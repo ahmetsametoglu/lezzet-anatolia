@@ -89,6 +89,21 @@ Yok — ilk modül.
     (kod sözleşmesi: `capNote` overCap→düğme, atCap→span). 6/6 yeşil (28,3 sn), artık sıfır.
     Fikstüre `setStockQty` eklendi. Yazım sırasında bir iddia dersi: cümlenin tümden kalkmasını
     beklemek YANLIŞTI — sözleşme kodda okundu, iddia ona hizalandı (bulgu-doğrulama disiplini).
+  - **Uç senaryo hattı · Parti 1 YAZILDI (08.08, kullanıcı onayıyla — "testlere devam et"):**
+    `edge-min-basket.smoke.ts` — asgari sepetin SÖZÜ ile KURALI aynı sayı mı (arka-uc tavsiyesi 4;
+    29.07 arıza sınıfı): eşik altında cümle + kapalı kapı, cümlenin istediği tutar eklenince
+    İKİSİ BİRDEN açılır. Eşik damgalı bölgenin KENDİ ayar satırından gelir (fikstür
+    `minBasketCents`; `purgeTestData`ya `settingIds` hedefi eklendi — küresel satıra dokunulmaz).
+    Statik kanıt: `--list` 32 test/9 dosya + iki dosya tsc temiz. **İLK CANLI KOŞU yapıldı (08.08
+    akşam) ve hattın varlık sebebini İLK KOŞUDA kanıtladı:** test KIRMIZI — sebep test değil,
+    gerçek bir iş-kuralı arızası: ayar KAPSAMI sepete/checkout'a hiç bağlanmamış (bölge/kanal/ülke
+    satırları ölü) → bulgu (07.15) + `arka-uc-ayar-kapsami-baglanmamis.md`; test düzeltme gelene
+    dek NÖBETTE kırmızı kalır. Aynı koşu `x-e2e` kanıtını da verdi: iki projede onlarca sayfa
+    gezildi, `analytics_session` 0 satırda kaldı — defter temiz (bekleyen kanıt kapandı). Yazım sırasında ölçülen bulgu: küresel `min_basket_cents` `0013`
+    seed'inde **0** — `MIN_BASKET_DEFAULT` (40 €, kullanıcı kararı 04.08) hiçbir ortamda okunmuyor,
+    b2c'de asgari sepet fiilen kapalı; kullanıcı kararına sunuldu (08.08). Onaylı listenin kalanı
+    (iki-sekme bayat sepet · OTP beklerken tükenme · adres değişimi · rezervasyon yarışı · COD
+    tavanı) checkout adım dumanlarını (adres/gün/ödeme) ister — kör yazılmaz, ilk canlı partiyle.
   - Kalan: mal kabulün UI adımı (10.4 ekranı inince `stock-intake` yazım adımı UI'a taşınır,
     iddialar aynı kalır) + Katman 2 gerçek-OTP provası (Kademe 3).
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile-web** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.

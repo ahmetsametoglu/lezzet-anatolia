@@ -94,6 +94,13 @@ export interface PurgeTargets {
    */
   accountIds?: string[];
   /**
+   * Ayar satırları — kimlikle, ANAHTARLA DEĞİL: anahtar kapsam satırlarını da taşır ve anahtarla
+   * silen bir test, kendi damgalı bölge satırıyla birlikte işletmenin gerçek ayarını da götürürdü.
+   * Buraya yalnız testin KENDİ AÇTIĞI (damgalı kapsam — ör. e2e fikstürünün bölge satırı) kimlik
+   * bildirilir; küresel tekil satırın geçici değişimi bu hedefin işi değil, `settingsSnapshot`ın.
+   */
+  settingIds?: string[];
+  /**
    * Test iş adları — cron kabuğunun (`runJob`) BIRAKTIĞI İKİ İZ birden gider: `job_run` satırı ve
    * `error_log` kayıtları (`context->>job`).
    *
@@ -128,6 +135,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     warehouseIds,
     accountIds,
     jobNames,
+    settingIds,
     analyticsSessionKeys,
     analyticsSearchQueries,
   } = {
@@ -147,6 +155,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     warehouseIds: clean(targets.warehouseIds),
     accountIds: clean(targets.accountIds),
     jobNames: clean(targets.jobNames),
+    settingIds: clean(targets.settingIds),
   };
 
   // 0a) Analitik: defterin hiçbir FK'si yok (bilinçli — `0035`), o yüzden sıradan bağımsız.
@@ -228,6 +237,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   // 5) Bağımsız kayıtlar.
   if (temperatureLocations.length > 0) await mustDelete(db, 'temperature_log', (q) => q.in('location', temperatureLocations));
   if (verificationEmails.length > 0) await mustDelete(db, 'email_verifications', (q) => q.in('email', verificationEmails));
+  // Ayar satırı bölgeye yalnız `scope_id` METNİYLE bağlı (FK yok) — hiçbir cascade toplamaz,
+  // bildirilmezse damgalı bölge silindikten sonra sahipsiz kalır ve anahtarın kapsam listesini
+  // sessizce şişirir.
+  if (settingIds.length > 0) await mustDelete(db, 'settings', (q) => q.in('id', settingIds));
 
   // 6) Auth kullanıcısı EN SON: profil satırı ona `set null` ile bağlı, silinince profil yetim kalır —
   //    o yüzden profil de burada gider (trigger'ın açtığı satırın sahibi testtir).

@@ -19,12 +19,14 @@ export const FREE_SHIPPING_THRESHOLD_KEY = 'free_shipping_threshold_cents';
 export const MIN_BASKET_KEY = 'min_basket_cents';
 
 /**
- * Asgari sepetin varsayılanı (cent) — ayar satırı yoksa geçerli.
+ * Asgari sepetin SON ÇARE varsayılanı (cent) — yalnız ayar satırı HİÇ yoksa okunur.
  *
- * 40,00 € · kullanıcı kararı 04.08, **her iki kanalda** geçerli (bölge içi teslimat + kargo).
- * Varsayılan uzun süre `0` idi ve iki okuma yerinde ayrı ayrı yazılıydı: statik metin "asgari sepet
- * uygulanır" diye söz verirken sistem hiçbir sepeti engellemiyordu — söz vardı, kural yoktu. Sayı
- * artık tek yerde durur; işletme ayarı girildiğinde bu değer hiç okunmaz.
+ * Gerçek değer `settings`'tedir ve migration (`0013`) global satırı her ortamda açtığı için bu
+ * sabit normalde hiç okunmaz — **buradaki sayı yürürlükteki kural DEĞİLDİR** (ölçüldü 08.08:
+ * global satır 0 = b2c'de alt sınır yok; b2b kanalı 120 €, bir bölge 45 €). İşletme değerini
+ * operatör Ayarlar'dan belirler. Bu sabit, satırı silen bir elin sistemi fark edilmeden sınırsız
+ * bırakmaması için emniyet değeri olarak durur. *(Eski künye "40 €, kullanıcı kararı 04.08,
+ * yürürlükte" diyordu ve yanılttı — karar verenin kendisini de: yürürlükte hiç olmadı.)*
  */
 export const MIN_BASKET_DEFAULT = 4_000;
 

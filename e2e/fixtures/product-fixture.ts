@@ -54,6 +54,14 @@ interface StampedProductOptions {
   stockQty?: number;
   /** Damgalı depoya bölge + posta kodu bağı kur (ziyaretçi yer seçebilsin diye). */
   withZone?: boolean;
+  /**
+   * Damgalı BÖLGEYE özel asgari sepet ayarı (cent) — `withZone` ister. Küresel `settings`
+   * satırına DOKUNULMAZ (e2e README kural 3): kapsam çözümü "bölge → kanal → ülke → global"
+   * olduğu için bu satırı yalnız fikstürün kendi bölgesini seçen ziyaretçi okur. Satır
+   * `purgeTestData`nın `settingIds` hedefiyle toplanır. Dev server'ın ayar önbelleği 30 sn'lik
+   * sözleşme (`SETTINGS_CACHE_TTL_MS`) — ilk iddiayı yenilemeli/sabırlı yaz.
+   */
+  minBasketCents?: number;
 }
 
 /** Varyantın b2c liste fiyatı — satılabilirliğin ön koşulu; tutarın kendisi senaryoda önemsiz. */
@@ -68,9 +76,12 @@ const PRICE_CENTS = 1290;
 export async function createStampedProduct(opts: StampedProductOptions = {}): Promise<StampedProduct> {
   loadRootEnv();
   // Dinamik import: modül yükü env'den SONRA (dosya başındaki künye).
-  const { CategoryService, DeliveryZoneService, PriceService, ProductService, StockService, serviceDb } =
+  const { CategoryService, DeliveryZoneService, PriceService, ProductService, SettingsService, StockService, serviceDb } =
     await import('@lezzet/database');
   const { createTestWarehouse, purgeTestData } = await import('@lezzet/database/testing');
+  if (opts.minBasketCents != null && !opts.withZone) {
+    throw new Error('minBasketCents `withZone` ister — bölge kapsamı olmadan ayar satırı küresel olurdu (e2e kural 3)');
+  }
 
   const db = serviceDb();
   const stamp = Date.now();
@@ -105,9 +116,20 @@ export async function createStampedProduct(opts: StampedProductOptions = {}): Pr
   }
 
   let postalCode: string | null = null;
+  let settingId: string | null = null;
   if (opts.withZone) {
     const zones = new DeliveryZoneService(db);
     const zone = await zones.insert({ name: `E2E bölgesi ${stamp}`, warehouseId, weekdays: [2, 5] });
+    if (opts.minBasketCents != null) {
+      // Anahtar `apps/web/lib/settings-keys.ts` MIN_BASKET_KEY ile aynı sözleşme (seed de aynı
+      // düz metni yazar) — buradan import edilmez, fikstür web uygulamasına bağlanmaz.
+      const setting = await new SettingsService(db).set('min_basket_cents', opts.minBasketCents, {
+        scopeType: 'zone',
+        scopeId: zone.id,
+        description: `E2E asgari sepet ${stamp}`,
+      });
+      settingId = setting.id;
+    }
     // Kod bağ tablosunda BİRİNCİL ANAHTARDIR (ülke, kod): iki paralel proje (desktop+mobile) aynı
     // kodu kapmaya kalkarsa ikincisi sessiz bir belirsizlik değil adlı bir hata alır — o yüzden
     // çakışmada yeni rastgele kod denenir. '00' öneki referans tabloda hiç yok, tek aday kalırız.
@@ -145,6 +167,7 @@ export async function createStampedProduct(opts: StampedProductOptions = {}): Pr
         productIds: [product.id],
         categoryIds: [category.id],
         warehouseIds: [warehouseId],
+        settingIds: settingId ? [settingId] : undefined,
       });
     },
   };

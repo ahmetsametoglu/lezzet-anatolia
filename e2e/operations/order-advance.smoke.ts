@@ -39,9 +39,16 @@ test.describe('kademe 2 · sipariş durum geçişi (damgalı fikstür)', () => {
 
     // Tek yol (desktop — operasyon web'i masaüstü-yalnız, 06.08): başlıktaki birincil düğme
     // ("Hazırlanıyor ▾") izinli geçiş ŞERİDİNİ açar, geçiş şeritteki düğmeden yapılır.
-    await page.getByRole('button', { name: 'Hazırlanıyor ▾' }).click();
-    // Şerit açıldı mı — tıklamadan önce iddia: düşerse "düğme yok" değil "şerit açılmadı" denir.
-    await expect(page.getByText('İzinli geçişler')).toBeVisible({ timeout: 10_000 });
+    // Tıklama TEKRARLI (edge-stock deseni): yoğun pencerede hidrasyon geç biter ve erken tıklama
+    // sessizce kaybolur — ölçüldü 08.08: iki yavaş koşuda üst üste düştü, hızlı koşuda hiç.
+    // Kanıt şeridin kendisi; düğme toggle olduğu için şerit görünürken İKİNCİ tıklama atılmaz.
+    const primary = page.getByRole('button', { name: 'Hazırlanıyor ▾' });
+    const strip = page.getByText('İzinli geçişler');
+    await expect(async () => {
+      if (await strip.isVisible()) return;
+      await primary.click({ timeout: 2_000 });
+      await expect(strip).toBeVisible({ timeout: 2_500 });
+    }).toPass({ timeout: 30_000 });
     const advance = page.getByRole('button', { name: 'Hazırlanıyor', exact: true });
     await expect(advance).toBeVisible({ timeout: 15_000 });
     await advance.click();
