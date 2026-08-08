@@ -3,7 +3,8 @@
  *
  * Meta'nın kuralı: **müşteri yazdıktan sonra 24 saat boyunca** ona serbest metin gönderilebilir ve
  * bu ücretsizdir. Pencere kapandıktan sonra yalnız Meta-onaylı şablon (template) gidebilir ve
- * ücretlidir (~€0,13 FR/DE). "Önce müşteri yazsın" ilkesi doğrudan bu satırdan doğuyor.
+ * ücretlidir (pazarlama şablonu FR/DE'de ~€0,13–0,14; kategoriye göre değişir — `DOMAIN §11`).
+ * "Önce müşteri yazsın" ilkesi doğrudan bu satırdan doğuyor.
  *
  * **Neden motorda, neden SQL'de değil:** pencerenin bitişi bir para kararının girdisidir ve tek
  * yerde durmalı. Süreyi RPC'ye de yazsaydık aynı kural iki dilde iki kopya olur, biri değiştiğinde
@@ -28,4 +29,34 @@ const HOUR_MS = 60 * 60 * 1000;
 export function serviceWindowExpiry(inboundAt: string | Date): string {
   const at = inboundAt instanceof Date ? inboundAt : new Date(inboundAt);
   return new Date(at.getTime() + SERVICE_WINDOW_HOURS * HOUR_MS).toISOString();
+}
+
+/**
+ * Pencerenin ŞU ANKİ hâli — **ücret kararının tek kapısı**.
+ *
+ * `windowExpiresAt` yazılıyor ama okunmuyorsa, ölçülen ama kullanılmayan bir sayıdır: her gönderim
+ * yeri "şablon mu, serbest metin mi" sorusunu kendi başına cevaplar ve biri mutlaka pencere AÇIKKEN
+ * şablon gönderir — yani bedava olana para öder. Bu fonksiyon o sorunun tek cevabıdır.
+ *
+ * Üç durum var ve ikisi aynı sayıya düşer ama farklı şeylerdir:
+ *   · `open: true`  — müşteri son 24 saatte yazdı. Serbest metin, ÜCRETSİZ.
+ *   · `open: false` + `everOpened: true`  — pencere kapandı. Yalnız onaylı şablon, ÜCRETLİ.
+ *   · `open: false` + `everOpened: false` — müşteri hiç yazmamış. Ortada bir konuşma yok; şablon
+ *     ancak pazarlama izniyle gider (`opt_in`). "Kapandı" ile "hiç başlamadı" ayrı iki durumdur —
+ *     ilki bir fırsatın kaçırılması, ikincisi henüz kurulmamış bir ilişkidir ve müdahaleleri farklı.
+ */
+export interface ServiceWindowState {
+  open: boolean;
+  /** Pencere hiç açıldı mı — yani müşteri bize bir kez olsun yazdı mı. */
+  everOpened: boolean;
+  /** Kapanmasına kalan süre (ms). Kapalıysa ya da hiç açılmamışsa `0`. */
+  msRemaining: number;
+}
+
+export function serviceWindowState(windowExpiresAt: string | null | undefined, now: Date = new Date()): ServiceWindowState {
+  if (!windowExpiresAt) return { open: false, everOpened: false, msRemaining: 0 };
+
+  const remaining = new Date(windowExpiresAt).getTime() - now.getTime();
+  // Damga varsa pencere bir zamanlar açılmıştır — kapanmış olması bunu değiştirmez.
+  return { open: remaining > 0, everOpened: true, msRemaining: remaining > 0 ? remaining : 0 };
 }

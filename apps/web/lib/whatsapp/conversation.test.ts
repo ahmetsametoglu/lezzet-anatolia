@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { ConversationService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { SERVICE_WINDOW_HOURS } from '@lezzet/domain-core';
+import { SERVICE_WINDOW_HOURS, serviceWindowState } from '@lezzet/domain-core';
 import { openWhatsappConversation, recordInboundMessage, recordOutboundMessage } from './conversation';
 
 /**
@@ -159,5 +159,30 @@ describe('mesaj kaydı ve servis penceresi', () => {
 
     const liste = await messages.listByConversation(sonuc.conversation.id);
     expect(liste[0]).toMatchObject({ direction: 'outbound', kind: 'template', templateName: 'order_confirm' });
+  });
+
+  it('pencere AÇIKKEN gönderilen şablon kaydı REDDEDİLMEZ — nöbetin işi gerçeği susturmak değil', async () => {
+    // Adım 1'de mesaj zaten gönderilmiş oluyor (admin telefonundan yazıyor, biz deftere işliyoruz).
+    // Olmuş bir şeyi kaydetmeyi reddetmek defteri yalancı yapardı; israf log'a düşer, deftere değil.
+    // Gönderimi ENGELLEYEN kapı, gönderimin kendisi doğduğunda kurulur (15.11).
+    const sonuc = await ac({ phone: numara() });
+    expect(sonuc.status).toBe('ok');
+    if (sonuc.status !== 'ok') return;
+
+    await recordInboundMessage({
+      conversationId: sonuc.conversation.id,
+      text: 'Merhaba',
+      receivedAt: new Date().toISOString(),
+    });
+    const kayit = await recordOutboundMessage({
+      conversationId: sonuc.conversation.id,
+      text: 'Siparişiniz hazırlanıyor.',
+      templateName: 'order_confirm',
+    });
+
+    expect(kayit).toMatchObject({ kind: 'template', templateName: 'order_confirm' });
+    // Pencere de kaymadı: giden mesaj onu ne uzatır ne kısaltır.
+    const acik = await conversations.getById(sonuc.conversation.id);
+    expect(serviceWindowState(acik?.windowExpiresAt).open).toBe(true);
   });
 });

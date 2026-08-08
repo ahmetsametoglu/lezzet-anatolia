@@ -1,6 +1,7 @@
 import { ConversationService, MessageService, serviceDb } from '@lezzet/database';
-import { serviceWindowExpiry } from '@lezzet/domain-core';
+import { serviceWindowExpiry, serviceWindowState } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
+import { logger } from '@lezzet/observability';
 import type { Conversation, Message, MessageBody, MessageKind, UserProfile } from '@lezzet/types';
 import { findOrCreateCustomer } from '../identity/find-or-create';
 
@@ -120,14 +121,40 @@ export async function recordInboundMessage(input: RecordMessageInput & { receive
 }
 
 /**
- * **Giden mesaj** — pencereye DOKUNMAZ.
+ * **Giden mesaj** — pencereye DOKUNMAZ, ama pencereye BAKAR.
  *
- * Giden mesajın pencereyi uzatması zararsız görünür; sonucu ücretsiz süreyi kendi kendimize
- * uzatmaktır. Meta tarafında pencere kapanmıştır, gönderim ya reddedilir ya şablon ücretiyle
- * geçer — fatura sürpriz olur.
+ * Pencereyi uzatmamasının gerekçesi yukarıda (`serviceWindowExpiry` künyesi). Bakmasının gerekçesi
+ * ayrı ve maliyet nöbetidir: pencere açıkken serbest metin ÜCRETSİZDİR, aynı içeriği şablonla
+ * göndermek ise para öder.
+ *
+ * **Uyarı bugün şablonun KATEGORİSİNİ bilmiyor ve bu bir eksiklik** (`message.kind` yalnız
+ * "template" diyor). Kategori fiyatı belirliyor: pazarlama şablonu her hâlde ücretli, utility
+ * (sipariş onayı/kargo) ise açık pencere içinde ücretsiz olabiliyor — Meta bunu değiştirdi ve
+ * güncel hâli `15.6` onboarding'inde doğrulanacak. Yani uyarı şu an **fazla geniş**: gerçekten
+ * israf olanı da, olmayabilecek olanı da işaretliyor. Kategori kolonu eklenince daralacak.
+ *
+ * **Kayıt REDDEDİLMEZ, işaretlenir** ve bu ayrım adım 1'de kritik: burada mesaj zaten gönderilmiş
+ * oluyor (admin telefonundan yazıyor, biz deftere işliyoruz). Olmuş bir şeyi kaydetmeyi reddetmek
+ * defteri yalancı yapardı — nöbetin işi gerçeği susturmak değil, görünür kılmak. Gönderimi
+ * ENGELLEYEN kapı, gönderimin kendisi doğduğunda kurulur (15.11 · `packages/notify` sürücüsü) ve
+ * kararı yine buradan (`serviceWindowState`) okur.
+ *
+ * Log'a yalnız kimlik yazılır (`CLAUDE §1`): hangi konuşma ve ne kadar süre boşa gitti — mesajın
+ * içeriği değil.
  */
 export async function recordOutboundMessage(input: RecordMessageInput & { templateName?: string | null }): Promise<Message> {
-  return new MessageService(serviceDb()).record({
+  const db = serviceDb();
+  const conversation = await new ConversationService(db).getById(input.conversationId);
+  const pencere = serviceWindowState(conversation?.windowExpiresAt);
+
+  if (pencere.open && input.templateName) {
+    logger.warn(
+      { context: 'whatsapp/outbound', conversationId: input.conversationId, msRemaining: pencere.msRemaining },
+      'pencere AÇIKKEN şablon gönderildi — serbest metin ücretsizdi',
+    );
+  }
+
+  return new MessageService(db).record({
     conversationId: input.conversationId,
     direction: 'outbound',
     kind: input.kind ?? (input.templateName ? 'template' : 'text'),
