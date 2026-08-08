@@ -105,12 +105,11 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'musteriler', label: 'Müşteriler', href: '/operations/customers', roles: FINANCE },
       { key: 'talepler', label: 'Talepler', href: '/operations/tickets', roles: ADMIN_ONLY },
       { key: 'geribildirim', label: 'Geri Bildirim', href: '/operations/feedback', roles: ADMIN_ONLY },
-      // WhatsApp girişi KALDIRILDI (denetim O-Y3, 03.08): `/operations/whatsapp` rotası yok ve
-      // modül 15'in tamamı henüz `[ ]` — yani giriş ekranından önce inmiş, tıklayan admin
-      // not-found'a düşüyordu. Bu, yüzeyin kendi yazdığı ilkenin ihlaliydi: **var olmayan bir yere
-      // giden düğme, olmayan bir yetenek vaat eder.** Girişi 15.5 (admin konuşma izleme) ekranıyla
-      // BİRLİKTE geri koyun — ray, modülün ne zaman biteceğinin ilanı değil, bugün gidilebilecek
-      // yerlerin listesidir.
+      // WhatsApp girişi 03.08'de KALDIRILMIŞTI (denetim O-Y3) ve gerekçesi doğruydu: rota yoktu,
+      // tıklayan admin not-found'a düşüyordu — var olmayan bir yere giden düğme, olmayan bir yetenek
+      // vaat eder. Ray, modülün ne zaman biteceğinin ilanı değil, BUGÜN gidilebilecek yerlerin
+      // listesidir. Giriş, o notun koyduğu şartla geri geldi: 15.5 (konuşma izleme) yazıldı.
+      { key: 'whatsapp', label: 'WhatsApp', href: '/operations/whatsapp', roles: ADMIN_ONLY },
     ],
   },
   {

@@ -17,6 +17,7 @@ import type { TicketMessageView } from '@/lib/ticket/ticket-types';
 // Başka ekranların URL SÖZLEŞMESİ (STACK §7 istisnası): adres elle kurulmaz, sahibinden alınır.
 import { customersUrl } from '../customers/customers-url';
 import { ORDERS_PATH } from '../orders/orders-url';
+import { whatsappLink } from '../whatsapp/whatsapp-url';
 import {
   RETURN_BLOCKED_REASON,
   TICKET_SENDER_LABELS,
@@ -186,12 +187,16 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOve
             ) : null}
           </span>
 
-          {/* WhatsApp köprüsü DÜZ METİN: `/operations/whatsapp` ekranı henüz yok (nav girişi var,
-              klasör yok). Var olmayan bir sayfaya götüren bağlantı, çalışan bir şey vaat ederdi. */}
+          {/* WhatsApp köprüsü artık GERÇEK BAĞLANTI: izleme ekranı yazıldı (15.5) ve konuşmayı
+              kimliğiyle açıyor. Bir tur boyunca düz metindi — o zaman doğruydu, çünkü var olmayan
+              bir sayfaya götüren bağlantı çalışan bir şey vaat ederdi. */}
           {ticket.conversationId ? (
-            <span className="flex items-center gap-1.5 font-ops-body text-ops-micro text-ops-faint">
-              <WhatsAppIcon size={12} /> Bağlı WhatsApp konuşması var — izleme ekranı açıldığında buradan bağlanacak.
-            </span>
+            <Link
+              href={whatsappLink(ticket.conversationId)}
+              className="flex cursor-pointer items-center gap-1.5 font-ops-body text-ops-micro text-ops-olive hover:underline"
+            >
+              <WhatsAppIcon size={12} /> Bağlı WhatsApp konuşmasını aç →
+            </Link>
           ) : null}
         </div>
 
