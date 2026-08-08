@@ -1,0 +1,284 @@
+{
+  "tr": {
+    "title": "Hesabım",
+    "back": "Geri",
+    "edit": {
+      "title": "Profili düzenle",
+      "nameLabel": "Ad soyad",
+      "namePlaceholder": "Ad soyad",
+      "emailLabel": "E-posta",
+      "emailPlaceholder": "E-posta",
+      "phoneLabel": "Telefon",
+      "phonePlaceholder": "Telefon (WhatsApp)",
+      "phoneNote": "Telefon numaranız WhatsApp bildirimleri için kullanılır.",
+      "save": "Kaydet",
+      "saved": "Profil güncellendi ✓",
+      "address": {
+        "newTitle": "Yeni adres",
+        "editTitle": "Adresi düzenle",
+        "labelLabel": "Adres etiketi",
+        "labelPlaceholder": "Etiket (Ev, İş)",
+        "streetLabel": "Sokak ve numara",
+        "streetPlaceholder": "Adres",
+        "zipLabel": "Posta kodu",
+        "zipPlaceholder": "Posta kodu",
+        "cityLabel": "Şehir",
+        "cityPlaceholder": "Şehir",
+        "save": "Kaydet",
+        "delete": "Adresi sil",
+        "error": "Etiket, adres ve posta kodu gerekli.",
+        "saved": "Adres kaydedildi ✓",
+        "deleted": "Adres silindi"
+      }
+    },
+    "guest": {
+      "title": "Hoş geldiniz",
+      "body": "Hesabınıza ulaşmak için birkaç saniyede doğrulanın — şifre yok.",
+      "cta": "Hızlı doğrulama"
+    },
+    "profile": {
+      "edit": "Düzenle",
+      "editLabel": "Profil bilgilerini düzenle"
+    },
+    "company": {
+      "eyebrow": "Onaylı profesyonel hesap",
+      "identifiers": "{siret} · {vat}",
+      "note": "Şirket bilgilerinde değişiklik için bize yazın."
+    },
+    "points": {
+      "title": "Puanlarım",
+      "value": "✦ {n}",
+      "body": "Sipariş, yorum ve keşif turlarıyla birikir. {threshold} puan = {value} indirim kuponu.",
+      "gap": "Kupona {n} puan kaldı.",
+      "convert": "{threshold} puanı {value} kupona çevir",
+      "couponValue": "{value} indirim"
+    },
+    "referral": {
+      "title": "Arkadaşını getir, ikiniz de kazanın",
+      "body": "Kodunuzla ilk siparişini veren arkadaşınız 5 € indirim kazanır; teslimattan sonra size de 5 € kupon yüklenir.",
+      "share": "Paylaş",
+      "shareLabel": "Referans kodunu paylaş"
+    },
+    "menu": {
+      "orders": "Siparişlerim",
+      "tickets": "Taleplerim",
+      "write": "Bize yazın",
+      "delivery": "Teslimat & soğuk zincir"
+    },
+    "addresses": {
+      "title": "Adreslerim",
+      "default": "varsayılan",
+      "makeDefault": "varsayılan yap",
+      "makeDefaultLabel": "{label} adresini varsayılan yap",
+      "edit": "Düzenle",
+      "editLabel": "{label} adresini düzenle",
+      "add": "＋ Yeni adres ekle"
+    },
+    "language": {
+      "title": "Dil tercihi",
+      "tr": "Türkçe",
+      "fr": "Français",
+      "de": "Deutsch"
+    },
+    "marketing": {
+      "title": "Kampanya iletişimi",
+      "email": "E-posta",
+      "whatsapp": "WhatsApp",
+      "note": "Kapalıyken hiçbir kampanya iletişimi almazsınız. Sipariş bildirimleri bundan etkilenmez."
+    },
+    "data": {
+      "title": "Verileriniz",
+      "body": "Bilgilerinizi bu sayfada görebilir ve düzenleyebilirsiniz. Verilerinizin silinmesini bonjour@lezzetanatolia.fr adresine yazarak talep edebilirsiniz.",
+      "privacy": "Gizlilik politikası"
+    },
+    "logout": "Çıkış yap"
+  },
+  "fr": {
+    "title": "Mon compte",
+    "back": "Retour",
+    "edit": {
+      "title": "Modifier le profil",
+      "nameLabel": "Nom et prénom",
+      "namePlaceholder": "Nom et prénom",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "E-mail",
+      "phoneLabel": "Téléphone",
+      "phonePlaceholder": "Téléphone (WhatsApp)",
+      "phoneNote": "Votre numéro sert aux notifications WhatsApp.",
+      "save": "Enregistrer",
+      "saved": "Profil mis à jour ✓",
+      "address": {
+        "newTitle": "Nouvelle adresse",
+        "editTitle": "Modifier l'adresse",
+        "labelLabel": "Libellé de l'adresse",
+        "labelPlaceholder": "Libellé (Maison, Bureau)",
+        "streetLabel": "Rue et numéro",
+        "streetPlaceholder": "Adresse",
+        "zipLabel": "Code postal",
+        "zipPlaceholder": "Code postal",
+        "cityLabel": "Ville",
+        "cityPlaceholder": "Ville",
+        "save": "Enregistrer",
+        "delete": "Supprimer l'adresse",
+        "error": "Libellé, adresse et code postal sont requis.",
+        "saved": "Adresse enregistrée ✓",
+        "deleted": "Adresse supprimée"
+      }
+    },
+    "guest": {
+      "title": "Bienvenue",
+      "body": "Vérifiez-vous en quelques secondes pour accéder à votre compte — sans mot de passe.",
+      "cta": "Vérification rapide"
+    },
+    "profile": {
+      "edit": "Modifier",
+      "editLabel": "Modifier les informations du profil"
+    },
+    "company": {
+      "eyebrow": "Compte professionnel validé",
+      "identifiers": "{siret} · {vat}",
+      "note": "Pour modifier les informations de société, écrivez-nous."
+    },
+    "points": {
+      "title": "Mes points",
+      "value": "✦ {n}",
+      "body": "Cumulés avec les commandes, les avis et les tours de découverte. {threshold} points = bon de {value}.",
+      "gap": "Encore {n} points pour un bon.",
+      "convert": "Convertir {threshold} points en bon de {value}",
+      "couponValue": "{value} de remise"
+    },
+    "referral": {
+      "title": "Parrainez, gagnez à deux",
+      "body": "Avec votre code, votre ami obtient 5 € de remise sur sa première commande ; après la livraison, vous recevez aussi un bon de 5 €.",
+      "share": "Partager",
+      "shareLabel": "Partager le code de parrainage"
+    },
+    "menu": {
+      "orders": "Mes commandes",
+      "tickets": "Mes demandes",
+      "write": "Écrivez-nous",
+      "delivery": "Livraison & chaîne du froid"
+    },
+    "addresses": {
+      "title": "Mes adresses",
+      "default": "par défaut",
+      "makeDefault": "définir par défaut",
+      "makeDefaultLabel": "Définir {label} comme adresse par défaut",
+      "edit": "Modifier",
+      "editLabel": "Modifier l'adresse {label}",
+      "add": "＋ Ajouter une adresse"
+    },
+    "language": {
+      "title": "Langue",
+      "tr": "Türkçe",
+      "fr": "Français",
+      "de": "Deutsch"
+    },
+    "marketing": {
+      "title": "Communications commerciales",
+      "email": "E-mail",
+      "whatsapp": "WhatsApp",
+      "note": "Désactivé, vous ne recevez aucune communication commerciale. Les notifications de commande ne sont pas concernées."
+    },
+    "data": {
+      "title": "Vos données",
+      "body": "Vous pouvez consulter et modifier vos informations sur cette page. Pour demander leur suppression, écrivez à bonjour@lezzetanatolia.fr.",
+      "privacy": "Politique de confidentialité"
+    },
+    "logout": "Se déconnecter"
+  },
+  "de": {
+    "title": "Mein Konto",
+    "back": "Zurück",
+    "edit": {
+      "title": "Profil bearbeiten",
+      "nameLabel": "Vor- und Nachname",
+      "namePlaceholder": "Vor- und Nachname",
+      "emailLabel": "E-Mail",
+      "emailPlaceholder": "E-Mail",
+      "phoneLabel": "Telefon",
+      "phonePlaceholder": "Telefon (WhatsApp)",
+      "phoneNote": "Ihre Nummer wird für WhatsApp-Benachrichtigungen genutzt.",
+      "save": "Speichern",
+      "saved": "Profil aktualisiert ✓",
+      "address": {
+        "newTitle": "Neue Adresse",
+        "editTitle": "Adresse bearbeiten",
+        "labelLabel": "Adressbezeichnung",
+        "labelPlaceholder": "Bezeichnung (Zuhause, Büro)",
+        "streetLabel": "Straße und Hausnummer",
+        "streetPlaceholder": "Adresse",
+        "zipLabel": "Postleitzahl",
+        "zipPlaceholder": "Postleitzahl",
+        "cityLabel": "Stadt",
+        "cityPlaceholder": "Stadt",
+        "save": "Speichern",
+        "delete": "Adresse löschen",
+        "error": "Bezeichnung, Adresse und Postleitzahl sind erforderlich.",
+        "saved": "Adresse gespeichert ✓",
+        "deleted": "Adresse gelöscht"
+      }
+    },
+    "guest": {
+      "title": "Willkommen",
+      "body": "Verifizieren Sie sich in Sekunden, um auf Ihr Konto zuzugreifen — ohne Passwort.",
+      "cta": "Schnelle Verifizierung"
+    },
+    "profile": {
+      "edit": "Bearbeiten",
+      "editLabel": "Profildaten bearbeiten"
+    },
+    "company": {
+      "eyebrow": "Bestätigtes Geschäftskonto",
+      "identifiers": "{siret} · {vat}",
+      "note": "Für Änderungen an den Firmendaten schreiben Sie uns."
+    },
+    "points": {
+      "title": "Meine Punkte",
+      "value": "✦ {n}",
+      "body": "Gesammelt durch Bestellungen, Bewertungen und Entdeckungsrunden. {threshold} Punkte = Gutschein über {value}.",
+      "gap": "Noch {n} Punkte bis zum Gutschein.",
+      "convert": "{threshold} Punkte in {value}-Gutschein umwandeln",
+      "couponValue": "{value} Rabatt"
+    },
+    "referral": {
+      "title": "Freunde werben, beide gewinnen",
+      "body": "Mit Ihrem Code erhält Ihr Freund 5 € Rabatt auf die erste Bestellung; nach der Lieferung bekommen auch Sie einen 5-€-Gutschein.",
+      "share": "Teilen",
+      "shareLabel": "Empfehlungscode teilen"
+    },
+    "menu": {
+      "orders": "Meine Bestellungen",
+      "tickets": "Meine Anfragen",
+      "write": "Schreiben Sie uns",
+      "delivery": "Lieferung & Kühlkette"
+    },
+    "addresses": {
+      "title": "Meine Adressen",
+      "default": "Standard",
+      "makeDefault": "als Standard",
+      "makeDefaultLabel": "{label} als Standardadresse festlegen",
+      "edit": "Bearbeiten",
+      "editLabel": "Adresse {label} bearbeiten",
+      "add": "＋ Neue Adresse"
+    },
+    "language": {
+      "title": "Sprache",
+      "tr": "Türkçe",
+      "fr": "Français",
+      "de": "Deutsch"
+    },
+    "marketing": {
+      "title": "Werbekommunikation",
+      "email": "E-Mail",
+      "whatsapp": "WhatsApp",
+      "note": "Ausgeschaltet erhalten Sie keinerlei Werbekommunikation. Bestellbenachrichtigungen sind davon nicht betroffen."
+    },
+    "data": {
+      "title": "Ihre Daten",
+      "body": "Sie können Ihre Angaben auf dieser Seite einsehen und bearbeiten. Die Löschung können Sie unter bonjour@lezzetanatolia.fr beantragen.",
+      "privacy": "Datenschutzerklärung"
+    },
+    "logout": "Abmelden"
+  }
+}

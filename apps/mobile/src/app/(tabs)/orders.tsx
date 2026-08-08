@@ -1,11 +1,6 @@
-import type { LocalizedCopy } from '@lezzet/i18n';
+import { OrdersScreen } from '@/screens/orders/orders-screen';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
-import { deviceLocale } from '@/lib/i18n/locale';
-import messages from './messages.json';
-
-// Siparişler — kendi dilimini bekliyor (oturum + sipariş uçları).
-export default function OrdersScreen() {
-  const t: LocalizedCopy<typeof messages> = messages[deviceLocale()];
-  return <ScreenPlaceholder title={t.tabs.orders} />;
+/* Rota dosyası İNCE (katalogla aynı gerekçe) — ekranın parçaları `src/screens/orders/`ta. */
+export default function OrdersRoute() {
+  return <OrdersScreen />;
 }

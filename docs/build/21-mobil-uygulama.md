@@ -452,7 +452,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief
   kuralı) — her listeye elle giden yol push'suz da çalışır.
   `touches: apps/mobile, apps/mobile-api, packages/database (token modeli — talep gerekebilir)`
-- [ ] (21.14) **Müşteri ekran seti — İLK ETAP: tasarım birebir, UI-only (kullanıcı kararı 08.08):**
+- [~] (21.14) **Müşteri ekran seti — İLK ETAP: tasarım birebir, UI-only (kullanıcı kararı 08.08):**
   `Mobil - Musteri v3.dc.html` (~21 ekran) fixture'la birebir geçirilir; **backend işi ÜRETMEZ**
   (uç yoksa ekran fixture'la TAM çalışır, bağlanma sonraki etap). Üçüncü alt ajan (musteri-expo)
   yürütür; yazı alanı yalnız müşteri ekran/rota dosyaları — **kit/tema/ikon değişikliği YASAK**,
@@ -460,6 +460,17 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   alt ajan — operasyon-expo · musteri-expo · mobil-backend). Sayfaya-özel komponent kendi
   klasöründe serbest.
   `touches: apps/mobile/src/screens (müşteri), apps/mobile/src/app/(tabs)`
+  - **Durum (08.08 — ilk büyük dilim, 21.14a):** vitrin · sepet · checkout (2 adım + onay) ·
+    giriş · hesap + hesap düzenleme · siparişlerim + sipariş detayı · taleplerim + talep detayı +
+    bize yazın · keşfet · paket detayı · tarif ekranları fixture'la yazıldı; `customer-kit`
+    (kart/rozet/FAB/stepper…) kuruldu. Kabuk düzeltmeleri canlı cihaz turundan: kök font kapısı
+    (`_layout` — `useFonts` bu kurulumda hiç tamamlanmıyor, `loadAsync`+kapı), tab bar
+    `Math.max(inset, dolgu)`, koleksiyon dairelerinin üst katmanı (RN kardeş z-sırası), fırsat
+    kartına foto (`CirclePhoto`). Talep durum sözlüğü müşteri dilinde — web ile aynı cümleler.
+    Doğrulama: jest 449/449 · tsc 0 · eslint 0 · knip 0. Kalan (kullanıcı yönlendirmesiyle):
+    geri bildirim akışı (vFb) · bildirimler içeriği · statik sayfa içerikleri · profesyonel
+    başvuru · onboarding · ürün detay boşluk ölçümü; rotaları açık ama içeriği yer tutucu olanlar:
+    `notifications` · `legal/[page]` · `professionals`.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

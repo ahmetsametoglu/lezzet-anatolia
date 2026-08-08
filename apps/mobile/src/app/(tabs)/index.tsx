@@ -1,11 +1,9 @@
-import type { LocalizedCopy } from '@lezzet/i18n';
+import { HomeScreen } from '@/screens/home/home-screen';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
-import { deviceLocale } from '@/lib/i18n/locale';
-import messages from './messages.json';
-
-// Vitrin (anasayfa) — kendi dilimini bekliyor; kabuk dörtlü kurulduğu için sekme bugünden duruyor.
-export default function HomeScreen() {
-  const t: LocalizedCopy<typeof messages> = messages[deviceLocale()];
-  return <ScreenPlaceholder title={t.tabs.index} />;
+/*
+  Rota dosyası İNCE (katalogla aynı gerekçe): expo-router bu klasördeki her `.tsx`i bir ROTA sayar,
+  o yüzden vitrinin parçaları (görünüm · bantlar · metinler · fixture) `src/screens/home/`ta yaşar.
+*/
+export default function HomeRoute() {
+  return <HomeScreen />;
 }

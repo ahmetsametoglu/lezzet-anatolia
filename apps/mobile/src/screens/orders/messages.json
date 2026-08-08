@@ -1,0 +1,173 @@
+{
+  "tr": {
+    "eyebrow": "Hesabım",
+    "title": "Siparişlerim",
+    "back": "Geri",
+    "status": {
+      "received": "Alındı",
+      "preparing": "Hazırlanıyor",
+      "on_the_way": "Yolda",
+      "delivered": "Teslim edildi",
+      "cancelled": "İptal",
+      "returning": "İade sürecinde"
+    },
+    "guest": {
+      "title": "Siparişleriniz için hızlı doğrulama",
+      "body": "Şifre yok — e-posta, Google veya WhatsApp ile birkaç saniyede doğrulanın.",
+      "cta": "Hızlı doğrulama"
+    },
+    "empty": {
+      "title": "Henüz siparişiniz yok",
+      "body": "İlk siparişinizi verin — teslimatta burada canlı takip edin.",
+      "cta": "Kataloğa göz at"
+    },
+    "row": {
+      "meta": "{date} · {count} ürün",
+      "more": "+{n}",
+      "reorder": "↻ Tekrar sipariş",
+      "detail": "Detay ›",
+      "open": "{reference} siparişinin detayı"
+    },
+    "detail": {
+      "notFound": "Bu sipariş bulunamadı",
+      "notFoundBody": "Bağlantı eski olabilir. Sipariş listenizden yeniden açın.",
+      "notFoundCta": "Siparişlerim",
+      "tracking": "Kurye yolda · tahmini {eta}",
+      "trackingLive": "Canlı takip",
+      "itemsEyebrow": "Sipariş içeriği",
+      "line": "{quantity}× {name}",
+      "delivery": "Teslimat",
+      "address": "Adres",
+      "payment": "Ödeme",
+      "total": "Toplam",
+      "reorder": "↻ Tekrar sipariş ver",
+      "feedback": "★ Ürünleri değerlendir",
+      "support": "Bir sorun mu var? Bize yazın",
+      "timeline": {
+        "received": "Sipariş alındı",
+        "preparing": "Hazırlanıyor",
+        "on_the_way": "Yolda",
+        "delivered": "Teslim edildi"
+      },
+      "note": {
+        "received": "Siparişiniz onaylandı",
+        "preparing": "Siparişiniz özenle paketleniyor",
+        "on_the_way": "Kurye bölgenizde — kapınıza yaklaşıyor"
+      }
+    }
+  },
+  "fr": {
+    "eyebrow": "Mon compte",
+    "title": "Mes commandes",
+    "back": "Retour",
+    "status": {
+      "received": "Reçue",
+      "preparing": "En préparation",
+      "on_the_way": "En route",
+      "delivered": "Livrée",
+      "cancelled": "Annulée",
+      "returning": "En retour"
+    },
+    "guest": {
+      "title": "Vérification rapide pour vos commandes",
+      "body": "Pas de mot de passe — e-mail, Google ou WhatsApp en quelques secondes.",
+      "cta": "Vérification rapide"
+    },
+    "empty": {
+      "title": "Aucune commande pour l'instant",
+      "body": "Passez votre première commande — suivez la livraison en direct ici.",
+      "cta": "Parcourir le catalogue"
+    },
+    "row": {
+      "meta": "{date} · {count} articles",
+      "more": "+{n}",
+      "reorder": "↻ Recommander",
+      "detail": "Détail ›",
+      "open": "Détail de la commande {reference}"
+    },
+    "detail": {
+      "notFound": "Commande introuvable",
+      "notFoundBody": "Le lien est peut-être périmé. Ouvrez-la depuis votre liste de commandes.",
+      "notFoundCta": "Mes commandes",
+      "tracking": "Livreur en route · env. {eta}",
+      "trackingLive": "Suivi en direct",
+      "itemsEyebrow": "Contenu de la commande",
+      "line": "{quantity}× {name}",
+      "delivery": "Livraison",
+      "address": "Adresse",
+      "payment": "Paiement",
+      "total": "Total",
+      "reorder": "↻ Recommander",
+      "feedback": "★ Évaluer les produits",
+      "support": "Un souci ? Écrivez-nous",
+      "timeline": {
+        "received": "Commande reçue",
+        "preparing": "En préparation",
+        "on_the_way": "En route",
+        "delivered": "Livrée"
+      },
+      "note": {
+        "received": "Votre commande est confirmée",
+        "preparing": "Votre commande est emballée avec soin",
+        "on_the_way": "Le livreur est dans votre quartier"
+      }
+    }
+  },
+  "de": {
+    "eyebrow": "Mein Konto",
+    "title": "Meine Bestellungen",
+    "back": "Zurück",
+    "status": {
+      "received": "Eingegangen",
+      "preparing": "In Vorbereitung",
+      "on_the_way": "Unterwegs",
+      "delivered": "Geliefert",
+      "cancelled": "Storniert",
+      "returning": "In Rücksendung"
+    },
+    "guest": {
+      "title": "Schnelle Verifizierung für Ihre Bestellungen",
+      "body": "Kein Passwort — mit E-Mail, Google oder WhatsApp in Sekunden.",
+      "cta": "Schnelle Verifizierung"
+    },
+    "empty": {
+      "title": "Noch keine Bestellungen",
+      "body": "Geben Sie Ihre erste Bestellung auf — verfolgen Sie die Lieferung hier live.",
+      "cta": "Katalog ansehen"
+    },
+    "row": {
+      "meta": "{date} · {count} Artikel",
+      "more": "+{n}",
+      "reorder": "↻ Erneut bestellen",
+      "detail": "Detail ›",
+      "open": "Detail der Bestellung {reference}"
+    },
+    "detail": {
+      "notFound": "Bestellung nicht gefunden",
+      "notFoundBody": "Der Link ist womöglich veraltet. Öffnen Sie sie aus Ihrer Bestellliste.",
+      "notFoundCta": "Meine Bestellungen",
+      "tracking": "Kurier unterwegs · ca. {eta}",
+      "trackingLive": "Live-Verfolgung",
+      "itemsEyebrow": "Bestellinhalt",
+      "line": "{quantity}× {name}",
+      "delivery": "Lieferung",
+      "address": "Adresse",
+      "payment": "Zahlung",
+      "total": "Gesamt",
+      "reorder": "↻ Erneut bestellen",
+      "feedback": "★ Produkte bewerten",
+      "support": "Ein Problem? Schreiben Sie uns",
+      "timeline": {
+        "received": "Bestellung eingegangen",
+        "preparing": "In Vorbereitung",
+        "on_the_way": "Unterwegs",
+        "delivered": "Geliefert"
+      },
+      "note": {
+        "received": "Ihre Bestellung ist bestätigt",
+        "preparing": "Ihre Bestellung wird sorgfältig verpackt",
+        "on_the_way": "Der Kurier ist in Ihrer Nähe"
+      }
+    }
+  }
+}

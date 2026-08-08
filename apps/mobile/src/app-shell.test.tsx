@@ -12,9 +12,10 @@ import { renderShell } from '@/testing/render-shell';
   Dosya `src/app/` İÇİNE konamaz: expo-router o klasördeki her `.tsx`'i ROTA sayar, test dosyası
   sekme çubuğunda "app-shell" diye belirirdi. Kabuğun testi bu yüzden `src/` kökünde durur.
 
-  Ağ YOK: başlangıç rotası Vitrin (yer tutucu) ve gezilen rota Siparişler (yer tutucu) — sekme
-  navigatörü tembel olduğundan Katalog ekranı hiç MOUNT olmaz, `fetch` çağrısı doğmaz. Katalog
-  ekranının kendi durumları kendi testinde (`catalog-screen.test.tsx`).
+  Ağ YOK: başlangıç rotası Vitrin ve gezilen rota Siparişler artık GERÇEK ekranlar ama ikisi de
+  fixture'dan çizilir (21.14 UI-only) — sekme navigatörü tembel olduğundan Katalog ekranı hiç
+  MOUNT olmaz, `fetch` çağrısı doğmaz. Katalog ekranının kendi durumları kendi testinde
+  (`catalog-screen.test.tsx`).
 */
 
 // Cihaz dili sabitlenir ki assert edilen etiketler koşulan makinenin diline bağlı olmasın.
@@ -38,14 +39,15 @@ describe('uygulama kabuğu', () => {
     expect(screen.getByRole('tab', { name: 'Vitrin', selected: true })).toBeOnTheScreen();
   });
 
-  it('sekmeye dokunmak rotayı değiştirir — Siparişler yer tutucusu açılır', async () => {
+  it('sekmeye dokunmak rotayı değiştirir — Siparişlerim ekranı açılır', async () => {
     const { app } = await renderShell('/');
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Siparişler' }));
 
     expect(app).toHavePathname('/orders');
     expect(screen.getByRole('tab', { name: 'Siparişler', selected: true })).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'Siparişler' })).toBeOnTheScreen();
+    // Sekme etiketi "Siparişler", ekranın kendi başlığı "Siparişlerim" (v3:718) — ikisi ayrı sözlük.
+    expect(screen.getByRole('header', { name: 'Siparişlerim' })).toBeOnTheScreen();
   });
 
   it('seçili sekmeye tekrar dokunmak rotayı OYNATMAZ (layout `state.index` kapısı)', async () => {

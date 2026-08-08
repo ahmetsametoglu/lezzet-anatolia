@@ -1,0 +1,122 @@
+{
+  "tr": {
+    "title": "Sepet",
+    "back": "Geri",
+    "count": "{n} ürün",
+    "empty": {
+      "title": "Sepetiniz boş",
+      "body": "Anadolu'nun lezzetleri sizi bekliyor.",
+      "cta": "Kataloğa göz at"
+    },
+    "line": {
+      "bundle": "Hazır Paket",
+      "unit": "{variant} · {price}",
+      "discounted": "İndirimli fiyat",
+      "soldOut": "Tükendi — teslim edilemez, kaldırın",
+      "remove": "kaldır",
+      "removeLabel": "{name} ürününü sepetten kaldır",
+      "decrease": "{name} adedini azalt",
+      "increase": "{name} adedini artır"
+    },
+    "coupon": {
+      "add": "Kupon kodu ekle",
+      "applied": "{code} uygulandı",
+      "remove": "kaldır",
+      "removeLabel": "Kuponu kaldır",
+      "sheetTitle": "Kupon kodu",
+      "field": "Kupon kodu",
+      "placeholder": "Örn. LEZZET5",
+      "apply": "Uygula",
+      "invalid": "Bu kod geçerli değil ya da süresi dolmuş."
+    },
+    "summary": {
+      "subtotal": "Ara toplam",
+      "discount": "İndirim",
+      "total": "Toplam",
+      "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir."
+    },
+    "minimum": "Asgari sepet {minimum} — {missing} eksik",
+    "continue": "← Alışverişe devam et",
+    "checkout": "Siparişi tamamla →"
+  },
+  "fr": {
+    "title": "Panier",
+    "back": "Retour",
+    "count": "{n} articles",
+    "empty": {
+      "title": "Votre panier est vide",
+      "body": "Les saveurs d'Anatolie vous attendent.",
+      "cta": "Parcourir le catalogue"
+    },
+    "line": {
+      "bundle": "Panier prêt",
+      "unit": "{variant} · {price}",
+      "discounted": "Prix remisé",
+      "soldOut": "Épuisé — non livrable, à retirer",
+      "remove": "retirer",
+      "removeLabel": "Retirer {name} du panier",
+      "decrease": "Diminuer la quantité de {name}",
+      "increase": "Augmenter la quantité de {name}"
+    },
+    "coupon": {
+      "add": "Ajouter un code promo",
+      "applied": "{code} appliqué",
+      "remove": "retirer",
+      "removeLabel": "Retirer le code promo",
+      "sheetTitle": "Code promo",
+      "field": "Code promo",
+      "placeholder": "Ex. LEZZET5",
+      "apply": "Appliquer",
+      "invalid": "Ce code n'est pas valide ou a expiré."
+    },
+    "summary": {
+      "subtotal": "Sous-total",
+      "discount": "Remise",
+      "total": "Total",
+      "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse."
+    },
+    "minimum": "Panier minimum {minimum} — il manque {missing}",
+    "continue": "← Continuer mes achats",
+    "checkout": "Finaliser la commande →"
+  },
+  "de": {
+    "title": "Warenkorb",
+    "back": "Zurück",
+    "count": "{n} Artikel",
+    "empty": {
+      "title": "Ihr Warenkorb ist leer",
+      "body": "Die Aromen Anatoliens warten auf Sie.",
+      "cta": "Katalog ansehen"
+    },
+    "line": {
+      "bundle": "Fertiges Paket",
+      "unit": "{variant} · {price}",
+      "discounted": "Reduzierter Preis",
+      "soldOut": "Ausverkauft — nicht lieferbar, bitte entfernen",
+      "remove": "entfernen",
+      "removeLabel": "{name} aus dem Warenkorb entfernen",
+      "decrease": "Menge von {name} verringern",
+      "increase": "Menge von {name} erhöhen"
+    },
+    "coupon": {
+      "add": "Gutscheincode hinzufügen",
+      "applied": "{code} angewendet",
+      "remove": "entfernen",
+      "removeLabel": "Gutschein entfernen",
+      "sheetTitle": "Gutscheincode",
+      "field": "Gutscheincode",
+      "placeholder": "z. B. LEZZET5",
+      "apply": "Anwenden",
+      "invalid": "Dieser Code ist ungültig oder abgelaufen."
+    },
+    "summary": {
+      "subtotal": "Zwischensumme",
+      "discount": "Rabatt",
+      "total": "Gesamt",
+      "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt."
+    },
+    "minimum": "Mindestbestellwert {minimum} — es fehlen {missing}",
+    "continue": "← Weiter einkaufen",
+    "checkout": "Bestellung abschließen →"
+  }
+}

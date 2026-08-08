@@ -1,9 +1,10 @@
 // Kök layout. Unistyles tema kaydı uygulama girişinde BİR KEZ yüklenir (yan etkili import).
 import '@/theme/unistyles';
 
-import { useFonts } from 'expo-font';
+import { loadAsync } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import { useUnistyles } from 'react-native-unistyles';
 
 import { appFontAssets } from '@/theme/fonts';
@@ -24,16 +25,25 @@ import { appFontAssets } from '@/theme/fonts';
 export default function RootLayout() {
   const { theme } = useUnistyles();
 
-  /* FOUT KABUL (kararın açık hükmü): yükleme açılışı ENGELLEMEZ, splash uzatılmaz, dönüş değeri
-     render'ı dallandırmaz. Fontlar gelene kadar RN sistem fontuna düşer ve `fontWeight` orada
-     çalışmaya devam eder — yani ilk kare eksik değil, yalnız başka bir yazıyla çizilir.
-
-     HATA SESSİZ DEĞİL, GÖRÜNÜR: `useFonts` düşerse uygulama kalıcı olarak sistem fontunda kalır
-     ve bu ekranda derhâl bellidir. Kayıt DÜŞÜLEMİYOR çünkü mobil istemcinin log altyapısı henüz
-     yok (01-teknoloji §9 açık sorusu; `lib/api/client.ts` de aynı yerde duruyor) — `console`
-     bu paket için lint kapısında yasak ve `pino` node-only. Altyapı gelince ilk bağlanacak
-     yerlerden biri burasıdır. */
-  useFonts(appFontAssets);
+  /* FONT KAPISI — FOUT hükmü (Token Kararları #24) İKİ ölçümle düştü (08.08, ekrana basılan
+     teşhisle):
+     1. `useFonts(appFontAssets)` bu kurulumda yüklemeyi hiç TAMAMLAMIYOR (`isLoaded` iki kesitte
+        de false; aynı haritayla `loadAsync` anında başarılı) — hook, bu sürüm bileşiminde
+        (expo-font 57 + yeni mimari) etkisiz.
+     2. FOUT'un varsaydığı "yüklenince yeniden çizilir" akmıyor: navigatör ekranları kök
+        re-render'ına karşı MEMOIZE — kayıt tamamlansa bile açık ekran sistem fontunda kalıyor
+        (ekran-içi setState ile anında Lora'ya döndüğü kanıtlandı).
+     Bu yüzden KAPI: yerel varlıklar milisaniyelerde yükleniyor, splash zaten ekranda — ilk kare
+     fontlar hazırken çizilir. Yükleme DÜŞERSE kapı açılır ve uygulama sistem fontunda AÇIK kalır
+     (boş ekranda kilitlenmek yalanın büyüğü olurdu); kayıt düşülemiyor — log altyapısı yok
+     (01-teknoloji §9), altyapı gelince ilk bağlanacak yer burası. */
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    loadAsync(appFontAssets)
+      .then(() => setFontsReady(true))
+      .catch(() => setFontsReady(true));
+  }, []);
+  if (!fontsReady) return null;
 
   return (
     <>

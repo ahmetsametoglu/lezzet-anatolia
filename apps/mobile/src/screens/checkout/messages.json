@@ -1,0 +1,203 @@
+{
+  "tr": {
+    "title": "Siparişi tamamla",
+    "back": "Geri",
+    "hero": "Az kaldı — sofra kurulsun",
+    "signedIn": "✓ {name}",
+    "guest": {
+      "title": "Siparişinizi tamamlamak için hızlı doğrulama",
+      "body": "Şifre yok — birkaç saniyede doğrulanın, kaldığınız yerden devam edin.",
+      "cta": "Doğrulan ve devam et"
+    },
+    "address": {
+      "eyebrow": "Teslimat adresi",
+      "default": "varsayılan",
+      "add": "＋ Yeni adres ekle"
+    },
+    "blocked": {
+      "title": "Bu ürünler yalnız teslimat bölgemizde",
+      "body": "{names} kargoyla gönderilemiyor. Bölge içi bir adres seçin ya da bu ürünleri sepetten çıkarın."
+    },
+    "delivery": {
+      "eyebrow": "Teslimat",
+      "door": "Kapıya teslim",
+      "doorBody": "Bölge içi adreslere ücretsiz — günü siz seçin.",
+      "doorUnavailable": "Bu adres teslimat bölgemizin dışında.",
+      "shipping": "Soğuk zincir kargo",
+      "shippingBody": "2–4 iş günü · {fee}",
+      "shippingFree": "2–4 iş günü · {threshold} üzeri ücretsiz",
+      "dayLabel": "Teslimat günü: {day}"
+    },
+    "payment": {
+      "eyebrow": "Ödeme",
+      "online": "Online ödeme",
+      "onlineBody": "Kart ile güvenli ödeme.",
+      "onDelivery": "Kapıda ödeme",
+      "onDeliveryBody": "Yalnız kapıya teslimde — kurye kart ve nakit kabul eder.",
+      "transfer": "Havale / EFT",
+      "transferBody": "Ödemeniz görüldüğünde sipariş hazırlanmaya başlar."
+    },
+    "summary": {
+      "eyebrow": "Sipariş özeti",
+      "line": "{quantity}× {name}",
+      "subtotal": "Ara toplam",
+      "discount": "İndirim",
+      "delivery": "Teslimat",
+      "free": "Ücretsiz",
+      "total": "Genel toplam"
+    },
+    "marketing": "Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)",
+    "block": {
+      "login": "Devam etmek için hızlı doğrulama gerekli.",
+      "shipping": "Sepetinizdeki bazı ürünler kargoyla gönderilemez — bölge içi bir adres seçin.",
+      "day": "Teslimat günü seçin.",
+      "payment": "Ödeme yolu seçin."
+    },
+    "confirm": "Siparişi onayla · {total}",
+    "confirmed": {
+      "title": "Siparişiniz alındı!",
+      "reference": "Sipariş no: {reference}",
+      "delivery": "Teslimat",
+      "payment": "Ödeme",
+      "total": "Toplam",
+      "points": "✦ +{n} puan kazandınız",
+      "note": "Sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz.",
+      "orders": "Siparişlerimi görüntüle",
+      "home": "Alışverişe dön"
+    }
+  },
+  "fr": {
+    "title": "Finaliser la commande",
+    "back": "Retour",
+    "hero": "Presque fini — dressons la table",
+    "signedIn": "✓ {name}",
+    "guest": {
+      "title": "Vérification rapide pour finaliser",
+      "body": "Pas de mot de passe — vérifiez-vous en quelques secondes et reprenez où vous en étiez.",
+      "cta": "Se vérifier et continuer"
+    },
+    "address": {
+      "eyebrow": "Adresse de livraison",
+      "default": "par défaut",
+      "add": "＋ Ajouter une adresse"
+    },
+    "blocked": {
+      "title": "Ces produits restent dans notre zone de livraison",
+      "body": "{names} ne peut pas partir en colis. Choisissez une adresse dans la zone ou retirez ces produits du panier."
+    },
+    "delivery": {
+      "eyebrow": "Livraison",
+      "door": "Livraison à domicile",
+      "doorBody": "Gratuite dans la zone — vous choisissez le jour.",
+      "doorUnavailable": "Cette adresse est hors de notre zone de livraison.",
+      "shipping": "Colis chaîne du froid",
+      "shippingBody": "2–4 jours ouvrés · {fee}",
+      "shippingFree": "2–4 jours ouvrés · offert dès {threshold}",
+      "dayLabel": "Jour de livraison : {day}"
+    },
+    "payment": {
+      "eyebrow": "Paiement",
+      "online": "Paiement en ligne",
+      "onlineBody": "Paiement sécurisé par carte.",
+      "onDelivery": "Paiement à la livraison",
+      "onDeliveryBody": "Uniquement à domicile — le livreur accepte carte et espèces.",
+      "transfer": "Virement",
+      "transferBody": "La préparation démarre dès réception du paiement."
+    },
+    "summary": {
+      "eyebrow": "Récapitulatif",
+      "line": "{quantity}× {name}",
+      "subtotal": "Sous-total",
+      "discount": "Remise",
+      "delivery": "Livraison",
+      "free": "Offerte",
+      "total": "Total général"
+    },
+    "marketing": "Je souhaite être informé(e) des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
+    "block": {
+      "login": "Une vérification rapide est nécessaire pour continuer.",
+      "shipping": "Certains produits ne peuvent pas partir en colis — choisissez une adresse dans la zone.",
+      "day": "Choisissez un jour de livraison.",
+      "payment": "Choisissez un mode de paiement."
+    },
+    "confirm": "Confirmer la commande · {total}",
+    "confirmed": {
+      "title": "Commande reçue !",
+      "reference": "N° de commande : {reference}",
+      "delivery": "Livraison",
+      "payment": "Paiement",
+      "total": "Total",
+      "points": "✦ +{n} points gagnés",
+      "note": "Suivez l'état de votre commande par e-mail et WhatsApp.",
+      "orders": "Voir mes commandes",
+      "home": "Retour aux achats"
+    }
+  },
+  "de": {
+    "title": "Bestellung abschließen",
+    "back": "Zurück",
+    "hero": "Fast geschafft — decken wir den Tisch",
+    "signedIn": "✓ {name}",
+    "guest": {
+      "title": "Schnelle Verifizierung zum Abschluss",
+      "body": "Kein Passwort — in Sekunden verifizieren und weitermachen.",
+      "cta": "Verifizieren und fortfahren"
+    },
+    "address": {
+      "eyebrow": "Lieferadresse",
+      "default": "Standard",
+      "add": "＋ Neue Adresse"
+    },
+    "blocked": {
+      "title": "Diese Produkte bleiben in unserem Liefergebiet",
+      "body": "{names} kann nicht als Paket versendet werden. Wählen Sie eine Adresse im Liefergebiet oder entfernen Sie diese Produkte."
+    },
+    "delivery": {
+      "eyebrow": "Lieferung",
+      "door": "Lieferung an die Tür",
+      "doorBody": "Im Liefergebiet kostenlos — Sie wählen den Tag.",
+      "doorUnavailable": "Diese Adresse liegt außerhalb unseres Liefergebiets.",
+      "shipping": "Kühlketten-Versand",
+      "shippingBody": "2–4 Werktage · {fee}",
+      "shippingFree": "2–4 Werktage · ab {threshold} kostenlos",
+      "dayLabel": "Liefertag: {day}"
+    },
+    "payment": {
+      "eyebrow": "Zahlung",
+      "online": "Online bezahlen",
+      "onlineBody": "Sichere Kartenzahlung.",
+      "onDelivery": "Zahlung bei Lieferung",
+      "onDeliveryBody": "Nur bei Lieferung an die Tür — Karte und Bargeld möglich.",
+      "transfer": "Überweisung",
+      "transferBody": "Die Vorbereitung startet nach Zahlungseingang."
+    },
+    "summary": {
+      "eyebrow": "Bestellübersicht",
+      "line": "{quantity}× {name}",
+      "subtotal": "Zwischensumme",
+      "discount": "Rabatt",
+      "delivery": "Lieferung",
+      "free": "Kostenlos",
+      "total": "Gesamtsumme"
+    },
+    "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional — ohne Einfluss auf Ihre Bestellung.)",
+    "block": {
+      "login": "Zum Fortfahren ist eine schnelle Verifizierung nötig.",
+      "shipping": "Einige Produkte können nicht versendet werden — wählen Sie eine Adresse im Liefergebiet.",
+      "day": "Wählen Sie einen Liefertag.",
+      "payment": "Wählen Sie eine Zahlungsart."
+    },
+    "confirm": "Bestellung bestätigen · {total}",
+    "confirmed": {
+      "title": "Bestellung eingegangen!",
+      "reference": "Bestellnummer: {reference}",
+      "delivery": "Lieferung",
+      "payment": "Zahlung",
+      "total": "Gesamt",
+      "points": "✦ +{n} Punkte erhalten",
+      "note": "Den Status Ihrer Bestellung verfolgen Sie per E-Mail und WhatsApp.",
+      "orders": "Meine Bestellungen ansehen",
+      "home": "Weiter einkaufen"
+    }
+  }
+}

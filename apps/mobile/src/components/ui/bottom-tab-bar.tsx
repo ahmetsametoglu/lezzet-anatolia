@@ -139,14 +139,16 @@ const styles = StyleSheet.create((theme, rt) => ({
   /** Müşteri: mürekkep üst çizgi + tasarımın 6 px alt dolgusu (v3). */
   customerBar: {
     borderTopColor: theme.colors.ink,
-    /* Alt güvenli alan çubuğun İÇİNDE: ana ekran çubuğu (home indicator) etiketin üstüne binmesin.
-       Tasarımın alt dolgusu onun üstüne eklenir. */
-    paddingBottom: rt.insets.bottom + theme.space.sm,
+    /* Alt güvenli alan çubuğun İÇİNDE ama tasarım dolgusuyla TOPLANMAZ — ikisinin büyüğü yeter
+       (kullanıcı ölçümü 08.08: Android'de -inset 0- yükseklik idealdi, iOS'ta toplam çubuğu
+       tasarımdan belirgin yükseltiyordu). Home indicator alanı zaten dolgu görevi görür. */
+    paddingBottom: Math.max(rt.insets.bottom, theme.space.sm),
   },
   /** Operasyon: kum ayracı (v2 `#ddd6c4` → `sand-300`) + 10 px alt dolgu (v2:809). */
   operationsBar: {
     borderTopColor: operationsTheme.colors['sand-300'],
-    paddingBottom: rt.insets.bottom + theme.space.lg,
+    // Aynı kural: inset ile dolgunun büyüğü (gerekçe üstte).
+    paddingBottom: Math.max(rt.insets.bottom, theme.space.lg),
   },
   /** Bulanıklığın üstündeki krem katman — gerekçesi `AppBar`da, aynı yüzeyin ikizi. */
   glass: {

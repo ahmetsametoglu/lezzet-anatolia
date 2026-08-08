@@ -1,0 +1,245 @@
+{
+  "tr": {
+    "back": "Geri",
+    "status": {
+      "open": "Aldık, sıradayız",
+      "in_progress": "İlgileniyoruz",
+      "resolved": "Çözüldü"
+    },
+    "type": {
+      "damaged": "Bozuk ürün",
+      "missing": "Eksik ürün",
+      "question": "Soru",
+      "other": "Diğer"
+    },
+    "list": {
+      "title": "Taleplerim",
+      "new": "＋ Yeni",
+      "newLabel": "Yeni talep oluştur",
+      "meta": "{scope} · {date}",
+      "orderScope": "Sipariş {reference}",
+      "generalScope": "Genel",
+      "open": "{type} talebini aç",
+      "empty": {
+        "title": "Henüz talebiniz yok",
+        "body": "Bir sorunuz ya da sorununuz olursa buradan yazabilirsiniz.",
+        "cta": "Bize yazın"
+      }
+    },
+    "detail": {
+      "generalScope": "Genel talep",
+      "resolution": "✓ Sonuç: {value}",
+      "notice": "Cevap geldiğinde e-posta ile haber veririz.",
+      "fromCustomer": "Siz",
+      "fromTeam": "Lezzet Anatolia",
+      "reply": {
+        "placeholder": "Mesaj yazın…",
+        "label": "Mesaj yazın",
+        "send": "Gönder"
+      },
+      "notFound": "Bu talebi bulamadık",
+      "notFoundBody": "Bağlantı eski olabilir; talebi listeden açmayı deneyin.",
+      "notFoundCta": "Taleplerim"
+    },
+    "new": {
+      "title": "Bize yazın",
+      "scope": {
+        "question": "Bir siparişle mi ilgili?",
+        "body": "Sorununuzu doğru yere iletmemiz için soruyoruz.",
+        "yes": "Evet, bir siparişimle ilgili",
+        "no": "Hayır, genel bir konu"
+      },
+      "order": {
+        "question": "Hangi sipariş?",
+        "pick": "{reference} siparişini seç",
+        "none": "Henüz siparişiniz yok — doğrudan yazabilirsiniz."
+      },
+      "items": {
+        "eyebrow": "Sipariş {reference}",
+        "question": "Hangi ürünlerle ilgili?",
+        "line": "{quantity}× {name}"
+      },
+      "typeTitle": "Konu",
+      "message": {
+        "title": "Bize anlatın",
+        "placeholder": "Kısaca anlatın — ne oldu, nasıl yardımcı olabiliriz?",
+        "label": "Talebinizin açıklaması",
+        "error": "Kısa bir açıklama yazın."
+      },
+      "photo": {
+        "add": "Fotoğraf ekle",
+        "added": "✓ 1 fotoğraf eklendi",
+        "note": "Fotoğraf, özellikle hasarlı ürünlerde çözümü hızlandırır — zorunlu değil."
+      },
+      "submit": "Gönder",
+      "sent": {
+        "title": "Talebiniz alındı",
+        "body": "Cevabımızı e-posta ile bildireceğiz.",
+        "summary": "{type} · {scope}",
+        "cta": "Taleplerim"
+      }
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "status": {
+      "open": "Reçue, en attente",
+      "in_progress": "En cours",
+      "resolved": "Résolue"
+    },
+    "type": {
+      "damaged": "Produit abîmé",
+      "missing": "Article manquant",
+      "question": "Question",
+      "other": "Autre"
+    },
+    "list": {
+      "title": "Mes demandes",
+      "new": "＋ Nouvelle",
+      "newLabel": "Créer une demande",
+      "meta": "{scope} · {date}",
+      "orderScope": "Commande {reference}",
+      "generalScope": "Général",
+      "open": "Ouvrir la demande « {type} »",
+      "empty": {
+        "title": "Aucune demande pour l'instant",
+        "body": "Une question ou un souci ? Écrivez-nous ici.",
+        "cta": "Écrivez-nous"
+      }
+    },
+    "detail": {
+      "generalScope": "Demande générale",
+      "resolution": "✓ Résultat : {value}",
+      "notice": "Nous vous préviendrons par e-mail dès notre réponse.",
+      "fromCustomer": "Vous",
+      "fromTeam": "Lezzet Anatolia",
+      "reply": {
+        "placeholder": "Écrivez un message…",
+        "label": "Écrivez un message",
+        "send": "Envoyer"
+      },
+      "notFound": "Demande introuvable",
+      "notFoundBody": "Le lien est peut-être ancien ; ouvrez la demande depuis la liste.",
+      "notFoundCta": "Mes demandes"
+    },
+    "new": {
+      "title": "Écrivez-nous",
+      "scope": {
+        "question": "Est-ce lié à une commande ?",
+        "body": "Nous le demandons pour orienter votre demande au bon endroit.",
+        "yes": "Oui, à l'une de mes commandes",
+        "no": "Non, un sujet général"
+      },
+      "order": {
+        "question": "Quelle commande ?",
+        "pick": "Choisir la commande {reference}",
+        "none": "Vous n'avez pas encore de commande — écrivez-nous directement."
+      },
+      "items": {
+        "eyebrow": "Commande {reference}",
+        "question": "Quels articles sont concernés ?",
+        "line": "{quantity}× {name}"
+      },
+      "typeTitle": "Sujet",
+      "message": {
+        "title": "Expliquez-nous",
+        "placeholder": "Racontez brièvement — que s'est-il passé, comment pouvons-nous aider ?",
+        "label": "Description de votre demande",
+        "error": "Écrivez une courte description."
+      },
+      "photo": {
+        "add": "Ajouter une photo",
+        "added": "✓ 1 photo ajoutée",
+        "note": "Une photo accélère la résolution, surtout pour un produit abîmé — facultatif."
+      },
+      "submit": "Envoyer",
+      "sent": {
+        "title": "Demande bien reçue",
+        "body": "Nous vous répondrons par e-mail.",
+        "summary": "{type} · {scope}",
+        "cta": "Mes demandes"
+      }
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "status": {
+      "open": "Erhalten, in Bearbeitung geplant",
+      "in_progress": "Wir kümmern uns darum",
+      "resolved": "Gelöst"
+    },
+    "type": {
+      "damaged": "Beschädigtes Produkt",
+      "missing": "Fehlender Artikel",
+      "question": "Frage",
+      "other": "Sonstiges"
+    },
+    "list": {
+      "title": "Meine Anfragen",
+      "new": "＋ Neu",
+      "newLabel": "Neue Anfrage erstellen",
+      "meta": "{scope} · {date}",
+      "orderScope": "Bestellung {reference}",
+      "generalScope": "Allgemein",
+      "open": "Anfrage „{type}“ öffnen",
+      "empty": {
+        "title": "Noch keine Anfragen",
+        "body": "Bei Fragen oder Problemen schreiben Sie uns einfach hier.",
+        "cta": "Schreiben Sie uns"
+      }
+    },
+    "detail": {
+      "generalScope": "Allgemeine Anfrage",
+      "resolution": "✓ Ergebnis: {value}",
+      "notice": "Sobald wir antworten, benachrichtigen wir Sie per E-Mail.",
+      "fromCustomer": "Sie",
+      "fromTeam": "Lezzet Anatolia",
+      "reply": {
+        "placeholder": "Nachricht schreiben…",
+        "label": "Nachricht schreiben",
+        "send": "Senden"
+      },
+      "notFound": "Anfrage nicht gefunden",
+      "notFoundBody": "Der Link ist womöglich veraltet; öffnen Sie die Anfrage über die Liste.",
+      "notFoundCta": "Meine Anfragen"
+    },
+    "new": {
+      "title": "Schreiben Sie uns",
+      "scope": {
+        "question": "Geht es um eine Bestellung?",
+        "body": "Wir fragen, damit Ihre Anfrage an der richtigen Stelle landet.",
+        "yes": "Ja, um eine meiner Bestellungen",
+        "no": "Nein, ein allgemeines Thema"
+      },
+      "order": {
+        "question": "Welche Bestellung?",
+        "pick": "Bestellung {reference} auswählen",
+        "none": "Sie haben noch keine Bestellung — schreiben Sie uns direkt."
+      },
+      "items": {
+        "eyebrow": "Bestellung {reference}",
+        "question": "Um welche Artikel geht es?",
+        "line": "{quantity}× {name}"
+      },
+      "typeTitle": "Thema",
+      "message": {
+        "title": "Erzählen Sie es uns",
+        "placeholder": "Kurz beschrieben — was ist passiert, wie können wir helfen?",
+        "label": "Beschreibung Ihrer Anfrage",
+        "error": "Schreiben Sie eine kurze Beschreibung."
+      },
+      "photo": {
+        "add": "Foto hinzufügen",
+        "added": "✓ 1 Foto hinzugefügt",
+        "note": "Ein Foto beschleunigt die Lösung, besonders bei beschädigter Ware — optional."
+      },
+      "submit": "Senden",
+      "sent": {
+        "title": "Anfrage erhalten",
+        "body": "Wir antworten Ihnen per E-Mail.",
+        "summary": "{type} · {scope}",
+        "cta": "Meine Anfragen"
+      }
+    }
+  }
+}

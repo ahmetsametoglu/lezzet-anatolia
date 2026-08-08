@@ -1,0 +1,224 @@
+{
+  "tr": {
+    "greeting": {
+      "morning": "Günaydın",
+      "afternoon": "Merhaba",
+      "evening": "İyi akşamlar",
+      "guest": "Hoş geldiniz",
+      "withName": "{greeting}, {name}"
+    },
+    "header": {
+      "points": "✦ {n}",
+      "pointsLabel": "{n} puanınız — hesabınıza gidin",
+      "wholesale": "TOPTAN",
+      "notifications": "Bildirimler",
+      "notificationsUnread": "Bildirimler, {n} okunmamış",
+      "location": "{postal} ▾",
+      "locationLabel": "Teslimat bölgesi: {postal}"
+    },
+    "liveOrder": {
+      "title": "Siparişiniz {status} · {reference}",
+      "track": "TAKİP ›",
+      "status": {
+        "received": "alındı",
+        "preparing": "hazırlanıyor",
+        "on_the_way": "yolda",
+        "delivered": "teslim edildi",
+        "cancelled": "iptal edildi",
+        "returning": "iade sürecinde"
+      }
+    },
+    "lastOrder": {
+      "title": "Geçen siparişinizi tekrarlayın",
+      "body": "{reference} · {total} — tek dokunuşla sepete"
+    },
+    "flash": {
+      "eyebrow": "GÜNÜN FIRSATI · {time} KALDI",
+      "ended": "GÜNÜN FIRSATI · SÜRE DOLDU",
+      "add": "Sepete +",
+      "addLabel": "{name} ürününü sepete ekle"
+    },
+    "offers": {
+      "discount": "−%{n}",
+      "limited": "STOKLA SINIRLI · YALNIZ BUGÜN"
+    },
+    "collections": {
+      "eyebrow": "Koleksiyonlar",
+      "count": "{n} çeşit ›"
+    },
+    "featured": {
+      "eyebrow": "Vitrindekiler",
+      "title": "Bu haftanın seçkisi",
+      "action": "Tüm katalog ›"
+    },
+    "recipes": {
+      "eyebrow": "Sofradan fikirler",
+      "title": "Bu sofra nasıl kurulur?",
+      "time": "{n} dk",
+      "meta": "{n} malzeme · Tarifi gör ›"
+    },
+    "packages": {
+      "eyebrow": "Hazır paketler",
+      "badge": "HAZIR PAKET · {n} çeşit"
+    },
+    "discover": {
+      "title": "Keşif — yeni lezzetleri ilk siz oylayın ✦",
+      "body": "Her tamamlanan tur +10 puan kazandırır."
+    },
+    "professional": {
+      "title": "Restoran ya da market misiniz?",
+      "body": "Toptan fiyatlar için profesyonel hesap açın."
+    },
+    "cart": {
+      "open": "Sepeti aç, {n} ürün"
+    }
+  },
+  "fr": {
+    "greeting": {
+      "morning": "Bonjour",
+      "afternoon": "Bonjour",
+      "evening": "Bonsoir",
+      "guest": "Bienvenue",
+      "withName": "{greeting}, {name}"
+    },
+    "header": {
+      "points": "✦ {n}",
+      "pointsLabel": "Vos {n} points — aller au compte",
+      "wholesale": "GROS",
+      "notifications": "Notifications",
+      "notificationsUnread": "Notifications, {n} non lues",
+      "location": "{postal} ▾",
+      "locationLabel": "Zone de livraison : {postal}"
+    },
+    "liveOrder": {
+      "title": "Votre commande est {status} · {reference}",
+      "track": "SUIVRE ›",
+      "status": {
+        "received": "reçue",
+        "preparing": "en préparation",
+        "on_the_way": "en route",
+        "delivered": "livrée",
+        "cancelled": "annulée",
+        "returning": "en retour"
+      }
+    },
+    "lastOrder": {
+      "title": "Recommandez votre dernière commande",
+      "body": "{reference} · {total} — au panier en un geste"
+    },
+    "flash": {
+      "eyebrow": "OFFRE DU JOUR · {time} RESTANT",
+      "ended": "OFFRE DU JOUR · TERMINÉE",
+      "add": "Au panier +",
+      "addLabel": "Ajouter {name} au panier"
+    },
+    "offers": {
+      "discount": "−{n} %",
+      "limited": "STOCK LIMITÉ · AUJOURD'HUI SEULEMENT"
+    },
+    "collections": {
+      "eyebrow": "Collections",
+      "count": "{n} produits ›"
+    },
+    "featured": {
+      "eyebrow": "En vitrine",
+      "title": "La sélection de la semaine",
+      "action": "Tout le catalogue ›"
+    },
+    "recipes": {
+      "eyebrow": "Idées de table",
+      "title": "Comment dresser cette table ?",
+      "time": "{n} min",
+      "meta": "{n} ingrédients · Voir la recette ›"
+    },
+    "packages": {
+      "eyebrow": "Paniers prêts",
+      "badge": "PANIER PRÊT · {n} produits"
+    },
+    "discover": {
+      "title": "Découverte — votez pour les nouveautés ✦",
+      "body": "Chaque tour terminé vous rapporte +10 points."
+    },
+    "professional": {
+      "title": "Vous êtes restaurant ou épicerie ?",
+      "body": "Ouvrez un compte professionnel pour les tarifs de gros."
+    },
+    "cart": {
+      "open": "Ouvrir le panier, {n} articles"
+    }
+  },
+  "de": {
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Hallo",
+      "evening": "Guten Abend",
+      "guest": "Willkommen",
+      "withName": "{greeting}, {name}"
+    },
+    "header": {
+      "points": "✦ {n}",
+      "pointsLabel": "Ihre {n} Punkte — zum Konto",
+      "wholesale": "GROSSHANDEL",
+      "notifications": "Benachrichtigungen",
+      "notificationsUnread": "Benachrichtigungen, {n} ungelesen",
+      "location": "{postal} ▾",
+      "locationLabel": "Liefergebiet: {postal}"
+    },
+    "liveOrder": {
+      "title": "Ihre Bestellung ist {status} · {reference}",
+      "track": "VERFOLGEN ›",
+      "status": {
+        "received": "eingegangen",
+        "preparing": "in Vorbereitung",
+        "on_the_way": "unterwegs",
+        "delivered": "geliefert",
+        "cancelled": "storniert",
+        "returning": "in Rücksendung"
+      }
+    },
+    "lastOrder": {
+      "title": "Letzte Bestellung wiederholen",
+      "body": "{reference} · {total} — mit einem Tipp in den Warenkorb"
+    },
+    "flash": {
+      "eyebrow": "ANGEBOT DES TAGES · NOCH {time}",
+      "ended": "ANGEBOT DES TAGES · BEENDET",
+      "add": "In den Korb +",
+      "addLabel": "{name} in den Warenkorb legen"
+    },
+    "offers": {
+      "discount": "−{n} %",
+      "limited": "SOLANGE VORRAT REICHT · NUR HEUTE"
+    },
+    "collections": {
+      "eyebrow": "Kollektionen",
+      "count": "{n} Sorten ›"
+    },
+    "featured": {
+      "eyebrow": "Im Schaufenster",
+      "title": "Die Auswahl der Woche",
+      "action": "Ganzer Katalog ›"
+    },
+    "recipes": {
+      "eyebrow": "Ideen für den Tisch",
+      "title": "Wie deckt man diesen Tisch?",
+      "time": "{n} Min.",
+      "meta": "{n} Zutaten · Rezept ansehen ›"
+    },
+    "packages": {
+      "eyebrow": "Fertige Pakete",
+      "badge": "FERTIGES PAKET · {n} Sorten"
+    },
+    "discover": {
+      "title": "Entdecken — stimmen Sie zuerst ab ✦",
+      "body": "Jede abgeschlossene Runde bringt +10 Punkte."
+    },
+    "professional": {
+      "title": "Sind Sie Restaurant oder Markt?",
+      "body": "Eröffnen Sie ein Geschäftskonto für Großhandelspreise."
+    },
+    "cart": {
+      "open": "Warenkorb öffnen, {n} Artikel"
+    }
+  }
+}
