@@ -221,6 +221,23 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
                 uploadDisabledHint="Görsel için paketi önce kaydedin (adres adından türüyor)."
               />
             </FormSection>
+
+            {/* ── VİTRİNDE (05.18) — SOL sütun, görselin altı (kullanıcı kararı 08.08) ──────
+                Altlıkta değil: orada "Durum" var ve iki etiketli kontrol yan yana taşıyor
+                (kategori diyaloğunda ölçüldü — ikincisi "Kaydet"in altına giriyor ve
+                tıklanamıyordu). Sağ sütunda da değil: orası fiyat/sunum ve kalemler, yani paketin
+                TİCARİ tarafı; vitrin işareti bir yayın/seçki kararı ve görselle aynı sütunda
+                durması onu "bu paket dışarıda nasıl görünüyor" grubuna sokuyor.
+
+                Satırdaki hızlı anahtarın ikizi; buradaki asıl olarak OLUŞTURMA içindir — yeni
+                pakette satır henüz yoktur. */}
+            <FormSection title="Vitrin">
+              <FormSwitch control={control} name="isFeatured" label="Vitrinde göster (ana sayfa)" />
+              <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+                Satışta olmaktan ayrıdır: satıştaki her paket paketler sayfasında görünür, ana sayfada yalnız burada
+                işaretlenenler. Satışta olmayan paket işaretli olsa da vitrine çıkmaz.
+              </span>
+            </FormSection>
           </div>
   
           <div className="flex flex-col gap-4">
@@ -269,18 +286,6 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
                 dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
               </span>
 
-              {/* VİTRİNDE (05.18) — altlıkta DEĞİL: orada "Durum" var ve ikisi yan yana taşıyor
-                  (kategori diyaloğunda ölçüldü, ikinci anahtar Kaydet'in altına giriyordu). Yeri
-                  işlevsel olarak da doğru: satışta olmak kayda eşlik eden karar, vitrin işareti
-                  kaydın kendi özelliği. Satırdaki hızlı anahtarın ikizi; buradaki asıl olarak
-                  OLUŞTURMA içindir — yeni pakette satır henüz yoktur. */}
-              <div className="flex flex-col gap-1.5 border-t border-ops-line-soft pt-3">
-                <FormSwitch control={control} name="isFeatured" label="Vitrinde göster (ana sayfa)" />
-                <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
-                  Satışta olmaktan ayrıdır: satıştaki her paket paketler sayfasında görünür, ana sayfada yalnız burada
-                  işaretlenenler. Satışta olmayan paket işaretli olsa da vitrine çıkmaz.
-                </span>
-              </div>
             </FormSection>
   
             {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}
