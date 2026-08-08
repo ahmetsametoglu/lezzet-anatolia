@@ -1,4 +1,4 @@
-import type { WarehouseReason } from '@/lib/stock/adjustment';
+import type { StockAdjustmentReason } from '@lezzet/types';
 
 /**
  * Stoktan düşme masasının sözlüğü (10.5).
@@ -7,12 +7,19 @@ import type { WarehouseReason } from '@/lib/stock/adjustment';
  * *"stoktan düş"*, *"stoğa geri al"*, *"son tarihi geçti"* yazar.
  */
 
-/** Dört sebep, depocunun dilinde. `return_restock` YOK — admin istisnası, tipte de yok. */
-export const REASON_LABEL: Record<WarehouseReason, string> = {
+/**
+ * Sebeplerin depocu dilindeki karşılığı.
+ *
+ * **Sözlük beş, seçenek dört:** `return_restock` depocuya SUNULMAZ (yazma tipi `WarehouseReason`
+ * onu dışlıyor) ama adminin girdiği bir geri-alma kaydı aynı günün defterinde görünebilir ve
+ * okunabilmeli. Sözlüğü dar tutsaydık o satır ekranda ham enum adıyla çıkardı.
+ */
+export const REASON_LABEL: Record<StockAdjustmentReason, string> = {
   expired: 'Son tarihi geçti',
   damaged: 'Hasar',
   count_diff: 'Sayım farkı',
   lost: 'Kayıp',
+  return_restock: 'İade — stoğa geri alındı',
 };
 
 export const ADJ_NOTES = {

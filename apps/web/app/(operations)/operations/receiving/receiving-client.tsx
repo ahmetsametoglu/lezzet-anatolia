@@ -6,6 +6,7 @@ import { titleOf } from '@/lib/catalog/title';
 import { openIntakeFormAction, receiveGoodsAction } from './receiving-actions';
 import { ReceivingDesktop } from './receiving.desktop';
 import { FinishDialog } from './finish-dialog';
+import { FreeIntake } from './free-intake';
 import type { IntakeRow, ReceivingData, ReceiveOutcome } from './receiving-types';
 
 /**
@@ -31,9 +32,17 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
   const [rows, setRows] = useState<IntakeRow[]>([]);
   const [finishing, setFinishing] = useState(false);
   const [outcome, setOutcome] = useState<ReceiveOutcome | null>(null);
+  /**
+   * Siparişsiz kabul modu. Sipariş seçimiyle **birbirini dışlar**: aynı formda hem PO kalemleri
+   * hem serbest satırlar olsaydı, kaydederken hangisinin siparişe sayılacağı belirsiz kalırdı —
+   * ve fark raporu o belirsizliği sessizce bir tarafa yazardı.
+   */
+  const [freeMode, setFreeMode] = useState(false);
+  const [supplierId, setSupplierId] = useState('');
 
   const select = (purchaseOrderId: string | null) => {
     setSelectedId(purchaseOrderId);
+    setFreeMode(false);
     setRows([]);
     setError(null);
     setOutcome(null);
@@ -72,8 +81,10 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
     startTransition(async () => {
       const { data: result, error: failed } = await receiveGoodsAction({
         warehouseId,
-        purchaseOrderId: selectedId,
-        supplierId: null,
+        // Siparişsiz kabulde PO YOK ve tedarikçi elle seçilmiş: kapı bu yolda fark üretmiyor,
+        // çünkü karşılaştırılacak bir sipariş yok.
+        purchaseOrderId: freeMode ? null : selectedId,
+        supplierId: freeMode ? supplierId || null : null,
         note: null,
         // Yalnız GİRİLMİŞ satırlar: boş bırakılan ("henüz saymadım") ve "gelmedi" işaretli satırlar
         // gönderilmiyor. İkincisinin kaydı adet DEĞİL, farkın kendisidir — PO kapanışında eksik
@@ -112,6 +123,39 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
         error={error}
         loading={loading}
         onFinish={() => setFinishing(true)}
+        freeMode={freeMode}
+        onFreeMode={() => {
+          setFreeMode(true);
+          setSelectedId(null);
+          setRows([]);
+          setError(null);
+          setOutcome(null);
+        }}
+        free={
+          <FreeIntake
+            suppliers={data.suppliers}
+            rows={rows}
+            supplierId={supplierId}
+            onSupplier={setSupplierId}
+            onAddRow={(variantId, title) =>
+              setRows((current) =>
+                // Aynı varyant iki kez eklenmez: farklı son tarih ayrı satır olurdu ama o zaman
+                // ayrı bir varyant satırı değil, ikinci bir GİRİŞ gerekir — bugün bu ekran tek
+                // satır/varyant çalışıyor ve ikizini sessizce eklemek adetleri toplardı.
+                current.some((row) => row.variantId === variantId)
+                  ? current
+                  : [
+                      ...current,
+                      { variantId, title, expectedQty: null, receivedQty: null, expiryDate: '', lotNumber: '', location: '', isMissing: false },
+                    ],
+              )
+            }
+            onRow={patchRow}
+            onRemoveRow={(variantId) => setRows((current) => current.filter((row) => row.variantId !== variantId))}
+            busy={busy}
+            onFinish={() => setFinishing(true)}
+          />
+        }
       />
 
       {finishing ? (

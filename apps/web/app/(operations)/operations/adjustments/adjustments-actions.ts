@@ -26,7 +26,7 @@ export async function recordAdjustmentAction(input: {
       lines: input.lines,
       reason: input.reason,
       note: input.note,
-      actorId: user.id,
+      actorId: user.profileId,
     });
 
     if (result.status === 'empty') throw new Error('Düşülecek satır yok — parti ve adet seçin.');

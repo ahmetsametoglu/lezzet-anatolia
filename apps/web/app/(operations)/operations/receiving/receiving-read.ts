@@ -66,5 +66,8 @@ export async function readReceiving(scope: WarehouseScope): Promise<ReceivingDat
     warehouseId: singleId,
     warehouseName: single?.name ?? null,
     warehouseOptions: warehouses.map((warehouse) => ({ id: warehouse.id, name: warehouse.name })),
+    // Aynı okumadan: tedarikçi adları hem bekleyen kartlarda hem siparişsiz kabulün seçicisinde
+    // kullanılıyor, ikinci bir tur açmaya gerek yok.
+    suppliers: suppliers.filter((supplier) => supplier.isActive).map((supplier) => ({ id: supplier.id, name: supplier.name })),
   };
 }

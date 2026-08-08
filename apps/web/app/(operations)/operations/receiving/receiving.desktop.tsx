@@ -31,9 +31,27 @@ interface ReceivingViewProps {
   error: string | null;
   loading: boolean;
   onFinish: () => void;
+  /** Siparişsiz kabul modu — sipariş seçimiyle birbirini dışlar. */
+  freeMode: boolean;
+  onFreeMode: () => void;
+  /** Siparişsiz kabul formu; mod açıkken sağ sütunu o doldurur. */
+  free: React.ReactNode;
 }
 
-export function ReceivingDesktop({ data, selectedId, onSelect, rows, onRow, busy, error, loading, onFinish }: ReceivingViewProps) {
+export function ReceivingDesktop({
+  data,
+  selectedId,
+  onSelect,
+  rows,
+  onRow,
+  busy,
+  error,
+  loading,
+  onFinish,
+  freeMode,
+  onFreeMode,
+  free,
+}: ReceivingViewProps) {
   const selected = data.pending.find((purchase) => purchase.purchaseOrderId === selectedId) ?? null;
   const girilen = rows.filter((row) => row.receivedQty !== null || row.isMissing).length;
 
@@ -65,6 +83,13 @@ export function ReceivingDesktop({ data, selectedId, onSelect, rows, onRow, busy
             {data.pending.length === 0 ? (
               <li className="px-5 py-4 font-ops-body text-ops-xs leading-[1.55] text-ops-muted">{RECEIVING_NOTES.empty}</li>
             ) : null}
+            {/* "Boş formla kabul" listenin ALTINDA: siparişsiz alım istisnadır, önce bekleyen
+                siparişlere bakılır. Üstte olsaydı varsayılan yol gibi okunurdu. */}
+            <li className="border-b border-ops-line-soft px-5 py-3">
+              <Button variant={freeMode ? 'primary' : 'secondary'} size="sm" fullWidth onClick={onFreeMode} disabled={busy}>
+                + Boş formla kabul
+              </Button>
+            </li>
           </ul>
           <p className="border-t border-ops-line-soft bg-ops-subtle px-5 py-2.5 font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
             {RECEIVING_NOTES.noWarehouseFilter}
@@ -72,7 +97,9 @@ export function ReceivingDesktop({ data, selectedId, onSelect, rows, onRow, busy
         </div>
 
         <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-panel">
-          {loading ? (
+          {freeMode ? (
+            free
+          ) : loading ? (
             <p className="px-5 py-6 font-ops-body text-ops-sm text-ops-muted">Sipariş kalemleri okunuyor…</p>
           ) : selected ? (
             <IntakeTable

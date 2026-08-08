@@ -1,10 +1,13 @@
 import 'server-only';
-import { StockService, WarehouseService, serviceDb } from '@lezzet/database';
+import { StockAdjustmentDetailService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
 import type { WarehouseScope } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import type { AdjustmentsData, BatchOption, TodayEntry } from './adjustments-types';
+
+/** Şeridin tavanı — bir günün düzeltmeleri doğal tavanlı ama sonsuz değil. */
+const TODAY_LIMIT = 30;
 
 /**
  * **Stoktan düşme masasının okuması** (10.5) — `design/project/Operasyon - Depo Imha Sayim.dc.html`.
@@ -46,24 +49,32 @@ export async function readAdjustments(scope: WarehouseScope): Promise<Adjustment
   }));
 
   /**
-   * **Bugünün kayıtları BUGÜN OKUNAMIYOR** ve boş dizi bir veri değil, bir BOŞLUK.
+   * Bugünün kayıtları — *"girdim mi girmedim mi"* belirsizliği kalmasın (tasarım §2).
    *
-   * Okumanın kapısı `StockAdjustmentDetailService.listPage` (ürün adı ve parti künyesi gömülü
-   * geliyor) ama sınıf `@lezzet/database`ten **dışa verilmemiş** — `StockAdjustmentService` var,
-   * detay sınıfı yok. Paket başka şeridin alanı; export'u kendim eklemedim, talep açtım
-   * (`docs/talep/arka-uc-stok-duzeltme-detay-servisi-export.md`).
-   *
-   * Elimdeki `StockAdjustmentService.listByStock` parti bazlı — "bugün ne düştüm" sorusunun cevabı
-   * değil ve her parti için ayrı çağrı N+1 olurdu. Uydurma bir liste (ör. yalnız son kayıt) da
-   * çizilmedi: tasarımın bu bölümünün bütün amacı *"girdim mi girmedim mi"* belirsizliğini
-   * kaldırmak; yarım bir liste o belirsizliği kaldırmaz, gizler.
-   * BEKLEYEN(10.5)
+   * **Tavan GÖRÜNÜR, sessiz değil:** okuma keyset sayfalı ve `nextCursor` dönüyor. Bu şerit
+   * doğal tavanlı bir liste sayılıyor (bir günün düzeltmeleri, `CLAUDE §1`) ama çok düzeltme
+   * girilen bir depoda imleç gerçekten dolabilir — arka uç şeridi bunu ayrıca uyardı. Kuyruğu
+   * sessizce yutmuyoruz: ekran son N kaydı gösterdiğini yazıyor (`hasMore`).
    */
-  const entries: TodayEntry[] = [];
+  const page = await new StockAdjustmentDetailService(db).listPage({ from: startOfDay, limit: TODAY_LIMIT });
+  const entries: TodayEntry[] = page.rows.map((row) => ({
+    id: row.id,
+    title: titleOf(
+      resolveLocalizedText(row.stock.variant.product.name, OPERATIONS_LOCALE) || 'Adsız ürün',
+      resolveLocalizedText(row.stock.variant.label, OPERATIONS_LOCALE),
+    ),
+    qty: Math.abs(row.qty),
+    reason: row.reason,
+    referenceNo: row.referenceNo,
+    time: new Date(row.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+  }));
 
   return {
     batches,
     today: entries,
+    // Tavan doldu mu — ekran "son N kayıt" diyebilsin diye. Sessiz kırpma, olmayan bir tamlık
+    // sözü vermek olurdu.
+    todayTruncated: page.nextCursor !== null,
     warehouseId: singleId,
     warehouseName: warehouse?.name ?? null,
   };

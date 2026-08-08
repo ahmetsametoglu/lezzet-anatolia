@@ -47,6 +47,11 @@ export interface ReceivingData {
   warehouseId: string | null;
   /** Yöneticinin seçebileceği depolar; depocuda boş (kimlikten gelir, seçim yok). */
   warehouseOptions: { id: string; name: string }[];
+  /**
+   * Siparişsiz kabulde seçilecek tedarikçiler — doğal tavanlı küme (operatörün elle kurduğu
+   * liste), tek turda okunuyor ve sayfalanmıyor (`CLAUDE §1`).
+   */
+  suppliers: { id: string; name: string }[];
 }
 
 /** Kabulün sonucu — uyarılar ve farklar ekrana taşınır, ikisi de İŞ DURDURMAZ. */

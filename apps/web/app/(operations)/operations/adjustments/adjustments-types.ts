@@ -1,4 +1,4 @@
-import type { WarehouseReason } from '@/lib/stock/adjustment';
+import type { StockAdjustmentReason } from '@lezzet/types';
 
 // Stoktan düşme masasının görünüm modeli (10.5).
 // Tasarım: `design/project/Operasyon - Depo Imha Sayim.dc.html` (*"· web"*).
@@ -23,7 +23,12 @@ export interface TodayEntry {
   title: string;
   /** Düşülen adet (pozitif sayı olarak yazılır; ekranda başına eksi konur). */
   qty: number;
-  reason: WarehouseReason;
+  /**
+   * **Okuma tipi YAZMA tipinden geniş** ve bu bilinçli: depocu `return_restock` GİREMEZ
+   * (`WarehouseReason` onu dışlıyor) ama adminin girdiği bir geri-alma kaydı aynı günün
+   * defterinde görünebilir. Dar tip seçseydik o satır okunduğu an ekran doğrulamada düşerdi.
+   */
+  reason: StockAdjustmentReason;
   /** Belge numarası — denetmenin elindeki kâğıdın karşılığı (`IMH-26-0012`). */
   referenceNo: string | null;
   /** Saat "09:40" — gün içinde hangi sırayla girildiği. */
@@ -33,6 +38,13 @@ export interface TodayEntry {
 export interface AdjustmentsData {
   batches: BatchOption[];
   today: TodayEntry[];
+  /**
+   * Şerit kırpıldı mı — tavan doldu ve daha eski kayıtlar var.
+   *
+   * Sessiz kırpma, olmayan bir tamlık sözü vermek olurdu: operatör listeyi "bugünün tamamı" sanır
+   * ve girdiği bir kaydı göremeyince ikinci kez girerdi.
+   */
+  todayTruncated: boolean;
   warehouseName: string | null;
   warehouseId: string | null;
 }

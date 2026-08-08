@@ -193,6 +193,13 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
               ))}
             </ul>
           )}
+          {/* Kırpma GÖRÜNÜR: sessiz tavan, operatöre "bugünün tamamı bu" der ve göremediği kaydı
+              ikinci kez girdirir. */}
+          {data.todayTruncated ? (
+            <p className="border-t border-ops-line-soft px-5 py-2 font-ops-body text-ops-micro text-ops-amber-dark">
+              Son {num(data.today.length)} kayıt gösteriliyor — bugün daha fazlası var.
+            </p>
+          ) : null}
           <p className="mt-auto border-t border-ops-line-soft px-5 py-2.5 font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
             {ADJ_NOTES.documentRule}
           </p>
