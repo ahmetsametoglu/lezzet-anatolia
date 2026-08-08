@@ -33,6 +33,7 @@ export type NavIconName =
   | 'hazirlik'
   | 'malkabul'
   | 'stock'
+  | 'stokdus'
   | 'satinalma'
   | 'depolar'
   | 'para'
@@ -113,6 +114,15 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <path d="m12 2 9 5-9 5-9-5z" />
       <path d="m3 12 9 5 9-5" />
       <path d="m3 17 9 5 9-5" />
+    </>
+  ),
+  // Stoktan düş — kutu, dışarı çıkan okla. Mal kabulün ikizi ve YÖNÜ ters: ikisi rayda birbirine
+  // yakın duruyor, ayırt edilmesi gereken tek şey okun yönü.
+  stokdus: (
+    <>
+      <path d="M4 9h16v10.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5z" />
+      <path d="M12 8V3" />
+      <path d="m9.5 5 2.5-2.5L14.5 5" />
     </>
   ),
   satinalma: (

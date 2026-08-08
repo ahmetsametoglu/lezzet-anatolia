@@ -79,6 +79,10 @@ const NAV_SECTIONS: NavSection[] = [
       // çıkar. Tedarik (sipariş verme) ise haftalık bir karar — sırada onların altında.
       { key: 'malkabul', label: 'Mal kabul', href: '/operations/receiving', roles: STOCK_FLOOR },
       { key: 'stock', label: 'Stok', href: '/operations/stock', roles: STOCK_FLOOR },
+      // Stoktan düş, Stok'un HEMEN ALTINDA: ikisi aynı sayının iki yüzü — biri "ne var", öteki
+      // "ne eksildi". Günlük işlerin (hazırlık/kabul) arasına girmemesi de bilinçli; düşüm
+      // rutin değil istisnadır.
+      { key: 'stokdus', label: 'Stoktan düş', href: '/operations/adjustments', roles: STOCK_FLOOR },
       // Tedarik muhasebeye de açık: tedarikçi borcu ve vadesi onun da sorusu.
       { key: 'satinalma', label: 'Tedarik', href: '/operations/procurement', roles: FINANCE },
       { key: 'depolar', label: 'Depolar', href: '/operations/warehouses', roles: ADMIN_ONLY },
