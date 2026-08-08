@@ -728,3 +728,20 @@ Gerekçe üç katmanlı ve üçü de aynı yöne bakıyor:
 
 Kaybedilen: sürükleyerek sıra değiştirme. Karşılığı, adımı metin içinde taşımak — ve üç dilin
 birbirinden bağımsız kalması.
+
+
+### Koleksiyon kapağı artık ana sayfada da ÇİZİLİYOR — "yalnız OG" kararı değişti (08.08)
+
+**Tasarım güncellemesiyle gelen değişiklik (kullanıcı bilgisinde).** 05.7'nin kararı *"koleksiyon
+görseli müşteri sayfasında render edilmez, yalnız paylaşım (OG) kartını besler"* idi — operasyondaki
+kapak alanı bu yüzden "paylaşım kartı (OG)" etiketiyle duruyordu. `Musteri - Anasayfa.dc.html`'in
+08.08 senkronu ana sayfaya iki slotluk **Koleksiyonlar** bölümü ekledi ve kapak orada 16:7 band
+olarak çizim yüzeyine çıktı.
+
+- Kapak kaydı AYNI (`role="collection"`, odak + zoom); yeni bir görsel alanı açılmadı — aynı kapak
+  iki yerde iki kırpımla kullanılır (OG 16:9 · ana sayfa bandı 16:7).
+- Operasyondaki alan etiketi "paylaşım kartı (OG)" DARALTICI kaldı; kapak artık vitrinde de
+  göründüğü için etiket 08.26/05.18 ekran turunda güncellenir.
+- Bölüm koşullu: aktif koleksiyon yoksa hiç çizilmez (`hasCollections`) — boş hâl gösterilmez.
+
+İş kaydı: `05.18` (vitrin işareti) + `08.26` (ana sayfa bölümü + koleksiyon katalog hâli).
