@@ -27,12 +27,12 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | --- | --- | --- | --- | --- |
 | 00 | `00-iskelet.md` | Monorepo İskeleti | sürüyor | 8/9 (+1 kısmi) |
 | 01 | `01-types.md` | `packages/types`: Şemalar ve Enum'lar | sürüyor | 3/11 (+5 kısmi) |
-| 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 11/13 (+2 kısmi) |
-| 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 10/11 (+1 kısmi) |
+| 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 12/13 (+1 kısmi) |
+| 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | tamam | 11/11 |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 8/10 |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 12/16 (+3 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 12/12 |
-| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 11/14 (+1 kısmi) |
+| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/14 (+1 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 12/24 (+11 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 5/21 (+11 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+5 kısmi) |
@@ -46,7 +46,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/12 (+2 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 15/21 (+5 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 4/8 (+4 kısmi) |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 5/13 (+3 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.
