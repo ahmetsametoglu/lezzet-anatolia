@@ -85,15 +85,6 @@
       "onlineRequired": "Bu tutarda online ödeme gerekir."
     },
     "summary": {
-      "title": "Sipariş özeti",
-      "discount": "İndirim",
-      "discountCampaign": "kampanya",
-      "discountCampaignPercent": "kampanya %{percent}",
-      "discountCustomerRate": "size özel %{percent}",
-      "delivery": "Teslimat",
-      "free": "Ücretsiz",
-      "total": "Genel toplam",
-      "vatIncluded": "Fiyatlara KDV dahildir.",
       "submit": "Siparişi onayla",
       "terms": "Onaylayarak satış koşullarını kabul etmiş olursunuz.",
       "termsLink": "Satış koşullarını okuyun",
@@ -234,15 +225,6 @@
       "onlineRequired": "À ce montant, le paiement en ligne est requis."
     },
     "summary": {
-      "title": "Récapitulatif",
-      "discount": "Remise",
-      "discountCampaign": "promotion",
-      "discountCampaignPercent": "promotion {percent} %",
-      "discountCustomerRate": "votre remise {percent} %",
-      "delivery": "Livraison",
-      "free": "Offerte",
-      "total": "Total",
-      "vatIncluded": "Prix TTC.",
       "submit": "Confirmer la commande",
       "terms": "En confirmant, vous acceptez les conditions de vente.",
       "termsLink": "Lire les conditions générales de vente",
@@ -383,15 +365,6 @@
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich."
     },
     "summary": {
-      "title": "Bestellübersicht",
-      "discount": "Rabatt",
-      "discountCampaign": "Aktion",
-      "discountCampaignPercent": "Aktion {percent} %",
-      "discountCustomerRate": "Ihr Rabatt {percent} %",
-      "delivery": "Lieferung",
-      "free": "Kostenlos",
-      "total": "Gesamtsumme",
-      "vatIncluded": "Preise inkl. MwSt.",
       "submit": "Bestellung bestätigen",
       "terms": "Mit der Bestätigung akzeptieren Sie die Verkaufsbedingungen.",
       "termsLink": "Allgemeine Geschäftsbedingungen lesen",

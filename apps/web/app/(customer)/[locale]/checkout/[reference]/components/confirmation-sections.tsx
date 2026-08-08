@@ -5,7 +5,7 @@ import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
-import { SummaryRow } from '@/components/customer/ui/summary-row';
+import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { isRefundedCancellation, type ConfirmationViewProps } from '../confirmation-types';
@@ -244,14 +244,18 @@ export function HelpBand({ t, compact }: Pick<ConfirmationViewProps, 't' | 'comp
 }
 
 /** Ne alındı, ne ödendi + iki çıkış (takip / katalog). */
-export function SummaryCard({ t, shared, locale, view, compact }: ConfirmationViewProps) {
+export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps) {
   const total = formatPrice(view.totalCents, locale);
+  // Özetin ORTAK sözcükleri (08.20): artık checkout'un sözlüğünden değil, bloğu ÇİZEN komponentin
+  // yanındaki nötr sözlükten. Aile bağı doğruydu ama aynı blok sipariş detayında da var ve o
+  // checkout ailesinin dışında — kelimeler bir aileye değil, bloğa ait.
+  const summary = summaryCopy(locale);
   // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde satır genel adında kalır.
-  const discountLabel = view.discountName ? `${shared.summary.discount} — ${view.discountName}` : shared.summary.discount;
+  const discountLabel = view.discountName ? `${summary.discount} — ${view.discountName}` : summary.discount;
 
   return (
     <Card compact={compact} gap="sm">
-      <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{shared.summary.title}</span>
+      <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{summary.title}</span>
 
       <ul className="flex flex-col gap-2.5">
         {view.lines.map((line) => (
@@ -274,16 +278,16 @@ export function SummaryCard({ t, shared, locale, view, compact }: ConfirmationVi
           <SummaryRow label={discountLabel} value={`−${formatPrice(view.discountCents, locale)}`} tone="olive" />
         )}
         <SummaryRow
-          label={shared.summary.delivery}
-          value={view.shippingFeeCents > 0 ? formatPrice(view.shippingFeeCents, locale) : shared.summary.free}
+          label={summary.delivery}
+          value={view.shippingFeeCents > 0 ? formatPrice(view.shippingFeeCents, locale) : summary.free}
           // Ücretsizde YALNIZ tutar yeşil (tasarım): ücret maliyet, ücretsizlik kazanç.
           tone={view.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
         />
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
-          <span className="font-sans text-lead font-bold text-ink">{shared.summary.total}</span>
+          <span className="font-sans text-lead font-bold text-ink">{summary.total}</span>
           <span className="font-sans text-lead font-bold text-ink">{total}</span>
         </div>
-        <span className="font-sans text-micro text-muted">{shared.summary.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
       </div>
 
       {view.cancelled ? (

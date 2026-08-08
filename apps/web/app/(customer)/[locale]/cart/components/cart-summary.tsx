@@ -3,6 +3,7 @@
 import type { Locale } from '@lezzet/i18n';
 import { buttonClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
+import { summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { cartBlockReason, shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
@@ -111,6 +112,9 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
   // checkout aynı iki koşulu kendisi de kontrol ediyor.
   const reason = checkoutBlockReason(view, t, locale);
   const blocked = reason !== null;
+  // Özetin ORTAK sözcükleri (08.20): toplam · KDV notu · indirim ailesi. Sepetin kendi sözlüğünde
+  // kopyaları duruyordu ve Almancada checkout'takinden farklıydı ("Gesamt" ≠ "Gesamtsumme").
+  const summary = summaryCopy(locale);
   // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
   const discountCents = view.subtotalCents - view.totalCents;
   /**
@@ -142,7 +146,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
                 ("İndirim — Hoş geldin indirimi"); yoksa kupon kodu ya da türün kendisi ("kampanya
                 %15"). Cümleyi ortak yardımcı kurar ki ödeme sayfası aynı indirimi başka türlü
                 anlatmasın. */}
-            <span>{discountLabel(view.discount, t, locale)}</span>
+            <span>{discountLabel(view.discount, summary, locale)}</span>
             <span className="font-bold">−{formatPrice(discountCents, locale)}</span>
           </div>
         )}
@@ -169,10 +173,10 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
             compact ? 'pt-2 text-body' : 'pt-2.5 text-card-title-sm',
           ].join(' ')}
         >
-          <span>{t.total}</span>
+          <span>{summary.total}</span>
           <span>{formatPrice(totalCents, locale)}</span>
         </div>
-        <span className="font-sans text-micro text-muted">{t.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
         {/* İki gruplu sepette indirim bir siparişe DEĞİL, iki siparişe dağılacak. Kupon/kampanya
             her siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor; burada tek bir
             sayı yazıp "bunu ödeyeceksiniz" demek, tutulmayacak bir söz olurdu. */}

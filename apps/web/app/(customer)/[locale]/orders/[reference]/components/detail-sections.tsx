@@ -4,7 +4,7 @@ import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { formatDeliveryDate, formatOrderDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { statusPillClass } from '@/components/customer/ui/badge';
-import { SummaryRow } from '@/components/customer/ui/summary-row';
+import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import type { DetailViewProps } from '../detail-types';
@@ -237,25 +237,29 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
  */
 export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, 't' | 'locale' | 'order'> & { title: string }) {
   const shortfallTotal = order.lines.reduce((sum, l) => sum + l.shortfallCents, 0);
+  // Özetin ORTAK sözcükleri (08.20) — aynı blok sepette, checkout'ta ve onay ekranında da çiziliyor.
+  // Sipariş detayı checkout'un sözlüğüne BAĞLANMADI: bağımlılık yönü anlamı takip etmeli, sipariş
+  // geçmişi ödeme akışının devamı değil. Sözlük her ikisinin de dışında, bloğu çizen komponentte.
+  const summary = summaryCopy(locale);
 
   return (
     <Panel title={title}>
       <SummaryRow label={t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
       {order.discountCents > 0 && (
         <SummaryRow
-          label={order.discountLabel ? `${t.discount} — ${order.discountLabel}` : t.discount}
+          label={order.discountLabel ? `${summary.discount} — ${order.discountLabel}` : summary.discount}
           value={`−${formatPrice(order.discountCents, locale)}`}
           tone="olive"
         />
       )}
       <SummaryRow
-        label={t.shipping}
-        value={order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : t.freeShipping}
+        label={summary.delivery}
+        value={order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : summary.free}
         // Ücretsiz teslimatta YALNIZ tutar yeşil (tasarım): etiket bir kazanç değil, tutar kazanç.
         tone={order.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
       />
       <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-sand-200 pt-2.5 font-sans text-body font-bold text-ink">
-        <span>{t.grandTotal}</span>
+        <span>{summary.total}</span>
         <span>{formatPrice(order.totalCents, locale)}</span>
       </div>
 

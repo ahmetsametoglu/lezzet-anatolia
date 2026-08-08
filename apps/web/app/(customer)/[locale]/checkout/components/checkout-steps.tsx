@@ -5,7 +5,7 @@ import type { PaymentMethod } from '@lezzet/types';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
-import { SummaryRow } from '@/components/customer/ui/summary-row';
+import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
 import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
@@ -458,6 +458,9 @@ export function OrderSummary(props: CheckoutViewProps) {
   const { t, locale, cart, cartReady, cartFailed, snapshot, state, compact, busy, error, onConfirm, selectedAddress } = props;
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
+  // Özetin ORTAK sözcükleri (08.20) — aynı blok sepette, onay ekranında ve sipariş detayında da
+  // çiziliyor; kelimeler dört sözlükte kopyalanmıştı ve Fransızca/Almancada ayrışmıştı.
+  const summary = summaryCopy(locale);
 
   /**
    * Teslimat satırı — **`payment` yokken "Ücretsiz" YAZILMAZ** (denetim notu 04.08).
@@ -471,7 +474,7 @@ export function OrderSummary(props: CheckoutViewProps) {
     ? UNKNOWN_AMOUNT
     : payment.shippingFeeCents > 0
       ? formatPrice(payment.shippingFeeCents, locale)
-      : t.summary.free;
+      : summary.free;
   const totalCents = payment?.orderTotalCents ?? cart.totalCents;
   const discountCents = cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? cart.discount.amountCents : 0;
 
@@ -487,7 +490,7 @@ export function OrderSummary(props: CheckoutViewProps) {
     // Tasarım künyesi: `radius 18 · ped 22/24 · gap 12` — adım kartlarıyla aynı aile, bir tık dar.
     // `snug` tam olarak bu: paylaşılan kartın yaygın pedi 22/26, özet kartı tasarımda 22/24 (M2).
     <Card compact={compact} pad="snug">
-      <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.summary.title}</span>
+      <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{summary.title}</span>
 
       {/* Kalemler ÖZETİN İÇİNDE, tasarımdaki gibi: `ad × adet ——— tutar`, sonra indirim, teslimat
           ve genel toplam; hepsi TEK sütunda, aynı ölçüde (400 14px). Sol sütunda ayrı bir
@@ -519,20 +522,20 @@ export function OrderSummary(props: CheckoutViewProps) {
           ))}
         {discountCents > 0 && (
           // Etiket sepetle AYNI yardımcıdan: müşteri iki ekranda aynı indirimi iki türlü okumamalı.
-          <SummaryRow label={discountLabel(cart.discount, t.summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
+          <SummaryRow label={discountLabel(cart.discount, summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
         )}
         {/* Ücretsizde YALNIZ tutar yeşil (tasarım): ücret bir maliyet, ücretsizlik bir kazanç. */}
         {/* Yeşil ton bir KAZANÇ söyler ("Ücretsiz"); bilinmeyen tutar bir kazanç değil, o yüzden
             `payment` yokken ton da nötr kalır — yoksa "—" yeşil çıkar ve iyi haber gibi okunur. */}
         <SummaryRow
-          label={t.summary.delivery}
+          label={summary.delivery}
           value={shippingLabel}
           tone={!payment || payment.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
         />
         {/* Toplam satırı tasarımda **Karla 700/18** — serif DEĞİL. Serif yapmak onu bir başlığa
             çeviriyor; oysa bu bir sayı satırı ve üstündeki satırlarla aynı ailede okunmalı. */}
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
-          <span className="font-sans text-card-title-sm font-bold text-ink">{t.summary.total}</span>
+          <span className="font-sans text-card-title-sm font-bold text-ink">{summary.total}</span>
           {/* Sepet OKUNMADAN toplam yazılmaz (denetim notu 04.08). Burada `formatPrice(0)` basılıyordu
               ve ekranda **0,00 €** görünüyordu: kalem satırları iskelet gösterirken toplam kendinden
               emin bir sayı söylüyordu. Ziyaretçi checkout'unda bu hâl kalıcı — misafir doğrulanana
@@ -544,7 +547,7 @@ export function OrderSummary(props: CheckoutViewProps) {
             <Skeleton className="h-4 w-20" />
           )}
         </div>
-        <span className="font-sans text-micro text-muted">{t.summary.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
       </div>
 
       {/* Sepet okunamadı: kalemsiz bir özet ve 0,00 € toplam çizilmişken sessiz kalmak, müşteriye
