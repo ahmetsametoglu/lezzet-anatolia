@@ -3,6 +3,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { Link } from '@/i18n/navigation';
 import type { CatalogSort } from '@lezzet/types';
 import type { StorefrontCatalog, StorefrontProduct } from '@lezzet/application';
+import type { PlaceMode } from '@/lib/delivery/read-place';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
@@ -45,6 +46,14 @@ export type CatalogFilterPatch = Partial<Omit<CatalogFilters, 'category' | 'coll
 export interface CatalogViewProps {
   t: Messages;
   locale: Locale;
+  /**
+   * **Yerin teslimat kipi** — "adresime gönderilebilir" çipinin anlamı buna bağlı (08.27).
+   *
+   * İstemci `useDeliveryPlace()` ile de öğrenebilirdi ama ilk boyada `ready` false: çip bir an
+   * çizilip sonra kaybolurdu (yerleşim sıçraması). Sunucu yeri zaten çözüyor — soruyu orada
+   * cevaplamak hem sıçramayı hem ikinci bir türetmeyi ortadan kaldırıyor.
+   */
+  placeMode: PlaceMode;
   data: StorefrontCatalog;
   /**
    * Gösterilecek ürünler — ilk sayfa sunucudan, sonrakiler kaydırdıkça EKLENİR. `data.products`

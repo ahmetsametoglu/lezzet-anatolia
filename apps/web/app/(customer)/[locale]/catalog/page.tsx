@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
-import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPlaceMode, readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { shippableFilterApplies } from '@/lib/delivery/place-filter';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
 import { getCatalogData, readCollectionHead } from '@lezzet/application';
@@ -86,7 +87,8 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   const activeSort: CatalogSort = CATALOG_SORTS.includes(sort as CatalogSort) ? (sort as CatalogSort) : 'featured';
   const onlyOffers = offers === '1';
   // Kargo çipi URL'de yaşar: süzülmüş liste paylaşılabilir ve geri tuşu çalışır (offers ile aynı desen).
-  const onlyShippable = shippable === '1';
+  const placeMode = await readPlaceMode();
+  const onlyShippable = shippableFilterApplies(shippable === '1', placeMode);
 
   const t: Messages = messages[locale];
   const [data, device] = await Promise.all([
@@ -133,7 +135,17 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="catalog">
-      <CatalogClient t={t} locale={locale} data={data} active={{ category, collection, sort: activeSort, onlyOffers, onlyShippable }} device={device} search={q} />
+      <CatalogClient
+        t={t}
+        locale={locale}
+        data={data}
+        // `onlyShippable` EFEKTİF değeri taşır (süzgeç gerçekten uygulandı mı), URL'deki ham değeri
+        // değil: çipin "seçili" görünmesi ile listenin süzülmüş olması aynı gerçeğe bakmalı.
+        active={{ category, collection, sort: activeSort, onlyOffers, onlyShippable }}
+        placeMode={placeMode}
+        device={device}
+        search={q}
+      />
     </SiteFrame>
   );
 }

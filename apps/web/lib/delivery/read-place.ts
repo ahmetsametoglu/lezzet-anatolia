@@ -126,6 +126,30 @@ export async function readPlaceScope(): Promise<{ country: string | null; zoneId
   };
 }
 
+/**
+ * **Yerin TESLİMAT KİPİ** — "adresime gönderilebilir" çipinin dayanağı (08.27).
+ *
+ * Üç hâl ve üçü de ekranda farklı davranış gerektiriyor:
+ *   `unknown`  — posta kodu yok ya da çözülemedi. **Ortada "adresim" YOK.**
+ *   `route`    — bölge içi: rota aracı gidiyor, yani soğuk zincir dâhil HER ŞEY ulaşabiliyor.
+ *   `shipping` — bölge dışı: yalnız kargolanabilir kalemler ulaşabiliyor.
+ *
+ * **Neden ayrı bir kapı:** `readPlaceWarehouses` iki depo kimliği veriyor ve ekran onlardan kipi
+ * TÜRETEMEZ — `warehouseId` dolu olması "rota" demek değil (kargo çözümü de depo verir). Türetmeyi
+ * ekrana bırakmak, aynı üç hâlin her sayfada yeniden ve biraz farklı hesaplanması olurdu.
+ *
+ * Kip ÇÖZÜMDEN okunur, çerezten değil — `readPlaceScope`'un künyesindeki güvenlik sınırının aynısı:
+ * çerezi istemci yazabilir, uydurulmuş bir çerez katalogun neyi göstereceğini belirlememeli.
+ */
+export type PlaceMode = 'unknown' | 'route' | 'shipping';
+
+export async function readPlaceMode(): Promise<PlaceMode> {
+  const { resolution } = await readPlaceContext();
+  if (resolution?.kind === 'route') return 'route';
+  if (resolution?.kind === 'shipping') return 'shipping';
+  return 'unknown';
+}
+
 async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {
   const raw = (await cookies()).get('lezzet.place.v2')?.value;
   if (!raw) return null;

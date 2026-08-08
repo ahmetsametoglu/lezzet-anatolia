@@ -6,6 +6,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { StorefrontCatalog, StorefrontProduct } from '@lezzet/application';
 import { loadMoreCatalogAction } from './actions';
+import type { PlaceMode } from '@/lib/delivery/read-place';
 import type { CatalogFilterPatch, CatalogFilters, CatalogHref, Messages } from './catalog-types';
 import { CatalogDesktop } from './catalog.desktop';
 import { CatalogMobile } from './catalog.mobile';
@@ -24,12 +25,14 @@ interface CatalogClientProps {
   locale: Locale;
   data: StorefrontCatalog;
   active: CatalogFilters;
+  /** Yerin teslimat kipi — "adresime gönderilebilir" çipinin hâli (künye `catalog-types.ts`). */
+  placeMode: PlaceMode;
   device: Device;
   /** Arama kutusundaki sorgu — sonraki sayfa isteği aynı süzgeci taşımalı. */
   search?: string;
 }
 
-export function CatalogClient({ t, locale, data, active, device, search }: CatalogClientProps) {
+export function CatalogClient({ t, locale, data, active, placeMode, device, search }: CatalogClientProps) {
   const resolved = useDevice(device);
 
   const [extraPages, setExtraPages] = useState<StorefrontProduct[]>([]);
@@ -78,6 +81,6 @@ export function CatalogClient({ t, locale, data, active, device, search }: Catal
     return { pathname: '/catalog', query };
   };
 
-  const view = { t, locale, data, products, hasMore: cursor !== null, loadingMore, onLoadMore, active, hrefFor, search };
+  const view = { t, locale, placeMode, data, products, hasMore: cursor !== null, loadingMore, onLoadMore, active, hrefFor, search };
   return resolved === 'mobile' ? <CatalogMobile {...view} /> : <CatalogDesktop {...view} />;
 }

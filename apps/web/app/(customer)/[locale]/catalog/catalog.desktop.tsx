@@ -4,6 +4,7 @@ import { SearchField } from '@/components/customer/ui/search-field';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
+import { ShippableChip } from '@/components/customer/delivery/shippable-chip';
 import { Link } from '@/i18n/navigation';
 import type { CatalogViewProps } from './catalog-types';
 
@@ -17,9 +18,10 @@ import type { CatalogViewProps } from './catalog-types';
  * eklenmez.
  *
  * Koleksiyon görünümü (tasarımdaki "Durum: koleksiyon görünümü" varyantı — üstbaşlıklı başlık bandı)
- * HENÜZ YOK: koleksiyon rotası açılmadı. Geldiğinde yalnız başlık bloğu değişir, gerisi aynı kalır.
+ * 08.26'da AÇILDI ve künyenin öngördüğü gibi oldu: yalnız başlık bloğu değişiyor, gerisi aynı kalıyor.
+ * Ayrı bir rota değil, katalogun bir hâli (`?collection=<slug>`).
  */
-export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor, search }: CatalogViewProps) {
+export function CatalogDesktop({ t, locale, placeMode, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor, search }: CatalogViewProps) {
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-5 px-12 pt-9 pb-5">
@@ -66,13 +68,16 @@ export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore
           <span className="font-sans text-body-sm text-muted">{t.count.replace('{n}', String(data.total))}</span>
           <span className="flex-1" />
           {/* Kargo çipi fırsat çipinin SOLUNDA: "nereye gidecek" sorusu "hangisi indirimli"den önce
-              gelir. Varsayılan kapalı — katalog kendiliğinden küçülmez (tasarım). */}
-          <FilterChip
+              gelir. Varsayılan kapalı — katalog kendiliğinden küçülmez (tasarım).
+              Üç hâli `ShippableChip` taşır (08.27): yer bilinmiyorsa süzmez, adresi sorar; bölge
+              içinde hiç çizilmez (süzecek şey yok); yalnız bölge dışında gerçek bir süzgeçtir. */}
+          <ShippableChip
+            mode={placeMode}
+            locale={locale}
             label={t.onlyShippable}
+            askLabel={t.shippableAsk}
             href={hrefFor({ onlyShippable: !active.onlyShippable })}
             active={active.onlyShippable}
-            tone="place"
-            size="control"
           />
           <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
           <SortSelect

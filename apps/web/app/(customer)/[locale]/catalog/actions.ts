@@ -4,7 +4,8 @@ import { KeysetCursorSchema, type KeysetCursor } from '@lezzet/types';
 import { hasLocale } from 'next-intl';
 import { getCatalogData, type StorefrontProduct } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
-import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPlaceMode, readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { shippableFilterApplies } from '@/lib/delivery/place-filter';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { CATALOG_SORTS, type CatalogSort } from '@lezzet/types';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
@@ -71,7 +72,11 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
         search: q.search,
         sort,
         onlyOffers: q.onlyOffers,
-        onlyShippable: q.onlyShippable,
+        // Kargo süzgeci YERE göre uygulanır ve kip SUNUCUDA yeniden çözülür (08.27) — istemciden
+        // gelen bayrağa güvenilmez. İlk sayfa `page.tsx`te aynı kuraldan geçiyor; burada
+        // atlansaydı kaydırmayla gelen sayfa BAŞKA bir süzgeçle dolar ve liste kendi içinde
+        // çelişirdi. Künyedeki `onlyShippable` vakasının aynı sınıfı, tersinden.
+        onlyShippable: shippableFilterApplies(q.onlyShippable, await readPlaceMode()),
         cursor: safeCursor,
       },
       place: await readPlaceWarehouses(),
