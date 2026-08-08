@@ -131,6 +131,9 @@ describe('bölünmezlik', () => {
     });
 
     expect(outcome.status).toBe('failed');
+    // Mesaj GERÇEK RPC cümlesidir, sabit yedek metin değil (21.11c): sözleşmenin vaadi "operatöre
+    // AYNEN gösterilir" ve depocu hangi partide kaç adet olduğunu ancak böyle okur.
+    expect(outcome.status === 'failed' ? outcome.message : '').toMatch(/partide 8 adet var, 99 adet düşülemez/);
     // İlk satır da yazılmadı: stok el değmemiş.
     expect((await stocks.getById(batchA))?.physicalQty).toBe(10);
     expect(await adjustments.listByStock(batchA)).toHaveLength(0);
@@ -144,6 +147,8 @@ describe('bölünmezlik', () => {
     const outcome = await recordAdjustment(db, { warehouseId, lines: [{ stockId: batchA, qty: -2 }], reason: 'count_diff' });
 
     expect(outcome.status).toBe('failed');
+    // Kuralı VERİTABANI zorluyor ve cümlesini de o kuruyor; ekran onu aynen gösterir (21.11c).
+    expect(outcome.status === 'failed' ? outcome.message : '').toMatch(/stoğa geri ekleme sebep notu ister/);
     expect((await stocks.getById(batchA))?.physicalQty).toBe(10);
   });
 

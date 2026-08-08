@@ -624,7 +624,7 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
     expect((await stocks.getById(stockId))?.physicalQty).toBe(20);
   });
 
-  it('fiziksel gerçek ihlali `failed` döner — ama MESAJ bugün kayboluyor (ölçüldü)', async () => {
+  it('fiziksel gerçek ihlali `failed` döner ve MESAJ operatöre AYNEN ulaşır', async () => {
     const outcome = await dataOf<RecordAdjustmentResponse>(
       await post('/api/v1/warehouse/adjustments', { lines: [{ stockId, qty: 999 }], reason: 'expired' }),
     );
@@ -633,19 +633,13 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
     expect(outcome.status).toBe('failed');
     expect((await stocks.getById(stockId))?.physicalQty).toBe(20);
 
-    // **ÖLÇÜLDÜ (08.08), varsayılmadı:** RPC reddi `throw` ile geliyor ama fırlatılan şey bir `Error`
-    // DEĞİL, DÜZ BİR NESNE — `constructor.name === 'Object'`, alanları `{code, details, hint,
-    // message}` ve `message` gerçek cümleyi taşıyor: *"adjust_stock_batch: partide 20 adet var, 999
-    // adet düşülemez"*. Kapının süzgeci (`error instanceof Error ? error.message : 'Kayıt
-    // yazılamadı'`, `application/warehouse/adjustment.ts`) bu nesneyi yakalamıyor ve sözleşmenin
-    // vaadi ("mesaj operatöre AYNEN gösterilir") bugün TUTMUYOR — operatör hangi partide kaç adet
-    // olduğunu göremiyor. Aynı süzgeç transfer kapısında da var (`sevk/kabul/geri alma`).
-    //
-    // İddia bilinçli olarak BUGÜNKÜ gerçeğe kilitli: düzeltildiği gün bu satır kırmızıya döner ve
-    // testi güncelleyen kişi neyin değiştiğini buradan okur. Düzeltme `packages/application`ın işi
-    // (mobil şeridin yazı alanı dışında) ve rapora yazıldı.
-    // BEKLEYEN(21.11): depo kapıları `failed` mesajını düz-nesne hatadan da çıkarmalı.
-    expect(outcome.status === 'failed' ? outcome.message : '').toBe('Kayıt yazılamadı');
+    // **ÖLÇÜLDÜ (08.08), DÜZELTİLDİ (21.11c).** RPC reddi `throw` ile geliyor ama fırlatılan şey bir
+    // `Error` DEĞİL, DÜZ BİR NESNE — `constructor.name === 'Object'`, alanları `{code, details,
+    // hint, message}`. Kapının eski süzgeci (`error instanceof Error ? …`) bu nesneyi yakalamıyordu
+    // ve sözleşmenin vaadi ("mesaj operatöre AYNEN gösterilir") tutmuyordu: operatör hangi partide
+    // kaç adet olduğunu göremiyor, sabit bir "Kayıt yazılamadı" okuyordu. Çıkarım artık tek
+    // yardımcıda (`application/warehouse/rpc-error.ts`) ve dört kapının dördü de onu çağırıyor.
+    expect(outcome.status === 'failed' ? outcome.message : '').toMatch(/partide 20 adet var, 999 adet düşülemez/);
   });
 
   it('satırsız istek `empty`', async () => {

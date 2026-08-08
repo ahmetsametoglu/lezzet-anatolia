@@ -2,6 +2,7 @@ import { StockService, WarehouseTransferService } from '@lezzet/database';
 import type { DispatchLine, ReceiveLine, TransferStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { displayName, variantNames } from './names';
+import { rpcRejectionMessage } from './rpc-error';
 
 /**
  * **Depolar arası transfer — D5** (19.1/19.6), terfi 21.11. DOMAIN §17, K11/T4; mobil v2 "Transfer"
@@ -148,7 +149,9 @@ export async function receiveTransfer(
     const result = await transfers.receive({ transferId: input.transferId, lines: [...input.lines], actorId: input.actorId });
     return { status: 'ok', transferId: result.transferId, createdBatches: result.createdBatches };
   } catch (error) {
-    return { status: 'failed', message: error instanceof Error ? error.message : 'Kabul yazılamadı' };
+    // Ret mesajı OLDUĞU GİBİ taşınır (`rpcRejectionMessage` künyesi): rampadaki depocu "kabul
+    // yazılamadı" değil, RPC'nin söylediği fiziksel gerçeği okumalı.
+    return { status: 'failed', message: rpcRejectionMessage(error, 'Kabul yazılamadı') };
   }
 }
 
@@ -203,7 +206,7 @@ export async function dispatchTransfer(
     });
     return { status: 'ok', transferId: result.transferId, referenceNo: result.referenceNo };
   } catch (error) {
-    return { status: 'failed', message: error instanceof Error ? error.message : 'Sevk yazılamadı' };
+    return { status: 'failed', message: rpcRejectionMessage(error, 'Sevk yazılamadı') };
   }
 }
 
@@ -236,6 +239,6 @@ export async function cancelTransfer(
     const result = await transfers.cancel({ transferId: input.transferId, actorId: input.actorId, reason: input.reason });
     return { status: 'ok', transferId: result.transferId, restoredLines: result.restoredLines };
   } catch (error) {
-    return { status: 'failed', message: error instanceof Error ? error.message : 'Geri alınamadı' };
+    return { status: 'failed', message: rpcRejectionMessage(error, 'Geri alınamadı') };
   }
 }

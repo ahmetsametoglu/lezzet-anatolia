@@ -1,0 +1,262 @@
+{
+  "common": {
+    "channel": { "b2b": "B2B", "b2c": "B2C" },
+    "back": "Geri",
+    "retry": "Tekrar dene",
+    "offlineCta": "Bağlantı yok — kayıt kilitli",
+    "offlineHint": "Bağlantı yok — raf ile sistemin çelişmemesi için yazma kapalı; işaret kuyruğa alınmaz.",
+    "networkError": "Bağlantı yok — istek gönderilemedi.",
+    "serverError": "Sunucu cevabı alınamadı ({error}).",
+    "outOfScope": "Bu kayıt başka deponun — hiçbir şey yazılmadı.",
+    "notFound": "Kayıt bulunamadı — araya biri girmiş olabilir.",
+    "scope": {
+      "title": "Hangi depoda çalıştığın belli değil",
+      "body": "Kapının kapsamında birden çok depo var (ya da hiç yok) ve seçim yapılacak bir depo listesi henüz uçtan gelmiyor. Depo ataması yapılınca bu bölüm kendiliğinden açılır."
+    }
+  },
+  "hub": {
+    "eyebrow": "DEPO",
+    "title": "Depo İşleri",
+    "loading": "İş listesi yükleniyor…",
+    "error": {
+      "title": "İş listesi yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — kayıtlı işlerin güvende."
+    },
+    "offline": "Bağlantı yok — mal kabul, transfer ve sayım çevrimdışı yapılamaz (raf ↔ sistem çelişkisi yasak).",
+    "footnote": "Depo ekranları fiyat/tutar görmez. Parti kararı motorundur; barkod v2'de.",
+    "rows": {
+      "picking": {
+        "code": "D1",
+        "title": "Toplama listesi",
+        "some": "{n} sipariş bekliyor",
+        "someWithHalf": "{n} sipariş bekliyor · {half} yarım",
+        "none": "bekleyen sipariş yok",
+        "unknown": "okunamadı"
+      },
+      "intake": {
+        "code": "D2",
+        "title": "Mal kabul",
+        "subtitle": "bekleyen sevkiyat listesi henüz uçtan gelmiyor"
+      },
+      "nearExpiry": {
+        "code": "D3",
+        "title": "Yakın-SKT turu",
+        "subtitle": "{n} parti listede · {discard} imhalık"
+      },
+      "adjustment": {
+        "code": "D4",
+        "title": "Sayım / düzeltme",
+        "subtitle": "dört sebep · işaretli adet"
+      },
+      "transfer": {
+        "code": "D5",
+        "title": "Transfer",
+        "some": "{ref} yolda",
+        "someMany": "{ref} · {n} transfer yolda",
+        "none": "yolda transfer yok",
+        "unknown": "okunamadı"
+      },
+      "return": {
+        "code": "D6",
+        "title": "Kurye dönüşü",
+        "subtitle": "1 döküm bekliyor"
+      }
+    }
+  },
+  "picking": {
+    "title": "Toplama",
+    "loading": "Toplama listesi yükleniyor…",
+    "error": { "title": "Toplama listesi yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — toplanan adetler güvende." },
+    "empty": { "title": "Toplanacak sipariş yok", "body": "Sipariş onaylandığında bildirim gelir — bu liste kendiliğinden dolar." },
+    "queueHeading": "BEKLEYEN SİPARİŞLER — BİRİNİ SEÇ",
+    "queueLines": "{picked}/{total} kalem hazır",
+    "queueHalf": "yarım",
+    "orderCaption": "{ref} · {customer} · {channel}",
+    "noReference": "referanssız sipariş",
+    "line": {
+      "wanted": "istenen {qty} · parti {batch} — motor önerisi",
+      "wantedNoBatch": "istenen {qty} · motor önerisi yok",
+      "batch": "{code} · SKT {date}",
+      "complete": "tamamı ✓",
+      "qtyLabel": "{name} için toplanan adet",
+      "pinned": "⚓ İndirimli teklif — yalnız bu partiden verilebilir",
+      "shortReported": "Eksik bildirildi — karar yönetim ekranında",
+      "shortLink": "eksik bildir",
+      "shortfallHint": "raf eksiği: {qty}",
+      "previous": "önceden {qty} yazılmış — yeni kayıt onun yerine geçer"
+    },
+    "footnote": "Yarım iş sürer — toplanan adet kayıtta kalır. Fark tutarı bu ekranda görünmez.",
+    "cta": {
+      "ready": "Sipariş HAZIR",
+      "reported": "Bildirildi — \"Hazırlanıyor\"da kalır",
+      "pending": "Kalem kalem say — ya da \"tamamı\"",
+      "sending": "Yazılıyor…"
+    },
+    "result": {
+      "ready": "Sipariş HAZIR — {n} kalem yazıldı.",
+      "partial": "{n} kalem yazıldı; sipariş \"Hazırlanıyor\"da sürüyor.",
+      "shortfall": "{name}: {qty} adet eksik — {reason}; öneri: {action}.",
+      "pinned": "Bu kalem çıpalı partiden verilmeli — hiçbir satır yazılmadı.",
+      "empty": "Hiçbir kalem işaretlenmedi."
+    },
+    "shortfallReason": {
+      "complete": "sipariş tamamlanamadı",
+      "line_fully_missing": "kalem hiç bulunamadı",
+      "large_share": "eksik payı büyük",
+      "high_value": "değerli kalem",
+      "minor": "küçük eksik"
+    },
+    "shortfallAction": {
+      "ask_customer": "müşteriye sorulsun",
+      "send_rest": "kalanı gönder"
+    }
+  },
+  "intake": {
+    "title": "Mal Kabul",
+    "loading": "Kabul formu yükleniyor…",
+    "captionPlanned": "tedarik siparişi · gönderildi",
+    "captionUnplanned": "plansız kabul",
+    "error": { "title": "Kabul formu yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — hiçbir satır yazılmadı." },
+    "noSubject": {
+      "title": "Hangi sevkiyat kabul edilecek?",
+      "body": "Bekleyen tedarik siparişlerini listeleyen bir kapı henüz yok; ekran bildirimden ya da doğrudan sipariş bağıyla açılır."
+    },
+    "emptyForm": {
+      "title": "Bu siparişin açık kalemi yok",
+      "body": "Sipariş ya kapanmış ya da satırları başka bir kabulde yazılmış."
+    },
+    "expected": "beklenen {qty}",
+    "qtyLabel": "{name} için gelen adet",
+    "expiry": { "missing": "SKT gir *", "set": "SKT {date} ✓", "placeholder": "gg.aa.yyyy", "field": "{name} için son kullanma tarihi", "done": "tamam" },
+    "lot": { "known": "lot: {lot}", "empty": "lot yok — bilinçli boş", "field": "{name} için lot numarası" },
+    "damage": { "idle": "hasar bildir", "set": "hasar notu eklendi ✓", "field": "{name} için hasar notu", "placeholder": "ne oldu?" },
+    "lifeWarning": "⚠ kalan ömür %{pct} — uyarı, engellemez",
+    "lifeUnknown": "⚠ raf ömrü bilinmiyor — uyarı, engellemez",
+    "diffHeading": "FARK ÖZETİ — YALNIZ SAPAN SATIRLAR",
+    "diffRow": "{name}: beklenen {expected}, gelen {received}",
+    "footnote": "SKT her satırda zorunlu — girilmeden kabul kapanmaz. Parçalı kabul mümkün; lot geri çağırma anahtarıdır, boş bırakmak bilinçli olmalı.",
+    "photoNote": "Hasar fotoğrafı bu sürümde eklenemiyor — not yazılı kalır.",
+    "cta": {
+      "ready": "Kabulü kaydet — partiler açılır",
+      "partial": "Kısmen teslim alındı olarak kaydet",
+      "pending": "Her satırda adet + SKT zorunlu",
+      "sending": "Yazılıyor…"
+    },
+    "result": {
+      "ok": "Kabul yazıldı — {n} parti açıldı.",
+      "empty": "Satırsız istek — hiçbir şey yazılmadı."
+    }
+  },
+  "nearExpiry": {
+    "title": "Yakın-SKT Turu",
+    "caption": "eşikler: %25 yakın-SKT · %30 öneri indirimi",
+    "row": "{qty} adet · {days} · {life}",
+    "decision": {
+      "offer_open": "teklif AÇIK",
+      "offer_candidate": "teklife girebilir",
+      "discard": "imha edilmeli",
+      "none": "karar yok"
+    },
+    "footnote": "Karar sistemce türetilir — bu liste fiziksel ayıklama rehberidir; işaretleme yok. \"İmha edilmeli\" → Sayım/Düzeltme; teklif oranı yönetimde onaylanır.",
+    "toAdjustment": "Sayım/Düzeltme →"
+  },
+  "adjustment": {
+    "title": "Sayım / Düzeltme",
+    "noSubject": "parti seçilmedi",
+    "noSubjectBlock": {
+      "title": "Hangi parti düzeltilecek?",
+      "body": "Depo partilerini listeleyen bir okuma kapısı henüz yok; ekran Yakın-SKT turundan seçilen partiyle açılır."
+    },
+    "reasonHeading": "SEBEP — DÖRT TİP",
+    "reason": {
+      "expired": "süresi geçti (imha)",
+      "damaged": "hasar / soğuk zincir",
+      "count_diff": "sayım farkı",
+      "lost": "kayıp"
+    },
+    "reasonNote": "\"İade stoğa döndü\" depocuya açılmaz — yönetim istisnasıdır.",
+    "qtyLabel": "Adet (işaretli)",
+    "qtyHelp": "− düşüm · + yalnız sayım fazlasında",
+    "qtyField": "İşaretli adet",
+    "surplusOnlyCount": "Fazla yalnız \"sayım farkı\" sebebiyle yazılır — başka sebeple stok artmaz.",
+    "noteRequired": "Geri eklemede sebep notu zorunlu — sistem zorlar.",
+    "noteField": "Sebep notu",
+    "notePlaceholder": "ne oldu?",
+    "refHeading": "OLAY REFERANSI",
+    "refPending": "kayıttan sonra verilir",
+    "refHelp": "kâğıt tutanakla eşleşir · kayıt atomiktir — bir satır düşerse hiçbiri yazılmaz",
+    "cta": {
+      "ready": "Düzeltmeyi kaydet",
+      "pending": "Sebep ve adet gerekli",
+      "sending": "Yazılıyor…"
+    },
+    "result": {
+      "ok": "{ref} yazıldı — {lines} satır, {qty} adet.",
+      "empty": "Satırsız istek — hiçbir şey yazılmadı."
+    }
+  },
+  "transfer": {
+    "title": "Transfer",
+    "loading": "Gelen transferler yükleniyor…",
+    "error": { "title": "Transfer listesi yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — sayım yazılmadı." },
+    "empty": { "title": "Yolda transfer yok", "body": "Başka depo sevk ettiğinde burada görünür." },
+    "queueHeading": "GELEN TRANSFERLER — BİRİNİ SEÇ",
+    "caption": "{ref} · yolda",
+    "queueLines": "{n} kalem · {date}",
+    "heading": "RAMPADA SAY — GELEN ADEDİ GİR",
+    "dispatched": "sevk edilen {qty}",
+    "qtyLabel": "{name} için gelen adet",
+    "missing": "sayılmadı",
+    "footnote": "0 = geldi ama kayıp; boş = sayılmadı — boş satır kabulü bloklar, ikisi ayrı şeydir. Sevk anında mal kaynaktan düşer; ölçü kullanılabilir stoktur. Dönüş ters transferdir.",
+    "cta": {
+      "ready": "Kabulü kaydet",
+      "pending": "Her satırı say — boş satır kabulü bloklar",
+      "sending": "Yazılıyor…"
+    },
+    "result": {
+      "ok": "Kabul yazıldı — {n} parti açıldı.",
+      "incomplete": "{n} satır sayılmamış — kabul yapılmadı.",
+      "stale": "Transfer artık yolda değil ({status}) — araya biri girdi."
+    },
+    "status": {
+      "draft": "taslak",
+      "in_transit": "yolda",
+      "received": "kabul edildi",
+      "cancelled": "iptal"
+    }
+  },
+  "return": {
+    "title": "Kurye Dönüşü Kabulü",
+    "caption": "{courier} · rota kapandı",
+    "heading": "DÖNEN MALLAR — AKIBET İŞARETLE",
+    "courierNote": "kurye notu: \"{note}\"",
+    "hasPhoto": "hasar fotoğrafı var",
+    "disposition": {
+      "restock": "Stoğa dön",
+      "discard": "İmha",
+      "goodwill": "Jest"
+    },
+    "restockNote": "\"Stoğa dön\"de sebep notu zorunlu: soğuk zincir kesintisiz — ambalaj sağlam",
+    "goodwillNote": "Jest: mal ve stok değişmez — yalnız kayıt düşülür.",
+    "noteField": "{name} için sebep notu",
+    "notePlaceholder": "soğuk zincir kesintisiz — ambalaj sağlam",
+    "unreachedHeading": "ULAŞILAMAYANLAR — ARAÇTA KALIR, KABUL EDİLMEZ",
+    "unreachedRow": "{ref} · {n} koli — yarına devrolur",
+    "footnote": "Miktar hedef değer olarak girilir; fark sistemde hesaplanır.",
+    "cta": {
+      "ready": "Dönüşü kaydet",
+      "pending": "Her kalemde akıbet işaretle",
+      "sending": "Yazılıyor…"
+    },
+    "result": {
+      "ok": "Dönüş yazıldı — {restocked} stoğa, {discarded} imha, {released} serbest.",
+      "stale": "Sipariş artık bu durumda düzeltilemez ({status})."
+    },
+    "refundBlocked": {
+      "no_account": "İade borcu YAZILAMADI: müşterinin hesabı yok.",
+      "provider_ref_missing": "İade borcu YAZILAMADI: ödeme referansı yok.",
+      "provider_unavailable": "İade borcu YAZILAMADI: ödeme sağlayıcısı bağlı değil.",
+      "provider_failed": "İade borcu YAZILAMADI: sağlayıcı reddetti."
+    }
+  }
+}

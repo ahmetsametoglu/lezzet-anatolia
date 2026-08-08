@@ -2,6 +2,7 @@ import { StockAdjustmentService, StockService } from '@lezzet/database';
 import { documentPrefixFor } from '@lezzet/domain-core';
 import type { AdjustBatchResult, StockAdjustmentReason } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { rpcRejectionMessage } from './rpc-error';
 
 /**
  * **İmha / sayım — D4** (10.5), terfi 21.11. Kaynağı `apps/web/lib/stock/adjustment.ts`;
@@ -94,6 +95,8 @@ export async function recordAdjustment(
   } catch (error) {
     // Fiziksel gerçeğin ihlali bir hata DEĞİL, operatöre söylenecek bir cevaptır ("partide 3 adet
     // var, 5 düşülemez"). Fırlatıp ekranı çökertmek yerine mesajı taşıyoruz (STACK §8).
-    return { status: 'failed', message: error instanceof Error ? error.message : 'Kayıt yazılamadı' };
+    // Çıkarım `rpcRejectionMessage`in işi: supabase-js reddi `Error` ÖRNEĞİ DEĞİL (ölçüldü) ve
+    // örnek denetimiyle bakan eski süzgeç gerçek cümleyi atıyordu — gerekçe o dosyanın künyesinde.
+    return { status: 'failed', message: rpcRejectionMessage(error, 'Kayıt yazılamadı') };
   }
 }

@@ -143,6 +143,9 @@ describe('sevk (D5 · "ver")', () => {
     });
 
     expect(outcome.status).toBe('failed');
+    // "Sebep operatöre taşınır" artık ÖLÇÜLÜYOR (21.11c): RPC'nin kendi cümlesi geliyor, sabit
+    // yedek metin ("Sevk yazılamadı") değil — kullanılabilir/fiili/ayrılmış üçlüsü mesajın içinde.
+    expect(outcome.status === 'failed' ? outcome.message : '').toMatch(/999 sevk edilemez/);
     expect((await stocks.getById(sourceBatch))?.physicalQty).toBe(12);
   });
 });

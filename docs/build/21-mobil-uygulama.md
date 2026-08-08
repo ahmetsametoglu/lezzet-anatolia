@@ -419,10 +419,21 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     (DB kısıtı gereği boş kapsamın tek sahibi admin — 403 yanlış cevap olurdu, ölçümlü); iki
     `forbidden` ayrımı: rol=403, veri kapsamı=200+gövde (`stockIds` ekrana lazım). Ortak parçalar
     `auth.ts`/`lib/request.ts`e terfi etti (courier künyesindeki söz; 67 eski test yeşil).
-    Ölçülen paylaşılan-paket kusuru: RPC reddi düz nesne fırlatıyor, `failed` mesajı sabit metne
-    düşüyor — 4 yer, `BEKLEYEN(21.11)` işaretli (application bizim açık pozisyon; sıradaki
-    dilimde düzeltilir). Doğrulama (yönetici tekrarı): 41 uç testi. Kalan: Expo ekranları +
-    D3 (06.13 bekliyor) + `failed` mesaj düzeltmesi.
+    ~~Ölçülen paylaşılan-paket kusuru: RPC reddi düz nesne fırlatıyor~~ (21.11c'de düzeltildi:
+    `rpc-error.ts` tek yardımcı, 4 yer bağlandı, kilitli testler gerçek mesaja döndü).
+    Doğrulama (yönetici tekrarı): 41 uç testi.
+  - **Durum (08.08 — ekran ayağı tamam, 21.11c):** hub + D1–D6 ekranları (27 dosya; 8 suite /
+    69 ekran testi + `qty-field` kit komponenti). Depo kimliği İSTEMCİDE ÇÖZÜLMEZ, ölçülür:
+    her cevap `warehouse-status`a işlenir, `warehouse_required` → hub "depo belirsiz" der (admin
+    hâli; seçici yok çünkü depo LİSTESİ ucu yok). Çevrimdışı: ağ hatası ölçülünce yazma CTA'ları
+    kilitli (NetInfo yok — 21.13 rebuild kümesi). Bilinçli sınırlar künyelerde: D3 fixture
+    (06.13'e bağlı) · D2 plansız kabulde satır açılamıyor (`variantId` kaynağı yok — tedarik
+    ürün araması ucu yok) · D2 künyesinde PO referansı/tedarikçi adı eksik (`IntakeFormResponse`
+    taşımıyor) · D1 yarım işte parti dağılımı sözleşmede yok (`pickedBatches` — `BEKLEYEN(21.11)`;
+    yazım absolüt, ekran "yeni kayıt öncekinin yerine geçer" diye söylüyor). Tarih seçici yerel
+    modül ister (21.13 kümesi — SKT alanı şimdilik doğrulamalı metin). Doğrulama (yönetici
+    tekrarı): depo 96 + paket 61 test. Kalan: sözleşme boşlukları (ayrı backend dilimi) +
+    kamera/tarih-seçici/NetInfo (21.13).
 - [ ] (21.12) **Yönetim + Para bölümleri (Y1–Y6 · M1–M2 · gün özeti):** okuma ağırlıklı; Y5 gün
   özeti birleştirme ucu (doc 04 iş listesi) + Y1 üstlen/YZ-cevap aksiyonları, Y2 istisna kararı
   (motor önerisi + para önizlemesi uçtan), Y3 teklif onayı, Y4 taslak TS, Y6 not düşme; M1/M2
@@ -434,6 +445,14 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief
   kuralı) — her listeye elle giden yol push'suz da çalışır.
   `touches: apps/mobile, apps/mobile-api, packages/database (token modeli — talep gerekebilir)`
+- [ ] (21.14) **Müşteri ekran seti — İLK ETAP: tasarım birebir, UI-only (kullanıcı kararı 08.08):**
+  `Mobil - Musteri v3.dc.html` (~21 ekran) fixture'la birebir geçirilir; **backend işi ÜRETMEZ**
+  (uç yoksa ekran fixture'la TAM çalışır, bağlanma sonraki etap). Üçüncü alt ajan (musteri-expo)
+  yürütür; yazı alanı yalnız müşteri ekran/rota dosyaları — **kit/tema/ikon değişikliği YASAK**,
+  ihtiyaç yöneticiye raporlanır (operasyon ekranlarıyla çakışma önlemi; kurum: şeritte artık üç
+  alt ajan — operasyon-expo · musteri-expo · mobil-backend). Sayfaya-özel komponent kendi
+  klasöründe serbest.
+  `touches: apps/mobile/src/screens (müşteri), apps/mobile/src/app/(tabs)`
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
