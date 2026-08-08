@@ -112,6 +112,14 @@ function securityHeaders(): Array<{ key: string; value: string }> {
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // pino sunucu paketine GÖMÜLMEZ (ölçüldü 08.08): `@lezzet/application` (transpile listesinde)
+  // `@lezzet/observability` üzerinden pino'yu içeri çekince webpack pino+thread-stream'i
+  // vendor-chunks'a gömdü; pino'nun transport worker'ı `__dirname`den dosya arar ve
+  // `.next/server/vendor-chunks/lib/worker.js` diye OLMAYAN bir yola düşer — dev server
+  // `MODULE_NOT_FOUND` ile ÇÖKER (yaşandı: POST /fr/compte). Next'in varsayılan dış-paket
+  // listesi pino'yu tanır ama transpile edilen paketin import zincirinden gelen kopyayı
+  // kurtarmadı; açık beyan ikisini de dışta tutar: worker gerçek node_modules yolundan doğar.
+  serverExternalPackages: ['pino', 'pino-pretty'],
   // Paketler kaynak olarak dışa verildiği için Next transpile eder (ara derleme yok).
   transpilePackages: [
     '@lezzet/brand',
