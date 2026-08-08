@@ -14,19 +14,21 @@ import { useOperationsNotifications } from './use-notifications.hook';
   dördünün de TEPESİ aynı: üstbaşlık + Lora başlık + sağ eylem. Ayrıştıkları yer GÖVDEDİR ve gövde
   bu dilimde YOK.
 
-  BU DİLİM KABUKTUR, İÇERİK DEĞİL: v2'nin gövdeleri (rota listesi + gün CTA'sı, depo iş karoları,
-  karar kutusu, tahsilat dökümü) kendi dilimlerine ait ve oraya BİREBİR yazılacak. Buraya yer
-  tutucu bir gövde de konmadı: `ScreenPlaceholder` ikinci bir `header` rolü basar (başlık zaten
-  var) ve olmayan bir tasarım kararını ekranda varmış gibi gösterirdi.
-  BEKLEYEN(21.10): kurye gövdesi (K1 durak listesi · ilerleme · gün CTA'sı).
+  BU DİLİM KABUKTUR, İÇERİK DEĞİL: v2'nin gövdeleri (depo iş karoları, karar kutusu, tahsilat
+  dökümü) kendi dilimlerine ait ve oraya BİREBİR yazılacak. Buraya yer tutucu bir gövde de konmadı:
+  `ScreenPlaceholder` ikinci bir `header` rolü basar (başlık zaten var) ve olmayan bir tasarım
+  kararını ekranda varmış gibi gösterirdi.
   BEKLEYEN(21.11): depo hub gövdesi (iş karoları · çevrimdışı kilidi).
   BEKLEYEN(21.12): yönetim karar kutusu + para dökümü gövdeleri ve Para'nın "Gün sonu →" eylemi.
 
-  ÜSTBAŞLIK VERİSİZ HÂLİYLE: v2 kuryede "KURYE · 8 AĞUSTOS · MUSA K.", depoda "DEPO · STRASBOURG
-  (SABİT)" yazıyor — ikisinin de kuyruğu VERİDİR (gün + kurye adı; personelin sabit deposu).
-  Kabukta o veri yok ve uydurulmadı: üstbaşlık bugün yalnız veri taşımayan önekiyle duruyor,
-  kuyruğu kendi dilimiyle gelecek (yukarıdaki iki BEKLEYEN aynı işin parçası). Yönetim ve Para'nın
-  üstbaşlıkları tasarımda zaten tamamen statiktir, birebir yazıldı.
+  KURYE ARTIK BURADAN ÇİZİLMİYOR (21.10): gövdesi geldi ve kendi ekranına taşındı
+  (`screens/courier/courier-day-screen.tsx`). Başlık üçlüsü yine ortak komponentten, yani ayrışan
+  yalnız gövde — kabuk kararı bozulmadı, kanıtlandı.
+
+  ÜSTBAŞLIK VERİSİZ HÂLİYLE (kalan üç bölüm için): v2 depoda "DEPO · STRASBOURG (SABİT)" yazıyor ve
+  kuyruğu VERİDİR (personelin sabit deposu). Kabukta o veri yok ve uydurulmadı; kuyruğu kendi
+  dilimiyle gelecek (yukarıdaki BEKLEYEN'in parçası). Kuryenin kuyruğu (gün + ad) 21.10'da bağlandı.
+  Yönetim ve Para'nın üstbaşlıkları tasarımda zaten tamamen statiktir, birebir yazıldı.
 
   ZİL PARA'DA YOK — tasarımın kararı (v2:719 sağ yuvada "Gün sonu →" metin eylemi var, zil değil).
   Sonuç: yalnız muhasebe rolü taşıyan kullanıcı bildirim ekranına kabuktan ULAŞAMAZ. Bu bir eksik

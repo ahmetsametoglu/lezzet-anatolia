@@ -95,6 +95,19 @@ export const appMetrics = {
     inlineIcon: 17,
     /** Yüzen sayfanın tutamağı (tasarım: 44×5). */
     sheetHandle: 44,
+    /**
+     * KÜÇÜK KONTROLLER — 44 dp'nin altında kalan dokunulabilir kare/daireler; hepsi `compact`
+     * işaretiyle `touchSlop` payını alır ve eşiğe böyle tamamlanır (21.10, Operasyon Mobil v2'den
+     * ölçüldü). Boşluk ölçeğinden ALINMADILAR: `space` dolgu/aralık ailesidir, bunlar ise öğenin
+     * KENDİ ölçüsüdür ve yuvarlanamaz — bir piksel kayması işaret kutusu ile durak dairesini
+     * birbirine yaklaştırır ve o ikisi bu ekranda farklı ŞEY demektir (kare = kalem, daire = durak).
+     */
+    /** Mal kaleminin ✓/✕ işaret kutusu (v2:151 — 26×26). */
+    markBox: 26,
+    /** Durak sırası dairesi ve iade adedi ±/− düğmesi (v2:78, 158 — 30×30). */
+    dotButton: 30,
+    /** Tahsilat tutarının ±/− düğmesi (v2:174 — 34×34). */
+    stepButton: 34,
   },
 
   /**

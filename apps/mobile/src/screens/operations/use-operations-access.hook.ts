@@ -20,7 +20,13 @@ import { operationsSectionsOf, type OperationsSection } from '@/lib/operations/s
 
 type OperationsAccess =
   | { status: 'loading' }
-  | { status: 'granted'; sections: OperationsSection[] }
+  /**
+   * `userName` de kapıdan gelir, ekranların ikinci bir `/me` uçuşundan değil: kurye üstbaşlığı
+   * (v2:38 "KURYE · 8 AĞUSTOS · MUSA K.") personelin adını istiyor ve o ad ZATEN bu cevabın
+   * içinde. Ayrıca okunsaydı ekran başına bir uçuş ve iki cevap arasında ayrışma riski doğardı
+   * (`sections-context.ts` künyesi: tek okuma, tek doğruluk).
+   */
+  | { status: 'granted'; sections: OperationsSection[]; userName: string }
   /** Oturum yok ya da yalnız müşteri — kabuk açılmaz, müşteri yüzeyine dönülür. */
   | { status: 'denied' }
   /** Rol bilgisi okunamadı; yetki hakkında hiçbir şey İDDİA EDİLMİYOR. */
@@ -55,7 +61,9 @@ export function useOperationsAccess(): OperationsAccess {
     }
 
     const sections = operationsSectionsOf(result.data.roles);
-    setState(sections.length === 0 ? { status: 'denied' } : { status: 'granted', sections });
+    setState(
+      sections.length === 0 ? { status: 'denied' } : { status: 'granted', sections, userName: result.data.name },
+    );
   }, []);
 
   useEffect(() => {

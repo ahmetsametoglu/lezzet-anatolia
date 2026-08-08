@@ -4,7 +4,7 @@ import type { OperationsSection } from '@/lib/operations/sections';
 import messages from './messages.json';
 import { NOTIFICATION_FIXTURE, type OperationsNotification } from './notifications-fixture';
 import { OperationsNotificationsScreen } from './notifications-screen';
-import { OperationsSectionsProvider } from './sections-context';
+import { OperationsSessionProvider } from './sections-context';
 
 /*
   BİLDİRİM EKRANI — dolu, boş ve rol-süzülmüş hâller + satır/geri gezinmesi.
@@ -32,9 +32,9 @@ const t = messages;
 async function renderScreen(sections: OperationsSection[], feed: OperationsNotification[]) {
   mockFeed = feed;
   await render(
-    <OperationsSectionsProvider value={sections}>
+    <OperationsSessionProvider value={{ sections, userName: 'Musa Kaya' }}>
       <OperationsNotificationsScreen />
-    </OperationsSectionsProvider>,
+    </OperationsSessionProvider>,
   );
 }
 

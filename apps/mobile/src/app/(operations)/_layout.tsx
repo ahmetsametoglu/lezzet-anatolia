@@ -6,7 +6,7 @@ import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { LoadingState } from '@/components/ui/loading-state';
 import { operationsCopy } from '@/screens/operations/copy';
-import { OperationsSectionsProvider } from '@/screens/operations/sections-context';
+import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { useOperationsAccess } from '@/screens/operations/use-operations-access.hook';
 import { operationsTheme } from '@/theme/unistyles';
 
@@ -87,7 +87,7 @@ export default function OperationsLayout() {
   }
 
   return (
-    <OperationsSectionsProvider value={access.sections}>
+    <OperationsSessionProvider value={{ sections: access.sections, userName: access.userName }}>
       <Stack
         screenOptions={{
           // Başlıkları ekranlar kendi çiziyor (v2: zeminle aynı renkte, çizgisiz, sayfayla kayan).
@@ -95,7 +95,7 @@ export default function OperationsLayout() {
           contentStyle: { backgroundColor: operationsTheme.colors.cream },
         }}
       />
-    </OperationsSectionsProvider>
+    </OperationsSessionProvider>
   );
 }
 

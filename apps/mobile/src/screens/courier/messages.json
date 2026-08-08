@@ -1,0 +1,193 @@
+{
+  "months": [
+    "OCAK",
+    "ŞUBAT",
+    "MART",
+    "NİSAN",
+    "MAYIS",
+    "HAZİRAN",
+    "TEMMUZ",
+    "AĞUSTOS",
+    "EYLÜL",
+    "EKİM",
+    "KASIM",
+    "ARALIK"
+  ],
+  "method": {
+    "online": "online",
+    "cash": "nakit",
+    "card": "kart",
+    "cheque": "çek",
+    "bank_transfer": "havale"
+  },
+  "channel": { "b2b": "B2B", "b2c": "B2C" },
+  "day": {
+    "eyebrow": "KURYE",
+    "title": "Günün Rotası",
+    "loading": "Rota yükleniyor…",
+    "error": {
+      "title": "Rota yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — kayıtlı işaretlerin güvende.",
+      "retry": "Tekrar dene"
+    },
+    "empty": {
+      "title": "Bugün için rota yok",
+      "body": "Rota atandığında bildirim gelir — bu ekran kendiliğinden dolar."
+    },
+    "pocket": "cepte {amount}",
+    "pocketUnknown": "cepte bilinmiyor",
+    "doorLeft": "{n} kapıda tahsilat kaldı · {amount}",
+    "startHint": "Önce \"Yola çıktım\" — durak sonuçları yola çıkmadan yazılamaz (kapı sırası).",
+    "start": "Yola çıktım — günü başlat",
+    "close": "Günü kapat",
+    "openBadge": "{n} açık",
+    "stop": {
+      "items": "{n} kalem",
+      "attempt": "{n}. deneme",
+      "noDebt": "borç yok",
+      "delivered": "teslim edildi",
+      "deliveredDebt": "kalan borç {amount}",
+      "unreachable": "ulaşılamadı — tekrar denenecek",
+      "refused": "kabul etmedi — iade akışında",
+      "noAddress": "Adres kayıtlı değil",
+      "door": "KAPIDA · {amount}",
+      "doorWithMethod": "KAPIDA · {amount} {method}",
+      "openLabel": "{address} — {sub}",
+      "lockedHint": "Önce \"Yola çıktım\" işaretlenmeli."
+    }
+  },
+  "delivery": {
+    "back": "Geri",
+    "title": "Durak {n}/{total}",
+    "subtitle": "{ref} · {n}. deneme",
+    "loading": "Durak yükleniyor…",
+    "notFound": {
+      "title": "Durak bulunamadı",
+      "body": "Bu durak bugünkü rotanızda yok — liste tazelendiğinde kaybolmuş olabilir.",
+      "retry": "Tekrar dene"
+    },
+    "navigate": "Navigasyon",
+    "noNavigate": "adres kayıtlı değil",
+    "call": "Ara",
+    "whatsApp": "WhatsApp",
+    "proof": {
+      "heading": "1 · KANIT {scope}",
+      "required": "— B2B'DE ZORUNLU",
+      "optional": "— İSTEĞE BAĞLI (AYAR)",
+      "sign": "İmza al",
+      "photo": "Fotoğraf",
+      "photoUnavailable": "Fotoğraf çekimi bu sürümde bağlı değil — kamera modülü kurulu değil; kanıt olarak imza alın.",
+      "canvasHint": "buraya imzalayın — {name}",
+      "clear": "Temizle",
+      "confirm": "Onayla",
+      "cancel": "Vazgeç",
+      "takenSignature": "İmza alındı — {name} ✓",
+      "retake": "yeniden al",
+      "uploading": "Kanıt yükleniyor…",
+      "uploadFailed": "Kanıt yüklenemedi — teslim yazılmadı. Bağlantıyı kontrol edip tekrar deneyin.",
+      "refusal": {
+        "unsupported_type": "Bu dosya türü kabul edilmiyor.",
+        "too_many": "Bu teslimat için kanıt sayısı sınırına ulaşıldı.",
+        "not_found": "Bu durak size atanmamış.",
+        "storage_unavailable": "Kanıt deposu şu an yapılandırılmamış — yükleme yapılamıyor. Teslim kanıtsız kapatılamaz; operasyonu arayın."
+      }
+    },
+    "goods": {
+      "heading": "2 · MAL · {n} KALEM — dokun: ✓ teslim · ✕ reddedildi",
+      "hidden": "+{n} kalem daha — durak özeti ilk üç kalemi yazıyor, kalanlar işaretlenemez.",
+      "returnQty": "iade adedi",
+      "decrease": "İade adedini azalt",
+      "increase": "İade adedini artır",
+      "partialNote": "Kısmi red — iade kalemleri depo kabulüne düşer; iade tutarını motor hesaplar.",
+      "partialBlocked": "Kısmi iade bu sürümde KAYDEDİLEMİYOR: durak özeti kalem kimliği taşımıyor, düzeltme uca gönderilemez. Tümü reddedildiyse \"Kabul etmedi\"yi kullanın."
+    },
+    "collection": {
+      "heading": "3 · TAHSİLAT — MOTOR TUTARI {amount}",
+      "amountLabel": "Tahsil edilen tutar (€)",
+      "decrease": "Tutarı azalt",
+      "increase": "Tutarı artır",
+      "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
+      "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
+      "note": "Ödeme durumu tahsilattan türetilir; \"tekrar dene\" güvenlidir, para iki kez yazılmaz.",
+      "blocked": "Tahsilat uca YAZILAMIYOR: kapı kasası hesabı bu uçtan gelmiyor. Para yazılmadan teslim kapatılmaz — operasyonu arayın.",
+      "settled": "✓ Borç yok",
+      "settledNote": "bu kapıda para konuşulmaz"
+    },
+    "cta": {
+      "deliver": "Teslim edildi",
+      "deliverWithAmount": "Teslim edildi — {amount} alındı",
+      "partial": "Kısmi teslim — iade kaydıyla",
+      "allRefused": "tümü reddedildi — \"Kabul etmedi\"yi kullan",
+      "sending": "Kaydediliyor…",
+      "gate": "sıra: kanıt → mal → teslim → para",
+      "gateProof": " — kanıt eksik",
+      "gateGoods": " — her kalemi işaretle",
+      "unreachable": "Ulaşılamadı",
+      "refused": "Kabul etmedi"
+    },
+    "outcome": {
+      "unreachableTitle": "Ulaşılamadı — kayıt (2/2: not + onay)",
+      "refusedTitle": "Kabul etmedi — iade kaydı (2/2: not + onay)",
+      "unreachableChips": ["kapı açılmadı", "telefona yanıt yok", "adres bulunamadı"],
+      "refusedChips": ["koku / hasar şüphesi", "sipariş beklenmiyordu", "çok geç geldi"],
+      "noteLabel": "Kısa not",
+      "notePlaceholder": "ör. zil bozuk",
+      "noteRequired": "Not zorunlu — kapıda ne olduğunu bir cümleyle yazın.",
+      "photo": "fotoğraf ekle (isteğe bağlı)",
+      "photoUnavailable": "Fotoğraf çekimi bu sürümde bağlı değil — kamera modülü kurulu değil.",
+      "refusedHint": "Koliler iade akışına düşer — akıbet kararı depo kabulünde verilir.",
+      "cancel": "Vazgeç",
+      "confirm": "Onayla — kaydet"
+    },
+    "result": {
+      "collected": "Teslim yazıldı — {amount} tahsil edildi.",
+      "collectedNone": "Teslim yazıldı.",
+      "due": " Kalan borç {amount}.",
+      "deduped": " Bu tahsilat zaten yazılmıştı — para İKİLENMEDİ.",
+      "cashLimit": " Nakit yasal sınırın üstünde (bilgi, engel değil).",
+      "unreachable": "Ulaşılamadı olarak kaydedildi — durak yarına devrolur.",
+      "refused": "Kabul etmedi olarak kaydedildi — koliler iade akışına düştü."
+    },
+    "refusal": {
+      "proofRequired": "Bu teslimat ({channel}) imza ya da fotoğraf ister; kanıt alınmadan kapanmaz. HİÇBİR kayıt yazılmadı.",
+      "stale": "Sipariş artık \"{status}\" durumunda — bu durak başkası tarafından kapatılmış olabilir. Para ve kayıt İKİLENMEDİ.",
+      "notAssigned": "Bu durak size atanmamış.",
+      "notFound": "Sipariş bulunamadı.",
+      "sameStatus": "Sipariş zaten bu durumda.",
+      "terminal": "Bu sipariş kapanmış; üzerinde değişiklik yapılamaz.",
+      "notAllowed": "Bu adım şu an yapılamaz — önce \"Yola çıktım\" işaretlenmeli.",
+      "network": "Bağlantı yok — kayıt gönderilemedi. Bağlantı gelince tekrar deneyin (kuyruk YOK, işaret yalnız gönderilince yazılır).",
+      "unknown": "Kayıt gönderilemedi ({error})."
+    }
+  },
+  "dayClose": {
+    "back": "Geri",
+    "title": "Günü Kapat",
+    "loading": "Gün özeti yükleniyor…",
+    "error": {
+      "title": "Gün özeti yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — yazılmış hiçbir kayıt etkilenmedi.",
+      "retry": "Tekrar dene"
+    },
+    "closed": "Gün kapalı — salt okunur. İkinci kapanış kaydı ezmez.",
+    "openWarning": "{n} durak sonuçlanmadı — kapanış yine de mümkün",
+    "counters": { "delivered": "TESLİM", "pending": "BEKLEYEN", "returned": "DÖNEN" },
+    "countersNote": "Bekleyenler yarına devrolur — yeniden planlama yönetimin. Dönen mallar depo kabulüne düşer.",
+    "moneyHeading": "PARA — SAYDIĞINI GİR",
+    "expected": "beklenen {amount}",
+    "countLabel": "{method} sayımı (€)",
+    "differenceNote": "Fark işaretlidir: eksi = eksik teslim, artı = fazla para. Nakit teslimi para defterine düşer.",
+    "noteHeading": "NOT — İSTEĞE BAĞLI",
+    "notePlaceholder": "ör. Krutenau kolisi araçta kaldı",
+    "noteLabel": "Kapanış notu",
+    "confirmBox": "Kapanış geri alınamaz — sayımlar ve nakit teslimi deftere yazılır. Emin misin?",
+    "cancel": "Vazgeç",
+    "confirm": "Evet, günü kapat",
+    "cta": "Günü kapat",
+    "ctaClosed": "Gün zaten kapalı",
+    "sending": "Kapanıyor…",
+    "alreadyClosed": "Gün zaten kapalıydı — ikinci kapanış kaydı EZMEDİ.",
+    "done": "Gün kapandı — fark: nakit {cash} · kart {card} · çek {cheque}.",
+    "failed": "Kapanış gönderilemedi ({error})."
+  }
+}
