@@ -12,7 +12,7 @@ import {
   StockService,
   UserProfileService,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import { recordOrderPayment } from '@lezzet/application';
 // Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
 // kırılır (katalog testinin kararı). Kurye sözleşmelerinin ilk tüketicisi de budur.
@@ -24,6 +24,7 @@ import type {
   DeliveryProofUploadResponse,
   MarkUndeliveredResponse,
   OrderStatus,
+  StartCourierDayResponse,
 } from '@lezzet/types';
 import { app } from '../../app';
 
@@ -140,9 +141,20 @@ async function advance(orderId: string, path: readonly OrderStatus[]): Promise<v
   }
 }
 
-/** Yola çıkmış sipariş — kuryenin gün listesine düşmesi için gereken en kısa yol (emsal: `courier/day.test.ts`). */
+/**
+ * Yola çıkmış sipariş — kuryenin gün listesine düşmesi için gereken en kısa yol (emsal:
+ * `courier/day.test.ts`). `upTo` gün başlatma ucunun üç adayını kurar (yolda · hazır ·
+ * hazırlanmamış); verilmeyen her çağrı eskisi gibi `out_for_delivery`e kadar gider.
+ */
 async function dispatched(
-  opts: { courier?: string; qty?: number; totalCents?: number; date?: string; channel?: 'b2b' | 'b2c' } = {},
+  opts: {
+    courier?: string;
+    qty?: number;
+    totalCents?: number;
+    date?: string;
+    channel?: 'b2b' | 'b2c';
+    upTo?: 'confirmed' | 'ready';
+  } = {},
 ): Promise<string> {
   const qty = opts.qty ?? 2;
   const { order, items } = await orders.create(
@@ -161,9 +173,16 @@ async function dispatched(
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
+
+  // Hazırlığı ATLANMIŞ sipariş: parti kaydı yok — gün başlatmanın "aday değil" dediği hâl.
+  if (opts.upTo === 'confirmed') {
+    await advance(order.id, ['confirmed']);
+    return order.id;
+  }
+
   await advance(order.id, ['confirmed', 'preparing']);
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  await advance(order.id, ['ready', 'out_for_delivery']);
+  await advance(order.id, opts.upTo === 'ready' ? ['ready'] : ['ready', 'out_for_delivery']);
   return order.id;
 }
 
@@ -300,6 +319,131 @@ describe('GET /api/v1/courier/day', () => {
     const res = await asCourier('/api/v1/courier/day?date=dun');
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ data: null, error: 'invalid_query' });
+  });
+
+  it('kapı kasası hesabı AYARDAN gelir — tahsilat kapısını açan tek değer (21.10d)', async () => {
+    // Ayar KÜRESEL tekil satır: pencere kısa tutulur ve bulunan hâl geri konur (CLAUDE §4b).
+    const settings = settingsSnapshot(db);
+    await settings.override('door_cash_account_id', accountId);
+
+    try {
+      const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
+      // Gün başına TEKİL: durak başına tekrarlanmıyor, çünkü ayar da tekil.
+      expect(day.doorAccountId).toBe(accountId);
+    } finally {
+      await settings.restore();
+    }
+  });
+
+  it('ayar boşsa `doorAccountId` null — istemci uydurma bir hesaba yazmasın', async () => {
+    const settings = settingsSnapshot(db);
+    await settings.remove('door_cash_account_id');
+
+    try {
+      const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
+      expect(day.doorAccountId).toBeNull();
+    } finally {
+      await settings.restore();
+    }
+  });
+
+  it('durak kalem satırlarını kimlik ve adetle taşır (21.10d)', async () => {
+    const orderId = await dispatched({ qty: 3, totalCents: 3000 });
+
+    const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
+    const stop = day.stops.find((s) => s.orderId === orderId)!;
+
+    expect(stop.items).toHaveLength(1);
+    expect(stop.items[0]!.qty).toBe(3);
+    expect(stop.items[0]!.name).toContain('Kayısılı Reçel');
+    // Kimlik gerçek: siparişin kalem satırının kendisi (ekran onu `adjustments`a koyacak).
+    const line = (await orders.getWithItems(orderId))!.items[0]!;
+    expect(stop.items[0]!.orderItemId).toBe(line.id);
+  });
+
+  it('KALEM KİMLİĞİ ZİNCİRİ KAPANDI: gün cevabındaki satır kısmi iade olarak geri gönderilebilir', async () => {
+    // Boşluğun kendisi buydu (ekran künyesi, 21.10): kurye kapıda eksik kalem işaretleyebiliyor ama
+    // gönderemiyordu, çünkü `adjustments[].orderItemId`nin geleceği bir yer yoktu. Test iki ucu
+    // birbirine bağlıyor — okunan kimlik, yazan uca aynen gidiyor.
+    const orderId = await dispatched({ qty: 2, totalCents: 2000 });
+    const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
+    const item = day.stops.find((s) => s.orderId === orderId)!.items[0]!;
+
+    const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
+      adjustments: [{ orderItemId: item.orderItemId, fulfilledQty: 1 }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(await dataOf<ConfirmDoorDeliveryResponse>(res)).toMatchObject({ status: 'ok', adjustedLines: 1 });
+    // Taşıma "oldu" demiyor, malın gerçeği değişti: iki adet ayrılmıştı, teslim edilen bir adet.
+    expect((await orders.getWithItems(orderId))!.items[0]!.fulfilledQty).toBe(1);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(19);
+  });
+});
+
+describe('POST /api/v1/courier/day/start', () => {
+  it('mutlu yol: günün HAZIR durakları yola çıkar', async () => {
+    const hazir = await dispatched({ upTo: 'ready' });
+
+    const res = await post('/api/v1/courier/day/start', {});
+    expect(res.status).toBe(200);
+
+    const result = await dataOf<StartCourierDayResponse>(res);
+    expect(result.date).toBe(today);
+    expect(result.started).toContain(hazir);
+    // Uç "başladı" demiyor, durum gerçekten değişti — kapı sırasının şartı bu (teslim yalnız
+    // yoldaki siparişten yazılır).
+    expect((await orders.getById(hazir))?.status).toBe('out_for_delivery');
+  });
+
+  it('kısmi başarı GÖVDEDE ve 200: geçen, zaten yolda olan, hazır olmayan ayrı listelerde', async () => {
+    const hazir = await dispatched({ upTo: 'ready' });
+    const yolda = await dispatched();
+    const hazirlanmamis = await dispatched({ upTo: 'confirmed' });
+
+    const res = await post('/api/v1/courier/day/start', {});
+    expect(res.status).toBe(200);
+
+    const result = await dataOf<StartCourierDayResponse>(res);
+    expect(result.started).toEqual([hazir]);
+    // İkinci basış bir hata DEĞİL: "yapılacak yeni bir şey yok" cevabı.
+    expect(result.alreadyOut).toEqual([yolda]);
+    // Atlanan durak gizlenmiyor; sebebi o anki durumunun kendisi.
+    expect(result.skipped).toEqual([{ orderId: hazirlanmamis, currentStatus: 'confirmed' }]);
+    expect(result.stale).toEqual([]);
+    expect((await orders.getById(hazirlanmamis))?.status).toBe('confirmed');
+  });
+
+  it('`date` verilince o günün rotası başlatılır', async () => {
+    const yarin = await dispatched({ date: dayOffset(3), upTo: 'ready' });
+
+    const bugun = await dataOf<StartCourierDayResponse>(await post('/api/v1/courier/day/start', {}));
+    expect(bugun.started).not.toContain(yarin);
+
+    const result = await dataOf<StartCourierDayResponse>(await post('/api/v1/courier/day/start', { date: dayOffset(3) }));
+    expect(result.date).toBe(dayOffset(3));
+    expect(result.started).toContain(yarin);
+  });
+
+  it('KURYE DEĞİL → 403; başkasının rotası bu uçtan başlatılamaz', async () => {
+    const hazir = await dispatched({ upTo: 'ready' });
+
+    const res = await app.request('/api/v1/courier/day/start', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${outsiderToken}`, 'content-type': 'application/json' },
+      body: '{}',
+    });
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ data: null, error: 'forbidden' });
+    // Rol kapısı yazımdan ÖNCE: sipariş kımıldamadı.
+    expect((await orders.getById(hazir))?.status).toBe('ready');
+  });
+
+  it('bozuk gün anahtarı 400', async () => {
+    const res = await post('/api/v1/courier/day/start', { date: 'bugun' });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ data: null, error: 'invalid_body' });
   });
 });
 

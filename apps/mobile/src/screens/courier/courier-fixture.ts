@@ -27,6 +27,12 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     payment: { dueAmountCents: 4200, expectedMethod: 'cash' },
     itemCount: 2,
     contentSummary: '2 × Fıstıklı Baklava, 1 × Mantı',
+    // Kalem satırları KİMLİKLİ (21.10d): kısmi iade `orderItemId` ile gönderilir; fixture'ın
+    // kimliği durak kimliğinden türetilir ki iki durağın kalemleri çakışmasın.
+    items: [
+      { orderItemId: uuid(500 + index), name: 'Fıstıklı Baklava', qty: 2 },
+      { orderItemId: uuid(600 + index), name: 'Mantı', qty: 1 },
+    ],
     outcome: 'pending',
     attempts: 0,
     ...overrides,
@@ -34,7 +40,9 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
 }
 
 export function courierDay(stops: CourierStopContract[], date = '2026-08-08'): CourierDayResponse {
-  return { date, stops };
+  // Kasa hesabı GÜN başına (21.10d): null = ayar boş → ekran tahsilat kapısını kapalı gösterir;
+  // tahsilat senaryosu kuran test kendi uuid'ini geçirir.
+  return { date, stops, doorAccountId: null };
 }
 
 export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): DayCloseDraftContract {

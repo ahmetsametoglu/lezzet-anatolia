@@ -7,7 +7,9 @@ import {
   listCourierDay,
   markUndelivered,
   openDayClose,
+  readDoorCashAccountId,
   requestDeliveryProofUploadUrl,
+  startCourierDay,
 } from '@lezzet/application';
 import {
   CloseCourierDayRequestSchema,
@@ -20,6 +22,8 @@ import {
   DeliveryProofUploadResponseSchema,
   MarkUndeliveredRequestSchema,
   MarkUndeliveredResponseSchema,
+  StartCourierDayRequestSchema,
+  StartCourierDayResponseSchema,
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
@@ -151,13 +155,51 @@ courier.get('/day', async (c) => {
   const query = DateQuerySchema.safeParse(c.req.query());
   if (!query.success) return fail(c, 'invalid_query', 400);
 
+  const db = serviceDb();
   const date = query.data.date ?? new Date().toISOString().slice(0, 10);
-  const stops = await listCourierDay(serviceDb(), { courierId: c.get('courierId'), date });
+  // Kapı kasası hesabı gün başına TEKİL ve duraklardan bağımsız — iki okuma paralel gidiyor, biri
+  // ötekini beklemiyor. Ayarın anahtarı ve kullanılamaz değerin akıbeti (null → tahsilat kapısı
+  // kapalı) KAPIDA yaşıyor; burada yalnız cevaba konuyor.
+  const [stops, doorAccountId] = await Promise.all([
+    listCourierDay(db, { courierId: c.get('courierId'), date }),
+    readDoorCashAccountId(db),
+  ]);
 
   // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü `CourierStop` sözleşmeye alan alan uymak
   // zorunda ve uymadığı gün burası DERLENMEZ (katalogdaki compile-lock deseni).
-  const body: z.input<typeof CourierDayResponseSchema> = { date, stops };
+  const body: z.input<typeof CourierDayResponseSchema> = { date, stops, doorAccountId };
   return ok(c, CourierDayResponseSchema.parse(body));
+});
+
+/**
+ * **"Yola çıktım" — günü başlat** (K1). Günün HAZIR siparişlerini yola çıkarır.
+ *
+ * ── NEDEN GÜN BAŞINA, WEB'DE SİPARİŞ BAŞINAYKEN ─────────────────────────────
+ * Web emsali durak başına çalışıyor (`deliveries/[orderId]/actions.ts` → `startDeliveryAction`).
+ * Mobil v2 aynı işareti gün başına soruyor ve bu ekranın kaprisi değil: K1'in birincil düğmesi
+ * *"Yola çıktım — günü başlat"* ve o düğmeye basılmadan hiçbir durak açılmıyor (kapı sırası —
+ * teslim, ulaşılamadı ve red YALNIZ yoldaki siparişten yazılabilir). Kurye araca tek durak değil,
+ * günün kolilerini yükler.
+ *
+ * ── KISMİ BAŞARI GÖVDEDE, DURUM KODUNDA DEĞİL ───────────────────────────────
+ * Dört liste dönüyor (`started` · `alreadyOut` · `stale` · `skipped`) ve hepsi **200**'dür: bu ucun
+ * "yarısı oldu" hâli normaldir, arıza değil. Tek bir `ok`a indirilseydi kurye hazırlanmayı bekleyen
+ * durağı ancak teslim yazmayı deneyip başarısız olunca öğrenirdi. `alreadyOut` da bir hata değil —
+ * düğmeye ikinci kez basmak zararsızdır ve cevabı "yeni bir şey yok"tur.
+ *
+ * Gün alanı sözleşmede serbest dize; burada `.extend` ile biçime bağlanıyor (`IsoDateSchema` ile
+ * aynı gerekçe). Gövde hiç gelmezse BUGÜN kastedilmiştir: düğme günü söylemek zorunda değil.
+ */
+const StartDayBodySchema = StartCourierDayRequestSchema.extend({ date: IsoDateSchema.optional() });
+
+courier.post('/day/start', async (c) => {
+  const parsed = StartDayBodySchema.safeParse((await readJsonBody(c)) ?? {});
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const result = await startCourierDay(serviceDb(), { courierId: c.get('courierId'), date: parsed.data.date });
+
+  const body: z.input<typeof StartCourierDayResponseSchema> = result;
+  return ok(c, StartCourierDayResponseSchema.parse(body));
 });
 
 /**

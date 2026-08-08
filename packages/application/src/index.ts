@@ -47,8 +47,11 @@ export type {
 // Kaynağı `apps/web/lib/courier/*`tı ve operasyon web ekranları onu çağırmaya devam ediyor (köprü);
 // mobil "Yol" bölümünün uçları (`/api/v1/courier/*`, sonraki ayak) AYNI kapıyı çağıracak. Ölçüt
 // karşılandı: iki yüzey, tek orkestrasyon. Kopyalamak tüzükçe yasaktı — taşındı.
-export { listCourierDay, markUndelivered } from './courier/day';
-export type { CourierStop, StopOutcome, UndeliveredOutcome } from './courier/day';
+// 21.10d: gün başlatma (`startCourierDay`) ve kapı kasası ayarı (`readDoorCashAccountId`) aynı
+// kapının yanına eklendi — paketin `exports` haritası yalnız `"."` açıyor, yani alt-yol import'u
+// paket sınırında kapalı ve dışa açılmayan bir kapı çağrılamaz.
+export { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay } from './courier/day';
+export type { CourierDayStart, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
 export { confirmDoorDelivery } from './courier/delivery';
 export type { DeliveryProofInput, DoorCollectionInput, DoorDeliveryOutcome } from './courier/delivery';
 export { closeCourierDay, openDayClose } from './courier/day-close';

@@ -55,6 +55,25 @@ export const CourierStopSchema = z.object({
   }),
   itemCount: z.number().int(),
   contentSummary: z.string(),
+  /**
+   * Kapıdaki KALEM SATIRLARI (21.10d). `orderItemId` olmadan kısmi iade GÖNDERİLEMEZ:
+   * `ConfirmDoorDeliveryRequest.adjustments[].orderItemId` tam olarak bu kimliği ister ve istemcinin
+   * onu öğrenebileceği başka bir yol yoktu — ekran içerik ÖZETİNİ ayrıştırıp satır uyduruyordu
+   * (`courier-format.parseContentSummary`), yani işaretleyebiliyor ama gönderemiyordu.
+   *
+   * `itemCount` ve `contentSummary` yerinde KALIYOR ve bu bilinçli: gün listesi satırı ve kapanış
+   * ekranı özet metni okuyor, ikisini bu turda sökmek sözleşmeyi kırardı. Bağlanma tamamlandığında
+   * ikisi de bu diziden türetilebilir — ekran şeridinin ayıklama işi (rapor 21.10d).
+   */
+  items: z.array(
+    z.object({
+      orderItemId: z.string().uuid(),
+      /** Kalemin kuryeye görünen adı — "Ürün (boy)", operasyon dilinde (Türkçe). */
+      name: z.string(),
+      /** SİPARİŞ EDİLEN adet. Kapıda eksik çıkan miktar bu sayıdan İNDİRİLEREK gönderilir. */
+      qty: z.number().int(),
+    }),
+  ),
   outcome: StopOutcomeEnum,
   /** Kaç kez yola çıkılıp dönüldü — ulaşılamayan durak listede kaybolmaz. */
   attempts: z.number().int(),
@@ -65,8 +84,58 @@ export type CourierStopContract = z.infer<typeof CourierStopSchema>;
 export const CourierDayResponseSchema = z.object({
   date: z.string(),
   stops: z.array(CourierStopSchema),
+  /**
+   * **Kapıda tahsil edilen paranın gireceği hesap** (`door_cash_account_id` ayarı) — 21.10d.
+   *
+   * DURAK BAŞINA DEĞİL GÜN BAŞINA, çünkü ayarın kendisi tekil: operasyon web ekranı da aynı anahtarı
+   * sipariş bağlamı olmadan okuyor (`deliveries/[orderId]/delivery-read.ts`) — durak başına
+   * tekrarlansaydı aynı değer N kez taşınır ve "bu durakta başka hesap olabilir" diye YANLIŞ bir
+   * beklenti kurardı.
+   *
+   * `null` = ayar boş ya da kullanılamaz hâlde → **tahsilat kapısı kapalıdır** ve ekran sebebini
+   * söyler. Uydurma bir kimlik göndermek `DoorCollectionInput`un uuid kapısından 400 alırdı; sıfıra
+   * ya da rastgele bir değere düşmek ise kapıda alınan parayı olmayan bir hesaba yazmak olurdu.
+   */
+  doorAccountId: z.string().uuid().nullable(),
 });
 export type CourierDayResponse = z.infer<typeof CourierDayResponseSchema>;
+
+/**
+ * **"Yola çıktım" isteği** (K1 · 21.10d). Gün verilmezse bugün — cevabın `date`i hangi günün
+ * başlatıldığını SÖYLER, istemci ikinci bir hesap yapmaz.
+ */
+export const StartCourierDayRequestSchema = z.object({ date: z.string().optional() });
+export type StartCourierDayRequest = z.infer<typeof StartCourierDayRequestSchema>;
+
+/** Yola çıkarılamayan durak — kimliği ve O ANDAKİ durumu. Durum, sebebin kendisidir. */
+export const CourierDayStopStateSchema = z.object({
+  orderId: z.string().uuid(),
+  currentStatus: OrderStatusEnum,
+});
+export type CourierDayStopState = z.infer<typeof CourierDayStopStateSchema>;
+
+/**
+ * **"Yola çıktım" yanıtı** (K1). Gün başına başlatma TOPLU bir yazımdır ve toplu yazımın en tehlikeli
+ * hâli "kısmen oldu"dur — bu yüzden cevap tek bir `ok` DEĞİL, dört listedir. Hangi siparişin
+ * geçtiği, hangisinin geçmediği ve NEDEN geçmediği ekranda görünür; "3 durak yola çıktı, 1'i
+ * hazırlanmayı bekliyor" cümlesi ancak böyle kurulabilir.
+ *
+ * Tek bir sayıya (ör. `startedCount`) indirilseydi kurye eksik kalanı ancak listeyi gözle sayarak
+ * bulurdu — ve teslim yazamadığında sebebini bilmezdi (kapı sırası: teslim yalnız YOLDAKİ siparişten
+ * olur).
+ */
+export const StartCourierDayResponseSchema = z.object({
+  date: z.string(),
+  /** Bu çağrıda `ready → out_for_delivery` yazılan siparişler. */
+  started: z.array(z.string().uuid()),
+  /** Zaten yoldaydı — ikinci çağrı bir HATA değil, "yapılacak yeni bir şey yok" cevabıdır. */
+  alreadyOut: z.array(z.string().uuid()),
+  /** Araya biri girdi: `ready` okundu, yazarken durum değişmişti. Ekran bunu GÖSTERİR, yutmaz. */
+  stale: z.array(CourierDayStopStateSchema),
+  /** Yola çıkarılmadı — durumu `ready` değil (henüz hazırlanmadı ya da gün içinde kapandı). */
+  skipped: z.array(CourierDayStopStateSchema),
+});
+export type StartCourierDayResponse = z.infer<typeof StartCourierDayResponseSchema>;
 
 /**
  * **Ulaşılamadı / reddedildi** isteği (K5). İki ayrı işaret, iki ayrı akıbet — tek düğmeye

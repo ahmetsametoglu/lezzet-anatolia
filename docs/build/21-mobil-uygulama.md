@@ -372,6 +372,16 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     (2) durak kalem satırları (`orderItemId`) yok → kısmi iade uçtan gönderilemiyor;
     (3) "Yola çıktım"ın sunucu ayağı yok (`ready → out_for_delivery` ucu). Üçü de mobil-backend
     dilimi; kamera + çevrimdışı kuyruk 21.13 hattında.
+  - **Durum (08.08 — sözleşme boşlukları kapandı, 21.10d):** `CourierStopSchema.items[]`
+    (kimlikli kalem satırları — zincir testle kanıtlı: gün cevabındaki `orderItemId` kısmi iade
+    olarak kapıdan geçip stok düşürüyor) · `CourierDayResponseSchema.doorAccountId` (gün başına;
+    ayardan, uuid değilse null+warn) · `POST /courier/day/start` (`startCourierDay` — yalnız
+    `ready` aday, kısmi başarı DÖRT listeyle görünür: started/alreadyOut/stale/skipped; eşzamanlı
+    çift çağrıda geçiş tam bir kez). Mevcut imzalar kırılmadı — web köprüsü 35 test yeşil.
+    Fixture iki alanı öğrendi (Expo tarafı, yönetici). Doğrulama (yönetici tekrarı): kurye
+    uç+paket 82 test + mobil 331 + typecheck 17/17. **Kalan (görev `[~]`):** Expo bağlanması —
+    hook'lar gerçek `doorAccountId`/`items`/`day/start`a döner (`BEKLEYEN(21.10)` işaretleri
+    silinir, `parseContentSummary` sökülür); kamera + kuyruk 21.13.
 - [ ] (21.11) **Depo bölümü (hub + D1–D6):** önce ölçüm — hazırlık/kabul/transfer/sayım/dönüş
   orkestrasyonlarının bugünkü adresi (web server action mı, pakette mi; tüketicisiz kapılar doc
   04 notu) → gerekirse terfi/benimseme talepleri defterden → `/api/v1/warehouse/*` uçları +
