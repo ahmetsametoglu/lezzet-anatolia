@@ -5,6 +5,8 @@ export * from './user-text.schema';
 export * from './pagination.schema';
 export * from './image.schema';
 export * from './user-profile.schema';
+// `/me` SÖZLEŞMESİ — profil şemasından TÜRER, o yüzden ondan sonra.
+export * from './me-api.schema';
 export * from './email-verification.schema';
 export * from './auth.schema';
 export * from './category.schema';

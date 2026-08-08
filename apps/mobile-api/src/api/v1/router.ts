@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { serviceDb, UserProfileService } from '@lezzet/database';
+import { MeSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { authOtp } from './auth-otp';
 import { catalog } from './catalog';
 import { bearerAuth, type V1Env } from './auth';
-import { MeSchema } from './contract';
 
 /**
  * `/api/v1` router'ı — mobil uygulamanın tek kapısı. VARSAYILAN KAPALI: uçlar Bearer
@@ -33,6 +33,10 @@ v1.use('*', bearerAuth);
  *
  * Profil yoksa `404 profile_not_found`: auth kaydı var ama profil satırı yok demektir (trigger
  * boşluğu ya da silinmiş kayıt) — boş bir profil uydurmak arızayı görünmez kılardı.
+ *
+ * Cevabın şekli BURADA TANIMLI DEĞİL: `MeSchema` `@lezzet/types`'a terfi etti (21.9) — hangi alanın
+ * müşteriye baktığı, hangisinin operasyon-içi kaldığı kararı ve gerekçesi orada yaşıyor
+ * (`me-api.schema.ts`). Uygulama kabuğu aynı şemayla parse eder; sözleşme tek kaynaktan.
  */
 v1.get('/me', async (c) => {
   const user = c.get('authUser');
