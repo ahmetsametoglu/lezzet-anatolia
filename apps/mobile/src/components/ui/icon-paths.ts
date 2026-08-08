@@ -58,6 +58,21 @@ export const ICON_PATHS = {
   'search-empty': { paths: ['m20.5 20.5-4.2-4.2'], circles: [[11, 11, 7]], large: true },
   /** "Bağlantı kurulamadı" — üstü çizili wifi. */
   'connection-off': { paths: ['M5 12.5a7 7 0 0 1 14 0M8 15.5a4 4 0 0 1 8 0M12 19h.01M2 2l20 20'], large: true },
+
+  /* ── OPERASYON kabuğu (Operasyon Mobil v2 · `icons` sözlüğü v2:1080 + zil v2:42) ──────────
+     Dört bölüm ikonu şablonda TEK `d` dizgesi olarak yazılı (alt yollar boşlukla ayrılmış);
+     ayrı `path`lere bölünMEDİ — bölmek geometriyi yeniden yazmak olurdu (dosyanın kendi kuralı).
+     Adlar İngilizce: `kurye/depo/yonetim/muhasebe` → `courier/warehouse/management/money`. */
+  courier: {
+    paths: ['M1 5h14v11H1z M15 9h4l3 4v3h-7 M5.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M17.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  },
+  warehouse: { paths: ['M3 21V9l9-5 9 5v12 M3 21h18 M9 21v-6h6v6'] },
+  management: { paths: ['M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'] },
+  money: { paths: ['M18 7a6 6 0 1 0 0 10 M4 11h9 M4 15h7'] },
+  /** Bildirim zili — bölüm köklerinin sağ üst düğmesi. Şablon burada İKİ ayrı `path` yazıyor. */
+  bell: { paths: ['M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'] },
+  /** "Tekrar dene" oku — v2'nin üç hata bloğunda da aynı geometri (v2:51, 280, 499). */
+  refresh: { paths: ['M23 4v6h-6', 'M20.49 15a9 9 0 1 1-2.12-9.36L23 10'] },
 } as const satisfies Record<string, IconGeometry>;
 
 /** Kitin tanıdığı ikon adları — `Icon` bunun dışına çıkamaz (yanlış ad derlemede yakalanır). */

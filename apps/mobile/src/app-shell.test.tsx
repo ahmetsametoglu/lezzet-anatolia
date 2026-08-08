@@ -1,5 +1,7 @@
-import { renderRouter, screen } from 'expo-router/testing-library';
+import { screen } from 'expo-router/testing-library';
 import { fireEvent } from '@testing-library/react-native';
+
+import { renderShell } from '@/testing/render-shell';
 
 /*
   KABUK SMOKE TESTİ — komponent testlerinden farkı: rota dosyaları GERÇEK (`./src/app` diskten
@@ -18,32 +20,7 @@ import { fireEvent } from '@testing-library/react-native';
 // Cihaz dili sabitlenir ki assert edilen etiketler koşulan makinenin diline bağlı olmasın.
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-/*
-  MATCHER TİPİ ELLE: expo-router 57'nin yayını `expect.d.ts`i BOŞ basıyor (`export {}`) — matcher
-  çalışma zamanında kayıtlı ama tipte yok. Tek tüketici bu dosya; ikinci bir router testi doğarsa
-  bildirim ortak bir ambient dosyaya taşınır.
-*/
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace jest {
-    interface Matchers<R> {
-      toHavePathname(pathname: string): R;
-    }
-  }
-}
-
-/*
-  RNTL v14 `render`ı ASYNC döndürür; `renderRouter` (57.0.11) bunu bilmez ve `getPathname` gibi
-  metodları sözün (promise) üstüne iliştirir. Bu sarmalayıcı sözü bekler ama İLİŞTİRİLMİŞ nesneyi
-  DÜZ DÖNDÜREMEZ: async fonksiyondan thenable dönerse `await` onu bir kez daha çözer ve elde
-  metodsuz iç sonuç kalır. Nesneye sarmak (`{ app }`) o ikinci çözülmeyi keser — matcher'lar
-  (`toHavePathname`) metodları `app`ten okur.
-*/
-async function renderShell(initialUrl: string) {
-  const app = renderRouter('./src/app', { initialUrl });
-  await app;
-  return { app };
-}
+// Sarmalayıcı + matcher tipi ORTAK iskelede (ikinci router testi doğunca oraya taşındı — CLAUDE §1).
 
 describe('uygulama kabuğu', () => {
   it('kök rotada dört sekme çizilir, seçili olan Vitrin', async () => {

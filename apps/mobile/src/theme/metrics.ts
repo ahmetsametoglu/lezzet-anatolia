@@ -83,8 +83,14 @@ export const appMetrics = {
      * orada başlığın önüne geçiyor. Boş durumdaki ikon ise sayfanın tek öğesi.
      */
     errorIcon: 34,
-    /** Sekme çubuğu ikonu (tasarım: 23). */
+    /**
+     * Sekme çubuğu ikonu (müşteri v3: 23 · operasyon v2: 22 — ±1 kuralıyla aynı durak).
+     * İki yüzey için ikinci bir durak açılmadı: 1 dp fark ekranda ölçülemez, ama iki ad bir gün
+     * "hangisi doğru?" sorusunu doğurur (aynı disiplin: `operations-app.ts` yeni durak eşiği).
+     */
     tabIcon: 23,
+    /** Başlık satırındaki yuvarlak düğmenin ikonu — operasyon zil düğmesi (v2: 20). */
+    headerIcon: 20,
     /** Girdi/düğme içinde satıra giren ikon (tasarım: arama büyüteci 17 · süzgeç çizgileri 19×17). */
     inlineIcon: 17,
     /** Yüzen sayfanın tutamağı (tasarım: 44×5). */

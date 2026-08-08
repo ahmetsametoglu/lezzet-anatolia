@@ -139,5 +139,8 @@ ne yapar) → **Sistemin cevabı**. Tek kabuk + rol bölümleri (§3.1); "🔔" 
   imzalı-yükleme ucu · D6 akıbet kapısının depocuya açılması (bugün admin guard'ı) · Y5 "gün
   özeti" birleştirme ucu (parçalar hazır, birleştiren kapı yok). Bazı kapılar webde de tüketicisiz
   (hazırlık kuyruğu, mal kabul, transfer) — native bunların İLK tüketicisi olacak.
-- **Webe bildirilen arıza (defter, 07.08):** `markUndelivered` imzasındaki `note` gövdede hiçbir
-  yere yazılmıyor — kuryenin sebebi sessizce kayboluyor (kanıt: `day.ts:169` yalnız imzada).
+- ~~Webe bildirilen arıza (defter, 07.08): `markUndelivered` imzasındaki `note` gövdede hiçbir
+  yere yazılmıyor~~ **DÜZELTİLDİ (08.08, denetim; kodda doğrulandı):** not artık geçişle ATOMİK —
+  `order_status_log.note` (0012) + `transition_order_status(p_note)` + `day.ts:181` geçiriyor.
+  Kurye terfisi (21.10) bu sürümü birebir taşır; yerel DB'de kolonun görünmesi `db:refresh`
+  bekliyor (kullanıcı kararı).

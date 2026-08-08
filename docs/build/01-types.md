@@ -37,6 +37,19 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
 - [~] (01.10) Insert/Update türevleri (id/created_at hariç tutan `.omit()/.partial()` türevleri) — servis katmanının kullanacağı biçimler
   - *Bitti:* en az Order/Customer/Product için türev tipler derleniyor
 - [ ] (01.11) `README` (paket içi): şema ekleme kuralı — "önce DATA_MODEL, sonra şema; çelişkide doküman güncellenir"
+- [ ] (01.12) **`schemas/` klasörüne eksen düzeni (kullanıcı kararı 08.08):** DB modelleri ile
+  öteki şemalar tek düzlemde durmayacak — "modeller birbirine girmemeli". Ölçüldü (08.08): 48
+  dosyada üç eksen iç içe: **DB satır aynaları** (product, order, money, cart, …), **yüzey
+  sözleşmeleri** (`auth`, `catalog-api`, `me-api` — kendi künyeleri "sözleşme" diyor), **yapı
+  taşları** (`db-numeric`, `pagination`, `localized-text`, `user-text`, `image`, `enums`).
+  Plan: `src/{entities,contracts,primitives}/` altklasörleri; barrel (`index.ts`) dışa görünümü
+  DEĞİŞTİRMEZ (derin import hiç yok — ölçüldü, tüketici etkisi sıfır); bağımlılık yönü
+  `primitives ← entities ← contracts` ve bu yön sözleşme testiyle makineye bağlanır.
+  `analytics.schema.ts` gibi TEK dosyada iki ekseni taşıyanlar taşımada BÖLÜNMEZ (davranış
+  değişmez), bölünme adayı olarak not edilir. **Zamanlama:** web şeridinin bu klasörde
+  commit'lenmemiş işi var (conversation/enums/order) — çakışan iş aynı anda başlamaz (CLAUDE §5);
+  taşıma onların commit penceresinden sonra TEK harekette yapılır (defter girdisi 08.08).
+  `touches: packages/types (yapı), docs/architecture/STACK.md §5 (kural satırı)`
 
 **Modül durumu (26.07.2026):** artımlı ilerliyor — şemalar ihtiyaç duyan modülle birlikte yazılıyor (toptan değil, CLAUDE.md §1).
 - **Var:** `LocalizedText`, `UserProfile`, `EmailVerification`, `Category`, `Collection`, `Product`, `ProductVariant`, `ProductCollection` + hepsinin Insert/Update türevleri; enum'lardan `ProductAllergen`, `ProductDateType`.

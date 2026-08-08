@@ -2,6 +2,7 @@ import { BlurView } from 'expo-blur';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { operationsTheme } from '@/theme/unistyles';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { PressableSurface } from './pressable-surface';
@@ -24,7 +25,23 @@ import { PressableSurface } from './pressable-surface';
 
   ZEMİN KREM CAM (Token Kararlari #17): %96 krem + `blur(8px)`. Gerekçe ve Android'in
   `BlurTargetView` açığı `AppBar` künyesinde, tek yerde yazılı — aynı yüzey, aynı karar.
+
+  ── İKİ YÜZEY, TEK ÇUBUK (21.9) ─────────────────────────────────────────────
+  Operasyon yüzeyinin sekme çubuğu (Operasyon Mobil v2:808) İSKELET olarak bunun AYNISIDIR: krem
+  cam + üst çizgi + eşit dört yuva + ikon üstü etiket. Ayrıştığı yer yalnız TON: seçili renk,
+  seçilmeyen renk, üst çizgi, etiket kademesi, seçili ikonun vurgusu ve basılı geri bildirim.
+  Bu yüzden ikinci bir çubuk YAZILMADI (CLAUDE §1 — komponent duplikasyonu da duplikasyondur);
+  fark tek bir `tone` prop'una indi ve karar KİTİN İÇİNDE kaldı: çağıran renk geçirmez, hangi
+  yüzeyde olduğunu söyler.
+
+  OPERASYON DEĞERLERİ `operationsTheme` SABİTİNDEN okunuyor, `theme` argümanından değil: Unistyles
+  geri çağrısındaki tema KAYITLI TEMALARIN BİRLEŞİMİDİR ve TypeScript birleşimde yalnız ortak
+  anahtarları okutur — `tab-inactive` yalnız operasyon temasında var. Ölçüm ve elenmiş
+  alternatifler `theme/unistyles.ts` künyesinde, tek yerde.
 */
+
+/** Çubuğun hangi yüzeyde durduğu — renk/kademe kararı bu addan türer, çağırandan değil. */
+type BottomTabTone = 'customer' | 'operations';
 
 /** Tek sekme — kabuk hangi rotanın seçili olduğunu bilir, çubuk yalnız çizer. */
 export interface BottomTabItem {
@@ -40,14 +57,30 @@ export interface BottomTabItem {
 
 interface BottomTabBarProps {
   items: BottomTabItem[];
+  /** Varsayılan müşteri vitrini; operasyon kabuğu kendi tonunu ister. */
+  tone?: BottomTabTone;
   testID?: string;
 }
 
-export function BottomTabBar({ items, testID }: BottomTabBarProps) {
+export function BottomTabBar({ items, tone = 'customer', testID }: BottomTabBarProps) {
   const { theme } = useUnistyles();
 
+  /* İkon ve etiket TEK kaynaktan boyanır (şablon ikonu `currentColor` ile boyuyor). Renk STİL
+     DEĞİL PROP olarak da gerektiği için (`Icon`ın `color`u) stil sayfasında değil burada durur —
+     iki yerde yazılsaydı ikon ile etiketin rengi bir gün ayrışırdı. */
+  const stateColors =
+    tone === 'operations'
+      ? { selected: operationsTheme.colors.ink, idle: operationsTheme.colors['tab-inactive'] }
+      : { selected: theme.colors.terracotta, idle: theme.colors.muted };
+
   return (
-    <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID={testID} accessibilityRole="tablist">
+    <BlurView
+      intensity={theme.glassBlurIntensity}
+      tint="light"
+      style={[styles.bar, styles[`${tone}Bar`]]}
+      testID={testID}
+      accessibilityRole="tablist"
+    >
       <View style={styles.glass} pointerEvents="none" testID={testID === undefined ? undefined : `${testID}-glass`} />
       {items.map((item) => (
         // Genişliği YUVA dağıtır: `PressableSurface`in stili iç yüzeydedir, dış `Pressable`a
@@ -55,7 +88,9 @@ export function BottomTabBar({ items, testID }: BottomTabBarProps) {
         <View key={item.key} style={styles.slot}>
           <PressableSurface
             onPress={item.onPress}
-            feedback="opacity"
+            /* Müşteri şablonu sekmede opaklık kullanıyor, operasyon v2 küçültme (`scale(.94)` —
+               kitin `scale` durağına, .97'ye çekildi; .9'a olan uzaklık daha büyük). */
+            feedback={tone === 'operations' ? 'scale' : 'opacity'}
             accessibilityRole="tab"
             accessibilityLabel={item.label}
             selected={item.selected}
@@ -71,14 +106,22 @@ export function BottomTabBar({ items, testID }: BottomTabBarProps) {
                 DÖNÜŞÜM SARMALAYICIDA, ikonun kendisinde değil: `Icon` bir SVG çizer ve stil
                 prop'u YOKTUR (renk/boy dışında bir görünüm kararı ikona ait değildir). Şablon da
                 dönüşümü ikonun kutusuna uyguluyor. */}
-            <View style={item.selected ? styles.selectedIcon : undefined}>
+            <View style={item.selected && tone === 'customer' ? styles.selectedIcon : undefined}>
               <Icon
                 name={item.icon}
                 size={theme.size.tabIcon}
-                color={item.selected ? theme.colors.terracotta : theme.colors.muted}
+                color={item.selected ? stateColors.selected : stateColors.idle}
               />
             </View>
-            <Text style={[styles.label, item.selected ? styles.selectedLabel : styles.idleLabel]}>{item.label}</Text>
+            <Text
+              style={[
+                styles.label,
+                styles[`${tone}Label`],
+                { color: item.selected ? stateColors.selected : stateColors.idle },
+              ]}
+            >
+              {item.label}
+            </Text>
           </PressableSurface>
         </View>
       ))}
@@ -90,12 +133,20 @@ const styles = StyleSheet.create((theme, rt) => ({
   bar: {
     flexDirection: 'row',
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors.ink,
     paddingTop: theme.space.md,
     paddingHorizontal: theme.space.md,
+  },
+  /** Müşteri: mürekkep üst çizgi + tasarımın 6 px alt dolgusu (v3). */
+  customerBar: {
+    borderTopColor: theme.colors.ink,
     /* Alt güvenli alan çubuğun İÇİNDE: ana ekran çubuğu (home indicator) etiketin üstüne binmesin.
-       Tasarımın 6 px'lik alt dolgusu onun üstüne eklenir. */
+       Tasarımın alt dolgusu onun üstüne eklenir. */
     paddingBottom: rt.insets.bottom + theme.space.sm,
+  },
+  /** Operasyon: kum ayracı (v2 `#ddd6c4` → `sand-300`) + 10 px alt dolgu (v2:809). */
+  operationsBar: {
+    borderTopColor: operationsTheme.colors['sand-300'],
+    paddingBottom: rt.insets.bottom + theme.space.lg,
   },
   /** Bulanıklığın üstündeki krem katman — gerekçesi `AppBar`da, aynı yüzeyin ikizi. */
   glass: {
@@ -111,18 +162,23 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space['2xs'],
     paddingVertical: theme.space.sm,
   },
-  /** Seçili sekmenin ikonu bir tık yukarı kalkar ve büyür — tasarımın durum vurgusu. */
+  /**
+   * Seçili sekmenin ikonu bir tık yukarı kalkar ve büyür — MÜŞTERİ tasarımının durum vurgusu.
+   * Operasyon v2'de bu vurgu YOK: orada seçili olma yalnız RENKLE söyleniyor (mürekkep ↔
+   * `tab-inactive`). Vurguyu oraya da taşımak, tasarımın vermediği bir kararı uydurmak olurdu.
+   */
   selectedIcon: {
     transform: [{ translateY: theme.tabSelected.lift }, { scale: theme.tabSelected.scale }],
   },
   label: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    /* Tasarım 10,5/700; ölçekte o durak yok (envanter §3b'nin bilinen açığı). Boy `micro` (11,5),
-       ağırlık üstbaşlık kademesinden (700) — `eyebrow` (10) sayıca daha yakın ama harf aralığı
-       .18em'dir ve büyük harf içindir; sekme etiketi cümle biçimlidir. */
-    fontSize: theme.text.micro,
     fontWeight: theme.text['eyebrow--font-weight'],
   },
-  selectedLabel: { color: theme.colors.terracotta },
-  idleLabel: { color: theme.colors.muted },
+  /* Müşteri tasarımı 10,5/700; ölçekte o durak yok (envanter §3b'nin bilinen açığı). Boy `micro`
+     (11,5), ağırlık üstbaşlık kademesinden (700) — `eyebrow` (10) sayıca daha yakın ama harf
+     aralığı .18em'dir ve büyük harf içindir; sekme etiketi cümle biçimlidir. */
+  customerLabel: { fontSize: theme.text.micro },
+  /* Operasyonda o durak ARTIK VAR: `meta` (10,5) tam olarak bu ölçü için açıldı
+     (`operations-app.ts`) — yani burada yuvarlamaya gerek kalmıyor. */
+  operationsLabel: { fontSize: operationsTheme.text.meta },
 }));

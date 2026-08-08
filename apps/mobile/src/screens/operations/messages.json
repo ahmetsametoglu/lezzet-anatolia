@@ -1,0 +1,31 @@
+{
+  "sections": {
+    "courier": { "tab": "Kurye", "eyebrow": "KURYE", "title": "Günün Rotası" },
+    "warehouse": { "tab": "Depo", "eyebrow": "DEPO", "title": "Depo İşleri" },
+    "management": { "tab": "Yönetim", "eyebrow": "YÖNETİM · BİLDİRİM → KISA KARAR", "title": "Karar Kutusu" },
+    "money": { "tab": "Para", "eyebrow": "PARA · SALT OKUMA", "title": "Tahsilat İzleme" }
+  },
+  "bell": {
+    "label": "Bildirimler",
+    "labelWithCount": "Bildirimler, {n} yeni"
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "back": "Geri",
+    "scopeAll": "tüm bölümler — çok rollü oturum",
+    "scopeFiltered": "yalnız {sections} — rol süzmesi",
+    "empty": {
+      "title": "Bildirim yok",
+      "body": "Yeni iş düştüğünde burada görünür — listeler elle de açılır."
+    },
+    "rule": "Süzme kuralı: tek rollü kullanıcı yalnız kendi bölümünün bildirimlerini görür; çok rollüde tümü akar. Bildirim hızlandırıcıdır, tek kapı değil."
+  },
+  "gate": {
+    "loading": "Yükleniyor…",
+    "error": {
+      "title": "Operasyon açılamadı",
+      "body": "Bağlantı ya da sunucu sorunu — tekrar denenebilir.",
+      "retry": "Tekrar dene"
+    }
+  }
+}

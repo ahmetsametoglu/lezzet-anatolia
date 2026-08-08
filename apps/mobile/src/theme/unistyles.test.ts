@@ -7,10 +7,15 @@ import {
   customerColors,
   customerRadius,
   customerText,
+  operationsAppColors,
+  operationsAppRadius,
+  operationsAppShadow,
+  operationsAppText,
+  operationsBrand,
 } from '@lezzet/design-tokens';
 
 import { appFontAssets } from './fonts';
-import { lightTheme } from './unistyles';
+import { lightTheme, operationsTheme } from './unistyles';
 
 // Bağlantı kanıtı: tema değerleri design-tokens paketinden GELİYOR — beklenenler de paketten
 // türetilir (ham değer teste de yazılmaz), böylece token değişince test tanım gereği ayak uydurur.
@@ -117,5 +122,69 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.gradient.photoBottom.end).toEqual({ x: 0.5, y: 1 });
     // Token değişirse çeviri de değişsin: kaynak dizgeden bağımsız bir sabit yazılmadı.
     expect(customerAppGradient['photo-top']).toContain('rgba(21, 23, 15, 0.28)');
+  });
+});
+
+/*
+  OPERASYON TEMASI — ÜÇ KATMANIN kompozisyonu (21.9). Beklenenler yine paketten türetilir;
+  ölçülen şey değerin kendisi değil, KATMAN SIRASININ doğru olmasıdır: en son katman kazanmalı,
+  tabanın geri kalanı sağlam kalmalı, müşteri teması hiç kıpırdamamalı.
+*/
+describe('Operasyon teması ↔ üç katman kompozisyonu', () => {
+  it('operasyon katmanı aynı addaki anahtarı EZER (fark token’ları)', () => {
+    expect(operationsTheme.colors.cream).toBe(operationsAppColors.cream);
+    expect(operationsTheme.colors['olive-bg']).toBe(operationsAppColors['olive-bg']);
+    /* Fark GERÇEK bir farktır — ve karşılaştırma müşteri TEMASIYLA yapılır (tek tek katmanlarla
+       değil): ölçülmek istenen "iki yüzey aynı rolde farklı renk görüyor mu" sorusudur. */
+    expect(operationsTheme.colors.cream).not.toBe(lightTheme.colors.cream);
+    expect(operationsTheme.colors['olive-bg']).not.toBe(lightTheme.colors['olive-bg']);
+  });
+
+  it('operasyona-yeni duraklar temaya girer (yüzey · mürekkep · kademe · yarıçap · gölge)', () => {
+    expect(operationsTheme.colors.panel).toBe(operationsAppColors.panel);
+    expect(operationsTheme.colors['neutral-bg']).toBe(operationsAppColors['neutral-bg']);
+    expect(operationsTheme.colors['ink-inset']).toBe(operationsAppColors['ink-inset']);
+    expect(operationsTheme.colors.warehouse).toBe(operationsAppColors.warehouse);
+    expect(operationsTheme.colors['tab-inactive']).toBe(operationsAppColors['tab-inactive']);
+    expect(operationsTheme.text.meta).toBe(Number.parseFloat(operationsAppText.meta));
+    expect(operationsTheme.text.tag).toBe(Number.parseFloat(operationsAppText.tag));
+    expect(operationsTheme.radius.tight).toBe(Number.parseFloat(operationsAppRadius.tight));
+    expect(operationsTheme.shadow['hard-on-ink']).toBe(operationsAppShadow['hard-on-ink']);
+  });
+
+  it('ALT katmanlar sağlam kalır: müşteri uygulamasının kendi durakları da okunur', () => {
+    // Tasarımın kullandığı dört değer YALNIZ `customer-app.ts`te yaşıyor — alt evren kanıtı.
+    expect(operationsTheme.colors.error).toBe(customerAppColors.error);
+    expect(operationsTheme.colors['error-bg']).toBe(customerAppColors['error-bg']);
+    expect(operationsTheme.colors['disabled-fill']).toBe(customerAppColors['disabled-fill']);
+    expect(operationsTheme.colors['sand-150']).toBe(customerAppColors['sand-150']);
+    // Taban da yerinde: mürekkep, zeytin, kum skalası birebir müşteri evreninden.
+    expect(operationsTheme.colors.ink).toBe(customerColors.ink);
+    expect(operationsTheme.radius.card).toBe(Number.parseFloat(customerAppRadius.card));
+    expect(operationsTheme.shadow.hard).toBe(customerAppShadow.hard);
+  });
+
+  it('WhatsApp ikon yeşili İKİNCİ KEZ yazılmadı — operasyon marka ihracından gelir', () => {
+    expect(operationsTheme.colors['brand-whatsapp']).toBe(operationsBrand['brand-whatsapp']);
+    // Müşterinin kanonik marka yeşiliyle karışmaz: iki ayrı ad, iki ayrı bağlam.
+    expect(operationsTheme.colors['brand-whatsapp-pure']).toBe(customerAppColors['brand-whatsapp-pure']);
+    expect(operationsTheme.colors['brand-whatsapp']).not.toBe(operationsTheme.colors['brand-whatsapp-pure']);
+  });
+
+  it('MÜŞTERİ TEMASI DEĞİŞMEDİ: operasyon durakları oraya sızmaz', () => {
+    expect(lightTheme.colors).not.toHaveProperty('panel');
+    expect(lightTheme.colors).not.toHaveProperty('tab-inactive');
+    expect(lightTheme.text).not.toHaveProperty('meta');
+    expect(lightTheme.colors.cream).toBe(customerColors.cream);
+  });
+
+  it('yapışkan CTA gradyanı çevrilmiş hâlde durur; fotoğraf gradyanları tabandan gelmeye devam eder', () => {
+    // Şeffaf durak `rgba(…, 0)` yazılır (`transparent` bazı motorlarda şeffaf SİYAHtır).
+    expect(operationsTheme.gradient.stickyFade.colors).toEqual([
+      'rgba(242, 240, 232, 0)',
+      operationsAppColors.cream,
+    ]);
+    expect(operationsTheme.gradient.stickyFade.locations).toEqual([0, 0.4]);
+    expect(operationsTheme.gradient.photoTop.locations).toEqual(lightTheme.gradient.photoTop.locations);
   });
 });

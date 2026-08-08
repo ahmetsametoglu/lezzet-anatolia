@@ -1,4 +1,4 @@
-import { customerColors } from '@lezzet/design-tokens';
+import { customerColors, operationsAppColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { appMetrics } from '../../theme/metrics';
@@ -26,8 +26,17 @@ describe('BackButton', () => {
   });
 
   it('fotoğraf üstünde krem zemin alır', async () => {
-    await render(<BackButton onPress={jest.fn()} accessibilityLabel="Geri" onPhoto testID="back" />);
+    await render(<BackButton onPress={jest.fn()} accessibilityLabel="Geri" variant="photo" testID="back" />);
 
     expect(screen.getByTestId('back')).toHaveStyle({ backgroundColor: customerColors['sand-50'] });
+  });
+
+  it('operasyon yerleşimi çubuğun ölçüsünü korur ama nötr dolgu alır', async () => {
+    await render(<BackButton onPress={jest.fn()} accessibilityLabel="Geri" variant="operations" testID="back" />);
+
+    expect(screen.getByTestId('back')).toHaveStyle({
+      width: appMetrics.size.iconButton,
+      backgroundColor: operationsAppColors['neutral-bg'],
+    });
   });
 });

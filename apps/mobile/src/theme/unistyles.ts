@@ -7,6 +7,12 @@ import {
   customerColors,
   customerRadius,
   customerText,
+  operationsAppColors,
+  operationsAppGradient,
+  operationsAppRadius,
+  operationsAppShadow,
+  operationsAppText,
+  operationsBrand,
 } from '@lezzet/design-tokens';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -25,8 +31,8 @@ import { mapTokens } from './parse';
   sınırından okunur. Web'e sıfır etki: `customerApp*` ihraçlarını web hiç görmez.
 
   Müşteri vitrini TEK temalıdır (karanlık mod yalnız OPERASYON evreninde) — o yüzden yalnız
-  `light` var. Operasyon teması, uygulamanın operasyon yüzeyi işiyle birlikte
-  `operationsColors`/`operationsDarkColors`tan bağlanacak.
+  `light` var. Operasyon yüzeyi (21.9) İKİNCİ temayı ekliyor; karanlık mod ona da GELMİYOR
+  (`operations-app.ts`: operasyonun karanlık teması MASAÜSTÜ yüzeyinindir).
 */
 
 /** 5 fark + 14 uygulamaya-yeni renk tabanın üstüne biner (`sand-300`, `star`, `error`, `scrim`…). */
@@ -76,8 +82,59 @@ export const lightTheme = {
   ...appMetrics,
 } as const;
 
+/*
+  ── OPERASYON TEMASI (21.9) ─────────────────────────────────────────────────
+  ÜÇ KATMAN, aynı addaki anahtarda EN SON katman kazanır — birleştirmenin TÜKETİCİNİN işi olduğu
+  `operations-app.ts` başlığında yazılı, burası o tüketici. Müşteri teması DEĞİŞMEDİ: `lightTheme`
+  yukarıda olduğu gibi duruyor, operasyon farkı yalnız bu nesnede yaşıyor.
+
+  MARKA anahtarı (`operationsBrand`) da yayılıyor: WhatsApp'ın koyultulmuş ikon yeşili
+  (`brand-whatsapp` #128c4b) tasarımda kullanılıyor ve token paketinde ZATEN var — ikinci kez
+  yazmak yerine oradan geliyor (o dosyanın açık hükmü). Müşterinin `brand-whatsapp-pure`ıyla
+  çakışmaz: iki ayrı ad, iki ayrı bağlam.
+
+  ── UNISTYLES'IN TİP SÖZLEŞMESİ: `theme` BİR BİRLEŞİMDİR (ÖLÇÜLDÜ) ──────────
+  `UnistylesTheme = UnistylesThemes[keyof UnistylesThemes]`, yani `StyleSheet.create((theme) => …)`
+  geri çağrısına gelen değer KAYITLI TÜM TEMALARIN BİRLEŞİMİDİR. TypeScript bir birleşimde ancak
+  HER ÜYEDE bulunan anahtarı okutur. Ölçüldü (tsc probu, 08.08): iki tema kaydedilip
+  `theme.colors.panel` okunduğunda `TS2339: Property 'panel' does not exist on type '… | …'`.
+  Yani operasyona-ÖZGÜ duraklar (`panel`, `neutral-bg`, `ink-inset`, `warehouse`, `tab-inactive`,
+  `meta`, `tag`, `tight`, `hard-on-ink`, `sticky-fade`) Unistyles'ın `theme` argümanından
+  OKUNAMAZ. Unistyles'ın kendi dokümanı da aynı şeyi söylüyor: *"It's not recommended to use themes
+  with different shapes"* (unistyl.es/v3/guides/theming).
+
+  ÇÖZÜM — operasyon komponentleri token'larını BU SABİTTEN okur (`operationsTheme.colors.panel`).
+  Bu bir kaçamak değil, tam olarak doğru olan: operasyon ekranları YALNIZ bu temanın altında
+  çizilir, dolayısıyla sabit ile etkin tema aynı nesnedir. Alternatifler ÖLÇÜLDÜ ve elendi:
+  · müşteri temasına operasyon anahtarlarını eklemek → şekli eşitler ama müşteri temasını
+    değiştirir ve `panel`/`warehouse` müşteri vitrininde ANLAMSIZDIR (bir tonun iki evrende iki
+    anlamı olurdu);
+  · `theme` üstünde daraltıcı bir kapı (`asOperationsTheme`) → expo-router rota ağacını AÇILIŞTA
+    topluca `require` eder, yani operasyon stil sayfaları müşteri teması etkinken de bir kez
+    değerlendirilir; kapı o anda patlardı (sessiz düşmek de yasak — CLAUDE §1);
+  · `ScopedTheme` sarmalayıcısı → tip birleşimini zaten çözmüyor, üstelik Unistyles'ın Jest
+    mock'unda `() => null` olarak duruyor: operasyon ağacının TAMAMI testte kaybolurdu.
+
+  KAYIT NEYE YARIYOR: PAYLAŞILAN kit (`PressableSurface`, `Icon`, `LoadingState`…) etkin temayı
+  okur; `UnistylesRuntime.setTheme('operations')` çağrıldığında bu komponentler operasyon
+  değerlerini görür. Bugün bu FARK İKİ DEĞERDİR (`cream` ve `olive-bg` — tek fark onlar), yani
+  kayıt bugün görsel olarak az şey değiştiriyor; ama dikişin doğru yeri burası ve operasyon
+  ekranları paylaşılan kitten öğe kullandıkça karşılığını verecek.
+*/
+export const operationsTheme = {
+  colors: { ...customerColors, ...customerAppColors, ...operationsAppColors, ...operationsBrand },
+  text: mapTokens({ ...customerText, ...customerAppText, ...operationsAppText }),
+  radius: mapTokens({ ...customerRadius, ...customerAppRadius, ...operationsAppRadius }),
+  shadow: { ...customerAppShadow, ...operationsAppShadow },
+  /** Fotoğraf gradyanları tabandan aynen gelir; operasyonun kendi durağı yapışkan CTA solmasıdır. */
+  gradient: { ...gradient, stickyFade: parseLinearGradient(operationsAppGradient['sticky-fade']) },
+  font,
+  ...appMetrics,
+} as const;
+
 const appThemes = {
   light: lightTheme,
+  operations: operationsTheme,
 } as const;
 
 type AppThemes = typeof appThemes;
@@ -92,6 +149,10 @@ declare module 'react-native-unistyles' {
 StyleSheet.configure({
   themes: appThemes,
   settings: {
+    /* AÇILIŞ MÜŞTERİ TEMASIYLA: "oturumsuz kullanım = müşteri gezinmesi" (02-mimari §4, kullanıcı
+       kararı 07.08) — uygulama giriş kapısıyla değil vitrinle açılır. Operasyon teması, operasyon
+       kabuğu bağlandığında `UnistylesRuntime.setTheme` ile devralır (`(operations)/_layout.tsx`).
+       `adaptiveThemes` AÇILMADI: iki tema aydınlık/karanlık çifti değil, iki AYRI YÜZEY. */
     initialTheme: 'light',
   },
 });

@@ -1,4 +1,11 @@
-import { customerAppColors, customerAppText, customerColors, customerText } from '@lezzet/design-tokens';
+import {
+  customerAppColors,
+  customerAppText,
+  customerColors,
+  customerText,
+  operationsAppColors,
+  operationsAppText,
+} from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { BottomTabBar, type BottomTabItem } from './bottom-tab-bar';
@@ -85,5 +92,52 @@ describe('BottomTabBar', () => {
     expect(screen.getByTestId('tabs-glass')).toHaveStyle({
       backgroundColor: customerAppColors['cream-glass'],
     });
+  });
+});
+
+/*
+  OPERASYON TONU (21.9) — aynı iskelet, başka yüzey. Beklenen değerler `operationsApp*`
+  token'larından TÜRETİLİR (ham hex teste de yazılmaz): tasarım seti değişirse test tanım gereği
+  ayak uydurur.
+*/
+describe('BottomTabBar · operasyon tonu', () => {
+  const operationsItems: BottomTabItem[] = [
+    { key: 'courier', label: 'Kurye', icon: 'courier', selected: true, onPress: jest.fn() },
+    { key: 'warehouse', label: 'Depo', icon: 'warehouse', selected: false, onPress: jest.fn() },
+  ];
+
+  it('seçili sekme MÜREKKEP, seçilmeyen `tab-inactive` — terracotta/muted çifti değil', async () => {
+    await render(<BottomTabBar items={operationsItems} tone="operations" />);
+
+    expect(screen.getByText('Kurye')).toHaveStyle({ color: customerColors.ink });
+    expect(screen.getByText('Depo')).toHaveStyle({ color: operationsAppColors['tab-inactive'] });
+    expect(screen.getByText('Kurye')).not.toHaveStyle({ color: customerColors.terracotta });
+  });
+
+  it('etiket kademesi `meta` (10,5) — müşterinin `micro` yuvarlaması burada gerekmiyor', async () => {
+    await render(<BottomTabBar items={operationsItems} tone="operations" />);
+
+    expect(screen.getByText('Kurye')).toHaveStyle({ fontSize: Number.parseFloat(operationsAppText.meta) });
+  });
+
+  it('üst çizgi kum ayracıdır, mürekkep değil', async () => {
+    await render(<BottomTabBar items={operationsItems} tone="operations" testID="ops-tabs" />);
+
+    expect(screen.getByTestId('ops-tabs')).toHaveStyle({ borderTopColor: customerAppColors['sand-300'] });
+  });
+
+  it('seçili ikon YÜKSELMEZ: operasyon tasarımı durumu yalnız RENKLE söylüyor', async () => {
+    await render(<BottomTabBar items={operationsItems} tone="operations" testID="ops-tabs" />);
+
+    expect(screen.getByTestId('ops-tabs-courier').children[0]).not.toHaveStyle({
+      transform: [{ translateY: appMetrics.tabSelected.lift }, { scale: appMetrics.tabSelected.scale }],
+    });
+  });
+
+  it('a11y sözleşmesi tondan bağımsızdır — rol ve seçililik aynı', async () => {
+    await render(<BottomTabBar items={operationsItems} tone="operations" />);
+
+    expect(screen.getByRole('tab', { name: 'Kurye', selected: true })).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'Depo', selected: false })).toBeOnTheScreen();
   });
 });
