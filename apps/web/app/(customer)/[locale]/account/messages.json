@@ -18,7 +18,7 @@
     "consentWhatsapp": "💬 WhatsApp",
     "consentNote": "Kapalı kanaldan hiçbir kampanya iletişimi gitmez; sipariş bildirimleri bundan bağımsızdır.",
     "dataTitle": "Verileriniz",
-    "dataBody": "Hangi verilerinizi tuttuğumuzu gizlilik politikasında bulabilirsiniz. Verilerinizin silinmesini {email} adresine yazarak talep edebilirsiniz.",
+    "dataBody": "Hangi verilerinizi tuttuğumuzu gizlilik politikasında bulabilirsiniz. Hesabınızı ve kişisel verilerinizi aşağıdan kendiniz silebilirsiniz.",
     "dataLink": "Gizlilik politikası →",
     "deleteAccount": {
       "action": "Hesabımı sil",
@@ -126,7 +126,7 @@
     "consentWhatsapp": "💬 WhatsApp",
     "consentNote": "Aucune communication marketing n’est envoyée sur un canal désactivé ; les notifications de commande sont indépendantes.",
     "dataTitle": "Vos données",
-    "dataBody": "Vous trouverez les données que nous conservons dans notre politique de confidentialité. Pour demander leur suppression, écrivez à {email}.",
+    "dataBody": "Vous trouverez les données que nous conservons dans notre politique de confidentialité. Vous pouvez supprimer vous-même votre compte et vos données personnelles ci-dessous.",
     "dataLink": "Politique de confidentialité →",
     "deleteAccount": {
       "action": "Supprimer mon compte",
@@ -234,7 +234,7 @@
     "consentWhatsapp": "💬 WhatsApp",
     "consentNote": "Über einen deaktivierten Kanal geht keine Marketing-Kommunikation raus; Bestellbenachrichtigungen sind davon unabhängig.",
     "dataTitle": "Ihre Daten",
-    "dataBody": "Welche Daten wir speichern, steht in unserer Datenschutzerklärung. Die Löschung können Sie unter {email} anfordern.",
+    "dataBody": "Welche Daten wir speichern, steht in unserer Datenschutzerklärung. Ihr Konto und Ihre personenbezogenen Daten können Sie unten selbst löschen.",
     "dataLink": "Datenschutzerklärung →",
     "deleteAccount": {
       "action": "Konto löschen",

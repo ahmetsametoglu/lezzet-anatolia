@@ -79,7 +79,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
 
       {/* Veri notu mobilde KART DEĞİL, sayfanın altındaki ince satır (tasarım). Gizlilik bağı
           08.8 ile açıldı; masaüstündeki kartla aynı hedef, buradaki kabuğu ince satır. */}
-      <span className="px-1 font-sans text-micro leading-relaxed text-muted">{t.dataBody.replace('{email}', CONTACT_EMAIL)}</span>
+      <span className="px-1 font-sans text-micro leading-relaxed text-muted">{t.dataBody}</span>
       <Link href="/legal/privacy" className="px-1 font-sans text-micro font-bold text-olive transition-colors hover:text-olive-dark">
         {t.dataLink}
       </Link>
@@ -90,9 +90,3 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
     </div>
   );
 }
-
-/**
- * Veri talebi adresi. `@lezzet/brand`'de böyle bir sabit YOK ve oraya eklemek bu işin kapsamı
- * değil; metne gömmek yerine tek yerde durur — marka paketine taşındığında tek satır değişir.
- */
-const CONTACT_EMAIL = 'bonjour@lezzetanatolie.com';

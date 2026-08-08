@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from '@/i18n/navigation';
+import { useLocale } from 'next-intl';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { errorText } from '@/lib/customer-error-text';
+import { signOutAction } from '@/lib/auth/actions';
 import { deleteAccountAction } from '../actions';
 import type { Messages } from '../account-types';
 
@@ -22,10 +23,20 @@ import type { Messages } from '../account-types';
  * düşünür ve o an haklı olan o olur. Ürün puanı da kimliksiz kalır: silmek, başka müşterilerin
  * gördüğü ürün skorunu geriye dönük değiştirirdi.
  *
- * ── SİLDİKTEN SONRA ──────────────────────────────────────────────────────────
- * Oturum ölüyor (`auth.users` satırı gidiyor), yani hesap sayfası tazelenemez — anasayfaya
- * gidiliyor. `router.refresh()` de çağrılıyor: yönlendirme tek başına sunucu bileşenlerinin
- * önbelleğini düşürmüyor ve üst şeritte bir an "hesabım" yazan bir kabuk kalıyordu.
+ * ── SİLDİKTEN SONRA: ÇIKIŞ DA YAPILIR ────────────────────────────────────────
+ * `anonymize` `auth.users` satırını siliyor, ama tarayıcıdaki oturum ÇEREZİNE dokunmuyor — onu
+ * ancak çerezi yazan taraf (Supabase istemcisi) silebilir. İlk sürüm bunu atlıyordu ve **ölçüldü** (08.08,
+ * tarayıcıda koşuldu): silme bittikten sonra `sb-…-auth-token` çerezi yerinde duruyordu. Sunucu
+ * onunla kimlik çözemediği için erişim açılmıyordu — yani sızıntı değil, ama ölü bir kimlik
+ * artefaktı paylaşılan bir cihazda kalıyor ve her istek boşa bir auth turu ödüyordu.
+ *
+ * Projenin oturumu bitirme yolu ZATEN yazılı ve tek: `signOutAction()` + **TAM YENİLEME**
+ * (`use-sign-out.hook.ts`). Gerekçesi orada anlatılıyor ve burada daha da güçlü: yumuşak
+ * tazeleme, oturuma göre kurulmuş istemci durumunu ekranda bırakır. Hesabını silmiş birinin
+ * ekranında kendi verisinin bir anı bile kalmamalı.
+ *
+ * Yerel yol ELDE TUTULUR (`useLocale`): çıplak `/`'a gitmek dili çereze/tarayıcıya sordurur ve
+ * müşteri bir anda başka dilde bir anasayfada bulunabilirdi.
  */
 interface DeleteAccountProps {
   t: Messages;
@@ -35,7 +46,7 @@ export function DeleteAccount({ t }: DeleteAccountProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
+  const locale = useLocale();
 
   const confirm = () => {
     setError(null);
@@ -45,9 +56,10 @@ export function DeleteAccount({ t }: DeleteAccountProps) {
         setError(errorText(t.errors, errorKey));
         return;
       }
-      setOpen(false);
-      router.replace('/');
-      router.refresh();
+      // Çerez SİLME BAŞARILI OLDUKTAN SONRA temizlenir: sıra tersine olsaydı silme düşen bir
+      // koşuda müşteri hem hesabıyla hem oturumuyla kalır, ne olduğunu anlamazdı.
+      await signOutAction();
+      window.location.assign(`/${locale}`);
     });
   };
 

@@ -50,8 +50,12 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
           <Card compact={compact}>
             <CardHead title={t.dataTitle} compact={compact} />
             {/* Bağ 08.8 ile AÇILDI: metin bir süredir "gizlilik politikasında bulabilirsiniz"
-                diyordu ama gidilecek sayfa yoktu; şimdi var. */}
-            <span className="font-sans text-note leading-relaxed text-body">{t.dataBody.replace('{email}', CONTACT_EMAIL)}</span>
+                diyordu ama gidilecek sayfa yoktu; şimdi var.
+                **E-posta adresi 08.21'de DÜŞTÜ** (ekranda görülerek bulundu): metin "silmek için
+                bize yazın" diyordu ve tam altında çalışan bir silme düğmesi duruyordu. Politika
+                metni düğme yazıldığında güncellenmişti, bu kart unutulmuştu — müşteriye aynı
+                ekranda iki farklı yol anlatılıyordu. */}
+            <span className="font-sans text-note leading-relaxed text-body">{t.dataBody}</span>
             <Link href="/legal/privacy" className="cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark">
               {t.dataLink}
             </Link>
@@ -99,8 +103,3 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
   );
 }
 
-/**
- * Veri talebi adresi. `@lezzet/brand`'de böyle bir sabit YOK ve oraya eklemek bu işin kapsamı
- * değil; metne gömmek yerine tek yerde durur — marka paketine taşındığında tek satır değişir.
- */
-const CONTACT_EMAIL = 'bonjour@lezzetanatolie.com';
