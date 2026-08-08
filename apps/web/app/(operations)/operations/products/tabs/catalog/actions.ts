@@ -34,6 +34,11 @@ interface CatalogInput extends Partial<ImageCropFields> {
   name: LocalizedText;
   isActive: boolean;
   description?: LocalizedText | null;
+  /**
+   * Kategori alt yazısı (05.17) — yalnız kategoride. `null` alt yazıyı KALDIRIR: alan nullable ve
+   * servis "dokunma" ile "sil"i ayırıyor, o yüzden boşaltma da geçerli bir kayıt.
+   */
+  tagline?: LocalizedText | null;
   /** Paylaşım linki — yalnız OLUŞTURMADA; boşsa addan türetilir. */
   slug?: string;
   /** Üyelik; dizinin SIRASI vitrin sırasıdır (kürasyon). */
@@ -47,7 +52,7 @@ export async function createCatalogAction(kind: CatalogKind, input: CatalogInput
     const db = serviceDb();
     const name = requireCatalogName(kind, input.name);
     if (kind === 'category') {
-      await new CategoryService(db).create({ name, isActive: input.isActive });
+      await new CategoryService(db).create({ name, tagline: input.tagline, isActive: input.isActive });
     } else {
       await new CollectionService(db).create({
         name,
@@ -78,7 +83,7 @@ export async function updateCatalogAction(kind: CatalogKind, id: string, input: 
     // taşınır; alan adları burada yazılmaz (no-duplication).
     const crop = pickCropFieldsPartial(input);
     if (kind === 'category') {
-      await new CategoryService(db).edit(id, { name, isActive: input.isActive, ...crop });
+      await new CategoryService(db).edit(id, { name, tagline: input.tagline ?? null, isActive: input.isActive, ...crop });
     } else {
       const svc = new CollectionService(db);
       await svc.edit(id, { name, description: input.description, isActive: input.isActive, ...crop });
@@ -121,6 +126,36 @@ export async function reorderCatalogAction(kind: CatalogKind, orderedIds: string
   try {
     await requireStaff();
     await catalogService(kind).reorder(orderedIds);
+    revalidatePath(PRODUCTS_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **Vitrin işareti** (05.18) — "ana sayfada göster".
+ *
+ * ── FORMDA DEĞİL, SATIRDA ───────────────────────────────────────────────────
+ * Kürasyon bir KARŞILAŞTIRMA işidir: operatör altı kategoriyi seçerken listeye bakar, tek tek
+ * form açıp kapatmaz. Anahtarı forma koysaydık altı seçim on iki diyalog açılışı ederdi ve
+ * "hangileri işaretliydi" sorusu ancak hepsini tek tek açarak cevaplanırdı.
+ *
+ * ── AKTİFLİKLE KARIŞTIRILMAZ ────────────────────────────────────────────────
+ * `isActive` "yayında mı", bu "vitrinde mi". Pasif bir kaydı vitrine işaretlemek serbest ve
+ * anlamlı: kampanya hazırlanırken işaret önceden konur, yayına alınınca vitrine düşer. Müşteri
+ * tarafı zaten aktifi süzüyor — burada ikinci bir kapı kurmak, operatörün hazırlığını engellerdi.
+ *
+ * Sıra YAZILMIYOR: vitrin sırası mevcut `sortOrder`'dan gelir (görev satırının kuralı). İkinci bir
+ * sıra tutulsaydı bir gün ötekiyle çelişirdi ve hangisinin kazandığı ekrandan anlaşılmazdı.
+ */
+export async function setCatalogFeaturedAction(kind: CatalogKind, id: string, featured: boolean): Promise<ActionResult> {
+  try {
+    await requireStaff();
+    // `setFeatured` — `edit()` DEĞİL: servisin dar ve adlı yazma yüzeyi (`setActive` ile aynı
+    // desen). Genel düzenleme yolundan geçirmek, tek bir boolean için formun bütün alanlarını
+    // taşıyan bir çağrı açardı.
+    await catalogService(kind).setFeatured(id, featured);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

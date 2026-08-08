@@ -5,7 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CollectionInsertSchema, DEFAULT_CROP_FIELDS, ImageCropFieldsSchema, pickCropFields, resolveLocalizedText, type Collection } from '@lezzet/types';
+import {
+  CategoryInsertSchema,
+  CollectionInsertSchema,
+  DEFAULT_CROP_FIELDS,
+  ImageCropFieldsSchema,
+  pickCropFields,
+  resolveLocalizedText,
+  type Category,
+  type Collection,
+} from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
@@ -30,11 +39,15 @@ import type { CatalogKind } from '../../products-types';
 
 // Kategori/Koleksiyon oluştur + düzenle — tek dialog, `kind` ile çatallanır (no-duplication).
 //
-// KATEGORİ tek kısa alan (ad) → diller doğrudan alt alta (`layout="stacked"`), sekme yok. Görseli
-// anasayfa kategori şeridinde görünür (masaüstü web 3:2 kart, mobil webde daire) → kaynak 3:2
-// (`role="category"`).
-// KOLEKSİYON çok dilli İKİ alan taşır (ad + açıklama) → ikisi bir DİL KARTINDA toplanır: kartın içi
-// seçili dilin alanı, dışı dilden bağımsız (slug/kapak/aktiflik). Kip görünür olur.
+// İKİSİ DE çok dilli İKİ alan taşır → içerik bir DİL KARTINDA toplanır: kartın içi seçili dilin
+// alanları, dışı dilden bağımsız (slug/kapak/aktiflik). Kip görünür olur.
+//   KATEGORİ: ad + ALT YAZI (05.17) — alt yazı vitrindeki kategori bandının ikinci satırı.
+//   KOLEKSİYON: ad + açıklama — açıklama paylaşım (OG) kartında okunur.
+// Kategori eskiden tek alanlıydı ve diller alt alta duruyordu (sekmesiz); alt yazı gelince o
+// ayrım anlamını yitirdi ve çatal kalktı (kullanıcı kararı 08.08).
+//
+// Kategori görseli anasayfa kategori şeridinde görünür (masaüstü web 3:2 kart, mobil webde daire)
+// → kaynak 3:2 (`role="category"`).
 // Koleksiyon ayrıca paylaşılabilir bir vitrin sayfasıdır (DOMAIN §13): slug + kapak + açıklama OG
 // kartını besler — kapak müşteri SAYFASINDA render edilmez (`role="collection"`, 16:9).
 // Üyeler sağ bölmede GÖRSELLİ ve SÜRÜKLE-SIRALANIR liste — sıra vitrin kürasyonudur.
@@ -46,6 +59,8 @@ import type { CatalogKind } from '../../products-types';
 type CatalogEditTarget = Pick<Collection, 'id' | 'name' | 'description' | 'slug' | 'isActive' | 'imageFocalX' | 'imageFocalY' | 'imageZoom'> & {
   imageUrl: string | null;
   productIds: string[];
+  /** Yalnız kategoride dolu (05.17); koleksiyon satırında bu alan yoktur. */
+  tagline?: Category['tagline'];
 };
 
 // Form şeması koleksiyon insert şemasından TÜRETİLİR (tek kaynak): formda olmayanlar çıkarılır,
@@ -54,6 +69,10 @@ const FormSchema = CollectionInsertSchema.omit({ imageKey: true, imageAlt: true,
   .extend({
     isActive: z.boolean(),
     productIds: z.array(z.string()),
+    // Kategorinin ikinci çok dilli alanı (05.17); koleksiyonda çizilmez ve gönderilmez. Tipi elle
+    // yazılmıyor, kaynağından alınıyor — `Category.tagline` bir gün nullable olmaktan çıkarsa form
+    // o gün derlenmez ve bunu commit anında öğreniriz.
+    tagline: CategoryInsertSchema.shape.tagline,
   })
   .merge(ImageCropFieldsSchema); // kapak odak/zoom alanları ortak şemadan (elle yazılmaz)
 type FormValues = z.infer<typeof FormSchema>;
@@ -94,6 +113,7 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
     defaultValues: {
       name: edit?.name ?? {},
       description: edit?.description ?? null,
+      tagline: edit?.tagline ?? null,
       slug: edit?.slug ?? '',
       isActive: edit?.isActive ?? true,
       productIds: edit?.productIds ?? [],
@@ -137,14 +157,16 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
-    const { name, description, slug, isActive, productIds: ids } = values;
-    // Kırpma künyesi İKİ türde de gider (kategori görseli + koleksiyon OG kapağı); açıklama/üyelik
-    // yalnız koleksiyonda anlamlı.
+    const { name, description, tagline, slug, isActive, productIds: ids } = values;
+    // Kırpma künyesi İKİ türde de gider (kategori görseli + koleksiyon OG kapağı); ikinci metin
+    // alanı türe göre ayrışıyor (koleksiyon → açıklama, kategori → alt yazı), üyelik yalnız
+    // koleksiyonda. `null` GÖNDERİLİYOR, alan atlanmıyor: boşaltmak da bir karar ve servis
+    // "dokunma" ile "sil"i ayırıyor.
     const payload = {
       name,
       isActive,
       ...pickCropFields(values),
-      ...(isCollection ? { description: description ?? null } : {}),
+      ...(isCollection ? { description: description ?? null } : { tagline: tagline ?? null }),
       ...(showMembers ? { productIds: ids } : {}),
     };
     const { error: actionError } = isEdit
@@ -183,13 +205,18 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
 
   // Alt bar SOL tarafı = aksiyon bölgesi: aktiflik anahtarı (kayda eşlik eden karar), zorunlu-alan
   // metni değil. Oluşturmada da görünür — pasif (taslak) olarak yaratmak mümkün.
+  //
+  // Etiket "vitrinde görünür" DEĞİL (05.18 · kullanıcı uyarısı 08.08): aktiflik YAYIN kararıdır —
+  // pasif kayıt müşteri yüzeyinde hiç çizilmez. "Vitrin" ise ANA SAYFA seçkisidir ve ayrı bir
+  // anahtarı var (satırdaki "Vitrinde"). Eski etiket ikisini tek cümlede topluyordu ve operatörü
+  // "aktif ettim, neden ana sayfada yok" sorusuna götürürdü.
   const footer = (
     <DialogFooter
       formId={FORM_ID}
       onCancel={onClose}
       submitting={form.formState.isSubmitting}
       error={error}
-      actions={<FormSwitch control={form.control} name="isActive" label="Aktif (vitrinde görünür)" bare />}
+      actions={<FormSwitch control={form.control} name="isActive" label="Aktif (müşteride görünür)" bare />}
     />
   );
 
@@ -222,15 +249,23 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
           imageField
         )}
 
-        {/* ── 2. İçerik bölmesi ── */}
+        {/* ── 2. İçerik bölmesi ──
+            **Çatal KALKTI (05.17, kullanıcı kararı 08.08).** Kategori tek çok dilli alan taşıdığı
+            sürece diller alt alta duruyordu (`layout="stacked"`, sekmesiz) ve o gün doğruydu: tek
+            kutu için sekme kurmak, olmayan bir seçimi varmış gibi göstermekti. Alt yazı gelince
+            kategori de İKİ alanlı oldu — altı kutu alt alta (2 alan × 3 dil) formu bir listeye
+            çevirirdi ve "bu dilin hâli ne" sorusu ancak kaydırarak cevaplanırdı.
+
+            İkisi artık AYNI dil kartını paylaşıyor; ayrışan tek şey ikinci alanın kendisi. Bu bir
+            birleştirme, yeni bir kip değil: kart deseni koleksiyonda zaten yürüyordu. */}
         <div className="flex flex-col gap-4">
-          {isCollection ? (
-            <LocaleCard title="İçerik" completenessOf={nameValue}>
-              {(lang) => (
-                <>
-                  {/* Alan türü geçiliyor: kategori/koleksiyon ADI kısa bir vitrin metni, açıklaması
-                      ise paylaşım kartında okunan bir cümle — ikisi aynı ölçüde çevrilmemeli. */}
-                  <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" lang={lang} onAiTranslate={(t) => suggestTranslationAction(t, 'ad')} />
+          <LocaleCard title="İçerik" completenessOf={nameValue}>
+            {(lang) => (
+              <>
+                {/* Alan türü geçiliyor: ad kısa bir vitrin metni, ikinci alan bir cümle — ikisi
+                    aynı ölçüde çevrilmemeli. */}
+                <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" lang={lang} onAiTranslate={(t) => suggestTranslationAction(t, 'ad')} />
+                {isCollection ? (
                   <FormLocalizedText
                     control={form.control}
                     name="description"
@@ -241,13 +276,29 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
                     lang={lang}
                     onAiTranslate={(t) => suggestTranslationAction(t, 'aciklama')}
                   />
-                </>
-              )}
-            </LocaleCard>
-          ) : (
-            <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" layout="stacked" onAiTranslate={(t) => suggestTranslationAction(t, 'ad')} />
-          )}
+                ) : (
+                  /* ALT YAZI (05.17) — vitrindeki kategori bandının ikinci satırı. Bugüne kadar
+                     TASARIMIN İÇİNDE sabit bir sözlüktü (`Mobil - Musteri v3.dc.html`, `CSUB`):
+                     yeni açılan kategori altyazısız doğuyordu ve metin operatörün elinde değildi.
 
+                     **Boş bırakılabilir ve boş kalınca UYDURULMAZ.** Zorunlu değil: on kategorinin
+                     onuna birden cümle yazdırmak, boş bırakmaktan kötü metin üretir. Yedek de
+                     üretilmiyor — ada düşen bir yedek "Börekler / Börekler" olurdu; müşteri tarafı
+                     altyazısız çizer. */
+                  <FormLocalizedText
+                    control={form.control}
+                    name="tagline"
+                    label="Alt yazı (vitrinde adın altında)"
+                    multiline
+                    rows={2}
+                    placeholder="Tek cümlelik tanıtım — boş bırakılabilir"
+                    lang={lang}
+                    onAiTranslate={(t) => suggestTranslationAction(t, 'aciklama')}
+                  />
+                )}
+              </>
+            )}
+          </LocaleCard>
         </div>
 
         {/* ── 3. Üyelik bölmesi (yalnız koleksiyon) ── */}

@@ -206,6 +206,22 @@ export async function setBundleActiveAction(id: string, isActive: boolean): Prom
   }
 }
 
+/**
+ * **Vitrin işareti** (05.18) — "ana sayfada göster". Gerekçesi katalog sekmesindeki ikizinde
+ * (`setCatalogFeaturedAction`): işaret satırda verilir çünkü kürasyon bir karşılaştırma işidir,
+ * ve `isActive` ile karıştırılmaz — biri "satışta mı", öteki "vitrinde mi".
+ */
+export async function setBundleFeaturedAction(id: string, isFeatured: boolean): Promise<ActionResult> {
+  try {
+    await requireStaff();
+    await new BundleService(serviceDb()).setFeatured(id, isFeatured);
+    revalidatePath(PRODUCTS_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 /** Kürasyon sırası (sürükle-bırak) — müşterinin gördüğü paket sırası. */
 export async function reorderBundlesAction(orderedIds: string[]): Promise<ActionResult> {
   try {

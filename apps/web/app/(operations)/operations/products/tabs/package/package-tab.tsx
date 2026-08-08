@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { bundleBalance, markupPercent } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { IMAGE_ROLES, cropOf, resolveLocalizedText } from '@lezzet/types';
@@ -10,7 +11,7 @@ import { money, percent } from '@/components/operation/ui/format';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { Toggle } from '@/components/operation/form/toggle';
-import { reorderBundlesAction, setBundleActiveAction } from './actions';
+import { reorderBundlesAction, setBundleActiveAction, setBundleFeaturedAction } from './actions';
 import { BundleFormDialog } from './bundle-form-dialog';
 import type { BundleView } from '../../products-types';
 
@@ -60,7 +61,17 @@ function Stacked({ value, hint, alert, title }: { value: string; hint?: string; 
   );
 }
 
-function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boolean) => void): Column<BundleView>[] {
+/**
+ * Vitrin ızgarasının paket slotu (05.18 · tasarımın ana sayfa ızgarası). Sınır ENGELLEMEZ —
+ * gerekçesi katalog sekmesindeki ikizinde (`FEATURED_SLOTS`).
+ */
+const FEATURED_SLOTS = 2;
+
+function bundleColumns(
+  pricingById: PricingMap,
+  onToggle: (id: string, next: boolean) => void,
+  onFeature: (id: string, next: boolean) => void,
+): Column<BundleView>[] {
   return [
     {
       key: 'image',
@@ -181,6 +192,18 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
       },
     },
     {
+      key: 'featured',
+      header: 'Vitrinde',
+      width: '74px',
+      align: 'center',
+      // Satır çift tıklamayla formu açıyor; anahtar o davranışı YUTMALI (katalog sekmesiyle aynı).
+      cell: (b) => (
+        <span className="justify-self-center" onDoubleClick={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+          <Toggle on={b.isFeatured} size="sm" onChange={(next) => onFeature(b.id, next)} label="Vitrinde" />
+        </span>
+      ),
+    },
+    {
       key: 'active',
       header: 'Satışta',
       width: '70px',
@@ -202,6 +225,7 @@ interface PackagesTabProps {
 }
 
 export function PackagesTab({ bundles, creating, onCreateClose }: PackagesTabProps) {
+  const router = useRouter();
   // Düzenlenen kayıt KİMLİKLE tutulur, verisi taze listeden türetilir (katalog sekmesinin deseni):
   // kopya tutulursa dialog içindeki görsel yüklemesi `router.refresh()` sonrası görünmez.
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -232,16 +256,42 @@ export function PackagesTab({ bundles, creating, onCreateClose }: PackagesTabPro
     void setBundleActiveAction(id, next);
   };
 
+  // Vitrin işareti (05.18). İyimser güncelleme YOK — gerekçe katalog sekmesindeki ikizinde:
+  // başarısız yazımda sessizce geri dönen bir anahtar, operatöre işaretlediğini sandırırdı.
+  const onFeature = (id: string, next: boolean) => {
+    void setBundleFeaturedAction(id, next).then(({ error }) => {
+      if (!error) router.refresh();
+    });
+  };
+
+  // Sayaç "kaç tanesi VİTRİNDE GÖRÜNECEK" — "kaç tanesi işaretli" değil. İki eksen ayrı
+  // (`isActive` = satışta mı · `isFeatured` = ana sayfada mı) ve satışta olmayan paket vitrine
+  // çıkmaz; gerekçe katalog sekmesindeki ikizinde uzun uzun yazılı.
+  const featured = bundles.filter((b) => b.isFeatured);
+  const visibleCount = featured.filter((b) => b.isActive).length;
+  const passiveCount = featured.length - visibleCount;
+  const overflowing = visibleCount > FEATURED_SLOTS;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
+      <div className="flex items-center gap-3 border-b border-ops-line-soft px-6 py-[11px]">
         <span className="font-ops-body text-ops-sm text-ops-muted">
           Paylar birim fiyatlara oransal dağıtılır · marj maliyetten türetilir · yeni ürün yaratmaz · sürükle-sırala
+        </span>
+        <span
+          className={`ml-auto flex-none font-ops-body text-ops-xs ${
+            overflowing ? 'font-semibold text-ops-amber-dark' : 'text-ops-faint'
+          }`}
+        >
+          {overflowing
+            ? `Vitrinde ${visibleCount} işaretli — ana sayfada sıradan ilk ${FEATURED_SLOTS} görünür`
+            : `Vitrinde ${visibleCount}/${FEATURED_SLOTS}`}
+          {passiveCount > 0 ? ` · ${passiveCount} işaretli paket satışta değil, vitrine çıkmaz` : ''}
         </span>
       </div>
 
       <Table
-        columns={bundleColumns(pricingById, onToggle)}
+        columns={bundleColumns(pricingById, onToggle, onFeature)}
         rows={displayed}
         rowKey={(b) => b.id}
         onReorder={handleReorder}

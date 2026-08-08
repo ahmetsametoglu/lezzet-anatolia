@@ -148,8 +148,11 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
           bare
           className="w-[168px]"
           options={[
-            { key: 'active', label: 'Satışta', tone: 'olive', title: 'Vitrinde görünür' },
-            { key: 'passive', label: 'Pasif', tone: 'neutral', title: 'Vitrinde gizli — silinmiş değil' },
+            // İpucu metinleri "vitrin" DEMİYOR (05.18 · kullanıcı uyarısı 08.08): satışta olmak
+            // yayın kararıdır, ana sayfada görünmek ayrı bir işaret (listedeki "Vitrinde" anahtarı).
+            // Eskisi ikisini tek cümlede topluyordu — "satışa açtım, neden ana sayfada yok".
+            { key: 'active', label: 'Satışta', tone: 'olive', title: 'Müşteri satın alabilir' },
+            { key: 'passive', label: 'Pasif', tone: 'neutral', title: 'Müşteride gizli — silinmiş değil' },
           ]}
         />
       }
