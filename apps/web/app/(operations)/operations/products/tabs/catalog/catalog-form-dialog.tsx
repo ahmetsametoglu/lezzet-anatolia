@@ -159,8 +159,16 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
   });
 
   // Görsel alanı TEK yerde kurulur; yerleşim `kind`'a göre farklı yere koyar (tekrar yok). Rol oranı
-  // belirler: kategori 3:2 (anasayfa şeridi · mobil webde daire), koleksiyon 16:9 (yalnız OG kartı).
+  // belirler: kategori 3:2 (anasayfa şeridi · mobil webde daire), koleksiyon 16:9.
   // Yükleme kayıt gerektirir (R2 anahtarı slug'a bağlı) → oluşturmada istem gösterilir.
+  //
+  // **Koleksiyon etiketi 08.08'de genişledi.** Eskiden "paylaşım kartı (OG)" yazıyordu ve o gün
+  // doğruydu — 05.7 kararı koleksiyon görselinin müşteri sayfasında HİÇ render edilmediğini,
+  // yalnız OG kartını beslediğini söylüyordu. `Musteri - Anasayfa.dc.html`'in 08.08 senkronu ana
+  // sayfaya iki slotluk Koleksiyonlar bölümü ekledi ve kapak orada 16:7 band olarak çizim yüzeyine
+  // çıktı (`design/KARARLAR.md`). Aynı kapak iki yerde iki kırpımla kullanılıyor; yeni bir görsel
+  // alanı AÇILMADI. Etiket dar kalsaydı operatör kapağı "kimsenin görmediği bir paylaşım
+  // detayı" sanır ve kadrajına özen göstermezdi — oysa artık vitrinin ilk ekranında duruyor.
   const imageField = (
     <ImageCropField
       role={isCollection ? 'collection' : 'category'}
@@ -169,7 +177,7 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
       onCropChange={setCrop}
       upload={isEdit ? (fd) => uploadCatalogImageAction(kind, edit.id, fd) : undefined}
       uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
-      caption={isCollection ? 'paylaşım kartı (OG)' : 'müşteride görünüm'}
+      caption={isCollection ? 'ana sayfa bandı + paylaşım kartı' : 'müşteride görünüm'}
     />
   );
 
