@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Tarifler — Sofradan Fikirler yönetimi · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Veri Masası dili · liste + seçili tarif paneli. Malzemeler ürün kayıtlarına bağlanır; fiyat ve stok kendi ekranlarından okunur.</span>
+    </div>
+
+    <div data-screen-label="Tarifler Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="tarifler" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Tarifler</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">5 tarif · 3 yayında · 2 taslak</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">🔍 Ara</span>
+          <span onClick="{{ openCreate }}" style="font:500 12.5px 'IBM Plex Mono';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Tarif</span>
+        </div>
+        <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:14px;padding:5px 12px">Tümü</span>
+          <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">Yayında</span>
+          <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">Taslak</span>
+          <span style="font:600 12px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:14px;padding:5px 12px;margin-left:auto">1 tarifte tükenen malzeme</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.95fr 1fr;flex:1;min-height:0;overflow:hidden">
+          <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0">
+            <div style="display:grid;grid-template-columns:minmax(130px,1fr) 56px 70px 82px 74px;gap:0 10px;padding:10px 20px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+              <span>Tarif</span><span style="text-align:center">Süre</span><span style="text-align:center">Malzeme</span><span style="text-align:center">Diller</span><span style="text-align:right">Durum</span>
+            </div>
+            <div style="overflow-y:auto;flex:1;min-height:0">
+              <sc-for list="{{ shown }}" as="r" hint-placeholder-count="5">
+                <div onClick="{{ r.select }}" onDoubleClick="{{ r.edit }}" style="display:grid;grid-template-columns:minmax(130px,1fr) 56px 70px 82px 74px;gap:0 10px;padding:11px 20px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer;background:{{ r.rowBg }}">
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                    <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                    <span style="font:400 11px 'Karla';color:#8b9086">{{ r.cat }} · {{ r.serves }}</span>
+                  </div>
+                  <span style="text-align:center;font:500 12px 'IBM Plex Mono';color:#3a3f37">{{ r.time }}</span>
+                  <span style="text-align:center;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">{{ r.count }}</span>
+                  <span style="justify-self:center;font:500 9.5px 'IBM Plex Mono';color:{{ r.langFg }};background:{{ r.langBg }};border-radius:6px;padding:2px 6px">{{ r.langs }}</span>
+                  <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ r.stFg }};background:{{ r.stBg }};border-radius:7px;padding:3px 9px">{{ r.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;background:#f8f9f5;overflow-y:auto;min-height:0">
+            <div style="padding:11px 20px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#f8f9f5;z-index:1">
+              <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Seçili tarif · önizleme</span>
+              <span style="font:500 10px 'Space Grotesk';color:#8b9086;background:#e4e6de;border-radius:6px;padding:2px 8px">salt görünüm · Düzenle ile aç</span>
+            </div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+              <div style="aspect-ratio:16/10;border:1px solid #e0e2da;border-radius:10px;overflow:hidden;background:#f0f1ec"><image-slot id="{{ det.slotId }}" radius="9" placeholder="{{ det.name }} — servis edilmiş, buğusu üstünde"></image-slot></div>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                <span style="font:600 17px 'Space Grotesk';color:#22251f">{{ det.name }}</span>
+                <span style="font:400 12px 'Karla';color:#8b9086">slug: /tarifler/{{ det.slug }}</span>
+                <div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap">
+                  <span style="font:600 10px 'Space Grotesk';color:{{ det.stFg }};background:{{ det.stBg }};border-radius:6px;padding:2px 8px">{{ det.status }}</span>
+                  <span style="font:600 10px 'Space Grotesk';color:#5c6157;background:#e4e6de;border-radius:6px;padding:2px 8px">{{ det.time }} · {{ det.serves }}</span>
+                  <span style="font:600 10px 'Space Grotesk';color:#5c6157;background:#e4e6de;border-radius:6px;padding:2px 8px">{{ det.cat }}</span>
+                </div>
+              </div>
+              <span style="font:400 12px/1.55 'Karla';color:#5c6157">{{ det.d }}</span>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Bağlı malzemeler — ürün kayıtları</span>
+                <sc-for list="{{ det.items }}" as="g" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:10px;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 12px">
+                    <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                      <span style="font:600 12.5px 'Karla';color:#22251f">{{ g.n }}</span>
+                      <span style="font:400 11px 'Karla';color:#8b9086">{{ g.v }} · {{ g.qtyL }}</span>
+                    </div>
+                    <span style="font:500 12px 'IBM Plex Mono';color:#3a3f37">{{ g.prF }}</span>
+                    <span style="font:600 10px 'Space Grotesk';color:{{ g.stFg }};background:{{ g.stBg }};border-radius:6px;padding:2px 7px">{{ g.st }}</span>
+                  </div>
+                </sc-for>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 2px">
+                  <span style="font:500 11px 'Karla';color:#8b9086">Malzeme toplamı · {{ det.totalNote }}</span>
+                  <span style="font:500 13px 'IBM Plex Mono';color:#22251f">{{ det.totalF }}</span>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Evinizden — serbest metin</span>
+                <sc-for list="{{ det.pantry }}" as="p" hint-placeholder-count="2"><span style="font:400 12px/1.5 'Karla';color:#5c6157">• {{ p }}</span></sc-for>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Hazırlanışı — {{ det.stepCount }} adım</span>
+                <sc-for list="{{ det.steps }}" as="st" hint-placeholder-count="3">
+                  <div style="display:flex;gap:9px">
+                    <span style="width:20px;height:20px;border-radius:50%;background:#e4e6de;color:#5c6157;font:600 10.5px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ st.i }}</span>
+                    <span style="font:400 11.5px/1.5 'Karla';color:#5c6157">{{ st.t }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="border:1px solid {{ det.decBd }};background:{{ det.decBg }};border-radius:9px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start">
+                <span style="width:20px;height:20px;border-radius:50%;border:1.5px solid {{ det.decIcon }};color:{{ det.decIcon }};font:700 12px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ det.decGlyph }}</span>
+                <span style="font:500 12px/1.5 'Karla';color:{{ det.decFg }}">{{ det.decText }}</span>
+              </div>
+
+              <div style="display:flex;gap:8px;border-top:1px solid #e6e7e1;padding-top:12px">
+                <span style="flex:1;text-align:center;font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:8px;padding:9px">Ürünler →</span>
+                <a href="./Musteri%20-%20Tarifler.dc.html" style="flex:1;text-align:center;font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:8px;padding:9px">Müşteride gör →</a>
+                <span onClick="{{ openEdit }}" style="flex:1;text-align:center;font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:8px;padding:9px;cursor:pointer">Düzenle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+        <div onClick="{{ stop }}" style="width:100%;max-width:640px;max-height:86vh;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+          <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+              <span style="font:600 18px 'Space Grotesk'">{{ modalTitle }}</span>
+              <span style="font:400 12px 'Karla';color:#8b9086">{{ modalSub }}</span>
+            </div>
+            <span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+          </div>
+
+          <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Temel</span>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 11.5px 'Karla';color:#6a7065">Tarif adı <span style="color:#b0561f">*</span> <span style="font:400 11px 'Karla';color:#9aa094">· {{ slugRead }}</span></span>
+                <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:{{ formNameFg }};background:#fff">{{ formName }}</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 11.5px 'Karla';color:#6a7065">Etiket <span style="color:#b0561f">*</span></span>
+                  <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;justify-content:space-between;align-items:center">{{ formCat }}<span style="color:#9aa094">▾</span></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 11.5px 'Karla';color:#6a7065">Süre <span style="color:#b0561f">*</span></span>
+                  <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'IBM Plex Mono';background:#fff">{{ formTime }}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 11.5px 'Karla';color:#6a7065">Porsiyon <span style="color:#b0561f">*</span></span>
+                  <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff">{{ formServes }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Çok dilli içerik</span>
+                <span style="font:600 11px 'Karla';color:#5f7a2c">✦ AI çeviri önerisi iste</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <span style="font:600 12px 'Space Grotesk';color:#22251f;border-bottom:2px solid #5f7a2c;padding:5px 10px">TR</span>
+                <span style="font:600 12px 'Space Grotesk';color:#8b9086;padding:5px 10px">FR <span style="color:#9a6416">öneri</span></span>
+                <span style="font:600 12px 'Space Grotesk';color:#8b9086;padding:5px 10px">DE <span style="color:#9a6416">öneri</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 11.5px 'Karla';color:#6a7065">Kısa açıklama <span style="font:400 11px 'Karla';color:#9aa094">· müşteri kartında ve detay başında görünür</span></span>
+                <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:400 13px/1.5 'Karla';color:{{ formDescFg }};background:#fff">{{ formDesc }}</div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Fotoğraf</span>
+                <span style="font:500 10.5px 'IBM Plex Mono';color:#8b9086;margin-left:auto">kaynak 16:10 · min 1600×1000</span>
+              </div>
+              <div style="width:260px;aspect-ratio:16/10;border:2px solid #e6e7e1;border-radius:9px;overflow:hidden;background:#f0f1ec"><image-slot id="ops-tarif-form-foto" radius="7" placeholder="Servis edilmiş, buğusu üstünde"></image-slot></div>
+              <span style="font:400 11px 'Karla';color:#8b9086">Web kartı, web detayı ve mobil hero bu tek kareden türetilir; ayrı yükleme yok.</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Malzemeler — bizden</span>
+                <span style="font:600 11px 'Karla';color:#5f7a2c">+ malzeme — ürün kaydından seç</span>
+              </div>
+              <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                <div style="display:grid;grid-template-columns:1.5fr 96px 58px 34px;gap:0 8px;padding:8px 13px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086"><span>Ürün</span><span>Varyant</span><span>Adet</span><span></span></div>
+                <sc-for list="{{ formItems }}" as="fi" hint-placeholder-count="2">
+                  <div style="display:grid;grid-template-columns:1.5fr 96px 58px 34px;gap:0 8px;padding:9px 13px;border-bottom:1px solid #f0f1ec;align-items:center">
+                    <span style="border:1px solid #d9dbd2;border-radius:7px;background:#fff;padding:7px 9px;font:500 12.5px 'Karla';color:#22251f;display:flex;justify-content:space-between;align-items:center;min-width:0"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ fi.n }}</span><span style="color:#9aa094;flex:none">▾</span></span>
+                    <span style="border:1px solid #d9dbd2;border-radius:7px;background:#fff;padding:7px 9px;font:500 12px 'Karla';color:#3a3f37;display:flex;justify-content:space-between;align-items:center">{{ fi.v }}<span style="color:#9aa094">▾</span></span>
+                    <span style="border:1px solid #d9dbd2;border-radius:7px;background:#fff;padding:7px 9px;font:500 12.5px 'IBM Plex Mono';text-align:center">{{ fi.qty }}</span>
+                    <span style="font:500 13px 'Space Grotesk';color:#9aa094;text-align:center;cursor:pointer">✕</span>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:400 11px/1.5 'Karla';color:#8b9086">Fiyat burada girilmez — ürün kaydından, oturumdaki personaya göre okunur. Tükenen malzeme müşteride satırdan düşer; toplam kalanla hesaplanır.</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Evinizden — satışa bağlanmaz</span>
+                <span style="font:600 11px 'Karla';color:#5f7a2c">+ satır</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ formPantry }}" as="fp" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="flex:1;border:1px solid #d9dbd2;border-radius:7px;background:#fff;padding:8px 11px;font:400 12.5px 'Karla';color:#3a3f37">{{ fp }}</span>
+                    <span style="font:500 13px 'Space Grotesk';color:#9aa094;cursor:pointer">✕</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Hazırlanışı — sürükle-sırala</span>
+                <span style="font:600 11px 'Karla';color:#5f7a2c">+ adım</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ formSteps }}" as="fs" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <span style="color:#c9ccc3;flex:none">⠿</span>
+                    <span style="width:22px;height:22px;border-radius:50%;background:#e4e6de;color:#5c6157;font:600 11px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ fs.i }}</span>
+                    <span style="flex:1;border:1px solid #d9dbd2;border-radius:7px;background:#fff;padding:8px 11px;font:400 12.5px/1.45 'Karla';color:#3a3f37">{{ fs.t }}</span>
+                    <span style="font:500 13px 'Space Grotesk';color:#9aa094;cursor:pointer">✕</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #d9dbd2;border-radius:9px;padding:10px 13px">
+              <div style="display:flex;flex-direction:column;gap:1px">
+                <span style="font:500 12.5px 'Karla'">Yayında</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">web /tarifler ve mobil "Sofradan Fikirler"de görünür</span>
+              </div>
+              <span style="width:40px;height:23px;border-radius:12px;background:{{ pubBg }};position:relative"><span style="position:absolute;top:2px;left:{{ pubX }};width:19px;height:19px;border-radius:50%;background:#fff"></span></span>
+            </div>
+          </div>
+
+          <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+            <span style="font:400 11.5px 'Karla';color:#8b9086;margin-right:auto">Zorunlu alanlar: ad, etiket, süre, porsiyon, en az 1 malzeme ve 1 adım</span>
+            <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer">İptal</span>
+            <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="max-width:640px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 14px 'Space Grotesk';color:#343b41">Kurallar ve etkileşim sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+      <li>Malzeme = gerçek ürün kaydı: <code>recipe_items(recipe_id, product_id, variant_id, qty)</code>. Fiyat burada tutulmaz, ürün kaydından okunur. "Evinizden" satırları serbest metindir, satışa bağlanmaz.</li>
+      <li><code>recipes</code> tablosu: id, ad, slug, açıklama, süre, porsiyon, etiket, evinizden[], adımlar[], yayın durumu; içerik TR/FR/DE. Web <code>/tarifler</code> ve mobil "Sofradan Fikirler" aynı API'den beslenir.</li>
+      <li><strong>Tükenen malzeme</strong> tarifi yayından düşürmez: müşteride satır "Tükendi" işaretlenir, toplam ve "Tümünü sepete ekle" kalanla hesaplanır. Panelde amber uyarı görünür.</li>
+      <li><strong>Taslak</strong> müşteride hiç görünmez. Eksik dilde TR içeriğe düşülür; panel "öneri" işaretini korur.</li>
+      <li>Silme yok — yayından kaldırılır; slug korunur, eski linkler tarif listesine yönlenir.</li>
+      <li>Mobil operasyonda tarif yüzeyi yok — içerik işi webde kalır (Ürünler'deki web/mobil ayrımıyla aynı ilke).</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { sel: 0, modalOpen: false, modalMode: 'edit' };
+  renderVals() {
+    const okB=['#4a6121','#eef4e2'], warnB=['#9a6416','#fdf1e3'];
+    const langFull=['#4a6121','#eef4e2'], langPart=['#9a6416','#fdf1e3'];
+    const fmt = v => v.toFixed(2).replace('.', ',') + ' \u20ac';
+    const R = [
+      { id:'kuymak', n:'M\u0131hlama (Kuymak)', cat:'Kahvalt\u0131', d:'Karadeniz kahvalt\u0131s\u0131n\u0131n y\u0131ld\u0131z\u0131: m\u0131s\u0131r ununda eriyip uzayan peynir \u2014 15 dakikada sofrada.', time:'15 dk', serves:'2 ki\u015filik', langs:'TR\u00b7FR\u00b7DE', full:true, status:'Yay\u0131nda',
+        items:[{ n:'Ezine Beyaz Peynir', v:'350 g', pr:6.4, qty:1, ok:true }],
+        pantry:['M\u0131s\u0131r unu \u2014 2 yemek ka\u015f\u0131\u011f\u0131','Tereya\u011f\u0131 \u2014 2 yemek ka\u015f\u0131\u011f\u0131','S\u0131cak su \u2014 1 su barda\u011f\u0131'],
+        steps:['Tereya\u011f\u0131n\u0131 tavada eritin, m\u0131s\u0131r ununu ekleyip orta ate\u015fte 2\u20133 dakika kavurun.','S\u0131cak suyu azar azar ekleyip p\u00fcr\u00fczs\u00fcz bir k\u0131vam alana dek kar\u0131\u015ft\u0131r\u0131n.','Ezine peynirini ekleyin; eriyip uzamaya ba\u015flay\u0131nca ocaktan al\u0131n, bekletmeden servis edin.'] },
+      { id:'manti', n:'Mant\u0131 Sofras\u0131', cat:'Ak\u015fam', d:'El mant\u0131s\u0131, sar\u0131msakl\u0131 yo\u011furt ve k\u0131zg\u0131n tereya\u011f\u0131 \u2014 misafir a\u011f\u0131rlatan klasik.', time:'25 dk', serves:'3\u20134 ki\u015filik', langs:'TR\u00b7FR', full:false, status:'Yay\u0131nda',
+        items:[{ n:'El Mant\u0131s\u0131', v:'500 g', pr:9.2, qty:1, ok:false },{ n:'Ezine Beyaz Peynir', v:'350 g', pr:6.4, qty:1, ok:true }],
+        pantry:['Yo\u011furt \u2014 3 yemek ka\u015f\u0131\u011f\u0131','Sar\u0131msak \u2014 2 di\u015f','Tereya\u011f\u0131 ve pul biber'],
+        steps:['Mant\u0131y\u0131 kaynar tuzlu suda 12 dakika ha\u015flay\u0131n.','Yo\u011furdu sar\u0131msakla \u00e7\u0131rp\u0131n, tuzunu ayarlay\u0131n.','Tereya\u011f\u0131n\u0131 pul biberle k\u0131zd\u0131r\u0131p mant\u0131n\u0131n \u00fczerinde gezdirin; yo\u011furtla servis edin.'] },
+      { id:'brunch', n:'\u00c7\u0131t\u0131r Pazar Kahvalt\u0131s\u0131', cat:'Kahvalt\u0131', d:'Sigara b\u00f6re\u011fi, zeytinli a\u00e7ma ve Ezine peyniriyle kalabal\u0131k pazar sofras\u0131.', time:'20 dk', serves:'4 ki\u015filik', langs:'TR\u00b7FR\u00b7DE', full:true, status:'Yay\u0131nda',
+        items:[{ n:'Sigara B\u00f6re\u011fi', v:'24\u2019l\u00fc', pr:9.9, qty:1, ok:true },{ n:'Zeytinli A\u00e7ma', v:'6\u2019l\u0131', pr:4.5, qty:1, ok:true },{ n:'Ezine Beyaz Peynir', v:'550 g', pr:10.0, qty:1, ok:true }],
+        pantry:['Domates, salatal\u0131k','Zeytin ve bal'],
+        steps:['A\u00e7malar\u0131 180\u00b0C f\u0131r\u0131nda 8 dakika \u0131s\u0131t\u0131n.','Sigara b\u00f6reklerini k\u0131zg\u0131n ya\u011fda alt\u0131n rengi alana dek k\u0131zart\u0131n.','Peyniri ve taze malzemeleri tabaklay\u0131n, s\u0131cak \u00e7ayla servis edin.'] },
+      { id:'kunefe-gecesi', n:'K\u00fcnefe Gecesi', cat:'Tatl\u0131', d:'Tel kaday\u0131f ve k\u00fcnefe peyniriyle ak\u015fam tatl\u0131s\u0131 \u2014 f\u0131r\u0131ndan \u015ferbete 20 dakika.', time:'20 dk', serves:'2 ki\u015filik', langs:'TR', full:false, status:'Taslak',
+        items:[{ n:'K\u00fcnefe (2 ki\u015filik)', v:'tepsi', pr:8.9, qty:1, ok:true }],
+        pantry:['Toz f\u0131st\u0131k \u2014 servis i\u00e7in'],
+        steps:['K\u00fcnefeyi 200\u00b0C f\u0131r\u0131nda alt\u0131 k\u0131zarana dek pi\u015firin.','S\u0131cakken \u015ferbeti gezdirin, f\u0131st\u0131kla servis edin.'] },
+      { id:'icli-kofte-aksami', n:'\u0130\u00e7li K\u00f6fte Ak\u015fam\u0131', cat:'Ak\u015fam', d:'K\u0131zartmaya haz\u0131r i\u00e7li k\u00f6fte ve ac\u0131l\u0131 ezmeyle h\u0131zl\u0131 ak\u015fam sofras\u0131.', time:'15 dk', serves:'3\u20134 ki\u015filik', langs:'TR', full:false, status:'Taslak',
+        items:[{ n:'\u0130\u00e7li K\u00f6fte \u00b7 12\u2019li', v:'12 adet', pr:14.5, qty:1, ok:true },{ n:'Ac\u0131l\u0131 Ezme', v:'250 g', pr:4.9, qty:1, ok:true }],
+        pantry:['Limon, marul'],
+        steps:['\u0130\u00e7li k\u00f6fteleri k\u0131zg\u0131n ya\u011fda 4\u20135 dakika k\u0131zart\u0131n.','Ezme ve ye\u015fillikle servis edin.'] },
+    ];
+    const sel = Math.min(this.state.sel, R.length - 1);
+    const shown = R.map((r, i) => {
+      const lang = r.full ? langFull : langPart;
+      const st = r.status === 'Yay\u0131nda' ? okB : warnB;
+      return { name:r.n, cat:r.cat, serves:r.serves, time:r.time, count:String(r.items.length),
+        langs:r.langs, langFg:lang[0], langBg:lang[1], status:r.status, stFg:st[0], stBg:st[1],
+        rowBg: i === sel ? '#eef4e2' : 'transparent',
+        select: () => this.setState({ sel:i }),
+        edit: () => this.setState({ sel:i, modalOpen:true, modalMode:'edit' }) };
+    });
+    const cur = R[sel];
+    const slug = (m => { const tr = {'\u0131':'i','\u0130':'i','\u015f':'s','\u015e':'s','\u00e7':'c','\u00c7':'c','\u011f':'g','\u011e':'g','\u00f6':'o','\u00d6':'o','\u00fc':'u','\u00dc':'u'}; return m.replace(/[\u0131\u0130\u015f\u015e\u00e7\u00c7\u011f\u011e\u00f6\u00d6\u00fc\u00dc]/g, c => tr[c]).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); })(cur.n);
+    const avail = cur.items.filter(g => g.ok);
+    const stCur = cur.status === 'Yay\u0131nda' ? okB : warnB;
+    const det = {
+      name: cur.n, slug, slotId: 'ops-tarif-' + cur.id, d: cur.d,
+      time: cur.time, serves: cur.serves, cat: cur.cat,
+      status: cur.status, stFg: stCur[0], stBg: stCur[1],
+      items: cur.items.map(g => { const s = g.ok ? okB : warnB; return { n:g.n, v:g.v, qtyL:'\u00d7' + g.qty, prF:fmt(g.pr), st: g.ok ? 'Sat\u0131\u015fta' : 'T\u00fckendi', stFg:s[0], stBg:s[1] }; }),
+      pantry: cur.pantry,
+      steps: cur.steps.map((t, i) => ({ i:String(i + 1), t })),
+      stepCount: String(cur.steps.length),
+      totalF: fmt(avail.reduce((s, g) => s + g.pr * g.qty, 0)),
+      totalNote: avail.length === cur.items.length ? 't\u00fcm malzemeler sat\u0131\u015fta' : (cur.items.length - avail.length) + ' t\u00fckenen d\u00fc\u015f\u00fcld\u00fc',
+    };
+    if (cur.status === 'Taslak') {
+      Object.assign(det, { decBd:'#bcd0e0', decBg:'#eef4f9', decIcon:'#3a6b8a', decFg:'#2f5a78', decGlyph:'i',
+        decText:'Taslak \u2014 m\u00fc\u015fteride g\u00f6r\u00fcnmez. Foto\u011fraf, \u00e7eviri ve malzeme ba\u011flant\u0131lar\u0131 tamamlan\u0131nca yay\u0131n anahtar\u0131yla a\u00e7\u0131l\u0131r.' });
+    } else if (avail.length < cur.items.length) {
+      Object.assign(det, { decBd:'#ecd9b4', decBg:'#fdf7ec', decIcon:'#9a6416', decFg:'#8a6410', decGlyph:'!',
+        decText:(cur.items.length - avail.length) + ' malzeme t\u00fckendi \u2014 m\u00fc\u015fteride sat\u0131r "T\u00fckendi" d\u00fc\u015fer, toplam kalanla hesaplan\u0131r. Tarif yay\u0131nda kal\u0131r; stok Stok ekran\u0131ndan y\u00f6netilir.' });
+    } else {
+      Object.assign(det, { decBd:'#cdd8b6', decBg:'#f2f6ea', decIcon:'#4a6121', decFg:'#3f5a2a', decGlyph:'\u2713',
+        decText:'Yay\u0131nda \u2014 t\u00fcm malzemeler sat\u0131\u015fta. Fiyatlar \u00fcr\u00fcn kay\u0131tlar\u0131ndan, oturumdaki personaya g\u00f6re okunur.' });
+    }
+    const isCreate = this.state.modalMode === 'create';
+    const pubOn = !isCreate && cur.status === 'Yay\u0131nda';
+    return {
+      shown, det,
+      modalOpen: this.state.modalOpen,
+      modalTitle: isCreate ? 'Yeni tarif' : 'Tarif d\u00fczenle',
+      modalSub: isCreate ? 'Malzemeleri \u00fcr\u00fcn kay\u0131tlar\u0131ndan ba\u011flay\u0131n; fiyat otomatik okunur' : cur.n,
+      formName: isCreate ? 'Tarif ad\u0131 girin\u2026' : cur.n,
+      formNameFg: isCreate ? '#9aa094' : '#22251f',
+      formCat: isCreate ? 'Etiket se\u00e7' : cur.cat,
+      formTime: isCreate ? '\u2014' : cur.time,
+      formServes: isCreate ? '\u2014' : cur.serves,
+      formDesc: isCreate ? 'K\u0131sa a\u00e7\u0131klama girin\u2026' : cur.d,
+      formDescFg: isCreate ? '#9aa094' : '#3a3f37',
+      formItems: isCreate ? [{ n:'\u00dcr\u00fcn se\u00e7\u2026', v:'\u2014', qty:'1' }] : cur.items.map(g => ({ n:g.n, v:g.v, qty:String(g.qty) })),
+      formPantry: isCreate ? ['\u00d6r. Tereya\u011f\u0131 \u2014 2 yemek ka\u015f\u0131\u011f\u0131'] : cur.pantry,
+      formSteps: (isCreate ? ['Ad\u0131m\u0131 yaz\u0131n\u2026'] : cur.steps).map((t, i) => ({ i:String(i + 1), t })),
+      slugRead: 'slug: /tarifler/' + (isCreate ? '\u2014' : slug),
+      pubBg: pubOn ? '#5f7a2c' : '#cfd2c9',
+      pubX: pubOn ? '19px' : '2px',
+      openCreate: () => this.setState({ modalOpen:true, modalMode:'create' }),
+      openEdit: () => this.setState({ modalOpen:true, modalMode:'edit' }),
+      closeModal: () => this.setState({ modalOpen:false }),
+      stop: (e) => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -68,7 +68,7 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;transfer&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;depolar&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;tarifler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;transfer&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;depolar&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
 class Component extends DCLogic {
   renderVals() {
     const active = this.props.active || 'panel';
@@ -81,6 +81,7 @@ class Component extends DCLogic {
       siparisler: svg(P('M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8',1),P('M3.3 7 12 12l8.7-5',2),P('M12 22V12',3)),
       rotalar: svg(C(6,19,2.4,1),C(18,5,2.4,2),P('M8 19h6a4 4 0 0 0 0-8H9a4 4 0 0 1 0-8h1',3)),
       urunler: svg(P('M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10z',1),C(7,7,1.3,2)),
+      tarifler: svg(P('M4 19.5A2.5 2.5 0 0 1 6.5 17H20',1),P('M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',2)),
       fiyatlar: svg(P('M19 5 5 19',1),C(6.5,6.5,2.5,2),C(17.5,17.5,2.5,3)),
       stok: svg(P('m12 2 9 5-9 5-9-5z',1),P('m3 12 9 5 9-5',2),P('m3 17 9 5 9-5',3)),
       satinalma: svg(C(9,20,1,1),C(18,20,1,2),P('M1 2h3l2.4 12.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.6L23 5H5',3)),
@@ -105,6 +106,7 @@ class Component extends DCLogic {
       ]},
       { label:'Katalog', items:[
         { key:'urunler', label:'Ürünler' },
+        { key:'tarifler', label:'Tarifler' },
         { key:'fiyatlar', label:'Fiyatlar' },
         { key:'stok', label:'Stok' },
         { key:'satinalma', label:'Satın Alma' },
@@ -130,7 +132,7 @@ class Component extends DCLogic {
     ];
     const files = {
       panel:'Operasyon - Dashboard', siparisler:'Operasyon - Siparisler', rotalar:'Operasyon - Rotalar',
-      urunler:'Operasyon - Urunler', fiyatlar:'Operasyon - Fiyatlar', stok:'Operasyon - Stok',
+      urunler:'Operasyon - Urunler', tarifler:'Operasyon - Tarifler', fiyatlar:'Operasyon - Fiyatlar', stok:'Operasyon - Stok',
       satinalma:'Operasyon - Satin Alma', transfer:'Operasyon - Transfer', para:'Operasyon - Para',
       raporlar:'Operasyon - Raporlar', analitik:'Operasyon - Analitik', musteriler:'Operasyon - Musteriler',
       b2b:'Operasyon - B2B Onay', talepler:'Operasyon - Talepler', geribildirim:'Operasyon - Geri Bildirim',

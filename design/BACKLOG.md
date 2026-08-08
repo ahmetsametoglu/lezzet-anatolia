@@ -167,6 +167,11 @@ değişecek yer parantezde.
       ya envanterden düşülür.
 - [ ] **Katalogun "koleksiyon görünümü" varyantı** — `Musteri - Katalog.dc.html`'de üstbaşlıklı
       başlık bandıyla çizili, ama koleksiyon rotası yok. Rota açılınca yalnız başlık bloğu değişir.
+      **SEO gerekçesi eklendi (denetim 08.08, kullanıcı bilgisinde):** bugün kategori/koleksiyon
+      süzgeci sorgu parametresinde yaşadığı için "baklava" sınıfı aramalara indekslenebilir bir
+      landing üretilmiyor — bu rota açıldığında her koleksiyon kendi URL'i + meta'sı + (operasyonda
+      ZATEN toplanan) 16:9 OG kapağıyla bir arama giriş sayfası olur. Kapsam kararı kullanıcının;
+      iş büyüdüğü için kendiliğinden başlatılmaz.
 - [ ] **Paketler listesinin içerik envanteri** — tasarımı var (`Musteri - Paketler.dc.html`) ama
       `pages/musteri-paketler.md` **yok**. Diğer 15 müşteri sayfasının hepsinde ikisi de var; bu
       sayfa envantersiz kaldı, "hangi bilgi neden" yazılı değil.
