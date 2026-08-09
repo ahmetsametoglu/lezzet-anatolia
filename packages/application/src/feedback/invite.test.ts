@@ -46,11 +46,19 @@ let foreignProductId: string;
 let categoryId: string;
 let deliveredOrderId: string;
 
-/** Siparişi teslim edilmiş göstermek için durum geçişini geçmişe damgalar (emsal fikstür). */
+/**
+ * Siparişi teslim edilmiş göstermek için durum geçişini geçmişe damgalar (emsal fikstür).
+ *
+ * **Referans da BURADA yazılıyor** (düzeltme 09.08): referansı servis üretmez, durum geçişi verir
+ * (`p_reference_no` — migration künyesi: *"ilk kalıcı durumda üretilen referans, motor verir"*).
+ * Bu fikstür motoru atlayıp doğrudan `update` yazdığı için referans hiç doğmuyordu ve
+ * *"sipariş referansı gelir"* iddiası **ilk günden kırmızıydı** — paylaşılan veritabanında yarış
+ * sanılabilecek bir düşüştü, oysa eksik olan fikstürdü. Damga tekilliği sağlıyor (kolon kısmi unique).
+ */
 async function markDelivered(orderId: string, daysAgo: number) {
   const at = new Date();
   at.setDate(at.getDate() - daysAgo);
-  await db.from('order').update({ status: 'delivered' }).eq('id', orderId);
+  await db.from('order').update({ status: 'delivered', reference_no: `TEST-${stamp}` }).eq('id', orderId);
   await db.from('order_status_log').insert({
     order_id: orderId,
     from_status: 'out_for_delivery',
