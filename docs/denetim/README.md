@@ -21,12 +21,10 @@ Cevap yazmadan önce dosyanın GÜNCEL hâli okunur.
 **İkinci tur (03.08'de resmîleşti):** Şerit, cevabında denetime karşı soru sorabilir; denetim
 **"Denetim görüşü:"** bölümüyle yanıtlar. İki turda uzlaşılamayan madde kullanıcıya taşınır.
 
-Dosyalar:
+Dosyalar: **açık dosya YOK** (09.08 itibarıyla) — bütün turlar kapandı, aşağıdaki liste onların
+künyesidir. Yeni tur açıldığında dosya buraya eklenir.
 
-- `denetim-migration-parcalama.md` — migration dosya dengesi (P3 kapandı; P1/P2 kabul → `02.11`,
-  P1'in `db:refresh` onayı KULLANICIDA)
-
-Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası,
+Kapanıp silinenler (02–05.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası,
 **veritabanı/duplikasyon taraması** (A1–A9), yorum bayatlığı 1/3 (Y1–Y3) ve **test artığı**
 (R1–R4 — `purgeTestData`+`mustDelete`, iki bağımsız ölçüm sıfır artık; süpürme kuralı `02.12`'de
 izlenir) · müşteri ilk dosyası,
@@ -36,4 +34,7 @@ komponent taraması (K1–K4, M2), **hata maskeleme** (H1–H4 — `customerErro
 gözlemleme (G1–G4 — istemci hata kapısı + süreç kancaları + webhook izleri) · **dosya ağacı**
 (D1–D4 — `*-url` istisnası STACK §7 + `docs:check` kuralı, checkout forku, `use-device.hook`
 29 import, aile-sözlük ölçümü) · **servis taban sınıfı** (TS1–TS2 — üç ham-gerekçe notu,
-STACK §6'ya "ham ne zaman serbest" kuralı + iki mutlak istisna).
+STACK §6'ya "ham ne zaman serbest" kuralı + iki mutlak istisna) · **analitik yol kalıbı**
+(P1–P3 — kaynak + kalıp sözlüğü, canlı ölçümle kapandı, `f791d80`) · **migration parçalanma
+dengesi** (P1–P4 — 34 dosya boşluksuz, üreteç yalnız 0034 verisini yazıyor; kalıcı kayıt `02.11`,
+`24fb897`).
