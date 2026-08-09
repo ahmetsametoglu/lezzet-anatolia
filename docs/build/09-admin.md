@@ -398,6 +398,21 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     - **Ölçüldü (`ui:shot`, açık + koyu):** boş hâlde dört kart yer tutucusuyla, dolu hâlde önizleme +
       alt metin + "Görseli kaldır" + sekme rozeti `1`. ⚠ **Seed bu turda `home_hero`'yu YAZMADI**
       (`site_image` 0 satır) — ölçüm için elle bir satır kuruldu ve silindi; denetime bildirildi.
+    - **ÇÖZÜLDÜ (09.08 · arka uç) — sebep R2 DEĞİL, silinmiş kaynak dosyaydı.** İki ajan birden
+      "R2 ayarsız" diye teşhis koydu, kullanıcı itiraz etti ve haklı çıktı: ölçüldü, R2 yerelde
+      **çalışıyor** (117/124 ürünün görseli yüklü). Gerçek sebep `apps/web/public/` altındaki geçici
+      hero dosyasının `b581b3e` ile silinmiş olmasıydı (~~`hero-sofra.jpg`~~ artık orada YOK ve
+      olmamalı) — seed **başka bir şeridin sahibi olduğu dosyaya** bağlıydı
+      ve o şerit dosyayı kendi planına uygun biçimde sildi (*"kaynak tek yerde kalır"*). Plan
+      doğruydu, seed güncellenmedi.
+      Fikstür seed'in kendi klasörüne taşındı (`scripts/seed/data/hero-sofra.jpg`, **bit bit aynı
+      dosya** — sha256 eşit, 1920×1080; yeni bir görsel SEÇİLMEDİ). Kural: seed'in ihtiyaç duyduğu
+      fikstür seed'in klasöründe durur.
+      **Asıl kusur uyarı metnindeydi:** yükleme iki sebeple `null` dönüyor (R2 ayarsız · kaynak
+      okunamadı) ama seed koşulsuz *"R2 yok"* yazıyordu. Yanlış teşhis koyan uyarı hiç uyarmamaktan
+      pahalıdır — nitekim aramayı iki kez yanlış yere yolladı. Sebep artık ayrılıyor.
+      Ölçüm: `site_image` 1 satır (`home_hero` → `site/home-hero.jpg`), üç slot bilerek boş;
+      kapsam denetimi **109/109 yeşil, exit 0** — `db:refresh`i kırmızı bitiren tek kova buydu.
   - **BEKLEYEN(09.16):** mevcut bir MÜŞTERİYİ personel yapma yolu yok — "+ Kullanıcı" var olan e-postayı reddediyor. Sessizce personel yapmak `customer` rolünü düşürür ve o kişinin veri görünürlüğünü değiştirir; bir düğmenin yan etkisi olamayacak kadar büyük bir karar, ayrı ve açık bir akış istiyor.
 
 - [~] (09.17) **Sonsuz kaydırma tek geçişte düzeltilir** · `touches: apps/web/components/operation/ui/{load-more-sentinel,table}.tsx · apps/web/lib/use-load-more.hook.ts · apps/web/app/(operations)/operations/{prices,stock}/*-client.tsx` — dört liste (Ürünler · Fiyatlar · Stok · Siparişler) tek tabloyu (O4) ve tek nöbetçiyi paylaşıyor; kusur da ortak, o yüzden iş de tek

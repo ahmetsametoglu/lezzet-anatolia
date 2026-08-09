@@ -1,4 +1,5 @@
 import { SiteImageService } from '@lezzet/database';
+import { getR2 } from '@lezzet/storage';
 import { r2Keys, tabloDolu, uploadImageFromPath, type Db } from './shared';
 
 // ── Sayfa görselleri (`site_image`, 09.16 · 0043) ────────────────────────────────────────────────
@@ -12,17 +13,27 @@ import { r2Keys, tabloDolu, uploadImageFromPath, type Db } from './shared';
 // görünmezdi. Seed'in işi gerçeği taklit etmek, en iyi hâli göstermek değil.
 //
 // ── GÖRSEL SEÇİMİ BU ŞERİDİN KARARI DEĞİL ───────────────────────────────────
-// `home_hero`nun kaynağı müşteri şeridinin bugün ekranda kullandığı geçici dosyanın TA KENDİSİ
-// (`apps/web/public/hero-sofra.jpg`). Yeni bir fotoğraf seçilmedi: hangi görselin kahraman olacağı
-// ön uç şeritlerinin kararı, buranın işi o kararı kalıcı yola taşımak. Slot bağlandığında geçici
-// dosya silinir ve kaynak tek yerde kalır.
+// `home_hero`nun kaynağı müşteri şeridinin ekranda kullandığı fotoğrafın TA KENDİSİ. Yeni bir
+// fotoğraf seçilmedi: hangi görselin kahraman olacağı ön uç şeritlerinin kararı, buranın işi o
+// kararı kalıcı yola taşımak.
+//
+// ── KAYNAK DOSYA SEED'İN KENDİ KLASÖRÜNDE, `apps/web/public`TE DEĞİL (düzeltme 09.08) ──
+// Eskiden `apps/web/public/hero-sofra.jpg`ti ve **başka bir şeridin sahibi olduğu dosyaya
+// bağlıydık**. O şerit dosyayı `b581b3e` ile sildi — commit başlığı da bunu söylüyor: *"dört sayfa
+// görseli operatörün kapısına bağlandı — geçici hero dosyası silindi"*. Plan doğruydu (kaynak tek
+// yerde kalsın), seed güncellenmedi ve kurgu kendi kendini bozdu: `site_image` 0 satır kaldı,
+// kapsam denetimi her `db:refresh`i **exit 1** ile bitirdi.
+//
+// Dosya BİREBİR aynısıdır (sha256 eşit, 1920×1080) — yeni bir görsel seçilmedi, yalnız fikstürün
+// evi düzeltildi. Kural olarak: **seed'in ihtiyaç duyduğu fikstür seed'in klasöründe durur.** Bir
+// başkasının ürün kararıyla silinebilecek bir dosyaya bağlanmak, sessizce bozulan bir bağımlılıktır.
 
 /** Kaynağı repoda duran slotlar. Ötekiler bilerek boş — yer tutucu yolu koşsun. */
 const DOLU_SLOTLAR = [
   {
     slot: 'home_hero' as const,
-    kaynak: 'apps/web/public/hero-sofra.jpg',
-    not: 'ana sayfa kahramanı (müşteri şeridinin geçici dosyası kalıcı yola taşındı)',
+    kaynak: 'scripts/seed/data/hero-sofra.jpg',
+    not: 'ana sayfa kahramanı (müşteri şeridinin fotoğrafı, fikstür kopyası)',
   },
 ];
 
@@ -38,10 +49,16 @@ export async function seedSiteImages(db: Db): Promise<void> {
 
   for (const s of DOLU_SLOTLAR) {
     const dosyaAdi = s.kaynak.split('/').pop() || 'hero.jpg';
-    // R2 ayarsızsa `null` döner ve slot BOŞ kalır — seed durmaz (kardeşleriyle aynı davranış).
+    // Yükleme İKİ sebeple `null` döner (R2 ayarsız · kaynak okunamadı) ve slot BOŞ kalır — seed
+    // durmaz (kardeşleriyle aynı davranış).
     const key = await uploadImageFromPath(s.kaynak, r2Keys.siteImage(s.slot, dosyaAdi));
     if (!key) {
-      console.log(`  ⚠ ${s.slot} — R2 yok, slot boş bırakıldı`);
+      // **Sebep AYRILARAK yazılır** ve bu bir üslup tercihi değil: mesaj eskiden koşulsuz "R2 yok"
+      // diyordu, oysa gerçek sebep silinmiş kaynak dosyaydı. Yanlış teşhis koyan bir uyarı hiç
+      // uyarmamaktan pahalıdır — bu satır iki ajanı birden yanılttı (09.08) ve arıza R2 ayarında
+      // aranırken seed'de duruyordu.
+      const sebep = getR2() ? `kaynak okunamadı (${s.kaynak})` : 'R2 ayarsız';
+      console.log(`  ⚠ ${s.slot} — ${sebep}; slot boş bırakıldı`);
       continue;
     }
     await images.put(s.slot, key);
