@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail } from '@/lib/order/customer-orders';
+import { orderIdOrNull } from '@/lib/order/order-id';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -41,9 +42,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);
   if (!customerId) redirect(`/${locale}${LOGIN_SEGMENT[locale]}`);
 
-  // Bulunamayan ile başkasına ait olan AYNI cevabı alır (kapı `null` döner) — ayrım söylenirse
-  // deneme yanılmayla başkasının sipariş kimliği doğrulatılabilirdi.
-  const order = await getCustomerOrderDetail(locale as Locale, customerId, reference);
+  // Bulunamayan · başkasına ait · BİÇİMİ GEÇERSİZ — üçü de AYNI cevabı alır. İlk ikisi bir güvenlik
+  // kararıydı (ayrım söylenirse deneme yanılmayla başkasının sipariş kimliği doğrulatılabilirdi);
+  // üçüncüsü 09.08'de ölçülerek eklendi — UUID olmayan segment servise kadar gidip veritabanı
+  // hatasına düşüyor ve müşteriye 500 gösteriyordu (`order-id.ts` künyesi).
+  const orderId = orderIdOrNull(reference);
+  const order = orderId ? await getCustomerOrderDetail(locale as Locale, customerId, orderId) : null;
   if (!order) notFound();
 
   return (

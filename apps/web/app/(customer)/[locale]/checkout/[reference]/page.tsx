@@ -9,6 +9,7 @@ import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { imageOf } from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
+import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
@@ -51,7 +52,10 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
 
   const db = serviceDb();
   const profile = user ? await new UserProfileService(db).findByAuthUserId(user.id) : null;
-  const found = await new OrderService(db).getWithItems(reference);
+  // Biçimi geçersiz kimlik servise HİÇ gitmez: UUID olmayan segment veritabanı hatasına düşüp
+  // müşteriye 500 gösteriyordu (09.08'de sipariş detayında ölçüldü, aynı açık burada da vardı).
+  const orderId = orderIdOrNull(reference);
+  const found = orderId ? await new OrderService(db).getWithItems(orderId) : null;
   // Başkasının siparişi GÖRÜNMEZ: kimlik yoldan geliyor, sahiplik sunucuda doğrulanır.
   if (!found || !profile || found.order.customerId !== profile.id) notFound();
 
