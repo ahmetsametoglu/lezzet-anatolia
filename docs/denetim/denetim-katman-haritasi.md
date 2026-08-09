@@ -56,7 +56,7 @@ oradaki bulgular mobili de ilgilendirir ve deftere bildirilir.
 | Katman | Durum | Bulgu dosyası |
 |---|---|---|
 | K1 Veri şeması | 🟢 **tamam** — şema disiplinli, iki hafif kayıt (arka uçta) | `denetim-K1-veri-semasi.md` |
-| K2 Tipler | ⬜ | — |
+| K2 Tipler | 🟢 **tamam** — bir duplikasyon düzeltildi, bir kural boşluğu (arka uçta) | `denetim-K2-tipler.md` |
 | K3 domain-core | ⬜ | — |
 | K4 database | ⬜ | — |
 | K5 application | ⬜ | — |

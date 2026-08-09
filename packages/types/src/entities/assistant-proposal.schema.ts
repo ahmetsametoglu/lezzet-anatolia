@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
-import { NutritionSchema, ProductAllergenEnum, ProductDateTypeEnum } from './product.schema';
+import { ProductDateTypeEnum, ProductSchema } from './product.schema';
 
 /**
  * AI asistanının ONAY KUYRUĞU (22.3) — `0042_assistant_proposal.sql`.
@@ -209,17 +209,29 @@ export const ZoneExtendPayloadSchema = z.object({
  */
 const DeclarationGapEnum = z.enum(['lang', 'ingredients', 'nutrition', 'storage', 'allergens']);
 
-/** Ambalajdan okunan beyan alanları — iki tipin de ortak gövdesi. */
-const ProductDeclarationSchema = z.object({
-  description: LocalizedTextSchema.nullable().optional(),
-  ingredients: LocalizedTextSchema.nullable().optional(),
-  /** Saklama koşulu — 22.3'te YASAKTI, belgeden okuma olduğu için açıldı (yukarıdaki künye). */
-  storageInstructions: LocalizedTextSchema.nullable().optional(),
-  nutrition: NutritionSchema.nullable().optional(),
-  /** 14 AB alerjeni — SERBEST METİN DEĞİL, kapalı küme: model cümle uyduramaz, listeden seçer. */
-  allergens: z.array(ProductAllergenEnum).optional(),
-  traces: z.array(ProductAllergenEnum).optional(),
-});
+/**
+ * Ambalajdan okunan beyan alanları — iki tipin de ortak gövdesi.
+ *
+ * **`ProductSchema`'dan TÜRETİLİR, yeniden yazılmaz** (denetim K2-1, 10.08): altı alanın tipi
+ * ürünün kendi tanımıyla aynı kalmalı. Elle yazıldığı sürece `NutritionSchema` bir kalem eklerse
+ * ya da `allergens` kümesi değişirse, dilekçe eski tipte kalır ve **onay ekranı asistanın yazdığını
+ * ürünün kabul edeceğinden farklı doğrular** — hata vermeden.
+ *
+ * `pick` bilinçli: ürüne yarın eklenen bir alan buraya KENDİLİĞİNDEN girmez. Asistanın
+ * dokunabileceği küme kapalı kalır (`AI_ADMIN_ASSISTANT §6`), açık olan yalnız tipler.
+ * `partial()` ise dilekçenin doğası — belgeden okunamayan alan boş gelir.
+ *
+ * Alan künyeleri: **saklama koşulu** 22.3'te yasaktı, belgeden okuma olduğu için açıldı (yukarıdaki
+ * künye). **Alerjen ve iz** serbest metin DEĞİL, kapalı küme — model cümle uyduramaz, listeden seçer.
+ */
+const ProductDeclarationSchema = ProductSchema.pick({
+  description: true,
+  ingredients: true,
+  storageInstructions: true,
+  nutrition: true,
+  allergens: true,
+  traces: true,
+}).partial();
 
 /**
  * Onay ekranının iki karar girdisi — ikisi de ARAÇTA hesaplanır, ekranda değil.
