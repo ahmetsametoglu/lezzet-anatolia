@@ -380,9 +380,21 @@ satırında.
     *"şu koleksiyonu vitrine çıkaralım"* cümlesi hiç kurulmuyordu, çünkü o koleksiyonun varlığından
     haberi yoktu. Boşluğun ölçülemeyen kısmı buydu.
   - **`delivery_map`** — depolar + bölgeler (**bağlı depo · teslimat günleri · kapsanan kodlar**) +
-    kapsanmayan talep kodları ve her birinin **EN YAKIN bölgesi + yaklaşık km**. Canlı doğrulama:
-    *67500 → Schiltigheim hattı (STR), ~18 km, 47 istek, 3 bekleyen* · *68000 → 56,5 km* (COLMAR
-    deposu pasif — asistan artık bunu görüp depo açmayı önerebilir) · *54000 → 113 km* (rota dışı).
+    kapsanmayan talep kodları ve her biri için **hangi hatta UYDUĞU**.
+    - **Ölçüt mesafeden GÜZERGÂHA döndü (kullanıcı düzeltmesi, aynı gün).** İlk yazımda "en yakın
+      bölge" vardı; kullanıcı çürüttü: *"araba ana yol üzerinde ilerlerken sağındaki solundaki
+      kodlara dağıtım yapabilir, ama ters yöndeki bir noktaya gidip de dağıtım yapamaz."* Mesafe
+      yanıltıyordu — hattın 5 km ötesindeki ters yön, hattın üzerindeki 15 km'den pahalıdır.
+      Motor artık dört hâl veriyor: `on_route` · `extends_route` · `detour` · `opposite`.
+    - Canlı: *67500 → **Schiltigheim'ın uzantısı** (açı 8°, sapma 3 km, perşembe hattı); Illkirch
+      **TERS YÖN** (162°)* · *68000 → Illkirch yönünde ama 8 km sapma* · *67600 → Illkirch uzantısı*.
+      Eski hâl 67500 için "Schiltigheim ~18 km" diyordu — doğru hattı buluyordu ama **neden**
+      doğru olduğunu söyleyemiyor, ters yöndekini de eleyemiyordu.
+    - **Yönü ölçülemeyen bölge ELENMİYOR, ayrı kovaya gidiyor** (`zonesWithoutDirection`): merkez
+      bölgesinin kodları deponun üstünde durduğu için hattın istikameti yok. İlk ölçümde motor bunu
+      fark etmiyor ve *"sapma 0,6 km, açı 2°"* gibi **ikna edici ama uydurma** bir sonuçla o bölgeyi
+      birinci sıraya koyuyordu — ikna ediciliği tam da tehlikesiydi. `null` dönüyor, çağıran "yön
+      bilinmiyor" diyor (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
   - **`reference_data`** — hesaplar, kategoriler, koleksiyonlar (vitrin işaretiyle), tedarikçiler,
     iş eşikleri. **Ayarlar BEYAZ listeyle**: `settings` tablosunda iş parametreleriyle birlikte
     **`analytics_session_salt`** duruyor (oturum anonimleştirmesinin dayanağı). Kara liste yarın
