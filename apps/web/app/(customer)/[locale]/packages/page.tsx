@@ -5,6 +5,7 @@ import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { listStorefrontPackages } from '@/lib/storefront/packages';
+import { readSiteImage } from '@/lib/storefront/site-image';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
@@ -47,14 +48,15 @@ export default async function PackagesPage({ params, searchParams }: PackagesPag
   // okumayı orkestrasyonun içine koymak onu istek DIŞINDA çağrılamaz hâle getirir (cron/webhook/
   // mobil uç) — ölçülmüş bir hata, 34 test düşürmüştü (`settings-scope.ts` künyesi). Çerezi okuyan
   // taraf sayfadır. Yer bilinmiyorsa kapı bugünküyle birebir aynı davranır (`route: null`).
-  const [packages, device] = await Promise.all([
+  const [packages, hero, device] = await Promise.all([
     listStorefrontPackages(locale, undefined, await readPlaceWarehouses()),
+    readSiteImage('packages_hero', locale),
     detectDevice(),
   ]);
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="packages">
-      <PackagesClient t={t} locale={locale} packages={packages} device={device} />
+      <PackagesClient t={t} locale={locale} packages={packages} hero={hero} device={device} />
     </SiteFrame>
   );
 }

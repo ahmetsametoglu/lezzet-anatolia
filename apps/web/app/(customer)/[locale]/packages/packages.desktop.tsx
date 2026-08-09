@@ -25,7 +25,7 @@ const FIRST_PAGE = 12;
  * "Daha fazla paket" sunucuya GİTMEZ: paket kümesi operatörün elle kurduğu, doğal tavanı olan bir
  * küme (CLAUDE.md §1) — tek turda okundu, düğme yalnız ilk 12'yi açıyor.
  */
-export function PackagesDesktop({ t, locale, packages }: PackagesViewProps) {
+export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps) {
   const [shown, setShown] = useState(FIRST_PAGE);
   const visible = packages.slice(0, shown);
 
@@ -45,10 +45,12 @@ export function PackagesDesktop({ t, locale, packages }: PackagesViewProps) {
             <span>{t.promise.onePrice}</span>
           </div>
         </div>
-        {/* Kahraman görseli: künyesi HENÜZ YOK (tasarımda `image-slot`). Çerçeve tam ölçüsüyle
-            durur — kaldırılsaydı sol sütun tek başına kalır ve tasarımın iki sütunlu dengesi
-            bozulurdu. Görsel geldiğinde yalnız kaynak değişir. */}
-        <FramedImage src={null} alt="" ratio={RATIO_SOURCE} crop={CROP_CENTER} />
+        {/* Kahraman görseli operatörün "Vitrin görselleri" sekmesinden (`site_image.packages_hero`,
+            08.33). Yüklenmemişse çerçeve tam ölçüsüyle durur — kaldırılsaydı sol sütun tek başına
+            kalır ve tasarımın iki sütunlu dengesi bozulurdu.
+            Alt metni operatör yazar; yazmamışsa BOŞ kalır ve bu doğru: kahraman burada bilgi değil
+            süstür, uydurma bir cümle ekran okuyucuya gereksiz gürültü olurdu (`alt=""` = dekoratif). */}
+        <FramedImage src={hero?.url ?? null} alt={hero?.alt ?? ''} ratio={RATIO_SOURCE} crop={hero?.crop ?? CROP_CENTER} />
       </section>
 
       <section className="flex flex-col gap-4 px-12 pb-11">

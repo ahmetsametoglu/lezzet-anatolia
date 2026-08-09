@@ -8,6 +8,7 @@ import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { detectDevice } from '@/lib/device';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { readB2bApplicant } from '@/lib/b2b/application';
+import { readSiteImage } from '@/lib/storefront/site-image';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { ProfessionalsClient } from './professionals-client';
@@ -47,7 +48,11 @@ export default async function ProfessionalsPage({ params, searchParams }: Profes
   void recordPageView('/professionals', await searchParams);
 
   const t: Messages = messages[locale];
-  const [device, applicant] = await Promise.all([detectDevice(), readB2bApplicant(locale as Locale)]);
+  const [device, applicant, hero] = await Promise.all([
+    detectDevice(),
+    readB2bApplicant(locale as Locale),
+    readSiteImage('professionals_hero', locale as Locale),
+  ]);
 
   return (
     <SiteFrame device={device} locale={locale as Locale} activeNav="pro">
@@ -68,6 +73,7 @@ export default async function ProfessionalsPage({ params, searchParams }: Profes
         }}
         whatsappHref={whatsappHref()}
         whatsappNumber={brand.contact.phoneDisplay}
+        hero={hero}
       />
     </SiteFrame>
   );

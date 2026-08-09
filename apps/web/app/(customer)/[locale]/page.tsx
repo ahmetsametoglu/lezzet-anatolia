@@ -13,6 +13,7 @@ import { LocalBusinessJsonLd } from '@/lib/seo/json-ld';
 import { getSessionUser } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
 import { getHomeData } from '@/lib/storefront/home';
+import { readSiteImage } from '@/lib/storefront/site-image';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -75,8 +76,11 @@ export default async function Home({ params, searchParams }: HomeProps) {
   }
 
   const t: Messages = messages[locale];
-  const [data, device] = await Promise.all([
+  const [data, hero, device] = await Promise.all([
     getHomeData(locale, await readPlaceWarehouses(), await readPricingViewer()),
+    // Kahraman görseli katalogla AYNI turda okunuyor (`Promise.all`) — ayrı beklenseydi sayfa bir
+    // tur daha uzardı ve ikisi arasında hiçbir bağımlılık yok.
+    readSiteImage('home_hero', locale as Locale),
     detectDevice(),
   ]);
 
@@ -85,7 +89,7 @@ export default async function Home({ params, searchParams }: HomeProps) {
       {/* İşletme künyesi YALNIZ ana sayfada (08.1): `LocalBusiness` sitenin tamamını tanıtır, her
           sayfada tekrarlamak aynı beyanı çoğaltmak olurdu. */}
       <LocalBusinessJsonLd url={localizedUrl('/', locale as Locale)} />
-      <HomeClient t={t} locale={locale as Locale} data={data} device={device} />
+      <HomeClient t={t} locale={locale as Locale} data={data} hero={hero} device={device} />
     </SiteFrame>
   );
 }

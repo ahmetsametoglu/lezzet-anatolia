@@ -4,6 +4,7 @@ import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@lezzet/application';
 import { readShowcase } from '@/lib/storefront/home';
+import { readSiteImage, type SitePageImage } from '@/lib/storefront/site-image';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from '@lezzet/application';
@@ -67,6 +68,14 @@ export interface EmptyCartContext {
    * döner ve bölüm hiç çizilmez; başka türlü boş bırakılmaz.
    */
   showcase: StorefrontProduct[];
+  /**
+   * Boş sepet çizimi (`site_image.empty_cart`, 08.33) — operatörün yüklediği sayfa görseli.
+   *
+   * Bağlamın içinde çünkü aynı ekranın parçası ve **aynı turda** okunuyor: ayrı beklenseydi kahraman
+   * görselsiz görünür, fotoğraf sonradan patlardı — bu dosyanın kendi künyesinin öneri için söylediği
+   * şeyin aynısı. `null` = yüklenmemiş; ekran 🧺 yer tutucusunu çizmeye devam eder.
+   */
+  illustration: SitePageImage | null;
 }
 
 /**
@@ -77,15 +86,16 @@ export interface EmptyCartContext {
  */
 export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartContext> {
   const db = serviceDb();
-  const [categoryRows, lastOrder, showcase] = await Promise.all([
+  const [categoryRows, lastOrder, showcase, illustration] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     readLastOrder(locale),
     // Seçki her iki dalda da okunur — sipariş geçmişine bağlı değil.
     readShowcase(db, locale, await readPlaceWarehouses(), await readPricingViewer()),
+    readSiteImage('empty_cart', locale),
   ]);
   // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın.
   const categories = lastOrder ? [] : (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
-  return { lastOrder, categories, showcase };
+  return { lastOrder, categories, showcase, illustration };
 }
 
 async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null> {

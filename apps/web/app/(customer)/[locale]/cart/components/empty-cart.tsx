@@ -65,17 +65,23 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
       ].join(' ')}
     >
       <div className={compact ? 'w-[180px]' : 'w-[260px] flex-none opacity-90'}>
-        {/* Görsel künyesi henüz yok (hasır sepet / tezgâh fotoğrafı); çerçeve TAM boyutuyla durur ki
-            asıl fotoğraf gelince yerleşim kaymasın. Yer tutucu boş bir kutu değil, sepet işareti.
+        {/* Çizim operatörün "Vitrin görselleri" sekmesinden (`site_image.empty_cart`, 08.33).
+            Yüklenmemişse çerçeve TAM boyutuyla durur ve yer tutucu boş bir kutu değil, sepet
+            işaretidir — fotoğraf gelince yerleşim kaymaz.
 
             Ton ve köşe SITE'ın: `FramedImage`ın varsayılanı operasyon grisidir (`ops-gray`) ve
             karanlık modda döner — krem sayfanın ortasında soğuk gri bir kutu duruyordu. Primitifin
             varsayılanı değiştirilmedi (operasyon ekranları onu doğru kullanıyor), çağrı yerinde
-            eziliyor. Köşe tasarımdan: web 16 · mobil 14. */}
+            eziliyor. Köşe tasarımdan: web 16 · mobil 14.
+
+            `alt` boş kalabilir ve kalmalı: bu bir DEKORATİF çizimdir, yanındaki başlık zaten aynı
+            şeyi söylüyor — ekran okuyucuya iki kez okutmak gürültüdür. Operatör bir cümle yazdıysa
+            o kazanır (bilerek yazılmış bir metni yok saymak, yazma imkânını anlamsız kılardı). */}
         <FramedImage
-          src={null}
-          alt=""
+          src={context.illustration?.url ?? null}
+          alt={context.illustration?.alt ?? ''}
           ratio={ILLUSTRATION_RATIO}
+          crop={context.illustration?.crop}
           className={compact ? '!rounded-[14px] !bg-cream-deep' : '!rounded-[16px] !bg-cream-deep'}
           placeholder={<span className="text-h1-sm">🧺</span>}
         />

@@ -6,7 +6,7 @@ import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/se
 import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { RecipeTeaserCard } from '@/components/customer/ui/recipe-card';
 import { Link } from '@/i18n/navigation';
-import { HERO_IMAGE, limitText, type HomeViewProps } from './home-types';
+import { limitText, type HomeViewProps } from './home-types';
 
 /**
  * Anasayfa — masaüstü düzeni (tasarım: `Musteri - Anasayfa.dc.html`, "Anasayfa Web" ekranı).
@@ -20,7 +20,7 @@ import { HERO_IMAGE, limitText, type HomeViewProps } from './home-types';
  * Fırsat bölümü teklif yoksa HİÇ render edilmez (envanter §4: "teklif yoksa bu bölüm hiç var
  * olmamalı" — boş başlık bırakılmaz).
  */
-export function HomeDesktop({ t, locale, data }: HomeViewProps) {
+export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
   return (
     <div className="flex flex-col">
       {/* Kahraman */}
@@ -46,12 +46,18 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
             </Link>
           </div>
         </div>
-        {/* Kahraman görseli GEÇİCİ ve statik (09.08, kullanıcı isteği): `public/hero-sofra.jpg`.
-            Kalıcı yolu `design/BACKLOG §4`'te yazılı ve HENÜZ YOK — ana sayfa hero'su operatörün
-            "Vitrin görselleri" sekmesinden yöneteceği bir SAYFA görselidir, bir varlığa bağlı
-            değildir; arka uçta `site_image` tablosu ve kovası açılmadan gerçek akış kurulamaz.
-            O gün geldiğinde bu satır kapıdan gelen künyeyle değişir, dosya silinir. */}
-        <FramedImage src={HERO_IMAGE} alt={t.hero.imageAlt} ratio={RATIO_BAND} className="!rounded-[24px]" />
+        {/* Kahraman görseli operatörün "Vitrin görselleri" sekmesinden geliyor (`site_image.home_hero`,
+            08.33): bir varlığa değil bir SAYFA YERİNE bağlı. Yüklenmemişse `null` — çerçeve yer
+            tutucusunu çizer ve yerleşim kaymaz. Alt metin operatörünkü varsa onun, yoksa sayfanın:
+            fotoğrafı yükleyen kişi ne olduğunu bilir, sayfa metni yalnız orada bir görsel olduğunu
+            söyler. Kırpım künyesi de kapıdan geliyor — aynı fotoğraf 16:9 ve 3:2'ye farklı oturur. */}
+        <FramedImage
+          src={hero?.url ?? null}
+          alt={hero?.alt ?? t.hero.imageAlt}
+          ratio={RATIO_BAND}
+          crop={hero?.crop}
+          className="!rounded-[24px]"
+        />
       </section>
 
       {/* K31 · Posta kodu sorma şeridi — kahramanın HEMEN ALTINDA (tasarım). Yer biliniyorsa ya da

@@ -13,7 +13,7 @@ import type { ProfessionalsViewProps } from './professionals-types';
  *
  * Bu dosya KOMPOZİSYONDUR: formu ve durum satırını yerleştirir, kendi mantığını kurmaz.
  */
-export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults, whatsappHref, whatsappNumber, locale }: ProfessionalsViewProps) {
+export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults, whatsappHref, whatsappNumber, locale, hero }: ProfessionalsViewProps) {
   return (
     <div className="flex flex-col">
       {/* Kahraman — koyu blok tam genişlikte; solda vaat, sağda görsel (tasarım 1.1fr / 1fr). */}
@@ -40,7 +40,14 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
             </a>
           </div>
         </div>
-        <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} className="!rounded-none" />
+        {/* Kahraman `site_image.professionals_hero` slotundan (08.33); yüklenmemişse yer tutucu. */}
+        <FramedImage
+          src={hero?.url ?? null}
+          alt={hero?.alt ?? t.hero.imageAlt}
+          ratio={RATIO_BAND}
+          crop={hero?.crop}
+          className="!rounded-none"
+        />
       </section>
 
       {/* Nasıl çalışır — üç adım. Numara tasarımda Lora ve zeytin. */}

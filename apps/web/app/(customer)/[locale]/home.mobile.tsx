@@ -7,7 +7,7 @@ import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { CartBar } from '@/components/customer/cart/cart-bar';
 import { Link } from '@/i18n/navigation';
-import { HERO_IMAGE, limitText, type HomeViewProps } from './home-types';
+import { limitText, type HomeViewProps } from './home-types';
 
 /**
  * Anasayfa — mobil düzeni (tasarım: `Musteri - Anasayfa.dc.html`, "Anasayfa Mobil" ekranı).
@@ -18,7 +18,7 @@ import { HERO_IMAGE, limitText, type HomeViewProps } from './home-types';
  * Trafiğin büyük kısmı mobil ve sosyal medyadan gelir (`musteri-anasayfa.md §7`), yani bu dosya
  * çoğu ziyaretçinin gördüğü ilk ekrandır.
  */
-export function HomeMobile({ t, locale, data }: HomeViewProps) {
+export function HomeMobile({ t, locale, data, hero }: HomeViewProps) {
   return (
     <div className="flex flex-col pb-24">
       {/* Kahraman */}
@@ -26,8 +26,9 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
         <h1 className="font-serif text-h1-sm text-ink">
           {t.hero.titleLead} <em className="text-olive">{t.hero.titleAccent}</em>
         </h1>
-        {/* Aynı görsel masaüstüyle paylaşılıyor (`HERO_IMAGE`) — künyesi orada. */}
-        <FramedImage src={HERO_IMAGE} alt={t.hero.imageAlt} ratio={RATIO_BAND} />
+        {/* Aynı slot masaüstüyle paylaşılıyor (`site_image.home_hero`) — künyesi orada. Tek kaynak
+            olması şart: iki dal ayrı okusaydı telefon ile masaüstü bir gün başka fotoğraf gösterirdi. */}
+        <FramedImage src={hero?.url ?? null} alt={hero?.alt ?? t.hero.imageAlt} ratio={RATIO_BAND} crop={hero?.crop} />
         <Link href="/catalog" className={buttonClass({ compact: true, fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>

@@ -1,5 +1,6 @@
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { B2bApplicationStatus } from '@lezzet/domain-core';
+import type { SitePageImage } from '@/lib/storefront/site-image';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
@@ -38,6 +39,11 @@ export interface ProfessionalsViewProps {
   /** WhatsApp köprüsü — numara `@lezzet/brand`ten, metin sözlükten. */
   whatsappHref: string;
   whatsappNumber: string;
+  /**
+   * Sayfa kahramanı (`site_image.professionals_hero`, 08.33) — başvuru verisinden AYRI kaynak.
+   * `null` = operatör henüz yüklemedi; çerçeve yer tutucusuyla durur.
+   */
+  hero: SitePageImage | null;
 }
 
 export interface ApplicationDefaults {
