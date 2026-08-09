@@ -49,6 +49,27 @@ import {
  * aynı tip her zaman aynı biçimde okunsun ve cümle gerçekten yapılacak işi anlatsın.
  */
 
+/**
+ * Kimlik BİÇİMİ — veritabanına gitmeden (harici MCP denetiminin önerisi, 09.08 · tur 2).
+ *
+ * Bozuk bir kimliği Postgres'e sormanın iki bedeli var: boşa bir sorgu, ve operatöre modelin
+ * anlamadığı bir cümle (`invalid input syntax for type uuid … 22P02`). Asıl bedel ise TOPLU HATA
+ * DÖNÜŞÜNÜN ÇÖKMESİYDİ: `listByIds` tek bozuk kimlikle komple patlıyor, o yüzden öteki dört satırın
+ * sorunu hiç ölçülemeden istisna dönüyordu. Biçim burada süzülünce sorgu ayakta kalır ve model
+ * bütün sorunları tek turda görür.
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
+/** Tekil kimlik alanı için standart ret — örnek kimlikle, ki model biçimi tahmin etmesin. */
+function badIdError(field: string, value: string) {
+  return {
+    error: `${field} geçersiz — kimlik UUID biçiminde olmalı (örn. 550e8400-e29b-41d4-a716-446655440000), gelen: "${value}".`,
+  };
+}
+
 /** Önerinin ömrü — ayarlanabilir (`DOMAIN §6`: eşik/süre parametriktir), varsayılan 24 saat. */
 async function expiryIso(): Promise<string> {
   const hours = await new SettingsService(serviceDb()).getNumber('assistant_proposal_ttl_hours', 24);
@@ -85,6 +106,7 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
     return { error: "target 'category' | 'collection' | 'bundle' olmalı." };
   }
   if (!id) return { error: 'id zorunlu.' };
+  if (!isUuid(id)) return badIdError('id', id);
 
   const db = serviceDb();
   const name =
@@ -220,6 +242,7 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
   const productId = String(args.productId ?? '').trim();
   const fields = (args.fields ?? {}) as Record<string, unknown>;
   if (!productId) return { error: 'productId zorunlu (catalog_health çıktısındaki ürünlerden).' };
+  if (!isUuid(productId)) return badIdError('productId', productId);
 
   const product = await new ProductService(serviceDb()).getById(productId);
   if (!product) return { error: `Ürün bulunamadı: ${productId}` };
@@ -251,7 +274,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const warehouse = (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.code === warehouseCode);
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
-  const variantIds = rawLines.map((l) => String(l.variantId ?? '')).filter(Boolean);
+  const variantIds = rawLines.map((l) => String(l.variantId ?? '')).filter(isUuid);
   const variants = await new ProductVariantService(db).listByIds(variantIds);
   const byId = new Map(variants.map((v) => [v.id, v]));
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
@@ -264,11 +287,16 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const lines: StockIntakePayload['lines'] = [];
   const problems: string[] = [];
   for (const [i, raw] of rawLines.entries()) {
-    const variant = byId.get(String(raw.variantId ?? ''));
+    const rawId = String(raw.variantId ?? '');
+    const variant = byId.get(rawId);
     const qty = Number(raw.qty);
     const expiryDate = String(raw.expiryDate ?? '').trim();
 
-    if (!variant) problems.push(`lines[${i}]: varyant bulunamadı (${String(raw.variantId)}) — katalogdan doğru kimliği bulun.`);
+    if (!isUuid(rawId)) {
+      problems.push(`lines[${i}]: variantId UUID biçiminde değil (gelen: "${rawId || '(boş)'}") — katalogdaki kimliği olduğu gibi kullanın.`);
+    } else if (!variant) {
+      problems.push(`lines[${i}]: varyant bulunamadı (${rawId}) — katalogdan doğru kimliği bulun.`);
+    }
     if (!Number.isInteger(qty) || qty <= 0) problems.push(`lines[${i}]: qty pozitif tam sayı olmalı (gelen: ${String(raw.qty)}).`);
     // SKT UYDURULMAZ: faturada/etikette yoksa asistan patrona sorar. Tarihsiz parti gıdada kör noktadır.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
@@ -366,7 +394,7 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
   if (!(totalPrice > 0)) return { error: 'totalPrice pozitif olmalı (euro).' };
   if (rawItems.length < 2) return { error: 'items en az İKİ kalem içermeli — tek ürünlük paket, paket değildir.' };
 
-  const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(Boolean);
+  const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(isUuid);
   const variants = await new ProductVariantService(db).listByIds(variantIds);
   const byId = new Map(variants.map((v) => [v.id, v]));
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
@@ -378,9 +406,11 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
   const problems: string[] = [];
   const prepared: Array<{ variantId: string; productName: string; qty: number; listPriceCents: number }> = [];
   for (const [i, raw] of rawItems.entries()) {
-    const variant = byId.get(String(raw.variantId ?? ''));
+    const rawId = String(raw.variantId ?? '');
+    const variant = byId.get(rawId);
     const qty = Number(raw.qty ?? 1);
-    if (!variant) problems.push(`items[${i}]: varyant bulunamadı (${String(raw.variantId)}).`);
+    if (!isUuid(rawId)) problems.push(`items[${i}]: variantId UUID biçiminde değil (gelen: "${rawId || '(boş)'}").`);
+    else if (!variant) problems.push(`items[${i}]: varyant bulunamadı (${rawId}).`);
     if (!Number.isInteger(qty) || qty <= 0) problems.push(`items[${i}]: qty pozitif tam sayı olmalı.`);
     if (!variant) continue;
     const product = productById.get(variant.productId);
@@ -504,7 +534,7 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
   if (!stepsTr) return { error: 'stepsTr zorunlu — hazırlanış adımları.' };
   if (rawItems.length === 0) return { error: 'items boş — tarifin malzemeleri (varyant kimlikleriyle).' };
 
-  const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(Boolean);
+  const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(isUuid);
   const variants = await new ProductVariantService(db).listByIds(variantIds);
   const byId = new Map(variants.map((v) => [v.id, v]));
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
@@ -513,9 +543,11 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
   const problems: string[] = [];
   const items: RecipeDraftPayload['items'] = [];
   for (const [i, raw] of rawItems.entries()) {
-    const variant = byId.get(String(raw.variantId ?? ''));
+    const rawId = String(raw.variantId ?? '');
+    const variant = byId.get(rawId);
     const qty = Number(raw.qty ?? 1);
-    if (!variant) problems.push(`items[${i}]: varyant bulunamadı (${String(raw.variantId)}) — malzeme BOY satırına bağlanır ("350 g"), ürüne değil.`);
+    if (!isUuid(rawId)) problems.push(`items[${i}]: variantId UUID biçiminde değil (gelen: "${rawId || '(boş)'}").`);
+    else if (!variant) problems.push(`items[${i}]: varyant bulunamadı (${rawId}) — malzeme BOY satırına bağlanır ("350 g"), ürüne değil.`);
     if (!Number.isInteger(qty) || qty <= 0) problems.push(`items[${i}]: qty pozitif tam sayı olmalı.`);
     if (!variant) continue;
     items.push({

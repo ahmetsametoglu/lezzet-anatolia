@@ -111,6 +111,22 @@ satırında.
     - *Doğrulandı:* `pnpm ui:shot /operations/assistant` — yedi tipin tamamı, üç sekme, açık+koyu
       tema (geçici örnek öneriler yerel DB'ye yazıldı, çekimden sonra silindi).
 
+  - **Harici MCP denetimi · tur 2 (09.08)** — dış bir ajan 18 aracın tamamını bozuk veriyle
+    yokladı; iki bulgunun ikisi de karşılandı, biri ölçünce başka çıktı:
+    - **Kimlik biçimi artık veritabanına gitmeden süzülüyor** (`isUuid`). Bulgunun gerekçesi
+      "boşa sorgu + Postgres'in İngilizce cümlesi"ydi; ölçünce daha ağırı çıktı: `listByIds` TEK
+      bozuk kimlikle komple patlıyor, yani **toplu hata dönüşünün kendisi çöküyordu** — öteki dört
+      satırın sorunu hiç ölçülemeden istisna dönüyordu. Doğrulandı: bir bozuk + bir eksik kimlikle
+      artık beş sorun tek turda listeleniyor.
+    - **"(silinmiş ürün)" satırları LİSTEDEN sayaca** (`unresolvedProductSignals`): adsız satır
+      modele bir şey söylemez, yalnız bağlam yer. Gizlenmiyor, sayılıyor.
+    - **Rapordaki "canlı veri" aslında test artığıydı** — üç satırın üçü de
+      `analytics.test.ts`'in damgalı sahte kimlikleri (`…-8001-…`), 08.08'in kesilen koşularından
+      kalma. Kök sebep kodun değil TEARDOWN'un: temizlik sınamanın son satırındaydı, yani testin
+      GEÇMESİNE bağlıydı. `afterAll`'a alındı (`analytics_daily_product`'ın ürüne FK'si yok —
+      bilinçli, ölçüm ürünle birlikte kaybolmasın diye; o yüzden hiçbir cascade onu toplamıyor).
+      Öksüz satırlar temizlendi.
+
 - [ ] (22.4) **Üretim turu — Faz 1 bitince AÇILIR:** ikili anahtar tablosu + Ayarlar paneli ·
   oran sınırı · `mcp_call_log` · OAuth (`well-known`, claude.ai connector — canlıya çıkış 18'e
   bağlı) · onay kuyruğu `assistant_proposal` + operasyon paneli (tasarım ısmarlaması burada) ·

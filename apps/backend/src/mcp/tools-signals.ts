@@ -69,12 +69,21 @@ export async function demandSignals(days: number) {
     searches: searches.map((s) => ({ query: s.query, searchCount: s.searchCount, sessionCount: s.sessionCount })),
     searchesWithoutResult: zeroSearches.map((s) => ({ query: s.query, kind: s.zeroResultKind, searchCount: s.searchCount })),
     // `cartRate` null = "hiç satılabilir hâlde görünmedi" — SIFIR DEĞİL (ölçüm yoksa yokluk yazılır).
-    productInterest: productSignals.map((s) => ({
-      product: nameById.get(s.productId) ?? '(silinmiş ürün)',
-      viewCount: s.viewCount,
-      cartCount: s.cartCount,
-      cartRate: s.cartRate,
-    })),
+    //
+    // Adı çözülemeyen satır LİSTEDE DEĞİL, SAYAÇTA (harici MCP denetimi, 09.08 · tur 2): ürün
+    // silinince ilgi verisi kalır (`analytics_daily_product`'ın ürüne FK'si yok — bilinçli, ölçüm
+    // kaybolmasın diye). Ama adsız bir satır modele hiçbir şey söylemez, yalnız bağlam yer ve üç
+    // ayrı "(silinmiş ürün)" satırı listeyi okunmaz kılar. Yine de GİZLENMEZ: sayısı yazılır, ki
+    // "ölçüm var ama adı yok" ile "ölçüm yok" birbirine karışmasın.
+    productInterest: productSignals
+      .filter((s) => nameById.has(s.productId))
+      .map((s) => ({
+        product: nameById.get(s.productId),
+        viewCount: s.viewCount,
+        cartCount: s.cartCount,
+        cartRate: s.cartRate,
+      })),
+    unresolvedProductSignals: productSignals.filter((s) => !nameById.has(s.productId)).length,
   };
 }
 

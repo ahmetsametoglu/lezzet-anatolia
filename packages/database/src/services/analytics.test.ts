@@ -36,6 +36,13 @@ const sessionKey = `test-${stamp}`;
 const otherKey = `test-${stamp}-b`;
 /** Damgalı bir ürün kimliği: defterde FK yok, yani var olmayan bir ürün de ölçülebilir (bilinçli). */
 const productId = `00000000-0000-4000-8000-${String(stamp).slice(-12).padStart(12, '0')}`;
+/**
+ * İkinci damgalı ürün — "hiç satılabilir görünmemiş" hâli için. Temizliği `afterAll`'da, sınamanın
+ * içinde DEĞİL: FK'siz olduğu için hiçbir cascade onu toplamıyor, o yüzden düşen ya da kesilen bir
+ * koşuda satır kalıcı oluyordu (ölçüldü 09.08: 3 öksüz satır, `demand_signals` çıktısını
+ * "(silinmiş ürün)" ile dolduruyordu). Teardown, testin geçmesine bağlı olmamalı.
+ */
+const soldOutOnlyProductId = `00000000-0000-4000-8001-${String(stamp).slice(-12).padStart(12, '0')}`;
 const searchQuery = `lahmacun-${stamp}`;
 const campaign = `kampanya-${stamp}`;
 
@@ -46,7 +53,7 @@ const at = (hour: number) => `${day}T${String(hour).padStart(2, '0')}:30:00.000Z
 afterAll(async () => {
   await purgeTestData(db, {
     analyticsSessionKeys: [sessionKey, otherKey],
-    productIds: [productId],
+    productIds: [productId, soldOutOnlyProductId],
     analyticsSearchQueries: [searchQuery],
   });
   // GÜN özeti satırları testin ürettiği güne ait; başka koşular da aynı güne yazabildiği için
@@ -175,7 +182,7 @@ describe('sinyal özetleri', () => {
 
   it('ürün oranı payda SIFIRKEN `null` — sıfır değil (ölçülemeyen değer sıfır değildir)', async () => {
     // Hiç satılabilir hâlde görünmemiş bir ürün: "kimse almıyor" DEĞİL, "hiç satılamamış".
-    const stoksuz = `00000000-0000-4000-8001-${String(stamp).slice(-12).padStart(12, '0')}`;
+    const stoksuz = soldOutOnlyProductId;
     await db.from('analytics_event').insert([
       { created_at: at(13), type: 'product_view', session_key: sessionKey, product_id: stoksuz, availability: 'sold_out' },
     ]);
@@ -184,8 +191,6 @@ describe('sinyal özetleri', () => {
     const [signal] = await products.signals(day, day, 50).then((rows) => rows.filter((r) => r.productId === stoksuz));
     expect(signal?.viewCount).toBe(1);
     expect(signal?.cartRate).toBeNull();
-
-    await purgeTestData(db, { productIds: [stoksuz] });
   });
 
   it('arama: sıfır-sonuç kovası AYRI satır — süzgeç boşluğu ile çeşit boşluğu karışmaz', async () => {
