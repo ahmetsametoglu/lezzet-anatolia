@@ -10,6 +10,26 @@
 import { createServiceRoleClient } from '@lezzet/database';
 import { kapsamOl } from './seed/coverage';
 
+/**
+ * **`.env` ELLE yüklenir — `seed.ts` ile aynı gerekçe ve aynı satır.**
+ *
+ * Bu betik Next.js dışında koşuyor, yani `.env` kendiliğinden yüklenmiyor. İlk yazımda bu blok
+ * YOKTU ve kusur benim koşularımda görünmedi: değişkenleri kabuğa elle veriyordum. Kullanıcının
+ * `pnpm db:refresh` penceresinde seed tamamlandı, hemen ardından bu betik ham bir yığın iziyle
+ * düştü (*"Supabase env eksik"*) — yani tazeleme başarılıydı ama komut kırmızı bitti.
+ *
+ * **Ders:** bir betiği yalnız kendi hazırladığın ortamda denemek, onu denememektir. Kapsam
+ * denetiminin kendisi de bir betik ve o da aynı kurala tabi.
+ *
+ * Yükleme `createServiceRoleClient` ÇAĞRISINDAN önce olmak zorunda: istemci env'i okuma anında
+ * doğruluyor, sonra yüklenen bir dosya onu kurtarmıyor.
+ */
+try {
+  (process as { loadEnvFile?: (path: string) => void }).loadEnvFile?.('.env');
+} catch {
+  // .env yoksa ortam değişkenleri zaten tanımlı olabilir (CI, elle export).
+}
+
 const db = createServiceRoleClient();
 const { satirlar, bosZorunlular, kdvOranlari } = await kapsamOl(db);
 
