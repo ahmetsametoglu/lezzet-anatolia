@@ -410,7 +410,10 @@ satırında.
     sabit günlerde koşar; bölge genişletmek zaten yola çıkmış bir araca durak eklemektir) ③ fiyatlar
     kanallı — liste b2c ve KDV DAHİL, maliyet HARİÇ ④ üründe beyan tamlığı ile satış durumu ayrı
     eksenler, ikincisi asistanın değil.
+  - **Vitrin ADAYLARI açıldı** — `catalog_health.featured` artık iki kova: işaretliler VE **aktif
+    ama işaretsiz** kayıtlar. Aynı "yapılmayan öneri" sınıfının en net örneğiydi: asistan bir
+    koleksiyonu ancak `propose_featured_flag`ı kör deneyip hata alarak keşfedebiliyordu. Canlı:
+    *kategori — vitrinde 4, aday 2 (Dondurma · Anadolu Mutfağı)*.
   - *Bitti:* araç kataloğu **21 → 23** · 26/26 test · tsc + eslint temiz · canlı doğrulandı.
-  - **BEKLEYEN(22.7):** vitrin ADAYLARI okuması (`catalog_health` yalnız işaretlileri veriyor —
-    aynı "yapılmayan öneri" sınıfı) · paket/teklif önizlemesi için kârlılık alanları (operasyon
-    şeridi bekliyor, `docs/talep/operasyon-paket-onerisinde-karlilik.md`).
+  - **BEKLEYEN(22.7):** paket/teklif önizlemesi için kârlılık alanları (operasyon şeridi bekliyor,
+    `docs/talep/operasyon-paket-onerisinde-karlilik.md`).

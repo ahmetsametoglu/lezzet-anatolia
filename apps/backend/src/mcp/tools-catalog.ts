@@ -58,18 +58,42 @@ export async function catalogHealth(limit: number) {
   };
 }
 
-/** Vitrine işaretli kayıtlar — üç varlıkta ayrı ayrı (aktif olan / işaretli olan). */
+/**
+ * Vitrin — işaretliler VE adaylar (22.7).
+ *
+ * ── NEDEN ADAYLAR DA (yapılmayan öneri sorunu) ──────────────────────────────
+ * Önceki hâl yalnız İŞARETLİ kayıtları veriyordu ve bu, asistanın ufkunu sessizce kesiyordu:
+ * *"şu koleksiyonu vitrine çıkaralım"* cümlesi hiç kurulamıyordu, çünkü o koleksiyonun varlığından
+ * haberi yoktu. Görünmeyen boşluk buydu — **hata değil, hiç yapılmayan öneri.** Model bir kaydı
+ * ancak `propose_featured_flag`ı kör deneyip hata alarak keşfedebiliyordu.
+ *
+ * Aday = aktif ama vitrinde olmayan kayıt. Kümeler küçük ve operatörün elle kurduğu cinsten
+ * (`CLAUDE §1`), yani sayfalama gerekmiyor; yine de tavan var ve **kesildiğinde söyleniyor**.
+ */
 async function featuredOverview() {
   const db = serviceDb();
   const [categories, collections, bundles] = await Promise.all([
-    new CategoryService(db).list({ activeOnly: true, featuredOnly: true }),
-    new CollectionService(db).list({ activeOnly: true, featuredOnly: true }),
-    new BundleService(db).listAll({ activeOnly: true, featuredOnly: true }),
+    new CategoryService(db).list({ activeOnly: true }),
+    new CollectionService(db).list({ activeOnly: true }),
+    new BundleService(db).listAll({ activeOnly: true }),
   ]);
+
+  const CANDIDATE_LIMIT = 25;
+  const split = <T extends { isFeatured: boolean }>(rows: T[], nameOf: (row: T) => string) => {
+    const featured = rows.filter((r) => r.isFeatured).map(nameOf);
+    const candidates = rows.filter((r) => !r.isFeatured).map(nameOf);
+    return {
+      featured,
+      /** Vitrine ALINABİLECEKLER — aktif ama işaretsiz. */
+      candidates: candidates.slice(0, CANDIDATE_LIMIT),
+      candidatesTruncated: candidates.length > CANDIDATE_LIMIT,
+    };
+  };
+
   return {
-    categories: categories.map((c) => resolveLocalizedText(c.name, 'tr')),
-    collections: collections.map((c) => resolveLocalizedText(c.name, 'tr')),
-    bundles: bundles.map((b) => resolveLocalizedText(b.name, 'tr')),
+    categories: split(categories, (c) => resolveLocalizedText(c.name, 'tr')),
+    collections: split(collections, (c) => resolveLocalizedText(c.name, 'tr')),
+    bundles: split(bundles, (b) => resolveLocalizedText(b.name, 'tr')),
   };
 }
 

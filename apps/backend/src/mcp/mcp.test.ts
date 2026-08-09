@@ -93,7 +93,13 @@ describe('katalog ve stok araçları', () => {
       expect(p.missing.length).toBeGreaterThan(0);
       for (const gap of p.missing) expect(allowed.has(gap)).toBe(true);
     }
-    expect(Array.isArray(health.featured.categories)).toBe(true);
+    // Vitrin İKİ kümeyle gelir (22.7): işaretliler VE adaylar. Adaylar olmadan asistan hiç
+    // denemediği bir kaydı öneremiyordu — boşluğun ölçülemeyen kısmı "yapılmayan öneri"ydi.
+    expect(Array.isArray(health.featured.categories.featured)).toBe(true);
+    expect(Array.isArray(health.featured.categories.candidates)).toBe(true);
+    // Bir kayıt iki kümede birden olamaz: aday tanımı "aktif AMA işaretsiz".
+    const overlap = health.featured.collections.featured.filter((n) => health.featured.collections.candidates.includes(n));
+    expect(overlap).toEqual([]);
   });
 
   it('stock_watch parti satırlarını depo koduyla verir ve kesmeyi SÖYLER', async () => {

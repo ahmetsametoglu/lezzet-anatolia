@@ -77,7 +77,7 @@ export const TOOLS = [
   {
     name: 'catalog_health',
     description:
-      "Catalog completeness: totals (products, candidates, products with incomplete legal declarations) + the incomplete products themselves with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens), whether they have an image, and shelf life — plus which categories/collections/bundles are flagged for the homepage showcase. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.",
+      "Catalog completeness: totals (products, candidates, products with incomplete legal declarations) + the incomplete products themselves with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens), whether they have an image, and shelf life — plus the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose). Use the candidates list — without it you can only ever discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.",
     inputSchema: {
       type: 'object',
       properties: { limit: { type: 'number', description: 'Max incomplete products to list, 1-50. Default 15.' } },
