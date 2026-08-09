@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CatalogImageSchema } from './catalog-api.schema';
+import { HomeRecipeSchema } from './home-api.schema';
 import { ProductSchema } from '../entities/product.schema';
 import { ProductVariantSchema } from '../entities/product-variant.schema';
 import { RecipeItemSchema, RecipeSchema } from '../entities/recipe.schema';
@@ -94,3 +95,27 @@ export const RecipeDetailSchema = RecipeSchema.pick({ slug: true }).extend({
   steps: z.array(z.string()),
 });
 export type RecipeDetail = z.infer<typeof RecipeDetailSchema>;
+
+/**
+ * TARİF LİSTE SÖZLEŞMESİ (Fikirler sekmesi) — `GET /api/v1/recipes`.
+ *
+ * ── KART İKİNCİ KEZ TANIMLANMADI ─────────────────────────────────────────────
+ * Satır şeması `HomeRecipeSchema`ın KENDİSİDİR, daraltması ya da kopyası değil (CLAUDE §1 — tip
+ * duplikasyonu da duplikasyondur): vitrin şeridindeki kart ile liste sayfasındaki kart AYNI kartlar
+ * ve aynı okuma kapısından çıkıyorlar (`apps/mobile-api/src/lib/ideas.ts`). Ayrı bir
+ * `RecipeCardSchema` açmak, iki şeklin bir gün sessizce ayrışmasına kapı bırakırdı. Adın "Home" ile
+ * başlaması bir borçtur (kart artık iki yüzeyde): ad `HomeRecipe` kaldı çünkü onu ekran, fixture ve
+ * uç birlikte okuyor — yeniden adlandırma ayrı bir iştir, kapsamı bu değil.
+ *
+ * ── SAYFALAMA YOK, TAVAN VAR (CLAUDE §1) ─────────────────────────────────────
+ * Tarif kümesi operatörün elle kurduğu EDİTORYAL bir seçkidir, veriyle büyümez → keyset değil,
+ * tek turda. `nextCursor` alanı bilerek yok: dolduramayacağı bir alan taşıyan sözleşme, ekranı
+ * "devamı yok" ile "devamı bilinmiyor"u ayırt edemez hâlde bırakır. Uçtaki emniyet sınırı
+ * (`RECIPE_LIST_LIMIT`) sayfalama DEĞİL, elle kurulan kümenin bir gün yüz satıra çıkmasına karşı
+ * korumadır (web `RECIPE_PAGE_LIMIT` emsali).
+ *
+ * Zarf SATIR ŞEMASI DEĞİL, nesnedir (`CatalogCategoryListSchema` emsali): uç yarın anahtarı
+ * değiştirse çıplak dizi bunu yakalayamazdı.
+ */
+export const RecipeListSchema = z.object({ recipes: z.array(HomeRecipeSchema) });
+export type RecipeList = z.infer<typeof RecipeListSchema>;

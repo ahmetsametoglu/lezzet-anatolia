@@ -8,10 +8,15 @@ import { deviceLocale } from '@/lib/i18n/locale';
 import messages from './messages.json';
 
 /*
-  SEKME KABUĞU — dört sekme (envanter §4): Vitrin · Katalog · Siparişler · Hesap. Sepet SEKME
-  DEĞİL; ona FAB ve yapışkan barlardan gidilir. Bugün yalnız KATALOG gerçek bir ekran, ötekiler
-  yer tutucu — ama kabuk baştan dörtlü kuruluyor ki sekme sırası ve dil sözlüğü ekran ekran
-  yeniden karar konusu olmasın.
+  SEKME KABUĞU — dört sekme: Vitrin · Katalog · Fikirler · Hesap. Sepet SEKME DEĞİL; ona FAB ve
+  yapışkan barlardan gidilir.
+
+  ── ÜÇÜNCÜ SEKME "SİPARİŞLER" DEĞİL "FİKİRLER" (kullanıcı kararı 09.08) ─────
+  Siparişler zaten Hesabım'ın alt sayfasıydı (ekranın kendi başlığı onu söylüyor) ve siparişe üç
+  yoldan daha gidiliyordu: hesap menüsü, vitrinin takip bandı, sipariş onayı — yani sekme dördüncü
+  bir kapıydı. Buna karşılık TARİF ve PAKETLERİN liste sayfası hiç yoktu: müşteri vitrindeki üç
+  kartın ötesini göremiyordu, oysa paket hazır bir sepet, tarif ise çapraz satış. Sipariş yığına
+  taşındı (`app/orders.tsx`, yol `/orders` korundu), yerine Fikirler girdi.
 
   ÇUBUĞUN KENDİSİ KİTTE (`BottomTabBar`), bağlama burada: router'ın durumu (hangi rota seçili) →
   kitin anladığı düz liste. Böylece kit navigasyon kütüphanesinin şeklini bilmez ve testi
@@ -35,7 +40,12 @@ type Messages = LocalizedCopy<typeof messages>;
 const TABS = {
   index: 'home',
   catalog: 'catalog',
-  orders: 'orders',
+  /* FİKİRLER'in KENDİ İKONU YOK: sözlük v3'ün `IC` setinden birebir alınıyor (`icon-paths.ts`
+     künyesi) ve o set dört sekmeyi Siparişler'le kurmuştu. Mevcutların en yakını `search` —
+     "keşfet/gözat" karşılığı; tarif ve paket bölümlerini gezmek tam olarak bu. Kit sözlüğüne yeni
+     bir geometri UYDURULMADI (CLAUDE §3: ikon bir tasarım kararıdır) — eksik raporlandı ve tasarım
+     ampul/pusula benzeri bir ikon verdiği gün yalnız bu satır değişir. */
+  ideas: 'search',
   account: 'account',
 } as const satisfies Record<string, IconName>;
 type TabName = keyof typeof TABS;

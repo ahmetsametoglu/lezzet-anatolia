@@ -4,7 +4,10 @@ import { serviceDb } from '@lezzet/database';
 import { HomeSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import { readHomeBands, readHomeFeatured, readHomeOffers, readHomePackages, readHomeRecipes } from '../../lib/home';
+import { readHomeBands, readHomeFeatured, readHomeOffers } from '../../lib/home';
+// Tarif/paket KARTI iki yüzeyin ortak kapısından gelir (`lib/ideas.ts`): vitrin şeridi ile Fikirler
+// listesi aynı kartı çiziyor, fark yalnız sınır ve süzgeçte.
+import { HOME_PACKAGE_LIMIT, HOME_RECIPE_LIMIT, readPackageCards, readRecipeCards } from '../../lib/ideas';
 import { readViewer, UNKNOWN_PLACE } from './catalog';
 
 /**
@@ -37,8 +40,9 @@ home.get('/home', async (c) => {
     readHomeBands(db, locale.data),
     readHomeOffers(db, locale.data, UNKNOWN_PLACE, viewer),
     readHomeFeatured(db, locale.data, UNKNOWN_PLACE, viewer),
-    readHomeRecipes(db, locale.data),
-    readHomePackages(db, locale.data),
+    readRecipeCards(db, locale.data, HOME_RECIPE_LIMIT),
+    // Vitrin YALNIZ işaretli paketleri taşır — işaret bir seçimdir, yedeği yoktur (sözleşme künyesi).
+    readPackageCards(db, locale.data, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT }),
   ]);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────

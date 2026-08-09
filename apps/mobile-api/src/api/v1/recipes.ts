@@ -1,14 +1,15 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
-import { PreferredLanguageEnum, RecipeDetailSchema } from '@lezzet/types';
+import { PreferredLanguageEnum, RecipeDetailSchema, RecipeListSchema } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
+import { RECIPE_LIST_LIMIT, readRecipeCards } from '../../lib/ideas';
 import { readRecipeDetail } from '../../lib/recipe';
 import { readViewer, UNKNOWN_PLACE } from './catalog';
 
 /**
- * Tarif detay ucu (21.14, tasarım 21) — katalogla aynı üç karar, gerekçeleri `catalog.ts` başlığında:
+ * Tarif uçları (21.14, tasarım 21) — katalogla aynı üç karar, gerekçeleri `catalog.ts` başlığında:
  *   · **Oturumsuz gezilir** — `router.ts`te `bearerAuth`tan ÖNCE bağlıdır; Bearer varsa yalnız
  *     satır FİYATINI kişiselleştirir (B2B/özel fiyat), erişimi değiştirmez. 401 yok.
  *   · **`locale` zorunlu ve varsayılansız** — eksikse 400 (sessizce Türkçeye düşmek gizli arıza).
@@ -18,6 +19,29 @@ import { readViewer, UNKNOWN_PLACE } from './catalog';
  * `@lezzet/application`da. Burada yalnız sorgu çözümü, kimlik çözümü ve zarf.
  */
 export const recipes = new Hono<AppEnv>();
+
+/**
+ * TARİF LİSTESİ — "Fikirler" sekmesinin tarif bölümü (09.08 bilgi mimarisi kararı).
+ *
+ * **SAYFALAMA YOK ve bu bilinçli** (CLAUDE §1): tarif kümesi operatörün elle kurduğu editoryal bir
+ * seçkidir, veriyle büyümez → doğal tavanlı küme, tek turda çekilir. `limit`/`cursor` sorgusu da
+ * yok: istemcinin büyütebileceği bir sınır, sınır değildir. Uçtaki `RECIPE_LIST_LIMIT` sayfalama
+ * değil emniyet tavanıdır (gerekçesi `lib/ideas.ts` künyesinde).
+ *
+ * KİMLİK OKUNMAZ: kart içerik kartıdır, fiyat taşımaz — Bearer'ın kişiselleştireceği bir şey yok
+ * (paket detayı ucunun aynı kısa devresi). Detay ucunun aksine `readViewer` çağrılmıyor: boşa bir
+ * tur olurdu.
+ */
+recipes.get('/recipes', async (c) => {
+  const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
+  if (!locale.success) return fail(c, 'invalid_locale', 400);
+
+  const list = await readRecipeCards(serviceDb(), locale.data, RECIPE_LIST_LIMIT);
+
+  // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
+  const body: z.input<typeof RecipeListSchema> = { recipes: list };
+  return ok(c, RecipeListSchema.parse(body));
+});
 
 /**
  * Taslak tarif doğrudan bağlantıyla da AÇILMAZ (404): vitrin şeridinde görünmeyen bir taslağın

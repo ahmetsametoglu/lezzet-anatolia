@@ -1,4 +1,4 @@
-import { BundleService, CategoryService, CollectionService, ProductService, RecipeService } from '@lezzet/database';
+import { CategoryService, CollectionService, ProductService } from '@lezzet/database';
 import {
   getCatalogData,
   imageOf,
@@ -6,15 +6,12 @@ import {
   type PricingViewer,
   type StorefrontProduct,
 } from '@lezzet/application';
-import { splitLines, toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import type {
   Category,
   Collection,
   HomeBand,
   HomeBandKind,
-  HomePackage,
-  HomeRecipe,
   ImageMeta,
   LocalizedText,
   PreferredLanguage,
@@ -39,12 +36,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Fırsat bandı — v3 tasarımı iki kart çizer (web bandının 6'lık ızgarasından bilinçli dar). */
 const HOME_OFFER_LIMIT = 2;
-/** "Sofradan Fikirler" şeridi — v3'te üç kart. */
-const HOME_RECIPE_LIMIT = 3;
 /** Vitrin seçkisi rayı — v3'te dört daire. */
 const HOME_FEATURED_LIMIT = 4;
-/** Hazır paket bölümü — v3'te iki büyük kart. */
-const HOME_PACKAGE_LIMIT = 2;
 /** Bant karışımı: 4 kategori + 2 koleksiyon = 6 slot (kullanıcı kararı 08.08). */
 export const HOME_BAND_CATEGORY_COUNT = 4;
 export const HOME_BAND_COLLECTION_COUNT = 2;
@@ -263,52 +256,11 @@ export async function readHomeFeatured(
   return page.products.filter((p) => p.priceCents !== null);
 }
 
-/**
- * Hazır paket kartları — yalnız İŞARETLİLER (`isFeatured`), `sortOrder` sırasıyla ilk N; işaret
- * yoksa bölüm BOŞ (bant karışımının ilkesi: işaret seçimdir, yedeği yoktur — web'in `pickFeatured`
- * yedeği bilerek alınmadı, gerekçe sözleşme başlığında). Kart karar taşımaz: ad/fiyat/adet/görsel
- * indirgemesi (`toCents` + `imageOf` + satır sayısı); stok/tükenme kararı paket DETAYININ işi.
+/*
+ * TARİF ve PAKET KARTLARI ARTIK BURADA DEĞİL — `lib/ideas.ts`te (09.08).
  *
- * `listWithItems` TEK sorgudur (üyelik gömülü); paket kataloğu doğal tavanlı küçük bir kümedir
- * (CLAUDE §1 "tek turda" dalı), süzme bellekte yapılır.
+ * Fikirler sekmesi (`GET /recipes` · `GET /packages`) aynı kartların İKİNCİ tüketenini doğurdu;
+ * kartı vitrinin dosyasında bırakıp listeye ikinci bir indirgeme yazmak aynı kartın iki tanımı
+ * olurdu (CLAUDE §1). Vitrin ucu artık o kapıyı kendi sınırlarıyla çağırıyor
+ * (`readRecipeCards` / `readPackageCards`); sınır sabitleri de kartla birlikte taşındı.
  */
-export async function readHomePackages(db: SupabaseClient, locale: PreferredLanguage): Promise<HomePackage[]> {
-  const bundles = await new BundleService(db).listWithItems();
-  return bundles
-    .filter((b) => b.isActive && b.isFeatured && b.items.length > 0)
-    .slice(0, HOME_PACKAGE_LIMIT)
-    .map((b) => ({
-      slug: b.slug,
-      name: resolveLocalizedText(b.name, locale),
-      priceCents: toCents(b.totalPrice),
-      itemCount: b.items.length,
-      image: imageOf(b),
-    }));
-}
-
-/**
- * Tarif şeridi — İÇERİK kartı, karar yok: fiyat/stok/tükenme okunmaz (o birleştirme tarif
- * detayının işi ve web'in tarif okumasıyla birlikte terfi edecek — `storefront-types.ts` künyesi:
- * "ikinci tüketeni doğduğu gün aynı yolla"). Karar olmayan yerde orkestrasyon da yok (katalog
- * `/categories` ucunun emsali); indirgeme paylaşılan ilkellerle yapılır (`resolveLocalizedText`,
- * `splitLines`, `imageOf`) — dil yedek zinciri ve "satır = madde" kuralı burada İKİNCİ KEZ
- * yazılmadı.
- *
- * Seçim: yayındaki tariflerin editoryal sırasından (`sortOrder`) ilk N — web tarif listesinin
- * okuduğu sıranın kendisi (`listActiveWithItems`), yalnız kısaltılmış.
- */
-export async function readHomeRecipes(db: SupabaseClient, locale: PreferredLanguage): Promise<HomeRecipe[]> {
-  const rows = await new RecipeService(db).listActiveWithItems(HOME_RECIPE_LIMIT);
-  return rows.map((recipe) => {
-    const pantry = resolvedOrNull(recipe.pantry, locale);
-    return {
-      slug: recipe.slug,
-      name: resolveLocalizedText(recipe.name, locale),
-      duration: resolvedOrNull(recipe.duration, locale),
-      serves: resolvedOrNull(recipe.serves, locale),
-      itemCount: recipe.items.length,
-      pantryCount: pantry ? splitLines(pantry).length : 0,
-      image: imageOf(recipe),
-    };
-  });
-}

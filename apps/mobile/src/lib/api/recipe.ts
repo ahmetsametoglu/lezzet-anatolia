@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { RecipeDetailSchema } from '@lezzet/types';
+import { RecipeDetailSchema, RecipeListSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { apiFetch, type ApiResult } from './client';
@@ -18,4 +18,15 @@ import { apiFetch, type ApiResult } from './client';
 /** Tarif detayı — sayfanın TAMAMI tek turda (satırlar, evinizden, hazırlanış); bölüm başına çağrı yok. */
 export function fetchRecipeDetail(slug: string, locale: Locale): Promise<ApiResult<z.infer<typeof RecipeDetailSchema>>> {
   return apiFetch(`/api/v1/recipes/${encodeURIComponent(slug)}?locale=${encodeURIComponent(locale)}`, RecipeDetailSchema);
+}
+
+/**
+ * Tarif listesi — "Fikirler" sekmesinin tarif bölümü.
+ *
+ * SAYFALAMA/İMLEÇ YOK ve olmaması sözleşmenin kararıdır (`RecipeListSchema` künyesi): tarif kümesi
+ * editoryal bir seçkidir, veriyle büyümez → tek turda gelir. `limit` de gönderilmez; sınır uçtadır
+ * ve istemcinin büyütebileceği bir sınır, sınır değildir.
+ */
+export function fetchRecipes(locale: Locale): Promise<ApiResult<z.infer<typeof RecipeListSchema>>> {
+  return apiFetch(`/api/v1/recipes?locale=${encodeURIComponent(locale)}`, RecipeListSchema);
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { BundleItemSchema, BundleSchema } from '../entities/bundle.schema';
 import { ProductSchema } from '../entities/product.schema';
 import { CatalogImageSchema } from './catalog-api.schema';
+import { HomePackageSchema } from './home-api.schema';
 
 /**
  * PAKET DETAY SÖZLEŞMESİ (21.14) — mobil `GET /api/v1/packages/:slug` ucunun ve onu tüketen Expo
@@ -72,3 +73,21 @@ export const PackageDetailSchema = BundleSchema.pick({ slug: true }).extend({
   items: z.array(PackageItemSchema).min(1),
 });
 export type PackageDetail = z.infer<typeof PackageDetailSchema>;
+
+/**
+ * PAKET LİSTE SÖZLEŞMESİ (Fikirler sekmesi) — `GET /api/v1/packages`.
+ *
+ * Satır şeması `HomePackageSchema`ın KENDİSİDİR (gerekçe `recipe-api.schema.ts`in liste künyesinde,
+ * tek yerde): vitrindeki "Hazır paketler" kartı ile liste sayfasının kartı aynı karttır ve aynı
+ * okuma kapısından çıkar — ikinci bir tanım, iki şeklin sessizce ayrışmasına kapı olurdu.
+ *
+ * ── LİSTE İŞARETLİYLE SINIRLI DEĞİL ──────────────────────────────────────────
+ * Vitrin YALNIZ `isFeatured` paketleri taşır (işaret seçimdir — `HomePackageSchema` künyesi); bu
+ * liste ise YAYINDAKİ paketlerin tamamıdır. Fark sözleşmede değil okumada: kart aynı, süzgeç
+ * farklı. Vitrin bir seçki, bu sayfa ise "hepsi" sorusunun cevabı.
+ *
+ * Sayfalama yok: paket kataloğu doğal tavanlı, operatörün elle kurduğu bir kümedir (CLAUDE §1 "tek
+ * turda" dalı) — `BundleService.listWithItems` zaten tek sorgudur ve sınırı yoktur.
+ */
+export const PackageListSchema = z.object({ packages: z.array(HomePackageSchema) });
+export type PackageList = z.infer<typeof PackageListSchema>;

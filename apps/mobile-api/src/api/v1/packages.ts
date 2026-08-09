@@ -3,10 +3,17 @@ import type { z } from 'zod';
 import { BundleService, ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
 import { imageOf } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
-import { CROP_CENTER, PackageDetailSchema, PreferredLanguageEnum, resolveLocalizedText } from '@lezzet/types';
+import {
+  CROP_CENTER,
+  PackageDetailSchema,
+  PackageListSchema,
+  PreferredLanguageEnum,
+  resolveLocalizedText,
+} from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { resolvedOrNull } from '../../lib/home';
+import { readPackageCards } from '../../lib/ideas';
 
 /**
  * Paket detay ucu (21.14) — vitrinin "Hazır paketler" kartının açtığı sayfa. Katalog kümesindendir:
@@ -29,6 +36,31 @@ import { resolvedOrNull } from '../../lib/home';
  * `listSellable`ın application karşılığına döner. BEKLEYEN(21.14).
  */
 export const packages = new Hono<AppEnv>();
+
+/**
+ * PAKET LİSTESİ — "Fikirler" sekmesinin paket bölümü (09.08 bilgi mimarisi kararı).
+ *
+ * **VİTRİNDEN FARKI SÜZGEÇTİR, KART DEĞİL** (ortak kapı `lib/ideas.ts`): vitrin yalnız İŞARETLİ
+ * paketleri taşır (işaret bir seçimdir), bu liste ise yayındaki paketlerin TAMAMIDIR — sayfa
+ * "hepsi" sorusunun cevabı, seçki değil.
+ *
+ * Sayfalama yok: paket kataloğu doğal tavanlı, operatörün elle kurduğu bir kümedir (CLAUDE §1 "tek
+ * turda" dalı) ve `listWithItems` zaten TEK sorgudur. `limit` sorgusu da yok — istemcinin
+ * belirlediği sınır, sınır değildir.
+ *
+ * Kimlik OKUNMAZ: paket tek fiyatlıdır (B2C), Bearer'ın kişiselleştireceği bir şey yok — detay
+ * ucunun aynı kısa devresi (dosya başlığı).
+ */
+packages.get('/packages', async (c) => {
+  const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
+  if (!locale.success) return fail(c, 'invalid_locale', 400);
+
+  const list = await readPackageCards(serviceDb(), locale.data, { featuredOnly: false });
+
+  // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
+  const body: z.input<typeof PackageListSchema> = { packages: list };
+  return ok(c, PackageListSchema.parse(body));
+});
 
 /**
  * `locale` zorunlu ve varsayılansız (`catalog.ts` `LocaleSchema` künyesi: sessizce Türkçeye düşmek

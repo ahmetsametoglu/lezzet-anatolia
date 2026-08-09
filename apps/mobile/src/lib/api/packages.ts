@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { PackageDetailSchema } from '@lezzet/types';
+import { PackageDetailSchema, PackageListSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { apiFetch, type ApiResult } from './client';
@@ -14,4 +14,13 @@ import { apiFetch, type ApiResult } from './client';
 
 export function fetchPackageDetail(slug: string, locale: Locale): Promise<ApiResult<z.infer<typeof PackageDetailSchema>>> {
   return apiFetch(`/api/v1/packages/${encodeURIComponent(slug)}?locale=${encodeURIComponent(locale)}`, PackageDetailSchema);
+}
+
+/**
+ * Paket listesi — "Fikirler" sekmesinin paket bölümü. Vitrindeki şeritten farkı SÜZGEÇ: orada
+ * yalnız işaretli paketler var, burada yayındakilerin tamamı (karar uçta — `PackageListSchema`).
+ * Sayfalama yok: paket kataloğu doğal tavanlı bir kümedir, tek turda gelir.
+ */
+export function fetchPackages(locale: Locale): Promise<ApiResult<z.infer<typeof PackageListSchema>>> {
+  return apiFetch(`/api/v1/packages?locale=${encodeURIComponent(locale)}`, PackageListSchema);
 }

@@ -1,0 +1,80 @@
+{
+  "tr": {
+    "eyebrow": "Fikirler",
+    "title": "Ne pişirsek, ne alsak?",
+    "recipes": {
+      "eyebrow": "Sofradan fikirler",
+      "title": "Bu sofra nasıl kurulur?",
+      "meta": "{n} malzeme",
+      "open": "{name} tarifini aç"
+    },
+    "packages": {
+      "eyebrow": "Hazır paketler",
+      "meta": "{n} çeşit",
+      "open": "{name} paketini aç"
+    },
+    "loading": "Yükleniyor…",
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "Fikirleri getiremedik. Bağlantınızı kontrol edip tekrar deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "empty": {
+      "title": "Henüz fikir yok",
+      "body": "Tarifler ve hazır paketler hazırlanıyor. Bu arada katalogu gezebilirsiniz.",
+      "cta": "Katalogu aç"
+    }
+  },
+  "fr": {
+    "eyebrow": "Idées",
+    "title": "Que cuisiner, que choisir ?",
+    "recipes": {
+      "eyebrow": "Idées de table",
+      "title": "Comment dresser cette table ?",
+      "meta": "{n} ingrédients",
+      "open": "Ouvrir la recette {name}"
+    },
+    "packages": {
+      "eyebrow": "Paniers prêts",
+      "meta": "{n} produits",
+      "open": "Ouvrir le panier {name}"
+    },
+    "loading": "Chargement…",
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Nous n'avons pas pu charger les idées. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
+    "empty": {
+      "title": "Pas encore d'idées",
+      "body": "Les recettes et les paniers arrivent bientôt. En attendant, parcourez le catalogue.",
+      "cta": "Ouvrir le catalogue"
+    }
+  },
+  "de": {
+    "eyebrow": "Ideen",
+    "title": "Was kochen, was wählen?",
+    "recipes": {
+      "eyebrow": "Ideen für den Tisch",
+      "title": "Wie deckt man diesen Tisch?",
+      "meta": "{n} Zutaten",
+      "open": "Rezept {name} öffnen"
+    },
+    "packages": {
+      "eyebrow": "Fertige Pakete",
+      "meta": "{n} Sorten",
+      "open": "Paket {name} öffnen"
+    },
+    "loading": "Wird geladen…",
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Die Ideen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
+    "empty": {
+      "title": "Noch keine Ideen",
+      "body": "Rezepte und fertige Pakete sind in Vorbereitung. Schauen Sie sich solange im Katalog um.",
+      "cta": "Katalog öffnen"
+    }
+  }
+}
