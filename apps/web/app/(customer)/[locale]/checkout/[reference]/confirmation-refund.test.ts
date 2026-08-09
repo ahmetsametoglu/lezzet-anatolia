@@ -9,37 +9,31 @@ import { isRefundedCancellation } from './confirmation-types';
  * çekilip otomatik iade edilmiş siparişte YANLIŞTI. İade ekstreye günler sonra düşer — o aralıkta
  * müşteri "tahsilat yapılmadı" okur ama hesabında para eksiktir.
  *
- * Sınanan şey, sebebin TEK BAŞINA yetmediği: `out_of_stock` iki ayrı yolda yazılıyor ve yalnız
- * birinde para çekilmiş oluyor. Kural ödeme yöntemiyle birlikte kuruluyor.
+ * **Kural bir tur değişti ve testler onunla döndü.** İlk hâli iptal SEBEBİNİ okuyordu
+ * (`out_of_stock` + `online`); o ikili doğru cevap veriyordu ama eksikti — parayı iade eden ikinci
+ * webhook dalı sebebi `superseded` bırakıyor, yani aynı yalan orada duruyordu. Arka uç iki soruyu
+ * iki kolona ayırdı; ekran artık damgayı okuyor. Sebep bu görünümde HİÇ TAŞINMIYOR ve testin
+ * sebep kümesini sayan bir dalı da yok: "hangi sebepler para demektir" sorusu artık ekranın değil.
  */
 const view = (over: Partial<Parameters<typeof isRefundedCancellation>[0]> = {}) => ({
   cancelled: true,
-  cancelReason: 'out_of_stock' as const,
-  paymentMethod: 'online' as const,
+  refundedAt: '2026-08-08T09:30:54.000Z',
   ...over,
 });
 
 describe('iptalde "paranız iade edildi" cümlesi', () => {
-  it('KART + stok kalmadı → iade edildi (webhook para çekip geri verdi)', () => {
+  it('iptal + iade damgası → iade edildi', () => {
     expect(isRefundedCancellation(view())).toBe(true);
   });
 
-  it('KAPIDA ödeme + stok kalmadı → iade YOK: para hiç çekilmedi', () => {
-    // Aynı sebep, başka yol: rezervasyon tutmadı ve sipariş `draft`ta kapandı. Sebebi tek başına
-    // okusaydık burada "paranız iade edildi" derdik — müşteri hiç ödeme yapmamışken.
-    expect(isRefundedCancellation(view({ paymentMethod: 'cash' }))).toBe(false);
-  });
-
-  it('taslak süperse edildi → iade YOK (müşteri yeni denemeye geçti)', () => {
-    expect(isRefundedCancellation(view({ cancelReason: 'superseded' }))).toBe(false);
-  });
-
-  it('sebep YAZILMAMIŞ → iade YOK; "sebep yok" demek değil, cümle nötre düşer', () => {
-    expect(isRefundedCancellation(view({ cancelReason: null }))).toBe(false);
+  it('damga YOK → iade YOK: para hiç çekilmedi', () => {
+    // Kapıda ödemede rezervasyon tutmadı ve sipariş `draft`ta kapandı; ortada tahsilat yok. Sebep
+    // burada da `out_of_stock`tur — sebebi okuyan kural bu satırda "paranız iade edildi" derdi.
+    expect(isRefundedCancellation(view({ refundedAt: null }))).toBe(false);
   });
 
   it('iptal EDİLMEMİŞ sipariş hiç sorgulanmaz', () => {
-    // Sebep kolonu geçmiş bir iptalden kalmış olsa bile ayakta bir siparişte cümle kurulmaz.
+    // Damga ayakta bir siparişte durabilir olsaydı bile iptal cümlesi kurulmaz.
     expect(isRefundedCancellation(view({ cancelled: false }))).toBe(false);
   });
 });

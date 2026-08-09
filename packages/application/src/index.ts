@@ -20,7 +20,7 @@ export { getCatalogData, readCollectionHead } from './catalog/catalog';
 export type { CatalogInput, CatalogQuery } from './catalog/catalog';
 export { getProductDetail } from './catalog/product';
 export type { ProductDetailInput } from './catalog/product';
-export { loadProductContext, listCollectionProductIds, listOfferProductIds } from './catalog/product-context';
+export { loadProductContext, listOfferProductIds } from './catalog/product-context';
 export { pricingViewerOf, VISITOR } from './catalog/pricing-viewer';
 export type { PricingViewer } from './catalog/pricing-viewer';
 export {

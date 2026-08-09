@@ -2,7 +2,7 @@ import { CategoryService, CollectionService, ProductListingService, ProductServi
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import type { CatalogSort, KeysetCursor, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { listCollectionProductIds, listOfferProductIds, loadProductContext } from './product-context';
+import { listOfferProductIds, loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, type CatalogCategoryRow } from './map';
 import type { PlaceWarehouses, StorefrontCatalog, StorefrontCollectionHead } from './storefront-types';
@@ -122,14 +122,10 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
   // Slug verilmemişse sorgu HİÇ atılmaz — katalogun sıradan hâli koleksiyon tablosuna uğramaz.
   const activeCollection = q.collectionSlug ? await readCollectionHead(db, q.collectionSlug, locale) : null;
 
-  // "Yalnız indirimliler" ve KOLEKSİYON üyeliği: ikisi de ürün kimliklerine çözülüp SORGUYA girer
-  // — sayfa çekildikten sonra elemek keyset sayfalamayı ve toplam sayıyı bozardı.
-  const offerIds = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
-  const memberIds = activeCollection ? await listCollectionProductIds(db, activeCollection.id) : undefined;
-  // İkisi birden açıksa KESİŞİM alınır, biri ötekini EZMEZ: "Bayram koleksiyonunun indirimlileri"
-  // anlamlı bir sorudur ve tek `ids` alanına son yazan kazansaydı ekran sessizce yanlış liste
-  // gösterirdi.
-  const ids = offerIds && memberIds ? offerIds.filter((id) => memberIds.includes(id)) : (offerIds ?? memberIds);
+  // "Yalnız indirimliler" ürün kimliklerine çözülüp SORGUYA girer — sayfa çekildikten sonra elemek
+  // keyset sayfalamayı ve toplam sayıyı bozardı. Boş küme erken döner: `ids: []` PostgREST'e
+  // "hiçbiri" diye gitmez, süzgeç düşer ve TÜM katalog gelirdi.
+  const ids = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
   if (ids && !ids.length) return noProducts(categories, activeCategory, activeCollection);
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
@@ -138,6 +134,13 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     categoryId: activeCategory?.id,
     status: 'active' as const,
     ids,
+    // Koleksiyon üyeliği SORGUNUN kendi süzgeci (08.08'de düzeltildi: `productSelect` artık koşullu
+    // `!inner` kuruyor). Kısa bir süre üyelik önden kimliklere çözülüp `ids`e yazılıyordu — süzgeç
+    // sessizce tüm katalogu döndürdüğü için. O köprü söküldü: iki süzgeç birlikte açıkken kesişimi
+    // artık elle almıyoruz, sorgu AND'liyor (ölçüldü 08.08: bayram-sofrasi `!inner` 24 · üstüne
+    // `shippable` 17). Elle kesişim hem ikinci bir tur atıyordu hem de `ids`e son yazanın
+    // ötekini ezmesi riskini taşıyordu.
+    collectionId: activeCollection?.id,
     onlyShippable: q.onlyShippable,
   };
   const productSvc = new ProductService(db);

@@ -1,7 +1,7 @@
 import type { Locale } from '@lezzet/i18n';
 import type { LocalizedCopy } from '@lezzet/i18n';
-import type { OrderCancelReason, PaymentMethod } from '@lezzet/types';
-import type { StorefrontImage } from '@/lib/storefront/storefront-types';
+import type { PaymentMethod } from '@lezzet/types';
+import type { StorefrontImage } from '@lezzet/application';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
@@ -11,20 +11,23 @@ import checkoutMessages from '../messages.json';
 export type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * **Sipariş özetinin ORTAK sözcükleri — aile kökünden okunur** (08.20).
+ * **Checkout AİLESİNİN ortak sözcükleri — aile kökünden okunur** (08.20).
  *
- * "Sipariş özeti · İndirim · Teslimat · Ücretsiz · Genel toplam · Fiyatlara KDV dahildir" ile
- * "Kapıya teslim · ücretsiz / Kargo" ve "Ödeme" başlığı iki ekranda da AYNI blokun kelimeleri;
- * onay ekranı bunların birebir kopyasını taşıyordu (üç dilde 30 satır). Kopya sessizce ayrışır:
- * checkout'ta "Genel toplam"ı değiştiren, onay ekranının eski kelimede kaldığını göremez — üstelik
- * iki bloku ÇİZEN komponent zaten ortak (`SummaryRow`).
+ * "Kapıya teslim · ücretsiz / Kargo" ve "Ödeme" başlığı iki ekranda da aynı blokun kelimeleri;
+ * onay ekranı bunların birebir kopyasını taşıyordu. Kopya sessizce ayrışır: checkout'ta bir
+ * kelimeyi değiştiren, onay ekranının eskisinde kaldığını göremez.
  *
  * Aile kökünün sözlüğü okunuyor, üçüncü bir dosya AÇILMADI: desen `support`ta zaten var (alt rota
  * `../messages.json`'u okur) ve buradaki ilişki de aynı — onay ekranı checkout'un devamı.
  *
- * **Tamamı taşınmadı, taşınamazdı:** `summary` isim alanının yarısı checkout'a özel (`submit`,
- * `terms`, `minBasket`, `coldChain`…) ve `delivery.title` iki ekranda FARKLI ("Teslimat günü" ile
- * "Teslimat"). Taşınan yalnız üç dilde de birebir aynı olanlar.
+ * ⚠ **SİPARİŞ ÖZETİNİN sözcükleri artık BURADAN GELMİYOR** (08.20'nin ikinci turu, 08.08):
+ * "Sipariş özeti · İndirim · Teslimat · Ücretsiz · Genel toplam · KDV dahildir" nötr bir sözlüğe
+ * taşındı (`components/customer/ui/summary-messages.json`). Aile bağı DOĞRUYDU ama YETMİYORDU:
+ * aynı blok sepette ve sipariş detayında da çiziliyor ve o ikisi checkout ailesinin dışında.
+ * Onları buraya bağlamak, sipariş geçmişini ödeme akışına bağımlı kılardı.
+ *
+ * **Kalan üçü checkout'a ÖZGÜ:** `delivery.route`/`delivery.shipping` teslimat seçeneğinin kendi
+ * cümleleri, `payment.title` ödeme adımının başlığı. Bunlar sipariş detayında yok.
  */
 export type SharedCopy = LocalizedCopy<typeof checkoutMessages>;
 
@@ -49,22 +52,22 @@ export interface ConfirmationView {
   placed: boolean;
   cancelled: boolean;
   /**
-   * **İptalin SEBEBİ** (07.14) — ekran iptalde buna göre farklı cümle kurar.
+   * **Sağlayıcı ödemesinin İADE DAMGASI** — `null` ise iade yok (07.14).
    *
    * Bulunan arıza şuydu: iptal edilmiş her siparişte ekran *"Ödeme tamamlanmadı — kartınızdan
-   * tahsilat yapılmadı"* diyordu. Üç yolun ikisinde doğru, birinde YANLIŞ: stok kalmadığı için
-   * parası çekilip **otomatik iade edilmiş** siparişte de aynı cümle çıkıyordu. İade ekstreye
-   * günler sonra düşer; o aralıkta müşteri "tahsilat yapılmadı" okur ama hesabında para eksiktir.
+   * tahsilat yapılmadı"* diyordu. Üç yolun ikisinde doğru, birinde YANLIŞ: parası çekilip
+   * **otomatik iade edilmiş** siparişte de aynı cümle çıkıyordu. İade ekstreye günler sonra düşer;
+   * o aralıkta müşteri "tahsilat yapılmadı" okur ama hesabında para eksiktir.
    *
-   * **Sebep TEK BAŞINA yetmiyor ve bu ölçüldü.** `cancel_reason = 'out_of_stock'` iki ayrı yolda
-   * yazılıyor: webhook'un iade dalında (kart — para çekildi) ve kapıda/vadeli ödemede rezervasyon
-   * tutmayınca (`checkout/actions.ts` — para HİÇ çekilmedi, sipariş `draft`ta kaldı). Sebebi tek
-   * başına okuyup "iade edildi" demek, ikinci yolda yeni bir yalan üretirdi. Ayrım ödeme
-   * yöntemiyle birlikte kuruluyor: **`out_of_stock` + `online`**.
+   * **İlk çözüm iptal SEBEBİNİ okuyordu ve yetmiyordu** — ölçüldü: `out_of_stock` iki ayrı yolda
+   * yazılıyor (kartta para çekilmiş, kapıda ödemede hiç çekilmemiş), ayrıca webhook'un "zaten iptal
+   * edilmiş siparişe geç gelen ödeme" dalı parayı iade ederken sebebi `superseded` bırakıyordu —
+   * yani düzeltilen yalanın dar bir kopyası orada duruyordu. Arka uç kolonu ikiye ayırdı: sebep
+   * "neden iptal oldu" sorusunun, damga "para çekilip geri verildi mi" sorusunun cevabı.
    *
-   * `null` sebep nötr cümleye düşer — "sebep yazılmadı" demek, "tahsilat yapılmadı" demek değil.
+   * **Bayrak değil TARİH:** "ekstremde görünmüyor" diyen müşteriye iade tarihi söylenebilsin.
    */
-  cancelReason: OrderCancelReason | null;
+  refundedAt: string | null;
   /** "Bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru; kapıda ödemede beklenen banka yok. */
   awaitingCard: boolean;
   onRoute: boolean;
@@ -113,11 +116,15 @@ export interface ConfirmationViewProps {
  * sorup üç yolun hepsine *"kartınızdan tahsilat yapılmadı"* diyordu. Kuralı bir satır ifade olarak
  * sayfanın içinde bırakmak, aynı yanlışın ikinci kez sessizce kurulmasına açık kapı bırakırdı.
  *
- * **İki koşul birden şart.** `out_of_stock` sebebi İKİ ayrı yolda yazılıyor:
- *   · webhook'un iade dalı — kart, para çekildi ve geri verildi
- *   · kapıda/vadeli ödemede rezervasyon tutmadı — para HİÇ çekilmedi, sipariş `draft`ta kaldı
- * Sebebi tek başına okumak ikincisinde yeni bir yalan üretirdi.
+ * **Soruyu SEBEBE değil DAMGAYA soruyoruz** ve arada bir tur var: kural önce
+ * `out_of_stock + online` diye kurulmuştu, çünkü elimizdeki tek alan iptal sebebiydi. O ikili bugün
+ * de doğru cevap verirdi ama EKSİK kalırdı — parayı iade eden ikinci webhook dalı sebebi
+ * `superseded` bırakıyor. Damga iki dalın da geçtiği tek ayakta yazılıyor (`refundProviderPayment`,
+ * iadeden SONRA), yani "para geri verildi mi" sorusunun tek dayanağı var.
+ *
+ * `cancelled` koşulu duruyor: damga bugün yalnız iptal edilmiş siparişlerde doğuyor, ama cümleyi
+ * kuran şey iptaldir — ayakta bir siparişe geçmiş bir iade damgası yüzünden iptal cümlesi kurulmaz.
  */
-export function isRefundedCancellation(view: Pick<ConfirmationView, 'cancelled' | 'cancelReason' | 'paymentMethod'>): boolean {
-  return view.cancelled && view.cancelReason === 'out_of_stock' && view.paymentMethod === 'online';
+export function isRefundedCancellation(view: Pick<ConfirmationView, 'cancelled' | 'refundedAt'>): boolean {
+  return view.cancelled && view.refundedAt !== null;
 }

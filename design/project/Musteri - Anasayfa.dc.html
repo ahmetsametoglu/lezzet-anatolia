@@ -72,6 +72,27 @@
           </sc-for>
         </div>
       </div>
+      <sc-if value="{{ hasCollections }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0 48px 48px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Koleksiyonlar</h2>
+            <span style="font:400 14px 'Karla';color:#8a8270">Döneme özel temalar — göz atın, dilediğinizi tek tek seçin</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <sc-for list="{{ collections }}" as="k" hint-placeholder-count="2">
+              <a href="./Musteri%20-%20Katalog.dc.html" style="position:relative;display:block;border-radius:22px;overflow:hidden;text-decoration:none;aspect-ratio:16/7">
+                <div style="position:absolute;inset:0"><image-slot id="kol-1a-{{ $index }}" shape="rect" placeholder="{{ k.name }} bandı · 16:9"></image-slot></div>
+                <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(52,59,65,.78) 0%,rgba(52,59,65,.35) 55%,rgba(52,59,65,0) 100%)"></div>
+                <div style="position:absolute;left:28px;bottom:24px;display:flex;flex-direction:column;gap:6px">
+                  <span style="font:600 12px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#a9c46b">{{ k.tag }}</span>
+                  <span style="font:600 26px 'Lora';color:#fff">{{ k.name }}</span>
+                  <span style="font:700 14px 'Karla';color:#f3efe2">{{ k.count }} · Koleksiyona git →</span>
+                </div>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
       <div style="background:#f0e9d6;padding:40px 48px;display:flex;flex-direction:column;gap:18px">
         <div style="display:flex;align-items:baseline;gap:14px">
           <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Bu haftanın fırsatları</h2>
@@ -278,6 +299,11 @@ class Component extends DCLogic {
         { name: "Ispanaklı Gözleme", weight: "4 adet", price: "5,90 €", was: "7,90 €", limit: "En fazla 5 adet" },
         { name: "Cevizli Sucuk Tatlısı", weight: "400 g", price: "6,50 €", was: "8,90 €", limit: "En fazla 3 adet" },
         { name: "Yaprak Sarma", weight: "1 kg", price: "9,90 €", was: "12,50 €", limit: "En fazla 4 adet" },
+      ],
+      hasCollections: true,
+      collections: [
+        { tag: "Koleksiyon", name: "Bayram", count: "14 ürün" },
+        { tag: "Koleksiyon", name: "Yeni Gelenler", count: "8 ürün" },
       ],
       packages: [
         { name: "Bayram Sofrası", items: "8 ürün", price: "49,90 €", desc: "Baklava, börek, sarma ve daha fazlası — 6 kişilik hazır bayram sofrası." },

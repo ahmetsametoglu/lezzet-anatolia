@@ -7,7 +7,7 @@ import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
-import { imageOf } from '@/lib/storefront/map';
+import { imageOf } from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
@@ -86,9 +86,9 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     createdAt: order.createdAt,
     placed,
     cancelled,
-    // Sebep HAM taşınır; "para iade edildi mi" kararını ekran tek bir yerden sorar
+    // Damga HAM taşınır; "para iade edildi mi" kararını ekran tek bir yerden sorar
     // (`isRefundedCancellation`) — kuralı burada da kurmak aynı kararın ikinci kopyası olurdu.
-    cancelReason: order.cancelReason,
+    refundedAt: order.providerRefundedAt,
     /**
      * "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru. Kapıda
      * ödemede beklenen bir banka yok; havalede de öyle — orada beklenen müşterinin transferi.

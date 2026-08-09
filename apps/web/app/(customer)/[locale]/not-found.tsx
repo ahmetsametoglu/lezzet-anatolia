@@ -13,11 +13,15 @@ import errorMessages from './error-messages.json';
  * (kataloğa/ana sayfaya dönüş) her zaman sunulur. Durum kodu 404 (Next varsayılanı) korunur.
  *
  * Kapsam: tasarımdaki "çok sevilenler" ızgarası ve kategori çipleri hâlâ yok — ama artık **engel
- * yok, sıra var.** Popülerlik ölçütü 04.08'de indi (`readShowcase` günlük ürün sinyalinden okuyor)
- * ve seçkiyi çizen parçalar da hazır (`ProductCard` · `SectionHeading`); kalan iş bu sayfanın
- * kendi yerleşimi. Künyenin iki kez eskimesinin dersi burada: **engel geçtiğinde işaret de
- * geçmeli**, yoksa okuyan ajan olmayan bir duvara çarpar (bir süre "katalog inince eklenir"
- * diyordu, katalog inmişti; sonra "ölçüt yok" dedi, ölçüt indi — denetim M-Y3).
+ * yok, sıra var.** Popülerlik ölçütü 04.08'de yazıldı (`readShowcase` günlük ürün sinyalinden
+ * okuyor) ve seçkiyi çizen parçalar da hazır (`ProductCard` · `SectionHeading`); kalan iş bu
+ * sayfanın kendi yerleşimi. Künyenin iki kez eskimesinin dersi burada: **engel geçtiğinde işaret de
+ * geçmeli**, yoksa okuyan ajan olmayan bir duvara çarpar (bir süre "katalog tamamlanınca eklenir"
+ * diyordu, katalog tamamlanmıştı; sonra "ölçüt yok" dedi, ölçüt gelmişti — denetim M-Y3).
+ *
+ * **Aynı ders üçüncü kez, bu kez METİNDE (08.08):** birincil düğme üç dilde *"Kataloğa dön"* diyor
+ * ama `/`'a gidiyordu — yorumu *"katalog rotası açılınca oraya yönlendirilir"* diye söz veriyordu,
+ * rota açıldı, söz unutuldu. 404'ten çıkan müşteriye yazan ile götüren ayrışıyordu.
  */
 export default async function CustomerNotFound() {
   const locale = (await getLocale()) as Locale;
@@ -34,8 +38,9 @@ export default async function CustomerNotFound() {
         description={t.notFound.description}
         actions={
           <>
-            {/* Katalog rotası (/catalog) inince birincil buton oraya yönlendirilir. */}
-            <Link href="/" className={buttonClass({ variant: 'primary' })}>
+            {/* Yol `/catalog` yazılır, URL'e dile göre çevrilerek çıkar (`PATHNAMES`: `/catalogue`
+                · `/katalog`) — `Link` bunu kendisi yapar. */}
+            <Link href="/catalog" className={buttonClass({ variant: 'primary' })}>
               {t.notFound.primaryCta}
             </Link>
             <Link href="/" className={buttonClass({ variant: 'secondary' })}>
