@@ -66,6 +66,7 @@ export async function createProductAction(input: ProductFormInput): Promise<Acti
       variants: variants.map((v) => ({
         label: v.label,
         netWeightG: v.netWeightG,
+        piecesCount: v.piecesCount,
         minStockQty: v.minStockQty,
         sku: v.sku,
         isActive: v.isActive,

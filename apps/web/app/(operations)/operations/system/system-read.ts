@@ -6,7 +6,7 @@ import {
   loadCapacityPercent,
 } from '@lezzet/domain-core';
 import type { ErrorLog, HealthTrendPoint, SystemHealthSnapshot } from '@lezzet/types';
-import { gigabytes, megabytes, num, percent } from '@/components/operation/ui/format';
+import { ageMinutesOf, gigabytes, megabytes, num, percent } from '@/components/operation/ui/format';
 import { calmSummary, reasonViews, uptimeLabel } from './system-reasons';
 import { WINDOW_LABEL, WINDOW_MINUTES, type TrendWindow } from './system-url';
 import type {
@@ -29,12 +29,6 @@ import type {
  * satırı ekranın istediği şekle sokmak (STACK §4: birleştiren yer uygulama katmanıdır).
  */
 
-
-/** Ölçümün yaşı — dakika. Damga geçersizse `null`: uydurma bir yaş, bayatlığı gizlerdi. */
-export function ageMinutesOf(iso: string, now: number): number | null {
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? null : Math.max(0, (now - t) / 60_000);
-}
 
 const VERDICT_TITLE: Record<VerdictTone, string> = {
   ok: 'İyi',

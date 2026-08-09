@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { TicketQueueItem } from '@/lib/ticket/ticket-types';
-import { ageMinutesOf, toRowViews, toTicketFilter } from './tickets-read';
+import { toRowViews, toTicketFilter } from './tickets-read';
+
+// Yaş hesabının kendi sınaması ORTAK dosyada (`components/operation/ui/format.test.ts`); burada
+// yalnız bu ekrana ait karar sınanır — ölçülemeyen damganın bu kuyrukta `0`'a düşürülmesi.
 
 const NOW = Date.parse('2026-08-03T12:00:00.000Z');
 
@@ -36,25 +39,16 @@ describe('toTicketFilter', () => {
   });
 });
 
-describe('ageMinutesOf', () => {
-  it('damganın yaşını dakika olarak verir', () => {
-    expect(ageMinutesOf('2026-08-03T11:30:00.000Z', NOW)).toBe(30);
-  });
-
-  it('İLERİ tarihli damga negatife düşmez — "-3 dk önce" diye bir şey yok', () => {
-    expect(ageMinutesOf('2026-08-03T12:05:00.000Z', NOW)).toBe(0);
-  });
-
-  it('okunamayan damga ekranı kırmaz, sıfır sayılır', () => {
-    expect(ageMinutesOf('bozuk-tarih', NOW)).toBe(0);
-  });
-});
-
 describe('toRowViews', () => {
   it('satırın alanlarını KORUR, yalnız yaş ekler', () => {
     const source = row();
     const [view] = toRowViews([source], NOW);
     expect(view).toEqual({ ...source, ageMinutes: 30 });
+  });
+
+  it('okunamayan damga kuyruğu kırmaz — bu ekranın yaşı sayıdır, sıfıra düşer', () => {
+    const views = toRowViews([row({ lastMessageAt: 'bozuk-tarih' })], NOW);
+    expect(views.map((v) => v.ageMinutes)).toEqual([0]);
   });
 
   it('tüm satırlar AYNI ana göre yaşlanır', () => {

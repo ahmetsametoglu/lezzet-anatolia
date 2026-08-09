@@ -120,6 +120,26 @@ export function shortDateTime(iso: string | null | undefined): string {
 }
 
 /**
+ * Bir damganın dakika cinsinden YAŞI — `agoLabel`/`agoShort`'un girdi tarafı.
+ *
+ * `now` DIŞARIDAN gelir: sayfa onu bir kez okur ve ekrandaki bütün yaşlar aynı ana göre çıkar.
+ * İçeride okunsaydı listenin başı ile sonu (ve detay künyesi) farklı anlara göre hesaplanır, aynı
+ * damga iki yerde iki farklı yaş gösterirdi. Ayrıca yaş SUNUCUDA hesaplanmalı — istemcide okunan
+ * `Date.now()` ilk boyamayı sunucununkinden ayırır ve hidrasyon uyuşmazlığı doğurur.
+ *
+ * Bozuk damgada `null` — sıfır DEĞİL (`CLAUDE §1`): "az önce ölçüldü" demek, bayatlığı gizlemenin
+ * en sessiz yoludur. İleri tarihli damga (saat kayması) 0'a kırpılır; "-3 dk önce" okunmaz.
+ *
+ * Üç ekran bunu ayrı ayrı yazmıştı (talepler · sistem · asistan kuyruğu) ve ikisi ayrışmıştı bile:
+ * biri bozuk damgada `0`, öteki `null` dönüyordu — yani aynı arıza bir ekranda taze, ötekinde
+ * ölçülemez görünüyordu.
+ */
+export function ageMinutesOf(iso: string, now: number): number | null {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? null : Math.max(0, (now - t) / 60_000);
+}
+
+/**
  * "2 dk önce" · "3 sa önce" · "2 gün önce" — bir damganın YAŞI.
  *
  * Sistem ekranında mutlak saat yetmiyor: "09:42" okunup geçilir, "23 dk önce" bir arıza işaretidir

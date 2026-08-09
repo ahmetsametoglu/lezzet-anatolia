@@ -17,6 +17,19 @@ export interface BatchOption {
   isExpired: boolean;
 }
 
+/**
+ * Tutanağa eklenmiş ama HENÜZ YAZILMAMIŞ satır (10.5).
+ *
+ * Olay = bir kâğıt: bir imhada birden çok parti çöpe gidebilir ve hepsi tek belge numarasını
+ * paylaşır. Satırlar bu yüzden önce burada birikir, tek çağrıda yazılır — her partiyi ayrı ayrı
+ * göndermek her birine ayrı numara üretirdi ve denetmenin elindeki tek kâğıt sistemde üç kayda
+ * dağılırdı.
+ */
+export interface DraftLine {
+  stockId: string;
+  qty: number;
+}
+
 /** Bugün girilmiş bir düşüm — sağdaki "bugünün kayıtları" şeridi. */
 export interface TodayEntry {
   id: string;

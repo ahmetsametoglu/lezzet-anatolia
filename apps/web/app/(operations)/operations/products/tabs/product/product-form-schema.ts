@@ -78,7 +78,7 @@ export function buildDefaults(p: ProductView | null): ProductFormValues {
       targetMarginPercent: null,
       autoPrice: false,
       ...DEFAULT_CROP_FIELDS,
-      variants: [{ label: {}, netWeightG: null, minStockQty: null, sku: null, isActive: true }],
+      variants: [{ label: {}, netWeightG: null, piecesCount: null, minStockQty: null, sku: null, isActive: true }],
     };
   }
   return {
@@ -102,6 +102,7 @@ export function buildDefaults(p: ProductView | null): ProductFormValues {
       id: v.id,
       label: v.label,
       netWeightG: v.netWeightG,
+      piecesCount: v.piecesCount,
       minStockQty: v.minStockQty,
       sku: v.sku,
       isActive: v.isActive,
@@ -134,11 +135,12 @@ export function toActionPayload(values: ProductFormValues) {
     // ölçüt "etiketi boş olanı at"tı — etiketi silinen kayıtlı varyant sessizce silinirdi. Yeni satır
     // (id'siz) ise hiçbir alanı doldurulmamışsa atılır: "+ varyant"a basıp vazgeçmek boş satır bırakmaz.
     variants: values.variants
-      .filter((v) => v.id || resolveLocalizedText(v.label) || v.sku?.trim() || v.netWeightG != null || v.minStockQty != null)
+      .filter((v) => v.id || resolveLocalizedText(v.label) || v.sku?.trim() || v.netWeightG != null || v.piecesCount != null || v.minStockQty != null)
       .map((v) => ({
         id: v.id,
         label: cleanLocalized(v.label),
         netWeightG: v.netWeightG,
+        piecesCount: v.piecesCount,
         minStockQty: v.minStockQty,
         sku: v.sku?.trim() || null,
         isActive: v.isActive,

@@ -1,4 +1,5 @@
 import type { TicketQueueFilter } from '@lezzet/database';
+import { ageMinutesOf } from '@/components/operation/ui/format';
 import type { TicketQueueItem } from '@/lib/ticket/ticket-types';
 import type { TicketRowView } from './tickets-types';
 import type { TicketFilterKey } from './tickets-url';
@@ -24,20 +25,13 @@ export function toTicketFilter(f: TicketFilterKey): TicketQueueFilter {
 }
 
 /**
- * Bir damganın dakika cinsinden yaşı.
+ * Kuyruk satırlarına tek türetme ekler: son mesajın yaşı.
  *
- * `now` dışarıdan gelir — sayfa onu BİR KEZ okur ve ekrandaki bütün yaşlar aynı ana göre hesaplanır.
- * İçeride okunsaydı listenin başı ile sonu (ve detay künyesi) farklı anlara göre çıkardı; fark
- * küçük ama ölçüt kayması gerçek — aynı damga iki yerde iki farklı yaş gösterebilirdi.
- *
- * Negatife DÜŞMEZ: ileri tarihli bir damga (saat kayması) "-3 dk önce" diye okunurdu.
+ * Yaş hesabı ORTAK (`ui/format.ageMinutesOf`) — burada ikinci bir tanımı vardı ve sistem
+ * ekranınınkinden ayrışmıştı: bozuk damgada biri `0` ("az önce"), öteki `null` ("ölçülemedi")
+ * diyordu. Bu ekranın sözleşmesi `number` olduğu için ölçülemeyen damga burada `0`'a düşürülür —
+ * karar TEK yerde ve görünür duruyor.
  */
-export function ageMinutesOf(iso: string, now: number): number {
-  const t = new Date(iso).getTime();
-  return Number.isNaN(t) ? 0 : Math.max(0, (now - t) / 60_000);
-}
-
-/** Kuyruk satırlarına tek türetme ekler: son mesajın yaşı. */
 export function toRowViews(rows: readonly TicketQueueItem[], now: number): TicketRowView[] {
-  return rows.map((row) => ({ ...row, ageMinutes: ageMinutesOf(row.lastMessageAt, now) }));
+  return rows.map((row) => ({ ...row, ageMinutes: ageMinutesOf(row.lastMessageAt, now) ?? 0 }));
 }

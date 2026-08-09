@@ -24,6 +24,7 @@ import {
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { privateReadUrls } from '@lezzet/storage';
+import { customerLabel } from '@/lib/customer/name';
 import type {
   CustomerTicketSummary,
   CustomerTicketView,
@@ -210,7 +211,17 @@ export async function listTicketsForOrder(customerId: string, orderId: string): 
  *
  * Müşteri adı, sipariş numarası ve son mesajın metni görünümden gelir (`ticket_queue`): ekran
  * onları ayrı ayrı çekseydi 30 satırlık bir kuyruk 90 sorguya çıkardı. Bu işlev yalnız sunum
- * kararını ekler — önizlemenin kırpılması.
+ * kararını ekler — önizlemenin kırpılması ve adsız müşterinin anılabilir kılınması.
+ *
+ * **ADSIZ MÜŞTERİ İÇİN İKİNCİ BİR OKUMA VAR ve şartlı** (kullanıcı tespiti 09.08): görünüm
+ * `user_profiles.name`'i olduğu gibi veriyor, o da OTP ile giren müşteride BOŞ DİZGE oluyor
+ * (`customerLabel` künyesi) — satırın başlığı boş çıkıyordu. Yedek e-posta görünümde yok, o yüzden
+ * yalnız **adı boş olan satırlar için** tek bir toplu profil okuması yapılır (`listByIds`, satır
+ * başına sorgu değil). Adsız satır yoksa hiç sorgu koşmaz.
+ *
+ * Kalıcı çözüm e-postayı görünüme eklemektir (`ticket_queue`, `0026`) ve tek satırlık bir
+ * değişiklik — ama migration'ı düzenlemek `db:reset` istiyor ve o KULLANICININ kararı (`CLAUDE §0`).
+ * Sıradaki reset penceresinde alınmak üzere işaretlendi. BEKLEYEN(16.3)
  */
 export async function listTicketQueue(
   viewLanguage: PreferredLanguage,
@@ -218,7 +229,13 @@ export async function listTicketQueue(
   cursor?: KeysetCursor,
   limit?: number,
 ): Promise<Page<TicketQueueItem>> {
-  const page = await new TicketQueueService(serviceDb()).list(filter, cursor, limit);
+  const db = serviceDb();
+  const page = await new TicketQueueService(db).list(filter, cursor, limit);
+
+  const namelessIds = [...new Set(page.rows.filter((row) => !row.customerName?.trim()).map((row) => row.customerId))];
+  const profiles = namelessIds.length > 0 ? await new UserProfileService(db).listByIds(namelessIds) : [];
+  const emailById = new Map(profiles.map((p) => [p.id, p.email]));
+
   return {
     rows: page.rows.map((row) => {
       // Önizleme de ÇEVRİLİR (20.2): detay çevrilip kuyruk çevrilmeseydi personel talebi ancak
@@ -229,7 +246,7 @@ export async function listTicketQueue(
       );
       return {
         id: row.id,
-        customerName: row.customerName,
+        customerName: customerLabel(row.customerName, emailById.get(row.customerId)),
         type: row.type,
         status: row.status,
         handledBy: row.handledBy,
@@ -279,7 +296,10 @@ export async function getStaffTicketDetail(locale: Locale, ticketId: string): Pr
     ticket: row,
     customer: {
       id: row.customerId,
-      name: customer?.name ?? '—',
+      // Kuyrukla AYNI kural (`customerLabel`): adsız müşteri e-postasıyla anılır. Burada bir tur
+      // `name ?? '—'` yazılıydı ve yalnız profil YOKSA devreye giriyordu; profili olup adı boş olan
+      // müşteri — yani OTP'yle giren herkes — detayda da boş görünüyordu.
+      name: customerLabel(customer?.name, customer?.email),
       email: customer?.email ?? null,
       phone: customer?.phone ?? null,
       totalTickets: customerTickets,

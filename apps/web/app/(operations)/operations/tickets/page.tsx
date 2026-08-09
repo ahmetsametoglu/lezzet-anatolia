@@ -5,7 +5,8 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { readCustomerContext } from '@/lib/customer/context';
 import { countTicketsByStatus, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
 import { TicketsClient } from './tickets-client';
-import { ageMinutesOf, toRowViews, toTicketFilter } from './tickets-read';
+import { ageMinutesOf } from '@/components/operation/ui/format';
+import { toRowViews, toTicketFilter } from './tickets-read';
 import { parseTicketsUrl } from './tickets-url';
 import type { TicketsData } from './tickets-types';
 
@@ -79,7 +80,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     rows: toRowViews(queue.rows, now),
     nextCursor: queue.nextCursor,
     counts,
-    detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) },
+    // Ölçülemeyen damga bu ekranın sözleşmesinde sayıdır; kararı `toRowViews` ile aynı yerde
+    // duruyor (ortak `ageMinutesOf` `null` döner — bkz. `ui/format`).
+    detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) ?? 0 },
     context,
   };
 

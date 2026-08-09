@@ -1,7 +1,8 @@
 import { ErrorLogService, SystemHealthService, UserProfileService, serviceDb } from '@lezzet/database';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { SystemClient } from './system-client';
-import { ageMinutesOf, toErrorRows, toHealthView, toTrendCharts, windowCutoff } from './system-read';
+import { ageMinutesOf } from '@/components/operation/ui/format';
+import { toErrorRows, toHealthView, toTrendCharts, windowCutoff } from './system-read';
 import { ERROR_PAGE_SIZE, parseSystemUrl } from './system-url';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 

@@ -25,7 +25,10 @@ import type { ProductFormValues } from './product-form-schema';
 // kendisinden sürüklemek metin seçmeyi bozardı.
 
 // Tutamak · Etiket (esner) · SKU · Net · Min · Aktif · sil
-const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_104px_64px_60px_38px_26px] items-center gap-x-2';
+// "Adet" sütunu `Net (g)`in HEMEN YANINA girdi (arka-uc talebi 09.08) ve yerine değil: 72'lik bir
+// kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer
+// kaplar"). Genişliği 52px — başlığı kısa, değeri iki haneli.
+const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_104px_64px_52px_60px_38px_26px] items-center gap-x-2';
 
 /** Sayı hücresi — Net (g) ve Min. stok aynı davranışı paylaşır (boş = bilinmiyor / eşik yok). */
 function NumberCell({
@@ -81,7 +84,7 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
         <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted">Varyantlar</span>
         <button
           type="button"
-          onClick={() => append({ label: {}, netWeightG: null, minStockQty: null, sku: null, isActive: true })}
+          onClick={() => append({ label: {}, netWeightG: null, piecesCount: null, minStockQty: null, sku: null, isActive: true })}
           className="cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive hover:text-ops-olive-dark"
         >
           + varyant
@@ -103,6 +106,7 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
           <span>Etiket ({lang.toUpperCase()})</span>
           <span>SKU</span>
           <span>Net (g)</span>
+          <span title="Kutudaki parça sayısı — 12'li baklava kutusu → 12. Dökme üründe boş bırakın.">Adet</span>
           <span title="Bu eşiğin altına düşünce stok uyarısı çıkar">Min. stok</span>
           <span className="text-center">Aktif</span>
           <span />
@@ -177,6 +181,14 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
                 <Controller
                   control={control}
                   name={`variants.${i}.netWeightG`}
+                  render={({ field }) => <NumberCell value={field.value} onChange={field.onChange} onBlur={field.onBlur} />}
+                />
+                {/* Paket içi adet — BOŞ bırakılabilir ve boş `null` demektir: "adet bildirilmemiş"
+                    (dökme ürün). Sıfır DEĞİL; sıfır "içinde hiç parça yok" derdi (`CLAUDE §1`).
+                    `NumberCell` zaten boşu `null`a çeviriyor, o yüzden ayrı bir kural yok. */}
+                <Controller
+                  control={control}
+                  name={`variants.${i}.piecesCount`}
                   render={({ field }) => <NumberCell value={field.value} onChange={field.onChange} onBlur={field.onBlur} />}
                 />
                 <Controller
