@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { StorefrontProductDetail } from '@lezzet/application';
+import { cheapestVariantId } from '@/lib/storefront/variant-choice';
 import { isProductUnavailable } from './components/family-block';
 import type { Messages, ReviewsData } from './product-types';
 import { ProductDesktop } from './product.desktop';
@@ -30,8 +31,10 @@ interface ProductClientProps {
 
 export function ProductClient({ t, locale, product, device, reviews }: ProductClientProps) {
   const resolved = useDevice(device);
-  // Varsayılan: EN KÜÇÜK boy seçili (tasarım etkileşim sözleşmesi) — liste zaten sortOrder'da gelir.
-  const [selectedId, setSelectedId] = useState(product.variants[0]?.id ?? '');
+  // Varsayılan: EN UCUZ boy seçili (denetim talebi 09.08) — sıranın ilki DEĞİL. Gerekçe ve ölçüt
+  // `cheapestVariantId`'de; kısaca: kartın gösterdiği fiyat en ucuz boyunki, detay başka bir boyu
+  // açarsa müşteri gördüğü fiyatı bulamaz. Seçicideki SIRA değişmiyor, yalnız seçili olan değişti.
+  const [selectedId, setSelectedId] = useState(() => cheapestVariantId(product.variants));
   const selected = product.variants.find((v) => v.id === selectedId) ?? product.variants[0] ?? null;
 
   // Aile bağlamı BURADA türetilir, iki görünümde ayrı ayrı değil (05.15): ikisi de aynı iki cevabı

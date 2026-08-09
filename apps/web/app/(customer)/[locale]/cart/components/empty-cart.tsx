@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { RATIO_ILLUSTRATION } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { FilterChip } from '@/components/customer/ui/filter-controls';
@@ -33,8 +34,11 @@ import type { Messages } from '../cart-types';
  * ekranın bittiğini sanıyordu. Sıralamanın kaynağı `readShowcase`, anasayfanın bandıyla aynı.
  */
 
-/** Kahraman görselinin çerçevesi (tasarım: web 260×200 · mobil 180×140 — ikisi de ~1,3). */
-const ILLUSTRATION_RATIO = 1.3;
+// Kahraman görselinin çerçevesi (tasarım: web 260×200 · mobil 180×140 — ikisi de ~1,3) artık
+// `@lezzet/types`te (`RATIO_ILLUSTRATION`, operasyon notu 09.08): operatörün kadraj panelinde
+// kırptığı çerçeve ile müşterinin gördüğü çerçeve aynı sayıdan gelmek zorunda. İki kopya bugün
+// eşitti ama ayrışsalardı fark KODDA değil FOTOĞRAFIN KENARINDA görünürdü — kimse hata görmez,
+// yalnız görselin bir yanı sitede kesilir.
 
 interface EmptyCartProps {
   t: Messages;
@@ -80,7 +84,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         <FramedImage
           src={context.illustration?.url ?? null}
           alt={context.illustration?.alt ?? ''}
-          ratio={ILLUSTRATION_RATIO}
+          ratio={RATIO_ILLUSTRATION}
           crop={context.illustration?.crop}
           className={compact ? '!rounded-[14px] !bg-cream-deep' : '!rounded-[16px] !bg-cream-deep'}
           placeholder={<span className="text-h1-sm">🧺</span>}

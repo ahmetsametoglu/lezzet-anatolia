@@ -26,6 +26,7 @@
       "addToCart": "Sepete ekle",
       "options": "Seçenekler →",
       "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
+      "fromPrice": "{price}'dan",
       "offer": "Fırsat",
       "soldOut": "Tükendi — yakında yeniden"
     },
@@ -61,6 +62,7 @@
       "addToCart": "Ajouter",
       "options": "Options →",
       "priceFrom": "prix de départ — le format se choisit en détail",
+      "fromPrice": "dès {price}",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
     },
@@ -96,6 +98,7 @@
       "addToCart": "In den Korb",
       "options": "Optionen →",
       "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+      "fromPrice": "ab {price}",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },

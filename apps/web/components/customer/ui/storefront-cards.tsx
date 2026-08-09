@@ -174,6 +174,15 @@ interface ProductCardLabels {
   options: string;
   /** Çok varyantlıda fiyatın altındaki not ("başlangıç fiyatı — boy detayda seçilir"). */
   priceFrom: string;
+  /**
+   * Çok varyantlıda fiyatın KENDİSİNİ saran şablon (`{price}'dan` · `dès {price}` · `ab {price}`).
+   *
+   * `priceFrom` notunun yerine geçmez, ONUNLA BİRLİKTE çalışır ve ayrımı cihaz belirliyor: not
+   * yalnız masaüstünde çiziliyor (dar kartta iki satırlık açıklama ızgarayı bozar), oysa fiyatın
+   * bir alt sınır olduğu bilgisi MOBİLDE DE gerekli — ölçüldü (09.08): 31 çok boylu üründen
+   * 24'ünde kartta yazan fiyat en ucuz boyunki değildi ve mobilde hiçbir işaret yoktu.
+   */
+  fromPrice: string;
   offer: string;
   soldOut: string;
   /** "En fazla {n} adet" — sayısı yerleştirilmiş hâli. */
@@ -275,6 +284,10 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             size={compact ? 'sm' : 'lg'}
             tone={away ? 'muted' : 'default'}
             stacked={compact}
+            /* Tükenmiş üründe "…'dan" YAZILMAZ: alt sınır bir davettir, satılamayan üründe davet
+               yanlış okunur. Ölçüt `purchaseMode` — künyesi `variantCount > 1` ile aynı kümede
+               olduğunu söylüyor, yani iki ayrı yerden iki farklı cevap çıkamaz. */
+            fromTemplate={product.purchaseMode === 'options' && !product.soldOut ? labels.fromPrice : undefined}
           />
           {product.soldOut ? (
             <span
