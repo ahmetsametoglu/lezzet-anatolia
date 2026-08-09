@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { UserProfileSchema } from '../entities/user-profile.schema';
+import { MarketingChannelEnum, UserProfileSchema } from '../entities/user-profile.schema';
+import { PreferredLanguageEnum } from '../primitives/enums.schema';
 
 /**
  * `/api/v1/me` SÖZLEŞME şeması (21.9) — mobil uçun ve onu tüketen uygulama kabuğunun ORTAK dili.
@@ -54,6 +55,52 @@ export const MeUpdateSchema = z
 /** Güncellemenin adlı retleri — cümleyi ekran kurar, anahtar sözleşmede yaşar. */
 export const MeUpdateErrorEnum = z.enum(['name_required', 'phone_invalid', 'phone_taken']);
 export type MeUpdateError = z.infer<typeof MeUpdateErrorEnum>;
+
+/**
+ * `PATCH /api/v1/me/preferences` gövdesi (21.16) — dil + kampanya izinleri.
+ *
+ * **`MeUpdateSchema`ya EKLENMEDİ, AYRI gövde.** Üstteki künye dil/izinlerin profil formunun işi
+ * olmadığını zaten söylüyordu ve web'in ayrımı da üç ayrı kapıdır (ad/telefon
+ * `updateProfileAction`, dil `language-actions`, izin `setConsentAction`). Tek gövdede
+ * birleşselerdi bir çağrı hem kimlik künyesini hem GDPR kanıtını yazardı; oysa ikisinin reddi,
+ * doğrulaması ve denetim izi ayrı cinsten. Ayrı gövde, ayrı kapı demektir.
+ *
+ * İki alan da isteğe bağlı: gönderilmeyen alana DOKUNULMAZ (`MeUpdateSchema` ile aynı kural).
+ *
+ * **İzin gövdesi BAYRAK taşır, KAYIT değil** — kanal başına `granted` boolean'ı gelir; `at` ve
+ * `source` GELMEZ. Kanıtı istemci yazamaz: pazarlama izni bir gün sorulduğunda dayanağımız o
+ * damgadır ve telefondan gelen bir tarihe dayanan kanıt, kanıt değildir. Damgayı sunucu vurur
+ * (`@lezzet/application` → `customer/preferences.ts`), kaydın şekli varlık şemasında
+ * (`MarketingConsentSchema`: `granted` + `at` + `source`).
+ *
+ * Kanal listesi `MarketingChannelEnum`den TÜRER, elle yazılmaz — varlık şemasındaki `.keyof()`
+ * kararının devamı: üçüncü kanal (SMS) eklendiğinde gövde kendiliğinden büyür. `z.record`
+ * bilerek `z.object().partial()`a tercih edildi: nesne şeması tanımadığı anahtarı SESSİZCE
+ * düşürür, record ise anahtarın adını söyleyerek reddeder — sunucunun daha desteklemediği bir
+ * kanalı gönderen istemci "kaydettim" sanmasın. (Ölçüldü: `z.record` enum anahtarla
+ * `Partial<Record<…>>` türetir, yani eksik kanal hem tipte hem çalışma zamanında serbesttir.)
+ */
+export const MePreferencesSchema = z
+  .object({
+    preferredLanguage: PreferredLanguageEnum,
+    marketingConsent: z.record(MarketingChannelEnum, z.boolean()),
+  })
+  .partial();
+
+/**
+ * Tercih güncellemesinin adlı retleri — `MeUpdateErrorEnum`dan FARKLI cinsten: oradakiler
+ * DOĞRULAMA reddidir (boş ad, geçersiz numara), buradakiler DURUM reddi. Doğrulama tarafının boş
+ * olması bir eksiklik değil ölçüm sonucu: kabul edilen her şey kapalı bir küme (dil üç değerli
+ * enum, izin boolean), geçersiz olan şema kapısından `invalid_body` olarak döner ve kapıya hiç
+ * varmaz.
+ *
+ * `no_changes` titizlik değil GÖRÜNÜRLÜK: hiçbir alan taşımayan gövde istemci hatasıdır ve 200
+ * dönmek onu susturur — "anahtarı yanlış yazmışım, ekran kaydetmiyor" arızası ancak aylar sonra
+ * fark edilirdi (CLAUDE §0: belirtiyi susturan çözüm, arızayı gözden saklar). Gönderilen değerin
+ * kayıtlıyla AYNI olması bu ret DEĞİLDİR — o geçerli ve boşa yazmayan bir çağrıdır.
+ */
+export const MePreferencesErrorEnum = z.enum(['no_changes', 'profile_not_found']);
+export type MePreferencesError = z.infer<typeof MePreferencesErrorEnum>;
 
 export const MeSchema = UserProfileSchema.pick({
   id: true,

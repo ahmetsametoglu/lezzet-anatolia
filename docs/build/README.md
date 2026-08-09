@@ -33,7 +33,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 14/20 (+4 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 13/13 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/15 (+2 kısmi) |
-| 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 19/28 (+9 kısmi) |
+| 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 20/29 (+9 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 5/21 (+13 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 2/7 (+5 kısmi) |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 4/6 (+1 kısmi) |
@@ -46,7 +46,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/12 (+2 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 15/22 (+6 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 7/15 (+6 kısmi) |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 11/19 (+6 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 2/3 |
 <!-- durum:son -->
 

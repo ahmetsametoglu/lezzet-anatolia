@@ -11,6 +11,70 @@ export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
 // Müşteri profil güncellemesi (21.14c) — web hesap formunun kuralları paket hâlinde; web köprü.
 export { updateCustomerProfile } from './customer/profile';
 export type { UpdateCustomerProfileOutcome } from './customer/profile';
+// Müşteri adres kapısı (21.15) — web hesap sayfasının adres kuralları paket hâlinde; web köprü.
+export {
+  addCustomerAddress,
+  deleteCustomerAddress,
+  listCustomerAddresses,
+  setDefaultCustomerAddress,
+  updateCustomerAddress,
+} from './customer/addresses';
+export type { CustomerAddressOutcome, CustomerAddressWrite } from './customer/addresses';
+// Müşteri tercih kapısı (21.16) — dil + kampanya izinleri; web'in `identity/language-actions` ve
+// `setConsentAction` kurallarının TERFİSİ (web köprü). Damga politikası ve dil yan etkisi künyede.
+export { updateCustomerPreferences } from './customer/preferences';
+export type { CustomerConsentToggles, UpdateCustomerPreferencesOutcome } from './customer/preferences';
+// ── Müşteri puan cüzdanı (21.17) — bakiye + eşik + kullanılabilir kuponlar + puan→kupon çevirme.
+// Web `lib/account/coupons.ts` + `lib/feedback/points.ts`in TERFİSİ (web köprü). Kazanım çekirdeği
+// `feedback/points.ts`te KALIYOR: çevirme bir cüzdan hareketi, geri bildirim aksiyonu değil.
+export { listCustomerCoupons, readCustomerPoints, redeemCustomerPoints } from './customer/points';
+export type {
+  CustomerCoupon,
+  CustomerPointsCard,
+  CustomerPointsView,
+  RedeemCustomerPointsOutcome,
+} from './customer/points';
+// ── Müşteri sipariş okuması (08.5) — terfi 21.16 ────────────────────────────
+// Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı; web köprü olarak
+// duruyor. Detay kapısı İKİ anahtarı da kabul eder (kimlik ⟷ referans) — gerekçe künyede.
+export { getCustomerOrderDetail, listCustomerOrders } from './order/customer-orders';
+export type {
+  CustomerOrderDetail,
+  CustomerOrderDetailInput,
+  CustomerOrderDetailLine,
+  CustomerOrderListInput,
+  CustomerOrderLookup,
+  CustomerOrderPage,
+  CustomerOrderSummary,
+  CustomerOrderThumb,
+} from './order/customer-orders';
+export { trackingUrlOf } from './order/carrier';
+
+// ── Müşteri talep/şikâyet kapısı (16.x) — terfi 21.18 ───────────────────────
+// Web destek sayfalarının kuralları paket hâlinde (web köprü): liste, mesajlaşma detayı, yeni
+// talep ve cevap yazımı. Bildirim tetikleri çağırana `TicketEffects` ile geçer — kapı taşıma
+// bilmez (kurye/sipariş kapılarının aynı deseni).
+export { getCustomerTicket, listCustomerTickets } from './ticket/read';
+export { openCustomerTicket, replyToCustomerTicket } from './ticket/write';
+export type { OpenCustomerTicketOutcome, ReplyToTicketOutcome, TicketEffects } from './ticket/write';
+export type {
+  CustomerTicketSummary,
+  CustomerTicketView,
+  TicketMessageView,
+  TicketReturnOutcome,
+} from './ticket/ticket-types';
+
+// ── Geri bildirim akışı (17.2 · 17.6) — terfi: web davet sayfası + mobil vFb ────────────────
+// Kaynak `apps/web/lib/feedback/{invite,product-feedback,points}.ts`in TOKEN akışı dilimi; web
+// köprü, benimsemesi web şeridinin işi. Kimlik TOKEN'dan çözülür; kapılar customerId almaz.
+export { completeFeedbackInvite, openFeedbackInvite } from './feedback/invite';
+export type { FeedbackCard, FeedbackCompletion, FeedbackInviteView } from './feedback/invite';
+export { reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
+export type { FeedbackWriteOutcome } from './feedback/write';
+export { awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
+
+// ── Yer çözümü (19.8 · 21.6 B) — posta kodu → rota/kargo; onboarding + web yer okuması ──────
+export { resolvePlaceForPostalCode } from './delivery/place';
 
 // ── Vitrin (katalog) orkestrasyonu — terfi 21.6 ─────────────────────────────
 // Kaynağı `apps/web/lib/storefront`ti; ticari bağlam (fiyat · stok · teklif · aile · benzer) orada
@@ -125,3 +189,4 @@ export type { ReturnDrop, ReturnDropLine } from './warehouse/returns';
 // kopyalamak iki yüzeyin aynı parti için farklı karar göstermesi demekti. Web tarafı ince köprü.
 export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
 export type { BatchView } from './warehouse/batch-types';
+export * from './assistant/apply';

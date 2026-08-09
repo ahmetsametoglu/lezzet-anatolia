@@ -48,6 +48,13 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + beğeni + ü
     - **Yan bulgu — ürün adları Talepler'de FRANSIZCA çözülüyormuş.** `DEFAULT_LOCALE` sabiti `'fr'`, yani MÜŞTERİ yüzeyinin varsayılanı; adı yüzey söylemediği için doğru duruyordu. Aynı ürün Talepler'de Fransızca, Fiyatlar ve Stok'ta Türkçe görünüyordu. `OPERATIONS_LOCALE` (`components/operation/ui/labels.ts`) eklendi ve Talepler düzeltildi. 16 birim testi (`feedback-read.test.ts`).
 - [x] (17.2) **FeedbackRequest cron:** teslim +10 gün (taramalı-idempotent); WhatsApp/e-posta link'iyle davet; tamamlanma izlenir
   - *Bitti:* teslimden 10 gün sonra davet gidiyor; tekrar tetiklenmiyor; **davetin indiği sayfa da ayakta** (08.7, 03.08)
+  - **Durum (09.08 — token akışı `@lezzet/application`a TERFİ, 21.14e):** davet açma/oy/yorum/
+    tamamlama/puan çekirdeği `packages/application/src/feedback/{invite,write,points}.ts`e taşındı
+    — ölçüt: aynı akışı artık İKİ yüzey istiyor (web `/feedback/[token]` + mobil vFb ekranı,
+    `GET/POST /api/v1/feedback/:token*`). Kurallar birebir korunarak (90 gün ömür, iki katlı
+    tekrar-engeli, kart-başına sessiz puan, ≥%80 motor eşiği). `apps/web/lib/feedback/*` KÖPRÜ;
+    benimsemesi web şeridinin işi (defter girdisi 09.08). Bu satırın işi değişmedi — kayıt,
+    çekirdeğin adres değiştirdiğini gelecekteki okura söylemek için.
   - **Durum (03.08 — davetin VARIŞ noktası açıldı, satır kapandı):** 29.07'den beri "arka uç hazır, web yalnız daveti açar ve tamamlar" deniyordu ve arka uç gerçekten hazırdı — ama **açılacak sayfa yoktu.** İş koşuyor, mail gidiyor, düğme `/feedback/[token]`'a bakıyor ve 404 alıyordu. Yani "davet gidiyor" ölçütü sağlanıyor ama davetin bir işe yaraması sağlanmıyordu; satırın `[~]` durması bunu doğru gösteriyormuş.
     Sayfa 08.7'de indi (`app/(customer)/[locale]/feedback/[token]/**`); ayrıntı orada. Burada anılmaya değer tek şey **kimliğin token'dan çözülmesi**: bu akışta oturum yok, `customerId` istemciden alınsaydı başkasının adına yorum yazılabilirdi.
   - **Durum (29.07):** **arka uç hazır** — `0029_feedback_request.sql` (tablo + `feedback_request_progress` görünümü), `createDueFeedbackRequests` (taramalı-idempotent; teslim anı `order_status_log`'dan türetilir), `openFeedbackInvite`/`completeFeedbackInvite` (`lib/feedback/invite.ts`). 13 test.

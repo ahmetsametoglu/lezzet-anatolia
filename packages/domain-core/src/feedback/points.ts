@@ -29,6 +29,24 @@ export const POINTS_SETTING_KEYS: Record<EarnablePointsReason, string> = {
 };
 
 /**
+ * **Çevrimin** ayar anahtarları — kazanımınkilerle (`POINTS_SETTING_KEYS`) aynı evde, çünkü aynı
+ * ailedendir: hepsi "puanın kuralı ayardan gelir, koda gömülmez" kararının parçası.
+ *
+ * Buraya taşınmalarının sebebi ölçülen bir ikilik: `apps/web/lib/settings-keys.ts` bu iki anahtarı
+ * sabit olarak tutuyor, `apps/web/lib/feedback/points.ts` ise aynı dizeleri LİTERAL yazıyor. İki
+ * kopya bugün aynı; üçüncüsünü (mobil kapısı) eklemek, bir gün ayrışacak üç yer demekti — ve
+ * ayrıştıklarında hata vermezler, yalnız ekran motorun uygulamayacağı bir eşik söyler (29.07
+ * denetiminin tam olarak bu olduğu yer). Web'inkiler bugün köprü; benimsemesi web şeridinin işi.
+ *
+ * Değerler burada YOK, yalnız anahtarlar: eşiği ve kuruş karşılığını operatör Ayarlar'dan
+ * belirler. Varsayılanlar okuyan kapıda durur (`getNumber`ın ikinci argümanı).
+ */
+/** Kupona çevirmenin asgari puanı — eşiğin altındaki bakiye çevrilemez. */
+export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
+/** Bir puanın CENT karşılığı — "500 puan = 5 €" cümlesi bu ikisinin çarpımıdır. */
+export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
+
+/**
  * **Kaynak satırı OLMAYAN sebepler** — tekillikleri `ref_id` üzerinden kurulamaz.
  *
  * `points_entry_source_key` kısmi indeksi `ref_id is not null` ile sınırlı; ziyaretin işaret

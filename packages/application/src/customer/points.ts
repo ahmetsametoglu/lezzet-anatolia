@@ -1,0 +1,247 @@
+import { DiscountCodeService, DiscountService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
+import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, canRedeem, redemptionCode } from '@lezzet/domain-core';
+import type { CompanyInfo, CustomerType } from '@lezzet/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getPointsBalance } from '../feedback/points';
+
+/*
+  MÜŞTERİ PUAN CÜZDANI — bakiye + çevirme eşiği + kullanılabilir kuponlar + puan→kupon çevirme
+  (21.17). Web'de İKİ dosyada duran kuralın TERFİSİ (kopya değil, CLAUDE §1):
+  `apps/web/lib/account/coupons.ts` (kullanılabilirlik süzgeci) ve `apps/web/lib/feedback/points.ts`
+  (`redeemPoints` + eşik okuması). Ölçüt karşılandı: aynı kuralları artık iki yüzey istiyor (web
+  hesap sayfası + mobil `vHesap` puan kartı). Web dosyaları bugün kendi ekranlarını besliyor
+  (KÖPRÜ); benimsemesi web şeridinin işi.
+
+  ── NEDEN `feedback/points.ts` DEĞİL DE BURASI ──────────────────────────────────────────────
+  O dosya puanın YAZIM çekirdeğidir (kazanım: yorum, sipariş, ziyaret, getiren) ve künyesi kupon
+  çevrimini "bugün tek yüzeyi var, ikinci yüzeyi doğduğu gün AYNI yoldan taşınır" diye bilerek
+  dışarıda bırakmıştı. O gün geldi — ama çevirme bir geri bildirim aksiyonu değil, müşterinin
+  cüzdan hareketidir: tetikleyeni hesap ekranıdır, geri bildirim akışı değil. Bakiye okuması
+  ikisinin ORTAK zeminidir ve kopyalanmıyor: `getPointsBalance` oradan çağrılıyor.
+
+  Web'den ölçülen ve BİREBİR korunan kurallar:
+  · **Kupon ayrı bir tablo değil**, `customerId`si dolu bir indirim satırıdır; `redeem_points`
+    RPC'si onu doğurur. İkinci bir "kupon" varlığı, sepetteki indirim motorunun onu hiç görmemesi
+    demekti.
+  · **Süzgeç KULLANILABİLİRLİĞE göre, sahipliğe göre değil** — pasif · tarih penceresi dışı · kotası
+    dolmuş kupon listeye girmez. Kullanılmış bir kodu göstermek, checkout'ta reddedilecek bir kodu
+    vaat etmektir.
+  · **Kota sayımı `usageCounts` ile**, `discount_use` satırı elle sayılarak değil: o metot iptal
+    edilmiş siparişleri zaten dışlıyor ("iptal hiç olmadı, iade oldu ve döndü") ve o kural burada
+    ikinci kez yazılmamalı.
+  · **Kodsuz kupon listeye girmez** — ilk kod alınır; kod ayrı varlıktır ve tekliği varsayılmaz.
+  · **Puan/kupon B2C'nindir** — B2B'de ikisi de yok (DOMAIN §14). İkisi TEK koşulda çözülür ki bir
+    gün biri B2B'ye sızmasın (web `read.ts` künyesindeki gerekçe).
+  · **Eşik AYARDAN** (`points_redeem_min` × `points_cent_value`), ekrana gömülmez: ekranın söylediği
+    eşik ile motorun uyguladığı eşik ayrıştığında müşteri reddedilecek bir düğmeye basar (29.07).
+    Anahtarlar artık `@lezzet/domain-core`da, kazanım anahtarlarının yanında — üç literal kopyaya
+    çıkmasın diye.
+  · **Kaç puanın harcanacağını İSTEMCİ SÖYLEMEZ** — `canRedeem`e istek geçilmiyor, motor bakiyenin
+    tamamını çeviriyor. İstemciden sayı kabul etseydik ekranın gördüğü eşik ile motorun uyguladığı
+    eşik ayrışabilirdi (web action künyesindeki aynı karar).
+  · **Puan düşümü ile kuponun doğuşu BÖLÜNEMEZ** — ikisi de `redeem_points` RPC'sinin içinde, tek
+    transaction ve müşteri başına advisory kilitle. Uygulama katmanı bunu kendi hesaplamaz.
+
+  Sonuç GÖRÜNÜR RETLİ döner (`updateCustomerPreferences` · `addCustomerAddress` emsali) ve başarıda
+  GÜNCEL CÜZDANI taşır: çevirme hem bakiyeyi düşürür hem listeye kupon ekler — tek kaydı dönmek
+  istemciyi ikinci tura mecbur bırakırdı (sözleşmedeki "aynı zarf" kararı).
+*/
+
+/** Kullanılabilir kişisel kupon — şekli sözleşmede (`MeCouponSchema`), kaynağı `discount` satırı. */
+export interface CustomerCoupon {
+  id: string;
+  code: string;
+  /** Kuponun değeri (cent) — puan kuponu her zaman tutar indirimidir, yüzde değil. */
+  amountCents: number | null;
+  percent: number | null;
+  /** Asgari sepet koşulu; `null` = koşulsuz. Ekran bunu ancak varsa yazar. */
+  minBasketCents: number | null;
+  validTo: string | null;
+}
+
+/** Puan kartı — `null` hâli çağıranda değil, `CustomerPointsView.points`ta yaşıyor. */
+export interface CustomerPointsCard {
+  balance: number;
+  /** `minimumPoints` puan = `valueCents` cent. İkisi de ayardan. */
+  redeem: { minimumPoints: number; valueCents: number };
+}
+
+export interface CustomerPointsView {
+  /** `null` = B2B, yani program dışı. SIFIR DEĞİL: kazanılamayan bakiye boş bir hedef gibi durur. */
+  points: CustomerPointsCard | null;
+  coupons: CustomerCoupon[];
+}
+
+/**
+ * Başarıda GÜNCEL CÜZDAN döner; yeni kupon zaten `view.coupons` içindedir. `code` ayrıca taşınıyor
+ * çünkü ekran "PUAN-7K4M2P hazır" diyebilmeli ve bunu listeyi ESKİSİYLE karşılaştırarak bulmak
+ * zorunda kalmamalı. Kuponun kendisi ikinci kez KURULMUYOR — o iş süzgeçten geçmiş listenin.
+ * `code: null` yalnız RPC kodu döndürmediğinde (olmaması gereken hâl): uydurma bir kod basmaktansa
+ * ekran o bildirimi hiç göstermesin.
+ */
+export type RedeemCustomerPointsOutcome =
+  | { status: 'ok'; view: CustomerPointsView; code: string | null }
+  | { status: 'insufficient_balance' | 'below_minimum' | 'not_eligible' };
+
+/**
+ * Program dışı mı — **İKİ sinyal de sayılır** ve bu web'in okumasından bilinçli bir SAPMA.
+ *
+ * Web hesap okuması B2B'yi yalnız `companyInfo`dan türetiyor ("kanal saklanmaz, türetilir"), ama
+ * çevirmeye izin veren motor (`canRedeem`) yalnız `type`a bakıyor. İki ölçüt AYRIŞABİLİYOR ve
+ * bugün gerçekten ayrışıyor (ölçüldü, yerel veri: `type='company'` + künyesi boş bir profil var).
+ * O profilde web bugün puan kartını ÇİZİYOR, düğmeyi gösteriyor, müşteri basıyor ve motor
+ * `not_eligible` diyor — ekranın vaat ettiği ile motorun uyguladığı ayrışması, 29.07 denetiminin
+ * tam olarak kapattığı arıza sınıfı.
+ *
+ * Burada birleşim (OR) alınıyor: hangi sinyal B2B derse kart çizilmez. Sonuç motorun kararından
+ * ASLA daha cömert olmaz — reddedilecek bir düğme gösterilmez. Ters yön (künyesi dolu ama
+ * `type='individual'`) zaten web'in de sakladığı hâl, orada davranış aynen korunuyor.
+ *
+ * **Bu bir yama, kök çözüm değil:** iki ölçütten hangisinin doğru olduğu bir ürün/veri kararıdır
+ * (`type` mi kanonik, `companyInfo` mu) ve rapora açık madde olarak yazıldı. Kararı verilene kadar
+ * güvenli taraf budur.
+ */
+function isOutsideProgram(type: CustomerType, companyInfo: CompanyInfo | null): boolean {
+  return type === 'company' || companyInfo !== null;
+}
+
+/** Çevirme eşiği — tek yerde okunur; kart da çevirme kapısı da AYNI sayıyı görür. */
+async function redeemSettings(db: SupabaseClient): Promise<{ minimum: number; centValue: number }> {
+  const settings = new SettingsService(db);
+  const [minimum, centValue] = await Promise.all([
+    settings.getNumber(POINTS_REDEEM_MIN_KEY, 500),
+    settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
+  ]);
+  return { minimum, centValue };
+}
+
+/**
+ * Hesap ekranının puan bölümü — bakiye, eşik ve kullanılabilir kuponlar TEK turda.
+ *
+ * B2B'de sorgu bile atılmaz: sonucu hiç çizilmeyecek bir veriyi getirmek, boşa dolaşmaktır (web'in
+ * aynı kısa devresi). Profil yoksa da program dışı sayılır — kimliksiz bir cüzdan yoktur.
+ */
+export async function readCustomerPoints(db: SupabaseClient, customerId: string): Promise<CustomerPointsView> {
+  const profile = await new UserProfileService(db).getById(customerId);
+  if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { points: null, coupons: [] };
+
+  const [balance, settings, coupons] = await Promise.all([
+    getPointsBalance(db, customerId),
+    redeemSettings(db),
+    listCustomerCoupons(db, customerId),
+  ]);
+
+  return {
+    points: {
+      balance: balance.balance,
+      redeem: { minimumPoints: settings.minimum, valueCents: settings.minimum * settings.centValue },
+    },
+    coupons,
+  };
+}
+
+/**
+ * Müşterinin KULLANILABİLİR kişisel kuponları — üç eleme (pasif · tarih penceresi · kota).
+ *
+ * Süzgeç "sahibi kim" değil "bugün kullanılabilir mi" sorusunu yanıtlar: ekran "kuponlarım" dese de
+ * müşterinin beklediği anlam budur, ve kullanılmış bir kodu listelemek onu checkout'ta hataya
+ * göndermektir (web künyesindeki ders).
+ */
+export async function listCustomerCoupons(db: SupabaseClient, customerId: string): Promise<CustomerCoupon[]> {
+  const discounts = new DiscountService(db);
+  const mine = await discounts.listByCustomer(customerId);
+  if (mine.length === 0) return [];
+
+  const now = Date.now();
+  const active = mine.filter((d) => {
+    if (!d.isActive) return false;
+    if (d.validFrom && Date.parse(d.validFrom) > now) return false;
+    if (d.validTo && Date.parse(d.validTo) < now) return false;
+    return true;
+  });
+  if (active.length === 0) return [];
+
+  const ids = active.map((d) => d.id);
+  const [usage, codes] = await Promise.all([discounts.usageCounts(ids), new DiscountCodeService(db).listByDiscounts(ids)]);
+
+  return active
+    .filter((d) => {
+      const used = usage.get(d.id);
+      // Kota YOKSA sınırsızdır; `maxUses` null bir eksiklik değil, bilinçli bir "sınırsız".
+      if (d.maxUses !== null && (used?.total ?? 0) >= d.maxUses) return false;
+      if (d.perCustomerLimit !== null && (used?.byCustomer.get(customerId) ?? 0) >= d.perCustomerLimit) return false;
+      return true;
+    })
+    .flatMap((d) => {
+      const code = codes.get(d.id)?.[0]?.code;
+      if (!code) return [];
+      return [
+        {
+          id: d.id,
+          code,
+          amountCents: d.amountCents,
+          percent: d.percent,
+          minBasketCents: d.minBasketCents,
+          validTo: d.validTo,
+        },
+      ];
+    });
+}
+
+/**
+ * **Puan → kişisel kupon** (17.5). Müşteri kendi isteyince çevirir, otomatik değil: biriken puanı
+ * kendiliğinden bozmak, daha büyük bir ödül için biriktirme kararını elinden almaktır (DOMAIN §14).
+ *
+ * Karar motorda (`canRedeem`), uygulama RPC'de (`redeem_points`): puan düşümü ve kuponun doğuşu
+ * bölünemez ve müşteri başına serileştirilir — iki eşzamanlı çevirme aynı puanı iki kez harcayamaz.
+ *
+ * Kod motorda üretilir, benzersizliği veritabanı söyler. Çakışma astronomik ölçüde nadirdir (26^6)
+ * ama imkânsız değil: çarpışmada yeni kodla yeniden denenir (`generateReferenceNo` ile aynı
+ * sözleşme). Üç denemeden sonra ısrar etmenin anlamı yok — ortada başka bir sorun vardır.
+ */
+export async function redeemCustomerPoints(db: SupabaseClient, input: { customerId: string }): Promise<RedeemCustomerPointsOutcome> {
+  const [profile, balance, settings] = await Promise.all([
+    new UserProfileService(db).getById(input.customerId),
+    getPointsBalance(db, input.customerId),
+    redeemSettings(db),
+  ]);
+  if (!profile) return { status: 'not_eligible' };
+
+  const check = canRedeem({
+    customerType: profile.type,
+    balance: balance.balance,
+    minimum: settings.minimum,
+    centValue: settings.centValue,
+  });
+  if (!check.allowed) {
+    // `b2b` dışarı motor sözlüğüyle sızmaz: müşteri "programa dahil değilsiniz" cümlesini görür.
+    return { status: check.reason === 'b2b' ? 'not_eligible' : check.reason };
+  }
+
+  const entries = new PointsEntryService(db);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await entries.redeem({
+        customerId: input.customerId,
+        points: check.pointsSpent,
+        valueCents: check.valueCents,
+        minimum: settings.minimum,
+        code: redemptionCode(),
+      });
+
+      // RPC'nin `ok:false`u bir ARIZA değil, motorun cevabı — yukarıdaki `canRedeem` ile bu çağrı
+      // arasında başka bir çevirme araya girmiş olabilir (advisory kilit transaction'ın İÇİNDE,
+      // öncesinde değil). Son sözü veritabanı söyler: bakiyeyi orada sayıyor.
+      if (!result.ok) return { status: result.reason ?? 'not_eligible' };
+
+      // Cüzdan çevirmeden SONRA okunur: bakiye düştü ve listeye yeni kupon girdi. Kuponu elle
+      // kurmuyoruz — listedeki satır süzgeçten geçmiş hâlidir, ikinci bir kurulum aynı kuponu iki
+      // farklı şekilde tarif etme riskidir.
+      return { status: 'ok', view: await readCustomerPoints(db, input.customerId), code: result.code ?? null };
+    } catch (err) {
+      if ((err as { code?: string }).code !== '23505') throw err; // unique ihlali değilse bizim sorunumuz değil
+    }
+  }
+
+  throw new Error('redeemCustomerPoints: benzersiz kupon kodu üretilemedi');
+}
