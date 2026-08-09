@@ -78,9 +78,32 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
   return {
     answer,
     resolution,
-    // Yalnız ÇÖZÜLMÜŞ hâller depo verir. `ambiguous`/`unknown`/`unresolved` → yer bilinmiyor gibi
-    // davranılır: sessizce bir depo seçmek, müşteriye başka şehrin stoğunu göstermek olurdu.
-    warehouseId: resolved ? resolution.warehouseId : null,
+    /**
+     * **YALNIZ ROTA DEPOSU** (09.08 · kullanıcı bildirimi, denetim+müşteri şeridi ölçtü).
+     *
+     * ── ÖNCEKİ HÂL VE BEDELİ ──────────────────────────────────────────────────
+     * Burası `resolution.warehouseId`i olduğu gibi yayıyordu. Ama çözüm `shipping` hâlinde o alana
+     * **kargo deposunun** kimliğini koyuyor (`warehouse-resolve.ts:96`) — yani tek kutu iki ayrı
+     * şey taşıyordu: rota hâlinde "aracın çıktığı depo", kargo hâlinde "kargonun çıktığı depo".
+     * Okuyan taraf ayırt edemiyor ve hepsini birincisi sanıyordu.
+     *
+     * Ölçüldü (aynı 12 ürün, `stockStatusOf`):
+     *   67000 rota içi            → available 12
+     *   75011 ROTA DIŞI           → available 12   ← Strasbourg'daymış gibi
+     *   KEHL (rota içi, yerelde yok) → shipping 5 · available 5 · elsewhere 2   ← doğru çalışıyor
+     *
+     * Yani dört hâl motoru SAĞLAM; bozuk olan girdiydi. Rota dışındaki müşteriye "ücretsiz kapı
+     * teslimi" işareti veriliyor, kargo grubu hiç doğmuyor ve iki-checkout akışı tetiklenmiyordu.
+     *
+     * ── ÜÇ HÂL ARTIK AYIRT EDİLEBİLİR, ÜÇÜNCÜ BİR ALANA GEREK YOK ─────────────
+     *   (null, null)   → yer bilinmiyor        → okuma ağ-geneline düşer (C3)
+     *   (rota, kargo)  → rota içi              → yerel havuz o deponun stoğu
+     *   (null, kargo)  → ROTA DIŞI             → yerel havuz BOŞ, yalnız kargo
+     *
+     * `mode` diye bir alan eklemedim bilerek: türetilebilen bir şeyi ayrıca taşımak, iki kaynağın
+     * bir gün ayrışması demektir. Alanların KENDİSİ artık tek anlam taşıyor — kök sebep buydu.
+     */
+    warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
     // Kargo deposu ÜLKEDEN türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
     shippingWarehouseId: resolved ? (findShippingWarehouse(resolution.country, warehouses)?.id ?? null) : null,
   };

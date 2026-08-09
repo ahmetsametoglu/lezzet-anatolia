@@ -301,3 +301,22 @@ Sistemi tek-depo varsayımından depo ağına taşır: depo varlığı, posta ko
     - **Yer PARAMETRE** (`PackagePlace = Partial<PlaceWarehouses>`), çerez okuması değil — 34 testin dersi (`settings-scope.ts` künyesi). Verilmezse davranış bugünküyle aynı: ağ-geneli okuma, yol bilinmiyor.
     - **Ölçüldü (tazelenmiş DB, gerçek paketler):** STR müşterisi → dördü de `local`. KEHL müşterisi → `bayram-sofrasi` kalemleri `14/1 0/1 0/1` dağılmış + soğuk zincir kalemi var → `not_shippable_here`; `maras-dondurma-seti` soğuk zincir → `not_shippable_here` (kargoya VERİLMİYOR); `fistik-sevenler` ve `baklava-ikilisi` yerelde yok, STR'de tam takım → **`shipping`** — paket ilk kez kargo grubuna binebiliyor.
     - **Kalan (müşteri şeridi):** paket kartı/satırı `route`'u okuyup varyantla aynı cümleleri göstermeli (`StockMark` deseni); `/packages` ve `/package/[slug]` sayfaları yeri kapıya geçirmeli (parametre isteğe bağlı, bugünkü davranış varsayılan). Talep açıldı.
+
+- [x] (19.23) **Rota DIŞI müşteri "Strasbourg'daymış" gibi okunuyordu — `warehouseId` tek kutuda iki anlam taşıyordu** *(kullanıcı bildirimi 09.08 → müşteri şeridi paket tarafında gördü → arka uç ölçtü ve genişletti)* · `touches: apps/web/lib/delivery/read-place.ts, apps/web/lib/delivery/place-types.ts, packages/application/src/catalog/{product-context,storefront-types}.ts, scripts/seed/coverage.ts`
+  - *Bitti:* rota dışı müşteri `shipping`/`elsewhere` işaretleri alıyor; teklifleri kaybetmiyor; kapsam denetiminde "rota dışı" kovası var
+  - **Ölçülen (aynı 12 ürün, `stockStatusOf`):**
+    ```
+    67000 rota içi                 available 12
+    KEHL  rota içi, yerelde yok    shipping 5 · available 5 · elsewhere 2   ← ÇALIŞIYOR
+    75011 ROTA DIŞI                available 12                            ← 67000 ile BİREBİR AYNI
+    ```
+  - **Kök sebep:** `resolvePlaceByPostalCode` `shipping` hâlinde `warehouseId` alanına **kargo deposunun** kimliğini koyuyor (`warehouse-resolve.ts:96`), `read-place` onu olduğu gibi yayıyordu. Tek kutu iki anlam: rota hâlinde "aracın çıktığı depo", kargo hâlinde "kargonun çıktığı depo". Okuyan taraf ayırt edemiyor, hepsini birincisi sanıyordu.
+  - **Dört hâl motoru SAĞLAMDI** — bozuk olan girdiydi. Bu ayrım önemli: `stockStatusOf`, `StockMark`, `decideCartAgainstWarehouse`, iki-checkout akışı hepsi doğru yazılmıştı ve KEHL senaryosunda çalışıyordu.
+  - **Neden bugüne dek görülmedi:** üçüncü senaryo hep **KEHL müşterisiyle** denendi — rota İÇİNDE olup kendi deposunda mal bulunmayan müşteri. Orada iki depo farklı, ayrım çalışıyor. **Rota DIŞI müşteri hiç denenmedi**; orada iki depo aynı kimliğe düşüyor (STR hem rota hem kargo deposu) ve karşılaştırılacak iki şey aynı oluyor. Yapısaldır, seed artefaktı değil: kargo deposu ayrı bir depo olsaydı da `warehouseId` ile `shippingWarehouseId` yine eşit olurdu.
+  - **Düzeltme — yeni alan YOK, yeniden adlandırma YOK.** `warehouseId` artık YALNIZ rota deposu; üç hâl iki alandan türüyor: `(null,null)` bilinmiyor · `(rota,kargo)` rota içi · `(null,kargo)` **rota dışı**. `mode` alanı bilerek eklenmedi — türetilebilen bir şeyin ikinci kaynağı bir gün ötekiyle çelişir.
+  - **Yerel havuz rota dışında BOŞ HARİTA, ağ-geneli DEĞİL.** Müşteri şeridinin önerdiği "kutuyu boşalt" düzeltmesi tek başına yetmiyordu ve sebebi buydu: `warehouseId` null olunca okuma ağ-geneline düşüyor, toplam sıfırdan büyük çıkıyor ve motor yine `local` diyordu — hata yer değiştirir, kaybolmazdı (ölçüldü).
+  - **Teklif havuzu = malın GELDİĞİ depo** (`warehouseId ?? shippingWarehouseId`): alan daraltılınca rota dışı müşteri indirimlerini sessizce kaybedecekti. Düzeltmenin yan hasarı önlendi — ölçüldü, 12/12 ürün teklifini koruyor.
+  - **Sonuç (ölçüldü):** `75011 → shipping 9 · elsewhere 3` (kargolanamayan soğuk zincir kalemleri doğru biçimde `elsewhere`). 67000 · KEHL · yer-bilinmiyor hâlleri DEĞİŞMEDİ.
+  - **Kapsam denetimine "Yer çözümü" alanı eklendi** (rota içi kod · rota DIŞI ama hizmette · kargo çıkış deposu) — senaryonun ön koşulu artık makineyle sorgulanıyor. 93 kova.
+  - **Sipariş tarafı zaten sağlamdı:** `checkout-draft` yeri ADRESTEN çözüyor, `deliveryType` doğru çıkıyor. Bozuk olan gösterim ve sepet akışıydı.
+

@@ -41,6 +41,15 @@ export async function loadProductContext(
   viewer: PricingViewer,
 ): Promise<Map<string, ProductContext>> {
   const { warehouseId, shippingWarehouseId } = place;
+  /**
+   * **YER BİLİNİYOR MU** — üç hâli ayıran ölçüt (19.23).
+   *
+   * `warehouseId` artık YALNIZ rota deposudur (`read-place.ts` künyesi). Rota dışındaki müşteride
+   * o alan `null`, kargo deposu ise DOLUDUR — yani "yer bilinmiyor" ile "yerini biliyorum, orada
+   * rota yok" bu ikiliden türetilebiliyor. Üçüncü bir alan taşımıyoruz: türetilebilen bir şeyin
+   * ikinci kaynağı bir gün ötekiyle çelişir.
+   */
+  const yerBiliniyor = warehouseId !== null || shippingWarehouseId !== null;
   const context = new Map<string, ProductContext>();
   if (!rows.length) return context;
 
@@ -60,7 +69,16 @@ export async function loadProductContext(
     // Kanal VE kimlik birlikte gider: kimlik olmadan `findApplicableMap` müşteriye özel fiyat
     // satırlarını hiç sorgulamıyor ve motor her zaman `customerPriceCents: null` alıyordu.
     new PriceService(db).findApplicableMap(variantIds, viewer.channel, viewer.customerId),
-    warehouseId ? stocks.getAvailableMap(warehouseId, variantIds) : stocks.getNetworkAvailabilityMap(variantIds),
+    // ── YEREL HAVUZ: rota deposu · BOŞ · ağ-geneli ───────────────────────────
+    // Rota dışındaki müşteride yerel havuz **BOŞ HARİTA**dır, ağ-geneli DEĞİL (09.08'de düzeltildi):
+    // ona araç gitmiyor, yani "yerelde var" diyebileceğimiz bir depo yok. Ağ-geneline düşseydik
+    // toplam sıfırdan büyük çıkar ve motor yine `local` derdi — hata yer değiştirir, kaybolmazdı.
+    // (Bu tam olarak müşteri şeridinin önerdiği düzeltmenin tek başına neden yetmediğiydi.)
+    warehouseId
+      ? stocks.getAvailableMap(warehouseId, variantIds)
+      : yerBiliniyor
+        ? Promise.resolve(new Map())
+        : stocks.getNetworkAvailabilityMap(variantIds),
     // ── KARGO DEPOSU AYRI OKUNUR (19.10) ──────────────────────────────────────
     // "Yerel depoda yok" tek başına **tükendi demek DEĞİLDİR** (C3): ürün kargo deposunda duruyorsa
     // hâlâ satılabilir. Bu ikinci harita olmadan sistem müşteriyi tanıdıkça daha AZ satıyordu —
@@ -82,7 +100,10 @@ export async function loadProductContext(
     // ya da gelecek malı kaçırmaktır.
     //
     // Yer bilinmiyorsa okunmaz: `stock` zaten ağ-geneli toplamdır.
-    warehouseId ? stocks.getNetworkAvailabilityMap(variantIds) : Promise.resolve(null),
+    // Ağ toplamı yer BİLİNDİĞİNDE okunur (rota içi ya da dışı): "burada yok ama başka depoda var"
+    // (`elsewhere`) ile "hiçbir yerde yok" (`out_of_stock`) ayrımının tek dayanağı. Yer bilinmiyorsa
+    // yerel havuz ZATEN ağ toplamıdır, ikinci kez okumanın karşılığı yok.
+    yerBiliniyor ? stocks.getNetworkAvailabilityMap(variantIds) : Promise.resolve(null),
     // ── TEKLİF TUTARI YALNIZ YER BELLİYKEN ────────────────────────────────────
     // Yer belliyse o deponun teklifi okunur. Yer BİLİNMİYORSA hiç okunmaz (boş liste): teklif bir
     // partiye bağlıdır, parti bir depodadır ve ziyaretçinin posta kodu oraya düşmeyebilir —
@@ -95,7 +116,13 @@ export async function loadProductContext(
     // BEKLEYEN(19.7): teklifin VARLIĞI (`has_near_expiry_offer`) posta kodu davetine dönüşecek —
     // "posta kodunuzu girin, size ulaşabilecek son tarih indirimlerini görün". (İşaret webin
     // silinen kopyasından taşındı — 21.6 benimsemesi, 08.08.)
-    warehouseId ? stocks.listOfferBatches(variantIds, warehouseId) : Promise.resolve([]),
+    // **Teklif havuzu = malın GELDİĞİ depo**, rota deposu değil: rota dışındaki müşteriye kargo
+    // deposunun teklifi okunur. Eskiden `warehouseId` kargo hâlinde de dolu olduğu için bu
+    // kendiliğinden doğruydu; alan daraltılınca açıkça yazılması gerekti (yoksa rota dışı müşteri
+    // indirimleri sessizce kaybederdi — düzeltmenin yan hasarı olurdu).
+    warehouseId || shippingWarehouseId
+      ? stocks.listOfferBatches(variantIds, warehouseId ?? shippingWarehouseId ?? undefined)
+      : Promise.resolve([]),
   ]);
 
   const offers = toOfferMap(offerBatches);

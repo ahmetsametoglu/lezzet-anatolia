@@ -384,6 +384,52 @@ export const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    baslik: 'Yer çözümü',
+    kovalar: [
+      {
+        ad: 'rota İÇİ posta kodu',
+        zorunlu: true,
+        sayac: (db) => say(db, 'delivery_zone_postal_code'),
+      },
+      {
+        ad: 'rota DIŞI ama hizmette',
+        zorunlu: true,
+        /**
+         * **Rota dışı müşteri — 19.23'ün kaçırıldığı hâl.**
+         *
+         * "Dört stok hâli" (available · shipping · elsewhere · out_of_stock) yazıldı, test edildi
+         * ve ÇALIŞIYOR — ama hep KEHL müşterisiyle denendi: rota İÇİNDE olup kendi deposunda mal
+         * bulunmayan müşteri. O senaryoda iki depo farklı, sistem ayırt edebiliyor.
+         *
+         * **Rota DIŞI müşteri hiç denenmedi** ve orada iki depo aynı kimliğe düşüyordu (rota
+         * çözümü kargo deposunu `warehouseId` alanında döndürüyor). Sonuç: 75011 ile 67000 birebir
+         * aynı çıktıyı veriyordu — sistem Parisli müşterinin Strasbourg'da olduğuna inanıyordu.
+         *
+         * Kova bunu doğrudan soramaz (çözüm bir fonksiyon, tablo değil) ama ÖN KOŞULUNU sorar:
+         * hizmet verdiğimiz ülkede, hiçbir rota bölgesine ait OLMAYAN bir posta kodu var mı?
+         * Yoksa rota dışı senaryo hiçbir ölçümde doğamaz.
+         */
+        sayac: async (db) => {
+          const [{ data: rotaKodlari }, { data: referans }] = await Promise.all([
+            db.from('delivery_zone_postal_code').select('country,postal_code'),
+            db.from('postal_code_place').select('country,postal_code').eq('country', 'FR').limit(2000),
+          ]);
+          const rota = new Set(
+            ((rotaKodlari ?? []) as unknown as { country: string; postal_code: string }[]).map((r) => `${r.country}:${r.postal_code}`),
+          );
+          const hepsi = (referans ?? []) as unknown as { country: string; postal_code: string }[];
+          return hepsi.filter((r) => !rota.has(`${r.country}:${r.postal_code}`)).length;
+        },
+      },
+      {
+        ad: 'kargo çıkış deposu',
+        zorunlu: true,
+        // Rota dışı müşterinin TEK yolu. Yoksa çözüm `unresolved` döner ve senaryo yine doğmaz.
+        sayac: (db) => say(db, 'warehouse', (q) => q.eq('ships_online', true).eq('is_active', true)),
+      },
+    ],
+  },
+  {
     baslik: 'Konuşma',
     kovalar: [
       {

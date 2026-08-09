@@ -31,11 +31,25 @@ import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode,
  * posta kodu → bölge → depo). O orkestrasyon 21.6'nın (B) parçasıdır ve HENÜZ TERFİ ETMEDİ; ettiği
  * gün bu paketin `delivery/` klasörüne gelir ve tip orada kalmaya devam eder — yani ev değişmez,
  * yalnız üreticisi de yanına taşınır. Web'in `PlaceWarehouses`'ı bugün yapısal ikizidir.
+*
+ * ── ÜÇ HÂL, İKİ ALANDAN TÜRER (19.23 · 09.08) ────────────────────────────────
+ *   (null, null)   yer bilinmiyor   → okuma ağ-geneline düşer (C3: "tükendi" ancak hiçbir depoda
+ *                                     yoksa denir)
+ *   (rota, kargo)  rota içi         → yerel havuz o deponun stoğu
+ *   (null, kargo)  **ROTA DIŞI**    → yerel havuz BOŞ; müşteriye yalnız kargo gider
+ *
+ * **`warehouseId` YALNIZ ROTA deposudur.** Eskiden çözümün `warehouseId`i olduğu gibi yayılıyordu
+ * ve o alan `shipping` hâlinde KARGO deposunu taşıyor — tek kutu iki anlam. Okuyan taraf ayırt
+ * edemediği için rota dışındaki müşteriye "ücretsiz kapı teslimi" işareti veriliyor, kargo grubu
+ * hiç doğmuyordu (ölçüldü: 75011 ile 67000 birebir aynı sonucu veriyordu).
+ *
+ * Üçüncü bir `mode` alanı EKLENMEDİ: türetilebilen bir şeyin ikinci kaynağı bir gün ötekiyle
+ * çelişir. Alanların kendisi artık tek anlam taşıyor — kök sebep buydu.
  */
 export interface PlaceWarehouses {
-  /** Yerin çözdüğü depo. `null` = yer bilinmiyor → okuma ağ-geneline düşer. */
+  /** **ROTA** deposu — aracın çıktığı yer. `null` = yer bilinmiyor YA DA rota dışı (üstteki tablo). */
   warehouseId: string | null;
-  /** Ülkenin kargo deposu. `null` = yer bilinmiyor ya da o ülkeye kargo yok. */
+  /** Ülkenin kargo çıkış deposu. `null` = yer bilinmiyor ya da o ülkeye kargo yok. */
   shippingWarehouseId: string | null;
 }
 
