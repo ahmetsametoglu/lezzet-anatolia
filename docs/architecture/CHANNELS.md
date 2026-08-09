@@ -119,6 +119,8 @@ Sıra kuralı (SCOPE ile uyumlu): zemin adımında yalnızca **genişlemeye enge
 
 ## İlgili dosyalar
 
+- `AI_CUSTOMER_AGENT.md` — müşteri ajanının işletme kurgusu: otonom-varsayılan reaktif cevap +
+  proaktif satış döngüsü (inceleme 09.08, karar turu bekliyor)
 - `ADR_WHATSAPP.md` — WhatsApp strateji kararları (ADR-001…005)
 - `WHATSAPP_ANALYSIS.md` — pazar/kanal analizi ve teknik olabilirlik
 - `COMPETITORS.md` — rakip haritası

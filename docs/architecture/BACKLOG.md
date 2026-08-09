@@ -195,7 +195,9 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 - Instagram comment-to-DM → WhatsApp'a taşıma
 
 **Faz 2 — ölçek:**
-- Double opt-in GDPR-uyumlu newsletter, segmentli proaktif template
+- Double opt-in GDPR-uyumlu newsletter, segmentli proaktif template — **kurgu önerisi yazıldı
+  09.08: [`AI_CUSTOMER_AGENT.md`](AI_CUSTOMER_AGENT.md)** (şablon kapıyı çalar → ücretsiz pencerede
+  reaktif ajan satışı kapatır; karar turu bekliyor)
 - Tam chatbot/SSS otomasyonu, B2B tek-tuş tekrar sipariş kancası
 
 ---
@@ -239,11 +241,13 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 
 Mobil uygulama + push, teslimat penceresi/rota kapasitesi, Meta/Google pixel + CAPI + retargeting, akıllı bölge önerisi, kampanya otomasyonu, WhatsApp broadcast/tam chatbot (§14 ölçek), ileri analitik.
 
-- **AI yönetici asistanı (MCP)** — niyet notu yazıldı 30.07: [`AI_ADMIN_ASSISTANT.md`](AI_ADMIN_ASSISTANT.md).
-  Yapay zeka MCP üzerinden yöneticinin işlerinin büyük kısmını yapar (hata raporu, dönemsel paket,
-  sosyal medya içeriği, pazarlama önerisi, finansal analiz) ama **sınırlı ve denetlenebilir**: iki
-  anahtar (bağlantı + kısa ömürlü kapsamlı oturum), **onay kuyruğu** (asistanın yazma niyeti JSON
-  olarak birikir, yönetici tek tek onaylar), son kullanıcı bilgilerine ve şirket-hassas verilere
-  erişim yok. **Faz 1'in tamamı bitmeden başlanmaz** (kullanıcı kararı). Referans projede MCP
-  sunucusu + iki anahtar + oran sınırı + çağrı denetimi ÇALIŞIYOR; onay kuyruğu ve veri maskeleme
-  bize özgü, sıfırdan yazılacak.
+- **AI yönetici asistanı (MCP)** — niyet 30.07; **kurgu ve teknik sınırlar belirlendi 09.08**
+  (üç kullanıcı kararıyla: finans = toplanmış marj · istemci = claude.ai/Desktop connector, OAuth
+  ilk günden · oturum = 1 saat + kapsam, parametrik): [`AI_ADMIN_ASSISTANT.md`](AI_ADMIN_ASSISTANT.md).
+  Kurgu: `apps/backend`'e `/mcp` (Hono, istek-başına stateless sunucu — 2026-07-28 spec'iyle uyumlu),
+  ikili anahtar, **onay kuyruğu `assistant_proposal`** (hiçbir yazma doğrudan değil; onay YALNIZ
+  operasyon panelinden, MCP yüzeyinden verilemez; uygulama normal servis/motor yolundan), araç
+  kataloğu üç fazda (salt-okuma → kuyruklu yazma → medya/dışa dönük), son kullanıcı kimliği ve
+  ürün-tekil maliyet/marj asistana kapalı. **Faz 1'in tamamı bitmeden kod yazılmaz** (kullanıcı
+  kararı). Referans projede sunucu + iki anahtar + oran sınırı + çağrı izi ÇALIŞIYOR; onay kuyruğu
+  ve veri maskeleme bize özgü, sıfırdan yazılacak.
