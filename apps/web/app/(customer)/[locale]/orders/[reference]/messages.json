@@ -27,6 +27,15 @@
     },
     "routeLine": "🚚 Kapıya teslim",
     "shippingLine": "📦 Kargo ile",
+    "trackingLabel": "Takip no",
+    "trackingCta": "Kargoyu takip et ↗",
+    "carrier": {
+      "colissimo": "Colissimo",
+      "chronopost": "Chronopost",
+      "dhl": "DHL",
+      "ups": "UPS",
+      "other": "Kargo firması"
+    },
     "cancelledTitle": "Bu sipariş iptal edildi",
     "returningTitle": "İade süreci sürüyor",
     "itemsTitle": "Kalemler",
@@ -61,6 +70,15 @@
     },
     "routeLine": "🚚 Livraison à domicile",
     "shippingLine": "📦 Par colis",
+    "trackingLabel": "N° de suivi",
+    "trackingCta": "Suivre mon colis ↗",
+    "carrier": {
+      "colissimo": "Colissimo",
+      "chronopost": "Chronopost",
+      "dhl": "DHL",
+      "ups": "UPS",
+      "other": "Transporteur"
+    },
     "cancelledTitle": "Cette commande a été annulée",
     "returningTitle": "Un retour est en cours",
     "itemsTitle": "Articles",
@@ -95,6 +113,15 @@
     },
     "routeLine": "🚚 Lieferung an die Tür",
     "shippingLine": "📦 Per Versand",
+    "trackingLabel": "Sendungsnummer",
+    "trackingCta": "Sendung verfolgen ↗",
+    "carrier": {
+      "colissimo": "Colissimo",
+      "chronopost": "Chronopost",
+      "dhl": "DHL",
+      "ups": "UPS",
+      "other": "Versanddienstleister"
+    },
     "cancelledTitle": "Diese Bestellung wurde storniert",
     "returningTitle": "Eine Rückgabe ist im Gange",
     "itemsTitle": "Artikel",

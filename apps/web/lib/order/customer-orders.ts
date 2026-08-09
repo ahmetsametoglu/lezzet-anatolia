@@ -3,8 +3,9 @@ import { OrderItemService, OrderService, OrderStatusLogService, serviceDb } from
 import { bundleQtyOf, customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from '@lezzet/domain-core';
 import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { CustomerOrderStatus, KeysetCursor, OrderItem, PaymentMethod, PaymentStatus } from '@lezzet/types';
+import type { Carrier, CustomerOrderStatus, KeysetCursor, OrderItem, PaymentMethod, PaymentStatus } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import { trackingUrlOf } from './carrier';
 import { resolveOrderLines } from './customer-lines';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 
@@ -173,6 +174,18 @@ export interface CustomerOrderDetail {
   paymentStatus: PaymentStatus;
   /** Vadeli (B2B) — ödeme hapı tasarımda ayrı bir hâl olarak çizili ("📋 Vadeli"). */
   onAccount: boolean;
+  /**
+   * **Kargo künyesi** (08.5) — tasarımın "Kargolu sipariş" kartı: taşıyıcı + takip no + takip bağı.
+   *
+   * `null` iki ayrı hâlde: rota siparişi (kısıt veride — `order_carrier_only_shipping`) ve
+   * **taşıyıcısı henüz girilmemiş** kargo siparişi. İkisini ayırmıyoruz çünkü ekranda ikisi de aynı
+   * şeyi yapar: blok çizilmez. "Kargo bilgisi yakında" gibi bir söz vermek, operatörün numarayı ne
+   * zaman gireceğini bilmediğimiz hâlde bir zaman vaadi olurdu.
+   *
+   * `trackingUrl` ayrıca taşınıyor, ekranda türetilmiyor: kural tek yerde ve testli
+   * (`lib/order/carrier.ts`) — iki ekran (masaüstü/mobil) aynı adresi iki kez hesaplamasın.
+   */
+  shipment: { carrier: Carrier; trackingNumber: string | null; trackingUrl: string | null } | null;
 }
 
 /**
@@ -286,6 +299,16 @@ export async function getCustomerOrderDetail(
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     onAccount: order.onAccount,
+    // Taşıyıcı YOKSA künye de yok — numarası olup taşıyıcısı olmayan bir kargo anlamsız (kolonlar
+    // birlikte yazılıyor, `setShipment`). Numara `null` olabilir: taşıyıcı belli, numara henüz
+    // gelmemiş olabilir ve o hâlde ekran taşıyıcıyı söyleyip numarayı beklemekte haklıdır.
+    shipment: order.carrier
+      ? {
+          carrier: order.carrier,
+          trackingNumber: order.trackingNumber,
+          trackingUrl: trackingUrlOf(order.carrier, order.trackingNumber),
+        }
+      : null,
   };
 }
 

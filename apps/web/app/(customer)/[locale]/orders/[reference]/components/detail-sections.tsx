@@ -210,10 +210,16 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
         .join(', ')
     : null;
 
+  const shipment = order.shipment;
+
   return (
     <Panel title={title}>
       <span className="font-sans text-body-sm leading-relaxed text-body">
         {order.deliveryType === 'route' ? t.routeLine : t.shippingLine}
+        {/* Taşıyıcı adı teslimat satırının DEVAMI, ayrı satır değil — tasarımda tek cümle:
+            "📦 Kargo ile — Colissimo". Gün ile aynı yeri paylaşamazlar (kargoda teslim günü
+            taşıyıcının işidir, biz söz veremeyiz), o yüzden ikisi de aynı ayraçla ekleniyor. */}
+        {shipment && ` — ${t.carrier[shipment.carrier]}`}
         {day && (
           <>
             {' — '}
@@ -226,7 +232,70 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
             {address}
           </>
         )}
+        {shipment?.trackingNumber && (
+          <>
+            <br />
+            {t.trackingLabel}: <strong className="text-ink">{shipment.trackingNumber}</strong>
+          </>
+        )}
       </span>
+      <TrackingButton t={t} shipment={shipment} />
+    </Panel>
+  );
+}
+
+/**
+ * **"Kargoyu takip et ↗"** — iki cihaz dalının ortak parçası (08.5).
+ *
+ * Düğme YALNIZ adres bilindiğinde çizilir (`other` taşıyıcıda `trackingUrl` `null`): nereye
+ * gideceğini bilmediğimiz bir bağlantı, tıklanınca müşteriyi hiçbir yere götürmeyen bir söz olurdu.
+ * Numara metinde yine görünür — müşteri taşıyıcıyı kendisi arayabilir.
+ *
+ * `rel="noopener"` şart: `_blank` ile açılan sekme `window.opener` üzerinden bu sayfaya erişebilir.
+ */
+function TrackingButton({ t, shipment }: { t: DetailViewProps['t']; shipment: CustomerOrderDetail['shipment'] }) {
+  if (!shipment?.trackingUrl) return null;
+  return (
+    <a
+      href={shipment.trackingUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={buttonClass({ variant: 'primary', compact: true, fullWidth: true, className: 'mt-3' })}
+    >
+      {t.trackingCta}
+    </a>
+  );
+}
+
+/**
+ * **Kargo künyesi — MOBİLİN kendi bloğu** (08.5).
+ *
+ * Masaüstünde bu bilgi Teslimat kartının içinde yaşıyor (tasarım: *"📦 Kargo ile — Colissimo /
+ * Takip no: …"*), ama **mobilde Teslimat kartı YOK**: teslimat bilgisi durum kahramanının tek
+ * satırına toplanmış (gün — adres). Tasarımın mobil bölümü kargolu siparişi hiç çizmemiş; yalnız
+ * rota örneği var (`Musteri - Siparis Detay.dc.html`).
+ *
+ * Boşluğu doldurmamak, mobil web müşterisinin takip numarasını HİÇ görememesi demekti — ve müşteri
+ * kitlesinin çoğunun bulunduğu yüzey orası. İçerik masaüstüyle birebir aynı, yalnız kabuğu kendi:
+ * ikisini ayrı ayrı yazmak, bir gün taşıyıcı adının bir ekranda değişip ötekinde kalması olurdu.
+ * Sapma `design/BACKLOG.md`'ye yazıldı.
+ */
+export function ShipmentCard({ t, order, title }: Pick<DetailViewProps, 't' | 'order'> & { title: string }) {
+  const shipment = order.shipment;
+  if (!shipment) return null;
+
+  return (
+    <Panel title={title}>
+      <span className="font-sans text-body-sm leading-relaxed text-body">
+        {t.shippingLine} — {t.carrier[shipment.carrier]}
+        {shipment.trackingNumber && (
+          <>
+            <br />
+            {t.trackingLabel}: <strong className="text-ink">{shipment.trackingNumber}</strong>
+          </>
+        )}
+      </span>
+      <TrackingButton t={t} shipment={shipment} />
     </Panel>
   );
 }

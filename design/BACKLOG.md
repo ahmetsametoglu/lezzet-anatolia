@@ -453,6 +453,26 @@ kullanıcı kararı, gürültü değil — aynı kod iki ülkede geçerli olabil
 eksiğimizi** itiraf eder — müşteriye kusur yüklemez. Panel ileride haritaya dönebilir (kullanıcı
 niyeti, 02.08); o gün bu hâllerin haritadaki karşılığı da kararlaştırılmalı.
 
+**Sipariş detayının MOBİL kargo künyesi — çizilmedi, kodlandı (09.08, 08.5).**
+`Musteri - Siparis Detay.dc.html` kargolu siparişi **yalnız masaüstünde** çiziyor: "Durumlar"
+bölümünde bir varyant kartı var (*"📦 Kargo ile — Colissimo / Takip no: 8R 452 617 334 FR"* +
+*"Kargoyu takip et ↗"*) ve ana düzende Teslimat kartının aldığı hâl bu. Mobil bölümde ise
+**Teslimat kartı hiç yok** — gün ve adres durum kahramanının tek satırına toplanmış — ve kargolu
+hâl çizilmemiş. Yani mobil web müşterisi takip numarasını hiçbir yerde göremiyordu.
+
+Boşluk doldurulmadan bırakılamazdı: **müşteri kitlesinin çoğunun bulunduğu yüzey mobil web.**
+Kurulan yüzey: kalemlerden sonra, tutardan önce duran kendi kartı (*"nerede" sorusunun cevabı "ne
+kadar"dan önce gelir*), içeriği masaüstüyle **birebir aynı parçadan** (`ShipmentCard` /
+`TrackingButton` — ikisini ayrı yazmak, bir gün taşıyıcı adının bir ekranda değişip ötekinde
+kalması olurdu). Rota siparişinde ve taşıyıcısı henüz girilmemiş kargo siparişinde kart hiç
+çizilmez; "kargo bilgisi yakında" gibi bir söz verilmedi, çünkü operatörün numarayı ne zaman
+gireceğini bilmiyoruz.
+
+Çizim istenirken bilinmesi gereken: *(a)* künye durum kahramanına mı girmeli yoksa kendi kartı mı
+olmalı (bugün ikincisi seçildi — kahraman zaten iki satır ve takip düğmesi orada barınamıyor);
+*(b)* `other` taşıyıcıda **düğme yok, numara var** ve bu bilinçli — takip adresini bilmediğimiz bir
+taşıyıcıya düğme koymak, tıklanınca hiçbir yere götürmeyen bir söz olurdu.
+
 **Checkout mobilde YAPIŞKAN OLAN ŞERİT, onay düğmesi değil — bilinçli sapma, kayda geçiyor (03.08).**
 Tasarım not düşüyor: *"onay butonu alta sabitlenir"* (`Musteri - Checkout.dc.html:339`). Kod bunun
 yerine üstteki ilerleme şeridini yapışkan yapıyor (`checkout-progress.tsx:37` — `sticky top-0`) ve
