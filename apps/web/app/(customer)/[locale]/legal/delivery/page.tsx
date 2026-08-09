@@ -13,13 +13,12 @@ import content from './content.json';
  * otomatik iadesi, kapıda ödemede tahsilatın düşmesi); bunlar uydurulmuş vaatler değil, kodda
  * karşılığı olan kurallar — bir gün değişirlerse bu sayfa da değişmek zorunda.
  *
- * BEKLEYEN(08.8): **yukarıdaki söz KARGO BÖLÜMÜNDE tutulmuyor.** §1 *"bölge dışındaki adreslere
- * Fransa ve Almanya genelinde soğuk zincir kargo paketiyle gönderim yapıyoruz"* diyor; gerçek
- * bunun tersi — soğuk zincir ürünleri yalnız kendi aracımızla bölge içinde gidiyor, kargo paketi
- * raf ürünlerini taşıyor (kullanıcı, 03.08). §3'teki *"kargo paketlerinde yalıtımlı kutu ve
- * soğutucu kullanılır"* aynı yanlışın devamı. **Sayfa kendi içinde de çelişiyor:** §2 doğruyu
- * söylüyor (*"bazı ürünler yapıları gereği yalnız bölge içinde teslim edilebilir"*) ve o cümle
- * `Product.shippable` ile birebir örtüşüyor. Kanal ayrıca henüz aktif değil. Ayrıntı `build/08` 08.8.
+ * **Metin DÜZELTİLDİ, işaret kaldırıldı (10.08 · ölçüm).** Sayfa bir dönem *"bölge dışındaki
+ * adreslere soğuk zincir kargo paketiyle gönderim yapıyoruz"* diyordu ve gerçek bunun tersiydi;
+ * üstelik sayfa kendi içinde çelişiyordu (§2 doğruyu söylüyordu). Bugünkü `kargo` bölümü sistemin
+ * davranışını anlatıyor: *"Bölge dışındaki adreslere yalnız raf ömürlü ürünlerimizi gönderiyoruz…
+ * Dondurulmuş ürünler kargoya çıkmaz."* — `Product.shippable` ve vitrindeki `StockMark` diliyle
+ * birebir aynı gerçek.
  */
 interface DeliveryPageProps {
   params: Promise<{ locale: string }>;

@@ -14,11 +14,11 @@ import content from './content.json';
  * Çıkış bandı YOK, çünkü SSS'nin kendi çıkış kutusu var (kesikli çerçeveli "Cevabını bulamadınız
  * mı?") ve tasarımda ikisi ayrı ayrı çizili değil — aynı cümleyi iki kutuda tekrarlamak olurdu.
  *
- * BEKLEYEN(08.8): "Ürünler donmuş mu gelir" cevabı iki yerde gerçekle örtüşmüyor — *"TÜM
- * ürünlerimiz şoklanmış halde"* (katalogda raf ürünü de var) ve *"kargo paketlerinde yalıtımlı kutu
- * ve soğutucu kullanılır"* (soğuk zincir kargoya hiç verilmiyor). Teslimat sorusundaki *"kargo
- * gönderimlerinde paket hazırlandıktan sonra yola çıkar"* da bugün karşılıksız: kanal aktif değil.
- * Dört sayfanın tamamı tek turda düzeltilecek, ayrıntı `build/08` 08.8.
+ * **Metin DÜZELTİLDİ, işaret kaldırıldı (10.08 · ölçüm).** Sayfa bir dönem *"TÜM ürünlerimiz
+ * şoklanmış halde"* ve *"kargo paketlerinde yalıtımlı kutu ve soğutucu kullanılır"* diyordu; ikisi
+ * de gerçeğe aykırıydı — katalogda raf ürünü var ve soğuk zincir kargoya hiç verilmiyor. Bugünkü
+ * `content.json` sistemin gerçek davranışını anlatıyor: kargoya yalnız raf ömürlü ürünler çıkar,
+ * dondurulmuş olanlar yalnız kendi aracımızla bölge içinde gider (`Product.shippable` ile birebir).
  */
 interface FaqPageProps {
   params: Promise<{ locale: string }>;

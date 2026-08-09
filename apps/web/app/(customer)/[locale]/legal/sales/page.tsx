@@ -16,12 +16,10 @@ import content from './content.json';
  * (Code de la consommation L221-28). Sayfa bunu saklamıyor, gerekçesiyle yazıyor ve hemen ardından
  * hatalı teslimattaki hakların DURDUĞUNU söylüyor — müşteri "hiçbir hakkım yok" diye okumasın.
  *
- * BEKLEYEN(08.8): teslimat bölümü *"bölge dışına soğuk zincir kargo paketiyle teslim ediyoruz"*
- * diyor ve bu YANLIŞ — soğuk zincir ürünleri yalnız kendi aracımızla, bölge içinde gidiyor; kargo
- * paketi raf ürünlerini taşıyor (kullanıcı, 03.08). Kanal ayrıca henüz aktif değil. Aynı bölümdeki
- * "kargo firmasından kaynaklanan gecikmeler" ve giriş bölümündeki "Ürünlerimiz dondurulmuş
- * gıdadır" cümleleri de aynı turda düzeltilecek. Metnin nasıl yazılacağı kanalın açılış kararına
- * bağlı; ayrıntı ve öteki üç sayfa `docs/build/08` 08.8'de.
+ * **Metin DÜZELTİLDİ, işaret kaldırıldı (10.08 · ölçüm).** Teslimat bölümü bir dönem *"bölge dışına
+ * soğuk zincir kargo paketiyle teslim ediyoruz"* diyordu ve giriş *"Ürünlerimiz dondurulmuş
+ * gıdadır"* diye başlıyordu; ikisi de gerçeğe aykırıydı (katalogda raf ürünü var, soğuk zincir
+ * kargoya verilmiyor). Bugünkü metin sistemin davranışını anlatıyor.
  *
  * **Tüketici arabulucusu KAPSAM DIŞI** (kullanıcı kararı 03.08): ilk aşamada bir arabuluculuk
  * kuruluşuyla anlaşma düşünülmüyor, dolayısıyla bekleyen bir iş değil — kapanmış bir karar.

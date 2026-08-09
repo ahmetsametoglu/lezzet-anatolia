@@ -5,7 +5,6 @@ import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { StorefrontProductDetail } from '@lezzet/application';
-import { cheapestVariantId } from '@/lib/storefront/variant-choice';
 import { isProductUnavailable } from './components/family-block';
 import type { Messages, ReviewsData } from './product-types';
 import { ProductDesktop } from './product.desktop';
@@ -31,10 +30,19 @@ interface ProductClientProps {
 
 export function ProductClient({ t, locale, product, device, reviews }: ProductClientProps) {
   const resolved = useDevice(device);
-  // Varsayılan: EN UCUZ boy seçili (denetim talebi 09.08) — sıranın ilki DEĞİL. Gerekçe ve ölçüt
-  // `cheapestVariantId`'de; kısaca: kartın gösterdiği fiyat en ucuz boyunki, detay başka bir boyu
-  // açarsa müşteri gördüğü fiyatı bulamaz. Seçicideki SIRA değişmiyor, yalnız seçili olan değişti.
-  const [selectedId, setSelectedId] = useState(() => cheapestVariantId(product.variants));
+  /**
+   * Varsayılan: EN UCUZ boy seçili (denetim talebi 09.08) — sıranın ilki DEĞİL. Kartın gösterdiği
+   * fiyat en ucuz boyunki; detay başka bir boyu açarsa müşteri gördüğü fiyatı bulamaz.
+   *
+   * **Ölçüt artık SUNUCUDAN geliyor** (`primaryVariantId`, 10.08): ekran hesap yapmıyor, okuyor.
+   * Bir gün kart ile detay ayrışamaz, çünkü ikisi de aynı alandan besleniyor — bu şeridin geçici
+   * `cheapestVariantId`'si (09.08) silindi, beş testi de kuralın kendi tarafına (`map.test.ts`)
+   * bırakıldı. Seçicideki SIRA değişmiyor: `variants` operatörün `sortOrder`'ında kalır.
+   *
+   * Yedek `variants[0]`: alan `null` dönerse (aktif boy yok) eski davranış geçerli — o hâlde zaten
+   * seçilecek daha iyi bir boy yok.
+   */
+  const [selectedId, setSelectedId] = useState(() => product.primaryVariantId ?? product.variants[0]?.id ?? '');
   const selected = product.variants.find((v) => v.id === selectedId) ?? product.variants[0] ?? null;
 
   // Aile bağlamı BURADA türetilir, iki görünümde ayrı ayrı değil (05.15): ikisi de aynı iki cevabı

@@ -17,11 +17,15 @@ import content from './content.json';
  * (`lib/delivery/place-store.ts`, `account/actions.ts`, `packages/observability/src/mask.ts`).
  * Uydurulmuş bir gizlilik metni, tutulmayacak bir söz vermek olurdu.
  *
- * BEKLEYEN(08.8): **alıcı listesinde OLMAYAN bir alıcı sayılıyor** — *"Kargo firması: bölge dışı
- * gönderimlerde adınız ve teslimat adresiniz"*. Kargo kanalı henüz aktif değil, yani bugün böyle
- * bir paylaşım yok. Öteki üç sayfadaki kargo cümlelerinden AYRI ele alınmalı ve daha ağır: orada
- * yanlış olan bir hizmet tarifi, burada bir **veri paylaşımı beyanı**. Satır kanal açıldığında
- * doğru hâle gelecek; o güne kadar gerçekleşmeyen bir işlemeyi beyan ediyor. Ayrıntı `build/08` 08.8.
+ * **Kargo firması satırı DOĞRU — işaret kaldırıldı (10.08 · kullanıcı teyidi).** Bir dönem burada
+ * *"alıcı listesinde OLMAYAN bir alıcı sayılıyor"* diye bir `BEKLEYEN(08.8)` duruyordu: kargo
+ * kanalının açık olmadığı varsayılıyor, yani beyan gerçekleşmeyen bir işlemeyi anlatıyor sanılıyordu.
+ * Kullanıcı teyit etti: **bölge dışına kargo gönderimi yapılıyor**, dolayısıyla ad ve teslimat
+ * adresi gerçekten taşıyıcıyla paylaşılıyor ve beyan olması gerektiği gibi duruyor.
+ *
+ * Ölçüm de aynı yeri gösteriyordu: `legal/delivery` kargo ücretini ve süresini yazıyor, vitrin
+ * `route: 'shipping'` ile kargo grubunu ayırıyor, checkout kargo siparişini ayrı açıyor. Beyanı
+ * kaldırmak, gerçekleşen bir paylaşımı gizlemek olurdu — eksik beyan, fazla beyandan ağırdır.
  */
 interface PrivacyPageProps {
   params: Promise<{ locale: string }>;
