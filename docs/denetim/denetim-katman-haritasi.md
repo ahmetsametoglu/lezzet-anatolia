@@ -62,10 +62,10 @@ oradaki bulgular mobili de ilgilendirir ve deftere bildirilir.
 | K5 application | 🟢 **tamam** — ⚡ 13 modül iki yerde paralel yaşıyor (terfi yarım) | `denetim-K5-application.md` |
 | K6 yardımcı paketler | 🟢 **tamam** — temiz; TS sürüm ayrışması koordinasyona | `denetim-K6-K7-paketler-backend.md` |
 | K7 backend | 🟢 **tamam** — bulgu yok | `denetim-K6-K7-paketler-backend.md` |
-| K8 web/lib | ⬜ | — |
-| K9 komponentler | ⬜ | — |
-| K10 operasyon | ⬜ | — |
-| K11 müşteri | ⬜ | — |
+| K8 web/lib | 🟢 **tamam** — 19 DB'siz test entegrasyon kuyruğunda (arka uçta) | `denetim-K8-web-lib.md` |
+| K9 komponentler | 🟢 **tamam** — ölçü ekseni koşuldu, iki sapma (operasyonda) | `denetim-K9-K10-K11-yuzeyler.md` |
+| K10 operasyon | 🟢 **tamam** — bir ad çakışması (operasyonda) | `denetim-K9-K10-K11-yuzeyler.md` |
+| K11 müşteri | 🟢 **tamam** — bulgu yok | `denetim-K9-K10-K11-yuzeyler.md` |
 
 **Not — daha önce kapanmış turlarla ilişki:** K4'ün taban-sınıf ekseni (TS1–TS2), K9/K10/K11'in
 komponent taramaları ve dosya ağacı (D1–D4) bir kez denetlendi ve kapandı (README künyesi). Bu
