@@ -33,8 +33,7 @@ export type AssistantProposalStatus = z.infer<typeof AssistantProposalStatusEnum
 
 // ─── Payload şemaları — bugün UYGULANABİLEN YEDİ tip ─────────────────────────
 //
-// Enum dokuz tip taşıyor; şeması yalnız uygulayıcısı yazılmış olanların var (bugün 7 — `discount_draft`
-// ve `recipe_draft` bekliyor). Şemasız tip için öneri HİÇ DOĞMAZ: yazıp uygulayamamak, panelde
+// Enum dokuz tip taşıyor ve bugün DOKUZU DA uygulanabilir (09.08: son iki tip eklendi). Şemasız tip için öneri HİÇ DOĞMAZ: yazıp uygulayamamak, panelde
 // onaylanan ama hiçbir şey yapmayan bir kalem üretirdi — "çizip yazmamak"ın kuyruk hâli.
 //
 // Kapsam 09.08'de TASARIMA göre genişledi (kullanıcı kararı): ilk üç tip "en kolay yazılabilen"e
@@ -183,6 +182,59 @@ export const ProductDraftPayloadSchema = z.object({
     .refine((f) => Object.keys(f).length > 0, { message: 'En az bir alan doldurulmalı' }),
 });
 
+/**
+ * Kampanya / indirim tanımı.
+ *
+ * **Kupon her zaman sepet düzeyindedir** (`DOMAIN §5`) — kod alanı `scope`u `cart` dışına
+ * taşıyamaz; kategori/koleksiyon kapsamı yalnız OTOMATİK indirimde anlamlı. Şema bu kuralı
+ * taşımaz (kural motorda ve veride), ama araç önerdiği kombinasyonu kapıya sorar.
+ */
+export const DiscountDraftPayloadSchema = z.object({
+  name: z.string().min(1),
+  trigger: z.enum(['coupon', 'automatic']),
+  type: z.enum(['percent', 'fixed']),
+  /** `percent` ise dolu; yüzde tavanı (%100) VERİDE — burada tekrarlanmaz. */
+  percent: z.number().positive().nullable(),
+  /** `fixed` ise dolu, CENT. */
+  amountCents: z.number().int().positive().nullable(),
+  scope: z.enum(['cart', 'category', 'collection']),
+  categoryId: z.string().uuid().nullable(),
+  collectionId: z.string().uuid().nullable(),
+  /** Önizlemede okunacak ad — kimlik değil (kapsamın hangi kategori/koleksiyon olduğu). */
+  scopeName: z.string().nullable(),
+  minBasketCents: z.number().int().nonnegative().nullable(),
+  validFrom: z.string().nullable(),
+  validTo: z.string().nullable(),
+  /** Kupon kodu (yalnız `trigger: 'coupon'`). Kod ÜRETİLMEZ, önerilir — çakışmayı kapı çözer. */
+  code: z.string().nullable(),
+});
+
+/**
+ * Sofra tarifi taslağı — **üç dil dolmadan yayınlanamaz** (`DOMAIN §13`) ve bu kural VERİDE;
+ * asistan taslağı doldurur, yayına almak insanın kararıdır (ürün taslağıyla aynı desen).
+ *
+ * Malzeme bağı VARYANTA kurulur: "Ezine Beyaz Peynir" yetmez, sepete eklenebilen tek şey
+ * "350 g" satırıdır.
+ */
+export const RecipeDraftPayloadSchema = z.object({
+  /** Alan adları `Recipe` varlığının kendisinden: `name` (başlık değil), `serves` METİN. */
+  name: LocalizedTextSchema,
+  description: LocalizedTextSchema.nullable().optional(),
+  /** Hazırlanış adımları — dil başına tek metin (adım ayracı ekranın işi). */
+  steps: LocalizedTextSchema,
+  /** "4 kişilik" gibi bir METİN — sayı değil (modelde `LocalizedText`). */
+  serves: LocalizedTextSchema.nullable().optional(),
+  items: z
+    .array(
+      z.object({
+        variantId: z.string().uuid(),
+        productName: z.string().min(1),
+        qty: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
 /** Kind → payload şeması. Uygulayıcısı olmayan tip burada YOKTUR (yukarıdaki gerekçe). */
 export const PROPOSAL_PAYLOAD_SCHEMAS = {
   featured_flag: FeaturedFlagPayloadSchema,
@@ -192,6 +244,8 @@ export const PROPOSAL_PAYLOAD_SCHEMAS = {
   money_movement: MoneyMovementPayloadSchema,
   zone_extend: ZoneExtendPayloadSchema,
   product_draft: ProductDraftPayloadSchema,
+  discount_draft: DiscountDraftPayloadSchema,
+  recipe_draft: RecipeDraftPayloadSchema,
 } as const satisfies Partial<Record<AssistantProposalKind, z.ZodTypeAny>>;
 
 /** Bugün öneri ÜRETİLEBİLEN tipler — MCP araçları ve panel bu listeden türer. */
@@ -204,6 +258,8 @@ export type StockIntakePayload = z.infer<typeof StockIntakePayloadSchema>;
 export type MoneyMovementPayload = z.infer<typeof MoneyMovementPayloadSchema>;
 export type ZoneExtendPayload = z.infer<typeof ZoneExtendPayloadSchema>;
 export type ProductDraftPayload = z.infer<typeof ProductDraftPayloadSchema>;
+export type DiscountDraftPayload = z.infer<typeof DiscountDraftPayloadSchema>;
+export type RecipeDraftPayload = z.infer<typeof RecipeDraftPayloadSchema>;
 
 /**
  * Ham payload'ı kind'ına göre doğrular. Desteklenmeyen tip **sessizce geçmez**: kuyruğa şekli

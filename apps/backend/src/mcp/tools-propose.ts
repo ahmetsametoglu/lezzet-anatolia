@@ -6,6 +6,7 @@ import {
   CollectionService,
   DeliveryZoneService,
   PostalCodeDemandService,
+  PriceService,
   ProductService,
   ProductVariantService,
   ReorderService,
@@ -15,14 +16,18 @@ import {
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
+import { rebalanceAllocations } from '@lezzet/domain-core';
 import {
   parseProposalPayload,
   resolveLocalizedText,
   type AssistantProposalKind,
+  type BundleDraftPayload,
+  type DiscountDraftPayload,
   type FeaturedFlagPayload,
   type MoneyMovementPayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
+  type RecipeDraftPayload,
   type StockIntakePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
@@ -338,6 +343,218 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const euro = (amountCents / 100).toFixed(2);
   const who = payload.counterpartyName ? ` — ${payload.counterpartyName}` : '';
   return queue('money_movement', payload, `${account.name}: ${euro} € ${label}${who}`, args.reason);
+}
+
+/**
+ * Paket taslağı önerisi — **payları MODEL DEĞİL MOTOR dağıtır.**
+ *
+ * Model kalemleri ve paketin tek fiyatını verir; kaleme düşen birim fiyatı `rebalanceAllocations`
+ * hesaplar (liste fiyatlarına oransal — `DOMAIN §13`). Modele bıraksaydık toplamı tutmayan paylar
+ * üretirdi ve mutabakat uygulama anında patlardı; üstelik "pahalı kalem indirimin çoğunu taşır"
+ * kuralı da kaybolurdu.
+ *
+ * **Mutabakat tutmazsa öneri YİNE kurulur ama fark SÖYLENİR:** birim fiyatlar tam kuruş olduğu
+ * için bazı hedefler matematiksel olarak tutturulamaz (motorun künyesi). Sessizce yuvarlamak,
+ * faturayı bir kuruş kaydırıp kimsenin bulamayacağı bir fark bırakmak olurdu.
+ */
+export async function proposeBundleDraft(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const rawItems = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
+  const totalPrice = Number(args.totalPrice);
+  const nameTr = String(args.nameTr ?? '').trim();
+  if (!nameTr) return { error: 'nameTr zorunlu — paketin Türkçe adı.' };
+  if (!(totalPrice > 0)) return { error: 'totalPrice pozitif olmalı (euro).' };
+  if (rawItems.length < 2) return { error: 'items en az İKİ kalem içermeli — tek ürünlük paket, paket değildir.' };
+
+  const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(Boolean);
+  const variants = await new ProductVariantService(db).listByIds(variantIds);
+  const byId = new Map(variants.map((v) => [v.id, v]));
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const productById = new Map(products.map((p) => [p.id, p]));
+  // Liste fiyatı AYRI tabloda (kanal/tarih boyutlu) — payların oransal dağıtımının tabanı b2c
+  // taban fiyatıdır (paket B2C-yalnızdır, `DOMAIN §13`).
+  const priceMap = await new PriceService(db).findApplicableMap(variants.map((v) => v.id), 'b2c');
+
+  const problems: string[] = [];
+  const prepared: Array<{ variantId: string; productName: string; qty: number; listPriceCents: number }> = [];
+  for (const [i, raw] of rawItems.entries()) {
+    const variant = byId.get(String(raw.variantId ?? ''));
+    const qty = Number(raw.qty ?? 1);
+    if (!variant) problems.push(`items[${i}]: varyant bulunamadı (${String(raw.variantId)}).`);
+    if (!Number.isInteger(qty) || qty <= 0) problems.push(`items[${i}]: qty pozitif tam sayı olmalı.`);
+    if (!variant) continue;
+    const product = productById.get(variant.productId);
+    prepared.push({
+      variantId: variant.id,
+      productName: `${resolveLocalizedText(product?.name ?? {}, 'tr')} · ${resolveLocalizedText(variant.label, 'tr')}`,
+      qty,
+      // Fiyatı olmayan varyant 0 taban alır; motor kalanı öteki kalemlere dağıtır.
+      listPriceCents: priceMap.get(variant.id)?.channelPrice?.amountCents ?? 0,
+    });
+  }
+  if (problems.length > 0) return { error: `${problems.length} kalem sorunu:`, problems };
+
+  // Dağıtım MOTORDA: önce liste fiyatlarına oransal bir başlangıç, sonra hedefe göre denge.
+  const targetCents = Math.round(totalPrice * 100);
+  const seed = prepared.map((p) => ({ qty: p.qty, allocatedUnitPriceCents: p.listPriceCents }));
+  const balanced = rebalanceAllocations(seed, targetCents);
+
+  const payload: BundleDraftPayload = {
+    name: { tr: nameTr, ...(typeof args.nameFr === 'string' ? { fr: args.nameFr } : {}), ...(typeof args.nameDe === 'string' ? { de: args.nameDe } : {}) },
+    description: typeof args.descriptionTr === 'string' && args.descriptionTr.trim() ? { tr: args.descriptionTr.trim() } : null,
+    totalPrice,
+    serves: Number.isInteger(args.serves) ? (args.serves as number) : null,
+    items: prepared.map((p, i) => ({
+      variantId: p.variantId,
+      productName: p.productName,
+      qty: p.qty,
+      // Motorun verdiği cent → euro (paket ailesi euro tutuyor; çevrim tek yerde).
+      allocatedUnitPrice: (balanced.unitPricesCents[i] ?? 0) / 100,
+    })),
+  };
+
+  const queued = await queue('bundle_draft', payload, `${nameTr} — ${prepared.length} kalemlik paket, ${totalPrice.toFixed(2)} €`, args.reason);
+  return {
+    ...queued,
+    allocation: {
+      targetCents,
+      achievedTotalCents: balanced.achievedTotalCents,
+      residualCents: balanced.residualCents,
+      // Kalan varsa KARAR OPERATÖRÜNDE: paketi 1 kuruş oynatmak ya da bir kalemin adedini
+      // değiştirmek. Asistan bunu patrona SÖYLEMELİ, sessizce geçmemeli.
+      note:
+        balanced.residualCents === 0
+          ? 'Paylar paket fiyatını tam tutuyor.'
+          : `DİKKAT: paylar hedefi ${balanced.residualCents} cent farkla tutuyor — birim fiyatlar tam kuruş olduğu için bu hedef tam tutturulamıyor. Yöneticiye söyle: paket fiyatını bir kuruş oynatmak ya da bir kalemin adedini değiştirmek çözer.`,
+    },
+  };
+}
+
+/** Kampanya/indirim önerisi — kapsam adı çözülür, kupon kodu ÜRETİLMEZ (tekillik veritabanında). */
+export async function proposeDiscountDraft(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const name = String(args.name ?? '').trim();
+  const trigger = String(args.trigger ?? 'automatic');
+  const type = String(args.type ?? '');
+  const scope = String(args.scope ?? 'cart');
+  if (!name) return { error: 'name zorunlu — kampanyanın adı (operatör bunu listede görecek).' };
+  if (!['coupon', 'automatic'].includes(trigger)) return { error: "trigger 'coupon' | 'automatic' olmalı." };
+  if (!['percent', 'fixed'].includes(type)) return { error: "type 'percent' | 'fixed' olmalı." };
+  if (!['cart', 'category', 'collection'].includes(scope)) return { error: "scope 'cart' | 'category' | 'collection' olmalı." };
+  // Kupon DAİMA sepet düzeyindedir (DOMAIN §5) — kural veride ve motorda; araç da erken söyler.
+  if (trigger === 'coupon' && scope !== 'cart') {
+    return { error: "Kupon daima sepet düzeyindedir (DOMAIN §5): trigger 'coupon' ise scope 'cart' olmalı." };
+  }
+
+  const percent = type === 'percent' ? Number(args.percent) : null;
+  const amountCents = type === 'fixed' ? Number(args.amountCents) : null;
+  if (type === 'percent' && !(percent! > 0 && percent! <= 100)) return { error: 'percent 0-100 arasında olmalı.' };
+  if (type === 'fixed' && !(Number.isInteger(amountCents) && amountCents! > 0)) return { error: 'amountCents pozitif tam sayı olmalı (cent).' };
+
+  let categoryId: string | null = null;
+  let collectionId: string | null = null;
+  let scopeName: string | null = null;
+  if (scope === 'category') {
+    const wanted = String(args.scopeName ?? '').trim();
+    const found = (await new CategoryService(db).list({ activeOnly: true })).find((c) =>
+      resolveLocalizedText(c.name, 'tr').toLowerCase().includes(wanted.toLowerCase()),
+    );
+    if (!found) return { error: `Kategori bulunamadı: '${wanted}'` };
+    categoryId = found.id;
+    scopeName = resolveLocalizedText(found.name, 'tr');
+  }
+  if (scope === 'collection') {
+    const wanted = String(args.scopeName ?? '').trim();
+    const found = (await new CollectionService(db).list({ activeOnly: true })).find((c) =>
+      resolveLocalizedText(c.name, 'tr').toLowerCase().includes(wanted.toLowerCase()),
+    );
+    if (!found) return { error: `Koleksiyon bulunamadı: '${wanted}'` };
+    collectionId = found.id;
+    scopeName = resolveLocalizedText(found.name, 'tr');
+  }
+
+  const payload: DiscountDraftPayload = {
+    name,
+    trigger: trigger as DiscountDraftPayload['trigger'],
+    type: type as DiscountDraftPayload['type'],
+    percent,
+    amountCents,
+    scope: scope as DiscountDraftPayload['scope'],
+    categoryId,
+    collectionId,
+    scopeName,
+    minBasketCents: Number.isInteger(args.minBasketCents) ? (args.minBasketCents as number) : null,
+    validFrom: typeof args.validFrom === 'string' ? args.validFrom : null,
+    validTo: typeof args.validTo === 'string' ? args.validTo : null,
+    code: typeof args.code === 'string' && args.code.trim() ? args.code.trim().toUpperCase() : null,
+  };
+
+  const value = type === 'percent' ? `%${percent}` : `${((amountCents ?? 0) / 100).toFixed(2)} €`;
+  const where = scopeName ? ` (${scopeName})` : '';
+  return queue('discount_draft', payload, `${name}: ${value} indirim${where}`, args.reason);
+}
+
+/** Sofra tarifi taslağı — malzeme bağı VARYANTA; üç dil dolmadan yayınlanamaz (kural veride). */
+export async function proposeRecipeDraft(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const rawItems = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
+  const nameTr = String(args.nameTr ?? '').trim();
+  const stepsTr = String(args.stepsTr ?? '').trim();
+  if (!nameTr) return { error: 'nameTr zorunlu — tarifin Türkçe adı.' };
+  if (!stepsTr) return { error: 'stepsTr zorunlu — hazırlanış adımları.' };
+  if (rawItems.length === 0) return { error: 'items boş — tarifin malzemeleri (varyant kimlikleriyle).' };
+
+  const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(Boolean);
+  const variants = await new ProductVariantService(db).listByIds(variantIds);
+  const byId = new Map(variants.map((v) => [v.id, v]));
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const productById = new Map(products.map((p) => [p.id, p]));
+
+  const problems: string[] = [];
+  const items: RecipeDraftPayload['items'] = [];
+  for (const [i, raw] of rawItems.entries()) {
+    const variant = byId.get(String(raw.variantId ?? ''));
+    const qty = Number(raw.qty ?? 1);
+    if (!variant) problems.push(`items[${i}]: varyant bulunamadı (${String(raw.variantId)}) — malzeme BOY satırına bağlanır ("350 g"), ürüne değil.`);
+    if (!Number.isInteger(qty) || qty <= 0) problems.push(`items[${i}]: qty pozitif tam sayı olmalı.`);
+    if (!variant) continue;
+    items.push({
+      variantId: variant.id,
+      productName: `${resolveLocalizedText(productById.get(variant.productId)?.name ?? {}, 'tr')} · ${resolveLocalizedText(variant.label, 'tr')}`,
+      qty,
+    });
+  }
+  if (problems.length > 0) return { error: `${problems.length} malzeme sorunu:`, problems };
+
+  const localized = (tr: string, fr: unknown, de: unknown) => ({
+    tr,
+    ...(typeof fr === 'string' && fr.trim() ? { fr: fr.trim() } : {}),
+    ...(typeof de === 'string' && de.trim() ? { de: de.trim() } : {}),
+  });
+
+  const payload: RecipeDraftPayload = {
+    name: localized(nameTr, args.nameFr, args.nameDe),
+    description:
+      typeof args.descriptionTr === 'string' && args.descriptionTr.trim()
+        ? localized(args.descriptionTr.trim(), args.descriptionFr, args.descriptionDe)
+        : null,
+    steps: localized(stepsTr, args.stepsFr, args.stepsDe),
+    serves: typeof args.servesTr === 'string' && args.servesTr.trim() ? localized(args.servesTr.trim(), args.servesFr, args.servesDe) : null,
+    items,
+  };
+
+  const langs = ['tr', typeof args.nameFr === 'string' ? 'fr' : null, typeof args.nameDe === 'string' ? 'de' : null].filter(Boolean);
+  const queued = await queue('recipe_draft', payload, `"${nameTr}" tarifi — ${items.length} malzeme`, args.reason);
+  return {
+    ...queued,
+    languages: langs,
+    // Üç dil dolmadan tarif YAYINLANAMAZ (kural veride). Asistan bunu baştan söylesin ki patron
+    // onaylayıp "neden görünmüyor" demesin.
+    publishNote:
+      langs.length === 3
+        ? 'Üç dil de dolu — onaydan sonra yayına alınabilir.'
+        : `Yalnız ${langs.join('/')} dolu. Tarif üç dil dolmadan YAYINLANAMAZ; taslak olarak kalır.`,
+  };
 }
 
 /** Bekleyen kuyruğun okuması — asistan kendi önerdiklerini görebilmeli (onaylayamaz). */

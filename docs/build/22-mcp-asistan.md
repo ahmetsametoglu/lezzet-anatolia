@@ -96,9 +96,20 @@ satırında.
   - *Bitti (kısmi):* 21/21 test · tsc + eslint temiz · canlı: 15 araç; `propose_zone_extend`
     gerçek talep panosundan öneri kurdu ve *"haber bekleyen 3 müşteriye bildirim gider — GERİ
     ALINAMAZ"* uyarısını üretti. `purgeTestData` yeni hedef `assistantProposalIds`.
-  - **KALAN — panel:** `/operations/assistant` ekranı operasyonda (tasarım geldi, sözleşme
-    yazıldı); benden önce `apps/web/lib/assistant` okuma kapısı + iki server action gelecek.
-    Panel yokken öneriler kuyrukta birikir ve yalnız `list_proposals` ile görülür.
+  - **PANEL YAZILDI (operasyon şeridi, 09.08)** — `/operations/assistant`: üç sekme (bekleyen ·
+    süresi geçti · karar geçmişi) + kuyruk + her tipte aynı karar çerçevesi + **yedi önizleme**
+    (çizimin beşi + sözleşmenin tarif ettiği vitrin/tedarik) + üç karar penceresi + ray girişi.
+    Okuma kapısı ve iki action denetimden geldi (`a76a71a`), ekran tek satırla bağlandı — fikstür
+    aynı turda silindi. touches: `apps/web/app/(operations)/operations/assistant/**`,
+    `components/operation/ui/{ops-nav,icons,format}.ts*`
+    - **Ekran `payload`ın içine girip kendi hesabını yapmıyor:** rozet metni, etki cümlesi, hedef
+      tablolar, tutar ve tazelik kapıdan hazır geliyor. Ekranın kendi kararı yalnız SUNUM (anlam
+      rengi, durum cümlesi) — sözleşmenin istediği ayrım bu.
+    - **Çizimden dört bilinçli sapma** (gerekçeleriyle `design/BACKLOG.md`): "ayrı ayrı alınsa"
+      karşılaştırması · ürün tablosundaki alerjen/saklama satırları · yakın-SKT vurgusu · doğan
+      kayda köprü düğmesi. Dördü de aynı sebeple: **ölçülemeyen ya da payload'da olmayan veri**.
+    - *Doğrulandı:* `pnpm ui:shot /operations/assistant` — yedi tipin tamamı, üç sekme, açık+koyu
+      tema (geçici örnek öneriler yerel DB'ye yazıldı, çekimden sonra silindi).
 
 - [ ] (22.4) **Üretim turu — Faz 1 bitince AÇILIR:** ikili anahtar tablosu + Ayarlar paneli ·
   oran sınırı · `mcp_call_log` · OAuth (`well-known`, claude.ai connector — canlıya çıkış 18'e

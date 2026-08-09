@@ -3,9 +3,11 @@ import {
   CategoryService,
   CollectionService,
   DeliveryZoneService,
+  DiscountService,
   MoneyMovementService,
   ProductService,
   PurchaseOrderService,
+  RecipeService,
   StockIntakeService,
 } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -13,10 +15,12 @@ import {
   parseProposalPayload,
   type AssistantProposal,
   type BundleDraftPayload,
+  type DiscountDraftPayload,
   type FeaturedFlagPayload,
   type MoneyMovementPayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
+  type RecipeDraftPayload,
   type StockIntakePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
@@ -193,6 +197,50 @@ const applyProductDraft: Applier = async (db, raw) => {
   return { productId: payload.productId };
 };
 
+/**
+ * Kampanya/indirim — **pasif doğar** (`isActive: false`). Onay "kampanyayı hazırla" demektir,
+ * "yayına al" değil: indirim yayına alındığı an sepetlere işler ve geri alınması müşterinin
+ * gördüğü fiyatı değiştirir. Yayın kararı fiyat ekranında.
+ *
+ * Kupon KODU burada üretilmez: kod tekilliği veritabanının işi (`discount_code`) ve öneri
+ * anındaki bir kod, onaya kadar geçen sürede başkasına verilmiş olabilir.
+ */
+const applyDiscountDraft: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('discount_draft', raw) as DiscountDraftPayload;
+  const row = await new DiscountService(db).insert({
+    name: payload.name,
+    trigger: payload.trigger,
+    type: payload.type,
+    percent: payload.percent,
+    amountCents: payload.amountCents,
+    scope: payload.scope,
+    categoryId: payload.categoryId,
+    collectionId: payload.collectionId,
+    minBasketCents: payload.minBasketCents,
+    validFrom: payload.validFrom,
+    validTo: payload.validTo,
+    isActive: false,
+  });
+  return { discountId: row.id };
+};
+
+/**
+ * Sofra tarifi taslağı — **pasif doğar** ve üç dil dolmadan zaten yayınlanamaz (kural VERİDE).
+ * Malzemeler varyanta bağlanır; slug addan türer (servis kapısı üretir).
+ */
+const applyRecipeDraft: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('recipe_draft', raw) as RecipeDraftPayload;
+  const recipe = await new RecipeService(db).createWithItems({
+    name: payload.name,
+    description: payload.description ?? null,
+    steps: payload.steps,
+    serves: payload.serves ?? null,
+    isActive: false,
+    items: payload.items.map((item, index) => ({ variantId: item.variantId, qty: item.qty, sortOrder: index })),
+  });
+  return { recipeId: recipe.id };
+};
+
 export const APPLIERS = {
   featured_flag: applyFeaturedFlag,
   purchase_order: applyPurchaseOrder,
@@ -201,6 +249,8 @@ export const APPLIERS = {
   money_movement: applyMoneyMovement,
   zone_extend: applyZoneExtend,
   product_draft: applyProductDraft,
+  discount_draft: applyDiscountDraft,
+  recipe_draft: applyRecipeDraft,
 } as const;
 
 export type ApplicableKind = keyof typeof APPLIERS;

@@ -6,10 +6,13 @@ import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals } from './tools-signals';
 import {
   listProposals,
+  proposeBundleDraft,
+  proposeDiscountDraft,
   proposeFeaturedFlag,
   proposeMoneyMovement,
   proposeProductDraft,
   proposePurchaseOrder,
+  proposeRecipeDraft,
   proposeStockIntake,
   proposeZoneExtend,
 } from './tools-propose';
@@ -29,7 +32,7 @@ import {
 const INSTRUCTIONS = [
   "You are the admin assistant for Lezzet Anatolia (Turkish food e-commerce, Strasbourg). You talk to the OWNER, never to customers.",
   'Always answer the admin in TURKISH. Keep answers short and concrete; lead with what needs attention.',
-  'You can PROPOSE actions but never perform them: propose_* tools write to an approval queue and the admin applies them from the operations panel. You cannot approve your own proposals — never say something is done because you proposed it; say it is waiting for approval. For actions with no propose_* tool (prices, discounts, recipes, customer messages), explain what you would do and say that tool is not built yet.',
+  'You can PROPOSE actions but never perform them: propose_* tools write to an approval queue and the admin applies them from the operations panel. You cannot approve your own proposals — never say something is done because you proposed it; say it is waiting for approval. For actions with no propose_* tool (price changes, customer messages), explain what you would do and say that tool is not built yet.',
   'Two proposals need extra care when you present them. propose_zone_extend: applying it sends an irreversible notification to waiting customers — always tell the admin how many. propose_stock_intake: never invent an expiry date or lot number; if the document does not show it, ask.',
   'All data you see is aggregate and identity-free by design: no customer names/contacts, no per-product purchase prices, no message content. Do not speculate about individuals.',
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
@@ -229,6 +232,94 @@ export const TOOLS = [
     },
   },
   {
+    name: 'propose_bundle_draft',
+    description:
+      "PROPOSE (does not apply): a new bundle (multi-product package sold at ONE price). You choose the items and the package price; the ENGINE distributes the per-item allocated prices proportionally to their list prices — you never compute shares yourself. If the target cannot be hit exactly (cent rounding), the response says so with the residual and you MUST tell the admin. Needs at least two items. The bundle is created INACTIVE — publishing is a separate decision.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        nameTr: { type: 'string', description: 'Bundle name in Turkish (required).' },
+        nameFr: { type: 'string' },
+        nameDe: { type: 'string' },
+        descriptionTr: { type: 'string' },
+        totalPrice: { type: 'number', description: 'The single customer-facing price, in EURO (e.g. 89.00).' },
+        serves: { type: 'number', description: 'How many people it serves, if meaningful.' },
+        items: {
+          type: 'array',
+          description: 'At least two entries.',
+          items: {
+            type: 'object',
+            properties: {
+              variantId: { type: 'string', description: 'Variant uuid.' },
+              qty: { type: 'number', description: 'Positive integer, default 1.' },
+            },
+            required: ['variantId'],
+          },
+        },
+        reason: { type: 'string', description: 'Ground it — e.g. "these six were bought together in 41 orders last month".' },
+      },
+      required: ['nameTr', 'totalPrice', 'items'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_discount_draft',
+    description:
+      "PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The discount is created INACTIVE: applying the proposal prepares it, publishing is a separate decision on the pricing screen. Coupon codes are not minted here — uniqueness belongs to the database.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Internal campaign name the admin will see in the list.' },
+        trigger: { type: 'string', description: "'automatic' (applies by itself) | 'coupon' (customer types a code)." },
+        type: { type: 'string', description: "'percent' | 'fixed'." },
+        percent: { type: 'number', description: 'Required when type=percent, 0-100.' },
+        amountCents: { type: 'number', description: 'Required when type=fixed, in cents.' },
+        scope: { type: 'string', description: "'cart' | 'category' | 'collection'. Coupons must be 'cart'." },
+        scopeName: { type: 'string', description: 'Category/collection name when scope is not cart.' },
+        minBasketCents: { type: 'number', description: 'Minimum basket in cents, if any.' },
+        validFrom: { type: 'string', description: 'ISO date.' },
+        validTo: { type: 'string', description: 'ISO date.' },
+        code: { type: 'string', description: 'Suggested coupon code (trigger=coupon only).' },
+        reason: { type: 'string' },
+      },
+      required: ['name', 'trigger', 'type', 'scope'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_recipe_draft',
+    description:
+      'PROPOSE (does not apply): a "table idea" recipe that carries existing products into the cart. Ingredients bind to VARIANTS (the "350 g" row), never to a product alone. The recipe is created INACTIVE and — by a data rule — CANNOT be published until all three languages are filled; the response tells you which languages you supplied so you can warn the admin.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        nameTr: { type: 'string' },
+        nameFr: { type: 'string' },
+        nameDe: { type: 'string' },
+        stepsTr: { type: 'string', description: 'Preparation steps, Turkish (required).' },
+        stepsFr: { type: 'string' },
+        stepsDe: { type: 'string' },
+        descriptionTr: { type: 'string' },
+        descriptionFr: { type: 'string' },
+        descriptionDe: { type: 'string' },
+        servesTr: { type: 'string', description: 'Free text like "4 kişilik" — not a number.' },
+        servesFr: { type: 'string' },
+        servesDe: { type: 'string' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { variantId: { type: 'string' }, qty: { type: 'number' } },
+            required: ['variantId'],
+          },
+        },
+        reason: { type: 'string' },
+      },
+      required: ['nameTr', 'stepsTr', 'items'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'list_proposals',
     description:
       'The approval queue as it stands: pending proposals (id, kind, summary, age, expiry) plus the last few decided ones with their outcome (applied/rejected/failed and why). Use it to check whether you already proposed something, or to tell the admin what is waiting for them.',
@@ -272,6 +363,9 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   propose_money_movement: (a) => proposeMoneyMovement(a),
   propose_zone_extend: (a) => proposeZoneExtend(a),
   propose_product_draft: (a) => proposeProductDraft(a),
+  propose_bundle_draft: (a) => proposeBundleDraft(a),
+  propose_discount_draft: (a) => proposeDiscountDraft(a),
+  propose_recipe_draft: (a) => proposeRecipeDraft(a),
   list_proposals: (a) => listProposals(num(a.limit, 20)),
 };
 
