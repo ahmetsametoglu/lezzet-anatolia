@@ -62,6 +62,10 @@ const styles = StyleSheet.create((theme) => ({
   block: {
     height: theme.size.controlLg,
     borderRadius: theme.radius.control,
+    /* Yatay dolgu, blok düğme GENİŞLİĞİNİ EBEVEYNDEN alsa da yazılır (kullanıcı bulgusu 09.08):
+       ortalanmış bir kapsayıcının içinde (boş durum kartı) düğme içeriğine büzülüyor ve etiket
+       kenara yapışıyordu. Dolgu tam-genişlik hâlde görünmez, büzülen hâlde kurtarır. */
+    paddingHorizontal: theme.space['7xl'],
   },
   pill: {
     alignSelf: 'flex-start',

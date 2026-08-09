@@ -33,6 +33,7 @@ export {
   customerAppText,
   customerAppRadius,
   customerAppShadow,
+  customerAppShadowOffset,
   customerAppBlur,
   customerAppGradient,
 } from './customer-app';

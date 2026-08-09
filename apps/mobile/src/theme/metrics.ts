@@ -12,6 +12,8 @@
   yüksekliği, daire çapı, dokunma hedefi) yuvarlanMAdı — orada bir piksel hizayı bozar.
 */
 
+import { customerAppShadowOffset } from '@lezzet/design-tokens';
+
 export const appMetrics = {
   /** Boşluk ölçeği — dolgu, aralık, kenar boşluğu. */
   space: {
@@ -160,6 +162,23 @@ export const appMetrics = {
     scaleSmall: 0.9,
     opacity: 0.55,
   },
+
+  /**
+   * SERT GÖLGENİN YERİ — gölge öğenin kutusunun DIŞINA taşar (sağa ve aşağı 3 dp). Web'de bunun
+   * bir bedeli yok: CSS `box-shadow` düzeni etkilemez ve taşan kısım serbestçe çizilir. RN'de
+   * öyle değil — kaydırma alanı çocuklarını kendi sınırında KIRPAR, dolayısıyla kabın kenarındaki
+   * öğenin gölgesi sessizce yok olur.
+   *
+   * ÖLÇÜLDÜ (cihaz, 09.08 · talep çekmecesi): kabın son çocuğu olan çerçeveli düğmenin alt ve sağ
+   * gölge bandı hiç çizilmiyordu; geriye yalnız köşe yaylarındaki kırıntılar kalıyor ve düğme
+   * "kenarı kirlenmiş" görünüyordu. Kırpma tek bir ekranın değil, sert gölgeli HER öğenin sorunu.
+   *
+   * ÇÖZÜM ÖĞENİN KENDİSİNDE: sert gölge çizen yüzey, kendi düzen kutusunda gölgesi kadar yer
+   * ayırır (`PressableSurface`, `feedback="shadow"`). Böylece kırpan kap ne olursa olsun gölge
+   * kutunun içinde kalır ve ekran başına yama gerekmez. Değer token'dan gelir, burada yeniden
+   * yazılmaz — gölge kayması değişirse ayrılan yer de değişir.
+   */
+  shadowRoom: customerAppShadowOffset,
 
   /** İskelet (skeleton) nabzı — tasarımdaki `@keyframes skel` (opaklık .45 ⟷ .9, 1,1 sn). */
   skeleton: {

@@ -1,5 +1,13 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type WithTimingConfig,
+} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
@@ -7,20 +15,48 @@ import { StyleSheet } from 'react-native-unistyles';
   sırala&filtrele · adres · kupon · paylaş · ödeme). İçerik YUVADIR: sheet hangi içeriğin
   geleceğini bilmez, yalnız örtüyü, tutamağı, başlığı ve kapanma yollarını garanti eder.
 
-  KAPANMANIN ÜÇ YOLU (tasarımda ikisi çizili, üçüncüsü platformun kendi sözü):
+  KAPANMANIN DÖRT YOLU:
     · örtüye dokunmak (şablonun `shClose`u)
     · içeriğin kendi düğmesi (çağıran `onClose`u kendi çağırır)
     · Android'in geri hareketi/tuşu — `onRequestClose`. Çizili değil ama Android'de bir katmanın
       geri tuşuyla kapanmaması ARIZADIR, tasarım eksiği değil.
+    · TUTAMAKTAN AŞAĞI SÜRÜKLEMEK (09.08) — aşağıdaki bölüm.
 
-  ── ŞABLONDAN SAPMA: AÇILIŞ ANİMASYONU ─────────────────────────────────────
-  Şablon örtüyü soldurup (`fadeIn .25s`) paneli AYRICA aşağıdan yukarı kaydırıyor
-  (`shUp .32s`). RN'in `Modal`ı tek bir animasyon türü alır: `slide` örtüyü de panelle birlikte
-  aşağıdan getirir (yani örtü ekranı süpürerek girer — şablonun söylediği şey değil), `fade`
-  ise ikisini birden soldurur. `fade` seçildi: yanlış olan hareket, olmayan hareketten kötüdür.
-  İki ayrı eğri gerçek bir animasyon katmanı ister (Reanimated) ve o kitin bugünkü kapsamında yok
-  — BEKLEYEN(21.7).
+  ── ANİMASYON: ARTIK GERÇEK (09.08 — eski `BEKLEYEN(21.7)` kapandı) ─────────
+  Şablon örtüyü SOLDURUYOR (`fadeIn .25s`) ve paneli AYRICA aşağıdan yukarı KAYDIRIYOR
+  (`shUp .32s`) — iki ayrı öğe, iki ayrı eğri. RN'in `Modal`ı tek bir animasyon türü alır, o
+  yüzden burada eskiden `fade` kullanılıyordu ve panel hiç kaymıyordu. Reanimated kurulunca
+  (kullanıcı izni 09.08) ikisi ayrıldı: `Modal` artık animasyonsuz (`none`), örtünün opaklığını
+  ve panelin `translateY`sini biz yürütüyoruz. Süreler şablonun kendi süreleri.
+
+  KAPANIŞ, AÇILIŞIN AYNASI DEĞİLDİR: panel önce kayıp GİDER, `Modal` ancak ondan sonra sökülür
+  (`runOnJS(onClose)` bitişte). `visible` false olur olmaz sökseydik kapanış hiç görünmezdi —
+  açılışı animasyonlu, kapanışı ani bir katman yarım kalmış hissi verir.
+
+  ── SÜRÜKLEYEREK KAPATMA ────────────────────────────────────────────────────
+  Tutamak artık yalnız görsel ipucu değil, HEDEFİN KENDİSİ: aşağı sürüklenince panel parmağı
+  takip eder, bırakılınca iki karar verilir — yeterince uzağa gittiyse (yükseklikinin dörtte
+  biri) ya da yeterince hızlı bırakıldıysa KAPANIR, aksi hâlde yerine geri oturur. Mesafe VE hız
+  birlikte bakılır: küçük ama hızlı bir fırlatma da kapatma niyetidir, ağır ağır yarıya kadar
+  indirip bırakmak da.
+
+  YUKARI SÜRÜKLEME YUTULUR (`Math.max(0, …)`): panel tavanının üstüne çıkmaz. Aksi hâlde çekmece
+  ekranın dışına doğru esner ve altında örtü rengi görünürdü.
 */
+
+/** Şablonun kendi süreleri (`fadeIn .25s` · `shUp .32s`). */
+const OPEN_MS = 320;
+const CLOSE_MS = 240;
+const TIMING: WithTimingConfig = { duration: OPEN_MS };
+const CLOSE_TIMING: WithTimingConfig = { duration: CLOSE_MS };
+
+/**
+ * Kapatma eşikleri. `RATIO` panelin YÜKSEKLİĞİNE oranlıdır — sabit piksel, kısa çekmecede çok
+ * uzak, uzun çekmecede çok yakın olurdu. `VELOCITY` saniyedeki dp: hızlı fırlatma mesafeye
+ * bakmadan kapatır.
+ */
+const DISMISS_RATIO = 0.25;
+const DISMISS_VELOCITY = 900;
 
 interface BottomSheetProps {
   visible: boolean;
@@ -32,8 +68,80 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ visible, title, onClose, children, testID }: BottomSheetProps) {
+  /* `Modal` KAPANIŞ animasyonu bitene kadar ayakta kalmalı; bu yüzden görünürlüğün iki hâli var:
+     çağıranın `visible`ı (niyet) ve buradaki `mounted` (ekranda mı). */
+  const [mounted, setMounted] = useState(visible);
+
+  /** Panelin kendi yüksekliği — kapanış mesafesi ve eşiği ondan türer, ekrandan değil. */
+  const height = useSharedValue(0);
+  /** 0 = yerinde, panelin yüksekliği = tamamen aşağıda. */
+  const offset = useSharedValue(0);
+  /** Örtünün opaklığı; panelden AYRI yürür (şablonun iki ayrı eğrisi). */
+  const scrimOpacity = useSharedValue(0);
+
+  const finishClose = useCallback(() => {
+    setMounted(false);
+    onClose();
+  }, [onClose]);
+
+  /* Sürükleme ve düğme aynı kapanışı kullanır: iki ayrı yol yazılsaydı biri bir gün ötekinden
+     farklı bir süreyle kapanırdı. */
+  const animateClose = useCallback(() => {
+    'worklet';
+    scrimOpacity.value = withTiming(0, CLOSE_TIMING);
+    offset.value = withTiming(height.value, CLOSE_TIMING, (done) => {
+      if (done === true) runOnJS(finishClose)();
+    });
+  }, [finishClose, height, offset, scrimOpacity]);
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      return;
+    }
+    if (mounted) animateClose();
+  }, [animateClose, mounted, visible]);
+
+  /* Panel ölçüsü BİLİNMEDEN açılış oynatılamaz: nereden geleceğini yükseklik söyler. Ölçü ilk
+     yerleşimde gelir, o yüzden açılış burada başlar — `useEffect`te değil. */
+  const onPanelLayout = useCallback(
+    (measured: number) => {
+      if (measured === 0 || height.value === measured) return;
+      const first = height.value === 0;
+      height.value = measured;
+      if (!first) return;
+      offset.value = measured;
+      offset.value = withTiming(0, TIMING);
+      scrimOpacity.value = withTiming(1, TIMING);
+    },
+    [height, offset, scrimOpacity],
+  );
+
+  const drag = Gesture.Pan()
+    .onChange((event) => {
+      // Yukarı sürükleme yutulur: panel tavanının üstüne çıkmaz.
+      offset.value = Math.max(0, offset.value + event.changeY);
+    })
+    .onEnd((event) => {
+      const farEnough = offset.value > height.value * DISMISS_RATIO;
+      const fastEnough = event.velocityY > DISMISS_VELOCITY;
+      if (farEnough || fastEnough) {
+        animateClose();
+        return;
+      }
+      offset.value = withTiming(0, TIMING);
+    });
+
+  const panelStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
+  /* Örtü sürüklenirken de sönükleşir: panel aşağı indikçe arkası açılır. Kendi zamanlaması
+     (`scrimOpacity`) ile sürükleme oranının küçüğü alınır — parmakla inen panelde örtü de iner. */
+  const scrimStyle = useAnimatedStyle(() => {
+    const dragged = height.value === 0 ? 1 : 1 - offset.value / height.value;
+    return { opacity: Math.min(scrimOpacity.value, dragged) };
+  });
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent testID={testID}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent testID={testID}>
       {/* KLAVYE PANELİ EZEMEZ (kullanıcı bulgusu 08.08 — profil çekmecesinde alanlar klavyenin
           altında kalıyordu): `statusBarTranslucent` bir Modal'da Android pencereyi kendiliğinden
           daraltmaz; kaçınma burada, KİTTE durur — girdili her çekmece (adres, kupon…) aynı
@@ -41,27 +149,39 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
       <KeyboardAvoidingView behavior="padding" style={styles.layer} accessibilityViewIsModal>
         {/* Örtü DOKUNULABİLİR ama düğme DEĞİLDİR: ekran okuyucuya "kapat" diye bir hedef eklemek
             yerine katmanın kendi kapatma düğmeleri okunur — örtü yalnız işaretçi kısayoludur. */}
-        <Pressable
-          style={styles.scrim}
-          onPress={onClose}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          testID={testID === undefined ? undefined : `${testID}-scrim`}
-        />
-        <View style={styles.panel}>
+        <Animated.View style={[styles.scrimLayer, scrimStyle]}>
+          <Pressable
+            style={styles.scrim}
+            onPress={onClose}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            testID={testID === undefined ? undefined : `${testID}-scrim`}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[styles.panel, panelStyle]}
+          onLayout={(event) => onPanelLayout(event.nativeEvent.layout.height)}
+        >
           {/* Panelin ALT KANAMASI — klavye kaçınması paneli kaldırınca panel ile ekran altı
               arasında kalan bölge (klavyenin arkası) örtü renginde kalıyordu ve modern klavyelerin
               KIVRIMLI köşelerinden garip görünüyordu (kullanıcı bulgusu 08.08). Bu katman panel
               zeminini aşağı taşırır: köşelerden görünen artık panelin kendisidir. Klavye kapalıyken
-              ekran dışında durur, zararsız. */}
+              ekran dışında durur, zararsız. Sürüklenen panelde de altını kapatır. */}
           <View style={styles.keyboardBleed} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-          {/* Tutamak — yalnız görsel ipucu (sürükleme henüz yok); ekran okuyucudan gizli. */}
-          <View style={styles.handle} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          {/* Tutamak SÜRÜKLEME HEDEFİDİR (09.08). Dokunma alanı çubuğun kendisinden büyük:
+              5 dp'lik bir çizgiye parmakla isabet ettirmek beklenemez — kavrama bölgesi çubuğu
+              saran şeffaf bir bant. Ekran okuyucudan gizli kalır: sürükleme onun için bir yol
+              değil, katmanın kendi kapatma düğmeleri okunur. */}
+          <GestureDetector gesture={drag}>
+            <View style={styles.handleZone} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View style={styles.handle} />
+            </View>
+          </GestureDetector>
           <Text style={styles.title} accessibilityRole="header">
             {title}
           </Text>
           {children}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -72,9 +192,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  scrim: {
+  /** Opaklığı yürüyen katman; dokunuşu içindeki `Pressable` alır. */
+  scrimLayer: {
     position: 'absolute',
     inset: 0,
+  },
+  scrim: {
+    flex: 1,
     backgroundColor: theme.colors.scrim,
   },
   panel: {
@@ -99,8 +223,15 @@ const styles = StyleSheet.create((theme, rt) => ({
     height: rt.screen.height * 0.5,
     backgroundColor: theme.colors['sand-50'],
   },
+  /** Tutamağın KAVRAMA bölgesi — görünmez, yalnız parmağa alan açar. */
+  handleZone: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    paddingVertical: theme.space.lg,
+    // Kendi dolgusunu ekler, panelin üst boşluğu bir kez sayılsın diye üstteki payı geri alır.
+    marginTop: -theme.space.lg,
+  },
   handle: {
-    alignSelf: 'center',
     width: theme.size.sheetHandle,
     height: theme.border.sheetHandle,
     // Tam yuvarlak uç, kalınlığın YARISINDAN türer — şablonun 3'ü de zaten budur (5/2 ≈ 2,5).

@@ -61,6 +61,12 @@ export function PressableSurface({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      /* Sert gölge kutunun DIŞINA taşar; kaydırma alanı da çocuklarını sınırında kırpar. İkisi
+         birleşince kabın kenarındaki öğenin gölgesi sessizce kayboluyordu (ölçüldü, cihaz 09.08).
+         Yer BURADA ayrılır — gölgeyi çizen yüzeyin kendi kutusunda — ki hangi kabın içinde
+         durduğu önemsiz olsun ve ekran başına dolgu yaması gerekmesin. Gerekçe `metrics.ts`
+         `shadowRoom` künyesinde. */
+      style={feedback === 'shadow' ? shadowRoomStyle.room : undefined}
       hitSlop={compact ? theme.touchSlop : undefined}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
@@ -84,6 +90,14 @@ export function PressableSurface({
  * okur: RN'in `Pressable`ı basılı durumu iç `Pressability` sorumlusu üzerinden yürütüyor, RNTL
  * o geçici durumu dışarıdan tetikleyemiyor. Kuralı ölçmenin tek dürüst yolu haritayı ölçmek.
  */
+/** Sert gölgenin kutu içinde ayrılan yeri — değer `metrics.ts`ten, ham piksel yazılmaz. */
+const shadowRoomStyle = StyleSheet.create((theme) => ({
+  room: {
+    paddingRight: theme.shadowRoom,
+    paddingBottom: theme.shadowRoom,
+  },
+}));
+
 export const pressFeedbackStyles = StyleSheet.create((theme) => ({
   shadow: {
     transform: [{ translateX: theme.press.translate }, { translateY: theme.press.translate }],

@@ -5,7 +5,8 @@ import { loadAsync } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { useUnistyles } from 'react-native-unistyles';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { ToastHost } from '@/components/ui/toast-host';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
@@ -66,12 +67,20 @@ export default function RootLayout() {
   if (!fontsReady || !onboardingReady || !scaleReady) return null;
 
   return (
-    <>
+    /* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün ALTINDA
+       çalışır ve kök EN DIŞTA olmalı; Android'de dokunuşları buradan dağıtır. Tek kopya, kökte:
+       her ekranın kendi kökünü kurması, iki ayrı hareket ağacı demek olurdu. */
+    <GestureHandlerRootView style={styles.root}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
       {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
           basan taraf `publishToast` (lib/toast), gerekçeler host'un künyesinde. */}
       <ToastHost />
       <StatusBar style="auto" />
-    </>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  /** Hareket kökü ekranı doldurur; yoksa altındaki yığın ölçüsüz kalır. */
+  root: { flex: 1 },
+});

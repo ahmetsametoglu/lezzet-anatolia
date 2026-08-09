@@ -235,9 +235,17 @@ export const customerAppRadius = {
    · `hard` — v3'ün imzası: kaydırılmış, bulanıklığı olmayan mürekkep gölge (26 kullanım).
      Değeri tabandaki `ink`ten TÜRETİLİR, ikinci kez yazılmaz: mürekkep değişirse gölge de
      değişir. Basılı durumda öğe `translate(2px,2px)` ile bu gölgeyi yutar (karar #8). */
+/**
+ * Sert gölgenin KAYMA MİKTARI (px) — gölge dizgesi bundan türer, sayı ikinci kez yazılmaz.
+ * Ayrıca bir ölçü olarak dışarı verilir: gölge kutunun DIŞINA taşar, dolayısıyla onu çizen öğenin
+ * kendi düzen kutusunda bu kadar yer ayırması gerekir. Ayırmayan öğe, kendisini sınırında kırpan
+ * bir kapsayıcının (kaydırma alanı) içinde gölgesini kaybeder — ölçüldü, cihaz 09.08.
+ */
+export const customerAppShadowOffset = 3;
+
 export const customerAppShadow = {
   soft: '0 1px 3px rgba(58, 65, 71, 0.08)',
-  hard: `3px 3px 0 ${customerSurface.ink}`,
+  hard: `${customerAppShadowOffset}px ${customerAppShadowOffset}px 0 ${customerSurface.ink}`,
   /* · `badge` — Token Kararlari #16'nın TEK DURAĞI. Rozet fotoğrafın ya da kartın üstünde YÜZER;
      `soft`un 1 px'lik yüksekliği orada yetmiyor, rozet fotoğrafa yapışık duruyordu. Tasarımda
      .18/.20/.22/.25 dörtlüsü ölçüldü, karar hepsini .22'ye çekti — bir rozetin ne kadar
