@@ -11,6 +11,7 @@ import {
   proposeDiscountDraft,
   proposeFeaturedFlag,
   proposeMoneyMovement,
+  proposeProductCreate,
   proposeProductDraft,
   proposePurchaseOrder,
   proposeRecipeDraft,
@@ -39,7 +40,7 @@ const INSTRUCTIONS = [
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
   'Ground every proposal in a tool result. For a weekly route/zone proposal use demand_signals (uncovered postal codes). For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
-  'FOOD SAFETY: allergen and storage declarations are never guessed. If catalog_health reports them missing, ask the admin for the supplier document — a plausible-sounding allergen line is the one mistake that can hurt someone.',
+  'FOOD SAFETY: you may record allergen and storage declarations ONLY from a document the admin gave you (label photo, supplier sheet) — never from what a product name suggests. Allergens are a closed set: pick values, never phrase a sentence. When a line is blurred or cut off, list that field in uncertainFields instead of guessing; the approval screen puts those in front of the admin. Saying "I could not read it" is always the better answer.',
   'You are NOT the customer-facing agent: you never write to customers and you never see conversation content. customer_pulse gives you counts so you can tell the admin how the inbox stands — that is the extent of your role in messaging.',
 ].join('\n');
 
@@ -156,6 +157,32 @@ export const TOOLS = [
     },
   },
   {
+    name: 'propose_product_create',
+    description:
+      "PROPOSE (does not apply): create a NEW product from the package the admin photographed — you read the label images, this tool queues what you read. Pass name (tr/fr/de), at least one variant size, dateType (DLC = safety date, destroy when passed; DDM = quality date, still sellable), and whatever the label shows: description, ingredients, storage instructions, nutrition per 100 g, allergens and traces. ALLERGENS ARE A CLOSED SET — pick from the list, never write a sentence; an unknown value is rejected rather than silently dropped. Say which fields you could NOT read clearly in uncertainFields — the approval screen highlights them, and 'I could not read it' is always better than a confident guess. The product is created as a CANDIDATE: it is never put on sale by this tool. No price, no stock — both are separate decisions.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'object', description: 'Product name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
+        categoryName: { type: 'string', description: 'Category by NAME (resolved server-side); omit if unsure — the tool lists the existing ones.' },
+        variants: { type: 'array', description: 'Sizes: [{ "label": { "tr": "500 g" } }]. At least one — a product with no size cannot be sold.' },
+        dateType: { type: 'string', description: "'DLC' or 'DDM' — read it off the label." },
+        shelfLifeDays: { type: 'number', description: 'Total shelf life in days, if the label states it.' },
+        vatRate: { type: 'number', description: 'French food VAT: 5.5 (packaged/frozen) or 10 (immediate consumption). Default 5.5.' },
+        description: { type: 'object', description: 'Per language.' },
+        ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
+        storageInstructions: { type: 'object', description: 'Per language, as printed.' },
+        nutrition: { type: 'object', description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.' },
+        allergens: { type: 'array', description: 'Closed set of the 14 EU allergens — values only, no free text.' },
+        traces: { type: 'array', description: 'Cross-contamination ("may contain"), same closed set.' },
+        uncertainFields: { type: 'array', description: 'Field names you could not read clearly (blurred, cut off, glare).' },
+        reason: { type: 'string', description: 'Where this came from — e.g. "label photos sent by the admin, 3 images".' },
+      },
+      required: ['name', 'variants', 'dateType'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'propose_purchase_order',
     description:
       'PROPOSE (does not apply): a draft purchase order for ONE warehouse, built from the below-threshold reorder suggestions. QUANTITIES COME FROM THE ENGINE, not from you — you pick the warehouse (and optionally the supplier); the shortfall is computed from stock thresholds. Writes to the approval queue; the admin applies it. Tells you how many OTHER suppliers still have pending shortfalls so nothing is silently dropped.',
@@ -242,22 +269,22 @@ export const TOOLS = [
   {
     name: 'propose_product_draft',
     description:
-      "PROPOSE (does not apply): fill a draft product's empty text fields (description, ingredients) in three languages. The product STAYS a draft — publishing is a separate human decision. ALLERGENS AND STORAGE CANNOT BE SET HERE: the payload has no such fields, by design. A plausible-sounding allergen line is the one mistake that can hurt someone; report them as missing (catalog_health) and let the admin supply the supplier document.",
+      "PROPOSE (does not apply): complete or correct an EXISTING product — name, description, ingredients, storage instructions, nutrition, allergens and traces, each in three languages where it applies. Use it to fill gaps reported by catalog_health, to translate a field that exists in one language only, or to write what the admin's label photos show. ALLERGENS ARE A CLOSED SET (pick values, never write a sentence; unknown values are rejected, not dropped). Say what you could not read clearly in uncertainFields. WRITING OVER EXISTING TEXT IS PERMANENT — there is no version history, so only overwrite a filled field when you mean to, and say so in reason. The product STAYS as it is: this tool never puts anything on sale.",
     inputSchema: {
       type: 'object',
       properties: {
-        productId: { type: 'string', description: 'Product uuid from catalog_health.' },
-        fields: {
-          type: 'object',
-          description: 'Each field is an object with tr/fr/de keys. Only description and ingredients are accepted.',
-          properties: {
-            description: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
-            ingredients: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
-          },
-        },
+        productId: { type: 'string', description: 'Product uuid from catalog_health or catalog_lookup.' },
+        name: { type: 'object', description: 'Product name per language. Changing it does NOT change the URL (the slug is fixed at creation).' },
+        description: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
+        ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
+        storageInstructions: { type: 'object', description: 'Per language, as printed.' },
+        nutrition: { type: 'object', description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.' },
+        allergens: { type: 'array', description: 'Closed set of the 14 EU allergens — values only.' },
+        traces: { type: 'array', description: 'Cross-contamination, same closed set.' },
+        uncertainFields: { type: 'array', description: 'Field names you could not read clearly.' },
         reason: { type: 'string' },
       },
-      required: ['productId', 'fields'],
+      required: ['productId'],
       additionalProperties: false,
     },
   },
@@ -395,6 +422,7 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   propose_money_movement: (a) => proposeMoneyMovement(a),
   propose_zone_extend: (a) => proposeZoneExtend(a),
   propose_product_draft: (a) => proposeProductDraft(a),
+  propose_product_create: (a) => proposeProductCreate(a),
   propose_bundle_draft: (a) => proposeBundleDraft(a),
   propose_discount_draft: (a) => proposeDiscountDraft(a),
   propose_recipe_draft: (a) => proposeRecipeDraft(a),

@@ -1,7 +1,13 @@
 import { AssistantProposalService, CategoryService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { APPLIERS, KIND_META, amountCentsOf, applyProposal, modeOf } from '@lezzet/application';
-import { AssistantProposalKindEnum, PROPOSAL_PAYLOAD_SCHEMAS, resolveLocalizedText, type FeaturedFlagPayload } from '@lezzet/types';
+import { APPLIERS, KIND_META, amountCentsOf, applyProposal, impactOf, modeOf } from '@lezzet/application';
+import {
+  AssistantProposalKindEnum,
+  PROPOSAL_PAYLOAD_SCHEMAS,
+  parseProposalPayload,
+  resolveLocalizedText,
+  type FeaturedFlagPayload,
+} from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { HANDLERS, TOOLS } from './server-factory';
 
@@ -147,6 +153,44 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
 
   it('bölge önerisinin etki cümlesi geri alınamazlığı SÖYLER', () => {
     expect(KIND_META.zone_extend.impact).toMatch(/GERİ ALINAMAZ/);
+  });
+
+  /**
+   * Payload jsonb'ye yazılırken anahtar biçimi dönüşüyor (`appToDb`). Dönüş yolunda geri
+   * çevrilmezse `remainingGaps` okunamaz ve **tamlık cümlesi sessizce yanlış olur**: eksik
+   * beyanlı bir ürün "onaylarsan tam olur" diye görünür. Sessiz olduğu için de fark edilmez —
+   * o yüzden gidiş-dönüş burada kilitleniyor (22.6).
+   */
+  it('payload GİDİŞ-DÖNÜŞÜ alan adlarını korur — tamlık cümlesi gerçek veriden kurulur', async () => {
+    const row = await proposals.create({
+      kind: 'product_create',
+      payload: {
+        name: { tr: `Kuyruk ürünü ${stamp}` },
+        categoryId: null,
+        categoryName: null,
+        dateType: 'DDM',
+        shelfLifeDays: null,
+        vatRate: 5.5,
+        variants: [{ label: { tr: '500 g' } }],
+        ingredients: { tr: 'un, yumurta' },
+        allergens: ['gluten'],
+        uncertainFields: ['nutrition'],
+        remainingGaps: ['lang', 'nutrition', 'storage'],
+      },
+      summary: `Yeni ürün: "Kuyruk ürünü ${stamp}" (500 g)`,
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      sourceSession: `test-${stamp}`,
+    });
+    created.push(row.id);
+
+    const [read] = (await proposals.listPending(50)).filter((r) => r.id === row.id);
+    const payload = read?.payload as Record<string, unknown>;
+    expect(payload.remainingGaps).toEqual(['lang', 'nutrition', 'storage']);
+    expect(payload.uncertainFields).toEqual(['nutrition']);
+    // Şema kapısı da aynı şekli kabul etmeli — okunan payload yeniden doğrulanabilir olmalı.
+    expect(() => parseProposalPayload('product_create', payload)).not.toThrow();
+    // Ve cümle gerçekten eksikleri SAYAR (sabit metin değil).
+    expect(impactOf('product_create', payload)).toMatch(/besin künyesi/);
   });
 
   /**

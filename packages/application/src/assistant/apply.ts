@@ -20,6 +20,7 @@ import {
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
   type MoneyMovementPayload,
+  type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
@@ -195,8 +196,58 @@ const applyZoneExtend: Applier = async (db, raw) => {
  */
 const applyProductDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('product_draft', raw) as ProductDraftPayload;
-  await new ProductService(db).updateDetails(payload.productId, payload.fields);
+  // Yalnız GELEN alanlar yazılır: payload'da olmayan alanı `undefined` geçmek, dolu bir beyanı
+  // sessizce `null`a çevirirdi. `status` hiç geçilmiyor — yayın kararı bu kapıdan verilmez (22.6).
+  await new ProductService(db).updateDetails(payload.productId, declarationUpdate(payload.fields));
   return { productId: payload.productId };
+};
+
+/**
+ * Payload'ın beyan alanlarını `updateDetails` girdisine çevirir — **verilmeyen alan hiç yazılmaz**.
+ *
+ * Ayrım ince ama pahalı: `{ description: undefined }` göndermek ile alanı hiç göndermemek aynı
+ * şey değil. Birincisi dolu bir açıklamayı boşaltır ve bunu kimse fark etmez (22.5'te ölçtük:
+ * ürün metinlerinde sürüm tutulmuyor, kaybolan geri gelmiyor).
+ */
+function declarationUpdate(p: {
+  name?: unknown;
+  description?: unknown;
+  ingredients?: unknown;
+  storageInstructions?: unknown;
+  nutrition?: unknown;
+  allergens?: unknown;
+  traces?: unknown;
+}): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of ['name', 'description', 'ingredients', 'storageInstructions', 'nutrition', 'allergens', 'traces'] as const) {
+    if (p[key] !== undefined) out[key] = p[key];
+  }
+  return out;
+}
+
+/**
+ * Ambalajdan YENİ ÜRÜN (22.6) — öteki tiplerden farkı: katalogda olmayan bir şeyi doğurur.
+ *
+ * **Ürün ADAY (`candidate`) doğar ve bu payload'la değiştirilemez:** `status` şemada yok, burada da
+ * elle veriliyor. Asistanın beyanı doldurabilmesi ile ürünü satışa çıkarabilmesi ayrı eksenler —
+ * yanlış okunmuş bir alerjen en kötü hâlde bile vitrine düşmez (`AI_ADMIN_ASSISTANT §6`).
+ *
+ * Fiyat ve stok YOK: ikisi de ayrı karar, ayrı ekran. Varyant en az bir tane (şema zorluyor) çünkü
+ * varyantsız ürün satılamaz — fiyat ve stok varyanta bağlıdır.
+ */
+const applyProductCreate: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('product_create', raw) as ProductCreatePayload;
+  const { product } = await new ProductService(db).create({
+    ...declarationUpdate(payload),
+    name: payload.name,
+    categoryId: payload.categoryId,
+    dateType: payload.dateType,
+    shelfLifeDays: payload.shelfLifeDays,
+    vatRate: payload.vatRate,
+    status: 'candidate',
+    variants: payload.variants.map((v, index) => ({ label: v.label, sortOrder: index })),
+  } as Parameters<ProductService['create']>[0]);
+  return { productId: product.id };
 };
 
 /**
@@ -269,6 +320,7 @@ export const APPLIERS = {
   money_movement: applyMoneyMovement,
   zone_extend: applyZoneExtend,
   product_draft: applyProductDraft,
+  product_create: applyProductCreate,
   discount_draft: applyDiscountDraft,
   recipe_draft: applyRecipeDraft,
 } as const;

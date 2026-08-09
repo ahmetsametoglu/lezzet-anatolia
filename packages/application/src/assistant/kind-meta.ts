@@ -103,6 +103,16 @@ export const KIND_META = {
     mode: 'handoff',
     target: 'routes',
   },
+  product_create: {
+    label: 'Yeni ürün',
+    impact:
+      'Katalogda yeni bir ürün oluşur ve ADAY olarak doğar — vitrinde görünmez, satılamaz. Satışa çıkarmak ayrı bir karardır ve bu yoldan verilemez. Fiyat ve stok girilmez; ikisi de ayrı iştir.',
+    tables: ['product', 'product_variant'],
+    // Kayıt aday doğuyor ve düzenlemesi ürün ekranında — paket/tarif ile aynı desen.
+    mode: 'draft_then_edit',
+    target: 'product',
+    resultKey: 'productId',
+  },
   product_draft: {
     label: 'Ürün',
     impact:
@@ -190,13 +200,32 @@ export function impactOf(kind: AssistantProposalKind, payload: unknown): string 
     return `${p.items.length} kalemlik yeni bir paket oluşur ve PASİF doğar — müşteri vitrininde görünmez. Yayına almak ayrı bir karardır.`;
   }
 
-  if (kind === 'product_draft' && p.fields && typeof p.fields === 'object') {
-    const fields = Object.keys(p.fields as Record<string, unknown>);
-    return `Ürünün ${fields.join(' ve ')} alanı güncellenir ama ürün TASLAKTA KALIR. Alerjen ve saklama beyanı bu yoldan yazılamaz — onlar dolmadan ürün yayına alınamaz.`;
+  // ── BEYAN TİPLERİNDE CÜMLE TAMLIKTAN KURULUR (22.6) ────────────────────────
+  // Ekranın en önemli tek bilgisi "onaylarsam kayıt tam olur mu". Ölçüt motordan geliyor
+  // (`missingDeclarations` → payload'daki `remainingGaps`), araç kendi ölçütünü uydurmuyor.
+  if (kind === 'product_create' || kind === 'product_draft') {
+    const gaps = Array.isArray(p.remainingGaps) ? (p.remainingGaps as string[]) : [];
+    const tail =
+      gaps.length === 0
+        ? 'Onaylanırsa ürünün yasal beyanı TAM olur.'
+        : `Onaylansa bile şu beyanlar EKSİK kalır: ${gaps.map((g) => GAP_LABEL[g] ?? g).join(' · ')} — eksik beyanlı ürün satışa çıkamaz.`;
+    if (kind === 'product_create') return `${base} ${tail}`;
+    const fields = p.fields && typeof p.fields === 'object' ? Object.keys(p.fields as Record<string, unknown>) : [];
+    const head = fields.length > 0 ? `Ürünün ${fields.join(' ve ')} alanı güncellenir` : 'Ürünün beyan alanları güncellenir';
+    return `${head} ama ürün TASLAKTA KALIR. ${tail}`;
   }
 
   return base;
 }
+
+/** Eksik beyan adları — motorun `DeclarationGap` kümesiyle birebir (`missingDeclarations`). */
+const GAP_LABEL: Record<string, string> = {
+  lang: 'üç dilde ad',
+  ingredients: 'içindekiler',
+  nutrition: 'besin künyesi',
+  storage: 'saklama koşulu',
+  allergens: 'alerjen listesi',
+};
 
 /**
  * Önerinin TUTARI — tipe göre payload'dan türer; tutar kavramı olmayan tipte `null`.

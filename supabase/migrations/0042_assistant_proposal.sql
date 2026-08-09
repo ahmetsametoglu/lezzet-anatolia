@@ -31,7 +31,10 @@ create type public.assistant_proposal_kind as enum (
   -- İlk kez SATIŞ FİYATINA dokunan yetki (kullanıcı kararı 09.08) — öteki dokuz tip ya taslak
   -- doğurur ya defter/stok yazar, hiçbiri müşterinin gördüğü fiyatı oynatmazdı. Onay yine şart;
   -- fiyat onaylanır onaylanmaz vitrinde görünür.
-  'batch_offer'
+  'batch_offer',
+  -- Ambalaj fotoğrafından YENİ ÜRÜN (22.6). Öteki tipler var olan bir kaydı değiştirir; bu, katalogda
+  -- olmayan bir şeyi doğurur. `status` payload'da YOK: ürün aday doğar, satışa çıkarmak ayrı karardır.
+  'product_create'
 );
 
 -- `failed` AYRI bir hâl ve şart: onaylandı ama uygulanamadı (stok bu arada bitti, motor reddetti).

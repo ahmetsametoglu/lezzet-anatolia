@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
+import { NutritionSchema, ProductAllergenEnum, ProductDateTypeEnum } from './product.schema';
 
 /**
  * AI asistanının ONAY KUYRUĞU (22.3) — `0042_assistant_proposal.sql`.
@@ -27,6 +28,7 @@ export const AssistantProposalKindEnum = z.enum([
   'product_draft',
   'recipe_draft',
   'batch_offer',
+  'product_create',
 ]);
 export type AssistantProposalKind = z.infer<typeof AssistantProposalKindEnum>;
 
@@ -188,40 +190,102 @@ export const ZoneExtendPayloadSchema = z.object({
 });
 
 /**
- * Ürün taslağının doldurulması — ve **buradaki asıl kural bir YOKLUK**.
+ * ─── BELGEDEN ÜRÜN (22.6) — ortak parçalar ───────────────────────────────────
  *
- * `allergens` ve `storageInstructions` bu şemada YOK, yani asistan onları teknik olarak
- * yazamaz — prompt'la değil ŞEMAYLA engellenmiş durumda (petit'in "fiziksel engel ilkesi").
- * Gıdada makul görünen bir alerjen satırı, insana zarar verebilecek tek hatadır; onu modelin
- * iyi niyetine bırakmak yerine imzadan çıkardık. Eksiklik `catalog_health`te raporlanır,
- * belgeyi patron girer.
+ * Patron ambalajın fotoğrafını asistana verir; asistan okur, kuyruğa dilekçe bırakır. İki hâl var
+ * (`product_create` yeni kayıt · `product_draft` var olanı tamamlama) ve alanların çoğu ortak —
+ * bu yüzden bir kez tanımlanıp ikisinde de kullanılır (`CLAUDE §1`: duplication yok).
+ *
+ * ── GIDA DUVARI ŞEMADAN EKRANA TAŞINDI (kullanıcı kararı 09.08) ─────────────
+ * 22.3'te alerjen ve saklama alanları payload'da YOKTU — "fiziksel engel", çünkü modelin
+ * uydurduğu bir alerjen satırı insana zarar verebilir. Bu senaryoda o duvar işlevsiz: **ambalajın
+ * fotoğrafını patron veriyor**, yani bilgi uydurma değil belgeden okuma (fatura senaryosunda aynı
+ * karar zaten verilmişti — `AI_ADMIN_ASSISTANT §6` write-only nüansı). Yeni duvar kullanıcının
+ * kendi cümlesiyle: *"en net duvarımız onay ekranımız."*
+ *
+ * Duvarın veri tarafındaki ayağı ise DEĞİŞMEDİ: `status` bu payload'ların hiçbirinde YOK. Asistan
+ * beyanı doldurabilir ama ürünü satışa çıkaramaz — ürün aday doğar, yayın ayrı karardır. Yanlış
+ * okunmuş bir alerjen en kötü hâlde bile vitrine düşmez.
  */
-export const ProductDraftPayloadSchema = z.object({
+const DeclarationGapEnum = z.enum(['lang', 'ingredients', 'nutrition', 'storage', 'allergens']);
+
+/** Ambalajdan okunan beyan alanları — iki tipin de ortak gövdesi. */
+const ProductDeclarationSchema = z.object({
+  description: LocalizedTextSchema.nullable().optional(),
+  ingredients: LocalizedTextSchema.nullable().optional(),
+  /** Saklama koşulu — 22.3'te YASAKTI, belgeden okuma olduğu için açıldı (yukarıdaki künye). */
+  storageInstructions: LocalizedTextSchema.nullable().optional(),
+  nutrition: NutritionSchema.nullable().optional(),
+  /** 14 AB alerjeni — SERBEST METİN DEĞİL, kapalı küme: model cümle uyduramaz, listeden seçer. */
+  allergens: z.array(ProductAllergenEnum).optional(),
+  traces: z.array(ProductAllergenEnum).optional(),
+});
+
+/**
+ * Onay ekranının iki karar girdisi — ikisi de ARAÇTA hesaplanır, ekranda değil.
+ *
+ * `uncertainFields`: modelin net okuyamadığı alan adları (bulanık, kesik, yansımalı satır).
+ * Ekranın gözü buraya yönlendirmesi bütün alanları tek tek okutmaktan değerli — patron ürünü
+ * zaten tanıyor, ona "şuraya bak" demek yeter. Boş dizi "hepsini net okudum" demektir.
+ *
+ * `remainingGaps`: **bu öneri uygulanırsa hangi beyanlar HÂLÂ eksik kalacak.** Ölçüt motordan
+ * (`missingDeclarations`) gelir, araç kendi ölçütünü uydurmaz. Ekranın en önemli tek cümlesi
+ * buradan çıkar: *"onaylarsan kayıt tam olur"* ya da *"onaylasan da besin künyesi eksik kalacak"*.
+ */
+const ProductReviewSignalsSchema = z.object({
+  uncertainFields: z.array(z.string()).default([]),
+  remainingGaps: z.array(DeclarationGapEnum).default([]),
+});
+
+/** Yeni ürün — ambalajdan. `status` YOK: ürün aday doğar, satışa çıkarmak ayrı karardır. */
+export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(ProductReviewSignalsSchema).extend({
+  name: LocalizedTextSchema,
+  /** Kategori kimlikten ÇÖZÜLÜR ama adı da taşınır — panel uuid göstermez. */
+  categoryId: z.string().uuid().nullable(),
+  categoryName: z.string().nullable(),
+  dateType: ProductDateTypeEnum,
+  /** Toplam raf ömrü (gün); parti tarihiyle birlikte "kalan %" bundan çıkar. */
+  shelfLifeDays: z.number().int().positive().nullable(),
+  vatRate: z.number().positive(),
+  /**
+   * En az BİR boy — varyantsız ürün satılamaz (fiyat ve stok varyanta bağlıdır). Fiyat BURADA YOK
+   * ve olmayacak: ayrı bir karar, ayrı bir ekran.
+   */
+  variants: z.array(z.object({ label: LocalizedTextSchema })).min(1),
+});
+export type ProductCreatePayload = z.infer<typeof ProductCreatePayloadSchema>;
+
+/**
+ * Var olan ürünün tamamlanması — ambalajdan ya da elle. Alan kümesi 22.6'da **beş çok dilli
+ * alana + beyan alanlarına** genişledi; gerekçe yukarıdaki ortak künyede.
+ *
+ * `ad` da yazılabilir hâle geldi (kullanıcı isteği: *"uzun adları kısaltmak için öneri"*) ve bu
+ * SEO'yu kırmıyor: slug ürün yaratılırken bir kez üretiliyor, `updateDetails` ona hiç dokunmuyor —
+ * yani ad değişse de URL sabit kalır (ölçüldü 09.08).
+ */
+export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
   productId: z.string().uuid(),
   productName: z.string().min(1),
-  fields: z
-    .object({
-      description: LocalizedTextSchema.optional(),
-      ingredients: LocalizedTextSchema.optional(),
-    })
-    .refine((f) => Object.keys(f).length > 0, { message: 'En az bir alan doldurulmalı' }),
   /**
-   * ALANIN BUGÜNKÜ HÂLİ — çünkü uygulama ÜZERİNE YAZAR (22.5 · denetim taraması 09.08).
+   * Asistanın YAZDIĞI alanlar. `currentFields` ile aynı şekilde — simetri bilinçli: ekran iki
+   * nesneyi alan alan yan yana koyabilsin, kendi eşleme tablosunu kurmak zorunda kalmasın.
+   */
+  fields: ProductDeclarationSchema.extend({ name: LocalizedTextSchema.optional() }).refine(
+    (f) => Object.values(f).some((v) => v !== undefined),
+    { message: 'En az bir alan doldurulmalı' },
+  ),
+  /**
+   * ALANLARIN BUGÜNKÜ HÂLİ — çünkü uygulama ÜZERİNE YAZAR (22.5 · denetim taraması 09.08).
    *
    * `updateDetails` düz bir `update`tir ve sürüm tutmaz: dolu bir açıklama onaylandığı an
    * kaybolur, geri getirilemez. Ekran "fark tablosu" vaat ediyordu ama karşılaştıracak eski
    * değeri hiç almıyordu — yani yazan taraf "boş alanı dolduruyorum" diyordu, gerçekte bunu
    * kimse doğrulamıyordu. Eski değer payload'da: patron neyi kaybedeceğini GÖREREK onaylar.
    *
-   * Boş nesne "alan boştu" demektir (yani ezilen bir şey yok); alanın hiç gelmemesi "eski hâl
-   * okunamadı" demektir ve ekran o zaman uyarı gösterir — ikisi ayrı şeydir.
+   * Alanın `null` gelmesi "boştu" demektir (ezilen bir şey yok); `currentFields`in hiç gelmemesi
+   * "eski hâl okunamadı" demektir ve ekran o zaman varsaymaz — ikisi ayrı şeydir.
    */
-  currentFields: z
-    .object({
-      description: LocalizedTextSchema.nullable().optional(),
-      ingredients: LocalizedTextSchema.nullable().optional(),
-    })
-    .optional(),
+  currentFields: ProductDeclarationSchema.extend({ name: LocalizedTextSchema.nullable().optional() }).optional(),
 });
 
 /**
@@ -315,6 +379,7 @@ export const PROPOSAL_PAYLOAD_SCHEMAS = {
   discount_draft: DiscountDraftPayloadSchema,
   recipe_draft: RecipeDraftPayloadSchema,
   batch_offer: BatchOfferPayloadSchema,
+  product_create: ProductCreatePayloadSchema,
 } as const satisfies Partial<Record<AssistantProposalKind, z.ZodTypeAny>>;
 
 /** Bugün öneri ÜRETİLEBİLEN tipler — MCP araçları ve panel bu listeden türer. */

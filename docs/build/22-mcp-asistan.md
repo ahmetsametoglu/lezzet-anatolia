@@ -231,7 +231,7 @@ satırında.
   - **BEKLEYEN(22.5):** ekran tarafı operasyon şeridinde
     (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` — dört devir hedefi + iki yeni alan).
 
-- [ ] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
+- [~] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
   09.08: "içindekiler fotoğrafını çekip yükleyeceğim, asistan bazen ürünü oluşturacak bazen
   bilgilerini güncelleyecek")*: yeni `product_create` tipi + `product_draft`ın beş çok dilli alana
   ve beyan alanlarına genişlemesi + ham kaynak metin ve güven işareti alanları + onay ekranı —
@@ -258,5 +258,24 @@ satırında.
     kolon) ile satış durumu (`status`) ayrı eksenler. Asistan birinciyi doldurabilir, **ikincisi
     hiçbir yoldan açılmaz** — ürün `candidate` doğar. En kötü hâlde yanlış okunmuş bir alerjen
     vitrine düşmez.
-  - **Kapsam dışı ve çizimde yer tutucusu bile olmayacak:** fiyat · stok · ürün görseli (medya
-    ayrı yetki sınıfı, `§7 Faz C`). BEKLEYEN(22.6): tasarım turu isteniyor.
+  - **Kapsam dışı:** fiyat · stok · ürün görseli (medya ayrı yetki sınıfı, `§7 Faz C`).
+  - *Kod tarafı BİTTİ (09.08) — araç kataloğu 20 → 21:*
+    - `product_create` tipi (enum + payload + uygulayıcı + araç). Ürün **`candidate`** doğar;
+      `status` payload'da yok, uygulayıcı elle yazıyor. Kategori ADLA çözülür (model uuid
+      ezberlemez), bulunamazsa mevcutlar listelenir. En az bir varyant — varyantsız ürün satılamaz.
+    - `product_draft` beş çok dilli alana + beyan alanlarına genişledi; `fields` ↔ `currentFields`
+      **simetrik** (ekran alan alan yan yana koyabilsin diye).
+    - **Alerjen kapalı küme ve sessiz atlama YOK:** tanınmayan değer reddediliyor, mevcut küme
+      cevaba yazılıyor. Canlı doğrulandı — *"süt içerebilir"* girişimi
+      `allergens: tanınmayan değer` ile döndü. Gıdada sessiz atlama, eksik alerjenin ta kendisidir.
+    - **Tamlık MOTORDAN:** `missingDeclarations` → payload `remainingGaps`; etki cümlesi ondan
+      kuruluyor (*"onaylansa bile şu beyanlar eksik kalır: üç dilde ad · besin künyesi · saklama"*).
+      Canlı: eksik beyanlı bir öneride motor `lang · nutrition · storage` saydı.
+    - **Payload GİDİŞ-DÖNÜŞÜ teste bağlandı:** jsonb'ye yazılırken anahtar biçimi dönüşüyor; dönüş
+      yolunda geri çevrilmezse `remainingGaps` okunamaz ve **tamlık cümlesi sessizce yanlış olur**
+      (eksik beyanlı ürün "tam olacak" görünür). Sessiz olduğu için fark edilmezdi.
+    - `uncertainFields` — modelin "net okuyamadım" dediği alanlar; talimat da buna göre yazıldı:
+      *"tahmin etmek yerine uncertainFields'e yaz"*.
+  - **BEKLEYEN(22.6):** ekran tarafı — brief `design/pages/admin-asistan-kuyrugu.md §5b`, muhatabı
+    Claude Design DEĞİL operasyon şeridi (kullanıcı kararı 09.08: son üç önizleme de tasarımsız,
+    mevcut dört yapı taşıyla yazıldı; çizimi gördükten sonra istenirse tasarım turu açılır).

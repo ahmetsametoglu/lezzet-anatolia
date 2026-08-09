@@ -19,7 +19,9 @@ import {
 } from '@lezzet/database';
 import { discountPercentOf, offerDecisionOf, rebalanceAllocations, suggestedOfferPriceCents } from '@lezzet/domain-core';
 import {
+  missingDeclarations,
   parseProposalPayload,
+  ProductAllergenEnum,
   resolveLocalizedText,
   type AssistantProposalKind,
   type BatchOfferPayload,
@@ -27,6 +29,7 @@ import {
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
   type MoneyMovementPayload,
+  type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
@@ -325,32 +328,167 @@ export async function proposeZoneExtend(args: Record<string, unknown>) {
 }
 
 /**
- * Ürün taslağının boş alanlarını doldurma önerisi.
+ * Ambalajdan okunan beyan alanlarının ortak ayrıştırıcısı (22.6) — iki ürün aracı da bunu kullanır.
  *
- * **Alerjen ve saklama BURADA YOK ve olamaz** — payload şeması onları taşımıyor (şemayla engel,
- * prompt'la değil). Gıdada makul görünen bir alerjen satırı insana zarar verebilir; o alan
- * belgeyle, insan eliyle dolar.
+ * **Alerjen SERBEST METİN DEĞİL**: 14'lük kapalı kümeden seçilir. Model "süt içerebilir" diye bir
+ * cümle yazamaz; ya listedeki değeri işaretler ya hiç. Tanınmayan değer sessizce atılmaz, HATA
+ * döner — gıdada sessiz atlama, eksik alerjenin ta kendisidir.
+ */
+function readDeclarations(args: Record<string, unknown>): { fields: Record<string, unknown>; problems: string[] } {
+  const fields: Record<string, unknown> = {};
+  const problems: string[] = [];
+
+  for (const key of ['name', 'description', 'ingredients', 'storageInstructions'] as const) {
+    const value = args[key];
+    if (value && typeof value === 'object') fields[key] = value;
+  }
+  if (args.nutrition && typeof args.nutrition === 'object') fields.nutrition = args.nutrition;
+
+  for (const key of ['allergens', 'traces'] as const) {
+    if (args[key] === undefined) continue;
+    if (!Array.isArray(args[key])) {
+      problems.push(`${key} dizi olmalı — ${ALLERGEN_VALUES.length} değerden seçin.`);
+      continue;
+    }
+    const list = (args[key] as unknown[]).map((a) => String(a));
+    const unknown = list.filter((a) => !ALLERGEN_VALUES.includes(a as (typeof ALLERGEN_VALUES)[number]));
+    if (unknown.length > 0) {
+      problems.push(`${key}: tanınmayan değer (${unknown.join(', ')}). Geçerli küme: ${ALLERGEN_VALUES.join(' · ')}`);
+      continue;
+    }
+    fields[key] = list;
+  }
+  return { fields, problems };
+}
+
+const ALLERGEN_VALUES = ProductAllergenEnum.options;
+
+/** Modelin "net okuyamadım" dediği alanlar — ekran gözü oraya çeker (`AI_ADMIN_ASSISTANT §5`). */
+function readUncertain(args: Record<string, unknown>): string[] {
+  return Array.isArray(args.uncertainFields) ? args.uncertainFields.map((f) => String(f)).filter(Boolean) : [];
+}
+
+/**
+ * Ürün taslağının doldurulması — 22.6'da **ambalaj fotoğrafından** okuma senaryosuna açıldı.
+ *
+ * Alerjen ve saklama artık YAZILABİLİR (22.3'te şemayla yasaklıydı): ambalajın fotoğrafını patron
+ * veriyorsa bilgi uydurma değil belgeden okumadır — fatura senaryosunda aynı karar verilmişti.
+ * Duvar ekrana taşındı; veri tarafındaki ayak (yayın kararı asistana kapalı) yerinde duruyor.
  */
 export async function proposeProductDraft(args: Record<string, unknown>) {
   const productId = String(args.productId ?? '').trim();
-  const fields = (args.fields ?? {}) as Record<string, unknown>;
   if (!productId) return { error: 'productId zorunlu (catalog_health çıktısındaki ürünlerden).' };
   if (!isUuid(productId)) return badIdError('productId', productId);
 
   const product = await new ProductService(serviceDb()).getById(productId);
   if (!product) return { error: `Ürün bulunamadı: ${productId}` };
 
+  const { fields, problems } = readDeclarations(args);
+  if (problems.length > 0) return { error: `${problems.length} alan sorunu:`, problems };
+  if (Object.keys(fields).length === 0) {
+    return { error: 'Hiçbir alan verilmedi — ad, açıklama, içindekiler, saklama, besin künyesi, alerjen ya da iz.' };
+  }
+
+  // TAMLIK MOTORDAN: "bu öneri uygulanırsa hangi beyanlar hâlâ eksik kalır". Araç kendi ölçütünü
+  // uydurmuyor — `missingDeclarations` ekranın, sunucu süzgecinin ve sayacın da okuduğu sözlük.
+  const merged = { ...product, ...fields } as Parameters<typeof missingDeclarations>[0];
   const payload: ProductDraftPayload = {
     productId,
     productName: resolveLocalizedText(product.name, 'tr'),
     fields: fields as ProductDraftPayload['fields'],
     // Bugünkü hâl ÖNERİYLE BİRLİKTE taşınır: uygulama üzerine yazıyor ve sürüm tutmuyor, yani
     // dolu bir açıklama onaylandığı an kayboluyor. Patron neyi kaybedeceğini görerek onaylasın.
-    currentFields: { description: product.description ?? null, ingredients: product.ingredients ?? null },
+    currentFields: {
+      name: product.name,
+      description: product.description,
+      ingredients: product.ingredients,
+      storageInstructions: product.storageInstructions,
+      nutrition: product.nutrition,
+      allergens: product.allergens,
+      traces: product.traces,
+    },
+    uncertainFields: readUncertain(args),
+    remainingGaps: missingDeclarations(merged),
   };
-  const filled = Object.keys(payload.fields);
+  const filled = Object.keys(fields);
   const summary = `"${payload.productName}" ürününde ${filled.join(' + ')} alanı dolduruldu`;
   return queue('product_draft', payload, summary, args.reason);
+}
+
+/**
+ * YENİ ÜRÜN önerisi — ambalajın fotoğrafından (22.6, kullanıcı senaryosu).
+ *
+ * Öteki tiplerden farkı: katalogda olmayan bir şeyi doğurur. Bu yüzden iki emniyet burada
+ * BİRLİKTE duruyor ve ikisi de kod tarafında:
+ *
+ * - **Ürün ADAY doğar** — `status` payload'da yok, uygulayıcı `candidate` yazıyor. Asistan beyanı
+ *   doldurabilir ama ürünü satışa çıkaramaz; yanlış okunmuş bir alerjen vitrine düşmez.
+ * - **Kategori addan ÇÖZÜLÜR ve gerçekten var olmalı.** Uydurma bir kategori adı, ürünü hiçbir
+ *   yerde görünmeyen bir kovaya atardı — model kategori uuid'si de ezberlemez.
+ *
+ * Fiyat ve stok BİLEREK YOK: ikisi de ayrı karar, ayrı ekran. Varyant en az bir tane (şema
+ * zorluyor) — varyantsız ürün satılamaz, çünkü fiyat ve stok varyanta bağlıdır.
+ */
+export async function proposeProductCreate(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const name = args.name;
+  if (!name || typeof name !== 'object' || !(name as Record<string, unknown>).tr) {
+    return { error: 'name zorunlu ve en az Türkçesi dolu olmalı — { "tr": "…", "fr": "…", "de": "…" }.' };
+  }
+
+  const rawVariants = Array.isArray(args.variants) ? (args.variants as Record<string, unknown>[]) : [];
+  if (rawVariants.length === 0) {
+    return { error: 'variants boş — en az bir boy gerekir ("500 g", "1 kg"). Varyantsız ürün satılamaz: fiyat ve stok boya bağlıdır.' };
+  }
+  const variants = rawVariants.flatMap((v) => (v.label && typeof v.label === 'object' ? [{ label: v.label as ProductCreatePayload['variants'][number]['label'] }] : []));
+  if (variants.length !== rawVariants.length) return { error: 'Her varyantın `label` alanı olmalı — { "tr": "500 g" }.' };
+
+  const dateType = String(args.dateType ?? '').toUpperCase();
+  if (dateType !== 'DLC' && dateType !== 'DDM') {
+    return { error: "dateType 'DLC' | 'DDM' olmalı. DLC = güvenlik tarihi (geçince imha), DDM = kalite tarihi (geçince hâlâ satılabilir)." };
+  }
+
+  const { fields, problems } = readDeclarations(args);
+  if (problems.length > 0) return { error: `${problems.length} alan sorunu:`, problems };
+
+  // Kategori ADLA bulunur; bulunamazsa mevcutlar yazılır ki model doğrusunu seçebilsin.
+  const categoryName = typeof args.categoryName === 'string' ? args.categoryName.trim() : '';
+  const categories = await new CategoryService(db).list({ activeOnly: true });
+  const category = categoryName
+    ? categories.find((c) => resolveLocalizedText(c.name, 'tr').toLowerCase().includes(categoryName.toLowerCase()))
+    : null;
+  if (categoryName && !category) {
+    return { error: `Kategori bulunamadı: '${categoryName}'. Mevcutlar: ${categories.map((c) => resolveLocalizedText(c.name, 'tr')).join(' · ')}` };
+  }
+
+  const vatRate = typeof args.vatRate === 'number' ? args.vatRate : 5.5;
+  const shelfLifeDays = Number.isInteger(args.shelfLifeDays) && (args.shelfLifeDays as number) > 0 ? (args.shelfLifeDays as number) : null;
+
+  // Tamlık MOTORDAN — yeni kayıtta karşılaştırılacak eski hâl yok, payload'ın kendisi ölçülür.
+  const remainingGaps = missingDeclarations({
+    name: name as Parameters<typeof missingDeclarations>[0]['name'],
+    ingredients: (fields.ingredients ?? null) as Parameters<typeof missingDeclarations>[0]['ingredients'],
+    nutrition: (fields.nutrition ?? null) as Parameters<typeof missingDeclarations>[0]['nutrition'],
+    storageInstructions: (fields.storageInstructions ?? null) as Parameters<typeof missingDeclarations>[0]['storageInstructions'],
+    allergens: (fields.allergens ?? []) as Parameters<typeof missingDeclarations>[0]['allergens'],
+  });
+
+  const payload: ProductCreatePayload = {
+    ...fields,
+    name: name as ProductCreatePayload['name'],
+    categoryId: category?.id ?? null,
+    categoryName: category ? resolveLocalizedText(category.name, 'tr') : null,
+    dateType,
+    shelfLifeDays,
+    vatRate,
+    variants,
+    uncertainFields: readUncertain(args),
+    remainingGaps,
+  };
+
+  const boy = variants.map((v) => resolveLocalizedText(v.label, 'tr')).join(' · ');
+  const summary = `Yeni ürün: "${resolveLocalizedText(payload.name, 'tr')}" (${boy})${category ? ` — ${payload.categoryName}` : ''}`;
+  return queue('product_create', payload, summary, args.reason);
 }
 
 /**
