@@ -44,7 +44,8 @@ export async function seedCatalog(db: Db): Promise<void> {
 interface SeedCollection {
   slug: string; // paylaşım linki — admin belirler (servis benzersizleştirir)
   name: LocalizedText;
-  description: LocalizedText;
+  /** Paylaşım (OG) açıklaması. Taslakta `null` — operatör metni yayına alırken yazar. */
+  description: LocalizedText | null;
   /** Ürün slug'ları — DİZİNİN SIRASI vitrin kürasyon sırasıdır (position). İlki KAPAĞI da verir. */
   products: string[];
   /**
@@ -60,14 +61,30 @@ interface SeedCollection {
     /** Toplam üye tavanı (elle yazılanlar dâhil). Koleksiyon sayfalanmıyor; tavan bilinçli. */
     upTo: number;
   };
+  /**
+   * **TASLAK koleksiyon** — pasif + kapaksız + üyesiz, üçü bir arada (kapsam denetimi 09.08).
+   *
+   * Üçünü tek kayıtta toplamak bilinçli: operatörün gerçekte kurduğu hâl budur. Yeni koleksiyon
+   * boş doğar, kapağı sonra yüklenir, hazır olunca yayına alınır — üç ayrı kayıt yapsaydık
+   * seed'de gerçekte hiç yaşanmayan üç yapay hâl olurdu.
+   *
+   * Vitrin işareti KONMAZ: pasif ama işaretli kayıt ayrı bir hâl ve onu paket tarafı örnekliyor
+   * (05.18 sayacının "1 işaretli kayıt pasif" uyarısı oradan besleniyor).
+   */
+  taslak?: true;
 }
 
 /**
- * Üç koleksiyon, ÜÇÜ DE gerçekçe kullanılabilir hâlde (kullanıcı kararı 08.08: "resmî olmayan
+ * Üç YAYINDAKİ koleksiyon gerçekçe kullanılabilir hâlde (kullanıcı kararı 08.08: "resmî olmayan
  * koleksiyon kalmasın"): aktif + kapaklı + gerçek ürünlerle dolu + vitrin havuzunda (`is_featured` —
- * ana sayfa 2 slotu bu havuzdan GÜNLÜK rotasyonla dolar, 08.26). Eski "bilinçli çeşitlilik"
- * örnekleri (kapaksız · pasif taslak · boş) test verisiydi ve kalktı; boş/pasif koleksiyon hâlini
- * operatör ekranı gerçek akışta zaten üretir (yeni koleksiyon boş doğar).
+ * ana sayfa 2 slotu bu havuzdan GÜNLÜK rotasyonla dolar, 08.26).
+ *
+ * ⚠ **DÜZELTME (09.08):** 08.08'de buraya *"kapaksız · pasif taslak · boş örnekleri test verisiydi
+ * ve kalktı; o hâli operatör akışı zaten üretir"* diye yazmıştım. **Yanlıştı.** "Operatör akışı
+ * üretir" demek, seed'i kuran hiç kimsenin o ekranı GÖREMEYECEĞİ demek — o hâli görmek için önce
+ * elle bir koleksiyon açmak gerekiyordu. Kapsam sessizce daraldı ve ölçen bir şey olmadığı için
+ * kimse fark etmedi. Kullanıcı kararı nettir ve tersidir: *"olası her durum için çeşitlendir."*
+ * Aşağıdaki dördüncü kayıt o üç hâli tek satırda geri getiriyor; denetimi `pnpm seed:coverage`.
  *
  * `İndirimde` YOK ve olmayacak (08.08 kararı, gerekçe kalıcı): vitrinde zaten TÜRETİLMİŞ bir fırsat
  * bandı var — elle kürasyonlu bir "indirimde" seçkisi onun bayatlayan ikizi olurdu. İndirim bir
@@ -109,6 +126,16 @@ const COLLECTIONS: SeedCollection[] = [
     products: ['cheese-pastry-su-borek', 'adana-borek-with-cheese'],
     fillFrom: { categorySlugs: ['firin'], upTo: 12 },
   },
+  {
+    // **TASLAK** — operatörün henüz yayına almadığı seçki: pasif · kapaksız · üyesiz.
+    // Gerçekçi bir hâl, uydurma bir kayıt değil: sezonluk seçkiler böyle hazırlanır.
+    slug: 'yilbasi-sofrasi',
+    name: { tr: 'Yılbaşı Sofrası', fr: 'Table du Nouvel An', de: 'Silvestertafel' },
+    description: null,
+    products: [],
+    fillFrom: { categorySlugs: [], upTo: 0 },
+    taslak: true,
+  },
 ];
 
 export async function seedCollections(db: Db): Promise<void> {
@@ -149,6 +176,13 @@ export async function seedCollections(db: Db): Promise<void> {
       slug: c.slug,
       productIds, // sıra = kürasyon (position 0..n-1)
     });
+    if (c.taslak) {
+      // Taslak: yayında değil, vitrinde değil, kapağı yok, üyesi yok. Üçü de kasıtlı — künyesi
+      // `SeedCollection.taslak`'ta.
+      await collections.edit(created.id, { isActive: false });
+      console.log(`  ✓ ${resolveLocalizedText(created.name)} · TASLAK (pasif · kapaksız · üyesiz) · /${created.slug}`);
+      continue;
+    }
     // Vitrin havuzu işareti (05.18 kapısı) — ana sayfanın 2 slotu bu havuzdan günlük rotasyonla dolar (08.26).
     await collections.setFeatured(created.id, true);
     // Kapak create'ten SONRA: key kesinleşen slug'a bağlanır (gerçek admin akışının aynısı).

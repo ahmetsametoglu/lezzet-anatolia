@@ -49,7 +49,11 @@ create table public.product (
   -- kalır; burada yalnız "eksik var mı" sorusu var.
   is_incomplete boolean generated always as (name ->> 'tr' is null or name ->> 'fr' is null or name ->> 'de' is null or ingredients is null or nutrition is null or storage_instructions is null or allergens = '{}') stored,
   traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
-  vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
+  -- Fransa gıda oranları: **5,5** (dondurulmuş/paketli) · **10** (hazır tüketim — "consommation
+  -- immédiate", dondurma/porsiyon kalemler) · **20** (gıda dışı). Künye uzun süre "5.5 / 20"
+  -- diyordu ve eksikti — seed 08.08'den beri %10 yazıyor (kapsam denetimi 09.08 ile ölçüldü).
+  -- Kısıt KONMUYOR: oran mali bir karardır ve mevzuat değişince kolon kısıtı migration ister.
+  vat_rate numeric(4, 2) not null default 5.5,
   date_type product_date_type not null default 'DDM',
   shelf_life_days int,                               -- toplam raf ömrü (gün); kalan % = (parti.dlc − bugün) ÷ bu
   -- **VARSAYILAN `false` — kullanıcı kararı 08.08.** Önce `true`ydu: işaretlenmemiş her ürün

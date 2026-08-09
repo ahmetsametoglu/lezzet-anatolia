@@ -26,23 +26,26 @@ export interface Depolar {
  * üstelik sessizce. Test kendi satırını silince de geriye FK'si kırık bir kurulum kalıyordu
  * (`user_profiles.warehouse_ids: … diye bir depo yok` — yaşandı).
  *
- * Ölçüt bu yüzden varlıktır: STR ve KEHL kodlu satır var mı? Yoksa açılır. Böylece hem boş
+ * Ölçüt bu yüzden varlıktır: STR/KEHL/COLMAR kodlu satır var mı? Yoksa açılır. Böylece hem boş
  * veritabanında hem yabancı satırlarla dolu bir tabloda aynı sonuç doğar.
  */
 export async function seedWarehouses(db: Db): Promise<Depolar> {
   const warehouses = new WarehouseService(db);
   const mevcut = await warehouses.list();
   const koduyla = new Map(mevcut.map((w) => [w.code, w.id]));
-  const yabanci = mevcut.filter((w) => w.code !== 'STR' && w.code !== 'KEHL');
+  // Seed'in YÖNETTİĞİ kodlar tek yerde: listeye bir depo eklenip bu kümeye yazılmazsa, kendi
+  // kurduğumuz kayıt bir sonraki koşuda "yabancı" diye raporlanır ve uyarı anlamsızlaşır.
+  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'COLMAR']);
+  const yabanci = mevcut.filter((w) => !SEED_DEPOLARI.has(w.code));
   if (yabanci.length > 0) {
     // Yabancı satır SESSİZ geçilmez: operasyon ekranında görünen her depo veriyi etkiler.
-    console.log(`▸ DEPO — tabloda ${yabanci.length} yabancı depo var (${yabanci.map((w) => w.code).join(', ')}); seed yalnız STR/KEHL'i yönetir`);
+    console.log(`▸ DEPO — tabloda ${yabanci.length} yabancı depo var (${yabanci.map((w) => w.code).join(', ')}); seed yalnız ${[...SEED_DEPOLARI].join('/')} kodlarını yönetir`);
   }
 
   let strId = koduyla.get('STR');
   let kehlId = koduyla.get('KEHL');
-  if (strId && kehlId) {
-    console.log('▸ depolar zaten kurulu (STR + KEHL) — atlandı');
+  if (strId && kehlId && koduyla.has('COLMAR')) {
+    console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR) — atlandı');
     return { str: strId, kehl: kehlId };
   }
   console.log('▸ DEPO seed');
@@ -74,7 +77,30 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
     console.log(`  ✓ ${kehl.code} · ${kehl.name}`);
   }
 
-  console.log('✓ depo: STR + KEHL hazır (biri kargo çıkışı)');
+  // **KAPALI depo** (kapsam denetimi 09.08) — pasif deponun kendi ekran hâli var: kapsam
+  // seçicisinde görünmez, bölge ataması yapılamaz, stok okuması onu atlar. Bu hâl seed'de hiç
+  // doğmadığı için o yollar bugüne dek hiç koşmadı.
+  //
+  // **Kapatılan gerçek bir depo, uydurma bir kayıt değil:** sezonluk/pilot depo açılıp kapanır ve
+  // kapandığında SİLİNMEZ — geçmiş siparişler, partiler ve hareketler ona bağlı kalır (`restrict`
+  // FK'ler zaten silmeyi engelliyor). "Kapalı ama duruyor" bu modelin normal hâlidir.
+  //
+  // Seed yalnız STR/KEHL'i yönettiği için (yukarıdaki künye) bu satır da koda göre koşullu:
+  // varlığı koddan sorulur, tablo doluluğundan değil.
+  if (!koduyla.has('COLMAR')) {
+    const kapali = await warehouses.insert({
+      code: 'COLMAR',
+      name: 'Colmar — pilot depo (kapalı)',
+      countryCode: 'FR',
+      address: { line1: 'Rue des Clefs 4', postalCode: '68000', city: 'Colmar', country: 'FR' },
+      shipsOnline: false,
+      isActive: false,
+      sortOrder: 3,
+    });
+    console.log(`  ✓ ${kapali.code} · ${kapali.name} · PASİF`);
+  }
+
+  console.log('✓ depo: STR + KEHL hazır (biri kargo çıkışı) + COLMAR pasif');
   return { str: strId, kehl: kehlId };
 }
 

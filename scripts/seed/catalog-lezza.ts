@@ -325,18 +325,44 @@ export async function seedLezzaProducts(
   // TAGLINE alttaki sözlükten (mobil vitrin bandının altyazısı — 05.17; başlık = kategori ADI),
   // `isFeatured` HEPSİNE true: tasarımın vitrin ızgarası 6 slot ve kategori sayısı tam 6 —
   // operatör dilediğini Katalog ekranından vitrinden düşürür (05.18).
-  for (const c of katalog.categories) {
+  //
+  // ── KAPSAM BOŞLUKLARI: KATEGORİ (09.08) ────────────────────────────────────
+  // Altı kategorinin altısı da aktif + kapaklı + altyazılı + vitrinde olduğu için DÖRT ekran hâli
+  // seed'de hiç doğmuyordu (`pnpm seed:coverage`): kapaksız kartın baş-harf yedeği, altyazısız
+  // bandın tek satırlık hâli, vitrin dışı kayıt ve pasif kategori. İkisini kullanıcı zaten EKRANDA
+  // gördü ve sordu ("bu resmi olmayan kutular nedir?") — yani hâl gerçekti, seed onu üretmiyordu.
+  //
+  // Boşluk SON kategorilere konuyor: vitrin ızgarası altı slot ve sıra `sort_order`'dan geliyor,
+  // yani vitrinden düşen kayıt listenin sonundaki olsun — ilk sıradakini düşürmek ana sayfayı
+  // gerçek katalogda olmayacak bir hâlde gösterirdi.
+  const sonKategoriler = katalog.categories.length - 1;
+  for (const [k, c] of katalog.categories.entries()) {
     if (catId.has(c.key)) continue;
+    const kapaksiz = k === sonKategoriler; // baş-harf yedeği bu kayıtta denenir
+    const altyazisiz = k === sonKategoriler - 1; // altyazısız kategori altyazısız çizilir (05.17)
+    const vitrinDisi = k >= sonKategoriler - 1; // ızgara 6 slot; ikisi dışarıda kalsın
     // `create` girdisi bilinçli dar (ad + sıra); tagline ve vitrin işareti update ile — aile
     // bağının `products.update` emsali. Tek çağrıda: ikisi de aynı ilk-kurulum kararının parçası.
     const created = await categories.create({ name: c.name });
-    await categories.update({ id: created.id, tagline: KATEGORI_TAGLINE[c.key] ?? null, isFeatured: true });
+    await categories.update({
+      id: created.id,
+      tagline: altyazisiz ? null : (KATEGORI_TAGLINE[c.key] ?? null),
+      isFeatured: !vitrinDisi,
+    });
     catId.set(c.key, created.id);
-    if (c.imageUrl) {
+    if (c.imageUrl && !kapaksiz) {
       const key = await uploadImageFromUrl(c.imageUrl, r2Keys.categoryImage(created.slug, c.imageUrl.split('/').pop() || 'cover.webp'));
       if (key) await categories.setImageKey(created.id, key);
     }
   }
+
+  // **PASİF kategori** — ayrı ve EK bir kayıt, gerçek altısından biri kapatılarak DEĞİL: pasif
+  // kategori ürünlerini de katalogdan düşürür, yani gerçek bir kategoriyi kapatmak 20-30 ürünü
+  // vitrinden silerdi. Sezonluk kategori gerçek bir operasyon hâlidir (yılın on ayı kapalı durur).
+  const sezonluk = await categories.create({
+    name: { tr: 'Ramazan Sofrası', fr: 'Table du Ramadan', de: 'Ramadan-Tafel' },
+  });
+  await categories.update({ id: sezonluk.id, isActive: false, isFeatured: false });
 
   let made = 0;
   let photos = 0;
@@ -360,6 +386,12 @@ export async function seedLezzaProducts(
     const beyanEksik = i % 13 === 0; // beyan dörtlüsü boş → "beyan eksik" süzgeci
     const kapaksiz = i % 19 === 0; // görselsiz kayıt → boş kapak durumu
     const durum: ProductStatus = i % 23 === 0 ? 'passive' : i % 29 === 0 ? 'candidate' : 'active';
+    // **Künyesi eksik ürün** (kapsam denetimi 09.08) — ikisi de ayrı bir EKRAN hâli, ayrı sebep:
+    //   raf ömrü yok  → "kalan %" hesaplanamaz; parti kartı o çubuğu HİÇ basmamalı
+    //   hedef marj yok → marj uyarısı hesaplanamaz; "uyarı yok" ile "veri yok" aynı şey değil
+    // Operatörün gerçekte unuttuğu iki alan bunlar; ikisi de zorunlu değil ve boş kalabiliyor.
+    const rafOmruYok = i % 31 === 0;
+    const marjYok = i % 37 === 0;
 
     // Saklama rejimi TEK KAYNAK: metin de kargo izni de buradan çıkar, ikisi ayrışamaz.
     // **Beyansız ürün kargolanmaz** ve bu, kolonun yeni varsayılanının (`false`) tam olarak
@@ -393,18 +425,27 @@ export async function seedLezzaProducts(
       storageInstructions: beyanEksik ? null : rejim.metin,
       nutrition: beyanEksik ? null : besinDegeri(p.category, i),
       vatRate: HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA,
-      shelfLifeDays: RAF_OMRU[p.category ?? ''] ?? 180,
+      shelfLifeDays: rafOmruYok ? undefined : (RAF_OMRU[p.category ?? ''] ?? 180),
       // Kargo izni SAKLAMA REJİMİNDEN türer, ayrı yazılmaz — gerekçe `SAKLAMA` künyesinde.
       shippable: beyanEksik ? false : rejim.shippable,
-      targetMarginPercent: 30 + (i % 6) * 3,
+      targetMarginPercent: marjYok ? undefined : 30 + (i % 6) * 3,
       autoPrice: i % 4 === 0,
       status: durum,
       sortOrder: startOrder + i,
-      variants: p.variants.map((v) => ({
+      variants: p.variants.map((v, n) => ({
         // Boysuz ürün (bütün pastalar) tek varsayılan varyant taşır — modelin kendi kuralı.
         label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
         netWeightG: v.netWeightG ?? undefined,
         sku: v.sku ?? undefined,
+        // **"Bu boy satıştan kalktı"** (kapsam denetimi 09.08) — kendi başına küçük bir alan ama
+        // BÜYÜK bir kuralın tek tetikleyicisi: pasif varyant, o varyantı taşıyan PAKETİ
+        // `listSellable`'dan tamamen düşürür (detay sayfası da 404). O kural bu hâl seed'de hiç
+        // doğmadığı için bugüne dek hiç koşmadı.
+        //
+        // **Yalnız ÇOK BOYLU üründe ve son boyda:** tek varyantlı ürünün tek boyunu kapatmak, ürünü
+        // satılamaz hâlde bırakır — gerçekte o karar `status: 'passive'` ile verilir, boy
+        // kapatmakla değil. İki farklı niyeti aynı veriyle anlatmak, ekranda ikisini de okunmaz kılar.
+        isActive: p.variants.length > 1 && n === p.variants.length - 1 && i % 11 === 0 ? false : undefined,
       })),
     });
     made += 1;
@@ -589,11 +630,17 @@ async function aileleriKur(
   // için ikisi çakışmaz.
   for (const aile of ELLE_AILELER) gruplar.set(aile.ad, [...aile.uyeler]);
 
+  // Kurulacak aileler ÖNCE süzülür: `gruplar` tek üyelileri de taşıyor ve onlar aile olmuyor.
+  // İlk yazımda "sonuncusu pasif" ölçütü `gruplar.size`e bakıyordu ve hiç tutmuyordu — ölçüldü
+  // (`seed:coverage`: "aile pasif" kovası boş kaldı). Süzülmüş liste üzerinden saymak tek doğru yol.
+  const kurulacak = [...gruplar].filter(([, uyeler]) => uyeler.length >= 2);
+
   let kurulan = 0;
-  for (const [taban, uyeler] of gruplar) {
-    if (uyeler.length < 2) continue;
+  for (const [taban, uyeler] of kurulacak) {
     // Aile adı TEK DİLLİ: yalnız operatör görüyor (kullanıcı kararı 04.08).
-    const aile = await families.insert({ name: taban });
+    // **Son aile PASİF** (kapsam denetimi 09.08): üyeleri satışta kalır ama "Çeşitler" bloğu
+    // çizilmez (0004 künyesi). Silmek yerine pasifleştirme kuralının tek sınanma yeri burası.
+    const aile = await families.insert({ name: taban, isActive: kurulan < kurulacak.length - 1 });
     for (const [sira, uye] of uyeler.entries()) {
       const id = urunIdBySlug.get(uye.slug);
       if (!id) continue;

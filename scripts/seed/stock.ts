@@ -1,5 +1,5 @@
 import {
-  ProductService, ProductVariantService, StockAdjustmentService, StockIntakeService, StockService, TemperatureLogService,
+  PriceService, ProductService, ProductVariantService, StockAdjustmentService, StockIntakeService, StockService, TemperatureLogService,
 } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
@@ -131,11 +131,57 @@ export async function seedStock(
 
   // 4) SINIR DURUMLAR — ekranların uyarı/engel hâlleri bunlarsız hiç görünmez.
   const ozel = satilabilir.slice(0, 8);
-  // Yaklaşan son tarih + indirimli teklif (parti fiyatı): near-expiry havuzu
-  const teklifA = await stocks.insert({ warehouseId: depolar.str, variantId: ozel[0]!.id, physicalQty: 14, expiryDate: gun(4), lotNumber: 'NE-001', purchasePriceCents: 240, location: 'Dolap 1' });
-  await stocks.setOfferPrice(teklifA.id, 490);
-  const teklifB = await stocks.insert({ warehouseId: depolar.str, variantId: ozel[1]!.id, physicalQty: 9, expiryDate: gun(7), lotNumber: 'NE-002', purchasePriceCents: 310, location: 'Dolap 2' });
-  await stocks.setOfferPrice(teklifB.id, 550);
+
+  // ── FIRSAT (near-expiry teklif) PARTİLERİ ────────────────────────────────────
+  // **Teklif fiyatı LİSTE FİYATINDAN TÜRER, sabit yazılmaz** (kullanıcı bildirimi 09.08).
+  //
+  // Önce iki parti sabit tutarla açılıyordu (490 · 550 cent) ve varyantın gerçek fiyatına HİÇ
+  // bakmıyordu. Gerçek katalogda fiyatlar 1,50 € ile 40 € arasında değişiyor; ölçüldü: "Artisan
+  // Lemon Cake" listede **2,30 €**, teklifi **4,90 €** yazılmıştı. Yani indirim, ürünü PAHALILAŞTIRAN
+  // bir sayıydı — ve `isOffer` haklı olarak eliyordu ("teklif normal fiyatı yenemezse fırsat
+  // değildir"). Sonuç: **ana sayfanın fırsat bandı hiç çizilmiyordu** ve sebebi ekrandan görünmüyordu.
+  //
+  // Hata sınıfı tanıdık: gerçek veriye sabit sayı yazmak (aynı sınıf `shippable` kategorisinde de
+  // yaşandı). Türetilen değer bu tuzağa düşemez — fiyat değişse de indirim indirim kalır.
+  //
+  // **Ürün AKTİF olmalı:** `satilabilir` yalnız `candidate`i eliyor, `passive`i değil. Eski hâlde
+  // iki teklifin biri pasif bir ürüne düşmüştü ve vitrin sorgusu (`status: 'active'`) onu zaten
+  // eliyordu — yani iki teklifin biri doğuşundan ölüydü.
+  const firsatliklar = satilabilir.filter((v) => v.status === 'active');
+  // Fiyat **uygulanabilir** olanı sorulur (`findApplicableMap`), ham satır değil: kanal + geçerlilik
+  // tarihi seçimi orada tek yerde yaşıyor ve vitrinin okuduğuyla aynı. Ham satır okusaydık ileri
+  // tarihli bir fiyat da sayılır, teklif bugün geçerli olmayan bir tutardan türerdi.
+  const fiyatlar = await new PriceService(db).findApplicableMap(
+    firsatliklar.map((v) => v.id),
+    'b2c',
+  );
+  const b2cFiyat = new Map(
+    [...fiyatlar].flatMap(([id, f]) => (f.channelPrice ? [[id, f.channelPrice.amountCents] as const] : [])),
+  );
+  // Bant altı slot (`OFFER_LIMIT`); dördü hem bandı dolduruyor hem "hepsi dolmadı" hâlini koruyor.
+  const FIRSAT_ADEDI = 4;
+  const firsatlar = firsatliklar.filter((v) => (b2cFiyat.get(v.id) ?? 0) > 0).slice(0, FIRSAT_ADEDI);
+  let firsatNo = 0;
+  for (const v of firsatlar) {
+    const liste = b2cFiyat.get(v.id)!;
+    // İndirim %20-%35 arasında dönüyor: tek oran, bütün kartlarda aynı rozeti üretirdi.
+    const indirim = 20 + firsatNo * 5;
+    const teklif = Math.max(1, Math.round((liste * (100 - indirim)) / 100));
+    const parti = await stocks.insert({
+      warehouseId: depolar.str,
+      variantId: v.id,
+      physicalQty: 14 - firsatNo * 2,
+      // SKT yaklaşıyor: teklifin SEBEBİ bu. Tarih uzak olsaydı "neden indirimli" sorusunun cevabı olmazdı.
+      expiryDate: gun(4 + firsatNo),
+      lotNumber: `NE-${String(firsatNo + 1).padStart(3, '0')}`,
+      // Alış fiyatı teklifin ALTINDA kalmalı, yoksa parti zararına satılıyor görünür ve marj
+      // raporu gerçekte olmayan bir alarm üretir.
+      purchasePriceCents: Math.max(1, Math.round(teklif * 0.6)),
+      location: `Dolap ${1 + (firsatNo % 4)}`,
+    });
+    await stocks.setOfferPrice(parti.id, teklif);
+    firsatNo += 1;
+  }
   // Yaklaşan ama HENÜZ indirime alınmamış — "sistem önerir, karar insanın" hâli
   await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePriceCents: 280, location: 'Dolap 1' });
   // Tarihi GEÇMİŞ partiler: biri DLC (satılamaz — imha edilecek), biri DDM (satılabilir)
