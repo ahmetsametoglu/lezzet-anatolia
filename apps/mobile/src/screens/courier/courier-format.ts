@@ -1,28 +1,24 @@
-import { formatPrice } from '@lezzet/helper';
-
 import { courierCopy } from './copy';
 
 /*
   KURYE EKRANLARININ BİÇİMLEME KURALLARI — saf, React'siz, testli.
 
-  Ekranlardan AYRI durur çünkü hiçbiri bir görünüm kararı değil: gün adının Türkçe yazımı, tutarın
-  cent ↔ metin çevrimi ve farkın işaretli gösterimi üç ayrı kuraldır ve üçü de bir bileşen değişse
-  bile aynı kalır.
+  Ekranlardan AYRI durur çünkü hiçbiri bir görünüm kararı değil: gün adının Türkçe yazımı, büyük
+  harfe çevrim ve kısa ad üç ayrı kuraldır ve üçü de bir bileşen değişse bile aynı kalır.
 
   İÇERİK ÖZETİNİ AYRIŞTIRAN KURAL (`parseContentSummary`) 21.10e'de SÖKÜLDÜ: durak sözleşmesi artık
   kalem satırlarını kimlikleriyle taşıyor (`CourierStop.items`), yani ekranın listesi bir metinden
   tahmin edilmiyor — kaynağından okunuyor. Ayrıştırma o boşluğun pansumanıydı; boşluk kapandı.
+
+  PARA KURALLARI 21.12'de BU DOSYADAN ÇIKTI (`lib/operations/money.ts`): cent yazımı, girdi çevrimi
+  ve işaretli fark kuryeye değil YÜZEYE ait — yönetim ve para ekranları da aynısını soruyor.
+  Buradan yeniden ihraç ediliyorlar, yani kurye ekranlarının import satırı hiç değişmedi; tanım ise
+  tek yerde durur (CLAUDE §1).
 */
 
+export { centsToAmountText, money, parseAmountToCents, signedMoney } from '@/lib/operations/money';
+
 const t = courierCopy;
-
-/** Operasyon yüzeyi TEK DİLLİDİR: para yazımı da cihaz dilinden değil, yüzeyin dilinden gelir. */
-const SURFACE_LOCALE = 'tr' as const;
-
-/** `4200` → `"42,00 €"`. Biçim `@lezzet/helper`ın tek kaynağından; RN'de yeniden yazılmaz. */
-export function money(cents: number): string {
-  return formatPrice(cents, SURFACE_LOCALE);
-}
 
 /**
  * TÜRKÇE BÜYÜK HARF — `toUpperCase` tek başına YANLIŞTIR: JS'in dil-bağımsız dönüşümü `i` → `I`
@@ -61,33 +57,3 @@ export function shortName(fullName: string): string {
   return `${parts.slice(0, -1).join(' ')} ${last.slice(0, 1)}.`;
 }
 
-/**
- * GİRDİ METNİ → CENT. Kurye virgülle de noktayla da yazar; ikisi de kabul edilir.
- *
- * Boş/bozuk girdide `null` DÖNER, 0 değil: "hiç yazmadım" ile "sıfır yazdım" aynı şey değildir ve
- * sıfıra düşürmek bozuk bir girdiyi sağlıklı gibi okuturdu (CLAUDE §1). Yuvarlama `round`:
- * "12,345" gibi bir girdide kuruş kaybı değil en yakın kuruş olsun.
- */
-export function parseAmountToCents(text: string): number | null {
-  const clean = text.replace(/\s/g, '').replace(',', '.');
-  if (clean.length === 0 || !/^\d*\.?\d*$/.test(clean) || clean === '.') return null;
-  const value = Number(clean);
-  return Number.isFinite(value) ? Math.round(value * 100) : null;
-}
-
-/** CENT → GİRDİ METNİ (`4200` → `"42,00"`). Simge YOK: alanın yanında ayrıca `€` yazıyor. */
-export function centsToAmountText(cents: number): string {
-  return (cents / 100).toFixed(2).replace('.', ',');
-}
-
-/**
- * FARKIN İŞARETLİ YAZIMI (K7) — `+12,00 €` · `−3,50 €` · `0,00 €`.
- *
- * İşaret MUTLAK DEĞERE indirgenmez, çünkü anlamı taşıyan şey işarettir: eksi = eksik teslim, artı
- * = fazla para (`design/pages/app-kurye.md` K7). Eksi işareti U+2212'dir, tire değil — rakamla
- * aynı genişlikte durur ve sütun hizası bozulmaz (v2:954 aynı karakteri kullanıyor).
- */
-export function signedMoney(cents: number): string {
-  const sign = cents > 0 ? '+' : cents < 0 ? '−' : '';
-  return `${sign}${money(Math.abs(cents))}`;
-}

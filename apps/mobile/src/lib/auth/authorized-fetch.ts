@@ -38,3 +38,23 @@ export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
 
   return attempt(freshToken);
 }
+
+/**
+ * ZİYARETÇİYE AÇIK ama kimlikten YARARLANAN çağrı — `authorizedFetch`in tersi: oturum yoksa istek
+ * yine de atılır, yalnız Bearer'sız. Keşif turunun iki ucu böyle (`GET /discover` · `POST
+ * /discover/vote`): giriş duvarı yok, ama token varsa sunucu oyu müşterinin üstüne yazar ve daha
+ * önce oylanan kartları desteden eler.
+ *
+ * "Token var mı" sorusu İKİ KEZ sorulur (burada ve `authorizedFetch` içinde) ama tazeleme/yeniden
+ * deneme mantığı TEK yerde kalır — o mantığı buraya kopyalamak duplikasyon olurdu (CLAUDE §1);
+ * `getSession` yerel okumadır, ağa çıkmaz.
+ */
+export async function maybeAuthorizedFetch<TSchema extends z.ZodTypeAny>(
+  path: string,
+  schema: TSchema,
+  init: ApiFetchInit = {},
+): Promise<ApiResult<z.infer<TSchema>>> {
+  const { data } = await getSupabase().auth.getSession();
+  if (!data.session?.access_token) return apiFetch(path, schema, init);
+  return authorizedFetch(path, schema, init);
+}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View, type TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 /*
@@ -13,6 +13,57 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
   HATA: kenarlık `terracotta-line`e döner ve mesaj hata renginde yazılır; `accessibilityRole`
   değişmez, mesaj alanla birlikte okunsun diye `accessibilityHint`e de geçer.
 */
+
+/*
+  ALANIN İÇERİK TÜRÜ — işletim sistemine "burada ne yazılacak" demenin TEK yeri.
+
+  Bunu söylemeyen alan, cihazın KAYITLI BİLGİLERİNİ (adres, ad, telefon) hiç önermez: Android
+  Autofill ve iOS AutoFill yalnız beyan edilmiş alanları tanır (kullanıcı bulgusu 09.08 — adres
+  çekmecesinde hiçbir öneri çıkmıyordu; alanlar türsüzdü). Kavram TEK, üç RN prop'una açılır
+  (`autoComplete` + iOS `textContentType` + klavye/büyük harf/düzeltme) — çağıran üçünü ayrı ayrı
+  bilmek zorunda kalmasın ve biri bir gün ötekinden ayrılmasın.
+
+  Not: bu OS-içi otomatik doldurmadır (cihazda kayıtlı adresi tek dokunuşla basar). Yazarken
+  arama sonucu öneren ADRES SERVİSİ ayrı bir konudur (dış API kararı — açık madde).
+*/
+type FieldTraits = {
+  autoComplete?: TextInputProps['autoComplete'];
+  textContentType?: TextInputProps['textContentType'];
+  keyboardType?: TextInputProps['keyboardType'];
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoCorrect?: boolean;
+};
+
+const CONTENT_TRAITS = {
+  none: {},
+  email: {
+    autoComplete: 'email',
+    textContentType: 'emailAddress',
+    keyboardType: 'email-address',
+    autoCapitalize: 'none',
+    autoCorrect: false,
+  },
+  oneTimeCode: { autoComplete: 'one-time-code', textContentType: 'oneTimeCode' },
+  name: { autoComplete: 'name', textContentType: 'name', autoCapitalize: 'words' },
+  tel: { autoComplete: 'tel', textContentType: 'telephoneNumber', keyboardType: 'phone-pad' },
+  /** Sokak + kapı numarası — cihazın kayıtlı adresini tek dokunuşla basan alan budur. */
+  streetAddress: {
+    autoComplete: 'street-address',
+    textContentType: 'fullStreetAddress',
+    autoCapitalize: 'words',
+    autoCorrect: false,
+  },
+  addressLine2: { autoComplete: 'address-line2', textContentType: 'streetAddressLine2', autoCapitalize: 'words' },
+  postalCode: {
+    autoComplete: 'postal-code',
+    textContentType: 'postalCode',
+    keyboardType: 'number-pad',
+    autoCorrect: false,
+  },
+  city: { autoComplete: 'postal-address-locality', textContentType: 'addressCity', autoCapitalize: 'words' },
+} as const satisfies Record<string, FieldTraits>;
+
+type FieldContent = Exclude<keyof typeof CONTENT_TRAITS, 'none'>;
 
 interface TextFieldProps {
   value: string;
@@ -30,7 +81,7 @@ interface TextFieldProps {
    * (`autoComplete` + iOS `textContentType` + uygun klavye/büyük harf) — çağıran üçünü ayrı
    * ayrı bilmek zorunda kalmasın.
    */
-  content?: 'email' | 'oneTimeCode';
+  content?: FieldContent;
   numeric?: boolean;
   multiline?: boolean;
   /** Alanın sonundaki yuva — genellikle bir düğme. */
@@ -59,6 +110,9 @@ export function TextField({
 }: TextFieldProps) {
   const { theme } = useUnistyles();
   const hasError = errorText !== undefined;
+  // Tip GENİŞLETİLEREK okunur: sabit tablo `as const` olduğu için üyeler dar birleşim; ortak
+  // arayüze bağlamak, "hangi anahtar hangi prop'u taşıyor" sorusunu tek yerde tutar.
+  const traits: FieldTraits = CONTENT_TRAITS[content ?? 'none'];
 
   return (
     <View style={styles.stack}>
@@ -69,11 +123,11 @@ export function TextField({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.muted}
-          keyboardType={content === 'email' ? 'email-address' : numeric ? 'number-pad' : 'default'}
-          autoComplete={content === 'email' ? 'email' : content === 'oneTimeCode' ? 'one-time-code' : undefined}
-          textContentType={content === 'email' ? 'emailAddress' : content === 'oneTimeCode' ? 'oneTimeCode' : undefined}
-          autoCapitalize={content === 'email' ? 'none' : undefined}
-          autoCorrect={content === 'email' ? false : undefined}
+          keyboardType={traits.keyboardType ?? (numeric ? 'number-pad' : 'default')}
+          autoComplete={traits.autoComplete}
+          textContentType={traits.textContentType}
+          autoCapitalize={traits.autoCapitalize}
+          autoCorrect={traits.autoCorrect}
           multiline={multiline}
           editable={editable}
           testID={testID}

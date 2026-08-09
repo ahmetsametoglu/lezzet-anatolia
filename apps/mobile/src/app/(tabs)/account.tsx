@@ -56,8 +56,6 @@ export default function AccountRoute() {
         email: me.email ?? '',
         phone: me.phone ?? '',
         company: null,
-        points: null,
-        coupons: [],
         referralCode: me.referralCode,
         preferredLanguage: me.preferredLanguage,
         marketingEmail: me.marketingConsent?.email?.granted ?? false,

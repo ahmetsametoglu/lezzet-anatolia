@@ -26,7 +26,9 @@ import {
   (webin `lookupSiretAction`), AB vergi numarası doğrulaması (`checkVatAction`) ve başvurunun
   kendisi (`applyAsCustomerAction`/`verifyAndApplyAction`). Uydurma bir uç ÇAĞRILMADI; gönderim
   ekranın durumunda kalıyor ve onay bloğuna dönüyor — 21.14'ün "uç yoksa ekran TAM çalışır"
-  kuralının aynısı (talep formunun kararıyla da aynı: `screens/support/new-ticket-screen`).
+  kuralının aynısı. (Talep formu bu arada ucuna KAVUŞTU — `screens/support/new-ticket-sheet`
+  gerçek `POST /api/v1/me/tickets`e gidiyor; buradaki emsal artık yalnız "uç yokken ne yapılır"
+  kuralının kendisidir, o ekranın bugünkü hâli değil.)
 
   ── ŞABLONDAN SAPMALAR, hepsi eksik ucun sonucu ─────────────────────────────
   1. **"Bul" düğmesi kayıt OKUMAZ, formu AÇAR.** v3'te düğme resmî kayıttan künyeyi getirip
