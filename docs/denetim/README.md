@@ -25,7 +25,22 @@ Dosyalar:
 
 - `denetim-katman-haritasi.md` — **program dosyası** (bulgu taşımaz): katman katman yürüyen
   standart-dışılık + duplikasyon denetiminin haritası ve tur durumu (kullanıcı talimatı 10.08).
-  Her katman kendi bulgu dosyasını açar (`denetim-K<n>-<ad>.md`); harita kapanana dek kalır.
+  **11/11 katman tarandı (10.08).** Harita, bulgu dosyalarının tamamı kapanınca silinir.
+- `denetim-K1-veri-semasi.md` — enum senkronu makineyle zorlanmıyor · iki "ciro" tanımı birbirini
+  işaret etmiyor → **arka uç**
+- `denetim-K2-tipler.md` — Entity↔Insert ayrımının gerekçesi yazılı değil → **arka uç**
+  *(asıl duplikasyon aynı turda düzeltildi)*
+- `denetim-K3-domain-core.md` — muhasebenin KDV bölmesi testsiz, 7 yerde kullanılıyor → **arka uç**
+  *(paket ekonomisi ikizi aynı turda düzeltildi)*
+- `denetim-K4-database.md` — "grup içinde tek bayrak" iki serviste birebir · `updateWhereIn`
+  varken ham yazan servis → **arka uç**
+- `denetim-K5-application.md` — ⚡ **en ağır bulgu**: terfi yarım, 13 modül iki yerde paralel
+  yaşıyor → modül modül dağınık, sırayı denetim izler
+- `denetim-K6-K7-paketler-backend.md` — TS sürüm ayrışması (koordinasyon defterinde) ·
+  **K7'de bulgu yok**
+- `denetim-K8-web-lib.md` — DB'ye vurmayan 19 test entegrasyon kuyruğunda → **arka uç**
+- `denetim-K9-K10-K11-yuzeyler.md` — ölçü ekseni: iki kare kontrol sözlüğe bağlı değil · iki farklı
+  komponent aynı adı taşıyor → **operasyon**. *(K11'de bulgu yok)*
 
 Kapanıp silinenler (02–05.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası,
 **veritabanı/duplikasyon taraması** (A1–A9), yorum bayatlığı 1/3 (Y1–Y3) ve **test artığı**
