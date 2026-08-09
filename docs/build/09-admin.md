@@ -364,6 +364,40 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     - Sözlüğe girmesi tek satır DEĞİL: değeri bir hesap kimliği, yani yeni bir tür (`account`) + seçenekleri `AccountService`'ten okuyan bir liste + gösterimde kimliği ADA çeviren bir eşleme gerekiyor (`formatSettingValue` bugün yalnız değeri görüyor, ad sözlüğünü değil — `scopeLabel`'daki `names` deseni gibi bir parametre alması lazım).
     - Ayrıca **fabrika değeri yok** ve olmamalı (kurulum-özgü bir seçim): sözlüğün `fallback` alanı ve onu migration'a bağlayan nöbet testi "fabrika değeri olmayan ayar" hâlini bugün tanımıyor. İkisi birlikte açılmalı — test iki yönlü olmalı: `fallback` verilen anahtar migration'da BULUNMALI, verilmeyen BULUNMAMALI.
     - Bu, `§7b`'deki "tüm ayarları getir" isteğinin de görünen yüzü: okuma anahtar başına yapıldığı için böyle bir satır bugün getirilmiyor bile. Uç inince ekran "sözlükte olmayan N ayar" diyebilir; sözlüğe girmesi yine de ayrı iş.
+  - ✅ **VİTRİN GÖRSELLERİ SEKMESİ YAZILDI (09.08) — tasarımın 7. sekmesi, `AÇIK 2` kapandı.**
+    `?tab=images`; dört slot (`site_image`): ana sayfa kahramanı 16:9 · Paketler 3:2 ·
+    Professionnels 16:9 · boş sepet çizimi 13:10. touches: `settings/{page,settings.desktop,
+    settings-types,settings-url}.tsx` + yeni `site-images-{catalog,read,tab}.ts(x)` +
+    `site-image-actions.ts`; `packages/types/src/primitives/image.schema.ts`
+    - **Dört ayrı yükleyici YAZILMADI:** oran slot'a göre değişiyor (aynı fotoğraf 16:9 ile 13:10
+      çerçeveye bambaşka oturur) ama kart TEK bileşen, çerçeveyi sözlükten parametre alıyor —
+      beşinci slot eklendiğinde beş yerde düzeltme gerekmesin. Kırpma/odak paneli ürün görselinin
+      emsali (`ImageCropField`), yeniden yazılmadı.
+    - **Slot listesi KODDA sabit ve karar arka uçta zaten verilmiş:** `site_image_slot` bir enum,
+      yeni slot ancak migration'la doğar. Serbest metin, hiçbir ekranda görünmeyecek bir görselin
+      yüklenmesine izin verirdi. Sözlük (`SITE_IMAGE_CATALOG`) `Record<SiteImageSlot, …>` — yeni
+      slot eklendiği gün karşılığı yazılmazsa DERLENMEZ.
+    - **Boş slot listeden DÜŞMÜYOR:** yokluk bir hata değil, henüz yapılmamış bir iş. Gizlenseydi
+      yükleme yolu da kaybolurdu. Sekme rozeti DOLU slotları sayıyor, slot sayısını değil — "4"
+      yazsaydı hiç görsel yüklenmemiş bir kurulumda sekme dolu görünürdü.
+    - **Alt metin görsel YOKKEN hiç çizilmiyor.** İlk yazımda alan çiziliydi ama yazma yolu kapalıydı
+      (kayıt olmadan yazılacak satır yok) — ölçümde görüldü ve kaldırıldı; çizip yazmamak, operatöre
+      yazdığını sandırmanın en sessiz yolu (`tagline` emsali). Yerine ne yapması gerektiğini söyleyen
+      tek cümle duruyor.
+    - **Üç yeni çerçeve `@lezzet/types`e:** `banner` sayfa kahramanına ayrıldı (kimse kullanmıyordu),
+      `page_wide` (3:2) ve `illustration` (13:10) eklendi. `RATIO_ILLUSTRATION` de oraya taşındı —
+      müşteri yüzeyinde gömülü duruyordu (`empty-cart`) ve iki yerde yazılsaydı operatörün
+      kadrajladığı alan müşterininkinden farklı olurdu. **BEKLEYEN(09.16):** müşteri şeridine not
+      bırakıldı, yerel sabitini bu kapıdan okuyacak.
+    - **Kayıt ANINDA, toplu "Kaydet" yok:** kardeş ekranlarda görsel bir FORMUN parçası, burada dört
+      bağımsız kayıt var — tek düğme dördünü tek işlem sanmaya iterdi. Kırpma diyalogdan onaylanınca,
+      alt metin alandan çıkınca yazılıyor.
+    - **Kovadaki obje boşaltmada SİLİNMİYOR:** anahtar deterministik (`site/<slot>.<uzantı>`), aynı
+      slota yeni yükleme onu zaten ezer — yetim birikmiyor. Silmeye kalksaydık kova erişilemezken
+      satırı da silememek gerekirdi; ekran boşalır, dosya kalır ve ayrıştıklarını kimse bilmezdi.
+    - **Ölçüldü (`ui:shot`, açık + koyu):** boş hâlde dört kart yer tutucusuyla, dolu hâlde önizleme +
+      alt metin + "Görseli kaldır" + sekme rozeti `1`. ⚠ **Seed bu turda `home_hero`'yu YAZMADI**
+      (`site_image` 0 satır) — ölçüm için elle bir satır kuruldu ve silindi; denetime bildirildi.
   - **BEKLEYEN(09.16):** mevcut bir MÜŞTERİYİ personel yapma yolu yok — "+ Kullanıcı" var olan e-postayı reddediyor. Sessizce personel yapmak `customer` rolünü düşürür ve o kişinin veri görünürlüğünü değiştirir; bir düğmenin yan etkisi olamayacak kadar büyük bir karar, ayrı ve açık bir akış istiyor.
 
 - [~] (09.17) **Sonsuz kaydırma tek geçişte düzeltilir** · `touches: apps/web/components/operation/ui/{load-more-sentinel,table}.tsx · apps/web/lib/use-load-more.hook.ts · apps/web/app/(operations)/operations/{prices,stock}/*-client.tsx` — dört liste (Ürünler · Fiyatlar · Stok · Siparişler) tek tabloyu (O4) ve tek nöbetçiyi paylaşıyor; kusur da ortak, o yüzden iş de tek

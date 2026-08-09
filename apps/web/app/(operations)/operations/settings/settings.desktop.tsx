@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { SETTING_GROUPS } from './settings-catalog';
 import { SettingList, StaffRow } from './settings-sections';
+import { SiteImagesTab } from './site-images-tab';
 import { isSettingGroup } from './settings-url';
 import type { SettingsViewProps } from './settings-types';
 
@@ -34,6 +35,13 @@ export function SettingsDesktop({ data, urlState, navPending, rows, search, onTa
       <Tabs
         items={[
           ...SETTING_GROUPS.map((g) => ({ key: g.key, label: g.label, count: data.rows.filter((r) => r.group === g.key).length })),
+          // Sayaç DOLU slotları sayıyor, slot sayısını değil: "4" yazsaydı hiç görsel yüklenmemiş
+          // bir kurulumda sekme dolu görünürdü. Boş küme rozetsiz kalır (Tabs'ın kuralı).
+          {
+            key: 'images' as const,
+            label: 'Vitrin görselleri',
+            count: data.siteImages.filter((i) => i.id !== null).length,
+          },
           { key: 'staff' as const, label: 'Kullanıcı & rol', count: data.staff.length },
         ]}
         active={urlState.tab}
@@ -59,6 +67,8 @@ export function SettingsDesktop({ data, urlState, navPending, rows, search, onTa
 
         {isSettingGroup(urlState.tab) || searching ? (
           <SettingList rows={rows} onOpen={onOpenSetting} searching={searching} />
+        ) : urlState.tab === 'images' ? (
+          <SiteImagesTab images={data.siteImages} />
         ) : (
           <div className="flex flex-col gap-2.5">
             <p className="font-ops-body text-ops-xs text-ops-muted">

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { SettingScopeEnum, UserRoleEnum, type Setting, type UserProfile, type UserRole } from '@lezzet/types';
 import type { ExceptionScope, SettingDef, SettingValue } from './settings-catalog';
+import type { SiteImageView } from './site-images-read';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
 
 // Ayarlar ekranının tipleri (09.16). Şema tek kaynak (`CLAUDE.md §1`): giriş şemaları
@@ -112,6 +113,14 @@ export interface SettingsData {
   accountOptions: { value: string; label: string }[];
   /** Değişikliğin tüm süreçlerde geçerli olacağı azami süre (sn) — ekranın operatöre verdiği söz. */
   propagationSeconds: number;
+  /**
+   * Vitrin görselleri — DÖRT SLOT DA gelir, boş olanlar dahil (09.16).
+   *
+   * Boş slot listeden düşseydi yükleme yolu da kaybolurdu: operatör "buraya bir görsel koyayım"
+   * diyebilmek için önce o yerin var olduğunu görmeli. Yokluk bir hata değil, henüz yapılmamış
+   * bir iştir.
+   */
+  siteImages: SiteImageView[];
 }
 
 /**

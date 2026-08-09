@@ -9,12 +9,18 @@ import { SETTING_GROUPS, type SettingGroup } from './settings-catalog';
 
 const SETTINGS_PATH = '/operations/settings';
 
-/** Ayar grupları + personel sekmesi. Personel bir ayar değil, bu yüzden sözlükte de yok. */
-export const SETTINGS_TABS = [...SETTING_GROUPS.map((g) => g.key), 'staff'] as const;
+/**
+ * Ayar grupları + personel + vitrin görselleri.
+ *
+ * Son ikisi bir AYAR DEĞİL, bu yüzden sözlükte de yoklar: personel bir kayıt, vitrin görseli bir
+ * dosya. Sekme barını paylaşmalarının sebebi ikisinin de "kurulum işi" olması — nadiren bakılır,
+ * yerini bilmek gerekir ve her ikisi de yalnız yöneticiye açıktır (ekranın kapısı `requireAdmin`).
+ */
+export const SETTINGS_TABS = [...SETTING_GROUPS.map((g) => g.key), 'images', 'staff'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 export function isSettingGroup(tab: SettingsTab): tab is SettingGroup {
-  return tab !== 'staff';
+  return tab !== 'staff' && tab !== 'images';
 }
 
 export interface SettingsUrlState {

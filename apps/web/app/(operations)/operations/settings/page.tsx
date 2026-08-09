@@ -14,6 +14,7 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { SettingsClient } from './settings-client';
 import { SETTING_CATALOG } from './settings-catalog';
 import { toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
+import { readSiteImages } from './site-images-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData } from './settings-types';
 
@@ -51,7 +52,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const urlState = parseSettingsUrl(await searchParams);
   const db = serviceDb();
 
-  const [settings, staff, zones, warehouses, accounts] = await Promise.all([
+  const [settings, staff, zones, warehouses, accounts, siteImages] = await Promise.all([
     readAllSettings(new SettingsService(db)),
     readStaff(new UserProfileService(db)),
     new DeliveryZoneService(db).list(),
@@ -59,6 +60,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     // TÜM hesaplar (pasifler dahil): ad sözlüğü kapatılmış bir hesabın adını da bilmeli — ayar
     // bugün ona işaret ediyorsa ekran ham uuid göstermemeli. Seçenek listesi ayrı ve dar.
     new AccountService(db).list(),
+    // Vitrin görselleri sekmesi TEK sorgu (`bySlot`) — dört slot da aynı ekranda; sekme açık
+    // olmasa bile okunuyor çünkü sekme rozeti dolu slot sayısını yazıyor.
+    readSiteImages(),
   ]);
 
   const { rows } = toSettingRows({ settings, zones, accounts });
@@ -77,6 +81,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     // yukarıdaki tam listeden — kapalı bir hesap seçilemez ama seçilmişse adıyla görünür.
     accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name })),
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
+    siteImages,
   };
 
   return <SettingsClient data={data} urlState={urlState} />;

@@ -35,6 +35,14 @@ export const RATIO_SOURCE = 3 / 2;
 export const RATIO_SQUARE = 1;
 /** Bant: hero, kampanya bandı, koleksiyon vitrin bandı, paylaşım (OG) kartı. */
 export const RATIO_BAND = 16 / 9;
+/**
+ * Çizim alanı: boş sepet gibi ANLATIM görselleri — bir ürünü değil bir hâli anlatır.
+ *
+ * Nesne oranından (3:2) daha kare, banttan (16:9) çok daha dar; müşteri yüzeyi bu oranı zaten
+ * kullanıyordu (`empty-cart`) ama sabit orada gömülüydü. Operasyonun yükleme ekranı da aynı çerçeveyi
+ * göstermek zorunda — iki yerde yazılsaydı operatörün kadrajladığı alan müşterininkinden farklı olurdu.
+ */
+export const RATIO_ILLUSTRATION = 1.3;
 
 /** Kaynaktan türeyen görünüm çerçevesi — odak panelinin canlı önizlemesi bunları gösterir. */
 export interface ImageFrame {
@@ -62,8 +70,29 @@ const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'v
  */
 const GALLERY_FRAMES: ImageFrame[] = [{ ratio: RATIO_SOURCE, label: '3:2', where: 'ürün detay galerisi' }];
 
+/**
+ * SAYFA GÖRSELLERİ tek çerçevede görünür (`site_image`, 09.16) — çünkü bir VARLIĞA değil bir sayfa
+ * YERİNE aitler: yüklenen fotoğraf yalnız o yerde, o oranda çizilir ve başka bir karede türemez.
+ * Nesne görselinin dört türevi (kart · sepet karesi · daire · paylaşım kartı) burada yok.
+ *
+ * `where` GENEL yazılıyor ("sayfa kahramanı"), hangi sayfa olduğu değil: aynı çerçeveyi iki slot
+ * paylaşıyor (ana sayfa · Professionnels) ve sayfanın adını slot kartının kendi başlığı söylüyor.
+ */
+const PAGE_BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'sayfa kahramanı' }];
+const PAGE_WIDE_FRAMES: ImageFrame[] = [{ ratio: RATIO_SOURCE, label: '3:2', where: 'sayfa kahramanı' }];
+const ILLUSTRATION_FRAMES: ImageFrame[] = [{ ratio: RATIO_ILLUSTRATION, label: '13:10', where: 'çizim alanı' }];
+
 /** Görselin ait olduğu nesne — kaynak oranını ve türev çerçeveleri belirler (envanter O15 tablosu). */
-export const ImageRoleEnum = z.enum(['product', 'gallery', 'category', 'package', 'collection', 'banner']);
+export const ImageRoleEnum = z.enum([
+  'product',
+  'gallery',
+  'category',
+  'package',
+  'collection',
+  'banner',
+  'page_wide',
+  'illustration',
+]);
 export type ImageRole = z.infer<typeof ImageRoleEnum>;
 
 interface ImageRoleSpec {
@@ -89,7 +118,12 @@ export const IMAGE_ROLES: Record<ImageRole, ImageRoleSpec> = {
   category: OBJECT_SPEC,
   package: OBJECT_SPEC,
   collection: BAND_SPEC,
-  banner: BAND_SPEC,
+  // Sayfa kahramanı bantla AYNI kaynağı ister, yalnız türev çerçevesi tek → BAND_SPEC'ten türer.
+  banner: { ...BAND_SPEC, frames: PAGE_BAND_FRAMES },
+  page_wide: { ...OBJECT_SPEC, frames: PAGE_WIDE_FRAMES },
+  // Çizim daha küçük bir alanda duruyor; ideal kaynak da o yüzden daha mütevazı — 2000 px istemek
+  // operatöre karşılığı olmayan bir uyarı gösterirdi.
+  illustration: { ratio: RATIO_ILLUSTRATION, label: '13:10', minWidth: 1200, minHeight: 920, frames: ILLUSTRATION_FRAMES },
 };
 
 /** Kapak + galeride tutulabilecek EN ÇOK fotoğraf sayısı (parametrik — tek yerden değişir). */
