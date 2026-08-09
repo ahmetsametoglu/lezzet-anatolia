@@ -1,4 +1,5 @@
 import type { ProductAllergen } from '@lezzet/types';
+import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from '@lezzet/application';
 
 /**
@@ -41,8 +42,30 @@ export interface StorefrontPackage {
   totalWeightG: number | null;
   /** Kargolanamayan (soğuk zincir) BİR kalem varsa paketin tamamı yalnız rota içi. */
   inRouteOnly: boolean;
-  /** BİR kalem bile yetmiyorsa paket tükendi — paket bütün satılır, "yarısı var" hâli yok. */
+  /**
+   * BİR kalem bile yetmiyorsa paket tükendi — paket bütün satılır, "yarısı var" hâli yok.
+   *
+   * **Ölçüsü AĞ GENELİDİR ve öyle kalmalı** (C3): "tükendi" ancak HİÇBİR depoda yoksa söylenir.
+   * Yere bağlı hâl (`route`) ayrı bir alandır — ikisini tek bayrakta toplamak, öbür depoda duran
+   * malı "tükendi" diye ilan etmek olurdu.
+   */
   soldOut: boolean;
+  /**
+   * **Bu yerden hangi yolla gelir** (19.22) — karar `decideBundleAgainstWarehouse` motorundan gelir.
+   *
+   * `null` = yer bilinmiyor (posta kodu sorulmamış): yol da bilinmiyor. Ziyaretçiye hangi yoldan
+   * geleceğini söylemek, bilmediğimiz bir şeyi söylemektir — o hâlde yalnız `soldOut` konuşur.
+   *
+   * Paket BÖLÜNMEZ (K5): yol paketin bütünü içindir, kalemleri için değil.
+   */
+  route: CartLineRoute | null;
+  /**
+   * Bu yerden ŞU AN kaç PAKET yapılabilir — en zayıf kalemden (`min⌊mevcut ÷ kalem-adedi⌋`).
+   *
+   * `null` = yer bilinmiyor. Olumsuz yollarda 0. **Bir SÖZ DEĞİL, bir sayı**: sepet stok ayırmıyor
+   * (DOMAIN §4), gerçek kapı checkout'tur.
+   */
+  maxQty: number | null;
   /**
    * Kalemlerin EN YÜKSEK KDV oranı (%). Vitrin bunu göstermez (fiyat KDV dahil); checkout'ta
    * kargo KDV'sinin oransal bölünmesi için gerekiyor. Karışık oranlı bir pakette en yükseği

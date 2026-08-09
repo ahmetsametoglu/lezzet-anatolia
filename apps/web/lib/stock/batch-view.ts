@@ -1,6 +1,5 @@
 import 'server-only';
 export { readExpiryThresholds, toBatchViews } from '@lezzet/application';
-export type { BatchView } from '@lezzet/application';
 
 /**
  * **Geçiş köprüsü** (06.13 terfisi, 08.08) — gövde `@lezzet/application/warehouse/batch-view`e taşındı.

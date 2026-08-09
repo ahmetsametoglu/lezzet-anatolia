@@ -118,7 +118,12 @@ export async function getCartView(
 
   const [variants, packageRows] = await Promise.all([
     new ProductVariantService(db).listByIds(variantIds),
-    getPackagesByIds(bundleIds, locale),
+    // Yer paket kapısına da GEÇER (19.22): kart, sepet ve checkout aynı yolu görmeli. Geçmeseydi
+    // paket ağ-geneli okunmaya devam eder ve checkout'un iki kapısı onu yine muaf geçerdi.
+    getPackagesByIds(bundleIds, locale, {
+      warehouseId: opts.warehouseId ?? null,
+      shippingWarehouseId: opts.shippingWarehouseId ?? null,
+    }),
   ]);
   const packages = new Map(packageRows.map((p) => [p.id, p]));
   const byVariant = new Map(variants.map((v) => [v.id, v]));
@@ -248,9 +253,11 @@ export async function getCartView(
 /**
  * Satırların yol kararı — motorun girdisini kurar, kararı ona verir.
  *
- * Paket satırı ayrımın DIŞINDADIR: paket bir kürasyondur, kalemleri farklı depolarda olabilir ve
- * "paketi ikiye böl" diye bir şey yok (DOMAIN §13). Yolu checkout'ta paketin bütünü üzerinden
- * çözülür; burada `null` kalır.
+ * **Paket satırı buradan geçmez ve bu doğru** (19.22): paket bölünmez, yolu BÜTÜNÜ için verilir ve
+ * kararı kendi motoru üretir (`decideBundleAgainstWarehouse`, paket kapısında çözülür). Kalemlerini
+ * bu süzgece tek tek versek üç kalemli bir paket için üç ayrı yol çıkardı ve hiçbiri paketin cevabı
+ * olmazdı. `bundleLine` sonucu taşıyor, yani paket satırının `route`/`availableHere`'i artık dolu —
+ * checkout'un iki kapısı onu kendiliğinden yakalıyor.
  *
  * Yolla birlikte **o yolun havuzundaki miktar** da döner (`availableHere`). Motorun kendi
  * `fulfillableQty` alanı bu soruyu cevaplayamıyor: o `min(istenen, mevcut)` — yani 2 adet isteyip
@@ -367,11 +374,18 @@ function bundleLine(bundleId: string, qty: number, pack: StorefrontPackageDetail
     limitCap: null,
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
-    // Paket ayrımın DIŞINDA: kalemleri farklı depolarda olabilir ve "paketi ikiye böl" diye bir şey
-    // yok (DOMAIN §13). Yolu checkout'ta bütünü üzerinden çözülür — adet tavanı da öyle: paketin
-    // "kaç tane yapılabilir"i en zayıf kaleminden doğar ve bugün ölçülmüyor.
-    route: null,
-    availableHere: null,
+    // **Yol paketin BÜTÜNÜ için** (19.22) — "paketi ikiye böl" yok (`DOMAIN §13`, K5). Karar
+    // `decideBundleAgainstWarehouse` motorundan geliyor ve paket KAPISINDA çözülüyor
+    // (`storefront/packages.ts`); burada yalnız taşınıyor, ikinci kez hesaplanmıyor — kartla sepet
+    // aynı paket için farklı yol söyleyemesin.
+    //
+    // İki alanın `null` kalması checkout'un iki kapısının (`!== null` süzgeci) paketi MUAF geçmesi
+    // demekti ve iş rezervasyonda, müşteri onaya bastıktan SONRA patlıyordu. Değer akınca kapılar
+    // paketi kendiliğinden yakalıyor: yeni kapı eklenmedi, **mevcut kapı beslendi.**
+    route: pack.route,
+    // "Şu an en fazla kaç adet" — en zayıf kalemden (`min⌊mevcut ÷ kalem-adedi⌋`). Bir söz değil,
+    // bir sayı: sepet stok ayırmıyor (DOMAIN §4).
+    availableHere: pack.maxQty,
     contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
     vatRate: pack.vatRate,
     // Pakette TEK bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır (05.5).

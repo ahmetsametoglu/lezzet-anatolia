@@ -116,6 +116,17 @@ export const readPlaceAnswer = cache(readPlaceAnswerFromCookie);
  * **Bölge kimliği ÇÖZÜMDEN gelir, çerezten değil** ve bu bir güvenlik sınırı: çerezi istemci
  * yazabilir; çözülmüş bölge kimliğini oradan okusaydık uydurulmuş bir çerez hangi asgari sepetin
  * uygulanacağını belirlerdi. Aynı gerekçe `warehouseId` için de yazılı (bu dosyanın künyesi).
+ *
+ * ── BEKLEYEN(07.15): HENÜZ ÇAĞIRANI YOK — ve YARISI BAĞLANMAYACAK ────────────
+ * Ölçüldü (08.08, `knip`): bu kapı yazıldı ama `getCartView`'a `country`/`zoneId` geçiren tek
+ * çağıran yok — üç çağıran da yalnız `readPlaceWarehouses()` yayıyor. Yani kapsamlı ayarın ülke ve
+ * bölge eksenleri hâlâ boş: DE kargo tarifesi ve bölge asgari sepeti okunmuyor.
+ *
+ * **Tek yüzeyi bağlamak, hiçbirini bağlamamaktan KÖTÜDÜR** (`settings-scope.ts` künyesi): sepet ile
+ * checkout aynı anahtarı farklı kapsamla okursa sepette "13 € eşik" yazıp checkout'ta 0 € uygulanır
+ * ve müşteri arada ne olduğunu anlamaz. Bu yüzden bağlama üç çağıranın hepsinde AYNI turda yapılır
+ * (`lib/cart/actions.ts` · `lib/order/checkout-draft.ts` · `app/(customer)/…/checkout/actions.ts` —
+ * sonuncusu müşteri şeridinin dosyası). 07.15'in kalan ayağı; `knip` o güne dek bu satırı gösterir.
  */
 export async function readPlaceScope(): Promise<{ country: string | null; zoneId: string | null; warehouseId: string | null }> {
   const { answer, resolution, warehouseId } = await readPlaceContext();

@@ -10,7 +10,6 @@ import { resolveLocalizedText } from '@lezzet/types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import {
   imageOf,
-  listCollectionProductIds,
   listOfferProductIds,
   loadProductContext,
   EMPTY_PRODUCT_CONTEXT,
@@ -217,16 +216,15 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
   const products = new ProductService(db);
   const cards = await Promise.all(
     chosen.map(async (c) => {
-      // Üyelik ÖNDEN kimliklere çözülür (`listCollectionProductIds` künyesi): `ProductFilters`ın
-      // `collectionId` süzgeci ölçüldü ve süzmüyor — sayım yolunda ise PostgREST'i reddettiriyor.
-      const memberIds = await listCollectionProductIds(db, c.id);
       return {
         id: c.id,
         slug: c.slug,
         name: resolveLocalizedText(c.name, locale),
         image: imageOf(c),
-        // Sayaç kataloğun ölçütüyle AYNI: üye VE aktif. Üyelik sayısını basmak kartı yalancı yapardı.
-        productCount: memberIds.length === 0 ? 0 : await products.countMatching({ ids: memberIds, status: 'active' }),
+        // Sayaç kataloğun ölçütüyle AYNI: üye VE aktif — kartın sayısı, karta tıklayınca açılan
+        // listenin sayısıdır. Üyelik sayısını basmak kartı yalancı yapardı (pasif ürün de üyedir).
+        // Süzgeç doğrudan `collectionId`: üyeliği önce kimliklere çözen köprü 08.08'de söküldü.
+        productCount: await products.countMatching({ collectionId: c.id, status: 'active' }),
       };
     }),
   );
@@ -254,7 +252,8 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
     readShowcase(db, locale, place, viewer),
     readOffers(db, locale, place, viewer),
-    listStorefrontPackages(locale, HOME_PACKAGE_LIMIT),
+    // Yer paket bandına da geçer (19.22): kart yol işaretini ancak yeri bilirse basabilir.
+    listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),
     readCollections(db, locale),
   ]);
 

@@ -31,6 +31,7 @@ export * from './delivery/delivery-days';
 export * from './delivery/warehouse-resolve';
 export * from './delivery/place-name';
 export * from './delivery/cart-warehouse';
+export * from './delivery/bundle-warehouse';
 export * from './delivery/shipping-fee';
 export * from './delivery/on-the-way';
 export * from './payment/checkout-options';

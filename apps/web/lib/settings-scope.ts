@@ -41,7 +41,7 @@ import type { SettingScopeContext } from '@lezzet/types';
  * **Ziyaretçide kanal `b2c`'dir, `undefined` değil** — kapsamsız bırakmak "kanal bilinmiyor"
  * demektir ve çözücü o ekseni atlar; oysa ziyaretçi bilinmeyen değil, perakendedir.
  */
-export interface SettingScopeInput {
+interface SettingScopeInput {
   customerId?: string | null;
   /** Teslimatın gideceği ülke — yeri çözen yüzeyden gelir (çerez okuması orada). */
   country?: string | null;
