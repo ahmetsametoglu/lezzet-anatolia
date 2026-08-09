@@ -1,4 +1,5 @@
 import type { AssistantProposalKind, AssistantProposalStatus } from '@lezzet/types';
+import type { ProposalEconomics } from './economics';
 
 /**
  * Asistan onay kuyruğu — EKRANIN SÖZLEŞMESİ (22.3).
@@ -41,6 +42,18 @@ export interface AssistantQueueRow {
   payload: unknown;
   /** Listede ve kartta gösterilecek tutar; tipinde tutar kavramı yoksa `null`. */
   amountCents: number | null;
+  /**
+   * KÂRLILIK — yalnız paket ve fırsat önerilerinde dolu, ötekilerde `null`.
+   *
+   * Ekran bu bloğu HESAPLAMAZ, çizer: maliyet KDV hariç, satış fiyatı dahil ve çevrim kapıda
+   * yapılmış durumda (`lib/assistant/economics.ts`). Marj negatifse uyarı tonu — ama YOL
+   * KAPATILMAZ: zararına satmak bir karardır (elde kalıp imha edilecek maldan iyidir) ve
+   * `offer-dialog` da aynı şekilde davranıyor.
+   *
+   * Maliyet `null` = alış hiç girilmemiş; ekran "kâr hesaplanamıyor" der. Sıfır YAZILMAZ —
+   * sıfır maliyet "%100 kâr" gösterirdi.
+   */
+  economics: ProposalEconomics | null;
   createdAt: string;
   expiresAt: string;
   /** Tazelik rozeti — eşiği KAPI bilir (6 saat), ekran bilmez. */

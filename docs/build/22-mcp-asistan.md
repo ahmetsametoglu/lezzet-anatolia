@@ -415,5 +415,17 @@ satırında.
     koleksiyonu ancak `propose_featured_flag`ı kör deneyip hata alarak keşfedebiliyordu. Canlı:
     *kategori — vitrinde 4, aday 2 (Dondurma · Anadolu Mutfağı)*.
   - *Bitti:* araç kataloğu **21 → 23** · 26/26 test · tsc + eslint temiz · canlı doğrulandı.
-  - **BEKLEYEN(22.7):** paket/teklif önizlemesi için kârlılık alanları (operasyon şeridi bekliyor,
-    `docs/talep/operasyon-paket-onerisinde-karlilik.md`).
+  - **KÂRLILIK KAPISI** (`apps/web/lib/assistant/economics.ts`) — harici denetimin zararına paket
+    önerisi (maliyet 6,10 € · fiyat 5,90 €) kuyruğa düştü ve **ekran bunu söylemiyordu**: paket
+    önizlemesi kalemleri ve mutabakatı gösteriyor, maliyeti hiç göstermiyordu. `AssistantQueueRow`
+    artık `economics` taşıyor (paket: kalem maliyetleri + KDV hariç fiyat + marj · fırsat: alış
+    fiyatı = "üçüncü yüz").
+    - **KDV tabanı ayrı ve bu şart:** satış fiyatı KDV DAHİL, maliyet HARİÇ. Test bunu kilitliyor —
+      dar marjda KDV atlanırsa **aynı veri zararı kâr gösteriyor**. Karışık KDV'li pakette oran
+      kalemlerin liste değerine göre ağırlıklı (tek oran varsaymak marjı sessizce kaydırırdı).
+    - **Bilinmeyen maliyet `null`, sıfır DEĞİL** — sıfır maliyet "%100 kâr" gösterir ve bu en
+      tehlikeli yanlıştır: ikna edicidir. Bir kalemin maliyeti bilinmiyorsa TOPLAM da `null`.
+    - **Ayrışma bir uyarıdır:** payload'daki fiyat önerinin dayandığı gerçek, kapıdaki şu anki
+      gerçek. Ekran ayrışmayı söyler, sessizce güncelini göstermez (operasyon şeridiyle mutabık).
+    - Marj negatifse uyarı ama **yol kapatılmaz**: zararına satmak bir karardır (elde kalıp imha
+      edilecek maldan iyidir) ve `offer-dialog` da aynı davranıyor.

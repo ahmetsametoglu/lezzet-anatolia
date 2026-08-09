@@ -1,6 +1,7 @@
 import 'server-only';
 import { AssistantProposalService, UserProfileService, serviceDb } from '@lezzet/database';
 import { KIND_META, amountCentsOf, impactOf } from '@lezzet/application';
+import { economicsOf } from './economics';
 import type { AssistantProposal } from '@lezzet/types';
 
 import type { AssistantQueueRow, QueueTab } from './assistant-types';
@@ -46,6 +47,12 @@ export async function readAssistantQueue(tab: QueueTab, limit = 50): Promise<Ass
   const staff = staffIds.length > 0 ? await new UserProfileService(db).listByIds(staffIds) : [];
   const nameById = new Map(staff.map((s) => [s.id, s.name]));
 
+  // Kâr künyesi YALNIZ iki tipte doluyor (paket · fırsat) ve satır başına birkaç okuma istiyor;
+  // paralel çözülüyor ki kuyruk açılışı satır sayısıyla uzamasın.
+  const economics = new Map(
+    await Promise.all(rows.map(async (p) => [p.id, await economicsOf(p)] as const)),
+  );
+
   return rows.map((proposal) => {
     const meta = KIND_META[proposal.kind];
     return {
@@ -60,6 +67,8 @@ export async function readAssistantQueue(tab: QueueTab, limit = 50): Promise<Ass
       targetTables: [...meta.tables],
       payload: proposal.payload,
       amountCents: amountCentsOf(proposal.kind, proposal.payload),
+      // Kârlılık — paket ve fırsat önizlemesinin uyarı satırı; öteki tiplerde `null` (bkz. economics.ts).
+      economics: economics.get(proposal.id) ?? null,
       createdAt: proposal.createdAt,
       expiresAt: proposal.expiresAt,
       freshness: freshnessOf(proposal),
