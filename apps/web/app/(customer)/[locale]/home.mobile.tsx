@@ -7,7 +7,7 @@ import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { CartBar } from '@/components/customer/cart/cart-bar';
 import { Link } from '@/i18n/navigation';
-import { limitText, type HomeViewProps } from './home-types';
+import { HERO_IMAGE, limitText, type HomeViewProps } from './home-types';
 
 /**
  * Anasayfa — mobil düzeni (tasarım: `Musteri - Anasayfa.dc.html`, "Anasayfa Mobil" ekranı).
@@ -26,7 +26,8 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
         <h1 className="font-serif text-h1-sm text-ink">
           {t.hero.titleLead} <em className="text-olive">{t.hero.titleAccent}</em>
         </h1>
-        <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} />
+        {/* Aynı görsel masaüstüyle paylaşılıyor (`HERO_IMAGE`) — künyesi orada. */}
+        <FramedImage src={HERO_IMAGE} alt={t.hero.imageAlt} ratio={RATIO_BAND} />
         <Link href="/catalog" className={buttonClass({ compact: true, fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>

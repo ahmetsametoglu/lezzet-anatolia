@@ -35,7 +35,7 @@ değişecek yer parantezde.
 | **Bölge haberi tetikleyicisi** — bölge genişleyince bekleyenlere TEK e-posta | `zone_notice` kaydı alınıyor, ekran "not aldık" diyor (söz vermiyor) | bölge kaydedilince kontrol eden iş + gönderim (`14-bildirim`) |
 | **Hesap sayfasında "sonraya kaydedilenler" + bölge haberi kartı** | çizili (`Musteri - Hesap.dc.html`) | hesap sayfası (`04-auth`); veri hazır (`cart.saved_items`, `zone_notice`) |
 | **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
-| **Ayarlar → "Vitrin görselleri" sekmesi** (ürüne ait OLMAYAN sayfa görselleri: ana sayfa hero, fırsat bandı, Professionnels hero, Hakkımızda; ayrıca "statik" işaretli iki kalem) | `Operasyon - Ayarlar.dc.html` → 7. sekme, tam çizili | **İKİ ŞERİT birden:** (1) *arka uç* — `site_image` tablosu + depolama kovası yok; ürün görselinin yolu (`product-image.service`) burada kullanılamaz, çünkü bunlar bir varlığa değil bir SAYFA YERİNE bağlı. (2) *müşteri şeridi* — hangi slot'un gerçekten var olduğu ve hangisinin koda gömülü kaldığı (marka sahnesi, hata çizimi) o yüzeyin bilgisi; liste onlardan mutabakatla gelir. Operasyon şeridi sekmeyi ancak ikisi netleşince çizer — bugün çizmek, arkasında hiçbir şey olmayan bir yükleme alanı göstermek olurdu (`09.16` AÇIK 2) |
+| **Ayarlar → "Vitrin görselleri" sekmesi** (ürüne ait OLMAYAN sayfa görselleri: ana sayfa hero, fırsat bandı, Professionnels hero, Hakkımızda; ayrıca "statik" işaretli iki kalem) | `Operasyon - Ayarlar.dc.html` → 7. sekme, tam çizili | **İKİ ŞERİT birden:** (1) *arka uç* — `site_image` tablosu + depolama kovası yok; ürün görselinin yolu (`product-image.service`) burada kullanılamaz, çünkü bunlar bir varlığa değil bir SAYFA YERİNE bağlı. (2) ~~*müşteri şeridi* — hangi slot'un gerçekten var olduğu ve hangisinin koda gömülü kaldığı (marka sahnesi, hata çizimi) o yüzeyin bilgisi; liste onlardan mutabakatla gelir~~ **→ LİSTE VERİLDİ (09.08), ölçülerek:** müşteri yüzeyindeki her `src={null}` çerçevesi tarandı, **dördü** gerçek sayfa görselidir — `home_hero` (16:9) · `packages_hero` (3:2) · `professionals_hero` (16:9) · `empty_cart` (`ILLUSTRATION_RATIO`). Üç aday listeden DÜŞTÜ: ürün galerisi yer tutucusu bir VARLIK görselidir (`product-image.service` sahibi), "fırsat bandı görseli"nin kodda karşılığı yok (bandda kart var görsel yok), "Hakkımızda" sayfası hiç yok. Ana sayfa slot'u bugün **geçici statik dosyayla** dolu (`public/hero-sofra.jpg`, 08.31) — kapı gelince silinir. Talepler açıldı: `arka-uc-site-gorseli-tablosu-ve-kovasi.md` · `operasyon-vitrin-gorselleri-sekmesi.md`. Operasyon şeridi sekmeyi ancak arka uç netleşince çizer — bugün çizmek, arkasında hiçbir şey olmayan bir yükleme alanı göstermek olurdu (`09.16` AÇIK 2) |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
 
@@ -654,3 +654,35 @@ tarayıcıdan bedava gelmez.
 
 ---
 
+
+### Asistan onay kuyruğu — çizimin dört öğesi VERİ olmadığı için çizilmedi (09.08, 22.3)
+
+`Operasyon - Asistan Kuyrugu.dc.html` birebir uygulandı; aşağıdaki dört öğe bilerek dışarıda kaldı.
+Dördünün de sebebi aynı: **çizim o veriyi varsayıyor, `payload` taşımıyor.** Uydurulsalardı ekran,
+onaydan önce operatöre yanlış bir gerçek gösterirdi — onay kuyruğunun yapabileceği en pahalı hata.
+
+1. **"Ayrı ayrı alınsa 104,20 € · %14,6 avantaj"** (paket önizlemesi). `BundleDraftPayload` kalemin
+   yalnız **atanan payını** taşıyor, perakende fiyatını değil. Karşılaştırma için kalemlerin güncel
+   satış fiyatı gerekiyor — bu ayrı bir okuma ve kararı denetimin (payload'a mı girer, ekran mı
+   çeker). Mutabakat rozeti (payların toplamı fiyatı tutuyor mu) uygulandı, o payload'dan çıkıyor.
+2. **Ürün fark tablosundaki "Alerjen / Saklama — boş" satırları.** Asistan bu iki alanı ŞEMA gereği
+   yazamıyor (`ProductDraftPayloadSchema` künyesi), yani payload'da hiç yoklar; ürünün kendisinde
+   dolu da olabilirler. "Boş" yazmak ürün hakkında bir iddia olurdu. Yokluk, tablonun altındaki
+   kırmızı kutuda iddiasız biçimde duruyor — çizimin söylemek istediği de zaten o.
+3. **Yakın-SKT vurgusu** (parti satırının kırmızıya boyanması). Bizde "yaklaşan son tarih" mutlak
+   günle değil **kalan raf ömrü yüzdesiyle** kararlaşıyor (`domain-core/stock/shelf-life.ts`: 3 gün
+   taze börekte normal, uzun ömürlü üründe alarm) ve payload ürünün toplam raf ömrünü taşımıyor.
+   Bugün yalnız **ölçülebilen** risk çiziliyor: tarihi geçmiş ya da bugün dolan parti. Çare
+   payload'a `shelfLifeDays` (ya da hazır `expiryFlag`) eklemek — denetime soruldu.
+4. **"Paketi aç →" köprüsü** (uygulanmış kayda gitme). Uygulama doğan kaydın kimliğini bırakıyor
+   (`result`) ama hiçbir operasyon ekranı TEK bir pakete/siparişe/harekete derin bağlantı kabul
+   etmiyor (`productsUrl`/`procurementUrl`/`financeUrl` yalnız liste + süzgeç taşıyor). Düğme
+   listeye götürseydi "paketi aç" demezdi. Kimlikler teknik dökümde duruyor; köprü, o ekranlara
+   kayıt-düzeyi adres açıldığı gün gelir.
+
+**Sekmeler için bir sapma denenmişti, geri alındı (kullanıcı düzeltmesi 09.08).** Üç görünüm bir tur
+`ui/tabs` ile başlığın ALTINA ayrı bir bant olarak yazılmıştı; çizim onları başlık barının İÇİNDE,
+gri rayın üstünde kayan bir hap olarak veriyor. Kullanıcı haklıydı iki yönden: ortak başlık zaten
+kullanılıyorsa konu oraya girer, ve bu ekranda ayrı bir bandın bedeli var — iki sütun ekranı
+dolduruyor, bant o yüksekliği karar çerçevesinden çalıyor. Çizim uygulandı
+(`components/operation/ui/segmented-nav.tsx`); açık bir madde değil, kayıt olarak duruyor.

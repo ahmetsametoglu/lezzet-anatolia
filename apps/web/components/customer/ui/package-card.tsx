@@ -1,6 +1,7 @@
-import { RATIO_SOURCE } from '@lezzet/types';
+import { RATIO_SOURCE, type StockStatus } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { FramedImage } from '@/components/media/framed-image';
+import { StockMark } from '@/components/customer/delivery/stock-mark';
 import { Link } from '@/i18n/navigation';
 import { formatPrice, formatWeight } from '@/lib/storefront/format';
 import type { StorefrontPackage } from '@/lib/storefront/storefront-types';
@@ -48,8 +49,28 @@ interface PackageListCardProps {
   wide?: boolean;
 }
 
+/**
+ * **Paketin YOLU → ürün kartının stok dili** (19.22 ekran ucu, arka-uç talebi 09.08).
+ *
+ * `CartLineRoute` ile `StockStatus` iki ayrı enum ama aynı dört soruyu soruyor; eşleyip `StockMark`
+ * kullanmak, paket için ikinci bir cümle ailesi yazmaktan iyidir — müşteri aynı bilgiyi ürün
+ * kartında ve paket kartında farklı kelimelerle okumamalı (`CLAUDE §1`).
+ *
+ * `null` = **yer bilinmiyor**, işaret çizilmez. `local` de işaretsiz: "adresine geliyor" varsayılan
+ * hâldir, her karta yazmak gürültü olurdu (ürün kartının `available` kararının aynısı).
+ *
+ * `unavailable` BİLEREK eşlenmiyor: o hâlde `soldOut` zaten devrede ve kart tek çipe iniyor —
+ * "tükendi" ile "buraya gelmiyor" aynı anda yazılırsa hangisinin geçerli olduğu belirsizleşir.
+ */
+function stockStatusOfRoute(route: StorefrontPackage['route']): StockStatus | null {
+  if (route === 'shipping') return 'shipping';
+  if (route === 'not_shippable_here') return 'elsewhere';
+  return null;
+}
+
 export function PackageListCard({ pack, locale, labels, compact = false, wide = false }: PackageListCardProps) {
   if (wide) return <WidePackageCard pack={pack} locale={locale} labels={labels} />;
+  const stockStatus = stockStatusOfRoute(pack.route);
   return (
     <Link
       href={{ pathname: '/package/[slug]', params: { slug: pack.slug } }}
@@ -112,19 +133,28 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
             </span>
           ) : (
             <>
-              {!compact && (
+              {/* "Stokta" AĞ GENELİDİR ve yer bilinince yerini yere bağlı gerçeğe bırakır: müşteri
+                  için "bir yerde var" değil "bana gelir mi" anlamlıdır. Yer bilinmiyorsa (çerez
+                  girilmemiş) bugünkü hâl aynen sürüyor. */}
+              {!compact && !stockStatus && (
                 <span className="rounded-soft bg-olive-bg px-2.5 py-0.5 font-sans text-micro font-semibold whitespace-nowrap text-olive-dark">
                   {labels.inStock}
                 </span>
               )}
-              <span
-                className={[
-                  'rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold whitespace-nowrap',
-                  pack.inRouteOnly ? 'border border-honey-line bg-honey-bg text-honey' : 'bg-olive-bg text-olive-dark',
-                ].join(' ')}
-              >
-                {pack.inRouteOnly ? labels.inRouteOnly : labels.shippable}
-              </span>
+              {stockStatus && <StockMark status={stockStatus} locale={locale} />}
+              {/* Kargo kısıtı çipi YALNIZ yer bilinmiyorken: `route` doluyken aynı soruyu daha
+                  kesin cevaplıyor ("kargolanamaz" ↔ "senin adresine gelmez") ve iki çip yan yana
+                  müşteriye aynı şeyi iki kez, iki farklı kesinlikte söylerdi. */}
+              {!stockStatus && (
+                <span
+                  className={[
+                    'rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold whitespace-nowrap',
+                    pack.inRouteOnly ? 'border border-honey-line bg-honey-bg text-honey' : 'bg-olive-bg text-olive-dark',
+                  ].join(' ')}
+                >
+                  {pack.inRouteOnly ? labels.inRouteOnly : labels.shippable}
+                </span>
+              )}
             </>
           )}
         </div>
@@ -160,6 +190,7 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
 
 /** Tek paket kaldığında kullanılan yatay kart — ızgaranın tek elemanlı hâli yerine (tasarım). */
 function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'compact' | 'wide'>) {
+  const stockStatus = stockStatusOfRoute(pack.route);
   // Künye tek satırda birleşir; hesaplanamayan parça sessizce düşer, ayraç ondan sonra kurulur.
   const meta = [
     pack.serves !== null ? labels.serves.replace('{n}', String(pack.serves)) : null,
@@ -186,9 +217,14 @@ function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'c
         <span className="font-serif text-h2-sm text-ink">{pack.name}</span>
         <span className="font-sans text-note text-muted">{meta}</span>
         {pack.description && <p className="flex-1 font-sans text-note leading-relaxed text-body">{pack.description}</p>}
+        {/* Çip kuralı DAR KARTIN aynısı (`PackageListCard`): yer biliniyorsa yola bağlı işaret,
+            bilinmiyorsa kargo kısıtı çipi. İki dal aynı soruyu iki türlü cevaplayamaz — sayfanın
+            ilk kartı geniş, gerisi dar ve müşteri ikisini yan yana görüyor. */}
         <div className="flex items-center gap-1.5">
           {pack.soldOut ? (
             <span className="rounded-soft bg-closed-bg px-2.5 py-1 font-sans text-micro font-semibold text-ink">{labels.soldOut}</span>
+          ) : stockStatus ? (
+            <StockMark status={stockStatus} locale={locale} />
           ) : (
             <span
               className={[

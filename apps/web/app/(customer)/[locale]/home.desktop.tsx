@@ -6,7 +6,7 @@ import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/se
 import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { RecipeTeaserCard } from '@/components/customer/ui/recipe-card';
 import { Link } from '@/i18n/navigation';
-import { limitText, type HomeViewProps } from './home-types';
+import { HERO_IMAGE, limitText, type HomeViewProps } from './home-types';
 
 /**
  * Anasayfa — masaüstü düzeni (tasarım: `Musteri - Anasayfa.dc.html`, "Anasayfa Web" ekranı).
@@ -46,7 +46,12 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
             </Link>
           </div>
         </div>
-        <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} className="!rounded-[24px]" />
+        {/* Kahraman görseli GEÇİCİ ve statik (09.08, kullanıcı isteği): `public/hero-sofra.jpg`.
+            Kalıcı yolu `design/BACKLOG §4`'te yazılı ve HENÜZ YOK — ana sayfa hero'su operatörün
+            "Vitrin görselleri" sekmesinden yöneteceği bir SAYFA görselidir, bir varlığa bağlı
+            değildir; arka uçta `site_image` tablosu ve kovası açılmadan gerçek akış kurulamaz.
+            O gün geldiğinde bu satır kapıdan gelen künyeyle değişir, dosya silinir. */}
+        <FramedImage src={HERO_IMAGE} alt={t.hero.imageAlt} ratio={RATIO_BAND} className="!rounded-[24px]" />
       </section>
 
       {/* K31 · Posta kodu sorma şeridi — kahramanın HEMEN ALTINDA (tasarım). Yer biliniyorsa ya da

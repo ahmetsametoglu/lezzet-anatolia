@@ -8,7 +8,6 @@ import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { captureError, SOURCES } from '@lezzet/observability';
-import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from '@/lib/cart/read';
 import { formatPrice } from '@/lib/storefront/format';
 import { clearOrderedLines } from '@/lib/cart/settle';
@@ -99,9 +98,32 @@ export async function loadCheckoutAction(
     const selected = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
     if (!selected) return { data: { addresses, delivery: null, payment: null }, errorKey: null };
 
-    const cart = await getCartView(locale as Locale, entries, { customerId, couponCode, ...(await readPlaceWarehouses()) });
+    // ── YER ÖNCE, SEPET SONRA (07.15'in kalanı, arka-uç talebi 09.08) ────────
+    // Sepet yeri ÇEREZTEN alıyordu (`readPlaceWarehouses`) ve ayar kapsamının ülke/bölge eksenleri
+    // hiç geçmiyordu: DE kargo tarifesi ve bölge asgari sepeti okunmuyor, FR/global değerler
+    // kesiliyordu. Checkout'un yer kaynağı çerez DEĞİL **seçilen adrestir** — müşteri hangi adrese
+    // gönderiyorsa eşik de oranın eşiğidir.
+    //
+    // İki tur `resolveDelivery` fazladan maliyet DEĞİL ve bunu kapının kendi künyesi söylüyor:
+    // bölge/depo listeleri ortak ve önbellekli, *"teslimat bir kez depoyu vermek, bir kez de sepet
+    // bilindikten sonra kargo kararını vermek için iki kez çözülebiliyor."* `checkout-draft.ts:181`
+    // aynı deseni zaten koşuyor — ekranın gösterdiği ile siparişi açanın uyguladığı ancak böyle
+    // aynı hesaptan çıkar.
+    const place = await resolveDelivery({ postalCode: selected.postalCode, country: selected.country });
+    const cart = await getCartView(locale as Locale, entries, {
+      customerId,
+      couponCode,
+      warehouseId: place.warehouseId,
+      shippingWarehouseId: place.shippingWarehouseId,
+      country: selected.country,
+      // Kargo siparişi bir BÖLGEYE ait değildir (`checkout-draft.ts:350` ile aynı kural): rota
+      // bölgesi yalnız araçla gidilen teslimatın kaydıdır, kargoda bölge eşiği uygulanmaz.
+      zoneId: shippingOrder ? null : place.zoneId,
+    });
+    // İkinci tur: kargo kararı ancak sepet bilinince verilebilir (soğuk zincir kalemi var mı).
     const delivery = await resolveDelivery({
       postalCode: selected.postalCode,
+      country: selected.country,
       hasNonShippableItem: cart.lines.some((l) => !l.shippable),
     });
 

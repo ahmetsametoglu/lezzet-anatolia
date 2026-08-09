@@ -5,6 +5,7 @@ import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { listStorefrontPackages } from '@/lib/storefront/packages';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -42,7 +43,14 @@ export default async function PackagesPage({ params, searchParams }: PackagesPag
   void recordPageView('/packages', await searchParams);
 
   const t: Messages = messages[locale];
-  const [packages, device] = await Promise.all([listStorefrontPackages(locale), detectDevice()]);
+  // Yer KAPIYA parametre olarak geçer, kapının içinde okunmaz (19.22): istek bağlamına bağlı bir
+  // okumayı orkestrasyonun içine koymak onu istek DIŞINDA çağrılamaz hâle getirir (cron/webhook/
+  // mobil uç) — ölçülmüş bir hata, 34 test düşürmüştü (`settings-scope.ts` künyesi). Çerezi okuyan
+  // taraf sayfadır. Yer bilinmiyorsa kapı bugünküyle birebir aynı davranır (`route: null`).
+  const [packages, device] = await Promise.all([
+    listStorefrontPackages(locale, undefined, await readPlaceWarehouses()),
+    detectDevice(),
+  ]);
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="packages">

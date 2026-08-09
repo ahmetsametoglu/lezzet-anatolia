@@ -6,6 +6,7 @@ import { openGraphOf } from '@/lib/seo/open-graph';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { getPackageDetail } from '@/lib/storefront/packages';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -60,7 +61,13 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
   void recordPageView('/package/[slug]', await searchParams);
 
   const t: Messages = messages[locale];
-  const [pack, device] = await Promise.all([getPackageDetail(slug, locale), detectDevice()]);
+  // Yer kapıya parametre (19.22) — gerekçe `packages/page.tsx` künyesinde. `generateMetadata`
+  // BİLEREK yersiz kalıyor: başlık ve paylaşım kartı ziyaretçinin yerine göre değişmez, üstelik
+  // meta üretimi çerez okursa sayfa dinamikleşir ve her paylaşım linki yeniden render edilir.
+  const [pack, device] = await Promise.all([
+    getPackageDetail(slug, locale, await readPlaceWarehouses()),
+    detectDevice(),
+  ]);
   if (!pack) notFound();
 
   return (

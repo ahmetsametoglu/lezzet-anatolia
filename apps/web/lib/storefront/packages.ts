@@ -221,13 +221,21 @@ function toCard(bundle: BundleRow, locale: Locale, context: PackageContext): Sto
    * Yer bilinmiyorsa hiç sorulmaz: `null` "yol bilinmiyor" demektir ve ziyaretçiye bilmediğimiz
    * bir şeyi söylemeyiz. Kargo deposu yoksa havuz 0 verilir — motorun sözleşmesi bunu bekliyor ve
    * `shipping` yolunu açmıyor.
+   *
+   * **KOŞUL `local || shipping`, yalnız `local` DEĞİL (09.08'de ölçülerek düzeltildi).** Önce
+   * `local ? … : null` yazıyordu ve bu, BÖLGE DIŞINDAKİ müşteriyi tümüyle dışarıda bırakıyordu:
+   * orada rota deposu yoktur (`warehouseId` null), yalnız kargo deposu vardır — yani yol
+   * BİLİNİYOR ("kargoyla gelir") ama karar hiç hesaplanmadığı için `route` null kalıyor ve kart
+   * yer bilinmiyormuş gibi davranıyordu. Ölçüldü: 75011 ile paketler sayfasında "Kargoyla
+   * gönderilir" işareti hiç çıkmıyordu. İki depodan BİRİ bile biliniyorsa yol sorulabilir.
    */
-  const decision = local
-    ? decideBundleAgainstWarehouse({
+  const decision =
+    local || shipping
+      ? decideBundleAgainstWarehouse({
         items: bundle.items.map((item) => ({
           variantId: item.variantId,
           qty: item.qty,
-          localAvailable: local.get(item.variantId) ?? 0,
+          localAvailable: local?.get(item.variantId) ?? 0,
           shippingAvailable: shipping?.get(item.variantId) ?? 0,
         })),
         // İstenen adet kartta bilinmiyor: kart "kaç tane yapılabilir"i söyler, "bunu karşılar mı"yı
