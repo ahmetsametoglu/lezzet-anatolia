@@ -80,7 +80,13 @@ export default defineConfig({
           // kod yavaşlığı değil sıra bekleme; tavanı kaldırmak değil genişletmek doğru: asılı
           // kalan sorgu yine düşer, yalnız yalancı kırmızı üretmez.
           testTimeout: 15_000,
-          hookTimeout: 30_000,
+          // Kanca tavanı testinkinden AYRI ve daha geniş (ölçüldü 09.08): refresh'in hemen
+          // ardındaki koşuda stock.test'in beforeAll VE afterAll'ı 30 sn'de kesildi — 23 test hiç
+          // koşamadı (yalancı kırmızı) ve kesilen afterAll purge'ü yarıda bıraktı: depo + kategori
+          // artığı kaldı, başka şeridin ölçümünü yanlış yöne çekti. Aynı dosya sakin pencerede
+          // 1,7 sn. Kesilen bir TEST kirlilik bırakmaz (afterAll yine koşar); kesilen bir KANCA
+          // bırakır — o yüzden kancaya sabır, teste değil. Gerçek kilitlenme 120 sn'de yine düşer.
+          hookTimeout: 120_000,
         },
       },
     ],
