@@ -365,3 +365,40 @@ satırında.
     - **Bilerek YAPILMADI:** ambalajın ham metni ekrana serilmiyor (brief: fotoğrafı çeken, yükleyen
       ve onaylayan aynı kişi — kaynağı ona tekrar okutmak boş yük) ve fiyat/stok/görsel için yer
       tutucu bile çizilmedi.
+
+- [~] (22.7) **Asistan KÖR SEÇİYORDU — referans okumaları + sistem modeli** *(kullanıcı sorusu 09.08:
+  "hangi depo hangi bölgeye tavsiyede bulunacağı ile ilgili bir yol haritası var mı, mevcut bölgeleri
+  ve posta kodlarını veriyor muyuz? … onun sağlıklı analiz yapabilmesi için doğru dataları vermemiz
+  gerek")* — touches: `apps/backend/src/mcp/tools-reference.ts`,
+  `packages/domain-core/src/delivery/distance.ts`, `apps/backend/src/mcp/server-factory.ts`
+  - **Kullanıcı bir örnek buldu, tarama SEKİZ yerde aynı deseni çıkardı.** Öneri araçlarının çoğu
+    bir kaydı ADLA/KODLA seçtiriyor (depo · bölge · hesap · kategori · koleksiyon · tedarikçi ·
+    vitrin adayı · ayar eşiği) ama o adların listesini okuyabildiği tek yer **hata mesajıydı**:
+    *"Bölge bulunamadı. Mevcutlar: …"*. Üstelik tutarsız — bazısı mevcutları sayıyor, bazısı
+    saymıyordu. Çalışma yöntemi fiilen **"kör dene, hatadan öğren"**di.
+  - **Görünmeyen zarar daha büyüktü: YAPILMAYAN öneriler.** Model hiç denemediği şeyi öneremez;
+    *"şu koleksiyonu vitrine çıkaralım"* cümlesi hiç kurulmuyordu, çünkü o koleksiyonun varlığından
+    haberi yoktu. Boşluğun ölçülemeyen kısmı buydu.
+  - **`delivery_map`** — depolar + bölgeler (**bağlı depo · teslimat günleri · kapsanan kodlar**) +
+    kapsanmayan talep kodları ve her birinin **EN YAKIN bölgesi + yaklaşık km**. Canlı doğrulama:
+    *67500 → Schiltigheim hattı (STR), ~18 km, 47 istek, 3 bekleyen* · *68000 → 56,5 km* (COLMAR
+    deposu pasif — asistan artık bunu görüp depo açmayı önerebilir) · *54000 → 113 km* (rota dışı).
+  - **`reference_data`** — hesaplar, kategoriler, koleksiyonlar (vitrin işaretiyle), tedarikçiler,
+    iş eşikleri. **Ayarlar BEYAZ listeyle**: `settings` tablosunda iş parametreleriyle birlikte
+    **`analytics_session_salt`** duruyor (oturum anonimleştirmesinin dayanağı). Kara liste yarın
+    eklenen hassas bir ayarı sessizce sızdırırdı; beyaz liste yeni ayarı sessizce göstermez —
+    ikinci hata ucuz, birincisi geri alınamaz. Doğrulandı: çıktıda tuz yok.
+  - **Mesafe MOTORDA** (`domain-core/delivery/distance`, 5 test): koordinatlar veride zaten vardı
+    (`postal_code_place.lat/lng`) ama hesap hiçbir yerde yoktu. Kuş uçuşu bilinçli — aranan şey
+    "hangi hat daha yakın" sıralaması, rota servisi değil. **Koordinatsız aday elenir, sıfır
+    sayılmaz**: sıfır "aynı yerde" demek olurdu ve hakkında hiçbir şey bilinmeyen kod hep "en yakın"
+    çıkardı.
+  - **Talimata SİSTEM MODELİ eklendi** — doğru veriyi verip yanlış çerçeveyle okutmak, veriyi hiç
+    vermemek kadar zararlı: ① varsayılan depo YOK ② **bölge = dağıtım güzergâhı** (bir depoya bağlı,
+    sabit günlerde koşar; bölge genişletmek zaten yola çıkmış bir araca durak eklemektir) ③ fiyatlar
+    kanallı — liste b2c ve KDV DAHİL, maliyet HARİÇ ④ üründe beyan tamlığı ile satış durumu ayrı
+    eksenler, ikincisi asistanın değil.
+  - *Bitti:* araç kataloğu **21 → 23** · 26/26 test · tsc + eslint temiz · canlı doğrulandı.
+  - **BEKLEYEN(22.7):** vitrin ADAYLARI okuması (`catalog_health` yalnız işaretlileri veriyor —
+    aynı "yapılmayan öneri" sınıfı) · paket/teklif önizlemesi için kârlılık alanları (operasyon
+    şeridi bekliyor, `docs/talep/operasyon-paket-onerisinde-karlilik.md`).

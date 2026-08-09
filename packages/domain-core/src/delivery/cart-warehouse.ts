@@ -21,6 +21,7 @@
  *
  * Saf: stok sayılarını çağıran getirir, karar burada verilir.
  */
+import type { CartLineRoute } from '@lezzet/types';
 
 export interface CartLineInput {
   variantId: string;
@@ -33,15 +34,14 @@ export interface CartLineInput {
   shippingAvailable: number;
 }
 
-export type CartLineRoute =
-  /** Kendi deposundan, araçla — ücretsiz kapı teslimi. */
-  | 'local'
-  /** Kargo deposundan, ayrı ödemeli ayrı siparişle. */
-  | 'shipping'
-  /** Hiçbir depoda yok — gerçekten tükendi. */
-  | 'unavailable'
-  /** Kargolanamayan ürün, kendi deposunda da yok: kargo dolgusu AÇILMAZ. */
-  | 'not_shippable_here';
+/**
+ * Kalemin yolu — dört hâl, künyeleri tanımın yanında (`CartLineRouteEnum`, `@lezzet/types`).
+ *
+ * **Tanım burada DEĞİL, türetiliyor** (`StockStatus`un aynı yolu): mobil sözleşme şeması aynı
+ * birliği zod olarak ifade etmek zorunda ve iki ayrı tanım bir gün ayrışırdı. Motorun dış API'si
+ * değişmiyor — çağıran `CartLineRoute`u yine buradan alır.
+ */
+export type { CartLineRoute };
 
 export interface CartLineDecision {
   variantId: string;

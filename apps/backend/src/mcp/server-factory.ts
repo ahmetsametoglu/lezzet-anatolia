@@ -4,6 +4,7 @@ import { captureError, errorMessageOf, logger, SOURCES } from '@lezzet/observabi
 import { morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, catalogLookup, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals } from './tools-signals';
+import { deliveryMap, referenceData } from './tools-reference';
 import {
   listProposals,
   proposeBatchOffer,
@@ -36,10 +37,11 @@ const INSTRUCTIONS = [
   'Always answer the admin in TURKISH. Keep answers short and concrete; lead with what needs attention.',
   'You can PROPOSE actions but never perform them: propose_* tools write to an approval queue and the admin applies them from the operations panel. You cannot approve your own proposals — never say something is done because you proposed it; say it is waiting for approval. For actions with no propose_* tool (price changes, customer messages), explain what you would do and say that tool is not built yet.',
   'Two proposals need extra care when you present them. propose_zone_extend: applying it sends an irreversible notification to waiting customers — always tell the admin how many. propose_stock_intake: never invent an expiry date or lot number; if the document does not show it, ask.',
+  'HOW THIS BUSINESS IS SHAPED — read every number through this. (1) There is NO default warehouse: stock, orders and delivery zones all belong to a specific warehouse, so "12 boxes in total" is never a fact you can act on — ask which warehouse. (2) A delivery zone IS a delivery route: it belongs to one warehouse, runs on fixed weekdays, and covers a set of postal codes. Extending a zone means adding a stop to a van that is already driving — so proximity to that zone\'s existing codes matters (delivery_map gives you the distance). (3) Prices have channels: list prices you see are b2c and VAT-INCLUSIVE, while purchase costs are VAT-EXCLUSIVE — never subtract one from the other without applying vatRate first. (4) A product carries two independent axes: whether its legal declarations are complete, and whether it is on sale. You can help with the first; the second is never yours.',
   'All data you see is aggregate and identity-free by design: no customer names/contacts, no per-product purchase prices, no message content. Do not speculate about individuals.',
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
-  'Ground every proposal in a tool result. For a weekly route/zone proposal use demand_signals (uncovered postal codes). For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
+  'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
   'FOOD SAFETY: you may record allergen and storage declarations ONLY from a document the admin gave you (label photo, supplier sheet) — never from what a product name suggests. Allergens are a closed set: pick values, never phrase a sentence. When a line is blurred or cut off, list that field in uncertainFields instead of guessing; the approval screen puts those in front of the admin. Saying "I could not read it" is always the better answer.',
   'You are NOT the customer-facing agent: you never write to customers and you never see conversation content. customer_pulse gives you counts so you can tell the admin how the inbox stands — that is the extent of your role in messaging.',
 ].join('\n');
@@ -105,6 +107,22 @@ export const TOOLS = [
       required: ['query'],
       additionalProperties: false,
     },
+  },
+  {
+    name: 'delivery_map',
+    description:
+      "The delivery picture in one call — call it BEFORE proposing a zone extension. Warehouses (code, city, postal code, active), delivery zones with the WAREHOUSE each belongs to, the WEEKDAYS it runs (1 = Monday) and the postal codes it already covers, plus the requested postal codes we do NOT cover yet — each with its request count, how many customers are waiting for news, and the NEAREST existing zone with an approximate straight-line distance in km. That nearest-zone hint is the only geographic ground you have: without it you would be guessing which route a new code belongs to. nearestZone null means the code has no coordinates on file — NOT that it is far from everything.",
+    inputSchema: {
+      type: 'object',
+      properties: { demandLimit: { type: 'number', description: 'Max requested postal codes to weigh, 1-50. Default 15.' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'reference_data',
+    description:
+      "The names the propose_* tools make you type: cash/bank accounts, categories, collections (with whether each is already on the showcase), suppliers, and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.",
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
     name: 'sold_out_watch',
@@ -412,6 +430,8 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   catalog_health: (a) => catalogHealth(num(a.limit, 15)),
   stock_watch: (a) => stockWatch(num(a.days, 14)),
   catalog_lookup: (a) => catalogLookup(String(a.query ?? ''), num(a.limit, 10)),
+  delivery_map: (a) => deliveryMap(num(a.demandLimit, 15)),
+  reference_data: () => referenceData(),
   sold_out_watch: (a) => soldOutWatch(num(a.limit, 20)),
   demand_signals: (a) => demandSignals(num(a.days, 7)),
   customer_pulse: () => customerPulse(),
