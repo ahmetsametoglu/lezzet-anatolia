@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
+import { CountryEnum } from '../primitives/enums.schema';
 
 /**
  * AI asistanının ONAY KUYRUĞU (22.3) — `0042_assistant_proposal.sql`.
@@ -138,8 +139,16 @@ export const MoneyMovementPayloadSchema = z.object({
   accountName: z.string().min(1),
   direction: z.enum(['in', 'out']),
   amountCents: z.number().int().positive(),
-  /** `money_movement.type` ile aynı küme; sipariş bağlı tipler asistana KAPALI (aşağı bak). */
-  type: z.enum(['purchase', 'expense', 'transfer', 'capital', 'misc']),
+  /**
+   * `money_movement.type` ALT kümesi — üç tip bilerek dışarıda.
+   *
+   * `order_payment`/`order_refund` baştan yoktu: sipariş bakiyesi iki yerden değişemez.
+   * **`purchase` 22.5'te ÇIKARILDI (operasyon şeridinin sorusu, 09.08):** stok alımı mal kabule
+   * bağlıdır ve motor bağsız satırı `supply_link_missing` ile zaten reddediyor — yani asistan
+   * uygulanması İMKÂNSIZ bir öneri kurabiliyordu. Kuyruğun en sinsi çürüme yolu bu: reddedilmeyi
+   * bekleyen kalemler patronun onay refleksini köreltir. Alım önerisi `stock_intake`ten geçer.
+   */
+  type: z.enum(['expense', 'transfer', 'capital', 'misc']),
   category: z.string().nullable(),
   description: z.string().nullable(),
   supplierId: z.string().uuid().nullable(),
@@ -159,7 +168,13 @@ export const MoneyMovementPayloadSchema = z.object({
 export const ZoneExtendPayloadSchema = z.object({
   zoneId: z.string().uuid(),
   zoneName: z.string().min(1),
-  country: z.string().length(2),
+  /**
+   * **KAPALI küme (22.5 · operasyon şeridinin sorusu, 09.08).** Önce `z.string().length(2)` idi ve
+   * daraltmayı EKRAN yapıyordu: tanınmayan ülkede rota kurulumu ön dolgu yapamıyor, öneri sessizce
+   * yarım açılıyordu. Daraltma şemaya taşındı — araç geçersiz ülkeyi kuyruğa hiç yazamaz, yani
+   * uygulanamayacak bir öneri doğmaz. Kapalı küme genişlerse (yeni ülke) tek yerden genişler.
+   */
+  country: CountryEnum,
   postalCodes: z
     .array(
       z.object({

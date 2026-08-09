@@ -123,10 +123,34 @@ satırında.
       `discount_draft` (kural tek cümlede), `recipe_draft` (üç dil doluluğu + malzeme tablosu)
       bu turda eklendi. Şemasız tip kalmadığı için eski "bu tip uygulanamıyor" cümlesi de kalktı —
       o cümle üç tip eklendiği an yalan olmuştu.
-    - **KALAN (22.5 B maddesi):** üç hedef ekranın (`deliveries?tab=routes` · `receiving` ·
-      `finance`) `?proposal=` ile ön doldurulması. Adres bugün kimliği taşıyor, ekranlar okumuyor;
-      düğmenin sözü de yalnız "aç" — "hazır doldur" değil. `apps/web/lib/assistant/handoff.ts`
-      tüketicisini o turda bulacak (bugün `knip`te kullanılmıyor görünüyor, silinmemeli).
+    - **ROTA EKRANI DEVRE BAĞLANDI (22.5 B, ilk hedef):** `deliveries?tab=routes&proposal=<id>`
+      öneriyi okuyup rotayı açıyor, kodları ÖN SEÇİLİ getiriyor ve mor bir künye ile *"asistan
+      önerisinden"* diyor. Kodlar **üstüne eklenir, yerine geçmez** (`zone_extend` bir ekleme
+      önerisidir; değiştirmek operatörün haberi olmadan rotadan kod düşürürdü).
+      **Bildirim sayısı CANLI:** kod çıkarınca "şu seçimle N müşteriye bildirim gider" sayısı da
+      düşüyor — kullanıcının derdinin kalbi buydu (*"hepsine birden gidiyor, ben belki bir bölgeyi
+      istiyorum"*). Kaydetme `withProposal` içinde koşuyor: satır `claimForApply` → iş →
+      `markApplied`; `proposalId` yoksa elle kurulum yolu hiç değişmiyor.
+      touches: `deliveries/{page,routes-client,routes.desktop,routes-actions}.tsx`, yeni
+      `deliveries/routes-handoff.ts`
+    - **MAL KABUL ve PARA da bağlandı (22.5 B tamam):** üç devir hedefinin üçü de `?proposal=`
+      okuyor. touches: `receiving/{page,receiving-client,receiving.desktop,receiving-actions}.tsx`
+      + yeni `receiving-handoff.ts`; `finance/{page,finance-client,finance.desktop,movement-dialog,
+      actions}.tsx` + yeni `finance-handoff.ts`
+      - **Mal kabulde ADET ön doldurulmuyor** — ekranın kendi kuralı (*"beklenen adedi 'gelen'
+        hanesine yazmak, depocuya saymadan onaylamayı teklif etmektir"*) burada daha da geçerli:
+        sayıyı bir modelin okuduğu fatura söylüyor. SKT ve lot ise sayım değil ETİKETTEN KOPYA,
+        onlar dolu gelir. Denetimin talebi "adet de yazılsın" diyordu; bilerek sapıldı.
+      - **Fatura maliyeti kaybolmuyor ama ekrana da inmiyor:** `stock_intake` payload'ı birim alış
+        fiyatı taşıyor, depo ekranının tipi taşıyamıyor (rol duvarı). Maliyet SUNUCUDA payload'dan
+        alınıp `receivePurchase` yoluna ekleniyor; istemci onu hiç görmüyor. Künye operatöre
+        "gideri ayrıca elle yazmayın" diyor.
+      - **Parada beş tipin üçü bu ekrandan geçer:** `purchase` elle yazılamaz (mal kabule bağlı,
+        motor bağsızı reddediyor), `transfer` kendi kapısından geçer. İkisinde de form AÇILMIYOR;
+        künye hangi yoldan gidileceğini söylüyor. Doldurulamayacak bir formu açmak "motor
+        reddetti" ile biterdi.
+      - **`invalid` sonucunda kuyruk satırı artık YANLIŞ damgalanmıyor:** motorun reddi
+        `withProposal` içinde FIRLATILIYOR, yoksa hiçbir şey yazılmadan satır "uygulandı" olurdu.
 
   - **Harici MCP denetimi · tur 2 (09.08)** — dış bir ajan 18 aracın tamamını bozuk veriyle
     yokladı; iki bulgunun ikisi de karşılandı, biri ölçünce başka çıktı:
@@ -197,5 +221,12 @@ satırında.
     modundaki tipi hiç tüketmez — `{ status: 'handoff', target }` döner, öneri `pending` kalır.
     Gerekçe geçiş penceresinden büyük: ekran düğmeyi gizlemeyi unutsa ya da eski bir sekme açık
     kalsa, geri alınamaz bir eylem (bildirim · stok · defter · satış fiyatı) düzenlenmeden koşardı.
+  - **İki payload kümesi DARALDI (operasyon şeridinin iki sorusu, 09.08).** İkisi de aynı kusurun
+    iki yüzü: **asistan uygulanması imkânsız bir öneri kurabiliyordu.** ① `money_movement.type`
+    kümesinden `purchase` çıktı — stok alımı mal kabule bağlı ve motor bağsız satırı
+    `supply_link_missing` ile zaten reddediyor. ② `zone_extend.country` serbest iki harften
+    `CountryEnum`a indi; daraltmayı EKRAN yapıyordu, tanınmayan ülkede ön dolgu yapılamayıp öneri
+    sessizce yarım açılıyordu. Kuyruğun en sinsi çürüme yolu budur: reddedilmeyi bekleyen kalemler
+    patronun onay refleksini köreltir.
   - **BEKLEYEN(22.5):** ekran tarafı operasyon şeridinde
     (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` — dört devir hedefi + iki yeni alan).

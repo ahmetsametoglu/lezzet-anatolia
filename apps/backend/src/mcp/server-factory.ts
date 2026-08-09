@@ -205,14 +205,14 @@ export const TOOLS = [
   {
     name: 'propose_money_movement',
     description:
-      'PROPOSE (does not apply): a manual cash/bank entry — expense, purchase payment, transfer, capital or misc. The account is matched BY NAME (you do not need its uuid). Order payments and refunds are deliberately NOT possible here: those may only come from the order flow itself, otherwise the order balance would change from two places.',
+      'PROPOSE (does not apply): a manual cash/bank entry — expense, transfer, capital or misc. The account is matched BY NAME (you do not need its uuid). Two kinds are deliberately impossible here: order payments/refunds (those may only come from the order flow, or the order balance would change from two places) and STOCK PURCHASES (a purchase must be linked to a goods receipt — the engine rejects an unlinked one, so proposing it would only produce a queue item that can never be applied; use propose_stock_intake).',
     inputSchema: {
       type: 'object',
       properties: {
         accountName: { type: 'string', description: 'Account name or part of it, e.g. "Kasa".' },
         direction: { type: 'string', description: "'out' = money leaves, 'in' = money arrives." },
         amountCents: { type: 'number', description: 'Positive integer, in cents.' },
-        type: { type: 'string', description: "'purchase' | 'expense' | 'transfer' | 'capital' | 'misc'." },
+        type: { type: 'string', description: "'expense' | 'transfer' | 'capital' | 'misc' — no 'purchase' (goods purchases go through propose_stock_intake)." },
         category: { type: 'string', description: 'Free-text category, e.g. "tedarik".' },
         description: { type: 'string' },
         supplierId: { type: 'string', description: 'Supplier uuid when paying a supplier.' },

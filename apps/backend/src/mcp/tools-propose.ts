@@ -440,8 +440,13 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   if (!accountName) return { error: 'accountName zorunlu (örn. "Kasa").' };
   if (!Number.isInteger(amountCents) || amountCents <= 0) return { error: 'amountCents pozitif tam sayı olmalı (cent).' };
   if (!['in', 'out'].includes(direction)) return { error: "direction 'in' | 'out' olmalı." };
-  if (!['purchase', 'expense', 'transfer', 'capital', 'misc'].includes(type)) {
-    return { error: "type 'purchase' | 'expense' | 'transfer' | 'capital' | 'misc' olmalı — sipariş tahsilatı bu yoldan yazılamaz." };
+  // `purchase` KÜMEDEN ÇIKTI (22.5): stok alımı mal kabule bağlıdır, motor bağsız satırı
+  // `supply_link_missing` ile reddediyor — kuyruğa uygulanamayacak kalem yazmanın anlamı yok.
+  if (!['expense', 'transfer', 'capital', 'misc'].includes(type)) {
+    return {
+      error:
+        "type 'expense' | 'transfer' | 'capital' | 'misc' olmalı. Sipariş tahsilatı bu yoldan yazılamaz; MAL ALIMI da yazılamaz — alım mal kabulden geçer (propose_stock_intake).",
+    };
   }
 
   const accounts = await new AccountService(db).list({ activeOnly: true });
