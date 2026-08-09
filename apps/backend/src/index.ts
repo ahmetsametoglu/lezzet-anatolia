@@ -20,6 +20,7 @@ import cron from 'node-cron';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { requestLog, type AppEnv } from './http/request-log';
+import { mcpHandler } from './mcp/route';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
 import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
@@ -76,6 +77,12 @@ app.onError((err, c) => {
 });
 
 app.get('/health', (c) => c.json({ ok: true, service: 'lezzet-backend' }));
+
+// MCP yönetici asistanı — deneme dilimi (22.1): salt-okuma üç araç, .env anahtarıyla.
+// Yerel istemci (Claude Code) doğrudan bağlanır; claude.ai connector'ı canlıya çıkışı bekler
+// (AI_ADMIN_ASSISTANT §11). Tüm metodlar tek handler'da: streamable HTTP, POST/GET/DELETE ayrımını
+// SDK transport'u yapar.
+app.all('/mcp', mcpHandler);
 
 // Zamanlı işler buraya takılır. Kural (STACK §13): her iş taramalı + idempotent; backend tek
 // instance (fork mode). Kabuk (`runJob`) üst üste binmeyi engeller, hatayı yutmaz, `last_run` bırakır.
@@ -174,7 +181,14 @@ cron.schedule('*/5 * * * *', () => {
   void runJob(TRANSLATE_USER_TEXT, translateUserTextJob);
 });
 
-const port = Number(process.env.BACKEND_PORT ?? 8787);
+// `??` DEĞİL `||` — ve bu bir arıza düzeltmesidir (ölçüldü 09.08): `.env.local`'da değişken
+// TANIMLI ama BOŞ bırakılmıştı (`BACKEND_PORT=`). Boş dizgi nullish değildir, yani `??` onu
+// yakalamaz; `Number('')` = 0 ve port 0 "işletim sistemi rastgele boş port versin" demektir.
+// Sonuç sessiz ve tam olarak yanıltıcıydı: süreç sağlıklı ayağa kalkıyor, log'a doğru portu
+// yazıyor — ama her başlatmada BAŞKA bir port (ölçülen: 60800) ve 8787'yi bekleyen hiçbir istemci
+// bağlanamıyor. Değeri OLMAYAN bir ayar ile BOŞ bırakılmış bir ayar aynı şeydir: ikisinde de
+// varsayılan geçerlidir.
+const port = Number(process.env.BACKEND_PORT) || 8787;
 serve({ fetch: app.fetch, port }, (info) => {
   logger.info({ port: info.port }, 'backend ayakta');
 });

@@ -19,6 +19,7 @@
     "@lezzet/notify": "workspace:*",
     "@lezzet/observability": "workspace:*",
     "@lezzet/types": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "hono": "^4.6.15",
     "node-cron": "^3.0.3"
   },

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { HttpBindings } from '@hono/node-server';
 import type { Context, Next } from 'hono';
 import { logger } from '@lezzet/observability';
 
@@ -6,8 +7,13 @@ import { logger } from '@lezzet/observability';
  * Hono bağlamının tipi. `reqId` burada TANIMLI olmak zorunda: Hono `c.set/get`'i tipe bağlıyor ve
  * tipsiz bir anahtar derleme hatası veriyor — yani kimliği taşımayı unutan bir ara katman derlenmez.
  * Sözleşmenin yeri kimliği üreten dosyadır.
+ *
+ * `Bindings` node sunucusunun ham `req`/`res` çiftidir (`c.env.incoming/outgoing`) — MCP taşıması
+ * (22.1) cevabı Hono'nun dışında, doğrudan `ServerResponse`e yazar; tip burada tanımlı olmazsa o
+ * erişim her kullanım yerinde ayrı bir cast olurdu.
  */
 export interface AppEnv {
+  Bindings: HttpBindings;
   Variables: { reqId: string };
 }
 

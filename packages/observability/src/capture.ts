@@ -59,6 +59,11 @@ export const SOURCES = {
   /** Sağlayıcı bildirimi (Stripe, 360dialog). */
   webhook: 'webhook',
   /**
+   * MCP yönetici asistanı yolu (`apps/backend/src/mcp` — 22.1). Ayrı kaynak, çünkü asistanın
+   * "sistem hatalarını raporla" aracı KENDİ hatalarını da bu etiketle görecek (AI_ADMIN_ASSISTANT §8).
+   */
+  mcp: 'mcp',
+  /**
    * TARAYICIDA doğan hata (`reportClientErrorAction` kapısı). Sunucu kancaları bunu görmez —
    * hata sınırındaki render çökmesi buradan gelmezse hiçbir yerde iz bırakmaz (denetim G1).
    */
