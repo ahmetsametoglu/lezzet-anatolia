@@ -1,7 +1,9 @@
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService } from '@lezzet/database';
-import { resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
+import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import { normalizePostalCode } from '@lezzet/helper';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { PlaceWarehouses } from '../catalog/storefront-types';
 
 /*
   POSTA KODU → YER ÇÖZÜMÜ — girdilerin toplanıp motora sorulması, paket hâlinde (21.6'nın B ayağı;
@@ -40,3 +42,51 @@ export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: 
   ]);
   return resolvePlaceByPostalCode(code, matches, zones, warehouses);
 }
+
+/**
+ * Posta kodu → **okumanın yer bağlamı** (`PlaceWarehouses`). Üstteki çözümün üstüne, vitrin/katalog
+ * okumalarının doğrudan tüketebileceği ikiliyi kurar.
+ *
+ * ── NEDEN AYRI BİR KAPI ───────────────────────────────────────────────────────
+ * `resolvePlaceForPostalCode` müşteriye ANLATILACAK cevabı verir (rota mı kargo mu, hangi yer adı,
+ * belirsiz mi); okumaların istediği ise iki depo kimliğidir. İkisi aynı şey değil ve eşleme
+ * **kuralın kendisi** — web'de `apps/web/lib/delivery/read-place.ts`te yaşıyor ve ölçülmüş bir
+ * arızanın düzeltmesini taşıyor (09.08):
+ *
+ *   `warehouseId` YALNIZ ROTA deposudur. Çözümün `warehouseId` alanı `shipping` hâlinde KARGO
+ *   deposunu taşır — tek kutu iki anlam. Olduğu gibi yayılınca rota DIŞINDAKİ müşteriye
+ *   "ücretsiz kapı teslimi" işareti veriliyordu (web ölçümü: 75011 ile 67000 birebir aynı sonucu
+ *   üretiyordu, oysa biri rota dışı).
+ *
+ * Bu eşlemeyi mobil ucun kendi içinde ikinci kez yazmak, aynı arızayı ikinci kez doğurmaya davetti
+ * (CLAUDE §1: hiçbir türde duplication yok). Kural buraya taşındı; web köprüsünün benimsemesi web
+ * şeridinin takviminde.
+ *
+ * ── DEPO KİMLİĞİ İSTEMCİDEN ALINMAZ ───────────────────────────────────────────
+ * Girdi POSTA KODUDUR, depo kimliği değil (`place-types.ts` güvenlik sınırı): istemcinin
+ * yazabildiği bir değer hangi deponun stoğunu göstereceğimizi belirleyemez. Çözüm her istekte
+ * sunucuda yeniden yapılır.
+ *
+ * ── ÇÖZÜLEMEYEN KOD BİR ARIZA DEĞİL ───────────────────────────────────────────
+ * `unknown` / `ambiguous` / `unresolved` hâllerinde ikili `(null, null)` döner — yani "yer
+ * bilinmiyor". Okuma o hâlde depo-üstüne düşer ve "yok" ancak hiçbir depoda yoksa denir (C3).
+ * Tahmin edilmez: yanlış depo, yanlış stok ve yanlış teslimat sözü demektir.
+ */
+export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: string): Promise<PlaceWarehouses> {
+  const [resolution, warehouses] = await Promise.all([
+    resolvePlaceForPostalCode(db, postalCode),
+    new WarehouseService(db).list({ activeOnly: true }),
+  ]);
+
+  if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return UNRESOLVED_PLACE;
+
+  return {
+    // Rota deposu YALNIZ rota hâlinde vardır; kargo hâlinde `null` ki yerel havuz boş kalsın.
+    warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
+    // Kargo deposu ÜLKEDEN türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
+    shippingWarehouseId: findShippingWarehouse(resolution.country, warehouses)?.id ?? null,
+  };
+}
+
+/** Yer bilinmiyor — iki `null` bir hâldir, eksik veri değil (`PlaceWarehouses` künyesi). */
+export const UNRESOLVED_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };

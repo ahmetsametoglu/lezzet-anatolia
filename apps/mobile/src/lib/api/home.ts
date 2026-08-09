@@ -13,6 +13,15 @@ import { apiFetch, type ApiResult } from './client';
   vitrin rayları sabit sınırlı editoryal seçkidir (CLAUDE §1).
 */
 
-export function fetchHome(locale: Locale): Promise<ApiResult<z.infer<typeof HomeSchema>>> {
-  return apiFetch(`/api/v1/home?locale=${encodeURIComponent(locale)}`, HomeSchema);
+export function fetchHome(locale: Locale, postalCode?: string | null): Promise<ApiResult<z.infer<typeof HomeSchema>>> {
+  /* POSTA KODU YERİN SORUSUDUR, cevabı değil: depo kimliğini sunucu çözer (uç künyesi
+     `catalog.ts` → `readPlace`). Kod yoksa parametre HİÇ gönderilmez — boş bir `postalCode=`
+     sunucuda "yer bilinmiyor"a düşer ama isteği de gereksiz kirletir.
+
+     BUNSUZ FIRSAT GELMİYOR (kullanıcı bulgusu 09.08): teklif tutarı bir partiye, parti bir depoya
+     bağlı; yer bilinmezken hiç okunmuyor ve şerit boş kalıyordu. Ölçüldü: kodsuz `offers=0`,
+     `postalCode=67000` ile `offers=2`. */
+  const query = new URLSearchParams({ locale });
+  if (postalCode !== undefined && postalCode !== null && postalCode !== '') query.set('postalCode', postalCode);
+  return apiFetch(`/api/v1/home?${query.toString()}`, HomeSchema);
 }

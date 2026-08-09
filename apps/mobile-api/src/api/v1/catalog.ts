@@ -6,6 +6,8 @@ import {
   getProductDetail,
   pricingViewerOf,
   toCategory,
+  resolvePlaceWarehouses,
+  UNRESOLVED_PLACE,
   type PlaceWarehouses,
   type PricingViewer,
 } from '@lezzet/application';
@@ -42,30 +44,30 @@ import { optionalCustomerId } from './auth';
 const MAX_PAGE_SIZE = 50;
 
 /**
- * **Yer bağlamı: "BİLİNMİYOR"** — web'in POSTA KODU VERMEMİŞ ziyaretçisiyle birebir aynı hâl.
+ * **YER BAĞLAMI İSTEKTEN ÇÖZÜLÜR (09.08 — eski `BEKLEYEN(21.6)` kapandı).**
  *
- * Ölçüldü, varsayılmadı: web depoyu `lezzet.place.v2` çerezinden çözüyor ve çerez yoksa
- * `apps/web/lib/delivery/read-place.ts:66` doğrudan `EMPTY`'ye dönüyor — o da `:50`'de
- * `{ warehouseId: null, shippingWarehouseId: null }` olarak tanımlı. Aynı satır çözülemeyen
- * (`ambiguous`/`unknown`) posta kodunda da geçerli (`:83-85`).
+ * Eskiden burada `UNKNOWN_PLACE` sabiti vardı ve mobil, yeri hiç bilmeyen bir ziyaretçiydi. Bedeli
+ * ölçülmüştü: yer bilinmezken teklif TUTARI hiç okunmaz (`product-context.ts` —
+ * `warehouseId ? listOfferBatches(…) : []`), yani yakın-SKT indirimi mobilde GÖRÜNMÜYORDU. Kullanıcı
+ * bunu 09.08'de bildirdi: aynı posta kodu (67000) webde üç fırsat gösterirken mobilde hiç
+ * göstermiyordu.
  *
- * Mobilde çerezin karşılığı cihazdaki `onbZip` ama posta kodunu depoya çeviren orkestrasyon
- * (`resolvePlaceByPostalCode` + bölge/depo girdileri + kargo deposu seçimi) HÂLÂ web lib'inde —
- * terfisi 21.6'nın (B) parçası ve yapılmadı (`storefront-types.ts` `PlaceWarehouses` notu).
- * Kopyalanmaz, o yüzden mobil bugün yeri bilmeyen ziyaretçidir.
+ * Çözüm terfi edince (`@lezzet/application.resolvePlaceWarehouses`) sabit kalktı: istemci POSTA
+ * KODUNU gönderir, sunucu her istekte yeniden çözer.
  *
- * **Bunun ölçülebilir bedeli:** yer bilinmezken teklif TUTARI hiç okunmaz
- * (`product-context.ts` — `warehouseId ? listOfferBatches(…) : []`), yani mobil katalogda
- * yakın-SKT indirimi bugün GÖRÜNMEZ ve `wasCents` hiç dolmaz. Bu bir eksik değil bir SÖZ: teklif
- * bir partiye bağlıdır, parti bir depodadır ve ziyaretçinin adresi oraya düşmeyebilir — indirimli
- * fiyatı gösterip ödemede yükseltmek verilmiş bir sözü bozmak olurdu (web de aynısını yapıyor).
+ * ── NEDEN KOD, DEPO KİMLİĞİ DEĞİL ────────────────────────────────────────────
+ * İstemcinin yazabildiği bir değer hangi deponun stoğunu göstereceğimizi belirleyemez
+ * (`place-types.ts` güvenlik sınırı). Gönderilen posta kodu bir SORUDUR, cevabı sunucu verir.
  *
- * BEKLEYEN(21.6): yer çözümü `@lezzet/application`a terfi edince bu sabit, istekten (`postalCode`)
- * çözülen gerçek yere bırakır ve teklifler mobilde de görünür.
- *
- * Dışa verilir: vitrin ucu (`home.ts`) aynı "yer bilinmiyor" hâlinde okur — ikinci tanım açılmaz.
+ * ── KOD YOKSA YA DA ÇÖZÜLEMEZSE ──────────────────────────────────────────────
+ * `UNRESOLVED_PLACE` (iki `null`) döner ve bu bir hâldir, eksik veri değil: okuma depo-üstüne
+ * düşer, "yok" ancak hiçbir depoda yoksa denir (C3). Web'in çerezsiz ziyaretçisiyle birebir aynı
+ * davranış (`apps/web/lib/delivery/read-place.ts:50`).
  */
-export const UNKNOWN_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
+export async function readPlace(db: SupabaseClient, postalCode: string | undefined): Promise<PlaceWarehouses> {
+  if (postalCode === undefined || postalCode.trim() === '') return UNRESOLVED_PLACE;
+  return resolvePlaceWarehouses(db, postalCode);
+}
 
 /**
  * `locale` ZORUNLU ve varsayılansız.
@@ -160,11 +162,14 @@ catalog.get('/products', async (c) => {
   const { locale, q, category, sort, limit } = parsed.data;
 
   const db = serviceDb();
-  const viewer = await readViewer(db, c.req.header('authorization'));
+  const [viewer, place] = await Promise.all([
+    readViewer(db, c.req.header('authorization')),
+    readPlace(db, c.req.query('postalCode')),
+  ]);
   const data = await getCatalogData(db, {
     locale,
     query: { search: q, categorySlug: category, sort, cursor: decodeCursor(parsed.data.cursor) },
-    place: UNKNOWN_PLACE,
+    place,
     viewer,
     limit,
   });
@@ -201,11 +206,14 @@ catalog.get('/products/:slug', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const viewer = await readViewer(db, c.req.header('authorization'));
+  const [viewer, place] = await Promise.all([
+    readViewer(db, c.req.header('authorization')),
+    readPlace(db, c.req.query('postalCode')),
+  ]);
   const detail = await getProductDetail(db, {
     locale: locale.data,
     slug: c.req.param('slug'),
-    place: UNKNOWN_PLACE,
+    place,
     viewer,
   });
   if (!detail) return fail(c, 'product_not_found', 404);

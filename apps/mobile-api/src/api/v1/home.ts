@@ -8,7 +8,7 @@ import { readHomeBands, readHomeFeatured, readHomeOffers } from '../../lib/home'
 // Tarif/paket KARTI iki yüzeyin ortak kapısından gelir (`lib/ideas.ts`): vitrin şeridi ile Fikirler
 // listesi aynı kartı çiziyor, fark yalnız sınır ve süzgeçte.
 import { HOME_PACKAGE_LIMIT, HOME_RECIPE_LIMIT, readPackageCards, readRecipeCards } from '../../lib/ideas';
-import { readViewer, UNKNOWN_PLACE } from './catalog';
+import { readPlace, readViewer } from './catalog';
 
 /**
  * Vitrin ucu (21.14 bağlanma etabı) — ana ekranın MÜŞTERİDEN BAĞIMSIZ bölümleri TEK turda.
@@ -33,13 +33,19 @@ home.get('/home', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const viewer = await readViewer(db, c.req.header('authorization'));
+  /* Yer artık İSTEKTEN çözülür (09.08): istemci posta kodunu gönderir, sunucu depoyu bulur.
+     Kimlikle birlikte tek turda okunur — biri ötekini bekletmez. Gerekçe `catalog.ts` `readPlace`
+     künyesinde; kod yoksa iki `null` döner ve okuma depo-üstüne düşer. */
+  const [viewer, place] = await Promise.all([
+    readViewer(db, c.req.header('authorization')),
+    readPlace(db, c.req.query('postalCode')),
+  ]);
   // Bölümler birbirinden bağımsız okunur; biri ötekini bekletmez. `limit` sorgusu yok: raylar
   // editoryal seçkidir, sınırlar okuma kapısında sabittir (CLAUDE §1).
   const [bands, offers, featured, recipes, packages] = await Promise.all([
     readHomeBands(db, locale.data),
-    readHomeOffers(db, locale.data, UNKNOWN_PLACE, viewer),
-    readHomeFeatured(db, locale.data, UNKNOWN_PLACE, viewer),
+    readHomeOffers(db, locale.data, place, viewer),
+    readHomeFeatured(db, locale.data, place, viewer),
     readRecipeCards(db, locale.data, HOME_RECIPE_LIMIT),
     // Vitrin YALNIZ işaretli paketleri taşır — işaret bir seçimdir, yedeği yoktur (sözleşme künyesi).
     readPackageCards(db, locale.data, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT }),

@@ -91,7 +91,7 @@ export type {
 } from './feedback/discover';
 
 // ── Yer çözümü (19.8 · 21.6 B) — posta kodu → rota/kargo; onboarding + web yer okuması ──────
-export { resolvePlaceForPostalCode } from './delivery/place';
+export { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from './delivery/place';
 
 // ── Vitrin (katalog) orkestrasyonu — terfi 21.6 ─────────────────────────────
 // Kaynağı `apps/web/lib/storefront`ti; ticari bağlam (fiyat · stok · teklif · aile · benzer) orada

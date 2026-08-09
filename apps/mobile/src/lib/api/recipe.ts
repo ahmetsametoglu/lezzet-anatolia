@@ -11,8 +11,8 @@ import { apiFetch, type ApiResult } from './client';
   şemayla üretiyor (02-mimari §3.2 "sözleşme tek kaynak") — alan adı değişirse iki taraf birden
   derlemede kırılır (katalog istemcisinin kuralı, birebir).
 
-  `locale` zorunlu: uç dilsiz çağrıyı 400'le reddediyor (sessizce Türkçeye düşmesin). Değer cihaz
-  dilinden çözülür (`lib/i18n/locale.ts`), ekranın kendi kararı değil.
+  `locale` zorunlu: uç dilsiz çağrıyı 400'le reddediyor (sessizce Türkçeye düşmesin). Değer
+  UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts`), ekranın kendi kararı değil.
 */
 
 /** Tarif detayı — sayfanın TAMAMI tek turda (satırlar, evinizden, hazırlanış); bölüm başına çağrı yok. */

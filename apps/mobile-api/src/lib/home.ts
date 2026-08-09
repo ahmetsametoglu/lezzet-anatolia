@@ -34,8 +34,20 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * tasarımının ızgarasından geliyor ve parametrik sabit — istemci büyütemez.
  */
 
-/** Fırsat bandı — v3 tasarımı iki kart çizer (web bandının 6'lık ızgarasından bilinçli dar). */
-const HOME_OFFER_LIMIT = 2;
+/**
+ * Fırsat şeridi (kullanıcı kararı 09.08 — 2'den 10'a).
+ *
+ * v3 tasarımı iki kart çiziyordu ve sınır oradan gelmişti; ama şerit YATAY KAYDIRILABİLİR
+ * (`home-screen.tsx` → `ScrollView horizontal`), yani ikiden fazlası bir yerleşim sorunu değil.
+ * Kullanıcı bunu ölçerek gördü: katalogda 4 fırsat varken vitrin ikisini gösteriyordu.
+ *
+ * SINIRSIZ YAPILMADI ve gerekçesi veriye bağlı: fırsat, SKT'si yaklaşan bir partiden doğuyor —
+ * yani sayısı katalogla değil, stoğun yaşıyla büyüyor ve bir gün onlarca olabilir. Vitrin
+ * uygulamanın AÇILIŞ ekranı; oraya sınırsız bir dizi koymak, açılışta katalogdaki her indirimli
+ * ürünü indirip çizmek demek. 10 bugünkü veriyi (4) rahat kapsıyor ve tavan olduğu görünür kalıyor.
+ * Tek sayı; artırmak isteyen burayı değiştirir.
+ */
+const HOME_OFFER_LIMIT = 10;
 /** Vitrin seçkisi rayı — v3'te dört daire. */
 const HOME_FEATURED_LIMIT = 4;
 /** Bant karışımı: 4 kategori + 2 koleksiyon = 6 slot (kullanıcı kararı 08.08). */

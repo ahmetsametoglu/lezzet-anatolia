@@ -12,7 +12,8 @@ import { apiFetch, type ApiResult } from './client';
   kurmak ve şemayı istemciye vermek — alan adı değişirse iki taraf birden derlemede kırılır.
 
   `locale` HER İSTEKTE zorunlu: uç dilsiz çağrıyı 400'le reddediyor (sessizce Türkçe'ye düşmesin
-  diye). Değer cihazın dilinden çözülür (`lib/i18n/locale.ts`), ekranların kendi kararı değil.
+  diye). Değer UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts` — kullanıcının seçimi, yoksa cihaz
+  dili), ekranların kendi kararı değil: ekran metniyle ürün adı aynı kaynaktan beslenir.
 */
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ; boş dize meşru bir değerdir. */

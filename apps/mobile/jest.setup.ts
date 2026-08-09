@@ -24,5 +24,10 @@ import 'react-native-gesture-handler/jestSetup';
    kendi içinde gerçek `index`i çekiyor ve o da worklets'in yerel dalına iniyor — çekirdek
    sahtelenmemişse mock'un kendisi patlıyor (ölçüldü 09.08). İkisi de paketlerin KENDİ
    mock'ları; elle taklit yazılmadı. */
+/* `require` BURADA ZORUNLU, tercih değil: `jest.mock`un fabrikası hoisting yüzünden modül üstü
+   `import`ları göremez (ESM bağı fabrika koştuğunda henüz kurulmamıştır) ve Jest'in kendi
+   dokümanı da bu iki satırı böyle yazdırıyor. Kural genel olarak doğru, bu iki satırda değil. */
+/* eslint-disable @typescript-eslint/no-require-imports */
 jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+/* eslint-enable @typescript-eslint/no-require-imports */

@@ -6,14 +6,15 @@ import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { RECIPE_LIST_LIMIT, readRecipeCards } from '../../lib/ideas';
 import { readRecipeDetail } from '../../lib/recipe';
-import { readViewer, UNKNOWN_PLACE } from './catalog';
+import { readPlace, readViewer } from './catalog';
 
 /**
  * Tarif uçları (21.14, tasarım 21) — katalogla aynı üç karar, gerekçeleri `catalog.ts` başlığında:
  *   · **Oturumsuz gezilir** — `router.ts`te `bearerAuth`tan ÖNCE bağlıdır; Bearer varsa yalnız
  *     satır FİYATINI kişiselleştirir (B2B/özel fiyat), erişimi değiştirmez. 401 yok.
  *   · **`locale` zorunlu ve varsayılansız** — eksikse 400 (sessizce Türkçeye düşmek gizli arıza).
- *   · **Yer bilinmiyor** (`UNKNOWN_PLACE`) — stok/teklif kısıtları katalogla aynı davranır.
+ *   · **Yer İSTEKTEN çözülür** (09.08, `readPlace`) — stok/teklif kısıtları katalogla aynı davranır;
+ *     posta kodu gelmezse yer bilinmiyor sayılır.
  *
  * BU DOSYA KURAL HESAPLAMAZ: kompozisyon okuma kapısında (`lib/recipe.ts`), fiyat/stok kararları
  * `@lezzet/application`da. Burada yalnız sorgu çözümü, kimlik çözümü ve zarf.
@@ -53,7 +54,8 @@ recipes.get('/recipes/:slug', async (c) => {
 
   const db = serviceDb();
   const viewer = await readViewer(db, c.req.header('authorization'));
-  const detail = await readRecipeDetail(db, c.req.param('slug'), locale.data, UNKNOWN_PLACE, viewer);
+  const place = await readPlace(db, c.req.query('postalCode'));
+  const detail = await readRecipeDetail(db, c.req.param('slug'), locale.data, place, viewer);
   if (!detail) return fail(c, 'recipe_not_found', 404);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────

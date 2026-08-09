@@ -28,7 +28,11 @@ export default [
     //
     // Aynı sınıf hata iki kez çıktığına göre elle sayım artık ucuz değil: **üçüncüde `globals.node`
     // sözlüğüne geçilmeli** (`eslint-config` paketine bağımlılık ekler, o yüzden bugün eklenmedi).
-    files: ['scripts/**/*.{ts,mjs}'],
+    // Desen `**/scripts/**`: kökün yanında PAKET içi script'ler de aynı ortamda koşuyor
+    // (`apps/mobile/scripts/design-diff.mjs` — tasarım farkını ekran düzeyinde okuyan araç, 09.08).
+    // Kökle sınırlı desen onu kapsamıyordu ve dosya eklenince kapı üç şeride birden kapanıyordu —
+    // künyenin yukarıda tarif ettiği hâlin aynısı, bu kez konumdan.
+    files: ['**/scripts/**/*.{ts,mjs}'],
     languageOptions: {
       globals: {
         process: 'readonly',
