@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
+import { PRODUCT_GALLERY_MAX } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
 
@@ -454,8 +455,18 @@ export async function seedLezzaProducts(
     made += 1;
     varyantSayisi += variants.length;
 
-    // Galeri: kaynaktaki İKİNCİ görsel. 98 üründe var, yani galeri denemesi gerçek veriyle yapılır.
-    for (const [n, url] of p.imageUrls.slice(1).entries()) {
+    // ── GALERİ TAVANI UYGULAMADAN GELİR (05.14 · operasyon notu 08.08) ───────────────────────
+    // Kaynakta tavan yok, uygulamada var (`PRODUCT_GALLERY_MAX`) — operasyon formu altıncı
+    // fotoğrafı REDDEDİYOR. Seed sınırsız yazsaydı, formun KURAMAYACAĞI bir kayıt üretirdi:
+    // operatör ürünü açar, fotoğrafı silmeden kaydedemez ve sebebini anlamaz.
+    //
+    // 08.08'de "bugün en kabarık ürün tam tavanda" diye kayda geçmişti; **adet birleşmesiyle
+    // (09.08) tavan AŞILDI** — dört baklava kaydı tek ürüne inince görselleri de birleşti ve
+    // `baklava-with-pistachio` 7 görsele çıktı (ölçüldü). Yani risk teorik değil, gerçekleşti.
+    //
+    // Sabit `@lezzet/types`'tan geliyor, burada yeniden yazılmıyor: ikinci bir sayı, bir gün
+    // formunkinden ayrılırdı.
+    for (const [n, url] of p.imageUrls.slice(1, 1 + PRODUCT_GALLERY_MAX).entries()) {
       const key = await uploadImageFromUrl(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url.split('/').pop() || 'g.webp'));
       if (!key) continue;
       await images.insert({ productId: product.id, imageKey: key, sortOrder: n, imageUpdatedAt: NOW, imageFocalX: 50, imageFocalY: 50, imageZoom: 100 });

@@ -67,18 +67,42 @@ export class DiscountService extends BaseDbService<Discount, DiscountInsert, Dis
    * kampanyalar dahil), bu yalnız SAHİBİ o müşteri olanları. Müşteri kartında herkese açık bir
    * kampanyayı "bu kişinin kuponu" gibi göstermek yanlış olurdu.
    *
-   * BEKLEYEN(08.5): keyset sayfalama yok — bugün SABİT TAVAN var (`limit`). Kişisel kupon kümesi
-   * operatörün eliyle değil puan çevrimiyle büyür (her çevrim yeni bir kural doğurur), yani veriyle
-   * büyüyen bir küme ve `CLAUDE.md §1`'e göre keyset ister. Ekran (hesaptaki "Kuponlarım", 17.5)
-   * 03.08'de açıldı; okuyan taraf artık var ama tavanın ötesindeki eski kuponları göremiyor.
+   * ── PENCERE DOĞRU KÜMEYE VURUYOR (08.5 kapandı · müşteri şeridinin talebi 09.08) ────────────
+   * Eskiden tavan "en yeni 50 KUPON"a vuruyordu, "en yeni 50 KULLANILABİLİR kupon"a değil: pasif,
+   * tarih penceresi dışı ve kotası dolmuş kuponlar 50 satır çekildikten SONRA uygulamada eleniyordu.
+   * Kupon kümesi puan çevrimiyle büyür ve **kullanılmış kuponlar kümede kalır** (silinmiyorlar,
+   * kapatılıyorlar — `setActive` künyesi). Yani birkaç yıl sonra pencere kullanılmışlarla dolar ve
+   * ekranda kullanılabilir kupon **sessizce eksik** görünürdü: eksik kupon "yok" gibi okunur, hata
+   * vermez.
    *
-   * Tavan geçici bir çözüm DEĞİL, yanlışın küçüğü: sayfalamasız sınırsız okuma, çok çevrim yapmış
-   * bir müşteride yüzlerce satırı tek kullanılabilir kuponu göstermek için getirirdi. Sınır en
-   * yenilerini verir — kullanılabilir kupon her zaman en yenilerin arasındadır, çünkü eskiler
-   * harcanmış ya da süresi geçmiştir. Yine de bir varsayımdır; keyset gelince kalkar.
+   * **Keyset DEĞİL, süzgeci sorguya taşımak.** `CLAUDE §1`'in ölçütü "sınırsız büyümek": sınırsız
+   * büyüyen şey tüm kupon GEÇMİŞİdir; bir müşterinin aynı anda elinde tuttuğu kullanılabilir kupon
+   * doğal tavanı olan bir kümedir. Doğru düzeltme sonsuz kaydırma değil, pencerenin doğru kümeye
+   * vurması — ekran tarafında "daha fazla göster" diye bir tasarım da yok (hesap sayfasında sabit
+   * blok).
+   *
+   * **Kota elemesi UYGULAMADA kaldı** ve bu bilinçli: `usageCounts` iptal/iade kuralını taşıyan ayrı
+   * bir turdur (`discount_use` kayıtlarından türer, sayaç kolonundan değil). Aynı kuralı SQL'e
+   * ikinci kez yazmak, bir gün ayrışan iki cevap üretirdi.
+   *
+   * `usableAt` verilmezse davranış AYNEN eskisi gibi — başka bir çağıran doğarsa kırılmaz.
    */
-  listByCustomer(customerId: string, limit = 50): Promise<Discount[]> {
-    return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc', limit });
+  listByCustomer(customerId: string, opts: { usableAt?: Date; limit?: number } = {}): Promise<Discount[]> {
+    const limit = opts.limit ?? 50;
+    if (!opts.usableAt) return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc', limit });
+
+    const at = opts.usableAt.toISOString();
+    return this.getAll(
+      { customerId, isActive: true },
+      {
+        // İki AYRI grup, yani aralarında VE var: "başlamış" VE "bitmemiş". Tek grupta yazılsaydı
+        // araya VEYA girerdi ve süresi geçmiş kupon "başlamış" olduğu için geçerdi.
+        orFilters: [`valid_from.is.null,valid_from.lte.${at}`, `valid_to.is.null,valid_to.gte.${at}`],
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+        limit,
+      },
+    );
   }
 
   /** Aktiflik anahtarı — süresi dolmuş/kullanımı bitmiş kupon SİLİNMEZ, kapatılır (geçmişi kalsın). */

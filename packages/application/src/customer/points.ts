@@ -229,16 +229,15 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
  */
 export async function listCustomerCoupons(db: SupabaseClient, customerId: string): Promise<CustomerCoupon[]> {
   const discounts = new DiscountService(db);
-  const mine = await discounts.listByCustomer(customerId);
-  if (mine.length === 0) return [];
-
-  const now = Date.now();
-  const active = mine.filter((d) => {
-    if (!d.isActive) return false;
-    if (d.validFrom && Date.parse(d.validFrom) > now) return false;
-    if (d.validTo && Date.parse(d.validTo) < now) return false;
-    return true;
-  });
+  // ── İKİ ELEME SORGUDA, BİRİ BURADA (08.5 · 09.08) ──────────────────────────
+  // Aktiflik ve tarih penceresi burada elle süzülüyordu ve tavan (50) o yüzden "en yeni 50 KUPON"a
+  // vuruyordu, "en yeni 50 KULLANILABİLİR kupon"a değil. Kullanılmış kuponlar kümede kalır
+  // (silinmez, kapatılır), yani pencere yıllar içinde onlarla dolar ve ekranda kullanılabilir kupon
+  // sessizce eksik görünürdü — eksik kupon "yok" gibi okunur, hata vermez.
+  //
+  // **Kota elemesi AŞAĞIDA kaldı** ve bu bilinçli: `usageCounts` iptal/iade kuralını taşıyan ayrı
+  // bir turdur; aynı kuralı SQL'e ikinci kez yazmak bir gün ayrışan iki cevap üretirdi.
+  const active = await discounts.listByCustomer(customerId, { usableAt: new Date() });
   if (active.length === 0) return [];
 
   const ids = active.map((d) => d.id);

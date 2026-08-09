@@ -181,8 +181,28 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   //     GÜN özeti (`analytics_daily`) SİLİNMEZ: gün bazlıdır ve testin damgalı anahtarıyla
   //     eşleşmez; testler özeti kendi ürettiği güne bakarak sınar, küresel sayıya değil.
   if (analyticsSessionKeys.length > 0) {
+    // ── ÖZET, OLAYLAR SİLİNMEDEN ÖNCE OKUNUR (09.08 · müşteri şeridinin gözlemi) ──────────────
+    // Aşağıdaki `productIds` süzgeci yalnız testin KURDUĞU ürünleri kapsıyor. Bir test uydurma bir
+    // ürün kimliğiyle olay yazıp `buildAll` çağırdığında özet satırı o kimliğe düşüyor, ürün satırı
+    // hiç var olmadığı için `productIds` onu içermiyor ve satır **öksüz kalıyor** — ölçüldü: taze
+    // veritabanında tek satır, ürünü yok, ham defteri (`analytics_event`) boş, yani artık yeniden
+    // de türetilemez. Zararsız görünüyordu ama özeti ham defterle karşılaştıran her denetim
+    // "rollup kaçırmış mı" sorusuyla başlayıp cevabı bulamazdı.
+    //
+    // Kimlikler olayların KENDİSİNDEN okunuyor: çağırana yeni bir alan eklemek, her testin kendi
+    // silme listesini uydurması demekti — `CLAUDE §4b`'nin tam olarak uyardığı şey.
+    const { data: signalRows } = await db
+      .from('analytics_event')
+      .select('product_id')
+      .in('session_key', analyticsSessionKeys)
+      .not('product_id', 'is', null);
+    const signalProductIds = [...new Set((signalRows ?? []).map((row) => (row as { product_id: string }).product_id))];
+
     await mustDelete(db, 'analytics_event', (q) => q.in('session_key', analyticsSessionKeys));
     await mustDelete(db, 'analytics_session', (q) => q.in('session_key', analyticsSessionKeys));
+    if (signalProductIds.length > 0) {
+      await mustDelete(db, 'analytics_daily_product', (q) => q.in('product_id', signalProductIds));
+    }
   }
   //     Ama ÜRÜN ve ARAMA özetleri damgalı bir anahtar taşıyor (test ürünü, damgalı terim) — yani
   //     bırakılırlarsa gün geçtikçe biriken, kimsenin sahiplenmediği satırlar olurlar. Ürün özeti

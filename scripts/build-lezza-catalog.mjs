@@ -186,6 +186,33 @@ function duzMetin(html) {
   return varlikCoz(html.replace(/<[^>]+>/g, ' '));
 }
 
+/**
+ * ── AÇIKLAMANIN BAŞINDAKİ "<ad> <gramaj> –" ÖNEKİ AYIKLANIR (operasyon notu 08.08) ──────────────
+ *
+ * Kaynak her açıklamayı ürünün adı ve O KAYDIN gramajıyla açıyor:
+ * *"Baklava with Walnut 450g – 12 frozen pre-portioned pieces…"*. Boylar tek üründe birleşince
+ * (05.14) bu iki şeyi birden bozuyordu: **ad zaten hemen üstünde yazılı** (tekrar), ve 1250 g'ı
+ * seçen müşteri 450 g'ı anlatan bir cümleyle karşılaşıyordu.
+ *
+ * Ayraç BOŞLUKLU tire olmalı: `E-Shaped Börek` içindeki tire bir ayraç değildir ve ayrıma
+ * girmemeli. Önek ancak ürünün ADIYLA başlıyorsa atılır — açıklamayı gerçekten oradan başlatan
+ * metinleri kesmemek için (ölçüldü: 127 açıklamanın 119'u ayıklanıyor, 8'i zaten öneksiz).
+ *
+ * ⚠ **Tutarsızlığın TAMAMINI bitirmez ve bunu abartmamak gerekiyor:** kalan gövde hâlâ tek bir boyu
+ * anlatabiliyor (*"12 frozen pre-portioned pieces"*). Kaynakta boy başına bir açıklama var, bizde
+ * ürün başına bir tane — hangisi seçilirse seçilsin ötekiler için eksik kalır. Öneğin atılması
+ * TEKRARI bitirir, boy referansını değil. Gerçek çözüm açıklamanın elle yazılması ve o operatörün
+ * işi (seed sahne kurar, gerçeği üretmez).
+ */
+const ACIKLAMA_ONEKI = /^(.{0,90}?)\s+[–—-]\s+/;
+
+function onekAyikla(aciklama, ad) {
+  const m = ACIKLAMA_ONEKI.exec(aciklama);
+  if (!m) return aciklama;
+  const sade = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  return sade(m[1]).startsWith(sade(ad).slice(0, 8)) ? aciklama.slice(m[0].length) : aciklama;
+}
+
 /** Ürün anahtarı — taban addan üretilen slug. Kaynak slug'ı KULLANILMAZ: o boyu da içeriyor. */
 function slugla(taban) {
   return taban
@@ -260,7 +287,7 @@ for (const p of ham) {
       sourceLanguage: 'en',
       category: aile?.key ?? null,
       brand: p.brands?.[0]?.name ?? null,
-      description: duzMetin(p.short_description || ''),
+      description: onekAyikla(duzMetin(p.short_description || ''), taban),
       // Kapak + galeri; uzaktaki adresler. Seed bunları indirip R2'ye yükler.
       imageUrls: [],
       channels: [],
@@ -272,7 +299,7 @@ for (const p of ham) {
   // Aynı ürünün farklı boyları farklı kanallarda olabilir — birleşir.
   for (const k of kanallar) if (!u.channels.includes(k)) u.channels.push(k);
   if (!u.category && aile) u.category = aile.key;
-  if (!u.description) u.description = duzMetin(p.short_description || '');
+  if (!u.description) u.description = onekAyikla(duzMetin(p.short_description || ''), taban);
 
   for (const img of p.images.slice(0, 2)) if (!u.imageUrls.includes(img.src)) u.imageUrls.push(img.src);
 

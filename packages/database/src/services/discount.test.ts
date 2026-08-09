@@ -245,3 +245,61 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
   });
 
 });
+
+/**
+ * **Kişisel kupon penceresi doğru kümeye vuruyor mu** (08.5 · müşteri şeridinin talebi 09.08).
+ *
+ * Eskiden tavan "en yeni N KUPON"a vuruyordu, "en yeni N KULLANILABİLİR kupon"a değil: pasif ve
+ * tarih penceresi dışı kuponlar N satır çekildikten SONRA uygulamada eleniyordu. Kullanılmış kupon
+ * kümede kalır (silinmez, kapatılır) — yani pencere yıllar içinde onlarla dolar ve ekranda
+ * kullanılabilir kupon **sessizce eksik** görünürdü.
+ *
+ * Ayırt edici sınav: tavanı 1'e indirip en YENİ satırı kullanılamaz yapmak. Süzgeç uygulamada
+ * kalsaydı o tek satır çekilir, elenir ve sonuç BOŞ dönerdi.
+ */
+describe('kişisel kupon — kullanılabilirlik penceresi (08.5)', () => {
+  const kupon = (name: string, extra: Record<string, unknown> = {}) =>
+    discounts.insert({ name, trigger: 'coupon', type: 'fixed', amountCents: 500, scope: 'cart', customerId, ...extra });
+
+  it('pasif ve süresi geçmiş kupon SORGUDA elenir — uygulamada değil', async () => {
+    const gecmis = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    track(await kupon('Pasif kupon', { isActive: false }));
+    track(await kupon('Süresi geçmiş kupon', { validTo: gecmis }));
+    const gecerli = track(await kupon('Geçerli kupon'));
+
+    const kullanilabilir = await discounts.listByCustomer(customerId, { usableAt: new Date() });
+    const idler = kullanilabilir.map((d) => d.id);
+
+    expect(idler).toContain(gecerli.id);
+    expect(kullanilabilir.filter((d) => d.name === 'Pasif kupon')).toHaveLength(0);
+    expect(kullanilabilir.filter((d) => d.name === 'Süresi geçmiş kupon')).toHaveLength(0);
+  });
+
+  it('HENÜZ BAŞLAMAMIŞ kupon de elenir — iki tarih ayrı sorulardır', async () => {
+    const gelecek = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    track(await kupon('Başlamamış kupon', { validFrom: gelecek }));
+
+    const bugun = await discounts.listByCustomer(customerId, { usableAt: new Date() });
+    expect(bugun.filter((d) => d.name === 'Başlamamış kupon')).toHaveLength(0);
+
+    // Aynı kupon o tarihte kullanılabilir olmalı — süzgeç "hep ele" demiyor, PENCEREYİ soruyor.
+    const sonra = await discounts.listByCustomer(customerId, { usableAt: new Date(Date.now() + 60 * 86_400_000) });
+    expect(sonra.filter((d) => d.name === 'Başlamamış kupon')).toHaveLength(1);
+  });
+
+  it('TAVAN kullanılabilir kümeye vurur — asıl düzeltme bu', async () => {
+    // En yeni satır kullanılamaz; tavan 1. Süzgeç uygulamada olsaydı sonuç BOŞ dönerdi.
+    const gecerli = track(await kupon('Tavan sınavı — geçerli'));
+    track(await kupon('Tavan sınavı — pasif', { isActive: false }));
+
+    const tek = await discounts.listByCustomer(customerId, { usableAt: new Date(), limit: 1 });
+    expect(tek).toHaveLength(1);
+    expect(tek[0]?.id).toBe(gecerli.id);
+  });
+
+  it('`usableAt` verilmezse davranış ESKİSİ gibi — başka çağıran kırılmaz', async () => {
+    track(await kupon('Süzgeçsiz okuma', { isActive: false }));
+    const hepsi = await discounts.listByCustomer(customerId);
+    expect(hepsi.filter((d) => d.name === 'Süzgeçsiz okuma')).toHaveLength(1);
+  });
+});

@@ -217,6 +217,29 @@ export function Headline({ title, intro }: { title: string; intro: React.ReactNo
 }
 
 /**
+ * **Künye SATIRI** — kartın kutusuz kardeşi (09.08, kullanıcı gözlemi telefondan).
+ *
+ * Neden var: künye bir HABER değil, bir etikettir ("hangi kayıt, ne zaman"). Kart olarak çizilince
+ * mailin en üstünde, asıl haberin ÖNÜNDE tam yükseklikte bir blok kaplıyordu ve dar bir telefon
+ * ekranında müşteri cevabı görmek için kaydırmak zorunda kalıyordu (ölçüldü: iki satırlık içerik,
+ * altı dikey blok). Kutusu alınınca blok sayısı düşer, sıralama serbest kalır.
+ *
+ * **Durum hapı YOK** ve bu bilinçli: durumu üstteki `StatusPill` zaten söylüyor. Kartlı sürümde iki
+ * kez yazılıyordu (`✉ Ouverte` … `Autre · Ouverte le 9 août · Ouverte`) — aynı bilgiyi iki kez
+ * okutmak, okuyanın ikisinin farklı şeyler olduğunu sanmasına yol açar.
+ *
+ * Kartlı `HeaderCard` DURUYOR: sipariş mailleri onu kullanıyor ve orada künye gerçekten haberin
+ * kendisidir (referans no + tutar + durum bir arada okunur).
+ */
+export function MetaLine({ text }: { text: string }) {
+  return (
+    <Row padding="0 32px 20px">
+      <div style={{ fontFamily: SANS, fontSize: 12.5, lineHeight: '18px', color: C.faint }}>{text}</div>
+    </Row>
+  );
+}
+
+/**
  * Künye kartı: kalın başlık + soluk ikincil satır + sağda durum hapı.
  *
  * Siparişte "LZA-2451 · 22 Temmuz · Onaylandı", talepte "Eksik ürün · 22 Temmuz'da açıldı ·
@@ -564,10 +587,17 @@ export interface EmailQuote {
  *
  * Sıra **en yeniden eskiye**: e-posta alıntı geleneği bu, ve müşterinin aradığı şey en son ne
  * konuşulduğu.
+ *
+ * ── KUTUSU KALKTI (09.08 · referans proje `support-reply.tsx`) ───────────────
+ * Beyaz kart içindeydi ve dar ekranda mailin üçüncü tam yükseklikli bloğuydu. Ama alıntı bir KART
+ * değil bir DİPNOTTUR: sol çizgi + soluk renk zaten "bu eski" diyor, kutu bunun üstüne bir de
+ * "bu ayrı bir bölüm" diyordu. Referans projede aynı blok kutusuz — yalnız `borderLeft` ve soluk
+ * metin. Kutunun kalkması kartlı blok sayısını üçten BİRE indirdi (yalnız haberin kendisi kart).
  */
 export function QuoteCard({ title, entries }: { title: string; entries: readonly EmailQuote[] }) {
   return (
-    <Card title={title}>
+    <Row padding="4px 32px 22px">
+      <div style={{ fontFamily: SERIF, fontSize: 16, lineHeight: '22px', color: C.muted, paddingBottom: 10 }}>{title}</div>
       {entries.map((entry, index) => (
         <table
           key={`${entry.at}-${index}`}
@@ -591,7 +621,7 @@ export function QuoteCard({ title, entries }: { title: string; entries: readonly
           </tbody>
         </table>
       ))}
-    </Card>
+    </Row>
   );
 }
 

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { PreferredLanguage, TicketHistoryEntry, TicketNotification } from '@lezzet/types';
 import type { EmailQuote } from '../components/email-layout';
-import { CtaButton, EmailLayout, HeaderCard, Headline, MessageCard, NoticeCard, QuoteCard, StatusPill } from '../components/email-layout';
+import { CtaButton, EmailLayout, Headline, MessageCard, MetaLine, NoticeCard, QuoteCard, StatusPill } from '../components/email-layout';
 import { TICKET_COPY, ticketLabel } from './ticket-copy';
 
 void React;
@@ -80,15 +80,25 @@ function TicketShell({
         preferencesUrl: data.notificationPreferencesUrl,
       }}
     >
+      {/* ── SIRA: HABER ÖNCE, KÜNYE SONRA (09.08, kullanıcı telefondan okudu) ──────────────────
+          Eskiden künye kartı cevabın ÜSTÜNDEydi ve dar ekranda mail şöyle diziliyordu: hap →
+          başlık → paragraf → künye kartı → cevap kartı → geçmiş kartı → düğme. İki satırlık
+          içerik için altı dikey blok; müşteri "ne yazdılar"ı görmek için kaydırıyordu.
+
+          Mailin tek işi cevabı göstermek — o yüzden `children` (cevabın kendisi) künyenin
+          önüne alındı ve künye kutusuz bir SATIRA indi (`MetaLine`). "Hangi kayıt" sorusu
+          önemsiz değil, ama HABER değil: cevabı okuduktan sonra bakılacak bir etiket. */}
       <StatusPill label={pill} tone="green" />
       <Headline title={title} intro={intro} />
-      <HeaderCard title={label} meta={meta} statusLabel={t.statuses[data.status]} />
       {children}
-      {quoted.length > 0 && <QuoteCard title={t.historyTitle} entries={quoted.map((entry) => quoteOf(entry, data.locale))} />}
+      <MetaLine text={`${label} · ${meta}`} />
       {/* Kapanmış talebe yazılabildiğini SÖYLEMEK gerekir: aksi hâlde müşteri yeni bir talep açar
           ve aynı konu iki yerde ilerler. */}
       {data.status === 'resolved' && <NoticeCard title={t.stillOpenTitle} text={t.stillOpenText} />}
+      {/* Düğme ALINTILARDAN ÖNCE (referans proje deseni): eylem cevaba aittir, geçmişe değil.
+          Alıntılar bir ek/dipnottur ve mailin sonunda durması onları okumayı isteğe bağlı kılar. */}
       <CtaButton label={t.cta} url={data.ticketUrl} />
+      {quoted.length > 0 && <QuoteCard title={t.historyTitle} entries={quoted.map((entry) => quoteOf(entry, data.locale))} />}
     </EmailLayout>
   );
 }

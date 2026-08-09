@@ -18,6 +18,17 @@ interface TicketCopy {
   resolvedSubject: (ref: string) => string;
   reopenedSubject: (ref: string) => string;
 
+  /**
+   * Başlık + giriş.
+   *
+   * **GİRİŞ, BAŞLIĞI TEKRAR ETMEZ** (kullanıcı gözlemi 09.08, telefondan okundu). Üç mailde de ilk
+   * cümle başlığın yeniden yazılmış hâliydi — *"Nous avons répondu à votre demande"* başlığının
+   * altında *"Notre équipe a répondu à votre demande."* Dar bir ekranda bu, okunacak asıl şeyi
+   * (cevabın kendisini) bir ekran aşağı itiyor ve okuyana hiçbir şey söylemiyordu.
+   *
+   * Kural: başlık NE OLDUĞUNU söyler, giriş BUNDAN SONRA NE OLACAĞINI. Giriş yalnız başlığın
+   * söylemediği bir şey ekliyorsa yazılır.
+   */
   receivedTitle: string;
   receivedIntro: string;
   repliedTitle: string;
@@ -66,11 +77,11 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     receivedTitle: 'Talebinizi aldık',
     receivedIntro: 'Mesajınız bize ulaştı ve ekibimizin sırasına girdi. Cevap yazdığımızda yine e-posta ile haber vereceğiz.',
     repliedTitle: 'Talebinize cevap verdik',
-    repliedIntro: 'Ekibimiz talebinizi yanıtladı. Cevabın tamamı aşağıda; dilerseniz aynı yerden yazmaya devam edebilirsiniz.',
+    repliedIntro: 'Cevabın tamamı aşağıda; dilerseniz aynı yerden yazmaya devam edebilirsiniz.',
     resolvedTitle: 'Talebiniz çözüldü',
-    resolvedIntro: 'Talebinizi çözüldü olarak işaretledik. Sorun devam ediyorsa yazmanız yeterli — talep kendiliğinden yeniden açılır.',
+    resolvedIntro: 'Sorun devam ediyorsa yazmanız yeterli — talep kendiliğinden yeniden açılır.',
     reopenedTitle: 'Talebiniz yeniden açıldı',
-    reopenedIntro: 'Talebiniz yeniden açıldı ve ekibimizin sırasına girdi.',
+    reopenedIntro: 'Talebiniz yeniden ekibimizin sırasına girdi.',
 
     requestLabel: 'Talep',
     openedOn: (date) => `${date} tarihinde açıldı`,
@@ -103,11 +114,11 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     receivedIntro:
       'Votre message nous est parvenu et se trouve dans la file de notre équipe. Nous vous préviendrons par e-mail dès que nous aurons répondu.',
     repliedTitle: 'Nous avons répondu à votre demande',
-    repliedIntro: 'Notre équipe a répondu à votre demande. La réponse complète figure ci-dessous ; vous pouvez continuer à écrire au même endroit.',
+    repliedIntro: 'La réponse complète figure ci-dessous ; vous pouvez continuer à écrire au même endroit.',
     resolvedTitle: 'Votre demande est résolue',
-    resolvedIntro: 'Nous avons marqué votre demande comme résolue. Si le problème persiste, écrivez-nous — la demande se rouvre automatiquement.',
+    resolvedIntro: 'Si le problème persiste, écrivez-nous — la demande se rouvre automatiquement.',
     reopenedTitle: 'Votre demande a été rouverte',
-    reopenedIntro: 'Votre demande a été rouverte et se trouve à nouveau dans la file de notre équipe.',
+    reopenedIntro: 'Votre demande se trouve à nouveau dans la file de notre équipe.',
 
     requestLabel: 'Demande',
     openedOn: (date) => `Ouverte le ${date}`,
@@ -140,11 +151,11 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     receivedIntro:
       'Ihre Nachricht ist bei uns eingegangen und steht in der Warteschlange unseres Teams. Sobald wir geantwortet haben, benachrichtigen wir Sie erneut per E-Mail.',
     repliedTitle: 'Wir haben auf Ihre Anfrage geantwortet',
-    repliedIntro: 'Unser Team hat Ihre Anfrage beantwortet. Die vollständige Antwort finden Sie unten; Sie können an derselben Stelle weiterschreiben.',
+    repliedIntro: 'Die vollständige Antwort finden Sie unten; Sie können an derselben Stelle weiterschreiben.',
     resolvedTitle: 'Ihre Anfrage ist gelöst',
-    resolvedIntro: 'Wir haben Ihre Anfrage als gelöst markiert. Besteht das Problem weiterhin, schreiben Sie uns — die Anfrage wird automatisch wieder geöffnet.',
+    resolvedIntro: 'Besteht das Problem weiterhin, schreiben Sie uns — die Anfrage wird automatisch wieder geöffnet.',
     reopenedTitle: 'Ihre Anfrage wurde wieder geöffnet',
-    reopenedIntro: 'Ihre Anfrage wurde wieder geöffnet und steht erneut in der Warteschlange unseres Teams.',
+    reopenedIntro: 'Ihre Anfrage steht erneut in der Warteschlange unseres Teams.',
 
     requestLabel: 'Anfrage',
     openedOn: (date) => `Eröffnet am ${date}`,
