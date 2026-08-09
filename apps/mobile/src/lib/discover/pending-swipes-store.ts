@@ -1,5 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
+
+import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
 
 /*
   BEKLEYEN KAYDIRMALAR DEPOSU — girişsizken yapılan oyların cihazda kalan izi. Web'in tarayıcı
@@ -30,8 +31,8 @@ import { z } from 'zod';
   çıkar, uygulama kararmaz.
 */
 
-/** SecureStore anahtarı — oturum/onboarding anahtarlarıyla aynı adlandırma ailesi (`lezzet.*`). */
-const PENDING_SWIPES_KEY = 'lezzet.discover.pending';
+/** Depo anahtarı — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */
+const PENDING_SWIPES_KEY = DEVICE_STORE_KEYS.discoverPending;
 
 /**
  * Cihazda tutulan en fazla kaydırma. Sözleşmenin talep tavanıyla AYNI sayı
@@ -53,7 +54,7 @@ let cache: string[] | null = null;
 /** Diskteki kayıt; okunamayan/bozuk kayıt "kayıt yok" ile aynı kapıya çıkar. */
 async function readFromDisk(): Promise<string[]> {
   try {
-    const raw = await SecureStore.getItemAsync(PENDING_SWIPES_KEY);
+    const raw = await deviceStore.getItem(PENDING_SWIPES_KEY);
     if (raw === null) return [];
     const parsed = PendingSwipesSchema.safeParse(JSON.parse(raw));
     if (!parsed.success) return [];
@@ -70,10 +71,10 @@ async function readFromDisk(): Promise<string[]> {
 async function writeToDisk(ids: string[]): Promise<void> {
   try {
     if (ids.length === 0) {
-      await SecureStore.deleteItemAsync(PENDING_SWIPES_KEY);
+      await deviceStore.removeItem(PENDING_SWIPES_KEY);
       return;
     }
-    await SecureStore.setItemAsync(PENDING_SWIPES_KEY, JSON.stringify(ids));
+    await deviceStore.setItem(PENDING_SWIPES_KEY, JSON.stringify(ids));
   } catch {
     // Sessizliğin nedeni yukarıdaki okumayla aynı. Bellek yansıması bu oturumu taşır; yazma
     // düştüyse bedeli, uygulamanın kapanmasıyla o kimliklerin kaybı — turun kendisi etkilenmez.

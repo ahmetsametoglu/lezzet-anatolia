@@ -1,6 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
 import { LOCALES } from '@lezzet/i18n';
+
+import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
 
 /*
   ONBOARDING DEPOSU — ilk açılış akışının cihazda kalan izi: gösterildi mi (`done`), hangi dil
@@ -10,7 +11,8 @@ import { LOCALES } from '@lezzet/i18n';
   AsyncStorage yok; oturum da aynı depoda, `lib/auth/session-store.ts`). Veri sır değil ama ikinci
   bir depo paketi açmak, tek tercih uğruna yeni bir bağımlılık ve ikinci bir saklama kapısı
   demekti. Oturum deposuyla aynı desen: TEK anahtar, TEK JSON — iki anahtara bölmek aynı verinin
-  iki kopyasını ve ayrışma riskini doğururdu (CLAUDE §1).
+  iki kopyasını ve ayrışma riskini doğururdu (CLAUDE §1). Erişim `lib/storage/device-store`
+  üzerinden: anahtar ailesinin sahibi ve yeniden kurulum kapısı orada.
 
   ŞEMA BURADA, `packages/types`TA DEĞİL: bu bir alan sözleşmesi değil, CİHAZ-YEREL saklama
   şeklidir — tek okuyanı ve tek yazanı bu modül (sayfaya-özel tip kuralının lib karşılığı).
@@ -22,15 +24,17 @@ import { LOCALES } from '@lezzet/i18n';
   vitrine dönerken kapı eski bayrağı okuyup kullanıcıyı onboarding'e geri fırlatmasın.
 */
 
-/** SecureStore anahtarı — oturum anahtarıyla aynı adlandırma ailesi (`lezzet.*`). */
-const ONBOARDING_STORAGE_KEY = 'lezzet.onboarding';
+/** Depo anahtarı — ham dizge burada YAZILMAZ, ailenin sahibinden gelir. */
+const ONBOARDING_STORAGE_KEY = DEVICE_STORE_KEYS.onboarding;
 
 const OnboardingStateSchema = z.object({
   /** Akış tamamlandı ya da atlandı — ikisi de "bir daha gösterme" demek (v3 `onbDone`). */
   done: z.boolean(),
   /**
-   * Seçilen dil. Uygulamanın dilini BU ETAPTA DEĞİŞTİRMEZ: dil `deviceLocale()` ile cihazdan
-   * çözülüyor; cihaz dilini ezme mekanizması kabuk kararı, ayrı iş. Seçim yalnız saklanır.
+   * Akıştan çıkarken geçerli olan dil — AKIŞIN İZİ, uygulamanın dil KAYNAĞI DEĞİL. Kaynak
+   * `lib/i18n/app-locale`tir (kullanıcı kararı 09.08): seçim yapıldığı anda oraya yazılır ve
+   * uygulama o karede döner. Buradaki alan yalnız "onboarding'i hangi dille bitirdi" kaydıdır;
+   * okuyan taraf uygulamanın GÜNCEL dilini sormak için `useAppLocale()` kullanır.
    */
   locale: z.enum(LOCALES),
   /** Yazılan posta kodu (0–5 hane); hiç yazılmadıysa `null` — boş dizge "bilgi yok"u gizlerdi. */
@@ -57,7 +61,7 @@ function publish(next: OnboardingState | null): void {
  */
 export async function readOnboarding(): Promise<OnboardingState | null> {
   try {
-    const raw = await SecureStore.getItemAsync(ONBOARDING_STORAGE_KEY);
+    const raw = await deviceStore.getItem(ONBOARDING_STORAGE_KEY);
     if (raw === null) return null;
     const parsed = OnboardingStateSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : null;
@@ -73,7 +77,7 @@ export async function readOnboarding(): Promise<OnboardingState | null> {
 export async function saveOnboarding(state: OnboardingState): Promise<void> {
   publish(state);
   try {
-    await SecureStore.setItemAsync(ONBOARDING_STORAGE_KEY, JSON.stringify(state));
+    await deviceStore.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Sessizliğin nedeni: yukarıdaki okumayla aynı (log altyapısı yok). Bellek yansıması bu
     // oturumu zaten taşıyor; yazma düştüyse bedeli sonraki açılışta onboarding'in bir kez daha
