@@ -87,6 +87,39 @@ async function iliskisizSay(db: Db, tablo: string, kolon: string, hedefTablo: st
   return tumu.filter((r) => !kume.has(r[kolon === 'id' ? 'id' : kolon])).length;
 }
 
+/**
+ * Parti bazında marj dağılımı — **alış fiyatı liste fiyatını tanıyor mu** sorusunun ölçümü.
+ *
+ * Karşılaştırma KDV HARİÇ yapılır (`liste / (1 + kdv/100)`): alış zaten hariç ve ikisini ham
+ * karşılaştırmak her partiyi yapay olarak kârlı gösterirdi.
+ *
+ * Tek turda üç okuma; küme sınırlı (parti sayısı) ve gün başına değil TOPLAM sorulduğu için
+ * sayfalama gerekmiyor.
+ */
+async function marjDagilimi(db: Db): Promise<{ zarar: number; kar: number }> {
+  const [{ data: partiler }, { data: fiyatlar }, { data: varyantlar }, { data: urunler }] = await Promise.all([
+    db.from('stock').select('variant_id,purchase_price').not('purchase_price', 'is', null),
+    db.from('price').select('variant_id,amount').eq('channel', 'b2c').is('customer_id', null),
+    db.from('product_variant').select('id,product_id'),
+    db.from('product').select('id,vat_rate'),
+  ]);
+
+  const kdvOf = new Map(((urunler ?? []) as unknown as { id: string; vat_rate: number }[]).map((u) => [u.id, u.vat_rate]));
+  const urunOf = new Map(((varyantlar ?? []) as unknown as { id: string; product_id: string }[]).map((v) => [v.id, v.product_id]));
+  const listeOf = new Map(((fiyatlar ?? []) as unknown as { variant_id: string; amount: number }[]).map((f) => [f.variant_id, f.amount]));
+
+  let zarar = 0;
+  let kar = 0;
+  for (const p of (partiler ?? []) as unknown as { variant_id: string; purchase_price: number }[]) {
+    const liste = listeOf.get(p.variant_id);
+    const kdv = kdvOf.get(urunOf.get(p.variant_id) ?? '');
+    if (liste === undefined || kdv === undefined) continue;
+    if (liste / (1 + kdv / 100) < p.purchase_price) zarar += 1;
+    else kar += 1;
+  }
+  return { zarar, kar };
+}
+
 export const KAPSAM: KapsamAlani[] = [
   {
     baslik: 'Ürün — satış durumu',
@@ -281,6 +314,25 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'lot no var', zorunlu: true, filtre: (q) => q.not('lot_number', 'is', null) },
       { ad: 'SKT yok', filtre: (q) => q.is('expiry_date', null) },
       { ad: 'raf yeri var', filtre: (q) => q.not('location', 'is', null) },
+      { ad: 'alış fiyatı GİRİLMEMİŞ', zorunlu: true, filtre: (q) => q.is('purchase_price', null) },
+      {
+        ad: 'MARJ ALTI parti (bilinçli istisna)',
+        zorunlu: true,
+        /**
+         * **Alış fiyatı listeden TÜRÜYOR mu, yoksa uydurma mı** (denetim bulgusu 09.08).
+         *
+         * Seed alışı sabit bir formülle üretiyordu (2,10-4,50 €) ve varyantın gerçek fiyatına HİÇ
+         * bakmıyordu. Katalogda liste 1,49-78,24 € arasında; sonuç **44 varyant zararına satılıyor
+         * görünüyordu** (en kötüsü −2,07 €). Gürültü değil: MCP asistanına maliyet okuması açılınca
+         * (22.5) bu veriye bakıp **zararına bir paket önerdi** — araç doğru, model doğru, veri yalan.
+         *
+         * Kova iki yönlü çalışır: marj altı parti **hiç yoksa** kârlılık uyarısının ekranı sınanmaz;
+         * ama sayı yükselirse (eski hâl) alışın listeden türemediği anlaşılır. İkinci kova kârlı
+         * tarafı tutuyor — ikisi birlikte "hem var hem kural değil" demeye yarıyor.
+         */
+        sayac: async (db) => (await marjDagilimi(db)).zarar,
+      },
+      { ad: 'kârlı parti', zorunlu: true, sayac: async (db) => (await marjDagilimi(db)).kar },
     ],
   },
   {

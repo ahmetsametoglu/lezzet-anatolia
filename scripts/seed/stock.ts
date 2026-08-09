@@ -35,6 +35,58 @@ export async function seedStock(
   const ana = tedarik.get('gaziantep')!;
   const yerel = tedarik.get('alsace')!;
 
+  // ── ALIŞ FİYATI LİSTEDEN TÜRER, SABİT YAZILMAZ (denetim bulgusu 09.08) ────────────────────────
+  //
+  // Önce sabit bir formül vardı: `2,10 € + ((i + p) % 9) × 0,30` → 2,10-4,50 € arası, varyantın
+  // gerçek fiyatına HİÇ bakmadan. Katalogda liste fiyatları 1,49 € ile 78,24 € arasında; sonuç
+  // ölçüldü: **44 varyant zararına satılıyor görünüyordu**, en kötüsü **−2,07 €** birim marj
+  // (1,49 € liste_HT'ye 2,40 € alış).
+  //
+  // **Hata sınıfı bu dosyada zaten yaşanmıştı:** teklif fiyatı da sabit yazılıyordu (490 · 550
+  // cent) ve indirim ürünü PAHALILAŞTIRIYORDU (aşağıdaki künye). Gerçek veriye sabit sayı yazmak.
+  //
+  // **Neden şimdi gürültüden fazlası:** MCP asistanına maliyet okuması açıldı (22.5) ve harici
+  // denetim ajanı ilk gerçek kullanımında bu veriye bakıp *"bu parti zararlı"* dedi, ardından
+  // **zararına bir paket önerdi** ve gerekçelendirdi. Araç doğru çalıştı, model doğru okudu —
+  // veri yalan söyledi. Sessiz bir tutarsızlık, yanlış öneri üreten bir girdiye dönüştü.
+  //
+  // Kural: `alış = liste_HT × (1 − hedefMarj)`. Hedef marj modelde zaten var
+  // (`product.target_margin_percent`); yoksa %30 (katalog seed'inin de tabanı).
+  const b2cUygulanabilir = await new PriceService(db).findApplicableMap(
+    satilabilir.map((v) => v.id),
+    'b2c',
+  );
+  const listeFiyati = new Map(
+    [...b2cUygulanabilir].flatMap(([id, f]) => (f.channelPrice ? [[id, f.channelPrice.amountCents] as const] : [])),
+  );
+
+  /**
+   * Bir varyantın alış fiyatı (cent). `tur` parti/senaryo indisidir — aynı varyantın iki partisi
+   * birebir aynı tutarı taşımasın diye ±%6 bandında oynatır (tedarikçi pazarlığı gerçekte de
+   * sabit değil ve FEFO maliyet raporunun gösterecek bir farkı olmalı).
+   *
+   * **MARJ ALTI KALAN VARYANTLAR — kural değil İSTİSNA.** Her yedinci varyant bilinçli olarak
+   * listenin ÜSTÜNDE alınmış sayılıyor: zararına satılan parti gerçek bir işletme hâlidir (yanlış
+   * alım, kur farkı, fiyat düşürülüp alış güncellenmemiş) ve kârlılık ekranının uyarısı bu hâl
+   * olmadan hiç koşmaz. Fark önceki hâlden şu: **44 kaza yerine ~%14 bilinçli örnek.**
+   *
+   * Liste fiyatı bilinmiyorsa (fiyatsız varyant) eski tabana düşülür — uydurma bir marj hesabı
+   * yapmaktansa bilinen bir sabit dürüsttür.
+   */
+  function alisFiyati(v: VaryantRef, tur: number): number {
+    const liste = listeFiyati.get(v.id);
+    if (!liste) return toCents(2.1 + (tur % 9) * 0.3);
+
+    const listeHT = liste / (1 + v.vatRate / 100);
+    const marj = (v.targetMarginPercent ?? 30) / 100;
+    // Marj altı seçimi VARYANT KİMLİĞİNDEN: aynı varyantın iki partisi aynı tarafta kalsın, yoksa
+    // "bu ürün zararına mı" sorusunun cevabı partiye göre değişirdi.
+    const marjAlti = Number.parseInt(v.id.slice(-2), 16) % 13 === 0;
+    const hedef = marjAlti ? listeHT * 1.08 : listeHT * (1 - marj);
+    const oynama = 1 + ((tur % 5) - 2) * 0.03; // −%6 … +%6
+    return Math.max(1, Math.round(hedef * oynama));
+  }
+
   // 1) PO'lu mal kabul — tedarik siparişini kapatır ve "sipariş edilen vs gelen" farkı doğar
   //    (bilinçli EKSİK gelir: fark raporunun gösterecek bir şeyi olsun).
   const poKalemleri = satilabilir.slice(11, 16);
@@ -49,7 +101,9 @@ export async function seedStock(
       qty: i === 2 ? 30 : 48 + i * 6, // üçüncü kalem eksik → fark raporu
       expiryDate: gun(150 + i * 20),
       lotNumber: `A227-${String(i + 1).padStart(2, '0')}`,
-      unitCostCents: toCents(2.2 + i * 0.4),
+      // Mal kabulün birim maliyeti de listeden türer — bu satır `stock.purchase_price`e yazılıyor
+      // ve sabit kalsaydı aynı "zararına parti" gürültüsünü kabul yolundan üretirdi.
+      unitCostCents: alisFiyati(v, i),
       location: `Dolap ${1 + (i % 3)}`,
     })),
   });
@@ -97,7 +151,7 @@ export async function seedStock(
       qty: 20 + i * 4,
       expiryDate: gun(25 + i * 15),
       lotNumber: `AF-${gun(-3).replaceAll('-', '')}-${i}`,
-      unitCostCents: toCents(2.9 + i * 0.2),
+      unitCostCents: alisFiyati(v, i + 2),
       location: 'Soğuk oda',
     })),
   });
@@ -122,7 +176,8 @@ export async function seedStock(
         physicalQty: 6 + ((i + p * 5) % 40),
         expiryDate: gun(20 + ((i * 7 + p * 45) % 300)),
         lotNumber: `L${String(2600 + i)}-${p + 1}`,
-        purchasePriceCents: toCents(2.1 + ((i + p) % 9) * 0.3),
+        // Alış LİSTEDEN türer; parti parti biraz oynar (tedarikçi pazarlığı gerçekte de sabit değil).
+        purchasePriceCents: alisFiyati(v, i + p),
         location: `Dolap ${1 + ((i + p) % 4)}`,
       });
       ekParti += 1;
@@ -182,13 +237,18 @@ export async function seedStock(
     await stocks.setOfferPrice(parti.id, teklif);
     firsatNo += 1;
   }
+  // ── SENARYO PARTİLERİNİN ALIŞI DA LİSTEDEN TÜRER ───────────────────────────────────────────
+  // Dört sabit vardı (280 · 340 · 220 · 260) ve hangi ürüne düştüklerine bakmıyorlardı; asistanın
+  // Tur 4'te takıldığı Mango Cake tam olarak buradan geliyordu. Bu partilerin senaryosu SKT ve
+  // miktardır — fiyat onların konusu değil, o yüzden ortak kuraldan alınıyor.
+  //
   // Yaklaşan ama HENÜZ indirime alınmamış — "sistem önerir, karar insanın" hâli
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePriceCents: 280, location: 'Dolap 1' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePriceCents: alisFiyati(ozel[2]!, 1), location: 'Dolap 1' });
   // Tarihi GEÇMİŞ partiler: biri DLC (satılamaz — imha edilecek), biri DDM (satılabilir)
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[3]!.id, physicalQty: 5, expiryDate: gun(-2), lotNumber: 'EXP-DLC', purchasePriceCents: 340, location: 'Karantina' });
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[4]!.id, physicalQty: 8, expiryDate: gun(-6), lotNumber: 'EXP-DDM', purchasePriceCents: 220, location: 'Dolap 3' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[3]!.id, physicalQty: 5, expiryDate: gun(-2), lotNumber: 'EXP-DLC', purchasePriceCents: alisFiyati(ozel[3]!, 2), location: 'Karantina' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[4]!.id, physicalQty: 8, expiryDate: gun(-6), lotNumber: 'EXP-DDM', purchasePriceCents: alisFiyati(ozel[4]!, 3), location: 'Dolap 3' });
   // Tükenmiş parti (fiili 0): satır durur, miktarı biter — "geçmiş parti" görünümü
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[5]!.id, physicalQty: 0, expiryDate: gun(90), lotNumber: 'L-BITTI', purchasePriceCents: 260, location: 'Dolap 2' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[5]!.id, physicalQty: 0, expiryDate: gun(90), lotNumber: 'L-BITTI', purchasePriceCents: alisFiyati(ozel[5]!, 4), location: 'Dolap 2' });
   // Alış fiyatı GİRİLMEMİŞ parti: gerçek COGS bu partide hesaplanamaz (rapor bunu göstermeli)
   await stocks.insert({ warehouseId: depolar.str, variantId: ozel[6]!.id, physicalQty: 12, expiryDate: gun(120), lotNumber: 'L-MALIYETSIZ', location: 'Dolap 4' });
 

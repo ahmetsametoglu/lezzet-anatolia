@@ -128,6 +128,11 @@ export interface VaryantRef {
    * bariz yanlış görünür. `null` = boysuz ürün (bütün pastalar) — çağıran kendi tabanını kullanır.
    */
   netWeightG: number | null;
+  /**
+   * Ürünün hedef marjı (%). Alış fiyatı buradan TÜRER (09.08) — sabit yazılmaz.
+   * `null` = hedef belirlenmemiş; çağıran kendi varsayılanını kullanır.
+   */
+  targetMarginPercent: number | null;
 }
 
 /** Fiyat/stok/sipariş bölümlerinin ortak girdisi: satılabilir birimler TEK sorguda (N+1 yok). */
@@ -142,6 +147,7 @@ export async function katalogVaryantlari(db: Db): Promise<VaryantRef[]> {
       status: p.status,
       shelfLifeDays: p.shelfLifeDays,
       netWeightG: v.netWeightG ?? null,
+      targetMarginPercent: p.targetMarginPercent ?? null,
     })),
   );
 }
