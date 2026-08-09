@@ -42,8 +42,10 @@ import { useOrder } from './use-order.hook';
        çizip hiçbir yere götürmemek ya da uydurma bir adrese gitmek, verilmiş bir sözü tutmamaktı.
      İkisi de kendi uçları geldiği gün şablondaki yerlerine döner.
   2. **"Bize yazın" doğru yere gidiyor** (v3 `od.talep` → `openTalepNew(o.ref)`): önceki UI-only
-     sürüm `/legal/faq`ye gidiyordu. Artık `/support/new?order=<referans>` — yeni talep ekranı bu
-     parametreyi zaten bekliyor ve akış doğrudan forma açılıyor.
+     sürüm `/legal/faq`ye gidiyordu. Artık `/support?order=<referans>` — yeni talep bir sayfa değil,
+     Taleplerim ekranının ÇEKMECESİDİR (kullanıcı kararı 09.08) ve parametre çekmeceyi doğrudan bu
+     siparişle açar. Eski `/support/new` adresi de çalışır (yönlendiren ince kabuk), ama içeriden
+     bir ara durağa uğramaya gerek yok.
   3. **Harita şeridinde TAHMİNİ SÜRE YOK** (v3:29 "· tahmini {eta}"). Şablonun `eta`sı sabit bir el
      yazısıydı ("30–40 dk"); gerçek veride kuryenin varış tahmini diye bir ölçüm yok. Uydurmak
      müşteriye tutamayacağımız bir zaman sözü vermek olurdu (CLAUDE §1: ölçülemeyen değer sıfır
@@ -314,7 +316,7 @@ export function OrderDetailScreen({ reference, locale = deviceLocale() }: OrderD
         <View style={styles.actionRow}>
           <TextAction
             label={t.detail.support}
-            onPress={() => router.push({ pathname: '/support/new', params: { order: detail.reference } })}
+            onPress={() => router.push({ pathname: '/support', params: { order: detail.reference } })}
             tone="terracotta"
             testID="order-support"
           />

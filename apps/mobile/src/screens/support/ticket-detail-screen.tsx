@@ -1,7 +1,8 @@
+import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Image, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -11,33 +12,46 @@ import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TextField } from '@/components/ui/text-field';
+import type { TicketMessage } from '@/lib/api/tickets';
 import { deviceLocale } from '@/lib/i18n/locale';
-import { ticketById, type TicketMessageView, type TicketView } from './support-fixture';
+import { publishToast } from '@/lib/toast/toast-store';
+import { formatOrderDate } from '@/screens/orders/order-format';
+import { ticketScope, ticketTitle } from './ticket-format';
 import { TicketStatusTag } from './ticket-status-tag';
 import messages from './messages.json';
+import { useTicket } from './use-ticket.hook';
 
 /*
-  TALEP DETAYI (v3 `vTalepD`) — yazışma görünümü: sonuç bloğu, baloncuklar, bilgi satırı ve
-  yapışkan mesaj kutusu.
+  TALEP DETAYI (v3 `vTalepD`) — GERÇEK UÇTAN okur (`GET /api/v1/me/tickets/:id`) ve cevap GERÇEK
+  UCA gider (`POST …/messages`): sonuç bloğu, baloncuklar, bilgi satırı ve yapışkan mesaj kutusu.
 
-  ── UI-ONLY (21.14 ikinci dilim) ────────────────────────────────────────────
-  Talep ucu YOK; talep fixture'dan numarayla okunuyor ve yazılan mesaj EKRANIN durumunda yaşıyor
-  (gerçekten görünür, yalnız kalıcı değil). BULUNAMAYAN numara sessiz değil: boş bir yazışma
-  yerine "bulamadık" bloğu çıkar ve listeye götürür (sipariş detayının aynı kuralı).
+  ── GÖNDERİM SONUCU SUNUCUDAN GELİR, EKRANDA UYDURULMAZ ─────────────────────
+  Cevap ucu GÜNCEL DETAYI döndürüyor; ekranın yerel "iyimser mesaj" listesi YOK. Kapanmış talebe
+  yazmak onu yeniden açar (motorun kararı) ve yeni durum da o cevapla gelir — ekran tahmin etseydi
+  bir gün sunucudan ayrışırdı. Düşen gönderim TASLAĞI SİLMEZ (hook künyesi): yazılan şikâyet metni
+  kaybolmaz.
 
   ── ŞABLONDAN SAPMALAR ─────────────────────────────────────────────────────
-  1. **Başlığın ikinci satırı çubuğun ALTINDA.** Şablon başlık çubuğuna iki satır koyuyor (tür +
-     "Sipariş … · tarih"); kitin `AppBar`ı TEK satır başlık taşır ve çubuğu değiştirmek bu görevin
-     yazma alanı dışında (kit ihtiyacı rapor edildi). İkinci satır içeriğin ilk satırı olarak
-     yazıldı — bilgi kaybı yok, yeri bir kademe aşağıda.
-  2. **Yeniden açılan talebin durumu `open`.** Şablon çözülmüş bir talebe mesaj yazılınca durumu
-     "Yeniden açıldı" yapıyor; şemada böyle bir durak YOK ve olması da gerekmiyor — `TicketStatus`
-     künyesi bunu açıkça yazıyor ("Çözülen talep müşteri dönerse yeniden açılır: resolved → open").
-     Dördüncü bir durak uydurmak, ekranı şemanın bilmediği bir gerçeğin kaynağı yapardı.
-  3. **Gönderim onayı toast DEĞİL.** Şablon "Mesajınız iletildi" toast'ı basıyor; toast küresel bir
-     kabuk katmanıdır (vitrin ekranının kendi künyesindeki karar). Onay burada mesajın yazışmada
-     BELİRMESİDİR — toast'tan daha kesin bir kanıt.
+  1. **Başlığın ikinci satırı çubuğun ALTINDA.** Şablon başlık çubuğuna iki satır koyuyor; kitin
+     `AppBar`ı TEK satır başlık taşır ve çubuğu değiştirmek bu görevin yazma alanı dışında (kit
+     ihtiyacı rapor edildi). Bilgi kaybı yok, yeri bir kademe aşağıda.
+  2. **Yeniden açılan talebin durumu `open`.** Şablon "Yeniden açıldı" diye dördüncü bir durak
+     çiziyor; şemada böyle bir durak YOK (`resolved → open`) ve uydurmak ekranı, şemanın bilmediği
+     bir gerçeğin kaynağı yapardı.
+  3. **Sonucun tutarı PARA ALANINDAN gelir**, elle yazılmış bir cümleden değil: sözleşme iadeyi
+     `triggeredAt` + `refundedCents` olarak taşıyor ve bant yalnız `refundedCents > 0` iken çizilir
+     (web bandının aynı ölçütü — "tetiklendi ama ödenmedi" gerçek bir ara hâl, 0 € iade "iade yok"
+     demek değildir).
+  4. **Çeviri İŞARETLENİR** (şablonda yok): mesaj okuyucunun dilinde geliyor (20.2) ve makine
+     çevirisi bir şikâyeti yumuşatabilir — hangi baloncuğun çeviri olduğu söylenmeden gösterilmesi,
+     personelin ağzına kurmadığı bir cümleyi koymak olurdu.
+  5. **Ekli fotoğraflar çizilir** (şablonda yok): web'den ek gönderen müşteri kendi fotoğrafını
+     burada da görmeli; adresler SÜRELİ imzalı (sözleşme künyesi), ekran onları yalnız gösterir.
+  6. **Gönderim onayı TOAST** (v3 `tSend` → "Mesajınız iletildi"): önceki UI-only etapta toast
+     katmanı yoktu, bugün var — şablonun kendi davranışı geri geldi. Mesajın yazışmada belirmesi
+     de sürüyor; toast onu ezmiyor, süreliyor.
 
   BALONCUĞUN KİMLİĞİ EKRAN OKUYUCUYA DA GİDER: hizalama ve renk "kim yazdı"yı yalnız GÖRENE
   söyler; her baloncuk `Siz:` / `Lezzet Anatolia:` önekiyle tek parça okunur.
@@ -46,118 +60,190 @@ import messages from './messages.json';
 type Messages = LocalizedCopy<typeof messages>;
 
 interface TicketDetailScreenProps {
-  /** Müşteriye görünen talep numarası (`T-108`). */
+  /** Talebin kimliği — rota parametresi (`/support/<uuid>`). */
   id: string;
-  /** Testlerin ve demo hâllerinin kapısı; verilmezse fixture'dan numarayla okunur. */
-  ticket?: TicketView | null;
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse cihazın dili. */
+  locale?: ReturnType<typeof deviceLocale>;
 }
 
-export function TicketDetailScreen({ id, ticket = ticketById(id) }: TicketDetailScreenProps) {
-  const locale = deviceLocale();
+export function TicketDetailScreen({ id, locale = deviceLocale() }: TicketDetailScreenProps) {
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-
-  /* Yazışma ve durum ekranın durumunda: fixture yalnız başlangıç değeri (UI-only etap). */
-  const [thread, setThread] = useState<TicketMessageView[]>(ticket?.messages ?? []);
-  const [status, setStatus] = useState(ticket?.status ?? 'open');
+  const ticket = useTicket(id, locale);
   const [draft, setDraft] = useState('');
+  const threadRef = useRef<ScrollView>(null);
 
-  if (ticket === null) {
+  /* Başlık her hâlde durur (şablonda da yüklenen sayfanın üstünde): geri yolu ekran boşken de açık. */
+  const appBar = (title: string, right?: React.ReactNode) => (
+    <AppBar
+      title={title}
+      left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="ticket-back" />}
+      right={right}
+      testID="ticket-appbar"
+    />
+  );
+
+  if (ticket.status === 'loading') {
+    return (
+      <View style={styles.screen} testID="ticket-loading">
+        {appBar(t.list.title)}
+        <View style={styles.skeletonBody}>
+          <Skeleton width="60%" height={16} radius="full" />
+          <Skeleton width="78%" height={56} radius="card" />
+          <Skeleton width="78%" height={72} radius="card" />
+        </View>
+      </View>
+    );
+  }
+
+  if (ticket.status !== 'ready' || ticket.detail === null) {
+    /* Üç ayrı hâl, üç ayrı cümle: misafir bir kapıdır (giriş), 404 eski bir bağlantıdır (listeye
+       dön), hata bir arızadır (tekrar dene). Tek "hata"ya indirmek üçünü de yanlış anlatırdı. */
+    const guest = ticket.status === 'guest';
+    const missing = ticket.status === 'missing';
     return (
       <View style={styles.screen}>
-        <AppBar
-          title={id}
-          left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="ticket-back" />}
-        />
+        {appBar(t.list.title)}
         <EmptyState
-          icon={<Icon name="whatsapp" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
-          title={t.detail.notFound}
-          description={t.detail.notFoundBody}
-          action={
-            <PrimaryButton
-              label={t.detail.notFoundCta}
-              shape="pill"
-              onPress={() => router.push('/support')}
-              testID="ticket-not-found-cta"
+          icon={
+            <Icon
+              name={missing || guest ? 'whatsapp' : 'connection-off'}
+              size={missing || guest ? theme.size.emptyIcon : theme.size.errorIcon}
+              color={theme.colors['sand-600']}
             />
           }
-          testID="ticket-not-found"
+          title={guest ? t.guest.title : missing ? t.detail.notFound : t.error.title}
+          description={guest ? t.guest.body : missing ? t.detail.notFoundBody : t.error.body}
+          action={
+            <PrimaryButton
+              label={guest ? t.guest.cta : missing ? t.detail.notFoundCta : t.error.retry}
+              shape="pill"
+              onPress={guest ? () => router.push('/login') : missing ? () => router.push('/support') : ticket.retry}
+              testID="ticket-error-action"
+            />
+          }
+          testID={guest ? 'ticket-guest' : missing ? 'ticket-not-found' : 'ticket-error'}
         />
       </View>
     );
   }
 
+  const detail = ticket.detail;
+  const scope = ticketScope(detail.orderReference, t.list.orderScope, t.detail.generalScope);
+  const title = ticketTitle(t.type[detail.type], detail.subject, t.list.withSubject);
+  const refunded = detail.returnOutcome !== null && detail.returnOutcome.refundedCents > 0
+    ? formatPrice(detail.returnOutcome.refundedCents, locale)
+    : null;
+
   const send = () => {
-    const body = draft.trim();
-    if (body.length === 0) return;
-    setThread([...thread, { id: `local-${thread.length + 1}`, fromCustomer: true, body }]);
-    // Çözülmüş talebe yazmak onu yeniden açar (şemanın kendi hükmü: `resolved → open`).
-    if (status === 'resolved') setStatus('open');
-    setDraft('');
+    void ticket.send(draft).then((sent) => {
+      if (!sent) return;
+      setDraft('');
+      publishToast(t.detail.reply.sent);
+    });
   };
 
-  const scope =
-    ticket.orderReference === null
-      ? t.detail.generalScope
-      : t.list.orderScope.replace('{reference}', ticket.orderReference);
+  const canSend = draft.trim().length > 0 && !ticket.sending;
+
+  const renderMessage = (message: TicketMessage) => {
+    const who = message.fromCustomer ? t.detail.fromCustomer : t.detail.fromTeam;
+    const translated = message.translated ? ` (${t.detail.translated})` : '';
+
+    return (
+      <View
+        key={message.id}
+        style={[styles.bubbleRow, message.fromCustomer ? styles.mineRow : styles.theirsRow]}
+        accessible
+        accessibilityLabel={`${who}${translated}: ${message.body}`}
+        testID={`ticket-message-${message.id}`}
+      >
+        <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
+          <Text style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>{message.body}</Text>
+
+          {message.photos.length === 0 ? null : (
+            <View style={styles.photoRow}>
+              {message.photos.map((uri) => (
+                <Image
+                  key={uri}
+                  source={{ uri }}
+                  style={styles.photo}
+                  accessibilityLabel={t.detail.photo}
+                  accessibilityIgnoresInvertColors
+                />
+              ))}
+            </View>
+          )}
+
+          {message.translated ? <Text style={styles.translated}>{t.detail.translated}</Text> : null}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.screen}>
-      <AppBar
-        title={t.type[ticket.type]}
-        left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="ticket-back" />}
-        right={<TicketStatusTag status={status} label={t.status[status]} testID="ticket-status" />}
-        testID="ticket-appbar"
-      />
-      <ScrollView contentContainerStyle={styles.content} testID="ticket-thread">
+      {appBar(title, <TicketStatusTag status={detail.status} label={t.status[detail.status]} testID="ticket-status" />)}
+      {/* Yazışma eskiden yeniye dizili: SON mesaj en altta. Kaydırma her içerik değişiminde sona
+          çekilir — açılışta müşteri en yeni cevabı görür, kendi mesajını gönderince de baloncuğu
+          ekranda belirir (onayın kendisi budur; toast yalnız onu süreler). */}
+      <ScrollView
+        ref={threadRef}
+        onContentSizeChange={() => threadRef.current?.scrollToEnd({ animated: true })}
+        contentContainerStyle={styles.content}
+        testID="ticket-thread"
+      >
         <Text style={styles.meta} testID="ticket-meta">
-          {t.list.meta.replace('{scope}', scope).replace('{date}', ticket.createdAtLabel)}
+          {/* Liste kartıyla AYNI biçim (yıllı kısa tarih): iki ekran aynı talebi aynı künyeyle anar. */}
+          {`${scope} · ${formatOrderDate(detail.createdAt, locale)}`}
         </Text>
 
-        {ticket.resolutionLabel === null ? null : (
+        {refunded === null ? null : (
           <Note
-            description={t.detail.resolution.replace('{value}', ticket.resolutionLabel)}
+            description={t.detail.resolution.replace('{value}', t.detail.refunded.replace('{amount}', refunded))}
             tone="olive"
             testID="ticket-resolution"
           />
         )}
 
-        {thread.map((message) => (
-          <View
-            key={message.id}
-            style={[styles.bubbleRow, message.fromCustomer ? styles.mineRow : styles.theirsRow]}
-            accessible
-            accessibilityLabel={`${message.fromCustomer ? t.detail.fromCustomer : t.detail.fromTeam}: ${message.body}`}
-            testID={`ticket-message-${message.id}`}
-          >
-            <Text style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>{message.body}</Text>
-          </View>
-        ))}
+        {detail.messages.map(renderMessage)}
 
         <Text style={styles.notice}>{t.detail.notice}</Text>
       </ScrollView>
 
       {/* Yapışkan kutu kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kalıbı). */}
       <View style={styles.composer}>
-        <TextField
-          value={draft}
-          onChangeText={setDraft}
-          accessibilityLabel={t.detail.reply.label}
-          placeholder={t.detail.reply.placeholder}
-          shape="pill"
-          testID="ticket-reply"
-        />
-        <PressableSurface
-          onPress={send}
-          feedback="scale-small"
-          disabled={draft.trim().length === 0}
-          style={[styles.sendButton, draft.trim().length === 0 ? styles.sendDisabled : styles.sendEnabled]}
-          accessibilityLabel={t.detail.reply.send}
-          testID="ticket-send"
-        >
-          <Icon name="navigate" size={theme.size.inlineIcon} color={theme.colors.card} />
-        </PressableSurface>
+        {/* Düşen gönderim SESSİZ DEĞİL: tek satırlık ret, taslak yerinde. */}
+        {ticket.sendFailed ? (
+          <Text style={styles.sendError} accessibilityRole="alert" testID="ticket-send-failed">
+            {t.detail.reply.failed}
+          </Text>
+        ) : null}
+        <View style={styles.composerRow}>
+          {/* Alanın kendi kökü esnemez (kit `TextField` bir `View` döndürüyor ve `flex` taşımıyor);
+              genişliği saran kutu verir — örtük esnemeye güvenilmez, kural açık yazılır. */}
+          <View style={styles.composerField}>
+            <TextField
+              value={draft}
+              onChangeText={setDraft}
+              accessibilityLabel={t.detail.reply.label}
+              placeholder={t.detail.reply.placeholder}
+              shape="pill"
+              editable={!ticket.sending}
+              testID="ticket-reply"
+            />
+          </View>
+          <PressableSurface
+            onPress={send}
+            feedback="scale-small"
+            disabled={!canSend}
+            style={[styles.sendButton, canSend ? styles.sendEnabled : styles.sendDisabled]}
+            accessibilityLabel={ticket.sending ? t.detail.reply.sending : t.detail.reply.send}
+            testID="ticket-send"
+          >
+            <Icon name="navigate" size={theme.size.inlineIcon} color={theme.colors.card} />
+          </PressableSurface>
+        </View>
       </View>
     </View>
   );
@@ -174,6 +260,10 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: rt.insets.bottom + theme.space['9xl'],
     gap: theme.space.lg,
   },
+  skeletonBody: {
+    padding: theme.space['4xl'],
+    gap: theme.space.lg,
+  },
   meta: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.micro,
@@ -182,9 +272,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   bubbleRow: { flexDirection: 'row' },
   mineRow: { justifyContent: 'flex-end' },
   theirsRow: { justifyContent: 'flex-start' },
+  // Şablonun kendi sınırı: baloncuk satırın %78'inden geniş olmaz.
+  bubbleColumn: { maxWidth: '78%', gap: theme.space.sm },
+  mineColumn: { alignItems: 'flex-end' },
+  theirsColumn: { alignItems: 'flex-start' },
   bubble: {
-    // Şablonun kendi sınırı: baloncuk satırın %78'inden geniş olmaz.
-    maxWidth: '78%',
     borderWidth: theme.border.hairline,
     borderColor: theme.colors['sand-200'],
     borderRadius: theme.radius.control,
@@ -204,6 +296,23 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: 'transparent',
     color: theme.colors.ink,
   },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.space.md,
+  },
+  photo: {
+    // Tasarımda ek fotoğraf yok; kitin küçük daire durağı ölçü olarak alındı (yeni sayı açılmadı).
+    width: theme.size.circleSm,
+    height: theme.size.circleSm,
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors['sand-250'],
+  },
+  translated: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors['sand-600'],
+  },
   notice: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.micro,
@@ -217,15 +326,24 @@ const styles = StyleSheet.create((theme, rt) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.md,
+    gap: theme.space.sm,
     paddingTop: theme.space.lg,
     paddingHorizontal: theme.space['4xl'],
     paddingBottom: rt.insets.bottom + theme.space['2xl'],
     borderTopWidth: theme.border.hairline,
     borderTopColor: theme.colors['sand-200'],
     backgroundColor: theme.colors['sand-50'],
+  },
+  composerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+  },
+  composerField: { flex: 1 },
+  sendError: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors.error,
   },
   sendButton: {
     width: theme.size.controlSm,
@@ -236,6 +354,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   sendEnabled: { backgroundColor: theme.colors.olive },
   /* Boş mesaj gönderilemez ve düğme bunu BASILMADAN ÖNCE söyler (şablon sessizce hiçbir şey
-     yapmıyordu — engelli düğme kuralı basmadan anlatır). */
+     yapmıyordu — engelli düğme kuralı basmadan anlatır). Gönderim sürerken de kapalıdır: aynı
+     mesaj iki kez gitmez. */
   sendDisabled: { backgroundColor: theme.colors['disabled-fill'] },
 }));

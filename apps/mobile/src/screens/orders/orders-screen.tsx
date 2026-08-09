@@ -79,7 +79,7 @@ export function OrdersScreen({ locale = deviceLocale() }: OrdersScreenProps) {
   if (orders.status === 'guest') {
     return (
       <View style={styles.screen}>
-        {header}
+        <View style={styles.headerPad}>{header}</View>
         <EmptyState
           icon={<Icon name="orders" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.guest.title}
@@ -94,7 +94,7 @@ export function OrdersScreen({ locale = deviceLocale() }: OrdersScreenProps) {
   if (orders.status === 'loading') {
     return (
       <View style={styles.screen} testID="orders-loading">
-        {header}
+        <View style={styles.headerPad}>{header}</View>
         <View style={styles.skeletonBody}>
           {Array.from({ length: SKELETON_COUNT }, (_, index) => (
             <Skeleton key={index} width="100%" height={SKELETON_HEIGHT} radius="card" />
@@ -107,7 +107,7 @@ export function OrdersScreen({ locale = deviceLocale() }: OrdersScreenProps) {
   if (orders.status === 'error') {
     return (
       <View style={styles.screen}>
-        {header}
+        <View style={styles.headerPad}>{header}</View>
         <EmptyState
           icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
           title={t.error.title}
@@ -122,7 +122,7 @@ export function OrdersScreen({ locale = deviceLocale() }: OrdersScreenProps) {
   if (orders.orders.length === 0) {
     return (
       <View style={styles.screen}>
-        {header}
+        <View style={styles.headerPad}>{header}</View>
         <EmptyState
           icon={<Icon name="orders" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.empty.title}
@@ -243,9 +243,17 @@ const styles = StyleSheet.create((theme, rt) => ({
   header: {
     // v3:9 `gap:3px` — iki durak arasında; eşitlikte ferah yön (2 yerine 4).
     gap: theme.space.xs,
-    paddingTop: theme.space.sm,
+    /* v3'ün üst payı İKİ parçadır: sayfa dolgusu (`padding:10px…`) + başlık bloğunun kendi
+       `padding-top:6px`i = 16. Bizde yalnız 6 vardı ve güvenli alanın hemen altına yapışıyordu
+       (kullanıcı bulgusu 09.08: "başlık yukarı kaymış") — telefon çerçevesinin şablondaki nefesi
+       eksikti. `insets.top` durum çubuğunu karşılar, bu dolgu ONUN ÜSTÜNE biner. */
+    paddingTop: theme.space['3xl'],
     paddingBottom: theme.space.xs,
   },
+  /* Başlık LİSTEDE kaydırma kabının dolgusunu alır; misafir/boş/hata dallarında o kap YOK ve
+     başlık sola yapışıyordu (kullanıcı bulgusu 09.08). Dolgu bu dallarda sarmalayıcıdan gelir —
+     başlığın kendisine koymak listede ÇİFT dolgu yapardı. */
+  headerPad: { paddingHorizontal: theme.space['4xl'] },
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,

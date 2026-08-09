@@ -1,6 +1,16 @@
 {
   "tr": {
     "back": "Geri",
+    "guest": {
+      "title": "Talepleriniz için hızlı doğrulama",
+      "body": "Şifre yok — e-posta, Google veya WhatsApp ile birkaç saniyede doğrulanın.",
+      "cta": "Hızlı doğrulama"
+    },
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "Talepleriniz getirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    },
     "status": {
       "open": "Aldık, sıradayız",
       "in_progress": "İlgileniyoruz",
@@ -16,10 +26,14 @@
       "title": "Taleplerim",
       "new": "＋ Yeni",
       "newLabel": "Yeni talep oluştur",
-      "meta": "{scope} · {date}",
+      "withSubject": "{type} · {subject}",
       "orderScope": "Sipariş {reference}",
       "generalScope": "Genel",
+      "lastMessage": "son mesaj: {date}",
       "open": "{type} talebini aç",
+      "loading": "Yükleniyor…",
+      "end": "Tüm talepleriniz listede.",
+      "tailRetry": "Devamı gelmedi — tekrar dene",
       "empty": {
         "title": "Henüz talebiniz yok",
         "body": "Bir sorunuz ya da sorununuz olursa buradan yazabilirsiniz.",
@@ -29,13 +43,19 @@
     "detail": {
       "generalScope": "Genel talep",
       "resolution": "✓ Sonuç: {value}",
+      "refunded": "{amount} iade edildi",
       "notice": "Cevap geldiğinde e-posta ile haber veririz.",
       "fromCustomer": "Siz",
       "fromTeam": "Lezzet Anatolia",
+      "translated": "Otomatik çevrildi",
+      "photo": "Ekli fotoğraf",
       "reply": {
         "placeholder": "Mesaj yazın…",
         "label": "Mesaj yazın",
-        "send": "Gönder"
+        "send": "Gönder",
+        "sending": "Gönderiliyor…",
+        "sent": "Mesajınız iletildi",
+        "failed": "Mesaj gönderilemedi — yazdığınız duruyor, tekrar deneyin."
       },
       "notFound": "Bu talebi bulamadık",
       "notFoundBody": "Bağlantı eski olabilir; talebi listeden açmayı deneyin.",
@@ -52,12 +72,16 @@
       "order": {
         "question": "Hangi sipariş?",
         "pick": "{reference} siparişini seç",
-        "none": "Henüz siparişiniz yok — doğrudan yazabilirsiniz."
+        "none": "Henüz siparişiniz yok — doğrudan yazabilirsiniz.",
+        "more": "Daha eski siparişler",
+        "error": "Siparişleriniz getirilemedi."
       },
       "items": {
         "eyebrow": "Sipariş {reference}",
         "question": "Hangi ürünlerle ilgili?",
-        "line": "{quantity}× {name}"
+        "line": "{quantity}× {name}",
+        "bundleNote": "Paket satırları tek tek işaretlenemiyor — paketle ilgili bir sorunu aşağıya yazın.",
+        "error": "Sipariş kalemleri getirilemedi; yine de yazabilirsiniz."
       },
       "typeTitle": "Konu",
       "message": {
@@ -72,16 +96,27 @@
         "note": "Fotoğraf, özellikle hasarlı ürünlerde çözümü hızlandırır — zorunlu değil."
       },
       "submit": "Gönder",
-      "sent": {
-        "title": "Talebiniz alındı",
-        "body": "Cevabımızı e-posta ile bildireceğiz.",
-        "summary": "{type} · {scope}",
-        "cta": "Taleplerim"
+      "submitting": "Gönderiliyor…",
+      "sentToast": "Talebiniz alındı — cevabı e-posta ile bildireceğiz",
+      "errors": {
+        "order": "Bu siparişi hesabınıza bağlayamadık. Genel talep olarak da yazabilirsiniz.",
+        "guest": "Oturumunuz kapanmış görünüyor — tekrar doğrulanıp gönderin.",
+        "generic": "Talebiniz gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin."
       }
     }
   },
   "fr": {
     "back": "Retour",
+    "guest": {
+      "title": "Vérification rapide pour vos demandes",
+      "body": "Pas de mot de passe — e-mail, Google ou WhatsApp en quelques secondes.",
+      "cta": "Vérification rapide"
+    },
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vos demandes n'ont pas pu être chargées. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
     "status": {
       "open": "Reçue, en attente",
       "in_progress": "En cours",
@@ -97,10 +132,14 @@
       "title": "Mes demandes",
       "new": "＋ Nouvelle",
       "newLabel": "Créer une demande",
-      "meta": "{scope} · {date}",
+      "withSubject": "{type} · {subject}",
       "orderScope": "Commande {reference}",
       "generalScope": "Général",
+      "lastMessage": "dernier message : {date}",
       "open": "Ouvrir la demande « {type} »",
+      "loading": "Chargement…",
+      "end": "Toutes vos demandes sont affichées.",
+      "tailRetry": "La suite n'est pas arrivée — réessayer",
       "empty": {
         "title": "Aucune demande pour l'instant",
         "body": "Une question ou un souci ? Écrivez-nous ici.",
@@ -110,13 +149,19 @@
     "detail": {
       "generalScope": "Demande générale",
       "resolution": "✓ Résultat : {value}",
+      "refunded": "{amount} remboursés",
       "notice": "Nous vous préviendrons par e-mail dès notre réponse.",
       "fromCustomer": "Vous",
       "fromTeam": "Lezzet Anatolia",
+      "translated": "Traduit automatiquement",
+      "photo": "Photo jointe",
       "reply": {
         "placeholder": "Écrivez un message…",
         "label": "Écrivez un message",
-        "send": "Envoyer"
+        "send": "Envoyer",
+        "sending": "Envoi…",
+        "sent": "Votre message est parti",
+        "failed": "Message non envoyé — votre texte est conservé, réessayez."
       },
       "notFound": "Demande introuvable",
       "notFoundBody": "Le lien est peut-être ancien ; ouvrez la demande depuis la liste.",
@@ -133,12 +178,16 @@
       "order": {
         "question": "Quelle commande ?",
         "pick": "Choisir la commande {reference}",
-        "none": "Vous n'avez pas encore de commande — écrivez-nous directement."
+        "none": "Vous n'avez pas encore de commande — écrivez-nous directement.",
+        "more": "Commandes plus anciennes",
+        "error": "Vos commandes n'ont pas pu être chargées."
       },
       "items": {
         "eyebrow": "Commande {reference}",
         "question": "Quels articles sont concernés ?",
-        "line": "{quantity}× {name}"
+        "line": "{quantity}× {name}",
+        "bundleNote": "Les coffrets ne peuvent pas être cochés article par article — décrivez le souci ci-dessous.",
+        "error": "Les articles n'ont pas pu être chargés ; vous pouvez tout de même nous écrire."
       },
       "typeTitle": "Sujet",
       "message": {
@@ -153,16 +202,27 @@
         "note": "Une photo accélère la résolution, surtout pour un produit abîmé — facultatif."
       },
       "submit": "Envoyer",
-      "sent": {
-        "title": "Demande bien reçue",
-        "body": "Nous vous répondrons par e-mail.",
-        "summary": "{type} · {scope}",
-        "cta": "Mes demandes"
+      "submitting": "Envoi…",
+      "sentToast": "Demande bien reçue — nous répondrons par e-mail",
+      "errors": {
+        "order": "Nous n'avons pas pu relier cette commande à votre compte. Écrivez-nous en demande générale.",
+        "guest": "Votre session semble expirée — vérifiez-vous puis renvoyez.",
+        "generic": "Votre demande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez."
       }
     }
   },
   "de": {
     "back": "Zurück",
+    "guest": {
+      "title": "Schnelle Verifizierung für Ihre Anfragen",
+      "body": "Kein Passwort — mit E-Mail, Google oder WhatsApp in Sekunden.",
+      "cta": "Schnelle Verifizierung"
+    },
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Ihre Anfragen konnten nicht geladen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
     "status": {
       "open": "Erhalten, in Bearbeitung geplant",
       "in_progress": "Wir kümmern uns darum",
@@ -178,10 +238,14 @@
       "title": "Meine Anfragen",
       "new": "＋ Neu",
       "newLabel": "Neue Anfrage erstellen",
-      "meta": "{scope} · {date}",
+      "withSubject": "{type} · {subject}",
       "orderScope": "Bestellung {reference}",
       "generalScope": "Allgemein",
+      "lastMessage": "letzte Nachricht: {date}",
       "open": "Anfrage „{type}“ öffnen",
+      "loading": "Wird geladen…",
+      "end": "Alle Ihre Anfragen werden angezeigt.",
+      "tailRetry": "Fortsetzung fehlt — erneut versuchen",
       "empty": {
         "title": "Noch keine Anfragen",
         "body": "Bei Fragen oder Problemen schreiben Sie uns einfach hier.",
@@ -191,13 +255,19 @@
     "detail": {
       "generalScope": "Allgemeine Anfrage",
       "resolution": "✓ Ergebnis: {value}",
+      "refunded": "{amount} erstattet",
       "notice": "Sobald wir antworten, benachrichtigen wir Sie per E-Mail.",
       "fromCustomer": "Sie",
       "fromTeam": "Lezzet Anatolia",
+      "translated": "Automatisch übersetzt",
+      "photo": "Angehängtes Foto",
       "reply": {
         "placeholder": "Nachricht schreiben…",
         "label": "Nachricht schreiben",
-        "send": "Senden"
+        "send": "Senden",
+        "sending": "Wird gesendet…",
+        "sent": "Ihre Nachricht ist unterwegs",
+        "failed": "Nachricht nicht gesendet — Ihr Text bleibt stehen, bitte erneut versuchen."
       },
       "notFound": "Anfrage nicht gefunden",
       "notFoundBody": "Der Link ist womöglich veraltet; öffnen Sie die Anfrage über die Liste.",
@@ -214,12 +284,16 @@
       "order": {
         "question": "Welche Bestellung?",
         "pick": "Bestellung {reference} auswählen",
-        "none": "Sie haben noch keine Bestellung — schreiben Sie uns direkt."
+        "none": "Sie haben noch keine Bestellung — schreiben Sie uns direkt.",
+        "more": "Ältere Bestellungen",
+        "error": "Ihre Bestellungen konnten nicht geladen werden."
       },
       "items": {
         "eyebrow": "Bestellung {reference}",
         "question": "Um welche Artikel geht es?",
-        "line": "{quantity}× {name}"
+        "line": "{quantity}× {name}",
+        "bundleNote": "Pakete lassen sich nicht einzeln markieren — beschreiben Sie das Problem unten.",
+        "error": "Die Artikel konnten nicht geladen werden; schreiben Sie uns trotzdem."
       },
       "typeTitle": "Thema",
       "message": {
@@ -234,11 +308,12 @@
         "note": "Ein Foto beschleunigt die Lösung, besonders bei beschädigter Ware — optional."
       },
       "submit": "Senden",
-      "sent": {
-        "title": "Anfrage erhalten",
-        "body": "Wir antworten Ihnen per E-Mail.",
-        "summary": "{type} · {scope}",
-        "cta": "Meine Anfragen"
+      "submitting": "Wird gesendet…",
+      "sentToast": "Anfrage erhalten — wir antworten per E-Mail",
+      "errors": {
+        "order": "Wir konnten diese Bestellung Ihrem Konto nicht zuordnen. Schreiben Sie uns als allgemeine Anfrage.",
+        "guest": "Ihre Sitzung ist wohl abgelaufen — bitte erneut verifizieren und senden.",
+        "generic": "Ihre Anfrage konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut."
       }
     }
   }

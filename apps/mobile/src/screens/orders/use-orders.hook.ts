@@ -29,7 +29,7 @@ import { fetchOrders, type OrderSummary } from '@/lib/api/orders';
 /** İlk yükün dört hâli — `guest` = oturum yok (hata değil, kapı). */
 type OrdersStatus = 'loading' | 'guest' | 'ready' | 'error';
 
-interface UseOrdersResult {
+export interface UseOrdersResult {
   status: OrdersStatus;
   orders: OrderSummary[];
   /** Devam eden sayfa var mı (`nextCursor !== null`). */
@@ -43,7 +43,17 @@ interface UseOrdersResult {
   retry: () => void;
 }
 
-export function useOrders(locale: Locale): UseOrdersResult {
+interface UseOrdersOptions {
+  /**
+   * Okuma AÇIK mı. Kapalıyken hook ağa hiç çıkmaz ve `loading` hâlinde kalır — çağıranın
+   * listeye ihtiyacı olmadığını BİLDİĞİ hâller için (talep çekmecesi: sipariş detayından
+   * gelindiğinde kapsam zaten belli, liste sorulmaz). Koşullu hook çağrılamadığı için kapı
+   * parametreye kondu.
+   */
+  enabled?: boolean;
+}
+
+export function useOrders(locale: Locale, { enabled = true }: UseOrdersOptions = {}): UseOrdersResult {
   const [status, setStatus] = useState<OrdersStatus>('loading');
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -88,8 +98,9 @@ export function useOrders(locale: Locale): UseOrdersResult {
 
   // Açılış yükü. `load` yalnız dile bağlı olduğu için bu etki bir kez koşar.
   useEffect(() => {
+    if (!enabled) return;
     void load({ refresh: false });
-  }, [load]);
+  }, [enabled, load]);
 
   const refresh = useCallback(() => {
     void load({ refresh: true });
