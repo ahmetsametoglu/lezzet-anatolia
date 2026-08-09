@@ -190,3 +190,4 @@ export type { ReturnDrop, ReturnDropLine } from './warehouse/returns';
 export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
 export type { BatchView } from './warehouse/batch-types';
 export * from './assistant/apply';
+export * from './assistant/kind-meta';

@@ -1,7 +1,7 @@
 import { AssistantProposalService, CategoryService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { APPLIERS, applyProposal } from '@lezzet/application';
-import { PROPOSAL_PAYLOAD_SCHEMAS, resolveLocalizedText, type FeaturedFlagPayload } from '@lezzet/types';
+import { APPLIERS, KIND_META, amountCentsOf, applyProposal } from '@lezzet/application';
+import { AssistantProposalKindEnum, PROPOSAL_PAYLOAD_SCHEMAS, resolveLocalizedText, type FeaturedFlagPayload } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { HANDLERS, TOOLS } from './server-factory';
 
@@ -117,6 +117,36 @@ describe('uygulama — normal servis yolundan', () => {
 
     expect(failed.status).toBe('failed');
     expect(failed.error).toContain('motor reddetti');
+  });
+});
+
+describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
+  it('tutar tipe göre payload’dan türer; tutar kavramı olmayan tipte null', () => {
+    // Paket EURO tutuyor → cent'e çevrilir.
+    expect(amountCentsOf('bundle_draft', { totalPrice: 89 })).toBe(8900);
+    expect(amountCentsOf('money_movement', { amountCents: 34000 })).toBe(34000);
+    // Mal kabulde toplam KALEMLERDEN; bir kalemin maliyeti bilinmiyorsa toplam UYDURULMAZ.
+    expect(amountCentsOf('stock_intake', { lines: [{ qty: 2, unitCostCents: 500 }] })).toBe(1000);
+    expect(amountCentsOf('stock_intake', { lines: [{ qty: 2, unitCostCents: null }] })).toBeNull();
+    expect(amountCentsOf('featured_flag', { name: 'x' })).toBeNull();
+  });
+
+  it('her kind’ın ekran künyesi var ve hedef tablolar GERÇEK şema adları', () => {
+    for (const kind of AssistantProposalKindEnum.options) {
+      const meta = KIND_META[kind];
+      expect(meta.label.length).toBeGreaterThan(2);
+      expect(meta.impact.length).toBeGreaterThan(20);
+      expect(meta.tables.length).toBeGreaterThan(0);
+    }
+    // Tasarımın fikstüründeki kurgusal adlar sızmamalı (sözleşme §2b).
+    const allTables = AssistantProposalKindEnum.options.flatMap((k) => KIND_META[k].tables);
+    for (const fake of ['packages', 'package_items', 'cash_entries', 'product_translations', 'stock_batches']) {
+      expect(allTables).not.toContain(fake);
+    }
+  });
+
+  it('bölge önerisinin etki cümlesi geri alınamazlığı SÖYLER', () => {
+    expect(KIND_META.zone_extend.impact).toMatch(/GERİ ALINAMAZ/);
   });
 });
 
