@@ -205,6 +205,17 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
     couponCode: input.couponCode,
     warehouseId: orderWarehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
+    // ── AYAR KAPSAMININ ÜLKE VE BÖLGE EKSENLERİ (07.15) ───────────────────────
+    // Yer zaten :181'de çözülü; sıra değişikliği bile gerekmedi. Bunlar geçmezse kapsamlı ayarın
+    // iki ekseni boş kalıyor ve DE kargo tarifesi (12,90 €) ile bölge asgari sepeti hiç
+    // okunmuyordu — FR/global değerler kesiliyordu.
+    //
+    // Ülke ADRESTEN, çerezten değil: sipariş hangi adrese gidiyorsa eşik de oranın eşiğidir.
+    country: address.country,
+    // **Kargo siparişi bir BÖLGEYE ait DEĞİLDİR** — aynı kural :350'de de yazılı: rota bölgesi
+    // yalnız araçla gidilen teslimatın kaydıdır. Adres rota içinde olsa bile bu sipariş kargodur
+    // (19.15) ve bölgenin asgari sepeti ona uygulanamaz.
+    zoneId: input.shippingOrder ? null : place.zoneId,
     previousPrices,
   });
   if (cart.lines.length === 0) return { status: 'empty_cart' };

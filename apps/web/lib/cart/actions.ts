@@ -5,7 +5,7 @@ import { hasLocale } from 'next-intl';
 import { currentCustomerId } from '@/lib/guard';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
-import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPlaceScope } from '@/lib/delivery/read-place';
 import { recordEvent } from '@/lib/analytics/record';
 import { getCartView } from './read';
 import { cartBlockedAnalyticsReason, entryOf, entryOfItem, isSplitCart, itemOfEntry, storedPrices, type CartEntry, type CartSignal, type CartView } from './cart-types';
@@ -224,7 +224,11 @@ async function resolveBoth(
   opts: { previousPrices?: ReadonlyMap<string, number>; customerId?: string | null; couponCode?: string | null } = {},
 ): Promise<Omit<CartPayload, 'serverCart'>> {
   const [view, savedView] = await Promise.all([
-    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode, ...(await readPlaceWarehouses()) }),
+    // Yer eksenleri `readPlaceScope` ile TEK parça geçiyor (07.15): iki depo kimliği + ülke +
+    // bölge. Sepet ekranında adres henüz seçilmemiş olabilir, o yüzden kaynak ÇEREZ — ama bölge
+    // kimliği çerezten okunmuyor, çözümden geliyor (kapının künyesi): istemci çerez yazabilir ve
+    // uydurulmuş bir çerez hangi asgari sepetin uygulanacağını belirlememeli.
+    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode, ...(await readPlaceScope()) }),
     // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir
     // hatırlatmadır — orada onay istenecek bir karar yok.
     getCartView(locale, saved),

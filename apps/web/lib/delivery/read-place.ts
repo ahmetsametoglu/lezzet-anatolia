@@ -140,23 +140,43 @@ export const readPlaceAnswer = cache(readPlaceAnswerFromCookie);
  * yazabilir; çözülmüş bölge kimliğini oradan okusaydık uydurulmuş bir çerez hangi asgari sepetin
  * uygulanacağını belirlerdi. Aynı gerekçe `warehouseId` için de yazılı (bu dosyanın künyesi).
  *
- * ── BEKLEYEN(07.15): HENÜZ ÇAĞIRANI YOK — ve YARISI BAĞLANMAYACAK ────────────
- * Ölçüldü (08.08, `knip`): bu kapı yazıldı ama `getCartView`'a `country`/`zoneId` geçiren tek
- * çağıran yok — üç çağıran da yalnız `readPlaceWarehouses()` yayıyor. Yani kapsamlı ayarın ülke ve
- * bölge eksenleri hâlâ boş: DE kargo tarifesi ve bölge asgari sepeti okunmuyor.
+ * ── BAĞLANDI (09.08) — ÜÇ ÇAĞIRANIN ÜÇÜ DE, AYNI TURDA ───────────────────────
+ * 08.08'de "bağlandı" denmişti ve YANLIŞTI: `knip` kapının hiç çağıranı olmadığını gösterdi. Üç
+ * çağıran da yalnız `readPlaceWarehouses()` yayıyordu, yani kapsamlı ayarın ülke ve bölge eksenleri
+ * boştu — DE kargo tarifesi (12,90 €) ve bölge asgari sepeti hiç okunmuyor, FR/global değerler
+ * kesiliyordu.
  *
  * **Tek yüzeyi bağlamak, hiçbirini bağlamamaktan KÖTÜDÜR** (`settings-scope.ts` künyesi): sepet ile
- * checkout aynı anahtarı farklı kapsamla okursa sepette "13 € eşik" yazıp checkout'ta 0 € uygulanır
- * ve müşteri arada ne olduğunu anlamaz. Bu yüzden bağlama üç çağıranın hepsinde AYNI turda yapılır
- * (`lib/cart/actions.ts` · `lib/order/checkout-draft.ts` · `app/(customer)/…/checkout/actions.ts` —
- * sonuncusu müşteri şeridinin dosyası). 07.15'in kalan ayağı; `knip` o güne dek bu satırı gösterir.
+ * checkout aynı anahtarı farklı kapsamla okursa sepette "60 € eşik" yazıp checkout'ta 120 € istenir
+ * ve müşteri arada ne olduğunu anlamaz. Bugün üçü de **tutarlı biçimde** yanlıştı; birini bağlamak
+ * onu **tutarsız biçimde** yanlış yapardı. Bu yüzden üçü aynı turda bağlandı:
+ *   `lib/cart/actions.ts` (çerezten — sepette adres henüz seçilmemiş olabilir)
+ *   `lib/order/checkout-draft.ts` (ADRESTEN; `zoneId` kargo siparişinde null)
+ *   `app/(customer)/…/checkout/actions.ts` (ADRESTEN — müşteri şeridi yazdı)
+ *
+ * **Sepet çerezten, checkout adresten çözüyor ve bu bir kusur DEĞİL, bilginin sırası:** adres
+ * seçilmeden önce en iyi bildiğimiz şey çerezdir. İkisi farklı bölge verirse fark checkout'ta
+ * görünür; müşteri şeridinin kararı (09.08) farkı önden uyarıyla anlatmak değil, GERÇEKLEŞTİĞİ
+ * yerde açıkça söylemek — daha dürüst ve daha az gürültülü.
  */
-export async function readPlaceScope(): Promise<{ country: string | null; zoneId: string | null; warehouseId: string | null }> {
-  const { answer, resolution, warehouseId } = await readPlaceContext();
+export async function readPlaceScope(): Promise<{
+  country: string | null;
+  zoneId: string | null;
+  warehouseId: string | null;
+  shippingWarehouseId: string | null;
+}> {
+  const { answer, resolution, warehouseId, shippingWarehouseId } = await readPlaceContext();
   return {
     country: answer?.country ?? null,
     zoneId: resolution?.kind === 'route' ? resolution.zoneId : null,
+    // ── KARGO DEPOSU DA BURADAN ÇIKAR — ve bu bir DÜZELTME (09.08) ────────────
+    // Kapı yazıldığında (07.15) yalnız üç alan dönüyordu ve o gün doğruydu: rota dışı müşteride
+    // `warehouseId` zaten kargo deposunu taşıyordu. **19.23 o kutuyu daralttı** — artık yalnız
+    // rota deposu. Kapı olduğu gibi bırakılıp sepete bağlansaydı rota dışı müşteri kargo havuzunu
+    // SESSİZCE kaybederdi: `readPlaceWarehouses`ın yerine geçen bir çağrı, onun taşıdığı ikinci
+    // depoyu taşımıyor olurdu. Yani düzeltmenin kendisi bir gerilemeye dönüşürdü.
     warehouseId,
+    shippingWarehouseId,
   };
 }
 
