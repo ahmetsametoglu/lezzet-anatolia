@@ -149,6 +149,15 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
   da yoktur. Çizimin oradaki *"Kalıp mesaj"* düğmesi de yok: onaylı şablon da sürücü de 15.11.
   Gönderim doğduğu gün kutu gerçek bir gönderme kutusuna döner, kayıt burada güncellenir.
 
+- **WHATSAPP KUYRUK SÜTUNU 330 PX — çizim 208 (09.08, kullanıcı kararı, 15.5).**
+  Genişlik TALEPLER ekranından referans alındı, çizimden değil. İki ekran aynı satır iskeletini
+  paylaşıyor (`ui/queue-pane`) ve operatör aralarında gezinirken gözü aynı yerde aynı şeyi arıyor;
+  farklı genişlik, ortaklaştırılmış bir satırı yine iki ayrı ekran gibi gösteriyordu.
+
+  Çizimin 208'i kendi tuvalinin ölçeğinde doğru; bu ölçekte başlık + önizleme + üç rozet o
+  genişlikte satırı ikiye bölüyordu. `loading.tsx` iskeleti de aynı değeri taşır — dar kalırsa
+  yüklenme bitince yerleşim sıçrar, yani o dosyanın var oluş sebebinin tersi olur.
+
 - **WHATSAPP BALONUNDA SAAT VAR, ÇİZİMDE YOK (08.08, 15.5).**
   Çizim balonların üstüne yalnız ad yazıyor ("Siz"), saat yazmıyor. Kodda künye satırında saat de
   var. Sebep: defter ELLE tutuluyor ve 24 saatlik servis penceresinin dayanağı mesajın ANI —

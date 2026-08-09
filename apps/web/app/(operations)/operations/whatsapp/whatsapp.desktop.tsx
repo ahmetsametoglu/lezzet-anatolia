@@ -61,7 +61,12 @@ export function WhatsappDesktop({
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <QueuePane
-          width={268}
+          // 330 px — TALEPLER ekranıyla AYNI (kullanıcı kararı 09.08). İki ekran aynı iskeleti
+          // paylaşıyor ve operatör aralarında gezinirken gözü aynı yerde aynı şeyi arıyor; farklı
+          // genişlik, ortaklaştırılmış bir satırı yine iki ayrı ekran gibi gösteriyordu.
+          // Çizim 208 px veriyor (`.dc.html`) ama o ölçü kendi tuvalinin ölçeğinde: burada başlık
+          // + önizleme + üç rozet o genişlikte satırı ikiye bölüyordu.
+          width={330}
           busy={navPending}
           isEmpty={data.rows.length === 0}
           empty={<InboxEmpty filtered={urlState.f === 'awaiting'} />}

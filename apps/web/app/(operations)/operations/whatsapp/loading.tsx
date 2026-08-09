@@ -14,7 +14,9 @@ export default function Loading() {
       <SkeletonPageHeader actions={['w-[120px]']} />
       <SkeletonFilterBar count={2} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="min-h-0 w-[268px] flex-none overflow-hidden border-r border-ops-line">
+        {/* Genişlik ekranın kendisiyle AYNI olmak zorunda (330 px): iskelet dar kalırsa yüklenme
+            bitince yerleşim sıçrar — bu dosyanın var oluş sebebinin tam tersi. */}
+        <div className="min-h-0 w-[330px] flex-none overflow-hidden border-r border-ops-line">
           <SkeletonRows rows={7} />
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-3 bg-ops-subtle px-5 py-4">
