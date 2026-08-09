@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:health": "node scripts/dev-health.mjs",
     "dev:web": "pnpm --filter @lezzet/web run dev",
     "dev:backend": "pnpm --filter @lezzet/backend run dev",
     "dev:mobile": "pnpm --filter @lezzet/mobile run start",

@@ -93,6 +93,15 @@
 - **Petit referans:** `~/dev/petitcigogne` kanonik; işe başlamadan karşılığına bak, saptığında (ne/neden) bildir.
 - Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
 - **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken `next build` **çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap; gerçek build şartsa dev'i durdurmasını iste. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.
+  - **İSTİSNA — bellek tazeleme YALNIZ DENETİMDE (kullanıcı kararı 09.08):** dev server dokunulan
+    her rotayı derleyip bellekte tutuyor ve uzun oturumlarda birikiyor (ölçüldü: 38 dakikada tepe
+    **3,2 GB**, sonra 740 MB'a inen dalgalı bir seyir; tek e2e dosyası koşarken 600 → 1284 MB).
+    Şikâyet "testler RAM yiyor" diye gelir ama ölçüm başkasını söyler: Chromium en çok tüketen ilk
+    altı sürecin içinde bile değildir — yük derleme birikimidir. **Denetim şeridi** `pnpm dev:health`
+    ile ölçer, eşik aşılmışsa `--apply` ile yeniden başlatır (`nohup`lu, oturumdan bağımsız; çıktı
+    `.test-results/dev-server.log`). **Öteki şeritler dev server'a DOKUNMAZ** — iki ajan aynı anda
+    yeniden başlatırsa kimsenin beklemediği bir kesinti doğar. Eşik parametrik (`DEV_RSS_LIMIT_MB`,
+    varsayılan 2048).
 
 ## 4b. Test disiplini (paylaşılan veritabanı — her ajan için bağlayıcı)
 > Üç ajan **tek çalışma ağacını ve tek yerel Supabase'i** paylaşıyor. Kural bundan doğdu: eşzamanlı iki
