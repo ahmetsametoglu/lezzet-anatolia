@@ -72,12 +72,9 @@ export function MobileMenu({ locale }: MobileMenuProps) {
             <Link href="/recipes" onClick={close} className={ITEM}>
               {t.nav.recipes}
             </Link>
-            {/* Fırsatlar ve Professionnels MASAÜSTÜNDE bağlanmıştı, burada ölü kalmıştı — aynı
-                menünün iki biçimi aynı yere gitmeli. Fırsatlar ayrı bir rota değil, katalogun
-                teklif süzgeçli hâli (`?offers=1`); üstteki menüyle birebir aynı hedef. */}
-            <Link href={{ pathname: '/catalog', query: { offers: '1' } }} onClick={close} className={`${ITEM} text-terracotta`}>
-              {t.nav.deals}
-            </Link>
+            {/* "Fırsatlar" burada da YOK (kullanıcı kararı 09.08, masaüstü menüsüyle birlikte):
+                katalogun teklif süzgeçli hâliydi, yani menüde kataloğun kopyası duruyordu. Aynı
+                menünün iki biçimi ayrışmamalı — masaüstünden düşen öğe mobilde de düşer. */}
             <Link href="/discover" onClick={close} className={ITEM}>
               {t.nav.discover}
             </Link>

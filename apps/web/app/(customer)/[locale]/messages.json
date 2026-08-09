@@ -26,6 +26,7 @@
     "offers": {
       "title": "Bu haftanın fırsatları",
       "note": "Stokla sınırlı",
+      "all": "Tüm fırsatlar →",
       "limit": "En fazla {n} adet"
     },
     "featured": {
@@ -42,6 +43,15 @@
       "items": "{n} ürün",
       "cta": "Paketi incele",
       "ctaShort": "İncele"
+    },
+    "recipes": {
+      "eyebrow": "Sofradan Fikirler",
+      "title": "Bu sofra nasıl kurulur?",
+      "all": "Tüm tarifler →",
+      "items": "{n} malzeme",
+      "pantry": "evinizden {n}",
+      "soldOutShort": "Malzemeleri şu an alınamıyor",
+      "cta": "Malzemeleri sepete ekle →"
     },
     "discover": {
       "title": "Yeni lezzetleri ilk siz deneyin",
@@ -81,6 +91,7 @@
     "offers": {
       "title": "Les offres de la semaine",
       "note": "Dans la limite des stocks",
+      "all": "Toutes les offres →",
       "limit": "{n} maximum"
     },
     "featured": {
@@ -97,6 +108,15 @@
       "items": "{n} produits",
       "cta": "Voir le coffret",
       "ctaShort": "Voir"
+    },
+    "recipes": {
+      "eyebrow": "Idées de table",
+      "title": "Comment dresser cette table ?",
+      "all": "Toutes les recettes →",
+      "items": "{n} produits",
+      "pantry": "{n} de chez vous",
+      "soldOutShort": "Ingrédients indisponibles",
+      "cta": "Ajouter les ingrédients →"
     },
     "discover": {
       "title": "Découvrez les nouveautés en avant-première",
@@ -136,6 +156,7 @@
     "offers": {
       "title": "Angebote der Woche",
       "note": "Solange der Vorrat reicht",
+      "all": "Alle Angebote →",
       "limit": "max. {n} Stück"
     },
     "featured": {
@@ -152,6 +173,15 @@
       "items": "{n} Produkte",
       "cta": "Paket ansehen",
       "ctaShort": "Ansehen"
+    },
+    "recipes": {
+      "eyebrow": "Ideen vom Tisch",
+      "title": "Wie deckt man diesen Tisch?",
+      "all": "Alle Rezepte →",
+      "items": "{n} Produkte",
+      "pantry": "{n} von zu Hause",
+      "soldOutShort": "Zutaten derzeit nicht verfügbar",
+      "cta": "Zutaten in den Warenkorb →"
     },
     "discover": {
       "title": "Neue Sorten als Erste probieren",

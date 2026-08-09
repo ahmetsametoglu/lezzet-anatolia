@@ -133,11 +133,28 @@ export interface StorefrontHome {
   categories: StorefrontCategory[];
   /** Vitrin seçkisi. */
   featured: StorefrontProduct[];
-  /** Boşsa fırsat bölümü HİÇ render edilmez (envanter: "teklif yoksa bu bölüm var olmamalı"). */
+  /**
+   * Bantta GÖSTERİLEN fırsatlar — tasarımın üçlü ızgarası, her istekte havuzdan rastgele seçilir
+   * (kullanıcı kararı 09.08). Boşsa bölüm HİÇ render edilmez (envanter: "teklif yoksa bu bölüm
+   * var olmamalı").
+   */
   offers: StorefrontOffer[];
+  /**
+   * ELDEKİ toplam fırsat sayısı — gösterilen değil. "Daha fazla gör" bağı yalnız
+   * `offersTotal > offers.length` iken çizilir; aksi hâlde tıklayan müşteri aynı üç ürünü bulurdu.
+   */
+  offersTotal: number;
   packages: StorefrontPackage[];
   /** Boşsa koleksiyon bölümü HİÇ çizilmez (tasarımın `hasCollections` koşulu) — boş hâl gösterilmez. */
   collections: StorefrontCollection[];
+  /**
+   * "Sofradan Fikirler" şeridi — ana sayfanın tarif daveti (tasarım 09.08).
+   *
+   * Boşsa bölüm HİÇ çizilmez, koleksiyonun kuralıyla aynı: yayında tarif yokken "yakında" demek,
+   * tutulacağı belli olmayan bir söz vermek olurdu. Tarifin yayın eşiği zaten yüksek (üç dil dolu
+   * olmadan `is_active` geçmiyor — 05.16), yani boş hâl gerçekten yaşanır.
+   */
+  recipes: StorefrontRecipe[];
 }
 
 /**

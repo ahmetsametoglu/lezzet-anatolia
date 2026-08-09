@@ -18,7 +18,8 @@ import {
 } from '@lezzet/application';
 import type { PricingViewer } from './read-viewer';
 import { HOME_PACKAGE_LIMIT, listStorefrontPackages } from './packages';
-import { pickFeatured, rotateDaily } from './featured';
+import { HOME_RECIPE_LIMIT, listStorefrontRecipes } from './recipe';
+import { pickFeatured, pickRandom, rotateDaily } from './featured';
 import type { StorefrontProduct } from '@lezzet/application';
 import type { StorefrontCollection, StorefrontHome, StorefrontOffer } from './storefront-types';
 
@@ -36,8 +37,24 @@ import type { StorefrontCollection, StorefrontHome, StorefrontOffer } from './st
  * görünür kalması için. Gerçek katalog dolunca bu yedek kendiliğinden devre dışı kalır.
  */
 
-/** Fırsat bandında en çok kaç kart — tasarımda üçlü ızgara (K8), fazlası bandı taşırır. */
-const OFFER_LIMIT = 6;
+/**
+ * Fırsat bandında kaç kart — tasarımda üçlü ızgara (`repeat(3,1fr)`), fazlası bandı taşırır.
+ *
+ * **6'ydı ve künyesi zaten "üçlü ızgara" diyordu** (kullanıcı bulgusu 09.08): sayı ile cümle
+ * çelişiyordu ve dördüncü fırsat sessizce ikinci satıra kayıyordu. Bant bir liste değil, tıklatma
+ * davetidir (`CLAUDE §1`) — fazlası "Daha fazla gör" bağının arkasında.
+ */
+const OFFER_LIMIT = 3;
+
+/**
+ * Rastgele seçimin çekildiği HAVUZ — emniyet sınırı, sunum kararı değil.
+ *
+ * Üçü rastgele seçebilmek için önce adayları görmek gerekiyor; havuzsuz "ilk üç" hep aynı üç
+ * olurdu. Teklif kümesi yakın-SKT partileriyle sınırlı olduğu için küçük kalır (`home.ts` künyesi:
+ * *"teklif sayısı küçük olduğu için zincir sabit maliyetlidir"*), ama sınırsız bırakmak bir gün
+ * yüz satır çeken bir ana sayfa demekti.
+ */
+const OFFER_POOL_LIMIT = 24;
 
 /** Kategori ızgarası — tasarım altılı tek sıra (`repeat(6,1fr)`). Seçim `is_featured`, sıra `sort_order`. */
 const HOME_CATEGORY_LIMIT = 6;
@@ -184,14 +201,27 @@ function isOffer(p: StorefrontProduct): p is StorefrontOffer {
  * İndirimin gerçekten uygulanıp uygulanmadığına burada karar VERİLMEZ: `toProduct` fiyatı motora
  * çözdürür, teklif normal fiyatı yenemezse ürün fırsat sayılmaz ve banda girmez. Bant boş kalırsa
  * sayfa bölümü tamamen kaldırır — boş hâl gösterilmez (komponent envanteri K8).
+ *
+ * **`total` GÖSTERİLENİ DEĞİL, ELDEKİNİ sayar** (09.08): "Daha fazla gör" bağı ancak banda
+ * sığmayan fırsat varken çizilir. Gösterilen sayıyı saymak bağı HER ZAMAN çizerdi ve tıklayan
+ * müşteri aynı üç ürünü bulurdu — kapı olmayan bir kapı.
  */
-async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWarehouses, viewer: PricingViewer): Promise<StorefrontOffer[]> {
+async function readOffers(
+  db: SupabaseClient,
+  locale: Locale,
+  place: PlaceWarehouses,
+  viewer: PricingViewer,
+): Promise<{ shown: StorefrontOffer[]; total: number }> {
   const productIds = await listOfferProductIds(db, place.warehouseId);
-  if (!productIds.length) return [];
+  if (!productIds.length) return { shown: [], total: 0 };
 
-  const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_LIMIT });
+  const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_POOL_LIMIT });
   const context = await loadProductContext(db, page.rows, place, viewer);
-  return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
+  // Havuz ÖNCE süzülür, sonra seçilir: `isOffer` motorun kararıdır (teklif normal fiyatı yenmezse
+  // ürün fırsat değildir) ve elenen bir ürünü seçime sokmak, bandın bazı yenilemelerde iki kartla
+  // çizilmesi demekti — "üçü rastgele" sözü ancak üçü de gerçek fırsatken tutulur.
+  const pool = page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
+  return { shown: pickRandom(pool, OFFER_LIMIT), total: pool.length };
 }
 
 /**
@@ -247,7 +277,7 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
  */
 export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer: PricingViewer): Promise<StorefrontHome> {
   const db = serviceDb();
-  const [categoryRows, featured, offers, packages, collections] = await Promise.all([
+  const [categoryRows, featured, offers, packages, collections, recipes] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
     readShowcase(db, locale, place, viewer),
@@ -255,6 +285,11 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
     // Yer paket bandına da geçer (19.22): kart yol işaretini ancak yeri bilirse basabilir.
     listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),
     readCollections(db, locale),
+    // Tarif şeridi LİSTE SAYFASININ kapısından okunur, ikinci bir okuma yazılmadı: aynı kart aynı
+    // kuralları taşıyor (tükenen kalem toplamdan düşer, fiyat personaya ve DEPOYA bağlı — 05.16).
+    // `place`/`viewer` geçmeseydi ana sayfa yer bilmeden fiyat basardı; kart "6,40 €" derken tarif
+    // sayfası başka bir sayı gösterirdi.
+    listStorefrontRecipes(locale, place, viewer, HOME_RECIPE_LIMIT),
   ]);
 
   // **Üç bölümün üçü de VİTRİNE İŞARETLİ olanı gösterir** (08.26). Sınır tasarımın ızgarası:
@@ -264,5 +299,5 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
     toCategory(c, locale),
   );
 
-  return { categories, featured, offers, packages, collections };
+  return { categories, featured, offers: offers.shown, offersTotal: offers.total, packages, collections, recipes };
 }

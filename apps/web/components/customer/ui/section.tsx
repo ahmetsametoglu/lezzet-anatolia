@@ -20,6 +20,12 @@ interface SectionAction {
 
 interface SectionHeadingProps {
   title: string;
+  /**
+   * Başlığın ÜSTÜNDEKİ küçük etiket ("SOFRADAN FİKİRLER") — bölümün adı, başlık ise onun sorusu
+   * (tasarım 09.08, tarif şeridi). Verilince başlık bloğu dikey akar; verilmeyince bugünkü tek
+   * satırlık hâl aynen korunur, yani mevcut bölümlerin hiçbiri değişmez.
+   */
+  eyebrow?: string;
   /** Başlığın yanındaki kısa not ("Stokla sınırlı") — vurgu rengiyle, ikincil ağırlıkta. */
   note?: string;
   /** Sağa yaslı bağlantı ("Tüm katalog →"). */
@@ -27,12 +33,34 @@ interface SectionHeadingProps {
   compact?: boolean;
 }
 
-/** K13 · Bölüm Başlığı — başlık + (yan not | sağ aksiyon). İkisi aynı anda verilmez. */
-export function SectionHeading({ title, note, action, compact = false }: SectionHeadingProps) {
+/**
+ * K13 · Bölüm Başlığı — (etiket +) başlık + yan not, sağda aksiyon.
+ *
+ * **Not ile aksiyon ARTIK BİRLİKTE verilebilir (09.08).** Önce "ikisi aynı anda verilmez" diyordu
+ * ve bu, fırsat bandının "Tüm fırsatlar →" bağını başlıktan dışarı itmişti — bant "Stokla sınırlı"
+ * notunu taşıdığı için bağ ızgaranın altında kalmış, öteki iki bölümün ("Tüm katalog →" · "Tüm
+ * tarifler →") deseninden ayrışmıştı (kullanıcı gördü). Ayrışmanın sebebi bir tasarım kararı değil,
+ * bu bileşenin kendi kısıtıydı.
+ *
+ * Yerleşim: **başlık ve not tek grup halinde solda**, aksiyon sağda. Üçünü tek `justify-between`
+ * satırına dizmek notu ortaya sürüklerdi — not başlığın niteleyicisidir, bağımsız bir sütun değil.
+ */
+export function SectionHeading({ title, eyebrow, note, action, compact = false }: SectionHeadingProps) {
+  const heading = <h2 className={['font-serif text-ink', compact ? 'text-h2-sm' : 'text-h2'].join(' ')}>{title}</h2>;
+
   return (
-    <div className={['flex items-baseline', action ? 'justify-between' : 'gap-3.5'].join(' ')}>
-      <h2 className={['font-serif text-ink', compact ? 'text-h2-sm' : 'text-h2'].join(' ')}>{title}</h2>
-      {note && <span className={['font-sans font-semibold text-terracotta', compact ? 'text-micro' : 'text-note'].join(' ')}>{note}</span>}
+    <div className="flex items-baseline justify-between gap-3.5">
+      <div className="flex items-baseline gap-3.5">
+        {eyebrow ? (
+          <div className="flex flex-col gap-1">
+            <span className="font-sans text-micro font-semibold tracking-wider text-olive uppercase">{eyebrow}</span>
+            {heading}
+          </div>
+        ) : (
+          heading
+        )}
+        {note && <span className={['font-sans font-semibold text-terracotta', compact ? 'text-micro' : 'text-note'].join(' ')}>{note}</span>}
+      </div>
       {action && (
         <Link href={action.href} className={buttonClass({ variant: 'ghost', size: compact ? 'sm' : 'md', className: '!font-bold' })}>
           {action.label}

@@ -10,7 +10,6 @@
       "catalog": "Katalog",
       "packages": "Paketler",
       "recipes": "Tarifler",
-      "deals": "Fırsatlar",
       "discover": "Keşif",
       "pro": "Professionnels"
     },
@@ -52,7 +51,6 @@
       "catalog": "Catalogue",
       "packages": "Coffrets",
       "recipes": "Recettes",
-      "deals": "Offres",
       "discover": "Découverte",
       "pro": "Professionnels"
     },
@@ -94,7 +92,6 @@
       "catalog": "Katalog",
       "packages": "Pakete",
       "recipes": "Rezepte",
-      "deals": "Angebote",
       "discover": "Entdecken",
       "pro": "Professionnels"
     },

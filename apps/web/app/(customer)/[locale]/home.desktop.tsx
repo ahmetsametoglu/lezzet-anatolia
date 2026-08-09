@@ -4,6 +4,7 @@ import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
+import { RecipeTeaserCard } from '@/components/customer/ui/recipe-card';
 import { Link } from '@/i18n/navigation';
 import { limitText, type HomeViewProps } from './home-types';
 
@@ -36,7 +37,11 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
             <Link href="/catalog" className={buttonClass({ className: '!px-[30px]' })}>
               {t.hero.ctaCatalog}
             </Link>
-            <Link href="/" className={buttonClass({ variant: 'secondary' })}>
+            {/* Bu düğme `/`'a gidiyordu, yani KENDİNE (ölçüldü 09.08). Metni "Bu haftanın
+                fırsatları" diyor; götürdüğü yer ana sayfaydı — 404'ün "Kataloğa dön" düğmesiyle
+                aynı sınıf kusur, yazan ile götüren ayrışmış. Fırsatların adresi katalogun teklif
+                süzgeçli hâli (`?offers=1`); ayrı bir rota yok (`site-frame` künyesi). */}
+            <Link href={{ pathname: '/catalog', query: { offers: '1' } }} className={buttonClass({ variant: 'secondary' })}>
               {t.hero.ctaDeals}
             </Link>
           </div>
@@ -78,10 +83,22 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
         </section>
       )}
 
-      {/* Fırsatlar — koşullu bölüm */}
+      {/* Fırsatlar — koşullu bölüm. Üç kart, tasarımın `repeat(3,1fr)` ızgarası (09.08). */}
       {data.offers.length > 0 && (
         <section className="flex flex-col gap-4 bg-cream-deep px-12 py-10">
-          <SectionHeading title={t.offers.title} note={t.offers.note} />
+          {/* Bağ başlığın SAĞINDA — "Tüm katalog →" ve "Tüm tarifler →" ile aynı yerde (kullanıcı
+              bulgusu 09.08: bir süre ızgaranın altındaydı ve desenden ayrışıyordu).
+              YALNIZ banda sığmayan fırsat varken çizilir: aksi hâlde tıklayan müşteri aynı üç ürünü
+              bulurdu — kapı olmayan bir kapı. */}
+          <SectionHeading
+            title={t.offers.title}
+            note={t.offers.note}
+            action={
+              data.offersTotal > data.offers.length
+                ? { label: t.offers.all, href: { pathname: '/catalog', query: { offers: '1' } } }
+                : undefined
+            }
+          />
           <div className="grid grid-cols-3 gap-[18px]">
             {data.offers.map((o) => (
               <OfferCard key={o.id} offer={o} locale={locale} limitLabel={limitText(t.offers.limit, o.limitLabel)} />
@@ -113,6 +130,30 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
           />
         ))}
       </section>
+
+      {/* Sofradan Fikirler — koşullu şerit (tasarım 09.08).
+          Yeri tasarımın kendi sırası: paketlerden SONRA, keşif çağrısından ÖNCE. Sıra bir iddia
+          taşıyor — tarif, ürünü gördükten sonra "peki bununla ne yapılır" sorusunun cevabı; keşif
+          daveti ise sayfayı kapatan çağrı.
+          Tarif yoksa bölüm HİÇ çizilmez (koleksiyon ve fırsat bölümlerinin kuralı): yayın eşiği
+          yüksek olduğu için (üç dil dolmadan `is_active` geçmiyor — 05.16) boş hâl gerçekten yaşanır.
+          **YALNIZ masaüstünde:** tasarımın mobil ekranında şerit çizilmemiş (ölçüldü — mobil blokta
+          paketlerden sonra doğrudan keşif bandı geliyor). Koleksiyon bandıyla aynı içerik kararı;
+          improvise edilmedi (CLAUDE §3), fark `design/BACKLOG §4`'te. */}
+      {data.recipes.length > 0 && (
+        <section className="flex flex-col gap-[18px] px-12 pb-11">
+          <SectionHeading
+            eyebrow={t.recipes.eyebrow}
+            title={t.recipes.title}
+            action={{ label: t.recipes.all, href: '/recipes' }}
+          />
+          <div className="grid grid-cols-3 gap-[18px]">
+            {data.recipes.map((r) => (
+              <RecipeTeaserCard key={r.id} recipe={r} labels={t.recipes} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mx-12 mb-11">
         <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/discover' }} />

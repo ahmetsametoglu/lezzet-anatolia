@@ -29,7 +29,10 @@ import messages from './site-frame-messages.json';
  * sayfada durması hem satırı boşaltıyor hem de "ne aradığım" bilgisini sonucun yanında tutuyor.
  * Diğer sayfalardan aramaya giden yol menüdeki "Katalog".
  */
-type NavKey = 'catalog' | 'packages' | 'recipes' | 'deals' | 'discover' | 'pro';
+// `deals` 09.08'de düştü: menüden kaldırıldı (kullanıcı kararı) ve aktif işareti verilecek bir
+// menü öğesi kalmadı. Katalog `?offers=1` ile açıldığında aktif olan öğe `catalog` — doğrusu da bu,
+// çünkü gidilen yer katalogun kendisi.
+type NavKey = 'catalog' | 'packages' | 'recipes' | 'discover' | 'pro';
 /** Hesap alanının üç sekmesi (tasarım: `Hesabım · Siparişlerim · Taleplerim`). */
 type AccountTab = 'account' | 'orders' | 'support';
 
@@ -256,20 +259,12 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             <Link href="/recipes" className={navClass('recipes', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
               {t.nav.recipes}
             </Link>
-            {/* Fırsatlar her sayfada terracotta — kampanya vurgusu sabittir, aktiflikten bağımsız.
-                AYRI BİR ROTA DEĞİL: katalogun teklif süzgeçli hâli (`?offers=1`), o süzgeç zaten
-                çalışıyordu ama menüden ulaşılamıyordu — çipe basmadan fırsatları görmenin yolu
-                yoktu. Ayrı bir `/deals` rotası açmak, aynı listenin ikinci bir adresi olurdu. */}
-            <Link
-              href={{ pathname: '/catalog', query: { offers: '1' } }}
-              // Hover RENK DEĞİŞTİRMİYOR, saydamlaşıyor: öbür menü öğeleri `hover:text-olive`
-              // kullanıyor ama terracotta'nın koyu varyantı envanterde yok ve zeytine dönmek
-              // kampanya vurgusunu kaybettirirdi ("vurgu sabittir"). Ham renk yazmak yerine
-              // token'sız bir geri bildirim (CLAUDE.md §3: token yoksa kodlanmaz).
-              className={navClass('deals', activeNav, 'cursor-pointer text-terracotta transition-opacity hover:opacity-75')}
-            >
-              {t.nav.deals}
-            </Link>
+            {/* **"Fırsatlar" menüden KALDIRILDI (kullanıcı kararı 09.08)** — ve gerekçesi bu satırın
+                kendi künyesinde zaten yazılıydı: *"AYRI BİR ROTA DEĞİL: katalogun teklif süzgeçli
+                hâli."* Menüde katalogun kopyası duruyordu. Fırsata iki ANLAMLI yol kaldı: ana
+                sayfanın kahraman düğmesi ("Bu haftanın fırsatları") ve fırsat bandının "Tüm
+                fırsatlar →" bağı; ikisi de aynı adrese (`/catalog?offers=1`) gidiyor, yani süzgeç
+                erişilebilir kalıyor. Tasarımda menüde HÂLÂ duruyor — sapma `design/BACKLOG`'da. */}
             <Link href="/discover" className={navClass('discover', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
               {t.nav.discover}
             </Link>
@@ -326,16 +321,16 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           </div>
 
           <div className={['flex font-sans text-body-sm', isMobile ? 'gap-8' : 'gap-12'].join(' ')}>
-            {/* Sütun satırları ölü `<span>`dı; sayfası OLANLAR bağlandı (03.08). "Fırsatlar" ayrı
-                bir rota değil, katalogun süzgeçli hâli (`?offers=1`) — üst menüdeki öğeyle aynı
-                hedef, iki yerde farklı davranmamalı. */}
+            {/* Sütun satırları ölü `<span>`dı; sayfası OLANLAR bağlandı (03.08).
+                "Fırsatlar" burada da YOK (kullanıcı kararı 09.08): üst menüden kaldırılırken
+                footer'da bırakmak, aynı kopyayı sayfanın dibinde saklamak olurdu — künyenin kendi
+                kuralı zaten "iki yerde farklı davranmamalı" diyordu. */}
             <FooterColumn
               title={t.footer.shopping}
               items={[
                 { label: t.nav.catalog, href: '/catalog' },
                 { label: t.nav.packages, href: '/packages' },
                 { label: t.nav.recipes, href: '/recipes' },
-                { label: t.nav.deals, href: { pathname: '/catalog', query: { offers: '1' } } },
               ]}
             />
             <FooterColumn

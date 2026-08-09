@@ -134,6 +134,38 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 2. Bilinçli sapmalar (eski BACKLOG §3)
 
+- **"FIRSATLAR" ÜST MENÜDEN VE FOOTER'DAN KALDIRILDI (kullanıcı kararı 09.08, 08.29).**
+  Tasarım (`Musteri - Anasayfa.dc.html` ve öteki müşteri çizimleri) menüde "Fırsatlar"ı terracotta
+  vurguyla gösteriyor. Kodda artık yok — üst menüde, mobil menüde ve footer'da.
+
+  Gerekçe kullanıcının kendi tespitiydi ve kodun künyesi zaten aynı şeyi söylüyordu: *"AYRI BİR
+  ROTA DEĞİL: katalogun teklif süzgeçli hâli (`?offers=1`)."* Yani menüde katalogun bir kopyası
+  duruyordu; `PATHNAMES`'te `offers` diye bir rota hiç olmadı. Beş öğeli menüde altıncı sırayı
+  kataloğun ikinci adına vermek, gerçek bir yüzey gibi görünen bir süzgeç yaratıyordu.
+
+  **Süzgeç erişilebilir kaldı, iki ANLAMLI yoldan:** ana sayfanın kahraman düğmesi ("Bu haftanın
+  fırsatları") ve fırsat bandının "Tüm fırsatlar →" bağı. İkisi de `/catalog?offers=1`'e gidiyor.
+  Kahraman düğmesi bu turdan önce `/`'a, yani kendine gidiyordu (ölçüldü) — o da düzeltildi.
+
+  Yan temizlik: `NavKey`'den `deals` ve üç dilden `nav.deals` metni düştü. Katalog `?offers=1` ile
+  açıldığında aktif menü öğesi `catalog` — doğrusu da bu, gidilen yer katalogun kendisi.
+
+- **FIRSAT BANDI ÜÇ KART VE HER İSTEKTE RASTGELE (kullanıcı kararı 09.08, 08.29).**
+  Tasarımın ızgarası `repeat(3,1fr)` ama koddaki sınır **6**'ydı ve künyesi *"tasarımda üçlü ızgara,
+  fazlası bandı taşırır"* diyordu — sayı ile cümle çelişiyordu, dördüncü fırsat sessizce ikinci
+  satıra kayıyordu. Sınır 3'e indi.
+
+  **Seçim `Math.random()` ile ve bu, koleksiyon rotasyonunda REDDEDİLEN yaklaşımın tersi.**
+  `rotateDaily` künyesi random'ı üç sebeple reddediyor (önbellek kırılır · her yenilemede başka
+  vitrin · "dün gördüğüm neydi" cevapsız kalır) ve o gerekçeler koleksiyon için hâlâ geçerli.
+  Fırsat bandında üçü de düşüyor: bant zaten önbelleklenemez (teklif partiye bağlı, parti erir),
+  "her yenilemede başka" burada İSTENEN davranıştır (bant seçki iddiası taşımaz, "elimizde şu an ne
+  var" der), ve fırsat yarın zaten olmayabilir — kalıcılık sözü verilmiyor.
+
+  Alternatif "ilk üç" olurdu ve öteki fırsatları hiç göstermezdi. Tamamı "Tüm fırsatlar →" bağının
+  arkasında; bağ **yalnız banda sığmayandan fazlası varken** çizilir (`offersTotal > offers.length`),
+  aksi hâlde tıklayan müşteri aynı üç ürünü bulurdu — kapı olmayan bir kapı.
+
 - **WHATSAPP ALTLIĞI GÖNDERME KUTUSU DEĞİL, DEFTER KUTUSU (08.08, 15.5).**
   Çizim (`Operasyon - WhatsApp.dc.html`) pencere açıkken *"Mesaj yaz…"* + uçak düğmesi koyuyor.
   Kodda kutu var ama düğmesi **"Deftere işle"** diyor ve altında tek satır duruyor: *"buradan mesaj
@@ -148,6 +180,21 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
   admin kendi telefonundan da serbest metin gönderemez (Meta engeller), yani kaydedilecek bir cevap
   da yoktur. Çizimin oradaki *"Kalıp mesaj"* düğmesi de yok: onaylı şablon da sürücü de 15.11.
   Gönderim doğduğu gün kutu gerçek bir gönderme kutusuna döner, kayıt burada güncellenir.
+
+- **STOKTAN DÜŞ FORMU ÇOK SATIRLI — çizim tek satır (09.08, 10.5).**
+  `Operasyon - Depo Imha Sayim.dc.html` tek parti + tek adet + tek sebep çiziyor. Kod satır
+  biriktiriyor ve hepsini TEK belge numarasıyla yazıyor.
+
+  Sapmanın dayanağı çizimi ısmarlayan isteğin kendi maddesi (`depo-masaustu-tasarim-istegi.md §C`):
+  *"bir imhada birden çok parti çöpe gidebilir ve üçü **tek tutanak numarasıyla** yazılır
+  (`IMH-26-0012`). Kare bu 'olay = bir kâğıt' ilişkisini göstermeli; satır başına ayrı numara
+  yanlış olur."* Çizim bu maddeyi karşılamadı; veri modeli ve arka uç ise ilk günden karşılıyordu
+  (`stockAdjustment.referenceNo`, `adjust_stock_batch`). Yani kod isteğe uydu, çizime değil.
+
+  **Form diyaloga TAŞINMADI** ve bu ayrı bir karar: operasyonda diyalog deseni ARA SIRA yapılan
+  işler içindir (elle talep açma, fark onayı, kabul formu). Stoktan düşme bu ekranın ASIL işidir —
+  her kayıtta pencere açtırmak, ekranı bir düğmeye indirgerdi. Aynı sayfadaki Hazırlık ve Mal kabul
+  kareleri de bu ayrımı doğru kuruyor: akan iş masada, tek seferlik karar diyalogda.
 
 - **WHATSAPP KUYRUK SÜTUNU 330 PX — çizim 208 (09.08, kullanıcı kararı, 15.5).**
   Genişlik TALEPLER ekranından referans alındı, çizimden değil. İki ekran aynı satır iskeletini

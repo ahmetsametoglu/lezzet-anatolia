@@ -51,3 +51,29 @@ export function rotateDaily<T>(pool: readonly T[], count: number, now: Date = ne
   const dayIndex = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 86_400_000);
   return Array.from({ length: take }, (_, i) => pool[(dayIndex + i) % pool.length]!);
 }
+
+/**
+ * **HER İSTEKTE rastgele seçim** — fırsat bandı (kullanıcı kararı 09.08).
+ *
+ * ── NEDEN BURADA `Math.random()` DOĞRU, KOLEKSİYONDA DEĞİLDİ ─────────────────
+ * Hemen yukarıdaki `rotateDaily` künyesi random'ı üç sebeple reddediyor ve o gerekçeler orada hâlâ
+ * geçerli. Fırsat bandında üçü de düşüyor:
+ *   *(1) önbellek* — fırsat bandı zaten önbelleklenemez: teklif partiye bağlıdır, parti eriyip
+ *        biter (`physical_qty`), yani içerik dakika dakika değişir.
+ *   *(2) "her yenilemede başka vitrin"* — koleksiyonda kusurdu (seçki iddiası taşır), burada
+ *        İSTENEN davranış: bant "elimizde şu an ne var" diyor, bir seçki iddiası taşımıyor.
+ *   *(3) "dün gördüğüm neydi"* — fırsat zaten yarın olmayabilir; kalıcılık sözü verilmiyor.
+ *
+ * Kullanıcı bunu açıkça istedi ve gerekçesi ekranda: bant üç kart genişliğinde, dördüncü fırsat
+ * alt satıra kayıyordu. Sabit "ilk üç" seçilseydi öteki fırsatlar hiç görünmezdi; rastgele seçim
+ * hepsine sıra veriyor, tamamı ise "Daha fazla gör" bağının arkasında duruyor.
+ *
+ * Havuzdan ÖRNEKLEME yapılır, karıştırma değil: kopya çıkmaz ve havuz sınırdan küçükse olduğu
+ * kadarı döner. `pick` parametre — test rastgeleliği sabitleyebilsin (`Math.random` çağıranın
+ * varsayılanı, testin işi değil).
+ */
+export function pickRandom<T>(pool: readonly T[], count: number, pick: () => number = Math.random): T[] {
+  const rest = [...pool];
+  const take = Math.min(count, rest.length);
+  return Array.from({ length: take }, () => rest.splice(Math.floor(pick() * rest.length), 1)[0]!);
+}

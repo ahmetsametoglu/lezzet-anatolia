@@ -473,6 +473,24 @@ olmalı (bugün ikincisi seçildi — kahraman zaten iki satır ve takip düğme
 *(b)* `other` taşıyıcıda **düğme yok, numara var** ve bu bilinçli — takip adresini bilmediğimiz bir
 taşıyıcıya düğme koymak, tıklanınca hiçbir yere götürmeyen bir söz olurdu.
 
+**Tarif şeridi MOBİL web ana sayfasında çizilmedi — tasarımın kararı (09.08, 08.28).**
+`Musteri - Anasayfa.dc.html` "Sofradan Fikirler" şeridini **yalnız "Anasayfa Web" ekranında**
+taşıyor; "Anasayfa Mobil" bloğunda paketlerden sonra doğrudan keşif bandı geliyor (ölçüldü). Şerit
+mobil webde YAZILMADI — koleksiyon bandının aynı kararı: cihaz forku burada bir yerleşim farkı
+değil, bir **içerik** kararı ve improvise edilmiyor (`CLAUDE §3`).
+
+Karar bir gün gözden geçirilecekse gerekçesi burada dursun: mobil trafiğin payı yüksek ve tarif
+şeridi tam olarak "telefonda göz gezdirilen" içerik. Native uygulamanın ana ekranında şerit ZATEN
+var (`Mobil - Musteri v3.dc.html`), yani asimetri web'in kendi içinde: masaüstü web var, mobil web
+yok. Bugünkü hâl birebir uygulandı; ekleme kararı tasarım tarafının.
+
+**Tarif detayında breadcrumb ayırıcısı `›`, ürün/paket detayında `·` (09.08, 08.28).**
+`Musteri - Tarifler.dc.html` detay ekranında "Tarifler › Mıhlama (Kuymak)" yazıyor; ürün ve paket
+detay çizimlerinde `›` hiç geçmiyor (ölçüldü: sırasıyla 0 · 0 · 1) ve kod ikisinde de `·`
+kullanıyor. Tarif sayfası tasarıma birebir uygulandı, yani müşteri yüzeyinde şu an **iki ayrı
+ayırıcı** var. Küçük ama gerçek bir tutarsızlık; birleştirme kararı tasarım tarafının — hangi
+yönde olursa olsun üç sayfa aynı anda değişmeli.
+
 **Checkout mobilde YAPIŞKAN OLAN ŞERİT, onay düğmesi değil — bilinçli sapma, kayda geçiyor (03.08).**
 Tasarım not düşüyor: *"onay butonu alta sabitlenir"* (`Musteri - Checkout.dc.html:339`). Kod bunun
 yerine üstteki ilerleme şeridini yapışkan yapıyor (`checkout-progress.tsx:37` — `sticky top-0`) ve

@@ -1,7 +1,7 @@
 {
   "tr": {
     "back": "Tarifler",
-    "eyebrow": "Tarif detayı",
+    "eyebrow": "Sofradan Fikirler",
     "steps": "Hazırlanışı",
     "ingredients": "Malzemeler — bizden",
     "pantry": "Evinizden",
@@ -17,7 +17,7 @@
   },
   "fr": {
     "back": "Recettes",
-    "eyebrow": "Détail de la recette",
+    "eyebrow": "Idées de table",
     "steps": "Préparation",
     "ingredients": "Ingrédients — chez nous",
     "pantry": "De votre cuisine",
@@ -33,7 +33,7 @@
   },
   "de": {
     "back": "Rezepte",
-    "eyebrow": "Rezeptdetails",
+    "eyebrow": "Ideen vom Tisch",
     "steps": "Zubereitung",
     "ingredients": "Zutaten — von uns",
     "pantry": "Aus Ihrer Küche",

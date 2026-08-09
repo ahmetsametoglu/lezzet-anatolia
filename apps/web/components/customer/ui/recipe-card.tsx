@@ -29,6 +29,73 @@ interface RecipeCardLabels {
   cta: string;
 }
 
+interface RecipeTeaserLabels {
+  /** "{n} malzeme" — ana sayfa tasarımının kendi sözcüğü; liste kartı "ürün" diyor. */
+  items: string;
+  /** "evinizden {n}" — listedeki "+ {n} ev malzemesi"nin kısa hâli. */
+  pantry: string;
+  soldOutShort: string;
+  cta: string;
+}
+
+interface RecipeTeaserCardProps {
+  recipe: StorefrontRecipe;
+  labels: RecipeTeaserLabels;
+}
+
+/**
+ * **Ana sayfa tarif kartı** — "Sofradan Fikirler" şeridi (tasarım 09.08: `Musteri - Anasayfa.dc.html`).
+ *
+ * Liste kartının varyantı DEĞİL, kardeşi — ve bu bir tercih değil, tasarımın kendi ayrımı: burada
+ * kart kabuğu yok (çerçevesiz, zeminsiz), rozet yok, düğme yok. Ortak olan yalnız veri tipi ve
+ * hedef. Liste kartına üçüncü bir `variant` bayrağı eklemek, gövdesinin yarısını koşula sarardı;
+ * iki ayrı sunum iki ayrı bileşendir, aynı DOSYADA durmaları da bunu söylüyor.
+ *
+ * **Künye sözcükleri de tasarımda AYRI:** şeritte *"1 malzeme + evinizden 3"*, listede *"1 ürün +
+ * 3 ev malzemesi"*. Aynı sayıların iki farklı cümlesi — metin anahtarları bu yüzden paylaşılmadı.
+ *
+ * **Fiyat YOK ve bu tasarımın kararı:** şerit bir davet, vitrin değil. Tükendiğinde de sayı yerine
+ * tek cümle kalır — alınamayan bir tarifte malzeme sayısı saymak yanlış bir söz olurdu.
+ *
+ * Çerçeve 3/2: tasarım 4/3 çiziyor ama envanterde o oran yok (`RATIO_SOURCE` 3/2 · `RATIO_BAND`
+ * 16/9 · `RATIO_SQUARE` 1) ve yalnız bu kart için yeni bir oran açmak, operatörün kırpma panelinde
+ * karşılığı olmayan bir çerçeve doğururdu — liste kartının 16/10 için verdiği kararın aynısı.
+ */
+export function RecipeTeaserCard({ recipe, labels }: RecipeTeaserCardProps) {
+  const meta = recipe.soldOut
+    ? labels.soldOutShort
+    : [
+        recipe.duration,
+        recipe.serves,
+        [
+          labels.items.replace('{n}', String(recipe.itemCount)),
+          recipe.pantryCount > 0 ? labels.pantry.replace('{n}', String(recipe.pantryCount)) : null,
+        ]
+          .filter(Boolean)
+          .join(' + '),
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
+  return (
+    <Link
+      href={{ pathname: '/recipe/[slug]', params: { slug: recipe.slug } }}
+      className="group flex cursor-pointer flex-col gap-2.5"
+    >
+      <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_SOURCE} crop={recipe.image.crop} />
+      <div className="flex flex-col gap-0.5">
+        <span className="font-serif text-h2-sm text-ink">{recipe.name}</span>
+        <span className="font-sans text-note text-muted">{meta}</span>
+        {/* Çağrı kartın İÇİNDE bir bağ değil, kartın kendi bağının etiketi — kart zaten tıklanabilir.
+            Bağ içinde bağ erişilebilirlikte geçersiz (liste kartıyla aynı karar). */}
+        <span className="mt-0.5 font-sans text-note font-bold text-olive transition-colors group-hover:text-olive-dark">
+          {labels.cta}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 interface RecipeListCardProps {
   recipe: StorefrontRecipe;
   locale: Locale;

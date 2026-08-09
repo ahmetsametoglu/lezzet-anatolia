@@ -45,6 +45,14 @@ import type { StorefrontRecipe, StorefrontRecipeDetail, StorefrontRecipeItem } f
  */
 const RECIPE_PAGE_LIMIT = 60;
 
+/**
+ * **Ana sayfa şeridinin sınırı** — tasarımın üçlü ızgarası (`Musteri - Anasayfa.dc.html`).
+ *
+ * Liste sayfasının 60'ı bir EMNİYET sınırıyken bu bir SUNUM kararı: şerit bir liste değil, tıklatma
+ * davetidir (`CLAUDE §1`). Dördüncü kart ızgarayı ikinci satıra taşırdı.
+ */
+export const HOME_RECIPE_LIMIT = 3;
+
 /** Çok dilli metni çözer; boş/boşluk metin YOK sayılır (rozet ve bölüm boşuna açılmasın). */
 function textOf(value: LocalizedText | null, locale: Locale): string | null {
   if (!value) return null;
@@ -69,9 +77,10 @@ export async function listStorefrontRecipes(
   locale: Locale,
   place: PlaceWarehouses,
   viewer: PricingViewer,
+  limit: number = RECIPE_PAGE_LIMIT,
 ): Promise<StorefrontRecipe[]> {
   const db = serviceDb();
-  const recipes = await new RecipeService(db).listActiveWithItems(RECIPE_PAGE_LIMIT);
+  const recipes = await new RecipeService(db).listActiveWithItems(limit);
   if (recipes.length === 0) return [];
 
   const context = await loadItemContext(db, recipes, place, viewer);

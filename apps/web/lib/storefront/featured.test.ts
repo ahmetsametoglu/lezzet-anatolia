@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickFeatured, rotateDaily } from './featured';
+import { pickFeatured, pickRandom, rotateDaily } from './featured';
 
 /**
  * Vitrin seçimi ve günlük rotasyon (08.26) — **saf kurallar, DB'siz.**
@@ -77,5 +77,39 @@ describe('rotateDaily — günlük deterministik seçim', () => {
     const utcGec = rotateDaily(pool, 2, new Date('2026-08-07T23:00:00Z'));
     const utcErken = rotateDaily(pool, 2, new Date('2026-08-07T01:00:00Z'));
     expect(utcGec).toEqual(utcErken);
+  });
+});
+
+describe('pickRandom — fırsat bandının her istekteki seçimi (09.08)', () => {
+  const havuz = ['a', 'b', 'c', 'd', 'e'];
+
+  it('istenen sayıda seçer', () => {
+    expect(pickRandom(havuz, 3, () => 0)).toHaveLength(3);
+  });
+
+  it('KOPYA ÇIKMAZ — aynı fırsat bantta iki kez görünmez', () => {
+    // Karıştırma yerine örnekleme yapıldığının kanıtı: seçilen eleman havuzdan düşüyor.
+    for (const p of [() => 0, () => 0.99, () => 0.5]) {
+      const secim = pickRandom(havuz, 3, p);
+      expect(new Set(secim).size).toBe(3);
+    }
+  });
+
+  it('havuz sınırdan KÜÇÜKSE olduğu kadarı döner, tekrar etmez', () => {
+    expect(pickRandom(['tek'], 3, () => 0)).toEqual(['tek']);
+  });
+
+  it('boş havuz boş döner — bant hiç çizilmez', () => {
+    expect(pickRandom([], 3, () => 0)).toEqual([]);
+  });
+
+  it('seçim GERÇEKTEN havuzdan gelir — uydurma eleman üretmez', () => {
+    for (const x of pickRandom(havuz, 3, () => 0.7)) expect(havuz).toContain(x);
+  });
+
+  it('farklı rastgelelik farklı seçim verebiliyor — sabit "ilk üç" değil', () => {
+    // Kullanıcının istediği davranışın çivisi: ilkinden başlayan ve sonuncudan başlayan iki
+    // örnekleme aynı diziyi vermemeli, yoksa öteki fırsatlar hiç görünmezdi.
+    expect(pickRandom(havuz, 3, () => 0)).not.toEqual(pickRandom(havuz, 3, () => 0.99));
   });
 });

@@ -2,6 +2,7 @@
 
 import { RATIO_SOURCE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
+import { Link } from '@/i18n/navigation';
 import { AddAllBar } from './components/add-all-bar';
 import { IngredientRow } from './components/ingredient-row';
 import type { RecipeViewProps } from './recipe-types';
@@ -22,7 +23,19 @@ export function RecipeDesktop({ t, locale, recipe }: RecipeViewProps) {
   const badges = [recipe.duration, recipe.serves].filter((value): value is string => Boolean(value));
 
   return (
-    <div className="flex flex-col gap-6 px-12 pt-9 pb-11">
+    <div className="flex flex-col gap-6 px-12 pt-5 pb-11">
+      {/* Breadcrumb — tasarım (09.08): "Tarifler › Künefe Sofrası". Mobilde YOK ve gerekmiyor:
+          orada kabuğun kendi başlık çubuğu "← Tarifler" bağını zaten taşıyor (`SiteFrame back`).
+          **Ayırıcı `›` ve bu tasarımın seçimi:** ürün ve paket detayları `·` kullanıyor (kodda da
+          öyle). Üç sayfada iki ayırıcı bir tutarsızlıktır ama çizim burada `›` diyor ve improvise
+          etmiyoruz (`CLAUDE §3`); birleştirme kararı tasarım tarafının, `design/BACKLOG`'a yazıldı. */}
+      <nav className="flex gap-1.5 font-sans text-body-sm text-muted">
+        <Link href="/recipes" className="font-bold text-olive hover:text-olive-dark">
+          {t.back}
+        </Link>
+        <span>› {recipe.name}</span>
+      </nav>
+
       <div className="flex flex-col gap-1">
         <span className="font-sans text-eyebrow-sm text-olive uppercase">{t.eyebrow}</span>
         <h1 className="font-serif text-h2 text-ink">{recipe.name}</h1>
