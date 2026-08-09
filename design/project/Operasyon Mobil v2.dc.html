@@ -538,6 +538,7 @@
           <span style="font:700 11px 'Karla';color:#a44a3f;background:#f4e3e0;border-radius:12px;padding:4px 10px">Bozuk</span>
           <span style="font:700 11px 'Karla';color:{{ yTalDurumFg }};background:{{ yTalDurumBg }};border-radius:12px;padding:4px 10px">{{ yTalDurum }}</span>
           <span style="font:700 11px 'Karla';color:#b05c2e;border:1.5px solid #b05c2e;border-radius:12px;padding:4px 10px">top bizde</span>
+          <span style="font:700 11px 'Karla';color:#343b41;border:1.5px dashed #8a8270;border-radius:12px;padding:4px 10px">Hibrit mod</span>
           <span style="display:flex;align-items:center;gap:5px;font:700 11px 'Karla';color:#8a8270;border:1.5px solid #c9c2ae;border-radius:12px;padding:4px 10px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>2 ek</span>
         </div>
         <div style="flex:1;padding:12px 22px;display:flex;flex-direction:column;gap:10px">
@@ -702,11 +703,47 @@
           <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
           <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">WhatsApp — Sipariş Niyeti</span><span style="font:700 10.5px 'Karla';color:#8a8270">+33 6 12 … 84 · 4 dk önce</span></div>
         </div>
+        <div style="padding:2px 22px 0;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;gap:7px">
+            <sc-for list="{{ waModes }}" as="m" hint-placeholder-count="3">
+              <span style="font:700 11.5px 'Karla';color:{{ m.fg }};background:{{ m.bg }};border:1.5px solid {{ m.bd }};border-radius:12px;padding:6px 12px;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ m.pick }}">{{ m.l }}</span>
+            </sc-for>
+          </div>
+          <span style="font:400 11px 'Karla';color:#8a8270">{{ waModeAciklama }}</span>
+        </div>
         <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column;gap:10px">
           <div style="align-self:flex-start;max-width:86%;background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 14px"><span style="font:400 13px/1.5 'Karla'">"Cumartesi için 2 kg fıstıklı baklava, 1 tepsi su böreği alabilir miyim? Illkirch'e."</span></div>
+          <sc-if value="{{ waYz }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+              <span style="flex:1;font:400 12px/1.5 'Karla';color:#8a8270">YZ yürütüyor — bu sohbette cevaplar otomatik gider.</span>
+              <span style="font:700 11.5px 'Karla';color:#fff;background:#343b41;border-radius:12px;padding:7px 11px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ waDevral }}">Devral</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ waHib }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ waTaslakBekliyor }}" hint-placeholder-val="{{ true }}">
+              <div style="align-self:flex-end;max-width:86%;background:#e7e2d2;border:1.5px dashed #8a8270;border-radius:16px;padding:11px 14px;display:flex;flex-direction:column;gap:6px">
+                <span style="font:700 10.5px 'Karla';color:#8a8270">YZ TASLAĞI — onaylamadan gitmez</span>
+                <span style="font:400 13px/1.5 'Karla'">Merhaba! Cumartesi için 2 kg fıstıklı baklava + 1 tepsi su böreği ayırıyoruz. Illkirch teslimatı 14:00–18:00 arası uygun mu?</span>
+                <div style="display:flex;gap:7px">
+                  <span style="font:700 11.5px 'Karla';color:#fff;background:#5f7a2c;border-radius:12px;padding:7px 11px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ waGonder }}">Gönder →</span>
+                  <span style="font:700 11.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:12px;padding:7px 11px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ waGonder }}">Düzenleyerek gönder</span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ waGitti }}">
+              <div style="align-self:flex-end;max-width:86%;background:#e3ecd2;border-radius:16px;padding:11px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:700 10.5px 'Karla';color:#4a6121">OPERATÖR · Selim — YZ taslağından</span>
+                <span style="font:400 13px/1.5 'Karla'">Merhaba! Cumartesi için 2 kg fıstıklı baklava + 1 tepsi su böreği ayırıyoruz. Illkirch teslimatı 14:00–18:00 arası uygun mu?</span>
+                <span style="font:700 10.5px 'Karla';color:#8a8270">müşteri dilinde (FR) gönderildi ✓</span>
+              </div>
+            </sc-if>
+          </sc-if>
           <span style="font:400 11.5px/1.6 'Karla';color:#8a8270">Uygulamadan sipariş kaydı v1'de yok — kayıt masada kurulur (kaynak sözlüğünde "whatsapp" hazır).</span>
         </div>
         <div style="padding:10px 20px 16px;display:flex;flex-direction:column;gap:9px">
+          <sc-if value="{{ waYazilir }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 15px;background:#fbfaf4"><span style="font:400 13px 'Karla';color:#8a8270">Kısa cevap yaz…</span></div>
+          </sc-if>
           <div style="background:{{ yWaCta.bg }};color:#fff;font:700 14px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ yWaCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ yWaNot }}">{{ yWaCta.l }}</div>
           <span style="text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0">Konuşmayı WhatsApp'ta aç</span>
         </div>
@@ -1136,6 +1173,11 @@ class Component extends DCLogic {
       yTedOnay: () => this.setState({ y4:true }),
       yWaCta: S.ywa ? { l:'Not düştü — masada kurulacak \u2713', bg:'#b9b29e', sh:'none' } : { l:'"Masada kur" notu düş', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' },
       yWaNot: () => this.setState({ ywa:true }),
+      waModes: ['yz','hibrit','ben'].map(k => { const on = (S.waMode||'hibrit')===k; const L = { yz:'YZ', hibrit:'Hibrit', ben:'Ben' }; return { l:L[k], fg:on?'#fff':'#343b41', bg:on?'#5f7a2c':'transparent', bd:on?'#5f7a2c':'#c9c2ae', pick:()=>this.setState({ waMode:k }) }; }),
+      waModeAciklama: { yz:'YZ yürütüyor — cevaplar otomatik gider, istediğinizde devralırsınız.', hibrit:'Hibrit — cevabı YZ hazırlar, onaylayıp siz gönderirsiniz.', ben:'Ben — YZ karışmaz, cevaplar elle yazılır.' }[S.waMode||'hibrit'],
+      waYz:(S.waMode||'hibrit')==='yz', waHib:(S.waMode||'hibrit')==='hibrit', waYazilir:(S.waMode||'hibrit')!=='yz',
+      waTaslakBekliyor: !S.waSent, waGitti: !!S.waSent, waGonder: () => this.setState({ waSent:true }),
+      waDevral: () => this.setState({ waMode:'hibrit' }),
       mBek, bil, bilBos: bil.length === 0,
       bilKapsam: rol === 'hepsi' ? 'tüm bölümler — çok rollü oturum' : 'yalnız ' + labels[rol] + ' — rol süzmesi',
     };

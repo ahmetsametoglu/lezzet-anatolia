@@ -1,6 +1,11 @@
-import type { ProductAllergen } from '@lezzet/types';
-import type { CartLineRoute } from '@lezzet/domain-core';
-import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from '@lezzet/application';
+import type {
+  StorefrontCategory,
+  StorefrontImage,
+  StorefrontPackage,
+  StorefrontPackageDetail,
+  StorefrontPackageItem,
+  StorefrontProduct,
+} from '@lezzet/application';
 
 /**
  * Vitrinin WEB'E ÖZEL görünüm tipleri (08.10 → terfi 21.6 sonrası incelmiş hâli).
@@ -8,103 +13,24 @@ import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from '@le
  * Ürün/katalog/detay sözleşmesinin tamamı (`StorefrontProduct` · `StorefrontCatalog` ·
  * `StorefrontProductDetail` · `StockStatus` · `CatalogSort` …) `@lezzet/application` ve
  * `@lezzet/types`'a terfi etti — native uygulama da aynı sözleşmeyi okur, iki kopya "sitede bir
- * fiyat, uygulamada başka fiyat" demekti. Burada kalanlar orkestrasyonu da webde kalan üç ailedir
- * (paketin kendi künyesi böyle diyor): **anasayfa** (`StorefrontHome`), **paket**
- * (`StorefrontPackage*`) ve **tarif** (`StorefrontRecipe*`). Bunların ikinci tüketeni doğduğu gün
- * tek tek aynı yolla terfi ederler.
+ * fiyat, uygulamada başka fiyat" demekti. Burada kalanlar orkestrasyonu da webde kalan iki ailedir
+ * (paketin kendi künyesi böyle diyor): **anasayfa** (`StorefrontHome`) ve **tarif**
+ * (`StorefrontRecipe*`). Bunların ikinci tüketeni doğduğu gün tek tek aynı yolla terfi ederler.
+ *
+ * **Paket ailesi (`StorefrontPackage*`) 09.08'de terfi etti** — ikinci tüketeni doğdu: mobil sepetin
+ * paket satırı ve mobil paket detay ucu. Şekiller `@lezzet/application/catalog/storefront-types`ta,
+ * aşağıdaki `export type` satırı KÖPRÜDÜR: sayfa/komponent import'ları (`packages-types.ts`,
+ * `package-card.tsx`, `content-card.tsx` …) yerinden oynamasın diye duruyor.
  *
  * Alan seçimi ilkesi aynen sürer: DB satırının tamamı taşınmaz, kartın gösterdiği kadarı taşınır;
  * çok dilli alanlar okuma katmanında çözülür, sayfa dil yedeğini bilmez.
  */
+export type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem };
 
 /** Anasayfanın fırsat bölümü — indirim alanları zorunlu daraltma. */
 export interface StorefrontOffer extends StorefrontProduct {
   wasCents: number;
   limitLabel: string | null;
-}
-
-/** Paket (bundle) kartı — tek fiyatlı hazır seçim. */
-export interface StorefrontPackage {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  image: StorefrontImage;
-  /** Kalem SAYISI (adet toplamı değil) — "8 ürün". */
-  itemCount: number;
-  priceCents: number;
-  /** "6 kişilik" künyesi; girilmemişse rozet HİÇ basılmaz (tasarım). */
-  serves: number | null;
-  /**
-   * Kalemlerin net ağırlık toplamı. Bir kalemin ağırlığı bilinmiyorsa **null** — eksiği 0 saymak
-   * paketi olduğundan hafif gösterirdi; satır o zaman hiç basılmaz.
-   */
-  totalWeightG: number | null;
-  /** Kargolanamayan (soğuk zincir) BİR kalem varsa paketin tamamı yalnız rota içi. */
-  inRouteOnly: boolean;
-  /**
-   * BİR kalem bile yetmiyorsa paket tükendi — paket bütün satılır, "yarısı var" hâli yok.
-   *
-   * **Ölçüsü AĞ GENELİDİR ve öyle kalmalı** (C3): "tükendi" ancak HİÇBİR depoda yoksa söylenir.
-   * Yere bağlı hâl (`route`) ayrı bir alandır — ikisini tek bayrakta toplamak, öbür depoda duran
-   * malı "tükendi" diye ilan etmek olurdu.
-   */
-  soldOut: boolean;
-  /**
-   * **Bu yerden hangi yolla gelir** (19.22) — karar `decideBundleAgainstWarehouse` motorundan gelir.
-   *
-   * `null` = yer bilinmiyor (posta kodu sorulmamış): yol da bilinmiyor. Ziyaretçiye hangi yoldan
-   * geleceğini söylemek, bilmediğimiz bir şeyi söylemektir — o hâlde yalnız `soldOut` konuşur.
-   *
-   * Paket BÖLÜNMEZ (K5): yol paketin bütünü içindir, kalemleri için değil.
-   */
-  route: CartLineRoute | null;
-  /**
-   * Bu yerden ŞU AN kaç PAKET yapılabilir — en zayıf kalemden (`min⌊mevcut ÷ kalem-adedi⌋`).
-   *
-   * `null` = yer bilinmiyor. Olumsuz yollarda 0. **Bir SÖZ DEĞİL, bir sayı**: sepet stok ayırmıyor
-   * (DOMAIN §4), gerçek kapı checkout'tur.
-   */
-  maxQty: number | null;
-  /**
-   * Kalemlerin EN YÜKSEK KDV oranı (%). Vitrin bunu göstermez (fiyat KDV dahil); checkout'ta
-   * kargo KDV'sinin oransal bölünmesi için gerekiyor. Karışık oranlı bir pakette en yükseği
-   * almak bilinçli: eksik hesaplamaktansa fazla hesaplamak vergi tarafında güvenli yön.
-   */
-  vatRate: number;
-}
-
-/**
- * Paket içeriğinin TEK kalemi — "Pakette neler var?" kartı.
- *
- * **Fiyat TAŞIMAZ ve taşımamalı.** Paketin tek fiyat kuralı (`musteri-paket-detay.md §6`) kalem
- * kırılımını yasaklıyor: "toplam değeri X, sen Y ödüyorsun" gösterilmez, hediye kalem "0 €" olarak
- * görünmez. Sözleşmede alan hiç olmayınca ekran onu yanlışlıkla basamaz.
- */
-export interface StorefrontPackageItem {
-  variantId: string;
-  /** Ürün detayına bağ — yasal beyan (alerjen/içindekiler) ORADA, paket sayfası yalnız özetler. */
-  slug: string;
-  name: string;
-  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş. */
-  unitLabel: string;
-  qty: number;
-  image: StorefrontImage;
-}
-
-/**
- * Paket detayının okuma sonucu — kart sözleşmesinin üstüne içerik + güven künyesi.
- *
- * Künyenin üç satırı da KALEMLERDEN türer, operatörden ayrıca istenmez: ağırlık = ağırlık × adet
- * toplamı, süre = en kısa ömürlü kalem, alerjen = kalemlerin birleşimi. Hesaplanamayan satır
- * BASILMAZ (uydurulmaz) — bu yüzden hepsi null/boş olabilir.
- */
-export interface StorefrontPackageDetail extends StorefrontPackage {
-  items: StorefrontPackageItem[];
-  /** Kalemlerin alerjen birleşimi (kod); görünen ad dile göre komponentte çözülür. Boşsa satır yok. */
-  allergens: ProductAllergen[];
-  /** En KISA raf ömrü — paketin tamamı en çabuk bozulan kalemine göre tüketilir. Bilinmiyorsa null. */
-  shelfLifeDays: number | null;
 }
 
 /**

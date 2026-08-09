@@ -479,6 +479,23 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
+   * **Referans numarasıyla sipariş** — müşteriye gösterilen numaranın (`LA-26-…`) okuma kapısı (21.18).
+   *
+   * Kolon benzersiz (`order_reference_key`, kısmi: `reference_no is not null`), yani tek satır döner.
+   * `findByIdempotencyKey`in birebir deseni: benzersiz bir kolondan tek satır — ikisi de `getAll`
+   * `protected` olduğu için servis dışından kurulamaz ve kurulmamalı da (sorgu servisin işi).
+   *
+   * **`customerId` ZORUNLU ve bu bir güvenlik kararı, kolaylık değil.** Numara müşterinin elindedir
+   * ve tahmin edilebilir bir uzayda yaşamaz, ama süzgeçsiz bir okuma "bu numara var mı" sorusunu
+   * numara deneyen birine cevaplardı. Süzgeç sorguya gömülü: çağıranın sonradan yapacağı bir eşitlik
+   * kontrolüne bırakılsaydı, unutan ilk çağıran başkasının siparişini okurdu.
+   */
+  async findByReference(referenceNo: string, customerId: string): Promise<Order | null> {
+    const rows = await this.getAll({ referenceNo, customerId }, { limit: 1 });
+    return rows[0] ?? null;
+  }
+
+  /**
    * Müşterinin AÇIK VADELİ siparişleri — vade pozisyonunun (açık bakiye, gecikme) girdisi (09.9).
    *
    * Sayfalanmıyor ve bu bilinçli: küme "ödenmemiş borç"tur, yani doğal tavanı olan bir kümedir ve

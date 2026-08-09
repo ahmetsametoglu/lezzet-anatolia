@@ -1,6 +1,7 @@
 'use server';
 
-import { PostalCodePlaceService, VariantStockNoticeService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { recordZoneNotice, type ZoneNoticeOutcome } from '@lezzet/application';
+import { VariantStockNoticeService, serviceDb } from '@lezzet/database';
 import type { PreferredLanguage } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
@@ -34,6 +35,13 @@ import { readPlaceAnswer } from './read-place';
  * yazmış Alman müşteriye de duyurabilir — ölçüldü, 610 kod iki ülkeye birden çözülüyor. Ülke
  * çerezden okunur, parametre olarak alınmaz: kaydın hangi yere ait olduğu bir tercih değil,
  * sistemin zaten bildiği bir gerçek (kardeş eylem `recordVariantStockNoticeAction` de böyle).
+ *
+ * ── KÖPRÜ (terfi 21.20) ──────────────────────────────────────────────────────
+ * Akışın kendisi artık `@lezzet/application` → `delivery/notice.ts`te (`recordZoneNotice`): mobil
+ * onboarding'in bölge dışı ekranı AYNI kaydı bırakıyor ve kuralı iki yerde tutmak tüzükçe yasak
+ * (02-mimari §3.1). Burada YALNIZ yüzeye özgü olan kaldı: çerezten okunan yer cevabı, oturumdan
+ * çözülen kimlik ve müşteri hata anahtarına çeviri. Bu dosyanın benimsemesi (eylemin doğrudan
+ * kapıyı çağırması) web şeridinin takvimindedir.
  */
 export async function recordZoneNoticeAction(
   rawPostalCode: string,
@@ -50,43 +58,51 @@ export async function recordZoneNoticeAction(
 ): Promise<CustomerResult<true>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
+    // Biçim denetimi ÇEREZ denetiminden ÖNCE durmalı: "670" gibi bir kod çerez cevabıyla da
+    // uyuşmaz ve sıra bozulsaydı müşteri "kodu kontrol edin" yerine "yerinizi bilmiyoruz"
+    // okurdu. Kapı da aynı denetimi yapıyor (sözleşme koruması); burada duran şey formun mesaj
+    // sırası, akışın kendisi değil.
     if (!isValidPostalCode(postalCode)) throw new CustomerError('postal_code_invalid');
 
-    const email = rawEmail.trim().toLowerCase();
-    // Biçim kontrolü kaba ve bilinçli: e-postanın gerçekten çalıştığını ancak göndererek anlarız,
-    // burada amaç yazım hatasını değil boş/anlamsız girdiyi elemek.
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new CustomerError('email_invalid');
-
     // Ülke müşterinin cevabından (çerez, 19.9). Yer bilinmiyorsa kayıt ALINMAZ — nereye haber
-    // vereceğimizi bilmeden söz veremeyiz; kardeş eylemin kuralı burada da geçerli.
+    // vereceğimizi bilmeden söz veremeyiz; kardeş eylemin kuralı burada da geçerli. Bu denetim
+    // KÖPRÜDE kalır: çerez bir web kavramı, paket onu bilmez.
     const answer = await readPlaceAnswer();
     if (!answer || answer.postalCode !== postalCode) throw new CustomerError('place_unknown');
 
     // `zone_notice.customer_id` de `user_profiles`'a FK'li: auth kimliği yazıldığında girişli
     // müşterinin kaydı FK ihlaliyle düşüyordu (ziyaretçininki null geçtiği için sorunsuz görünüyordu).
     const customerId = await currentCustomerId();
-    const db = serviceDb();
-    // Yer adı KAYIT ANINDA dondurulur: kod tablosu ileride değişse de operatör "68000" değil
-    // "Colmar" okur. Çözülemezse `null` — uydurma yok. Çok yerleşimli kodda ilki yeter, karar
-    // "burayı açalım mı"dır, adres değil.
-    const places = await new PostalCodePlaceService(db).findPlaces(answer.country, postalCode);
 
-    // Servis üzerinden (denetim A4): tekillik yine veritabanında (`zone_notice_unique_idx`),
-    // çakışma hata sayılmıyor — düğmeye ikinci kez basmak yeni bir bekleyiş değil.
-    await new ZoneNoticeService(db).record({
+    const outcome = await recordZoneNotice(serviceDb(), {
       postalCode,
       country: answer.country,
-      placeName: places[0] ?? null,
-      source,
-      email,
+      email: rawEmail,
       customerId,
       locale: locale ?? null,
+      source,
+      // Sayaç bu yüzeyde ZATEN artıyor — yer çözülürken (`actions.ts` → `finishResolved`). Burada
+      // bir daha artırmak aynı ziyaretçiyi tek niyet için iki kez saymak olurdu; web'in bugünkü
+      // davranışı korunuyor (kapının `countDemand` künyesi ölçümü taşıyor).
+      countDemand: false,
     });
-
-    return { data: true, errorKey: null };
+    if (outcome === 'ok' || outcome === 'already') return { data: true, errorKey: null };
+    throw new CustomerError(errorKeyOf(outcome));
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
+}
+
+/**
+ * Kapının reddi → müşteri hata anahtarı. `email_required` de `email_invalid`e iner ve bu bir
+ * kayıp değil: form e-postayı ZORUNLU alan olarak gönderiyor, yani boş gelen adresin müşteriye
+ * söylenecek hâli "adresi kontrol edin"dir — eylemin terfi öncesi davranışı da buydu (boş dize
+ * biçim denetiminden geçemiyordu).
+ */
+function errorKeyOf(outcome: Exclude<ZoneNoticeOutcome, 'ok' | 'already'>): 'place_unknown' | 'postal_code_invalid' | 'email_invalid' {
+  if (outcome === 'place_unknown') return 'place_unknown';
+  if (outcome === 'postal_code_invalid') return 'postal_code_invalid';
+  return 'email_invalid';
 }
 
 /**

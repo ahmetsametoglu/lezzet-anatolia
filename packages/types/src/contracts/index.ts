@@ -46,6 +46,16 @@ export * from './courier-api.schema';
 // Depo — hazırlık kuyruğu/onayı, mal kabul, sayım-düzeltme, transfer, kurye dönüşü (D1–D6).
 // Kaynağı `@lezzet/application`ın depo kapıları; parti/kabul/transfer varlık şemalarından türer.
 export * from './warehouse-api.schema';
+// Sepet (müşteri) — sunucu sepetinin mobil yüzü; `cart` varlık şemasından türer. Sepet iki yüzeyde
+// PAYLAŞILIR (kullanıcı kararı 09.08), kabı `customerId` anahtarlı `cart` tablosu. Gövde fiyat
+// TAŞIMAZ — istemcinin yazabildiği tutar siparişin parasını belirleyemez; cevap SATIRDIR, görünüm
+// değil (ad/fiyat/indirim/kargo `getCartView` kuralınındır — iki yerde hesaplanan toplam bir gün
+// iki farklı sayı gösterir).
+export * from './cart-api.schema';
+// Checkout — "Siparişi tamamla" ekranının anlık görüntüsü (adres · teslimat · ödeme) + siparişi
+// açan gövde ve ADLI retleri. Gövde yalnız SEÇİM taşır: tutar, kargo ücreti, indirim ve teslimat
+// türü istemciden hiç kabul edilmez, hepsi sunucuda çözülür.
+export * from './checkout-api.schema';
 // Bildirim — tablo değil, müşteriye giden mesajın veri şekli; üç yer okur (şablon `packages/email`,
 // sürücü `packages/notify`, veriyi kuran uygulama kapısı).
 export * from './notification.schema';

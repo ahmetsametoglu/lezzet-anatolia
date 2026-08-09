@@ -5,16 +5,27 @@ import type { OrderStatus } from '@lezzet/types';
  * **Sipariş orkestrasyonlarının YÜZEY-ÜSTÜ yan etkileri** (terfi 21.10) — müşteri haberi, sadakat
  * puanı ve sağlayıcıya iade çağrısı.
  *
- * ── NEDEN PORT, NEDEN TERFİ DEĞİL ────────────────────────────────────────────
- * Terfi edilen dört kurye kapısı ve `refund` üç şeye dokunuyordu ve üçü de BAŞKA modülün dosyası:
- *   • `apps/web/lib/order/notify.ts` → `notification-data.ts` (319 satır, modül 14) — `@lezzet/notify`
- *     ve `@lezzet/i18n` bağımlılığı ister; ikisi de `@lezzet/application`ın bağımlılığı DEĞİL.
- *   • `apps/web/lib/feedback/points.ts` (298 satır, modül 17) — `rewardCompletedOrder` yalnız 20
- *     satır ama `pointsSettings()` üstünde duruyor; parçasını almak o yardımcıyı İKİ KEZ yazmaktı.
- *   • `apps/web/lib/order/provider-refund.ts` + `lib/stripe.ts` — `stripe` npm bağımlılığı ister.
- * Üçünü de buraya kopyalamak, sahibi başka şerit olan üç modülü habersiz çatallamak olurdu; paketin
- * kabul ölçütü de ("en az iki yüzeyin çağırdığı orkestrasyon", `index.ts`) bunları kapsamıyor.
- * Bağımlılık eklemek ayrıca kök `pnpm-lock.yaml`a dokunmak demek — bu şeridin yazı alanı dışı.
+ * ── NEDEN HÂLÂ PORT ──────────────────────────────────────────────────────────
+ * Üç etkiden İKİSİ 21.21'de terfi etti, biri kaldı; port yapısı üçü için de duruyor.
+ *
+ *   • `notifyStatus` / `notifyException` → gövde artık `order/notify.ts` + `notification-data.ts`,
+ *     bu pakette. Eski gerekçe ("`@lezzet/notify` + `@lezzet/i18n` bu paketin bağımlılığı değil")
+ *     ÖLÇÜMLE YANLIŞLANDI: `@lezzet/notify`ın npm kapanışı (`resend`, `@react-email/*`, `react`)
+ *     `@lezzet/email` üzerinden ZATEN buradaydı — paket OTP mailini bu ağaçtan gönderiyor
+ *     (`auth/otp.ts`) — ve `@lezzet/i18n`ın hiç bağımlılığı yok. İki `workspace:*` satırı eklendi,
+ *     yeni npm paketi girmedi. Terfiyi zorunlu kılan şey ölçülmüş bir arızaydı: `apps/mobile-api`
+ *     gönderimi import edemediği için mobilden verilen kapıda/vadeli siparişte onay maili hiç
+ *     gitmiyordu.
+ *   • `rewardDelivered` → gövde `feedback/points.ts`te (`rewardCompletedOrder`), bu pakette. Puan
+ *     yazım çekirdeği (`awardPoints`) zaten buradaydı; taşınan yalnız iki ödülü birleştiren kapı.
+ *   • `refunder` → HÂLÂ yüzeyde: `apps/web/lib/order/provider-refund.ts` + `lib/stripe.ts`,
+ *     `stripe` npm bağımlılığı ister ve o gerçekten bu paketin ağacında değil.
+ *
+ * Peki ikisi buradayken port neden kalktı değil? Çünkü port **kayıt yeri değil, KARAR yeridir**:
+ * geçiş kapısı "haber ver" demeyi çağıranın kararına bırakıyor. Varsayılan hâline getirilseydi her
+ * `transitionOrder` çağrısı — fikstür kuran her test dâhil — mail göndermeye kalkardı. Çağıran
+ * yüzeyler bugün üçü de portu dolduruyor: `webOrderEffects` (web köprüsü) ve `mobileOrderEffects`
+ * (`apps/mobile-api/src/api/v1/checkout.ts`).
  *
  * ── SESSİZ ATLAMA YOK ────────────────────────────────────────────────────────
  * Kayıtsız bir etki HİÇBİR ŞEY yapmaz ama bunu SÖYLER: süreç başına bir kez `logger.warn`. Sessiz
@@ -22,8 +33,11 @@ import type { OrderStatus } from '@lezzet/types';
  * "belirtiyi susturan düzeltme çözüm değildir" kuralının tam karşılığı. Uyarı bir kez basılır:
  * her teslimatta basılsaydı gürültüye dönüşür, gürültü de görünmezliğin ikinci hâlidir.
  *
- * **`@lezzet/notify` + `notification-data` + `rewardCompletedOrder` terfisi mobil ucun ÖN ŞARTIDIR**
- * (BEKLEYEN(14.11)): o terfi olmadan `/api/v1/courier/*` teslimatı müşteriye haber vermez.
+ * O terfi 21.21'de yapıldı ve `POST /api/v1/me/checkout/order` portu doldurdu.
+ * **BEKLEYEN(14.11): `/api/v1/courier/*` hâlâ `effects` GEÇMİYOR** (`courier.ts` → `stops/:orderId/
+ * deliver`) — yani mobil kuryenin teslim ettiği sipariş müşteriye "teslim edildi" haberi vermiyor ve
+ * sipariş puanı yazılmıyor. Engel kalktı, kalan iş mekanik: aynı `mobileOrderEffects` nesnesini o
+ * çağrılara da geçirmek.
  */
 
 /** İstisna haberleri (14.5) — iptal, eksik karşılanma, iade. Durum geçişine değil PARA çözümüne bağlı. */

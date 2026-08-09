@@ -62,6 +62,29 @@ const config: ExpoConfig = {
     'react-native-edge-to-edge',
     'expo-secure-store',
     [
+      '@stripe/stripe-react-native',
+      {
+        /*
+          YEREL ÖDEME KARTI (kullanıcı kararı 09.08) — yerel modül, CNG eklentisiyle bağlanır;
+          native klasörlere elle dosya YAZILMAZ.
+
+          `enableGooglePay` yalnız Android manifest'ine bir `meta-data` satırı ekler (cüzdan API'si
+          açık); ödemenin kendisi yine sunucudaki niyetten geçer.
+
+          APPLE PAY BİLEREK KOŞULLU: eklenti `merchantIdentifier` verilince iOS'a
+          `com.apple.developer.in-app-payments` ENTITLEMENT'ı yazar. Apple Developer'da KAYITLI
+          olmayan bir kimlikle bu entitlement imzalamayı düşürür — yani kayıtsızken alanı yazmak,
+          ödemeyi açmak değil DERLEMEYİ kırmak olurdu. Değer tek bir yerden gelir
+          (`EXPO_PUBLIC_STRIPE_APPLE_MERCHANT_ID`) ve aynı değişkeni `lib/payment/stripe-config.ts`
+          okur: entitlement, `StripeProvider` ve kartın Apple Pay bölümü hep birlikte açılır.
+        */
+        enableGooglePay: true,
+        ...(process.env.EXPO_PUBLIC_STRIPE_APPLE_MERCHANT_ID
+          ? { merchantIdentifier: process.env.EXPO_PUBLIC_STRIPE_APPLE_MERCHANT_ID }
+          : {}),
+      },
+    ],
+    [
       'expo-localization',
       {
         /* TEK KAYNAK: dil kümesi `@lezzet/i18n`de yaşar. `LOCALES` salt-okunur bir demet olduğu

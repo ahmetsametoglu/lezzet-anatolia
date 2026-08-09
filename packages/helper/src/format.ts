@@ -31,3 +31,18 @@ export function formatPrice(cents: number, locale: Locale): string {
   }).format(cents / 100);
   return `${amount}${EURO_SUFFIX}`;
 }
+
+/**
+ * Kısa tarih ("22 Temmuz" · "22 juillet" · "22. Juli") — bir kaydı TANITMAK için, kayıt tutmak için
+ * değil. Yıl yazılmaz: müşteri kendi siparişini gün+ay ile zaten tanır, yıl satırı uzatır. Ayın adı
+ * kısaltılmaz — "22 Tem" resmî bir belge tonudur, vitrinin dili değil.
+ *
+ * TERFİ: gövde webin `apps/web/lib/storefront/format.ts`inden BİREBİR geldi; bu dosyanın üstündeki
+ * künye "format ailesinin kalanı ikinci tüketen doğunca teker teker aynı yolla iner" diyordu ve o
+ * gün bugündür — sipariş bildiriminin verisi `@lezzet/application`a terfi etti (21.21) ve o paket
+ * `apps/web`ten import EDEMEZ. Web kopyası buradan yeniden dışa veriliyor; `INTL_LOCALE` tablosunun
+ * ikinci bir yazımı doğmadı.
+ */
+export function formatShortDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long' }).format(new Date(iso));
+}

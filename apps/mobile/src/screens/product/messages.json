@@ -7,6 +7,9 @@
       "soldOut": "Tükendi",
       "discount": "İndirim"
     },
+    "gallery": {
+      "photo": "Ürün görseli {n} / {total}"
+    },
     "meta": {
       "perKg": "{price} / kg",
       "vat": "KDV dahil",
@@ -77,6 +80,9 @@
       "soldOut": "Épuisé",
       "discount": "Promo"
     },
+    "gallery": {
+      "photo": "Photo du produit {n} / {total}"
+    },
     "meta": {
       "perKg": "{price} / kg",
       "vat": "TVA incluse",
@@ -146,6 +152,9 @@
     "badge": {
       "soldOut": "Ausverkauft",
       "discount": "Angebot"
+    },
+    "gallery": {
+      "photo": "Produktbild {n} / {total}"
     },
     "meta": {
       "perKg": "{price} / kg",

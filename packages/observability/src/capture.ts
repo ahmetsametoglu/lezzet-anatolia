@@ -82,6 +82,14 @@ export const SOURCES = {
    * kendisindeyse iki yüzeyde de aynı adla görünmeli, yoksa aynı arıza iki kova arasında bölünür.
    */
   applicationAuth: 'application-auth',
+  /**
+   * Paylaşılan SİPARİŞ akışı (`packages/application/src/order`) — sipariş açma zinciri (21.19).
+   * `applicationAuth` ile aynı gerekçe ve aynı ayrım: web checkout'u ile mobilin "Siparişi
+   * tamamla" ekranı AYNI kapıyı çağırıyor, yani arıza akışın kendisindeyse iki yüzeyde de aynı
+   * adla görünmeli. Çağırana bağlansaydı tek bir yapılandırma hatası (kargo deposu yok) iki kova
+   * arasında bölünür ve ikisi de eşiğin altında kalırdı.
+   */
+  applicationOrder: 'application-order',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

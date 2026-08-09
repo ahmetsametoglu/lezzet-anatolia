@@ -1,12 +1,15 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
-import { serviceDb } from '@lezzet/database';
-import { resolvePlaceForPostalCode } from '@lezzet/application';
+import { serviceDb, UserProfileService } from '@lezzet/database';
+import { recordZoneNotice, resolvePlaceForPostalCode } from '@lezzet/application';
 import { placeLabel, type PostalCodeResolution } from '@lezzet/domain-core';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
-import { PlaceResolutionSchema } from '@lezzet/types';
+import { PlaceNoticeBodySchema, PlaceNoticeResultSchema, PlaceResolutionSchema } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
+import { readJsonBody } from '../../lib/request';
+import { optionalCustomerId } from './auth';
+import { localeOf } from './cart-view';
 
 /**
  * Yer uçları — onboarding'in "posta kodunuz" adımı (19.8 · 19.16b).
@@ -83,4 +86,62 @@ places.get('/places/by-postal-code', async (c) => {
   const resolution = await resolvePlaceForPostalCode(serviceDb(), code);
   // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): şekil derlemede, fazla alan çalışma zamanında yakalanır.
   return ok(c, PlaceResolutionSchema.parse(toContract(code, resolution)));
+});
+
+/**
+ * `POST /places/notice?locale=fr` — *"buraya da gelin"* kaydı (21.20).
+ *
+ * ── OTURUMSUZ, ÇÜNKÜ AKIŞ ORADA DOĞUYOR ─────────────────────────────────────
+ * Uç `bearerAuth`ın ÖNÜNDE: düğme, müşterinin vazgeçmeye en yakın olduğu anda — bölge dışı
+ * cevabının hemen altında — duruyor ve önüne giriş duvarı koymak ikinci bir engel çıkarmaktır
+ * (`zone_notice.email` künyesi). Hesap ZORUNLU DEĞİL.
+ *
+ * ── KİMLİK VARSA SUNUCUDA ÇÖZÜLÜR, GÖVDEDEN ASLA ────────────────────────────
+ * Bearer'ı uç KENDİ okur (`optionalCustomerId` — `discover.ts`in kimlik zinciri; token yoksa ya da
+ * bayatsa misafir gibi davranılır, 401 hiçbir hâlde dönmez). Girişli müşteride adres PROFİLDEN
+ * gelir: gövdeden gelen bir adresi hesabın kaydına yazmak, kaydı hesaba bağlarken adresi başkasına
+ * ait yapmaya açık kapı olurdu. **Profilinde e-posta olmayan** müşteride (telefonla açılmış hesap)
+ * gövdedeki adrese düşülür — misafirin zaten yapabildiği şeyin fazlası değil, ve tek alternatifi
+ * girişli müşteriyi kayıt bırakamaz hâle getirmekti.
+ *
+ * ── KURAL BURADA DEĞİL ──────────────────────────────────────────────────────
+ * Yer doğrulaması, yer adının dondurulması, tekillik ve anonim sayaç `@lezzet/application`ın
+ * kapısında (`delivery/notice.ts` → `recordZoneNotice`) — web eyleminin okuduğu kuralın TAM AYNISI.
+ * Burada yalnız gövde/sorgu çözümü, kimlik çözümü ve zarf var.
+ *
+ * ── SAYAÇ BU YÜZEYDE BURADA ARTAR ───────────────────────────────────────────
+ * `countDemand: true`: mobilin yer çözümü ucu (`/places/by-postal-code`) sayaca dokunmuyor, yani
+ * bu uç mobilin TEK sayım noktası. Web tersi (çözerken sayıyor) — ayrımın ölçümü kapının künyesinde.
+ */
+places.post('/places/notice', async (c) => {
+  const body = PlaceNoticeBodySchema.safeParse(await readJsonBody(c));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  // Dil ZORUNLU ve varsayılansız — sepet/checkout ailesiyle AYNI okuma (`cart-view.ts` → `localeOf`).
+  // Kayıt hesapsız olabildiği için haber gönderilirken dili çözecek bir profil çoğu zaman YOKTUR:
+  // burada sessizce "bilinmiyor" yazmak, o müşteriye bir gün yanlış dilde mail gitmesi demekti.
+  const locale = localeOf(c);
+  if (!locale.success) return fail(c, 'invalid_locale', 400);
+
+  const db = serviceDb();
+  const customerId = await optionalCustomerId(db, c.req.header('authorization'));
+  const profile = customerId ? await new UserProfileService(db).getById(customerId) : null;
+
+  const outcome = await recordZoneNotice(db, {
+    postalCode: body.data.postalCode,
+    country: body.data.country,
+    email: profile?.email ?? body.data.email,
+    customerId,
+    locale: locale.data,
+    source: body.data.source,
+    countDemand: true,
+  });
+
+  // Biçim retleri müşteriye ANLATILACAK bir hâl değil, geçersiz bir istektir → 400 (uçtaki yer
+  // çözümüyle aynı anahtar: `invalid_code`). Kalan dördü sözleşmenin hâlleri ve hepsi 200'dür.
+  if (outcome === 'postal_code_invalid') return fail(c, 'invalid_code', 400);
+  if (outcome === 'email_invalid') return fail(c, 'invalid_email', 400);
+
+  const result: z.input<typeof PlaceNoticeResultSchema> = { status: outcome };
+  return ok(c, PlaceNoticeResultSchema.parse(result));
 });

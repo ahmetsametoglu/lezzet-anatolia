@@ -16,7 +16,9 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
-import { addProduct } from '@/screens/customer-kit/cart-store';
+import { CartFab } from '@/screens/customer-kit/cart-fab';
+import { addProduct, addProducts, cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
 import { useRecipe } from './use-recipe.hook';
@@ -119,6 +121,9 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { status, detail, retry } = useRecipe(slug, locale);
+  /* Hook'lar erken çıkışların ÜSTÜNDE: aşağıdaki `loading`/`error` dalları `return` ediyor ve
+     aboneliği o dallarda atlamak React'in çağrı sırası kuralını kırardı. */
+  const fabCount = cartCount(useCart());
 
   if (status === 'loading') {
     return (
@@ -163,8 +168,13 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
 
   const addAll = () => {
     /* v3 `rc.addAll` (v3:1899): yalnız eklenebilir satırlar; onay v3'ün kendi toast'ı —
-       "{n} malzeme sepete eklendi ✓" (toast altyapısı gelince eski "sessiz onay" sapması kapandı). */
-    for (const row of addable) addProduct(cartLineOf(row), row.qty);
+       "{n} malzeme sepete eklendi ✓" (toast altyapısı gelince eski "sessiz onay" sapması kapandı).
+
+       TEK ÇAĞRI, DÖNGÜ DEĞİL (09.08): burada `for` içinde `addProduct` çağrılıyordu ve her çağrı
+       sunucuya AYRI bir istek atıyordu; sepet tek satırda yaşadığı için eşzamanlı istekler
+       birbirini eziyor ve üç malzemeden yalnız biri sepete giriyordu — üstelik toast "3 malzeme
+       eklendi" diyordu. Gerekçenin tamamı deponun `addProducts` künyesinde. */
+    addProducts(addable.map((row) => ({ ...cartLineOf(row), quantity: row.qty })));
     publishToast(t.addAllToast.replace('{n}', String(addable.length)));
   };
 
@@ -303,6 +313,19 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
           <PrimaryButton label={`${t.addAll} · ${formatPrice(totalCents, locale)}`} onPress={addAll} testID="recipe-add-all" />
         </BlurView>
       )}
+
+      {/* Sepet FAB'ı — ürün ve paket detaylarının aynı yuvası (kullanıcı isteği 09.08): malzemeleri
+          ekleyen müşterinin sepete gitmek için geri çıkması gerekiyordu. Yapışkan bar VARSA onun
+          üstünde durur; bar yokken de aynı yükseklikte kalır — sepet doluyken düğmenin yeri
+          sayfadan sayfaya oynamasın. Boş sepette komponent kendini çizmez. */}
+      <View style={styles.fabSlot} pointerEvents="box-none">
+        <CartFab
+          count={fabCount}
+          onPress={() => router.push('/cart')}
+          accessibilityLabel={t.cart.open.replace('{n}', String(fabCount))}
+          testID="recipe-cart-fab"
+        />
+      </View>
     </View>
   );
 }
@@ -521,6 +544,13 @@ const styles = StyleSheet.create((theme, rt) => ({
 
   barSpace: {
     height: recipeMetrics.barSpace,
+  },
+  /* FAB yuvası — ürün ve paket detaylarının BİREBİR aynı hesabı (`productFabBottom` + güvenli
+     alanın barı aşan payı). Üç sayfada aynı ölçü: müşteri düğmeyi hep aynı yerde bulsun. */
+  fabSlot: {
+    position: 'absolute',
+    right: theme.space['4xl'],
+    bottom: customerMetrics.productFabBottom + Math.max(rt.insets.bottom - theme.space['2xl'], 0),
   },
   bar: {
     position: 'absolute',

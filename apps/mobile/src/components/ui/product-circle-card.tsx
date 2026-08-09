@@ -3,6 +3,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from './circle-photo';
 import { PressableSurface } from './pressable-surface';
+import { StockMark, type StockMarkView } from './stock-mark';
 import { Tag } from './tag';
 
 /*
@@ -40,6 +41,18 @@ interface ProductCircleCardProps {
   soldOutLabel?: string;
   /** "İndirim" etiketi; verilirse indirim rozeti çıkar. */
   discountLabel?: string;
+  /**
+   * YER işareti (21.20) — kare katalog kartıyla AYNI komponent, aynı cümle, aynı ton
+   * (`StockMark`). Vitrin ve katalog aynı ürüne bakan iki ekran; işaret birinde çizilip ötekinde
+   * çizilmezse müşteri iki ekranda iki farklı gerçek okur.
+   *
+   * Yeri fotoğrafın KÖŞESİ değil, adın ALTI: daire kartın kimliği ad ve fiyat çipiyle kuruluyor
+   * ve dairenin üstüne binen üçüncü bir rozet fotoğrafı yutardı. Web de aynı yeri seçiyor —
+   * işaret künyenin altında, satın alma kararından önce (`storefront-cards.tsx`).
+   */
+  stockMark?: StockMarkView | null;
+  /** Bu adrese hiç gitmeyen ürün — daire tükendiyle aynı değerde solar (gerekçe: kare kart künyesi). */
+  dimmed?: boolean;
   /** "3 seçenek" gibi çeşit satırı. */
   optionsLabel?: string;
   /** Ekran okuyucu adı; verilmezse ad + fiyattan kurulur. */
@@ -57,6 +70,8 @@ export function ProductCircleCard({
   soldOut = false,
   soldOutLabel,
   discountLabel,
+  stockMark,
+  dimmed = false,
   optionsLabel,
   accessibilityLabel,
   testID,
@@ -64,13 +79,17 @@ export function ProductCircleCard({
   const { theme } = useUnistyles();
   const diameter = { sm: theme.size.circleSm, lg: theme.size.circleLg }[size];
   const initialFontSize = { sm: theme.text['h2-sm'], lg: theme.text['h1-sm'] }[size];
+  // Tükendide yer işareti basılmaz (gerekçe: kare kart künyesi — cevabı olmayan soru sorulmaz).
+  const mark = soldOut ? null : (stockMark ?? null);
+  const faded = soldOut || dimmed;
 
   return (
     <PressableSurface
       onPress={onPress}
       feedback="scale"
       style={styles.card}
-      accessibilityLabel={accessibilityLabel ?? `${name} · ${priceLabel}`}
+      // Yer işareti erişilebilir ada da girer: gören ve duyan müşteri aynı bilgiyi almalı.
+      accessibilityLabel={accessibilityLabel ?? [name, priceLabel, mark?.label].filter((part) => part !== undefined).join(' · ')}
       testID={testID}
     >
       <View style={[styles.photoFrame, { width: diameter, height: diameter }]}>
@@ -79,7 +98,7 @@ export function ProductCircleCard({
           initial={initial ?? name.slice(0, 1)}
           initialFontSize={initialFontSize}
           photoUri={photoUri}
-          style={soldOut ? styles.soldOutPhoto : undefined}
+          style={faded ? styles.soldOutPhoto : undefined}
         />
         {/* Durum rozeti TEK yuvadadır: tasarımda tükendi ve indirim aynı köşede duruyor ve bir
             ürün ikisini birden taşıyamaz — tükendiyse indirim bilgisi anlamsızdır. */}
@@ -100,6 +119,9 @@ export function ProductCircleCard({
         {name}
       </Text>
       {optionsLabel === undefined ? null : <Text style={styles.options}>{optionsLabel}</Text>}
+      {mark === null ? null : (
+        <StockMark label={mark.label} tone={mark.tone} testID={testID === undefined ? undefined : `${testID}-stock-mark`} />
+      )}
     </PressableSurface>
   );
 }

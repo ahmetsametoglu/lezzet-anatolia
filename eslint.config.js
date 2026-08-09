@@ -16,6 +16,13 @@ export default [
       // `pnpm lint` ÜÇ ŞERİT İÇİN BİRDEN kırmızıya dönüyordu — üstelik kaynak kodda hiçbir hata
       // yokken. Üretilmiş dosya denetlenmez.
       '.test-results/**',
+      // Native derleme çıktıları (09.08). `android/` ve `ios/` CNG ile ÜRETİLİR ve `.gitignore`da,
+      // ama eslint'te değildi: Stripe için yapılan `expo run:android` sonrası
+      // `android/app/build/intermediates/**` içindeki paketlenmiş JS lint'e girdi ve `pnpm lint`
+      // üç şerit için birden kırmızıya döndü — kaynak kodda tek hata yokken. Yukarıdaki
+      // `.test-results` dersinin aynısı: üretilmiş dosya denetlenmez.
+      '**/android/**',
+      '**/ios/**',
     ],
   },
   ...baseConfig,

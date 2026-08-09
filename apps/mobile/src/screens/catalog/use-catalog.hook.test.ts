@@ -55,8 +55,9 @@ function mockOpening(first = page([1, 2], 'cursor-2')) {
   fetchMock.mockImplementation((url) => Promise.resolve(String(url).includes('/categories') ? okResponse(categories) : okResponse(first)));
 }
 
+/** `null` = posta kodu yok (yer bilinmiyor) — bu dosyadaki testlerin hiçbiri yere bağlı değil. */
 async function openCatalog(locale: 'tr' | 'fr' | 'de' = 'fr') {
-  const { result } = await renderHook(() => useCatalog(locale));
+  const { result } = await renderHook(() => useCatalog(locale, null));
   await waitFor(() => expect(result.current.status).toBe('ready'));
   return result;
 }
@@ -65,7 +66,7 @@ describe('useCatalog', () => {
   it('cevap gelene kadar yükleniyor durumunda kalır (ekran iskeleti bunu okur)', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
-    const { result } = await renderHook(() => useCatalog('fr'));
+    const { result } = await renderHook(() => useCatalog('fr', null));
 
     expect(result.current.status).toBe('loading');
     expect(result.current.products).toHaveLength(0);
@@ -151,7 +152,7 @@ describe('useCatalog', () => {
     fetchMock.mockImplementation((url) =>
       Promise.resolve(String(url).includes('/categories') ? okResponse(categories) : failResponse('server_error')),
     );
-    const { result } = await renderHook(() => useCatalog('de'));
+    const { result } = await renderHook(() => useCatalog('de', null));
     await waitFor(() => expect(result.current.status).toBe('error'));
 
     mockOpening();
@@ -166,7 +167,7 @@ describe('useCatalog', () => {
       Promise.resolve(String(url).includes('/categories') ? failResponse('server_error') : okResponse(page([1], null))),
     );
 
-    const { result } = await renderHook(() => useCatalog('fr'));
+    const { result } = await renderHook(() => useCatalog('fr', null));
 
     await waitFor(() => expect(result.current.status).toBe('error'));
   });
@@ -174,7 +175,7 @@ describe('useCatalog', () => {
   it('ağ yokken hata durumu — istek hiç atılamadığında da (status null) aynı kapı', async () => {
     fetchMock.mockRejectedValue(new TypeError('Network request failed'));
 
-    const { result } = await renderHook(() => useCatalog('fr'));
+    const { result } = await renderHook(() => useCatalog('fr', null));
 
     await waitFor(() => expect(result.current.status).toBe('error'));
   });

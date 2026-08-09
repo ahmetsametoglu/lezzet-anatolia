@@ -10,6 +10,7 @@ import { BackButton } from '@/components/ui/back-button';
 import { BlurView } from 'expo-blur';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,6 +47,10 @@ import { usePackage } from './use-package.hook';
      bilinen borç (21.14a raporu) — katman gelince buradaki `add` da onu çağırır.
   7. **İskelet şablonda tanımlı değil**; ürün detayının bekleme diliyle asgari bloklar çizildi
      (foto + başlık + satırlar). Foto iskeleti 16:10 oranını ekran gerçek genişliğinden hesaplar.
+  8. **Kahraman GALERİ oldu** (kullanıcı isteği 09.08, `design/KARARLAR.md`): tek foto yerine
+     kaydırılabilir şerit (`PhotoGallery`) — önce paketin kapağı, sonra kalemlerin ana görselleri.
+     16:10 kutu, konum ve başlık DEĞİŞMEDİ; görselsiz kalem atlanır, tek görselli pakette şerit
+     de gösterge de çizilmez.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -149,10 +154,24 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
 
   const totalCents = detail.priceCents * quantity;
 
+  /* Kahraman şeridi: ÖNCE paketin kendi kapağı, SONRA kalemlerin ana görselleri. Sıra kararın
+     kendisidir — satılan şey pakettir, kalemler onun içeriği; kapağı araya karıştırmak paketi
+     kalemlerinden biri gibi gösterirdi. Adressiz kalem ELENİR (boş kare çizilmez); tekrarlanan
+     adresi galeri komponenti eler. Paket sözleşmesinde ayrı bir `gallery` alanı YOK — şerit
+     kalemlerin kendi kapaklarından kurulur (`PackageDetailSchema.items[].image`). */
+  const heroPhotos = [detail.image, ...detail.items.map((item) => item.image)]
+    .map((image) => image.url)
+    .filter((url): url is string => url !== null);
+
   const addToCart = () => {
     addBundle(
       {
-        id: detail.slug,
+        /* Satırın kimliği paketin UUID'sidir, slug'ı değil (21.21): sunucu sepetinde paket satırının
+           adresi `bundleId`dir (`cart.items[].bundle_id`) ve görünüm satırı da onunla anılıyor
+           (`cartLineId`). Slug bir GÖRÜNTÜ kimliğidir — yeniden adlandırılabilir ve sepetteki satırı
+           sessizce ikizler. Sözleşme uuid'yi 21.21'de kazandı; ondan önce elimizde yalnız slug vardı
+           ve paket bu yüzden sunucuya hiç yazılamıyordu. */
+        id: detail.id,
         name: detail.name,
         // Sepet satırının içerik özeti — kalem adları orta noktayla (sepet fixture'ının dili).
         contentLabel: detail.items.map((item) => item.name).join(' · '),
@@ -168,15 +187,18 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
     <View style={styles.screen} testID="package-detail">
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="package-scroll">
-        {/* ── Foto 16:10 (v3:14-17); rozet çizilmez — sapma 1 ── */}
+        {/* ── Foto 16:10 (v3:14-17), galeri şeridi olarak; rozet çizilmez — sapma 1 ── */}
         <View style={styles.hero}>
-          {detail.image.url === null ? (
-            <View style={styles.heroFallback}>
-              <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
-            </View>
-          ) : (
-            <Image source={{ uri: detail.image.url }} style={styles.heroImage} accessibilityIgnoresInvertColors />
-          )}
+          <PhotoGallery
+            uris={heroPhotos}
+            photoLabel={t.gallery.photo}
+            fallback={
+              <View style={styles.heroFallback}>
+                <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
+              </View>
+            }
+            testID="package-gallery"
+          />
         </View>
 
         {/* ── Künye: ad · fiyat + ek · kargo kısıtı · açıklama (v3:18-22) ── */}
@@ -324,10 +346,6 @@ const styles = StyleSheet.create((theme, rt) => ({
 
   hero: {
     aspectRatio: 16 / 10,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   heroFallback: {
     width: '100%',

@@ -294,9 +294,19 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
   return resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />;
 }
 
-/** Ret sebebi → müşteri diline. Sunucu kodu döner, metin ekranın sorumluluğudur. */
+/**
+ * Ret sebebi → müşteri diline. Sunucu kodu döner, metin ekranın sorumluluğudur.
+ *
+ * **Yarış hâlinin İKİ metni var** (08.13): kalem adı çözülebildiyse adlı cümle, çözülemediyse
+ * bugünkü genel cümle. Ayrımı EKRAN yapıyor, sunucu değil — sebep kodu davranışı belirler
+ * (`checkoutBlocker`, ret ölçümü) ve onu metnin varlığına göre ikiye bölmek, aynı gerçeğe iki kod
+ * vermek olurdu. Ürün silinmişse ad boş döner; o zaman eksik ama doğru bir cümle kalır.
+ */
 function rejectionMessage(t: Messages, reason: string, detail?: string[] | string): string {
-  const template = t.rejected[reason as keyof typeof t.rejected] ?? t.pay.error;
   const list = Array.isArray(detail) ? detail.join(', ') : (detail ?? '');
+  const template =
+    reason === 'insufficient_stock' && list
+      ? t.rejected.insufficient_stock_named
+      : (t.rejected[reason as keyof typeof t.rejected] ?? t.pay.error);
   return template.replace('{detail}', list);
 }

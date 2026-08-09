@@ -68,7 +68,7 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;tarifler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;transfer&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;depolar&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;asistan&quot;,&quot;urunler&quot;,&quot;tarifler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;transfer&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;depolar&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
 class Component extends DCLogic {
   renderVals() {
     const active = this.props.active || 'panel';
@@ -91,6 +91,7 @@ class Component extends DCLogic {
       musteriler: svg(C(12,8,4,1),P('M4 21v-1a6 6 0 0 1 12 0v1',2)),
       b2b: svg(R(4,2,16,20,1.5,1),P('M9 22v-4h6v4',2),P('M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01',3)),
       talepler: svg(P('M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z',1)),
+      asistan: svg(P('M12 3v3',1),R(4,6,16,12,3,2),C(9,12,1,3),C(15,12,1,4),P('M9 16h6',5)),
       geribildirim: svg(P('M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z',1)),
       whatsapp: svg(P('M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z',1)),
       ayarlar: svg(C(12,12,3,1),P('M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1',2)),
@@ -103,6 +104,7 @@ class Component extends DCLogic {
         { key:'panel', label:'Panel' },
         { key:'siparisler', label:'Siparişler', badge:'6', tone:'n' },
         { key:'rotalar', label:'Rotalar' },
+        { key:'asistan', label:'Asistan Kuyruğu', badge:'5', tone:'a' },
       ]},
       { label:'Katalog', items:[
         { key:'urunler', label:'Ürünler' },
@@ -135,7 +137,7 @@ class Component extends DCLogic {
       urunler:'Operasyon - Urunler', tarifler:'Operasyon - Tarifler', fiyatlar:'Operasyon - Fiyatlar', stok:'Operasyon - Stok',
       satinalma:'Operasyon - Satin Alma', transfer:'Operasyon - Transfer', para:'Operasyon - Para',
       raporlar:'Operasyon - Raporlar', analitik:'Operasyon - Analitik', musteriler:'Operasyon - Musteriler',
-      b2b:'Operasyon - B2B Onay', talepler:'Operasyon - Talepler', geribildirim:'Operasyon - Geri Bildirim',
+      asistan:'Operasyon - Asistan Kuyrugu', b2b:'Operasyon - B2B Onay', talepler:'Operasyon - Talepler', geribildirim:'Operasyon - Geri Bildirim',
       whatsapp:'Operasyon - WhatsApp', depolar:'Operasyon - Depolar', ayarlar:'Operasyon - Ayarlar',
       sistem:'Operasyon - Sistem',
     };

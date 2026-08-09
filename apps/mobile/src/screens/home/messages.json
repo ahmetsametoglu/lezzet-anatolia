@@ -32,7 +32,8 @@
     },
     "lastOrder": {
       "title": "Geçen siparişinizi tekrarlayın",
-      "body": "{reference} · {total} — tek dokunuşla sepete"
+      "body": "{reference} · {total} — tek dokunuşla sepete",
+      "summary": "{reference} · {total}"
     },
     "flash": {
       "eyebrow": "GÜNÜN FIRSATI · {time} KALDI",
@@ -125,7 +126,8 @@
     },
     "lastOrder": {
       "title": "Recommandez votre dernière commande",
-      "body": "{reference} · {total} — au panier en un geste"
+      "body": "{reference} · {total} — au panier en un geste",
+      "summary": "{reference} · {total}"
     },
     "flash": {
       "eyebrow": "OFFRE DU JOUR · {time} RESTANT",
@@ -218,7 +220,8 @@
     },
     "lastOrder": {
       "title": "Letzte Bestellung wiederholen",
-      "body": "{reference} · {total} — mit einem Tipp in den Warenkorb"
+      "body": "{reference} · {total} — mit einem Tipp in den Warenkorb",
+      "summary": "{reference} · {total}"
     },
     "flash": {
       "eyebrow": "ANGEBOT DES TAGES · NOCH {time}",

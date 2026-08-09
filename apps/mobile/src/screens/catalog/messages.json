@@ -32,6 +32,22 @@
       "offer": "Fırsat",
       "options": "{n} seçenek"
     },
+    "placeNotice": {
+      "title": "Bu adrese aracımız gitmiyor",
+      "body": "Kendi soğuk zincir aracımız bu bölgeye uğramıyor. Gönderebildiğimiz ürünler kargoyla gelir; soğuk zincir isteyenler gelemez.",
+      "cta": "Buraya da gelin",
+      "ctaHint": "Bölgenizi talep olarak kaydederiz",
+      "retry": "Tekrar dene",
+      "emailPrompt": "Kaydı hangi adrese işleyelim?",
+      "emailLabel": "E-posta adresiniz",
+      "emailPlaceholder": "ornek@eposta.com",
+      "emailInvalid": "Geçerli bir e-posta adresi yazın.",
+      "send": "Kaydet",
+      "recorded": "Not aldık. Bu bölge için gelen talepleri sayıyoruz — karar verilince duyururuz.",
+      "alreadyRecorded": "Kaydınız zaten var; bu bölge için bir kez sayıldınız.",
+      "placeUnknown": "Adresinizi çözemedik, kaydı alamadık. Posta kodunuzu kontrol edin.",
+      "failed": "Kaydınızı alamadık. Bağlantınızı kontrol edip tekrar deneyin."
+    },
     "cart": {
       "open": "Sepeti aç, {n} ürün"
     }
@@ -69,6 +85,22 @@
       "offer": "Offre",
       "options": "{n} options"
     },
+    "placeNotice": {
+      "title": "Notre camion ne dessert pas cette adresse",
+      "body": "Notre camion frigorifique ne passe pas dans cette zone. Ce que nous pouvons expédier arrive par transporteur ; les produits sous chaîne du froid, non.",
+      "cta": "Venez aussi chez moi",
+      "ctaHint": "Nous enregistrons votre zone comme demande",
+      "retry": "Réessayer",
+      "emailPrompt": "À quelle adresse rattacher la demande ?",
+      "emailLabel": "Votre adresse e-mail",
+      "emailPlaceholder": "exemple@email.com",
+      "emailInvalid": "Saisissez une adresse e-mail valide.",
+      "send": "Enregistrer",
+      "recorded": "C'est noté. Nous comptons les demandes pour cette zone — nous communiquerons dès qu'une décision sera prise.",
+      "alreadyRecorded": "Votre demande est déjà enregistrée ; vous êtes compté une fois pour cette zone.",
+      "placeUnknown": "Nous n'avons pas pu identifier votre adresse, la demande n'a pas été enregistrée. Vérifiez votre code postal.",
+      "failed": "Nous n'avons pas pu enregistrer votre demande. Vérifiez votre connexion et réessayez."
+    },
     "cart": {
       "open": "Ouvrir le panier, {n} articles"
     }
@@ -105,6 +137,22 @@
       "soldOut": "Ausverkauft",
       "offer": "Angebot",
       "options": "{n} Optionen"
+    },
+    "placeNotice": {
+      "title": "Unser Fahrzeug fährt diese Adresse nicht an",
+      "body": "Unser Kühlfahrzeug kommt nicht in diese Region. Was wir versenden können, kommt per Versand; Produkte mit Kühlkette nicht.",
+      "cta": "Kommt auch zu mir",
+      "ctaHint": "Wir erfassen Ihre Region als Anfrage",
+      "retry": "Erneut versuchen",
+      "emailPrompt": "Zu welcher Adresse sollen wir die Anfrage erfassen?",
+      "emailLabel": "Ihre E-Mail-Adresse",
+      "emailPlaceholder": "beispiel@email.com",
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "send": "Speichern",
+      "recorded": "Notiert. Wir zählen die Anfragen für diese Region — sobald entschieden ist, sagen wir Bescheid.",
+      "alreadyRecorded": "Ihre Anfrage ist bereits erfasst; für diese Region wurden Sie einmal gezählt.",
+      "placeUnknown": "Wir konnten Ihre Adresse nicht bestimmen, die Anfrage wurde nicht erfasst. Prüfen Sie Ihre Postleitzahl.",
+      "failed": "Wir konnten Ihre Anfrage nicht speichern. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"

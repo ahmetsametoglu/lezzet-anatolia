@@ -1,5 +1,7 @@
+import type { z } from 'zod';
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
+import type { CartDiscountReasonSchema, MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -8,21 +10,21 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BackButton } from '@/components/ui/back-button';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingState } from '@/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { SectionHeader } from '@/components/ui/section-header';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import {
   applyCoupon,
   cartCount,
-  cartSubtotalCents,
-  cartTotalCents,
+  cartLineId,
   removeBundle,
   removeCoupon,
   removeProduct,
-  seedCart,
   setBundleQuantity,
   setProductQuantity,
   useCart,
@@ -30,24 +32,37 @@ import {
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { CartLineRow } from './cart-line-row';
-import { cartFixture, DEMO_COUPONS, MINIMUM_ORDER_CENTS } from './cart-fixture';
 import messages from './messages.json';
 
 /*
-  SEPET (v3 `vCart`) — hazır paket satırları, ürün satırları, kupon, tutar özeti ve yapışkan
-  "siparişi tamamla" barı.
+  SEPET (v3 `vCart`) — satırlar, kupon, tutar özeti ve yapışkan "siparişi tamamla" barı.
 
-  ── UI-ONLY (21.14 ilk etap) ────────────────────────────────────────────────
-  Sepetin bir UCU YOK; durum uygulama ömrü boyunca yaşayan sepet deposunda (`customer-kit/
-  cart-store`). Adet değiştirmek, satır kaldırmak, kupon uygulamak GERÇEKTEN çalışır ve vitrindeki
-  yüzen düğmenin sayısını da o an değiştirir — ekran "çalışıyormuş gibi" yapmıyor.
+  ── EKRAN HESAP YAPMAZ, ÇİZER ───────────────────────────────────────────────
+  Ara toplam · indirim · toplam · asgari sepet · ücretsiz kargo eşiği · "tükendi, çıkarın" hâli —
+  hepsi SUNUCUNUN çözdüğü görünümden (`MeCartView`) okunur. Ekranın kendi aritmetiği YOK ve kupon
+  sözlüğü YOK: sepetteki fiyat bağlayıcı değildir, her okumada yeniden çözülür (DOMAIN §5) ve iki
+  yüzeyde iki ayrı hesap bir gün iki farklı tutar gösterirdi. Görünümü misafirde de sunucu çözer
+  (`POST /cart/view`) — aynı sepet misafirken bir, giriş yapınca başka bir tutar göstermesin.
+
+  Deponun kaynağını (sunucu ⟷ cihaz) ekran BİLMEZ; sunucu turunu da o AÇMAZ (`useCartSync` müşteri
+  sekme kabuğunda takılı — `app/(tabs)/_layout`; ikinci kez takmak aynı aboneliği iki yerden
+  yönetmek olurdu).
+
+  ── SEPETİN İKİ GRUBU ───────────────────────────────────────────────────────
+  Kalemin yolunu STOK belirler (`route`): kendi deposunda bulunan araçla kapıya gider, yalnız kargo
+  deposunda olan kargoyla. İki grup = İKİ SİPARİŞ ve ikincisi zorunlu değil (web sepetinin aynı
+  hükmü, `cart-group.tsx`). Başlıklar YALNIZ iki grup da doluyken çizilir: tek yolu olan sepette
+  başlık, olmayan bir seçimi varmış gibi gösterir. Yolu BİLİNMEYEN satır varsa (posta kodu yok →
+  `route: null`) ayrım hiç yapılmaz — sözleşmenin kendi hükmü.
 
   ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
   1. **Kupon sayfası kitin `BottomSheet`i.** Şablonun kupon yüzeni (`shCoupon`) aynı yerleşimi
      kullanıyor; ikinci bir yüzen sayfa kurmak yerine kitteki kullanıldı.
-  2. **Geçersiz kod SESSİZ DEĞİL.** Şablon kodu toast ile reddediyor; toast küresel bir kabuk
-     öğesi (bu ekranın parçası değil, bkz. vitrin künyesi) — mesaj alanın kendi hata satırına
-     yazıldı, yani hata kodun YANINDA duruyor ve ekran okuyucuya alanla birlikte gidiyor.
+  2. **Kuponun REDDİ artık sunucudan gelir ve alanın altında değil, sepette yazar.** Doğrulama bir
+     ağ turudur; yüzen sayfayı cevabı beklerken açık tutmak, müşteriyi boş bir formun başında
+     bekletirdi. Alanın kendi hata satırı duruyor ama tek işi kalıyor: boş kodu göndermemek.
+     Sebep CÜMLESİ gerçek (`süresi dolmuş` ⟷ `asgari sepet` ⟷ `hakkı bitmiş` üç ayrı şeydir ve
+     ikincisinde müşteri sepetine ürün ekleyerek kuponu kullanabilir).
   3. **Asgari tutar uyarısı `Note` ile** (kitteki terracotta tonu) — şablonun kum-turuncu kutusu
      birebir aynı rol. Yapışkan bardaki düğme o sırada ENGELLİ değil: şablon da tıklatınca uyarıyı
      gösteriyor, yani engel checkout'un kapısında değil sepetin kendisindedir. Burada uyarı ZATEN
@@ -55,19 +70,27 @@ import messages from './messages.json';
      kural ekranda duruyor.
   4. **Tükendi satırı otomatik silinmez.** Şablon da silmiyor: müşteriye "şunu kaldırın" diyor.
      Sessizce kaldırmak, sepetten haber vermeden ürün çıkarmak olurdu.
+  5. **Grup başlıkları ve bölünme uyarısı kitin `SectionHeader`/`Note`u ile.** Mobil tasarımda
+     sepetin bölünmesi çizilmemiş; yeni bir görsel dil üretmek yerine ekranın zaten kullandığı iki
+     bileşen kullanıldı — bilgi web sepetiyle aynı, biçim mobilin kendi kiti.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
+type DiscountReason = z.infer<typeof CartDiscountReasonSchema>;
 
-/*
-  DEMO SEPETİ MODÜL YÜKLENİRKEN BİR KEZ kurulur (UI-only etap). Ekranın içinde kurulsaydı her
-  açılışta yeniden kurulurdu ve müşterinin kaldırdığı satır geri gelirdi — sepet kendi kendine
-  dolardı. Modül düzeyi doğru yer: expo-router rota ağacını AÇILIŞTA topluca `require` eder, yani
-  bu satır uygulama başlarken tam bir kez çalışır ve vitrindeki yüzen düğme de o an doğru sayıyı
-  gösterir. Gerçek uç geldiğinde burası sunucudan sepet çekmeye döner; ekranın gerisi değişmez.
-  Testler kendi hâllerini `seedCart` ile kurar (aynı kapı).
-*/
-seedCart(cartFixture());
+/**
+ * SUNUCUDAN GELEN PAKET SATIRI UYGULAMADAN DÜZENLENEMEZ. Sebep 21.21'de DEĞİŞTİ ve ölçüldü: yazma
+ * gövdesi paket dalını artık kabul ediyor (ekleme çalışıyor, adet birleşiyor) ama satırın ADRESİ
+ * yok — `PATCH`/`DELETE` yolu varyant + parti ile adresliyor ve paket kimliğiyle atılan `DELETE`
+ * satırı bulamıyor (canlı ölçüm: sepet aynen döndü). Basılınca hiçbir şey yapmayan bir sayaç,
+ * müşteriye arızalı bir uygulama gösterirdi.
+ *
+ * Satır GİZLENMEZ — sepettedir ve müşteri neyi taşıdığını görmeli. BEKLEYEN(21.14):
+ * `CartService.setQty`/`removeItem` satır anahtarına (`CartRef`) geçince bu süzgeç kalkar.
+ */
+function isReadOnly(line: MeCartViewLine): boolean {
+  return line.kind === 'bundle';
+}
 
 export function CartScreen() {
   const locale = useAppLocale();
@@ -75,45 +98,159 @@ export function CartScreen() {
   const { theme } = useUnistyles();
   const router = useRouter();
   const cart = useCart();
+  const view = cart.view;
 
   const [couponSheetOpen, setCouponSheetOpen] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState<string | null>(null);
 
   const count = cartCount(cart);
-  const subtotalCents = cartSubtotalCents(cart);
-  const totalCents = cartTotalCents(cart);
-  const missingCents = MINIMUM_ORDER_CENTS - totalCents;
   const isEmpty = count === 0;
 
+  /* Cihazda niyet var ama görünüm henüz yok: sepet ÇÖZÜLEMEDİ. Tutar gösterilmez ve sipariş
+     tamamlanamaz — boş bir görünümü "toplam 0,00 €" diye çizmek, ölçülemeyen değeri sıfır saymak
+     olurdu (CLAUDE §1). */
+  const unresolved = cart.products.length > 0 && view.lines.length === 0;
+
+  /* AYNI PAKET İKİ KEZ ÇİZİLMEZ. Cihazdaki paket kaydı ile sunucunun görünüm satırı aynı satırın
+     iki yüzüdür ve 21.21'den beri aynı kimliği taşıyorlar (paketin uuid'si). Çizilen YEREL kayıttır:
+     sunucu paketi bugün çözemiyor (`CartBundlePort` mobil uçlarda geçilmiyor — adı boş, fiyatı
+     `null` döner), yereldeki ise adını ve fiyatını taşıyor. Süzgeç olmasaydı müşteri aynı paketi
+     biri adsız iki satır hâlinde görürdü. */
+  const localBundleIds = new Set(cart.bundles.map((bundle) => bundle.id));
+  const lines = view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
+
+  const shippingLines = lines.filter((line) => line.route === 'shipping');
+  const routeLines = lines.filter((line) => line.route !== 'shipping');
+  const placeKnown = lines.every((line) => line.route !== null);
+  const split = !view.shippingOnly && placeKnown && shippingLines.length > 0 && routeLines.length > 0;
+
+  const discount = view.discount;
+  const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk;
+
+  /** Kendiliğinden inen indirimin künyesi — kampanyanın İÇ adı değil, müşterinin okuduğu sebep. */
+  const reasonLabel = (reason: DiscountReason): string => {
+    if (reason.kind === 'customer_rate') return t.discount.customerRate.replace('{percent}', String(reason.percent));
+    return reason.percent === null
+      ? t.discount.campaign
+      : t.discount.campaignPercent.replace('{percent}', String(reason.percent));
+  };
+
+  const discountRow = (): SummaryRow | null => {
+    const row = (label: string | null, amountCents: number): SummaryRow => ({
+      key: 'discount',
+      label: label === null ? t.summary.discount : `${t.summary.discount} · ${label}`,
+      // İndirim EKSİ yazılır: özetteki tek çıkarma satırı odur ve işaretsiz yazılırsa
+      // toplamla aritmetiği tutmuyormuş gibi okunur.
+      value: `−${formatPrice(amountCents, locale)}`,
+      tone: 'olive',
+    });
+
+    if (discount.status === 'applied') return row(discount.label ?? discount.code, discount.amountCents);
+    if (discount.status === 'automatic') return row(discount.label ?? reasonLabel(discount.reason), discount.amountCents);
+    /* Kupon tutmasa da müşteri hak ettiği otomatik indirimi KAYBETMEZ — sözleşmenin `appliedInstead`
+       kararı; özet satırı bir kupon denendi diye künyesini yitirmemeli. */
+    if (discount.status === 'rejected' && discount.appliedInsteadCents > 0) {
+      const instead = discount.appliedInstead;
+      return row(instead === null ? null : (instead.label ?? reasonLabel(instead.reason)), discount.appliedInsteadCents);
+    }
+    return null;
+  };
+
+  const rejection = discount.status === 'rejected' ? discount : null;
+  const rejectionText =
+    rejection === null
+      ? null
+      : rejection.reason === 'outranked'
+        ? t.coupon.rejected.outranked.replace('{amount}', formatPrice(rejection.appliedInsteadCents, locale))
+        : t.coupon.rejected[rejection.reason];
+
+  const discountSummary = discountRow();
+  const summaryRows: SummaryRow[] = [
+    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
+    ...(discountSummary === null ? [] : [discountSummary]),
+  ];
+
   const submitCoupon = () => {
-    const code = couponInput.trim().toLocaleUpperCase('tr-TR');
-    const amountCents = DEMO_COUPONS[code];
-    if (amountCents === undefined) {
-      setCouponError(t.coupon.invalid);
+    /* Kod bir KİMLİKTİR, dilin harf kuralına tabi değil: `toLocaleUpperCase('tr')` "i"yi "İ" yapar
+       ve sunucudaki kodu bulamaz hâle getirirdi. */
+    const code = couponInput.trim().toUpperCase();
+    if (code === '') {
+      setCouponError(t.coupon.empty);
       return;
     }
-    applyCoupon({ code, amountCents });
+    applyCoupon(code);
     setCouponInput('');
     setCouponError(null);
     setCouponSheetOpen(false);
   };
 
-  const summaryRows: SummaryRow[] = [
-    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(subtotalCents, locale) },
-    ...(cart.coupon === null
-      ? []
-      : [
-          {
-            key: 'discount',
-            label: `${t.summary.discount} · ${cart.coupon.code}`,
-            // İndirim EKSİ yazılır: özetteki tek çıkarma satırı odur ve işaretsiz yazılırsa
-            // toplamla aritmetiği tutmuyormuş gibi okunur.
-            value: `−${formatPrice(cart.coupon.amountCents, locale)}`,
-            tone: 'olive' as const,
-          },
-        ]),
-  ];
+  const renderLine = (line: MeCartViewLine) => {
+    const id = cartLineId(line);
+    const bundle = line.kind === 'bundle';
+    const priceLabel = line.unitPriceCents === null ? null : formatPrice(line.unitPriceCents, locale);
+    const contents = line.contents.map((item) => `${item.name} ×${item.qty}`).join(' · ');
+
+    const subtitle =
+      bundle && contents !== ''
+        ? contents
+        : priceLabel === null
+          ? line.unitLabel === ''
+            ? t.line.noPrice
+            : line.unitLabel
+          : line.unitLabel === ''
+            ? priceLabel
+            : t.line.unit.replace('{variant}', line.unitLabel).replace('{price}', priceLabel);
+
+    /* Fiyat ARTTIYSA önce o söylenir (DOMAIN §5: müşteriye açıkça söylenir); düzenlenemezlik ikinci
+       derecede bir bilgidir ve ancak başka uyarı yokken yer alır. */
+    const notice =
+      line.priceChange !== undefined
+        ? t.line.priceUp.replace('{price}', formatPrice(line.priceChange.previousCents, locale))
+        : isReadOnly(line)
+          ? t.line.readOnly
+          : undefined;
+
+    return (
+      <CartLineRow
+        key={id}
+        name={line.name}
+        subtitle={subtitle}
+        totalLabel={line.lineTotalCents === null ? t.line.noPrice : formatPrice(line.lineTotalCents, locale)}
+        quantity={line.qty}
+        photoUri={line.image.url}
+        tone={bundle ? 'bundle' : 'product'}
+        eyebrow={bundle ? t.line.bundle : undefined}
+        discountLabel={line.wasCents === undefined ? undefined : t.line.discounted}
+        soldOutLabel={line.blocked ? (line.unitPriceCents === null ? t.line.closed : t.line.soldOut) : undefined}
+        noticeLabel={notice}
+        readOnly={isReadOnly(line)}
+        removeLabel={t.line.remove}
+        removeAccessibilityLabel={t.line.removeLabel.replace('{name}', line.name)}
+        decreaseLabel={t.line.decrease.replace('{name}', line.name)}
+        increaseLabel={t.line.increase.replace('{name}', line.name)}
+        onDecrease={() => setProductQuantity(id, line.qty - 1)}
+        onIncrease={() => setProductQuantity(id, line.qty + 1)}
+        onRemove={() => removeProduct(id)}
+        testID={`cart-line-${id}`}
+      />
+    );
+  };
+
+  /* Ücretsiz kargo eşiği YALNIZ kargo grubu varken anlamlıdır: kapıya teslimde kargo ücreti diye
+     bir şey yok ve eşiği orada göstermek olmayan bir hedefi varmış gibi okuturdu. Eşik 0 =
+     "tanımsız" (sözleşmenin hükmü) — blok hiç çizilmez. */
+  const freeShippingRemaining = view.freeShippingCents - view.shippingSubtotalCents;
+  const freeShippingNote =
+    view.freeShippingCents === 0 || shippingLines.length === 0 ? null : freeShippingRemaining > 0 ? (
+      <Note
+        tone="warm"
+        description={t.freeShipping.remaining.replace('{amount}', formatPrice(freeShippingRemaining, locale))}
+        testID="cart-free-shipping"
+      />
+    ) : (
+      <Note tone="olive" description={t.freeShipping.reached} testID="cart-free-shipping" />
+    );
 
   const header = (
     <View style={styles.header}>
@@ -145,6 +282,8 @@ export function CartScreen() {
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="cart-scroll">
         <View style={styles.lines}>
+          {/* Cihazda duran hazır paket satırları — depo onları henüz sunucuya bağlamıyor (iki ölçülmüş
+              engel: satır çözülemiyor, satır silinemiyor — `cart-store` künyesi). */}
           {cart.bundles.map((bundle) => (
             <CartLineRow
               key={bundle.id}
@@ -165,32 +304,44 @@ export function CartScreen() {
               testID={`cart-bundle-${bundle.id}`}
             />
           ))}
-          {cart.products.map((product) => (
-            <CartLineRow
-              key={product.id}
-              name={product.name}
-              subtitle={t.line.unit
-                .replace('{variant}', product.variantLabel)
-                .replace('{price}', formatPrice(product.unitCents, locale))}
-              totalLabel={formatPrice(product.unitCents * product.quantity, locale)}
-              quantity={product.quantity}
-              photoUri={product.photoUri}
-              tone="product"
-              discountLabel={product.discounted ? t.line.discounted : undefined}
-              soldOutLabel={product.soldOut ? t.line.soldOut : undefined}
-              removeLabel={t.line.remove}
-              removeAccessibilityLabel={t.line.removeLabel.replace('{name}', product.name)}
-              decreaseLabel={t.line.decrease.replace('{name}', product.name)}
-              increaseLabel={t.line.increase.replace('{name}', product.name)}
-              onDecrease={() => setProductQuantity(product.id, product.quantity - 1)}
-              onIncrease={() => setProductQuantity(product.id, product.quantity + 1)}
-              onRemove={() => removeProduct(product.id)}
-              testID={`cart-line-${product.id}`}
-            />
-          ))}
+
+          {split ? (
+            <>
+              <SectionHeader eyebrow={t.group.route} testID="cart-group-route" />
+              {routeLines.map(renderLine)}
+              <SectionHeader eyebrow={t.group.shipping} testID="cart-group-shipping" />
+              {shippingLines.map(renderLine)}
+            </>
+          ) : (
+            lines.map(renderLine)
+          )}
         </View>
 
-        {cart.coupon === null ? (
+        {unresolved ? (
+          cart.resolving ? (
+            <LoadingState accessibilityLabel={t.unresolved.loading} label={t.unresolved.loading} testID="cart-loading" />
+          ) : (
+            <Note tone="terracotta" description={t.unresolved.failed} testID="cart-unresolved" />
+          )
+        ) : null}
+
+        {freeShippingNote}
+
+        {/* Bölünme SEPETİN kendi hâlidir, bir seçim değil: müşteri kalem taşımaz, yol seçmez. */}
+        {split ? <Note tone="warm" description={t.group.split} testID="cart-split" /> : null}
+
+        {discount.status === 'applied' ? (
+          <View style={styles.couponApplied} testID="cart-coupon-applied">
+            <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+            <Text style={styles.couponAppliedLabel}>{t.coupon.applied.replace('{code}', discount.code)}</Text>
+            <TextAction
+              label={t.coupon.remove}
+              onPress={removeCoupon}
+              accessibilityHint={t.coupon.removeLabel}
+              testID="cart-coupon-remove"
+            />
+          </View>
+        ) : (
           <PressableSurface
             onPress={() => setCouponSheetOpen(true)}
             feedback="scale"
@@ -202,36 +353,44 @@ export function CartScreen() {
             <Text style={styles.couponInviteLabel}>{t.coupon.add}</Text>
             <Text style={styles.couponChevron}>›</Text>
           </PressableSurface>
-        ) : (
-          <View style={styles.couponApplied} testID="cart-coupon-applied">
-            <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
-            <Text style={styles.couponAppliedLabel}>{t.coupon.applied.replace('{code}', cart.coupon.code)}</Text>
-            <TextAction
-              label={t.coupon.remove}
-              onPress={removeCoupon}
-              accessibilityHint={t.coupon.removeLabel}
-              testID="cart-coupon-remove"
-            />
-          </View>
+        )}
+
+        {rejectionText === null ? null : (
+          <Note tone="terracotta" description={rejectionText} testID="cart-coupon-rejected" />
         )}
 
         <SummaryPanel
           rows={summaryRows}
           totalLabel={t.summary.total}
-          totalValue={formatPrice(totalCents, locale)}
+          totalValue={formatPrice(view.totalCents, locale)}
           note={t.summary.note}
           testID="cart-summary"
         />
 
-        {missingCents > 0 ? (
+        {/* Sunucu reddi: iyimser yazım geri alındı, yani ekrandaki sepet SUNUCUDAKİ sepettir.
+            GELİŞTİRMEDE RET ANAHTARI DA YAZILIR: müşteriye tek cümle yeter ama biz o cümleyle
+            arızayı teşhis edemiyorduk — "eşitlenemedi" `unauthorized`ı da `invalid_response`u da
+            aynı görünüşe indiriyor ve hangisi olduğu ancak cihazda tekrar üretilerek anlaşılıyor
+            (09.08). Anahtar depoda zaten duruyordu, ekran onu atıyordu. */}
+        {cart.error === null ? null : (
+          <Note
+            tone="terracotta"
+            description={__DEV__ ? `${t.sync.failed} [${cart.error}]` : t.sync.failed}
+            testID="cart-sync-error"
+          />
+        )}
+
+        {view.hasBlocked ? <Note tone="error" description={t.blocked} testID="cart-blocked" /> : null}
+
+        {view.minBasketOk || unresolved ? null : (
           <Note
             tone="terracotta"
             description={t.minimum
-              .replace('{minimum}', formatPrice(MINIMUM_ORDER_CENTS, locale))
-              .replace('{missing}', formatPrice(missingCents, locale))}
+              .replace('{minimum}', formatPrice(view.minBasketCents, locale))
+              .replace('{missing}', formatPrice(view.missingForMinBasketCents, locale))}
             testID="cart-minimum"
           />
-        ) : null}
+        )}
 
         <View style={styles.continueRow}>
           <TextAction label={t.continue} onPress={() => router.push('/catalog')} testID="cart-continue" />
@@ -243,14 +402,14 @@ export function CartScreen() {
         <PressableSurface
           onPress={() => router.push('/checkout')}
           feedback="shadow"
-          disabled={missingCents > 0}
-          style={[styles.checkoutButton, missingCents > 0 ? styles.checkoutDisabled : styles.checkoutEnabled]}
+          disabled={checkoutBlocked}
+          style={[styles.checkoutButton, checkoutBlocked ? styles.checkoutDisabled : styles.checkoutEnabled]}
           accessibilityLabel={t.checkout}
           testID="cart-checkout"
         >
           <Text style={styles.checkoutLabel}>{t.checkout}</Text>
           <View style={styles.checkoutTotal}>
-            <Text style={styles.checkoutLabel}>{formatPrice(totalCents, locale)}</Text>
+            <Text style={styles.checkoutLabel}>{formatPrice(view.totalCents, locale)}</Text>
           </View>
         </PressableSurface>
       </View>

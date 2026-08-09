@@ -73,3 +73,55 @@ export const PlaceResolutionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('unresolved'), reason: z.enum(['no_shipping_warehouse', 'ambiguous_zone']) }),
 ]);
 export type PlaceResolution = z.infer<typeof PlaceResolutionSchema>;
+
+/**
+ * "BURAYA DA GELİN" KAYDI — bölge dışı müşterinin talebi (21.20 · kullanıcı kararı 10.08).
+ *
+ * ── İKİ KAYIT, İKİ AYRI SORU ─────────────────────────────────────────────────
+ * Uç TEK istekte iki yere yazar ve ikisi BİRLEŞTİRİLEMEZ (`0023_notices.sql` kararı):
+ * · `postal_code_demand` — **anonim sayaç**, kimlik TUTMAZ. Aynı ziyaretçinin tekrar sorması ayrı
+ *   sayılır ve bu bilinçli: tekilleştirmek için kimlik tutmak gerekirdi. Ölçtüğü şey bir "kişi
+ *   sayısı" değil, İLGİ YOĞUNLUĞU.
+ * · `zone_notice` — **kuvvetli sinyal**: e-posta + ülke + kod. Tekilliği veritabanı tutuyor
+ *   (`zone_notice_unique_idx (country, postal_code, lower(email))`), yani **aynı kişi aynı yer için
+ *   ikinci kez sayılmaz** — düğmeye tekrar basmak yeni bir bekleyiş değil, aynı bekleyişin
+ *   tekrarıdır. Kullanıcının istediği "bir kullanıcı bir artırım" kuralı BURADA yaşıyor.
+ *
+ * Operatörün "burayı açalım mı" kararı kuvvetli sinyali sayar; anonim sayaç yalnız yönü gösterir.
+ *
+ * ── HESAP ZORUNLU DEĞİL ──────────────────────────────────────────────────────
+ * Ziyaretçi de kayıt bırakabilir (`zone_notice.email` künyesi): "haber ver"in önüne giriş duvarı
+ * koymak, tam da vazgeçmeye en yakın anda ikinci bir engel çıkarmaktır. Girişli müşteride e-posta
+ * SUNUCUDA çözülür — gövdeden gelen bir adres başkasının yerine kayıt bırakmaya açık kapı olurdu.
+ */
+export const PlaceNoticeBodySchema = z.object({
+  postalCode: z.string().trim().min(1).max(16),
+  country: CountryEnum,
+  /**
+   * Ziyaretçinin adresi. Girişli müşteride GÖVDEDEN ALINMAZ ve gönderilse bile YOK SAYILIR: kimlik
+   * sunucunun bildiği şeydir. Misafirde zorunlu — nereye haber vereceğimizi bilmeden söz veremeyiz.
+   */
+  email: z.string().email().nullable().default(null),
+  /**
+   * Kaydın hangi EKRANDAN geldiği (`app-catalog` · `app-onboarding` · `app-account`). Enum DEĞİL:
+   * bir karar girdisi değil, denetim izi — yeni ekran migration yazdırmasın (tablonun kendi kararı).
+   */
+  source: z.string().trim().min(1).max(32),
+});
+
+/**
+ * Kaydın sonucu. **`ok` "haber göndereceğiz" DEMEK DEĞİLDİR** — tablo künyesinin kuralı: bu bir söz
+ * değil bir kayıttır, bölge genişletme kararı verilmemiştir. Ekran "not aldık" der.
+ *
+ * `already` ayrı bir hâl çünkü ekranın cümlesi farklı: "kaydınız zaten var" demek, müşteriye ikinci
+ * kez bastığında sessiz kalmaktan da "yeni kayıt aldık" demekten de dürüsttür.
+ */
+export const PlaceNoticeResultSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok') }),
+  z.object({ status: z.literal('already') }),
+  /** Yer çözülemedi: nereye haber vereceğimizi bilmiyoruz, kayıt ALINMAZ (webin aynı hükmü). */
+  z.object({ status: z.literal('place_unknown') }),
+  /** Misafir e-posta vermedi — giriş duvarı değil, adres sorusu. */
+  z.object({ status: z.literal('email_required') }),
+]);
+export type PlaceNoticeResult = z.infer<typeof PlaceNoticeResultSchema>;

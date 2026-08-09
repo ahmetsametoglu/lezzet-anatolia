@@ -1,4 +1,4 @@
-import type { DiscountScope, DiscountTrigger, DiscountType } from '@lezzet/types';
+import type { CouponRejection, DiscountScope, DiscountTrigger, DiscountType } from '@lezzet/types';
 import { distributeDiscount, percentOf } from '@lezzet/helper';
 
 /**
@@ -156,21 +156,13 @@ export function applyBestDiscount(
 }
 
 /**
- * Kuponun neden geçmediği. Müşteriye **sebep** söylenir, "geçersiz kod" denip geçilmez: süresi
- * dolmuş kuponla asgari sepeti tutmayan kupon farklı şeylerdir ve ikincisinde müşteri sepetine
- * ürün ekleyerek kuponu kullanabilir.
+ * Kuponun neden geçmediği — künyeleri ve `not_yours` sızdırma kuralı tanımın yanında
+ * (`CouponRejectionEnum`, `@lezzet/types`).
  *
- * `not_yours` dışarı **sızdırılmaz**: kişisel kupon başkasının elindeyse "bu kupon var ama senin
- * değil" demek, kodun varlığını doğrulamak olurdu. Çağıran onu `unknown_code` gibi sunar.
+ * **Tanım burada DEĞİL, türetiliyor** (`CartLineRoute`un aynı yolu): sebep mobil sözleşmesinde zod
+ * olarak da ifade ediliyor ve iki ayrı tanım bir gün ayrışırdı. Motorun dış API'si değişmiyor.
  */
-export type CouponRejection =
-  | 'inactive'
-  | 'not_started'
-  | 'expired'
-  | 'min_basket'
-  | 'first_order_only'
-  | 'used_up'
-  | 'not_yours';
+export type { CouponRejection };
 
 export type CouponEligibility = { ok: true } | { ok: false; reason: CouponRejection };
 

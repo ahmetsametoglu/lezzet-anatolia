@@ -5,13 +5,17 @@ import { MeSchema, MeUpdateSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { addresses } from './addresses';
 import { authOtp } from './auth-otp';
+import { cart } from './cart';
+import { cartView } from './cart-view';
 import { catalog } from './catalog';
+import { checkout } from './checkout';
 import { devLogin } from './dev-login';
 import { discover, discoverClaim } from './discover';
 import { feedback } from './feedback';
 import { home } from './home';
 import { orders } from './orders';
 import { packages } from './packages';
+import { payments } from './payments';
 import { places } from './places';
 import { points } from './points';
 import { preferences } from './preferences';
@@ -59,6 +63,12 @@ v1.route('/', places);
 // yalnız iki şey değişir: oylanmış kartlar destede elenir ve oy sahibine yazılıp puan doğar.
 // Erişim değişmez, 401 hiçbir hâlde dönmez (`discover.ts` künyesi).
 v1.route('/', discover);
+// MİSAFİRİN SEPET GÖRÜNÜMÜ de açık kümededir (21.21) ve gerekçesi katalogunkiyle aynı soydan:
+// sepet oturumsuz doldurulur (satırları cihaz taşır), ama o sepetin PARASI sunucunun kararıdır.
+// Fiyatı/tükendiyi/asgari sepeti istemciye hesaplatmak, aynı sepetin misafirken bir, giriş yapınca
+// başka bir tutar göstermesi demekti. Uç niyeti GÖVDEDEN alır ve hiçbir şey YAZMAZ — girişli
+// kullanıcının sepeti buradan gölgelenemez, onunki `bearerAuth`ın arkasındaki `/me/cart`tır.
+v1.route('/cart', cartView);
 
 v1.use('*', bearerAuth);
 
@@ -114,7 +124,23 @@ v1.route('/me/addresses', addresses);
 // sipariş kapısında (`order/customer-orders.ts`), kimlik çözümü `orders.ts`te tek middleware'de.
 v1.route('/me/orders', orders);
 
+// Sepet uçları (21.21) — Bearer'ın ARKASINDA: sunucu sepeti `customerId` anahtarlı, yani MİSAFİRİN
+// sunucu sepeti YOKTUR ve olması da gerekmez (web de öyle: misafir satırları istemcide taşır).
+// Gövde yalnız `{variantId, qty, stockId}` alır — ad/fiyat/tutar istemciden ASLA kabul edilmez;
+// sepetin parası `getCartView` kuralında çözülür (`@lezzet/application`, terfi 09.08).
+v1.route('/me/cart', cart);
+
+// Checkout (21.22) — Bearer'ın ARKASINDA, katalogun aksine: sepet girişsiz DOLDURULUR ama sipariş
+// müşterinin kendisidir (adres · sipariş geçmişi · ödeme yetkisi hesaba bağlı). Kural burada değil,
+// `@lezzet/application`ın checkout anlık görüntüsünde — web checkout'u AYNI kapıyı çağırıyor.
+v1.route('/me/checkout', checkout);
+
 v1.route('/me/preferences', preferences);
+
+// Ödeme uçları (21.x) — Bearer'ın ARKASINDA: ödeme müşterinin kendisidir. Tutar GÖVDEDEN
+// alınmaz, siparişin `total_cents`inden sunucuda çözülür; niyetin künyesine web'in yazdığı
+// `order_id` yazılır, yani onayı AYNI Stripe webhook'u işler (`payments.ts` künyesi).
+v1.route('/payments', payments);
 
 // Puan uçları (21.17) — Bearer'ın ARKASINDA: cüzdan müşterinin kendisidir. Kural ve B2B kısa
 // devresi `points.ts` + `@lezzet/application/customer/points` künyesinde.

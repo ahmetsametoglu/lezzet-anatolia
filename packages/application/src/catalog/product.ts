@@ -4,7 +4,7 @@ import { parseEmphasis } from '@lezzet/helper';
 import { hasNutrition, resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText, PreferredLanguage, ProductWithRelations } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, toVariant } from './map';
+import { EMPTY_PRODUCT_CONTEXT, imageOf, primaryVariantOf, toCategory, toProduct, toVariant } from './map';
 import type { ProductContext } from './map';
 import { loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
@@ -242,6 +242,9 @@ export async function getProductDetail(
     gallery: galleryOf(cover, images.map(imageOf)),
     category: category ? toCategory(category, locale) : null,
     variants: variants.map((v) => toVariant(v, locale, ctx, product.shippable)),
+    // Açılışta seçili boy — ölçüt kartla BİREBİR aynı (`primaryVariantOf`). Sıra DEĞİŞMİYOR:
+    // `variants` yine `sortOrder`'da, yalnız hangisinin seçili açılacağı buradan geliyor.
+    primaryVariantId: primaryVariantOf(variants, ctx)?.id ?? null,
     declaration: declarationOf(product, locale),
     shippable: product.shippable,
     family,

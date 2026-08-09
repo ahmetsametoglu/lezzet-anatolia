@@ -1,3 +1,4 @@
+import { addressLineOf } from '@lezzet/address-fr';
 import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
@@ -14,6 +15,7 @@ import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
+import { SuggestionList } from '@/components/ui/suggestion-list';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import {
@@ -38,6 +40,7 @@ import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { AddressCard } from './address-card';
 import { accountData, type AccountData } from './account-fixture';
 import { useAddresses } from './use-addresses.hook';
+import { useAddressSearch } from './use-address-search.hook';
 import { usePoints } from './use-points.hook';
 import messages from './messages.json';
 
@@ -236,9 +239,28 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
   const [addressError, setAddressError] = useState<string | null>(null);
   const [defaultFailed, setDefaultFailed] = useState(false);
 
+  /* ADRES ARAMASI (BAN, 21.15) — sokak alanına yazarken devletin adres servisinden öneri gelir ve
+     dokunulan öneri ÜÇ alanı birden doldurur (sokak + posta kodu + şehir). Elle yazma yolu
+     KAPANMAZ: servis düşerse ya da kota dolarsa liste hiç çizilmez, form bugünkü gibi çalışır —
+     doğrulama da aynı kalır (5 hane posta kodu). Kararların künyesi `use-address-search.hook.ts`.
+
+     LİSTE NE ZAMAN AÇIK: yalnız müşteri sokak alanına YAZARKEN. Çekmece yeni açıldığında
+     (düzenlemede alan zaten dolu) ve öneri seçildikten sonra kapalıdır — aksi hâlde seçilen
+     adres kendi önerisini yeniden getirir ve liste seçimin üstünde asılı kalırdı. */
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const addressSearch = useAddressSearch(addressDraft.line1, { enabled: addressSheet !== null && suggestOpen });
+
   const editAddressDraft = (patch: Partial<typeof addressDraft>) => {
     setAddressDraft((current) => ({ ...current, ...patch }));
     setAddressError(null);
+  };
+
+  /** Öneriye dokunuldu: satır, posta kodu ve şehir BİRLİKTE yazılır, liste kapanır. */
+  const applySuggestion = (id: string) => {
+    const picked = addressSearch.suggestions.find((suggestion) => suggestion.id === id);
+    if (picked === undefined) return;
+    setSuggestOpen(false);
+    editAddressDraft({ line1: addressLineOf(picked), postalCode: picked.postalCode, city: picked.city });
   };
 
   const openAddressSheet = (address: MeAddress | null) => {
@@ -249,6 +271,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
       city: address?.city ?? '',
     });
     setAddressError(null);
+    setSuggestOpen(false);
     setAddressSheet({ editing: address });
   };
 
@@ -705,12 +728,34 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
               posta kodu/şehri de doldurur (sistem alan kümesini birlikte tanıyor). */}
           <TextField
             value={addressDraft.line1}
-            onChangeText={(value) => editAddressDraft({ line1: value })}
+            onChangeText={(value) => {
+              setSuggestOpen(true);
+              editAddressDraft({ line1: value });
+            }}
             accessibilityLabel={t.addresses.sheet.lineLabel}
             placeholder={t.addresses.sheet.linePlaceholder}
             content="streetAddress"
             testID="address-line"
           />
+          {/* Adres servisinin önerileri — alanın hemen ALTINDA, seçilince üç alanı birden doldurur.
+              Künye satırı listeyle birlikte gelir: veri Etalab 2.0 altında ve kaynak gösterimi
+              gösteren yüzeyin sorumluluğu (STACK "Adres arama (FR)"). */}
+          <SuggestionList
+            items={addressSearch.suggestions.map((suggestion) => ({
+              id: suggestion.id,
+              title: addressLineOf(suggestion),
+              subtitle: `${suggestion.postalCode} ${suggestion.city}`,
+            }))}
+            onSelect={applySuggestion}
+            footnote={t.addresses.sheet.suggestCredit}
+            accessibilityLabel={t.addresses.sheet.suggestLabel}
+            testID="address-suggestions"
+          />
+          {/* Kota doldu (429): tek satır söylenir ve BİTER — alan yazmaya açık kalır, kaydetme
+              engellenmez. Öneri yardımcı bir özellik; yokluğu müşterinin işini durdurmaz. */}
+          {addressSearch.throttled ? (
+            <Note description={t.addresses.sheet.suggestBusy} tone="warm" testID="address-suggest-busy" />
+          ) : null}
           <View style={styles.zipRow}>
             <View style={styles.zipField}>
               <TextField

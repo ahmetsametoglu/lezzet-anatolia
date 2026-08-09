@@ -20,8 +20,8 @@
 
 <section style="display:flex;flex-direction:column;gap:40px;align-items:flex-start">
 
-  <div style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
-    <span style="font:600 16px 'Karla';color:#343b41">Müşteri — Tarifler / Sofradan Fikirler · Web</span>
+  <div id="tarifler-web" style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#343b41">Müşteri — Tarifler / Sofradan Fikirler · Web (/tarifler)</span>
     <div data-screen-label="Tarifler Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
       <div style="background:#5f7a2c;color:#f3efe2;font:500 13px 'Karla';display:flex;justify-content:center;gap:28px;padding:8px 0">
         <span>❄ Soğuk zincirle teslim</span><span>Strasbourg &amp; çevresinde kapıya teslim</span><span>Fransa geneline kargo</span>
@@ -55,7 +55,7 @@
             <span style="font:400 13.5px/1.55 'Karla';color:#6d7261;flex:1">Karadeniz kahvaltısının yıldızı: mısır ununda eriyip uzayan peynir — 15 dakikada sofrada.</span>
             <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f0e9d6;padding-top:12px">
               <span style="font:600 13px 'Karla';color:#8a8270">1 ürün + 3 ev malzemesi · <strong style="color:#4a6121">6,40 €</strong></span>
-              <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 18px;border-radius:22px">Tarifi gör</span>
+              <a href="#tarif-detay-web" style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 18px;border-radius:22px;text-decoration:none">Tarifi gör</a>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@
             <span style="font:400 13.5px/1.55 'Karla';color:#6d7261;flex:1">El mantısı, sarımsaklı yoğurt ve kızgın tereyağı — misafir ağırlatan klasik.</span>
             <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f0e9d6;padding-top:12px">
               <span style="font:600 13px 'Karla';color:#8a8270">2 ürün + 3 ev malzemesi · <strong style="color:#4a6121">15,60 €</strong></span>
-              <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 18px;border-radius:22px">Tarifi gör</span>
+              <a href="#tarif-detay-web" style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 18px;border-radius:22px;text-decoration:none">Tarifi gör</a>
             </div>
           </div>
         </div>
@@ -83,19 +83,41 @@
             <span style="font:400 13.5px/1.55 'Karla';color:#6d7261;flex:1">Sigara böreği, zeytinli açma ve Ezine peyniriyle kalabalık pazar sofrası.</span>
             <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f0e9d6;padding-top:12px">
               <span style="font:600 13px 'Karla';color:#8a8270">3 ürün + 2 ev malzemesi · <strong style="color:#4a6121">24,40 €</strong></span>
-              <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 18px;border-radius:22px">Tarifi gör</span>
+              <a href="#tarif-detay-web" style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 18px;border-radius:22px;text-decoration:none">Tarifi gör</a>
             </div>
           </div>
         </div>
       </div>
 
-      <div style="background:#f0e9d6;padding:44px 48px;display:flex;flex-direction:column;gap:22px">
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Tarif detayı</span>
-          <h2 style="margin:0;font:600 32px 'Lora';color:#343b41">Mıhlama (Kuymak)</h2>
-          <p style="margin:6px 0 0;font:400 16px/1.6 'Karla';color:#6d7261;max-width:620px">Karadeniz kahvaltısının yıldızı: mısır ununda eriyip uzayan peynir — 15 dakikada sofrada.</p>
+    </div>
+  </div>
+
+  <div id="tarif-detay-web" style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#343b41">Müşteri — Tarif Detay · Web (/tarifler/kuymak · mobil "Sofradan Fikirler" detayıyla aynı recipes kaydı)</span>
+    <div data-screen-label="Tarif Detay Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="background:#5f7a2c;color:#f3efe2;font:500 13px 'Karla';display:flex;justify-content:center;gap:28px;padding:8px 0">
+        <span>❄ Soğuk zincirle teslim</span><span>Strasbourg &amp; çevresinde kapıya teslim</span><span>Fransa geneline kargo</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <a href="./Musteri%20-%20Anasayfa.dc.html" style="display:inline-flex;line-height:0"><img src="assets/logo.jpg" style="height:58px;mix-blend-mode:multiply" alt="Lezzet Anatolia"></a>
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#343b41">
+          <a href="./Musteri%20-%20Katalog.dc.html" style="color:inherit;text-decoration:none;">Katalog</a><a href="./Musteri%20-%20Paketler.dc.html" style="color:inherit;text-decoration:none;">Paketler</a><span style="color:#5f7a2c;border-bottom:2px solid #5f7a2c;padding-bottom:2px">Tarifler</span><a href="./Musteri%20-%20Katalog.dc.html" style="color:#b05c2e;text-decoration:none;">Fırsatlar</a><a href="./Musteri%20-%20Kesif.dc.html" style="color:inherit;text-decoration:none;">Keşif</a><a href="./Musteri%20-%20Professionnels.dc.html" style="color:inherit;text-decoration:none;">Professionnels</a>
+        </nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:18px">
+          <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:24px;padding:9px 18px;width:250px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div>
+          <span style="font:600 14px 'Karla';color:#8a8270">TR ▾</span>
+          <div style="position:relative;font-size:22px">🧺<span style="position:absolute;top:-6px;right:-10px;background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:10px;padding:1px 6px">2</span></div>
         </div>
-        <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:36px;align-items:start">
+      </div>
+      <div style="padding:26px 48px 0;display:flex;align-items:center;gap:8px;font:600 14px 'Karla';color:#8a8270">
+        <a href="#tarifler-web" style="color:#5f7a2c;text-decoration:none">Tarifler</a><span>›</span><span style="color:#343b41">Mıhlama (Kuymak)</span>
+      </div>
+      <div style="padding:16px 48px 10px;display:flex;flex-direction:column;gap:8px;max-width:760px">
+        <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Sofradan Fikirler</span>
+        <h1 style="margin:0;font:600 40px/1.1 'Lora';color:#343b41">Mıhlama (Kuymak)</h1>
+        <p style="margin:0;font:400 16px/1.6 'Karla';color:#6d7261">Karadeniz kahvaltısının yıldızı: mısır ununda eriyip uzayan peynir — 15 dakikada sofrada.</p>
+      </div>
+      <div style="padding:16px 48px 48px;display:grid;grid-template-columns:1.1fr 1fr;gap:36px;align-items:start">
           <div style="display:flex;flex-direction:column;gap:22px">
             <div style="aspect-ratio:4/3"><image-slot id="trf-w-kuymak-hero" radius="18" placeholder="Mıhlama — tavada, kaşıkta uzayan peynir"></image-slot></div>
             <div style="display:flex;flex-direction:column;gap:14px">
@@ -130,7 +152,6 @@
             </div>
           </div>
         </div>
-      </div>
     </div>
   </div>
 

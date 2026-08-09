@@ -5,15 +5,17 @@ import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/t
 import type { CatalogVariant, Nutrition, ProductAllergen } from '@lezzet/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Image, ScrollView, Share, Text, View } from 'react-native';
+import { useState, useSyncExternalStore } from 'react';
+import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@/components/ui/back-button';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { BlurView } from 'expo-blur';
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
@@ -55,6 +57,10 @@ import { useProduct } from './use-product.hook';
      (21.14a raporu) — katman gelince buradaki `add` da onu çağırır.
   7. **İskelet şablonda tanımlı değil**; katalog iskeletinin diliyle asgari bloklar çizildi
      (kahraman + başlık + satır). Uydurulmuş bir tasarım değil, uygulamanın kendi bekleme dili.
+  8. **Kahraman GALERİ oldu** (kullanıcı isteği 09.08, `design/KARARLAR.md`): şablonun tek
+     `image-slot`u yerine kaydırılabilir şerit (`PhotoGallery`) — sözleşme zaten birden çok görsel
+     taşıyordu (`gallery`) ve ekran onları atıyordu. Yerleşim DEĞİŞMEDİ: ölçü, degrade, yüzen
+     düğmeler ve rozetler aynı yerde; tek görselli üründe şerit de gösterge de çizilmez.
 
   KAHRAMAN ROZETİ KOMŞUYA TAŞAR (fiyat, alt kenardan -22): kardeş çizim sırası yüzünden içerik
   bloğu rozeti ezerdi — kahraman kapsayıcısı `zIndex` ile üste alındı (koleksiyon dairelerinin
@@ -124,7 +130,10 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const { theme } = useUnistyles();
   const locale = useAppLocale();
   const t: Messages = messages[locale];
-  const { status, detail, retry } = useProduct(slug, locale);
+  /* Yer bağlamı katalogla AYNI kaynaktan: iki ekran farklı yer sorarsa aynı ürün iki fiyatla
+     görünür (ölçüldü 09.08 — listede 1,84 €, detayda 2,30 €). */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const { status, detail, retry } = useProduct(slug, locale, onboarding?.postalCode ?? null);
 
   /* Seçim ürüne değil boya aittir; ürün değişince (aile çipi `setParams`la slug'ı yerinde
      değiştirir, rota `key={slug}` ile ekranı yeniden kurar) seçim doğal olarak sıfırlanır.
@@ -182,6 +191,12 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   /* Fiyatsız benzer kart çizilmez: kitin kartı fiyat etiketini zorunlu tutuyor (fiyatsız kart
      doğmasın diye) ve fiyatı olmayan ürün zaten satışa kapalı. */
   const similar = detail.similar.filter((product) => product.priceCents !== null);
+  /* Kahraman şeridi sözleşmenin GALERİSİNDEN kurulur (ilk öğe kapaktır — `CatalogProductDetail`
+     künyesi); galeri hiç gelmediyse tek kapakla çizilir ve ekran bugünkü hâlini korur. Adressiz
+     görsel elenir: `url === null` "görsel yok / R2 tabanı ayarsız" demektir, boş bir karo değil. */
+  const heroPhotos = (detail.gallery.length > 0 ? detail.gallery : [detail.image])
+    .map((image) => image.url)
+    .filter((url): url is string => url !== null);
 
   const share = () => {
     void Share.share({ message: detail.name });
@@ -208,15 +223,20 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   return (
     <View style={styles.screen} testID="product-detail">
       <ScrollView contentContainerStyle={styles.content} testID="product-scroll">
-        {/* ── Kahraman: foto + üst degrade + yüzen düğmeler + rozetler (v3:240-249) ── */}
+        {/* ── Kahraman: galeri şeridi + üst degrade + yüzen düğmeler + rozetler (v3:240-249) ── */}
         <View style={styles.hero}>
-          {detail.image.url === null ? (
-            <View style={styles.heroFallback}>
-              <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
-            </View>
-          ) : (
-            <Image source={{ uri: detail.image.url }} style={styles.heroImage} accessibilityIgnoresInvertColors />
-          )}
+          {/* Şerit kahramanın YERİNE geçer, yerleşimini değiştirmez: degrade, düğmeler ve rozetler
+              onun üstünde çizilmeye devam eder (kardeş sırası korundu). */}
+          <PhotoGallery
+            uris={heroPhotos}
+            photoLabel={t.gallery.photo}
+            fallback={
+              <View style={styles.heroFallback}>
+                <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
+              </View>
+            }
+            testID="product-gallery"
+          />
           <LinearGradient
             colors={[theme.colors['scrim-soft'], 'transparent']}
             locations={[0, 0.3]}
@@ -540,10 +560,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   hero: {
     height: customerMetrics.productHero,
     zIndex: 2,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   heroFallback: {
     width: '100%',

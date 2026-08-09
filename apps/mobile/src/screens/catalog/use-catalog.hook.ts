@@ -26,6 +26,12 @@ import { appMetrics } from '@/theme/metrics';
   HATA YUTULMAZ: ilk yük düşerse ekran hata durumuna geçer (yeniden dene ile aynı sorguyu tekrar
   eder); KUYRUK düşerse liste yerinde kalır ve listenin sonunda tekrar-dene çıkar. İkisi ayrı
   ayrı taşınır çünkü ikisi ayrı şey: biri "hiç veri yok", öteki "devamı gelmedi".
+
+  ── YER (POSTA KODU) SÜZGEÇ DEĞİL, OKUMANIN BAĞLAMIDIR ──────────────────────
+  Kod `filters`e GİRMEZ: müşteri onu katalogda seçmiyor (kaynak cihazdaki kayıt) ve seçilmiş bir
+  süzgeç gibi davranırsa "temizle" düğmesinin kapsamına girerdi. Yine de her isteğe eşlik eder —
+  fiyat, teklif ve stok hâli depoya bağlı. Kod DEĞİŞİNCE liste baştan okunur ama SÜZGEÇLER
+  KORUNUR (`filtersRef`): bölge değiştirmek, seçili kategoriyi ya da aramayı iptal etmek değildir.
 */
 
 /** İlk yükün üç hâli — kuyruk (sonraki sayfa) durumu ayrı taşınır. */
@@ -41,6 +47,14 @@ interface CatalogFilters {
   /** Aranan metin; boş dize = arama yok (uca hiç gitmez). */
   search: string;
   sort: CatalogSort;
+  /**
+   * "Adresime gönderilebilir" çipi (21.20) — VARSAYILAN KAPALI ve öteki süzgeçlerle aynı kümede
+   * durur, çünkü aynı işi yapar: uca gider, sayfalamayı sıfırlar, `total`ı değiştirir.
+   *
+   * Posta kodunun kendisi buraya GİRMEZ (o okumanın bağlamı, süzgeç değil — yukarıdaki künye);
+   * çip ise müşterinin KENDİ daraltmasıdır ve bir süzgeçtir.
+   */
+  onlyShippable: boolean;
 }
 
 /** Uç kendi varsayılanını (`featured`) zaten taşıyor; buradaki başlangıç onunla AYNI olmalı. */
@@ -54,6 +68,8 @@ interface UseCatalogResult {
   /** Arama kutusunun GÖSTERDİĞİ metin (uca gitmiş olması gerekmez). */
   searchText: string;
   sort: CatalogSort;
+  /** "Adresime gönderilebilir" açık mı — çip seçili hâlini bundan okur. */
+  onlyShippable: boolean;
   /** Varsayılandan sapan bir süzgeç var mı — süzgeç düğmesi bununla "etkin" görünür. */
   filtersActive: boolean;
   products: CatalogProduct[];
@@ -67,15 +83,23 @@ interface UseCatalogResult {
   /** Kutuya yazılan metin; uca gecikmeyle gider. */
   search: (text: string) => void;
   selectSort: (sort: CatalogSort) => void;
+  /** Çipi aç/kapat. Ekran kapatmayı da çağırır: yer rota İÇİNE dönünce çip kaybolur ve görünmeyen
+   *  bir süzgecin açık kalması listeyi sessizce daraltırdı. */
+  setOnlyShippable: (value: boolean) => void;
   loadMore: () => void;
   refresh: () => void;
   retry: () => void;
 }
 
-export function useCatalog(locale: Locale): UseCatalogResult {
+/**
+ * @param postalCode Cihazdaki saklı posta kodu (`lib/onboarding`); `null` = kod hiç girilmemiş.
+ * Yerin SORUSUDUR, cevabı sunucu verir — vitrinle aynı desen (`use-home.hook.ts`). Kod değişince
+ * katalog yeniden okunur: eski liste kalırsa müşteri başka bir bölgenin fiyatına bakar.
+ */
+export function useCatalog(locale: Locale, postalCode: string | null): UseCatalogResult {
   const [status, setStatus] = useState<CatalogStatus>('loading');
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
-  const [filters, setFilters] = useState<CatalogFilters>({ category: null, search: '', sort: DEFAULT_SORT });
+  const [filters, setFilters] = useState<CatalogFilters>({ category: null, search: '', sort: DEFAULT_SORT, onlyShippable: false });
   const [searchText, setSearchText] = useState('');
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -103,7 +127,14 @@ export function useCatalog(locale: Locale): UseCatalogResult {
 
       const [categoryResult, pageResult] = await Promise.all([
         options.withCategories ? fetchCategories(locale) : Promise.resolve(null),
-        fetchProducts({ locale, category: next.category, search: next.search, sort: next.sort }),
+        fetchProducts({
+          locale,
+          category: next.category,
+          search: next.search,
+          sort: next.sort,
+          onlyShippable: next.onlyShippable,
+          postalCode,
+        }),
       ]);
       if (run !== generation.current) return;
 
@@ -125,12 +156,22 @@ export function useCatalog(locale: Locale): UseCatalogResult {
       setCursor(pageResult.data.nextCursor);
       setStatus('ready');
     },
-    [locale],
+    [locale, postalCode],
   );
 
-  // Açılış yükü. `load` yalnız dile bağlı olduğu için bu etki bir kez koşar.
+  /* Etkinin okuduğu GÜNCEL süzgeçler. Ref, çünkü etkinin bağımlılığı olsalardı her çip dokunuşu
+     ikinci bir açılış yükü (kategori rayı dahil) tetiklerdi; `load`un içine kapansalardı da yeni
+     `load` eski süzgeçle koşardı. Eşitleme AYRI ve ÖNCE gelen bir etkide: React etkileri yazım
+     sırasına göre koşturur, yani aşağıdaki yük etkisi hep taze değeri görür. */
+  const filtersRef = useRef(filters);
   useEffect(() => {
-    void load({ category: null, search: '', sort: DEFAULT_SORT }, { withCategories: true, refresh: false });
+    filtersRef.current = filters;
+  }, [filters]);
+
+  /* Açılış yükü — ve dil/POSTA KODU değiştiğinde yeniden okuma (`load` kimliği o ikisine bağlı).
+     Süzgeçler sıfırlanmaz: bölge değiştirmek seçili kategoriyi iptal etmek değildir. */
+  useEffect(() => {
+    void load(filtersRef.current, { withCategories: true, refresh: false });
   }, [load]);
 
   // Ekrandan çıkarken bekleyen arama zamanlayıcısı iptal edilir: sökülmüş bir ekranın durumunu
@@ -165,6 +206,14 @@ export function useCatalog(locale: Locale): UseCatalogResult {
     [applyFilters, filters],
   );
 
+  const setOnlyShippable = useCallback(
+    (value: boolean) => {
+      if (value === filters.onlyShippable) return;
+      applyFilters({ ...filters, onlyShippable: value });
+    },
+    [applyFilters, filters],
+  );
+
   const search = useCallback(
     (text: string) => {
       setSearchText(text);
@@ -195,7 +244,17 @@ export function useCatalog(locale: Locale): UseCatalogResult {
     setLoadingMore(true);
     setTailFailed(false);
 
-    void fetchProducts({ locale, category: filters.category, search: filters.search, sort: filters.sort, cursor }).then(
+    // Kuyruk da AYNI yerle istenir: sayfalar farklı depoların fiyatlarını taşırsa tek liste iki
+    // bölgenin katalogu olur.
+    void fetchProducts({
+      locale,
+      category: filters.category,
+      search: filters.search,
+      sort: filters.sort,
+      onlyShippable: filters.onlyShippable,
+      cursor,
+      postalCode,
+    }).then(
       (result) => {
         // Bu kuyruk artık BAŞKA bir listenin kuyruğu olabilir (süzgeç değişti) — yazılmaz.
         if (run !== generation.current) return;
@@ -208,7 +267,7 @@ export function useCatalog(locale: Locale): UseCatalogResult {
         setCursor(result.data.nextCursor);
       },
     );
-  }, [cursor, filters, loadingMore, locale, status]);
+  }, [cursor, filters, loadingMore, locale, postalCode, status]);
 
   return {
     status,
@@ -216,9 +275,14 @@ export function useCatalog(locale: Locale): UseCatalogResult {
     activeCategory: filters.category,
     searchText,
     sort: filters.sort,
+    onlyShippable: filters.onlyShippable,
     /* Kategori çipi bu sayıya GİRMEZ: rayda zaten seçili çip görünüyor ve süzgeç düğmesinin
-       "etkin" hâli, rayda görünmeyen bir süzgecin var olduğunu söylemek içindir. */
-    filtersActive: filters.sort !== DEFAULT_SORT,
+       "etkin" hâli, rayda görünmeyen bir süzgecin var olduğunu söylemek içindir.
+
+       KARGO SÜZGECİ ARTIK GİRER (kullanıcı isteği 10.08): çipken ekranda kendi seçili hâliyle
+       duruyordu ve bu sayıya girmesi gereksizdi; süzgeç sayfasına taşınınca kapalı sayfanın
+       arkasında görünmez oldu — düğmenin dolu hâli onun var olduğunu söyleyen TEK işaret. */
+    filtersActive: filters.sort !== DEFAULT_SORT || filters.onlyShippable,
     products,
     hasMore: cursor !== null,
     loadingMore,
@@ -227,6 +291,7 @@ export function useCatalog(locale: Locale): UseCatalogResult {
     selectCategory,
     search,
     selectSort,
+    setOnlyShippable,
     loadMore,
     refresh,
     retry,

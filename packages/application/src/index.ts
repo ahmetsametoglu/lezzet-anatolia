@@ -107,6 +107,7 @@ export type { PricingViewer } from './catalog/pricing-viewer';
 export {
   EMPTY_PRODUCT_CONTEXT,
   imageOf,
+  primaryVariantOf,
   sellingOf,
   stockStatusOf,
   toCategory,
@@ -208,3 +209,130 @@ export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
 export type { BatchView } from './warehouse/batch-types';
 export * from './assistant/apply';
 export * from './assistant/kind-meta';
+
+// ── Sepet okuması ve kuralları (08.4 · 09.6 · 19.7 · 19.11) — TERFİ aşama 1/3 ────────────────
+// Kaynak `apps/web/lib/cart/{read,cart-types,discount,place-change,settle,empty-cart}.ts` +
+// `apps/web/lib/{settings-scope,settings-keys}.ts`. Gerekçe 02-mimari §3.1 ve denetimin 07.08 notu
+// (`docs/talep/not-mobil-sepet-yarisi-web-native.md`): çapraz-istemci kural ya veritabanında ya
+// paylaşılan pakette yaşar — `apps/web`'e de `apps/mobile-api`'ye de kural yazılmaz, ikisi de çağırır.
+// Web kopyaları bugün KÖPRÜ; benimsemesi web şeridinin takvimi.
+//
+// **Girdi yalnız `{variantId, qty, stockId}`**: ad/fiyat/stok/tavan kapıda YENİDEN çözülür
+// (DOMAIN §5). Bu bir güvenlik özelliğidir, gevşetilmez — istemcinin yazabildiği tutar siparişin
+// parasını belirleyemez.
+export { getCartView } from './cart/read';
+export type { CartBundlePort, CartBundleSource } from './cart/read';
+export {
+  EMPTY_CART,
+  cartBlockReason,
+  cartBlockedAnalyticsReason,
+  cartKey,
+  discountAmountOf,
+  entryOf,
+  entryOfItem,
+  isSplitCart,
+  itemOfEntry,
+  shippingGroupFee,
+  splitByRoute,
+  storedPrices,
+  viewWithEntries,
+} from './cart/cart-types';
+export type {
+  AddToCartIntent,
+  CartBundleEntry,
+  CartDiscount,
+  CartEntry,
+  CartLine,
+  CartRef,
+  CartSignal,
+  CartVariantEntry,
+  CartView,
+  CouponFailure,
+  DiscountReason,
+} from './cart/cart-types';
+export { resolveCartDiscount } from './cart/discount';
+export type { CartDiscountInput } from './cart/discount';
+export { diffCartByPlace } from './cart/place-change';
+export type { CartLineChange } from './cart/place-change';
+export { clearOrderedLines } from './cart/settle';
+export { readLastOrderSuggestion } from './cart/last-order';
+export type { LastOrderSuggestion } from './cart/last-order';
+// Ayar kapsamı + müşteriye SÖZ VEREN anahtarlar: sepet ve checkout aynı satırı, aynı kapsamla
+// okumak zorunda (07.15 · 29.07 dersi). Kapsam kurucusu artık SAF — görüntüleyen çağırandan gelir.
+export { settingScopeOf } from './cart/setting-scope';
+export {
+  FREE_SHIPPING_THRESHOLD_DEFAULT,
+  FREE_SHIPPING_THRESHOLD_KEY,
+  MIN_BASKET_DEFAULT,
+  MIN_BASKET_KEY,
+  SHIPPING_FEE_DEFAULT,
+  SHIPPING_FEE_KEY,
+} from './cart/settings-keys';
+
+// ── Sipariş oluşturma zinciri (07.2 · 07.3 · 07.4 · 08.13) — TERFİ aşama 2/3 ────────────────
+// Kaynak `apps/web/lib/{delivery/places,order/{delivery,checkout-options,reserve,checkout-draft}}.ts`
+// + `apps/web/app/(customer)/[locale]/checkout/actions.ts`'in checkout anlık görüntüsü. Gerekçe
+// 02-mimari §3.1 ve mobilin "Siparişi tamamla" ekranı: **iki yüzeyde iki sipariş kuralı olamaz.**
+// Web kopyaları bugün KÖPRÜ; benimsemesi web şeridinin takvimi.
+//
+// İki bağımlılık PORT olarak dışarıda: paket çözümü (`bundles`, aşama 1'in `CartBundlePort`u) ve
+// edinim kaynağı (`onCustomerAcquired`, oturum çerezini okuyor — pakette yaşayamaz).
+export { placesForPostalCode } from './delivery/places';
+export { readDeliveryInputs, resolveDelivery } from './order/delivery';
+export type { DeliveryInputs, DeliveryResolution, ResolveDeliveryInput } from './order/delivery';
+export { resolveCheckoutPayment } from './order/checkout-options';
+export type { CheckoutPaymentInput, CheckoutPaymentResult } from './order/checkout-options';
+export { reserveOrderStock } from './order/reserve';
+export type { ReserveOrderInput, ReserveOutcome } from './order/reserve';
+export { createCheckoutDraft } from './order/checkout-draft';
+export type { CheckoutDraftInput, CheckoutDraftOutcome } from './order/checkout-draft';
+export { readCheckoutSnapshot } from './order/checkout-snapshot';
+export type { CheckoutSnapshot, CheckoutSnapshotInput } from './order/checkout-snapshot';
+// ── Sipariş ONAYLAMA zinciri (07.4 · 07.6 · 08.13) — TERFİ aşama 3/3 ────────────────────────
+// Kaynak `apps/web/app/(customer)/[locale]/checkout/actions.ts`'in onay eylemi +
+// `apps/web/lib/order/{checkout-session,transition}.ts`. Web kopyaları bugün KÖPRÜ.
+//
+// **`stripe` PAKETE GİRMEZ:** ödeme niyetini açan taraf port (`CheckoutSessionCreator`) ve çağıran
+// geçer — bu paket React Native tarafından da okunabilen bir bağımlılık ağacında yaşıyor. Aynı
+// gerekçeyle ölçüm (`onRejected`/`onPlaced`, çerez okur) ve durum geçişinin iki yan etkisi
+// (`OrderEffects` — müşteri haberi + sipariş puanı) da dışarıda. Ret DETAYININ dizeye çevrilmesi
+// çağıranda kalır: para biçimi dile bağlı, yani bir GÖRÜNÜM kararı.
+export { placeOrder } from './order/place-order';
+export type { PlaceOrderInput, PlaceOrderOutcome, PlaceOrderRejection } from './order/place-order';
+export { createCheckoutSession } from './order/checkout-session';
+export type { CheckoutSessionCreator, CheckoutSessionInput, CheckoutSessionOutcome } from './order/checkout-session';
+export { transitionOrder } from './order/transition';
+export type { TransitionInput, TransitionOutcome } from './order/transition';
+// ── Paket (bundle) çözümü — terfi 09.08 ─────────────────────────────────────
+// Kaynağı `apps/web/lib/storefront/packages.ts`tı ve `server-only` olduğu için `apps/mobile-api`
+// okuyamıyordu; web köprü olarak duruyor. Terfi tetiği ÖLÇÜLMÜŞ bir arızaydı: mobil sepette paket
+// satırı sunucuya yazılıyor ama onu çözecek kapı (`CartBundlePort`) beslenemediği için satır
+// adsız/fiyatsız/ENGELLİ dönüyor ve tutarı sepet toplamına hiç girmiyordu.
+// `pickFeatured` de onunla geldi (vitrin şeridini süzüyor, zincir gereği); `rotateDaily` ve
+// `pickRandom` webde KALDI — tek tüketenleri web ana sayfasıdır.
+export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
+export { pickFeatured } from './catalog/featured';
+export type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './catalog/storefront-types';
+// ── Sipariş BİLDİRİMİ + sipariş puanı — terfi 10.08 ─────────────────────────
+// Kaynağı `apps/web/lib/order/{notify,notification-data}.ts` ve `lib/feedback/points.ts`ti; web
+// köprü olarak duruyor. Tetiği ÖLÇÜLMÜŞ bir arızaydı: durum geçişinin yan etkileri `OrderEffects`
+// portundan akıyor ve web köprüsü portu VARSAYILAN olarak dolduruyordu — yani operasyonun
+// "yola çıktı"/"teslim edildi" geçişleri mail gönderiyor, ama MOBİLDEN verilen kapıda-ödemeli
+// siparişin `order_confirmed` maili hiç gitmiyordu: `placeOrder`a `effects` geçilmiyordu, çünkü
+// maili kuran kod `apps/web` içindeydi ve `apps/mobile-api` onu import edemiyordu.
+//
+// Yeni npm bağımlılığı GİRMEDİ (ölçüldü): `@lezzet/notify`ın npm kapanışı `@lezzet/email` üzerinden
+// zaten paketin ağacındaydı — eklenen yalnız iki `workspace:*` satırı.
+export { notifyOrderException, notifyOrderStatus } from './order/notify';
+export { buildOrderNotification } from './order/notification-data';
+export type { NotificationBundle } from './order/notification-data';
+export { awardReferralPoints, rewardCompletedOrder } from './feedback/points';
+// ── "Buraya da gelin" kaydı — terfi 10.08 ───────────────────────────────────
+// Kaynağı `apps/web/lib/delivery/notice-actions.ts`in `recordZoneNoticeAction`ıydı; web köprü.
+// Mobil bant (21.20) aynı kaydı yazıyor ve kural TEK olmalı: yer adının KAYIT ANINDA dondurulması
+// (kod tablosu değişse de operatör "68000" değil "Colmar" okur) ve tekilliğin veritabanında
+// durması (`zone_notice_unique_idx` — aynı kişi aynı yer için ikinci kez sayılmaz) iki yüzeyde
+// ayrı yazılsaydı biri bir gün ötekinden geride kalırdı. Yüzeye özgü olan dışarıda: web'in
+// çerezten okuduğu yer cevabı ve oturumdan çözdüğü kimlik parametre olarak geliyor.
+export { recordZoneNotice } from './delivery/notice';
+export type { ZoneNoticeInput, ZoneNoticeOutcome } from './delivery/notice';

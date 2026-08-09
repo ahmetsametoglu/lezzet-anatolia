@@ -46,22 +46,58 @@ interface ProductPageQuery {
    * olduğu sunucunun bileceği iş; istemci onu okumaya kalksaydı keyset'in şekli sözleşme olurdu.
    */
   cursor?: string;
+  /**
+   * Cihazda kayıtlı posta kodu — YERİN SORUSUDUR, cevabı değil: depoyu sunucu çözer (uç künyesi
+   * `apps/mobile-api/src/api/v1/catalog.ts` → `readPlace`). Fiyat, teklif ve stok hâli depoya göre
+   * değişir; kod gitmezse liste "hiç var mı" sorusunun ağ-geneli cevabıyla döner.
+   *
+   * `null`/boş = kod hiç girilmemiş → parametre HİÇ YAZILMAZ (vitrin okumasının kuralı birebir,
+   * `home.ts`): boş bir `postalCode=` sunucuda yine "yer bilinmiyor"a düşer ama isteği kirletir.
+   */
+  postalCode?: string | null;
+  /**
+   * "Adresime gönderilebilir" çipi (21.20) — kargolanabilir kalemlere daraltır.
+   *
+   * Tel üstündeki adı WEB'İN URL'siyle AYNI (`?shippable=1`): iki yüzey aynı soruyu aynı kelimeyle
+   * sorar. Varsayılan KAPALI ve kapalıyken parametre HİÇ YAZILMAZ — `shippable=0` göndermek
+   * "süzgeç yok" ile aynı sonucu verir ama isteği kirletir (`postalCode`un kuralı birebir).
+   *
+   * **Süzgeç YALNIZ YER eksenini daraltır:** tükenmiş ürün listede kalır (o başka bir eksen ve
+   * kendi işareti var). Çipin adının söylemediği ikinci bir daraltma yapılmaz.
+   */
+  onlyShippable?: boolean;
 }
 
 /** Ürün detayı — sayfanın TAMAMI tek turda (boylar, aile, benzerler, beyan); bölüm başına çağrı yok. */
-export function fetchProductDetail(slug: string, locale: Locale): Promise<ApiResult<z.infer<typeof CatalogProductDetailSchema>>> {
-  return apiFetch(`/api/v1/products/${encodeURIComponent(slug)}${queryOf({ locale })}`, CatalogProductDetailSchema);
+export function fetchProductDetail(
+  slug: string,
+  locale: Locale,
+  postalCode?: string | null,
+): Promise<ApiResult<z.infer<typeof CatalogProductDetailSchema>>> {
+  /* POSTA KODU DETAYDA DA ZORUNLU — atlanınca ÖLÇÜLEBİLİR bir tutarsızlık doğuyor (09.08):
+     katalog kodu gönderiyor, detay göndermiyordu ve aynı ürün listede 1,84 €, detayda 2,30 €
+     görünüyordu. Müşteri indirimli fiyata dokunup normal fiyatı görüyor — verilmiş sözün
+     bozulmasının ta kendisi. Teklif tutarı depoya bağlı olduğu için iki ekranın AYNI yeri
+     sorması şart. */
+  const trimmed = postalCode?.trim();
+  return apiFetch(
+    `/api/v1/products/${encodeURIComponent(slug)}${queryOf({ locale, ...(trimmed ? { postalCode: trimmed } : {}) })}`,
+    CatalogProductDetailSchema,
+  );
 }
 
 /** Ürün sayfası — keyset imleçli (`nextCursor === null` → liste bitti). */
 export function fetchProducts(query: ProductPageQuery): Promise<ApiResult<z.infer<typeof CatalogPageSchema>>> {
   const search = query.search?.trim();
+  const postalCode = query.postalCode?.trim();
   const path = `/api/v1/products${queryOf({
     locale: query.locale,
     category: query.category ?? undefined,
     q: search === undefined || search.length === 0 ? undefined : search,
     sort: query.sort,
     cursor: query.cursor,
+    postalCode: postalCode === undefined || postalCode.length === 0 ? undefined : postalCode,
+    shippable: query.onlyShippable === true ? '1' : undefined,
   })}`;
   return apiFetch(path, CatalogPageSchema);
 }

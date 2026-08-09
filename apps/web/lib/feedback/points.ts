@@ -1,5 +1,9 @@
 import 'server-only';
-import { OrderService, PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import {
+  awardReferralPoints as awardReferralPointsFor,
+  rewardCompletedOrder as rewardCompletedOrderFor,
+} from '@lezzet/application';
+import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import {
   POINTS_SETTING_KEYS,
   canEarnPoints,
@@ -138,53 +142,19 @@ export function awardVisitPoints(customerId: string): Promise<PointsEntry | null
 }
 
 /**
- * **Sipariş puanı** (17.4) — sipariş müşterinin eline GEÇTİĞİNDE, verildiğinde değil.
+ * **Kapanan siparişin İKİ ödülü** — sipariş puanı (17.4) + getiren puanı (17.7). **Köprü.**
  *
- * Denetim bunu 29.07'de eksik bulmuştu: defter, ayar (`points_order`) ve tavan hazırdı ama yazan
- * üretim kodu yoktu — sebep yalnız testte geçiyordu. Yani müşteri sipariş verdiği için hiç puan
- * kazanmıyordu ve bunu hiçbir yer söylemiyordu.
+ * Gövde `@lezzet/application`'ın `feedback/points`ine taşındı (terfi 21.21) ve kuralın tamamı —
+ * neden sipariş VERİLİNCE değil eline GEÇİNCE, tekillik indeksinin neden çağıranı "zaten yazıldı
+ * mı" sorusundan kurtardığı, getiren ödülünün neden kayıtta değil burada olduğu — orada yazılı.
  *
- * **Neden sipariş VERİLİNCE değil:** iptal edilen ya da hiç ödenmeyen bir sipariş de puan öderdi.
- * Ödül gerçekleşmiş bir alışverişindir; `delivered` ve `completed` bunun iki yüzüdür (kapıda satış
- * doğrudan `completed`'a gider, teslimat `delivered`'da durur).
- *
- * **İkisinden hangisi önce gelirse o yazar, ikincisi sessizce düşer** — güvence `points_entry`in
- * `(customer_id, reason, ref_id)` kısmi unique indeksinde. Bu yüzden çağıran taraf "acaba daha önce
- * yazıldı mı" diye sormak zorunda değil ve üç ayrı yoldan çağrılması sorun değil; teslim edilip
- * sonra kapatılan bir sipariş iki kez puan ödemez.
- *
- * **Bilinen sınır (yazılı olsun):** yeni bir "sipariş kapandı" yolu açılırsa buradan çağırmayı
- * unutmak sessiz bir ödül kaybıdır — hata vermez, yalnız müşteri puanını almaz. Path-proof
- * alternatifi `order_status_log` üzerinde tarayan bir cron olurdu; ödülün ANINDA görünmesi
- * (müşteri teslimattan sonra hesabına bakar) o gecikmeye tercih edildi.
+ * Taşınmasının sebebi ikinci yüzeyin doğmasıdır: mobil arka uç siparişi aynı `placeOrder`
+ * zincirinden açıyor ve durum geçişinin `rewardDelivered` portunu dolduracak bir uygulamaya
+ * ihtiyacı var; `apps/mobile-api` bu dosyayı import edemez. Yeni bağımlılık gerekmedi — puan yazım
+ * çekirdeği (`awardPoints`) zaten pakette duruyordu.
  */
-async function awardOrderPoints(orderId: string, customerId: string): Promise<PointsEntry | null> {
-  return awardPoints({ customerId, reason: 'order', refId: orderId });
-}
-
-/**
- * **Kapanan siparişin İKİ ödülü** — sipariş puanı (17.4) + getiren puanı (17.7).
- *
- * Tek kapı, çünkü tetikleri aynı: sipariş müşterinin eline geçtiği an. Ayrı ayrı çağrılsalardı üç
- * yazma yolunun (teslimat · genel geçiş · kapıda satış) her birinde ikisini de hatırlamak
- * gerekirdi ve biri mutlaka bir yerde unutulurdu.
- *
- * **Getiren ödülü KAYITTA değil BURADA** ve bu bilinçli: kayıt anında ödemek, sahte kayıtla puan
- * basmaya kapı açardı. Getiren, getirdiği kişi gerçekten müşteri olunca kazanır. "İlk sipariş"
- * kontrolü koda yazılmıyor — defterin tekillik indeksi (`customer_id`=getiren, `reason='referral'`,
- * `ref_id`=getirilen) ikinci siparişte yazımı zaten düşürür; ayrıca sayarsak aynı kuralı iki yerde
- * tutmuş olurduk.
- *
- * **Hiçbiri asıl işlemi durdurmaz** (DOMAIN §14 "ödül asıl işlemi durdurmaz"): ödül yazılamazsa
- * sipariş yine kapanmıştır.
- */
-export async function rewardCompletedOrder(orderId: string): Promise<void> {
-  const order = await new OrderService(serviceDb()).getById(orderId);
-  if (!order) return;
-  await Promise.all([
-    awardOrderPoints(orderId, order.customerId),
-    awardReferralPoints(order.customerId),
-  ]);
+export function rewardCompletedOrder(orderId: string): Promise<void> {
+  return rewardCompletedOrderFor(serviceDb(), orderId);
 }
 
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */
@@ -273,17 +243,12 @@ export async function adjustPointsManually(input: {
 }
 
 /**
- * **Getiren müşteriye puan** (17.7). Yeni müşteri `referredBy` doluysa getirene bir kez yazılır.
- *
- * `refId` YENİ müşterinin kimliğidir, getirenin değil: tekillik "aynı kişiyi iki kez getiremezsin"
- * demeli. Getirenin kimliğini kaynak yapsaydık, ikinci bir davet hiç puan doğurmazdı.
- *
- * Çağrı yeri kayıt akışıdır (04); zemin burada hazır durur.
+ * **Getiren müşteriye puan** (17.7) — **köprü**. Gövde `rewardCompletedOrder` ile birlikte
+ * `@lezzet/application`a taşındı (21.21); ikisi tek çağrı zincirinde ve ayrılsalardı kural iki
+ * pakete bölünürdü. Künye orada: `refId` YENİ müşterinin kimliğidir, getirenin değil.
  */
-export async function awardReferralPoints(newCustomerId: string): Promise<PointsEntry | null> {
-  const profile = await new UserProfileService(serviceDb()).getById(newCustomerId);
-  if (!profile?.referredBy) return null;
-  return awardPoints({ customerId: profile.referredBy, reason: 'referral', refId: newCustomerId });
+export function awardReferralPoints(newCustomerId: string): Promise<PointsEntry | null> {
+  return awardReferralPointsFor(serviceDb(), newCustomerId);
 }
 
 /**

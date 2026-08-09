@@ -30,4 +30,13 @@ import 'react-native-gesture-handler/jestSetup';
 /* eslint-disable @typescript-eslint/no-require-imports */
 jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
+/* ÖDEME SDK'sı (09.08) — kök `_layout` `PaymentProvider` ile sarmalandığı an her ekran testi yerel
+   Stripe modülüne çarpıyor ("TurboModuleRegistry … 'StripeSdk' could not be found", ölçüldü: 18
+   paket birden düştü).
+
+   DOĞRU DOSYA `jest/mock.js`, `jest/setup.js` DEĞİL: setup yalnız Onramp modülünü sahteliyor,
+   `StripeSdk`'ya hiç dokunmuyor — `setupFiles`a eklemek denendi ve çözmedi. Paketin kendi mock'u;
+   elle taklit yazılmadı. */
+jest.mock('@stripe/stripe-react-native', () => require('@stripe/stripe-react-native/jest/mock.js'));
 /* eslint-enable @typescript-eslint/no-require-imports */

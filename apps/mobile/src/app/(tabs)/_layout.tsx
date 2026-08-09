@@ -4,6 +4,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { BottomTabBar, type BottomTabItem } from '@/components/ui/bottom-tab-bar';
 import type { IconName } from '@/components/ui/icon-paths';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useCartSync } from '@/screens/customer-kit/cart-store';
 import { useWholesale } from '@/screens/customer-kit/use-me.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
 import messages from './messages.json';
@@ -70,6 +71,14 @@ export default function TabsLayout() {
      üçüncü yuva Siparişler'e döner. Tersi (önce Siparişler) daha kötü olurdu: müşterilerin
      ezici çoğunluğu perakende ve her açılışta bir kere yanlış sekme görürlerdi. */
   const wholesale = useWholesale();
+
+  /* SUNUCU SEPETİ BURADAN AÇILIR — kökten değil, MÜŞTERİ kabuğundan. Kök `_layout` operasyon
+     kabuğuyla ORTAK ve personelin sepeti yoktur: orada takmak, her personel oturumunda
+     `profile_not_found` dönen bir tur açardı. Sekme kabuğu ise müşteri ağacının altındaki her
+     yığın ekranı (ürün, tarif, sepet) boyunca MONTE KALIR, yani tur bir kez açılır.
+     Önceden sepet ekranı takıyordu; o hâlde açılıştaki yüzen düğme sayacı sunucudaki satırları
+     henüz saymıyordu — sepet dolu, rozet boş görünüyordu. */
+  useCartSync();
 
   return (
     <Tabs

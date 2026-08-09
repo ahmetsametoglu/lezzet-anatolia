@@ -1,4 +1,4 @@
-import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
+import { OrderService, PointsBalanceService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
 import { POINTS_SETTING_KEYS, canEarnPoints, feedbackPointsReason, type EarnablePointsReason } from '@lezzet/domain-core';
 import type { PointsBalance, PointsEntry, ProductFeedback } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -9,10 +9,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
   (web davet sayfası + mobil vFb ekranı) ve puan etkisi akışın parçası. Web dosyası kendi yüzeyinde
   KÖPRÜ olarak duruyor; benimsemesi web şeridinin işi (profile.ts terfisinin aynı sözleşmesi).
 
-  BİLEREK TERFİ ETMEYENLER: kupon çevrimi (`redeemPoints`), elle düzeltme, ziyaret/sipariş/getiren
-  ödülleri ve puan geçmişi okumaları. Bugün tek yüzeyleri var (web hesap sayfası · operasyon ·
-  backend işleri); ikinci yüzeyleri doğduğu gün AYNI yoldan buraya taşınırlar — erken taşımak,
-  köprü/paket ikiliğini çağıransız kapılar için de açmak olurdu.
+  SİPARİŞ + GETİREN ÖDÜLÜ 21.21'de bu sözün gereğiyle taşındı: ikinci yüzey doğdu. Mobil arka uç
+  siparişi `placeOrder` üstünden açıyor ve durum geçişinin `rewardDelivered` portunu dolduracak bir
+  uygulamaya ihtiyacı var; web köprüsü onu `apps/web/lib/feedback/points.ts`ten veriyordu ve
+  `apps/mobile-api` o dosyayı import EDEMEZ. Yeni bağımlılık gerekmedi — `awardPoints` zaten burada.
+
+  BİLEREK TERFİ ETMEYENLER: kupon çevrimi (`redeemPoints`), elle düzeltme, ziyaret ödülü ve puan
+  geçmişi okumaları. Bugün tek yüzeyleri var (web hesap sayfası · operasyon · backend işleri);
+  ikinci yüzeyleri doğduğu gün AYNI yoldan buraya taşınırlar — erken taşımak, köprü/paket ikiliğini
+  çağıransız kapılar için de açmak olurdu.
 
   **Puan verme SESSİZ başarısız olur ve bu bilinçlidir** (DOMAIN §14): müşteri yorumunu yazdı,
   beğenisini verdi; tavana takıldıysa ya da B2B olduğu için kazanamıyorsa asıl işlem yine de
@@ -124,6 +129,48 @@ export function awardFeedbackPoints(db: SupabaseClient, feedback: ProductFeedbac
     hasText: (feedback.comment?.trim().length ?? 0) > 0,
   });
   return awardPoints(db, { customerId: feedback.customerId, reason, refId: feedback.id });
+}
+
+/**
+ * **Getiren müşteriye puan** (17.7). Yeni müşteri `referredBy` doluysa getirene bir kez yazılır.
+ *
+ * `refId` YENİ müşterinin kimliğidir, getirenin değil: tekillik "aynı kişiyi iki kez getiremezsin"
+ * demeli. Getirenin kimliğini kaynak yapsaydık, ikinci bir davet hiç puan doğurmazdı.
+ */
+export async function awardReferralPoints(db: SupabaseClient, newCustomerId: string): Promise<PointsEntry | null> {
+  const profile = await new UserProfileService(db).getById(newCustomerId);
+  if (!profile?.referredBy) return null;
+  return awardPoints(db, { customerId: profile.referredBy, reason: 'referral', refId: newCustomerId });
+}
+
+/**
+ * **Kapanan siparişin İKİ ödülü** — sipariş puanı (17.4) + getiren puanı (17.7).
+ *
+ * Tek kapı, çünkü tetikleri aynı: sipariş müşterinin eline geçtiği an. Ayrı ayrı çağrılsalardı üç
+ * yazma yolunun (teslimat · genel geçiş · kapıda satış) her birinde ikisini de hatırlamak
+ * gerekirdi ve biri mutlaka bir yerde unutulurdu.
+ *
+ * **Sipariş VERİLİNCE değil, eline GEÇİNCE:** iptal edilen ya da hiç ödenmeyen bir sipariş de puan
+ * öderdi. `delivered` ve `completed` aynı gerçeğin iki yüzü (kapıda satış doğrudan `completed`'a
+ * gider); hangisi önce gelirse o yazar, ikincisi `points_entry`in `(customer_id, reason, ref_id)`
+ * kısmi unique indeksinde sessizce düşer. Bu yüzden çağıran "acaba yazıldı mı" diye sormaz.
+ *
+ * **Getiren ödülü KAYITTA değil BURADA** ve bu bilinçli: kayıt anında ödemek, sahte kayıtla puan
+ * basmaya kapı açardı. Getiren, getirdiği kişi gerçekten müşteri olunca kazanır. "İlk sipariş"
+ * kontrolü koda yazılmıyor — defterin tekillik indeksi ikinci siparişte yazımı zaten düşürür.
+ *
+ * **Hiçbiri asıl işlemi durdurmaz** (DOMAIN §14): ödül yazılamazsa sipariş yine kapanmıştır.
+ *
+ * **Bilinen sınır (yazılı olsun):** yeni bir "sipariş kapandı" yolu açılırsa buradan çağırmayı
+ * unutmak sessiz bir ödül kaybıdır — hata vermez, yalnız müşteri puanını almaz.
+ */
+export async function rewardCompletedOrder(db: SupabaseClient, orderId: string): Promise<void> {
+  const order = await new OrderService(db).getById(orderId);
+  if (!order) return;
+  await Promise.all([
+    awardPoints(db, { customerId: order.customerId, reason: 'order', refId: orderId }),
+    awardReferralPoints(db, order.customerId),
+  ]);
 }
 
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */

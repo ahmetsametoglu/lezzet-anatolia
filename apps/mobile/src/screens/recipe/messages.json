@@ -24,6 +24,9 @@
       "title": "Tarif bulunamadı",
       "body": "Tarif yayından kalkmış ya da bağlantı eskimiş olabilir.",
       "back": "Geri dön"
+    },
+    "cart": {
+      "open": "Sepeti aç, {n} ürün"
     }
   },
   "fr": {
@@ -51,6 +54,9 @@
       "title": "Recette introuvable",
       "body": "La recette n'est peut-être plus publiée, ou le lien a expiré.",
       "back": "Retour"
+    },
+    "cart": {
+      "open": "Ouvrir le panier, {n} articles"
     }
   },
   "de": {
@@ -78,6 +84,9 @@
       "title": "Rezept nicht gefunden",
       "body": "Das Rezept ist möglicherweise nicht mehr veröffentlicht, oder der Link ist veraltet.",
       "back": "Zurück"
+    },
+    "cart": {
+      "open": "Warenkorb öffnen, {n} Artikel"
     }
   }
 }

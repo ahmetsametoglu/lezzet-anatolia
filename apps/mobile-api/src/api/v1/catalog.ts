@@ -70,6 +70,33 @@ export async function readPlace(db: SupabaseClient, postalCode: string | undefin
 }
 
 /**
+ * **"Adresime gönderilebilir" süzgeci GERÇEKTEN uygulanacak mı** (21.20).
+ *
+ * İstemcinin `?shippable=1` demesi yetmez ve bu bir güvenlik değil DOĞRULUK kararı — web'in
+ * `shippableFilterApplies`ıyla aynı soru, aynı gerekçe (`apps/web/lib/delivery/place-filter.ts`,
+ * kullanıcı bulgusu 08.08). Üç hâl, üç farklı doğru:
+ *
+ *   rota DIŞI      → yalnız kargolanabilirler o adrese ulaşıyor; süzgeç GERÇEKTEN bir şey yapar.
+ *   rota İÇİ       → rota aracı gidiyor, soğuk zincir dâhil her aktif ürün ulaşıyor. Süzgeç burada
+ *                    adrese ULAŞABİLEN ürünleri gizlerdi. **Ölçüldü (09.08, canlı uç):** 67000 ile
+ *                    `shippable=1` toplamı 114'ten 72'ye düşürüyordu — 42 ürün, hepsi o adrese
+ *                    gidebilen soğuk zincir kalemi.
+ *   yer BİLİNMİYOR → ortada "adresim" yok; adres olmadan verilen her cevap uydurmadır (CLAUDE §1).
+ *
+ * Uygulamanın kendi ekranı bu hâllerde çipi zaten çizmiyor (`lib/places/place-view.ts` →
+ * `shippableChipVisible`), ama iki kapı web'de de AYRI ve gerekçesi orada yazılı: biri ekranın
+ * ("denetim çizilecek mi"), öteki sunucunun ("süzgeç uygulanacak mı") sorusu. Eski bir sürüm ya da
+ * uygulama dışı bir istemci sessizce daha DAR bir katalog alamamalı — geri almanın görünür bir
+ * yolu olmadan daralan liste, hatanın en kötü türü.
+ *
+ * Kip iki depo kimliğinden TÜRER, üçüncü bir alan taşınmaz (`PlaceWarehouses` künyesi): `warehouseId`
+ * YALNIZ rota deposudur, `shippingWarehouseId` ülkenin kargo çıkışı. İkisi de boşsa yer bilinmiyor.
+ */
+function shippableApplies(requested: boolean, place: PlaceWarehouses): boolean {
+  return requested && place.warehouseId === null && place.shippingWarehouseId !== null;
+}
+
+/**
  * `locale` ZORUNLU ve varsayılansız.
  *
  * `resolveLocalizedText` dil verilmezse kanonik sıraya (TR → FR → DE) düşer, yani sessizce TÜRKÇE
@@ -95,6 +122,18 @@ const ProductQuerySchema = z.object({
    * ayrıca `.default` yazılmıyor — iki yerde duran aynı varsayılan bir gün ayrışır.
    */
   sort: CatalogSortEnum.catch('featured'),
+  /**
+   * **"Adresime gönderilebilir" çipi** (21.20) — web'in URL'siyle AYNI kelime (`?shippable=1`,
+   * `apps/web/app/(customer)/[locale]/catalog/page.tsx`). İki yüzey aynı soruyu aynı adla soruyor;
+   * ayrı adlar (`onlyShippable=true` gibi) bir gün birinin ötekinden ayrışmasının ilk adımı olurdu.
+   *
+   * `1` DIŞINDA ne gelirse gelsin süzgeç kapalıdır (`.catch`) — `sort`un kuralıyla aynı: bozuk bir
+   * değer listeyi YANLIŞ yapmaz, yalnız süzülmemiş bırakır ve 400 dönmek istemciyi cevapsız
+   * bırakmaktan kötüdür.
+   *
+   * **Tek başına YETMEZ:** süzgeç yalnız rota DIŞINDAKİ müşteriye uygulanır (`shippableApplies`).
+   */
+  shippable: z.literal('1').optional().catch(undefined),
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });
@@ -150,9 +189,11 @@ catalog.get('/categories', async (c) => {
  * Fiyat, stok hâli, "tükendi" ve satın alma yolu artık cevapta: hepsi `getCatalogData`'dan gelir,
  * yani web katalogunun okuduğu kararların aynısıdır. Bu uçta hesaplanan tek şey yok.
  *
- * **`total` semantiği değişmedi:** sayaç arama + kategori + durum süzgecini tanır ve bu uç yalnız
- * o üçünü sunar (orkestrasyonun `onlyOffers`/`onlyShippable` süzgeçleri buradan AÇILMADI), yani sayı
- * listeyle tutarlıdır.
+ * **`total` yine listeyle tutarlı** — ve 21.20'de `shippable` açılınca da öyle kaldı. Sayaç
+ * `productSvc.countMatching(filters)` ile TAM AYNI süzgeç nesnesinden geçiyor (`onlyShippable`
+ * dahil); eski `counts()` RPC'si süzgeçlerin yalnız dördünü tanıdığı için sessizce yalan söylüyordu
+ * ve o arıza 08.26'da kapatıldı (`packages/application/src/catalog/catalog.ts` künyesi). Sayaçtan
+ * habersiz bir süzgeç eklenirse alan yeniden yalan söylemeye başlar — kontrol orkestrasyonda.
  */
 catalog.get('/products', async (c) => {
   const parsed = ProductQuerySchema.safeParse(c.req.query());
@@ -168,7 +209,16 @@ catalog.get('/products', async (c) => {
   ]);
   const data = await getCatalogData(db, {
     locale,
-    query: { search: q, categorySlug: category, sort, cursor: decodeCursor(parsed.data.cursor) },
+    query: {
+      search: q,
+      categorySlug: category,
+      sort,
+      // Süzgeç SQL'de çözülür (`ProductService` filtresi), sayfa çekildikten sonra elenmez —
+      // eleseydik keyset imleci ve `total` birlikte bozulurdu. İstenmesi yetmez, YERİN de uygun
+      // olması gerekir (`shippableApplies` künyesi).
+      onlyShippable: shippableApplies(parsed.data.shippable === '1', place),
+      cursor: decodeCursor(parsed.data.cursor),
+    },
     place,
     viewer,
     limit,

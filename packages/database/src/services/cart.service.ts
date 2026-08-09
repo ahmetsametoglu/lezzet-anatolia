@@ -37,17 +37,41 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
   /**
    * Kalem ekler. Aynı satır (varyant + parti) zaten varsa **adet birleşir**, ikinci satır açılmaz;
    * gösterilen fiyat İLK eklenişteki kalır (checkout zaten yeniden çözecek, gereksiz oynama yapmaz).
+   *
+   * Tek kalem, TEK ELEMANLI LİSTEDİR — kural `addItems`te (gerekçesi orada).
    */
   async addItem(customerId: string, item: Omit<CartItem, 'addedAt'>): Promise<Cart> {
+    return this.addItems(customerId, [item]);
+  }
+
+  /**
+   * Kalemleri ekler — **TEK okuma, TEK yazma.** Çakışan satırda adetler toplanır, yeni satır sona
+   * eklenir; fiyat sunucudaki (daha eski) kalır.
+   *
+   * ── NEDEN TOPLU BİR METOT VAR (ölçüldü 09.08) ────────────────────────────────
+   * Sepet TEK SATIRDA yaşıyor (`cart.items` jsonb). Her ekleme sepeti okur, üstüne ekler, geri
+   * yazar — yani art arda değil EŞZAMANLI gelen iki ekleme aynı başlangıcı okur ve son yazan
+   * ötekini siler (kayıp güncelleme). Tarif ekranının "Malzemeleri sepete ekle"si üç satırı üç ayrı
+   * istekle gönderiyordu: sırayla 3 satır, eşzamanlı 1–2 satır — hangisinin kalacağı belirsiz.
+   *
+   * Çare "istekleri sıraya diz" DEĞİL: o kural her çağrı yerinde yeniden hatırlanmak zorunda
+   * kalırdı ve unutulduğu gün sepet yine sessizce kalem düşürürdü. Bir kullanıcı eylemi tek yazma
+   * turuna indiğinde yarışın kaynağı kalmıyor.
+   *
+   * **Kilit değil, kapsam kararı:** bu, aynı sepete iki AYRI cihazdan aynı anda yazmayı hâlâ
+   * korumaz (o, satır düzeyinde kilit ya da veritabanı tarafında birleştirme ister). Kapatılan şey
+   * TEK eylemin kendi içinde ürettiği yarıştı — bugünkü arıza buydu.
+   */
+  async addItems(customerId: string, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
     const { items } = await this.get(customerId);
-    const index = items.findIndex((row) => sameLine(row, item));
+    const merged = [...items];
 
-    const next =
-      index >= 0
-        ? items.map((row, i) => (i === index ? { ...row, qty: row.qty + item.qty } : row))
-        : [...items, { ...item, stockId: item.stockId ?? null, addedAt: new Date().toISOString() }];
-
-    return this.write(customerId, next);
+    for (const item of incoming) {
+      const index = merged.findIndex((row) => sameLine(row, item));
+      if (index >= 0) merged[index] = { ...merged[index]!, qty: merged[index]!.qty + item.qty };
+      else merged.push({ ...item, stockId: item.stockId ?? null, addedAt: new Date().toISOString() });
+    }
+    return this.write(customerId, merged);
   }
 
   /** Adet belirler; **0 veya altı satırı siler** (arayüzde "−" ile sıfıra inmek çıkarmak demektir). */
@@ -92,18 +116,14 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
   /**
    * **Anonim sepeti devralma** (07.1): misafir tarayıcıda sepet doldurup sonra giriş yapar.
    * Sunucudaki sepet KORUNUR, gelen kalemler üstüne eklenir — giriş, daha önce eklenmiş bir ürünü
-   * sessizce kaybettirmemeli. Çakışan satırda adetler toplanır, fiyat sunucudaki (daha eski) kalır.
+   * sessizce kaybettirmemeli.
+   *
+   * Kural `addItems`in TA KENDİSİDİR; ad çağrı yerinde niyeti söylediği için duruyor ("sepeti
+   * devral" ile "şu kalemleri ekle" aynı fiil değil, aynı sonuçtur). Gövdesi kopyalanmıyor —
+   * kopyalandığı sürece devirdeki birleştirme ile eklemedeki birleştirme bir gün ayrışırdı.
    */
   async takeOver(customerId: string, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
-    const { items } = await this.get(customerId);
-    const merged = [...items];
-
-    for (const item of incoming) {
-      const index = merged.findIndex((row) => sameLine(row, item));
-      if (index >= 0) merged[index] = { ...merged[index]!, qty: merged[index]!.qty + item.qty };
-      else merged.push({ ...item, stockId: item.stockId ?? null, addedAt: new Date().toISOString() });
-    }
-    return this.write(customerId, merged);
+    return this.addItems(customerId, incoming);
   }
 
   /**

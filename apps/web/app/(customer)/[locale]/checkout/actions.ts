@@ -1,23 +1,20 @@
 'use server';
 
-import { AddressService, OrderService, ReservationService, serviceDb } from '@lezzet/database';
+import { AddressService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
-import type { Address, AddressInsert, OrderCancelReason, PaymentMethod } from '@lezzet/types';
+import { placeOrder, readCheckoutSnapshot, type CheckoutSnapshot, type PlaceOrderRejection } from '@lezzet/application';
+import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
-import { captureError, SOURCES } from '@lezzet/observability';
-import { getCartView } from '@/lib/cart/read';
 import { formatPrice } from '@/lib/storefront/format';
-import { clearOrderedLines } from '@/lib/cart/settle';
 import type { CartEntry } from '@/lib/cart/cart-types';
-import { createCheckoutDraft } from '@/lib/order/checkout-draft';
-import { reserveOrderStock } from '@/lib/order/reserve';
-import { transitionOrder } from '@/lib/order/transition';
-import { createCheckoutSession } from '@/lib/order/checkout-session';
-import { resolveCheckoutPayment } from '@/lib/order/checkout-options';
-import { resolveDelivery } from '@/lib/order/delivery';
+import { getPackagesByIds } from '@/lib/storefront/packages';
+import { resolveOrderLines } from '@/lib/order/customer-lines';
+import { webOrderEffects } from '@/lib/order/transition';
+import { stripeSessionCreator } from '@/lib/order/checkout-session';
+import { rememberAcquisition } from '@/lib/analytics/attribution';
 import { recordEvent } from '@/lib/analytics/record';
 import { routing } from '@/i18n/routing';
 
@@ -38,51 +35,21 @@ import { routing } from '@/i18n/routing';
  * değil bir cevaptır ve kendi sözlüğünde yaşar (`t.rejected.*`, `ConfirmOutcome.rejected`).
  */
 
-/** Ekranın bir adımda ihtiyacı olan her şey — tek turda, çünkü üçü birbirine bağlı. */
-export interface CheckoutSnapshot {
-  addresses: Address[];
-  /** Seçili adrese göre çözülmüş teslimat; adres seçilmemişse null. */
-  delivery: {
-    deliveryType: 'route' | 'shipping';
-    availableDates: string[];
-    requiresDateChoice: boolean;
-    /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli (K32). */
-    blocked: boolean;
-  } | null;
-  /** Ödeme seçenekleri + kargo + toplam; adres seçilmemişse null. */
-  payment: {
-    methods: PaymentMethod[];
-    creditAvailable: boolean;
-    codBlockedReason: string | null;
-    cashWarning: boolean;
-    shippingFeeCents: number;
-    shippingFreeReason: 'route' | 'threshold' | null;
-    orderTotalCents: number;
-    minBasketOk: boolean;
-    missingForMinBasketCents: number;
-    /**
-     * Eşiklerin DAYANDIĞI yer — "67000 Strasbourg" (08.13).
-     *
-     * Asgari sepet bir sistem sabiti değil, **seçilen adresin bölgesinin** ayarıdır (kapsam:
-     * depo → bölge → kanal → ülke → global). Sepet bu sayıyı ÇEREZTEKİ koda göre gösteriyor,
-     * checkout ADRESE göre hesaplıyor; ikisi ayrı yere düşen müşteride sayı değişir ve sayıyı
-     * yalnız başına gösteren cümle "az önce başka bir şey yazıyordu" hissi bırakır.
-     *
-     * Yer cümlenin İÇİNDE, ayrı bir uyarıda değil: fark çoğu müşteride hiç yaşanmaz, onu her
-     * sepette anlatmak gürültü olurdu (08.30 kararı). Duvarın kendisi çıktığında ise sebebi
-     * taşıması gerekiyor — ve yer her hâlde doğru bir bilgidir, fark olsun olmasın.
-     *
-     * "Fark var mı" ayrıca HESAPLANMADI ve bu bilinçli: çerez kapsamıyla ikinci bir ayar okuması,
-     * ekranın gösterdiği sayının ikinci bir kaynağı olurdu — bir gün ötekiyle çelişirdi. Yer tek
-     * kaynaktan (seçili adres) geliyor.
-     */
-    placeLabel: string;
-  } | null;
-}
+/**
+ * Ekranın bir adımda ihtiyacı olan her şey — şekli artık `@lezzet/application`'da
+ * (`order/checkout-snapshot`), okuması da orada. Buradan yeniden ihraç ediliyor ki ekranın
+ * (`checkout-client`, `checkout-types`) bugünkü import yolu değişmesin.
+ */
+export type { CheckoutSnapshot };
 
 /**
  * Adım verisini çözer. Adres seçilmeden de çağrılır (liste gelsin diye) — o zaman teslimat ve
  * ödeme null döner, çünkü ikisi de adresin cevabıdır ve adres yokken uydurulamaz.
+ *
+ * **Köprü** (sipariş zinciri terfisi, aşama 2/3): birleştirme kuralı `@lezzet/application`'a
+ * taşındı — mobilin "Siparişi tamamla" ekranı tam da bu birleşimi istiyor ve `'use server'`
+ * dosyası bir UÇTUR, orkestrasyon barındırmaz (CLAUDE §2). Uçta kalanlar: dil doğrulaması,
+ * müşteri kimliğinin oturumdan çözülmesi (girişsizde boş cevap) ve müşteri hata zarfı.
  */
 export async function loadCheckoutAction(
   locale: string,
@@ -110,83 +77,20 @@ export async function loadCheckoutAction(
     const customerId = await currentCustomerId();
     if (!customerId) return { data: { addresses: [], delivery: null, payment: null }, errorKey: null };
 
-    const db = serviceDb();
-    const addresses = await new AddressService(db).listByCustomer(customerId);
-    const selected = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
-    if (!selected) return { data: { addresses, delivery: null, payment: null }, errorKey: null };
-
-    // ── YER ÖNCE, SEPET SONRA (07.15'in kalanı, arka-uç talebi 09.08) ────────
-    // Sepet yeri ÇEREZTEN alıyordu (`readPlaceWarehouses`) ve ayar kapsamının ülke/bölge eksenleri
-    // hiç geçmiyordu: DE kargo tarifesi ve bölge asgari sepeti okunmuyor, FR/global değerler
-    // kesiliyordu. Checkout'un yer kaynağı çerez DEĞİL **seçilen adrestir** — müşteri hangi adrese
-    // gönderiyorsa eşik de oranın eşiğidir.
-    //
-    // İki tur `resolveDelivery` fazladan maliyet DEĞİL ve bunu kapının kendi künyesi söylüyor:
-    // bölge/depo listeleri ortak ve önbellekli, *"teslimat bir kez depoyu vermek, bir kez de sepet
-    // bilindikten sonra kargo kararını vermek için iki kez çözülebiliyor."* `checkout-draft.ts:181`
-    // aynı deseni zaten koşuyor — ekranın gösterdiği ile siparişi açanın uyguladığı ancak böyle
-    // aynı hesaptan çıkar.
-    const place = await resolveDelivery({ postalCode: selected.postalCode, country: selected.country });
-    const cart = await getCartView(locale as Locale, entries, {
+    // Sıra, iki tur teslimat çözümü ve kargo siparişinin bölgesizliği — hepsi kapının kendi
+    // künyesinde (`@lezzet/application`, `order/checkout-snapshot`). Uç yalnız kimliği çözer,
+    // paket çözümünün kapısını geçer ve sonucu müşteri zarfına koyar.
+    const data = await readCheckoutSnapshot(serviceDb(), locale, {
       customerId,
+      entries,
+      addressId,
       couponCode,
-      warehouseId: place.warehouseId,
-      shippingWarehouseId: place.shippingWarehouseId,
-      country: selected.country,
-      // Kargo siparişi bir BÖLGEYE ait değildir (`checkout-draft.ts:350` ile aynı kural): rota
-      // bölgesi yalnız araçla gidilen teslimatın kaydıdır, kargoda bölge eşiği uygulanmaz.
-      zoneId: shippingOrder ? null : place.zoneId,
+      shippingOrder,
+      // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım — kapı
+      // geçiliyor ki bugünkü paket davranışı birebir korunsun.
+      bundles: getPackagesByIds,
     });
-    // İkinci tur: kargo kararı ancak sepet bilinince verilebilir (soğuk zincir kalemi var mı).
-    const delivery = await resolveDelivery({
-      postalCode: selected.postalCode,
-      country: selected.country,
-      hasNonShippableItem: cart.lines.some((l) => !l.shippable),
-    });
-
-    // Kargo siparişinde tür adresin cevabını EZER (19.15) ve gün hiç sorulmaz: tarih taşıyıcıya
-    // bağlıdır, söz verilmez. Ezme tek yönlü — normal taslak adresin cevabını olduğu gibi kullanır.
-    const deliveryType = shippingOrder ? ('shipping' as const) : delivery.deliveryType;
-
-    const options = await resolveCheckoutPayment({
-      customerId,
-      deliveryType,
-      basketCents: cart.totalCents,
-      // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
-      // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
-      lines: cart.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
-    });
-
-    return {
-      data: {
-        addresses,
-        delivery: {
-          deliveryType,
-          availableDates: shippingOrder ? [] : delivery.availableDates,
-          requiresDateChoice: shippingOrder ? false : delivery.requiresDateChoice,
-          // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ — adres rota içinde olsa bile. Taslak
-          // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
-          blocked: shippingOrder ? cart.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',
-        },
-        payment: {
-          methods: options.methods,
-          creditAvailable: options.creditAvailable,
-          codBlockedReason: options.codBlockedReason,
-          cashWarning: options.cashWarning,
-          shippingFeeCents: options.shippingFeeCents,
-          shippingFreeReason: options.shippingFreeReason,
-          orderTotalCents: options.orderTotalCents,
-          minBasketOk: options.minBasketOk,
-          missingForMinBasketCents: options.missingForMinBasketCents,
-          // Eşiği hangi yerin belirlediği: seçili adresin kendisi. Bölge ADI değil posta kodu +
-          // şehir, çünkü müşteri kendi bölgemizin adını ("Strasbourg Merkez") bilmiyor — adresini
-          // biliyor. `resolveDelivery` zaten bölge adını taşımıyor; ikinci bir okuma açmaya da
-          // gerek yok.
-          placeLabel: `${selected.postalCode} ${selected.city}`,
-        },
-      },
-      errorKey: null,
-    };
+    return { data, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -264,8 +168,15 @@ export async function addCheckoutAddressAction(
  *
  * Online ödemede `clientSecret` döner ve kart onayı **istemcide** verilir (Stripe iframe'i);
  * sipariş ödeme onayına kadar `draft` kalır ("önce ayır, sonra tahsil et").
- * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez ve sipariş BURADA kesinleşir (`confirmed`):
- * beklenen bir ödeme yok, bekletmenin de anlamı yok.
+ * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez ve sipariş kesinleşir (`confirmed`): beklenen bir
+ * ödeme yok, bekletmenin de anlamı yok.
+ *
+ * **Köprü** (sipariş zinciri terfisi, aşama 3/3): zincirin tamamı `@lezzet/application`'ın
+ * `order/place-order`ında — mobilin "Siparişi tamamla" ekranı aynı kapıyı çağıracak ve `'use
+ * server'` dosyası bir UÇTUR, orkestrasyon barındırmaz (CLAUDE §2). Uçta kalanlar: dil doğrulaması,
+ * kimliğin oturumdan çözülmesi, müşteri hata zarfı, **reddin ekran diline çevrilmesi**
+ * (`rejectionOutcome` — para biçimi dile bağlı, bir görünüm kararı) ve dört yüzey portu (Stripe
+ * üreteci · paket çözümü · edinim çerezi · huni defteri).
  */
 type ConfirmOutcome =
   | { status: 'payment_required'; orderId: string; clientSecret: string; totalCents: number }
@@ -288,7 +199,7 @@ export async function confirmCheckoutAction(input: {
    *
    * Kapsam BİLEREK dar: yalnız kart DIŞI yollarda işler. Orada sipariş bu çağrıda kesinleşiyor,
    * yani ikinci bir çağrı **kalıcı ve gerçek** bir çift sipariş demek. Kart yolunda ise çağrı
-   * yalnız taslak açıyor; oradaki koruma `supersedeOpenDrafts` (açık taslak süpürülür) ve
+   * yalnız taslak açıyor; oradaki koruma açık taslakların süpürülmesi (kapının kendi adımı) ve
    * düğmenin gezinme bitene kadar kapalı kalması.
    */
   idempotencyKey?: string | null;
@@ -300,22 +211,11 @@ export async function confirmCheckoutAction(input: {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
 
-    /**
-     * Aynı istek İKİNCİ kez geldiyse (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ:
-     * var olanın kimliği döner. Kart dışı yollarda sipariş bu çağrıda kesinleştiği için buradaki
-     * tekrar, kalıcı bir çift sipariş demekti.
-     */
-    if (input.idempotencyKey) {
-      const already = await new OrderService(serviceDb()).findByIdempotencyKey(input.idempotencyKey);
-      if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-        return { data: { status: 'placed', orderId: already.id, totalCents: already.totalCents }, errorKey: null };
-      }
-    }
-
-    // Önceki deneme(ler)den kalan açık taslak KAPATILIR — yenisini açmadan önce.
-    await supersedeOpenDrafts(customerId);
-
-    const draft = await createCheckoutDraft({
+    // Zincirin TAMAMI kapının içinde (`@lezzet/application`, `order/place-order`): tekrar kalkanı,
+    // açık taslakların süpürülmesi, taslak, çevrimdışı yolun rezervasyon → `confirmed` sırası ve
+    // çevrimiçi yolun ödeme niyeti. Uç yalnız yüzeye ait dört şeyi geçirir — sağlayıcı üreteci,
+    // paket çözümü, edinim çerezi ve ölçüm — sonra sonucu ekranın diline çevirir.
+    const outcome = await placeOrder(serviceDb(), {
       locale: input.locale as Locale,
       customerId,
       entries: input.entries,
@@ -323,170 +223,120 @@ export async function confirmCheckoutAction(input: {
       deliveryDate: input.deliveryDate,
       paymentMethod: input.paymentMethod,
       onAccount: input.onAccount,
+      marketingConsent: input.marketingConsent,
       couponCode: input.couponCode,
       idempotencyKey: input.idempotencyKey,
       shippingOrder: input.shippingOrder,
-    });
-    if (draft.status !== 'ok') {
-      // Depo çözülemedi: iki sebep de siparişi engeller ama biri VERİ hatası (aynı kod iki bölgede),
-      // öteki YAPILANDIRMA eksiği (kargo deposu yok). İkisi de operatörün müdahalesini bekler ve
-      // müşteri bunu "ödeme hatası" olarak görmemeli — sebep ekrana taşınır, iz de bırakılır.
-      if (draft.status === 'warehouse_unresolved') {
-        // Log'a KİMLİK yazılır, içerik yazılmaz (CLAUDE.md §1): sebep ve müşteri kimliği yeter —
-        // adres satırı ya da posta kodu kişisel veridir ve teşhis için gerekmez.
-        await captureError(new Error(`checkout: yer çözülemedi (${draft.reason})`), {
-          source: SOURCES.webAction,
-          context: { reason: draft.reason, customerId },
-        });
-        return { data: { status: 'rejected', reason: draft.status, detail: draft.reason }, errorKey: null };
-      }
-      // Ürünün adı YETMEZ, sayısı da gerekir: "Kayseri Mantısı" cümlesi müşteriye ne yapacağını
-      // söylemiyor, "Kayseri Mantısı (2)" söylüyor. Parantezin ne anlama geldiğini metin yazıyor —
-      // sunucu tarafında dil sözlüğü açmadan (`rejected.insufficient_here`).
-      const detail =
-        draft.status === 'blocked_lines'
-          ? draft.lines
-          : draft.status === 'insufficient_here'
-            ? draft.lines.map((l) => `${l.name} (${l.available})`)
-            : draft.status === 'date_unavailable'
-              ? draft.availableDates
-              : // Zamda ESKİ ve YENİ tutar BİRLİKTE taşınır (07.13): yalnız yeniyi göstermek
-                // müşteriyi "ne kadar arttı" diye sepete geri döndürürdü. Tutar burada
-                // biçimlendiriliyor çünkü `detail` bir DİZE listesi (öteki üç hâlle aynı sözleşme)
-                // — ve biçimlendirici ekranınkiyle AYNI (`formatPrice`, dile duyarlı), yani
-                // "12,50 €" ile "€12.50" ayrımı bir kez tanımlı.
-                draft.status === 'price_changed'
-                ? draft.lines.map(
-                    (l) => `${l.name}: ${formatPrice(l.fromCents, input.locale as Locale)} → ${formatPrice(l.toCents, input.locale as Locale)}`,
-                  )
-                : undefined;
-      measureRejection(draft.status);
-      return { data: { status: 'rejected', reason: draft.status, detail }, errorKey: null };
-    }
-
-    /**
-     * Kapıda ya da vadeli: para şimdi geçmiyor, sağlayıcıya hiç gidilmiyor — ama sipariş
-     * **KESİNLEŞİR**. Önce yalnız taslak açılıp öyle bırakılıyordu; müşteri "tamamla" dediği hâlde
-     * sipariş `draft` kalıyor, referans numarası doğmuyor ve onay sayfası siparişi ödemesi
-     * beklenen bir kart siparişi sanıp "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz"
-     * diyordu (29.07). Kapıda ödemede beklenen bir banka yok.
-     *
-     * Sıra ORDER_LIFECYCLE'ın kuralı: kapıda/vadeli ödemede rezervasyon `confirmed` geçişinde
-     * yapılır ve **süresizdir** — düşmesini bekleyeceğimiz bir ödeme penceresi yok. Referans
-     * numarası da ilk kalıcı durumda (`confirmed`) doğar.
-     */
-    if (input.paymentMethod !== 'online') {
-      // Kalemler TASLAKTAN değil SİPARİŞTEN okunur: paket açılımı, parti seçimi ve fiyat
-      // `createCheckoutDraft` içinde yapılıp satırlara yazıldı — ayırma da o yazılmış hâli
-      // ayırmalı. Online yolda `createCheckoutSession` zaten aynı kaynaktan okuyor.
-      const placed = await new OrderService(serviceDb()).getWithItems(draft.orderId);
-      if (!placed) return { data: { status: 'rejected', reason: 'order_not_placed' }, errorKey: null };
-
-      const reserved = await reserveOrderStock({ orderId: draft.orderId, items: placed.items, expiring: false });
-      if (!reserved.ok) {
-        // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
-        // Sebep `out_of_stock` — gerçekten mal kalmadı. **Bu yolda PARA HİÇ ÇEKİLMEDİ** (kapıda/vadeli
-        // ödeme, sipariş `draft`): ekranın "iade edildi" cümlesi bu sebebi tek başına okuyarak
-        // kurulamaz, ödeme yöntemiyle birlikte okunur (`confirmation-types` künyesi, 07.14).
-        await cancelDraft(draft.orderId, 'out_of_stock');
-        measureRejection('insufficient_stock');
-        return { data: { status: 'rejected', reason: 'insufficient_stock' }, errorKey: null };
-      }
-
-      const moved = await transitionOrder({ orderId: draft.orderId, to: 'confirmed' });
-      if (moved.status !== 'ok') {
-        await releaseOrderStock(draft.orderId);
-        // Sebep `null` ve bilerek: geçiş motorca reddedildi — kümedeki beş sebepten hiçbiri bunu
-        // anlatmıyor. Uydurulmuş bir sebep, ekranı yanlış cümleye götürürdü; `null` "sebep
-        // yazılmadı" der ve ekran nötr cümleye düşer.
-        await cancelDraft(draft.orderId, null);
-        return { data: { status: 'rejected', reason: 'order_not_placed' }, errorKey: null };
-      }
-
-      // Sipariş kesinleşti → sepetten O SİPARİŞİN kalemleri düşer. Toptan boşaltmak, iki gruplu
-      // sepette kapıya siparişini veren müşterinin kargo grubunu da sessizce silerdi (19.7).
-      await clearOrderedLines(customerId, draft.orderId);
+      // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım.
+      bundles: getPackagesByIds,
+      // Edinim kaynağı oturumun kampanya ÇEREZİNİ okur — taşıma ayrıntısı, pakette yaşayamaz.
+      onCustomerAcquired: (id) => void rememberAcquisition(id),
+      // Sağlayıcı istemcisi pakete GİRMEZ (`stripe` npm bağımlılığı): üreteç buradan geçer.
+      createPaymentSession: stripeSessionCreator(),
+      // Durum geçişinin iki yan etkisi (müşteri haberi + sipariş puanı) de web modüllerinde.
+      effects: webOrderEffects,
+      onRejected: measureRejection,
       // Huninin son adımı (08.9). Tutar ve müşteri TAŞINMAZ — olay yalnız "bu oturum siparişle
       // bitti" der (`ANALYTICS §1`, İlke 2'nin bilinçli istisnası).
-      void recordEvent({ type: 'order_placed' });
-      return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, errorKey: null };
-    }
+      onPlaced: () => void recordEvent({ type: 'order_placed' }),
+    });
 
-    const session = await createCheckoutSession({ orderId: draft.orderId, marketingConsent: input.marketingConsent });
-    if (session.status !== 'ok' || !session.clientSecret) {
-      // Ödeme oturumu açılamadı: müşteri her şeyi doğru yaptı, kasa açılmadı. Huninin son
-      // adımındaki kayıpların en pahalısı bu — sepet ve adres tamam, ödeme yolu yok.
-      //
-      // **Kartın REDDİ burada değil** ve bilerek: o karar Stripe'ın kendi arayüzünde veriliyor,
-      // sunucuya hiç uğramıyor. Ölçmek için istemciden çağrılabilir ikinci bir yazma ucu açmak
-      // gerekirdi (haritanın tek istisnası paylaşma) — üstelik red sebepleri zaten sağlayıcının
-      // panosunda, bizden daha ayrıntılı duruyor.
-      void recordEvent({ type: 'checkout_blocked', reason: 'payment_failed' });
-      return { data: { status: 'rejected', reason: session.status }, errorKey: null };
+    if (outcome.status === 'placed') {
+      return { data: { status: 'placed', orderId: outcome.orderId, totalCents: outcome.totalCents }, errorKey: null };
     }
-    // Kart yolunun huni adımı BURADA kapanır (08.9 · kullanıcı kararı 04.08). Buraya gelinmesi
-    // müşterinin ödeme düğmesine bastığı anlamına gelir — sipariş henüz `draft`, ama huni bir
-    // NİYET ölçüyor, muhasebe değil: bankadan dönmeyen bir onay müşterinin kararını değiştirmez.
-    // Sipariş ve ciro SAYISI zaten defterin değil `order` tablosunun yetkisinde (`ANALYTICS §4`).
-    //
-    // Alternatifleri elemek: webhook'ta atmak imkânsız (orada ziyaretçinin oturumu yok, anahtar
-    // istekten türüyor), dönüş sayfasında atmak yenilemede çift sayardı ve kapıdan tekilleştirme
-    // beklemek gerekirdi. Kart reddedilip müşteri tekrar denerse ikinci olay yazılır — o da ikinci
-    // bir niyettir, düzeltilecek bir sapma değil.
-    void recordEvent({ type: 'order_placed' });
-    return {
-      data: { status: 'payment_required', orderId: draft.orderId, clientSecret: session.clientSecret, totalCents: draft.totalCents },
-      errorKey: null,
-    };
+    if (outcome.status === 'payment_required') {
+      return {
+        data: {
+          status: 'payment_required',
+          orderId: outcome.orderId,
+          clientSecret: outcome.clientSecret,
+          totalCents: outcome.totalCents,
+        },
+        errorKey: null,
+      };
+    }
+    return { data: await rejectionOutcome(outcome, input.locale), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
 /**
- * Müşterinin ÖNCEKİ açık taslaklarını kapatır ve stoklarını geri bırakır.
+ * Yapısal reddi EKRANIN diline çevirir — **ve bu bir görünüm kararıdır, o yüzden burada.**
  *
- * **Neden şart.** Kart reddedildiğinde ekran hatayı gösterip müşteriyi aynı sayfada bırakıyor;
- * "tekrar dene" her seferinde YENİ bir taslak sipariş ve YENİ bir rezervasyon açıyordu. Eski
- * rezervasyon TTL'i boyunca (30 dk) malı tutmaya devam ettiği için müşteri **kendi ilk denemesi
- * yüzünden** ikinci denemede "stok yetersiz" alabiliyordu — az stoklu üründe ürünü hiç alamıyordu.
- * Ve tutulan mal yalnız ona kapalı değildi: **başka müşterilere de yok görünüyordu** (29.07
- * denetimi + kullanıcı tespiti).
+ * Kapı adlı ve yapısal döner (`{ status: 'price_changed', lines: [{ name, fromCents, toCents }] }`);
+ * müşterinin gördüğü şey ise tek bir dize listesidir. Çeviri iki sebeple yüzeye ait: para biçimi
+ * DİLE bağlı (`formatPrice` — "12,50 €" ile "€12.50" ayrımı bir kez tanımlı) ve mobil aynı reddi
+ * kendi bileşenleriyle gösterecek. Şekil kapıda dursaydı iki yüzey aynı dizeyi paylaşmak zorunda
+ * kalırdı.
  *
- * Kapsam bilerek geniş: yöntem değiştiren müşterinin (karttan kapıda ödemeye geçen) ardında da
- * taslak kalmamalı. Yalnız `draft` olanlara dokunulur — kesinleşmiş sipariş buraya hiç girmez.
- *
- * **Süpürülen taslağın ödeme niyeti iptal EDİLEMİYOR** (siparişte sağlayıcı kimliği saklanmıyor).
- * Onaylanmamış bir niyet kendiliğinden hiç tahsil etmez; yine de dar bir ihtimal için webhook
- * tarafında emniyet var: iptal edilmiş bir siparişe ödeme gelirse para iade edilir.
+ * `detail`in tek biçim (dize listesi) olması bilinçli: ekran dört ayrı ret için tek bir liste
+ * bileşeni gösteriyor (`rejectionMessage`).
  */
-async function supersedeOpenDrafts(customerId: string): Promise<void> {
-  const orders = new OrderService(serviceDb());
-  // Taslaklar en yenilerdir: sayfanın başı yeter, tüm geçmişi taramaya gerek yok.
-  const recent = await orders.listByCustomer(customerId, { limit: 20 });
-  for (const order of recent.rows) {
-    if (order.status !== 'draft') continue;
-    // Sıra ÖNEMLİ: önce mal geri bırakılır, sonra sipariş kapanır. Tersi olsaydı iptal edilmiş bir
-    // siparişin rezervasyonu ortada kalabilirdi.
-    await releaseOrderStock(order.id);
-    // Müşteri yeni bir denemeye geçti; bu taslak onun YERİNE geçildiği için kapanıyor (07.14).
-    await cancelDraft(order.id, 'superseded');
+async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale): Promise<ConfirmOutcome> {
+  switch (rejection.status) {
+    // Depo çözülemedi: sebep bir DİZE (ötekiler liste) — ekran onu tek satır gösteriyor. İz
+    // (`captureError`) kapının içinde bırakıldı: bu bizim yapılandırma hatamız, hangi yüzeyden
+    // gelirse gelsin aynı kovada görünmeli (`SOURCES.applicationOrder`).
+    case 'warehouse_unresolved':
+      return { status: 'rejected', reason: rejection.status, detail: rejection.reason };
+    case 'blocked_lines':
+      return { status: 'rejected', reason: rejection.status, detail: rejection.lines };
+    // Ürünün adı YETMEZ, sayısı da gerekir: "Kayseri Mantısı" cümlesi müşteriye ne yapacağını
+    // söylemiyor, "Kayseri Mantısı (2)" söylüyor. Parantezin ne anlama geldiğini metin yazıyor —
+    // sunucu tarafında dil sözlüğü açmadan (`rejected.insufficient_here`).
+    case 'insufficient_here':
+      return { status: 'rejected', reason: rejection.status, detail: rejection.lines.map((l) => `${l.name} (${l.available})`) };
+    case 'date_unavailable':
+      return { status: 'rejected', reason: rejection.status, detail: rejection.availableDates };
+    // Zamda ESKİ ve YENİ tutar BİRLİKTE taşınır (07.13): yalnız yeniyi göstermek müşteriyi "ne
+    // kadar arttı" diye sepete geri döndürürdü. Biçimlendirici ekranınkiyle AYNI (`formatPrice`,
+    // dile duyarlı), yani "12,50 €" ile "€12.50" ayrımı bir kez tanımlı.
+    case 'price_changed':
+      return {
+        status: 'rejected',
+        reason: rejection.status,
+        detail: rejection.lines.map((l) => `${l.name}: ${formatPrice(l.fromCents, locale)} → ${formatPrice(l.toCents, locale)}`),
+      };
+    // Yarış hâli iki daldan da doğabilir (kapıda ödemenin ayırması / kartın ödeme oturumu) ve
+    // künyesi aynı: kalem kimliği kapıdan gelir, ADI ekranın işidir.
+    case 'insufficient_stock':
+      return { status: 'rejected', reason: rejection.status, detail: await raceDetail(rejection, locale) };
+    /**
+     * Ödeme oturumu açılamadı. Ekranın sözlüğü sağlayıcı hâllerini adıyla tanıyor
+     * (`rejected.provider_unavailable`, `rejected.stale`); tanımayanlar genel hata cümlesine düşer
+     * (`rejectionMessage`'ın `?? t.pay.error` dalı) — `no_client_secret` de oraya düşüyor ve bu
+     * doğru: "sağlayıcı jeton vermedi" müşteriye anlatılacak bir şey değil, bize kalan bir izdir.
+     */
+    case 'payment_unavailable':
+      return { status: 'rejected', reason: rejection.reason };
+    default:
+      return { status: 'rejected', reason: rejection.status };
   }
 }
 
 /**
- * Ayrılamayan siparişin taslağı kapatılır: ortada söz verilmemiş yarım bir sipariş kalmaz.
+ * YARIŞ HÂLİNİN künyesi: hangi kalem, kaç tane kaldı (08.13'ün son kalanı).
  *
- * **Sebep ZORUNLU parametre** (07.14): `null` "sebep yazılmadı" demektir, "sebep yok" değil — ve
- * onay ekranı iptalin sebebine göre farklı cümle kuruyor. Varsayılan bıraksaydık yeni bir kapatma
- * yolu sessizce sebepsiz yazar, ekran da müşteriye yanlış cümleyi gösterirdi.
+ * Sepet okumasıyla rezervasyon arasında stok düşerse — başka müşteri aldı — ekran *"Ürünlerden biri
+ * bu arada tükendi"* diyordu. **Sepetinde on kalem olan müşteri hangisi olduğunu bulamıyor.**
+ * Motor kimliği ve kalan adedi ZATEN döndürüyordu (`{ variantId, available }`); ekrana taşınmıyordu.
+ *
+ * Kardeşi `insufficient_here` bunu 19.7'de çözmüştü ve künyesi aynı cümleyi kuruyor: *"ürünün adı
+ * YETMEZ, sayısı da gerekir."* Aynı biçim burada da geçerli — `Kayseri Mantısı (2)`.
+ *
+ * **Ad SEPETTEN değil VARYANTTAN çözülüyor** ve mecburen: bu hâl sepet okumasından SONRA doğuyor,
+ * elde yalnız varyant kimliği var. `resolveOrderLines` müşteri yüzeyinin kendi kapısı — seçili dile
+ * göre çözer (operasyonun `readVariantTitles`'ı Türkçe sabittir, o kullanılamazdı).
+ *
+ * **Ad bulunamazsa BOŞ liste** döner, uydurma bir metin değil: ürün silinmiş olabilir. Ekran o zaman
+ * bugünkü genel cümleye düşer — eksik bilgi, yanlış bilgiden iyidir (`CLAUDE §1`).
  */
-async function cancelDraft(orderId: string, reason: OrderCancelReason | null): Promise<void> {
-  await new OrderService(serviceDb()).cancel(orderId, 'draft', null, reason);
-}
-
-async function releaseOrderStock(orderId: string): Promise<void> {
-  await new ReservationService(serviceDb()).releaseByOrder(orderId);
+async function raceDetail(outcome: { variantId: string; available: number }, locale: string): Promise<string[] | undefined> {
+  if (!hasLocale(routing.locales, locale)) return undefined;
+  const lines = await resolveOrderLines(serviceDb(), [{ variantId: outcome.variantId }], locale);
+  const name = lines.get(outcome.variantId)?.name;
+  return name ? [`${name} (${outcome.available})`] : undefined;
 }
 
 /**
@@ -500,6 +350,10 @@ async function releaseOrderStock(orderId: string): Promise<void> {
  *   · `order_not_placed` iç bir arıza, aynı gerekçe.
  *   · `date_unavailable` gerçek bir sürtünme ama enum'da karşılığı YOK; uydurmak yerine
  *     ölçmüyoruz. Karşılığı açılırsa tek satır (13.1'e bildirildi).
+ *
+ * **Kapının `onRejected` PORTU budur** (terfi 3/3): paket hangi ret olduğunu söyler, neyin
+ * sayılacağına yüzey karar verir. Defter çerez + oturum + istek başlığı okuyor, yani bir taşıma
+ * ayrıntısı — mobil bu kapıyı hiç geçmeyecek.
  */
 function measureRejection(reason: string): void {
   // `price_changed` BİLEREK ölçülmüyor (07.13): `checkout_blocked` sebep kümesi tiplidir
@@ -511,6 +365,10 @@ function measureRejection(reason: string): void {
       ? 'not_shippable'
       : reason === 'insufficient_here' || reason === 'insufficient_stock'
         ? 'out_of_stock'
-        : null;
+        : // Ödeme oturumu açılamadı — enum'da KENDİ karşılığı var ve kapı onu adıyla veriyor.
+          // (Eskiden bu olay zincirin içinden doğrudan atılıyordu; terfide tek kapıya toplandı.)
+          reason === 'payment_failed'
+          ? 'payment_failed'
+          : null;
   if (mapped) void recordEvent({ type: 'checkout_blocked', reason: mapped });
 }

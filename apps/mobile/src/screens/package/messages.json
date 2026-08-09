@@ -5,6 +5,9 @@
     "addedToast": "Paket sepete eklendi ✓",
     "share": "Paylaş",
     "priceSuffix": "tek paket fiyatı · KDV dahil",
+    "gallery": {
+      "photo": "Paket görseli {n} / {total}"
+    },
     "noShip": "Yalnız bölge içi kapıya teslim — kargoya verilmez",
     "contents": {
       "title": "Pakette neler var?",
@@ -38,6 +41,9 @@
     "addedToast": "Coffret ajouté au panier ✓",
     "share": "Partager",
     "priceSuffix": "prix du panier complet · TVA incluse",
+    "gallery": {
+      "photo": "Photo du coffret {n} / {total}"
+    },
     "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
     "contents": {
       "title": "Que contient ce panier ?",
@@ -71,6 +77,9 @@
     "addedToast": "Paket zum Warenkorb hinzugefügt ✓",
     "share": "Teilen",
     "priceSuffix": "Preis für das ganze Paket · inkl. MwSt.",
+    "gallery": {
+      "photo": "Paketbild {n} / {total}"
+    },
     "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
     "contents": {
       "title": "Was ist im Paket?",

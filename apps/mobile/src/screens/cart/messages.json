@@ -13,10 +13,19 @@
       "unit": "{variant} · {price}",
       "discounted": "İndirimli fiyat",
       "soldOut": "Tükendi — teslim edilemez, kaldırın",
+      "closed": "Satışa kapandı — devam etmek için kaldırın",
+      "noPrice": "Fiyat yok",
+      "priceUp": "Fiyat güncellendi — önceki {price}",
+      "readOnly": "Bu satır uygulamadan düzenlenemiyor",
       "remove": "kaldır",
       "removeLabel": "{name} ürününü sepetten kaldır",
       "decrease": "{name} adedini azalt",
       "increase": "{name} adedini artır"
+    },
+    "group": {
+      "route": "Kapıya teslim",
+      "shipping": "Kargoyla gönderilir",
+      "split": "Bu sepet iki ayrı siparişe bölünecek: kapıya getirilenler ve kargoyla gönderilenler ayrı ödenir. Kargolu siparişi vermek zorunlu değil — vermezseniz o kalemler sepette bekler."
     },
     "coupon": {
       "add": "Kupon kodu ekle",
@@ -25,9 +34,29 @@
       "removeLabel": "Kuponu kaldır",
       "sheetTitle": "Kupon kodu",
       "field": "Kupon kodu",
-      "placeholder": "Örn. LEZZET5",
+      "placeholder": "Kodu girin",
       "apply": "Uygula",
-      "invalid": "Bu kod geçerli değil ya da süresi dolmuş."
+      "empty": "Önce kupon kodunu yazın.",
+      "rejected": {
+        "inactive": "Bu kupon şu an kullanımda değil.",
+        "not_started": "Bu kupon henüz başlamadı.",
+        "expired": "Bu kuponun süresi dolmuş.",
+        "min_basket": "Bu kupon daha yüksek bir sepet tutarı istiyor.",
+        "first_order_only": "Bu kupon yalnız ilk siparişte geçerli.",
+        "used_up": "Bu kuponun kullanım hakkı dolmuş.",
+        "not_yours": "Bu kod geçerli değil.",
+        "unknown_code": "Bu kod geçerli değil.",
+        "outranked": "Sepetinizde zaten daha yüksek bir indirim uygulanıyor ({amount}) — sizin için avantajlı olanı geçerli tuttuk."
+      }
+    },
+    "discount": {
+      "campaign": "Kampanya",
+      "campaignPercent": "Kampanya · %{percent}",
+      "customerRate": "Size özel · %{percent}"
+    },
+    "freeShipping": {
+      "remaining": "Ücretsiz kargoya {amount} kaldı.",
+      "reached": "Ücretsiz kargo eşiğini geçtiniz."
     },
     "summary": {
       "subtotal": "Ara toplam",
@@ -36,6 +65,14 @@
       "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir."
     },
     "minimum": "Asgari sepet {minimum} — {missing} eksik",
+    "blocked": "Devam etmek için tükenen ya da satışa kapanan kalemi sepetten çıkarın.",
+    "unresolved": {
+      "loading": "Sepetiniz getiriliyor",
+      "failed": "Sepetiniz şu an getirilemedi. Kalemleriniz duruyor, tutarlarını gösteremiyoruz."
+    },
+    "sync": {
+      "failed": "Sepet sunucuyla eşitlenemedi; son değişiklik geri alındı."
+    },
     "continue": "← Alışverişe devam et",
     "checkout": "Siparişi tamamla →"
   },
@@ -53,10 +90,19 @@
       "unit": "{variant} · {price}",
       "discounted": "Prix remisé",
       "soldOut": "Épuisé — non livrable, à retirer",
+      "closed": "Plus en vente — à retirer pour continuer",
+      "noPrice": "Prix indisponible",
+      "priceUp": "Prix mis à jour — précédemment {price}",
+      "readOnly": "Cette ligne ne se modifie pas depuis l'application",
       "remove": "retirer",
       "removeLabel": "Retirer {name} du panier",
       "decrease": "Diminuer la quantité de {name}",
       "increase": "Augmenter la quantité de {name}"
+    },
+    "group": {
+      "route": "Livraison à domicile",
+      "shipping": "Envoi par transporteur",
+      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux envoyés par transporteur se règlent séparément. La commande transporteur n'est pas obligatoire — sinon ces articles restent dans votre panier."
     },
     "coupon": {
       "add": "Ajouter un code promo",
@@ -65,9 +111,29 @@
       "removeLabel": "Retirer le code promo",
       "sheetTitle": "Code promo",
       "field": "Code promo",
-      "placeholder": "Ex. LEZZET5",
+      "placeholder": "Saisissez le code",
       "apply": "Appliquer",
-      "invalid": "Ce code n'est pas valide ou a expiré."
+      "empty": "Saisissez d'abord un code.",
+      "rejected": {
+        "inactive": "Ce code promo n'est pas actif actuellement.",
+        "not_started": "Ce code promo n'a pas encore commencé.",
+        "expired": "Ce code promo a expiré.",
+        "min_basket": "Ce code promo demande un panier plus élevé.",
+        "first_order_only": "Ce code promo est réservé à la première commande.",
+        "used_up": "Ce code promo a été entièrement utilisé.",
+        "not_yours": "Ce code n'est pas valide.",
+        "unknown_code": "Ce code n'est pas valide.",
+        "outranked": "Une remise plus avantageuse est déjà appliquée à votre panier ({amount}) — nous avons gardé la meilleure pour vous."
+      }
+    },
+    "discount": {
+      "campaign": "Promotion",
+      "campaignPercent": "Promotion · {percent} %",
+      "customerRate": "Votre remise · {percent} %"
+    },
+    "freeShipping": {
+      "remaining": "Encore {amount} pour la livraison offerte.",
+      "reached": "Vous avez atteint la livraison offerte."
     },
     "summary": {
       "subtotal": "Sous-total",
@@ -76,6 +142,14 @@
       "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse."
     },
     "minimum": "Panier minimum {minimum} — il manque {missing}",
+    "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
+    "unresolved": {
+      "loading": "Chargement de votre panier",
+      "failed": "Votre panier n'a pas pu être récupéré. Vos articles sont conservés, mais nous ne pouvons pas afficher les montants."
+    },
+    "sync": {
+      "failed": "Le panier n'a pas pu être synchronisé ; la dernière modification a été annulée."
+    },
     "continue": "← Continuer mes achats",
     "checkout": "Finaliser la commande →"
   },
@@ -93,10 +167,19 @@
       "unit": "{variant} · {price}",
       "discounted": "Reduzierter Preis",
       "soldOut": "Ausverkauft — nicht lieferbar, bitte entfernen",
+      "closed": "Nicht mehr im Verkauf — bitte entfernen",
+      "noPrice": "Preis nicht verfügbar",
+      "priceUp": "Preis aktualisiert — zuvor {price}",
+      "readOnly": "Diese Zeile lässt sich in der App nicht ändern",
       "remove": "entfernen",
       "removeLabel": "{name} aus dem Warenkorb entfernen",
       "decrease": "Menge von {name} verringern",
       "increase": "Menge von {name} erhöhen"
+    },
+    "group": {
+      "route": "Lieferung an die Haustür",
+      "shipping": "Versand per Paketdienst",
+      "split": "Dieser Warenkorb wird zu zwei getrennten Bestellungen: die Artikel für die Haustürlieferung und die Versandartikel werden separat bezahlt. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb."
     },
     "coupon": {
       "add": "Gutscheincode hinzufügen",
@@ -105,9 +188,29 @@
       "removeLabel": "Gutschein entfernen",
       "sheetTitle": "Gutscheincode",
       "field": "Gutscheincode",
-      "placeholder": "z. B. LEZZET5",
+      "placeholder": "Code eingeben",
       "apply": "Anwenden",
-      "invalid": "Dieser Code ist ungültig oder abgelaufen."
+      "empty": "Bitte zuerst einen Code eingeben.",
+      "rejected": {
+        "inactive": "Dieser Gutschein ist derzeit nicht aktiv.",
+        "not_started": "Dieser Gutschein ist noch nicht gültig.",
+        "expired": "Dieser Gutschein ist abgelaufen.",
+        "min_basket": "Dieser Gutschein verlangt einen höheren Warenkorbwert.",
+        "first_order_only": "Dieser Gutschein gilt nur für die erste Bestellung.",
+        "used_up": "Dieser Gutschein ist bereits aufgebraucht.",
+        "not_yours": "Dieser Code ist ungültig.",
+        "unknown_code": "Dieser Code ist ungültig.",
+        "outranked": "In Ihrem Warenkorb gilt bereits ein höherer Rabatt ({amount}) — wir haben den für Sie günstigeren behalten."
+      }
+    },
+    "discount": {
+      "campaign": "Aktion",
+      "campaignPercent": "Aktion · {percent} %",
+      "customerRate": "Ihr Rabatt · {percent} %"
+    },
+    "freeShipping": {
+      "remaining": "Noch {amount} bis zum kostenlosen Versand.",
+      "reached": "Sie haben die Grenze für kostenlosen Versand erreicht."
     },
     "summary": {
       "subtotal": "Zwischensumme",
@@ -116,6 +219,14 @@
       "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt."
     },
     "minimum": "Mindestbestellwert {minimum} — es fehlen {missing}",
+    "blocked": "Bitte entfernen Sie den ausverkauften oder nicht mehr verkäuflichen Artikel, um fortzufahren.",
+    "unresolved": {
+      "loading": "Ihr Warenkorb wird geladen",
+      "failed": "Ihr Warenkorb konnte gerade nicht geladen werden. Ihre Artikel bleiben erhalten, die Beträge können wir nicht anzeigen."
+    },
+    "sync": {
+      "failed": "Der Warenkorb konnte nicht mit dem Server abgeglichen werden; die letzte Änderung wurde zurückgenommen."
+    },
     "continue": "← Weiter einkaufen",
     "checkout": "Bestellung abschließen →"
   }

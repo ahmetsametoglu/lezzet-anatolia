@@ -1,33 +1,17 @@
 /**
- * **Vitrin seçimi — üç bölümün TEK kuralı** (08.26 · veri zemini 05.18).
+ * **Geçiş köprüsü** — `pickFeatured`ın gövdesi `@lezzet/application/catalog/featured`a taşındı
+ * (paket kapısının terfisi, 09.08). Künyenin tamamı orada; burada tek satır kalıyor ki bu dosyayı
+ * çağıran altı yer (ana sayfa üç bandı + paket köprüsü + testler) yerinden oynamasın.
  *
- * Ana sayfa üç seçki çiziyor (kategori · koleksiyon · paket) ve üçü de aynı soruyu soruyor:
- * *"operatör hangilerini vitrine işaretledi, kaç tanesi sığıyor?"* Kural üç dosyaya ayrı ayrı
- * yazılsaydı biri gün gelip ötekilerden ayrışırdı — ve ayrışma sessiz olurdu: her bölüm kendi
- * içinde tutarlı görünür, yalnız ana sayfanın bütünü çelişirdi.
+ * Taşınma sebebi zincirdir, seçim değil: terfi eden paket okuması (`storefront/packages.ts` →
+ * `@lezzet/application/catalog/packages`) vitrin şeridini süzerken bu kuralı çağırıyor ve pakette
+ * yaşayan bir orkestrasyon `apps/web`ten import EDEMEZ (bağımlılık tek yönlü, STACK §4).
  *
- * ── İŞARET SEÇİMDİR, SIRA DEĞİL ──────────────────────────────────────────────
- * `is_featured` "vitrinde göster" der; sıra mevcut `sort_order`'dan gelir (görev satırının kuralı).
- * İkinci bir vitrin sırası TUTULMAZ — iki sıra bir gün çelişir ve hangisinin doğru olduğunu kimse
- * bilemez. Servisler zaten `sort_order`'da döndürüyor, bu fonksiyon sırayı hiç değiştirmez.
- *
- * ── HİÇ İŞARET YOKSA VİTRİN BOŞ KALMAZ ───────────────────────────────────────
- * Bugünkü veri tam olarak bu hâlde: 10 kategori var, hiçbiri işaretli değil (ölçüldü 08.08). Boş
- * dönseydik yeni bir kurulumda ana sayfa kendini kategorisiz açardı — operatör daha hiçbir şey
- * işaretlememişken. Bu bir "yedek veri" DEĞİL: gerçek kayıtların sıradan ilk N'i, yani ekran yine
- * gerçeği gösteriyor, yalnız seçimi henüz kimse yapmamış.
- *
- * **Fikstüre düşmekle karıştırılmamalı** (`FIXTURE_CATEGORIES`): o, katalog TAMAMEN boşken sahte
- * satır çizer. Burada sahte satır yok — işaret yoksa gerçek satırların ilk N'i.
- *
- * `limit` İSTEĞE BAĞLI: koleksiyon bandı önce havuzu süzüp sonra güne göre seçtiği için sınırı
- * kendi uygular (`rotateDaily`). Sınırsız çağrı "işaretliler, hepsi" demektir.
+ * Öteki iki seçici (`rotateDaily`, `pickRandom`) BİLEREK burada kaldı: ikisinin de tek tüketeni
+ * web ana sayfasıdır (koleksiyon rotasyonu ve fırsat bandı) ve paketin ölçütü "en az iki yüzeyin
+ * çağırdığı orkestrasyon" — tek yüzeyin işi kendi uygulamasında kalır.
  */
-export function pickFeatured<T extends { isFeatured: boolean }>(rows: readonly T[], limit?: number): T[] {
-  const marked = rows.filter((row) => row.isFeatured);
-  const pool = marked.length > 0 ? marked : rows;
-  return limit === undefined ? [...pool] : pool.slice(0, limit);
-}
+export { pickFeatured } from '@lezzet/application';
 
 /**
  * **Güne bağlı deterministik seçim** — koleksiyon slotlarının rotasyonu (kullanıcı kararı 08.08).

@@ -49,7 +49,7 @@ export const PackageItemSchema = ProductSchema.pick({ slug: true }).extend({
 export type PackageItem = z.infer<typeof PackageItemSchema>;
 
 /** Paket detayı — sayfanın TAMAMI tek turda (içerik satırları dahil; bölüm başına çağrı yok). */
-export const PackageDetailSchema = BundleSchema.pick({ slug: true }).extend({
+export const PackageDetailSchema = BundleSchema.pick({ id: true, slug: true }).extend({
   name: z.string(),
   /** Seçili dilde tek metin; **`null` = hiç girilmemiş** (boş/boşluk da `null`) → paragraf çizilmez. */
   description: z.string().nullable(),

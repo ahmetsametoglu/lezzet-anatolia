@@ -11,6 +11,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ToastHost } from '@/components/ui/toast-host';
 import { initAppLocale } from '@/lib/i18n/app-locale';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
+import { PaymentProvider } from '@/lib/payment/payment-provider';
 import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
 import { ensureFreshInstall } from '@/lib/storage/device-store';
 import { appFontAssets } from '@/theme/fonts';
@@ -92,16 +93,22 @@ export default function RootLayout() {
   if (!installReady || !fontsReady || !onboardingReady || !scaleReady || !localeReady) return null;
 
   return (
-    /* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün ALTINDA
-       çalışır ve kök EN DIŞTA olmalı; Android'de dokunuşları buradan dağıtır. Tek kopya, kökte:
-       her ekranın kendi kökünü kurması, iki ayrı hareket ağacı demek olurdu. */
-    <GestureHandlerRootView style={styles.root}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
-      {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
-          basan taraf `publishToast` (lib/toast), gerekçeler host'un künyesinde. */}
-      <ToastHost />
-      <StatusBar style="auto" />
-    </GestureHandlerRootView>
+    /* ÖDEME SAĞLAYICISI (09.08) — yerel ödeme kartının kök bağlantısı. Anahtar yoksa ağaç
+       sarmalanmaz ve uygulama normal açılır; düşen tek şey ödeme kartıdır
+       (`lib/payment/stripe-config.ts` künyesi). Saf efekt sağlayıcı olduğu için hareket kökünün
+       ÜSTÜNDE durur, dokunuş ağacını bozmaz (ölçüldü). */
+    <PaymentProvider>
+      {/* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün
+          ALTINDA çalışır; Android'de dokunuşları buradan dağıtır. Tek kopya, kökte: her ekranın
+          kendi kökünü kurması, iki ayrı hareket ağacı demek olurdu. */}
+      <GestureHandlerRootView style={styles.root}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
+        {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
+            basan taraf `publishToast` (lib/toast), gerekçeler host'un künyesinde. */}
+        <ToastHost />
+        <StatusBar style="auto" />
+      </GestureHandlerRootView>
+    </PaymentProvider>
   );
 }
 

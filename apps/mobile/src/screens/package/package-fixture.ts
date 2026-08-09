@@ -22,6 +22,9 @@ function packageItem(index: number, overrides: Partial<PackageItem> = {}): Packa
 /** Kargolanabilen, açıklamalı, dört satırlık paket — sayfanın her bölümünü açan hâl. */
 export function packageDetail(overrides: Partial<PackageDetail> = {}): PackageDetail {
   return {
+    // Sabit uuid — sepet satırının adresi (`bundleId`). Rastgele üretmek testleri koşudan koşuya
+    // değiştirirdi; fixture'ın işi tekrarlanabilir bir dünya kurmak.
+    id: '9f1c4a20-6b1e-4d3a-9f2c-0a5b7c8d1e20',
     slug: 'bayram-sofrasi-paketi',
     name: 'Bayram Sofrası Paketi',
     description: 'Bayram sofrasını tek kutuda kurar: baklava, su böreği, fıstık ve künefe.',

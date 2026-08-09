@@ -16,6 +16,12 @@ import { QuantityStepper } from '@/screens/customer-kit/quantity-stepper';
 
   ROZETLER (indirimli fiyat · tükendi) YALNIZ ÜRÜN SATIRINDA: şablon paket kartında hiç rozet
   çizmiyor — paketin kendi içeriğinin durumu paket detayında konuşur.
+
+  SALT OKUNUR HÂL (`readOnly`): sunucu sepetinde OLUP mobilden yazılamayan satır — bugün yalnız
+  webden eklenmiş PAKET satırı (yazma gövdesi yalnız varyant kabul ediyor, `MeCartItemWriteSchema`).
+  Satır gizlenmez, çünkü sepettedir ve toplamın içindedir; yalnız sayaç ile "kaldır" yerine adet
+  yazısı çizilir ve sebebi `noticeLabel` ile söylenir — basılınca hiçbir şey yapmayan bir düğme,
+  müşteriye arızalı bir uygulama gösterirdi.
 */
 
 interface CartLineRowProps {
@@ -33,6 +39,13 @@ interface CartLineRowProps {
   discountLabel?: string;
   /** "Tükendi — teslim edilemez" rozeti. */
   soldOutLabel?: string;
+  /**
+   * Müşterinin BİLMESİ gereken tek uyarı — fiyat arttı (DOMAIN §5: açıkça söylenir) ya da satır
+   * uygulamadan düzenlenemiyor. İki durum aynı anda oluşmaz; sıralaması çağıranın kararı.
+   */
+  noticeLabel?: string;
+  /** Adet sayacı ve "kaldır" ÇİZİLMEZ; yerine adet yazısı durur (künye: salt okunur hâl). */
+  readOnly?: boolean;
   removeLabel: string;
   removeAccessibilityLabel: string;
   decreaseLabel: string;
@@ -53,6 +66,8 @@ export function CartLineRow({
   eyebrow,
   discountLabel,
   soldOutLabel,
+  noticeLabel,
+  readOnly = false,
   removeLabel,
   removeAccessibilityLabel,
   decreaseLabel,
@@ -88,26 +103,38 @@ export function CartLineRow({
             {soldOutLabel}
           </Text>
         )}
+        {noticeLabel === undefined ? null : (
+          // Fiyat artışı da bir DURUM DEĞİŞİKLİĞİDİR ve müşterinin onayına sunulur: duyurulur.
+          <Text style={[styles.badge, styles.discountBadge]} accessibilityRole="alert">
+            {noticeLabel}
+          </Text>
+        )}
       </View>
       <View style={styles.controls}>
-        <QuantityStepper
-          quantity={quantity}
-          onDecrease={onDecrease}
-          onIncrease={onIncrease}
-          decreaseLabel={decreaseLabel}
-          increaseLabel={increaseLabel}
-          tone={isBundle ? 'ink' : 'sand'}
-          testID={testID === undefined ? undefined : `${testID}-stepper`}
-        />
-        <TextAction
-          label={removeLabel}
-          onPress={onRemove}
-          // Koyu kartta zeytin metin okunmuyor; orada terracotta da kirli duruyor — kaldır
-          // eylemi ikinci sesli bir eylemdir ve şablonda ikisinde de sönük yazılı.
-          tone={isBundle ? 'terracotta' : 'olive'}
-          accessibilityHint={removeAccessibilityLabel}
-          testID={testID === undefined ? undefined : `${testID}-remove`}
-        />
+        {readOnly ? (
+          <Text style={[styles.readOnlyQuantity, isBundle ? styles.onInk : styles.onSand]}>{`×${quantity}`}</Text>
+        ) : (
+          <>
+            <QuantityStepper
+              quantity={quantity}
+              onDecrease={onDecrease}
+              onIncrease={onIncrease}
+              decreaseLabel={decreaseLabel}
+              increaseLabel={increaseLabel}
+              tone={isBundle ? 'ink' : 'sand'}
+              testID={testID === undefined ? undefined : `${testID}-stepper`}
+            />
+            <TextAction
+              label={removeLabel}
+              onPress={onRemove}
+              // Koyu kartta zeytin metin okunmuyor; orada terracotta da kirli duruyor — kaldır
+              // eylemi ikinci sesli bir eylemdir ve şablonda ikisinde de sönük yazılı.
+              tone={isBundle ? 'terracotta' : 'olive'}
+              accessibilityHint={removeAccessibilityLabel}
+              testID={testID === undefined ? undefined : `${testID}-remove`}
+            />
+          </>
+        )}
       </View>
       {/* Ürün satırının kesikli alt ayracı — paket kartında yok (kartın kendi kenarı var). */}
       {isBundle ? null : <View style={[styles.divider, { borderBottomColor: theme.colors['sand-400'] }]} />}
@@ -176,6 +203,10 @@ const styles = StyleSheet.create((theme) => ({
   controls: {
     alignItems: 'center',
     gap: theme.space.sm,
+  },
+  readOnlyQuantity: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text.control,
   },
   divider: {
     position: 'absolute',

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -9,6 +9,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import type { IconName } from '@/components/ui/icon-paths';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -16,9 +17,14 @@ import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { formatPrice } from '@lezzet/helper';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { placeModeOf, shippableChipLabel, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
+import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { CatalogSkeleton } from './catalog-skeleton';
+import { PlaceNoticeBand } from './place-notice-band';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';
 
@@ -37,15 +43,48 @@ import messages from './messages.json';
      (birincil zeytin, ikincil çerçeveli) ve tek ekran için üçüncü bir düğme tonu açmak kitin
      sözlüğünü büyütürdü.
   4. **Kuyruk (sonraki sayfa) durumları şablonda HİÇ YOK** (envanter §5: "sonsuz kaydırma göstergesi
-     yok"). Şablonun kendi diliyle kuruldu: yüklenirken iskelet bloğundaki halka + "Yükleniyor…",
-     bittiğinde "— hepsi bu kadar —" satırı, düşerse aynı satırda tekrar-dene.
+     yok"). Şablonun kendi diliyle kuruldu: listenin ALTINDA halka + "Yükleniyor…", bittiğinde
+     "— hepsi bu kadar —" satırı, düşerse aynı satırda tekrar-dene. İLK yükün göstergesi bu DEĞİL,
+     iskelettir; ikisi asla birlikte çizilmez (aşağıda `body()`).
   5. **Süzgeç sayfasının "Sadece indirimliler" anahtarı ve iki alt düğmesi YOK.** Anahtar
-     SÖZLEŞMEDE yok: `/api/v1/products` yalnız `locale · q · category · sort · cursor · limit`
-     kabul ediyor (`ProductQuerySchema`) — istemcide süzmek listenin sayfalı olduğu gerçeğiyle
-     çelişirdi (bir sayfada üç indirimli varsa müşteri "üç ürün var" sanır). Anahtar düşünce alt
+     SÖZLEŞMEDE yok: `/api/v1/products` `locale · q · category · sort · shippable · cursor · limit`
+     kabul ediyor (`ProductQuerySchema`) ve `offers` bunların arasında değil — istemcide süzmek
+     listenin sayfalı olduğu gerçeğiyle çelişirdi (bir sayfada üç indirimli varsa müşteri "üç ürün
+     var" sanır). Anahtar düşünce alt
      düğmeler de anlamını yitirdi: "Temizle" ilk satırı seçmekle, "Göster" seçim yapmakla aynı şey
      — ekranda zaten duran iki şeyin ikinci kopyası olurlardı. Sıralama seçilir seçilmez uygulanır.
+     **Anahtar SATIRI ise şimdi dolu** (aşağı): şablonun o yuvası boş kalmadı, sözleşmede gerçekten
+     var olan tek boolean süzgeç ("adresime gönderilebilir") oraya yerleşti.
+
+  ── SÜZGEÇ NEREDE (kullanıcı isteği 10.08) ──────────────────────────────────
+  "Adresime gönderilebilir" ayrı bir çipti (kategori rayının altında kendi satırında); artık
+  SÜZGEÇ SAYFASININ içinde. Yeni bir görsel dil üretilmedi — şablonun `shFilter` sayfasında bu
+  süzgecin duracağı yer ZATEN VAR: sıralama satırlarının altındaki anahtar satırı ("Sadece
+  indirimliler", `padding:4px 2px` · etiket solda · anahtar sağda). O satırı boş bırakıp süzgeci
+  başka yere koymak, tasarımın verdiği kararı görmezden gelmek olurdu. Anahtarın kendisi kitte
+  hazır (`ToggleSwitch`, v3:882 — hesap ekranının kampanya tercihleri); ikinci bir anahtar
+  çizilmedi.
+
+  Taşınmanın bir yan sonucu: süzgeç artık EKRANDA GÖRÜNMÜYOR, yani "etkin süzgeç var" bilgisini
+  taşıyacak tek işaret süzgeç düğmesinin dolu hâli. `filtersActive` bu yüzden onu da sayıyor
+  (hook künyesi) — çipken saymıyordu çünkü çipin kendisi görünürdü.
 */
+
+/**
+ * SIRALAMA SATIRLARININ İKONLARI (kullanıcı isteği 10.08) — kitin KENDİ setinden (`IconName`),
+ * uydurma yok. İki fiyat satırı para ikonunu (`money`, avro glifi) paylaşır: ikisinin de eksen
+ * "fiyat"tır, YÖNÜ etiket söyler. Sette yukarı/aşağı ok YOK — yatay oklar (`arrow-left/right`)
+ * yön anlatır ama YANLIŞ yönü, o yüzden kullanılmadı.
+ *
+ * `featured` (Önerilen) BİLEREK İKONSUZ: sette "önerilen"i anlatan bir çizim (yıldız, kıvılcım,
+ * kalp) yok ve olmayan bir kavram için eldeki bir ikonu ödünç almak, satırı başka bir yere
+ * gidiyormuş gibi gösterirdi. Satırın ikon yuvası yine ayrılır ki üç etiket aynı hizadan başlasın.
+ * Eksik ikonlar envantere raporlandı.
+ */
+const SORT_ICONS: Partial<Record<CatalogSort, IconName>> = {
+  priceAsc: 'money',
+  priceDesc: 'money',
+};
 
 type Messages = LocalizedCopy<typeof messages>;
 
@@ -63,8 +102,42 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  const catalog = useCatalog(locale);
+  /* KATALOG DA YERE BAĞLI (kullanıcı bulgusu 09.08): fiyat, teklif ve stok hâli depoya göre
+     değişiyor ve vitrin kodu zaten gönderiyordu — katalog göndermeyince aynı ürün iki ekranda
+     farklı fiyatla görünebiliyordu. Kaynak vitrindekiyle AYNI: cihazdaki onboarding kaydı
+     (`home-screen` deseni). Kod değişince hook listeyi baştan okur (künyesi).
+
+     Snapshot burada `undefined` OLAMAZ: kök kapı (`useOnboardingGate`) depo okunana dek ağacı
+     hiç çizmiyor — yine de `?.` ile okunur, kapının kararı bu ekranın varsayımı olmasın. */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const postalCode = onboarding?.postalCode ?? null;
+  const catalog = useCatalog(locale, postalCode);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
+
+  /* YERİN ÇÖZÜMÜ — kartın hangi cümleyi kuracağını ve süzgeç satırının çizilip çizilmeyeceğini
+     belirler (21.20). Kaynak vitrindekiyle AYNI kapı (`usePlaceResolution`); posta kodu beş haneye
+     ulaşmamışsa ya da tanınmamışsa `null` döner ve o hâlde ne işaret ne süzgeç satırı vardır.
+
+     Stok HÂLİ süzgece değil, sunucudan gelen cevaba bağlı: kod zaten her istekte gidiyor ve depo
+     orada çözülüyor. Buradaki ikinci çözüm yalnız "rota içinde miyim" sorusunu cevaplıyor —
+     depo kimliği İSTEMCİYE hiç verilmiyor (`place-api.schema.ts` güvenlik sınırı). */
+  const place = usePlaceResolution(postalCode ?? '');
+  const placeMode = placeModeOf(place);
+  const chipVisible = shippableChipVisible(placeMode);
+  /* BANDIN yeri: aynı koşul (çözülmüş + rota dışı), ama bandın kendisi ülke ve normalize posta
+     kodunu İSTİYOR — talebi o ikisiyle kaydediyor. `chipVisible` bir boolean olduğu için tipi
+     daraltmıyor; nesne buradan, tek satırda türetilir (ikinci bir kural yazılmış olmuyor). */
+  const noticePlace = place?.kind === 'resolved' && !place.place.inRoute ? place.place : null;
+
+  /* Satır kaybolunca SÜZGEÇ de kapanır: müşteri bölgesini rota içine çevirdiğinde (posta kodunu
+     değiştirdi) görünmeyen bir süzgeç açık kalır ve listeyi sessizce daraltırdı — geri almanın
+     görünür bir yolu olmadan. Süzgeç artık sayfanın İÇİNDE olduğu için bu kapı daha da gerekli:
+     kapalı bir sayfada duran anahtar, ekranda hiç iz bırakmadan listeyi kısar. Web aynı korumayı
+     sunucuda yapıyor (`shippableFilterApplies`); uygulamada URL yok, kapı burası. */
+  const { onlyShippable, setOnlyShippable } = catalog;
+  useEffect(() => {
+    if (!chipVisible && onlyShippable) setOnlyShippable(false);
+  }, [chipVisible, onlyShippable, setOnlyShippable]);
 
   /* Banttan gelen seçim etkiyle uygulanır: sekme MOUNT KALIR (navigatör tembel), yani ikinci
      banda basışta yeni bir mount olmaz — parametreyi ancak bir etki izleyebilir. İlk yük "Tümü"
@@ -93,19 +166,38 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
    * İNDİRİM rozeti tükendide çıkmaz — `ProductPhotoCard` tükendiyi zaten öne alıyor; burada da
    * elenmesi, tükenmiş bir ürünün "fırsat" diye okunmasını iki katmanda birden kapatır.
    */
-  const cardOf = (product: CatalogProduct) => ({
-    name: product.name,
-    photoUri: product.image.url,
-    priceLabel: product.priceCents === null ? undefined : formatPrice(product.priceCents, locale),
-    soldOut: product.soldOut,
-    soldOutLabel: t.card.soldOut,
-    discountLabel: product.wasCents === undefined ? undefined : t.card.offer,
-    /* Çeşit satırı yalnız ÇOK boylu üründe (şablon: `p.vs.length>1 ? p.vs.length+' seçenek' : null`).
-       Sayı sözleşmeden (`variantCount`), CÜMLE cihazdan: "N seçenek" bir i18n şablonudur ve dile
-       göre çekim alır — API biçimli metin göndermez. "1 seçenek" yazılmaz: olmayan bir seçim
-       varmış izlenimi verirdi. */
-    optionsLabel: product.variantCount > 1 ? t.card.options.replace('{n}', String(product.variantCount)) : undefined,
-  });
+  const cardOf = (product: CatalogProduct) => {
+    /* YER İŞARETİ (21.20) — sunucu doğruyu zaten söylüyordu (`stockStatus`), kart onu ATIYORDU:
+       rota dışı müşteri katalogda neyin gelip gelmeyeceğini göremiyor, uyarıyı ancak ürün
+       detayına girince buluyordu. Cümleyi kuran yer `stockMarkOf`; kart yalnız çiziyor. */
+    const stockMark = stockMarkOf(product.stockStatus, place, locale);
+    /* "KARGOYLA GELİR" KARTA YAZILMAZ (kullanıcı kararı 10.08): rota dışı müşterinin kartlarının
+       neredeyse tamamı o işareti taşıyordu — her kartta yazan bir bilgi, bilgi olmaktan çıkar.
+       Cümle listenin başındaki banda (`PlaceNoticeBand`) taşındı, TEK yere. Kartta kalan not,
+       GÖNDEREMEDİĞİMİZ ya da bölgede olmayan ürününkidir: `info` tonu (kargo) elenir, `blocked`
+       ve `pending` kalır. Eleme burada yapılır çünkü `stockMarkOf` vitrinin daire kartını da
+       besliyor ve o ekran bu şeridin alanı değil (terfi ihtiyacı raporlandı). */
+    const placeNote = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark.label;
+    return {
+      name: product.name,
+      photoUri: product.image.url,
+      priceLabel: product.priceCents === null ? undefined : formatPrice(product.priceCents, locale),
+      soldOut: product.soldOut,
+      soldOutLabel: t.card.soldOut,
+      discountLabel: product.wasCents === undefined ? undefined : t.card.offer,
+      placeNote,
+      /* SOLMA yalnız KAPALI kapıda: "bu adrese gönderemiyoruz" kalıcı bir hâl ve kart bir satın
+         alma değil bir bilgi. `shipping` ve rota içi `elsewhere` SOLMAZ — ikisinde de ürün
+         gelebiliyor (biri kargoyla, öteki stok girince) ve soldurmak müşteriyi olmayan bir
+         kapıdan çevirirdi. */
+      dimmed: stockMark?.tone === 'blocked',
+      /* Çeşit satırı yalnız ÇOK boylu üründe (şablon: `p.vs.length>1 ? p.vs.length+' seçenek' : null`).
+         Sayı sözleşmeden (`variantCount`), CÜMLE cihazdan: "N seçenek" bir i18n şablonudur ve dile
+         göre çekim alır — API biçimli metin göndermez. "1 seçenek" yazılmaz: olmayan bir seçim
+         varmış izlenimi verirdi. */
+      optionsLabel: product.variantCount > 1 ? t.card.options.replace('{n}', String(product.variantCount)) : undefined,
+    };
+  };
 
   const header = (
     <View style={styles.header}>
@@ -156,7 +248,7 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
     </View>
   );
 
-  /** Sıralama sayfası — seçim ANINDA uygulanır ve sayfa kapanır (bkz. sapma 5). */
+  /** Sırala & filtrele sayfası — sıralama seçimi ANINDA uygulanır ve sayfa kapanır (bkz. sapma 5). */
   const sortSheet = (
     <BottomSheet
       visible={sortSheetOpen}
@@ -169,6 +261,7 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
             listeye eklenmediğinde o seçenek sessizce görünmezdi (CLAUDE §1). */}
         {CATALOG_SORTS.map((option: CatalogSort) => {
           const selected = catalog.sort === option;
+          const icon = SORT_ICONS[option];
           return (
             <PressableSurface
               key={option}
@@ -182,13 +275,40 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
               selected={selected}
               testID={`catalog-sort-${option}`}
             >
-              <Text style={styles.sortLabel}>{t.sort[option]}</Text>
+              <View style={styles.sortRowMain}>
+                {/* İkon yuvası HER satırda ayrılır (ikonsuz seçenekte boş kalır) ki üç etiket aynı
+                    hizadan başlasın; ikonun kendisi sessizdir, satırın adını etiket taşıyor. */}
+                <View style={styles.sortIconSlot}>
+                  {icon === undefined ? null : <Icon name={icon} size={theme.size.inlineIcon} color={theme.colors.ink} />}
+                </View>
+                <Text style={styles.sortLabel}>{t.sort[option]}</Text>
+              </View>
               {/* İşaret yalnız GÖRSEL: seçili olma bilgisi ekran okuyucuya `selected` ile gidiyor. */}
               {selected ? <Text style={styles.sortCheck}>✓</Text> : null}
             </PressableSurface>
           );
         })}
       </View>
+      {/* YER SÜZGECİ — şablonun anahtar satırı (v3 `shFilter`: etiket solda, anahtar sağda).
+          YALNIZ ROTA DIŞINDA çizilir (kuralı `shippableChipVisible`): rota içindeki müşteriye
+          süzecek bir şeyi olmayan bir denetim göstermek, web'de ölçülmüş bir arızaydı (67000 için
+          42 kalem gizleniyordu). Rota içindeki ve kodsuz müşteri bu satırı hiç görmez — sayfa
+          eskisi gibi yalnız sıralamadır. Varsayılan KAPALI: katalog kendiliğinden küçülmez.
+
+          Sayfa BURADA KAPANMAZ (sıralamanın aksine): anahtar bir seçim değil bir açma/kapama ve
+          müşteri onu deneyip geri alabilmeli — her dokunuşta sayfayı kapatmak, geri almak için
+          sayfayı yeniden açtırırdı. */}
+      {!chipVisible ? null : (
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>{shippableChipLabel(locale)}</Text>
+          <ToggleSwitch
+            value={catalog.onlyShippable}
+            onToggle={() => catalog.setOnlyShippable(!catalog.onlyShippable)}
+            accessibilityLabel={shippableChipLabel(locale)}
+            testID="catalog-shippable-toggle"
+          />
+        </View>
+      )}
     </BottomSheet>
   );
 
@@ -216,6 +336,10 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
   };
 
   const body = () => {
+    /* İLK YÜK ile KUYRUK yükü AYRI şeyler ve göstergeleri de ayrı: burada liste hiç çizilmediği
+       için alttaki halka (`listFooter`) ilk yükte zaten görünemez. Kullanıcının 09.08'de bildirdiği
+       çift gösterge ölçüldü ve kaynağı BURASI DEĞİLDİ — iskeletin KENDİ içindeki "Yükleniyor…"
+       satırıydı; düzeltme orada (`catalog-skeleton` künyesi). */
     if (catalog.status === 'loading') return <CatalogSkeleton loadingLabel={t.loading} testID="catalog-skeleton" />;
 
     if (catalog.status === 'error') {
@@ -243,6 +367,18 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
             <ProductPhotoCard {...cardOf(item)} onPress={() => openProduct(item.slug)} testID={`product-${item.slug}`} />
           </View>
         )}
+        /* BİLGİ BANDI listenin BAŞINDA, başlığın içinde DEĞİL: adresin gerçeği bir kez okunur,
+           sonra kaydırılıp geçilir. Yapışkan başlığa konsaydı her kaydırmada ekranın üstünden bir
+           dilim yerdi — arama ve kategori rayı kalıcı denetimlerdir, bu bir cümledir. */
+        ListHeaderComponent={
+          noticePlace === null ? null : (
+            <PlaceNoticeBand
+              country={noticePlace.country}
+              postalCode={noticePlace.postalCode}
+              testID="catalog-place-notice"
+            />
+          )
+        }
         onEndReached={catalog.loadMore}
         /* Ekranın yarısı kala istenir: kart yüksekliği ekranın yaklaşık yarısı kadar, yani bir
            satır önceden. Daha küçük bir eşik, hızlı kaydırmada listenin sonunda boşluk bırakırdı. */
@@ -262,15 +398,18 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
             title={t.empty.title}
             description={t.empty.body}
             /* CTA yalnız SÜZGEÇ VARKEN: süzgeçsiz boş katalogda "tüm katalog" düğmesi aynı boş
-               listeye götürürdü. Arama metni de bir süzgeçtir — onu temizlemek de aynı düğme. */
+               listeye götürürdü. Arama metni de bir süzgeçtir — onu temizlemek de aynı düğme.
+               Yer çipi de öyle: açıkken liste boşalabilir (rota dışı müşterinin kategorisinde hiç
+               kargolanabilir ürün yoksa) ve düğme onu temizlemezse çıkışsız bir oda kalırdı. */
             action={
-              catalog.activeCategory === null && catalog.searchText === '' ? undefined : (
+              catalog.activeCategory === null && catalog.searchText === '' && !catalog.onlyShippable ? undefined : (
                 <PrimaryButton
                   label={t.empty.cta}
                   shape="pill"
                   onPress={() => {
                     catalog.search('');
                     catalog.selectCategory(null);
+                    catalog.setOnlyShippable(false);
                   }}
                   testID="catalog-clear-filter"
                 />
@@ -392,10 +531,41 @@ const styles = StyleSheet.create((theme, rt) => ({
   sortRowIdle: {
     borderColor: theme.colors['sand-400'],
   },
+  /* Satırın SOL yarısı: ikon yuvası + etiket. Ayrı bir sarmalayıcı gerekiyor çünkü satırın kendisi
+     `space-between` ile ikiye ayrılıyor (sol blok ↔ sağdaki onay işareti). */
+  sortRowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+  },
+  /* Sabit genişlik: ikonsuz seçenekte de yer tutar, üç etiket aynı hizadan başlar. */
+  sortIconSlot: {
+    width: theme.size.inlineIcon,
+    alignItems: 'center',
+  },
   sortLabel: {
     fontFamily: theme.font.body[theme.text['control--font-weight']],
     fontSize: theme.text.control,
     color: theme.colors.ink,
+  },
+  /* Anahtar satırı — şablon: `padding:4px 2px`, etiket solda, anahtar sağda. Yatay dolgu
+     ölçekte ara değer değil, `2xs`; dikey `xs`. Sayfanın kendi kenar boşluğu zaten var. */
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space['2xs'],
+    gap: theme.space.lg,
+  },
+  switchLabel: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    // Şablon 14 çiziyor; sıralama satırıyla aynı kademede (13.5) tutuldu — iki satır aynı
+    // sayfada yan yana duruyor ve yarım puntoluk fark ikisini farklı ailedenmiş gibi okuturdu.
+    fontSize: theme.text.control,
+    color: theme.colors.ink,
+    // Uzun cümle anahtarı sıkıştırmasın; anahtar sabit genişlikte.
+    flexShrink: 1,
   },
   sortCheck: {
     fontFamily: theme.font.body[theme.text['step-sm--font-weight']],

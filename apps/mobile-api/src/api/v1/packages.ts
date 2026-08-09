@@ -1,18 +1,10 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
-import { BundleService, ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
-import { imageOf } from '@lezzet/application';
-import { toCents } from '@lezzet/helper';
-import {
-  CROP_CENTER,
-  PackageDetailSchema,
-  PackageListSchema,
-  PreferredLanguageEnum,
-  resolveLocalizedText,
-} from '@lezzet/types';
+import { serviceDb } from '@lezzet/database';
+import { getPackageDetail } from '@lezzet/application';
+import { PackageDetailSchema, PackageListSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import { resolvedOrNull } from '../../lib/home';
 import { readPackageCards } from '../../lib/ideas';
 
 /**
@@ -23,17 +15,21 @@ import { readPackageCards } from '../../lib/ideas';
  * çağırmak boşa bir tur olurdu.
  *
  * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Yaptığı şey taşımadır: slug'ı çözer, kalemleri ürün adına/görseline bağlar (MEVCUT servislerin
- * toplu okumalarıyla — kalem başına sorgu yok), sözleşme şekline indirger ve zarflar. Tek türetme
- * kargo kısıtıdır ve o da web'in kararının okunuşu (aşağıda).
+ * Yaptığı şey taşımadır: dili doğrular, terfi etmiş paket kapısını çağırır, dönen görünümü sözleşme
+ * şekline indirger ve zarflar.
  *
- * ── SATILABİLİRLİK/STOK ZİNCİRİ BİLEREK YOK ─────────────────────────────────
- * Web'in paket kapısı (`apps/web/lib/storefront/packages.ts`) pasif-kalemli paketi `listSellable`
- * ile eler ve tükenmeyi stok zincirinden türetir; o karar HENÜZ `@lezzet/application`a terfi
- * etmedi ve kopyası yasak (CLAUDE §1). Bu uç yalnız paketin KENDİ niyetine bakar: pasif paket ve
- * kalemsiz paket 404 (aday/pasif ürünün 404 kararıyla aynı sınıf — DOMAIN §13), gerisi döner.
- * Sözleşme de `soldOut` taşımıyor (`package-api.schema.ts` künyesi). Terfi gününde bu uç
- * `listSellable`ın application karşılığına döner. BEKLEYEN(21.14).
+ * ── SATILABİLİRLİK ARTIK ORTAK KAPIDAN (09.08) ──────────────────────────────
+ * Bu uç 09.08'e kadar kendi okumasını yazıyordu (`listWithItems` + kalem→ürün köprüsü + kargo
+ * kısıtı türetmesi) çünkü web'in paket kapısı `server-only`di ve kopyalaması yasaktı. Kapı
+ * `@lezzet/application`a terfi etti; uç artık `getPackageDetail`i çağırıyor ve satılabilirlik
+ * ölçütü webinkiyle AYNI: pasif paket, kalemsiz paket ve **kalemi satıştan kalkmış paket** 404
+ * (`listSellable` — DOMAIN §13). Eski hâlinde son madde eksikti: boyu pasife alınmış bir ürünün
+ * paketi mobilde hâlâ satılabilir görünüyordu. BEKLEYEN(21.14) kapandı.
+ *
+ * `soldOut` hâlâ sözleşmede YOK (`package-api.schema.ts` künyesi): kapı artık `soldOut`/`route`
+ * üretiyor ama alanı taşımak ekran tarafında bir tasarım kararı bekliyor — sözleşme `packages/types`
+ * ve bu şeridin dışında. Yer (posta kodu) bu yüzden kapıya GEÇİLMİYOR: sözleşmenin yere bağlı tek
+ * bir alanı yok, geçmek ölçülemeyen bir bedel olurdu.
  */
 export const packages = new Hono<AppEnv>();
 
@@ -45,8 +41,8 @@ export const packages = new Hono<AppEnv>();
  * "hepsi" sorusunun cevabı, seçki değil.
  *
  * Sayfalama yok: paket kataloğu doğal tavanlı, operatörün elle kurduğu bir kümedir (CLAUDE §1 "tek
- * turda" dalı) ve `listWithItems` zaten TEK sorgudur. `limit` sorgusu da yok — istemcinin
- * belirlediği sınır, sınır değildir.
+ * turda" dalı) ve okuma zaten TEK sorgudur. `limit` sorgusu da yok — istemcinin belirlediği sınır,
+ * sınır değildir.
  *
  * Kimlik OKUNMAZ: paket tek fiyatlıdır (B2C), Bearer'ın kişiselleştireceği bir şey yok — detay
  * ucunun aynı kısa devresi (dosya başlığı).
@@ -64,60 +60,43 @@ packages.get('/packages', async (c) => {
 
 /**
  * `locale` zorunlu ve varsayılansız (`catalog.ts` `LocaleSchema` künyesi: sessizce Türkçeye düşmek
- * gizli arıza). Aday/eksik slug 404 — katalogda görünmeyen paket linkle de açılmaz.
+ * gizli arıza). Satılamayan/eksik slug 404 — katalogda görünmeyen paket linkle de açılmaz.
  */
 packages.get('/packages/:slug', async (c) => {
   const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
-  const db = serviceDb();
-  // Paket kataloğu DOĞAL TAVANLI küçük bir kümedir (operatör elle kurar, CLAUDE §1 "tek turda"
-  // dalı): kalemler gömülü TEK sorguda gelir, slug bellekte çözülür — vitrin okumasının
-  // (`readHomePackages`) aynı deseni; slug için ikinci bir sorgu yolu açılmaz.
-  const bundle = (await new BundleService(db).listWithItems()).find((b) => b.slug === c.req.param('slug'));
-  // Kalemsiz paket de 404: boş kutu satılmaz — vitrin kartının `positive` kilidiyle aynı kural.
-  if (!bundle || !bundle.isActive || bundle.items.length === 0) return fail(c, 'package_not_found', 404);
-
-  // Kalem → ürün köprüsü İKİ toplu okumayla (kalem varyant taşır, ad/görsel/slug üründe): önce
-  // varyantlar, sonra ürünleri — kalem başına sorgu yok (web `loadContext`in aynı zinciri).
-  const variants = await new ProductVariantService(db).listByIds(bundle.items.map((i) => i.variantId));
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const byVariant = new Map(variants.map((v) => [v.id, v]));
-  const byProduct = new Map(products.map((p) => [p.id, p]));
-
-  // Satır sırası paketin kendi sırasıdır (kalemler `sortOrder`la geldi); ürünü çözülemeyen kalem
-  // sessizce DÜŞMEZ — paket "4 ürün" diyorsa dördü de görünür, bağsız ve adsız kalır (web
-  // `toDetail`in aynı son çaresi; öksüz kalem zaten `restrict` FK'ler yüzünden kurulamaz).
-  const items = bundle.items.map((item) => {
-    const variant = byVariant.get(item.variantId);
-    const product = variant ? byProduct.get(variant.productId) : undefined;
-    return {
-      slug: product?.slug ?? '',
-      name: product ? resolveLocalizedText(product.name, locale.data) : '',
-      unitLabel: variant ? resolveLocalizedText(variant.label, locale.data) : '',
-      qty: item.qty,
-      image: product ? imageOf(product) : { url: null, crop: CROP_CENTER },
-    };
-  });
-
-  // Kargo kısıtı ÜRÜNÜN alanıdır ve BİR kalem bile kargolanamıyorsa (soğuk zincir) paketin tamamı
-  // bölge-içine kilitlenir — web `toCard`ın `inRouteOnly` türetmesinin kendisi, yön çevrilmiş.
-  const inRouteOnly = bundle.items.some((item) => {
-    const variant = byVariant.get(item.variantId);
-    return variant !== undefined && byProduct.get(variant.productId)?.shippable === false;
-  });
+  const pack = await getPackageDetail(serviceDb(), c.req.param('slug'), locale.data);
+  if (!pack) return fail(c, 'package_not_found', 404);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: şekil sözleşmeden saparsa burası DERLENMEZ; `parse` da
-  // süzgeçtir — fazla alan (kalem fiyatı gibi) zarfa sızamaz.
+  // süzgeçtir — kapının ürettiği ama ekranın işi olmayan alanlar (KDV oranı, tükendi, yol, tavan,
+  // ağırlık, alerjen, raf ömrü, kalem varyant kimliği) zarfa sızamaz.
   const body: z.input<typeof PackageDetailSchema> = {
-    slug: bundle.slug,
-    name: resolveLocalizedText(bundle.name, locale.data),
-    description: resolvedOrNull(bundle.description, locale.data),
-    priceCents: toCents(bundle.totalPrice),
-    shippable: !inRouteOnly,
-    image: imageOf(bundle),
-    items,
+    // `id` SEPETİN ihtiyacı, ekranın değil (21.21): sunucu sepetinde paket satırının adresi
+    // `bundleId`dir ve sözleşme yalnız `slug` taşıdığı sürece mobilden paket EKLENEMİYORDU —
+    // satır cihazda kalıyor, sunucunun çözdüğü toplama hiç girmiyordu.
+    id: pack.id,
+    slug: pack.slug,
+    name: pack.name,
+    // Kapı açıklamayı BOŞ DİZE olarak veriyor (vitrin kartı öyle istiyor), sözleşme `null` istiyor:
+    // "girilmemiş" ile "boş" aynı şeydir ve ekran o hâlde paragrafı hiç çizmez.
+    description: pack.description.trim() === '' ? null : pack.description,
+    priceCents: pack.priceCents,
+    // Yön çevrilmiş: kapı kısıtı (`inRouteOnly`), sözleşme yeteneği (`shippable`) taşıyor — ekran
+    // `!shippable` ile kısıt çipini çizer (ürün detayının okuduğu yön).
+    shippable: !pack.inRouteOnly,
+    image: pack.image,
+    // Satır sırası paketin kendi sırasıdır; ürünü çözülemeyen kalem sessizce DÜŞMEZ (kapının son
+    // çaresi: bağsız ve adsız kalır) — paket "4 ürün" diyorsa dördü de görünür.
+    items: pack.items.map((item) => ({
+      slug: item.slug,
+      name: item.name,
+      unitLabel: item.unitLabel,
+      qty: item.qty,
+      image: item.image,
+    })),
   };
   return ok(c, PackageDetailSchema.parse(body));
 });

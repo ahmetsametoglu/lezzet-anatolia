@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { formatPrice, formatShortDate } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 
 /**
@@ -9,8 +9,12 @@ import type { Locale } from '@lezzet/i18n';
  * kaynaktan tüketiyor; "webde 75,53 €, mobilde €75,53" ayrışmasını tek kaynak kapatır). Simge-sonda
  * kararının gerekçesi de artık o dosyanın künyesinde. Web çağıranları için buradan yeniden dışa
  * verilir — 32 dosya import yolunu değiştirmeden tek kaynağa bağlı (web ikizi silindi, 07.08).
+ *
+ * `formatShortDate` AYNI yolu 21.21'de izledi: sipariş bildiriminin verisi `@lezzet/application`a
+ * terfi edince ikinci tüketen doğdu ve gövde `@lezzet/helper`a taşındı (o dosyanın künyesi bu adımı
+ * zaten söz vermişti). Web çağıranları yine buradan alır.
  */
-export { formatPrice };
+export { formatPrice, formatShortDate };
 
 /** Dil → ICU eşlemesi — bu modüldeki tarih/sayı biçimleri bundan türer. */
 const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
@@ -57,15 +61,6 @@ export function formatDeliveryDate(iso: string, locale: Locale): string {
 /** Karşılaştırma fiyatı ("12,90 €/kg") — INCO gereği raf fiyatının yanında bulunur. */
 export function formatComparison(cents: number, locale: Locale): string {
   return `${formatPrice(cents, locale)}/kg`;
-}
-
-/**
- * Kısa tarih ("22 Temmuz" · "22 juillet" · "22. Juli") — geçmiş siparişi TANITMAK için, kayıt
- * tutmak için değil. Yıl yazılmaz: müşteri kendi siparişini gün+ay ile zaten tanır, yıl satırı
- * uzatır. Ayın adı kısaltılmaz — "22 Tem" resmî bir belge tonudur, vitrinin dili değil.
- */
-export function formatShortDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long' }).format(new Date(iso));
 }
 
 /**

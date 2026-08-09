@@ -1,0 +1,20 @@
+{
+  "tr": {
+    "shipMark": "📦 Kargoyla gelir",
+    "awayMark": "Bölgenizde şu an yok",
+    "lineBlocked": "❄ Bu adrese gönderemiyoruz",
+    "onlyShippable": "📍 Adresime gönderilebilir"
+  },
+  "fr": {
+    "shipMark": "📦 Envoyé par transporteur",
+    "awayMark": "Indisponible dans votre zone",
+    "lineBlocked": "❄ Impossible à cette adresse",
+    "onlyShippable": "📍 Livrable chez moi"
+  },
+  "de": {
+    "shipMark": "📦 Wird versandt",
+    "awayMark": "In Ihrer Region derzeit nicht da",
+    "lineBlocked": "❄ An diese Adresse nicht möglich",
+    "onlyShippable": "📍 An meine Adresse"
+  }
+}

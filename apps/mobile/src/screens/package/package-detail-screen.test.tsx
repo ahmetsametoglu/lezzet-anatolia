@@ -102,11 +102,12 @@ describe('paket detayı', () => {
 
     await fireEvent.press(screen.getByTestId('package-qty-increase'));
     await fireEvent.press(screen.getByTestId('package-add'));
-    expect(screen.getByTestId('cart-probe')).toHaveTextContent('bayram-sofrasi-paketi:2:4990');
+    // Satırın kimliği paketin UUID'si — slug DEĞİL (21.21): sunucu sepetindeki adresi budur.
+    expect(screen.getByTestId('cart-probe')).toHaveTextContent(`${packageDetail().id}:2:4990`);
 
     // Aynı paket ikinci kez eklenince satır ÇOĞALMAZ, adet toplanır (`addBundle` kuralı).
     await fireEvent.press(screen.getByTestId('package-add'));
-    expect(screen.getByTestId('cart-probe')).toHaveTextContent('bayram-sofrasi-paketi:4:4990');
+    expect(screen.getByTestId('cart-probe')).toHaveTextContent(`${packageDetail().id}:4:4990`);
   });
 
   it('içerik satırına basınca ürün detayına gidilir (v3 `it.open`)', async () => {

@@ -848,3 +848,116 @@ sayfa, sepete giden tek kapıyı taşımayan sayfaydı.
 Yerleşim uydurulmadı: ürün ve paket detaylarının BİREBİR aynı yuvası (`productFabBottom` + güvenli
 alan payı), yani yapışkan barın üstünde. Üç sayfada aynı ölçü — düğmenin yeri sayfadan sayfaya
 oynamıyor. Boş sepette komponent yine kendini çizmiyor (v3'ün kuralı korundu).
+
+
+### Kahraman fotoğraf GALERİ oldu — ürün ve paket detayında kaydırılabilir şerit (09.08)
+
+**Kullanıcı isteği**, tasarımdan bilinçli sapma. v3'ün ürün detayı (`vProduct`) ve paket detayı
+(`vPackage`) kahramanı TEK `image-slot` çiziyor; şablonda galeri/karusel yok. Ama veri çoktan
+çoktu: sözleşme ürün başına birden çok görsel taşıyor (`CatalogProductDetail.gallery` — künyesinde
+"İlk öğe KAPAKTIR; tek görselli üründe şerit çizilmez") ve uç bunu dolduruyordu. Ekran yalnız
+kapağı çizdiği için operatörün yüklediği öteki fotoğraflar müşteriye hiç ulaşmıyordu — sapmanın
+gerekçesi bir tasarım tercihi değil, çizilmeyen veri.
+
+- **Yerleşim DEĞİŞMEDİ.** Şerit kahramanın yerine geçer, kutusunu miras alır: ürün detayında 400 dp
+  yükseklik, paket detayında 16:10 oran; üst degrade, yüzen geri/paylaş düğmeleri, durum rozeti ve
+  alt kenardan sarkan fiyat rozeti aynı yerde ve şeridin ÜSTÜNDE çizilmeye devam eder.
+- **Tek görselde şerit de gösterge de çizilmez** (sözleşmenin kendi kuralı): tek noktalı bir sayfa
+  göstergesi hiçbir bilgi taşımaz. Görsel hiç yoksa bugünkü baş-harf yer tutucusu korunur.
+- **Paket detayında sıra karardır:** önce paketin KENDİ kapağı, sonra kalemlerin ana görselleri.
+  Satılan şey pakettir, kalemler onun içeriği. Görseli olmayan kalem atlanır (boş kare çizilmez).
+- **Gösterge tasarımın kendi dilinden:** onboarding'in adım noktaları (v3 `ob.dots` — etkin 24 ·
+  sönük 8 · yükseklik 5 · yarıçap 3). Tek fark sönük noktanın rengi: fotoğrafın üstünde opak kum
+  kaybolduğu için tasarımın "foto üstü yüzen yüzey" tokenı (`cream-glass-soft`) kullanıldı; etkin
+  nokta terracotta kaldı. Nokta sırası ekran okuyucuya sessizdir — sırayı karonun kendi etiketi
+  söyler ("Ürün görseli 2 / 3").
+- Yeni kütüphane KURULMADI: yatay kaydırma ve sayfa sınırı RN'in `FlatList`inden
+  (`horizontal` + `pagingEnabled` + sabit `getItemLayout`).
+
+Kod: `apps/mobile/src/components/ui/photo-gallery.tsx`; tüketen iki ekran ürün ve paket detayı.
+
+
+### Adres çekmecesine ÖNERİ LİSTESİ eklendi — tasarımda olmayan bir öğe, kitten kuruldu (10.08)
+
+**Kullanıcı isteği**, tasarımdan bilinçli sapma. v3'ün adres çekmecesi (`shAddr`, v3:1486-1497)
+dört düz alan çiziyor (etiket · adres · posta kodu · şehir) ve öneri listesi YOK. Native uygulamada
+sokak alanı artık Fransız devletinin adres servisine (BAN, `@lezzet/address-fr`) bağlı: müşteri
+yazarken alanın ALTINDA en çok beş öneri açılır, dokunulan öneri sokak + posta kodu + şehri
+BİRLİKTE doldurur.
+
+- **Yeni görsel dil ÜRETİLMEDİ.** Liste kutusu girdi çerçevesiyle aynı ailedendir (kart zemini +
+  `sand-400` çerçeve + kontrol yarıçapı), satırlar kitin basılabilir yüzeyini `tint` geri
+  bildirimiyle kullanır — açılır listede küçültme/kaydırma titrek durur, zemin değişimi hizayı
+  bozmaz (aynı gerekçe başlık çubuğunun yuvarlak düğmesinde de verilmişti). Ham renk/ölçü yok;
+  hepsi tema token'ından.
+- **Şablonun metinleri DEĞİŞMEDİ:** yer tutucu yine "Adres", bölge notu yine yerinde. Yeni metin
+  yalnız listenin kendisine ait (kaynak künyesi + kota satırı).
+- **Elle yazma yolu kapanmıyor.** Servis düşerse ya da cevap tanınmazsa liste hiç çizilmez ve
+  çekmece bugünkü gibi çalışır; kota dolarsa (429) tek satırlık bir not çıkar, alan yine yazmaya
+  açıktır. Doğrulama değişmedi (5 haneli posta kodu).
+- **Kaynak künyesi ZORUNLU, süs değil:** veri Etalab 2.0 açık lisansı altında ve kaynak gösterimi
+  gösteren yüzeyin sorumluluğu (`STACK.md` "Adres arama (FR)"). Künye satırı listenin İÇİNDE durur
+  — liste görünüyorsa künye de görünür, biri ötekisiz çizilemez.
+
+Kod: `apps/mobile/src/components/ui/suggestion-list.tsx` (yeni kit öğesi) +
+`apps/mobile/src/screens/account/use-address-search.hook.ts` (gecikme · önbellek · yarış sayacı);
+tüketen ekran hesabım adres çekmecesi.
+
+
+### Katalogun YER EKSENİ: rozet yerine yazı, kart yerine bant, çip yerine süzgeç satırı (10.08)
+
+**Kullanıcı kararı**, üç parçalı; ikisi tasarımdan bilinçli sapma, biri tasarımın kendi yuvasına
+dönüş. Ortak gerekçe tek: rota dışı müşterinin ekranında yer bilgisi HER KARTTA tekrar ediyordu ve
+tekrar eden bilgi, bilgi olmaktan çıkıp gürültü oluyordu.
+
+**1. Kart üzerindeki "Kargoyla gelir" işareti KALDIRILDI.** Rota dışı müşterinin kartlarının
+neredeyse tamamı onu taşıyordu. Kullanıcının cümlesi: *"zaten gönderemediklerimizi stille
+ayırıyorsak, diğerlerine kargoyla gönderilir demeye gerek yok."* Ayrım artık tek yönlü ve sessiz:
+gönderemediğimiz kart SOLUK, geri kalan normal. `stockStatus === 'shipping'` katalog kartında
+hiçbir şey çizmez.
+
+**2. "Bu adrese gönderemiyoruz" ROZET DEĞİL, YAZI.** Kullanıcı: *"her şey rozet içerisindeymiş gibi
+görünüyor ve hoş olmuyor; yazı zaten filigranın üzerinde olduğu için doğrudan yazılabilir."*
+`StockMark` kabuğu (zemin · kenarlık · dolgu) bu kartta kullanılmıyor. Bunun bir konum sonucu var:
+rozet yığını sol ÜST köşedeydi, gradyan ise ALTTA — zeminsiz bir yazı üst köşede okunmazdı, o yüzden
+not künyenin (ad + çeşit satırı) SON satırı oldu, yani gradyanın en koyu yerinde. Yeni yazı durağı
+AÇILMADI: not künye ailesinin ölçü/ağırlığını kullanır, tek farkı renk (`on-image`, altyazının
+`on-image-soft`una karşı) — okunması gereken bir cümle, çeşit sayısından sönük olamaz.
+Tükendi rozeti DURUYOR: o başka bir eksen ve tasarımda rozet olarak var.
+
+**3. SOLMA fotoğrafa uygulanır, bilgiye değil** (arıza düzeltmesi). Şablon `opacity`yi fotoğraf
+katmanına koyuyor ve bizde de öyleydi; arıza yapı kurgumuzun yan etkisiydi — rozet yığınını ve
+künyeyi o katmanın İÇİNE koymuştuk, yani solmanın SEBEBİNİ açıklayan cümle tam da gerektiği anda
+okunaksızlaşıyordu. Rozet ve künye artık katmanın kardeşi ve tam opak; gradyan solan grupta kaldı
+(yoksa soluk fotoğrafın üstünde tam opak bir koyu leke bırakırdı). Tükendi hâli aynı düzeltmeyi
+aldı. Emsal kitin içindeydi: daire kart (`ProductCircleCard`) solmayı zaten yalnız fotoğrafa
+uyguluyordu.
+
+**4. Listenin başına BİLGİ BANDI** — tasarımda YOK, kitin diliyle kuruldu. Kart başına tekrarlanan
+cümle tek yere taşındı: "kendi soğuk zincir aracımız bu bölgeye uğramıyor; gönderebildiklerimiz
+kargoyla gelir". Yeni görsel dil üretilmedi, kitin bilgi kutusu (`Note`) kullanıldı — sıcak nötr
+ton (`warm`), çünkü bu bir hata da bir fırsat da değil, adresin gerçeği. Bant yapışkan başlığa
+DEĞİL listenin başına kondu: arama ve kategori rayı kalıcı denetimlerdir, bu bir cümledir; bir kez
+okunur, kaydırılıp geçilir. Bandın içinde bir eylem var ("Buraya da gelin") ve dört sonuç hâlinin
+dördü de karşılanır — kayıt alındı · zaten vardı · yer çözülemedi · e-posta gerekli. Bant "haber
+göndereceğiz" DEMEZ, "not aldık" der: bölge genişletme kararı verilmemiş, tutulamayacak söz
+verilmez. Misafirden e-posta bandın İÇİNDE sorulur; giriş duvarı kurulmaz.
+
+**5. "Adresime gönderilebilir" süzgeci ÇİPTEN SÜZGEÇ SAYFASINA.** Bu bir sapma değil, tasarımın
+kendi yuvasına dönüş: v3'ün `shFilter` sayfasında sıralama satırlarının altında bir anahtar satırı
+zaten var ("Sadece indirimliler", etiket solda · anahtar sağda). O satır bizde boştu (sözleşmede
+`offers` yok — ekranın 5. sapması); şimdi sözleşmede gerçekten var olan tek boolean süzgeç oraya
+yerleşti. Anahtar kitte hazırdı (`ToggleSwitch`), ikincisi çizilmedi. Süzgeç ekrandan kalktığı için
+"etkin süzgeç var" bilgisini artık yalnız süzgeç düğmesinin dolu hâli taşıyor; `filtersActive` bu
+yüzden onu da sayıyor.
+
+**6. Sıralama satırlarına İKON** (kullanıcı isteği). İki fiyat satırı kitin para ikonunu paylaşır
+(`money`); eksen ikisinde de fiyattır, yönü etiket söyler. **"Önerilen" satırı bilerek ikonsuz** —
+sette o kavramın çizimi (yıldız/kıvılcım) yok ve olmayan bir kavram için eldeki bir ikonu ödünç
+almak, satırı başka bir yere gidiyormuş gibi gösterirdi; ikon yuvası yine ayrılır ki etiketler
+hizalı kalsın. Süzgeç satırının `📍`si de emoji olarak KALDI: kitin ikon setinde yer imi yok
+(eksikler envantere raporlandı — yer imi · yukarı/aşağı ok · yıldız).
+
+Kod: `apps/mobile/src/components/ui/product-photo-card.tsx` ·
+`apps/mobile/src/screens/catalog/place-notice-band.tsx` (yeni) ·
+`apps/mobile/src/screens/catalog/catalog-screen.tsx`.

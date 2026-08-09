@@ -1,5 +1,3 @@
-import type { CustomerOrderStatus } from '@lezzet/types';
-
 /*
   VİTRİN TEST/DEMO VERİSİ — 21.14 ilk etabı UI-only: vitrinin bir UCU YOK (bugün gerçek uç yalnız
   katalog/ürün) ve bu etapta backend işi ÜRETİLMEZ. Ekran o yüzden bu dosyadan besleniyor.
@@ -28,18 +26,6 @@ export interface HomeCustomerView {
   unreadNotifications: number;
 }
 
-export interface HomeLiveOrderView {
-  reference: string;
-  status: CustomerOrderStatus;
-  /** "Bugün 14:00–18:00" gibi teslim penceresi — biçimlenmiş, veriden gelir. */
-  dayLabel: string;
-}
-
-export interface HomeLastOrderView {
-  reference: string;
-  totalCents: number;
-}
-
 export interface HomeFlashDealView {
   slug: string;
   name: string;
@@ -64,13 +50,16 @@ export interface HomeFlashDealView {
   şimdilik BOŞ döndürüyor (`home.ts` yeri `UNKNOWN_PLACE` ile çözüyor: teklif tutarı yer
   bilinmeden hiç okunmaz) — yani bölüm çizilmiyor. Uydurma iki kart basmak, olmayan bir indirimi
   varmış gibi göstermekti; boş bırakmak arızayı görünür kılıyor (terfi ihtiyacı raporlandı).
+
+  SİPARİŞ BANTLARI DA ARTIK BURADA DEĞİL (09.08): "siparişiniz yolda" ve "geçen siparişinizi
+  tekrarlayın" bantları sabit bir `LA-2418` çiziyordu (kullanıcı bulgusu). İkisi de gerçek uçtan
+  okunuyor artık (`GET /api/v1/me/orders` → `use-home-orders.hook`) ve sözleşme tipini
+  (`MeOrderSummary`) kullanıyor — sayfaya özel görünüm tipleri (`HomeLiveOrderView`,
+  `HomeLastOrderView`) bu yüzden silindi, künyenin "sözleşme geldiğinde bu tipler silinir" sözü
+  onlar için de yerine getirildi.
 */
 export interface HomeData {
   customer: HomeCustomerView;
-  /** Süren sipariş — yoksa bant çizilmez. */
-  liveOrder: HomeLiveOrderView | null;
-  /** Süren sipariş YOKKEN gösterilen "tekrarla" bandı (şablon ikisini birlikte çizmez). */
-  lastOrder: HomeLastOrderView | null;
   flashDeal: HomeFlashDealView | null;
 }
 
@@ -88,7 +77,7 @@ function endOfToday(): number {
 
 /**
  * Şablonun kendi vitrini (v3 `V.homeCats` · `V.vitrin` · `V.rcps` · `V.pkgsHome`) — giriş yapmış
- * B2C müşteri, süren bir sipariş ve günün fırsatı.
+ * B2C müşteri ve günün fırsatı.
  * `overrides` ile her test/demo kendi hâlini kurar (misafir, boş vitrin, B2B).
  */
 export function homeData(overrides: Partial<HomeData> = {}): HomeData {
@@ -99,8 +88,6 @@ export function homeData(overrides: Partial<HomeData> = {}): HomeData {
       wholesale: false,
       unreadNotifications: 2,
     },
-    liveOrder: { reference: 'LA-2418', status: 'on_the_way', dayLabel: 'Bugün 14:00 – 18:00' },
-    lastOrder: null,
     flashDeal: {
       slug: 'kol-boregi',
       name: 'El Açması Kol Böreği',

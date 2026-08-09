@@ -1,8 +1,8 @@
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Image, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useState, useSyncExternalStore } from 'react';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
@@ -17,9 +17,10 @@ import {
   saveOnboarding,
   subscribeOnboarding,
 } from '@/lib/onboarding/onboarding-store';
+import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { publishToast } from '@/lib/toast/toast-store';
-import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -32,19 +33,20 @@ import { HomeSkeleton } from './home-skeleton';
 import messages from './messages.json';
 import { PostalCodeSheet } from './postal-code-sheet';
 import { useHome } from './use-home.hook';
+import { useHomeOrders } from './use-home-orders.hook';
 
 /*
   VİTRİN (v3 `vHome`) — uygulamanın açılış ekranı. Şablonun sırası birebir korundu: başlık →
   süren sipariş → günün fırsatı → fırsat rayı → koleksiyon bantları → vitrin rayı → tarif rayı →
   hazır paketler → Keşif ve profesyonel davetleri.
 
-  ── VERİNİN ÜÇ KAYNAĞI ──────────────────────────────────────────────────────
+  ── VERİNİN DÖRT KAYNAĞI ────────────────────────────────────────────────────
   · `/api/v1/home` (bantlar · seçki · FIRSATLAR · tarifler · paketler),
   · `/api/v1/me` (selamlama adı, toptan rozeti),
+  · `/api/v1/me/orders` (süren sipariş bandı + "geçen siparişi tekrarla" bandı — 09.08),
   · cihaz (`lib/onboarding` — teslimat bölgesi kodu) + `/places` (kodun şehri).
-  Kalan üç blok hâlâ fixture ve gerekçeleri `home-fixture` künyesinde (süren sipariş · geçen
-  sipariş · günün fırsatı). Veri PROP olarak alınıyor (varsayılanı fixture) ki testler kendi
-  hâllerini aynı kapıdan kursun.
+  Fixture'da kalan tek şey günün fırsatıdır ve o da ÇİZİLMİYOR (aşağıdaki künye). Veri PROP olarak
+  alınıyor (varsayılanı fixture) ki testler kendi hâllerini aynı kapıdan kursun.
 
   ── AŞAĞI ÇEKEREK YENİLEME (kullanıcı isteği 09.08) ─────────────────────────
   Vitrin uygulamanın açılış ekranı ve içeriği gün içinde değişiyor (fırsat biter, paket tükenir);
@@ -73,12 +75,10 @@ interface HomeScreenProps {
   data?: HomeData;
 }
 
-/** ms → "05:12:44". Saat 24'ü aşarsa da doğru: saat alanı taşar, kırpılmaz. */
-function countdownLabel(remainingMs: number): string {
-  const totalSeconds = Math.floor(remainingMs / 1000);
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${pad(Math.floor(totalSeconds / 3600))}:${pad(Math.floor(totalSeconds / 60) % 60)}:${pad(totalSeconds % 60)}`;
-}
+/* Selamlamanın saati ÇİZİM ANINDA okunur. Eskiden geri sayımın saniyelik sayacına bağlıydı; o
+   sayaç günün fırsatıyla birlikte kalktı ve yalnız selamlama için saniyede bir yeniden çizim
+   yapmak, bir saatte bir değişen bir kelime için ödenecek bedel değil. En kötü hâl, ekran açık
+   dururken selamlamanın bir sonraki etkileşime kadar geç dönmesidir. */
 
 /** Şablonun selamlama eşikleri: 11'den önce sabah, 18'den önce gündüz, sonrası akşam. */
 function greetingOf(t: Messages, hour: number, firstName: string | null): string {
@@ -95,7 +95,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const cart = useCart();
   const count = cartCount(cart);
 
-  const { customer: fixtureCustomer, liveOrder, lastOrder, flashDeal } = data;
+  const { customer: fixtureCustomer } = data;
   /* KİMLİK GERÇEK OTURUMDAN (21.14c): ad `/me`den (ilk kelime — selamlama tam ad değil hitaptır),
      toptan rozeti onaylı kurumsal müşteriden (ölçüt `useWholesale`da, sekme çatalıyla ORTAK).
      PUAN ARTIK ÇİZİLMEZ: `/me` puan taşımıyor (puan modülü ayrı) ve oturum gerçekken kurgu sayı
@@ -117,6 +117,13 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   /* Bantlar + seçki + FIRSATLAR + tarifler + paketler GERÇEK uçtan (`/api/v1/home`); yüklenirken/
      hata anında bu bölümler çizilmez (vitrin tasarımında iskelet/hata hâli yok; gerekçe hook
      künyesinde). Fixture'da kalanlar: kimlikli bölümler ve günün fırsatı (fixture künyesi). */
+
+  /* SİPARİŞ BANTLARI GERÇEK UÇTAN (09.08): süren sipariş ve "geçen siparişi tekrarla" artık
+     `/api/v1/me/orders`tan okunuyor — sabit `LA-2418` kalktı. Kapı oturuma bağlı (`signedIn`):
+     misafirde ne çağrı yapılır ne bant çizilir; giriş/çıkış anında hook kendiliğinden döner. */
+  const homeOrders = useHomeOrders(locale, signedIn);
+  const liveOrder = homeOrders.live;
+  const lastOrder = homeOrders.last;
 
   /* TESLİMAT BÖLGESİ — kaynak CİHAZ (onboarding'de yazılan kod), adı da gerçek uçtan (`/places`).
      Fixture'daki sabit "67000 STRASBOURG" kalktı: kullanıcının kendi cevabı dururken uydurma bir
@@ -167,15 +174,6 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
     publishToast(t.zip.saved);
   };
 
-  /* Geri sayım — şablonun saniyelik sayacı. Kaynak `endsAtMs`; ekran yalnız "şimdi"yi tazeler,
-     yani bitiş anı tek bir yerde durur ve her karede yeniden hesaplanmaz. */
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (flashDeal === null) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [flashDeal]);
-
   const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
 
   /* İLK YÜK: sayfanın yerini iskelet tutar (kullanıcı isteği 09.08 — "vitrin sayfasını bire bir
@@ -189,7 +187,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       <View style={styles.headerText}>
         <View style={styles.greetingRow}>
           <Text style={styles.greeting} accessibilityRole="header">
-            {greetingOf(t, new Date(now).getHours(), customer.firstName)} <Text style={styles.asterisk}>✺</Text>
+            {greetingOf(t, new Date().getHours(), customer.firstName)} <Text style={styles.asterisk}>✺</Text>
           </Text>
           {customer.points === null ? null : (
             <Tag
@@ -241,6 +239,11 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
     </View>
   );
 
+  /* TESLİM PENCERESİ YAZILMIYOR (ölçüldü 09.08): şablon "Bugün 14:00 – 18:00" diyordu ama böyle
+     bir veri YOK — sözleşmenin liste satırı (`MeOrderSummary`) teslim günü taşımıyor, veritabanı
+     da yalnız GÜN tutuyor (`order.delivery_date` bir `date`; saat aralığı hiçbir yerde yok).
+     Uydurma bir saat basmak müşteriye verilmiş bir söz olurdu; bant tek satır çiziliyor ve alan
+     ihtiyacı raporlandı. */
   const liveOrderBand =
     liveOrder === null ? null : (
       <PressableSurface
@@ -259,7 +262,6 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               .replace('{status}', t.liveOrder.status[liveOrder.status])
               .replace('{reference}', liveOrder.reference)}
           </Text>
-          <Text style={styles.liveDay}>{liveOrder.dayLabel}</Text>
         </View>
         <View style={styles.trackTilt}>
           <View style={styles.trackChip}>
@@ -269,11 +271,18 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       </PressableSurface>
     );
 
-  /* Sapma 4: süren sipariş varken "tekrarla" bandı çizilmez. */
+  /* Sapma 4: süren sipariş varken "tekrarla" bandı çizilmez.
+
+     BANT SEPETE DEĞİL SİPARİŞ DETAYINA GÖTÜRÜR (09.08): tekrar sipariş, kalemleri BUGÜNKÜ fiyat
+     ve satılabilirlikle sepete kopyalayan bir orkestrasyondur; o kural `@lezzet/application`a
+     terfi etmedi ve ucu da yok (`orders-screen` künyesi sapma 1). Eski hedef boş sepeti açıyordu
+     — "tek dokunuşla sepete" diyip hiçbir şey eklememek verilmiş bir sözü tutmamaktı. Detay,
+     müşterinin ne aldığını gördüğü ve tekrarın gerçekten başladığı yer; alt satır da bu yüzden
+     vaatsiz künyeye (`{reference} · {total}`) indi. Uç geldiği gün hedef sepet olur. */
   const lastOrderBand =
     liveOrder !== null || lastOrder === null ? null : (
       <PressableSurface
-        onPress={() => router.push('/cart')}
+        onPress={() => router.push({ pathname: '/order/[reference]', params: { reference: lastOrder.reference } })}
         feedback="scale"
         style={styles.repeatBand}
         accessibilityLabel={t.lastOrder.title}
@@ -283,7 +292,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         <View style={styles.repeatText}>
           <Text style={styles.repeatTitle}>{t.lastOrder.title}</Text>
           <Text style={styles.repeatBody}>
-            {t.lastOrder.body
+            {t.lastOrder.summary
               .replace('{reference}', lastOrder.reference)
               .replace('{total}', formatPrice(lastOrder.totalCents, locale))}
           </Text>
@@ -292,58 +301,16 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       </PressableSurface>
     );
 
-  const flashBand =
-    flashDeal === null ? null : (
-      <PressableSurface
-        onPress={() => openProduct(flashDeal.slug)}
-        feedback="scale"
-        style={styles.flashBand}
-        accessibilityLabel={flashDeal.name}
-        testID="home-flash"
-      >
-        <View style={styles.flashText}>
-          <Text style={styles.flashEyebrow}>
-            {flashDeal.endsAtMs <= now
-              ? t.flash.ended
-              : t.flash.eyebrow.replace('{time}', countdownLabel(flashDeal.endsAtMs - now))}
-          </Text>
-          <Text style={styles.flashName}>{flashDeal.name}</Text>
-          <View style={styles.flashPriceRow}>
-            <Text style={styles.flashPrice}>{formatPrice(flashDeal.priceCents, locale)}</Text>
-            <Text style={styles.flashWas}>{formatPrice(flashDeal.wasCents, locale)}</Text>
-            <Tag
-              label={t.flash.add}
-              tone="cream"
-              rotate={-3}
-              onPress={() => {
-                addProduct({
-                  id: `${flashDeal.slug}-default`,
-                  slug: flashDeal.slug,
-                  name: flashDeal.name,
-                  variantLabel: '',
-                  unitCents: flashDeal.priceCents,
-                  photoUri: flashDeal.photoUri,
-                  discounted: true,
-                  soldOut: false,
-                });
-                publishToast(t.flash.addedToast);
-              }}
-              accessibilityLabel={t.flash.addLabel.replace('{name}', flashDeal.name)}
-              testID="home-flash-add"
-            />
-          </View>
-        </View>
-        <View style={styles.flashPhoto} pointerEvents="none">
-          {flashDeal.photoUri === null ? (
-            <View style={styles.flashPhotoPlaceholder}>
-              <Text style={styles.flashInitial}>{flashDeal.name.slice(0, 1)}</Text>
-            </View>
-          ) : (
-            <Image source={{ uri: flashDeal.photoUri }} style={styles.flashImage} accessibilityIgnoresInvertColors />
-          )}
-        </View>
-      </PressableSurface>
-    );
+  /* ── GÜNÜN FIRSATI ÇİZİLMİYOR (kullanıcı kararı 09.08) ────────────────────────
+     Şablonda geri sayımlı bir "günün fırsatı" bandı var ve buraya fixture'la çizilmişti. Ölçüldü:
+     BÖYLE BİR ÖZELLİK YOK — ne "günün fırsatı" diye seçilmiş bir kayıt, ne de bitiş anını
+     (`endsAtMs`) taşıyan bir uç. Fırsat şeridi (`offers`) başka bir şeydir: SKT'si yaklaşan
+     partiden doğan indirimli ürünler, süresi yok.
+
+     Kurgu veriyle çizilip bırakılsaydı ekranın en görünür yerinde tutulamayacak bir söz dururdu —
+     sayaç işleyip biterdi ama arkasında bir kampanya olmazdı. Kaldırıldı; kavram
+     `design/BACKLOG.md`ye yazıldı ve uç geldiği gün blok şablondaki yerine döner.
+     Yardımcılar (`countdownLabel`, `now` sayacı) da onunla birlikte kalktı. */
 
   const offerRail =
     offers.length === 0 ? null : (
@@ -402,6 +369,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             onRefresh={() => {
               home.refresh();
               meState.refresh();
+              // Sipariş bantları da tazelenir: teslimat gün içinde ilerliyor ("hazırlanıyor" →
+              // "yolda") ve ekranın en üstünde eski bir durum kalması vitrinin yalan söylemesidir.
+              homeOrders.refresh();
             }}
             tintColor={theme.colors.olive}
           />
@@ -411,7 +381,6 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {header}
         {liveOrderBand}
         {lastOrderBand}
-        {flashBand}
         {offerRail}
 
         {bands.length === 0 ? null : (
@@ -456,17 +425,33 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               <SectionHeader eyebrow={t.featured.eyebrow} title={t.featured.title} testID="home-featured-header" />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.circleRail}>
-              {featured.map((product) => (
-                <ProductCircleCard
-                  key={product.slug}
-                  name={product.name}
-                  /* Fiyatsız ürünü uç zaten süzer (satışa kapalı raya giremez); `?? 0` tip daraltması. */
-                  priceLabel={formatPrice(product.priceCents ?? 0, locale)}
-                  photoUri={product.image.url}
-                  onPress={() => openProduct(product.slug)}
-                  testID={`home-featured-${product.slug}`}
-                />
-              ))}
+              {featured.map((product) => {
+                /* YER İŞARETİ (21.20) — katalog kartıyla AYNI cümle, AYNI komponent. Vitrin ve
+                   katalog aynı ürüne bakan iki ekran; işaret yalnız birinde çizilseydi rota dışı
+                   müşteri iki ekranda iki farklı gerçek okurdu. Kaynak da aynı: `stockStatus`
+                   sözleşmede zaten vardı (`CatalogProductSchema`), vitrin onu atıyordu. */
+                const stockMark = stockMarkOf(product.stockStatus, savedPlace, locale);
+                /* "KARGOYLA GELİR" ÇİZİLMEZ (kullanıcı kararı 10.08 — katalog ekranının aynı
+                   satırı). Rota dışı müşterinin kartlarının neredeyse TAMAMI o işareti taşıyordu,
+                   yani bilgi olmaktan çıkıp gürültü oluyordu; cümle listenin başındaki bilgi
+                   bandına, TEK yere taşındı. Kartta yalnız KAPALI kapı konuşur ("bu adrese
+                   gönderemiyoruz") — o istisnadır ve söylenmezse müşteri sepette öğrenir. */
+                const placeMark = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark;
+                return (
+                  <ProductCircleCard
+                    key={product.slug}
+                    name={product.name}
+                    /* Fiyatsız ürünü uç zaten süzer (satışa kapalı raya giremez); `?? 0` tip daraltması. */
+                    priceLabel={formatPrice(product.priceCents ?? 0, locale)}
+                    photoUri={product.image.url}
+                    stockMark={placeMark}
+                    // Solma yalnız KAPALI kapıda (gerekçe: katalog ekranının aynı satırı).
+                    dimmed={stockMark?.tone === 'blocked'}
+                    onPress={() => openProduct(product.slug)}
+                    testID={`home-featured-${product.slug}`}
+                  />
+                );
+              })}
               {/* Rayın sonundaki KATALOG kartı (v3:130) — ürün dairesinin ikizi ama ürün DEĞİL:
                   fiyat çipi yerine ok rozeti, fotoğraf yerine katalog ikonu taşır. Bu yüzden
                   `ProductCircleCard` kullanılmadı; o kart fiyatı ZORUNLU tutar (künyesi) ve
@@ -710,11 +695,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.control,
     color: theme.colors['sand-50'],
   },
-  liveDay: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    color: theme.colors['neutral-400'],
-  },
+  /* `liveDay` (teslim penceresi satırı) KALDIRILDI — veri yok, bant tek satır (bandın künyesi). */
   trackTilt: { transform: [{ rotate: '3deg' }] },
   trackChip: {
     paddingVertical: theme.space.sm,

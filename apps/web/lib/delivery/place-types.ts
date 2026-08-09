@@ -170,31 +170,17 @@ export interface DeliveryZoneSummary {
 export { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
 
 /**
- * `elsewhere` hâlinin ALT SEBEBİ (09.08 · kullanıcı kararı) — **aynı stok hâli, iki farklı gerçek.**
+ * `elsewhere` hâlinin ALT SEBEBİ — **kural artık `@lezzet/helper`'da, burası KÖPRÜ** (21.20).
  *
- *   `stock`        rota İÇİNDEYİZ ama kalem bölgenin deposunda yok. GEÇİCİ: mal gelince çözülür,
- *                  beklenecek şey KALEMDİR (`variant_stock_notice`).
- *   `out_of_route` rota DIŞINDA. KALICI: ürün gelse bile oraya gidemez, çünkü soğuk zincir kargoya
- *                  verilemiyor. Beklenecek şey BÖLGENİN açılmasıdır (`zone_notice`).
+ * Gerekçe `helper/src/delivery.ts` künyesinde: aynı üç cümleyi native uygulamanın katalog/vitrin
+ * kartı da kuruyor ve `apps/mobile` ne `@lezzet/application`'ı ne `domain-core`'u biliyor. İki
+ * yüzeyin de bildiği tek ev `helper` — `normalizePostalCode`in emsali (üstteki satır).
  *
- * İkisini tek cümleye indirmek rota dışındaki müşteriye gelmeyecek bir malı bekletmek, ona kalem
- * notu yazdırmak ise tutulamayacak bir söz vermek olurdu. Ayrım sepetin kısıt bloğunda 01.08'den
- * beri vardı (`place-restriction`); kart ve ürün detayında yoktu — rota dışı müşteri bu hâle
- * 19.23'e kadar hiç düşmediği için eksik görünmüyordu.
- *
- * Kural burada tek nüsha yaşıyor: üç ekran öğesi (işaret · haber düğmesi · teslimat kutusu) aynı
- * soruyu soruyor ve üçünde ayrı yazılsaydı biri bir gün ötekilerden ayrışırdı.
+ * Köprü duruyor çünkü web tarafındaki ÜÇ çağıran (işaret · haber düğmesi · teslimat kutusu) yerin
+ * sözlüğünü tek dosyadan okuyor; import yolunu üç yerde değiştirmek, taşımanın kendisinden başka
+ * hiçbir şey kazandırmazdı.
  */
-type ElsewhereReason = 'stock' | 'out_of_route';
-
-/**
- * **Yer bilinmiyorsa `stock`** ve bu bilinçli: "gönderemiyoruz" demek için rota dışında olduğunu
- * BİLMEK gerekir. Bilinmeyeni kalıcı bir olumsuzluğa çevirmek uydurma olurdu (`CLAUDE §1`) — ve
- * pratikte bu hâl zaten oluşmaz, `elsewhere` ancak yer biliniyorken doğar.
- */
-export function elsewhereReasonOf(place: Pick<DeliveryPlace, 'inRoute'> | null): ElsewhereReason {
-  return place && !place.inRoute ? 'out_of_route' : 'stock';
-}
+export { elsewhereReasonOf } from '@lezzet/helper';
 
 // `isValidPostalCode`'un gerekçesi (5 rakam FR ve DE'de aynı; ayrımı `postal_code_place` yapar) ve
 // gövdesi artık `@lezzet/helper`'da. Doğrulama İSTEMCİDE de yapılır ki her tuşta sunucuya

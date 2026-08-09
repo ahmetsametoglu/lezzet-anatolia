@@ -93,14 +93,19 @@ export async function readRecipeCards(
 }
 
 /**
- * Paket kartları — `listWithItems` TEK sorgudur (üyelik gömülü) ve süzme BELLEKTE yapılır: paket
- * kataloğu doğal tavanlı küçük bir kümedir (`api/v1/packages.ts` detay ucunun aynı deseni).
+ * Paket kartları — süzme BELLEKTE yapılır: paket kataloğu doğal tavanlı küçük bir kümedir
+ * (`api/v1/packages.ts` detay ucunun aynı deseni), okuma `sortOrder` sırasında gelir.
  *
- * ÜÇ SÜZGEÇ ÜÇ AYRI GEREKÇEDEN:
- *   · `isActive`  — pasif paket hiçbir yüzeyde görünmez (detayı da 404).
- *   · kalem sayısı — boş kutu satılmaz; sözleşmenin `itemCount: positive` kilidinin veri tarafı.
- *   · `isFeatured` — YALNIZ vitrinde (`featuredOnly`): işaret bir SEÇİMDİR ve yedeği yoktur
- *     (bant karışımının ilkesi). Liste sayfası "hepsi" sorusunun cevabıdır, seçki değil.
+ * ── SATILABİLİRLİK ÖLÇÜTÜ DETAYLA AYNI OLMAK ZORUNDA (09.08) ────────────────
+ * Süzgeç 09.08'e kadar burada elle yazılıyordu (`isActive` + kalem sayısı) çünkü ölçütün tam hâli
+ * (`listSellable`: kalemi satıştan kalkmış paket de düşer) web'in `server-only` kapısındaydı.
+ * Detay ucu terfi etmiş kapıya (`getPackageDetail` → `listSellable`) geçince ikisi AYRIŞACAKTI:
+ * boyu pasife alınmış bir ürünün paketi listede görünür, dokununca 404 verirdi. Liste de aynı
+ * servis kapısına alındı — tek ölçüt, iki uç.
+ *
+ * `isFeatured` süzgeci burada KALIYOR: YALNIZ vitrinde uygulanır (`featuredOnly`). İşaret bir
+ * SEÇİMDİR ve yedeği yoktur (bant karışımının ilkesi; web'in `pickFeatured` yedeğine bilerek
+ * düşülmüyor — `lib/home.ts` künyesi). Liste sayfası "hepsi" sorusunun cevabıdır, seçki değil.
  *
  * `limit` VERİLMEZSE kesme yapılmaz — liste sayfası kümenin tamamını ister (doğal tavan).
  */
@@ -109,10 +114,8 @@ export async function readPackageCards(
   locale: PreferredLanguage,
   options: { featuredOnly: boolean; limit?: number },
 ): Promise<HomePackage[]> {
-  const bundles = await new BundleService(db).listWithItems();
-  const visible = bundles.filter(
-    (b) => b.isActive && b.items.length > 0 && (!options.featuredOnly || b.isFeatured),
-  );
+  const sellable = await new BundleService(db).listSellable();
+  const visible = options.featuredOnly ? sellable.filter((b) => b.isFeatured) : sellable;
   const page = options.limit === undefined ? visible : visible.slice(0, options.limit);
   return page.map((bundle) => toPackageCard(bundle, locale));
 }
