@@ -3,8 +3,8 @@
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { ContextPane, ConversationPane, DetailPlaceholder, InboxEmpty, InboxRow } from './whatsapp-sections';
+import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
+import { ConversationPane, DetailPlaceholder, InboxEmpty, InboxRow, WhatsappContextPane } from './whatsapp-sections';
 import { WHATSAPP_FILTERS, WHATSAPP_FILTER_LABELS } from './whatsapp-url';
 import type { WhatsappViewProps } from './whatsapp-types';
 
@@ -15,9 +15,12 @@ import type { WhatsappViewProps } from './whatsapp-types';
  * operatörü her mesajda müşteri kartına gidip geri döndürürdü; sohbet gün içinde arka arkaya işlenen
  * bir iştir ve bağlam kaybı burada gerçek bir maliyettir.
  *
- * Çip şeridi başlık barının ALTINDA, kendi bandında (Talepler ekranının kalıbı): süzgeç kuyruğa
- * aittir, ekran çapında bir arama değil. Bu ekranda ARAMA KUTUSU YOK ve olmamalı — aranacak şey
- * (müşteri, numara, sipariş) kendi ekranlarında aranır ve oradan buraya bağlantı verilir.
+ * Kabuk ORTAK (`QueuePane` · `FilterBar`): Talepler ekranı da aynısını kullanıyor. Bu ekran bir tur
+ * boyunca aynı dizilişi kendi içinde yazmıştı — iki kopya bir gün ayrışır ve ayrıştığı gün biri
+ * `aria-busy`'yi ya da "daha fazla" gözcüsünü unutur.
+ *
+ * Bu ekranda ARAMA KUTUSU YOK ve olmamalı — aranacak şey (müşteri, numara, sipariş) kendi
+ * ekranlarında aranır ve oradan buraya bağlantı verilir.
  */
 export function WhatsappDesktop({
   data,
@@ -30,8 +33,8 @@ export function WhatsappDesktop({
   onLoadMore,
   onFilter,
   onSelect,
-  onRecordInbound,
   onRecordOutbound,
+  onIncoming,
   onNewDm,
   onNewTicket,
 }: WhatsappViewProps) {
@@ -48,35 +51,28 @@ export function WhatsappDesktop({
         </Button>
       </PageHeader>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-ops-gray-100 px-6 py-2.5">
+      <FilterBar>
         {WHATSAPP_FILTERS.map((key) => (
           <Chip key={key} active={urlState.f === key} onClick={() => onFilter(key)}>
             {WHATSAPP_FILTER_LABELS[key]}
           </Chip>
         ))}
-      </div>
+      </FilterBar>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div
-          aria-busy={navPending || undefined}
-          className={[
-            'flex w-[268px] flex-none flex-col overflow-y-auto border-r border-ops-line',
-            navPending ? 'pointer-events-none opacity-60' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
+        <QueuePane
+          width={268}
+          busy={navPending}
+          isEmpty={data.rows.length === 0}
+          empty={<InboxEmpty filtered={urlState.f === 'awaiting'} />}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={onLoadMore}
         >
-          {data.rows.length === 0 ? (
-            <InboxEmpty filtered={urlState.f === 'awaiting'} />
-          ) : (
-            <>
-              {data.rows.map((row) => (
-                <InboxRow key={row.id} row={row} active={row.id === urlState.c} onSelect={onSelect} />
-              ))}
-              <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
-            </>
-          )}
-        </div>
+          {data.rows.map((row) => (
+            <InboxRow key={row.id} row={row} active={row.id === urlState.c} onSelect={onSelect} />
+          ))}
+        </QueuePane>
 
         {data.detail ? (
           <>
@@ -84,13 +80,12 @@ export function WhatsappDesktop({
               detail={data.detail}
               busy={busy}
               error={error}
-              onRecordInbound={onRecordInbound}
+              onIncoming={onIncoming}
               onRecordOutbound={onRecordOutbound}
             />
-            <ContextPane
+            <WhatsappContextPane
               context={data.detail.context}
-              // Numara konuşmanın malı, müşterinin değil: kimlik çözülmemiş sohbette de gösterilmeli.
-              phone={data.detail.context?.phone ?? data.detail.title}
+              phone={data.detail.phone}
               tickets={data.detail.tickets}
               onNewTicket={onNewTicket}
             />

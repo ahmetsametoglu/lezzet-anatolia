@@ -134,6 +134,39 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 2. Bilinçli sapmalar (eski BACKLOG §3)
 
+- **WHATSAPP ALTLIĞI GÖNDERME KUTUSU DEĞİL, DEFTER KUTUSU (08.08, 15.5).**
+  Çizim (`Operasyon - WhatsApp.dc.html`) pencere açıkken *"Mesaj yaz…"* + uçak düğmesi koyuyor.
+  Kodda kutu var ama düğmesi **"Deftere işle"** diyor ve altında tek satır duruyor: *"buradan mesaj
+  GÖNDERİLMEZ, yazışma telefondan yürür."*
+
+  Sebep: adım 1'de gönderim kanalı YOK (360dialog 15.7/15.11). Yazdığını gönderdiğini sanan bir
+  operatör, cevapsız kalan müşteriyi asla fark etmez — çizip yazmamak, yazdığını sandırmanın en
+  sessiz yolu. Bugün gerçek olan iş yazışmanın admin telefonundan yürümesi ve ekranın DEFTERİ
+  tutması (15.1'in beyanı: *"admin, gelen DM'i işler"*).
+
+  **Pencere kapalıyken kutu HİÇ çizilmiyor** — bu çizimle aynı ve ayrıca doğru: pencere kapalıyken
+  admin kendi telefonundan da serbest metin gönderemez (Meta engeller), yani kaydedilecek bir cevap
+  da yoktur. Çizimin oradaki *"Kalıp mesaj"* düğmesi de yok: onaylı şablon da sürücü de 15.11.
+  Gönderim doğduğu gün kutu gerçek bir gönderme kutusuna döner, kayıt burada güncellenir.
+
+- **WHATSAPP BALONUNDA SAAT VAR, ÇİZİMDE YOK (08.08, 15.5).**
+  Çizim balonların üstüne yalnız ad yazıyor ("Siz"), saat yazmıyor. Kodda künye satırında saat de
+  var. Sebep: defter ELLE tutuluyor ve 24 saatlik servis penceresinin dayanağı mesajın ANI —
+  saati göstermeyen bir defterde *"pencere neden kapalı"* sorusunun cevabı ekranda hiç görünmezdi.
+  Ayrı satır AÇILMADI: çizimin zaten var olan künye satırına yazıldı, yani dizinin ritmi bozulmuyor.
+
+- **TALEPLER EKRANINA ÜÇÜNCÜ SÜTUN EKLENDİ — çizim iki sütun (08.08, 16.3, kullanıcı tespiti).**
+  `Operasyon - Talepler.dc.html` kuyruk + detay çiziyor. Koda üçüncü bir sütun eklendi: müşteri
+  bağlamı (kimlik · son siparişler · kampanya izni), WhatsApp ekranıyla ORTAK komponent
+  (`ui/customer-context-pane`).
+
+  Sebep kullanıcıdan geldi: talep detayı müşterinin adını ve kaçıncı talebi olduğunu söylüyordu ama
+  **başka siparişlerini göstermiyordu** — oysa iade kararının en sık sorulan sorusu tam da o ("bu
+  müşteri düzenli mi, ilk kez mi sorun yaşıyor"). Veri zaten vardı, ekran sormuyordu.
+
+  Talebin KENDİ siparişi sütuna taşınmadı: o, gövdedeki `OrderCard`'dır ve kalemleriyle birlikte
+  şikâyetin zeminidir. Sağdaki liste "öteki alışverişleri" — iki ayrı soru, iki ayrı yer.
+
 
 - **AB (ALMAN) YOLUNDA "FAALİYET" SORULMUYOR (03.08, 08.7).**
   Tasarımın "Alman şirketi yolu" kartı *"Adres/faaliyet elle doldurulur"* diyor. Adres soruluyor,

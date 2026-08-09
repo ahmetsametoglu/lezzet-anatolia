@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadMoreConversationsAction, recordInboundAction, recordOutboundAction } from './actions';
+import { loadMoreConversationsAction, recordOutboundAction } from './actions';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
 import { ManualDmDialog } from './manual-dm-dialog';
 import { WhatsappDesktop } from './whatsapp.desktop';
@@ -53,7 +53,12 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dmOpen, setDmOpen] = useState(false);
+  /**
+   * Gelen mesaj penceresinin iki kapısı, TEK durum: `new` yeni bir numara, `follow` açık sohbetin
+   * devamı (numara kilitli). İki ayrı bayrak tutmak, ikisinin aynı anda açık olabildiği bir hâl
+   * üretirdi — üstelik pencere zaten aynı pencere.
+   */
+  const [dmMode, setDmMode] = useState<'new' | 'follow' | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
 
   const detail = data.detail;
@@ -94,11 +99,10 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
     onFilter: (f: WhatsappFilterKey) => go({ f }),
     // Süzgeç değişmiyor, seçim değişiyor: aynı adres iki soruyu birden taşıyor.
     onSelect: (c: string) => go({ c }),
-    onRecordInbound: (text: string, receivedAt: string) =>
-      detail ? run(() => recordInboundAction({ conversationId: detail.id, text, receivedAt })) : Promise.resolve(false),
     onRecordOutbound: (text: string) =>
       detail ? run(() => recordOutboundAction({ conversationId: detail.id, text })) : Promise.resolve(false),
-    onNewDm: () => setDmOpen(true),
+    onIncoming: () => setDmMode('follow'),
+    onNewDm: () => setDmMode('new'),
     onNewTicket: () => setTicketOpen(true),
   };
 
@@ -106,11 +110,14 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
     <>
       <WhatsappDesktop {...view} />
 
-      {dmOpen ? (
+      {dmMode ? (
         <ManualDmDialog
-          onClose={() => setDmOpen(false)}
+          // Devam kapısı numarayı SOHBETTEN alır, operatör yeniden yazmaz — ve yazamaz da:
+          // değiştirilebilir olsaydı mesaj farkında olmadan başka birinin sohbetine düşerdi.
+          existingPhone={dmMode === 'follow' ? detail?.phone : undefined}
+          onClose={() => setDmMode(null)}
           onOpened={(conversationId) => {
-            setDmOpen(false);
+            setDmMode(null);
             // İşlenen sohbet AÇILIR: operatör onu okumak için buraya geldi, kuyrukta aramamalı.
             go({ c: conversationId });
             router.refresh();

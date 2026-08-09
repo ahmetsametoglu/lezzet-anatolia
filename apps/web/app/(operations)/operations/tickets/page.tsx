@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
+import { readCustomerContext } from '@/lib/customer/context';
 import { countTicketsByStatus, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
 import { TicketsClient } from './tickets-client';
 import { ageMinutesOf, toRowViews, toTicketFilter } from './tickets-read';
@@ -60,6 +61,16 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   // doğru duruyordu; hangi yüzeyin varsayılanı olduğu sorulmamıştı (03.08).
   const detail = selectedId ? await getStaffTicketDetail(OPERATIONS_LOCALE, selectedId) : null;
 
+  /**
+   * Müşteri bağlamı — sağ pano (08.08). **Talep okumasının İÇİNE konmadı ve konmamalı:**
+   * `getStaffTicketDetail` talebin kendi sözleşmesidir ve müşteri geçmişini oraya sokmak, talebin
+   * her okumasını (mobil, e-posta işi, ileride AI bağlamı) genişletirdi. Ayrı okuma, ayrı tüketici.
+   *
+   * Okuma ORTAK (`lib/customer/context`): WhatsApp ekranı da aynısını çağırıyor — "bu kişi kim, ne
+   * aldı, neye izin verdi" sorusunun tek cevabı olsun diye.
+   */
+  const context = detail ? await readCustomerContext(detail.customer.id) : null;
+
   // Tek an, tüm yaşlar: kuyruk satırları ve detay künyesi aynı `now`'a göre hesaplanır — ikisi ayrı
   // okunsaydı aynı damga listede ve detayda farklı yaş gösterebilirdi.
   const now = Date.now();
@@ -69,6 +80,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     nextCursor: queue.nextCursor,
     counts,
     detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) },
+    context,
   };
 
   return <TicketsClient data={data} urlState={{ ...urlState, t: selectedId }} />;

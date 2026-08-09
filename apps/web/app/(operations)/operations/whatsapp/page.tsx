@@ -2,14 +2,12 @@ import { ConversationInboxService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
-import { shortDate } from '@/components/operation/ui/format';
+import { readCustomerContext } from '@/lib/customer/context';
 import { readConversationDetail } from '@/lib/whatsapp/read';
-// Kardeş sayfadan YALNIZ adres sözleşmesi alınır (STACK §7): sipariş yolu elle kurulmaz, sahibinden.
-import { ORDERS_PATH } from '../orders/orders-url';
 import { WhatsappClient } from './whatsapp-client';
 import { toInboxRows, toMessageViews, toWindowView } from './whatsapp-read';
 import { parseWhatsappUrl } from './whatsapp-url';
-import { CONTEXT_ORDER_LIMIT, type ConversationDetailView, type WhatsappData } from './whatsapp-types';
+import type { ConversationDetailView, WhatsappData } from './whatsapp-types';
 
 // WhatsApp konuşma izleme (15.5) — gelen kutusu, sohbet ve müşteri bağlamı tek ekranda.
 //
@@ -62,7 +60,11 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
    * "önce bir şey seç" adımı dayatırdı ve kuyruk zaten cevap bekleyeni öne alan sırada geliyor.
    */
   const selectedId = urlState.c || (page.rows[0]?.id ?? '');
-  const detail = selectedId ? await readConversationDetail(selectedId, CONTEXT_ORDER_LIMIT) : null;
+  const detail = selectedId ? await readConversationDetail(selectedId) : null;
+
+  // Müşteri bağlamı ORTAK okumadan (`lib/customer/context`) — Talepler ekranı da aynısını okuyor.
+  // Konuşmanın kendi okumasına gömülseydi iki ekran aynı soruyu iki biçimde cevaplardı.
+  const context = detail?.conversation.customerId ? await readCustomerContext(detail.conversation.customerId) : null;
 
   // Tek an, tüm pencereler: kuyruk rozetleri ve sohbet altlığı aynı `now`'a göre hesaplanır — ikisi
   // ayrı okunsaydı aynı konuşma listede "2 dk" derken altlıkta "kapalı" diyebilirdi.
@@ -70,25 +72,11 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
 
   const detailView: ConversationDetailView | null = detail && {
     id: detail.conversation.id,
-    title: detail.customer?.name?.trim() || detail.conversation.externalRef,
+    title: context?.name.trim() || detail.conversation.externalRef,
+    phone: detail.conversation.externalRef,
     window: toWindowView(detail.conversation.windowExpiresAt, now),
     messages: toMessageViews(detail.messages),
-    context: detail.customer && {
-      customerId: detail.customer.id,
-      name: detail.customer.name,
-      phone: detail.conversation.externalRef,
-      isDraft: detail.customer.isDraft,
-      isCompany: detail.customer.type === 'company',
-      whatsappConsent: detail.customer.marketingConsent.whatsapp ?? null,
-      // Numarasız sipariş TASLAKTIR (yarım kalmış checkout) ve gizlenmez — tarihiyle görünür;
-      // gizlemek "bu müşteri denedi ama tamamlamadı" bilgisini yok etmek olurdu.
-      orders: detail.orders.map((o) => ({
-        id: o.id,
-        label: o.referenceNo ?? shortDate(o.createdAt),
-        totalCents: o.totalCents,
-        href: `${ORDERS_PATH}/${o.id}`,
-      })),
-    },
+    context,
     tickets: detail.tickets.map((t) => ({
       id: t.id,
       subject: t.subject?.trim() || 'Başlıksız talep',

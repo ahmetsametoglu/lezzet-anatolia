@@ -51,7 +51,15 @@ export const WINDOW_TONE: Record<WindowView['tone'], OpsTone> = {
  * çareyi arardı.
  */
 export const WINDOW_NOTE: Record<WindowView['state'], string> = {
-  open: 'Cevap süresi açık — serbest metin ücretsiz gider.',
+  // Açık hâlin cümlesi kalan süreyle TAMAMLANIR (çizim: *"Cevap süresi açık · 23 saat kaldı"*),
+  // o yüzden burada nokta yok — süreyi ekleyen yer altlığın kendisi.
+  open: 'Cevap süresi açık ·',
   closed: 'Cevap süresi doldu — serbest mesaj gönderilemez. Yalnız onaylı kalıp mesaj (ücretli) gider.',
   never: 'Müşteri bize hiç yazmadı — pencere hiç açılmadı. Kalıp mesaj bile ancak pazarlama izniyle gider.',
 };
+
+/**
+ * Giden balonun künyesi — çizimin sözcüğü ("Siz"). GELEN balona ad YAZILMAZ: kimin yazdığını zaten
+ * başlık söylüyor ve her balona ad koymak diziyi gürültüye boğardı (çizim de öyle yapıyor).
+ */
+export const OUTBOUND_LABEL = 'Siz';

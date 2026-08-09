@@ -1,28 +1,23 @@
-import {
-  ConversationService,
-  MessageService,
-  OrderService,
-  TicketService,
-  UserProfileService,
-  serviceDb,
-} from '@lezzet/database';
-import type { Conversation, Message, Order, Ticket, UserProfile } from '@lezzet/types';
+import { ConversationService, MessageService, TicketService, serviceDb } from '@lezzet/database';
+import type { Conversation, Message, Ticket } from '@lezzet/types';
 
 /**
- * Konuşma DETAYININ okuması (15.5) — üç panelin tek turu.
+ * Konuşma DETAYININ okuması (15.5) — sohbetin kendi verisi.
  *
  * `lib/` altında, çünkü DB'ye vuran her okuma entegrasyon köküne yazılır (`CLAUDE §4b`) ve sayfa
- * bileşeninin içinde `serviceDb()` çağırmak, o okumayı sınanamaz kılardı. Gelen kutusu listesi
- * BURADA DEĞİL: o tek servis çağrısı (`ConversationInboxService.list`) ve sarmalamak yalnız bir
- * dolaylılık katmanı olurdu.
+ * bileşeninin içinde `serviceDb()` çağırmak, o okumayı sınanamaz kılardı.
+ *
+ * **Müşteri bağlamı BURADA DEĞİL** (`lib/customer/context`): "kim bu, ne aldı, neye izin verdi"
+ * sorusunu Talepler ekranı da soruyor ve cevabı tek yerde durmalı. Konuşmanın okumasına gömseydik,
+ * iki ekran aynı soruyu iki biçimde cevaplardı — ve biri gün gelip taslak bayrağını unuturdu.
+ *
+ * Gelen kutusu listesi de burada değil: o tek servis çağrısı (`ConversationInboxService.list`) ve
+ * sarmalamak yalnız bir dolaylılık katmanı olurdu.
  */
 interface ConversationDetailData {
   conversation: Conversation;
   /** Eskiden yeniye — okunan şey bir sohbet. */
   messages: Message[];
-  /** Kimlik çözülmemiş konuşmada `null`; eksik değil, tasarımın bir hâli. */
-  customer: UserProfile | null;
-  orders: Order[];
   tickets: Ticket[];
 }
 
@@ -36,11 +31,8 @@ interface ConversationDetailData {
  *
  * Bugün tamamını okumak DOĞRU ve 15.5'in kendi satırı da bunu yazıyor: adım 1'de mesajlar elle
  * işleniyor, bir avuç satır var. Sınırsız büyüme canlı kanalla başlar → BEKLEYEN(15.7).
- *
- * Sipariş sayısı SINIRLI ve sınır çağırandan gelir (`CONTEXT_ORDER_LIMIT`): sağ panel bir sipariş
- * listesi değil, "bu müşteri kim" bağlamıdır.
  */
-export async function readConversationDetail(conversationId: string, orderLimit: number): Promise<ConversationDetailData | null> {
+export async function readConversationDetail(conversationId: string): Promise<ConversationDetailData | null> {
   const db = serviceDb();
   const conversation = await new ConversationService(db).getById(conversationId);
   if (!conversation) return null;
@@ -51,14 +43,5 @@ export async function readConversationDetail(conversationId: string, orderLimit:
     new TicketService(db).listByConversation(conversationId),
   ]);
 
-  if (!conversation.customerId) {
-    return { conversation, messages, customer: null, orders: [], tickets };
-  }
-
-  const [customer, orders] = await Promise.all([
-    new UserProfileService(db).getById(conversation.customerId),
-    new OrderService(db).listByCustomer(conversation.customerId, { limit: orderLimit }),
-  ]);
-
-  return { conversation, messages, customer, orders: orders.rows, tickets };
+  return { conversation, messages, tickets };
 }

@@ -8,12 +8,7 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { openTicket } from '@/lib/ticket/write';
 import { openWhatsappConversation, recordInboundMessage, recordOutboundMessage } from '@/lib/whatsapp/conversation';
 import { toInboxRows } from './whatsapp-read';
-import {
-  ConversationTicketSchema,
-  ManualInboundSchema,
-  RecordMessageSchema,
-  type InboxRowView,
-} from './whatsapp-types';
+import { ConversationTicketSchema, ManualInboundSchema, RecordOutboundSchema, type InboxRowView } from './whatsapp-types';
 import { parseWhatsappUrl, WHATSAPP_PATH } from './whatsapp-url';
 
 // WhatsApp izleme ekranının YAZMA KAPILARI (15.5 + 15.1'in yüzey yarısı) — guard ilk, kapıya
@@ -99,24 +94,6 @@ export async function openManualDmAction(input: unknown): Promise<ActionResult<{
   }
 }
 
-/** Var olan konuşmaya GELEN mesaj — servis penceresini açan tek olay, damgası zorunlu. */
-export async function recordInboundAction(input: unknown): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin();
-    const parsed = RecordMessageSchema.parse(input);
-    if (!parsed.receivedAt) return { data: null, error: 'Mesajın geldiği an yazılmalı.' };
-    const message = await recordInboundMessage({
-      conversationId: parsed.conversationId,
-      text: parsed.text,
-      receivedAt: parsed.receivedAt,
-    });
-    refresh();
-    return { data: { id: message.id }, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
 /**
  * Var olan konuşmaya GİDEN mesaj — pencereye dokunmaz.
  *
@@ -127,7 +104,7 @@ export async function recordInboundAction(input: unknown): Promise<ActionResult<
 export async function recordOutboundAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {
     await requireAdmin();
-    const parsed = RecordMessageSchema.parse(input);
+    const parsed = RecordOutboundSchema.parse(input);
     const message = await recordOutboundMessage({ conversationId: parsed.conversationId, text: parsed.text });
     refresh();
     return { data: { id: message.id }, error: null };

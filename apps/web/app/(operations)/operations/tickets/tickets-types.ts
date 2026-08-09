@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TicketTypeEnum, type KeysetCursor, type TicketStatus } from '@lezzet/types';
+import type { CustomerContextData } from '@/lib/customer/context';
 import type { StaffTicketDetail, TicketQueueItem } from '@/lib/ticket/ticket-types';
 import type { TicketFilterKey, TicketsUrlState } from './tickets-url';
 
@@ -36,6 +37,12 @@ export interface TicketsData {
   counts: Record<TicketStatus, number>;
   /** Seçili talebin detayı; seçim yoksa ya da talep silinmişse null. */
   detail: TicketDetailView | null;
+  /**
+   * Seçili talebin müşterisinin BAĞLAMI — ORTAK okuma (`lib/customer/context`), WhatsApp ekranı da
+   * aynısını kullanıyor. Detayın içinde DEĞİL, yanında: `StaffTicketDetail` talebin kendi
+   * sözleşmesidir ve müşteri geçmişini oraya sokmak, talep okumasını her açılışta genişletirdi.
+   */
+  context: CustomerContextData | null;
 }
 
 /**

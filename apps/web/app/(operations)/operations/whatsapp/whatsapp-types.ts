@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { TicketTypeEnum, type Consent, type KeysetCursor, type MessageDirection, type MessageKind } from '@lezzet/types';
+import { TicketTypeEnum, type KeysetCursor, type MessageDirection, type MessageKind } from '@lezzet/types';
+import type { CustomerContextData } from '@/lib/customer/context';
 import type { WhatsappFilterKey, WhatsappUrlState } from './whatsapp-url';
 
 // WhatsApp izleme ekranının GÖRÜNÜM tipleri (15.5).
@@ -54,39 +55,14 @@ export interface MessageView {
   templateLabel: string | null;
 }
 
-/**
- * Sağ panelin sipariş satırı — **müşteri panelininkinden (`CustomerOrderRow`) daha DAR ve o bilinçli.**
- *
- * Orada satır bir sipariş listesidir (durum, tahsilat, tarih); burada "bu müşteri ne aldı"
- * bağlamıdır ve çizim de iki şey gösteriyor: numara ve tutar. Geniş tipi ödünç almak, kullanılmayan
- * dört alanı bu ekranın sözleşmesine sokardı. (Kardeş sayfadan tip almak zaten yasak — STACK §7,
- * yalnız `*-url` geçer; ama tipi taşımanın gerekçesi kural değil, ekranın kendi ihtiyacı.)
- */
-export interface ConversationOrderRow {
-  id: string;
-  /** Referans numarası; henüz üretilmemişse (taslak sipariş) tarihi tanıtır. */
-  label: string;
-  totalCents: number;
-  href: string;
-}
-
-/** Müşteri bağlamı — sağ panel. */
-export interface ConversationContextView {
-  customerId: string | null;
-  name: string;
-  /** E.164 numara (`external_ref`) — operatör satırı numaradan tanır. */
-  phone: string;
-  /** WhatsApp'tan otomatik açılmış, doğrulanmış girişten geçmemiş kayıt. */
-  isDraft: boolean;
-  isCompany: boolean;
-  /** `null` = hiç sorulmamış; "reddetti" ile aynı şey DEĞİL ve ekran ikisini ayırır. */
-  whatsappConsent: Consent | null;
-  orders: ConversationOrderRow[];
-}
-
 export interface ConversationDetailView {
   id: string;
   title: string;
+  /**
+   * Konuşmanın numarası (`external_ref`) — müşteri bağlamından AYRI tutulur, çünkü konuşmanın malı.
+   * Kimlik çözülmemiş sohbette bağlam `null`'dır ama numara yine bilinir ve gösterilmelidir.
+   */
+  phone: string;
   window: WindowView;
   /**
    * Eskiden yeniye — okunan şey bir sohbet, ters sıralı sohbet okunmaz.
@@ -95,8 +71,11 @@ export interface ConversationDetailView {
    * yönlü sayfalı okuma geldiğinde eklenir → BEKLEYEN(15.7); gerekçe `lib/whatsapp/read.ts`'te.
    */
   messages: MessageView[];
-  /** Kimlik çözülememiş konuşmada `null` — sağ panel o zaman numarayla ne yapılacağını söyler. */
-  context: ConversationContextView | null;
+  /**
+   * Müşteri bağlamı — ORTAK okuma (`lib/customer/context`), Talepler ekranı da aynısını kullanır.
+   * Kimlik çözülememiş konuşmada `null`; sağ panel o zaman numarayla ne yapılacağını söyler.
+   */
+  context: CustomerContextData | null;
   /** Bu konuşmadan açılmış talepler — köprü iki yönlü olsun diye. */
   tickets: { id: string; subject: string; statusLabel: string }[];
 }
@@ -125,11 +104,15 @@ export const ManualInboundSchema = z.object({
   receivedAt: z.string().min(1),
 });
 
-/** Var olan konuşmaya mesaj işleme — yön ekranda seçilir, damga yalnız gelende sorulur. */
-export const RecordMessageSchema = z.object({
+/**
+ * Var olan konuşmaya GİDEN mesaj işleme — damga YOK ve olmamalı: giden mesaj pencereye dokunmuyor.
+ *
+ * Gelen mesajın kendi kapısı var (`ManualInboundSchema`), çünkü gelen mesaj pencereyi AÇAN olaydır
+ * ve alınma anını ister. İkisini tek şemaya toplamak, damgayı "bazen zorunlu" bir alana çevirirdi.
+ */
+export const RecordOutboundSchema = z.object({
   conversationId: z.string().uuid(),
   text: z.string().min(1),
-  receivedAt: z.string().min(1).optional(),
 });
 
 /**
@@ -147,9 +130,6 @@ export const ConversationTicketSchema = z.object({
   body: z.string().min(1),
 });
 
-/** Sağ panelin son sipariş listesi — sınır GÖRÜNÜR, sessiz kırpma yok. */
-export const CONTEXT_ORDER_LIMIT = 5;
-
 export interface WhatsappViewProps {
   data: WhatsappData;
   urlState: WhatsappUrlState;
@@ -161,8 +141,9 @@ export interface WhatsappViewProps {
   onLoadMore: () => void;
   onFilter: (f: WhatsappFilterKey) => void;
   onSelect: (c: string) => void;
-  onRecordInbound: (text: string, receivedAt: string) => Promise<boolean>;
   onRecordOutbound: (text: string) => Promise<boolean>;
+  /** Açık sohbete GELEN mesaj — numarası kilitli pencereyi açar. */
+  onIncoming: () => void;
   onNewDm: () => void;
   onNewTicket: () => void;
 }

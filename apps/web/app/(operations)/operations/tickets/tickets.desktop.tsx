@@ -3,21 +3,25 @@
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { DetailPlaceholder, QueueEmpty, QueueRow, TicketDetail } from './tickets-sections';
+import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
+import { DetailPlaceholder, QueueEmpty, QueueRow, TicketContextPane, TicketDetail } from './tickets-sections';
 import { TICKET_FILTERS, TICKET_FILTER_LABELS } from './tickets-url';
 import type { TicketsViewProps } from './tickets-types';
 
 /**
  * Talepler — web (16.3).
  *
- * İKİ SÜTUN, TEK EKRAN (çizim): solda kuyruk, sağda detay. Kuyruğu ayrı bir sayfaya koymak
- * operatörü her cevap sonrası listeye geri döndürürdü; talepler gün içinde arka arkaya işlenen bir
- * iştir ve bağlam kaybı burada gerçek bir maliyettir.
+ * ÜÇ SÜTUN, TEK EKRAN: kuyruk · talep · müşteri bağlamı. Çizim iki sütun çiziyordu ve üçüncüsü
+ * 08.08'de eklendi (kullanıcı tespiti): talep detayı müşterinin BAŞKA siparişlerini göstermiyordu,
+ * oysa iade kararının en sık sorulan sorusu tam da o. Pano WhatsApp ekranıyla ORTAK
+ * (`ui/customer-context-pane`) — aynı soruyu soran iki ekran, tek cevap.
  *
- * Çip şeridi başlık barının ALTINDA, kendi bandında (çizim): süzgeç kuyruğa aittir, ekran çapında
- * bir arama değil — bu ekranda arama kutusu YOK ve olmamalı, çünkü kuyruk zaten cevap bekleyeni
- * öne alan bir sıraya göre geliyor ve aranacak şey (müşteri, sipariş) kendi ekranlarında aranıyor.
+ * Kuyruğu ayrı bir sayfaya koymak operatörü her cevap sonrası listeye geri döndürürdü; talepler gün
+ * içinde arka arkaya işlenen bir iştir ve bağlam kaybı burada gerçek bir maliyettir.
+ *
+ * Kabuk da ORTAK (`QueuePane` · `FilterBar`): süzgeç kuyruğa aittir, ekran çapında bir arama değil —
+ * bu ekranda arama kutusu YOK ve olmamalı, çünkü aranacak şey (müşteri, sipariş) kendi ekranlarında
+ * aranıyor.
  */
 export function TicketsDesktop({
   data,
@@ -39,8 +43,7 @@ export function TicketsDesktop({
   return (
     // `bg-ops-card` ŞART ve unutulmuştu: kabuğun zemini `ops-bg` (#dedbd3 — bej; koyu temada
     // #1b1e18) ve zemin çizilmeyince başlık barı ile kuyruk sütunu onu gösteriyordu. Ekran
-    // "kahverengiye çalıyor" diye bildirildi (kullanıcı, 03.08); öteki sekiz operasyon ekranının
-    // hepsi bu sınıfı taşıyor — `min-h-0 flex-1` de onların kalıbı, `h-full` sapmaydı.
+    // "kahverengiye çalıyor" diye bildirildi (kullanıcı, 03.08).
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Talepler"
@@ -53,53 +56,51 @@ export function TicketsDesktop({
         </Button>
       </PageHeader>
 
-      {/* Ayraç `gray-100` (#eef0ea) — çizimin değeri; `line-soft` bir kademe açıktı ve çip şeridi
-          başlık barından ayrılmıyordu. */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-ops-gray-100 px-6 py-2.5">
+      <FilterBar>
         {TICKET_FILTERS.map((key) => (
           <Chip key={key} active={urlState.f === key} onClick={() => onFilter(key)}>
             {TICKET_FILTER_LABELS[key]}
           </Chip>
         ))}
-      </div>
+      </FilterBar>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[330px_1fr] overflow-hidden">
-        <div
-          aria-busy={navPending || undefined}
-          className={[
-            'flex min-h-0 flex-col overflow-y-auto border-r border-ops-line',
-            navPending ? 'pointer-events-none opacity-60' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <QueuePane
+          width={330}
+          busy={navPending}
+          isEmpty={data.rows.length === 0}
+          empty={<QueueEmpty filtered={urlState.f !== 'open'} />}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={onLoadMore}
         >
-          {data.rows.length === 0 ? (
-            <QueueEmpty filtered={urlState.f !== 'open'} />
-          ) : (
-            <>
-              {data.rows.map((row) => (
-                <QueueRow key={row.id} row={row} active={row.id === urlState.t} onSelect={onSelect} />
-              ))}
-              <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
-            </>
-          )}
-        </div>
+          {data.rows.map((row) => (
+            <QueueRow key={row.id} row={row} active={row.id === urlState.t} onSelect={onSelect} />
+          ))}
+        </QueuePane>
 
         {data.detail ? (
-          <TicketDetail
-            // Talep değişince kutu ve iç durum SIFIRLANIR: yarım kalmış bir cevap bir sonraki
-            // müşterinin penceresinde durursa yanlış kişiye gönderilir.
-            key={data.detail.ticket.id}
-            detail={data.detail}
-            busy={busy}
-            error={error}
-            onStatus={onStatus}
-            onReply={onReply}
-            onTakeOver={onTakeOver}
-            onTriggerReturn={onTriggerReturn}
-          />
+          <>
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <TicketDetail
+                // Talep değişince kutu ve iç durum SIFIRLANIR: yarım kalmış bir cevap bir sonraki
+                // müşterinin penceresinde durursa yanlış kişiye gönderilir.
+                key={data.detail.ticket.id}
+                detail={data.detail}
+                busy={busy}
+                error={error}
+                onStatus={onStatus}
+                onReply={onReply}
+                onTakeOver={onTakeOver}
+                onTriggerReturn={onTriggerReturn}
+              />
+            </div>
+            <TicketContextPane context={data.context} customerName={data.detail.customer.name} />
+          </>
         ) : (
-          <DetailPlaceholder />
+          <div className="flex min-h-0 flex-1">
+            <DetailPlaceholder />
+          </div>
         )}
       </div>
     </div>

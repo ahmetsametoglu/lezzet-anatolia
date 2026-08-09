@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { TICKET_STATUS_LABELS, TICKET_TYPE_LABELS, type TicketStatus } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
+import {
+  ContextConsent,
+  ContextIdentity,
+  ContextOrders,
+  ContextPane,
+} from '@/components/operation/ui/customer-context-pane';
 import { EmptyState } from '@/components/operation/ui/empty-state';
+import { bubbleClass, MessageRow, SectionLabel } from '@/components/operation/ui/message-thread';
+import { EDGE_CLASS, QueueRow as SharedQueueRow } from '@/components/operation/ui/queue-pane';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { Textarea } from '@/components/operation/form/input';
 import { MultiToggle, type MultiToggleOption } from '@/components/operation/form/multi-toggle';
@@ -13,6 +21,7 @@ import { CONTROL_H } from '@/components/operation/ui/control';
 import { CameraIcon, SearchOffIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
 import { agoLabel, agoShort, money, shortDateTime } from '@/components/operation/ui/format';
 import type { OpsTone } from '@/components/operation/ui/tone';
+import type { CustomerContextData } from '@/lib/customer/context';
 import type { TicketMessageView } from '@/lib/ticket/ticket-types';
 // Başka ekranların URL SÖZLEŞMESİ (STACK §7 istisnası): adres elle kurulmaz, sahibinden alınır.
 import { customersUrl } from '../customers/customers-url';
@@ -52,68 +61,43 @@ interface QueueRowProps {
  * işareti. İkisinin de verisi görünümde hazır (`awaiting_reply`, `has_attachment`) ve çizim onları
  * kullanmıyordu; sapma `design/BACKLOG.md`'de kayıtlı.
  */
-/**
- * Seçili satırın sol kenar rengi. Sınıf adı ÜRETİLMEZ (`border-l-ops-${tone}`), sabit sözlükten
- * gelir: Tailwind sınıfları kaynaktan statik olarak toplar ve birleştirilmiş bir ad hiç üretilmez —
- * kenar sessizce renksiz kalırdı.
- */
-const EDGE_CLASS: Record<OpsTone, string> = {
-  neutral: 'border-l-ops-line-strong',
-  olive: 'border-l-ops-olive',
-  amber: 'border-l-ops-amber',
-  red: 'border-l-ops-red',
-  blue: 'border-l-ops-blue',
-  slate: 'border-l-ops-slate',
-  violet: 'border-l-ops-violet',
-};
-
 export function QueueRow({ row, active, onSelect }: QueueRowProps) {
   const tone = TICKET_TYPE_TONE[row.type];
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(row.id)}
-      aria-current={active || undefined}
-      className={[
-        'flex w-full cursor-pointer flex-col gap-1.5 border-b border-l-[3px] border-b-ops-line-soft px-4 py-3 text-left transition-colors',
-        active ? `${EDGE_CLASS[tone]} bg-ops-olive-bg` : 'border-l-transparent hover:bg-ops-subtle',
-      ].join(' ')}
-    >
-      <span className="flex items-center gap-2">
-        {/* Çizim 13px → merdivende `base` (künye: `base ← 13 · 13,5 · 14`). Satırın ADI en büyük
-            öğesi olmalı. Bir tur boyunca burası elle `lead`e çekilmişti — okunmuyordu diye; ama
-            doğru çözüm ekranı değil ÖLÇEĞİ büyütmekti (globals §0.0, 03.08 ikinci kalibrasyon),
-            yoksa bu ekran ötekilerden bir kademe büyük kalırdı. */}
-        <span className="min-w-0 flex-1 truncate font-ops-body text-ops-base font-semibold text-ops-ink">{row.customerName}</span>
-        <Badge tone={tone}>{TICKET_TYPE_LABELS[row.type]}</Badge>
-      </span>
-
-      {/* Önizleme `body` (#6a7065), `muted` DEĞİL: çizimin değeri bu ve kuyruğun asıl okunan
-          satırı burası — bir kademe soluk token taramayı zorlaştırıyordu. */}
-      <span className="truncate font-ops-body text-ops-xs text-ops-body">{row.preview || 'Mesaj yok'}</span>
-
-      <span className="flex flex-wrap items-center gap-1.5">
-        <Badge tone={TICKET_STATUS_TONE[row.status]}>{TICKET_STATUS_LABELS[row.status]}</Badge>
-        {row.awaitingReply ? (
-          <Badge tone="amber" dot>
-            Cevap bekliyor
-          </Badge>
-        ) : null}
-        {row.handledBy === 'ai' ? <Badge tone="violet">AI yürütüyor</Badge> : null}
-        {/* Fotoğraf işareti YALNIZ İKON — sipariş numarası buradan kalktı (03.08). İkisi birlikte
-            rozet şeridini taşırıp yaşı alt satıra atıyordu; sipariş bağı zaten detayda kartıyla
-            duruyor ve kuyrukta okunması gereken şey "kim, ne tipte, ne durumda, ne kadar bekledi". */}
-        {row.hasAttachment ? (
-          <span className="text-ops-faint" title="Fotoğraf var">
-            <CameraIcon size={13} />
-          </span>
-        ) : null}
-        {/* Yaş KISA biçimde (`agoShort`): "önce" eki bu sütunda bilgi taşımıyor ama genişlik yiyordu
-            ve rozetlerin yanına sığmayıp satırı ikiye bölüyordu — kuyruk çizimin iki katı yükseklikte
-            görünüyordu. Tarama yüzeyinde satır sayısı bilginin kendisi. */}
-        <span className="ml-auto flex-none font-ops-mono text-ops-micro text-ops-faint">{agoShort(row.ageMinutes)}</span>
-      </span>
-    </button>
+    // Satırın İSKELETİ ortak (`ui/queue-pane`) — WhatsApp gelen kutusu da aynısını kullanıyor.
+    // Burada kalan yalnız ANLAM: hangi rozet, hangi kenar rengi, hangi künye.
+    <SharedQueueRow
+      id={row.id}
+      active={active}
+      onSelect={onSelect}
+      // Sol kenar TÜRÜN rengi (çizim): tarama sırasında hangi satırın para işi olduğu okunmadan görünsün.
+      edgeClass={EDGE_CLASS[tone]}
+      title={row.customerName}
+      trailing={<Badge tone={tone}>{TICKET_TYPE_LABELS[row.type]}</Badge>}
+      preview={row.preview || 'Mesaj yok'}
+      badges={
+        <>
+          <Badge tone={TICKET_STATUS_TONE[row.status]}>{TICKET_STATUS_LABELS[row.status]}</Badge>
+          {row.awaitingReply ? (
+            <Badge tone="amber" dot>
+              Cevap bekliyor
+            </Badge>
+          ) : null}
+          {row.handledBy === 'ai' ? <Badge tone="violet">AI yürütüyor</Badge> : null}
+          {/* Fotoğraf işareti YALNIZ İKON — sipariş numarası buradan kalktı (03.08). İkisi birlikte
+              rozet şeridini taşırıp yaşı alt satıra atıyordu; sipariş bağı zaten detayda kartıyla
+              duruyor ve kuyrukta okunması gereken şey "kim, ne tipte, ne durumda, ne kadar bekledi". */}
+          {row.hasAttachment ? (
+            <span className="text-ops-faint" title="Fotoğraf var">
+              <CameraIcon size={13} />
+            </span>
+          ) : null}
+          {/* Yaş KISA biçimde (`agoShort`): "önce" eki bu sütunda bilgi taşımıyor ama genişlik yiyordu
+              ve rozetlerin yanına sığmayıp satırı ikiye bölüyordu. */}
+          <span className="ml-auto flex-none font-ops-mono text-ops-micro text-ops-faint">{agoShort(row.ageMinutes)}</span>
+        </>
+      }
+    />
   );
 }
 
@@ -293,12 +277,6 @@ export function DetailPlaceholder() {
 
 // ── Parçalar ─────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">{children}</span>
-  );
-}
-
 /**
  * Durum kontrolünün SEÇENEKLERİ — kontrolün kendisi ortak (`MultiToggle`, Envanter O8).
  *
@@ -363,17 +341,7 @@ function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> })
 }
 
 /** Balonun zemin+kenarlığı; METİN buraya girmez — gerekçe `MessageBubble` künyesinde. */
-const BUBBLE_SKIN: Record<OpsTone, string> = {
-  olive: 'border-ops-olive-line bg-ops-olive-bg',
-  violet: 'border-ops-violet-line bg-ops-violet-bg',
-  neutral: 'border-ops-line bg-ops-white',
-  amber: 'border-ops-amber-line bg-ops-amber-bg',
-  red: 'border-ops-red-line bg-ops-red-bg',
-  blue: 'border-ops-blue-line bg-ops-blue-bg',
-  slate: 'border-ops-slate-line bg-ops-slate-bg',
-};
-
-/** Gönderici ADININ rengi — ayrımı taşıyan yer burası. */
+/** Gönderici ADININ rengi — ayrımı taşıyan yer burası. Balonun DERİSİ ortak (`bubbleClass`). */
 const SENDER_NAME: Record<OpsTone, string> = {
   olive: 'text-ops-olive-dark',
   violet: 'text-ops-violet',
@@ -442,24 +410,21 @@ function MessageBubble({ message }: { message: TicketMessageView }) {
   const mine = message.sender !== 'customer';
   const tone = TICKET_SENDER_TONE[message.sender];
   return (
-    <div className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
-      <span className={`flex items-center gap-1.5 font-ops-display text-ops-micro font-semibold ${SENDER_NAME[tone]}`}>
-        {TICKET_SENDER_LABELS[message.sender]}
-        <span className="font-ops-mono font-normal text-ops-faint">{shortDateTime(message.createdAt)}</span>
-      </span>
-      <TranslatedBody
-        message={message}
-        align={mine ? 'end' : 'start'}
-        className={[
-          // Çizim 12,5px → merdivende `sm` (künye: `sm ← 12 · 12,5`). Burası ekranın EN ÇOK OKUNAN
-          // metni; okunabilirlik ölçeğin kendi kalibrasyonuyla çözüldü (globals §0.0), ekran
-          // özelinde bir sapmayla değil.
-          'max-w-[78%] rounded-ops-card border px-3 py-2 font-ops-body text-ops-sm leading-relaxed text-ops-strong',
-          BUBBLE_SKIN[tone],
-        ].join(' ')}
-      />
+    // Hizalama ve künye satırı ORTAK (`ui/message-thread`); WhatsApp sohbeti de aynısını kullanıyor.
+    // Kutuyu yine `TranslatedBody` çiziyor, sınıfı ortak: çeviri anahtarı kutunun DIŞINDA durmak
+    // zorunda, o yüzden kutuyu sahiplenen bir komponent bu ekranı çatallamaya zorlardı.
+    <MessageRow
+      side={mine ? 'out' : 'in'}
+      meta={
+        <span className={`flex items-center gap-1.5 font-ops-display text-ops-micro font-semibold ${SENDER_NAME[tone]}`}>
+          {TICKET_SENDER_LABELS[message.sender]}
+          <span className="font-ops-mono font-normal text-ops-faint">{shortDateTime(message.createdAt)}</span>
+        </span>
+      }
+    >
+      <TranslatedBody message={message} align={mine ? 'end' : 'start'} className={bubbleClass(tone)} />
       <Attachments urls={message.attachmentUrls} align={mine ? 'end' : 'start'} />
-    </div>
+    </MessageRow>
   );
 }
 
@@ -560,5 +525,49 @@ function ReplyBar({ busy, returnAllowed, returnReason, onReply, onTriggerReturn 
       {iade}
       {gonder}
     </div>
+  );
+}
+
+// ── Müşteri bağlamı panosu ───────────────────────────────────────────────────
+
+/**
+ * Talep detayının SAĞ SÜTUNU — "bu kişi kim, bizden ne aldı, neye izin verdi".
+ *
+ * **Bu ekranda bir tur boyunca HİÇ YOKTU** ve eksikliği kullanıcı fark etti (08.08): talep detayı
+ * müşterinin adını ve kaçıncı talebi olduğunu söylüyordu ama BAŞKA siparişlerini göstermiyordu —
+ * oysa iade kararının en sık sorulan sorusu tam da o ("bu müşteri düzenli mi, ilk kez mi sorun
+ * yaşıyor"). Pano WhatsApp ekranı için yazılmıştı; aynı soruyu soran iki ekran olduğu anlaşılınca
+ * ortak kite taşındı (`ui/customer-context-pane`) ve buraya da takıldı.
+ *
+ * Talebin KENDİ siparişi burada DEĞİL: o, gövdedeki `OrderCard`'dır ve kalemleriyle birlikte
+ * şikâyetin zeminidir. Buradaki liste "öteki alışverişleri" — ikisi ayrı soru.
+ */
+export function TicketContextPane({ context, customerName }: { context: CustomerContextData | null; customerName: string }) {
+  if (!context) {
+    return (
+      <ContextPane>
+        <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{customerName}</span>
+        {/* Bağlam okunamadıysa SUSMUYORUZ: boş bir pano "bu müşterinin siparişi yok" diye okunurdu
+            ve iade kararı o yanlış okumaya dayanabilirdi (CLAUDE §1: ölçülemeyen değer sıfır değil). */}
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
+          Müşteri bağlamı okunamadı — sipariş geçmişi ve izin bilgisi bu talepte gösterilemiyor.
+        </span>
+      </ContextPane>
+    );
+  }
+
+  return (
+    <ContextPane>
+      {/* Ad müşteri ekranına EN AYIRT EDİCİ anahtarla gider (e-posta → telefon → ad): aynı adlı iki
+          müşteri varsa ad araması ikisini birden getirirdi. Detay panosunun köprüsüyle aynı kural. */}
+      <ContextIdentity
+        context={context}
+        href={customersUrl({ q: context.email ?? context.phone ?? context.name, type: 'all', scope: 'all', mc: 'any' })}
+      />
+      <ContextOrders context={context} />
+      {/* Kanal E-POSTA: talep yazışması müşteriye e-posta ile gidiyor (16.4), yani bu ekranda anlamlı
+          olan izin odur. WhatsApp ekranında aynı pano `whatsapp` kanalını okuyor. */}
+      <ContextConsent context={context} channel="email" />
+    </ContextPane>
   );
 }
