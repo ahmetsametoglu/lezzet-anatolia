@@ -139,10 +139,18 @@ const TALEPLER: Talep[] = [
     type: 'question',
     subject: 'Teslimat günü · Krutenau',
     ilkMesaj: 'Merhaba, Krutenau bölgesine hangi günler geliyorsunuz?',
-    yazisma: [{ sender: 'ai', body: 'Merhaba! 67000 posta kodu salı ve cuma rotasında. Sipariş vermek ister misiniz?' }],
+    yazisma: [
+      { sender: 'ai', body: 'Merhaba! 67000 posta kodu salı ve cuma rotasında. Sipariş vermek ister misiniz?' },
+      // **SON SÖZ MÜŞTERİDE** ve bu bilinçli (kapsam denetimi 09.08): gelen kutusunun ana sinyali
+      // `awaiting_reply` ve başlığı *"N cevap bekliyor"* — ikisi de "son mesajı müşteri yazdı"
+      // hâlinden doğuyor. Seed'de her konuşma bizim mesajımızla bitiyordu, yani o sinyal HİÇ
+      // doğmuyordu ve sayaç her zaman 0 okuyordu. Aşağıdaki konuşma (6) bizim sözümüzle bitiyor;
+      // ikisi birlikte iki hâli de örnekliyor.
+      { sender: 'customer', body: 'Salı için sipariş vermek istiyorum, akşam 18:00 sonrası uygun mu?' },
+    ],
     ai: true,
     yas: 2,
-    etiket: 'AÇIK · WhatsApp · AI yanıtladı',
+    etiket: 'AÇIK · WhatsApp · müşteri CEVAP BEKLİYOR',
   },
   // 6) AI'DAN DEVRALINMIŞ (16.5): AI başladı, konu karışınca insan aldı. Geçiş TEK YÖNLÜ — geri
   //    vermek, müşterinin konuştuğu muhatabın habersiz değişmesi olurdu.
@@ -283,27 +291,51 @@ async function waKonusmaKur(db: Db, customerId: string, t: Talep): Promise<strin
   const messages = new MessageService(db);
   const alindi = an(-t.yas);
 
-  await messages.record({
-    conversationId: konusma.id,
-    direction: 'inbound',
-    body: { text: t.ilkMesaj },
-    windowExpiresAt: serviceWindowExpiry(alindi),
-  });
+  const kayitlar: string[] = [];
+  kayitlar.push(
+    (
+      await messages.record({
+        conversationId: konusma.id,
+        direction: 'inbound',
+        body: { text: t.ilkMesaj },
+        windowExpiresAt: serviceWindowExpiry(alindi),
+      })
+    ).id,
+  );
   for (const m of t.yazisma ?? []) {
     const gelen = m.sender === 'customer';
-    await messages.record({
-      conversationId: konusma.id,
-      direction: gelen ? 'inbound' : 'outbound',
-      body: { text: m.body },
-      // Pencereyi yalnız gelen mesaj açar; giden mesaj ona dokunmaz.
-      windowExpiresAt: gelen ? serviceWindowExpiry(alindi) : null,
-    });
+    kayitlar.push(
+      (
+        await messages.record({
+          conversationId: konusma.id,
+          direction: gelen ? 'inbound' : 'outbound',
+          body: { text: m.body },
+          // Pencereyi yalnız gelen mesaj açar; giden mesaj ona dokunmaz.
+          windowExpiresAt: gelen ? serviceWindowExpiry(alindi) : null,
+        })
+      ).id,
+    );
   }
 
-  // Yaşlandırma: `record_message` damgayı `now()` atıyor (üretimde doğru). Seed'de sohbetin talebiyle
-  // aynı yaşta görünmesi gerekiyor — yoksa gelen kutusu, günler önceki bir konuşmayı en üste koyar.
-  const { error: mErr } = await db.from('message').update({ created_at: alindi }).eq('conversation_id', konusma.id);
-  if (mErr) throw mErr;
+  // ── YAŞLANDIRMA: her mesaja AYRI damga ────────────────────────────────────────
+  // `record_message` damgayı `now()` atıyor (üretimde doğru). Seed'de sohbetin talebiyle aynı yaşta
+  // görünmesi gerekiyor — yoksa gelen kutusu, günler önceki bir konuşmayı en üste koyar.
+  //
+  // **Önce TEK `update` ile hepsine aynı damga yazılıyordu ve bu iki şeyi birden bozuyordu**
+  // (ölçüldü 09.08, operasyon şeridinin sayfalama talebi üzerine): *(1)* sohbet bir ZAMAN DİZİSİDİR
+  // ve aynı anda gönderilmiş beş mesaj gerçekte olmaz — ekran "önce/sonra" ayrımını gösteremez;
+  // *(2)* `created_at` üzerinde keyset sayfalama tam olarak eşit anahtarlarda sınanamaz hâle gelir,
+  // yani `listPage` ile `listRecent`'in YÖN farkı veriyle doğrulanamaz (denendi: iki okuma da aynı
+  // satırları aynı sırada döndürdü — sıralama değil, verinin ayırt edilemezliği).
+  //
+  // Aralık dakikadır: bir konuşma dakikalar içinde akar, ve `an()` saniye taşıdığı için damgalar
+  // ayrık kalır. Son mesaj `alindi` anına denk gelir — gelen kutusu sıralaması değişmez.
+  const araliklar = kayitlar.length;
+  for (const [n, id] of kayitlar.entries()) {
+    const damga = new Date(new Date(alindi).getTime() - (araliklar - 1 - n) * 60_000).toISOString();
+    const { error } = await db.from('message').update({ created_at: damga }).eq('id', id);
+    if (error) throw error;
+  }
   const { error: cErr } = await db.from('conversation').update({ last_message_at: alindi }).eq('id', konusma.id);
   if (cErr) throw cErr;
 

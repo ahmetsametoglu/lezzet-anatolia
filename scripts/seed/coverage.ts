@@ -384,6 +384,37 @@ export const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    baslik: 'Konuşma',
+    kovalar: [
+      {
+        ad: 'mesajları ayrık damgalı',
+        zorunlu: true,
+        /**
+         * **Sohbet bir ZAMAN DİZİSİDİR** — mesajları aynı damgayı taşıyan konuşma, gerçekte
+         * olmayan bir hâldir ve iki şeyi birden sınanamaz kılar (ölçüldü 09.08):
+         *   · ekran "önce/sonra" ayrımını gösteremez,
+         *   · `created_at` üzerindeki keyset sayfalamanın YÖNÜ doğrulanamaz — `listPage` (eskiden
+         *     yeniye) ile `listRecent` (yeniden eskiye) aynı satırları aynı sırada döndürür.
+         *     Sıralama bozuk olduğu için değil, veri ayırt edilemez olduğu için.
+         *
+         * Kova "en az bir konuşmanın mesajları farklı damgalı mı" diye sorar.
+         */
+        sayac: async (db) => {
+          const { data } = await db.from('message').select('conversation_id,created_at');
+          const damgalar = new Map<string, Set<string>>();
+          for (const r of (data ?? []) as unknown as { conversation_id: string; created_at: string }[]) {
+            if (!damgalar.has(r.conversation_id)) damgalar.set(r.conversation_id, new Set());
+            damgalar.get(r.conversation_id)!.add(r.created_at);
+          }
+          return [...damgalar.values()].filter((s) => s.size > 1).length;
+        },
+      },
+      { ad: 'cevap bekleyen', zorunlu: true, sayac: (db) => say(db, 'conversation_inbox', (q) => q.eq('awaiting_reply', true)) },
+      { ad: 'giden mesaj', zorunlu: true, sayac: (db) => say(db, 'message', (q) => q.eq('direction', 'outbound')) },
+      { ad: 'gelen mesaj', zorunlu: true, sayac: (db) => say(db, 'message', (q) => q.eq('direction', 'inbound')) },
+    ],
+  },
+  {
     baslik: 'Sipariş — yol ve kanal',
     tablo: 'order',
     kovalar: [

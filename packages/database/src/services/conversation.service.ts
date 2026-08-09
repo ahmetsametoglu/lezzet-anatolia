@@ -148,16 +148,45 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
   }
 
   /**
-   * **Sayfalı geçmiş** (15.5) — canlı kanalda tek sohbet aylarca sürer.
+   * **Sayfalı geçmiş — ESKİDEN YENİYE** (15.5). Konuşmayı BAŞTAN okuyan yolların kapısı: AI bağlamı,
+   * dışa aktarma, denetim. Sohbet bir anlatıdır ve baştan okunur.
    *
-   * `listByConversation` adım 1'de doğruydu (elle işlenen bir avuç mesaj) ve DURUYOR: konuşmayı
-   * baştan okuyan yollar (AI bağlamı, dışa aktarma) tamamını ister. Bu ise ekranın kapısı.
+   * `listByConversation` (tamamı) da duruyor: küçük konuşmada sayfalamanın maliyeti yok.
    *
-   * **Sıra eskiden yeniye KORUNUYOR** — okunan şey bir sohbet, ters sıralı bir sohbet okunmaz.
-   * "Daha eski" düğmesi imleci ileri taşır; ekran satırları yukarı ekler.
+   * ⚠ **EKRANIN kapısı bu DEĞİL** — `listRecent`. Artan sırada `keysetAfter` "bundan sonrakiler",
+   * yani ileri gitmek daha YENİYE gider; sohbet penceresi ise tersini ister.
    */
   listPage(conversationId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<Message>> {
     return this.getPage({ conversationId }, { orderBy: 'createdAt', limit, keysetAfter: cursor });
+  }
+
+  /**
+   * **Sohbet penceresinin kapısı — YENİDEN ESKİYE** (operasyon talebi 08.08).
+   *
+   * ── NEDEN İKİNCİ BİR OKUMA, VE NEDEN İLKİ YETMEDİ ───────────────────────────
+   * `listPage` artan sıralı ve ilk sayfası sohbetin EN ESKİ mesajlarıdır. Adım 1'de bu görünmüyordu
+   * (elle işlenmiş bir avuç mesaj), ama canlı kanalda iki ay süren bir sohbet operatöre iki ay
+   * önceki *"merhaba"*dan açılırdı — cevaplanacak mesaj imlecin en sonunda, birkaç "daha fazla"
+   * tıklaması ötede kalırdı. Operasyon şeridi ekranı yazarken `listPage`'i **tüketemedi** ve sebebi
+   * buydu.
+   *
+   * **Kusur benim cevabımda da yazılıydı ve iki taraf da göremedi:** `listPage` künyesine
+   * *"'daha eski' düğmesi imleci ileri taşır"* demişim — artan sırada imleci ileri taşımak daha
+   * eskiye değil daha YENİYE gider. Cümle kendi içinde çelişkiliydi; talebin ifadesini devralırken
+   * yönü hiç sınamamışım.
+   *
+   * ── İKİSİ DE MEŞRU, ADLARI YÖNLERİNİ SÖYLESİN ───────────────────────────────
+   * `listPage` silinmedi: yanlış değil, farklı bir soruyu cevaplıyor. İkisini tek metotta bir
+   * `direction` parametresiyle birleştirmek de yapılmadı — çağıran o parametreyi unuttuğunda
+   * sessizce YANLIŞ uca düşerdi, ve bu hata tam olarak bir kez zaten yaşandı.
+   *
+   * **Sıra ters çevirme EKRANIN işi** (talebin kendi cümlesi): sıralama kararı burada, sunum orada.
+   */
+  listRecent(conversationId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<Message>> {
+    return this.getPage(
+      { conversationId },
+      { orderBy: 'createdAt', orderDirection: 'desc', limit, keysetAfter: cursor },
+    );
   }
 }
 
