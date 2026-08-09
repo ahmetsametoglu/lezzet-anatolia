@@ -97,10 +97,16 @@ export async function seedScopedSettings(db: Db): Promise<void> {
   // karşılanması gereken iki koşul — `min_basket_cents` artık EN KATISINI uyguluyor
   // (`SettingsService.STRICTEST_WINS`). Yani bu satır hâlâ bir sınav, ama sorusu şu: B2C müşteri
   // bu bölgede 45 € görüyor mu, B2B müşteri yine de 120 €'da kalıyor mu.
+  //
+  // **AÇIKLAMASINDA "ÖRNEK" YAZIYOR ve bu bilerek (kullanıcı kararı 09.08).** Bölgeye özel asgari
+  // sepet bugün gerçek bir iş kuralı DEĞİL — kullanıcı böyle bir uygulaması olmadığını söyledi ama
+  // mekanizma dursun istedi ("ileride kullanabilirim"). Etiket olmasaydı satır gerçek bir karar
+  // gibi okunurdu; bugün tam olarak öyle oldu: eski künyesi "uzak bölge" diyordu, kimse öyle bir
+  // kural koymamıştı ve saatler o lafın peşinde geçti. Uydurma veri, uydurma olduğunu söylemeli.
   await yaz('min_basket_cents', 4500, {
     scopeType: 'zone',
     scopeId: cevreBolge?.id ?? null,
-    description: `Çevre bölge asgari sepet (${cevreBolge?.name ?? '—'}) — operatör kararı`,
+    description: `ÖRNEK — bölgeye özel asgari sepet (${cevreBolge?.name ?? '—'}). Mekanizma gösterimi; gerçek bir iş kuralı değil`,
   });
   await yaz('order_cutoff_time', '10:00', {
     scopeType: 'zone',
