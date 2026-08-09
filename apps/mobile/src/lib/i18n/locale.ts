@@ -2,8 +2,12 @@ import { getLocales } from 'expo-localization';
 import { DEFAULT_LOCALE, LOCALES, type Locale } from '@lezzet/i18n';
 
 /*
-  CİHAZ DİLİ → DESTEKLENEN DİL. Uygulamanın dili webdeki gibi ADRESTEN gelmez (URL yok), cihazın
-  kendi tercih sırasından gelir; bu dosya o sıradan tek bir `Locale` üretir.
+  CİHAZ DİLİ → DESTEKLENEN DİL. Uygulamanın dili webdeki gibi ADRESTEN gelmez (URL yok); bu dosya
+  cihazın kendi tercih sırasından tek bir `Locale` üretir.
+
+  BU DOSYA ARTIK "UYGULAMANIN DİLİ" DEĞİL, VARSAYILANIDIR (kullanıcı kararı 09.08): dil kullanıcının
+  seçimidir ve tek kaynağı `app-locale.ts`tir — o modül önce kayıtlı seçime, yoksa buraya bakar.
+  Ekranlar `useAppLocale()` okur; buradaki `deviceLocale()` yalnız seçim yokken devreye girer.
 
   DİL KÜMESİ VE VARSAYILAN İKİNCİ KEZ YAZILMAZ: `LOCALES` ve `DEFAULT_LOCALE` `@lezzet/i18n`ten
   gelir (02-mimari §3.4 — "dil/rota @lezzet/i18n"). Web de yönlendirmesini aynı iki sabitle kuruyor
@@ -15,9 +19,9 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from '@lezzet/i18n';
   tercih sırası). Bölge eki (`fr-CA`, `de-AT`) YOK SAYILIR: elimizde bölgesel çeviri yok, sözlük
   dilin kendisiyle anahtarlı.
 
-  ÜRÜN METİNLERİNİN dili bu değerle SUNUCUDA çözülür (`?locale=` — uç zorunlu tutuyor); ekran
-  metinleri ise ekranın kendi `messages.json`'undan. İkisi tek karardan beslenir ki ürün adı
-  Fransızca, başlık Türkçe olmasın.
+  ÜRÜN METİNLERİNİN dili SUNUCUDA çözülür (`?locale=` — uç zorunlu tutuyor); ekran metinleri ise
+  ekranın kendi `messages.json`'undan. İkisi tek karardan beslenir ki ürün adı Fransızca, başlık
+  Türkçe olmasın — o tek karar `app-locale.ts`tir.
 */
 
 /**

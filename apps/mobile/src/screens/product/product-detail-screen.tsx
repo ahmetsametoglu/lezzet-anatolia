@@ -18,7 +18,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -122,7 +122,7 @@ interface ProductDetailScreenProps {
 export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const router = useRouter();
   const { theme } = useUnistyles();
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { status, detail, retry } = useProduct(slug, locale);
 

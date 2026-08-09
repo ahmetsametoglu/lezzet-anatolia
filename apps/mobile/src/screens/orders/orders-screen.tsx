@@ -1,10 +1,11 @@
 import { formatPrice } from '@lezzet/helper';
-import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
+import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -13,7 +14,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
 import type { OrderSummary } from '@/lib/api/orders';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { formatOrderDate } from './order-format';
 import messages from './messages.json';
@@ -55,18 +56,26 @@ const SKELETON_COUNT = 3;
 const SKELETON_HEIGHT = 110;
 
 interface OrdersScreenProps {
-  /** Testlerin ve demo hâllerinin kapısı; verilmezse cihazın dili. */
-  locale?: ReturnType<typeof deviceLocale>;
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
+  locale?: Locale;
 }
 
-export function OrdersScreen({ locale = deviceLocale() }: OrdersScreenProps) {
+export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
+  const appLocale = useAppLocale();
+  const locale = forcedLocale ?? appLocale;
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
   const orders = useOrders(locale);
 
+  /* GERİ OKU (v3 yeni sürüm — `ordersPushed`): bu ekran artık HEP yığında açılıyor (sekmeden
+     çıktığı gün, 09.08) ve yığın ekranında sekme çubuğu yok; geri dönüşün tek yolu cihazın kendi
+     hareketi kalmıştı. Tasarım da bu sürümde okla başlıyor. */
   const header = (
     <View style={styles.header}>
+      <View style={styles.backRow}>
+        <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="orders-back" />
+      </View>
       <Text style={styles.eyebrow}>{t.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
@@ -249,6 +258,11 @@ const styles = StyleSheet.create((theme, rt) => ({
        eksikti. `insets.top` durum çubuğunu karşılar, bu dolgu ONUN ÜSTÜNE biner. */
     paddingTop: theme.space['3xl'],
     paddingBottom: theme.space.xs,
+  },
+  /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (v3:141 `margin-left:-8px`). */
+  backRow: {
+    flexDirection: 'row',
+    marginLeft: -theme.space.md,
   },
   /* Başlık LİSTEDE kaydırma kabının dolgusunu alır; misafir/boş/hata dallarında o kap YOK ve
      başlık sola yapışıyordu (kullanıcı bulgusu 09.08). Dolgu bu dallarda sarmalayıcıdan gelir —

@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { emToDp } from '@/theme/parse';
@@ -43,7 +43,7 @@ import messages from './messages.json';
 */
 
 export function ProfessionalsScreen() {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

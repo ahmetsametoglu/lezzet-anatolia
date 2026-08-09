@@ -14,7 +14,7 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { addProduct } from '@/screens/customer-kit/cart-store';
 import { emToDp } from '@/theme/parse';
@@ -116,7 +116,7 @@ interface RecipeDetailScreenProps {
 export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
   const router = useRouter();
   const { theme } = useUnistyles();
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { status, detail, retry } = useRecipe(slug, locale);
 

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { fetchMe, type Me } from '@/lib/api/me';
 import { getSupabase } from '@/lib/auth/supabase';
+import { applyProfileLocale } from '@/lib/i18n/app-locale';
 
 /*
   MÜŞTERİ KİMLİĞİ — `/me`nin ekran tarafı (21.14c). Birden çok müşteri ekranı okuduğu için kit
@@ -34,6 +35,12 @@ let authSubscription: { unsubscribe: () => void } | null = null;
 
 function setState(next: MeState): void {
   state = next;
+  /* MÜŞTERİNİN DİLİ TEK KAPIDAN GEÇER (09.08): dil bir arayüz ayarı değil, kartta yaşayan
+     `preferred_language`tır (yazışma dili) ve GİRİŞLİ kullanıcıda kaynak odur — cihazın dili
+     onu ezmez. Profilin okunduğu HER yol buradan geçtiği için (ilk yükleme, oturum değişimi,
+     `publishMe`) uygulama da burada yapılıyor; ekranlara dağıtılsaydı hangi ekranın açıldığına
+     göre dil değişirdi. Zincirin tamamı `lib/i18n/app-locale` künyesinde. */
+  if (next.status === 'ready' && next.me !== null) applyProfileLocale(next.me.preferredLanguage);
   listeners.forEach((listener) => listener());
 }
 
@@ -78,4 +85,21 @@ interface UseMeResult extends MeState {
 export function useMe(): UseMeResult {
   const current = useSyncExternalStore(subscribe, () => state);
   return { ...current, refresh: load };
+}
+
+/**
+ * ONAYLI KURUMSAL MÜŞTERİ (B2B) Mİ — v3'ün `isB2B()`sinin karşılığı, TEK yerde.
+ *
+ * Ölçüt üç parçalıdır ve üçü birden şart: oturum okundu (`ready`), hesap kurumsal (`company`),
+ * başvuru ONAYLANDI. `b2bApproved` üç değerlidir (`true`/`false`/`null` — `user-profile.schema`
+ * künyesi: ret silmez, B2C'de zaten `null`), o yüzden `=== true` ile okunur; "boş değil" kontrolü
+ * REDDEDİLMİŞ başvuruyu da toptan sayardı.
+ *
+ * Ölçütün burada durmasının sebebi CLAUDE §1: sekme çatalı (üçüncü sekme Paketler ⟷ Siparişler)
+ * ve vitrinin TOPTAN rozeti aynı soruyu soruyor; iki kopya bir gün ayrışır ve kullanıcı rozetli
+ * ama yanlış sekmeli bir uygulama görürdü.
+ */
+export function useWholesale(): boolean {
+  const { status, me } = useMe();
+  return status === 'ready' && me !== null && me.type === 'company' && me.b2bApproved === true;
 }

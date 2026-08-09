@@ -13,7 +13,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import {
   applyCoupon,
   cartCount,
@@ -70,7 +70,7 @@ type Messages = LocalizedCopy<typeof messages>;
 seedCart(cartFixture());
 
 export function CartScreen() {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

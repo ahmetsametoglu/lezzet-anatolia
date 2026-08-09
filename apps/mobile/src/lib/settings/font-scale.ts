@@ -1,8 +1,9 @@
-import * as SecureStore from 'expo-secure-store';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { z } from 'zod';
 
 import { lightTheme, operationsTheme } from '@/theme/unistyles';
+
+import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
 
 /*
   YAZI BOYUTU AYARI (kullanıcı kararı 09.08) — müşteri yazıları büyütüp küçültebilsin: seçim
@@ -18,7 +19,8 @@ import { lightTheme, operationsTheme } from '@/theme/unistyles';
   içindeki güncel değerden değil) — art arda seçimlerde çarpan birikmez.
 */
 
-const STORE_KEY = 'lezzet.fontScale';
+/** Depo anahtarı — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */
+const STORE_KEY = DEVICE_STORE_KEYS.fontScale;
 
 export const FONT_SCALES = ['small', 'normal', 'large'] as const;
 const FontScaleSchema = z.enum(FONT_SCALES);
@@ -54,7 +56,7 @@ export function applyFontScale(scale: FontScale): void {
 /** Kayıtlı seçim; bozuk/boş kayıt = 'normal' (ilk açılış hâli). */
 export async function readFontScale(): Promise<FontScale> {
   try {
-    const raw = await SecureStore.getItemAsync(STORE_KEY);
+    const raw = await deviceStore.getItem(STORE_KEY);
     const parsed = FontScaleSchema.safeParse(raw);
     return parsed.success ? parsed.data : 'normal';
   } catch {
@@ -66,7 +68,7 @@ export async function readFontScale(): Promise<FontScale> {
 export async function saveFontScale(scale: FontScale): Promise<void> {
   applyFontScale(scale);
   try {
-    await SecureStore.setItemAsync(STORE_KEY, scale);
+    await deviceStore.setItem(STORE_KEY, scale);
   } catch {
     // Kalıcılık düşerse seçim bu oturumda yine geçerli; sonraki açılış 'normal'e döner —
     // ayar kaybı okunur bir arıza, sessiz de olsa kırıcı değil (log altyapısı 01-teknoloji §9).

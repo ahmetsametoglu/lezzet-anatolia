@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';
 import messages from './messages.json';
@@ -46,7 +46,7 @@ export function OrderConfirmedScreen({
   paymentLabel,
   points,
 }: OrderConfirmedScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
 

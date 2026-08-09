@@ -1,5 +1,3 @@
-import type { Locale } from '@lezzet/i18n';
-
 /*
   HESAP TEST/DEMO VERİSİ — artık yalnız KİMLİK KARTININ ve henüz ucu olmayan iki bloğun
   başlangıç değeri. Ekranın gerisi gerçek uçlardan okuyor ve fixture o alanları TAŞIMIYOR:
@@ -25,7 +23,6 @@ export interface AccountData {
   company: AccountCompanyView | null;
   /** Arkadaş getirme kodu; `/me`den gelir, kapalıysa `null`. */
   referralCode: string | null;
-  preferredLanguage: Locale;
   marketingEmail: boolean;
   marketingWhatsApp: boolean;
 }
@@ -38,7 +35,6 @@ export function accountData(overrides: Partial<AccountData> = {}): AccountData {
     phone: '+33 6 24 51 09 88',
     company: null,
     referralCode: 'AYSE-LEZZET',
-    preferredLanguage: 'tr',
     marketingEmail: true,
     marketingWhatsApp: false,
     ...overrides,

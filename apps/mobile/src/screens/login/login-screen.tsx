@@ -15,7 +15,7 @@ import { TextField } from '@/components/ui/text-field';
 import { DEV_ADMIN_EMAIL, DEV_CUSTOMER_EMAIL, devSignIn } from '@/lib/auth/dev-login';
 import { signInWithGoogle } from '@/lib/auth/oauth';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -65,7 +65,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

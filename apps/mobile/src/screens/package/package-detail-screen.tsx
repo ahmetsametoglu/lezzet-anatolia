@@ -13,7 +13,7 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -77,7 +77,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   const router = useRouter();
   const { theme } = useUnistyles();
   const { width } = useWindowDimensions();
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { status, detail, retry } = usePackage(slug, locale);
 

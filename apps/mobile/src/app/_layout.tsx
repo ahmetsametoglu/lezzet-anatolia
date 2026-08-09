@@ -9,8 +9,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { ToastHost } from '@/components/ui/toast-host';
+import { initAppLocale } from '@/lib/i18n/app-locale';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
 import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
+import { ensureFreshInstall } from '@/lib/storage/device-store';
 import { appFontAssets } from '@/theme/fonts';
 
 /*
@@ -28,6 +30,21 @@ import { appFontAssets } from '@/theme/fonts';
 */
 export default function RootLayout() {
   const { theme } = useUnistyles();
+
+  /* YENİDEN KURULUM KAPISI (ölçülmüş arıza 09.08, fiziksel iPhone): uygulama silinip yeniden
+     kurulunca oturum ve onboarding izi HAYATTA KALIYORDU — iOS Keychain kayıtları uygulama
+     silinince silinmez. Karar ve mekanizma `lib/storage/device-store.ts`'te; burada yalnız
+     "temizlik bitmeden ağaç ÇİZİLMESİN" var: sonra koşsaydı kullanıcı bir an girişli görünüp
+     ardından atılırdı. Depo okumaları aynı sözü kendileri de bekler (tek uçuşlu), bu kapı
+     ikinci bir temizlik başlatmaz — yalnız ilk kareyi geciktirir, splash o sırada ekranda. */
+  const [installReady, setInstallReady] = useState(false);
+  useEffect(() => {
+    ensureFreshInstall()
+      .then(() => setInstallReady(true))
+      // Son emniyet: iç adımlar hatalarını zaten karşılıyor; buraya düşen bir şey olsa bile
+      // uygulama açık kalır — kapalı bir kapı, düzeltmeye çalıştığı arızadan beter olurdu.
+      .catch(() => setInstallReady(true));
+  }, []);
 
   /* FONT KAPISI — FOUT hükmü (Token Kararları #24) İKİ ölçümle düştü (08.08, ekrana basılan
      teşhisle):
@@ -64,7 +81,15 @@ export default function RootLayout() {
     });
   }, []);
 
-  if (!fontsReady || !onboardingReady || !scaleReady) return null;
+  /* DİL KAPISI (kullanıcı kararı 09.08): kayıtlı dil seçimi İLK kareden önce okunur — kapısız
+     okunsa ekran bir an cihaz dilinde çizilip seçilen dile sıçrardı. Okuma düşerse cihaz diliyle
+     açılır (`initAppLocale` kendi içinde sessiz-varsayılanlı, künyesi orada). */
+  const [localeReady, setLocaleReady] = useState(false);
+  useEffect(() => {
+    void initAppLocale().then(() => setLocaleReady(true));
+  }, []);
+
+  if (!installReady || !fontsReady || !onboardingReady || !scaleReady || !localeReady) return null;
 
   return (
     /* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün ALTINDA

@@ -1,5 +1,5 @@
 import { formatPrice } from '@lezzet/helper';
-import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { Linking, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -14,7 +14,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
 import type { OrderDetail } from '@/lib/api/orders';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { DeliveryMap } from './delivery-map';
@@ -89,11 +89,13 @@ function paymentKey(order: OrderDetail): keyof Messages['detail']['pay'] {
 
 interface OrderDetailScreenProps {
   reference: string;
-  /** Testlerin ve demo hâllerinin kapısı; verilmezse cihazın dili. */
-  locale?: ReturnType<typeof deviceLocale>;
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
+  locale?: Locale;
 }
 
-export function OrderDetailScreen({ reference, locale = deviceLocale() }: OrderDetailScreenProps) {
+export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDetailScreenProps) {
+  const appLocale = useAppLocale();
+  const locale = forcedLocale ?? appLocale;
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

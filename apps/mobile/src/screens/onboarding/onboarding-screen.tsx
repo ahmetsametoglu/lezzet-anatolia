@@ -7,9 +7,9 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { resolvePostalCode, type PlaceResolution } from '@/lib/api/places';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
+import { maskPostalCode, usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
@@ -24,10 +24,16 @@ import messages from './messages.json';
   atla) seçimleri cihaza yazar (`lib/onboarding`) ve vitrine döner. Kapı kök layout'ta
   (`use-onboarding-gate.hook.ts`).
 
-  DİL SEÇİMİ EKRANIN DİLİNİ DEĞİŞTİRMEZ — tasarımın kendi davranışı: v3 kurucusunda seçim yalnız
-  `lang` durumunu yazar, arayüz metnine dokunmaz (v3 `setLang`ın toast'u bunu açık söylüyor:
-  "prototip arayüzü Türkçe kalır"). Uygulamada da ekran metni `deviceLocale()`den gelir; cihaz
-  dilini seçilen dille ezme mekanizması kabuk kararı, ayrı iş. Seçim yalnız saklanır.
+  DİL SEÇİMİ EKRANIN DİLİNİ ANINDA DEĞİŞTİRİR (kullanıcı kararı 09.08 — v3'ün tersi). Prototipte
+  seçim yalnız `lang` durumunu yazıyordu ve toast'ı bunu açıkça söylüyordu ("prototip arayüzü
+  Türkçe kalır"); o, tasarımın DEĞİL prototipin sınırıydı. Ürün kararı şudur: dil kullanıcının
+  seçimidir ve seçildiği anda geçerlidir — Français'ya basan kişi ekranın Türkçe kalmasını
+  "seçimim işlemedi" diye okur. Seçim tek kaynağa yazılır (`lib/i18n/app-locale`), ağaç oradan
+  beslendiği için bu ekran da dahil her yüzey aynı karede döner.
+
+  SEÇİM BURADA MİSAFİRİN CEVABIDIR ve cihazda kalır; hesap açılınca OTP çağrısının `locale`iyle
+  YENİ kartın `preferred_language`ına tohumlanır (zincirin tamamı `lib/i18n/app-locale` künyesinde).
+  Bu ekrandan profile AYRICA bir yazma yapılmaz — ikinci bir yol tohumla yarışırdı.
 
   ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
   1. **Bitişteki toast ("Hoş geldiniz — afiyetle! ✓") ÇİZİLMEDİ**: toast kabuk katmanına ait ve o
@@ -42,8 +48,8 @@ import messages from './messages.json';
      kit bu etapta yazıya kapalı — varyantın kite terfisi raporlandı.
   5. **"Havale" ikonu kitin `warehouse` geometrisi**: v3'ün bina ikonu ondan 1–2 birim farklı;
      neredeyse özdeş ikinci bir geometri açmak "hangisi doğru" sorusunu doğururdu (CLAUDE §1).
-  6. **Dil önseçimi cihaz dili**: şablon 'TR' ile açılıyor — o, prototipin o anki uygulama dili;
-     uygulamadaki karşılığı `deviceLocale()`.
+  6. **Dil önseçimi uygulamanın o anki dili**: şablon 'TR' ile açılıyor — o, prototipin o anki
+     uygulama dili; uygulamadaki karşılığı `useAppLocale()` (ilk açılışta cihaz dili).
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -65,9 +71,6 @@ const ZIP_FIELD_HEIGHT = 56;
 /** Ödeme satırı ikonlarının kenarı (v3:314 — 21). Terfisi raporlandı. */
 const PAYMENT_ICON_SIZE = 21;
 
-/** Yer sorusunun sorulduğu hane sayısı — Fransız/Alman kodları beş hanedir, eksiği sorulmaz. */
-const ZIP_LENGTH = 5;
-
 /**
  * Not alanının SABİT yüksekliği (kullanıcı bulgusu 09.08): cevap gelince satır belirip
  * altındakileri aşağı itiyordu. Alan hep ayrılır, içi boşken görünmez — iki satırlık en uzun
@@ -76,13 +79,14 @@ const ZIP_LENGTH = 5;
 const ZIP_NOTE_HEIGHT = 64;
 
 export function OnboardingScreen() {
-  const locale = deviceLocale();
+  /* Seçim AYRI BİR DURUMDA TUTULMAZ: uygulamanın dili zaten seçimin kendisidir (tek kaynak) —
+     ikinci bir `selected` durumu, aynı cevabın ekran-yerel ikinci kopyası olurdu. */
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
 
   const [step, setStep] = useState(0);
-  const [selected, setSelected] = useState<Locale>(locale);
   const [fontScale, setFontScale] = useState<FontScale>('normal');
   const [zip, setZip] = useState('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,7 +99,8 @@ export function OnboardingScreen() {
   );
 
   const pickLanguage = (next: Locale) => {
-    setSelected(next);
+    // Anında uygulanır VE cihaza yazılır: bu ekranın metni de aynı karede seçilen dile döner.
+    void setAppLocale(next);
     // Tasarım: seçimden 250 ms sonra kendiliğinden posta kodu adımı (v3 `ob.langs[].pick`).
     if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
@@ -111,24 +116,13 @@ export function OnboardingScreen() {
     applyFontScale(next);
   };
 
-  // Şablonun maskesi birebir: yalnız rakam, en çok beş hane (v3:644).
-  const onZipChange = (value: string) => setZip(value.replace(/\D/g, '').slice(0, ZIP_LENGTH));
+  // Maske de çözüm de ORTAK kapıdan (`lib/places`): aynı soruyu vitrinin teslimat çekmecesi de
+  // soruyor ve iki kopya bir gün ayrışırdı.
+  const onZipChange = (value: string) => setZip(maskPostalCode(value));
 
   /* YER ÇÖZÜMÜ GERÇEK UÇTAN (kullanıcı kararı 09.08 — eski yerel '67' kuralı kalktı): kod beş
-     haneye ulaşınca sorulur, cevap ŞEHRİ de söyler. Kod değişince eski cevap ANINDA düşer
-     (yarım kodun yanında eski şehir durmasın); yarışta son istek kazanır (`current` bağı). */
-  const [place, setPlace] = useState<PlaceResolution | null>(null);
-  useEffect(() => {
-    setPlace(null);
-    if (zip.length < ZIP_LENGTH) return;
-    let current = true;
-    void resolvePostalCode(zip).then((result) => {
-      if (current && result.error === null) setPlace(result.data);
-    });
-    return () => {
-      current = false;
-    };
-  }, [zip]);
+     haneye ulaşınca sorulur, cevap ŞEHRİ de söyler. Davranışın gerekçeleri hook'un künyesinde. */
+  const place = usePlaceResolution(zip);
 
   /* Ekranda söylenen cümle — dört hâlin her biri KENDİ cümlesini alır; bilinmeyen kod bir kapı
      değil uyarıdır, çözülemeyen hâl ise BİZİM eksiğimiz olabilir (sözleşme künyesi). */
@@ -149,7 +143,7 @@ export function OnboardingScreen() {
 
   /** Her iki çıkış da (bitir/atla) o ana dek yapılan seçimleri saklar — yarım bilgi de bilgidir. */
   const leave = () => {
-    void saveOnboarding({ done: true, locale: selected, postalCode: zip === '' ? null : zip });
+    void saveOnboarding({ done: true, locale, postalCode: zip === '' ? null : zip });
     void saveFontScale(fontScale);
     router.replace('/');
   };
@@ -234,7 +228,7 @@ export function OnboardingScreen() {
             <View style={styles.langList}>
               {/* Liste `LOCALES`ten türer (hesap ekranı emsali) — yeni dil açıldığında ekran kendiliğinden öğrenir. */}
               {LOCALES.map((option) => {
-                const isSelected = option === selected;
+                const isSelected = option === locale;
                 return (
                   <PressableSurface
                     key={option}

@@ -15,7 +15,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { formatPrice } from '@lezzet/helper';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CatalogSkeleton } from './catalog-skeleton';
@@ -59,7 +59,7 @@ interface CatalogScreenProps {
 }
 
 export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

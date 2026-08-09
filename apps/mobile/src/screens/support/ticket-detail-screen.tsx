@@ -1,5 +1,5 @@
 import { formatPrice } from '@lezzet/helper';
-import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
@@ -15,7 +15,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextField } from '@/components/ui/text-field';
 import type { TicketMessage } from '@/lib/api/tickets';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { formatOrderDate } from '@/screens/orders/order-format';
 import { ticketScope, ticketTitle } from './ticket-format';
@@ -62,11 +62,13 @@ type Messages = LocalizedCopy<typeof messages>;
 interface TicketDetailScreenProps {
   /** Talebin kimliği — rota parametresi (`/support/<uuid>`). */
   id: string;
-  /** Testlerin ve demo hâllerinin kapısı; verilmezse cihazın dili. */
-  locale?: ReturnType<typeof deviceLocale>;
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
+  locale?: Locale;
 }
 
-export function TicketDetailScreen({ id, locale = deviceLocale() }: TicketDetailScreenProps) {
+export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScreenProps) {
+  const appLocale = useAppLocale();
+  const locale = forcedLocale ?? appLocale;
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

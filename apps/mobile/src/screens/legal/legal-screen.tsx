@@ -7,7 +7,7 @@ import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { LegalFaq } from './legal-faq';
 import {
   isLegalPageKey,
@@ -53,7 +53,7 @@ interface LegalScreenProps {
 }
 
 export function LegalScreen({ page }: LegalScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
 

@@ -13,7 +13,7 @@ import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { cartSubtotalCents, cartTotalCents, resetCart, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { OptionRow } from '@/screens/customer-kit/option-row';
@@ -52,7 +52,7 @@ interface CheckoutScreenProps {
 }
 
 export function CheckoutScreen({ data = checkoutData() }: CheckoutScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
   const cart = useCart();

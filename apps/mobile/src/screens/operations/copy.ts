@@ -5,7 +5,7 @@ import messages from './messages.json';
 
   ── Karar ve gerekçe (CLAUDE §2: "Operasyon yüzeyi yalnız Türkçe") ───────────
   Müşteri yüzeyinde `messages.json` DİLE GÖRE anahtarlıdır (`{ tr, fr, de }`) ve tip
-  `LocalizedCopy<typeof messages>` ile o zarftan türer; ekran `messages[deviceLocale()]` der
+  `LocalizedCopy<typeof messages>` ile o zarftan türer; ekran `messages[useAppLocale()]` der
   (emsal: `app/(tabs)/_layout.tsx`). Burada o zarf BİLEREK yok:
 
   · `LocalizedCopy<T>` `T extends Record<Locale, unknown>` ister — üç dilin ÜÇÜNÜ de zorunlu
@@ -14,7 +14,7 @@ import messages from './messages.json';
   · Zarfın YOKLUĞU bir bilgidir: dosyayı açan "bu yüzeyin dil ekseni yok" bilgisini şeklinden
     okur. `{"tr": {...}}` diye tek anahtarlı bir zarf ise dil ekseni VARMIŞ da eksik kalmış gibi
     görünürdü.
-  · `deviceLocale()` bu yüzeyde HİÇ ÇAĞRILMAZ — cihaz Fransızca olsa da operasyon Türkçedir.
+  · `useAppLocale()` bu yüzeyde HİÇ ÇAĞRILMAZ — kullanıcı Français seçse de operasyon Türkçedir.
 
   ── Peki neden hâlâ bir JSON dosyası? ───────────────────────────────────────
   Web operasyonu metinleri doğrudan JSX'e yazıyor (`apps/web/app/(operations)`ta tek bir

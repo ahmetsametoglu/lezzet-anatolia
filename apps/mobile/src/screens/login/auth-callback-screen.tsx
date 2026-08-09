@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { LoadingState } from '@/components/ui/loading-state';
 import { fetchMe } from '@/lib/api/me';
 import { exchangeOAuthCode } from '@/lib/auth/oauth';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import messages from './messages.json';
@@ -28,7 +28,8 @@ interface AuthCallbackScreenProps {
 }
 
 export function AuthCallbackScreen({ code }: AuthCallbackScreenProps) {
-  const t = messages[deviceLocale()];
+  const locale = useAppLocale();
+  const t = messages[locale];
   const router = useRouter();
 
   useEffect(() => {

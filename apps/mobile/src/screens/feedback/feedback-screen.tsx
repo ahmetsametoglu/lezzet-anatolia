@@ -14,7 +14,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { Tag } from '@/components/ui/tag';
 import { TextField } from '@/components/ui/text-field';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { emToDp } from '@/theme/parse';
 import { HeartIcon, ThumbIcon } from './feedback-icons';
 import {
@@ -98,7 +98,7 @@ interface FeedbackScreenProps {
 }
 
 export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }: FeedbackScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();

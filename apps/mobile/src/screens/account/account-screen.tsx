@@ -30,7 +30,7 @@ import { resolvePostalCode } from '@/lib/api/places';
 import { signOut } from '@/lib/auth/sign-out';
 import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
 import { publishToast } from '@/lib/toast/toast-store';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
@@ -58,9 +58,12 @@ import messages from './messages.json';
   2. **Dil seçimi kitin `Chip`i ile.** Şablon üç eşit genişlikte kutu çiziyor; kitte tam bu rolde
      bir öğe var (seçili/boş çip) ve ikinci bir seçim kutusu türü açmak kitin sözlüğünü büyütürdü.
   3. **Dil listesi `LOCALES`ten türer**, elle yazılmaz: yeni bir dil açıldığında bu ekran
-     kendiliğinden öğrenir (CLAUDE §1). Seçim UYGULAMANIN DİLİNİ ANINDA DEĞİŞTİRMEZ — cihaz dili
-     `deviceLocale()` ile çözülüyor ve bunu ezmek uygulama genelinde bir karar (kabuk işi);
-     ekran tercihi kaydeder, etkisi bağlanma etabında gelir.
+     kendiliğinden öğrenir (CLAUDE §1). Seçim UYGULAMANIN DİLİNİ ANINDA DEĞİŞTİRİR (kullanıcı
+     kararı 09.08): çipler `useAppLocale()`i gösterir — yani ekranda okunan dilin kendisini.
+     Girişli kullanıcıda o değer ZATEN profilden gelir (`/me`.preferredLanguage, `use-me.hook`
+     uygular), o yüzden çip ile kart hiçbir zaman ayrışmaz; ekran ayrıca `data.preferredLanguage`
+     TAŞIMAZ (ikinci yol = ayrışma kapısı). Değişiklik önce yerele, sonra `PATCH /me/preferences`e
+     gider — dil bir görünüm ayarı değil, müşteriyle yazışma dilidir (zincir: `lib/i18n/app-locale`).
   4. **Puan çevirme eşiğin altında ENGELLİ**, şablonda ise basılınca hiçbir şey olmuyor. Engelli
      düğme + eksik puan satırı, kuralı basmadan önce söylüyor.
 */
@@ -74,7 +77,7 @@ interface AccountScreenProps {
 }
 
 export function AccountScreen({ data = accountData(), signedIn = true }: AccountScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
@@ -84,7 +87,6 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
      selamlaması ve kart aynı anda döner). İYİMSER yazım: anahtar hemen kayar, ret gelirse
      ESKİ değere döner ve satır altında söylenir — kaydedilmemiş bir seçimi kaydedilmiş
      göstermek, kullanıcıya olmayan bir izni vermiş gibi okutur. */
-  const [language, setLanguage] = useState<Locale>(data.preferredLanguage);
   const [prefsFailed, setPrefsFailed] = useState(false);
 
   const savePreference = (patch: { preferredLanguage?: Locale; marketingConsent?: Record<string, boolean> }, revert: () => void) => {
@@ -134,10 +136,14 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
      sürüm yarının anahtarını yine tanımayacak — o satırı çizmemek çökmekten iyidir. */
   const isKnownWay = (key: string): key is MePointsEarnWayKey => key in EARN_ICONS;
 
+  /* Dil seçimi ÖNCE yerele (anında, tüm ekranlar), SONRA karta (`PATCH /me/preferences` — asıl
+     kaynak orası; dil yazışmanın dilidir). Başarıda dönen profil `publishMe` ile yayınlanır ve
+     aynı değeri geri uygular (sıçrama yok); RET gelirse arayüz de eski dile döner —
+     kaydedilmemiş bir seçimi kaydedilmiş göstermek, izinlerdeki hükümle aynı sebeple yasak. */
   const pickLanguage = (next: Locale) => {
-    const previous = language;
-    setLanguage(next);
-    savePreference({ preferredLanguage: next }, () => setLanguage(previous));
+    const previous = locale;
+    void setAppLocale(next);
+    savePreference({ preferredLanguage: next }, () => void setAppLocale(previous));
   };
 
   const toggleConsent = (channel: 'email' | 'whatsapp', next: boolean) => {
@@ -536,7 +542,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
               <Chip
                 key={option}
                 label={t.language[option]}
-                selected={language === option}
+                selected={locale === option}
                 onPress={() => pickLanguage(option)}
                 testID={`account-language-${option}`}
               />
