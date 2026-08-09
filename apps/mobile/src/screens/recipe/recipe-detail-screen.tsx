@@ -15,6 +15,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { publishToast } from '@/lib/toast/toast-store';
 import { addProduct } from '@/screens/customer-kit/cart-store';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
@@ -161,8 +162,10 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
   const totalCents = addable.reduce((sum, row) => sum + row.priceCents * row.qty, 0);
 
   const addAll = () => {
-    /* v3 `rc.addAll` (v3:1899): yalnız eklenebilir satırlar; onay sessiz (sapma 5). */
+    /* v3 `rc.addAll` (v3:1899): yalnız eklenebilir satırlar; onay v3'ün kendi toast'ı —
+       "{n} malzeme sepete eklendi ✓" (toast altyapısı gelince eski "sessiz onay" sapması kapandı). */
     for (const row of addable) addProduct(cartLineOf(row), row.qty);
+    publishToast(t.addAllToast.replace('{n}', String(addable.length)));
   };
 
   return (
@@ -203,29 +206,35 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
               <View>
                 {detail.rows.map((row) => (
                   <View key={row.variantId} style={styles.row}>
-                    <PressableSurface
-                      onPress={() => router.push(`/product/${row.productSlug}`)}
-                      feedback="opacity"
-                      compact
-                      style={styles.rowMain}
-                      accessibilityLabel={t.row.open.replace('{name}', row.name)}
-                      testID={`recipe-row-${row.variantId}`}
-                    >
-                      <CirclePhoto
-                        size={recipeMetrics.rowPhoto}
-                        initial={row.name.slice(0, 1)}
-                        initialFontSize={theme.text['screen-title']}
-                        photoUri={row.image.url}
-                      />
-                      <View style={styles.rowText}>
-                        <Text style={styles.rowName} numberOfLines={1}>
-                          {row.name}
-                        </Text>
-                        <Text style={styles.rowMeta} numberOfLines={1}>
-                          {rowMeta(row, locale)}
-                        </Text>
-                      </View>
-                    </PressableSurface>
+                    {/* Satırın esneme payı SARMALAYICIDA: kitin Pressable'ı stilsiz bir dış
+                        kutudur, `style` içteki yüzeye gider — pay yüzeyde kalınca satır
+                        çöküyordu (cihazda ölçüldü 08.09: ad/fiyat 0 genişlikte, + kutusu
+                        fotoğrafın dibinde; uç doluydu, toplam bile doğruydu). */}
+                    <View style={styles.rowMainWrap}>
+                      <PressableSurface
+                        onPress={() => router.push(`/product/${row.productSlug}`)}
+                        feedback="opacity"
+                        compact
+                        style={styles.rowMain}
+                        accessibilityLabel={t.row.open.replace('{name}', row.name)}
+                        testID={`recipe-row-${row.variantId}`}
+                      >
+                        <CirclePhoto
+                          size={recipeMetrics.rowPhoto}
+                          initial={row.name.slice(0, 1)}
+                          initialFontSize={theme.text['screen-title']}
+                          photoUri={row.image.url}
+                        />
+                        <View style={styles.rowText}>
+                          <Text style={styles.rowName} numberOfLines={1}>
+                            {row.name}
+                          </Text>
+                          <Text style={styles.rowMeta} numberOfLines={1}>
+                            {rowMeta(row, locale)}
+                          </Text>
+                        </View>
+                      </PressableSurface>
+                    </View>
                     {row.soldOut ? (
                       <Text style={styles.soldOut} testID={`recipe-soldout-${row.variantId}`}>
                         {t.row.soldOut}
@@ -233,7 +242,9 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
                     ) : row.priceCents === null ? null : (
                       <PressableSurface
                         onPress={() => {
-                          if (isAddable(row)) addProduct(cartLineOf(row), row.qty);
+                          if (!isAddable(row)) return;
+                          addProduct(cartLineOf(row), row.qty);
+                          publishToast(t.addedToast);
                         }}
                         feedback="shadow"
                         compact
@@ -334,7 +345,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   heroInitial: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     color: theme.colors['on-image-soft'],
   },
   heroScrim: {
@@ -343,11 +353,12 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   heroButtons: {
     /* Ürün kahramanının aynı kararı (kullanıcı bulgusu 08.08): foto saat altına taşar, düğme
-       taşmaz — şablonun 8px'i üst güvenli alanın üstüne eklenir; iki ekranın geri düğmesi hizalı. */
+       taşmaz — şablonun 8px'i üst güvenli alanın üstüne eklenir; iki ekranın geri düğmesi hizalı.
+       Değerler v3'ün kendisi (göz denetimi 09.08): `top:8 · left/right:16` — md/3xl. */
     position: 'absolute',
-    top: rt.insets.top + theme.space.sm,
-    left: theme.space.lg,
-    right: theme.space.lg,
+    top: rt.insets.top + theme.space.md,
+    left: theme.space['3xl'],
+    right: theme.space['3xl'],
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -370,7 +381,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   timeBadgeText: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
     fontSize: theme.text.badge,
-    fontWeight: theme.text['badge--font-weight'],
     letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text.badge),
     color: theme.colors['sand-50'],
   },
@@ -384,14 +394,12 @@ const styles = StyleSheet.create((theme, rt) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors.terracotta,
   },
   title: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     lineHeight: theme.text['h1-sm'] * theme.text['h1-sm--line-height'],
     color: theme.colors.ink,
   },
@@ -406,7 +414,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   sectionEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors.terracotta,
   },
@@ -423,9 +430,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderStyle: 'dashed',
     borderBottomColor: theme.colors['sand-400'],
   },
-  rowMain: {
+  /** Esneme payı burada (gerekçe JSX'te — kitin Pressable'ı stilsiz, pay yüzeyde işlemiyor). */
+  rowMainWrap: {
     flex: 1,
     minWidth: 0,
+  },
+  rowMain: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.xl,
@@ -435,10 +445,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     minWidth: 0,
     gap: theme.space['2xs'],
   },
+  /* v3 700 13.5 (v3:26) = `control` kademesinin KENDİSİ — ölçü ve ağırlık tek kademeden gelir
+     (note 13 + chip ağırlığı devşirmesi Token Kararlari #16'nın yasakladığı desendi); basılabilir
+     satır başlığında kitin emsali de bu (`nav-row`). */
   rowName: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
+    fontFamily: theme.font.body[theme.text['control--font-weight']],
+    fontSize: theme.text.control,
     color: theme.colors.ink,
   },
   rowMeta: {
@@ -449,7 +461,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   soldOut: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.muted,
   },
   /** + kutusu (v3:1193-1194): mürekkep çerçeve + krem zemin + 2'lik sert gölge (künye sapma 7). */
@@ -498,7 +509,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   stepBadgeText: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.terracotta,
   },
   stepText: {
@@ -522,8 +532,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space.xl,
     paddingHorizontal: theme.space['4xl'],
     /* Alt güvenli alan barın İÇİNDE, dolguyla toplanmaz (tab bar kararı 08.08 — ikisinin büyüğü);
-       şablonun 24'ü ölçekte 22 ('6xl'). */
-    paddingBottom: Math.max(rt.insets.bottom, theme.space['6xl']),
+       şablonun 24'ü (v3:52) ölçekte yok, 22/26'ya eşit uzak → FERAH yön kuralıyla 26 ('7xl'). */
+    paddingBottom: Math.max(rt.insets.bottom, theme.space['7xl']),
   },
   barGlass: {
     position: 'absolute',

@@ -46,7 +46,6 @@ const styles = StyleSheet.create((theme) => ({
   title: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
-    fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.ink,
     textAlign: 'center',
   },

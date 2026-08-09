@@ -137,7 +137,6 @@ const styles = StyleSheet.create((theme) => ({
   title: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['button--font-weight'],
   },
   terracottaTitle: { color: theme.colors.terracotta },
   inkTitle: { color: theme.colors.ink },

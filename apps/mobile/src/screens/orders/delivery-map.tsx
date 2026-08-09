@@ -97,7 +97,6 @@ const styles = StyleSheet.create((theme) => ({
   trackingLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['sand-50'],
   },
   liveChip: {
@@ -112,7 +111,6 @@ const styles = StyleSheet.create((theme) => ({
   liveLabel: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.muted,
   },
 }));

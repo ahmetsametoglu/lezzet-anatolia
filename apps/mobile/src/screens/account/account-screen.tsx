@@ -1,7 +1,7 @@
 import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -15,8 +15,19 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
-import { updateMe } from '@/lib/api/me';
+import {
+  createAddress,
+  deleteAddress,
+  makeDefaultAddress,
+  updateAddress,
+  type AddressWrite,
+  type MeAddress,
+} from '@/lib/api/addresses';
+import { updateMe, updatePreferences } from '@/lib/api/me';
+import { resolvePostalCode } from '@/lib/api/places';
 import { signOut } from '@/lib/auth/sign-out';
+import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
+import { publishToast } from '@/lib/toast/toast-store';
 import { deviceLocale } from '@/lib/i18n/locale';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
@@ -30,6 +41,7 @@ import {
   type AccountData,
   type AccountCouponView,
 } from './account-fixture';
+import { useAddresses } from './use-addresses.hook';
 import messages from './messages.json';
 
 /*
@@ -70,9 +82,48 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
   const { theme } = useUnistyles();
   const router = useRouter();
 
-  /* Tercihler ekranın durumunda: fixture yalnız başlangıç değeri (UI-only etap). */
-  const [addresses, setAddresses] = useState(data.addresses);
+  /* DİL + KAMPANYA İZİNLERİ GERÇEK (21.16): başlangıç değeri profilden gelir (`/me`), değişim
+     anında `PATCH /me/preferences`e gider ve dönen profil yayınlanır (`publishMe` — vitrin
+     selamlaması ve kart aynı anda döner). İYİMSER yazım: anahtar hemen kayar, ret gelirse
+     ESKİ değere döner ve satır altında söylenir — kaydedilmemiş bir seçimi kaydedilmiş
+     göstermek, kullanıcıya olmayan bir izni vermiş gibi okutur. */
   const [language, setLanguage] = useState<Locale>(data.preferredLanguage);
+  const [prefsFailed, setPrefsFailed] = useState(false);
+
+  const savePreference = (patch: { preferredLanguage?: Locale; marketingConsent?: Record<string, boolean> }, revert: () => void) => {
+    setPrefsFailed(false);
+    void updatePreferences(patch).then((result) => {
+      if (result.error !== null) {
+        revert();
+        setPrefsFailed(true);
+        return;
+      }
+      publishMe(result.data);
+    });
+  };
+
+  const pickLanguage = (next: Locale) => {
+    const previous = language;
+    setLanguage(next);
+    savePreference({ preferredLanguage: next }, () => setLanguage(previous));
+  };
+
+  const toggleConsent = (channel: 'email' | 'whatsapp', next: boolean) => {
+    const apply = channel === 'email' ? setMarketingEmail : setMarketingWhatsApp;
+    apply(next);
+    savePreference({ marketingConsent: { [channel]: next } }, () => apply(!next));
+  };
+
+  /* Yazı boyutu (kullanıcı kararı 09.08) — cihaz ayarı, hesaptan bağımsız GERÇEK: açılışta
+     kayıtlı seçim okunur, seçim anında uygulanıp saklanır (onboarding'in aynı deposu). */
+  const [fontScale, setFontScale] = useState<FontScale>('normal');
+  useEffect(() => {
+    void readFontScale().then(setFontScale);
+  }, []);
+  const pickFontScale = (next: FontScale) => {
+    setFontScale(next);
+    void saveFontScale(next);
+  };
   const [marketingEmail, setMarketingEmail] = useState(data.marketingEmail);
   const [marketingWhatsApp, setMarketingWhatsApp] = useState(data.marketingWhatsApp);
   const [points, setPoints] = useState(data.points);
@@ -95,6 +146,113 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
     setProfileSheetOpen(true);
   };
 
+  /* Adresler GERÇEK (21.15): liste `/me/addresses`ten, yazımlar v3 `shAddr` çekmecesinden.
+     Her yazma cevabı GÜNCEL listedir (sözleşme kararı) — ekran ikinci bir GET atmaz, `publish`ler. */
+  const addressBook = useAddresses(signedIn);
+
+  /* BÖLGE-DIŞI TALEP BLOĞU (kullanıcı kararı 09.08) — varsayılan adres teslimat rotamızın dışına
+     düşüyorsa kampanya kartı bir SORU sorar: "buraya teslimat açılsın" der misin? Ayrım kasıtlı —
+     posta kodu girmek ZAYIF sinyaldir (belki merak etti), kanal açıp talep bildirmek KUVVETLİ
+     sinyaldir (hattı açarsak müşteri olur) ve ikisi aynı sayılırsa yatırım kararı yanlış veriden
+     çıkar. Yer sorusu gerçek uca gider (`/places/by-postal-code`), tahmin edilmez. */
+  const defaultAddress = addressBook.addresses.find((a) => a.isDefault) ?? addressBook.addresses[0];
+  const zipOfDefault = defaultAddress?.postalCode;
+  const [outOfZone, setOutOfZone] = useState(false);
+  useEffect(() => {
+    if (zipOfDefault === undefined) {
+      setOutOfZone(false);
+      return;
+    }
+    let alive = true;
+    void resolvePostalCode(zipOfDefault).then((result) => {
+      // Çözülemeyen kod "bölge dışı" SAYILMAZ: bilinmeyeni olumsuz okumak, ölçemediğimiz şeyi
+      // ölçmüş gibi göstermek olurdu (CLAUDE §1).
+      if (alive && result.error === null) setOutOfZone(result.data.kind === 'resolved' && !result.data.place.inRoute);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [zipOfDefault]);
+
+  const [interestSent, setInterestSent] = useState(false);
+  /**
+   * Kuvvetli talep. BUGÜN KAYDEDİLEN ŞEY İZİNDİR: talebin kendisi (hangi posta kodundan kaç kişi
+   * istedi) için tablo YOK — `BEKLEYEN(21.15)`, web denetmene talep açıldı
+   * (`docs/talep/talep-web-teslimat-talebi-kaydi.md`); tablo gelince buraya tek çağrı eklenir.
+   * Düğme boş söz vermiyor: kanalı açıyor, yani hat açıldığında haber gerçekten gidebilir.
+   */
+  const sendZoneInterest = () => {
+    setInterestSent(true);
+    publishToast(t.marketing.zone.sent);
+    if (!marketingEmail) toggleConsent('email', true);
+  };
+
+  const [addressSheet, setAddressSheet] = useState<{ editing: MeAddress | null } | null>(null);
+  const [addressDraft, setAddressDraft] = useState({ label: '', line1: '', postalCode: '', city: '' });
+  const [addressSaving, setAddressSaving] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [defaultFailed, setDefaultFailed] = useState(false);
+
+  const editAddressDraft = (patch: Partial<typeof addressDraft>) => {
+    setAddressDraft((current) => ({ ...current, ...patch }));
+    setAddressError(null);
+  };
+
+  const openAddressSheet = (address: MeAddress | null) => {
+    setAddressDraft({
+      label: address?.label ?? '',
+      line1: address?.line1 ?? '',
+      postalCode: address?.postalCode ?? '',
+      city: address?.city ?? '',
+    });
+    setAddressError(null);
+    setAddressSheet({ editing: address });
+  };
+
+  const saveAddress = () => {
+    if (addressSheet === null) return;
+    const line1 = addressDraft.line1.trim();
+    const city = addressDraft.city.trim();
+    if (!line1 || !city || !/^\d{5}$/.test(addressDraft.postalCode)) {
+      setAddressError(t.addresses.sheet.error);
+      return;
+    }
+    /* `line2` gövdede BİLEREK yok: çekmece göstermiyor; gönderilmeyen alana kapı dokunmaz
+       (application patch kuralı) — web'den girilmiş kat/daire satırı burada kaybolmaz. */
+    const body: AddressWrite = { label: addressDraft.label.trim() || null, line1, postalCode: addressDraft.postalCode, city };
+    setAddressSaving(true);
+    setAddressError(null);
+    const call = addressSheet.editing === null ? createAddress(body) : updateAddress(addressSheet.editing.id, body);
+    void call.then((result) => {
+      setAddressSaving(false);
+      if (result.error !== null) return setAddressError(t.addresses.sheet.unexpected);
+      addressBook.publish(result.data);
+      setAddressSheet(null);
+    });
+  };
+
+  const removeAddress = () => {
+    if (addressSheet?.editing == null) return;
+    setAddressSaving(true);
+    void deleteAddress(addressSheet.editing.id).then((result) => {
+      setAddressSaving(false);
+      if (result.error !== null) return setAddressError(t.addresses.sheet.unexpected);
+      addressBook.publish(result.data);
+      setAddressSheet(null);
+      publishToast(t.addresses.sheet.deleted);
+    });
+  };
+
+  const makeDefault = (address: MeAddress) => {
+    void makeDefaultAddress(address.id).then((result) => {
+      if (result.error !== null) return setDefaultFailed(true);
+      setDefaultFailed(false);
+      addressBook.publish(result.data);
+      // Başlık kartla aynı kural: etiketsiz adreste şehir (v3'ün `a.n+' varsayılan yapıldı'`sı).
+      publishToast(t.addresses.defaultDone.replace('{label}', address.label ?? address.city));
+    });
+  };
+
   const saveProfile = () => {
     setProfileSaving(true);
     setProfileError(null);
@@ -107,6 +265,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
       }
       publishMe(result.data);
       setProfileSheetOpen(false);
+      publishToast(t.edit.saved);
     });
   };
 
@@ -134,9 +293,6 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
     setPoints(points - POINTS_PER_COUPON);
     setCoupons([...coupons, { code: 'PUAN5', valueLabel: t.points.couponValue.replace('{value}', couponValueLabel) }]);
   };
-
-  const makeDefault = (id: string) =>
-    setAddresses(addresses.map((address) => ({ ...address, isDefault: address.id === id })));
 
   return (
     <View style={styles.screen}>
@@ -252,47 +408,75 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
           />
         </View>
 
-        {/* Adres DÜZENLEME/EKLEME bu dilimde bilerek yok: hedefi olan tek yer (ayrı düzenleme
-            sayfası) kullanıcı kararıyla söküldü ve v3'ün adres çekmecesi (`shAddr`) adres uçlarıyla
-            birlikte gelecek (doc 21.14 kalanlar) — kaydetmeyen bir form çizmek yalan olurdu.
-            Bölüm adres VARKEN listeler (varsayılan yapma gerçek davranış), yokken hiç çizilmez. */}
-        {addresses.length === 0 ? null : (
-          <View style={styles.block}>
-            <Text style={styles.blockTitle}>{t.addresses.title}</Text>
-            {addresses.map((address) => (
+        {/* Adresler GERÇEK (21.15, v3:857-868): bölüm koşulsuz çizilir — boş listede de başlık ve
+            "＋ Yeni adres ekle" durur, ekleme kapısı adressiz müşteriye de lazım. Yüklenirken kart
+            çizilmez (v3'te iskelet yok); düşen okuma/yazım tek hata satırında söylenir. */}
+        {/* Adresler — "Puanlarım" kartının deseni (kullanıcı kararı 09.08): başlık KARTIN İÇİNDE,
+            satırlar kesikli çizgiyle ayrılır. Adres kartının kendi zemini kalktı; kart zaten yüzey. */}
+        <View style={styles.settingsCard}>
+          <Text style={styles.cardTitle}>{t.addresses.title}</Text>
+          {addressBook.addresses.map((address, index) => (
+            <View key={address.id} style={index > 0 ? styles.settingsDivider : undefined}>
               <AddressCard
-                key={address.id}
                 address={address}
                 copy={t.addresses}
-                onMakeDefault={() => makeDefault(address.id)}
+                onMakeDefault={() => makeDefault(address)}
+                onEdit={() => openAddressSheet(address)}
                 testID={`account-address-${address.id}`}
               />
-            ))}
+            </View>
+          ))}
+          {addressBook.status === 'error' || defaultFailed ? (
+            <Note
+              description={addressBook.status === 'error' ? t.addresses.loadError : t.addresses.sheet.unexpected}
+              tone="terracotta"
+              testID="account-address-error"
+            />
+          ) : null}
+          <View style={addressBook.addresses.length > 0 ? styles.settingsDivider : undefined}>
+            <TextAction label={t.addresses.add} onPress={() => openAddressSheet(null)} testID="account-address-add" />
           </View>
-        )}
+        </View>
 
-        <View style={styles.block}>
-          <Text style={styles.blockTitle}>{t.language.title}</Text>
+        {/* Dil + yazı boyutu TEK kartta (kullanıcı kararı 09.08): ikisi de "nasıl okuyorum"
+            sorusunun cevabı; ayrı kartlara bölmek aynı konuyu iki kez sorardı. Yazı boyutu
+            seçimi ANINDA uygulanır — bu kart dahil bütün ekran yeniden çizilir. */}
+        <View style={styles.settingsCard}>
+          <Text style={styles.cardTitle}>{t.language.title}</Text>
           <View style={styles.languageRow}>
             {LOCALES.map((option) => (
               <Chip
                 key={option}
                 label={t.language[option]}
                 selected={language === option}
-                onPress={() => setLanguage(option)}
+                onPress={() => pickLanguage(option)}
                 testID={`account-language-${option}`}
+              />
+            ))}
+          </View>
+          <View style={styles.settingsDivider}>
+            <Text style={styles.cardTitle}>{t.fontSize.title}</Text>
+          </View>
+          <View style={styles.languageRow}>
+            {FONT_SCALES.map((option) => (
+              <Chip
+                key={option}
+                label={t.fontSize[option]}
+                selected={fontScale === option}
+                onPress={() => pickFontScale(option)}
+                testID={`account-fontsize-${option}`}
               />
             ))}
           </View>
         </View>
 
-        <View style={styles.block}>
-          <Text style={styles.blockTitle}>{t.marketing.title}</Text>
+        <View style={styles.settingsCard}>
+          <Text style={styles.cardTitle}>{t.marketing.title}</Text>
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>{t.marketing.email}</Text>
             <ToggleSwitch
               value={marketingEmail}
-              onToggle={() => setMarketingEmail(!marketingEmail)}
+              onToggle={() => toggleConsent('email', !marketingEmail)}
               accessibilityLabel={`${t.marketing.title} · ${t.marketing.email}`}
               testID="account-marketing-email"
             />
@@ -301,12 +485,30 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
             <Text style={styles.switchLabel}>{t.marketing.whatsapp}</Text>
             <ToggleSwitch
               value={marketingWhatsApp}
-              onToggle={() => setMarketingWhatsApp(!marketingWhatsApp)}
+              onToggle={() => toggleConsent('whatsapp', !marketingWhatsApp)}
               accessibilityLabel={`${t.marketing.title} · ${t.marketing.whatsapp}`}
               testID="account-marketing-whatsapp"
             />
           </View>
           <Text style={styles.switchNote}>{t.marketing.note}</Text>
+          {/* Yazılamayan tercih SESSİZ KALMAZ: anahtar eski hâline döndü, sebep burada söylenir —
+              dil ve izin aynı uca gittiği için tek satır ikisini de kapsar. */}
+          {prefsFailed ? <Note description={t.marketing.saveFailed} tone="terracotta" testID="account-prefs-error" /> : null}
+
+          {/* Bölge dışı müşteriye SORU (v3'te yok, kullanıcı kararı 09.08): gerekçe hook künyesinde. */}
+          {outOfZone ? (
+            <View style={styles.zoneBox}>
+              <Text style={styles.zoneTitle}>{t.marketing.zone.title}</Text>
+              <Text style={styles.zoneBody}>
+                {t.marketing.zone.body.replace('{place}', defaultAddress?.city ?? '')}
+              </Text>
+              {interestSent ? (
+                <Text style={styles.zoneDone}>{t.marketing.zone.done}</Text>
+              ) : (
+                <PrimaryButton label={t.marketing.zone.cta} onPress={sendZoneInterest} testID="account-zone-interest" />
+              )}
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.dataCard}>
@@ -384,6 +586,72 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
           />
         </View>
       </BottomSheet>
+
+      {/* ── Adres çekmecesi (v3 `shAddr`, v3:203-215) — etiket + adres + posta kodu/şehir satırı +
+          bölge notu + Kaydet; DÜZENLEMEDE ayrıca "Adresi sil" (v3'ün koşullu `sa.del` linki). */}
+      <BottomSheet
+        visible={addressSheet !== null}
+        title={addressSheet?.editing == null ? t.addresses.sheet.titleNew : t.addresses.sheet.titleEdit}
+        onClose={() => setAddressSheet(null)}
+        testID="account-address-sheet"
+      >
+        <View style={styles.sheetForm}>
+          <TextField
+            value={addressDraft.label}
+            onChangeText={(value) => editAddressDraft({ label: value })}
+            accessibilityLabel={t.addresses.sheet.labelLabel}
+            placeholder={t.addresses.sheet.labelPlaceholder}
+            testID="address-label"
+          />
+          <TextField
+            value={addressDraft.line1}
+            onChangeText={(value) => editAddressDraft({ line1: value })}
+            accessibilityLabel={t.addresses.sheet.lineLabel}
+            placeholder={t.addresses.sheet.linePlaceholder}
+            testID="address-line"
+          />
+          <View style={styles.zipRow}>
+            <View style={styles.zipField}>
+              <TextField
+                value={addressDraft.postalCode}
+                onChangeText={(value) => editAddressDraft({ postalCode: value.replace(/\D/g, '').slice(0, 5) })}
+                accessibilityLabel={t.addresses.sheet.zipLabel}
+                placeholder={t.addresses.sheet.zipPlaceholder}
+                numeric
+                testID="address-zip"
+              />
+            </View>
+            <View style={styles.cityField}>
+              <TextField
+                value={addressDraft.city}
+                onChangeText={(value) => editAddressDraft({ city: value })}
+                accessibilityLabel={t.addresses.sheet.cityLabel}
+                placeholder={t.addresses.sheet.cityPlaceholder}
+                testID="address-city"
+              />
+            </View>
+          </View>
+          <Text style={styles.zipNote}>{t.addresses.sheet.zipNote}</Text>
+          {addressError === null ? null : <Note description={addressError} tone="terracotta" testID="address-error" />}
+          <PrimaryButton
+            label={addressSaving ? t.addresses.sheet.saving : t.addresses.sheet.save}
+            onPress={saveAddress}
+            disabled={addressSaving}
+            testID="address-save"
+          />
+          {addressSheet?.editing == null ? null : (
+            <View style={styles.deleteRow}>
+              <TextAction
+                label={t.addresses.sheet.delete}
+                onPress={removeAddress}
+                tone="terracotta"
+                disabled={addressSaving}
+                testID="address-delete"
+              />
+            </View>
+          )}
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -392,6 +660,20 @@ const styles = StyleSheet.create((theme, rt) => ({
   sheetForm: {
     gap: theme.space.lg,
   },
+  /* Posta kodu dar sabit sütun + şehir kalan genişlik (v3:206-209 — zip 120px, şehir flex). */
+  zipRow: {
+    flexDirection: 'row',
+    gap: theme.space.md,
+  },
+  zipField: { width: 120 },
+  cityField: { flex: 1 },
+  zipNote: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    color: theme.colors.muted,
+  },
+  deleteRow: { alignItems: 'center' },
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
@@ -405,7 +687,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['card-title'],
-    fontWeight: theme.text['page-title-sm--font-weight'],
     color: theme.colors.ink,
     paddingTop: theme.space.sm,
     paddingHorizontal: theme.space['4xl'],
@@ -423,7 +704,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   profileName: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['step-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   profileMeta: {
@@ -441,13 +721,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   companyEyebrow: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors['olive-light'],
   },
   companyName: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.button,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['sand-50'],
   },
   companyMeta: {
@@ -477,13 +755,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   cardTitle: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
-    fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.ink,
   },
   pointsValue: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['h2-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['olive-dark'],
   },
   cardBody: {
@@ -495,7 +771,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   pointsGap: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.helper,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.muted,
   },
   couponRow: {
@@ -513,7 +788,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   couponCode: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.terracotta,
   },
   couponValue: {
@@ -538,7 +812,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['2xl'],
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
     letterSpacing: theme.text['body-sm'] * 0.06,
     color: theme.colors.ink,
     overflow: 'hidden',
@@ -554,8 +827,49 @@ const styles = StyleSheet.create((theme, rt) => ({
   blockTitle: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
-    fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.ink,
+  },
+  /* AYAR KARTI (kullanıcı kararı 09.08 — v3'te yok): adres/dil-yazı/izin bölümleri çıplak zeminde
+     akıyor ve birbirine giriyordu. Yeni bir dil icat edilmedi — "Puanlarım" kartının deseni
+     tekrarlandı (`pointsCard` ile aynı yüzey, yarıçap ve dolgu; başlık kartın İÇİNDE). */
+  settingsCard: {
+    backgroundColor: theme.colors['sand-150'],
+    borderRadius: theme.radius.card,
+    padding: theme.space['3xl'],
+    gap: theme.space.md,
+  },
+  /* Bölge-dışı talep kutusu — kartın içinde İKİNCİ bir yüzey (terracotta ailesi): "bu senin
+     durumun" demenin görsel yolu; kampanya satırlarıyla aynı tonda olsaydı okunmazdı. */
+  zoneBox: {
+    backgroundColor: theme.colors['terracotta-bg'],
+    borderRadius: theme.radius.control,
+    padding: theme.space['2xl'],
+    gap: theme.space.md,
+    marginTop: theme.space.md,
+  },
+  zoneTitle: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text.control,
+    color: theme.colors.terracotta,
+  },
+  zoneBody: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  zoneDone: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text.note,
+    color: theme.colors['olive-dark'],
+  },
+  /* Kart içi ayraç — menü kartının kesikli çizgisi; üstten nefes verir ki satırlar yapışmasın. */
+  settingsDivider: {
+    borderTopWidth: theme.border.base,
+    borderTopColor: theme.colors['sand-400'],
+    borderStyle: 'dashed',
+    paddingTop: theme.space.lg,
+    marginTop: theme.space.xs,
   },
   languageRow: {
     flexDirection: 'row',
@@ -576,7 +890,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   switchLabel: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.ink,
   },
   switchNote: {
@@ -595,7 +908,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   dataTitle: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.helper,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   dataBody: {

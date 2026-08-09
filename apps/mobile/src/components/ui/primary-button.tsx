@@ -81,7 +81,6 @@ const styles = StyleSheet.create((theme) => ({
   label: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.button,
-    fontWeight: theme.text['button--font-weight'],
   },
   // Zeytin dolgunun üstündeki metin paletin saf beyazıdır; ayrı bir "zeytin-üstü" token'ı yok
   // (envantere önerildi — bugün `card` ile aynı değer).

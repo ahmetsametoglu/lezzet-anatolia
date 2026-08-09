@@ -84,7 +84,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
     textAlign: 'center',
   },
   selectedLabel: { color: operationsTheme.colors.card },

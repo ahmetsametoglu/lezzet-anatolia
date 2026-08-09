@@ -174,7 +174,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   label: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    fontWeight: theme.text['eyebrow--font-weight'],
   },
   /* Müşteri tasarımı 10,5/700; ölçekte o durak yok (envanter §3b'nin bilinen açığı). Boy `micro`
      (11,5), ağırlık üstbaşlık kademesinden (700) — `eyebrow` (10) sayıca daha yakın ama harf

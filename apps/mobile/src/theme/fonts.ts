@@ -28,6 +28,15 @@ import { Lora_400Regular, Lora_600SemiBold } from '@expo-google-fonts/lora';
   aileyi sistem fontuna düşürür ve `fontWeight` orada normal şekilde çalışır — yani ilk kare
   fontsuz değil, sistem fontunun doğru ağırlığıyla çizilir. Metrik yakın yedekler (Georgia /
   system-ui) RN'de ayrıca yazılMAZ: platformun kendi düşüşü zaten odur.
+
+  ── STİLLERE `fontWeight` YAZILMAZ (cihaz kanıtı 09.08) ─────────────────────
+  Yukarıdaki "ağırlık aile adının içindedir" kuralının İKİNCİ yarısı: `fontFamily` bu seam'den
+  gelirken stile AYRICA `fontWeight` yazmak, RN yeni mimarisinde aile çözümlemesine karışıyor —
+  motor 'Karla_700Bold' ailesinin '700' kesitini arıyor, tek kesitlik kayıtta bulamıyor ve İKİ
+  platformda da sessizce sistem fontuna düşüyor (Android'de Roboto bastığı için gözle yakalandı:
+  ürün detayında tek satırlık kaldır-karşılaştır deneyiyle kanıtlandı, 285 satır tek geçişte
+  söküldü). Kalınlık zaten ailenin adında; `fontWeight` yalnız fontFamily'siz (sistem fontu)
+  metinlerde meşrudur ve bugün öyle bir kullanım yok.
 */
 
 /**

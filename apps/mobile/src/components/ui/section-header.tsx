@@ -56,7 +56,6 @@ const styles = StyleSheet.create((theme) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     textTransform: 'uppercase',
     color: theme.colors.terracotta,
@@ -66,7 +65,6 @@ const styles = StyleSheet.create((theme) => ({
     // Tasarım bu başlığı 21 px çiziyor; token'da o durak YOK, bölüm başlığının mobil kademesi
     // `h2-sm` (20). Ham değer kodlanmadı — 21'lik durak raporlandı.
     fontSize: theme.text['h2-sm'],
-    fontWeight: theme.text['h2-sm--font-weight'],
     color: theme.colors.ink,
   },
 }));

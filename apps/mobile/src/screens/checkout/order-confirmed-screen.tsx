@@ -110,26 +110,22 @@ const styles = StyleSheet.create((theme, rt) => ({
   markGlyph: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.card,
   },
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['page-title-sm--font-weight'],
     color: theme.colors.ink,
     textAlign: 'center',
   },
   reference: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.muted,
   },
   points: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.terracotta,
     backgroundColor: theme.colors['terracotta-bg'],
     borderRadius: theme.radius.card,

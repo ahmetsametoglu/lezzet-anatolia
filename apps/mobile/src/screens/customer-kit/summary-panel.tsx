@@ -86,7 +86,6 @@ const styles = StyleSheet.create((theme) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     textTransform: 'uppercase',
     color: theme.colors.terracotta,
   },
@@ -103,7 +102,6 @@ const styles = StyleSheet.create((theme) => ({
   oliveLabel: {
     color: theme.colors['olive-dark'],
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontWeight: theme.text['field-label--font-weight'],
   },
   totalRow: {
     flexDirection: 'row',
@@ -118,7 +116,6 @@ const styles = StyleSheet.create((theme) => ({
   totalLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   badgeTilt: {
@@ -137,7 +134,6 @@ const styles = StyleSheet.create((theme) => ({
   badgeLabel: {
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
     fontSize: theme.text['screen-title'],
-    fontWeight: theme.text['screen-title--font-weight'],
   },
   inkBadgeLabel: { color: theme.colors['sand-50'] },
   terracottaBadgeLabel: { color: theme.colors.card },

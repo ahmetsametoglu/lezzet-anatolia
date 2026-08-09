@@ -23,7 +23,6 @@ describe('TextAction', () => {
     expect(screen.getByText('Çıkış yap')).toHaveStyle({
       color: customerColors.terracotta,
       fontSize: baseText.control,
-      fontWeight: baseText['control--font-weight'],
     });
   });
 

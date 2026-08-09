@@ -329,7 +329,6 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   rowSub: {
@@ -350,7 +349,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.badge,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   chipMissing: {
     borderColor: operationsTheme.colors.terracotta,
@@ -376,7 +374,6 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   chipLabelIdle: { color: operationsTheme.colors.ink },
   chipLabelSkipped: { color: operationsTheme.colors.terracotta },
@@ -390,7 +387,6 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.card,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   diffBox: {
@@ -405,21 +401,18 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
   diffRow: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.terracotta,
   },
   warning: {
     marginTop: operationsTheme.space.md,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.terracotta,
   },
   footnote: {
@@ -444,7 +437,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
   },
   notice_ok: {
@@ -473,7 +465,6 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.card,
   },
 });

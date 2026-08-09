@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['badge--font-weight']],
     // v2: `700 10px` — rozetin küçük kademesi (`badge-sm`), aralığı yok (tek sayı).
     fontSize: operationsTheme.text['badge-sm'],
-    fontWeight: operationsTheme.text['badge--font-weight'],
     // Dolu rozet üstünde beyaz: tabandaki `card` tam olarak #ffffff (`operations-app.ts` eşlemesi).
     color: operationsTheme.colors.card,
   },

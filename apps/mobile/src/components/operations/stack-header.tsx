@@ -67,14 +67,12 @@ const styles = StyleSheet.create((_theme, rt) => ({
   title: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['screen-title--font-weight']],
     fontSize: operationsTheme.text['screen-title'],
-    fontWeight: operationsTheme.text['screen-title--font-weight'],
     color: operationsTheme.colors.ink,
   },
   subtitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     // `meta` (10,5) tam bu satır için açıldı — künye satırı, ince yazı ve sekme etiketi (24 kullanım).
     fontSize: operationsTheme.text.meta,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.muted,
   },
 }));

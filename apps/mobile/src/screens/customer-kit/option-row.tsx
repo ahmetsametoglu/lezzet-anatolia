@@ -76,7 +76,6 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   description: {

@@ -222,7 +222,6 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.sm,
@@ -252,7 +251,6 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   rowSub: {
@@ -263,7 +261,6 @@ const styles = StyleSheet.create({
   /** Kapının "sayılmadı" dediği satır — cevaptan gelir, ekran tahmin etmez. */
   rowSubMissing: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.error,
   },
   chevron: {
@@ -293,7 +290,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
   },
   notice_ok: {
@@ -322,7 +318,6 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.card,
   },
 });

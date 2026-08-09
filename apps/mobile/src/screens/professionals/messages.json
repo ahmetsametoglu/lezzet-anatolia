@@ -1,0 +1,137 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Professionnels",
+    "hero": {
+      "eyebrow": "Restoran · Market · Toplu Mutfak",
+      "title": "Toptan fiyatlarla, düzenli teslimat",
+      "body": "Hacimli sipariş kolaylığı, bölge içi düzenli teslimat ve tek dokunuşla tekrar sipariş. Başvurun, hızla dönüş yapalım."
+    },
+    "steps": [
+      "Kaydolun — bir dakikada",
+      "Başvurunuzu inceleyelim — sonuç e-posta ile",
+      "Onayla birlikte fiyat listeniz açılır"
+    ],
+    "form": {
+      "tabSiret": "Fransız şirketi",
+      "tabVat": "Alman şirketi",
+      "siret": "SIRET (14 hane)",
+      "siretNote": "SIRET numaranızı girin ve Bul'a dokunun. Resmî kayıttan otomatik doldurma henüz bağlı değil — şirket bilgilerinizi bir kez siz girersiniz.",
+      "fetch": "Bul",
+      "vatNumber": "USt-IdNr (DE + 9 hane)",
+      "vatValid": "✓ Geçerli",
+      "vatNote": "Numaranızın biçimi kontrol edilir; resmî AB doğrulaması başvurunuzdan sonra yapılır.",
+      "companyTitle": "Şirket bilgileri",
+      "legalName": "Şirket unvanı",
+      "line1": "Sokak ve numara",
+      "postalCode": "Posta kodu",
+      "city": "Şehir",
+      "contactTitle": "İletişim",
+      "contactName": "Ad soyad",
+      "email": "E-posta",
+      "phone": "Telefon (WhatsApp)",
+      "submit": "Başvuruyu gönder"
+    },
+    "errors": {
+      "siretLength": "SIRET 14 haneli olmalı. Bulamadıysanız elle devam edin veya bize yazın.",
+      "incomplete": "Şu alanları kontrol edin: {fields}"
+    },
+    "whatsapp": "Sorunuz mu var? WhatsApp'tan yazın",
+    "whatsappSoon": "WhatsApp sohbeti çok yakında.",
+    "sent": {
+      "title": "Başvurunuz alındı",
+      "body": "İnceliyoruz — sonucu e-posta ile bildireceğiz. Fiyat listeniz onayla birlikte açılır; bu sırada kataloğu perakende fiyatlarla gezebilirsiniz.",
+      "cta": "Kataloğa göz at"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Professionnels",
+    "hero": {
+      "eyebrow": "Restaurant · Épicerie · Cuisine collective",
+      "title": "Tarifs de gros, livraisons régulières",
+      "body": "Commandes en volume, livraisons régulières dans la zone et recommande en un geste. Faites votre demande, nous revenons vers vous rapidement."
+    },
+    "steps": [
+      "Inscrivez-vous — en une minute",
+      "Nous étudions votre demande — réponse par e-mail",
+      "Vos tarifs s'ouvrent avec la validation"
+    ],
+    "form": {
+      "tabSiret": "Société française",
+      "tabVat": "Société allemande",
+      "siret": "SIRET (14 chiffres)",
+      "siretNote": "Saisissez votre numéro SIRET puis touchez Rechercher. Le remplissage automatique depuis le registre officiel n'est pas encore actif — vous saisissez les informations une fois.",
+      "fetch": "Rechercher",
+      "vatNumber": "USt-IdNr (DE + 9 chiffres)",
+      "vatValid": "✓ Valide",
+      "vatNote": "Le format de votre numéro est vérifié ; la validation officielle UE a lieu après votre demande.",
+      "companyTitle": "Informations de l'entreprise",
+      "legalName": "Dénomination sociale",
+      "line1": "Rue et numéro",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "contactTitle": "Contact",
+      "contactName": "Nom et prénom",
+      "email": "E-mail",
+      "phone": "Téléphone (WhatsApp)",
+      "submit": "Envoyer la demande"
+    },
+    "errors": {
+      "siretLength": "Le SIRET compte 14 chiffres. Si vous ne le trouvez pas, continuez manuellement ou écrivez-nous.",
+      "incomplete": "Vérifiez ces champs : {fields}"
+    },
+    "whatsapp": "Une question ? Écrivez-nous sur WhatsApp",
+    "whatsappSoon": "La discussion WhatsApp arrive très bientôt.",
+    "sent": {
+      "title": "Nous avons bien reçu votre demande",
+      "body": "Nous l'étudions — vous recevrez la réponse par e-mail. Vos tarifs de gros s'ouvrent avec la validation ; en attendant, le catalogue reste accessible aux prix de détail.",
+      "cta": "Voir le catalogue"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Professionnels",
+    "hero": {
+      "eyebrow": "Restaurant · Markt · Großküche",
+      "title": "Großhandelspreise, regelmäßige Lieferung",
+      "body": "Große Mengen einfach bestellen, regelmäßige Lieferung im Gebiet und Nachbestellung mit einer Geste. Stellen Sie Ihre Anfrage — wir melden uns zügig."
+    },
+    "steps": [
+      "Anmelden — in einer Minute",
+      "Wir prüfen Ihre Anfrage — Antwort per E-Mail",
+      "Mit der Freigabe öffnet sich Ihre Preisliste"
+    ],
+    "form": {
+      "tabSiret": "Französische Firma",
+      "tabVat": "Deutsche Firma",
+      "siret": "SIRET (14 Ziffern)",
+      "siretNote": "Geben Sie Ihre SIRET-Nummer ein und tippen Sie auf Abrufen. Das automatische Ausfüllen aus dem amtlichen Register ist noch nicht aktiv — Sie tragen die Angaben einmal ein.",
+      "fetch": "Abrufen",
+      "vatNumber": "USt-IdNr. (DE + 9 Ziffern)",
+      "vatValid": "✓ Gültig",
+      "vatNote": "Das Format Ihrer Nummer wird geprüft; die amtliche EU-Prüfung erfolgt nach Ihrer Anfrage.",
+      "companyTitle": "Firmenangaben",
+      "legalName": "Firmenname",
+      "line1": "Straße und Hausnummer",
+      "postalCode": "Postleitzahl",
+      "city": "Stadt",
+      "contactTitle": "Kontakt",
+      "contactName": "Vor- und Nachname",
+      "email": "E-Mail",
+      "phone": "Telefon (WhatsApp)",
+      "submit": "Anfrage senden"
+    },
+    "errors": {
+      "siretLength": "Die SIRET-Nummer hat 14 Ziffern. Wenn Sie sie nicht finden, machen Sie manuell weiter oder schreiben Sie uns.",
+      "incomplete": "Bitte prüfen Sie diese Felder: {fields}"
+    },
+    "whatsapp": "Noch Fragen? Schreiben Sie uns auf WhatsApp",
+    "whatsappSoon": "Der WhatsApp-Chat kommt sehr bald.",
+    "sent": {
+      "title": "Ihre Anfrage ist eingegangen",
+      "body": "Wir prüfen sie — die Antwort erhalten Sie per E-Mail. Ihre Großhandelspreise werden mit der Freigabe sichtbar; in der Zwischenzeit bleibt der Katalog zu Einzelhandelspreisen offen.",
+      "cta": "Zum Katalog"
+    }
+  }
+}

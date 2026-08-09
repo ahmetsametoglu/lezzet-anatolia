@@ -110,7 +110,6 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   rowSub: {
@@ -126,7 +125,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.badge,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   decision_offer_open: {
     backgroundColor: operationsTheme.colors['olive-bg'],
@@ -162,7 +160,6 @@ const styles = StyleSheet.create({
   toAdjustmentLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
 });

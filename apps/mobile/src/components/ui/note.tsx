@@ -73,7 +73,6 @@ const styles = StyleSheet.create((theme) => ({
   title: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
   },
   description: {
     // Ağırlıksız gövde — RN'in varsayılanı da 400; aile o ağırlıkla indekslenir.

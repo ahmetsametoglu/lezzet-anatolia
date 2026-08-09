@@ -21,6 +21,11 @@ import { meFixture } from '@/screens/operations/me-fixture';
 // bağlanmasın (operasyon yüzeyi zaten tek dilli).
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// İlk-açılış kapısı tamamlanmış sayılır (modül-yanı mock — gerekçesi mock dosyasının başlığında):
+// yetkisiz/oturumsuz hâller müşteri köküne düşer ve bayraksız ortamda kapı orayı da onboarding'e
+// çevirirdi; bu testin konusu operasyon kapısı, onboarding değil.
+jest.mock('@/lib/onboarding/onboarding-store');
+
 // `mock` öneki ZORUNLU: `jest.mock` fabrikası dosyanın en üstüne kaldırılıyor ve Babel yalnız bu
 // önekli değişkenlere kapanış izni veriyor (katalog testinin künyesi).
 const mockSession = { access_token: 'test-token' };

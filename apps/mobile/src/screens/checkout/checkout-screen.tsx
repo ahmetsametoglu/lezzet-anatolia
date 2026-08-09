@@ -338,7 +338,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['page-title-sm--font-weight'],
     lineHeight: theme.text['page-title-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,
   },
@@ -355,21 +354,18 @@ const styles = StyleSheet.create((theme, rt) => ({
   signedInLabel: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.ink,
   },
   section: { gap: theme.space.md },
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors.terracotta,
   },
   defaultBadge: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors['olive-dark'],
     backgroundColor: theme.colors['olive-bg'],
     borderRadius: theme.radius.badge,
@@ -406,7 +402,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   checkboxMark: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.card,
   },
   consentLabel: {
@@ -420,7 +415,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     textAlign: 'center',
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.helper,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.terracotta,
   },
 }));

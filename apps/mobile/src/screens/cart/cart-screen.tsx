@@ -299,13 +299,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
     fontSize: theme.text['screen-title'],
-    fontWeight: theme.text['screen-title--font-weight'],
     color: theme.colors.ink,
   },
   count: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.muted,
   },
   content: {
@@ -329,7 +327,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   couponChevron: {
@@ -351,7 +348,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['olive-dark'],
   },
   continueRow: { alignItems: 'center' },
@@ -383,7 +379,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   checkoutLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['step-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.card,
   },
   checkoutTotal: {

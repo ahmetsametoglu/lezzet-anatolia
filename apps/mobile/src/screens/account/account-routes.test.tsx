@@ -11,6 +11,10 @@ import { renderShell } from '@/testing/render-shell';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// İlk-açılış kapısı tamamlanmış sayılır (modül-yanı mock — gerekçesi mock dosyasının başlığında):
+// bayraksız ortamda kök layout her müşteri rotasını onboarding'e çevirirdi; bu testin konusu o değil.
+jest.mock('@/lib/onboarding/onboarding-store');
+
 // Hesap rotası artık oturumu okuyor (`useMe`, 21.14c); bu ortamda Supabase env'i yok — istemci
 // mock'lanır, oturumsuz hâl döner. Rota testinin konusu GÖLGELENME, kimlik hâlleri ekran testinde.
 jest.mock('@/lib/auth/supabase', () => ({

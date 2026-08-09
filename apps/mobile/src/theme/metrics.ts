@@ -78,6 +78,11 @@ export const appMetrics = {
     /** Boş durum ikonu (tasarım: 40–46). */
     emptyIcon: 44,
     /**
+     * Toast'un alt kenardan yüksekliği (tasarım: `bottom:104` — tab çubuğu 88 + 16 nefes).
+     * Cihaz alt inset'i ÜSTÜNE eklenir: çubuk inset kadar büyüyünce mesaj da onunla kalkar.
+     */
+    toastBottom: 104,
+    /**
      * Hata bloğunun ikonu (tasarım: 34). Boş durumdan AYRI bir durak çünkü tasarım onu bilerek
      * küçük çiziyor: hata bloğu kesikli çerçevenin içinde dar bir kutudur ve 44'lük bir ikon
      * orada başlığın önüne geçiyor. Boş durumdaki ikon ise sayfanın tek öğesi.

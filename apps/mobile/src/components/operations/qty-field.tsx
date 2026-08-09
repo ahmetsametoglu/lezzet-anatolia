@@ -82,7 +82,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.body,
-    fontWeight: operationsTheme.text['control--font-weight'],
   },
   /* Genişlikler v2'den ÖLÇÜLDÜ (64 · 70 · 80) ve `space`ten türetiliyor: ölçek dolgu/aralık
      ailesidir, kutunun kendi ölçüsü ondan çıkarılırsa tek yerde değişir. */

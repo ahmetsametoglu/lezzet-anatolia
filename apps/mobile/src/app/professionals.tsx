@@ -1,9 +1,9 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { ProfessionalsScreen } from '@/screens/professionals/professionals-screen';
 
 /*
-  PROFESYONEL HESAP BAŞVURUSU — bugün YER TUTUCU (SIRET/USt-IdNr doğrulaması kendi dilimi).
-  Rota vitrindeki davet kutusunun hedefi.
+  PROFESYONEL HESAP BAŞVURUSU (v3 `vPro`) — vitrindeki davet kutusunun hedefi.
+  Başvuru ucu henüz yok; ekranın kendisi TAM çalışır (künye `professionals-screen.tsx`).
 */
 export default function ProfessionalsRoute() {
-  return <ScreenPlaceholder title="Professionnels" />;
+  return <ProfessionalsScreen />;
 }

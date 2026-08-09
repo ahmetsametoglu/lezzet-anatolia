@@ -2,6 +2,7 @@
   "tr": {
     "header": "Hazır Paket",
     "back": "Geri",
+    "addedToast": "Paket sepete eklendi ✓",
     "share": "Paylaş",
     "priceSuffix": "tek paket fiyatı · KDV dahil",
     "noShip": "Yalnız bölge içi kapıya teslim — kargoya verilmez",
@@ -34,6 +35,7 @@
   "fr": {
     "header": "Panier prêt",
     "back": "Retour",
+    "addedToast": "Coffret ajouté au panier ✓",
     "share": "Partager",
     "priceSuffix": "prix du panier complet · TVA incluse",
     "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
@@ -66,6 +68,7 @@
   "de": {
     "header": "Fertiges Paket",
     "back": "Zurück",
+    "addedToast": "Paket zum Warenkorb hinzugefügt ✓",
     "share": "Teilen",
     "priceSuffix": "Preis für das ganze Paket · inkl. MwSt.",
     "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",

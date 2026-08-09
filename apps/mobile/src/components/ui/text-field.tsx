@@ -137,7 +137,6 @@ const styles = StyleSheet.create((theme) => ({
   label: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['field-label'],
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.ink,
   },
   helper: {

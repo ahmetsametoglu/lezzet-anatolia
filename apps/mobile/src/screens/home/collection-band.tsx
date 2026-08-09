@@ -133,18 +133,15 @@ const styles = StyleSheet.create((theme) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
   },
   title: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     fontSize: theme.text['h2-sm'],
-    fontWeight: theme.text['h2-sm--font-weight'],
     lineHeight: theme.text['h2-sm'] * theme.text['h1--line-height'],
   },
   count: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.helper,
-    fontWeight: theme.text['button--font-weight'],
   },
   oliveAccent: { color: theme.colors['olive-light'] },
   oliveTitle: { color: theme.colors['sand-50'] },

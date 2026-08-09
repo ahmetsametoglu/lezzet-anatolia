@@ -21,6 +21,17 @@ jest.mock('@/lib/auth/supabase', () => ({
 const mockGoogle = jest.fn(async (): Promise<{ error: string | null }> => ({ error: null }));
 jest.mock('@/lib/auth/oauth', () => ({ signInWithGoogle: () => mockGoogle() }));
 
+const mockDevSignIn = jest.fn(async (_email: string): Promise<{ error: string | null }> => ({ error: null }));
+jest.mock('@/lib/auth/dev-login', () => ({
+  DEV_CUSTOMER_EMAIL: 'musteri@test.local',
+  DEV_ADMIN_EMAIL: 'admin@test.local',
+  devSignIn: (email: string) => mockDevSignIn(email),
+}));
+
+// Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı bırakmasın.
+const mockToast = jest.fn();
+jest.mock('@/lib/toast/toast-store', () => ({ publishToast: (m: string) => mockToast(m) }));
+
 /** Üç yollu seçim aşamasından e-posta yoluna iner — akış testlerinin ortak girişi. */
 async function toEmailStage() {
   await fireEvent.press(screen.getByTestId('login-email'));
@@ -52,6 +63,8 @@ beforeEach(() => {
   mockRouter.back.mockReset();
   mockSetSession.mockClear();
   mockGoogle.mockClear();
+  mockDevSignIn.mockClear();
+  mockToast.mockReset();
 });
 
 describe('hızlı doğrulama', () => {
@@ -67,16 +80,19 @@ describe('hızlı doğrulama', () => {
     expect(mockRouter.back).not.toHaveBeenCalled();
   });
 
-  it('Google yolu gerçek OAuth akışını çağırır; başarıda ekran kapanır', async () => {
+  it('Google yolu tarayıcıyı AÇAR ve ekranda bekleme kurmaz — devamı /auth/callback rotasının', async () => {
     await render(<LoginScreen />);
 
     await fireEvent.press(screen.getByTestId('login-google'));
 
     await waitFor(() => expect(mockGoogle).toHaveBeenCalled());
-    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+    // Ekran kapanmaz, 'verifying' de basılmaz: dönüş derin bağlantısı rotada işlenir.
+    expect(mockRouter.back).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('login-busy')).toBeNull();
+    expect(screen.getByTestId('login-google')).toBeOnTheScreen();
   });
 
-  it('Google arızasında seçim aşamasına dönülür ve sebep söylenir', async () => {
+  it('Google arızasında seçim aşamasında sebep söylenir', async () => {
     mockGoogle.mockResolvedValueOnce({ error: 'google_unavailable' });
     await render(<LoginScreen />);
 
@@ -85,6 +101,32 @@ describe('hızlı doğrulama', () => {
     await waitFor(() =>
       expect(screen.getByTestId('login-notice')).toHaveTextContent('Google ile giriş şu an kullanılamıyor — e-posta ile deneyin.'),
     );
+    expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('OAuth dönüş rotasının bıraktığı adlı ret açılışta söylenir (initialNotice)', async () => {
+    await render(<LoginScreen initialNotice="oauth_failed" />);
+
+    expect(screen.getByTestId('login-notice')).toBeOnTheScreen();
+  });
+
+  it('dev test düğmeleri GERÇEK giriş akışını çağırır; başarı done akışına biner (toast + kapanış)', async () => {
+    await render(<LoginScreen />);
+
+    await fireEvent.press(screen.getByTestId('login-dev-customer'));
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('musteri@test.local'));
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+    expect(mockToast).toHaveBeenCalled();
+  });
+
+  it('dev operasyon düğmesi admin e-postasıyla çağırır; ret seçim aşamasında söylenir', async () => {
+    mockDevSignIn.mockResolvedValueOnce({ error: 'dev_session_failed' });
+    await render(<LoginScreen />);
+
+    await fireEvent.press(screen.getByTestId('login-dev-admin'));
+
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('admin@test.local'));
+    await waitFor(() => expect(screen.getByTestId('login-notice')).toBeOnTheScreen());
     expect(mockRouter.back).not.toHaveBeenCalled();
   });
 

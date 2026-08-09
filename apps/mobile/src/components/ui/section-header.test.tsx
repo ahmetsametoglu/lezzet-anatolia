@@ -37,7 +37,6 @@ describe('SectionHeader', () => {
 
     expect(screen.getByText('Hazır paketler')).toHaveStyle({
       fontSize: appText.eyebrow,
-      fontWeight: appText['eyebrow--font-weight'],
       letterSpacing: emToDp(appText['eyebrow--letter-spacing'], appText.eyebrow),
       color: customerColors.terracotta,
     });

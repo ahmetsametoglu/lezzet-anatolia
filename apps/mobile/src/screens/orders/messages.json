@@ -21,37 +21,72 @@
       "body": "İlk siparişinizi verin — teslimatta burada canlı takip edin.",
       "cta": "Kataloğa göz at"
     },
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "Siparişleriniz getirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    },
     "row": {
       "meta": "{date} · {count} ürün",
       "more": "+{n}",
-      "reorder": "↻ Tekrar sipariş",
       "detail": "Detay ›",
       "open": "{reference} siparişinin detayı"
+    },
+    "list": {
+      "loading": "Yükleniyor…",
+      "end": "Tüm siparişleriniz listede.",
+      "tailRetry": "Devamı gelmedi — tekrar dene"
     },
     "detail": {
       "notFound": "Bu sipariş bulunamadı",
       "notFoundBody": "Bağlantı eski olabilir. Sipariş listenizden yeniden açın.",
       "notFoundCta": "Siparişlerim",
-      "tracking": "Kurye yolda · tahmini {eta}",
+      "tracking": "Kurye yolda",
       "trackingLive": "Canlı takip",
       "itemsEyebrow": "Sipariş içeriği",
       "line": "{quantity}× {name}",
+      "bundlePill": "Paket · {count} ürün",
+      "shortfallRefund": "{ordered} sipariş edildi, {fulfilled} gönderildi — {amount} fark ödemenize iade edilir.",
+      "shortfallDoor": "{ordered} sipariş edildi, {fulfilled} gönderildi — tahsilat güncel tutardan yapılır.",
+      "subtotal": "Ara toplam",
+      "discount": "İndirim",
+      "shipping": "Teslimat ücreti",
+      "shippingFree": "Ücretsiz",
       "delivery": "Teslimat",
+      "deliveryRoute": "Kapıya teslim",
+      "deliveryShipping": "Kargo ile",
       "address": "Adres",
       "payment": "Ödeme",
       "total": "Toplam",
-      "reorder": "↻ Tekrar sipariş ver",
-      "feedback": "★ Ürünleri değerlendir",
+      "cancelled": "Bu sipariş iptal edildi",
+      "returning": "İade süreci sürüyor",
       "support": "Bir sorun mu var? Bize yazın",
-      "timeline": {
+      "carrierLabel": "Kargo",
+      "trackingNumber": "Takip no",
+      "trackingCta": "Kargoyu takip et ↗",
+      "carrier": {
+        "colissimo": "Colissimo",
+        "chronopost": "Chronopost",
+        "dhl": "DHL",
+        "ups": "UPS",
+        "other": "Kargo firması"
+      },
+      "pay": {
+        "online": "Online ödendi",
+        "door": "Kapıda ödenecek",
+        "transfer": "Havale bekleniyor",
+        "credit": "Vadeli (B2B)",
+        "refunded": "İade edildi"
+      },
+      "milestone": {
         "received": "Sipariş alındı",
-        "preparing": "Hazırlanıyor",
+        "prepared": "Hazırlandı",
         "on_the_way": "Yolda",
         "delivered": "Teslim edildi"
       },
       "note": {
         "received": "Siparişiniz onaylandı",
-        "preparing": "Siparişiniz özenle paketleniyor",
+        "prepared": "Siparişiniz özenle paketlendi",
         "on_the_way": "Kurye bölgenizde — kapınıza yaklaşıyor"
       }
     }
@@ -78,37 +113,72 @@
       "body": "Passez votre première commande — suivez la livraison en direct ici.",
       "cta": "Parcourir le catalogue"
     },
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vos commandes n'ont pas pu être chargées. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
     "row": {
       "meta": "{date} · {count} articles",
       "more": "+{n}",
-      "reorder": "↻ Recommander",
       "detail": "Détail ›",
       "open": "Détail de la commande {reference}"
+    },
+    "list": {
+      "loading": "Chargement…",
+      "end": "Toutes vos commandes sont affichées.",
+      "tailRetry": "La suite n'est pas arrivée — réessayer"
     },
     "detail": {
       "notFound": "Commande introuvable",
       "notFoundBody": "Le lien est peut-être périmé. Ouvrez-la depuis votre liste de commandes.",
       "notFoundCta": "Mes commandes",
-      "tracking": "Livreur en route · env. {eta}",
+      "tracking": "Livreur en route",
       "trackingLive": "Suivi en direct",
       "itemsEyebrow": "Contenu de la commande",
       "line": "{quantity}× {name}",
+      "bundlePill": "Coffret · {count} produits",
+      "shortfallRefund": "{ordered} commandés, {fulfilled} livrés — la différence de {amount} vous est remboursée.",
+      "shortfallDoor": "{ordered} commandés, {fulfilled} livrés — seul le montant réel est encaissé.",
+      "subtotal": "Sous-total",
+      "discount": "Remise",
+      "shipping": "Frais de livraison",
+      "shippingFree": "Offerte",
       "delivery": "Livraison",
+      "deliveryRoute": "Livraison à domicile",
+      "deliveryShipping": "Par colis",
       "address": "Adresse",
       "payment": "Paiement",
       "total": "Total",
-      "reorder": "↻ Recommander",
-      "feedback": "★ Évaluer les produits",
+      "cancelled": "Cette commande a été annulée",
+      "returning": "Un retour est en cours",
       "support": "Un souci ? Écrivez-nous",
-      "timeline": {
+      "carrierLabel": "Transporteur",
+      "trackingNumber": "N° de suivi",
+      "trackingCta": "Suivre mon colis ↗",
+      "carrier": {
+        "colissimo": "Colissimo",
+        "chronopost": "Chronopost",
+        "dhl": "DHL",
+        "ups": "UPS",
+        "other": "Transporteur"
+      },
+      "pay": {
+        "online": "Payé en ligne",
+        "door": "À régler à la livraison",
+        "transfer": "Virement en attente",
+        "credit": "À terme (B2B)",
+        "refunded": "Remboursé"
+      },
+      "milestone": {
         "received": "Commande reçue",
-        "preparing": "En préparation",
+        "prepared": "Préparée",
         "on_the_way": "En route",
         "delivered": "Livrée"
       },
       "note": {
         "received": "Votre commande est confirmée",
-        "preparing": "Votre commande est emballée avec soin",
+        "prepared": "Votre commande a été emballée avec soin",
         "on_the_way": "Le livreur est dans votre quartier"
       }
     }
@@ -135,37 +205,72 @@
       "body": "Geben Sie Ihre erste Bestellung auf — verfolgen Sie die Lieferung hier live.",
       "cta": "Katalog ansehen"
     },
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Ihre Bestellungen konnten nicht geladen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
     "row": {
       "meta": "{date} · {count} Artikel",
       "more": "+{n}",
-      "reorder": "↻ Erneut bestellen",
       "detail": "Detail ›",
       "open": "Detail der Bestellung {reference}"
+    },
+    "list": {
+      "loading": "Wird geladen…",
+      "end": "Alle Ihre Bestellungen werden angezeigt.",
+      "tailRetry": "Fortsetzung fehlt — erneut versuchen"
     },
     "detail": {
       "notFound": "Bestellung nicht gefunden",
       "notFoundBody": "Der Link ist womöglich veraltet. Öffnen Sie sie aus Ihrer Bestellliste.",
       "notFoundCta": "Meine Bestellungen",
-      "tracking": "Kurier unterwegs · ca. {eta}",
+      "tracking": "Kurier unterwegs",
       "trackingLive": "Live-Verfolgung",
       "itemsEyebrow": "Bestellinhalt",
       "line": "{quantity}× {name}",
+      "bundlePill": "Paket · {count} Produkte",
+      "shortfallRefund": "{ordered} bestellt, {fulfilled} geliefert — die Differenz von {amount} wird erstattet.",
+      "shortfallDoor": "{ordered} bestellt, {fulfilled} geliefert — es wird nur der tatsächliche Betrag kassiert.",
+      "subtotal": "Zwischensumme",
+      "discount": "Rabatt",
+      "shipping": "Lieferkosten",
+      "shippingFree": "Kostenlos",
       "delivery": "Lieferung",
+      "deliveryRoute": "Lieferung an die Tür",
+      "deliveryShipping": "Per Versand",
       "address": "Adresse",
       "payment": "Zahlung",
       "total": "Gesamt",
-      "reorder": "↻ Erneut bestellen",
-      "feedback": "★ Produkte bewerten",
+      "cancelled": "Diese Bestellung wurde storniert",
+      "returning": "Eine Rückgabe ist im Gange",
       "support": "Ein Problem? Schreiben Sie uns",
-      "timeline": {
+      "carrierLabel": "Versand",
+      "trackingNumber": "Sendungsnummer",
+      "trackingCta": "Sendung verfolgen ↗",
+      "carrier": {
+        "colissimo": "Colissimo",
+        "chronopost": "Chronopost",
+        "dhl": "DHL",
+        "ups": "UPS",
+        "other": "Versanddienstleister"
+      },
+      "pay": {
+        "online": "Online bezahlt",
+        "door": "Bei Lieferung zu zahlen",
+        "transfer": "Überweisung ausstehend",
+        "credit": "Auf Rechnung (B2B)",
+        "refunded": "Erstattet"
+      },
+      "milestone": {
         "received": "Bestellung eingegangen",
-        "preparing": "In Vorbereitung",
+        "prepared": "Vorbereitet",
         "on_the_way": "Unterwegs",
         "delivered": "Geliefert"
       },
       "note": {
         "received": "Ihre Bestellung ist bestätigt",
-        "preparing": "Ihre Bestellung wird sorgfältig verpackt",
+        "prepared": "Ihre Bestellung wurde sorgfältig verpackt",
         "on_the_way": "Der Kurier ist in Ihrer Nähe"
       }
     }

@@ -305,7 +305,6 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     // Harf aralığı token'da `em` (yazı boyuna göreli) tutulur; RN mutlak dp ister — çeviri
     // `emToDp` ile, tek yerden (`theme/parse.ts` künyesi).
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
@@ -340,7 +339,6 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   rowSub: {
@@ -370,7 +368,6 @@ const styles = StyleSheet.create({
   completeLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   completeLabelOn: { color: operationsTheme.colors.card },
   completeLabelOff: { color: operationsTheme.colors['olive-dark'] },
@@ -383,18 +380,15 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.terracotta,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   shortHint: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.terracotta,
   },
   shortReported: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.muted,
   },
   footnote: {
@@ -419,7 +413,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
   },
   notice_ok: {
@@ -449,7 +442,6 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   ctaLabelReady: { color: operationsTheme.colors.card },
   ctaLabelIdle: { color: operationsTheme.colors.card },

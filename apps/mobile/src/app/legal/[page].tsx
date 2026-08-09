@@ -1,13 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { LegalScreen } from '@/screens/legal/legal-screen';
 
 /*
-  BİLGİ SAYFALARI (gizlilik · teslimat · satış koşulları · SSS) — bugün YER TUTUCU; içerik web
-  yüzeyinde yaşıyor ve uygulamaya taşınması kendi dilimi. Rota giriş ekranının gizlilik
-  bağlantısı ve hesap ekranındaki bilgi satırları için var.
+  BİLGİ SAYFALARI (teslimat & iade · SSS · gizlilik · satış koşulları · yasal bilgiler) — TEK rota,
+  beş belge. Anahtar YOLDA taşınır; ekran tanımadığı anahtarda "bu sayfa yok" bloğunu çizer.
+  Çağıranlar: giriş ekranının gizlilik bağı, hesap menüsü, checkout ve sipariş detayı.
 */
 export default function LegalRoute() {
   const { page } = useLocalSearchParams<{ page: string }>();
-  return <ScreenPlaceholder title={page} />;
+  return <LegalScreen page={page} />;
 }

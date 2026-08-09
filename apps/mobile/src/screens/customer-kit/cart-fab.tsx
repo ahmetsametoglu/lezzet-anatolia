@@ -74,7 +74,6 @@ const styles = StyleSheet.create((theme) => ({
   badgeLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.card,
   },
 }));

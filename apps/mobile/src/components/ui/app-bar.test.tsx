@@ -27,7 +27,6 @@ describe('AppBar', () => {
 
     expect(screen.getByRole('header')).toHaveStyle({
       fontSize: appText['screen-title'],
-      fontWeight: appText['screen-title--font-weight'],
       color: customerColors.ink,
     });
     expect(screen.getByTestId('bar')).toHaveStyle({

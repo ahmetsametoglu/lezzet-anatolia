@@ -77,6 +77,5 @@ const styles = StyleSheet.create((theme) => ({
     // Tasarım çipi 12,5 çiziyor; kontrol kademelerinde yuvarlama YOK kuralı gereği token'ın
     // kendi durağı kullanıldı (`control` 13,5/700). 12,5'lik durak raporlandı.
     fontSize: theme.text.control,
-    fontWeight: theme.text['control--font-weight'],
   },
 }));

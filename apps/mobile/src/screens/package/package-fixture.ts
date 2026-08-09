@@ -8,7 +8,7 @@ import type { PackageDetail, PackageItem } from '@lezzet/types';
 */
 
 /** İçerik satırı — ürün adı + boy etiketi + adet; slug ürün detayına açılan kapı. */
-export function packageItem(index: number, overrides: Partial<PackageItem> = {}): PackageItem {
+function packageItem(index: number, overrides: Partial<PackageItem> = {}): PackageItem {
   return {
     slug: `paket-urunu-${index}`,
     name: `Paket Ürünü ${index}`,

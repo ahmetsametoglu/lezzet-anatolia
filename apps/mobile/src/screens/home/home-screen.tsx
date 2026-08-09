@@ -12,6 +12,7 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Tag } from '@/components/ui/tag';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { publishToast } from '@/lib/toast/toast-store';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
@@ -245,7 +246,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               label={t.flash.add}
               tone="cream"
               rotate={-3}
-              onPress={() =>
+              onPress={() => {
                 addProduct({
                   id: `${flashDeal.slug}-default`,
                   slug: flashDeal.slug,
@@ -255,8 +256,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   photoUri: flashDeal.photoUri,
                   discounted: true,
                   soldOut: false,
-                })
-              }
+                });
+                publishToast(t.flash.addedToast);
+              }}
               accessibilityLabel={t.flash.addLabel.replace('{name}', flashDeal.name)}
               testID="home-flash-add"
             />
@@ -514,7 +516,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     // Şablon 27; ölçekte en yakın durak `page-title-sm` (26).
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['page-title-sm--font-weight'],
     lineHeight: theme.text['page-title-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,
   },
@@ -522,7 +523,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   location: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     letterSpacing: theme.text.micro * 0.08,
     color: theme.colors.terracotta,
   },
@@ -554,7 +554,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   bellBadgeLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.card,
   },
 
@@ -573,7 +572,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   liveTitle: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['sand-50'],
   },
   liveDay: {
@@ -591,7 +589,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   trackLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['ink-deep'],
   },
   repeatBand: {
@@ -608,7 +605,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   repeatTitle: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   repeatBody: {
@@ -639,7 +635,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   flashEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     // Şablonun `.16em`i ile kitin üstbaşlık aralığı (.18em) arasındaki fark ölçülemez; token kazanır.
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['terracotta-line'],
@@ -647,7 +642,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   flashName: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     fontSize: theme.text['h2-sm'],
-    fontWeight: theme.text['h2-sm--font-weight'],
     color: theme.colors['sand-50'],
   },
   flashPriceRow: {
@@ -660,7 +654,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   flashPrice: {
     fontFamily: theme.font.body[theme.text['step-sm--font-weight']],
     fontSize: theme.text['step-sm'],
-    fontWeight: theme.text['step-sm--font-weight'],
     color: theme.colors['olive-light'],
   },
   flashWas: {
@@ -696,7 +689,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   flashInitial: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     color: theme.colors.muted,
   },
 
@@ -730,21 +722,18 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   offerInitial: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
-    fontWeight: theme.text['h2-sm--font-weight'],
     color: theme.colors.muted,
   },
   offerText: { gap: theme.space['2xs'] },
   offerName: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.helper,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   offerPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: theme.space.sm },
   offerPrice: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.terracotta,
   },
   offerWas: {
@@ -756,7 +745,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   offerLimit: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     color: theme.colors.terracotta,
   },
 
@@ -772,7 +760,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   sectionEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors.terracotta,
     paddingHorizontal: theme.space['6xl'],
@@ -786,13 +773,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   tileTitle: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
-    fontWeight: theme.text['h2-sm--font-weight'],
     color: theme.colors['on-image'],
   },
   tileMeta: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['olive-light'],
   },
   packages: {
@@ -809,7 +794,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   packageEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
   },
@@ -824,7 +808,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   packagePriceLabel: {
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
     fontSize: theme.text['screen-title'],
-    fontWeight: theme.text['screen-title--font-weight'],
     color: theme.colors.card,
   },
 
@@ -843,7 +826,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   inviteArrow: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.olive,
   },
 

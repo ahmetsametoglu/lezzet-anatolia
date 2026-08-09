@@ -13,23 +13,6 @@
       "phoneNote": "Telefon numaranız WhatsApp bildirimleri için kullanılır.",
       "save": "Kaydet",
       "saved": "Profil güncellendi ✓",
-      "address": {
-        "newTitle": "Yeni adres",
-        "editTitle": "Adresi düzenle",
-        "labelLabel": "Adres etiketi",
-        "labelPlaceholder": "Etiket (Ev, İş)",
-        "streetLabel": "Sokak ve numara",
-        "streetPlaceholder": "Adres",
-        "zipLabel": "Posta kodu",
-        "zipPlaceholder": "Posta kodu",
-        "cityLabel": "Şehir",
-        "cityPlaceholder": "Şehir",
-        "save": "Kaydet",
-        "delete": "Adresi sil",
-        "error": "Etiket, adres ve posta kodu gerekli.",
-        "saved": "Adres kaydedildi ✓",
-        "deleted": "Adres silindi"
-      },
       "errors": {
         "name_required": "Ad boş olamaz.",
         "phone_invalid": "Telefon numarası çözülemedi — kontrol edin.",
@@ -79,7 +62,28 @@
       "makeDefaultLabel": "{label} adresini varsayılan yap",
       "edit": "Düzenle",
       "editLabel": "{label} adresini düzenle",
-      "add": "＋ Yeni adres ekle"
+      "add": "＋ Yeni adres ekle",
+      "defaultDone": "{label} varsayılan yapıldı",
+      "loadError": "Adresler yüklenemedi — sayfayı yeniden açın.",
+      "sheet": {
+        "titleNew": "Yeni adres",
+        "titleEdit": "Adresi düzenle",
+        "labelLabel": "Adres etiketi",
+        "labelPlaceholder": "Etiket (Ev, Ofis…)",
+        "lineLabel": "Sokak ve numara",
+        "linePlaceholder": "Adres",
+        "zipLabel": "Posta kodu",
+        "zipPlaceholder": "Posta kodu",
+        "cityLabel": "Şehir",
+        "cityPlaceholder": "Şehir",
+        "zipNote": "67 ile başlayan posta kodları teslimat bölgemizdedir — kapıya ücretsiz teslim.",
+        "save": "Kaydet",
+        "saving": "Kaydediliyor…",
+        "delete": "Adresi sil",
+        "deleted": "Adres silindi",
+        "error": "Adres, posta kodu (5 hane) ve şehir gerekli.",
+        "unexpected": "Kaydedilemedi — yeniden deneyin."
+      }
     },
     "language": {
       "title": "Dil tercihi",
@@ -87,11 +91,25 @@
       "fr": "Français",
       "de": "Deutsch"
     },
+    "fontSize": {
+      "title": "Yazı boyutu",
+      "small": "Küçük",
+      "normal": "Normal",
+      "large": "Büyük"
+    },
     "marketing": {
       "title": "Kampanya iletişimi",
       "email": "E-posta",
       "whatsapp": "WhatsApp",
-      "note": "Kapalıyken hiçbir kampanya iletişimi almazsınız. Sipariş bildirimleri bundan etkilenmez."
+      "note": "Kapalıyken hiçbir kampanya iletişimi almazsınız. Sipariş bildirimleri bundan etkilenmez.",
+      "zone": {
+        "title": "Bölgemizin dışındasınız",
+        "body": "{place} için şu an yalnız kargolanabilir ürünleri gösterebiliyoruz. Buraya kendi soğutuculu aracımızla teslimat açmamızı ister misiniz? Talebiniz, hattı nereye açacağımıza karar verirken sayılır — hat açıldığında da açık bıraktığınız kanaldan haber veririz.",
+        "cta": "Buraya teslimat açılsın istiyorum",
+        "done": "Talebiniz alındı — hat açıldığında haber vereceğiz ✓",
+        "sent": "Talebiniz alındı ✓"
+      },
+      "saveFailed": "Tercihiniz kaydedilemedi — yeniden deneyin."
     },
     "data": {
       "title": "Verileriniz",
@@ -114,23 +132,6 @@
       "phoneNote": "Votre numéro sert aux notifications WhatsApp.",
       "save": "Enregistrer",
       "saved": "Profil mis à jour ✓",
-      "address": {
-        "newTitle": "Nouvelle adresse",
-        "editTitle": "Modifier l'adresse",
-        "labelLabel": "Libellé de l'adresse",
-        "labelPlaceholder": "Libellé (Maison, Bureau)",
-        "streetLabel": "Rue et numéro",
-        "streetPlaceholder": "Adresse",
-        "zipLabel": "Code postal",
-        "zipPlaceholder": "Code postal",
-        "cityLabel": "Ville",
-        "cityPlaceholder": "Ville",
-        "save": "Enregistrer",
-        "delete": "Supprimer l'adresse",
-        "error": "Libellé, adresse et code postal sont requis.",
-        "saved": "Adresse enregistrée ✓",
-        "deleted": "Adresse supprimée"
-      },
       "errors": {
         "name_required": "Le nom ne peut pas être vide.",
         "phone_invalid": "Le numéro n'a pas pu être interprété — vérifiez-le.",
@@ -180,7 +181,28 @@
       "makeDefaultLabel": "Définir {label} comme adresse par défaut",
       "edit": "Modifier",
       "editLabel": "Modifier l'adresse {label}",
-      "add": "＋ Ajouter une adresse"
+      "add": "＋ Ajouter une adresse",
+      "defaultDone": "{label} définie par défaut",
+      "loadError": "Impossible de charger les adresses — rouvrez la page.",
+      "sheet": {
+        "titleNew": "Nouvelle adresse",
+        "titleEdit": "Modifier l'adresse",
+        "labelLabel": "Libellé de l'adresse",
+        "labelPlaceholder": "Libellé (Maison, Bureau…)",
+        "lineLabel": "Rue et numéro",
+        "linePlaceholder": "Adresse",
+        "zipLabel": "Code postal",
+        "zipPlaceholder": "Code postal",
+        "cityLabel": "Ville",
+        "cityPlaceholder": "Ville",
+        "zipNote": "Les codes postaux commençant par 67 sont dans notre zone de livraison — livraison gratuite à domicile.",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "delete": "Supprimer l'adresse",
+        "deleted": "Adresse supprimée",
+        "error": "Adresse, code postal (5 chiffres) et ville sont requis.",
+        "unexpected": "Impossible d'enregistrer — réessayez."
+      }
     },
     "language": {
       "title": "Langue",
@@ -188,11 +210,25 @@
       "fr": "Français",
       "de": "Deutsch"
     },
+    "fontSize": {
+      "title": "Taille du texte",
+      "small": "Petit",
+      "normal": "Normal",
+      "large": "Grand"
+    },
     "marketing": {
       "title": "Communications commerciales",
       "email": "E-mail",
       "whatsapp": "WhatsApp",
-      "note": "Désactivé, vous ne recevez aucune communication commerciale. Les notifications de commande ne sont pas concernées."
+      "note": "Désactivé, vous ne recevez aucune communication commerciale. Les notifications de commande ne sont pas concernées.",
+      "zone": {
+        "title": "Vous êtes hors de notre zone",
+        "body": "Pour {place}, nous ne pouvons afficher que les produits expédiables. Souhaitez-vous que nous ouvrions la livraison par notre véhicule réfrigéré ici ? Votre demande compte dans le choix des prochaines zones — et nous vous préviendrons par le canal que vous laissez ouvert.",
+        "cta": "Je veux la livraison ici",
+        "done": "Demande enregistrée — nous vous préviendrons à l’ouverture ✓",
+        "sent": "Demande enregistrée ✓"
+      },
+      "saveFailed": "Votre préférence n’a pas pu être enregistrée — réessayez."
     },
     "data": {
       "title": "Vos données",
@@ -215,23 +251,6 @@
       "phoneNote": "Ihre Nummer wird für WhatsApp-Benachrichtigungen genutzt.",
       "save": "Speichern",
       "saved": "Profil aktualisiert ✓",
-      "address": {
-        "newTitle": "Neue Adresse",
-        "editTitle": "Adresse bearbeiten",
-        "labelLabel": "Adressbezeichnung",
-        "labelPlaceholder": "Bezeichnung (Zuhause, Büro)",
-        "streetLabel": "Straße und Hausnummer",
-        "streetPlaceholder": "Adresse",
-        "zipLabel": "Postleitzahl",
-        "zipPlaceholder": "Postleitzahl",
-        "cityLabel": "Stadt",
-        "cityPlaceholder": "Stadt",
-        "save": "Speichern",
-        "delete": "Adresse löschen",
-        "error": "Bezeichnung, Adresse und Postleitzahl sind erforderlich.",
-        "saved": "Adresse gespeichert ✓",
-        "deleted": "Adresse gelöscht"
-      },
       "errors": {
         "name_required": "Der Name darf nicht leer sein.",
         "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden — bitte prüfen.",
@@ -281,7 +300,28 @@
       "makeDefaultLabel": "{label} als Standardadresse festlegen",
       "edit": "Bearbeiten",
       "editLabel": "Adresse {label} bearbeiten",
-      "add": "＋ Neue Adresse"
+      "add": "＋ Neue Adresse",
+      "defaultDone": "{label} als Standard festgelegt",
+      "loadError": "Adressen konnten nicht geladen werden — Seite erneut öffnen.",
+      "sheet": {
+        "titleNew": "Neue Adresse",
+        "titleEdit": "Adresse bearbeiten",
+        "labelLabel": "Adressbezeichnung",
+        "labelPlaceholder": "Bezeichnung (Zuhause, Büro…)",
+        "lineLabel": "Straße und Hausnummer",
+        "linePlaceholder": "Adresse",
+        "zipLabel": "Postleitzahl",
+        "zipPlaceholder": "Postleitzahl",
+        "cityLabel": "Stadt",
+        "cityPlaceholder": "Stadt",
+        "zipNote": "Postleitzahlen, die mit 67 beginnen, liegen in unserem Liefergebiet — kostenlose Lieferung an die Tür.",
+        "save": "Speichern",
+        "saving": "Wird gespeichert…",
+        "delete": "Adresse löschen",
+        "deleted": "Adresse gelöscht",
+        "error": "Adresse, Postleitzahl (5 Ziffern) und Stadt sind erforderlich.",
+        "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
+      }
     },
     "language": {
       "title": "Sprache",
@@ -289,11 +329,25 @@
       "fr": "Français",
       "de": "Deutsch"
     },
+    "fontSize": {
+      "title": "Textgröße",
+      "small": "Klein",
+      "normal": "Normal",
+      "large": "Groß"
+    },
     "marketing": {
       "title": "Werbekommunikation",
       "email": "E-Mail",
       "whatsapp": "WhatsApp",
-      "note": "Ausgeschaltet erhalten Sie keinerlei Werbekommunikation. Bestellbenachrichtigungen sind davon nicht betroffen."
+      "note": "Ausgeschaltet erhalten Sie keinerlei Werbekommunikation. Bestellbenachrichtigungen sind davon nicht betroffen.",
+      "zone": {
+        "title": "Sie liegen außerhalb unseres Gebiets",
+        "body": "Für {place} können wir derzeit nur versandfähige Produkte zeigen. Sollen wir hier die Lieferung mit unserem Kühlfahrzeug öffnen? Ihre Anfrage zählt bei der Wahl der nächsten Gebiete — und wir melden uns über den Kanal, den Sie offen lassen.",
+        "cta": "Ich möchte Lieferung hierher",
+        "done": "Anfrage aufgenommen — wir melden uns bei Eröffnung ✓",
+        "sent": "Anfrage aufgenommen ✓"
+      },
+      "saveFailed": "Ihre Einstellung konnte nicht gespeichert werden — bitte erneut versuchen."
     },
     "data": {
       "title": "Ihre Daten",

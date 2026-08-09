@@ -337,12 +337,10 @@ const styles = StyleSheet.create({
     // Android'de çirkin durur; en yakın gerçek kesit 700.
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text['icon-sm'],
-    fontWeight: 700,
     color: operationsTheme.colors.ink,
   },
   progressTotal: {
     fontFamily: operationsTheme.font.body[400],
-    fontWeight: 400,
     color: operationsTheme.colors.muted,
   },
   progressTrack: {
@@ -360,13 +358,11 @@ const styles = StyleSheet.create({
   pocket: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.muted,
   },
   doorLeft: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.terracotta,
     paddingTop: operationsTheme.space.sm,
   },
@@ -380,7 +376,6 @@ const styles = StyleSheet.create({
   startHintText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.body,
   },
@@ -423,7 +418,6 @@ const styles = StyleSheet.create({
   circleText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
   },
   circleText_delivered: { color: operationsTheme.colors['olive-dark'] },
   circleText_issue: { color: operationsTheme.colors.error },
@@ -436,7 +430,6 @@ const styles = StyleSheet.create({
   stopAddress: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.body,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   stopAddressDone: {
@@ -460,7 +453,6 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.card,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   chevron: {
     fontFamily: operationsTheme.font.body[400],
@@ -487,7 +479,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
   },
   startNotice_ok: {
@@ -522,7 +513,6 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   ctaLabelStart: { color: operationsTheme.colors.card },
   ctaLabelClose: { color: operationsTheme.colors['on-image'] },
@@ -534,6 +524,5 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors['sand-150'],
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
 });

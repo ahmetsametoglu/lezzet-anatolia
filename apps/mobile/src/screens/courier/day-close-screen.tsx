@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
   closedText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
     color: operationsTheme.colors.body,
   },
   warnBox: {
@@ -268,7 +267,6 @@ const styles = StyleSheet.create({
   warnBoxText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
     color: operationsTheme.colors.terracotta,
   },
   counters: { flexDirection: 'row', gap: operationsTheme.space.lg },
@@ -285,12 +283,10 @@ const styles = StyleSheet.create({
     // v2: `800 22px` — Karla'nın 800'ü yüklenmiyor; en yakın gerçek kesit 700 (`fonts.ts`).
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.icon,
-    fontWeight: 700,
   },
   counterLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['badge-sm'],
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   counterText_delivered: { color: operationsTheme.colors['olive-dark'] },
   counterText_pending: { color: operationsTheme.colors.muted },
@@ -299,7 +295,6 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     color: operationsTheme.colors.muted,
   },
   moneyRow: {
@@ -315,7 +310,6 @@ const styles = StyleSheet.create({
   moneyName: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.control,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.ink,
   },
   moneyExpected: {
@@ -333,7 +327,6 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.card,
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.body,
-    fontWeight: 700,
     textAlign: 'right',
     color: operationsTheme.colors.ink,
   },
@@ -347,7 +340,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.note,
-    fontWeight: 700,
   },
   differenceZero: { color: operationsTheme.colors.muted },
   differenceShort: { color: operationsTheme.colors.error },
@@ -380,7 +372,6 @@ const styles = StyleSheet.create({
   notice: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     padding: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.control,
@@ -408,7 +399,6 @@ const styles = StyleSheet.create({
   confirmText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
     lineHeight: operationsTheme.text['field-label'] * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.error,
   },
@@ -425,7 +415,6 @@ const styles = StyleSheet.create({
   confirmCancelLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.ink,
   },
   confirmYes: {
@@ -437,7 +426,6 @@ const styles = StyleSheet.create({
   confirmYesLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.card,
   },
   cta: {
@@ -454,7 +442,6 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors['on-image'],
   },
 });

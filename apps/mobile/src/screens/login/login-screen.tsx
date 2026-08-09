@@ -12,9 +12,11 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
+import { DEV_ADMIN_EMAIL, DEV_CUSTOMER_EMAIL, devSignIn } from '@/lib/auth/dev-login';
 import { signInWithGoogle } from '@/lib/auth/oauth';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { CodeField } from './code-field';
@@ -54,9 +56,15 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 interface LoginScreenProps {
   /** Doğrulama bitince çağrılır; varsayılanı geri dönmek (şablonun `finishLogin` davranışı). */
   onVerified?: () => void;
+  /**
+   * OAuth dönüş rotasının bıraktığı adlı ret (`/auth/callback` → `?notice=`): Google akışı bu
+   * ekranın DIŞINDA düşer ve cümlesi yine bu ekranın sözlüğünden kurulur — anahtar taşınır,
+   * metin taşınmaz.
+   */
+  initialNotice?: AuthErrorKey;
 }
 
-export function LoginScreen({ onVerified }: LoginScreenProps) {
+export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
   const locale = deviceLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -68,7 +76,7 @@ export function LoginScreen({ onVerified }: LoginScreenProps) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   /** Seçim aşamasının bilgi/hata satırı (WhatsApp "yakında", Google arızası). */
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(initialNotice === undefined ? null : (t.errors[initialNotice] ?? null));
   /** İstek uçuştayken düğme kilidi — çift dokunuş iki kod isteği atmasın. */
   const [sending, setSending] = useState(false);
   /** 429'un bekleme süresi (sn) — sayaç sıfıra inene dek yeniden gönderme kilitli. */
@@ -82,9 +90,12 @@ export function LoginScreen({ onVerified }: LoginScreenProps) {
 
   useEffect(() => {
     if (stage !== 'done') return;
+    // v3'ün `finishLogin` toast'ı: kapanan ekranın ARKASINDA görünür (host kökte) — giriş
+    // başarısının tek görsel onayı; sekme zaten girişli hâle dönmüş oluyor.
+    publishToast(t.verifiedToast);
     const finish = onVerified ?? (() => router.back());
     finish();
-  }, [stage, onVerified, router]);
+  }, [stage, onVerified, router, t.verifiedToast]);
 
   /**
    * Bekleme cezası TEK kaynaktan söylenir: saniye sayacı yalnız DÜĞME etiketinde işler
@@ -101,16 +112,26 @@ export function LoginScreen({ onVerified }: LoginScreenProps) {
     setError(penalized ? null : t.errors[result.error]);
   };
 
-  const startGoogle = () => {
+  /* Dev test girişi — başarı OTP yolunun 'done' akışına biner (aynı toast, aynı kapanış). */
+  const startDevSignIn = (email: string) => {
     setNotice(null);
-    setStage('verifying');
-    void signInWithGoogle().then((result) => {
+    void devSignIn(email).then((result) => {
+      // Dev yolunda HAM mesaj basılır (sebep `dev-login.ts` künyesinde): teşhis için.
       if (result.error !== null) {
-        setStage('choose');
-        setNotice(t.errors[result.error]);
+        setNotice(result.error);
         return;
       }
       setStage('done');
+    });
+  };
+
+  const startGoogle = () => {
+    setNotice(null);
+    /* Ekran 'verifying'e GEÇMEZ: başarı "tarayıcı açıldı" demektir ve akışın kalanı `/auth/
+       callback` rotasında yaşar (dinleyici kurgusunun cihazda düşüşü — `oauth.ts` künyesi).
+       Vazgeçip elle dönen müşteri ekranı bıraktığı gibi bulur; asılı bir bekleme yok. */
+    void signInWithGoogle().then((result) => {
+      if (result.error !== null) setNotice(t.errors[result.error]);
     });
   };
 
@@ -176,6 +197,9 @@ export function LoginScreen({ onVerified }: LoginScreenProps) {
             ve şablonun `multiply` karışımı iOS'ta uygulanmadı (ölçüldü 08.08 — beyaz kutu görünüyordu);
             beyaz→alfa dönüşümü türetim script'iyle yapıldı, karışıma gerek kalmadı. */}
         <Image
+          // Statik varlık Metro'da `require` ile yüklenir (Expo png için modül tipi bildirmiyor,
+          // `import` derlenmez) — kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
           source={require('../../../assets/images/logo.png')}
           style={styles.logo}
           accessibilityLabel={t.brand}
@@ -297,6 +321,21 @@ export function LoginScreen({ onVerified }: LoginScreenProps) {
           </Text>
           {t.legalSuffix}
         </Text>
+
+        {/* GELİŞTİRME GİRİŞLERİ (kullanıcı isteği 09.08) — yalnız dev derlemesinde çizilir;
+            OTP/Google turunu atlayan ama Supabase doğrulamasından geçen GERÇEK oturum
+            (`lib/auth/dev-login` künyesi). Metin sabit Türkçe: müşteri bu satırı hiç görmez. */}
+        {__DEV__ ? (
+          <View style={styles.devRow}>
+            <TextAction label="Müşteri (test)" onPress={() => startDevSignIn(DEV_CUSTOMER_EMAIL)} testID="login-dev-customer" />
+            <TextAction
+              label="Operasyon (test)"
+              onPress={() => startDevSignIn(DEV_ADMIN_EMAIL)}
+              tone="terracotta"
+              testID="login-dev-admin"
+            />
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -307,6 +346,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
     paddingTop: rt.insets.top,
+  },
+  devRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: theme.space['4xl'],
+    paddingTop: theme.space['3xl'],
   },
   topBar: {
     flexDirection: 'row',
@@ -320,15 +365,16 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
     gap: theme.space['3xl'],
   },
+  /* Genişlik orandan HESAPLANIR (onboarding'in cihaz kanıtı 09.08 — `aspectRatio` tek başına
+     güvenilir çözülmüyor, resim ham boyuna düşebiliyor). Aynı varlık, aynı ölçü, tek kaynak. */
   logo: {
     height: customerMetrics.loginLogoHeight,
-    aspectRatio: LOGO_ASPECT,
+    width: customerMetrics.loginLogoHeight * LOGO_ASPECT,
     alignSelf: 'flex-start',
   },
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['page-title-sm--font-weight'],
     lineHeight: theme.text['page-title-sm'] * theme.text['h1-sm--line-height'],
     color: theme.colors.ink,
   },
@@ -356,21 +402,18 @@ const styles = StyleSheet.create((theme, rt) => ({
   providerLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
   },
   cardLabel: { color: theme.colors.ink },
   oliveLabel: { color: theme.colors.card },
   googleMark: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.step,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors['brand-google'],
   },
   /** Seçim aşamasının bilgi satırı (WhatsApp "yakında" / Google arızası) — web'in `notice` muadili. */
   notice: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
-    fontWeight: '600',
     color: theme.colors['olive-dark'],
     textAlign: 'center',
     marginTop: theme.space.sm,
@@ -379,13 +422,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   sentLine: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.ink,
   },
   codeError: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
-    fontWeight: '600',
     color: theme.colors['terracotta-bright'],
     textAlign: 'center',
   },

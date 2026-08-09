@@ -28,7 +28,6 @@ describe('BottomTabBar', () => {
     expect(screen.getByText('Katalog')).toHaveStyle({
       color: customerColors.terracotta,
       fontSize: appText.micro,
-      fontWeight: appText['eyebrow--font-weight'],
     });
     expect(screen.getByText('Vitrin')).toHaveStyle({ color: customerColors.muted });
     expect(screen.getAllByRole('tab')).toHaveLength(4);

@@ -395,13 +395,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   sortLabel: {
     fontFamily: theme.font.body[theme.text['control--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['control--font-weight'],
     color: theme.colors.ink,
   },
   sortCheck: {
     fontFamily: theme.font.body[theme.text['step-sm--font-weight']],
     fontSize: theme.text['step-sm'],
-    fontWeight: theme.text['step-sm--font-weight'],
     color: theme.colors['olive-dark'],
   },
   grid: {
@@ -428,7 +426,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.body[theme.text['card-title-sm--font-weight']],
     // Şablon: `600 11.5px 'Karla'` + `#b3ab97` — ikisi de ölçekte tam karşılığıyla var.
     fontSize: theme.text.micro,
-    fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors['sand-600'],
     textAlign: 'center',
     paddingTop: theme.space.md,

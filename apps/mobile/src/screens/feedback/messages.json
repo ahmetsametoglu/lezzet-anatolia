@@ -1,0 +1,104 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Siparişiniz nasıldı?",
+    "progress": "{current} / {total}",
+    "vote": {
+      "eyebrow": "BU ÜRÜN NASILDI?",
+      "like": "Beğendim",
+      "dislike": "Beğenmedim",
+      "hint": "Değerlendirmeniz yalnız bir dokunuş — hangi lezzetleri geliştireceğimize yön verir."
+    },
+    "comment": {
+      "title": "Teşekkürler! Bir şey eklemek ister misiniz?",
+      "body": "Kısa bir yorum bırakabilirsiniz — incelendikten sonra ürün sayfasında yayınlanır. Zorunlu değil.",
+      "placeholder": "Örn. Börek tam annemin yaptığı gibiydi…",
+      "label": "Yorumunuz",
+      "finish": "Değerlendirmeyi tamamla"
+    },
+    "done": {
+      "title": "Değerlendirmeniz için teşekkürler",
+      "points": "✦ +{points} puan",
+      "pointsNote": "hesabınıza eklendi",
+      "pointsTotal": "Toplam ✦ {points} puan",
+      "reviewBody": "Memnuniyetinizi {platform}'da paylaşırsanız çok seviniriz — bir dakikanızı alır.",
+      "reviewCta": "{platform}'da değerlendir ↗",
+      "issueBody": "Beğenmediğiniz bir ürün mü vardı? Sorunu bize iletin, düzeltelim.",
+      "issueCta": "Sorun bildir",
+      "home": "Vitrine dön"
+    },
+    "notFound": {
+      "title": "Bu bağlantıyı çözemedik",
+      "body": "Değerlendirme daveti e-postanızdaki bağlantıyla açılır — bağlantı eksik ya da eskimiş olabilir.",
+      "cta": "Vitrine dön"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Comment était votre commande ?",
+    "progress": "{current} / {total}",
+    "vote": {
+      "eyebrow": "COMMENT ÉTAIT CE PRODUIT ?",
+      "like": "J'ai aimé",
+      "dislike": "Je n'ai pas aimé",
+      "hint": "Votre avis ne prend qu'une touche — il guide les saveurs que nous améliorons."
+    },
+    "comment": {
+      "title": "Merci ! Souhaitez-vous ajouter un mot ?",
+      "body": "Vous pouvez laisser un court commentaire — après relecture, il sera publié sur la page du produit. Facultatif.",
+      "placeholder": "Ex. Le börek était exactement comme celui de ma mère…",
+      "label": "Votre commentaire",
+      "finish": "Terminer l'évaluation"
+    },
+    "done": {
+      "title": "Merci pour votre évaluation",
+      "points": "✦ +{points} points",
+      "pointsNote": "ajoutés à votre compte",
+      "pointsTotal": "Total ✦ {points} points",
+      "reviewBody": "Si vous partagiez votre satisfaction sur {platform}, cela nous ferait très plaisir — cela ne prend qu'une minute.",
+      "reviewCta": "Évaluer sur {platform} ↗",
+      "issueBody": "Un produit ne vous a pas plu ? Signalez-le-nous, nous arrangerons cela.",
+      "issueCta": "Signaler un problème",
+      "home": "Retour à la vitrine"
+    },
+    "notFound": {
+      "title": "Lien introuvable",
+      "body": "L'invitation s'ouvre via le lien de votre e-mail — celui-ci est peut-être incomplet ou expiré.",
+      "cta": "Retour à la vitrine"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Wie war Ihre Bestellung?",
+    "progress": "{current} / {total}",
+    "vote": {
+      "eyebrow": "WIE WAR DIESES PRODUKT?",
+      "like": "Hat mir gefallen",
+      "dislike": "Hat mir nicht gefallen",
+      "hint": "Ihre Bewertung ist nur eine Berührung — sie zeigt uns, welche Spezialitäten wir verbessern."
+    },
+    "comment": {
+      "title": "Danke! Möchten Sie noch etwas hinzufügen?",
+      "body": "Sie können einen kurzen Kommentar hinterlassen — nach Prüfung erscheint er auf der Produktseite. Optional.",
+      "placeholder": "z. B. Das Börek war genau wie bei meiner Mutter…",
+      "label": "Ihr Kommentar",
+      "finish": "Bewertung abschließen"
+    },
+    "done": {
+      "title": "Danke für Ihre Bewertung",
+      "points": "✦ +{points} Punkte",
+      "pointsNote": "Ihrem Konto gutgeschrieben",
+      "pointsTotal": "Gesamt ✦ {points} Punkte",
+      "reviewBody": "Wir würden uns sehr freuen, wenn Sie Ihre Zufriedenheit auf {platform} teilen — es dauert nur eine Minute.",
+      "reviewCta": "Auf {platform} bewerten ↗",
+      "issueBody": "War ein Produkt nicht in Ordnung? Sagen Sie es uns, wir kümmern uns darum.",
+      "issueCta": "Problem melden",
+      "home": "Zurück zur Vitrine"
+    },
+    "notFound": {
+      "title": "Link nicht gefunden",
+      "body": "Die Einladung öffnet sich über den Link in Ihrer E-Mail — er ist womöglich unvollständig oder abgelaufen.",
+      "cta": "Zurück zur Vitrine"
+    }
+  }
+}

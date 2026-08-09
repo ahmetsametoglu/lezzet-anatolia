@@ -36,7 +36,8 @@
       "eyebrow": "GÜNÜN FIRSATI · {time} KALDI",
       "ended": "GÜNÜN FIRSATI · SÜRE DOLDU",
       "add": "Sepete +",
-      "addLabel": "{name} ürününü sepete ekle"
+      "addLabel": "{name} ürününü sepete ekle",
+      "addedToast": "Sepete eklendi ✓"
     },
     "offers": {
       "discount": "−%{n}",
@@ -109,7 +110,8 @@
       "eyebrow": "OFFRE DU JOUR · {time} RESTANT",
       "ended": "OFFRE DU JOUR · TERMINÉE",
       "add": "Au panier +",
-      "addLabel": "Ajouter {name} au panier"
+      "addLabel": "Ajouter {name} au panier",
+      "addedToast": "Ajouté au panier ✓"
     },
     "offers": {
       "discount": "−{n} %",
@@ -182,7 +184,8 @@
       "eyebrow": "ANGEBOT DES TAGES · NOCH {time}",
       "ended": "ANGEBOT DES TAGES · BEENDET",
       "add": "In den Korb +",
-      "addLabel": "{name} in den Warenkorb legen"
+      "addLabel": "{name} in den Warenkorb legen",
+      "addedToast": "Zum Warenkorb hinzugefügt ✓"
     },
     "offers": {
       "discount": "−{n} %",

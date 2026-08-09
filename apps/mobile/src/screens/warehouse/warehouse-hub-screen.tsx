@@ -294,7 +294,6 @@ const styles = StyleSheet.create({
   offlineText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.error,
   },
@@ -318,7 +317,6 @@ const styles = StyleSheet.create({
   codeText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
     // Depo bölümünün kimlik tonu (`warehouse` #8a6d3a) — üstbaşlıkla aynı renk, satırda küçük hâli.
     color: operationsTheme.colors.warehouse,
   },
@@ -329,7 +327,6 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.body,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   rowSubtitle: {
@@ -345,7 +342,6 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.card,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   chevron: {
     fontFamily: operationsTheme.font.body[400],

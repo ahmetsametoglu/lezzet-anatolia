@@ -1,6 +1,7 @@
 {
   "tr": {
     "back": "Geri",
+    "verifiedToast": "Doğrulandı — hoş geldiniz ✓",
     "brand": "Lezzet Anatolia",
     "title": "Birkaç saniyede doğrulanın",
     "body": "Şifre yok, form yok. İster yeni ister dönen müşteri olun — aynı yoldan devam edersiniz.",
@@ -41,6 +42,7 @@
   },
   "fr": {
     "back": "Retour",
+    "verifiedToast": "Vérifié — bienvenue ✓",
     "brand": "Lezzet Anatolia",
     "title": "Vérifiez-vous en quelques secondes",
     "body": "Pas de mot de passe, pas de formulaire. Nouveau ou fidèle — c'est le même chemin.",
@@ -81,6 +83,7 @@
   },
   "de": {
     "back": "Zurück",
+    "verifiedToast": "Verifiziert — willkommen ✓",
     "brand": "Lezzet Anatolia",
     "title": "In Sekunden verifizieren",
     "body": "Kein Passwort, kein Formular. Ob neu oder wiederkehrend — der Weg ist derselbe.",

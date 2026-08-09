@@ -231,7 +231,6 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
   },
   clearLabel: { color: operationsTheme.colors.muted },
   filledLabel: { color: operationsTheme.colors.card },

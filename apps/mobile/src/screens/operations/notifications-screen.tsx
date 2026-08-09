@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     // v2: `700 13.5px` — kontrol kademesi (satır başlığı).
     fontSize: operationsTheme.text.control,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.ink,
   },
   rowMeta: {

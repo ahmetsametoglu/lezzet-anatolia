@@ -197,7 +197,6 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
@@ -224,7 +223,6 @@ const styles = StyleSheet.create({
   qtyTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.control,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   warnBox: {
@@ -236,7 +234,6 @@ const styles = StyleSheet.create({
   warnText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.terracotta,
   },
@@ -263,7 +260,6 @@ const styles = StyleSheet.create({
   refValue: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text['card-title-sm'],
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.ink,
   },
   sticky: {
@@ -281,7 +277,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
   },
   notice_ok: {
@@ -306,7 +301,6 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors['on-image'],
   },
 });

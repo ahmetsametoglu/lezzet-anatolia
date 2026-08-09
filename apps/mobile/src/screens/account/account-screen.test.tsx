@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { AccountScreen } from './account-screen';
-import messages from './messages.json';
 
 /*
   HESAP EKRANI TESTİ — bu turda EKLENEN şey ekranın ÇIKIŞLARIDIR (21.14 ikinci dilim): profil
@@ -46,10 +45,32 @@ const ME_BODY = {
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => mockPush(href) }) }));
 
-const t = messages.tr;
+/* Adres uçları MOCK (21.15) — ekran gerçek istemci modülünü çağırır, testler cevabı kurar.
+   Sözleşme kararı testte de görünür: her çağrının cevabı GÜNCEL listedir. */
+const mockFetchAddresses = jest.fn();
+const mockCreateAddress = jest.fn();
+const mockUpdateAddress = jest.fn();
+const mockDeleteAddress = jest.fn();
+const mockMakeDefaultAddress = jest.fn();
+jest.mock('@/lib/api/addresses', () => ({
+  fetchAddresses: () => mockFetchAddresses(),
+  createAddress: (body: unknown) => mockCreateAddress(body),
+  updateAddress: (id: string, body: unknown) => mockUpdateAddress(id, body),
+  deleteAddress: (id: string) => mockDeleteAddress(id),
+  makeDefaultAddress: (id: string) => mockMakeDefaultAddress(id),
+}));
+
+const HOME = { id: 'addr-home', label: 'Ev', line1: '12 Quai des Bateliers', line2: null, postalCode: '67000', city: 'Strasbourg', isDefault: true };
+const WORK = { id: 'addr-work', label: 'İş', line1: '3 Rue du Dôme', line2: null, postalCode: '67000', city: 'Strasbourg', isDefault: false };
+const listResult = (addresses: unknown[]) => ({ data: addresses, error: null, status: 200, retryAfterSec: null });
 
 beforeEach(() => {
   mockPush.mockReset();
+  mockFetchAddresses.mockReset().mockResolvedValue(listResult([HOME, WORK]));
+  mockCreateAddress.mockReset();
+  mockUpdateAddress.mockReset();
+  mockDeleteAddress.mockReset();
+  mockMakeDefaultAddress.mockReset();
 });
 
 describe('AccountScreen', () => {
@@ -94,31 +115,79 @@ describe('AccountScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/support/new');
   });
 
-  it('adres bölümü yalnız LİSTELER: metin parçalardan kurulur, düzenleme/ekleme kapısı çizilmez (21.14c)', async () => {
+  it('adresler UÇTAN gelir: kartlar çizilir, satır parçalardan kurulur, ekle/düzenle kapıları var (21.15)', async () => {
     await render(<AccountScreen />);
 
-    expect(screen.getByText('12 Quai des Bateliers, 67000 Strasbourg')).toBeOnTheScreen();
-    // Kaydetmeyen form çizilmez: adres çekmecesi (v3 shAddr) adres uçlarıyla birlikte gelecek.
-    expect(screen.queryByTestId('account-address-add')).toBeNull();
-    expect(screen.queryByTestId('account-address-home-edit')).toBeNull();
+    expect(await screen.findByText('12 Quai des Bateliers, 67000 Strasbourg')).toBeOnTheScreen();
+    expect(screen.getByTestId('account-address-add')).toBeOnTheScreen();
+    expect(screen.getByTestId('account-address-addr-home-edit')).toBeOnTheScreen();
+    expect(mockFetchAddresses).toHaveBeenCalledTimes(1);
   });
 
-  it('"varsayılan yap" rozeti taşır (ekranın kendi durumu)', async () => {
+  it('"varsayılan yap" GERÇEK uca gider; rozet sunucunun döndürdüğü listeye göre taşınır', async () => {
+    mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-work-default');
 
-    expect(screen.getByText(t.addresses.default)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
 
-    await fireEvent.press(screen.getByTestId('account-address-work-default'));
-
-    expect(screen.getByTestId('account-address-home-default')).toBeOnTheScreen();
-    expect(screen.queryByTestId('account-address-work-default')).toBeNull();
+    expect(mockMakeDefaultAddress).toHaveBeenCalledWith('addr-work');
+    await waitFor(() => expect(screen.getByTestId('account-address-addr-home-default')).toBeOnTheScreen());
+    expect(screen.queryByTestId('account-address-addr-work-default')).toBeNull();
   });
 
-  it('misafirde doğrulama kapısı çıkar, menü çıkmaz', async () => {
+  it('"＋ Yeni adres ekle" çekmeceyi BOŞ açar; Kaydet doğru gövdeyle yazar ve dönen liste basılır', async () => {
+    mockCreateAddress.mockResolvedValue(
+      listResult([HOME, WORK, { id: 'addr-new', label: null, line1: '8 Rue Neuve', line2: null, postalCode: '67100', city: 'Strasbourg', isDefault: false }]),
+    );
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-add');
+
+    await fireEvent.press(screen.getByTestId('account-address-add'));
+    expect(screen.getByTestId('account-address-sheet')).toBeOnTheScreen();
+    expect(screen.getByTestId('address-line').props.value).toBe('');
+
+    // Eksik alanla istek ATILMAZ — hata satırı çekmecede söylenir.
+    await fireEvent.press(screen.getByTestId('address-save'));
+    expect(mockCreateAddress).not.toHaveBeenCalled();
+    expect(screen.getByTestId('address-error')).toBeOnTheScreen();
+
+    await fireEvent.changeText(screen.getByTestId('address-line'), '8 Rue Neuve');
+    // Posta kodu maskesi: sayı dışı düşer, 5 hanede kesilir (v3 `sa.onZ`).
+    await fireEvent.changeText(screen.getByTestId('address-zip'), '67100abc9');
+    expect(screen.getByTestId('address-zip').props.value).toBe('67100');
+    await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');
+    await fireEvent.press(screen.getByTestId('address-save'));
+
+    // Boş etiket null olarak gider; line2 gövdede HİÇ yok (gönderilmeyen alana kapı dokunmaz).
+    expect(mockCreateAddress).toHaveBeenCalledWith({ label: null, line1: '8 Rue Neuve', postalCode: '67100', city: 'Strasbourg' });
+    await waitFor(() => expect(screen.queryByTestId('account-address-sheet')).toBeNull());
+    expect(screen.getByText('8 Rue Neuve, 67100 Strasbourg')).toBeOnTheScreen();
+  });
+
+  it('kartın "Düzenle"si çekmeceyi DOLU açar; "Adresi sil" gerçek silmeye gider', async () => {
+    mockDeleteAddress.mockResolvedValue(listResult([HOME]));
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-work-edit');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-edit'));
+    expect(screen.getByTestId('address-line').props.value).toBe('3 Rue du Dôme');
+    expect(screen.getByTestId('address-zip').props.value).toBe('67000');
+
+    await fireEvent.press(screen.getByTestId('address-delete'));
+
+    expect(mockDeleteAddress).toHaveBeenCalledWith('addr-work');
+    await waitFor(() => expect(screen.queryByTestId('account-address-sheet')).toBeNull());
+    expect(screen.queryByText('3 Rue du Dôme, 67000 Strasbourg')).toBeNull();
+  });
+
+  it('misafirde doğrulama kapısı çıkar, menü çıkmaz — adres ucu HİÇ çağrılmaz', async () => {
     await render(<AccountScreen signedIn={false} />);
 
     expect(screen.getByTestId('account-guest')).toBeOnTheScreen();
     expect(screen.queryByTestId('account-menu-tickets')).toBeNull();
+    // Oturumsuz açılış adres okumasına ağ turu harcamaz (hook `enabled` kapısı).
+    expect(mockFetchAddresses).not.toHaveBeenCalled();
 
     await fireEvent.press(screen.getByTestId('account-login'));
 

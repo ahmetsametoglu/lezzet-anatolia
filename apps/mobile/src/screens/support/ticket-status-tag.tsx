@@ -66,7 +66,6 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     // Şablon 11,5 yazıyor — ölçekte tam karşılığı `micro`.
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
   },
   terracotta: { backgroundColor: theme.colors['terracotta-bg'] },
   terracottaLabel: { color: theme.colors.terracotta },

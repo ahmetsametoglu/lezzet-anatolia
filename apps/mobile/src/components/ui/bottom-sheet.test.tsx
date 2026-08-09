@@ -67,7 +67,6 @@ describe('BottomSheet', () => {
     });
     expect(screen.getByRole('header')).toHaveStyle({
       fontSize: appText['sheet-title'],
-      fontWeight: appText['sheet-title--font-weight'],
     });
   });
 });

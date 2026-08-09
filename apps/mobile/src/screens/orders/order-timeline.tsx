@@ -1,4 +1,4 @@
-import type { CustomerOrderStatus } from '@lezzet/types';
+import type { OrderMilestone, OrderTimelineStep } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -6,82 +6,88 @@ import { Icon } from '@/components/ui/icon';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 
 /*
-  SİPARİŞ ZAMAN ÇİZGİSİ (v3:719) — dört durak: alındı → hazırlanıyor → yolda → teslim edildi.
+  SİPARİŞ ZAMAN ÇİZGİSİ (v3:719) — dört durak: alındı → hazırlandı → yolda → teslim edildi.
 
-  DÖRT DURAK SABİT, durum ONLARDAN BİRİNE denk gelir. `cancelled` ve `returning` çizgide bir yer
-  TUTMAZ (şablonun `si` haritası da onları içermiyor): iptal edilmiş bir sipariş çizginin
-  ortasında donmuş gibi görünmemeli — o durumda hiçbir durak "şu an burası" diye işaretlenmez,
-  ulaşılmış olanlar geçmiş kalır. Durumun kendisi başlıktaki rozetle söyleniyor.
+  ── ADIMLARI ARTIK MOTOR VERİYOR (21.18) ────────────────────────────────────
+  Önceki sürüm durumdan kendi çıkarımını yapıyordu (`STATUS_INDEX` haritası + dörtlü saat dizisi).
+  Artık `timeline` sözleşmeden geliyor ve kararı motor veriyor (`orderTimeline`): hangi durak
+  geçildi, hangisi ŞU AN, hangisi bekliyor. Fark bir incelik değil — motor GEÇMİŞE bakıyor
+  (`order_status_log`), anlık duruma değil: sipariş yoldayken "hazırlandı"nın da geçildiğini yalnız
+  geçmiş söyleyebilir ve atlanan geçişler (hızlı satış yolu) anlık durumdan çıkarılamaz.
 
-  ÜÇ GÖRSEL DURUM: geçilmiş (zeytin) · şu an (terracotta) · henüz değil (kum). Şu an olan durak
-  ayrıca bir NOT taşır ("Kurye bölgenizde…"); teslim edilmiş siparişte not yoktur, çünkü söylenecek
-  bir "şu an" kalmamıştır.
+  İPTAL/İADE ÇİZGİDE YER TUTMAZ: motor o hâllerde `null` döndürüyor ve ekran çizgi yerine tek durum
+  bloğu çiziyor (kararı çağıran veriyor — bu komponent yalnız adımları alır).
+
+  ÜÇ GÖRSEL DURUM: geçilmiş (zeytin) · şu an (terracotta) · henüz değil (kum). "Şu an" olan durak
+  ayrıca bir NOT taşır ("Kurye bölgenizde…"); teslim edilmişte hiçbir durak `current` olmaz, çünkü
+  söylenecek bir "şu an" kalmamıştır.
+
+  SAAT YALNIZ KAYDI OLAN ADIMDA yazılır: motor `at: null` döndürdüğünde ekran boş bırakır. Geçilmiş
+  sayılan ama damgası olmayan adım olabilir — orada tarih uydurmak, kaydı olmayan bir olaya saat
+  yazmak olurdu (CLAUDE §1).
 */
 
-/** Çizginin durakları — sıra tasarımın sırası. */
-const STEPS = ['received', 'preparing', 'on_the_way', 'delivered'] as const;
-type TimelineStep = (typeof STEPS)[number];
-
-/** Durum → çizgideki durak sırası. Kümede olmayan durum (iptal/iade) çizgide yer tutmaz. */
-const STATUS_INDEX: Partial<Record<CustomerOrderStatus, number>> = {
-  received: 0,
-  preparing: 1,
-  on_the_way: 2,
-  delivered: 3,
-};
+/** Durağın ikonu — sıra tasarımın sırası; küme motorun `OrderMilestone`u (kapalı, derlemede zorlar). */
+const STEP_ICONS = {
+  received: 'check',
+  prepared: 'box',
+  on_the_way: 'truck',
+  delivered: 'home',
+} as const satisfies Record<OrderMilestone, string>;
 
 interface OrderTimelineProps {
-  status: CustomerOrderStatus;
-  /** Dört durağın saati; ulaşılmamış durak `null`. */
-  times: readonly [string | null, string | null, string | null, string | null];
+  /** Motorun ürettiği dört adım — sıra anlamlıdır, ekran yeniden sıralamaz. */
+  steps: readonly OrderTimelineStep[];
   /** Durak adları — sayfanın `messages.json`'undan. */
-  labels: Record<TimelineStep, string>;
-  /** "Şu an" durağının notu; teslim edilmişte hiç okunmaz. */
-  notes: Record<'received' | 'preparing' | 'on_the_way', string>;
+  labels: Record<OrderMilestone, string>;
+  /** "Şu an" durağının notu; `delivered` hiç `current` olmadığı için kümede yok. */
+  notes: Record<Exclude<OrderMilestone, 'delivered'>, string>;
+  /** Damgayı okunur metne çeviren biçimlendirici — dil kararı çağıranın. */
+  formatAt: (iso: string) => string;
   testID?: string;
 }
 
-export function OrderTimeline({ status, times, labels, notes, testID }: OrderTimelineProps) {
+export function OrderTimeline({ steps, labels, notes, formatAt, testID }: OrderTimelineProps) {
   const { theme } = useUnistyles();
-  const currentIndex = STATUS_INDEX[status];
-  const delivered = status === 'delivered';
 
   return (
     <View style={styles.panel} testID={testID}>
-      {STEPS.map((step, index) => {
-        const reached = currentIndex !== undefined && index <= currentIndex;
-        const isCurrent = currentIndex === index && !delivered;
-        const note = isCurrent && step !== 'delivered' ? notes[step] : undefined;
+      {steps.map((step, index) => {
+        const reached = step.state !== 'pending';
+        const isCurrent = step.state === 'current';
+        const note = isCurrent && step.milestone !== 'delivered' ? notes[step.milestone] : undefined;
         const markStyle = isCurrent ? styles.markCurrent : reached ? styles.markDone : styles.markIdle;
-        const markColor = reached || isCurrent ? theme.colors.card : theme.colors.muted;
+        const markColor = reached ? theme.colors.card : theme.colors.muted;
+        const icon = STEP_ICONS[step.milestone];
 
         return (
-          <View key={step} style={styles.row}>
+          <View key={step.milestone} style={styles.row}>
             <View style={styles.rail}>
               <View style={[styles.mark, markStyle]}>
-                {step === 'received' ? (
-                  <CustomerIcon name="check" size={theme.size.inlineIcon} color={markColor} />
-                ) : step === 'preparing' ? (
-                  <CustomerIcon name="box" size={theme.size.inlineIcon} color={markColor} />
-                ) : step === 'on_the_way' ? (
-                  <CustomerIcon name="truck" size={theme.size.inlineIcon} color={markColor} />
-                ) : (
+                {icon === 'home' ? (
                   <Icon name="home" size={theme.size.inlineIcon} color={markColor} />
+                ) : (
+                  <CustomerIcon name={icon} size={theme.size.inlineIcon} color={markColor} />
                 )}
               </View>
-              {/* Son durağın altında çizgi yok: çizgi İKİ durağı bağlar, tek başına bir şey demez. */}
-              {index < STEPS.length - 1 ? (
+              {/* Son durağın altında çizgi yok: çizgi İKİ durağı bağlar, tek başına bir şey demez.
+                  Rengi SONRAKİ adım belirler (web'in aynı kararı): "Yolda" geçilmiş olsa da ondan
+                  sonrası henüz yaşanmadıysa çizgi kum rengidir — kendi hâline bakmak, geleceğe
+                  giden yolu yaşanmış gibi boyardı. */}
+              {index < steps.length - 1 ? (
                 <View
                   style={[
                     styles.line,
-                    currentIndex !== undefined && index < currentIndex ? styles.lineDone : styles.lineIdle,
+                    steps[index + 1]?.state === 'pending' ? styles.lineIdle : styles.lineDone,
                   ]}
                 />
               ) : null}
             </View>
             <View style={styles.text}>
-              <Text style={[styles.label, reached ? styles.labelReached : styles.labelIdle]}>{labels[step]}</Text>
-              {reached && times[index] !== null ? <Text style={styles.time}>{times[index]}</Text> : null}
+              <Text style={[styles.label, reached ? styles.labelReached : styles.labelIdle]}>
+                {labels[step.milestone]}
+              </Text>
+              {reached && step.at !== null ? <Text style={styles.time}>{formatAt(step.at)}</Text> : null}
               {note === undefined ? null : <Text style={styles.note}>{note}</Text>}
             </View>
           </View>
@@ -131,7 +137,6 @@ const styles = StyleSheet.create((theme) => ({
   label: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['button--font-weight'],
   },
   labelReached: { color: theme.colors.ink },
   labelIdle: { color: theme.colors['sand-600'] },
@@ -143,7 +148,6 @@ const styles = StyleSheet.create((theme) => ({
   note: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['field-label--font-weight'],
     lineHeight: theme.text.micro * theme.text['lead--line-height'],
     color: theme.colors.terracotta,
   },

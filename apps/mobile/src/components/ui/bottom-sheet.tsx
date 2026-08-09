@@ -111,7 +111,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   title: {
     fontFamily: theme.font.display[theme.text['sheet-title--font-weight']],
     fontSize: theme.text['sheet-title'],
-    fontWeight: theme.text['sheet-title--font-weight'],
     color: theme.colors.ink,
   },
 }));

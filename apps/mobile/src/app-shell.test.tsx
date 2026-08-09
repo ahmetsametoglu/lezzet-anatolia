@@ -22,6 +22,10 @@ import { renderShell } from '@/testing/render-shell';
 // Cihaz dili sabitlenir ki assert edilen etiketler koşulan makinenin diline bağlı olmasın.
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// İlk-açılış kapısı tamamlanmış sayılır (modül-yanı mock — gerekçesi mock dosyasının başlığında):
+// bayraksız ortamda kök layout '/' açılışını onboarding'e çevirirdi; bu testin konusu o değil.
+jest.mock('@/lib/onboarding/onboarding-store');
+
 // Vitrin artık oturumu dinliyor (`useMe`, 21.14c); bu ortamda Supabase env'i yok — istemci
 // mock'lanır, oturumsuz hâl döner ("oturumsuz kullanım = müşteri"). Kabuk testinin konusu sekmeler.
 jest.mock('@/lib/auth/supabase', () => ({

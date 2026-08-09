@@ -1,6 +1,7 @@
 {
   "tr": {
     "back": "Geri",
+    "addedToast": "Sepete eklendi ✓",
     "share": "Paylaş",
     "badge": {
       "soldOut": "Tükendi",
@@ -70,6 +71,7 @@
   },
   "fr": {
     "back": "Retour",
+    "addedToast": "Ajouté au panier ✓",
     "share": "Partager",
     "badge": {
       "soldOut": "Épuisé",
@@ -139,6 +141,7 @@
   },
   "de": {
     "back": "Zurück",
+    "addedToast": "Zum Warenkorb hinzugefügt ✓",
     "share": "Teilen",
     "badge": {
       "soldOut": "Ausverkauft",

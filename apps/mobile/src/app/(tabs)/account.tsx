@@ -11,10 +11,11 @@ import { useMe } from '@/screens/customer-kit/use-me.hook';
   KİMLİK BURADA BAĞLANIR (21.14c): ekran prop'la çalışır (testleri fixture'la koşar), GERÇEK
   oturumu rota okur. Misafir → v3'ün karşılama bloğu; girişli → kimlik alanları `/me`den.
 
-  Gerçek kullanıcıda KURGU KİŞİSEL VERİ BASILMAZ: fixture'ın adres/kupon/puan/şirket blokları
-  kendi uçları bağlanana dek girişli hâlde BOŞ taşınır — Ayşe'nin adreslerini gerçek bir hesabın
-  altında göstermek, ekranı "hâlâ hazır kullanıcı" gibi okutuyordu (kullanıcı bulgusu 08.08).
-  Boşluk da bir beyan değildir: adres/puan uçları gelince bu satırlar gerçek veriyle dolar.
+  Gerçek kullanıcıda KURGU KİŞİSEL VERİ BASILMAZ: fixture'ın kupon/puan/şirket blokları kendi
+  uçları bağlanana dek girişli hâlde BOŞ taşınır — Ayşe'nin verisini gerçek bir hesabın altında
+  göstermek, ekranı "hâlâ hazır kullanıcı" gibi okutuyordu (kullanıcı bulgusu 08.08). Boşluk da
+  bir beyan değildir: puan uçları gelince bu satırlar gerçek veriyle dolar. ADRESLER ARTIK GERÇEK
+  (21.15): ekran kendi yüklüyor (`use-addresses.hook`), fixture'ta adres kavramı kalmadı.
 */
 export default function AccountRoute() {
   const meState = useMe();
@@ -58,7 +59,6 @@ export default function AccountRoute() {
         points: null,
         coupons: [],
         referralCode: me.referralCode,
-        addresses: [],
         preferredLanguage: me.preferredLanguage,
         marketingEmail: me.marketingConsent?.email?.granted ?? false,
         marketingWhatsApp: me.marketingConsent?.whatsapp?.granted ?? false,

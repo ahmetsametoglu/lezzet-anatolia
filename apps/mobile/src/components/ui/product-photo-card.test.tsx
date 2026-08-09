@@ -96,7 +96,6 @@ describe('ProductPhotoCard', () => {
     expect(screen.getByText('İndirim')).toHaveStyle({
       color: customerColors.terracotta,
       fontSize: appText['badge-sm'],
-      fontWeight: appText['badge--font-weight'],
       letterSpacing: emToDp(appText['badge--letter-spacing'], appText['badge-sm']),
       textTransform: 'uppercase',
     });

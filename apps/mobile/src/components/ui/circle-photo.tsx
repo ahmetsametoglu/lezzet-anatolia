@@ -68,7 +68,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   initial: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
-    fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.muted,
   },
 }));

@@ -93,7 +93,6 @@ const styles = StyleSheet.create((theme) => ({
   initial: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     color: theme.colors.terracotta,
   },
   scrim: {

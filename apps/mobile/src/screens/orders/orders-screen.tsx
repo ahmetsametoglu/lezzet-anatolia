@@ -1,50 +1,69 @@
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
+import type { OrderSummary } from '@/lib/api/orders';
 import { deviceLocale } from '@/lib/i18n/locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
-import { ordersFixture, type OrderView } from './orders-fixture';
+import { formatOrderDate } from './order-format';
 import messages from './messages.json';
+import { useOrders } from './use-orders.hook';
 
 /*
-  SİPARİŞLERİM (v3 `vOrders`) — misafir kapısı, boş durum ve sipariş kartları.
+  SİPARİŞLERİM (v3 `vOrders`) — GERÇEK UÇTAN okur (`GET /api/v1/me/orders`): misafir kapısı,
+  iskelet, ağ hatası, boş durum ve sipariş kartları; hepsi şablonun `ov.` dallarının karşılığı.
 
-  ── UI-ONLY (21.14 ilk etap) ────────────────────────────────────────────────
-  Sipariş ucu YOK; liste fixture'dan. İskelet ve ağ hatası durumları ÇİZİLMEDİ (şablonda varlar):
-  ikisi de bir AĞ olduğunu varsayar ve bu ekranda ağ yok — bugün çizilseler hiçbir koşulda
-  görünmeyen ölü kod olurlardı. Uç bağlandığında ikisi de kataloğun kendi kalıbıyla eklenir
-  (`CatalogSkeleton` + `EmptyState`/`connection-off`), yani deseni zaten yazılı.
+  ── ŞABLONUN BEŞ DALI, BEŞİ DE CANLI ────────────────────────────────────────
+  `ov.guest` · `ov.skel` · `ov.netErr` · `ov.emptyL` · `ov.rows`. Önceki etapta iskelet ve ağ
+  hatası ÇİZİLMEMİŞTİ ve gerekçesi doğruydu ("bu ekranda ağ yok, bugün çizilseler ölü kod
+  olurlardı"); ağ geldi, ikisi de açıldı.
 
-  MİSAFİR KAPISI gerçek: oturum durumu prop'tan geliyor ve varsayılanı "giriş yapılmış" —
-  oturum deposuna bağlanma sonraki etabın işi (giriş ekranıyla aynı gerekçe).
+  ── SONSUZ KAYDIRMA ─────────────────────────────────────────────────────────
+  Liste veriyle SINIRSIZ büyüyen bir küme → keyset + sonsuz kaydırma; imleç URL'e yazılmaz
+  (CLAUDE §1). Şablonda sayfalama düğmesi de yok. Kuyruk hatası listeyi düşürmez: satırlar yerinde
+  kalır, sona tekrar-dene çıkar (katalogun aynı ayrımı — "hiç veri yok" ≠ "devamı gelmedi").
+
+  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
+  1. **"↻ Tekrar sipariş" düğmesi ÇİZİLMEDİ** (v3:59). Tekrar sipariş, kalemleri BUGÜNKÜ fiyat ve
+     BUGÜNKÜ satılabilirlikle sepete kopyalayan bir orkestrasyondur (web `lib/order/reorder.ts`:
+     sepet niyet taşır, fiyatı her okumada yeniden çözer) ve o kural henüz `@lezzet/application`a
+     terfi etmedi, uç da yok. Mobil sepet ise fiyat TAŞIYOR — sipariş detayındaki donmuş fiyatla
+     doldurmak müşteriye sessizce eski fiyatı satmak (ya da tükenmiş malı sepete koymak) olurdu.
+     Düğmeyi çizip bir şey yapmaması ise verilmiş bir sözü tutmamaktır. Uç geldiği gün düğme
+     şablondaki yerine, `publishToast` onayıyla birlikte döner (paket ekranının aynı deseni).
+  2. **Ağ hatası bloğu kesikli çerçeveli kutu DEĞİL** (v3:20-24), katalog/paket ekranlarının
+     `EmptyState` + `connection-off` kalıbı: aynı arıza üç ekranda üç ayrı görünüme sahip olmasın.
+  3. **Kart bütünüyle basılabilir.** Şablon `o.open`ı üç ayrı bloğa (üst satır, küçük resimler,
+     tutar) tek tek bağlıyor; sonuç aynı ama tek dokunma hedefi ekran okuyucuya da tek satır
+     olarak gider ("LA-26-… siparişinin detayı").
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Karttaki küçük resim sayısı — şablonun kendi sınırı (dört ürün + bir paket). */
-const MAX_THUMBS = 5;
+/** İskelet kart sayısı ve yüksekliği — şablonun kendi ölçüsü (v3:27-31: üç kart, 110 dp). */
+const SKELETON_COUNT = 3;
+const SKELETON_HEIGHT = 110;
 
 interface OrdersScreenProps {
-  orders?: OrderView[];
-  /** Oturum durumu — misafirde liste yerine doğrulama kapısı çıkar. */
-  signedIn?: boolean;
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse cihazın dili. */
+  locale?: ReturnType<typeof deviceLocale>;
 }
 
-export function OrdersScreen({ orders = ordersFixture(), signedIn = true }: OrdersScreenProps) {
-  const locale = deviceLocale();
+export function OrdersScreen({ locale = deviceLocale() }: OrdersScreenProps) {
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
+  const orders = useOrders(locale);
 
   const header = (
     <View style={styles.header}>
@@ -55,7 +74,9 @@ export function OrdersScreen({ orders = ordersFixture(), signedIn = true }: Orde
     </View>
   );
 
-  if (!signedIn) {
+  /* Misafir · iskelet · hata · boş — dördü de listenin YERİNE geçer, içine değil: hiçbirinde
+     kaydırılacak bir satır yok ve `FlatList` kabuğu boşuna kurulmaz. */
+  if (orders.status === 'guest') {
     return (
       <View style={styles.screen}>
         {header}
@@ -70,7 +91,35 @@ export function OrdersScreen({ orders = ordersFixture(), signedIn = true }: Orde
     );
   }
 
-  if (orders.length === 0) {
+  if (orders.status === 'loading') {
+    return (
+      <View style={styles.screen} testID="orders-loading">
+        {header}
+        <View style={styles.skeletonBody}>
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <Skeleton key={index} width="100%" height={SKELETON_HEIGHT} radius="card" />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (orders.status === 'error') {
+    return (
+      <View style={styles.screen}>
+        {header}
+        <EmptyState
+          icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
+          title={t.error.title}
+          description={t.error.body}
+          action={<PrimaryButton label={t.error.retry} shape="pill" onPress={orders.retry} testID="orders-retry" />}
+          testID="orders-error"
+        />
+      </View>
+    );
+  }
+
+  if (orders.orders.length === 0) {
     return (
       <View style={styles.screen}>
         {header}
@@ -85,69 +134,97 @@ export function OrdersScreen({ orders = ordersFixture(), signedIn = true }: Orde
     );
   }
 
+  /** Listenin kuyruğu: yükleniyor · düştü · bitti — üçü ayrı şey, üçü ayrı gösterilir. */
+  const listFooter = () => {
+    if (orders.loadingMore) {
+      return (
+        <View style={styles.tail}>
+          <LoadingState size="sm" label={t.list.loading} accessibilityLabel={t.list.loading} testID="orders-tail-loading" />
+        </View>
+      );
+    }
+    if (orders.tailFailed) {
+      return (
+        <View style={styles.tail}>
+          <PrimaryButton label={t.list.tailRetry} shape="pill" onPress={orders.loadMore} testID="orders-tail-retry" />
+        </View>
+      );
+    }
+    if (!orders.hasMore) return <Text style={styles.tailNote}>{t.list.end}</Text>;
+    return null;
+  };
+
+  const renderOrder = (order: OrderSummary) => {
+    const open = () => router.push({ pathname: '/order/[reference]', params: { reference: order.reference } });
+
+    return (
+      <PressableSurface
+        onPress={open}
+        feedback="opacity"
+        style={styles.card}
+        accessibilityLabel={t.row.open.replace('{reference}', order.reference)}
+        testID={`order-${order.reference}`}
+      >
+        <View style={styles.cardTop}>
+          <View style={styles.cardTopText}>
+            <Text style={styles.reference}>{order.reference}</Text>
+            <Text style={styles.meta}>
+              {t.row.meta
+                .replace('{date}', formatOrderDate(order.placedAt, locale))
+                .replace('{count}', String(order.itemCount))}
+            </Text>
+          </View>
+          <OrderStatusTag status={order.status} label={t.status[order.status]} />
+        </View>
+
+        {/* Küçük resim yığını: soldan sağa binerek dizilir (kitin `stacked` varyantı). Küme
+            SUNUCUDA tekilleştirilip sınırlandı — "+N" de oradan gelir, listenin uzunluğundan
+            türetilmez (aynı ürünün iki boyu tek halkadır ve iki kez sayılmamalı). */}
+        {order.thumbs.length === 0 ? null : (
+          <View style={styles.thumbs}>
+            {order.thumbs.map((thumb, index) => (
+              <AvatarThumb
+                key={`${thumb.name}-${index}`}
+                initial={thumb.name.slice(0, 1)}
+                accessibilityLabel={thumb.name}
+                photoUri={thumb.image.url}
+                size="sm"
+                stacked
+              />
+            ))}
+            {order.moreCount > 0 ? (
+              <Text style={styles.more}>{t.row.more.replace('{n}', String(order.moreCount))}</Text>
+            ) : null}
+          </View>
+        )}
+
+        <View style={styles.cardBottom}>
+          <Text style={styles.total}>{formatPrice(order.totalCents, locale)}</Text>
+          {/* Kart zaten basılabilir; bu yazı bir DÜĞME değil, nereye gidileceğini söyleyen bir
+              işaret — o yüzden kendi dokunma hedefini açmıyor (a11y'de tek satır kalsın). */}
+          <TextAction label={t.row.detail} onPress={open} tone="terracotta" />
+        </View>
+      </PressableSurface>
+    );
+  };
+
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} testID="orders-list">
-        {header}
-        {orders.map((order) => {
-          const itemCount = order.lines.reduce((total, line) => total + line.quantity, 0);
-          const open = () =>
-            router.push({ pathname: '/order/[reference]', params: { reference: order.reference } });
-
-          return (
-            <View key={order.reference} style={styles.card} testID={`order-${order.reference}`}>
-              <PressableSurface
-                onPress={open}
-                feedback="opacity"
-                style={styles.cardTop}
-                accessibilityLabel={t.row.open.replace('{reference}', order.reference)}
-                testID={`order-${order.reference}-open`}
-              >
-                <View style={styles.cardTopText}>
-                  <Text style={styles.reference}>{order.reference}</Text>
-                  <Text style={styles.meta}>
-                    {t.row.meta.replace('{date}', order.placedAtLabel).replace('{count}', String(itemCount))}
-                  </Text>
-                </View>
-                <OrderStatusTag status={order.status} label={t.status[order.status]} />
-              </PressableSurface>
-
-              {/* Küçük resim yığını: soldan sağa binerek dizilir (kitin `stacked` varyantı). */}
-              <View style={styles.thumbs}>
-                {order.lines.slice(0, MAX_THUMBS).map((line) => (
-                  <AvatarThumb
-                    key={line.id}
-                    initial={line.name.slice(0, 1)}
-                    accessibilityLabel={line.name}
-                    photoUri={line.photoUri}
-                    size="sm"
-                    stacked
-                  />
-                ))}
-                {order.lines.length > MAX_THUMBS ? (
-                  <Text style={styles.more}>{t.row.more.replace('{n}', String(order.lines.length - MAX_THUMBS))}</Text>
-                ) : null}
-              </View>
-
-              <View style={styles.cardBottom}>
-                <Text style={styles.total}>{formatPrice(order.totalCents, locale)}</Text>
-                <View style={styles.actions}>
-                  {/* Tekrar sipariş sepeti kurar ve sepete götürür — sonraki etapta gerçek
-                      kalemlerle; bugün sepet zaten fixture'dan dolu, yani akış canlı. */}
-                  <SecondaryButton
-                    label={t.row.reorder}
-                    onPress={() => router.push('/cart')}
-                    tone="olive"
-                    shape="pill"
-                    testID={`order-${order.reference}-reorder`}
-                  />
-                  <TextAction label={t.row.detail} onPress={open} tone="terracotta" />
-                </View>
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+      <FlatList
+        data={orders.orders}
+        keyExtractor={(order) => order.reference}
+        renderItem={({ item }) => renderOrder(item)}
+        ListHeaderComponent={header}
+        ListFooterComponent={listFooter()}
+        contentContainerStyle={styles.content}
+        onEndReached={orders.loadMore}
+        // `FlatList` eşiği cömertçe tetikler; ikinci kapı hook'ta (imleç yoksa istek atılmaz).
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl refreshing={orders.refreshing} onRefresh={orders.refresh} tintColor={theme.colors.olive} />
+        }
+        testID="orders-list"
+      />
     </View>
   );
 }
@@ -164,27 +241,31 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.xl,
   },
   header: {
-    gap: theme.space['2xs'],
+    // v3:9 `gap:3px` — iki durak arasında; eşitlikte ferah yön (2 yerine 4).
+    gap: theme.space.xs,
     paddingTop: theme.space.sm,
     paddingBottom: theme.space.xs,
   },
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors.terracotta,
   },
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['page-title-sm--font-weight'],
     color: theme.colors.ink,
   },
+  skeletonBody: {
+    paddingHorizontal: theme.space['4xl'],
+    gap: theme.space.xl,
+  },
+  /* Kart (v3:42): kum zemin, köşe 18, dolgu 14/16, aralık 9 → ferah yön (10). */
   card: {
     backgroundColor: theme.colors['sand-250'],
     borderRadius: theme.radius.card,
-    padding: theme.space['2xl'],
+    paddingVertical: theme.space['2xl'],
     paddingHorizontal: theme.space['3xl'],
     gap: theme.space.lg,
   },
@@ -198,7 +279,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   reference: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   meta: {
@@ -216,7 +296,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     marginLeft: theme.space.md,
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.muted,
   },
   cardBottom: {
@@ -232,12 +311,17 @@ const styles = StyleSheet.create((theme, rt) => ({
   total: {
     fontFamily: theme.font.body[theme.text['step-sm--font-weight']],
     fontSize: theme.text['step-sm'],
-    fontWeight: theme.text['step-sm--font-weight'],
     color: theme.colors.ink,
   },
-  actions: {
-    flexDirection: 'row',
+  tail: {
     alignItems: 'center',
-    gap: theme.space.md,
+    paddingTop: theme.space.lg,
+  },
+  tailNote: {
+    paddingTop: theme.space.lg,
+    textAlign: 'center',
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.helper,
+    color: theme.colors.muted,
   },
 }));

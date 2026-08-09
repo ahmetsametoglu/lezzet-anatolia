@@ -290,7 +290,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   question: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
-    fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.ink,
   },
   body: {
@@ -302,7 +301,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.muted,
   },
 
@@ -318,7 +316,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   orderReference: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   orderDate: {
@@ -349,7 +346,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.ink,
   },
   typeRow: {
@@ -371,7 +367,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   photoLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.olive,
   },
   note: {

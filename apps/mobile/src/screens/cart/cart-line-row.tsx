@@ -135,14 +135,12 @@ const styles = StyleSheet.create((theme) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     textTransform: 'uppercase',
     color: theme.colors['olive-light'],
   },
   name: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-    fontWeight: theme.text['button--font-weight'],
   },
   subtitle: {
     fontFamily: theme.font.body[400],
@@ -152,7 +150,6 @@ const styles = StyleSheet.create((theme) => ({
   total: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
     marginTop: theme.space['2xs'],
   },
   onInk: { color: theme.colors['sand-50'] },
@@ -163,7 +160,6 @@ const styles = StyleSheet.create((theme) => ({
     alignSelf: 'flex-start',
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['button--font-weight'],
     paddingVertical: theme.space['2xs'],
     paddingHorizontal: theme.space.md,
     borderRadius: theme.radius.badge,

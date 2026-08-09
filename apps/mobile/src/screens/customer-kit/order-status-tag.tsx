@@ -68,7 +68,6 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     // Şablon 11,5 yazıyor — ölçekte tam karşılığı `micro`.
     fontSize: theme.text.micro,
-    fontWeight: theme.text['button--font-weight'],
   },
   olive: { backgroundColor: theme.colors['olive-bg'] },
   oliveLabel: { color: theme.colors['olive-dark'] },

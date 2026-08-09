@@ -183,7 +183,6 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
     // Rozet ailesinin KÜÇÜK boyu (#16): fotoğraf üstündeki durum etiketi 10 px.
     fontSize: theme.text['badge-sm'],
-    fontWeight: theme.text['badge--font-weight'],
     letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
     // Şablonda rozet metni büyük harf; büyütmeyi komponent yapar ki i18n dizgesi bağırmasın.
     textTransform: 'uppercase',
@@ -200,7 +199,6 @@ const styles = StyleSheet.create((theme) => ({
   name: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text.body,
-    fontWeight: theme.text['card-title-sm--font-weight'],
     // Sıkı başlık satır aralığı — oran da token (`h1--line-height`), ham çarpan yazılmadı.
     lineHeight: theme.text.body * theme.text['h1--line-height'],
     /* ROL TOKEN'I (Token Kararlari #14): fotoğraf üstü ad `on-image`tır. Daha önce şablonun
@@ -214,7 +212,6 @@ const styles = StyleSheet.create((theme) => ({
     // Şablon 10,5; ölçekte o durak yok. `micro` (11,5) alındı: `eyebrow` (10) sayıca daha yakın
     // ama üstbaşlık kademesidir — cümle biçimli bir alt satır onun ağırlığı/aralığıyla döner.
     fontSize: theme.text.micro,
-    fontWeight: theme.text['field-label--font-weight'],
     // Fotoğraf üstü ALTYAZI rolü; değeri #d5d0c2 (Token Kararlari #15 — rol ile değer örtüştü).
     color: theme.colors['on-image-soft'],
   },

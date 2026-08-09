@@ -140,7 +140,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   type: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['button--font-weight'],
     color: theme.colors.ink,
   },
   meta: {

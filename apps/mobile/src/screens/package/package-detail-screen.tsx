@@ -14,6 +14,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -160,6 +161,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
       },
       quantity,
     );
+    publishToast(t.addedToast);
   };
 
   return (
@@ -296,7 +298,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
     fontSize: theme.text['screen-title'],
-    fontWeight: theme.text['screen-title--font-weight'],
     color: theme.colors.ink,
   },
   /** Paylaş dairesi geri düğmesinin `bar` varyantıyla AYNI ölçü/geri bildirim (v3 ikisi tek stil). */
@@ -338,7 +339,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   heroInitial: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     color: theme.colors['on-image-soft'],
   },
 
@@ -352,21 +352,18 @@ const styles = StyleSheet.create((theme, rt) => ({
   title: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     lineHeight: theme.text['h1-sm'] * theme.text['h1-sm--line-height'],
     color: theme.colors.ink,
   },
   price: {
     fontFamily: theme.font.body[700],
     fontSize: theme.text['card-title'],
-    fontWeight: '700',
     color: theme.colors.ink,
   },
   /* "tek paket fiyatı · KDV dahil" — yardımcı satır kademesi (`helper` token'ının kendi rolü). */
   priceSuffix: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
-    fontWeight: '400',
     color: theme.colors.muted,
   },
   /* Ürün detayının çipiyle TEK stil (sapma 3) — iki ekranda iki farklı kısıt çipi olmasın. */
@@ -374,7 +371,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignSelf: 'flex-start',
     fontFamily: theme.font.body[600],
     fontSize: theme.text.micro,
-    fontWeight: '600',
     color: theme.colors['olive-dark'],
     backgroundColor: theme.colors['olive-bg'],
     borderRadius: theme.radius.badge,
@@ -392,7 +388,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     marginTop: theme.space.sm,
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
     fontSize: theme.text['screen-title'],
-    fontWeight: theme.text['screen-title--font-weight'],
     color: theme.colors.ink,
   },
 
@@ -421,20 +416,17 @@ const styles = StyleSheet.create((theme, rt) => ({
   itemInitial: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.muted,
   },
   itemLabel: {
     flex: 1,
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
   },
   itemQty: {
     fontFamily: theme.font.body[700],
     fontSize: theme.text.helper,
-    fontWeight: '700',
     color: theme.colors.muted,
   },
   itemChevron: {
@@ -495,7 +487,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     textAlign: 'center',
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.body,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
   },
   ctaSlot: {

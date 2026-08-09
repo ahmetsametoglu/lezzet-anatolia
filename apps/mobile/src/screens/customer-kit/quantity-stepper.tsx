@@ -104,7 +104,6 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: 'center',
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['button--font-weight'],
   },
   sandQuantity: { color: theme.colors.ink },
   inkQuantity: { color: theme.colors['sand-50'] },

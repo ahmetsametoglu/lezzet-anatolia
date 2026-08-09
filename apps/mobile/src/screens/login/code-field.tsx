@@ -53,7 +53,6 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: 'center',
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text['page-title-sm'],
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
     /* Şablonun `.22em`i — rakamlar arası nefes; em→dp çevirisi boy üstünden. */
     letterSpacing: theme.text['page-title-sm'] * 0.22,

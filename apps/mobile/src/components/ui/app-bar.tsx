@@ -87,7 +87,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
     fontSize: theme.text['screen-title'],
-    fontWeight: theme.text['screen-title--font-weight'],
     color: theme.colors.ink,
   },
 }));

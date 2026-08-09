@@ -19,6 +19,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -201,6 +202,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
       },
       quantity,
     );
+    publishToast(t.addedToast);
   };
 
   return (
@@ -553,7 +555,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   heroInitial: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     color: theme.colors['on-image-soft'],
   },
   heroScrim: {
@@ -564,10 +565,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     position: 'absolute',
     /* Foto tam ekrana taşar (saatİN ALTINA girer — v3 niyeti); düğmeler ise girmez: şablonun
        8px'i ÜST GÜVENLİ ALANIN üstüne eklenir (kullanıcı bulgusu 08.08 — iPhone'da saate biniyordu;
-       çentiksiz cihazda inset 0, davranış şablonla aynı kalır). */
-    top: rt.insets.top + theme.space.sm,
-    left: theme.space.lg,
-    right: theme.space.lg,
+       çentiksiz cihazda inset 0, davranış şablonla aynı kalır).
+       Değerler v3'ün kendisi (göz denetimi 09.08): `top:8 · left/right:16` — md/3xl; tarifle hizalı. */
+    top: rt.insets.top + theme.space.md,
+    left: theme.space['3xl'],
+    right: theme.space['3xl'],
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -593,14 +595,12 @@ const styles = StyleSheet.create((theme, rt) => ({
   soldOutBadgeText: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors['sand-50'],
   },
   discountBadge: { backgroundColor: theme.colors['sand-50'] },
   discountBadgeText: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.terracotta,
   },
   /** Fiyat alt kenardan sarkar (v3: `bottom:-22px`, 3° dönüş, gölge) — taşma tasarımın imzası. */
@@ -622,7 +622,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   priceBadgeText: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     fontSize: theme.text['card-title'],
-    fontWeight: theme.text['h2-sm--font-weight'],
     color: theme.colors.card,
   },
 
@@ -635,14 +634,12 @@ const styles = StyleSheet.create((theme, rt) => ({
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors.terracotta,
   },
   title: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
-    fontWeight: theme.text['h1-sm--font-weight'],
     lineHeight: theme.text['h1-sm'] * theme.text['h1-sm--line-height'],
     color: theme.colors.ink,
   },
@@ -655,7 +652,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignSelf: 'flex-start',
     fontFamily: theme.font.body[600],
     fontSize: theme.text.micro,
-    fontWeight: '600',
     color: theme.colors.terracotta,
     backgroundColor: theme.colors['terracotta-bg'],
     borderRadius: theme.radius.badge,
@@ -666,7 +662,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignSelf: 'flex-start',
     fontFamily: theme.font.body[600],
     fontSize: theme.text.micro,
-    fontWeight: '600',
     color: theme.colors['olive-dark'],
     backgroundColor: theme.colors['olive-bg'],
     borderRadius: theme.radius.badge,
@@ -680,7 +675,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   familyEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors.terracotta,
   },
@@ -692,16 +686,18 @@ const styles = StyleSheet.create((theme, rt) => ({
     marginHorizontal: -theme.space['2xl'],
   },
   familyRail: {
-    gap: theme.space.md,
+    gap: theme.space.lg,
     paddingHorizontal: theme.space['2xl'],
   },
+  /* Dolgular v3'ün kendisi (göz kıyası 09.08 — dar basılıyordu): `7px 14px 7px 8px` + iç gap 9;
+     sol dar bilerek (foto o kenara yaslı), ±1 yuvarlamada ferah yön seçildi. */
   familyChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.space.sm,
-    paddingVertical: theme.space.xs,
-    paddingLeft: theme.space.xs,
-    paddingRight: theme.space.lg,
+    gap: theme.space.lg,
+    paddingVertical: theme.space.md,
+    paddingLeft: theme.space.md,
+    paddingRight: theme.space['2xl'],
     borderRadius: theme.radius.control,
     borderWidth: theme.border.base,
     borderColor: theme.colors['sand-400'],
@@ -709,25 +705,24 @@ const styles = StyleSheet.create((theme, rt) => ({
   familyName: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
   },
   familyPrice: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.micro,
-    fontWeight: '600',
     color: theme.colors['olive-dark'],
   },
 
   variantRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.space.sm,
+    gap: theme.space.md,
   },
+  /* Dolgu v3'ün kendisi (aynı göz kıyası): `9px 15px` — ±1'de ferah yön (10/16). */
   variantChip: {
     gap: theme.space['2xs'],
-    paddingVertical: theme.space.sm,
-    paddingHorizontal: theme.space.lg,
+    paddingVertical: theme.space.lg,
+    paddingHorizontal: theme.space['3xl'],
     borderRadius: theme.radius.control,
     borderWidth: theme.border.base,
     borderColor: theme.colors['sand-400'],
@@ -739,13 +734,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   variantLabel: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
   },
   variantPrice: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.micro,
-    fontWeight: '600',
     color: theme.colors['olive-dark'],
   },
   description: {
@@ -777,7 +770,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   accordionTitle: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
   },
   accordionCaret: {
@@ -796,18 +788,15 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   accordionStrong: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontWeight: theme.text['chip--font-weight'],
   },
   allergenLine: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.micro,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.terracotta,
   },
   netWeight: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.micro,
-    fontWeight: '600',
     color: theme.colors.ink,
   },
 
@@ -819,7 +808,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   sectionTitle: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
-    fontWeight: theme.text['h2-sm--font-weight'],
     color: theme.colors.ink,
   },
   reviewsEmpty: {
@@ -899,7 +887,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     textAlign: 'center',
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.body,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.ink,
   },
   ctaSlot: {
@@ -909,7 +896,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
-    fontWeight: '600',
     lineHeight: theme.text.note * 1.4,
     color: theme.colors.muted,
   },
@@ -927,7 +913,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   alertText: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.note,
-    fontWeight: theme.text['chip--font-weight'],
     color: theme.colors.card,
   },
   alertTextOn: {

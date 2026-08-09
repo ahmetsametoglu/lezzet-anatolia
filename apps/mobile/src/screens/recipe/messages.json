@@ -1,6 +1,8 @@
 {
   "tr": {
     "back": "Geri",
+    "addedToast": "Sepete eklendi ✓",
+    "addAllToast": "{n} malzeme sepete eklendi ✓",
     "eyebrow": "SOFRADAN FİKİRLER",
     "sections": {
       "ours": "MALZEMELER — BİZDEN",
@@ -26,6 +28,8 @@
   },
   "fr": {
     "back": "Retour",
+    "addedToast": "Ajouté au panier ✓",
+    "addAllToast": "{n} ingrédients ajoutés au panier ✓",
     "eyebrow": "IDÉES DE TABLE",
     "sections": {
       "ours": "INGRÉDIENTS — DE CHEZ NOUS",
@@ -51,6 +55,8 @@
   },
   "de": {
     "back": "Zurück",
+    "addedToast": "Zum Warenkorb hinzugefügt ✓",
+    "addAllToast": "{n} Zutaten in den Warenkorb gelegt ✓",
     "eyebrow": "IDEEN FÜR DEN TISCH",
     "sections": {
       "ours": "ZUTATEN — VON UNS",

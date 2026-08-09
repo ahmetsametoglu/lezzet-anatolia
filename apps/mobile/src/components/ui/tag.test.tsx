@@ -59,7 +59,6 @@ describe('Tag', () => {
 
     expect(screen.getByText('9,90 €')).toHaveStyle({
       fontSize: appText.badge,
-      fontWeight: appText['badge--font-weight'],
       // `.06em` × 12,5 dp = 0,75 dp — çeviri `emToDp`de, tek yerde.
       letterSpacing: emToDp(appText['badge--letter-spacing'], appText.badge),
     });

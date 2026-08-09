@@ -83,6 +83,5 @@ const styles = StyleSheet.create((theme) => ({
   label: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.button,
-    fontWeight: theme.text['button--font-weight'],
   },
 }));

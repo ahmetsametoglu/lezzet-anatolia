@@ -1,0 +1,1244 @@
+{
+  "tr": {
+    "back": "Geri",
+    "updatedAt": "Son güncelleme: 1 Temmuz 2026",
+    "searchPlaceholder": "Soru arayın…",
+    "noMatch": "Bu aramaya uyan soru yok.",
+    "notFoundTitle": "Cevabını bulamadınız mı?",
+    "notFoundCta": "Bize yazın",
+    "missing": {
+      "title": "Bu bilgi sayfası yok",
+      "body": "Aradığınız sayfayı bulamadık. Sık sorulan sorulardan devam edebilirsiniz.",
+      "cta": "Sık sorulan sorular"
+    },
+    "pages": {
+      "delivery": {
+        "title": "Teslimat ve iade",
+        "sections": [
+          {
+            "heading": "Teslimat bölgemiz",
+            "paragraphs": [
+              "Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz; teslimat gününüz bölgenizin takvimine göre sunulur.",
+              "Posta kodunuzu sitenin üst şeridinde her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup checkout'ta sürprizle karşılaşmazsınız."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Asgari sepet tutarı",
+            "paragraphs": [
+              "Asgari sepet tutarı 40 €'dur ve her iki gönderim yolunda da geçerlidir. Sepetiniz bu tutarın altındaysa ne kadar kaldığı sepette yazar."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Kargo ile gönderim",
+            "paragraphs": [
+              "Bölge dışındaki adreslere yalnız raf ömürlü ürünlerimizi gönderiyoruz — Fransa ve Almanya geneline. Dondurulmuş ürünler kargoya çıkmaz: soğuk zinciri kargo koşullarında güvenle koruyamayacağımız için bu ürünleri yalnız kendi aracımızla, bölge içinde teslim ediyoruz.",
+              "Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz. Ücret sepette, siparişi tamamlamadan önce görünür. Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında elinizde olur.",
+              "Hangi ürünün kargoya çıkabildiğini katalogda ve ürün sayfasında görürsünüz. Bölge dışı bir adres seçtiğinizde, yalnız bölge içinde teslim edilebilen kalemlerin sepetten çıkarılması gerekir."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Soğuk zincir",
+            "paragraphs": [
+              "Dondurulmuş ürünlerimiz üreticisinden şoklanmış olarak gelir; depomuzda da aracımızda da soğuk zincir bozulmaz. Teslim aldığınızda doğrudan dondurucunuza koymanız yeterlidir.",
+              "Bu ürünleri kendimiz teslim ettiğimiz için yolda geçen süre kısadır. Yine de teslim anında ürünlerin kenarları hafif yumuşamış olabilir; bu normaldir ve kaliteyi etkilemez. Ürünler tamamen çözülmüş geldiyse dondurucuya koymayın ve aşağıdaki gibi bize bildirin."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "İade koşulları",
+            "paragraphs": [
+              "Gıda ürünlerinde, soğuk zincirin kırılma riski nedeniyle teslim alınmış ve kabul edilmiş ürünler için genel cayma hakkı uygulanmaz (Fransız tüketici mevzuatı, çabuk bozulan ürünler istisnası).",
+              "Buna karşılık şu durumlarda siparişinizin bedelini iade ediyoruz ya da yeniden gönderiyoruz — seçim sizindir:"
+            ],
+            "bullets": [
+              "Eksik gelen kalem: kutunuzdan çıkmayan ürünün bedeli otomatik olarak iade edilir, ayrıca talep açmanız gerekmez.",
+              "Hasarlı ya da çözülmüş gelen ürün: teslimattan sonraki 48 saat içinde fotoğrafla bildirin.",
+              "Yanlış gönderilen ürün: doğrusunu gönderir ya da bedelini iade ederiz.",
+              "Teslim edilemeyen sipariş: bizden kaynaklı bir sebeple teslim edilemediyse tahsilat yapılmaz, yapılmışsa iade edilir.",
+              "Adreste bulunamadığımızda: teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez."
+            ]
+          },
+          {
+            "heading": "İade nasıl ve ne zaman yapılır",
+            "paragraphs": [
+              "İade, ödemeyi yaptığınız yönteme yapılır. Kartla ödediyseniz tutar kartınıza geçer; bankanıza bağlı olarak hesabınızda görünmesi birkaç iş günü sürebilir.",
+              "Kapıda ödeme seçtiyseniz ve henüz ödeme yapmadıysanız iade diye bir şey olmaz — eksik kalemin bedeli teslimat anındaki tutardan zaten düşülür.",
+              "Talebinizi \"Taleplerim\" bölümünden açabilirsiniz; siparişinizi ve ilgili kalemleri formda seçtiğinizde bize neyin eksik ya da hasarlı olduğu doğrudan ulaşır."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Aklınızdaki soruya burada cevap bulamadıysanız",
+          "links": [
+            {
+              "label": "SSS'ye bakın",
+              "target": "faq"
+            },
+            {
+              "label": "bize yazın",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "faq": {
+        "title": "Sık sorulan sorular",
+        "sections": [],
+        "questions": [
+          {
+            "question": "Ürünler donmuş mu geliyor?",
+            "answer": "Dondurulmuş ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır — bu ürünleri yalnız kendi aracımızla, teslimat bölgemiz içinde getiriyoruz. Teslim aldığınızda dondurucunuza koymanız yeterli. Bölge dışına yalnız raf ömürlü ürünlerimizi kargoyla gönderiyoruz; dondurulmuş ürünler kargoya çıkmaz."
+          },
+          {
+            "question": "Minimum sipariş tutarı var mı?",
+            "answer": "Evet, 40 €. Hem bölge içi teslimatta hem kargo gönderiminde geçerlidir; altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo ücreti ayrıca 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz."
+          },
+          {
+            "question": "Siparişim ne zaman gelir?",
+            "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
+          },
+          {
+            "question": "Kapıda ödeyebilir miyim?",
+            "answer": "Bölge içi teslimatlarda, 500 €'ya kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
+          },
+          {
+            "question": "Bir ürün eksik geldi, ne yapmalıyım?",
+            "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan kalemin bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Taleplerim\" bölümünden siparişinizi seçip yazabilirsiniz."
+          },
+          {
+            "question": "Restoranım için toptan fiyat alabilir miyim?",
+            "answer": "Evet. \"Professionnels\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ve çekle ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
+          },
+          {
+            "question": "Alerjen bilgilerini nereden görebilirim?",
+            "answer": "Her ürünün sayfasında içindekiler, alerjen bilgisi ve varsa çapraz bulaşma uyarısı yer alır. Bu bilgiler ürünü üreten firmanın beyanına dayanır — ürünlerimizi kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Ciddi bir alerjiniz varsa sipariş öncesi bize yazın; üreticiden teyit alırız."
+          },
+          {
+            "question": "Sipariş vermek için hesap açmam gerekiyor mu?",
+            "answer": "Parola kurmanız gerekmez: sepetinizi doldurup e-posta adresinizle siparişi tamamlayabilirsiniz — size gönderdiğimiz kodu girdiğinizde hesabınız arka planda açılır ve siparişiniz ona bağlanır. Böylece siparişleriniz, adresleriniz ve puanınız saklanır; adresinizi bir daha yazmanız gerekmez ve geçmiş bir siparişinizi \"Siparişlerim\"den tek tuşla tekrarlayabilirsiniz."
+          },
+          {
+            "question": "Site ve e-postaların dilini nasıl değiştiririm?",
+            "answer": "Sitenin üst şeridinden ya da hesap sayfanızdaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — siteyi Türkçe gezen birinin maillerinin Fransızca gelmesi anlamsız olurdu."
+          }
+        ],
+        "notice": {
+          "text": "",
+          "links": []
+        }
+      },
+      "privacy": {
+        "title": "Gizlilik politikası",
+        "sections": [
+          {
+            "heading": "Verilerinizden kim sorumlu",
+            "paragraphs": [
+              "Bu sitede toplanan kişisel verilerin sorumlusu QUALITE SAS'tır (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, Fransa. Site Lezzet Anatolia markasıyla işletilmektedir.",
+              "Veri koruma ile ilgili her konuda lezzetanatolie@gmail.com adresinden bize ulaşabilirsiniz."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Hangi verileri topluyoruz",
+            "paragraphs": [
+              "Yalnız işi yürütmek için gereken verileri topluyoruz. Toplananlar şunlardır:"
+            ],
+            "bullets": [
+              "Kimlik ve iletişim: adınız, e-posta adresiniz, telefon numaranız.",
+              "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da tarayıcınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
+              "Sipariş: verdiğiniz siparişler, kalemleri, tutarları ve durumları.",
+              "İletişim tercihleri: kampanya izinleri ve tercih ettiğiniz dil.",
+              "Talepleriniz: bize yazdığınız mesajlar ve eklediğiniz fotoğraflar.",
+              "İşletme müşterisiyseniz: SIRET numaranız ve şirket künyeniz."
+            ]
+          },
+          {
+            "heading": "Neden topluyoruz",
+            "paragraphs": [
+              "Adınız ve adresiniz olmadan sipariş teslim edilemez; e-posta adresiniz olmadan siparişinizin ne durumda olduğunu size söyleyemeyiz. Bu veriler sözleşmenin yerine getirilmesi için işlenir.",
+              "Kampanya iletileri yalnız açıkça izin verdiyseniz gönderilir ve izni istediğiniz an geri alabilirsiniz. İzin kaydı bayrak olarak değil, ne zaman ve nereden verildiği bilgisiyle birlikte saklanır — bu, izin sorulduğunda gösterebileceğimiz kanıttır.",
+              "Muhasebe ve yasal yükümlülükler için sipariş ve ödeme kayıtlarını saklamak zorundayız; bunlar izne bağlı değildir."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Ne kadar saklıyoruz",
+            "paragraphs": [
+              "Hesap verileriniz hesabınız açık olduğu sürece saklanır. Hesabınızı dilediğiniz an hesap sayfanızdan kendiniz silebilirsiniz: adınız, e-posta ve telefonunuz, kayıtlı adresleriniz, talep yazışmalarınız, puanlarınız ve kişisel kuponlarınız kaldırılır, giriş bilgileriniz silinir ve bir daha giriş yapamazsınız.",
+              "Sipariş ve fatura kayıtları, Fransız ticaret ve vergi mevzuatının gerektirdiği süre boyunca saklanır; bu kayıtlar hesap silinse de yasal süre dolana kadar korunur. Buna faturanın üzerindeki ad ve adres de dâhildir — mevzuat faturanın bu bilgileri içermesini zorunlu kılıyor, bu yüzden hesabınızı silseniz de o kayıtlardan çıkarılamaz. Ürünlere verdiğiniz puan da kalır ama adınıza bağlı olmaktan çıkar.",
+              "Teknik hata kayıtlarımızda kişisel veri tutulmaz. Bir arızayı bulmak için gereken durumlarda e-posta ve telefon gibi bilgiler yalnız maskelenmiş biçimde yazılır (örneğin a***@example.com); tek amaç hangi kaydın konuşulduğunu ayırt etmektir, kim olduğunu söylemek değil."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Kimlerle paylaşıyoruz",
+            "paragraphs": [
+              "Verilerinizi satmıyoruz. Yalnız işi yürütmek için gereken hizmet sağlayıcılarla paylaşılır:"
+            ],
+            "bullets": [
+              "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
+              "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
+              "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
+              "Barındırma: Hetzner Online GmbH (Almanya) — sunucular Avrupa Birliği içindedir."
+            ]
+          },
+          {
+            "heading": "Haklarınız",
+            "paragraphs": [
+              "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için lezzetanatolie@gmail.com adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
+            ],
+            "bullets": [
+              "Verilerinize erişme ve bir kopyasını isteme",
+              "Yanlış veya eksik verilerin düzeltilmesini isteme",
+              "Verilerinizin silinmesini isteme",
+              "İşlemenin sınırlandırılmasını isteme",
+              "Verilerinizi taşınabilir bir biçimde alma",
+              "Kampanya iletilerine itiraz etme ve izni geri alma",
+              "CNIL'e (Fransız veri koruma kurumu) şikâyette bulunma"
+            ]
+          },
+          {
+            "heading": "Çerezler ve tarayıcı kaydı",
+            "paragraphs": [
+              "Reklam veya takip çerezi kullanmıyoruz. Tarayıcınızda tutulanlar sitenin çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu.",
+              "Sayfaların ne sıklıkla görüntülendiğini ölçüyoruz, ama bu ölçüm çerezsizdir ve kimliğe bağlanamaz: ziyaretler her gün değişen, ertesi gün atılan bir anahtarla sayılır ve kişiye ait hiçbir kayıt tutulmaz.",
+              "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda tarayıcıdaki sepetiniz hesabınıza devredilir ve tarayıcıdan silinir."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Verilerinizle ilgili bir talebiniz mi var?",
+          "links": [
+            {
+              "label": "Hesabınızdan tercihlerinizi yönetin",
+              "target": "account"
+            },
+            {
+              "label": "ya da bize yazın",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "sales": {
+        "title": "Satış koşulları",
+        "sections": [
+          {
+            "heading": "Kapsam",
+            "paragraphs": [
+              "Bu koşullar, QUALITE SAS (SIRET 907 496 640 00026 · 46 rue des Prés, 67380 Lingolsheim, Fransa) tarafından Lezzet Anatolia markasıyla bu site üzerinden yapılan tüm satışlara uygulanır. Sipariş vermekle bu koşulları kabul etmiş olursunuz.",
+              "Koşullar değişebilir; siparişinize uygulanacak olan, siparişi verdiğiniz tarihte yürürlükte olan sürümdür. Sayfanın başındaki güncelleme tarihi hangi sürüme baktığınızı gösterir."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Ürünler ve bilgiler",
+            "paragraphs": [
+              "Sattığımız ürünler dondurulmuş ve raf ömürlü gıdalardır. Ürünleri kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır; bu bilgiler ürünü üreten firmanın beyanına dayanır.",
+              "Ürün fotoğrafları tanıtım amaçlıdır; sunum ve görünüm ürünler arasında farklılık gösterebilir. Bağlayıcı olan, ürün sayfasındaki yazılı bilgidir.",
+              "Dondurulmuş ürünler yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Siparişin kurulması",
+            "paragraphs": [
+              "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur — kapıda ödemeyi seçtiyseniz bu adımda ödeme yöntemini onaylamanız yeterlidir. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
+              "Fiyatlar sepette gösterildiği anda sabitlenir. Sipariş verdikten sonra katalogdaki fiyat değişse de siparişinizin tutarı değişmez.",
+              "Stokta olmadığı sonradan anlaşılan bir kalem varsa siparişiniz iptal edilmez: eksik kalem çıkarılır, bedeli tahsil edilmez ya da iade edilir ve durum size bildirilir."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Fiyatlar",
+            "paragraphs": [
+              "Fiyatlar euro cinsindendir ve yürürlükteki KDV dâhildir. Uygulanan KDV oranı ürün türüne göre değişir.",
+              "İşletme (B2B) hesaplarında fiyatlar farklıdır ve hesabınız onaylandıktan sonra görünür.",
+              "Teslimat ücreti fiyata dâhil değildir; sepette ayrı satır olarak gösterilir ve siparişi tamamlamadan önce görürsünüz."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Ödeme",
+            "paragraphs": [
+              "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
+              "Teslimat bölgemiz içinde, 500 €'ya kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır; eksik çıkan kalem baştan düşülür.",
+              "Havale ve çekle ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
+              "Peşin ödemeli siparişler, ödeme tamamlanmadan hazırlığa alınmaz. Kapıda ödemede tahsilat teslimat anında yapılır ve sipariş onaylandığı anda hazırlığa girer."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Teslimat",
+            "paragraphs": [
+              "Bölge içi adreslere kendi soğuk zincir aracımızla teslim ediyoruz; bölge dışına yalnız raf ömürlü ürünlerimizi normal kargoyla gönderiyoruz. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+              "Asgari sepet tutarı 40 €'dur ve her iki gönderim yolunda da geçerlidir. Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz; paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında teslim edilir.",
+              "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
+              "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Cayma hakkı",
+            "paragraphs": [
+              "Fransız tüketici mevzuatı uyarınca, çabuk bozulabilen gıda ürünlerinde mesafeli satışın 14 günlük cayma hakkı UYGULANMAZ (Code de la consommation, md. L221-28).",
+              "Bu, hatalı teslimattaki haklarınızı ortadan kaldırmaz: eksik, hasarlı, çözülmüş ya da yanlış gönderilen ürünlerde bedel iade edilir veya yeniden gönderim yapılır. Koşullar ve süreler teslimat ve iade sayfasında yazılıdır."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Yasal garantiler",
+            "paragraphs": [
+              "Ürünlerimiz, Fransız hukukundaki uygunluk garantisi (garantie légale de conformité) ve gizli ayıplara karşı garanti (garantie des vices cachés) kapsamındadır.",
+              "Bu garantiler yasal olup ayrıca ücret talep edilmez ve ticari bir taahhütle sınırlandırılamaz."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Kişisel veriler",
+            "paragraphs": [
+              "Siparişiniz için gereken kişisel verilerin nasıl işlendiği gizlilik politikası sayfasında ayrıntılı olarak açıklanmıştır."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Uyuşmazlık ve uygulanacak hukuk",
+            "paragraphs": [
+              "Bir sorun yaşarsanız bize yazın; talepler \"Taleplerim\" bölümünden açılabilir ve takip edilebilir.",
+              "Her türlü sorununuzu memnuniyetle çözeriz ve bir talebi çözüme ulaşmadan kapatmayız. Bu koşullar Fransız hukukuna tabidir."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Teslimat, kargo ve iade ayrıntıları ayrı bir sayfada:",
+          "links": [
+            {
+              "label": "Teslimat ve iade",
+              "target": "delivery"
+            },
+            {
+              "label": "bize yazın",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "terms": {
+        "title": "Yasal bilgiler",
+        "sections": [
+          {
+            "heading": "Site sahibi",
+            "paragraphs": [
+              "Bu site, Lezzet Anatolia markasıyla QUALITE SAS tarafından işletilmektedir."
+            ],
+            "bullets": [
+              "Ticari unvan: QUALITE",
+              "Marka adı: Lezzet Anatolia",
+              "Hukuki biçim: SAS — société par actions simplifiée",
+              "Sermaye: 500 €",
+              "SIREN: 907 496 640",
+              "SIRET (merkez): 907 496 640 00026",
+              "KDV numarası: FR50907496640",
+              "APE kodu: 4791B — uzaktan satış, uzmanlaşmış katalog",
+              "Merkez: 46 rue des Prés, 67380 Lingolsheim, Fransa",
+              "E-posta: lezzetanatolie@gmail.com",
+              "Telefon: +33 (0)6 16 99 06 81"
+            ]
+          },
+          {
+            "heading": "Yayın sorumlusu",
+            "paragraphs": [
+              "Yayın sorumlusu Yigit Bilgin'dir (QUALITE SAS başkanı). İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Barındırma",
+            "paragraphs": [
+              "Site, Hetzner Online GmbH tarafından Avrupa Birliği içindeki veri merkezlerinde barındırılmaktadır."
+            ],
+            "bullets": [
+              "Barındırıcı: Hetzner Online GmbH",
+              "Adres: Industriestr. 25, 91710 Gunzenhausen, Almanya",
+              "Telefon: +49 (0)9831 505-0"
+            ]
+          },
+          {
+            "heading": "Fikri mülkiyet",
+            "paragraphs": [
+              "Bu sitedeki metinler, ürün fotoğrafları, logo ve tasarım öğeleri site sahibine aittir ve Fransız fikri mülkiyet mevzuatı ile korunmaktadır.",
+              "Bunların tamamının ya da bir kısmının izinsiz çoğaltılması, yayımlanması veya ticari amaçla kullanılması yasaktır. Kişisel ve ticari olmayan kullanım için tarayıcınızda görüntüleme ve yazdırma serbesttir."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Sorumluluk",
+            "paragraphs": [
+              "Site içeriğinin güncel ve doğru olması için özen gösterilir. Ürün bilgileri, fiyatlar ve stok durumu değişebilir; sipariş anında sepette görünen bilgi geçerlidir.",
+              "Sitenin geçici olarak erişilemez olmasından ya da bakım nedeniyle kesintiye uğramasından doğan zararlardan sorumluluk kabul edilmez."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Uygulanacak hukuk",
+            "paragraphs": [
+              "Bu yasal bilgiler Fransız hukukuna tabidir. Satışa ilişkin koşullar için satış koşulları sayfasına bakınız."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Satın almaya ilişkin koşullar ayrı bir sayfada:",
+          "links": [
+            {
+              "label": "Satış koşulları",
+              "target": "sales"
+            },
+            {
+              "label": "Gizlilik politikası",
+              "target": "privacy"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "updatedAt": "Dernière mise à jour : 1 juillet 2026",
+    "searchPlaceholder": "Rechercher une question…",
+    "noMatch": "Aucune question ne correspond à cette recherche.",
+    "notFoundTitle": "Vous ne trouvez pas votre réponse ?",
+    "notFoundCta": "Écrivez-nous",
+    "missing": {
+      "title": "Cette page n'existe pas",
+      "body": "Nous ne trouvons pas la page demandée. Vous pouvez continuer avec les questions fréquentes.",
+      "cta": "Questions fréquentes"
+    },
+    "pages": {
+      "delivery": {
+        "title": "Livraison et retours",
+        "sections": [
+          {
+            "heading": "Notre zone de livraison",
+            "paragraphs": [
+              "Nous livrons les adresses de Strasbourg et de ses environs avec notre propre véhicule frigorifique, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
+              "Vous pouvez changer votre code postal à tout moment dans le bandeau en haut du site. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Montant minimum de commande",
+            "paragraphs": [
+              "Le montant minimum de commande est de 40 €. Il s'applique aux deux modes d'envoi. Si votre panier est en dessous, le montant restant est indiqué dans le panier."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Expédition",
+            "paragraphs": [
+              "Hors de notre zone, nous n'expédions que nos produits de longue conservation, dans toute la France et en Allemagne. Les produits surgelés ne partent pas en colis : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les livrons qu'avec notre propre véhicule, à l'intérieur de la zone.",
+              "Les frais d'expédition sont de 7,90 € et ils sont offerts au-delà de 60 € de commande. Le montant est affiché dans le panier avant la validation. Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France, un jour de plus pour l'Allemagne.",
+              "Vous voyez dans le catalogue et sur chaque fiche produit ce qui peut être expédié. Si vous choisissez une adresse hors zone, les articles livrables uniquement dans la zone doivent être retirés du panier."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Chaîne du froid",
+            "paragraphs": [
+              "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur.",
+              "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le congelez pas et signalez-le nous comme indiqué ci-dessous."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Conditions de retour",
+            "paragraphs": [
+              "Pour les denrées alimentaires, le droit de rétractation général ne s'applique pas aux produits livrés et acceptés, en raison du risque de rupture de la chaîne du froid (exception des biens périssables, code de la consommation).",
+              "En revanche, nous vous remboursons ou réexpédions votre commande dans les cas suivants — le choix vous appartient :"
+            ],
+            "bullets": [
+              "Article manquant : le montant du produit absent de votre colis est remboursé automatiquement, sans démarche de votre part.",
+              "Produit endommagé ou décongelé : signalez-le avec une photo dans les 48 heures suivant la livraison.",
+              "Produit erroné : nous envoyons le bon produit ou nous vous remboursons.",
+              "Commande non livrée : si la livraison n'a pas pu être faite pour une raison qui nous incombe, aucun encaissement n'est effectué, ou il est remboursé.",
+              "Absence à l'adresse : nous présentons la commande une seconde fois, sans frais. Si nous ne pouvons pas livrer lors de ce second passage non plus, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé."
+            ]
+          },
+          {
+            "heading": "Comment et quand le remboursement est effectué",
+            "paragraphs": [
+              "Le remboursement est effectué sur le moyen de paiement utilisé. Si vous avez payé par carte, le montant est recrédité sur votre carte ; selon votre banque, quelques jours ouvrés peuvent être nécessaires avant qu'il apparaisse sur votre compte.",
+              "Si vous avez choisi le paiement à la livraison et que vous n'avez pas encore payé, il n'y a pas de remboursement : le montant de l'article manquant est déjà déduit de la somme réclamée à la livraison.",
+              "Vous pouvez ouvrir une demande depuis la rubrique « Mes demandes » ; en sélectionnant votre commande et les articles concernés dans le formulaire, nous savons directement ce qui manque ou ce qui est abîmé."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Vous ne trouvez pas la réponse à votre question ici ?",
+          "links": [
+            {
+              "label": "Consultez la FAQ",
+              "target": "faq"
+            },
+            {
+              "label": "écrivez-nous",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "faq": {
+        "title": "Questions fréquentes",
+        "sections": [],
+        "questions": [
+          {
+            "question": "Les produits arrivent-ils surgelés ?",
+            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid — nous les livrons uniquement avec notre propre véhicule, à l'intérieur de notre zone de livraison. À la réception, il vous suffit de les placer au congélateur. Hors zone, nous n'expédions que nos produits de longue conservation : les surgelés ne partent pas en colis."
+          },
+          {
+            "question": "Y a-t-il un montant minimum de commande ?",
+            "answer": "Oui, 40 €. Il s'applique aussi bien à la livraison dans notre zone qu'à l'expédition ; si vous êtes en dessous, le montant restant est indiqué dans le panier. Les frais d'expédition sont par ailleurs de 7,90 € et sont offerts au-delà de 60 €."
+          },
+          {
+            "question": "Quand ma commande arrive-t-elle ?",
+            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour l'Allemagne. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
+          },
+          {
+            "question": "Puis-je payer à la livraison ?",
+            "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à 500 € de commande — en espèces ou par carte. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
+          },
+          {
+            "question": "Un produit manque dans ma commande, que faire ?",
+            "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Mes demandes » en sélectionnant votre commande."
+          },
+          {
+            "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
+            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au virement et au paiement par chèque ; vos conditions de règlement sont définies sur votre compte."
+          },
+          {
+            "question": "Où puis-je voir les informations sur les allergènes ?",
+            "answer": "Les ingrédients, les allergènes et, le cas échéant, l'avertissement de contamination croisée figurent sur la fiche de chaque produit. Ces informations proviennent de la déclaration du fabricant — nous ne fabriquons pas nos produits, nous les achetons auprès de producteurs que nous sélectionnons. En cas d'allergie sévère, écrivez-nous avant de commander : nous demandons confirmation au fabricant."
+          },
+          {
+            "question": "Dois-je créer un compte pour commander ?",
+            "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
+          },
+          {
+            "question": "Comment changer la langue du site et des e-mails ?",
+            "answer": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui navigue en français reçoive ses messages en turc."
+          }
+        ],
+        "notice": {
+          "text": "",
+          "links": []
+        }
+      },
+      "privacy": {
+        "title": "Politique de confidentialité",
+        "sections": [
+          {
+            "heading": "Qui est responsable de vos données",
+            "paragraphs": [
+              "Le responsable du traitement des données personnelles collectées sur ce site est la société QUALITE SAS (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, France, exploitant le site sous le nom commercial Lezzet Anatolia.",
+              "Pour toute question relative à la protection des données, vous pouvez nous écrire à lezzetanatolie@gmail.com."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Quelles données nous collectons",
+            "paragraphs": [
+              "Nous ne collectons que les données nécessaires à l'activité. Il s'agit de :"
+            ],
+            "bullets": [
+              "Identité et contact : votre nom, votre adresse e-mail, votre numéro de téléphone.",
+              "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé dans votre navigateur même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
+              "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
+              "Préférences de communication : vos consentements marketing et votre langue.",
+              "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
+              "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société."
+            ]
+          },
+          {
+            "heading": "Pourquoi nous les collectons",
+            "paragraphs": [
+              "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
+              "Les messages promotionnels ne sont envoyés que si vous y avez expressément consenti, et vous pouvez retirer ce consentement à tout moment. Le consentement n'est pas enregistré comme un simple indicateur mais avec la date et l'origine — c'est la preuve que nous pouvons produire si le consentement est contesté.",
+              "Pour la comptabilité et nos obligations légales, nous sommes tenus de conserver les enregistrements de commande et de paiement ; ceux-ci ne dépendent pas du consentement."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Combien de temps nous les conservons",
+            "paragraphs": [
+              "Les données de votre compte sont conservées tant que votre compte est actif. Vous pouvez supprimer votre compte vous-même, à tout moment, depuis votre page compte : votre nom, votre e-mail et votre téléphone, vos adresses enregistrées, vos demandes, vos points et vos bons personnels sont retirés, vos identifiants sont effacés et vous ne pouvez plus vous connecter.",
+              "Les enregistrements de commande et de facturation sont conservés pendant la durée exigée par la réglementation commerciale et fiscale française ; ils sont préservés jusqu'à l'expiration de ce délai, même après la suppression du compte. Cela inclut le nom et l'adresse figurant sur la facture : la réglementation impose que la facture contienne ces informations, elles ne peuvent donc pas en être retirées. La note que vous avez donnée aux produits reste également, mais elle n'est plus rattachée à votre nom.",
+              "Nos journaux techniques ne contiennent pas de données personnelles. Lorsqu'un diagnostic l'exige, des informations telles que l'e-mail ou le téléphone n'y figurent que sous forme masquée (par exemple a***@example.com) ; l'objectif est uniquement de distinguer de quel enregistrement il s'agit, pas de savoir qui c'est."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Avec qui nous les partageons",
+            "paragraphs": [
+              "Nous ne vendons pas vos données. Elles ne sont partagées qu'avec les prestataires nécessaires à l'activité :"
+            ],
+            "bullets": [
+              "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
+              "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
+              "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
+              "Hébergement : Hetzner Online GmbH (Allemagne) — les serveurs sont situés dans l'Union européenne."
+            ]
+          },
+          {
+            "heading": "Vos droits",
+            "paragraphs": [
+              "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à lezzetanatolie@gmail.com ; une réponse vous est apportée dans un délai maximal d'un mois."
+            ],
+            "bullets": [
+              "Accéder à vos données et en demander une copie",
+              "Demander la rectification de données inexactes ou incomplètes",
+              "Demander l'effacement de vos données",
+              "Demander la limitation du traitement",
+              "Recevoir vos données dans un format portable",
+              "Vous opposer aux messages promotionnels et retirer votre consentement",
+              "Introduire une réclamation auprès de la CNIL"
+            ]
+          },
+          {
+            "heading": "Cookies et stockage navigateur",
+            "paragraphs": [
+              "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi.",
+              "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé.",
+              "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Vous avez une demande concernant vos données ?",
+          "links": [
+            {
+              "label": "Gérez vos préférences depuis votre compte",
+              "target": "account"
+            },
+            {
+              "label": "ou écrivez-nous",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "sales": {
+        "title": "Conditions générales de vente",
+        "sections": [
+          {
+            "heading": "Champ d'application",
+            "paragraphs": [
+              "Les présentes conditions s'appliquent à toutes les ventes réalisées via ce site par la société QUALITE SAS (SIRET 907 496 640 00026 · 46 rue des Prés, 67380 Lingolsheim, France), sous le nom commercial Lezzet Anatolia. En passant commande, vous acceptez ces conditions.",
+              "Ces conditions peuvent évoluer ; la version applicable à votre commande est celle en vigueur à la date de la commande. La date de mise à jour en haut de page indique la version que vous consultez."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Produits et informations",
+            "paragraphs": [
+              "Les produits que nous vendons sont des denrées alimentaires surgelées ou de longue conservation. Nous ne les fabriquons pas nous-mêmes : nous les achetons auprès de producteurs que nous sélectionnons. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit ; ces informations proviennent de la déclaration du fabricant.",
+              "Les photographies sont fournies à titre d'illustration ; la présentation et l'aspect peuvent varier d'un produit à l'autre. Seules les informations écrites sur la fiche produit sont contractuelles.",
+              "Les produits surgelés ne peuvent être vendus qu'à l'intérieur de notre zone de livraison : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les envoyons pas en colis. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Formation de la commande",
+            "paragraphs": [
+              "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
+              "Les prix sont figés au moment où ils s'affichent dans le panier. Même si le prix du catalogue change après votre commande, le montant de votre commande reste inchangé.",
+              "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Prix",
+            "paragraphs": [
+              "Les prix sont indiqués en euros, toutes taxes comprises. Le taux de TVA applicable varie selon le type de produit.",
+              "Les comptes professionnels (B2B) bénéficient de tarifs distincts, visibles une fois le compte validé.",
+              "Les frais de livraison ne sont pas inclus dans le prix ; ils apparaissent sur une ligne distincte du panier et vous les voyez avant de finaliser la commande."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Paiement",
+            "paragraphs": [
+              "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
+              "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à 500 € de commande — en espèces ou par carte. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
+              "Le virement et le chèque sont réservés aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
+              "Les commandes payées d'avance ne sont pas mises en préparation avant la finalisation du paiement. En paiement à la livraison, l'encaissement a lieu au moment de la livraison et la commande entre en préparation dès sa validation."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Livraison",
+            "paragraphs": [
+              "Nous livrons les adresses de la zone avec notre propre véhicule frigorifique ; hors zone, nous n'expédions que nos produits de longue conservation, en colis standard. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
+              "Le montant minimum de commande est de 40 € et s'applique aux deux modes d'envoi. Les frais d'expédition sont de 7,90 € et sont offerts au-delà de 60 € ; une fois le colis préparé, comptez 2 à 4 jours ouvrés en France et un jour de plus pour l'Allemagne.",
+              "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
+              "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, nous présentons la commande une seconde fois, sans frais. Si ce second passage échoue également, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé. Les détails figurent sur la page livraison et retours."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Droit de rétractation",
+            "paragraphs": [
+              "Conformément au code de la consommation (art. L221-28), le droit de rétractation de 14 jours applicable à la vente à distance NE S'APPLIQUE PAS aux denrées alimentaires susceptibles de se détériorer rapidement.",
+              "Cela ne supprime pas vos droits en cas de livraison non conforme : en cas d'article manquant, endommagé, décongelé ou erroné, le montant est remboursé ou le produit réexpédié. Les conditions et les délais sont précisés sur la page livraison et retours."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Garanties légales",
+            "paragraphs": [
+              "Nos produits bénéficient de la garantie légale de conformité et de la garantie des vices cachés prévues par le droit français.",
+              "Ces garanties sont légales, ne donnent lieu à aucun frais supplémentaire et ne peuvent être limitées par un engagement commercial."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Données personnelles",
+            "paragraphs": [
+              "Le traitement des données personnelles nécessaires à votre commande est détaillé sur la page de politique de confidentialité."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Litiges et droit applicable",
+            "paragraphs": [
+              "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Mes demandes ».",
+              "Nous résolvons volontiers tout problème que vous rencontrez et ne clôturons pas une demande sans solution. Les présentes conditions sont soumises au droit français."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Les détails de livraison, d'expédition et de retour figurent sur une page distincte :",
+          "links": [
+            {
+              "label": "Livraison et retours",
+              "target": "delivery"
+            },
+            {
+              "label": "écrivez-nous",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "terms": {
+        "title": "Mentions légales",
+        "sections": [
+          {
+            "heading": "Éditeur du site",
+            "paragraphs": [
+              "Ce site est édité par la société QUALITE SAS, sous le nom commercial Lezzet Anatolia."
+            ],
+            "bullets": [
+              "Dénomination sociale : QUALITE",
+              "Nom commercial : Lezzet Anatolia",
+              "Forme juridique : SAS — société par actions simplifiée",
+              "Capital social : 500 €",
+              "SIREN : 907 496 640",
+              "SIRET (siège) : 907 496 640 00026",
+              "Numéro de TVA intracommunautaire : FR50907496640",
+              "Code APE : 4791B — vente à distance sur catalogue spécialisé",
+              "Siège social : 46 rue des Prés, 67380 Lingolsheim, France",
+              "E-mail : lezzetanatolie@gmail.com",
+              "Téléphone : +33 (0)6 16 99 06 81"
+            ]
+          },
+          {
+            "heading": "Directeur de la publication",
+            "paragraphs": [
+              "Le directeur de la publication est Yigit Bilgin, président de QUALITE SAS. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Hébergement",
+            "paragraphs": [
+              "Le site est hébergé par Hetzner Online GmbH, dans des centres de données situés dans l'Union européenne."
+            ],
+            "bullets": [
+              "Hébergeur : Hetzner Online GmbH",
+              "Adresse : Industriestr. 25, 91710 Gunzenhausen, Allemagne",
+              "Téléphone : +49 (0)9831 505-0"
+            ]
+          },
+          {
+            "heading": "Propriété intellectuelle",
+            "paragraphs": [
+              "Les textes, photographies de produits, le logo et les éléments graphiques de ce site appartiennent à l'éditeur et sont protégés par le code de la propriété intellectuelle.",
+              "Toute reproduction, publication ou exploitation commerciale, totale ou partielle, sans autorisation est interdite. La consultation et l'impression dans un cadre privé et non commercial restent libres."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Responsabilité",
+            "paragraphs": [
+              "Nous veillons à l'exactitude et à l'actualité du contenu du site. Les informations produits, les prix et les disponibilités peuvent évoluer ; l'information affichée dans le panier au moment de la commande fait foi.",
+              "Notre responsabilité ne saurait être engagée en cas d'indisponibilité temporaire du site ou d'interruption pour maintenance."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Droit applicable",
+            "paragraphs": [
+              "Les présentes mentions légales sont soumises au droit français. Pour les conditions relatives à la vente, veuillez consulter la page des conditions générales de vente."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Les conditions relatives à l'achat figurent sur une page distincte :",
+          "links": [
+            {
+              "label": "Conditions générales de vente",
+              "target": "sales"
+            },
+            {
+              "label": "Politique de confidentialité",
+              "target": "privacy"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
+    "searchPlaceholder": "Frage suchen…",
+    "noMatch": "Keine Frage passt zu dieser Suche.",
+    "notFoundTitle": "Antwort nicht gefunden?",
+    "notFoundCta": "Schreiben Sie uns",
+    "missing": {
+      "title": "Diese Seite gibt es nicht",
+      "body": "Wir konnten die gesuchte Seite nicht finden. Sie können mit den häufigen Fragen weitermachen.",
+      "cta": "Häufige Fragen"
+    },
+    "pages": {
+      "delivery": {
+        "title": "Lieferung und Rücksendung",
+        "sections": [
+          {
+            "heading": "Unser Liefergebiet",
+            "paragraphs": [
+              "Adressen in Straßburg und Umgebung beliefern wir mit unserem eigenen Kühlfahrzeug bis vor die Haustür. Ob Ihre Adresse im Liefergebiet liegt, sehen Sie bei der Bestellung automatisch anhand Ihrer Postleitzahl; Ihr Liefertag richtet sich nach dem Kalender Ihres Gebiets.",
+              "Sie können Ihre Postleitzahl jederzeit oben auf der Seite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — Sie erleben also an der Kasse keine Überraschung."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Mindestbestellwert",
+            "paragraphs": [
+              "Der Mindestbestellwert beträgt 40 € und gilt für beide Versandwege. Liegt Ihr Warenkorb darunter, wird der fehlende Betrag im Warenkorb angezeigt."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Versand",
+            "paragraphs": [
+              "Außerhalb unseres Liefergebiets versenden wir nur unsere lagerfähigen Produkte — in ganz Frankreich und Deutschland. Tiefgekühlte Produkte gehen nicht als Paket auf die Reise: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, liefern wir sie ausschließlich mit unserem eigenen Fahrzeug innerhalb des Gebiets.",
+              "Die Versandkosten betragen 7,90 € und entfallen ab 60 € Bestellwert. Der Betrag wird im Warenkorb vor dem Abschluss der Bestellung angezeigt. Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich mit 2 bis 4 Werktagen, in Deutschland mit einem Tag mehr.",
+              "Was versandfähig ist, sehen Sie im Katalog und auf jeder Produktseite. Wenn Sie eine Adresse außerhalb des Gebiets wählen, müssen die nur im Gebiet lieferbaren Artikel aus dem Warenkorb entfernt werden."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Kühlkette",
+            "paragraphs": [
+              "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller; die Kühlkette wird weder in unserem Lager noch in unserem Fahrzeug unterbrochen. Nach dem Empfang legen Sie sie einfach direkt in Ihren Gefrierschrank.",
+              "Da wir diese Produkte selbst ausliefern, ist der Weg kurz. Dennoch können die Ränder der Produkte bei der Übergabe leicht angetaut sein; das ist normal und beeinträchtigt die Qualität nicht. Ist der Inhalt vollständig aufgetaut, frieren Sie ihn nicht ein und melden Sie es uns wie unten beschrieben."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Rücksendebedingungen",
+            "paragraphs": [
+              "Bei Lebensmitteln gilt für gelieferte und angenommene Ware wegen des Risikos einer unterbrochenen Kühlkette kein allgemeines Widerrufsrecht (Ausnahme für schnell verderbliche Waren).",
+              "In den folgenden Fällen erstatten wir Ihnen den Betrag oder senden erneut — die Wahl liegt bei Ihnen:"
+            ],
+            "bullets": [
+              "Fehlender Artikel: Der Betrag des in Ihrem Paket fehlenden Produkts wird automatisch erstattet, ohne dass Sie etwas tun müssen.",
+              "Beschädigtes oder aufgetautes Produkt: Melden Sie es innerhalb von 48 Stunden nach der Lieferung mit einem Foto.",
+              "Falsch geliefertes Produkt: Wir senden das richtige Produkt oder erstatten den Betrag.",
+              "Nicht zugestellte Bestellung: Konnte aus einem von uns zu vertretenden Grund nicht zugestellt werden, erfolgt kein Einzug beziehungsweise eine Erstattung.",
+              "Niemand an der Adresse angetroffen: Wir versuchen die Zustellung ein zweites Mal, kostenfrei. Können wir auch dann nicht zustellen, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet."
+            ]
+          },
+          {
+            "heading": "Wie und wann erstattet wird",
+            "paragraphs": [
+              "Die Erstattung erfolgt auf das von Ihnen genutzte Zahlungsmittel. Bei Kartenzahlung wird der Betrag Ihrer Karte gutgeschrieben; je nach Bank kann es einige Werktage dauern, bis er auf Ihrem Konto erscheint.",
+              "Haben Sie Zahlung bei Lieferung gewählt und noch nicht bezahlt, gibt es keine Erstattung: Der Betrag des fehlenden Artikels wird bereits von der bei der Lieferung fälligen Summe abgezogen.",
+              "Eine Anfrage können Sie im Bereich „Meine Anfragen“ eröffnen; wenn Sie im Formular Ihre Bestellung und die betroffenen Artikel auswählen, erfahren wir direkt, was fehlt oder beschädigt ist."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Sie finden hier keine Antwort auf Ihre Frage?",
+          "links": [
+            {
+              "label": "Sehen Sie in den FAQ nach",
+              "target": "faq"
+            },
+            {
+              "label": "schreiben Sie uns",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "faq": {
+        "title": "Häufige Fragen",
+        "sections": [],
+        "questions": [
+          {
+            "question": "Kommen die Produkte gefroren an?",
+            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an — wir liefern sie ausschließlich mit unserem eigenen Fahrzeug innerhalb unseres Liefergebiets. Nach dem Empfang legen Sie sie einfach in den Gefrierschrank. Außerhalb des Gebiets versenden wir nur unsere lagerfähigen Produkte; Tiefkühlware geht nicht als Paket auf die Reise."
+          },
+          {
+            "question": "Gibt es einen Mindestbestellwert?",
+            "answer": "Ja, 40 €. Er gilt sowohl für die Lieferung in unserem Gebiet als auch für den Versand; liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Die Versandkosten betragen darüber hinaus 7,90 € und entfallen ab 60 €."
+          },
+          {
+            "question": "Wann kommt meine Bestellung an?",
+            "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich, in Deutschland mit einem Tag mehr. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
+          },
+          {
+            "question": "Kann ich bei Lieferung bezahlen?",
+            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem Bestellwert von 500 € möglich — bar oder mit Karte. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+          },
+          {
+            "question": "Ein Produkt fehlt in meiner Bestellung, was tun?",
+            "answer": "Sie müssen nichts tun: Der Betrag des in Ihrem Paket fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Meine Anfragen“ eine Anfrage und wählen Ihre Bestellung aus."
+          },
+          {
+            "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
+            "answer": "Ja. Sie können sich über die Seite „Professionnels“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung und Scheck bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
+          },
+          {
+            "question": "Wo finde ich Angaben zu Allergenen?",
+            "answer": "Zutaten, Allergene und gegebenenfalls der Hinweis auf Kreuzkontamination stehen auf der Seite jedes Produkts. Diese Angaben stammen aus der Deklaration des Herstellers — wir stellen unsere Produkte nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Bei einer schweren Allergie schreiben Sie uns bitte vor der Bestellung; wir holen die Bestätigung beim Hersteller ein."
+          },
+          {
+            "question": "Brauche ich ein Konto, um zu bestellen?",
+            "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert: Sie geben Ihre Adresse nicht erneut ein und können eine frühere Bestellung unter „Meine Bestellungen“ mit einem Klick wiederholen."
+          },
+          {
+            "question": "Wie ändere ich die Sprache der Website und der E-Mails?",
+            "answer": "Oben auf der Seite oder über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die Seite auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
+          }
+        ],
+        "notice": {
+          "text": "",
+          "links": []
+        }
+      },
+      "privacy": {
+        "title": "Datenschutzerklärung",
+        "sections": [
+          {
+            "heading": "Wer für Ihre Daten verantwortlich ist",
+            "paragraphs": [
+              "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist die QUALITE SAS (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, Frankreich, die die Website unter dem Handelsnamen Lezzet Anatolia betreibt.",
+              "Bei allen Fragen zum Datenschutz erreichen Sie uns unter lezzetanatolie@gmail.com."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Welche Daten wir erheben",
+            "paragraphs": [
+              "Wir erheben nur die Daten, die für den Geschäftsbetrieb erforderlich sind. Das sind:"
+            ],
+            "bullets": [
+              "Identität und Kontakt: Ihr Name, Ihre E-Mail-Adresse, Ihre Telefonnummer.",
+              "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto in Ihrem Browser gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
+              "Bestellungen: Ihre Bestellungen, deren Artikel, Beträge und Status.",
+              "Kommunikationseinstellungen: Ihre Marketing-Einwilligungen und Ihre Sprache.",
+              "Ihre Anfragen: die Nachrichten, die Sie uns schreiben, und die Fotos, die Sie anhängen.",
+              "Wenn Sie Geschäftskunde sind: Ihre SIRET-Nummer und Ihre Unternehmensangaben."
+            ]
+          },
+          {
+            "heading": "Warum wir sie erheben",
+            "paragraphs": [
+              "Ohne Ihren Namen und Ihre Adresse kann eine Bestellung nicht zugestellt werden; ohne Ihre E-Mail-Adresse können wir Ihnen den Status Ihrer Bestellung nicht mitteilen. Diese Daten werden zur Erfüllung des Vertrags verarbeitet.",
+              "Werbenachrichten senden wir nur, wenn Sie ausdrücklich eingewilligt haben, und Sie können die Einwilligung jederzeit widerrufen. Die Einwilligung wird nicht als bloßes Kennzeichen gespeichert, sondern mit Zeitpunkt und Herkunft — das ist der Nachweis, den wir vorlegen können, wenn die Einwilligung bestritten wird.",
+              "Für Buchhaltung und gesetzliche Pflichten sind wir verpflichtet, Bestell- und Zahlungsunterlagen aufzubewahren; diese hängen nicht von einer Einwilligung ab."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Wie lange wir sie speichern",
+            "paragraphs": [
+              "Ihre Kontodaten werden gespeichert, solange Ihr Konto besteht. Sie können Ihr Konto jederzeit selbst über Ihre Kontoseite löschen: Ihr Name, Ihre E-Mail-Adresse und Telefonnummer, Ihre gespeicherten Adressen, Ihre Anfragen, Ihre Punkte und persönlichen Gutscheine werden entfernt, Ihre Anmeldedaten gelöscht, und eine Anmeldung ist nicht mehr möglich.",
+              "Bestell- und Rechnungsunterlagen werden für die nach französischem Handels- und Steuerrecht vorgeschriebene Dauer aufbewahrt; sie bleiben bis zum Ablauf dieser Frist erhalten, auch wenn das Konto gelöscht wurde. Dazu gehören auch der Name und die Adresse auf der Rechnung: Die Vorschriften verlangen, dass die Rechnung diese Angaben enthält, sie können daher nicht entfernt werden. Auch Ihre Produktbewertung bleibt bestehen, ist aber nicht mehr mit Ihrem Namen verknüpft.",
+              "Unsere technischen Protokolle enthalten keine personenbezogenen Daten. Wo es zur Fehlersuche erforderlich ist, erscheinen Angaben wie E-Mail oder Telefon dort nur maskiert (zum Beispiel a***@example.com); der Zweck ist allein, zu unterscheiden, um welchen Datensatz es geht, nicht, wer dahintersteht."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Mit wem wir sie teilen",
+            "paragraphs": [
+              "Wir verkaufen Ihre Daten nicht. Sie werden nur mit den für den Betrieb notwendigen Dienstleistern geteilt:"
+            ],
+            "bullets": [
+              "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
+              "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
+              "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
+              "Hosting: Hetzner Online GmbH (Deutschland) — die Server stehen innerhalb der Europäischen Union."
+            ]
+          },
+          {
+            "heading": "Ihre Rechte",
+            "paragraphs": [
+              "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an lezzetanatolie@gmail.com; wir antworten spätestens innerhalb eines Monats."
+            ],
+            "bullets": [
+              "Auskunft über Ihre Daten und eine Kopie davon verlangen",
+              "Berichtigung unrichtiger oder unvollständiger Daten verlangen",
+              "Löschung Ihrer Daten verlangen",
+              "Einschränkung der Verarbeitung verlangen",
+              "Ihre Daten in einem übertragbaren Format erhalten",
+              "Werbenachrichten widersprechen und die Einwilligung widerrufen",
+              "Beschwerde bei der CNIL (französische Datenschutzbehörde) einlegen"
+            ]
+          },
+          {
+            "heading": "Cookies und Browser-Speicher",
+            "paragraphs": [
+              "Wir verwenden weder Werbe- noch Tracking-Cookies. Was in Ihrem Browser gespeichert wird, ist für den Betrieb der Website erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl.",
+              "Wir messen, wie häufig Seiten aufgerufen werden, doch diese Messung kommt ohne Cookies aus und lässt sich keiner Person zuordnen: Besuche werden mit einem Schlüssel gezählt, der täglich wechselt und am Folgetag verworfen wird; ein personenbezogener Eintrag entsteht dabei nicht.",
+              "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb aus dem Browser in Ihr Konto übernommen und aus dem Browser gelöscht."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Haben Sie ein Anliegen zu Ihren Daten?",
+          "links": [
+            {
+              "label": "Verwalten Sie Ihre Einstellungen im Konto",
+              "target": "account"
+            },
+            {
+              "label": "oder schreiben Sie uns",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "sales": {
+        "title": "Allgemeine Geschäftsbedingungen",
+        "sections": [
+          {
+            "heading": "Geltungsbereich",
+            "paragraphs": [
+              "Diese Bedingungen gelten für alle über diese Website getätigten Verkäufe der QUALITE SAS (SIRET 907 496 640 00026 · 46 rue des Prés, 67380 Lingolsheim, Frankreich) unter dem Handelsnamen Lezzet Anatolia. Mit Ihrer Bestellung erkennen Sie diese Bedingungen an.",
+              "Die Bedingungen können sich ändern; für Ihre Bestellung gilt die zum Bestelldatum gültige Fassung. Das Aktualisierungsdatum oben auf der Seite zeigt, welche Fassung Sie einsehen."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Produkte und Angaben",
+            "paragraphs": [
+              "Die von uns verkauften Produkte sind tiefgekühlte und lagerfähige Lebensmittel. Wir stellen sie nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts; diese Angaben stammen aus der Deklaration des Herstellers.",
+              "Produktfotos dienen der Veranschaulichung; Darstellung und Aussehen können von Produkt zu Produkt abweichen. Verbindlich sind allein die schriftlichen Angaben auf der Produktseite.",
+              "Tiefgekühlte Produkte können nur innerhalb unseres Liefergebiets verkauft werden: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, versenden wir sie nicht als Paket. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Zustandekommen der Bestellung",
+            "paragraphs": [
+              "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen — bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
+              "Die Preise werden in dem Moment festgeschrieben, in dem sie im Warenkorb angezeigt werden. Ändert sich der Katalogpreis nach Ihrer Bestellung, bleibt der Betrag Ihrer Bestellung unverändert.",
+              "Stellt sich nachträglich heraus, dass ein Artikel nicht verfügbar ist, wird Ihre Bestellung nicht storniert: Der fehlende Artikel wird entfernt, sein Betrag nicht eingezogen oder erstattet, und Sie werden informiert."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Preise",
+            "paragraphs": [
+              "Die Preise verstehen sich in Euro einschließlich der geltenden Mehrwertsteuer. Der anwendbare Steuersatz richtet sich nach der Produktart.",
+              "Für Geschäftskonten (B2B) gelten abweichende Preise, die nach Bestätigung des Kontos sichtbar sind.",
+              "Lieferkosten sind nicht im Preis enthalten; sie werden als eigene Zeile im Warenkorb ausgewiesen und sind vor dem Abschluss der Bestellung sichtbar."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Zahlung",
+            "paragraphs": [
+              "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
+              "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem Bestellwert von 500 € möglich — bar oder mit Karte. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
+              "Überweisung und Scheck stehen ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
+              "Im Voraus bezahlte Bestellungen werden erst nach Abschluss der Zahlung in Vorbereitung genommen. Bei Zahlung bei Lieferung erfolgt der Einzug bei der Übergabe, und die Bestellung geht unmittelbar nach ihrer Bestätigung in Vorbereitung."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Lieferung",
+            "paragraphs": [
+              "Adressen im Liefergebiet beliefern wir mit unserem eigenen Kühlfahrzeug; außerhalb des Gebiets versenden wir nur unsere lagerfähigen Produkte als normales Paket. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+              "Der Mindestbestellwert beträgt 40 € und gilt für beide Versandwege. Die Versandkosten betragen 7,90 € und entfallen ab 60 €; nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und einem Tag mehr in Deutschland.",
+              "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
+              "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Widerrufsrecht",
+            "paragraphs": [
+              "Nach französischem Verbraucherrecht (Code de la consommation, Art. L221-28) findet das 14-tägige Widerrufsrecht im Fernabsatz auf schnell verderbliche Lebensmittel KEINE ANWENDUNG.",
+              "Ihre Rechte bei fehlerhafter Lieferung bleiben davon unberührt: Bei fehlenden, beschädigten, aufgetauten oder falsch gelieferten Produkten wird der Betrag erstattet oder erneut versendet. Bedingungen und Fristen stehen auf der Seite Lieferung und Rücksendung."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Gesetzliche Gewährleistung",
+            "paragraphs": [
+              "Für unsere Produkte gelten die im französischen Recht vorgesehene Konformitätsgarantie und die Gewährleistung für versteckte Mängel.",
+              "Diese Gewährleistungen sind gesetzlich, verursachen keine zusätzlichen Kosten und können nicht durch eine kommerzielle Zusage eingeschränkt werden."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Personenbezogene Daten",
+            "paragraphs": [
+              "Wie die für Ihre Bestellung erforderlichen personenbezogenen Daten verarbeitet werden, ist auf der Seite zur Datenschutzerklärung ausführlich beschrieben."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Streitigkeiten und anwendbares Recht",
+            "paragraphs": [
+              "Bei Problemen schreiben Sie uns; Anfragen können unter „Meine Anfragen“ eröffnet und verfolgt werden.",
+              "Wir lösen jedes Problem gerne und schließen keine Anfrage ohne Lösung. Diese Bedingungen unterliegen französischem Recht."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Einzelheiten zu Lieferung, Versand und Rücksendung stehen auf einer eigenen Seite:",
+          "links": [
+            {
+              "label": "Lieferung und Rücksendung",
+              "target": "delivery"
+            },
+            {
+              "label": "schreiben Sie uns",
+              "target": "support"
+            }
+          ]
+        }
+      },
+      "terms": {
+        "title": "Impressum",
+        "sections": [
+          {
+            "heading": "Betreiber der Website",
+            "paragraphs": [
+              "Diese Website wird von der QUALITE SAS unter dem Handelsnamen Lezzet Anatolia betrieben."
+            ],
+            "bullets": [
+              "Firma: QUALITE",
+              "Handelsname: Lezzet Anatolia",
+              "Rechtsform: SAS — société par actions simplifiée",
+              "Stammkapital: 500 €",
+              "SIREN: 907 496 640",
+              "SIRET (Sitz): 907 496 640 00026",
+              "USt-IdNr.: FR50907496640",
+              "APE-Code: 4791B — Fernabsatz über spezialisierten Katalog",
+              "Sitz: 46 rue des Prés, 67380 Lingolsheim, Frankreich",
+              "E-Mail: lezzetanatolie@gmail.com",
+              "Telefon: +33 (0)6 16 99 06 81"
+            ]
+          },
+          {
+            "heading": "Verantwortlich für den Inhalt",
+            "paragraphs": [
+              "Verantwortlich für den Inhalt ist Yigit Bilgin, Präsident der QUALITE SAS. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Hosting",
+            "paragraphs": [
+              "Die Website wird von der Hetzner Online GmbH in Rechenzentren innerhalb der Europäischen Union gehostet."
+            ],
+            "bullets": [
+              "Hoster: Hetzner Online GmbH",
+              "Anschrift: Industriestr. 25, 91710 Gunzenhausen, Deutschland",
+              "Telefon: +49 (0)9831 505-0"
+            ]
+          },
+          {
+            "heading": "Urheberrecht",
+            "paragraphs": [
+              "Die Texte, Produktfotos, das Logo und die Gestaltungselemente dieser Website gehören dem Betreiber und sind nach französischem Urheberrecht geschützt.",
+              "Jede unerlaubte Vervielfältigung, Veröffentlichung oder kommerzielle Nutzung, ganz oder teilweise, ist untersagt. Das Ansehen und Ausdrucken für private, nicht kommerzielle Zwecke bleibt frei."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Haftung",
+            "paragraphs": [
+              "Wir achten auf Aktualität und Richtigkeit der Inhalte. Produktangaben, Preise und Verfügbarkeiten können sich ändern; maßgeblich ist die im Warenkorb zum Zeitpunkt der Bestellung angezeigte Information.",
+              "Für Schäden aus vorübergehender Nichterreichbarkeit der Website oder Unterbrechungen wegen Wartungsarbeiten wird keine Haftung übernommen."
+            ],
+            "bullets": []
+          },
+          {
+            "heading": "Anwendbares Recht",
+            "paragraphs": [
+              "Dieses Impressum unterliegt französischem Recht. Für die Bedingungen des Kaufs sehen Sie bitte die Seite mit den allgemeinen Geschäftsbedingungen ein."
+            ],
+            "bullets": []
+          }
+        ],
+        "questions": [],
+        "notice": {
+          "text": "Die Bedingungen für den Kauf stehen auf einer eigenen Seite:",
+          "links": [
+            {
+              "label": "Allgemeine Geschäftsbedingungen",
+              "target": "sales"
+            },
+            {
+              "label": "Datenschutzerklärung",
+              "target": "privacy"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

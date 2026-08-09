@@ -99,13 +99,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['screen-title--font-weight']],
     fontSize: operationsTheme.text['screen-title'],
-    fontWeight: operationsTheme.text['screen-title--font-weight'],
   },
   /** Hata başlığı KARLA 700/15 (v2) — gövde kademesinde, çünkü hata bir başlık değil bir bildirim. */
   errorTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.body,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   description: {
     fontFamily: operationsTheme.font.body[400],
@@ -129,7 +127,6 @@ const styles = StyleSheet.create({
   retryLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
 });

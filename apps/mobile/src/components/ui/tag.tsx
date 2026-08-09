@@ -81,7 +81,6 @@ const styles = StyleSheet.create((theme) => ({
   label: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
     fontSize: theme.text.badge,
-    fontWeight: theme.text['badge--font-weight'],
     letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text.badge),
   },
   terracotta: { backgroundColor: theme.colors.terracotta },

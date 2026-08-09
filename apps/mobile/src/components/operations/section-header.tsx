@@ -75,7 +75,6 @@ const styles = StyleSheet.create((_theme, rt) => ({
   eyebrow: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     /* Harf aralığı token'da `em` (yazı boyuna göreli); RN mutlak dp ister — çeviri `parse.ts`te,
        tek yerde. Ham bir dp yazmak, kademe değişince aralığın yerinde kalması demekti. */
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
@@ -84,7 +83,6 @@ const styles = StyleSheet.create((_theme, rt) => ({
   title: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['card-title--font-weight']],
     fontSize: operationsTheme.text['card-title'],
-    fontWeight: operationsTheme.text['card-title--font-weight'],
     color: operationsTheme.colors.ink,
   },
 }));

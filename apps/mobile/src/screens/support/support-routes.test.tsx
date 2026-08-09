@@ -14,6 +14,10 @@ import { renderShell } from '@/testing/render-shell';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// İlk-açılış kapısı tamamlanmış sayılır (modül-yanı mock — gerekçesi mock dosyasının başlığında):
+// bayraksız ortamda kök layout her müşteri rotasını onboarding'e çevirirdi; bu testin konusu o değil.
+jest.mock('@/lib/onboarding/onboarding-store');
+
 describe('destek rotaları', () => {
   it('/support taleplerim listesini açar', async () => {
     const { app } = await renderShell('/support');

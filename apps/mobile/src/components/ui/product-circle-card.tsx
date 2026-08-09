@@ -129,7 +129,6 @@ const styles = StyleSheet.create((theme) => ({
   name: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['body-sm'],
-    fontWeight: theme.text['card-title-sm--font-weight'],
     // Sıkı başlık satır aralığı — oran da token (`h1--line-height`), ham çarpan yazılmadı.
     lineHeight: theme.text['body-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,

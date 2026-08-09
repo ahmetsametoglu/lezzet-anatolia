@@ -1,0 +1,236 @@
+{
+  "tr": {
+    "brand": "Lezzet Anatolia",
+    "skip": "Atla",
+    "next": "Devam",
+    "start": "Alışverişe başla",
+    "doneToast": "Hoş geldiniz — afiyetle! ✓",
+    "step": "Adım {n} / {total}",
+    "language": {
+      "kicker": "HOŞ GELDİNİZ · BIENVENUE",
+      "title": "Hangi dilde devam edelim?",
+      "names": {
+        "tr": "Türkçe",
+        "fr": "Français",
+        "de": "Deutsch"
+      }
+    },
+    "fontSize": {
+      "kicker": "OKUMA RAHATLIĞI",
+      "title": "Yazı boyutunu seçin",
+      "options": {
+        "small": "Küçük",
+        "normal": "Normal",
+        "large": "Büyük"
+      },
+      "note": "Bunu istediğiniz zaman Hesabım'dan değiştirebilirsiniz.",
+      "sampleCard": {
+        "eyebrow": "BÖREKLER",
+        "name": "Ispanaklı Su Böreği",
+        "meta": "17,80 € / kg · KDV dahil",
+        "price": "8,90 €",
+        "body": "El açması yufka, bol ıspanak ve beyaz peynirle klasik su böreği."
+      }
+    },
+    "zip": {
+      "kicker": "TESLİMAT BÖLGESİ",
+      "title": "Size nasıl ulaştıralım?",
+      "body": "Posta kodunuzu girin, teslimat şeklinizi söyleyelim.",
+      "field": "Posta kodu",
+      "placeholder": "Posta kodu — örn. 67000",
+      "insideNote": "Harika — kapınıza ücretsiz teslim ediyoruz! Kapıda ödeme de kullanabilirsiniz.",
+      "shippingNote": "Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız; 60 € üzeri kargo ücretsiz.",
+      "ambiguousNote": "Bu kod birden çok yerde geçerli — teslimat adresinizi girerken netleştireceğiz.",
+      "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
+      "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız."
+    },
+    "back": "Geri",
+    "delivery": {
+      "kicker": "TESLİMAT NASIL ÇALIŞIR",
+      "title": "İki teslimat yolumuz var",
+      "body": "Posta kodunuza göre size ulaşabilen ürünleri gösteriyoruz — bu yüzden katalogda gördükleriniz bulunduğunuz yere göre değişir.",
+      "route": {
+        "title": "Kendi soğutuculu aracımızla",
+        "body": "Teslimat bölgemizdeyseniz her ürün gelir — donuk ve soğuk zincir dâhil."
+      },
+      "shipping": {
+        "title": "Kargoyla",
+        "body": "Bölge dışında yalnız kargolanabilir ürünler; soğuk zincir gerektirenler kargoyla gönderilemez."
+      },
+      "note": "Posta kodunuzu bu yüzden soruyoruz: size ulaşamayacak bir ürünü sepetinizde görmeyin diye."
+    },
+    "payment": {
+      "kicker": "ÖDEME",
+      "title": "Nasıl isterseniz öyle ödeyin",
+      "online": {
+        "title": "Online ödeme",
+        "body": "Stripe altyapısıyla — kart bilgileriniz bizde tutulmaz"
+      },
+      "door": {
+        "title": "Kapıda ödeme",
+        "body": "Bölge içi teslimatlarda nakit, kart veya çekle"
+      },
+      "transfer": {
+        "title": "Havale ve vadeli hesap",
+        "body": "Profesyonel müşterilerimize özel"
+      },
+      "secure": "Ödemeleriniz Stripe güvencesinde — bankanızın uyguladığı korumanın aynısı. Bir sorun olursa iade kolay."
+    }
+  },
+  "fr": {
+    "brand": "Lezzet Anatolia",
+    "skip": "Passer",
+    "next": "Continuer",
+    "start": "Commencer mes achats",
+    "doneToast": "Bienvenue — bon appétit ! ✓",
+    "step": "Étape {n} sur {total}",
+    "language": {
+      "kicker": "HOŞ GELDİNİZ · BIENVENUE",
+      "title": "Dans quelle langue continuons-nous ?",
+      "names": {
+        "tr": "Türkçe",
+        "fr": "Français",
+        "de": "Deutsch"
+      }
+    },
+    "fontSize": {
+      "kicker": "CONFORT DE LECTURE",
+      "title": "Choisissez la taille du texte",
+      "options": {
+        "small": "Petit",
+        "normal": "Normal",
+        "large": "Grand"
+      },
+      "note": "Modifiable à tout moment depuis Mon compte.",
+      "sampleCard": {
+        "eyebrow": "BÖREKS",
+        "name": "Böreki aux épinards",
+        "meta": "17,80 € / kg · TVA incluse",
+        "price": "8,90 €",
+        "body": "Pâte étirée à la main, épinards et fromage blanc — le böreki classique."
+      }
+    },
+    "zip": {
+      "kicker": "ZONE DE LIVRAISON",
+      "title": "Comment vous livrer ?",
+      "body": "Saisissez votre code postal, nous vous dirons comment nous livrons.",
+      "field": "Code postal",
+      "placeholder": "Code postal — ex. 67000",
+      "insideNote": "Parfait — nous livrons gratuitement à votre porte ! Le paiement à la livraison est aussi possible.",
+      "shippingNote": "Expédition sous chaîne du froid en 2–4 jours ouvrés ; frais de port offerts dès 60 €.",
+      "ambiguousNote": "Ce code correspond à plusieurs lieux — nous préciserons lors de la saisie de l'adresse.",
+      "unknownNote": "Nous n'avons pas trouvé ce code — pouvez-vous vérifier la saisie ?",
+      "unresolvedNote": "Nous ne pouvons pas encore préciser la livraison pour ce code ; nous verrons cela à la commande."
+    },
+    "back": "Retour",
+    "delivery": {
+      "kicker": "COMMENT NOUS LIVRONS",
+      "title": "Deux modes de livraison",
+      "body": "Nous affichons les produits qui peuvent vous être livrés selon votre code postal — le catalogue change donc selon l'endroit où vous êtes.",
+      "route": {
+        "title": "Avec notre véhicule réfrigéré",
+        "body": "Dans notre zone, tout arrive — surgelés et chaîne du froid compris."
+      },
+      "shipping": {
+        "title": "Par colis",
+        "body": "Hors zone, uniquement les produits expédiables ; ceux qui exigent la chaîne du froid ne partent pas en colis."
+      },
+      "note": "C'est pourquoi nous demandons votre code postal : pour ne pas vous montrer un produit qui ne peut pas vous parvenir."
+    },
+    "payment": {
+      "kicker": "PAIEMENT",
+      "title": "Payez comme vous voulez",
+      "online": {
+        "title": "Paiement en ligne",
+        "body": "Via Stripe — vos données de carte ne sont jamais stockées chez nous"
+      },
+      "door": {
+        "title": "Paiement à la livraison",
+        "body": "En zone locale : espèces, carte ou chèque"
+      },
+      "transfer": {
+        "title": "Virement et paiement différé",
+        "body": "Réservé à nos clients professionnels"
+      },
+      "secure": "Vos paiements sont sous la protection de Stripe — la même que celle appliquée par votre banque. En cas de problème, le remboursement est simple."
+    }
+  },
+  "de": {
+    "brand": "Lezzet Anatolia",
+    "skip": "Überspringen",
+    "next": "Weiter",
+    "start": "Einkauf starten",
+    "doneToast": "Willkommen — guten Appetit! ✓",
+    "step": "Schritt {n} von {total}",
+    "language": {
+      "kicker": "HOŞ GELDİNİZ · BIENVENUE",
+      "title": "In welcher Sprache geht es weiter?",
+      "names": {
+        "tr": "Türkçe",
+        "fr": "Français",
+        "de": "Deutsch"
+      }
+    },
+    "fontSize": {
+      "kicker": "LESEKOMFORT",
+      "title": "Textgröße wählen",
+      "options": {
+        "small": "Klein",
+        "normal": "Normal",
+        "large": "Groß"
+      },
+      "note": "Jederzeit unter „Mein Konto“ änderbar.",
+      "sampleCard": {
+        "eyebrow": "BÖREK",
+        "name": "Spinat-Wasserbörek",
+        "meta": "17,80 € / kg · inkl. MwSt.",
+        "price": "8,90 €",
+        "body": "Handgezogener Teig, viel Spinat und Weißkäse — klassischer Wasserbörek."
+      }
+    },
+    "zip": {
+      "kicker": "LIEFERGEBIET",
+      "title": "Wie dürfen wir liefern?",
+      "body": "Geben Sie Ihre Postleitzahl ein — wir sagen Ihnen, wie wir liefern.",
+      "field": "Postleitzahl",
+      "placeholder": "Postleitzahl — z. B. 67000",
+      "insideNote": "Wunderbar — wir liefern kostenlos bis an Ihre Tür! Auch Zahlung bei Lieferung ist möglich.",
+      "shippingNote": "Versand mit geschützter Kühlkette in 2–4 Werktagen; ab 60 € versandkostenfrei.",
+      "ambiguousNote": "Dieser Code gilt für mehrere Orte — wir klären das bei der Adresseingabe.",
+      "unknownNote": "Diesen Code konnten wir nicht finden — bitte die Eingabe prüfen.",
+      "unresolvedNote": "Für diesen Code können wir die Lieferart noch nicht sagen; wir klären das bei der Bestellung."
+    },
+    "back": "Zurück",
+    "delivery": {
+      "kicker": "SO LIEFERN WIR",
+      "title": "Zwei Lieferwege",
+      "body": "Wir zeigen die Produkte, die Sie erreichen können — abhängig von Ihrer Postleitzahl ändert sich der Katalog.",
+      "route": {
+        "title": "Mit unserem Kühlfahrzeug",
+        "body": "In unserem Liefergebiet kommt alles an — auch Tiefkühl- und Kühlkettenware."
+      },
+      "shipping": {
+        "title": "Per Paketversand",
+        "body": "Außerhalb nur versandfähige Produkte; Kühlkettenware kann nicht per Paket verschickt werden."
+      },
+      "note": "Deshalb fragen wir nach der Postleitzahl: damit Sie kein Produkt sehen, das Sie nicht erreichen kann."
+    },
+    "payment": {
+      "kicker": "ZAHLUNG",
+      "title": "Zahlen Sie, wie Sie möchten",
+      "online": {
+        "title": "Online-Zahlung",
+        "body": "Über Stripe — Ihre Kartendaten werden bei uns nicht gespeichert"
+      },
+      "door": {
+        "title": "Zahlung bei Lieferung",
+        "body": "Bei Lieferungen in der Region: bar, mit Karte oder Scheck"
+      },
+      "transfer": {
+        "title": "Überweisung und Zahlung auf Rechnung",
+        "body": "Exklusiv für unsere Geschäftskunden"
+      },
+      "secure": "Ihre Zahlungen sind durch Stripe geschützt — derselbe Schutz wie bei Ihrer Bank. Bei Problemen ist die Erstattung einfach."
+    }
+  }
+}

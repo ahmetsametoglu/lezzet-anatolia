@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { MeSchema, type MeUpdateSchema } from '@lezzet/types';
+import { MeSchema, type MePreferencesSchema, type MeUpdateSchema } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
@@ -37,4 +37,14 @@ export function fetchMe(): Promise<ApiResult<Me>> {
  */
 export function updateMe(input: z.input<typeof MeUpdateSchema>): Promise<ApiResult<Me>> {
   return authorizedFetch('/api/v1/me', MeSchema, { method: 'PATCH', body: input });
+}
+
+/**
+ * Tercihler (21.16) — dil + kampanya izinleri; profil güncellemesinden AYRI uç (sözleşmenin
+ * kendi ayrımı: ad/telefon "kimlik kartı", dil/izin "nasıl konuşalım"). İstemci yalnız
+ * `granted` boolean'ı gönderir; kanıtın damgasını (`at`/`source`) sunucu vurur. Boş gövde
+ * görünür rettir (`no_changes`) — ekran yalnız DEĞİŞEN alanı yollar.
+ */
+export function updatePreferences(input: z.input<typeof MePreferencesSchema>): Promise<ApiResult<Me>> {
+  return authorizedFetch('/api/v1/me/preferences', MeSchema, { method: 'PATCH', body: input });
 }

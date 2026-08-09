@@ -50,7 +50,6 @@ const styles = StyleSheet.create((theme) => ({
     // Kontrol kademesi (13,5/700) — tasarım bu rolde 12,5 ve 13,5'i birlikte kullanıyor;
     // yuvarlama YOK kuralı gereği token'da var olan durak seçildi (12,5'lik ikizi raporlandı).
     fontSize: theme.text.control,
-    fontWeight: theme.text['control--font-weight'],
   },
   olive: { color: theme.colors.olive },
   terracotta: { color: theme.colors.terracotta },

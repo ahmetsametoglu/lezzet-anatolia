@@ -512,7 +512,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
     fontSize: operationsTheme.text['h2-sm'],
-    fontWeight: operationsTheme.text['h2-sm--font-weight'],
     color: operationsTheme.colors.ink,
   },
   channelTag: {
@@ -523,7 +522,6 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.badge,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.meta,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   addressDetail: {
@@ -555,19 +553,16 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.ink,
   },
   contactPrimaryLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.card,
   },
   contactMuted: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.muted,
     textAlign: 'center',
   },
@@ -575,7 +570,6 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     color: operationsTheme.colors.muted,
   },
   proofButtons: { flexDirection: 'row', gap: operationsTheme.space.md },
@@ -592,13 +586,11 @@ const styles = StyleSheet.create({
   proofButtonLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.ink,
   },
   proofButtonDisabledLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors['disabled-text'],
   },
   proofTaken: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.lg },
@@ -610,13 +602,11 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors['olive-dark'],
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
   },
   retake: { paddingVertical: operationsTheme.space.xs },
   retakeLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.olive,
   },
   lineRow: {
@@ -650,7 +640,6 @@ const styles = StyleSheet.create({
   markGlyph: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
   },
   markGlyphOk: { color: operationsTheme.colors.card },
   markGlyphRefused: { color: operationsTheme.colors.error },
@@ -658,7 +647,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.control,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.ink,
   },
   lineNameRefused: { color: operationsTheme.colors.error },
@@ -672,13 +660,11 @@ const styles = StyleSheet.create({
   returnLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.error,
   },
   returnCount: {
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text['body-sm'],
-    fontWeight: 700,
     color: operationsTheme.colors.error,
   },
   settled: {
@@ -692,7 +678,6 @@ const styles = StyleSheet.create({
   settledLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.control,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors['olive-dark'],
   },
   settledNote: {
@@ -712,7 +697,6 @@ const styles = StyleSheet.create({
   collectionHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    fontWeight: operationsTheme.text['eyebrow--font-weight'],
     color: operationsTheme.colors.terracotta,
   },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.md },
@@ -727,13 +711,11 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.card,
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text['icon-sm'],
-    fontWeight: 700,
     color: operationsTheme.colors.ink,
   },
   currency: {
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.step,
-    fontWeight: 700,
     color: operationsTheme.colors.muted,
   },
   partialBadge: {
@@ -745,7 +727,6 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.terracotta,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    fontWeight: operationsTheme.text['button--font-weight'],
   },
   methodRow: { flexDirection: 'row', gap: operationsTheme.space.md },
   hintText: {
@@ -757,14 +738,12 @@ const styles = StyleSheet.create({
   warnText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.terracotta,
   },
   errorText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.error,
   },
@@ -777,7 +756,6 @@ const styles = StyleSheet.create({
   notice: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
-    fontWeight: operationsTheme.text['button--font-weight'],
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     padding: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.control,
@@ -804,7 +782,6 @@ const styles = StyleSheet.create({
   primaryLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
-    fontWeight: operationsTheme.text['button--font-weight'],
     color: operationsTheme.colors.card,
     textAlign: 'center',
   },
@@ -828,14 +805,12 @@ const styles = StyleSheet.create({
   outcomeNeutralLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
     color: operationsTheme.colors.ink,
   },
   outcomeDanger: { borderColor: operationsTheme.colors.error },
   outcomeDangerLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
-    fontWeight: operationsTheme.text['field-label--font-weight'],
     color: operationsTheme.colors.error,
   },
   outcomeConfirm: {
@@ -847,7 +822,6 @@ const styles = StyleSheet.create({
   outcomeConfirmLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.card,
   },
   outcomePanel: {
@@ -862,7 +836,6 @@ const styles = StyleSheet.create({
   outcomeTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.control,
-    fontWeight: operationsTheme.text['control--font-weight'],
     color: operationsTheme.colors.error,
   },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.sm },

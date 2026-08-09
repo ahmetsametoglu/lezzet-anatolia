@@ -7,6 +7,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useUnistyles } from 'react-native-unistyles';
 
+import { ToastHost } from '@/components/ui/toast-host';
+import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
+import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
 import { appFontAssets } from '@/theme/fonts';
 
 /*
@@ -43,11 +46,31 @@ export default function RootLayout() {
       .then(() => setFontsReady(true))
       .catch(() => setFontsReady(true));
   }, []);
-  if (!fontsReady) return null;
+
+  /* ONBOARDING KAPISI — ilk açılışta tek seferlik akışa yönlendirme. Karar ve gerekçeler hook'ta
+     (`lib/onboarding/use-onboarding-gate.hook.ts`); burada yalnız "bayrak okunana dek boş kal"
+     var — font kapısıyla aynı desen, splash o sırada ekranda. */
+  const onboardingReady = useOnboardingGate();
+
+  /* YAZI ÖLÇEĞİ KAPISI (kullanıcı kararı 09.08): kayıtlı seçim İLK kareden önce uygulanır —
+     kapısız uygulansa ekran bir an normal boyda çizilip sonra sıçrardı. Okuma düşerse 'normal'
+     ile açılır (`readFontScale` kendi içinde sessiz-varsayılanlı). */
+  const [scaleReady, setScaleReady] = useState(false);
+  useEffect(() => {
+    void readFontScale().then((scale) => {
+      applyFontScale(scale);
+      setScaleReady(true);
+    });
+  }, []);
+
+  if (!fontsReady || !onboardingReady || !scaleReady) return null;
 
   return (
     <>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
+      {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
+          basan taraf `publishToast` (lib/toast), gerekçeler host'un künyesinde. */}
+      <ToastHost />
       <StatusBar style="auto" />
     </>
   );
