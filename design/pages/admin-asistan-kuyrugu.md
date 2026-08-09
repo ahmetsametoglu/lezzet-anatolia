@@ -107,41 +107,49 @@ kuyruğa bir öneri bırakır. İki hâl var ve **ikisi de aynı ekranda karar b
 
 ### Bu önizlemenin çözmesi gereken ASIL problem
 
-Öteki tiplerde soru *"bu işlem yapılsın mı?"*dır. Burada soru başkadır ve tasarımın tamamını o
-belirler:
+**Kaynağı doğrulamak DEĞİL.** Ambalajı çeken, yükleyen ve onaylayan aynı kişi: ürünü elinde
+tutuyor, ne gönderdiğini biliyor. Ona ambalajı ekranda tekrar okutmak boş yük — okuduğu ham metni
+sayfaya sermek de öyle.
 
-> **"Bu veri ambalajla uyuşuyor mu?"**
+Asıl soru şu:
 
-Yani ekran bir onay ekranı değil, bir **karşılaştırma** ekranıdır. Patron burada bir kararı değil,
-bir **okumayı** denetler. Tasarım bunu kolaylaştırmazsa kurgunun tamamı çöker: makine okuması
-yeterince iyi göründüğü için üç kez sonra kimse bakmaz, ve dördüncüde yanlış bir alerjen satırı
-onaylanır.
+> **"Sisteme ne yazılıyor, ve neyi eksik bırakıyor?"**
+
+Yani bu bir **inceleme** ekranıdır: patron bir saniyede *"bu kayıt tam mı, bir tuhaflık var mı"*
+diyebilmeli. Kullanıcının kendi ölçütü: *"insanın gözüne problemler hızlıca batabilsin veya
+onaylanması istenen talebi çok kolay inceleyebilsin."*
+
+Tasarımın işi eksik ve tuhaf olanı **öne çıkarmak**, doğru olanı sessizce geçmektir. Her alanı
+eşit ağırlıkta gösteren bir tablo bunun tam tersini yapar: göz kalabalıkta gezinir, üçüncü seferde
+okumadan onaylanır.
 
 ### İçerik envanteri — ne var, neden
 
-**① Asistanın OKUDUĞU ham metin.** Öneriyle birlikte gelir (*"Ingrédients: farine de blé, œufs,
-lait en poudre, sucre…"*). Fotoğrafın kendisi sistemde saklanmıyor — model onu okudu, biz metni
-saklıyoruz. Bu blok **çıkarılan alanların yanında** durmalı: denetimin tek dayanağı budur.
-Patron ham metni okuyup çıkarılan alanlarla karşılaştırabilmeli.
-
-**② Çıkarılan alanlar, üç dil.** Ad · açıklama · içindekiler · saklama koşulu · aile etiketi.
+**① Çıkarılan alanlar, üç dil.** Ad · açıklama · içindekiler · saklama koşulu · aile etiketi.
 Yeni üründe ayrıca: kategori · tarih tipi (DLC/DDM) · raf ömrü (gün) · KDV oranı · en az bir boy
 (varyant) adı. **Fiyat ve stok BU EKRANDA YOK** — ayrı işler, ayrı kararlar.
 
-**③ ALERJENLER — ve buranın kuralı ötekilerden farklı.** On dört AB alerjeninin **tamamı**
-görünmeli: işaretlenenler vurgulu, **işaretlenmeyenler sönük ama görünür**. Sebep tek cümlede:
-*en tehlikeli hata fazladan alerjen değil, EKSİK alerjendir* — ve yalnız seçilenleri gösteren bir
-liste tam da onu görünmez kılar. Göz *"fındık işaretlenmemiş"* diyebilmeli. Çapraz bulaşma (iz)
-listesi de aynı kuralla.
+**② TAMLIK — ekranın en önemli tek bilgisi.** *"Bu kayıt yayınlanabilir hâlde mi, değilse ne
+eksik?"* Sistem bunu zaten hesaplıyor (üç dilde ad + içindekiler + besin künyesi + saklama +
+alerjen dolu mu) ve eksikse ürün satışa çıkamıyor. Patronun onaydan önce görmesi gereken tek
+cümle bu: *"Onaylarsan kayıt tam olur"* ya da *"Onaylasan da besin künyesi ve Almanca ad eksik
+kalacak"*. Eksik alanlar **adlarıyla** sayılmalı — sonradan aramak zorunda kalmasın.
 
-**④ Besin künyesi** (100 g başına enerji/yağ/karbonhidrat/protein/tuz) — tablo hâlinde, ambalajın
-kendi tablosuna benzer okunsun ki göz satır satır eşleştirebilsin.
+**③ ALERJENLER — on dört AB alerjeninin TAMAMI, işaretlenmeyenler dahil.** İşaretlenenler vurgulu,
+işaretlenmeyenler sönük **ama görünür**. Sebebi kaynak denetimi değil: *en tehlikeli hata fazladan
+alerjen değil, EKSİK alerjendir* ve yalnız seçilenleri gösteren bir liste tam da onu görünmez
+kılar. Patron ürünü tanıyor — *"fındık işaretlenmemiş"* diyebilmesi için fındığın orada,
+işaretsiz durması yeter. Çapraz bulaşma (iz) listesi aynı kuralla.
 
-**⑤ GÜVEN İŞARETİ — yeni bir görsel dil gerekiyor.** Asistan her alan için "net okudum" ya da
-"okuyamadım / emin değilim" diyebilecek. Bulanık bir satır, yansıma, kesik kenar — bunlar gerçek
-ve saklanmamalı. Emin olunmayan alan ekranda **kendini belli etmeli** ve gözü oraya çekmeli.
-Bu, kuyruğun bugünkü "gerekçesiz öneri soluk görünür" diline benzer ama daha keskin: orada bilgi
-eksikti, burada **bilgi şüpheli**.
+**④ Besin künyesi** (100 g başına enerji/yağ/karbonhidrat/protein/tuz) — tablo hâlinde. Ölçü
+birimleri ve mantık dışı değerler göze batmalı: sıfır enerji, %100'ü aşan toplam, boş bırakılmış
+satır. Burada aranan "ambalajla aynı mı" değil, **"bu tablo kendi içinde tutarlı mı"**.
+
+**⑤ ASİSTANIN EMİN OLMADIĞI ALANLAR.** Model bir satırı net okuyamadıysa (bulanık, kesik, yansıma)
+bunu söyleyebilmeli ve o alan gözü kendine çekmeli. **Ekranın gözü buraya yönlendirmesi, bütün
+alanları tek tek okutmaktan değerlidir**: patron zaten ürünü biliyor, ona *"şuraya bak"* demek
+yeter. Kuyruğun bugünkü "gerekçesiz öneri soluk durur" diline benzer ama daha keskin — orada bilgi
+eksikti, burada bilgi **şüpheli**.
 
 **⑥ ÜZERİNE YAZILANLAR (yalnız tamamlama hâlinde).** Alan doluysa eski ve yeni değer yan yana,
 ve *"üzerine yazılacak"* açıkça yazılı. Sebep teknik ve geri alınamaz: ürün metinlerinde sürüm
@@ -160,17 +168,20 @@ alerjen vitrine düşmez. Ekran bunu bir uyarı gibi değil, bir **rahatlama** g
 
 - **Çizilecek iki önizleme:** yeni ürün (`product_create`) ve tamamlama (`product_draft`).
   İkisinin de payload'ı yazılacak — tasarım geldiğinde kod ona uyar, tersi değil.
-- Yukarıdaki alanların hepsi **payload'da olacak**: ham metin, güven işareti, eski değerler,
-  alerjen/iz listeleri, besin künyesi, varyant adları.
+- Yukarıdaki alanların hepsi **payload'da olacak**: tamlık bilgisi, emin olunmayan alan işareti,
+  eski değerler, alerjen/iz listeleri, besin künyesi, varyant adları.
 - **Fiyat, stok ve görsel bu tipe DAHİL DEĞİL.** Ürün görseli ayrı bir yetki sınıfı (medya),
   fiyat ayrı bir karar. Çizimde yer tutucu bile olmasın — olmayan bir şeyi vaat etmeyelim.
+- **Ambalajın ham metni ekrana SERİLMEZ.** Fotoğrafı çeken, yükleyen ve onaylayan aynı kişi;
+  kaynağı ona tekrar okutmak boş yük. (Hata ayıklama için "teknik döküm" katlamasında durabilir —
+  ana yüzeyde değil.)
 - Ekran **yalnız masaüstü** (operasyon yüzeyi kuralı).
 
 ### Ölçüt
 
-Tasarımın başarı ölçütü tek bir soruyla sınanır: **kötü bir okuma ne kadar hızlı fark edilir?**
-Ambalajda "fındık içerir" yazarken alerjen listesinde fındık işaretli değilse, patron bunu
-ekrana bakar bakmaz görmeli — aramak zorunda kalmamalı.
+Tasarımın başarı ölçütü tek soruyla sınanır: **patron bu kaydı kaç saniyede "tamam" ya da "burada
+bir şey eksik" diye ayırabiliyor?** Ürünü zaten tanıyor; ekranın işi ona ürünü anlatmak değil,
+**eksik ve şüpheli olanı önüne koymak**. Doğru ve tam olan sessizce geçmeli.
 
 ## 6. Bu ekranın ötesinde
 

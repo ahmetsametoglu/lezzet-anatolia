@@ -243,14 +243,17 @@ satırında.
     okuma**, ve fatura senaryosunda (`§6` write-only nüansı) aynı karar zaten verilmişti. Kullanıcı
     yeni duvarı adıyla koydu: *"en net duvarımız onay ekranımız… insanın gözüne problemler
     hızlıca batabilsin."*
-  - **Ekranın cevaplayacağı soru ötekilerden FARKLI:** "bu işlem yapılsın mı?" değil, **"bu veri
-    ambalajla uyuşuyor mu?"**. Yani bir onay değil bir KARŞILAŞTIRMA ekranı. Bunu kolaylaştırmazsa
-    kurgu çöker: makine okuması yeterince iyi göründüğü için üç kez sonra kimse bakmaz.
-  - **Üç yeni görsel gereklilik** (brief `design/pages/admin-asistan-kuyrugu.md §5b`): ① asistanın
-    okuduğu HAM METİN çıkarılan alanların yanında — denetimin tek dayanağı ② **on dört alerjenin
-    tamamı**, işaretlenmeyenler de görünür (en tehlikeli hata fazladan değil EKSİK alerjendir;
-    yalnız seçilenleri gösteren liste tam da onu gizler) ③ **güven işareti** — model "okuyamadım"
-    diyebilmeli ve o alan gözü kendine çekmeli.
+  - **Ekranın cevaplayacağı soru ötekilerden FARKLI — ve ilk yazımda YANLIŞ kurdum.** Brief'i
+    "bu veri ambalajla uyuşuyor mu" ekseninde yazmıştım; kullanıcı düzeltti: *"resim benim elimde,
+    ürün benim elimde, yükleyen benim, onaylayan da benim."* Kaynağı doğrulatmak boş yük — soru
+    **"sisteme ne yazılıyor ve neyi eksik bırakıyor?"**. Yani doğrulama değil **inceleme** ekranı:
+    işi eksik ve tuhaf olanı öne çıkarmak, doğru olanı sessizce geçmek.
+  - **Üç görsel gereklilik** (brief `design/pages/admin-asistan-kuyrugu.md §5b`): ① **TAMLIK** —
+    "onaylarsan kayıt tam olur" ya da "şu alanlar eksik kalacak", eksikler adıyla (sistem bunu
+    `is_incomplete` ile zaten hesaplıyor) ② **on dört alerjenin tamamı**, işaretlenmeyenler de
+    görünür — en tehlikeli hata fazladan değil EKSİK alerjendir ve yalnız seçilenleri gösteren
+    liste tam da onu gizler ③ **asistanın emin olmadığı alanlar** göze batmalı: patron ürünü zaten
+    biliyor, ona "şuraya bak" demek bütün alanları okutmaktan değerli.
   - **Emniyet veri modelinden geliyor ve korunuyor:** beyan tamlığı (`is_incomplete`, üretilmiş
     kolon) ile satış durumu (`status`) ayrı eksenler. Asistan birinciyi doldurabilir, **ikincisi
     hiçbir yoldan açılmaz** — ürün `candidate` doğar. En kötü hâlde yanlış okunmuş bir alerjen
