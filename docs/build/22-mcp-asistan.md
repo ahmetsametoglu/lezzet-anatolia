@@ -145,12 +145,47 @@ satırında.
         fiyatı taşıyor, depo ekranının tipi taşıyamıyor (rol duvarı). Maliyet SUNUCUDA payload'dan
         alınıp `receivePurchase` yoluna ekleniyor; istemci onu hiç görmüyor. Künye operatöre
         "gideri ayrıca elle yazmayın" diyor.
-      - **Parada beş tipin üçü bu ekrandan geçer:** `purchase` elle yazılamaz (mal kabule bağlı,
-        motor bağsızı reddediyor), `transfer` kendi kapısından geçer. İkisinde de form AÇILMIYOR;
-        künye hangi yoldan gidileceğini söylüyor. Doldurulamayacak bir formu açmak "motor
-        reddetti" ile biterdi.
+      - **Parada ~~beş~~ dört tipin üçü bu ekrandan geçer:** `transfer` kendi kapısından geçer (iki
+        hesap ister), formu AÇILMIYOR; künye hangi yoldan gidileceğini söylüyor. ~~`purchase` elle
+        yazılamaz~~ — bulgu denetime bildirildi ve kabul edildi: motor bağsız alımı reddettiği için
+        asistan **uygulanması imkânsız** bir dilekçe kurabiliyordu; daraltma şemaya taşındı
+        (`MoneyMovementPayload.type` artık `expense · transfer · capital · misc`) ve ekranın o dalı
+        gereksiz kalıp silindi.
       - **`invalid` sonucunda kuyruk satırı artık YANLIŞ damgalanmıyor:** motorun reddi
         `withProposal` içinde FIRLATILIYOR, yoksa hiçbir şey yazılmadan satır "uygulandı" olurdu.
+
+    - **DÖRDÜNCÜ devir hedefi + iki payload alanı ekrana bağlandı (22.5 tamam · dördüncü tur).**
+      touches: `stock/{page,stock-client,stock.desktop,stock-types}.tsx` + yeni `stock-handoff.ts`,
+      `components/operation/stock/offer-dialog.tsx`, `lib/stock/offer-actions.ts`,
+      `assistant/{assistant-preview,assistant-labels,assistant-url}.ts(x)`, yeni
+      `components/operation/ui/handoff-note.tsx`, yeni `lib/catalog/featured-slots.ts`
+      - **Fırsat devri (`batch_offer` → `stock?tab=attention&proposal=`):** teklif diyaloğu ön dolu
+        AÇILIYOR; fiyat önerininki, ama kilitli değil ve üç yüzü (tutar · indirim · marj) yanında
+        duruyor. Adres "yaklaşan tarihli" sekmesine gidiyor, varsayılan seviye tablosuna değil —
+        devredilen parti orada listelenmiyor olurdu.
+      - **Künye DİYALOĞUN İÇİNDE, sayfada değil — ve bu bir KUSUR DÜZELTMESİ:** pencere öneriden
+        gelindiğinde kendiliğinden açılıp örtüsüyle sayfayı kaplıyor, yani arkadaki künyeyi operatör
+        ancak kararı verdikten SONRA görürdü. Aynı kusur para ekranında da vardı (üçüncü turda
+        yazılmıştı), o da düzeltildi. Sayfada kalan tek hâl **açılamayan** devir.
+      - **Devredilen parti listede yoksa SESSİZ GEÇİLMİYOR:** amber künye sebebini sayıyor (satıldı ·
+        imha edildi · depo kapsamı dışında) ve teklifin açılamayacağını söylüyor. `data.attention`
+        sayfalanmadığı için "listede yok" gerçekten yok demek, "bu sayfada yok" değil.
+      - **Teklifi KAPATMAK öneriyi uygulamak sayılmaz:** `null` fiyat kuyruğa hiç dokunmuyor. Tersini
+        yapan bir kaydı onay diye damgalamak, kuyruğun söyleyebileceği en kötü yalanlardan olurdu.
+      - **`product_draft` önizlemesi artık ESKİ/YENİ gösteriyor** (`currentFields`): dolu alan varsa
+        amber "üzerine yazılacak" uyarısı adıyla; `currentFields` hiç yoksa "eski hâl okunamadı" denir
+        ve varsayılmaz. Alan kümesi 22.6 ile büyüdüğü için tablo üç şekli birden indirger (çok dilli
+        metin · besin künyesi · alerjen listesi). `remainingGaps` ve `uncertainFields` de çiziliyor.
+      - **`featured_flag` önizlemesinde ızgara doluluğu:** *"vitrinde şu an 6 kategori var, ızgarada 6
+        yer görünüyor — ızgara dolu"*. Sayı gelmediyse satır HİÇ çizilmiyor: "0 kayıt vitrinde" demek
+        ölçülemeyen değeri sıfıra düşürmek olurdu (`CLAUDE §1`).
+      - **Üç duplikasyon kapatıldı:** devir künyesi dört ekranda tekrarlanacaktı → `HandoffNote`;
+        vitrin slot sayısı iki sekmede ayrı ayrı yazılıydı → `lib/catalog/featured-slots`; eksik beyan
+        etiketleri ürün önizlemesinde gömülüydü → `DECLARATION_GAP_LABELS` (`@lezzet/types`).
+      - Doğrulandı (`ui:shot`, açık + koyu tema): fırsat devri diyaloğu gerçek bir partiyle
+        (1,61 € · %30 · %39,1 marj), ürün taslağının fark tablosu ve üç uyarısı, vitrin sayacının
+        "ızgara dolu" hâli. `product_create` (22.6) bilerek "önizlemesi henüz yok" dalında —
+        istenen şey fark tablosu değil bir İNCELEME ekranı ve tasarım turunu bekliyor.
 
   - **Harici MCP denetimi · tur 2 (09.08)** — dış bir ajan 18 aracın tamamını bozuk veriyle
     yokladı; iki bulgunun ikisi de karşılandı, biri ölçünce başka çıktı:
@@ -228,8 +263,10 @@ satırında.
     `CountryEnum`a indi; daraltmayı EKRAN yapıyordu, tanınmayan ülkede ön dolgu yapılamayıp öneri
     sessizce yarım açılıyordu. Kuyruğun en sinsi çürüme yolu budur: reddedilmeyi bekleyen kalemler
     patronun onay refleksini köreltir.
-  - **BEKLEYEN(22.5):** ekran tarafı operasyon şeridinde
-    (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` — dört devir hedefi + iki yeni alan).
+  - ~~**BEKLEYEN(22.5):** ekran tarafı operasyon şeridinde~~ **KAPANDI (09.08, dördüncü tur):** dört
+    devir hedefinin dördü de bağlı, iki yeni payload alanı da önizlemede
+    (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` cevabı; ayrıntı 22.3'ün Durum
+    notunda). Kalan tek boşluk 22.6'nın kendi ekranı.
 
 - [~] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
   09.08: "içindekiler fotoğrafını çekip yükleyeceğim, asistan bazen ürünü oluşturacak bazen
@@ -276,6 +313,16 @@ satırında.
       (eksik beyanlı ürün "tam olacak" görünür). Sessiz olduğu için fark edilmezdi.
     - `uncertainFields` — modelin "net okuyamadım" dediği alanlar; talimat da buna göre yazıldı:
       *"tahmin etmek yerine uncertainFields'e yaz"*.
+  - **Harici denetim · tur 4 (09.08) — 4/4 boşluk kapandı, ama asıl bulgu raporun içinde SAKLIYDI.**
+    Ajan kârlılık analizini övüyor ve örnek veriyor: *"Liste 2,40 € · Alış 2,80 € — bu parti
+    zararlı!"*; ardından zararına bir paket önerisi kurup "makul strateji" diye gerekçelendiriyor.
+    Araç doğru çalıştı, model doğru okudu — **veri yalan söyledi.** Ölçtüm: **159 varyanttan 31'i
+    zararına** görünüyor (en kötü birim marj −2,07 €). Kök sebep `scripts/seed/stock.ts:125` —
+    alış fiyatı sabit bir formülden üretiliyor, varyantın liste fiyatına hiç bakmıyor. **Sınıfı bu
+    depoda daha önce yaşandı** (05.14: seed teklif fiyatını sabit yazıyordu, "indirim" ürünü
+    pahalılaştırıyor ve fırsat bandı boş kalıyordu). Maliyet okuması asistana açılana kadar sessiz
+    bir gürültüydü; artık yanlış öneri üreten bir girdi. Talep:
+    `docs/talep/arka-uc-seed-alis-fiyati-listeden-bagimsiz.md`.
   - **BEKLEYEN(22.6):** ekran tarafı — brief `design/pages/admin-asistan-kuyrugu.md §5b`, muhatabı
     Claude Design DEĞİL operasyon şeridi (kullanıcı kararı 09.08: son üç önizleme de tasarımsız,
     mevcut dört yapı taşıyla yazıldı; çizimi gördükten sonra istenirse tasarım turu açılır).
