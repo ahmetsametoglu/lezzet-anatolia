@@ -3,6 +3,7 @@ import { purgeTestData } from '@lezzet/database/testing';
 import { APPLIERS, KIND_META, amountCentsOf, applyProposal, impactOf, modeOf } from '@lezzet/application';
 import {
   AssistantProposalKindEnum,
+  DECLARATION_GAP_LABELS,
   PROPOSAL_PAYLOAD_SCHEMAS,
   parseProposalPayload,
   resolveLocalizedText,
@@ -189,8 +190,10 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     expect(payload.uncertainFields).toEqual(['nutrition']);
     // Şema kapısı da aynı şekli kabul etmeli — okunan payload yeniden doğrulanabilir olmalı.
     expect(() => parseProposalPayload('product_create', payload)).not.toThrow();
-    // Ve cümle gerçekten eksikleri SAYAR (sabit metin değil).
-    expect(impactOf('product_create', payload)).toMatch(/besin künyesi/);
+    // Ve cümle gerçekten eksikleri SAYAR (sabit metin değil). Beklenen metin ŞEMANIN sözlüğünden
+    // okunuyor, buraya elle yazılmıyor: ilk hâli "besin künyesi" diye sabitti ve sözlük tek kaynağa
+    // bağlanınca kırıldı — iki sözlük "birebir aynı" sanılıyordu, `nutrition` karşılığı farklıymış.
+    expect(impactOf('product_create', payload)).toContain(DECLARATION_GAP_LABELS.nutrition);
   });
 
   /**

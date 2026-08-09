@@ -1,15 +1,5 @@
-import type { AssistantProposalKind } from '@lezzet/types';
+import { DECLARATION_GAP_LABELS, type AssistantProposalKind, type DeclarationGap } from '@lezzet/types';
 
-/**
- * Öneri tipinin EKRAN KÜNYESİ (22.3) — rozet metni, "uygulanınca ne olur" cümlesi, hedef tablolar.
- *
- * **Neden kapıda, ekranda değil:** üç şey de tipin DEĞİŞMEZ özelliği; ekrana yazılsalardı panelin
- * ikinci bir gerçek kaynağı olurdu ve tip eklendiğinde biri unutulurdu. `satisfies Record<…>`
- * sayesinde yeni bir `kind` eklendiği an burası DERLENMEZ — unutmak mümkün değil.
- *
- * Hedef tablolar gerçek şema adlarıdır (tasarımın fikstüründeki `packages`/`cash_entries` gibi
- * kurgusal adlar DEĞİL — `docs/talep/operasyon-asistan-kuyrugu-veri-sozlesmesi.md §2b`).
- */
 /**
  * Kararın CİNSİ — kuyruk ekranı hangi kapıyı açacağını buradan okur (kullanıcı kararı 09.08).
  *
@@ -47,6 +37,17 @@ interface KindMeta {
   resultKey?: string;
 }
 
+/**
+ * Öneri tipinin EKRAN KÜNYESİ (22.3) — rozet metni, "uygulanınca ne olur" cümlesi, hedef tablolar,
+ * kararın cinsi ve köprü hedefi.
+ *
+ * **Neden kapıda, ekranda değil:** hepsi tipin DEĞİŞMEZ özelliği; ekrana yazılsalardı panelin
+ * ikinci bir gerçek kaynağı olurdu ve tip eklendiğinde biri unutulurdu. `satisfies Record<…>`
+ * sayesinde yeni bir `kind` eklendiği an burası DERLENMEZ — unutmak mümkün değil.
+ *
+ * Hedef tablolar gerçek şema adlarıdır (tasarımın fikstüründeki `packages`/`cash_entries` gibi
+ * kurgusal adlar DEĞİL — 22.3 veri sözleşmesi).
+ */
 export const KIND_META = {
   bundle_draft: {
     label: 'Paket',
@@ -115,8 +116,11 @@ export const KIND_META = {
   },
   product_draft: {
     label: 'Ürün',
+    // 22.6'da metin GÜNCELLENDİ: "alerjen ve saklama bu yoldan yazılamaz" cümlesi artık YANLIŞTI —
+    // ambalaj fotoğrafından okuma senaryosuyla o alanlar açıldı (gıda duvarı şemadan ekrana taşındı).
+    // Bayat bir etki cümlesi, olmayan bir güvenceyi vaat eder.
     impact:
-      'Ürünün metin alanları güncellenir ama ürün TASLAKTA KALIR. Alerjen ve saklama beyanı bu yoldan yazılamaz — onlar dolmadan ürün yayına alınamaz.',
+      'Ürünün beyan alanları güncellenir ama ürün TASLAKTA KALIR — satışa çıkarmak bu yoldan verilemez. DOLU bir alan yazılırsa eskisi KAYBOLUR (metinlerde sürüm tutulmuyor).',
     tables: ['product'],
     mode: 'draft_then_edit',
     target: 'product',
@@ -208,7 +212,7 @@ export function impactOf(kind: AssistantProposalKind, payload: unknown): string 
     const tail =
       gaps.length === 0
         ? 'Onaylanırsa ürünün yasal beyanı TAM olur.'
-        : `Onaylansa bile şu beyanlar EKSİK kalır: ${gaps.map((g) => GAP_LABEL[g] ?? g).join(' · ')} — eksik beyanlı ürün satışa çıkamaz.`;
+        : `Onaylansa bile şu beyanlar EKSİK kalır: ${gaps.map((g) => DECLARATION_GAP_LABELS[g as DeclarationGap] ?? g).join(' · ')} — eksik beyanlı ürün satışa çıkamaz.`;
     if (kind === 'product_create') return `${base} ${tail}`;
     const fields = p.fields && typeof p.fields === 'object' ? Object.keys(p.fields as Record<string, unknown>) : [];
     const head = fields.length > 0 ? `Ürünün ${fields.join(' ve ')} alanı güncellenir` : 'Ürünün beyan alanları güncellenir';
@@ -218,14 +222,6 @@ export function impactOf(kind: AssistantProposalKind, payload: unknown): string 
   return base;
 }
 
-/** Eksik beyan adları — motorun `DeclarationGap` kümesiyle birebir (`missingDeclarations`). */
-const GAP_LABEL: Record<string, string> = {
-  lang: 'üç dilde ad',
-  ingredients: 'içindekiler',
-  nutrition: 'besin künyesi',
-  storage: 'saklama koşulu',
-  allergens: 'alerjen listesi',
-};
 
 /**
  * Önerinin TUTARI — tipe göre payload'dan türer; tutar kavramı olmayan tipte `null`.
