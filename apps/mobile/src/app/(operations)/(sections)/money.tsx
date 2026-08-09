@@ -1,6 +1,9 @@
-import { OperationsSectionScreen } from '@/screens/operations/section-screen';
+import { MoneyTrackingScreen } from '@/screens/money/money-screen';
 
-// Para bölümünün kökü — gerekçe ve ince-rota kuralı `courier.tsx`te, tek yerde.
+/*
+  Para bölümünün kökü — gövdesi geldi (21.12). Başlığın sağ yuvasında zil DEĞİL "Gün sonu →" metin
+  eylemi durur (v2:719); gerekçe `components/operations/section-header.tsx` künyesinde.
+*/
 export default function MoneyRoute() {
-  return <OperationsSectionScreen section="money" />;
+  return <MoneyTrackingScreen />;
 }
