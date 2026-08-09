@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { SettingsService, StockService, serviceDb } from '@lezzet/database';
 import { offerDecisionOf } from '@lezzet/domain-core';
 import { requireStaff } from '@/lib/guard';
+import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readExpiryThresholds } from './batch-view';
 
@@ -25,9 +26,17 @@ const OFFER_PATHS = ['/operations/stock', '/operations/prices'] as const;
  * bırakılmaz. Kapatma her hâlde serbesttir — yanlışlıkla açılmış bir teklifin geri alınması hiçbir
  * koşulda engellenmemeli.
  */
-export async function setOfferPriceAction(stockId: string, offerPriceCents: number | null): Promise<ActionResult> {
+export async function setOfferPriceAction(
+  stockId: string,
+  offerPriceCents: number | null,
+  /**
+   * Asistan önerisinden gelindiyse o önerinin kimliği (22.5). **Yoksa akış hiç değişmez** — iki
+   * ekranın elle kullandığı yol tek satır bile farklı koşmaz.
+   */
+  proposalId?: string | null,
+): Promise<ActionResult> {
   try {
-    await requireStaff();
+    const staff = await requireStaff();
     const db = serviceDb();
     const stockSvc = new StockService(db);
 
@@ -52,8 +61,20 @@ export async function setOfferPriceAction(stockId: string, offerPriceCents: numb
       }
     }
 
-    await stockSvc.setOfferPrice(stockId, offerPriceCents);
+    /**
+     * Öneriden gelindiyse yazma ile kuyruk satırı BİRLİKTE koşar; sıra tek yerde (`withProposal`).
+     * `resultOf` künyenin beklediği anahtarı döndürür (`KIND_META.batch_offer.resultKey`), yoksa
+     * kuyruk "hangi kayıt doğdu" sorusuna cevap veremezdi.
+     */
+    await withProposal(
+      proposalId,
+      staff.profileId,
+      () => stockSvc.setOfferPrice(stockId, offerPriceCents),
+      (row) => ({ stockId: row.id }),
+    );
     for (const path of OFFER_PATHS) revalidatePath(path);
+    // Kuyruk satırı da tazelenir: karar burada verildi, rozetin sayısı orada duruyor.
+    revalidatePath('/operations/assistant');
     return { data: null, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

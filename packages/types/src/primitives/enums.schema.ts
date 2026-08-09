@@ -148,9 +148,27 @@ export type DiscountTrigger = z.infer<typeof DiscountTriggerEnum>;
 export const DiscountTypeEnum = z.enum(['percent', 'fixed']);
 export type DiscountType = z.infer<typeof DiscountTypeEnum>;
 
+/**
+ * İndirimin OPERASYON yüzeyindeki adları — `PRODUCT_STATUS_LABELS` ile aynı gerekçe: enum'un
+ * Türkçe karşılığı bir sunum kararı ama TEK olmalı. İki ekran (kupon sekmesi ve asistan kuyruğunun
+ * indirim önizlemesi) aynı satırı okuyor; ayrı ayrı yazılsalardı biri "Kampanya", öteki "Otomatik"
+ * derdi ve aynı kayıt iki ekranda iki ad taşırdı.
+ */
+export const DISCOUNT_TRIGGER_LABELS: Record<DiscountTrigger, string> = {
+  coupon: 'Kupon',
+  automatic: 'Kampanya',
+};
+
 /** İndirim kapsamı — kupon daima `cart` düzeyindedir (DOMAIN §5). */
 export const DiscountScopeEnum = z.enum(['cart', 'category', 'collection']);
 export type DiscountScope = z.infer<typeof DiscountScopeEnum>;
+
+/** Kapsamın operatör dili. `cart` "sepet" DEĞİL "tüm sepet": kapsam bir daraltmadır, boş bırakılmaz. */
+export const DISCOUNT_SCOPE_LABELS: Record<DiscountScope, string> = {
+  cart: 'Tüm sepet',
+  category: 'Kategori',
+  collection: 'Koleksiyon',
+};
 
 /**
  * Ödeme durumu — **türetilir, elle set edilmez** (DOMAIN §7): net tahsilat (tahsil − iade) ile
@@ -378,6 +396,45 @@ export const CATALOG_SORTS = CatalogSortEnum.options;
  */
 export const StockStatusEnum = z.enum(['available', 'shipping', 'elsewhere', 'out_of_stock']);
 export type StockStatus = z.infer<typeof StockStatusEnum>;
+
+/**
+ * Sepet KALEMİNİN hangi yoldan geleceği (19.11) — `StockStatus`un sepetteki karşılığı, ama aynı
+ * şey DEĞİL: stok hâli "var mı" sorusunu, yol "nasıl gelir" sorusunu cevaplar. Kararı
+ * `decideCartAgainstWarehouse` motoru verir; ekran da uç da yalnız taşır.
+ *
+ *   `local`             — kendi deposundan araçla; ücretsiz kapı teslimi.
+ *   `shipping`          — kargo deposundan; AYRI ödemeli ayrı sipariş (sepet ikiye bölünür).
+ *   `unavailable`       — hiçbir depoda yok; satır çıkarılmadan devam edilemez.
+ *   `not_shippable_here`— soğuk zincir: kargolanamaz ve bu adresin deposunda da yok.
+ *
+ * **Zod tanımı burada, tip domain-core'da TÜRER** (`StockStatusEnum` ile aynı yol): mobil sözleşme
+ * şeması aynı birliği zod olarak ifade etmek zorunda, iki ayrı tanım bir gün ayrışırdı — ayrıştığı
+ * gün uç bir yol adı gönderir, istemci onu tanımaz ve sepet cevabın tamamını reddeder.
+ */
+export const CartLineRouteEnum = z.enum(['local', 'shipping', 'unavailable', 'not_shippable_here']);
+export type CartLineRoute = z.infer<typeof CartLineRouteEnum>;
+
+/**
+ * Kuponun neden geçmediği (motorun kararı). Müşteriye **sebep** söylenir, "geçersiz kod" denip
+ * geçilmez: süresi dolmuş kuponla asgari sepeti tutmayan kupon farklı şeylerdir ve ikincisinde
+ * müşteri sepetine ürün ekleyerek kuponu kullanabilir.
+ *
+ * `not_yours` müşteriye **sızdırılmaz**: kişisel kupon başkasının elindeyse "bu kupon var ama senin
+ * değil" demek, kodun varlığını doğrulamak olurdu — kapı onu `unknown_code` gibi sunar.
+ *
+ * **Zod tanımı burada, tip domain-core'da TÜRER** (`CartLineRouteEnum` ile aynı gerekçe): sebep iki
+ * yüzeyin ekranına birden çıkıyor ve mobil sözleşmesi onu zod olarak ifade etmek zorunda.
+ */
+export const CouponRejectionEnum = z.enum([
+  'inactive',
+  'not_started',
+  'expired',
+  'min_basket',
+  'first_order_only',
+  'used_up',
+  'not_yours',
+]);
+export type CouponRejection = z.infer<typeof CouponRejectionEnum>;
 
 /**
  * Konuşmanın kaynağı (15.1). Bugün tek değerli ve yine de bir enum: yarın Instagram DM eklenirse

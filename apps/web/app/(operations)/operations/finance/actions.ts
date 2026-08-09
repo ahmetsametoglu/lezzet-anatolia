@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { AccountService, serviceDb } from '@lezzet/database';
 import type { MovementDirection } from '@lezzet/types';
 import { requireFinance } from '@/lib/guard';
+import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
 import { applyOrderMatch, classifyAsExpense, dismissRow } from '@/lib/bank/reconcile';
@@ -54,9 +55,11 @@ interface ManualMovementInput {
  * dizesini burada elle yazsaydık, sabit değişince rapor hata vermeden boşalırdı (12.5'in künyesi:
  * *"sessiz sıfır, yanlış cevabın en kötüsü"*).
  */
-export async function recordManualMovementAction(input: ManualMovementInput): Promise<ActionResult<{ movementId: string }>> {
+export async function recordManualMovementAction(
+  input: ManualMovementInput & { proposalId?: string | null },
+): Promise<ActionResult<{ movementId: string }>> {
   try {
-    await requireFinance();
+    const staff = await requireFinance();
 
     const shared = {
       accountId: input.accountId,
@@ -65,23 +68,42 @@ export async function recordManualMovementAction(input: ManualMovementInput): Pr
       description: input.description.trim() || null,
     };
 
-    const outcome =
-      input.type === 'expense' && input.category === ADVERTISING_CATEGORY
-        ? await recordAdvertisingExpense({ ...shared, campaign: input.campaign })
-        : input.type === 'expense'
-          ? await recordExpense({ ...shared, category: input.category.trim() })
-          : await recordMovement({
-              ...shared,
-              type: input.type,
-              // Sermaye girişinin yönü sabit (`in`, motorun kuralı); `misc` serbest, çünkü banka
-              // "para girdi/çıktı" der, sebebini söylemez ve elle girilen karşılığı da öyledir.
-              direction: input.type === 'capital' ? 'in' : input.direction,
-              category: input.category.trim() || null,
-            });
-
-    if (outcome.status === 'invalid') return { data: null, error: invalidMessage(outcome.reason) };
+    /**
+     * Öneriden gelindiyse kayıt ile kuyruk satırı BİRLİKTE koşar; sıra tek yerde (`withProposal`).
+     *
+     * **Motorun `invalid` cevabı FIRLATILIR, döndürülmez** — ve bu, sarmalın var olmasının doğrudan
+     * sonucu: `invalid` hiçbir şey yazılmadı demek, ama `work()` sessizce dönseydi `withProposal`
+     * satırı "uygulandı" diye damgalardı. Kuyruğun söyleyebileceği en kötü yalan bu olurdu.
+     * Fırlatınca satır `failed`e park ediyor ve sebebi orada yazıyor.
+     *
+     * Elle giriş yolunda (öneri yok) davranış AYNI kalıyor: fırlatılan cümle dışarıdaki `catch`ten
+     * geçip aynı metinle dönüyor.
+     */
+    const outcome = await withProposal(
+      input.proposalId,
+      staff.profileId,
+      async () => {
+        const result =
+          input.type === 'expense' && input.category === ADVERTISING_CATEGORY
+            ? await recordAdvertisingExpense({ ...shared, campaign: input.campaign })
+            : input.type === 'expense'
+              ? await recordExpense({ ...shared, category: input.category.trim() })
+              : await recordMovement({
+                  ...shared,
+                  type: input.type,
+                  // Sermaye girişinin yönü sabit (`in`, motorun kuralı); `misc` serbest, çünkü banka
+                  // "para girdi/çıktı" der, sebebini söylemez ve elle girilen karşılığı da öyledir.
+                  direction: input.type === 'capital' ? 'in' : input.direction,
+                  category: input.category.trim() || null,
+                });
+        if (result.status === 'invalid') throw new Error(invalidMessage(result.reason));
+        return result;
+      },
+      (result) => ({ moneyMovementId: result.movement.id }),
+    );
 
     revalidatePath(FINANCE_PATH);
+    revalidatePath('/operations/assistant');
     return { data: { movementId: outcome.movement.id }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };

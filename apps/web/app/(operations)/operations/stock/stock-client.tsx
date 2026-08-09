@@ -8,6 +8,7 @@ import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { RecallDialog } from './recall-dialog';
 import { StockDesktop } from './stock.desktop';
 import { stockUrl, type LossPeriod, type StockScope, type StockTab, type StockUrlState } from './stock-url';
+import type { OfferHandoff } from './stock-handoff';
 import type { BatchView, StockData, StockLevelRow } from './stock-types';
 
 // Stok ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
@@ -19,9 +20,11 @@ import type { BatchView, StockData, StockLevelRow } from './stock-types';
 interface StockClientProps {
   data: StockData;
   urlState: StockUrlState;
+  /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
+  handoff?: OfferHandoff | null;
 }
 
-export function StockClient({ data, urlState }: StockClientProps) {
+export function StockClient({ data, urlState, handoff = null }: StockClientProps) {
   const router = useRouter();
   /**
    * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
@@ -134,13 +137,27 @@ export function StockClient({ data, urlState }: StockClientProps) {
 
   // Teklif diyaloğu bir PARTİYE bağlı: hangi partinin teklifi düzenleniyorsa o. Kimlikle tutulur ki
   // sunucu tazelendiğinde diyalog eski satırın kopyasını göstermesin.
-  const [offerStockId, setOfferStockId] = useState<string | null>(null);
+  //
+  // **Öneriden gelindiyse diyalog DOĞRUDAN açılır** (22.5): operatör kuyruktan bu ekrana zaten "bu
+  // teklife bak" diye geldi, ayrıca satırı listede aratmak fazladan bir adım olurdu.
+  const [offerStockId, setOfferStockId] = useState<string | null>(handoff?.batchId ?? null);
   const allBatches = [...data.attention, ...levels.flatMap((r) => r.batches)];
   const offerBatch: BatchView | null = allBatches.find((b) => b.id === offerStockId) ?? null;
   useEffect(() => {
     // Parti listeden düştüyse (tükendi/silindi) diyalog kendiliğinden kapanır — boş forma bakılmaz.
     if (offerStockId && !offerBatch) setOfferStockId(null);
   }, [offerStockId, offerBatch]);
+
+  /**
+   * **Devredilen parti listede YOK** — ve bu sessiz geçilemez. Üç sebebi olabilir ve üçü de
+   * operatörün bilmesi gereken şeyler: parti satılıp tükendi · imha edildi · personelin depo
+   * kapsamı dışında. Diyalog açılmadığı için künye sayfada durur (bulunan hâlde künye diyaloğun
+   * İÇİNDE, kararın verildiği yerde).
+   *
+   * `data.attention` sayfalanmıyor (`page.tsx`: parti listesi tek turda, eksiksiz) — yani "listede
+   * yok" gerçekten yok demek, "bu sayfada yok" değil.
+   */
+  const handoffMissing = handoff !== null && !allBatches.some((b) => b.id === handoff.batchId);
 
   // `null` = kapalı, '' = boş kutuyla açık, dolu = satırdan gelen lot ile açık.
   const [recallLot, setRecallLot] = useState<string | null>(null);
@@ -182,13 +199,22 @@ export function StockClient({ data, urlState }: StockClientProps) {
     onToggleSplit: (variantId: string) => setOpenVariantId((cur) => (cur === variantId ? null : variantId)),
     onOpenOffer: setOfferStockId,
     onOpenRecall: (lot?: string) => setRecallLot(lot ?? ''),
+    // Yalnız BULUNAMAYAN devir sayfaya iner; bulunan hâlin künyesi diyaloğun içinde.
+    handoffMissing: handoffMissing ? handoff : null,
   };
 
   return (
     <>
       <StockDesktop {...view} />
       {offerBatch ? (
-        <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
+        <OfferDialog
+          key={offerBatch.id}
+          batch={offerBatch}
+          // Künye yalnız DEVREDİLEN parti açıkken: operatör listeden başka bir partiye geçerse
+          // pencere sıradan bir teklif penceresidir, asistanın cümlesi orada yanlış olurdu.
+          handoff={handoff && handoff.batchId === offerBatch.id ? handoff : null}
+          onClose={() => setOfferStockId(null)}
+        />
       ) : null}
       {recallLot !== null ? <RecallDialog initialLot={recallLot} onClose={() => setRecallLot(null)} /> : null}
     </>

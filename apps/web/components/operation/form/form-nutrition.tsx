@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
-import { EMPTY_NUTRITION, type Nutrition } from '@lezzet/types';
+import { EMPTY_NUTRITION, NUTRITION_KEYS, NUTRITION_LABELS, type Nutrition } from '@lezzet/types';
 import { FieldShell } from './field-shell';
 import { Input } from './input';
 
@@ -30,18 +30,11 @@ import { Input } from './input';
 /** INCO çevrim katsayısı: 1 kcal = 4,184 kJ. */
 const KJ_PER_KCAL = 4.184;
 
-// Görünen adlar — `Record<keyof Nutrition, …>` olduğu için şemaya yeni kalem eklenirse BURASI derlenmez;
-// yani yeni alan sessizce ekransız kalamaz.
-const LABELS: Record<keyof Nutrition, string> = {
-  energyKj: 'Enerji',
-  energyKcal: 'Enerji',
-  fatG: 'Yağ',
-  saturatedFatG: 'Doymuş yağ',
-  carbohydrateG: 'Karbonhidrat',
-  sugarsG: 'Şeker',
-  proteinG: 'Protein',
-  saltG: 'Tuz',
-};
+// Görünen adlar şemanın yanında, tek yerde (`NUTRITION_LABELS`) — asistan kuyruğunun önizlemesi de
+// aynı satır adlarını okuyor. Burada yalnız kısa bir ad kısayolu tutuluyor.
+const LABELS = Object.fromEntries(
+  NUTRITION_KEYS.map((k) => [k, NUTRITION_LABELS[k].label]),
+) as Record<keyof Nutrition, string>;
 
 interface FormNutritionProps<T extends FieldValues> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

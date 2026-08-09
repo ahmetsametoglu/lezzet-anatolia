@@ -3,10 +3,12 @@
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
+import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Input } from '@/components/operation/form/input';
 import { num } from '@/components/operation/ui/format';
 import { RECEIVING_NOTES, pendingBadge, pendingSummary, rowStatus } from './receiving-labels';
+import type { IntakeHandoff } from './receiving-handoff';
 import type { IntakeRow, PendingPurchase, ReceivingData } from './receiving-types';
 
 /**
@@ -36,6 +38,8 @@ interface ReceivingViewProps {
   onFreeMode: () => void;
   /** Siparişsiz kabul formu; mod açıkken sağ sütunu o doldurur. */
   free: React.ReactNode;
+  /** Asistan önerisinden gelindiyse künye (22.5); `null` ise ekranda hiçbir iz yok. */
+  handoff: IntakeHandoff | null;
 }
 
 export function ReceivingDesktop({
@@ -51,6 +55,7 @@ export function ReceivingDesktop({
   freeMode,
   onFreeMode,
   free,
+  handoff,
 }: ReceivingViewProps) {
   const selected = data.pending.find((purchase) => purchase.purchaseOrderId === selectedId) ?? null;
   const girilen = rows.filter((row) => row.receivedQty !== null || row.isMissing).length;
@@ -69,6 +74,28 @@ export function ReceivingDesktop({
         <p className="mx-6 mt-3 rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">
           {error}
         </p>
+      ) : null}
+
+      {/* **Öneriden gelindiyse künye** (22.5) — mor: bu yüzeyde "makine konuştu" demek. Satırların
+          kendiliğinden dolu gelmesi bir arıza değil, asistanın işi; ama ADEDİN boş olması da bir
+          unutma değil, kuralın kendisi — künye ikisini birden söylüyor. */}
+      {handoff ? (
+        <HandoffNote
+          className="mx-6 mt-3"
+          labelSuffix={handoff.documentNo ? `irsaliye ${handoff.documentNo}` : undefined}
+          summary={handoff.summary}
+          reason={handoff.reason}
+        >
+          Son kullanma ve lot faturadan dolduruldu — etikete bakıp düzeltin.{' '}
+          <strong className="font-semibold">Adet bilerek boş: sayım sizin.</strong>
+          {handoff.warehouseCode ? ` Öneri ${handoff.warehouseCode} deposunu işaret ediyor.` : ''}
+          {handoff.supplierName ? ` Faturadaki tedarikçi: ${handoff.supplierName}.` : ''}
+          {/* Fiyat bu ekranda GÖRÜNMEZ ama kayda GİRER — ve operatörün bunu bilmesi şart, yoksa
+              alımın gideri ikinci kez elle yazılır. Ekranın alt notu ("fiyat alanı yok") elle
+              kabul için doğru; öneriden gelen kabulde maliyet faturadan sunucuda taşınıyor. */}{' '}
+          Faturadaki birim maliyet kayda otomatik eklenir (bu ekranda görünmez) — gideri ayrıca elle
+          yazmayın.
+        </HandoffNote>
       ) : null}
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,1fr)_2.4fr] overflow-hidden">

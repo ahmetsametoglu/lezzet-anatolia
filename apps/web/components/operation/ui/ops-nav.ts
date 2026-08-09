@@ -57,6 +57,11 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'panel', label: 'Panel', href: '/operations', roles: DAILY },
       { key: 'siparisler', label: 'Siparişler', href: '/operations/orders', roles: FINANCE },
       { key: 'rotalar', label: 'Teslimat & Rota', href: '/operations/deliveries', roles: DAILY },
+      // Asistan onay kuyruğu (22.3) GÜNLÜK grubunda: bir modül değil, her gün bakılıp boşaltılan
+      // bir karar kuyruğu — komşuları da öyle. "Sistem"e konsaydı bir ayar gibi okunurdu, oysa
+      // burada bekleyen şey işin kendisi. YALNIZ admin: buradan verilen tek bir onay katalogda
+      // paket kurar, stok yazar, para hareketi açar (`AI_ADMIN_ASSISTANT §5`).
+      { key: 'asistan', label: 'Asistan', href: '/operations/assistant', roles: ADMIN_ONLY },
     ],
   },
   {

@@ -11,6 +11,7 @@ import {
   type PostalCodeSuggestion,
 } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
+import { withProposal } from '@/lib/assistant/handoff';
 import { readPostalCodesForMap } from '@/lib/delivery/map-codes';
 import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -51,12 +52,17 @@ const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT
  */
 export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {
-    await requireAdmin();
+    const staff = await requireAdmin();
     const parsed = ZoneFormSchema.extend({
       id: z.string().uuid().optional(),
       warehouseId: z.string().uuid(),
+      /**
+       * Asistan önerisinden gelindiyse o önerinin kimliği (22.5). **Yoksa akış hiç değişmez** —
+       * elle rota kurma yolu bu değişiklikten habersiz kalmalı.
+       */
+      proposalId: z.string().uuid().optional(),
     }).parse(input);
-    const { id, warehouseId, postalCodes, ...fields } = parsed;
+    const { id, warehouseId, postalCodes, proposalId, ...fields } = parsed;
 
     const db = serviceDb();
     const zoneSvc = new DeliveryZoneService(db);
@@ -64,12 +70,31 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
     const conflict = await findConflict(db, postalCodes, id ?? null);
     if (conflict) return { data: null, error: conflict };
 
-    const zone = id
-      ? await zoneSvc.update({ id, warehouseId, ...fields })
-      : await zoneSvc.insert({ warehouseId, ...fields });
+    /**
+     * **Kayıt ile kuyruk satırı BİRLİKTE koşar** (`withProposal`): önce satır `pending`ten çıkar
+     * (`claimForApply`), sonra iş yapılır, sonra sonuç damgalanır. Sıra şemanın dayattığı sıra ve
+     * tek yerde durur — üç hedef ekrana kopyalansaydı biri bir gün kilidi atlar ve aynı öneri iki
+     * kez uygulanırdı.
+     *
+     * Kaydedilen küme OPERATÖRÜN kümesidir, önerininki değil: kodları haritada görüp çıkarabilsin
+     * diye buraya geliyor. Bildirim de yalnız kaydedilene gider (`zone_available` uzlaştırması
+     * kapsanan kodlara bakar), yani "hepsine birden gitmesi" derdi burada kapanıyor.
+     */
+    const zone = await withProposal(
+      proposalId,
+      staff.profileId,
+      async () => {
+        const saved = id
+          ? await zoneSvc.update({ id, warehouseId, ...fields })
+          : await zoneSvc.insert({ warehouseId, ...fields });
+        await zoneSvc.replacePostalCodes(saved.id, postalCodes);
+        return saved;
+      },
+      (saved) => ({ zoneId: saved.id, postalCodeCount: String(postalCodes.length) }),
+    );
 
-    await zoneSvc.replacePostalCodes(zone.id, postalCodes);
     revalidatePath('/operations/deliveries');
+    revalidatePath('/operations/assistant');
     return { data: { id: zone.id }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };

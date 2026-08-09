@@ -4,7 +4,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { AlertIcon, CheckIcon, InfoIcon } from '@/components/operation/ui/icons';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { StatusBadge } from './status-badge';
-import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
+import { DECLARATION_GAP_LABELS, missingDeclarations, resolveLocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { filledContentLangs, type FamilyView, type ProductView } from '../../products-types';
 
@@ -45,12 +45,6 @@ function DeclarationNote({ product }: { product: ProductView }) {
   const missingLangs = LOCALES.filter((l) => !filled.includes(l));
   // Neyin eksik sayıldığı TEK KAYNAKTA (types/missingDeclarations) — sunucu süzgeci de onu izler.
   const gaps = missingDeclarations(product);
-  const GAP_LABELS: Record<string, string> = {
-    ingredients: 'içindekiler',
-    nutrition: 'besin değerleri',
-    storage: 'saklama koşulları',
-    allergens: 'alerjen beyanı',
-  };
 
   let cls: string;
   let icon: ReactNode;
@@ -61,9 +55,10 @@ function DeclarationNote({ product }: { product: ProductView }) {
     text = 'Aday ürün — satılamaz, yalnız keşifte görünür. Varyant · stok · fiyat tamamlanınca "Etkinleştir" ile satılabilir yapılır.';
   } else if (gaps.length > 0) {
     const parts: string[] = [];
+    // `lang` burada kendi cümlesini kurar (HANGİ dil eksik), ötekiler ortak sözlükten.
     if (gaps.includes('lang')) parts.push(`${missingLangs.map((l) => l.toUpperCase()).join(', ')} içeriği`);
     for (const g of gaps) {
-      if (GAP_LABELS[g]) parts.push(GAP_LABELS[g]);
+      if (g !== 'lang') parts.push(DECLARATION_GAP_LABELS[g]);
     }
     cls = 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark [--ic:var(--color-ops-amber)]';
     icon = <AlertIcon />;

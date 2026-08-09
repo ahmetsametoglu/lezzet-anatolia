@@ -1,6 +1,7 @@
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { AuthError } from '@/lib/guard';
 import { ReceivingClient } from './receiving-client';
+import { readIntakeHandoff } from './receiving-handoff';
 import { readReceiving } from './receiving-read';
 
 /**
@@ -19,7 +20,12 @@ import { readReceiving } from './receiving-read';
  * Rampadaki tek-kalem akışı native uygulamanın işi (`21.11`); burası tasarımın deyişiyle *"irsaliye
  * masada"* çalışılan yer — bütün kalemler tek tabloda.
  */
-export default async function ReceivingPage() {
+interface ReceivingPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ReceivingPage({ searchParams }: ReceivingPageProps) {
+  const params = await searchParams;
   let data;
   try {
     data = await readReceiving();
@@ -33,5 +39,12 @@ export default async function ReceivingPage() {
     );
   }
 
-  return <ReceivingClient data={data} />;
+  /**
+   * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) masa ön doldurulur (22.5): satırlar,
+   * SKT ve lot dolu gelir — ADET boş kalır (`receiving-handoff` künyesi: sayım gözle yapılır).
+   * `null` dönen üç hâlde (satır yok · artık `pending` değil · devir tipi değil) ekran normal açılır.
+   */
+  const handoff = await readIntakeHandoff(typeof params.proposal === 'string' ? params.proposal : null);
+
+  return <ReceivingClient key={handoff?.proposalId ?? 'manual'} data={data} handoff={handoff} />;
 }

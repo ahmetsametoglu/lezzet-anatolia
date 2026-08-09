@@ -4,6 +4,7 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { matchQueue } from '@/lib/bank/reconcile';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
+import { readMoneyHandoff } from './finance-handoff';
 import { NOTES } from './finance-labels';
 import { toAccountViews, toMatchRows, toMovementRows, totalBalance } from './finance-read';
 import type { FinanceData, LedgerView } from './finance-types';
@@ -41,7 +42,8 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     );
   }
 
-  const raw = parseFinanceUrl(await searchParams);
+  const params = await searchParams;
+  const raw = parseFinanceUrl(params);
   const db = serviceDb();
   const accountService = new AccountService(db);
 
@@ -102,8 +104,16 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     unmatchedCount,
   };
 
+  /**
+   * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) elle hareket penceresi ÖN DOLU açılır
+   * (22.5). Formun kabul etmediği iki tipte (stok alımı · transfer) pencere açılmaz, künye hangi
+   * yoldan gidileceğini söyler (`finance-handoff` künyesi).
+   */
+  const handoff = await readMoneyHandoff(typeof params.proposal === 'string' ? params.proposal : null);
+
   return (
     <FinanceClient
+      handoff={handoff}
       data={data}
       urlState={urlState}
       // Pasif hesap listede kalır (geçmişi ona bağlı) ama YENİ harekete kapanır — diyalogların

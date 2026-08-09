@@ -6,6 +6,7 @@ import { markupPercent } from '@lezzet/domain-core';
 import { fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PriceTriple } from '@/components/operation/form/price-triple';
 import { daysLabel, money, percent, shortDate } from '@/components/operation/ui/format';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
@@ -43,15 +44,24 @@ import type { BatchView } from '@/lib/stock/batch-types';
 interface OfferDialogProps {
   batch: BatchView;
   onClose: () => void;
+  /**
+   * **Asistan önerisinden gelindiyse** devir künyesi + o önerinin fiyatı (22.5). Verilmezse diyalog
+   * hiç değişmez — elle açılan yol tek satır bile farklı koşmaz.
+   *
+   * Künye diyaloğun İÇİNDE duruyor, sayfada değil: bu pencere kendiliğinden açılıyor ve örtüsü
+   * sayfayı kaplıyor. Künye arkada kalsaydı operatör fiyatın neden dolu geldiğini ancak pencereyi
+   * kapattıktan sonra görürdü — yani kararı verdikten sonra.
+   */
+  handoff?: { proposalId: string; summary: string; reason: string | null; offerPriceCents: number } | null;
 }
 
-export function OfferDialog({ batch, onClose }: OfferDialogProps) {
+export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps) {
   const router = useRouter();
   const editing = batch.offerPriceCents !== null;
 
-  // Açık teklif varsa onunla, yoksa öneriyle başlar. Öneri de yoksa (liste fiyatı girilmemiş) alan
-  // BOŞ gelir — sıfır yazmak "bedava" demekti.
-  const initial = batch.offerPriceCents ?? batch.suggestedOfferCents;
+  // Öneriden gelindiyse ONUN fiyatı; yoksa açık teklif, o da yoksa sistemin önerisi. Öneri de yoksa
+  // (liste fiyatı girilmemiş) alan BOŞ gelir — sıfır yazmak "bedava" demekti.
+  const initial = handoff?.offerPriceCents ?? batch.offerPriceCents ?? batch.suggestedOfferCents;
   const [price, setPrice] = useState<number | null>(initial === null ? null : fromCents(initial));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,7 +78,9 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
   const submit = async (next: number | null) => {
     setBusy(true);
     setError(null);
-    const { error: actionError } = await setOfferPriceAction(batch.id, next);
+    // Kuyruk satırı YALNIZ teklif AÇILDIĞINDA kapanır: `null` göndermek teklifi kaldırmaktır ve
+    // öneriyi "uygulandı" saymak, tam tersini yapan bir kaydı onay diye damgalamak olurdu.
+    const { error: actionError } = await setOfferPriceAction(batch.id, next, next === null ? null : handoff?.proposalId);
     setBusy(false);
     if (actionError) {
       setError(actionError);
@@ -116,6 +128,15 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
         </>
       }
     >
+      {/* Devir künyesi EN ÜSTTE: fiyatın neden dolu geldiğini, alana bakmadan önce söyler. */}
+      {handoff ? (
+        <HandoffNote dense summary={handoff.summary} reason={handoff.reason}>
+          Fiyat önerideki gibi dolduruldu ama <strong className="font-semibold">kilitli değil</strong> — aşağıdaki
+          kâr satırına bakıp değiştirebilirsiniz. Kaydedince öneri kuyruktan düşer; teklifi kapatmak
+          öneriyi uygulamak sayılmaz.
+        </HandoffNote>
+      ) : null}
+
       <div className="grid grid-cols-3 gap-2.5">
         <Metric label="Kalan" value={`${batch.physicalQty} ad.`} />
         <Metric

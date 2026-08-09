@@ -1,4 +1,5 @@
-import type { AssistantProposalKind, AssistantProposalStatus } from '@lezzet/types';
+import { ZoneExtendPayloadSchema, type AssistantProposalKind, type AssistantProposalStatus } from '@lezzet/types';
+import type { ProposalMode } from '@lezzet/application';
 import type { AssistantQueueRow } from '@/lib/assistant/assistant-types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { shortDateTime } from '@/components/operation/ui/format';
@@ -30,10 +31,21 @@ export const KIND_TONE: Record<AssistantProposalKind, OpsTone> = {
   product_draft: 'neutral',
   featured_flag: 'slate',
   purchase_order: 'blue',
-  // Şeması henüz yok (`PROPOSAL_PAYLOAD_SCHEMAS`), yani bugün öneri doğmuyor. Yine de haritada
-  // duruyorlar: `Record` tam olmasaydı tip eklendiği gün burası derlenmezdi — istenen tam olarak bu.
   discount_draft: 'olive',
   recipe_draft: 'neutral',
+  // **Fırsat amber, çünkü ağırlığı bölge önerisiyle aynı sınıfta:** taslak evresi YOK, uygulanınca
+  // parti anında müşteri vitrinine düşer (`KIND_META.batch_offer`). Stokla aynı mavi verilseydi
+  // "bir stok kaydı" diye okunurdu; oysa değişen şey rafta duran mal değil, müşterinin gördüğü fiyat.
+  //
+  // Bu satırı derleyici ISTEDI: harita `Record<AssistantProposalKind, …>` olduğu için denetim
+  // enum'a sekizinci tipi eklediği gün ekran derlenmedi. Tam olarak istenen buydu — yeni bir öneri
+  // tipi, rengi düşünülmeden panele giremez.
+  batch_offer: 'amber',
+  // **Yeni ürün de nötr — `product_draft` ile aynı ton** (22.6). İkisi aynı eksende: biri kaydı
+  // açıyor, öteki tamamlıyor; ikisi de yalnız BEYAN yazıyor ve hiçbiri ürünü satışa çıkaramıyor
+  // (`status` payload'da yok, ürün aday doğar). Ayrı bir renk verilseydi "yeni ürün" panelde daha
+  // ağır bir karar gibi okunurdu; oysa ağırlığı aynı ve duvar da aynı yerde: onay ekranı.
+  product_create: 'neutral',
 };
 
 /** Tazelik rozeti — eşiği KAPI biliyor (`freshness`), ekran yalnız çiziyor. `ok` rozetsizdir. */
@@ -101,6 +113,43 @@ export function decisionNote(row: AssistantQueueRow): string | null {
     return row.decidedNote ? `Ret notu: “${row.decidedNote}”` : 'Ret notu yazılmadı.';
   }
   return row.decidedNote;
+}
+
+/**
+ * **Uygulanınca müşteriye kaç bildirim gider** — `null` ise böyle bir etki yok.
+ *
+ * Çizim onay düğmesini bu yüzden değiştiriyor ("Uygula ve bildirimi gönder", amber): geri
+ * alınamayan bir eylem, geri alınabilir olanla aynı görünmemeli. Ama koşul TİP değil SAYIDIR —
+ * bekleyen müşterisi olmayan bir bölge önerisi hiç bildirim göndermez ve "gönder" demek yalan
+ * olurdu. Bölge bugün dış etkisi olan TEK tip (`ZoneExtendPayloadSchema` künyesi).
+ */
+export function notifyCountOf(row: AssistantQueueRow): number | null {
+  if (row.kind !== 'zone_extend') return null;
+  const parsed = ZoneExtendPayloadSchema.safeParse(row.payload);
+  if (!parsed.success) return null;
+  const waiting = parsed.data.postalCodes.reduce((sum, c) => sum + c.waitingCount, 0);
+  return waiting > 0 ? waiting : null;
+}
+
+/**
+ * Karar barının sol tarafındaki tek satırlık not — **her tipte AYNI ve bilerek öyle.**
+ *
+ * Çizim burada tip başına ayrı bir cümle veriyordu, ama o cümleler fikstürün kendi metniydi ve
+ * karşılıkları zaten yukarıda duruyor. Ölçüldü (09.08, ekran görüntüsü): bölge önerisinde
+ * "bildirim geri alınamaz" uyarısı ÜÇ KEZ okunuyordu — önizlemenin turuncu kutusunda, "Uygulanınca
+ * ne olur" satırında, bir de burada. Üç kez söylenen bir uyarı, bir kez söylenenden daha az
+ * okunur. Geriye barın kendi işi kaldı: onayın ardından ne olabileceği.
+ */
+export function decisionFooterNote(mode: ProposalMode): string {
+  // Devredilen öneride "motor reddederse" cümlesi anlamsız: kuyruk hiçbir şey uygulamıyor, karar
+  // hedef ekranda veriliyor. Barın işi burada operatöre NEDEN başka bir ekrana gittiğini söylemek.
+  if (mode === 'handoff') {
+    return 'Bu öneri kuyruktan uygulanmaz — etkisi geri alınamaz, o yüzden kayıt kendi ekranında gözden geçirilerek yazılır.';
+  }
+  if (mode === 'draft_then_edit') {
+    return 'Uygulanınca kayıt PASİF doğar; ince ayar ve yayına alma kendi ekranının işi.';
+  }
+  return 'Motor reddederse öneri “uygulanamadı” hâline geçer ve sebebi burada yazar.';
 }
 
 /**

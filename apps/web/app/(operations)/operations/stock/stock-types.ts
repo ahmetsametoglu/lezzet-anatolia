@@ -13,6 +13,7 @@ import type {
   StockAdjustmentReason,
 } from '@lezzet/types';
 import type { BatchView } from '@/lib/stock/batch-types';
+import type { OfferHandoff } from './stock-handoff';
 import type { LossPeriod, StockScope, StockTab } from './stock-url';
 
 // Parti görünümü İKİ ekranın ortak tipi (stok · fiyatlar) — tanımı `lib/stock`'ta, burada yalnız
@@ -210,5 +211,12 @@ export interface StockViewProps {
   /** Geri çağırma sorgusunu aç. Lot verilirse kutu DOLU açılır — satırdaki numarayı elle yeniden
    *  yazdırmak, acil bir akışta en gereksiz adımdır. */
   onOpenRecall: (lot?: string) => void;
+  /**
+   * Asistan önerisinden gelindi ama devredilen parti LİSTEDE YOK (22.5); `null` = sorun yok.
+   *
+   * Yalnız bu hâl sayfaya iner: parti bulunduğunda künye teklif diyaloğunun içinde durur, çünkü
+   * pencere kendiliğinden açılıp sayfayı örtüyor — arkada kalan künyeyi kimse okuyamaz.
+   */
+  handoffMissing: OfferHandoff | null;
 }
 

@@ -43,6 +43,7 @@ export type NavIconName =
   | 'talepler'
   | 'geribildirim'
   | 'whatsapp'
+  | 'asistan'
   | 'ayarlar'
   | 'sistem';
 
@@ -166,6 +167,15 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
   talepler: <path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />,
   geribildirim: <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" />,
   whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z" />,
+  // Asistan = KIVILCIM. Bu yüzeyde "makine konuştu" işareti zaten kıvılcım (`SparkleIcon`, AI
+  // rozetleri) — rayda başka bir biçim kullanmak aynı şeyi iki dille anlatmak olurdu. İki
+  // kıvılcımın büyüklüğü farklı: öneri tek başına gelmiyor, kuyruk oluyor.
+  asistan: (
+    <>
+      <path d="M13 3.5l1.5 4L18.5 9l-4 1.5L13 14.5l-1.5-4L7.5 9l4-1.5z" />
+      <path d="M6.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8L4 18l1.8-.7z" />
+    </>
+  ),
   ayarlar: (
     <>
       <circle cx="12" cy="12" r="3" />

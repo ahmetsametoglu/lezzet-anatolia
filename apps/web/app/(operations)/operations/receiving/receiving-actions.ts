@@ -1,13 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { openIntakeForm, receiveGoods, type IntakeFormLine, type IntakeFormRow } from '@lezzet/application';
+import { openIntakeForm, receiveGoods, receivePurchase, type IntakeFormLine, type IntakeFormRow } from '@lezzet/application';
 import { ProductService, SupplierService, serviceDb } from '@lezzet/database';
-import { resolveLocalizedText } from '@lezzet/types';
+import { StockIntakePayloadSchema, resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
+import { readHandoffProposal, withProposal } from '@/lib/assistant/handoff';
+import { costsForLines } from './receiving-handoff';
 import type { ReceiveOutcome } from './receiving-types';
 
 /**
@@ -42,21 +44,49 @@ export async function receiveGoodsAction(input: {
   supplierId: string | null;
   note: string | null;
   lines: IntakeFormLine[];
+  /** Asistan önerisinden gelindiyse o önerinin kimliği (22.5); yoksa akış hiç değişmez. */
+  proposalId?: string | null;
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
     // Depo kapsamı BU depo için doğrulanıyor: yöneticinin açık seçimi de, depocunun kimliğinden
     // geleni de aynı kapıdan geçer. Kapsamı olmayan personel hiçbir depoya kabul yazamaz.
-    await requireWarehouseScope(input.warehouseId);
+    const { user: staff } = await requireWarehouseScope(input.warehouseId);
 
     if (input.lines.length === 0) throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 
-    const result = await receiveGoods(serviceDb(), {
-      warehouseId: input.warehouseId,
-      purchaseOrderId: input.purchaseOrderId,
-      supplierId: input.supplierId,
-      note: input.note,
-      lines: input.lines,
-    });
+    /**
+     * **Öneriden gelen kabul FİYATLI yoldan yazılır** (`receivePurchase`), elle kabul fiyatsız
+     * yoldan (`receiveGoods`) — ve fiyat istemciye hiç inmez.
+     *
+     * Fatura fotoğrafından okunan birim maliyet payload'da duruyor; ekranın tipi onu taşıyamıyor
+     * (rol duvarı, `IntakeFormLine`). Burada payload sunucuda yeniden okunup maliyet operatörün
+     * onayladığı satırlara ekleniyor. Böylece depocu fiyatı görmüyor ama "son alış fiyatı" da
+     * kaybolmuyor — `auto_price` onu bu kayıttan öğreniyor.
+     */
+    const proposal = input.proposalId ? await readHandoffProposal(input.proposalId) : null;
+    const payload = proposal?.kind === 'stock_intake' ? StockIntakePayloadSchema.safeParse(proposal.payload) : null;
+
+    const run = async () =>
+      payload?.success
+        ? receivePurchase(serviceDb(), {
+            warehouseId: input.warehouseId,
+            purchaseOrderId: input.purchaseOrderId,
+            supplierId: input.supplierId,
+            note: input.note,
+            lines: costsForLines(payload.data, input.lines),
+          })
+        : receiveGoods(serviceDb(), {
+            warehouseId: input.warehouseId,
+            purchaseOrderId: input.purchaseOrderId,
+            supplierId: input.supplierId,
+            note: input.note,
+            lines: input.lines,
+          });
+
+    // Kuyruk satırı kayıtla BİRLİKTE kapanır; sıra tek yerde (`withProposal`).
+    const result = await withProposal(input.proposalId, staff.profileId, run, (outcome) => ({
+      stockIntakeId: outcome.status === 'empty' ? '' : outcome.result.intakeId,
+    }));
 
     if (result.status === 'empty') throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 

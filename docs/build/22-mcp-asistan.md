@@ -268,7 +268,7 @@ satırında.
     (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` cevabı; ayrıntı 22.3'ün Durum
     notunda). Kalan tek boşluk 22.6'nın kendi ekranı.
 
-- [~] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
+- [x] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
   09.08: "içindekiler fotoğrafını çekip yükleyeceğim, asistan bazen ürünü oluşturacak bazen
   bilgilerini güncelleyecek")*: yeni `product_create` tipi + `product_draft`ın beş çok dilli alana
   ve beyan alanlarına genişlemesi + ham kaynak metin ve güven işareti alanları + onay ekranı —
@@ -323,6 +323,37 @@ satırında.
     pahalılaştırıyor ve fırsat bandı boş kalıyordu). Maliyet okuması asistana açılana kadar sessiz
     bir gürültüydü; artık yanlış öneri üreten bir girdi. Talep:
     `docs/talep/arka-uc-seed-alis-fiyati-listeden-bagimsiz.md`.
-  - **BEKLEYEN(22.6):** ekran tarafı — brief `design/pages/admin-asistan-kuyrugu.md §5b`, muhatabı
-    Claude Design DEĞİL operasyon şeridi (kullanıcı kararı 09.08: son üç önizleme de tasarımsız,
-    mevcut dört yapı taşıyla yazıldı; çizimi gördükten sonra istenirse tasarım turu açılır).
+  - ~~**BEKLEYEN(22.6):** ekran tarafı~~ **YAZILDI (09.08, operasyon şeridi)** — brief
+    `design/pages/admin-asistan-kuyrugu.md §5b`, tasarımsız, mevcut yapı taşlarıyla. touches:
+    `apps/web/app/(operations)/operations/assistant/assistant-preview.tsx`,
+    `packages/types/src/entities/product.schema.ts`
+    - **İki önizleme de aynı gövdeyi paylaşıyor** (`DeclarationBlocks` · `GapNotice`): ikisi de aynı
+      soruya cevap veriyor — *"sisteme ne yazılıyor, neyi eksik bırakıyor?"*. Fark kimlikte: yeni
+      kayıt kategori · tarih tipi · raf ömrü · KDV · boyları da getiriyor, karşılaştıracak "bugünkü
+      hâl"i ise yok.
+    - **① Alanlar** üç dil yan yana; tamamlamada "Bugün ↔ Yazılacak", yeni üründe tek sütun.
+    - **② TAMLIK** `remainingGaps`ten, eksikler ADIYLA. Eksik yoksa cümle KUTU DEĞİL düz satır:
+      "onaylarsanız eksik kalmıyor" bir uyarı değil bir teyittir, kutuda riskle aynı ağırlıkta
+      okunurdu.
+    - **③ ON DÖRT ALERJENİN TAMAMI**, işaretsizler sönük ama OKUNUR ve üstü çizili değil — üstünü
+      çizmek "yok" iddiası olurdu, oysa söylenen "asistan işaretlemedi". Başlık sayıyla:
+      "3 işaretli" / "hiçbiri işaretlenmedi". İz listesi aynı kuralla.
+    - **④ Besin künyesi** 100 g başına; enerji TEK satır (kJ · kcal aynı büyüklüğün iki birimi).
+      Ondalık **ancak varsa** — sabit basamak iki yönde de yanlış: `0` "16,4 g yağ"ı 16'ya yuvarlar,
+      `1` enerjiyi "1.650,0 kJ" diye yazıp olmayan bir hassasiyet iddia eder. Tutarsızlık ölçülüyor:
+      makro toplamı 100 g'ı aşarsa kırmızı ("bu değerlerden biri yanlış okunmuş"). **"Sıfır enerji"
+      İŞARETLENMİYOR** — bir içecekte meşrudur ve her makul değeri uyarıya çevirmek uyarıyı
+      değersizleştirir.
+    - **⑤ Emin olunmayan alanlar** kırmızı kutuda, adlarıyla. **⑥ Üzerine yazma** yalnız eski hâli
+      DOLU olan alanlarda; alerjen ve besin künyesi tabloda değil ama uyarı onları da sayıyor.
+    - **⑦ Emniyet bir RAHATLAMA olarak yazıldı**, uyarı olarak değil: ürün aday doğar, satışa
+      çıkarmak bu ekranın işi değil, fiyat/stok/görsel öneriye dahil değil.
+    - **Ölçüldü** (`ui:shot`, açık + koyu): gerçek bir tamamlama önerisinde fark tablosu + 14'lü
+      ızgara + künye; yeni üründe kimlik künyesi. Bir kusur ölçümde çıktı ve düzeltildi: KDV tam
+      sayıya yuvarlanıp **%5,5 yerine %6** yazıyordu — var olmayan bir oran.
+    - **İki duplikasyon kapandı:** eksik beyan etiketleri (`DECLARATION_GAP_LABELS`) ve besin kalemi
+      adları/birimleri (`NUTRITION_LABELS`) `@lezzet/types`e, enum'ların yanına taşındı; ürün
+      önizlemesi ile künye formu artık aynı sözlükten okuyor.
+    - **Bilerek YAPILMADI:** ambalajın ham metni ekrana serilmiyor (brief: fotoğrafı çeken, yükleyen
+      ve onaylayan aynı kişi — kaynağı ona tekrar okutmak boş yük) ve fiyat/stok/görsel için yer
+      tutucu bile çizilmedi.

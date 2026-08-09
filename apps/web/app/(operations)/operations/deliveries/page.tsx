@@ -7,6 +7,7 @@ import { parseDeliveriesUrl, toIsoDate } from './deliveries-url';
 import { DispatchClient } from './dispatch-client';
 import { readDispatchDay } from './dispatch-read';
 import { RoutesClient } from './routes-client';
+import { readZoneHandoff } from './routes-handoff';
 import { readRoutes } from './routes-read';
 
 // **Teslimat & Rota** (`/operations/deliveries`) — İKİ DAL, TEK ADRES.
@@ -42,12 +43,30 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
     // gezinmeye zorluyordu.
     if (urlState.tab === 'routes') {
       const warehouseId = typeof params.depo === 'string' ? params.depo : null;
+      /**
+       * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) rota kurulumu ÖN DOLDURULUR (22.5).
+       *
+       * Sebep kullanıcının kendi cümlesi: *"bölgeye hangi posta kodlarının gireceğine haritaya
+       * bakmadan karar veremem — diğer kodlar nerede, nerede değil."* Kuyruk bu yüzden bu tipi
+       * uygulamıyor; buraya getiriyor. Kodlar önerinin kümesiyle **başlar**, operatör haritada
+       * çıkarır/ekler ve kaydedilen küme ONUN kümesidir.
+       *
+       * `readHandoffProposal` üç hâlde `null` döner (satır yok · artık `pending` değil · devir
+       * tipi değil) ve üçünde de ekran normal açılır — uyarı göstermez. Sonuncusu bir yetki
+       * kapısıdır: adrese elle kimlik yazan biri `apply` modundaki bir öneriyi bu yoldan
+       * uygulatamaz (mod künyeden okunur, adresin iddiasından değil).
+       */
+      const handoff = await readZoneHandoff(typeof params.proposal === 'string' ? params.proposal : null);
       return (
         <RoutesClient
-          key={urlState.routeId ?? 'new'}
+          // Öneriden gelen kod kümesi ilk taslağı kuruyor; öneri değişince bileşen yeniden doğmalı.
+          key={`${urlState.routeId ?? handoff?.zoneId ?? 'new'}:${handoff?.proposalId ?? ''}`}
           data={await readRoutes()}
-          routeId={urlState.routeId}
+          // Öneri bir bölgeyi işaret ediyorsa adres seçim taşımasa bile o rota açılır: operatör
+          // "hangi rotaydı" diye aramak zorunda kalmamalı.
+          routeId={urlState.routeId ?? handoff?.zoneId ?? null}
           warehouseId={warehouseId}
+          handoff={handoff}
         />
       );
     }

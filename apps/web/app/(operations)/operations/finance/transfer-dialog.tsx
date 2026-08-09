@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toCents } from '@lezzet/helper';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
@@ -30,7 +31,7 @@ function blockedReasonOf(values: TransferForm): string | null {
   // Motor bunu zaten reddediyor (`transfer_same_account`); engel burada da yazılı çünkü kural
   // kapıda öğrenilmemeli — kaydet düğmesine basıp hata okumak, seçerken uyarılmaktan kötüdür.
   if (values.fromAccountId === values.toAccountId) return 'Aynı hesabın içinde transfer olmaz — iki farklı hesap seçin.';
-  if (!values.amountCents || values.amountCents <= 0) return 'Tutar sıfırdan büyük olmalı.';
+  if (!values.amount || values.amount <= 0) return 'Tutar sıfırdan büyük olmalı.';
   return null;
 }
 
@@ -48,7 +49,7 @@ export function TransferDialog({ accounts, onClose, onSaved }: TransferDialogPro
     defaultValues: {
       fromAccountId: accounts[0]?.id ?? '',
       toAccountId: accounts[1]?.id ?? '',
-      amountCents: null,
+      amount: null,
       valueDate: today(),
       description: '',
     },
@@ -64,7 +65,8 @@ export function TransferDialog({ accounts, onClose, onSaved }: TransferDialogPro
     const { error: actionError } = await recordTransferAction({
       fromAccountId: values.fromAccountId,
       toAccountId: values.toAccountId,
-      amountCents: values.amountCents ?? 0,
+      // EURO → CENT sınırda (`ManualMovementSchema` künyesi).
+      amountCents: toCents(values.amount ?? 0),
       valueDate: values.valueDate,
       description: values.description,
     });
@@ -107,17 +109,17 @@ export function TransferDialog({ accounts, onClose, onSaved }: TransferDialogPro
         {/* Transferin en sık hatası yanlış yönü seçmek ve o hata bakiyeleri iki kat kaydırır (biri
             fazla, öteki eksik). Bu yüzden sonuç kaydetmeden ÖNCE yazılıyor: operatör okuduğu cümlenin
             niyetiyle aynı olup olmadığını görebiliyor. Bakiyeler gerçek — şeritteki sayının aynısı. */}
-        {from && to && watched.amountCents ? (
+        {from && to && watched.amount ? (
           <p className="rounded-ops-card border border-ops-line bg-ops-surface-sunken px-3.5 py-2.5 font-ops-body text-ops-sm text-ops-muted">
             <span className="text-ops-ink">{from.name}</span> {money(from.balanceCents)} →{' '}
-            <span className="text-ops-ink">{money(from.balanceCents - watched.amountCents)}</span> ·{' '}
+            <span className="text-ops-ink">{money(from.balanceCents - toCents(watched.amount))}</span> ·{' '}
             <span className="text-ops-ink">{to.name}</span> {money(to.balanceCents)} →{' '}
-            <span className="text-ops-ink">{money(to.balanceCents + watched.amountCents)}</span>
+            <span className="text-ops-ink">{money(to.balanceCents + toCents(watched.amount))}</span>
           </p>
         ) : null}
 
         <div className="grid grid-cols-2 gap-3">
-          <FormMoney control={form.control} name="amountCents" label="Tutar" required placeholder="0,00" />
+          <FormMoney control={form.control} name="amount" label="Tutar" required placeholder="0,00" />
           <Controller
             control={form.control}
             name="valueDate"

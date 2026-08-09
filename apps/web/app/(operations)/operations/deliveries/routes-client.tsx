@@ -12,6 +12,7 @@ import { readMapCodesAction, saveZoneAction } from './routes-actions';
 import { RoutesDesktop } from './routes.desktop';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RoutesData, RouteView } from './routes-read';
+import type { ZoneHandoff } from './routes-handoff';
 import type { PostalCodePick } from './routes-types';
 import type { Country } from '@lezzet/types';
 
@@ -29,7 +30,18 @@ interface Draft {
  * Depolar'dan gelen köprü doğrudan o rotayı açabilmeli. Taslak (yazılan ad, işaretlenen gün, atılan
  * kod) adreste DEĞİL — o bir işlemin yarısıdır; geri düğmesi yarım bir rotayı geri getirmemeli.
  */
-export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData; routeId: string | null; warehouseId: string | null }) {
+export function RoutesClient({
+  data,
+  routeId,
+  warehouseId,
+  handoff = null,
+}: {
+  data: RoutesData;
+  routeId: string | null;
+  warehouseId: string | null;
+  /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
+  handoff?: ZoneHandoff | null;
+}) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +60,23 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
   // Kod aramasında ülke etiketi yalnız YABANCI kod için basılır; "kendi ülkemiz" seçili rotanın
   // deposundan gelir, yeni rotada adresten ya da tek depodan.
   const home = data.warehouses.find((w) => w.id === (selected?.warehouseId ?? warehouseId)) ?? data.warehouses[0];
-  // Taslak seçili rotadan doğar; `key` ile bileşen yeniden kurulduğu için seçim değişince tazelenir.
-  const [draft, setDraft] = useState<Draft | null>(
-    selected
+  /**
+   * Taslak seçili rotadan doğar; `key` ile bileşen yeniden kurulduğu için seçim değişince tazelenir.
+   *
+   * **Öneriden gelindiyse kodlar ÜSTÜNE eklenir, yerine geçmez** — `zone_extend` bir EKLEME
+   * önerisidir; mevcut kümeyi önerininkiyle değiştirmek, kaydetmeye basan operatörün haberi olmadan
+   * rotadan kod düşürürdü (uygulayıcının kendi kuralı da bu: *"önce okur, üstüne ekler — 'ekle'
+   * sessizce 'değiştir' olmasın"*). Zaten var olan kod ikinci kez eklenmiyor.
+   */
+  const [draft, setDraft] = useState<Draft | null>(() => {
+    const base = selected
       ? { name: selected.name, weekdays: selected.weekdays, isActive: selected.isActive, codes: selected.postalCodes }
-      : { name: '', weekdays: [], isActive: true, codes: [] },
-  );
+      : { name: handoff?.zoneName ?? '', weekdays: [], isActive: true, codes: [] as PostalCodePick[] };
+    if (!handoff) return base;
+    const have = new Set(base.codes.map((code) => `${code.country}:${code.postalCode}`));
+    const added = handoff.codes.filter((code) => !have.has(`${code.country}:${code.postalCode}`));
+    return { ...base, codes: [...base.codes, ...added] };
+  });
 
   const select = (id: string | null) => {
     setError(null);
@@ -118,9 +141,19 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
         weekdays: draft.weekdays,
         isActive: draft.isActive,
         postalCodes: draft.codes,
+        // Öneriden gelindiyse kuyruk satırı bu kayıtla birlikte kapanır (`withProposal`). Elle
+        // kurulumda alan hiç gitmez ve akış değişmez.
+        proposalId: handoff?.proposalId,
       });
       if (result.error) {
         setError(result.error);
+        return;
+      }
+      // Öneri kapandıysa adresten de düşer: sayfa yenilenince aynı öneri ikinci kez ön dolgu
+      // yapmamalı — satır artık `pending` değil, `readZoneHandoff` zaten `null` dönerdi ama adreste
+      // ölü bir parametre bırakmak da bir sonraki paylaşımda kafa karıştırırdı.
+      if (handoff) {
+        router.replace(`/operations/deliveries?tab=routes&route=${selected?.id ?? handoff.zoneId}`);
         return;
       }
       router.refresh();
@@ -193,6 +226,7 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
       homeCountry={(home?.countryCode ?? 'FR') as Country}
       busy={busy}
       error={error}
+      handoff={handoff}
     />
   );
 }

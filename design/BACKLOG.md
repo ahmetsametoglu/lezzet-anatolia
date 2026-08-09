@@ -44,6 +44,21 @@ değişecek yer parantezde.
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
+- **"GÜNÜN FIRSATI" DİYE BİR ÖZELLİK YOK — mobil vitrinden KALDIRILDI (kullanıcı kararı 09.08).**
+  `Mobil - Musteri v3` vitrininde geri sayımlı bir "günün fırsatı" bandı var (`vHome` → `flashBand`)
+  ve mobil ekranda fixture'la çizilmişti. Ölçüldü: arkasında ne bir kayıt ne bir uç var — ne "günün
+  fırsatı" diye SEÇİLMİŞ bir ürün, ne de bitiş anını (`endsAtMs`) taşıyan bir alan.
+  **Fırsat şeridiyle karıştırılmasın:** `GET /api/v1/home` → `offers`, SKT'si yaklaşan partiden
+  DOĞAN indirimli ürünlerdir; kimse seçmez ve süresi yoktur. Günün fırsatı ise bir KAMPANYA —
+  seçilmiş tek ürün + biteceği an.
+  Kurgu veriyle bırakılmadı çünkü ekranın en görünür yerinde tutulamayacak bir söz olurdu: sayaç
+  işleyip biter, arkasında kampanya olmaz. Blok gerekçesiyle kaldırıldı (`home-screen.tsx` künyesi);
+  iskeletteki karşılığı da öyle.
+  **Karar gereken:** kampanya nereden doğacak — (a) operatörün elle seçtiği bir kayıt (kontrol
+  operatörde, yeni tablo + ekran ister), (b) partinin son kullanma tarihinden türeyen otomatik
+  seçim (veriden gelir, operatör iş yapmaz ama "kampanya" değil "indirim" olur), (c) hiç yapılmaz
+  ve şablondaki bant kalıcı olarak düşer. Karar verilince uç ve blok birlikte gelir.
+
 - **"BUNLARI DA SEVEBİLİRSİNİZ" — SIRALAMA ÖLÇÜTÜ ERTELENDİ (kullanıcı kararı 04.08).**
   Bölümün *hangi ürünleri* alacağı çözüldü (kendi ailesi dışarıda, öteki ailelerden birer üye —
   `lib/storefront/similar.ts`). Çözülmeyen, **hangi sırayla** alacağı: bugün katalog sırası, o da

@@ -14,6 +14,7 @@ import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/conte
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { StockClient } from './stock-client';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
+import { readOfferHandoff } from './stock-handoff';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
@@ -36,7 +37,8 @@ interface StockPageProps {
 }
 
 export default async function StockPage({ searchParams }: StockPageProps) {
-  const urlState = parseStockUrl(await searchParams);
+  const params = await searchParams;
+  const urlState = parseStockUrl(params);
   const filters = toStockFilters(urlState);
 
   const db = serviceDb();
@@ -106,8 +108,15 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const levels = toLevelRows({ products: productPage.rows, batches: rowBatches, available, categoryNames, warehouseLabels });
   const attention = batches.filter((b) => needsExpiryAttention(b.decision));
 
+  /**
+   * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) teklif diyaloğu ÖN DOLU açılır (22.5).
+   * Öneriden gelen fiyat bir başlangıç değeridir, karar değil — üç yüzü de diyalogda görünür.
+   */
+  const handoff = await readOfferHandoff(typeof params.proposal === 'string' ? params.proposal : null);
+
   return (
     <StockClient
+      handoff={handoff}
       data={{
         levels,
         nextCursor: productPage.nextCursor,

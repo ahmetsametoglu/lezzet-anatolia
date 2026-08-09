@@ -145,6 +145,8 @@ export interface FinanceViewProps {
   writableAccounts: AccountView[];
   navPending: boolean;
   dialog: DialogKind;
+  /** Asistan önerisinden gelindiyse ön dolgu + künye (22.5); `null` ise ekranda iz yok. */
+  handoff: MoneyHandoff | null;
   busyId: string | null;
   queueError: string | null;
   onFilter: (next: Partial<FinanceUrlState>) => void;
@@ -173,10 +175,24 @@ export type ManualType = (typeof MANUAL_TYPES)[number];
  * Tutar **cent** taşınır (STACK §8) ve `MoneyField` zaten cent veriyor — forma euro koyup sunucuda
  * çevirseydik yuvarlama iki yerde olurdu. `null` başlangıç değeri "boş kutu" demek; sıfır değil.
  */
+/**
+ * **Form alanı EURO taşır, cent DEĞİL** — ve adı bir tur `amountCents`ti, tam da bu yüzden
+ * değiştirildi (ölçüldü 09.08).
+ *
+ * `MoneyField` birimden habersiz: verdiğiniz sayıyı iki ondalıkla gösterir, operatörün yazdığını
+ * olduğu gibi geri verir. Katalogdaki kardeş diyaloglar bu yüzden sınırda çeviriyor
+ * (`price-dialog` · `discount-dialog`: `fromCents` yükler, `toCents` gönderir). Para diyalogları
+ * çevirmiyordu ve alan `amountCents` adını taşıdığı için doğru görünüyordu: operatörün yazdığı
+ * "340,00" kapıya 340 CENT olarak gidiyordu — deftere 3,40 € yazılırdı. Transfer önizlemesi de
+ * aynı sebeple 100 kat yanlış bakiye gösteriyordu.
+ *
+ * Ad artık birimi söylüyor; çevrim gönderme anında (`toCents`).
+ */
 export const ManualMovementSchema = z.object({
   accountId: z.string().min(1),
   type: z.enum(MANUAL_TYPES),
-  amountCents: z.number().int().positive().nullable(),
+  /** **EURO** — kapıya `toCents` ile gider. */
+  amount: z.number().positive().nullable(),
   direction: MovementDirectionEnum,
   category: z.string(),
   campaign: z.string(),
@@ -188,8 +204,27 @@ export type ManualMovementForm = z.infer<typeof ManualMovementSchema>;
 export const TransferFormSchema = z.object({
   fromAccountId: z.string().min(1),
   toAccountId: z.string().min(1),
-  amountCents: z.number().int().positive().nullable(),
+  /** **EURO** — kapıya `toCents` ile gider (`ManualMovementSchema` künyesi). */
+  amount: z.number().positive().nullable(),
   valueDate: z.string(),
   description: z.string(),
 });
 export type TransferForm = z.infer<typeof TransferFormSchema>;
+
+/**
+ * Asistan önerisinden gelen ön dolgu (22.5).
+ *
+ * **Tip BURADA, `finance-handoff` içinde DEĞİL** ve sebebi mekanik: görünüm props'u bu tipi
+ * istiyor, devir okuması ise formun tipini (`ManualMovementForm`) istiyor — ikisi karşılıklı
+ * import edince `no-circular` düştü (ölçüldü 09.08). Tip dosyası yaprak kalmalı: herkes ondan
+ * okur, o kimseden okumaz.
+ */
+export interface MoneyHandoff {
+  proposalId: string;
+  summary: string;
+  reason: string | null;
+  /** Elle hareket formu bu tipi alabiliyor mu — alamıyorsa `blocked` doludur. */
+  form: ManualMovementForm | null;
+  /** Form doldurulamıyorsa sebebi ve operatörün gideceği yol. */
+  blocked: string | null;
+}

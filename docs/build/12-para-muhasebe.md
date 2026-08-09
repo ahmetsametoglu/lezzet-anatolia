@@ -43,6 +43,16 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
   - **Durum (28.07):** `SupplierService.debt()` tamamlandı (06.8'den beri `paid = 0` TODO'su duruyordu) · kapı `recordSupplierPayment` (`apps/web/lib/money/movement.ts`). 7 test. Yeni tablo/RPC GEREKMEDİ — 12.1'in hareket tablosu bağları (`supplier_id`, `stock_intake_id`) zaten taşıyordu.
   - **`paid` tipe göre süzülmez, BAĞA göre toplanır:** o tedarikçiye çıkan her para borcu kapatır. Tipe göre süzseydik (`purchase`), doğru bağlanmış ama farklı tipteki bir ödeme borçta hiç görünmezdi — borç olduğundan büyük çıkardı.
   - **Bağsız alım motorda reddediliyor** (12.1'deki `supply_link_missing`): borç bu bağın üstünde durduğu için, bağı olmayan bir `purchase` hareketi kasayı azaltır ama hiçbir tedarikçinin borcunu kapatmazdı — parası kaybolan sessiz bir kayıt.
+  - **KUSUR — elle giriş TUTARI 100 KAT KÜÇÜK yazıyordu (ölçüldü ve düzeltildi 09.08):** `MoneyField`
+    birimden habersizdir (verilen sayıyı gösterir, yazılanı geri verir) ve kardeş diyaloglar bu
+    yüzden sınırda çeviriyor (`price-dialog`/`discount-dialog`: `fromCents` yükler, `toCents`
+    gönderir). Para diyalogları çevirmiyordu ve form alanının adı `amountCents` olduğu için doğru
+    görünüyordu: operatörün yazdığı "340,00" kapıya **340 cent** gidiyordu ve servis
+    (`p_amount: fromCents(...)`) deftere **3,40 €** yazardı. Transfer önizlemesi de aynı sebeple
+    100 kat yanlış bakiye gösteriyordu (`balanceCents − amount`). Alan adı artık birimi söylüyor
+    (`amount`, EURO) ve çevrim gönderme anında. Asistan devri (22.5) bu kusuru ortaya çıkardı:
+    payload cent taşıyor ve forma konunca 34000,00 göründü.
+
 - [~] (12.4) **Banka import:** Excel yükle → sütun şablonu çıkar (`BankImportProfile`, hesaba özel; **bugün sezgisel eşleyici — AI bir port, boş**) → satırlar hareket olarak → sipariş/gider/transfer eşleştirme (öneri + elle onay). **Kalan:** dosya okuma (xlsx/CSV → satır dizisi) + ekranlar — Durum notu
   - *Bitti:* ikinci import aynı bankada şablonu otomatik uyguluyor; eşleşme onaya düşüyor
   - **Durum (28.07):** `0018_money.sql` (şablon + yükleme kaydı) · `money_movement`e `import_fingerprint`/`bank_import_id` (0021) · motor `domain-core/bank/` (sütun tanıma, okuma, parmak izi, eşleştirme) · `BankImportProfileService`/`BankImportService` · kapı `apps/web/lib/bank/{import,reconcile}.ts` · seed'de bir ekstre. 40 test (25 motor + 15 entegrasyon).

@@ -7,6 +7,7 @@ import { openIntakeFormAction, receiveGoodsAction } from './receiving-actions';
 import { ReceivingDesktop } from './receiving.desktop';
 import { FinishDialog } from './finish-dialog';
 import { FreeIntake } from './free-intake';
+import type { IntakeHandoff } from './receiving-handoff';
 import type { IntakeRow, ReceivingData, ReceiveOutcome } from './receiving-types';
 
 /**
@@ -22,14 +23,19 @@ import type { IntakeRow, ReceivingData, ReceiveOutcome } from './receiving-types
  * satırlar gönderiliyor: boş satırı sıfırla yazmak, sayılmamış kalemi "hiç gelmedi" diye
  * kaydetmek olurdu ve fark raporu o kalemi kalıcı eksik gösterirdi.
  */
-export function ReceivingClient({ data }: { data: ReceivingData }) {
+export function ReceivingClient({ data, handoff = null }: { data: ReceivingData; handoff?: IntakeHandoff | null }) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [rows, setRows] = useState<IntakeRow[]>([]);
+  /**
+   * Öneriden gelindiyse satırlar DOLU başlar — ama `receivedQty` yine `null`: SKT ve lot etiketten
+   * kopyadır, adet ise SAYIMDIR ve onu bir fatura fotoğrafından doldurmak, depocuya saymadan
+   * onaylamayı teklif etmek olurdu (`receiving-handoff` künyesi).
+   */
+  const [rows, setRows] = useState<IntakeRow[]>(handoff?.rows ?? []);
   const [finishing, setFinishing] = useState(false);
   const [outcome, setOutcome] = useState<ReceiveOutcome | null>(null);
   /**
@@ -37,8 +43,10 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
    * hem serbest satırlar olsaydı, kaydederken hangisinin siparişe sayılacağı belirsiz kalırdı —
    * ve fark raporu o belirsizliği sessizce bir tarafa yazardı.
    */
-  const [freeMode, setFreeMode] = useState(false);
-  const [supplierId, setSupplierId] = useState('');
+  // Öneri bir siparişe bağlı değilse serbest kabul modunda açılır: kalemler faturadan geliyor,
+  // karşılaştırılacak bir sipariş yok.
+  const [freeMode, setFreeMode] = useState(Boolean(handoff));
+  const [supplierId, setSupplierId] = useState(handoff?.supplierId ?? '');
 
   const select = (purchaseOrderId: string | null) => {
     setSelectedId(purchaseOrderId);
@@ -98,6 +106,9 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
             lotNumber: row.lotNumber.trim() || null,
             location: row.location.trim() || null,
           })),
+        // Öneriden gelindiyse kuyruk satırı bu kayıtla kapanır VE faturadan okunan birim maliyet
+        // sunucuda kayda eklenir — istemci onu hiç görmez (rol duvarı).
+        proposalId: handoff?.proposalId,
       });
 
       if (failed || !result) {
@@ -114,6 +125,7 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
   return (
     <>
       <ReceivingDesktop
+        handoff={handoff}
         data={data}
         selectedId={selectedId}
         onSelect={select}
@@ -161,7 +173,10 @@ export function ReceivingClient({ data }: { data: ReceivingData }) {
       {finishing ? (
         <FinishDialog
           rows={rows}
-          warehouseId={data.warehouseId}
+          // **Öneri deposu ÖN SEÇİLİ** (22.5): faturayı okuyan araç malın hangi kapıdan gireceğini
+          // zaten söylüyor ve yöneticide bu alan boş başlıyor. Seçim yine DEĞİŞTİRİLEBİLİR —
+          // varsayılan üretmiyoruz, önerinin söylediğini gösteriyoruz.
+          warehouseId={handoff?.warehouseId ?? data.warehouseId}
           warehouseName={data.warehouseName}
           warehouseOptions={data.warehouseOptions}
           busy={busy}

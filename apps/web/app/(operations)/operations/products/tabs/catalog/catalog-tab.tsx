@@ -9,6 +9,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { cropOf, IMAGE_ROLES, pickCropFields, resolveLocalizedText, type ImageRole } from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
+import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
 import { reorderCatalogAction, setCatalogFeaturedAction } from './actions';
 import { CatalogFormDialog } from './catalog-form-dialog';
 import { matchesCatalogFilter, type CatalogKind, type CatalogRow, type CollectionView } from '../../products-types';
@@ -93,13 +94,6 @@ function catalogColumns(
   ];
 }
 
-/**
- * Vitrin ızgarasının slot sayısı (05.18 · tasarımın ana sayfa ızgarası). **Sınır ENGELLEMEZ:**
- * fazlası işaretlenebilir, ekran sırayla ilk N'i gösterir ve başlık bunu söyler. Engelleseydik
- * operatör yedinci kategoriyi işaretlemek için önce birini kaldırmak zorunda kalırdı — kürasyon
- * sırasında en istenmeyen sürtünme bu; kesme kuralı zaten müşteri tarafında ve deterministik.
- */
-const FEATURED_SLOTS: Record<CatalogKind, number> = { category: 6, collection: 2 };
 
 // Oluşturma etiketi burada DEĞİL: düğme sekme çubuğunda, kabukta yaşıyor (products.desktop).
 // `filtered`: arama açıkken ipucu değişir, çünkü o hâlde sürükleme kapalıdır — "sürükle-sırala" yazan

@@ -6,6 +6,7 @@ import { bundleBalance, markupPercent } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { IMAGE_ROLES, cropOf, resolveLocalizedText } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
+import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
 import { Badge } from '@/components/operation/ui/badge';
 import { money, percent } from '@/components/operation/ui/format';
 import { ImageIcon } from '@/components/operation/ui/icons';
@@ -61,11 +62,8 @@ function Stacked({ value, hint, alert, title }: { value: string; hint?: string; 
   );
 }
 
-/**
- * Vitrin ızgarasının paket slotu (05.18 · tasarımın ana sayfa ızgarası). Sınır ENGELLEMEZ —
- * gerekçesi katalog sekmesindeki ikizinde (`FEATURED_SLOTS`).
- */
-const FEATURED_SLOTS = 2;
+/** Vitrin ızgarasının paket slotu — sayı ve gerekçe `lib/catalog/featured-slots`'ta, tek yerde. */
+const BUNDLE_SLOTS = FEATURED_SLOTS.bundle;
 
 function bundleColumns(
   pricingById: PricingMap,
@@ -270,7 +268,7 @@ export function PackagesTab({ bundles, creating, onCreateClose }: PackagesTabPro
   const featured = bundles.filter((b) => b.isFeatured);
   const visibleCount = featured.filter((b) => b.isActive).length;
   const passiveCount = featured.length - visibleCount;
-  const overflowing = visibleCount > FEATURED_SLOTS;
+  const overflowing = visibleCount > BUNDLE_SLOTS;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -284,8 +282,8 @@ export function PackagesTab({ bundles, creating, onCreateClose }: PackagesTabPro
           }`}
         >
           {overflowing
-            ? `Vitrinde ${visibleCount} işaretli — ana sayfada sıradan ilk ${FEATURED_SLOTS} görünür`
-            : `Vitrinde ${visibleCount}/${FEATURED_SLOTS}`}
+            ? `Vitrinde ${visibleCount} işaretli — ana sayfada sıradan ilk ${BUNDLE_SLOTS} görünür`
+            : `Vitrinde ${visibleCount}/${BUNDLE_SLOTS}`}
           {passiveCount > 0 ? ` · ${passiveCount} işaretli paket satışta değil, vitrine çıkmaz` : ''}
         </span>
       </div>

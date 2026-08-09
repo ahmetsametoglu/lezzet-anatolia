@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
+import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Select } from '@/components/operation/form/select';
 import { Tabs } from '@/components/operation/ui/tabs';
@@ -70,6 +71,24 @@ export function StockDesktop(props: StockViewProps) {
           kendi şeridinde yaşayan bir daraltma. Seviyeler kategori süzgeciyle, karar kuyruğu zaten
           kısa olduğu için süzgeçsiz çalışır. */}
       <Tabs items={TABS.map((t) => (t.key === 'attention' ? { ...t, badge: attention } : t))} active={tab} onSelect={onTab} />
+
+      {/* **Devredilen parti bulunamadı** (22.5) — künye YALNIZ bu hâlde sayfada durur; bulunan
+          hâlde diyaloğun içinde, kararın verildiği yerde. Sessiz geçilemez: operatör kuyruktan
+          "bu teklife bak" diye geldi ve karşısına sıradan bir stok listesi çıktı. */}
+      {props.handoffMissing ? (
+        <HandoffNote
+          blocked
+          className="mx-6 mt-3"
+          summary={props.handoffMissing.summary}
+          reason={props.handoffMissing.reason}
+        >
+          <strong className="font-semibold">
+            {props.handoffMissing.productName} ({props.handoffMissing.expiryDate}) partisi listede yok
+          </strong>{' '}
+          — satılıp tükenmiş, imha edilmiş ya da {props.handoffMissing.warehouseCode} deposu sizin kapsamınızın dışında
+          olabilir. Teklif açılamaz; öneri kuyrukta durur, oradan reddedebilirsiniz.
+        </HandoffNote>
+      ) : null}
 
       {/* Süzgeç şeridi YALNIZ seviyeler sekmesinde: "yaklaşan tarihli" sekmesi zaten süzülmüş bir
           listedir, üstüne aynı çipi koymak aynı soruyu iki kez sormak olurdu. */}

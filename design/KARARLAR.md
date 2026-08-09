@@ -834,3 +834,17 @@ olarak çizim yüzeyine çıktı.
 - Bölüm koşullu: aktif koleksiyon yoksa hiç çizilmez (`hasCollections`) — boş hâl gösterilmez.
 
 İş kaydı: `05.18` (vitrin işareti) + `08.26` (ana sayfa bölümü + koleksiyon katalog hâli).
+
+
+### Sepet FAB'ı tarif detayına da eklendi — v3'ün dörtlü listesi genişledi (09.08)
+
+**Kullanıcı isteği**, tasarımdan bilinçli sapma. v3'ün kuralı FAB'ı dört sayfayla sınırlıyor
+(`cartCount>0 && (home|catalog|product|package)` — v3:1892) ve tarif detayı listede yok.
+
+Gerekçe kullanımdan geldi: tarif sayfasının işi zaten sepeti DOLDURMAK ("Malzemeleri sepete ekle").
+Malzemeleri ekleyen müşterinin sepete gitmek için geri çıkması gerekiyordu — sepeti en çok dolduran
+sayfa, sepete giden tek kapıyı taşımayan sayfaydı.
+
+Yerleşim uydurulmadı: ürün ve paket detaylarının BİREBİR aynı yuvası (`productFabBottom` + güvenli
+alan payı), yani yapışkan barın üstünde. Üç sayfada aynı ölçü — düğmenin yeri sayfadan sayfaya
+oynamıyor. Boş sepette komponent yine kendini çizmiyor (v3'ün kuralı korundu).

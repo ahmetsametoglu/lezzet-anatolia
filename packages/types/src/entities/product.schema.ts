@@ -98,6 +98,27 @@ export type Nutrition = z.infer<typeof NutritionSchema>;
 /** Tablo sırası TEK KAYNAK — INCO'nun beyan sırası; hem form hem müşteri tablosu bunu izler. */
 export const NUTRITION_KEYS = Object.keys(NutritionSchema.shape) as Array<keyof Nutrition>;
 
+/**
+ * Kalemlerin operatöre görünen adı ve birimi — sıranın yanında, TEK KAYNAK.
+ *
+ * `Record<keyof Nutrition, …>` olduğu için şemaya yeni kalem eklenirse okuyan her yüzey derlenmez;
+ * yani yeni alan sessizce ekransız kalamaz. İki yüzey okuyor (ürün formunun künye tablosu ve
+ * asistan kuyruğunun önizlemesi) — ayrı yazılsalardı aynı satır iki ekranda iki ad taşırdı.
+ *
+ * Enerjinin iki kalemi de "Enerji" adını taşır ve bu doğru: aynı büyüklüğün iki birimi (kJ · kcal),
+ * ayrı satır değil. Okuyan yüzeyler ikisini tek satırda birleştirir.
+ */
+export const NUTRITION_LABELS: Record<keyof Nutrition, { label: string; unit: string }> = {
+  energyKj: { label: 'Enerji', unit: 'kJ' },
+  energyKcal: { label: 'Enerji', unit: 'kcal' },
+  fatG: { label: 'Yağ', unit: 'g' },
+  saturatedFatG: { label: 'Doymuş yağ', unit: 'g' },
+  carbohydrateG: { label: 'Karbonhidrat', unit: 'g' },
+  sugarsG: { label: 'Şeker', unit: 'g' },
+  proteinG: { label: 'Protein', unit: 'g' },
+  saltG: { label: 'Tuz', unit: 'g' },
+};
+
 /** Hiçbir kalemi girilmemiş boş künye — form varsayılanı bunu SPREAD eder. */
 export const EMPTY_NUTRITION: Nutrition = Object.fromEntries(NUTRITION_KEYS.map((k) => [k, null])) as Nutrition;
 
@@ -108,6 +129,24 @@ export function hasNutrition(n: Nutrition | null): boolean {
 
 /** Beyanı eksik bırakan alanlar — ekran göstergesi ve sunucu süzgeci AYNI listeyi izler. */
 export type DeclarationGap = 'lang' | 'ingredients' | 'nutrition' | 'storage' | 'allergens';
+
+/**
+ * Eksik beyanın operatöre görünen adı (`PRODUCT_STATUS_LABELS` emsali).
+ *
+ * Enum'un yanında duruyor çünkü aynı eksiği İKİ ekran yazıyor: ürün önizlemesinin uyarı kutusu ve
+ * asistan kuyruğunun "onaylasan da şu alanlar eksik kalacak" satırı. İki yerde yazılsalardı aynı
+ * eksik iki ekranda iki ad taşırdı.
+ *
+ * `lang` ötekilerden farklı — hangi DİLİN eksik olduğunu ekran kendi bağlamından söyler
+ * ("FR, DE içeriği"), bu yüzden buradaki karşılık genel kalır.
+ */
+export const DECLARATION_GAP_LABELS: Record<DeclarationGap, string> = {
+  lang: 'dil içeriği',
+  ingredients: 'içindekiler',
+  nutrition: 'besin değerleri',
+  storage: 'saklama koşulları',
+  allergens: 'alerjen beyanı',
+};
 
 /**
  * Yasal beyanın hangi parçaları eksik. TEK KAYNAK: operasyon önizlemesindeki uyarı kutusu bunu

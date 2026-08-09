@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/operation/ui/button';
+import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
 import { AccountStrip, FilterBar, MatchQueue, MovementList } from './finance-sections';
@@ -20,6 +21,7 @@ export function FinanceDesktop({
   urlState,
   writableAccounts,
   dialog,
+  handoff,
   busyId,
   queueError,
   onFilter,
@@ -43,6 +45,19 @@ export function FinanceDesktop({
           ⇄ Transfer
         </Button>
       </PageHeader>
+
+      {/* **Öneriden gelindi ama form doldurulamadı** (22.5) — elle hareket kapısı önerinin tipini
+          ALAMIYORSA (stok alımı · transfer) pencere hiç açılmaz ve künye hangi yoldan gidileceğini
+          söyler. Doldurulamayacak bir formu açıp kaydete bastırmak, "motor reddetti" ile biten bir
+          yolculuk olurdu.
+
+          Dolu hâlin künyesi burada DEĞİL, pencerenin içinde: pencere kendiliğinden açılıp sayfayı
+          örtüyor ve arkada kalan künyeyi operatör ancak kararı verdikten sonra görürdü. */}
+      {handoff?.blocked ? (
+        <HandoffNote blocked className="mx-6 mt-3" summary={handoff.summary} reason={handoff.reason}>
+          {handoff.blocked}
+        </HandoffNote>
+      ) : null}
 
       {hasAccounts ? (
         <>
@@ -86,7 +101,16 @@ export function FinanceDesktop({
       )}
 
       {dialog === 'movement' ? (
-        <MovementDialog accounts={writableAccounts} onClose={onCloseDialog} onSaved={onSaved} />
+        <MovementDialog
+          accounts={writableAccounts}
+          onClose={onCloseDialog}
+          onSaved={onSaved}
+          initial={handoff?.form ?? null}
+          proposalId={handoff?.proposalId ?? null}
+          // Künye PENCERENİN İÇİNDE: bu pencere öneriden gelindiğinde kendiliğinden açılıyor ve
+          // sayfayı örtüyor. Sayfadaki künye yalnız pencere HİÇ açılmadığında (`blocked`) görünür.
+          note={handoff?.form ? { summary: handoff.summary, reason: handoff.reason } : null}
+        />
       ) : null}
       {dialog === 'transfer' ? (
         <TransferDialog accounts={writableAccounts} onClose={onCloseDialog} onSaved={onSaved} />

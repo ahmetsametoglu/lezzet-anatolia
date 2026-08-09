@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { DISCOUNT_TRIGGER_LABELS } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Toggle } from '@/components/operation/form/toggle';
@@ -100,7 +101,9 @@ function DiscountCard({ rule, onEdit }: DiscountCardProps) {
         rule.liveNow ? 'border-ops-line' : 'border-ops-line-soft'
       }`}
     >
-      <Badge tone={rule.trigger === 'coupon' ? 'blue' : 'amber'}>{rule.trigger === 'coupon' ? 'Kupon' : 'Kampanya'}</Badge>
+      {/* Etiket TEK KAYNAKTAN (`DISCOUNT_TRIGGER_LABELS`): aynı satırı asistan kuyruğunun indirim
+          önizlemesi de okuyor ve iki yerde yazılsa aynı kayıt iki ekranda iki ad taşırdı. */}
+      <Badge tone={rule.trigger === 'coupon' ? 'blue' : 'amber'}>{DISCOUNT_TRIGGER_LABELS[rule.trigger]}</Badge>
 
       <button
         type="button"
