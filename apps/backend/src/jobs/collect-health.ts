@@ -25,7 +25,14 @@ export const COLLECT_HEALTH = 'collect_health';
  */
 const exec = promisify(execFile);
 
-const WEB_URL = `http://127.0.0.1:${process.env.WEB_HEALTH_PORT ?? 3000}/`;
+/**
+ * **`||` kullanılıyor, `??` DEĞİL** (denetim notu 09.08 — aynı desen `index.ts`'te gerçek arıza
+ * üretmişti). Boş bırakılmış ayar (`WEB_HEALTH_PORT=`) nullish DEĞİLDİR: `??` devreye girmez ve
+ * adres `http://127.0.0.1:/` olur — istek sessizce başarısız olur, sağlık ölçümü "web kapalı" der.
+ *
+ * **Boş ayar ile tanımsız ayar aynı şeydir**; ikisinde de varsayılan geçerlidir.
+ */
+const WEB_URL = `http://127.0.0.1:${process.env.WEB_HEALTH_PORT || 3000}/`;
 /** Ölçülemeyen diskin tek gösterimi — üç alan birlikte bilinmez olur, yarısı sayı yarısı boş kalmaz. */
 const UNMEASURED_DISK = { diskTotalGb: null, diskUsedGb: null, diskUsedPct: null } as const;
 const HOUR_MS = 60 * 60 * 1000;
