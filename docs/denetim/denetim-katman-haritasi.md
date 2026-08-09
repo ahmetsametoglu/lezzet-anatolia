@@ -59,7 +59,7 @@ oradaki bulgular mobili de ilgilendirir ve deftere bildirilir.
 | K2 Tipler | 🟢 **tamam** — bir duplikasyon düzeltildi, bir kural boşluğu (arka uçta) | `denetim-K2-tipler.md` |
 | K3 domain-core | 🟢 **tamam** — paket ekonomisi ikizi düzeltildi, KDV bölmesi testsiz (arka uçta) | `denetim-K3-domain-core.md` |
 | K4 database | 🟢 **tamam** — iki duplikasyon (arka uçta), sayfalama kusursuz | `denetim-K4-database.md` |
-| K5 application | ⬜ | — |
+| K5 application | 🟢 **tamam** — ⚡ 13 modül iki yerde paralel yaşıyor (terfi yarım) | `denetim-K5-application.md` |
 | K6 yardımcı paketler | ⬜ | — |
 | K7 backend | ⬜ | — |
 | K8 web/lib | ⬜ | — |
