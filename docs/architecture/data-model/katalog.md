@@ -128,6 +128,23 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 
 **Çerçeve farkı:** kapak dört çerçeveye türer (kart 3:2, sepet 1:1, kategori dairesi, paylaşım kartı); galeri fotoğrafı **tek** çerçevede görünür (detay galerisi, 3:2). Fark veride değil, kırpma editörünün gösterdiği önizlemededir (`gallery` rolü).
 
+## SiteImage (sayfa görseli)
+
+**Bu tablo katalogun parçası DEĞİL, ama görsel ailesinin parçası** — bu yüzden burada, kardeşlerinin yanında duruyor. Ayıran şey sahiplik: ürünün/kategorinin/koleksiyonun/paketin/tarifin görseli **kendi satırının künyesinde** yaşar, çünkü görsel o varlığa aittir ve varlık silinince anlamsızlaşır. Buradakiler bir varlığa değil bir **sayfa yerine** aittir: ana sayfanın kahramanı, boş sepetin çizimi. "Boş sepet" diye bir varlık yoktur ve olmayacaktır.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| slot | enum | `home_hero` (16:9) · `packages_hero` (3:2) · `professionals_hero` (16:9) · `empty_cart` (illüstrasyon). **Kapalı küme** — yeni slot ancak onu çizen ekran doğunca eklenir |
+| image_key | string | depo anahtarı (`site/{slot}.{ext}`), tam URL değil. **null olamaz:** satırın kendisi görseldir |
+| image_focal_x / image_focal_y / image_zoom | int | odak + zoom — aynı fotoğraf 16:9 ve 3:2 çerçevelere farklı oturur |
+| image_alt | LocalizedText (jsonb) \| null | erişilebilirlik + SEO |
+| image_updated_at | timestamptz \| null | dosyanın sürüm damgası (`?v=`) — anahtar deterministik olduğu için public cache'i kıran tek şey bu |
+
+**Anahtar neden enum:** serbest metin, ekranda karşılığı olmayan bir görselin yüklenmesine izin verirdi — yüklendiği anda kaybolan, operatörün "yükledim ama görünmüyor" diye aradığı bir dosya. Enum, yeni slot açmayı migration'a (gözden geçirilen bir yere) taşır.
+
+**Boş slot = satır YOK.** Okuma haritası eksik anahtarı hiç taşımaz; ekran yer tutucusunu çizmeye devam eder ve kova boş diye sayfa kırılmaz. Çok dillilik gerekmiyor: görselin içinde metin yok, aynı fotoğraf üç dile de hizmet eder — dil başına ayrı dosya, üç kat yükleme karşılığında sıfır kazanç olurdu.
+
 ## ProductVariant (ürün varyantı)
 
 **Satılabilir birim varyanttır.** Bir ürün bir veya birden çok varyant taşır (ör. "Maraş Dondurma" → 70gr, 500gr); müşteri ürün sayfasında varyantı seçer. Varyantsız görünen ürünler de aslında **tek (varsayılan) varyant** taşır — böylece fiyat/stok mantığı her yerde aynı çalışır.
@@ -138,6 +155,7 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | product_id | uuid | bağlı ürün (paylaşılan ad/açıklama/görsel/DLC/KDV orada) |
 | label | LocalizedText (jsonb) | varyant etiketi — **müşteriye görünür** (boy kartı: "700 g tepsi" / "plateau 700 g"), bu yüzden çok dilli; tek varyantlıda varsayılan |
 | net_weight_g | int \| null | net ağırlık (gram) — etiket beyanı ve €/kg birim fiyat gösterimi |
+| pieces_count | int \| null | paket içi adet ("12'li baklava"). Gramajın YERİNE değil yanına: 72'lik kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). `null` = bildirilmemiş (dökme ürün), **sıfır değil**. Alan yokken adet adın içinde kalıyor ve slug ayrıştığı için tek ürün ayrı ürünlere bölünüyordu (05.14) |
 | min_stock_qty | int \| null | asgari stok eşiği — kullanılabilir stok altına düşünce "sipariş zamanı" önerisine düşer (bkz. `DOMAIN.md §16`); null = öneri yok |
 | sku | string \| null | stok kodu |
 | is_active | boolean | |

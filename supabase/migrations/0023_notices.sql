@@ -60,11 +60,36 @@ $$;
 -- İşletme tarafındaki değeri `postal_code_demand`'den FARKLI: orada anonim bir sayaç var ("bu koddan
 -- N kişi sordu"), burada iletişime izin vermiş somut kişiler. İkisi ayrı sorulara cevap verir ve
 -- birleştirilemez — sayacın kimliği yoktur, olması da istenmez (0023).
+--
+-- ── BU TABLO "TESLİMAT TALEBİ"NİN TA KENDİSİDİR (21.16 · mobil talebi 09.08) ─
+-- Mobil şerit bölge dışı müşterinin *"buraya kendi aracınızla gelin"* cevabını yazacak bir yer
+-- aradı ve bulamadı (arananlar: `%interest%`, `%waitlist%`, `%lead%`, `%consent%`). Aranmayan
+-- sözcük `notice` idi — kayıt buradaydı: posta kodu + iletişim kanalı + müşteri bağı + gönderim
+-- damgası, üstelik okuyan işiyle birlikte (`apps/backend/src/jobs/zone-available.ts`).
+--
+-- İkinci bir tablo AÇILMADI (CLAUDE §1): iki tablo da *"kim bölge açılmasını bekliyor"* sorusuna
+-- cevap verirdi ve haber işi ikisini birden okumak zorunda kalırdı — o gün biri unutulur, o
+-- listedeki müşteri hiç haber almaz. Bunun yerine üç alan eklendi (`country`, `place_name`,
+-- `source`); talebin istediği ayrım da zaten burada: **sayaç zayıf sinyal, bu satır kuvvetli.**
 
 create table public.zone_notice (
   id uuid primary key default gen_random_uuid(),
   -- Normalize edilmiş posta kodu; hangi bölgenin açılması bekleniyor.
   postal_code text not null,
+  -- ── ÜLKE: kod TEK BAŞINA yeri belirlemiyor ────────────────────────────────
+  -- Ölçüldü (09.08): `postal_code_place`'teki 16 878 satırın 610 kodu İKİ ülkeye birden çözülüyor.
+  -- Bu tablo koddan ibaretken haber işi iki ülkeyi de deniyor ve *"biri tutarsa kapsanmış say"*
+  -- diyordu (`zone-available.ts`) — yani Fransa'da açılan bir bölge, aynı kodu yazmış Alman
+  -- müşteriye "bölgeniz açıldı" diye gidebilirdi. Küçük kardeşi bu dersi zaten almıştı
+  -- (`variant_stock_notice.country`, 19.8); burası ondan eski olduğu için geride kalmıştı.
+  country country_code not null,
+  -- Kaydın alındığı gün çözülen şehir adı. Kod tablosu ileride değişse de o günkü ad kalır:
+  -- operatör "68000" değil "Colmar" okur ve bölge açma kararını isimle verir.
+  place_name text,
+  -- Kaydın hangi YÜZEYDEN geldiği (`web` · `app-account` · `app-onboarding` …). Enum DEĞİL:
+  -- değer bir karar girdisi değil, bir denetim izidir — yeni bir ekran açıldığında migration
+  -- yazdırmasının karşılığı yok. Boş bırakılamaz, çünkü "bilinmiyor" diye bir yüzey yok.
+  source text not null default 'web',
   -- İletişim adresi. Ziyaretçi de kayıt bırakabilir — hesap ZORUNLU DEĞİL: "haber ver"in önüne
   -- giriş duvarı koymak, tam da vazgeçmeye en yakın anda ikinci bir engel çıkarmaktır.
   email text not null,
@@ -83,12 +108,16 @@ create table public.zone_notice (
 
 alter table public.zone_notice enable row level security;
 
--- Aynı kişi aynı kod için iki kez kayıt bırakmasın — düğmeye ikinci kez basmak yeni bir bekleyiş
--- değil, aynı bekleyişin tekrarıdır.
-create unique index zone_notice_unique_idx on public.zone_notice (postal_code, lower(email));
+comment on table public.zone_notice is
+  'Bölge açılma talebi + haber kaydı (K34 · 21.16). KUVVETLİ sinyal: kimliği ve kanalı var — postal_code_demand ise anonim sayaç.';
 
--- Bölge açıldığında "bu koda bekleyen var mı" sorgusu: henüz haber verilmemişler.
-create index zone_notice_pending_idx on public.zone_notice (postal_code) where notified_at is null;
+-- Aynı kişi aynı YER için iki kez kayıt bırakmasın — düğmeye ikinci kez basmak yeni bir bekleyiş
+-- değil, aynı bekleyişin tekrarıdır. Ülke anahtarın parçası: aynı kodun Fransız ve Alman hâli iki
+-- ayrı yerdir ve biri açıldı diye ötekini bekleyen kişinin kaydı kapanmamalı.
+create unique index zone_notice_unique_idx on public.zone_notice (country, postal_code, lower(email));
+
+-- Bölge açıldığında "bu yere bekleyen var mı" sorgusu: henüz haber verilmemişler.
+create index zone_notice_pending_idx on public.zone_notice (country, postal_code) where notified_at is null;
 
 
 -- ═══ STOK BİLDİRİMİ ═══

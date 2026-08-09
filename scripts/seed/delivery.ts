@@ -152,22 +152,42 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
   }
   console.log('▸ BÖLGE HABER-VER seed');
 
-  const kayitlar: Array<{ postal_code: string; email: string; customer_id?: string | null; notified_at?: string | null; not: string }> = [
+  // `country` · `place_name` · `source` · `locale` 21.16'da eklendi. Dördü de ÇEŞİTLENDİRİLİYOR:
+  // hepsi aynı değeri taşısaydı ekranlar ve haber işi tek dalı görürdü.
+  type Kayit = {
+    postal_code: string;
+    country: 'FR' | 'DE';
+    place_name?: string | null;
+    source?: string;
+    locale?: 'fr' | 'de' | 'tr' | null;
+    email: string;
+    customer_id?: string | null;
+    notified_at?: string | null;
+    not: string;
+  };
+  const kayitlar: Kayit[] = [
     // En çok talep gören kodda BEKLEYEN liste — bölge açılınca gidecek mektupların kuyruğu.
-    { postal_code: '67500', email: 'nathalie.roux@example.fr', not: 'bekliyor · kayıtsız ziyaretçi' },
-    { postal_code: '67500', email: 'kemal.ozturk@example.fr', not: 'bekliyor · kayıtsız ziyaretçi' },
-    { postal_code: '67500', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
-    { postal_code: '68000', email: 'sophie.klein@example.fr', not: 'bekliyor' },
-    // PASİF bölgedeki kod: bölge tanımı var ama kapalı — açıldığında haber verilecekler.
-    { postal_code: '77694', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · pasif bölge (Kehl)' },
+    { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: 'fr', email: 'nathalie.roux@example.fr', not: 'bekliyor · kayıtsız ziyaretçi' },
+    // Dil KAYITSIZ (null): 14.10 öncesi kayıtların hâli — haber işi profile, sonra fr'ye düşer.
+    { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: null, email: 'kemal.ozturk@example.fr', not: 'bekliyor · dili bilinmiyor' },
+    { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: 'tr', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
+    // Yer adı ÇÖZÜLEMEMİŞ kayıt — kolonun null hâli de görünsün.
+    { postal_code: '68000', country: 'FR', place_name: null, locale: 'fr', email: 'sophie.klein@example.fr', not: 'bekliyor · yer adı yok' },
+    // PASİF bölgedeki ALMAN kod: ülke ayrımının tek gerçek denek taşı — kod FR'de de geçerli olsa
+    // haber işi bunu Fransız bölge açılışında GÖNDERMEMELİ (21.16).
+    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt, pasif bölge (Kehl)' },
     // HABER VERİLMİŞ kayıt: bölge açıldı, mektup gitti. Listenin "bitmiş" ucu da görünsün —
     // hepsi bekliyorsa gönderim akışının çalıştığı hiç görülmez.
-    { postal_code: '67400', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-15), not: 'HABER VERİLDİ (bölge açıldı)' },
+    { postal_code: '67400', country: 'FR', place_name: 'Illkirch-Graffenstaden', locale: 'fr', source: 'app-account', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-15), not: 'HABER VERİLDİ (bölge açıldı)' },
   ];
 
   const { error } = await db.from('zone_notice').insert(
     kayitlar.map((k) => ({
       postal_code: k.postal_code,
+      country: k.country,
+      place_name: k.place_name ?? null,
+      source: k.source ?? 'web',
+      locale: k.locale ?? null,
       email: k.email,
       customer_id: k.customer_id ?? null,
       notified_at: k.notified_at ?? null,

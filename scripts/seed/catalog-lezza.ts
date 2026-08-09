@@ -38,6 +38,8 @@ import { NOW, r2Keys, uploadImageFromUrl } from './shared';
 interface LezzaVariant {
   label: LocalizedText | null;
   netWeightG: number | null;
+  /** Paket içi adet (`(12 Pieces)` · `4x80g`). `null` = bildirilmemiş — sıfır DEĞİL. */
+  piecesCount: number | null;
   sku: string | null;
   sourceId: number;
   sourceSlug: string;
@@ -436,6 +438,7 @@ export async function seedLezzaProducts(
         // Boysuz ürün (bütün pastalar) tek varsayılan varyant taşır — modelin kendi kuralı.
         label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
         netWeightG: v.netWeightG ?? undefined,
+        piecesCount: v.piecesCount ?? undefined,
         sku: v.sku ?? undefined,
         // **"Bu boy satıştan kalktı"** (kapsam denetimi 09.08) — kendi başına küçük bir alan ama
         // BÜYÜK bir kuralın tek tetikleyicisi: pasif varyant, o varyantı taşıyan PAKETİ

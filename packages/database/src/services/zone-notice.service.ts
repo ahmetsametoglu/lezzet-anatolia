@@ -54,7 +54,13 @@ export class ZoneNoticeService extends BaseDbService<ZoneNotice, ZoneNoticeInser
     return this.getAll({ customerId }, { orderBy: 'createdAt' });
   }
 
-  /** Müşteri bekleme kaydını kaldırır — verdiğimiz sözü geri alması. */
+  /**
+   * Müşteri bekleme kaydını kaldırır — verdiğimiz sözü geri alması.
+   *
+   * Ülke ARANMAZ ve bu bilinçli: aynı müşterinin aynı kodu iki ülkede birden beklemesi gerçek bir
+   * hâl değil (kendi adresi tek ülkede). Ülkeyi de şart koşmak, hesap ekranındaki "vazgeç"
+   * düğmesine ekranın taşımadığı bir bilgiyi taşıtmak olurdu.
+   */
   async removeForCustomer(customerId: string, postalCode: string): Promise<void> {
     await this.deleteWhere({ customerId, postalCode });
   }
@@ -82,6 +88,11 @@ export class ZoneNoticeService extends BaseDbService<ZoneNotice, ZoneNoticeInser
 
   /**
    * Posta kodu başına BEKLEYEN sayısı — Depolar ekranının ikinci sütunu (19.21).
+   *
+   * **Anahtar kod, ülke değil** (21.16 sonrası da böyle): ekran kodu gösteriyor ve teslimat
+   * bölgemiz Fransa merkezli — aynı kodun iki ülkeye çözüldüğü 610 vakada sayılar burada
+   * birleşir. Ayrım gerektiğinde satırın kendisinde duruyor (`country`); bu okuma bir karar
+   * girdisi değil, bir yoğunluk göstergesi.
    *
    * Uygulamada sayılıyor, `group by` ile değil: PostgREST'te toplama fonksiyonları bu kurulumda
    * KAPALI ("Use of aggregate functions is not allowed" — aynı sapma katalog sayımında da yazılı).

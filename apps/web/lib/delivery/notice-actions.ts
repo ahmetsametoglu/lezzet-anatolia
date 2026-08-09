@@ -1,6 +1,6 @@
 'use server';
 
-import { VariantStockNoticeService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { PostalCodePlaceService, VariantStockNoticeService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { PreferredLanguage } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
@@ -27,8 +27,13 @@ import { readPlaceAnswer } from './read-place';
  * duvarı koymak ikinci bir engel çıkarmak olurdu. Oturum varsa kayıt ona bağlanır (hesap sayfası
  * kendi kayıtlarını böyle bulacak), yoksa yalnız e-posta ile durur.
  *
- * Aynı kod + e-posta ikinci kez gelirse yeni satır AÇILMAZ (benzersiz indeks): düğmeye tekrar
+ * Aynı yer + e-posta ikinci kez gelirse yeni satır AÇILMAZ (benzersiz indeks): düğmeye tekrar
  * basmak yeni bir bekleyiş değil, aynı bekleyişin tekrarıdır.
+ *
+ * **Yer İKİ parçadır** (21.16): ülke kaydedilmezse haber işi Fransa'da açılan bir bölgeyi aynı kodu
+ * yazmış Alman müşteriye de duyurabilir — ölçüldü, 610 kod iki ülkeye birden çözülüyor. Ülke
+ * çerezden okunur, parametre olarak alınmaz: kaydın hangi yere ait olduğu bir tercih değil,
+ * sistemin zaten bildiği bir gerçek (kardeş eylem `recordVariantStockNoticeAction` de böyle).
  */
 export async function recordZoneNoticeAction(
   rawPostalCode: string,
@@ -40,6 +45,8 @@ export async function recordZoneNoticeAction(
    * yazılır ("bilinmiyor"), varsayılan uydurulmaz.
    */
   locale?: PreferredLanguage,
+  /** Kaydın geldiği yüzey — web dışı çağıran (native uygulama) kendi etiketini geçer (21.16). */
+  source = 'web',
 ): Promise<CustomerResult<true>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
@@ -50,12 +57,31 @@ export async function recordZoneNoticeAction(
     // burada amaç yazım hatasını değil boş/anlamsız girdiyi elemek.
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new CustomerError('email_invalid');
 
+    // Ülke müşterinin cevabından (çerez, 19.9). Yer bilinmiyorsa kayıt ALINMAZ — nereye haber
+    // vereceğimizi bilmeden söz veremeyiz; kardeş eylemin kuralı burada da geçerli.
+    const answer = await readPlaceAnswer();
+    if (!answer || answer.postalCode !== postalCode) throw new CustomerError('place_unknown');
+
     // `zone_notice.customer_id` de `user_profiles`'a FK'li: auth kimliği yazıldığında girişli
     // müşterinin kaydı FK ihlaliyle düşüyordu (ziyaretçininki null geçtiği için sorunsuz görünüyordu).
     const customerId = await currentCustomerId();
+    const db = serviceDb();
+    // Yer adı KAYIT ANINDA dondurulur: kod tablosu ileride değişse de operatör "68000" değil
+    // "Colmar" okur. Çözülemezse `null` — uydurma yok. Çok yerleşimli kodda ilki yeter, karar
+    // "burayı açalım mı"dır, adres değil.
+    const places = await new PostalCodePlaceService(db).findPlaces(answer.country, postalCode);
+
     // Servis üzerinden (denetim A4): tekillik yine veritabanında (`zone_notice_unique_idx`),
     // çakışma hata sayılmıyor — düğmeye ikinci kez basmak yeni bir bekleyiş değil.
-    await new ZoneNoticeService(serviceDb()).record({ postalCode, email, customerId, locale: locale ?? null });
+    await new ZoneNoticeService(db).record({
+      postalCode,
+      country: answer.country,
+      placeName: places[0] ?? null,
+      source,
+      email,
+      customerId,
+      locale: locale ?? null,
+    });
 
     return { data: true, errorKey: null };
   } catch (err) {

@@ -118,6 +118,7 @@ import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler } from './seed/people';
 import { seedPrices } from './seed/pricing';
+import { seedSiteImages } from './seed/site-image';
 import { seedRecipes } from './seed/recipe';
 import { seedScopedSettings } from './seed/settings';
 import { katalogVaryantlari } from './seed/shared';
@@ -198,6 +199,9 @@ async function main(): Promise<void> {
   // yani fiyat sırası burada bağlayıcı değil. Sıra okunabilirlik için — ikisi de varyantlar üzerine
   // kurulan editoryal seçkiler ve yan yana durmaları hangi kümenin nereden doğduğunu anlatıyor.
   await seedRecipes(db);
+  // Sayfa görselleri hiçbir şeye bağlı DEĞİL (bir varlığa değil bir sayfa yerine ait) — sırası
+  // serbest; katalogun yanında duruyor çünkü ikisi de aynı kovaya yazıyor.
+  await seedSiteImages(db);
   await seedDeliveryZones(db, depolar);
   // Kapsamlı ayarlar BÖLGELERDEN SONRA: bölge kapsamlı satır, bölgenin kimliğine yazılır.
   await seedScopedSettings(db);

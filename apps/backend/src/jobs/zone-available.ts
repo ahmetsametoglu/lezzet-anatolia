@@ -4,7 +4,7 @@ import { localizedUrl } from '@lezzet/i18n';
 import { defaultNotifier } from '@lezzet/notify';
 import { logger } from '@lezzet/observability';
 import { maskEmail } from '@lezzet/observability/mask';
-import type { Country, PreferredLanguage, ZoneNotice } from '@lezzet/types';
+import type { PreferredLanguage, ZoneNotice } from '@lezzet/types';
 
 export const ZONE_AVAILABLE = 'zone_available';
 
@@ -44,11 +44,16 @@ export const ZONE_AVAILABLE = 'zone_available';
 const BATCH = 200;
 
 /**
- * Ülke bilgisi kayıtta YOK (`zone_notice` yalnız kodu tutuyor) — kapsama kontrolü ülke ister.
- * İki ülke de denenir, biri tutarsa kapsanmış sayılır. `readZoneDemand` ile aynı çözüm; kaydedilmemiş
- * bir bilgiyi kaydediyormuş gibi yapmıyoruz.
+ * ── ÜLKE ARTIK KAYITTA (21.16) ──────────────────────────────────────────────
+ * Burada bir zamanlar `const COUNTRIES = ['FR','DE']` duruyordu ve kapsama kontrolü **iki ülkeyi
+ * de deneyip biri tutarsa kapsanmış sayıyordu** — kayıt yalnız kodu taşıdığı için başka çare
+ * yoktu. Bedeli sessiz ve yanlış bir gönderimdi: ölçüldü (09.08), kod tablosundaki 610 kod iki
+ * ülkeye birden çözülüyor, yani Fransa'da açılan bir bölge aynı kodu yazmış Alman müşteriye
+ * *"bölgeniz açıldı"* diye gidebilirdi — hem yalan hem de bir daha düzeltilemez (damga yazılır,
+ * satır bir daha hiçbir turda görünmez).
+ *
+ * `zone_notice.country` eklendi; kontrol artık kaydın KENDİ ülkesiyle yapılıyor. Tahmin yok.
  */
-const COUNTRIES: readonly Country[] = ['FR', 'DE'];
 
 /**
  * Haberin dili. Sıra: kaydın kendi dili → müşterinin profili → **Fransızca**.
@@ -74,7 +79,7 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
   // **Kapsama kararını MOTOR veriyor** (`isInRoute`). Kendi karşılaştırmamızı yazsaydık üçüncü bir
   // kopya olurdu (okuma kapısı + ekran + burası) ve kopyalar bir gün ayrışır: biri haber gönderir,
   // öteki tabloda "kapsanmıyor" yazar.
-  const covered = pending.filter((n) => COUNTRIES.some((country) => isInRoute({ country, postalCode: n.postalCode }, zones)));
+  const covered = pending.filter((n) => isInRoute({ country: n.country, postalCode: n.postalCode }, zones));
   if (covered.length === 0) return { checked: pending.length, sent: 0, failed: 0 };
 
   // Kimlikli kayıtların profilleri TEK turda — satır başına sorgu N+1 olurdu.

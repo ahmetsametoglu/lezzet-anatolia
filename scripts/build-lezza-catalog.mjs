@@ -92,38 +92,73 @@ const KANAL_ONEKI = { horeca: 'b2b', retail: 'b2c' };
 const COKLU_BOY = /(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|lt|cc)\b/i;
 const BOY = /\b(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|lt|cc|pcs|adet)\b/i;
 
+/**
+ * ── PAKET İÇİ ADET (`(12 Pieces)`) — addan ayrılır, varyanta gider (05.14) ──────────────────────
+ *
+ * Kaynak aynı baklavayı dört kez yazıyor: *"Baklava with Pistachio (6 / 12 / 36 / 72 Pieces)"*. Ek
+ * adın içinde kaldığı sürece slug ayrışıyor ve **tek ürün dört ayrı ürüne bölünüyordu** — ölçüldü
+ * (08.08, operasyon şeridi): 10 kayıt, 2 ürün olmalı. `05.15`'in *"benzer ürünlerde aynı baklavanın
+ * üç gramajı"* açığının kökü de buydu.
+ *
+ * Adet, gramajın YERİNE değil YANINA yazılır (`product_variant.pieces_count`): 72'lik kutu hem 72
+ * adet hem 2500 g'dır ve ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar").
+ * Etiket gramajdan gelir — müşteri raftaki kutuda onu görüyor.
+ *
+ * **`pcs` bilerek DIŞARIDA:** o `BOY`'un birimi (ölçü olarak etikete giriyor). Buradaki desen yalnız
+ * "pieces" sözcüğünü tanır, yani ölçü birimi ile paket adedi karışmaz.
+ *
+ * **`Mono Pack` de bilerek dışarıda ve gerekçesi ÖLÇÜM:** o bir adet değil bir KANAL ayrımı —
+ * `artisan-lemon-cake` (b2b, 90 g, SKU 901016B) ile `…-mono-pack` (b2c, 90 g, SKU 901026B) aynı
+ * ağırlıkta. Adet sansaydık aynı ürüne birbirinden ayırt edilemeyen iki "90g" varyantı girerdi.
+ * Doğru birleşme oradan değil FİYAT ekseninden geçer (`DOMAIN §5`) — ayrı kayıt, kendi gerekçesiyle.
+ */
+const ADET = /\(?\s*(\d+)\s*pieces?\s*\)?/i;
+
 /** Birimi grama çevirir; ml/adet ölçü birimi olarak etikette kalır (net ağırlık değil). */
 function grama(sayi, birim) {
   if (birim === 'kg') return Math.round(sayi * 1000);
   return ['g', 'gr'].includes(birim) ? Math.round(sayi) : null;
 }
 
-function boyAyir(name) {
+function boyAyir(adHam) {
+  // Adet ÖNCE ayrılır: `(12 Pieces)` addan çıkmadan boy deseni kalan metinde aranamaz ve slug da
+  // ekle birlikte üretilirdi — ayrışmanın kaynağı tam olarak buydu.
+  let name = adHam;
+  let adet = null;
+  const a = ADET.exec(name);
+  if (a) {
+    adet = Number.parseInt(a[1], 10);
+    name = `${name.slice(0, a.index)}${name.slice(a.index + a[0].length)}`.replace(/\s{2,}/g, ' ').trim();
+  }
+
   const coklu = COKLU_BOY.exec(name);
   if (coklu) {
-    const adet = Number.parseInt(coklu[1], 10);
+    const paketAdedi = Number.parseInt(coklu[1], 10);
     const birimAgirlik = Number.parseFloat(coklu[2].replace(',', '.'));
     const birim = coklu[3].toLowerCase();
     const tekil = grama(birimAgirlik, birim);
     const taban = `${name.slice(0, coklu.index)}${name.slice(coklu.index + coklu[0].length)}`.replace(/\s{2,}/g, ' ').trim();
     return {
       taban,
+      // `4x80g` de bir adet bildirir: kutuda 4 parça var. Ad ekinde adet AYRICA yazılıysa (nadir)
+      // o öncelikli — daha açık bir beyandır.
+      adet: adet ?? paketAdedi,
       boy: {
         // Etiket kaynaktaki biçimi KORUR (`4x80g`): müşteri kutunun üstünde onu görüyor.
         // "320 g" yazmak doğru toplamı verir ama raftaki ürünle eşleşmez.
-        etiket: `${adet}x${birimAgirlik}${birim}`,
+        etiket: `${paketAdedi}x${birimAgirlik}${birim}`,
         // Net ağırlık ise TOPLAMDIR — kargo ve fiyat/kg hesabı kutunun tamamını taşır.
-        netWeightG: tekil === null ? null : tekil * adet,
+        netWeightG: tekil === null ? null : tekil * paketAdedi,
       },
     };
   }
 
   const m = BOY.exec(name);
-  if (!m) return { taban: name.trim(), boy: null };
+  if (!m) return { taban: name.trim(), boy: null, adet };
   const sayi = Number.parseFloat(m[1].replace(',', '.'));
   const birim = m[2].toLowerCase();
   const taban = `${name.slice(0, m.index)}${name.slice(m.index + m[0].length)}`.replace(/\s{2,}/g, ' ').trim();
-  return { taban, boy: { etiket: `${sayi}${birim}`, netWeightG: grama(sayi, birim) } };
+  return { taban, adet, boy: { etiket: `${sayi}${birim}`, netWeightG: grama(sayi, birim) } };
 }
 
 /**
@@ -203,7 +238,7 @@ console.log(`▸ kaynaktan ${ham.length} kayıt + ${gorseller.size} kategori gö
 const urunler = new Map();
 
 for (const p of ham) {
-  const { taban, boy } = boyAyir(varlikCoz(p.name));
+  const { taban, boy, adet } = boyAyir(varlikCoz(p.name));
   const slug = slugla(taban);
 
   const slugs = p.categories.map((c) => c.slug);
@@ -245,6 +280,8 @@ for (const p of ham) {
     // Boysuz ürün (bütün pastalar) tek varsayılan varyant taşır — modelin kendi kuralı.
     label: boy ? { tr: boy.etiket, fr: boy.etiket, de: boy.etiket } : null,
     netWeightG: boy?.netWeightG ?? null,
+    // `null` = adet bildirilmemiş (dökme ürün) — sıfır DEĞİL (`CLAUDE §1`).
+    piecesCount: adet,
     sku: p.sku || null,
     sourceId: p.id,
     sourceSlug: p.slug,

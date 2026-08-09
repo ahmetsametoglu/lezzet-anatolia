@@ -49,6 +49,28 @@ export async function uploadImage(file: string, key: string): Promise<string | n
 }
 
 /**
+ * DEPO İÇİNDEKİ bir dosyayı R2'ye yükler — yol repo köküne göre verilir.
+ *
+ * `uploadImage`'dan farkı yalnız kök: o `temp/` altına bakar (repoya girmeyen, elle konan
+ * görseller), bu repoda DURAN bir dosyayı alır. İhtiyaç sayfa görsellerinden doğdu (09.16): ana
+ * sayfanın kahramanı bugün `apps/web/public/hero-sofra.jpg`'de geçici olarak duruyor ve slot
+ * tablosuna taşınırken kaynak o dosyanın kendisi.
+ */
+export async function uploadImageFromPath(relPath: string, key: string): Promise<string | null> {
+  const r2 = getR2();
+  if (!r2) return null;
+  try {
+    const bytes = readFileSync(join(process.cwd(), relPath));
+    const uzanti = (relPath.split('.').pop() || '').toLowerCase();
+    await r2.uploadFile(key, bytes, uzanti === 'png' ? 'image/png' : uzanti === 'webp' ? 'image/webp' : 'image/jpeg');
+    return key;
+  } catch (err) {
+    console.warn(`  ⚠ görsel atlandı (${relPath}): ${(err as Error).message}`);
+    return null;
+  }
+}
+
+/**
  * UZAKTAKİ görseli indirir ve R2'ye yükler (Lezza kataloğu — 05, kullanıcı kararı 04.08).
  *
  * **İndirilen dosya `temp/lezza-cache/` altında ÖNBELLEKLENİR** ve sebebi ölçülebilir: katalogda

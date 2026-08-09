@@ -108,6 +108,15 @@ create table public.product_variant (
   -- en az bir dilin dolu olması FORM kuralıdır (boy'ları ayırt edilemez bırakmamak için).
   label jsonb not null default '{}'::jsonb,          -- LocalizedText
   net_weight_g int,
+  -- ── PAKET İÇİ ADET (05.14 · besleme notu 08.08) ─────────────────────────────
+  -- "12'li baklava" ile "36'lı baklava" aynı ÜRÜNÜN iki boyudur; adet ürünü ayırmaz, varyantı
+  -- ayırır. Kolonu olmadığı için üreteç adedi adın içinde bırakıyordu (`… (12 Pieces)`) ve slug
+  -- ayrıştığı için tek baklava dört ayrı ürüne bölünüyordu — ölçüldü: 33 kayıt, 14 taban.
+  --
+  -- Gramajın YERİNE değil YANINA: bir varyant hem 36 adet hem 2500 g olabilir ve ikisi ayrı
+  -- soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). null = adet bilgisi yok (dökme
+  -- ürün) — sıfır DEĞİL: sıfır "içinde hiç parça yok" demek olurdu (CLAUDE §1).
+  pieces_count int,
   min_stock_qty int,                                 -- asgari eşik (DOMAIN §16); null = öneri yok
   sku text,
   is_active boolean not null default true,

@@ -16,6 +16,7 @@ export * from './product.schema';
 export * from './discount.schema';
 export * from './product-variant.schema';
 export * from './product-image.schema';
+export * from './site-image.schema';
 export * from './bundle.schema';
 export * from './recipe.schema';
 export * from './price.schema';

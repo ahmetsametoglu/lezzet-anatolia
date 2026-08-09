@@ -41,7 +41,7 @@ afterAll(async () => {
 
 describe('zone_available', () => {
   it('KAPSANMAYAN kod damgalanmaz — söz verilmemiş bir haber verilmiş sayılamaz', async () => {
-    await notices.record({ postalCode: uncoveredCode, email: email('disarda'), locale: 'fr' });
+    await notices.record({ postalCode: uncoveredCode, country: 'FR', email: email('disarda'), locale: 'fr' });
     await zoneAvailableJob();
 
     const { data } = await db.from('zone_notice').select('notified_at').eq('postal_code', uncoveredCode).single();
@@ -52,7 +52,7 @@ describe('zone_available', () => {
     // Kapsanan koda kayıt var ve iş onu görüyor; ama mail gerçekten gitmediği için damga atılmıyor
     // ve satır sıradaki turda yeniden denenecek. Ters davranış (önce damgala) müşteriyi KALICI
     // sessizliğe mahkûm ederdi: satır "haber verildi" görünür, bir daha hiçbir tur onu bulmaz.
-    await notices.record({ postalCode: coveredCode, email: email('iceride'), locale: 'de' });
+    await notices.record({ postalCode: coveredCode, country: 'FR', email: email('iceride'), locale: 'de' });
     const sonuc = await zoneAvailableJob();
 
     expect(sonuc.covered).toBeGreaterThan(0);

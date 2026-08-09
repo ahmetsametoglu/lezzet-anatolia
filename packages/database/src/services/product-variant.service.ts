@@ -71,6 +71,9 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
         sku: e.sku,
         isActive: e.isActive,
         sortOrder: i,
+        // Adet VERİLDİĞİNDE yazılır, verilmediğinde dokunulmaz. Formda girdisi yok (05.14 talebi):
+        // koşulsuz yazsaydık her kayıt, üretecin bulduğu adedi sessizce `null`'a ezerdi.
+        ...(e.piecesCount !== undefined ? { piecesCount: e.piecesCount } : {}),
       };
       result.push(e.id ? await this.update({ id: e.id, ...fields }) : await this.insert({ productId, ...fields }));
     }

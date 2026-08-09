@@ -12,6 +12,12 @@ export const ProductVariantSchema = z.object({
   productId: z.string().uuid(),
   label: LocalizedTextDraftSchema,
   netWeightG: z.number().int().nullable(),
+  /**
+   * Paket içi adet ("12'li baklava"). Gramajın YERİNE değil YANINA: bir varyant hem 36 adet hem
+   * 2500 g olabilir, ikisi ayrı soruya cevap verir. `null` = adet bilgisi yok (dökme ürün) —
+   * sıfır DEĞİL, çünkü sıfır "içinde hiç parça yok" demek olurdu.
+   */
+  piecesCount: z.number().int().nullable(),
   minStockQty: z.number().int().nullable(),
   sku: z.string().nullable(),
   isActive: z.boolean(),
@@ -24,6 +30,7 @@ export const ProductVariantInsertSchema = z.object({
   productId: z.string().uuid(),
   label: LocalizedTextDraftSchema.optional(),
   netWeightG: z.number().int().nullish(),
+  piecesCount: z.number().int().nullish(),
   minStockQty: z.number().int().nullish(),
   sku: z.string().nullish(),
   isActive: z.boolean().optional(),
@@ -43,5 +50,15 @@ export const ProductVariantEntrySchema = ProductVariantSchema.pick({
   minStockQty: true,
   sku: true,
   isActive: true,
-}).extend({ id: z.string().uuid().optional() });
+}).extend({
+  id: z.string().uuid().optional(),
+  /**
+   * Paket içi adet — **OPSİYONEL, kardeşlerinin aksine.** Alanı bugün yalnız besleme üreteci
+   * yazıyor; operasyon formunda henüz girdisi yok (talep açıldı). Zorunlu yapılsaydı formun
+   * derlemesi bu turda kırılırdı ve alanı hiç göstermeyen bir ekran, olmayan bir değeri her
+   * kayıtta `null`'a ezerdi. Verilmeyen alan YAZILMAZ (`syncVariants`) — form gelene kadar
+   * üretecin yazdığı değer olduğu yerde kalır.
+   */
+  piecesCount: ProductVariantSchema.shape.piecesCount.optional(),
+});
 export type ProductVariantEntry = z.infer<typeof ProductVariantEntrySchema>;

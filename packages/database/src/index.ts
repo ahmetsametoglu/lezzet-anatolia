@@ -25,6 +25,7 @@ export {
 } from './services/product.service';
 export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';
+export { SiteImageService } from './services/site-image.service';
 export { BundleService, type CreateBundleInput } from './services/bundle.service';
 export { BundleItemService } from './services/bundle-item.service';
 export { RecipeService, type CreateRecipeInput } from './services/recipe.service';

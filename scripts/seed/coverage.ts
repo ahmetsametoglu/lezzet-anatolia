@@ -168,6 +168,18 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'SKU yok', filtre: (q) => q.is('sku', null) },
       // Ağırlıksız varyant: paketin toplam ağırlığı hesaplanamaz, satır basılmamalı.
       { ad: 'ağırlıksız', zorunlu: true, filtre: (q) => q.is('net_weight_g', null) },
+      {
+        ad: 'paket içi adet bildirilmiş',
+        zorunlu: true,
+        /**
+         * `pieces_count` (05.14) — *"12'li baklava"*. Alan yokken adet adın içinde kalıyordu ve
+         * slug ayrıştığı için **tek baklava dört ayrı ürüne bölünüyordu** (ölçüldü 08.08: 10 kayıt,
+         * 2 ürün olmalı). Üreteç düzeltildi; kova ölçümün SONUCUNU sorar — kolon dolduruluyor mu.
+         */
+        filtre: (q) => q.not('pieces_count', 'is', null),
+      },
+      // Dökme ürün adet bildirmez. `null` ile 0'ın ayrı şeyler olduğu ancak ikisi de varsa görünür.
+      { ad: 'adet bildirilmemiş (dökme)', zorunlu: true, filtre: (q) => q.is('pieces_count', null) },
     ],
   },
   {
@@ -426,6 +438,64 @@ export const KAPSAM: KapsamAlani[] = [
         zorunlu: true,
         // Rota dışı müşterinin TEK yolu. Yoksa çözüm `unresolved` döner ve senaryo yine doğmaz.
         sayac: (db) => say(db, 'warehouse', (q) => q.eq('ships_online', true).eq('is_active', true)),
+      },
+    ],
+  },
+  {
+    baslik: 'Bölge talebi (haber-ver)',
+    tablo: 'zone_notice',
+    kovalar: [
+      { ad: 'bekleyen (haber gitmemiş)', zorunlu: true, filtre: (q) => q.is('notified_at', null) },
+      // Gönderim akışının çalıştığı görülmezse "damga yazılıyor mu" hiç sınanmaz.
+      { ad: 'haber verilmiş', zorunlu: true, filtre: (q) => q.not('notified_at', 'is', null) },
+      { ad: 'kayıtlı müşteriye bağlı', zorunlu: true, filtre: (q) => q.not('customer_id', 'is', null) },
+      // Hesap zorunlu DEĞİL; ziyaretçi kaydı hiç doğmazsa o dal (profilsiz dil çözümü) koşmaz.
+      { ad: 'ziyaretçi (hesapsız)', zorunlu: true, filtre: (q) => q.is('customer_id', null) },
+      {
+        ad: 'ALMAN kayıt (ülke ayrımı)',
+        zorunlu: true,
+        /**
+         * **21.16'nın tek denek taşı.** Ülke kolonu eklenmeden önce haber işi iki ülkeyi de deneyip
+         * *"biri tutarsa kapsanmış say"* diyordu — ölçüldü (09.08): kod tablosundaki 610 kod iki
+         * ülkeye birden çözülüyor, yani Fransa'da açılan bir bölge aynı kodu yazmış Alman müşteriye
+         * gidebilirdi. Yanlış gönderim geri alınamaz (damga yazılır, satır bir daha görünmez).
+         *
+         * Tüm kayıtlar FR olsaydı ayrımın çalıştığı hiçbir koşuda görülmezdi.
+         */
+        filtre: (q) => q.eq('country', 'DE'),
+      },
+      // 14.10 dil kolonu: dolu ve BOŞ hâli birlikte — boşta haber işi profile, sonra fr'ye düşer.
+      { ad: 'dili kayıtlı', zorunlu: true, filtre: (q) => q.not('locale', 'is', null) },
+      { ad: 'dili bilinmiyor', zorunlu: true, filtre: (q) => q.is('locale', null) },
+      // Yüzey izi: hepsi 'web' olsaydı native uygulamadan gelen kaydın hiç örneği olmazdı.
+      { ad: 'native uygulamadan gelen', zorunlu: true, filtre: (q) => q.neq('source', 'web') },
+      { ad: 'yer adı çözülememiş', filtre: (q) => q.is('place_name', null) },
+    ],
+  },
+  {
+    baslik: 'Sayfa görselleri',
+    tablo: 'site_image',
+    kovalar: [
+      {
+        ad: 'dolu slot',
+        zorunlu: true,
+        // Kova R2 ayarına da bağlı: anahtar yüklenemezse seed slotu boş bırakır (graceful). Boş
+        // kalması bir seed kusurundan çok bir ortam eksiğini gösterir — ikisi de görülmeli.
+        filtre: (q) => q.eq('slot', 'home_hero'),
+      },
+      {
+        ad: 'BOŞ slot (yer tutucu yolu)',
+        zorunlu: true,
+        /**
+         * Dört slotun hepsi dolsaydı **yer tutucu dalı hiç koşmazdı**: ekranların boş çerçeve
+         * çizimi, operasyonun "bu slot henüz boş" satırı ve kova erişilemediğinde kırılmama
+         * davranışı yerelde hiç görülmezdi. Kova "en az bir slot boş mu" diye sorar.
+         */
+        sayac: async (db) => {
+          const { data } = await db.from('site_image').select('slot');
+          const dolu = new Set(((data ?? []) as unknown as { slot: string }[]).map((r) => r.slot));
+          return ['home_hero', 'packages_hero', 'professionals_hero', 'empty_cart'].filter((s) => !dolu.has(s)).length;
+        },
       },
     ],
   },

@@ -58,6 +58,16 @@ export const r2Keys = {
     `catalog/recipes/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
   /**
+   * **Sayfa görseli** (09.16) — ana sayfa kahramanı, boş sepet çizimi… Bir varlığa değil bir SAYFA
+   * YERİNE ait olduğu için `catalog/` altında değil kendi klasöründe.
+   *
+   * Anahtar SLOT'tan türer, kimlikten değil: slot kapalı bir kümedir ve her slot tek görsel taşır
+   * (`site_image_slot_idx`). Yeni yükleme aynı objenin üzerine yazar → kovada yetim obje birikmez;
+   * kardeşlerinin hepsi aynı sebeple deterministik.
+   */
+  siteImage: (slot: string, sourceFilename: string): string => `site/${sanitize(slot)}.${extOf(sourceFilename)}`,
+
+  /**
    * **Şikâyet fotoğrafı** (16.2) — PRIVATE kovaya yazılır (`getR2Private`), public adresi yoktur.
    *
    * Katalog anahtarlarının tersine **deterministik DEĞİL**: aynı talebe birden çok fotoğraf
