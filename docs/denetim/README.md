@@ -21,8 +21,11 @@ Cevap yazmadan önce dosyanın GÜNCEL hâli okunur.
 **İkinci tur (03.08'de resmîleşti):** Şerit, cevabında denetime karşı soru sorabilir; denetim
 **"Denetim görüşü:"** bölümüyle yanıtlar. İki turda uzlaşılamayan madde kullanıcıya taşınır.
 
-Dosyalar: **açık dosya YOK** (09.08 itibarıyla) — bütün turlar kapandı, aşağıdaki liste onların
-künyesidir. Yeni tur açıldığında dosya buraya eklenir.
+Dosyalar:
+
+- `denetim-katman-haritasi.md` — **program dosyası** (bulgu taşımaz): katman katman yürüyen
+  standart-dışılık + duplikasyon denetiminin haritası ve tur durumu (kullanıcı talimatı 10.08).
+  Her katman kendi bulgu dosyasını açar (`denetim-K<n>-<ad>.md`); harita kapanana dek kalır.
 
 Kapanıp silinenler (02–05.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası,
 **veritabanı/duplikasyon taraması** (A1–A9), yorum bayatlığı 1/3 (Y1–Y3) ve **test artığı**
