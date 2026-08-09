@@ -17,7 +17,7 @@ import type { ApiResult } from './client';
   MİSAFİR olarak okur (ekran giriş kapısı çizer) — veri katmanı yönlendirme yapmaz (02-mimari §4).
 
   `locale` HER İSTEKTE zorunlu: uç dilsiz çağrıyı 400'le reddediyor (ürün adları sessizce Türkçeye
-  düşmesin diye). Değer cihazın dilinden çözülür (`lib/i18n/locale.ts`), ekranların kararı değil.
+  düşmesin diye). Değer UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts`), ekranların kararı değil.
 */
 
 /** Liste satırı — alan kümesi sözleşmenin kendisi. */

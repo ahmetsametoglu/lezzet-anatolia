@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import type { Locale } from '@lezzet/i18n';
 
 import {
@@ -27,9 +28,38 @@ import { appendPendingSwipe, clearPendingSwipes, readPendingSwipes } from '@/lib
   YAZIM DÜŞERSE KART YİNE İLERLER (web kararı): müşteriyi düzeltemeyeceği bir arızada turun
   ortasında kilitlemeyiz. Düşen yazım yutulmuyor — sonucu burada okunuyor ve tek karşılığı var:
   o kaydırma sayılmaz (puanı eklenmez, kimliği saklanmaz), tur devam eder.
+
+  ── "GERİ AL" NEDEN GECİKMELİ YAZIMLA KURULDU ───────────────────────────────
+  Tasarımın yeni sürümü başlık çubuğuna bir "Geri al" eylemi koyuyor. Sunucuda oyu GERİ ALAN bir
+  uç YOK ve olmayan bir ucu varmış gibi çağırmak yasak; desteyi sessizce geri sarıp müşteriye
+  "geri aldık" demek ise düpedüz YANILTICI olurdu — oy yazılmış olurdu ve talep sinyalinde
+  kalırdı. O yüzden geri alınabilirlik yazımın KENDİSİNDEN doğar: bir kaydırma önce burada
+  bekler, `UNDO_WINDOW_MS` dolunca yazılır. Pencere içinde geri alınan oy hiç GÖNDERİLMEZ, yani
+  geri alma gerçektir.
+
+  Bekleyen oy KAYBOLMAZ: ekran kapanırken (unmount) ve uygulama arka plana düşerken kuyruk
+  ANINDA boşaltılır. Kalan tek açık, pencere doluyken uygulamanın öldürülmesidir — o hâlde o tek
+  oy yazılmaz ve bu bilinçli bedeldir: alternatifi, geri alınamayan bir "geri al" düğmesiydi.
 */
 
+/**
+ * GERİ ALMA PENCERESİ (ms) — bir kaydırmanın sunucuya yazılmadan önce beklediği süre.
+ *
+ * Tasarımda karşılığı YOK (şablon oyu hiç göndermiyor, yerel bir diziyi ilerletiyor); değer
+ * PARAMETRİK bir varsayılan (CLAUDE §4). 6 sn, yanlış yöne kaydırdığını fark edip başlık
+ * çubuğuna uzanacak kadar uzun; turun sinyalini anlamlı biçimde geciktirmeyecek kadar kısa.
+ * Pencere kart başına ayrı işler — hızlı kaydıran müşteride birkaç oy aynı anda bekleyebilir ve
+ * "Geri al" onları sondan başa doğru tek tek çözer (şablonun `kHist` davranışı).
+ */
+const UNDO_WINDOW_MS = 6000;
+
 type DiscoverStatus = 'loading' | 'ready' | 'error';
+
+/** Yazılmayı bekleyen tek kaydırma — penceresi dolunca `send`e gider, geri alınırsa hiç gitmez. */
+interface PendingVote {
+  input: DiscoverVoteInput;
+  timer: ReturnType<typeof setTimeout> | null;
+}
 
 interface UseDiscoverResult {
   status: DiscoverStatus;
@@ -42,6 +72,13 @@ interface UseDiscoverResult {
   awardedPoints: number | null;
   /** Bir kartın kaydırılması — cevabı beklemeden çağrılır, kart ilerlemesi ekranın işidir. */
   vote: (input: DiscoverVoteInput) => void;
+  /** Geri alınabilir (henüz SUNUCUYA YAZILMAMIŞ) bir kaydırma var mı — "Geri al"ın tek koşulu. */
+  canUndo: boolean;
+  /**
+   * Son bekleyen kaydırmayı iptal eder ve iptal edilen oyu döner; bekleyen yoksa `null`.
+   * Dönen değer ekranın işine yarar: beğeni sayacı hangi yönün geri alındığını bilmeden düzeltilemez.
+   */
+  undoLastVote: () => DiscoverVoteInput | null;
   retry: () => void;
 }
 
@@ -75,7 +112,8 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     setAwardedPoints((current) => (current ?? 0) + points);
   }, []);
 
-  const vote = useCallback(
+  /** Oyun SUNUCUYA gidişi — kuyruğun tek çıkışı; hem pencere dolunca hem toplu boşaltmada burası. */
+  const send = useCallback(
     (input: DiscoverVoteInput) => {
       void submitDiscoverVote(input).then((result) => {
         if (result.error !== null) return;
@@ -87,6 +125,62 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     },
     [addAwarded],
   );
+
+  /* Kuyruk REF'te, sayısı DURUMDA: kuyruğun kendisi her kaydırmada değişiyor ve ekranın ondan
+     ihtiyacı olan tek şey "geri alınacak bir şey var mı" — diziyi duruma koymak her oyda gereksiz
+     bir yeniden çizim demekti. */
+  const pending = useRef<PendingVote[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const vote = useCallback(
+    (input: DiscoverVoteInput) => {
+      const entry: PendingVote = { input, timer: null };
+      entry.timer = setTimeout(() => {
+        const at = pending.current.indexOf(entry);
+        // Geri alınmış olabilir: kuyrukta yoksa yazılacak bir şey de yok.
+        if (at === -1) return;
+        pending.current.splice(at, 1);
+        setPendingCount(pending.current.length);
+        send(entry.input);
+      }, UNDO_WINDOW_MS);
+      pending.current.push(entry);
+      setPendingCount(pending.current.length);
+    },
+    [send],
+  );
+
+  const undoLastVote = useCallback((): DiscoverVoteInput | null => {
+    const entry = pending.current.pop();
+    if (entry === undefined) return null;
+    if (entry.timer !== null) clearTimeout(entry.timer);
+    setPendingCount(pending.current.length);
+    return entry.input;
+  }, []);
+
+  /*
+    KUYRUĞUN ACİL ÇIKIŞI — ekran kapanırken ve uygulama arka plana düşerken bekleyen oylar
+    pencerelerini beklemeden yazılır. İkisi de aynı gerekçenin iki hâli: müşteri artık ekranda
+    değilse geri alamaz, dolayısıyla beklemenin bir karşılığı kalmamıştır ve beklemeye devam
+    etmek yalnızca sinyali kaybetme riski üretir.
+  */
+  useEffect(() => {
+    const flushAll = () => {
+      const queued = pending.current.splice(0);
+      if (queued.length === 0) return;
+      setPendingCount(0);
+      for (const entry of queued) {
+        if (entry.timer !== null) clearTimeout(entry.timer);
+        send(entry.input);
+      }
+    };
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') flushAll();
+    });
+    return () => {
+      subscription.remove();
+      flushAll();
+    };
+  }, [send]);
 
   /*
     TALEP KAPISI — girişsizken biriken kaydırmalar hesaba bağlanır. `signedIn` true olduğu ANDA
@@ -127,5 +221,5 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     };
   }, [signedIn, addAwarded]);
 
-  return { status, cards, awardedPoints, vote, retry: load };
+  return { status, cards, awardedPoints, vote, canUndo: pendingCount > 0, undoLastVote, retry: load };
 }

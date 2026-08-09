@@ -2,9 +2,24 @@
   "tr": {
     "back": "Geri",
     "title": "Keşif",
+    "undo": "Geri al",
     "progress": "{current} / {total}",
-    "framing": "Bunlar {strong} — beğendikleriniz ne getireceğimize yön verir. Henüz satışta değiller.",
-    "framingStrong": "yakında gelebilir",
+    "framing": "Bunlar henüz satışta değil — beğenileriniz ne getireceğimize yön verir",
+    "hint": {
+      "passTitle": "Sola kaydır",
+      "passBody": "başka sefer",
+      "likeTitle": "Sağa kaydır",
+      "likeBody": "bunu isterim"
+    },
+    "stamp": {
+      "like": "İsterim",
+      "pass": "Başka sefer"
+    },
+    "likes": {
+      "zero": "Henüz beğeni yok",
+      "one": "1 lezzet beğendiniz",
+      "other": "{count} lezzet beğendiniz"
+    },
     "vote": {
       "like": "Beğen",
       "pass": "Geç"
@@ -33,9 +48,24 @@
   "fr": {
     "back": "Retour",
     "title": "Découverte",
+    "undo": "Annuler",
     "progress": "{current} / {total}",
-    "framing": "Ces produits {strong} — vos avis orientent nos prochains choix. Ils ne sont pas encore en vente.",
-    "framingStrong": "pourraient bientôt arriver",
+    "framing": "Ces produits ne sont pas encore en vente — vos avis orientent nos prochains choix",
+    "hint": {
+      "passTitle": "Glissez à gauche",
+      "passBody": "une autre fois",
+      "likeTitle": "Glissez à droite",
+      "likeBody": "je le veux"
+    },
+    "stamp": {
+      "like": "Je le veux",
+      "pass": "Une autre fois"
+    },
+    "likes": {
+      "zero": "Aucun coup de cœur pour l'instant",
+      "one": "1 saveur aimée",
+      "other": "{count} saveurs aimées"
+    },
     "vote": {
       "like": "J'aime",
       "pass": "Passer"
@@ -64,9 +94,24 @@
   "de": {
     "back": "Zurück",
     "title": "Entdecken",
+    "undo": "Rückgängig",
     "progress": "{current} / {total}",
-    "framing": "Diese Produkte {strong} — Ihre Bewertungen lenken unsere Auswahl. Sie sind noch nicht im Sortiment.",
-    "framingStrong": "könnten bald kommen",
+    "framing": "Diese Produkte sind noch nicht im Sortiment — Ihre Bewertungen lenken unsere Auswahl",
+    "hint": {
+      "passTitle": "Nach links wischen",
+      "passBody": "ein andermal",
+      "likeTitle": "Nach rechts wischen",
+      "likeBody": "das will ich"
+    },
+    "stamp": {
+      "like": "Das will ich",
+      "pass": "Ein andermal"
+    },
+    "likes": {
+      "zero": "Noch keine Favoriten",
+      "one": "1 Spezialität gefällt Ihnen",
+      "other": "{count} Spezialitäten gefallen Ihnen"
+    },
     "vote": {
       "like": "Gefällt mir",
       "pass": "Weiter"

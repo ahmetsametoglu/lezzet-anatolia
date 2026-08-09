@@ -24,7 +24,8 @@ import { useOperationsSections } from '@/screens/operations/sections-context';
   bozulurdu. Tasarımın söylediği şey "çubuğu çizme", "navigasyonu kaldır" değil.
 
   METİNLER tek dilli sözlükten (`screens/operations/copy.ts` — kararın gerekçesi orada). Müşteri
-  kabuğunun `deviceLocale()` çağrısı burada YOK; operasyon yüzeyi cihaz dilinden bağımsız Türkçedir.
+  kabuğunun `useAppLocale()` çağrısı burada YOK; operasyon yüzeyi uygulamanın dilinden bağımsız
+  Türkçedir.
 */
 
 /** Bölüm → ikon. "Hangi rota hangi ikonu taşır" navigasyonun bilgisidir, kitin değil (müşteri emsali). */

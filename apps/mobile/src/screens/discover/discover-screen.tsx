@@ -1,18 +1,11 @@
-import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { DiscoverCard, FeedbackVote } from '@lezzet/types';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  Easing,
-  Extrapolation,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -23,53 +16,56 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { HeartIcon } from '@/screens/feedback/feedback-icons';
+import { emToDp, withAlpha } from '@/theme/parse';
 import messages from './messages.json';
 import { useDiscover } from './use-discover.hook';
 
 /*
-  KEŞİF TURU (v3 `vKesif`, tasarım 05: v3:351-392 + kurucu `kv` v3:721-729 + kGo v3:524-527) —
-  aday ürünler kart kart gösterilir, müşteri beğenir ya da geçer; deste bitince teşekkür ve puan.
-  Vitrinin kesikli davet kutusu ve hesap kartının "puan kazanma yolları" satırı buraya basıyor;
-  ekran o iki bağın karşılığıdır.
+  KEŞİF TURU (v3 `vKesif` — YENİ SÜRÜM, v3:371-447 + `kv` kurucusu v3:2052-2070 + jest
+  işleyicileri `kDown/kMove/kUp/kGo/kBack` v3:1805-1815) — aday ürünler kart kart gösterilir,
+  müşteri beğenir ya da geçer; deste bitince teşekkür ve puan. Vitrinin kesikli davet kutusu ve
+  hesap kartının "puan kazanma yolları" satırı buraya basıyor.
 
-  ── VERİ ARTIK GERÇEK (21.19; eski `BEKLEYEN(21.17)` kapandı) ───────────────
-  Deste `GET /api/v1/discover`ten, oy `POST /api/v1/discover/vote`a, girişsiz turun hesaba
-  bağlanması `POST /api/v1/me/discover/claim`e gider — üçü de `use-discover.hook`un arkasında.
-  Fixture SİLİNDİ: ekranın okuduğu tek kaynak sözleşmenin kendisi (`DiscoverCard`), elle yazılmış
-  ayna tip duplikasyondu (CLAUDE §1).
+  ── YENİ SÜRÜMÜN GETİRDİKLERİ (bu turda uygulandı) ──────────────────────────
+  1. **Gerçek kaydırma fiziği**: kart parmağı yatayda birebir, dikeyde %35 takip eder; eğim
+     `x/16` derecedir ve gölgesi yöne göre RENK değiştirip mesafeyle koyulaşır (`kv.glow`).
+  2. **Basılı rozetler**: "İSTERİM" (sol üst, zeytin, −13°) ve "BAŞKA SEFER" (sağ üst,
+     terracotta, +13°); opaklıkları `min(1, |x|/92)`.
+  3. **Yön ipuçları**: kartın üstünde iki kutu — sola/sağa kaydırmanın ne demek olduğunu ilk
+     kartta söyler (öğrenilince de yer kaplamaya devam eder; tasarımın kararı).
+  4. **Dilimli ilerleme çubuğu**: her aday bir dilim; geçilen zeytin, güncel terracotta ve iki
+     kat geniş, gelecek kum.
+  5. **Kart artık FOTOĞRAF**: ad ve tanıtım fotoğrafın ÜSTÜNDE, koyu gradyanın içinde durur —
+     eski sürümde beyaz kartın altındaki künye bandındaydı.
+  6. **"Geri al"**: başlık çubuğunun sağ yuvasında; sayaç oradan ilerleme çubuğuna taşındı.
+  7. **Beğeni sayacı**: düğmelerin altında ve bitiş ekranında "N lezzet beğendiniz".
 
-  ── PUAN CÜMLESİ ARTIK GEÇMİŞ ZAMAN ─────────────────────────────────────────
-  Sayı MOTORDAN gelir: her kaydırmanın cevabındaki `pointsAwarded` toplamı (+ girişsiz tur giriş
-  dönüşünde talep edilirse onun puanı). Kart sayısı × ayar DEĞİL — ikisi ayrışırsa (günlük tavan,
-  B2B, ikinci oy) müşteri gelmeyecek bir ödül için hareket ederdi. Toplam `null` (girişsiz tur) ya
-  da `0` ise çip HİÇ çizilmez: kazanılmamış puan vaat edilmez.
+  ── "GERİ AL" DÜRÜSTLÜĞÜ ────────────────────────────────────────────────────
+  Sunucuda oyu geri alan bir uç YOK. Bu yüzden geri alınabilirlik yazımın kendisinden doğuyor:
+  bir kaydırma önce hook'un kuyruğunda bekler (`UNDO_WINDOW_MS`), pencere içinde geri alınırsa
+  sunucuya HİÇ gitmez. Düğme yalnız gerçekten geri alınabilir bir oy varken etkindir; pencere
+  dolunca soluklaşır (şablonun kendi `undoCol` ayrımı). Desteyi sessizce geri sarıp müşteriye
+  "geri aldık" demek yanıltıcı olurdu — oy yazılmış ve talep sinyalinde kalmış olurdu.
+
+  ── VERİ SÖZLEŞMESİNİN ÇİZİLEMEYEN İKİ ÖĞESİ (raporlandı) ───────────────────
+  Şablonun kartında KATEGORİ rozeti (`kv.cur.c`) ve "N kişi istedi" çipi (`kv.cur.votes`) var;
+  `DiscoverCardSchema` ikisini de TAŞIMIYOR (ad · tanıtım · görsel · ürün kimliği). Uydurma bir
+  kategori ya da sayı yazmak olmayan bir veriyi varmış gibi göstermekti — çizilmediler ve
+  sözleşme ihtiyacı yöneticiye raporlandı.
 
   ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **Deste yüksekliği ESNEK**: v3 kartı sabit 470 çiziyor; küçük telefonda sabit yükseklik
-     düğmeleri ekranın dışına itiyordu. Kart alanı kalan boşluğu alır, tavanı 470'te durur —
-     tasarımın ölçüsü büyük ekranda birebir, küçük ekranda kırpılmadan küçülür.
-  2. **Boş deste hâli EKLENDİ** (v3'te yok, web'de var): aday kalmadığında tur BİTMEDİ, hiç
-     başlamadı — iki hâl ayrı cümle ister (web `discover-outcome`un `emptyDeck` ayrımı).
-  3. **İskelet ve ağ hatası hâlleri EKLENDİ** (v3 destesi hep dolu): gerçek uçtan okuyan her
-     ekranın üç hâli olmak zorunda. Hata bloğu kesikli kutu değil, katalog/sipariş ekranlarının
-     `EmptyState` + `connection-off` kalıbı — aynı arıza her ekranda aynı görünsün.
-  4. **Kalp ikonu geri bildirim ekranından**: v3'ün `vKesif` kalbi ile `vFb` kalbi AYNI geometri
-     (aynı `path`) — ikinci kez çizmek duplikasyon olurdu (CLAUDE §1). İkon sözlüğüne terfi
-     etmesi gerekiyor, raporlandı.
-  5. **"Damak tadı profili" ÇİZİLMEDİ**: ne v3'ün bitiş hâlinde ne web akışında böyle bir çıktı
-     var; olmayan bir özelliği tasarımsız uydurmak improvizasyon olurdu (CLAUDE §3).
-
-  ── KAYDIRMA JESTİ (09.08 sonrası) ──────────────────────────────────────────
-  Tasarımın kendi cümlesi: *"kaydırma etkileşimi tek elle, dokunmatik akıcılıkta olmalı"*
-  (`design/pages/musteri-kesif.md`). Eski sapma notu ("jest yok, çünkü gesture-handler kurulu
-  değil") artık geçersiz: iki paket de kurulu ve kök `GestureHandlerRootView` ile sarılı. Kart
-  parmağı takip eder; bırakıldığında yeterince uzağa gittiyse ya da yeterince hızlı fırlatıldıysa
-  oy verilir, aksi hâlde yerine oturur. Eşikler yüzen sayfanın (`bottom-sheet`) kendi eşikleri —
-  iki yerde iki ayrı "yeterince" tanımı olmasın. Düğmeler AYNEN duruyor: jest bir kısayoldur,
-  tek erişilebilir yol değil (ekran okuyucu düğmeleri okur).
+  1. **Deste yüksekliği ESNEK**: şablon 486 çiziyor; küçük telefonda sabit yükseklik düğmeleri
+     ekranın dışına iter. Kart alanı kalan boşluğu alır, tavanı 486'da durur.
+  2. **Boş deste hâli EKLENDİ** (şablonda yok, web'de var): aday kalmadığında tur BİTMEDİ, hiç
+     başlamadı — iki hâl ayrı cümle ister.
+  3. **İskelet ve ağ hatası hâlleri EKLENDİ**: gerçek uçtan okuyan her ekranın üç hâli olmalı.
+  4. **Hızlı fırlatma da karardır**: şablon yalnız mesafeye bakıyor (92 px). Dokunmatikte kısa
+     ama hızlı bir fırlatma da nettir; mesafe eşiğinin yanına hız eşiği eklendi (kaldırılsaydı
+     parmağını çabuk çeken müşterinin kararı yok sayılırdı).
+  5. **Kalp ikonu geri bildirim ekranından**: `vKesif` kalbi ile `vFb` kalbi AYNI geometri.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -80,39 +76,97 @@ type Messages = LocalizedCopy<typeof messages>;
   açıldığında oraya terfi eder (raporlandı).
 */
 const discoverMetrics = {
-  /** Kart destesinin yüksekliği (v3:355 — 470). Sapma 1: tavan olarak uygulanır. */
-  deckHeight: 470,
-  /** Arkadaki sıradaki kart (v3:357): küçülme · aşağı kayma · opaklık. */
+  /** Deste alanının yüksekliği (v3:403 — 486). Sapma 1: tavan olarak uygulanır. */
+  deckHeight: 486,
+  /** Kartın deste kutusunun ALT kenarından payı (v3:404-414 — `bottom:34px`). */
+  deckFootroom: 34,
+  /** Sıradaki kart (v3:409): aşağı kayma · küçülme · üstündeki krem tülün opaklığı. */
+  nextDrop: 30,
   nextScale: 0.94,
-  nextDrop: 14,
-  nextOpacity: 0.55,
-  /** Arkadaki kartın görünen fotoğraf payı (v3:358 — %65). */
-  nextPhotoRatio: '65%',
-  /** Oy düğmesi (v3:365-366 — 64×64). */
-  voteButton: 64,
-  /** Beğen düğmesinin kalbi (v3:366 — 26). */
-  likeIcon: 26,
-  /** Teşekkür dairesi ve içindeki ✦ (v3:387 — 88 / 38). */
+  nextVeilOpacity: 0.55,
+  /** Üçüncü kart (v3:406): yalnız derinlik — fotoğrafı yok, kum yüzey ve çerçeve. */
+  thirdDrop: 56,
+  thirdScale: 0.88,
+  /** İlerleme çubuğunun dilimi (v3:385): yükseklik 4 · yarıçap 2 · durgun 10 · güncel 22. */
+  segmentHeight: 4,
+  segmentRadius: 2,
+  segmentWidth: 10,
+  segmentCurrentWidth: 22,
+  /** Yön ipucu kutusunun satır yüksekliği (v3:393 — `12px/1.3`). */
+  hintLineHeight: 1.3,
+  /** Basılı rozetin eğimi (v3:418-419 — ∓13°) ve satır yüksekliği. */
+  stampRotateDeg: 13,
+  /** Kart adının satır yüksekliği (v3:421 — `27px/1.08`). */
+  cardNameLineHeight: 1.08,
+  /** Oy düğmeleri (v3:429-430 — 60 ve 72) ve ikonları (24 · 30). */
+  passButton: 60,
+  passIcon: 24,
+  likeButton: 72,
+  likeIcon: 30,
+  /** Teşekkür dairesi ve içindeki ✦ (v3:437 — 88 / 38). */
   thanksMark: 88,
   thanksGlyph: 38,
-  /** Kartın çıkışı (v3:30-31 + `kGo`): 330 ms, %130 yol, 9° dönüş. */
+  /** Kartın çıkışı (v3:24-25 `kOutL/kOutR` + `kGo`): 330 ms, %130 yol, 9° dönüş. */
   exitMs: 330,
   exitTravel: 1.3,
   exitRotateDeg: 9,
   /** Bırakılan kartın yerine oturması — çıkıştan kısa (geri dönüş bir olay değil, düzeltme). */
   returnMs: 220,
+  /** Sürüklerken: dikey takip payı ve eğim böleni (v3:2060 — `y*.35`, `x/16`). */
+  verticalFollow: 0.35,
+  rotateDivisor: 16,
+  /**
+   * KART GÖLGESİ (v3:2063 `kv.glow`) — durgunken mürekkep, kaydırırken yönün rengi.
+   * Token'ı YOK (kitin `soft`/`hard`/`badge` üçlüsü bu geometriyi taşımıyor); değerler
+   * şablonun kendi ölçüleridir ve renkleri temadan gelir (`withAlpha`), ham hex yazılmaz.
+   */
+  glowOffsetY: 12,
+  glowBlur: 32,
+  glowAlpha: 0.16,
+  dragGlowBlur: 34,
+  dragGlowMinAlpha: 0.12,
+  dragGlowMaxAlpha: 0.42,
+  /** Beğen düğmesinin zeytin halesi (v3:430 — `0 8px 22px rgba(95,122,44,.42)`). */
+  likeGlowOffsetY: 8,
+  likeGlowBlur: 22,
+  likeGlowAlpha: 0.42,
 } as const;
 
 /**
- * Oy sayılma eşikleri — yüzen sayfanın (`bottom-sheet`) kendi eşikleri, bilerek AYNI sayılar:
- * "yeterince uzak" kartın kendi genişliğine oranlıdır (sabit piksel dar ekranda çok uzak olurdu),
- * "yeterince hızlı" ise saniyedeki dp. Küçük ama hızlı bir fırlatma da karar demektir.
+ * Oy sayılma eşiği — şablonun kendi ölçüsü (v3:1808, 2053: `|x| > 92`). Aynı sayı basılı
+ * rozetlerin ve gölge yoğunluğunun ramp'ını da tanımlıyor (`kAbs = min(1, |x|/92)`), yani tek
+ * durak: kart "karar verilmiş" görünmeye başladığı anda gerçekten karar eşiğindedir.
  */
-const SWIPE_RATIO = 0.25;
+const SWIPE_THRESHOLD = 92;
+
+/**
+ * Hız eşiği (dp/sn) — sapma 4. Şablonda yok; dokunmatikte kısa ama hızlı bir fırlatma da nettir
+ * ve yüzen sayfanın (`bottom-sheet`) kapanma eşiğiyle bilerek AYNI sayı: iki yerde iki ayrı
+ * "yeterince hızlı" tanımı olmasın.
+ */
 const SWIPE_VELOCITY = 900;
 
-/** Çıkış eğrisi (v3 `kGo`) — şablonun kendi hızlanması. */
+/** Çıkış eğrisi (v3 `kOutL/kOutR` — `ease-in`). */
 const EXIT_EASING = Easing.in(Easing.ease);
+
+/**
+ * Halenin opaklığı — şablonun alfa hesabının (`0.12 + oran*0.3`) opaklığa çevrilmiş hâli:
+ * katman en yüksek alfayla çizildiği için istenen alfa "istenen/azami" oranıyla elde edilir.
+ * UI iş parçacığında koştuğu için `worklet` — modül düzeyinde durur ki her karede yeniden
+ * kurulmasın.
+ */
+function glowOpacity(ratio: number): number {
+  'worklet';
+  const { dragGlowMinAlpha, dragGlowMaxAlpha } = discoverMetrics;
+  return (dragGlowMinAlpha + ratio * (dragGlowMaxAlpha - dragGlowMinAlpha)) / dragGlowMaxAlpha;
+}
+
+/** "N lezzet beğendiniz" — 0 ve 1 kendi cümlelerini alır; "0 lezzet beğendiniz" cümle değildir. */
+function likesLabel(copy: Messages, count: number): string {
+  if (count === 0) return copy.likes.zero;
+  if (count === 1) return copy.likes.one;
+  return copy.likes.other.replace('{count}', String(count));
+}
 
 interface CardPhotoProps {
   card: DiscoverCard;
@@ -133,11 +187,13 @@ function CardPhoto({ card }: CardPhotoProps) {
 interface DiscoverScreenProps {
   /** Girişli mi — puan davetinin ve talep kapısının tek koşulu; rota `useMe` ile çözer. */
   signedIn: boolean;
-  /** Testlerin ve demo hâllerinin kapısı; verilmezse cihazın dili. */
-  locale?: ReturnType<typeof deviceLocale>;
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
+  locale?: Locale;
 }
 
-export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverScreenProps) {
+export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScreenProps) {
+  const appLocale = useAppLocale();
+  const locale = forcedLocale ?? appLocale;
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
@@ -145,17 +201,25 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
   const discover = useDiscover(locale, signedIn);
 
   const [index, setIndex] = useState(0);
-  /** Kartın çıkacağı yol — jest de düğme de bu tek mesafeyi kullanır. */
-  const travel = width * discoverMetrics.exitTravel;
+  /** Bu turda beğenilen aday sayısı — düğmelerin altındaki ve bitiş ekranındaki cümlenin sayısı. */
+  const [likes, setLikes] = useState(0);
 
-  /** Parmağın/animasyonun yatay yeri: 0 duruyor, ±`travel` tamamen çıkmış. */
-  const drag = useSharedValue(0);
+  /* Kartın çıkacağı yol: şablon %130 diyor ve yüzde KARTIN genişliğinindir (ekranın değil) —
+     kart iki yandan 18'er dolgunun içinde durur. */
+  const travel = (width - 2 * theme.space['4xl']) * discoverMetrics.exitTravel;
+
+  /** Parmağın yatay/dikey yeri (drag) — çıkış animasyonu bunları sıfıra çekerken devralır. */
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  /** Çıkışın ilerlemesi: 0 durgun, +1 sağa tamamen çıkmış, −1 sola. */
+  const exit = useSharedValue(0);
   /** Çıkış sürerken ikinci karar YUTULUR (v3 `kGo`nun ilk satırı) — iki kart birden geçmesin. */
   const locked = useSharedValue(0);
 
   const cards = discover.cards;
   const card = cards[index] ?? null;
   const nextCard = cards[index + 1] ?? null;
+  const hasThirdCard = cards[index + 2] !== undefined;
 
   /* Kartın ekranda kaldığı süre — `dwellMs` sinyal KALİTESİNİN girdisidir, puanın değil
      (DOMAIN §14): ekran ölçer, motor değerlendirir. Ölçüm kartın göründüğü anda başlar. */
@@ -164,7 +228,7 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
     shownAt.current = Date.now();
   }, [index, cards]);
 
-  /** Oy yazılır, kart ilerler, tur bitiyorsa onay verilir. JS tarafı — worklet'ten çağrılır. */
+  /** Oy kuyruğa girer, kart ilerler, tur bitiyorsa onay verilir. JS tarafı — worklet'ten çağrılır. */
   const advance = useCallback(
     (choice: FeedbackVote) => {
       const current = cards[index];
@@ -177,6 +241,7 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
          ortasında kilitlemeyiz. Düşen yazımın karşılığı hook'ta: o kaydırma sayılmaz. */
       discover.vote({ productId: current.productId, vote: choice, dwellMs });
       setIndex(index + 1);
+      if (choice === 'like') setLikes((count) => count + 1);
       /* Tur bitişi tek onay noktası — v3'te toast yok ama akışın sonu sessiz kalmamalı
          (kitin toast katmanı tam bu iş için var). */
       if (index + 1 >= cards.length) publishToast(t.toast);
@@ -185,36 +250,39 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
   );
 
   /* Çıkış animasyonu: jest de düğme de buradan geçer — iki ayrı yol yazılsaydı biri bir gün
-     ötekinden farklı bir süreyle çıkardı (yüzen sayfanın `animateClose` dersi). */
+     ötekinden farklı bir süreyle çıkardı (yüzen sayfanın `animateClose` dersi).
+     Parmağın bıraktığı yer (`dragX/dragY`) sıfıra çekilirken `exit` yolu devralır: böylece
+     eğim `x/16`dan şablonun çıkış açısına (9°) KESİNTİSİZ geçer, kart zıplamaz. */
   const commit = useCallback(
     (choice: FeedbackVote) => {
       'worklet';
       if (locked.value === 1) return;
       locked.value = 1;
-      drag.value = withTiming(
-        choice === 'like' ? travel : -travel,
-        { duration: discoverMetrics.exitMs, easing: EXIT_EASING },
-        () => {
-          drag.value = 0;
-          locked.value = 0;
-          runOnJS(advance)(choice);
-        },
-      );
+      const timing = { duration: discoverMetrics.exitMs, easing: EXIT_EASING };
+      dragX.value = withTiming(0, timing);
+      dragY.value = withTiming(0, timing);
+      exit.value = withTiming(choice === 'like' ? 1 : -1, timing, () => {
+        exit.value = 0;
+        locked.value = 0;
+        runOnJS(advance)(choice);
+      });
     },
-    [advance, drag, locked, travel],
+    [advance, dragX, dragY, exit, locked],
   );
 
   const swipe = Gesture.Pan()
     .onUpdate((event) => {
       if (locked.value === 1) return;
-      drag.value = event.translationX;
+      dragX.value = event.translationX;
+      dragY.value = event.translationY;
     })
     .onEnd((event) => {
       if (locked.value === 1) return;
-      const farEnough = Math.abs(event.translationX) > width * SWIPE_RATIO;
+      const farEnough = Math.abs(event.translationX) > SWIPE_THRESHOLD;
       const fastEnough = Math.abs(event.velocityX) > SWIPE_VELOCITY;
       if (!farEnough && !fastEnough) {
-        drag.value = withTiming(0, { duration: discoverMetrics.returnMs });
+        dragX.value = withTiming(0, { duration: discoverMetrics.returnMs });
+        dragY.value = withTiming(0, { duration: discoverMetrics.returnMs });
         return;
       }
       /* Yön mesafeden okunur; mesafe tam sıfırsa (yerinde fırlatma) hızın işareti karar verir. */
@@ -222,37 +290,75 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
       commit(forward > 0 ? 'like' : 'dislike');
     });
 
-  /* Sağa/sola gittikçe eğilir ve soluklaşır (v3 `kOutL`/`kOutR`); parmak yarı yolda bırakılırsa
-     aynı eğri geri sarar — sürüklemenin ve çıkışın görünümü TEK yerde tanımlı. */
+  /** Kartın kendisi: parmağı takip eder, eğilir, çıkarken soluklaşır (v3:2060 + `kOut*`). */
   const cardStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(Math.abs(drag.value), [0, travel], [1, 0], Extrapolation.CLAMP),
+    opacity: 1 - Math.abs(exit.value),
     transform: [
-      { translateX: drag.value },
+      { translateX: dragX.value + exit.value * travel },
+      { translateY: dragY.value * discoverMetrics.verticalFollow },
       {
-        rotate: `${interpolate(
-          drag.value,
-          [-travel, 0, travel],
-          [-discoverMetrics.exitRotateDeg, 0, discoverMetrics.exitRotateDeg],
-          Extrapolation.CLAMP,
-        )}deg`,
+        rotate: `${dragX.value / discoverMetrics.rotateDivisor + exit.value * discoverMetrics.exitRotateDeg}deg`,
       },
     ],
   }));
 
+  /* Basılı rozetler ve gölge halesi — üçü de AYNI oranı okur (`min(1, |x|/92)`), yani karar
+     eşiğine yaklaşan kartın üç işareti birlikte koyulaşır. */
+  const likeStampStyle = useAnimatedStyle(() => ({
+    opacity: dragX.value > 0 ? Math.min(1, dragX.value / SWIPE_THRESHOLD) : 0,
+  }));
+  const passStampStyle = useAnimatedStyle(() => ({
+    opacity: dragX.value < 0 ? Math.min(1, -dragX.value / SWIPE_THRESHOLD) : 0,
+  }));
+
+  /*
+    GÖLGE ÜÇ KATMAN, OPAKLIKLA KARIŞTIRILIR: şablon gölgenin RENGİNİ ve alfasını her karede
+    yeniden yazıyor; RN'de `boxShadow` dizgesini kare kare üretmek Reanimated'in native yolunda
+    tanımlı DEĞİL (ölçülemedi, o yüzden denenmedi). Aynı sonucu opaklıkla kurmak matematiksel
+    olarak birebir: hale en yüksek alfasıyla çizilir, opaklık `istenen/azami` oranına ayarlanır.
+  */
+  const restGlowStyle = useAnimatedStyle(() => ({ opacity: dragX.value === 0 ? 1 : 0 }));
+  const likeGlowStyle = useAnimatedStyle(() => ({
+    opacity: dragX.value > 0 ? glowOpacity(Math.min(1, dragX.value / SWIPE_THRESHOLD)) : 0,
+  }));
+  const passGlowStyle = useAnimatedStyle(() => ({
+    opacity: dragX.value < 0 ? glowOpacity(Math.min(1, -dragX.value / SWIPE_THRESHOLD)) : 0,
+  }));
+
+  /** "Geri al" — yalnız GERÇEKTEN geri alınabilir bir oy varken etkin (bkz. başlık künyesi). */
+  const undo = useCallback(() => {
+    const undone = discover.undoLastVote();
+    if (undone === null) return;
+    setIndex((current) => Math.max(0, current - 1));
+    if (undone.vote === 'like') setLikes((count) => Math.max(0, count - 1));
+    dragX.value = 0;
+    dragY.value = 0;
+    exit.value = 0;
+  }, [discover, dragX, dragY, exit]);
+
+  const showUndo = discover.status === 'ready' && cards.length > 0;
   const bar = (
     <AppBar
       title={t.title}
       left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="discover-back" />}
-      /* Sayaç bitiş hâlinde de durur (v3: `kv.prog` çubuğun kendisinde, kartın içinde değil) ve
-         kural `min(idx+1, toplam)` — şablonun kendi hesabı: son karttan sonra "5 / 5" okunur,
-         yani tamamlandığını sayı da söyler. Deste boşken çubuk sayaçsız (sapma 2'nin hâli). */
       right={
-        discover.status !== 'ready' || cards.length === 0 ? undefined : (
-          <Text style={styles.progress} testID="discover-progress">
-            {t.progress
-              .replace('{current}', String(Math.min(index + 1, cards.length)))
-              .replace('{total}', String(cards.length))}
-          </Text>
+        !showUndo ? undefined : (
+          <PressableSurface
+            onPress={undo}
+            feedback="scale-small"
+            disabled={!discover.canUndo}
+            style={styles.undo}
+            accessibilityLabel={t.undo}
+            compact
+            testID="discover-undo"
+          >
+            <Icon
+              name="undo"
+              size={theme.size.inlineIcon}
+              color={discover.canUndo ? theme.colors.ink : theme.colors['sand-500']}
+            />
+            <Text style={[styles.undoLabel, discover.canUndo ? undefined : styles.undoLabelIdle]}>{t.undo}</Text>
+          </PressableSurface>
         )
       }
       testID="discover-appbar"
@@ -308,7 +414,7 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
   }
 
   if (card === null) {
-    /* ── Bitiş: ✦ · teşekkür · puan çipi · giriş daveti · kataloğa dönüş (v3:385-391) ── */
+    /* ── Bitiş: ✦ · teşekkür · beğeni sayısı · puan çipi · giriş daveti · katalog (v3:435-444) ── */
     return (
       <View style={styles.screen} testID="discover-screen">
         {bar}
@@ -320,6 +426,9 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
           </View>
           <Text style={styles.doneTitle} accessibilityRole="header">
             {t.done.title}
+          </Text>
+          <Text style={styles.doneLikes} testID="discover-done-likes">
+            {likesLabel(t, likes)}
           </Text>
           <Text style={styles.doneBody}>{t.done.body}</Text>
 
@@ -357,40 +466,92 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
     );
   }
 
-  const [framingBefore, framingAfter] = t.framing.split('{strong}');
-
   return (
     <View style={styles.screen} testID="discover-screen">
       {bar}
       <View style={styles.body}>
-        {/* Çerçeveleme cümlesi — vurgulu parça ayrı anahtar (tek cümle çevrilir, vurgu yerinde kalır). */}
-        <Text style={styles.framing}>
-          {framingBefore}
-          <Text style={styles.framingStrong}>{t.framingStrong}</Text>
-          {framingAfter}
-        </Text>
+        {/* ── Dilimli ilerleme (v3:383-389): geçilen · güncel · gelecek + "3 / 20" ── */}
+        <View style={styles.progressRow}>
+          <View style={styles.segments} testID="discover-segments">
+            {cards.map((deckCard, position) => (
+              <View
+                key={deckCard.productId}
+                style={[
+                  styles.segment,
+                  position < index ? styles.segmentDone : undefined,
+                  position === index ? styles.segmentCurrent : undefined,
+                ]}
+              />
+            ))}
+          </View>
+          <Text style={styles.progress} testID="discover-progress">
+            {t.progress
+              .replace('{current}', String(Math.min(index + 1, cards.length)))
+              .replace('{total}', String(cards.length))}
+          </Text>
+        </View>
+
+        {/* ── Çerçeveleme cümlesi + yön ipuçları (v3:390-400) ── */}
+        <View style={styles.guide}>
+          <Text style={styles.framing}>{t.framing}</Text>
+          <View style={styles.hintRow}>
+            <View style={[styles.hint, styles.hintPass]}>
+              <Icon name="arrow-left" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
+              <Text style={styles.hintPassTitle}>
+                {t.hint.passTitle}
+                {'\n'}
+                <Text style={styles.hintPassBody}>{t.hint.passBody}</Text>
+              </Text>
+            </View>
+            <View style={[styles.hint, styles.hintLike]}>
+              <Text style={styles.hintLikeTitle}>
+                {t.hint.likeTitle}
+                {'\n'}
+                <Text style={styles.hintLikeBody}>{t.hint.likeBody}</Text>
+              </Text>
+              <Icon name="arrow-right" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+            </View>
+          </View>
+        </View>
 
         <View style={styles.deck}>
-          {/* Sıradaki kart yalnız DERİNLİK bilgisidir: dokunuşu almaz, yalnız fotoğrafının üst
-              payı görünür (v3:357-359). */}
+          {/* Üçüncü kart yalnız DERİNLİK: fotoğrafı bile yok, kum bir yüzey (v3:406). */}
+          {!hasThirdCard ? null : <View style={styles.thirdCard} pointerEvents="none" testID="discover-third" />}
+
+          {/* Sıradaki kart: fotoğrafı görünür ama krem bir tülün altında (v3:408-412). */}
           {nextCard === null ? null : (
             <View style={styles.nextCard} pointerEvents="none" testID="discover-next">
-              <View style={styles.nextPhoto}>
-                <CardPhoto card={nextCard} />
-              </View>
+              <CardPhoto card={nextCard} />
+              <View style={styles.nextVeil} />
             </View>
           )}
 
           <GestureDetector gesture={swipe}>
             <Animated.View style={[styles.card, cardStyle]} testID="discover-card">
-              {/* Gölge DIŞ kutuda, kırpma İÇTE: aynı görünümde `overflow: 'hidden'` gölgeyi de
-                  keser (kutunun dışına düşen her şeyi keser) — iki katman ayrılmazsa kartın
-                  yükselmesi kaybolurdu. */}
+              {/* Gölge DIŞ katmanlarda, kırpma İÇTE: aynı görünümde `overflow: 'hidden'` gölgeyi
+                  de keser. Üç hale kardeş katman — hangisinin görüneceğini opaklık söyler. */}
+              <Animated.View style={[styles.glow, styles.glowRest, restGlowStyle]} pointerEvents="none" />
+              <Animated.View style={[styles.glow, styles.glowLike, likeGlowStyle]} pointerEvents="none" />
+              <Animated.View style={[styles.glow, styles.glowPass, passGlowStyle]} pointerEvents="none" />
               <View style={styles.cardSurface}>
-                <View style={styles.photo}>
-                  <CardPhoto card={card} />
-                </View>
-                <View style={styles.cardText}>
+                <CardPhoto card={card} />
+                {/* Fotoğrafın üstündeki yazının okunması için koyu gradyan (v3:416). */}
+                <LinearGradient {...theme.gradient.photoBottom} style={styles.cardScrim} pointerEvents="none" />
+                <Animated.View
+                  style={[styles.stamp, styles.stampLike, likeStampStyle]}
+                  pointerEvents="none"
+                  testID="discover-stamp-like"
+                >
+                  <Text style={[styles.stampLabel, styles.stampLikeLabel]}>{t.stamp.like}</Text>
+                </Animated.View>
+                <Animated.View
+                  style={[styles.stamp, styles.stampPass, passStampStyle]}
+                  pointerEvents="none"
+                  testID="discover-stamp-pass"
+                >
+                  <Text style={[styles.stampLabel, styles.stampPassLabel]}>{t.stamp.pass}</Text>
+                </Animated.View>
+                <View style={styles.cardText} pointerEvents="none">
                   <Text style={styles.cardName} accessibilityRole="header">
                     {card.name}
                   </Text>
@@ -401,7 +562,7 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
           </GestureDetector>
         </View>
 
-        {/* ── İki oy düğmesi (v3:363-367): geç (kum çerçeveli beyaz) · beğen (zeytin dolgulu) ── */}
+        {/* ── İki oy düğmesi (v3:428-431): geç (beyaz, kum çerçeveli) · beğen (zeytin dolgulu) ── */}
         <View style={styles.voteRow}>
           <PressableSurface
             onPress={() => commit('dislike')}
@@ -410,7 +571,7 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
             accessibilityLabel={t.vote.pass}
             testID="discover-pass"
           >
-            <Text style={styles.passGlyph}>✕</Text>
+            <Icon name="close" size={discoverMetrics.passIcon} color={theme.colors.terracotta} />
           </PressableSurface>
           <PressableSurface
             onPress={() => commit('like')}
@@ -422,6 +583,9 @@ export function DiscoverScreen({ signedIn, locale = deviceLocale() }: DiscoverSc
             <HeartIcon size={discoverMetrics.likeIcon} color={theme.colors.card} />
           </PressableSurface>
         </View>
+        <Text style={styles.likes} testID="discover-likes">
+          {likesLabel(t, likes)}
+        </Text>
       </View>
     </View>
   );
@@ -432,11 +596,20 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
   },
-  /** Başlık çubuğundaki sayaç (v3:354 — `700 12.5px`, sessiz ton); geri bildirim ekranıyla aynı kademe. */
-  progress: {
-    fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    fontSize: theme.text.badge,
-    color: theme.colors.muted,
+  /** "Geri al" — ikon + etiket, başlık çubuğunun sağ yuvası (v3:375-378). */
+  undo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.sm,
+  },
+  undoLabel: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.helper,
+    color: theme.colors.ink,
+  },
+  /** Geri alınacak bir şey kalmadığında soluklaşır (v3 `undoCol`; şablon #c9c0a6 → `sand-500`). */
+  undoLabelIdle: {
+    color: theme.colors['sand-500'],
   },
   /** Yükleme — deste alanının yerini alır, ekranın dikey ortası (sapma 3). */
   loading: {
@@ -445,68 +618,183 @@ const styles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'center',
   },
 
-  /* Gövde: v3:355 `padding:14px 18px 0` + `gap:14`. */
+  /* Gövde: v3:381 `padding:12px 18px 0` + `gap:12`. */
   body: {
     flex: 1,
-    paddingTop: theme.space['2xl'],
+    paddingTop: theme.space.xl,
     paddingHorizontal: theme.space['4xl'],
-    gap: theme.space['2xl'],
+    gap: theme.space.xl,
+  },
+
+  /* ── İlerleme çubuğu (v3:383-389) ── */
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+  },
+  segments: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: theme.space.xs,
+  },
+  /* Dilimler ŞABLONUN ölçüsünde (10/22) ama BÜZÜLEBİLİR: deste 20 karta kadar çıkabiliyor
+     (`DECK_SIZE`) ve dar telefonda sabit genişlikler satırı taşırıyordu. Büzülme genişlikle
+     orantılıdır, yani güncel dilim her hâlde ötekilerin iki katı görünür. */
+  segment: {
+    width: discoverMetrics.segmentWidth,
+    flexShrink: 1,
+    height: discoverMetrics.segmentHeight,
+    borderRadius: discoverMetrics.segmentRadius,
+    backgroundColor: theme.colors['sand-300'],
+  },
+  segmentDone: {
+    backgroundColor: theme.colors.olive,
+  },
+  segmentCurrent: {
+    width: discoverMetrics.segmentCurrentWidth,
+    backgroundColor: theme.colors.terracotta,
+  },
+  progress: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.micro,
+    color: theme.colors.muted,
+  },
+
+  /* ── Çerçeveleme + yön ipuçları (v3:390-400) ── */
+  guide: {
+    alignItems: 'center',
+    gap: theme.space.md,
   },
   framing: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.note,
-    lineHeight: theme.text.note * theme.text['lead--line-height'],
-    color: theme.colors.body,
+    fontSize: theme.text.helper,
+    color: theme.colors.muted,
     textAlign: 'center',
   },
-  framingStrong: {
-    fontFamily: theme.font.body[theme.text['control--font-weight']],
+  hintRow: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    alignItems: 'stretch',
+    gap: theme.space.md,
+  },
+  hint: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+    paddingVertical: theme.space.lg,
+    paddingHorizontal: theme.space.xl,
+    borderRadius: theme.radius.soft,
+  },
+  hintPass: {
+    backgroundColor: theme.colors['terracotta-bg'],
+  },
+  hintLike: {
+    justifyContent: 'flex-end',
+    backgroundColor: theme.colors['olive-bg'],
+  },
+  hintPassTitle: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.helper,
+    lineHeight: theme.text.helper * discoverMetrics.hintLineHeight,
+    color: theme.colors.terracotta,
+  },
+  /* İkinci satır ailenin AÇIK tonunda (#a97a55 / #6f8a44). Zeytin tarafın karşılığı token
+     setinde var (`olive`), terracotta tarafın YOK — en yakın durak `muted` alındı ve hiyerarşi
+     korundu (başlık koyu+kalın, alt satır açık+normal). Eksik token raporlandı. */
+  hintPassBody: {
+    fontFamily: theme.font.body[400],
+    color: theme.colors.muted,
+  },
+  hintLikeTitle: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.helper,
+    lineHeight: theme.text.helper * discoverMetrics.hintLineHeight,
     color: theme.colors['olive-dark'],
+    textAlign: 'right',
+  },
+  hintLikeBody: {
+    fontFamily: theme.font.body[400],
+    color: theme.colors.olive,
   },
 
-  /* Deste: sabit 470 yerine ESNEK + tavan (sapma 1). */
+  /* ── Deste: sabit 486 yerine ESNEK + tavan (sapma 1) ── */
   deck: {
     flex: 1,
     maxHeight: discoverMetrics.deckHeight,
   },
-  /** Sıradaki kart — küçültülmüş, aşağı kaydırılmış, soluk (v3:357). */
+  /** Üç kartın da AYNI kutusu: alttan 34 pay bırakır (v3:404-414). */
+  thirdCard: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: discoverMetrics.deckFootroom,
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors['sand-100'],
+    borderWidth: theme.border.base,
+    borderColor: theme.colors['sand-300'],
+    transform: [{ translateY: discoverMetrics.thirdDrop }, { scale: discoverMetrics.thirdScale }],
+  },
   nextCard: {
     position: 'absolute',
-    inset: 0,
-    backgroundColor: theme.colors.card,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: discoverMetrics.deckFootroom,
     borderRadius: theme.radius.card,
     overflow: 'hidden',
-    opacity: discoverMetrics.nextOpacity,
-    transform: [{ scale: discoverMetrics.nextScale }, { translateY: discoverMetrics.nextDrop }],
+    backgroundColor: theme.colors['sand-100'],
+    boxShadow: theme.shadow.soft,
+    transform: [{ translateY: discoverMetrics.nextDrop }, { scale: discoverMetrics.nextScale }],
   },
-  nextPhoto: {
-    height: discoverMetrics.nextPhotoRatio,
+  /* Krem tül — şablon `rgba(243,239,226,.55)` diyor; renk `sand-50`in ta kendisi, saydamlığı
+     opaklıkla kuruluyor (kremin %55'lik durağı token setinde yok, `cream-glass` .90/.96). */
+  nextVeil: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: theme.colors['sand-50'],
+    opacity: discoverMetrics.nextVeilOpacity,
   },
-  /** Öndeki kart: beyaz, yuvarlak, fotoğraf üstte (esner), künye altta (v3:361-362).
-      Yarıçap resmî setten (`card` 20; şablonun 24'ü sette yok) — gölge de setin yüzen durağı. */
   card: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: discoverMetrics.deckFootroom,
+  },
+  /** Halelerin ortak kutusu — kartla birebir; yalnız gölge çizerler, yüzeyleri yoktur. */
+  glow: {
     position: 'absolute',
     inset: 0,
     borderRadius: theme.radius.card,
-    boxShadow: theme.shadow.badge,
+  },
+  glowRest: {
+    boxShadow: `0 ${discoverMetrics.glowOffsetY}px ${discoverMetrics.glowBlur}px ${withAlpha(theme.colors.ink, discoverMetrics.glowAlpha)}`,
+  },
+  glowLike: {
+    boxShadow: `0 ${discoverMetrics.glowOffsetY}px ${discoverMetrics.dragGlowBlur}px ${withAlpha(theme.colors.olive, discoverMetrics.dragGlowMaxAlpha)}`,
+  },
+  glowPass: {
+    boxShadow: `0 ${discoverMetrics.glowOffsetY}px ${discoverMetrics.dragGlowBlur}px ${withAlpha(theme.colors.terracotta, discoverMetrics.dragGlowMaxAlpha)}`,
   },
   cardSurface: {
     flex: 1,
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors['sand-100'],
     borderRadius: theme.radius.card,
     overflow: 'hidden',
   },
-  photo: {
-    flex: 1,
-    minHeight: 0,
+  cardScrim: {
+    position: 'absolute',
+    inset: 0,
   },
   photoImage: {
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    inset: 0,
   },
   photoFallback: {
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    inset: 0,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors['sand-300'],
@@ -516,57 +804,97 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['h1-sm'],
     color: theme.colors['on-image-soft'],
   },
+  /* Basılı rozet (v3:418-419) — şablon 22 px yazıyor, kitin en yakın kademesi 20 (`h2-sm`);
+     çerçevesi 3 px, en yakın durak `ring` (2,5). İkisi de raporlandı. */
+  stamp: {
+    position: 'absolute',
+    top: theme.space['6xl'],
+    borderWidth: theme.border.ring,
+    borderRadius: theme.radius.badge,
+    paddingVertical: theme.space.md,
+    paddingHorizontal: theme.space['3xl'],
+    backgroundColor: theme.colors['cream-glass'],
+  },
+  stampLike: {
+    left: theme.space['4xl'],
+    borderColor: theme.colors.olive,
+    transform: [{ rotate: `-${discoverMetrics.stampRotateDeg}deg` }],
+  },
+  stampPass: {
+    right: theme.space['4xl'],
+    borderColor: theme.colors.terracotta,
+    transform: [{ rotate: `${discoverMetrics.stampRotateDeg}deg` }],
+  },
+  stampLabel: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text['h2-sm'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['h2-sm']),
+    textTransform: 'uppercase',
+  },
+  stampLikeLabel: {
+    color: theme.colors.olive,
+  },
+  stampPassLabel: {
+    color: theme.colors.terracotta,
+  },
+  /* Künye artık fotoğrafın ÜSTÜNDE (v3:420-424). */
   cardText: {
-    paddingTop: theme.space['3xl'],
-    paddingHorizontal: theme.space['4xl'],
-    paddingBottom: theme.space['4xl'],
-    gap: theme.space.sm,
+    position: 'absolute',
+    left: theme.space['5xl'],
+    right: theme.space['5xl'],
+    bottom: theme.space['5xl'],
+    gap: theme.space.md,
   },
   cardName: {
-    fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
-    fontSize: theme.text['h2-sm'],
-    color: theme.colors.ink,
+    fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
+    fontSize: theme.text['page-title-sm'],
+    lineHeight: theme.text['page-title-sm'] * discoverMetrics.cardNameLineHeight,
+    color: theme.colors['on-image'],
   },
   cardDescription: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.note,
     lineHeight: theme.text.note * theme.text['lead--line-height'],
-    color: theme.colors.body,
+    color: theme.colors['on-image-soft'],
   },
 
-  /* Oy sırası (v3:363): ortalanmış, 26 aralık, altta nefes. Alt güvenli alan dolgunun İÇİNDE
-     (kitin yapışkan bar kuralı) — ikisinin büyüğü alınır, toplanmaz. */
+  /* ── Oy sırası (v3:428) — ortalanmış, 24 aralık (kitin durağı 26) ── */
   voteRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: theme.space['7xl'],
-    paddingTop: theme.space.xs,
-    paddingBottom: Math.max(rt.insets.bottom, theme.space['5xl']),
+    paddingTop: theme.space['2xs'],
   },
   voteButton: {
-    width: discoverMetrics.voteButton,
-    height: discoverMetrics.voteButton,
-    borderRadius: discoverMetrics.voteButton / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   passButton: {
+    width: discoverMetrics.passButton,
+    height: discoverMetrics.passButton,
+    borderRadius: discoverMetrics.passButton / 2,
     backgroundColor: theme.colors.card,
-    borderWidth: theme.border.base,
-    borderColor: theme.colors['sand-400'],
+    borderWidth: theme.border.ring,
+    borderColor: theme.colors['sand-300'],
     boxShadow: theme.shadow.soft,
   },
-  passGlyph: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text['page-title-sm'],
-    color: theme.colors.muted,
-  },
   likeButton: {
+    width: discoverMetrics.likeButton,
+    height: discoverMetrics.likeButton,
+    borderRadius: discoverMetrics.likeButton / 2,
     backgroundColor: theme.colors.olive,
-    boxShadow: theme.shadow.badge,
+    boxShadow: `0 ${discoverMetrics.likeGlowOffsetY}px ${discoverMetrics.likeGlowBlur}px ${withAlpha(theme.colors.olive, discoverMetrics.likeGlowAlpha)}`,
+  },
+  /* Beğeni sayacı (v3:432). Alt güvenli alan dolgunun İÇİNDE — ikisinin büyüğü alınır, toplanmaz. */
+  likes: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors['sand-600'],
+    textAlign: 'center',
+    paddingBottom: Math.max(rt.insets.bottom, theme.space['4xl']),
   },
 
-  /* ── Bitiş hâli (v3:385-391) — geri bildirim ekranının teşekkür bloğuyla aynı kalıp ── */
+  /* ── Bitiş hâli (v3:435-444) — geri bildirim ekranının teşekkür bloğuyla aynı kalıp ── */
   done: {
     alignItems: 'center',
     gap: theme.space['2xl'],
@@ -595,6 +923,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.ink,
     textAlign: 'center',
   },
+  /** Bitişteki beğeni cümlesi (v3:439) — düğme altındakiyle aynı metin, koyu zeytin ve kalın. */
+  doneLikes: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.note,
+    color: theme.colors['olive-dark'],
+    textAlign: 'center',
+  },
   doneBody: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.note,
@@ -602,7 +937,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
     textAlign: 'center',
   },
-  /** Puan çipi (v3:389) — fırsat ailesinin zemini, hap yarıçapı; `overflow` Android'de şart. */
+  /** Puan çipi (v3:441) — fırsat ailesinin zemini, hap yarıçapı; `overflow` Android'de şart. */
   award: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
     fontSize: theme.text.chip,
