@@ -44,3 +44,22 @@ export const emToDp = (em: string, fontSize: number): number => {
   if (!match) throw new Error(`Harf aralığı token'ı "em" biçiminde değil: ${em}`);
   return Number(match[1]) * fontSize;
 };
+
+const HEX_PATTERN = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i;
+
+/**
+ * `#5f7a2c` + 0,42 → `"rgba(95, 122, 44, 0.42)"`. Gölge dizgesi rengin SAYDAM hâlini ister;
+ * token ise katı hex tutar. Çeviri burada, tek yerde durur — gerekçesi paketin kendi deseni:
+ * `customerAppShadow.hard` da gölgesini `customerSurface.ink`ten TÜRETİYOR, ikinci kez ham
+ * değer yazmıyor. Aynı disiplin RN tarafında da geçerli: gölge rengi bir token'ın türevidir,
+ * yeni bir renk değil.
+ *
+ * Hex OLMAYAN değerde SESSİZ düşmez, fırlatır (`emToDp` ile aynı gerekçe): rgba token'ı
+ * (örtü ailesi) buraya girerse çıktı geçersiz bir dizge olurdu ve gölge sessizce kaybolurdu.
+ */
+export const withAlpha = (hex: string, alpha: number): string => {
+  const match = HEX_PATTERN.exec(hex);
+  if (!match) throw new Error(`Renk token'ı 6 haneli hex değil: ${hex}`);
+  const [red, green, blue] = match.slice(1).map((part) => Number.parseInt(part, 16));
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};

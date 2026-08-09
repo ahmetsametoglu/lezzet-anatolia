@@ -17,8 +17,12 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 interface SkeletonProps {
   width: DimensionValue;
   height: number;
-  /** Yarıçap: `full` yüksekliğin yarısı (çubuk/daire), ötekiler resmî yarıçap seti. */
-  radius?: 'full' | 'badge' | 'control' | 'card';
+  /**
+   * Yarıçap: `full` yüksekliğin yarısı (çubuk/daire), `none` köşesiz — kenardan kenara uzanan
+   * blokların (vitrinin günün fırsatı bandı, koleksiyon bantları) sayfadaki karşılığı da
+   * köşesizdir ve yuvarlatmak onları "kart" gibi gösterirdi. Ötekiler resmî yarıçap seti.
+   */
+  radius?: 'full' | 'none' | 'badge' | 'control' | 'card';
   testID?: string;
 }
 
@@ -55,7 +59,12 @@ export function Skeleton({ width, height, radius = 'full', testID }: SkeletonPro
       importantForAccessibility="no-hide-descendants"
       style={[
         styles.block,
-        { width, height, borderRadius: radius === 'full' ? height / 2 : theme.radius[radius], opacity: pulse },
+        {
+          width,
+          height,
+          borderRadius: radius === 'full' ? height / 2 : radius === 'none' ? 0 : theme.radius[radius],
+          opacity: pulse,
+        },
       ]}
     />
   );

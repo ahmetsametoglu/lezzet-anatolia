@@ -1,8 +1,8 @@
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Image, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
@@ -11,7 +11,13 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Tag } from '@/components/ui/tag';
-import { deviceLocale } from '@/lib/i18n/locale';
+import { useAppLocale } from '@/lib/i18n/app-locale';
+import {
+  getOnboardingSnapshot,
+  saveOnboarding,
+  subscribeOnboarding,
+} from '@/lib/onboarding/onboarding-store';
+import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { publishToast } from '@/lib/toast/toast-store';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
@@ -19,10 +25,12 @@ import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
+import { HomeSkeleton } from './home-skeleton';
 import messages from './messages.json';
+import { PostalCodeSheet } from './postal-code-sheet';
 import { useHome } from './use-home.hook';
 
 /*
@@ -30,10 +38,18 @@ import { useHome } from './use-home.hook';
   süren sipariş → günün fırsatı → fırsat rayı → koleksiyon bantları → vitrin rayı → tarif rayı →
   hazır paketler → Keşif ve profesyonel davetleri.
 
-  ── UI-ONLY (21.14 ilk etap) ────────────────────────────────────────────────
-  Vitrinin bir UCU YOK ve bu etapta backend işi ÜRETİLMEZ; ekran `home-fixture`tan besleniyor.
-  Veri PROP olarak alınıyor (varsayılanı fixture): uç geldiğinde bu satır bir hook çağrısına
-  döner ve ekranın gövdesi hiç değişmez. Testler de aynı kapıdan kendi hâllerini kuruyor.
+  ── VERİNİN ÜÇ KAYNAĞI ──────────────────────────────────────────────────────
+  · `/api/v1/home` (bantlar · seçki · FIRSATLAR · tarifler · paketler),
+  · `/api/v1/me` (selamlama adı, toptan rozeti),
+  · cihaz (`lib/onboarding` — teslimat bölgesi kodu) + `/places` (kodun şehri).
+  Kalan üç blok hâlâ fixture ve gerekçeleri `home-fixture` künyesinde (süren sipariş · geçen
+  sipariş · günün fırsatı). Veri PROP olarak alınıyor (varsayılanı fixture) ki testler kendi
+  hâllerini aynı kapıdan kursun.
+
+  ── AŞAĞI ÇEKEREK YENİLEME (kullanıcı isteği 09.08) ─────────────────────────
+  Vitrin uygulamanın açılış ekranı ve içeriği gün içinde değişiyor (fırsat biter, paket tükenir);
+  o yüzden hareket İKİ kaynağı birden tazeler — vitrin bölümlerini ve kimliği. Yenileme sırasında
+  ekran iskelete DÜŞMEZ: bölümler yerinde kalır, hareketin kendi göstergesi yeter (hook künyesi).
 
   ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
   1. **Onboarding (`ob`) ve toast ÇİZİLMEDİ.** İkisi de kabuk öğesidir, vitrinin parçası değil:
@@ -72,40 +88,84 @@ function greetingOf(t: Messages, hour: number, firstName: string | null): string
 }
 
 export function HomeScreen({ data = homeData() }: HomeScreenProps) {
-  const locale = deviceLocale();
+  const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
   const cart = useCart();
   const count = cartCount(cart);
 
-  const { customer: fixtureCustomer, liveOrder, lastOrder, flashDeal, offers } = data;
+  const { customer: fixtureCustomer, liveOrder, lastOrder, flashDeal } = data;
   /* KİMLİK GERÇEK OTURUMDAN (21.14c): ad `/me`den (ilk kelime — selamlama tam ad değil hitaptır),
-     toptan rozeti onaylı kurumsal müşteriden. PUAN ARTIK ÇİZİLMEZ: `/me` puan taşımıyor (puan
-     modülü ayrı) ve oturum gerçekken kurgu sayı basılamaz — alan bağlanınca rozet geri gelir.
-     Bildirim sayacı da aynı gerekçeyle 0 (altyapısı 21.13). Posta kodu hapı fixture'da: yer
-     çözümü/onboarding gelene dek son gerçek olmayan başlık parçası o. `error` misafir GİBİ
-     çizilir ama misafir sayılmaz (hook künyesi). */
+     toptan rozeti onaylı kurumsal müşteriden (ölçüt `useWholesale`da, sekme çatalıyla ORTAK).
+     PUAN ARTIK ÇİZİLMEZ: `/me` puan taşımıyor (puan modülü ayrı) ve oturum gerçekken kurgu sayı
+     basılamaz — alan bağlanınca rozet geri gelir. Bildirim sayacı da aynı gerekçeyle 0 (altyapısı
+     21.13). `error` misafir GİBİ çizilir ama misafir sayılmaz (hook künyesi). */
   const meState = useMe();
+  const wholesale = useWholesale();
   /* Ad HİÇ girilmemiş olabilir (e-postayla yeni açılan hesap: `name` boş dize) — boş ad, adsız
      selamlamadır; "İyi akşamlar, " diye yarım cümle kurulmaz. */
   const firstName = meState.status === 'ready' && meState.me !== null ? (meState.me.name.trim().split(/\s+/)[0] ?? '') : '';
+  const signedIn = meState.status === 'ready' && meState.me !== null;
   const customer = {
     ...fixtureCustomer,
     firstName: firstName === '' ? null : firstName,
-    wholesale: meState.status === 'ready' && meState.me !== null && meState.me.type === 'company' && meState.me.b2bApproved,
+    wholesale,
     points: null,
     unreadNotifications: 0,
   };
-  /* Bantlar + seçki + tarifler + paketler GERÇEK uçtan (21.14b — `/api/v1/home`); yüklenirken/
+  /* Bantlar + seçki + FIRSATLAR + tarifler + paketler GERÇEK uçtan (`/api/v1/home`); yüklenirken/
      hata anında bu bölümler çizilmez (vitrin tasarımında iskelet/hata hâli yok; gerekçe hook
-     künyesinde). Fixture'da kalanlar: kimlikli bölümler (selamlama/puan/sipariş — giriş akışı
-     bağlanınca) ve fırsatlar/flash (yer çözümü + kural; fixture künyesi). */
-  const home = useHome(locale);
+     künyesinde). Fixture'da kalanlar: kimlikli bölümler ve günün fırsatı (fixture künyesi). */
+
+  /* TESLİMAT BÖLGESİ — kaynak CİHAZ (onboarding'de yazılan kod), adı da gerçek uçtan (`/places`).
+     Fixture'daki sabit "67000 STRASBOURG" kalktı: kullanıcının kendi cevabı dururken uydurma bir
+     şehir yazmak, ekranın en görünür yerinde yalan söylemekti. Kod hiç girilmemişse (onboarding
+     atlandı) hap bir DAVET olur — boş bir yer adı basılmaz. */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const postalCode = onboarding?.postalCode ?? null;
+  const savedPlace = usePlaceResolution(postalCode ?? '');
+  const savedPlaceName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
+  const postalLabel =
+    postalCode === null ? null : savedPlaceName === null ? postalCode : `${postalCode} ${savedPlaceName.toLocaleUpperCase(locale)}`;
+
+  /* Vitrin okuması YERE bağlı: posta kodu `useHome`a geçer, sunucu depoyu çözer ve fırsat şeridi
+     ancak öyle dolar (ölçüldü 09.08 — kodsuz 0, 67000 ile 2). Çağrı bu yüzden posta kodunun
+     TANIMLANDIĞI satırdan sonra durur; kod değişince hook yeniden okur. */
+  const home = useHome(locale, postalCode);
   const bands = home.home?.bands ?? [];
   const featured = home.home?.featured ?? [];
+  const offers = home.home?.offers ?? [];
   const recipes = home.home?.recipes ?? [];
   const packages = home.home?.packages ?? [];
+
+  const [zipSheetOpen, setZipSheetOpen] = useState(false);
+  /* HAP HER HÂLDE ÇEKMECEYİ AÇAR (kullanıcı kararı 09.08) — v3'ün `pillTap` kuralından bilinçli
+     sapma.
+
+     Şablon girişli müşteride çekmece yerine "adresleriniz Hesap bölümünde" diyordu ve gerekçesi
+     makul görünüyordu: girişlinin gerçek adres kaydı var, buradaki yalnız bir bölge kodu. Ama
+     ölçülünce iki arıza çıktı (kullanıcı, cihaz 09.08):
+       1. Girişli müşteri vitrini BAŞKA bir bölge için gezemiyordu ("anneme göndersem ne çıkar").
+       2. Kayıtlı adresi OLMAYAN girişli müşteri hiçbir yerden bölge seçemiyordu — ne hap açılıyor
+          ne seçilecek adres var. Çıkışsız oda; fırsatlar da o yüzden hiç çözülmüyordu.
+
+     KURGU (kullanıcının tarifi, web'de zaten böyle): posta kodu bir GEZİNME MERCEĞİDİR, teslimat
+     kararı değil. Müşteri onu istediği gibi değiştirir; SEPETE gidince sepet gönderilecek ADRESE
+     göre güncellenir. İki bilgi ayrı sorulara cevap veriyor, o yüzden çelişmiyorlar — ve çekmece
+     bunu girişli müşteriye açıkça söyler (`t.zip.browsingOnly`). */
+  const openLocation = () => setZipSheetOpen(true);
+  const saveLocation = (code: string) => {
+    setZipSheetOpen(false);
+    /* Kaydın ÖTEKİ alanları korunur: bu çekmece yalnız posta kodunu değiştirir. Kayıt yoksa
+       (onboarding atlanmış olsa bile kapı geçilmiş demektir) `done: true` yazılır — aksi hâlde
+       bir sonraki açılış kullanıcıyı akışa geri fırlatırdı. */
+    /* Dil CANLI kaynaktan yazılır, kayıttaki eski değerden değil: `onboarding?.locale` akışın
+       İZİdir (onboarding'in yapıldığı andaki dil). Kullanıcı sonradan dilini değiştirdiyse onu geri
+       yazmak, ayarı sessizce eski hâline döndürürdü. */
+    void saveOnboarding({ done: true, locale, postalCode: code });
+    publishToast(t.zip.saved);
+  };
 
   /* Geri sayım — şablonun saniyelik sayacı. Kaynak `endsAtMs`; ekran yalnız "şimdi"yi tazeler,
      yani bitiş anı tek bir yerde durur ve her karede yeniden hesaplanmaz. */
@@ -117,6 +177,12 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   }, [flashDeal]);
 
   const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
+
+  /* İLK YÜK: sayfanın yerini iskelet tutar (kullanıcı isteği 09.08 — "vitrin sayfasını bire bir
+     kopyalasın"). Yalnız İLK yük: aşağı çekerek yenilemede hook `loading`e düşmez (künyesi),
+     bölümler yerinde kalır. Bütün kancalar bu satırın ÜSTÜNDE çağrılıyor; erken dönüş çağrı
+     sırasını bozmaz. */
+  if (home.status === 'loading') return <HomeSkeleton testID="home-skeleton" />;
 
   const header = (
     <View style={styles.header}>
@@ -136,16 +202,19 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             />
           )}
         </View>
-        {/* Konum hapı bugün bir SEÇİM AÇMIYOR: posta kodu sayfası (v3 `shZip`) bu etabın kapsamı
-            dışında. Yine de dokunulabilir ve hesaba götürüyor — adres orada yönetiliyor. */}
+        {/* Konum hapı artık ÇEKMECE açıyor (v3 `shZip` — kullanıcı isteği 09.08). */}
         <PressableSurface
-          onPress={() => router.push('/account')}
+          onPress={openLocation}
           feedback="opacity"
           compact
-          accessibilityLabel={t.header.locationLabel.replace('{postal}', customer.postalLabel)}
+          accessibilityLabel={
+            postalLabel === null ? t.header.locationEmptyLabel : t.header.locationLabel.replace('{postal}', postalLabel)
+          }
           testID="home-location"
         >
-          <Text style={styles.location}>{t.header.location.replace('{postal}', customer.postalLabel)}</Text>
+          <Text style={styles.location}>
+            {postalLabel === null ? t.header.locationEmpty : t.header.location.replace('{postal}', postalLabel)}
+          </Text>
         </PressableSurface>
       </View>
       <View style={styles.headerActions}>
@@ -292,25 +361,25 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               <Tag
                 label={t.offers.discount.replace(
                   '{n}',
-                  String(Math.round((1 - offer.priceCents / offer.wasCents) * 100)),
+                  String(Math.round((1 - (offer.priceCents ?? 0) / offer.wasCents) * 100)),
                 )}
                 rotate={-7}
                 shadow
               />
             </View>
-            {/* Foto varsa foto, yoksa baş harf — kitin tek dairesi (harf-only hâli fixture'ın
-                foto taşımadığı ilk günden kalmaydı; v3 fırsat kartı da daire FOTO çizer). */}
+            {/* Foto varsa foto, yoksa baş harf — kitin tek dairesi (v3 fırsat kartı daire FOTO çizer). */}
             <CirclePhoto
               size={customerMetrics.offerPhoto}
               initial={offer.name.slice(0, 1)}
               initialFontSize={theme.text['h2-sm']}
               initialStyle={styles.offerInitial}
-              photoUri={offer.photoUri}
+              photoUri={offer.image.url}
             />
             <View style={styles.offerText}>
               <Text style={styles.offerName}>{offer.name}</Text>
               <View style={styles.offerPriceRow}>
-                <Text style={styles.offerPrice}>{formatPrice(offer.priceCents, locale)}</Text>
+                {/* Fiyatsız ürün fırsat rayına giremez (uç süzer); `?? 0` tip daraltmasıdır. */}
+                <Text style={styles.offerPrice}>{formatPrice(offer.priceCents ?? 0, locale)}</Text>
                 <Text style={styles.offerWas}>{formatPrice(offer.wasCents, locale)}</Text>
               </View>
               <Text style={styles.offerLimit}>{t.offers.limited}</Text>
@@ -322,7 +391,23 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} testID="home-scroll">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={home.refreshing}
+            /* Hareket İKİ kaynağı tazeler: vitrin bölümleri ve kimlik (ad/toptan rozeti). Gösterge
+               vitrinin hâline bağlı — kimlik okuması sessiz ve hızlıdır, ayrı bir gösterge
+               göstermek kullanıcıya iki ayrı yükleme varmış izlenimi verirdi. */
+            onRefresh={() => {
+              home.refresh();
+              meState.refresh();
+            }}
+            tintColor={theme.colors.olive}
+          />
+        }
+        testID="home-scroll"
+      >
         {header}
         {liveOrderBand}
         {lastOrderBand}
@@ -366,13 +451,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {featured.length === 0 ? null : (
           <View style={styles.section}>
             <View style={styles.sectionPad}>
-              <SectionHeader
-                eyebrow={t.featured.eyebrow}
-                title={t.featured.title}
-                actionLabel={t.featured.action}
-                onActionPress={() => router.push('/catalog')}
-                testID="home-featured-header"
-              />
+              {/* Başlığın sağındaki "Tüm katalog ›" bağlantısı KALKTI (v3 yeni sürüm): kapı artık
+                  rayın SONUNDAKİ kart — parmağın zaten kaydırdığı yerde duruyor. */}
+              <SectionHeader eyebrow={t.featured.eyebrow} title={t.featured.title} testID="home-featured-header" />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.circleRail}>
               {featured.map((product) => (
@@ -386,6 +467,29 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   testID={`home-featured-${product.slug}`}
                 />
               ))}
+              {/* Rayın sonundaki KATALOG kartı (v3:130) — ürün dairesinin ikizi ama ürün DEĞİL:
+                  fiyat çipi yerine ok rozeti, fotoğraf yerine katalog ikonu taşır. Bu yüzden
+                  `ProductCircleCard` kullanılmadı; o kart fiyatı ZORUNLU tutar (künyesi) ve
+                  fiyatsız bir kart doğurmak, ürün kartını "bazen ürün değil"e çevirirdi. */}
+              <PressableSurface
+                onPress={() => router.push('/catalog')}
+                feedback="scale"
+                style={styles.railEndCard}
+                accessibilityLabel={t.featured.allCatalogLabel}
+                testID="home-featured-all"
+              >
+                <View style={styles.catalogCircleFrame}>
+                  <View style={styles.catalogCircle}>
+                    {/* v3:133 ikonu 46; kitin büyük dekoratif ikon durağı `emptyIcon` (44) tam
+                        bu aralık için açıldı (metrics künyesi: "tasarım 40–46"). */}
+                    <Icon name="catalog" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />
+                  </View>
+                  <View style={styles.catalogArrow}>
+                    <Tag label="→" rotate={4} shadow />
+                  </View>
+                </View>
+                <Text style={styles.railEndLabel}>{t.featured.allCatalog}</Text>
+              </PressableSurface>
             </ScrollView>
           </View>
         )}
@@ -415,6 +519,29 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   <Text style={styles.tileMeta}>{t.recipes.meta.replace('{n}', String(recipe.itemCount + recipe.pantryCount))}</Text>
                 </PhotoTile>
               ))}
+              {/* Rayın sonundaki KOYU kart (v3:155) → tarifler listesi. Tasarımın başlığı
+                  "{n} tarif daha" diyor ama o sayı SÖZLEŞMEDE YOK: `/home` yalnız rayın kendi
+                  dilimini taşıyor, toplam tarif sayısını değil. Uydurma bir sayı yazmaktansa
+                  sayısız cümle kuruldu ("Tüm tarifler") — alan geldiği gün metin tek satırda
+                  sayılı hâline döner (terfi ihtiyacı raporlandı). */}
+              <PressableSurface
+                onPress={() => router.push('/recipes')}
+                feedback="scale"
+                style={styles.recipesMoreCard}
+                accessibilityLabel={t.recipes.moreLabel}
+                testID="home-recipes-all"
+              >
+                <View style={styles.recipesMoreTop}>
+                  <Text style={styles.recipesMoreEyebrow}>{t.recipes.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+                  <Text style={styles.recipesMoreTitle}>{t.recipes.moreTitle}</Text>
+                </View>
+                <View style={styles.recipesMoreAction}>
+                  <View style={styles.recipesMoreArrow}>
+                    <Text style={styles.recipesMoreArrowGlyph}>→</Text>
+                  </View>
+                  <Text style={styles.recipesMoreLabel}>{t.recipes.moreAction}</Text>
+                </View>
+              </PressableSurface>
             </ScrollView>
           </View>
         )}
@@ -481,6 +608,15 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
           testID="home-cart-fab"
         />
       </View>
+
+      <PostalCodeSheet
+        visible={zipSheetOpen}
+        code={postalCode}
+        signedIn={signedIn}
+        copy={t.zip}
+        onSave={saveLocation}
+        onClose={() => setZipSheetOpen(false)}
+      />
     </View>
   );
 }
@@ -769,6 +905,87 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space['4xl'],
     paddingHorizontal: theme.space['6xl'],
     paddingTop: theme.space.lg,
+  },
+
+  /* ── Rayların sonundaki "tümünü gör" kartları ───────────────────────────── */
+  /** Ürün dairesiyle aynı hizada durur (kitin kart yerleşimi: ortalı, 6'lık ara). */
+  railEndCard: {
+    alignItems: 'center',
+    gap: theme.space.sm,
+  },
+  catalogCircleFrame: {
+    width: theme.size.circleLg,
+    height: theme.size.circleLg,
+    position: 'relative',
+  },
+  catalogCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.size.circleLg / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors['sand-250'],
+  },
+  /** Fiyat çipiyle AYNI köşe (v3:135) — kart ürün dairesinin ikizi olduğu için hiza da aynı. */
+  catalogArrow: {
+    position: 'absolute',
+    right: -theme.space['2xs'],
+    bottom: -theme.space['2xs'],
+  },
+  railEndLabel: {
+    fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['h1--line-height'],
+    color: theme.colors.ink,
+    textAlign: 'center',
+  },
+  /** Tarif rayının koyu kapanış kartı — tarif kartıyla aynı ölçü (v3:155). */
+  recipesMoreCard: {
+    width: customerMetrics.recipeCardWidth,
+    height: customerMetrics.recipeCardHeight,
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors.ink,
+    padding: theme.space['2xl'],
+    justifyContent: 'space-between',
+  },
+  recipesMoreTop: { gap: theme.space.sm },
+  recipesMoreEyebrow: {
+    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
+    fontSize: theme.text.eyebrow,
+    letterSpacing: theme.text.eyebrow * 0.18,
+    color: theme.colors['olive-light'],
+  },
+  recipesMoreTitle: {
+    fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
+    // v3:158 — 26; sayfa başlığı kademesiyle aynı durak.
+    fontSize: theme.text['page-title-sm'],
+    lineHeight: theme.text['page-title-sm'] * theme.text['h1--line-height'],
+    color: theme.colors['on-image'],
+  },
+  recipesMoreAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+  },
+  recipesMoreArrow: {
+    width: customerMetrics.railMoreArrow,
+    height: customerMetrics.railMoreArrow,
+    borderRadius: customerMetrics.railMoreArrow / 2,
+    borderWidth: theme.border.base,
+    borderColor: theme.colors['olive-light'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recipesMoreArrowGlyph: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['icon-sm'],
+    lineHeight: theme.text['icon-sm'],
+    color: theme.colors['olive-light'],
+  },
+  recipesMoreLabel: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text.badge,
+    color: theme.colors['on-image'],
   },
   tileTitle: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],

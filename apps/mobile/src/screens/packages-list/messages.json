@@ -1,0 +1,56 @@
+{
+  "tr": {
+    "eyebrow": "Hazır paketler",
+    "title": "Sofrayı biz kuralım, siz buyur edin",
+    "body": "Bayram, kahvaltı ya da kalabalık bir akşam — hazırladığımız paketler tek fiyata gelir, içeriği bellidir.",
+    "meta": "{n} çeşit · TEK FİYAT",
+    "cta": "Paketi incele ›",
+    "open": "{name} paketini aç",
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "Paketleri getiremedik. Bağlantınızı kontrol edip tekrar deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "empty": {
+      "title": "Şu an hazır paket yok",
+      "body": "Yeni paketler hazırlanıyor. O zamana dek katalogdan kendi sofranızı kurabilirsiniz.",
+      "cta": "Kataloğa göz at"
+    }
+  },
+  "fr": {
+    "eyebrow": "Paniers prêts",
+    "title": "Nous dressons la table, vous n'avez qu'à inviter",
+    "body": "Une fête, un petit-déjeuner ou un grand dîner — nos paniers arrivent à prix unique, contenu annoncé.",
+    "meta": "{n} produits · PRIX UNIQUE",
+    "cta": "Voir le panier ›",
+    "open": "Ouvrir le panier {name}",
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Nous n'avons pas pu charger les paniers. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
+    "empty": {
+      "title": "Aucun panier pour le moment",
+      "body": "De nouveaux paniers se préparent. En attendant, composez votre table depuis le catalogue.",
+      "cta": "Parcourir le catalogue"
+    }
+  },
+  "de": {
+    "eyebrow": "Fertige Pakete",
+    "title": "Wir decken den Tisch, Sie laden ein",
+    "body": "Fest, Frühstück oder ein großer Abend — unsere Pakete kommen zum Festpreis, mit klarem Inhalt.",
+    "meta": "{n} Sorten · FESTPREIS",
+    "cta": "Paket ansehen ›",
+    "open": "Paket {name} öffnen",
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Die Pakete konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
+    "empty": {
+      "title": "Derzeit keine fertigen Pakete",
+      "body": "Neue Pakete sind in Vorbereitung. Bis dahin stellen Sie Ihre Tafel im Katalog selbst zusammen.",
+      "cta": "Katalog ansehen"
+    }
+  }
+}

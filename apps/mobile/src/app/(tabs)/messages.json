@@ -3,7 +3,8 @@
     "tabs": {
       "index": "Vitrin",
       "catalog": "Katalog",
-      "ideas": "Fikirler",
+      "packages": "Paketler",
+      "orders": "Siparişler",
       "account": "Hesap"
     }
   },
@@ -11,7 +12,8 @@
     "tabs": {
       "index": "Vitrine",
       "catalog": "Catalogue",
-      "ideas": "Idées",
+      "packages": "Paniers",
+      "orders": "Commandes",
       "account": "Compte"
     }
   },
@@ -19,7 +21,8 @@
     "tabs": {
       "index": "Schaufenster",
       "catalog": "Katalog",
-      "ideas": "Ideen",
+      "packages": "Pakete",
+      "orders": "Bestellungen",
       "account": "Konto"
     }
   }

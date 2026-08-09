@@ -20,8 +20,6 @@ import type { CustomerOrderStatus } from '@lezzet/types';
 export interface HomeCustomerView {
   /** Giriş yapılmışsa ad (selamlama için); misafirde `null`. */
   firstName: string | null;
-  /** Başlıktaki konum hapı — "67000 STRASBOURG". */
-  postalLabel: string;
   /** Puan rozeti; B2B ve misafirde `null` (şablonun kendi kuralı: puan yalnız B2C'de). */
   points: number | null;
   /** Toptan (B2B) rozeti. */
@@ -52,21 +50,20 @@ export interface HomeFlashDealView {
   endsAtMs: number;
 }
 
-export interface HomeOfferView {
-  slug: string;
-  name: string;
-  priceCents: number;
-  wasCents: number;
-  photoUri: string | null;
-}
-
 /*
   BANTLAR · SEÇKİ · TARİFLER · PAKETLER BURADA DEĞİL (21.14b): sözleşmeleri geldi (`HomeBand` ·
   `CatalogProduct` · `HomeRecipe` · `HomePackage`, `@lezzet/types`) ve ekran onları GERÇEK uçtan
   okuyor (`use-home.hook`) — künyenin "sözleşme geldiğinde bu tipler silinir" sözü o bölümler için
   yerine getirildi. Kalanlar hâlâ fixture ve sebepleri ayrı: kimlikli bölümler (selamlama · puan ·
-  süren sipariş · bildirim) giriş akışının bağlanmasını bekliyor; fırsatlar yer çözümü terfisine
-  kadar uçtan BOŞ dönüyor; günün fırsatının seçim kuralı henüz hiçbir yüzeyde kararlaştırılmadı.
+  süren sipariş · bildirim) giriş akışının bağlanmasını bekliyor; günün fırsatının seçim kuralı
+  henüz hiçbir yüzeyde kararlaştırılmadı.
+
+  FIRSATLAR DA ARTIK BURADA DEĞİL (09.08): kullanıcı isteği üzerine bölümün gerçekten bağlı olup
+  olmadığı ölçüldü — bağlı DEĞİLDİ, sözleşmesi (`HomeOfferSchema`) hazır olduğu hâlde ekran
+  fixture'daki iki kartı çiziyordu. Bugün `/home`un `offers` dizisinden okunuyor. Uç o diziyi
+  şimdilik BOŞ döndürüyor (`home.ts` yeri `UNKNOWN_PLACE` ile çözüyor: teklif tutarı yer
+  bilinmeden hiç okunmaz) — yani bölüm çizilmiyor. Uydurma iki kart basmak, olmayan bir indirimi
+  varmış gibi göstermekti; boş bırakmak arızayı görünür kılıyor (terfi ihtiyacı raporlandı).
 */
 export interface HomeData {
   customer: HomeCustomerView;
@@ -75,7 +72,6 @@ export interface HomeData {
   /** Süren sipariş YOKKEN gösterilen "tekrarla" bandı (şablon ikisini birlikte çizmez). */
   lastOrder: HomeLastOrderView | null;
   flashDeal: HomeFlashDealView | null;
-  offers: HomeOfferView[];
 }
 
 /** Fırsatın bitişi: şablonda "bugünün sonu" (23:59:59). */
@@ -92,14 +88,13 @@ function endOfToday(): number {
 
 /**
  * Şablonun kendi vitrini (v3 `V.homeCats` · `V.vitrin` · `V.rcps` · `V.pkgsHome`) — giriş yapmış
- * B2C müşteri, süren bir sipariş, günün fırsatı ve iki fırsat kartı.
+ * B2C müşteri, süren bir sipariş ve günün fırsatı.
  * `overrides` ile her test/demo kendi hâlini kurar (misafir, boş vitrin, B2B).
  */
 export function homeData(overrides: Partial<HomeData> = {}): HomeData {
   return {
     customer: {
       firstName: 'Ayşe',
-      postalLabel: '67000 STRASBOURG',
       points: 145,
       wholesale: false,
       unreadNotifications: 2,
@@ -117,10 +112,6 @@ export function homeData(overrides: Partial<HomeData> = {}): HomeData {
       photoUri: demoPhoto('fistikli-baklava.jpeg'),
       endsAtMs: endOfToday(),
     },
-    offers: [
-      { slug: 'antep-fistigi', name: 'Antep Fıstığı', priceCents: 1490, wasCents: 1890, photoUri: demoPhoto('artisan-lemon-cake.webp') },
-      { slug: 'kunefelik-peynir', name: 'Künefelik Peynir', priceCents: 640, wasCents: 790, photoUri: demoPhoto('kunefe.jpeg') },
-    ],
     ...overrides,
   };
 }

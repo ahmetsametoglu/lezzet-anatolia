@@ -42,6 +42,8 @@ export const ICON_PATHS = {
   home: { paths: ['M3 11.5 12 4l9 7.5M5.5 10V20h13v-10'] },
   catalog: { paths: ['M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'] },
   orders: { paths: ['M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4'] },
+  /** Hazır paketler sekmesi — açılı kutu (v3:1883 `IC.pkgs`, yeni sürümle geldi). */
+  packages: { paths: ['M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9'] },
   account: { paths: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20c1.5-3.8 5.5-4.8 7.5-4.8s6 1 7.5 4.8'] },
 
   /* ── Katalog başlığı (v3:179, 183) ───────────────────────────────────────── */
@@ -77,6 +79,20 @@ export const ICON_PATHS = {
   },
   /** "Tekrar dene" oku — v2'nin üç hata bloğunda da aynı geometri (v2:51, 280, 499). */
   refresh: { paths: ['M23 4v6h-6', 'M20.49 15a9 9 0 1 1-2.12-9.36L23 10'] },
+
+  /* ── KEŞİF TURU (v3 `vKesif` — yeni sürüm: v3:376, 393, 396, 429) ────────────────────
+     `undo` `refresh`in aynası DEĞİL: şablon geri alma okunu SAAT YÖNÜNÜN TERSİNE ve tek
+     `path` olarak çiziyor; `refresh` ise iki parçalı ve ters yönlü. Aynı kavramın iki
+     çizimi olduğu için ikisi de duruyor — birini ötekine bağlamak geometriyi yeniden
+     yazmak olurdu (dosyanın kendi kuralı). */
+  /** Geri al — açık daire + sol üstte geri dönüş oku (başlık çubuğunun sağ yuvası). */
+  undo: { paths: ['M4 12a8 8 0 1 0 2.5-5.8M4 3.5V7.5h4'] },
+  /** Sola kaydırma ipucunun oku. */
+  'arrow-left': { paths: ['M19 12H5M11 6l-6 6 6 6'] },
+  /** Sağa kaydırma ipucunun oku. */
+  'arrow-right': { paths: ['M5 12h14M13 6l6 6-6 6'] },
+  /** Çarpı — "başka sefer" oy düğmesi. */
+  close: { paths: ['M6 6l12 12M18 6 6 18'] },
 
   /* ── KURYE bölümü (Operasyon Mobil v2:111-114 · 121-122 · 99 · 206) ──────────────────
      Altı ikon da v2'den BİREBİR; sadeleştirilmedi, yeniden çizilmedi (dosyanın kendi kuralı).

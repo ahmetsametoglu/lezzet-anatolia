@@ -14,7 +14,9 @@
       "notifications": "Bildirimler",
       "notificationsUnread": "Bildirimler, {n} okunmamış",
       "location": "{postal} ▾",
-      "locationLabel": "Teslimat bölgesi: {postal}"
+      "locationLabel": "Teslimat bölgesi: {postal}",
+      "locationEmpty": "Teslimat bölgenizi seçin ▾",
+      "locationEmptyLabel": "Teslimat bölgenizi seçin"
     },
     "liveOrder": {
       "title": "Siparişiniz {status} · {reference}",
@@ -50,12 +52,16 @@
     "featured": {
       "eyebrow": "Vitrindekiler",
       "title": "Bu haftanın seçkisi",
-      "action": "Tüm katalog ›"
+      "allCatalog": "Tüm katalog",
+      "allCatalogLabel": "Tüm kataloğu aç"
     },
     "recipes": {
       "eyebrow": "Sofradan fikirler",
       "title": "Bu sofra nasıl kurulur?",
-      "meta": "{n} malzeme · Tarifi gör ›"
+      "meta": "{n} malzeme · Tarifi gör ›",
+      "moreTitle": "Tüm tarifler",
+      "moreAction": "Tümünü gör",
+      "moreLabel": "Tüm tarifleri gör"
     },
     "packages": {
       "eyebrow": "Hazır paketler",
@@ -71,6 +77,19 @@
     },
     "cart": {
       "open": "Sepeti aç, {n} ürün"
+    },
+    "zip": {
+      "title": "Teslimat bölgeniz",
+      "field": "Posta kodu",
+      "placeholder": "Posta kodu — örn. 67000",
+      "save": "Kaydet",
+      "saved": "Teslimat bölgeniz güncellendi ✓",
+      "insideNote": "Harika — kapınıza ücretsiz teslim ediyoruz! Kapıda ödeme de kullanabilirsiniz.",
+      "shippingNote": "Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız; 60 € üzeri kargo ücretsiz.",
+      "ambiguousNote": "Bu kod birden çok yerde geçerli — teslimat adresinizi girerken netleştireceğiz.",
+      "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
+      "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız.",
+      "browsingOnly": "Bu kod yalnız vitrini gezmek içindir; siparişte kayıtlı adresiniz kullanılır."
     }
   },
   "fr": {
@@ -88,7 +107,9 @@
       "notifications": "Notifications",
       "notificationsUnread": "Notifications, {n} non lues",
       "location": "{postal} ▾",
-      "locationLabel": "Zone de livraison : {postal}"
+      "locationLabel": "Zone de livraison : {postal}",
+      "locationEmpty": "Choisir votre zone ▾",
+      "locationEmptyLabel": "Choisir votre zone de livraison"
     },
     "liveOrder": {
       "title": "Votre commande est {status} · {reference}",
@@ -124,12 +145,16 @@
     "featured": {
       "eyebrow": "En vitrine",
       "title": "La sélection de la semaine",
-      "action": "Tout le catalogue ›"
+      "allCatalog": "Tout le catalogue",
+      "allCatalogLabel": "Ouvrir tout le catalogue"
     },
     "recipes": {
       "eyebrow": "Idées de table",
       "title": "Comment dresser cette table ?",
-      "meta": "{n} ingrédients · Voir la recette ›"
+      "meta": "{n} ingrédients · Voir la recette ›",
+      "moreTitle": "Toutes les recettes",
+      "moreAction": "Tout voir",
+      "moreLabel": "Voir toutes les recettes"
     },
     "packages": {
       "eyebrow": "Paniers prêts",
@@ -145,6 +170,19 @@
     },
     "cart": {
       "open": "Ouvrir le panier, {n} articles"
+    },
+    "zip": {
+      "title": "Votre zone de livraison",
+      "field": "Code postal",
+      "placeholder": "Code postal — ex. 67000",
+      "save": "Enregistrer",
+      "saved": "Zone de livraison mise à jour ✓",
+      "insideNote": "Parfait — nous livrons gratuitement à votre porte ! Le paiement à la livraison est aussi possible.",
+      "shippingNote": "Expédition sous chaîne du froid en 2–4 jours ouvrés ; frais de port offerts dès 60 €.",
+      "ambiguousNote": "Ce code correspond à plusieurs lieux — nous préciserons lors de la saisie de l'adresse.",
+      "unknownNote": "Nous n'avons pas trouvé ce code — pouvez-vous vérifier la saisie ?",
+      "unresolvedNote": "Nous ne pouvons pas encore préciser la livraison pour ce code ; nous verrons cela à la commande.",
+      "browsingOnly": "Ce code sert uniquement à parcourir la boutique ; votre adresse enregistrée sera utilisée pour la commande."
     }
   },
   "de": {
@@ -162,7 +200,9 @@
       "notifications": "Benachrichtigungen",
       "notificationsUnread": "Benachrichtigungen, {n} ungelesen",
       "location": "{postal} ▾",
-      "locationLabel": "Liefergebiet: {postal}"
+      "locationLabel": "Liefergebiet: {postal}",
+      "locationEmpty": "Liefergebiet wählen ▾",
+      "locationEmptyLabel": "Ihr Liefergebiet wählen"
     },
     "liveOrder": {
       "title": "Ihre Bestellung ist {status} · {reference}",
@@ -198,12 +238,16 @@
     "featured": {
       "eyebrow": "Im Schaufenster",
       "title": "Die Auswahl der Woche",
-      "action": "Ganzer Katalog ›"
+      "allCatalog": "Ganzer Katalog",
+      "allCatalogLabel": "Ganzen Katalog öffnen"
     },
     "recipes": {
       "eyebrow": "Ideen für den Tisch",
       "title": "Wie deckt man diesen Tisch?",
-      "meta": "{n} Zutaten · Rezept ansehen ›"
+      "meta": "{n} Zutaten · Rezept ansehen ›",
+      "moreTitle": "Alle Rezepte",
+      "moreAction": "Alle ansehen",
+      "moreLabel": "Alle Rezepte ansehen"
     },
     "packages": {
       "eyebrow": "Fertige Pakete",
@@ -219,6 +263,19 @@
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"
+    },
+    "zip": {
+      "title": "Ihr Liefergebiet",
+      "field": "Postleitzahl",
+      "placeholder": "Postleitzahl — z. B. 67000",
+      "save": "Speichern",
+      "saved": "Liefergebiet aktualisiert ✓",
+      "insideNote": "Wunderbar — wir liefern kostenlos bis an Ihre Tür! Auch Zahlung bei Lieferung ist möglich.",
+      "shippingNote": "Versand mit geschützter Kühlkette in 2–4 Werktagen; ab 60 € versandkostenfrei.",
+      "ambiguousNote": "Dieser Code gilt für mehrere Orte — wir klären das bei der Adresseingabe.",
+      "unknownNote": "Diesen Code konnten wir nicht finden — bitte die Eingabe prüfen.",
+      "unresolvedNote": "Für diesen Code können wir die Lieferart noch nicht sagen; wir klären das bei der Bestellung.",
+      "browsingOnly": "Diese Postleitzahl dient nur zum Stöbern; für die Bestellung wird Ihre gespeicherte Adresse verwendet."
     }
   }
 }

@@ -57,7 +57,9 @@ export default function AccountRoute() {
         phone: me.phone ?? '',
         company: null,
         referralCode: me.referralCode,
-        preferredLanguage: me.preferredLanguage,
+        /* DİL BURADAN GEÇMEZ (09.08): uygulamanın dili tek kaynaktan okunur (`lib/i18n/app-locale`)
+           ve `/me`deki tercih o kaynağa `use-me.hook` üzerinden ulaşır — ekrana ikinci bir yoldan
+           taşımak, çipin arayüzden farklı bir dili işaretlemesine kapı açardı. */
         marketingEmail: me.marketingConsent?.email?.granted ?? false,
         marketingWhatsApp: me.marketingConsent?.whatsapp?.granted ?? false,
       })}

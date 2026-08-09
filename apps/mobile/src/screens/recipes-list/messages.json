@@ -1,0 +1,53 @@
+{
+  "tr": {
+    "title": "Sofradan Fikirler",
+    "body": "Tarifi seçin, malzemelerini tek dokunuşla sepete atın. Evinizde olanları listeden çıkarabilirsiniz.",
+    "back": "Geri",
+    "meta": "{n} malzeme · Tarifi gör ›",
+    "open": "{name} tarifini aç",
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "Tarifleri getiremedik. Bağlantınızı kontrol edip tekrar deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "empty": {
+      "title": "Henüz tarif yok",
+      "body": "Tarifler hazırlanıyor. Bu arada kataloğu gezebilirsiniz.",
+      "cta": "Kataloğa göz at"
+    }
+  },
+  "fr": {
+    "title": "Idées de table",
+    "body": "Choisissez une recette et ajoutez ses ingrédients au panier en un geste. Retirez de la liste ce que vous avez déjà.",
+    "back": "Retour",
+    "meta": "{n} ingrédients · Voir la recette ›",
+    "open": "Ouvrir la recette {name}",
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Nous n'avons pas pu charger les recettes. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
+    "empty": {
+      "title": "Pas encore de recettes",
+      "body": "Les recettes arrivent bientôt. En attendant, parcourez le catalogue.",
+      "cta": "Parcourir le catalogue"
+    }
+  },
+  "de": {
+    "title": "Ideen für den Tisch",
+    "body": "Wählen Sie ein Rezept und legen Sie die Zutaten mit einem Tipp in den Warenkorb. Vorhandenes streichen Sie einfach aus der Liste.",
+    "back": "Zurück",
+    "meta": "{n} Zutaten · Rezept ansehen ›",
+    "open": "Rezept {name} öffnen",
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Die Rezepte konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
+    "empty": {
+      "title": "Noch keine Rezepte",
+      "body": "Rezepte sind in Vorbereitung. Schauen Sie sich solange im Katalog um.",
+      "cta": "Katalog ansehen"
+    }
+  }
+}

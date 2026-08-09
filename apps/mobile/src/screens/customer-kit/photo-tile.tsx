@@ -1,24 +1,27 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { type DimensionValue, Image, Text, View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { type DimensionValue, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PhotoSurface } from './photo-surface';
 
 /*
-  FOTOĞRAF KARTI — "büyük görsel + altında koyulaşan skrim + üstünde yazı" kalıbı. v3'te üç yerde
-  aynı kurgu: tarif kartı (v3:136), hazır paket kartı (v3:150) ve paket detayının kahramanı.
+  FOTOĞRAF KARTI — "büyük görsel + altında koyulaşan skrim + üstünde yazı" kalıbı. v3'te dört
+  yerde aynı kurgu: tarif kartı (v3:136), hazır paket kartı (v3:150), paket detayının kahramanı
+  ve tarifler listesinin tam genişlik kartı (v3:912).
 
   KİTTEKİ `ProductPhotoCard`IN İKİZİ DEĞİL: o KARE bir ÜRÜN kartıdır (fiyat çipi zorunlu, tükendi
   ve indirim rozetleri, ad iki satıra kırpılı) — yani ürün sözleşmesine bağlı. Bu ise boş bir
   YÜZEY: altına ne yazılacağını çağıran söyler. İkisini birleştirmek, ürün kartına "ama bazen
   fiyat yok, bazen ad yok" diye üç bayrak eklemek olurdu.
 
-  FOTOĞRAF YOKKEN baş harf çizilir (şablonun `noPh` varyantı) — `CirclePhoto`nun DAİRE karşılığı
-  burada dikdörtgendir, o yüzden o komponent kullanılamadı.
+  FOTOĞRAFIN KENDİSİ `PhotoSurface`TA (kitin iç ilkeli): "foto varsa foto, yoksa baş harf" +
+  skrim + kırpma orada tek kopya duruyor; bu komponent onun BASILABİLİR KART biçimidir. İkinci
+  biçim paket listesi kartıdır (fotoğraf bölgesi + altında beyaz gövde) ve o da aynı yüzeyi kullanır.
 
-  SKRİM token'dan (`gradient.photoBottom`): fotoğrafın alt kenarını karartıp üstündeki yazıyı
-  okunur kılan geçiş. Dokunuşu geçirir (`pointerEvents="none"`), yoksa kartın kendisi basılmazdı.
+  ROZET İKİ KÖŞEDE: sol üst DURUM (tarifin süresi, "Tükendi"), sağ üst FİYAT — tasarımın kendi
+  ayrımı (v3:878 paket fiyatı sağ üstte, v3:915 tarif süresi sol üstte). İkisi de yuvadır; hangi
+  rozetin hangi köşeye gideceğini kart değil çağıran bilir.
 */
 
 interface PhotoTileProps {
@@ -30,6 +33,8 @@ interface PhotoTileProps {
   initial: string;
   /** Sol üst köşedeki rozet yuvası (tarif kartının süresi). */
   topBadge?: ReactNode;
+  /** Sağ üst köşedeki rozet yuvası (paket kartının fiyatı). */
+  topRightBadge?: ReactNode;
   /** Alt kenardaki içerik — skrimin üstünde durur. */
   children: ReactNode;
   onPress: () => void;
@@ -44,13 +49,12 @@ export function PhotoTile({
   photoUri,
   initial,
   topBadge,
+  topRightBadge,
   children,
   onPress,
   accessibilityLabel,
   testID,
 }: PhotoTileProps) {
-  const { theme } = useUnistyles();
-
   return (
     <PressableSurface
       onPress={onPress}
@@ -59,16 +63,11 @@ export function PhotoTile({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
-      {photoUri === null ? (
-        <View style={styles.placeholder}>
-          <Text style={styles.initial}>{initial}</Text>
-        </View>
-      ) : (
-        <Image source={{ uri: photoUri }} style={styles.image} accessibilityIgnoresInvertColors />
-      )}
-      <LinearGradient {...theme.gradient.photoBottom} style={styles.scrim} pointerEvents="none" />
-      {topBadge === undefined ? null : <View style={styles.topBadge}>{topBadge}</View>}
-      <View style={styles.caption}>{children}</View>
+      <PhotoSurface photoUri={photoUri} initial={initial} scrim style={styles.photo}>
+        {topBadge === undefined ? null : <View style={styles.topBadge}>{topBadge}</View>}
+        {topRightBadge === undefined ? null : <View style={styles.topRightBadge}>{topRightBadge}</View>}
+        <View style={styles.caption}>{children}</View>
+      </PhotoSurface>
     </PressableSurface>
   );
 }
@@ -77,32 +76,18 @@ const styles = StyleSheet.create((theme) => ({
   tile: {
     borderRadius: theme.radius.card,
     overflow: 'hidden',
-    backgroundColor: theme.colors['sand-300'],
   },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors['sand-300'],
-  },
-  initial: {
-    fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
-    fontSize: theme.text['h1-sm'],
-    color: theme.colors.terracotta,
-  },
-  scrim: {
-    position: 'absolute',
-    inset: 0,
-  },
+  /** Yüzey kartın tamamını doldurur; köşe yarıçapı dıştaki kırpmadan gelir. */
+  photo: { flex: 1 },
   topBadge: {
     position: 'absolute',
     top: theme.space.lg,
     left: theme.space.lg,
+  },
+  topRightBadge: {
+    position: 'absolute',
+    top: theme.space.xl,
+    right: theme.space.xl,
   },
   caption: {
     position: 'absolute',

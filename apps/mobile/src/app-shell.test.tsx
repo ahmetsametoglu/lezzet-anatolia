@@ -47,24 +47,25 @@ describe('uygulama kabuğu', () => {
     expect(app).toHavePathname('/');
     expect(screen.getAllByRole('tab')).toHaveLength(4);
     // Etiketler sekme sözlüğünden (messages.json/tr) — sıra TASARIMIN sırası, alfabetik değil.
+    // Üçüncü yuva PERAKENDE hâlidir (v3:1883): oturumsuz kabukta `useWholesale` false döner.
     expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
       'Vitrin',
       'Katalog',
-      'Siparişler',
+      'Paketler',
       'Hesap',
     ]);
     expect(screen.getByRole('tab', { name: 'Vitrin', selected: true })).toBeOnTheScreen();
   });
 
-  it('sekmeye dokunmak rotayı değiştirir — Siparişlerim ekranı açılır', async () => {
+  it('sekmeye dokunmak rotayı değiştirir — Paketler ekranı açılır', async () => {
     const { app } = await renderShell('/');
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Siparişler' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Paketler' }));
 
-    expect(app).toHavePathname('/orders');
-    expect(screen.getByRole('tab', { name: 'Siparişler', selected: true })).toBeOnTheScreen();
-    // Sekme etiketi "Siparişler", ekranın kendi başlığı "Siparişlerim" (v3:718) — ikisi ayrı sözlük.
-    expect(screen.getByRole('header', { name: 'Siparişlerim' })).toBeOnTheScreen();
+    expect(app).toHavePathname('/packages');
+    expect(screen.getByRole('tab', { name: 'Paketler', selected: true })).toBeOnTheScreen();
+    // Sekme etiketi "Paketler", ekranın kendi başlığı tasarımın cümlesi (v3:862) — ayrı sözlükler.
+    expect(screen.getByRole('header', { name: 'Sofrayı biz kuralım, siz buyur edin' })).toBeOnTheScreen();
   });
 
   it('seçili sekmeye tekrar dokunmak rotayı OYNATMAZ (layout `state.index` kapısı)', async () => {

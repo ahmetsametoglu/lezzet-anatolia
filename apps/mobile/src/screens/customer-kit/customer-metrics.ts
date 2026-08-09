@@ -31,6 +31,14 @@ export const customerMetrics = {
   recipeCardHeight: 280,
   packageCardHeight: 172,
 
+  /** Vitrin raylarının sonundaki "tümünü gör" kartındaki ok dairesi (v3:161 — 34). */
+  railMoreArrow: 34,
+
+  /** Tarifler listesindeki tam genişlik kart (v3:912 — 168). */
+  recipeListCardHeight: 168,
+  /** Paketler listesindeki kartın fotoğraf bölgesi (v3:875 — 198). */
+  packageListPhotoHeight: 198,
+
   /** Günün fırsatı bandındaki daire fotoğraf (v3:85 — 132). */
   flashPhoto: 132,
 
