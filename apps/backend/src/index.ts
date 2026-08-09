@@ -79,6 +79,19 @@ app.onError((err, c) => {
 
 app.get('/health', (c) => c.json({ ok: true, service: 'lezzet-backend' }));
 
+/**
+ * Bilinmeyen yol → **JSON 404** (Hono'nun varsayılanı düz metin "404 Not Found").
+ *
+ * Kozmetik değil, ölçülmüş bir arıza düzeltmesi (09.08): MCP istemcisi bağlanırken önce OAuth
+ * keşfi deniyor (`/.well-known/oauth-*`). O uçlar bizde YOK ve olmamalı — bu sunucu header'lı
+ * Bearer ile çalışıyor. Ama istemci 404 gövdesini JSON diye ayrıştırmaya kalkıyor, düz metinde
+ * `SyntaxError` fırlatıyor ve kullanıcıya bunu **"SDK auth failed"** diye gösteriyor: anahtar ve
+ * sunucu sapasağlamken "kimlik doğrulanamadı" diyen, yanlış yere baktıran bir hata.
+ *
+ * JSON gövde ile istemci "burada OAuth yok" sonucuna temiz varır ve header'lı yola döner.
+ */
+app.notFound((c) => c.json({ error: 'not_found', path: c.req.path }, 404));
+
 // MCP yönetici asistanı — deneme dilimi (22.1): salt-okuma üç araç, .env anahtarıyla.
 // Yerel istemci (Claude Code) doğrudan bağlanır; claude.ai connector'ı canlıya çıkışı bekler
 // (AI_ADMIN_ASSISTANT §11). Tüm metodlar tek handler'da: streamable HTTP, POST/GET/DELETE ayrımını
