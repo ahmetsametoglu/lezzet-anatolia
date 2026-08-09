@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { toCents } from '@lezzet/helper';
 import {
   ALLERGEN_LABELS,
-  DECLARATION_GAP_LABELS,
   DISCOUNT_SCOPE_LABELS,
   DISCOUNT_TRIGGER_LABELS,
   NUTRITION_KEYS,
@@ -15,7 +14,6 @@ import {
   type AssistantProposalKind,
   type BatchOfferPayload,
   type BundleDraftPayload,
-  type DeclarationGap,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
   type MoneyMovementPayload,
@@ -488,7 +486,7 @@ function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
         </PreviewNotice>
       ) : null}
 
-      <GapNotice gaps={payload.remainingGaps} uncertain={payload.uncertainFields} />
+      <UncertainNotice uncertain={payload.uncertainFields} />
     </PreviewBody>
   );
 }
@@ -496,7 +494,7 @@ function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
 /**
  * Yeni ürün — ambalajdan (22.6).
  *
- * Tamamlama önizlemesiyle aynı gövdeyi paylaşır (`DeclarationBlocks` · `GapNotice`) ve bu bilinçli:
+ * Tamamlama önizlemesiyle aynı gövdeyi paylaşır (`DeclarationBlocks` · `UncertainNotice`) ve bu bilinçli:
  * ikisi de aynı soruya cevap veriyor — *"sisteme ne yazılıyor, neyi eksik bırakıyor?"*. Fark
  * kimlikte: yeni kayıt kategorisini, tarih tipini, raf ömrünü, KDV'sini ve en az bir boyunu da
  * getiriyor; karşılaştıracak "bugünkü hâl" ise yok (ortada henüz kayıt yok).
@@ -519,9 +517,11 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
             label: 'Raf ömrü',
             value: payload.shelfLifeDays === null ? 'belirtilmedi' : `${num(payload.shelfLifeDays)} gün`,
           },
-          // Oran ondalık geliyor (0,055), operatör yüzde okuyor. **Ondalık ŞART:** Fransa'nın gıda
-          // oranı %5,5 ve tam sayıya yuvarlansaydı ekranda "%6" yazardı — var olmayan bir oran.
-          { label: 'KDV', value: percent(payload.vatRate * 100, 1) },
+          // **Oran YÜZDEDİR, kesir değil** — `product.vat_rate` veride `5.50` duruyor ve motor da
+          // öyle okuyor (`removeVat`: `1 + vatRate/100`). Bir tur burada 100 ile çarpılıyordu ve
+          // canlı bir öneride ekrana **%550** yazdı (ölçüldü). Ondalık ŞART: Fransa'nın gıda oranı
+          // %5,5 ve tam sayıya yuvarlansaydı "%6" görünürdü — var olmayan bir oran.
+          { label: 'KDV', value: percent(payload.vatRate, 1) },
           { label: 'Boylar', value: payload.variants.map((v) => resolveLocalizedText(v.label)).join(' · ') },
         ]}
       />
@@ -538,7 +538,7 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
       ) : null}
 
       <DeclarationBlocks fields={pickDeclaration(payload)} />
-      <GapNotice gaps={payload.remainingGaps} uncertain={payload.uncertainFields} />
+      <UncertainNotice uncertain={payload.uncertainFields} />
 
       {/* ⑦ Emniyet bir UYARI değil, bir RAHATLAMA (brief): kayıt aday doğuyor, satışa çıkarmak bu
           ekranın işi değil. Kutuya konsaydı riskle aynı ağırlıkta okunurdu. */}
@@ -755,35 +755,25 @@ function localizedSummary(value: unknown): string {
 }
 
 /**
- * **Onaylarsan kayıt tam olur mu** + asistanın emin olmadığı alanlar (22.6'nın iki karar girdisi).
+ * Asistanın **emin olmadığı** alanlar (22.6'nın ikinci karar girdisi).
  *
- * İkisi de ARAÇTA hesaplanıyor, ekranda değil: eksiklik ölçütü `missingDeclarations` (tek kaynak),
- * belirsizlik ise modelin kendi okuması. Ekran yalnız gösteriyor — kendi ölçütünü kursaydı ürün
- * ekranındaki uyarı kutusuyla ayrışırdı.
+ * ── TAMLIK BURADA YAZILMIYOR, VE BU BİLİNÇLİ ────────────────────────────────
+ * Bir tur burada da "onaylasanız da şu beyanlar eksik kalacak" kutusu vardı; ölçünce aynı cümlenin
+ * kartın "Uygulanınca ne olur" bölümünde zaten kurulduğu görüldü (`kind-meta.impactFor`, tamlık
+ * ölçütü motordan). İki kutu aynı şeyi söylüyordu — ve her yerde uyaran bir ekran hiçbir yerde
+ * uyarmamış olur. Tek kaynak künyede kaldı; ekran onu yeniden hesaplamıyor.
+ *
+ * Belirsizlik ise künyenin söylemediği şey: hangi alanı net okuyamadığı modelin kendi beyanı ve
+ * ekranın gözü oraya yönlendirmesi bütün alanları tek tek okutmaktan değerli — patron ürünü zaten
+ * biliyor, ona "şuraya bak" demek yeter.
  */
-function GapNotice({ gaps, uncertain }: { gaps: readonly DeclarationGap[]; uncertain: readonly string[] }) {
-  const uncertainLabels = uncertain.map((f) => DECLARATION_FIELD_LABEL[f] ?? f);
+function UncertainNotice({ uncertain }: { uncertain: readonly string[] }) {
+  if (uncertain.length === 0) return null;
   return (
-    <>
-      {gaps.length > 0 ? (
-        <PreviewNotice tone="amber" title="Onaylasanız da eksik kalacak">
-          {gaps.map((g) => DECLARATION_GAP_LABELS[g]).join(' · ')} — ürün beyanı tamamlanana kadar aday kalır ve
-          satışa çıkamaz.
-        </PreviewNotice>
-      ) : (
-        // İyi haber KUTU DEĞİL: `PreviewNotice` bu yüzeyde uyarıdır (risk ya da geri alınamaz etki).
-        // "Eksik kalmıyor" bir uyarı değil, bir teyit — kutuya konsaydı gözü aynı ağırlıkta çekerdi.
-        <span className="font-ops-body text-ops-sm font-medium leading-relaxed text-ops-olive-dark">
-          Onaylarsanız yasal beyanın eksiği kalmıyor. Satışa çıkarmak yine ayrı bir karar — asistan ürünü yayına
-          alamaz.
-        </span>
-      )}
-      {uncertainLabels.length > 0 ? (
-        <PreviewNotice tone="red" title="Asistan bu alanlardan emin değil">
-          {uncertainLabels.join(' · ')} — ambalajdan net okunamadı. Onaylamadan önce bu alanları gözden geçirin.
-        </PreviewNotice>
-      ) : null}
-    </>
+    <PreviewNotice tone="red" title="Asistan bu alanlardan emin değil">
+      {uncertain.map((f) => DECLARATION_FIELD_LABEL[f] ?? f).join(' · ')} — ambalajdan net okunamadı. Onaylamadan
+      önce bu alanları gözden geçirin.
+    </PreviewNotice>
   );
 }
 

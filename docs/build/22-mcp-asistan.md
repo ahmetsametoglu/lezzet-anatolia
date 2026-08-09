@@ -349,8 +349,16 @@ satırında.
     - **⑦ Emniyet bir RAHATLAMA olarak yazıldı**, uyarı olarak değil: ürün aday doğar, satışa
       çıkarmak bu ekranın işi değil, fiyat/stok/görsel öneriye dahil değil.
     - **Ölçüldü** (`ui:shot`, açık + koyu): gerçek bir tamamlama önerisinde fark tablosu + 14'lü
-      ızgara + künye; yeni üründe kimlik künyesi. Bir kusur ölçümde çıktı ve düzeltildi: KDV tam
-      sayıya yuvarlanıp **%5,5 yerine %6** yazıyordu — var olmayan bir oran.
+      ızgara + künye; yeni üründe kimlik künyesi. **Üç kusur ölçümde çıktı:**
+      ① KDV tam sayıya yuvarlanıp %5,5 yerine "%6" yazıyordu; ② sonra canlı bir öneride **%550**
+      çıktı — `vatRate`ı kesir sanıp 100 ile çarpmıştım, oysa `product.vat_rate` veride YÜZDE
+      duruyor (`5.50`) ve motor da öyle okuyor (`removeVat`: `1 + vatRate/100`); ③ besin künyesi
+      sütunu sayıyı kesiyordu (`394 kca`) — kesilen bir sayı yanlış bir sayıdır.
+    - **Tamlık cümlesi ÖNİZLEMEDE YAZILMIYOR ve bu bilinçli bir geri adım:** bir tur burada da
+      "onaylasanız da eksik kalacak" kutusu vardı; ölçünce aynı cümlenin künye kutusunda zaten
+      kurulduğu görüldü (`kind-meta.impactFor`). Kendi kopyam silindi — her yerde uyaran ekran
+      hiçbir yerde uyarmamış olur. Bedeli: cümle kartın ALTINDA, brief'in istediği gibi en üstte
+      değil. Daha görünür istenirse doğru hamle ikinci kopya değil, künye kutusunun yeri.
     - **İki duplikasyon kapandı:** eksik beyan etiketleri (`DECLARATION_GAP_LABELS`) ve besin kalemi
       adları/birimleri (`NUTRITION_LABELS`) `@lezzet/types`e, enum'ların yanına taşındı; ürün
       önizlemesi ile künye formu artık aynı sözlükten okuyor.
