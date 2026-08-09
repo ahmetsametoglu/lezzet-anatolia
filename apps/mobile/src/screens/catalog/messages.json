@@ -31,6 +31,9 @@
       "soldOut": "Tükendi",
       "offer": "Fırsat",
       "options": "{n} seçenek"
+    },
+    "cart": {
+      "open": "Sepeti aç, {n} ürün"
     }
   },
   "fr": {
@@ -65,6 +68,9 @@
       "soldOut": "Épuisé",
       "offer": "Offre",
       "options": "{n} options"
+    },
+    "cart": {
+      "open": "Ouvrir le panier, {n} articles"
     }
   },
   "de": {
@@ -99,6 +105,9 @@
       "soldOut": "Ausverkauft",
       "offer": "Angebot",
       "options": "{n} Optionen"
+    },
+    "cart": {
+      "open": "Warenkorb öffnen, {n} Artikel"
     }
   }
 }

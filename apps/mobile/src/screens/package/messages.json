@@ -1,0 +1,98 @@
+{
+  "tr": {
+    "header": "Hazır Paket",
+    "back": "Geri",
+    "share": "Paylaş",
+    "priceSuffix": "tek paket fiyatı · KDV dahil",
+    "noShip": "Yalnız bölge içi kapıya teslim — kargoya verilmez",
+    "contents": {
+      "title": "Pakette neler var?",
+      "open": "{name} ürününe git",
+      "note": "İçindekiler ve alerjen bilgileri için her ürünün kendi sayfasına bakabilirsiniz. Paket bütün olarak eklenir; içeriği değiştirilemez."
+    },
+    "cta": {
+      "add": "Paketi sepete ekle"
+    },
+    "stepper": {
+      "decrease": "{name} adedini azalt",
+      "increase": "{name} adedini artır"
+    },
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "İnternet bağlantınızı kontrol edin. Bağlantı gelince kaldığınız yerden devam edersiniz.",
+      "retry": "Tekrar dene"
+    },
+    "notFound": {
+      "title": "Paket bulunamadı",
+      "body": "Paket satıştan kalkmış ya da bağlantı eskimiş olabilir.",
+      "back": "Geri dön"
+    },
+    "cart": {
+      "open": "Sepeti aç, {n} ürün"
+    }
+  },
+  "fr": {
+    "header": "Panier prêt",
+    "back": "Retour",
+    "share": "Partager",
+    "priceSuffix": "prix du panier complet · TVA incluse",
+    "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
+    "contents": {
+      "title": "Que contient ce panier ?",
+      "open": "Voir le produit {name}",
+      "note": "Pour les ingrédients et les allergènes, consultez la page de chaque produit. Le panier s'ajoute en entier ; son contenu ne peut pas être modifié."
+    },
+    "cta": {
+      "add": "Ajouter le panier"
+    },
+    "stepper": {
+      "decrease": "Réduire la quantité de {name}",
+      "increase": "Augmenter la quantité de {name}"
+    },
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "retry": "Réessayer"
+    },
+    "notFound": {
+      "title": "Panier introuvable",
+      "body": "Ce panier n'est peut-être plus en vente, ou le lien a expiré.",
+      "back": "Revenir"
+    },
+    "cart": {
+      "open": "Ouvrir le panier, {n} articles"
+    }
+  },
+  "de": {
+    "header": "Fertiges Paket",
+    "back": "Zurück",
+    "share": "Teilen",
+    "priceSuffix": "Preis für das ganze Paket · inkl. MwSt.",
+    "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
+    "contents": {
+      "title": "Was ist im Paket?",
+      "open": "Zum Produkt {name}",
+      "note": "Zutaten und Allergene finden Sie auf der Seite jedes Produkts. Das Paket wird als Ganzes hinzugefügt; der Inhalt kann nicht geändert werden."
+    },
+    "cta": {
+      "add": "Paket in den Korb"
+    },
+    "stepper": {
+      "decrease": "Menge von {name} verringern",
+      "increase": "Menge von {name} erhöhen"
+    },
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Prüfen Sie Ihre Internetverbindung. Sobald sie wieder da ist, geht es weiter.",
+      "retry": "Erneut versuchen"
+    },
+    "notFound": {
+      "title": "Paket nicht gefunden",
+      "body": "Das Paket ist möglicherweise nicht mehr im Verkauf, oder der Link ist veraltet.",
+      "back": "Zurück"
+    },
+    "cart": {
+      "open": "Warenkorb öffnen, {n} Artikel"
+    }
+  }
+}

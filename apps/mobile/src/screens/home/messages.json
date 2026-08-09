@@ -54,7 +54,6 @@
     "recipes": {
       "eyebrow": "Sofradan fikirler",
       "title": "Bu sofra nasıl kurulur?",
-      "time": "{n} dk",
       "meta": "{n} malzeme · Tarifi gör ›"
     },
     "packages": {
@@ -128,7 +127,6 @@
     "recipes": {
       "eyebrow": "Idées de table",
       "title": "Comment dresser cette table ?",
-      "time": "{n} min",
       "meta": "{n} ingrédients · Voir la recette ›"
     },
     "packages": {
@@ -202,7 +200,6 @@
     "recipes": {
       "eyebrow": "Ideen für den Tisch",
       "title": "Wie deckt man diesen Tisch?",
-      "time": "{n} Min.",
       "meta": "{n} Zutaten · Rezept ansehen ›"
     },
     "packages": {

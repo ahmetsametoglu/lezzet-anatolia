@@ -18,9 +18,11 @@ import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
+import { useMe } from '@/screens/customer-kit/use-me.hook';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import messages from './messages.json';
+import { useHome } from './use-home.hook';
 
 /*
   VİTRİN (v3 `vHome`) — uygulamanın açılış ekranı. Şablonun sırası birebir korundu: başlık →
@@ -76,7 +78,33 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const cart = useCart();
   const count = cartCount(cart);
 
-  const { customer, liveOrder, lastOrder, flashDeal, offers, collections, featured, recipes, packages } = data;
+  const { customer: fixtureCustomer, liveOrder, lastOrder, flashDeal, offers } = data;
+  /* KİMLİK GERÇEK OTURUMDAN (21.14c): ad `/me`den (ilk kelime — selamlama tam ad değil hitaptır),
+     toptan rozeti onaylı kurumsal müşteriden. PUAN ARTIK ÇİZİLMEZ: `/me` puan taşımıyor (puan
+     modülü ayrı) ve oturum gerçekken kurgu sayı basılamaz — alan bağlanınca rozet geri gelir.
+     Bildirim sayacı da aynı gerekçeyle 0 (altyapısı 21.13). Posta kodu hapı fixture'da: yer
+     çözümü/onboarding gelene dek son gerçek olmayan başlık parçası o. `error` misafir GİBİ
+     çizilir ama misafir sayılmaz (hook künyesi). */
+  const meState = useMe();
+  /* Ad HİÇ girilmemiş olabilir (e-postayla yeni açılan hesap: `name` boş dize) — boş ad, adsız
+     selamlamadır; "İyi akşamlar, " diye yarım cümle kurulmaz. */
+  const firstName = meState.status === 'ready' && meState.me !== null ? (meState.me.name.trim().split(/\s+/)[0] ?? '') : '';
+  const customer = {
+    ...fixtureCustomer,
+    firstName: firstName === '' ? null : firstName,
+    wholesale: meState.status === 'ready' && meState.me !== null && meState.me.type === 'company' && meState.me.b2bApproved,
+    points: null,
+    unreadNotifications: 0,
+  };
+  /* Bantlar + seçki + tarifler + paketler GERÇEK uçtan (21.14b — `/api/v1/home`); yüklenirken/
+     hata anında bu bölümler çizilmez (vitrin tasarımında iskelet/hata hâli yok; gerekçe hook
+     künyesinde). Fixture'da kalanlar: kimlikli bölümler (selamlama/puan/sipariş — giriş akışı
+     bağlanınca) ve fırsatlar/flash (yer çözümü + kural; fixture künyesi). */
+  const home = useHome(locale);
+  const bands = home.home?.bands ?? [];
+  const featured = home.home?.featured ?? [];
+  const recipes = home.home?.recipes ?? [];
+  const packages = home.home?.packages ?? [];
 
   /* Geri sayım — şablonun saniyelik sayacı. Kaynak `endsAtMs`; ekran yalnız "şimdi"yi tazeler,
      yani bitiş anı tek bir yerde durur ve her karede yeniden hesaplanmaz. */
@@ -299,79 +327,98 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {flashBand}
         {offerRail}
 
-        <View style={styles.collections}>
-          <Text style={[styles.sectionEyebrow, styles.collectionsEyebrow]}>{t.collections.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
-          {/* Daireler bantların İÇİNDE değil, yığının ÜSTÜNDE (aşağıdaki katman): v3'te daire
-              komşu bantlara taşar; RN'de kardeş sırası z-sırası olduğundan bunu ancak sonradan
-              çizilen bir üst katman verebilir (kullanıcı bulgusu 08.08). */}
-          <View style={styles.bandStack}>
-            {collections.map((collection, index) => (
-              <CollectionBand
-                key={collection.slug}
-                name={collection.name}
-                subtitle={collection.subtitle}
-                countLabel={t.collections.count.replace('{n}', String(collection.productCount))}
-                index={index}
-                photoUri={collection.photoUri}
-                onPress={() => router.push('/catalog')}
-                testID={`home-collection-${collection.slug}`}
-                photoInOverlay
+        {bands.length === 0 ? null : (
+          <View style={styles.collections}>
+            <Text style={[styles.sectionEyebrow, styles.collectionsEyebrow]}>{t.collections.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+            {/* Daireler bantların İÇİNDE değil, yığının ÜSTÜNDE (aşağıdaki katman): v3'te daire
+                komşu bantlara taşar; RN'de kardeş sırası z-sırası olduğundan bunu ancak sonradan
+                çizilen bir üst katman verebilir (kullanıcı bulgusu 08.08). */}
+            <View style={styles.bandStack}>
+              {bands.map((band, index) => (
+                <CollectionBand
+                  key={band.slug}
+                  name={band.name}
+                  subtitle={band.subtitle}
+                  countLabel={t.collections.count.replace('{n}', String(band.productCount))}
+                  index={index}
+                  photoUri={band.image.url}
+                  onPress={() =>
+                    /* Kategori bandı katalogu O SÜZGEÇLE açar; koleksiyon kesiti mobil katalogda
+                       henüz yok — koleksiyon bandı kataloğun köküne gider (BEKLEYEN(21.14) —
+                       katalog koleksiyon süzgeci, doc 21 kalan listesinde). */
+                    band.kind === 'category'
+                      ? router.push({ pathname: '/catalog', params: { category: band.slug } })
+                      : router.push('/catalog')
+                  }
+                  testID={`home-collection-${band.slug}`}
+                  photoInOverlay
+                />
+              ))}
+              {bands.map((band, index) => (
+                <CollectionPhotoOverlay key={`photo-${band.slug}`} name={band.name} index={index} photoUri={band.image.url} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {featured.length === 0 ? null : (
+          <View style={styles.section}>
+            <View style={styles.sectionPad}>
+              <SectionHeader
+                eyebrow={t.featured.eyebrow}
+                title={t.featured.title}
+                actionLabel={t.featured.action}
+                onActionPress={() => router.push('/catalog')}
+                testID="home-featured-header"
               />
-            ))}
-            {collections.map((collection, index) => (
-              <CollectionPhotoOverlay key={`photo-${collection.slug}`} name={collection.name} index={index} photoUri={collection.photoUri} />
-            ))}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.circleRail}>
+              {featured.map((product) => (
+                <ProductCircleCard
+                  key={product.slug}
+                  name={product.name}
+                  /* Fiyatsız ürünü uç zaten süzer (satışa kapalı raya giremez); `?? 0` tip daraltması. */
+                  priceLabel={formatPrice(product.priceCents ?? 0, locale)}
+                  photoUri={product.image.url}
+                  onPress={() => openProduct(product.slug)}
+                  testID={`home-featured-${product.slug}`}
+                />
+              ))}
+            </ScrollView>
           </View>
-        </View>
+        )}
 
-        <View style={styles.section}>
-          <View style={styles.sectionPad}>
-            <SectionHeader
-              eyebrow={t.featured.eyebrow}
-              title={t.featured.title}
-              actionLabel={t.featured.action}
-              onActionPress={() => router.push('/catalog')}
-              testID="home-featured-header"
-            />
+        {recipes.length === 0 ? null : (
+          <View style={styles.section}>
+            <View style={styles.sectionPad}>
+              <SectionHeader eyebrow={t.recipes.eyebrow} title={t.recipes.title} testID="home-recipes-header" />
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
+              {recipes.map((recipe) => (
+                <PhotoTile
+                  key={recipe.slug}
+                  width={customerMetrics.recipeCardWidth}
+                  height={customerMetrics.recipeCardHeight}
+                  photoUri={recipe.image.url}
+                  initial={recipe.name.slice(0, 1)}
+                  /* `duration` hazır metindir ("35 dk" — 05.16, cümleyi cihaz kurmaz); null →
+                     rozet çizilmez (girilmemiş süreye rozet uydurulmaz). */
+                  topBadge={recipe.duration === null ? undefined : <Tag label={recipe.duration} tone="cream" rotate={-3} />}
+                  onPress={() => router.push({ pathname: '/recipe/[slug]', params: { slug: recipe.slug } })}
+                  accessibilityLabel={recipe.name}
+                  testID={`home-recipe-${recipe.slug}`}
+                >
+                  <Text style={styles.tileTitle}>{recipe.name}</Text>
+                  {/* "N malzeme" = bizim ürün satırları + evden malzemeler (sözleşme ikisini ayrı taşır). */}
+                  <Text style={styles.tileMeta}>{t.recipes.meta.replace('{n}', String(recipe.itemCount + recipe.pantryCount))}</Text>
+                </PhotoTile>
+              ))}
+            </ScrollView>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.circleRail}>
-            {featured.map((product) => (
-              <ProductCircleCard
-                key={product.slug}
-                name={product.name}
-                priceLabel={formatPrice(product.priceCents, locale)}
-                photoUri={product.photoUri}
-                onPress={() => openProduct(product.slug)}
-                testID={`home-featured-${product.slug}`}
-              />
-            ))}
-          </ScrollView>
-        </View>
+        )}
 
-        <View style={styles.section}>
-          <View style={styles.sectionPad}>
-            <SectionHeader eyebrow={t.recipes.eyebrow} title={t.recipes.title} testID="home-recipes-header" />
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
-            {recipes.map((recipe) => (
-              <PhotoTile
-                key={recipe.slug}
-                width={customerMetrics.recipeCardWidth}
-                height={customerMetrics.recipeCardHeight}
-                photoUri={recipe.photoUri}
-                initial={recipe.name.slice(0, 1)}
-                topBadge={<Tag label={t.recipes.time.replace('{n}', String(recipe.minutes))} tone="cream" rotate={-3} />}
-                onPress={() => router.push({ pathname: '/recipe/[slug]', params: { slug: recipe.slug } })}
-                accessibilityLabel={recipe.name}
-                testID={`home-recipe-${recipe.slug}`}
-              >
-                <Text style={styles.tileTitle}>{recipe.name}</Text>
-                <Text style={styles.tileMeta}>{t.recipes.meta.replace('{n}', String(recipe.ingredientCount))}</Text>
-              </PhotoTile>
-            ))}
-          </ScrollView>
-        </View>
-
+        {packages.length === 0 ? null : (
+          <>
         <View style={styles.sectionPad}>
           <Text style={styles.sectionEyebrow}>{t.packages.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
         </View>
@@ -380,7 +427,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             <PhotoTile
               key={pack.slug}
               height={customerMetrics.packageCardHeight}
-              photoUri={pack.photoUri}
+              photoUri={pack.image.url}
               initial={pack.name.slice(0, 1)}
               onPress={() => router.push({ pathname: '/package/[slug]', params: { slug: pack.slug } })}
               accessibilityLabel={pack.name}
@@ -402,6 +449,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             </PhotoTile>
           ))}
         </View>
+          </>
+        )}
 
         <View style={styles.invites}>
           <DashedInvite

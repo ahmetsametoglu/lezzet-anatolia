@@ -8,6 +8,9 @@
 // çağıracağı) bir orkestrasyon olması. Tek yüzeyin işi kendi uygulamasında kalır.
 export { requestOtpCode, verifyOtpCode } from './auth/otp';
 export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
+// Müşteri profil güncellemesi (21.14c) — web hesap formunun kuralları paket hâlinde; web köprü.
+export { updateCustomerProfile } from './customer/profile';
+export type { UpdateCustomerProfileOutcome } from './customer/profile';
 
 // ── Vitrin (katalog) orkestrasyonu — terfi 21.6 ─────────────────────────────
 // Kaynağı `apps/web/lib/storefront`ti; ticari bağlam (fiyat · stok · teklif · aile · benzer) orada

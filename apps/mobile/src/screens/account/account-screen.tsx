@@ -6,13 +6,19 @@ import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
+import { TextField } from '@/components/ui/text-field';
+import { updateMe } from '@/lib/api/me';
+import { signOut } from '@/lib/auth/sign-out';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
@@ -72,6 +78,38 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
   const [points, setPoints] = useState(data.points);
   const [coupons, setCoupons] = useState<AccountCouponView[]>(data.coupons);
 
+  /* Profil çekmecesi (v3 `shPf`) — GERÇEK kayıt (21.14c): taslak alanlar açılışta karttan dolar,
+     Kaydet `PATCH /me`ye gider; başarı `publishMe` ile yayınlanır (kart ve vitrin selamlaması
+     aynı anda döner), adlı retler (`name_required` · `phone_invalid` · `phone_taken`) cümleye
+     çevrilip çekmecede söylenir. */
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draftPhone, setDraftPhone] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const openProfileSheet = () => {
+    setDraftName(data.name === data.email ? '' : data.name);
+    setDraftPhone(data.phone);
+    setProfileError(null);
+    setProfileSheetOpen(true);
+  };
+
+  const saveProfile = () => {
+    setProfileSaving(true);
+    setProfileError(null);
+    void updateMe({ name: draftName, phone: draftPhone.trim() === '' ? null : draftPhone }).then((result) => {
+      setProfileSaving(false);
+      if (result.error !== null) {
+        const known = result.error as keyof Messages['edit']['errors'];
+        setProfileError(t.edit.errors[known] ?? t.edit.errors.unexpected);
+        return;
+      }
+      publishMe(result.data);
+      setProfileSheetOpen(false);
+    });
+  };
+
   const couponValueLabel = formatPrice(COUPON_VALUE_CENTS, locale);
 
   if (!signedIn) {
@@ -112,11 +150,12 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
           <View style={styles.profileText}>
             <Text style={styles.profileName}>{data.name}</Text>
             <Text style={styles.profileMeta}>{data.email}</Text>
-            <Text style={styles.profileMeta}>{data.phone}</Text>
+            {/* Telefon girilmemişse satır çizilmez (gerçek hesapta alan boş olabilir — 21.14c). */}
+            {data.phone === '' ? null : <Text style={styles.profileMeta}>{data.phone}</Text>}
           </View>
           <TextAction
             label={t.profile.edit}
-            onPress={() => router.push('/account/edit')}
+            onPress={openProfileSheet}
             accessibilityHint={t.profile.editLabel}
             testID="account-edit"
           />
@@ -213,20 +252,24 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
           />
         </View>
 
-        <View style={styles.block}>
-          <Text style={styles.blockTitle}>{t.addresses.title}</Text>
-          {addresses.map((address) => (
-            <AddressCard
-              key={address.id}
-              address={address}
-              copy={t.addresses}
-              onMakeDefault={() => makeDefault(address.id)}
-              onEdit={() => router.push('/account/edit')}
-              testID={`account-address-${address.id}`}
-            />
-          ))}
-          <TextAction label={t.addresses.add} onPress={() => router.push('/account/edit')} testID="account-address-add" />
-        </View>
+        {/* Adres DÜZENLEME/EKLEME bu dilimde bilerek yok: hedefi olan tek yer (ayrı düzenleme
+            sayfası) kullanıcı kararıyla söküldü ve v3'ün adres çekmecesi (`shAddr`) adres uçlarıyla
+            birlikte gelecek (doc 21.14 kalanlar) — kaydetmeyen bir form çizmek yalan olurdu.
+            Bölüm adres VARKEN listeler (varsayılan yapma gerçek davranış), yokken hiç çizilmez. */}
+        {addresses.length === 0 ? null : (
+          <View style={styles.block}>
+            <Text style={styles.blockTitle}>{t.addresses.title}</Text>
+            {addresses.map((address) => (
+              <AddressCard
+                key={address.id}
+                address={address}
+                copy={t.addresses}
+                onMakeDefault={() => makeDefault(address.id)}
+                testID={`account-address-${address.id}`}
+              />
+            ))}
+          </View>
+        )}
 
         <View style={styles.block}>
           <Text style={styles.blockTitle}>{t.language.title}</Text>
@@ -277,14 +320,78 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
         </View>
 
         <View style={styles.logoutRow}>
-          <TextAction label={t.logout} onPress={() => router.push('/login')} tone="terracotta" testID="account-logout" />
+          {/* Gerçek çıkış (21.14c): oturum cihazdan silinir, `useMe` dinleyicisi vitrini misafire
+              döndürür; sekme yerinde kalır ("oturumsuz kullanım = müşteri gezinmesi", 02-mimari §4).
+              Çıkış hatası yutulMAZ ama ekrana da taşınmaz: depo temizliği deterministik
+              (`clearStoredSession`), müşteri için sonuç aynı — çıkmıştır. */}
+          <TextAction
+            label={t.logout}
+            onPress={() => {
+              void signOut();
+            }}
+            tone="terracotta"
+            testID="account-logout"
+          />
         </View>
       </ScrollView>
+
+      {/* ── Profil çekmecesi (v3 `shPf`, v3:253-260) — üç alan + WhatsApp notu + Kaydet ── */}
+      <BottomSheet
+        visible={profileSheetOpen}
+        title={t.edit.title}
+        onClose={() => setProfileSheetOpen(false)}
+        testID="account-profile-sheet"
+      >
+        <View style={styles.sheetForm}>
+          <TextField
+            value={draftName}
+            onChangeText={(value) => {
+              setDraftName(value);
+              setProfileError(null);
+            }}
+            accessibilityLabel={t.edit.nameLabel}
+            placeholder={t.edit.namePlaceholder}
+            testID="profile-name"
+          />
+          {/* E-posta SALT OKUNUR (v3'te yazılabilir görünür): e-posta kimliğin kendisidir (auth
+              anahtarı) — değişimi yeni adrese kod doğrulatan ayrı bir akış ister; sessizce
+              yazılabilir göstermek kaydetmeyecek bir söz olurdu. */}
+          <TextField
+            value={data.email}
+            onChangeText={() => undefined}
+            editable={false}
+            accessibilityLabel={t.edit.emailLabel}
+            placeholder={t.edit.emailPlaceholder}
+            testID="profile-email"
+          />
+          <TextField
+            value={draftPhone}
+            onChangeText={(value) => {
+              setDraftPhone(value);
+              setProfileError(null);
+            }}
+            accessibilityLabel={t.edit.phoneLabel}
+            placeholder={t.edit.phonePlaceholder}
+            helperText={t.edit.phoneNote}
+            testID="profile-phone"
+          />
+          {profileError === null ? null : <Note description={profileError} tone="terracotta" testID="profile-error" />}
+          <PrimaryButton
+            label={profileSaving ? t.edit.saving : t.edit.save}
+            onPress={saveProfile}
+            disabled={profileSaving}
+            testID="profile-save"
+          />
+        </View>
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  sheetForm: {
+    gap: theme.space.lg,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],

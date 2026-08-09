@@ -132,6 +132,22 @@ export function removeProduct(id: string): void {
   publish({ ...state, products: state.products.filter((product) => product.id !== id) });
 }
 
+/**
+ * Hazır paketi sepete ekler; aynı paket zaten varsa ADEDİNİ artırır (`addProduct`un aynı kuralı —
+ * v3 `addPkg` de böyle: `cartPkgs`ta satır varsa `qty` toplanır, yeni satır açılmaz).
+ */
+export function addBundle(line: Omit<CartBundleLine, 'quantity'>, quantity = 1): void {
+  const existing = state.bundles.find((bundle) => bundle.id === line.id);
+  publish({
+    ...state,
+    bundles: existing
+      ? state.bundles.map((bundle) =>
+          bundle.id === line.id ? { ...bundle, quantity: bundle.quantity + quantity } : bundle,
+        )
+      : [...state.bundles, { ...line, quantity }],
+  });
+}
+
 export function setBundleQuantity(id: string, quantity: number): void {
   publish({
     ...state,

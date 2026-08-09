@@ -29,6 +29,8 @@ jest.mock('@/lib/auth/supabase', () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),
       refreshSession: async () => ({ data: { session: mockSession }, error: null }),
+      // Vitrin `useMe` ile oturumu dinler (21.14c); kapı testinde değişim olayı doğmaz.
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
     },
   }),
 }));

@@ -44,7 +44,7 @@ export interface ApiFail {
 export type ApiResult<T> = ApiOk<T> | ApiFail;
 
 export interface ApiFetchInit {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH';
   body?: unknown;
   headers?: Record<string, string>;
 }

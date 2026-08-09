@@ -1,15 +1,16 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { RecipeDetailScreen } from '@/screens/recipe/recipe-detail-screen';
 
 /*
-  TARİF DETAY — bugün YER TUTUCU (kendi dilimi 21.14'ün SONRAKİ turunda: kahraman foto, malzeme
-  listesi "bizden/evinizden" ayrımı, adımlar, "hepsini sepete" yapışkan barı).
+  TARİF DETAY ROTASI — ekran gerçek uçtan okur (`GET /api/v1/recipes/:slug`); tasarım ve
+  sapmaları ekranın künyesinde. Vitrinin "Sofradan fikirler" kartı buraya gerçek slug'la basar.
 
-  Rota şimdiden var çünkü vitrinin tarif rayı basılınca gidilecek bir yer olmalı; olmasaydı kart
-  ya ölü dururdu ya da geçici bir davranış uydurulurdu (`product/[slug]` ile aynı gerekçe).
+  Sekme kabuğunun DIŞINDA (kök `Stack` altında): yığına girildiğinde sekme çubuğu gizlenir
+  (envanter §4) — ürün rotasının aynı kararı. Ürün rotasındaki `key={slug}` burada YOK: tarifin
+  aile-çipi gibi slug'ı yerinde değiştiren bir etkileşimi yok, ekran rota başına bir kez kurulur.
 */
 export default function RecipeRoute() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  return <ScreenPlaceholder title={slug} />;
+  return <RecipeDetailScreen slug={typeof slug === 'string' ? slug : ''} />;
 }

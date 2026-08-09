@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { UserProfileSchema } from '../entities/user-profile.schema';
 
 /**
@@ -37,6 +38,23 @@ import { UserProfileSchema } from '../entities/user-profile.schema';
  * Bilerek ölü bırakılan bir `export const` bile yakalanmadı. Yani bu dosyada ölü ihraç disiplini
  * MAKİNEYLE ZORLANMIYOR, elle korunuyor.
  */
+/**
+ * `PATCH /api/v1/me` gövdesi (21.14c) — yalnız MÜŞTERİNİN kendi elindeki alanlar: ad + telefon.
+ * E-posta BİLEREK yok: kimliğin kendisidir (auth), değişimi ayrı bir doğrulama akışı ister.
+ * Dil/izinler de yok — onların yeri tercih uçları (web'in aynı ayrımı: "dil profil formunun işi
+ * değil"). İki alan da isteğe bağlı: gönderilmeyen alanına DOKUNULMAZ; `phone: null` numarayı siler.
+ */
+export const MeUpdateSchema = z
+  .object({
+    name: z.string(),
+    phone: z.string().nullable(),
+  })
+  .partial();
+
+/** Güncellemenin adlı retleri — cümleyi ekran kurar, anahtar sözleşmede yaşar. */
+export const MeUpdateErrorEnum = z.enum(['name_required', 'phone_invalid', 'phone_taken']);
+export type MeUpdateError = z.infer<typeof MeUpdateErrorEnum>;
+
 export const MeSchema = UserProfileSchema.pick({
   id: true,
   type: true,

@@ -63,8 +63,10 @@ const MAX_PAGE_SIZE = 50;
  *
  * BEKLEYEN(21.6): yer çözümü `@lezzet/application`a terfi edince bu sabit, istekten (`postalCode`)
  * çözülen gerçek yere bırakır ve teklifler mobilde de görünür.
+ *
+ * Dışa verilir: vitrin ucu (`home.ts`) aynı "yer bilinmiyor" hâlinde okur — ikinci tanım açılmaz.
  */
-const UNKNOWN_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
+export const UNKNOWN_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
 
 /**
  * `locale` ZORUNLU ve varsayılansız.
@@ -143,8 +145,10 @@ function decodeCursor(raw: string | undefined): KeysetCursor | undefined {
  * `user_profiles.id` ile `auth.users.id` AYRI kolonlardır). Aynı zincir burada da kurulur; auth
  * kimliğini doğrudan `pricingViewerOf`a vermek profili hiç bulamaz ve her müşteriyi sessizce
  * ziyaretçi fiyatına düşürürdü.
+ *
+ * Dışa verilir: vitrin ucu (`home.ts`) fırsat fiyatını aynı kimlik zinciriyle kişiselleştirir.
  */
-async function readViewer(db: SupabaseClient, authorization: string | undefined): Promise<PricingViewer> {
+export async function readViewer(db: SupabaseClient, authorization: string | undefined): Promise<PricingViewer> {
   const token = bearerTokenOf(authorization);
   if (!token) return VISITOR;
 

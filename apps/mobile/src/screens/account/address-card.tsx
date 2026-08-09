@@ -26,7 +26,8 @@ interface AddressCardProps {
   address: AccountAddressView;
   copy: AddressCopy;
   onMakeDefault: () => void;
-  onEdit: () => void;
+  /** Düzenleme kapısı; verilmezse ok çizilmez (adres çekmecesi uçlarıyla birlikte gelecek — 21.14c). */
+  onEdit?: () => void;
   testID?: string;
 }
 
@@ -48,12 +49,14 @@ export function AddressCard({ address, copy, onMakeDefault, onEdit, testID }: Ad
           testID={testID === undefined ? undefined : `${testID}-default`}
         />
       )}
-      <TextAction
-        label={copy.edit}
-        onPress={onEdit}
-        accessibilityHint={copy.editLabel.replace('{label}', address.label)}
-        testID={testID === undefined ? undefined : `${testID}-edit`}
-      />
+      {onEdit === undefined ? null : (
+        <TextAction
+          label={copy.edit}
+          onPress={onEdit}
+          accessibilityHint={copy.editLabel.replace('{label}', address.label)}
+          testID={testID === undefined ? undefined : `${testID}-edit`}
+        />
+      )}
     </View>
   );
 }

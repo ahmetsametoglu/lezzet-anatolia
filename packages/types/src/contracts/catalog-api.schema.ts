@@ -40,8 +40,11 @@ import { StockSchema } from '../entities/stock.schema';
  * bağımlılık olarak tutmak gerekirdi — `knip` ölü bağımlılık olarak yakalıyordu).
  */
 
-/** Görselin çözülmüş hâli — anahtar değil, public URL + kırpma künyesi (`StorefrontImage` aynası). */
-const CatalogImageSchema = z.object({
+/**
+ * Görselin çözülmüş hâli — anahtar değil, public URL + kırpma künyesi (`StorefrontImage` aynası).
+ * Dışa verilir: vitrin sözleşmesi (`home-api.schema.ts`) aynı şekli okur — ikinci tanım açılmaz.
+ */
+export const CatalogImageSchema = z.object({
   /** `null` = görsel yok ya da R2 taban adresi ayarsız; istemci yer tutucu çizer. */
   url: z.string().nullable(),
   crop: ImageCropSchema,

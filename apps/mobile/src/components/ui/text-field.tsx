@@ -24,6 +24,13 @@ interface TextFieldProps {
   placeholder?: string;
   /** Köşe kademesi: hap (22) ⟷ yumuşak/kontrol (16). */
   shape?: 'pill' | 'soft';
+  /**
+   * Alanın İÇERİK TÜRÜ — işletim sistemine otomatik doldurma/öneri için söylenir (kullanıcı
+   * bulgusu 08.08: e-posta alanı klavye önerisi vermiyordu). Tek kavram, üç RN prop'una açılır
+   * (`autoComplete` + iOS `textContentType` + uygun klavye/büyük harf) — çağıran üçünü ayrı
+   * ayrı bilmek zorunda kalmasın.
+   */
+  content?: 'email' | 'oneTimeCode';
   numeric?: boolean;
   multiline?: boolean;
   /** Alanın sonundaki yuva — genellikle bir düğme. */
@@ -41,6 +48,7 @@ export function TextField({
   label,
   placeholder,
   shape = 'soft',
+  content,
   numeric = false,
   multiline = false,
   trailing,
@@ -61,7 +69,11 @@ export function TextField({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.muted}
-          keyboardType={numeric ? 'number-pad' : 'default'}
+          keyboardType={content === 'email' ? 'email-address' : numeric ? 'number-pad' : 'default'}
+          autoComplete={content === 'email' ? 'email' : content === 'oneTimeCode' ? 'one-time-code' : undefined}
+          textContentType={content === 'email' ? 'emailAddress' : content === 'oneTimeCode' ? 'oneTimeCode' : undefined}
+          autoCapitalize={content === 'email' ? 'none' : undefined}
+          autoCorrect={content === 'email' ? false : undefined}
           multiline={multiline}
           editable={editable}
           testID={testID}

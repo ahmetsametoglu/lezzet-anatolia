@@ -22,7 +22,8 @@ import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 
 interface CollectionBandProps {
   name: string;
-  subtitle: string;
+  /** Adın altındaki cümle; `null` = yazılmamış → satır çizilmez (yedek metin uydurulmaz — şema künyesi). */
+  subtitle: string | null;
   /** "12 çeşit ›" — cümle cihazda kurulur, sayı veriden. */
   countLabel: string;
   /** Listedeki sıra — ton ve yön bundan türer. */
@@ -58,7 +59,9 @@ export function CollectionBand({ name, subtitle, countLabel, index, photoUri, on
         <Text style={[styles.eyebrow, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}>
           {name.toLocaleUpperCase('tr-TR')}
         </Text>
-        <Text style={[styles.title, styles[`${tone}Title`], mirrored ? styles.alignEnd : undefined]}>{subtitle}</Text>
+        {subtitle === null ? null : (
+          <Text style={[styles.title, styles[`${tone}Title`], mirrored ? styles.alignEnd : undefined]}>{subtitle}</Text>
+        )}
         <Text style={[styles.count, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}>{countLabel}</Text>
       </View>
       {photoInOverlay ? null : (

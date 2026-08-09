@@ -1,0 +1,77 @@
+{
+  "tr": {
+    "back": "Geri",
+    "eyebrow": "SOFRADAN FİKİRLER",
+    "sections": {
+      "ours": "MALZEMELER — BİZDEN",
+      "pantry": "EVİNİZDEN",
+      "steps": "HAZIRLANIŞI"
+    },
+    "row": {
+      "add": "{name} sepete ekle",
+      "open": "{name} ürününü aç",
+      "soldOut": "Tükendi"
+    },
+    "addAll": "Malzemeleri sepete ekle",
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "İnternet bağlantınızı kontrol edin. Bağlantı gelince kaldığınız yerden devam edersiniz.",
+      "retry": "Tekrar dene"
+    },
+    "notFound": {
+      "title": "Tarif bulunamadı",
+      "body": "Tarif yayından kalkmış ya da bağlantı eskimiş olabilir.",
+      "back": "Geri dön"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "eyebrow": "IDÉES DE TABLE",
+    "sections": {
+      "ours": "INGRÉDIENTS — DE CHEZ NOUS",
+      "pantry": "DE VOTRE CUISINE",
+      "steps": "PRÉPARATION"
+    },
+    "row": {
+      "add": "Ajouter {name} au panier",
+      "open": "Voir {name}",
+      "soldOut": "Épuisé"
+    },
+    "addAll": "Ajouter les ingrédients au panier",
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "retry": "Réessayer"
+    },
+    "notFound": {
+      "title": "Recette introuvable",
+      "body": "La recette n'est peut-être plus publiée, ou le lien a expiré.",
+      "back": "Retour"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "eyebrow": "IDEEN FÜR DEN TISCH",
+    "sections": {
+      "ours": "ZUTATEN — VON UNS",
+      "pantry": "AUS IHRER KÜCHE",
+      "steps": "ZUBEREITUNG"
+    },
+    "row": {
+      "add": "{name} in den Korb legen",
+      "open": "{name} öffnen",
+      "soldOut": "Ausverkauft"
+    },
+    "addAll": "Zutaten in den Korb",
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Prüfen Sie Ihre Internetverbindung. Sobald sie wieder da ist, geht es weiter.",
+      "retry": "Erneut versuchen"
+    },
+    "notFound": {
+      "title": "Rezept nicht gefunden",
+      "body": "Das Rezept ist möglicherweise nicht mehr veröffentlicht, oder der Link ist veraltet.",
+      "back": "Zurück"
+    }
+  }
+}

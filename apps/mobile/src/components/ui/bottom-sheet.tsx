@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
@@ -34,7 +34,11 @@ interface BottomSheetProps {
 export function BottomSheet({ visible, title, onClose, children, testID }: BottomSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent testID={testID}>
-      <View style={styles.layer} accessibilityViewIsModal>
+      {/* KLAVYE PANELİ EZEMEZ (kullanıcı bulgusu 08.08 — profil çekmecesinde alanlar klavyenin
+          altında kalıyordu): `statusBarTranslucent` bir Modal'da Android pencereyi kendiliğinden
+          daraltmaz; kaçınma burada, KİTTE durur — girdili her çekmece (adres, kupon…) aynı
+          korumayı otomatik alır, ekranlar tek tek uğraşmaz. */}
+      <KeyboardAvoidingView behavior="padding" style={styles.layer} accessibilityViewIsModal>
         {/* Örtü DOKUNULABİLİR ama düğme DEĞİLDİR: ekran okuyucuya "kapat" diye bir hedef eklemek
             yerine katmanın kendi kapatma düğmeleri okunur — örtü yalnız işaretçi kısayoludur. */}
         <Pressable
@@ -45,6 +49,12 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
           testID={testID === undefined ? undefined : `${testID}-scrim`}
         />
         <View style={styles.panel}>
+          {/* Panelin ALT KANAMASI — klavye kaçınması paneli kaldırınca panel ile ekran altı
+              arasında kalan bölge (klavyenin arkası) örtü renginde kalıyordu ve modern klavyelerin
+              KIVRIMLI köşelerinden garip görünüyordu (kullanıcı bulgusu 08.08). Bu katman panel
+              zeminini aşağı taşırır: köşelerden görünen artık panelin kendisidir. Klavye kapalıyken
+              ekran dışında durur, zararsız. */}
+          <View style={styles.keyboardBleed} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           {/* Tutamak — yalnız görsel ipucu (sürükleme henüz yok); ekran okuyucudan gizli. */}
           <View style={styles.handle} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           <Text style={styles.title} accessibilityRole="header">
@@ -52,7 +62,7 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
           </Text>
           {children}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -79,6 +89,15 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: theme.space['8xl'] + rt.insets.bottom,
     gap: theme.space['2xl'],
     maxHeight: rt.screen.height * theme.sheetMaxHeightRatio,
+  },
+  /** Panel zemininin klavye arkasına taşan uzantısı — yükseklik "her klavyeyi örtecek kadar". */
+  keyboardBleed: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    height: rt.screen.height * 0.5,
+    backgroundColor: theme.colors['sand-50'],
   },
   handle: {
     alignSelf: 'center',

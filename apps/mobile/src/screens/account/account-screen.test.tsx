@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { AccountScreen } from './account-screen';
 import messages from './messages.json';
@@ -11,6 +11,38 @@ import messages from './messages.json';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// Profil KAYDETME gerçek istemci yolundan geçer (updateMe → authorizedFetch → Bearer): oturum ve
+// tel mock'lanır; öteki testler bu yola hiç girmez.
+const mockSession = { access_token: 'test-token' };
+jest.mock('@/lib/auth/supabase', () => ({
+  getSupabase: () => ({
+    auth: {
+      getSession: async () => ({ data: { session: mockSession } }),
+      refreshSession: async () => ({ data: { session: mockSession }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+    },
+  }),
+}));
+
+const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
+
+/** PATCH cevabının gövdesi — `MeSchema`nın geçerli asgarisi. */
+const ME_BODY = {
+  id: '00000000-0000-4000-8000-000000000001',
+  type: 'individual',
+  name: 'Ayşe Yeni',
+  email: 'ayse@example.com',
+  phone: null,
+  preferredLanguage: 'tr',
+  country: 'FR',
+  roles: ['customer'],
+  b2bApproved: false,
+  b2bPending: false,
+  marketingConsent: {},
+  referralCode: null,
+  createdAt: '2026-08-08T00:00:00.000Z',
+};
+
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => mockPush(href) }) }));
 
@@ -21,12 +53,35 @@ beforeEach(() => {
 });
 
 describe('AccountScreen', () => {
-  it('profil "Düzenle" düzenleme sayfasına gider', async () => {
+  it('profil "Düzenle" ÇEKMECEYİ açar (v3 shPf) — alanlar karttan dolu, e-posta salt okunur', async () => {
     await render(<AccountScreen />);
 
     await fireEvent.press(screen.getByTestId('account-edit'));
 
-    expect(mockPush).toHaveBeenCalledWith('/account/edit');
+    expect(screen.getByTestId('account-profile-sheet')).toBeOnTheScreen();
+    expect(screen.getByTestId('profile-name').props.value).toBe('Ayşe Demir');
+    expect(screen.getByTestId('profile-email').props.editable).toBe(false);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('çekmecede Kaydet GERÇEK yazar: PATCH atılır, başarıda çekmece kapanır', async () => {
+    process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    fetchMock.mockResolvedValue({
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ data: ME_BODY, error: null }),
+    } as unknown as Response);
+    await render(<AccountScreen />);
+
+    await fireEvent.press(screen.getByTestId('account-edit'));
+    await fireEvent.changeText(screen.getByTestId('profile-name'), 'Ayşe Yeni');
+    await fireEvent.press(screen.getByTestId('profile-save'));
+
+    await waitFor(() => expect(screen.queryByTestId('account-profile-sheet')).toBeNull());
+    const call = fetchMock.mock.calls.find((entry) => entry[1]?.method === 'PATCH');
+    // Telefon taslağı karttan dolar (fixture'ın numarası) — dokunulmayan alan da gövdede taşınır.
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Ayşe Yeni', phone: '+33 6 24 51 09 88' });
   });
 
   it('menüdeki "Taleplerim" ve "Bize yazın" destek sayfalarına gider', async () => {
@@ -39,16 +94,13 @@ describe('AccountScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/support/new');
   });
 
-  it('adres satırları düzenleme sayfasına gider; adres metni parçalarından kurulur', async () => {
+  it('adres bölümü yalnız LİSTELER: metin parçalardan kurulur, düzenleme/ekleme kapısı çizilmez (21.14c)', async () => {
     await render(<AccountScreen />);
 
     expect(screen.getByText('12 Quai des Bateliers, 67000 Strasbourg')).toBeOnTheScreen();
-
-    await fireEvent.press(screen.getByTestId('account-address-add'));
-    expect(mockPush).toHaveBeenCalledWith('/account/edit');
-
-    await fireEvent.press(screen.getByTestId('account-address-home-edit'));
-    expect(mockPush).toHaveBeenLastCalledWith('/account/edit');
+    // Kaydetmeyen form çizilmez: adres çekmecesi (v3 shAddr) adres uçlarıyla birlikte gelecek.
+    expect(screen.queryByTestId('account-address-add')).toBeNull();
+    expect(screen.queryByTestId('account-address-home-edit')).toBeNull();
   });
 
   it('"varsayılan yap" rozeti taşır (ekranın kendi durumu)', async () => {

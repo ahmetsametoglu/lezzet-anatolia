@@ -60,39 +60,14 @@ export interface HomeOfferView {
   photoUri: string | null;
 }
 
-export interface HomeCollectionView {
-  slug: string;
-  /** Üstbaşlık — büyük harfe komponent çevirir. */
-  name: string;
-  subtitle: string;
-  productCount: number;
-  photoUri: string | null;
-}
-
-export interface HomeProductView {
-  slug: string;
-  name: string;
-  priceCents: number;
-  photoUri: string | null;
-}
-
-export interface HomeRecipeView {
-  slug: string;
-  name: string;
-  /** Hazırlık süresi (dk) — cümlesi cihazda kurulur. */
-  minutes: number;
-  ingredientCount: number;
-  photoUri: string | null;
-}
-
-export interface HomePackageView {
-  slug: string;
-  name: string;
-  priceCents: number;
-  itemCount: number;
-  photoUri: string | null;
-}
-
+/*
+  BANTLAR · SEÇKİ · TARİFLER · PAKETLER BURADA DEĞİL (21.14b): sözleşmeleri geldi (`HomeBand` ·
+  `CatalogProduct` · `HomeRecipe` · `HomePackage`, `@lezzet/types`) ve ekran onları GERÇEK uçtan
+  okuyor (`use-home.hook`) — künyenin "sözleşme geldiğinde bu tipler silinir" sözü o bölümler için
+  yerine getirildi. Kalanlar hâlâ fixture ve sebepleri ayrı: kimlikli bölümler (selamlama · puan ·
+  süren sipariş · bildirim) giriş akışının bağlanmasını bekliyor; fırsatlar yer çözümü terfisine
+  kadar uçtan BOŞ dönüyor; günün fırsatının seçim kuralı henüz hiçbir yüzeyde kararlaştırılmadı.
+*/
 export interface HomeData {
   customer: HomeCustomerView;
   /** Süren sipariş — yoksa bant çizilmez. */
@@ -101,10 +76,6 @@ export interface HomeData {
   lastOrder: HomeLastOrderView | null;
   flashDeal: HomeFlashDealView | null;
   offers: HomeOfferView[];
-  collections: HomeCollectionView[];
-  featured: HomeProductView[];
-  recipes: HomeRecipeView[];
-  packages: HomePackageView[];
 }
 
 /** Fırsatın bitişi: şablonda "bugünün sonu" (23:59:59). */
@@ -149,26 +120,6 @@ export function homeData(overrides: Partial<HomeData> = {}): HomeData {
     offers: [
       { slug: 'antep-fistigi', name: 'Antep Fıstığı', priceCents: 1490, wasCents: 1890, photoUri: demoPhoto('artisan-lemon-cake.webp') },
       { slug: 'kunefelik-peynir', name: 'Künefelik Peynir', priceCents: 640, wasCents: 790, photoUri: demoPhoto('kunefe.jpeg') },
-    ],
-    collections: [
-      { slug: 'borekler', name: 'Börekler', subtitle: 'El açması, fırına hazır', productCount: 12, photoUri: demoPhoto('cevizli-baklava.jpeg') },
-      { slug: 'tatlilar', name: 'Tatlılar', subtitle: 'Şerbetli ve sütlü', productCount: 9, photoUri: demoPhoto('kazandibi.jpeg') },
-      { slug: 'kahvaltilik', name: 'Kahvaltılık', subtitle: 'Pazar sofrası kurulur', productCount: 14, photoUri: demoPhoto('artisan-mango-cake.webp') },
-    ],
-    featured: [
-      { slug: 'su-boregi', name: 'Su Böreği', priceCents: 1290, photoUri: null },
-      { slug: 'manti', name: 'El Mantısı', priceCents: 1090, photoUri: null },
-      { slug: 'tulum-peyniri', name: 'Tulum Peyniri', priceCents: 1690, photoUri: null },
-      { slug: 'kunefe', name: 'Künefe', priceCents: 950, photoUri: null },
-    ],
-    recipes: [
-      { slug: 'mantili-sofra', name: 'Mantılı Pazar Sofrası', minutes: 45, ingredientCount: 6, photoUri: null },
-      { slug: 'kahvalti-tabagi', name: 'Anadolu Kahvaltı Tabağı', minutes: 20, ingredientCount: 8, photoUri: null },
-      { slug: 'serbetli-tatlilar', name: 'Şerbetli Tatlı Üçlüsü', minutes: 60, ingredientCount: 5, photoUri: null },
-    ],
-    packages: [
-      { slug: 'kahvalti-paketi', name: 'Kahvaltı Paketi', priceCents: 3490, itemCount: 6, photoUri: null },
-      { slug: 'misafir-paketi', name: 'Misafir Sofrası', priceCents: 4290, itemCount: 5, photoUri: null },
     ],
     ...overrides,
   };

@@ -1,9 +1,13 @@
 import { Hono } from 'hono';
+import { updateCustomerProfile } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { MeSchema } from '@lezzet/types';
+import { MeSchema, MeUpdateSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { authOtp } from './auth-otp';
 import { catalog } from './catalog';
+import { home } from './home';
+import { packages } from './packages';
+import { recipes } from './recipes';
 import { courier } from './courier';
 import { warehouse } from './warehouse';
 import { bearerAuth, type V1Env } from './auth';
@@ -24,6 +28,15 @@ export const v1 = new Hono<V1Env>();
 
 v1.route('/auth/otp', authOtp);
 v1.route('/', catalog);
+// Vitrin de katalog kümesindendir (21.14): oturumsuz gezinme aynı karar, Bearer yalnız fiyatı
+// kişiselleştirir — kapının ÖNÜNDE kalması güvenlik kararının kendisidir (üstteki sıra notu).
+v1.route('/', home);
+// Paket detayı da öyle (21.14): vitrindeki kartın açtığı sayfa girişsiz gezilir; paket tek
+// fiyatlı (B2C) olduğundan Bearer'ın kişiselleştireceği bir şey de yok (`packages.ts` künyesi).
+v1.route('/', packages);
+// Tarif detayı da (21.14): "Sofradan fikirler" kartının açtığı sayfa girişsiz gezilir; Bearer
+// yalnız malzeme satırlarının fiyatını kişiselleştirir (katalogun aynı kuralı — `recipes.ts`).
+v1.route('/', recipes);
 
 v1.use('*', bearerAuth);
 
@@ -46,6 +59,26 @@ v1.get('/me', async (c) => {
   if (!profile) return fail(c, 'profile_not_found', 404);
   // `parse` süzgeçtir: pick'te olmayan alan (kredi limiti, personel kapsamı) zarfa sızamaz.
   return ok(c, MeSchema.parse(profile));
+});
+
+/**
+ * Profil güncellemesi (21.14c) — ad + telefon; gövde `MeUpdateSchema` (e-posta/dil bilerek dışarıda,
+ * gerekçe şemada). KURAL BURADA DEĞİL: ad/telefon kuralları ve numara-çakışması okuma biçimi
+ * `@lezzet/application.updateCustomerProfile`ta (web hesap formuyla TEK kural). Adlı retler
+ * görünür döner: 400 (`name_required`/`phone_invalid`) · 409 (`phone_taken`).
+ */
+v1.patch('/me', async (c) => {
+  const body = MeUpdateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  const user = c.get('authUser');
+  const db = serviceDb();
+  const profile = await new UserProfileService(db).findByAuthUserId(user.id);
+  if (!profile) return fail(c, 'profile_not_found', 404);
+
+  const outcome = await updateCustomerProfile(db, { profileId: profile.id, ...body.data });
+  if (outcome.status !== 'ok') return fail(c, outcome.status, outcome.status === 'phone_taken' ? 409 : 400);
+  return ok(c, MeSchema.parse(outcome.profile));
 });
 
 /**

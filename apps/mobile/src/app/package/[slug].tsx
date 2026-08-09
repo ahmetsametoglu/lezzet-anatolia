@@ -1,12 +1,16 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { PackageDetailScreen } from '@/screens/package/package-detail-screen';
 
 /*
-  PAKET DETAY — bugün YER TUTUCU (kendi dilimi 21.14'ün sonraki turunda: paket içeriği listesi,
-  adet sayacı + "sepete ekle" yapışkan barı). Rota vitrinin hazır paket kartı için var.
+  PAKET DETAY ROTASI — ekran gerçek uçtan okur (`GET /api/v1/packages/:slug`), tasarım ve
+  sapmaları ekranın künyesinde. Vitrinin "Hazır paketler" kartı buraya gerçek slug'la gelir.
+
+  Sekme kabuğunun DIŞINDA (kök `Stack` altında): yığına girildiğinde sekme çubuğu gizlenir
+  (envanter §4) — ürün detayı rotasının aynı kararı. `key` GEREKMEZ: ürün detayındaki aile
+  çiplerinin `setParams` oyunu burada yok, slug ekran ömrü boyunca sabittir.
 */
 export default function PackageRoute() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  return <ScreenPlaceholder title={slug} />;
+  return <PackageDetailScreen slug={typeof slug === 'string' ? slug : ''} />;
 }

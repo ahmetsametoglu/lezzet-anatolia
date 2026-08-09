@@ -12,14 +12,27 @@ import { renderShell } from '@/testing/render-shell';
   Dosya `src/app/` İÇİNE konamaz: expo-router o klasördeki her `.tsx`'i ROTA sayar, test dosyası
   sekme çubuğunda "app-shell" diye belirirdi. Kabuğun testi bu yüzden `src/` kökünde durur.
 
-  Ağ YOK: başlangıç rotası Vitrin ve gezilen rota Siparişler artık GERÇEK ekranlar ama ikisi de
-  fixture'dan çizilir (21.14 UI-only) — sekme navigatörü tembel olduğundan Katalog ekranı hiç
-  MOUNT olmaz, `fetch` çağrısı doğmaz. Katalog ekranının kendi durumları kendi testinde
-  (`catalog-screen.test.tsx`).
+  AĞ MOCK'SUZ: vitrin artık `/home` ucunu ÇAĞIRIR (21.14b) ama bu ortamda `fetch` yoktur —
+  istemci bunu ağ hatası olarak yutmaz, taşır; vitrin de o iki bölümü (bant/tarif) çizmez ve
+  ekranın kalanı fixture'la ayakta kalır. Kabuk testinin konusu sekmeler olduğundan bu yeterli;
+  vitrinin kendi veri hâlleri kendi testinin işi. Katalog ekranı tembel navigatörde hiç MOUNT
+  olmaz. (`catalog-screen.test.tsx` kendi durumlarını kendisi kurar.)
 */
 
 // Cihaz dili sabitlenir ki assert edilen etiketler koşulan makinenin diline bağlı olmasın.
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
+
+// Vitrin artık oturumu dinliyor (`useMe`, 21.14c); bu ortamda Supabase env'i yok — istemci
+// mock'lanır, oturumsuz hâl döner ("oturumsuz kullanım = müşteri"). Kabuk testinin konusu sekmeler.
+jest.mock('@/lib/auth/supabase', () => ({
+  getSupabase: () => ({
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      refreshSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+    },
+  }),
+}));
 
 // Sarmalayıcı + matcher tipi ORTAK iskelede (ikinci router testi doğunca oraya taşındı — CLAUDE §1).
 

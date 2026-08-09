@@ -29,7 +29,14 @@
         "error": "Etiket, adres ve posta kodu gerekli.",
         "saved": "Adres kaydedildi ✓",
         "deleted": "Adres silindi"
-      }
+      },
+      "errors": {
+        "name_required": "Ad boş olamaz.",
+        "phone_invalid": "Telefon numarası çözülemedi — kontrol edin.",
+        "phone_taken": "Bu numara başka bir hesapta kayıtlı.",
+        "unexpected": "Kaydedilemedi — yeniden deneyin."
+      },
+      "saving": "Kaydediliyor…"
     },
     "guest": {
       "title": "Hoş geldiniz",
@@ -123,7 +130,14 @@
         "error": "Libellé, adresse et code postal sont requis.",
         "saved": "Adresse enregistrée ✓",
         "deleted": "Adresse supprimée"
-      }
+      },
+      "errors": {
+        "name_required": "Le nom ne peut pas être vide.",
+        "phone_invalid": "Le numéro n'a pas pu être interprété — vérifiez-le.",
+        "phone_taken": "Ce numéro est déjà associé à un autre compte.",
+        "unexpected": "Impossible d'enregistrer — réessayez."
+      },
+      "saving": "Enregistrement…"
     },
     "guest": {
       "title": "Bienvenue",
@@ -217,7 +231,14 @@
         "error": "Bezeichnung, Adresse und Postleitzahl sind erforderlich.",
         "saved": "Adresse gespeichert ✓",
         "deleted": "Adresse gelöscht"
-      }
+      },
+      "errors": {
+        "name_required": "Der Name darf nicht leer sein.",
+        "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden — bitte prüfen.",
+        "phone_taken": "Diese Nummer ist bereits mit einem anderen Konto verknüpft.",
+        "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
+      },
+      "saving": "Wird gespeichert…"
     },
     "guest": {
       "title": "Willkommen",

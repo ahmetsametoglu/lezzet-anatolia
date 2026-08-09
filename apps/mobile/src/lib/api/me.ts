@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { MeSchema } from '@lezzet/types';
+import { MeSchema, type MeUpdateSchema } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
@@ -28,4 +28,13 @@ export type Me = z.infer<typeof MeSchema>;
 
 export function fetchMe(): Promise<ApiResult<Me>> {
   return authorizedFetch('/api/v1/me', MeSchema);
+}
+
+/**
+ * Profil güncellemesi (21.14c) — ad + telefon; gövde `MeUpdateSchema`nın kendisi (`z.input`:
+ * gönderilmeyen alana dokunulmaz, `phone: null` numarayı siler). Adlı retler zarfta anahtar
+ * olarak döner (`name_required` · `phone_invalid` · `phone_taken`); cümleyi ekran kurar.
+ */
+export function updateMe(input: z.input<typeof MeUpdateSchema>): Promise<ApiResult<Me>> {
+  return authorizedFetch('/api/v1/me', MeSchema, { method: 'PATCH', body: input });
 }

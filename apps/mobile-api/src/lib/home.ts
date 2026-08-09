@@ -1,0 +1,314 @@
+import { BundleService, CategoryService, CollectionService, ProductService, RecipeService } from '@lezzet/database';
+import {
+  getCatalogData,
+  imageOf,
+  type PlaceWarehouses,
+  type PricingViewer,
+  type StorefrontProduct,
+} from '@lezzet/application';
+import { splitLines, toCents } from '@lezzet/helper';
+import { resolveLocalizedText } from '@lezzet/types';
+import type {
+  Category,
+  Collection,
+  HomeBand,
+  HomeBandKind,
+  HomePackage,
+  HomeRecipe,
+  ImageMeta,
+  LocalizedText,
+  PreferredLanguage,
+} from '@lezzet/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Vitrin okuma KAPISI — `GET /api/v1/home`un veri tarafı (21.14 bağlanma etabı).
+ *
+ * BURADA duruyor, `@lezzet/application`da DEĞİL, çünkü paketin künyesi açık: oraya giren akışın
+ * ölçütü **en az iki yüzeyin** çağırmasıdır; bu kompozisyonun (bant karışımı, tarif kart başlığı)
+ * tek tüketeni mobil vitrin. Web'in ana sayfa orkestrasyonu (`apps/web/lib/storefront/home.ts`)
+ * kendi yüzeyinde aynı gerekçeyle yaşıyor — o dosyanın application'a terfisi web şeridiyle defter
+ * mutabakatı bekliyor, KOPYALANMADI: buradaki her bölüm ya application'ın mevcut kapısından geçer
+ * (fırsatlar → `getCatalogData`) ya web'de hiç olmayan, kullanıcı kararıyla mobile verilmiş bir
+ * kuraldır (bant karışımı — 08.08) ya da karar içermeyen içerik indirgemesidir (tarif kartı).
+ *
+ * ── SABİT SINIRLAR, `limit` SORGUSU YOK ──────────────────────────────────────
+ * Vitrin rayları editoryal seçkidir: sayfalanmaz ama sabit sınır taşır (CLAUDE §1). Sınırlar v3
+ * tasarımının ızgarasından geliyor ve parametrik sabit — istemci büyütemez.
+ */
+
+/** Fırsat bandı — v3 tasarımı iki kart çizer (web bandının 6'lık ızgarasından bilinçli dar). */
+const HOME_OFFER_LIMIT = 2;
+/** "Sofradan Fikirler" şeridi — v3'te üç kart. */
+const HOME_RECIPE_LIMIT = 3;
+/** Vitrin seçkisi rayı — v3'te dört daire. */
+const HOME_FEATURED_LIMIT = 4;
+/** Hazır paket bölümü — v3'te iki büyük kart. */
+const HOME_PACKAGE_LIMIT = 2;
+/** Bant karışımı: 4 kategori + 2 koleksiyon = 6 slot (kullanıcı kararı 08.08). */
+export const HOME_BAND_CATEGORY_COUNT = 4;
+export const HOME_BAND_COLLECTION_COUNT = 2;
+/** Toplam slot — ayrı bir sabit DEĞİL: iki sayının toplamından türer, üçüncü bir gerçek açılmaz. */
+const HOME_BAND_TOTAL = HOME_BAND_CATEGORY_COUNT + HOME_BAND_COLLECTION_COUNT;
+
+/**
+ * Rastgelelik DIŞARIDAN gelir (emsal: web `rotateDaily`in `now` parametresi — "test günü
+ * sabitleyebilsin"). Üretimde `Math.random`; testte tohumlu sayaç. Kuralın kendisi rastgele,
+ * KANITI deterministik olmalı.
+ */
+export type Rng = () => number;
+
+/**
+ * Havuzdan `count` FARKLI öğe seçer; seçilenler HAVUZDAKİ sıralarını korur.
+ *
+ * Sıranın korunması kuralın yarısıdır (08.08): "rastgele 2 koleksiyon" seçilir ama "ikisinin kendi
+ * arası sırası `sortOrder`a uyar" — havuz zaten o sırada geldiği için indeksleri artan sıralamak
+ * yeter. Kısmi Fisher–Yates: her aday eşit olasılıkla seçilir, tam karıştırma maliyeti ödenmez.
+ */
+export function pickRandomDistinct<T>(pool: readonly T[], count: number, rng: Rng): T[] {
+  if (count >= pool.length) return [...pool];
+  const indices = pool.map((_, i) => i);
+  for (let i = 0; i < count; i++) {
+    const j = i + Math.floor(rng() * (indices.length - i));
+    const tmp = indices[i]!;
+    indices[i] = indices[j]!;
+    indices[j] = tmp;
+  }
+  return indices
+    .slice(0, count)
+    .sort((a, b) => a - b)
+    .map((i) => pool[i]!);
+}
+
+/**
+ * `secondary` öğelerini birleşik dizinin RASTGELE konumlarına yerleştirir; iki dizinin de KENDİ İÇ
+ * sırası korunur (08.08: koleksiyonlar 6'lı dizide rastgele iki konuma girer, kategoriler kendi
+ * aralarındaki sırayı korur).
+ */
+export function interleaveAtRandom<T>(primary: readonly T[], secondary: readonly T[], rng: Rng): T[] {
+  const total = primary.length + secondary.length;
+  const slots = new Set(
+    pickRandomDistinct(
+      Array.from({ length: total }, (_, i) => i),
+      secondary.length,
+      rng,
+    ),
+  );
+  const out: T[] = [];
+  let p = 0;
+  let s = 0;
+  for (let i = 0; i < total; i++) out.push(slots.has(i) ? secondary[s++]! : primary[p++]!);
+  return out;
+}
+
+/**
+ * Bant KAYNAKLARININ seçimi — saf karar, DB'siz (test edilebilir diye ayrı duruyor).
+ *
+ * Kural (kullanıcı kararı 08.08, web'den bilinçli sapma):
+ *   koleksiyon → işaretlilerden (`isFeatured`) RASTGELE en çok 2; kendi aralarında `sortOrder`.
+ *   kategori   → işaretlilerden `sortOrder` sırasıyla, toplam 6'ya TAMAMLAYACAK kadar (koleksiyon
+ *                2'den azsa kategori 4'ten çok olabilir). Toplam 6'yı bulamazsa olduğu kadar —
+ *                dolgu/uydurma yok.
+ *
+ * İşaret SEÇİMDİR, yedeği yoktur: hiç işaret yoksa bant da yoktur. (Web'in `pickFeatured`ı işaretsiz
+ * havuzda "ilk N gerçek satır"a düşer — o kural web'de yaşıyor ve KOPYALANMADI; buradaki kural
+ * kullanıcının mobile verdiği kuraldır ve işaretsiz veride boş döner.)
+ */
+export function selectHomeBandSources<C extends { isFeatured: boolean }, K extends { isFeatured: boolean }>(
+  categories: readonly C[],
+  collections: readonly K[],
+  rng: Rng,
+): { categories: C[]; collections: K[] } {
+  const chosenCollections = pickRandomDistinct(
+    collections.filter((c) => c.isFeatured),
+    HOME_BAND_COLLECTION_COUNT,
+    rng,
+  );
+  const chosenCategories = categories.filter((c) => c.isFeatured).slice(0, HOME_BAND_TOTAL - chosenCollections.length);
+  return { categories: chosenCategories, collections: chosenCollections };
+}
+
+/** Bant kompozisyonunun girdisi — uç küresel listeyi verir; test kendi kurduğu satırları verir. */
+interface HomeBandPools {
+  /** AKTİF kategoriler, `sortOrder` sırasında (`CategoryService.list`). */
+  categories: Category[];
+  /** AKTİF koleksiyonlar + üye ürün kimlikleri (`listWithProductIds` — üyelik gömülü, N+1 yok). */
+  collections: Array<Collection & { productIds: string[] }>;
+}
+
+/**
+ * Çok dilli metni çözer; boş/boşluk `null` sayılır — altyazı ve rozet boşuna açılmasın.
+ * Dışa verilir: paket ucu (`api/v1/packages.ts`) açıklamayı aynı kuralla indirger — ikinci tanım
+ * açılmaz (`catalog.ts`teki `UNKNOWN_PLACE`/`readViewer` ihracının aynı deseni).
+ */
+export function resolvedOrNull(value: LocalizedText | null, locale: PreferredLanguage): string | null {
+  if (!value) return null;
+  const text = resolveLocalizedText(value, locale).trim();
+  return text.length > 0 ? text : null;
+}
+
+function toBand(
+  kind: HomeBandKind,
+  row: { slug: string; name: LocalizedText } & ImageMeta,
+  subtitle: LocalizedText | null,
+  productCount: number,
+  locale: PreferredLanguage,
+): HomeBand {
+  return {
+    kind,
+    slug: row.slug,
+    name: resolveLocalizedText(row.name, locale),
+    // `null` = yazılmamış; yedek metin UYDURULMAZ (sözleşme künyesi — ada düşmek tekrar üretirdi).
+    subtitle: resolvedOrNull(subtitle, locale),
+    productCount,
+    image: imageOf(row),
+  };
+}
+
+/**
+ * Bant karışımını kurar: seç → SEÇİLENLER için say → boş kapıyı düşür → karıştır.
+ *
+ * Sıra maliyeti belirliyor (web koleksiyon bandının aynı gerekçesi): sayım sorgusu yalnız seçilen
+ * ≤6 kayıt için atılır; ters sırada bandın maliyeti katalogdaki kategori/koleksiyon sayısıyla
+ * büyürdü. Sayaç kataloğun ölçütüyle AYNI (`status: 'active'`; koleksiyonda aktif ÜYE) —
+ * üyelik/kayıt sayısını basmak kartı yalancı yapardı.
+ *
+ * **Ürünü kalmamış bant karta GİRMEZ** (web emsali: tıklanınca boş katalog açan kapı, kapı
+ * değildir) — sayımdan sonra düşer ve dizi kısalır; yerine yenisi SAYILMAZ (sayım maliyeti sabit
+ * kalsın, "olduğu kadar" esnemesi 08.08 kararında zaten var). Sözleşmenin `positive` kilidi de bu.
+ */
+export async function composeHomeBands(
+  db: SupabaseClient,
+  locale: PreferredLanguage,
+  pools: HomeBandPools,
+  rng: Rng = Math.random,
+): Promise<HomeBand[]> {
+  const chosen = selectHomeBandSources(pools.categories, pools.collections, rng);
+
+  const products = new ProductService(db);
+  const [categoryCounts, collectionCounts] = await Promise.all([
+    Promise.all(chosen.categories.map((c) => products.countMatching({ categoryId: c.id, status: 'active' }))),
+    Promise.all(
+      chosen.collections.map((c) =>
+        // Üyesiz koleksiyona sorgu atılmaz: boş `ids` süzgeci "süzgeçsiz" okunurdu (web'in aynı korunması).
+        c.productIds.length === 0 ? Promise.resolve(0) : products.countMatching({ ids: c.productIds, status: 'active' }),
+      ),
+    ),
+  ]);
+
+  const categoryBands = chosen.categories
+    .map((c, i) => toBand('category', c, c.tagline, categoryCounts[i] ?? 0, locale))
+    .filter((band) => band.productCount > 0);
+  const collectionBands = chosen.collections
+    .map((c, i) => toBand('collection', c, c.description, collectionCounts[i] ?? 0, locale))
+    .filter((band) => band.productCount > 0);
+
+  return interleaveAtRandom(categoryBands, collectionBands, rng);
+}
+
+/** Uçtan çağrılan hâli — havuzları küresel listeden kurar (2 okuma), kuralı kompozisyona bırakır. */
+export async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, rng: Rng = Math.random): Promise<HomeBand[]> {
+  const [categories, collections] = await Promise.all([
+    new CategoryService(db).list({ activeOnly: true }),
+    new CollectionService(db).listWithProductIds({ activeOnly: true }),
+  ]);
+  return composeHomeBands(db, locale, { categories, collections }, rng);
+}
+
+/** Kartın fırsat hâline geçtiğinin tek ölçütü: motor teklifi kazandırdı → üstü çizili referans var. */
+function hasWonOffer(p: StorefrontProduct): p is StorefrontProduct & { wasCents: number } {
+  return p.wasCents !== undefined;
+}
+
+/**
+ * Fırsat kartları — application'ın MEVCUT kapısından (`getCatalogData` + `onlyOffers`): teklifli
+ * ürünlerin bulunması, fiyatın motora çözdürülmesi ve kart indirgemesi web katalogunun okuduğu
+ * kararların TAM AYNISI. Web ana sayfasının `readOffers`ı kopyalanmadı; buradaki tek iş sözleşme
+ * daraltması — teklif normal fiyatı YENMEDİYSE `wasCents` doğmaz ve kart fırsat bandına giremez
+ * (web `isOffer` süzgecinin teli; karar motorun, süzgeç sonucu okur).
+ *
+ * Bedeli bilinçli: kapı bu uçta kullanılmayan iki okuma da yapar (kategori listesi + süzgeç
+ * sayacı). Kopyasız tek yol buydu; tur sayısı rapora ölçülü yazıldı, tek-okumaya indirme kararı
+ * gecikme ölçümüyle birlikte verilecek (STACK "Okumada RPC eşiği").
+ *
+ * ⚠ Yer bilinmezken (`warehouseId: null`) teklif TUTARI hiç okunmaz — verilmiş söz (`catalog.ts`
+ * `UNKNOWN_PLACE` künyesi): dizi bugün hep BOŞ döner, yer çözümü terfi edince (21.6 B) dolar.
+ */
+export async function readHomeOffers(
+  db: SupabaseClient,
+  locale: PreferredLanguage,
+  place: PlaceWarehouses,
+  viewer: PricingViewer,
+): Promise<Array<StorefrontProduct & { wasCents: number }>> {
+  const page = await getCatalogData(db, { locale, query: { onlyOffers: true }, place, viewer, limit: HOME_OFFER_LIMIT });
+  return page.products.filter(hasWonOffer);
+}
+
+/**
+ * Vitrin seçkisi — kataloğun KENDİ `featured` sıralamasından ilk N (application'ın mevcut kapısı;
+ * katalog sekmesinin açılış sırasının kendisi). **GEÇİCİ SEÇKİ KURALI** (08.08 ikinci tur): web'in
+ * sinyalli seçkisi (`readShowcase` — görüntüleme+sepet sinyali+ayar) KOPYALANMADI; sinyalsiz veride
+ * iki yüzey aynı listeyi verir, sinyal birikince ayrışır — web kuralı pakete terfi ettiğinde
+ * (defter kaydı 08.08) bu okuma o kapıya döner. BEKLEYEN(21.14).
+ *
+ * Fiyatsız (satışa kapalı) ürün rayda taşınmaz: kart fiyat etiketi zorunlu bir gezinme davetidir.
+ */
+export async function readHomeFeatured(
+  db: SupabaseClient,
+  locale: PreferredLanguage,
+  place: PlaceWarehouses,
+  viewer: PricingViewer,
+): Promise<StorefrontProduct[]> {
+  const page = await getCatalogData(db, { locale, query: {}, place, viewer, limit: HOME_FEATURED_LIMIT });
+  return page.products.filter((p) => p.priceCents !== null);
+}
+
+/**
+ * Hazır paket kartları — yalnız İŞARETLİLER (`isFeatured`), `sortOrder` sırasıyla ilk N; işaret
+ * yoksa bölüm BOŞ (bant karışımının ilkesi: işaret seçimdir, yedeği yoktur — web'in `pickFeatured`
+ * yedeği bilerek alınmadı, gerekçe sözleşme başlığında). Kart karar taşımaz: ad/fiyat/adet/görsel
+ * indirgemesi (`toCents` + `imageOf` + satır sayısı); stok/tükenme kararı paket DETAYININ işi.
+ *
+ * `listWithItems` TEK sorgudur (üyelik gömülü); paket kataloğu doğal tavanlı küçük bir kümedir
+ * (CLAUDE §1 "tek turda" dalı), süzme bellekte yapılır.
+ */
+export async function readHomePackages(db: SupabaseClient, locale: PreferredLanguage): Promise<HomePackage[]> {
+  const bundles = await new BundleService(db).listWithItems();
+  return bundles
+    .filter((b) => b.isActive && b.isFeatured && b.items.length > 0)
+    .slice(0, HOME_PACKAGE_LIMIT)
+    .map((b) => ({
+      slug: b.slug,
+      name: resolveLocalizedText(b.name, locale),
+      priceCents: toCents(b.totalPrice),
+      itemCount: b.items.length,
+      image: imageOf(b),
+    }));
+}
+
+/**
+ * Tarif şeridi — İÇERİK kartı, karar yok: fiyat/stok/tükenme okunmaz (o birleştirme tarif
+ * detayının işi ve web'in tarif okumasıyla birlikte terfi edecek — `storefront-types.ts` künyesi:
+ * "ikinci tüketeni doğduğu gün aynı yolla"). Karar olmayan yerde orkestrasyon da yok (katalog
+ * `/categories` ucunun emsali); indirgeme paylaşılan ilkellerle yapılır (`resolveLocalizedText`,
+ * `splitLines`, `imageOf`) — dil yedek zinciri ve "satır = madde" kuralı burada İKİNCİ KEZ
+ * yazılmadı.
+ *
+ * Seçim: yayındaki tariflerin editoryal sırasından (`sortOrder`) ilk N — web tarif listesinin
+ * okuduğu sıranın kendisi (`listActiveWithItems`), yalnız kısaltılmış.
+ */
+export async function readHomeRecipes(db: SupabaseClient, locale: PreferredLanguage): Promise<HomeRecipe[]> {
+  const rows = await new RecipeService(db).listActiveWithItems(HOME_RECIPE_LIMIT);
+  return rows.map((recipe) => {
+    const pantry = resolvedOrNull(recipe.pantry, locale);
+    return {
+      slug: recipe.slug,
+      name: resolveLocalizedText(recipe.name, locale),
+      duration: resolvedOrNull(recipe.duration, locale),
+      serves: resolvedOrNull(recipe.serves, locale),
+      itemCount: recipe.items.length,
+      pantryCount: pantry ? splitLines(pantry).length : 0,
+      image: imageOf(recipe),
+    };
+  });
+}

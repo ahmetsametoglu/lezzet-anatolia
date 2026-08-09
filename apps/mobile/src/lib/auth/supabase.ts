@@ -25,6 +25,10 @@ export function getSupabase(): SupabaseClient {
       persistSession: true,
       // RN'de tarayıcı URL'i yok; magic-link parametresi aramaya kalkması anlamsız.
       detectSessionInUrl: false,
+      /* OAuth PKCE ile (21.14c — Google girişi): dönüş derin bağlantısı `?code=` taşır ve
+         `exchangeCodeForSession` doğrular; code_verifier'ı istemci SecureStore'a kendisi yazar.
+         Implicit akışın fragment'ta token taşıması hem kırılgan hem loglara sızmaya açıktı. */
+      flowType: 'pkce',
     },
   });
 

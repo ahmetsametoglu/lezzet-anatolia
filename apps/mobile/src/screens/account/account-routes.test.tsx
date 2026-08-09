@@ -1,4 +1,4 @@
-import { screen } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderShell } from '@/testing/render-shell';
 
@@ -11,19 +11,32 @@ import { renderShell } from '@/testing/render-shell';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// Hesap rotası artık oturumu okuyor (`useMe`, 21.14c); bu ortamda Supabase env'i yok — istemci
+// mock'lanır, oturumsuz hâl döner. Rota testinin konusu GÖLGELENME, kimlik hâlleri ekran testinde.
+jest.mock('@/lib/auth/supabase', () => ({
+  getSupabase: () => ({
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      refreshSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+    },
+  }),
+}));
+
 describe('hesap rotaları', () => {
-  it('/account/edit profil düzenleme sayfasını açar', async () => {
-    const { app } = await renderShell('/account/edit');
+  // `/account/edit` rotası BİLEREK YOK (kullanıcı kararı 08.08): profil düzenleme v3'teki gibi
+  // hesap ekranının İÇİNDEKİ çekmecedir (`account-screen.test` kanıtlıyor); ayrı sayfa söküldü.
 
-    expect(app).toHavePathname('/account/edit');
-    expect(screen.getByTestId('profile-form')).toBeOnTheScreen();
-  });
-
-  it('/account sekmesi GÖLGELENMEZ: hesap ekranı olduğu gibi açılır', async () => {
+  it('misafir /account açınca GİRİŞ sayfası doğrudan gelir; vazgeçince karşılama durur (08.08)', async () => {
     const { app } = await renderShell('/account');
 
-    expect(app).toHavePathname('/account');
-    expect(screen.getByTestId('account-scroll')).toBeOnTheScreen();
+    // Misafir sekmeye gelir gelmez login İTİLİR (v3 karşılama bloğu fazladan dokunuştu).
+    await waitFor(() => expect(app).toHavePathname('/login'));
+
+    // Girişten vazgeçen kişi ikinci kez itilmez: hesapta karşılama bloğu (yedek kapı) görünür.
+    await fireEvent.press(screen.getByTestId('login-back'));
+    await waitFor(() => expect(app).toHavePathname('/account'));
+    await waitFor(() => expect(screen.getByTestId('account-guest')).toBeOnTheScreen());
     expect(screen.queryByTestId('profile-form')).toBeNull();
   });
 });

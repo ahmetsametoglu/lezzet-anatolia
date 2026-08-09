@@ -11,6 +11,15 @@ export * from './auth.schema';
 export * from './me-api.schema';
 // Katalog — kategori/ürün/varyant/stok varlık şemalarından türer.
 export * from './catalog-api.schema';
+// Vitrin (ana ekran) — katalog kartını ve kategori/koleksiyon/tarif varlık şemalarını türetir;
+// yalnız müşteriden bağımsız bölümler (kullanıcı kararı 08.08).
+export * from './home-api.schema';
+// Tarif detayı — tarif varlık şemasından türer; satır fiyat/stok alanları motorun vitrin
+// indirgemesinin aynasıdır (gerekçe dosya başlığında).
+export * from './recipe-api.schema';
+// Paket detayı — bundle/ürün varlık şemalarından türer; tek fiyat kuralı ve `soldOut`suz kapsam
+// dosya başlığında.
+export * from './package-api.schema';
 // Kurye — gün listesi, kapıda teslim/tahsilat, kanıt yükleme, gün kapanışı. Kaynağı
 // `@lezzet/application`ın kurye kapıları; kanıt ve kapanış varlık şemalarından türer.
 export * from './courier-api.schema';

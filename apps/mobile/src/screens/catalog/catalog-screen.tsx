@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -16,6 +16,8 @@ import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { formatPrice } from '@lezzet/helper';
 import { deviceLocale } from '@/lib/i18n/locale';
+import { CartFab } from '@/screens/customer-kit/cart-fab';
+import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';
@@ -47,13 +49,36 @@ import messages from './messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-export function CatalogScreen() {
+interface CatalogScreenProps {
+  /**
+   * Vitrin bandından iletilen kategori SLUG'ı (21.14b); `null` = istek yok. Süzgecin SAHİBİ
+   * değildir — yalnız bir seçim iletir: değer (yeniden) geldiğinde çip seçilir, müşteri sonra
+   * elle değiştirebilir. Aynı değerle tekrar gelmek no-op (`selectCategory` kendi kapısında).
+   */
+  requestedCategory?: string | null;
+}
+
+export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) {
   const locale = deviceLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
   const catalog = useCatalog(locale);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
+
+  /* Banttan gelen seçim etkiyle uygulanır: sekme MOUNT KALIR (navigatör tembel), yani ikinci
+     banda basışta yeni bir mount olmaz — parametreyi ancak bir etki izleyebilir. İlk yük "Tümü"
+     ile başlayıp hemen kategoriye geçebilir (tek fazladan istek, yalnız sekme hiç açılmamışken);
+     eskimiş cevabı hook'un `generation` koruması düşürür. */
+  const { selectCategory } = catalog;
+  useEffect(() => {
+    // Bağımlılık BİLEREK yalnız istek: `selectCategory` her render'da tazelenir, ona bağlanmak
+    // etkiyi her çizimde koşturur ve müşterinin elle seçimini bantla ezerdi.
+    if (requestedCategory !== null) selectCategory(requestedCategory);
+  }, [requestedCategory]);
+
+  const cart = useCart();
+  const fabCount = cartCount(cart);
 
   const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
 
@@ -265,11 +290,27 @@ export function CatalogScreen() {
       {header}
       {body()}
       {sortSheet}
+      {/* Sepet FAB'ı — v3:602 kuralı: sepette ürün varken vitrin·katalog·ürün·paket dörtlüsünde
+          görünür (boşken komponent kendini çizmez); yerleşim vitrindekiyle aynı yuva. */}
+      <View style={styles.fabSlot} pointerEvents="box-none">
+        <CartFab
+          count={fabCount}
+          onPress={() => router.push('/cart')}
+          accessibilityLabel={t.cart.open.replace('{n}', String(fabCount))}
+          testID="catalog-cart-fab"
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  /** Sepet FAB yuvası — vitrindekiyle aynı konum (v3: sekme çubuğunun üstünde sağda). */
+  fabSlot: {
+    position: 'absolute',
+    right: theme.space['4xl'],
+    bottom: theme.space['5xl'],
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
