@@ -10,6 +10,7 @@
     "rebuild:ios": "expo prebuild --clean && expo run:ios",
     "rebuild:android": "expo prebuild --clean && expo run:android",
     "test": "jest",
+    "design:diff": "node scripts/design-diff.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "clean": "rm -rf .turbo .expo dist node_modules"
