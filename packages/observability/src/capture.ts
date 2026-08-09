@@ -4,6 +4,7 @@
 // orada `node:` şemalı modül yok ve derleme "UnhandledSchemeError: node:crypto" ile kırılıyor.
 // Yaşandı (30.07); referans projede aynı tuzak aynı gerekçeyle yazılıydı.
 import { serviceDb } from '@lezzet/database/client';
+import { errorMessageOf } from './error-message';
 import { scrubMessage } from './mask';
 import { ErrorLogService } from '@lezzet/database/services/error-log.service';
 import type { ErrorLogLevel } from '@lezzet/types';
@@ -91,7 +92,7 @@ export async function captureError(error: unknown, ctx: CaptureContext): Promise
    * olduğu gibi düşüyordu. Her çağıranın hatırlaması gereken bir kural, bir gün hatırlanmaz —
    * bu yüzden kural çağıranda değil burada.
    */
-  const message = scrubMessage(error instanceof Error ? error.message : String(error));
+  const message = scrubMessage(errorMessageOf(error));
   /**
    * **Yığın izi de maskelenir** (05.08 · statik metin söz denetimi, ölçüm 4) ve bu bir düzeltme
    * değil bir DELİK KAPATMAsıdır: `error.stack`in ilk satırı `Error: <mesaj>`tır. Yani yukarıda

@@ -1,6 +1,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { captureError, logger, SOURCES } from '@lezzet/observability';
+import { captureError, errorMessageOf, logger, SOURCES } from '@lezzet/observability';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals } from './tools-signals';
@@ -303,7 +303,9 @@ export function createMcpServer(): Server {
       logger.info({ tool: toolName, ms: Date.now() - started }, 'mcp: araç çağrısı');
       return text(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      // `String(err)` Supabase hatasında `[object Object]` üretiyordu ve model neyi düzelteceğini
+      // anlayamıyordu (harici MCP denetiminin bulgusu, 09.08).
+      const message = errorMessageOf(err);
       // Altyapı hatası admin hata ekranına da düşer — asistanın kendi arızası görünmez kalmasın (§8).
       void captureError(err, { source: SOURCES.mcp, context: { tool: toolName } });
       return text(`Araç hatası: ${message}`, true);

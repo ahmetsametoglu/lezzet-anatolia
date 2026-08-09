@@ -252,17 +252,25 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const productById = new Map(products.map((p) => [p.id, p]));
 
+  // ── KALEM HATALARI TOPLU DÖNER (harici MCP denetiminin önerisi, 09.08) ────
+  // İlk hatada dönmek "short-circuit"tü ve teknik olarak doğruydu; ama her araç çağrısı modelin
+  // bağlam bütçesinden yiyor. Beş bozuk satırı beş turda öğrenmek yerine tek turda öğrensin:
+  // bunlar birbirinden BAĞIMSIZ doğrulamalar, sıralamanın bir anlamı yok.
   const lines: StockIntakePayload['lines'] = [];
+  const problems: string[] = [];
   for (const [i, raw] of rawLines.entries()) {
     const variant = byId.get(String(raw.variantId ?? ''));
-    if (!variant) return { error: `lines[${i}]: varyant bulunamadı (${String(raw.variantId)}) — katalogdan doğru kimliği bulun.` };
     const qty = Number(raw.qty);
-    if (!Number.isInteger(qty) || qty <= 0) return { error: `lines[${i}]: qty pozitif tam sayı olmalı.` };
     const expiryDate = String(raw.expiryDate ?? '').trim();
+
+    if (!variant) problems.push(`lines[${i}]: varyant bulunamadı (${String(raw.variantId)}) — katalogdan doğru kimliği bulun.`);
+    if (!Number.isInteger(qty) || qty <= 0) problems.push(`lines[${i}]: qty pozitif tam sayı olmalı (gelen: ${String(raw.qty)}).`);
     // SKT UYDURULMAZ: faturada/etikette yoksa asistan patrona sorar. Tarihsiz parti gıdada kör noktadır.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
-      return { error: `lines[${i}]: expiryDate 'YYYY-AA-GG' olmalı. Belgede yoksa UYDURMAYIN — yöneticiye sorun.` };
+      problems.push(`lines[${i}]: expiryDate 'YYYY-AA-GG' olmalı (gelen: ${expiryDate || '(boş)'}). Belgede yoksa UYDURMAYIN — yöneticiye sorun.`);
     }
+    if (!variant || problems.length > 0) continue;
+
     const name = `${resolveLocalizedText(productById.get(variant.productId)?.name ?? {}, 'tr')} · ${resolveLocalizedText(variant.label, 'tr')}`;
     lines.push({
       variantId: variant.id,
@@ -273,6 +281,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
       unitCostCents: Number.isInteger(raw.unitCostCents) ? (raw.unitCostCents as number) : null,
     });
   }
+  if (problems.length > 0) return { error: `${problems.length} kalem sorunu — hepsini düzeltip tekrar gönderin:`, problems };
 
   const supplierId = typeof args.supplierId === 'string' ? args.supplierId : null;
   const supplier = supplierId ? await new SupplierService(db).getById(supplierId) : null;

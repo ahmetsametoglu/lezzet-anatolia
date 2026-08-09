@@ -8,3 +8,4 @@
 export { logger } from './logger';
 export { captureError, SOURCES, type CaptureContext } from './capture';
 export { maskEmail, maskPhone, scrubMessage } from './mask';
+export { errorMessageOf } from './error-message';

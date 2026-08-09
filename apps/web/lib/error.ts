@@ -1,5 +1,5 @@
 import 'server-only';
-import { captureError, SOURCES } from '@lezzet/observability';
+import { captureError, errorMessageOf, SOURCES } from '@lezzet/observability';
 
 /**
  * Server Action hata normalizasyonu + sonuç sözleşmesi (referans deseni). Action'lar throw ETMEZ;
@@ -37,7 +37,10 @@ import { captureError, SOURCES } from '@lezzet/observability';
  */
 export function getErrorMessage(err: unknown): string {
   void captureError(err, { source: SOURCES.webAction });
-  return err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu.';
+  // `instanceof Error` Supabase hatalarını KAÇIRIYORDU (düz nesne: {message, code, hint}) ve
+  // operatöre "Beklenmeyen bir hata oluştu" diyorduk — oysa veritabanı sebebi tam olarak
+  // söylüyordu (ölçüldü 09.08, harici MCP denetimi). Normalize edici tek yerde: observability.
+  return errorMessageOf(err);
 }
 
 export type ActionResult<T = null> = { data: T | null; error: string | null };
