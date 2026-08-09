@@ -14,8 +14,11 @@ import type { ReactNode } from 'react';
  * `label` isteğe bağlı: rota düzeyindeki yüklemede sayfanın adı henüz elimizde olmayabilir (dil bağlamı
  * kurulmadan çizilir). `role="status"` + `aria-busy` tek başına da yeter.
  *
- * BEKLEYEN(08.11): müşteri kitindeki `SkeletonRegion` de buna bağlanacak — bugün kendi kopyası var.
- * Şimdi birleştirilmedi çünkü o dosyalar paralel çalışan müşteri-yüzeyi ajanının şeridinde (WORKFLOW §7).
+ * **Müşteri kitindeki `SkeletonRegion` buraya bağlandı** (10.08 · 08.37): iki sarmalayıcı aynı işi
+ * yapıyordu ve biri gün gelip `role`ünü ya da `aria-busy`sini değiştirse ekran okuyucu bazı
+ * sayfalarda yüklemeyi duyurur bazılarında duyurmazdı — yalnız ekran okuyucu kullanan birinin fark
+ * edeceği bir ayrışma. `SkeletonRegion` adı korundu (iskelet kiti tek yerden okunuyor), gövdesi
+ * artık burası.
  */
 /**
  * `className` İSTEĞE BAĞLI DEĞİL, ZORUNLU BİR KAÇIŞ: sarmalayıcı sınıfsız düz bir `div` olarak

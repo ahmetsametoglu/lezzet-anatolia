@@ -15,6 +15,7 @@
  * merkezi değil.
  */
 import { cardClass } from './card';
+import { LoadingRegion } from '@/components/loading-region';
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return <span className={['block animate-pulse rounded-[6px] bg-sand-100', className].join(' ')} aria-hidden="true" />;
@@ -31,17 +32,24 @@ export function SkeletonBlock({ className = '' }: { className?: string }) {
 }
 
 /**
- * Yükleniyor bölgesinin ERİŞİLEBİLİR sarmalayıcısı. Ekran okuyucu için tek bir "yükleniyor" bildirimi
- * yeter; iskeletin kendisi `aria-hidden` çünkü onlarca boş çubuğu tek tek okutmanın anlamı yok.
+ * Yükleniyor bölgesinin ERİŞİLEBİLİR sarmalayıcısı — **artık kendi gövdesi yok** (10.08).
+ *
+ * `components/loading-region.tsx` aynı işi yapıyordu (`role="status"` + `aria-busy` + `aria-label`)
+ * ve o dosyanın künyesindeki `BEKLEYEN(08.11)` bunu zaten söylüyordu: *"müşteri kitindeki
+ * `SkeletonRegion` de buna bağlanacak — bugün kendi kopyası var."* İşaret bu şeridi bekliyordu,
+ * çünkü dosyalar bu yüzeyin.
+ *
+ * Kopyanın taşıdığı gerçek risk erişilebilirlikti: iki sarmalayıcıdan biri gün gelip `role`ünü ya da
+ * `aria-busy`sini değiştirse, ekran okuyucu bazı sayfalarda yüklemeyi duyurur bazılarında duyurmaz —
+ * ve bunu **yalnız ekran okuyucu kullanan biri** fark eder. Sessiz ayrışmanın en pahalı türü.
+ *
+ * Ad korunuyor: dört çağıran (`cart` ve `checkout` iskeletleri) `Skeleton*` ailesini tek yerden
+ * okuyor ve `LoadingRegion` adını oraya taşımak, iskelet kitinin dışına çıkan bir import zinciri
+ * kurardı. Aynı gerekçeyle yeniden ihraç değil sarmalayıcı: `className` kaçışı burada gerekmiyor
+ * (o kaçış operasyon rotalarının flex zinciri içindir, künyesi orada).
  */
 export function SkeletonRegion({ label, children }: { label?: string; children: React.ReactNode }) {
-  return (
-    // `label` isteğe bağlı: rota düzeyindeki yüklemede sayfanın adı henüz elimizde olmayabilir
-    // (dil bağlamı kurulmadan çizilir). `role="status"` + `aria-busy` tek başına da yeter.
-    <div role="status" aria-busy="true" aria-label={label}>
-      {children}
-    </div>
-  );
+  return <LoadingRegion label={label}>{children}</LoadingRegion>;
 }
 
 /**

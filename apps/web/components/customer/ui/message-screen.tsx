@@ -37,13 +37,20 @@ export function MessageScreen({ device, emoji, eyebrow, title, description, acti
         isMobile ? 'px-6 py-12' : 'px-12 py-20',
       ].join(' ')}
     >
-      <span className={isMobile ? 'text-4xl' : 'text-[42px]'}>{emoji}</span>
+      {/* Emoji bir TİPOGRAFİ kademesi değil dekoratif bir ikondur; ölçekte karşılığı aramak yanlış
+          soruydu (`design/BACKLOG §2`). Ham `[42px]` yerine iki standart Tailwind kademesi: mobilde
+          36, masaüstünde 48. Dekoratif bir öğede 6px büyüme görsel bir bozulma değil, ham değerin
+          kalması ise envanterin dışında kalan bir ölçüyü kalıcılaştırırdı. */}
+      <span className={isMobile ? 'text-4xl' : 'text-5xl'}>{emoji}</span>
       <div className="flex flex-col items-center gap-2.5">
         <span className="font-sans text-eyebrow uppercase text-muted">{eyebrow}</span>
+        {/* Başlık ölçeğe bağlandı: `text-page-title` (38/26) ile buradaki ham 40/27 AYNI ROLÜ
+            taşıyor — sayfanın kendi başlığı. 2px fark için üçüncü bir kademe açmak, ölçeği
+            kalabalıklaştırıp sonraki okuyucuya "hangisi doğru" sorusunu sordururdu. */}
         <h1
           className={[
             'max-w-[660px] text-balance font-serif font-semibold leading-tight text-ink',
-            isMobile ? 'text-[27px]' : 'text-[40px]',
+            isMobile ? 'text-page-title-sm' : 'text-page-title',
           ].join(' ')}
         >
           {title}

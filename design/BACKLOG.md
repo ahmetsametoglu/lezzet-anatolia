@@ -196,10 +196,16 @@ değişecek yer parantezde.
       satırının etiketi, uzun duyuru cümlesi orayı taşırır. Ad verilmemişse yüzey eski davranışına
       düşüyor (kuponda kod, kampanyada tür). Operasyon kupon formunda dil sekmeli alan var.
       **Tasarımda otomatik kampanya hâli hâlâ çizilmemiş** — kod hazır, çizim gelince yalnız yerleşim değişir.
-- [ ] **Hata sayfası başlık ölçüleri** — `message-screen.tsx` üç ham kademe taşımaya devam ediyor
-      (emoji 42 · başlık 40/27 px); bunlar envanter §0.4 ölçeğinde yok. Kademe eklemek mi yuvarlamak
-      mı — hata sayfası tasarımının ayrı ele alınmasını gerektiriyor. **Dosyanın kalanı token'landı**
-      (üstbaşlık → `text-eyebrow`), yalnız bu üç değer kaldı.
+- [x] **Hata sayfası başlık ölçüleri** — ~~`message-screen.tsx` üç ham kademe taşımaya devam ediyor
+      (emoji 42 · başlık 40/27 px)~~ **KAPANDI (10.08 · 08.37).** Soru "kademe eklemek mi yuvarlamak
+      mı" diye kurulmuştu; ölçünce üçüncü bir yol çıktı: **başlığın envanterde zaten bir karşılığı
+      vardı.** `text-page-title` (38/26) 08.10'da liste sayfaları için eklenmişti ve buradaki 40/27
+      ile AYNI ROLÜ taşıyor — sayfanın kendi başlığı. 2px için üçüncü bir kademe açmak ölçeği
+      kalabalıklaştırıp sonraki okuyucuya "hangisi doğru" sorusunu sordururdu.
+      **Emoji ayrı bir cevap istedi:** o bir tipografi kademesi değil dekoratif bir ikon, ölçekte
+      karşılığını aramak yanlış soruydu. İki standart Tailwind kademesine indi (mobil 36 · masaüstü
+      48); dekoratif bir öğede 6px büyüme görsel bozulma değil, ham değerin kalması ise envanter
+      dışı bir ölçüyü kalıcılaştırırdı.
 
 ---
 
