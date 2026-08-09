@@ -73,8 +73,9 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
             fallback={t.assurance}
             blockedActions={
               selected?.stockStatus === 'elsewhere' ? (
-                /* "Bölgenizde şu an yok" hâlinin BİRİNCİL eylemi (tasarım): sepete ekleme yolu
-                   yukarıda açık kalır, buradaki düğme bekleyişi kaydeder. */
+                /* `elsewhere` hâlinin BİRİNCİL eylemi (tasarım): sepete ekleme yolu yukarıda açık
+                   kalır, buradaki düğme bekleyişi kaydeder. Bekleyişin NEYE dair olduğunu düğme
+                   kendi çözer — rota içinde kalem, rota dışında bölge. */
                 <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
               ) : (
                 <Link href={{ pathname: '/catalog', query: { shippable: '1' } }} className={buttonClass({ size: 'sm', className: '!text-note' })}>

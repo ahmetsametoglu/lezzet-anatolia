@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Badge } from '@/components/customer/ui/badge';
-import { buttonClass } from '@/components/customer/ui/button';
 import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
+import { elsewhereReasonOf } from '@/lib/delivery/place-types';
 import type { StockStatus } from '@lezzet/types';
 import { useDeliveryPlace } from './place-context';
 import { NoticeDialog } from './notice-dialog';
+import { noticeButtonClass, ZoneNoticeButton, type NoticeEmphasis } from './zone-notice-button';
 import messages from './place-messages.json';
 
 /**
@@ -16,10 +17,22 @@ import messages from './place-messages.json';
  * Dördü de stoktan doğar, müşteri seçmez:
  *   `available`     → **hiçbir işaret yok.** İyi haber sessizdir; normal ürün araçla ücretsiz gelir.
  *   `shipping`      → "📦 Kargoyla gönderilir" — yerelde yok ama kargolanabiliyor.
- *   `elsewhere`     → "Bölgenizde şu an yok" — soğuk zincir, kargoya verilemez. YERE BAĞLI ve
- *                     değişebilir; birincil eylem "Gelince haber ver".
+ *   `elsewhere`     → soğuk zincir, kargoya verilemez. **İKİ ALT HÂLİ VAR** (aşağıda).
  *   `out_of_stock`  → işaret BURADA basılmaz: "Tükendi" kartın kendi köşe rozetidir (K7), çünkü o
  *                     yere bağlı değil evrensel bir hâldir ve görselin üstünde durur.
+ *
+ * ── `elsewhere` TEK CÜMLEYLE ANLATILAMAZ (09.08) ─────────────────────────────
+ * Sebebi müşterinin rotada olup olmamasına göre değişir ve ikisi aynı şeyi vaat etmez:
+ *   rota İÇİ  → "Bölgenizde şu an yok" — GEÇİCİ; bölgenin deposuna mal gelince çözülür ve
+ *               bekleyeceği şey KALEM (`variant_stock_notice`).
+ *   rota DIŞI → "bu adrese gönderemiyoruz" — KALICI; ürün gelse bile ona gidemez, çünkü soğuk
+ *               zincir kargoya verilemiyor. Bekleyeceği şey BÖLGENİN açılması (`zone_notice`).
+ * "Şu an yok" demek rota dışındaki müşteriye gelmeyecek bir mal beklettirirdi. Ayrım sepetin kısıt
+ * bloğunda 01.08'den beri yapılıyordu (`place-restriction`: `reason` ↔ `reasonHere`); kart ve ürün
+ * detayı düzeyinde yapılmıyordu, çünkü rota dışı müşteri bu hâle 19.23'e kadar hiç düşmüyordu.
+ *
+ * İki cümle de yer ailesinin mevcut sözlüğünden geliyor (`lineBlocked` sepet satırında da aynı
+ * durumu anlatıyor) — yeni bir cümle ailesi yazılmadı.
  *
  * **Metin burada, sayfada değil.** Aynı dört cümle anasayfa, katalog, ürün detayı ve sepette
  * görünüyor; dört `messages.json`'a kopyalansaydı biri değişince ötekiler eskirdi. Yer ailesinin
@@ -35,6 +48,7 @@ interface StockMarkProps {
 
 export function StockMark({ status, locale }: StockMarkProps) {
   const t = messages[locale];
+  const { place } = useDeliveryPlace();
   if (status === 'shipping') {
     return (
       <Badge tone="closed" variant="outline">
@@ -45,7 +59,7 @@ export function StockMark({ status, locale }: StockMarkProps) {
   if (status === 'elsewhere') {
     return (
       <Badge tone="pending" variant="outline">
-        {t.awayMark}
+        {elsewhereReasonOf(place) === 'out_of_route' ? t.lineBlocked : t.awayMark}
       </Badge>
     );
   }
@@ -62,6 +76,11 @@ export function StockMark({ status, locale }: StockMarkProps) {
  *
  * Kayıt bir SÖZ değil bir NOT: tetikleyici (stok girince mail) henüz yazılmadı ve metin de öyle
  * diyor ("not aldık"). Kaydın bugünkü değeri hangi ürünün nerede beklendiğini bilmek.
+ *
+ * **ROTA DIŞINDA kendi yerini bölge notuna bırakır** (09.08 · kullanıcı kararı): orada beklenecek
+ * şey kalem değil bölgedir, kalem notu tutulamayacak bir sözdür. Kararı ÇAĞIRAN değil bu bileşen
+ * verir — düğmenin kendi ön koşulunu bilmesi, üç çağıranın (kart · ürün detayı masaüstü/mobil)
+ * aynı koşulu üç kez yazıp birinde unutmasından güvenlidir.
  */
 interface StockNoticeButtonProps {
   variantId: string | null;
@@ -69,7 +88,7 @@ interface StockNoticeButtonProps {
   productName: string;
   locale: Locale;
   /** Kartta çerçeveli ve küçük; ürün detayında dolu ve tam genişlik. */
-  emphasis?: 'card' | 'panel';
+  emphasis?: NoticeEmphasis;
 }
 
 export function StockNoticeButton({ variantId, productName, locale, emphasis = 'card' }: StockNoticeButtonProps) {
@@ -82,20 +101,17 @@ export function StockNoticeButton({ variantId, productName, locale, emphasis = '
   // doğar — ama düğmenin kendi ön koşulunu bilmesi, çağıranların onu unutmasından güvenlidir.
   if (!variantId || !place) return null;
 
+  // Rota DIŞI: kalem notu yerine bölge notu. Ürünün gelmesini beklemek burada bir şey çözmez —
+  // geldiğinde de kargoya verilemeyecek; değişmesi gereken şey bölgedir.
+  if (elsewhereReasonOf(place) === 'out_of_route') {
+    return <ZoneNoticeButton locale={locale} postalCode={place.postalCode} emphasis={emphasis} />;
+  }
+
   const fill = (text: string) => text.replace('{product}', productName).replace('{code}', place.postalCode);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={buttonClass({
-          variant: emphasis === 'card' ? 'secondary' : 'primary',
-          size: emphasis === 'card' ? 'card' : 'md',
-          fullWidth: emphasis === 'panel',
-          className: emphasis === 'card' ? '!border-olive !text-olive flex-none whitespace-nowrap' : '',
-        })}
-      >
+      <button type="button" onClick={() => setOpen(true)} className={noticeButtonClass(emphasis)}>
         {t.notifyCta}
       </button>
 

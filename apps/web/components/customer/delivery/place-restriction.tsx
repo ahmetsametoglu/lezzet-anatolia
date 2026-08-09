@@ -10,9 +10,10 @@ import { formatPrice } from '@/lib/storefront/format';
 import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
-import { recordVariantStockNoticeAction, recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
+import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
 import type { CustomerResult } from '@/lib/customer-error';
 import { NoticeDialog } from './notice-dialog';
+import { ZoneNoticeButton } from './zone-notice-button';
 import messages from './restriction-messages.json';
 
 /**
@@ -202,23 +203,29 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
         <Button variant="outlineOlive" size="sm" compact={compact} onClick={onChangePlace ?? (() => setPlaceOpen(true))}>
           {onChangePlace ? t.changeAddressCta : t.changeCta}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setNoticeOpen(true)}>
-          {here ? t.noticeCtaHere : t.noticeCta}
-        </Button>
+        {/* Rota içindeyken bölge notu ANLAMSIZ — müşteri zaten bölgede. Söz kalem kalem verilir ve
+            kayıt da kalem kalem düşülür; tek bir çağrının kaydedeceği bir "bölge" yok. Bu dalda
+            engelli satırların hepsi varyant satırıdır: paketin yolu `null` olduğu için kısıt
+            süzgeci onu ancak rota DIŞINDA yakalar.
+            Rota dışı dal ORTAK bileşene taşındı (`ZoneNoticeButton`): aynı bekleyiş kartta ve ürün
+            detayında da kaydediliyor, panelin ikinci bir kopyası yazılmadı. */}
+        {here ? (
+          <Button variant="ghost" size="sm" onClick={() => setNoticeOpen(true)}>
+            {t.noticeCtaHere}
+          </Button>
+        ) : (
+          <ZoneNoticeButton locale={locale} postalCode={place.postalCode} emphasis="ghost" />
+        )}
       </div>
 
       {placeOpen && <PlaceDialog locale={locale} onClose={() => setPlaceOpen(false)} />}
       {noticeOpen && (
         <NoticeDialog
           locale={locale}
-          title={here ? t.noticeTitleHere : t.noticeTitle}
-          body={(here ? t.noticeBodyHere : t.noticeBody).replace('{code}', place.postalCode)}
-          doneText={(here ? t.noticeDoneHere : t.noticeDone).replace('{code}', place.postalCode)}
-          /* Rota içindeyken bölge notu ANLAMSIZ — müşteri zaten bölgede. Söz kalem kalem verilir
-             ve kayıt da kalem kalem düşülür; tek bir çağrının kaydedeceği bir "bölge" yok.
-             Bu dalda engelli satırların hepsi varyant satırıdır: paketin yolu `null` olduğu için
-             kısıt süzgeci onu ancak rota DIŞINDA yakalar. */
-          onSubmit={(email) => (here ? recordVariantNotices(blocked, email) : recordZoneNoticeAction(place.postalCode, email))}
+          title={t.noticeTitleHere}
+          body={t.noticeBodyHere.replace('{code}', place.postalCode)}
+          doneText={t.noticeDoneHere.replace('{code}', place.postalCode)}
+          onSubmit={(email) => recordVariantNotices(blocked, email)}
           onClose={() => setNoticeOpen(false)}
         />
       )}

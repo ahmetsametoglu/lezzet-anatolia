@@ -287,9 +287,11 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               {labels.addToCart}
             </span>
           ) : away ? (
-            /* Kartta TEK eylem "Gelince haber ver" (tasarım): dar kartta iki düğme sığmaz ve bu
-               hâlde müşterinin sorusu "alabilir miyim" değil, "ne zaman alabilirim". Sepete ekleme
-               yolu kapanmıyor — ürün detayında "sonraya kaydet" ile sürüyor. */
+            /* Kartta TEK eylem "haber ver" (tasarım): dar kartta iki düğme sığmaz ve bu hâlde
+               müşterinin sorusu "alabilir miyim" değil, "ne zaman alabilirim". Sepete ekleme yolu
+               kapanmıyor — ürün detayında "sonraya kaydet" ile sürüyor.
+               Neyin haberi olduğunu düğme KENDİ seçiyor: rota içinde kalemin (`variant_stock_notice`),
+               rota dışında bölgenin (`zone_notice`). Kart o ayrımı bilmez. */
             <StockNoticeButton variantId={product.variantId} productName={product.name} locale={locale} />
           ) : product.purchaseMode === 'options' ? (
             /* Mobilde düğme belirgin şekilde küçülür (tasarım: 11px · 5/9 ped): dar kartta fiyatla

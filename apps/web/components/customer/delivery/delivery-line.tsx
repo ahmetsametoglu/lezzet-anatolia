@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { formatDeliveryDate } from '@/lib/storefront/format';
+import { elsewhereReasonOf } from '@/lib/delivery/place-types';
 import type { StockStatus } from '@lezzet/types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
@@ -105,7 +106,12 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
   }
 
   // Stok hâli biliniyorsa iki blok tasarımın §3 diliyle konuşur ve rota tahminini ezer.
-  if (status === 'shipping' || status === 'elsewhere') {
+  //
+  // `elsewhere` YALNIZ ROTA İÇİNDE bu bloğa girer (09.08): rota dışında sebep geçici değil kalıcı
+  // ve cümle de öyle olmalı — aşağıdaki kısıt dalı ("{code} adresine gönderemiyoruz") o hâlin
+  // zaten var olan doğru dilidir. "Şu an elimizde yok · gelince haber verelim" demek, ürün gelse
+  // bile ona gidemeyecek bir müşteriyi beklemeye çağırırdı.
+  if (status === 'shipping' || (status === 'elsewhere' && elsewhereReasonOf(place) === 'stock')) {
     const away = status === 'elsewhere';
     return (
       <>
@@ -133,7 +139,10 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
   }
 
   // Kısıt: yer rota dışında VE ürün kargolanamıyor. Tek gerçek çıkmaz bu — amber, kırmızı değil.
-  const blocked = !place.inRoute && !shippable;
+  //
+  // Stok hâli varsa o daha KESİN konuşur: `elsewhere` zaten "kargoya verilemiyor" demektir, oysa
+  // `shippable` ürünün kendi özelliğidir ve stoğa bakmaz. İkisi ayrışırsa stoğa güvenilir.
+  const blocked = status === 'elsewhere' ? elsewhereReasonOf(place) === 'out_of_route' : !place.inRoute && !shippable;
 
   return (
     <>
