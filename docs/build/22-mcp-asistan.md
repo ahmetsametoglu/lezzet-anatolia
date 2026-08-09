@@ -110,6 +110,23 @@ satırında.
       kayda köprü düğmesi. Dördü de aynı sebeple: **ölçülemeyen ya da payload'da olmayan veri**.
     - *Doğrulandı:* `pnpm ui:shot /operations/assistant` — yedi tipin tamamı, üç sekme, açık+koyu
       tema (geçici örnek öneriler yerel DB'ye yazıldı, çekimden sonra silindi).
+    - **Sekmeler ORTAK BAŞLIĞIN İÇİNDE** (kullanıcı düzeltmesi 09.08): bir tur `ui/tabs` ile
+      başlığın altına ayrı bir bant olarak yazılmıştı, çizim ise başlık barının içinde gri rayın
+      üstünde kayan bir hap veriyor. Sapmanın bedeli de vardı — iki sütun ekranı dolduruyor, bant
+      o yüksekliği karar çerçevesinden çalıyordu. `components/operation/ui/segmented-nav.tsx`.
+    - **Karar çubuğu MODA göre üç hâlde (22.5 A maddesi, aynı turda):** `handoff` tiplerinde
+      "Uygula" YOK, yerinde hedef ekrana köprü ("Rota ekranında aç →"); `draft_then_edit`te
+      uygulama kalır ve uygulanmış satırda listeye köprü çıkar; `apply` eski davranış. Mod ve adres
+      SUNUCUDA türetilir — `KIND_META`/`modeOf`u istemciden çağırmak `node:crypto`'yu tarayıcı
+      paketine sokup sayfayı 500'e düşürüyor (ölçüldü).
+    - **On tipin onunda önizleme var:** `batch_offer` (eski→yeni fiyat + oran + parti künyesi),
+      `discount_draft` (kural tek cümlede), `recipe_draft` (üç dil doluluğu + malzeme tablosu)
+      bu turda eklendi. Şemasız tip kalmadığı için eski "bu tip uygulanamıyor" cümlesi de kalktı —
+      o cümle üç tip eklendiği an yalan olmuştu.
+    - **KALAN (22.5 B maddesi):** üç hedef ekranın (`deliveries?tab=routes` · `receiving` ·
+      `finance`) `?proposal=` ile ön doldurulması. Adres bugün kimliği taşıyor, ekranlar okumuyor;
+      düğmenin sözü de yalnız "aç" — "hazır doldur" değil. `apps/web/lib/assistant/handoff.ts`
+      tüketicisini o turda bulacak (bugün `knip`te kullanılmıyor görünüyor, silinmemeli).
 
   - **Harici MCP denetimi · tur 2 (09.08)** — dış bir ajan 18 aracın tamamını bozuk veriyle
     yokladı; iki bulgunun ikisi de karşılandı, biri ölçünce başka çıktı:
@@ -161,6 +178,24 @@ satırında.
   - **Fiyat okuması liste + ALIŞ MALİYETİ** (kullanıcı kararı 09.08): maliyet bugüne kadar
     asistanın bağlamı dışındaydı; kârlılık hesabı yapabilmesi için açıldı. Maliyet KDV hariç, liste
     KDV dahil — oran da satırda, ki hesap doğru yapılsın. Bilinmeyen maliyet `null`, sıfır DEĞİL.
-  - **BEKLEYEN(22.5):** `batch_offer` enum'u `0042`ye eklendi → **`db:reset` kullanıcıda**; reset
-    öncesi bu tip canlıda denenemez. Ekran tarafı operasyon şeridinde
-    (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md`).
+  - **ON TİPİN TAMAMI TARANDI (kullanıcı isteği 09.08: "diğerlerinde de benzer durumlar var mı?").**
+    Bölgeyi bulduğumuz yöntem — payload'ı KARAR İHTİYACIYLA karşılaştırmak — hepsine uygulandı.
+    `draft_then_edit` beşlisinin beşinin de hedef editörü gerçekten var (ölçüldü: paket
+    `bundle-items-editor` · indirim `saveDiscountAction` · tarif `recipe-dialog` · ürün katalog ·
+    tedarik `updateDraftLineAction`), yani ölü doğan kayıt yok. Üç şey çıktı:
+    - **`batch_offer` yanlış kapıdaydı → `handoff`.** "Tek sayı" diye `apply` demiştim; oysa teklif
+      fiyatının ÜÇ YÜZÜ var (tutar · indirim · marj) ve `offer-dialog` üçünü birlikte gösteriyor.
+      Kuyrukta tek sayı onaylamak **marjı görmeden fiyat onaylamaktır** — zararına satışı fark
+      etmenin tek yeri o diyalog.
+    - **`product_draft` ÜZERİNE YAZIYOR ve ekran bunu söyleyemiyordu.** `updateDetails` düz bir
+      `update`, sürüm tutmuyor: dolu bir açıklama onaylandığı an kayboluyor. Önizleme "boş alanlara
+      yazılanlar" diyordu ama karşılaştıracak eski değeri hiç almıyordu — vaadi doğrulanmamış bir
+      varsayımdı. Payload artık `currentFields` taşıyor; kayıp GÖRÜLEREK onaylanır.
+    - **`featured_flag` bağlamsızdı:** vitrin liste değil SEÇKİ, doluysa eklenen ötekini iter.
+      Payload artık `currentlyFeaturedCount` taşıyor.
+  - **Devir kapısı SUNUCUDA, ekranın iyi niyetinde değil:** `applyProposalAction` `handoff`
+    modundaki tipi hiç tüketmez — `{ status: 'handoff', target }` döner, öneri `pending` kalır.
+    Gerekçe geçiş penceresinden büyük: ekran düğmeyi gizlemeyi unutsa ya da eski bir sekme açık
+    kalsa, geri alınamaz bir eylem (bildirim · stok · defter · satış fiyatı) düzenlenmeden koşardı.
+  - **BEKLEYEN(22.5):** ekran tarafı operasyon şeridinde
+    (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` — dört devir hedefi + iki yeni alan).

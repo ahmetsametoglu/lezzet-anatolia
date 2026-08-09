@@ -52,6 +52,15 @@ export const FeaturedFlagPayloadSchema = z.object({
    * sorusunun cevabı o günkü ad olmalı.
    */
   name: z.string().min(1),
+  /**
+   * Aynı türde ŞU AN vitrinde kaç kayıt var (22.5 · denetim taraması 09.08).
+   *
+   * "Vitrine ekle" kararı tek başına verilemez: vitrin bir liste değil bir SEÇKİdir ve doluysa
+   * eklenen şey ötekini aşağı iter. Önizleme bunu söylemiyordu; patron "bir tane daha eklemekle"
+   * "sekizinciyi eklemek" arasındaki farkı göremiyordu. Sayı önerinin kurulduğu andaki hâldir —
+   * uygulama anında değişmiş olabilir, o yüzden karar girdisi, kural değil.
+   */
+  currentlyFeaturedCount: z.number().int().nonnegative().optional(),
 });
 
 /** Tedarik siparişi taslağı — eşik-altı sinyalinden; hedef depo ZORUNLU (varsayılan depo yoktur). */
@@ -181,6 +190,23 @@ export const ProductDraftPayloadSchema = z.object({
       ingredients: LocalizedTextSchema.optional(),
     })
     .refine((f) => Object.keys(f).length > 0, { message: 'En az bir alan doldurulmalı' }),
+  /**
+   * ALANIN BUGÜNKÜ HÂLİ — çünkü uygulama ÜZERİNE YAZAR (22.5 · denetim taraması 09.08).
+   *
+   * `updateDetails` düz bir `update`tir ve sürüm tutmaz: dolu bir açıklama onaylandığı an
+   * kaybolur, geri getirilemez. Ekran "fark tablosu" vaat ediyordu ama karşılaştıracak eski
+   * değeri hiç almıyordu — yani yazan taraf "boş alanı dolduruyorum" diyordu, gerçekte bunu
+   * kimse doğrulamıyordu. Eski değer payload'da: patron neyi kaybedeceğini GÖREREK onaylar.
+   *
+   * Boş nesne "alan boştu" demektir (yani ezilen bir şey yok); alanın hiç gelmemesi "eski hâl
+   * okunamadı" demektir ve ekran o zaman uyarı gösterir — ikisi ayrı şeydir.
+   */
+  currentFields: z
+    .object({
+      description: LocalizedTextSchema.nullable().optional(),
+      ingredients: LocalizedTextSchema.nullable().optional(),
+    })
+    .optional(),
 });
 
 /**

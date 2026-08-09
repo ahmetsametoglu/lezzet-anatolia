@@ -126,9 +126,13 @@ export const KIND_META = {
     impact:
       'Partiye indirimli satış fiyatı yazılır ve o parti ANINDA fırsat olarak vitrine düşer — taslak evresi yoktur. Aynı ürünün öteki partileri tam fiyatta kalır. Geri almak teklifi kaldırmaktır.',
     tables: ['stock'],
-    // Tek kolon, düzenlenecek başka alanı yok; tutarı onay penceresinde görülüyor. Ama etkisi
-    // ANINDA ve müşteriye görünür — karar penceresinin uyarı tonu bu yüzden `apply`de en ağırı.
-    mode: 'apply',
+    // ── İLK YAZIMDA `apply` DENMİŞTİ, TARAMADA DÜZELTİLDİ (09.08) ───────────
+    // "Tek sayı, düzenlenecek bir şey yok" diye düşünülmüştü. Yanlıştı: teklif fiyatının ÜÇ YÜZÜ
+    // var (tutar · listeye göre indirim · alışa göre marj) ve `offer-dialog` üçünü birden
+    // gösteriyor. Kuyrukta tek sayı onaylamak, marjı GÖRMEDEN fiyat onaylamaktır — zararına satışı
+    // fark etmenin tek yeri o diyalogdur. Üstelik patron rakamı değiştirmek isteyebilir ve
+    // "onayla/reddet" ona bu yolu hiç vermiyordu.
+    mode: 'handoff',
     target: 'stock',
     resultKey: 'stockId',
   },

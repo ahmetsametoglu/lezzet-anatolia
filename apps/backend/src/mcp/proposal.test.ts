@@ -153,8 +153,10 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
    * Kararın CİNSİ künyeden okunur (22.5). Ekran kendi tablosunu kurarsa iki gerçek doğar ve biri
    * bir gün ötekinden ayrılır — geri alınamaz bir öneri "tek tık uygula" kapısına düşer.
    */
-  it('geri alınamaz üç tip DEVREDİLİR, taslak doğuran tipler KÖPRÜ verir', () => {
-    for (const kind of ['zone_extend', 'stock_intake', 'money_movement'] as const) {
+  it('geri alınamaz DÖRT tip DEVREDİLİR, taslak doğuran tipler KÖPRÜ verir', () => {
+    // `batch_offer` de burada: fiyatın üç yüzü (tutar · indirim · marj) yalnız teklif diyaloğunda
+    // birlikte görünür; kuyrukta tek sayı onaylamak marjı görmeden fiyat onaylamaktır.
+    for (const kind of ['zone_extend', 'stock_intake', 'money_movement', 'batch_offer'] as const) {
       expect(modeOf(kind)).toBe('handoff');
     }
     for (const kind of ['bundle_draft', 'discount_draft', 'recipe_draft', 'product_draft', 'purchase_order'] as const) {

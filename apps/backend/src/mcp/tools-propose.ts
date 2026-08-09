@@ -188,16 +188,30 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
   if (!isUuid(id)) return badIdError('id', id);
 
   const db = serviceDb();
-  const name =
+  // Vitrinin BUGÜNKÜ doluluğu da okunur: "bir tane daha ekle" ile "sekizinciyi ekle" aynı karar
+  // değil — vitrin bir liste değil seçkidir, dolu olan aşağı iter (denetim taraması 09.08).
+  const [name, featuredCount] = await Promise.all([
     target === 'category'
-      ? (await new CategoryService(db).getById(id))?.name
+      ? new CategoryService(db).getById(id).then((r) => r?.name)
       : target === 'collection'
-        ? (await new CollectionService(db).getById(id))?.name
-        : (await new BundleService(db).getById(id))?.name;
+        ? new CollectionService(db).getById(id).then((r) => r?.name)
+        : new BundleService(db).getById(id).then((r) => r?.name),
+    target === 'category'
+      ? new CategoryService(db).list({ activeOnly: true, featuredOnly: true }).then((r) => r.length)
+      : target === 'collection'
+        ? new CollectionService(db).list({ activeOnly: true, featuredOnly: true }).then((r) => r.length)
+        : new BundleService(db).listAll({ activeOnly: true, featuredOnly: true }).then((r) => r.length),
+  ]);
   if (!name) return { error: `Kayıt bulunamadı (${target}): ${id}` };
 
   const label = resolveLocalizedText(name, 'tr');
-  const payload: FeaturedFlagPayload = { target: target as FeaturedFlagPayload['target'], id, isFeatured, name: label };
+  const payload: FeaturedFlagPayload = {
+    target: target as FeaturedFlagPayload['target'],
+    id,
+    isFeatured,
+    name: label,
+    currentlyFeaturedCount: featuredCount,
+  };
   const verb = isFeatured ? 'vitrine çıkarılsın' : 'vitrinden çıkarılsın';
   return queue('featured_flag', payload, `${label} ${verb} (${target})`);
 }
@@ -330,6 +344,9 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
     productId,
     productName: resolveLocalizedText(product.name, 'tr'),
     fields: fields as ProductDraftPayload['fields'],
+    // Bugünkü hâl ÖNERİYLE BİRLİKTE taşınır: uygulama üzerine yazıyor ve sürüm tutmuyor, yani
+    // dolu bir açıklama onaylandığı an kayboluyor. Patron neyi kaybedeceğini görerek onaylasın.
+    currentFields: { description: product.description ?? null, ingredients: product.ingredients ?? null },
   };
   const filled = Object.keys(payload.fields);
   const summary = `"${payload.productName}" ürününde ${filled.join(' + ')} alanı dolduruldu`;

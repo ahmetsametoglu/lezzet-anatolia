@@ -60,7 +60,13 @@ export interface AssistantQueueRow {
 export type ApplyOutcome =
   | { status: 'applied'; result: Record<string, string> }
   | { status: 'failed'; error: string }
-  | { status: 'gone' };
+  | { status: 'gone' }
+  /**
+   * Bu tip kuyruktan uygulanmaz, ilgili ekrana DEVREDİLİR (22.5). Hata değil yönlendirme: öneri
+   * `pending` kalır, ekran kullanıcıyı `target` ekranına götürür. Ekran düğmeyi gizlese bile kapı
+   * sunucuda durur — eski bir sekme geri alınamaz bir eylemi düzenlenmeden koşturamasın.
+   */
+  | { status: 'handoff'; target: string };
 
 /** `rejectProposalAction` sonucu. */
 export type RejectOutcome = { status: 'rejected' } | { status: 'gone' };

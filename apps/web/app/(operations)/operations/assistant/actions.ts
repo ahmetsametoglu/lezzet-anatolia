@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { AssistantProposalService, serviceDb } from '@lezzet/database';
-import { applyProposal } from '@lezzet/application';
+import { applyProposal, modeOf, KIND_META } from '@lezzet/application';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage } from '@/lib/error';
@@ -37,6 +37,16 @@ export async function applyProposalAction(id: string): Promise<ActionResult<Appl
   const service = new AssistantProposalService(db);
 
   try {
+    // ── DEVREDİLEN TİP BURADAN UYGULANAMAZ (22.5 · kullanıcı kararı 09.08) ──
+    // Kapı KODDA, ekranın iyi niyetinde değil: ekran düğmeyi gizlemeyi unutsa ya da eski bir sekme
+    // açık kalsa, geri alınamaz bir eylem (bildirim · stok · defter · satış fiyatı) DÜZENLENMEDEN
+    // koşardı — kuyruğun tek kapılı hâlinde şikâyet edilen tam olarak buydu. Süzgeç `pending`
+    // satırı hiç tüketmez: öneri kuyrukta kalır ve doğru ekrandan uygulanır.
+    const pending = await service.getById(id);
+    if (pending && modeOf(pending.kind) === 'handoff') {
+      return { data: { status: 'handoff', target: KIND_META[pending.kind].target }, error: null };
+    }
+
     const claimed = await service.claimForApply(id, staff.id);
     // Hata DEĞİL bilgi: başka bir sekmede/kişide karar verilmiş. Ekran bunu nazikçe söyler.
     if (!claimed) return { data: { status: 'gone' }, error: null };
