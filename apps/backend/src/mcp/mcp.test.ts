@@ -10,8 +10,14 @@ import { customerPulse, demandSignals } from './tools-signals';
  *
  * Sayıların DEĞERİ assert edilmez (paylaşılan DB'de küresel sayıya bakan test başka ajanın
  * verisiyle oynar — CLAUDE §4b); doğrulanan şey alanların varlığı/tipi ve YASAKLI alanların
- * YOKLUĞU. Maskeleme testi güvenlik iddiasının kendisidir: `lastPurchasePriceCents` (tedarikçi
- * alışı) araç çıktısının serileşmiş hâlinde hiçbir yerde geçemez (AI_ADMIN_ASSISTANT §6).
+ * YOKLUĞU. Maskeleme testi güvenlik iddiasının kendisidir.
+ *
+ * ── SINIR 22.5'te İNCELDİ, KALKMADI (kullanıcı kararı 09.08) ────────────────
+ * Maliyet artık katalog ve stok araçlarında GÖRÜNÜR (kârlılık hesabı yapılabilsin diye). Kapalı
+ * kalan şey **tedarikçi bağlamıdır**: brifingin tedarik önerisinde `lastPurchasePriceCents` +
+ * `supplierCode` yan yana durur ve o ikili "hangi tedarikçiden kaça alıyoruz" sorusunu cevaplar —
+ * bu, bir partinin maliyetini bilmekten başka bir şeydir (AI_ADMIN_ASSISTANT §6, hassas ticari
+ * veri). Ayrım bilinçli: açılan şey MALİYET, açılmayan şey TEDARİKÇİ İLİŞKİSİ.
  */
 
 const KEY_ENV = 'MCP_CONNECTION_KEY';
@@ -97,12 +103,23 @@ describe('katalog ve stok araçları', () => {
     expect(typeof watch.truncated).toBe('boolean');
     for (const b of watch.batches) {
       // Depo boyutu DÜŞMEZ: parti bir depoda durur (DOMAIN §17).
+      //
+      // ── SATIRIN ŞEKLİ 22.5'te DEĞİŞTİ (kullanıcı kararı 09.08) ─────────────
+      // Eklenen iki küme ve gerekçeleri ayrı:
+      // ① `batchId`/`variantId` — okuma ile yazma arasındaki KİMLİK KÖPRÜSÜ. Yokken asistan
+      //    ömrü dolan partiyi görüyor ama hiçbir öneri aracına besleyemiyordu.
+      // ② `purchasePriceCents` — **maskeleme sözleşmesi bilinçli olarak GEVŞETİLDİ.** 22.1'de
+      //    alış fiyatı araç yüzeyine çıkmıyordu (finans sınırı §6); kullanıcı 09.08'de kârlılık
+      //    hesabı yapılabilsin diye açtı. Sınırın kendisi kalkmadı: bu bir PARTİ maliyetidir ve
+      //    liste fiyatı KDV dahilken bu hariçtir — `vatRate` de o yüzden satırda.
       expect(Object.keys(b).sort()).toEqual([
-        'dateType', 'expired', 'expiryDate', 'physicalQty', 'product', 'unit', 'warehouse',
+        'batchId', 'dateType', 'decision', 'expired', 'expiryDate', 'listPriceCents', 'offerPriceCents',
+        'physicalQty', 'product', 'purchasePriceCents', 'suggestedOfferPriceCents', 'unit', 'variantId',
+        'vatRate', 'warehouse',
       ]);
+      // Karar MOTORUN sözlüğünden gelir — araç kendi eşiğini kurmaz (STACK §4).
+      expect(['none', 'can_offer', 'offer_open', 'must_discard']).toContain(b.decision);
     }
-    // Alış fiyatı parti satırında VARDIR ama araç yüzeyine çıkmaz (finans sınırı).
-    expect(JSON.stringify(watch)).not.toContain('purchasePrice');
   });
 
   it('sold_out_watch sıfır stoklu aktif varyantları sayar', async () => {

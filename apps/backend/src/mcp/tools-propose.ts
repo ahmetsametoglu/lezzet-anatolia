@@ -11,16 +11,18 @@ import {
   ProductVariantService,
   ReorderService,
   SettingsService,
+  StockService,
   SupplierService,
   WarehouseService,
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
-import { rebalanceAllocations } from '@lezzet/domain-core';
+import { discountPercentOf, offerDecisionOf, rebalanceAllocations, suggestedOfferPriceCents } from '@lezzet/domain-core';
 import {
   parseProposalPayload,
   resolveLocalizedText,
   type AssistantProposalKind,
+  type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
@@ -95,6 +97,83 @@ async function queue(kind: AssistantProposalKind, payload: unknown, summary: str
     expiresAt: row.expiresAt,
     note: 'Öneri onay kuyruğuna yazıldı. Uygulanması için yöneticinin operasyon panelinden onaylaması gerekir — sen onaylayamazsın.',
   };
+}
+
+/**
+ * Parti teklifi önerisi — SKT'si yaklaşan malı eritmenin DOĞRU aracı (kullanıcı kararı 09.08).
+ *
+ * ── NEDEN İNDİRİM DEĞİL, PARTİ TEKLİFİ ──────────────────────────────────────
+ * Harici denetim "indirime ürün bazlı kapsam ekleyin" demişti; teşhis doğruydu (koleksiyona açılan
+ * indirim tarihi uzak malı da ucuzlatıyor) ama çözüm yanlıştı. İndirim ürünün TAMAMINI kapsar;
+ * oysa ucuzlaması gereken şey ürün değil **o parti**. Aynı ürünün taze partisi tam fiyatta kalmalı.
+ * `stock.offer_price` tam bunun için var ve vitrinin fırsat bandı zaten onu okuyor.
+ *
+ * ── KARARI MOTOR VERİR, MODEL DEĞİL ─────────────────────────────────────────
+ * "Bu partiye teklif açılabilir mi" sorusunu `offerDecisionOf` cevaplar: DLC'si geçmiş partiye
+ * teklif YAZILAMAZ (satılamaz, tek yol imha) ve araç bunu reddeder. Model ısrar edemez — kural
+ * motorda, prompt'ta değil.
+ *
+ * Fiyatı model verebilir ama vermek zorunda değil: boş bırakılırsa motorun önerdiği fiyat
+ * (%30 indirim, parametrik) kullanılır.
+ */
+export async function proposeBatchOffer(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const batchId = String(args.batchId ?? '').trim();
+  if (!batchId) return { error: 'batchId zorunlu (stock_watch çıktısındaki partilerden).' };
+  if (!isUuid(batchId)) return badIdError('batchId', batchId);
+
+  const [batch] = await new StockService(db).getBatchDetails([batchId]);
+  if (!batch) return { error: `Parti bulunamadı: ${batchId} — stock_watch ile güncel listeyi alın.` };
+  if (batch.physicalQty <= 0) return { error: 'Bu partide mal kalmamış — teklif açmanın anlamı yok.' };
+
+  const { decision, flag } = offerDecisionOf({
+    dateType: batch.variant.product.dateType,
+    expiryDate: batch.expiryDate,
+    shelfLifeDays: batch.variant.product.shelfLifeDays,
+    offerPriceCents: batch.offerPriceCents,
+  });
+  if (decision === 'must_discard') {
+    return { error: `Bu partinin DLC'si geçmiş (${batch.expiryDate}) — satılamaz, tek yol imha. Teklif açılamaz.` };
+  }
+  if (decision === 'none') {
+    return {
+      error: `Bu partinin ömrü daha yeterli (${batch.expiryDate}, durum: ${flag}) — teklif kararı henüz gerekmiyor.`,
+    };
+  }
+
+  const priceMap = await new PriceService(db).findApplicableMap([batch.variantId], 'b2c');
+  const listPriceCents = priceMap.get(batch.variantId)?.channelPrice?.amountCents ?? null;
+
+  // Fiyat modelden gelmediyse MOTORDAN gelir. Liste fiyatı da yoksa öneri kurulamaz: uydurma bir
+  // taban üzerinden indirim, operatöre olmayan bir hesabı doğruymuş gibi gösterirdi.
+  const given = typeof args.offerPriceCents === 'number' ? Math.round(args.offerPriceCents) : null;
+  const offerPriceCents = given ?? suggestedOfferPriceCents(listPriceCents);
+  if (!offerPriceCents || offerPriceCents <= 0) {
+    return { error: 'Teklif fiyatı hesaplanamadı — bu varyantın liste fiyatı yok. offerPriceCents verin ya da fiyat tanımlayın.' };
+  }
+  if (listPriceCents !== null && offerPriceCents >= listPriceCents) {
+    return {
+      error: `Teklif liste fiyatını yenmiyor (${offerPriceCents} ≥ ${listPriceCents} cent) — indirim olmayan bir "fırsat" vitrinde de görünmez.`,
+    };
+  }
+
+  const warehouses = await new WarehouseService(db).list({ activeOnly: true });
+  const productName = `${resolveLocalizedText(batch.variant.product.name, 'tr')} · ${resolveLocalizedText(batch.variant.label, 'tr')}`;
+  const payload: BatchOfferPayload = {
+    batchId: batch.id,
+    variantId: batch.variantId,
+    productName,
+    warehouseCode: warehouses.find((w) => w.id === batch.warehouseId)?.code ?? '?',
+    expiryDate: batch.expiryDate,
+    offerPriceCents,
+    listPriceCents,
+    physicalQty: batch.physicalQty,
+  };
+
+  const percent = discountPercentOf(listPriceCents, offerPriceCents);
+  const off = listPriceCents ? ` (liste ${(listPriceCents / 100).toFixed(2)} €, %${percent === null ? '?' : Math.round(percent)} indirim)` : '';
+  const summary = `${productName} — ${batch.physicalQty} adet ${(offerPriceCents / 100).toFixed(2)} € fırsat fiyatına${off}; SKT ${batch.expiryDate}`;
+  return queue('batch_offer', payload, summary, args.reason);
 }
 
 /** Vitrin işareti önerisi: kayıt kimlikten ÇÖZÜLÜR (ad ve varlık doğrulanır). */

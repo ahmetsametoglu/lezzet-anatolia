@@ -2,10 +2,11 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { captureError, errorMessageOf, logger, SOURCES } from '@lezzet/observability';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
-import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
+import { catalogHealth, catalogLookup, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals } from './tools-signals';
 import {
   listProposals,
+  proposeBatchOffer,
   proposeBundleDraft,
   proposeDiscountDraft,
   proposeFeaturedFlag,
@@ -83,10 +84,24 @@ export const TOOLS = [
   {
     name: 'stock_watch',
     description:
-      'Batches expiring within N days, per warehouse (product, unit, warehouse code, expiry date, DLC/DDM type, quantity, and whether it is already expired). DLC = safety date (cannot be sold past it → destroy); DDM = quality date (still sellable → candidate for a near-expiry offer). Sorted soonest first; the list is capped and says so when truncated.',
+      'Batches expiring within N days, per warehouse. Each row carries batchId and variantId — feed them straight into propose_batch_offer or propose_bundle_draft. Also: expiry date, DLC/DDM type, quantity, list price, last purchase price (VAT-EXCLUSIVE, while list price is VAT-INCLUSIVE — use vatRate before comparing), any open offer price, the engine decision (can_offer / offer_open / must_discard / none) and the engine-suggested offer price. DLC = safety date (cannot be sold past it → destroy); DDM = quality date (still sellable → candidate for a near-expiry offer). Sorted soonest first; capped, and says so when truncated.',
     inputSchema: {
       type: 'object',
       properties: { days: { type: 'number', description: 'Horizon in days, 1-90. Default 14.' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'catalog_lookup',
+    description:
+      'Search the catalog by product name (matches all three languages) and get the IDENTIFIERS the propose_* tools need: productId, variantId per size, plus list price (b2c, VAT-INCLUSIVE) and last purchase price (VAT-EXCLUSIVE, null when unknown — never treat null as zero). This is the bridge between reading tools (which speak names) and writing tools (which need ids). Use it before proposing a bundle, a recipe or a product draft.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Part of a product name, e.g. "kek", "baklava".' },
+        limit: { type: 'number', description: 'Max products, 1-25. Default 10.' },
+      },
+      required: ['query'],
       additionalProperties: false,
     },
   },
@@ -122,6 +137,21 @@ export const TOOLS = [
         isFeatured: { type: 'boolean', description: 'true = put on the showcase (default), false = remove.' },
       },
       required: ['target', 'id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_batch_offer',
+    description:
+      "PROPOSE (does not apply): put ONE near-expiry batch on discount (stock.offer_price) so it sells before its date. This is the RIGHT tool for expiring stock — do NOT use propose_discount_draft for it: a discount covers a whole category/collection and would also cheapen fresh batches of the same product, while an offer touches only THIS batch. Get batchId from stock_watch. Price is optional: leave it out and the engine's suggestion (30% off list, configurable) is used. The engine refuses batches whose DLC has passed (destroy-only) and batches whose life is still comfortable. Once the admin approves, the batch appears in the storefront's deals band immediately — there is no draft stage.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        batchId: { type: 'string', description: 'Batch uuid from stock_watch.batchId.' },
+        offerPriceCents: { type: 'number', description: 'Optional offer price in cents (VAT-inclusive). Omit to use the engine suggestion.' },
+        reason: { type: 'string', description: 'Why now — e.g. "14 units, 4 days left, no other stock of this size".' },
+      },
+      required: ['batchId'],
       additionalProperties: false,
     },
   },
@@ -354,10 +384,12 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   system_errors: (a) => systemErrors(num(a.limit, 10)),
   catalog_health: (a) => catalogHealth(num(a.limit, 15)),
   stock_watch: (a) => stockWatch(num(a.days, 14)),
+  catalog_lookup: (a) => catalogLookup(String(a.query ?? ''), num(a.limit, 10)),
   sold_out_watch: (a) => soldOutWatch(num(a.limit, 20)),
   demand_signals: (a) => demandSignals(num(a.days, 7)),
   customer_pulse: () => customerPulse(),
   propose_featured_flag: (a) => proposeFeaturedFlag(a),
+  propose_batch_offer: (a) => proposeBatchOffer(a),
   propose_purchase_order: (a) => proposePurchaseOrder(a),
   propose_stock_intake: (a) => proposeStockIntake(a),
   propose_money_movement: (a) => proposeMoneyMovement(a),

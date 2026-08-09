@@ -1,6 +1,6 @@
 import { AssistantProposalService, CategoryService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { APPLIERS, KIND_META, amountCentsOf, applyProposal } from '@lezzet/application';
+import { APPLIERS, KIND_META, amountCentsOf, applyProposal, modeOf } from '@lezzet/application';
 import { AssistantProposalKindEnum, PROPOSAL_PAYLOAD_SCHEMAS, resolveLocalizedText, type FeaturedFlagPayload } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { HANDLERS, TOOLS } from './server-factory';
@@ -147,6 +147,22 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
 
   it('bölge önerisinin etki cümlesi geri alınamazlığı SÖYLER', () => {
     expect(KIND_META.zone_extend.impact).toMatch(/GERİ ALINAMAZ/);
+  });
+
+  /**
+   * Kararın CİNSİ künyeden okunur (22.5). Ekran kendi tablosunu kurarsa iki gerçek doğar ve biri
+   * bir gün ötekinden ayrılır — geri alınamaz bir öneri "tek tık uygula" kapısına düşer.
+   */
+  it('geri alınamaz üç tip DEVREDİLİR, taslak doğuran tipler KÖPRÜ verir', () => {
+    for (const kind of ['zone_extend', 'stock_intake', 'money_movement'] as const) {
+      expect(modeOf(kind)).toBe('handoff');
+    }
+    for (const kind of ['bundle_draft', 'discount_draft', 'recipe_draft', 'product_draft', 'purchase_order'] as const) {
+      expect(modeOf(kind)).toBe('draft_then_edit');
+      // Köprü ancak doğan kaydın kimliğiyle kurulabilir; anahtar uygulayıcının döndürdüğü adla aynı olmalı.
+      expect(KIND_META[kind].resultKey).toBeTruthy();
+    }
+    expect(modeOf('featured_flag')).toBe('apply');
   });
 });
 

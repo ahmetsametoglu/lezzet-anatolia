@@ -10,65 +10,143 @@ import type { AssistantProposalKind } from '@lezzet/types';
  * Hedef tablolar gerçek şema adlarıdır (tasarımın fikstüründeki `packages`/`cash_entries` gibi
  * kurgusal adlar DEĞİL — `docs/talep/operasyon-asistan-kuyrugu-veri-sozlesmesi.md §2b`).
  */
+/**
+ * Kararın CİNSİ — kuyruk ekranı hangi kapıyı açacağını buradan okur (kullanıcı kararı 09.08).
+ *
+ * Kuyruk ilk hâlinde tek kapılıydı: onayla ya da reddet. Gerçek kullanım bunu çürüttü — *"bölgeye
+ * hangi posta kodlarının gireceğine haritaya bakmadan karar veremem; paketten bir kalemi
+ * çıkarabilmeliyim"*. Doğru cevap kuyruğa on tane form yazmak DEĞİL (hepsi mevcut operasyon
+ * ekranlarının kopyası olurdu); önerinin **cinsine göre** doğru yere göndermek:
+ *
+ * - `apply` — düzenlenecek bir şey yok, tek tık uygulanır (vitrin işareti bir boolean'dır).
+ * - `draft_then_edit` — uygulama PASİF/taslak bir kayıt doğurur; ince ayar o varlığın kendi
+ *   ekranında yapılır. Kuyruğun işi köprüyü vermek: "oluştu, düzenlemeye git".
+ * - `handoff` — etki geri alınamaz (bildirim gider, stok satılabilir olur, defter yazılır), yani
+ *   karar ÖNCESİ düzenleme şart. Kuyruk uygulamaz, ilgili ekranı ÖN DOLDURUR; kayıt oradan ve
+ *   normal akışla olur. İkinci yazma yolu yine açılmaz.
+ */
+export type ProposalMode = 'apply' | 'draft_then_edit' | 'handoff';
+
 interface KindMeta {
   label: string;
   impact: string;
   tables: string[];
+  mode: ProposalMode;
+  /**
+   * Devrin/köprünün hedef VARLIĞI — ekran URL'i bundan kurar.
+   *
+   * URL'in kendisi bilerek BURADA DEĞİL: rota sözleşmesi operasyon yüzeyinin işidir (`*-url.ts`),
+   * uygulama katmanı ekran bilmez (`STACK §4`). Burada duran şey "hangi varlık", orada duran şey
+   * "o varlık hangi adreste".
+   */
+  target: string;
+  /**
+   * `draft_then_edit` tiplerinde doğan kaydın `result` içindeki anahtarı (`{ bundleId: … }`).
+   * Köprü ancak bu kimlikle kurulabilir; anahtar uygulayıcının döndürdüğü adla birebir aynıdır.
+   */
+  resultKey?: string;
 }
 
 export const KIND_META = {
   bundle_draft: {
     label: 'Paket',
     impact:
-      'Katalogda yeni bir paket oluşur ve PASİF doğar — müşteri vitrininde görünmez. Yayına almak ayrı bir karardır (katalog ekranı).',
+      'Katalogda yeni bir paket oluşur ve PASİF doğar — müşteri vitrininde görünmez. Kalem çıkarmak/eklemek ve payları değiştirmek paket ekranının işi; yayına almak ayrı bir karardır.',
     tables: ['bundle', 'bundle_item'],
+    mode: 'draft_then_edit',
+    target: 'bundle',
+    resultKey: 'bundleId',
   },
   featured_flag: {
     label: 'Vitrin',
     impact: 'Kayıt ana sayfa vitrinine girer ya da çıkar. Yayın durumu (aktif/pasif) DEĞİŞMEZ — bu ayrı bir eksendir.',
     tables: ['category', 'collection', 'bundle'],
+    // Payload bir boolean: düzenlenecek bir şey yok, ara ekran gereksiz sürtünme olurdu.
+    mode: 'apply',
+    target: 'featured',
   },
   purchase_order: {
     label: 'Tedarik',
     impact:
-      'Tedarik siparişi TASLAK olarak açılır; tedarikçiye gönderilmez. Göndermek ayrı ve insanlı bir adımdır (tedarik ekranı).',
+      'Tedarik siparişi TASLAK olarak açılır; tedarikçiye gönderilmez. Kalem ve adet düzeltmesi tedarik ekranında yapılır, göndermek ayrı ve insanlı bir adımdır.',
     tables: ['purchase_order', 'purchase_order_item'],
+    mode: 'draft_then_edit',
+    target: 'purchase_order',
+    resultKey: 'purchaseOrderId',
   },
   stock_intake: {
     label: 'Stok',
     impact:
       'Partiler stoğa girer ve satılabilir hâle gelir; son kullanma tarihleri bu tabloyla sabitlenir. Bağlı tedarik siparişi varsa kapanışı da bu kabulden türer.',
     tables: ['stock_intake', 'stock'],
+    // Geri alınamaz: giren parti satılabilir olur ve SKT o an sabitlenir. Faturadan okunan
+    // miktar/tarih gözle doğrulanmadan yazılmamalı — mal kabul ekranı ön doldurulur.
+    mode: 'handoff',
+    target: 'receiving',
   },
   money_movement: {
     label: 'Para',
     impact:
       'Muhasebe defterine bir hareket yazılır ve hesap bakiyesi değişir. Kayıt SİLİNMEZ — düzeltmesi ters kayıtladır.',
     tables: ['money_movement'],
+    // Silinemeyen bir defter satırı: tutar ve hesap onaydan önce görülüp düzeltilebilmeli.
+    mode: 'handoff',
+    target: 'finance',
   },
   zone_extend: {
     label: 'Bölge',
     impact:
       'Posta kodları bölgeye eklenir, o adreslerde teslimat açılır ve haber bekleyen müşterilere "bölgeniz açıldı" bildirimi gider. BİLDİRİM GERİ ALINAMAZ: bölgeyi sonra kapatsanız bile mesaj gitmiş olur.',
     tables: ['delivery_zone_postal_code', 'zone_notice'],
+    // Kuyruğun tek kapılı hâlinin çöktüğü yer (kullanıcı 09.08): "hangi kod girsin" sorusu
+    // haritasız cevaplanamaz ve bildirim kısmi seçime bağlıdır. Rota ekranı ön doldurulur.
+    mode: 'handoff',
+    target: 'routes',
   },
   product_draft: {
     label: 'Ürün',
     impact:
       'Ürünün metin alanları güncellenir ama ürün TASLAKTA KALIR. Alerjen ve saklama beyanı bu yoldan yazılamaz — onlar dolmadan ürün yayına alınamaz.',
     tables: ['product'],
+    mode: 'draft_then_edit',
+    target: 'product',
+    resultKey: 'productId',
   },
   discount_draft: {
     label: 'İndirim',
-    impact: 'Bu tip henüz uygulanamıyor.',
+    impact:
+      'Kampanya PASİF doğar — hiçbir sepete işlemez. Kapsamı, tarihi ve oranı indirim ekranında düzenlenir; yayına almak ayrı bir karardır.',
     tables: ['discount'],
+    mode: 'draft_then_edit',
+    target: 'discount',
+    resultKey: 'discountId',
+  },
+  batch_offer: {
+    label: 'Fırsat',
+    impact:
+      'Partiye indirimli satış fiyatı yazılır ve o parti ANINDA fırsat olarak vitrine düşer — taslak evresi yoktur. Aynı ürünün öteki partileri tam fiyatta kalır. Geri almak teklifi kaldırmaktır.',
+    tables: ['stock'],
+    // Tek kolon, düzenlenecek başka alanı yok; tutarı onay penceresinde görülüyor. Ama etkisi
+    // ANINDA ve müşteriye görünür — karar penceresinin uyarı tonu bu yüzden `apply`de en ağırı.
+    mode: 'apply',
+    target: 'stock',
+    resultKey: 'stockId',
   },
   recipe_draft: {
     label: 'Tarif',
-    impact: 'Bu tip henüz uygulanamıyor.',
+    impact:
+      'Tarif PASİF doğar. Üç dil dolmadan yayına alınamaz; malzeme ve adım düzenlemesi tarif ekranında yapılır.',
     tables: ['recipe', 'recipe_item'],
+    mode: 'draft_then_edit',
+    target: 'recipe',
+    resultKey: 'recipeId',
   },
 } as const satisfies Record<AssistantProposalKind, KindMeta>;
+
+/** Kararın cinsi — ekran kapıyı buradan seçer (`satisfies` sayesinde yeni tip eklenince derlenmez). */
+export function modeOf(kind: AssistantProposalKind): ProposalMode {
+  return KIND_META[kind].mode;
+}
 
 /**
  * "Uygulanınca ne olur" — sabit şablon + ÖNERİYE ÖZGÜ sayı (operasyon şeridinin itirazı, 09.08).

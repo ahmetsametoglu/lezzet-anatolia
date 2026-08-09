@@ -25,6 +25,7 @@ export const AssistantProposalKindEnum = z.enum([
   'zone_extend',
   'product_draft',
   'recipe_draft',
+  'batch_offer',
 ]);
 export type AssistantProposalKind = z.infer<typeof AssistantProposalKindEnum>;
 
@@ -235,6 +236,32 @@ export const RecipeDraftPayloadSchema = z.object({
     .min(1),
 });
 
+/**
+ * Parti teklifi — SKT'si yaklaşan partiye indirimli satış fiyatı (`stock.offer_price`).
+ *
+ * **Payload PARTİYE bağlıdır, ürüne değil** ve bu ayrım kurgunun kendisidir: aynı ürünün taze
+ * partisi tam fiyatta kalır, yalnız tarihi yaklaşan parti ucuzlar. İndirim tablosuna ürün kapsamı
+ * eklemek (harici denetimin önerisiydi) bunu YAPAMAZDI — indirim ürünün tamamını kapsar ve taze
+ * malı da ucuzlatırdı.
+ *
+ * `listPriceCents` künye olarak taşınır: onay ekranı "3,20 € → 2,24 € (%30)" diyebilsin diye.
+ * Uygulama anında fiyat değişmişse motor değil ekran yanılmış olur — o yüzden karar anında da
+ * gösterilir, saklanmaz.
+ */
+export const BatchOfferPayloadSchema = z.object({
+  batchId: z.string().uuid(),
+  variantId: z.string().uuid(),
+  /** "Artisan Limonlu Kek · 90 g" — panelin okuyacağı ad. */
+  productName: z.string().min(1),
+  warehouseCode: z.string().min(1),
+  expiryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Teklif fiyatı (cent, KDV DAHİL — b2c tabanı). `null` YAZILAMAZ: teklifi kaldırmak ayrı bir iştir. */
+  offerPriceCents: z.number().int().positive(),
+  listPriceCents: z.number().int().positive().nullable(),
+  physicalQty: z.number().int().positive(),
+});
+export type BatchOfferPayload = z.infer<typeof BatchOfferPayloadSchema>;
+
 /** Kind → payload şeması. Uygulayıcısı olmayan tip burada YOKTUR (yukarıdaki gerekçe). */
 export const PROPOSAL_PAYLOAD_SCHEMAS = {
   featured_flag: FeaturedFlagPayloadSchema,
@@ -246,6 +273,7 @@ export const PROPOSAL_PAYLOAD_SCHEMAS = {
   product_draft: ProductDraftPayloadSchema,
   discount_draft: DiscountDraftPayloadSchema,
   recipe_draft: RecipeDraftPayloadSchema,
+  batch_offer: BatchOfferPayloadSchema,
 } as const satisfies Partial<Record<AssistantProposalKind, z.ZodTypeAny>>;
 
 /** Bugün öneri ÜRETİLEBİLEN tipler — MCP araçları ve panel bu listeden türer. */

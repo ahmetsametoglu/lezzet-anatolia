@@ -132,3 +132,35 @@ satırında.
   bağlı) · onay kuyruğu `assistant_proposal` + operasyon paneli (tasarım ısmarlaması burada) ·
   araç fazları B1/B2 · oturum anahtarı (1 saat + kapsam). Ayrıntı ve sıra `AI_ADMIN_ASSISTANT
   §4-7`; bu satır Faz 1 kapanışında gerçek görevlere bölünür.
+
+- [~] (22.5) **Kuyruk ÜÇ KAPILI karara geçiyor + kimlik köprüsü + parti teklifi** *(kullanıcı kararı
+  09.08; harici denetim turu 3)* — touches: `packages/application/src/assistant/`,
+  `apps/web/lib/assistant/handoff.ts`, `apps/backend/src/mcp/`, `packages/types/src/entities/
+  assistant-proposal.schema.ts`, `supabase/migrations/0042_*`
+  - **Tek kapı gerçek kullanımda çöktü.** Kullanıcı dolu kuyruğu ilk kez elden geçirdi: *"bölgeye
+    hangi posta kodlarının gireceğine haritaya bakmadan karar veremem; bildirim hepsine birden
+    gidiyor, ben belki bir bölgeyi istiyorum"* · *"paketten bazı şeyleri çıkarabilmeliyim,
+    fiyatlarını değiştirebilmeliyim"*. Karar düzenlemeden verilemiyor.
+  - **Çözüm: tipe göre DEĞİL, kararın cinsine göre üç kapı** (`modeOf(kind)`). `apply` (vitrin ·
+    fırsat: payload tek değer, düzenlenecek şey yok) · `draft_then_edit` (paket · indirim · tarif ·
+    ürün · tedarik: pasif kayıt doğar, ince ayar kendi ekranında — kuyruğun işi köprü) · `handoff`
+    (bölge · stok girişi · para: geri alınamaz, ilgili ekran ÖN DOLDURULUR, kayıt oradan ve normal
+    akışla olur). **Kuyruğa on form yazılmıyor** — kullanıcının ikinci şartı buydu ve ihtiyaç
+    duyulan editörler zaten yazılı (`postal-code-picker` + rota haritası 19.20, paket/indirim/tarif
+    ekranları). Sıra tek yerde: `withProposal()` (`claimForApply` → iş → `markApplied`).
+  - **Araç kataloğu 18 → 20.** `catalog_lookup` okuma ile yazma arasındaki **kimlik köprüsü**
+    (ad → `variantId` + liste fiyatı + son alış maliyeti); `stock_watch` artık `batchId`/`variantId`,
+    fiyat/maliyet/KDV oranı, motorun kararı (`offerDecisionOf`) ve önerdiği teklif fiyatını taşıyor.
+    Boşluk denetimin turu 3'ünde ölçüldü: asistan SKT'si yaklaşan malı görüyor ama hiçbir yazma
+    aracına besleyemiyordu (*"paket kuramadım, variantId'leri bilmiyorum"*).
+  - **`batch_offer` — onuncu öneri tipi ve İLK KEZ satış fiyatına dokunan yetki** (kullanıcı kararı
+    09.08, sınırsız: tavan yok, tek güvence onay). Denetim "indirime ürün kapsamı ekleyin" demişti;
+    teşhis doğruydu (koleksiyon indirimi taze partiyi de ucuzlatıyor) ama çözüm yanlıştı — indirim
+    ürünün TAMAMINI kapsar, oysa ucuzlaması gereken **o parti**. `stock.offer_price` bunun için
+    zaten var. DLC'si geçmiş partiyi motor reddediyor (satılamaz, tek yol imha).
+  - **Fiyat okuması liste + ALIŞ MALİYETİ** (kullanıcı kararı 09.08): maliyet bugüne kadar
+    asistanın bağlamı dışındaydı; kârlılık hesabı yapabilmesi için açıldı. Maliyet KDV hariç, liste
+    KDV dahil — oran da satırda, ki hesap doğru yapılsın. Bilinmeyen maliyet `null`, sıfır DEĞİL.
+  - **BEKLEYEN(22.5):** `batch_offer` enum'u `0042`ye eklendi → **`db:reset` kullanıcıda**; reset
+    öncesi bu tip canlıda denenemez. Ekran tarafı operasyon şeridinde
+    (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md`).

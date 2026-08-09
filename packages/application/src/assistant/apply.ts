@@ -9,11 +9,13 @@ import {
   PurchaseOrderService,
   RecipeService,
   StockIntakeService,
+  StockService,
 } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   parseProposalPayload,
   type AssistantProposal,
+  type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
@@ -241,8 +243,26 @@ const applyRecipeDraft: Applier = async (db, raw) => {
   return { recipeId: recipe.id };
 };
 
+/**
+ * Parti teklifi — tek kolon (`stock.offer_price`) ama **öteki dokuzdan farklı bir şey yapıyor:
+ * müşterinin gördüğü fiyatı değiştiriyor** (kullanıcı kararı 09.08). Onaylandığı an vitrinde
+ * "fırsat" olarak görünür; taslak evresi yoktur.
+ *
+ * Parti hâlâ yerinde mi diye BAKILIR: onay anına kadar geçen sürede satılıp bitmiş ya da imha
+ * edilmiş olabilir. Yoksa `failed` — olmayan bir partiye fiyat yazmak sessiz bir yalan olurdu.
+ */
+const applyBatchOffer: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('batch_offer', raw) as BatchOfferPayload;
+  const service = new StockService(db);
+  const [batch] = await service.getBatchDetails([payload.batchId]);
+  if (!batch) throw new Error(`Parti bulunamadı ya da tükendi: ${payload.productName} (${payload.expiryDate})`);
+  const row = await service.setOfferPrice(payload.batchId, payload.offerPriceCents);
+  return { stockId: row.id };
+};
+
 export const APPLIERS = {
   featured_flag: applyFeaturedFlag,
+  batch_offer: applyBatchOffer,
   purchase_order: applyPurchaseOrder,
   bundle_draft: applyBundleDraft,
   stock_intake: applyStockIntake,

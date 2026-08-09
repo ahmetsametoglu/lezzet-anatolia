@@ -26,7 +26,12 @@ create type public.assistant_proposal_kind as enum (
   'money_movement',    -- para hareketi (elle giriş: gider, tahsilat, transfer)
   'zone_extend',       -- teslimat bölgesine posta kodu ekleme (talep panosundan)
   'product_draft',     -- ürün detayının tamamlanması (taslak alanlar)
-  'recipe_draft'       -- sofra tarifi taslağı
+  'recipe_draft',      -- sofra tarifi taslağı
+  -- Parti teklifi: SKT'si yaklaşan bir partiye indirimli satış fiyatı (`stock.offer_price`).
+  -- İlk kez SATIŞ FİYATINA dokunan yetki (kullanıcı kararı 09.08) — öteki dokuz tip ya taslak
+  -- doğurur ya defter/stok yazar, hiçbiri müşterinin gördüğü fiyatı oynatmazdı. Onay yine şart;
+  -- fiyat onaylanır onaylanmaz vitrinde görünür.
+  'batch_offer'
 );
 
 -- `failed` AYRI bir hâl ve şart: onaylandı ama uygulanamadı (stok bu arada bitti, motor reddetti).

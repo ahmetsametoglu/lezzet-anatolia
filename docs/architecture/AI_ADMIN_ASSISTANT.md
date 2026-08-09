@@ -163,6 +163,13 @@ işlem asistan için yoktur. Kataloğa araç eklemek kullanıcı onayı gerektir
   kârlılık toplamları açık; **ürün-tekil alış fiyatı VE ürün-tekil marj kapalı** — marj yüzdesi
   satış fiyatıyla birleşince alış fiyatını türetir, o yüzden ikisi aynı sınıfın içindedir.
   Kârlılık raporu `order_sale` ve özet görünümlerden çalışır; tek tek alış satırına inen araç yoktur.
+- **MALİYET AÇILDI, TEDARİKÇİ İLİŞKİSİ KAPALI (kullanıcı kararı 09.08 · 22.5).** Yukarıdaki
+  "ürün-tekil alış fiyatı kapalı" kuralı inceldi: `catalog_lookup` son alış maliyetini,
+  `stock_watch` parti maliyetini döner — asistan paket ve fırsat fiyatı önerirken kârlılık hesabı
+  yapabilsin diye (aksi hâlde zararına bir fiyat önerir ve kimse fark etmez). Kapalı kalan şey
+  **tedarikçi bağlamıdır**: brifingin tedarik önerisinde maliyet ile tedarikçi kodu yan yana durur
+  ve o ikili *"hangi tedarikçiden kaça alıyoruz"* sorusunu cevaplar — bir partinin maliyetini
+  bilmekten başka bir şey. Maskeleme testi bu ayrımı kilitliyor (`mcp.test.ts` künyesi).
 - **Hassas ticari veri KAPALI:** tedarikçi alış fiyatları ve sözleşme koşulları, personel bilgileri,
   banka/kasa hareketlerinin ham dökümü, vergi kimlikleri. (Liste kodlama gününde gözden geçirilir;
   varsayılan kapalıdır — açmak karar ister, kapamak istemez.)
@@ -182,7 +189,7 @@ işlem asistan için yoktur. Kataloğa araç eklemek kullanıcı onayı gerektir
 
 | Faz | Nitelik | Aday araçlar |
 | --- | --- | --- |
-| **A — salt okuma** ✅ *(22.1 · sekiz araç yazıldı, yerelde çalışıyor)* | kuyruk yok, maskeli özetler | `morning_briefing` (gün + `attention` listesi) · `sales_summary` · `system_errors` · `catalog_health` (eksik beyan/görsel + vitrin işaretleri) · `stock_watch` (ömrü dolan partiler, depo koduyla) · `sold_out_watch` · `demand_signals` (kapsanmayan posta kodu · sonuçsuz arama · ürün ilgisi) · `customer_pulse` (**yazışma-gözlem özeti** — kimliksiz ve içeriksiz sayım, §1 "Ne DEĞİL"; yönetim değil gözlem) |
+| **A — salt okuma** ✅ *(22.1 · **dokuz araç** yazıldı, yerelde çalışıyor)* | kuyruk yok, maskeli özetler | `morning_briefing` (gün + `attention` listesi) · `sales_summary` · `system_errors` · `catalog_health` (eksik beyan/görsel + vitrin işaretleri) · `catalog_lookup` (**kimlik köprüsü** — addan `variantId`'ye + liste fiyatı + son alış maliyeti; 22.5) · `stock_watch` (ömrü dolan partiler, depo koduyla + `batchId`/`variantId` + fiyat/maliyet + motorun teklif kararı) · `sold_out_watch` · `demand_signals` (kapsanmayan posta kodu · sonuçsuz arama · ürün ilgisi) · `customer_pulse` (**yazışma-gözlem özeti** — kimliksiz ve içeriksiz sayım, §1 "Ne DEĞİL"; yönetim değil gözlem) |
 | **B1 — atomik öneriler** | kuyruk satırı (§5 biçim ①) | vitrin işareti önerisi · kampanya/indirim tanımı · tedarik siparişi (PO) açma — eşik-altı sinyalinden · **rota/bölge önerisi** (talep panosu `postal_code_demand` + sipariş yoğunluğundan "şu kodları bölgeye ekle / şu günü aç") · stok eşiği istisnası · **banka satırı eşleştirme önerisi** (12.4'ün AI portu zaten bunun için boş bekliyor) · **alım girişi / mal kabul taslağı** (kullanıcının verdiği faturadan — §6 write-only nüansı; depo/parti/son-tarih eksikse asistan sorar, uydurmaz) |
 | **B2 — taslak üretimler** | taslak-varlık deseni (§5 biçim ②) | **ürün detayının tamamlanması** (eksik-alan taraması → üç dilli açıklama + çeviri önerisi + görsel eşleme; **alerjen/saklama beyanı YALNIZ kaynaklı yazılır** — tedarikçi belgesi yoksa boş bırakır ve eksik raporuna yazar, gıdada uydurma tek yasak cevaptır) · **sofra tarifi taslağı** (üç dilli metin + varyant bağları; "üç dil dolmadan yayınlanamaz" kuralı VERİDE zaten duruyor) · dönemsel paket kurulumu (kalem + pay — `bundleBalance` motor doğrulamasından geçer) · koleksiyon kurgusu |
 | **C — medya + dışa dönük** | ayrı karar turu | ürün görseli OKUMA (R2 URL — yazma ayrı yetki, `packages/storage` iki kovalı model) · sosyal içerik taslağı · müşteriye giden her şey (ayrı sınıf, belki hiç) |
