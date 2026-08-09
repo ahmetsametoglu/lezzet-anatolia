@@ -71,6 +71,9 @@ importers:
       '@lezzet/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@lezzet/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@lezzet/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -9163,7 +9166,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.86.2': {}
 

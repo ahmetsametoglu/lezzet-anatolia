@@ -16,13 +16,13 @@ import {
   CatalogProductDetailSchema,
   CatalogSortEnum,
   DEFAULT_PAGE_SIZE,
-  KeysetCursorSchema,
   PreferredLanguageEnum,
-  type KeysetCursor,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
+// İmleç kodlaması `lib/request.ts`te: sipariş listesi ikinci çağıran olunca oraya taşındı (21.18).
+import { decodeCursor, encodeCursor } from '../../lib/request';
 import { bearerTokenOf } from './auth';
 
 /**
@@ -97,35 +97,6 @@ const ProductQuerySchema = z.object({
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });
-
-/**
- * İmleç TELDE opak bir dize (base64url'lenmiş keyset nesnesi) — saf TAŞIMA adaptörü, kural değil.
- *
- * İstemci imlecin içini bilmez ve bilmemeli: keyset'in `{value,id}` şekli bir uygulama ayrıntısı,
- * yarın değişirse istemci kırılmamalı. Orkestrasyon `KeysetCursor` NESNESİ konuşur; dizeye çeviren
- * ve geri çözen taraf yalnız burasıdır.
- */
-function encodeCursor(cursor: KeysetCursor): string {
-  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
-}
-
-/**
- * Bozuk imleç **hata değil, geçersiz bir istek**: eskimiş bir bağlantı ya da elle oynanmış bir
- * parametre. Doğru cevap 400 değil, listeyi BAŞTAN vermek — müşterinin göreceği en anlamlı sonuç o
- * (web'in aynı kararı: `catalog/actions.ts` `safeParse` notu, denetim H3).
- */
-function decodeCursor(raw: string | undefined): KeysetCursor | undefined {
-  if (!raw) return undefined;
-  try {
-    const parsed: unknown = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
-    const cursor = KeysetCursorSchema.safeParse(parsed);
-    return cursor.success ? cursor.data : undefined;
-  } catch {
-    // Base64/JSON çözülemedi — imleç yok sayılır ve liste başa döner. Kayıt DÜŞÜLMEZ: bu bir arıza
-    // değil, dışarıdan gelen geçersiz bir değer; her yenilenen eski bağlantı hata defterini şişirirdi.
-    return undefined;
-  }
-}
 
 /**
  * **İSTEĞE BAĞLI KİMLİK** — fiyatın kişiselleşmesi için; erişim için DEĞİL.

@@ -3,11 +3,18 @@ import { updateCustomerProfile } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { MeSchema, MeUpdateSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
+import { addresses } from './addresses';
 import { authOtp } from './auth-otp';
 import { catalog } from './catalog';
+import { devLogin } from './dev-login';
+import { feedback } from './feedback';
 import { home } from './home';
 import { packages } from './packages';
+import { places } from './places';
+import { points } from './points';
+import { preferences } from './preferences';
 import { recipes } from './recipes';
+import { tickets } from './tickets';
 import { courier } from './courier';
 import { warehouse } from './warehouse';
 import { bearerAuth, type V1Env } from './auth';
@@ -27,6 +34,9 @@ import { bearerAuth, type V1Env } from './auth';
 export const v1 = new Hono<V1Env>();
 
 v1.route('/auth/otp', authOtp);
+// Geliştirme giriş kapısı — YALNIZ yerel süreçte zincire girer; üretim derlemesi bu route'u
+// hiç mount etmez (`dev-login.ts` künyesi: mail turunu atlayan GERÇEK oturum, sahte kimlik değil).
+if (process.env.NODE_ENV !== 'production') v1.route('/auth', devLogin);
 v1.route('/', catalog);
 // Vitrin de katalog kümesindendir (21.14): oturumsuz gezinme aynı karar, Bearer yalnız fiyatı
 // kişiselleştirir — kapının ÖNÜNDE kalması güvenlik kararının kendisidir (üstteki sıra notu).
@@ -37,6 +47,11 @@ v1.route('/', packages);
 // Tarif detayı da (21.14): "Sofradan fikirler" kartının açtığı sayfa girişsiz gezilir; Bearer
 // yalnız malzeme satırlarının fiyatını kişiselleştirir (katalogun aynı kuralı — `recipes.ts`).
 v1.route('/', recipes);
+// Geri bildirim de açık kümededir ama gerekçesi katalogunkinden FARKLI: token kimliğin
+// KENDİSİDİR (davet linki girişsiz açılır — `feedback.ts` künyesi). Bearer istemek daveti kırardı.
+v1.route('/', feedback);
+// Yer çözümü onboarding'in GİRİŞ sorusudur — hesap açılmadan sorulur (`places.ts` künyesi).
+v1.route('/', places);
 
 v1.use('*', bearerAuth);
 
@@ -80,6 +95,22 @@ v1.patch('/me', async (c) => {
   if (outcome.status !== 'ok') return fail(c, outcome.status, outcome.status === 'phone_taken' ? 409 : 400);
   return ok(c, MeSchema.parse(outcome.profile));
 });
+
+// Adres uçları (21.15) — Bearer'ın ARKASINDA: adres müşterinin kendisidir, oturumsuz gezilmez.
+// Kural ve gerekçeler `addresses.ts` künyesinde; kimlik çözümü orada tek middleware'de.
+v1.route('/me/addresses', addresses);
+
+// Tercih uçları (21.16) — Bearer'ın ARKASINDA: dil ve kampanya izni müşterinin kendisidir.
+// Kural kapıda (`@lezzet/application` → `customer/preferences.ts`), damga politikası orada.
+v1.route('/me/preferences', preferences);
+
+// Puan uçları (21.17) — Bearer'ın ARKASINDA: cüzdan müşterinin kendisidir. Kural ve B2B kısa
+// devresi `points.ts` + `@lezzet/application/customer/points` künyesinde.
+v1.route('/me/points', points);
+
+// Talep uçları (21.18) — Bearer'ın ARKASINDA: talep müşterinin kendisidir. Durum makinesi ve
+// bildirim tetikleri `@lezzet/application`ın talep kapısında (`ticket/{read,write}.ts`).
+v1.route('/me/tickets', tickets);
 
 /**
  * Personel bölümleri (21.10 · 21.11) — `bearerAuth`ın ARDINDA ve orada kalacaklar: katalogun aksine

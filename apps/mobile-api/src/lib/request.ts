@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { z } from 'zod';
+import { KeysetCursorSchema, type KeysetCursor } from '@lezzet/types';
 
 /**
  * `/api/v1` İSTEK ayrıştırma yardımcıları — zarfın (`respond.ts`) karşı yakası.
@@ -35,6 +36,39 @@ export async function readJsonBody(c: Context): Promise<unknown> {
   try {
     return await c.req.json();
   } catch {
+    return undefined;
+  }
+}
+
+/*
+  ── KEYSET İMLECİ: TELDE OPAK DİZE ──────────────────────────────────────────
+  İkisi de 21.6'da `catalog.ts`in içinde doğdu ve orada kalmalarının tek sebebi tek çağıranlı
+  olmalarıydı; sipariş listesi (21.18) ikinci çağıran oldu — yukarıdaki üçlünün taşınma
+  gerekçesinin aynısı (CLAUDE §1). Kopyalansaydı iki uç bir gün iki farklı kodlama konuşurdu.
+
+  İstemci imlecin İÇİNİ bilmez ve bilmemeli: keyset'in `{value,id}` şekli bir uygulama ayrıntısı,
+  yarın değişirse istemci kırılmamalı. Orkestrasyon `KeysetCursor` NESNESİ konuşur; dizeye çeviren
+  ve geri çözen taraf yalnız burasıdır — saf TAŞIMA adaptörü, kural değil.
+*/
+
+export function encodeCursor(cursor: KeysetCursor): string {
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
+}
+
+/**
+ * Bozuk imleç **hata değil, geçersiz bir istek**: eskimiş bir bağlantı ya da elle oynanmış bir
+ * parametre. Doğru cevap 400 değil, listeyi BAŞTAN vermek — müşterinin göreceği en anlamlı sonuç o
+ * (web'in aynı kararı: `catalog/actions.ts` `safeParse` notu, denetim H3).
+ */
+export function decodeCursor(raw: string | undefined): KeysetCursor | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+    const cursor = KeysetCursorSchema.safeParse(parsed);
+    return cursor.success ? cursor.data : undefined;
+  } catch {
+    // Base64/JSON çözülemedi — imleç yok sayılır ve liste başa döner. Kayıt DÜŞÜLMEZ: bu bir arıza
+    // değil, dışarıdan gelen geçersiz bir değer; her yenilenen eski bağlantı hata defterini şişirirdi.
     return undefined;
   }
 }
