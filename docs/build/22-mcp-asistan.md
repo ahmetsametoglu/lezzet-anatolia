@@ -230,3 +230,30 @@ satırında.
     patronun onay refleksini köreltir.
   - **BEKLEYEN(22.5):** ekran tarafı operasyon şeridinde
     (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` — dört devir hedefi + iki yeni alan).
+
+- [ ] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
+  09.08: "içindekiler fotoğrafını çekip yükleyeceğim, asistan bazen ürünü oluşturacak bazen
+  bilgilerini güncelleyecek")*: yeni `product_create` tipi + `product_draft`ın beş çok dilli alana
+  ve beyan alanlarına genişlemesi + ham kaynak metin ve güven işareti alanları + onay ekranı —
+  touches: `packages/types/src/entities/assistant-proposal.schema.ts`,
+  `packages/application/src/assistant/apply.ts`, `apps/backend/src/mcp/`, `design/pages/`
+  - **GIDA DUVARI YER DEĞİŞTİRDİ: şemadan EKRANA (kullanıcı kararı 09.08).** 22.3'te duvar
+    şemadaydı — alerjen/saklama alanı payload'da yoktu, "fiziksel engel". Bu senaryoda o duvar
+    işlevsiz: ambalajın fotoğrafını PATRON veriyorsa alerjen bilgisi uydurma değil **belgeden
+    okuma**, ve fatura senaryosunda (`§6` write-only nüansı) aynı karar zaten verilmişti. Kullanıcı
+    yeni duvarı adıyla koydu: *"en net duvarımız onay ekranımız… insanın gözüne problemler
+    hızlıca batabilsin."*
+  - **Ekranın cevaplayacağı soru ötekilerden FARKLI:** "bu işlem yapılsın mı?" değil, **"bu veri
+    ambalajla uyuşuyor mu?"**. Yani bir onay değil bir KARŞILAŞTIRMA ekranı. Bunu kolaylaştırmazsa
+    kurgu çöker: makine okuması yeterince iyi göründüğü için üç kez sonra kimse bakmaz.
+  - **Üç yeni görsel gereklilik** (brief `design/pages/admin-asistan-kuyrugu.md §5b`): ① asistanın
+    okuduğu HAM METİN çıkarılan alanların yanında — denetimin tek dayanağı ② **on dört alerjenin
+    tamamı**, işaretlenmeyenler de görünür (en tehlikeli hata fazladan değil EKSİK alerjendir;
+    yalnız seçilenleri gösteren liste tam da onu gizler) ③ **güven işareti** — model "okuyamadım"
+    diyebilmeli ve o alan gözü kendine çekmeli.
+  - **Emniyet veri modelinden geliyor ve korunuyor:** beyan tamlığı (`is_incomplete`, üretilmiş
+    kolon) ile satış durumu (`status`) ayrı eksenler. Asistan birinciyi doldurabilir, **ikincisi
+    hiçbir yoldan açılmaz** — ürün `candidate` doğar. En kötü hâlde yanlış okunmuş bir alerjen
+    vitrine düşmez.
+  - **Kapsam dışı ve çizimde yer tutucusu bile olmayacak:** fiyat · stok · ürün görseli (medya
+    ayrı yetki sınıfı, `§7 Faz C`). BEKLEYEN(22.6): tasarım turu isteniyor.

@@ -47,7 +47,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 17/24 (+6 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 11/20 (+6 kısmi) |
-| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 2/5 (+2 kısmi) |
+| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 2/6 (+2 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

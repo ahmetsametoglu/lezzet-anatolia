@@ -89,6 +89,89 @@ bölümünde durur (denetim ve hata ayıklama için).
   patron neye dayandığını göremediğini bilmeli).
 - **Mobil YOK** (operasyon yüzeyi yalnız masaüstü — `docs/uygulama/README.md` yüzey formülü).
 
+## 5b. YENİ TUR (22.6) — Belgeden ürün: ambalaj fotoğrafından ürün açma ve tamamlama
+
+> **Bu bölüm yeni bir tasarım turu ister.** Yukarıdaki iskelet (kuyruk + karar çerçevesi) aynen
+> kalır; istenen şey **iki yeni önizleme** ve onların gerektirdiği yeni görsel dil. Kullanıcının
+> kendi cümlesiyle gerekçe: *"Data girişiyle alakalı bizim en net duvarımız onay ekranımız. Onay
+> ekranını çok güzel kullanmamız lazım ki insanın gözüne problemler hızlıca batabilsin."*
+
+### Senaryo (gerçek, kullanıcının anlattığı)
+
+Patron bir ürünün **ambalajının fotoğraflarını** çeker — içindekiler listesi, besin tablosu,
+saklama koşulu, alerjen satırı — ve asistana yükler. Asistan görselleri okur, veriyi çıkarır ve
+kuyruğa bir öneri bırakır. İki hâl var ve **ikisi de aynı ekranda karar bekler**:
+
+1. **Yeni ürün açma** — katalogda hiç yoksa (`product_create`).
+2. **Var olanı tamamlama/düzeltme** — kayıt var, alanları eksik ya da yanlış (`product_draft`).
+
+### Bu önizlemenin çözmesi gereken ASIL problem
+
+Öteki tiplerde soru *"bu işlem yapılsın mı?"*dır. Burada soru başkadır ve tasarımın tamamını o
+belirler:
+
+> **"Bu veri ambalajla uyuşuyor mu?"**
+
+Yani ekran bir onay ekranı değil, bir **karşılaştırma** ekranıdır. Patron burada bir kararı değil,
+bir **okumayı** denetler. Tasarım bunu kolaylaştırmazsa kurgunun tamamı çöker: makine okuması
+yeterince iyi göründüğü için üç kez sonra kimse bakmaz, ve dördüncüde yanlış bir alerjen satırı
+onaylanır.
+
+### İçerik envanteri — ne var, neden
+
+**① Asistanın OKUDUĞU ham metin.** Öneriyle birlikte gelir (*"Ingrédients: farine de blé, œufs,
+lait en poudre, sucre…"*). Fotoğrafın kendisi sistemde saklanmıyor — model onu okudu, biz metni
+saklıyoruz. Bu blok **çıkarılan alanların yanında** durmalı: denetimin tek dayanağı budur.
+Patron ham metni okuyup çıkarılan alanlarla karşılaştırabilmeli.
+
+**② Çıkarılan alanlar, üç dil.** Ad · açıklama · içindekiler · saklama koşulu · aile etiketi.
+Yeni üründe ayrıca: kategori · tarih tipi (DLC/DDM) · raf ömrü (gün) · KDV oranı · en az bir boy
+(varyant) adı. **Fiyat ve stok BU EKRANDA YOK** — ayrı işler, ayrı kararlar.
+
+**③ ALERJENLER — ve buranın kuralı ötekilerden farklı.** On dört AB alerjeninin **tamamı**
+görünmeli: işaretlenenler vurgulu, **işaretlenmeyenler sönük ama görünür**. Sebep tek cümlede:
+*en tehlikeli hata fazladan alerjen değil, EKSİK alerjendir* — ve yalnız seçilenleri gösteren bir
+liste tam da onu görünmez kılar. Göz *"fındık işaretlenmemiş"* diyebilmeli. Çapraz bulaşma (iz)
+listesi de aynı kuralla.
+
+**④ Besin künyesi** (100 g başına enerji/yağ/karbonhidrat/protein/tuz) — tablo hâlinde, ambalajın
+kendi tablosuna benzer okunsun ki göz satır satır eşleştirebilsin.
+
+**⑤ GÜVEN İŞARETİ — yeni bir görsel dil gerekiyor.** Asistan her alan için "net okudum" ya da
+"okuyamadım / emin değilim" diyebilecek. Bulanık bir satır, yansıma, kesik kenar — bunlar gerçek
+ve saklanmamalı. Emin olunmayan alan ekranda **kendini belli etmeli** ve gözü oraya çekmeli.
+Bu, kuyruğun bugünkü "gerekçesiz öneri soluk görünür" diline benzer ama daha keskin: orada bilgi
+eksikti, burada **bilgi şüpheli**.
+
+**⑥ ÜZERİNE YAZILANLAR (yalnız tamamlama hâlinde).** Alan doluysa eski ve yeni değer yan yana,
+ve *"üzerine yazılacak"* açıkça yazılı. Sebep teknik ve geri alınamaz: ürün metinlerinde sürüm
+tutulmuyor, onaylandığı an eski metin kayboluyor. Alan boşsa bu vurgu **olmamalı** — her yerde
+uyarı veren ekran, hiçbir yerde uyarmamış olur.
+
+**⑦ Sonucun ne olacağı — ve buradaki emniyet görünmeli.** Ürün **aday (candidate)** olarak doğar
+ya da taslakta kalır; **satışa çıkarmak bu ekranın işi değildir**. Beyan tamlığı ile satış durumu
+sistemde iki ayrı eksen ve bu ayrım patronun güvencesi: en kötü hâlde bile yanlış okunmuş bir
+alerjen vitrine düşmez. Ekran bunu bir uyarı gibi değil, bir **rahatlama** gibi söylemeli.
+
+### Neyin bugün uygulanabilir olduğu (22.3'ün dersi)
+
+> Önceki turda dokuz tipi listelemiş ama "bugün uygulanabilir olanlar" ayrımını yazmamıştım;
+> tasarım gerçek iş listesini çizdi, kod başka yerdeydi. Bu sefer açık yazıyorum.
+
+- **Çizilecek iki önizleme:** yeni ürün (`product_create`) ve tamamlama (`product_draft`).
+  İkisinin de payload'ı yazılacak — tasarım geldiğinde kod ona uyar, tersi değil.
+- Yukarıdaki alanların hepsi **payload'da olacak**: ham metin, güven işareti, eski değerler,
+  alerjen/iz listeleri, besin künyesi, varyant adları.
+- **Fiyat, stok ve görsel bu tipe DAHİL DEĞİL.** Ürün görseli ayrı bir yetki sınıfı (medya),
+  fiyat ayrı bir karar. Çizimde yer tutucu bile olmasın — olmayan bir şeyi vaat etmeyelim.
+- Ekran **yalnız masaüstü** (operasyon yüzeyi kuralı).
+
+### Ölçüt
+
+Tasarımın başarı ölçütü tek bir soruyla sınanır: **kötü bir okuma ne kadar hızlı fark edilir?**
+Ambalajda "fındık içerir" yazarken alerjen listesinde fındık işaretli değilse, patron bunu
+ekrana bakar bakmaz görmeli — aramak zorunda kalmamalı.
+
 ## 6. Bu ekranın ötesinde
 
 Kuyruk bir **bildirim** kaynağı da olacak (bekleyen öneri sayısı üst çubukta) — ama tasarımı
