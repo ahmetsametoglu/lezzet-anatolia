@@ -266,7 +266,7 @@ export function DecisionCard({
 
         <ReasonBlock reason={row.reason} />
 
-        <ProposalPreview kind={row.kind} payload={row.payload} />
+        <ProposalPreview kind={row.kind} payload={row.payload} economics={row.economics} />
 
         <div className="flex items-start gap-2.5 rounded-ops-card border border-ops-gray-300 bg-ops-gray-100 px-3.5 py-2.5">
           <span className="mt-px flex-none text-ops-body">

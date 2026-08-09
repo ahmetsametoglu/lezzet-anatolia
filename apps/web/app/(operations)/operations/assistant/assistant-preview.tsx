@@ -26,6 +26,7 @@ import {
   type StockIntakePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
+import type { ProposalEconomics } from '@/lib/assistant/economics';
 import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
@@ -139,6 +140,57 @@ function PreviewTable<Row>({
   );
 }
 
+/**
+ * **KÂR SATIRI** — "bu karar bize ne kazandırıyor" (22.7 · harici denetimin bulgusu).
+ *
+ * ── NEDEN ROZET DEĞİL DE CÜMLE ──────────────────────────────────────────────
+ * Zarar bir ARIZA değil, bilinçli verilebilecek bir karardır: elde kalıp imha edilecek maldan
+ * zararına satış iyidir. Kırmızı bir rozet operatörü düşünmeden geri adım attırırdı; bu yüzden
+ * `offer-dialog`un kâr satırıyla aynı dil kullanılıyor — **tutarıyla söyle, yolu kapatma.**
+ * İki ekran aynı karara iki farklı cevap vermemeli.
+ *
+ * ── MALİYET BİLİNMİYORSA HESAP YAPILMAZ ─────────────────────────────────────
+ * `null` maliyet "sıfır maliyet" değildir (`CLAUDE §1`). Sıfır sayılsaydı ekran **"%100 kâr"**
+ * gösterirdi — yanlışın en tehlikelisi, çünkü ikna edici. O hâlde cümle neyin eksik olduğunu
+ * söylüyor ve kararı liste fiyatına bırakıyor.
+ */
+function MarginLine({
+  marginCents,
+  marginPercent,
+  missingCost,
+}: {
+  marginCents: number | null;
+  marginPercent: number | null;
+  /** Maliyeti bilinmeyen kalem var mı — cümleyi bu belirler, sayı değil. */
+  missingCost: boolean;
+}) {
+  if (missingCost || marginCents === null) {
+    return (
+      <span className="font-ops-body text-ops-sm leading-relaxed text-ops-muted">
+        {missingCost
+          ? 'Alış fiyatı girilmemiş bir kalem var — kâr hesaplanamıyor. Karar yalnız liste fiyatına göre verilebilir.'
+          : 'Kâr hesaplanamıyor: fiyat ya da maliyet eksik.'}
+      </span>
+    );
+  }
+
+  const tone = marginCents > 0 ? 'text-ops-olive-dark' : marginCents === 0 ? 'text-ops-body' : 'text-ops-amber';
+  const verdict = marginCents > 0 ? `${money(marginCents)} kâr` : marginCents === 0 ? 'başa baş' : `${money(-marginCents)} zarar`;
+
+  return (
+    <span className="font-ops-body text-ops-sm leading-relaxed text-ops-body">
+      <span className={`font-ops-mono font-semibold ${tone}`}>{verdict}</span>
+      {marginPercent !== null ? <span className="text-ops-muted"> ({percent(marginPercent, 1)} marj)</span> : null}
+      {marginCents < 0 ? (
+        <span className="text-ops-muted">
+          {' '}
+          — zararına satmak bir karardır (elde kalıp imha edilecek maldan iyidir), ekran yolu kapatmaz.
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 /** Tablonun üstündeki künye satırı ("Hedef depo: D1 · Belge no: 2026/0418"). */
 function FactRow({ facts }: { facts: Array<{ label: string; value: string; mono?: boolean }> }) {
   return (
@@ -191,8 +243,20 @@ function PreviewNotice({ tone, title, children }: { tone: 'red' | 'amber'; title
  * fiyatını tutmuyorsa motor zaten reddedecek (`applyProposal`), ve operatörün bunu ONAYDAN ÖNCE
  * görmesi gerekir — yoksa "uygula" der, "uygulanamadı" alır ve sebebi aramaya gider.
  */
-function BundlePreview({ payload }: { payload: BundleDraftPayload }) {
-  const lines = payload.items.map((item) => ({ ...item, ...splitVariantName(item.productName) }));
+function BundlePreview({
+  payload,
+  economics,
+}: {
+  payload: BundleDraftPayload;
+  economics: Extract<ProposalEconomics, { kind: 'bundle' }> | null;
+}) {
+  // Maliyet kalem SIRASIYLA eşleşiyor (kapı payload'ın kalemlerinden kuruyor) — kimlikle eşleme
+  // ikinci bir varsayım olurdu ve aynı varyant iki kez yazılırsa yanlış satıra düşerdi.
+  const lines = payload.items.map((item, i) => ({
+    ...item,
+    ...splitVariantName(item.productName),
+    costCents: economics?.lines[i]?.costCents ?? null,
+  }));
   const allocated = payload.items.reduce((sum, i) => sum + i.qty * i.allocatedUnitPrice, 0);
   // Kuruş altı yuvarlama farkı mutabakatsızlık değildir; karşılaştırma cent'te yapılır.
   const balanced = toCents(allocated) === toCents(payload.totalPrice);
@@ -239,10 +303,46 @@ function BundlePreview({ payload }: { payload: BundleDraftPayload }) {
             mono: true,
             cell: (l) => money(toCents(l.qty * l.allocatedUnitPrice)),
           },
+          // Maliyet sütunu YALNIZ künye geldiğinde: sütunu boş çizmek "maliyet sıfır" diye
+          // okunabilirdi ve o, kârlılığı görünmez kılmaktan daha kötü.
+          ...(economics
+            ? [
+                {
+                  key: 'alis',
+                  header: 'Alış (KDV hariç)',
+                  width: '116px',
+                  align: 'right' as const,
+                  mono: true,
+                  cell: (l: (typeof lines)[number]) =>
+                    l.costCents === null ? '—' : money(l.costCents * l.qty),
+                },
+              ]
+            : []),
         ]}
         rows={lines}
         rowKey={(l) => l.variantId}
       />
+
+      {/* **KÂRLILIK — mutabakat rozetiyle AYNI ağırlıkta** (denetimin talebi): ikisi de "bu paket
+          kurulmalı mı" sorusunun parçası. Paylar tutuyor olabilir ve paket yine zararına olabilir;
+          bir tur bu ekran yalnız ilkini söylüyordu ve zararına bir paket sessizce onaylanabiliyordu. */}
+      {economics ? (
+        <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
+          <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
+            Bu paket ne kazandırıyor
+          </span>
+          <span className="font-ops-body text-ops-xs text-ops-muted">
+            Paket {money(economics.priceCents)} (KDV dahil)
+            {economics.priceHtCents !== null ? ` · ${money(economics.priceHtCents)} KDV'siz gelir` : ''}
+            {economics.costTotalCents !== null ? ` − ${money(economics.costTotalCents)} alış` : ''}
+          </span>
+          <MarginLine
+            marginCents={economics.marginCents}
+            marginPercent={economics.marginPercent}
+            missingCost={economics.costTotalCents === null}
+          />
+        </div>
+      ) : null}
 
       <span
         className={[
@@ -881,10 +981,28 @@ function PurchaseOrderPreview({ payload }: { payload: PurchaseOrderPayload }) {
  * ne onayladığını görmüş olsun. Liste fiyatı bilinmiyorsa oran **yazılmaz**; bilinmeyeni sıfır
  * saymak "indirimsiz" diye okunurdu.
  */
-function BatchOfferPreview({ payload }: { payload: BatchOfferPayload }) {
+function BatchOfferPreview({
+  payload,
+  economics,
+}: {
+  payload: BatchOfferPayload;
+  economics: Extract<ProposalEconomics, { kind: 'offer' }> | null;
+}) {
   const { name, size } = splitVariantName(payload.productName);
   const list = payload.listPriceCents;
   const drop = list !== null && list > payload.offerPriceCents ? Math.round(((list - payload.offerPriceCents) / list) * 100) : null;
+
+  /**
+   * **Liste fiyatı ÖNERİDEN SONRA değişmiş mi** — payload öneri anındaki, künye ŞU ANKİ liste.
+   *
+   * Ayrışma sessizce geçilemez ve güncel olan da sessizce gösterilemez: patron kararı önerinin
+   * dayandığı gerçeğe göre veriyor olabilir. Denetimle mutabık kalınan kural bu (09.08) — ekran
+   * ayrışmayı SÖYLER.
+   */
+  const listDrift =
+    economics && economics.listPriceCents !== null && list !== null && economics.listPriceCents !== list
+      ? economics.listPriceCents
+      : null;
 
   return (
     <PreviewBody note="stok · parti teklifi">
@@ -911,6 +1029,45 @@ function BatchOfferPreview({ payload }: { payload: BatchOfferPayload }) {
           { label: 'Partideki adet', value: num(payload.physicalQty), mono: true },
         ]}
       />
+
+      {/* **FİYATIN ÜÇÜNCÜ YÜZÜ** (22.7): tutar ve listeye göre indirim yukarıda; eksik olan
+          ALIŞA göre marjdı. `offer-dialog` üçünü birlikte gösteriyor, önizleme yalnız ikisini —
+          yani devretmeden önce kararın büyüklüğü görünmüyordu. */}
+      {economics ? (
+        <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
+          <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
+            Adet başına kâr
+          </span>
+          <span className="font-ops-body text-ops-xs text-ops-muted">
+            Teklif {money(payload.offerPriceCents)} (KDV dahil)
+            {economics.offerHtCents !== null ? ` · ${money(economics.offerHtCents)} KDV'siz gelir` : ''}
+            {economics.costCents !== null ? ` − ${money(economics.costCents)} alış` : ''}
+          </span>
+          <MarginLine
+            marginCents={economics.marginCents}
+            marginPercent={economics.marginPercent}
+            missingCost={economics.costCents === null}
+          />
+          {/* Parti tükenirse toplam etki — karar tek adet için değil, elde kalan mal için veriliyor
+              (`offer-dialog`un kendi cümlesinin aynısı). */}
+          {economics.marginCents !== null ? (
+            <span className="font-ops-body text-ops-xs text-ops-muted">
+              Parti tükenirse toplam{' '}
+              <span className={`font-ops-mono ${economics.marginCents >= 0 ? 'text-ops-olive-dark' : 'text-ops-amber'}`}>
+                {money(Math.abs(economics.marginCents) * payload.physicalQty)}
+              </span>{' '}
+              {economics.marginCents >= 0 ? 'kâr' : 'zarar'}.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {listDrift !== null ? (
+        <PreviewNotice tone="amber" title="Liste fiyatı öneriden sonra değişmiş">
+          Öneri {money(list)} listeye göre kurulmuştu; şu an {money(listDrift)}. İndirim oranı da o eski
+          fiyata göre yazılı — kararı vermeden önce güncel fiyata bakın.
+        </PreviewNotice>
+      ) : null}
 
       <PreviewNotice tone="amber" title="Taslak evresi yok">
         Onaylandığı an bu parti fırsat olarak vitrine düşer. Aynı ürünün öteki partileri tam fiyatta
@@ -1041,7 +1198,22 @@ function RecipeDraftPreview({ payload }: { payload: RecipeDraftPayload }) {
  * yapabileceği en kötü şey. Doğrulama düşerse kart yaşar, önizleme yerine sebebini söyler ve
  * operatör "Teknik döküm"den ham JSON'a bakabilir.
  */
-export function ProposalPreview({ kind, payload }: { kind: AssistantProposalKind; payload: unknown }) {
+export function ProposalPreview({
+  kind,
+  payload,
+  economics = null,
+}: {
+  kind: AssistantProposalKind;
+  payload: unknown;
+  /**
+   * Kâr künyesi — okuma kapısından hazır gelir (`lib/assistant/economics`), ekran hesaplamaz.
+   *
+   * `null` üç şey demek olabilir ve üçü de aynı davranışı gerektirir (blok çizilmez): bu tipte
+   * kârlılık kavramı yok · hesaplanamadı · satır eski. Ekran hesabı kendi yapsaydı aynı sayı iki
+   * yerde çıkar ve bir gün ayrışırdı — ayrışan sayı burada "kâr" diye okunur.
+   */
+  economics?: ProposalEconomics | null;
+}) {
   const schema = (PROPOSAL_PAYLOAD_SCHEMAS as Partial<Record<AssistantProposalKind, { safeParse: (v: unknown) => { success: boolean; data?: unknown } }>>)[kind];
   const parsed = schema?.safeParse(payload);
 
@@ -1059,7 +1231,12 @@ export function ProposalPreview({ kind, payload }: { kind: AssistantProposalKind
   const data = parsed.data;
   switch (kind) {
     case 'bundle_draft':
-      return <BundlePreview payload={data as BundleDraftPayload} />;
+      return (
+        <BundlePreview
+          payload={data as BundleDraftPayload}
+          economics={economics?.kind === 'bundle' ? economics : null}
+        />
+      );
     case 'stock_intake':
       return <StockIntakePreview payload={data as StockIntakePayload} />;
     case 'money_movement':
@@ -1073,7 +1250,12 @@ export function ProposalPreview({ kind, payload }: { kind: AssistantProposalKind
     case 'purchase_order':
       return <PurchaseOrderPreview payload={data as PurchaseOrderPayload} />;
     case 'batch_offer':
-      return <BatchOfferPreview payload={data as BatchOfferPayload} />;
+      return (
+        <BatchOfferPreview
+          payload={data as BatchOfferPayload}
+          economics={economics?.kind === 'offer' ? economics : null}
+        />
+      );
     case 'discount_draft':
       return <DiscountDraftPreview payload={data as DiscountDraftPayload} />;
     case 'recipe_draft':

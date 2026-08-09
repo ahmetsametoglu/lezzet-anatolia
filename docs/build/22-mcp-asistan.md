@@ -429,3 +429,22 @@ satırında.
       gerçek. Ekran ayrışmayı söyler, sessizce güncelini göstermez (operasyon şeridiyle mutabık).
     - Marj negatifse uyarı ama **yol kapatılmaz**: zararına satmak bir karardır (elde kalıp imha
       edilecek maldan iyidir) ve `offer-dialog` da aynı davranıyor.
+    - **EKRANA BAĞLANDI (10.08, operasyon şeridi)** — kapı aynı gün tüketicisini buldu. touches:
+      `assistant/{assistant-preview,assistant-sections}.tsx`
+      - **Pakette maliyet SÜTUN, kârlılık BLOK:** kalem tablosuna "Alış (KDV hariç)" eklendi ve
+        mutabakat rozetinin yanına *"Bu paket ne kazandırıyor"* bloğu kondu — ikisi aynı ağırlıkta,
+        çünkü ikisi de "bu paket kurulmalı mı" sorusunun parçası. **Paylar tutuyor olabilir ve paket
+        yine zararına olabilir**; bir tur ekran yalnız ilkini söylüyordu.
+      - **Maliyet sütunu künye YOKSA hiç çizilmiyor:** boş bir sütun "maliyet sıfır" diye okunurdu ve
+        o, kârlılığı görünmez kılmaktan kötü.
+      - **Fırsatta "üçüncü yüz" geldi:** tutar ve listeye göre indirim zaten vardı, alışa göre marj
+        yoktu — yani devretmeden önce kararın büyüklüğü görünmüyordu. Parti tükenirse toplam etki de
+        yazılıyor (`offer-dialog`un kendi cümlesinin aynısı: karar tek adet için değil).
+      - **Zarar ROZET DEĞİL CÜMLE:** kırmızı bir rozet operatörü düşünmeden geri adım attırırdı.
+        Tutarıyla söyleniyor ve yolun açık olduğu yazılıyor — iki ekran aynı karara iki farklı cevap
+        vermemeli.
+      - **Liste fiyatı ayrışmışsa ekran SÖYLÜYOR** (payload öneri anındaki, künye şu anki): *"öneri
+        şu listeye göre kurulmuştu, şu an bu"*. Sessizce güncelini göstermek, patronun eski gerçeğe
+        göre karar verdiğini gizlerdi.
+      - Ölçüldü (`ui:shot`, açık + koyu): kârlı paket (1,63 € · %41,2) ve **zararına teklif**
+        (0,08 € zarar · %-5,7 · parti toplamı 0,88 € zarar) gerçek fiyat/alış verisiyle.
