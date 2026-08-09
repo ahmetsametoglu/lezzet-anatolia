@@ -40,11 +40,12 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
   betikleri hiç derlenmiyor: `Page<T>`'nin alanı `rows` iken `items` yazan bir satır sessizce
   geçti, hatası ancak `db:seed` çalıştırılınca görülecekti. Kök tsconfig'e `scripts/**` eklenip
   `typecheck`'e bağlanmalı.
-- **Gözlemleme (log · hata izleme · sistem sağlığı)** — tasarımı yazıldı, kodu yazılmadı:
-  [`OBSERVABILITY.md`](OBSERVABILITY.md), tablolar `data-model/operasyon.md`, ekran
-  `design/pages/admin-sistem.md`, görev `build/18-operasyon-guvenlik.md` (18.5). `pino` +
-  `error_log`/`capture_error` + `system_health_snapshot` + tek operasyon ekranı. **E-posta alarmı
-  bilinçli olarak yok** — izleme çekme modeliyle, ekran alarmın yerini tutar.
+- **Gözlemleme (log · hata izleme · sistem sağlığı)** — kapsam: `pino` + `error_log`/`capture_error`
+  + `system_health_snapshot` + tek operasyon ekranı. Referans [`OBSERVABILITY.md`](OBSERVABILITY.md),
+  tablolar `data-model/operasyon.md`, ekran `design/pages/admin-sistem.md`, görev
+  `build/18-operasyon-guvenlik.md` (18.5). **E-posta alarmı bilinçli olarak yok** — izleme çekme
+  modeliyle, ekran alarmın yerini tutar. *(Madde "tasarımı yazıldı, kodu yazılmadı" diyordu; ölçüldü
+  10.08 — üçü de kodda, gözlemleme karşı-denetimi 03.08'de kapandı. Durum görev satırındadır.)*
 
 ## 2. Kimlik ve roller
 
@@ -68,12 +69,12 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Product entity (çok dilli ad/açıklama, görsel, KDV, aktif, sıra)
 - `ProductVariant` entity (satılabilir birim = varyant; sabit paket/adet); fiyat/stok varyanta bağlı
 - Alerjen alanı: `Product.allergens` (AB 14 enum, manuel seçim) + görünen ad TR/FR/DE
-- **Yasal beyan alanları (tek migration turu):** `ingredients` · `nutrition` (sabit kalemli, 100 g) · `traces` (çapraz bulaşma) · `storage_instructions` — dördü de müşteri ürün detayının zorunlu bölümleri; operasyon formunda giriş yeri yok, bu yüzden bugün girilemiyor
+- **Yasal beyan alanları:** `ingredients` · `nutrition` (sabit kalemli, 100 g) · `traces` (çapraz bulaşma) · `storage_instructions` — dördü de müşteri ürün detayının zorunlu bölümleri. *(Madde "operasyon formunda giriş yeri yok, bugün girilemiyor" diyordu; ölçüldü 10.08 — dördünün de girişi var, `products/tabs/product/product-form-declaration.tsx`.)*
 - `ProductVariant.label` → LocalizedText (müşteriye görünen boy etiketi; bugün tek dil)
 - Görsel yükleme (`packages/storage`, image_key deseni)
 - **Görsel okuma URL'i public'e iner:** bugün her render'da 30 dk'lık imzalı (signed) URL üretiliyor; katalog görselleri gizli olmadığı için imzanın koruma değeri yok, bedeli var — tarayıcı/CDN cache'i ölü, paylaşım (OG) kartı imza dolunca görselsiz kalıyor, vitrin statik cache'lenemiyor. R2 public okuma + `R2_PUBLIC_BASE_URL` + `?v=<updated_at>` sürüm damgası. Başlangıç: r2.dev geliştirme adresi (alan adı yok); özel alan (`cdn.<domain>`) sonra, yalnız env değeri değişir. → `build/05-katalog.md (05.11)`
 - `ProductImage` (galeri): ek görseller + sıralama; kapak üründe kalır
-- **Operasyon ürün formu tasarımının güncellenmesi (claude_design):** bugünkü "Yasal beyan" bölümü yalnız alerjen çipleri — içindekiler/besin/saklama/çapraz bulaşma alanları ve galeri yönetimi tasarımda yok; kodlamadan önce tasarım müşteri ürün detayıyla hizalanmalı
+- ~~Operasyon ürün formu tasarımının güncellenmesi (claude_design)~~ — **karşılandı** (ölçüldü 10.08): "Yasal beyan" bölümü dört alanı da alıyor (`product-form-declaration.tsx`), galeri yönetimi de var (`product-photos.tsx`). Madde, bu ikisi tasarımda yokken açılmıştı.
 - Ürün skoru okuma önbelleği (`rating_avg`/`rating_count` ya da materialized view) — kaynak `Review`, katalog/detay/benzer listelerinde agregasyon tekrarlanmasın
 - AI çeviri önerisi: girilen dilden diğer ikisini üret, admin onayı
 - Admin katalog ekranları (telefon öncelikli)
@@ -209,15 +210,15 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 - Üst üste binmez → en büyük indirim uygulanır (domain-core)
 - Paketler ve near-expiry teklif genel indirimden muaf
 - `Order.discount_id` + `discount_amount`; koşullar (min sepet, ilk sipariş, tarih, kullanım sınırı)
-- **`discount_use` satırının YAZILMASI — sipariş kapanışında.** Tablo, okuması (`usageCounts`) ve
-  motorun sınır denetimi (`used_up`) hazır; **yazan yok**, yani sayaç kalıcı olarak sıfır ve
-  "toplam N kullanım" ile "müşteri başına N" koşulları **hiç bağlamıyor** — kupon fiilen sınırsız.
-  Fiyat ekranı bunu doğru gösteriyor (rozet "bugün yürürlükte mi"yi söyler), eksik olan kayıt.
-  → **MÜŞTERİ/UI ŞERİDİNDEKİ AJANIN İŞİ** (sepet + checkout): `apps/web/lib/cart/discount.ts`
-  kuralı çözüyor, `lib/order/checkout-draft.ts` `order.discount_id` ve `discount_amount`'ı
-  yazıyor; `discount_use` satırı da aynı noktada, aynı turda atılmalı. Sipariş iptal/iade
-  edilirse kullanımın geri düşüp düşmeyeceği o işin ilk kararıdır (öneri: düşmesin — kupon
-  harcanmıştır; aksi hâli suistimale açık).
+- **`discount_use` satırı — YAZILIYOR, tek yerden.** *(Bu madde bir dönem "yazan yok, kupon fiilen
+  sınırsız" diyordu ve bir şeride iş olarak havale edilmişti; ölçüldü 10.08, yanlıştı.)* Satırı
+  sipariş yaratan RPC atıyor: `0030_create_order.sql` içindeki `insert into public.discount_use`.
+  Yani kayıt siparişle **aynı işlemde** doğuyor ve kotayı gerçekten bağlıyor; tekillik veritabanı
+  indeksinde, uygulamada bir kontrolde değil (`checkout-draft.test.ts` ikinci kaydın `false`
+  döndüğünü ve sayacın 1 kaldığını sınıyor).
+  **İkinci bir yazım EKLENMEZ** — uygulama katmanından da atılsaydı her sipariş kotayı iki
+  sayardı ve hiçbir yerde hata vermezdi. Açık kalan tek karar: sipariş iptal/iade edilince kullanım
+  geri düşer mi (öneri: düşmesin — kupon harcanmıştır, aksi suistimale açık).
 
 ## 16. Müşteri bağlılığı / etkileşim (Faz 1)
 
