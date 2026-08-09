@@ -1,19 +1,15 @@
 import type { Locale } from '@lezzet/i18n';
 
 /*
-  HESAP TEST/DEMO VERİSİ — 21.14 ilk etabı UI-only. `/api/v1/me` sözleşmesi (`MeSchema`) VAR ama
-  hesap ekranının gösterdiklerinin tamamını taşımıyor (puan bakiyesi, kupon listesi, referans
-  kodu ayrı uçların işi) ve bu etapta uca BAĞLANMIYORUZ. Tipler bu yüzden sayfaya özel; alan
-  adları sözleşmedekilerle aynı yazıldı ki taşınma günü çeviri gerekmesin. ADRESLER ARTIK BURADA
-  DEĞİL: 21.15'te gerçek uçlara bağlandı (`use-addresses.hook.ts`), fixture yalnız kalan
-  UI-only bölümleri taşıyor.
-*/
+  HESAP TEST/DEMO VERİSİ — artık yalnız KİMLİK KARTININ ve henüz ucu olmayan iki bloğun
+  başlangıç değeri. Ekranın gerisi gerçek uçlardan okuyor ve fixture o alanları TAŞIMIYOR:
+  adresler 21.15'te (`use-addresses.hook`), dil/izinler 21.16'da (`/me` + `/me/preferences`),
+  puan ve kuponlar 21.17'de (`use-points.hook`) bağlandı — her biri kalktıkça bu dosya küçüldü.
 
-export interface AccountCouponView {
-  code: string;
-  /** İndirim değeri — biçimlenmiş metin ("5 € indirim"). */
-  valueLabel: string;
-}
+  KALAN İKİSİ: `company` (B2B künyesi — okuma ucu yok) ve `points`in eski alanı DEĞİL, yalnız
+  `referralCode`ün geldiği `/me`. Tipler sayfaya özel; alan adları sözleşmedekilerle aynı ki
+  bağlanma günü çeviri gerekmesin.
+*/
 
 export interface AccountCompanyView {
   name: string;
@@ -25,21 +21,14 @@ export interface AccountData {
   name: string;
   email: string;
   phone: string;
-  /** Onaylı profesyonel hesap; yoksa `null` (B2C). */
+  /** Onaylı profesyonel hesap; yoksa `null` (B2C). Okuma ucu YOK — girişli hesapta `null` taşınır. */
   company: AccountCompanyView | null;
-  /** Puan bakiyesi; B2B'de `null` (şablon: puan yalnız B2C'de). */
-  points: number | null;
-  coupons: AccountCouponView[];
-  /** Arkadaş getirme kodu; kapalıysa `null`. */
+  /** Arkadaş getirme kodu; `/me`den gelir, kapalıysa `null`. */
   referralCode: string | null;
   preferredLanguage: Locale;
   marketingEmail: boolean;
   marketingWhatsApp: boolean;
 }
-
-/** Puan → kupon dönüşümünün eşiği ve karşılığı (şablon: 200 puan = 5 €). */
-export const POINTS_PER_COUPON = 200;
-export const COUPON_VALUE_CENTS = 500;
 
 /** Şablonun B2C müşterisi. `overrides` ile misafir/B2B/boş hâller kurulur. */
 export function accountData(overrides: Partial<AccountData> = {}): AccountData {
@@ -48,8 +37,6 @@ export function accountData(overrides: Partial<AccountData> = {}): AccountData {
     email: 'ayse.demir@example.fr',
     phone: '+33 6 24 51 09 88',
     company: null,
-    points: 145,
-    coupons: [],
     referralCode: 'AYSE-LEZZET',
     preferredLanguage: 'tr',
     marketingEmail: true,

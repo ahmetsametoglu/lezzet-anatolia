@@ -1,12 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { anonDb, CategoryService, serviceDb, UserProfileService } from '@lezzet/database';
+import { CategoryService, serviceDb } from '@lezzet/database';
 import {
   getCatalogData,
   getProductDetail,
   pricingViewerOf,
   toCategory,
-  VISITOR,
   type PlaceWarehouses,
   type PricingViewer,
 } from '@lezzet/application';
@@ -23,7 +22,7 @@ import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 // İmleç kodlaması `lib/request.ts`te: sipariş listesi ikinci çağıran olunca oraya taşındı (21.18).
 import { decodeCursor, encodeCursor } from '../../lib/request';
-import { bearerTokenOf } from './auth';
+import { optionalCustomerId } from './auth';
 
 /**
  * Katalog uçları (21.6) — **oturumsuz gezilir** (02-mimari §4: "oturumsuz kullanım = müşteri
@@ -101,34 +100,18 @@ const ProductQuerySchema = z.object({
 /**
  * **İSTEĞE BAĞLI KİMLİK** — fiyatın kişiselleşmesi için; erişim için DEĞİL.
  *
- * Üç yol da 200 döner ve üçünün de karşılığı webde var:
- *   · başlık yok            → ziyaretçi (webde çerezsiz gezinme)
- *   · başlık var ama geçersiz/süresi dolmuş → ziyaretçi (webde süresi dolmuş oturum çerezi:
- *     `getSessionUser` null döner, `currentCustomerId` null, fiyat liste fiyatına düşer)
- *   · geçerli token         → müşterinin künyesi (B2B kanalı + müşteriye özel fiyat satırları)
+ * Katalog hiçbir hâlde 401 dönmez: başlıksız da, süresi dolmuş token'la da ziyaretçi fiyatı
+ * gösterilir; geçerli token müşterinin künyesini açar (B2B kanalı + müşteriye özel fiyat satırları).
+ * Kimlik ZİNCİRİ burada değil, `auth.ts`te (`optionalCustomerId`): keşif ucu (21.19) aynı zinciri
+ * başka bir KARAR için istiyor (oyu sahibine yazmak) ve zincir iki kez yazılsaydı biri gün gelip
+ * profilsiz kullanıcıyı ötekinden farklı ele alırdı. Burada kalan tek şey o kimliğin FİYAT
+ * künyesine çevrilmesi.
  *
- * Geçersiz token'a 401 vermek katalogu kapatırdı: uygulamanın haftalarca açılmadığı bir cihazda
- * token süresi dolmuş olur ve müşteri vitrini değil bir hata ekranını görürdü. Kayıt da düşülmez —
- * süresi dolmuş token bir arıza değil, oturumun normal sonu.
- *
- * **Auth kimliği ≠ müşteri kimliği** (ölçüldü: `apps/web/lib/guard.ts:70-74` — `currentCustomerId`
- * oturumdaki auth kullanıcısını `UserProfileService.findByAuthUserId` ile profil satırına çevirir,
- * `user_profiles.id` ile `auth.users.id` AYRI kolonlardır). Aynı zincir burada da kurulur; auth
- * kimliğini doğrudan `pricingViewerOf`a vermek profili hiç bulamaz ve her müşteriyi sessizce
- * ziyaretçi fiyatına düşürürdü.
- *
- * Dışa verilir: vitrin ucu (`home.ts`) fırsat fiyatını aynı kimlik zinciriyle kişiselleştirir.
+ * Dışa verilir: vitrin ucu (`home.ts`) fırsat fiyatını aynı kapıdan kişiselleştirir.
  */
 export async function readViewer(db: SupabaseClient, authorization: string | undefined): Promise<PricingViewer> {
-  const token = bearerTokenOf(authorization);
-  if (!token) return VISITOR;
-
-  const { data, error } = await anonDb().auth.getUser(token);
-  if (error || !data.user) return VISITOR;
-
-  const profile = await new UserProfileService(db).findByAuthUserId(data.user.id);
-  // Profil yoksa (trigger boşluğu / silinmiş kayıt) `pricingViewerOf` zaten ziyaretçiye düşer.
-  return pricingViewerOf(db, profile?.id ?? null);
+  // Kimliksizde `pricingViewerOf` zaten `VISITOR` döner — ayrı bir kısa devre ikinci bir karar olurdu.
+  return pricingViewerOf(db, await optionalCustomerId(db, authorization));
 }
 
 export const catalog = new Hono<AppEnv>();

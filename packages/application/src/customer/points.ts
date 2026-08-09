@@ -1,8 +1,10 @@
 import { DiscountCodeService, DiscountService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
-import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, canRedeem, redemptionCode } from '@lezzet/domain-core';
-import type { CompanyInfo, CustomerType } from '@lezzet/types';
+import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, POINTS_SETTING_KEYS, canRedeem, redemptionCode } from '@lezzet/domain-core';
+import { logger } from '@lezzet/observability';
+import type { CompanyInfo, CustomerType, MePointsEarnWayKey } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getPointsBalance } from '../feedback/points';
+import { ensureCustomerReferralCode } from './referral';
 
 /*
   MÜŞTERİ PUAN CÜZDANI — bakiye + çevirme eşiği + kullanılabilir kuponlar + puan→kupon çevirme
@@ -59,11 +61,29 @@ export interface CustomerCoupon {
   validTo: string | null;
 }
 
+/**
+ * Puan KAZANMA yolu — anahtar + puan; ekrandaki cümle istemcide (i18n).
+ *
+ * Anahtar tipi SÖZLEŞMEDEN geliyor (`MePointsEarnWayKey`), burada ikinci kez sıralanmıyor: üç yolun
+ * listesi hem burada hem şemada dursaydı, dördüncü yol eklendiğinde biri güncellenir öteki
+ * unutulurdu ve sonuç derleme hatası değil, çalışma anında `parse` düşmesi olurdu. Tek liste, tek
+ * doğru — sözcük dağarcığının kendisi zaten defterin sebep sözlüğünden türüyor (şemadaki künye).
+ */
+export interface CustomerEarnWay {
+  key: MePointsEarnWayKey;
+  /** Ayardan okunan değer; sıfır ya da okunamayan yol listeye HİÇ girmez (bkz. `readEarnWays`). */
+  points: number;
+}
+
 /** Puan kartı — `null` hâli çağıranda değil, `CustomerPointsView.points`ta yaşıyor. */
 export interface CustomerPointsCard {
   balance: number;
   /** `minimumPoints` puan = `valueCents` cent. İkisi de ayardan. */
   redeem: { minimumPoints: number; valueCents: number };
+  /** Davet kodu — kart varsa GARANTİLİ (yoksa üretilir); `null` yalnız üretim başarısızsa. */
+  referralCode: string | null;
+  /** Bakiyesi sıfır olan müşteriye "nereden kazanırım" cevabı; sıra ürün kararı (bkz. `EARN_WAYS`). */
+  earnWays: CustomerEarnWay[];
 }
 
 export interface CustomerPointsView {
@@ -116,25 +136,85 @@ async function redeemSettings(db: SupabaseClient): Promise<{ minimum: number; ce
 }
 
 /**
- * Hesap ekranının puan bölümü — bakiye, eşik ve kullanılabilir kuponlar TEK turda.
+ * **Gösterilecek kazanma yolları ve SIRASI** — en yüksek getiriden en düşüğe değil, ÜRÜN sırasına
+ * göre: davet (getiri en yüksek ve tek "başkasını getir" hamlesi) → değerlendirme (elindeki
+ * siparişten kazanır) → keşif turu (hemen şimdi, hiçbir ön koşulsuz yapılabilen).
+ *
+ * Sıra sunucudan gelir ki üç yüzey (mobil hesap, ileride web hesap, kampanya maili) aynı öncelik
+ * sırasını göstersin; istemcinin kendi sıralaması, aynı programı iki farklı hikâyeyle anlatmak
+ * olurdu. Liste bir DOMAIN kuralı DEĞİL — "hangi aksiyon kaç puan" motorda/ayarda, "hangisini
+ * ekranda önce anlatırız" burada; o yüzden `domain-core`a değil bu kapıya yazıldı.
+ */
+const EARN_WAYS: readonly MePointsEarnWayKey[] = ['referral', 'review', 'feedback_candidate'];
+
+/**
+ * Kazanma yollarının ayardaki değerleri — **okunamayan yol LİSTEYE GİRMEZ.**
+ *
+ * Varsayılan YOK ve bu bilinçli: aksiyonun kaç puan ettiğinin varsayılanı yazım kapısında yaşıyor
+ * (`feedback/points.ts` → `POINTS_DEFAULTS`) ve orası dışa açık değil. Burada ikinci bir tablo
+ * açsaydık aynı sayı üçüncü kez yazılmış olurdu (web `pointsSettings` + paket `POINTS_DEFAULTS` +
+ * bu) ve üçü bir gün ayrışırdı — ekran, motorun vermeyeceği bir sayı söylerdi (29.07 denetiminin
+ * tam olarak kapattığı arıza sınıfı).
+ *
+ * Bu yüzden ayar satırı YOKSA yol sessizce değil, LOG'la atlanır ve ekran o yolu hiç göstermez.
+ * Yön güvenli: motor yine de puanı yazar (varsayılanı var), yani müşteri kazanır ama fazlasını
+ * vaat etmiş olmayız — kart hiçbir zaman motordan cömert olmaz (`isOutsideProgram` ile aynı ilke).
+ * Sıfır da aynı kapıdan düşer: `canEarnPoints` sıfır değerli aksiyonu `no_value` diye reddediyor,
+ * yani "0 puan kazandıran yol" diye bir şey yok (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+ */
+async function readEarnWays(db: SupabaseClient, customerId: string): Promise<CustomerEarnWay[]> {
+  const settings = new SettingsService(db);
+  const values = await Promise.all(EARN_WAYS.map((key) => settings.get<unknown>(POINTS_SETTING_KEYS[key], null)));
+
+  const ways: CustomerEarnWay[] = [];
+  EARN_WAYS.forEach((key, index) => {
+    const points = Number(values[index]);
+    if (!Number.isFinite(points) || !Number.isInteger(points) || points <= 0) {
+      logger.warn(
+        { context: 'customer/points', customerId, earnWay: key, settingKey: POINTS_SETTING_KEYS[key] },
+        'kazanım puanı ayardan okunamadı — yol ekranda gösterilmiyor',
+      );
+      return;
+    }
+    ways.push({ key, points });
+  });
+  return ways;
+}
+
+/**
+ * Hesap ekranının puan bölümü — bakiye, eşik, kullanılabilir kuponlar, davet kodu ve kazanma
+ * yolları TEK turda.
  *
  * B2B'de sorgu bile atılmaz: sonucu hiç çizilmeyecek bir veriyi getirmek, boşa dolaşmaktır (web'in
  * aynı kısa devresi). Profil yoksa da program dışı sayılır — kimliksiz bir cüzdan yoktur.
+ *
+ * **Okuma YAZABİLİR ve bu bilinçli:** davet kodu yoksa burada üretilir (`ensureCustomerReferralCode`
+ * — web'in tembel üretiminin aynısı). Bir GET'in yan etkisi olması ilk bakışta rahatsız edicidir
+ * ama alternatifi daha kötü: ekran "arkadaşını davet et, 50 puan" der, müşteri dokunur ve
+ * paylaşılacak kod olmadığı için hiçbir şey olmaz. Yazım İDEMPOTENT (kod bir kez doğar, sonraki her
+ * okuma aynısını döndürür) ve yalnız programa dahil profilde çalışır — B2B'de kısa devre yukarıda.
  */
 export async function readCustomerPoints(db: SupabaseClient, customerId: string): Promise<CustomerPointsView> {
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { points: null, coupons: [] };
 
-  const [balance, settings, coupons] = await Promise.all([
+  const [balance, settings, coupons, referralCode, earnWays] = await Promise.all([
     getPointsBalance(db, customerId),
     redeemSettings(db),
     listCustomerCoupons(db, customerId),
+    // Kod ZATEN varsa kapı hiç çağrılmaz: `ensureCustomerReferralCode` profili yeniden okuyor ve o
+    // tur her puan okumasında boşuna atılırdı — elimizdeki satır aynı cevabı taşıyor. Kapı yine de
+    // kimliği alır (profili değil): üretim yolunda tek doğrulanmış kaynak vardır, o da DB satırı.
+    profile.referralCode ?? ensureCustomerReferralCode(db, customerId),
+    readEarnWays(db, customerId),
   ]);
 
   return {
     points: {
       balance: balance.balance,
       redeem: { minimumPoints: settings.minimum, valueCents: settings.minimum * settings.centValue },
+      referralCode,
+      earnWays,
     },
     coupons,
   };

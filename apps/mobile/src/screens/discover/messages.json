@@ -1,0 +1,95 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Keşif",
+    "progress": "{current} / {total}",
+    "framing": "Bunlar {strong} — beğendikleriniz ne getireceğimize yön verir. Henüz satışta değiller.",
+    "framingStrong": "yakında gelebilir",
+    "vote": {
+      "like": "Beğen",
+      "pass": "Geç"
+    },
+    "toast": "Tur tamamlandı — teşekkürler ✓",
+    "done": {
+      "title": "Hepsi bu kadardı — teşekkürler!",
+      "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni adaylar geldikçe burası yeniden dolar.",
+      "award": "+{points} puan kazandınız",
+      "loginHint": "Giriş yaparsanız keşif turları puan kazandırır.",
+      "loginCta": "Hızlı doğrulama",
+      "catalog": "Kataloğa dön"
+    },
+    "empty": {
+      "title": "Şu an değerlendirecek yenilik yok",
+      "body": "Yeni adaylar geldikçe burası dolar.",
+      "catalog": "Kataloğa dön"
+    },
+    "loading": "Yükleniyor…",
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "Keşif turu getirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Découverte",
+    "progress": "{current} / {total}",
+    "framing": "Ces produits {strong} — vos avis orientent nos prochains choix. Ils ne sont pas encore en vente.",
+    "framingStrong": "pourraient bientôt arriver",
+    "vote": {
+      "like": "J'aime",
+      "pass": "Passer"
+    },
+    "toast": "Tour terminé — merci ✓",
+    "done": {
+      "title": "C'était tout — merci !",
+      "body": "Vos avis orientent les saveurs que nous ferons venir. De nouveaux candidats rempliront cette page.",
+      "award": "Vous avez gagné +{points} points",
+      "loginHint": "Connectez-vous et vos tours de découverte vous rapportent des points.",
+      "loginCta": "Vérification rapide",
+      "catalog": "Voir le catalogue"
+    },
+    "empty": {
+      "title": "Rien de nouveau à évaluer pour l'instant",
+      "body": "De nouveaux candidats rempliront cette page.",
+      "catalog": "Voir le catalogue"
+    },
+    "loading": "Chargement…",
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Le tour de découverte n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Entdecken",
+    "progress": "{current} / {total}",
+    "framing": "Diese Produkte {strong} — Ihre Bewertungen lenken unsere Auswahl. Sie sind noch nicht im Sortiment.",
+    "framingStrong": "könnten bald kommen",
+    "vote": {
+      "like": "Gefällt mir",
+      "pass": "Weiter"
+    },
+    "toast": "Runde abgeschlossen — danke ✓",
+    "done": {
+      "title": "Das war alles — vielen Dank!",
+      "body": "Ihre Bewertungen lenken, welche Spezialitäten wir holen. Sobald neue Kandidaten da sind, füllt sich diese Seite wieder.",
+      "award": "Sie haben +{points} Punkte erhalten",
+      "loginHint": "Mit Anmeldung bringen Ihnen Entdeckungsrunden Punkte.",
+      "loginCta": "Schnelle Verifizierung",
+      "catalog": "Zum Katalog"
+    },
+    "empty": {
+      "title": "Derzeit gibt es nichts Neues zu bewerten",
+      "body": "Sobald neue Kandidaten da sind, füllt sich diese Seite.",
+      "catalog": "Zum Katalog"
+    },
+    "loading": "Wird geladen…",
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Die Entdeckungsrunde konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    }
+  }
+}

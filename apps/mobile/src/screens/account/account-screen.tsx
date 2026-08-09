@@ -1,8 +1,9 @@
 import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
+import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useState, type ReactElement } from 'react';
+import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
@@ -23,6 +24,7 @@ import {
   type AddressWrite,
   type MeAddress,
 } from '@/lib/api/addresses';
+import { redeemPoints } from '@/lib/api/points';
 import { updateMe, updatePreferences } from '@/lib/api/me';
 import { resolvePostalCode } from '@/lib/api/places';
 import { signOut } from '@/lib/auth/sign-out';
@@ -34,14 +36,9 @@ import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { AddressCard } from './address-card';
-import {
-  accountData,
-  COUPON_VALUE_CENTS,
-  POINTS_PER_COUPON,
-  type AccountData,
-  type AccountCouponView,
-} from './account-fixture';
+import { accountData, type AccountData } from './account-fixture';
 import { useAddresses } from './use-addresses.hook';
+import { usePoints } from './use-points.hook';
 import messages from './messages.json';
 
 /*
@@ -102,6 +99,41 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
     });
   };
 
+  /* Davet paylaşımı — v3 iki satırlık ÖZEL çekmece çiziyor (WhatsApp · bağlantıyı kopyala);
+     native'de karşılığı SİSTEM paylaşım sayfasıdır ve ikisini de zaten içerir (üstelik müşterinin
+     kendi seçtiği uygulamayı). Kendi çekmecemizi çizmek panoya kopyalama için ikinci bir paket
+     (rebuild) isterdi ve sistemin seçeneklerini daraltırdı — sapma bilinçli. */
+  const shareReferral = () => {
+    if (data.referralCode === null) return;
+    void Share.share({ message: t.referral.shareMessage.replace('{code}', data.referralCode) });
+  };
+
+  /* PUAN KAZANMA YOLLARI (kullanıcı kararı 09.08) — bakiye sıfırken kart boş kalmaz, kullanıcı
+     puanı KAZANACAĞI yere itilir. LİSTE SUNUCUDAN gelir (`card.earnWays`): hem sıra hem PUAN
+     MİKTARI oradan — ekranın uydurduğu bir sayı, ödenmeyen bir vaattir. Ekranın işi anahtarı
+     görsele/metne/hedefe bağlamak; tanımadığı anahtar sessizce düşer (sunucu yeni bir yol
+     eklerse eski uygulama çökmez, o satırı çizmez).
+
+     ANAHTAR SÖZLEŞMENİN ANAHTARIDIR (arıza düzeltildi 09.08 — ÖLÇÜLDÜ): burada eskiden `discovery`
+     yazıyordu, uç ise `feedback_candidate` gönderiyor (`GET /api/v1/me/points` cevabında
+     `earnWays: [referral, review, feedback_candidate]`) — eşleşmediği için keşif satırı hiç
+     ÇİZİLMİYORDU. Sözlük artık `MePointsEarnWayKey`e bağlı: ekrana özel ikinci bir ad açmak
+     (`points-api.schema.ts`in kendi uyarısı) sözlüğü ayrıştırıyor. `Record` tam kapsam ister —
+     sunucu yeni bir yol eklerse burası DERLEMEDE kırılır, sessizce eksik çizmez. */
+  const EARN_ICONS: Record<MePointsEarnWayKey, ReactElement> = {
+    referral: <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />,
+    review: <Icon name="orders" size={theme.size.inlineIcon} color={theme.colors.muted} />,
+    feedback_candidate: <CustomerIcon name="star" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />,
+  };
+  const EARN_ACTIONS: Record<MePointsEarnWayKey, () => void> = {
+    referral: shareReferral,
+    review: () => router.push('/orders'),
+    feedback_candidate: () => router.push('/discover'),
+  };
+  /* Çalışma zamanı süzgeci DURUYOR: derleme kilidi yalnız BUGÜNKÜ paketi bağlar, cihazdaki eski
+     sürüm yarının anahtarını yine tanımayacak — o satırı çizmemek çökmekten iyidir. */
+  const isKnownWay = (key: string): key is MePointsEarnWayKey => key in EARN_ICONS;
+
   const pickLanguage = (next: Locale) => {
     const previous = language;
     setLanguage(next);
@@ -126,8 +158,13 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
   };
   const [marketingEmail, setMarketingEmail] = useState(data.marketingEmail);
   const [marketingWhatsApp, setMarketingWhatsApp] = useState(data.marketingWhatsApp);
-  const [points, setPoints] = useState(data.points);
-  const [coupons, setCoupons] = useState<AccountCouponView[]>(data.coupons);
+  /* PUAN CÜZDANI GERÇEK (21.17): bakiye · eşik · kuponlar uçtan. Kartın çizilme koşulu tek
+     yerde — `wallet` null ise (B2B ya da düşen okuma) bölüm hiç görünmez. */
+  const pointsWallet = usePoints(signedIn);
+  const wallet = pointsWallet.view?.points ?? null;
+  const coupons = pointsWallet.view?.coupons ?? [];
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemFailed, setRedeemFailed] = useState(false);
 
   /* Profil çekmecesi (v3 `shPf`) — GERÇEK kayıt (21.14c): taslak alanlar açılışta karttan dolar,
      Kaydet `PATCH /me`ye gider; başarı `publishMe` ile yayınlanır (kart ve vitrin selamlaması
@@ -269,8 +306,6 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
     });
   };
 
-  const couponValueLabel = formatPrice(COUPON_VALUE_CENTS, locale);
-
   if (!signedIn) {
     return (
       <View style={styles.screen}>
@@ -288,11 +323,19 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
     );
   }
 
+  /* Çevirme GERÇEK (21.17): gövde YOK — kaç puanın harcanacağını istemci söylemez, motor
+     bakiyenin tamamını çevirir (sözleşme kararı). Cevap TAM görünüm taşır, ikinci GET atılmaz. */
   const convertPoints = () => {
-    if (points === null || points < POINTS_PER_COUPON) return;
-    setPoints(points - POINTS_PER_COUPON);
-    setCoupons([...coupons, { code: 'PUAN5', valueLabel: t.points.couponValue.replace('{value}', couponValueLabel) }]);
+    setRedeeming(true);
+    setRedeemFailed(false);
+    void redeemPoints().then((result) => {
+      setRedeeming(false);
+      if (result.error !== null) return setRedeemFailed(true);
+      pointsWallet.publish(result.data);
+      publishToast(t.points.converted);
+    });
   };
+
 
   return (
     <View style={styles.screen}>
@@ -328,33 +371,78 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
           </View>
         )}
 
-        {points === null ? null : (
+        {/* PUAN CÜZDANI GERÇEK (21.17). Bölüm B2B'de ve okuma düştüğünde HİÇ çizilmez (yanlış
+            bakiye göstermektense göstermemek). Bakiye SIFIRSA kart boş kalmaz: kullanıcı kararı
+            09.08 — "burası boş kalmasın, puan kazanacağı yere itelim". Eşik ve kupon değeri
+            SUNUCUDAN gelir (`redeem.minimumPoints`/`valueCents`), ekran sayı uydurmaz. */}
+        {wallet === null ? null : (
           <View style={styles.pointsCard} testID="account-points">
             <View style={styles.pointsHead}>
               <Text style={styles.cardTitle}>{t.points.title}</Text>
-              <Text style={styles.pointsValue}>{t.points.value.replace('{n}', String(points))}</Text>
+              <Text style={styles.pointsValue}>{t.points.value.replace('{n}', String(wallet.balance))}</Text>
             </View>
-            <Text style={styles.cardBody}>
-              {t.points.body
-                .replace('{threshold}', String(POINTS_PER_COUPON))
-                .replace('{value}', couponValueLabel)}
-            </Text>
-            {points < POINTS_PER_COUPON ? (
-              <Text style={styles.pointsGap}>{t.points.gap.replace('{n}', String(POINTS_PER_COUPON - points))}</Text>
-            ) : null}
-            <PrimaryButton
-              label={t.points.convert
-                .replace('{threshold}', String(POINTS_PER_COUPON))
-                .replace('{value}', couponValueLabel)}
-              onPress={convertPoints}
-              disabled={points < POINTS_PER_COUPON}
-              testID="account-convert"
-            />
+
+            {wallet.balance === 0 ? (
+              <>
+                <Text style={styles.cardBody}>{t.points.emptyBody}</Text>
+                <View style={styles.earnList}>
+                  {wallet.earnWays.filter((way) => isKnownWay(way.key)).map((way, index) => {
+                    const key = way.key;
+                    const copy = t.points.earn[key];
+                    return (
+                      <View key={key} style={[styles.earnRow, index > 0 ? styles.settingsDivider : undefined]}>
+                        {EARN_ICONS[key]}
+                        <View style={styles.earnText}>
+                          <Text style={styles.earnTitle}>{copy.title}</Text>
+                          <Text style={styles.earnBody}>
+                            {t.points.earnPoints.replace('{n}', String(way.points))} · {copy.body}
+                          </Text>
+                        </View>
+                        <TextAction label={copy.cta} onPress={EARN_ACTIONS[key]} testID={`account-earn-${key}`} />
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.cardBody}>
+                  {t.points.body
+                    .replace('{threshold}', String(wallet.redeem.minimumPoints))
+                    .replace('{value}', formatPrice(wallet.redeem.valueCents, locale))}
+                </Text>
+                {wallet.balance < wallet.redeem.minimumPoints ? (
+                  <Text style={styles.pointsGap}>
+                    {t.points.gap.replace('{n}', String(wallet.redeem.minimumPoints - wallet.balance))}
+                  </Text>
+                ) : null}
+                <PrimaryButton
+                  label={
+                    redeeming
+                      ? t.points.converting
+                      : t.points.convert
+                          .replace('{threshold}', String(wallet.redeem.minimumPoints))
+                          .replace('{value}', formatPrice(wallet.redeem.valueCents, locale))
+                  }
+                  onPress={convertPoints}
+                  disabled={redeeming || wallet.balance < wallet.redeem.minimumPoints}
+                  testID="account-convert"
+                />
+              </>
+            )}
+
+            {redeemFailed ? <Note description={t.points.failed} tone="terracotta" testID="account-points-error" /> : null}
+
+            {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
             {coupons.map((coupon) => (
-              <View key={coupon.code} style={styles.couponRow} testID={`account-coupon-${coupon.code}`}>
+              <View key={coupon.id} style={styles.couponRow} testID={`account-coupon-${coupon.code}`}>
                 <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
                 <Text style={styles.couponCode}>{coupon.code}</Text>
-                <Text style={styles.couponValue}>{coupon.valueLabel}</Text>
+                <Text style={styles.couponValue}>
+                  {coupon.amountCents === null
+                    ? t.points.couponPercent.replace('{n}', String(coupon.percent ?? 0))
+                    : t.points.couponValue.replace('{value}', formatPrice(coupon.amountCents, locale))}
+                </Text>
               </View>
             ))}
           </View>
@@ -368,7 +456,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
               <Text style={styles.referralCode}>{data.referralCode}</Text>
               <SecondaryButton
                 label={t.referral.share}
-                onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'faq' } })}
+                onPress={shareReferral}
                 tone="olive"
                 shape="pill"
                 accessibilityHint={t.referral.shareLabel}
@@ -553,6 +641,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
             }}
             accessibilityLabel={t.edit.nameLabel}
             placeholder={t.edit.namePlaceholder}
+            content="name"
             testID="profile-name"
           />
           {/* E-posta SALT OKUNUR (v3'te yazılabilir görünür): e-posta kimliğin kendisidir (auth
@@ -575,6 +664,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
             accessibilityLabel={t.edit.phoneLabel}
             placeholder={t.edit.phonePlaceholder}
             helperText={t.edit.phoneNote}
+            content="tel"
             testID="profile-phone"
           />
           {profileError === null ? null : <Note description={profileError} tone="terracotta" testID="profile-error" />}
@@ -603,11 +693,16 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
             placeholder={t.addresses.sheet.labelPlaceholder}
             testID="address-label"
           />
+          {/* İÇERİK TÜRLERİ (kullanıcı bulgusu 09.08): alanlar cihaza "burası adres" demeden
+              hiçbir öneri çıkmıyordu — Android Autofill / iOS AutoFill yalnız beyan edilmiş
+              alanı tanır. Sokak alanı `streetAddress`: kayıtlı adresi tek dokunuşla basar ve
+              posta kodu/şehri de doldurur (sistem alan kümesini birlikte tanıyor). */}
           <TextField
             value={addressDraft.line1}
             onChangeText={(value) => editAddressDraft({ line1: value })}
             accessibilityLabel={t.addresses.sheet.lineLabel}
             placeholder={t.addresses.sheet.linePlaceholder}
+            content="streetAddress"
             testID="address-line"
           />
           <View style={styles.zipRow}>
@@ -617,7 +712,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
                 onChangeText={(value) => editAddressDraft({ postalCode: value.replace(/\D/g, '').slice(0, 5) })}
                 accessibilityLabel={t.addresses.sheet.zipLabel}
                 placeholder={t.addresses.sheet.zipPlaceholder}
-                numeric
+                content="postalCode"
                 testID="address-zip"
               />
             </View>
@@ -627,6 +722,7 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
                 onChangeText={(value) => editAddressDraft({ city: value })}
                 accessibilityLabel={t.addresses.sheet.cityLabel}
                 placeholder={t.addresses.sheet.cityPlaceholder}
+                content="city"
                 testID="address-city"
               />
             </View>
@@ -771,6 +867,27 @@ const styles = StyleSheet.create((theme, rt) => ({
   pointsGap: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.helper,
+    color: theme.colors.muted,
+  },
+  /* Puan KAZANMA yolları — sıfır bakiyede kartın içi (kullanıcı kararı 09.08). Satır düzeni
+     ödeme/teslimat listelerinin aynısı (ikon · metin · eylem), ayraç kart içi kesikli çizgi. */
+  earnList: { gap: theme.space.xs },
+  earnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+    paddingVertical: theme.space.md,
+  },
+  earnText: { flex: 1, gap: theme.space['2xs'] },
+  earnTitle: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
+  earnBody: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
   couponRow: {

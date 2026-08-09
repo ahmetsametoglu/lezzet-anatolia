@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DiscountSchema } from '../entities/discount.schema';
 import { PointsBalanceSchema } from '../entities/points.schema';
+import { PointsReasonEnum } from '../primitives/enums.schema';
 
 /**
  * `/api/v1/me/points` SÖZLEŞME şemaları (21.17) — hesap ekranının "Puanlarım" bölümünün ve puan →
@@ -32,6 +33,44 @@ export const MeCouponSchema = DiscountSchema.pick({
 }).extend({ code: z.string() });
 
 /**
+ * **Puan kazanma yolunun ANAHTARI** — defterin sebep sözlüğünden TÜRER (`PointsReasonEnum`), elle
+ * yazılmaz. İkinci bir sözlük ("discovery", "invite" gibi ekrana özel adlar) açsaydık, ayarın
+ * anahtarı (`points_feedback_candidate`), defterin sebebi (`feedback_candidate`) ve telin adı
+ * birbirinden ayrı üç sözcük olurdu — ve "keşif turu kaç puan" sorusunun cevabı her katmanda bir
+ * çeviri gerektirirdi (enum künyesinin `ProductFeedback.context` ile hizalanma gerekçesi birebir
+ * aynı).
+ *
+ * Küme `.extract` ile DARALTILMIŞ, tüm kazanım sebepleri değil: buradakiler müşterinin **kendi
+ * iradesiyle başlatabileceği** yollar. Dışarıda kalanlar bilinçli — `order` ve
+ * `feedback_purchase` bir satın almanın peşinden gelir (kazanma yolu değil, alışverişin yan ödülü)
+ * ve `visit` uygulamayı açmakla kendiliğinden yazılır, yani gösterilecek bir "yap" yok. Ekran bu
+ * anahtar kümesi üzerinde TAM bir metin haritası kurabilir; enum genişlerse derleme kırılır ve
+ * eksik metin üretimde değil, o an fark edilir.
+ */
+export const MePointsEarnWayKeyEnum = PointsReasonEnum.extract(['referral', 'review', 'feedback_candidate']);
+export type MePointsEarnWayKey = z.infer<typeof MePointsEarnWayKeyEnum>;
+
+/**
+ * Tek bir kazanma yolu — **anahtar + sayı, metin YOK.**
+ *
+ * Cümleyi ekran kurar (i18n istemcide, üç dil); sunucu yalnız "hangi yol" ve "kaç puan" der. Metni
+ * sunucudan göndermek, tele çeviri koymak ve müşterinin dilini sunucunun tahminine bağlamak olurdu
+ * — adlı retlerin (`MePointsRedeemErrorEnum`) aynı ayrımı: anahtar sözleşmede, cümle ekranda.
+ *
+ * `points` AYARDAN gelir (`points_referral` · `points_review` · `points_feedback_candidate`), tele
+ * sabit gömülmez: ekranın vaat ettiği puan ile motorun yazdığı puan ayrıştığında müşteri
+ * gelmeyecek bir ödül için hareket eder (eşik ayrışmasının aynısı — 29.07 denetimi).
+ *
+ * `positive()` bir titizlik değil KURAL: motor sıfır değerli aksiyonu zaten reddediyor
+ * (`canEarnPoints` → `no_value`), yani "0 puan kazandıran yol" diye bir şey yok. Sıfır taşıyan bir
+ * satır listeye hiç girmez — girseydi ekran kazandırmayan bir işi kazanç gibi gösterirdi.
+ */
+export const MePointsEarnWaySchema = z.object({
+  key: MePointsEarnWayKeyEnum,
+  points: z.number().int().positive(),
+});
+
+/**
  * Puan kartının gövdesi — bakiye + çevirme kuralı.
  *
  * **Eşik AYARDAN gelir, tele sabit gömülmez** (29.07 denetimi): ekranın söylediği eşik ile motorun
@@ -41,12 +80,30 @@ export const MeCouponSchema = DiscountSchema.pick({
  * `earned`/`spent` BİLEREK dışarıda: görünüm onları taşıyor (`PointsBalanceSchema`) ama v3 puan
  * kartı yalnız bakiyeyi ve eksik puanı yazıyor. "Topladın / harcadın" dökümü bir ekrana girdiği
  * gün küme oradan büyür — sözleşme ekranın ihtiyacını taşır (adres sözleşmesinin aynı kararı).
+ *
+ * `referralCode` ve `earnWays` KARTIN İÇİNDE, zarfın kökünde değil: ikisi de "bu müşteri puan
+ * kazanabilir" önermesinin parçası ve kart `null` olduğunda (B2B) ikisinin de anlamı yok. Kökte
+ * dursalardı program dışı bir profile davet kodu üretmemek için AYNI koşulu ikinci kez yazmak
+ * gerekirdi — ve iki koşuldan biri bir gün ötekinden ayrılırdı (kuponların `read.ts` künyesindeki
+ * gerekçenin aynısı: tek koşul, tek karar).
  */
 export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).extend({
   redeem: z.object({
     minimumPoints: z.number().int(),
     valueCents: z.number().int(),
   }),
+  /**
+   * Müşterinin davet kodu — **kart çizildiyse GARANTİLİ** (kapı yoksa üretir). `/me`nin aynı adlı
+   * alanı profil satırının HAM aynasıdır ve boş olabilir; burada kod bir kimlik künyesi değil,
+   * `referral` kazanım yolunun yüküdür — yolu gösterip paylaşılacak kodu vermemek, müşteriyi
+   * çalışmayan bir düğmeye bastırırdı.
+   *
+   * `null` yalnız üretim başarısızsa (kod çakışması tekrarı tükendi — pratikte olmayan hâl):
+   * uydurma bir kod basmaktansa ekran davet yolunu hiç göstermesin.
+   */
+  referralCode: z.string().nullable(),
+  /** Puan kazanma yolları — sıra sunucudan gelir (bkz. `MePointsEarnWaySchema`). */
+  earnWays: z.array(MePointsEarnWaySchema),
 });
 
 /**

@@ -30,10 +30,15 @@ export type { CustomerConsentToggles, UpdateCustomerPreferencesOutcome } from '.
 export { listCustomerCoupons, readCustomerPoints, redeemCustomerPoints } from './customer/points';
 export type {
   CustomerCoupon,
+  CustomerEarnWay,
   CustomerPointsCard,
   CustomerPointsView,
   RedeemCustomerPointsOutcome,
 } from './customer/points';
+// Davet kodu garantisi (17.7) — web `lib/feedback/referral.ts`teki tembel üretimin TERFİSİ; web
+// köprü olarak duruyor. Puan kapısı içeriden çağırıyor, barrel'da durması web'in köprüyü bırakıp
+// aynı kapıyı çağırabilmesi için.
+export { ensureCustomerReferralCode } from './customer/referral';
 // ── Müşteri sipariş okuması (08.5) — terfi 21.16 ────────────────────────────
 // Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı; web köprü olarak
 // duruyor. Detay kapısı İKİ anahtarı da kabul eder (kimlik ⟷ referans) — gerekçe künyede.
@@ -72,6 +77,18 @@ export type { FeedbackCard, FeedbackCompletion, FeedbackInviteView } from './fee
 export { reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
 export type { FeedbackWriteOutcome } from './feedback/write';
 export { awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
+
+// ── Keşif turu (08.7 · 17.3) — terfi 21.19: web keşif sayfası + mobil keşif ekranı ──────────
+// Kaynak `apps/web/lib/feedback/{discover,discover-claim}.ts` ve `product-feedback.ts`in
+// `candidate` DALI; web köprü, benimsemesi web şeridinin işi. Kimlik ÇAĞIRANDAN gelir
+// (oturum ya da Bearer), istemcinin iddiasından değil.
+export { claimDiscoverSwipes, openDiscoverDeck, recordDiscoverSwipe } from './feedback/discover';
+export type {
+  DiscoverCard,
+  DiscoverClaimResult,
+  DiscoverSwipeOutcome,
+  DiscoverSwipeRecord,
+} from './feedback/discover';
 
 // ── Yer çözümü (19.8 · 21.6 B) — posta kodu → rota/kargo; onboarding + web yer okuması ──────
 export { resolvePlaceForPostalCode } from './delivery/place';

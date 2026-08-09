@@ -7,8 +7,10 @@ import { addresses } from './addresses';
 import { authOtp } from './auth-otp';
 import { catalog } from './catalog';
 import { devLogin } from './dev-login';
+import { discover, discoverClaim } from './discover';
 import { feedback } from './feedback';
 import { home } from './home';
+import { orders } from './orders';
 import { packages } from './packages';
 import { places } from './places';
 import { points } from './points';
@@ -52,6 +54,11 @@ v1.route('/', recipes);
 v1.route('/', feedback);
 // Yer çözümü onboarding'in GİRİŞ sorusudur — hesap açılmadan sorulur (`places.ts` künyesi).
 v1.route('/', places);
+// Keşif turu da açık kümededir (21.19) ve gerekçesi ÖLÇÜLMÜŞ bir web kararıdır: tur ziyaretçiye
+// açıktır — `swipeAction` kimliği sunucuda çözer ve yoksa kaydırmayı KİMLİKSİZ yazar. Bearer varsa
+// yalnız iki şey değişir: oylanmış kartlar destede elenir ve oy sahibine yazılıp puan doğar.
+// Erişim değişmez, 401 hiçbir hâlde dönmez (`discover.ts` künyesi).
+v1.route('/', discover);
 
 v1.use('*', bearerAuth);
 
@@ -102,11 +109,21 @@ v1.route('/me/addresses', addresses);
 
 // Tercih uçları (21.16) — Bearer'ın ARKASINDA: dil ve kampanya izni müşterinin kendisidir.
 // Kural kapıda (`@lezzet/application` → `customer/preferences.ts`), damga politikası orada.
+// Sipariş uçları (21.16) — Bearer'ın ARKASINDA: sipariş müşterinin kendisidir. Liste keyset
+// sayfalı, detay REFERANS numarasıyla adreslenir; kurallar `@lezzet/application`ın müşteri
+// sipariş kapısında (`order/customer-orders.ts`), kimlik çözümü `orders.ts`te tek middleware'de.
+v1.route('/me/orders', orders);
+
 v1.route('/me/preferences', preferences);
 
 // Puan uçları (21.17) — Bearer'ın ARKASINDA: cüzdan müşterinin kendisidir. Kural ve B2B kısa
 // devresi `points.ts` + `@lezzet/application/customer/points` künyesinde.
 v1.route('/me/points', points);
+
+// Keşif turunun hesaba bağlanması (21.19) — Bearer'ın ARKASINDA: "bu kaydırmaları BENİM hesabıma
+// yaz" cümlesinin oturumsuz hâli yoktur. Kimlik bağlamdan çözülür, gövdeden ASLA; kural
+// `@lezzet/application`ın keşif kapısında (`feedback/discover.ts`).
+v1.route('/me/discover', discoverClaim);
 
 // Talep uçları (21.18) — Bearer'ın ARKASINDA: talep müşterinin kendisidir. Durum makinesi ve
 // bildirim tetikleri `@lezzet/application`ın talep kapısında (`ticket/{read,write}.ts`).

@@ -1,5 +1,5 @@
 import type { Context, MiddlewareHandler, Next } from 'hono';
-import type { User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
 import { anonDb, serviceDb, UserProfileService } from '@lezzet/database';
 import type { UserProfile, UserRole } from '@lezzet/types';
@@ -18,14 +18,19 @@ export interface V1Env {
 /**
  * `Authorization: Bearer <jwt>` başlığından ham token — **ayrıştırma tek yerde**.
  *
- * İki çağıranı var ve ikisinin KARARI farklı: `bearerAuth` token yoksa kapıyı kapatır (401),
- * katalog uçları ziyaretçiye düşer (200). Ayrıştırmanın kendisi ise aynı ve iki kez yazılsaydı
- * biri gün gelip `Bearer` önekini ya da boşluk kırpmayı ötekinden farklı ele alırdı.
+ * İki çağıranı var ve ikisinin KARARI farklı: `bearerAuth` token yoksa kapıyı KAPATIR (401),
+ * `optionalCustomerId` ziyaretçiye düşer (200). Ayrıştırmanın kendisi ise aynı ve iki kez
+ * yazılsaydı biri gün gelip `Bearer` önekini ya da boşluk kırpmayı ötekinden farklı ele alırdı.
+ *
+ * **Dışa VERİLMEZ** (21.19): iki çağıranı da bu dosyada — açık uçların kimlik zinciri artık
+ * `optionalCustomerId`de yaşıyor ve dışarısı ham token'la değil, çözülmüş kimlikle konuşur. Dışa
+ * açık bir ayrıştırıcı, kimlik zincirinin bir gün başka bir dosyada yeniden kurulmasına davetiye
+ * olurdu (`knip` de ölü ihracat olarak yakalıyordu).
  *
  * Hono başlığı imzasız verdiği için parametre ham dize: bağlam tipine (`AppEnv`/`V1Env`) bağlanmak
  * bu yardımcıyı iki ayrı Hono kuşağına da bağlardı.
  */
-export function bearerTokenOf(header: string | undefined): string | undefined {
+function bearerTokenOf(header: string | undefined): string | undefined {
   if (!header?.startsWith('Bearer ')) return undefined;
   const token = header.slice('Bearer '.length).trim();
   return token.length > 0 ? token : undefined;
@@ -50,6 +55,42 @@ export async function bearerAuth(c: Context<V1Env>, next: Next): Promise<Respons
 
   c.set('authUser', data.user);
   await next();
+}
+
+/**
+ * **İSTEĞE BAĞLI KİMLİK** — açık uçların (katalog · vitrin · tarif · keşif) ortak zinciri:
+ * `Bearer` → auth kullanıcısı → **müşteri profili**. Üç yol da kapıyı KAPATMAZ, `null` döner:
+ *   · başlık yok            → ziyaretçi (webde çerezsiz gezinme)
+ *   · başlık var ama geçersiz/süresi dolmuş → ziyaretçi (webde süresi dolmuş oturum çerezi:
+ *     `getSessionUser` null döner, `currentCustomerId` null)
+ *   · geçerli token ama profil satırı yok (trigger boşluğu / silinmiş kayıt) → ziyaretçi
+ *
+ * Geçersiz token'a 401 vermek açık uçları kapatırdı: uygulamanın haftalarca açılmadığı bir cihazda
+ * token süresi dolmuş olur ve müşteri vitrini değil bir hata ekranını görürdü. Kayıt da düşülmez —
+ * süresi dolmuş token bir arıza değil, oturumun normal sonu.
+ *
+ * **Auth kimliği ≠ müşteri kimliği** (ölçüldü: `apps/web/lib/guard.ts:70-74` — `currentCustomerId`
+ * oturumdaki auth kullanıcısını `findByAuthUserId` ile profil satırına çevirir; `user_profiles.id`
+ * ile `auth.users.id` AYRI kolonlardır). Zinciri atlayıp auth kimliğini bir kapıya vermek hiçbir
+ * satırla eşleşmez ve **hata da vermez** — sessizce ziyaretçi muamelesi görür.
+ *
+ * **Burada, çünkü iki KARAR de aynı zinciri istiyor ve ikisi ayrışamaz:** fiyatı kişiselleştiren
+ * katalog (`readViewer` → `pricingViewerOf`) ve oyu sahibine yazan keşif (`discover.ts`). İkinci kez
+ * yazılsaydı biri gün gelip profilsiz kullanıcıyı ya da geçersiz token'ı ötekinden farklı ele alırdı
+ * (`bearerTokenOf`un ayrıştırmayı tek yere toplama gerekçesinin aynısı — CLAUDE §1).
+ *
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`); token doğrulaması ise en az
+ * yetkiyle, anon istemciyle yapılır.
+ */
+export async function optionalCustomerId(db: SupabaseClient, authorization: string | undefined): Promise<string | null> {
+  const token = bearerTokenOf(authorization);
+  if (!token) return null;
+
+  const { data, error } = await anonDb().auth.getUser(token);
+  if (error || !data.user) return null;
+
+  const profile = await new UserProfileService(db).findByAuthUserId(data.user.id);
+  return profile?.id ?? null;
 }
 
 /**

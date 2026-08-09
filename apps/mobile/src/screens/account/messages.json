@@ -41,13 +41,37 @@
       "body": "Sipariş, yorum ve keşif turlarıyla birikir. {threshold} puan = {value} indirim kuponu.",
       "gap": "Kupona {n} puan kaldı.",
       "convert": "{threshold} puanı {value} kupona çevir",
-      "couponValue": "{value} indirim"
+      "couponValue": "{value} indirim",
+      "emptyBody": "Henüz puanınız yok. Puan biriktirmenin üç yolu var — biri şimdi, elinizin altında:",
+      "converting": "Çevriliyor…",
+      "converted": "Kupon hesabınıza eklendi ✓",
+      "failed": "Puan işlemi tamamlanamadı — yeniden deneyin.",
+      "couponPercent": "%{n} indirim",
+      "earn": {
+        "referral": {
+          "title": "Arkadaşını davet et",
+          "body": "Kodunla ilk siparişini veren arkadaşın da kazanır.",
+          "cta": "Paylaş"
+        },
+        "review": {
+          "title": "Siparişini değerlendir",
+          "body": "Teslimattan sonra beğendiklerini söyle.",
+          "cta": "Siparişlerim"
+        },
+        "feedback_candidate": {
+          "title": "Yeni lezzetler — ilk siz oylayın",
+          "body": "Henüz satışta olmayan adayları beğenin ya da geçin.",
+          "cta": "Keşfet"
+        }
+      },
+      "earnPoints": "+{n} puan"
     },
     "referral": {
       "title": "Arkadaşını getir, ikiniz de kazanın",
       "body": "Kodunuzla ilk siparişini veren arkadaşınız 5 € indirim kazanır; teslimattan sonra size de 5 € kupon yüklenir.",
       "share": "Paylaş",
-      "shareLabel": "Referans kodunu paylaş"
+      "shareLabel": "Referans kodunu paylaş",
+      "shareMessage": "Lezzet Anatolia'da ev yapımı lezzetler! Davet kodum: {code} — ilk siparişinde indirim kazanırsın."
     },
     "menu": {
       "orders": "Siparişlerim",
@@ -160,13 +184,37 @@
       "body": "Cumulés avec les commandes, les avis et les tours de découverte. {threshold} points = bon de {value}.",
       "gap": "Encore {n} points pour un bon.",
       "convert": "Convertir {threshold} points en bon de {value}",
-      "couponValue": "{value} de remise"
+      "couponValue": "{value} de remise",
+      "emptyBody": "Vous n’avez pas encore de points. Trois façons d’en gagner — la première est à portée de main :",
+      "converting": "Conversion…",
+      "converted": "Bon ajouté à votre compte ✓",
+      "failed": "L’opération sur les points a échoué — réessayez.",
+      "couponPercent": "{n} % de remise",
+      "earn": {
+        "referral": {
+          "title": "Parrainez un ami",
+          "body": "Avec votre code, votre ami gagne aussi sur sa première commande.",
+          "cta": "Partager"
+        },
+        "review": {
+          "title": "Évaluez votre commande",
+          "body": "Après la livraison, dites-nous ce que vous avez aimé.",
+          "cta": "Mes commandes"
+        },
+        "feedback_candidate": {
+          "title": "Nouvelles saveurs — votez en avant-première",
+          "body": "Aimez ou passez les candidats pas encore en vente.",
+          "cta": "Découvrir"
+        }
+      },
+      "earnPoints": "+{n} points"
     },
     "referral": {
       "title": "Parrainez, gagnez à deux",
       "body": "Avec votre code, votre ami obtient 5 € de remise sur sa première commande ; après la livraison, vous recevez aussi un bon de 5 €.",
       "share": "Partager",
-      "shareLabel": "Partager le code de parrainage"
+      "shareLabel": "Partager le code de parrainage",
+      "shareMessage": "Des saveurs faites maison chez Lezzet Anatolia ! Mon code de parrainage : {code} — remise sur ta première commande."
     },
     "menu": {
       "orders": "Mes commandes",
@@ -279,13 +327,37 @@
       "body": "Gesammelt durch Bestellungen, Bewertungen und Entdeckungsrunden. {threshold} Punkte = Gutschein über {value}.",
       "gap": "Noch {n} Punkte bis zum Gutschein.",
       "convert": "{threshold} Punkte in {value}-Gutschein umwandeln",
-      "couponValue": "{value} Rabatt"
+      "couponValue": "{value} Rabatt",
+      "emptyBody": "Sie haben noch keine Punkte. Es gibt drei Wege zu sammeln — einer davon sofort:",
+      "converting": "Wird umgewandelt…",
+      "converted": "Gutschein Ihrem Konto gutgeschrieben ✓",
+      "failed": "Die Punkteaktion ist fehlgeschlagen — bitte erneut versuchen.",
+      "couponPercent": "{n} % Rabatt",
+      "earn": {
+        "referral": {
+          "title": "Freunde werben",
+          "body": "Mit Ihrem Code gewinnt auch Ihr Freund bei der ersten Bestellung.",
+          "cta": "Teilen"
+        },
+        "review": {
+          "title": "Bestellung bewerten",
+          "body": "Sagen Sie uns nach der Lieferung, was Ihnen geschmeckt hat.",
+          "cta": "Bestellungen"
+        },
+        "feedback_candidate": {
+          "title": "Neue Spezialitäten — stimmen Sie zuerst ab",
+          "body": "Bewerten Sie Kandidaten, die noch nicht im Sortiment sind.",
+          "cta": "Entdecken"
+        }
+      },
+      "earnPoints": "+{n} Punkte"
     },
     "referral": {
       "title": "Freunde werben, beide gewinnen",
       "body": "Mit Ihrem Code erhält Ihr Freund 5 € Rabatt auf die erste Bestellung; nach der Lieferung bekommen auch Sie einen 5-€-Gutschein.",
       "share": "Teilen",
-      "shareLabel": "Empfehlungscode teilen"
+      "shareLabel": "Empfehlungscode teilen",
+      "shareMessage": "Hausgemachte Köstlichkeiten bei Lezzet Anatolia! Mein Empfehlungscode: {code} — Rabatt auf deine erste Bestellung."
     },
     "menu": {
       "orders": "Meine Bestellungen",

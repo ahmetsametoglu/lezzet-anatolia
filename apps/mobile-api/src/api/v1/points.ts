@@ -42,6 +42,15 @@ points.use('*', resolveCustomer);
  * Puan kartı + kullanılabilir kuponlar. **B2B'de `points: null` döner, sıfır değil** — program
  * dışıdır ve ekran bölümü hiç çizmez; "0 puan" yazmak kazanılamayacak bir bakiyeyi boş bir hedef
  * gibi gösterirdi (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+ *
+ * **Kart artık KAZANMA yollarını da taşıyor** (`earnWays` + `referralCode`): bakiyesi sıfır olan
+ * müşteriye "puanın var/yok" demek yetmez, "nereden kazanırsın" demek gerekir ve o cevabın
+ * sayıları ayardan gelir — ekran sayı UYDURMAZ. İkisi de kartın İÇİNDE, zarfın kökünde değil:
+ * program dışı profilde ikisinin de anlamı yok ve tek koşulla düşerler (şemadaki künye).
+ *
+ * Bu GET'in bir yan etkisi var ve bilinçli: davet kodu yoksa uygulama katmanında ÜRETİLİR
+ * (`ensureCustomerReferralCode` — web'in tembel üretiminin terfisi). Yazım burada değil kapıda;
+ * bu dosya yine taşıma katmanıdır.
  */
 points.get('/', async (c) => {
   const view = await readCustomerPoints(serviceDb(), c.get('customerId'));
