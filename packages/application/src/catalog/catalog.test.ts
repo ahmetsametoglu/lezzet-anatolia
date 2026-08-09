@@ -184,6 +184,58 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
   });
 });
 
+/**
+ * **Birincil boy = EN UCUZ boy** (düzeltme 09.08) — kartın da görünümün de aynı boyu seçtiği pinlenir.
+ *
+ * Kusurun şekli sessizdi: birincil boy `sort_order`'dan seçiliyordu ve o sıra fiyatı bilmiyor.
+ * Ölçüldü — 32 çok boylu ürünün 24'ünde kartta yazan fiyat en ucuz boyunki değildi. Hiçbir yerde
+ * hata vermiyor, yalnız müşteri pahalı fiyatı görüp geçiyordu.
+ *
+ * Kendi damgası var: üstteki `sortedNames` testleri `stamp`'e göre süzüyor ve buraya eklenen ürünler
+ * o kümeyi (ve `total`ı) oynatırdı.
+ */
+describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
+  const damga = stamp + 1;
+
+  it('kart en ucuz boyun fiyatını yazar VE sıralama da onu kullanır — operatörün sırası pahalı boyu öne alsa da', async () => {
+    const { product, variants } = await new ProductService(db).create({
+      name: { tr: `Cokboy ${damga}` },
+      categoryId,
+      status: 'active',
+      // Sıra operatörün: 2 kg önce (sortOrder 0). Fiyat tersine — düzeltmeden önceki hâlde kart
+      // 33,82 € yazar ve ürün sıralamada 33,82 €'ya göre yerleşirdi.
+      variants: [{ label: { tr: '2 kg' } }, { label: { tr: '1 kg' } }],
+    });
+    productIds.push(product.id);
+    await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 3382 });
+    await prices.insert({ variantId: variants[1]!.id, channel: 'b2c', amountCents: 1701 });
+    await stocks.insert({ warehouseId, variantId: variants[1]!.id, physicalQty: 10, expiryDate: dayOffset(60), purchasePriceCents: 100 });
+
+    // Kıyas ürünü: iki fiyatın ARASINDA. Kart doğru olup sıra yanlış kalsaydı bu ürün öne geçerdi —
+    // yani tek başına kart iddiası, görünümün de düzeldiğini kanıtlamaz.
+    const kiyas = await new ProductService(db).create({
+      name: { tr: `Kiyas ${damga}` },
+      categoryId,
+      status: 'active',
+      variants: [{ label: { tr: '1 kg' } }],
+    });
+    productIds.push(kiyas.product.id);
+    await prices.insert({ variantId: kiyas.variants[0]!.id, channel: 'b2c', amountCents: 2000 });
+
+    const data = await getCatalogData(db, {
+      locale: 'tr',
+      query: { sort: 'priceAsc', search: String(damga) },
+      place: YERSIZ,
+      viewer: VISITOR,
+    });
+
+    expect(data.products.map((p) => p.name.split(' ')[0])).toEqual(['Cokboy', 'Kiyas']);
+    expect(data.products[0]?.priceCents).toBe(1701);
+    // Boy ADI da en ucuz boyunki olmalı: fiyatı bir boydan, etiketi başka boydan yazan kart yalan söyler.
+    expect(data.products[0]?.unitLabel).toBe('1 kg');
+  });
+});
+
 describe('süzgeçler sıralamayla birlikte çalışır', () => {
   it('kategori/arama süzgeci fiyat sıralamasında da geçerli — tek süzgeç makinesi', async () => {
     const data = await getCatalogData(db, {

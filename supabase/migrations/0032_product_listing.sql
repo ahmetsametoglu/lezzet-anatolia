@@ -86,41 +86,74 @@ select null::uuid                                                       as wareh
   from list_price lp;
 
 -- ── Ürünün liste satırı ──────────────────────────────────────────────────────
--- Kartın fiyatı ürünün İLK aktif varyantından okunur (`storefront/map.ts`) — çok boylu üründe bu
--- "başlangıç fiyatı"dır. Sıra burada da aynı ölçütle sabitlenir (operatörün sırası, eşitlikte doğuş
--- anı); okuma tarafı da aynı sıraya göre seçer, ikisi ayrışamaz.
+-- Kartın fiyatı ürünün EN UCUZ aktif boyundan okunur (`application/catalog/map.ts` →
+-- `primaryVariantOf`) — çok boylu üründe bu "başlangıç fiyatı"dır. Ölçüt burada da aynı; okuma
+-- tarafı da aynı boyu seçer, ikisi ayrışamaz.
+--
+-- ── ÖLÇÜT NEDEN `sort_order` DEĞİL (düzeltme 09.08 · denetim ölçümü) ─────────
+-- Birincil boy önce **operatörün sırasından** seçiliyordu ve o sıra fiyatı bilmiyor. Ölçüldü:
+-- 32 çok boylu ürünün **24'ünde** kartta yazan fiyat en ucuz boyunki DEĞİLDİ; bir üründe kart
+-- 9,14 € gösteriyordu, 1,57 €'luk boyu vardı. Müşteri pahalı fiyatı görüp geçiyor ve ucuz boyun
+-- varlığını hiç öğrenmiyordu — sessiz bir satış kaybı, hiçbir yerde hata vermiyor.
+--
+-- **Çözüm `product_variant.sort_order`'a DOKUNMAZ** ve sebebi ölçülebilir: o kolonu detayın boy
+-- seçicisi, mobil ana ekran ve fikirler şeridi de okuyor; fiyata bağlansaydı operatör *"1 kg'ı öne
+-- al"* diyemezdi. Üstelik fiyat tek bir sayı değil — kanal + müşteri + tarih boyutlu, teklif ise
+-- DEPO bazlı: aynı boy Strasbourg'da fırsatta, Kehl'de değil olabilir. "En ucuz boy" bu yüzden
+-- tek boyutlu bir kolona sığmaz, ama bu görünüm zaten depo boyutlu — kararın doğru evi burası.
+--
+-- **Birincil boy artık DEPO BAŞINA seçilir.** Grain zaten (depo × ürün) olduğu için bedeli yok ve
+-- doğrusu da bu: teklif bir partiye, parti bir depoya bağlı.
+--
+-- Eşitlikte eski ölçüt tie-breaker olarak DURUYOR (`sort_order`, `created_at`) — kararlılık için
+-- şart: iki boy aynı fiyattaysa sıra rastgele olurdu ve keyset imleci aynı ürünü iki kez görürdü.
 --
 -- Grain fiyat görünümüyle aynı: her aktif depo için bir satır + yeri bilinmeyen okuma için bir
 -- satır. Okuyan taraf `warehouse_id = $1` ya da `warehouse_id is null` süzer; keyset ikisinde de
 -- kendi kümesi içinde çalışır. Katalog SÜZÜLMEZ, işaretlenir (K2) — bu yüzden ürün, o depoda hiç
 -- stoğu olmasa da listede durur.
 create or replace view public.product_listing as
-with primary_variant as (
-  select distinct on (v.product_id) v.product_id, v.id as variant_id
-    from public.product_variant v
-   where v.is_active
-   order by v.product_id, v.sort_order, v.created_at
-),
-scope as (
+with scope as (
   select id as warehouse_id from public.warehouse where is_active
   union all
   select null::uuid
+),
+primary_variant as (
+  -- `distinct on` NULL'ları eşit sayar (grup semantiği) — yeri bilinmeyen kapsam da kendi grubunu
+  -- kurar, ayrıca bir dal yazmaya gerek yok.
+  select distinct on (sc.warehouse_id, v.product_id)
+         sc.warehouse_id,
+         v.product_id,
+         v.id                    as variant_id,
+         vep.effective_price,
+         vep.has_near_expiry_offer
+    from scope sc
+    cross join public.product_variant v
+    -- `is not distinct from`: null-güvenli eşitlik — yeri bilinmeyen kapsam yalnız yeri bilinmeyen
+    -- fiyatla eşleşir, `=` ile bu join sessizce boş dönerdi.
+    left join public.variant_effective_price vep
+           on vep.variant_id = v.id
+          and vep.warehouse_id is not distinct from sc.warehouse_id
+   where v.is_active
+   -- **`nulls last`** — fiyatı hiç girilmemiş boy birincil seçilmemeli: seçilseydi ürünün fiyatı
+   -- olduğu hâlde kartı boş görünürdü. Aynı ilke `sort_price`'ta da var: fiyatsız DÜŞMEZ, sonda durur.
+   order by sc.warehouse_id, v.product_id, vep.effective_price nulls last, v.sort_order, v.created_at
 )
 select sc.warehouse_id,
        p.*,
-       vep.effective_price,
+       pv.effective_price,
        -- "Bu üründe bir yerde son tarih indirimi var" — yeri bilinmeyen ziyaretçide posta kodu
        -- davetini tetikleyen bayrak; yeri bilinende o deponun teklifinin varlığı.
-       coalesce(vep.has_near_expiry_offer, false) as has_near_expiry_offer,
+       -- Bayrak BİRİNCİL boyundur (eskiden de öyleydi, yalnız birincilin tanımı değişti): kartta
+       -- yazan fiyat hangi boydansa rozet de o boyun hâlini söylemeli, yoksa kart indirim vaat edip
+       -- gösterdiği fiyatı indirimsiz yazardı.
+       coalesce(pv.has_near_expiry_offer, false) as has_near_expiry_offer,
        -- SIRALAMA anahtarı. Fiyatı olmayan ürün (kanal fiyatı hiç girilmemiş → satışa kapalı)
        -- listeden DÜŞMEZ, sonda durur. `null` bırakılsaydı keyset imleci orada kopardı: imleç
        -- son satırın değerinden kurulur ve `null > null` diye bir şey yoktur.
-       coalesce(vep.effective_price, 'Infinity'::numeric) as sort_price
+       coalesce(pv.effective_price, 'Infinity'::numeric) as sort_price
   from public.product p
  cross join scope sc
-  left join primary_variant pv on pv.product_id = p.id
-  -- `is not distinct from`: null-güvenli eşitlik — yeri bilinmeyen satır yalnız yeri bilinmeyen
-  -- fiyatla eşleşir, `=` ile bu join sessizce boş dönerdi.
-  left join public.variant_effective_price vep
-         on vep.variant_id = pv.variant_id
-        and vep.warehouse_id is not distinct from sc.warehouse_id;
+  left join primary_variant pv
+         on pv.product_id = p.id
+        and pv.warehouse_id is not distinct from sc.warehouse_id;

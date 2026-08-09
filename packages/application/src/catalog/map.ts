@@ -171,6 +171,43 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
 }
 
 /**
+ * Ürünün BİRİNCİL boyu — kartın fiyatını okuduğu, detayın seçili açması gereken boy (düzeltme 09.08).
+ *
+ * **Ölçüt EN UCUZ satılabilir boydur, operatörün sırası değil.** Sıra fiyatı bilmiyor ve ölçüldü:
+ * 32 çok boylu ürünün **24'ünde** kartta yazan fiyat en ucuz boyunki değildi (bir üründe kart
+ * 9,14 € gösteriyordu, 1,57 €'luk boyu vardı). Müşteri pahalı fiyatı görüp geçiyor, ucuz boyun
+ * varlığını hiç öğrenmiyordu — hiçbir yerde hata vermeyen, sessiz bir satış kaybı.
+ *
+ * **`sort_order`'a dokunulmadı** ve dokunulmamalı: o kolon operatörün kararı (*"1 kg'ı öne al"*) ve
+ * detayın boy seçicisi, mobil ana ekran ve fikirler şeridi de onu okuyor. Değişen tek şey hangi
+ * boyun fiyatının VAAT edildiği; boyların SIRASI değişmiyor. İkisi ayrı sorudur.
+ *
+ * **Fiyatı olmayan boy birincil olamaz** — olsaydı ürünün fiyatı olduğu hâlde kartı boş görünürdü.
+ * Hiçbir boyun fiyatı yoksa ilk boya düşülür: ürün satışa kapalıdır ve kart yine de bir boy adı
+ * gösterebilmeli (`unitLabel`), aksi hâlde kart adsız kalırdı.
+ *
+ * **Eşitlikte gelen sıra korunur** (`<`, `<=` değil) — sıra `sort_order`'dan geliyor ve bu, SQL
+ * tarafındaki tie-breaker'ın (`0032_product_listing.sql`) birebir karşılığı. İki taraf aynı boyu
+ * seçmezse kartın fiyatı ile sıralamanın kullandığı fiyat ayrışır ve ayrışma sessizdir.
+ *
+ * Dışa VERİLİR: ölçüt tek yerde dursun — detay sayfasının açılış boyu da buradan okunmalı, yoksa
+ * müşteri listede 17 € görüp tıklıyor ve karşısına 33 € çıkıyor (bugünkü hâlden kötü).
+ */
+export function primaryVariantOf(variants: readonly ProductVariant[], ctx: ProductContext): ProductVariant | null {
+  let best: ProductVariant | null = null;
+  let bestCents: number | null = null;
+  for (const variant of variants) {
+    const cents = sellingOf(variant, ctx).priceCents;
+    if (cents == null) continue;
+    if (bestCents == null || cents < bestCents) {
+      best = variant;
+      bestCents = cents;
+    }
+  }
+  return best ?? variants[0] ?? null;
+}
+
+/**
  * Varyantı detay sayfasının "Boy seçin" kartına indirger (K22).
  *
  * `shippable` ÜRÜNÜN özelliğidir, varyantın değil — ama karar varyant düzeyinde verilir (bir boy
@@ -221,9 +258,10 @@ export type CatalogProductRow = Pick<Product, 'id' | 'slug' | 'name' | 'shippabl
  * (DOMAIN §5, komponent envanteri K6).
  */
 export function toProduct(row: CatalogProductRow, locale: PreferredLanguage, ctx: ProductContext): StorefrontProduct {
-  // Fiyat, ürünün İLK aktif varyantından okunur — çok varyantlıda bu "başlangıç fiyatı"dır.
+  // Fiyat, ürünün EN UCUZ aktif boyundan okunur (`primaryVariantOf`) — çok boyluda bu gerçekten
+  // "başlangıç fiyatı"dır. Eskiden ilk boydan okunuyordu ve o boy en ucuz olmak zorunda değildi.
   const variants = ctx.variants.filter((v) => v.isActive);
-  const primary = variants[0];
+  const primary = primaryVariantOf(variants, ctx);
   const selling = primary ? sellingOf(primary, ctx) : null;
   // Stok kararı kartta ÜRÜN düzeyindedir: bir boyu biten ürün listede tükenmiş görünmemeli — bu
   // yüzden hâl tüm aktif varyantların toplamından türer.

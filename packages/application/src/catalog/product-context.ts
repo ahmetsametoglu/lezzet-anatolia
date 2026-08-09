@@ -53,9 +53,11 @@ export async function loadProductContext(
   const context = new Map<string, ProductContext>();
   if (!rows.length) return context;
 
-  // Sıra BURADA sabitlenir. Kartın fiyatı ürünün İLK aktif varyantından okunur (`map.ts`) ve gömülü
-  // ilişkinin dönüş sırası PostgREST'te garantili DEĞİLDİR — sabitlenmezse aynı ürün iki istekte
-  // farklı "başlangıç fiyatı" gösterebilir. Ölçüt operatörün elindeki sıra, eşitlikte doğuş anı.
+  // Sıra BURADA sabitlenir. Kartın fiyatı ürünün EN UCUZ aktif boyundan okunur (`primaryVariantOf`)
+  // ama fiyat EŞİTLİĞİNDE seçim gelen sıraya düşüyor; gömülü ilişkinin dönüş sırası ise PostgREST'te
+  // garantili DEĞİLDİR. Sabitlenmezse aynı fiyatlı iki boydan hangisinin adının kartta yazacağı
+  // istekten isteğe değişirdi. Ölçüt operatörün elindeki sıra, eşitlikte doğuş anı — SQL tarafındaki
+  // tie-breaker'ın (`0032_product_listing.sql`) birebir aynısı.
   const variantsByProduct = new Map(
     rows.map((r) => [
       r.id,

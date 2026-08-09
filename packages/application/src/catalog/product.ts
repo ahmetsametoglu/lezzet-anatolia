@@ -162,7 +162,9 @@ async function readFamily(
   const cards = page.rows
     // Hem "tükendi mi" hem BAŞLANGIÇ FİYATI `toProduct`tan okunur, ikinci bir hesap yazılmaz: kart,
     // katalog ve detay aynı ürün için farklı sayı gösterirse müşteri hangisine inanacağını bilemez.
-    // `toProduct`un fiyatı zaten "ilk aktif varyantın fiyatı", yani çizimdeki "…'dan" tam olarak o.
+    // `toProduct`un fiyatı EN UCUZ aktif boyunki (09.08), yani çizimdeki "…'dan" tam olarak o.
+    // Düzeltmeden önce "ilk boyun fiyatı"ydı ve "…'dan" eki o hâlde YANLIŞ bir vaatti: en ucuz
+    // olmayan bir sayının önüne "…'dan" yazmak, olmayan bir alt sınır sözü vermekti.
     .map((row) => ({ row, card: toProduct(row, locale, context.get(row.id) ?? EMPTY_PRODUCT_CONTEXT) }))
     // Tükenen HER üye düşer — bakılan çeşit dâhil (çizimin etkileşim sözleşmesi).
     .filter(({ card }) => !card.soldOut)
