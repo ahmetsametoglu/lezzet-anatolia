@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { removeVat } from '@lezzet/helper';
-import { markupPercent } from '@lezzet/domain-core';
+import { bundleEconomics, markupPercent } from '@lezzet/domain-core';
 
 /**
  * Kâr künyesinin ARİTMETİĞİ (22.7) — `economics.ts`in DB'siz çekirdeği.
@@ -46,6 +46,43 @@ describe('KDV tabanı', () => {
 
     expect(markupPercent(removeVat(price, 10), cost)!).toBeLessThan(0);
     expect(markupPercent(price, cost)!).toBeGreaterThan(0);
+  });
+});
+
+describe('karışık KDV — hesap MOTORUN (K3-2)', () => {
+  /**
+   * Bu dosya bir tur paket HT'sini kalemlerin **ağırlıklı ortalama oranıyla** hesaplıyordu. Motor
+   * (`bundleEconomics`) kalem kalem indiriyor ve doğru olan o: ortalama oranla bölmek karışık
+   * KDV'li pakette HT'yi ve dolayısıyla marjı **sistematik olarak düşük** gösterir.
+   *
+   * Yön sabit (Jensen): hata her zaman aynı tarafa düşer, yani gürültü değil sapmadır.
+   */
+  it('kalem kalem indirim ≠ ortalama oranla indirim, ve fark hep aynı yönde', () => {
+    const lines = [
+      { qty: 1, allocatedUnitPriceCents: 1000, vatRate: 5.5, unitCostCents: 750 },
+      { qty: 1, allocatedUnitPriceCents: 1000, vatRate: 20, unitCostCents: 750 },
+    ];
+    const motor = bundleEconomics(lines);
+
+    const ttc = 2000;
+    const ortalamaOran = lines.reduce((s, l) => s + l.vatRate * ((l.allocatedUnitPriceCents * l.qty) / ttc), 0);
+    const eskiYontem = removeVat(ttc, ortalamaOran);
+
+    expect(motor.revenueTtcCents).toBe(ttc);
+    expect(motor.revenueHtCents).toBeGreaterThan(eskiYontem); // eski yöntem HT'yi düşük gösteriyordu
+    expect(motor.marginPercent!).toBeGreaterThan(markupPercent(eskiYontem, 1500)!);
+  });
+
+  it('bir kalemin maliyeti bilinmiyorsa motor da marjı UYDURMAZ', () => {
+    const motor = bundleEconomics([
+      { qty: 1, allocatedUnitPriceCents: 1000, vatRate: 5.5, unitCostCents: 750 },
+      { qty: 1, allocatedUnitPriceCents: 1000, vatRate: 20, unitCostCents: null },
+    ]);
+    expect(motor.costCents).toBeNull();
+    expect(motor.marginPercent).toBeNull();
+    expect(motor.unknownCostLines).toBe(1);
+    // Ama ciro bilinir — eksik olan yalnız maliyet tarafı.
+    expect(motor.revenueTtcCents).toBe(2000);
   });
 });
 

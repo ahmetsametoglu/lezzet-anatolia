@@ -1,6 +1,6 @@
 import 'server-only';
 import { PriceService, ProductService, ProductVariantService, StockService, serviceDb } from '@lezzet/database';
-import { markupPercent } from '@lezzet/domain-core';
+import { bundleEconomics as bundleEngine, markupPercent } from '@lezzet/domain-core';
 import { removeVat } from '@lezzet/helper';
 import type { AssistantProposal } from '@lezzet/types';
 
@@ -35,6 +35,11 @@ import type { AssistantProposal } from '@lezzet/types';
 export interface EconomicsLine {
   productName: string;
   qty: number;
+  /**
+   * Öneride kaleme ATANAN birim fiyat, KDV DAHİL. Liste fiyatından ayrı: paket indirimi burada
+   * yaşar. `null` = dilekçe payı taşımıyor (o zaman motor çağrılamaz, marj hesaplanamaz).
+   */
+  allocatedUnitPriceCents: number | null;
   /** Liste fiyatı, KDV DAHİL (b2c). `null` = bu varyantın kanal fiyatı yok. */
   listPriceCents: number | null;
   /** Son alış, KDV HARİÇ. `null` = hiç alış kaydı yok — sıfır değil. */
@@ -47,12 +52,20 @@ export type ProposalEconomics =
   | {
       kind: 'bundle';
       lines: EconomicsLine[];
-      /** Paket fiyatı KDV DAHİL (payload'dan) ve HARİÇ karşılığı — kalem oranlarıyla ağırlıklı. */
+      /** Dilekçedeki paket fiyatı, KDV DAHİL. */
       priceCents: number;
+      /**
+       * Kalem paylarının toplamı (KDV dahil). `priceCents`ten AYRI tutuluyor: mutabakat kuralı
+       * servis kapısında koşuyor, öneri aşamasında değil — ikisi ayrışabilir ve ekran bunu söyler.
+       */
+      allocatedTotalCents: number | null;
+      /** KDV hariç satış — motor her kalemi KENDİ oranıyla indirdi (ortalama oran DEĞİL). */
       priceHtCents: number | null;
       costTotalCents: number | null;
       marginCents: number | null;
       marginPercent: number | null;
+      /** Maliyeti bilinmeyen kalem sayısı — ekran neyin eksik olduğunu söyleyebilsin. */
+      unknownCostLines: number;
     }
   | {
       kind: 'offer';
@@ -80,7 +93,10 @@ export async function economicsOf(proposal: AssistantProposal): Promise<Proposal
 }
 
 async function bundleEconomics(raw: unknown): Promise<ProposalEconomics | null> {
-  const payload = raw as { items?: Array<{ variantId?: string; productName?: string; qty?: number }>; totalPrice?: number };
+  const payload = raw as {
+    items?: Array<{ variantId?: string; productName?: string; qty?: number; allocatedUnitPrice?: number }>;
+    totalPrice?: number;
+  };
   const items = Array.isArray(payload.items) ? payload.items : [];
   const priceCents = typeof payload.totalPrice === 'number' ? Math.round(payload.totalPrice * 100) : null;
   if (items.length === 0 || priceCents === null) return null;
@@ -91,30 +107,44 @@ async function bundleEconomics(raw: unknown): Promise<ProposalEconomics | null> 
   const lines: EconomicsLine[] = items.map((item) => ({
     productName: item.productName ?? '—',
     qty: typeof item.qty === 'number' ? item.qty : 1,
+    allocatedUnitPriceCents: typeof item.allocatedUnitPrice === 'number' ? Math.round(item.allocatedUnitPrice * 100) : null,
     listPriceCents: item.variantId ? (listByVariant.get(item.variantId) ?? null) : null,
     costCents: item.variantId ? (costByVariant.get(item.variantId) ?? null) : null,
     vatRate: (item.variantId ? vatByVariant.get(item.variantId) : undefined) ?? 5.5,
   }));
 
-  // Bir kalemin maliyeti bile bilinmiyorsa TOPLAM uydurulmaz: eksik veriyi 0 saymak paketi
-  // olduğundan kârlı gösterirdi (`amountCentsOf`un mal kabul kuralının aynısı).
-  const costTotalCents = lines.some((l) => l.costCents === null)
-    ? null
-    : lines.reduce((sum, l) => sum + (l.costCents ?? 0) * l.qty, 0);
+  // ── HESAP MOTORUN, BURASI YALNIZ VERİYİ TOPLAR (denetim K3-2, 10.08) ────────
+  // Bu blok bir tur kendi KDV indirimini yapıyordu: paket fiyatını kalemlerin AĞIRLIKLI ORTALAMA
+  // oranıyla bölüyordu. Motor (`domain-core/pricing/bundleEconomics`) ise kalem kalem indiriyor ve
+  // **doğru olan o**: ortalama oranla bölmek karışık KDV'li pakette marjı sistematik olarak DÜŞÜK
+  // gösterir (ölçüldü: %5,5+%20 karışımında %18,27 ↔ gerçek %18,73). Uygulama iş kuralını kendi
+  // hesaplayamaz, motora sorar (CLAUDE §1).
+  const engine =
+    lines.every((l) => l.allocatedUnitPriceCents !== null) && lines.length > 0
+      ? bundleEngine(
+          lines.map((l) => ({
+            qty: l.qty,
+            allocatedUnitPriceCents: l.allocatedUnitPriceCents!,
+            vatRate: l.vatRate,
+            unitCostCents: l.costCents,
+          })),
+        )
+      : null;
 
-  // Paket fiyatının KDV hariç karşılığı: kalemlerin liste değerine göre ağırlıklı. Tek oran
-  // varsaymak, karışık KDV'li bir pakette marjı sessizce kaydırırdı.
-  const priceHtCents = weightedHt(priceCents, lines);
-  const marginCents = costTotalCents !== null && priceHtCents !== null ? priceHtCents - costTotalCents : null;
+  // Payların toplamı paket fiyatını tutmayabilir — mutabakat kuralı servis KAPISINDA koşuyor,
+  // öneri aşamasında değil. Ayrışmayı ekran söyler; sessizce birini ötekinin yerine koymayız.
+  const allocatedTotalCents = engine?.revenueTtcCents ?? null;
 
   return {
     kind: 'bundle',
     lines,
     priceCents,
-    priceHtCents,
-    costTotalCents,
-    marginCents,
-    marginPercent: costTotalCents !== null && priceHtCents !== null ? markupPercent(priceHtCents, costTotalCents) : null,
+    allocatedTotalCents,
+    priceHtCents: engine?.revenueHtCents ?? null,
+    costTotalCents: engine?.costCents ?? null,
+    marginCents: engine?.profitCents ?? null,
+    marginPercent: engine?.marginPercent ?? null,
+    unknownCostLines: engine?.unknownCostLines ?? lines.filter((l) => l.costCents === null).length,
   };
 }
 
@@ -172,22 +202,4 @@ async function marketOf(variantIds: string[]) {
       }),
     ),
   };
-}
-
-/**
- * Paket fiyatının KDV hariç karşılığı — kalemlerin LİSTE değerine göre ağırlıklı.
- *
- * Liste fiyatı bilinmeyen kalem varsa ağırlık kurulamaz; o zaman kalemlerin oranları eşitse tek
- * oran, değilse `null`. Uydurma bir ortalama, marjı sessizce kaydıran türden bir hatadır.
- */
-function weightedHt(priceCents: number, lines: EconomicsLine[]): number | null {
-  const rates = [...new Set(lines.map((l) => l.vatRate))];
-  if (rates.length === 1) return removeVat(priceCents, rates[0]!);
-
-  const weights = lines.map((l) => (l.listPriceCents ?? 0) * l.qty);
-  const total = weights.reduce((a, b) => a + b, 0);
-  if (total <= 0 || lines.some((l) => l.listPriceCents === null)) return null;
-
-  const blended = lines.reduce((sum, l, i) => sum + l.vatRate * (weights[i]! / total), 0);
-  return removeVat(priceCents, blended);
 }
