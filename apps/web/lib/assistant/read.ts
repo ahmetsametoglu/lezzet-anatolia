@@ -1,6 +1,6 @@
 import 'server-only';
 import { AssistantProposalService, UserProfileService, serviceDb } from '@lezzet/database';
-import { KIND_META, amountCentsOf } from '@lezzet/application';
+import { KIND_META, amountCentsOf, impactOf } from '@lezzet/application';
 import type { AssistantProposal } from '@lezzet/types';
 
 import type { AssistantQueueRow, QueueTab } from './assistant-types';
@@ -54,7 +54,9 @@ export async function readAssistantQueue(tab: QueueTab, limit = 50): Promise<Ass
       kindLabel: meta.label,
       summary: proposal.summary,
       reason: proposal.reason,
-      impact: meta.impact,
+      // Etki cümlesi öneriye ÖZGÜ (bekleyen müşteri sayısı, kalem sayısı) — operasyon şeridinin
+      // itirazıyla sabit metinden şablona geçti (09.08).
+      impact: impactOf(proposal.kind, proposal.payload),
       targetTables: [...meta.tables],
       payload: proposal.payload,
       amountCents: amountCentsOf(proposal.kind, proposal.payload),

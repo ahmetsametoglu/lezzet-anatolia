@@ -71,6 +71,52 @@ export const KIND_META = {
 } as const satisfies Record<AssistantProposalKind, KindMeta>;
 
 /**
+ * "Uygulanınca ne olur" — sabit şablon + ÖNERİYE ÖZGÜ sayı (operasyon şeridinin itirazı, 09.08).
+ *
+ * İtiraz haklıydı ve şuydu: aynı `zone_extend`in biri bildirim gönderir, biri göndermez (bekleyen
+ * yoksa) — "gider" diyen sabit bir cümle ikinci hâlde YALAN söyler. Ama cümleyi tümüyle üreten
+ * araca bırakmak da doğru değildi: o zaman metni MODEL yazardı ve geri alınamaz bir etkiyi
+ * yumuşatan bir cümle kurabilirdi.
+ *
+ * Orta yol: **iskelet burada sabit** (asistan değiştiremez), **sayı payload'dan okunur** (öneriye
+ * özgü ve gerçek). Kolon açmaya gerek yok — veri zaten payload'da.
+ */
+export function impactOf(kind: AssistantProposalKind, payload: unknown): string {
+  const base = KIND_META[kind].impact;
+  if (!payload || typeof payload !== 'object') return base;
+  const p = payload as Record<string, unknown>;
+
+  if (kind === 'zone_extend' && Array.isArray(p.postalCodes)) {
+    const codes = p.postalCodes as Array<{ waitingCount?: unknown }>;
+    const waiting = codes.reduce((sum, c) => sum + (typeof c.waitingCount === 'number' ? c.waitingCount : 0), 0);
+    // Bekleyen YOKSA cümle bildirimden hiç söz etmez: olmayan bir dış etkiyi uyarmak, gerçek
+    // uyarıyı da değersizleştirir ("nasılsa hep yazıyor").
+    return waiting === 0
+      ? `${codes.length} posta kodu bölgeye eklenir ve o adreslerde teslimat açılır. Bu kodlarda haber bekleyen müşteri yok — bildirim gitmeyecek.`
+      : `${codes.length} posta kodu bölgeye eklenir, o adreslerde teslimat açılır ve haber bekleyen ${waiting} müşteriye bildirim gider. BİLDİRİM GERİ ALINAMAZ: bölgeyi sonra kapatsanız bile mesaj gitmiş olur.`;
+  }
+
+  if (kind === 'stock_intake' && Array.isArray(p.lines)) {
+    return `${p.lines.length} parti stoğa girer ve satılabilir hâle gelir; son kullanma tarihleri bu tabloyla sabitlenir. Bağlı tedarik siparişi varsa kapanışı da bu kabulden türer.`;
+  }
+
+  if (kind === 'purchase_order' && Array.isArray(p.lines)) {
+    return `${p.lines.length} kalemlik tedarik siparişi TASLAK olarak açılır; tedarikçiye gönderilmez. Göndermek ayrı ve insanlı bir adımdır.`;
+  }
+
+  if (kind === 'bundle_draft' && Array.isArray(p.items)) {
+    return `${p.items.length} kalemlik yeni bir paket oluşur ve PASİF doğar — müşteri vitrininde görünmez. Yayına almak ayrı bir karardır.`;
+  }
+
+  if (kind === 'product_draft' && p.fields && typeof p.fields === 'object') {
+    const fields = Object.keys(p.fields as Record<string, unknown>);
+    return `Ürünün ${fields.join(' ve ')} alanı güncellenir ama ürün TASLAKTA KALIR. Alerjen ve saklama beyanı bu yoldan yazılamaz — onlar dolmadan ürün yayına alınamaz.`;
+  }
+
+  return base;
+}
+
+/**
  * Önerinin TUTARI — tipe göre payload'dan türer; tutar kavramı olmayan tipte `null`.
  *
  * **Ekran bunu hesaplamaz** (sözleşme): aynı türetme iki yerde yazılsaydı biri bir gün ötekinden
