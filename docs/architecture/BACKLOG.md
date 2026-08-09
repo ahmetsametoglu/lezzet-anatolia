@@ -12,7 +12,14 @@ Sıralama kabaca bağımlılık sırasındadır: üstteki alttakine zemin olur.
 
 Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar gelmeden ilgili kalem başlamaz.
 
+> **Ölçüm notu (denetim, 10.08):** aşağıdaki işaretler "karar verildi mi"yi gösterir, "kodlandı
+> mı"yı değil (dosya başındaki kural). Ama üç maddede kod, kararın fiilen verildiğini söylüyor —
+> işaretler bu yüzden bayat olabilir. **İşaretlere DOKUNULMADI**, karar kullanıcınındır; ölçüm
+> maddelerin altına yazıldı ki bir sonraki okuyan sıfırdan aramasın.
+
 - [ ] Marka adı yazımı: "Anatolia" mı "Anatolie" mi → `packages/brand`
+  - *Kodda `packages/brand/src/index.ts` → `name: 'Lezzet Anatolia'` ve her yüzey oradan okuyor.
+    Yani "Anatolia" fiilen yürürlükte; soru, bunun karar mı yoksa yer tutucu mu olduğu.*
 - [ ] Ana logo seçimi + renk paleti → `packages/brand`, Tailwind token
 - [x] Gramaj varyantı: **varyant katmanı var** (satılabilir birim = varyant; varyantsız ürün tek varsayılan varyant)
 - [x] Satış birimi: **hepsi sabit paket** (adet). Alış toptan olabilir ama girişte pakete çevrilir (ör. 1kg → 10×100gr)
@@ -20,7 +27,11 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - [~] Kategori yapısı: **düz (tek seviye) + koleksiyon** kararı verildi; nihai kategori/koleksiyon **içeriği** (isimler) bekliyor
 - [x] Alerjen/içindekiler: `Product.allergens` (AB 14) + `ingredients` (çok dilli) — **model kararı** verildi (kodda `allergens` var, `ingredients` §3'te açık)
 - [ ] Ürün bazında KDV oranları
+  - *Model kararı verilmiş görünüyor: `product.vat_rate` (`0005`, varsayılan 5,5) ve sipariş kalemi
+    kendi oranını dondururyor (`0012`). Bekleyen, hangi ürünün hangi orana gireceği — yani VERİ.*
 - [ ] Raf ömrü bilgisi (DLC uyarı eşiği için)
+  - *Aynı ayrım: `product.shelf_life_days` (`0005`) ve DLC türetimleri (`0006`) yerinde. Bekleyen,
+    ürün başına gün değerleri.*
 
 ---
 
