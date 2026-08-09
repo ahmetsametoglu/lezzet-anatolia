@@ -1,11 +1,24 @@
-import { BundleService, CategoryService, CollectionService, PurchaseOrderService } from '@lezzet/database';
+import {
+  BundleService,
+  CategoryService,
+  CollectionService,
+  DeliveryZoneService,
+  MoneyMovementService,
+  ProductService,
+  PurchaseOrderService,
+  StockIntakeService,
+} from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   parseProposalPayload,
   type AssistantProposal,
   type BundleDraftPayload,
   type FeaturedFlagPayload,
+  type MoneyMovementPayload,
+  type ProductDraftPayload,
   type PurchaseOrderPayload,
+  type StockIntakePayload,
+  type ZoneExtendPayload,
 } from '@lezzet/types';
 
 /**
@@ -97,10 +110,97 @@ const applyBundleDraft: Applier = async (db, raw) => {
   return { bundleId: bundle.id };
 };
 
+/**
+ * Mal kabul — `receive_intake` RPC'sinin sarmalayıcısından geçer (giriş + partiler + PO kapanışı
+ * + son alış fiyatı BÖLÜNEMEZ). Uygulayıcı bunu bilmez, sadece kapıyı çağırır: bölünmezliği
+ * servis/RPC garanti eder, kuyruk kendi sırasını uydurmaz.
+ */
+const applyStockIntake: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('stock_intake', raw) as StockIntakePayload;
+  const result = await new StockIntakeService(db).receive({
+    warehouseId: payload.warehouseId,
+    supplierId: payload.supplierId,
+    purchaseOrderId: payload.purchaseOrderId,
+    note: payload.documentNo,
+    lines: payload.lines.map((line) => ({
+      variantId: line.variantId,
+      qty: line.qty,
+      expiryDate: line.expiryDate,
+      lotNumber: line.lotNumber,
+      unitCostCents: line.unitCostCents,
+    })),
+  });
+  return { stockIntakeId: result.intakeId };
+};
+
+/**
+ * Para hareketi — sipariş bağlı tipler (`order_payment`/`order_refund`) şemada YOK ve olmayacak:
+ * onların tek meşru kaynağı siparişin kendi akışıdır (`recordForOrder`). Asistan elle bir tahsilat
+ * yazabilseydi, sipariş bakiyesi iki ayrı yerden değişir ve mutabakat sessizce bozulurdu.
+ */
+const applyMoneyMovement: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('money_movement', raw) as MoneyMovementPayload;
+  const row = await new MoneyMovementService(db).insert({
+    accountId: payload.accountId,
+    direction: payload.direction,
+    amountCents: payload.amountCents,
+    type: payload.type,
+    category: payload.category,
+    description: payload.description,
+    supplierId: payload.supplierId,
+    counterAccountId: payload.counterAccountId,
+    ...(payload.valueDate ? { valueDate: payload.valueDate } : {}),
+    source: 'manual',
+  });
+  return { moneyMovementId: row.id };
+};
+
+/**
+ * Bölgeye posta kodu ekleme — kapı `replacePostalCodes` yani KÜMEYİ yazar. Uygulayıcı bu yüzden
+ * önce mevcut kodları okur ve üstüne ekler: doğrudan yazsaydı bölgenin var olan kodları silinirdi
+ * ("ekle" denen bir öneri, sessizce "bunlarla değiştir" olurdu).
+ *
+ * **Bildirim buradan GİTMEZ:** `zone_available` uzlaştırma işi (saatte bir) "kapsanmış hâle gelmiş
+ * ve haberi gitmemiş" bekleyişleri kendi bulur. İkinci bir gönderim yolu açmak aynı müşteriye iki
+ * mesaj demekti.
+ */
+const applyZoneExtend: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('zone_extend', raw) as ZoneExtendPayload;
+  const service = new DeliveryZoneService(db);
+  const zones = await service.listWithCodes();
+  const zone = zones.find((z) => z.id === payload.zoneId);
+  if (!zone) throw new Error('Bölge bulunamadı — silinmiş olabilir.');
+
+  const country = payload.country as (typeof zone.postalCodes)[number]['country'];
+  const existing = zone.postalCodes.map((c) => ({ country: c.country, postalCode: c.postalCode }));
+  const wanted = payload.postalCodes.map((c) => ({ country, postalCode: c.postalCode }));
+  const merged = [...existing];
+  for (const code of wanted) {
+    if (!merged.some((c) => c.country === code.country && c.postalCode === code.postalCode)) merged.push(code);
+  }
+
+  await service.replacePostalCodes(payload.zoneId, merged);
+  return { zoneId: payload.zoneId, addedCount: String(merged.length - existing.length) };
+};
+
+/**
+ * Ürün taslağının doldurulması — ürün TASLAKTA KALIR. Alerjen/saklama zaten şemada yok (yazılamaz);
+ * yayına alma da burada yapılmaz: `status` bu kapıya hiç geçilmiyor, o karar katalog ekranında.
+ */
+const applyProductDraft: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('product_draft', raw) as ProductDraftPayload;
+  await new ProductService(db).updateDetails(payload.productId, payload.fields);
+  return { productId: payload.productId };
+};
+
 export const APPLIERS = {
   featured_flag: applyFeaturedFlag,
   purchase_order: applyPurchaseOrder,
   bundle_draft: applyBundleDraft,
+  stock_intake: applyStockIntake,
+  money_movement: applyMoneyMovement,
+  zone_extend: applyZoneExtend,
+  product_draft: applyProductDraft,
 } as const;
 
 export type ApplicableKind = keyof typeof APPLIERS;

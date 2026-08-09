@@ -31,11 +31,15 @@ export type AssistantProposalKind = z.infer<typeof AssistantProposalKindEnum>;
 export const AssistantProposalStatusEnum = z.enum(['pending', 'applied', 'rejected', 'expired', 'failed']);
 export type AssistantProposalStatus = z.infer<typeof AssistantProposalStatusEnum>;
 
-// ─── Payload şemaları — bugün UYGULANABİLEN üç tip ────────────────────────────
+// ─── Payload şemaları — bugün UYGULANABİLEN YEDİ tip ─────────────────────────
 //
-// Enum dokuz tip taşıyor (ileriye hazır, `0042` künyesi) ama şeması yalnız uygulayıcısı yazılmış
-// olanların var. Şemasız tip için öneri HİÇ DOĞMAZ: yazıp uygulayamamak, panelde onaylanan ama
-// hiçbir şey yapmayan bir kalem üretirdi — "çizip yazmamak"ın kuyruk hâli.
+// Enum dokuz tip taşıyor; şeması yalnız uygulayıcısı yazılmış olanların var (bugün 7 — `discount_draft`
+// ve `recipe_draft` bekliyor). Şemasız tip için öneri HİÇ DOĞMAZ: yazıp uygulayamamak, panelde
+// onaylanan ama hiçbir şey yapmayan bir kalem üretirdi — "çizip yazmamak"ın kuyruk hâli.
+//
+// Kapsam 09.08'de TASARIMA göre genişledi (kullanıcı kararı): ilk üç tip "en kolay yazılabilen"e
+// göre seçilmişti; tasarımın seçtiği beşli ise kullanıcının gerçek iş listesiydi (faturadan stok
+// girişi, para girişi, ürün tamamlama, bölge önerisi). Değer kolaylığı yendi.
 
 /** Vitrin işareti — en küçük yazma: tek boolean, tek kayıt. */
 export const FeaturedFlagPayloadSchema = z.object({
@@ -87,11 +91,107 @@ export const BundleDraftPayloadSchema = z.object({
     .min(2),
 });
 
+/**
+ * Mal kabul / alım girişi — patronun verdiği FATURADAN kurulur.
+ *
+ * **Alış fiyatı (`unitCostCents`) burada VAR ve bu çelişki değil** (`AI_ADMIN_ASSISTANT §6`):
+ * finans sınırı OKUMA yönlüdür. Bilgi zaten patronun elindeki belgeden geliyor, yani sızma yönü
+ * tersine dönmüyor — asistan yazdığını geri OKUYAMAZ (okuma araçlarında alış fiyatı yok ve testi
+ * bunu kilitliyor).
+ */
+export const StockIntakePayloadSchema = z.object({
+  warehouseId: z.string().uuid(),
+  warehouseCode: z.string().min(1),
+  supplierId: z.string().uuid().nullable(),
+  supplierName: z.string().nullable(),
+  /** Bağlı tedarik siparişi — PO'suz doğrudan giriş de meşru (küçük/plansız alım). */
+  purchaseOrderId: z.string().uuid().nullable(),
+  /** İrsaliye/fatura numarası — önizlemenin "belge no" satırı. */
+  documentNo: z.string().nullable(),
+  lines: z
+    .array(
+      z.object({
+        variantId: z.string().uuid(),
+        productName: z.string().min(1),
+        qty: z.number().int().positive(),
+        /** SKT — **zorunlu**: tarihsiz parti yazılamaz (gıda; `stock.expiry_date` not null). */
+        expiryDate: z.string().min(8),
+        lotNumber: z.string().nullable(),
+        unitCostCents: z.number().int().nonnegative().nullable(),
+      }),
+    )
+    .min(1),
+});
+
+/** Para hareketi — elle giriş (gider · tahsilat · transfer). Tutar CENT (STACK §8). */
+export const MoneyMovementPayloadSchema = z.object({
+  accountId: z.string().uuid(),
+  accountName: z.string().min(1),
+  direction: z.enum(['in', 'out']),
+  amountCents: z.number().int().positive(),
+  /** `money_movement.type` ile aynı küme; sipariş bağlı tipler asistana KAPALI (aşağı bak). */
+  type: z.enum(['purchase', 'expense', 'transfer', 'capital', 'misc']),
+  category: z.string().nullable(),
+  description: z.string().nullable(),
+  supplierId: z.string().uuid().nullable(),
+  counterpartyName: z.string().nullable(),
+  counterAccountId: z.string().uuid().nullable(),
+  valueDate: z.string().nullable(),
+});
+
+/**
+ * Bölgeye posta kodu ekleme — **geri alınamaz dış etkisi olan tek tip**.
+ *
+ * Kod bölgeye girince `zone_available` uzlaştırma işi haber bekleyenlere bildirim gönderir
+ * (14.10 · 19.21). Uygulayıcı bildirimi KENDİ göndermez — cron zaten "kapsanmış ve haberi
+ * gitmemiş" bekleyişleri arıyor; ikinci bir gönderim yolu açmak aynı mesajı iki kez yollardı.
+ * Ekranın uyarısı bu yüzden doğru ve şart: bölge kapatılsa bile mesaj gitmiş olur.
+ */
+export const ZoneExtendPayloadSchema = z.object({
+  zoneId: z.string().uuid(),
+  zoneName: z.string().min(1),
+  country: z.string().length(2),
+  postalCodes: z
+    .array(
+      z.object({
+        postalCode: z.string().min(3),
+        placeName: z.string().nullable(),
+        requestCount: z.number().int().nonnegative(),
+        waitingCount: z.number().int().nonnegative(),
+      }),
+    )
+    .min(1),
+});
+
+/**
+ * Ürün taslağının doldurulması — ve **buradaki asıl kural bir YOKLUK**.
+ *
+ * `allergens` ve `storageInstructions` bu şemada YOK, yani asistan onları teknik olarak
+ * yazamaz — prompt'la değil ŞEMAYLA engellenmiş durumda (petit'in "fiziksel engel ilkesi").
+ * Gıdada makul görünen bir alerjen satırı, insana zarar verebilecek tek hatadır; onu modelin
+ * iyi niyetine bırakmak yerine imzadan çıkardık. Eksiklik `catalog_health`te raporlanır,
+ * belgeyi patron girer.
+ */
+export const ProductDraftPayloadSchema = z.object({
+  productId: z.string().uuid(),
+  productName: z.string().min(1),
+  fields: z
+    .object({
+      description: LocalizedTextSchema.optional(),
+      ingredients: LocalizedTextSchema.optional(),
+    })
+    .refine((f) => Object.keys(f).length > 0, { message: 'En az bir alan doldurulmalı' }),
+});
+
 /** Kind → payload şeması. Uygulayıcısı olmayan tip burada YOKTUR (yukarıdaki gerekçe). */
 export const PROPOSAL_PAYLOAD_SCHEMAS = {
   featured_flag: FeaturedFlagPayloadSchema,
   purchase_order: PurchaseOrderPayloadSchema,
   bundle_draft: BundleDraftPayloadSchema,
+  stock_intake: StockIntakePayloadSchema,
+  money_movement: MoneyMovementPayloadSchema,
+  zone_extend: ZoneExtendPayloadSchema,
+  product_draft: ProductDraftPayloadSchema,
 } as const satisfies Partial<Record<AssistantProposalKind, z.ZodTypeAny>>;
 
 /** Bugün öneri ÜRETİLEBİLEN tipler — MCP araçları ve panel bu listeden türer. */
@@ -100,6 +200,10 @@ export type SupportedProposalKind = keyof typeof PROPOSAL_PAYLOAD_SCHEMAS;
 export type FeaturedFlagPayload = z.infer<typeof FeaturedFlagPayloadSchema>;
 export type PurchaseOrderPayload = z.infer<typeof PurchaseOrderPayloadSchema>;
 export type BundleDraftPayload = z.infer<typeof BundleDraftPayloadSchema>;
+export type StockIntakePayload = z.infer<typeof StockIntakePayloadSchema>;
+export type MoneyMovementPayload = z.infer<typeof MoneyMovementPayloadSchema>;
+export type ZoneExtendPayload = z.infer<typeof ZoneExtendPayloadSchema>;
+export type ProductDraftPayload = z.infer<typeof ProductDraftPayloadSchema>;
 
 /**
  * Ham payload'ı kind'ına göre doğrular. Desteklenmeyen tip **sessizce geçmez**: kuyruğa şekli
@@ -120,6 +224,8 @@ export const AssistantProposalSchema = z.object({
   payload: z.unknown(),
   /** Patronun okuyacağı TEK cümle — panel bunu gösterir, JSON'u değil. */
   summary: z.string(),
+  /** Öneri neye dayanıyor — panelde ayrı kutu; null ise "gerekçe yazılmadı" hâli çizilir. */
+  reason: z.string().nullable(),
   status: AssistantProposalStatusEnum,
   expiresAt: z.string(),
   createdAt: z.string(),
@@ -138,6 +244,7 @@ export const AssistantProposalInsertSchema = AssistantProposalSchema.pick({
   payload: true,
   summary: true,
 }).extend({
+  reason: z.string().nullish(),
   sourceSession: z.string().nullish(),
   expiresAt: z.string(),
 });

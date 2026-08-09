@@ -4,6 +4,15 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals } from './tools-signals';
+import {
+  listProposals,
+  proposeFeaturedFlag,
+  proposeMoneyMovement,
+  proposeProductDraft,
+  proposePurchaseOrder,
+  proposeStockIntake,
+  proposeZoneExtend,
+} from './tools-propose';
 
 /**
  * İstek-başına MCP Server (22.1 deneme dilimi) — stateless: durum yok, her istek kendi örneğini
@@ -20,7 +29,8 @@ import { customerPulse, demandSignals } from './tools-signals';
 const INSTRUCTIONS = [
   "You are the admin assistant for Lezzet Anatolia (Turkish food e-commerce, Strasbourg). You talk to the OWNER, never to customers.",
   'Always answer the admin in TURKISH. Keep answers short and concrete; lead with what needs attention.',
-  'This is the READ-ONLY phase: you can observe and propose IN WORDS, but you cannot write anything. If the admin asks you to act (create a PO, change a price, publish a product, send a message), explain what you would do and say the approval-queue phase is not built yet.',
+  'You can PROPOSE actions but never perform them: propose_* tools write to an approval queue and the admin applies them from the operations panel. You cannot approve your own proposals — never say something is done because you proposed it; say it is waiting for approval. For actions with no propose_* tool (prices, discounts, recipes, customer messages), explain what you would do and say that tool is not built yet.',
+  'Two proposals need extra care when you present them. propose_zone_extend: applying it sends an irreversible notification to waiting customers — always tell the admin how many. propose_stock_intake: never invent an expiry date or lot number; if the document does not show it, ask.',
   'All data you see is aggregate and identity-free by design: no customer names/contacts, no per-product purchase prices, no message content. Do not speculate about individuals.',
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
@@ -98,6 +108,137 @@ export const TOOLS = [
     },
   },
   {
+    name: 'propose_featured_flag',
+    description:
+      'PROPOSE (does not apply): put a category/collection/bundle on the homepage showcase, or take it off. Writes a proposal to the approval queue — the admin applies it from the operations panel. You cannot approve your own proposals. Pass target (category|collection|bundle), id, and isFeatured.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', description: "'category' | 'collection' | 'bundle'" },
+        id: { type: 'string', description: 'Record id (uuid) — get it from catalog_health or ask the admin.' },
+        isFeatured: { type: 'boolean', description: 'true = put on the showcase (default), false = remove.' },
+      },
+      required: ['target', 'id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_purchase_order',
+    description:
+      'PROPOSE (does not apply): a draft purchase order for ONE warehouse, built from the below-threshold reorder suggestions. QUANTITIES COME FROM THE ENGINE, not from you — you pick the warehouse (and optionally the supplier); the shortfall is computed from stock thresholds. Writes to the approval queue; the admin applies it. Tells you how many OTHER suppliers still have pending shortfalls so nothing is silently dropped.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        warehouseCode: { type: 'string', description: 'Warehouse code, e.g. "STR" (see morning_briefing.reorder).' },
+        supplierId: { type: 'string', description: 'Optional: restrict to one supplier; default is the largest group.' },
+        note: { type: 'string', description: 'Optional note carried onto the draft order.' },
+      },
+      required: ['warehouseCode'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_stock_intake',
+    description:
+      "PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and write-only (you cannot read purchase prices back).",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        warehouseCode: { type: 'string', description: 'Which warehouse physically received the goods, e.g. "STR".' },
+        lines: {
+          type: 'array',
+          description: 'One entry per invoice line.',
+          items: {
+            type: 'object',
+            properties: {
+              variantId: { type: 'string', description: 'Variant uuid (look it up in the catalog first).' },
+              qty: { type: 'number', description: 'Positive integer.' },
+              expiryDate: { type: 'string', description: 'YYYY-MM-DD — from the document/label. Never guessed.' },
+              lotNumber: { type: 'string', description: 'Lot/batch number if printed.' },
+              unitCostCents: { type: 'number', description: 'Purchase cost per unit in cents, if the invoice shows it.' },
+            },
+            required: ['variantId', 'qty', 'expiryDate'],
+          },
+        },
+        supplierId: { type: 'string', description: 'Supplier uuid, if known.' },
+        purchaseOrderId: { type: 'string', description: 'Linked purchase order, if this receipt closes one.' },
+        documentNo: { type: 'string', description: 'Invoice / delivery-note number.' },
+        reason: { type: 'string', description: 'One line: what this is based on (e.g. "invoice photo sent by the admin").' },
+      },
+      required: ['warehouseCode', 'lines'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_money_movement',
+    description:
+      'PROPOSE (does not apply): a manual cash/bank entry — expense, purchase payment, transfer, capital or misc. The account is matched BY NAME (you do not need its uuid). Order payments and refunds are deliberately NOT possible here: those may only come from the order flow itself, otherwise the order balance would change from two places.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountName: { type: 'string', description: 'Account name or part of it, e.g. "Kasa".' },
+        direction: { type: 'string', description: "'out' = money leaves, 'in' = money arrives." },
+        amountCents: { type: 'number', description: 'Positive integer, in cents.' },
+        type: { type: 'string', description: "'purchase' | 'expense' | 'transfer' | 'capital' | 'misc'." },
+        category: { type: 'string', description: 'Free-text category, e.g. "tedarik".' },
+        description: { type: 'string' },
+        supplierId: { type: 'string', description: 'Supplier uuid when paying a supplier.' },
+        counterpartyName: { type: 'string', description: 'Who the money went to / came from, when there is no supplier record.' },
+        valueDate: { type: 'string', description: 'YYYY-MM-DD; defaults to today.' },
+        reason: { type: 'string' },
+      },
+      required: ['accountName', 'direction', 'amountCents', 'type'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_zone_extend',
+    description:
+      'PROPOSE (does not apply): add postal codes to an existing delivery zone — the concrete form of a "new route" proposal. Codes come from demand_signals (postal codes people asked about that we do not cover). The tool enriches each code with its request count and how many customers are WAITING for news there. IMPORTANT: applying this sends a "your area is now covered" notification to those waiting customers and CANNOT be undone — say so when you present it to the admin.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        zoneName: { type: 'string', description: 'Target delivery zone, matched by name.' },
+        postalCodes: { type: 'array', items: { type: 'string' }, description: 'Codes to add, e.g. ["67400","67540"].' },
+        reason: { type: 'string', description: 'Why these codes — cite the demand numbers.' },
+      },
+      required: ['zoneName', 'postalCodes'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_product_draft',
+    description:
+      "PROPOSE (does not apply): fill a draft product's empty text fields (description, ingredients) in three languages. The product STAYS a draft — publishing is a separate human decision. ALLERGENS AND STORAGE CANNOT BE SET HERE: the payload has no such fields, by design. A plausible-sounding allergen line is the one mistake that can hurt someone; report them as missing (catalog_health) and let the admin supply the supplier document.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productId: { type: 'string', description: 'Product uuid from catalog_health.' },
+        fields: {
+          type: 'object',
+          description: 'Each field is an object with tr/fr/de keys. Only description and ingredients are accepted.',
+          properties: {
+            description: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
+            ingredients: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
+          },
+        },
+        reason: { type: 'string' },
+      },
+      required: ['productId', 'fields'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_proposals',
+    description:
+      'The approval queue as it stands: pending proposals (id, kind, summary, age, expiry) plus the last few decided ones with their outcome (applied/rejected/failed and why). Use it to check whether you already proposed something, or to tell the admin what is waiting for them.',
+    inputSchema: {
+      type: 'object',
+      properties: { limit: { type: 'number', description: 'Max pending rows, 1-50. Default 20.' } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'customer_pulse',
     description:
       'Customer-facing workload: support tickets by status, reviews awaiting moderation, and conversations awaiting a reply. COUNTS ONLY — message content and customer identities are deliberately out of scope for this assistant (the customer-facing agent and the operations screen own those). Use it to tell the admin how the inbox stands, never to answer a customer.',
@@ -125,6 +266,13 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   sold_out_watch: (a) => soldOutWatch(num(a.limit, 20)),
   demand_signals: (a) => demandSignals(num(a.days, 7)),
   customer_pulse: () => customerPulse(),
+  propose_featured_flag: (a) => proposeFeaturedFlag(a),
+  propose_purchase_order: (a) => proposePurchaseOrder(a),
+  propose_stock_intake: (a) => proposeStockIntake(a),
+  propose_money_movement: (a) => proposeMoneyMovement(a),
+  propose_zone_extend: (a) => proposeZoneExtend(a),
+  propose_product_draft: (a) => proposeProductDraft(a),
+  list_proposals: (a) => listProposals(num(a.limit, 20)),
 };
 
 /** Araç sonucu zarfı — MCP metin içeriği. */

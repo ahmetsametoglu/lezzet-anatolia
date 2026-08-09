@@ -60,6 +60,13 @@ export interface PurgeTargets {
   /** Kimlik profilleri (`user_profiles`) — adresleri CASCADE ile gider. Ayrı müşteri tablosu yok. */
   profileIds?: string[];
   /**
+   * Asistan onay kuyruğu satırları (`assistant_proposal`, 0042). Hiçbir şeye FK'yle bağlı DEĞİL —
+   * `decided_by` dışında bağı yok ve o da `set null`. Yani kimse onu tutmaz ama kimse de
+   * toplamaz: silinmezse kuyruk test önerileriyle dolar ve panel açıldığı gün operatör
+   * kendisinin kurmadığı kalemlerle karşılaşır.
+   */
+  assistantProposalIds?: string[];
+  /**
    * WhatsApp konuşmaları (15.1) — mesajları CASCADE ile gider.
    *
    * Müşteriye bağlı konuşma zaten profil silinince gider (`conversation.customer_id` CASCADE); bu
@@ -137,6 +144,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     supplierIds,
     orderIds,
     profileIds,
+    assistantProposalIds,
     conversationIds,
     temperatureLocations,
     verificationEmails,
@@ -158,6 +166,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     supplierIds: clean(targets.supplierIds),
     orderIds: clean(targets.orderIds),
     profileIds: clean(targets.profileIds),
+    assistantProposalIds: clean(targets.assistantProposalIds),
     conversationIds: clean(targets.conversationIds),
     temperatureLocations: clean(targets.temperatureLocations),
     verificationEmails: clean(targets.verificationEmails),
@@ -195,6 +204,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   // 0b) Sipariş grafiği ÜRÜNDEN VE PROFİLDEN ÖNCE: `order_item.variant_id` restrict ürünü,
   //     `order.customer_id` restrict profili tutar — sipariş dururken ikisi de silinemez.
   //     Rezervasyon AÇIKÇA: `order_id` bağı FK'sız (0006), cascade toplamaz (interface künyesi).
+  // 0a) Asistan önerileri: bağımsız satırlar, sırası önemsiz — ama silinmezlerse hiç toplanmazlar.
+  if (assistantProposalIds.length > 0) {
+    await mustDelete(db, 'assistant_proposal', (q) => q.in('id', assistantProposalIds));
+  }
+
   if (orderIds.length > 0) {
     await mustDelete(db, 'reservation', (q) => q.in('order_id', orderIds));
     await mustDelete(db, 'order', (q) => q.in('id', orderIds)); // kalem/log/discount_use CASCADE

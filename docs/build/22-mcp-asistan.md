@@ -66,7 +66,41 @@ satırında.
     + 5 yaklaşan; talep panosunda 67500 kodu 47 kez sorulmuş (kapsanmıyor) — asistan artık gerçek
     bir haftalık gündem kurabiliyor.
 
-- [ ] (22.3) **Üretim turu — Faz 1 bitince AÇILIR:** ikili anahtar tablosu + Ayarlar paneli ·
+- [~] (22.3) **Faz B — onay kuyruğu: asistan YAZABİLİR, uygulayamaz** *(kullanıcı kararı 09.08;
+  tablo `0042` canlıda)*: `assistant_proposal` + `AssistantProposalService` + payload şemaları +
+  **uygulayıcı kaydı** (`packages/application/src/assistant/apply.ts`) + **yedi öneri tipi** +
+  yedi `propose_*` aracı + `list_proposals` + süre süpürme cron'u (saatte bir) + onay ekranının
+  tasarım brief'i — touches: `supabase/migrations/0042_*`, `packages/types/src/entities/
+  assistant-proposal.schema.ts`, `packages/database/src/services/assistant-proposal.service.ts`,
+  `packages/application/src/assistant/`, `apps/backend/src/mcp/`, `apps/backend/src/jobs/`
+  - **Kapsam TASARIMA göre belirlendi (kullanıcı kararı 09.08).** İlk üç tip "en kolay
+    yazılabilen"e göre seçilmişti (vitrin · tedarik · paket); Claude Design'ın çizdiği beşli ise
+    kullanıcının gerçek iş listesiydi (faturadan stok girişi · para girişi · ürün tamamlama ·
+    bölge önerisi). **Uyuşmazlığın kaynağı benim brief'imdi**: dokuz tipi listeledim ama "bugün
+    uygulanabilir olanlar" ayrımını yazmadım. Değer kolaylığı yendi — dört tip eklendi, tasarım
+    yeniden istenmedi. Sözleşme: `docs/talep/operasyon-asistan-kuyrugu-veri-sozlesmesi.md`.
+  - **Güvenlik ŞEMAYLA kuruldu, prompt'la değil** (petit "fiziksel engel" ilkesi):
+    `product_draft` payload'ında **alerjen ve saklama alanı YOK** — asistan onları teknik olarak
+    yazamaz (gıdada makul görünen bir alerjen satırı en pahalı hatadır). `money_movement` tip
+    kümesinde `order_payment`/`order_refund` YOK — sipariş bakiyesi iki yerden değişemez.
+    `stock_intake` aracı SKT'siz kalemi reddeder (uydurulmuş tarih raftaki gerçeği yanlış gösterir).
+  - **Uygulama sırası ŞEMANIN kısıtından geliyor:** `claimForApply` → gerçek iş →
+    `markApplied`/`markFailed`. Testin ilk hâli kilidi atlıyordu ve `assistant_proposal_decided_status`
+    reddetti — "iki kez uygulanamaz" güvencesi kodda değil VERİDE.
+  - **Uygulayıcılar mevcut servis kapılarını çağırır** (kuyruk ikinci yazma yolu açmaz): `setFeatured` ·
+    `PurchaseOrderService.createDraft` (adetler MOTORDAN) · `BundleService.create` (mutabakat motorda) ·
+    `StockIntakeService.receive` (RPC bölünmezliği) · `MoneyMovementService` · `DeliveryZoneService.
+    replacePostalCodes` (önce okur, üstüne ekler — "ekle" sessizce "değiştir" olmasın) ·
+    `ProductService.updateDetails`. Bölge bildirimi uygulayıcıdan GİTMEZ: `zone_available` cron'u
+    zaten kapsanmış-ve-haberi-gitmemiş bekleyişleri arar.
+  - *Bitti (kısmi):* 21/21 test · tsc + eslint temiz · canlı: 15 araç; `propose_zone_extend`
+    gerçek talep panosundan öneri kurdu ve *"haber bekleyen 3 müşteriye bildirim gider — GERİ
+    ALINAMAZ"* uyarısını üretti. `purgeTestData` yeni hedef `assistantProposalIds`.
+  - **KALAN — panel:** `/operations/assistant` ekranı operasyonda (tasarım geldi, sözleşme
+    yazıldı); benden önce `apps/web/lib/assistant` okuma kapısı + iki server action gelecek.
+    Panel yokken öneriler kuyrukta birikir ve yalnız `list_proposals` ile görülür.
+
+- [ ] (22.4) **Üretim turu — Faz 1 bitince AÇILIR:** ikili anahtar tablosu + Ayarlar paneli ·
   oran sınırı · `mcp_call_log` · OAuth (`well-known`, claude.ai connector — canlıya çıkış 18'e
   bağlı) · onay kuyruğu `assistant_proposal` + operasyon paneli (tasarım ısmarlaması burada) ·
   araç fazları B1/B2 · oturum anahtarı (1 saat + kapsam). Ayrıntı ve sıra `AI_ADMIN_ASSISTANT

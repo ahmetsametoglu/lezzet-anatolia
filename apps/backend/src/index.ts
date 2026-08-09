@@ -22,6 +22,7 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { requestLog, type AppEnv } from './http/request-log';
 import { mcpHandler } from './mcp/route';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
+import { EXPIRE_PROPOSALS, expireProposalsJob } from './jobs/expire-proposals';
 import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
 import { ANALYTICS_INSIGHT, analyticsInsightJob } from './jobs/analytics-insight';
@@ -188,6 +189,14 @@ cron.schedule('*/5 * * * *', () => {
 // yazıyor — ama her başlatmada BAŞKA bir port (ölçülen: 60800) ve 8787'yi bekleyen hiçbir istemci
 // bağlanamıyor. Değeri OLMAYAN bir ayar ile BOŞ bırakılmış bir ayar aynı şeydir: ikisinde de
 // varsayılan geçerlidir.
+// Asistan önerilerinin süre süpürmesi (22.3) — saatte bir. Öneri ömrü saat mertebesinde
+// (varsayılan 24 saat), yani dakikalık bir tur boş dönerdi; saatlik tarama kaydı "süresi doldu"
+// olarak düzeltmeye yeter. Kuyruk okuması zaten bayat satırı göstermiyor — bu iş GÖRÜNTÜYÜ değil
+// KAYDI düzeltir: geçmişte "süresi doldu" ile "reddettim" ayrı görünmeli.
+cron.schedule('35 * * * *', () => {
+  void runJob(EXPIRE_PROPOSALS, expireProposalsJob);
+}, { timezone: 'Europe/Paris' });
+
 const port = Number(process.env.BACKEND_PORT) || 8787;
 serve({ fetch: app.fetch, port }, (info) => {
   logger.info({ port: info.port }, 'backend ayakta');

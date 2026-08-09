@@ -78,6 +78,7 @@ export {
   type AnalyticsDailyFilter,
   type SegmentOptions,
 } from './services/analytics.service';
+export { AssistantProposalService } from './services/assistant-proposal.service';
 export { CourierDayCloseService, CourierDayCollectionService } from './services/courier-day-close.service';
 export { TicketService, TicketQueueService, TicketMessageService, type TicketQueueFilter } from './services/ticket.service';
 export { ConversationService, MessageService, ConversationInboxService } from './services/conversation.service';

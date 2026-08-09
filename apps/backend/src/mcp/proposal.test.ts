@@ -1,0 +1,138 @@
+import { AssistantProposalService, CategoryService, serviceDb } from '@lezzet/database';
+import { purgeTestData } from '@lezzet/database/testing';
+import { APPLIERS, applyProposal } from '@lezzet/application';
+import { PROPOSAL_PAYLOAD_SCHEMAS, resolveLocalizedText, type FeaturedFlagPayload } from '@lezzet/types';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { HANDLERS, TOOLS } from './server-factory';
+
+/**
+ * Onay kuyruğunun GÜVENCELERİ (22.3) — kurgunun kalbi burada kilitleniyor.
+ *
+ * Sınanan şey davranış değil **söz**: "asistan onaysız hiçbir şey yazamaz", "bir öneri iki kez
+ * uygulanamaz", "uygulama normal servis yolundan geçer", "şeması olan her tipin uygulayıcısı var".
+ * Bunların biri gevşerse kuyruk bir güvenlik katmanı olmaktan çıkıp bir formaliteye döner.
+ */
+
+const db = serviceDb();
+const proposals = new AssistantProposalService(db);
+const stamp = Date.now();
+const created: string[] = [];
+let categoryId: string;
+
+beforeAll(async () => {
+  const category = await new CategoryService(db).create({ name: { tr: `Kuyruk testi ${stamp}` } });
+  categoryId = category.id;
+});
+
+afterAll(async () => {
+  await purgeTestData(db, { assistantProposalIds: created, categoryIds: [categoryId] });
+});
+
+/** Damgalı öneri — küresel sayıya bakmadan kendi satırlarımızı izleyebilmek için. */
+async function queueFeatured(isFeatured: boolean) {
+  const payload: FeaturedFlagPayload = { target: 'category', id: categoryId, isFeatured, name: `Kuyruk testi ${stamp}` };
+  const row = await proposals.create({
+    kind: 'featured_flag',
+    payload,
+    summary: `Kuyruk testi ${stamp} ${isFeatured ? 'vitrine' : 'vitrinden'} (${stamp})`,
+    expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+    sourceSession: `test-${stamp}`,
+  });
+  created.push(row.id);
+  return row;
+}
+
+describe('kuyruk bütünlüğü', () => {
+  it('öneri BEKLEYEN doğar ve hiçbir şeyi değiştirmez', async () => {
+    const before = await new CategoryService(db).getById(categoryId);
+    const proposal = await queueFeatured(true);
+
+    expect(proposal.status).toBe('pending');
+    expect(proposal.appliedAt).toBeNull();
+    // Asıl iddia: öneri YAZMAK bir şey UYGULAMAK değildir.
+    const after = await new CategoryService(db).getById(categoryId);
+    expect(after?.isFeatured).toBe(before?.isFeatured);
+  });
+
+  it('aynı öneri İKİ KEZ karara bağlanamaz (yarış veritabanında çözülür)', async () => {
+    const proposal = await queueFeatured(true);
+
+    const first = await proposals.decide(proposal.id, { status: 'rejected', decidedBy: null as unknown as string, note: 'test' });
+    const second = await proposals.decide(proposal.id, { status: 'rejected', decidedBy: null as unknown as string, note: 'ikinci' });
+
+    expect(first?.status).toBe('rejected');
+    // İkinci çağrı hata değil `null` döner: "bu satıra zaten karar verilmiş".
+    expect(second).toBeNull();
+  });
+
+  it('süresi geçmiş öneri kuyrukta GÖRÜNMEZ ve süpürücü onu expired yapar', async () => {
+    const row = await proposals.create({
+      kind: 'featured_flag',
+      payload: { target: 'category', id: categoryId, isFeatured: true, name: `Bayat ${stamp}` },
+      summary: `Bayat öneri ${stamp}`,
+      // Şemada `expires_at > created_at` kısıtı var; bir saniyelik ömür veriyoruz ve bekliyoruz.
+      expiresAt: new Date(Date.now() + 1000).toISOString(),
+      sourceSession: `test-${stamp}`,
+    });
+    created.push(row.id);
+
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const pending = await proposals.listPending(100);
+    expect(pending.some((p) => p.id === row.id)).toBe(false);
+
+    await proposals.expireOverdue();
+    const after = await proposals.getById(row.id);
+    expect(after?.status).toBe('expired');
+  });
+});
+
+describe('uygulama — normal servis yolundan', () => {
+  /**
+   * Sıra ŞEMANIN dayattığı sıradır (`assistant_proposal_decided_status`): önce kilitle
+   * (`claimForApply` — satırı kuyruktan çıkarır ve kararı damgalar), sonra uygula, sonra
+   * sonucu yaz. Bu testin ilk hâli kilidi atlıyordu ve kısıt onu reddetti — yani "iki kez
+   * uygulanamaz" güvencesi yalnız uygulamada değil, veride duruyor.
+   */
+  it('onaylanan öneri GERÇEKTEN uygulanır ve doğan kayıt satıra yazılır', async () => {
+    const proposal = await queueFeatured(true);
+
+    const claimed = await proposals.claimForApply(proposal.id, null as unknown as string);
+    expect(claimed).not.toBeNull();
+    const result = await applyProposal(db, claimed!);
+    const applied = await proposals.markApplied(proposal.id, result);
+
+    expect(result.categoryId).toBe(categoryId);
+    expect(applied.status).toBe('applied');
+    expect(applied.appliedAt).not.toBeNull();
+    // Uygulama SERVİS kapısından geçti: kategori gerçekten vitrine çıktı.
+    const category = await new CategoryService(db).getById(categoryId);
+    expect(category?.isFeatured).toBe(true);
+    expect(resolveLocalizedText(category!.name, 'tr')).toContain(String(stamp));
+  });
+
+  it('uygulama düşerse sebep satırda KALIR (sessiz başarısızlık yok)', async () => {
+    const proposal = await queueFeatured(true);
+    await proposals.claimForApply(proposal.id, null as unknown as string);
+    const failed = await proposals.markFailed(proposal.id, 'test: motor reddetti');
+
+    expect(failed.status).toBe('failed');
+    expect(failed.error).toContain('motor reddetti');
+  });
+});
+
+describe('kayıt eşliği — yazıp uygulayamama hâli olamaz', () => {
+  it('payload şeması olan her tipin bir UYGULAYICISI var (ve tersi)', () => {
+    expect(Object.keys(APPLIERS).sort()).toEqual(Object.keys(PROPOSAL_PAYLOAD_SCHEMAS).sort());
+  });
+
+  it('her propose_* aracının kuyruk tipiyle karşılığı var', () => {
+    const proposeTools = TOOLS.filter((t) => t.name.startsWith('propose_')).map((t) => t.name);
+    expect(proposeTools.length).toBeGreaterThan(0);
+    for (const name of proposeTools) expect(HANDLERS[name]).toBeTypeOf('function');
+  });
+
+  it('ONAY ARACI YOKTUR — asistan kendi önerisini uygulayamaz', () => {
+    const forbidden = TOOLS.filter((t) => /approve|apply|decide|confirm_proposal/i.test(t.name));
+    expect(forbidden).toEqual([]);
+  });
+});

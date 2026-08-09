@@ -13,6 +13,7 @@
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@lezzet/ai": "workspace:*",
+    "@lezzet/application": "workspace:*",
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/i18n": "workspace:*",

@@ -49,6 +49,13 @@ create table public.assistant_proposal (
   -- okumasını istemek, onayı bir formaliteye çevirmenin en hızlı yoludur. Üreten araç yazar.
   summary text not null,
 
+  -- **Öneri NEYE DAYANIYOR** — "şu üç kod 47 kez soruldu", "un eşiğin altında, 8 gün yeter".
+  -- `summary`den ayrı bir alan çünkü ekranda ayrı bir karar girdisi: gerekçesiz bir öneri
+  -- onaylanabilir ama patron neye dayandığını göremediğini BİLMELİ (tasarım bunu soluk/kesikli
+  -- bir kutuyla söylüyor). Nullable ve öyle kalmalı — zorunlu yapmak, asistanı gerekçe
+  -- UYDURMAYA iter; boş bırakabilmek dürüstlüğün ucuz yolu.
+  reason text,
+
   status public.assistant_proposal_status not null default 'pending',
 
   -- ── TAZELİK: ÖNERİNİN SON KULLANMA TARİHİ VARDIR ──────────────────────────
