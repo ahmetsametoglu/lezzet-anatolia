@@ -37,6 +37,32 @@ export const SETTINGS_CACHE_TTL_MS = 30_000;
 const SCOPE_PRIORITY: readonly SettingScope[] = ['warehouse', 'zone', 'channel', 'country', 'global'];
 
 /**
+ * **EN KATISI KAZANAN anahtarlar** — "en dar kazanır" kuralının İSTİSNASI (kullanıcı kararı 09.08).
+ *
+ * ── SORUN NASIL GÖRÜLDÜ ─────────────────────────────────────────────────────
+ * `min_basket_cents`in iki satırı var ve **ikisi ayrı sorulara cevap veriyor**:
+ *   `channel: b2b` 120 € → TİCARİ ŞART. Toptan fiyat vermenin karşılığı; mesafeyle ilgisi yok.
+ *   `zone: <bölge>`  45 € → LOJİSTİK TABAN. Aracın o tura çıkması anlamlı olsun diye.
+ *
+ * "En dar kazanır" bunları rakip sayıyordu ve bölge kanalı eziyordu: o bölgedeki işletme müşterisi
+ * 120 € yerine 45 € ile toptan fiyat alabiliyordu. Kural bugüne dek görünmedi çünkü `zoneId` hiçbir
+ * çağırandan geçmiyordu (07.15); bağlandığı gün ortaya çıktı.
+ *
+ * Bunlar rakip değil, **birlikte karşılanması gereken iki koşul** — o yüzden eşleşen kapsamların
+ * EN YÜKSEĞİ uygulanır. Kısa bir tur, kimseye toptan şartları hediye etmez.
+ *
+ * ── ÖDÜNLEŞME AÇIKÇA YAZILI ─────────────────────────────────────────────────
+ * Bu kuralla bir eşiği dar kapsamda **YÜKSELTEBİLİR ama DÜŞÜREMEZSİNİZ**. Bugün kayıp yok (global
+ * satır 0), ama bir gün "merkez bölgede eşiği düşürelim" istenirse bu kural onu engeller ve o gün
+ * yeni bir karar gerekir — sessizce çalışmayan bir ayar bırakmamak için yazıyor.
+ *
+ * **Yalnız KOŞUL ayarları burada.** `shipping_fee_cents` bilerek DIŞARIDA: o bir koşul değil FİYAT
+ * — Alman müşteri Almanya tarifesini öder, "en pahalısı" değil. Bir ücreti buraya koymak, kapsamın
+ * anlamını sessizce değiştirirdi.
+ */
+const STRICTEST_WINS: ReadonlySet<string> = new Set(['min_basket_cents']);
+
+/**
  * İşletme ayarı servisi (02.6) — DATA_MODEL "Setting", STACK §10.
  *
  * **Ayar env'e/koda gömülmez.** Kesim saati, minimum sepet, kapıda ödeme tavanı gibi değerler işin
@@ -90,10 +116,38 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
     return fallback;
   }
 
-  /** Sayısal ayar — jsonb'den gelen değer metin olabilir; sayı değilse `fallback`'e düşer. */
+  /**
+   * Sayısal ayar — jsonb'den gelen değer metin olabilir; sayı değilse `fallback`'e düşer.
+   *
+   * `STRICTEST_WINS` anahtarlarında çözüm farklıdır: ilk eşleşen değil, eşleşen kapsamların EN
+   * YÜKSEĞİ döner. Gerekçe o sabitin künyesinde — birlikte karşılanması gereken iki koşulu rakip
+   * saymamak için.
+   */
   async getNumber(key: string, fallback: number, scope: SettingScopeContext = {}): Promise<number> {
+    if (STRICTEST_WINS.has(key)) return this.strictestNumber(key, fallback, scope);
     const value = Number(await this.get<unknown>(key, fallback, scope));
     return Number.isFinite(value) ? value : fallback;
+  }
+
+  /**
+   * Eşleşen TÜM kapsamların en katısı (en yükseği). Sayıya çevrilemeyen satır sayılmaz — bozuk bir
+   * değer eşiği sessizce `NaN`'a çevirmemeli; hiç satır yoksa `fallback`.
+   */
+  private async strictestNumber(key: string, fallback: number, scope: SettingScopeContext): Promise<number> {
+    const rows = await this.rowsFor(key);
+    const values: number[] = [];
+
+    for (const scopeType of SCOPE_PRIORITY) {
+      const wanted = scopeIdFor(scopeType, scope);
+      if (scopeType !== 'global' && !wanted) continue;
+
+      const match = rows.find((row) => row.scopeType === scopeType && (scopeType === 'global' || row.scopeId === wanted));
+      if (!match) continue;
+      const value = Number(match.value);
+      if (Number.isFinite(value)) values.push(value);
+    }
+
+    return values.length > 0 ? Math.max(...values) : fallback;
   }
 
   /**

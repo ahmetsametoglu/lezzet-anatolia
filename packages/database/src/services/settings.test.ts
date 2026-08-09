@@ -155,3 +155,51 @@ describe('seed varsayılanları (02.7)', () => {
     expect(await settings.get('delivery_proof_required', {})).toEqual({ b2b: true, b2c: false });
   });
 });
+
+/**
+ * **EN KATISI KAZANAN çözüm** (`STRICTEST_WINS`, kullanıcı kararı 09.08) — yalnız koşul ayarları.
+ *
+ * Kural neden var: `min_basket_cents`in iki satırı iki AYRI soruya cevap veriyor — `channel: b2b`
+ * bir ticari şart (toptan fiyatın karşılığı, mesafeyle ilgisi yok), bölge satırı bir lojistik taban
+ * (aracın o tura çıkması anlamlı olsun). "En dar kazanır" bunları rakip sayıp bölgeyi kanalın önüne
+ * geçiriyordu: o bölgedeki işletme müşterisi 120 € yerine 45 € ile toptan fiyat alabiliyordu.
+ *
+ * Test SAHTE kapsam kimlikleriyle koşar (`zone-<damga>` · `wh-<damga>`): paylaşılan veritabanında
+ * gerçek `channel: b2b` satırına dokunmak, TÜM suite'in okuduğu bir satırı kirletmek olurdu
+ * (`CLAUDE §4b`). Ayrım için DAR kapsama düşük, GENİŞ kapsama yüksek değer yazılıyor — eski kural
+ * dar olanı, yeni kural yüksek olanı döndürür.
+ */
+describe('en katısı kazanan koşul ayarları (09.08)', () => {
+  const zoneId = `zone-${stamp}`;
+  const warehouseId = `wh-${stamp}`;
+
+  afterEach(async () => {
+    await db.from('settings').delete().eq('key', 'min_basket_cents').in('scope_id', [zoneId, warehouseId]);
+    SettingsService.invalidate();
+  });
+
+  it('DAR kapsam düşükse geniş olan kazanır — eşik gevşetilemez', async () => {
+    await settings.set('min_basket_cents', 8000, { scopeType: 'zone', scopeId: zoneId });
+    await settings.set('min_basket_cents', 4500, { scopeType: 'warehouse', scopeId: warehouseId });
+
+    // "En dar kazanır" olsaydı 4500 dönerdi (depo, bölgeden dar).
+    expect(await settings.getNumber('min_basket_cents', 0, { zoneId, warehouseId })).toBe(8000);
+  });
+
+  it('tek kapsam eşleşiyorsa o değer döner — kural yalnız ÇAKIŞMADA fark yaratır', async () => {
+    await settings.set('min_basket_cents', 4500, { scopeType: 'zone', scopeId: zoneId });
+    expect(await settings.getNumber('min_basket_cents', 0, { zoneId })).toBe(4500);
+  });
+
+  it('hiç kapsam eşleşmiyorsa global okunur, `fallback` uydurulmaz', async () => {
+    const global = await settings.getNumber('min_basket_cents', -1);
+    expect(await settings.getNumber('min_basket_cents', -1, { zoneId: 'yok', warehouseId: 'yok' })).toBe(global);
+  });
+
+  it('FİYAT ayarı bu kuralın DIŞINDA — Alman müşteri Almanya tarifesini öder, en pahalısını değil', async () => {
+    // `shipping_fee_cents` bilerek listede yok: kapsam orada "hangi tarife" sorusunun cevabı.
+    // Seedli satırlar: global 790 · country DE 1290. En dar (ülke) kazanmalı.
+    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'DE' })).toBe(1290);
+    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'FR' })).toBe(790);
+  });
+});
