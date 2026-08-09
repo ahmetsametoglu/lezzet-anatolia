@@ -47,18 +47,16 @@ export type ProductVariantUpdate = z.infer<typeof ProductVariantUpdateSchema>;
 export const ProductVariantEntrySchema = ProductVariantSchema.pick({
   label: true,
   netWeightG: true,
+  /**
+   * Paket içi adet. **Bir tur OPSİYONEL kaldı ve sebebi kayıt olarak duruyor:** kolon geldiğinde
+   * (05.14) formda girdisi yoktu; zorunlu yapmak hem operasyon formunun derlemesini kırar hem de
+   * alanı hiç göstermeyen bir ekranın, üretecin bulduğu değeri her kayıtta `null`'a ezmesine yol
+   * açardı. Form aynı gün yazıldı (operasyon şeridi, 09.08) ve alan artık her kayıtta gönderiliyor
+   * — ölçüldü: `variant-editor` · `product-form-schema` (yükleme + gönderme) · `createProductAction`.
+   */
+  piecesCount: true,
   minStockQty: true,
   sku: true,
   isActive: true,
-}).extend({
-  id: z.string().uuid().optional(),
-  /**
-   * Paket içi adet — **OPSİYONEL, kardeşlerinin aksine.** Alanı bugün yalnız besleme üreteci
-   * yazıyor; operasyon formunda henüz girdisi yok (talep açıldı). Zorunlu yapılsaydı formun
-   * derlemesi bu turda kırılırdı ve alanı hiç göstermeyen bir ekran, olmayan bir değeri her
-   * kayıtta `null`'a ezerdi. Verilmeyen alan YAZILMAZ (`syncVariants`) — form gelene kadar
-   * üretecin yazdığı değer olduğu yerde kalır.
-   */
-  piecesCount: ProductVariantSchema.shape.piecesCount.optional(),
-});
+}).extend({ id: z.string().uuid().optional() });
 export type ProductVariantEntry = z.infer<typeof ProductVariantEntrySchema>;

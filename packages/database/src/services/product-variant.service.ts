@@ -67,13 +67,13 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
       const fields = {
         label: e.label,
         netWeightG: e.netWeightG,
+        // Adet artık koşulsuz yazılıyor: formda girdisi var (09.08). Bir tur koşullu kalmıştı —
+        // alanı göstermeyen bir ekran, üretecin bulduğu değeri her kayıtta `null`'a ezerdi.
+        piecesCount: e.piecesCount,
         minStockQty: e.minStockQty,
         sku: e.sku,
         isActive: e.isActive,
         sortOrder: i,
-        // Adet VERİLDİĞİNDE yazılır, verilmediğinde dokunulmaz. Formda girdisi yok (05.14 talebi):
-        // koşulsuz yazsaydık her kayıt, üretecin bulduğu adedi sessizce `null`'a ezerdi.
-        ...(e.piecesCount !== undefined ? { piecesCount: e.piecesCount } : {}),
       };
       result.push(e.id ? await this.update({ id: e.id, ...fields }) : await this.insert({ productId, ...fields }));
     }
