@@ -60,6 +60,23 @@ export interface CheckoutSnapshot {
     orderTotalCents: number;
     minBasketOk: boolean;
     missingForMinBasketCents: number;
+    /**
+     * Eşiklerin DAYANDIĞI yer — "67000 Strasbourg" (08.13).
+     *
+     * Asgari sepet bir sistem sabiti değil, **seçilen adresin bölgesinin** ayarıdır (kapsam:
+     * depo → bölge → kanal → ülke → global). Sepet bu sayıyı ÇEREZTEKİ koda göre gösteriyor,
+     * checkout ADRESE göre hesaplıyor; ikisi ayrı yere düşen müşteride sayı değişir ve sayıyı
+     * yalnız başına gösteren cümle "az önce başka bir şey yazıyordu" hissi bırakır.
+     *
+     * Yer cümlenin İÇİNDE, ayrı bir uyarıda değil: fark çoğu müşteride hiç yaşanmaz, onu her
+     * sepette anlatmak gürültü olurdu (08.30 kararı). Duvarın kendisi çıktığında ise sebebi
+     * taşıması gerekiyor — ve yer her hâlde doğru bir bilgidir, fark olsun olmasın.
+     *
+     * "Fark var mı" ayrıca HESAPLANMADI ve bu bilinçli: çerez kapsamıyla ikinci bir ayar okuması,
+     * ekranın gösterdiği sayının ikinci bir kaynağı olurdu — bir gün ötekiyle çelişirdi. Yer tek
+     * kaynaktan (seçili adres) geliyor.
+     */
+    placeLabel: string;
   } | null;
 }
 
@@ -161,6 +178,11 @@ export async function loadCheckoutAction(
           orderTotalCents: options.orderTotalCents,
           minBasketOk: options.minBasketOk,
           missingForMinBasketCents: options.missingForMinBasketCents,
+          // Eşiği hangi yerin belirlediği: seçili adresin kendisi. Bölge ADI değil posta kodu +
+          // şehir, çünkü müşteri kendi bölgemizin adını ("Strasbourg Merkez") bilmiyor — adresini
+          // biliyor. `resolveDelivery` zaten bölge adını taşımıyor; ikinci bir okuma açmaya da
+          // gerek yok.
+          placeLabel: `${selected.postalCode} ${selected.city}`,
         },
       },
       errorKey: null,

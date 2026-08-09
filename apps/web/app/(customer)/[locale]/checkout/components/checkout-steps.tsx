@@ -561,9 +561,14 @@ export function OrderSummary(props: CheckoutViewProps) {
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.summary.blockedTotal}</p>
       )}
 
+      {/* Alt sınır YERE bağlıdır ve cümle bunu söyler (08.13): sepet eşiği çerezdeki koda göre
+          gösterir, checkout seçilen ADRESE göre hesaplar — ikisi ayrı bölgeye düşen müşteride sayı
+          değişir. Yalnız sayıyı yazan bir cümle "az önce başka bir şey diyordu" hissi bırakırdı;
+          yeri taşıyan cümle farkı kendiliğinden açıklar. */}
       {payment && !payment.minBasketOk && (
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">
           {t.summary.minBasket
+            .replace('{place}', payment.placeLabel)
             .replace('{min}', formatPrice(payment.orderTotalCents + payment.missingForMinBasketCents, locale))
             .replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale))}
         </p>

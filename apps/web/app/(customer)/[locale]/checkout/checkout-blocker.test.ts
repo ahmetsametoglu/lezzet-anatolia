@@ -19,6 +19,9 @@ const payment: NonNullable<CheckoutSnapshot['payment']> = {
   orderTotalCents: 4000,
   minBasketOk: true,
   missingForMinBasketCents: 0,
+  // Eşiğin dayandığı yer (08.13) — engel kararına GİRMEZ, yalnız cümlede geçer. Fixture'da gerçek
+  // bir değer duruyor ki "boş string de geçer" gibi bir sessiz varsayım doğmasın.
+  placeLabel: '67000 Strasbourg',
 };
 
 const delivery: NonNullable<CheckoutSnapshot['delivery']> = {
