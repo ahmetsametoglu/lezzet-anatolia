@@ -150,6 +150,10 @@ const EMPTY_VIEW: MeCartView = {
   totalCents: 0,
   itemCount: 0,
   hasBlocked: false,
+  /* Teslim edilemeyen kalemlerin tutarı — boş sepette sıfır, çünkü kalem yok. Asgari sepet bu
+     tutarı MATRAHTAN düşüyor (kullanıcı kararı 10.08): sipariş edilemeyecek bir kalemle eşiği
+     geçmiş görünen müşteri, kasada geri düşerdi. */
+  undeliverableSubtotalCents: 0,
   minBasketOk: false,
   missingForMinBasketCents: 0,
   minBasketCents: 0,
@@ -157,6 +161,10 @@ const EMPTY_VIEW: MeCartView = {
   shippingSubtotalCents: 0,
   shippingTariffCents: 0,
   shippingOnly: false,
+  /* Kargo grubunun çözülmüş ücreti ve eşiğe kalan — boş sepette ikisi de sıfır: ödenecek kargo
+     yok, aşılacak eşik yok. */
+  shippingGroupFeeCents: 0,
+  shippingFreeRemainingCents: 0,
 };
 
 const EMPTY_CART: CartState = {

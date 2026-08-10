@@ -1,0 +1,17 @@
+{
+  "tr": {
+    "campaign": "Kampanya",
+    "campaignPercent": "Kampanya · %{percent}",
+    "customerRate": "Size özel · %{percent}"
+  },
+  "fr": {
+    "campaign": "Promotion",
+    "campaignPercent": "Promotion · {percent} %",
+    "customerRate": "Votre remise · {percent} %"
+  },
+  "de": {
+    "campaign": "Aktion",
+    "campaignPercent": "Aktion · {percent} %",
+    "customerRate": "Ihr Rabatt · {percent} %"
+  }
+}

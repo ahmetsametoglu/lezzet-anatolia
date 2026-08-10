@@ -226,12 +226,20 @@ export {
   EMPTY_CART,
   cartBlockReason,
   cartBlockedAnalyticsReason,
+  /* Kalemin ÜÇ yoldan hangisine düştüğü — kapıya teslim · kargo · bu adrese hiç gelemez
+     (kullanıcı kararı 10.08). Karar TEK yerde: iki yüzey aynı sepete aynı cevabı versin diye
+     terfi edildi; mobil ekranı elle filtre yazıyordu ve `not_shippable_here` kalemi "kapıya
+     teslim" grubuna sokuyordu — müşteri engeli ancak kasada görüyordu. */
+  cartGroupOf,
   cartKey,
   discountAmountOf,
   entryOf,
   entryOfItem,
   isSplitCart,
   itemOfEntry,
+  /* Siparişe GİREBİLECEK kalemler — gelemeyenler sepette KALIR, silinmez ve sildirilmez
+     (kullanıcı kararı 10.08): yarın bölge içi bir adres eklendiğinde o kalem yine lazım. */
+  orderableLines,
   shippingGroupFee,
   splitByRoute,
   storedPrices,

@@ -23,8 +23,15 @@ export interface SummaryRow {
   key: string;
   label: string;
   value: string;
-  /** İndirim satırı zeytin yazılır (v3:466) — kazanç, gidere benzemesin. */
-  tone?: 'muted' | 'olive';
+  /**
+   * `olive` indirim satırı (v3:466) — kazanç, gidere benzemesin.
+   * `danger` bu siparişe GİRMEYEN kalem (kullanıcı kararı 10.08): kalem özetten gizlenmez, üstü
+   * çizilir ve kırmızı yazılır. Gizlemek müşteriye "herhâlde bunları alıyorum" dedirtiyordu —
+   * karar özetin uzağında, adresin yanında duruyor ve uyarı gibi okunmuyordu.
+   */
+  tone?: 'muted' | 'olive' | 'danger';
+  /** Satırın üstü çizilsin mi — `danger` kalem satırlarında; açıklama satırında değil. */
+  strike?: boolean;
 }
 
 interface SummaryPanelProps {
@@ -52,12 +59,17 @@ export function SummaryPanel({
   return (
     <View style={styles.panel} testID={testID}>
       {eyebrow === undefined ? null : <Text style={styles.eyebrow}>{eyebrow}</Text>}
-      {rows.map((row) => (
-        <View key={row.key} style={styles.row}>
-          <Text style={[styles.label, row.tone === 'olive' ? styles.oliveLabel : styles.mutedLabel]}>{row.label}</Text>
-          <Text style={[styles.label, row.tone === 'olive' ? styles.oliveLabel : styles.mutedLabel]}>{row.value}</Text>
-        </View>
-      ))}
+      {rows.map((row) => {
+        const toneStyle =
+          row.tone === 'olive' ? styles.oliveLabel : row.tone === 'danger' ? styles.dangerLabel : styles.mutedLabel;
+        const strike = row.strike === true ? styles.struck : null;
+        return (
+          <View key={row.key} style={styles.row}>
+            <Text style={[styles.label, toneStyle, strike]}>{row.label}</Text>
+            {row.value === '' ? null : <Text style={[styles.label, toneStyle, strike]}>{row.value}</Text>}
+          </View>
+        );
+      })}
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>{totalLabel}</Text>
         {/* Dönüş DIŞ sarmalayıcıda: rozetin kendi dönüşü ile ileride gelebilecek basılı ölçek
@@ -102,6 +114,15 @@ const styles = StyleSheet.create((theme) => ({
   oliveLabel: {
     color: theme.colors['olive-dark'],
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+  },
+  /* Sistemin hata kırmızısı (`error` token'ı) — ham hex YASAK (CLAUDE §3) ve karanlık modda dönen
+     tek renk budur. Tailwind'in sabit kırmızısı burada kullanılmaz. */
+  dangerLabel: {
+    color: theme.colors.error,
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+  },
+  struck: {
+    textDecorationLine: 'line-through',
   },
   totalRow: {
     flexDirection: 'row',

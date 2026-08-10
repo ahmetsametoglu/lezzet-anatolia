@@ -1,6 +1,6 @@
 import { meetsMinBasket, resolveShippingFee } from '@lezzet/domain-core';
 import type { CouponRejection, ShippingFeeResult } from '@lezzet/domain-core';
-import type { AnalyticsBlockedReason, CartItem } from '@lezzet/types';
+import type { AnalyticsBlockedReason, CartItem, CartLineGroup } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontImage } from '../catalog/storefront-types';
@@ -218,6 +218,15 @@ interface CartLineView {
    */
   availableHere: number | null;
   /**
+   * Kalemin GRUBU (10.08) — `route`un ekrana ve siparişe bakan izdüşümü. Künyesi tek yerde:
+   * `cartGroupOf`.
+   *
+   * `route` ile birlikte, AYNI anda ve AYNI kaynaktan doldurulur (`decideRoutes`'un hemen ardından):
+   * ikinci bir hesap değil, kararın okunabilir hâli. Ayrı ayrı türetilseydi — ki 10.08'e kadar öyleydi
+   * — her yüzey kendi süzgecini yazar ve biri mutlaka `not_shippable_here`ı yutardı.
+   */
+  group: CartLineGroup;
+  /**
    * PAKET satırının salt-okunur içeriği (K27) — varyant satırında boş dizi.
    *
    * Sepette gösterilmesi tasarımın kararı: müşteri "Bayram Sofrası"nın ne olduğunu satın alma
@@ -266,8 +275,25 @@ export interface CartView {
   totalCents: number;
   /** Toplam adet — başlıktaki sepet rozetinin sayısı. */
   itemCount: number;
-  /** Çıkarılmadan devam edilemeyecek satır var mı — "Checkout'a geç" pasifleşir. */
+  /**
+   * **SATILAMAZ** satır var mı (tükendi / satışa kapandı) — "Checkout'a geç" bunda pasifleşir.
+   *
+   * Anlamı 10.08'de değişmedi, SINIRI yazıldı: teslim edilemeyen kalem (`group: 'undeliverable'`)
+   * buraya girmez ve düğmeyi kapatmaz — müşteri gelebilecekleri sipariş eder, gelemeyenler sepette
+   * işaretli bekler (kullanıcı kararı 10.08). İkisi tek bayrağa toplansaydı tek bir soğuk zincir
+   * ürün bütün sepeti kilitlerdi ve müşterinin elinde çıkışsız bir ekran kalırdı.
+   */
   hasBlocked: boolean;
+  /**
+   * Bu adrese HİÇ gelemeyen kalemlerin toplamı — **asgari sepete SAYILMAYAN tutar** (10.08).
+   *
+   * `subtotalCents` sepette DURAN her şeyi sayar (ekran müşterinin sepetini eksiksiz gösterir);
+   * eşik ise yalnız sipariş edilebilen kısma bakar. Ayrılmasaydı müşteri sipariş edemeyeceği bir
+   * ürünle eşiği geçmiş görünür, kasada geri düşerdi — sepette bir söz verip checkout'ta tutmamanın
+   * bu dosyada birkaç kez künyelenmiş hâli. `minBasketOk` ve `missingForMinBasketCents` bu tutar
+   * ZATEN düşülmüş olarak gelir; okuyan taraf ikinci bir çıkarma yapmaz.
+   */
+  undeliverableSubtotalCents: number;
   /** Asgari sepet tutuyor mu (DOMAIN §6, ayardan gelir); tutmuyorsa eksik tutar. */
   minBasketOk: boolean;
   missingForMinBasketCents: number;
@@ -317,6 +343,7 @@ export const EMPTY_CART: CartView = {
   totalCents: 0,
   itemCount: 0,
   hasBlocked: false,
+  undeliverableSubtotalCents: 0,
   minBasketOk: false,
   missingForMinBasketCents: 0,
   minBasketCents: 0,
@@ -422,23 +449,74 @@ export function cartBlockedAnalyticsReason(view: CartView): AnalyticsBlockedReas
 }
 
 /**
- * Sepetin İKİ GRUBU (19.7) — kapıya gidenler + kargoyla gidenler.
+ * **KALEM HANGİ GRUPTA — kararın TEK yeri** (kullanıcı kararı 10.08).
  *
- * **Ayrımın TEK yeri.** Üç yer birden soruyor: sepet ekranı (iki grup çizer), mobil alt çubuk
- * (yalnız rota grubunu taşır) ve checkout istemcisi (siparişe hangi kalemler girecek). Üçü ayrı
- * ayrı `route === 'shipping'` yazsaydı kural üç yerde bakıma kalırdı — ve ayrışan bir kopya
- * burada "ekranda gördüğüm kalem siparişe girmedi" demek.
+ * Üç grup, üçü de bir YOL: `local` kapıya teslim (bizim aracımız; soğuk zincir olan budur),
+ * `shipping` NORMAL kargo (soğuk zincir değil), `undeliverable` bu adrese hiç gelemez. Dördüncü hâl
+ * `unavailable` bir yol değil ENGELDİR ve ayrı konuşur (`blocked` / `hasBlocked`) — bu yüzden burada
+ * kendi grubu yoktur, ana grupta durur ve çıkışını başka kapılar verir.
  *
- * Kargo grubuna YALNIZ motorun oraya koyduğu kalem girer; geri kalan her şey — yolu çözülmemiş
- * satır, paket, engelli kalem — ana grupta kalır. Yön bilinçli: bilinmeyen bir satırı ana akıştan
- * çıkarmak, müşterinin siparişinden sessizce kalem düşürmek olurdu. Paket zaten tanım gereği
- * bölünmez (`route: null`) — yolu checkout'ta bütünü üzerinden çözülür.
+ * **Neden bir fonksiyon:** aynı soru dört yerde soruluyordu (sepet ekranı, checkout istemcisi,
+ * checkout taslağı, mobil sepet) ve dördü ayrı ayrı `route === 'shipping'` yazıyordu. Ölçülen sonuç
+ * (10.08): mobil sepet `route !== 'shipping'` diyerek teslim edilemeyen kalemi "kapıya teslim"
+ * grubuna sokuyor, ekranda hiçbir uyarı çıkmıyor, engel ancak checkout'ta doğuyordu. Kararın
+ * kopyası, ayrıştığı gün "ekranda gördüğüm kalem siparişe girmedi" demektir.
+ *
+ * **Bilinmeyen yol (`null`) ana gruba düşer** ve bu yön bilinçli: yolu çözülmemiş satırı — paket
+ * dahil — ana akıştan çıkarmak, müşterinin siparişinden sessizce kalem düşürmek olurdu. Paket zaten
+ * tanım gereği bölünmez; yolu checkout'ta bütünü üzerinden çözülür.
+ */
+export function cartGroupOf(line: Pick<CartLine, 'route'>): CartLineGroup {
+  if (line.route === 'shipping') return 'shipping';
+  // Soğuk zincir + bu adresin deposunda yok: ne araç gider ne kargo çıkar (motorun `not_shippable_here`ı).
+  if (line.route === 'not_shippable_here') return 'undeliverable';
+  return 'local';
+}
+
+/**
+ * SİPARİŞİN kapsayabildiği satırlar (10.08) — teslim edilemeyen kalem düşer, ötekiler kalır.
+ *
+ * **Düşmek SİLİNMEK değildir:** kalem sepette durmaya devam eder ve müşteriye sildirilmez — yarın
+ * bölge içi bir adres eklerse o kalem ona lazım. Burada yapılan tek şey, açılacak siparişin
+ * kapsamını çizmek: gelemeyecek bir kalemi siparişe yazmak, ya rezervasyonda patlar ya da müşteriye
+ * teslim edilemeyecek bir mal satar.
+ *
+ * `unavailable` yollu ve `blocked` satırlar BURADA elenmez: onlar "engel"dir ve kendi kapılarında
+ * ret üretmeye devam ederler (`blocked_lines`). İkisini tek süzgeçte toplamak, satılamayan bir
+ * kalemi sessizce siparişten düşürüp müşteriye haber vermemek olurdu.
+ */
+export function orderableLines(lines: readonly CartLine[]): CartLine[] {
+  return lines.filter((l) => cartGroupOf(l) !== 'undeliverable');
+}
+
+/**
+ * Sepetin İKİ ŞERİDİ (19.7) — kapıya gidenler + kargoyla gidenler. **Kararı `cartGroupOf` verir.**
+ *
+ * Üç yer birden soruyor: sepet ekranı (iki grup çizer), mobil alt çubuk (yalnız rota grubunu taşır)
+ * ve checkout istemcisi (siparişe hangi kalemler girecek).
+ *
+ * **Teslim edilemeyen kalem `route` şeridinde KALIR** ve bu bilinçli (kullanıcı kararı 10.08):
+ * ekranda görünmeye devam etmeli — sepetten silinmiyor, müşteriye sildirilmiyor, yalnız işaretli
+ * duruyor. Şeritten çıkarsaydı satır listeden sessizce kaybolur, müşteri sepetini eksik görürdü.
+ * Siparişin kapsamı ayrı bir sorudur ve ayrı bir kapısı vardır (`orderableLines`) — "ekranda
+ * nerede duruyor" ile "siparişe giriyor mu" aynı soru değil.
  */
 export function splitByRoute(lines: readonly CartLine[]): { route: CartLine[]; shipping: CartLine[] } {
   return {
-    route: lines.filter((l) => l.route !== 'shipping'),
-    shipping: lines.filter((l) => l.route === 'shipping'),
+    route: lines.filter((l) => cartGroupOf(l) !== 'shipping'),
+    shipping: lines.filter((l) => cartGroupOf(l) === 'shipping'),
   };
+}
+
+/**
+ * Teslim edilemeyen kalemlerin toplamı — asgari sepete SAYILMAYAN tutar (`CartView` künyesi).
+ *
+ * Fiyatı çözülememiş satır 0 katar: sepet okuması orada `lineTotalCents: null` üretiyor ve
+ * bilinmeyen bir tutarı sıfır saymakla toplamayı reddetmek arasında fark yok — eksilteceği bir şey
+ * yok (`CLAUDE §1`: ölçülemeyen değer sıfır değildir; burada ölçüm zaten toplama girmiyor).
+ */
+export function undeliverableTotalOf(lines: readonly CartLine[]): number {
+  return lines.reduce((sum, l) => (cartGroupOf(l) === 'undeliverable' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
 }
 
 /**
@@ -570,8 +648,14 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
       return qty === l.qty ? l : { ...l, qty, lineTotalCents: l.unitPriceCents === null ? null : l.unitPriceCents * qty };
     });
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  /**
+   * Teslim edilemeyen kalemler eşiğe SAYILMAZ (10.08) — sunucu okumasıyla birebir aynı kural.
+   * Burada da uygulanmasaydı adet değiştiren müşteri, sunucu turu dönene kadar eşiği geçmiş
+   * görünür ve "Siparişi tamamla"ya bastığında geri düşerdi.
+   */
+  const undeliverableSubtotalCents = undeliverableTotalOf(lines);
   // Eşik kuralı MOTORDAN sorulur, burada yeniden yazılmaz — sunucu okumasıyla aynı karar.
-  const basket = meetsMinBasket(subtotalCents, view.minBasketCents);
+  const basket = meetsMinBasket(subtotalCents - undeliverableSubtotalCents, view.minBasketCents);
   /**
    * KARGO grubunun sayıları da tazelenir. Yoksa kargo satırının adedini artıran müşteri, sunucu
    * turu dönene kadar eski grup toplamını ve "ücretsiz kargoya X kaldı" cümlesini okur — üstelik
@@ -602,6 +686,7 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
     // satırı yoktur ama sepette vardır — rozet onu beklemeden göstermeli.
     itemCount: entries.reduce((sum, e) => sum + e.qty, 0),
     hasBlocked: lines.some((l) => l.blocked),
+    undeliverableSubtotalCents,
     minBasketOk: basket.ok,
     missingForMinBasketCents: basket.missingCents,
   };

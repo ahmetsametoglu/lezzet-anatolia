@@ -24,6 +24,9 @@ import { addressLine } from '@/screens/customer-kit/address-format';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { cartLineId, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
+import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
+import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
+import { useAddressCartView } from '@/screens/customer-kit/use-address-cart.hook';
 import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
@@ -62,6 +65,13 @@ import messages from './messages.json';
   Şablonun `confirmBlock`u ile aynı sıra, sunucunun gerçekleriyle genişletilmiş: doğrulama →
   adres → tazeleme → kargo engeli → asgari sepet → gün → ödeme. Sebep düğmenin ÜSTÜNDE yazılı ve
   düğme engelli: kuralı basmadan önce göstermek, kullanıcıyı denemeye zorlamaktan iyi.
+
+  ── GELEMEYEN KALEM ENGEL DEĞİL, KAPSAM SORUSUDUR (kullanıcı kararı 10.08) ──
+  Bu adrese hiç gelemeyen kalem (soğuk zincir + rota dışı adres) siparişin DIŞINDA kalır ve sepette
+  bekler; sipariş gelebilecek kalemlerle açılır (`orderableLines`, `@lezzet/application`). Ekranın
+  üç sonucu: kırmızı engel kutusu bilgi satırına indi, özet yalnız siparişe gireni yazar, onay
+  düğmesi AÇIK kalır. Adres değişince anlık görüntü zaten tazeleniyor — bölge içi bir adres
+  seçildiğinde o kalemler kendiliğinden siparişe girer, ayrıca kodlanmadı.
 
   ── RETLER TEK CÜMLEYE İNDİRGENMEZ ──────────────────────────────────────────
   On beş adlı ret ayrı ayrı karşılanıyor (`order-result-copy.ts`); her ret sonrası anlık görüntü
@@ -109,7 +119,12 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const customer = meStatus === 'ready' ? me : null;
 
   /** Seçili adres; `null` = "sunucu karar versin" (varsayılan, yoksa ilk adres — uç künyesi). */
-  const [addressId, setAddressId] = useState<string | null>(null);
+  /* ADRES SEÇİMİ ORTAK DEPODA (kullanıcı kararı 10.08) — ekran içi `useState` DEĞİL. Sepet de aynı
+     adresi okuyor ve orada da değiştirilebiliyor; iki ekran ayrı state tutsaydı sepette seçilen
+     adres checkout'a taşınmaz ve az önce kapatılan ayrışma (sepette bir gerçek, burada başka) geri
+     açılırdı. `null` = müşteri seçmedi, varsayılan geçerli (deponun künyesi). */
+  const addressId = useSelectedDeliveryAddress();
+  const setAddressId = selectDeliveryAddress;
   /** Adres çekmecesi — kitin ortak formu, hesap ekranıyla AYNI (10.08). Kapalıyken `null`. */
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
@@ -219,12 +234,60 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      `null`) ve yerel kayıt onu taşıyor; sepet ekranının süzgeci burada da geçerli, yoksa aynı
      paket biri adsız iki kez yazılırdı. */
   const localBundleIds = new Set(cart.bundles.map((bundle) => bundle.id));
-  const viewLines = cart.view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
+  /* SEPET ADRESLE ÇÖZÜLÜR (kullanıcı kararı 10.08) — künyesi `use-address-cart.hook`ta. Adres henüz
+     bilinmiyorsa gezinme görünümüne düşülür; ekranı boş bırakmaktansa bir adım eski bir doğru. */
+  const addressView = useAddressCartView(locale, selectedAddress?.postalCode ?? null, cart.couponCode);
+  const view = addressView ?? cart.view;
+  const viewLines = view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
+
+  /* ── BU SİPARİŞİN KAPSAMI (kullanıcı kararı 10.08) ────────────────────────
+     Bu adrese hiç gelemeyen kalem siparişe GİRMEZ ama sepetten de silinmez; sunucu onu kapsam
+     dışında bırakıp siparişi açıyor (`orderableLines`, `@lezzet/application`).
+
+     GRUP ARTIK ADRESİN CEVABI (`addressView`) — eski iki koşullu süzgeç SÖKÜLDÜ ve sebebi ölçüldü
+     (10.08, cihazda): grup gezinme koduyla çözülüyordu, kod rota İÇİ olduğu an hiçbir satır
+     `undeliverable` olmuyor ve süzgeç hiçbir şey düşürmüyordu. Sepet 67000 ile kurulup adres 67380
+     seçilince özet dört kalemi de yazıyordu (76,95 €) — ekranın kendi uyarısı aynı anda "bu
+     kalemler siparişe eklenmiyor" derken. Tek kaynak, tek cevap: satırın grubu.
+
+     Kalem GİZLENMEZ, üstü çizilir (kullanıcı kararı 10.08): özetten sessizce çıkan kalem,
+     müşteriye "herhâlde bunları alıyorum" dedirtiyordu — uyarı özetten uzakta, adresin yanındaydı
+     ve uyarı gibi okunmuyordu. Artık kararın kendisi özetin İÇİNDE yazılı. */
+  const droppedLines = viewLines.filter((line) => line.group === 'undeliverable');
+  const orderedLines = viewLines.filter((line) => line.group !== 'undeliverable');
+
+  /**
+   * Özetin ara toplamı — SİPARİŞE GİREN kalemlerin toplamı.
+   *
+   * İki sunucu sayısının farkı; ekranın kendi aritmetiği DEĞİL: matrahı sunucu da tam olarak böyle
+   * kuruyor (`subtotalCents − undeliverableSubtotalCents`, asgari sepet eşiğinin girdisi) ve
+   * sözleşme bu alanı zaten "ekran yazabilir" diye taşıyor. Ham çıkarma yerine listelenen satırları
+   * toplasaydık, fiyatı çözülememiş bir satır (`lineTotalCents: null`) sessizce sıfır sayılırdı.
+   */
+  const orderedSubtotalCents = view.subtotalCents - view.undeliverableSubtotalCents;
+
+  /* Hangi kalemler olduğu SÖYLENİR ama ancak biliniyorsa: sepet görünümü başka bir posta koduyla
+     çözülmüşse elimizde ad yoktur ve uydurulmuş bir liste, yanlış ürünü aratırdı. */
+  const undeliverableText =
+    droppedLines.length === 0
+      ? t.undeliverable.body
+      : `${t.undeliverable.body} ${t.undeliverable.items.replace('{items}', droppedLines.map((line) => line.name).join(', '))}`;
 
   const shippingFeeLabel =
     payment === null ? t.summary.pending : payment.shippingFeeCents === 0 ? t.summary.free : formatPrice(payment.shippingFeeCents, locale);
-  /** Ödenecek TOPLAM sunucunun kararıdır; adres seçilmeden yalnız kalem toplamı bilinir. */
-  const grandTotalCents = payment?.orderTotalCents ?? cart.view.totalCents;
+  /**
+   * Ödenecek TOPLAM sunucunun kararıdır; adres seçilmeden yalnız kalem toplamı bilinir.
+   *
+   * Anlık görüntü artık siparişin KAPSAMINI matrah alıyor (10.08): `readCheckoutSnapshot` hem
+   * kalemleri `orderableLines` ile süzüyor hem eşiği `totalCents − undeliverableSubtotalCents`
+   * üzerinden ölçüyor — yani bu sayı taslağın tahsil edeceğiyle aynı kapsamdan çıkıyor. Ekran onu
+   * kendi hesaplamaz ve hesaplamamalı: indirim ve kargo ücreti sunucunun kararı, istemci uydurursa
+   * kasada kesilenden başka bir sayı gösterir.
+   */
+  const grandTotalCents = payment?.orderTotalCents ?? view.totalCents;
+
+  /* Türetme SEPETLE ORTAK (`discountSummaryOf`) — künyesi kitte. */
+  const discountSummary = discountSummaryOf(view.discount, locale);
 
   const summaryRows: SummaryRow[] = [
     ...cart.bundles.map((bundle) => ({
@@ -232,29 +295,57 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       label: t.summary.line.replace('{quantity}', String(bundle.quantity)).replace('{name}', bundle.name),
       value: formatPrice(bundle.unitCents * bundle.quantity, locale),
     })),
-    ...viewLines.map((line) => ({
+    ...orderedLines.map((line) => ({
       key: cartLineId(line),
       label: t.summary.line.replace('{quantity}', String(line.qty)).replace('{name}', line.name),
       // Fiyatı olmayan satır SIFIR yazılmaz (CLAUDE §1): satışa kapanmış kalem "bedava" değildir.
       value: line.lineTotalCents === null ? t.summary.noPrice : formatPrice(line.lineTotalCents, locale),
     })),
-    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(cart.view.subtotalCents, locale) },
-    ...(cart.coupon === null
+    /* GELEMEYEN KALEM ÖZETTEN GİZLENMEZ, ÜSTÜ ÇİZİLİR (kullanıcı kararı 10.08).
+       Gizlemek "herhâlde bunları alıyorum" dedirtiyordu: karar özetin uzağında, adresin yanında
+       duruyor ve bir uyarı gibi okunmuyordu. Artık kalem gözün gittiği yerde, kırmızı ve üstü
+       çizili; hemen altında da NEDEN olduğu yazılı. Satırlar ara toplamın ÜSTÜNDE duruyor ki
+       "bunlar bu listenin parçasıydı ama düştü" okunsun. */
+    ...droppedLines.map((line) => ({
+      key: `dropped-${cartLineId(line)}`,
+      label: t.summary.line.replace('{quantity}', String(line.qty)).replace('{name}', line.name),
+      value: line.lineTotalCents === null ? t.summary.noPrice : formatPrice(line.lineTotalCents, locale),
+      tone: 'danger' as const,
+      strike: true,
+    })),
+    ...(droppedLines.length === 0
+      ? []
+      : [{ key: 'undeliverable-note', label: t.summary.undeliverableNote, value: '', tone: 'danger' as const }]),
+    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(orderedSubtotalCents, locale) },
+    /* İndirimin KÜNYESİ de yazılır, yalnız tutarı değil (kullanıcı kararı 10.08 — web'in aynı
+       hükmü): sepette "İndirim · Baklava haftası" okuyan müşteri burada sadece "İndirim" görürse
+       aynı indirimden bahsedildiğini ancak sayıları karşılaştırarak anlar. Ad çok dilli bir alandan
+       (`discount.public_label`) SUNUCUDA çözülüyor; türetme ise sepetle ORTAK
+       (`discountSummaryOf`) — iki ekranın aynı kampanyaya iki ad vermesi imkânsız olsun. */
+    ...(discountSummary === null
       ? []
       : [
           {
             key: 'discount',
-            label: t.summary.discount,
-            value: `−${formatPrice(cart.coupon.amountCents, locale)}`,
+            label:
+              discountSummary.name === null
+                ? t.summary.discount
+                : `${t.summary.discount} · ${discountSummary.name}`,
+            value: `−${formatPrice(discountSummary.amountCents, locale)}`,
             tone: 'olive' as const,
           },
         ]),
     { key: 'delivery', label: t.summary.delivery, value: shippingFeeLabel },
   ];
 
+  // Küçük resimler de siparişin kendisini gösterir: kapsam dışı bir kalemin fotoğrafı, "bunlar
+  // geliyor" diye okunurdu.
+  /* FOTOĞRAF DA GEÇİLİR (kullanıcı bulgusu 10.08): yuvarlaklar baş harf çiziyordu çünkü `photoUri`
+     hiç verilmiyordu — `AvatarThumb` onu zaten destekliyor. Baş harf yedek olarak kalır: fotoğrafı
+     olmayan ürün boş bir daire değil, adının ilk harfi olur. */
   const thumbs = [
-    ...cart.bundles.map((bundle) => ({ key: `bundle-${bundle.id}`, name: bundle.name })),
-    ...viewLines.map((line) => ({ key: cartLineId(line), name: line.name })),
+    ...cart.bundles.map((bundle) => ({ key: `bundle-${bundle.id}`, name: bundle.name, photoUri: bundle.photoUri })),
+    ...orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, photoUri: line.image.url })),
   ].slice(0, 4);
 
   /** Onayı engelleyen İLK sebep; yoksa `null`. Sıra şablonun sırası, gerçekler sunucunun. */
@@ -269,7 +360,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     if (selectedAddress === null) return t.block.address;
     // Adres var ama teslimat/ödeme dilimi yoksa karar VERİLMEMİŞ demektir; tahmin yürütülmez.
     if (payment === null) return t.block.loading;
-    if (delivery?.blocked === true) return t.block.shipping;
+    /* GELEMEYEN KALEM ARTIK ONAYI KAPATMAZ (kullanıcı kararı 10.08): sunucu onu siparişin
+       kapsamından çıkarıp siparişi açıyor — tek bir soğuk zincir ürünü yüzünden bütün sepeti
+       kilitlemek, müşteriyi çıkışsız bırakmaktı. Engel YALNIZ kargo siparişinde gerçek: o sipariş
+       soğuk zincir kalemi taşıyamaz ve sunucu onu reddeder (`cold_chain_unshippable`). */
+    if (shippingOrder && delivery?.blocked === true) return t.block.shipping;
     if (!payment.minBasketOk) {
       return t.block.minBasket
         .replace('{place}', payment.placeLabel)
@@ -388,7 +483,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           </Text>
           <View style={styles.thumbs}>
             {thumbs.map((thumb) => (
-              <AvatarThumb key={thumb.key} initial={thumb.name.slice(0, 1)} accessibilityLabel={thumb.name} size="sm" stacked />
+              <AvatarThumb
+                key={thumb.key}
+                initial={thumb.name.slice(0, 1)}
+                accessibilityLabel={thumb.name}
+                photoUri={thumb.photoUri}
+                size="sm"
+                stacked
+              />
             ))}
           </View>
         </View>
@@ -474,9 +576,15 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
               )}
             </View>
 
-            {delivery?.blocked === true ? (
-              <Note tone="error" title={t.blocked.title} description={t.blocked.body} testID="checkout-blocked" />
-            ) : null}
+            {/* ENGEL DEĞİL, BİLGİ (kullanıcı kararı 10.08). Kutu eskiden KIRMIZIYDI ve "bu adrese
+                teslim edemiyoruz, o kalemleri sepetten çıkarın" diyordu — bugün yanlış: sunucu o
+                kalemleri siparişin dışında bırakıyor, siparişi reddetmiyor. Cümle artık ne olduğunu
+                söylüyor: bu siparişe girmiyorlar, SEPETTE bekliyorlar, bölge içi bir adres seçilirse
+                dahil olurlar. Ton `warm`; hata kırmızısı müşteriye düzeltmesi gereken bir yanlış
+                yaptığını söylerdi. */}
+            {droppedLines.length === 0 ? null : (
+              <Note tone="warm" title={t.undeliverable.title} description={undeliverableText} testID="checkout-undeliverable" />
+            )}
 
             {delivery === null ? null : (
               <View style={styles.section}>
@@ -486,6 +594,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : t.delivery.doorUnavailable}
                   selected={isRoute}
                   disabled={!isRoute}
+                  /* SEBEP KIRMIZI (kullanıcı kararı 10.08): soluklaşma "kapalı" der ama NEDEN
+                     kapalı olduğunu söylemez; sebep soluk griyle yazılınca müşteri onu fark
+                     etmiyordu. Yalnız KAPALI hâlde kırmızı — açık seçenekte sebep yok. */
+                  descriptionTone={isRoute ? 'muted' : 'danger'}
                   // Yol adresin cevabı: dokunuş bir şey değiştirmez (dosya künyesi).
                   onPress={keepDelivery}
                   testID="checkout-mode-door"
@@ -495,6 +607,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   description={isRoute ? t.delivery.shippingUnavailable : t.delivery.shippingBody.replace('{fee}', shippingFeeLabel)}
                   selected={!isRoute}
                   disabled={isRoute}
+                  descriptionTone={isRoute ? 'danger' : 'muted'}
                   onPress={keepDelivery}
                   testID="checkout-mode-shipping"
                 />
@@ -531,6 +644,9 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                     description={option.body}
                     selected={selectedPayment?.key === option.key}
                     disabled={!option.available}
+                    /* Kapalı ödeme yolunun sebebi de kırmızı — "kapıda ödeme yalnız kendi
+                       aracımızla getirdiğimiz adreslerde" cümlesi aynı sebeple soluk kalıyordu. */
+                    descriptionTone={option.available ? 'muted' : 'danger'}
                     onPress={() => setPaymentKey(option.key)}
                     testID={`checkout-payment-${option.key}`}
                   />

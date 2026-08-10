@@ -40,6 +40,14 @@ interface CartLineRowProps {
   /** "Tükendi — teslim edilemez" rozeti. */
   soldOutLabel?: string;
   /**
+   * "Bu adrese teslim edemiyoruz" künyesi — kalem SATILABİLİR, yalnız BU adrese gelmiyor
+   * (`group: 'undeliverable'`). `soldOutLabel`den ayrı ve hata renginde DEĞİL: tükenmiş kalem
+   * çıkarılmadan devam edilemez, gelemeyen kalem ise sepette bekler ve müşteriye sildirilmez
+   * (kullanıcı kararı 10.08). İkisini tek rozete toplamak, adresin gerçeğini bir arıza gibi
+   * okuturdu.
+   */
+  awayLabel?: string;
+  /**
    * Müşterinin BİLMESİ gereken tek uyarı — fiyat arttı (DOMAIN §5: açıkça söylenir) ya da satır
    * uygulamadan düzenlenemiyor. İki durum aynı anda oluşmaz; sıralaması çağıranın kararı.
    */
@@ -66,6 +74,7 @@ export function CartLineRow({
   eyebrow,
   discountLabel,
   soldOutLabel,
+  awayLabel,
   noticeLabel,
   readOnly = false,
   removeLabel,
@@ -95,7 +104,7 @@ export function CartLineRow({
         <Text style={[styles.subtitle, isBundle ? styles.onInkMuted : styles.onSandMuted]}>{subtitle}</Text>
         <Text style={[styles.total, isBundle ? styles.onInk : styles.onSand]}>{totalLabel}</Text>
         {discountLabel === undefined ? null : (
-          <Text style={[styles.badge, styles.discountBadge]}>{discountLabel}</Text>
+          <Text style={[styles.badge, styles.noteBadge]}>{discountLabel}</Text>
         )}
         {soldOutLabel === undefined ? null : (
           // Tükendi bir DURUM DEĞİŞİKLİĞİDİR (sepete girdikten sonra oldu): duyurulur.
@@ -103,9 +112,15 @@ export function CartLineRow({
             {soldOutLabel}
           </Text>
         )}
+        {awayLabel === undefined ? null : (
+          // DUYURULMAZ (`alert` yok): bu bir olay değil, adresin sabit gerçeği — ve satırların
+          // üstünde tek bir uyarı zaten aynı şeyi söylüyor. Her satırda bir uyarı duyurmak,
+          // ekran okuyucuyu aynı cümleyle üç kez keserdi.
+          <Text style={[styles.badge, styles.noteBadge]}>{awayLabel}</Text>
+        )}
         {noticeLabel === undefined ? null : (
           // Fiyat artışı da bir DURUM DEĞİŞİKLİĞİDİR ve müşterinin onayına sunulur: duyurulur.
-          <Text style={[styles.badge, styles.discountBadge]} accessibilityRole="alert">
+          <Text style={[styles.badge, styles.noteBadge]} accessibilityRole="alert">
             {noticeLabel}
           </Text>
         )}
@@ -192,7 +207,10 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.radius.badge,
     overflow: 'hidden',
   },
-  discountBadge: {
+  /** İŞARET rozetinin ortak tonu (terracotta ailesi): indirim · gelemeyen kalem · fiyat uyarısı.
+      Üçü de "bunu bil" der; hata ailesi yalnız `soldOutBadge`in — orada satır çıkarılmadan devam
+      edilemiyor. */
+  noteBadge: {
     color: theme.colors.terracotta,
     backgroundColor: theme.colors['terracotta-bg'],
   },

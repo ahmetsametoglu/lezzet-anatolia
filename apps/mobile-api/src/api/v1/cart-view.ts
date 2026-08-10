@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import {
   getCartView,
   getPackagesByIds,
+  shippingGroupFee,
   type CartDiscount,
   type CartEntry,
   type CartLine,
@@ -115,6 +116,7 @@ export async function readCartView(
 
 /** Kapının görünümü → sözleşme şekli. `z.input` KİLİTTİR: kapı saparsa burası DERLENMEZ. */
 function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof MeCartViewSchema> {
+  const fee = shippingGroupFee(view);
   return {
     lines: view.lines.map(toLineBody),
     subtotalCents: view.subtotalCents,
@@ -122,6 +124,9 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     totalCents: view.totalCents,
     itemCount: view.itemCount,
     hasBlocked: view.hasBlocked,
+    // Asgari sepete SAYILMAYAN tutar (10.08) — kapı zaten düşerek hesapladı, burada yalnız taşınıyor
+    // ki ekran "X € şu an gönderilemeyen kalemlerde" diyebilsin. İkinci bir çıkarma YAPILMAZ.
+    undeliverableSubtotalCents: view.undeliverableSubtotalCents,
     minBasketOk: view.minBasketOk,
     missingForMinBasketCents: view.missingForMinBasketCents,
     minBasketCents: view.minBasketCents,
@@ -129,6 +134,12 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     shippingSubtotalCents: view.shippingSubtotalCents,
     shippingTariffCents: view.shippingTariffCents,
     shippingOnly: view.shippingOnly,
+    /* Kargo grubunun ÇÖZÜLMÜŞ ücreti ve eşiğe kalan — kararı motor veriyor (`shippingGroupFee`,
+       `@lezzet/application`), burada yalnız taşınıyor. İstemci `tarife` ile `eşik`i alıp kendi
+       karşılaştırsaydı aynı kural iki yerde yaşardı ve ayrıştığı gün sepette "ücretsiz" yazıp
+       kasada ücret kesilirdi. Web sepeti de aynı kapıyı çağırıyor (`cart-group.tsx`). */
+    shippingGroupFeeCents: fee.feeCents,
+    shippingFreeRemainingCents: fee.remainingForFreeCents,
   };
 }
 
@@ -150,6 +161,9 @@ function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][n
     lineTotalCents: line.lineTotalCents,
     blocked: line.blocked,
     route: line.route,
+    // Grup KAPIDAN gelir, burada `route`tan türetilmez (10.08): türetseydik uç, ekranın yaptığı
+    // hatanın aynısını bir kat aşağıda tekrarlardı — kural `cartGroupOf`ta, cevabı satır taşıyor.
+    group: line.group,
     availableHere: line.availableHere,
     contents: line.contents,
   };

@@ -1,9 +1,8 @@
-import type { z } from 'zod';
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
-import type { CartDiscountReasonSchema, MeCartViewLine } from '@lezzet/types';
+import type { MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -14,10 +13,12 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { SecondaryButton } from '@/components/ui/secondary-button';
 import { SectionHeader } from '@/components/ui/section-header';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import {
   applyCoupon,
   cartCount,
@@ -30,6 +31,15 @@ import {
   useCart,
 } from '@/screens/customer-kit/cart-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
+import { addressLine } from '@/screens/customer-kit/address-format';
+import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';
+import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
+import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
+import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
+import { useAddressCartView } from '@/screens/customer-kit/use-address-cart.hook';
+import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
+import { useMe } from '@/screens/customer-kit/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { CartLineRow } from './cart-line-row';
 import messages from './messages.json';
@@ -48,12 +58,22 @@ import messages from './messages.json';
   sekme kabuğunda takılı — `app/(tabs)/_layout`; ikinci kez takmak aynı aboneliği iki yerden
   yönetmek olurdu).
 
-  ── SEPETİN İKİ GRUBU ───────────────────────────────────────────────────────
-  Kalemin yolunu STOK belirler (`route`): kendi deposunda bulunan araçla kapıya gider, yalnız kargo
-  deposunda olan kargoyla. İki grup = İKİ SİPARİŞ ve ikincisi zorunlu değil (web sepetinin aynı
-  hükmü, `cart-group.tsx`). Başlıklar YALNIZ iki grup da doluyken çizilir: tek yolu olan sepette
-  başlık, olmayan bir seçimi varmış gibi gösterir. Yolu BİLİNMEYEN satır varsa (posta kodu yok →
-  `route: null`) ayrım hiç yapılmaz — sözleşmenin kendi hükmü.
+  ── SEPETİN ÜÇ GRUBU (kullanıcı kararı 10.08) ───────────────────────────────
+  Grubu SÖZLEŞME söyler (`line.group`), ekran türetmez: `local` kapıya teslim (bizim aracımız —
+  soğuk zincir ürün buradan gider), `shipping` NORMAL kargo, `undeliverable` bu adrese HİÇ gelemez.
+
+  ELLE SÜZGEÇ SÖKÜLDÜ ve sebebi ölçüldü (10.08, cihazda): ekran `route !== 'shipping'` diyerek
+  teslim edilemeyen kalemi "kapıya teslim" grubuna sokuyordu. Sepette üç satır, 38,36 € ve YEŞİL
+  bir "Siparişi tamamla" duruyordu; engel ancak bir dokunuş sonra checkout'ta kırmızı bir kutuyla
+  çıkıyordu — müşteri gidemeyecek kalemi son adımda öğreniyordu. Karar artık tek yerde
+  (`cartGroupOf`, `@lezzet/application`) ve cevabı sunucu taşıyor.
+
+  Başlıklar YALNIZ birden çok grup doluyken çizilir (web sepetinin aynı hükmü, `cart-group.tsx`):
+  tek yolu olan sepette başlık, olmayan bir seçimi varmış gibi gösterir.
+
+  KALEM SİLİNMEZ, SİLDİRİLMEZ: gelemeyen satır sepette işaretli bekler — yarın bölge içi bir adres
+  eklenirse o kalem yine lazım. "Kaldır" eylemi satırda duruyor (müşterinin kendi kararı) ama ekran
+  onu teşvik etmez ve "şunu çıkarın" demez.
 
   ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
   1. **Kupon sayfası kitin `BottomSheet`i.** Şablonun kupon yüzeni (`shCoupon`) aynı yerleşimi
@@ -76,7 +96,6 @@ import messages from './messages.json';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-type DiscountReason = z.infer<typeof CartDiscountReasonSchema>;
 
 /**
  * SUNUCUDAN GELEN PAKET SATIRI UYGULAMADAN DÜZENLENEMEZ. Sebep 21.21'de DEĞİŞTİ ve ölçüldü: yazma
@@ -98,7 +117,40 @@ export function CartScreen() {
   const { theme } = useUnistyles();
   const router = useRouter();
   const cart = useCart();
-  const view = cart.view;
+
+  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
+  /* Adres YOKKEN düşülen yer — gezinme kodu. Bandın andığı yer ile görünümü çözen yer DAİMA aynı
+     olmalı; başka bir kaynaktan yazılsaydı ekran, arkasındaki hesabın dayanmadığı bir yeri
+     suçlardı. */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const browsingCode = onboarding?.postalCode ?? '';
+
+  /* ── SEPETİN YERİ: KAYITLI ADRES (kullanıcı kararı 10.08) ──────────────────
+     Posta kodu çekmecesinin kendi cümlesi *"Bu kod yalnız vitrini gezmek içindir; siparişte
+     kayıtlı adresiniz kullanılır"* diyor — sepet bu sözü tutmuyordu ve grupları GEZİNME koduyla
+     çözüyordu. Ölçülen bedeli üç ayrı arızaydı (grup · toplam · tahsilat): müşteri 67000 ile gezip
+     sepette "her şey yolunda" görüyor, adresi 67380 olduğu için checkout'ta başka bir gerçekle
+     karşılaşıyordu.
+
+     İki yeri yan yana yazıp farkı UYARIYLA yönetmek yerine kaynak TEKE indirildi: satın alma
+     tarafının tamamı (sepet + checkout) adresle çözülür, gezinme kodu vitrinde kalır. Ayrışma artık
+     yapısal olarak imkânsız; açıklanacak bir fark yok.
+
+     ADRESİ OLMAYANDA gezinme koduna düşülür (misafir ya da hiç adres eklememiş müşteri) — orada
+     zaten iki kaynak yok, çelişki de yok. */
+  const { status: meStatus } = useMe();
+  const { addresses, publish: publishAddresses } = useAddresses(meStatus === 'ready');
+  /* Seçim ORTAK depoda (`delivery-address-store`): sepette seçilen adres checkout'ta da geçerli.
+     `null` = müşteri seçmedi, varsayılan geçerli — kimliğini burada saklamıyoruz (künye orada). */
+  const selectedAddressId = useSelectedDeliveryAddress();
+  const deliveryAddress =
+    addresses.find((a) => a.id === selectedAddressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
+  const addressView = useAddressCartView(locale, deliveryAddress?.postalCode ?? null, cart.couponCode);
+  const view = addressView ?? cart.view;
+  /** Bandın ve künyenin andığı yer — adres varsa onun kodu, yoksa gezinme kodu. */
+  const placeLabel = deliveryAddress?.postalCode ?? browsingCode;
 
   const [couponSheetOpen, setCouponSheetOpen] = useState(false);
   const [couponInput, setCouponInput] = useState('');
@@ -120,41 +172,45 @@ export function CartScreen() {
   const localBundleIds = new Set(cart.bundles.map((bundle) => bundle.id));
   const lines = view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
 
-  const shippingLines = lines.filter((line) => line.route === 'shipping');
-  const routeLines = lines.filter((line) => line.route !== 'shipping');
-  const placeKnown = lines.every((line) => line.route !== null);
-  const split = !view.shippingOnly && placeKnown && shippingLines.length > 0 && routeLines.length > 0;
+  /* GRUP SÖZLEŞMEDEN OKUNUR, yoldan TÜRETİLMEZ (künye: elle süzgecin ölçülmüş arızası). Sıra
+     tasarımın sırası: önce gelenler, sonra kargoyla gelenler, en sonda bu adrese gelemeyenler. */
+  const localLines = lines.filter((line) => line.group === 'local');
+  const shippingLines = lines.filter((line) => line.group === 'shipping');
+  const undeliverableLines = lines.filter((line) => line.group === 'undeliverable');
+  const groups = [
+    { key: 'local', eyebrow: t.group.local, lines: localLines },
+    { key: 'shipping', eyebrow: t.group.shipping, lines: shippingLines },
+    { key: 'undeliverable', eyebrow: t.group.undeliverable, lines: undeliverableLines },
+  ].filter((group) => group.lines.length > 0);
+  /* Başlık ancak AYRILACAK bir şey varken bilgidir; tek gruplu sepette olmayan bir seçimi varmış
+     gibi gösterirdi. Karar grup SAYISINDAN doğar — `shippingOnly` ayrıca sorulmaz, salt-kargo
+     sepette zaten tek grup kalır. */
+  const showGroupHeadings = groups.length > 1;
+  /* İKİ SİPARİŞ uyarısı yalnız gerçekten iki sipariş doğacaksa: gelemeyen kalem bir sipariş
+     açmaz, sepette bekler. */
+  const split = localLines.length > 0 && shippingLines.length > 0;
 
   const discount = view.discount;
+  /* DÜĞMEYİ GELEMEYEN KALEM KAPATMAZ (kullanıcı kararı 10.08): müşteri gelebilecek kalemleri
+     sipariş eder, ötekiler sepette işaretli bekler. Kapatan üç hâl duruyor — görünüm çözülemedi,
+     SATILAMAZ kalem var (`hasBlocked` — tükendi/satışa kapandı, teslim edilebilirlikle ilgisi yok)
+     ve asgari sepet tutmuyor (eşiğin matrahından gelemeyen kalemler zaten sunucuda düşülüyor). */
   const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk;
 
-  /** Kendiliğinden inen indirimin künyesi — kampanyanın İÇ adı değil, müşterinin okuduğu sebep. */
-  const reasonLabel = (reason: DiscountReason): string => {
-    if (reason.kind === 'customer_rate') return t.discount.customerRate.replace('{percent}', String(reason.percent));
-    return reason.percent === null
-      ? t.discount.campaign
-      : t.discount.campaignPercent.replace('{percent}', String(reason.percent));
-  };
-
+  /* Künye TÜRETMESİ kitte (`discountSummaryOf`): aynı indirim sipariş özetinde de anılıyor ve iki
+     ekranın aynı kampanyaya iki farklı ad vermesi, müşteriye "bu aynı indirim mi" diye sayıları
+     karşılaştırtırdı. Ekranın kendi işi yalnız öneki koymak — o metin ekranın sözlüğünde. */
   const discountRow = (): SummaryRow | null => {
-    const row = (label: string | null, amountCents: number): SummaryRow => ({
+    const summary = discountSummaryOf(discount, locale);
+    if (summary === null) return null;
+    return {
       key: 'discount',
-      label: label === null ? t.summary.discount : `${t.summary.discount} · ${label}`,
+      label: summary.name === null ? t.summary.discount : `${t.summary.discount} · ${summary.name}`,
       // İndirim EKSİ yazılır: özetteki tek çıkarma satırı odur ve işaretsiz yazılırsa
       // toplamla aritmetiği tutmuyormuş gibi okunur.
-      value: `−${formatPrice(amountCents, locale)}`,
+      value: `−${formatPrice(summary.amountCents, locale)}`,
       tone: 'olive',
-    });
-
-    if (discount.status === 'applied') return row(discount.label ?? discount.code, discount.amountCents);
-    if (discount.status === 'automatic') return row(discount.label ?? reasonLabel(discount.reason), discount.amountCents);
-    /* Kupon tutmasa da müşteri hak ettiği otomatik indirimi KAYBETMEZ — sözleşmenin `appliedInstead`
-       kararı; özet satırı bir kupon denendi diye künyesini yitirmemeli. */
-    if (discount.status === 'rejected' && discount.appliedInsteadCents > 0) {
-      const instead = discount.appliedInstead;
-      return row(instead === null ? null : (instead.label ?? reasonLabel(instead.reason)), discount.appliedInsteadCents);
-    }
-    return null;
+    };
   };
 
   const rejection = discount.status === 'rejected' ? discount : null;
@@ -166,10 +222,19 @@ export function CartScreen() {
         : t.coupon.rejected[rejection.reason];
 
   const discountSummary = discountRow();
+  /* Toplam SEPETTE DURAN her şeyi sayar (sözleşmenin hükmü: ekran müşterinin sepetini eksiksiz
+     göstermeli) — ama gelemeyen kalem siparişe girmiyor. Kapsam belirsiz kalmasın diye tutar ayrı
+     bir satırda yazılır ve panelin dip notu ne demek olduğunu söyler. Hesap YOK: sayı sunucudan
+     olduğu gibi geliyor (`undeliverableSubtotalCents`). */
+  const undeliverableCents = view.undeliverableSubtotalCents;
   const summaryRows: SummaryRow[] = [
     { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
     ...(discountSummary === null ? [] : [discountSummary]),
+    ...(undeliverableCents === 0
+      ? []
+      : [{ key: 'undeliverable', label: t.summary.undeliverable, value: formatPrice(undeliverableCents, locale) }]),
   ];
+  const summaryNote = undeliverableCents === 0 ? t.summary.note : `${t.summary.note} ${t.summary.undeliverableNote}`;
 
   const submitCoupon = () => {
     /* Kod bir KİMLİKTİR, dilin harf kuralına tabi değil: `toLocaleUpperCase('tr')` "i"yi "İ" yapar
@@ -223,6 +288,8 @@ export function CartScreen() {
         eyebrow={bundle ? t.line.bundle : undefined}
         discountLabel={line.wasCents === undefined ? undefined : t.line.discounted}
         soldOutLabel={line.blocked ? (line.unitPriceCents === null ? t.line.closed : t.line.soldOut) : undefined}
+        // Satır künyesi: kalem sepette DURUYOR, yalnız bu adrese gelmiyor. Cümle "kaldırın" demez.
+        awayLabel={line.group === 'undeliverable' ? t.line.undeliverable : undefined}
         noticeLabel={notice}
         readOnly={isReadOnly(line)}
         removeLabel={t.line.remove}
@@ -237,20 +304,80 @@ export function CartScreen() {
     );
   };
 
+  /* ── İKİ GRUP = İKİ SİPARİŞ (web'in hükmü, `cart-group.tsx`) ───────────────
+     *"Tek sepet, iki grup, iki checkout"* — ikinci sipariş ZORUNLU DEĞİL: müşteri vermezse o
+     kalemler sepette bekler, kapıya siparişi hiç etkilenmez. Bölünmenin kendisi bir seçim değil,
+     stokun sonucu: rota deposunda bulunan her şey — kargolanabilir olsa bile — araçla gider.
+
+     GRUP TOPLAMLARI satırlardan toplanır ve İNDİRİM bu toplamlara yazılmaz; web'in aynı kararı ve
+     aynı gerekçesi: kupon/kampanya siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor,
+     sepette bir gruba düşecek payı kesin bilemeyiz. Dökümün yeri özet kartı.
+
+     KARGO ÜCRETİ SUNUCUDAN (`shippingGroupFeeCents`): eşikle tarifeyi karşılaştırma kararı iş
+     kuralıdır, istemcide tekrarlanmaz (sözleşme künyesi). */
+  const localItemsCents = localLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
+  const shippingItemsCents = shippingLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
+  const shippingFeeCents = view.shippingGroupFeeCents;
+
+  const shippingBreakdown = [
+    shippingFeeCents > 0
+      ? t.group.shippingFee
+          .replace('{items}', formatPrice(shippingItemsCents, locale))
+          .replace('{fee}', formatPrice(shippingFeeCents, locale))
+      : t.group.shippingFeeFree.replace('{items}', formatPrice(shippingItemsCents, locale)),
+    view.shippingFreeRemainingCents > 0
+      ? t.group.shippingRemaining.replace('{amount}', formatPrice(view.shippingFreeRemainingCents, locale))
+      : null,
+    t.group.shippingPayment,
+  ]
+    .filter((part) => part !== null)
+    .join(' · ');
+
   /* Ücretsiz kargo eşiği YALNIZ kargo grubu varken anlamlıdır: kapıya teslimde kargo ücreti diye
      bir şey yok ve eşiği orada göstermek olmayan bir hedefi varmış gibi okuturdu. Eşik 0 =
-     "tanımsız" (sözleşmenin hükmü) — blok hiç çizilmez. */
-  const freeShippingRemaining = view.freeShippingCents - view.shippingSubtotalCents;
+     "tanımsız" (sözleşmenin hükmü) — blok hiç çizilmez. BÖLÜNMÜŞ sepette çizilmez çünkü aynı bilgi
+     kargo grubunun kendi kartında, tutarıyla birlikte zaten yazılı. */
   const freeShippingNote =
-    view.freeShippingCents === 0 || shippingLines.length === 0 ? null : freeShippingRemaining > 0 ? (
+    view.freeShippingCents === 0 || shippingLines.length === 0 || split ? null : view.shippingFreeRemainingCents > 0 ? (
       <Note
         tone="warm"
-        description={t.freeShipping.remaining.replace('{amount}', formatPrice(freeShippingRemaining, locale))}
+        description={t.freeShipping.remaining.replace('{amount}', formatPrice(view.shippingFreeRemainingCents, locale))}
         testID="cart-free-shipping"
       />
     ) : (
       <Note tone="olive" description={t.freeShipping.reached} testID="cart-free-shipping" />
     );
+
+  /**
+   * Kargo grubunun KENDİ eylemi — çerçeveli düğme, ikincil ağırlık (web'in aynı hiyerarşisi):
+   * asıl akış kapıya gidendir, bu isteğe bağlı ikinci siparıştir.
+   *
+   * ASGARİ SEPET BU GRUBA İŞLEMEZ (web'in kararı): eşik siparişin kendi tutarına bakar ve kargo
+   * siparişi ayrı bir siparıştir — rota grubunun eksiği yüzünden kargo siparişini kilitlemek,
+   * olmayan bir bağ kurmak olurdu. SATILAMAZ kalem ise sepetin tamamını durdurur (`hasBlocked`).
+   */
+  const shippingAction = !split ? null : (
+    <View style={styles.groupCard} testID="cart-shipping-group">
+      <Text style={styles.groupTotal}>
+        {t.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents + shippingFeeCents, locale))}
+      </Text>
+      <Text style={styles.groupNote}>{shippingBreakdown}</Text>
+      <SecondaryButton
+        label={t.group.shippingCta}
+        onPress={() => router.push('/checkout?group=shipping')}
+        disabled={view.hasBlocked}
+        testID="cart-shipping-checkout"
+      />
+    </View>
+  );
+
+  /** Rota grubunun künyesi — düğmesi yapışkan bardadır, bu kart yalnız tutarı ve vaadi söyler. */
+  const routeSummary = !split ? null : (
+    <View style={styles.groupCard} testID="cart-route-group">
+      <Text style={styles.groupTotal}>{t.group.routeTotal.replace('{amount}', formatPrice(localItemsCents, locale))}</Text>
+      <Text style={styles.groupNote}>{t.group.routeNote}</Text>
+    </View>
+  );
 
   const header = (
     <View style={styles.header}>
@@ -281,6 +408,67 @@ export function CartScreen() {
     <View style={styles.screen}>
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="cart-scroll">
+        {/* TESLİMAT ADRESİ — SEPETİN YERİNİ SÖYLER (kullanıcı kararı 10.08).
+            Sepetin neye göre değerlendirildiği ekranda YAZILI olmalı: müşteri az önce katalogda
+            başka bir posta koduyla geziyor olabilir ve kalemlerin neden bu hâle geldiğini burada
+            görmeli. Posta kodu düzenleyicisi sepette YOK — başka bir yere gönderecekse adres seçer
+            ya da ekler; iki ayrı yer tutmak, az önce kapattığımız ayrışmayı geri açardı. */}
+        {deliveryAddress === null ? (
+          browsingCode === '' ? null : (
+            <View style={styles.place}>
+              <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
+              <Text style={styles.placeNote}>{t.address.none.replace('{code}', browsingCode)}</Text>
+              <TextAction label={t.undeliverable.change} onPress={() => setCodeSheetOpen(true)} testID="cart-place-code" />
+            </View>
+          )
+        ) : (
+          <View style={styles.place}>
+            <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
+            <Text style={styles.placeLine}>{addressLine(deliveryAddress)}</Text>
+            <Text style={styles.placeNote}>{t.address.note}</Text>
+            <TextAction
+              label={t.address.change}
+              /* EKRAN TERK EDİLMEZ (kullanıcı bulgusu 10.08): burası eskiden `/account`a
+                 yönlendiriyordu ve müşteri Hesabım'ın tepesine düşüp adres bölümünü arıyor, geri
+                 dönünce de sepete değil vitrine çıkıyordu (sekme değiştiği için). Checkout aynı işi
+                 kendi ekranında yapıyor; sepetin ondan farkı yok. */
+              onPress={() => setPickerOpen(true)}
+              testID="cart-place-address"
+            />
+          </View>
+        )}
+
+        {/* GELEMEYEN KALEMLERİN TEK UYARISI, satırların ÜSTÜNDE: müşteri sepetini okumadan önce
+            neyle karşılaşacağını bilsin. Ton `warm` — bu bir HATA değil, adresin gerçeği; `error`
+            kırmızısı müşteriye yanlış bir şey yaptığını söylerdi. Çıkış yolu da burada yazılı:
+            bölge içi bir adres. "Ürünü kaldırın" YAZILMAZ (kullanıcı kararı 10.08). */}
+        {undeliverableLines.length === 0 ? null : (
+          /* KODU DEĞİŞTİRME KUTUNUN İÇİNDE (kullanıcı bulgusu 10.08): bağlantı kutunun ALTINDA
+             dururken bandın parçası gibi değil, bağımsız bir eylem gibi okunuyordu. `Note`un kendi
+             eylem yuvası zaten kutunun içinde çiziyor.
+
+             Web sepette bunu hiç sunmuyor çünkü orada kod sitenin tepesindeki kanonik panelde ve
+             hep görünür; uygulamada sepet TAM EKRAN, müşteri problemi burada görüyor ve kodu
+             değiştirecek yer ekranda yok. Üçüncü bir posta kodu girdisi YAZILMIYOR: kitteki kanonik
+             çekmece açılıyor (web'in aynı gerekçesi — aynı doğrulamayı üç yerde bakıma bırakmamak). */
+          <Note
+            tone="warm"
+            title={t.undeliverable.title.replace('{place}', placeLabel)}
+            description={t.undeliverable.body.replace('{place}', placeLabel)}
+            /* EYLEM YALNIZ ADRESİ OLMAYANDA (kullanıcı bulgusu 10.08): adres varken bandın içine de
+               "adresi değiştir" koymak, hemen üstündeki künyenin "Değiştir"iyle AYNI yere açan ikinci
+               bir düğme demekti. Aynı işi yapan iki eylem, müşteriye "acaba farklı bir şey mi
+               yapıyorlar" diye düşündürür. Adres yokken bandın kendi çıkışı gerekli — o hâlde
+               yukarıdaki künye de kod künyesidir. */
+            action={
+              deliveryAddress !== null ? undefined : (
+                <TextAction label={t.undeliverable.change} onPress={() => setCodeSheetOpen(true)} testID="cart-change-code" />
+              )
+            }
+            testID="cart-undeliverable"
+          />
+        )}
+
         <View style={styles.lines}>
           {/* Cihazda duran hazır paket satırları — depo onları henüz sunucuya bağlamıyor (iki ölçülmüş
               engel: satır çözülemiyor, satır silinemiyor — `cart-store` künyesi). */}
@@ -305,16 +493,17 @@ export function CartScreen() {
             />
           ))}
 
-          {split ? (
-            <>
-              <SectionHeader eyebrow={t.group.route} testID="cart-group-route" />
-              {routeLines.map(renderLine)}
-              <SectionHeader eyebrow={t.group.shipping} testID="cart-group-shipping" />
-              {shippingLines.map(renderLine)}
-            </>
-          ) : (
-            lines.map(renderLine)
-          )}
+          {/* Grubun EYLEMİ kendi kalemlerinin hemen ardında: web'in yerleşimi ve gerekçesi aynı —
+              "kargolu ürünleri ayrıca sipariş ver" düğmesi, hangi ürünlerden bahsettiği görünürken
+              anlam taşır. Rota grubunun düğmesi yapışkan bardadır, burada yalnız künyesi durur. */}
+          {groups.map((group) => (
+            <Fragment key={group.key}>
+              {showGroupHeadings ? <SectionHeader eyebrow={group.eyebrow} testID={`cart-group-${group.key}`} /> : null}
+              {group.lines.map(renderLine)}
+              {group.key === 'local' ? routeSummary : null}
+              {group.key === 'shipping' ? shippingAction : null}
+            </Fragment>
+          ))}
         </View>
 
         {unresolved ? (
@@ -363,7 +552,7 @@ export function CartScreen() {
           rows={summaryRows}
           totalLabel={t.summary.total}
           totalValue={formatPrice(view.totalCents, locale)}
-          note={t.summary.note}
+          note={summaryNote}
           testID="cart-summary"
         />
 
@@ -409,7 +598,9 @@ export function CartScreen() {
         >
           <Text style={styles.checkoutLabel}>{t.checkout}</Text>
           <View style={styles.checkoutTotal}>
-            <Text style={styles.checkoutLabel}>{formatPrice(view.totalCents, locale)}</Text>
+            {/* BÖLÜNMÜŞ sepette bar ROTA siparişinin tutarını yazar: düğme o siparişi açıyor ve
+                sepetin tamamını yazmak, basılınca başka bir tutarla karşılaşmak demekti. */}
+            <Text style={styles.checkoutLabel}>{formatPrice(split ? localItemsCents : view.totalCents, locale)}</Text>
           </View>
         </PressableSurface>
       </View>
@@ -437,11 +628,98 @@ export function CartScreen() {
           <PrimaryButton label={t.coupon.apply} onPress={submitCoupon} testID="cart-coupon-apply" />
         </View>
       </BottomSheet>
+
+      {/* Kanonik posta kodu çekmecesi — vitrinle AYNI dosya, aynı doğrulama, aynı kaydetme.
+          Kapanınca `useCartSync` yeni kodu görüp görünümü yeniden çözdürüyor; ekranın ayrıca bir şey
+          yapması gerekmiyor. */}
+      {/* Adres seçici — ekranı terk etmeden (künyesi `address-picker-sheet`). Seçim ortak depoya
+          yazılır, yani checkout da aynı adresi okur. */}
+      <AddressPickerSheet
+        visible={pickerOpen}
+        addresses={addresses}
+        selectedId={deliveryAddress?.id ?? null}
+        onSelect={selectDeliveryAddress}
+        onAddNew={() => {
+          setPickerOpen(false);
+          setAddressSheet({ editing: null });
+        }}
+        onClose={() => setPickerOpen(false)}
+        testID="cart-address-picker"
+      />
+
+      {/* Adres YAZMA kitin ortak formu — hesap ve checkout ekranlarıyla AYNI dosya. Yazılan adres
+          hem listeye girer hem SEÇİLİ hâle gelir: müşteri onu az önce bu sepet için yazdı. */}
+      <AddressSheet
+        target={addressSheet}
+        addresses={addresses}
+        onClose={() => setAddressSheet(null)}
+        onSaved={(next, savedId) => {
+          publishAddresses(next);
+          // `savedId` silmede `null` gelir — o hâlde seçim varsayılana düşsün, silinmiş bir kimliğe değil.
+          selectDeliveryAddress(savedId);
+          setAddressSheet(null);
+        }}
+        testID="cart-address-sheet"
+      />
+
+      <PostalCodeSheet
+        visible={codeSheetOpen}
+        code={browsingCode === '' ? null : browsingCode}
+        onClose={() => setCodeSheetOpen(false)}
+        // "Nerelere gidiyorsunuz?" ÇİZİLİR: müşteri tam da bu soruyu sorduğu anda burada.
+        showZonesLink
+        testID="cart-postal-sheet"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  /* Teslimat adresi bloğu — kutu DEĞİL: sepetin başında duran bir künye. Kutuya alsaydık uyarı
+     gibi okunurdu, oysa bu bir durum bildirimi. */
+  place: {
+    gap: theme.space['2xs'],
+    paddingHorizontal: theme.space['3xl'],
+    paddingBottom: theme.space.lg,
+  },
+  placeEyebrow: {
+    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
+    fontSize: theme.text.eyebrow,
+    letterSpacing: theme.text.eyebrow * 0.18,
+    color: theme.colors.terracotta,
+  },
+  placeLine: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.body,
+    color: theme.colors.ink,
+  },
+  /* Grup künyesi — kutu, ama satırların çerçevesinden ayrı: kalemler kendi kartlarında kalsın,
+     ikinci bir çerçeve sepeti kutu içinde kutu yapardı (web'in aynı kararı). */
+  groupCard: {
+    gap: theme.space.sm,
+    padding: theme.space['3xl'],
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors['sand-100'],
+    borderWidth: theme.border.base,
+    borderColor: theme.colors['sand-300'],
+  },
+  groupTotal: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.body,
+    color: theme.colors.ink,
+  },
+  groupNote: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.helper,
+    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    color: theme.colors.muted,
+  },
+  placeNote: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.helper,
+    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    color: theme.colors.muted,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],

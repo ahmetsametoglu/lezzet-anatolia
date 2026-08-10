@@ -16,6 +16,7 @@
       "closed": "Satışa kapandı — devam etmek için kaldırın",
       "noPrice": "Fiyat yok",
       "priceUp": "Fiyat güncellendi — önceki {price}",
+      "undeliverable": "❄ Bu adrese teslim edemiyoruz",
       "readOnly": "Bu satır uygulamadan düzenlenemiyor",
       "remove": "kaldır",
       "removeLabel": "{name} ürününü sepetten kaldır",
@@ -23,9 +24,24 @@
       "increase": "{name} adedini artır"
     },
     "group": {
-      "route": "Kapıya teslim",
+      "local": "Kapıya teslim",
       "shipping": "Kargoyla gönderilir",
-      "split": "Bu sepet iki ayrı siparişe bölünecek: kapıya getirilenler ve kargoyla gönderilenler ayrı ödenir. Kargolu siparişi vermek zorunlu değil — vermezseniz o kalemler sepette bekler."
+      "undeliverable": "Bu adrese gelemeyenler",
+      "split": "Bu sepet iki ayrı siparişe bölünecek: kapıya getirilenler ve kargoyla gönderilenler ayrı ödenir. Kargolu siparişi vermek zorunlu değil — vermezseniz o kalemler sepette bekler.",
+      "routeTotal": "Kapıya gidecek toplam: {amount}",
+      "routeNote": "Teslimat ücretsiz · kapıda ödeme mümkün",
+      "shippingTotal": "Kargoyla gidecek toplam: {amount}",
+      "shippingFee": "{items} + kargo {fee}",
+      "shippingFeeFree": "{items} · kargo ücretsiz",
+      "shippingRemaining": "{amount} daha eklerseniz kargo ücretsiz",
+      "shippingPayment": "yalnız online ödeme",
+      "shippingCta": "Kargolu ürünleri ayrıca sipariş ver"
+    },
+    "undeliverable": {
+      "title": "{place} için bazı kalemler gelemiyor",
+      "body": "Soğuk zincir ürünlerini yalnız kendi soğutuculu aracımızla götürüyoruz; {place} rotamızın dışında. Bölge içi bir adres seçerseniz siparişinize girerler.",
+      "change": "Posta kodunu değiştir",
+      "changeAddress": "Teslimat adresini değiştir"
     },
     "coupon": {
       "add": "Kupon kodu ekle",
@@ -49,11 +65,6 @@
         "outranked": "Sepetinizde zaten daha yüksek bir indirim uygulanıyor ({amount}) — sizin için avantajlı olanı geçerli tuttuk."
       }
     },
-    "discount": {
-      "campaign": "Kampanya",
-      "campaignPercent": "Kampanya · %{percent}",
-      "customerRate": "Size özel · %{percent}"
-    },
     "freeShipping": {
       "remaining": "Ücretsiz kargoya {amount} kaldı.",
       "reached": "Ücretsiz kargo eşiğini geçtiniz."
@@ -61,8 +72,10 @@
     "summary": {
       "subtotal": "Ara toplam",
       "discount": "İndirim",
+      "undeliverable": "Siparişe girmeyenler",
       "total": "Toplam",
-      "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir."
+      "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.",
+      "undeliverableNote": "Toplam sepetinizin tamamını gösterir; bu adrese gelemeyen kalemler siparişe girmez ve ödemeye eklenmez."
     },
     "minimum": "Asgari sepet {minimum} — {missing} eksik",
     "blocked": "Devam etmek için tükenen ya da satışa kapanan kalemi sepetten çıkarın.",
@@ -74,7 +87,13 @@
       "failed": "Sepet sunucuyla eşitlenemedi; son değişiklik geri alındı."
     },
     "continue": "← Alışverişe devam et",
-    "checkout": "Siparişi tamamla →"
+    "checkout": "Siparişi tamamla →",
+    "address": {
+      "eyebrow": "TESLİMAT ADRESİ",
+      "change": "Değiştir",
+      "note": "Sepetiniz teslimat adresinize göre değerlendirildi.",
+      "none": "Henüz adres eklemediniz — şimdilik {code} posta koduna göre gösteriyoruz."
+    }
   },
   "fr": {
     "title": "Panier",
@@ -93,6 +112,7 @@
       "closed": "Plus en vente — à retirer pour continuer",
       "noPrice": "Prix indisponible",
       "priceUp": "Prix mis à jour — précédemment {price}",
+      "undeliverable": "❄ Non livrable à cette adresse",
       "readOnly": "Cette ligne ne se modifie pas depuis l'application",
       "remove": "retirer",
       "removeLabel": "Retirer {name} du panier",
@@ -100,9 +120,24 @@
       "increase": "Augmenter la quantité de {name}"
     },
     "group": {
-      "route": "Livraison à domicile",
+      "local": "Livraison à domicile",
       "shipping": "Envoi par transporteur",
-      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux envoyés par transporteur se règlent séparément. La commande transporteur n'est pas obligatoire — sinon ces articles restent dans votre panier."
+      "undeliverable": "Non livrables à cette adresse",
+      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux envoyés par transporteur se règlent séparément. La commande transporteur n'est pas obligatoire — sinon ces articles restent dans votre panier.",
+      "routeTotal": "Total à domicile : {amount}",
+      "routeNote": "Livraison offerte · paiement à la livraison possible",
+      "shippingTotal": "Total en colis : {amount}",
+      "shippingFee": "{items} + livraison {fee}",
+      "shippingFeeFree": "{items} · livraison offerte",
+      "shippingRemaining": "encore {amount} et la livraison est offerte",
+      "shippingPayment": "paiement en ligne uniquement",
+      "shippingCta": "Commander les articles en colis séparément"
+    },
+    "undeliverable": {
+      "title": "Certains articles ne peuvent pas être livrés à {place}",
+      "body": "Les produits sous chaîne du froid partent uniquement dans notre véhicule réfrigéré, et {place} est hors de notre tournée. Avec une adresse dans la zone, ils rejoindront votre commande.",
+      "change": "Changer de code postal",
+      "changeAddress": "Changer d’adresse de livraison"
     },
     "coupon": {
       "add": "Ajouter un code promo",
@@ -126,11 +161,6 @@
         "outranked": "Une remise plus avantageuse est déjà appliquée à votre panier ({amount}) — nous avons gardé la meilleure pour vous."
       }
     },
-    "discount": {
-      "campaign": "Promotion",
-      "campaignPercent": "Promotion · {percent} %",
-      "customerRate": "Votre remise · {percent} %"
-    },
     "freeShipping": {
       "remaining": "Encore {amount} pour la livraison offerte.",
       "reached": "Vous avez atteint la livraison offerte."
@@ -138,8 +168,10 @@
     "summary": {
       "subtotal": "Sous-total",
       "discount": "Remise",
+      "undeliverable": "Hors commande",
       "total": "Total",
-      "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse."
+      "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
+      "undeliverableNote": "Le total reflète l'ensemble de votre panier ; les articles non livrables à cette adresse ne font pas partie de la commande et ne sont pas facturés."
     },
     "minimum": "Panier minimum {minimum} — il manque {missing}",
     "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
@@ -151,7 +183,13 @@
       "failed": "Le panier n'a pas pu être synchronisé ; la dernière modification a été annulée."
     },
     "continue": "← Continuer mes achats",
-    "checkout": "Finaliser la commande →"
+    "checkout": "Finaliser la commande →",
+    "address": {
+      "eyebrow": "ADRESSE DE LIVRAISON",
+      "change": "Modifier",
+      "note": "Votre panier a été évalué selon votre adresse de livraison.",
+      "none": "Vous n'avez pas encore d'adresse — nous affichons pour l'instant selon le code postal {code}."
+    }
   },
   "de": {
     "title": "Warenkorb",
@@ -170,6 +208,7 @@
       "closed": "Nicht mehr im Verkauf — bitte entfernen",
       "noPrice": "Preis nicht verfügbar",
       "priceUp": "Preis aktualisiert — zuvor {price}",
+      "undeliverable": "❄ An diese Adresse nicht lieferbar",
       "readOnly": "Diese Zeile lässt sich in der App nicht ändern",
       "remove": "entfernen",
       "removeLabel": "{name} aus dem Warenkorb entfernen",
@@ -177,9 +216,24 @@
       "increase": "Menge von {name} erhöhen"
     },
     "group": {
-      "route": "Lieferung an die Haustür",
+      "local": "Lieferung an die Haustür",
       "shipping": "Versand per Paketdienst",
-      "split": "Dieser Warenkorb wird zu zwei getrennten Bestellungen: die Artikel für die Haustürlieferung und die Versandartikel werden separat bezahlt. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb."
+      "undeliverable": "An diese Adresse nicht lieferbar",
+      "split": "Dieser Warenkorb wird zu zwei getrennten Bestellungen: die Artikel für die Haustürlieferung und die Versandartikel werden separat bezahlt. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
+      "routeTotal": "Summe für die Lieferung: {amount}",
+      "routeNote": "Lieferung kostenlos · Barzahlung an der Tür möglich",
+      "shippingTotal": "Summe für den Versand: {amount}",
+      "shippingFee": "{items} + Versand {fee}",
+      "shippingFeeFree": "{items} · Versand kostenlos",
+      "shippingRemaining": "noch {amount} und der Versand ist kostenlos",
+      "shippingPayment": "nur Online-Zahlung",
+      "shippingCta": "Versandartikel separat bestellen"
+    },
+    "undeliverable": {
+      "title": "Einige Artikel erreichen {place} nicht",
+      "body": "Kühlkettenware liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, und {place} liegt außerhalb unserer Tour. Mit einer Adresse im Liefergebiet kommen sie in Ihre Bestellung.",
+      "change": "Postleitzahl ändern",
+      "changeAddress": "Lieferadresse ändern"
     },
     "coupon": {
       "add": "Gutscheincode hinzufügen",
@@ -203,11 +257,6 @@
         "outranked": "In Ihrem Warenkorb gilt bereits ein höherer Rabatt ({amount}) — wir haben den für Sie günstigeren behalten."
       }
     },
-    "discount": {
-      "campaign": "Aktion",
-      "campaignPercent": "Aktion · {percent} %",
-      "customerRate": "Ihr Rabatt · {percent} %"
-    },
     "freeShipping": {
       "remaining": "Noch {amount} bis zum kostenlosen Versand.",
       "reached": "Sie haben die Grenze für kostenlosen Versand erreicht."
@@ -215,8 +264,10 @@
     "summary": {
       "subtotal": "Zwischensumme",
       "discount": "Rabatt",
+      "undeliverable": "Nicht in der Bestellung",
       "total": "Gesamt",
-      "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt."
+      "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt.",
+      "undeliverableNote": "Die Summe zeigt Ihren gesamten Warenkorb; nicht lieferbare Artikel gehören nicht zur Bestellung und werden nicht berechnet."
     },
     "minimum": "Mindestbestellwert {minimum} — es fehlen {missing}",
     "blocked": "Bitte entfernen Sie den ausverkauften oder nicht mehr verkäuflichen Artikel, um fortzufahren.",
@@ -228,6 +279,12 @@
       "failed": "Der Warenkorb konnte nicht mit dem Server abgeglichen werden; die letzte Änderung wurde zurückgenommen."
     },
     "continue": "← Weiter einkaufen",
-    "checkout": "Bestellung abschließen →"
+    "checkout": "Bestellung abschließen →",
+    "address": {
+      "eyebrow": "LIEFERADRESSE",
+      "change": "Ändern",
+      "note": "Ihr Warenkorb wurde anhand Ihrer Lieferadresse bewertet.",
+      "none": "Sie haben noch keine Adresse — wir zeigen vorerst anhand der Postleitzahl {code}."
+    }
   }
 }

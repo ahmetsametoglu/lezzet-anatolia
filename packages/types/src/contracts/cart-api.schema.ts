@@ -209,6 +209,30 @@ export const MeCartDiscountSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
+/**
+ * Kalemin düştüğü GRUP — "bu kalem bu adrese nasıl gelir" sorusunun üç cevabı (kullanıcı kararı 10.08).
+ *
+ * **`route`un yerini almaz, onun EKRANA bakan izdüşümüdür.** Yol dört değerlidir
+ * (`CartLineRouteEnum`) ve dördüncüsü (`unavailable`) bir yol değil bir ENGELDİR — sepette
+ * `blocked` olarak zaten konuşuyor. Grup yalnız yolu söyler:
+ *
+ *   `local`         — kapıya teslim: kendi aracımız, ücretsiz. **Soğuk zincir ürün BURADAN gider.**
+ *   `shipping`      — NORMAL kargo (soğuk zincir DEĞİL): kargo deposundan, ayrı ödemeli ayrı sipariş.
+ *   `undeliverable` — bu adrese HİÇ gelemez: soğuk zincir ürün + rota dışı/deposunda olmayan adres.
+ *
+ * **NEDEN SÖZLEŞMEDE, ekranda TÜRETİLMİYOR** (ölçülmüş arıza, 10.08): üçüncü hâlin adı yoktu ve her
+ * yüzey kendi süzgecini yazıyordu. Mobil sepet `route !== 'shipping'` diyerek teslim edilemeyen
+ * kalemi "kapıya teslim" grubuna sokuyordu — ekranda yeşil bir "Siparişi tamamla" duruyor, engel
+ * ancak checkout'ta çıkıyordu. Kural artık tek yerde (`cartGroupOf`, `@lezzet/application`) ve cevabı
+ * sunucu taşıyor: RN istemcisi sunucu paketlerini import EDEMEZ, yani ona kuralı değil KARARI
+ * göndermek zorundayız.
+ *
+ * **Teslim edilemeyen kalem sepetten silinmez ve müşteriye sildirilmez:** yarın bölge içi bir adres
+ * eklerse o kalem ona lazım. Grup bir işarettir, bir çıkarma emri değil.
+ */
+export const CartLineGroupEnum = z.enum(['local', 'shipping', 'undeliverable']);
+export type CartLineGroup = z.infer<typeof CartLineGroupEnum>;
+
 /** Her satırın ortak görünüm alanları — varyant satırı da paket satırı da bunları taşır. */
 const CartLineViewShape = {
   /** Ürüne/pakete dönüş bağlantısı (`/product/[slug]`, `/package/[slug]`). */
@@ -235,6 +259,16 @@ const CartLineViewShape = {
   blocked: z.boolean(),
   /** Kalem hangi yoldan gelir; **`null` = yer bilinmiyor** ve o hâlde ayrım YAPILMAZ. */
   route: CartLineRouteEnum.nullable(),
+  /**
+   * Kalemin GRUBU — ekran satırı bu alana göre yerleştirir, `route`tan yeniden türetmez
+   * (künyesi `CartLineGroupEnum`de: üçüncü grubun adı yokken her yüzey kendi süzgecini yazdı).
+   *
+   * **`null` YOKTUR ve bu bilinçli:** yer bilinmiyorken bile bir yol vardır — kalem ana grupta
+   * (`local`) durur. Ayrım yapılamadığında satırı gruptan çıkarmak, müşterinin sepetinden sessizce
+   * kalem düşürmek olurdu; bilinmeyen bir yolu "gelemez" diye okumak ise bilmediğimiz bir şeyi
+   * söylemek. `route: null` hâli ekranda hâlâ okunabilir — grup ondan HABER vermez, karar verir.
+   */
+  group: CartLineGroupEnum,
   /**
    * Bu yerde ŞU AN kaç adet var. `null` = yol bilinmiyor. **Bir SÖZ DEĞİL, bir sayı**: sepet stok
    * ayırmaz (DOMAIN §4) — ekran "şu an en fazla 2 adet" der ve buna dayanıp kilitlemez.
@@ -286,8 +320,28 @@ export const MeCartViewSchema = z.object({
   totalCents: z.number().int(),
   /** Toplam adet — yüzen düğmenin ve başlığın sayacı. */
   itemCount: z.number().int(),
-  /** Çıkarılmadan devam edilemeyecek satır var mı — "Siparişi tamamla" pasifleşir. */
+  /**
+   * **SATILAMAZ** satır var mı — tükenmiş ya da satışa kapanmış. "Siparişi tamamla" bunda pasifleşir.
+   *
+   * Anlamı 10.08'de DEĞİŞMEDİ, sınırı yazıldı: teslim edilemeyen kalem (`group: 'undeliverable'`)
+   * buraya GİRMEZ ve düğmeyi kapatmaz. Müşteri gelebilecek kalemleri sipariş eder, gelemeyenler
+   * sepette işaretli bekler (kullanıcı kararı 10.08) — ikisini tek bayrağa toplamak, tek bir soğuk
+   * zincir ürünü yüzünden bütün sepeti kilitlemek olurdu.
+   */
   hasBlocked: z.boolean(),
+  /**
+   * Bu adrese HİÇ gelemeyen kalemlerin toplamı — **asgari sepete SAYILMAYAN tutar** (kullanıcı
+   * kararı 10.08). `0` = öyle bir kalem yok (ya da hepsinin fiyatı çözülemedi).
+   *
+   * Neden ayrı taşınır: `subtotalCents` sepette DURAN her şeyi sayar (ekran müşterinin sepetini
+   * eksiksiz göstermeli), asgari sepet eşiği ise yalnız SİPARİŞ EDİLEBİLEN kısma bakar. Fark
+   * yazılmasaydı müşteri sipariş edemeyeceği ürünle eşiği geçmiş görünür, kasada geri düşerdi.
+   * Eşik kapıya teslimin kuralıdır; kargonun kendi eşiği ayrı yaşar (`shippingSubtotalCents`).
+   *
+   * Ekran bunu "X € şu an gönderilemeyen kalemlerde" diye YAZABİLİR ama hesaplamaz: `minBasketOk`
+   * ve `missingForMinBasketCents` zaten bu tutar düşülmüş hâlde gelir.
+   */
+  undeliverableSubtotalCents: z.number().int(),
   /** Asgari sepet tutuyor mu (DOMAIN §6, AYARDAN gelir — ekran eşiği kendi bilmez). */
   minBasketOk: z.boolean(),
   missingForMinBasketCents: z.number().int(),
@@ -301,6 +355,24 @@ export const MeCartViewSchema = z.object({
   shippingTariffCents: z.number().int(),
   /** Sepetin tamamı kargo grubundaysa müşteriye "iki sipariş vereceksiniz" DENMEZ. */
   shippingOnly: z.boolean(),
+  /**
+   * KARGO GRUBUNUN ÇÖZÜLMÜŞ ÜCRETİ (10.08) — tarife değil, KARAR: eşik aşıldıysa 0.
+   *
+   * `shippingTariffCents` ile `freeShippingCents` zaten taşınıyordu ama aralarındaki kararı
+   * (`resolveShippingFee`) istemci veremez: o bir İŞ KURALI ve kopyası bir gün sunucununkinden
+   * ayrışırdı — sepette "ücretsiz" yazıp kasada 7,90 € kesmek, ekranın sözünü tutmamasıdır
+   * (CLAUDE §1, `STACK §4`). Sunucu `shippingGroupFee` ile çözüp buraya koyuyor.
+   *
+   * Kargo grubu boşken 0 — ödenecek bir kargo yok.
+   */
+  shippingGroupFeeCents: z.number().int(),
+  /**
+   * Ücretsiz kargoya kalan (cent) — 0 ise ya eşik aşıldı ya eşik tanımsız.
+   *
+   * Ham çıkarma (`freeShippingCents − shippingSubtotalCents`) ekranda YAPILMAZ: eşik tanımsızken
+   * (0) o çıkarma negatif çıkar ve "−33,25 € kaldı" gibi bir cümle üretirdi.
+   */
+  shippingFreeRemainingCents: z.number().int(),
 });
 export type MeCartView = z.infer<typeof MeCartViewSchema>;
 

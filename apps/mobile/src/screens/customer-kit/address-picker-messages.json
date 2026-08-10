@@ -1,0 +1,17 @@
+{
+  "tr": {
+    "title": "Teslimat adresi",
+    "untitled": "Adres",
+    "addNew": "＋ Yeni adres ekle"
+  },
+  "fr": {
+    "title": "Adresse de livraison",
+    "untitled": "Adresse",
+    "addNew": "＋ Ajouter une adresse"
+  },
+  "de": {
+    "title": "Lieferadresse",
+    "untitled": "Adresse",
+    "addNew": "＋ Neue Adresse"
+  }
+}

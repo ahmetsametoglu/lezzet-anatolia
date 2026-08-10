@@ -23,16 +23,17 @@
       "empty": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
       "emptyBody": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok."
     },
-    "blocked": {
-      "title": "Bu ürünler yalnız teslimat bölgemizde",
-      "body": "Sepetinizdeki soğuk zincir ürünlerini bu adrese teslim edemiyoruz. Bölge içi bir adres seçin ya da o kalemleri sepetten çıkarın."
+    "undeliverable": {
+      "title": "Bazı kalemler bu siparişe girmiyor",
+      "body": "Soğuk zincir isteyen ürünleri bu adrese götüremiyoruz; onlar sepetinizde bekliyor ve bu siparişe eklenmiyor. Bölge içi bir adres seçerseniz aynı siparişe dahil olurlar.",
+      "items": "Bekleyenler: {items}."
     },
     "delivery": {
       "eyebrow": "Teslimat",
       "door": "Kapıya teslim",
       "doorBody": "Soğutuculu araçlarımızla — günü siz seçin. Teslimat: {fee}",
       "doorUnavailable": "Bu adres teslimat bölgemizin dışında.",
-      "shipping": "Soğuk zincir kargo",
+      "shipping": "Kargoyla gönderim",
       "shippingBody": "2–4 iş günü. Teslimat: {fee}",
       "shippingUnavailable": "Bu adres teslimat bölgemizde — sipariş aracımızla gelir.",
       "dayLabel": "Teslimat günü: {day}"
@@ -64,7 +65,8 @@
       "free": "Ücretsiz",
       "noPrice": "Fiyat yok",
       "pending": "Adres seçilince",
-      "total": "Genel toplam"
+      "total": "Genel toplam",
+      "undeliverableNote": "Üstü çizili ürünler bu posta koduna teslim edilemiyor; siparişe eklenmedi ve ödemeye girmiyor."
     },
     "marketing": "Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)",
     "block": {
@@ -115,7 +117,7 @@
       "title": "Siparişiniz alındı!",
       "reference": "Sipariş no: {reference}",
       "delivery": "Teslimat",
-      "shipping": "Soğuk zincir kargo",
+      "shipping": "Kargoyla gönderim",
       "payment": "Ödeme",
       "total": "Toplam",
       "unknown": "Bilinmiyor",
@@ -149,16 +151,17 @@
       "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
       "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande."
     },
-    "blocked": {
-      "title": "Ces produits restent dans notre zone de livraison",
-      "body": "Nous ne pouvons pas livrer les articles en chaîne du froid à cette adresse. Choisissez une adresse dans notre zone ou retirez ces articles du panier."
+    "undeliverable": {
+      "title": "Certains articles ne font pas partie de cette commande",
+      "body": "Les produits sous chaîne du froid ne peuvent pas venir à cette adresse ; ils restent dans votre panier et ne sont pas ajoutés à cette commande. Avec une adresse située dans notre zone, ils rejoindront la même commande.",
+      "items": "En attente : {items}."
     },
     "delivery": {
       "eyebrow": "Livraison",
       "door": "Livraison à domicile",
       "doorBody": "Avec nos véhicules réfrigérés — vous choisissez le jour. Livraison : {fee}",
       "doorUnavailable": "Cette adresse est hors de notre zone de livraison.",
-      "shipping": "Colis chaîne du froid",
+      "shipping": "Envoi par transporteur",
       "shippingBody": "2–4 jours ouvrés. Livraison : {fee}",
       "shippingUnavailable": "Cette adresse est dans notre zone — notre véhicule vous livre.",
       "dayLabel": "Jour de livraison : {day}"
@@ -190,7 +193,8 @@
       "free": "Offerte",
       "noPrice": "Prix indisponible",
       "pending": "Après le choix de l'adresse",
-      "total": "Total général"
+      "total": "Total général",
+      "undeliverableNote": "Les articles barrés ne sont pas livrables à ce code postal ; ils ne font pas partie de la commande ni du paiement."
     },
     "marketing": "Je souhaite être informé(e) des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
     "block": {
@@ -241,7 +245,7 @@
       "title": "Commande reçue !",
       "reference": "N° de commande : {reference}",
       "delivery": "Livraison",
-      "shipping": "Colis chaîne du froid",
+      "shipping": "Envoi par transporteur",
       "payment": "Paiement",
       "total": "Total",
       "unknown": "Inconnu",
@@ -275,16 +279,17 @@
       "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
       "emptyBody": "Fügen Sie Ihre Adresse hier hinzu — Sie müssen Ihre Bestellung nicht verlassen."
     },
-    "blocked": {
-      "title": "Diese Produkte bleiben in unserem Liefergebiet",
-      "body": "Kühlkettenartikel können wir nicht an diese Adresse liefern. Wählen Sie eine Adresse in unserem Gebiet oder entfernen Sie diese Artikel aus dem Warenkorb."
+    "undeliverable": {
+      "title": "Einige Artikel gehören nicht zu dieser Bestellung",
+      "body": "Kühlkettenprodukte können nicht an diese Adresse kommen; sie bleiben in Ihrem Warenkorb und werden dieser Bestellung nicht hinzugefügt. Mit einer Adresse in unserem Liefergebiet gehören sie zur selben Bestellung.",
+      "items": "Wartend: {items}."
     },
     "delivery": {
       "eyebrow": "Lieferung",
       "door": "Lieferung an die Tür",
       "doorBody": "Mit unseren Kühlfahrzeugen — Sie wählen den Tag. Lieferung: {fee}",
       "doorUnavailable": "Diese Adresse liegt außerhalb unseres Liefergebiets.",
-      "shipping": "Kühlketten-Versand",
+      "shipping": "Versand per Paketdienst",
       "shippingBody": "2–4 Werktage. Lieferung: {fee}",
       "shippingUnavailable": "Diese Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
       "dayLabel": "Liefertag: {day}"
@@ -316,7 +321,8 @@
       "free": "Kostenlos",
       "noPrice": "Preis nicht verfügbar",
       "pending": "Nach Wahl der Adresse",
-      "total": "Gesamtsumme"
+      "total": "Gesamtsumme",
+      "undeliverableNote": "Durchgestrichene Artikel sind an diese Postleitzahl nicht lieferbar; sie gehören weder zur Bestellung noch zur Zahlung."
     },
     "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional — ohne Einfluss auf Ihre Bestellung.)",
     "block": {
@@ -367,7 +373,7 @@
       "title": "Bestellung eingegangen!",
       "reference": "Bestellnummer: {reference}",
       "delivery": "Lieferung",
-      "shipping": "Kühlketten-Versand",
+      "shipping": "Versand per Paketdienst",
       "payment": "Zahlung",
       "total": "Gesamt",
       "unknown": "Unbekannt",

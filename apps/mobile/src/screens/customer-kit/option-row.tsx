@@ -23,12 +23,28 @@ interface OptionRowProps {
   selected: boolean;
   onPress: () => void;
   disabled?: boolean;
+  /**
+   * Alt satır SEBEP bildiriyor mu (kullanıcı kararı 10.08). Kapalı bir seçeneğin sadece
+   * SOLUKLAŞMASI yetmiyordu: müşteri neden kapalı olduğunu okumak için soluk gri bir cümleyi
+   * fark etmek zorunda kalıyordu. Sebep sistemin hata kırmızısıyla yazılınca göz oraya gidiyor.
+   * Ton `error` token'ından gelir — ham hex ve Tailwind sabiti YASAK (CLAUDE §3).
+   */
+  descriptionTone?: 'muted' | 'danger';
   /** Başlığın sağındaki rozet ("varsayılan"). */
   trailing?: ReactNode;
   testID?: string;
 }
 
-export function OptionRow({ label, description, selected, onPress, disabled = false, trailing, testID }: OptionRowProps) {
+export function OptionRow({
+  label,
+  description,
+  selected,
+  onPress,
+  disabled = false,
+  descriptionTone = 'muted',
+  trailing,
+  testID,
+}: OptionRowProps) {
   return (
     <PressableSurface
       onPress={onPress}
@@ -43,7 +59,9 @@ export function OptionRow({ label, description, selected, onPress, disabled = fa
         <Text style={styles.label}>{label}</Text>
         {trailing}
       </View>
-      {description === undefined ? null : <Text style={styles.description}>{description}</Text>}
+      {description === undefined ? null : (
+        <Text style={[styles.description, descriptionTone === 'danger' ? styles.dangerDescription : null]}>{description}</Text>
+      )}
     </PressableSurface>
   );
 }
@@ -77,6 +95,9 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
     color: theme.colors.ink,
+  },
+  dangerDescription: {
+    color: theme.colors.error,
   },
   description: {
     fontFamily: theme.font.body[400],
