@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 // Monorepo geneli test yapılandırması — **iki proje**, çünkü iki farklı gerçek var:
 //
@@ -15,8 +15,43 @@ import { defineConfig } from 'vitest/config';
 // riskini taşıyordu.
 //
 // **Sınır dizinle çizilir, isimle değil:** 52 dosyayı yeniden adlandırmak diğer ajanların işine
-// dokunurdu. `apps/web/lib`, `packages/database` ve `apps/backend` entegrasyon kökleridir; oradaki
-// birkaç saf dosyanın seri koşması ihmal edilebilir bir bedeldir.
+// dokunurdu. `apps/web/lib`, `packages/database` ve `apps/backend` entegrasyon kökleridir.
+//
+// **Ama "birkaç saf dosya ihmal edilebilir" varsayımı ÖLÇÜLDÜ ve yanlış çıktı (K8-1, 10.08):**
+// `apps/web/lib`in 68 test dosyasının **19'u** DB'ye hiç vurmuyor. Bedel de artık yalnız hız değil:
+// 08.08'den beri `CLAUDE §4b` DB'ye vuran koşuyu şeritlere kapatıyor, yani `cart-blocker`ı yazan
+// şerit kendi testini KOŞAMIYOR. Dizin ölçütü burada işlemiyor çünkü klasörler karışık —
+// `cart/discount.ts` (DB) ile `cart/discount-label.ts` (saf) aynı yerde durur.
+//
+// Çözüm yeniden adlandırma DEĞİL (yukarıdaki gerekçe hâlâ geçerli: dosyalar başka şeritlerin),
+// **yolların tek yerde sayılması**. Liste ikiye bölünmez: birim projesi bunu `include`a ekler,
+// entegrasyon `exclude`a — aynı sabitten. Çürümesini `docs:check §3g` engelliyor: DB'siz olup
+// listede olmayan bir test dosyası commit'ten geçmez.
+const WEB_LIB_DBSIZ = [
+  'apps/web/lib/analytics/availability.test.ts',
+  'apps/web/lib/analytics/route-pattern.test.ts',
+  'apps/web/lib/analytics/session-key.test.ts',
+  'apps/web/lib/analytics/utm.test.ts',
+  'apps/web/lib/assistant/economics.test.ts',
+  'apps/web/lib/auth/post-login-target.test.ts',
+  'apps/web/lib/cart/cart-blocker.test.ts',
+  'apps/web/lib/cart/discount-label.test.ts',
+  'apps/web/lib/cart/place-change.test.ts',
+  'apps/web/lib/customer/name.test.ts',
+  'apps/web/lib/customer/scorecard.test.ts',
+  // `delivery/map-codes.test.ts` BURAYA GİRMEZ — denetimin K8-1 listesinde vardı, ölçünce düştü:
+  // kendi metninde DB izi yok ama `./map-codes` → `serviceDb` çağırıyor ve birim projesinde 7 test
+  // birden patlıyor. Listeyi grep'le değil koşuyla doğrulamanın sebebi bu tek dosya.
+  'apps/web/lib/delivery/place-filter.test.ts',
+  // `order/carrier.test.ts` YOK ARTIK — kural pakete terfi etmişti, web nüshası köprü bile olmadan
+  // sahipsiz kalmıştı (K5-1 benimsemesi 10.08). Dosya ve testi silindi, test pakete taşındı.
+  'apps/web/lib/order/order-id.test.ts',
+  'apps/web/lib/storefront/featured.test.ts',
+  'apps/web/lib/storefront/showcase-rank.test.ts',
+  'apps/web/lib/use-load-more.hook.test.ts',
+  'apps/web/lib/warehouse/filter.test.ts',
+];
+
 const alias = {
   // `@/…` — apps/web'in tsconfig takma adı. Test koşucusu bunu bilmezse web tarafındaki saf
   // fonksiyonlar (yönlendirme kararı gibi) yalnız göreli yolla test edilebilirdi.
@@ -53,6 +88,8 @@ export default defineConfig({
             'packages/design-tokens/src/**/*.test.ts?(x)',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
+            // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).
+            ...WEB_LIB_DBSIZ,
           ],
           setupFiles: ['./vitest.setup.unit.ts'],
         },
@@ -71,6 +108,10 @@ export default defineConfig({
             // Application da entegrasyon köküdür (21.4a): orkestrasyonlar servislerle DB'ye vurur.
             'packages/application/src/**/*.test.ts?(x)',
           ],
+          // Birim projesine alınan 19 dosya buradan DÜŞER, yoksa İKİ projede birden koşarlardı.
+          // `configDefaults.exclude` korunuyor: `exclude` verildiğinde vitest varsayılanı EZER ve
+          // `node_modules` yeniden taranmaya başlardı.
+          exclude: [...configDefaults.exclude, ...WEB_LIB_DBSIZ],
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.
           fileParallelism: false,

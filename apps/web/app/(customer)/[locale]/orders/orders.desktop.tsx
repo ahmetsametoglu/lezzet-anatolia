@@ -6,6 +6,7 @@ import { ListEmpty } from '@/components/customer/ui/list-empty';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import type { CustomerOrderSummary } from '@/lib/order/customer-orders';
+import { orderProductNames } from '@/lib/order/order-names';
 import { OrderStatusBadge } from './components/order-status-badge';
 import { ReorderNotice } from './components/reorder-notice';
 // Liste `ReorderButton`ı KULLANMIYOR (kendi meşgul durumunu tüm satırlar için tek yerde tutuyor),
@@ -125,6 +126,7 @@ function EmptyOrders({ t }: { t: OrdersViewProps['t'] }) {
  */
 export function summaryOf(order: CustomerOrderSummary, t: OrdersViewProps['t'], locale: OrdersViewProps['locale'], compact = false): string {
   const parts = [formatOrderDate(order.createdAt, locale, compact), t.itemCount.replace('{count}', String(order.itemCount))];
-  if (order.productNames.length > 0) parts.push(order.productNames.join(', '));
+  const names = orderProductNames(order);
+  if (names.length > 0) parts.push(names.join(', '));
   return parts.join(' · ');
 }

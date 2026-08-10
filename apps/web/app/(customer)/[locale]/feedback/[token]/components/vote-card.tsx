@@ -52,7 +52,7 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
         {/* Görsel oranı 3/2 (tasarım). Görselsiz üründe alan yine ayrılıyor: kart yüksekliği
             karttan karta değişseydi akış her geçişte zıplardı. */}
         <div className="relative aspect-3/2 w-full bg-sand-50">
-          {card.imageUrl && <Image src={card.imageUrl} alt="" fill sizes="(max-width: 768px) 100vw, 460px" className="object-cover" />}
+          {card.image.url && <Image src={card.image.url} alt="" fill sizes="(max-width: 768px) 100vw, 460px" className="object-cover" />}
         </div>
 
         <div className={`flex flex-col items-center gap-3 text-center ${compact ? 'px-5 pb-5 pt-4' : 'px-5 pb-5 pt-4'}`}>

@@ -9,6 +9,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { formatOrderDate } from '@/lib/storefront/format';
+import { orderProductNames } from '@/lib/order/order-names';
 import type { CustomerOrderDetail, CustomerOrderSummary } from '@/lib/order/customer-orders';
 import { errorText } from '@/lib/customer-error-text';
 import { openTicketAction } from '../actions';
@@ -120,7 +121,7 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
             >
               <span className="font-sans text-note font-bold leading-tight text-ink">{row.referenceNo ?? '—'}</span>
               <span className="font-sans text-micro leading-relaxed text-muted">
-                {formatOrderDate(row.createdAt, locale, true)} · {row.productNames.join(', ')}
+                {formatOrderDate(row.createdAt, locale, true)} · {orderProductNames(row).join(', ')}
               </span>
             </Link>
           ))

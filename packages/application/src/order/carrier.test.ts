@@ -4,6 +4,10 @@ import { trackingUrlOf } from './carrier';
 /**
  * Takip adresi kuralı (08.5) — saf, DB'siz. Testler ADRESİN KENDİSİNİ değil DAVRANIŞI tutuyor:
  * taşıyıcı bir gün sitesini değiştirebilir, ama "bilinmeyen taşıyıcıya düğme çizilmez" değişmez.
+ *
+ * Web'den TAŞINDI (10.08 · denetim K5-1): kural pakete terfi ettikten sonra web nüshası köprü bile
+ * olmadan sahipsiz kaldı ve testi köprüyü değil kuralı sınamalı — `apps/web/lib/order/carrier.ts`
+ * ile testi birlikte silindi.
  */
 describe('trackingUrlOf', () => {
   it('bilinen taşıyıcıya adres üretir', () => {

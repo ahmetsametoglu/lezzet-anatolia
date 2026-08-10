@@ -1,174 +1,38 @@
 import 'server-only';
-import {
-  FeedbackProgressService,
-  FeedbackRequestService,
-  OrderItemService,
-  OrderService,
-  ProductService,
-  ProductVariantService,
-  SettingsService,
-  UserProfileService,
-  serviceDb,
-} from '@lezzet/database';
-import { feedbackOutcomeOf, POINTS_SETTING_KEYS, type FeedbackOutcome } from '@lezzet/domain-core';
-import { resolveLocalizedText, type ProductFeedback } from '@lezzet/types';
+import { completeFeedbackInvite as completeInviteFor, openFeedbackInvite as openInviteFor } from '@lezzet/application';
+import type { FeedbackCompletion, FeedbackInviteView } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import type { Locale } from '@lezzet/i18n';
-import { publicImageUrl } from '@lezzet/storage';
-import { ProductFeedbackService } from '@lezzet/database';
-import { awardPoints, getPointsBalance } from './points';
 
 /**
- * Alım-sonrası geri bildirim daveti (17.2) ve akış sonu (17.6) — uygulama kapıları.
+ * **Geçiş köprüsü** — alım-sonrası davet akışının (17.2 · 17.6) gövdesi
+ * `@lezzet/application/feedback/invite`ta (terfi aşama 2/3, 10.08 · denetim K5-1). Künyenin tamamı
+ * orada: token'ın neden oturum yerine geçtiği, yarıda bırakılan akışın nasıl sürdüğü, tamamlama
+ * puanının neden beğeniye değil tamamlamaya bağlı olduğu.
  *
- * **Davet OLUŞTURULUR, sonra GÖNDERİLİR.** İki ayrı adım, çünkü iki ayrı gerçek: e-posta
- * sağlayıcısı düştüğünde davet kaybolmaz, gönderilmemiş olarak kuyrukta kalır ve sonraki tarama
- * onu bulur. Tek adım olsaydı sağlayıcı hatası daveti hiç var olmamış yapardı.
+ * **Neden köprüye indi.** Daveti artık iki yüzey açıyor — web `/feedback/[token]` sayfası ve mobil
+ * vFb ekranının derin bağlantısı. İki nüshanın ikisi de canlıyken puan kuralı bir yerde düzeltilse
+ * öteki yerinde kalırdı ve iki dosyanın da kendi testi yeşil görünürdü.
+ *
+ * **Bu köprü `serviceDb()`yi enjekte ediyor** (`lib/feedback/points.ts`in `rewardCompletedOrder`
+ * köprüsüyle aynı desen): paket taşıma bilmez, `db`yi çağıranından alır; web tarafında o çağıran
+ * burasıdır. Çağıran sayfa ve action'lar imzayı olduğu gibi kullanmayı sürdürüyor.
+ *
+ * **Tek şekil farkı kartın görselinde ve bilinçli:** paket `image: StorefrontImage` (`imageOf`)
+ * dönüyor, çıplak URL değil — katalog/vitrin kartlarının indirgemesiyle aynı kapı. Oy kartı
+ * `card.image.url` okuyor; ikinci bir görsel çözümü yaşamıyor.
+ *
+ * Testi de pakete bırakıldı (`packages/application/src/feedback/invite.test.ts`) — köprüyü test
+ * eden bir test, kuralı test etmiş sayılmaz.
  */
+export type { FeedbackCard, FeedbackCompletion, FeedbackInviteView } from '@lezzet/application';
 
-/** Değerlendirme akışındaki tek kart — müşterinin aldığı bir ürün. */
-export interface FeedbackCard {
-  productId: string;
-  name: string;
-  imageUrl: string | null;
-  /** Müşteri bu ürünü zaten değerlendirdiyse mevcut kaydı — akış kaldığı yerden devam eder. */
-  existing: { vote: ProductFeedback['vote']; rating: number | null; comment: string | null } | null;
+/** **Davetin açılması** — bağlantıdaki token'la. Akışın tek giriş kapısı. */
+export function openFeedbackInvite(locale: Locale, token: string): Promise<FeedbackInviteView | null> {
+  return openInviteFor(serviceDb(), locale, token);
 }
 
-/** Davet açıldığında ekranın gördüğü her şey — tek turda. */
-export interface FeedbackInviteView {
-  requestId: string;
-  customerId: string;
-  /** Karşılama ve teşekkür ekranı adla hitap ediyor ("Teşekkürler Ayşe Hanım!"). Yoksa genel cümle. */
-  customerName: string | null;
-  orderReferenceNo: string | null;
-  /** Siparişin tarihi — karşılama ekranı "LZA-2417 · 8 Temmuz" diyor; ham ISO, biçimleme ekranın. */
-  orderedOn: string | null;
-  cards: FeedbackCard[];
-  /** "2 / 5" — türetilir, saklanmaz. */
-  progress: { rated: number; total: number };
-  /**
-   * Tamamlamanın kazandıracağı puan — **AYARDAN** (`points_feedback_purchase`), ekrana gömülmez.
-   *
-   * Karşılama ekranı bunu bir SÖZ olarak veriyor ("Tamamlayınca +N puan sizindir"). Tasarımdaki
-   * `30` bir maket sayısı; kodlanmış olsaydı ayar değiştiği gün ekran müşteriye sistemin
-   * vermeyeceği bir sayı söylerdi — hesap kartındaki eşiğin 300/500 ayrışması tam olarak buydu
-   * (29.07 denetimi).
-   */
-  completionPoints: number;
-  /** Tamamlanmış davet tekrar açılırsa: teşekkür durumu, puan ikinci kez verilmez. */
-  completedAt: string | null;
-  pointsAwarded: number | null;
-}
-
-/**
- * **Davetin açılması** — bağlantıdaki token'la. Akışın tek giriş kapısı.
- *
- * Token oturum yerine geçer; başka kimlik sorulmaz. Geçersiz token `null` döner — "böyle bir davet
- * var ama senin değil" demek, olmayan bir kaydın varlığını doğrulamaktır.
- *
- * **Yarıda bırakılan akış kaldığı yerden devam eder:** her kart mevcut değerlendirmesiyle gelir.
- */
-export async function openFeedbackInvite(locale: Locale, token: string): Promise<FeedbackInviteView | null> {
-  const db = serviceDb();
-  const request = await new FeedbackRequestService(db).findByToken(token);
-  if (!request) return null;
-
-  const [order, items, progress, given, customer, completionPoints] = await Promise.all([
-    new OrderService(db).getById(request.orderId),
-    new OrderItemService(db).listByOrder(request.orderId),
-    new FeedbackProgressService(db).getByRequest(request.id),
-    new ProductFeedbackService(db).listByRequest(request.id),
-    new UserProfileService(db).getById(request.customerId),
-    // Sözün sayısı ayardan; ekran kendi rakamını uydurmaz (alanın künyesi).
-    new SettingsService(db).getNumber(POINTS_SETTING_KEYS.feedback_purchase, 5),
-  ]);
-
-  // Kalem varyanta bağlı, kart ürüne: aynı ürünün iki boyu TEK karttır.
-  const variants = await new ProductVariantService(db).listByIds(items.map((i) => i.variantId));
-  const productIds = [...new Set(variants.map((v) => v.productId))];
-  const products = await new ProductService(db).listByIds(productIds);
-  const givenByProduct = new Map(given.map((g) => [g.productId, g]));
-
-  return {
-    requestId: request.id,
-    customerId: request.customerId,
-    customerName: customer?.name ?? null,
-    orderReferenceNo: order?.referenceNo ?? null,
-    orderedOn: order?.createdAt ?? null,
-    completionPoints,
-    cards: products.map((product) => {
-      const existing = givenByProduct.get(product.id);
-      return {
-        productId: product.id,
-        name: resolveLocalizedText(product.name, locale),
-        imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
-        existing: existing ? { vote: existing.vote, rating: existing.rating, comment: existing.comment } : null,
-      };
-    }),
-    progress: { rated: progress?.ratedProducts ?? 0, total: progress?.totalProducts ?? 0 },
-    completedAt: request.completedAt,
-    pointsAwarded: request.pointsAwarded,
-  };
-}
-
-export interface FeedbackCompletion {
-  outcome: FeedbackOutcome;
-  /** Bu turda kazanılan puan; ikinci kez tamamlamada 0. */
-  pointsAwarded: number;
-  balance: number;
-  /** Yalnız `review_invite` sonucunda dolu — dış değerlendirme adresi ve düğmede yazacak ad. */
-  reviewUrl: string | null;
-  reviewPlatform: string | null;
-}
-
-/**
- * **Akışın tamamlanması** — puan burada verilir ve akış sonu belirlenir.
- *
- * **Puan tamamlamaya bağlıdır, beğeniye değil** (DOMAIN §14): müşteri her ürüne "beğenmedim" dese
- * de ödülünü alır. Arayüz bunun tersini ima bile etmemeli.
- *
- * İkinci çağrı puan vermez: `completedAt` damgası bunu söyler, defterdeki tekillik de ikinci bir
- * emniyet olarak durur.
- */
-export async function completeFeedbackInvite(token: string): Promise<FeedbackCompletion | null> {
-  const db = serviceDb();
-  const requests = new FeedbackRequestService(db);
-  const request = await requests.findByToken(token);
-  if (!request) return null;
-
-  const given = await new ProductFeedbackService(db).listByRequest(request.id);
-  const likeCount = given.filter((g) => g.vote === 'like').length;
-  const dislikeCount = given.filter((g) => g.vote === 'dislike').length;
-
-  // Hangi platform olduğu buranın kararı DEĞİL, ayarın: Google İşletme Profili de Trustpilot da
-  // aynı uca takılır (`review_platform_url`). Motor yalnız "bağlantı var mı"yı sorar.
-  const settings = new SettingsService(db);
-  const reviewUrl = (await settings.get<string>('review_platform_url', '')) || null;
-  const outcome = feedbackOutcomeOf({ likeCount, dislikeCount, hasReviewLink: Boolean(reviewUrl) });
-  const invite =
-    outcome === 'review_invite'
-      ? { reviewUrl, reviewPlatform: await settings.get<string>('review_platform_name', 'Google') }
-      : { reviewUrl: null, reviewPlatform: null };
-
-  // Zaten tamamlanmış: teşekkür durumu gösterilir, puan İKİNCİ KEZ verilmez.
-  if (request.completedAt) {
-    return {
-      outcome,
-      pointsAwarded: 0,
-      balance: (await getPointsBalance(request.customerId)).balance,
-      ...invite,
-    };
-  }
-
-  // Tamamlama puanı davetin KENDİSİNE yazılır: tek tek kartların puanı zaten kart başına verildi.
-  const entry = await awardPoints({ customerId: request.customerId, reason: 'feedback_purchase', refId: request.id });
-  const points = entry?.points ?? 0;
-  await requests.markCompleted(request.id, points);
-
-  return {
-    outcome,
-    pointsAwarded: points,
-    balance: (await getPointsBalance(request.customerId)).balance,
-    ...invite,
-  };
+/** **Akışın tamamlanması** — puan burada verilir ve akış sonu belirlenir. */
+export function completeFeedbackInvite(token: string): Promise<FeedbackCompletion | null> {
+  return completeInviteFor(serviceDb(), token);
 }
