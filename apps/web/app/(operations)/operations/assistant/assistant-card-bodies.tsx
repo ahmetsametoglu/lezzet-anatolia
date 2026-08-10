@@ -8,10 +8,11 @@ import {
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
+  type MoneyMovementPayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
-import { SubjectCard } from '@/components/operation/ui/subject-card';
+import { MEDIA_H, SubjectCard } from '@/components/operation/ui/subject-card';
 import { CardFact } from './assistant-card';
 import type { AssistantRowView } from './assistant-types';
 
@@ -61,6 +62,8 @@ export function cardBodyOf(row: AssistantRowView): ReactNode {
       ));
     case 'bundle_draft':
       return renderWith<BundleDraftPayload>(row, 'bundle_draft', (p) => <BundleCard payload={p} row={row} />);
+    case 'money_movement':
+      return renderWith<MoneyMovementPayload>(row, 'money_movement', (p) => <MoneyCard payload={p} />);
     default:
       // Kalan yedi tip asistanın CÜMLESİYLE duruyor ve bu yeterli bir hâl, eksik bir hâl değil —
       // özet zaten tam bir cümle. Kendi dilleri tip tip kurulacak (fırsat ve paket kuruldu); desen
@@ -359,6 +362,87 @@ function BundleCard({ payload, row }: { payload: BundleDraftPayload; row: Assist
           />
         )}
         <CardFact label="İçerik" value={`${payload.items.length} kalem · ${num(payload.items.reduce((s, i) => s + i.qty, 0))} ad.`} />
+      </Facts>
+    </>
+  );
+}
+
+/** Para hareketinin türü — dilekçedeki kapalı küme, operatörün diliyle. */
+const MONEY_TYPE: Record<MoneyMovementPayload['type'], string> = {
+  expense: 'Gider',
+  transfer: 'Transfer',
+  capital: 'Sermaye',
+  misc: 'Diğer',
+};
+
+/**
+ * PARA HAREKETİ — görseli OLMAYAN ilk tip (22.11).
+ *
+ * ── GÖRSELİN YERİNİ TUTAR ALIYOR ────────────────────────────────────────────
+ * Bugüne kadar kurulan kart dili fotoğraf üzerineydi: fırsat ürünü, paket kalemlerini gösteriyor.
+ * Defter satırının fotoğrafı yok ve olamaz — ama bandın YÜKSEKLİĞİ standart (`MEDIA_H`, kullanıcı
+ * kararı 10.08) ve ızgarada hizayı o tutuyor. Bandı boş bırakmak kartı ötekilerden 128 piksel kısa
+ * yapardı; onun yerine bandı **kararın kendisi** dolduruyor: tür, tutar, paranın yolu. Bir para
+ * hareketinde tanımayı sağlayan şey zaten fotoğraf değil bu üçlü.
+ *
+ * ── TUTAR RENKLİ: GİDER KIRMIZI, GELİR YEŞİL (kullanıcı kararı 10.08) ───────
+ * Bir tur yalnız işaret vardı (`−`/`+`) ve gerekçesi "kira ödemek arıza değil, alarm rengi gereksiz
+ * korku yaratır"dı. Kullanıcı düzeltti: *"gider ve gelir kavramı dolayısıyla rakamı
+ * renklendirebilirsin."* Doğrusu bu — burada renk bir UYARI değil bir SINIFLANDIRMA: muhasebenin
+ * kendi dili kırmızıyı "çıkan", yeşili "giren" için kullanır ve operatör o dili zaten biliyor.
+ * Zarar satırındaki amber ile karışmıyorlar, çünkü o gerçekten bir uyarıdır (beklenmeyen sonuç),
+ * bu ise hareketin türü.
+ *
+ * ── TRANSFERDE PARANIN YOLU GÖRÜNÜR ─────────────────────────────────────────
+ * `Kasa → Crédit Mutuel`. Hedef hesabın ADI dilekçeye 22.11'de eklendi; öncesinde yalnız kimlik
+ * yazılıyordu ve transfer önerisi "Kasa → uuid" diye okunuyordu, yani onaylanamazdı.
+ *
+ * ── AÇIKLAMA CÜMLESİ KALIYOR ────────────────────────────────────────────────
+ * Öteki tiplerde cümle kalktı, burada kalıyor ve sebebi tipin kendisi: "Ağustos ayı depo kirası —
+ * STR deposu" bilgisinin sayıya çevrilebilir bir karşılığı yok. Kategori (`kira`) neyin ödendiğini
+ * söyler, açıklama HANGİSİNİN ödendiğini.
+ *
+ * ── BOŞ ALAN DA GÖSTERİLİR ──────────────────────────────────────────────────
+ * Kategori/karşı taraf/değer tarihi yoksa satır "—" ile duruyor, gizlenmiyor. Kural kullanıcının
+ * kendi kararı (22.10, indirim formu): *"asgari sepete hiç girmemiş, haberi var mıydı?"* — verilmemiş
+ * bir kararı listeden çıkarmak, onu verilmiş gibi gösterir. Defterde bu daha da ağır basıyor:
+ * kategorisiz bir gider ay sonunda hiçbir raporda görünmez.
+ */
+function MoneyCard({ payload }: { payload: MoneyMovementPayload }) {
+  const out = payload.direction === 'out';
+  // Paranın yolu: transferde iki hesap, ötekilerde tek. Ok işareti yönü kelimeye gerek bırakmıyor.
+  const route = payload.counterAccountName
+    ? `${payload.accountName} → ${payload.counterAccountName}`
+    : payload.accountName;
+
+  return (
+    <>
+      <span
+        className={`flex ${MEDIA_H} flex-col justify-center gap-1.5 rounded-ops-card border border-ops-line bg-ops-white px-3.5`}
+      >
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
+          {MONEY_TYPE[payload.type]}
+        </span>
+        <span
+          className={`font-ops-mono text-ops-title font-semibold leading-none ${out ? 'text-ops-red' : 'text-ops-olive-dark'}`}
+        >
+          {out ? '−' : '+'}
+          {money(payload.amountCents)}
+        </span>
+        {/* Hesap tutarın ALTINDA ve sönük: "ne kadar" ile "nereden" ardışık iki soru. Künyeye
+            indirilseydi kararın yarısı ayraçın altında kalırdı — aynı tutar kasadan çıkmakla
+            bankadan çıkmak ayrı şeylerdir. */}
+        <span className="truncate font-ops-body text-ops-sm text-ops-muted">{route}</span>
+      </span>
+
+      {payload.description ? (
+        <span className="line-clamp-2 font-ops-body text-ops-base leading-snug text-ops-ink">{payload.description}</span>
+      ) : null}
+
+      <Facts>
+        <CardFact label="Kategori" value={payload.category ?? '—'} />
+        <CardFact label="Karşı taraf" value={payload.counterpartyName ?? '—'} />
+        <CardFact label="Değer tarihi" value={payload.valueDate ? shortDate(payload.valueDate) : '—'} />
       </Facts>
     </>
   );

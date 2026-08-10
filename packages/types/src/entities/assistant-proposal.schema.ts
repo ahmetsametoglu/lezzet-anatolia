@@ -156,6 +156,18 @@ export const MoneyMovementPayloadSchema = z.object({
   supplierId: z.string().uuid().nullable(),
   counterpartyName: z.string().nullable(),
   counterAccountId: z.string().uuid().nullable(),
+  /**
+   * Hedef hesabın ADI — transferde kararın yarısı (22.11).
+   *
+   * Kimlik tek başına okunamaz: "Kasa → `9a46b355…` 500 €" diye bir öneri onaylanamaz, çünkü paranın
+   * nereye gittiği görünmüyor. Ad öneri anında yazılıyor (`accountName` ile aynı gerekçe): dilekçe
+   * o günün gerçeğini taşır, hesap sonradan yeniden adlandırılsa bile öneri neyi teklif ettiğini
+   * söylemeye devam eder.
+   *
+   * `.default(null)` — alan sonradan açıldı ve kuyrukta onsuz yazılmış dilekçeler var; zorunlu
+   * yapmak onları `safeParse`ta düşürür ve kartları sessizce asistanın cümlesine indirirdi.
+   */
+  counterAccountName: z.string().nullable().default(null),
   valueDate: z.string().nullable(),
 });
 

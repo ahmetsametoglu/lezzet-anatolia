@@ -611,6 +611,14 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const account = accounts.find((a) => a.name.toLowerCase().includes(accountName.toLowerCase()));
   if (!account) return { error: `Hesap bulunamadı: '${accountName}'. Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}` };
 
+  // Hedef hesap da AYNI listeden çözülüyor: transferde model uuid ezberlemesin diye kaynağı adla
+  // buluyoruz, hedefi kimlikle bulup adsız bırakmak o kolaylığı yarıda keserdi.
+  const counterAccountId = typeof args.counterAccountId === 'string' ? args.counterAccountId : null;
+  const counterAccount = counterAccountId ? (accounts.find((a) => a.id === counterAccountId) ?? null) : null;
+  if (counterAccountId && !counterAccount) {
+    return { error: `Hedef hesap bulunamadı: '${counterAccountId}'. Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}` };
+  }
+
   const supplierId = typeof args.supplierId === 'string' ? args.supplierId : null;
   const supplier = supplierId ? await new SupplierService(db).getById(supplierId) : null;
   const payload: MoneyMovementPayload = {
@@ -623,7 +631,10 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
     description: typeof args.description === 'string' && args.description.trim() ? args.description.trim() : null,
     supplierId: supplier?.id ?? null,
     counterpartyName: supplier?.name ?? (typeof args.counterpartyName === 'string' ? args.counterpartyName : null),
-    counterAccountId: typeof args.counterAccountId === 'string' ? args.counterAccountId : null,
+    counterAccountId: counterAccount?.id ?? null,
+    // Hedef hesabın ADI da yazılıyor: kimlik tek başına okunamaz ve onay ekranı "Kasa → uuid" diye
+    // bir transferi kimseye sunamaz. Liste zaten elde, ikinci sorgu açılmıyor.
+    counterAccountName: counterAccount?.name ?? null,
     valueDate: typeof args.valueDate === 'string' ? args.valueDate : null,
   };
   const label = direction === 'out' ? 'gider' : 'tahsilat';

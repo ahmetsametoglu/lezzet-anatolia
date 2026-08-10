@@ -631,8 +631,25 @@ satırında.
   - **`ProposalSubject` artık kırpma da taşıyor** (`crop`) ve çoğul `images` alanı paket kalemlerinin
     fotoğraflarını veriyor — paketin kendi fotoğrafı yoktur (kayıt henüz doğmamıştır), taslak evresinde
     tanınmanın tek yolu kalemleridir.
-  - *Doğrulandı:* `typecheck` · `lint` · `boundaries` · `knip` temiz · birim 1346/1346.
-  - **BEKLEYEN(22.11):** yedi tipin kart gövdesi (`product_draft` · `product_create` · `purchase_order` ·
-    `stock_intake` · `money_movement` · `recipe_draft` · `featured_flag`) asistanın cümlesiyle duruyor;
+  - **Para hareketi kartı — görseli OLMAYAN ilk tip.** Bant boş bırakılmadı: yüksekliği standart
+    (`MEDIA_H`) ve ızgaradaki hizayı o tutuyor, o yüzden bandı **kararın kendisi** dolduruyor — tür,
+    tutar, paranın yolu. Tanımayı sağlayan şey burada fotoğraf değil bu üçlü.
+    - **Tutar RENKLİ: gider kırmızı, gelir yeşil** *(kullanıcı düzeltmesi 10.08)*. İlk tur yalnız
+      işaretti (`−`/`+`) ve gerekçesi "kira ödemek arıza değil"di; doğrusu şu: burada renk bir uyarı
+      değil **sınıflandırma**. Muhasebenin kendi dili kırmızıyı çıkana, yeşili girene ayırır ve
+      operatör o dili zaten biliyor. Zarar satırındaki amber ile karışmıyor — o beklenmeyen bir
+      sonucun uyarısı, bu hareketin türü.
+    - **Dilekçedeki açık kapatıldı: `counterAccountName`.** `counterAccountId` yalnız kimlik olarak
+      yazılıyordu, yani transfer önerisi ekranda "Kasa → uuid" diye okunuyor ve onaylanamıyordu. Araç
+      hedef hesabı elindeki listeden çözüyor (ikinci sorgu yok) ve tanımadığı hedefi artık reddediyor.
+      Alan `.default(null)` — kuyrukta onsuz yazılmış dilekçeler `safeParse`ta düşüp kartları sessizce
+      cümleye indirmesin diye.
+    - **Boş alan da GÖSTERİLİYOR** (kategori · karşı taraf · değer tarihi, yoksa "—"): 22.10'daki
+      kararın aynısı. Defterde daha da ağır basıyor — kategorisiz bir gider ay sonunda hiçbir raporda
+      görünmez, satırı gizlemek o eksiği verilmiş bir karar gibi gösterirdi.
+  - *Doğrulandı:* `typecheck` (web + backend) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346 ·
+    `mcp.test.ts` + `proposal.test.ts` 26/26.
+  - **BEKLEYEN(22.11):** altı tipin kart gövdesi (`product_draft` · `product_create` · `purchase_order` ·
+    `stock_intake` · `recipe_draft` · `featured_flag`) asistanın cümlesiyle duruyor;
     tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
     `assistant-preview.tsx` blokları o sırada düşecek.

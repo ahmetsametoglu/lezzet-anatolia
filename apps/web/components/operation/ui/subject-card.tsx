@@ -71,7 +71,7 @@ interface SubjectCardProps {
  * 7 → 8rem: bant bir tur 112 pikseldi ve kullanıcı ölçtü — *"yüksekliği biraz artıralım"*. Fotoğrafın
  * ürünü tanıtabilmesi için gereken asgari boy bu; 112'de kek ile turta ayırt edilemiyordu.
  */
-const MEDIA_H = 'h-32';
+export const MEDIA_H = 'h-32';
 
 /**
  * Destede gösterilen kalem sayısı — üç.
