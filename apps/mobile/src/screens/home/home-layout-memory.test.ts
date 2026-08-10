@@ -1,6 +1,11 @@
 /*
   VİTRİN YERLEŞİM İZİ — SecureStore yerine bellek haritası; her test modülü TAZE yükler çünkü
   bellek yansıması (snapshot) modül düzeyinde yaşıyor (onboarding deposu testinin aynı kurulumu).
+
+  OKUMA ABONELİKTEN SINANIR: izin dış kapısı `subscribeHomeLayout` + `getHomeLayoutSnapshot`
+  ikilisidir (diski okuyan fonksiyon bilerek dışarı açılmadı — künyesi). `freshStore()` modülü
+  yeniden değerlendirir; bellek haritası korunduğu için bu "aynı cihaz, YENİ açılış" demektir —
+  izin asıl sınandığı senaryo da budur.
 */
 
 import type * as HomeLayoutMemoryModule from './home-layout-memory';
@@ -24,6 +29,19 @@ let store: Store;
 /** Mikro görev kuyruğunu boşaltır — abonelikle tetiklenen okuma yayınını bekletmek için. */
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+/** "Yeni açılış": modül taze değerlendirilir, cihaz deposu (mockMemory) yerinde kalır. */
+function freshStore(): Store {
+  jest.resetModules();
+  return jest.requireActual<Store>('./home-layout-memory');
+}
+
+/** Bir açılışın gördüğü izi döndürür — depo okunana kadar bekler. */
+async function bootAndRead(target: Store = store) {
+  target.subscribeHomeLayout(jest.fn());
+  await flush();
+  return target.getHomeLayoutSnapshot();
+}
+
 /** Varsayılandan farklı, tanınabilir bir iz. */
 const layout = {
   orderBand: true,
@@ -36,16 +54,15 @@ const layout = {
 };
 
 beforeEach(() => {
-  jest.resetModules();
   mockMemory.clear();
   mockGetItemAsync.mockClear();
   mockSetItemAsync.mockClear();
-  store = jest.requireActual<Store>('./home-layout-memory');
+  store = freshStore();
 });
 
 describe('vitrin yerleşim izi', () => {
-  it('kayıt yokken null döner — iskelet varsayılan yerleşimi çizer', async () => {
-    await expect(store.readHomeLayout()).resolves.toBeNull();
+  it('kayıt yokken null döner — skeleton varsayılan yerleşimi çizer', async () => {
+    await expect(bootAndRead()).resolves.toBeNull();
   });
 
   it('varsayılan yerleşim uç sözleşmesinin tavanlarını taşır, sipariş bandını taşımaz', () => {
@@ -60,12 +77,12 @@ describe('vitrin yerleşim izi', () => {
     });
   });
 
-  it('kaydedilen iz aynen geri okunur; tek anahtar altında tek JSON yazılır', async () => {
+  it('kaydedilen iz SONRAKİ açılışta aynen okunur; tek anahtar altında tek JSON yazılır', async () => {
     await store.saveHomeLayout(layout);
 
-    await expect(store.readHomeLayout()).resolves.toEqual(layout);
     expect(mockSetItemAsync).toHaveBeenCalledTimes(1);
     expect(mockSetItemAsync).toHaveBeenCalledWith('lezzet.home.layout', JSON.stringify(layout));
+    await expect(bootAndRead(freshStore())).resolves.toEqual(layout);
   });
 
   it('DEĞİŞMEYEN iz ikinci kez diske yazılmaz — vitrin her yüklemede çağırıyor', async () => {
@@ -83,27 +100,29 @@ describe('vitrin yerleşim izi', () => {
     expect(store.getHomeLayoutSnapshot()).toEqual({ ...layout, packages: 0 });
   });
 
-  it('bozuk JSON "kayıt yok" sayılır, fırlatmaz', async () => {
+  it('bozuk JSON "kayıt yok" sayılır, uygulama kararmaz', async () => {
     mockMemory.set('lezzet.home.layout', '{bozuk');
-    await expect(store.readHomeLayout()).resolves.toBeNull();
+    await expect(bootAndRead()).resolves.toBeNull();
   });
 
   it('şemaya uymayan kayıt "kayıt yok" sayılır (eski sürüm ya da bozulmuş sayı)', async () => {
     mockMemory.set('lezzet.home.layout', JSON.stringify({ ...layout, bands: -1 }));
-    await expect(store.readHomeLayout()).resolves.toBeNull();
+    await expect(bootAndRead()).resolves.toBeNull();
   });
 
-  it('makul olmayan büyüklükteki sayı reddedilir — iskelet ekran boyu griye dönmez', async () => {
+  it('makul olmayan büyüklükteki sayı reddedilir — skeleton ekran boyu griye dönmez', async () => {
     mockMemory.set('lezzet.home.layout', JSON.stringify({ ...layout, bands: 1000 }));
-    await expect(store.readHomeLayout()).resolves.toBeNull();
+    await expect(bootAndRead()).resolves.toBeNull();
   });
 
-  it('depo okuma arızası "kayıt yok" sayılır — uygulama kararmaz', async () => {
+  it('depo okuma arızası "kayıt yok" sayılır', async () => {
+    mockMemory.set('lezzet.home.layout', JSON.stringify(layout));
     mockGetItemAsync.mockRejectedValueOnce(new Error('keychain arızası'));
-    await expect(store.readHomeLayout()).resolves.toBeNull();
+
+    await expect(bootAndRead()).resolves.toBeNull();
   });
 
-  it('yazma düşse bile bellek yansıması güncellenir — aynı oturumun ikinci iskeleti taze izi görür', async () => {
+  it('yazma düşse bile bellek yansıması güncellenir — aynı oturumun ikinci skeleton’ı taze izi görür', async () => {
     mockSetItemAsync.mockRejectedValueOnce(new Error('disk dolu'));
     const listener = jest.fn();
     store.subscribeHomeLayout(listener);
@@ -114,7 +133,7 @@ describe('vitrin yerleşim izi', () => {
     expect(listener).toHaveBeenCalled();
   });
 
-  it('ilk abonelik depoyu bir kez okur ve kayıtlı izi yayınlar', async () => {
+  it('ilk abonelik depoyu BİR KEZ okur ve kayıtlı izi yayınlar', async () => {
     mockMemory.set('lezzet.home.layout', JSON.stringify(layout));
 
     const listener = jest.fn();

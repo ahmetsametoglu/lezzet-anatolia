@@ -19,7 +19,6 @@ import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
@@ -29,6 +28,7 @@ import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-stor
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
+import { ProductSkeleton } from './product-skeleton';
 import { useProduct } from './use-product.hook';
 
 /*
@@ -158,19 +158,11 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   /* Akordeonlar kapalı açılır (şablonun `acc` başlangıcı boş). */
   const [accordion, setAccordion] = useState({ ingredients: false, nutrition: false, storage: false });
 
-  if (status === 'loading') {
-    return (
-      <View style={styles.screen} testID="product-loading">
-        <Skeleton width="100%" height={customerMetrics.productHero} radius="card" />
-        <View style={styles.skeletonBody}>
-          <Skeleton width={120} height={12} radius="full" />
-          <Skeleton width="80%" height={26} radius="full" />
-          <Skeleton width="55%" height={14} radius="full" />
-          <Skeleton width="100%" height={90} radius="card" />
-        </View>
-      </View>
-    );
-  }
+  /* İLK YÜK: sayfanın yerini skeleton tutar (`product-skeleton` — yalnız HER ZAMAN görünen
+     bölümler; gerekçesi ve ölçülerin kaynağı o dosyanın künyesinde). Ekranın içine gömülü dört
+     çubuk sökülüp oraya taşındı: ölçüleri ham sayıydı ve sayfanın yarısını (akordeon ·
+     değerlendirmeler · yapışkan bar) hiç temsil etmiyordu. */
+  if (status === 'loading') return <ProductSkeleton testID="product-loading" />;
 
   if (status === 'missing' || status === 'error' || detail === null) {
     const missing = status === 'missing';
@@ -593,10 +585,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   content: {
     paddingBottom: theme.space['3xl'],
-  },
-  skeletonBody: {
-    padding: theme.space['3xl'],
-    gap: theme.space.xl,
   },
   errorScreen: {
     flex: 1,

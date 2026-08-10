@@ -71,7 +71,7 @@ export const DEFAULT_HOME_LAYOUT: HomeLayout = {
 };
 
 /** `undefined` = depo henüz okunmadı; `null` = kayıt yok. İkisinde de varsayılan çizilir. */
-export type HomeLayoutSnapshot = HomeLayout | null | undefined;
+type HomeLayoutSnapshot = HomeLayout | null | undefined;
 
 let snapshot: HomeLayoutSnapshot = undefined;
 let readStarted = false;
@@ -95,8 +95,12 @@ function sameLayout(a: HomeLayout, b: HomeLayout): boolean {
   );
 }
 
-/** Depodaki izi okur; kayıt yok · bozuk · okunamadı üçü de `null` (üçünde de doğru davranış aynı). */
-export async function readHomeLayout(): Promise<HomeLayout | null> {
+/**
+ * Depodaki izi okur; kayıt yok · bozuk · okunamadı üçü de `null` (üçünde de doğru davranış aynı).
+ * Dışarı AÇILMAZ: izin tek okuma kapısı aboneliktir (`subscribeHomeLayout`) — ikinci bir kapı,
+ * belleği atlayıp diski okuyan ve bu yüzden bir tur eski cevap veren bir yol açardı.
+ */
+async function readHomeLayout(): Promise<HomeLayout | null> {
   try {
     const raw = await deviceStore.getItem(STORAGE_KEY);
     if (raw === null) return null;

@@ -148,6 +148,26 @@ kez gelenlerle ekranı aşağı itiyor. İkisi de aynı arızanın iki yüzü.
 Skeleton'ın kendisi bu izi **okumaz**: yerleşim `sections` prop'uyla dışarıdan gelir (oturum
 bilgisi de karara giriyor ve o ekranın elinde). Skeleton saf çizim olarak kalır.
 
+**İZİN İŞLEMEDİĞİ EKRANLAR — "yalnız her zaman görüneni çiz" (kullanıcı kararı 10.08, ürün
+detayı):** iz ancak ekran her açılışta AYNI şeyi gösteriyorsa anlamlıdır. Ürün detayı gibi her
+seferinde başka bir kaydı gösteren ekranlarda iz ürüne özel olurdu (bu üründe aile rayı var,
+ötekinde yok) ve slug başına kayıt tutmak depoyu şişirirdi. Orada kural daha basit: **koşulsuz
+bölümler tam çizilir, koşullular hiç çizilmez.** Kayma yalnız "gelen eklendi" yönünde olur;
+gözden kaybolan blok — kullanıcının arıza diye okuduğu hareket — hiç doğmaz.
+
+**Her skeleton için geçerli üç ölçüt** (ikisinde de aynı):
+- **Ölçü sayfadan türer, tahmin edilmez.** Yükseklik `fontSize × satır oranı` ya da kit ölçüsüdür;
+  ham piksel yazılmaz. Kap stilleri (dolgu · ara · kenar boşluğu · çerçeve) sayfadan kopyalanır —
+  yalnız blokları eşitlemek yetmez, bölümler arası boşluk da yerleşimin parçasıdır.
+- **Sabit yapı gerçek çizilir, veri gri olur.** Akordeon çerçevesi, barın zemini ve çizgisi veriye
+  bağlı değil; onları da griye çevirmek sayfanın değişmeyen iskeletini bilinmiyormuş gibi
+  gösterirdi.
+- **Ekranın altına yapışık sabit öğe (satın alma barı, sekme üstü bar) MUTLAKA temsil edilir.**
+  Yüksekliği sabittir ve skeleton'da yoksa veri gelince aşağıdan aniden belirir — en görünür
+  zıplama budur.
+- **Tek ses:** kök `progressbar` + `busy`; blokların kendisi a11y'de görünmez, "Yükleniyor…"
+  metni yazılmaz (aynı şeyi iki kez söylemek olurdu).
+
 ## 5. İlk iş birimleri
 
 - **21.1** `apps/mobile-api` iskeleti — apps/backend desenleri ayna (env, logger, `{data,error}`
