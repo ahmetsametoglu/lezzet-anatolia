@@ -4,6 +4,8 @@
     "back": "Geri",
     "hero": "Az kaldı — sofra kurulsun",
     "signedIn": "✓ {name}",
+    "meUnreadable": "Hesabınızı okuyamadık — bağlantınızı kontrol edip tekrar deneyin.",
+    "meRetry": "Tekrar dene",
     "guest": {
       "title": "Siparişinizi tamamlamak için hızlı doğrulama",
       "body": "Şifre yok — birkaç saniyede doğrulanın, kaldığınız yerden devam edin.",
@@ -128,6 +130,8 @@
     "back": "Retour",
     "hero": "Presque fini — dressons la table",
     "signedIn": "✓ {name}",
+    "meUnreadable": "Nous n'avons pas pu lire votre compte — vérifiez votre connexion et réessayez.",
+    "meRetry": "Réessayer",
     "guest": {
       "title": "Vérification rapide pour finaliser",
       "body": "Pas de mot de passe — vérifiez-vous en quelques secondes et reprenez où vous en étiez.",
@@ -252,6 +256,8 @@
     "back": "Zurück",
     "hero": "Fast geschafft — decken wir den Tisch",
     "signedIn": "✓ {name}",
+    "meUnreadable": "Wir konnten Ihr Konto nicht laden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "meRetry": "Erneut versuchen",
     "guest": {
       "title": "Schnelle Verifizierung zum Abschluss",
       "body": "Kein Passwort — in Sekunden verifizieren und weitermachen.",

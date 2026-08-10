@@ -125,3 +125,83 @@ export const PlaceNoticeResultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('email_required') }),
 ]);
 export type PlaceNoticeResult = z.infer<typeof PlaceNoticeResultSchema>;
+
+/**
+ * TESLİMAT BÖLGELERİ LİSTESİ — `GET /api/v1/places/zones` (kullanıcı kararı 10.08).
+ *
+ * ── NİYE VAR ─────────────────────────────────────────────────────────────────
+ * Bölge dışı müşteri bugün yalnız "buraya gelmiyoruz" cümlesini okuyor ve kullanıcının sorusu şu:
+ * *"on tane posta kodu girdim hiçbirine gitmiyorsunuz — siz nereye gidiyorsunuz?"* Cevabı hiçbir
+ * yerde yoktu; müşteri kod kod deneyerek haritayı kendi çıkarmak zorundaydı.
+ *
+ * ── POSTA KODU, BÖLGE ADI DEĞİL (kullanıcı düzeltmesi 10.08) ─────────────────
+ * İlk yazımda liste bölge ADLARINI taşıyordu ve bunun için tabloya müşteri-yüzü bir ad kolonu bile
+ * eklenmişti. Kullanıcı ikisini de eledi: **`delivery_zone.name` müşteri için bir şey ifade
+ * etmiyor** — o operasyonun rota etiketi ("Illkirch / Ostwald"). Müşterinin elindeki tek ölçü kendi
+ * posta kodudur ve sorduğu soru zaten "benim kodum listede var mı". Kodlar ZATEN veride
+ * (`delivery_zone_postal_code`): cevap için ne yeni kolon gerekiyordu ne migration; eklenen kolon
+ * geri alındı, veritabanını sıfırlama ihtiyacı da onunla birlikte kalktı.
+ *
+ * Liste yalnız AKTİF bölgelerin kodlarını taşır: pasif bölgeye araç gitmiyor ve onun kodunu
+ * listelemek, tutmadığımız bir sözü ilan etmek olurdu.
+ *
+ * ── GRUPLAMA YOK ─────────────────────────────────────────────────────────────
+ * Grup başlığının tek kaynağı bölge ya da depo adı olurdu; ikisi de iç etiket ("Strasbourg — ana
+ * depo", "Colmar — pilot depo (kapalı)"). Kod listesi zaten kendi doğal sırasında okunuyor —
+ * başlık, olmayan bir bilgiyi varmış gibi gösterirdi.
+ *
+ * Sayfalama yok: bölge kümesi operatörün elle kurduğu, doğal tavanlı bir kümedir (CLAUDE §1 "tek
+ * turda" dalı) — bugün üç satır, yarın kırk.
+ *
+ * **Boş liste geçerli bir cevaptır**: hiçbir bölgenin müşteri-yüzü adı yazılmamışsa sayfa "henüz
+ * ilan edilmiş bölge yok" der; okuma düşseydi zarfın kendisi hata dönerdi (ikisi karışmaz).
+ */
+/**
+ * Tek YER satırı — bir komün ve o komüne düşen kodlar ("Strasbourg · 67000 67100 67200").
+ *
+ * Ad `postal_code_place.places[0]`den gelir (kod → komün adları + koordinat; FR 6 065, DE 10 813
+ * satır — veri ZATEN elimizde, yeni kolon gerekmedi). **`null` = o kodun yer kaydı yok**: kod yine
+ * listelenir, yalnız başlıksız. Adı uydurmak ya da kodu gizlemek iki ayrı yalan olurdu — biri
+ * olmayan bir yer adı, öteki gittiğimiz bir yerin saklanması.
+ */
+export const DeliveryPlaceSchema = z.object({
+  name: z.string().nullable(),
+  codes: z.array(z.string()).min(1),
+});
+
+/**
+ * Ülkeye göre öbek. Ülke bir GRUP EKSENİDİR, süs değil: bir bölge sınır ötesi olabiliyor (ADR-002)
+ * ve `67540` ile `77694` yan yana dururken müşteri hangisinin nerede olduğunu anlayamaz.
+ */
+export const DeliveryAreaSchema = z.object({
+  country: CountryEnum,
+  places: z.array(DeliveryPlaceSchema).min(1),
+});
+
+/**
+ * ── ÖLÇEK: DÜZ LİSTE 200 KODDA ÇÖKER (kullanıcı sorusu 10.08) ────────────────
+ * İlk şekil düz bir kod dizisiydi (`{ places: string[] }`) ve kullanıcı ölçeği sordu: *"yarın iki
+ * yüz posta koduna hizmet veriyorum ve ellisi Almanya'da — bu tasarım nasıl olur?"* Cevap: kötü.
+ * Yedi kodda görünmeyen iki arıza vardı — 200 satır kimsenin okumadığı bir duvardır, ve Alman
+ * kodları Fransız kodlarının arasına karışır.
+ *   Şekil bu yüzden İKİ eksende öbeklendi: **ülke → komün**. 200 kod yaklaşık 80 komüne iner ve her
+ * satır tanıdık bir adla başlar. Öbekleme SUNUCUDA yapılır; iki yüzey (bugün uygulama, yarın web)
+ * aynı listeyi iki ayrı kuralla öbeklerse biri bir gün ötekinden farklı bir sayfa gösterirdi.
+ *
+ * **Ama asıl cevap liste değil ARAMADIR** (kullanıcı seçimi): müşterinin sorusu "hepsini göster"
+ * değil, *"benim kodum var mı"*. Sayfanın birincil öğesi kod alanıdır ve cevabı bu uçtan değil,
+ * `GET /places/by-postal-code`tan gelir — o zaten var ve rota içi/kargo/bilinmiyor ayrımını
+ * yapıyor. Bu liste ikincil, "gezinmek" içindir. İkinci bir çözüm ucu YAZILMADI.
+ *
+ * ── NEDEN région/département YOK ─────────────────────────────────────────────
+ * Daha üst bir öbek ("Grand Est", "Bas-Rhin") daha da kısa bir liste verirdi ama o bilgi ŞEMADA
+ * HİÇ YOK (ölçüldü). Fransa'da kodun ilk iki hanesi département NUMARASIDIR, adı değil; Almanya'da
+ * bunun karşılığı da yok. Numara basmak ("67 bölgesi") müşteriye bir şey söylemez, ad uydurmak ise
+ * veri olmadan yapılamaz — o yüzden bu eksen bilinçli olarak AÇILMADI.
+ *
+ * Sayfalama yok: kod kümesi operatörün elle kurduğu, doğal tavanı olan bir kümedir (CLAUDE §1'in
+ * "tek turda" dalı) ve öbeklenmiş hâli 200 kodda bile tek turluk bir gövdedir.
+ * **Boş liste geçerli bir cevaptır**; okuma düşseydi zarfın kendisi hata dönerdi (ikisi karışmaz).
+ */
+export const DeliveryAreaListSchema = z.object({ areas: z.array(DeliveryAreaSchema) });
+export type DeliveryAreaList = z.infer<typeof DeliveryAreaListSchema>;

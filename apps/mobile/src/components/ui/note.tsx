@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -13,6 +14,19 @@ import { StyleSheet } from 'react-native-unistyles';
 
   HATA tonu ekran okuyucuya `alert` rolüyle gider: hata görsel bir renk değil, duyurulması
   gereken bir olaydır.
+
+  ── EYLEM YUVASI (10.08, ölçülmüş arıza) ────────────────────────────────────
+  Kutunun ALTINA eylem koymak, kutuyu bir cümleye indirip eylemleri sayfaya döküyordu: katalogda
+  bölge dışı bandın altında yan yana iki bağlantı ve onların da altında bir form açılıyordu; ürün
+  kartları ekranın yarısına iniyordu (kullanıcı bulgusu: "üç metin butonu alt alta, gerçekten kötü
+  görünüyor"). Eylem artık kutunun İÇİNDE, açıklamanın altında duruyor.
+
+  YUVA, VARYANT DEĞİL: kutu hangi kontrolün geleceğini bilmez (`ReactNode`) — düğme, bağlantı
+  satırı ya da ikisi birden. Ton/kademe kararı yine çağıranın kontrolünde kalır; kutu yalnız
+  boşluğu garanti eder. Yuvayı kullanmayan çağıranlar (10 kullanım) hiç değişmedi.
+
+  Yuva a11y kapsamının DIŞINDADIR: kutu tek okuma birimidir (`accessible`) ama içindeki düğme
+  kendi başına odaklanabilmeli — sarmalayıcı onu yutarsa ekran okuyucu eylemi hiç göremez.
 */
 
 type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm';
@@ -23,30 +37,41 @@ interface NoteProps {
   tone?: NoteTone;
   /** İsteğe bağlı kalın ilk satır. */
   title?: string;
+  /** Eylem yuvası: kutunun İÇİNDE, metnin altında çizilir (düğme / bağlantı satırı). */
+  action?: ReactNode;
   testID?: string;
 }
 
-export function Note({ description, tone = 'olive', title, testID }: NoteProps) {
+export function Note({ description, tone = 'olive', title, action, testID }: NoteProps) {
   return (
-    <View
-      style={[styles.box, styles[tone]]}
-      testID={testID}
-      // Kutu TEK a11y öğesidir: başlık ve açıklama bir arada okunur, iki ayrı duraklama olmaz.
-      accessible
-      accessibilityRole={tone === 'error' ? 'alert' : undefined}
-    >
-      {title === undefined ? null : <Text style={[styles.title, styles[`${tone}Text`]]}>{title}</Text>}
-      <Text style={[styles.description, styles[`${tone}Text`]]}>{description}</Text>
+    <View style={[styles.box, styles[tone]]} testID={testID}>
+      {/* METİN TEK a11y öğesidir: başlık ve açıklama bir arada okunur, iki ayrı duraklama olmaz.
+          Sarmalayıcı eylemi KAPSAMAZ (künye) — kapsasaydı düğme odaklanamazdı. */}
+      <View style={styles.text} accessible accessibilityRole={tone === 'error' ? 'alert' : undefined}>
+        {title === undefined ? null : <Text style={[styles.title, styles[`${tone}Text`]]}>{title}</Text>}
+        <Text style={[styles.description, styles[`${tone}Text`]]}>{description}</Text>
+      </View>
+      {action === undefined ? null : <View style={styles.action}>{action}</View>}
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
   box: {
-    gap: theme.space.xs,
+    // Metin bloğu ile eylem yuvası arasındaki nefes; yuvasız kutuda etkisi yok.
+    gap: theme.space.xl,
     padding: theme.space['2xl'],
     borderRadius: theme.radius.control,
     borderWidth: theme.border.hairline,
+  },
+  /** Başlık ↔ açıklama aralığı — kutunun eski `gap`i buraya indi, görünüm değişmedi. */
+  text: {
+    gap: theme.space.xs,
+  },
+  /** Eylem yuvası metinle aynı hizada başlar; genişliği içeriğin kendi kararı. */
+  action: {
+    alignItems: 'flex-start',
+    gap: theme.space.lg,
   },
   olive: {
     backgroundColor: theme.colors['olive-bg'],

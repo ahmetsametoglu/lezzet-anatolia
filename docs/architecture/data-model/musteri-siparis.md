@@ -91,6 +91,8 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 
 **Posta kodları artık bu tabloda değil** (`DeliveryZonePostalCode`, `data-model/depo.md`): dizi kolonken iki bölgeye aynı kodu yazmak serbestti ve çözücü sessizce ilkini seçiyordu — çok depoda bu, siparişin yanlış depoya düşmesi demek. Anahtar `(ülke, kod)`: `67000` iki ülkede de geçerlidir.
 
+**`name` MÜŞTERİYE GÖSTERİLMEZ** (kullanıcı kararı 10.08). Bu bir iç etikettir ve operasyon içine not yazıyor (`Kehl (DE) — hazırlanıyor`; depo adlarında da `Colmar — pilot depo (kapalı)`). Native uygulamanın "aracımız nerelere gidiyor" sayfası bir ara bölge adlarını gösterecekti ve bunun için tabloya müşteri-yüzü bir ad kolonu bile eklendi; kullanıcı ikisini de eledi — **bölge adının müşteri için bir anlamı yok**, müşterinin elindeki tek ölçü kendi posta kodudur. Sayfa `delivery_zone_postal_code`ten AKTİF bölgelerin kodlarını okuyor; eklenen kolon geri alındı, yeni alan gerekmedi.
+
 **Rota içi/dışı SAKLANMAZ** (07.2): adresin posta kodu aktif bir bölgeye düşüyorsa rota içi. Bölge sınırı admin tarafından değiştirilebildiği için saklanan değer ertesi gün yalan olur. Teslimat günü hesabı da (kesim saati dâhil) motordadır — `domain-core/delivery`.
 
 ## Order (sipariş)

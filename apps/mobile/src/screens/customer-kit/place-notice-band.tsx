@@ -1,24 +1,26 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { z } from 'zod';
 import type { PlaceNoticeBodySchema } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
-// E-posta geçerliliği paylaşılan motordan — RN'de ikinci bir düzenli ifade YAZILMAZ (02-mimari §3.4).
-import { isValidEmail } from '@lezzet/helper';
 
 import { Note } from '@/components/ui/note';
-import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { publishToast } from '@/lib/toast/toast-store';
 // Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
 // çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
 import messages from '@/lib/places/messages.json';
+import { PlaceNoticeSheet } from './place-notice-sheet';
+import { PostalCodeSheet } from './postal-code-sheet';
+import { useMe } from './use-me.hook';
+import { useSheet } from './use-sheet.hook';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI (kullanıcı kararı 10.08) — müşteri listelerinin BAŞINDA tek bir cümle.
+  BÖLGE DIŞI BİLGİ BANDI (kullanıcı kararı 10.08) — müşteri listelerinin BAŞINDA tek bir blok.
 
   NEDEN VAR: kart başına tekrarlanan "Kargoyla gelir" işareti kaldırıldı çünkü rota dışı
   müşterinin kartlarının neredeyse tamamı onu taşıyordu — her kartta yazan bir bilgi, bilgi
@@ -35,20 +37,43 @@ import messages from '@/lib/places/messages.json';
   dil üretilmedi — kitin bilgi kutusu (`Note`) kullanıldı; sıcak nötr ton (`warm`) çünkü bu bir
   hata da bir fırsat da değil, adresin gerçeği. Sapma `design/KARARLAR.md` sonunda kayıtlı.
 
-  ── "BURAYA DA GELİN" ────────────────────────────────────────────────────────
-  Bant bir bilgi levhası değil, bir kapı: müşteri bölgesini talep olarak bırakabiliyor
-  (`POST /api/v1/places/notice`). Sözleşmenin DÖRT hâli de karşılanır, hiçbiri sessiz geçilmez:
-    · `ok`             — "not aldık". **"Haber vereceğiz" DEMEZ**: bölge genişletme kararı
-                         verilmedi ve tutulamayacak söz verilmez (`zone_notice` künyesi).
-    · `already`        — "kaydınız zaten var". Tekilleştirme veritabanında (aynı kişi + aynı yer
-                         bir kez sayılır); ekranın işi bunu DOĞRU cümleyle söylemek. Sessiz kalmak
-                         "kaydedemedik" diye okunurdu, "yeni kayıt aldık" demek ise yalan olurdu.
-    · `email_required` — misafir e-posta vermemiş. GİRİŞ DUVARI KURULMAZ: küçük bir alan açılır,
-                         adres sorulur. Girişli müşteride bu hâl hiç gelmez (e-postayı sunucu
-                         çözer), yani alan yalnız gerçekten gerekince görünür.
-    · `place_unknown`  — yer çözülemedi, kayıt ALINMADI. Kaydedilmemiş bir talebi kaydedilmiş gibi
-                         göstermek, sayacı da müşteriyi de yanıltırdı.
-  Taşıma hatası (ağ) beşinci bir hâl değil ama ayrı cümle ister: kayıt alınmadı, TEKRAR denenebilir.
+  ── BANT TEK BLOKTUR: EYLEMLER KUTUNUN İÇİNDE (kullanıcı kararı 10.08, ölçüm sonrası) ───────
+  Eylemler önce kutunun ALTINA konmuştu ve cihazda şu çıktı: kutu bitiyor, altında yan yana iki
+  yeşil bağlantı, onların da altında açılan bir e-posta formu — ürün kartları ekranın yarısına
+  iniyordu (kullanıcının sözü: "üç metin butonu alt alta, gerçekten kötü görünüyor"). Şimdi bandın
+  altına taşan hiçbir parça yok: kutunun içinde cümle ve İKİ metin eylemi var, o kadar.
+
+  İKİ EŞİT SÜTUN, İÇERİKLERİ ORTALANMIŞ (kullanıcının seçtiği yerleşim): "Buraya da gelin" ·
+  "Posta kodunu değiştir". Birincil düğme KULLANILMADI — ikisi de aynı ağırlıkta birer öneri;
+  biri düğme olsaydı bant, bilgi levhası olmaktan çıkıp bir çağrıya dönerdi. Etiket dar ekranda
+  iki satıra sarabilir, sütun hizası bozulmaz (`TextAction align="center"`).
+
+  Kutunun eylem yuvası bu iş için KİTE eklendi (`Note action`), banda tek kullanımlık ikinci bir
+  kutu çizilmedi — kitin öteki on çağıranı değişmedi.
+
+  Cümle de KISALDI: iki cümlelik açıklama tek cümleye indi. Başlık zaten "aracımız gitmiyor"
+  diyor; aynı bilgiyi gövdede tekrar etmek, altındaki eylemleri okunmaz hâle getiren bir metin
+  duvarı kuruyordu.
+
+  ── İKİ EYLEMİN İKİSİ DE BİR SORUYA CEVAP ───────────────────────────────────
+  Bant eskiden yalnız kapıyı kapatıyordu ("aracımız gelmiyor") ve müşterinin elinde tek hareket
+  kalıyordu: talep bırakmak. Ölçülen şikâyet şuydu — *"on posta kodu denedim, hiçbirine
+  gitmiyorsunuz; siz nereye gidiyorsunuz?"*.
+    · **Posta kodunu değiştir** — aynı çekmece (`PostalCodeSheet`), vitrin başlığındakinin TA
+      KENDİSİ; 10.08'de kite taşındı, ikinci nüsha yazılmadı. Yanlış kod girmiş müşteri bandı
+      gördüğü yerde düzeltir, vitrine geri dönmez. *"Nerelere gidiyorsunuz?"* bağlantısı da
+      BANTTAN ORAYA taşındı (kullanıcı kararı): kendi kodunu denemekle "siz nereye gidiyorsunuz"
+      aynı sorunun iki yüzü, ikisi aynı yerde durur — bantta üçüncü bir eylem kalmadı.
+    · **Buraya da gelin** — talebi bırakma akışı. İKİ DALI VAR (kullanıcı kararı 10.08):
+      **girişli** müşteride hiçbir katman açılmaz, talep tek dokunuşta bırakılır ve sonuç toast'la
+      söylenir (e-posta cümlede geçer: haber nereye gidecek); **misafirde** kendi çekmecesi
+      (`PlaceNoticeSheet`) açılır ve e-posta + tek kullanımlık kodla DOĞRULANMIŞ hesap kurulur.
+      Girişliye e-posta sormak, sunucunun ZATEN bildiği bir şeyi sormaktır — çekmece açıp tek
+      düğmeye bastırmak da tek dokunuşluk işi üç dokunuşa çıkarırdı. Çekmecenin kendi kararları o
+      dosyanın künyesinde.
+
+  KAYIT ALINDIĞINDA DÜĞME KALKAR: alınmış bir kaydı ikinci kez isteten düğme, "sayılmadım mı?"
+  sorusunu doğururdu — yerine sonucun tek satırı geçer.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -64,17 +89,6 @@ type NoticeBody = z.input<typeof PlaceNoticeBodySchema>;
  */
 type PlaceNoticeSource = 'app-catalog' | 'app-packages';
 
-/**
- * Bandın hâli. `sending` ayrı bir faz: düğme iki kez basılabilirse aynı talep iki kez gider ve
- * anonim sayaç (`postal_code_demand`) bir kişiyi iki kez sayar.
- */
-type BandPhase =
-  | { kind: 'idle' }
-  | { kind: 'askEmail' }
-  | { kind: 'sending' }
-  | { kind: 'done'; status: 'ok' | 'already' }
-  | { kind: 'failed'; reason: 'place_unknown' | 'transport' };
-
 interface PlaceNoticeBandProps {
   /** Çözülmüş yerin ülkesi — bant yalnız çözülmüş VE rota dışı yerde çiziliyor (çağıranın kapısı). */
   country: NoticeBody['country'];
@@ -89,103 +103,131 @@ interface PlaceNoticeBandProps {
 export function PlaceNoticeBand({ country, postalCode, source, testID }: PlaceNoticeBandProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
-  const [phase, setPhase] = useState<BandPhase>({ kind: 'idle' });
-  const [email, setEmail] = useState('');
-  /* Alan hatası FAZDAN AYRI tutulur: geçersiz adres bandın hâlini değiştirmez (hâlâ "adres
-     soruyoruz"), yalnız alanın altına bir satır ekler. */
-  const [emailInvalid, setEmailInvalid] = useState(false);
+
+  const zipSheet = useSheet();
+  const noticeSheet = useSheet();
+  /** Kayıt alındı mı — `null` = henüz istenmedi ya da tamamlanmadı. */
+  const [recorded, setRecorded] = useState<'ok' | 'already' | null>(null);
+  /** İstek uçuşta: çift dokunuş aynı talebi iki kez göndermesin. */
+  const [sending, setSending] = useState(false);
+
+  /* GİRİŞLİ MÜŞTERİ ÇEKMECE GÖRMEZ (kullanıcı kararı 10.08): e-postasını sormak, sunucunun ZATEN
+     bildiği bir şeyi sormaktır — ve bir çekmece açıp tek düğmeye bastırmak, tek dokunuşluk bir işi
+     üç dokunuşa çıkarır. Girişlide talep DOĞRUDAN bırakılır, sonuç toast'la söylenir; e-posta
+     cümlede geçer ki müşteri haberin nereye gideceğini bilsin. Misafirde akış değişmedi:
+     çekmece açılır (e-posta → kod → hesap → talep). */
+  const meState = useMe();
+  const me = meState.status === 'ready' ? meState.me : null;
+
+  /* Çekmecenin başlangıç değeri SAKLI koddur, bandın gösterdiği çözülmüş kod değil: ikisi bugün
+     aynı olsa da kaynakları farklı (biri cihazın kaydı, öteki sunucunun cevabı) ve çekmece
+     "kayıtlı olan ne" sorusunu sorar. */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+
   /* Alt kimlikler bandın kendi kimliğinden TÜRER: iki liste aynı bandı çiziyor ve sabit
      "catalog-…" önekleri paketler sekmesinde yalan söylerdi. */
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 
-  const send = async (address: string | null) => {
-    setPhase({ kind: 'sending' });
-    const result = await submitPlaceNotice({ postalCode, country, email: address, source });
-    if (result.error !== null) {
-      setPhase({ kind: 'failed', reason: 'transport' });
-      return;
-    }
-    if (result.data.status === 'email_required') {
-      setPhase({ kind: 'askEmail' });
-      return;
-    }
-    if (result.data.status === 'place_unknown') {
-      setPhase({ kind: 'failed', reason: 'place_unknown' });
-      return;
-    }
-    setPhase({ kind: 'done', status: result.data.status });
+  /**
+   * Girişli müşterinin tek dokunuşu — e-posta GÖVDEYE KONMAZ, sunucu Bearer'dan çözer.
+   *
+   * @param email Yalnız CÜMLE için (haber nereye gidecek). `null` olabilir (profilde adres
+   *   yoksa) ve o zaman adressiz cümle kurulur — boş bir yer tutucu basmak, müşteriye var
+   *   olmayan bir adresi göstermek olurdu.
+   */
+  const recordSignedIn = (email: string | null) => {
+    setSending(true);
+    void submitPlaceNotice(locale, { postalCode, country, source }).then((result) => {
+      setSending(false);
+      /* Dört hâlin dördü de SÖYLENİR; sessiz geçilen hâl, müşteriye "sayıldım mı?" diye
+         sordururdu. Kaydın alındığı iki hâlde eylem de kalkar. */
+      if (result.error !== null) {
+        publishToast(t.placeNotice.failed);
+        return;
+      }
+      if (result.data.status === 'place_unknown') {
+        publishToast(t.placeNotice.placeUnknown);
+        return;
+      }
+      if (result.data.status === 'email_required') {
+        // Oturum varken gelmemeli; sözleşme hâli olduğu için yine de sessiz geçilmez.
+        publishToast(t.placeNotice.emailRequired);
+        return;
+      }
+      setRecorded(result.data.status);
+      const ok = result.data.status === 'ok';
+      const line =
+        email === null
+          ? ok
+            ? t.placeNotice.recorded
+            : t.placeNotice.alreadyRecorded
+          : (ok ? t.placeNotice.toastRecorded : t.placeNotice.toastAlready).replace('{email}', email);
+      publishToast(line);
+    });
   };
 
-  /* İlk dokunuşta e-posta GÖNDERİLMEZ (null): girişli müşteride adres sunucuda çözülüyor ve
-     sormak gereksiz bir soru olurdu. Misafirde uç `email_required` der, alan o zaman açılır. */
   const request = () => {
-    void send(null);
-  };
-
-  const submitEmail = () => {
-    const trimmed = email.trim();
-    if (!isValidEmail(trimmed)) {
-      setEmailInvalid(true);
+    if (me === null) {
+      noticeSheet.open();
       return;
     }
-    setEmailInvalid(false);
-    void send(trimmed);
+    recordSignedIn(me.email);
   };
+
+  const actions = (
+    <View style={styles.columns}>
+      <View style={styles.column}>
+        {recorded === null ? (
+          <TextAction
+            label={t.placeNotice.cta}
+            align="center"
+            onPress={request}
+            disabled={sending}
+            accessibilityHint={t.placeNotice.ctaHint}
+            testID={idOf('cta')}
+          />
+        ) : (
+          <Text style={styles.recorded} testID={idOf('result')}>
+            {recorded === 'ok' ? t.placeNotice.recorded : t.placeNotice.alreadyRecorded}
+          </Text>
+        )}
+      </View>
+      <View style={styles.column}>
+        <TextAction
+          label={t.placeNotice.changeCode}
+          align="center"
+          onPress={zipSheet.open}
+          testID={idOf('change-zip')}
+        />
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.band} testID={testID}>
-      <Note tone="warm" title={t.placeNotice.title} description={t.placeNotice.body} />
+      <Note tone="warm" title={t.placeNotice.title} description={t.placeNotice.body} action={actions} />
 
-      {phase.kind === 'done' ? (
-        <Note
-          tone="olive"
-          description={phase.status === 'ok' ? t.placeNotice.recorded : t.placeNotice.alreadyRecorded}
-          testID={idOf('result')}
+      {/* Çekmeceler İLK AÇILIŞTA kurulur ve kapanınca sökülMEZ — gerekçe `use-sheet.hook`ta. */}
+      {zipSheet.mounted ? (
+        <PostalCodeSheet
+          visible={zipSheet.visible}
+          code={onboarding?.postalCode ?? null}
+          onClose={zipSheet.close}
+          // Bant listenin başında: "nerelere gidiyorsunuz" sorusunun cevabı burada yok, sayfası var.
+          showZonesLink
+          testID={idOf('zip')}
         />
       ) : null}
 
-      {phase.kind === 'failed' ? (
-        <Note
-          tone="error"
-          description={phase.reason === 'place_unknown' ? t.placeNotice.placeUnknown : t.placeNotice.failed}
-          testID={idOf('error')}
-        />
-      ) : null}
-
-      {phase.kind === 'askEmail' ? (
-        <View style={styles.emailBlock}>
-          {/* SORU, DUVAR DEĞİL: alan bandın içinde açılır, ayrı bir ekrana ya da girişe götürmez. */}
-          <Text style={styles.emailPrompt}>{t.placeNotice.emailPrompt}</Text>
-          <TextField
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              setEmailInvalid(false);
-            }}
-            accessibilityLabel={t.placeNotice.emailLabel}
-            placeholder={t.placeNotice.emailPlaceholder}
-            content="email"
-            errorText={emailInvalid ? t.placeNotice.emailInvalid : undefined}
-            testID={idOf('email')}
-          />
-          <PrimaryButton
-            label={t.placeNotice.send}
-            shape="pill"
-            onPress={submitEmail}
-            testID={idOf('email-submit')}
-          />
-        </View>
-      ) : null}
-
-      {/* Eylem satırı: ilk çağrıda ve düşen çağrıdan sonra durur; kayıt alındığında KALKAR —
-          alınmış bir kaydı ikinci kez isteten düğme, "sayılmadım mı?" sorusunu doğururdu. */}
-      {phase.kind === 'idle' || phase.kind === 'sending' || phase.kind === 'failed' ? (
-        <TextAction
-          label={phase.kind === 'failed' ? t.placeNotice.retry : t.placeNotice.cta}
-          onPress={request}
-          disabled={phase.kind === 'sending'}
-          accessibilityHint={t.placeNotice.ctaHint}
-          testID={idOf('cta')}
+      {noticeSheet.mounted ? (
+        <PlaceNoticeSheet
+          visible={noticeSheet.visible}
+          country={country}
+          postalCode={postalCode}
+          source={source}
+          onClose={noticeSheet.close}
+          onRecorded={setRecorded}
+          testID={idOf('notice')}
         />
       ) : null}
     </View>
@@ -194,16 +236,27 @@ export function PlaceNoticeBand({ country, postalCode, source, testID }: PlaceNo
 
 const styles = StyleSheet.create((theme) => ({
   band: {
-    gap: theme.space.lg,
     // Izgaranın üst nefesi kartlar için; bant listenin başında kendi payını taşır.
     paddingBottom: theme.space.md,
   },
-  emailBlock: {
-    gap: theme.space.lg,
+  /** İki eşit sütun — yuvanın sola yaslamasını EZER (`alignSelf`), satır kutunun enini kaplar. */
+  columns: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    columnGap: theme.space.xl,
   },
-  emailPrompt: {
+  /** Eşit pay + ortalanmış içerik: iki satıra saran etiket sütunu kaydırmaz. */
+  column: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  /** Kaydın sonucu — eylemin yerine geçen tek satır; kutunun kendi tonunda kalır. */
+  recorded: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.helper,
-    color: theme.colors.muted,
+    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    color: theme.colors['olive-dark'],
+    textAlign: 'center',
   },
 }));

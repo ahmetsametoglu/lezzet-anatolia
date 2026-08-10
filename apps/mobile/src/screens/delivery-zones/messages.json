@@ -1,0 +1,62 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Nerelere gidiyoruz",
+    "intro": "Soğuk zincir aracımız şu posta kodlarına kendi elimizle teslim ediyor.",
+    "listEyebrow": "Posta kodları",
+    "countries": {
+      "FR": "Fransa",
+      "DE": "Almanya"
+    },
+    "loading": "Yükleniyor",
+    "errorBody": "Posta kodu listesini alamadık. Bağlantınızı kontrol edip tekrar deneyin.",
+    "retry": "Tekrar dene",
+    "empty": {
+      "title": "Henüz ilan edilmiş posta kodu yok",
+      "body": "Aracımızın gittiği posta kodlarını yakında burada yayınlayacağız."
+    },
+    "tryCode": "Kendi posta kodumu deneyeyim",
+    "tryCodeHint": "Posta kodunuzu girin, teslimat şeklini söyleyelim",
+    "closing": "Kalan her yere kargoyla gönderiyoruz; yalnız soğuk zincir isteyen ürünler gidemiyor."
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Où nous livrons",
+    "intro": "Notre camion frigorifique livre en main propre dans ces codes postaux.",
+    "listEyebrow": "Codes postaux",
+    "countries": {
+      "FR": "France",
+      "DE": "Allemagne"
+    },
+    "loading": "Chargement",
+    "errorBody": "Nous n'avons pas pu charger la liste des codes postaux. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer",
+    "empty": {
+      "title": "Aucun code postal annoncé pour l'instant",
+      "body": "Nous publierons ici très bientôt les codes postaux desservis par notre camion."
+    },
+    "tryCode": "Essayer mon code postal",
+    "tryCodeHint": "Saisissez votre code postal, nous vous indiquons le mode de livraison",
+    "closing": "Partout ailleurs, nous expédions par transporteur ; seuls les produits sous chaîne du froid ne peuvent pas partir."
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Wohin wir liefern",
+    "intro": "Unser Kühlfahrzeug liefert in diesen Postleitzahlen persönlich aus.",
+    "listEyebrow": "Postleitzahlen",
+    "countries": {
+      "FR": "Frankreich",
+      "DE": "Deutschland"
+    },
+    "loading": "Wird geladen",
+    "errorBody": "Wir konnten die Postleitzahlenliste nicht laden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "retry": "Erneut versuchen",
+    "empty": {
+      "title": "Noch keine Postleitzahl veröffentlicht",
+      "body": "Die von unserem Fahrzeug belieferten Postleitzahlen veröffentlichen wir hier in Kürze."
+    },
+    "tryCode": "Meine Postleitzahl ausprobieren",
+    "tryCodeHint": "Geben Sie Ihre Postleitzahl ein, wir nennen Ihnen die Lieferart",
+    "closing": "Überall sonst versenden wir per Versand; nur Produkte mit Kühlkette können nicht mit."
+  }
+}

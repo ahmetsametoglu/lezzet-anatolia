@@ -16,6 +16,13 @@ interface TextActionProps {
   label: string;
   onPress: () => void;
   tone?: 'olive' | 'terracotta';
+  /**
+   * Metnin kendi içindeki hizası — varsayılan sola yaslı (v3'ün her kullanımı böyle).
+   * `center` SÜTUNA yerleşen bağlantılar içindir: iki eşit sütuna konan iki bağlantıda etiket
+   * iki satıra sarabiliyor ve sola yaslı sarma, ortalanmış sütunun hizasını bozuyordu (bilgi
+   * bandı, 10.08). Genişliği yine çağıran verir; burada sadece satırların hizası kararlaşır.
+   */
+  align?: 'start' | 'center';
   disabled?: boolean;
   accessibilityHint?: string;
   testID?: string;
@@ -25,6 +32,7 @@ export function TextAction({
   label,
   onPress,
   tone = 'olive',
+  align = 'start',
   disabled = false,
   accessibilityHint,
   testID,
@@ -39,7 +47,7 @@ export function TextAction({
       accessibilityHint={accessibilityHint}
       testID={testID}
     >
-      <Text style={[styles.label, disabled ? styles.disabled : styles[tone]]}>{label}</Text>
+      <Text style={[styles.label, styles[align], disabled ? styles.disabled : styles[tone]]}>{label}</Text>
     </PressableSurface>
   );
 }
@@ -51,6 +59,8 @@ const styles = StyleSheet.create((theme) => ({
     // yuvarlama YOK kuralı gereği token'da var olan durak seçildi (12,5'lik ikizi raporlandı).
     fontSize: theme.text.control,
   },
+  start: { textAlign: 'left' },
+  center: { textAlign: 'center' },
   olive: { color: theme.colors.olive },
   terracotta: { color: theme.colors.terracotta },
   disabled: { color: theme.colors['disabled-text'] },

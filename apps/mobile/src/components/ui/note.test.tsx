@@ -1,7 +1,8 @@
 import { customerAppColors, customerColors } from '@lezzet/design-tokens';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Note } from './note';
+import { PrimaryButton } from './primary-button';
 
 describe('Note', () => {
   it('açıklamayı gösterir, başlık isteğe bağlıdır', async () => {
@@ -38,6 +39,28 @@ describe('Note', () => {
       backgroundColor: customerAppColors['sand-150'],
       borderColor: 'transparent',
     });
+  });
+
+  it('eylem yuvası kutunun İÇİNDE çizilir ve a11y kapsamına yutulmaz', async () => {
+    await render(
+      <Note
+        description="Bu adrese aracımız gitmiyor"
+        tone="warm"
+        action={<PrimaryButton label="Buraya da gelin" onPress={jest.fn()} testID="note-cta" />}
+        testID="note"
+      />,
+    );
+
+    // Düğme kutunun içinde ama kendi dokunma hedefi olarak duruyor (metin bloğu onu kapsamıyor).
+    expect(screen.getByTestId('note-cta')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('note-cta'));
+  });
+
+  it('yuvasız kullanım hiç değişmedi — eylem verilmezse çizilmez', async () => {
+    await render(<Note description="Puanınız: 240" tone="warm" testID="note" />);
+
+    expect(screen.getByTestId('note')).toBeOnTheScreen();
+    expect(screen.queryByTestId('note-cta')).toBeNull();
   });
 
   it('hata dışındaki tonlar alert rolü ÜRETMEZ', async () => {

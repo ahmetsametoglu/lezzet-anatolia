@@ -336,3 +336,7 @@ export { awardReferralPoints, rewardCompletedOrder } from './feedback/points';
 // çerezten okuduğu yer cevabı ve oturumdan çözdüğü kimlik parametre olarak geliyor.
 export { recordZoneNotice } from './delivery/notice';
 export type { ZoneNoticeInput, ZoneNoticeOutcome } from './delivery/notice';
+// ── Teslimat bölgeleri listesi — "araç nerelere gidiyor" (kullanıcı kararı 10.08) ──
+// Kaydın kardeşi: bant müşteriye "buraya gelmiyoruz" derken, bu okuma "peki nereye gidiyoruz"un
+// cevabını veriyor. Ad `public_name`den gelir, `name`den ASLA — gerekçe varlık şemasının künyesinde.
+export { listPublicDeliveryAreas } from './delivery/zones';

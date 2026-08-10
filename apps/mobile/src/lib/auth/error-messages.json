@@ -1,0 +1,38 @@
+{
+  "tr": {
+    "invalid_email": "Bu e-posta adresi geçerli görünmüyor.",
+    "send_failed": "Kod gönderilemedi — biraz sonra yeniden deneyin.",
+    "rate_limit": "Çok sık denediniz.",
+    "cooldown": "Yeni kod için biraz bekleyin.",
+    "invalid_code": "Kod yanlış — yeniden deneyin.",
+    "code_expired": "Kodun süresi doldu — yeni kod isteyin.",
+    "code_locked": "Çok fazla yanlış deneme — yeni kod isteyin.",
+    "no_active_code": "Bekleyen kod yok — yeni kod isteyin.",
+    "google_unavailable": "Google ile giriş şu an kullanılamıyor — e-posta ile deneyin.",
+    "oauth_failed": "Sağlayıcıyla giriş tamamlanamadı — e-posta ile deneyin."
+  },
+  "fr": {
+    "invalid_email": "Cette adresse e-mail ne semble pas valide.",
+    "send_failed": "Le code n'a pas pu être envoyé — réessayez dans un instant.",
+    "rate_limit": "Trop de tentatives.",
+    "cooldown": "Patientez un peu avant un nouveau code.",
+    "invalid_code": "Code incorrect — réessayez.",
+    "code_expired": "Le code a expiré — demandez-en un nouveau.",
+    "code_locked": "Trop d'essais incorrects — demandez un nouveau code.",
+    "no_active_code": "Aucun code en attente — demandez-en un nouveau.",
+    "google_unavailable": "La connexion Google est indisponible pour le moment — essayez par e-mail.",
+    "oauth_failed": "La connexion via le fournisseur a échoué — essayez par e-mail."
+  },
+  "de": {
+    "invalid_email": "Diese E-Mail-Adresse scheint ungültig zu sein.",
+    "send_failed": "Der Code konnte nicht gesendet werden — versuchen Sie es gleich erneut.",
+    "rate_limit": "Zu viele Versuche.",
+    "cooldown": "Bitte warten Sie kurz auf einen neuen Code.",
+    "invalid_code": "Der Code ist falsch — versuchen Sie es erneut.",
+    "code_expired": "Der Code ist abgelaufen — fordern Sie einen neuen an.",
+    "code_locked": "Zu viele Fehlversuche — fordern Sie einen neuen Code an.",
+    "no_active_code": "Kein Code ausstehend — fordern Sie einen neuen an.",
+    "google_unavailable": "Die Google-Anmeldung ist derzeit nicht verfügbar — versuchen Sie es per E-Mail.",
+    "oauth_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen — versuchen Sie es per E-Mail."
+  }
+}

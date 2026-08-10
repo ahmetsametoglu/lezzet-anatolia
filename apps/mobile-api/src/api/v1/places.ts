@@ -1,10 +1,15 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { recordZoneNotice, resolvePlaceForPostalCode } from '@lezzet/application';
+import { listPublicDeliveryAreas, recordZoneNotice, resolvePlaceForPostalCode } from '@lezzet/application';
 import { placeLabel, type PostalCodeResolution } from '@lezzet/domain-core';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
-import { PlaceNoticeBodySchema, PlaceNoticeResultSchema, PlaceResolutionSchema } from '@lezzet/types';
+import {
+  DeliveryAreaListSchema,
+  PlaceNoticeBodySchema,
+  PlaceNoticeResultSchema,
+  PlaceResolutionSchema,
+} from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { readJsonBody } from '../../lib/request';
@@ -86,6 +91,33 @@ places.get('/places/by-postal-code', async (c) => {
   const resolution = await resolvePlaceForPostalCode(serviceDb(), code);
   // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): şekil derlemede, fazla alan çalışma zamanında yakalanır.
   return ok(c, PlaceResolutionSchema.parse(toContract(code, resolution)));
+});
+
+/**
+ * `GET /places/zones` — *"soğuk zincir aracımız nerelere gidiyor"* listesi (kullanıcı kararı 10.08).
+ *
+ * ── ZİYARETÇİYE AÇIK ────────────────────────────────────────────────────────
+ * Kardeş uçlarla aynı kümede (`bearerAuth`tan ÖNCE bağlı): soru bölge dışı kalan müşterinin ilk
+ * sorusudur ve tam da vazgeçmeye en yakın anda sorulur — cevabın önüne giriş duvarı koymak, "size
+ * gelmiyoruz" dedikten sonra "nereye geldiğimizi öğrenmek için hesap açın" demek olurdu. Kimliğin
+ * kişiselleştireceği bir şey de yok: araç herkes için aynı yerlere gidiyor.
+ *
+ * ── DİLSİZ, VE BU BİR EKSİK DEĞİL ───────────────────────────────────────────
+ * Kardeşi `POST /places/notice` dili ZORUNLU ister (haber o dilde gidecek); bu uç İSTEMEZ çünkü
+ * döndürdüğü şey ÇEVİRİ DEĞİL, ÖZEL ADDIR: "Strasbourg" üç dilde de Strasbourg'dur ve öbek başlığı
+ * posta kodu referansının yer adından gelir (`postal_code_place.places[0]`) — çevirisi ne veride var
+ * ne olmalı (şehir adını çevirmek onu tanınmaz kılar). Dil parametresi alsaydık cevabı değiştirmeyen
+ * bir girdi istemiş, üstelik "bunun çevirisi bir gün gelecek" diye tutulamayacak bir söz vermiş
+ * olurduk. Ekranın çevrilen kısmı (başlık, boş liste cümlesi) istemcinin kendi sözlüğünde.
+ *
+ * KURAL BURADA DEĞİL: süzgeç (aktif bölge), ad çözümü, ülke → yer öbeklemesi ve belirlenimci sıra
+ * `@lezzet/application` kapısında (`delivery/zones.ts`). Burada yalnız sözleşme kilidi ve zarf var.
+ */
+places.get('/places/zones', async (c) => {
+  const areas = await listPublicDeliveryAreas(serviceDb());
+  // Sözleşme kilidi (`catalog.ts` emsali): boş dizi geçerli bir cevaptır — okuma düşseydi servis
+  // fırlatır, `app.onError` kaydeder ve zarf hata dönerdi; ekran ikisini karıştırmaz.
+  return ok(c, DeliveryAreaListSchema.parse(areas));
 });
 
 /**

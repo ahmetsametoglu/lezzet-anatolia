@@ -12,27 +12,22 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import {
-  getOnboardingSnapshot,
-  saveOnboarding,
-  subscribeOnboarding,
-} from '@/lib/onboarding/onboarding-store';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
-import { publishToast } from '@/lib/toast/toast-store';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
+import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { emToDp } from '@/theme/parse';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import { HomeSkeleton } from './home-skeleton';
 import messages from './messages.json';
-import { PostalCodeSheet } from './postal-code-sheet';
 import { useHome } from './use-home.hook';
 import { useHomeOrders } from './use-home-orders.hook';
 
@@ -161,19 +156,12 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      KURGU (kullanıcının tarifi, web'de zaten böyle): posta kodu bir GEZİNME MERCEĞİDİR, teslimat
      kararı değil. Müşteri onu istediği gibi değiştirir; SEPETE gidince sepet gönderilecek ADRESE
      göre güncellenir. İki bilgi ayrı sorulara cevap veriyor, o yüzden çelişmiyorlar — ve çekmece
-     bunu girişli müşteriye açıkça söyler (`t.zip.browsingOnly`). */
+     bunu girişli müşteriye açıkça söyler (kit künyesi: `browsingOnly`).
+
+     KAYDI ÇEKMECE YAPAR (10.08, kite taşınırken): kaydetme ve onay toast'ı artık çekmecenin
+     içinde — aynı çekmeceyi bilgi bandı ve teslimat bölgeleri sayfası da açıyor ve kaydın ne
+     yaptığı üç ekranda üç kez yazılmamalı. Vitrine kalan tek şey açma/kapama. */
   const openLocation = () => setZipSheetOpen(true);
-  const saveLocation = (code: string) => {
-    setZipSheetOpen(false);
-    /* Kaydın ÖTEKİ alanları korunur: bu çekmece yalnız posta kodunu değiştirir. Kayıt yoksa
-       (onboarding atlanmış olsa bile kapı geçilmiş demektir) `done: true` yazılır — aksi hâlde
-       bir sonraki açılış kullanıcıyı akışa geri fırlatırdı. */
-    /* Dil CANLI kaynaktan yazılır, kayıttaki eski değerden değil: `onboarding?.locale` akışın
-       İZİdir (onboarding'in yapıldığı andaki dil). Kullanıcı sonradan dilini değiştirdiyse onu geri
-       yazmak, ayarı sessizce eski hâline döndürürdü. */
-    void saveOnboarding({ done: true, locale, postalCode: code });
-    publishToast(t.zip.saved);
-  };
 
   const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
 
@@ -627,10 +615,10 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       <PostalCodeSheet
         visible={zipSheetOpen}
         code={postalCode}
-        signedIn={signedIn}
-        copy={t.zip}
-        onSave={saveLocation}
         onClose={() => setZipSheetOpen(false)}
+        // Vitrinde bölge dışı müşteri de geziniyor: "nerelere gidiyorsunuz" sorusu burada da doğar.
+        showZonesLink
+        testID="home-zip"
       />
     </View>
   );

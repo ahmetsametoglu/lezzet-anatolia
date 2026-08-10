@@ -62,6 +62,13 @@ interface BottomSheetProps {
   visible: boolean;
   /** Başlık — i18n üstte çözülür; ekran okuyucuda katmanın adıdır. */
   title: string;
+  /*
+   * Panelin boyu SEÇİLMEZ: yükseklik İÇERİKTEN gelir, tavanı `sheetMaxHeightRatio`.
+   * 10.08'de bir `tall` kademesi eklendi (taban = tavan) ve aynı gün geri alındı — kullanıcı
+   * cihazda görüp eledi: tek bir bağlantı için paneli tavana dayamak, altında kocaman boş bir
+   * alan bırakıyordu. Kademe tek çağıranıyla birlikte söküldü; ölü bir seçenek bırakmak, bir
+   * sonraki ekranın onu yeniden keşfetmesine kapı olurdu (CLAUDE §1).
+   */
   onClose: () => void;
   children: ReactNode;
   testID?: string;
@@ -84,6 +91,27 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
     onClose();
   }, [onClose]);
 
+  /**
+   * Açılış — panel aşağıdan gelir, örtü belirir.
+   *
+   * ── İKİNCİ AÇILIŞ ARIZASI (kullanıcı bulgusu 10.08, cihazda ölçüldü) ──────
+   * Açılış eskiden YALNIZ ilk ölçümde, `onLayout` içinde başlıyordu. Ama bileşen kapanınca
+   * SÖKÜLMÜYOR (yalnız `Modal` iniyor) ve paylaşılan değerler hafızada kalıyor: kapanışın
+   * bıraktığı `offset = yükseklik` ve `scrimOpacity = 0`. İkinci açılışta ölçü DEĞİŞMEDİĞİ için
+   * `onLayout` erken dönüyor, bunları geri alan kod hiç koşmuyordu — `Modal` açılıyor (ekranda
+   * kısa bir titreme), panel ekran dışında, örtü görünmez kalıyordu. Yani çekmece bir kez
+   * açılıyor, bir daha açılmıyordu; her yüzeyde (vitrin posta kodu, bandın iki çekmecesi).
+   * Açılış bu yüzden ölçümden AYRILDI: ölçü bilinmiyorsa `onLayout` başlatır (nereden geleceğini
+   * yükseklik söyler), biliniyorsa `visible` etkisi başlatır.
+   */
+  const animateOpen = useCallback(() => {
+    'worklet';
+    // Panel her açılışta aşağıdan başlar — kapanışın bıraktığı yeri varsaymak yerine kurulur.
+    offset.value = height.value;
+    offset.value = withTiming(0, TIMING);
+    scrimOpacity.value = withTiming(1, TIMING);
+  }, [height, offset, scrimOpacity]);
+
   /* Sürükleme ve düğme aynı kapanışı kullanır: iki ayrı yol yazılsaydı biri bir gün ötekinden
      farklı bir süreyle kapanırdı. */
   const animateClose = useCallback(() => {
@@ -97,24 +125,26 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
   useEffect(() => {
     if (visible) {
       setMounted(true);
+      /* Ölçü BİLİNİYORSA (ikinci ve sonraki açılışlar) açılış BURADAN başlar: `onLayout` aynı
+         ölçüyle yeniden anlamlı bir şey söylemez ve panel kapanışın bıraktığı yerde kalırdı. */
+      if (height.value > 0) animateOpen();
       return;
     }
     if (mounted) animateClose();
-  }, [animateClose, mounted, visible]);
+  }, [animateClose, animateOpen, height, mounted, visible]);
 
-  /* Panel ölçüsü BİLİNMEDEN açılış oynatılamaz: nereden geleceğini yükseklik söyler. Ölçü ilk
-     yerleşimde gelir, o yüzden açılış burada başlar — `useEffect`te değil. */
+  /* İLK açılışta ölçü bilinmiyor ve açılış oynatılamaz: nereden geleceğini yükseklik söyler.
+     O yüzden ilk ölçüm açılışı buradan başlatır. Sonraki ölçümler (içerik değişince — örneğin
+     çekmecenin ikinci adımı) yalnız yüksekliği tazeler: sürükleme eşiği doğru kalsın, ama
+     açılış animasyonu içerik büyüdü diye baştan oynamasın. */
   const onPanelLayout = useCallback(
     (measured: number) => {
-      if (measured === 0 || height.value === measured) return;
-      const first = height.value === 0;
+      if (measured === 0) return;
+      const wasUnknown = height.value === 0;
       height.value = measured;
-      if (!first) return;
-      offset.value = measured;
-      offset.value = withTiming(0, TIMING);
-      scrimOpacity.value = withTiming(1, TIMING);
+      if (wasUnknown) animateOpen();
     },
-    [height, offset, scrimOpacity],
+    [animateOpen, height],
   );
 
   const drag = Gesture.Pan()

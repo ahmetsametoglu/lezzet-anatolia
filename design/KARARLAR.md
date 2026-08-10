@@ -1020,3 +1020,70 @@ pahalı adıma zorlamak, checkout zaten adresi kendi çekmecesinde sorarken gere
 
 Kod: `apps/mobile/src/screens/profile-setup/*` · `apps/mobile/src/app/profile-setup.tsx` ·
 `apps/mobile/src/screens/customer-kit/address-form.tsx`.
+
+
+### TESLİMAT BÖLGELERİ sayfası — v3'te yok (10.08)
+
+**Kullanıcı kararı (ölçülmüş şikâyet).** Bölge dışı müşteri bugüne dek yalnız "bu adrese aracımız
+gitmiyor" cümlesini okuyordu; gelen tepki *"on posta kodu denedim, hiçbirine gitmiyorsunuz — siz
+nereye gidiyorsunuz?"* oldu. Cevabı hiçbir ekranda yoktu. Üç değişiklik birlikte yapıldı: bilgi
+bandının gövdesi tek cümleye indi, ~~cümlenin altına **iki çıkış** kondu (posta kodunu değiştir ·
+nerelere gidiyorsunuz)~~ ve sayfanın kendisi açıldı (`/delivery-zones`).
+
+**Eylemlerin yeri aynı gün İKİ KEZ değişti, ikisi de cihazda ölçülerek.** Önce kutunun ALTINA
+konmuşlardı: cihazda kutu bitiyor, altında yan yana iki yeşil bağlantı ve onların da altında
+açılan bir e-posta formu çıkıyordu — ürün kartları ekranın yarısına iniyordu (kullanıcı: "üç metin
+butonu alt alta, gerçekten kötü görünüyor"). Son hâl: bant **tek bloktur**, kutunun içinde cümle ve
+**iki eşit sütuna ortalanmış iki metin eylemi** vardır ("Buraya da gelin" · "Posta kodunu
+değiştir"); kutunun altına taşan hiçbir parça yoktur. Birincil düğme kullanılmadı — ikisi de aynı
+ağırlıkta birer öneri; biri düğme olsaydı bant, bilgi levhası olmaktan çıkıp bir çağrıya dönerdi.
+Bunun için kitte iki yuva açıldı: `Note`a **eylem yuvası** (kutunun içine kontrol) ve `TextAction`a
+**`align`** (sütuna saran etiketin hizası). İkisi de yuvadır, varyant değil; mevcut çağıranların
+hiçbiri değişmedi. **"Nerelere gidiyorsunuz?" ise banttan posta kodu çekmecesine taşındı**
+(kullanıcı gerekçesi: kendi kodunu denemekle "siz nereye gidiyorsunuz" aynı sorunun iki yüzü) —
+çekmece bu yüzden `tall` açılıyor ve bağlantı bir prop'la kapatılabiliyor: teslimat bölgeleri
+sayfasından açılan çekmecede çizilseydi müşteriyi durduğu sayfaya yollayan ölü bir kapı olurdu.
+
+**Yeni görsel dil ÜRETİLMEDİ.** Sayfa baştan sona kitin mevcut komponentleridir: `AppBar` +
+`BackButton` (başlık), `SectionHeader` (bölüm üstbaşlığı), satır listesi için kitin onay ikonu +
+gövde kademesi, `LoadingState` · `Note tone="error"` · `EmptyState` (üç hâl) ve kapanış cümlesi
+için `Note tone="warm"` — bandın kullandığı sıcak nötr panelin aynısı. Ham hex yok, tüm renk ve
+ölçü token'dan.
+
+**Liste ŞEHİR ADIYLA okunur, posta koduyla değil** (kullanıcı kararı: "insanın tanıdığı dil"). Uç
+zaten kod taşımıyor; kodları basmak sayfayı iki katına çıkarır ve kimsenin okumadığı bir tabloya
+çevirirdi. Müşterinin kendi kodunu denemesi ayrı ve **tek** bir eylemdir: vitrin başlığındaki
+posta kodu çekmecesi bu iş için kite taşındı (`screens/customer-kit/postal-code-sheet.tsx`) ve üç
+çağıran (vitrin · bilgi bandı · bu sayfa) aynı çekmeceyi açıyor — ikinci bir alan yazılmadı.
+Taşınırken metin, kaydetme ve "girişli mi" sorusu da çekmecenin içine alındı; çağırana yalnız
+"açık mı" kaldı.
+
+**Kapanış cümlesi bilinçli:** liste bir kapı değil bir haritadır. "Burada yoksanız satmıyoruz"
+diye okunmasın diye sayfanın sonunda kargo yolu açıkça söylenir (soğuk zincir isteyenler hariç).
+
+Kod: `apps/mobile/src/screens/delivery-zones/*` · `apps/mobile/src/app/delivery-zones.tsx` ·
+`apps/mobile/src/screens/customer-kit/postal-code-sheet.tsx` ·
+`apps/mobile/src/screens/customer-kit/place-notice-band.tsx`.
+
+
+### "Buraya da gelin" TALEBİ ARTIK HESAP AÇIYOR — eski "giriş duvarı yok" kararının üstü çizildi (10.08)
+
+~~**Eski karar:** "Giriş duvarı KURULMAZ — vazgeçmeye en yakın anda ikinci engel çıkarılmaz."
+Misafir yalnız e-postasını yazardı; uç `email_required` derse bandın içinde küçük bir alan
+açılırdı.~~ **Kullanıcı 10.08'de bunu bilerek değiştirdi.** Gerekçe: e-posta tek başına bir
+kayıttır ama bir MÜŞTERİ değildir — doğrulanmamış adrese ne haber gönderilebilir ne de o kişi bir
+daha tanınır. Yeni kural: talep bırakan kişi aynı akışta **doğrulanmış bir hesaba** dönüşür
+(e-posta → altı haneli kod → oturum → talep kaydı). **Bedeli kabul edilmiştir**: bırakılan talep
+sayısı düşer, ama gelen her talep bir hesaptır.
+
+**Yeni altyapı yok, yeni görsel dil yok.** OTP yolu hesabı zaten yaratıyor (`generateLink` + profil
+tetiği) ve akışın iki ucu giriş ekranıyla ortak; hata cümleleri de ortak sözlüğe çıkarıldı
+(`lib/auth/error-text`) — aynı hâl iki yüzeyde iki farklı şey söylemesin. Form da banttan
+**çekmeceye** taşındı (kullanıcı: "biz zaten alttan çekmece çıkarıp posta kodu alabiliyoruz, neden
+mail adresini de orada yapmayalım"): kalıp posta kodu çekmecesinin kalıbı, kabuk kitin
+`BottomSheet`i, kod alanı giriş ekranının `CodeField`i. Sözleşmenin dört hâli (`ok` · `already` ·
+`place_unknown` · `email_required`) çekmecede karşılanmaya devam ediyor; `email_required` artık
+gelmemeli (oturum var) ama sözleşme hâli olduğu için sessiz geçilmiyor.
+
+Kod: `apps/mobile/src/screens/customer-kit/place-notice-sheet.tsx` ·
+`apps/mobile/src/lib/auth/error-text.ts`.

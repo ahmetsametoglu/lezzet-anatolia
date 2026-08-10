@@ -98,8 +98,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const t: Messages = messages[locale];
   const router = useRouter();
   const cart = useCart();
-  const { status: meStatus, me } = useMe();
-  /** Doğrulanmış müşteri; `null` = misafir ya da profil henüz okunmadı (ikisi de giriş kapısıdır). */
+  const { status: meStatus, me, refresh: refreshMe } = useMe();
+  /**
+   * Doğrulanmış müşteri — YALNIZ `ready` hâlinde dolu.
+   *
+   * `null` olmasının ÜÇ ayrı sebebi var ve bunlar aynı şey DEĞİL: misafir (`guest` — cevap),
+   * okunamadı (`error` — cevapsızlık), henüz okunmadı (`loading` — sorulmamış soru). Ekran üçünü
+   * ayrı karşılar; eskiden hepsi "misafir" sayılıyordu ve arıza buydu (aşağıdaki blok künyesi).
+   */
   const customer = meStatus === 'ready' ? me : null;
 
   /** Seçili adres; `null` = "sunucu karar versin" (varsayılan, yoksa ilk adres — uç künyesi). */
@@ -387,11 +393,23 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           </View>
         </View>
 
-        {customer !== null ? (
+        {/* KİMLİK DÖRT HÂLDİR, İKİ DEĞİL (kullanıcı bulgusu 10.08 — cihazda ölçüldü).
+            Bu blok eskiden `me === null` diye tek soru soruyordu ve `loading`/`error` hâllerini de
+            MİSAFİR sayıyordu: uç kısa süre düştüğünde giriş yapmış müşteri, adresi ekranda dururken
+            "siparişinizi tamamlamak için hızlı doğrulama" davetini görüyordu — sistem, bildiği bir
+            şeyi bilmiyormuş gibi davranıp müşteriyi kendi hesabından şüpheye düşürüyordu.
+            CLAUDE §1'in kuralı: ölçülemeyen değer SIFIR değildir. `guest` bir CEVAPTIR, `error`
+            cevapsızlıktır, `loading` henüz sorulmamış sorudur; üçü aynı şeyi söyleyemez. */}
+        {meStatus === 'ready' && customer !== null ? (
           <View style={styles.signedIn} testID="checkout-signed-in">
             <Text style={styles.signedInLabel}>{t.signedIn.replace('{name}', customer.name)}</Text>
           </View>
-        ) : (
+        ) : meStatus === 'error' ? (
+          <View style={styles.signedIn} testID="checkout-me-error">
+            <Note tone="error" description={t.meUnreadable} testID="checkout-me-error-note" />
+            <TextAction label={t.meRetry} onPress={refreshMe} testID="checkout-me-retry" />
+          </View>
+        ) : meStatus === 'guest' ? (
           <DashedInvite
             layout="stack"
             title={t.guest.title}
@@ -399,7 +417,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="checkout-login" />}
             testID="checkout-guest"
           />
-        )}
+        ) : /* `loading`: hiçbir şey çizilmez — cevabı gelmemiş bir soruyu ekrana yazmak, kimliği
+              olan müşteriye bir an için "misafirsiniz" demektir. */ null}
 
         {/* Seçenekler okunamadıysa ekran SESSİZ KALMAZ: hangi hâlde olduğunu söyler ve aynı
             sorguyu tekrar etme yolunu verir. */}

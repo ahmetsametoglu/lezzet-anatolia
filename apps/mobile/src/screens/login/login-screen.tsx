@@ -13,6 +13,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { DEV_ADMIN_EMAIL, DEV_CUSTOMER_EMAIL, devSignIn } from '@/lib/auth/dev-login';
+import { authErrorText } from '@/lib/auth/error-text';
 import { signInWithGoogle } from '@/lib/auth/oauth';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
 import { useAppLocale } from '@/lib/i18n/app-locale';
@@ -80,7 +81,9 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   /** Seçim aşamasının bilgi/hata satırı (WhatsApp "yakında", Google arızası). */
-  const [notice, setNotice] = useState<string | null>(initialNotice === undefined ? null : (t.errors[initialNotice] ?? null));
+  const [notice, setNotice] = useState<string | null>(
+    initialNotice === undefined ? null : authErrorText(locale, initialNotice),
+  );
   /** İstek uçuştayken düğme kilidi — çift dokunuş iki kod isteği atmasın. */
   const [sending, setSending] = useState(false);
   /** 429'un bekleme süresi (sn) — sayaç sıfıra inene dek yeniden gönderme kilitli. */
@@ -132,7 +135,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
   ) => {
     setCooldownSec(result.retryAfterSec ?? 0);
     const penalized = result.retryAfterSec !== null && (result.error === 'cooldown' || result.error === 'rate_limit');
-    setError(penalized ? null : t.errors[result.error]);
+    setError(penalized ? null : authErrorText(locale, result.error));
   };
 
   /* Dev test girişi — başarı OTP yolunun 'done' akışına biner (aynı toast, aynı kapanış). */
@@ -154,7 +157,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
        callback` rotasında yaşar (dinleyici kurgusunun cihazda düşüşü — `oauth.ts` künyesi).
        Vazgeçip elle dönen müşteri ekranı bıraktığı gibi bulur; asılı bir bekleme yok. */
     void signInWithGoogle().then((result) => {
-      if (result.error !== null) setNotice(t.errors[result.error]);
+      if (result.error !== null) setNotice(authErrorText(locale, result.error));
     });
   };
 

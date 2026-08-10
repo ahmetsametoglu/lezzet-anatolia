@@ -1,7 +1,10 @@
+import type { Locale } from '@lezzet/i18n';
 import type { z } from 'zod';
 import {
+  DeliveryAreaListSchema,
   PlaceNoticeResultSchema,
   PlaceResolutionSchema,
+  type DeliveryAreaList,
   type PlaceNoticeBodySchema,
   type PlaceNoticeResult,
   type PlaceResolution,
@@ -29,6 +32,22 @@ export function resolvePostalCode(code: string): Promise<ApiResult<PlaceResoluti
 }
 
 /**
+ * TESLİMAT BÖLGELERİ — `GET /api/v1/places/zones` (kullanıcı kararı 10.08).
+ *
+ * ÇIPLAK `apiFetch`, çözüm ucuyla aynı gerekçe: liste herkese açıktır (bölge dışı ziyaretçi
+ * "siz nereye gidiyorsunuz" diye soruyor, hesabı yok) ve kimliğe göre değişmez.
+ *
+ * DİL SORGUSU YOK: cevap ŞEHİR ADLARIDIR (`publicName`) — çevrilecek bir cümle değil, olduğu gibi
+ * basılan özel adlar. Dili sorguya koymak, sunucuya tutamayacağı bir söz verdirirdi.
+ *
+ * **Boş dizi geçerli bir cevaptır** (sözleşme künyesi): ekran "henüz ilan edilmiş bölge yok" der;
+ * okuma düşerse zarfın kendisi hata döner — ikisi karışmaz.
+ */
+export function fetchDeliveryAreas(): Promise<ApiResult<DeliveryAreaList>> {
+  return apiFetch('/api/v1/places/zones', DeliveryAreaListSchema);
+}
+
+/**
  * "BURAYA DA GELİN" KAYDI — `POST /api/v1/places/notice` (21.20 · kullanıcı kararı 10.08).
  *
  * `maybeAuthorizedFetch`: ziyaretçiye AÇIK ama kimlikten YARARLANIR. Giriş duvarı yok (sözleşme
@@ -39,7 +58,22 @@ export function resolvePostalCode(code: string): Promise<ApiResult<PlaceResoluti
  *
  * Gövde tipi `z.input`: `email` şemada varsayılanlı (`.default(null)`), yani çağıran alanı hiç
  * yazmadan da geçebilir.
+ *
+ * ── `locale` ZORUNLU (ölçülmüş arıza 10.08) ─────────────────────────────────
+ * Uç dili sorgudan okuyor ve dilsiz çağrıyı `400 invalid_locale` ile reddediyor — kaydı bir gün
+ * yanlış dilde haber gitsin diye sessizce Türkçe'ye düşürmemek için (uç künyesi). Bu çağrı dili
+ * hiç göndermiyordu: cihazda ölçüldü, "Kaydınızı alamadık — bağlantınızı kontrol edin" kırmızısı
+ * TAŞIMA hatası değil, bizim eksik sorgumuzdu.
+ *   POST /api/v1/places/notice → HTTP 400 {"error":"invalid_locale"}
+ * Dil ekranın elinde (`useAppLocale`), o yüzden gövdeye değil imzaya kondu: gövdeye konsaydı
+ * sözleşme yüzey diline bağlanırdı; ötekiler de (katalog · sepet · sipariş) dili sorguda taşıyor.
  */
-export function submitPlaceNotice(body: z.input<typeof PlaceNoticeBodySchema>): Promise<ApiResult<PlaceNoticeResult>> {
-  return maybeAuthorizedFetch('/api/v1/places/notice', PlaceNoticeResultSchema, { method: 'POST', body });
+export function submitPlaceNotice(
+  locale: Locale,
+  body: z.input<typeof PlaceNoticeBodySchema>,
+): Promise<ApiResult<PlaceNoticeResult>> {
+  return maybeAuthorizedFetch(`/api/v1/places/notice?locale=${encodeURIComponent(locale)}`, PlaceNoticeResultSchema, {
+    method: 'POST',
+    body,
+  });
 }
