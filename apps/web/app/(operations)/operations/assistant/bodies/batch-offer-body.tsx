@@ -103,7 +103,7 @@ export function BatchOfferBody({
           `Fact` satırı artık konu sütununun içinde ve dikey — sıkışmıyor, sağdaki ölü alanı da
           kendiliğinden kapatıyor. */}
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-3.5">
-        <div className="flex w-[13rem] flex-none flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+        <div className="flex min-w-[15rem] flex-1 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
           {subject ? (
             <SubjectCard
               name={subject.name}
@@ -128,7 +128,7 @@ export function BatchOfferBody({
         </div>
 
       {readOnly ? (
-        <div className="flex w-[20rem] flex-none flex-col gap-3">
+        <div className="flex min-w-[15rem] flex-1 flex-col gap-3">
           <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
           <StaticFace
             label="İndirim"
@@ -144,7 +144,7 @@ export function BatchOfferBody({
           />
         </div>
       ) : (
-        <div className="w-[20rem] flex-none">
+        <div className="min-w-[15rem] flex-1">
         <PriceTriple
           valueCents={valueCents}
           onChange={onChange}
@@ -162,7 +162,7 @@ export function BatchOfferBody({
         </div>
       )}
 
-        <div className="flex min-w-[18rem] flex-1 items-start flex-col gap-3">
+        <div className="flex min-w-[15rem] flex-1 items-start flex-col gap-3">
           <MarginSentence
             costCents={costCents}
             offerHtCents={offerHtCents}
@@ -197,12 +197,19 @@ export function BatchOfferBody({
   );
 }
 
-/** Künye çifti — etiket sönük ve küçük, DEĞER mono ve tam boyda (okunacak şey o). */
+/**
+ * Künye çifti — etiket solda sönük, DEĞER sağda mono.
+ *
+ * Bir tur `Depo: STR` gibi bitişikti; yan yana dizilirken doğruydu ama sütuna girince beş satır
+ * sola yaslı ve sağı boş bir liste oldu — göz her satırda değeri yeniden aramak zorunda kaldı.
+ * `justify-between` ile değerler tek dikey hatta iniyor ve sağdaki kâr künyesiyle **aynı okuma
+ * biçimi** oluyor: ekranda iki farklı künye dili kalmıyor.
+ */
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <span className="whitespace-nowrap">
-      <span className="text-ops-sm text-ops-muted">{label}:</span>{' '}
-      <strong className="font-ops-mono font-semibold text-ops-ink">{value}</strong>
+    <span className="flex items-baseline justify-between gap-3">
+      <span className="text-ops-sm text-ops-muted">{label}</span>
+      <strong className="whitespace-nowrap font-ops-mono font-semibold text-ops-ink">{value}</strong>
     </span>
   );
 }

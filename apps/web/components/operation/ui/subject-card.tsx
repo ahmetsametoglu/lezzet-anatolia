@@ -31,9 +31,11 @@ export function SubjectCard({ name, detail, imageUrl, href, layout = 'row' }: Su
   const column = layout === 'column';
   const body = (
     <>
-      <Thumbnail src={imageUrl} alt={name} size={column ? undefined : 44} fluid={column} />
+      <Thumbnail src={imageUrl} alt={name} size={column ? undefined : 44} fluid={column} ratio={column ? 4 / 3 : 1} />
       <span className="flex min-w-0 flex-col">
-        <span className={`font-ops-display font-semibold text-ops-ink ${column ? 'text-ops-lead' : 'truncate text-ops-base'}`}>
+        {/* Dikey sütunda ad SARILIR, kırpılmaz: kırpma satır içi künyede doğru (yer dar) ama
+            sütunda ürünün adının yarısını göstermek, kartın varlık sebebini götürür. */}
+        <span className={`font-ops-display font-semibold text-ops-ink ${column ? 'text-ops-base leading-snug' : 'truncate text-ops-base'}`}>
           {name}
         </span>
         {detail ? <span className="truncate font-ops-body text-ops-sm text-ops-muted">{detail}</span> : null}
@@ -41,7 +43,7 @@ export function SubjectCard({ name, detail, imageUrl, href, layout = 'row' }: Su
     </>
   );
 
-  const shell = column ? 'flex flex-col gap-2' : 'flex items-center gap-3';
+  const shell = column ? 'flex flex-col gap-1.5' : 'flex items-center gap-3';
 
   if (!href) {
     return <span className={shell}>{body}</span>;
