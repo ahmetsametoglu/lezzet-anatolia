@@ -1,71 +1,88 @@
-import { AccountService, MoneyMovementService, OrderService, serviceDb } from '@lezzet/database';
-import { canTransition } from '@lezzet/domain-core';
-import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
-import { recordOrderRefund, syncOrderPaymentStatus } from '../money/order-payment';
+import 'server-only';
+import { serviceDb } from '@lezzet/database';
+import {
+  adjustFulfillment as adjustFulfillmentFor,
+  cancelOrder as cancelOrderFor,
+  retryRefund as retryRefundFor,
+  type OrderEffects,
+  type RefundOptions as CoreRefundOptions,
+} from '@lezzet/application';
+import type { FulfillmentAdjustment, OrderCancelReason } from '@lezzet/types';
 import { notifyOrderException } from './notify';
 import { stripeRefunder, type ProviderRefunder } from './provider-refund';
 
 /**
- * Kısmi karşılama (07.8) ve iptal/iade (07.9) kapısı — **uygulama katmanı orkestrasyonu**.
- * DOMAIN §8, ORDER_LIFECYCLE.
+ * Kısmi karşılama (07.8) ve iptal/iade (07.9) — **geçiş köprüsü** (terfi aşama 2/3, denetim K5-1).
  *
- * Üç katman birleşir: malın gerçeğini veritabanı yazar (`adjust_fulfillment` / `cancel_order`,
- * bölünemez), iade borcunu motor TÜRETİR (`derivePaymentStatus`), hareketi para kapısı yazar (12.2).
+ * ── NEDEN KÖPRÜYE İNDİ ──────────────────────────────────────────────────────
+ * Gövde `@lezzet/application/order/refund`ta ve künyenin tamamı orada: sıranın neden "önce mal,
+ * sonra para" olduğu, iade borcunun neden türetildiği, sağlayıcı reddedince hareketin neden hiç
+ * yazılmadığı.
  *
- * **"Peşin mi, kapıda mı" diye dallanılmaz.** İade borcu = net tahsilat − karşılanan tutar; bu sayı
- * peşin ödenmişse kendiliğinden pozitif çıkar (fark iade edilir), kapıda ödenecekse sıfır çıkar
- * (yalnız tahsil edilecek tutar düşer). Tek yol, iki sonuç — ödeme yöntemine bakan bir `if` yok.
+ * Burada 260 satırlık bir İKİZ duruyordu ve ikisi de canlıydı: operasyon sipariş ekranı buradan,
+ * mobil arka uç paketten okuyordu. **Üstelik ayrışmışlardı bile** — paket sürümü depo kapsamı
+ * (`out_of_scope`, D6) kazanmıştı, bu kopya kazanmamıştı. Aynı soruya iki cevap veren bir para
+ * kuralı, bir gün yanlış tutar demektir ve **hiçbir test bunu yakalamaz**: iki dosyanın da kendi
+ * testi vardı, ikisi de yeşildi.
  *
- * İadenin gideceği hesap da SORULMAZ, türetilir: para hangi hesaba girdiyse oradan çıkar (son
- * tahsilat hareketi). Çağıran isterse başka hesap verebilir (Stripe'tan tahsil, nakit iade).
+ * ── KÖPRÜNÜN TAŞIDIĞI ŞEY: İMZA + İKİ YAN ETKİ ──────────────────────────────
+ * Düz bir `export … from` yetmiyor, çünkü paket sürümü `db`yi PARAMETRE alıyor (taşıma bilmez) ve
+ * yan etkileri PORT'tan istiyor. Köprü tam olarak bu ikisini dolduruyor — `transition.ts`in aynı
+ * deseni. Kural yine tek yerde; buradaki hiçbir satır karar vermiyor.
+ *
+ * `server-only` BURADA kalıyor, pakette değil: paket Next'e ait hiçbir şey bilmez, ama web tarafında
+ * bu kapının istemciye sızmaması hâlâ zorlanmalı.
+ *
+ * ── KAPSAM VERİLMİYOR VE BU BİLİNÇLİ ────────────────────────────────────────
+ * `warehouseScope` geçilmiyor, yani kapsam sorulmuyor — ekranın `requireAdmin` guard'ı zaten
+ * kapıda. Bugünkü davranışın birebir aynısı (paket künyesi: *"undefined = kapsam sorulmuyor"*).
+ * Mobil depo ucu (21.11) açıldığında kapsamı O çağıran verir; web köprüsüne eklemek, olmayan bir
+ * güvenceyi vaat etmek olurdu.
  */
 
-interface RefundOutcome {
-  /** Fiilen yazılan iade tutarı (**cent**). 0 = iade borcu yoktu **ya da** yazılamadı (`refundBlocked`). */
-  refundedAmountCents: number;
-  paymentStatus: PaymentStatus;
-  /** Kapıda/vadeli tahsil edilmeyi bekleyen kalan (**cent**) — kısmi karşılamada düşmüş hâli. */
-  amountToCollectCents: number;
-  /**
-   * Borç vardı ama iade YAZILAMADI — sebebiyle. Yokluğu "iade tamam" demektir.
-   *
-   * Sessizce sıfır dönmek en tehlikeli seçenekti: operatör iadeyi yapılmış sanır, müşteri parasını
-   * bekler. Borç zaten `amountToCollect`'in negatifinde görünür; bu alan onu **sebebiyle** söyler.
-   */
-  refundBlocked?: RefundBlockReason;
+export type { RefundBlockReason } from '@lezzet/application';
+
+/**
+ * ── SONUÇ TİPLERİ DARALTILIYOR: `out_of_scope` BU KAPIDAN DÖNMEZ ────────────
+ *
+ * Köprü `warehouseScope` geçmiyor, yani paket "bu siparişin deposu kümede mi" sorusunu hiç sormuyor
+ * ve o hâl **yapı gereği** doğmuyor. Tipi olduğu gibi bırakmak, ekranı hiç gerçekleşmeyecek bir dal
+ * yazmaya zorlardı — ölü kod, üstelik test edilemeyen türden.
+ *
+ * Daraltma bir `as` ile DEĞİL, çalışma anında bakan bir kapıyla yapılıyor (`withoutScopeVerdict`):
+ * gün gelir köprü kapsam geçmeye başlarsa `as` sessizce yalan söylerdi ve ekran tanımadığı bir
+ * durumu "ok" sanıp devam ederdi. Kapı bunun yerine bağırıyor.
+ */
+type CoreAdjust = Awaited<ReturnType<typeof adjustFulfillmentFor>>;
+type CoreCancel = Awaited<ReturnType<typeof cancelOrderFor>>;
+type ScopeVerdict = { status: 'forbidden'; reason: 'out_of_scope' };
+
+type AdjustOutcome = Exclude<CoreAdjust, ScopeVerdict>;
+type CancelOutcome =
+  | Exclude<CoreCancel, { status: 'forbidden' }>
+  | {
+      status: 'forbidden';
+      reason: Exclude<Extract<CoreCancel, { status: 'forbidden' }>['reason'], 'out_of_scope'>;
+    };
+
+function withoutScopeVerdict<T extends { status: string }, N>(outcome: T): N {
+  if (outcome.status === 'forbidden' && (outcome as { reason?: string }).reason === 'out_of_scope') {
+    // Ulaşılamaz olması GEREKİYOR; ulaşıldıysa köprü kapsam geçmeye başlamış demektir ve bunu
+    // öğrenmenin yeri sessiz bir dal değil, düşen bir istektir.
+    throw new Error('[refund] Köprü depo kapsamı geçmiyor — `out_of_scope` dönmemeliydi.');
+  }
+  return outcome as unknown as N;
 }
 
 /**
- * `no_account` — paranın hangi hesaba girdiği türetilemedi (hiç tahsilat yok).
- * `provider_ref_missing` — sağlayıcı hesabına yazılmış ama ödeme künyesi tutulmamış bir tahsilat;
- *   hangi ödemenin üzerinden dönüleceği bilinmiyor.
- * `provider_unavailable` — sağlayıcı anahtarı yok (yerel ortam).
- * `provider_failed` — sağlayıcı reddetti ya da ulaşılamadı.
+ * Web'in seçenekleri — paketinkiyle aynı, tek farkı `effects` yerine **`refunder`**.
+ *
+ * Ayrım bilinçli: bu kapının çağıranları (operasyon ekranı, Stripe webhook'u, testler) haber
+ * portuyla hiç ilgilenmiyor, yalnız sağlayıcıyı sahtelemek istiyor. Portun tamamını imzaya koymak,
+ * her çağıranın `notifyException`ı da hatırlamasını gerektirirdi — ve unutan bir çağıran müşteriye
+ * haber gitmeyen bir iade yazardı. Köprü bu yüzden haberi KENDİ dolduruyor.
  */
-export type RefundBlockReason = 'no_account' | 'provider_ref_missing' | 'provider_unavailable' | 'provider_failed';
-
-type AdjustOutcome =
-  | ({ status: 'ok'; restockedQty: number; discardedQty: number; releasedQty: number } & RefundOutcome)
-  /** Sipariş artık düzeltilebilir bir durumda değil (iptal edilmiş). */
-  | { status: 'stale'; currentStatus: OrderStatus }
-  | { status: 'not_found' };
-
-type CancelOutcome =
-  | ({ status: 'ok'; releasedQty: number } & RefundOutcome)
-  | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' }
-  | { status: 'stale'; currentStatus: OrderStatus }
-  | { status: 'not_found' };
-
-interface RefundOptions {
-  /** İadenin çıkacağı hesap — verilmezse paranın girdiği hesaptan türetilir. */
-  refundAccountId?: string | null;
-  /**
-   * Tutarı elle vermek. Tek gerçek kullanımı **jest iadesidir** (`goodwill`): mal müşteride kaldığı
-   * için karşılanan tutar düşmez, borç türetilemez — tutarı operatör söyler (DOMAIN §8).
-   */
-  refundAmountCents?: number | null;
-  valueDate?: string;
-  description?: string | null;
+interface RefundOptions extends Omit<CoreRefundOptions, 'effects'> {
   /**
    * Sağlayıcıya iade portu (07.11). Varsayılanı gerçek Stripe çağrısıdır; test sahte üreteç verir —
    * "önce sağlayıcı, sonra hareket" sırası ağa çıkmadan sınanabilsin diye.
@@ -73,188 +90,38 @@ interface RefundOptions {
   refunder?: ProviderRefunder;
 }
 
-/**
- * **Kısmi karşılama / kalem iadesi** (07.8). Eksik çıkan ya da geri gelen adet yazılır; ardından
- * ödeme durumu yeniden türetilir ve iade borcu varsa hareket yazılır.
- *
- * Sıra önemlidir: önce mal, sonra para. Tersi olsaydı iade yazılıp düzeltme başarısız olduğunda
- * "parası iade edilmiş ama hâlâ karşılanmış görünen" sipariş kalırdı.
- */
+/** Web yüzeyinin etki portu: istisna haberi hep dolu, sağlayıcı çağıranca sahtelenebilir. */
+function webRefundEffects(refunder?: ProviderRefunder): OrderEffects {
+  return {
+    notifyException: (orderId, event, opts) => notifyOrderException(orderId, event, opts),
+    refunder: refunder ?? stripeRefunder(),
+  };
+}
+
+/** Paket imzasına çevirir: `refunder` → `effects`, geri kalanı olduğu gibi. */
+function toCoreOptions({ refunder, ...rest }: RefundOptions): CoreRefundOptions {
+  return { ...rest, effects: webRefundEffects(refunder) };
+}
+
 export async function adjustFulfillment(
   orderId: string,
   lines: readonly FulfillmentAdjustment[],
   opts: RefundOptions & { actorId?: string | null } = {},
 ): Promise<AdjustOutcome> {
-  const orders = new OrderService(serviceDb());
-  if (!(await orders.getById(orderId))) return { status: 'not_found' };
-
-  const result = await orders.adjustFulfillment(orderId, lines, opts.actorId);
-  if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
-
-  const settled = await settleRefund(orderId, opts);
-  if (!settled) return { status: 'not_found' };
-
-  // Haberin hangisi olduğunu malın nerede olduğu belirler: mal daha çıkmadıysa bu bir EKSİK
-  // KARŞILANMA (müşteri kapıda sürprizle karşılaşmasın), çıktıysa bir İADE (para geri döndü).
-  const delivered = result.currentStatus === 'delivered' || result.currentStatus === 'completed';
-  await notifyOrderException(orderId, delivered ? 'order_refunded' : 'order_shortfall', { refundedAmountCents: settled.refundedAmountCents });
-
-  return {
-    status: 'ok',
-    restockedQty: result.restockedQty ?? 0,
-    discardedQty: result.discardedQty ?? 0,
-    releasedQty: result.releasedQty ?? 0,
-    ...settled,
-  };
+  const { actorId, ...refundOpts } = opts;
+  const outcome = await adjustFulfillmentFor(serviceDb(), orderId, lines, { ...toCoreOptions(refundOpts), actorId });
+  return withoutScopeVerdict<CoreAdjust, AdjustOutcome>(outcome);
 }
 
-/**
- * **İptal** (07.9). Ayrılmış mal geri bırakılır ve tahsil edilmiş para varsa TAMAMI iade edilir —
- * iptal edilen siparişte karşılanan tutar 0'dır (ORDER_LIFECYCLE), gerisi türetimden gelir.
- */
 export async function cancelOrder(
   orderId: string,
   opts: RefundOptions & { actorId?: string | null; reason?: OrderCancelReason | null } = {},
 ): Promise<CancelOutcome> {
-  const orders = new OrderService(serviceDb());
-
-  const order = await orders.getById(orderId);
-  if (!order) return { status: 'not_found' };
-
-  // Kural motorun: teslim edilmiş sipariş iptal edilmez, iade yoluna girer (`returned`).
-  const verdict = canTransition(order.status, 'cancelled');
-  if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
-
-  const result = await orders.cancel(orderId, order.status, opts.actorId, opts.reason);
-  if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
-
-  const settled = await settleRefund(orderId, { description: 'Sipariş iptali — iade', ...opts });
-  if (!settled) return { status: 'not_found' };
-
-  await notifyOrderException(orderId, 'order_cancelled', { refundedAmountCents: settled.refundedAmountCents });
-
-  return { status: 'ok', releasedQty: result.releasedQty ?? 0, ...settled };
+  const { actorId, reason, ...refundOpts } = opts;
+  const outcome = await cancelOrderFor(serviceDb(), orderId, { ...toCoreOptions(refundOpts), actorId, reason });
+  return withoutScopeVerdict<CoreCancel, CancelOutcome>(outcome);
 }
 
-/**
- * **İadeyi tek başına yeniden dener** (07.11).
- *
- * Neden ayrı bir yol: sağlayıcı çağrısı düştüğünde düzeltme/iptal ZATEN yazılmıştır ve geri
- * alınmaz — `cancelOrder` ikinci kez koşamaz (sipariş artık iptal), `adjustFulfillment` koşarsa
- * adetleri ikinci kez uygular. Yani "tekrar deneyin" demenin karşılığı olan bir kapı yoksa uyarı
- * boş bir cümledir; operatörün elinde sağlayıcı panelinden başka bir şey kalmaz.
- *
- * Borç yeniden TÜRETİLİR, saklanmaz: aradan geçen sürede tahsilat ya da başka bir düzeltme olmuş
- * olabilir. Borç kalmadıysa iade de yazılmaz — bu bir hata değil, cevabın kendisidir.
- */
-export async function retryRefund(
-  orderId: string,
-  opts: RefundOptions = {},
-): Promise<({ status: 'ok' } & RefundOutcome) | { status: 'not_found' }> {
-  if (!(await new OrderService(serviceDb()).getById(orderId))) return { status: 'not_found' };
-
-  const settled = await settleRefund(orderId, opts);
-  if (!settled) return { status: 'not_found' };
-  return { status: 'ok', ...settled };
-}
-
-/**
- * Ödeme durumunu tazeler ve borç varsa iadeyi yazar. Borç türetimden gelir; tek istisnası çağıranın
- * verdiği açık tutardır (jest iadesi).
- *
- * İade hareketi yazıldığında durum bir kez daha türetilir (para kapısı yapar) — bu yüzden dönen
- * değer hareketten SONRAKİ hâldir, öncekinden değil.
- *
- * **SIRA TERSİNE ÇEVRİLEMEZ (07.11): önce sağlayıcı çağrısı, sonra hareket.** Kartla ödenmiş bir
- * siparişte para gerçekten dönmeden hareket yazılırsa defter kapanmış görünür, müşteri parasını
- * beklemeye devam eder — hatanın en sinsi hâli, çünkü hiçbir ekranda iz bırakmaz. Çağrı düşerse
- * hareket HİÇ yazılmaz ve sebep `refundBlocked` ile çağırana söylenir.
- */
-async function settleRefund(orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
-  const before = await syncOrderPaymentStatus(orderId);
-  if (before.status !== 'ok') return null;
-
-  // Motor zaten cent veriyordu; `/ 100` ile euro'ya inip sonra tekrar `* 100` ile çıkmak, aynı
-  // sayının iki kez çevrilmesiydi — birim karışıklığının tipik izi (02.9).
-  const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
-  const unsettled = (refundBlocked?: RefundBlockReason): RefundOutcome => ({
-    refundedAmountCents: 0,
-    paymentStatus: before.paymentStatus,
-    amountToCollectCents: before.derivation.amountToCollectCents,
-    ...(refundBlocked ? { refundBlocked } : {}),
-  });
-
-  if (dueCents <= 0) return unsettled();
-
-  const payment = await lastPayment(orderId);
-  const accountId = opts.refundAccountId ?? payment?.accountId ?? null;
-  // Hesap türetilemiyorsa iade yazılamaz ama düzeltme geçerlidir: borç `amountToCollect`'in negatifi
-  // olarak zaten görünür. Sessizce yanlış hesaba yazmaktansa borcu açıkta bırakmak doğrudur.
-  if (!accountId) return unsettled('no_account');
-
-  // Sağlayıcı çağrısı hesabın TÜRÜNE bağlıdır, siparişin ödeme yöntemine değil. Operatör kartla
-  // ödenmiş bir siparişi kasadan nakit iade etmeyi seçebilir (`refundAccountId`) — o zaman dönülecek
-  // bir sağlayıcı yoktur ve olmamalıdır.
-  const account = await new AccountService(serviceDb()).getById(accountId);
-  let refundMeta: Record<string, unknown> | null = null;
-
-  if (account?.type === 'provider') {
-    const providerRef = typeof payment?.meta?.providerRef === 'string' ? payment.meta.providerRef : null;
-    // Künye yoksa hangi ödemenin üzerinden dönüleceği bilinmiyor. Tahmin edilemez: yanlış niyete
-    // yapılan bir iade başka bir müşterinin parasını geri gönderir.
-    if (!providerRef) return unsettled('provider_ref_missing');
-
-    const refunder = opts.refunder ?? stripeRefunder();
-    const result = await refunder({
-      paymentIntentId: providerRef,
-      amountCents: dueCents,
-      idempotencyKey: await refundIdempotencyKey(orderId, dueCents),
-    });
-    if (result.status === 'unavailable') return unsettled('provider_unavailable');
-    if (result.status === 'failed') return unsettled('provider_failed');
-
-    refundMeta = { providerRef, refundId: result.refundId };
-  }
-
-  const after = await recordOrderRefund({
-    orderId,
-    accountId,
-    amountCents: dueCents,
-    valueDate: opts.valueDate,
-    description: opts.description ?? 'Sipariş iadesi',
-    meta: refundMeta,
-  });
-  if (after.status !== 'ok') {
-    // Para SAĞLAYICIDAN ÇIKTI ama deftere geçmedi — sessiz kalınamaz. Hangi iade olduğunu ancak bu
-    // satır söyleyebilir; `getErrorMessage` funnel'ı bunu `error_log`'a düşürür (18.5).
-    throw new Error(
-      `[refund] sağlayıcı iadesi yapıldı ama hareket yazılamadı — sipariş ${orderId}, iade ${String(refundMeta?.refundId ?? '-')}`,
-    );
-  }
-
-  return {
-    refundedAmountCents: dueCents,
-    paymentStatus: after.paymentStatus,
-    amountToCollectCents: after.derivation.amountToCollectCents,
-  };
-}
-
-/** Para hangi hesaba girdiyse oradan çıkar — son tahsilat hareketi (künyesi de ondan okunur). */
-async function lastPayment(orderId: string) {
-  const movements = await new MoneyMovementService(serviceDb()).listByOrder(orderId);
-  return movements.filter((movement) => movement.type === 'order_payment').at(-1) ?? null;
-}
-
-/**
- * Sağlayıcı tarafında mükerrer iadeyi engelleyen anahtar.
- *
- * Sıradaki iadenin **kaçıncı** olduğu ve **tutarı** anahtara girer. Aynı iadenin tekrar denenmesi
- * (çağrı geçti ama hareket yazılamadı, operatör yeniden bastı) aynı anahtarla gider ve Stripe ilk
- * iadenin sonucunu döner — para iki kez çıkmaz. Gerçekten yeni bir kısmi iade ise sıra numarası
- * değişmiştir, yeni anahtar üretilir.
- */
-async function refundIdempotencyKey(orderId: string, amount: number): Promise<string> {
-  const movements = await new MoneyMovementService(serviceDb()).listByOrder(orderId);
-  const sequence = movements.filter((movement) => movement.type === 'order_refund').length;
-  return `refund:${orderId}:${sequence}:${Math.round(amount * 100)}`;
+export async function retryRefund(orderId: string, opts: RefundOptions = {}) {
+  return retryRefundFor(serviceDb(), orderId, toCoreOptions(opts));
 }

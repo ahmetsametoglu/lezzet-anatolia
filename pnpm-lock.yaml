@@ -138,6 +138,9 @@ importers:
       '@lezzet/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
+      '@lezzet/domain-core':
+        specifier: workspace:*
+        version: link:../../packages/domain-core
       '@lezzet/helper':
         specifier: workspace:*
         version: link:../../packages/helper

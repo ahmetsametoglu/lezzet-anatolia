@@ -1,62 +1,26 @@
-import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
-import type { CloseResult, DeliverResult } from '@lezzet/types';
-import { notifyOrderStatus } from './notify';
-import { rewardCompletedOrder } from '../feedback/points';
+import 'server-only';
+import { serviceDb } from '@lezzet/database';
+import { closeOrder as closeOrderFor, deliverOrder as deliverOrderFor } from '@lezzet/application';
+import { webOrderEffects } from './transition';
 
 /**
- * Teslim ve kapanış kapısı (07.7) — **uygulama katmanı orkestrasyonu**.
+ * Teslim ve kapanış (07.6 · 12.x) — **geçiş köprüsü** (terfi aşama 2/3, denetim K5-1).
  *
- * İki an ayrıdır (DOMAIN §12):
- * - **Teslim** malın fiziksel gerçeğini değiştirir: ayrılmış düşer, fiili stok kayıtlı partilerden
- *   düşer, teslim onayı yazılır.
- * - **Kapanış** kâr kalemlerini sabitler. Aralarında iade/kısmi düzeltme olabildiği için maliyeti
- *   teslimde dondurmak o düzeltmeleri kârın dışında bırakırdı.
+ * Gövde `@lezzet/application/order/fulfillment`ta: teslimin neden `transition_order_status`'tan
+ * geçmediği (kendi RPC'si var), kapanışta birim maliyetlerin neden koddan değil `settings`ten
+ * okunduğu — hepsi orada.
  *
- * Maliyet oranları ayarlardan gelir — kapı onları toplar, hesabı RPC yapar.
+ * ── KÖPRÜNÜN TAŞIDIĞI ŞEY: İKİ YAN ETKİ ─────────────────────────────────────
+ * Teslim durum geçişinden geçmediği için teslim haberi (14.5) ve sipariş puanı (17.4) bu kapıdan
+ * tetikleniyor. Paket ikisini de PORT'tan istiyor; web'in portu zaten kurulu ve tek:
+ * `webOrderEffects`. Burada ikinci bir etki nesnesi kurulsaydı, gün gelir biri güncellenir öteki
+ * unutulurdu — teslim edilen siparişin haberi giderken puanının yazılmaması gibi, sessiz bir arıza.
  */
 
-/**
- * Teslim: kurye ekranındaki onay. `deliveryProof` kapsamı parametriktir (B2B zorunlu, B2C kapalı).
- *
- * Teslim `transition_order_status`'tan geçmez (kendi RPC'si vardır) — bu yüzden teslim haberi de
- * burada tetiklenir. Gönderim yalnız teslim GERÇEKLEŞTİYSE olur; `stale` dönen çağrı haber üretmez.
- */
-export async function deliverOrder(
-  orderId: string,
-  opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {},
-): Promise<DeliverResult> {
-  const result = await new OrderService(serviceDb()).deliver(orderId, opts);
-  if (result.ok) {
-    await notifyOrderStatus(orderId, 'delivered');
-    // Sipariş puanı (17.4) — teslim `transition_order_status`'tan geçmediği için buradan da
-    // çağrılmak zorunda. İki kez çağrılması zararsız: defterin tekillik indeksi ikinciyi düşürür.
-    await rewardCompletedOrder(orderId);
-  }
-  return result;
+export function deliverOrder(orderId: string, opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {}) {
+  return deliverOrderFor(serviceDb(), orderId, { ...opts, effects: webOrderEffects });
 }
 
-/**
- * Kapanış: kâr kalemleri sabitlenir. Rota-içinde birim maliyet, kargoda gerçek ücret kullanılır;
- * ikisi de `settings`'ten okunur (kodda sabit yok).
- */
-export async function closeOrder(
-  orderId: string,
-  opts: { actorId?: string | null; actualDeliveryCostCents?: number | null } = {},
-): Promise<CloseResult> {
-  const db = serviceDb();
-  const settings = new SettingsService(db);
-
-  const [routeUnitCents, packagingUnitCents] = await Promise.all([
-    settings.getNumber('route_delivery_unit_cost_cents', 250),
-    settings.getNumber('packaging_unit_cost_cents', 120),
-  ]);
-
-  // Ayarlar zaten cent'te tutuluyordu; servis de artık cent alıyor (02.9) — buradaki `/ 100`
-  // çevrimleri kalktı ve iki taraf aynı birimi konuşuyor.
-  return new OrderService(db).close(orderId, {
-    actorId: opts.actorId,
-    deliveryCostCents: opts.actualDeliveryCostCents,
-    routeUnitCostCents: routeUnitCents,
-    packagingUnitCostCents: packagingUnitCents,
-  });
+export function closeOrder(orderId: string, opts: { actorId?: string | null; actualDeliveryCostCents?: number | null } = {}) {
+  return closeOrderFor(serviceDb(), orderId, opts);
 }

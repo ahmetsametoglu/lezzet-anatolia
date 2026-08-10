@@ -1,57 +1,34 @@
 /**
- * Müşteriye SÖZ VEREN ayar anahtarları — sepet ve checkout AYNI satırı okumak zorunda.
+ * Ayar anahtarları ve varsayılanları — **kısmi geçiş köprüsü** (terfi aşama 2/3, denetim K5-1).
  *
- * Neden tek yerde: sepet "60 € üzeri kargo ücretsiz" diye söz verir, checkout ücreti keser. İkisi
- * farklı anahtar okursa ekran bir şey vaat eder, kasa başkasını uygular. Yaşandı (29.07): sepet
- * `free_shipping_cents` okuyordu, öyle bir ayar hiç yoktu — sessizce koddaki varsayılana düşüyor,
- * checkout ise gerçek ayarı (`free_shipping_threshold_cents`) okuyordu. İkisi tesadüfen aynı
- * değerde olduğu için görünmüyordu; operatör eşiği değiştirdiği an sepetin sözü yalan olacaktı.
+ * Altı sepet/kargo sabiti `@lezzet/application/cart/settings-keys`ten geliyor; künyelerin tamamı
+ * orada (eşiğin neden koda gömülmediği, varsayılanın neden ayar okunamadığında devreye girdiği).
  *
- * Buraya YALNIZ iki yüzeyde birden okunan, müşteriye görünen ayarlar girer. Tek yerde okunan
- * ayarların (kapıda ödeme tavanı, kesim saati) anahtarını okuduğu dosyada tutmak doğru — bir
- * sabit dosyası her ayarı toplarsa okuyan kişi anlamı için iki dosya gezer.
+ * ── NEDEN İKİZ TEHLİKELİYDİ ─────────────────────────────────────────────────
+ * Bunlar "yalnızca sabit" değil, İKİ YÜZEYİN AYNI SAYIYI okuma sözü: ücretsiz kargo eşiği web
+ * sepetinde bir dosyadan, mobil sepette başkasından okunuyordu. Biri güncellenip öteki unutulsa
+ * müşteri web'de "6,90 € kargo", uygulamada "ücretsiz" görürdü — ve iki dosyanın da testi yeşil
+ * kalırdı.
+ *
+ * ── İKİ ANAHTAR HÂLÂ BURADA VE BU BİLİNÇLİ ──────────────────────────────────
+ * `POINTS_*` pakete taşınmadı: puan kuralı sepetin değil sadakat modülünün (17.x) ve paket tarafında
+ * karşılığı yok. Buraya sahte bir köprü yazmak — pakette olmayan bir şeyi varmış gibi göstermek —
+ * ikizden kötü olurdu. Taşınma sırası geldiğinde bu dosya tamamen köprüye iner.
+ *
+ * ── ADRES BARREL DEĞİL, DERİN YOL (10.08) ───────────────────────────────────
+ * Bu dosyayı operasyonun ayarlar ve depolar ekranları (istemci komponentleri) okuyor. Barrel'dan
+ * açılınca paketin tamamı — `@lezzet/database` ve `node:crypto` dahil — tarayıcı paketine giriyor;
+ * sepet köprüsünde aynı şey ödeme sayfasını 500'e düşürdü. Kaynak modül saf (hiç importu yok), o
+ * yüzden derin yol hem doğru hem bedelsiz.
  */
-
-/** Ücretsiz kargo eşiği (cent). Sepette ilerleme çubuğu, checkout'ta ücret kararı. */
-export const FREE_SHIPPING_THRESHOLD_KEY = 'free_shipping_threshold_cents';
-
-/** Asgari sepet tutarı (cent). Sepette "şu kadar daha ekleyin", checkout'ta kapı. */
-export const MIN_BASKET_KEY = 'min_basket_cents';
-
-/**
- * Asgari sepetin SON ÇARE varsayılanı (cent) — yalnız ayar satırı HİÇ yoksa okunur.
- *
- * Gerçek değer `settings`'tedir ve migration (`0013`) global satırı her ortamda açtığı için bu
- * sabit normalde hiç okunmaz — **buradaki sayı yürürlükteki kural DEĞİLDİR** (ölçüldü 08.08:
- * global satır 0 = b2c'de alt sınır yok; b2b kanalı 120 €, bir bölge 45 €). İşletme değerini
- * operatör Ayarlar'dan belirler. Bu sabit, satırı silen bir elin sistemi fark edilmeden sınırsız
- * bırakmaması için emniyet değeri olarak durur. *(Eski künye "40 €, kullanıcı kararı 04.08,
- * yürürlükte" diyordu ve yanılttı — karar verenin kendisini de: yürürlükte hiç olmadı.)*
- */
-export const MIN_BASKET_DEFAULT = 4_000;
-
-/**
- * Kargo ücreti (cent). Checkout'ta kesilen tutar; sepette **kargo grubunun** blokunda yazılır.
- *
- * Sepet uzun süre ücreti hiç yazmadı ve bu doğruydu: ücret teslimat türüne bağlı, tür de adresten
- * çıkıyordu. Kargo grubunda o belirsizlik YOK — grubun tanımı zaten "kargoyla gidecek": türü
- * biliniyor, tutarı biliniyor. Bilinen bir sayıyı saklamak, müşteriyi checkout'ta sürprizle
- * karşılamaktır.
- */
-export const SHIPPING_FEE_KEY = 'shipping_fee_cents';
-
-/** Kargo ücretinin varsayılanı (cent) — ayar satırı yoksa geçerli. */
-export const SHIPPING_FEE_DEFAULT = 790;
-
-/**
- * Ücretsiz kargo eşiğinin varsayılanı (cent) — ayar satırı yoksa geçerli.
- *
- * 60,00 € · kullanıcı kararı 04.08. Eşik, kargo ücretinin (7,90 €) belirgin üstünde olmalı; yoksa
- * her sepet ücretsiz olur ve ücret satırı anlamını yitirir. **Kargo soğuk zincir taşımaz** — bölge
- * dışına yalnız raf ömürlü ürünler çıkar (`Product.shippable`), dondurulmuş ürünler yalnız kendi
- * aracımızla teslim edilir. Admin ayarı girildiğinde bu değer hiç okunmaz.
- */
-export const FREE_SHIPPING_THRESHOLD_DEFAULT = 6_000;
+export {
+  FREE_SHIPPING_THRESHOLD_DEFAULT,
+  FREE_SHIPPING_THRESHOLD_KEY,
+  MIN_BASKET_DEFAULT,
+  MIN_BASKET_KEY,
+  SHIPPING_FEE_DEFAULT,
+  SHIPPING_FEE_KEY,
+} from '@lezzet/application/cart/settings-keys';
 
 /**
  * Puanı kupona çevirme kuralı — **hesap ekranı ile motor aynı sayıyı okumak zorunda.**

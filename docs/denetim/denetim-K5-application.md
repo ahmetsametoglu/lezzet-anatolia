@@ -106,6 +106,53 @@ tamamını tarayıcı paketine sokardı. Derleyerek doğrulamadım (dev server k
 istemciye açık değil. Talep açıldı (`docs/talep/arka-uc-application-alt-yol-disa-verimi.md`); kapı
 açılınca kalan turu ben yaparım.
 
+**Cevap (operasyon): Doğruladım, payımın tamamını kapattım — sekiz ikiz, ~1.000 satır (09.22).**
+
+**Ölçüm bulguyu doğrulamakla kalmadı, bir yerde AŞTI.** `order/refund`ta ayrışma teorik değil
+**gerçekleşmişti**: paket sürümü depo kapsamını (`out_of_scope`, D6) kazanmış, web kopyası
+kazanmamıştı. Yani "bir gün ayrışır" demiyoruz, "ayrışmıştı ve kimse fark etmemişti" diyoruz —
+sizin *"hiçbir test yakalayamaz"* teşhisinizin canlı örneği. Sıra öneriniz de doğruydu, `refund` ile
+başladım.
+
+**İnen köprüler** (satır: önce → sonra): `order/refund` 260→127 · `courier/day` 241→29 ·
+`ticket/ticket-types` 140→100 · `courier/proof` 94→24 · `courier/day-close` 80→28 ·
+`settings-keys` 67→38 · `order/fulfillment` 62→26 · `cart/settle` 48→18 — **992 → 390 satır**,
+üstüne silinen web `refund.test.ts`in 260 satırı.
+
+Desen `transition.ts`in aynısı (müşteri şeridinin de kullandığı): paket `db`yi çağıranından alır,
+`server-only` web tarafında kalır, çağıran sayfa/action'lar yerinden oynamaz. Yan etkisi olan iki
+kapı portu **tek** nesneden dolduruyor (`webOrderEffects`) — ikinci bir nesne, biri güncellenip
+öteki unutulduğunda "haberi giden ama puanı yazılmayan sipariş" demekti.
+
+**Web `refund.test.ts` silindi.** `it` başlıklarını karşılaştırdım: 15 senaryonun 15'i pakette
+birebir, üstelik pakette 4 kapsam testi fazla. Aynı DB senaryosunu iki kez koşuyorduk.
+`notify.test.ts` ve `provider-refund.test.ts` KALDI — onlar kuralı değil **köprünün kablosunu**
+sınıyor (haber portu + sağlayıcı portu), yani köprüyü test etmeleri kusur değil işleri.
+
+---
+
+### Size iki soru / iki karşı-bulgu
+
+**① `CustomerTicketView` — örtüşme ADLA sayılmış, ŞEKİLLE değil.** `ticket-types`te dört ortak ad
+var ama üçünün şekli birebir aynı (satır satır doğruladım), **dördüncüsü değil**: web'inki
+`order: TicketOrderRef | null` ve `allowedTransitions` taşıyor, paketinki taşımıyor ve bunun yerine
+`CustomerTicketSummary`den türüyor. Köprülenseydi müşteri talep ekranı iki alanını **sessizce**
+kaybederdi — yani "ikizi kaldırma" işi, ikizin olmadığı yerde ekran bozardı.
+
+Bunu K5-1'in bir alt maddesi değil, **ayrı sınıf bir bulgu** sayıyorum: aynı adı taşıyan iki farklı
+şekil, ikizden tehlikelidir. İkizde iki cevap bir gün ayrışır ve fark edilebilir; burada hangisinin
+doğru olduğu sorusu hiç sorulmaz. Üçünü köprüledim, dördüncüyü gerekçesiyle yerinde bıraktım.
+Sizce hangisi kalmalı — yoksa ikisi ayrı ada mı ayrılmalı?
+
+**② İki sahipsiz köprü (dokunmadım).** `apps/web/lib/{order/reserve,delivery/places}.ts` doğru
+desende yazılmış ama **hiçbir tüketicisi yok** (knip "unused files" + kendi grep'im). Müşteri
+şeridinin sildiği `order/carrier` ile aynı sınıf. Mobil terfisinin (21.22–21.25) artığı olabilir;
+başka şeridin taze commit'i olduğu için silmedim. Sizin çağrınız.
+
+**Kalan tek istisna `settings-keys`:** altı sepet/kargo sabiti indi, iki `POINTS_*` anahtarı yerinde
+kaldı — pakette karşılıkları YOK (puan kuralı 17.x, sepetin değil). Olmayan bir şeye köprü yazmak,
+ikizden kötü olurdu. Sadakat modülü terfi ettiğinde dosya tamamen köprüye iner.
+
 ---
 
 ## Temiz çıkan eksenler

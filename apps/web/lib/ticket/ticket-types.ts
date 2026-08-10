@@ -1,6 +1,21 @@
-import type { SourceLanguage, Ticket, TicketMessage, TicketQueueRow } from '@lezzet/types';
+import type { Ticket, TicketQueueRow } from '@lezzet/types';
+import type { CustomerTicketSummary, TicketMessageView, TicketReturnOutcome } from '@lezzet/application';
 
 /**
+ * ── K5-1 KISMİ KÖPRÜ + BİR AYRIŞMA KAYDI (10.08) ────────────────────────────
+ *
+ * Üç tip pakete köprülendi (`TicketMessageView` · `TicketReturnOutcome` · `CustomerTicketSummary`);
+ * üçünün de şekli paketle **birebir aynı** çıktı (satır satır karşılaştırıldı).
+ *
+ * **Ama `CustomerTicketView` KÖPRÜLENMEDİ ve sebebi bir bulgu:** denetim K5-1 örtüşmeyi ADLA saydı,
+ * şekille değil — bu tipin iki sürümü aynı adı taşıyor ama aynı şey DEĞİL. Web sürümü `order`
+ * (`TicketOrderRef`) ve `allowedTransitions` taşıyor; paket sürümü ikisini de taşımıyor ve bunun
+ * yerine `CustomerTicketSummary`den türüyor. Köprülenseydi müşteri talep ekranı iki alanını sessizce
+ * kaybederdi — yani "ikizi kaldırma" işi, ikizin olmadığı yerde ekran bozardı.
+ *
+ * Aynı adı taşıyan iki farklı şekil, ikizden daha tehlikelidir: ikizde iki cevap ayrışır, burada
+ * hangisinin doğru olduğu sorusu hiç sorulmaz. Denetime bildirildi (K5-1 cevabı).
+ *
  * Talep görünüm sözleşmesi (16.1) — **iki yüzeyin ortak veri kapısı.**
  *
  * Müşteri ve operasyon aynı talebi okur ama aynı şeyi GÖRMEZ: müşteri kendi anlatımını ve
@@ -11,31 +26,8 @@ import type { SourceLanguage, Ticket, TicketMessage, TicketQueueRow } from '@lez
  * `design/pages/musteri-talep.md` + `design/pages/admin-talepler.md` bağlayıcı.
  */
 
-/**
- * Yazışmadaki tek mesaj — ekranın gördüğü hâl.
- *
- * **Metin OKUYUCUNUN dilinde gelir** (20.2) ve yazışmada bu iki yönlüdür: müşteri kendi dilinde
- * yazar personel Türkçe okur, personel Türkçe yazar müşteri kendi dilinde okur. Tek yön çevirmek
- * yazışmanın yarısını anlaşılmaz bırakırdı — sorusu okunan ama cevabı okunamayan bir talep.
- *
- * Alan üçlüsü ürün yorumundakiyle (`PublishedReview`) BİLEREK aynı: iki ekran aynı rozeti ve aynı
- * "orijinali göster" bağını çiziyor, iki ayrı adlandırma ikisini iki ayrı komponente zorlardı.
- */
-export interface TicketMessageView {
-  id: string;
-  sender: TicketMessage['sender'];
-  /** Okuyucunun dilinde gösterilecek metin; o dile çeviri yoksa orijinalin kendisi. */
-  body: string;
-  /** Gösterilen metin makine çevirisi mi — ekran bunu işaretlemeli ("otomatik çevrildi"). */
-  bodyTranslated: boolean;
-  /** ORİJİNALİN dili — `lang` özniteliği ve "orijinali göster" için. `null` = tespit koşmadı. */
-  language: SourceLanguage | null;
-  /** Orijinal metin — ekran "orijinali göster" derse bunu basar; çeviri onun yerine GEÇMEZ. */
-  originalBody: string;
-  /** Public okuma URL'leri; anahtar değil (ekran anahtarla bir şey yapamaz). */
-  attachmentUrls: string[];
-  createdAt: string;
-}
+/** Şekli paketle birebir aynı olan üçlü — künyeleri `@lezzet/application/ticket/ticket-types`ta. */
+export type { CustomerTicketSummary, TicketMessageView, TicketReturnOutcome };
 
 /** Talebe bağlı siparişin künyesi — tam sipariş değil, tanınmasına yetecek kadarı. */
 export interface TicketOrderRef {
@@ -44,38 +36,6 @@ export interface TicketOrderRef {
   referenceNo: string | null;
   /** Müşterinin işaretlediği kalemler — şikâyetin somut zemini. */
   markedItems: Array<{ id: string; name: string; qty: number }>;
-}
-
-/**
- * İadenin sonucu — **siparişten türetilir**, talepte saklanmaz (DOMAIN §8).
- *
- * `triggeredAt` talebin kendi damgasıdır (iadeyi bu talep doğurdu); `refundedCents` siparişin para
- * hareketlerinden gelir. İkisi ayrı kaynaklardan geldiği için "tetiklendi ama henüz ödenmedi" hâli
- * kendiliğinden görünür — tek bir alan olsaydı o ara hâl kaybolurdu.
- */
-export interface TicketReturnOutcome {
-  triggeredAt: string;
-  refundedCents: number;
-}
-
-/**
- * "Taleplerim" listesinin tek satırı (08.6) — **taranmaya yetecek kadarı.**
- *
- * Yazışma taşımaz: liste yirmi talebin yirmi mesaj dizisini çekmek zorunda değil, o detayın işi.
- * `lastMessageAt` hem sıralama ölçütü hem ekranın "son mesaj: bugün" satırı — tasarımın kartta
- * gösterdiği iki bağlam (o an ve siparişin numarası) `ticket_queue` görünümünde zaten türetilmiş
- * durumda; ham talep satırından okumak sayfa başına iki ek tur olurdu.
- */
-export interface CustomerTicketSummary {
-  id: string;
-  type: Ticket['type'];
-  status: Ticket['status'];
-  subject: string | null;
-  createdAt: string;
-  /** Son mesajın anı — liste bu sıraya göre gelir (cevaplanan talep başa çıkar). */
-  lastMessageAt: string;
-  /** Bağlı siparişin müşteri numarası ("LZA-2451"); siparişsiz talepte null. */
-  orderReferenceNo: string | null;
 }
 
 /**
