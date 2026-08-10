@@ -18,21 +18,33 @@ interface SubjectCardProps {
   detail: string | null;
   imageUrl: string | null;
   href: string | null;
+  /**
+   * **Yön.** `row` (varsayılan) satır içi künye içindir — küçük görsel, yanında ad.
+   * `column` KENDİ SÜTUNUNU kaplar: görsel büyür ve üste geçer, ad altına iner. Öneri kartında
+   * konu artık bir satır değil bir sütun (kullanıcı kararı 10.08: *"en solda kart olsun, ürün
+   * resmi adı sanı bilgisi"*) — görsel tanımanın en hızlı yolu ve o boyda gerçekten işe yarıyor.
+   */
+  layout?: 'row' | 'column';
 }
 
-export function SubjectCard({ name, detail, imageUrl, href }: SubjectCardProps) {
+export function SubjectCard({ name, detail, imageUrl, href, layout = 'row' }: SubjectCardProps) {
+  const column = layout === 'column';
   const body = (
     <>
-      <Thumbnail src={imageUrl} alt={name} size={44} />
+      <Thumbnail src={imageUrl} alt={name} size={column ? undefined : 44} fluid={column} />
       <span className="flex min-w-0 flex-col">
-        <span className="truncate font-ops-display text-ops-base font-semibold text-ops-ink">{name}</span>
+        <span className={`font-ops-display font-semibold text-ops-ink ${column ? 'text-ops-lead' : 'truncate text-ops-base'}`}>
+          {name}
+        </span>
         {detail ? <span className="truncate font-ops-body text-ops-sm text-ops-muted">{detail}</span> : null}
       </span>
     </>
   );
 
+  const shell = column ? 'flex flex-col gap-2' : 'flex items-center gap-3';
+
   if (!href) {
-    return <span className="flex items-center gap-3">{body}</span>;
+    return <span className={shell}>{body}</span>;
   }
 
   return (
@@ -41,7 +53,7 @@ export function SubjectCard({ name, detail, imageUrl, href }: SubjectCardProps) 
       target="_blank"
       rel="noopener"
       title={`${name} — ürün ekranında aç (yeni sekme)`}
-      className="flex cursor-pointer items-center gap-3 rounded-ops-card transition-colors hover:bg-ops-gray-100"
+      className={`${shell} cursor-pointer rounded-ops-card transition-colors hover:opacity-90`}
     >
       {body}
     </Link>

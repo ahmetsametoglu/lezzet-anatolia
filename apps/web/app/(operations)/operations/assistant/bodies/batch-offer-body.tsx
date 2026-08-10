@@ -96,49 +96,37 @@ export function BatchOfferBody({
       {/* Ad KENDİ SATIRINDA: künyeyle yan yana dururken uzun adlar sıkışıp ortasından bölünüyordu
           ("Artisan Strawberry / Cake") — kararın konusu olan şeyin adı, ekranın en kolay okunan
           satırı olmalı. Boy adın yanında, kuyruk satırındaki gibi. */}
-      <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-        {/* Konu KARTI — görsel + ad + ürün ekranı bağlantısı (22.9, kullanıcı kararı 10.08).
-            Görsel en hızlı tanıma yolu: patron ürünü adından önce fotoğrafından tanıyor. Künye
-            yoksa (görsel çözülemedi) kart yine ad satırını çiziyor, yani ekran hiç boşalmıyor. */}
-        {subject ? (
-          <SubjectCard name={subject.name} detail={subject.detail} imageUrl={subject.imageUrl} href={subject.href} />
-        ) : (
-          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
-            {name}
-            {size ? <span className="font-ops-body font-normal text-ops-body"> · {size}</span> : null}
-          </span>
-        )}
-        {/* Künye METİN DEĞİL VERİ ve öyle okunmalı: etiket sönük, sayı mono ve koyu. "Asistan
-            önerdi" bilgisi de buraya girdi — bir tur altında ayrı bir cümle olarak duruyordu
-            ("alan onunla dolduruldu ama kilitli değil, değiştirirseniz kâr satırı değişir": 194
-            karakter). İkisi de gereksizdi: bir GİRİŞ KUTUSUNA bakan insan onun yazılabilir olduğunu
-            zaten görüyor, mekanizmayı da `PriceTriple` kendi ipucunda anlatıyor. Geriye kalan tek
-            gerçek bilgi sayının kendisiydi. */}
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-ops-body text-ops-base text-ops-body">
-          <Fact label="Depo" value={payload.warehouseCode} />
-          <Fact label="SKT" value={shortDate(payload.expiryDate)} />
-          <Fact label="Partide" value={`${num(payload.physicalQty)} ad.`} />
-          <Fact label="Asistanın önerisi" value={money(payload.offerPriceCents)} />
-          {listCents !== null ? <Fact label="Liste" value={money(listCents)} /> : null}
-        </span>
-      </div>
-
-      {/* ── İKİ SÜTUN: solda YAZILAN, sağda OKUNAN (kullanıcı kararı 10.08) ────
-          Üçlü bir tur tam genişlikte yatay duruyordu ve konteyner büyüdükçe kutular da büyüyordu:
-          *"inputlar ekran genişliğine göre uzuyor"*. Bir para alanının 400 piksele ihtiyacı yok.
-
-          Sonra sıra düzeltildi: *"asıl odaklanılması gereken yer input, dolayısıyla inputları sola
-          alalım"*. Karar sütunu SOLDA ve SABİT (16rem) — göz soldan başlar, ilk gördüğü şey
-          yazacağı yer olur. Bilgi sağda ve `flex-1`: geniş ekranda büyüyen taraf bilgi olsun,
-          kutular değil.
-
-          `items-start` bilgi sütununda ZORUNLU: onsuz flex çocukları sütun genişliğine yayılıyor ve
-          tek satırlık sarı uyarı ekranı boydan boya kesiyordu — *"ihtiyacından fazla uzuyor, dağınık
-          tasarım havası veriyor"*. Artık her uyarı kendi metni kadar yer kaplıyor. */}
-      {/* `px-3.5` künye kutusuyla HİZA içindir: o kutu kendi iç boşluğunu taşıyor, sütunlar ise
-          kartın kenarından başlıyordu — "Depo:" ile "Teklif fiyatı" 14 piksel kaymış görünüyor ve
-          göz aradığı dikey çizgiyi bulamıyordu. */}
+      {/* ── ÜÇ SÜTUN (kullanıcı kararı 10.08) ───────────────────────────────
+          *"En solda kart olsun — ürün resmi, adı, bilgisi. Sonra form olsun. En kenarda da
+          bilgilendirme kısmı."* Sıra kararın akışını izliyor: NE (konu) → NE YAZIYORUM (form) →
+          NE OLUYOR (kâr ve uyarılar). Künye bir tur üstte tam genişlik bir kutuydu; oradaki
+          `Fact` satırı artık konu sütununun içinde ve dikey — sıkışmıyor, sağdaki ölü alanı da
+          kendiliğinden kapatıyor. */}
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-3.5">
+        <div className="flex w-[13rem] flex-none flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+          {subject ? (
+            <SubjectCard
+              name={subject.name}
+              detail={subject.detail}
+              imageUrl={subject.imageUrl}
+              href={subject.href}
+              layout="column"
+            />
+          ) : (
+            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
+              {name}
+              {size ? <span className="font-ops-body font-normal text-ops-body"> · {size}</span> : null}
+            </span>
+          )}
+          <span className="flex flex-col gap-1 border-t border-ops-line pt-2 font-ops-body text-ops-base text-ops-body">
+            <Fact label="Depo" value={payload.warehouseCode} />
+            <Fact label="SKT" value={shortDate(payload.expiryDate)} />
+            <Fact label="Partide" value={`${num(payload.physicalQty)} ad.`} />
+            <Fact label="Asistanın önerisi" value={money(payload.offerPriceCents)} />
+            {listCents !== null ? <Fact label="Liste" value={money(listCents)} /> : null}
+          </span>
+        </div>
+
       {readOnly ? (
         <div className="flex w-[20rem] flex-none flex-col gap-3">
           <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
