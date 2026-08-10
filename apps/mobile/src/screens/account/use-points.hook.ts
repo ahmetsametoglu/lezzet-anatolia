@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { fetchPoints, type MePointsView } from '@/lib/api/points';
 
@@ -18,11 +18,23 @@ export function usePoints(enabled: boolean): {
   status: PointsStatus;
   view: MePointsView | null;
   publish: (next: MePointsView) => void;
+  /**
+   * Yeniden okur ve BİTİNCE çözülür (21.29c) — adres kapısının aynı deseni. Bu ekranda özellikle
+   * gerekli: sipariş puanı TESLİMATTA yazılıyor (`rewardCompletedOrder`), yani bakiye ekran
+   * açıkken değişebiliyor ve müşterinin onu görmesinin tek yolu uygulamayı kapatıp açmaktı.
+   */
+  reload: () => Promise<void>;
 } {
   const [state, setState] = useState<{ status: PointsStatus; view: MePointsView | null }>({
     status: 'loading',
     view: null,
   });
+
+  const load = useCallback(async (): Promise<void> => {
+    const result = await fetchPoints();
+    if (result.error !== null) return setState({ status: 'error', view: null });
+    setState({ status: 'ready', view: result.data });
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -38,5 +50,5 @@ export function usePoints(enabled: boolean): {
   }, [enabled]);
 
   /** Çevirme cevabı da tam görünüm taşır — yazan el ikinci bir GET atmaz (adres kapısının kuralı). */
-  return { ...state, publish: (next) => setState({ status: 'ready', view: next }) };
+  return { ...state, publish: (next) => setState({ status: 'ready', view: next }), reload: load };
 }

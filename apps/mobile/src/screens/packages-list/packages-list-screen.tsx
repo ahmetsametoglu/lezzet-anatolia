@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -197,7 +198,7 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} tintColor={theme.colors.olive} />
+          <RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} {...pullRefreshColors(theme.colors.olive)} />
         }
         testID="packages-scroll"
       >

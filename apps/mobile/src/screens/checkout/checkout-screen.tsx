@@ -21,7 +21,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine } from '@/screens/customer-kit/address-format';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
-import { cartLineId, useCart } from '@/screens/customer-kit/cart-store';
+import { cartLineId, refreshCart, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
@@ -387,10 +387,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    */
   const finish = (totalCents: number, deliveryType: 'route' | 'shipping'): void => {
     const points = Math.round((totalCents / 100) * POINTS_PER_EURO);
-    /* SEPET YERELDE BOŞALTILMAZ: sunucu o siparişin kalemlerini zaten düşürdü (`placeOrder`) ve
-       `resetCart()` iki gruplu sepette kargo yarısını da silerdi. Deponun sunucudan tazelenmesi
-       gerekiyor ama dışa açık bir tazeleme kapısı YOK (`cart-store` yalnız dil/yer/oturum
-       değişiminde okuyor) — BEKLEYEN(21.14): `refreshCart()` ihracı. */
+    /* SEPET YERELDE BOŞALTILMAZ, SUNUCUDAN TAZELENİR (21.29a): sunucu o siparişin kalemlerini
+       zaten düşürdü (`placeOrder` → `clearOrderedLines`) ve `resetCart()` iki gruplu sepette kargo
+       yarısını da silerdi — müşterinin henüz sipariş etmediği kalemleri.
+
+       Eksik olan tek şey deponun HABERİYDİ: sunucu turunu yalnız dil/yer/oturum değişimi
+       tetikliyordu, sipariş bunların hiçbiri değil. Ölçüldü (kullanıcı bulgusu 10.08): sipariş
+       verildikten sonra rozet eski sayıyı göstermeye devam ediyordu. Kapı artık var. */
+    refreshCart();
     router.replace({
       pathname: '/checkout/confirmed',
       params: {

@@ -121,7 +121,7 @@
       "payment": "Ödeme",
       "total": "Toplam",
       "unknown": "Bilinmiyor",
-      "points": "✦ +{n} puan kazandınız",
+      "points": "✦ Teslimatta +{n} puan kazanacaksınız",
       "note": "Sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz.",
       "orders": "Siparişlerimi görüntüle",
       "home": "Alışverişe dön"
@@ -249,7 +249,7 @@
       "payment": "Paiement",
       "total": "Total",
       "unknown": "Inconnu",
-      "points": "✦ +{n} points gagnés",
+      "points": "✦ +{n} points à la livraison",
       "note": "Suivez l'état de votre commande par e-mail et WhatsApp.",
       "orders": "Voir mes commandes",
       "home": "Retour aux achats"
@@ -377,7 +377,7 @@
       "payment": "Zahlung",
       "total": "Gesamt",
       "unknown": "Unbekannt",
-      "points": "✦ +{n} Punkte erhalten",
+      "points": "✦ +{n} Punkte bei Lieferung",
       "note": "Den Status Ihrer Bestellung verfolgen Sie per E-Mail und WhatsApp.",
       "orders": "Meine Bestellungen ansehen",
       "home": "Weiter einkaufen"

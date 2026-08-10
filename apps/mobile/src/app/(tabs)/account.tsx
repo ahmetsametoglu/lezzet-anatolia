@@ -50,6 +50,9 @@ export default function AccountRoute() {
   const me = meState.me;
   return (
     <AccountScreen
+      /* Aşağı çekildiğinde kimliği TAZELEYEN kapı (21.29c): ekran `/me`yi kendi okumuyor, bu satır
+         okuyor — tazeleme de burada. Puan ve adresleri ekran kendi tazeliyor. */
+      onRefreshIdentity={meState.refresh}
       data={accountData({
         // Ad hiç girilmemişse kart adsız kalmaz: e-posta kimliğin kendisidir (profil düzenlemede ad eklenir).
         name: me.name.trim() === '' ? (me.email ?? '') : me.name,

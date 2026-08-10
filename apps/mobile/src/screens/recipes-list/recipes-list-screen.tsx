@@ -2,6 +2,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -99,7 +100,7 @@ export function RecipesListScreen({ locale: forcedLocale }: RecipesListScreenPro
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} tintColor={theme.colors.olive} />
+          <RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} {...pullRefreshColors(theme.colors.olive)} />
         }
         testID="recipes-scroll"
       >

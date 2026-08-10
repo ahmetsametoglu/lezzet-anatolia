@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { Icon } from '@/components/ui/icon';
@@ -407,7 +408,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               // "yolda") ve ekranın en üstünde eski bir durum kalması vitrinin yalan söylemesidir.
               homeOrders.refresh();
             }}
-            tintColor={theme.colors.olive}
+            {...pullRefreshColors(theme.colors.olive)}
           />
         }
         testID="home-scroll"

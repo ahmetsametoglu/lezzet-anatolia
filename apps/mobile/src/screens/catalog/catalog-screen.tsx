@@ -7,6 +7,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Chip } from '@/components/ui/chip';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon-paths';
@@ -389,9 +390,8 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
           <RefreshControl
             refreshing={catalog.refreshing}
             onRefresh={catalog.refresh}
-            // Yenileme halkası da temadan (iOS tek renk, Android renk dizisi ister).
-            tintColor={theme.colors.olive}
-            colors={[theme.colors.olive]}
+            // Yenileme halkası da temadan; iki platformun iki ayrı propu tek yerden (`pull-refresh`).
+            {...pullRefreshColors(theme.colors.olive)}
           />
         }
         ListEmptyComponent={

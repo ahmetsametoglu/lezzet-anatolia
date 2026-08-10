@@ -792,7 +792,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   /me/tickets` (+ mesaj yazımı) — kural `application/ticket/{read,write}.ts`, bildirim tetikleri
   çağırana `TicketEffects` ile geçer (kapı taşıma bilmez). STATİK sayfalar (teslimat · SSS ·
   gizlilik · satış/kullanım koşulları) webin içeriğinden ÜRETİLDİ (elle metin yazılmadı);
-  PROFESYONEL başvuru formu tam çalışır, gönderim ucu yok → `BEKLEYEN(21.14)`.
+  ~~PROFESYONEL başvuru formu tam çalışır, gönderim ucu yok → `BEKLEYEN(21.14)`~~ → 11.08'de
+  kapandı: üç uç da açıldı ve form bağlandı (21.31).
   `touches: packages/{types,application}, apps/mobile-api, apps/mobile/src/screens/{support,legal,professionals}`
 - [x] (21.19) **Kabuk dalgası (09.08):** TOAST altyapısı (v3 `toastM` — 2400 ms, kökte tek host,
   9 dikiş) · ONBOARDING (5 adım: dil → yazı boyutu → posta kodu → teslimat mantığı → ödeme; kapı
@@ -1221,7 +1222,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **DE**`, `TestBerlin 10115 Berlin **DE**` — ikisi de hizmet alanımız dışında ve ikisi de sorunsuz
   kaydedildi (test satırları sonra silindi).
 
-- [ ] (21.29) **SİPARİŞTEN SONRA DÖRT AÇIK — sepet duruyor, puan uydurma, yenileme eksik/renksiz (kullanıcı bulgusu 10.08).**
+- [x] (21.29) **SİPARİŞTEN SONRA DÖRT AÇIK — sepet duruyor, puan uydurma, yenileme eksik/renksiz (kullanıcı bulgusu 10.08).**
   `touches:` `packages/application/src/order/checkout-draft.ts` · `apps/mobile/src/screens/checkout/*` ·
   `apps/mobile/src/screens/account/*` · `apps/mobile/src/components/ui/*`
 
@@ -1247,6 +1248,40 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **(d) Yenileme/yükleme göstergesinin RENGİ tutarsız.** Katalogda yeşil, öteki ekranlarda siyah.
   Tek bir token'a bağlanmalı — hangisinin doğru olduğu tasarım kararı.
 
+  **Durum (11.08 · tamamlandı). ÜSTTEKİ (a) VE (b) İDDİALARI ÖLÇÜMLE ÇÜRÜDÜ — düzeltmeleri burada,
+  yukarısı tarihsel kayıt olarak duruyor.**
+
+  · **(a) "Sepet boşalmıyor, künye yalan söylüyor" YANLIŞTI.** `placeOrder` → `clearOrderedLines`
+    (`place-order.ts:231`) sepeti SUNUCUDA temizliyor, üstelik yalnız SİPARİŞE GİREN kalemleri —
+    iki gruplu sepette kargo yarısı yerinde kalıyor. `checkout-screen` künyesi de doğruydu. Gerçek
+    açık künyenin ikinci yarısında zaten yazılıydı: **istemci deposunun haberi yoktu.** `cart-store`
+    sunucu turunu yalnız dil/yer/oturum değişiminde atıyordu; sipariş bunların hiçbiri değil.
+    Çözüm: `refreshCart()` ihraç edildi (`resetCart` DEĞİL — o kargo yarısını da silerdi) ve onay
+    yönlendirmesinden önce çağrılıyor.
+  · **(b) "Sunucu sipariş puanı yazmıyor" YANLIŞTI.** `rewardCompletedOrder` (`points.ts:166`)
+    yazıyor — ama sipariş VERİLİNCE değil, müşterinin ELİNE GEÇİNCE (`delivered`/`completed`), ve
+    gerekçesi künyede: *"iptal edilen ya da hiç ödenmeyen bir sipariş de puan öderdi."* Sistem
+    doğru; yanlış olan ekranın ZAMAN KİPİYDİ. Metin üç dilde düzeltildi: "+{n} puan kazandınız" →
+    **"Teslimatta +{n} puan kazanacaksınız"**. Puan yazan kod eklenmedi — eklemek, teslim edilmemiş
+    siparişe ödül vermek olurdu.
+  · **(c)** Hesabım'a aşağı-çekip-yenile geldi; üç okuma birden tazeleniyor (kimlik rotadan —
+    `onRefreshIdentity`, puan ve adres ekrandan) ama TEK halka dönüyor. `usePoints`/`useAddresses`
+    artık `reload(): Promise<void>` veriyor; halka üçünü bekleyip kapanıyor.
+  · **(d) Sebep tahmin edilenden farklı çıktı.** Altı ekranın hepsinde `tintColor` VARDI; eksik
+    olan `colors` dizisiydi ve o YALNIZ katalogda vardı. `tintColor` iOS'un, Android `colors`
+    ister — bu yüzden Android'de yalnız katalog yeşil, ötekiler sistem siyahı dönüyordu. Karar
+    tek yere alındı (`components/ui/pull-refresh.ts`) ve yedi ekran ona geçti. Komponent değil
+    YAYILAN PROPLAR, çünkü `ScrollView` `refreshControl` elementini `cloneElement` ile klonluyor.
+
+  **Cihazda ölçüldü (11.08):** sipariş `LA-26-H3QUND` verildi → sepet rozeti kayboldu ve `cart`
+  satırı DB'de **0**; onay ekranı *"✦ Teslimatta +67 puan kazanacaksınız"* yazdı; sipariş `confirmed`
+  (teslim edilmedi), yani puan hâlâ yazılmamış — cümle ile veri uyumlu. Hesabım ve Siparişlerim'de
+  yenileme halkası **yeşil** döndü.
+
+  **Cihaz testi gerçek bir hata yakaladı:** yenileme bayrağı (`useState`) ilk yazımda erken
+  `return`ların ALTINDAYDI ve ekran *"Rendered more hooks than during the previous render"* ile
+  çöküyordu. Birim testler bunu görmedi (misafir dalı ayrı render ağacı); hook en üste taşındı.
+
 - [ ] (21.30) **ADRES FORMUNDA SOKAK ALANINA YAZINCA UYGULAMA YENİDEN YÜKLENİYOR — form kapanıyor (ölçüldü 11.08).**
   `touches:` `apps/mobile/src/screens/customer-kit/use-address-search.hook.ts` ·
   `apps/mobile/src/lib/hooks/use-debounced-lookup.hook.ts` · `packages/address-fr/src/ban-client.ts`
@@ -1268,15 +1303,89 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Ne DEĞİL:** logcat'te JS istisnası, `FATAL`, ANR ya da lowmemory-kill YOK; yalnız bundle'ın
   baştan çalışması var. Native çökme olsaydı yığın izi düşerdi.
 
-  **BEKLEYEN(21.30): sebep ölçülmedi, teori kurulmadı.** Şüpheliler sırayla: (1) 21.28'de
-  `use-address-search.hook` gecikme/önbellek/yarış mantığı ortak çekirdeğe taşındı — arıza o turda
-  görüldü, ilk şüpheli kendi değişikliğimiz; (2) cihazın dış ağa çıkışı sınırlı (mobil veri kapalı)
-  ve BAN isteği sırasında Metro websocket'i kopuyor olabilir — o hâlde bu bir GELİŞTİRME ortamı
-  davranışıdır, üretimde görünmez. Ayrım tek ölçümle yapılır: BAN çağrısı geçici olarak devre dışı
-  bırakılıp aynı metin yazılır. Yeniden yükleme sürerse sebep hook değildir.
+  **BAN ÇAĞRISI ELENDİ (ölçüldü 11.08).** `use-address-search.hook`taki `lookup` geçici olarak dış
+  servise HİÇ çıkmadan `EMPTY` dönecek şekilde kısaldı (gecikme, önbellek, yarış sayacı ve `setState`
+  aynen koştu; yalnız ağ turu yok) ve sokak alanına yine `Torstrasse` yazıldı: **yeniden yükleme
+  SÜRDÜ.** Yani tetikleyen şey ne BAN isteğinin kendisi ne de cihazın dış ağa çıkışı. Geçici kod
+  ölçümden hemen sonra geri alındı (dosya commit hâlinde).
+
+  Bu, ilk şüpheliyi de zayıflatıyor: BAN kapalıyken `lookup` hemen modül düzeyindeki `EMPTY`
+  nesnesini döndürüyor, yani `setState` referansı değiştirmiyor ve React yeni bir render bile
+  yapmıyor — buna rağmen yeniden yükleme oluyor. Hook'un state mantığı sebep olsaydı burada
+  susması gerekirdi.
+
+  **BEKLEYEN(21.30): sebep hâlâ ölçülmedi, teori kurulmuyor.** Elenmemiş şüpheliler: (1) sokak
+  alanının `content="streetAddress"` beyanı — Android Autofill yalnız BU alanda devrede (posta kodu
+  `postalCode`, şehir `city` alanlarında aynı davranış YOK); (2) `SuggestionList`in açılıp kapanması;
+  (3) Metro/dev ortamının kendisi — o hâlde üretim derlemesinde görünmez. Sıradaki ölçüm: `content`
+  prop'u geçici kaldırılıp aynı metin yazılır. Logcat'te JS istisnası, `FATAL`, ANR, autofill izi ya
+  da lowmemory-kill YOK; yalnız `Running "main"` var.
 
   Sıra: 21.29'dan önce (adres kaydetmeyi fiilen engelliyor). Kullanıcı kararı 11.08: 21.28 önce
   commit edilsin, bu ayrı görev olarak açılsın.
+
+- [x] (21.31) **PROFESYONEL BAŞVURUSU GERÇEK — üç uç açıldı, motor kopyası söküldü (11.08).**
+  `touches:` `packages/{application/src/{b2b/**,customer/b2b.ts},types/src/contracts/b2b-api.schema.ts,observability/src/capture.ts}` ·
+  `apps/web/lib/b2b/**` · `apps/mobile-api/src/api/v1/{b2b.ts,router.ts}` ·
+  `apps/mobile/src/{lib/api/b2b.ts,screens/{professionals/**,customer-kit/{use-otp-sign-in.hook.ts,otp-sign-in-fields.tsx,place-notice-sheet.tsx}}}`
+
+  **Ölçülen arıza:** form tamdı ama hiçbir yere gitmiyordu — müşteri "Başvurunuz alındı" ekranını
+  görüyor, başvuru ekranın durumunda kalıyordu (`BEKLEYEN(21.14)`). Web'de akış TAM kurulu ve
+  kuralların çoğu zaten paylaşılan motorda (`domain-core/b2b-application`); eksik olan mobilin
+  kapısıydı.
+
+  Yapılanlar:
+  · **TERFİ:** `apps/web/lib/b2b/{company-registry,vat-check}.ts` → `@lezzet/application/b2b/`,
+    `submitB2bApplication` + `readB2bApplicant` → `application/customer/b2b.ts`. Web dosyaları
+    KÖPRÜ; imzalar korundu, `application.test.ts` dokunulmadan yeşil. `notifyB2bDecision` TAŞINMADI
+    (tek çağıranı operasyon yüzeyi — terfi ölçütü "en az iki yüzey"). Değişen tek kural: ret artık
+    **görünür** — `CustomerError` yerine adlı sonuç ve eksik ALAN listesi (mobil form o alanları
+    işaretleyebilsin diye; web köprüsü sonucu eskisi gibi `CustomerError`a çeviriyor).
+    `cache: 'no-store'` bayrağı düştü (Next genişletmesiydi, Next 15'te zaten varsayılan) ve hata
+    kaynağı `SOURCES.applicationB2b` oldu — dış servis düşünce arıza iki kovaya bölünmesin.
+  · **SÖZLEŞME:** `contracts/b2b-api.schema.ts`. Alan denetimi ŞEMADA DEĞİL motorda (ikinci bir
+    denetim, biri ötekinden sıkı olduğu gün çıkılamayan bir döngü olurdu); motorla bağ uçta
+    `B2bApplicationInput` ataması ile derlemede kilitli (`types` `domain-core`a bağlanamıyor).
+  · **UÇLAR:** `GET /b2b/company/:siret` · `GET /b2b/vat/:number` (ikisi AÇIK — form kimlik
+    sorulmadan doldurulur; maruziyet künyede) · `GET /me/b2b` · `POST /me/b2b/application`
+    (Bearer'ın arkasında: başvuru bir müşteri kaydının hâli, sahibi olmalı).
+  · **DUPLİKASYON KAPANDI:** `apps/mobile` artık `@lezzet/domain-core`a bağlı (ölçüldü: o paketin
+    npm bağımlılığı SIFIR — `types` + `helper`, ikisi de mobilde vardı) ve
+    `professionals-types.ts`in elle yazılmış yarısı (`normalizeSiret` · `formatSiret` ·
+    `normalizeVatNumber` · `isGermanVatNumber` · `applicationIssues` + üç tip) SİLİNDİ. Kopyanın
+    bilerek zayıf bıraktığı iki kural da kapandı: SIRET Luhn denetimi ve AB numarasının biçimi.
+  · **İKİNCİ DUPLİKASYON:** akış-içi kimlik adımı (e-posta → kod → oturum) 21.27'de bölge talebi
+    çekmecesinde kurulmuştu; ikinci tüketen doğunca mantığı `customer-kit/use-otp-sign-in.hook`a,
+    ÇİZİMİ `otp-sign-in-fields.tsx`e çıktı ve çekmece de onları kullanıyor. Cümleler her ekranın
+    kendi sözlüğünde kaldı (CLAUDE §2) — zaten farklı olmaları gerekiyor.
+  · **EKRAN:** akışın tamamı `professionals-screen`de (kayıt getir → doldur → motorla denetle →
+    gönder → gerekirse kimlik → tekrar dene), form yalnız çiziyor. Üç yeni hâl: `pending` ·
+    `approved` · `rejected` (gerekçesi + "otomatik çevrildi" rozetiyle, "Yeniden başvur" formu geri
+    açar). AB numarasının işareti artık TAHMİN değil ÖLÇÜM: VIES'in üç cevabı ayrı çiziliyor ve
+    "doğrulanamadı" başvuruyu engellemiyor.
+  · **KİMLİK (kullanıcı kararı 11.08):** *"kullanıcı başvurmadan önce giriş yaparsa daha iyi olur,
+    ama başvuru formunda da giriş yöntemini seçip OTP kodunu girebilir"* — ikisi de karşılandı:
+    girişli müşteri ek adım görmez, misafir gönderirken çekmeceden geçer ve başvuru kendiliğinden
+    gider. Kapı SUNUCUDA (401), ekranın tahmininde değil.
+
+  **Canlı ölçüm (uç 3002):** `GET /b2b/company/90749664000026` → gerçek kayıt geldi (*QUALITE ·
+  47.91B · 2021 · 46 RUE DES PRES · 67380 LINGOLSHEIM*) · biçimi bozuk numara `not_found` (dış
+  servise hiç gidilmiyor) · VIES üç cevabı da verdi: `DE12` → `false` (biçim), `DE999999999` →
+  `false` (INVALID), `DE811907980` → **`null`** (üye ülke sunucusu cevap vermedi — `null` hâlinin
+  var olma sebebi tam olarak bu) · jetonsuz `/me/b2b` → `401` · eksik gövde → `200`
+  `{"status":"invalid_application","issues":["legalName","line1","city"]}` · tam gövde → `200`
+  `pending`, DB'de `company_info` (legal_name · siret · activity_code · founded_year · is_active),
+  `b2b_pending = true`, işletme adresi künye adıyla yazıldı. **Ölçüm verisi geri alındı**: seed
+  müşterisi (Julien Fischer) başvuru öncesi hâline döndürüldü — künye null, açılan adres silindi.
+
+  **Doğrulama:** mobil **79 suite / 559 test** (yeni 8: kayıt doldurma · bulunamadı · biçimsizde
+  dış servise gitmeme · eksik formun uca gitmemesi · misafirde kimlik adımı · başarılı gönderim ·
+  iki durum bloğu) · `application`/`types`/`mobile-api`/`web` typecheck temiz · eslint · knip ·
+  boundaries temiz.
+
+  **Test borcu:** terfi edilen kapının paket düzeyinde entegrasyon testi yazılmadı (web'in
+  `apps/web/lib/b2b/application.test.ts`i köprü üzerinden AYNI gövdeyi koşuyor, imza korundu);
+  uçların entegrasyon testi de yok (§4b: DB'ye vuran koşu denetmenin işi).
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

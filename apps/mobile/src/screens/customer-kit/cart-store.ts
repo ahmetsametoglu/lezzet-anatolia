@@ -216,6 +216,29 @@ export function resetCart(): void {
   publish(EMPTY_CART);
 }
 
+/**
+ * SEPETİ SUNUCUDAN TAZELE (21.29a) — silmez, YENİDEN OKUR.
+ *
+ * ── NEDEN `resetCart` DEĞİL ─────────────────────────────────────────────────
+ * Sipariş verildiğinde sunucu sepeti kendisi kapatıyor ve **yalnız siparişe giren kalemleri**
+ * düşürüyor (`clearOrderedLines`, `placeOrder` içinden): iki gruplu sepette kargo yarısı yerinde
+ * kalır. `resetCart()` çağırmak o yarıyı da silerdi — müşterinin henüz sipariş etmediği kalemleri.
+ * Doğru hareket sunucuya sormaktır; cevabı zaten o biliyor.
+ *
+ * ── NEDEN AYRI BİR KAPI GEREKTİ ─────────────────────────────────────────────
+ * Depo sunucu turunu bugüne kadar YALNIZ kendi tetiklediği anlarda atıyordu (dil, yer ya da oturum
+ * değişimi). Sipariş bunların hiçbiri değil: sunucudaki sepet değişti ama depo bunu bilmiyor ve
+ * ekranın rozeti eski sayıyı göstermeye devam ediyordu (kullanıcı bulgusu 10.08: *"siparişi
+ * tamamladığım zaman sepetim temizlenmedi"*). Kayıp sunucuda değil, istemcinin haberinde.
+ *
+ * `refreshView` misafir sepetini de doğru karşılıyor (yerel çözüm) — bu kapı onun dışa açık yüzü,
+ * ikinci bir mantık yazılmadı. Kabuk takılı değilken (`watchers === 0`) sessizce hiçbir şey yapmaz:
+ * görünmeyen bir ekranın turu, cevabı kimsenin okumayacağı bir istektir.
+ */
+export function refreshCart(): void {
+  refreshView();
+}
+
 // ── GÖRÜNÜMÜN BAĞLAMI (dil + yer) ───────────────────────────────────────────
 
 interface ViewContext {

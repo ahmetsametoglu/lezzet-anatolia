@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { fetchAddresses, type MeAddress } from '@/lib/api/addresses';
 
@@ -21,19 +21,29 @@ export function useAddresses(enabled: boolean): {
   status: AddressesStatus;
   addresses: MeAddress[];
   publish: (next: MeAddress[]) => void;
+  /** Yeniden okur ve BİTİNCE çözülür — çağıran yenileme halkasını buna göre kapatır (21.29c). */
+  reload: () => Promise<void>;
 } {
   const [state, setState] = useState<{ status: AddressesStatus; addresses: MeAddress[] }>({
     status: 'loading',
     addresses: [],
   });
 
+  /* Okuma TEK yerde: ilk yük de yenileme de aynı fonksiyonu çağırır. İkinci bir `fetch` yazmak,
+     hata karşılamasının bir gün ikisinde ayrışması demekti. */
+  const load = useCallback(async (): Promise<void> => {
+    const result = await fetchAddresses();
+    // Hata anahtarı ekranda cümleye dönmez (tek genel satır var) — hâl yeter, sebep loglanmaz:
+    // istemcide teşhis kanalı yok, sunucu tarafı zaten kendi izini bırakıyor.
+    if (result.error !== null) return setState({ status: 'error', addresses: [] });
+    setState({ status: 'ready', addresses: result.data });
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
     void fetchAddresses().then((result) => {
       if (!alive) return;
-      // Hata anahtarı ekranda cümleye dönmez (tek genel satır var) — hâl yeter, sebep loglanmaz:
-      // istemcide teşhis kanalı yok, sunucu tarafı zaten kendi izini bırakıyor.
       if (result.error !== null) return setState({ status: 'error', addresses: [] });
       setState({ status: 'ready', addresses: result.data });
     });
@@ -42,5 +52,5 @@ export function useAddresses(enabled: boolean): {
     };
   }, [enabled]);
 
-  return { ...state, publish: (next) => setState({ status: 'ready', addresses: next }) };
+  return { ...state, publish: (next) => setState({ status: 'ready', addresses: next }), reload: load };
 }

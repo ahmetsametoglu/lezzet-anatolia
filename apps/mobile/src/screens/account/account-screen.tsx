@@ -3,11 +3,12 @@ import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, type ReactElement } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -69,9 +70,15 @@ interface AccountScreenProps {
   data?: AccountData;
   /** Oturum durumu — misafirde doğrulama kapısı çıkar. */
   signedIn?: boolean;
+  /**
+   * Aşağı çekildiğinde KİMLİĞİ tazeleyen kapı (21.29c). Ekran `/me`yi kendi okumaz; rota okur ve
+   * `data` olarak verir, o yüzden tazeleme de rotanın elinde. Verilmezse yenileme yalnız puan ve
+   * adresleri kapsar — testlerin ve demo hâllerinin çağırdığı yol.
+   */
+  onRefreshIdentity?: () => void;
 }
 
-export function AccountScreen({ data = accountData(), signedIn = true }: AccountScreenProps) {
+export function AccountScreen({ data = accountData(), signedIn = true, onRefreshIdentity }: AccountScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -83,6 +90,12 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
      ESKİ değere döner ve satır altında söylenir — kaydedilmemiş bir seçimi kaydedilmiş
      göstermek, kullanıcıya olmayan bir izni vermiş gibi okutur. */
   const [prefsFailed, setPrefsFailed] = useState(false);
+
+  /* Yenileme halkasının durumu (21.29c). BURADA, ekranın en üstünde: aşağıda misafir/boş hâller
+     için erken `return`lar var ve hook'un onların ALTINDA kalması render'lar arasında hook sayısını
+     değiştiriyordu — cihazda ölçüldü (11.08): *"Rendered more hooks than during the previous
+     render"*. Hook'lar koşulsuz ve en üstte durur; kullanıldığı yerin yakınında değil. */
+  const [refreshing, setRefreshing] = useState(false);
 
   const savePreference = (patch: { preferredLanguage?: Locale; marketingConsent?: Record<string, boolean> }, revert: () => void) => {
     setPrefsFailed(false);
@@ -289,9 +302,38 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
   };
 
 
+  /* AŞAĞI ÇEKİP YENİLE (21.29c) — bu ekranın üç okuması da ekran açıkken eskiyebiliyor: kimlik
+     (ad/telefon web'den değişmiş olabilir), PUAN (sipariş puanı TESLİMATTA yazılıyor —
+     `rewardCompletedOrder`, yani müşteri beklerken bakiye artar) ve ADRES defteri. Yenileme
+     olmadan üçünü de görmenin tek yolu uygulamayı kapatıp açmaktı (kullanıcı bulgusu 10.08).
+
+     KİMLİK PROP'TAN TAZELENİR: bu ekran `/me`yi kendi okumuyor, rota okuyup `data` olarak veriyor
+     (`app/(tabs)/account.tsx` künyesi) — tazeleme de oradan gelmeli, yoksa ekran kimliği ikinci
+     bir yoldan okur ve iki kaynak ayrışırdı.
+
+     Halka ÜÇÜ BİRDEN bekler ama TEK döner: üç ayrı gösterge, kullanıcıya üç ayrı yükleme varmış
+     izlenimi verirdi (vitrin ekranının aynı kararı). Kimlik beklenmiyor çünkü prop'un arkasındaki
+     okuma bu ekrana bir söz vermiyor — o tazelendiğinde `data` kendiliğinden yenilenir. */
+  const refreshAll = async (): Promise<void> => {
+    setRefreshing(true);
+    onRefreshIdentity?.();
+    await Promise.all([pointsWallet.reload(), addressBook.reload()]);
+    setRefreshing(false);
+  };
+
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} testID="account-scroll">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refreshAll()}
+            {...pullRefreshColors(theme.colors.olive)}
+          />
+        }
+        testID="account-scroll"
+      >
         <Text style={styles.title} accessibilityRole="header">
           {t.title}
         </Text>

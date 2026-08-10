@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
@@ -242,7 +243,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
         // `FlatList` eşiği cömertçe tetikler; ikinci kapı hook'ta (imleç yoksa istek atılmaz).
         onEndReachedThreshold={0.5}
         refreshControl={
-          <RefreshControl refreshing={tickets.refreshing} onRefresh={tickets.refresh} tintColor={theme.colors.olive} />
+          <RefreshControl refreshing={tickets.refreshing} onRefresh={tickets.refresh} {...pullRefreshColors(theme.colors.olive)} />
         }
         testID="tickets-list"
       />

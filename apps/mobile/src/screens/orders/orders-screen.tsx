@@ -3,6 +3,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BackButton } from '@/components/ui/back-button';
@@ -230,7 +231,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
         // `FlatList` eşiği cömertçe tetikler; ikinci kapı hook'ta (imleç yoksa istek atılmaz).
         onEndReachedThreshold={0.5}
         refreshControl={
-          <RefreshControl refreshing={orders.refreshing} onRefresh={orders.refresh} tintColor={theme.colors.olive} />
+          <RefreshControl refreshing={orders.refreshing} onRefresh={orders.refresh} {...pullRefreshColors(theme.colors.olive)} />
         }
         testID="orders-list"
       />
