@@ -6,7 +6,7 @@ import type { QueueTab } from '@/lib/assistant/assistant-types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button, buttonClass } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
-import { ChevronDownIcon, InfoIcon } from '@/components/operation/ui/icons';
+import { ChevronDownIcon } from '@/components/operation/ui/icons';
 import { agoLabel, money, shortDateTime } from '@/components/operation/ui/format';
 import { EDGE_CLASS } from '@/components/operation/ui/queue-pane';
 import {
@@ -300,19 +300,11 @@ export function DecisionCard({
           <ProposalPreview kind={row.kind} payload={row.payload} economics={row.economics} />
         )}
 
-        <div className="flex items-start gap-2.5 rounded-ops-card border border-ops-gray-300 bg-ops-gray-100 px-3.5 py-2.5">
-          <span className="mt-px flex-none text-ops-body">
-            <InfoIcon size={15} />
-          </span>
-          <div className="flex flex-col gap-0.5">
-            <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
-              {/* Karar verilmiş kayıtta aynı cümle GEÇMİŞ zamanda okunmalı: "uygulanınca ne olur"
-                  demek, olup bitmiş bir işi hâlâ seçenekmiş gibi gösterirdi. */}
-              {live ? 'Uygulanınca ne olur' : 'Ne olacaktı'}
-            </span>
-            <span className="font-ops-body text-ops-sm leading-relaxed text-ops-strong">{row.impact}</span>
-          </div>
-        </div>
+        {/* ── "UYGULANINCA NE OLUR" BURADAN KALKTI (10.08, kullanıcı kararı) ─────
+            Metin ONAY DİYALOĞUNA taşındı. Kartta iki kez zarar veriyordu: her bakışta okunuyor
+            (yani hiç okunmuyor) ve kartın en uzun bloğuydu. Karar anında gösterilince hem kısa
+            kalıyor hem işe yarıyor. Karar VERİLMİŞ kayıtlarda da çizilmiyor — olup bitmiş bir işin
+            "ne olacaktı"sı, kararı okuyan için bilgi değil gürültü; sonucu `result` satırı söylüyor. */}
 
         <TechnicalBlock row={row} />
       </div>

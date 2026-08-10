@@ -26,6 +26,16 @@ interface AssistantDecisionDialogProps {
   summary: string;
   /** Uygulanınca bildirim gidecek müşteri sayısı; `null` ise dış etki yok. */
   notifyCount: number | null;
+  /**
+   * **"Uygulanınca ne olur" — kartın değil, KARARIN yanında** (kullanıcı kararı 10.08).
+   *
+   * Bu metin bir tur kartın dibinde duruyordu ve orada iki kez zarar veriyordu: her bakışta
+   * okunuyor (yani hiç okunmuyor), ve kartın en uzun bloğuydu. Karar anında gösterilince hem
+   * kısalıyor hem işe yarıyor. `KIND_META.impact`ten gelir — tek kaynak.
+   */
+  impact: string;
+  /** Geri alma YOLU (`KIND_META.undoHint`). Tanımsızsa satır çizilmez — uydurma yapılmaz. */
+  undoHint?: string;
   busy: boolean;
   error: string | null;
   onClose: () => void;
@@ -37,6 +47,8 @@ export function AssistantDecisionDialog({
   kind,
   summary,
   notifyCount,
+  impact,
+  undoHint,
   busy,
   error,
   onClose,
@@ -102,6 +114,14 @@ export function AssistantDecisionDialog({
       }
     >
       <p className="font-ops-body text-ops-base leading-relaxed text-ops-strong">{body}</p>
+
+      {/* Uygulama kararında ne olacağı burada söylenir; ret/erteleme kararında olacak bir şey yok. */}
+      {kind === 'apply' ? (
+        <div className="flex flex-col gap-1 rounded-ops-card border border-ops-gray-300 bg-ops-gray-100 px-3.5 py-2.5">
+          <span className="font-ops-body text-ops-sm leading-relaxed text-ops-strong">{impact}</span>
+          {undoHint ? <span className="font-ops-body text-ops-xs text-ops-muted">{undoHint}</span> : null}
+        </div>
+      ) : null}
 
       {notice ? (
         <p className={`rounded-ops-card border px-3 py-2.5 font-ops-body text-ops-xs font-medium leading-relaxed ${notice.skin}`}>

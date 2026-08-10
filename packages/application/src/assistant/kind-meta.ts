@@ -29,6 +29,18 @@ export type ProposalMode = 'apply' | 'draft_then_edit' | 'handoff' | 'inline';
 interface KindMeta {
   label: string;
   impact: string;
+  /**
+   * **Geri alma YOLU — cümle değil adres** (kullanıcı kararı 10.08).
+   *
+   * Kart bir tur *"geri almak teklifi kaldırmaktır"* diyordu: doğru ama eksik, çünkü NEREDEN
+   * yapılacağını söylemiyordu. Operatör okur, "nereden?" diye sorar, cevap ekranda yoktur.
+   * Burada yol adıyla yazılır; yeri de kart değil **onay diyaloğudur** — bilgi karar anında
+   * gerekir, her bakışta değil.
+   *
+   * Tanımsızsa diyalog bu satırı hiç çizmez: uydurulmuş bir "geri alınabilir" izlenimi hiç
+   * söylememekten kötüdür.
+   */
+  undoHint?: string;
   tables: string[];
   mode: ProposalMode;
   /**
@@ -149,6 +161,7 @@ export const KIND_META = {
     impact:
       'Partiye indirimli satış fiyatı yazılır ve o parti ANINDA fırsat olarak vitrine düşer — taslak evresi yoktur. Aynı ürünün öteki partileri tam fiyatta kalır. Geri almak teklifi kaldırmaktır.',
     tables: ['stock'],
+    undoHint: 'Geri almak için: Stok → parti → Teklifi kaldır.',
     // ── ÜÇ TURDA ÜÇ CEVAP; SONUNCUSU İKİSİNİ DE KAPSIYOR ───────────────────
     // (1) `apply` yazılmıştı: "tek sayı, düzenlenecek bir şey yok". Yanlıştı — teklif fiyatının ÜÇ
     //     YÜZÜ var (tutar · listeye göre indirim · alışa göre marj) ve tek sayı onaylamak, marjı
@@ -189,6 +202,14 @@ export function modeOf(kind: AssistantProposalKind): ProposalMode {
  * Orta yol: **iskelet burada sabit** (asistan değiştiremez), **sayı payload'dan okunur** (öneriye
  * özgü ve gerçek). Kolon açmaya gerek yok — veri zaten payload'da.
  */
+/**
+ * Geri alma yolu — tanımlıysa. `KIND_META` `as const` olduğu için alan yalnız onu TAŞIYAN tipte
+ * görünür; çağıran her tip için sorabilsin diye erişim buradan geçer (`modeOf`/`impactOf` deseni).
+ */
+export function undoHintOf(kind: AssistantProposalKind): string | undefined {
+  return (KIND_META[kind] as { undoHint?: string }).undoHint;
+}
+
 export function impactOf(kind: AssistantProposalKind, payload: unknown): string {
   const base = KIND_META[kind].impact;
   if (!payload || typeof payload !== 'object') return base;
