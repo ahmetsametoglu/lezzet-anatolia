@@ -1,8 +1,22 @@
 import 'server-only';
-import { ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
+import {
+  BundleService,
+  CategoryService,
+  CollectionService,
+  ProductService,
+  ProductVariantService,
+  serviceDb,
+} from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
 import { cropOf, CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
-import type { AssistantProposal, BundleDraftPayload, DiscountDraftPayload, ImageCrop } from '@lezzet/types';
+import type {
+  AssistantProposal,
+  BundleDraftPayload,
+  DiscountDraftPayload,
+  FeaturedFlagPayload,
+  ImageCrop,
+  RecipeDraftPayload,
+} from '@lezzet/types';
 // Görsel + kırpma ikilisi ÇİZEN tarafın sözleşmesi (`SubjectImage`): burada ikinci kez tanımlansaydı
 // biri bir gün alan eklerdi ve iki tanım sessizce ayrışırdı (`CLAUDE §1`).
 import type { SubjectImage } from '@/components/operation/ui/subject-card';
@@ -77,8 +91,76 @@ export async function subjectOf(proposal: AssistantProposal): Promise<ProposalSu
     const payload = proposal.payload as { productId?: string };
     return typeof payload.productId === 'string' ? productSubject(payload.productId) : null;
   }
+  if (proposal.kind === 'recipe_draft') {
+    return recipeSubject(proposal.payload as RecipeDraftPayload);
+  }
+  if (proposal.kind === 'featured_flag') {
+    return featuredSubject(proposal.payload as FeaturedFlagPayload);
+  }
   return null;
 }
+
+/**
+ * TARİFİN yüzü MALZEMELERİ — paketle aynı gerekçe (22.11).
+ *
+ * Tarif de taslak evresinde doğmamış bir kayıttır ve kendi fotoğrafı yoktur; "bu ne tarifi"
+ * sorusunun görsel cevabı içindeki ürünlerdir. Malzeme sırası dilekçeden korunuyor: tarifte sıra
+ * rastgele değil, ana malzeme başta.
+ */
+async function recipeSubject(payload: RecipeDraftPayload): Promise<ProposalSubject | null> {
+  const variantIds = payload.items.map((item) => item.variantId);
+  if (variantIds.length === 0) return null;
+
+  return {
+    kind: 'recipe',
+    name: resolveLocalizedText(payload.name, 'tr'),
+    // Kaç kişilik — tarifin ölçeği. `serves` METİNdir ("4 kişilik"), sayı değil (`Recipe` modeli).
+    detail: payload.serves ? resolveLocalizedText(payload.serves, 'tr') : null,
+    imageUrl: null,
+    crop: CROP_CENTER,
+    images: await variantImages(variantIds),
+    href: null,
+  };
+}
+
+/**
+ * VİTRİN İŞARETİNİN konusu HEDEF KAYIT — kategori, koleksiyon ya da paket (22.11).
+ *
+ * Üçünün de kendi fotoğrafı var (`ImageMeta` üçünde de merge edilmiş) ve vitrin kararı tam olarak
+ * o fotoğrafla veriliyor: "bunu vitrine çıkaralım mı" sorusunun cevabı, kaydın müşteriye nasıl
+ * görüneceğine bakmadan verilemez.
+ *
+ * **Ad DİLEKÇEDEN, görsel BUGÜNKÜ kayıttan.** İkisi bilinçle farklı kaynaktan: ad, "o gün neyi
+ * onayladım" sorusunun cevabıdır ve kayıt yeniden adlandırılsa bile değişmemeli
+ * (`FeaturedFlagPayloadSchema.name` künyesi); fotoğraf ise "şu an ne satıyoruz"un parçası.
+ */
+async function featuredSubject(payload: FeaturedFlagPayload): Promise<ProposalSubject | null> {
+  const db = serviceDb();
+  const record =
+    payload.target === 'category'
+      ? await new CategoryService(db).getById(payload.id)
+      : payload.target === 'collection'
+        ? await new CollectionService(db).getById(payload.id)
+        : await new BundleService(db).getById(payload.id);
+  if (!record) return null;
+
+  return {
+    kind: payload.target === 'bundle' ? 'bundle' : payload.target,
+    name: payload.name,
+    detail: TARGET_LABEL[payload.target],
+    imageUrl: publicImageUrl(record.imageKey, record.imageUpdatedAt),
+    crop: cropOf(record),
+    images: [],
+    href: null,
+  };
+}
+
+/** Vitrin hedefinin türü — kartta ve künyede aynı kelimeyle geçsin diye tek yerde. */
+const TARGET_LABEL: Record<FeaturedFlagPayload['target'], string> = {
+  category: 'Kategori',
+  collection: 'Koleksiyon',
+  bundle: 'Paket',
+};
 
 /**
  * ÜRÜNÜN KENDİSİ — tamamlama önerisinin konusu (22.11).
@@ -104,6 +186,35 @@ async function productSubject(productId: string): Promise<ProposalSubject | null
   };
 }
 
+/**
+ * VARYANT LİSTESİNİN GÖRSELLERİ — paket · tedarik · tarif, üçünün de ortak işi (22.11).
+ *
+ * Üç yerde aynı üç adım yazılıydı (varyantları çöz → ürünleri çöz → görsel + kırpma): dördüncüsü
+ * yazılmadan birleştirildi. Ayrı kalsalardı biri bir gün kırpmayı unutur, öteki sırayı bozardı.
+ *
+ * **Görseller ürünün BUGÜNKÜ kaydından**, dilekçeden değil: payload öneri anındaki gerçeği taşır,
+ * fotoğraf ise "şu an ne satıyoruz"un parçası. **Sıra VERİLEN sıradır** (dilekçedeki kalem sırası) —
+ * `listByIds` sırayı korumaz ve koruduğunu varsaymak destede başka ürünleri gösterirdi. Görseli
+ * olmayan kalem sessizce ATLANIR: yer tutucu dizmek, dört kalemli bir pakette iki fotoğraf iki boş
+ * kutu gösterirdi.
+ *
+ * Kırpma ürünün KENDİ künyesinden — ortak bir merkez kırpma, dikey çekilmiş bir fotoğrafın ürününü
+ * bandın dışında bırakırdı.
+ */
+async function variantImages(variantIds: string[]): Promise<SubjectImage[]> {
+  const db = serviceDb();
+  const variants = await new ProductVariantService(db).listByIds([...new Set(variantIds)]);
+  const byVariant = new Map(variants.map((v) => [v.id, v]));
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const byProduct = new Map(products.map((p) => [p.id, p]));
+
+  return variantIds.flatMap((id) => {
+    const product = byProduct.get(byVariant.get(id)?.productId ?? '');
+    const url = product ? publicImageUrl(product.imageKey, product.imageUpdatedAt) : null;
+    return url && product ? [{ url, crop: cropOf(product) }] : [];
+  });
+}
+
 /** Tedarik ikilisinin ortak şekli — ikisi de "hangi varyanttan kaç adet" taşıyor. */
 type SupplyPayload = { supplierName?: string | null; warehouseCode?: string | null; lines: { variantId: string }[] };
 
@@ -126,20 +237,9 @@ type SupplyPayload = { supplierName?: string | null; warehouseCode?: string | nu
  * ürünleri gösterirdi.
  */
 async function supplySubject(payload: SupplyPayload, kind: 'purchase_order' | 'stock_intake'): Promise<ProposalSubject | null> {
-  const db = serviceDb();
   const variantIds = [...new Set(payload.lines.map((line) => line.variantId))];
   if (variantIds.length === 0) return null;
-
-  const variants = await new ProductVariantService(db).listByIds(variantIds);
-  const byVariant = new Map(variants.map((v) => [v.id, v]));
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const byProduct = new Map(products.map((p) => [p.id, p]));
-
-  const images = variantIds.flatMap((variantId) => {
-    const product = byProduct.get(byVariant.get(variantId)?.productId ?? '');
-    const url = product ? publicImageUrl(product.imageKey, product.imageUpdatedAt) : null;
-    return url && product ? [{ url, crop: cropOf(product) }] : [];
-  });
+  const images = await variantImages(variantIds);
 
   return {
     kind: 'product',
@@ -168,22 +268,9 @@ async function supplySubject(payload: SupplyPayload, kind: 'purchase_order' | 's
  * paket eksik görünmemeli.
  */
 async function bundleSubject(payload: BundleDraftPayload): Promise<ProposalSubject | null> {
-  const db = serviceDb();
   const variantIds = payload.items.map((item) => item.variantId);
   if (variantIds.length === 0) return null;
-
-  const variants = await new ProductVariantService(db).listByIds(variantIds);
-  const byVariant = new Map(variants.map((v) => [v.id, v]));
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const byProduct = new Map(products.map((p) => [p.id, p]));
-
-  const images = variantIds.flatMap((id) => {
-    const product = byProduct.get(byVariant.get(id)?.productId ?? '');
-    const url = product ? publicImageUrl(product.imageKey, product.imageUpdatedAt) : null;
-    // Kırpma ürünün KENDİ künyesinden: her kalem kendi odağıyla oturuyor. Ortak bir merkez kırpma
-    // vermek, dikey çekilmiş bir fotoğrafın ürününü bandın dışında bırakırdı.
-    return url && product ? [{ url, crop: cropOf(product) }] : [];
-  });
+  const images = await variantImages(variantIds);
 
   const qty = payload.items.reduce((sum, item) => sum + item.qty, 0);
   return {

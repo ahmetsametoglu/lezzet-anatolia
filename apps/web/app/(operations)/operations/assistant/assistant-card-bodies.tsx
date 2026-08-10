@@ -11,10 +11,12 @@ import {
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
+  type FeaturedFlagPayload,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
+  type RecipeDraftPayload,
   type StockIntakePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
@@ -80,6 +82,10 @@ export function cardBodyOf(row: AssistantRowView): ReactNode {
       return renderWith<ProductDraftPayload>(row, 'product_draft', (p) => <ProductDraftCard payload={p} row={row} />);
     case 'product_create':
       return renderWith<ProductCreatePayload>(row, 'product_create', (p) => <ProductCreateCard payload={p} />);
+    case 'recipe_draft':
+      return renderWith<RecipeDraftPayload>(row, 'recipe_draft', (p) => <RecipeCard payload={p} row={row} />);
+    case 'featured_flag':
+      return renderWith<FeaturedFlagPayload>(row, 'featured_flag', (p) => <FeaturedCard payload={p} row={row} />);
     default:
       // Kalan yedi tip asistanın CÜMLESİYLE duruyor ve bu yeterli bir hâl, eksik bir hâl değil —
       // özet zaten tam bir cümle. Kendi dilleri tip tip kurulacak (fırsat ve paket kuruldu); desen
@@ -486,6 +492,95 @@ function StockIntakeCard({ payload, row }: { payload: StockIntakePayload; row: A
     </>
   );
 }
+
+/**
+ * TARİF TASLAĞI — kararın konusu içerik, ölçüsü MALZEME.
+ *
+ * ── NEDEN ADIM SAYISI ───────────────────────────────────────────────────────
+ * Tarifin hazırlanışı çok dilli tek bir metin (`steps`) ve karta sığmaz. Ama "kaç adım" sayısı
+ * kararın ölçeğini söylüyor: iki adımlık bir servis önerisi ile sekiz adımlık bir pişirme tarifi
+ * aynı iş değil. Adımlar satır satır yazılıyor (`1.` `2.` …), sayı da satırlardan çıkıyor —
+ * ayraç ekranın işi olduğu için (`RecipeDraftPayloadSchema` künyesi) burada da aynı ayraç geçerli.
+ *
+ * ── AÇIKLAMA VARSA GÖSTERİLİYOR ─────────────────────────────────────────────
+ * Tarif müşteri yüzeyine çıkan bir içerik; onaylanan metnin ne olduğu onay anında okunmalı
+ * (`product_create`teki tanıtım metniyle aynı gerekçe).
+ */
+function RecipeCard({ payload, row }: { payload: RecipeDraftPayload; row: AssistantRowView }) {
+  const description = payload.description ? resolveLocalizedText(payload.description, 'tr') : '';
+  const steps = resolveLocalizedText(payload.steps, 'tr')
+    .split('\n')
+    .filter((line) => line.trim().length > 0);
+
+  return (
+    <>
+      {row.subject ? <SubjectBox subject={row.subject} /> : <SummaryLine summary={row.summary} />}
+
+      {description ? (
+        <span className="line-clamp-2 font-ops-body text-ops-base leading-snug text-ops-ink">{description}</span>
+      ) : null}
+
+      <Facts>
+        <CardFact
+          label="Malzeme"
+          value={`${num(payload.items.length)} çeşit · ${num(totalQty(payload.items))} ad.`}
+        />
+        <CardFact label="Hazırlanış" value={steps.length > 0 ? `${num(steps.length)} adım` : 'yazılmamış'} />
+      </Facts>
+    </>
+  );
+}
+
+/**
+ * VİTRİN İŞARETİ — tek bir aç/kapa kararı, ama yalnız başına verilemez.
+ *
+ * ── KARARIN KENDİSİ BÜYÜK YAZILIR ───────────────────────────────────────────
+ * Öteki tiplerde kartın büyük satırı paradır; burada para yok, **yön** var: "Vitrine çıkar" ya da
+ * "Vitrinden kaldır". İkisini küçük bir künye satırına gömmek, kartın ne teklif ettiğini okunmaz
+ * kılardı — ızgarada iki zıt karar aynı görünürdü.
+ *
+ * ── VİTRİNDEKİ SAYI KARARIN YARISI ──────────────────────────────────────────
+ * Vitrin bir liste değil bir SEÇKİdir: doluysa eklenen şey ötekini aşağı iter. "Bir tane daha
+ * eklemek" ile "sekizinciyi eklemek" aynı karar değil ve fark ancak sayı görünürse fark edilir
+ * (`currentlyFeaturedCount`, 22.5 denetim bulgusu). Sayı öneri anındaki hâldir — uygulama anında
+ * değişmiş olabilir, o yüzden karar girdisi olarak sunuluyor, kural olarak değil.
+ *
+ * Alan HİÇ gelmemişse "0" denmiyor: sayılmamış olmak ile sıfır olmak ayrı şeyler (`CLAUDE §1`).
+ */
+function FeaturedCard({ payload, row }: { payload: FeaturedFlagPayload; row: AssistantRowView }) {
+  const on = payload.isFeatured;
+
+  return (
+    <>
+      {row.subject ? <SubjectBox subject={row.subject} /> : <SummaryLine summary={row.summary} />}
+
+      <span
+        className={`font-ops-display text-ops-lead font-semibold ${on ? 'text-ops-olive-dark' : 'text-ops-body'}`}
+      >
+        {on ? 'Vitrine çıkar' : 'Vitrinden kaldır'}
+      </span>
+
+      <Facts>
+        <CardFact label="Tür" value={TARGET_LABEL[payload.target]} />
+        <CardFact
+          label="Vitrinde"
+          value={
+            payload.currentlyFeaturedCount === undefined
+              ? 'sayılmadı'
+              : `${num(payload.currentlyFeaturedCount)} ${TARGET_LABEL[payload.target].toLowerCase()}`
+          }
+        />
+      </Facts>
+    </>
+  );
+}
+
+/** Vitrin hedefinin türü — konu künyesiyle aynı kelimeyi kullanır (`lib/assistant/subject`). */
+const TARGET_LABEL: Record<FeaturedFlagPayload['target'], string> = {
+  category: 'Kategori',
+  collection: 'Koleksiyon',
+  bundle: 'Paket',
+};
 
 /**
  * MODELİN NET OKUYAMADIĞI ALANLAR — ambalaj fotoğrafı bulanık, kesik ya da yansımalıydı.

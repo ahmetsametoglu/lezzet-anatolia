@@ -684,8 +684,23 @@ satırında.
     - Beyan alanı adları sözlüğü `assistant-preview`ten `assistant-labels`a taşındı: kart da aynı
       adları yazıyor ve iki yerde tutulsalardı aynı alan bir ekranda "Saklama", ötekinde "Saklama
       koşulları" olurdu.
+  - **Son ikili — `recipe_draft` · `featured_flag`; ON BİR TİPİN HEPSİNİN kartı var.**
+    - Tarif de taslak evresinde doğmamış bir kayıttır: yüzü malzemeleri (paketle aynı deste).
+      Hazırlanış metni karta sığmaz ama **adım sayısı** ölçeği söylüyor — iki adımlık bir servis
+      önerisi ile sekiz adımlık pişirme aynı iş değil.
+    - Vitrin işaretinde para yok, **yön** var: kartın büyük satırı "Vitrine çıkar" / "Vitrinden
+      kaldır". Küçük bir künye satırına gömülseydi ızgarada iki zıt karar aynı görünürdü.
+      `currentlyFeaturedCount` künyede: vitrin bir liste değil SEÇKİdir, doluysa eklenen ötekini
+      aşağı iter — "bir tane daha" ile "sekizinci" aynı karar değil (22.5 denetim bulgusu). Alan hiç
+      gelmediyse "0" değil "sayılmadı" (`CLAUDE §1`).
+    - **Üç yerdeki görsel toplama tek yere alındı** (`variantImages`): paket · tedarik · tarif aynı
+      üç adımı yazıyordu (varyant → ürün → görsel + kırpma). Dördüncüsü yazılmadan birleştirildi;
+      ayrı kalsalardı biri bir gün kırpmayı unutur, öteki sırayı bozardı.
   - *Doğrulandı:* `typecheck` (web + backend) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346 ·
     `mcp.test.ts` + `proposal.test.ts` 26/26.
-  - **BEKLEYEN(22.11):** iki tipin kart gövdesi (`recipe_draft` · `featured_flag`) asistanın cümlesiyle duruyor;
+  - **BEKLEYEN(22.11):** `assistant-card-bodies.tsx` **823 satır** — on bir tipin gövdesi tek dosyada
+    birikti ve bu, ajanın her dokunuşta bütün dosyayı bağlama almasına yol açıyor (kullanıcı ölçümü
+    11.08: token tüketimi). Tip başına ya da öbek başına bölünecek. `featured_flag` kartı ekranda
+    DOĞRULANMADI: kuyrukta o tipten öneri yok (on tipin ikişer örneği var, bu tip hiç yazılmamış).
     tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
     `assistant-preview.tsx` blokları o sırada düşecek.
