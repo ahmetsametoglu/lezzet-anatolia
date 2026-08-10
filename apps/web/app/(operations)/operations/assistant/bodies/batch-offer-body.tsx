@@ -261,24 +261,59 @@ function MarginSentence({
   const tone = marginCents > 0 ? 'text-ops-olive-dark' : marginCents === 0 ? 'text-ops-body' : 'text-ops-amber';
   const verdict =
     marginCents > 0 ? `${money(marginCents)} kâr` : marginCents === 0 ? 'başa baş' : `${money(-marginCents)} zarar`;
+  const totalCents = Math.abs(marginCents) * physicalQty;
 
+  /**
+   * ── CÜMLE DEĞİL KÜNYE (kullanıcı kararı 10.08: "sağdaki bölüm problemli") ──
+   *
+   * Bu blok bir tur tek uzun cümleydi: *"Adet başına 0,25 € kâr (%16,9 marj) · 1,73 € KDV'siz
+   * gelir − 1,48 € alış. Parti tükenirse toplam 2,00 € kâr."* Beş sayı bir cümleye sıkışmıştı ve
+   * ekranı boydan boya kesiyordu — **metin gibi akıyordu ama veriydi.** Okuyan, aradığı sayıyı her
+   * seferinde cümlenin içinden çıkarmak zorundaydı.
+   *
+   * Künye olarak: her sayı kendi satırında, etiketler sönük, değerler mono ve sağa hizalı — göz
+   * tek bir dikey çizgide aşağı iniyor. Yan etkisi de istenen yöndeydi: sol sütun üç kutu boyunda,
+   * bu blok dört satır; iki sütun arasındaki ölü boşluk kapandı.
+   */
   return (
-    <span
-      aria-live="polite"
-      aria-busy={disabled || undefined}
-      className="font-ops-body text-ops-base leading-relaxed text-ops-body"
-    >
-      Adet başına <span className={`font-ops-mono font-semibold ${tone}`}>{verdict}</span>
-      {marginPercent !== null ? <span className="text-ops-muted"> ({percent(marginPercent, 1)} marj)</span> : null} ·{' '}
-      <span className="text-ops-muted">
-        {money(offerHtCents)} KDV’siz gelir − {money(costCents)} alış.
-      </span>{' '}
-      {/* Toplam etki: karar tek adet için değil, elde kalan tüm parti için veriliyor. */}
-      <span className="text-ops-muted">
-        Parti tükenirse toplam{' '}
-        <span className={`font-ops-mono ${tone}`}>{money(Math.abs(marginCents) * physicalQty)}</span>{' '}
-        {marginCents >= 0 ? 'kâr' : 'zarar'}.
-      </span>
-    </span>
+    <dl aria-live="polite" aria-busy={disabled || undefined} className="flex w-full max-w-[22rem] flex-col gap-1">
+      <MoneyRow label="Adet başına" value={verdict} aside={marginPercent === null ? null : `${percent(marginPercent, 1)} marj`} tone={tone} strong />
+      <MoneyRow label="KDV’siz gelir" value={money(offerHtCents)} />
+      <MoneyRow label="Alış" value={money(costCents)} />
+      {/* Toplam etki: karar tek adet için değil, elde kalan TÜM parti için veriliyor. */}
+      <MoneyRow
+        label={`Parti tükenirse (${physicalQty} ad.)`}
+        value={`${money(totalCents)} ${marginCents >= 0 ? 'kâr' : 'zarar'}`}
+        tone={tone}
+        divided
+      />
+    </dl>
+  );
+}
+
+/** Künye satırı — etiket solda sönük, değer sağda mono. Dört satır tek dikey hizada okunur. */
+function MoneyRow({
+  label,
+  value,
+  aside = null,
+  tone = 'text-ops-body',
+  strong = false,
+  divided = false,
+}: {
+  label: string;
+  value: string;
+  aside?: string | null;
+  tone?: string;
+  strong?: boolean;
+  divided?: boolean;
+}) {
+  return (
+    <div className={`flex items-baseline justify-between gap-3${divided ? ' mt-1 border-t border-ops-line pt-1.5' : ''}`}>
+      <dt className="font-ops-body text-ops-base text-ops-muted">{label}</dt>
+      <dd className="flex items-baseline gap-1.5 text-right">
+        {aside ? <span className="font-ops-body text-ops-sm text-ops-muted">({aside})</span> : null}
+        <span className={`font-ops-mono ${strong ? 'font-semibold' : ''} ${tone}`}>{value}</span>
+      </dd>
+    </div>
   );
 }
