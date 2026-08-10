@@ -24,11 +24,14 @@ interface SkeletonProps {
    */
   radius?: 'full' | 'none' | 'badge' | 'control' | 'card';
   /**
-   * Ton: varsayılan gri, ya da bir tık KOYU (`deep`). Koyu ton yalnız bir blok başka bir bloğun
-   * ÜSTÜNE biniyorsa gerekir — vitrinin koleksiyon daireleri bantların üstünde çiziliyor ve tek
-   * tonda ikisi tek bir gri lekeye dönüşürdü (sayfada da daire bandın kendi renginin koyusudur).
+   * Ton — üç kademe: `soft` · `default` · `deep`. Varsayılanın dışına yalnız bloklar BİRBİRİNE
+   * DEĞİYORSA çıkılır; ayrı duran bloklar arasında ton farkı bir şey söylemez, gürültü olur.
+   *
+   * İki gerçek ihtiyaç (vitrin, kullanıcı bulgusu 10.08): (1) koleksiyon bantları BİTİŞİK ve tek
+   * tonda altısı tek bir gri lekeye dönüşüyor — sayfada da bantlar üç renk arasında dönüyor;
+   * (2) daireler bantların ÜSTÜNE biniyor ve zeminlerinden ayrışmaları gerekiyor.
    */
-  tone?: 'default' | 'deep';
+  tone?: 'soft' | 'default' | 'deep';
   testID?: string;
 }
 
@@ -65,7 +68,7 @@ export function Skeleton({ width, height, radius = 'full', tone = 'default', tes
       importantForAccessibility="no-hide-descendants"
       style={[
         styles.block,
-        tone === 'deep' ? styles.deep : null,
+        tone === 'deep' ? styles.deep : tone === 'soft' ? styles.soft : null,
         {
           width,
           height,
@@ -80,6 +83,9 @@ export function Skeleton({ width, height, radius = 'full', tone = 'default', tes
 const styles = StyleSheet.create((theme) => ({
   block: {
     backgroundColor: theme.colors['sand-300'],
+  },
+  soft: {
+    backgroundColor: theme.colors['sand-250'],
   },
   deep: {
     backgroundColor: theme.colors['sand-400'],

@@ -49,6 +49,17 @@ import { DEFAULT_HOME_LAYOUT, type HomeLayout } from './home-layout-memory';
 */
 const slots = (count: number): number[] => Array.from({ length: count }, (_, index) => index);
 
+/*
+  BANTLARIN GRİ RİTMİ (kullanıcı bulgusu 10.08) — sayfada bantlar üç renk arasında dönüyor
+  (zeytin → kum → terracotta, `collection-band` `TONES`) ve BİTİŞİKLER. Skeleton hepsini tek
+  tonda çizince altı bant tek bir gri lekeye dönüşüyordu: yerleşimin en belirgin ritmi
+  kayboluyordu. Ton veriden değil SIRADAN türer — bandın kendi dosyasındaki kuralın aynısı.
+*/
+const BAND_TONES = ['soft', 'default', 'deep'] as const;
+
+const bandTone = (index: number): (typeof BAND_TONES)[number] =>
+  BAND_TONES[index % BAND_TONES.length] as (typeof BAND_TONES)[number];
+
 interface HomeSkeletonProps {
   /** Çizilecek yerleşim — son açılışın izi. Verilmezse ilk kurulum varsayılanı. */
   sections?: HomeLayout;
@@ -150,7 +161,13 @@ export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSke
               altında kalırdı. */}
           <View style={styles.bandStack}>
             {slots(sections.bands).map((slot) => (
-              <Skeleton key={slot} width="100%" height={customerMetrics.collectionBand} radius="none" />
+              <Skeleton
+                key={slot}
+                width="100%"
+                height={customerMetrics.collectionBand}
+                radius="none"
+                tone={bandTone(slot)}
+              />
             ))}
             {slots(sections.bands).map((slot) => (
               <View
@@ -162,9 +179,14 @@ export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSke
                 ]}
                 pointerEvents="none"
               >
-                {/* KOYU ton: daire bandın ÜSTÜNDE duruyor, tek tonda ikisi tek gri lekeye
-                    dönüşürdü — sayfada da daire bandın kendi renginin koyusudur. */}
-                <Skeleton width={customerMetrics.collectionPhoto} height={customerMetrics.collectionPhoto} tone="deep" />
+                {/* Daire ZEMİNİNDEN ayrışır: en koyu ton, bandın kendisi zaten koyuysa en açık.
+                    Sayfada da daire bandın renginin bir tık koyusudur; skeleton'da tek kural
+                    "daire ile altındaki bant asla aynı tonda olmasın" — yoksa kaybolur. */}
+                <Skeleton
+                  width={customerMetrics.collectionPhoto}
+                  height={customerMetrics.collectionPhoto}
+                  tone={bandTone(slot) === 'deep' ? 'soft' : 'deep'}
+                />
               </View>
             ))}
           </View>
