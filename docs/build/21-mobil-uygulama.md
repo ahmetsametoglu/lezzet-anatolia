@@ -604,6 +604,28 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     bekleyen ölçüler `customerMetrics`e taşındı (`recipe*` + `packageItemPhoto`) — skeleton'lar
     aynı ölçüleri isteyince ekran dosyasından import dairesel bağımlılık, kopyalamak duplikasyon
     olurdu. Doğrulama: tarif+paket 15/15 test yeşil · tsc/eslint/knip temiz.
+  - **Durum (10.08 — MOBİL SKELETON ENVANTERİ + iki liste ekranı, kullanıcı isteği):** uygulamanın
+    TAMAMI tarandı; skeleton kullanan/kullanması gereken 17 yer çıktı. Bu turda **paket ve tarif
+    LİSTELERİ** kalıba alındı (`packages-list-skeleton.tsx` · `recipes-list-skeleton.tsx`):
+    paket listesinin gövde satırı `width={size.circleSm} height={text.note}` ile çiziliyordu —
+    DAİRE ÇAPI genişlik, YAZI BOYU satır yüksekliği olarak; ikisi de o rol için ölçülmemiş
+    değerlerdi. İki ekranda da sayfa BAŞLIĞI skeleton'a girmedi (her dalda gerçek çiziliyor;
+    tariflerde içinde çalışan geri düğmesi var) ve kök `progressbar`+`busy` eklendi.
+    Doğrulama: mobil paket 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
+
+    **KALAN (envanter — sırayla kapatılacak):**
+    · `BEKLEYEN(21.14)` sipariş şeridi: `orders-screen` (`SKELETON_HEIGHT=110` ham) ve
+      `order-detail-screen` (`140`·`18`·`62`·`62` — dördü de uydurma, sayfanın bölümleri temsilsiz);
+    · `BEKLEYEN(21.14)` destek şeridi: `tickets-screen` (64) · `ticket-detail-screen` (16·56·72) ·
+      `order-picker` (52) · `order-line-picker` (46) — hepsi gömülü, ham, a11y'siz;
+    · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: `checkout-screen` (ödeme özetinin
+      tamamı sunucudan) ve `discover-screen` (tam ekran halka, arkasından kart destesi);
+    · `BEKLEYEN(21.14)` `account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK — liste boş dizi
+      olarak başlıyor, yani "hiç adresin yok" ile "adresler yükleniyor" ayırt edilemiyor. Taramanın
+      bulduğu tek sessizce YANLIŞ şey söyleyen yer budur.
+    Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `cart` (ekran zaten dolu, yalnız fiyat
+    çözümü bekleniyor) · `delivery-zones` (künyesinde bilinçli) · `login`/`profile-setup`/
+    `auth-callback` (form ve geçiş ekranları) · kurye ve depo ekranları (operasyon yüzeyi).
 - [x] (21.15) **Adres dilimi — uçlar + v3 `shAddr` çekmecesi (kullanıcı onaylı sıra, 09.08):**
   hesap ekranının adres bölümü gerçek uçlara bağlanır; ekleme/düzenleme/silme/varsayılan v3
   çekmecesinden. Checkout adres seçiminin zemini.

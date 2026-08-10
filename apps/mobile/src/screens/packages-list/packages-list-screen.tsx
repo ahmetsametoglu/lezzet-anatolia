@@ -10,7 +10,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
@@ -21,6 +20,7 @@ import { PhotoSurface } from '@/screens/customer-kit/photo-surface';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
+import { PackagesListSkeleton } from './packages-list-skeleton';
 import { usePackagesList } from './use-packages-list.hook';
 
 /*
@@ -58,9 +58,6 @@ import { usePackagesList } from './use-packages-list.hook';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-
-/** İskelet kart sayısı — tasarımın kendi yer tutucu sayısı (v3:873 `hint-placeholder-count="3"`). */
-const SKELETON_CARDS = [0, 1, 2];
 
 interface PackagesListScreenProps {
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -166,19 +163,15 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
     );
   };
 
+  /* İLK YÜK: başlık GERÇEK kalır (yukarıdaki kural), kartların yerini skeleton tutar. Blok
+     ekrandan `packages-list-skeleton`a taşındı — gövde satırı burada daire çapı ve yazı boyuyla
+     çiziliyordu, ikisi de o rol için ölçülmemiş değerlerdi (o dosyanın künyesi). */
   if (list.status === 'loading') {
     return (
       <View style={styles.screen}>
         <View style={styles.content}>
           {header}
-          {SKELETON_CARDS.map((index) => (
-            <View key={index} style={styles.card}>
-              <Skeleton width="100%" height={customerMetrics.packageListPhotoHeight} radius="card" />
-              <View style={styles.cardBody}>
-                <Skeleton width={theme.size.circleSm} height={theme.text.note} radius="badge" />
-              </View>
-            </View>
-          ))}
+          <PackagesListSkeleton testID="packages-loading" />
         </View>
       </View>
     );

@@ -7,12 +7,12 @@ import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import messages from './messages.json';
+import { RecipesListSkeleton } from './recipes-list-skeleton';
 import { useRecipesList } from './use-recipes-list.hook';
 
 /*
@@ -36,9 +36,6 @@ import { useRecipesList } from './use-recipes-list.hook';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-
-/** İskelet kart sayısı — tasarımın kendi yer tutucu sayısı (v3:911 `hint-placeholder-count="4"`). */
-const SKELETON_CARDS = [0, 1, 2, 3];
 
 interface RecipesListScreenProps {
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -69,14 +66,14 @@ export function RecipesListScreen({ locale: forcedLocale }: RecipesListScreenPro
     </View>
   );
 
+  /* İLK YÜK: başlık GERÇEK kalır (yukarıdaki kural — içindeki geri düğmesi çalışır), kartların
+     yerini skeleton tutar (`recipes-list-skeleton`). */
   if (list.status === 'loading') {
     return (
       <View style={styles.screen}>
         <View style={styles.content}>
           {header}
-          {SKELETON_CARDS.map((index) => (
-            <Skeleton key={index} width="100%" height={customerMetrics.recipeListCardHeight} radius="card" />
-          ))}
+          <RecipesListSkeleton testID="recipes-loading" />
         </View>
       </View>
     );
