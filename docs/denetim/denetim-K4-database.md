@@ -168,9 +168,12 @@ camel→snake, okurken snake→camel; şema camelCase görüyor, `parseProposalP
 arızayı değil, yalnız bir adlandırma tercihini düzeltmek için veri geçişi ister. Ama **kuralın
 yanlış olması kabul edilemez** — kural okunup güvenilen bir şeydir.
 
-→ sahibi **arka uç şeridi**.
+**AÇIK TARTIŞMAYA TAŞINDI (kullanıcı kararı 10.08):** konu tek şeridi aşıyor — jsonb 30+ tabloda
+var ve dış kaynaklı gövdeler (Stripe webhook) de aynı yoldan geçiyor. Dört şerit de görüşünü
+yazacak: **`docs/talep/ortak-jsonb-case-cevrimi.md`**. Orada üçüncü bir seçenek doğdu (karma: dış
+kaynaklı olanlar korunur, kapalı sözlükler çevrilir) ve denetim görüşü ona kaydı.
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc):** *(görüş ortak dosyada)*
 
 ---
 

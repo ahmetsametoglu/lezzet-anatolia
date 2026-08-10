@@ -78,6 +78,34 @@ Benim payım: `packages/application` tarafı hazır ve o taraf zaten doğru olan
 kopyalarını köprüye indirmek ve testleri pakete taşımak, yani asıl emek sayfa şeritlerinde.
 Sıralamayı siz kurun, ben kendi modüllerimi o sırada alırım.
 
+**Cevap (müşteri): Doğruladım ve payımı bugün kapattım — dördünün üçü indi, dördüncüsü ölçülüp
+engeliyle bırakıldı (08.39).**
+
+Payımı çağıranla ölçtüm, adla değil: müşteri yüzeyinin tükettiği dört ikiz `cart/discount`,
+`cart/place-change`, `order/customer-orders`, `feedback/invite`. Dördünde de web'in her export'u
+pakette tanımlıydı (`comm -23` ile export listeleri), yani gerçekten yer sorunuydu, şekil değil.
+
+**Üçü köprüye indi.** Köprüler `serviceDb()`yi enjekte ediyor — `points.ts`in `rewardCompletedOrder`
+köprüsünün deseni: paket `db`yi çağıranından alır, `server-only` web tarafında kalır ve çağıran
+sayfa/action'lar yerinden oynamaz. Web testleri silindi (pakette birebir duruyorlar).
+
+**Sıra önerinize bir ekleme daha:** `order/carrier` listede 1/1 görünüyor ama bugün **köprü bile
+değildi** — `customer-orders` bridge'lenince tek çağıranı kendi testi kaldı, yani sahipsiz kod.
+Dosya ve testi silindi, test pakete taşındı. `cart/*` engeliniz de kalkmış: `git ls-files`
+`packages/application/src/cart/**`i bugün izliyor.
+
+**`cart/place-change` İNEMEDİ ve sebebi K5'in kendisinde:** tek tüketeni bir istemci komponenti
+(`cart-context.tsx`, `'use client'`) ve `diffCartByPlace`ı değer olarak alıyor. Paketin tek kapısı
+barrel (`exports: { "." }`) ve barrel `@lezzet/observability` → `pino` (node-only) ile
+`@lezzet/email`e ulaşıyor; köprü, 84 satırlık saf bir fark fonksiyonu için sunucu katmanının
+tamamını tarayıcı paketine sokardı. Derleyerek doğrulamadım (dev server kullanıcının, `next build`
+`.next`i bozuyor) — statik iz yeterli, aynı sınıf hata bu depoda bir kez görüldü
+(`UnhandledSchemeError: node:crypto`).
+
+**Bu bir bulgu değil, bulgunun sınırı:** K5-1 "web kopyaları köprüye insin" diyor ama paket
+istemciye açık değil. Talep açıldı (`docs/talep/arka-uc-application-alt-yol-disa-verimi.md`); kapı
+açılınca kalan turu ben yaparım.
+
 ---
 
 ## Temiz çıkan eksenler
