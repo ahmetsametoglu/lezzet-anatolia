@@ -1,26 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { z } from 'zod';
-import type { AuthErrorKey, PlaceNoticeBodySchema } from '@lezzet/types';
+import type { PlaceNoticeBodySchema } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
-// E-posta geçerliliği paylaşılan motordan — RN'de ikinci bir düzenli ifade YAZILMAZ (02-mimari §3.4).
-import { isValidEmail } from '@lezzet/helper';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { LoadingState } from '@/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
-import { fetchMe } from '@/lib/api/me';
 import { submitPlaceNotice } from '@/lib/api/places';
-import { authErrorText } from '@/lib/auth/error-text';
-import { requestOtp, verifyOtp } from '@/lib/auth/otp';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import messages from '@/lib/places/messages.json';
-import { CodeField } from '@/screens/login/code-field';
-import { publishMe } from './use-me.hook';
+import { OtpSignInFields } from './otp-sign-in-fields';
+import { useOtpSignIn } from './use-otp-sign-in.hook';
 
 /*
   "BURAYA DA GELİN" ÇEKMECESİ — bölge dışı müşterinin talebini bırakırken HESABININ da açıldığı
@@ -59,6 +52,11 @@ import { publishMe } from './use-me.hook';
   E-POSTA GÖVDEYE KONMAZ: doğrulama bittiğinde oturum cihazda kuruludur (`verifyOtp` → `setSession`)
   ve uç e-postayı Bearer'dan çözer — gövdeden gelen adres yok sayılır, yani başkasının yerine kayıt
   bırakılamaz.
+
+  ── KİMLİK ADIMI ARTIK PAYLAŞILAN (21.31) ───────────────────────────────────
+  E-posta → kod → oturum mekaniği `use-otp-sign-in.hook`a çıktı: ikinci tüketen doğdu (B2B başvuru
+  formu) ve aynı durum makinesini ikinci kez yazmak bir gün ayrışacak bir kopya olurdu. Bu dosyada
+  kalan iki şey kendisine ait: TALEBİN yazılması ve cümleler (CLAUDE §2 — sözlük ekranın).
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -66,17 +64,13 @@ type Messages = LocalizedCopy<typeof messages>;
 /** Gövde tipi SÖZLEŞMEDEN türer; `country` için elle bir birleşim yazılmaz (02-mimari §3.2). */
 type NoticeBody = z.input<typeof PlaceNoticeBodySchema>;
 
-/** Kod uzunluğu — giriş ekranıyla aynı (altı hane). */
-const CODE_LENGTH = 6;
-
 /**
- * Akışın hâli. `verifying`/`recording` ayrı fazlar: alan ve düğme kilitli kalmalı — iki kez
- * gönderilen aynı talep anonim sayacı (`postal_code_demand`) bir kişiyi iki kez saydırırdı.
+ * Çekmecenin KENDİ hâli — kimlik adımının fazı hook'ta (`use-otp-sign-in`), burada yalnız TALEBİN
+ * yazımı var. `recording` ayrı bir faz: düğme kilitli kalmalı, iki kez gönderilen aynı talep anonim
+ * sayacı (`postal_code_demand`) bir kişiyi iki kez saydırırdı.
  */
 type SheetPhase =
-  | { kind: 'email' }
-  | { kind: 'code' }
-  | { kind: 'verifying' }
+  | { kind: 'identity' }
   | { kind: 'recording' }
   | { kind: 'recorded'; status: 'ok' | 'already' }
   | { kind: 'failed'; reason: 'place_unknown' | 'email_required' | 'transport' };
@@ -108,39 +102,9 @@ export function PlaceNoticeSheet({
   const t: Messages = messages[locale];
   const copy = t.placeNotice;
 
-  const [phase, setPhase] = useState<SheetPhase>({ kind: 'email' });
-  const [email, setEmail] = useState('');
-  /* Alan hataları FAZDAN AYRI tutulur: geçersiz adres akışın hâlini değiştirmez (hâlâ "adres
-     soruyoruz"), yalnız alanın altına bir satır ekler. */
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [code, setCode] = useState('');
-  const [codeError, setCodeError] = useState<string | null>(null);
-  /** İstek uçuştayken düğme kilidi — çift dokunuş iki kod isteği atmasın. */
-  const [sending, setSending] = useState(false);
-  /** 429'un bekleme süresi (sn) — sayaç sıfıra inene dek yeniden gönderme kilitli. */
-  const [cooldownSec, setCooldownSec] = useState(0);
-
-  useEffect(() => {
-    if (cooldownSec <= 0) return;
-    const timer = setTimeout(() => setCooldownSec((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [cooldownSec]);
+  const [phase, setPhase] = useState<SheetPhase>({ kind: 'identity' });
 
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
-
-  /**
-   * Bekleme cezası TEK kaynaktan söylenir: saniye sayacı yalnız DÜĞME/BAĞLANTI etiketinde işler
-   * (giriş ekranının 08.08'de ölçülmüş kararı — saniyeyi hata metnine gömmek, donmuş bir
-   * "bekleyin" yazısını aktif düğmenin yanında bırakıyordu).
-   */
-  const applyAuthError = (
-    result: { error: AuthErrorKey; retryAfterSec: number | null },
-    setError: (text: string | null) => void,
-  ) => {
-    setCooldownSec(result.retryAfterSec ?? 0);
-    const penalized = result.retryAfterSec !== null && (result.error === 'cooldown' || result.error === 'rate_limit');
-    setError(penalized ? null : authErrorText(locale, result.error));
-  };
 
   /** Talebi bırakır — oturum ARTIK var, e-posta gövdeye konmaz (künye). */
   const recordNotice = () => {
@@ -163,64 +127,9 @@ export function PlaceNoticeSheet({
     });
   };
 
-  const sendCode = () => {
-    const trimmed = email.trim();
-    if (!isValidEmail(trimmed)) {
-      setEmailError(copy.emailInvalid);
-      return;
-    }
-    setEmailError(null);
-    setSending(true);
-    void requestOtp(trimmed, locale).then((result) => {
-      setSending(false);
-      if (result.error !== null) {
-        applyAuthError({ error: result.error, retryAfterSec: result.retryAfterSec }, setEmailError);
-        return;
-      }
-      setCode('');
-      setCodeError(null);
-      setPhase({ kind: 'code' });
-    });
-  };
-
-  const resend = () => {
-    if (cooldownSec > 0 || sending) return;
-    setSending(true);
-    setCode('');
-    setCodeError(null);
-    void requestOtp(email.trim(), locale).then((result) => {
-      setSending(false);
-      if (result.error !== null) {
-        applyAuthError({ error: result.error, retryAfterSec: result.retryAfterSec }, setCodeError);
-      }
-    });
-  };
-
-  const onCodeChange = (value: string) => {
-    // Yalnız rakam ve en çok altı hane: alan biçimi kendi zorlar, kullanıcı hata mesajı görmez.
-    const digits = value.replace(/\D/g, '').slice(0, CODE_LENGTH);
-    setCode(digits);
-    setCodeError(null);
-    if (digits.length !== CODE_LENGTH) return;
-
-    setPhase({ kind: 'verifying' });
-    void verifyOtp(email.trim(), digits, locale).then((result) => {
-      if (result.error !== null) {
-        // Kod aşamasına geri: yanlış kod, alan temizlenmiş hâlde yeniden denenir.
-        setPhase({ kind: 'code' });
-        setCode('');
-        applyAuthError({ error: result.error, retryAfterSec: result.retryAfterSec }, setCodeError);
-        return;
-      }
-      /* PROFİL BURADA OKUNUP YAYINLANIR (giriş ekranının 09.08'de ÖLÇÜLMÜŞ yarışı): `useMe`
-         oturum olayını gecikmeli işliyor, arkadaki ekranlar o aralıkta müşteriyi "misafir"
-         sanabiliyor. Okuma düşerse akış durmaz — talep kaydı asıl iştir, selamlama yardımcı. */
-      void fetchMe().then((me) => {
-        if (me.error === null) publishMe(me.data);
-      });
-      recordNotice();
-    });
-  };
+  /* Kimlik adımı PAYLAŞILAN mekanikten: e-posta → kod → oturum. Oturum kurulunca asıl iş burada
+     başlar — hook talebin ne olduğunu bilmez (künye). */
+  const signIn = useOtpSignIn({ locale, invalidEmailText: copy.emailInvalid, onSignedIn: recordNotice });
 
   const failureText =
     phase.kind !== 'failed'
@@ -233,65 +142,15 @@ export function PlaceNoticeSheet({
 
   return (
     <BottomSheet visible={visible} title={copy.sheetTitle} onClose={onClose} testID={idOf('sheet')}>
-      {phase.kind === 'email' ? (
+      {phase.kind === 'identity' ? (
         <View style={styles.block}>
-          <Text style={styles.intro}>{copy.sheetIntro}</Text>
-          <Text style={styles.prompt}>{copy.emailPrompt}</Text>
-          <TextField
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              setEmailError(null);
-            }}
-            accessibilityLabel={copy.emailLabel}
-            placeholder={copy.emailPlaceholder}
-            content="email"
-            errorText={emailError ?? undefined}
-            testID={idOf('email')}
-          />
-          <PrimaryButton
-            label={
-              cooldownSec > 0
-                ? copy.sendWait.replace('{s}', String(cooldownSec))
-                : sending
-                  ? copy.sending
-                  : copy.send
-            }
-            onPress={sendCode}
-            disabled={sending || cooldownSec > 0}
-            testID={idOf('send')}
-          />
+          {/* Giriş cümlesi çekmecenin KENDİSİNE ait: kimlik adımı ortak, ne için istendiği değil. */}
+          {signIn.phase === 'email' ? <Text style={styles.intro}>{copy.sheetIntro}</Text> : null}
+          <OtpSignInFields signIn={signIn} copy={copy} testID={testID} />
         </View>
       ) : null}
 
-      {phase.kind === 'code' ? (
-        <View style={styles.block}>
-          <Text style={styles.prompt}>{copy.sent.replace('{email}', email.trim())}</Text>
-          <CodeField
-            value={code}
-            onChangeText={onCodeChange}
-            accessibilityLabel={copy.codeField}
-            placeholder={copy.codePlaceholder}
-            testID={idOf('code')}
-          />
-          {codeError === null ? null : (
-            <Text style={styles.codeError} testID={idOf('code-error')}>
-              {codeError}
-            </Text>
-          )}
-          <View style={styles.resendRow}>
-            {/* Bekleme süresince GERÇEKTEN kilitli (soluk + basılamaz) — sayaç yalnız burada. */}
-            <TextAction
-              label={cooldownSec > 0 ? copy.resendWait.replace('{s}', String(cooldownSec)) : copy.resend}
-              onPress={resend}
-              disabled={sending || cooldownSec > 0}
-              testID={idOf('resend')}
-            />
-          </View>
-        </View>
-      ) : null}
-
-      {phase.kind === 'verifying' || phase.kind === 'recording' ? (
+      {phase.kind === 'recording' ? (
         <View style={styles.busy}>
           <LoadingState label={copy.verifying} accessibilityLabel={copy.verifying} testID={idOf('busy')} />
         </View>

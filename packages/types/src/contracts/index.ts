@@ -24,6 +24,9 @@ export * from './ticket-api.schema';
 // Geri bildirim akışı — davet + oy/yorum/tamamlama; token oturum yerine geçer, kimlik alanları
 // bilerek zarf dışında (gerekçeler dosya başlığında).
 export * from './feedback-api.schema';
+// B2B başvurusu — resmî kayıt okuması + AB vergi doğrulaması + başvurunun yazımı/durumu. Alan
+// denetimi ŞEMADA DEĞİL motorda; bağ uçta derleme kilidiyle kurulur (gerekçe dosya başlığında).
+export * from './b2b-api.schema';
 // Keşif turu — aday ürün destesi + kaydırma + ziyaretçi turunun hesaba bağlanması. Kart katalog
 // kartından TÜRETİLMEZ: aday ürün fiyat/stok/varyant taşımaz (gerekçe dosya başlığında).
 export * from './discover-api.schema';

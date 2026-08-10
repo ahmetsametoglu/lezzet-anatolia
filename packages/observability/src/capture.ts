@@ -90,6 +90,14 @@ export const SOURCES = {
    * arasında bölünür ve ikisi de eşiğin altında kalırdı.
    */
   applicationOrder: 'application-order',
+  /**
+   * Paylaşılan B2B akışı (`packages/application/src/b2b` + `customer/b2b.ts`) — resmî işletme
+   * kaydı okuması, AB vergi numarası doğrulaması ve başvurunun yazımı (21.31). Aynı ayrım:
+   * web'in Professionnels sayfası ile mobilin başvuru formu AYNI kapıları çağırıyor ve bu
+   * akışın tipik arızası DIŞ SERVİSİN düşmesidir — iki kovaya bölünürse "kayıt servisi bugün
+   * cevap vermiyor" hiçbir ekranda görünmez.
+   */
+  applicationB2b: 'application-b2b',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

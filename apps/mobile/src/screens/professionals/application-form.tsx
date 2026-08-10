@@ -1,115 +1,94 @@
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  formatSiret,
+  normalizeSiret,
+  normalizeVatNumber,
+  type B2bApplicationInput,
+  type B2bApplicationKind,
+} from '@lezzet/domain-core';
 
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
-import {
-  applicationIssues,
-  emptyApplication,
-  formatSiret,
-  isGermanVatNumber,
-  normalizeSiret,
-  normalizeVatNumber,
-  type ApplicationField,
-  type ApplicationInput,
-  type ApplicationKind,
-  type Messages,
-} from './professionals-types';
+import type { Messages } from './professionals-types';
 
 /*
   BAŞVURU FORMU (v3 `vPro`nun `pr.notSent` gövdesi) — iki yol, tek gönderim.
 
-  ── BEKLEYEN(21.14): GÖNDERİM UCU YOK ───────────────────────────────────────
-  `apps/mobile-api` bugün B2B başvurusu için ÜÇ ucun hiçbirini taşımıyor: resmî kayıt okuması
-  (webin `lookupSiretAction`), AB vergi numarası doğrulaması (`checkVatAction`) ve başvurunun
-  kendisi (`applyAsCustomerAction`/`verifyAndApplyAction`). Uydurma bir uç ÇAĞRILMADI; gönderim
-  ekranın durumunda kalıyor ve onay bloğuna dönüyor — 21.14'ün "uç yoksa ekran TAM çalışır"
-  kuralının aynısı. (Talep formu bu arada ucuna KAVUŞTU — `screens/support/new-ticket-sheet`
-  gerçek `POST /api/v1/me/tickets`e gidiyor; buradaki emsal artık yalnız "uç yokken ne yapılır"
-  kuralının kendisidir, o ekranın bugünkü hâli değil.)
+  ── FORM ARTIK YALNIZ ÇİZER (21.31) ─────────────────────────────────────────
+  Akışın kendisi (kayıt okuma → alanları doldurma → denetim → gönderim → kimlik adımı → tekrar
+  deneme) EKRANDA yaşıyor; burada kalan yalnız alanlar ve dokunuşların yukarı bildirilmesi.
+  Gerekçe ölçülebilir: aynı akışın parçaları iki dosyaya bölünseydi "hangi alan hangi kaynaktan
+  doldu" sorusunun cevabı ikiye ayrılırdı.
 
-  ── ŞABLONDAN SAPMALAR, hepsi eksik ucun sonucu ─────────────────────────────
-  1. **"Bul" düğmesi kayıt OKUMAZ, formu AÇAR.** v3'te düğme resmî kayıttan künyeyi getirip
-     onay kartına yazıyor (v3:34-42). Kayıt kapısı yokken o kartı çizmek, olmayan bir kaynaktan
-     geldiğini söyleyen bir veri göstermek olurdu. Düğme yerinde ve gerçek iş yapıyor: numaranın
-     biçimini denetliyor ve şirket bloğunu açıyor — künye aynı yerde beliriyor, farkı YAZAN
-     tarafın kim olduğu. Metin bunu açıkça söylüyor (`form.siretNote`).
-  2. **Şirket adresi İKİ yolda da elle giriliyor.** Motor adresi iki yolda da zorunlu tutuyor
-     (`b2b-application` künyesi: adres yoksa onay kartının rota sinyali ölçülemez kalır); SIRET
-     yolunda web onu kayıttan dolduruyor, biz dolduramıyoruz. Alanları hiç sormamak, sunucuya
-     eksik bir başvuru göndermek demekti.
-  3. **AB numarasının ✓ işareti BİÇİM işareti** (v3'ün `DE`+9 kuralı), servis doğrulaması değil;
-     ayrımın gerekçesi `professionals-types` künyesinde.
-  4. **"Gönderiliyor…" ara hâli YOK** — bekleyecek bir ağ turu yok. Uç bağlandığında düğmenin
-     `disabled` kapısı ve webin `form.submitting` metni birlikte gelir.
+  Eski künyedeki **BEKLEYEN(21.14)** kalktı: üç ucun üçü de artık var (`GET /b2b/company/:siret` ·
+  `GET /b2b/vat/:number` · `POST /me/b2b/application`).
+
+  ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
+  1. **Şirket adresi AB yolunda elle giriliyor**, SIRET yolunda resmî kayıttan gelir. Motor adresi
+     iki yolda da zorunlu tutuyor (`b2b-application` künyesi: adres yoksa onay kartının rota
+     sinyali ölçülemez kalır); AB yolunda resmî kayıt muadili açık bir kaynak yok.
+  2. **AB numarasının işareti artık ÖLÇÜM, tahmin değil** — v3'ün `DE`+9 biçim kuralı yerine VIES
+     cevabı çiziliyor ve üç değeri de ayrı: geçerli · bulunamadı · doğrulanamadı. Sonuncusu
+     başvuruyu ENGELLEMEZ (üye ülke sunucuları düzenli olarak susuyor).
+  3. **Kit'te MÜREKKEP tonlu düğme yok** (birincil zeytin, ikincil çerçeveli); "Bul" düğmesinin
+     yüzeyi bu yüzden ekranda kuruldu — ihtiyaç raporlandı.
 */
 
 interface ApplicationFormProps {
   t: Messages;
-  /** Gönderim tamamlandı — ekran onay bloğuna geçer (v3'te `pr.sent`). */
-  onSubmitted: () => void;
+  input: B2bApplicationInput;
+  onChange: (patch: Partial<B2bApplicationInput>) => void;
+  onKindChange: (kind: B2bApplicationKind) => void;
+  /** Şirket bloğu açık mı — SIRET yolunda "Bul"dan sonra açılır, AB yolunda zaten açıktır. */
+  companyOpen: boolean;
+  /** Resmî kayıt sorgusu uçuşta. */
+  looking: boolean;
+  onLookup: () => void;
+  /** `undefined` = hiç sorulmadı · `null` = sorulamadı · `true/false` = VIES'in cevabı. */
+  vatValid: boolean | null | undefined;
+  vatChecking: boolean;
+  submitting: boolean;
+  /** Tek satırlık bildirim — eksik alan, kayıt bulunamadı, gönderim düştü (cümleyi ekran kurar). */
+  notice: string | null;
+  onSubmit: () => void;
 }
 
-export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
-  const [input, setInput] = useState<ApplicationInput>(emptyApplication);
-  /**
-   * Şirket bloğu açık mı. SIRET yolunda "Bul"la açılır; AB yolunda zaten açıktır (orada künye
-   * ZATEN elle giriliyor, web de öyle yapıyor — açılacak bir şey yok).
-   */
-  const [companyOpen, setCompanyOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
+export function ApplicationForm({
+  t,
+  input,
+  onChange,
+  onKindChange,
+  companyOpen,
+  looking,
+  onLookup,
+  vatValid,
+  vatChecking,
+  submitting,
+  notice,
+  onSubmit,
+}: ApplicationFormProps) {
   const isSiret = input.kind === 'siret';
   const showCompany = companyOpen || !isSiret;
 
-  const set = (patch: Partial<ApplicationInput>) => {
-    setInput((prev) => ({ ...prev, ...patch }));
-    // Yazmaya başlayınca eski ret düşer: kapanmış bir kapının uyarısı ekranda durmaz.
-    setNotice(null);
-  };
-
-  /** Yol değişince kimlik alanları SIFIRLANIR: iki yolun künyesi birbirinin yerine geçmez. */
-  const switchKind = (kind: ApplicationKind) => {
-    if (kind === input.kind) return;
-    setCompanyOpen(false);
-    setNotice(null);
-    setInput((prev) => ({ ...prev, kind, siret: '', vatNumber: '', legalName: '', line1: '', postalCode: '', city: '' }));
-  };
-
-  /** Şablonun "Bul"u — kayıt okuyamadığı için numarayı denetler ve künye bloğunu açar. */
-  const openCompany = () => {
-    if (normalizeSiret(input.siret).length !== 14) {
-      setNotice(t.errors.siretLength);
-      setCompanyOpen(false);
-      return;
-    }
-    setNotice(null);
-    setCompanyOpen(true);
-  };
-
-  const submit = () => {
-    /* Numara tamsa blok kendiliğinden açılır: kapalı bir bloğun eksik alanını "tamamlayın" demek,
-       kullanıcıyı göremediği bir kapıya yollamaktı. */
-    if (isSiret && normalizeSiret(input.siret).length === 14) setCompanyOpen(true);
-
-    const issues = applicationIssues(input);
-    if (issues.length > 0) {
-      setNotice(retFor(issues, input.kind, t));
-      return;
-    }
-    setNotice(null);
-    // BEKLEYEN(21.14): gönderim ucu bağlandığında çağrı buraya girer; bugün onay ekranda kalır.
-    onSubmitted();
-  };
+  /** VIES'in üç cevabı + "hiç sorulmadı" — dördüncüsünde işaret HİÇ çizilmez. */
+  const vatMark = vatChecking
+    ? t.form.vatChecking
+    : vatValid === true
+      ? t.form.vatValid
+      : vatValid === false
+        ? t.form.vatInvalid
+        : vatValid === null
+          ? t.form.vatUnknown
+          : null;
 
   return (
     <View style={styles.form}>
       {/* İki yol — seçim birbirini dışlıyor, o yüzden `tab` rolü ve `selected` bayrağı. */}
       <View style={styles.tabs}>
-        <KindTab label={t.form.tabSiret} active={isSiret} onPress={() => switchKind('siret')} testID="pro-tab-siret" />
-        <KindTab label={t.form.tabVat} active={!isSiret} onPress={() => switchKind('eu_vat')} testID="pro-tab-vat" />
+        <KindTab label={t.form.tabSiret} active={isSiret} onPress={() => onKindChange('siret')} testID="pro-tab-siret" />
+        <KindTab label={t.form.tabVat} active={!isSiret} onPress={() => onKindChange('eu_vat')} testID="pro-tab-vat" />
       </View>
 
       {isSiret ? (
@@ -117,20 +96,21 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
           <Text style={styles.note}>{t.form.siretNote}</Text>
           <TextField
             value={formatSiret(input.siret)}
-            onChangeText={(value) => set({ siret: normalizeSiret(value).slice(0, 14) })}
+            onChangeText={(value) => onChange({ siret: normalizeSiret(value).slice(0, 14) })}
             accessibilityLabel={t.form.siret}
             placeholder={t.form.siret}
             shape="pill"
             numeric
             trailing={
               <PressableSurface
-                onPress={openCompany}
+                onPress={onLookup}
                 feedback="scale-small"
+                disabled={looking}
                 style={styles.fetch}
                 accessibilityLabel={t.form.fetch}
                 testID="pro-fetch"
               >
-                <Text style={styles.fetchLabel}>{t.form.fetch}</Text>
+                <Text style={styles.fetchLabel}>{looking ? t.form.fetching : t.form.fetch}</Text>
               </PressableSurface>
             }
             testID="pro-siret"
@@ -140,16 +120,16 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
         <View style={styles.block}>
           <TextField
             value={input.vatNumber}
-            onChangeText={(value) => set({ vatNumber: normalizeVatNumber(value).slice(0, 11) })}
+            onChangeText={(value) => onChange({ vatNumber: normalizeVatNumber(value).slice(0, 14) })}
             accessibilityLabel={t.form.vatNumber}
             placeholder={t.form.vatNumber}
             shape="pill"
             trailing={
-              isGermanVatNumber(input.vatNumber) ? (
-                <Text style={styles.vatMark} testID="pro-vat-valid">
-                  {t.form.vatValid}
+              vatMark === null ? null : (
+                <Text style={[styles.vatMark, vatValid === false ? styles.vatMarkBad : null]} testID="pro-vat-mark">
+                  {vatMark}
                 </Text>
-              ) : null
+              )
             }
             testID="pro-vat"
           />
@@ -164,7 +144,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
           </Text>
           <TextField
             value={input.legalName}
-            onChangeText={(value) => set({ legalName: value })}
+            onChangeText={(value) => onChange({ legalName: value })}
             accessibilityLabel={t.form.legalName}
             placeholder={t.form.legalName}
             shape="pill"
@@ -172,7 +152,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
           />
           <TextField
             value={input.line1}
-            onChangeText={(value) => set({ line1: value })}
+            onChangeText={(value) => onChange({ line1: value })}
             accessibilityLabel={t.form.line1}
             placeholder={t.form.line1}
             shape="pill"
@@ -183,7 +163,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
             <View style={styles.pairNarrow}>
               <TextField
                 value={input.postalCode}
-                onChangeText={(value) => set({ postalCode: value })}
+                onChangeText={(value) => onChange({ postalCode: value })}
                 accessibilityLabel={t.form.postalCode}
                 placeholder={t.form.postalCode}
                 shape="pill"
@@ -194,7 +174,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
             <View style={styles.pairWide}>
               <TextField
                 value={input.city}
-                onChangeText={(value) => set({ city: value })}
+                onChangeText={(value) => onChange({ city: value })}
                 accessibilityLabel={t.form.city}
                 placeholder={t.form.city}
                 shape="pill"
@@ -211,7 +191,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
         </Text>
         <TextField
           value={input.contactName}
-          onChangeText={(value) => set({ contactName: value })}
+          onChangeText={(value) => onChange({ contactName: value })}
           accessibilityLabel={t.form.contactName}
           placeholder={t.form.contactName}
           shape="pill"
@@ -219,7 +199,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
         />
         <TextField
           value={input.email}
-          onChangeText={(value) => set({ email: value })}
+          onChangeText={(value) => onChange({ email: value })}
           accessibilityLabel={t.form.email}
           placeholder={t.form.email}
           shape="pill"
@@ -228,7 +208,7 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
         />
         <TextField
           value={input.phone}
-          onChangeText={(value) => set({ phone: value })}
+          onChangeText={(value) => onChange({ phone: value })}
           accessibilityLabel={t.form.phone}
           placeholder={t.form.phone}
           shape="pill"
@@ -242,23 +222,14 @@ export function ApplicationForm({ t, onSubmitted }: ApplicationFormProps) {
         </Text>
       )}
 
-      <PrimaryButton label={t.form.submit} onPress={submit} testID="pro-submit" />
+      <PrimaryButton
+        label={submitting ? t.form.submitting : t.form.submit}
+        onPress={onSubmit}
+        disabled={submitting}
+        testID="pro-submit"
+      />
     </View>
   );
-}
-
-/**
- * Ret CÜMLESİ — tek satır, ama NE eksik olduğunu söyleyen bir satır.
- *
- * v3 de tek satır basıyor (`pr.err`) ve o satır her seferinde eksiği ADIYLA anıyor ("Ad soyad ve
- * geçerli bir e-posta gerekli."). Şablonun üç sabit cümlesi yerine alan adları sözlükten
- * toplanıyor: hangi alanların sorulduğu değişince cümle kendiliğinden doğru kalıyor. SIRET'in
- * kendi cümlesi korundu — "14 hane" bilgisi bir alan adından çıkmaz.
- */
-function retFor(issues: readonly ApplicationField[], kind: ApplicationKind, t: Messages): string {
-  if (kind === 'siret' && issues.includes('siret')) return t.errors.siretLength;
-  // Alan adı = sözlük anahtarı (`form.email`, `form.postalCode`…); ikinci bir eşleme tablosu yok.
-  return t.errors.incomplete.replace('{fields}', issues.map((field) => t.form[field]).join(' · '));
 }
 
 interface KindTabProps {
@@ -361,6 +332,8 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text.helper,
     color: theme.colors['olive-dark'],
   },
+  /** Geçersiz numara uyarı tonunda; "doğrulanamadı" NÖTR kalır — o bir suçlama değil, bir boşluk. */
+  vatMarkBad: { color: theme.colors['terracotta-bright'] },
 
   pairRow: {
     flexDirection: 'row',

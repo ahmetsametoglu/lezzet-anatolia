@@ -22,6 +22,7 @@
     "@lezzet/address-fr": "workspace:*",
     "@lezzet/brand": "workspace:*",
     "@lezzet/design-tokens": "workspace:*",
+    "@lezzet/domain-core": "workspace:*",
     "@lezzet/helper": "workspace:*",
     "@lezzet/i18n": "workspace:*",
     "@lezzet/types": "workspace:*",

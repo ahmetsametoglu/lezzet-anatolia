@@ -5,6 +5,7 @@ import { MeSchema, MeUpdateSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { addresses } from './addresses';
 import { authOtp } from './auth-otp';
+import { b2b, b2bPublic } from './b2b';
 import { cart } from './cart';
 import { cartView } from './cart-view';
 import { catalog } from './catalog';
@@ -69,6 +70,11 @@ v1.route('/', discover);
 // başka bir tutar göstermesi demekti. Uç niyeti GÖVDEDEN alır ve hiçbir şey YAZMAZ — girişli
 // kullanıcının sepeti buradan gölgelenemez, onunki `bearerAuth`ın arkasındaki `/me/cart`tır.
 v1.route('/cart', cartView);
+// B2B'nin OKUMA yarısı da açık kümededir (21.31): resmî kayıt sorgusu ve vergi numarası
+// doğrulaması, aday daha hesap açmadan — form kimlik istemeden doldurulur ve künyesini görmeden
+// kimse hesap açmaya ikna olmaz (webde de ziyaretçiye açık). Başvurunun YAZIMI Bearer'ın
+// arkasında; maruziyet ve sınırı `b2b.ts` künyesinde.
+v1.route('/', b2bPublic);
 
 v1.use('*', bearerAuth);
 
@@ -154,6 +160,11 @@ v1.route('/me/discover', discoverClaim);
 // Talep uçları (21.18) — Bearer'ın ARKASINDA: talep müşterinin kendisidir. Durum makinesi ve
 // bildirim tetikleri `@lezzet/application`ın talep kapısında (`ticket/{read,write}.ts`).
 v1.route('/me/tickets', tickets);
+
+// B2B başvurusunun YAZIMI ve DURUMU (21.31) — Bearer'ın ARKASINDA: başvuru ayrı bir varlık değil,
+// müşteri kaydının bir hâli (DOMAIN §10), yani sahibi olmak zorunda. Kural
+// `@lezzet/application/customer/b2b`de; okumaların açık yarısı yukarıda.
+v1.route('/me/b2b', b2b);
 
 /**
  * Personel bölümleri (21.10 · 21.11) — `bearerAuth`ın ARDINDA ve orada kalacaklar: katalogun aksine
