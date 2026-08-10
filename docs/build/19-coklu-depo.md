@@ -150,6 +150,40 @@ Sistemi tek-depo varsayımından depo ağına taşır: depo varlığı, posta ko
   - **Eşik KARGO grubundan ölçülüyor** (K37): ücretsiz kargo bir kargo MALİYETİ kuralıdır, rota grubunun tutarının onunla ilgisi yok. Hesap kapıda yapılıyor, çağırana bırakılmıyor — sepet ekranı ile checkout iki ayrı hesap yapsaydı "sepette bedava yazıyordu" şikâyeti doğardı.
   - **`route: null` = yer bilinmiyor** ve bu bir eksik değil: hangi yoldan geleceğini bilmediğimiz bir kaleme yol atamak, bilmediğimiz şeyi söylemektir. Paket satırı da ayrımın dışında — kalemleri farklı depolarda olabilir ve "paketi ikiye böl" diye bir şey yok (DOMAIN §13).
   - `resolveDelivery` artık `shippingWarehouseId` de döndürüyor (19.15'in girdisi): kargo deposu ÜLKEDEN türer, rotadan değil — rota içindeki müşteri de kargo dolgusu alabilir. 5 entegrasyon testi.
+  - ⚠ **YARIM KALMIŞTI — kablo rota DIŞINDA hiç bağlanmamış (bulundu 10.08, mobil şeridin cihaz ölçümü;
+    düzeltildi denetimde).** `decideRoutes` yalnız rota deposunu alıyordu ve o boşsa BOŞ harita
+    dönüyordu; satırlar kuruluş değerinde kalıyordu (`route: null` → `group: 'local'`). Yani **rota
+    dışındaki her adreste, her yüzeyde** sepet her kalemi "kapıya teslim ediyoruz" diye gösteriyordu —
+    soğuk zincir kalemi de dahil, o adrese hiç gelemezken. Yan hasarlar: `undeliverableSubtotalCents`
+    daima 0 (asgari sepet matrahı yanlış), `shippingOnly` daima `false` (salt-kargo sepeti rota sepeti
+    sanılıyor), 10.08'in grup işi rota dışında ölü.
+    - **Kök, `warehouseId` boşluğunun İKİ ayrı şey demesiydi ve fonksiyonun ikisini tek saymasıydı:**
+      "yer bilinmiyor" (iki depo da yok — yol atamamak doğru) ile "yer biliniyor, rota dışı" (rota
+      deposu yok ama kargo deposu dolu — yol atanmalı). Çıkış koşulu artık "iki depo da yok".
+    - **Motor zaten doğruydu, çağrılmıyordu** (`decideCartAgainstWarehouse`). İkinci havuz da zaten
+      okunuyordu (`product-context`: rota dışında yerel havuz BOŞ harita, kargo havuzu ayrıca
+      çekiliyor) — düzeltme bir parametre ve bir koşul, ek sorgu yok.
+    - **Künye ile kod ayrışmıştı ve bulgunun en pahalı yanı buydu:** `read.ts`in `shippingWarehouseId`
+      künyesi "bunu `decideCartAgainstWarehouse` motoruna veriyor (19.11)" diyordu. Vermiyordu.
+      Okuyan taraf künyeye güvenip kodu bir daha açmadığı için arıza aylarca görünmedi. Künye
+      düzeltildi ve yalanın kaydı orada bırakıldı.
+    - **Neden aylarca kimse görmedi:** aynı posta kodunda KATALOG doğru çalışıyor (ürün soluk +
+      "bu adrese teslim edemiyoruz"), çünkü katalog kargo havuzunu doğrudan okuyor. Yer ekseni
+      sağlamdı; bozuk olan yalnız sepetin yol kararıydı — yani belirti, kaynağın komşusunda görünmüyordu.
+    - 2 regresyon testi (`cart-route.test.ts`): rota dışı adreste kargolanabilir kalem `shipping`
+      + `group: 'shipping'` + `shippingOnly`; soğuk zincir kalem `not_shippable_here` +
+      `group: 'undeliverable'` + tutarı `undeliverableSubtotalCents`e sayılıyor.
+  - ⚠ **`cart.updated_at` yazmada hiç tazelenmiyormuş (aynı ölçümde çıktı, düzeltildi 10.08).**
+    `CartService.write` damgayı gönderiyordu ve künyesi "her dokunuşta tazelenir" diyordu, ama
+    `upsert` girdiyi `insertSchema.parse`ten geçiriyor ve `CartInsertSchema` alanı taşımıyordu —
+    Zod tanımadığı anahtarı sessizce atıyor. Kolon yalnız `default now()` ile, yalnız INSERT'te
+    doluyordu. Ölçüldü: bir sepetin damgası 10:29, aynı sepetin son kalemi 15:27'de eklenmiş.
+    Sepet kurtarma / terk edilmiş sepet okuması bu sütuna bakacak; bugün canlı tüketeni yok ama
+    veri sessizce yanlış birikiyordu.
+    - **Asıl kusur `as CartInsert` dönüşümüydü:** alan şemada olmadığı hâlde çağrıyı geçerli
+      gösteriyordu. Cast kaldırıldı — bundan sonra alan yeniden düşerse derleyici uyarır.
+      **Tarandı: servislerdeki altı `upsert` çağrısından cast kullanan TEK bu vardı**, yani tuzak
+      yayılmamış. Ders `upsert`e değil cast'e ait: `as` ile susturulan bir kapı, kapının olmaması demektir.
 - [x] (19.12) **Varyant+yer bazlı "gelince haber ver"**: `variant_stock_notice (variant_id, country, postal_code, email | customer_id)` — anahtar depo DEĞİL yer (söz müşterinin adresi hakkındadır; bölge ileride başka depoya bağlanırsa söz ayakta kalır) + kısmi unique (`where notified_at is null`). `zone_notice` yerinde kalır, anlamı farklı ("bölgenize gelmiyoruz" ≠ "bu ürün burada yok"). Tetikleyici bu turda değil — kayıt tutulur, ekran "not aldık" der — touches: `supabase/migrations/`, `packages/types/`, `packages/database/`
   - *Bitti:* aynı kişi+varyant+kod için tek açık kayıt; ekran söz vermiyor
   - **Durum (01.08):** `0045` + `VariantStockNoticeService` + `recordVariantStockNoticeAction`. Anahtar YER (`ülke, kod`), depo DEĞİL — bölge ileride başka depoya bağlansa da söz ayakta kalır ve "müşteri depoyu hiç görmez" kuralı veride korunur. Yer istemciden parametre olarak alınmaz, çerezden okunur: kaydın hangi yere ait olduğu bir tercih değil, sistemin bildiği gerçek.

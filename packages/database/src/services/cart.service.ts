@@ -147,10 +147,15 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    *
    * İki liste birlikte yazılır: `saved` verilmezse MEVCUDU korunur. Verilmediğinde boş dizi
    * yazılsaydı, sepete bir kalem eklemek sonraya kaydedilenleri sessizce silerdi.
+   *
+   * **`as CartInsert` KALDIRILDI (10.08).** Cast, alan `CartInsertSchema`'da bulunmadığı hâlde
+   * çağrıyı geçerli gösteriyordu; `upsert` girdiyi `insertSchema.parse`ten geçirince Zod damgayı
+   * sessizce atıyor ve bu künyenin vaadi yerine gelmiyordu. Şema düzeltildi, cast de gitti —
+   * bundan sonra alan yeniden düşerse derleyici uyaracak. Bir dönüşüm, kapının kendisini kapatır.
    */
   private async write(customerId: string, items: CartItem[], saved?: CartItem[]): Promise<Cart> {
     const savedItems = saved ?? (await this.get(customerId)).savedItems;
-    return this.upsert({ customerId, items, savedItems, updatedAt: new Date().toISOString() } as CartInsert, 'customer_id');
+    return this.upsert({ customerId, items, savedItems, updatedAt: new Date().toISOString() }, 'customer_id');
   }
 }
 

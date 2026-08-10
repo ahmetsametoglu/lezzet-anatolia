@@ -22,6 +22,8 @@ const stamp = Date.now();
 
 let categoryId: string;
 let productId: string;
+/** Soğuk zincir ürünü testin İÇİNDE doğuyor; teardown'a yakalanması için dışarıda tutuluyor. */
+let coldProductId: string | null = null;
 let variantId: string;
 let localWarehouseId: string;
 let shippingWarehouseId: string;
@@ -57,7 +59,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds });
+  await purgeTestData(db, {
+    productIds: [productId, ...(coldProductId ? [coldProductId] : [])],
+    categoryIds: [categoryId],
+    warehouseIds,
+  });
 });
 
 const entry = (qty: number) => [{ kind: 'variant' as const, variantId, qty, stockId: null }];
@@ -113,5 +119,52 @@ describe('sepetin yol ayrımı', () => {
   it('kargo deposu bilinmiyorsa kalem kargoya düşmez — uydurma yol yok', async () => {
     const view = await getCartView(db, 'tr',entry(1), { warehouseId: localWarehouseId });
     expect(view.lines[0]?.route).toBe('unavailable');
+  });
+
+  /**
+   * ── ROTA DIŞI ADRES: "rota deposu yok" ≠ "yer bilinmiyor" (10.08) ──────────
+   *
+   * Arıza mobil şeridin cihaz ölçümüyle çıktı ve iki yüzeyi birden kapsıyordu: `decideRoutes` yalnız
+   * rota deposunu alıyor, o boşsa BOŞ harita dönüyordu. Satırlar kuruluş değerinde kalıyor
+   * (`route: null` → `group: 'local'`), yani rota dışındaki her adreste sepet her kalemi "kapıya
+   * teslim ediyoruz" diye gösteriyordu — soğuk zincir kalemi de dahil, o adrese hiç gelemezken.
+   *
+   * Test yerin İKİ hâlini ayırıyor, çünkü arızanın kökü tam olarak ikisinin tek sayılmasıydı.
+   */
+  it('ROTA DIŞI adreste kargolanabilir kalem KARGO yolunu alır — rota deposu yok diye yol düşmez', async () => {
+    const view = await getCartView(db, 'tr', entry(1), { shippingWarehouseId });
+    expect(view.lines[0]?.route).toBe('shipping');
+    // Grup da tazelenmeli: bir tur `local` kalıyordu ve müşteriye kapıya teslim sözü veriyordu.
+    expect(view.lines[0]?.group).toBe('shipping');
+    // Sepetin tamamı kargo grubunda: rota grubu hiç yok.
+    expect(view.shippingOnly).toBe(true);
+  });
+
+  it('ROTA DIŞI adreste SOĞUK ZİNCİR kalem teslim edilemez sayılır — asgari sepete de girmez', async () => {
+    // Ayrı ürün: `shippable: false`, yani kargo yolu bu ürün için hiç açılmaz.
+    const cold = await new ProductService(db).create({
+      name: { tr: `Soğuk zincir ${stamp}` },
+      categoryId,
+      shippable: false,
+      variants: [{ label: { tr: '500 g' } }],
+    });
+    const coldVariantId = cold.variants[0]!.id;
+    await new PriceService(db).insert({ variantId: coldVariantId, channel: 'b2c', amountCents: 1_800 });
+    // Stok KARGO deposunda duruyor — ama ürün kargolanamaz, yani oraya erişilemez.
+    await new StockService(db).insert({
+      warehouseId: shippingWarehouseId,
+      variantId: coldVariantId,
+      physicalQty: 5,
+      expiryDate: new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10),
+    });
+    coldProductId = cold.product.id;
+
+    const view = await getCartView(db, 'tr', [{ kind: 'variant', variantId: coldVariantId, qty: 1, stockId: null }], {
+      shippingWarehouseId,
+    });
+    expect(view.lines[0]?.route).toBe('not_shippable_here');
+    expect(view.lines[0]?.group).toBe('undeliverable');
+    // Gelemeyecek malın tutarı asgari sepet matrahına SAYILMAZ; bir tur daima 0 kalıyordu.
+    expect(view.undeliverableSubtotalCents).toBe(1_800);
   });
 });
