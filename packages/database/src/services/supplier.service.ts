@@ -126,15 +126,6 @@ export class SupplierProductService extends BaseDbService<SupplierProduct, Suppl
    * durumu sessiz bir belirsizliktir — öneri hangisini seçeceğini bilemez.
    */
   async setPreferred(id: string): Promise<SupplierProduct> {
-    const mapping = await this.getById(id);
-    if (!mapping) throw new Error(`supplier_product bulunamadı: ${id}`);
-
-    const { error } = await this.supabase
-      .from('supplier_product')
-      .update({ is_preferred: false })
-      .eq('variant_id', mapping.variantId);
-    if (error) throw error;
-
-    return this.update({ id, isPreferred: true });
+    return this.setExclusiveFlag(id, 'isPreferred', 'variantId');
   }
 }

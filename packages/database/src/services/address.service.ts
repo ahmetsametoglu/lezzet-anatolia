@@ -31,16 +31,7 @@ export class AddressService extends BaseDbService<Address, AddressInsert, Addres
    * checkout'ta hangisinin seçileceğini belirsiz bırakır.
    */
   async setDefault(id: string): Promise<Address> {
-    const address = await this.getById(id);
-    if (!address) throw new Error(`address bulunamadı: ${id}`);
-
-    const { error } = await this.supabase
-      .from('address')
-      .update({ is_default: false })
-      .eq('customer_id', address.customerId);
-    if (error) throw error;
-
-    return this.update({ id, isDefault: true });
+    return this.setExclusiveFlag(id, 'isDefault', 'customerId');
   }
 
   /** İlk adres otomatik varsayılandır — müşteriye "varsayılan yap" dedirtmeye gerek yok. */

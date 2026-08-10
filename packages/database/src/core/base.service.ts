@@ -504,6 +504,53 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   }
 
   /**
+   * "Grup içinde tek bayrak" kuralı: kardeşleri düşürür, kendini işaretler. Varsayılan adres,
+   * tercihli tedarikçi — aynı algoritma, değişen yalnız üç ad.
+   *
+   * **Neden tabana çıktı:** `STACK §6`'nın eşiği "ikinci tüketici" ve o çıktı (`address.setDefault`
+   * ↔ `supplier.setPreferred` satır satır aynıydı, K4-1). Kapsam değerini çağırandan istemiyoruz:
+   * `getById` zaten satırın tamamını getiriyor, kapsam alanı onun içinde — çağıranın ikinci kez
+   * okuması hem tur hem hata payı olurdu.
+   *
+   * **SIRA bilinçli: önce temizle, sonra işaretle.** Tersi bir an için İKİ bayraklı bir grup
+   * üretir; bu sıra bir an için SIFIR bayraklı üretir. İkisi de kusurlu ama simetrik değil: sıfır
+   * bayrak "seçim yok" diye okunur (checkout kullanıcıya sorar), iki bayrak "hangisi?" diye —
+   * sessizce yanlış olanı seçilebilir. Ayrıca bu sıra, kuralın bir gün kısmi unique index'e
+   * taşınmasıyla uyumlu olan TEK sıradır; tersi index'i anında ihlal ederdi.
+   *
+   * İki yazım arasında hata olursa grup bayraksız kalır — PostgREST tek turda koşullu yazım
+   * (`set flag = (id = $1) where scope = $2`) ifade edemediği için gerçek atomiklik ancak RPC ile
+   * gelir. Kayıt `denetim-K4-veri-semasi` Cevap'ında; bugünkü veride ihlal yok (ölçüldü 10.08:
+   * address 6 grup, supplier_product 18 grup, çoklu 0 · bayraksız 0).
+   *
+   * Alanlar camelCase verilir (`isDefault`, `customerId`); çevrimi taban yapar. İkisi de düz
+   * `string` olduğu için derleyici yanlış adı yakalayamaz — bu yüzden **iki bekçi** var: kapsam
+   * alanı satırda yoksa ve bayrak yazımı tutmadıysa fonksiyon fırlatır. Bekçisiz hâlde yanlış ad
+   * sessiz kalırdı: `update()` Zod'dan geçiyor ve şemada olmayan alanı **atarak** yazıyor, yani
+   * çağrı başarılı döner ve hiçbir bayrak değişmez (`writeImageKey` künyesindeki aynı tuzak).
+   */
+  protected async setExclusiveFlag(id: string, flagField: string, scopeField: string): Promise<TDb> {
+    const row = await this.getById(id);
+    if (!row) throw new Error(`[${this.tableName}] ${id} bulunamadı`);
+    const scopeValue = (row as Record<string, unknown>)[scopeField];
+    if (scopeValue === undefined) {
+      throw new Error(`[${this.tableName}] setExclusiveFlag: '${scopeField}' kapsam alanı satırda yok`);
+    }
+
+    const { error } = await this.supabase
+      .from(this.tableName)
+      .update({ [this.column(flagField)]: false })
+      .eq(this.column(scopeField), this.filterValue(scopeField, scopeValue));
+    if (error) throw error;
+
+    const updated = await this.update({ id, [flagField]: true } as TUpdate);
+    if ((updated as Record<string, unknown>)[flagField] !== true) {
+      throw new Error(`[${this.tableName}] setExclusiveFlag: '${flagField}' yazılamadı — Update şemasında yok`);
+    }
+    return updated;
+  }
+
+  /**
    * Verilen id sırasına göre bir sıra-alanını 0..n-1 olarak toplu yazar (sürükle-bırak sonrası).
    * Küçük listeler için ardışık update; ilk hata fırlatılır. Alan camelCase verilir (ör. 'sortOrder').
    */

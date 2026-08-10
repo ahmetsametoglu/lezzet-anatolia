@@ -79,11 +79,13 @@ export class ZoneNoticeService extends BaseDbService<ZoneNotice, ZoneNoticeInser
   /**
    * Haber gönderildi damgası. **Toplu**, çünkü bir bölge açılınca onlarca kişiye birden gider ve
    * satır satır damgalamak turu kişi sayısıyla çarpardı.
+   *
+   * Kolon adı elle yazılmıyor: taban `notifiedAt` → `notified_at` çevrimini kendisi yapıyor (K4-2).
+   * Ham sürümde kolon yeniden adlandırılsa hata **çalışma zamanında** çıkardı ve bu yol bir cron
+   * işinin içinde — yani kullanıcının önüne değil, log'a düşerdi.
    */
   async markNotified(ids: readonly string[], at: string): Promise<void> {
-    if (ids.length === 0) return;
-    const { error } = await this.supabase.from('zone_notice').update({ notified_at: at }).in('id', [...ids]);
-    if (error) throw error;
+    await this.updateWhereIn('id', ids, { notifiedAt: at });
   }
 
   /**
