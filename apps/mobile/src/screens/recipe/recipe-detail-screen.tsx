@@ -13,7 +13,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
@@ -21,6 +20,7 @@ import { addProduct, addProducts, cartCount, useCart } from '@/screens/customer-
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
+import { RecipeSkeleton } from './recipe-skeleton';
 import { useRecipe } from './use-recipe.hook';
 
 /*
@@ -60,24 +60,12 @@ import { useRecipe } from './use-recipe.hook';
 type Messages = LocalizedCopy<typeof messages>;
 
 /*
-  v3'te ölçülmüş, EKRANA-ÖZEL yapısal duraklar. `customer-kit/customer-metrics.ts` bu görevde
-  yazıya KAPALI (kit dosyası) — ham değerler komponent stillerine DAĞILMADI, tek yerde duruyor
-  (ölçü katmanının kendi kuralı); kit açıldığında oraya terfi eder, ihtiyaç raporlandı.
+  EKRANA-ÖZEL ÖLÇÜLER KİTE TERFİ ETTİ (10.08): `hero`/`badgeDrop`/`rowPhoto`/`addBox`/`stepBadge`/
+  `barSpace` artık `customerMetrics`te (`recipe*` önekiyle) — bu dosyanın künyesi zaten "kit
+  açıldığında oraya terfi eder" diyordu. Terfiyi zorunlu kılan skeleton oldu: aynı ölçülere o da
+  ihtiyaç duyunca ekran dosyasından import etmek dairesel bağımlılık, kopyalamak duplikasyon
+  olurdu.
 */
-const recipeMetrics = {
-  /** Kahraman fotoğraf (v3:1184 — 300; ürünün 400'lük kahramanından bilerek basık). */
-  hero: 300,
-  /** Süre·porsiyon rozetinin alt kenardan sarkması (v3:1187 — -18). */
-  badgeDrop: 18,
-  /** Malzeme satırının daire fotoğrafı (v3:1191 — 46). */
-  rowPhoto: 46,
-  /** Sepete + kutusu (v3:1193 — 38×38). */
-  addBox: 38,
-  /** Hazırlanış adımının numara dairesi (v3:1206 — 28). */
-  stepBadge: 28,
-  /** Yapışkan barın kaydırma payı (v3:1223 — 108). */
-  barSpace: 108,
-} as const;
 
 /** Satır eklenebilir mi — fiyatı var VE tükenmedi (v3 `l.ok`'un sözleşmedeki karşılığı). */
 function isAddable(row: RecipeRow): row is RecipeRow & { priceCents: number } {
@@ -125,19 +113,10 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
      aboneliği o dallarda atlamak React'in çağrı sırası kuralını kırardı. */
   const fabCount = cartCount(useCart());
 
-  if (status === 'loading') {
-    return (
-      <View style={styles.screen} testID="recipe-loading">
-        <Skeleton width="100%" height={recipeMetrics.hero} radius="card" />
-        <View style={styles.skeletonBody}>
-          <Skeleton width={120} height={12} radius="full" />
-          <Skeleton width="80%" height={26} radius="full" />
-          <Skeleton width="100%" height={46} radius="card" />
-          <Skeleton width="100%" height={46} radius="card" />
-        </View>
-      </View>
-    );
-  }
+  /* İLK YÜK: sayfanın yerini skeleton tutar (`recipe-skeleton` — ölçülerin kaynağı ve neyin
+     çizilip neyin çizilmediği o dosyanın künyesinde). Ekranın içine gömülü dört çubuk sökülüp
+     oraya taşındı: ölçüleri ham sayıydı ve sayfanın bölümlerini temsil etmiyordu. */
+  if (status === 'loading') return <RecipeSkeleton testID="recipe-loading" />;
 
   if (status === 'missing' || status === 'error' || detail === null) {
     const missing = status === 'missing';
@@ -230,7 +209,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
                         testID={`recipe-row-${row.variantId}`}
                       >
                         <CirclePhoto
-                          size={recipeMetrics.rowPhoto}
+                          size={customerMetrics.recipeRowPhoto}
                           initial={row.name.slice(0, 1)}
                           initialFontSize={theme.text['screen-title']}
                           photoUri={row.image.url}
@@ -338,10 +317,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   content: {
     paddingBottom: theme.space['3xl'],
   },
-  skeletonBody: {
-    padding: theme.space['3xl'],
-    gap: theme.space.xl,
-  },
   errorScreen: {
     flex: 1,
     backgroundColor: theme.colors.cream,
@@ -351,7 +326,7 @@ const styles = StyleSheet.create((theme, rt) => ({
 
   /* Kahraman kapsayıcısı içeriğin ÜSTÜNE çizilir (zIndex) — süre·porsiyon rozeti alt komşuya taşıyor. */
   hero: {
-    height: recipeMetrics.hero,
+    height: customerMetrics.recipeHero,
     zIndex: 2,
   },
   heroImage: {
@@ -389,7 +364,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   timeBadge: {
     position: 'absolute',
     right: theme.space['4xl'],
-    bottom: -recipeMetrics.badgeDrop,
+    bottom: -customerMetrics.recipeBadgeDrop,
     backgroundColor: theme.colors.ink,
     paddingVertical: theme.space.md,
     paddingHorizontal: theme.space['2xl'],
@@ -488,8 +463,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   /** + kutusu (v3:1193-1194): mürekkep çerçeve + krem zemin + 2'lik sert gölge (künye sapma 7). */
   addBox: {
-    width: recipeMetrics.addBox,
-    height: recipeMetrics.addBox,
+    width: customerMetrics.recipeAddBox,
+    height: customerMetrics.recipeAddBox,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.badge,
@@ -522,9 +497,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.xl,
   },
   stepBadge: {
-    width: recipeMetrics.stepBadge,
-    height: recipeMetrics.stepBadge,
-    borderRadius: recipeMetrics.stepBadge / 2,
+    width: customerMetrics.recipeStepBadge,
+    height: customerMetrics.recipeStepBadge,
+    borderRadius: customerMetrics.recipeStepBadge / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors['sand-150'],
@@ -543,7 +518,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
 
   barSpace: {
-    height: recipeMetrics.barSpace,
+    height: customerMetrics.recipeBarSpace,
   },
   /* FAB yuvası — ürün ve paket detaylarının BİREBİR aynı hesabı (`productFabBottom` + güvenli
      alanın barı aşan payı). Üç sayfada aynı ölçü: müşteri düğmeyi hep aynı yerde bulsun. */

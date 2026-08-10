@@ -148,12 +148,24 @@ kez gelenlerle ekranı aşağı itiyor. İkisi de aynı arızanın iki yüzü.
 Skeleton'ın kendisi bu izi **okumaz**: yerleşim `sections` prop'uyla dışarıdan gelir (oturum
 bilgisi de karara giriyor ve o ekranın elinde). Skeleton saf çizim olarak kalır.
 
-**İZİN İŞLEMEDİĞİ EKRANLAR — "yalnız her zaman görüneni çiz" (kullanıcı kararı 10.08, ürün
-detayı):** iz ancak ekran her açılışta AYNI şeyi gösteriyorsa anlamlıdır. Ürün detayı gibi her
-seferinde başka bir kaydı gösteren ekranlarda iz ürüne özel olurdu (bu üründe aile rayı var,
-ötekinde yok) ve slug başına kayıt tutmak depoyu şişirirdi. Orada kural daha basit: **koşulsuz
-bölümler tam çizilir, koşullular hiç çizilmez.** Kayma yalnız "gelen eklendi" yönünde olur;
-gözden kaybolan blok — kullanıcının arıza diye okuduğu hareket — hiç doğmaz.
+**İZİN İŞLEMEDİĞİ EKRANLAR — "yalnız her zaman görüneni çiz" (kullanıcı kararı 10.08; ürün ·
+tarif · paket detayları):** iz ancak ekran her açılışta AYNI şeyi gösteriyorsa anlamlıdır. Detay
+sayfaları gibi her seferinde başka bir kaydı gösteren ekranlarda iz kayda özel olurdu (bu üründe
+aile rayı var, ötekinde yok) ve slug başına kayıt tutmak depoyu şişirirdi. Orada kural daha
+basit: **koşulsuz bölümler tam çizilir, koşullular hiç çizilmez.** Kayma yalnız "gelen eklendi"
+yönünde olur; gözden kaybolan blok — kullanıcının arıza diye okuduğu hareket — hiç doğmaz.
+
+Ölçüt "kodda `if` var mı" değil, **"bu bölüm olmadan sayfa var olabilir mi"**: aile rayı olmayan
+ürün olağandır (çizilmez), malzemesi olmayan tarif ya da kalemi olmayan paket ise yoktur
+(çizilir) — koddaki `length === 0` koruması orada bozuk veriye karşıdır, gerçek bir hâl değil.
+
+**Sayısı bilinmeyen listede EN AZ MAKUL SAYI çizilir.** Kaç malzeme, kaç kalem geleceğini
+bilmiyoruz. Fazla çizmek veri gelince blokları KAYBETTİRİR, az çizmek yalnız aşağı doğru EKLER —
+ikisi eşit değil, o yüzden alt sınır seçilir.
+
+**Yüklenirken de ÇALIŞAN gerçek öğe gri çizilmez.** Paket detayının başlık çubuğu yüklenirken de
+gerçek basılıyor (geri yolu ekran boşken de açık olmalı); skeleton onun altından başlar. Çalışan
+bir düğmeyi gri bloğa çevirmek, kullanıcıyı bekleme süresi boyunca sayfaya kilitler.
 
 **Her skeleton için geçerli üç ölçüt** (ikisinde de aynı):
 - **Ölçü sayfadan türer, tahmin edilmez.** Yükseklik `fontSize × satır oranı` ya da kit ölçüsüdür;

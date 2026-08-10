@@ -58,6 +58,24 @@ export const customerMetrics = {
   /** Sepet FAB'ının yapışkan barın üstündeki konumu (v3:602 — `b:'112px'`). */
   productFabBottom: 112,
 
+  /*
+    TARİF ve PAKET DETAYININ ölçüleri — 10.08'e kadar kendi ekran dosyalarında ham sabit olarak
+    duruyorlardı ("kit bu etapta yazıya kapalı, terfi ihtiyacı raporlandı" künyeleriyle). Terfi
+    burada gerçekleşti: skeleton'lar da aynı ölçülere ihtiyaç duyunca ekran dosyasından import
+    etmek dairesel bağımlılık doğuruyordu ve ikinci bir kopya yazmak duplikasyondu.
+  */
+  /** Tarif kahramanı (v3:1184 — 300; ürünün 400'lüğünden bilerek basık) + rozetin sarkması (v3:1187). */
+  recipeHero: 300,
+  recipeBadgeDrop: 18,
+  /** Malzeme satırının daire fotoğrafı (v3:1191 — 46) ve sepete + kutusu (v3:1193 — 38×38). */
+  recipeRowPhoto: 46,
+  recipeAddBox: 38,
+  /** Hazırlanış adımının numara dairesi (v3:1206 — 28) ve barın kaydırma payı (v3:1223 — 108). */
+  recipeStepBadge: 28,
+  recipeBarSpace: 108,
+  /** Paket içerik satırının küçük karesi (v3:27 — 46, köşe 10). */
+  packageItemPhoto: 46,
+
   /** Sipariş detayındaki canlı takip haritası (v3:702 — 195). */
   mapHeight: 195,
 

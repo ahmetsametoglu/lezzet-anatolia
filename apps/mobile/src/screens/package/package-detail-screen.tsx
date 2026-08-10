@@ -3,7 +3,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PackageItem } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState, useSyncExternalStore } from 'react';
-import { Image, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Image, ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@/components/ui/back-button';
@@ -13,7 +13,6 @@ import { Icon } from '@/components/ui/icon';
 import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
@@ -25,6 +24,7 @@ import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
+import { PackageSkeleton } from './package-skeleton';
 import { usePackage } from './use-package.hook';
 
 /*
@@ -68,11 +68,11 @@ import { usePackage } from './use-package.hook';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/**
- * İçerik satırının küçük karesi (v3:27 — 46 dp, köşe 10). Ölçü `customerMetrics`e AİT ama o dosya
- * kit kapsamında ve bu etapta yazıya kapalı — terfi ihtiyacı raporlandı; ham değer tek yerde durur.
- */
-const PACKAGE_ITEM_PHOTO = 46;
+/*
+  İçerik satırının küçük karesi KİTE TERFİ ETTİ (10.08): `customerMetrics.packageItemPhoto`. Bu
+  dosyanın künyesi zaten "terfi ihtiyacı raporlandı" diyordu; terfiyi zorunlu kılan skeleton oldu —
+  aynı ölçüye o da ihtiyaç duyunca ekran dosyasından import etmek dairesel bağımlılık olurdu.
+*/
 
 /** Adet tavanı — şablonun kendi kuralı (v3:1887 `Math.min(20, …)`); parametrik sabit. */
 const MAX_QUANTITY = 20;
@@ -94,7 +94,6 @@ interface PackageDetailScreenProps {
 export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   const router = useRouter();
   const { theme } = useUnistyles();
-  const { width } = useWindowDimensions();
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   /* YER: kaynak katalog/vitrinle AYNI (cihazdaki onboarding kaydı). Kod sunucuya gider ve `route`
@@ -131,18 +130,15 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
     </View>
   );
 
+  /* İLK YÜK: başlık GERÇEK kalır (geri yolu açık — yukarıdaki künye), sayfanın geri kalanının
+     yerini skeleton tutar (`package-skeleton`; ölçülerin kaynağı ve neyin çizilip çizilmediği o
+     dosyanın künyesinde). Ekranın içine gömülü dört çubuk sökülüp oraya taşındı: ölçüleri ham
+     sayıydı ve bölüm başlığı, alt not, yapışkan bar hiç temsil edilmiyordu. */
   if (status === 'loading') {
     return (
-      <View style={styles.screen} testID="package-loading">
+      <View style={styles.screen}>
         {header}
-        {/* Foto 16:10 (v3:14) — iskelet yüksekliği orandan, ekranın gerçek genişliğiyle. */}
-        <Skeleton width="100%" height={Math.round((width * 10) / 16)} radius="badge" />
-        <View style={styles.skeletonBody}>
-          <Skeleton width="70%" height={26} radius="full" />
-          <Skeleton width="45%" height={18} radius="full" />
-          <Skeleton width="100%" height={66} radius="card" />
-          <Skeleton width="100%" height={66} radius="card" />
-        </View>
+        <PackageSkeleton testID="package-loading" />
       </View>
     );
   }
@@ -389,10 +385,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   content: {
     paddingBottom: theme.space['3xl'],
   },
-  skeletonBody: {
-    padding: theme.space['4xl'],
-    gap: theme.space.xl,
-  },
   errorBody: {
     flex: 1,
     justifyContent: 'center',
@@ -500,8 +492,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space.xl,
   },
   itemPhoto: {
-    width: PACKAGE_ITEM_PHOTO,
-    height: PACKAGE_ITEM_PHOTO,
+    width: customerMetrics.packageItemPhoto,
+    height: customerMetrics.packageItemPhoto,
     borderRadius: theme.radius.badge,
   },
   itemPhotoFallback: {
