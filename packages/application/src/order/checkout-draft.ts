@@ -8,7 +8,7 @@ import {
   UserProfileService,
   type Db,
 } from '@lezzet/database';
-import { cityMatchesPlaces, deriveChannel, resolveVatTreatment } from '@lezzet/domain-core';
+import { cityMatchesPlaces, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
@@ -269,8 +269,45 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   });
   if (cart.lines.length === 0) return { status: 'empty_cart' };
 
+  /* ── BU SİPARİŞİN KAPSAMI (kullanıcı kararı 10.08) ─────────────────────────
+     Rota DIŞI adreste soğuk zincir kalemi hiçbir yoldan gidemez. Eskiden bu SİPARİŞİN TAMAMINI
+     reddediyordu: gelebilecek beş kalem, gelemeyen biri yüzünden sipariş edilemiyordu. Artık
+     gelemeyen kalem siparişin kapsamından DÜŞER — sepette kalmaya devam eder, çünkü müşteri yarın
+     bölge içi bir adres eklerse o kalem yine lazım — ve ret yalnız geriye HİÇBİR kalem
+     kalmadığında doğar (web'in `cold_chain_unshippable` testi tam da o hâli sınıyor).
+
+     ÖLÇÜT `route`/`group` DEĞİL, satırın kendi `shippable`ı. Sebebi bu çağrının kendi künyesinde:
+     buradaki `warehouseId` "siparişin çıkacağı depo"dur ve kalemler ona göre `local` görünür — grup
+     burada "bu adrese gelemez"i söyleyemez. Adresin rota dışı olduğunu `place.deliveryType` söylüyor.
+     (Denendi ve yanlış olduğu ölçüldü: depoyu rota deposuna çevirmek hem fiyat çözümünü hem
+     karşılanabilirlik kontrolünü kırıyor.)
+
+     KARGO SİPARİŞİ KAPSAM DIŞI: orada soğuk zincir kalemi zaten ayrıca reddediliyor (aşağıda) —
+     sessizce düşürmek, müşterinin sepetine koyduğu ürünü haber vermeden siparişten çıkarmak olurdu.
+
+     İNDİRİM PAYLARI SATIRLA BİRLİKTE SÜZÜLÜR: `discountSharesOf` KONUM dizisi döner; satırı süzüp
+     payı süzmemek, kalan kalemlere başkasının indirimini yazardı. */
+  const outOfRoute = !input.shippingOrder && place.deliveryType === 'shipping';
+  const shares = discountSharesOf(cart);
+  const kept = cart.lines
+    .map((line, index) => ({ line, share: shares[index] ?? 0 }))
+    .filter(({ line }) => !outOfRoute || line.shippable);
+  const orderedLines = kept.map((k) => k.line);
+  const orderedShares = kept.map((k) => k.share);
+  if (orderedLines.length === 0) return { status: 'cold_chain_unshippable' };
+
+  /* Siparişe girenlerin İKİ tutarı ve ikisi AYNI ŞEY DEĞİL:
+     · `orderedSubtotalCents` indirim ÖNCESİ — ASGARİ SEPET bunu ölçer (`read.ts`teki `meets` de ara
+       toplamı ölçüyor; indirim sonrasını vermek eşiği kupon kullanan müşteride sessizce yükseltirdi).
+     · `orderedBasketCents` indirim SONRASI — ödeme/kargo kapısı bunu ister (`cart.totalCents`in
+       kapsama daraltılmış hâli). */
+  const orderedSubtotalCents = orderedLines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  const orderedBasketCents = orderedSubtotalCents - orderedShares.reduce((sum, v) => sum + v, 0);
+
   // 4) Teslimat kararı tamamlanır: posta kodu → bölge → gün(ler). Soğuk zincir kalemi kargoyu kapatır.
-  const hasNonShippableItem = cart.lines.some((l) => !l.shippable);
+  // Kapsam dışında kalan kalem kargo kararını da etkilemez: siparişe girmeyen bir soğuk zincir
+  // kalemi yüzünden kargo yolunu kapatmak, olmayan bir kısıtı uygulamak olurdu.
+  const hasNonShippableItem = orderedLines.some((l) => !l.shippable);
   const delivery = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,
@@ -318,7 +355,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // rezervasyon aşamasında, müşteri ödemeye geçtikten sonra patlar.
   //
   // Ayrımın yeri burası: sepet "alınabilir mi" sorusunu yanıtlar, checkout "bu siparişle gelir mi".
-  const unfulfillable = cart.lines.filter((l) => l.route !== null && l.route !== 'local');
+  const unfulfillable = orderedLines.filter((l) => l.route !== null && l.route !== 'local');
   if (unfulfillable.length > 0) return { status: 'blocked_lines', lines: unfulfillable.map((l) => l.name) };
 
   // ── ADET DE KARŞILANMALI (19.7) ───────────────────────────────────────────
@@ -326,11 +363,15 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Cevaplanmadığında iş rezervasyonda patlıyordu: müşteri ödeme yöntemini seçmiş, "onayla"ya
   // basmış, ve aldığı cevap ürünü adlandırmayan bir "bir ürün tükendi" oluyordu — oysa tükenen bir
   // şey yok, o adrese istenen adet gitmiyor. Sayı sepetin gösterdiğiyle aynı kaynaktan (`availableHere`).
-  const overCap = cart.lines.filter((l) => l.availableHere !== null && l.availableHere < l.qty);
+  const overCap = orderedLines.filter((l) => l.availableHere !== null && l.availableHere < l.qty);
   if (overCap.length > 0) {
     return { status: 'insufficient_here', lines: overCap.map((l) => ({ name: l.name, available: l.availableHere ?? 0 })) };
   }
-  if (!cart.minBasketOk) return { status: 'min_basket', missingCents: cart.missingForMinBasketCents };
+  /* Eşik SİPARİŞE GİREN tutara bakar: gelemeyen bir kalemle asgari sepeti geçmiş görünen müşteri
+     kasada geri düşerdi. `cart.minBasketOk` sepetin TAMAMINI ölçüyor; kapsam daraldığında ölçüm de
+     daralmalı. Eşiğin kendisi yine sunucunun (kapsamlı ayar) — burada yalnız matrah değişiyor. */
+  const basket = meetsMinBasket(orderedSubtotalCents, cart.minBasketCents);
+  if (!basket.ok) return { status: 'min_basket', missingCents: basket.missingCents };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.
   // Kargo siparişinde gün HİÇ sorulmaz: tarih taşıyıcıya bağlıdır ve söz verilmez.
@@ -346,11 +387,11 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Reverse charge'da kalem oranı SIFIRLANIR: `zeroRated` "ürünün kendi oranı geçerli değil"
   // demektir. Kargonun KDV'si taşıdığı malın oranını izlediği için (`apportionShippingVat`) ücret
   // de kendiliğinden sıfırlanır — ayrıca sıfırlamak, aynı kuralın ikinci bir tanımı olurdu.
-  const items = await expandToOrderItems(db, cart.lines, discountSharesOf(cart), vat.zeroRated);
+  const items = await expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated);
   const options = await resolveCheckoutPayment(db, {
     customerId: customer.id,
     deliveryType,
-    basketCents: cart.totalCents,
+    basketCents: orderedBasketCents,
     lines: items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })),
     /* ── AYAR KAPSAMI BURADA DA GEÇER (07.15'in ikinci yarısı, 09.08) ─────────
        Üç eksen de sepet okumasına ZATEN geçiliyordu (yukarıda, adım 3) ama ödeme kapısına
@@ -396,7 +437,10 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
    * Düşen fiyat buraya HİÇ gelmez (`priceChangeOf` yalnız artışta işaret koyar) — indirimi
    * onaylatmak müşteriyi hediyesi için durdurmak olurdu.
    */
-  const raised = cart.lines.filter((l) => l.priceChange);
+  // Onay yalnız SİPARİŞE GİREN kalemin zammı için istenir: siparişe girmeyen bir kalemin fiyatını
+  // onaylatmak, müşteriyi almadığı bir şey için durdurmak olurdu. Saklanan fiyatlar yine sepetin
+  // TAMAMI için tazelenir (aşağıda) — sepet o kalemleri taşımaya devam ediyor.
+  const raised = orderedLines.filter((l) => l.priceChange);
   if (raised.length > 0) {
     await cartService.replace(
       customer.id,
