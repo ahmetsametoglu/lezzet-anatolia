@@ -6,7 +6,6 @@ import type { QueueTab } from '@/lib/assistant/assistant-types';
 import { applyProposalAction, rejectProposalAction } from './actions';
 import { inlineBodyOf } from './assistant-body';
 import { notifyCountOf } from './assistant-labels';
-import { undoHintOf } from '@lezzet/application';
 import { AssistantDecisionDialog } from './assistant-decision-dialog';
 import { AssistantDesktop } from './assistant.desktop';
 import { assistantUrl, type AssistantUrlState } from './assistant-url';
@@ -144,7 +143,7 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
           summary={selected.summary}
           notifyCount={notifyCountOf(selected)}
           impact={selected.impact}
-          undoHint={undoHintOf(selected.kind)}
+          undoHint={selected.undoHint ?? undefined}
           busy={busy}
           error={busy ? null : notice}
           onClose={() => setDecision(null)}

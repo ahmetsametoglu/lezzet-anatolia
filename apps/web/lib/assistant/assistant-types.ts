@@ -34,8 +34,17 @@ export interface AssistantQueueRow {
   summary: string;
   /** "Neden bu öneri". `null` ise tasarımın soluk/kesikli hâli çizilir — uydurulmaz. */
   reason: string | null;
-  /** "Uygulanınca ne olur" — `kind`'dan türer, sabit metin. */
+  /** "Uygulanınca ne olur" — `kind`'dan türer, sabit metin. Yeri KART değil onay diyaloğu (10.08). */
   impact: string;
+  /**
+   * Geri alma YOLU (`KIND_META.undoHint`) — yalnız onay diyaloğunda, tanımlıysa.
+   *
+   * **Sunucudan gelir, istemci `KIND_META`ya BAKMAZ:** o sözlük `@lezzet/application` içinde ve o
+   * paket `node:crypto` taşıyan sunucu bağımlılıklarına açılıyor — istemci komponentinden import
+   * edilirse derleme "Reading from node:crypto is not handled" ile kırılır (yaşandı 10.08).
+   * `impact` de aynı sebeple burada taşınıyor; desen tek.
+   */
+  undoHint: string | null;
   /** Teknik dökümün "hedef tablolar" satırı (`['bundle', 'bundle_item']`). */
   targetTables: string[];
   /** Ham dilekçe — YALNIZ teknik dökümde, olduğu gibi. Şekli `kind`'a göre değişir. */
