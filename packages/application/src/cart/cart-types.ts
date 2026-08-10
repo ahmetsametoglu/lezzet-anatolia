@@ -691,3 +691,39 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
     missingForMinBasketCents: basket.missingCents,
   };
 }
+
+/**
+ * SİPARİŞİN KAPSAMI — bu adrese gidemeyen kalemler düşer, ötekiler kalır (kullanıcı kararı 10.08).
+ *
+ * **TEK YER, İKİ ÇAĞIRAN:** siparişi açan taslak (`checkout-draft`) ve ekranın gördüğü anlık görüntü
+ * (`checkout-snapshot`) aynı kümeyi kullanmak ZORUNDA — ayrı hesaplasalardı müşteri bir tutar görüp
+ * başka bir tutar öderdi (ölçüldü 10.08: ekran 67,49 € derken taslak 31,41 €'yu tahsil ediyordu).
+ *
+ * Ölçüt satırın kendi `shippable`ı ve adresin rota dışı olması; `route`/`group` DEĞİL. Sebebi
+ * çağrı yerlerinin künyesinde: oradaki depo "siparişin çıkacağı depo"dur ve kalemler ona göre
+ * `local` görünür — grup orada "bu adrese gelemez"i söyleyemez.
+ *
+ * İndirim payları KONUM dizisidir; satırla birlikte süzülür. Ayrı süzülseydi kalan kalemlere
+ * başkasının indirimi yazılırdı.
+ */
+export function orderScopeOf(
+  view: Pick<CartView, 'lines' | 'discount'>,
+  outOfRoute: boolean,
+): { lines: CartLine[]; shares: number[]; subtotalCents: number; basketCents: number } {
+  const all = discountSharesOf(view.discount);
+  const kept = view.lines
+    .map((line, index) => ({ line, share: all[index] ?? 0 }))
+    .filter(({ line }) => !outOfRoute || line.shippable);
+  const lines = kept.map((k) => k.line);
+  const shares = kept.map((k) => k.share);
+  /* İki tutar AYNI ŞEY DEĞİL: asgari sepet indirim ÖNCESİNİ ölçer (sepet okumasındaki `meets` de
+     öyle), ödeme/kargo kapısı indirim SONRASINI ister. */
+  const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  return { lines, shares, subtotalCents, basketCents: subtotalCents - shares.reduce((sum, v) => sum + v, 0) };
+}
+
+/** İndirimin kalem payları — dört hâlin ikisinde dolu, ötekilerde boş. */
+export function discountSharesOf(discount: CartDiscount): readonly number[] {
+  if (discount.status === 'applied' || discount.status === 'automatic') return discount.lineShares;
+  return discount.status === 'rejected' ? discount.appliedInsteadShares : [];
+}

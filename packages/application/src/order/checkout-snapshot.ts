@@ -1,7 +1,7 @@
 import { AddressService, type Db } from '@lezzet/database';
 import type { Address, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
-import { orderableLines } from '../cart/cart-types';
+import { orderScopeOf } from '../cart/cart-types';
 import type { CartEntry } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
@@ -159,7 +159,7 @@ export async function readCheckoutSnapshot(
      okusaydı ekran ile kasa ayrışırdı: müşteri gelemeyen kalemi de içeren bir "Genel toplam"
      görür, siparişten daha azı kesilirdi — ve asgari sepet eşiği de sipariş edilemeyecek bir
      kalemle geçilmiş görünürdü. Taslak ile ekran AYNI sayıyı vermek zorunda. */
-  const scoped = orderableLines(cart.lines);
+  const scope = orderScopeOf(cart, !input.shippingOrder && place.deliveryType === 'shipping');
 
   // İkinci tur: kargo kararı ancak sepet bilinince verilebilir (soğuk zincir kalemi var mı).
   const delivery = await resolveDelivery(db, {
@@ -167,7 +167,7 @@ export async function readCheckoutSnapshot(
     country: selected.country,
     // Kapsam DIŞINDA kalan kalem kargo kararını da etkilememeli: siparişe girmeyen bir soğuk
     // zincir kalemi yüzünden kargo yolunu kapatmak, olmayan bir kısıtı uygulamaktır.
-    hasNonShippableItem: scoped.some((l) => !l.shippable),
+    hasNonShippableItem: scope.lines.some((l) => !l.shippable),
     inputs: deliveryInputs,
   });
 
@@ -178,10 +178,10 @@ export async function readCheckoutSnapshot(
   const options = await resolveCheckoutPayment(db, {
     customerId: input.customerId,
     deliveryType,
-    basketCents: cart.totalCents - cart.undeliverableSubtotalCents,
+    basketCents: scope.basketCents,
     // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
     // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
-    lines: scoped.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
+    lines: scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
     /* AYAR KAPSAMI (07.15'in ikinci yarısı, 09.08) — üç eksen de sepet okumasına yukarıda ZATEN
        geçiyor; ödeme kapısına geçmiyordu. Ekran o hâlde kendi kendisiyle çelişiyordu: kalem bloğu
        kapsamlı eşiği, ödeme bloğu global eşiği gösteriyordu. Gerekçe ve ölçüm `checkout-draft.ts`in

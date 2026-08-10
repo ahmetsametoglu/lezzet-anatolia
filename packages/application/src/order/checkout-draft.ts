@@ -17,8 +17,8 @@ import {
   discountAmountOf,
   entryOf,
   itemOfEntry,
+  orderScopeOf,
   storedPrices,
-  type CartDiscount,
   type CartEntry,
   type CartLine,
   type CartView,
@@ -287,22 +287,10 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
 
      İNDİRİM PAYLARI SATIRLA BİRLİKTE SÜZÜLÜR: `discountSharesOf` KONUM dizisi döner; satırı süzüp
      payı süzmemek, kalan kalemlere başkasının indirimini yazardı. */
-  const outOfRoute = !input.shippingOrder && place.deliveryType === 'shipping';
-  const shares = discountSharesOf(cart);
-  const kept = cart.lines
-    .map((line, index) => ({ line, share: shares[index] ?? 0 }))
-    .filter(({ line }) => !outOfRoute || line.shippable);
-  const orderedLines = kept.map((k) => k.line);
-  const orderedShares = kept.map((k) => k.share);
+  const scope = orderScopeOf(cart, !input.shippingOrder && place.deliveryType === 'shipping');
+  const orderedLines = scope.lines;
+  const orderedShares = scope.shares;
   if (orderedLines.length === 0) return { status: 'cold_chain_unshippable' };
-
-  /* Siparişe girenlerin İKİ tutarı ve ikisi AYNI ŞEY DEĞİL:
-     · `orderedSubtotalCents` indirim ÖNCESİ — ASGARİ SEPET bunu ölçer (`read.ts`teki `meets` de ara
-       toplamı ölçüyor; indirim sonrasını vermek eşiği kupon kullanan müşteride sessizce yükseltirdi).
-     · `orderedBasketCents` indirim SONRASI — ödeme/kargo kapısı bunu ister (`cart.totalCents`in
-       kapsama daraltılmış hâli). */
-  const orderedSubtotalCents = orderedLines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
-  const orderedBasketCents = orderedSubtotalCents - orderedShares.reduce((sum, v) => sum + v, 0);
 
   // 4) Teslimat kararı tamamlanır: posta kodu → bölge → gün(ler). Soğuk zincir kalemi kargoyu kapatır.
   // Kapsam dışında kalan kalem kargo kararını da etkilemez: siparişe girmeyen bir soğuk zincir
@@ -370,7 +358,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   /* Eşik SİPARİŞE GİREN tutara bakar: gelemeyen bir kalemle asgari sepeti geçmiş görünen müşteri
      kasada geri düşerdi. `cart.minBasketOk` sepetin TAMAMINI ölçüyor; kapsam daraldığında ölçüm de
      daralmalı. Eşiğin kendisi yine sunucunun (kapsamlı ayar) — burada yalnız matrah değişiyor. */
-  const basket = meetsMinBasket(orderedSubtotalCents, cart.minBasketCents);
+  const basket = meetsMinBasket(scope.subtotalCents, cart.minBasketCents);
   if (!basket.ok) return { status: 'min_basket', missingCents: basket.missingCents };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.
@@ -391,7 +379,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const options = await resolveCheckoutPayment(db, {
     customerId: customer.id,
     deliveryType,
-    basketCents: orderedBasketCents,
+    basketCents: scope.basketCents,
     lines: items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })),
     /* ── AYAR KAPSAMI BURADA DA GEÇER (07.15'in ikinci yarısı, 09.08) ─────────
        Üç eksen de sepet okumasına ZATEN geçiliyordu (yukarıda, adım 3) ama ödeme kapısına
@@ -606,11 +594,6 @@ async function expandToOrderItems(
  * kampanya olabilir ve müşteri onu kaybetmez. Payları yok saymak, başlıkta 4 € indirim yazıp
  * kalemlere 0 dağıtmak olurdu — veritabanı bunu zaten reddediyor.
  */
-function discountSharesOf(cart: { discount: CartDiscount }): readonly number[] {
-  const { discount } = cart;
-  if (discount.status === 'applied' || discount.status === 'automatic') return discount.lineShares;
-  return discount.status === 'rejected' ? discount.appliedInsteadShares : [];
-}
 
 /**
  * Kuponun girildiği KAPI (`discount_code.id`) — yalnız `applied` hâlde vardır.
