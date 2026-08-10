@@ -1,10 +1,11 @@
 'use client';
 
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { QueuePane } from '@/components/operation/ui/queue-pane';
 import { SegmentedNav } from '@/components/operation/ui/segmented-nav';
 import { agoLabel, num } from '@/components/operation/ui/format';
-import { CardPlaceholder, DecisionCard, ProposalRow, QueueEmpty } from './assistant-sections';
+import { ProposalCard } from './assistant-card';
+import { cardBodyOf } from './assistant-card-bodies';
+import { ProposalDialog, QueueEmpty } from './assistant-sections';
 import { QUEUE_TABS, QUEUE_TAB_LABELS } from './assistant-url';
 import type { AssistantViewProps } from './assistant-types';
 
@@ -73,40 +74,70 @@ export function AssistantDesktop({
         />
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <QueuePane
-          width={326}
-          busy={navPending}
-          isEmpty={data.rows.length === 0}
-          empty={<QueueEmpty tab={urlState.tab} />}
-          // Kuyruk bugün TEK sayfa okuyor (`readAssistantQueue(tab, limit)` — imleç yok). Karar
-          // geçmişi zamanla sınırsız büyüyen bir küme; sayfalama sözleşmesi denetime soruldu.
-          hasMore={false}
-          loadingMore={false}
-          onLoadMore={() => {}}
-        >
-          {data.rows.map((row) => (
-            <ProposalRow key={row.id} row={row} active={row.id === urlState.p} onSelect={onSelect} />
-          ))}
-        </QueuePane>
+      {/* ── IZGARA (kullanıcı kararı 10.08) ─────────────────────────────────────
+          Bir tur burada iki sütun vardı: 326 piksellik kuyruk listesi + karar panosu. Izgara ikisini
+          de düzeltiyor — öneriler yan yana görünüyor (hangisi önce, hangisi bekleyebilir) ve karar
+          kendi penceresinde tam alan buluyor. Kuyruk artık bir liste değil bir MASA.
 
-        {data.selected ? (
-          <DecisionCard
-            // Öneri değişince kartın iç durumu (açık teknik döküm) SIFIRLANIR: bir önerinin ham
-            // dilekçesi açıkken ötekine geçmek, başka bir kaydın JSON'unu aynı yerde gösterirdi.
-            key={data.selected.id}
-            row={data.selected}
-            options={data.options}
-            busy={busy}
-            error={error}
-            onDecision={onDecision}
-          />
+          Sütun sayısı ekrana göre değil KART GENİŞLİĞİNE göre: `auto-fill` + `minmax` ile kart
+          17,5rem (280 px) altına düşmüyor, sığdığı kadarı yan yana diziliyor. Sabit sütun sayısı
+          yazsaydık geniş ekranda kartlar gereksiz uzar, dar panoda ezilirdi.
+
+          **Ölçü kullanıcının verdiği hedeften çıktı** (10.08: *"1280 piksele dört-beş kart sığsın,
+          kartlar dikey dikdörtgen olsun"*): 1280'de sayfa dolgusu düşünce 1232 kalıyor,
+          `(1232+14)/(280+14) = 4` kart. Alt sınır 20rem'ken 3 sığıyordu ve kartlar yatay dikdörtgene
+          kaçıyordu. Kartın boyu `min-h` ile tutuluyor (`assistant-card`), yani biçim dikey kalıyor.
+
+          **KARTLAR EŞİT BOYDA** (`auto-rows-fr` + varsayılan `stretch`, kullanıcı kararı 10.08).
+          Bir tur `items-start` yazılıydı ve gerekçesi "kısa kartlar boşluk taşımasın"dı — ölçüm bunu
+          çürüttü: fırsat kartı ürün görseliyle 490 piksele çıkıyor, tarif kartı 384'te kalıyor ve
+          ızgara kırık bir tarağa dönüyor. Izgaranın tek gerekçesi tarama; hizasız bir taban gözü
+          her kartta yeniden ayarlamaya zorluyor, yani tam da o yeteneği götürüyor.
+          `auto-rows-fr` satırlar ARASINDA da eşitliyor: yalnız `stretch` verilseydi ilk satır
+          kendi en uzununa, ikinci satır kendi en uzununa hizalanır ve ızgara satır satır kayardı.
+          Artan boşluk sorun değil — durum satırı `mt-auto` ile dibe yaslı, yani kart dolu duruyor. */}
+      <div className="min-h-0 flex-1 overflow-y-auto bg-ops-card px-6 py-5" aria-busy={navPending || undefined}>
+        {/* KARARIN SONUCU IZGARANIN ÜSTÜNDE, kartın içinde değil (10.08). Karar verilen öneri
+            kuyruktan düşer ve diyalog kapanır — cümle karta yazılsaydı o an başka bir önerinin
+            kartında görünürdü, yani yanlış satırın altında. Üstte durunca hangi öneriye ait olduğu
+            değil NE OLDUĞU okunuyor ve o yeter ("Teklif açıldı", "Motor reddetti: …"). */}
+        {error ? (
+          <div
+            role="status"
+            className="mb-3.5 rounded-ops-card border border-ops-line border-l-[3px] border-l-ops-olive bg-ops-subtle px-3.5 py-2.5 font-ops-body text-ops-base text-ops-strong"
+          >
+            {error}
+          </div>
+        ) : null}
+
+        {data.rows.length === 0 ? (
+          <QueueEmpty tab={urlState.tab} />
         ) : (
-          <div className="flex min-h-0 flex-1 bg-ops-subtle">
-            <CardPlaceholder />
+          <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-3.5">
+            {data.rows.map((row) => (
+              <ProposalCard key={row.id} row={row} onOpen={onSelect}>
+                {cardBodyOf(row)}
+              </ProposalCard>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Diyalog seçili öneriyle açılır; seçim adreste (`?p=`) durduğu için bağlantısı paylaşılabilir.
+          `key` ile sarılı: öneri değişince iç durum (taslak, açık teknik döküm) sıfırlanır — bir
+          önerinin ham dilekçesi açıkken ötekine geçmek, başka bir kaydın JSON'unu aynı yerde
+          gösterirdi. */}
+      {data.selected ? (
+        <ProposalDialog
+          key={data.selected.id}
+          row={data.selected}
+          options={data.options}
+          busy={busy}
+          error={error}
+          onClose={() => onSelect('')}
+          onDecision={onDecision}
+        />
+      ) : null}
     </div>
   );
 }

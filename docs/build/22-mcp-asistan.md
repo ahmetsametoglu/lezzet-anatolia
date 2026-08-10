@@ -583,3 +583,56 @@ satırında.
     bildirime göre oturacak. `applyDiscountDraft`/`applyBatchOffer` uygulayıcıları artık ULAŞILAMAZ
     (genel kapı `inline` tipini reddediyor) ama `APPLIERS` kaydında duruyor — `proposal.test.ts` şema
     ↔ uygulayıcı eşliğini şart koşuyor, yani temizlik o testin sözleşmesiyle birlikte düşünülmeli.
+
+- [~] (22.11) **Kuyruk IZGARAYA döndü: tipe özel önizleme kartları** *(kullanıcı kararı 10.08: "grid
+  şeklinde kartlar olacak, bir kart listesi şeklinde görünecek öneri; her önerinin kendi kart formatı
+  olacak, sadece ön izleme için. Bu karta tıkladığımız zaman bir diyalog açılacak")* —
+  touches: `apps/web/app/(operations)/operations/assistant/{assistant-card,assistant-card-bodies,assistant-sections,assistant.desktop,page}.tsx`,
+  `apps/web/components/operation/ui/subject-card.tsx`, `apps/web/lib/assistant/subject.ts`
+  - **İki sütun kalktı.** Önceki kurgu 326 piksellik bir kuyruk listesi + geniş bir karar panosuydu:
+    liste sıkışıyor, pano da her an TEK öneriyi gösteriyordu. Izgara ikisini de düzeltiyor —
+    öneriler yan yana görünüyor (hangisi önce, hangisi bekleyebilir), karar kendi penceresinde tam
+    alan buluyor. `DecisionCard` → `ProposalDialog` (397 → 309 satır); `ProposalRow` ve
+    `CardPlaceholder` silindi.
+  - **Sütun sayısı ekrana değil KART GENİŞLİĞİNE bağlı** (`auto-fill` + `minmax(18rem,1fr)`):
+    kullanıcının hedefi 1280'de dört karttı, ölçü oradan çıktı. **Kartlar eşit boyda** (`auto-rows-fr`):
+    bir tur `items-start` yazılıydı ve ızgara kırık bir tarağa dönüyordu — ızgaranın tek gerekçesi
+    tarama, hizasız taban gözü her kartta yeniden ayarlamaya zorluyor.
+  - **İskelet ortak, gövde tipe özel** (`assistant-card` ⟷ `assistant-card-bodies`): rozet · tazelik ·
+    yaş · durum her kartta aynı yerde; ortadaki önizleme gövdesini tip veriyor. Gövdesi olmayan tip
+    asistanın cümlesine düşüyor, yani hiçbir kart boş kalmıyor. **Karta form konmaz** — kart "bu neyle
+    ilgili, ne kadar acil, ne kadar para" sorusunun cevabı; "kaç lira yazayım" diyaloğun işi.
+  - **Renk zeminden ÜST ŞERİDE geçti** (kullanıcı ölçümü: *"indirim kartları neden sarı"*). Bir tur
+    kartın zemini tonun en soluk basamağıydı; ölçüm çürüttü: `olive-bg` = `#eef4e2`, `amber-bg` =
+    `#fdf1e3` — o basamak **rozet arkası** için tasarlanmış, 288×352'lik bir yüzeyde ikisi de kirli
+    beyaza düşüyor ve zeytin yeşili sarımsı olduğu için indirim kartı sarı görünüyordu. 3 pikselik
+    doygun şerit iki tonu tartışmasız ayırıyor.
+  - **Para iki katmanda, taban ADLANDIRILMIŞ** (kullanıcı ölçümü: *"üç rakam arka arkaya, aralarında
+    boşluk yok… bu karta bakınca bir şey anlamıyorum"*): eski fiyat üstte ve sönük ("neydi → ne oldu"
+    yönü), indirimli fiyat altta ve büyük. Yüzde artık daima **"indirim"** ve tabanın adı yazılı
+    ("liste" · "ayrı alınsa") — *"avantaj kimin için?"* sorusunun cevabı: buradaki yüzde müşterinin,
+    künyedeki `Kâr` bizim. Zarar "eksi kâr" diye yazılmıyor, **etiketi değişiyor** (`Zarar`) ve ton
+    uyarıyor; kırmızı alarm yok, çünkü imha edilecek maldan zararına satış meşrudur.
+  - **Görsel bandı TÜM KARTLARDA standart** (`MEDIA_H = h-32`, kullanıcı kararı: *"resim bölümünün bir
+    yükseklik standardı olsun, onun hemen altında fiyat"*). Oran denendi ve yetmedi: oran kartın
+    genişliğine bağlıdır, hiza kartın genişliğinden bağımsız olmalıdır — ızgarada hiza kazanıyor.
+  - **Fotoğraf KARE çerçevede, kırpılmadan.** Bant bir tur tam genişlikti (1,9:1) ve `cover` ürünü
+    kesiyordu; sebep ölçüldü: **117 görselli ürünün SIFIRININ odağı ayarlanmış** — hepsi
+    `x50 y50 zoom100`. Kod odağı doğru okuyor (`cropOf` → `FramedImage`), künye "merkez" diyor. Kare
+    kaynağı kare çerçevede göstermek kırpmayı sıfırlıyor; odaklar ileride ayarlanınca `crop` aynen
+    çalışmayı sürdürüyor. `object-contain` yolu bilinçle terk edildi — proje zaten tek kaynaktan
+    `cover` + odak + zoom ile çerçeve türetiyor (`image.schema §0B`), ikinci bir mekanizma açılmadı.
+  - **Paket kalemleri DESTE** (kullanıcı kararı: *"resimler hafiften üst üste binsin, klasik tasarım"*):
+    dar bir kartta yan yana dizilen kareler ya küçülüyor ya taşıyordu; örtüşen kısım yer tutmadığı için
+    kareler bandın tamamını doldurabiliyor. Kenarlık **beyaz halka değil gri çizgi** — beyaz, ürün
+    fotoğraflarının stüdyo zeminine karışıyor ve üç börek tek fotoğrafa dönüşüyordu (kullanıcı
+    ölçümü). Gölge binmenin YÖNÜNÜ görünür kılıyor. Tek fotoğrafta çerçeve yok: bandın tamamı zaten o.
+    Kırpılan kalem sayısı "+N" rozetiyle değil künyedeki `İçerik 4 kalem · 4 ad.` satırıyla korunuyor.
+  - **`ProposalSubject` artık kırpma da taşıyor** (`crop`) ve çoğul `images` alanı paket kalemlerinin
+    fotoğraflarını veriyor — paketin kendi fotoğrafı yoktur (kayıt henüz doğmamıştır), taslak evresinde
+    tanınmanın tek yolu kalemleridir.
+  - *Doğrulandı:* `typecheck` · `lint` · `boundaries` · `knip` temiz · birim 1346/1346.
+  - **BEKLEYEN(22.11):** yedi tipin kart gövdesi (`product_draft` · `product_create` · `purchase_order` ·
+    `stock_intake` · `money_movement` · `recipe_draft` · `featured_flag`) asistanın cümlesiyle duruyor;
+    tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
+    `assistant-preview.tsx` blokları o sırada düşecek.

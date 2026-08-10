@@ -67,11 +67,15 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
   }));
 
   /**
-   * **Seçim yoksa ilk satır açılır.** Karar çerçevesi ekranın büyük yarısı: boş bırakmak operatöre
-   * her sekme geçişinde "önce bir şey seç" adımı dayatırdı.
+   * **Seçim yoksa HİÇBİR şey açılmaz** (10.08, ızgara kurgusu).
+   *
+   * Bir tur burada "seçim yoksa ilk satırı aç" vardı ve iki sütunlu düzende doğruydu: karar panosu
+   * ekranın yarısıydı, boş bırakmak her sekme geçişinde "önce bir şey seç" adımı dayatırdı. Izgarada
+   * o gerekçe düştü — kartlar zaten görünüyor. Dahası varsayılan seçim artık bir ARIZA olurdu:
+   * karar diyalogla veriliyor ve sayfa her açılışta kendiliğinden bir öneri diyaloğu açardı;
+   * kapatmak da imkânsızlaşırdı, çünkü kapanış boş `p` demek ve boş `p` yine ilk satırı seçerdi.
    */
-  const selectedId = urlState.p || (rows[0]?.id ?? '');
-  const selected = rows.find((row) => row.id === selectedId) ?? null;
+  const selected = urlState.p ? (rows.find((row) => row.id === urlState.p) ?? null) : null;
 
   const data: AssistantData = { rows, selected, pendingCount, options };
 

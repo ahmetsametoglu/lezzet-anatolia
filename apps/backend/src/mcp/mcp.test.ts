@@ -118,10 +118,13 @@ describe('katalog ve stok araçları', () => {
       //    alış fiyatı araç yüzeyine çıkmıyordu (finans sınırı §6); kullanıcı 09.08'de kârlılık
       //    hesabı yapılabilsin diye açtı. Sınırın kendisi kalkmadı: bu bir PARTİ maliyetidir ve
       //    liste fiyatı KDV dahilken bu hariçtir — `vatRate` de o yüzden satırda.
+      // ③ **KDV tabanı ARTIK ADIN İÇİNDE** (`126e2e1`): `listPriceCentsIncVat` ·
+      //    `purchasePriceCentsExVat`. Test bunu görmeden bayatladı ve bir koşu boyunca kırmızı
+      //    kaldı — sözleşmeyi doğrulayan test, sözleşme değişince onunla birlikte güncellenir.
       expect(Object.keys(b).sort()).toEqual([
-        'batchId', 'dateType', 'decision', 'expired', 'expiryDate', 'listPriceCents', 'offerPriceCents',
-        'physicalQty', 'product', 'purchasePriceCents', 'suggestedOfferPriceCents', 'unit', 'variantId',
-        'vatRate', 'warehouse',
+        'batchId', 'dateType', 'decision', 'expired', 'expiryDate', 'listPriceCentsIncVat',
+        'offerPriceCentsIncVat', 'physicalQty', 'product', 'purchasePriceCentsExVat',
+        'suggestedOfferPriceCentsIncVat', 'unit', 'variantId', 'vatRate', 'warehouse',
       ]);
       // Karar MOTORUN sözlüğünden gelir — araç kendi eşiğini kurmaz (STACK §4).
       expect(['none', 'can_offer', 'offer_open', 'must_discard']).toContain(b.decision);
