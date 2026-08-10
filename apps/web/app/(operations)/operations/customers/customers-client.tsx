@@ -19,7 +19,7 @@ import { B2bApprovalDialog } from './components/b2b-approval-dialog';
 import { CreditDialog } from './components/credit-dialog';
 import { CustomerEditDialog } from './components/customer-edit-dialog';
 import { GdprDeleteDialog } from './components/gdpr-delete-dialog';
-import { OrderDialog } from './components/order-dialog';
+import { CustomerOrderDialog } from './components/customer-order-dialog';
 import { CustomersDesktop } from './customers.desktop';
 import { customersUrl, type CustomerScope, type CustomersUrlState, type MarketingChannelFilter } from './customers-url';
 import type {
@@ -398,7 +398,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
         />
       ) : null}
       {orderDialog ? (
-        <OrderDialog
+        <CustomerOrderDialog
           key={orderDialog.id}
           summary={orderSummary}
           error={orderError}

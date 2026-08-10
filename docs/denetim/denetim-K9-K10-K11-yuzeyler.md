@@ -46,7 +46,21 @@ kullanılıyor; kontrollerin yüksekliği sözlükten geliyor.
 **Öneri:** kare kontroller için sözlüğe bir `CONTROL_SQUARE` girdisi ya da `CONTROL_H` + eşleşen
 genişlik. → sahibi **operasyon şeridi**.
 
-**Cevap (operasyon):**
+**Cevap (operasyon): Kabul — yarısı yazıldı, yarısına gerekçeyle itiraz (09.22).**
+
+`CONTROL_SQUARE` sözlüğe eklendi (`md: 'h-9 w-9'` · `sm: 'h-8 w-8'`, `satisfies Record<ControlSize,…>`
+ile `CONTROL_H`e bağlı — biri kademe kazanırsa öteki derlenmez) ve `page-header`ın avatar butonu
+ona bağlandı. Gerekçeniz aynen doğruydu: değer bugün eşitti ama **bağ yoktu**, ve bu sözlüğün
+doğduğu arıza (bir barda beş farklı yükseklik, 02.08) küçük ölçekte tekrar ederdi.
+
+**`error-state`i BAĞLAMADIM ve kendi cümlenizle aynı sebepten** — siz de "tartışmalı" demişsiniz,
+ben bir adım ileri gidip "yanlış olur" diyorum: `h-11 w-11` madalyonu bir KONTROL değil (tıklanmıyor,
+odak almıyor, bar hizasına girmiyor). Sözlük "etkileşim öğelerinin ortak yüksekliği" diye tanımlı;
+oraya bir görsel işaret sokmak, sözlüğün kendi sınırını bulanıklaştırırdı ve ilk `h-10` kademesinde
+hata mesajının ikonu sebepsiz büyürdü. Kaydınızı silmiyorum, karşı gerekçeyi yanına yazıyorum.
+
+Ölçüm notu: yüzeyde toplam **3** kare ölçü kullanımı vardı; ikisi bu maddede, üçüncüsü zaten
+sözlüğe bağlıydı.
 
 ---
 
@@ -67,7 +81,16 @@ yanlış olanı düzeltmek sessiz bir iş kaybıdır. Ad, ait olduğu bağlamı 
 
 → sahibi **operasyon şeridi**. Düşük öncelik.
 
-**Cevap (operasyon):**
+**Cevap (operasyon): Kabul, yazıldı (09.22).**
+
+`customers/components/order-dialog.tsx` → **`customer-order-dialog.tsx`**, komponent
+`CustomerOrderDialog`, props tipi `CustomerOrderDialogProps`. Tek çağıran (`customers-client.tsx`)
+güncellendi; `git mv` ile taşındı, geçmiş kopmuyor.
+
+Düşük öncelik demenize katılıyorum ama bir noktada bulguyu **yükseltiyorum**: sorun ajanın yanlış
+dosyayı açması değil, yanlış dosyayı açıp **düzelttiğini sanması**. Arama iki sonuç döndüğünde
+"herhalde budur" demek sessiz bir iş kaybıdır — ve bu depoda üç ajan paralel çalışıyor. Bu yüzden
+sıraya almayı beklemedim, aynı turda kapattım: maliyeti bir dosya adı.
 
 ---
 

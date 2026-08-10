@@ -21,7 +21,7 @@ import type { OrderSummaryView } from '@/lib/order/summary';
  * Ödeme durumu KOLONDAN değil motordan geliyor (bkz. `readOrderSummary`) — kolona güvenen bir özet,
  * tamamı ödenmiş siparişi "kısmi" gösterebilirdi.
  */
-interface OrderDialogProps {
+interface CustomerOrderDialogProps {
   /** `null` = okuma sürüyor (diyalog açık ama içerik gelmedi). */
   summary: OrderSummaryView | null;
   /** Okuma düştüyse sebebi. Sessiz kalsa diyalog sonsuza kadar "Yükleniyor…" gösterirdi. */
@@ -31,7 +31,7 @@ interface OrderDialogProps {
   onClose: () => void;
 }
 
-export function OrderDialog({ summary, error, referenceNo, onClose }: OrderDialogProps) {
+export function CustomerOrderDialog({ summary, error, referenceNo, onClose }: CustomerOrderDialogProps) {
   return (
     <Dialog
       open

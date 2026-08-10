@@ -29,3 +29,20 @@ export const CONTROL_H = {
 } as const;
 
 export type ControlSize = keyof typeof CONTROL_H;
+
+/**
+ * KARE kontroller — yüksekliğine EŞİT genişlik (denetim K9-1, 10.08).
+ *
+ * Kare öğeler (ikon butonu, avatar) yüksekliği elle yazıyordu: `'h-9 w-9'`. Değer bugün
+ * `CONTROL_H.md` ile aynı ama **bağlı değildi** — sözlük bir gün `h-10`a çıkarsa bar öğeleri
+ * yükselir, kare olanlar yerinde kalır ve satır hizası sessizce bozulur. Tam olarak bu sözlüğün
+ * doğduğu arıza (beş farklı yükseklik, 02.08), küçük ölçekte tekrar ederdi.
+ *
+ * **Yalnız KONTROLLER için.** Tıklanmayan bir ikon kutusu (`error-state`in `h-11 w-11` madalyonu)
+ * bu ailede DEĞİL: o bir etkileşim öğesi değil, bir görsel işarettir ve bar hizasına girmez.
+ * Sözlüğe bağlamak, ölçüsünü olmadığı bir sözleşmeye tabi kılmak olurdu.
+ */
+export const CONTROL_SQUARE = {
+  md: 'h-9 w-9',
+  sm: 'h-8 w-8',
+} as const satisfies Record<ControlSize, string>;

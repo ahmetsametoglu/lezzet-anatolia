@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, type ReactNode } from 'react';
 import type { UserRole } from '@lezzet/types';
 import { signOutAction } from '@/lib/auth/actions';
 import { AnchoredMenu } from './anchored-menu';
-import { CONTROL_H } from './control';
+import { CONTROL_H, CONTROL_SQUARE } from './control';
 import { SearchInput } from './search-input';
 import { CommandPalette, useCommandPaletteShortcut } from './command-palette';
 import { useOpsShell } from './ops-shell';
@@ -191,7 +191,9 @@ function UserAvatar({ email, roles }: { email: string; roles: readonly UserRole[
             // (zemin `ops-card`) kenar kaybolmuyor.
             'grid flex-none cursor-pointer place-items-center rounded-full bg-ops-olive font-ops-display font-semibold text-ops-card outline-none transition-all',
             'ring-2 ring-ops-olive-bg hover:ring-ops-olive-line',
-            'h-9 w-9 text-ops-sm',
+            // Ölçü SÖZLÜKTEN (K9-1): barın öteki öğeleriyle aynı yükseklikte kalması bir tercih
+            // değil, hizanın kendisi — elle yazılan `h-9`, sözlük değiştiği gün geride kalırdı.
+            `${CONTROL_SQUARE.md} text-ops-sm`,
             open ? 'ring-ops-olive-line' : '',
           ]
             .filter(Boolean)

@@ -1087,3 +1087,36 @@ gelmemeli (oturum var) ama sözleşme hâli olduğu için sessiz geçilmiyor.
 
 Kod: `apps/mobile/src/screens/customer-kit/place-notice-sheet.tsx` ·
 `apps/mobile/src/lib/auth/error-text.ts`.
+
+
+### SEPET ÜÇ GRUPLU — "bu adrese gelemeyenler" kendi grubunu aldı, engel olmaktan çıktı (10.08)
+
+**Ölçülmüş arıza (cihazda görüldü).** Müşterinin sepetinde soğuk zincir ürünler, adresi rota
+dışıydı: sepet ekranı üç satır, 38,36 € ve **yeşil** bir "Siparişi tamamla" gösteriyordu; hiçbir
+uyarı yoktu. Tek dokunuş sonra checkout kırmızı bir kutu basıyordu ("bu adrese teslim edemiyoruz").
+Sebep ekranın elle yazdığı süzgeçti (`route !== 'shipping'`): teslim edilemeyen kalem "kapıya
+teslim" grubuna düşüyordu. Müşteri engeli **son adımda** öğreniyordu.
+
+**Karar üç yönlü.** (1) Gruplama artık sözleşmeden okunur (`line.group`: `local` · `shipping` ·
+`undeliverable`) — ekran yoldan türetmez; kararın tek yeri sunucudur (`cartGroupOf`). (2) Gelemeyen
+kalem **sepetten silinmez ve müşteriye sildirilmez**: yarın bölge içi bir adres eklenirse o kalem
+ona lazım. Ekran "ürünü kaldırın" demez; satırdaki mevcut "kaldır" eylemi müşterinin kendi kararı
+olarak durur. (3) "Siparişi tamamla" **açık kalır** — müşteri gelebilecek kalemleri sipariş eder;
+düğmeyi yalnız satılamaz kalem (`hasBlocked` — tükendi/satışa kapandı) ve asgari sepet kapatır.
+
+**Kırmızı gitti, bilgi geldi.** Checkout'taki engel kutusu (`Note tone="error"`) bilgi satırına
+indi (`tone="warm"`): sunucu artık gelemeyen kalemi siparişin kapsamından çıkarıp siparişi açıyor
+(`orderableLines`), reddetmiyor — kırmızı ton müşteriye düzeltmesi gereken bir yanlış yaptığını
+söylerdi. Cümle ne olduğunu söylüyor: bu siparişe girmiyorlar, sepette bekliyorlar, bölge içi bir
+adres seçilirse dahil olurlar. Checkout özeti de yalnız siparişe gireni yazar.
+
+**Yeni görsel dil üretilmedi.** Grup başlıkları kitin `SectionHeader`ı, uyarılar `Note`, satır
+künyesi mevcut rozet yuvası (terracotta ailesi — hata ailesi değil: gelemeyen kalem bir arıza değil,
+adresin gerçeği). Başlıklar **yalnız birden çok grup doluyken** çizilir (web sepetinin `cart-group`
+kuralı): tek yolu olan sepette başlık, olmayan bir seçimi varmış gibi gösterir.
+
+**Terminoloji:** kargo = NORMAL kargo; kapıya teslim = soğuk zincir (bizim aracımız). "Soğuk zincir
+kargo" diye bir şey yoktur.
+
+Kod: `apps/mobile/src/screens/cart/cart-screen.tsx` · `cart-line-row.tsx` ·
+`apps/mobile/src/screens/checkout/checkout-screen.tsx`.
