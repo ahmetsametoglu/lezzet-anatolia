@@ -448,3 +448,54 @@ satırında.
         göre karar verdiğini gizlerdi.
       - Ölçüldü (`ui:shot`, açık + koyu): kârlı paket (1,63 € · %41,2) ve **zararına teklif**
         (0,08 € zarar · %-5,7 · parti toplamı 0,88 € zarar) gerçek fiyat/alış verisiyle.
+
+- [~] (22.8) **Karar KUYRUĞUN İÇİNDE veriliyor — öneri detayına form gövdesi** *(kullanıcı şikâyeti
+  10.08: "öneri tiplerinin onaylanması sırasında asistan sayfasından dışarı çıkmam benim açımdan
+  büyük problem, çünkü konseptten kopuyorum" · brief: `docs/talep/operasyon-oneri-onayi-formun-icinde.md`)* —
+  touches: `packages/application/src/assistant/kind-meta.ts`, `apps/web/lib/assistant/economics.ts`,
+  `apps/web/app/(operations)/operations/assistant/**`
+  - **Ölçüm şikâyeti doğruladı: 11 tipin 10'u kullanıcıyı ekrandan çıkarıyordu** (6 `draft_then_edit`
+    + 4 `handoff`); yalnız vitrin işareti yerinde bitiyordu. İkinci ölçüm daha ağırdı: o tiplerin
+    hedeflerinin **zaten formu var** (ürün · paket · indirim · tarif · tedarik · finans diyalogları),
+    yani ekran alanları ANLATAN bir tablo yazmıştı — oysa o alanları GÖSTEREN form duruyordu. İki
+    gösterim dili bakımı da ikiye böler: forma alan eklendiğinde önizleme bilmez ve öneri ekranı
+    sessizce eksik gösterir.
+  - **Kararın cinsine dördüncü hâl: `inline`.** Devir (`handoff`) gerçek bir sorunu çözüyordu —
+    geri alınamaz etki düzenlenmeden onaylanmamalı — ama bedeli kullanıcının kuyruktan kopmasıydı.
+    Yeni hâl ikisini birden karşılıyor: **düzenleme yüzeyi kuyruğa GELİYOR**, karar orada veriliyor.
+  - **İkinci yazma yolu yine açılmadı** ve bu ayrım kurgunun kendisi: gövde, hedef ekranın kullandığı
+    server action'ın TA KENDİSİNİ çağırıyor (`setOfferPriceAction`) ve o eylem `withProposal` ile
+    kuyruk satırını da kapatıyor. Kuyruk hâlâ uygulamıyor; değişen tek şey formun nerede DURDUĞU.
+    Genel kapı (`applyProposalAction`) `inline` tipini de reddediyor — buradan uygulansaydı asistanın
+    ÖNERDİĞİ ham fiyat yazılırdı, yani operatörün az önce elleriyle değiştirdiği sayı sessizce yok
+    sayılarak.
+  - **Çerçeve tipi BİLMİYOR:** `kind`'a göre dallanan tek yer gövde kaydı (`assistant-body.tsx`).
+    Sözleşme beş parça — şekil doğrulaması · ilk değer · çizim · engel · kaydeden kapı. Taslak
+    ÇERÇEVEDE duruyor, gövdede değil: kararı yürüten, hatayı gösteren ve kuyruğu tazeleyen taraf o.
+  - **İlk gövde: parti fırsatı** (`bodies/batch-offer-body.tsx`) — en az sürtünmeli tip seçildi,
+    en değerli olan değil; amaç deseni çalışır hâlde görmek.
+    - **Yeni form YAZILMADI:** ortadaki kontrol `PriceTriple`, yani `offer-dialog`un ve
+      müşteriye-özel-fiyat diyaloğunun kullandığı ortak üçlü. Kopyalansaydı bir gün biri KDV'yi
+      düşerken öteki unuturdu ve aynı parti iki ekranda iki farklı marj gösterirdi.
+    - **Yeni okuma YAZILMADI:** maliyet · liste · KDV oranı `economics` künyesinden (22.7).
+      Künyeye eklenen tek alan **`vatRate`** ve gerekçesi düzenlemenin kendisi: `marginCents` öneri
+      fiyatına göre hesaplanmış SABİT bir sayı, operatör fiyatı değiştirdiği an bayatlıyor. Orandan
+      geriye türetmek kayıplı (1,40 / 1,33 → %5,26 çıkar, gerçeği %5,5) ve o fark doğrudan marja
+      yazılırdı. Değer zaten okunuyordu, künyeye taşındı.
+    - **Marj GİRİLEN fiyattan hesaplanıyor:** eski sayıyı bırakmak, yeni fiyatın altında eski fiyatın
+      kârını yazmak olurdu — kuyruğun yapabileceği en sinsi yalan, çünkü hem doğru görünür hem de
+      kararın tam konusudur.
+    - **Öneriden sapma KÜNYE olarak yazılıyor** ("5,90 € yerine 5,40 € yazılacak"): asistanın dilekçesi
+      değişmiyor, geçmişte olduğu gibi kalıyor — *"asistan ne önerdi, patron ne onayladı"* farkı
+      kaybolmamalı.
+    - **Onay penceresi açılmıyor:** gövdenin kendisi zaten onay yüzeyi. Modal koymak hem *"dialog
+      açılmaz, konteynere gömülür"* kuralının karşısı olurdu hem de aynı kararı iki kez sordururdu.
+    - **`assistant-preview.tsx`ten `batch_offer` bloğu SİLİNDİ** (1.281 → 1.170 satır): iki gösterim
+      birden kalsaydı aynı fiyat iki yerde iki farklı hâlde okunurdu.
+    - **Karar verilmiş öneride AYNI gövde, okunur hâlde** (`readOnly`): arşive ayrı bir "özet"
+      bileşeni yazmak duplikasyonun kendisiydi. Üçlünün yerini sabit sayılar alıyor — olup bitmiş bir
+      işte düzenlenebilir kutu, hâlâ seçenekmiş gibi okunur.
+  - *Doğrulandı:* `typecheck` (18/18) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346.
+  - **BEKLEYEN(22.8):** kalan 10 tip. Sıra brief'te: `product_draft` → `zone_extend` (harita) →
+    B sınıfı dört tip (gövde ayırma refactor'ü) → `stock_intake` ayrıca konuşulacak. **Desen kullanıcı
+    onayından geçmeden çoğaltılmıyor** — yanlış deseni 11 kez yazmak, bir kez yazıp düzeltmekten pahalı.

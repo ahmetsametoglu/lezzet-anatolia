@@ -53,5 +53,10 @@ export interface AssistantViewProps {
   error: string | null;
   onTab: (tab: QueueTab) => void;
   onSelect: (id: string) => void;
-  onDecision: (kind: DecisionKind) => void;
+  /**
+   * Karar. `draft` YALNIZ kuyruğun içinde karar verilen tiplerde dolu (22.8) — gövdenin o an
+   * ekranda duran değeri. Çerçeve taslağın ŞEKLİNİ bilmez (`unknown`) ve bilmemeli: bileni gövde
+   * kaydıdır (`assistant-body`), çerçeve yalnız taşır.
+   */
+  onDecision: (kind: DecisionKind, draft?: unknown) => void;
 }

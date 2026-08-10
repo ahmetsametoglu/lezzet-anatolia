@@ -37,13 +37,19 @@ export async function applyProposalAction(id: string): Promise<ActionResult<Appl
   const service = new AssistantProposalService(db);
 
   try {
-    // ── DEVREDİLEN TİP BURADAN UYGULANAMAZ (22.5 · kullanıcı kararı 09.08) ──
+    // ── KENDİ FORMU OLAN TİP BURADAN UYGULANAMAZ (22.5 · 22.8) ──────────────
     // Kapı KODDA, ekranın iyi niyetinde değil: ekran düğmeyi gizlemeyi unutsa ya da eski bir sekme
     // açık kalsa, geri alınamaz bir eylem (bildirim · stok · defter · satış fiyatı) DÜZENLENMEDEN
     // koşardı — kuyruğun tek kapılı hâlinde şikâyet edilen tam olarak buydu. Süzgeç `pending`
-    // satırı hiç tüketmez: öneri kuyrukta kalır ve doğru ekrandan uygulanır.
+    // satırı hiç tüketmez: öneri kuyrukta kalır ve doğru yerden uygulanır.
+    //
+    // **`inline` de aynı kapıdan geçmez ve bu bilinçli (22.8):** o tiplerde karar kuyruğun içinde
+    // veriliyor ama kararı YAZAN yine varlığın kendi eylemi (`setOfferPriceAction` → `withProposal`),
+    // çünkü düzenlenmiş değer buraya değil oraya gidiyor. Buradan uygulansaydı asistanın ÖNERDİĞİ
+    // ham fiyat yazılırdı — operatörün az önce elleriyle değiştirdiği sayı sessizce yok sayılarak.
     const pending = await service.getById(id);
-    if (pending && modeOf(pending.kind) === 'handoff') {
+    const pendingMode = pending ? modeOf(pending.kind) : null;
+    if (pending && (pendingMode === 'handoff' || pendingMode === 'inline')) {
       return { data: { status: 'handoff', target: KIND_META[pending.kind].target }, error: null };
     }
 

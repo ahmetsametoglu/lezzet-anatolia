@@ -76,6 +76,19 @@ export type ProposalEconomics =
       offerHtCents: number | null;
       marginCents: number | null;
       marginPercent: number | null;
+      /**
+       * Ürünün KDV oranı (YÜZDE — `product.vat_rate` ile aynı birim).
+       *
+       * **Künyeye 22.8'de eklendi ve gerekçesi kuyruğun içinde DÜZENLEMEye geçmesi:** buradaki
+       * `marginCents` öneri fiyatına göre hesaplanmış SABİT bir sayı; operatör fiyatı kartın içinde
+       * değiştirdiği an marj yeniden hesaplanmalı ve bu KDV oranı olmadan yapılamaz. Orandan geriye
+       * türetmek (`offerPrice / offerHt`) tam sayı kuruşlarda kayıplı: 1,40 / 1,33 → %5,26 çıkar,
+       * gerçeği %5,5'tir — ve o fark doğrudan marja yazılırdı.
+       *
+       * Zaten burada okunuyor (`vatByVariant`), yani yeni bir sorgu değil; künyeye taşınan mevcut
+       * bir değer.
+       */
+      vatRate: number;
     };
 
 /**
@@ -167,6 +180,7 @@ async function offerEconomics(raw: unknown): Promise<ProposalEconomics | null> {
     offerHtCents,
     marginCents,
     marginPercent: costCents === null ? null : markupPercent(offerHtCents, costCents),
+    vatRate,
   };
 }
 

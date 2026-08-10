@@ -12,7 +12,6 @@ import {
   ProductAllergenEnum,
   resolveLocalizedText,
   type AssistantProposalKind,
-  type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
@@ -970,114 +969,6 @@ function PurchaseOrderPreview({ payload }: { payload: PurchaseOrderPayload }) {
 }
 
 /**
- * Parti teklifi — asistanın **satış fiyatına dokunan tek** yetkisi (kullanıcı kararı 09.08).
- *
- * Önizlemenin işi tek bir soruyu cevaplamak: *"ne kadar ucuzluyor ve neden?"* Bu yüzden eski fiyat,
- * yeni fiyat ve aradaki fark yan yana; altında partiyi kimliklendiren künye (depo · SKT · adet).
- *
- * **İndirim oranı burada HESAPLANIYOR ama bir eşik uygulanmıyor:** kuyruğun kuralı tavan koymak
- * değil, kararı görünür kılmak (`0042` künyesi: *"sınırsız: tavan yok, tek güvence onay"*). Ekranın
- * yapabileceği en yararlı şey oranı büyük ve okunur yazmak — %70'i onaylayan da, %5'i onaylayan da
- * ne onayladığını görmüş olsun. Liste fiyatı bilinmiyorsa oran **yazılmaz**; bilinmeyeni sıfır
- * saymak "indirimsiz" diye okunurdu.
- */
-function BatchOfferPreview({
-  payload,
-  economics,
-}: {
-  payload: BatchOfferPayload;
-  economics: Extract<ProposalEconomics, { kind: 'offer' }> | null;
-}) {
-  const { name, size } = splitVariantName(payload.productName);
-  const list = payload.listPriceCents;
-  const drop = list !== null && list > payload.offerPriceCents ? Math.round(((list - payload.offerPriceCents) / list) * 100) : null;
-
-  /**
-   * **Liste fiyatı ÖNERİDEN SONRA değişmiş mi** — payload öneri anındaki, künye ŞU ANKİ liste.
-   *
-   * Ayrışma sessizce geçilemez ve güncel olan da sessizce gösterilemez: patron kararı önerinin
-   * dayandığı gerçeğe göre veriyor olabilir. Denetimle mutabık kalınan kural bu (09.08) — ekran
-   * ayrışmayı SÖYLER.
-   */
-  const listDrift =
-    economics && economics.listPriceCents !== null && list !== null && economics.listPriceCents !== list
-      ? economics.listPriceCents
-      : null;
-
-  return (
-    <PreviewBody note="stok · parti teklifi">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{name}</span>
-          {size ? <span className="font-ops-body text-ops-sm text-ops-body">{size}</span> : null}
-        </span>
-        {list !== null ? (
-          <span className="font-ops-mono text-ops-base text-ops-muted line-through">{money(list)}</span>
-        ) : null}
-        <span className="font-ops-mono text-ops-section font-semibold text-ops-amber">{money(payload.offerPriceCents)}</span>
-        {drop !== null ? (
-          <span className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-2.5 py-1 font-ops-display text-ops-xs font-semibold text-ops-amber-dark">
-            %{num(drop)} indirim
-          </span>
-        ) : null}
-      </div>
-
-      <FactRow
-        facts={[
-          { label: 'Depo', value: payload.warehouseCode },
-          { label: 'Son kullanma', value: shortDate(payload.expiryDate), mono: true },
-          { label: 'Partideki adet', value: num(payload.physicalQty), mono: true },
-        ]}
-      />
-
-      {/* **FİYATIN ÜÇÜNCÜ YÜZÜ** (22.7): tutar ve listeye göre indirim yukarıda; eksik olan
-          ALIŞA göre marjdı. `offer-dialog` üçünü birlikte gösteriyor, önizleme yalnız ikisini —
-          yani devretmeden önce kararın büyüklüğü görünmüyordu. */}
-      {economics ? (
-        <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-          <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
-            Adet başına kâr
-          </span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            Teklif {money(payload.offerPriceCents)} (KDV dahil)
-            {economics.offerHtCents !== null ? ` · ${money(economics.offerHtCents)} KDV'siz gelir` : ''}
-            {economics.costCents !== null ? ` − ${money(economics.costCents)} alış` : ''}
-          </span>
-          <MarginLine
-            marginCents={economics.marginCents}
-            marginPercent={economics.marginPercent}
-            missingCost={economics.costCents === null}
-          />
-          {/* Parti tükenirse toplam etki — karar tek adet için değil, elde kalan mal için veriliyor
-              (`offer-dialog`un kendi cümlesinin aynısı). */}
-          {economics.marginCents !== null ? (
-            <span className="font-ops-body text-ops-xs text-ops-muted">
-              Parti tükenirse toplam{' '}
-              <span className={`font-ops-mono ${economics.marginCents >= 0 ? 'text-ops-olive-dark' : 'text-ops-amber'}`}>
-                {money(Math.abs(economics.marginCents) * payload.physicalQty)}
-              </span>{' '}
-              {economics.marginCents >= 0 ? 'kâr' : 'zarar'}.
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {listDrift !== null ? (
-        <PreviewNotice tone="amber" title="Liste fiyatı öneriden sonra değişmiş">
-          Öneri {money(list)} listeye göre kurulmuştu; şu an {money(listDrift)}. İndirim oranı da o eski
-          fiyata göre yazılı — kararı vermeden önce güncel fiyata bakın.
-        </PreviewNotice>
-      ) : null}
-
-      <PreviewNotice tone="amber" title="Taslak evresi yok">
-        Onaylandığı an bu parti fırsat olarak vitrine düşer. Aynı ürünün öteki partileri tam fiyatta
-        kalır; geri almanın yolu teklifi kaldırmaktır.
-      </PreviewNotice>
-    </PreviewBody>
-  );
-}
-
-/**
  * İndirim/kampanya taslağı — brief'in istediği gibi **kural özeti DÜZ TÜRKÇE**
  * (`admin-asistan-kuyrugu.md §3`: *"Tatlı kategorisinde %15, 30 Eylül'e kadar, alt sınır 25 €"*).
  *
@@ -1249,13 +1140,11 @@ export function ProposalPreview({
       return <FeaturedFlagPreview payload={data as FeaturedFlagPayload} />;
     case 'purchase_order':
       return <PurchaseOrderPreview payload={data as PurchaseOrderPayload} />;
-    case 'batch_offer':
-      return (
-        <BatchOfferPreview
-          payload={data as BatchOfferPayload}
-          economics={economics?.kind === 'offer' ? economics : null}
-        />
-      );
+    // `batch_offer` burada YOK ve boşluğu bilinçli (22.8): o tipin kararı artık kuyruğun içinde,
+    // kendi form gövdesiyle veriliyor (`bodies/batch-offer-body`). Önizlemesi de silindi — ikisi
+    // birden dursaydı aynı fiyat iki yerde iki farklı hâlde okunurdu (biri asistanın önerdiği,
+    // öteki operatörün yazdığı). Karar verilmiş satırda gövde çizilmez ama form da gerekmez:
+    // kartın künyesi (özet · tutar · "ne olacaktı") olan biteni zaten söylüyor.
     case 'discount_draft':
       return <DiscountDraftPreview payload={data as DiscountDraftPayload} />;
     case 'recipe_draft':

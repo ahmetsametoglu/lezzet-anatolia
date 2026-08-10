@@ -149,6 +149,12 @@ export function decisionFooterNote(mode: ProposalMode): string {
   if (mode === 'draft_then_edit') {
     return 'Uygulanınca kayıt PASİF doğar; ince ayar ve yayına alma kendi ekranının işi.';
   }
+  // Kuyruğun içinde karar verilen tipte barın işi TEK şeyi söylemek: yazılacak olan asistanın
+  // önerisi değil, yukarıdaki formda DURAN değer. Operatör alanı değiştirdiyse bunu zaten
+  // biliyor; değiştirmediyse de bilmesi gerekiyor — "onayladım" ile "yazdım" aynı şey oldu.
+  if (mode === 'inline') {
+    return 'Yukarıdaki formda ne yazıyorsa o kaydedilir; kayıt normal yolundan yazılır ve öneri kuyruktan düşer.';
+  }
   return 'Motor reddederse öneri “uygulanamadı” hâline geçer ve sebebi burada yazar.';
 }
 

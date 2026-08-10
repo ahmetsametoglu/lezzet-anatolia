@@ -14,8 +14,17 @@ import { DECLARATION_GAP_LABELS, type AssistantProposalKind, type DeclarationGap
  * - `handoff` — etki geri alınamaz (bildirim gider, stok satılabilir olur, defter yazılır), yani
  *   karar ÖNCESİ düzenleme şart. Kuyruk uygulamaz, ilgili ekranı ÖN DOLDURUR; kayıt oradan ve
  *   normal akışla olur. İkinci yazma yolu yine açılmaz.
+ * - `inline` — **karar kuyruğun İÇİNDE verilir** (22.8, kullanıcı kararı 10.08). Devrin çözdüğü
+ *   sorun gerçekti (düzenlemeden onay verilemez) ama çözümün bedeli daha büyük çıktı: kullanıcı
+ *   *"asistan sayfasından çıkınca konseptten kopuyorum"*. Doğru cevap devretmek değil, düzenleme
+ *   yüzeyini kuyruğa GETİRMEK — hedef ekranın kendi form gövdesi öneri detayına gömülür.
+ *
+ * `inline` yeni bir yazma yolu AÇMAZ ve bu ayrım kurgunun kendisi: gövde, hedef ekranın kullandığı
+ * server action'ın TA KENDİSİNİ çağırır (`setOfferPriceAction` gibi) ve o eylem `withProposal` ile
+ * kuyruk satırını da kapatır. Yani kuyruk hâlâ uygulamıyor; uygulayan yine varlığın kendi kapısı,
+ * değişen tek şey formun nerede DURDUĞU.
  */
-export type ProposalMode = 'apply' | 'draft_then_edit' | 'handoff';
+export type ProposalMode = 'apply' | 'draft_then_edit' | 'handoff' | 'inline';
 
 interface KindMeta {
   label: string;
@@ -140,13 +149,16 @@ export const KIND_META = {
     impact:
       'Partiye indirimli satış fiyatı yazılır ve o parti ANINDA fırsat olarak vitrine düşer — taslak evresi yoktur. Aynı ürünün öteki partileri tam fiyatta kalır. Geri almak teklifi kaldırmaktır.',
     tables: ['stock'],
-    // ── İLK YAZIMDA `apply` DENMİŞTİ, TARAMADA DÜZELTİLDİ (09.08) ───────────
-    // "Tek sayı, düzenlenecek bir şey yok" diye düşünülmüştü. Yanlıştı: teklif fiyatının ÜÇ YÜZÜ
-    // var (tutar · listeye göre indirim · alışa göre marj) ve `offer-dialog` üçünü birden
-    // gösteriyor. Kuyrukta tek sayı onaylamak, marjı GÖRMEDEN fiyat onaylamaktır — zararına satışı
-    // fark etmenin tek yeri o diyalogdur. Üstelik patron rakamı değiştirmek isteyebilir ve
-    // "onayla/reddet" ona bu yolu hiç vermiyordu.
-    mode: 'handoff',
+    // ── ÜÇ TURDA ÜÇ CEVAP; SONUNCUSU İKİSİNİ DE KAPSIYOR ───────────────────
+    // (1) `apply` yazılmıştı: "tek sayı, düzenlenecek bir şey yok". Yanlıştı — teklif fiyatının ÜÇ
+    //     YÜZÜ var (tutar · listeye göre indirim · alışa göre marj) ve tek sayı onaylamak, marjı
+    //     GÖRMEDEN fiyat onaylamaktır.
+    // (2) `handoff` oldu: karar stok ekranına, `offer-dialog`a devredildi. Üç yüz orada görünüyordu
+    //     ve fiyat değiştirilebiliyordu — ama bedeli kullanıcının kuyruktan kopmasıydı (10.08).
+    // (3) `inline`: o diyaloğun kendi gövdesi (`PriceTriple`) kuyruğun içine geldi. Üç yüz de
+    //     görünüyor, fiyat da değiştirilebiliyor, üstelik sayfadan çıkılmıyor — devrin çözdüğü
+    //     sorun duruyor, yarattığı sorun kalkıyor. Yazan kapı yine `setOfferPriceAction`.
+    mode: 'inline',
     target: 'stock',
     resultKey: 'stockId',
   },

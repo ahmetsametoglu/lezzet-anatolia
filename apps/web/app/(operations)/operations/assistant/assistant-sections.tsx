@@ -19,6 +19,7 @@ import {
   notifyCountOf,
   queueStatusLine,
 } from './assistant-labels';
+import { inlineBodyOf } from './assistant-body';
 import { ProposalPreview } from './assistant-preview';
 import type { AssistantRowView, DecisionKind } from './assistant-types';
 
@@ -228,7 +229,7 @@ export function DecisionCard({
   row: AssistantRowView;
   busy: boolean;
   error: string | null;
-  onDecision: (kind: DecisionKind) => void;
+  onDecision: (kind: DecisionKind, draft?: unknown) => void;
 }) {
   const tone = KIND_TONE[row.kind];
   const notifyCount = notifyCountOf(row);
@@ -238,6 +239,23 @@ export function DecisionCard({
   // Kararın CİNSİ ve hedef adres SUNUCUDAN gelir (`AssistantRowView` künyesi): künye uygulama
   // katmanında ve o paketi istemciden çağırmak sunucu modüllerini tarayıcı paketine sokuyor.
   const { mode, bridge } = row;
+
+  /**
+   * ── KUYRUĞUN İÇİNDE DÜZENLEME (22.8) ──────────────────────────────────────
+   * Gövde karar bekleyen satırda DÜZENLENEBİLİR, karar verilmiş satırda okunur hâlde çizilir —
+   * ikisi de aynı bileşen. Arşive ayrı bir "özet" yazmak, aynı kararı iki dilde anlatmak olurdu.
+   *
+   * Şekil tutmuyorsa gövde `null`: bozuk bir dilekçeye form çizmek, doldurulup kaydedilemeyecek
+   * bir ekran demekti. O hâlde önizleme devreye girer ve sebebini yazar.
+   */
+  const body = inlineBodyOf(row.kind);
+  const bodyPayload = body ? body.parse(row.payload) : null;
+  const inline = body && bodyPayload !== null ? body : null;
+
+  // Taslak ÇERÇEVEDE durur, gövdede değil: kararı yürüten, hatayı gösteren ve kuyruğu tazeleyen
+  // taraf burası. Kart `key={row.id}` ile sarılı olduğu için öneri değişince taslak da sıfırlanır.
+  const [draft, setDraft] = useState<unknown>(() => (inline && bodyPayload !== null ? inline.initial(bodyPayload) : null));
+  const blocked = inline ? inline.blocked(draft) : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-ops-subtle">
@@ -266,7 +284,21 @@ export function DecisionCard({
 
         <ReasonBlock reason={row.reason} />
 
-        <ProposalPreview kind={row.kind} payload={row.payload} economics={row.economics} />
+        {/* Gövde varsa ÖNİZLEME ÇİZİLMEZ — ikisi birden dururdu ve aynı sayı iki yerde iki farklı
+            hâlde okunurdu (önizleme asistanın önerdiği fiyatı, form operatörün yazdığını). İki
+            gösterim dili bakımı da ikiye böler; talebin birinci amacı bunu azaltmaktı. */}
+        {inline && bodyPayload !== null ? (
+          inline.render({
+            payload: bodyPayload,
+            economics: row.economics,
+            draft,
+            onDraft: setDraft,
+            disabled: busy || !live,
+            readOnly: !live,
+          })
+        ) : (
+          <ProposalPreview kind={row.kind} payload={row.payload} economics={row.economics} />
+        )}
 
         <div className="flex items-start gap-2.5 rounded-ops-card border border-ops-gray-300 bg-ops-gray-100 px-3.5 py-2.5">
           <span className="mt-px flex-none text-ops-body">
@@ -304,7 +336,28 @@ export function DecisionCard({
 
               Öteki iki modda düğme kalır. Bildirim gidecekse rengi ve cümlesi değişir — geri
               alınamaz eylem, geri alınabilir olanla aynı görünmemeli (brief §5). */}
-          {mode === 'handoff' ? (
+          {inline ? (
+            /* ── GÖVDESİ OLAN TİP: kaydeden düğme GÖVDENİN kapısıdır (22.8) ────────
+               Metni "Uygula" değil işin kendi adı ("Teklifi aç"): operatör bir öneriyi değil, bir
+               işi yapıyor — ve o iş kartın içinde gözünün önünde duruyor. Engel varsa sebebi
+               düğmenin ipucunda yazar; etkin görünüp hiçbir şey yapmayan düğme olmaz.
+
+               Onay penceresi AÇILMAZ: gövdenin kendisi zaten onay yüzeyi — operatör fiyatı görüp
+               değiştirdi. Üstüne bir modal koymak, "dialog açılmaz" kuralını çiğnemenin yanında
+               aynı kararı iki kez sordurmak olurdu. */
+            <Button
+              variant="primary"
+              onClick={() => onDecision('apply', draft)}
+              disabled={busy || blocked !== null}
+              title={blocked ?? undefined}
+            >
+              {busy ? 'Kaydediliyor…' : inline.applyLabel}
+            </Button>
+          ) : mode === 'handoff' || mode === 'inline' ? (
+            /* `inline` buraya YALNIZ dilekçenin şekli tanınmadığında düşer: gövde çizilemedi, yani
+               düzenlenecek form da yok. O hâlde genel "Uygula" gösterilemez — sunucudaki kapı onu
+               zaten reddeder ve operatör hiçbir şey olmadan bir düğmeye basmış olurdu. Geriye tek
+               dürüst çıkış kalıyor: ekranın kendisi. */
             bridge ? (
               <Link href={bridge.href} className={buttonClass({ variant: 'primary' })}>
                 {bridge.label} →
