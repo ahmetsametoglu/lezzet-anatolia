@@ -249,6 +249,10 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 - **Rota dışı:** kargo.
 - **Ürün teslimat izni:** bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez (`Product.shippable=false`) — yalnız rota-içi kapı teslimi. Böyle bir ürün rota-dışı (kargo) siparişte **görünmez/eklenemez**; sepette varsa müşteri kargo adresi seçemez, yalnız rota-içi teslim sunulur.
 - **Minimum sepet:** bir alt sınır olabilir, ama **parametrik** — kod sabiti değil, admin ayarı. Kanala/bölgeye göre farklı olabilmeli. (Blueprint STACK §10: işletme ayarı env'e/koda değil, ayar tablosuna girer.)
+  - **YALNIZ KAPIYA TESLİMDE** (kullanıcı kararı 10.08). Alt sınır bir **lojistik tabandır**: aracın o tura çıkması anlamlı olsun diye konur. **Kargo siparişinde uygulanmaz** — araç çıkmaz, taşıyıcı gider ve ücretini müşteri zaten öder; küçük siparişin ekonomik freni de zaten oradadır (ücretsiz kargo eşiğinin altında ücret doğar). Aynı sepete iki fren koymak müşteriden iki kez istemektir.
+  - **Kanal satırı bunun istisnası ve her yolda geçerli:** `channel: b2b` alt sınırı toptan fiyat vermenin karşılığıdır — **ticari şarttır, mesafeyle ilgisi yoktur.** Toptancı kargoyla alsa da doldurur.
+  - Kural **kodda zorlanır, veriyle değil** (`packages/application/src/cart/min-basket.ts`): kargo yolunda ayar yalnız kanal kapsamından okunur (`only: ['channel']`), küresel satır bile sayılmaz. Kapsam düşürmek yetmiyordu — küresel satır her zaman eşleşir, yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce ona takılırdı. **Kimsenin vermediği bir kararın oluşabildiği yol kapatıldı.**
+  - Bu güvence sayesinde taban **küresel satıra** yazılabiliyor (bölge bölge tekrarlanmadan); bölge satırı yalnız gerçekten farklı bir tur için gerekir.
 - **Ücretsiz kargo eşiği:** parametrik.
 - **Kargo ücreti:** eşik altı siparişte müşteriden alınan ücret `Order.shipping_fee`'ye yazılır ve **KDV'ye tabidir**; `total` bu ücreti içerir. Tam iptalde ücret de iade edilir; kısmi eksikte varsayılan olarak iade edilmez (teslimat yapılmıştır).
 - Faz 1'de rota kapasitesi ve zaman penceresi **yok** (Faz 2); sadece içerideyim/dışarıdayım ayrımı.

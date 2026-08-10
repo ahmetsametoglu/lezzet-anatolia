@@ -68,7 +68,10 @@ describe('toSettingRows', () => {
     expect(row.value).toBe(2500);
     expect(row.display).toBe('25,00 €');
     expect(row.changed).toBe(true);
-    expect(row.fallbackDisplay).toBe('0,00 €');
+    // Fabrika değeri 40 € (kullanıcı kararı 10.08 — kapıya teslim tabanı); 0 idi ve o hâlde kural
+    // fiilen kapalıydı. Sayının kendisi sözlükten okunuyor, burada elle yazılmıyor olsaydı bu satır
+    // her ayar değişiminde yeniden düşerdi — kasıtlı: fabrika değerinin değişmesi görülmeli.
+    expect(row.fallbackDisplay).toBe('40,00 €');
   });
 
   it('istisnalar ekseniyle ve hedef ADIYLA yazılır', () => {

@@ -11,13 +11,12 @@ import {
 } from '@lezzet/domain-core';
 import type { DeliveryType, PaymentMethod } from '@lezzet/types';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
+import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
 // Müşteriye söz veren ayarlar: sepet ve checkout AYNI satırı okumalı (`../cart/settings-keys`).
 import {
   FREE_SHIPPING_THRESHOLD_DEFAULT,
   FREE_SHIPPING_THRESHOLD_KEY,
-  MIN_BASKET_DEFAULT,
-  MIN_BASKET_KEY,
   SHIPPING_FEE_DEFAULT,
   SHIPPING_FEE_KEY,
 } from '../cart/settings-keys';
@@ -109,7 +108,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     settings.getNumber('cash_legal_limit_cents', 100_000, scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
     settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),
-    settings.getNumber(MIN_BASKET_KEY, MIN_BASKET_DEFAULT, scope),
+    minBasketFor(settings, input.deliveryType, scope),
   ]);
   if (!customer) throw new Error(`checkout: müşteri bulunamadı (${input.customerId})`);
 

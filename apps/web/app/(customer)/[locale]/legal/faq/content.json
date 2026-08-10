@@ -10,7 +10,7 @@
       {
         "id": "asgari-sepet",
         "question": "Minimum sipariş tutarı var mı?",
-        "answer": "Evet, 40 €. Hem bölge içi teslimatta hem kargo gönderiminde geçerlidir; altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo ücreti ayrıca 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz."
+        "answer": "Yalnız bölge içi teslimatta: kendi aracımızla kapınıza getirdiğimiz siparişlerde en az 40 €. Altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo gönderiminde minimum sipariş tutarı yoktur — orada kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz."
       },
       {
         "id": "teslimat-gunu",
@@ -60,7 +60,7 @@
       {
         "id": "asgari-sepet",
         "question": "Y a-t-il un montant minimum de commande ?",
-        "answer": "Oui, 40 €. Il s'applique aussi bien à la livraison dans notre zone qu'à l'expédition ; si vous êtes en dessous, le montant restant est indiqué dans le panier. Les frais d'expédition sont par ailleurs de 7,90 € et sont offerts au-delà de 60 €."
+        "answer": "Uniquement pour la livraison dans notre zone : 40 € minimum pour les commandes que nous apportons à votre porte avec notre propre véhicule. Si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum de commande — les frais d'expédition y sont de 7,90 € et sont offerts au-delà de 60 €."
       },
       {
         "id": "teslimat-gunu",
@@ -110,7 +110,7 @@
       {
         "id": "asgari-sepet",
         "question": "Gibt es einen Mindestbestellwert?",
-        "answer": "Ja, 40 €. Er gilt sowohl für die Lieferung in unserem Gebiet als auch für den Versand; liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Die Versandkosten betragen darüber hinaus 7,90 € und entfallen ab 60 €."
+        "answer": "Nur für die Lieferung in unserem Gebiet: mindestens 40 € für Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen. Liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — dort betragen die Versandkosten 7,90 € und entfallen ab 60 €."
       },
       {
         "id": "teslimat-gunu",

@@ -63,6 +63,26 @@ const SCOPE_PRIORITY: readonly SettingScope[] = ['warehouse', 'zone', 'channel',
 const STRICTEST_WINS: ReadonlySet<string> = new Set(['min_basket_cents']);
 
 /**
+ * Okumayı BELİRLİ kapsam türleriyle sınırlar — küresel satır dahil ötekiler hiç sayılmaz.
+ *
+ * **Neden gerekti (kullanıcı kararı 10.08).** `min_basket_cents` iki ayrı soruya cevap veriyor
+ * (yukarıdaki künye) ve biri teslimat yoluna bağlı: **kargo siparişinde LOJİSTİK taban yoktur** —
+ * araç çıkmıyor, taşıyıcı gidiyor ve ücretini müşteri zaten ödüyor. Ticari şart (kanal satırı) ise
+ * her yolda geçerli; toptan fiyat vermenin karşılığıdır, mesafeyle ilgisi yoktur.
+ *
+ * Kapsam düşürerek çözülemiyordu: `zoneId`yi boş geçmek bölge satırını eler ama **küresel satır her
+ * zaman eşleşir**. Yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce o eşiğe
+ * takılırdı — kimsenin vermediği bir karar, kimsenin fark etmediği bir yerde. `only: ['channel']`
+ * bunu yapısal olarak imkânsız kılıyor: kargo yolunda okunan tek satır kanalın kendisidir.
+ *
+ * Sınır **çağrı yerinde** duruyor, anahtar listesinde değil: hangi okumanın hangi kapsamı
+ * dinleyeceği çağıranın bağlamına (teslimat yolu) bağlı, anahtarın kendisine değil.
+ */
+export interface ScopeLimit {
+  only?: readonly SettingScope[];
+}
+
+/**
  * İşletme ayarı servisi (02.6) — DATA_MODEL "Setting", STACK §10.
  *
  * **Ayar env'e/koda gömülmez.** Kesim saati, minimum sepet, kapıda ödeme tavanı gibi değerler işin
@@ -123,8 +143,8 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
    * YÜKSEĞİ döner. Gerekçe o sabitin künyesinde — birlikte karşılanması gereken iki koşulu rakip
    * saymamak için.
    */
-  async getNumber(key: string, fallback: number, scope: SettingScopeContext = {}): Promise<number> {
-    if (STRICTEST_WINS.has(key)) return this.strictestNumber(key, fallback, scope);
+  async getNumber(key: string, fallback: number, scope: SettingScopeContext = {}, opts: ScopeLimit = {}): Promise<number> {
+    if (STRICTEST_WINS.has(key)) return this.strictestNumber(key, fallback, scope, opts);
     const value = Number(await this.get<unknown>(key, fallback, scope));
     return Number.isFinite(value) ? value : fallback;
   }
@@ -132,12 +152,22 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
   /**
    * Eşleşen TÜM kapsamların en katısı (en yükseği). Sayıya çevrilemeyen satır sayılmaz — bozuk bir
    * değer eşiği sessizce `NaN`'a çevirmemeli; hiç satır yoksa `fallback`.
+   *
+   * `only` verilirse **yalnız o kapsam türleri katılır ve küresel satır bile dışarıda kalır**.
+   * Sebebi `ScopeLimit` künyesinde: bir eşiğin hangi kapsamdan geldiği bazen değerin kendisi kadar
+   * anlamlıdır ve o hâlde "hepsini oku, en katısını al" yanlış cevap verir.
    */
-  private async strictestNumber(key: string, fallback: number, scope: SettingScopeContext): Promise<number> {
+  private async strictestNumber(
+    key: string,
+    fallback: number,
+    scope: SettingScopeContext,
+    opts: ScopeLimit = {},
+  ): Promise<number> {
     const rows = await this.rowsFor(key);
     const values: number[] = [];
 
     for (const scopeType of SCOPE_PRIORITY) {
+      if (opts.only && !opts.only.includes(scopeType)) continue;
       const wanted = scopeIdFor(scopeType, scope);
       if (scopeType !== 'global' && !wanted) continue;
 

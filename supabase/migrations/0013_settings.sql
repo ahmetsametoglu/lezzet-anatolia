@@ -51,7 +51,11 @@ alter table public.settings enable row level security;
 insert into public.settings (key, value, description) values
   ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk). Stripe oturum asgarisi 30 dk — altına inilemez; ödeme penceresi buna eşitlenir.'),
   ('order_cutoff_time',            '"16:00"','Sipariş kesim saati. Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır.'),
-  ('min_basket_cents',             '0',      'Minimum sepet tutarı (cent). 0 = alt sınır yok.'),
+  -- KAPIYA TESLİM tabanı (kullanıcı kararı 10.08). Kargo siparişinde OKUNMAZ — orada yalnız kanal
+  -- satırı (toptan ticari şartı) geçerlidir; kuralın kendisi `application/cart/min-basket.ts`te.
+  -- Küresel satıra yazılabilmesinin sebebi o kural: kargoya sızma yolu kapalı olduğu için taban
+  -- bölge bölge tekrarlanmak zorunda değil. SSS de bu sayıyı yazıyor (`legal/faq`).
+  ('min_basket_cents',             '4000',   'Asgari sepet — KAPIYA TESLİM için lojistik taban (cent). Kargo siparişinde uygulanmaz; 0 = alt sınır yok.'),
   ('free_shipping_threshold_cents','6000',   'Ücretsiz kargo eşiği (cent).'),
   ('shipping_fee_cents',           '790',    'Eşik altı kargo ücreti (cent). KDV''ye tabidir.'),
   ('cod_max_cents',                '30000',  'Kapıda ödeme genel tavanı (cent) — kötüye kullanım freni.'),

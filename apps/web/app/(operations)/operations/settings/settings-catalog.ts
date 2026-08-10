@@ -134,14 +134,14 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   // ── Sipariş & teslimat ────────────────────────────────────────────────────
   {
     key: MIN_BASKET_KEY,
-    label: 'Minimum sepet tutarı',
-    help: 'Bu tutarın altında sipariş tamamlanamaz. 0 = alt sınır yok.',
+    label: 'Minimum sepet tutarı (kapıya teslim)',
+    help: 'Kendi aracımızla kapıya götürdüğümüz siparişlerin alt sınırı — aracın o tura çıkması anlamlı olsun diye. KARGO siparişine UYGULANMAZ: orada araç çıkmaz, müşteri kargo ücretini zaten öder. 0 = alt sınır yok.',
     group: 'order',
     kind: 'money',
     min: 0,
-    impact: 'Geniş etkili: yükseltmek küçük sepetli müşterilerin siparişini engeller. Değişiklik geleceğe uygulanır, verilmiş siparişleri etkilemez.',
+    impact: 'Geniş etkili: yükseltmek küçük sepetli müşterilerin KAPIYA TESLİM siparişini engeller; kargo siparişleri etkilenmez. Tek istisna kanal satırıdır — toptan (b2b) alt sınırı bir ticari şarttır ve kargoda da geçerlidir. Değişiklik geleceğe uygulanır, verilmiş siparişleri etkilemez.',
     exceptionScopes: WITH_WAREHOUSE('channel', 'zone', 'country'),
-    fallback: 0,
+    fallback: 4000,
   },
   {
     key: FREE_SHIPPING_THRESHOLD_KEY,

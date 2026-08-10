@@ -87,27 +87,18 @@ export async function seedScopedSettings(db: Db): Promise<void> {
     description: 'Toptan ücretsiz kargo eşiği',
   });
 
-  // BÖLGE: çevre bölgede araç bir tur daha atıyor — asgari sepet oraya özel yüksek ve kesim saati
-  // erken.
+  // BÖLGE: çevre bölgede araç bir tur daha atıyor — kesim saati oraya özel erken.
   //
-  // **BU SATIRIN SINAVI DEĞİŞTİ (kullanıcı kararı 09.08).** Eskiden künyesi *"b2b müşteri bu
-  // bölgeden sipariş verdiğinde kanal değil BÖLGE kazanmalı"* diyordu. Kural tersine döndü ve
-  // gerekçesi ticari: `channel: b2b` 120 € bir TİCARİ ŞARTTIR (toptan fiyat vermenin karşılığı,
-  // mesafeyle ilgisi yok), bölge satırı ise bir LOJİSTİK TABANDIR. İkisi rakip değil, birlikte
-  // karşılanması gereken iki koşul — `min_basket_cents` artık EN KATISINI uyguluyor
-  // (`SettingsService.STRICTEST_WINS`). Yani bu satır hâlâ bir sınav, ama sorusu şu: B2C müşteri
-  // bu bölgede 45 € görüyor mu, B2B müşteri yine de 120 €'da kalıyor mu.
+  // **BÖLGEYE ÖZEL ASGARİ SEPET SATIRI KALDIRILDI (kullanıcı kararı 10.08).** Buradaki satır
+  // açıkça "ÖRNEK — gerçek bir iş kuralı değil" etiketiyle duruyordu (09.08: *"böyle bir uygulamam
+  // yok ama mekanizma dursun"*). Bugün gerçek bir kural konuldu ve **küresel satıra** yazıldı
+  // (`0013_settings.sql` → 40 €): kargo yolunda okunmayacağı kod tarafından güvence altına
+  // alındığı için taban artık bölge bölge tekrarlanmak zorunda değil.
   //
-  // **AÇIKLAMASINDA "ÖRNEK" YAZIYOR ve bu bilerek (kullanıcı kararı 09.08).** Bölgeye özel asgari
-  // sepet bugün gerçek bir iş kuralı DEĞİL — kullanıcı böyle bir uygulaması olmadığını söyledi ama
-  // mekanizma dursun istedi ("ileride kullanabilirim"). Etiket olmasaydı satır gerçek bir karar
-  // gibi okunurdu; bugün tam olarak öyle oldu: eski künyesi "uzak bölge" diyordu, kimse öyle bir
-  // kural koymamıştı ve saatler o lafın peşinde geçti. Uydurma veri, uydurma olduğunu söylemeli.
-  await yaz('min_basket_cents', 4500, {
-    scopeType: 'zone',
-    scopeId: cevreBolge?.id ?? null,
-    description: `ÖRNEK — bölgeye özel asgari sepet (${cevreBolge?.name ?? '—'}). Mekanizma gösterimi; gerçek bir iş kuralı değil`,
-  });
+  // Sahte satırın bedeli ölçüldü: kullanıcı kendi ödeme sayfasında "Sipariş onayla" düğmesini
+  // pasif buldu, sebebi Illkirch'e yazılmış bu gösterim satırıydı ve gerçek bir kural sanıldı.
+  // Mekanizma yine sınanabilir — bölge kapsamının çalıştığını `order_cutoff_time` satırı gösteriyor
+  // ve o GERÇEK bir kural (araç erken çıkar).
   await yaz('order_cutoff_time', '10:00', {
     scopeType: 'zone',
     scopeId: cevreBolge?.id ?? null,

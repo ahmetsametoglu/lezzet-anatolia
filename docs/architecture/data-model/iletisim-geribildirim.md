@@ -297,13 +297,15 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 
 Ödünleşme açıkça yazılı: bu anahtarlarda bir eşiği dar kapsamda **yükseltebilir ama düşüremezsiniz**. **Fiyat ayarları listede DEĞİL** (`shipping_fee_cents`): orada kapsam "hangi tarife" sorusunun cevabıdır — Alman müşteri Almanya tarifesini öder, "en pahalısını" değil.
 
+**İKİNCİ İSTİSNA — kargo siparişinde okuma KANALLA sınırlıdır** (kullanıcı kararı 10.08, `ScopeLimit.only`). Yukarıdaki iki koşuldan biri teslimat yoluna bağlı: **lojistik taban kargoda yoktur** (araç çıkmaz, taşıyıcı gider ve ücretini müşteri öder), **ticari şart ise her yolda geçerlidir**. Kapsam düşürerek çözülemiyordu — `zoneId`yi boş geçmek bölge satırını eler ama **küresel satır her zaman eşleşir**, yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce ona takılırdı. Kural artık kodda: kargo yolunda okunan tek satır kanalın kendisidir (`application/cart/min-basket.ts`, dört birim testi). Bu güvence sayesinde taban küresel satıra yazılabildi — bölge bölge tekrarlanması gerekmiyor.
+
 **Yüklü varsayılanlar** (migration'ın kendisinde — test verisi değil, sistemin zemini; `db:reset` sonrası seed çalışmasa da yerinde olmalı). Para değerleri **cent**, yüzdeler tam sayı:
 
 | Anahtar | Varsayılan | Ne işe yarar |
 | --- | --- | --- |
 | `reservation_ttl_minutes` | 30 | Checkout rezervasyon + ödeme + fiyat penceresi (Stripe oturum asgarisi; altına inilemez) |
 | `order_cutoff_time` | `"16:00"` | Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır |
-| `min_basket_cents` | 0 | Minimum sepet; 0 = alt sınır yok |
+| `min_basket_cents` | 4000 | Asgari sepet — **yalnız kapıya teslim** için lojistik taban; kargoda uygulanmaz (0 = alt sınır yok) |
 | `free_shipping_threshold_cents` | 6000 | Ücretsiz kargo eşiği |
 | `shipping_fee_cents` | 790 | Eşik altı kargo ücreti (KDV'ye tabi) |
 | `cod_max_cents` | 30000 | Kapıda ödeme genel tavanı (kötüye kullanım freni) |
