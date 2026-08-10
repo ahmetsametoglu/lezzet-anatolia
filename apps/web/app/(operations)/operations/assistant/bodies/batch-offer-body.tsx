@@ -111,17 +111,55 @@ export function BatchOfferBody({
         </span>
       </div>
 
-      {/* ── İKİ SÜTUN: solda OKUNAN, sağda YAZILAN (kullanıcı kararı 10.08) ────
+      {/* ── İKİ SÜTUN: solda YAZILAN, sağda OKUNAN (kullanıcı kararı 10.08) ────
           Üçlü bir tur tam genişlikte yatay duruyordu ve konteyner büyüdükçe kutular da büyüyordu:
-          *"inputlar ekran genişliğine göre uzuyor, bu istediğim bir şey değil"*. Bir para alanının
-          400 piksele ihtiyacı yok, üstelik ekranı boydan boya kesen üç kutu "asıl iş burada"
-          sinyali veriyordu — oysa karar TEK sayı, öteki ikisi onun okunuşu.
+          *"inputlar ekran genişliğine göre uzuyor"*. Bir para alanının 400 piksele ihtiyacı yok.
 
-          Ayrım işlevsel: sol sütun bakılacak şeyleri toplar (kâr cümlesi, sapma künyeleri, not),
-          sağ sütun SABİT genişlikte kalır ve yalnız karar alanını taşır. Geniş ekranda büyüyen
-          taraf bilgi olur, kutular değil. */}
+          Sonra sıra düzeltildi: *"asıl odaklanılması gereken yer input, dolayısıyla inputları sola
+          alalım"*. Karar sütunu SOLDA ve SABİT (16rem) — göz soldan başlar, ilk gördüğü şey
+          yazacağı yer olur. Bilgi sağda ve `flex-1`: geniş ekranda büyüyen taraf bilgi olsun,
+          kutular değil.
+
+          `items-start` bilgi sütununda ZORUNLU: onsuz flex çocukları sütun genişliğine yayılıyor ve
+          tek satırlık sarı uyarı ekranı boydan boya kesiyordu — *"ihtiyacından fazla uzuyor, dağınık
+          tasarım havası veriyor"*. Artık her uyarı kendi metni kadar yer kaplıyor. */}
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
-        <div className="flex min-w-[18rem] flex-1 flex-col gap-3">
+      {readOnly ? (
+        <div className="flex w-[16rem] flex-none flex-col gap-3">
+          <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
+          <StaticFace
+            label="İndirim"
+            aside="listeye göre"
+            value={
+              listCents !== null && valueCents !== null ? percent(((listCents - valueCents) / listCents) * 100, 1) : '—'
+            }
+          />
+          <StaticFace
+            label="Kâr marjı"
+            aside="alışa göre"
+            value={marginPercent === null ? '—' : percent(marginPercent, 1)}
+          />
+        </div>
+      ) : (
+        <div className="w-[16rem] flex-none">
+        <PriceTriple
+          valueCents={valueCents}
+          onChange={onChange}
+          channel="b2c"
+          vatRate={vatRate ?? 0}
+          listCents={listCents}
+          costCents={costCents}
+          priceLabel="Teklif fiyatı (€)"
+          priceLabelAside="KDV dahil"
+          pricePlaceholder="ör. 12,60"
+          required
+          idPrefix="proposal-offer"
+          layout="column"
+        />
+        </div>
+      )}
+
+        <div className="flex min-w-[18rem] flex-1 items-start flex-col gap-3">
           <MarginSentence
             costCents={costCents}
             offerHtCents={offerHtCents}
@@ -149,42 +187,7 @@ export function BatchOfferBody({
           <span className="font-ops-body text-ops-base text-ops-muted">
             Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
           </span>
-        </div>
-
-      {readOnly ? (
-        <div className="flex w-[15rem] flex-none flex-col gap-3">
-          <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
-          <StaticFace
-            label="İndirim"
-            aside="listeye göre"
-            value={
-              listCents !== null && valueCents !== null ? percent(((listCents - valueCents) / listCents) * 100, 1) : '—'
-            }
-          />
-          <StaticFace
-            label="Kâr marjı"
-            aside="alışa göre"
-            value={marginPercent === null ? '—' : percent(marginPercent, 1)}
-          />
-        </div>
-      ) : (
-        <div className="w-[15rem] flex-none">
-        <PriceTriple
-          valueCents={valueCents}
-          onChange={onChange}
-          channel="b2c"
-          vatRate={vatRate ?? 0}
-          listCents={listCents}
-          costCents={costCents}
-          priceLabel="Teklif fiyatı (€)"
-          priceLabelAside="KDV dahil"
-          pricePlaceholder="ör. 12,60"
-          required
-          idPrefix="proposal-offer"
-          layout="column"
-        />
-        </div>
-      )}
+      </div>
       </div>
 
     </div>
