@@ -75,6 +75,15 @@ export const customerMetrics = {
   recipeBarSpace: 108,
   /** Paket içerik satırının küçük karesi (v3:27 — 46, köşe 10). */
   packageItemPhoto: 46,
+  /**
+   * Geri bildirim akışının oy aşaması (v3:1016 — 380 fotoğraf · v3:1026 — 56 oy düğmesi; kitin
+   * 52'lik `controlLg`sinden bilerek büyük, şablonun kendi vurgusu). Terfi gerekçesi ÜSTTEKİYLE
+   * AYNI: skeleton aynı ölçüleri isteyince ekran dosyasından import dairesel bağımlılık olurdu.
+   * Yalnız SKELETON'IN da okuduğu iki durak taşındı; teşekkür dairesi ve kalp ikonu (88/38) tek
+   * tüketenli kaldığı için ekranın kendi bloğunda durur.
+   */
+  feedbackPhoto: 380,
+  feedbackVoteButton: 56,
 
   /** Sipariş detayındaki canlı takip haritası (v3:702 — 195). */
   mapHeight: 195,

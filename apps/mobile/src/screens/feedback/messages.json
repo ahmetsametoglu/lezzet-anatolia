@@ -14,7 +14,8 @@
       "body": "Kısa bir yorum bırakabilirsiniz — incelendikten sonra ürün sayfasında yayınlanır. Zorunlu değil.",
       "placeholder": "Örn. Börek tam annemin yaptığı gibiydi…",
       "label": "Yorumunuz",
-      "finish": "Değerlendirmeyi tamamla"
+      "finish": "Değerlendirmeyi tamamla",
+      "finishing": "Tamamlanıyor…"
     },
     "done": {
       "title": "Değerlendirmeniz için teşekkürler",
@@ -27,10 +28,25 @@
       "issueCta": "Sorun bildir",
       "home": "Vitrine dön"
     },
+    "already": {
+      "title": "Bu değerlendirmeyi zaten tamamladınız",
+      "body": "Teşekkürler! Puanınız daha önce eklendi."
+    },
     "notFound": {
       "title": "Bu bağlantıyı çözemedik",
       "body": "Değerlendirme daveti e-postanızdaki bağlantıyla açılır — bağlantı eksik ya da eskimiş olabilir.",
       "cta": "Vitrine dön"
+    },
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "İnternet bağlantınızı kontrol edin. Bağlantı gelince kaldığınız yerden devam edersiniz.",
+      "retry": "Tekrar dene"
+    },
+    "errors": {
+      "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
+      "network": "Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+      "invalid_link": "Bu bağlantı artık geçerli değil.",
+      "vote_failed": "Değerlendirmeniz kaydedilemedi. Tekrar deneyin."
     }
   },
   "fr": {
@@ -48,7 +64,8 @@
       "body": "Vous pouvez laisser un court commentaire — après relecture, il sera publié sur la page du produit. Facultatif.",
       "placeholder": "Ex. Le börek était exactement comme celui de ma mère…",
       "label": "Votre commentaire",
-      "finish": "Terminer l'évaluation"
+      "finish": "Terminer l'évaluation",
+      "finishing": "Finalisation…"
     },
     "done": {
       "title": "Merci pour votre évaluation",
@@ -61,10 +78,25 @@
       "issueCta": "Signaler un problème",
       "home": "Retour à la vitrine"
     },
+    "already": {
+      "title": "Vous avez déjà complété cette évaluation",
+      "body": "Merci ! Vos points ont déjà été ajoutés."
+    },
     "notFound": {
       "title": "Lien introuvable",
       "body": "L'invitation s'ouvre via le lien de votre e-mail — celui-ci est peut-être incomplet ou expiré.",
       "cta": "Retour à la vitrine"
+    },
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "retry": "Réessayer"
+    },
+    "errors": {
+      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
+      "network": "Connexion impossible. Vérifiez votre connexion et réessayez.",
+      "invalid_link": "Ce lien n'est plus valable.",
+      "vote_failed": "Votre réponse n'a pas pu être enregistrée. Réessayez."
     }
   },
   "de": {
@@ -82,7 +114,8 @@
       "body": "Sie können einen kurzen Kommentar hinterlassen — nach Prüfung erscheint er auf der Produktseite. Optional.",
       "placeholder": "z. B. Das Börek war genau wie bei meiner Mutter…",
       "label": "Ihr Kommentar",
-      "finish": "Bewertung abschließen"
+      "finish": "Bewertung abschließen",
+      "finishing": "Wird abgeschlossen…"
     },
     "done": {
       "title": "Danke für Ihre Bewertung",
@@ -95,10 +128,25 @@
       "issueCta": "Problem melden",
       "home": "Zurück zur Vitrine"
     },
+    "already": {
+      "title": "Sie haben diese Bewertung bereits abgeschlossen",
+      "body": "Vielen Dank! Ihre Punkte wurden bereits gutgeschrieben."
+    },
     "notFound": {
       "title": "Link nicht gefunden",
       "body": "Die Einladung öffnet sich über den Link in Ihrer E-Mail — er ist womöglich unvollständig oder abgelaufen.",
       "cta": "Zurück zur Vitrine"
+    },
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Prüfen Sie Ihre Internetverbindung. Sobald sie wieder da ist, geht es weiter.",
+      "retry": "Erneut versuchen"
+    },
+    "errors": {
+      "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "network": "Keine Verbindung. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "invalid_link": "Dieser Link ist nicht mehr gültig.",
+      "vote_failed": "Ihre Antwort konnte nicht gespeichert werden. Bitte erneut versuchen."
     }
   }
 }

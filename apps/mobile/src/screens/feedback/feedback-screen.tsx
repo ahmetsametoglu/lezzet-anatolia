@@ -1,5 +1,4 @@
 import type { LocalizedCopy } from '@lezzet/i18n';
-import type { FeedbackVote } from '@lezzet/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -9,23 +8,20 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { Tag } from '@/components/ui/tag';
 import { TextField } from '@/components/ui/text-field';
+import { CLIENT_ERROR } from '@/lib/api/client';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { emToDp } from '@/theme/parse';
+import { FeedbackSkeleton } from './feedback-skeleton';
 import { HeartIcon, ThumbIcon } from './feedback-icons';
-import {
-  completeFeedbackFixture,
-  feedbackInviteByToken,
-  type FeedbackCardView,
-  type FeedbackCompletionView,
-  type FeedbackInviteView,
-  type FeedbackVoteBody,
-} from './feedback-fixture';
 import messages from './messages.json';
+import { useFeedback } from './use-feedback.hook';
 
 /*
   GERİ BİLDİRİM (v3 `vFb`) — sipariş sonrası değerlendirme; mail/bildirimdeki token'lı derin
@@ -36,11 +32,15 @@ import messages from './messages.json';
   · sonuç   — teşekkür + puan kartı; hepsi beğenildiyse dış değerlendirme daveti, değilse
               "Sorun bildir" köprüsü (`/support/new?order=…`), en altta vitrine dönüş.
 
-  ── UI-ONLY ─────────────────────────────────────────────────────────────────
-  Geri bildirim uçları mobile bağlanmadı; davet fixture'dan okunur, oylar ekran durumunda birikir.
-  Sözleşme YAZILI ve tek: `packages/types/.../feedback-api.schema.ts` — fixture onun alan alan
-  aynası, bağlantı noktaları (oy · yorum · tamamlama) kod içinde işaretli. Yarıda bırakılan akış
-  sözleşmenin kendi kuralıyla kaldığı yerden sürer (ilk oysuz kart).
+  ── GERÇEK UÇLARA BAĞLI (10.08) ─────────────────────────────────────────────
+  Dört uç da `apps/mobile-api`de yazılıydı ve ekran onları HİÇ çağırmıyordu: davet fixture'dan
+  okunuyor, oylar ekran durumunda birikip kayboluyordu — yani davet linkiyle gelen müşteri kurgu
+  ürünleri oyluyordu. Veri artık `use-feedback.hook`tan gelir (`GET /feedback/:token` +
+  oy/yorum/tamamlama yazımları); ekran kural hesaplamaz, sözleşmeyi çizer.
+
+  Aşama İSTEMCİDE türetilir (sözleşmenin kararı), ama hangi kartta olduğumuz AYRI BİR DURUM DEĞİL:
+  hook'un `votes` haritasındaki ilk oysuz kart. Yarıda bırakılan akış böylece kendiliğinden kaldığı
+  yerden sürer ve reddedilen bir oy geri alındığında ekran o karta kendiliğinden döner.
 
   ── ŞABLONDAN SAPMALAR ─────────────────────────────────────────────────────
   1. **`pageIn`/`pop` animasyonları çizilmedi** — onay ekranının verdiği kararla aynı gerekçe
@@ -60,6 +60,16 @@ import messages from './messages.json';
   5. **Oy düğmeleri yerel** — kit düğmelerinde ikon yuvası yok ve 56'lık boy kitin `controlLg`
      durağından bilerek büyük (şablonun kendi vurgusu); basılı geri bildirim kitin kuralından
      (gölgeli yüzey kayar, gölgesiz küçülür).
+  6. **Yükleme ve bağlantı hatası durumları EKLENDİ** — şablon ağı olmayan bir demoydu (envanter
+     §5: "ilk yükleme skeleton'ları yok · ağ hatası hiçbir ekranda yok"). Yükleme `feedback-skeleton`,
+     hata ise kitin `EmptyState`i + "Tekrar dene": tarif/paket detaylarının cümleleriyle BİREBİR
+     aynı sözlük — aynı arıza iki ekranda iki türlü anlatılmaz.
+  7. **"Zaten tamamlanmış davet" durumu EKLENDİ** — şablonda yok ama sözleşmede var
+     (`completedAt`) ve web davet sayfasının kendi kutusu (`AlreadyDone`). Kartları göstermek,
+     puanı ikinci kez kazanılabilirmiş gibi okuturdu; cümleler web'inkinin aynısı.
+  8. **Yorum aşamasındaki metin ÜRÜNE yazılır** — sözleşme yorumu ürüne bağlıyor (`productId`
+     zorunlu) ve tasarımın tek kutusu bir sadeleştirme. Hedefi seçen kural hook'ta
+     (`reviewTargetOf`), gerekçesiyle birlikte.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -71,46 +81,55 @@ type Messages = LocalizedCopy<typeof messages>;
   buradakiler oraya terfi eder (raporlandı).
 */
 const feedbackMetrics = {
-  /** Ürün fotoğrafı bloğu (v3:1016 — 380). */
-  photo: 380,
-  /** Oy düğmesi (v3:1026 — 56; kitin 52'lik `controlLg`sinden bilerek büyük). */
-  voteButton: 56,
   /** Teşekkür dairesi (v3:1035 — 88; onay ekranının 92'lik işaretinden AYRI ölçü). */
   thanksMark: 88,
   /** Teşekkür kalbi (v3:1035 — 38). */
   heartIcon: 38,
 } as const;
 
+/*
+  Fotoğraf bloğu (380) ve oy düğmesi (56) `customerMetrics`e TERFİ ETTİ: skeleton da aynı ölçüleri
+  istiyor ve bu dosyadan import etmesi dairesel bağımlılık, kopyalaması duplikasyon olurdu (tarif
+  ve paket detaylarının aynı gerekçesi).
+*/
+
 /**
- * Yarıda bırakılan akışın kaldığı yeri bulur — sözleşmenin kendi kuralı: ölçüt `existing` değil
- * `existing.vote` (yalnız yorum taşıyan kart hâlâ cevapsızdır). Hepsi cevaplıysa yorum aşaması.
+ * Yazım retlerinin cümlesi — tanınmayan anahtar jenerik cümleye düşer (web'in `errorText` kuralı:
+ * ekranda hiçbir hâlde boş bir kırmızı satır durmaz).
+ *
+ * `review_empty` LİSTEDE YOK ve olmamalı: bu ekran yorumu yalnız boş DEĞİLKEN gönderiyor (hook'un
+ * `trim` kapısı), yıldız alanı da tasarımda yok — yani o ret buradan doğamaz. Sözlüğe yazsaydık
+ * müşteriye hiç göremeyeceği bir cümleyi vaat etmiş olurduk; gelirse jenerik cümleye düşer.
  */
-function firstUnvotedIndex(cards: FeedbackCardView[]): number {
-  const index = cards.findIndex((card) => card.existing === null || card.existing.vote === null);
-  return index === -1 ? cards.length : index;
+function writeErrorText(t: Messages, key: string): string {
+  if (key === CLIENT_ERROR.network) return t.errors.network;
+  if (key === 'invalid_link') return t.errors.invalid_link;
+  if (key === 'vote_failed') return t.errors.vote_failed;
+  return t.errors.unexpected;
 }
 
 interface FeedbackScreenProps {
   /** Derin bağlantıdaki davet token'ı — oturum yerine geçer, başka kimlik sorulmaz. */
   token: string;
-  /** Test kapısı; verilmezse fixture token'la çözer (uç geldiğinde yerini gerçek okuma alır). */
-  invite?: FeedbackInviteView | null;
 }
 
-export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }: FeedbackScreenProps) {
+export function FeedbackScreen({ token }: FeedbackScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
 
-  const [index, setIndex] = useState(() => (invite === null ? 0 : firstUnvotedIndex(invite.cards)));
-  const [votes, setVotes] = useState<FeedbackVoteBody[]>([]);
+  const { status, invite, votes, errorKey, finishing, completion, retry, vote, finish } = useFeedback(token, locale);
   const [comment, setComment] = useState('');
-  const [completion, setCompletion] = useState<FeedbackCompletionView | null>(null);
 
-  /* Aşama TÜRETİLİR, ayrıca saklanmaz (şablon `stage` tutuyor; tek kaynak yeter): kart varken oy,
-     kartlar bitince yorum, tamamlama cevabı gelince sonuç. */
-  const card = invite === null || index >= invite.cards.length ? null : (invite.cards[index] ?? null);
+  /* Aşama TÜRETİLİR, ayrıca saklanmaz (şablon `stage` tutuyor; tek kaynak yeter): oysuz kart
+     varken oy, kartlar bitince yorum, tamamlama cevabı gelince sonuç. Kartın SIRASI da türetilir —
+     hook'un oy haritasındaki ilk boşluk (dosya künyesi). */
+  const cards = invite?.cards ?? [];
+  const index = cards.findIndex((entry) => votes[entry.productId] === undefined);
+  const card = index === -1 ? null : (cards[index] ?? null);
+  /* Davet zaten tamamlanmış: akış HİÇ kurulmaz (sapma 7) — puan ikinci kez verilmez. */
+  const alreadyDone = invite !== null && invite.completedAt !== null;
 
   const bar = (
     <AppBar
@@ -118,11 +137,9 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
       left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="feedback-back" />}
       /* Sayaç yalnız oy aşamasında (şablon: `sc-if fv.stage0`) — `min(idx+1, toplam)` kuralı. */
       right={
-        invite !== null && card !== null ? (
+        card !== null && !alreadyDone ? (
           <Text style={styles.progress} testID="feedback-progress">
-            {t.progress
-              .replace('{current}', String(Math.min(index + 1, invite.cards.length)))
-              .replace('{total}', String(invite.cards.length))}
+            {t.progress.replace('{current}', String(index + 1)).replace('{total}', String(cards.length))}
           </Text>
         ) : undefined
       }
@@ -130,8 +147,21 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
     />
   );
 
-  /* Geçersiz/eskimiş bağlantı: davet yok. Şablonda karşılığı yok — sapma 2. */
-  if (invite === null) {
+  /* İLK YÜK: oy aşamasının yerini skeleton tutar (neyin çizilip neyin çizilmediği o dosyanın
+     künyesinde). Başlık çubuğu GERÇEK basılır — içindeki geri düğmesi beklerken de çalışmalı. */
+  if (status === 'loading') {
+    return (
+      <View style={styles.screen}>
+        {bar}
+        <FeedbackSkeleton testID="feedback-loading" />
+      </View>
+    );
+  }
+
+  /* Geçersiz/eskimiş bağlantı (uç 404 `invalid_link`): davet yok. Şablonda karşılığı yok — sapma 2.
+     Ağ arızasından AYRI hâl: "bağlantını kontrol et" demek, eskimiş bir linki tel arızası gibi
+     gösterirdi (tarif detayının aynı ayrımı). */
+  if (status === 'missing') {
     return (
       <View style={styles.screen}>
         {bar}
@@ -147,26 +177,21 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
     );
   }
 
-  const vote = (value: FeedbackVote) => {
-    if (card === null) return;
-    /* BAĞLANTI NOKTASI — oy ÜRÜN BAŞINA ve ANINDA yazılır (`POST /feedback/:token/vote`,
-       gövde `FeedbackVoteBodySchema`); yarıda bırakılan akış böylece kaldığı yerden sürer.
-       Bu etapta ekran durumunda birikir. */
-    setVotes([...votes, { productId: card.productId, vote: value }]);
-    setIndex(index + 1);
-  };
-
-  const finish = () => {
-    /* BAĞLANTI NOKTASI — iki yazım sırayla:
-       1. Yorum doluysa `POST /feedback/:token/review` — sözleşme yorumu ÜRÜNE bağlar (`productId`
-          zorunlu; "çok ürünlüde hedefi ekran belirler"): hedef ilk beğenilen kart, hiçbiri
-          beğenilmediyse ilk kart olacak.
-       2. `POST /feedback/:token/complete` — sonuç (`outcome`), puan ve dış değerlendirme
-          bağlantısı CEVAPTAN okunur, ekran hesaplamaz; fixture o cevabın yer tutucusu.
-       Davet ZATEN tamamlanmışsa (`invite.completedAt` dolu) uç puanı ikinci kez vermez; o durumda
-       ekran açılışta doğrudan tamamlama çağırıp teşekkür durumuna düşecek (web sayfası emsali). */
-    setCompletion(completeFeedbackFixture(votes));
-  };
+  /* Telin arızası — davet duruyor olabilir, o yüzden çıkış değil TEKRAR DENE (sapma 6). */
+  if (status === 'error' || invite === null) {
+    return (
+      <View style={styles.screen}>
+        {bar}
+        <EmptyState
+          icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
+          title={t.error.title}
+          description={t.error.body}
+          action={<PrimaryButton label={t.error.retry} shape="pill" onPress={retry} testID="feedback-retry" />}
+          testID="feedback-error"
+        />
+      </View>
+    );
+  }
 
   /* Talep akışını SİPARİŞE bağlayarak açar (şablon: `openTalepNew(o.ref)`); kargosuz senaryoda
      referans yoksa genel talep kapısına düşer. */
@@ -175,11 +200,19 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
     router.push(reference === null ? '/support/new' : { pathname: '/support/new', params: { order: reference } });
   };
 
+  /** Son yazımın reddi — oy geri alındıysa kartın altında, tamamlama düştüyse düğmenin altında. */
+  const errorLine =
+    errorKey === null ? null : (
+      <Text style={styles.errorLine} accessibilityRole="alert" testID="feedback-write-error">
+        {writeErrorText(t, errorKey)}
+      </Text>
+    );
+
   return (
     <View style={styles.screen} testID="feedback-screen">
       {bar}
       <ScrollView contentContainerStyle={styles.content} testID="feedback-scroll">
-        {card !== null ? (
+        {card !== null && !alreadyDone ? (
           /* ── Oy aşaması: fotoğraf + rozet + künye, iki oy düğmesi, alt not (v3:1014-1030) ── */
           <View testID="feedback-vote">
             <View style={styles.photo}>
@@ -210,7 +243,7 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
                   yüzeydedir, dış `Pressable`a `flex: 1` geçirilemez. */}
               <View style={styles.voteSlot}>
                 <PressableSurface
-                  onPress={() => vote('dislike')}
+                  onPress={() => vote(card.productId, 'dislike')}
                   feedback="scale"
                   style={[styles.voteButton, styles.voteDislike]}
                   accessibilityLabel={t.vote.dislike}
@@ -222,7 +255,7 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
               </View>
               <View style={styles.voteSlot}>
                 <PressableSurface
-                  onPress={() => vote('like')}
+                  onPress={() => vote(card.productId, 'like')}
                   feedback="shadow"
                   style={[styles.voteButton, styles.voteLike]}
                   accessibilityLabel={t.vote.like}
@@ -233,9 +266,12 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
                 </PressableSurface>
               </View>
             </View>
+            {/* Ret satırı düğmelerin ALTINDA: geri alınan oyun kartı zaten yeniden çizildi, sebep
+                de dokunulan yerin yanında durmalı. */}
+            {errorLine}
             <Text style={styles.voteHint}>{t.vote.hint}</Text>
           </View>
-        ) : completion === null ? (
+        ) : completion === null && !alreadyDone ? (
           /* ── Yorum aşaması: başlık + açıklama + serbest alan + tamamla (v3:1032-1038) ── */
           <View style={styles.commentBlock} testID="feedback-comment">
             <Text style={styles.commentTitle} accessibilityRole="header">
@@ -250,7 +286,15 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
               multiline
               testID="feedback-comment-input"
             />
-            <PrimaryButton label={t.comment.finish} onPress={finish} testID="feedback-finish" />
+            <PrimaryButton
+              label={finishing ? t.comment.finishing : t.comment.finish}
+              onPress={() => void finish(comment)}
+              disabled={finishing}
+              testID="feedback-finish"
+            />
+            {/* Tamamlama düştüyse metin KUTUDA KALIR (talep ekranının kuralı: düşen gönderim
+                taslağı silmez) — tek dokunuşla tekrarlanır. */}
+            {errorLine}
           </View>
         ) : (
           /* ── Sonuç: kalp + teşekkür + puan kartı + akış-sonu köprüsü (v3:1040-1060) ── */
@@ -259,12 +303,16 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
               <HeartIcon size={feedbackMetrics.heartIcon} color={theme.colors.olive} />
             </View>
             <Text style={styles.doneTitle} accessibilityRole="header">
-              {t.done.title}
+              {completion === null ? t.already.title : t.done.title}
             </Text>
+
+            {/* ZATEN TAMAMLANMIŞ davet (sapma 7): puanın daha önce eklendiği söylenir, sonuç
+                kutuları çizilmez — bu turda kazanılan bir şey yok ve akış hiç kurulmadı. */}
+            {completion === null ? <Text style={styles.doneBody}>{t.already.body}</Text> : null}
 
             {/* Puan TAMAMLAMAYA bağlıdır, beğeniye değil (DOMAIN §14); 0 → kart çizilmez
                 (B2B'de ve ikinci tamamlamada puan yok — şablonun `sc-if fv.ptsF` kapısı). */}
-            {completion.pointsAwarded > 0 ? (
+            {completion !== null && completion.pointsAwarded > 0 ? (
               <View style={styles.pointsCard} testID="feedback-points">
                 <Text style={styles.pointsValue}>
                   {t.done.points.replace('{points}', String(completion.pointsAwarded))}
@@ -278,11 +326,14 @@ export function FeedbackScreen({ token, invite = feedbackInviteByToken(token) }:
               </View>
             ) : null}
 
-            {completion.outcome === 'review_invite' && completion.reviewUrl !== null && completion.reviewPlatform !== null ? (
+            {completion !== null &&
+            completion.outcome === 'review_invite' &&
+            completion.reviewUrl !== null &&
+            completion.reviewPlatform !== null ? (
               <ReviewInvite url={completion.reviewUrl} platform={completion.reviewPlatform} copy={t} />
             ) : null}
 
-            {completion.outcome === 'report_issue' ? (
+            {completion !== null && completion.outcome === 'report_issue' ? (
               <>
                 <Text style={styles.doneBody}>{t.done.issueBody}</Text>
                 <PressableSurface
@@ -345,9 +396,19 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.muted,
   },
 
+  /** Yazım reddi — talep ekranının `sendError` deseni (hata rengi + `micro`), akışın ortalanmışı. */
+  errorLine: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors.error,
+    textAlign: 'center',
+    paddingHorizontal: theme.space['6xl'],
+    paddingBottom: theme.space.md,
+  },
+
   /* ── Oy aşaması ── */
   photo: {
-    height: feedbackMetrics.photo,
+    height: customerMetrics.feedbackPhoto,
   },
   photoImage: {
     width: '100%',
@@ -403,7 +464,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
   },
   voteButton: {
-    height: feedbackMetrics.voteButton,
+    height: customerMetrics.feedbackVoteButton,
     borderRadius: theme.radius.control,
     flexDirection: 'row',
     alignItems: 'center',
