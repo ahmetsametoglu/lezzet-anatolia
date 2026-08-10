@@ -23,10 +23,16 @@ interface SkeletonProps {
    * köşesizdir ve yuvarlatmak onları "kart" gibi gösterirdi. Ötekiler resmî yarıçap seti.
    */
   radius?: 'full' | 'none' | 'badge' | 'control' | 'card';
+  /**
+   * Ton: varsayılan gri, ya da bir tık KOYU (`deep`). Koyu ton yalnız bir blok başka bir bloğun
+   * ÜSTÜNE biniyorsa gerekir — vitrinin koleksiyon daireleri bantların üstünde çiziliyor ve tek
+   * tonda ikisi tek bir gri lekeye dönüşürdü (sayfada da daire bandın kendi renginin koyusudur).
+   */
+  tone?: 'default' | 'deep';
   testID?: string;
 }
 
-export function Skeleton({ width, height, radius = 'full', testID }: SkeletonProps) {
+export function Skeleton({ width, height, radius = 'full', tone = 'default', testID }: SkeletonProps) {
   const { theme } = useUnistyles();
   const pulse = useRef(new Animated.Value(theme.skeleton.minOpacity)).current;
 
@@ -59,6 +65,7 @@ export function Skeleton({ width, height, radius = 'full', testID }: SkeletonPro
       importantForAccessibility="no-hide-descendants"
       style={[
         styles.block,
+        tone === 'deep' ? styles.deep : null,
         {
           width,
           height,
@@ -73,5 +80,8 @@ export function Skeleton({ width, height, radius = 'full', testID }: SkeletonPro
 const styles = StyleSheet.create((theme) => ({
   block: {
     backgroundColor: theme.colors['sand-300'],
+  },
+  deep: {
+    backgroundColor: theme.colors['sand-400'],
   },
 }));

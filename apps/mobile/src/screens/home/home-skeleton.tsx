@@ -87,6 +87,10 @@ export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSke
      hesap katalog iskeletinin ızgara hesabıyla aynı dilde: ekran eksi yan boşluklar, eksi ara. */
   const offerCardWidth = (rt.screen.width - theme.space['6xl'] * 2 - theme.space.xl) / 2;
 
+  /* Koleksiyon dairesi bandın içinde DİKEYDE ORTALANIR ve iki uçtan taşar (148 > 132) — hesap
+     bandın kendi dosyasının aynısı (`collection-band`: `(bant - daire) / 2`). */
+  const bandPhotoOffset = (customerMetrics.collectionBand - customerMetrics.collectionPhoto) / 2;
+
   /* Davet kutusu (`DashedInvite`, `row` yerleşimi): dolgu + çerçeve + başlık satırı + açıklama
      satırı. Açıklamanın satır aralığı kendi token'ından (`lead--line-height`). */
   const inviteHeight =
@@ -140,9 +144,30 @@ export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSke
           <View style={styles.collectionsEyebrow}>
             <Skeleton width="34%" height={line(theme.text.eyebrow)} />
           </View>
-          {slots(sections.bands).map((slot) => (
-            <Skeleton key={slot} width="100%" height={customerMetrics.collectionBand} radius="none" />
-          ))}
+          {/* Daireler bantların İÇİNDE değil YIĞININ ÜSTÜNDE — sayfanın kendi kararı
+              (`home-screen`: RN'de kardeş sırası z-sırasıdır, taşan daireyi ancak sonradan çizilen
+              bir katman verebilir). Skeleton aynı katmanlamayı kurar, yoksa daireler komşu bandın
+              altında kalırdı. */}
+          <View style={styles.bandStack}>
+            {slots(sections.bands).map((slot) => (
+              <Skeleton key={slot} width="100%" height={customerMetrics.collectionBand} radius="none" />
+            ))}
+            {slots(sections.bands).map((slot) => (
+              <View
+                key={`photo-${slot}`}
+                style={[
+                  styles.bandPhoto,
+                  slot % 2 === 1 ? styles.bandPhotoMirrored : styles.bandPhotoNormal,
+                  { top: slot * customerMetrics.collectionBand + bandPhotoOffset },
+                ]}
+                pointerEvents="none"
+              >
+                {/* KOYU ton: daire bandın ÜSTÜNDE duruyor, tek tonda ikisi tek gri lekeye
+                    dönüşürdü — sayfada da daire bandın kendi renginin koyusudur. */}
+                <Skeleton width={customerMetrics.collectionPhoto} height={customerMetrics.collectionPhoto} tone="deep" />
+              </View>
+            ))}
+          </View>
         </View>
       )}
 
@@ -265,6 +290,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['6xl'],
     paddingBottom: theme.space.md,
   },
+
+  /** Daire katmanının konum çapası + yatay taşmanın kırpılmaması (sayfanın `bandStack`i). */
+  bandStack: { position: 'relative', overflow: 'visible' },
+  /* Daire ölçüsü, taşması ve eğimi bandın kendi dosyasından (`collection-band` — `photoNormal` /
+     `photoMirrored`): yön sırayla değişir, yatayda şeridin dışına sarkar, hafifçe eğiktir. */
+  bandPhoto: { position: 'absolute' },
+  bandPhotoNormal: { right: -theme.space['8xl'], transform: [{ rotate: '5deg' }] },
+  bandPhotoMirrored: { left: -theme.space['8xl'], transform: [{ rotate: '-6deg' }] },
 
   section: { gap: theme.space.md },
   sectionPad: { paddingHorizontal: theme.space['6xl'] },
