@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { PROPOSAL_PAYLOAD_SCHEMAS, type AssistantProposalKind, type BatchOfferPayload } from '@lezzet/types';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
+import type { ProposalSubject } from '@/lib/assistant/subject';
 import { BatchOfferBody } from './bodies/batch-offer-body';
 
 /**
@@ -28,6 +29,8 @@ import { BatchOfferBody } from './bodies/batch-offer-body';
 interface InlineBodyArgs<Payload, Draft> {
   payload: Payload;
   economics: ProposalEconomics | null;
+  /** Önerinin konusu (görsel + ad + ilgili ekran); tipin konusu yoksa `null`. */
+  subject: ProposalSubject | null;
   draft: Draft;
   onDraft: (next: Draft) => void;
   disabled: boolean;
@@ -78,10 +81,11 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   batch_offer: defineBody<BatchOfferPayload, number | null>({
     parse: parseWith<BatchOfferPayload>('batch_offer'),
     initial: (payload) => payload.offerPriceCents,
-    render: ({ payload, economics, draft, onDraft, disabled, readOnly }) => (
+    render: ({ payload, economics, subject, draft, onDraft, disabled, readOnly }) => (
       <BatchOfferBody
         payload={payload}
         economics={economics?.kind === 'offer' ? economics : null}
+        subject={subject}
         valueCents={draft}
         onChange={onDraft}
         disabled={disabled}

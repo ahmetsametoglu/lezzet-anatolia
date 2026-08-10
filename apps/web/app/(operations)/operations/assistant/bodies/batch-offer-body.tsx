@@ -6,6 +6,8 @@ import type { BatchOfferPayload } from '@lezzet/types';
 import { PriceTriple } from '@/components/operation/form/price-triple';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
+import type { ProposalSubject } from '@/lib/assistant/subject';
+import { SubjectCard } from '@/components/operation/ui/subject-card';
 import { splitVariantName } from '../assistant-labels';
 
 /**
@@ -31,6 +33,8 @@ import { splitVariantName } from '../assistant-labels';
 interface BatchOfferBodyProps {
   payload: BatchOfferPayload;
   economics: Extract<ProposalEconomics, { kind: 'offer' }> | null;
+  /** Önerinin konusu — görsel + ad + ürün ekranı bağlantısı (22.9). */
+  subject: ProposalSubject | null;
   /** Operatörün girdiği fiyat (kuruş, KDV DAHİL). `null` = kutu boş. */
   valueCents: number | null;
   onChange: (cents: number | null) => void;
@@ -48,6 +52,7 @@ interface BatchOfferBodyProps {
 export function BatchOfferBody({
   payload,
   economics,
+  subject,
   valueCents,
   onChange,
   disabled,
@@ -92,10 +97,17 @@ export function BatchOfferBody({
           ("Artisan Strawberry / Cake") — kararın konusu olan şeyin adı, ekranın en kolay okunan
           satırı olmalı. Boy adın yanında, kuyruk satırındaki gibi. */}
       <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
-          {name}
-          {size ? <span className="font-ops-body font-normal text-ops-body"> · {size}</span> : null}
-        </span>
+        {/* Konu KARTI — görsel + ad + ürün ekranı bağlantısı (22.9, kullanıcı kararı 10.08).
+            Görsel en hızlı tanıma yolu: patron ürünü adından önce fotoğrafından tanıyor. Künye
+            yoksa (görsel çözülemedi) kart yine ad satırını çiziyor, yani ekran hiç boşalmıyor. */}
+        {subject ? (
+          <SubjectCard name={subject.name} detail={subject.detail} imageUrl={subject.imageUrl} href={subject.href} />
+        ) : (
+          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
+            {name}
+            {size ? <span className="font-ops-body font-normal text-ops-body"> · {size}</span> : null}
+          </span>
+        )}
         {/* Künye METİN DEĞİL VERİ ve öyle okunmalı: etiket sönük, sayı mono ve koyu. "Asistan
             önerdi" bilgisi de buraya girdi — bir tur altında ayrı bir cümle olarak duruyordu
             ("alan onunla dolduruldu ama kilitli değil, değiştirirseniz kâr satırı değişir": 194

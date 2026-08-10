@@ -291,6 +291,7 @@ export function DecisionCard({
           inline.render({
             payload: bodyPayload,
             economics: row.economics,
+            subject: row.subject,
             draft,
             onDraft: setDraft,
             disabled: busy || !live,

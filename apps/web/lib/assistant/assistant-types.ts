@@ -1,5 +1,6 @@
 import type { AssistantProposalKind, AssistantProposalStatus } from '@lezzet/types';
 import type { ProposalEconomics } from './economics';
+import type { ProposalSubject } from './subject';
 
 /**
  * Asistan onay kuyruğu — EKRANIN SÖZLEŞMESİ (22.3).
@@ -63,6 +64,11 @@ export interface AssistantQueueRow {
    * sıfır maliyet "%100 kâr" gösterirdi.
    */
   economics: ProposalEconomics | null;
+  /**
+   * Önerinin KONUSU — görsel + ad + ilgili ekran (`lib/assistant/subject.ts`).
+   * `null` = bu tipin görsel bir konusu yok (`money_movement`, `zone_extend`).
+   */
+  subject: ProposalSubject | null;
   createdAt: string;
   expiresAt: string;
   /** Tazelik rozeti — eşiği KAPI bilir (6 saat), ekran bilmez. */
