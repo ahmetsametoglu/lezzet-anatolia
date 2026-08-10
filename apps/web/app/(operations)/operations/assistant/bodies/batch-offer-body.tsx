@@ -123,7 +123,10 @@ export function BatchOfferBody({
           `items-start` bilgi sütununda ZORUNLU: onsuz flex çocukları sütun genişliğine yayılıyor ve
           tek satırlık sarı uyarı ekranı boydan boya kesiyordu — *"ihtiyacından fazla uzuyor, dağınık
           tasarım havası veriyor"*. Artık her uyarı kendi metni kadar yer kaplıyor. */}
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+      {/* `px-3.5` künye kutusuyla HİZA içindir: o kutu kendi iç boşluğunu taşıyor, sütunlar ise
+          kartın kenarından başlıyordu — "Depo:" ile "Teklif fiyatı" 14 piksel kaymış görünüyor ve
+          göz aradığı dikey çizgiyi bulamıyordu. */}
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-3.5">
       {readOnly ? (
         <div className="flex w-[16rem] flex-none flex-col gap-3">
           <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />

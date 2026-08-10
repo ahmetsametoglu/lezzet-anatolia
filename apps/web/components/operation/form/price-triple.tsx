@@ -131,7 +131,10 @@ export function PriceTriple({
 
       {/* Mekanizma bir kez SÖYLENİR: kutular birbirine bağlı olduğunu kendiliğinden anlatmaz;
           operatör yüzde kutusunu "bilgi" sanıp fiyatı elle çevirmeye kalkardı. */}
-      <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
+      {/* Dar (dikey) sütunda GİZLİ: orada iki satıra düşüp sütunu uzatıyor ve yanındaki bilgi
+          sütunuyla arasında ölü boşluk açıyor. Kutular alt alta ve etiketleri okunurken mekanizma
+          zaten bir denemede anlaşılıyor; yatay düzende tek satır olduğu için orada kalıyor. */}
+      <span className={`font-ops-body text-ops-micro leading-[1.5] text-ops-muted${layout === 'column' ? ' hidden' : ''}`}>
         Üçü aynı fiyatın farklı okunuşu — hangisini yazarsanız diğer ikisi ondan hesaplanır.
       </span>
     </div>
