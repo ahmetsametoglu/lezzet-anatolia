@@ -53,6 +53,8 @@ export const DEVICE_STORE_KEYS = {
   appLocale: 'lezzet.locale',
   /** Girişsiz yapılan kaydırmaların kimlikleri (girişte hesaba bağlanır). */
   discoverPending: 'lezzet.discover.pending',
+  /** Vitrinin son başarılı yüklemesinde hangi bölümler kaç elemanla vardı — iskelet bunu taklit eder. */
+  homeLayout: 'lezzet.home.layout',
 } as const;
 
 /**

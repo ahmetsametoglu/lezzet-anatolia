@@ -1,7 +1,7 @@
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -26,6 +26,12 @@ import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { emToDp } from '@/theme/parse';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
+import {
+  DEFAULT_HOME_LAYOUT,
+  getHomeLayoutSnapshot,
+  saveHomeLayout,
+  subscribeHomeLayout,
+} from './home-layout-memory';
 import { HomeSkeleton } from './home-skeleton';
 import messages from './messages.json';
 import { useHome } from './use-home.hook';
@@ -142,6 +148,45 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const recipes = home.home?.recipes ?? [];
   const packages = home.home?.packages ?? [];
 
+  /* ── SKELETON'IN YERLEŞİMİ SON AÇILIŞTAN (kullanıcı kararı 10.08) ──────────────
+     Vitrinin bölümleri koşullu, iskelet ise veri gelmeden hangisinin çıkacağını bilemez. Sabit
+     bir iskelet (eski hâli) her açılışta olmayan blokları çizip veri gelince kaybediyordu — ekran
+     zıplıyordu. Cihaz bu vitrini geçen sefer gördü; iz o yüzden tutuluyor ve iskelet onu çiziyor.
+
+     YAZMA YALNIZ BAŞARILI YÜKLEMEDE: hata hâlinde bölümler zaten çizilmiyor, o boşluğu "geçen
+     sefer böyleydi" diye kaydetmek bir sonraki açılışın iskeletini yanlış küçültürdü.
+
+     Sipariş bandı iki kapıdan geçer — İZ ve OTURUM. İz "vardı" dese bile MİSAFİRDE çizilmez
+     (bant girişe bağlı); oturum henüz OKUNMADIYSA ize güvenilir, çünkü ölçülmemiş bir değeri
+     "yok" saymak bilinen bir bilgiyi çöpe atmaktır (CLAUDE §1). */
+  const storedLayout = useSyncExternalStore(subscribeHomeLayout, getHomeLayoutSnapshot);
+  const knownGuest = meState.status === 'ready' && meState.me === null;
+  const layout = storedLayout ?? DEFAULT_HOME_LAYOUT;
+  const skeletonSections = { ...layout, orderBand: layout.orderBand && !knownGuest };
+
+  const hasOrderBand = liveOrder !== null || lastOrder !== null;
+  useEffect(() => {
+    if (home.status !== 'ready') return;
+    void saveHomeLayout({
+      orderBand: hasOrderBand,
+      // Günün fırsatı sayfada ÇİZİLMİYOR (ucu yok — aşağıdaki künye), yani hiç görülmedi.
+      flash: false,
+      offers: offers.length,
+      bands: bands.length,
+      featured: featured.length,
+      recipes: recipes.length,
+      packages: packages.length,
+    });
+  }, [
+    home.status,
+    hasOrderBand,
+    offers.length,
+    bands.length,
+    featured.length,
+    recipes.length,
+    packages.length,
+  ]);
+
   const [zipSheetOpen, setZipSheetOpen] = useState(false);
   /* HAP HER HÂLDE ÇEKMECEYİ AÇAR (kullanıcı kararı 09.08) — v3'ün `pillTap` kuralından bilinçli
      sapma.
@@ -168,8 +213,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   /* İLK YÜK: sayfanın yerini iskelet tutar (kullanıcı isteği 09.08 — "vitrin sayfasını bire bir
      kopyalasın"). Yalnız İLK yük: aşağı çekerek yenilemede hook `loading`e düşmez (künyesi),
      bölümler yerinde kalır. Bütün kancalar bu satırın ÜSTÜNDE çağrılıyor; erken dönüş çağrı
-     sırasını bozmaz. */
-  if (home.status === 'loading') return <HomeSkeleton testID="home-skeleton" />;
+     sırasını bozmaz. Hangi bölümlerin çizileceğini son açılışın izi söyler (yukarıdaki künye). */
+  if (home.status === 'loading') return <HomeSkeleton sections={skeletonSections} testID="home-skeleton" />;
 
   const header = (
     <View style={styles.header}>

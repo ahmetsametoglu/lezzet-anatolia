@@ -3,6 +3,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { DEFAULT_HOME_LAYOUT, type HomeLayout } from './home-layout-memory';
 
 /*
   VİTRİN İSKELETİ — ilk yükte sayfanın YERİNİ TUTAR (kullanıcı isteği 09.08: "vitrin sayfasını
@@ -13,9 +14,15 @@ import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
   hiçbir yükseklik tahmin DEĞİLDİR: her biri `home-screen`in kendi stillerinden türetildi
   (dolgu + satır yüksekliği) ya da sabit kart ölçüsünden alındı (`customerMetrics`).
 
-  BÖLÜM SIRASI SAYFAYLA AYNI: başlık → süren sipariş → günün fırsatı → fırsat rayı → koleksiyon
-  bantları → vitrin rayı → tarif rayı → hazır paketler → davet blokları. Kimlikli/fixture
-  bölümler (süren sipariş · günün fırsatı) de yerini tutar: sayfada varsa iskelette de var.
+  BÖLÜM SIRASI SAYFAYLA AYNI: başlık → sipariş bandı → günün fırsatı → fırsat rayı → koleksiyon
+  bantları → vitrin rayı → tarif rayı → hazır paketler → davet blokları.
+
+  AMA HANGİ BÖLÜMÜN ÇİZİLECEĞİ SABİT DEĞİL (kullanıcı kararı 10.08): sayfanın kendisi koşullu —
+  boş dönen bölüm hiç çizilmiyor, sipariş bandı yalnız girişli müşteride çıkıyor. İskelet hepsini
+  var sayınca veri gelince bölümler kayboluyor ve ekran zıplıyordu. Artık son açılışın izi
+  (`home-layout-memory`) hangi bölümün kaç elemanla çizileceğini söyler; iz `sections` prop'uyla
+  DIŞARIDAN gelir çünkü oturum bilgisi de karara giriyor ve o vitrin ekranında duruyor.
+  Başlık ve davet blokları her hâlde çizilir — sayfada da koşulsuzlar.
 
   İKİ ÇİZİM DİLİ, TEK KURAL (v3'ün kendi iskelet dili — katalog `catSkel`, siparişler `ov.skel`):
   · sayfada TEK PARÇA renkli YÜZEY olan öğe (sipariş bandı, günün fırsatı, koleksiyon bandı,
@@ -34,22 +41,21 @@ import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 */
 
 /*
-  TEKRAR SAYILARI UÇ SÖZLEŞMESİNDEN (`/api/v1/home` tavanları): bant 6 (4 kategori + 2 koleksiyon)
-  · fırsat 2 · seçki 4 · tarif 3 · paket 2. Uydurma bir sayı, iskeletin toplam yüksekliğini
-  sayfadan ayırırdı. Yatay rayların sayısı yalnız ekrana sığan kadarını etkiler; dikey bölümlerde
-  (bantlar, paketler) sayfanın kendi yüksekliğini verir.
+  TEKRAR SAYILARI SABİT DEĞİL, SON AÇILIŞIN İZİNDEN (kullanıcı kararı 10.08 —
+  `home-layout-memory`): vitrinin bölümleri koşullu (sipariş bandı oturuma, fırsat şeridi yere,
+  paket/tarif uçtan gelene bağlı) ve hepsini var sayan sabit bir iskelet, veri gelince kaybolan
+  bloklarla ekranı ZIPLATIYORDU. Cihaz vitrini geçen sefer gördü; en iyi tahmin odur. İz yoksa
+  (ilk kurulum) `DEFAULT_HOME_LAYOUT` devreye girer — uç sözleşmesinin tavanları.
 */
-const BAND_SLOTS = [0, 1, 2, 3, 4, 5];
-const OFFER_SLOTS = [0, 1];
-const FEATURED_SLOTS = [0, 1, 2, 3];
-const RECIPE_SLOTS = [0, 1, 2];
-const PACKAGE_SLOTS = [0, 1];
+const slots = (count: number): number[] => Array.from({ length: count }, (_, index) => index);
 
 interface HomeSkeletonProps {
+  /** Çizilecek yerleşim — son açılışın izi. Verilmezse ilk kurulum varsayılanı. */
+  sections?: HomeLayout;
   testID?: string;
 }
 
-export function HomeSkeleton({ testID }: HomeSkeletonProps) {
+export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSkeletonProps) {
   const { theme, rt } = useUnistyles();
 
   /* Bir metin satırının kapladığı yer. Oran sayfanın kendi hesabıdır: `home-screen` başlıklarını
@@ -109,78 +115,92 @@ export function HomeSkeleton({ testID }: HomeSkeletonProps) {
         </View>
       </View>
 
-      {/* ── Süren sipariş bandı ─────────────────────────────────────────────── */}
-      <View style={styles.bandSlot}>
-        <Skeleton width="100%" height={liveBandHeight} radius="card" />
-      </View>
+      {/* ── Sipariş bandı: süren sipariş YA DA "tekrarla" — ikisi aynı ölçüde ── */}
+      {!sections.orderBand ? null : (
+        <View style={styles.bandSlot}>
+          <Skeleton width="100%" height={liveBandHeight} radius="card" />
+        </View>
+      )}
 
-      {/* ── Günün fırsatı: kenardan kenara, köşesiz ─────────────────────────── */}
-      <Skeleton width="100%" height={flashBandHeight} radius="none" />
+      {/* ── Günün fırsatı: kenardan kenara, köşesiz. Ucu gelene kadar iz hep "yok" der. ── */}
+      {!sections.flash ? null : <Skeleton width="100%" height={flashBandHeight} radius="none" />}
 
       {/* ── Fırsat rayı ─────────────────────────────────────────────────────── */}
-      <View style={styles.rail}>
-        {OFFER_SLOTS.map((slot) => (
-          <Skeleton key={slot} width={offerCardWidth} height={offerCardHeight} radius="control" />
-        ))}
-      </View>
+      {sections.offers === 0 ? null : (
+        <View style={styles.rail}>
+          {slots(sections.offers).map((slot) => (
+            <Skeleton key={slot} width={offerCardWidth} height={offerCardHeight} radius="control" />
+          ))}
+        </View>
+      )}
 
       {/* ── Koleksiyon bantları: üstbaşlık + BİTİŞİK bant yığını (sayfada da gap yok) ── */}
-      <View>
-        <View style={styles.collectionsEyebrow}>
-          <Skeleton width="34%" height={line(theme.text.eyebrow)} />
+      {sections.bands === 0 ? null : (
+        <View>
+          <View style={styles.collectionsEyebrow}>
+            <Skeleton width="34%" height={line(theme.text.eyebrow)} />
+          </View>
+          {slots(sections.bands).map((slot) => (
+            <Skeleton key={slot} width="100%" height={customerMetrics.collectionBand} radius="none" />
+          ))}
         </View>
-        {BAND_SLOTS.map((slot) => (
-          <Skeleton key={slot} width="100%" height={customerMetrics.collectionBand} radius="none" />
-        ))}
-      </View>
+      )}
 
       {/* ── Vitrin rayı: bölüm başlığı + ürün daireleri ─────────────────────── */}
-      <View style={styles.section}>
-        <View style={styles.sectionPad}>
-          <View style={styles.sectionHeader}>
-            <Skeleton width="34%" height={line(theme.text.eyebrow)} />
-            <Skeleton width="62%" height={line(theme.text['h2-sm'])} />
+      {sections.featured === 0 ? null : (
+        <View style={styles.section}>
+          <View style={styles.sectionPad}>
+            <View style={styles.sectionHeader}>
+              <Skeleton width="34%" height={line(theme.text.eyebrow)} />
+              <Skeleton width="62%" height={line(theme.text['h2-sm'])} />
+            </View>
+          </View>
+          <View style={styles.circleRail}>
+            {slots(sections.featured).map((slot) => (
+              <View key={slot} style={styles.circleCard}>
+                <Skeleton width={theme.size.circleLg} height={theme.size.circleLg} />
+                <Skeleton width={theme.size.circleLg} height={line(theme.text['body-sm'])} />
+              </View>
+            ))}
           </View>
         </View>
-        <View style={styles.circleRail}>
-          {FEATURED_SLOTS.map((slot) => (
-            <View key={slot} style={styles.circleCard}>
-              <Skeleton width={theme.size.circleLg} height={theme.size.circleLg} />
-              <Skeleton width={theme.size.circleLg} height={line(theme.text['body-sm'])} />
-            </View>
-          ))}
-        </View>
-      </View>
+      )}
 
       {/* ── Tarif rayı ──────────────────────────────────────────────────────── */}
-      <View style={styles.section}>
-        <View style={styles.sectionPad}>
-          <View style={styles.sectionHeader}>
-            <Skeleton width="34%" height={line(theme.text.eyebrow)} />
-            <Skeleton width="62%" height={line(theme.text['h2-sm'])} />
+      {sections.recipes === 0 ? null : (
+        <View style={styles.section}>
+          <View style={styles.sectionPad}>
+            <View style={styles.sectionHeader}>
+              <Skeleton width="34%" height={line(theme.text.eyebrow)} />
+              <Skeleton width="62%" height={line(theme.text['h2-sm'])} />
+            </View>
+          </View>
+          <View style={styles.rail}>
+            {slots(sections.recipes).map((slot) => (
+              <Skeleton
+                key={slot}
+                width={customerMetrics.recipeCardWidth}
+                height={customerMetrics.recipeCardHeight}
+                radius="card"
+              />
+            ))}
           </View>
         </View>
-        <View style={styles.rail}>
-          {RECIPE_SLOTS.map((slot) => (
-            <Skeleton
-              key={slot}
-              width={customerMetrics.recipeCardWidth}
-              height={customerMetrics.recipeCardHeight}
-              radius="card"
-            />
-          ))}
-        </View>
-      </View>
+      )}
 
       {/* ── Hazır paketler: üstbaşlık ve kartlar sayfada da AYRI iki kardeş ─── */}
-      <View style={styles.sectionPad}>
-        <Skeleton width="34%" height={line(theme.text.eyebrow)} />
-      </View>
-      <View style={styles.packages}>
-        {PACKAGE_SLOTS.map((slot) => (
-          <Skeleton key={slot} width="100%" height={customerMetrics.packageCardHeight} radius="card" />
-        ))}
-      </View>
+      {sections.packages === 0 ? null : (
+        <>
+          <View style={styles.sectionPad}>
+            <Skeleton width="34%" height={line(theme.text.eyebrow)} />
+          </View>
+          <View style={styles.packages}>
+            {slots(sections.packages).map((slot) => (
+              <Skeleton key={slot} width="100%" height={customerMetrics.packageCardHeight} radius="card" />
+            ))}
+          </View>
+        </>
+      )}
 
       {/* ── Davet blokları (Keşif · profesyonel hesap) ──────────────────────── */}
       <View style={styles.invites}>

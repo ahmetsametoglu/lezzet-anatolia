@@ -112,6 +112,42 @@ alanı — sözleşmede zaten var) OPERASYON arayüzü açılır; yoksa müşter
 kullanım = müşteri gezinmesi** (katalog vb. girişsiz gezilir; giriş gereken akışta kapı
 çıkar). Kabuk seçimi kökte tek karardır; iki yüzey iki ayrı navigasyon ağacıdır.
 
+## 4b. Skeleton politikası — son açılışın izi (kullanıcı kararı 10.08)
+
+> **Statü: KARAR.** Vitrinle (`screens/home`) başladı ama kural EKRAN-ÜSTÜDÜR: koşullu bölümü
+> olan her skeleton bu deseni izler.
+
+**Sorun (ölçüldü, vitrin):** skeleton'ın tek işi gelecek yerleşimin ölçüsünü tutmaktır — ölçüsü
+sayfadan farklıysa veri gelince ekran ZIPLAR ve kullanıcı bunu bir arıza gibi okur. Ama vitrinin
+bölümleri **koşulludur**: sipariş bandı yalnız girişli ve siparişi olan müşteride, fırsat şeridi
+yerin depo cevabına bağlı, tarif/paket uçtan boş dönebilir. Sabit skeleton (ilk hâli) hepsini var
+sayıyordu; veri gelince bloklar kayboluyordu. Tersi de doğru değil: hiçbirini çizmeyen skeleton bu
+kez gelenlerle ekranı aşağı itiyor. İkisi de aynı arızanın iki yüzü.
+
+**Karar:** cihaz bu ekranı geçen sefer zaten gördü — **en iyi tahmin geçen seferkidir**.
+
+1. **İz tutulur:** her BAŞARILI yüklemede hangi bölümün kaç elemanla çizildiği cihaza yazılır
+   (`screens/home/home-layout-memory.ts`; depo `lib/storage/device-store` — yeni bir saklama
+   kapısı açılmaz, anahtar `DEVICE_STORE_KEYS`e eklenir). Var/yok değil **sayı**: dikey
+   bölümlerde (koleksiyon bantları, paketler) yüksekliği doğrudan eleman sayısı belirliyor.
+2. **Hata hâlinde yazılmaz.** Hatada bölümler zaten çizilmiyor; o boşluğu "geçen sefer böyleydi"
+   diye kaydetmek bir sonraki açılışın skeleton'ını yanlış küçültürdü.
+3. **İz yoksa varsayılan** (`DEFAULT_HOME_LAYOUT`) — "her zaman görünen" bölümler, uç
+   sözleşmesinin tavan sayılarıyla. Vitrinde: koleksiyonlar · fırsatlar · vitrin rayı · sofradan
+   fikirler · paketler. Sipariş bandı ve günün fırsatı varsayılanda YOK.
+4. **Oturuma bağlı bölüm iki kapıdan geçer — iz VE oturum.** İz "vardı" dese bile misafirde
+   çizilmez. Oturum henüz OKUNMADIYSA ize güvenilir: ölçülmemiş değeri "yok" saymak bilinen bir
+   bilgiyi çöpe atmaktır (CLAUDE §1).
+5. **İz bir tahmindir, sözleşme değil.** Kayıt yok · bozuk · okunamadı üçü de aynı kapıya çıkar
+   (varsayılan). Şema doğrulaması yalnız BOZUK kayda karşıdır; uç sözleşmesinin bugünkü tavanı
+   şemaya yazılmaz — uç genişlediğinde kendi yazdığımız iz kendi doğrulamamıza takılırdı.
+6. **Ucu olmayan bölüm skeleton'dan silinmez, ize bağlanır.** Vitrindeki "günün fırsatı" örneği:
+   sayfa çizmiyor (uç yok), iz o yüzden hep `false` ve blok hiç görünmüyor — uç geldiği gün
+   skeleton kendiliğinden takip eder. Kaldırıp geri eklemek aynı kararı iki kez vermektir.
+
+Skeleton'ın kendisi bu izi **okumaz**: yerleşim `sections` prop'uyla dışarıdan gelir (oturum
+bilgisi de karara giriyor ve o ekranın elinde). Skeleton saf çizim olarak kalır.
+
 ## 5. İlk iş birimleri
 
 - **21.1** `apps/mobile-api` iskeleti — apps/backend desenleri ayna (env, logger, `{data,error}`
