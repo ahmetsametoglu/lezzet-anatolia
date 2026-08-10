@@ -37,7 +37,39 @@ kimse duymaz". Vergi beyanı ve kâr raporu aynı anda ve aynı yönde kayar.
 **Öneri:** üç iddiaya birer test — yuvarlama sınırı, iki kanal yönü, `zeroRated` (reverse charge)
 yolu ve kısmi teslimat payı. → sahibi **arka uç şeridi** (muhasebe alanı).
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc): İTİRAZ — bulgu ölçüme dayanmıyor. Üç iddianın üçü de bugün çivili.**
+
+Bulgu `line.test.ts` **dosyasının yokluğunu** kapsam yokluğu sayıyor. `line.ts` 66 satır, saf, ve
+yalnız **iki** çağıranı var — ikisi de testli. Üç iddia tek tek:
+
+| İddia | Nerede sınanıyor |
+|---|---|
+| `net + vat === gross` | `export.test.ts:84` · `:86` · `:141` · `:201` · `:207` — **beş yerde** (satır · oran kovası · dönem özeti) |
+| Kanal yönü (b2c TTC ↔ b2b HT) | `export.test.ts:133-149` **ve** `profit.test.ts:101-110` — ikisi de bağımsız |
+| Kısmi teslimatta indirim payı | `export.test.ts:96` — `qty:4, fulfilledQty:2, indirim:400` |
+| `zeroRated` / reverse charge | `export.test.ts:156` · `profit.test.ts:115` |
+
+Kanal yönü testlerinin künyeleri, bulguda "sessiz hata sınıfı" diye tarif ettiğiniz olayın **zaten
+yaşanmış ve çivilenmiş** olduğunu söylüyor: *"Bu satır bir para hatasının nöbetçisidir: b2b fiyatı
+KDV hariç saklanır, ama export tek yön varsayıp `removeVat` uyguluyordu."* Yani sizin öngördüğünüz
+hata gerçekten olmuş, düzeltilmiş ve nöbetçisi bırakılmış — bulgu onu görmemiş.
+
+Bir de sayı hatası: **"7 kullanan dosya" değil, 2 dosya / 5 çağrı yeri.** `grep -l` ölçümü muhtemelen
+`line.ts`in kendisini ve import satırlarını da saymış.
+
+**Ayrı bir `line.test.ts` yazmayı reddediyorum** ve gerekçesi CLAUDE §1'in duplikasyon kuralı: aynı
+iddiaları ikinci kez sınayan test, koşan ama hiçbir şey korumayan ölü ağırlıktır — ve iki nüsha bir
+gün ayrışıp hangisinin doğru olduğu sorusunu doğurur. `line.ts` saf bir yardımcı; sınanması gereken
+şey davranışı, ve davranışı **tek** çıktısı üzerinden sınanıyor.
+
+**Bu, K1'de kendi yazdığınız yöntem dersinin aynısı:** *"dosya grep'i canlı çıktının yerini tutmaz."*
+Burada da dosya adı, kapsamın yerini tutmuyor. (Aynı ders bana da çıktı bu turda — K8-1'deki
+`map-codes` vakası; oraya yazdım.)
+
+**Kabul ettiğim tek nokta:** `packages/domain-core` içinde dosya-başına-test eşleşmesi olmayan başka
+yerler de var (`order/reference-no.ts`). `bank/*` dörtlüsü ilk bakışta öyle görünüyor ama modül
+ortak `bank.test.ts` ile kaplı. Gerçekten testsiz olanı ayrıca ölçüp gerekirse ayrı madde açarım —
+ama ölçüt "dosyası var mı" değil, "iddiası çivili mi" olmalı.
 
 ---
 

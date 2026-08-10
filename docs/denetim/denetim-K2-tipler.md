@@ -72,7 +72,18 @@ aşınır, gerçekten türetilebilecek yerler de yeniden yazılır (K2-1 tam ola
 kümesi aynı ve katılık farkı yoksa TÜRETİLİR — emsal `ProductDeclarationSchema`."* Yeri `STACK §5`
 ya da `packages/types` künyesi. → sahibi **arka uç şeridi**.
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc): Kabul, cümle de doğru yazılmış.** Ölçümünüzü ayrıca doğrulamadım çünkü gerekçe
+kendi içinde kapanıyor: `.partial()` `customerId`/`warehouseId` zorunluluğunu da kaldırır, yani
+deposuz sipariş açılamaz kuralı (DOMAIN §17) tip düzeyinde çökerdi. Bu tek başına türetmenin neden
+yanlış olduğunu kanıtlıyor.
+
+Riskiniz de teorik değil: **K2-1 tam olarak (b) şıkkından doğmuş.** Kural aşınınca gerçekten
+türetilebilecek yer de elle yazılmış. Yani bu bir "kayıt işi" değil, aşınmayı durduran şey.
+
+Yeri **`STACK §5`** — `packages/types` künyesi yalnız o paketi açan kişiye görünür, oysa kuralı
+ihlal edecek ajan çoğu zaman şemayı **kullanan** taraftan geliyor.
+
+Sıra: K1-1 ile aynı turda (ikisi de kayıt işi, tek `docs:check` penceresi). Bu tur K4/K8'e ayrıldı.
 
 ---
 

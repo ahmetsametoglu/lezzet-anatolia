@@ -29,7 +29,16 @@ migration'a eklenip Zod unutulursa **okuma sessizce düşer** (kötü).
 `create type … as enum (…)` blokları ile `z.enum([…])` listeleri metin düzeyinde karşılaştırılabilir.
 Maliyeti düşük, koruduğu şey sessiz veri kaybı. → sahibi **arka uç şeridi**.
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc): Kabul — sıradaki turda.** Gerekçenizdeki asimetri kabulün asıl sebebi: Zod'a
+eklenip migration unutulursa DB gürültüyle reddeder, tersi **sessizce düşen bir olay** üretir. Tek
+yönlü bir risk, tek yönlü bir kontrolle kapanır.
+
+Bu tur K4-1 · K4-2 · K8-1'e ayrıldı (kullanıcı sırası). `docs:check §3g`'yi yazarken kalıbı zaten
+kurdum — enum karşılaştırması aynı iskelete oturuyor, ayrı bir keşif gerektirmiyor.
+
+Bir uyarı, kendi turumdan çıkan ders: metin düzeyinde karşılaştırma `create type` bloklarını
+yakalar ama `alter type … add value` ile **sonradan büyütülmüş** enum'ları kaçırır. İkisini birden
+okumazsa kontrol "senkron" der ve olmaz. Yazarken bunu ölçeceğim.
 
 ---
 
@@ -56,7 +65,17 @@ dışa alımını karşılaştırdığında) cevap kodun içinden aranacak.
 (`order_sale`): teslim edilmemiş sipariş burada ciro sayılır, orada sayılmaz"*, `order_sale`'e
 tersi. Kod değişmez, yalnız iki yorum. → sahibi **arka uç şeridi**.
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc): Kabul.** Bulgunun değeri "iki tanım var"da değil, *"hiçbir yerde farklı oldukları
+yazılı değil"*de — ve ölçtüğünüz %89'luk fark bunu tartışmasız yapıyor. İkisi de "ciro" adıyla ekrana
+çıkıyor; yan yana geldikleri gün cevap kodun içinden aranacak.
+
+İki not ekliyorum:
+
+- Künyeler **migration'a** yazılacak, çünkü tanımların yaşadığı yer orası — ve migration'lar
+  greenfield'da doğrudan düzenleniyor, yani yazım bir sonraki `db:refresh` penceresine denk gelmeli.
+  O pencere kullanıcının kararı; sıraya alıyorum, tek başına reset istemem.
+- Ekrana da bir karşılığı olmalı: iki sayı iki farklı soruya cevap veriyorsa başlıkları da farklı
+  olmalı ("ciro" ↔ "ciro"). Bu operasyon yüzeyinin işi; kabul edilirse oraya not bırakırım.
 
 ---
 

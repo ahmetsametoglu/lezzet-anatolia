@@ -36,7 +36,48 @@ yolda görünüyor: aynı desen `is_primary`/`is_active` gibi her "grup içinde 
 **Öneri:** `BaseDbService`'e `protected setExclusiveFlag(id, flagField, scopeField, scopeValue)`.
 → sahibi **arka uç şeridi**.
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc):** **Kabul, yazıldı (10.08).** Bulgu birebir doğru — iki metot satır satır aynıydı.
+
+İmzada bir sapma var: `scopeValue` parametresini **almadım**. `getById` zaten satırın tamamını
+getiriyor ve kapsam alanı onun içinde; çağıranın ikinci kez okuması hem fazladan bir tur hem de bir
+hata payı olurdu (yanlış satırın kapsamı geçirilebilir). Kalan imza:
+
+```ts
+protected async setExclusiveFlag(id: string, flagField: string, scopeField: string): Promise<TDb>
+```
+
+İki çağıran da tek satıra indi (`address.service.ts:33` · `supplier.service.ts:128`).
+
+**Sıranın gerekçesi künyeye yazıldı** — sorduğunuz "bayraksız kalma" riski burada duruyor. Tersine
+çevirmedim: *"önce temizle"* bir an SIFIR bayrak, *"önce işaretle"* bir an İKİ bayrak üretir. İkisi
+de kusurlu ama simetrik değil — sıfır bayrak "seçim yok" diye okunur, iki bayrak sessizce yanlış
+olanı seçtirebilir. Ayrıca bu sıra, kural bir gün kısmi unique index'e taşınırsa uyumlu olan tek
+sıradır. Gerçek atomiklik ancak RPC ile gelir: PostgREST tek turda `set flag = (id = $1) where
+scope = $2` ifade edemiyor.
+
+**Tabana bir sessiz hata kapısı açtığımı fark ettim ve kapattım.** `flagField` artık düz `string`,
+yani derleyici yanlış adı yakalayamıyor — ve `update()` Zod'dan geçtiği için şemada olmayan alanı
+**atarak** yazıyor: çağrı başarılı döner, hiçbir bayrak değişmez. İki bekçi koydum (kapsam alanı
+satırda yoksa · bayrak yazımı tutmadıysa fırlatır). Aynı tuzak `writeImageKey` künyesinde de anılı.
+
+**Bir de sizin bulgunuzun altındaki bulgu — kararınız gerekiyor.** Kural veride HİÇ durmuyor:
+`is_default`/`is_preferred` üzerinde kısmi unique index yok, yani "iki varsayılan" durumunu bugün
+engelleyen tek şey bu iki metot. Herhangi bir doğrudan yazım (seed, düzeltme script'i, ileride
+yazılacak bir toplu içe alma) kuralı sessizce kırabilir. CLAUDE §1: *"Kural veride durur (ertelenmiş
+kısıtlar, not null, kısmi unique)."*
+
+Ölçtüm, **bugün ihlal yok**: `address` 8 satır / 6 grup, `supplier_product` 23 satır / 18 grup —
+çoklu bayrak 0, bayraksız grup 0. Yani düzeltilecek veri yok; eksik olan güvence.
+
+Yapmadım çünkü migration değişikliği **reset penceresi** ister ve o kullanıcının kararı. Sıraya
+alınmasını öneriyorum; iki satırlık bir index.
+
+---
+
+**Cevap (arka-uc) — doğrulama:** `typecheck` temiz · `lint` temiz · birim paketi 117 dosya/1351 test
+yeşil. `setDefault`/`setPreferred` entegrasyon testleri mevcut (`user-profile.test.ts:380` ·
+`supply.test.ts:96`) ama DB'ye vurdukları için **koşmadım** (CLAUDE §4b) — tam pakette sizde koşacak.
+Eski hata metinlerine (`address bulunamadı: …`) bağlı test/kod olmadığını grep'le doğruladım.
 
 ---
 
@@ -59,6 +100,75 @@ kullanıcının önüne değil log'a düşer.
 türetimi değil, tabanın taşımadığı operatör değil (`in` taban metodunda zaten var), sözlük dönüşü değil.
 
 **Öneri:** `zone-notice` de `updateWhereIn`'e geçsin. → sahibi **arka uç şeridi**.
+
+**Cevap (arka-uc):** **Kabul, yazıldı (10.08).** İtirazım yok — gerekçeniz de tam yerinde: bu yol bir
+cron işinin içinde, yani kolon yeniden adlandırılsa hata kullanıcının önüne değil log'a düşerdi.
+
+```ts
+async markNotified(ids: readonly string[], at: string): Promise<void> {
+  await this.updateWhereIn('id', ids, { notifiedAt: at });
+}
+```
+
+Boş liste kontrolü de gitti — taban zaten `values.length === 0` için erken dönüyor. Yedi satır ikiye
+indi ve `updateWhereIn`in "tek tüketicisi kalmış" durumu da kapandı: artık iki tüketicisi var, yani
+tabanda durması için `STACK §6`nın eşiği geriye dönük olarak da karşılanmış oldu.
+
+---
+
+## K4-3 · `jsonb korumalı` kuralı CLAUDE.md'de yazılı, kodda YOK (ek bulgu, 10.08)
+
+> **Bu madde ilk turda KAÇIRILDI** ve sonradan, MCP önerilerini incelerken canlı veriyle çıktı.
+> Dosyaya eklendi ki katman "kapandı" sanılmasın.
+
+**Kural:** `CLAUDE.md §1` — *"`packages/database`: `BaseDbService` + case-transformers
+(**jsonb korumalı**)"*.
+
+**Kod:** `packages/database/src/utils/case-transformers.ts:29` — `transformKeys` **derinlemesine**
+iniyor ve nesne değerlerin içine giriyor:
+
+```ts
+result[transformer(key)] = typeof value === 'object' ? transformKeys(value, transformer) : value;
+```
+
+jsonb kolonları da birer nesne olduğu için **içerikleri de çevriliyor**. Koruma diye bir şey yok.
+
+**Canlı kanıt (10.08):** MCP aracı `assistant_proposal.payload`ı camelCase yazıyor
+(`tools-propose.ts` → `offerPriceCents`, `variantId`); veritabanında duran hâli **snake_case**:
+
+```json
+{ "batch_id": "…", "variant_id": "…", "offer_price_cents": 183, "list_price_cents": 261 }
+```
+
+**Bugün ÇALIŞIYOR ve bulgu bu yüzden "hata" değil "kırılganlık":** çevrim simetrik — yazarken
+camel→snake, okurken snake→camel; şema camelCase görüyor, `parseProposalPayload` geçiyor. Ama:
+
+1. **Aynı dosyanın kendi künyesi tuzağı anlatıyor:** `rating_1_count` → `rating_1Count` (rakam
+   ayıran alt çizgi bozuluyor) ve künye *"düzeltilmedi ve düzeltilmemeli — bir tarafı düzeltmek
+   ötekini bozuyor"* diyor. Bu tuzak bugün **kolon adları** için taranmış ve örneği yok; **jsonb
+   içeriği taranmamış.** Payload'a rakamlı bir anahtar giren gün (`line_1`, `rating_5`) aynı hata
+   jsonb'nin içinde doğar.
+2. **Serbest anahtarlı jsonb varsa içerik bozulur:** bugün payload'lar kapalı sözlük (Zod ayrık
+   birliği) olduğu için güvendeyiz. `analytics_event.meta` da öyle. Ama kural "jsonb korunur"
+   dediği için **bir sonraki yazan bunu varsayacak** ve serbest anahtarlı bir jsonb eklediğinde
+   sessizce bozulacak.
+3. **Yazan iki taraf ayrışırsa yakalanmaz:** biri servisten (çevrimli), öteki ham SQL/RPC'den
+   (çevrimsiz) yazarsa aynı kolonda iki farklı anahtar biçimi oluşur ve okuma yalnız birini görür.
+
+**Karar gerekiyor — ikisinden biri:**
+- *(a)* **Kodu kurala uydur:** `transformKeys` jsonb kolonlarını atlasın (servis `jsonbFields`
+  bildirsin, `moneyFields` deseninin aynısı). Mevcut satırlar snake_case yazılmış olduğu için
+  **geçiş gerektirir** — greenfield olduğumuz için `db:refresh` ile çözülür, ama kullanıcının
+  kararıdır.
+- *(b)* **Kuralı koda uydur:** CLAUDE.md'deki "jsonb korumalı" ifadesi silinsin, yerine *"jsonb
+  içeriği de çevrilir; bu yüzden payload anahtarları camelCase yazılır ve rakamla ayrılmış alt
+  çizgi KULLANILMAZ"* yazılsın.
+
+**Denetimin görüşü: (b).** Çevrim bugün simetrik ve tüm payload'lar kapalı sözlük; (a) gerçek bir
+arızayı değil, yalnız bir adlandırma tercihini düzeltmek için veri geçişi ister. Ama **kuralın
+yanlış olması kabul edilemez** — kural okunup güvenilen bir şeydir.
+
+→ sahibi **arka uç şeridi**.
 
 **Cevap (arka-uc):**
 

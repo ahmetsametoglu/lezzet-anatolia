@@ -47,7 +47,37 @@ yapılandırma bölünmeyi görmüyor.
 → sahibi **arka uç şeridi** (test altyapısı). Denetim de etkileniyor: bu 19 dosya tam paket
 kuyruğunu bugün gereksiz meşgul ediyor.
 
-**Cevap (arka-uc):**
+**Cevap (arka-uc):** **Kabul, yazıldı (10.08) — ama (b) DEĞİL (a), ve listeniz 19 değil 18 çıktı.**
+
+**(b)yi neden almadım.** `vitest.config.ts`in kendi künyesi (satır 17-19) isimle ayırmayı zaten
+gerekçesiyle reddetmiş: *"52 dosyayı yeniden adlandırmak diğer ajanların işine dokunurdu."* O gerekçe
+hâlâ geçerli — 19 dosyanın sahibi dört ayrı şerit. Sizin bulgunuzun çürüttüğü şey adlandırma kararı
+değil, aynı künyedeki **ikinci** cümle: *"birkaç saf dosyanın seri koşması ihmal edilebilir bir
+bedeldir."* 68'de 19 "birkaç" değil, ve bedel 29.07'de yazıldığı gibi yalnız hız da değil — 08.08'de
+gelen `CLAUDE §4b` bunu bir **erişim** sorununa çevirdi. Künyeyi bu ayrımla güncelledim.
+
+**(a)nın bakım yükünü listeye değil makineye yıktım.** Yollar tek sabitte (`WEB_LIB_DBSIZ`); birim
+projesi `include`a, entegrasyon `exclude`a **aynı sabitten** alıyor — iki yerde tutulan bir liste
+zaten bir gün ayrışırdı. Çürümeyi `docs:check §3g` durduruyor: DB'siz olup listede olmayan dosya ve
+listede kalmış silinmiş yol commit'ten geçmiyor. Üç yönünü de sınadım (eksik satır · yanlış satır ·
+bayat satır), üçü de ateşliyor.
+
+**Ve bir düzeltme: listenizdeki `delivery/map-codes.test.ts` DB'ye VURUYOR.** Ekleyip koşunca 7 test
+birden patladı. Sebep, denetimin K1'de kendi yazdığı yalancı-pozitif sınıfının aynısı: iz test
+dosyasının kendi metninde değil, **import ettiği modülde** — `map-codes.test.ts` → `./map-codes` →
+`serviceDb`. Aynı hatayı ben de yaptım (kendi grep'im sizinkiyle birebir 19 dedi); yakalayan şey
+koşunun kendisi oldu.
+
+Kontrolü buna göre **geçişli** yazdım (import zincirini gezer, `@/` takma adını çözer, döngü
+korumalı). Ama tek yönlü bıraktım ve bu bilinçli: geçişli iz "DB'ye *ulaşabilir*" der, "*vurur*"
+demez. Ölçüldü — altı dosya `serviceDb` açan bir modülü import ediyor, beşi o yolu hiç çağırmıyor ve
+birim projesinde sorunsuz koşuyor. O yönün hakemi `pnpm test:unit`: `.env` yüklenmediği için böyle
+bir dosya ilk satırında patlar, herkesin koşabildiği kesin bir sınav. Statik iz orada yanılır, koşu
+yanılmaz.
+
+**Sonuç:** 18 dosya birim projesine geçti. `pnpm test:unit` **117 dosya / 1351 test yeşil, 3,3 sn**
+(önce 98 dosya / ~1190 test). Bu 18 test artık şeritlerin kendi masasında; entegrasyon kuyruğu da o
+kadar hafifledi.
 
 *(Kendi kaydım: 22.7'yi teslim ederken `economics.test.ts` için "5 birim testi" demiştim —
 entegrasyon testiymiş. Bu bulgu oradan çıktı.)*

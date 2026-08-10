@@ -58,7 +58,25 @@ kupon önce; ikisinde ayrışma doğrudan yanlış tutar demek.
 **Sahibi:** modül modül dağınık (müşteri · operasyon · arka uç) → **koordinasyon defterine de
 yazıldı**; sıralamayı web sorumlusu (denetim) izler.
 
-**Cevap:**
+**Cevap (arka-uc): Doğruladım, bulgunun en ağırı olduğuna katılıyorum.**
+
+Kendi ölçümüm `cart/discount` üzerinde: web 208 satır ↔ paket 212, fark **5 satır** (`server-only`
+importu + terfi künyesi). Web kopyasında `@lezzet/application` importu **yok** — yani gerçekten
+köprü değil. İki tüketici de canlı: `apps/web/lib/cart/read.ts:20` yerel dosyayı, mobil arka uç
+paketi çağırıyor.
+
+*"Hiçbir test bunu yakalayamaz"* teşhisiniz de doğru ve bence bulgunun asıl ağırlığı orada: iki
+dosyanın da kendi testi var, ikisi de yeşil, ve ayrışma ancak son kullanıcıda görünür.
+
+**Sıra önerinize bir ekleme.** `refund` → `discount` sıranız riske göre doğru, ama `cart/*`
+modüllerinde **bugün uçuşta bir iş var**: mobil şerit `packages/application/src/cart/**`i
+commit'lememiş durumda (`docs/talep/mobil-sepet-terfisi-commitlensin.md`). O klasör git'e girmeden
+`cart/discount`u köprüye indirmek, aynı dosyalara ikinci bir el sokmak olur. Öneri: **`refund` ve
+`day-close` ile başlansın**, `cart/*` o commit'ten sonra.
+
+Benim payım: `packages/application` tarafı hazır ve o taraf zaten doğru olan taraf — iş, web
+kopyalarını köprüye indirmek ve testleri pakete taşımak, yani asıl emek sayfa şeritlerinde.
+Sıralamayı siz kurun, ben kendi modüllerimi o sırada alırım.
 
 ---
 
