@@ -3,11 +3,11 @@ import { TicketTypeEnum, type TicketType } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Chip } from '@/components/ui/chip';
-import { LoadingState } from '@/components/ui/loading-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -91,6 +91,8 @@ interface NewTicketSheetProps {
 }
 
 export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: NewTicketSheetProps) {
+  // Bekleme dalının satır yüksekliklerini yazı kademelerinden türetir (kapsam adımı).
+  const { theme } = useUnistyles();
   const t: Messages = messages[locale];
   const router = useRouter();
 
@@ -189,7 +191,21 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
         {/* Kapsam sorusunun cevabı henüz bilinmiyor: soru da, form da çizilmez — yanlış adımı
             gösterip bir an sonra değiştirmek, müşterinin gözünde ekranın zıplaması olurdu. */}
         {resolvedStep === 'scope' && orderList.status === 'loading' ? (
-          <LoadingState label={t.list.loading} accessibilityLabel={t.list.loading} testID="new-ticket-scope-loading" />
+          /* Halka yerine ADIMIN KENDİSİ bekler (kullanıcı kararı 10.08): burada bekleyen şey bir
+             işlem değil, gelecek olan SORU ve iki cevap düğmesi. Halka onların yerini tutmuyordu
+             ve çekmece cevap gelince bir anda uzuyordu. Ölçüler adımın kendi stillerinden. */
+          <View
+            style={styles.content}
+            testID="new-ticket-scope-loading"
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityState={{ busy: true }}
+          >
+            <Skeleton width="72%" height={theme.text['card-title-sm'] * theme.text['h1--line-height']} tone="deep" />
+            <Skeleton width="90%" height={theme.text.note * theme.text['lead--line-height']} />
+            <Skeleton width="100%" height={theme.size.controlLg} radius="control" tone="deep" />
+            <Skeleton width="100%" height={theme.size.controlLg} radius="control" />
+          </View>
         ) : null}
 
         {resolvedStep === 'scope' && orderList.status !== 'loading' ? (

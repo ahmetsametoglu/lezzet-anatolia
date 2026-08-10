@@ -167,6 +167,27 @@ ikisi eşit değil, o yüzden alt sınır seçilir.
 gerçek basılıyor (geri yolu ekran boşken de açık olmalı); skeleton onun altından başlar. Çalışan
 bir düğmeyi gri bloğa çevirmek, kullanıcıyı bekleme süresi boyunca sayfaya kilitler.
 
+### Halka mı skeleton mı — muadil DEĞİLLER (kullanıcı sorusu 10.08)
+
+Ölçüt tek soru: **bekleyen şey bir YERLEŞİM mi, bir İŞLEM mi?** Skeleton yer tutar; tutacak bir
+yer yoksa anlamsızdır. Halka "çalışıyorum" der; yerleşimi olan bir boşlukta ise hiçbir şey tutmaz.
+
+**Halka DOĞRU** (üç durum, dokunulmaz):
+1. **Aşağı çekme** (`RefreshControl`) — ekran zaten dolu, hareketi kullanıcı başlattı ve geri
+   bildirim parmağın çektiği yerde. Skeleton'a çevrilse ekran bir an boşalırdı.
+2. **Kuyruk** (sonsuz kaydırmada "daha fazla") — liste dolu, kuyruğa satır ekleniyor; kaç satır
+   geleceği de bilinmiyor (son sayfa boş dönebilir), skeleton kart olmayan satırın sözünü verirdi.
+3. **İşlem/geçiş** — giriş gönderiliyor · kod doğrulanıyor · profil kuruluyor · sepet çözümleniyor.
+   Bekleyen bir yerleşim yok, bir cevap var.
+
+**Skeleton DOĞRU:** ilk yükte bir bölümün ya da sayfanın YERLEŞİMİ bekleniyorsa. Vitrin · katalog ·
+detay sayfaları · listeler · hesabın iki bölümü · keşif destesi · teslimat bölgeleri · talep
+çekmecesinin kapsam adımı bu sınıfta.
+
+**Ekran okuyucuya giden ses gösterge değişince DEĞİŞMEZ:** rol `progressbar` + `busy`, ve ekranda
+yazılı hiçbir şey kalmıyorsa `accessibilityLabel` ile ad. Halkadan skeleton'a geçen bir ekranın
+testi bu yüzden aynı sorguyla ayakta kalır.
+
 **Her skeleton için geçerli üç ölçüt** (ikisinde de aynı):
 - **Ölçü sayfadan türer, tahmin edilmez.** Yükseklik `fontSize × satır oranı` ya da kit ölçüsüdür;
   ham piksel yazılmaz. Kap stilleri (dolgu · ara · kenar boşluğu · çerçeve) sayfadan kopyalanır —

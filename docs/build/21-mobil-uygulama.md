@@ -618,8 +618,10 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
       durum notu);
     · ~~destek şeridi: `tickets-screen` · `ticket-detail-screen` · `order-picker` ·
       `order-line-picker`~~ → **KAPANDI 10.08** (aşağıdaki durum notu);
-    · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: `checkout-screen` (ödeme özetinin
-      tamamı sunucudan) ve `discover-screen` (tam ekran halka, arkasından kart destesi);
+    · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: yalnız `checkout-screen` kaldı
+      (ödeme özetinin tamamı sunucudan) — SEPET ŞERİDİNİN aktif alanı olduğu için bekliyor.
+      ~~`discover-screen`~~ · ~~`delivery-zones`~~ · ~~`new-ticket-sheet` kapsam adımı~~ →
+      **KAPANDI 10.08** (aşağıdaki durum notu);
     · ~~`account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK~~ → **KAPANDI 10.08** (aşağıdaki
       durum notu).
     **Ek durum (10.08 — SİPARİŞ ŞERİDİ KAPANDI):** `order-detail-skeleton.tsx` ve
@@ -667,6 +669,22 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     bir liste gibi okuturdu. Balon yüksekliği TEK SATIR (en az makul: fazlası veri gelince balonu
     küçültür, azı yalnız aşağı açar). Dört yerde de yükseklik artık YAZILMIYOR; satır/kart
     kabuğu gerçek kuruluyor. Doğrulama: 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
+
+    **Ek durum (10.08 — HALKA ↔ SKELETON AYRIMI, kullanıcı sorusu):** "halka başka sayfalarda da
+    var mı, ikisi muadil mi?" sorusuyla uygulamanın TAMAMI yeniden tarandı. Cevap: **muadil
+    değiller** ve ölçüt tek soruda toplanıyor — bekleyen şey bir YERLEŞİM mi, bir İŞLEM mi.
+    Kullanıcının gördüğü vitrin/paket/katalog halkaları aslında **aşağı çekme** halkalarıydı
+    (`RefreshControl`) ve onlar DOĞRU. Üç sınıf dokunulmadan bırakıldı: aşağı çekme (6 ekran) ·
+    sonsuz kaydırmanın kuyruğu (4 yer) · işlem-geçiş halkaları (giriş · doğrulama · profil kurma ·
+    sepet çözümleme). Skeleton'a çevrilenler: `discover-screen` (deste + ilerleme dilimleri +
+    ipucu kutuları; alt iki kart katmanı GERÇEK çiziliyor — derinlik veriye bağlı değil),
+    `delivery-zones-screen` (iki ülke öbeği, dörder yer satırı) ve `new-ticket-sheet`in kapsam
+    adımı (soru + gövde + iki cevap düğmesi). Üçünde de skeleton EKRANIN İÇİNDE kaldı: ölçüleri
+    ekranların kendi stil/metrik bloklarından geliyor ve ayrı dosya ya dairesel bağımlılık ya
+    40 satırlık taşıma isterdi — kusur gömülülük değil, YANLIŞ GÖSTERGEydi. Ekran okuyucuya giden
+    ses değişmedi (rol + ad + meşgul), o yüzden bölgeler ekranının testi aynı sorguyla ayakta
+    kaldı; yalnız adı düzeltildi. Ayrım ekran-üstü kural olarak yazıldı: `docs/uygulama §4b`.
+    Doğrulama: 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
 
     Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `cart` (ekran zaten dolu, yalnız fiyat
     çözümü bekleniyor) · `delivery-zones` (künyesinde bilinçli) · `login`/`profile-setup`/

@@ -7,7 +7,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingState } from '@/components/ui/loading-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { SectionHeader } from '@/components/ui/section-header';
 import { TextAction } from '@/components/ui/text-action';
@@ -48,7 +48,7 @@ import { useDeliveryZones } from './use-delivery-zones.hook';
   (`PostalCodeSheet`), vitrin başlığındakinin ta kendisi — ikinci bir alan yazılmadı.
 
   ── ÜÇ HÂLİN ÜÇÜ DE ÇİZİLİ, VE ÜÇÜ AYRI ŞEY SÖYLER ──────────────────────────
-  · yükleniyor — kitin halkası (`LoadingState`),
+  · yükleniyor — listenin SKELETON'ı (kullanıcı kararı 10.08; eskiden kitin halkasıydı),
   · hata       — kitin hata kutusu (`Note tone="error"`) + tekrar dene. Sayfanın kalanı (giriş
                  cümlesi, kod deneme, kapanış) YERİNDE kalır: liste okunamadı diye "kargoyla
                  gönderiyoruz" bilgisi yanlış olmaz, onu da gizlemek müşteriyi boş bir sayfada
@@ -77,7 +77,34 @@ export function DeliveryZonesScreen() {
 
   const list =
     zones.status === 'loading' ? (
-      <LoadingState accessibilityLabel={t.loading} testID="zones-loading" />
+      /* Halka yerine LİSTENİN KENDİSİ bekler (kullanıcı kararı 10.08): burada bekleyen şey bir
+         işlem değil bir YERLEŞİM — ülke başlığı ve altında yer satırları. Halka o yerleşimi
+         tutmuyordu ve liste gelince sayfa bir anda uzuyordu. Ölçüler sayfanın kendi stillerinden;
+         iki öbek ve dörder satır "en az makul" (fazlası veri gelince kaybolur, azı eklenir). */
+      <View
+        style={styles.groups}
+        testID="zones-loading"
+        accessible
+        accessibilityRole="progressbar"
+        /* Ekran okuyucuya TEK ses: rol + ad + meşgul. Ad korundu çünkü halkanın yerini alan bu
+           blok, ekranda yazılı hiçbir şey taşımıyor — "ilerleme çubuğu" tek başına neyin
+           beklendiğini söylemezdi. */
+        accessibilityLabel={t.loading}
+        accessibilityState={{ busy: true }}
+      >
+        {[0, 1].map((group) => (
+          <View key={group} style={styles.group}>
+            <Skeleton width="38%" height={theme.text.h2 * theme.text['h1--line-height']} tone="deep" />
+            {[0, 1, 2, 3].map((row) => (
+              <Skeleton
+                key={row}
+                width={row % 2 === 0 ? '86%' : '72%'}
+                height={theme.text.body * theme.text['lead--line-height']}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
     ) : zones.status === 'error' ? (
       <View style={styles.errorBlock}>
         <Note tone="error" description={t.errorBody} testID="zones-error" />

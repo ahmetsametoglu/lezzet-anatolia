@@ -12,7 +12,7 @@ import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
-import { LoadingState } from '@/components/ui/loading-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
@@ -69,6 +69,9 @@ import { useDiscover } from './use-discover.hook';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
+
+/** Bekleme dalının ilerleme dilimleri — destenin tipik uzunluğu (uç 10 kart veriyor). */
+const SKELETON_SEGMENTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /*
   v3'te ölçülmüş, EKRANA-ÖZEL duraklar. Ölçü katmanları (`theme/metrics` + `customer-metrics`)
@@ -199,6 +202,9 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
   const router = useRouter();
   const { width } = useWindowDimensions();
   const discover = useDiscover(locale, signedIn);
+  /* İpucu kutusunun yüksekliği (`styles.hint`): dikey dolgu + İKİ satır yazı — kutu şablonda da
+     iki satırlıdır ("Beğenmedim / sola kaydır"). Bekleme dalında kullanılır. */
+  const skeletonHintHeight = theme.space.lg * 2 + theme.text.helper * discoverMetrics.hintLineHeight * 2;
 
   const [index, setIndex] = useState(0);
   /** Bu turda beğenilen aday sayısı — düğmelerin altındaki ve bitiş ekranındaki cümlenin sayısı. */
@@ -365,12 +371,57 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     />
   );
 
+  /* İLK YÜK: dönen halka yerine DESTENİN KENDİSİ bekler (kullanıcı kararı 10.08 — halka bir
+     YERLEŞİM bekleyen ekranda yer tutmuyordu; deste gelince ekran bir anda doluyor ve ilerleme
+     çubuğuyla ipuçları aşağıdan zıplıyordu).
+
+     SKELETON EKRANIN İÇİNDE, ayrı dosyada değil: ölçüleri `discoverMetrics` veriyor ve o blok bu
+     dosyada yaşıyor (kendi künyesi: ölçü katmanları bu görevde yazıya kapalı). Ayrı dosya, ya
+     dairesel bağımlılık ya 40 satırlık bir taşıma isterdi — kusur zaten gömülülük değil, yanlış
+     göstergeydi.
+
+     SABİT YAPI GERÇEK ÇİZİLİR: ilerleme dilimleri, destenin alt iki katmanı ve ipucu kutularının
+     kabuğu veriye bağlı değil. Gri kalan yalnız üstteki kart, sayaç ve ipucu yazıları. */
   if (discover.status === 'loading') {
     return (
       <View style={styles.screen} testID="discover-screen">
         {bar}
-        <View style={styles.loading}>
-          <LoadingState label={t.loading} accessibilityLabel={t.loading} testID="discover-loading" />
+        <View
+          style={styles.body}
+          testID="discover-loading"
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityState={{ busy: true }}
+        >
+          <View style={styles.progressRow}>
+            <View style={styles.segments}>
+              {SKELETON_SEGMENTS.map((slot) => (
+                <View key={slot} style={styles.segment} />
+              ))}
+            </View>
+            <Skeleton width={discoverMetrics.segmentCurrentWidth} height={theme.text.micro} tone="deep" />
+          </View>
+
+          <View style={styles.guide}>
+            <Skeleton width="62%" height={theme.text.helper * theme.text['h1--line-height']} />
+            <View style={styles.hintRow}>
+              <Skeleton width="48%" height={skeletonHintHeight} radius="control" />
+              <Skeleton width="48%" height={skeletonHintHeight} radius="control" />
+            </View>
+          </View>
+
+          <View style={styles.deck}>
+            {/* Alt iki katman GERÇEK: derinlik hissini veren şey onlar ve ikisi de veriye bağlı
+                değil (yalnız yüzey + gölge). Üstteki kart gri — gelecek olan odur. */}
+            <View style={styles.thirdCard} pointerEvents="none" />
+            <View style={styles.nextCard} pointerEvents="none" />
+            <Skeleton
+              width="100%"
+              height={discoverMetrics.deckHeight - discoverMetrics.deckFootroom}
+              radius="card"
+              tone="deep"
+            />
+          </View>
         </View>
       </View>
     );

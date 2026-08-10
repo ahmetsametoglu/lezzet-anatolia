@@ -59,7 +59,9 @@ beforeEach(() => {
 });
 
 describe('DeliveryZonesScreen', () => {
-  it('ilk yükte halkayı çizer ve bölge ucunu çağırır', async () => {
+  // Gösterge 10.08'de halkadan SKELETON'a döndü (ekranın künyesi); ekran okuyucuya giden ses
+  // değişmedi — rol + ad + meşgul — ve test onu tutuyor.
+  it('ilk yükte listenin skeletonını çizer ve bölge ucunu çağırır', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
     await render(<DeliveryZonesScreen />);
