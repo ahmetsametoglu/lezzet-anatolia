@@ -9,7 +9,6 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BackButton } from '@/components/ui/back-button';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingState } from '@/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -42,6 +41,7 @@ import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { CartLineRow } from './cart-line-row';
+import { CartSkeleton } from './cart-skeleton';
 import messages from './messages.json';
 
 /*
@@ -506,9 +506,17 @@ export function CartScreen() {
           ))}
         </View>
 
+        {/* ÇÖZÜLMEMİŞ SEPET: elimizde ürün var ama satırları henüz kuramadık. Bu bir işlem değil
+            YERLEŞİM beklemesidir (ölçüldü 10.08) — eskiden halka dönüyordu ve liste boş
+            duruyordu; satırlar gelince kupon daveti, özet ve bar aşağı zıplıyordu. Satır sayısı
+            TAHMİN DEĞİL: sepet cihazda yaşıyor, kaç ürün olduğunu biliyoruz (skeleton künyesi).
+            Okuma DÜŞERSE skeleton yerine tek satırlık ret durur — bekleme bitti, cevap yok. */}
         {unresolved ? (
           cart.resolving ? (
-            <LoadingState accessibilityLabel={t.unresolved.loading} label={t.unresolved.loading} testID="cart-loading" />
+            <CartSkeleton
+              count={cart.products.length}
+              testID="cart-loading"
+            />
           ) : (
             <Note tone="terracotta" description={t.unresolved.failed} testID="cart-unresolved" />
           )

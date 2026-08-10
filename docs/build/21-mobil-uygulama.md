@@ -618,10 +618,9 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
       durum notu);
     · ~~destek şeridi: `tickets-screen` · `ticket-detail-screen` · `order-picker` ·
       `order-line-picker`~~ → **KAPANDI 10.08** (aşağıdaki durum notu);
-    · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: yalnız `checkout-screen` kaldı
-      (ödeme özetinin tamamı sunucudan) — SEPET ŞERİDİNİN aktif alanı olduğu için bekliyor.
-      ~~`discover-screen`~~ · ~~`delivery-zones`~~ · ~~`new-ticket-sheet` kapsam adımı~~ →
-      **KAPANDI 10.08** (aşağıdaki durum notu);
+    · ~~skeleton olması gerekirken dönen halka~~ → **HEPSİ KAPANDI 10.08**: `discover-screen` ·
+      `delivery-zones` · `new-ticket-sheet` kapsam adımı · `cart` · `checkout` (aşağıdaki durum
+      notları);
     · ~~`account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK~~ → **KAPANDI 10.08** (aşağıdaki
       durum notu).
     **Ek durum (10.08 — SİPARİŞ ŞERİDİ KAPANDI):** `order-detail-skeleton.tsx` ve
@@ -686,9 +685,28 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     kaldı; yalnız adı düzeltildi. Ayrım ekran-üstü kural olarak yazıldı: `docs/uygulama §4b`.
     Doğrulama: 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
 
-    Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `cart` (ekran zaten dolu, yalnız fiyat
-    çözümü bekleniyor) · `delivery-zones` (künyesinde bilinçli) · `login`/`profile-setup`/
-    `auth-callback` (form ve geçiş ekranları) · kurye ve depo ekranları (operasyon yüzeyi).
+    **Ek durum (10.08 — SEPET ve ÖDEME; müşteri yüzü KAPANDI):** paralel şerit kendi işini
+    commit'leyip alanı boşaltınca iki ekran da alındı. **Sepette bir ÖLÇÜM DÜZELTMESİ var:** bu
+    envanterde `cart` önce "halka doğru, ekran zaten dolu" diye kaydedilmişti — yanlış. Ekranın
+    kendi koşulu `unresolved = products.length > 0 && view.lines.length === 0`, yani "elimde ürün
+    var, satırları kuramadım": o anda liste BOŞ çiziliyor ve altında halka dönüyordu; satırlar
+    gelince kupon daveti, özet ve bar aşağı zıplıyordu. `cart-skeleton.tsx` satırların yerini
+    tutuyor ve **satır sayısı TAHMİN DEĞİL** — sepet cihazda yaşıyor, kaç ürün olduğu biliniyor
+    (`cart.products.length`, tavan 6); çözülmeyen şey satırların İÇERİĞİ. Bu, envanterdeki tek
+    "sayıyı biliyoruz" hâli. `checkout-skeleton.tsx` ise üç bölümün yerini tutuyor (teslim adresi ·
+    teslimat yolu · ödeme yöntemi, her biri üstbaşlık + iki seçenek satırı); TUTAR ÖZETİ skeleton'a
+    ALINMADI çünkü sayfa onu `ready` bloğunun dışında, beklerken de çiziyor — duran bir paneli
+    griye çevirmek olurdu. Doğrulama: 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
+    **Müşteri yüzünde skeleton işi bitti**; kalan tek gelecek borcu geri bildirim ekranı
+    (`BEKLEYEN(21.14)` — bugün fixture'la çalışıyor, ucu bağlanınca skeleton gerekecek).
+    Operasyon ekranları (kurye 3 + depo 4) bilinçli olarak kapsam dışında: müşteri tasarım dilinde
+    değiller ve personel akışında halkanın zararı yok — istendiğinde aynı ölçütle geçilir.
+
+    Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `login`/`profile-setup`/
+    `auth-callback` ve bölge talebi çekmecesi (form ve geçiş ekranları — bekleyen bir yerleşim
+    değil, bir cevap) · aşağı çekme halkaları (6 ekran) · sonsuz kaydırmanın kuyruğu (4 yer) ·
+    kurye ve depo ekranları (operasyon yüzeyi). ~~`cart`~~ ve ~~`delivery-zones`~~ bu listeden
+    ÇIKTI: ikisi de ölçülünce yerleşim beklediği görüldü ve skeleton'a çevrildi.
 - [x] (21.15) **Adres dilimi — uçlar + v3 `shAddr` çekmecesi (kullanıcı onaylı sıra, 09.08):**
   hesap ekranının adres bölümü gerçek uçlara bağlanır; ekleme/düzenleme/silme/varsayılan v3
   çekmecesinden. Checkout adres seçiminin zemini.

@@ -10,7 +10,6 @@ import { AppBar } from '@/components/ui/app-bar';
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BackButton } from '@/components/ui/back-button';
 import { Chip } from '@/components/ui/chip';
-import { LoadingState } from '@/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -33,6 +32,7 @@ import { useMe } from '@/screens/customer-kit/use-me.hook';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
 import { newOrderKey } from './order-key';
 import { deliveryLabelOf, paymentFailureMessage, rejectionMessage } from './order-result-copy';
+import { CheckoutSkeleton } from './checkout-skeleton';
 import { useCheckout } from './use-checkout.hook';
 import messages from './messages.json';
 
@@ -524,9 +524,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
         {/* Seçenekler okunamadıysa ekran SESSİZ KALMAZ: hangi hâlde olduğunu söyler ve aynı
             sorguyu tekrar etme yolunu verir. */}
-        {checkout.status === 'loading' ? (
-          <LoadingState accessibilityLabel={t.state.loading} label={t.state.loading} testID="checkout-loading" />
-        ) : null}
+        {/* Halka yerine ÜÇ BÖLÜMÜN yeri tutulur (kullanıcı kararı 10.08): burada bekleyen şey bir
+            işlem değil, gelecek olan teslim adresi · teslimat yolu · ödeme yöntemi. Halka
+            hiçbirinin yerini tutmuyor, cevap gelince üçü birden giriyor ve tutar özetiyle onay
+            barı aşağı zıplıyordu (skeleton künyesi). */}
+        {checkout.status === 'loading' ? <CheckoutSkeleton testID="checkout-loading" /> : null}
         {checkout.status === 'error' ? (
           <View style={styles.section} testID="checkout-failed">
             <Note tone="error" description={t.state.failed} />
