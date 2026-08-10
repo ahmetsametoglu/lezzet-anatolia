@@ -219,6 +219,10 @@ export function toDiscountRows({ rules, usage, codes, categoryNames, collectionN
       amountCents: rule.amountCents,
       scope: rule.scope,
       scopeName,
+      // Kimlik de taşınır: ad ekranın, kimlik formun. Yalnız ad taşındığında düzenleme formu hedefi
+      // seçili açamıyordu (`prices-types` künyesi).
+      categoryId: rule.categoryId,
+      collectionId: rule.collectionId,
       minBasketCents: rule.minBasketCents,
       firstOrderOnly: rule.firstOrderOnly,
       validFrom: rule.validFrom,

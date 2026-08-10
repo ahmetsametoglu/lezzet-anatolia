@@ -309,6 +309,16 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
  */
 export const DiscountDraftPayloadSchema = z.object({
   name: z.string().min(1),
+  /**
+   * MÜŞTERİYE görünen ad, dil başına — `name` operatörün listesi içindir, bu sepette ve mailde
+   * indirim satırının etiketidir ("İndirim — Hoş geldin indirimi").
+   *
+   * Alan 10.08'de EKLENDİ ve gerekçesi kullanıcının sorusudur: form kuyruğa gelince boş kutular
+   * görünür oldu ve *"bunlardan asistanın haberi var mıydı?"* diye soruldu. Yoktu — şemada bu alan
+   * hiç bulunmuyordu. Boş kalan bir kutu "asistan atladı" gibi okunur; oysa gerçek "asistana
+   * sorulmadı"ydı ve ikisi bambaşka şeyler. Boş bırakılırsa müşteri yalnız "İndirim" görür.
+   */
+  publicLabel: LocalizedTextSchema.nullable().optional(),
   trigger: z.enum(['coupon', 'automatic']),
   type: z.enum(['percent', 'fixed']),
   /** `percent` ise dolu; yüzde tavanı (%100) VERİDE — burada tekrarlanmaz. */
@@ -321,6 +331,16 @@ export const DiscountDraftPayloadSchema = z.object({
   /** Önizlemede okunacak ad — kimlik değil (kapsamın hangi kategori/koleksiyon olduğu). */
   scopeName: z.string().nullable(),
   minBasketCents: z.number().int().nonnegative().nullable(),
+  /** Yalnız İLK siparişte mi geçerli — müşteri kazanım kampanyalarının belirleyici koşulu. */
+  firstOrderOnly: z.boolean().optional(),
+  /**
+   * Kullanım tavanları. **Sınırsız bir kupon ticari bir risktir** ve asistanın bunu önerememesi,
+   * kararı sessizce "sınırsız"a bırakıyordu: alan yoksa varsayılan `null` yazılıyor, `null` da
+   * sınırsız demek. Bir kararın varsayılanı, o karar hiç sorulmadığında en tehlikeli hâline
+   * düşmemeli.
+   */
+  maxUses: z.number().int().positive().nullable().optional(),
+  perCustomerLimit: z.number().int().positive().nullable().optional(),
   validFrom: z.string().nullable(),
   validTo: z.string().nullable(),
   /** Kupon kodu (yalnız `trigger: 'coupon'`). Kod ÜRETİLMEZ, önerilir — çakışmayı kapı çözer. */

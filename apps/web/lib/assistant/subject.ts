@@ -2,7 +2,7 @@ import 'server-only';
 import { ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { AssistantProposal } from '@lezzet/types';
+import type { AssistantProposal, DiscountDraftPayload } from '@lezzet/types';
 import { productsUrl } from '@/app/(operations)/operations/products/products-url';
 
 /**
@@ -49,7 +49,32 @@ export async function subjectOf(proposal: AssistantProposal): Promise<ProposalSu
     const payload = proposal.payload as { variantId?: string };
     return typeof payload.variantId === 'string' ? variantSubject(payload.variantId) : null;
   }
+  if (proposal.kind === 'discount_draft') {
+    return scopeSubject(proposal.payload as DiscountDraftPayload);
+  }
   return null;
+}
+
+/**
+ * İndirimin konusu KAPSAMIDIR — kuralın kendisi değil.
+ *
+ * "Yaz Tatlı Festivali" bir ADdır ve zaten kartın başlığında duruyor; kararın konusu *hangi malın*
+ * ucuzlayacağıdır. Sepet kapsamında konu YOKTUR ve uydurulmaz: "tüm katalog" diye bir kayıt yok,
+ * onu gövde kendi cümlesiyle söylüyor.
+ *
+ * **Kimlik değil AD okunur** ve bu bilinçli: kategori/koleksiyonun görseli yok, tıklanacak ayrı bir
+ * ekranı da yok (ikisi de katalog ekranının sekmeleri). Ek bir sorgu açmak, ekrana tek satır bile
+ * yeni bilgi getirmezdi — dilekçedeki `scopeName` zaten öneri anındaki adı taşıyor.
+ */
+function scopeSubject(payload: DiscountDraftPayload): ProposalSubject | null {
+  if (payload.scope === 'cart' || !payload.scopeName) return null;
+  return {
+    kind: payload.scope === 'category' ? 'category' : 'collection',
+    name: payload.scopeName,
+    detail: payload.scope === 'category' ? 'Kategori' : 'Koleksiyon',
+    imageUrl: null,
+    href: null,
+  };
 }
 
 /** Varyanttan ürün künyesi — görsel ÜRÜNÜN, ayırt edici ad varyantın (boy). */

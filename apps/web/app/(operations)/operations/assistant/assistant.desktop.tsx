@@ -96,6 +96,7 @@ export function AssistantDesktop({
             // dilekçesi açıkken ötekine geçmek, başka bir kaydın JSON'unu aynı yerde gösterirdi.
             key={data.selected.id}
             row={data.selected}
+            options={data.options}
             busy={busy}
             error={error}
             onDecision={onDecision}

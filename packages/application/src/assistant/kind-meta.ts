@@ -150,9 +150,19 @@ export const KIND_META = {
   discount_draft: {
     label: 'İndirim',
     impact:
-      'Kampanya PASİF doğar — hiçbir sepete işlemez. Kapsamı, tarihi ve oranı indirim ekranında düzenlenir; yayına almak ayrı bir karardır.',
-    tables: ['discount'],
-    mode: 'draft_then_edit',
+      'Kampanya kuralı kuyruktaki formdan yazılır — kapsam, oran, tarih ve "Aktif" anahtarı onaydan ÖNCE elinizin altında. Aktif kaydedilirse koşulları tutan sepetlere hemen işler; kapalı kaydetmek kuralı hazır ama yayın dışı bırakır.',
+    tables: ['discount', 'discount_code'],
+    undoHint: 'Geri almak için: Fiyatlar → Kuponlar → kuralı kapatın (silinmez, geçmişi durur).',
+    // ── `draft_then_edit` DEVRİ KAPANDI (kullanıcı kararı 10.08) ────────────
+    // Eski etki cümlesi şuydu: *"Kampanya PASİF doğar. Kapsamı, tarihi ve oranı indirim ekranında
+    // düzenlenir."* Kullanıcının itirazı doğrudan bu cümleyeydi — *"doğrudan bu indirimle alakalı
+    // formun önüme gelmesini istiyorum"*. Pasif doğurmak bir emniyetti ama emniyetin sebebi
+    // operatörün formu GÖRMEMESİYDİ: görmediği bir kuralı yayına almak tehlikelidir. Form kuyruğa
+    // gelince o gerekçe düştü; anahtar da öteki alanlarla aynı ekranda duruyor.
+    //
+    // Kod satırları da işin içinde (`discount_code`) — bir kuponun kapısı yoksa kural kimsenin
+    // giremediği bir odadır, ve kuyruk onu "uygulandı" diye damgalamamalı.
+    mode: 'inline',
     target: 'discount',
     resultKey: 'discountId',
   },

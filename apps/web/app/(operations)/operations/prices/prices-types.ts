@@ -125,6 +125,15 @@ export interface DiscountRow {
   scope: DiscountScope;
   /** Kapsam hedefinin adı ("Baklava"); sepet kapsamında boş. */
   scopeName: string;
+  /**
+   * Kapsam hedefinin KİMLİĞİ — satır bir tur yalnız adı taşıyordu ve düzenleme formu hedef kutusunu
+   * boş açıyordu. Sonuç sessiz bir çıkmazdı: kategori/koleksiyon kapsamlı bir kuralı düzenlemeye
+   * açan operatör "Kapsam hedefi seçilmeli" engelini hiç kaldıramıyor, kaydet düğmesi kilitli
+   * kalıyordu (bulundu 10.08, form gövdesi ayrılırken). Ad İNSAN içindir, kimlik FORM içindir;
+   * ikisi ayrı sorulara cevap veriyor ve biri ötekinin yerine geçemez.
+   */
+  categoryId: string | null;
+  collectionId: string | null;
   minBasketCents: number | null;
   firstOrderOnly: boolean;
   validFrom: string | null;
@@ -145,40 +154,11 @@ export interface DiscountRow {
   dormantReason: string;
 }
 
-/**
- * İndirim formunun sunucuya gönderdiği hâl — client'ın topladığı alanlar. Para KURUŞTA (STACK §8);
- * action euroya çevirip yazar. `id` doluysa güncelleme.
- */
-export interface DiscountFormInput {
-  id: string | null;
-  name: string;
-  /** Müşteriye görünen ad, üç dilde. Boş diller aksiyonda ayıklanır; hepsi boşsa alan `null` yazılır. */
-  publicLabel: LocalizedText;
-  trigger: DiscountTrigger;
-  /**
-   * Kuponun kodları, DİL BAŞINA bir tane (boş bırakılan dil kod açmaz). Kampanyada hepsi boş.
-   * Action bunları `discount_code` satırlarına eşitler — kotayı bölmezler, aynı kuralı açarlar.
-   */
-  codes: Partial<Record<Locale, string>>;
-  type: DiscountType;
-  /**
-   * Formda tek girdi kutusu var ama gönderilen alan İKİ (02.9): tipine uyan dolu, öteki `null`.
-   * Tek alan `valueCents` adıyla yüzde de taşıyordu — adın yalan söylediği hâl.
-   */
-  percent: number | null;
-  amountCents: number | null;
-  scope: DiscountScope;
-  /** Kapsam hedefi (kategori ya da koleksiyon kimliği); sepet kapsamında `null`. */
-  targetId: string | null;
-  minBasketCents: number | null;
-  firstOrderOnly: boolean;
-  validFrom: string | null;
-  validTo: string | null;
-  customerId: string | null;
-  maxUses: number | null;
-  perCustomerLimit: number | null;
-  isActive: boolean;
-}
+// `DiscountFormInput` BURADA DEĞİL, formun kendi dosyasında
+// (`components/operation/form/discount-form.tsx`, 22.10): girdiyi üreten `discountInputOf` orada ve
+// ikisi tek sözleşmenin iki ucu. Ayrı dosyalarda dururlarsa bir gün biri alan ekler, öteki bilmez.
+// Ayrıca form artık iki yüzeyin ortağı; tipini fiyat ekranının görünüm dosyasında tutmak, ortak bir
+// komponenti bir sayfaya bağımlı kılardı (`STACK §7`).
 
 /** Kategori seçeneği — süzgeç menüsünü besler (tavanı sınırlı, tek turda gelir). */
 export interface CategoryOption {

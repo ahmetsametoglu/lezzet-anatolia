@@ -200,13 +200,20 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
    * Kararın CİNSİ künyeden okunur (22.5). Ekran kendi tablosunu kurarsa iki gerçek doğar ve biri
    * bir gün ötekinden ayrılır — geri alınamaz bir öneri "tek tık uygula" kapısına düşer.
    */
-  it('geri alınamaz DÖRT tip DEVREDİLİR, taslak doğuran tipler KÖPRÜ verir', () => {
-    // `batch_offer` de burada: fiyatın üç yüzü (tutar · indirim · marj) yalnız teklif diyaloğunda
-    // birlikte görünür; kuyrukta tek sayı onaylamak marjı görmeden fiyat onaylamaktır.
-    for (const kind of ['zone_extend', 'stock_intake', 'money_movement', 'batch_offer'] as const) {
+  it('geri alınamaz tipler DEVREDİLİR, kendi formu kuyruğa gelenler İÇERİDE karar alır', () => {
+    // Geri alınamaz üçlü: bildirim gider, stok/defter yazılır. Kararın konusu formda değil ekranda
+    // (harita, mal kabul akışı, defter satırı) — kuyruk bunları uygulamaz, ön doldurup devreder.
+    for (const kind of ['zone_extend', 'stock_intake', 'money_movement'] as const) {
       expect(modeOf(kind)).toBe('handoff');
     }
-    for (const kind of ['bundle_draft', 'discount_draft', 'recipe_draft', 'product_draft', 'purchase_order'] as const) {
+    // `inline` = gövdesi kuyruğun içinde çizilen tipler. İkisi de bir tur devredilmişti; formları
+    // kuyruğa taşındıkça devir kalktı (`kind-meta` künyeleri). Yazan kapı yine varlığın kendi
+    // eylemi, o yüzden `resultKey` burada da şart.
+    for (const kind of ['batch_offer', 'discount_draft'] as const) {
+      expect(modeOf(kind)).toBe('inline');
+      expect(KIND_META[kind].resultKey).toBeTruthy();
+    }
+    for (const kind of ['bundle_draft', 'recipe_draft', 'product_draft', 'purchase_order'] as const) {
       expect(modeOf(kind)).toBe('draft_then_edit');
       // Köprü ancak doğan kaydın kimliğiyle kurulabilir; anahtar uygulayıcının döndürdüğü adla aynı olmalı.
       expect(KIND_META[kind].resultKey).toBeTruthy();

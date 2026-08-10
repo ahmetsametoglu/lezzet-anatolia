@@ -1,11 +1,25 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { PROPOSAL_PAYLOAD_SCHEMAS, type AssistantProposalKind, type BatchOfferPayload } from '@lezzet/types';
+import {
+  PROPOSAL_PAYLOAD_SCHEMAS,
+  type AssistantProposalKind,
+  type BatchOfferPayload,
+  type DiscountDraftPayload,
+} from '@lezzet/types';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
+import { saveDiscountAction } from '@/lib/prices/discount-actions';
+import {
+  discountBlocked,
+  discountInputOf,
+  discountValuesFromProposal,
+  type DiscountFormValues,
+} from '@/components/operation/form/discount-form';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
+import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { BatchOfferBody } from './bodies/batch-offer-body';
+import { DiscountDraftBody } from './bodies/discount-draft-body';
 
 /**
  * ÖNERİ GÖVDELERİ — kuyruğun içinde karar verilen tiplerin kaydı (22.8).
@@ -31,6 +45,12 @@ interface InlineBodyArgs<Payload, Draft> {
   economics: ProposalEconomics | null;
   /** Önerinin konusu (görsel + ad + ilgili ekran); tipin konusu yoksa `null`. */
   subject: ProposalSubject | null;
+  /**
+   * Formların seçenek havuzu (kategori · koleksiyon). Sözleşmeye TİP BAŞINA değil ortak eklendi:
+   * sıradaki gövdeler de aynı iki listeyi isteyecek ve her tip kendi okumasını açsaydı aynı sorgu
+   * üç kez koşardı.
+   */
+  options: AssistantFormOptions;
   draft: Draft;
   onDraft: (next: Draft) => void;
   disabled: boolean;
@@ -98,6 +118,32 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     submit: (payload, cents, proposalId) => setOfferPriceAction(payload.batchId, cents, proposalId),
     applyLabel: 'Teklifi aç',
     appliedNote: 'Teklif açıldı — parti fırsat olarak vitrine düştü. Öneri karar geçmişine indi.',
+  }),
+
+  discount_draft: defineBody<DiscountDraftPayload, DiscountFormValues>({
+    parse: parseWith<DiscountDraftPayload>('discount_draft'),
+    // Formun açılış hâli asistanın dilekçesi; hangi kutulara dokunduğu da aynı yerden türer, çünkü
+    // ikisi tek bir gerçeğin iki yüzü ve ayrı hesaplanırsa bir gün ayrışırlar.
+    initial: (payload) => discountValuesFromProposal(payload).values,
+    render: ({ payload, subject, options, draft, onDraft, disabled, readOnly }) => (
+      <DiscountDraftBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        values={draft}
+        filled={discountValuesFromProposal(payload).filled}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    // Engel formun kendi dosyasından: iki yüzey aynı emniyeti paylaşmazsa kural bir ekranda
+    // kaydedilir ötekinde reddedilir.
+    blocked: discountBlocked,
+    submit: (_payload, values, proposalId) => saveDiscountAction(discountInputOf(values, null), proposalId),
+    applyLabel: 'İndirimi kaydet',
+    appliedNote:
+      'İndirim kuralı yazıldı — Fiyatlar → Kuponlar listesinde. Aktif bıraktıysanız koşulları tutan sepetlere işlemeye başladı.',
   }),
 };
 

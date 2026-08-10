@@ -19,23 +19,29 @@ interface SubjectCardProps {
   imageUrl: string | null;
   href: string | null;
   /**
-   * **Yön.** `row` (varsayılan) satır içi künye içindir — küçük görsel, yanında ad.
-   * `column` KENDİ SÜTUNUNU kaplar: görsel büyür ve üste geçer, ad altına iner. Öneri kartında
-   * konu artık bir satır değil bir sütun (kullanıcı kararı 10.08: *"en solda kart olsun, ürün
-   * resmi adı sanı bilgisi"*) — görsel tanımanın en hızlı yolu ve o boyda gerçekten işe yarıyor.
+   * **Görselin kenarı (px).** 44 = satır içi künye · 132 = öneri panelinin başı.
+   *
+   * Görsel KUTUYU DOLDURMAZ, sabit kalır. Bir tur panel genişliğini izliyordu (`fluid`) ve geniş
+   * ekranda 550 piksellik sütunda 4:3 fotoğraf 410 piksel boy tutuyordu: panel tek başına ötekilerin
+   * iki katına çıkıyor, yanındaki iki sütunun altında 450 piksellik ölü alan kalıyordu (kullanıcı,
+   * 10.08: *"ekranın canına okuyor"*). Sabit boy hem kırpmayı öngörülebilir tutar hem panelin
+   * yüksekliğini formunkine yaklaştırır — akışkan görsel, sütunlu bir dizilimde daima en uzun
+   * sütunu üretir.
    */
-  layout?: 'row' | 'column';
+  size?: number;
 }
 
-export function SubjectCard({ name, detail, imageUrl, href, layout = 'row' }: SubjectCardProps) {
-  const column = layout === 'column';
+export function SubjectCard({ name, detail, imageUrl, href, size = 44 }: SubjectCardProps) {
+  // Büyük görselde ad SARILIR ve büyür; küçükte kırpılır. Eşik boyun kendisinden çıkıyor, ayrı bir
+  // bayrak taşınmıyor — iki ayar aynı şeyin iki yüzü ve ayrı verilirse bir gün ayrışırlar.
+  const wide = size >= 96;
   const body = (
     <>
-      <Thumbnail src={imageUrl} alt={name} size={column ? undefined : 44} fluid={column} ratio={column ? 4 / 3 : 1} />
-      <span className="flex min-w-0 flex-col">
-        {/* Dikey sütunda ad SARILIR, kırpılmaz: kırpma satır içi künyede doğru (yer dar) ama
-            sütunda ürünün adının yarısını göstermek, kartın varlık sebebini götürür. */}
-        <span className={`font-ops-display font-semibold text-ops-ink ${column ? 'text-ops-base leading-snug' : 'truncate text-ops-base'}`}>
+      <Thumbnail src={imageUrl} alt={name} size={size} />
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span
+          className={`font-ops-display font-semibold text-ops-ink ${wide ? 'text-ops-lead leading-snug' : 'truncate text-ops-base'}`}
+        >
           {name}
         </span>
         {detail ? <span className="truncate font-ops-body text-ops-sm text-ops-muted">{detail}</span> : null}
@@ -43,7 +49,7 @@ export function SubjectCard({ name, detail, imageUrl, href, layout = 'row' }: Su
     </>
   );
 
-  const shell = column ? 'flex flex-col gap-1.5' : 'flex items-center gap-3';
+  const shell = wide ? 'flex items-start gap-3.5' : 'flex items-center gap-3';
 
   if (!href) {
     return <span className={shell}>{body}</span>;

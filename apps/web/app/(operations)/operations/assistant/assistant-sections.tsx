@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { QueueTab } from '@/lib/assistant/assistant-types';
+import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button, buttonClass } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
@@ -222,11 +223,14 @@ function TechnicalBlock({ row }: { row: AssistantRowView }) {
  */
 export function DecisionCard({
   row,
+  options,
   busy,
   error,
   onDecision,
 }: {
   row: AssistantRowView;
+  /** Gövdedeki formların seçenek havuzu — çerçeve içeriğini bilmez, olduğu gibi geçirir. */
+  options: AssistantFormOptions;
   busy: boolean;
   error: string | null;
   onDecision: (kind: DecisionKind, draft?: unknown) => void;
@@ -292,6 +296,7 @@ export function DecisionCard({
             payload: bodyPayload,
             economics: row.economics,
             subject: row.subject,
+            options,
             draft,
             onDraft: setDraft,
             disabled: busy || !live,

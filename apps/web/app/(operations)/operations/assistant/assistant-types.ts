@@ -1,5 +1,6 @@
 import type { ProposalMode } from '@lezzet/application';
 import type { AssistantQueueRow, QueueTab } from '@/lib/assistant/assistant-types';
+import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { AssistantUrlState } from './assistant-url';
 
 /**
@@ -38,6 +39,14 @@ export interface AssistantData {
   selected: AssistantRowView | null;
   /** Sekme rozetleri — yalnız bekleyen iş sayılır (`Tabs.count` künyesi: boş sayı çizilmez). */
   pendingCount: number;
+  /**
+   * Kuyruğun içindeki formların seçenek havuzu (kategori · koleksiyon).
+   *
+   * Payload'da YOKTUR ve olmamalı: dilekçe hedefin KİMLİĞİNİ taşır, kataloğun tamamını değil. Ama
+   * operatör kapsamı değiştirebilmeli — asistan "Tatlı" demişken o "Baklava" diyebilir ve liste
+   * orada olmazsa karar formu yarım kalır (`lib/assistant/form-options`).
+   */
+  options: AssistantFormOptions;
 }
 
 /** Karar penceresinin hâli — çizimdeki tek modal kabuğu üç karara hizmet ediyor. */

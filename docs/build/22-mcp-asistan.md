@@ -496,6 +496,90 @@ satırında.
       bileşeni yazmak duplikasyonun kendisiydi. Üçlünün yerini sabit sayılar alıyor — olup bitmiş bir
       işte düzenlenebilir kutu, hâlâ seçenekmiş gibi okunur.
   - *Doğrulandı:* `typecheck` (18/18) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346.
-  - **BEKLEYEN(22.8):** kalan 10 tip. Sıra brief'te: `product_draft` → `zone_extend` (harita) →
-    B sınıfı dört tip (gövde ayırma refactor'ü) → `stock_intake` ayrıca konuşulacak. **Desen kullanıcı
-    onayından geçmeden çoğaltılmıyor** — yanlış deseni 11 kez yazmak, bir kez yazıp düzeltmekten pahalı.
+  - **BEKLEYEN(22.8):** kalan 9 tip. Sıra brief'te: `product_draft` → `zone_extend` (harita) →
+    B sınıfının kalan üçü → `stock_intake` ayrıca konuşulacak. **Desen kullanıcı onayından geçmeden
+    çoğaltılmıyor** — yanlış deseni 11 kez yazmak, bir kez yazıp düzeltmekten pahalı.
+
+- [x] (22.9) **Önerinin KONU KARTI + kararın üç panel yerleşimi** *(kullanıcı kararı 10.08: "konu bir
+  ürünle alakalı olduğu zaman buraya ürünün resmi gibi bilgiler koyabiliriz… tıklayınca o ürünün
+  detay sayfasına")* — touches: `apps/web/lib/assistant/subject.ts`,
+  `apps/web/components/operation/ui/subject-card.tsx`,
+  `apps/web/app/(operations)/operations/assistant/bodies/batch-offer-body.tsx`
+  - **Konu ORTAK bir okuma** (`subjectOf`), tip başına değil: 11 tipin 9'unda bir konu var (ürün ·
+    paket · kategori · koleksiyon · tarif). Tip başına başlık kartı yazılsaydı dokuz kopya doğardı.
+  - **Görsel payload'dan DEĞİL bugünkü kayıttan:** payload bir dilekçedir ve öneri anındaki gerçeği
+    taşır; görsel ise "şu an ne satıyoruz"un parçası. Dondurulmuş bir görsel, fotoğraf değiştiyse
+    yanlış ürünü gösterirdi. Bağlantı **yeni sekmede** — kurgunun bütün amacı operatörü sayfadan
+    çıkarmamak; aynı sekmede gitmek az önce çözülen sorunu geri getirirdi.
+  - **Görsel AKIŞKAN olamaz** (ölçüldü, kullanıcı ekran görüntüsü): sütun genişliğini izleyen 4:3 bir
+    fotoğraf 550 piksellik sütunda 413 piksel boy tutuyordu; konu sütunu ötekilerin iki katına çıkıyor,
+    yanlarında 450 pikselik ölü alan kalıyordu. Akışkan görsel, sütunlu bir dizilimde **daima en uzun
+    sütunu üretir** — boy sabitlendi (132 px) ve kart yatay dizildi.
+  - **Üç bölüm aynı kabukta ve `items-stretch` ile aynı boyda:** bir tur yalnız konu sütununun
+    çerçevesi vardı, öteki ikisi çıplak metindi ve boy farkı "delik" olarak okunuyordu. Eşit boy o
+    farkı panelin İÇ boşluğuna çeviriyor — aynı piksel, ama artık dizilimin parçası.
+
+- [~] (22.10) **İkinci gövde: kampanya/kupon — B sınıfının ilk tipi, GERÇEK formuyla** *(kullanıcı
+  talebi 10.08: "uygula dediğim zaman bana tarihi ve oranı indirim ekranında düzenlenir diye bir şey
+  geliyor; doğrudan bu indirimle alakalı formun önüme gelmesini istiyorum")* —
+  touches: `apps/web/components/operation/form/discount-form.tsx`,
+  `apps/web/lib/prices/discount-actions.ts`, `apps/web/lib/assistant/form-options.ts`,
+  `apps/web/app/(operations)/operations/prices/{discount-dialog,actions,prices-types,prices-read}.ts*`,
+  `apps/web/app/(operations)/operations/assistant/**`,
+  `packages/application/src/assistant/kind-meta.ts`
+  - **Gövde SAYFADAN DA ÇIKTI, ortak komponentlere:** ilk tur `prices/discount-form.tsx` yazılmıştı
+    ve `docs:check` reddetti (`STACK §7`: kardeş sayfadan yalnız `*-url` import edilir). Kural burada
+    teknik bir ayrıntı değil ölçünün kendisi — iki yüzey aynı formu paylaşıyorsa o form bir sayfaya
+    ait değildir. Aynı gerekçeyle `saveDiscountAction` da `lib/prices/discount-actions.ts`'e taşındı
+    (teklif yazma yolunun `lib/stock/offer-actions` devriyle aynı desen).
+  - **B sınıfının bedeli ödendi: gövde dialog'dan AYRILDI** (`discount-form.tsx`). Fırsat tipi C
+    sınıfıydı — küçük bir karar kartı yeterdi; indirimde form vardı ama `discount-dialog`un içine
+    gömülüydü (395 satır). Ayrım dosya bölmek değil **sözleşme kurmak**: değerler (`DiscountFormValues`),
+    engel (`discountBlocked`) ve kaydetme girdisine dönüşüm (`discountInputOf`) gövdeyle birlikte
+    taşındı. Engel dialog'da kalsaydı asistan kabuğu kendi engelini yazardı ve bir gün biri "%100 üstü
+    yüzde" ya da "kodsuz kupon" kuralını unuturdu — aynı kural bir ekranda kaydedilir, ötekinde
+    reddedilirdi. Dialog artık kabuk: başlık, alt bar, kaydetme çağrısı (395 → 103 satır).
+  - **Aynı gövde iki yüzeyde:** `discount-dialog` (fiyat ekranı) ve `bodies/discount-draft-body`
+    (kuyruk). Bir alan eklendiğinde ikisinde birden görünüyor — talebin birinci amacı bu ikiliği
+    bitirmekti.
+  - **`draft_then_edit` devri kapandı → `inline`.** Eski etki cümlesi kullanıcının itiraz ettiği
+    cümlenin ta kendisiydi. **Kampanya artık pasif doğmuyor:** pasiflik bir emniyetti ama gerekçesi
+    operatörün formu GÖRMEMESİYDİ; form kuyruğa gelince o gerekçe düştü ve "Aktif" anahtarı öteki
+    alanlarla aynı ekranda duruyor. Görmediği bir kuralı yayına almak tehlikelidir, gördüğü kuralı
+    yayına almamak ise ona sorulmamış bir karardır.
+  - **Asistanın DOKUNDUĞU kutular işaretli** (`filled` kümesi → etiketin ucunda mor nokta + "asistan").
+    Ayrı bir "değişiklikler listesi" yazılmadı (brief §3.4): operatör zaten bildiği forma bakıyor,
+    farkı gözünün alışkın olduğu yerde görmeli. İşaret kutu düzenlenince de yerinde kalıyor —
+    "asistan nereye dokundu" ile "operatör sonra ne yazdı" iki ayrı olgu.
+  - **Yazan kapı yine varlığın kendi eylemi:** `saveDiscountAction(input, proposalId)` → `withProposal`.
+    Kod satırları (`discount_code`) da işin İÇİNDE: kapısı olmayan bir kupon kimsenin giremediği bir
+    odadır ve kuyruk onu "uygulandı" diye damgalamamalı.
+  - **Yol üstünde bulunan arıza düzeltildi:** `DiscountRow` kapsam hedefinin yalnız ADINI taşıyordu,
+    kimliğini değil. Kategori/koleksiyon kapsamlı bir kuralı düzenlemeye açan operatör hedef kutusunu
+    boş buluyor, "Kapsam hedefi seçilmeli" engelini hiç kaldıramıyor ve kaydet düğmesi kilitli
+    kalıyordu — yani o kayıtlar hiç düzenlenemiyordu. Ad İNSAN için, kimlik FORM için.
+  - **Seçenek havuzu ortak** (`lib/assistant/form-options.ts`): kategori + koleksiyon listesi. Tip
+    başına okuma açılsaydı aynı sorgu üç kez koşar ve biri bir gün sıralamayı ötekinden farklı yapardı.
+  - **`assistant-preview.tsx`ten `discount_draft` bloğu SİLİNDİ** (1.170 → 1.126 satır).
+  - **Gövdenin GENEL kurgusu kuruldu** *(kullanıcı kararı 10.08: "bir önerinin önizlemesi olacak, bir
+    de kategori/koleksiyon/ürün her ne ile ilgiliyse onunla alakalı bir tanıtım kartı, bir de form —
+    bu diğer öneri tiplerinde de olsun")*: her gövde **konu kartı + asistanın dilekçesi ⟷ form**.
+    Ortak kabuk `components/operation/ui/proposal-aside.tsx`.
+    - **Silinen önizlemeyle aynı şey DEĞİL:** `assistant-preview` formun YERİNE anlatıyordu (o yüzden
+      silindi); bu sütun formun YANINDA duruyor ve başka bir soruya cevap veriyor. Form bir taslaktır
+      ve operatör ona dokundukça asistanın ne dediği kaybolur — kullanıcının cümlesi: *"ben
+      değiştirdiğim zaman önerinin ne olduğunu unutmam."*
+    - **Sapma satırın ÜSTÜNDE:** değiştirilen alanda asistanın değeri üstü çizili kalır, yenisi
+      yanında. Ayrı bir "değişiklikler listesi" kurulmadı — fark ait olduğu satırda durur.
+    - **Boş bırakılan alanlar da listede** ("—"): kullanıcının ilk sorusu buydu (*"asgari sepete hiç
+      girmemiş, haberi var mıydı?"*). Satırı listeden çıkarmak, verilmemiş bir kararı gizlerdi.
+    - **`batch_offer` de aynı kabuğa çekildi** ve künye çifti oradan silindi: ikinci kopya doğmadan
+      birleştirildi, yoksa biri bir gün sapmayı öğrenir öteki öğrenmezdi.
+  - **Bayat test yakalandı ve düzeltildi:** `proposal.test.ts` hâlâ `batch_offer`'ı `handoff`
+    bekliyordu (22.8'de `inline` olmuştu). Dosya `apps/backend` altında, yani ENTEGRASYON projesinde
+    koşuyor — DB'siz bir test olduğu hâlde birim koşusunda görünmediği için sessizce bayatlamış.
+  - *Doğrulandı:* `typecheck` · `lint` · birim 1346/1346.
+  - **BEKLEYEN(22.10):** ekran doğrulaması kullanıcıda; yerleşim (form sütunu ↔ künye sütunu) geri
+    bildirime göre oturacak. `applyDiscountDraft`/`applyBatchOffer` uygulayıcıları artık ULAŞILAMAZ
+    (genel kapı `inline` tipini reddediyor) ama `APPLIERS` kaydında duruyor — `proposal.test.ts` şema
+    ↔ uygulayıcı eşliğini şart koşuyor, yani temizlik o testin sözleşmesiyle birlikte düşünülmeli.

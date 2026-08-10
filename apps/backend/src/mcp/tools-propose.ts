@@ -68,6 +68,26 @@ function isUuid(value: string): boolean {
   return UUID_RE.test(value);
 }
 
+/**
+ * Dil başına metin argümanı (`{ "tr": "…", "fr": "…" }`). Model tek dil de verebilir — eksik dili
+ * operatör formda tamamlar. Metin OLMAYAN değerler ve boş dizeler ayıklanır: boş bir dil "metin var"
+ * gibi okunup yüzeyde boş bir etiket bırakırdı; hiçbir dil kalmazsa alan `null`.
+ */
+function localizedArg(raw: unknown): Record<string, string> | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const cleaned = Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>)
+      .filter(([, text]) => typeof text === 'string' && text.trim())
+      .map(([lang, text]) => [lang, (text as string).trim()]),
+  );
+  return Object.keys(cleaned).length > 0 ? cleaned : null;
+}
+
+/** Pozitif tam sayı argümanı; verilmediyse ya da anlamsızsa `null` ("sınır yok"). */
+function positiveIntArg(raw: unknown): number | null {
+  return Number.isInteger(raw) && (raw as number) > 0 ? (raw as number) : null;
+}
+
 /** Tekil kimlik alanı için standart ret — örnek kimlikle, ki model biçimi tahmin etmesin. */
 function badIdError(field: string, value: string) {
   return {
@@ -744,6 +764,9 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
 
   const payload: DiscountDraftPayload = {
     name,
+    // Müşteri metni ÜÇ DİLDE beklenir ama tek dil de kabul edilir: eksik dili operatör formda
+    // tamamlar (çeviri düğmesi orada). Hiç gelmezse `null` — müşteri yalnız "İndirim" görür.
+    publicLabel: localizedArg(args.publicLabel),
     trigger: trigger as DiscountDraftPayload['trigger'],
     type: type as DiscountDraftPayload['type'],
     percent,
@@ -753,6 +776,9 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
     collectionId,
     scopeName,
     minBasketCents: Number.isInteger(args.minBasketCents) ? (args.minBasketCents as number) : null,
+    firstOrderOnly: args.firstOrderOnly === true,
+    maxUses: positiveIntArg(args.maxUses),
+    perCustomerLimit: positiveIntArg(args.perCustomerLimit),
     validFrom: typeof args.validFrom === 'string' ? args.validFrom : null,
     validTo: typeof args.validTo === 'string' ? args.validTo : null,
     code: typeof args.code === 'string' && args.code.trim() ? args.code.trim().toUpperCase() : null,

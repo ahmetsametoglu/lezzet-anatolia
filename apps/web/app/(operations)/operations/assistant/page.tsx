@@ -3,6 +3,7 @@ import { guarded, requireAdmin } from '@/lib/guard';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { KIND_META, modeOf } from '@lezzet/application';
 import { countPendingProposals, readAssistantQueue } from '@/lib/assistant/read';
+import { readAssistantFormOptions } from '@/lib/assistant/form-options';
 import { AssistantClient } from './assistant-client';
 import { parseAssistantUrl, proposalTargetUrl } from './assistant-url';
 import type { AssistantData } from './assistant-types';
@@ -43,7 +44,12 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
   const urlState = parseAssistantUrl(await searchParams);
 
   // Sayaç sekmeden BAĞIMSIZ okunur: rozet "bekleyen iş" der ve arşive bakarken de doğru olmalı.
-  const [queue, pendingCount] = await Promise.all([readAssistantQueue(urlState.tab), countPendingProposals()]);
+  // Seçenek havuzu da burada: kuyruğun içindeki formlar (indirim kapsamı) listesiz açılamaz.
+  const [queue, pendingCount, options] = await Promise.all([
+    readAssistantQueue(urlState.tab),
+    countPendingProposals(),
+    readAssistantFormOptions(),
+  ]);
 
   // Tek an, tüm yaşlar: kuyruk satırları ve kart künyesi aynı `now`'a göre hesaplanır — ayrı ayrı
   // okunsaydı aynı damga listede ve kartta farklı yaş gösterebilirdi.
@@ -67,7 +73,7 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
   const selectedId = urlState.p || (rows[0]?.id ?? '');
   const selected = rows.find((row) => row.id === selectedId) ?? null;
 
-  const data: AssistantData = { rows, selected, pendingCount };
+  const data: AssistantData = { rows, selected, pendingCount, options };
 
   return <AssistantClient data={data} urlState={{ ...urlState, p: selected?.id ?? '' }} />;
 }

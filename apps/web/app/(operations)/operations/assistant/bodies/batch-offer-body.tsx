@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { markupPercent } from '@lezzet/domain-core';
 import { removeVat } from '@lezzet/helper';
 import type { BatchOfferPayload } from '@lezzet/types';
@@ -7,7 +8,7 @@ import { PriceTriple } from '@/components/operation/form/price-triple';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
 import type { ProposalSubject } from '@/lib/assistant/subject';
-import { SubjectCard } from '@/components/operation/ui/subject-card';
+import { ProposalAside } from '@/components/operation/ui/proposal-aside';
 import { splitVariantName } from '../assistant-labels';
 
 /**
@@ -92,77 +93,75 @@ export function BatchOfferBody({
   const edited = valueCents !== null && valueCents !== payload.offerPriceCents;
 
   return (
-    <div className="flex flex-col gap-3 overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
-      {/* Ad KENDİ SATIRINDA: künyeyle yan yana dururken uzun adlar sıkışıp ortasından bölünüyordu
-          ("Artisan Strawberry / Cake") — kararın konusu olan şeyin adı, ekranın en kolay okunan
-          satırı olmalı. Boy adın yanında, kuyruk satırındaki gibi. */}
-      {/* ── ÜÇ SÜTUN (kullanıcı kararı 10.08) ───────────────────────────────
+    <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
+      {/* ── ÜÇ PANEL (kullanıcı kararı 10.08) ───────────────────────────────
           *"En solda kart olsun — ürün resmi, adı, bilgisi. Sonra form olsun. En kenarda da
           bilgilendirme kısmı."* Sıra kararın akışını izliyor: NE (konu) → NE YAZIYORUM (form) →
-          NE OLUYOR (kâr ve uyarılar). Künye bir tur üstte tam genişlik bir kutuydu; oradaki
-          `Fact` satırı artık konu sütununun içinde ve dikey — sıkışmıyor, sağdaki ölü alanı da
-          kendiliğinden kapatıyor. */}
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-3.5">
-        <div className="flex min-w-[15rem] flex-1 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
-          {subject ? (
-            <SubjectCard
-              name={subject.name}
-              detail={subject.detail}
-              imageUrl={subject.imageUrl}
-              href={subject.href}
+          NE OLUYOR (kâr ve uyarılar).
+
+          ÜÇÜ DE AYNI KABUKTA ve `items-stretch` ile AYNI BOYDA. Bir tur yalnız konu sütununun
+          çerçevesi vardı, öteki ikisi çıplak metindi: yüksek bir kutunun yanında havada duran iki
+          blok, boy farkını "ölü alan" olarak okutuyordu. Eşit boy o farkı panelin İÇ boşluğuna
+          çeviriyor — aynı piksel, ama artık dizilimin parçası (kullanıcı: *"üç bölüm birbiriyle
+          uyumlu olmalı"*). `basis-0` şart: `basis-auto` sütunları içeriklerinin uzunluğuna göre
+          farklı genişletirdi, oysa istenen eşit genişlik. */}
+      <div className="flex flex-wrap items-stretch gap-4">
+        {/* Önizleme sütunu ORTAK (`ProposalAside`, 22.10): konu kartı + asistanın dilekçesi + sapma.
+            Bir tur bu panel burada elle kuruluydu; indirim tipi gelince aynı kurgu ikinci kez
+            yazılacaktı — kullanıcının istediği düzen zaten buydu ("her tipte önizleme + tanıtım
+            kartı + form"), o yüzden ikinci kopya doğmadan tek yere alındı. */}
+        <ProposalAside
+          subject={subject}
+          fallbackTitle={size ? `${name} · ${size}` : name}
+          facts={[
+            { label: 'Depo', value: payload.warehouseCode },
+            { label: 'SKT', value: shortDate(payload.expiryDate) },
+            { label: 'Partide', value: `${num(payload.physicalQty)} ad.` },
+            // Teklif fiyatı SAPMA gösteren tek satır: operatör kutuyu değiştirdiğinde asistanın
+            // önerisi üstü çizili kalır — kararın konusu tam olarak bu fark.
+            { label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) },
+            ...(listCents !== null ? [{ label: 'Liste', value: money(listCents) }] : []),
+          ]}
+        />
+
+        <Panel>
+          {readOnly ? (
+            <>
+              <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
+              <StaticFace
+                label="İndirim"
+                aside="listeye göre"
+                value={
+                  listCents !== null && valueCents !== null
+                    ? percent(((listCents - valueCents) / listCents) * 100, 1)
+                    : '—'
+                }
+              />
+              <StaticFace
+                label="Kâr marjı"
+                aside="alışa göre"
+                value={marginPercent === null ? '—' : percent(marginPercent, 1)}
+              />
+            </>
+          ) : (
+            <PriceTriple
+              valueCents={valueCents}
+              onChange={onChange}
+              channel="b2c"
+              vatRate={vatRate ?? 0}
+              listCents={listCents}
+              costCents={costCents}
+              priceLabel="Teklif fiyatı (€)"
+              priceLabelAside="KDV dahil"
+              pricePlaceholder="ör. 12,60"
+              required
+              idPrefix="proposal-offer"
               layout="column"
             />
-          ) : (
-            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
-              {name}
-              {size ? <span className="font-ops-body font-normal text-ops-body"> · {size}</span> : null}
-            </span>
           )}
-          <span className="flex flex-col gap-1 border-t border-ops-line pt-2 font-ops-body text-ops-base text-ops-body">
-            <Fact label="Depo" value={payload.warehouseCode} />
-            <Fact label="SKT" value={shortDate(payload.expiryDate)} />
-            <Fact label="Partide" value={`${num(payload.physicalQty)} ad.`} />
-            <Fact label="Asistanın önerisi" value={money(payload.offerPriceCents)} />
-            {listCents !== null ? <Fact label="Liste" value={money(listCents)} /> : null}
-          </span>
-        </div>
+        </Panel>
 
-      {readOnly ? (
-        <div className="flex min-w-[15rem] flex-1 flex-col gap-3">
-          <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
-          <StaticFace
-            label="İndirim"
-            aside="listeye göre"
-            value={
-              listCents !== null && valueCents !== null ? percent(((listCents - valueCents) / listCents) * 100, 1) : '—'
-            }
-          />
-          <StaticFace
-            label="Kâr marjı"
-            aside="alışa göre"
-            value={marginPercent === null ? '—' : percent(marginPercent, 1)}
-          />
-        </div>
-      ) : (
-        <div className="min-w-[15rem] flex-1">
-        <PriceTriple
-          valueCents={valueCents}
-          onChange={onChange}
-          channel="b2c"
-          vatRate={vatRate ?? 0}
-          listCents={listCents}
-          costCents={costCents}
-          priceLabel="Teklif fiyatı (€)"
-          priceLabelAside="KDV dahil"
-          pricePlaceholder="ör. 12,60"
-          required
-          idPrefix="proposal-offer"
-          layout="column"
-        />
-        </div>
-      )}
-
-        <div className="flex min-w-[15rem] flex-1 items-start flex-col gap-3">
+        <Panel>
           <MarginSentence
             costCents={costCents}
             offerHtCents={offerHtCents}
@@ -187,32 +186,34 @@ export function BatchOfferBody({
             </span>
           ) : null}
 
-          <span className="font-ops-body text-ops-base text-ops-muted">
+          {/* Not panelin DİBİNE yaslanır (`mt-auto`): eşit boya çekilen sütunda artan boşluk
+              künyenin altında kalırsa "eksik bir şey var" gibi durur; altta bir kapanış satırı
+              varsa aynı boşluk paragraf arası olur. */}
+          <span className="mt-auto font-ops-body text-ops-base text-ops-muted">
             Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
           </span>
+        </Panel>
       </div>
-      </div>
-
     </div>
   );
 }
 
 /**
- * Künye çifti — etiket solda sönük, DEĞER sağda mono.
- *
- * Bir tur `Depo: STR` gibi bitişikti; yan yana dizilirken doğruydu ama sütuna girince beş satır
- * sola yaslı ve sağı boş bir liste oldu — göz her satırda değeri yeniden aramak zorunda kaldı.
- * `justify-between` ile değerler tek dikey hatta iniyor ve sağdaki kâr künyesiyle **aynı okuma
- * biçimi** oluyor: ekranda iki farklı künye dili kalmıyor.
+ * Kararın üç bölümünden biri — eşit genişlik (`basis-0 flex-1`), eşit boy (dışarıdaki
+ * `items-stretch`), aynı kabuk. Üçü tek yerden tanımlı, çünkü aralarındaki tek fark İÇERİK olmalı:
+ * ayrı ayrı yazılsalardı bir gün biri farklı bir dolgu ya da farklı bir kenarlık alır ve "uyumlu üç
+ * bölüm" bozulurdu (`CLAUDE §1`).
  */
-function Fact({ label, value }: { label: string; value: string }) {
+function Panel({ children }: { children: ReactNode }) {
   return (
-    <span className="flex items-baseline justify-between gap-3">
-      <span className="text-ops-sm text-ops-muted">{label}</span>
-      <strong className="whitespace-nowrap font-ops-mono font-semibold text-ops-ink">{value}</strong>
-    </span>
+    <div className="flex min-w-[15rem] flex-1 basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+      {children}
+    </div>
   );
 }
+
+// Künye satırı (`Fact`) BURADAN KALKTI: aynı çift `ProposalAside` içinde duruyor ve sapmayı da
+// gösteriyor. İki kopya kalsaydı biri bir gün sapmayı öğrenir, öteki öğrenmezdi.
 
 /**
  * Karar verilmiş öneride üçlünün yerini alan sabit sayı — `PriceTriple`in kutularıyla aynı sırada
@@ -283,7 +284,7 @@ function MarginSentence({
    * bu blok dört satır; iki sütun arasındaki ölü boşluk kapandı.
    */
   return (
-    <dl aria-live="polite" aria-busy={disabled || undefined} className="flex w-full max-w-[30rem] flex-col gap-1">
+    <dl aria-live="polite" aria-busy={disabled || undefined} className="flex w-full flex-col gap-1">
       <MoneyRow label="Adet başına" value={verdict} aside={marginPercent === null ? null : `${percent(marginPercent, 1)} marj`} tone={tone} strong />
       <MoneyRow label="KDV’siz gelir" value={money(offerHtCents)} />
       <MoneyRow label="Alış" value={money(costCents)} />

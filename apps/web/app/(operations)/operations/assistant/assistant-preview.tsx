@@ -4,8 +4,6 @@ import type { ReactNode } from 'react';
 import { toCents } from '@lezzet/helper';
 import {
   ALLERGEN_LABELS,
-  DISCOUNT_SCOPE_LABELS,
-  DISCOUNT_TRIGGER_LABELS,
   NUTRITION_KEYS,
   NUTRITION_LABELS,
   PROPOSAL_PAYLOAD_SCHEMAS,
@@ -13,7 +11,6 @@ import {
   resolveLocalizedText,
   type AssistantProposalKind,
   type BundleDraftPayload,
-  type DiscountDraftPayload,
   type FeaturedFlagPayload,
   type MoneyMovementPayload,
   type Nutrition,
@@ -969,51 +966,6 @@ function PurchaseOrderPreview({ payload }: { payload: PurchaseOrderPayload }) {
 }
 
 /**
- * İndirim/kampanya taslağı — brief'in istediği gibi **kural özeti DÜZ TÜRKÇE**
- * (`admin-asistan-kuyrugu.md §3`: *"Tatlı kategorisinde %15, 30 Eylül'e kadar, alt sınır 25 €"*).
- *
- * Alan alan bir tablo yerine tek cümle, çünkü indirimin onaylanabilirliği alanların tek tek
- * doğruluğunda değil, hepsinin BİRLİKTE anlattığı kuralda: "%15" tek başına ne fazla ne az.
- */
-function DiscountDraftPreview({ payload }: { payload: DiscountDraftPayload }) {
-  const value = payload.type === 'percent' && payload.percent !== null ? `%${num(payload.percent)}` : money(payload.amountCents);
-  const scope =
-    payload.scope === 'cart'
-      ? DISCOUNT_SCOPE_LABELS.cart.toLocaleLowerCase('tr-TR')
-      : `${DISCOUNT_SCOPE_LABELS[payload.scope].toLocaleLowerCase('tr-TR')}: ${payload.scopeName ?? 'seçilmedi'}`;
-
-  return (
-    <PreviewBody note="katalog · indirim kuralı">
-      <div className="rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-        <span className="font-ops-body text-ops-lead leading-relaxed text-ops-ink">
-          <strong className="font-semibold">{value}</strong> indirim — {scope}
-          {payload.minBasketCents !== null ? `, alt sınır ${money(payload.minBasketCents)}` : ''}
-          {payload.validTo ? `, ${shortDate(payload.validTo)} tarihine kadar` : ''}.
-        </span>
-      </div>
-
-      <FactRow
-        facts={[
-          { label: 'Ad', value: payload.name },
-          { label: 'Tetikleyici', value: DISCOUNT_TRIGGER_LABELS[payload.trigger] },
-          ...(payload.code ? [{ label: 'Önerilen kod', value: payload.code, mono: true }] : []),
-          ...(payload.validFrom ? [{ label: 'Başlangıç', value: shortDate(payload.validFrom), mono: true }] : []),
-        ]}
-      />
-
-      {/* Kupon KODU öneridir, tahsis değil: çakışmayı kapı çözer (`DiscountDraftPayloadSchema`).
-          Ekranın bunu söylemesi şart — yoksa operatör kodu müşteriye duyurur ve kod değişir. */}
-      {payload.code ? (
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          Kod bir ÖNERİDİR; çakışma varsa kayıt sırasında değişebilir. Duyurmadan önce indirim ekranından
-          doğrulayın.
-        </span>
-      ) : null}
-    </PreviewBody>
-  );
-}
-
-/**
  * Tarif taslağı — üç dilin DOLULUĞU + malzeme bağları.
  *
  * Yayın kuralı veride: üç dil dolmadan tarif yayınlanamaz (`DOMAIN §13`). Önizlemenin en yararlı
@@ -1145,8 +1097,10 @@ export function ProposalPreview({
     // birden dursaydı aynı fiyat iki yerde iki farklı hâlde okunurdu (biri asistanın önerdiği,
     // öteki operatörün yazdığı). Karar verilmiş satırda gövde çizilmez ama form da gerekmez:
     // kartın künyesi (özet · tutar · "ne olacaktı") olan biteni zaten söylüyor.
-    case 'discount_draft':
-      return <DiscountDraftPreview payload={data as DiscountDraftPayload} />;
+    // `discount_draft` de burada YOK, aynı gerekçeyle (22.10): kural artık kuyruğun içinde GERÇEK
+    // indirim formuyla kuruluyor (`bodies/discount-draft-body` → `prices/discount-form`). Önizleme
+    // korunsaydı aynı kampanya iki dilde anlatılırdı ve forma bir alan eklendiğinde önizleme bunu
+    // bilmez, öneri ekranı sessizce eksik gösterirdi — talebin birinci amacı bu ikiliği bitirmekti.
     case 'recipe_draft':
       return <RecipeDraftPreview payload={data as RecipeDraftPayload} />;
     case 'product_create':

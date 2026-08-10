@@ -340,11 +340,16 @@ export const TOOLS = [
   {
     name: 'propose_discount_draft',
     description:
-      "PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The discount is created INACTIVE: applying the proposal prepares it, publishing is a separate decision on the pricing screen. Coupon codes are not minted here — uniqueness belongs to the database.",
+      "PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The admin approves it INSIDE the queue, on the real discount form: every field you send lands in a box they can edit, and the boxes you leave empty stay empty. So fill in what the campaign actually needs — publicLabel above all (that is the text the CUSTOMER reads in the basket; leave it out and they just see \"Discount\"), and for coupons the usage limits, because an unlimited coupon is a commercial risk. Coupon codes are not minted here — uniqueness belongs to the database.",
     inputSchema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Internal campaign name the admin will see in the list.' },
+        name: { type: 'string', description: 'INTERNAL campaign name — only the admin sees this, in their list.' },
+        publicLabel: {
+          type: 'object',
+          description:
+            'What the CUSTOMER sees, per language: { "tr": "…", "fr": "…", "de": "…" }. Shown next to the discount line in the basket and in mails ("Discount — Welcome offer"), so keep it SHORT (max 40 chars). French matters most: the storefront is France.',
+        },
         trigger: { type: 'string', description: "'automatic' (applies by itself) | 'coupon' (customer types a code)." },
         type: { type: 'string', description: "'percent' | 'fixed'." },
         percent: { type: 'number', description: 'Required when type=percent, 0-100.' },
@@ -352,6 +357,18 @@ export const TOOLS = [
         scope: { type: 'string', description: "'cart' | 'category' | 'collection'. Coupons must be 'cart'." },
         scopeName: { type: 'string', description: 'Category/collection name when scope is not cart.' },
         minBasketCents: { type: 'number', description: 'Minimum basket in cents, if any.' },
+        firstOrderOnly: {
+          type: 'boolean',
+          description: 'True = valid only on the customer FIRST order. This is the defining condition of an acquisition campaign — say it explicitly instead of leaving it to the default (false = every order).',
+        },
+        maxUses: {
+          type: 'number',
+          description: 'Total redemption cap across all customers. Omit only if the campaign is deliberately unlimited — omitting it IS the unlimited answer, not a neutral one.',
+        },
+        perCustomerLimit: {
+          type: 'number',
+          description: 'Cap per customer. A welcome coupon normally wants 1.',
+        },
         validFrom: { type: 'string', description: 'ISO date.' },
         validTo: { type: 'string', description: 'ISO date.' },
         code: { type: 'string', description: 'Suggested coupon code (trigger=coupon only).' },
