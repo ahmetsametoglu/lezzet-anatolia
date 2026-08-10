@@ -11,7 +11,6 @@ import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
 import type { TicketSummary } from '@/lib/api/tickets';
 import { useAppLocale } from '@/lib/i18n/app-locale';
@@ -19,6 +18,7 @@ import { publishToast } from '@/lib/toast/toast-store';
 import { NewTicketSheet } from './new-ticket-sheet';
 import { ticketMeta, ticketScope, ticketTitle } from './ticket-format';
 import { TicketStatusTag } from './ticket-status-tag';
+import { TicketsSkeleton } from './tickets-skeleton';
 import messages from './messages.json';
 import { useTickets } from './use-tickets.hook';
 
@@ -51,9 +51,8 @@ import { useTickets } from './use-tickets.hook';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** İskelet kart sayısı ve yüksekliği — şablonun kendi ölçüsü (v3:920 iki yer tutucu, ~64 dp kart). */
-const SKELETON_COUNT = 3;
-const SKELETON_HEIGHT = 64;
+/* Skeleton kart sayısı artık `tickets-skeleton`ın kendi sabiti; yükseklik ise hiç yazılmıyor —
+   kartın yapısı kurulunca kendiliğinden çıkıyor (o dosyanın künyesi). */
 
 interface TicketsScreenProps {
   /**
@@ -129,14 +128,15 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
     );
   }
 
+  /* İLK YÜK: başlık GERÇEK kalır (geri düğmesi ve "Yeni talep" bağlantısı çalışır), kartların
+     yerini skeleton tutar. Blok ekrandan `tickets-skeleton`a taşındı: kartın içi tanınmıyordu ve
+     yüksekliği tek ham sayıydı. Çekmece yine çizilir — açık gelmiş olabilir (`openNew`). */
   if (tickets.status === 'loading') {
     return (
-      <View style={styles.screen} testID="tickets-loading">
+      <View style={styles.screen}>
         {bar}
         <View style={styles.skeletonBody}>
-          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-            <Skeleton key={index} width="100%" height={SKELETON_HEIGHT} radius="card" />
-          ))}
+          <TicketsSkeleton testID="tickets-loading" />
         </View>
         {sheet}
       </View>

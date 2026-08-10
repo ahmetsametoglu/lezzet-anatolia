@@ -616,8 +616,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     **KALAN (envanter — sırayla kapatılacak):**
     · ~~sipariş şeridi: `orders-screen` + `order-detail-screen`~~ → **KAPANDI 10.08** (aşağıdaki
       durum notu);
-    · `BEKLEYEN(21.14)` destek şeridi: `tickets-screen` (64) · `ticket-detail-screen` (16·56·72) ·
-      `order-picker` (52) · `order-line-picker` (46) — hepsi gömülü, ham, a11y'siz;
+    · ~~destek şeridi: `tickets-screen` · `ticket-detail-screen` · `order-picker` ·
+      `order-line-picker`~~ → **KAPANDI 10.08** (aşağıdaki durum notu);
     · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: `checkout-screen` (ödeme özetinin
       tamamı sunucudan) ve `discover-screen` (tam ekran halka, arkasından kart destesi);
     · ~~`account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK~~ → **KAPANDI 10.08** (aşağıdaki
@@ -655,6 +655,18 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     · `BEKLEYEN(21.14)` Kalan tek nokta hesapta: rota `/me` okunurken sekme TAMAMEN BOŞ
       (`return null`) — künyesinde bilinçli ("misafir daveti yanıp sönmesin"), ama okuma uzarsa
       kullanıcı boş ekran görüyor. Kimlik kartının skeleton'ı ayrı bir karar, kullanıcıya soruldu.
+
+    **Ek durum (10.08 — DESTEK ŞERİDİ KAPANDI):** dört yerin dördü de ham ölçülüydü ve a11y'siz.
+    İki EKRAN kendi skeleton dosyasını aldı (`tickets-skeleton.tsx` · `ticket-detail-skeleton.tsx`),
+    iki SEÇİCİ ise çekmece içi form adımı olduğu için kendi yerlerinde düzeltildi — ayrı dosya
+    açmak bakım yükü olurdu, kusur zaten gömülülük değil HAM ÖLÇÜydü. Yazışma ekranı en ilginci:
+    üç ortalanmış çubuk buranın bir SOHBET olduğunu hiç göstermiyordu; skeleton artık balonları
+    sırayla sağa/sola yaslıyor (%78 tavanı sayfanın kendi sınırı) ve altta yapışkan yanıt kutusunu
+    çiziyor. **Yön sırası gerçek yazışmayı taklit etmiyor** (kim ne zaman yazdı bilinmiyor);
+    amaç ekranın İKİ YANLI olduğunu göstermek — tek yana yaslanmış balonlar sohbeti tek taraflı
+    bir liste gibi okuturdu. Balon yüksekliği TEK SATIR (en az makul: fazlası veri gelince balonu
+    küçültür, azı yalnız aşağı açar). Dört yerde de yükseklik artık YAZILMIYOR; satır/kart
+    kabuğu gerçek kuruluyor. Doğrulama: 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
 
     Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `cart` (ekran zaten dolu, yalnız fiyat
     çözümü bekleniyor) · `delivery-zones` (künyesinde bilinçli) · `login`/`profile-setup`/

@@ -1,6 +1,6 @@
 import type { LocalizedCopy, Locale } from '@lezzet/i18n';
 import { Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { LoadingState } from '@/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
@@ -34,9 +34,14 @@ import type messages from './messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Bekleme iskeleti — üç sipariş satırı (v3 `hint-placeholder-count="3"`), kart yüksekliği ~52 dp. */
-const SKELETON_COUNT = 3;
-const SKELETON_HEIGHT = 52;
+/**
+ * Bekleme skeleton'ı — üç sipariş satırı (v3 `hint-placeholder-count="3"`).
+ *
+ * YÜKSEKLİK YAZILMIYOR (10.08): eskiden `52` diye ham bir sayıydı ve satırın kendi dolgusundan
+ * bağımsızdı — `orderRow` değiştiğinde sessizce yanlışa düşerdi. Skeleton artık satırın GERÇEK
+ * kabuğunu kuruyor (`styles.orderRow`) ve içine iki çubuk koyuyor; yükseklik kendiliğinden çıkıyor.
+ */
+const SKELETON_SLOTS = [0, 1, 2];
 
 interface OrderPickerProps {
   locale: Locale;
@@ -50,11 +55,24 @@ interface OrderPickerProps {
 }
 
 export function OrderPicker({ locale, t, orders, onPick, onGeneral }: OrderPickerProps) {
+  // Skeleton satır yüksekliklerini yazı kademelerinden türetir (aşağıdaki bekleme dalı).
+  const { theme } = useUnistyles();
+
   if (orders.status === 'loading') {
     return (
-      <View style={styles.block} testID="new-ticket-orders-loading">
-        {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-          <Skeleton key={index} width="100%" height={SKELETON_HEIGHT} radius="card" />
+      <View
+        style={styles.block}
+        testID="new-ticket-orders-loading"
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityState={{ busy: true }}
+      >
+        {SKELETON_SLOTS.map((slot) => (
+          <View key={slot} style={styles.orderRow}>
+            {/* Solda sipariş numarası, sağda tarih — satırın kendi düzeni. */}
+            <Skeleton width="42%" height={theme.text.note * theme.text['h1--line-height']} tone="deep" />
+            <Skeleton width="28%" height={theme.text.helper * theme.text['h1--line-height']} tone="deep" />
+          </View>
         ))}
       </View>
     );

@@ -12,13 +12,13 @@ import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TextField } from '@/components/ui/text-field';
 import type { TicketMessage } from '@/lib/api/tickets';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { formatOrderDate } from '@/screens/orders/order-format';
 import { ticketScope, ticketTitle } from './ticket-format';
+import { TicketDetailSkeleton } from './ticket-detail-skeleton';
 import { TicketStatusTag } from './ticket-status-tag';
 import messages from './messages.json';
 import { useTicket } from './use-ticket.hook';
@@ -86,15 +86,14 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
     />
   );
 
+  /* İLK YÜK: başlık GERÇEK kalır (geri yolu açık), sayfanın geri kalanının yerini skeleton tutar.
+     Blok ekrandan `ticket-detail-skeleton`a taşındı: üç ortalanmış çubuk buranın bir SOHBET
+     ekranı olduğunu hiç göstermiyordu (o dosyanın künyesi). */
   if (ticket.status === 'loading') {
     return (
-      <View style={styles.screen} testID="ticket-loading">
+      <View style={styles.screen}>
         {appBar(t.list.title)}
-        <View style={styles.skeletonBody}>
-          <Skeleton width="60%" height={16} radius="full" />
-          <Skeleton width="78%" height={56} radius="card" />
-          <Skeleton width="78%" height={72} radius="card" />
-        </View>
+        <TicketDetailSkeleton testID="ticket-loading" />
       </View>
     );
   }
@@ -260,10 +259,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     padding: theme.space['4xl'],
     // Yapışkan kutunun altında kalan alan: kutu yüksekliği + cihazın alt güvenli alanı.
     paddingBottom: rt.insets.bottom + theme.space['9xl'],
-    gap: theme.space.lg,
-  },
-  skeletonBody: {
-    padding: theme.space['4xl'],
     gap: theme.space.lg,
   },
   meta: {

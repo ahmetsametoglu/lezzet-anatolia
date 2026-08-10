@@ -34,9 +34,14 @@ import type messages from './messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Bekleme iskeleti — üç kalem satırı (v3 `hint-placeholder-count="3"`), satır yüksekliği ~46 dp. */
-const SKELETON_COUNT = 3;
-const SKELETON_HEIGHT = 46;
+/**
+ * Bekleme skeleton'ı — üç kalem satırı (v3 `hint-placeholder-count="3"`).
+ *
+ * YÜKSEKLİK YAZILMIYOR (10.08): eskiden `46` diye ham bir sayıydı ve satırın kendi dolgusundan
+ * bağımsızdı. Skeleton artık satırın GERÇEK kabuğunu kuruyor (`styles.lineRow` + boştaki çerçeve
+ * tonu) ve içine iki çubuk koyuyor; yükseklik kendiliğinden çıkıyor.
+ */
+const SKELETON_SLOTS = [0, 1, 2];
 
 interface OrderLinePickerProps {
   /** Siparişin müşteri numarası (`LA-26-…`). */
@@ -63,10 +68,21 @@ export function OrderLinePicker({ reference, locale, t, selected, onToggle }: Or
 
   if (status === 'loading') {
     return (
-      <View style={styles.block} testID="new-ticket-lines-loading">
+      <View
+        style={styles.block}
+        testID="new-ticket-lines-loading"
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityState={{ busy: true }}
+      >
+        {/* Başlık GERÇEK: metni veriden gelmiyor (sipariş numarası zaten elimizde). */}
         {heading}
-        {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-          <Skeleton key={index} width="100%" height={SKELETON_HEIGHT} radius="control" />
+        {SKELETON_SLOTS.map((slot) => (
+          <View key={slot} style={[styles.lineRow, styles.lineIdle]}>
+            {/* Solda kalem adı, sağda adet — satırın kendi düzeni. */}
+            <Skeleton width="58%" height={theme.text.note * theme.text['h1--line-height']} tone="deep" />
+            <Skeleton width="14%" height={theme.text.helper * theme.text['h1--line-height']} tone="deep" />
+          </View>
         ))}
       </View>
     );
