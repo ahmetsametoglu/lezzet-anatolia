@@ -614,8 +614,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     Doğrulama: mobil paket 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
 
     **KALAN (envanter — sırayla kapatılacak):**
-    · `BEKLEYEN(21.14)` sipariş şeridi: `orders-screen` (`SKELETON_HEIGHT=110` ham) ve
-      `order-detail-screen` (`140`·`18`·`62`·`62` — dördü de uydurma, sayfanın bölümleri temsilsiz);
+    · ~~sipariş şeridi: `orders-screen` + `order-detail-screen`~~ → **KAPANDI 10.08** (aşağıdaki
+      durum notu);
     · `BEKLEYEN(21.14)` destek şeridi: `tickets-screen` (64) · `ticket-detail-screen` (16·56·72) ·
       `order-picker` (52) · `order-line-picker` (46) — hepsi gömülü, ham, a11y'siz;
     · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: `checkout-screen` (ödeme özetinin
@@ -623,6 +623,22 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     · `BEKLEYEN(21.14)` `account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK — liste boş dizi
       olarak başlıyor, yani "hiç adresin yok" ile "adresler yükleniyor" ayırt edilemiyor. Taramanın
       bulduğu tek sessizce YANLIŞ şey söyleyen yer budur.
+    **Ek durum (10.08 — SİPARİŞ ŞERİDİ KAPANDI):** `order-detail-skeleton.tsx` ve
+    `orders-skeleton.tsx` yazıldı; envanterin en ağır kalemi buydu (detayda dört ölçünün dördü de
+    hamdı ve sayfanın hiçbir bölümü tanınmıyordu — `140`lık blok neyi temsil ettiği belli olmayan
+    bir dikdörtgendi). **YÜKSEKLİK ARTIK HİÇ YAZILMIYOR:** iki panel (zaman çizgisi · tutar özeti)
+    ve sipariş kartı kendi komponentlerinde yaşıyor; skeleton onların yüksekliğini hesaplamaya
+    çalışmak yerine AYNI YAPIYI aynı kap stilleriyle kuruyor ve yükseklik kendiliğinden çıkıyor —
+    bir formüle çevrilseydi panel her değiştiğinde formül sessizce yanlışa düşerdi. Detayda
+    çizilenler: zaman çizgisi (dört durak — motorun sabit sayısı) · kalemler (üstbaşlık + 3 satır) ·
+    tutar özeti (4 koşulsuz satır + toplam rozeti) · destek eylemi; çizilmeyenler: canlı takip
+    haritası, eksik karşılama notu, kargo takip bağı, durum etiketi. Listede kartın kabuğu gerçek,
+    gri kalan numara/künye/durum/küçük resimler/tutar. İki ekranda da `AppBar`/başlık skeleton'a
+    girmedi (ikisinde de çalışan geri düğmesi var). **"En az makul" iki yerde:** zaman çizgisi
+    durağında yalnız AD çubuğu var (saat yalnız kaydı olan adımda yazılıyor — saati de çizseydik
+    veri gelince satır KISALIR ve aşağısı yukarı kayardı) ve kalem sayısı 3.
+    Doğrulama: mobil paket 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
+
     Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `cart` (ekran zaten dolu, yalnız fiyat
     çözümü bekleniyor) · `delivery-zones` (künyesinde bilinçli) · `login`/`profile-setup`/
     `auth-callback` (form ve geçiş ekranları) · kurye ve depo ekranları (operasyon yüzeyi).

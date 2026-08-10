@@ -11,13 +11,13 @@ import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
 import type { OrderSummary } from '@/lib/api/orders';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { formatOrderDate } from './order-format';
 import messages from './messages.json';
+import { OrdersSkeleton } from './orders-skeleton';
 import { useOrders } from './use-orders.hook';
 
 /*
@@ -51,9 +51,8 @@ import { useOrders } from './use-orders.hook';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** İskelet kart sayısı ve yüksekliği — şablonun kendi ölçüsü (v3:27-31: üç kart, 110 dp). */
-const SKELETON_COUNT = 3;
-const SKELETON_HEIGHT = 110;
+/* Skeleton kart sayısı ve yüksekliği artık BURADA DEĞİL: sayı `orders-skeleton`ın kendi sabiti,
+   yükseklik ise hiç yazılmıyor — kartın yapısı kurulunca kendiliğinden çıkıyor (o dosyanın künyesi). */
 
 interface OrdersScreenProps {
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -100,14 +99,15 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
     );
   }
 
+  /* İLK YÜK: başlık GERÇEK kalır (geri düğmesi çalışır), kartların yerini skeleton tutar. Blok
+     ekrandan `orders-skeleton`a taşındı: kartın içi hiç tanınmıyordu ve yüksekliği tek ham sayı
+     olarak yazılıydı — kartın dolgusu değiştiğinde sessizce yanlışa düşerdi. */
   if (orders.status === 'loading') {
     return (
-      <View style={styles.screen} testID="orders-loading">
+      <View style={styles.screen}>
         <View style={styles.headerPad}>{header}</View>
         <View style={styles.skeletonBody}>
-          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-            <Skeleton key={index} width="100%" height={SKELETON_HEIGHT} radius="card" />
-          ))}
+          <OrdersSkeleton testID="orders-loading" />
         </View>
       </View>
     );

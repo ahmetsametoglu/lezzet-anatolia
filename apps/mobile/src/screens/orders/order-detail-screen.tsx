@@ -11,13 +11,13 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
 import type { OrderDetail } from '@/lib/api/orders';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { DeliveryMap } from './delivery-map';
+import { OrderDetailSkeleton } from './order-detail-skeleton';
 import { formatDeliveryDate, formatStamp } from './order-format';
 import { OrderTimeline } from './order-timeline';
 import messages from './messages.json';
@@ -111,16 +111,14 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
     />
   );
 
+  /* İLK YÜK: başlık GERÇEK kalır (yukarıdaki kural), sayfanın geri kalanının yerini skeleton tutar
+     (`order-detail-skeleton`). Ekranın içine gömülü dört çubuk sökülüp oraya taşındı: dört
+     ölçünün dördü de hamdı ve sayfanın hiçbir bölümü tanınmıyordu. */
   if (status === 'loading') {
     return (
-      <View style={styles.screen} testID="order-loading">
+      <View style={styles.screen}>
         {appBar()}
-        <View style={styles.skeletonBody}>
-          <Skeleton width="100%" height={140} radius="card" />
-          <Skeleton width="60%" height={18} radius="full" />
-          <Skeleton width="100%" height={62} radius="card" />
-          <Skeleton width="100%" height={62} radius="card" />
-        </View>
+        <OrderDetailSkeleton testID="order-loading" />
       </View>
     );
   }
@@ -337,10 +335,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     padding: theme.space['4xl'],
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
     gap: theme.space['3xl'],
-  },
-  skeletonBody: {
-    padding: theme.space['4xl'],
-    gap: theme.space.xl,
   },
   items: { gap: theme.space.md },
   eyebrow: {
