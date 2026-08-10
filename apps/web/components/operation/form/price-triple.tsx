@@ -51,6 +51,17 @@ interface PriceTripleProps {
   idPrefix: string;
   /** İndirim kutusunun örnek değeri (ör. sistemin önerdiği oran). */
   discountPlaceholder?: string;
+  /**
+   * **Üçlünün yönü.** `row` (varsayılan) geniş formlar için — fiyat ekranı böyle kullanıyor.
+   * `column` DAR bir karar sütunu içindir: kutular alt alta gelir ve konteyner genişledikçe
+   * uzamazlar.
+   *
+   * Neden prop, neden kullanıcının sarmalayıcısı değil: `grid-cols-3` bu komponentin İÇİNDE ve
+   * dışarıdan ezilemiyordu; kart onu dar bir sütuna koyduğunda üç kutu sıkışıp okunmaz oluyordu.
+   * Yön kararı burada dursun ki her çağıran aynı iki seçenekten birini alsın (kullanıcı kararı 10.08:
+   * *"inputlar ekran genişliğine göre uzuyor, bu istediğim bir şey değil"*).
+   */
+  layout?: 'row' | 'column';
 }
 
 export function PriceTriple({
@@ -66,6 +77,7 @@ export function PriceTriple({
   required,
   idPrefix,
   discountPlaceholder = 'ör. 10',
+  layout = 'row',
 }: PriceTripleProps) {
   const discount = discountPercentOf(listCents, valueCents);
   const margin =
@@ -73,7 +85,7 @@ export function PriceTriple({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="grid grid-cols-3 gap-3">
+      <div className={layout === 'column' ? 'flex flex-col gap-3' : 'grid grid-cols-3 gap-3'}>
         <MoneyField
           label={priceLabel}
           labelAside={priceLabelAside}

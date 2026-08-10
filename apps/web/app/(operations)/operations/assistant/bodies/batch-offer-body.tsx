@@ -111,8 +111,48 @@ export function BatchOfferBody({
         </span>
       </div>
 
+      {/* ── İKİ SÜTUN: solda OKUNAN, sağda YAZILAN (kullanıcı kararı 10.08) ────
+          Üçlü bir tur tam genişlikte yatay duruyordu ve konteyner büyüdükçe kutular da büyüyordu:
+          *"inputlar ekran genişliğine göre uzuyor, bu istediğim bir şey değil"*. Bir para alanının
+          400 piksele ihtiyacı yok, üstelik ekranı boydan boya kesen üç kutu "asıl iş burada"
+          sinyali veriyordu — oysa karar TEK sayı, öteki ikisi onun okunuşu.
+
+          Ayrım işlevsel: sol sütun bakılacak şeyleri toplar (kâr cümlesi, sapma künyeleri, not),
+          sağ sütun SABİT genişlikte kalır ve yalnız karar alanını taşır. Geniş ekranda büyüyen
+          taraf bilgi olur, kutular değil. */}
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+        <div className="flex min-w-[18rem] flex-1 flex-col gap-3">
+          <MarginSentence
+            costCents={costCents}
+            offerHtCents={offerHtCents}
+            marginCents={marginCents}
+            marginPercent={marginPercent}
+            physicalQty={payload.physicalQty}
+            disabled={disabled}
+          />
+
+          {/* Sapma bir UYARI değil künye: cümle değil, iki sayı ve aralarındaki ok. */}
+          {edited && !readOnly ? (
+            <span className="rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3.5 py-2 font-ops-body text-ops-base text-ops-violet">
+              Öneriden sapıldı: <span className="font-ops-mono">{money(payload.offerPriceCents)}</span> →{' '}
+              <strong className="font-ops-mono font-semibold">{money(valueCents)}</strong>
+            </span>
+          ) : null}
+
+          {listDrift ? (
+            <span className="rounded-ops-card border border-ops-amber-line border-l-[3px] border-l-ops-amber-dot bg-ops-amber-bg px-3.5 py-2 font-ops-body text-ops-base font-medium text-ops-amber-dark">
+              Liste öneriden sonra değişti: <span className="font-ops-mono">{money(listDrift.was)}</span> →{' '}
+              <span className="font-ops-mono font-semibold">{money(listDrift.now)}</span>
+            </span>
+          ) : null}
+
+          <span className="font-ops-body text-ops-base text-ops-muted">
+            Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
+          </span>
+        </div>
+
       {readOnly ? (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="flex w-[15rem] flex-none flex-col gap-3">
           <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
           <StaticFace
             label="İndirim"
@@ -128,6 +168,7 @@ export function BatchOfferBody({
           />
         </div>
       ) : (
+        <div className="w-[15rem] flex-none">
         <PriceTriple
           valueCents={valueCents}
           onChange={onChange}
@@ -140,47 +181,12 @@ export function BatchOfferBody({
           pricePlaceholder="ör. 12,60"
           required
           idPrefix="proposal-offer"
+          layout="column"
         />
+        </div>
       )}
+      </div>
 
-      <MarginSentence
-        costCents={costCents}
-        offerHtCents={offerHtCents}
-        marginCents={marginCents}
-        marginPercent={marginPercent}
-        physicalQty={payload.physicalQty}
-        disabled={disabled}
-      />
-
-      {/* Sapma bir UYARI değil künye: cümle değil, iki sayı ve aralarındaki ok. Bir tur burada
-          "öneri kaydı değişmez, dilekçe geçmişte kalır" da yazıyordu — doğru ama operatörün o an
-          verdiği kararla ilgisi yok; kaydın ne olduğunu teknik döküm zaten gösteriyor. */}
-      {edited && !readOnly ? (
-        <span className="rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3.5 py-2 font-ops-body text-ops-base text-ops-violet">
-          Öneriden sapıldı: <span className="font-ops-mono">{money(payload.offerPriceCents)}</span> →{' '}
-          <strong className="font-ops-mono font-semibold">{money(valueCents)}</strong>
-        </span>
-      ) : null}
-
-      {listDrift ? (
-        <span className="rounded-ops-card border border-ops-amber-line border-l-[3px] border-l-ops-amber-dot bg-ops-amber-bg px-3.5 py-2 font-ops-body text-ops-base font-medium text-ops-amber-dark">
-          Liste öneriden sonra değişti: <span className="font-ops-mono">{money(listDrift.was)}</span> →{' '}
-          <span className="font-ops-mono font-semibold">{money(listDrift.now)}</span>
-        </span>
-      ) : null}
-
-      {/* ── BURADA BİR PARAGRAF VARDI, SİLİNDİ (10.08, kullanıcı itirazı) ───────
-          *"Bu kadar önemsiz bilgi neden bu kadar çok metin içeriyor?"* — ölçüldü: kartta 1.090
-          karakter metin vardı ve yalnız 108'i veriydi. En büyük parça (280 karakter) bu satırın
-          yerindeki paragraftı ve dört cümlesinden ÜÇÜ "Uygulanınca ne olur" bloğunun tekrarıydı
-          (taslak evresi yok · öteki partiler tam fiyatta · geri alma teklifi kaldırmak).
-
-          Bu şeridin kendi dersiydi ve tekrarlandı — `assistant-labels.decisionFooterNote`:
-          *"üç kez söylenen bir uyarı, bir kez söylenenden daha az okunur."* Geriye impact'te
-          BULUNMAYAN iki olgu kaldı; ikisi tek satırda ve okunur boyda. */}
-      <span className="font-ops-body text-ops-base text-ops-muted">
-        Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
-      </span>
     </div>
   );
 }
