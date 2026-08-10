@@ -128,7 +128,7 @@ export function BatchOfferBody({
           göz aradığı dikey çizgiyi bulamıyordu. */}
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-3.5">
       {readOnly ? (
-        <div className="flex w-[16rem] flex-none flex-col gap-3">
+        <div className="flex w-[20rem] flex-none flex-col gap-3">
           <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
           <StaticFace
             label="İndirim"
@@ -144,7 +144,7 @@ export function BatchOfferBody({
           />
         </div>
       ) : (
-        <div className="w-[16rem] flex-none">
+        <div className="w-[20rem] flex-none">
         <PriceTriple
           valueCents={valueCents}
           onChange={onChange}
@@ -276,7 +276,7 @@ function MarginSentence({
    * bu blok dört satır; iki sütun arasındaki ölü boşluk kapandı.
    */
   return (
-    <dl aria-live="polite" aria-busy={disabled || undefined} className="flex w-full max-w-[22rem] flex-col gap-1">
+    <dl aria-live="polite" aria-busy={disabled || undefined} className="flex w-full max-w-[30rem] flex-col gap-1">
       <MoneyRow label="Adet başına" value={verdict} aside={marginPercent === null ? null : `${percent(marginPercent, 1)} marj`} tone={tone} strong />
       <MoneyRow label="KDV’siz gelir" value={money(offerHtCents)} />
       <MoneyRow label="Alış" value={money(costCents)} />
