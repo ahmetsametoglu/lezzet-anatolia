@@ -17,7 +17,7 @@ import {
   saveOnboarding,
   subscribeOnboarding,
 } from '@/lib/onboarding/onboarding-store';
-import { stockMarkOf } from '@/lib/places/place-view';
+import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { publishToast } from '@/lib/toast/toast-store';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -27,6 +27,7 @@ import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
+import { emToDp } from '@/theme/parse';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import { HomeSkeleton } from './home-skeleton';
@@ -537,31 +538,60 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
           <Text style={styles.sectionEyebrow}>{t.packages.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
         </View>
         <View style={styles.packages}>
-          {packages.map((pack) => (
-            <PhotoTile
-              key={pack.slug}
-              height={customerMetrics.packageCardHeight}
-              photoUri={pack.image.url}
-              initial={pack.name.slice(0, 1)}
-              onPress={() => router.push({ pathname: '/package/[slug]', params: { slug: pack.slug } })}
-              accessibilityLabel={pack.name}
-              testID={`home-package-${pack.slug}`}
-            >
-              <View style={styles.packageRow}>
-                <View style={styles.packageText}>
-                  <Text style={styles.packageEyebrow}>{t.packages.badge.replace('{n}', String(pack.itemCount))}</Text>
-                  <Text style={styles.tileTitle} numberOfLines={1}>
-                    {pack.name}
-                  </Text>
-                </View>
-                <View style={styles.packagePriceTilt}>
-                  <View style={styles.packagePrice}>
-                    <Text style={styles.packagePriceLabel}>{formatPrice(pack.priceCents, locale)}</Text>
+          {packages.map((pack) => {
+            /* PAKETİN YER EKSENİ (10.08) — ürün dairesiyle AYNI kapı, AYNI cümle: paketin kendi
+               gerçeği (`soldOut` + `route`) önce ürün sözlüğüne çevrilir (`packageStockStatus`),
+               cümleyi yine `stockMarkOf` kurar. Vitrin ile paketler sekmesi aynı karta bakan iki
+               ekran; işaret yalnız birinde çizilseydi müşteri iki farklı gerçek okurdu. */
+            const stockMark = stockMarkOf(packageStockStatus(pack), savedPlace, locale);
+            /* "Kargoyla gelir" (`info`) yazılmaz — cümlesi listelerin başındaki bantta (ürün
+               dairesinin aynı satırı). Kartta yalnız kapalı kapı ve bekleyen bölge konuşur. */
+            const placeNote = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark.label;
+            const note = pack.soldOut ? undefined : placeNote;
+            const faded = pack.soldOut || stockMark?.tone === 'blocked';
+            return (
+              <PhotoTile
+                key={pack.slug}
+                height={customerMetrics.packageCardHeight}
+                photoUri={pack.image.url}
+                initial={pack.name.slice(0, 1)}
+                dimmed={faded}
+                topBadge={
+                  pack.soldOut ? (
+                    <View style={styles.packageSoldOut}>
+                      <Text style={styles.packageSoldOutLabel}>{t.packages.soldOut}</Text>
+                    </View>
+                  ) : undefined
+                }
+                onPress={() => router.push({ pathname: '/package/[slug]', params: { slug: pack.slug } })}
+                accessibilityLabel={[pack.name, pack.soldOut ? t.packages.soldOut : undefined, note]
+                  .filter((part) => part !== undefined)
+                  .join(' · ')}
+                testID={`home-package-${pack.slug}`}
+              >
+                <View style={styles.packageRow}>
+                  <View style={styles.packageText}>
+                    <Text style={styles.packageEyebrow}>{t.packages.badge.replace('{n}', String(pack.itemCount))}</Text>
+                    <Text style={styles.tileTitle} numberOfLines={1}>
+                      {pack.name}
+                    </Text>
+                    {/* YER NOTU zeminsiz, künyenin son satırı — kare kartın ve paket listesinin
+                        aynı kararı (rozet değil, yazı). */}
+                    {note === undefined ? null : (
+                      <Text style={styles.packagePlaceNote} numberOfLines={2} testID={`home-package-note-${pack.slug}`}>
+                        {note}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.packagePriceTilt}>
+                    <View style={styles.packagePrice}>
+                      <Text style={styles.packagePriceLabel}>{formatPrice(pack.priceCents, locale)}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </PhotoTile>
-          ))}
+              </PhotoTile>
+            );
+          })}
         </View>
           </>
         )}
@@ -994,6 +1024,28 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.eyebrow,
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
+  },
+  /* YER NOTU — paket listesindeki kardeşiyle AYNI karar: zeminsiz yazı, künyenin son satırı,
+     rengi adınki (`on-image`) çünkü okunması gereken bir cümle üstbaşlıktan sönük olmamalı. */
+  packagePlaceNote: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    color: theme.colors['on-image'],
+  },
+  /* Tükendi rozeti — kare ürün kartının tükendi rozetiyle aynı geometri ve örtü tonu. */
+  packageSoldOut: {
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space.lg,
+    borderRadius: theme.radius.badge,
+    backgroundColor: theme.colors['scrim-72'],
+  },
+  packageSoldOutLabel: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text['badge-sm'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
+    textTransform: 'uppercase',
+    color: theme.colors['sand-50'],
   },
   packagePriceTilt: { transform: [{ rotate: '3deg' }] },
   packagePrice: {

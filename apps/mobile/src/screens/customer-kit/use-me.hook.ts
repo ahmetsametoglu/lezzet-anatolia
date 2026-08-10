@@ -82,6 +82,13 @@ interface UseMeResult extends MeState {
   refresh: () => void;
 }
 
+/**
+ * ABONE OLMAK AĞA ÇIKMAKTIR — `subscribe` ilk abonede `getSupabase()` çağırır ve o çağrı env
+ * ister. Bu yüzden kanca YALNIZ kimliğin gerçekten konu olduğu ekranlarda çağrılır; kök kabuğa
+ * takmak bağı uygulamanın tamamına yayar ve ziyaretçiye açık yolları (davet linkiyle gelen geri
+ * bildirim — kimlik token'ın KENDİSİDİR) oturum altyapısına bağlardı (ölçüldü 10.08, künye
+ * kapısı kökten sökülerek çözüldü). Aynı ders `cart-store`un künyesinde de yazılı.
+ */
 export function useMe(): UseMeResult {
   const current = useSyncExternalStore(subscribe, () => state);
   return { ...current, refresh: load };

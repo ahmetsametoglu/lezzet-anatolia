@@ -90,6 +90,10 @@ export default function RootLayout() {
     void initAppLocale().then(() => setLocaleReady(true));
   }, []);
 
+  /* KÜNYE KAPISI BURADA DEĞİL (kullanıcı kararı 10.08): kökte dururken açık oturumla uygulamayı
+     her açanın önüne çıkıyordu. Soru artık anlamlı olduğu üç anda soruluyor — giriş, OAuth
+     dönüşü, sepet (`screens/profile-setup/use-profile-setup-gate.hook` künyesi). */
+
   if (!installReady || !fontsReady || !onboardingReady || !scaleReady || !localeReady) return null;
 
   return (

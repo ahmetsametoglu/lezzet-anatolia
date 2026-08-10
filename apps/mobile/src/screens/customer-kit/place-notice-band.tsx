@@ -13,16 +13,23 @@ import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import messages from './messages.json';
+// Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
+// çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
+import messages from '@/lib/places/messages.json';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI (kullanıcı kararı 10.08) — katalog listesinin BAŞINDA tek bir cümle.
+  BÖLGE DIŞI BİLGİ BANDI (kullanıcı kararı 10.08) — müşteri listelerinin BAŞINDA tek bir cümle.
 
   NEDEN VAR: kart başına tekrarlanan "Kargoyla gelir" işareti kaldırıldı çünkü rota dışı
   müşterinin kartlarının neredeyse tamamı onu taşıyordu — her kartta yazan bir bilgi, bilgi
   olmaktan çıkıp gürültü olur. Aynı cümle buraya, TEK yere taşındı: "kendi aracımız buraya
   gitmiyor, gönderebildiklerimiz kargoyla gelir". Kartlarda kalan tek yer işareti, GÖNDEREMEDİĞİMİZ
   ürünün notudur (o da solmayla birlikte).
+
+  KATALOGDAN KİTE TAŞINDI (10.08): ikinci çağıranı doğdu — paketler sekmesi. O sekmeye alt
+  çubuktan DOĞRUDAN gelinebiliyor, yani katalogdan geçmeyen bir müşteri adresinin gerçeğini hiç
+  okumadan bir paket listesine bakıyordu. Bandın ikinci nüshası yazılmadı; ekranın adı bir prop
+  oldu (`source`) ve kaydın hangi listeden geldiği yine izlenebiliyor.
 
   TASARIMDA YOK, KİTİN DİLİYLE KURULDU: v3'te bölge dışı katalog bandı çizilmemiş. Yeni bir görsel
   dil üretilmedi — kitin bilgi kutusu (`Note`) kullanıldı; sıcak nötr ton (`warm`) çünkü bu bir
@@ -49,8 +56,13 @@ type Messages = LocalizedCopy<typeof messages>;
 /** Gövde tipi SÖZLEŞMEDEN türer; `country` için elle bir birleşim yazılmaz (02-mimari §3.2). */
 type NoticeBody = z.input<typeof PlaceNoticeBodySchema>;
 
-/** Kaydın hangi ekrandan geldiği — denetim izi (sözleşme: enum değil, serbest kısa dizge). */
-const NOTICE_SOURCE = 'app-catalog';
+/**
+ * Kaydın hangi ekrandan geldiği — denetim izi (sözleşme: enum değil, serbest kısa dizge).
+ *
+ * DIŞA VERİLMEZ: çağıran değeri satır içinde yazıyor (`source="app-packages"`) ve tipi adıyla
+ * anan kimse yok — kullanılmayan bir dışa verim `knip`in ölü listesine düşer.
+ */
+type PlaceNoticeSource = 'app-catalog' | 'app-packages';
 
 /**
  * Bandın hâli. `sending` ayrı bir faz: düğme iki kez basılabilirse aynı talep iki kez gider ve
@@ -68,10 +80,13 @@ interface PlaceNoticeBandProps {
   country: NoticeBody['country'];
   /** Normalize posta kodu (çözümden gelir, müşterinin yazdığı ham metin değil). */
   postalCode: string;
+  /** Talebin hangi listeden bırakıldığı — denetim izi; ekran adı, cümleyi değiştirmez. */
+  source: PlaceNoticeSource;
+  /** Alt öğelerin test kimlikleri bundan TÜREtilir — iki liste aynı bandı çiziyor, id'ler ayrışmalı. */
   testID?: string;
 }
 
-export function PlaceNoticeBand({ country, postalCode, testID }: PlaceNoticeBandProps) {
+export function PlaceNoticeBand({ country, postalCode, source, testID }: PlaceNoticeBandProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const [phase, setPhase] = useState<BandPhase>({ kind: 'idle' });
@@ -79,10 +94,13 @@ export function PlaceNoticeBand({ country, postalCode, testID }: PlaceNoticeBand
   /* Alan hatası FAZDAN AYRI tutulur: geçersiz adres bandın hâlini değiştirmez (hâlâ "adres
      soruyoruz"), yalnız alanın altına bir satır ekler. */
   const [emailInvalid, setEmailInvalid] = useState(false);
+  /* Alt kimlikler bandın kendi kimliğinden TÜRER: iki liste aynı bandı çiziyor ve sabit
+     "catalog-…" önekleri paketler sekmesinde yalan söylerdi. */
+  const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 
   const send = async (address: string | null) => {
     setPhase({ kind: 'sending' });
-    const result = await submitPlaceNotice({ postalCode, country, email: address, source: NOTICE_SOURCE });
+    const result = await submitPlaceNotice({ postalCode, country, email: address, source });
     if (result.error !== null) {
       setPhase({ kind: 'failed', reason: 'transport' });
       return;
@@ -122,7 +140,7 @@ export function PlaceNoticeBand({ country, postalCode, testID }: PlaceNoticeBand
         <Note
           tone="olive"
           description={phase.status === 'ok' ? t.placeNotice.recorded : t.placeNotice.alreadyRecorded}
-          testID="catalog-notice-result"
+          testID={idOf('result')}
         />
       ) : null}
 
@@ -130,7 +148,7 @@ export function PlaceNoticeBand({ country, postalCode, testID }: PlaceNoticeBand
         <Note
           tone="error"
           description={phase.reason === 'place_unknown' ? t.placeNotice.placeUnknown : t.placeNotice.failed}
-          testID="catalog-notice-error"
+          testID={idOf('error')}
         />
       ) : null}
 
@@ -148,13 +166,13 @@ export function PlaceNoticeBand({ country, postalCode, testID }: PlaceNoticeBand
             placeholder={t.placeNotice.emailPlaceholder}
             content="email"
             errorText={emailInvalid ? t.placeNotice.emailInvalid : undefined}
-            testID="catalog-notice-email"
+            testID={idOf('email')}
           />
           <PrimaryButton
             label={t.placeNotice.send}
             shape="pill"
             onPress={submitEmail}
-            testID="catalog-notice-email-submit"
+            testID={idOf('email-submit')}
           />
         </View>
       ) : null}
@@ -167,7 +185,7 @@ export function PlaceNoticeBand({ country, postalCode, testID }: PlaceNoticeBand
           onPress={request}
           disabled={phase.kind === 'sending'}
           accessibilityHint={t.placeNotice.ctaHint}
-          testID="catalog-notice-cta"
+          testID={idOf('cta')}
         />
       ) : null}
     </View>

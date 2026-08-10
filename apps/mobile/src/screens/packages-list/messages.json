@@ -6,6 +6,9 @@
     "meta": "{n} çeşit · TEK FİYAT",
     "cta": "Paketi incele ›",
     "open": "{name} paketini aç",
+    "card": {
+      "soldOut": "Tükendi"
+    },
     "error": {
       "title": "Bağlantı kurulamadı",
       "body": "Paketleri getiremedik. Bağlantınızı kontrol edip tekrar deneyin.",
@@ -24,6 +27,9 @@
     "meta": "{n} produits · PRIX UNIQUE",
     "cta": "Voir le panier ›",
     "open": "Ouvrir le panier {name}",
+    "card": {
+      "soldOut": "Épuisé"
+    },
     "error": {
       "title": "Connexion impossible",
       "body": "Nous n'avons pas pu charger les paniers. Vérifiez votre connexion et réessayez.",
@@ -42,6 +48,9 @@
     "meta": "{n} Sorten · FESTPREIS",
     "cta": "Paket ansehen ›",
     "open": "Paket {name} öffnen",
+    "card": {
+      "soldOut": "Ausverkauft"
+    },
     "error": {
       "title": "Keine Verbindung",
       "body": "Die Pakete konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",

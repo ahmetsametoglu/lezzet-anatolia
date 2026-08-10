@@ -3,9 +3,13 @@ import { useEffect, useState } from 'react';
 import { fetchAddresses, type MeAddress } from '@/lib/api/addresses';
 
 /*
-  ADRES LİSTESİ DURUMU (21.15) — hesap ekranının adres bölümünü besler. `useMe` gibi modül-durumlu
-  DEĞİL, ekran-yerel: adresleri tek ekran okuyor; checkout günü ikinci tüketen doğarsa terfi o gün
-  yapılır (erken genelleme, kullanılmayan makine kurar).
+  ADRES LİSTESİ DURUMU (21.15) — adres okuyan ekranların ortak durumu. `useMe` gibi modül-durumlu
+  DEĞİL, ekran-yerel: her ekran kendi listesini okur ve yazma cevabıyla günceller.
+
+  KİTE TERFİ ETTİ (10.08): dosya hesap ekranının klasöründeydi ve künyesi "ikinci tüketen doğarsa
+  terfi o gün yapılır" diyordu — doğdu (doğrulama sonrası profil tamamlama akışı adres adımını
+  göstermek için aynı listeyi okuyor). Checkout kendi listesini anlık görüntüden alır
+  (`/me/checkout` zaten adresleri taşıyor), o yüzden burayı çağırmaz.
 
   `publish` yazma uçlarının döndürdüğü GÜNCEL listeyi yerleştirir — uçların "cevap hep listedir"
   kararının ekran karşılığı (`lib/api/addresses.ts`): yazan el ikinci bir GET atmaz.

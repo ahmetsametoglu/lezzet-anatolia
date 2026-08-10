@@ -34,7 +34,12 @@ interface UsePackagesListResult {
   retry: () => void;
 }
 
-export function usePackagesList(locale: Locale): UsePackagesListResult {
+/**
+ * @param postalCode Cihazdaki saklı posta kodu (`lib/onboarding`); `null` = kod hiç girilmemiş.
+ *   YERİN SORUSUDUR, cevabı sunucu verir — kart "bu adrese gelir mi"yi ancak bu kodla söyleyebilir
+ *   (10.08). Kod değişince liste baştan okunur: `load` ona bağlı.
+ */
+export function usePackagesList(locale: Locale, postalCode: string | null): UsePackagesListResult {
   const [status, setStatus] = useState<PackagesStatus>('loading');
   const [packages, setPackages] = useState<HomePackage[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,7 +51,7 @@ export function usePackagesList(locale: Locale): UsePackagesListResult {
       if (options.refresh) setRefreshing(true);
       else setStatus('loading');
 
-      void fetchPackages(locale).then((result) => {
+      void fetchPackages(locale, postalCode).then((result) => {
         if (run !== generation.current) return;
         setRefreshing(false);
 
@@ -62,7 +67,7 @@ export function usePackagesList(locale: Locale): UsePackagesListResult {
         setStatus('ready');
       });
     },
-    [locale],
+    [locale, postalCode],
   );
 
   useEffect(() => {

@@ -9,33 +9,49 @@
       "body": "Şifre yok — birkaç saniyede doğrulanın, kaldığınız yerden devam edin.",
       "cta": "Doğrulan ve devam et"
     },
+    "state": {
+      "loading": "Sipariş seçenekleriniz getiriliyor…",
+      "failed": "Sipariş seçenekleriniz şu an okunamadı.",
+      "retry": "Yeniden dene"
+    },
     "address": {
       "eyebrow": "Teslimat adresi",
       "default": "varsayılan",
-      "add": "＋ Yeni adres ekle"
+      "add": "＋ Yeni adres ekle",
+      "empty": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
+      "emptyBody": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok."
     },
     "blocked": {
       "title": "Bu ürünler yalnız teslimat bölgemizde",
-      "body": "{names} kargoyla gönderilemiyor. Bölge içi bir adres seçin ya da bu ürünleri sepetten çıkarın."
+      "body": "Sepetinizdeki soğuk zincir ürünlerini bu adrese teslim edemiyoruz. Bölge içi bir adres seçin ya da o kalemleri sepetten çıkarın."
     },
     "delivery": {
       "eyebrow": "Teslimat",
       "door": "Kapıya teslim",
-      "doorBody": "Bölge içi adreslere ücretsiz — günü siz seçin.",
+      "doorBody": "Soğutuculu araçlarımızla — günü siz seçin. Teslimat: {fee}",
       "doorUnavailable": "Bu adres teslimat bölgemizin dışında.",
       "shipping": "Soğuk zincir kargo",
-      "shippingBody": "2–4 iş günü · {fee}",
-      "shippingFree": "2–4 iş günü · {threshold} üzeri ücretsiz",
+      "shippingBody": "2–4 iş günü. Teslimat: {fee}",
+      "shippingUnavailable": "Bu adres teslimat bölgemizde — sipariş aracımızla gelir.",
       "dayLabel": "Teslimat günü: {day}"
     },
     "payment": {
       "eyebrow": "Ödeme",
       "online": "Online ödeme",
-      "onlineBody": "Kart ile güvenli ödeme.",
+      "onlineBody": "Kart bilgileriniz Stripe tarafından şifrelenir.",
       "onDelivery": "Kapıda ödeme",
-      "onDeliveryBody": "Yalnız kapıya teslimde — kurye kart ve nakit kabul eder.",
-      "transfer": "Havale / EFT",
-      "transferBody": "Ödemeniz görüldüğünde sipariş hazırlanmaya başlar."
+      "onDeliveryBody": "Nakit, kart veya çek.",
+      "transfer": "Havale ile öde",
+      "transferBody": "Hesabımıza, faturayla.",
+      "credit": "Hesaba yaz",
+      "creditBody": "Vadeli ödeme — faturayla.",
+      "codBlocked": {
+        "over_limit": "Kapıda ödeme bu tutarın üzerinde açık değil.",
+        "customer_blocked": "Hesabınızda kapıda ödeme kapalı.",
+        "shipping": "Kapıda ödeme yalnız kendi aracımızla getirdiğimiz adreslerde."
+      },
+      "onlineRequired": "Bu tutarda online ödeme gerekir.",
+      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kart ya da çek kullanabilirsiniz."
     },
     "summary": {
       "eyebrow": "Sipariş özeti",
@@ -44,22 +60,63 @@
       "discount": "İndirim",
       "delivery": "Teslimat",
       "free": "Ücretsiz",
+      "noPrice": "Fiyat yok",
+      "pending": "Adres seçilince",
       "total": "Genel toplam"
     },
     "marketing": "Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)",
     "block": {
       "login": "Devam etmek için hızlı doğrulama gerekli.",
-      "shipping": "Sepetinizdeki bazı ürünler kargoyla gönderilemez — bölge içi bir adres seçin.",
+      "address": "Teslimat adresi ekleyin.",
+      "loading": "Seçenekleriniz güncelleniyor…",
+      "shipping": "Sepetinizdeki bazı ürünler bu adrese gönderilemiyor.",
+      "minBasket": "{place} için sipariş alt sınırının altındasınız — {missing} daha ekleyin.",
       "day": "Teslimat günü seçin.",
       "payment": "Ödeme yolu seçin."
     },
     "confirm": "Siparişi onayla · {total}",
+    "confirmPay": "Ödemeye geç · {total}",
+    "submitting": "Siparişiniz açılıyor…",
+    "reject": {
+      "transport": "Sipariş gönderilemedi — bağlantınızı kontrol edip tekrar deneyin.",
+      "session": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
+      "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin.",
+      "empty_cart": "Sepetiniz boş görünüyor.",
+      "blocked_lines": "Sepetinizde artık satın alınamayan kalemler var: {detail}. Sepete dönüp çıkarın.",
+      "insufficient_here": "Bazı ürünlerden istediğiniz adet bu adrese gönderilemiyor — parantezdeki sayı şu an mümkün olan en fazla adet: {detail}. Sepette düzeltebilirsiniz.",
+      "min_basket": "Sipariş alt sınırının altındasınız — {missing} daha ekleyin.",
+      "address_not_found": "Seçilen adres bulunamadı.",
+      "address_city_mismatch": "{postalCode} posta kodu {city} ile eşleşmiyor. Şu yerlerden biri olmalı: {places}. Adresi hesabınızdan düzeltin.",
+      "cold_chain_unshippable": "Soğuk zincir kalemleri bu adrese gönderilemiyor.",
+      "date_unavailable": "Seçtiğiniz gün artık uygun değil — lütfen yeniden seçin.",
+      "payment_not_allowed": "Bu ödeme yöntemi şu an kullanılamıyor — açık yollardan birini seçin.",
+      "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar onaylayın.",
+      "customer_not_found": "Hesabınız çözümlenemedi, lütfen tekrar giriş yapın.",
+      "insufficient_stock": "Ürünlerden biri bu arada tükendi. Sepetinizi kontrol edin.",
+      "insufficient_stock_named": "Siz ekrandayken bu üründen kalan adet düştü: {detail}. Parantezdeki sayı şu an elimizde kalan adet — sepette düzeltip tekrar deneyin.",
+      "payment_unavailable": {
+        "stale": "Bu sipariş zaten işleme alınmış.",
+        "not_found": "Ödeme oturumu açılamadı. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz.",
+        "provider_unavailable": "Ödeme sağlayıcısına ulaşılamıyor. Kapıda ödemeyi seçebilirsiniz.",
+        "no_client_secret": "Ödeme oturumu açılamadı. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz."
+      },
+      "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin."
+    },
+    "paymentSheet": {
+      "canceled": "Ödeme yarıda kaldı — siparişiniz duruyor, hazır olduğunuzda tekrar deneyebilirsiniz.",
+      "configuration_missing": "Bu uygulamada ödeme henüz açık değil. Kapıda ödemeyi seçebilirsiniz.",
+      "setup_failed": "Ödeme ekranı açılamadı. Tekrar deneyin ya da başka bir ödeme yolu seçin.",
+      "timeout": "Ödeme sağlayıcısı yanıt vermedi. Tekrar deneyin.",
+      "declined": "Ödeme tamamlanamadı — hesabınızdan para çekilmedi. Bilgileri kontrol edip yeniden deneyin ya da başka bir yolla ödeyin."
+    },
     "confirmed": {
       "title": "Siparişiniz alındı!",
       "reference": "Sipariş no: {reference}",
       "delivery": "Teslimat",
+      "shipping": "Soğuk zincir kargo",
       "payment": "Ödeme",
       "total": "Toplam",
+      "unknown": "Bilinmiyor",
       "points": "✦ +{n} puan kazandınız",
       "note": "Sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz.",
       "orders": "Siparişlerimi görüntüle",
@@ -76,33 +133,49 @@
       "body": "Pas de mot de passe — vérifiez-vous en quelques secondes et reprenez où vous en étiez.",
       "cta": "Se vérifier et continuer"
     },
+    "state": {
+      "loading": "Chargement de vos options de commande…",
+      "failed": "Vos options de commande n'ont pas pu être chargées.",
+      "retry": "Réessayer"
+    },
     "address": {
       "eyebrow": "Adresse de livraison",
       "default": "par défaut",
-      "add": "＋ Ajouter une adresse"
+      "add": "＋ Ajouter une adresse",
+      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
+      "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande."
     },
     "blocked": {
       "title": "Ces produits restent dans notre zone de livraison",
-      "body": "{names} ne peut pas partir en colis. Choisissez une adresse dans la zone ou retirez ces produits du panier."
+      "body": "Nous ne pouvons pas livrer les articles en chaîne du froid à cette adresse. Choisissez une adresse dans notre zone ou retirez ces articles du panier."
     },
     "delivery": {
       "eyebrow": "Livraison",
       "door": "Livraison à domicile",
-      "doorBody": "Gratuite dans la zone — vous choisissez le jour.",
+      "doorBody": "Avec nos véhicules réfrigérés — vous choisissez le jour. Livraison : {fee}",
       "doorUnavailable": "Cette adresse est hors de notre zone de livraison.",
       "shipping": "Colis chaîne du froid",
-      "shippingBody": "2–4 jours ouvrés · {fee}",
-      "shippingFree": "2–4 jours ouvrés · offert dès {threshold}",
+      "shippingBody": "2–4 jours ouvrés. Livraison : {fee}",
+      "shippingUnavailable": "Cette adresse est dans notre zone — notre véhicule vous livre.",
       "dayLabel": "Jour de livraison : {day}"
     },
     "payment": {
       "eyebrow": "Paiement",
       "online": "Paiement en ligne",
-      "onlineBody": "Paiement sécurisé par carte.",
+      "onlineBody": "Vos données de carte sont chiffrées par Stripe.",
       "onDelivery": "Paiement à la livraison",
-      "onDeliveryBody": "Uniquement à domicile — le livreur accepte carte et espèces.",
-      "transfer": "Virement",
-      "transferBody": "La préparation démarre dès réception du paiement."
+      "onDeliveryBody": "Espèces, carte ou chèque.",
+      "transfer": "Payer par virement",
+      "transferBody": "Sur notre compte, avec facture.",
+      "credit": "Sur compte",
+      "creditBody": "Paiement différé — sur facture.",
+      "codBlocked": {
+        "over_limit": "Le paiement à la livraison n'est pas disponible au-delà de ce montant.",
+        "customer_blocked": "Le paiement à la livraison est désactivé sur votre compte.",
+        "shipping": "Le paiement à la livraison n'existe que pour les adresses que nous livrons nous-mêmes."
+      },
+      "onlineRequired": "À ce montant, le paiement en ligne est requis.",
+      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — carte ou chèque à la livraison."
     },
     "summary": {
       "eyebrow": "Récapitulatif",
@@ -111,22 +184,63 @@
       "discount": "Remise",
       "delivery": "Livraison",
       "free": "Offerte",
+      "noPrice": "Prix indisponible",
+      "pending": "Après le choix de l'adresse",
       "total": "Total général"
     },
     "marketing": "Je souhaite être informé(e) des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
     "block": {
       "login": "Une vérification rapide est nécessaire pour continuer.",
-      "shipping": "Certains produits ne peuvent pas partir en colis — choisissez une adresse dans la zone.",
+      "address": "Ajoutez une adresse de livraison.",
+      "loading": "Mise à jour de vos options…",
+      "shipping": "Certains produits de votre panier ne peuvent pas être livrés à cette adresse.",
+      "minBasket": "Vous êtes en dessous du minimum de commande pour {place} — ajoutez encore {missing}.",
       "day": "Choisissez un jour de livraison.",
       "payment": "Choisissez un mode de paiement."
     },
     "confirm": "Confirmer la commande · {total}",
+    "confirmPay": "Passer au paiement · {total}",
+    "submitting": "Création de votre commande…",
+    "reject": {
+      "transport": "La commande n'a pas pu être envoyée — vérifiez votre connexion et réessayez.",
+      "session": "Votre session semble expirée. Reconnectez-vous.",
+      "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
+      "empty_cart": "Votre panier semble vide.",
+      "blocked_lines": "Certains articles ne sont plus disponibles : {detail}. Retournez au panier pour les retirer.",
+      "insufficient_here": "Pour certains articles, la quantité demandée ne peut pas être livrée à cette adresse — le nombre entre parenthèses est le maximum possible actuellement : {detail}. Vous pouvez corriger depuis le panier.",
+      "min_basket": "Vous êtes en dessous du minimum de commande — ajoutez encore {missing}.",
+      "address_not_found": "Adresse introuvable.",
+      "address_city_mismatch": "Le code postal {postalCode} ne correspond pas à {city}. Ce doit être l'une de ces communes : {places}. Corrigez l'adresse dans votre compte.",
+      "cold_chain_unshippable": "Les articles en chaîne du froid ne peuvent pas être envoyés à cette adresse.",
+      "date_unavailable": "Le jour choisi n'est plus disponible — merci d'en choisir un autre.",
+      "payment_not_allowed": "Ce moyen de paiement n'est pas disponible — choisissez-en un autre.",
+      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer — si cela vous convient, confirmez à nouveau.",
+      "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
+      "insufficient_stock": "Un article vient d'être épuisé. Vérifiez votre panier.",
+      "insufficient_stock_named": "Pendant que vous étiez sur cette page, la quantité restante a baissé : {detail}. Le nombre entre parenthèses est ce qu'il nous reste — corrigez votre panier et réessayez.",
+      "payment_unavailable": {
+        "stale": "Cette commande est déjà en cours de traitement.",
+        "not_found": "La session de paiement n'a pas pu être ouverte. Choisissez le paiement à la livraison ou réessayez dans un instant.",
+        "provider_unavailable": "Le prestataire de paiement est injoignable. Vous pouvez choisir le paiement à la livraison.",
+        "no_client_secret": "La session de paiement n'a pas pu être ouverte. Choisissez le paiement à la livraison ou réessayez dans un instant."
+      },
+      "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer."
+    },
+    "paymentSheet": {
+      "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
+      "configuration_missing": "Le paiement n'est pas encore actif dans cette application. Vous pouvez choisir le paiement à la livraison.",
+      "setup_failed": "La fenêtre de paiement n'a pas pu s'ouvrir. Réessayez ou choisissez un autre moyen de paiement.",
+      "timeout": "Le prestataire de paiement n'a pas répondu. Réessayez.",
+      "declined": "Le paiement n'a pas abouti — aucun montant n'a été débité. Vérifiez vos informations et réessayez, ou payez autrement."
+    },
     "confirmed": {
       "title": "Commande reçue !",
       "reference": "N° de commande : {reference}",
       "delivery": "Livraison",
+      "shipping": "Colis chaîne du froid",
       "payment": "Paiement",
       "total": "Total",
+      "unknown": "Inconnu",
       "points": "✦ +{n} points gagnés",
       "note": "Suivez l'état de votre commande par e-mail et WhatsApp.",
       "orders": "Voir mes commandes",
@@ -143,33 +257,49 @@
       "body": "Kein Passwort — in Sekunden verifizieren und weitermachen.",
       "cta": "Verifizieren und fortfahren"
     },
+    "state": {
+      "loading": "Ihre Bestelloptionen werden geladen…",
+      "failed": "Ihre Bestelloptionen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen"
+    },
     "address": {
       "eyebrow": "Lieferadresse",
       "default": "Standard",
-      "add": "＋ Neue Adresse"
+      "add": "＋ Neue Adresse",
+      "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
+      "emptyBody": "Fügen Sie Ihre Adresse hier hinzu — Sie müssen Ihre Bestellung nicht verlassen."
     },
     "blocked": {
       "title": "Diese Produkte bleiben in unserem Liefergebiet",
-      "body": "{names} kann nicht als Paket versendet werden. Wählen Sie eine Adresse im Liefergebiet oder entfernen Sie diese Produkte."
+      "body": "Kühlkettenartikel können wir nicht an diese Adresse liefern. Wählen Sie eine Adresse in unserem Gebiet oder entfernen Sie diese Artikel aus dem Warenkorb."
     },
     "delivery": {
       "eyebrow": "Lieferung",
       "door": "Lieferung an die Tür",
-      "doorBody": "Im Liefergebiet kostenlos — Sie wählen den Tag.",
+      "doorBody": "Mit unseren Kühlfahrzeugen — Sie wählen den Tag. Lieferung: {fee}",
       "doorUnavailable": "Diese Adresse liegt außerhalb unseres Liefergebiets.",
       "shipping": "Kühlketten-Versand",
-      "shippingBody": "2–4 Werktage · {fee}",
-      "shippingFree": "2–4 Werktage · ab {threshold} kostenlos",
+      "shippingBody": "2–4 Werktage. Lieferung: {fee}",
+      "shippingUnavailable": "Diese Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
       "dayLabel": "Liefertag: {day}"
     },
     "payment": {
       "eyebrow": "Zahlung",
       "online": "Online bezahlen",
-      "onlineBody": "Sichere Kartenzahlung.",
+      "onlineBody": "Ihre Kartendaten werden von Stripe verschlüsselt.",
       "onDelivery": "Zahlung bei Lieferung",
-      "onDeliveryBody": "Nur bei Lieferung an die Tür — Karte und Bargeld möglich.",
-      "transfer": "Überweisung",
-      "transferBody": "Die Vorbereitung startet nach Zahlungseingang."
+      "onDeliveryBody": "Bar, Karte oder Scheck.",
+      "transfer": "Per Überweisung",
+      "transferBody": "Auf unser Konto, mit Rechnung.",
+      "credit": "Auf Rechnung",
+      "creditBody": "Zahlungsziel — per Rechnung.",
+      "codBlocked": {
+        "over_limit": "Zahlung bei Lieferung ist über diesem Betrag nicht möglich.",
+        "customer_blocked": "Zahlung bei Lieferung ist für Ihr Konto deaktiviert.",
+        "shipping": "Zahlung bei Lieferung gibt es nur für Adressen, die wir selbst beliefern."
+      },
+      "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
+      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür Karte oder Scheck."
     },
     "summary": {
       "eyebrow": "Bestellübersicht",
@@ -178,22 +308,63 @@
       "discount": "Rabatt",
       "delivery": "Lieferung",
       "free": "Kostenlos",
+      "noPrice": "Preis nicht verfügbar",
+      "pending": "Nach Wahl der Adresse",
       "total": "Gesamtsumme"
     },
     "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional — ohne Einfluss auf Ihre Bestellung.)",
     "block": {
       "login": "Zum Fortfahren ist eine schnelle Verifizierung nötig.",
-      "shipping": "Einige Produkte können nicht versendet werden — wählen Sie eine Adresse im Liefergebiet.",
+      "address": "Fügen Sie eine Lieferadresse hinzu.",
+      "loading": "Ihre Optionen werden aktualisiert…",
+      "shipping": "Einige Produkte in Ihrem Warenkorb können nicht an diese Adresse geliefert werden.",
+      "minBasket": "Sie liegen unter dem Mindestbestellwert für {place} — fügen Sie noch {missing} hinzu.",
       "day": "Wählen Sie einen Liefertag.",
       "payment": "Wählen Sie eine Zahlungsart."
     },
     "confirm": "Bestellung bestätigen · {total}",
+    "confirmPay": "Weiter zur Zahlung · {total}",
+    "submitting": "Ihre Bestellung wird angelegt…",
+    "reject": {
+      "transport": "Die Bestellung konnte nicht gesendet werden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "session": "Ihre Sitzung scheint abgelaufen. Bitte erneut anmelden.",
+      "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns.",
+      "empty_cart": "Ihr Warenkorb scheint leer zu sein.",
+      "blocked_lines": "Einige Artikel sind nicht mehr erhältlich: {detail}. Bitte im Warenkorb entfernen.",
+      "insufficient_here": "Bei einigen Artikeln kann die gewünschte Menge nicht an diese Adresse geliefert werden — die Zahl in Klammern ist die derzeit höchstmögliche Menge: {detail}. Im Warenkorb können Sie das korrigieren.",
+      "min_basket": "Sie liegen unter dem Mindestbestellwert — fügen Sie noch {missing} hinzu.",
+      "address_not_found": "Adresse nicht gefunden.",
+      "address_city_mismatch": "Die Postleitzahl {postalCode} passt nicht zu {city}. Es muss einer dieser Orte sein: {places}. Bitte korrigieren Sie die Adresse in Ihrem Konto.",
+      "cold_chain_unshippable": "Kühlkettenartikel können nicht an diese Adresse gesendet werden.",
+      "date_unavailable": "Der gewählte Tag ist nicht mehr verfügbar — bitte neu wählen.",
+      "payment_not_allowed": "Diese Zahlungsart ist nicht verfügbar — wählen Sie eine andere.",
+      "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wenn das für Sie in Ordnung ist, bestätigen Sie erneut.",
+      "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
+      "insufficient_stock": "Ein Artikel ist gerade ausverkauft. Bitte prüfen Sie den Warenkorb.",
+      "insufficient_stock_named": "Während Sie auf dieser Seite waren, ist die verfügbare Menge gesunken: {detail}. Die Zahl in Klammern ist der aktuelle Bestand — bitte passen Sie den Warenkorb an und versuchen Sie es erneut.",
+      "payment_unavailable": {
+        "stale": "Diese Bestellung wird bereits bearbeitet.",
+        "not_found": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal.",
+        "provider_unavailable": "Der Zahlungsanbieter ist nicht erreichbar. Sie können bei Lieferung zahlen.",
+        "no_client_secret": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal."
+      },
+      "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut."
+    },
+    "paymentSheet": {
+      "canceled": "Zahlung abgebrochen — Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",
+      "configuration_missing": "Zahlung ist in dieser App noch nicht aktiv. Sie können bei Lieferung zahlen.",
+      "setup_failed": "Das Zahlungsfenster konnte nicht geöffnet werden. Versuchen Sie es erneut oder wählen Sie eine andere Zahlungsart.",
+      "timeout": "Der Zahlungsanbieter hat nicht geantwortet. Bitte erneut versuchen.",
+      "declined": "Die Zahlung wurde nicht abgeschlossen — es wurde nichts abgebucht. Prüfen Sie Ihre Daten und versuchen Sie es erneut oder zahlen Sie anders."
+    },
     "confirmed": {
       "title": "Bestellung eingegangen!",
       "reference": "Bestellnummer: {reference}",
       "delivery": "Lieferung",
+      "shipping": "Kühlketten-Versand",
       "payment": "Zahlung",
       "total": "Gesamt",
+      "unknown": "Unbekannt",
       "points": "✦ +{n} Punkte erhalten",
       "note": "Den Status Ihrer Bestellung verfolgen Sie per E-Mail und WhatsApp.",
       "orders": "Meine Bestellungen ansehen",

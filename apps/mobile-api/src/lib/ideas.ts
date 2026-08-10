@@ -1,8 +1,9 @@
 import { BundleService, RecipeService } from '@lezzet/database';
-import { imageOf } from '@lezzet/application';
-import { splitLines, toCents } from '@lezzet/helper';
+import { getPackagesByIds, imageOf, listStorefrontPackages } from '@lezzet/application';
+import type { PlaceWarehouses, StorefrontPackage } from '@lezzet/application';
+import { splitLines } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { BundleWithItems, HomePackage, HomeRecipe, PreferredLanguage, RecipeWithItems } from '@lezzet/types';
+import type { HomePackage, HomeRecipe, PreferredLanguage, RecipeWithItems } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { resolvedOrNull } from './home';
@@ -22,10 +23,12 @@ import { resolvedOrNull } from './home';
  * pakete terfi ettiği gün bu dosya o kapıya döner.
  *
  * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Yaptığı iş içerik indirgemesidir: ad/süre/porsiyon çözümü (`resolveLocalizedText`), satır sayımı
- * ve görsel seçimi (`imageOf`) — hepsi paylaşılan ilkellerle. Fiyat/stok/tükendi kararı YOK: tarif
- * kartı içerik kartıdır, paket kartı ise gezinme kapısıdır ve TEK fiyatını paketin kendi alanından
- * taşır (sözleşme künyeleri: `HomeRecipeSchema` · `HomePackageSchema`).
+ * TARİF kartı burada indirgenir (ad/süre/porsiyon çözümü, satır sayımı, görsel) — içerik kartıdır,
+ * fiyatı ve stoğu yoktur. PAKET kartı ise 10.08'den beri hiç kurulmuyor: kapının (`@lezzet/
+ * application` → `listStorefrontPackages`/`getPackagesByIds`) verdiği vitrin kartı sözleşme şekline
+ * indirgeniyor, o kadar. Fiyat · tükendi · yol kararlarının hiçbiri burada değil; olsaydı web ile
+ * mobil aynı pakete iki farklı cevap verebilirdi (sözleşme künyeleri: `HomeRecipeSchema` ·
+ * `HomePackageSchema`).
  *
  * ── SAYFALAMA YOK, SINIR VAR (CLAUDE §1) ─────────────────────────────────────
  * İki küme de operatörün elle kurduğu editoryal seçkilerdir, veriyle büyümezler → keyset değil,
@@ -64,15 +67,28 @@ function toRecipeCard(recipe: RecipeWithItems, locale: PreferredLanguage): HomeR
   };
 }
 
-/** Paket kartı — GEZİNME kapısı: ad/fiyat/içerik adedi/görsel; tükenme kararı paket detayının işi. */
-function toPackageCard(bundle: BundleWithItems, locale: PreferredLanguage): HomePackage {
+/**
+ * Paket kartı — kapının ürettiği vitrin kartını SÖZLEŞME şekline indirger.
+ *
+ * ── 10.08: KART ARTIK KAPIDAN GELİYOR, BURADA KURULMUYOR ────────────────────
+ * Eskiden ham `BundleWithItems` satırından kuruluyordu (ad/fiyat/adet/görsel) ve stok/yol hiç
+ * okunmuyordu — kart yere KÖRDÜ. Kapı (`listStorefrontPackages` → `toCard`) o kararları zaten
+ * veriyor; ikinci bir kart kurgusu, `soldOut`/`route`u burada yeniden hesaplamak demekti
+ * (CLAUDE §1). Bu fonksiyonun işi artık yalnız SÜZGEÇ: kapının kartı ekranın taşımadığı alanları
+ * da içeriyor (KDV oranı, ağırlık, kişi sayısı, tavan, rota kilidi) ve onlar tele çıkmaz.
+ */
+function toPackageCard(pack: StorefrontPackage): HomePackage {
   return {
-    slug: bundle.slug,
-    name: resolveLocalizedText(bundle.name, locale),
-    priceCents: toCents(bundle.totalPrice),
+    slug: pack.slug,
+    name: pack.name,
+    priceCents: pack.priceCents,
     // Satır sayısı, adet toplamı DEĞİL ("5 ürün" — sözleşme künyesi).
-    itemCount: bundle.items.length,
-    image: imageOf(bundle),
+    itemCount: pack.itemCount,
+    image: pack.image,
+    // İKİ EKSEN, İKİ ALAN: `soldOut` ağ geneli ("hiç var mı"), `route` yere bağlı ("bana nasıl
+    // gelir") ve yer bilinmiyorsa `null` — künyesi `HomePackageSchema`da, kural burada değil.
+    soldOut: pack.soldOut,
+    route: pack.route,
   };
 }
 
@@ -103,19 +119,47 @@ export async function readRecipeCards(
  * boyu pasife alınmış bir ürünün paketi listede görünür, dokununca 404 verirdi. Liste de aynı
  * servis kapısına alındı — tek ölçüt, iki uç.
  *
+ * ── YER ARTIK KAPIYA GEÇİYOR (10.08) ────────────────────────────────────────
+ * `place` verilmezse davranış eskisiyle aynı kalır (iki `null` = yer bilinmiyor → `route: null`),
+ * ama ekran o hâlde de doğru davranır: "bilinmiyor" bir hâldir, sıfır değil.
+ *
  * `isFeatured` süzgeci burada KALIYOR: YALNIZ vitrinde uygulanır (`featuredOnly`). İşaret bir
  * SEÇİMDİR ve yedeği yoktur (bant karışımının ilkesi; web'in `pickFeatured` yedeğine bilerek
  * düşülmüyor — `lib/home.ts` künyesi). Liste sayfası "hepsi" sorusunun cevabıdır, seçki değil.
+ * **İki dal, TEK ölçüt:** ikisi de `listSellable` süzgecinden geçen kapıları çağırıyor
+ * (`listStorefrontPackages` ve `getPackagesByIds`), yani satılabilirlik iki uçta ayrışamaz.
  *
  * `limit` VERİLMEZSE kesme yapılmaz — liste sayfası kümenin tamamını ister (doğal tavan).
  */
 export async function readPackageCards(
   db: SupabaseClient,
   locale: PreferredLanguage,
-  options: { featuredOnly: boolean; limit?: number },
+  options: { featuredOnly: boolean; limit?: number; place?: PlaceWarehouses },
 ): Promise<HomePackage[]> {
-  const sellable = await new BundleService(db).listSellable();
-  const visible = options.featuredOnly ? sellable.filter((b) => b.isFeatured) : sellable;
-  const page = options.limit === undefined ? visible : visible.slice(0, options.limit);
-  return page.map((bundle) => toPackageCard(bundle, locale));
+  const place = options.place;
+
+  if (!options.featuredOnly) {
+    /* Liste sayfası: kapının kendi tam listesi. `limit` VERİLMEDEN çağrılır ki kapı `pickFeatured`e
+       hiç girmesin — o yedek (işaret yoksa ilk N) WEB'in kararıdır ve mobil ona bilerek düşmüyor
+       (aşağıdaki dalın künyesi). Kesme, kapı kararını verdikten SONRA burada yapılır. Kapının
+       kendi sırası korunur: tükenmiş paket listeden düşmez, SONA gider (`listStorefrontPackages`
+       künyesi — sosyal medyadaki link boşa düşmesin). */
+    const cards = await listStorefrontPackages(db, locale, undefined, place);
+    const page = options.limit === undefined ? cards : cards.slice(0, options.limit);
+    return page.map(toPackageCard);
+  }
+
+  /* VİTRİN ŞERİDİ İKİ ADIMDIR ve sebebi bir ödünleşmedir: işaret süzgeci `isFeatured` alanını
+     ister, kapının döndürdüğü KART ise onu taşımaz (ve taşımamalı — kart müşteriye giden şeydir,
+     editoryal işaret değil). Seçimi ham satırdan yapıp seçilenleri kimlikle kapıya soruyoruz.
+     Bedeli bir fazladan `listSellable` turudur; kazancı, mobilin "işaret yoksa şerit yok"
+     kuralının KAPININ yedeğine (`pickFeatured`) sessizce dönüşmemesidir — o gün vitrin, operatör
+     hiçbir şey işaretlememişken kendi kendine iki paket seçerdi. */
+  const marked = (await new BundleService(db).listSellable()).filter((b) => b.isFeatured);
+  const page = options.limit === undefined ? marked : marked.slice(0, options.limit);
+  if (page.length === 0) return [];
+  /* Sıra `sortOrder`dan gelir ve kapı onu korur (`getPackagesByIds` de aynı listeden süzer).
+     Tükenmişi sona atma kuralı burada UYGULANMAZ: şerit iki karttır ve seçimi operatör yapmıştır —
+     onun sırasını stok durumuna göre değiştirmek, işaretin anlamını zayıflatırdı. */
+  return (await getPackagesByIds(db, page.map((b) => b.id), locale, place)).map(toPackageCard);
 }

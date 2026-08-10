@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CatalogImageSchema, CatalogProductSchema } from './catalog-api.schema';
+import { CartLineRouteEnum } from '../primitives/enums.schema';
 import { RecipeSchema } from '../entities/recipe.schema';
 
 /**
@@ -76,9 +77,34 @@ export const HomeOfferSchema = CatalogProductSchema.extend({ wasCents: z.number(
 export type HomeOffer = z.infer<typeof HomeOfferSchema>;
 
 /**
- * Hazır paket kartı — GEZİNME kapısıdır, satın alma değil: fiyat + ad + içerik adedi taşır,
- * `soldOut`/stok TAŞIMAZ (o karar üye ürünlerin stok zincirinden çıkar ve web'in paket kartı
- * okumasıyla birlikte terfi edecek — kart basılınca paket detayı zaten gerçeği söyler).
+ * Hazır paket kartı — gezinme kapısı, ama artık **YERİ DE OLAN** bir kapı (kullanıcı bulgusu 10.08).
+ *
+ * ── STOK/YER EKSENİ 10.08'DE AÇILDI ──────────────────────────────────────────
+ * Kart 10.08'e kadar beş alan taşıyordu (slug · ad · fiyat · kalem sayısı · görsel) ve bu bir
+ * KÖRLÜKTÜ: rota dışındaki müşteri, o adrese hiç gidemeyecek bir paketi normal bir kart olarak
+ * görüyordu — kataloğun ürün kartı aynı soruyu 21.20'de yanıtlamışken (`stockStatus`). Alanın
+ * yokluğunun eski gerekçesi ("web'in stok zinciri terfi etmedi, kopyası yasak") 09.08'de düştü:
+ * kural `@lezzet/application`'a taşındı (`listStorefrontPackages` → `toCard`) ve kapı `soldOut` ·
+ * `route` ÜRETİYOR. Taşımamak artık bilgiyi saklamak olurdu.
+ *
+ * ── İKİ EKSEN, İKİ ALAN: "TÜKENDİ" ≠ "BURAYA GELEMEZ" ────────────────────────
+ * Tek bayrakta toplamak ölçülmüş bir arıza sınıfıdır (denetim 08.08): öbür depoda duran malı
+ * "tükendi" ilan eder. Bu yüzden:
+ *   · `soldOut` **AĞ GENELİDİR** — "hiç var mı" (C3). Yerden bağımsız, evrensel bir hâl; kartın
+ *     kendi durum rozetidir ve posta kodu girilmemişken de doğrudur.
+ *   · `route` **YERE BAĞLIDIR** — "bana nasıl gelir". `null` = yer bilinmiyor (posta kodu
+ *     gönderilmedi ya da çözülemedi): yol da bilinmiyor ve ziyaretçiye bilmediğimiz bir şey
+ *     söylenmez (CLAUDE §1 — ölçülemeyen değer sıfır DEĞİLDİR; `local` varsaymak "geliyor" demek,
+ *     `unavailable` varsaymak "gelmiyor" demek olurdu, ikisi de uydurma).
+ *
+ * ── PAKETTE ROTA KİLİDİ ÖZELDİR (DOMAIN §6/K32) ──────────────────────────────
+ * Paket BÖLÜNMEZ: kalemlerinden BİRİ bile kargolanamıyorsa (soğuk zincir) paketin TAMAMI rota
+ * içine kilitlenir ve rota dışı müşteriye hiç gidemez. Kilidin kendisi (`inRouteOnly`) kartta
+ * TAŞINMAZ, sonucu taşınır: rota dışı müşteride motor zaten `not_shippable_here` döndürür
+ * (`decideBundleAgainstWarehouse` — yerelde tam takım yoksa ve paket kargolanamıyorsa). Kilidi
+ * ayrı bir alan olarak da göndermek, yer bilinmezken bile "yalnız bölge içi" yazdırma ihtimali
+ * doğururdu; kartın işi kısıtı ilan etmek değil, MÜŞTERİNİN adresine ne olduğunu söylemek.
+ * (Kısıtın kendisi paket DETAYINDA `shippable` olarak duruyor — orada yeri var.)
  *
  * `itemCount` paket İÇERİĞİNİN satır sayısıdır ("5 ürün" — adet toplamı değil); `positive`:
  * içeriksiz paket kart olamaz (boş kutu satılmaz, işaretlense bile taşınmaz).
@@ -90,6 +116,22 @@ export const HomePackageSchema = z.object({
   priceCents: z.number().int(),
   itemCount: z.number().int().positive(),
   image: CatalogImageSchema,
+  /**
+   * **Hiçbir depoda tam takım yok** — BİR kalem bile yetmiyorsa paket tükendi (paket bütün
+   * satılır, "yarısı var" hâli yok). Ölçüsü AĞ GENELİ ve öyle kalmalı (C3).
+   */
+  soldOut: z.boolean(),
+  /**
+   * **Bu adrese hangi yolla gelir** — kararı `decideBundleAgainstWarehouse` motoru verir, uç
+   * yalnız taşır. `null` = yer bilinmiyor (üstteki künye).
+   *
+   * Dört hâlin künyesi tanımın yanında (`CartLineRouteEnum`). Ekranın okuduğu ayrım şudur:
+   * `local`/`shipping` iyi haberdir (sessiz kalınır), `not_shippable_here` ve `unavailable` ise
+   * kartın söylemesi gereken şeydir — hangisinin "bu adrese gönderemiyoruz", hangisinin
+   * "bölgenizde şu an yok" diye okunacağına yerin rota içi olup olmadığı karar verir
+   * (`elsewhereReasonOf`, `@lezzet/helper` — web ve native uygulama tek cümle sözlüğü).
+   */
+  route: CartLineRouteEnum.nullable(),
 });
 export type HomePackage = z.infer<typeof HomePackageSchema>;
 

@@ -145,7 +145,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
    * zaten sayıldı — ikinci kez saymak aynı siparişi iki niyet göstermek olurdu.
    */
   if (input.idempotencyKey) {
-    const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey);
+    const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
     if (already && already.status !== 'draft' && already.status !== 'cancelled') {
       return { status: 'placed', orderId: already.id, totalCents: already.totalCents, deliveryType: already.deliveryType };
     }

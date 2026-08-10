@@ -14,13 +14,17 @@ import { HomePackageSchema } from './home-api.schema';
  * kargo kısıtı · içerik satırları. "İçerik değiştirilemez" notu SÖZLEŞMEDE YOK: statik metindir,
  * ekranın kendi sözlüğünde yaşar — API biçimli/sabit cümle göndermez (katalog kartının kuralı).
  *
- * ── `soldOut`/STOK ZİNCİRİ BİLEREK YOK ───────────────────────────────────────
- * Web'in paket okuması stok/tükenme kararını kalem zincirinden türetiyor (`apps/web/lib/storefront/
- * packages.ts` — "BİR kalem bile yetmiyorsa paket tükendi") ama o kural HÂLÂ web'de yaşıyor,
- * `@lezzet/application`a terfi etmedi. Kopyalamak yasak (CLAUDE §1); alanı taşıyıp hep `false`
- * basmak ise ekranı "tükendi yok" ile "tükendi bilinmiyor"u ayırt edemez hâlde bırakırdı
- * (ölçülemeyen değer sıfır değildir). Vitrin kartıyla aynı karar (`HomePackageSchema` künyesi):
- * kural terfi ettiği gün alan burada, tükendi hâli ekranda birlikte açılır. BEKLEYEN(21.14).
+ * ── STOK/YER EKSENİ 10.08'DE AÇILDI (eski `BEKLEYEN(21.14)` kapandı) ─────────
+ * Bu künye 10.08'e kadar "`soldOut`/stok zinciri BİLEREK YOK" diyordu ve gerekçesi şuydu: kural
+ * web'de yaşıyor (`apps/web/lib/storefront/packages.ts`), kopyalamak yasak, hep `false` basmak ise
+ * "tükendi yok" ile "bilinmiyor"u ayırt edilemez yapardı. **Gerekçenin ilk yarısı 09.08'de düştü:**
+ * okuma `@lezzet/application`a terfi etti ve kapı `soldOut` · `route`u ZATEN üretiyor. İkinci
+ * yarısı hâlâ geçerli ve bu yüzden alanlar uydurulmadan taşınıyor: `route` yer bilinmezken `null`
+ * kalır, "bilinmiyor" bir hâl olarak sözleşmede durur.
+ *
+ * Alanların künyesi ve iki eksenin neden AYRI olduğu tek yerde: `HomePackageSchema` (liste kartı).
+ * Detayın farkı, kısıtın kendisini de taşımasıdır (`shippable` — aşağıda): kart müşterinin adresine
+ * ne olduğunu söyler, detay ayrıca paketin KENDİ kuralını ("yalnız bölge içi") ilan eder.
  *
  * ── TEK FİYAT KURALI ─────────────────────────────────────────────────────────
  * Kalem fiyatı TAŞINMAZ (web `StorefrontPackageItem`in aynı kararı): "toplam değeri X, sen Y
@@ -64,6 +68,17 @@ export const PackageDetailSchema = BundleSchema.pick({ id: true, slug: true }).e
    * aynısı, yön çevrilmiş: ekran `!shippable` ile kısıt çipini çizer — ürün detayının okuduğu yön).
    */
   shippable: z.boolean(),
+  /**
+   * **Hiçbir depoda tam takım yok** (ağ geneli, C3) — künyesi `HomePackageSchema`da. Detayda da
+   * gerekli çünkü sayfanın alt barı bir SATIN ALMA kapısıdır: tükenmiş bir pakete "Sepete ekle"
+   * göstermek, karşılayamayacağımız bir şeyi teklif etmek olurdu.
+   */
+  soldOut: HomePackageSchema.shape.soldOut,
+  /**
+   * **Bu adrese hangi yolla gelir** — künyesi `HomePackageSchema`da; kart ile detay AYNI ekseni
+   * aynı adla taşır ki iki ekran aynı cümleyi kursun (ikinci bir sözlük yazılmaz).
+   */
+  route: HomePackageSchema.shape.route,
   image: CatalogImageSchema,
   /**
    * İçerik satırları, paketin kendi sırasında (`bundle_item.sort_order`). **`min(1)` bir KİLİT**:

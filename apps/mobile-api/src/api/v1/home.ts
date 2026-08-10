@@ -48,7 +48,9 @@ home.get('/home', async (c) => {
     readHomeFeatured(db, locale.data, place, viewer),
     readRecipeCards(db, locale.data, HOME_RECIPE_LIMIT),
     // Vitrin YALNIZ işaretli paketleri taşır — işaret bir seçimdir, yedeği yoktur (sözleşme künyesi).
-    readPackageCards(db, locale.data, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT }),
+    // Yer BURAYA DA geçer (10.08): vitrindeki paket kartı ile Fikirler sekmesindeki kart AYNI
+    // karttır; birinin yeri bilip ötekinin bilmemesi aynı paketi iki ekranda farklı gösterirdi.
+    readPackageCards(db, locale.data, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT, place }),
   ]);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────

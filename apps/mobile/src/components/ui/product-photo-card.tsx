@@ -183,15 +183,20 @@ export function ProductPhotoCard({
             {optionsLabel}
           </Text>
         )}
-        {/* YER NOTU — zeminsiz, doğrudan gradyanın üstünde; künyenin en alt satırı, yani
-            gradyanın EN KOYU yerinde. İki satıra kadar sarar: cümle kısa ama üç dilde
-            uzunluğu değişiyor ve tek satıra sıkıştırmak Almancada cümlenin yarısını yerdi. */}
-        {note === undefined ? null : (
-          <Text style={styles.placeNote} numberOfLines={2} testID={testID === undefined ? undefined : `${testID}-place-note`}>
+      </View>
+      {/* YER NOTU KARTIN ORTASINDA (kullanıcı kararı 10.08, üçüncü tur) — künyenin içinde DEĞİL.
+          Künyeye konduğunda ürünün başlığının yerini alıyordu: iki satırlık bir cümle adın hemen
+          altına binince kartın kimliği (ad + fiyat) ikinci plana düşüyordu.
+          Artık kartın TAMAMINI örten filigranın üstünde, ortalanmış ve künye kademesinden BÜYÜK:
+          bu bir dipnot değil, kartın o müşteri için verdiği cevabın kendisi.
+          `pointerEvents="none"`: örtü dokunuşu yutmaz — kart yine ürün detayına açılır. */}
+      {note === undefined ? null : (
+        <View style={styles.noteVeil} pointerEvents="none">
+          <Text style={styles.placeNote} numberOfLines={3} testID={testID === undefined ? undefined : `${testID}-place-note`}>
             {note}
           </Text>
-        )}
-      </View>
+        </View>
+      )}
       {/* Fiyat çipi `Tag` ile BİREBİR örtüşür: terracotta zemin · beyaz metin · rozet kademesi
           (12,5/700 · .06em) · yarıçap `badge` · gölge `shadow.badge` · +4°. Token Kararlari #16
           ile gölge farkı da kapandı — kitte artık şablonun kendi değeri (`0 3px 8px …/.22`) var.
@@ -284,15 +289,31 @@ const styles = StyleSheet.create((theme) => ({
     // Fotoğraf üstü ALTYAZI rolü; değeri #d5d0c2 (Token Kararlari #15 — rol ile değer örtüştü).
     color: theme.colors['on-image-soft'],
   },
-  /* YER NOTU — künye ailesinin İÇİNDE kalır (yeni durak açılmadı): altyazıyla aynı ölçü ve
-     ağırlık, farkı yalnız RENK. Altyazı `on-image-soft` (susturulmuş), not `on-image` (adın
-     rengi) — okunması gereken bir cümlenin, çeşit sayısından daha sönük olması yanlış olurdu.
-     Zemin/kenarlık YOK: okunurluk alt gradyandan gelir (kullanıcı kararı 10.08). */
+  /**
+   * YER NOTUNUN FİLİGRANI — kartın tamamını örten yarı saydam katman (daire kartın ikizi).
+   *
+   * Solma tek başına SESSİZ bir işarettir: müşteri kartın neden soluk olduğunu bilemez. Filigran
+   * hem cümleyi taşıyacak zemini verir hem de sebebi görselin kendisine bıraktırmaz. Örtü fotoğraf
+   * katmanının KARDEŞİ, çocuğu değil — solma fotoğrafa uygulanıyor ve yazı onunla birlikte
+   * solsaydı, tam da okunması gereken cümle okunaksızlaşırdı (kullanıcı bildirimi 10.08).
+   */
+  noteVeil: {
+    position: 'absolute',
+    inset: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.space.xl,
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors.scrim,
+  },
+  /* Kademe künyeden BÜYÜK (`micro` → `body`, adın kademesi): cümle bir dipnot değil, kartın o
+     müşteri için verdiği cevap. Zemin/kenarlık YOK — okunurluğu filigran veriyor. */
   placeNote: {
-    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text.body,
+    lineHeight: theme.text.body * theme.text['lead--line-height'],
     color: theme.colors['on-image'],
+    textAlign: 'center',
   },
   /* Fiyat çipi kartın SAĞ ÜST köşesinden taşar (şablon: `top:-8px;right:-5px`). Yatay ofset
      ölçekte ara değer, yukarı yuvarlandı (5 → 6). */

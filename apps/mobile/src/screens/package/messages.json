@@ -9,6 +9,12 @@
       "photo": "Paket görseli {n} / {total}"
     },
     "noShip": "Yalnız bölge içi kapıya teslim — kargoya verilmez",
+    "badge": {
+      "soldOut": "Tükendi"
+    },
+    "soldOutBar": {
+      "text": "Bu paket şu an tükendi."
+    },
     "contents": {
       "title": "Pakette neler var?",
       "open": "{name} ürününe git",
@@ -45,6 +51,12 @@
       "photo": "Photo du coffret {n} / {total}"
     },
     "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
+    "badge": {
+      "soldOut": "Épuisé"
+    },
+    "soldOutBar": {
+      "text": "Ce panier est épuisé pour le moment."
+    },
     "contents": {
       "title": "Que contient ce panier ?",
       "open": "Voir le produit {name}",
@@ -81,6 +93,12 @@
       "photo": "Paketbild {n} / {total}"
     },
     "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
+    "badge": {
+      "soldOut": "Ausverkauft"
+    },
+    "soldOutBar": {
+      "text": "Dieses Paket ist derzeit ausverkauft."
+    },
     "contents": {
       "title": "Was ist im Paket?",
       "open": "Zum Produkt {name}",

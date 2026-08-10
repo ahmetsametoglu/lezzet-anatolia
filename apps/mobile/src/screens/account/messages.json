@@ -89,28 +89,7 @@
       "add": "＋ Yeni adres ekle",
       "defaultDone": "{label} varsayılan yapıldı",
       "loadError": "Adresler yüklenemedi — sayfayı yeniden açın.",
-      "sheet": {
-        "titleNew": "Yeni adres",
-        "titleEdit": "Adresi düzenle",
-        "labelLabel": "Adres etiketi",
-        "labelPlaceholder": "Etiket (Ev, Ofis…)",
-        "lineLabel": "Sokak ve numara",
-        "linePlaceholder": "Adres",
-        "suggestLabel": "Adres önerileri",
-        "suggestCredit": "Adresler: Base Adresse Nationale (Etalab 2.0)",
-        "suggestBusy": "Adres önerileri şu an yoğun — biraz sonra tekrar deneyin. Adresi elle de yazabilirsiniz.",
-        "zipLabel": "Posta kodu",
-        "zipPlaceholder": "Posta kodu",
-        "cityLabel": "Şehir",
-        "cityPlaceholder": "Şehir",
-        "zipNote": "67 ile başlayan posta kodları teslimat bölgemizdedir — kapıya ücretsiz teslim.",
-        "save": "Kaydet",
-        "saving": "Kaydediliyor…",
-        "delete": "Adresi sil",
-        "deleted": "Adres silindi",
-        "error": "Adres, posta kodu (5 hane) ve şehir gerekli.",
-        "unexpected": "Kaydedilemedi — yeniden deneyin."
-      }
+      "defaultFailed": "Varsayılan adres değiştirilemedi — yeniden deneyin."
     },
     "language": {
       "title": "Dil tercihi",
@@ -235,28 +214,7 @@
       "add": "＋ Ajouter une adresse",
       "defaultDone": "{label} définie par défaut",
       "loadError": "Impossible de charger les adresses — rouvrez la page.",
-      "sheet": {
-        "titleNew": "Nouvelle adresse",
-        "titleEdit": "Modifier l'adresse",
-        "labelLabel": "Libellé de l'adresse",
-        "labelPlaceholder": "Libellé (Maison, Bureau…)",
-        "lineLabel": "Rue et numéro",
-        "linePlaceholder": "Adresse",
-        "suggestLabel": "Suggestions d'adresses",
-        "suggestCredit": "Adresses : Base Adresse Nationale (Licence Ouverte Etalab 2.0)",
-        "suggestBusy": "Les suggestions d'adresses sont momentanément saturées — réessayez dans un instant. Vous pouvez aussi saisir l'adresse manuellement.",
-        "zipLabel": "Code postal",
-        "zipPlaceholder": "Code postal",
-        "cityLabel": "Ville",
-        "cityPlaceholder": "Ville",
-        "zipNote": "Les codes postaux commençant par 67 sont dans notre zone de livraison — livraison gratuite à domicile.",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
-        "delete": "Supprimer l'adresse",
-        "deleted": "Adresse supprimée",
-        "error": "Adresse, code postal (5 chiffres) et ville sont requis.",
-        "unexpected": "Impossible d'enregistrer — réessayez."
-      }
+      "defaultFailed": "Impossible de changer l'adresse par défaut — réessayez."
     },
     "language": {
       "title": "Langue",
@@ -381,28 +339,7 @@
       "add": "＋ Neue Adresse",
       "defaultDone": "{label} als Standard festgelegt",
       "loadError": "Adressen konnten nicht geladen werden — Seite erneut öffnen.",
-      "sheet": {
-        "titleNew": "Neue Adresse",
-        "titleEdit": "Adresse bearbeiten",
-        "labelLabel": "Adressbezeichnung",
-        "labelPlaceholder": "Bezeichnung (Zuhause, Büro…)",
-        "lineLabel": "Straße und Hausnummer",
-        "linePlaceholder": "Adresse",
-        "suggestLabel": "Adressvorschläge",
-        "suggestCredit": "Adressen: Base Adresse Nationale (Etalab 2.0)",
-        "suggestBusy": "Adressvorschläge sind gerade ausgelastet — versuchen Sie es gleich noch einmal. Sie können die Adresse auch manuell eingeben.",
-        "zipLabel": "Postleitzahl",
-        "zipPlaceholder": "Postleitzahl",
-        "cityLabel": "Stadt",
-        "cityPlaceholder": "Stadt",
-        "zipNote": "Postleitzahlen, die mit 67 beginnen, liegen in unserem Liefergebiet — kostenlose Lieferung an die Tür.",
-        "save": "Speichern",
-        "saving": "Wird gespeichert…",
-        "delete": "Adresse löschen",
-        "deleted": "Adresse gelöscht",
-        "error": "Adresse, Postleitzahl (5 Ziffern) und Stadt sind erforderlich.",
-        "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
-      }
+      "defaultFailed": "Standardadresse konnte nicht geändert werden — versuchen Sie es erneut."
     },
     "language": {
       "title": "Sprache",

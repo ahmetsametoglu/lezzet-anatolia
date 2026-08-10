@@ -6,6 +6,8 @@ import { PackageDetailSchema, PackageListSchema, PreferredLanguageEnum } from '@
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { readPackageCards } from '../../lib/ideas';
+// Yer çözümü katalog ucunun kapısından (`readPlace`): posta kodu → depo eşlemesi TEK yerde durur.
+import { readPlace } from './catalog';
 
 /**
  * Paket detay ucu (21.14) — vitrinin "Hazır paketler" kartının açtığı sayfa. Katalog kümesindendir:
@@ -26,10 +28,20 @@ import { readPackageCards } from '../../lib/ideas';
  * (`listSellable` — DOMAIN §13). Eski hâlinde son madde eksikti: boyu pasife alınmış bir ürünün
  * paketi mobilde hâlâ satılabilir görünüyordu. BEKLEYEN(21.14) kapandı.
  *
- * `soldOut` hâlâ sözleşmede YOK (`package-api.schema.ts` künyesi): kapı artık `soldOut`/`route`
- * üretiyor ama alanı taşımak ekran tarafında bir tasarım kararı bekliyor — sözleşme `packages/types`
- * ve bu şeridin dışında. Yer (posta kodu) bu yüzden kapıya GEÇİLMİYOR: sözleşmenin yere bağlı tek
- * bir alanı yok, geçmek ölçülemeyen bir bedel olurdu.
+ * ── YER ARTIK KAPIYA GEÇİYOR (10.08) ────────────────────────────────────────
+ * Bu künye 09.08'de şöyle diyordu: *"`soldOut` hâlâ sözleşmede YOK … yer (posta kodu) bu yüzden
+ * kapıya GEÇİLMİYOR: sözleşmenin yere bağlı tek bir alanı yok, geçmek ölçülemeyen bir bedel
+ * olurdu."* **Değişen şey sözleşmedir:** kart ve detay artık `soldOut` · `route` taşıyor
+ * (`package-api.schema.ts` künyesi — iki eksen neden ayrı). Bedelin karşılığı doğdu, yani her iki
+ * uç da `?postalCode=` okuyup `readPlace` ile çözüyor ve kapıya `place` geçiyor.
+ *
+ * **LİSTE ve DETAY AYNI ÖLÇÜTÜ KULLANIR** ve bu iki katmanda birden zorunlu: satılabilirlik
+ * (`listSellable`) ve artık YER de. Detayda çözülen yerin listede çözülmemesi, kartında "bu adrese
+ * gönderemiyoruz" yazmayan bir paketin detayında yazması demekti.
+ *
+ * Posta kodu bir SORUDUR, cevabı sunucu verir (`readPlace` künyesi): istemcinin yazabildiği bir
+ * değer hangi deponun stoğunu göstereceğimizi belirleyemez. Kod yoksa/çözülemezse iki `null` döner
+ * ve okuma ağ-genelinde kalır — `route: null`, yani "yol bilinmiyor".
  */
 export const packages = new Hono<AppEnv>();
 
@@ -51,7 +63,9 @@ packages.get('/packages', async (c) => {
   const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
-  const list = await readPackageCards(serviceDb(), locale.data, { featuredOnly: false });
+  const db = serviceDb();
+  const place = await readPlace(db, c.req.query('postalCode'));
+  const list = await readPackageCards(db, locale.data, { featuredOnly: false, place });
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   const body: z.input<typeof PackageListSchema> = { packages: list };
@@ -66,7 +80,9 @@ packages.get('/packages/:slug', async (c) => {
   const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
-  const pack = await getPackageDetail(serviceDb(), c.req.param('slug'), locale.data);
+  const db = serviceDb();
+  const place = await readPlace(db, c.req.query('postalCode'));
+  const pack = await getPackageDetail(db, c.req.param('slug'), locale.data, place);
   if (!pack) return fail(c, 'package_not_found', 404);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
@@ -87,6 +103,10 @@ packages.get('/packages/:slug', async (c) => {
     // Yön çevrilmiş: kapı kısıtı (`inRouteOnly`), sözleşme yeteneği (`shippable`) taşıyor — ekran
     // `!shippable` ile kısıt çipini çizer (ürün detayının okuduğu yön).
     shippable: !pack.inRouteOnly,
+    // İKİ EKSEN AYRI TAŞINIR: `soldOut` ağ geneli ("hiç var mı"), `route` yere bağlı ("bana nasıl
+    // gelir"). Yer bilinmiyorsa `route` null gelir ve ekran o hâlde susar (sözleşme künyesi).
+    soldOut: pack.soldOut,
+    route: pack.route,
     image: pack.image,
     // Satır sırası paketin kendi sırasıdır; ürünü çözülemeyen kalem sessizce DÜŞMEZ (kapının son
     // çaresi: bağsız ve adsız kalır) — paket "4 ürün" diyorsa dördü de görünür.

@@ -184,6 +184,7 @@
               "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
               "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
               "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
+              "Adres arama: adres alanına yazdığınız metin, öneri getirebilmek için doğrudan cihazınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
               "Barındırma: Hetzner Online GmbH (Almanya) — sunucular Avrupa Birliği içindedir."
             ]
           },
@@ -598,6 +599,7 @@
               "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
               "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
               "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
+              "Recherche d'adresse : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
               "Hébergement : Hetzner Online GmbH (Allemagne) — les serveurs sont situés dans l'Union européenne."
             ]
           },
@@ -1012,6 +1014,7 @@
               "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
               "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
               "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
+              "Adresssuche: Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Gerät an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
               "Hosting: Hetzner Online GmbH (Deutschland) — die Server stehen innerhalb der Europäischen Union."
             ]
           },

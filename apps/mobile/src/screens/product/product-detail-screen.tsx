@@ -21,6 +21,8 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { stockMarkOf } from '@/lib/places/place-view';
+import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -57,7 +59,12 @@ import { useProduct } from './use-product.hook';
      (21.14a raporu) — katman gelince buradaki `add` da onu çağırır.
   7. **İskelet şablonda tanımlı değil**; katalog iskeletinin diliyle asgari bloklar çizildi
      (kahraman + başlık + satır). Uydurulmuş bir tasarım değil, uygulamanın kendi bekleme dili.
-  8. **Kahraman GALERİ oldu** (kullanıcı isteği 09.08, `design/KARARLAR.md`): şablonun tek
+  8. **Yer işareti KAHRAMANIN FİLİGRANI, satın alma barı ise KALKAR** (kullanıcı bildirimi 10.08 —
+     arıza düzeltmesi; şablonda ikisi de yok, `design/KARARLAR.md`). Ekran şimdiye dek yalnız
+     `soldOut`a bakıyordu; `stockStatus`ün `elsewhere` hâli hiç okunmadığı için katalogda
+     "Bölgenizde şu an yok" yazan ürün DETAYDA normal satılabilir çiziliyor ve sepete girebiliyordu.
+     Cümle KATALOGLA AYNI yerden gelir (`stockMarkOf`) — ikinci bir sözlük açılmadı.
+  9. **Kahraman GALERİ oldu** (kullanıcı isteği 09.08, `design/KARARLAR.md`): şablonun tek
      `image-slot`u yerine kaydırılabilir şerit (`PhotoGallery`) — sözleşme zaten birden çok görsel
      taşıyordu (`gallery`) ve ekran onları atıyordu. Yerleşim DEĞİŞMEDİ: ölçü, degrade, yüzen
      düğmeler ve rozetler aynı yerde; tek görselli üründe şerit de gösterge de çizilmez.
@@ -134,6 +141,11 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
      görünür (ölçüldü 09.08 — listede 1,84 €, detayda 2,30 €). */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const { status, detail, retry } = useProduct(slug, locale, onboarding?.postalCode ?? null);
+  /* "Rota içinde miyim" sorusunun kapısı katalogla AYNI (`usePlaceResolution`): stok HÂLİNİ sunucu
+     zaten cevaplıyor, buradaki çözüm yalnız `elsewhere`in iki alt sebebini ayırmaya yarıyor
+     (geçici KALEM ↔ kalıcı BÖLGE). Kod beş haneye ulaşmamışsa hook `null` döner ve kural
+     "bilinmiyorsa kalem" der. */
+  const place = usePlaceResolution(onboarding?.postalCode ?? '');
 
   /* Seçim ürüne değil boya aittir; ürün değişince (aile çipi `setParams`la slug'ı yerinde
      değiştirir, rota `key={slug}` ile ekranı yeniden kurar) seçim doğal olarak sıfırlanır.
@@ -187,6 +199,22 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const was = variant?.wasCents;
   const soldOut = variant?.soldOut ?? true;
   const discounted = was !== undefined;
+  /* YERİN CEVABI — cümleyi kuran yer `stockMarkOf`, ekran yalnız çizer (katalog kartının emsali).
+     İki eleme bilinçli:
+       · `info` ("Kargoyla gelir") ELENİR — kullanıcı kararı 10.08 ile o işaret ekranlardan
+         kaldırıldı; kargolanabilirlik künyedeki `noShip` çipiyle zaten konuşuyor.
+       · fiyatsız ürün SESSİZ kalır — ürün her kanalda satışa kapalıyken "bu adrese gelmiyor"
+         demek, cevabı olmayan bir soruya cevap vermektir (tükendinin aynı kuralı; `soldOut`
+         hâlinde `stockMarkOf` kendiliğinden `null` döner). */
+  const stockMark = variant === undefined || price === null ? null : stockMarkOf(variant.stockStatus, place, locale);
+  const placeMark = stockMark === null || stockMark.tone === 'info' ? null : stockMark;
+  /* "Haber ver" dalı PAYLAŞILIR (yeni düğme kurulmadı): tükendi ile "bölgenizde şu an yok" farklı
+     sebepler ama müşterinin yapabileceği şey aynı — kalem gelince haber almak. `blocked` bu dala
+     GİRMEZ: orada beklenen kalem değil BÖLGEdir ve tutamayacağımız bir söz verilmez. */
+  const alertBar = soldOut || placeMark?.tone === 'pending';
+  /* Barın açıklama satırı tek yerde kurulur. Filigrandaki iki satırlık cümle barda TEK satıra
+     iner: barın yüksekliği tasarımın kararıdır (v3:1228) ve bir cümle onu büyütmemeli. */
+  const barNote = soldOut ? t.soldOutBar.text : placeMark === null ? null : placeMark.label.replace('\n', ' ');
   const declaration = detail.declaration;
   /* Fiyatsız benzer kart çizilmez: kitin kartı fiyat etiketini zorunlu tutuyor (fiyatsız kart
      doğmasın diye) ve fiyatı olmayan ürün zaten satışa kapalı. */
@@ -243,6 +271,19 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
             style={styles.heroScrim}
             pointerEvents="none"
           />
+          {/* YER FİLİGRANI — kart ailesinin ikizi (`ProductPhotoCard.noteVeil`,
+              `ProductCircleCard.markVeil`): kahramanı örten yarı saydam katman + ORTALANMIŞ cümle,
+              rozet kabuğu YOK. Galerinin KARDEŞİ, çocuğu değil: örtü şeridin içine konsaydı hem
+              kaydırmayla birlikte kayar hem de solmaya ortak olurdu — okunması gereken cümle tam o
+              anda okunaksızlaşırdı (10.08 kart arızasının dersi). `pointerEvents="none"`: galeri
+              kaydırması ve göstergesi bozulmaz, yüzen düğmeler de üstte kalır. */}
+          {placeMark === null ? null : (
+            <View style={styles.placeVeil} pointerEvents="none" testID="product-place-veil">
+              <Text style={styles.placeVeilText} numberOfLines={3}>
+                {placeMark.label}
+              </Text>
+            </View>
+          )}
           <View style={styles.heroButtons}>
             <BackButton onPress={() => router.back()} accessibilityLabel={t.back} variant="photo" testID="product-back" />
             <PressableSurface
@@ -465,9 +506,9 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
       {/* ── Yapışkan alt bar (v3:1228-1252) — krem cam, tab bar ile aynı yüzey kararı ── */}
       <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="product-bar">
         <View style={styles.barGlass} pointerEvents="none" />
-        {soldOut ? (
+        {alertBar ? (
           <View style={styles.barRow}>
-            <Text style={styles.soldOutText}>{t.soldOutBar.text}</Text>
+            <Text style={styles.soldOutText}>{barNote}</Text>
             <PressableSurface
               onPress={() => setAlertOn((current) => !current)}
               feedback="scale-small"
@@ -481,6 +522,14 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
               </Text>
             </PressableSurface>
           </View>
+        ) : placeMark !== null ? (
+          /* KAPALI KAPI (`blocked`) — satın alma öğeleri hiç çizilmez, yerine TEK satır bilgi.
+             Buraya "Buraya da gelin" eylemi KONMAZ: o bandın işi kataloğun başındadır ve mesele
+             bu ürün değil BÖLGEdir; aynı daveti ikinci kez, hem de müşterinin alamayacağı bir
+             ürünün sayfasında tekrarlamak, onu ürünün olmadığı bir işe zorlamak olurdu. */
+          <Text style={styles.soldOutText} testID="product-place-blocked">
+            {barNote}
+          </Text>
         ) : price === null ? (
           <Text style={styles.soldOutText} testID="product-closed">
             {t.cta.closed}
@@ -576,6 +625,26 @@ const styles = StyleSheet.create((theme, rt) => ({
   heroScrim: {
     position: 'absolute',
     inset: 0,
+  },
+  /**
+   * YER FİLİGRANI — kahramanı örten yarı saydam katman (kart ailesinin ikizi: `noteVeil` /
+   * `markVeil`). Cümle bir dipnot değil, sayfanın o müşteri için verdiği cevap: ortalanır ve
+   * künye kademesinde (`body`) yazılır. Zemin/kenarlık YOK — okunurluğu filigranın kendisi verir.
+   */
+  placeVeil: {
+    position: 'absolute',
+    inset: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.space['3xl'],
+    backgroundColor: theme.colors.scrim,
+  },
+  placeVeilText: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text.body,
+    lineHeight: theme.text.body * theme.text['lead--line-height'],
+    color: theme.colors['on-image'],
+    textAlign: 'center',
   },
   heroButtons: {
     position: 'absolute',

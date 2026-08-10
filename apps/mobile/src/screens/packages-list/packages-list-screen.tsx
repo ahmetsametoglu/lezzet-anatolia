@@ -2,6 +2,7 @@ import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { HomePackage } from '@lezzet/types';
 import { useRouter } from 'expo-router';
+import { useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -12,8 +13,13 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
+import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { PhotoSurface } from '@/screens/customer-kit/photo-surface';
+import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
+import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
 import { usePackagesList } from './use-packages-list.hook';
 
@@ -24,13 +30,23 @@ import { usePackagesList } from './use-packages-list.hook';
 
   ── TASARIMIN KARTINDAN BUGÜN ÇİZİLEBİLEN ───────────────────────────────────
   v3'ün kartı fotoğraf bölgesinin ALTINDA beyaz bir gövde taşıyor: kısa açıklama · içerik çipleri
-  (paketin kalem adları) · soğuk zincir notu · "Paketi incele ›". Bunlardan yalnız SONUNCUSU
-  verisizdir; ötekilerin üçü de sözleşmede YOK — `HomePackageSchema` beş alan taşır (slug · ad ·
-  fiyat · kalem SAYISI · görsel). Çizilmediler çünkü uydurulacak bir açıklama ya da hayalî bir
-  çip listesi, boş bırakmaktan kötüdür (CLAUDE §0 — kanıtsız bilgi basma). Aynı gerekçeyle
-  "Tükendi — yakında yeniden" rozeti de yok: paket sözleşmesi stok TAŞIMIYOR ve `false` basmak
-  "tükenmiş yok" ile "tükenme bilinmiyor"u aynı şeye indirirdi. Eksik alanlar terfi ihtiyacı
-  olarak raporlandı; geldikleri gün gövde tasarımdaki hâline tamamlanır.
+  (paketin kalem adları) · soğuk zincir notu · "Paketi incele ›". İlk ikisi hâlâ sözleşmede YOK ve
+  çizilmediler: uydurulacak bir açıklama ya da hayalî bir çip listesi, boş bırakmaktan kötüdür
+  (CLAUDE §0 — kanıtsız bilgi basma). Eksik alanlar terfi ihtiyacı olarak raporlandı.
+
+  ── "TÜKENDİ" ROZETİ VE YER NOTU ARTIK VAR (10.08) ──────────────────────────
+  Bu künye 10.08'e kadar şöyle diyordu: *"'Tükendi — yakında yeniden' rozeti de yok: paket
+  sözleşmesi stok TAŞIMIYOR."* Taşıyor artık (`HomePackageSchema` → `soldOut` · `route`) ve sayfa
+  yere kör olmaktan çıktı: rota dışındaki müşteri, o adrese hiç gidemeyecek paketi normal bir kart
+  olarak görüyordu. Kart kataloğun ürün kartıyla AYNI dili konuşur (kullanıcı kararı 10.08):
+    1. Gidemeyeceğimiz kartın yalnız FOTOĞRAFI solar; rozet ve künye tam opak kalır — yoksa
+       solmanın sebebini açıklayan cümle tam da gerektiği anda okunaksızlaşır.
+    2. "Bu adrese gönderemiyoruz" ROZET İÇİNDE DEĞİL, künyenin son satırında düz yazı; okunurluk
+       alt gradyandan gelir ("her şey rozet içindeymiş gibi görünüyor, hoş olmuyor").
+    3. "Kargoyla gelir" işareti KARTA YAZILMAZ — rota dışında kartların çoğu onu taşırdı ve bilgi
+       olmaktan çıkardı; cümlenin genel hâli listenin başındaki bantta.
+  Cümleyi kuran yer ekran değil `stockMarkOf` (`lib/places/place-view.ts`); paketin kendi gerçeği
+  (`soldOut` + `route`) o sözlüğe `packageStockStatus` ile çevrilir. İkinci bir cümle sözlüğü YOK.
 
   FOTOĞRAF BÖLGESİ KİTİN YÜZEYİNDEN (`PhotoSurface`): "foto varsa foto, yoksa baş harf" + skrim
   tek kopya durur. `PhotoTile` kullanılMADI çünkü o BASILABİLİR bir karttır ve burada basılabilir
@@ -57,7 +73,19 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  const list = usePackagesList(locale);
+  /* YER: kaynak katalog ve vitrinle AYNI (cihazdaki onboarding kaydı) — kod sunucuya gider, depo
+     orada çözülür ve kartın `soldOut`/`route` alanları ona göre dolar. Snapshot kök kapı yüzünden
+     `undefined` olamaz; yine de `?.` ile okunur (kataloğun aynı gerekçesi). */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const postalCode = onboarding?.postalCode ?? null;
+  const list = usePackagesList(locale, postalCode);
+  /* İkinci çözüm YALNIZ "rota içinde miyim" sorusunu cevaplar (depo kimliği istemciye hiç
+     verilmez): cümlenin GEÇİCİ mi KALICI mı olduğunu ve bandın çizilip çizilmeyeceğini belirler. */
+  const place = usePlaceResolution(postalCode ?? '');
+  /* BANT: kataloğunkiyle aynı koşul (çözülmüş + rota dışı) ve aynı komponent. Bu sekmeye alt
+     çubuktan DOĞRUDAN gelinebiliyor — katalogdan geçmeyen müşteri, adresinin gerçeğini hiç
+     okumadan bir paket listesine bakardı. */
+  const noticePlace = place?.kind === 'resolved' && !place.place.inRoute ? place.place : null;
 
   /* Sayfa başlığı HER DALDA durur (siparişler ekranının kuralı): yüklenirken, hata anında ve boş
      listede de kullanıcı hangi sayfada olduğunu görür. */
@@ -71,32 +99,72 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
     </View>
   );
 
-  const card = (pack: HomePackage) => (
-    <PressableSurface
-      key={pack.slug}
-      onPress={() => router.push({ pathname: '/package/[slug]', params: { slug: pack.slug } })}
-      feedback="scale"
-      style={styles.card}
-      accessibilityLabel={t.open.replace('{name}', pack.name)}
-      testID={`packages-card-${pack.slug}`}
-    >
-      <PhotoSurface photoUri={pack.image.url} initial={pack.name.slice(0, 1)} scrim style={styles.photo}>
-        {/* Fiyat rozeti SAĞ ÜSTTE (v3:878) — vitrin şeridinde sol altta; ikisi ayrı kart. */}
-        <View style={styles.priceBadge}>
-          <Tag label={formatPrice(pack.priceCents, locale)} rotate={3} shadow />
+  const card = (pack: HomePackage) => {
+    /* Paketin kendi gerçeği → ürün sözlüğü → cümle. Üç adım da paylaşılan kapıdan geçer; bu ekran
+       hiçbirini kendi içinde hesaplamaz. */
+    const stockMark = stockMarkOf(packageStockStatus(pack), place, locale);
+    /* "Kargoyla gelir" (`info`) KARTA BASILMAZ — cümlesi bandın işi (başlık §3). Kartta kalan not,
+       gönderemediğimiz (`blocked`) ya da bölgede olmayan (`pending`) paketinkidir. */
+    const placeNote = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark.label;
+    /* Yer notu TÜKENDİDE basılmaz: paket hiçbir yerde yokken "bu adrese gelmez" demek, cevabı
+       olmayan bir soruya cevap vermek olurdu (`packageStockStatus` zaten `out_of_stock` döner ve
+       `stockMarkOf` o hâlde susar — bu satır kartın kendi ön koşulu). */
+    const note = pack.soldOut ? undefined : placeNote;
+    /* SOLMA iki sebepten: tükendi (evrensel) ya da bu adrese gitmiyor (yere bağlı). `pending`
+       ("bölgenizde şu an yok") SOLMAZ — paket gelebilir, yalnız bugün değil. */
+    const faded = pack.soldOut || stockMark?.tone === 'blocked';
+    return (
+      <PressableSurface
+        key={pack.slug}
+        onPress={() => router.push({ pathname: '/package/[slug]', params: { slug: pack.slug } })}
+        feedback="scale"
+        style={styles.card}
+        /* Ekran okuyucu gören müşteriyle AYNI bilgiyi almalı: durum ve yer notu ada eklenir. */
+        accessibilityLabel={[t.open.replace('{name}', pack.name), pack.soldOut ? t.card.soldOut : undefined, note]
+          .filter((part) => part !== undefined)
+          .join(' · ')}
+        testID={`packages-card-${pack.slug}`}
+      >
+        {/* SOLAN GRUP yalnız fotoğraf ve gradyanı; rozet/künye onun KARDEŞİ ve tam opak
+            (`ProductPhotoCard`ın 10.08 düzeltmesi birebir). Konumlar değişmedi: yüzey zaten
+            bloğun tamamını kaplıyor. */}
+        <View style={styles.photo}>
+          <PhotoSurface
+            photoUri={pack.image.url}
+            initial={pack.name.slice(0, 1)}
+            scrim
+            style={[styles.photoFill, faded ? styles.fadedPhoto : undefined]}
+          />
+          {/* Durum rozeti SOL ÜSTTE — kitin kendi ayrımı (sol üst durum, sağ üst fiyat). */}
+          {pack.soldOut ? (
+            <View style={styles.soldOutBadge}>
+              <Text style={styles.soldOutLabel}>{t.card.soldOut}</Text>
+            </View>
+          ) : null}
+          {/* Fiyat rozeti SAĞ ÜSTTE (v3:878) — vitrin şeridinde sol altta; ikisi ayrı kart. */}
+          <View style={styles.priceBadge}>
+            <Tag label={formatPrice(pack.priceCents, locale)} rotate={3} shadow />
+          </View>
+          <View style={styles.caption}>
+            <Text style={styles.name}>{pack.name}</Text>
+            <Text style={styles.meta}>{t.meta.replace('{n}', String(pack.itemCount))}</Text>
+            {/* YER NOTU zeminsiz, künyenin son satırı — gradyanın en koyu yerinde. İki satıra
+                kadar sarar: cümle üç dilde farklı uzunlukta. */}
+            {note === undefined ? null : (
+              <Text style={styles.placeNote} numberOfLines={2} testID={`packages-place-note-${pack.slug}`}>
+                {note}
+              </Text>
+            )}
+          </View>
         </View>
-        <View style={styles.caption}>
-          <Text style={styles.name}>{pack.name}</Text>
-          <Text style={styles.meta}>{t.meta.replace('{n}', String(pack.itemCount))}</Text>
+        {/* Gövde bugün YALNIZ eylemi taşıyor; tasarımın kesikli ayracı da onunla birlikte gelecek —
+            ayıracak bir şey yokken çizilen bir ayraç, olmayan bir içeriğin sözünü verirdi. */}
+        <View style={styles.cardBody}>
+          <Text style={styles.cta}>{t.cta}</Text>
         </View>
-      </PhotoSurface>
-      {/* Gövde bugün YALNIZ eylemi taşıyor; tasarımın kesikli ayracı da onunla birlikte gelecek —
-          ayıracak bir şey yokken çizilen bir ayraç, olmayan bir içeriğin sözünü verirdi. */}
-      <View style={styles.cardBody}>
-        <Text style={styles.cta}>{t.cta}</Text>
-      </View>
-    </PressableSurface>
-  );
+      </PressableSurface>
+    );
+  };
 
   if (list.status === 'loading') {
     return (
@@ -141,6 +209,16 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
         testID="packages-scroll"
       >
         {header}
+        {/* Bant başlığın ALTINDA, kartların üstünde (kataloğun yerleşimi): adresin gerçeği bir kez
+            okunur, sonra kaydırılıp geçilir. Yalnız çözülmüş VE rota dışı yerde çizilir. */}
+        {noticePlace === null ? null : (
+          <PlaceNoticeBand
+            country={noticePlace.country}
+            postalCode={noticePlace.postalCode}
+            source="app-packages"
+            testID="packages-place-notice"
+          />
+        )}
         {/* Boş hâl KESİKLİ ÇERÇEVELİ kutu (v3:866) — kitin boş durumu o kutunun içinde durur. */}
         {list.packages.length === 0 ? (
           <View style={styles.emptyBox}>
@@ -217,7 +295,30 @@ const styles = StyleSheet.create((theme, rt) => ({
     // v3 gölgesi `0 4px 18px rgba(58,65,71,.07)`; token seti bu rolde tek durak taşıyor (`soft`).
     boxShadow: theme.shadow.soft,
   },
+  /* Fotoğraf BLOĞU: yüzeyin kendisi değil, onu ve üstündeki bilgi katmanını taşıyan kutu.
+     Ölçü burada durur ki solan yüzey ile solmayan rozetler aynı koordinat sistemini paylaşsın. */
   photo: { height: customerMetrics.packageListPhotoHeight },
+  photoFill: { position: 'absolute', inset: 0 },
+  /* Solma durağı kare ürün kartıyla AYNI (`soldOutOpacity`): iki kart aynı şeyi söylemeli. */
+  fadedPhoto: { opacity: theme.soldOutOpacity },
+  /* Durum rozeti — kare kartın tükendi rozetiyle aynı geometri ve aynı örtü tonu; köşe kitin
+     kendi durum yuvası (sol üst). */
+  soldOutBadge: {
+    position: 'absolute',
+    top: theme.space.xl,
+    left: theme.space.xl,
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space.lg,
+    borderRadius: theme.radius.badge,
+    backgroundColor: theme.colors['scrim-72'],
+  },
+  soldOutLabel: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text['badge-sm'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
+    textTransform: 'uppercase',
+    color: theme.colors['sand-50'],
+  },
   priceBadge: {
     position: 'absolute',
     top: theme.space.xl,
@@ -242,6 +343,15 @@ const styles = StyleSheet.create((theme, rt) => ({
     // v3:882 .16em; kitin üstbaşlık aralığı .18em — fark ekranda ölçülemez, token kazanır.
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
+  },
+  /* YER NOTU — künye ailesinin içinde, kare ürün kartıyla AYNI karar: zemin/kenarlık YOK
+     (okunurluk gradyandan gelir), renk adınki (`on-image`) çünkü okunması gereken bir cümle
+     altyazıdan sönük olmamalı. */
+  placeNote: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    color: theme.colors['on-image'],
   },
   cardBody: {
     paddingVertical: theme.space['2xl'],

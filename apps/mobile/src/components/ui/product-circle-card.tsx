@@ -3,7 +3,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from './circle-photo';
 import { PressableSurface } from './pressable-surface';
-import { StockMark, type StockMarkView } from './stock-mark';
+import type { StockMarkView } from './stock-mark';
 import { Tag } from './tag';
 
 /*
@@ -111,6 +111,24 @@ export function ProductCircleCard({
             <Tag label={discountLabel} tone="cream" rotate={-7} shadow />
           </View>
         ) : null}
+        {/* YER İŞARETİ DAİRENİN İÇİNDE (kullanıcı kararı 10.08) — kartın ALTINDA değil.
+            Önce `StockMark` olarak ada ve fiyata eklenen üçüncü bir satırdı; yatay şeritte
+            kartların boyu ona göre uzuyor ve rota dışı müşteride şeridin tamamı metne dönüyordu.
+            Yazı artık solmuş görselin üstünde, kendi filigranıyla: solma sebebi ile sebebin
+            AÇIKLAMASI aynı yerde duruyor. Kabuk YOK (kataloğun aynı kararı: "her şey rozet
+            içindeymiş gibi görünüyor") — okunurluğu filigran veriyor.
+            `pointerEvents="none"`: örtü dokunuşu yutmaz, kart yine açılır. */}
+        {mark === null ? null : (
+          <View
+            style={[styles.markVeil, { width: diameter, height: diameter, borderRadius: diameter / 2 }]}
+            pointerEvents="none"
+            testID={testID === undefined ? undefined : `${testID}-stock-mark`}
+          >
+            <Text style={styles.markLabel} numberOfLines={3}>
+              {mark.label}
+            </Text>
+          </View>
+        )}
         <View style={styles.priceBadge}>
           <Tag label={priceLabel} rotate={4} shadow />
         </View>
@@ -119,9 +137,6 @@ export function ProductCircleCard({
         {name}
       </Text>
       {optionsLabel === undefined ? null : <Text style={styles.options}>{optionsLabel}</Text>}
-      {mark === null ? null : (
-        <StockMark label={mark.label} tone={mark.tone} testID={testID === undefined ? undefined : `${testID}-stock-mark`} />
-      )}
     </PressableSurface>
   );
 }
@@ -136,6 +151,33 @@ const styles = StyleSheet.create((theme) => ({
   },
   soldOutPhoto: {
     opacity: theme.soldOutOpacity,
+  },
+  /**
+   * Yer işaretinin FİLİGRANI — dairenin tamamını örten yarı saydam katman.
+   *
+   * Solma tek başına SESSİZ bir işarettir: müşteri kartın neden soluk olduğunu bilemez. Filigran
+   * hem sebebi yazacak zemini verir hem de "bu kart farklı" demeyi görselin kendisine bırakmaz.
+   * Örtü fotoğrafın ÜSTÜNDE ayrı bir kardeş: solma fotoğrafa uygulanıyor (`soldOutPhoto`) ve yazı
+   * onunla birlikte solsaydı, tam da okunması gereken cümle okunaksızlaşırdı — kataloğun aynı
+   * dersi (kullanıcı bildirimi 10.08).
+   */
+  markVeil: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.space.lg,
+    backgroundColor: theme.colors.scrim,
+  },
+  markLabel: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    // Daire dar: kademe `badge-sm`, satır yüksekliği ölçünün kendi durağından (`space.xl`) —
+    // token sözlüğünde bu kademenin ayrı bir satır yüksekliği yok, uydurulmuş bir sayı yazılmadı.
+    fontSize: theme.text['badge-sm'],
+    lineHeight: theme.space.xl,
+    color: theme.colors.cream,
+    textAlign: 'center',
   },
   // Fiyat çipi dairenin SAĞ ALT köşesinden taşar (tasarım: `bottom:-2px;right:-2px`).
   priceBadge: {

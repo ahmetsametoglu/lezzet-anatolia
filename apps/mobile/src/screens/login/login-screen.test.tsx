@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import type { Me } from '@/lib/api/me';
+import { meFixture } from '@/screens/operations/me-fixture';
 import { LoginScreen } from './login-screen';
 
 /*
@@ -10,12 +12,20 @@ import { LoginScreen } from './login-screen';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-const mockRouter = { back: jest.fn(), push: jest.fn() };
+const mockRouter = { back: jest.fn(), push: jest.fn(), replace: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 
 const mockSetSession = jest.fn(async () => ({ error: null }));
+/* `getSession` de gerekli: doğrulama bitince ekran KÜNYEYİ okuyor (`fetchMe` → yetkili istek) ve
+   o yol oturum jetonunu buradan alıyor. Eksik bırakılırsa test gerçek akışı değil, mock'un
+   patlamasını ölçer. */
 jest.mock('@/lib/auth/supabase', () => ({
-  getSupabase: () => ({ auth: { setSession: mockSetSession } }),
+  getSupabase: () => ({
+    auth: {
+      setSession: mockSetSession,
+      getSession: async () => ({ data: { session: { access_token: 'access-1' } } }),
+    },
+  }),
 }));
 
 const mockGoogle = jest.fn(async (): Promise<{ error: string | null }> => ({ error: null }));
@@ -43,6 +53,14 @@ function reply(status: number, body: unknown): Response {
   return { status, headers: { get: () => null }, json: async () => body } as unknown as Response;
 }
 
+/**
+ * `/me` cevabı — künye kapısının okuduğu gövde. Fixture ORTAK (`screens/operations/me-fixture`):
+ * ikinci bir `Me` yazmak, sözleşme değişince yalnız birinin kırılması demekti.
+ */
+function meReply(overrides: Partial<Me> = {}): Response {
+  return reply(200, { data: meFixture(['customer'], overrides), error: null });
+}
+
 const SESSION = {
   session: {
     accessToken: 'access-1',
@@ -61,6 +79,7 @@ beforeAll(() => {
 beforeEach(() => {
   fetchMock.mockReset();
   mockRouter.back.mockReset();
+  mockRouter.replace.mockReset();
   mockSetSession.mockClear();
   mockGoogle.mockClear();
   mockDevSignIn.mockClear();
@@ -111,6 +130,7 @@ describe('hızlı doğrulama', () => {
   });
 
   it('dev test düğmeleri GERÇEK giriş akışını çağırır; başarı done akışına biner (toast + kapanış)', async () => {
+    fetchMock.mockResolvedValue(meReply());
     await render(<LoginScreen />);
 
     await fireEvent.press(screen.getByTestId('login-dev-customer'));
@@ -194,6 +214,8 @@ describe('hızlı doğrulama', () => {
   it('doğru kod: oturum cihaza yazılır ve ekran kapanır', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
+    // Künyesi TAM müşteri: kapı açılmaz, ekran normal kapanır.
+    fetchMock.mockResolvedValueOnce(meReply());
     await render(<LoginScreen />);
     await toEmailStage();
 
@@ -207,6 +229,26 @@ describe('hızlı doğrulama', () => {
       expect(mockSetSession).toHaveBeenCalledWith({ access_token: 'access-1', refresh_token: 'refresh-1' }),
     );
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  /* KÜNYE SORUSUNUN İLK ANI (kullanıcı kararı 10.08) — kapı artık uygulama AÇILIŞINDA değil,
+     kimliğin kurulduğu anda çalışıyor. Ölçüt ad + telefon; burada telefon boş. */
+  it('doğrulama bitti ama künye eksik: ekran kapanmaz, tamamlama akışına gidilir', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
+    fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
+    fetchMock.mockResolvedValueOnce(meReply({ phone: null }));
+    await render(<LoginScreen />);
+    await toEmailStage();
+
+    await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
+    await fireEvent.press(screen.getByTestId('login-send'));
+    await waitFor(() => expect(screen.getByTestId('login-code-input')).toBeOnTheScreen());
+
+    await fireEvent.changeText(screen.getByTestId('login-code-input'), '123456');
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/profile-setup' }));
+    expect(mockRouter.back).not.toHaveBeenCalled();
   });
 
   it('biçimsiz kod (6 haneden az) UCA HİÇ gitmez', async () => {

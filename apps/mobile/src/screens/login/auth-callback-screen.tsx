@@ -9,6 +9,8 @@ import { exchangeOAuthCode } from '@/lib/auth/oauth';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
+import { hasProfileGap } from '@/screens/profile-setup/profile-gaps';
+import { profileSetupRoute } from '@/screens/profile-setup/use-profile-setup-gate.hook';
 import messages from './messages.json';
 
 /*
@@ -46,9 +48,19 @@ export function AuthCallbackScreen({ code }: AuthCallbackScreenProps) {
          gecikmeli işliyor ve hesap sekmesi o aralıkta "misafir" sanıp otomatik login'e geri
          itiyordu — giriş başarılı, yönlendirme yarışı kaybediyordu. Profil çekmecesinin
          `publishMe` deseni aynı yarışı burada da kapatır. */
-      const me = await fetchMe();
-      if (me.error === null) publishMe(me.data);
+      /* Okuma PATLARSA ekran bekleme çarkında ASILI kalırdı (giriş bitti, ekran kapanmadı):
+         beklenmedik hata `null`a çevrilir ve akış hesaba devam eder — profil okuması yardımcı,
+         giriş ise asıl iştir. Sessiz değil, ADLI bir "okunamadı" hâli (CLAUDE §1). */
+      const me = await fetchMe().catch(() => null);
+      if (me !== null && me.error === null) publishMe(me.data);
       publishToast(t.verifiedToast);
+      /* KÜNYE EKSİKSE ÖNCE O SORULUR (kullanıcı kararı 10.08) — kimlik şu an kuruldu, soru da
+         şimdi anlamlı. Okuma düştüyse hesap sekmesine gidilir: okunamayan bir profil "künyesi
+         eksik" demek değildir (CLAUDE §1 — ölçülemeyen değer sıfır değildir). */
+      if (me !== null && me.error === null && hasProfileGap(me.data)) {
+        router.replace(profileSetupRoute('/account'));
+        return;
+      }
       router.replace('/account');
     });
   }, [code, router, t.verifiedToast]);

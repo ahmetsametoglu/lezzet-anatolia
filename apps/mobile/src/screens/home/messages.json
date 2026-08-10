@@ -66,7 +66,8 @@
     },
     "packages": {
       "eyebrow": "Hazır paketler",
-      "badge": "HAZIR PAKET · {n} çeşit"
+      "badge": "HAZIR PAKET · {n} çeşit",
+      "soldOut": "Tükendi"
     },
     "discover": {
       "title": "Keşif — yeni lezzetleri ilk siz oylayın ✦",
@@ -160,7 +161,8 @@
     },
     "packages": {
       "eyebrow": "Paniers prêts",
-      "badge": "PANIER PRÊT · {n} produits"
+      "badge": "PANIER PRÊT · {n} produits",
+      "soldOut": "Épuisé"
     },
     "discover": {
       "title": "Découverte — votez pour les nouveautés ✦",
@@ -254,7 +256,8 @@
     },
     "packages": {
       "eyebrow": "Fertige Pakete",
-      "badge": "FERTIGES PAKET · {n} Sorten"
+      "badge": "FERTIGES PAKET · {n} Sorten",
+      "soldOut": "Ausverkauft"
     },
     "discover": {
       "title": "Entdecken — stimmen Sie zuerst ab ✦",

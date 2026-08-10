@@ -1,4 +1,3 @@
-import { addressLineOf } from '@lezzet/address-fr';
 import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
@@ -15,17 +14,9 @@ import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { SuggestionList } from '@/components/ui/suggestion-list';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
-import {
-  createAddress,
-  deleteAddress,
-  makeDefaultAddress,
-  updateAddress,
-  type AddressWrite,
-  type MeAddress,
-} from '@/lib/api/addresses';
+import { makeDefaultAddress, type MeAddress } from '@/lib/api/addresses';
 import { redeemPoints } from '@/lib/api/points';
 import { updateMe, updatePreferences } from '@/lib/api/me';
 import { resolvePostalCode } from '@/lib/api/places';
@@ -34,13 +25,13 @@ import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib
 import { publishToast } from '@/lib/toast/toast-store';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
+import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
+import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
 import { accountData, type AccountData } from './account-fixture';
-import { useAddresses } from './use-addresses.hook';
-import { useAddressSearch } from './use-address-search.hook';
 import { usePoints } from './use-points.hook';
 import messages from './messages.json';
 
@@ -233,81 +224,12 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
     if (!marketingEmail) toggleConsent('email', true);
   };
 
-  const [addressSheet, setAddressSheet] = useState<{ editing: MeAddress | null } | null>(null);
-  const [addressDraft, setAddressDraft] = useState({ label: '', line1: '', postalCode: '', city: '' });
-  const [addressSaving, setAddressSaving] = useState(false);
-  const [addressError, setAddressError] = useState<string | null>(null);
+  /* Adres yazımının TAMAMI kitin ortak çekmecesinde (`customer-kit/address-sheet`, 10.08): form,
+     doğrulama, BAN önerileri ve üç yazma çağrısı oraya TAŞINDI — checkout de aynı çekmeceyi
+     açıyor, ikinci bir nüsha yok. Bu ekranda kalan tek şey çekmecenin AÇILMASI ve dönen listenin
+     yayınlanmasıdır. */
+  const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [defaultFailed, setDefaultFailed] = useState(false);
-
-  /* ADRES ARAMASI (BAN, 21.15) — sokak alanına yazarken devletin adres servisinden öneri gelir ve
-     dokunulan öneri ÜÇ alanı birden doldurur (sokak + posta kodu + şehir). Elle yazma yolu
-     KAPANMAZ: servis düşerse ya da kota dolarsa liste hiç çizilmez, form bugünkü gibi çalışır —
-     doğrulama da aynı kalır (5 hane posta kodu). Kararların künyesi `use-address-search.hook.ts`.
-
-     LİSTE NE ZAMAN AÇIK: yalnız müşteri sokak alanına YAZARKEN. Çekmece yeni açıldığında
-     (düzenlemede alan zaten dolu) ve öneri seçildikten sonra kapalıdır — aksi hâlde seçilen
-     adres kendi önerisini yeniden getirir ve liste seçimin üstünde asılı kalırdı. */
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const addressSearch = useAddressSearch(addressDraft.line1, { enabled: addressSheet !== null && suggestOpen });
-
-  const editAddressDraft = (patch: Partial<typeof addressDraft>) => {
-    setAddressDraft((current) => ({ ...current, ...patch }));
-    setAddressError(null);
-  };
-
-  /** Öneriye dokunuldu: satır, posta kodu ve şehir BİRLİKTE yazılır, liste kapanır. */
-  const applySuggestion = (id: string) => {
-    const picked = addressSearch.suggestions.find((suggestion) => suggestion.id === id);
-    if (picked === undefined) return;
-    setSuggestOpen(false);
-    editAddressDraft({ line1: addressLineOf(picked), postalCode: picked.postalCode, city: picked.city });
-  };
-
-  const openAddressSheet = (address: MeAddress | null) => {
-    setAddressDraft({
-      label: address?.label ?? '',
-      line1: address?.line1 ?? '',
-      postalCode: address?.postalCode ?? '',
-      city: address?.city ?? '',
-    });
-    setAddressError(null);
-    setSuggestOpen(false);
-    setAddressSheet({ editing: address });
-  };
-
-  const saveAddress = () => {
-    if (addressSheet === null) return;
-    const line1 = addressDraft.line1.trim();
-    const city = addressDraft.city.trim();
-    if (!line1 || !city || !/^\d{5}$/.test(addressDraft.postalCode)) {
-      setAddressError(t.addresses.sheet.error);
-      return;
-    }
-    /* `line2` gövdede BİLEREK yok: çekmece göstermiyor; gönderilmeyen alana kapı dokunmaz
-       (application patch kuralı) — web'den girilmiş kat/daire satırı burada kaybolmaz. */
-    const body: AddressWrite = { label: addressDraft.label.trim() || null, line1, postalCode: addressDraft.postalCode, city };
-    setAddressSaving(true);
-    setAddressError(null);
-    const call = addressSheet.editing === null ? createAddress(body) : updateAddress(addressSheet.editing.id, body);
-    void call.then((result) => {
-      setAddressSaving(false);
-      if (result.error !== null) return setAddressError(t.addresses.sheet.unexpected);
-      addressBook.publish(result.data);
-      setAddressSheet(null);
-    });
-  };
-
-  const removeAddress = () => {
-    if (addressSheet?.editing == null) return;
-    setAddressSaving(true);
-    void deleteAddress(addressSheet.editing.id).then((result) => {
-      setAddressSaving(false);
-      if (result.error !== null) return setAddressError(t.addresses.sheet.unexpected);
-      addressBook.publish(result.data);
-      setAddressSheet(null);
-      publishToast(t.addresses.sheet.deleted);
-    });
-  };
 
   const makeDefault = (address: MeAddress) => {
     void makeDefaultAddress(address.id).then((result) => {
@@ -538,20 +460,20 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
                 address={address}
                 copy={t.addresses}
                 onMakeDefault={() => makeDefault(address)}
-                onEdit={() => openAddressSheet(address)}
+                onEdit={() => setAddressSheet({ editing: address })}
                 testID={`account-address-${address.id}`}
               />
             </View>
           ))}
           {addressBook.status === 'error' || defaultFailed ? (
             <Note
-              description={addressBook.status === 'error' ? t.addresses.loadError : t.addresses.sheet.unexpected}
+              description={addressBook.status === 'error' ? t.addresses.loadError : t.addresses.defaultFailed}
               tone="terracotta"
               testID="account-address-error"
             />
           ) : null}
           <View style={addressBook.addresses.length > 0 ? styles.settingsDivider : undefined}>
-            <TextAction label={t.addresses.add} onPress={() => openAddressSheet(null)} testID="account-address-add" />
+            <TextAction label={t.addresses.add} onPress={() => setAddressSheet({ editing: null })} testID="account-address-add" />
           </View>
         </View>
 
@@ -706,99 +628,15 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
         </View>
       </BottomSheet>
 
-      {/* ── Adres çekmecesi (v3 `shAddr`, v3:203-215) — etiket + adres + posta kodu/şehir satırı +
-          bölge notu + Kaydet; DÜZENLEMEDE ayrıca "Adresi sil" (v3'ün koşullu `sa.del` linki). */}
-      <BottomSheet
-        visible={addressSheet !== null}
-        title={addressSheet?.editing == null ? t.addresses.sheet.titleNew : t.addresses.sheet.titleEdit}
+      {/* ── Adres çekmecesi (v3 `shAddr`) — kitin ortak formu; checkout'la AYNI dosya. Dönen
+          liste doğrudan yayınlanır: her yazma cevabı GÜNCEL listedir (uçların sözleşme kararı). */}
+      <AddressSheet
+        target={addressSheet}
+        addresses={addressBook.addresses}
         onClose={() => setAddressSheet(null)}
+        onSaved={(next) => addressBook.publish(next)}
         testID="account-address-sheet"
-      >
-        <View style={styles.sheetForm}>
-          <TextField
-            value={addressDraft.label}
-            onChangeText={(value) => editAddressDraft({ label: value })}
-            accessibilityLabel={t.addresses.sheet.labelLabel}
-            placeholder={t.addresses.sheet.labelPlaceholder}
-            testID="address-label"
-          />
-          {/* İÇERİK TÜRLERİ (kullanıcı bulgusu 09.08): alanlar cihaza "burası adres" demeden
-              hiçbir öneri çıkmıyordu — Android Autofill / iOS AutoFill yalnız beyan edilmiş
-              alanı tanır. Sokak alanı `streetAddress`: kayıtlı adresi tek dokunuşla basar ve
-              posta kodu/şehri de doldurur (sistem alan kümesini birlikte tanıyor). */}
-          <TextField
-            value={addressDraft.line1}
-            onChangeText={(value) => {
-              setSuggestOpen(true);
-              editAddressDraft({ line1: value });
-            }}
-            accessibilityLabel={t.addresses.sheet.lineLabel}
-            placeholder={t.addresses.sheet.linePlaceholder}
-            content="streetAddress"
-            testID="address-line"
-          />
-          {/* Adres servisinin önerileri — alanın hemen ALTINDA, seçilince üç alanı birden doldurur.
-              Künye satırı listeyle birlikte gelir: veri Etalab 2.0 altında ve kaynak gösterimi
-              gösteren yüzeyin sorumluluğu (STACK "Adres arama (FR)"). */}
-          <SuggestionList
-            items={addressSearch.suggestions.map((suggestion) => ({
-              id: suggestion.id,
-              title: addressLineOf(suggestion),
-              subtitle: `${suggestion.postalCode} ${suggestion.city}`,
-            }))}
-            onSelect={applySuggestion}
-            footnote={t.addresses.sheet.suggestCredit}
-            accessibilityLabel={t.addresses.sheet.suggestLabel}
-            testID="address-suggestions"
-          />
-          {/* Kota doldu (429): tek satır söylenir ve BİTER — alan yazmaya açık kalır, kaydetme
-              engellenmez. Öneri yardımcı bir özellik; yokluğu müşterinin işini durdurmaz. */}
-          {addressSearch.throttled ? (
-            <Note description={t.addresses.sheet.suggestBusy} tone="warm" testID="address-suggest-busy" />
-          ) : null}
-          <View style={styles.zipRow}>
-            <View style={styles.zipField}>
-              <TextField
-                value={addressDraft.postalCode}
-                onChangeText={(value) => editAddressDraft({ postalCode: value.replace(/\D/g, '').slice(0, 5) })}
-                accessibilityLabel={t.addresses.sheet.zipLabel}
-                placeholder={t.addresses.sheet.zipPlaceholder}
-                content="postalCode"
-                testID="address-zip"
-              />
-            </View>
-            <View style={styles.cityField}>
-              <TextField
-                value={addressDraft.city}
-                onChangeText={(value) => editAddressDraft({ city: value })}
-                accessibilityLabel={t.addresses.sheet.cityLabel}
-                placeholder={t.addresses.sheet.cityPlaceholder}
-                content="city"
-                testID="address-city"
-              />
-            </View>
-          </View>
-          <Text style={styles.zipNote}>{t.addresses.sheet.zipNote}</Text>
-          {addressError === null ? null : <Note description={addressError} tone="terracotta" testID="address-error" />}
-          <PrimaryButton
-            label={addressSaving ? t.addresses.sheet.saving : t.addresses.sheet.save}
-            onPress={saveAddress}
-            disabled={addressSaving}
-            testID="address-save"
-          />
-          {addressSheet?.editing == null ? null : (
-            <View style={styles.deleteRow}>
-              <TextAction
-                label={t.addresses.sheet.delete}
-                onPress={removeAddress}
-                tone="terracotta"
-                disabled={addressSaving}
-                testID="address-delete"
-              />
-            </View>
-          )}
-        </View>
-      </BottomSheet>
+      />
     </View>
   );
 }
@@ -807,20 +645,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   sheetForm: {
     gap: theme.space.lg,
   },
-  /* Posta kodu dar sabit sütun + şehir kalan genişlik (v3:206-209 — zip 120px, şehir flex). */
-  zipRow: {
-    flexDirection: 'row',
-    gap: theme.space.md,
-  },
-  zipField: { width: 120 },
-  cityField: { flex: 1 },
-  zipNote: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
-    color: theme.colors.muted,
-  },
-  deleteRow: { alignItems: 'center' },
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],

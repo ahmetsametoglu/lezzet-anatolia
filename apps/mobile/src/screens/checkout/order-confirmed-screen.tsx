@@ -15,10 +15,18 @@ import messages from './messages.json';
   SİPARİŞ ONAYI (v3 `vConfirm`) — büyük onay işareti, sipariş numarası, teslimat/ödeme/toplam
   özeti, kazanılan puan ve iki çıkış yolu.
 
-  ── UI-ONLY (21.14 ilk etap) ────────────────────────────────────────────────
-  Sipariş oluşturma ucu yok; ekran checkout'un verdiği değerlerle çiziliyor. Değerler rota
-  PARAMETRESİYLE taşınıyor (durum deposuyla değil) çünkü bu ekranın hayatı tek bir geçişten
-  ibarettir: geri gelinemez (`replace` ile açılır), yenilenmez, paylaşılmaz.
+  ── DEĞERLER GERÇEK SİPARİŞTEN (21.14 ikinci etap) ──────────────────────────
+  Tutar ve teslimat/ödeme künyesi checkout'un AÇTIĞI siparişten geliyor (`POST /me/checkout/order`
+  cevabı). Değerler rota PARAMETRESİYLE taşınıyor (durum deposuyla değil) çünkü bu ekranın hayatı
+  tek bir geçişten ibarettir: geri gelinemez (`replace` ile açılır), yenilenmez, paylaşılmaz.
+
+  ── SİPARİŞ NUMARASI HENÜZ TAŞINMIYOR ───────────────────────────────────────
+  Sözleşme sipariş açıldığında yalnız `orderId` (uuid) döndürüyor; müşteriye gösterilen numara
+  (`LA-26-…`) `reference_no` alanıdır ve sipariş uçları YALNIZ o numarayla adreslenebiliyor
+  (`GET /me/orders/:reference`) — yani uuid'den numaraya giden bir yol YOK. Numara bilinmiyorsa
+  satır ÇİZİLMEZ: "bilinmiyor" yazan bir sipariş numarası, olmayan bir numaradan kötüdür.
+  Doğru çözüm `CheckoutOrderResultSchema`nın `placed`/`payment_required` dallarına `referenceNo`
+  eklemek — sözleşme bu şeridin yazma alanı değil, terfi ihtiyacı olarak raporlandı.
 
   ── SAPMA: onay işaretinin "pop" animasyonu çizilmedi ───────────────────────
   Şablonda işaret 0,5 sn'lik bir yay ile büyüyerek geliyor. RN'de karşılığı `Animated`; tek bir
@@ -29,9 +37,10 @@ import messages from './messages.json';
 type Messages = LocalizedCopy<typeof messages>;
 
 interface OrderConfirmedScreenProps {
-  reference: string;
-  /** Genel toplam (cent) — rota parametresinden geldiği için çağıran sayıya çevirir. */
-  totalCents: number;
+  /** Müşteriye gösterilen sipariş numarası; `null` = bilinmiyor → satır çizilmez (dosya künyesi). */
+  reference: string | null;
+  /** Genel toplam (cent); `null` = parametre okunamadı — sıfır YAZILMAZ (CLAUDE §1). */
+  totalCents: number | null;
   /** Teslimat satırı: seçilen gün ya da kargo yazısı. */
   deliveryLabel: string;
   paymentLabel: string;
@@ -59,7 +68,11 @@ export function OrderConfirmedScreen({
         <Text style={styles.title} accessibilityRole="header">
           {t.confirmed.title}
         </Text>
-        <Text style={styles.reference}>{t.confirmed.reference.replace('{reference}', reference)}</Text>
+        {reference === null ? null : (
+          <Text style={styles.reference} testID="confirmed-reference">
+            {t.confirmed.reference.replace('{reference}', reference)}
+          </Text>
+        )}
 
         <SummaryPanel
           rows={[
@@ -67,7 +80,7 @@ export function OrderConfirmedScreen({
             { key: 'payment', label: t.confirmed.payment, value: paymentLabel },
           ]}
           totalLabel={t.confirmed.total}
-          totalValue={formatPrice(totalCents, locale)}
+          totalValue={totalCents === null ? t.confirmed.unknown : formatPrice(totalCents, locale)}
           testID="confirmed-summary"
         />
 

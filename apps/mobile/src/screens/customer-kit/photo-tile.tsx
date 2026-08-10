@@ -22,6 +22,13 @@ import { PhotoSurface } from './photo-surface';
   ROZET İKİ KÖŞEDE: sol üst DURUM (tarifin süresi, "Tükendi"), sağ üst FİYAT — tasarımın kendi
   ayrımı (v3:878 paket fiyatı sağ üstte, v3:915 tarif süresi sol üstte). İkisi de yuvadır; hangi
   rozetin hangi köşeye gideceğini kart değil çağıran bilir.
+
+  SOLMA FOTOĞRAFA UYGULANIR, BİLGİYE DEĞİL (kullanıcı kararı 10.08 — `ProductPhotoCard`ın aynı
+  düzeltmesi): rozetler ve alt künye fotoğraf yüzeyinin İÇİNDEYDİ, yani kart solunca solmanın
+  SEBEBİNİ açıklayan cümle ("Bu adrese gönderemiyoruz") tam da gerektiği anda okunaksızlaşırdı.
+  Üçü de artık yüzeyin KARDEŞİ ve tam opak; konumları birebir aynı çünkü yüzey zaten kartın
+  kutusunu (`flex:1`) kaplıyor. Gradyan solan grupta KALIR — fotoğrafla birlikte solmasaydı soluk
+  bir fotoğrafın üstünde tam opak bir koyu leke bırakırdı.
 */
 
 interface PhotoTileProps {
@@ -37,6 +44,11 @@ interface PhotoTileProps {
   topRightBadge?: ReactNode;
   /** Alt kenardaki içerik — skrimin üstünde durur. */
   children: ReactNode;
+  /**
+   * Fotoğrafı SOLDUR — kart bugün bir satın alma değil bir bilgi (tükendi ya da bu adrese
+   * gitmiyor). Yalnız fotoğraf ve gradyanı solar; rozetler ve künye tam opak kalır (bkz. başlık).
+   */
+  dimmed?: boolean;
   onPress: () => void;
   /** Ekran okuyucu adı — ZORUNLU: kartın içindeki metin görsel katmandadır. */
   accessibilityLabel: string;
@@ -51,6 +63,7 @@ export function PhotoTile({
   topBadge,
   topRightBadge,
   children,
+  dimmed = false,
   onPress,
   accessibilityLabel,
   testID,
@@ -63,11 +76,11 @@ export function PhotoTile({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
-      <PhotoSurface photoUri={photoUri} initial={initial} scrim style={styles.photo}>
-        {topBadge === undefined ? null : <View style={styles.topBadge}>{topBadge}</View>}
-        {topRightBadge === undefined ? null : <View style={styles.topRightBadge}>{topRightBadge}</View>}
-        <View style={styles.caption}>{children}</View>
-      </PhotoSurface>
+      {/* SOLAN GRUP — yalnız fotoğraf ve skrimi; kartın kutusunu kaplar. */}
+      <PhotoSurface photoUri={photoUri} initial={initial} scrim style={[styles.photo, dimmed ? styles.faded : undefined]} />
+      {topBadge === undefined ? null : <View style={styles.topBadge}>{topBadge}</View>}
+      {topRightBadge === undefined ? null : <View style={styles.topRightBadge}>{topRightBadge}</View>}
+      <View style={styles.caption}>{children}</View>
     </PressableSurface>
   );
 }
@@ -79,6 +92,9 @@ const styles = StyleSheet.create((theme) => ({
   },
   /** Yüzey kartın tamamını doldurur; köşe yarıçapı dıştaki kırpmadan gelir. */
   photo: { flex: 1 },
+  /* Solma DURAĞI tükendiden gelir (`soldOutOpacity`) ama iki sebebi var — kare ürün kartıyla
+     AYNI değer: müşteri açısından sonuç aynı ve iki kart aynı şeyi söylemeli. */
+  faded: { opacity: theme.soldOutOpacity },
   topBadge: {
     position: 'absolute',
     top: theme.space.lg,

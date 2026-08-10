@@ -22,9 +22,10 @@ import { placeModeOf, shippableChipLabel, shippableChipVisible, stockMarkOf } fr
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
+// Bant KİTE taşındı (10.08): paketler sekmesi ikinci çağıranı oldu (komponentin kendi künyesi).
+import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { CatalogSkeleton } from './catalog-skeleton';
-import { PlaceNoticeBand } from './place-notice-band';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';
 
@@ -375,6 +376,7 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
             <PlaceNoticeBand
               country={noticePlace.country}
               postalCode={noticePlace.postalCode}
+              source="app-catalog"
               testID="catalog-place-notice"
             />
           )

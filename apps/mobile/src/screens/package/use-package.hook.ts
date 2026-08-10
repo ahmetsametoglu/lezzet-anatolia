@@ -24,7 +24,12 @@ interface UsePackageResult {
   retry: () => void;
 }
 
-export function usePackage(slug: string, locale: Locale): UsePackageResult {
+/**
+ * @param postalCode Cihazdaki saklı posta kodu; `null` = girilmemiş. Detay da yeri GÖNDERİR
+ *   (10.08) — göndermeseydi kartında "bu adrese gönderemiyoruz" yazan paket, detayında normal
+ *   görünürdü (ürün detayının 09.08'de ölçülen fiyat tutarsızlığının aynı sınıfı).
+ */
+export function usePackage(slug: string, locale: Locale, postalCode: string | null): UsePackageResult {
   const [status, setStatus] = useState<PackageStatus>('loading');
   const [detail, setDetail] = useState<PackageDetail | null>(null);
   const generation = useRef(0);
@@ -32,7 +37,7 @@ export function usePackage(slug: string, locale: Locale): UsePackageResult {
   const load = useCallback(() => {
     const run = (generation.current += 1);
     setStatus('loading');
-    void fetchPackageDetail(slug, locale).then((result) => {
+    void fetchPackageDetail(slug, locale, postalCode).then((result) => {
       if (run !== generation.current) return;
       if (result.error !== null) {
         setStatus(result.status === 404 ? 'missing' : 'error');
@@ -41,7 +46,7 @@ export function usePackage(slug: string, locale: Locale): UsePackageResult {
       setDetail(result.data);
       setStatus('ready');
     });
-  }, [locale, slug]);
+  }, [locale, postalCode, slug]);
 
   useEffect(() => {
     load();

@@ -1,5 +1,5 @@
 import { elsewhereReasonOf } from '@lezzet/helper';
-import type { StockStatus } from '@lezzet/types';
+import type { CartLineRoute, StockStatus } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 
 import type { PlaceResolution } from '@/lib/api/places';
@@ -83,6 +83,40 @@ export function shippableChipLabel(locale: Locale): string {
  * Yer bilinmiyorken `stockStatus` zaten ağ-geneli okumadan gelir (`available` ya da
  * `out_of_stock`), yani bu fonksiyon o hâllerde kendiliğinden sessizdir.
  */
+/**
+ * **PAKETİN yer ekseni → ürünün stok sözlüğü** (kullanıcı kararı 10.08).
+ *
+ * Paket kendi gerçeğini taşıyor (`soldOut` + `route`, `HomePackageSchema` künyesi) ve ürün kartı
+ * dört hâlli bir sözlük konuşuyor (`StockStatus`). Bu fonksiyon ikisi arasındaki TEK köprüdür:
+ * pakete ikinci bir cümle sözlüğü yazmak yerine, paketin hâlini o sözlüğe çeviriyoruz — böylece
+ * "Bu adrese gönderemiyoruz" cümlesi katalogda da paket kartında da aynı yerden (`stockMarkOf`)
+ * çıkıyor ve biri değişince öteki eskiyemiyor (CLAUDE §1).
+ *
+ * Eşleme ve gerekçesi:
+ *   `soldOut`             → `out_of_stock`. **ÖNCE bakılır**: hiçbir depoda yokken "bu adrese
+ *                           gelmez" demek, cevabı olmayan bir soruya cevap vermektir.
+ *   `local`               → `available`. İyi haber; kart susar.
+ *   `shipping`            → `shipping`. Kargoyla gelir — kart bu işareti ZATEN basmıyor
+ *                           (kullanıcı kararı 10.08: rota dışında neredeyse her kart taşırdı,
+ *                           bilgi olmaktan çıkardı); cümle listenin başındaki bantta.
+ *   `not_shippable_here`  → `elsewhere`. Paket rota içine kilitli VE yerelde tam takım yok.
+ *   `unavailable`         → `elsewhere`. Bu iki havuzda tam takım yok ama ağ genelinde VAR
+ *                           (`soldOut` yukarıda elendi) — yani "başka yerde", tam da `elsewhere`.
+ *   `null` (yer yok)      → `available`. Yol bilinmiyor: susmak, uydurmanın tek alternatifidir.
+ *
+ * **Rota içi mi dışı mı ayrımı BURADA YAPILMAZ.** `elsewhere`in iki alt sebebi var ("bölgenizde şu
+ * an yok" GEÇİCİ ↔ "bu adrese gönderemiyoruz" KALICI) ve ikisini `stockMarkOf` ayırıyor, kararı da
+ * `@lezzet/helper`taki `elsewhereReasonOf` veriyor. Motor bu ayrımı yapamaz: rota İÇİNDEKİ
+ * müşterinin soğuk zincirli paketi yerelde bittiğinde de `not_shippable_here` döner ve o hâl
+ * geçicidir — kalıcı sanılırsa müşteriye olmayan bir kapı kapatılmış olur.
+ */
+export function packageStockStatus(pack: { soldOut: boolean; route: CartLineRoute | null }): StockStatus {
+  if (pack.soldOut) return 'out_of_stock';
+  if (pack.route === 'shipping') return 'shipping';
+  if (pack.route === 'not_shippable_here' || pack.route === 'unavailable') return 'elsewhere';
+  return 'available';
+}
+
 export function stockMarkOf(status: StockStatus, place: PlaceResolution | null, locale: Locale): StockMarkView | null {
   const t: Messages = messages[locale];
   if (status === 'shipping') return { label: t.shipMark, tone: 'info' };

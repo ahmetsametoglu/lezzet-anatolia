@@ -2,7 +2,7 @@ import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PackageItem } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Image, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -15,10 +15,15 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
+import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { publishToast } from '@/lib/toast/toast-store';
+import { StockMark } from '@/components/ui/stock-mark';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
 import { usePackage } from './use-package.hook';
 
@@ -28,11 +33,19 @@ import { usePackage } from './use-package.hook';
   fixture göstermek müşteriye başka bir paketi satmak olurdu (ürün detayının aynı gerekçesi).
 
   ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **"Tükendi" hâli ÇİZİLMEDİ** (foto rozeti v3:16 + barın tükendi kutusu v3:53-55): sözleşme
-     `soldOut` bilerek taşımıyor — web'in stok-zinciri kararı (`packages.ts`) application'a terfi
-     etmedi ve kopyası yasak; alanı hep-false basmak "tükendi yok" ile "bilinmiyor"u ayırt
-     edilemez yapardı (`package-api.schema.ts` künyesi). Karar terfi edince bar iki hâlini
-     şablondaki sırayla kazanır. Bar bu yüzden hep `pk.ok` dalını çizer.
+  1. **"Tükendi" hâli ARTIK ÇİZİLİYOR (10.08)** — eski sapma kapandı. Künye 10.08'e kadar şöyle
+     diyordu: *"sözleşme `soldOut` bilerek taşımıyor … karar terfi edince bar iki hâlini şablondaki
+     sırayla kazanır."* Karar 09.08'de terfi etti, sözleşme 10.08'de alanı kazandı: foto rozeti
+     (v3:16) ve barın tükendi kutusu (v3:53-55) yerinde. Ürün detayının "haber ver" anahtarı
+     ALINMADI: pakette öyle bir kayıt yolu yok ve olmayan bir söz verilmez.
+
+     **YER EKSENİ DE AYNI TURDA GELDİ** (kullanıcı kararı 10.08): sayfa artık posta kodunu
+     gönderiyor ve "bu adrese gönderemiyoruz / bölgenizde şu an yok" cümlesini kataloğun kendi
+     kapısından kuruyor (`stockMarkOf` + `packageStockStatus`). Kart listesinde olan solma burada
+     da var ve yalnız KAHRAMANA uygulanır: yazı katmanı tam opak kalır, yoksa solmanın sebebini
+     açıklayan cümle okunaksızlaşırdı. **"Tükendi" ile "buraya gelemez" AYRI şeylerdir:** birincisi
+     sepete eklemeyi kapatır (karşılayamayacağımız şey teklif edilmez), ikincisi KAPATMAZ — yer bir
+     söz, bir filtre değil; sepet ve ödeme adımı o kararı kendi kapısında veriyor.
   2. **Yapışkan başlık kaydırma alanının DIŞINDA** (katalog sapma 1'in aynısı): RN'de `position:
      sticky` yok; başlık üstte sabit durur, içerik altından akar — görsel sonuç aynı.
   3. **Kargo kısıtı çipinin kamyon ikonu ÇİZİLMEDİ** (v3:21'deki svg): ürün detayının aynı çipi
@@ -84,7 +97,13 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   const { width } = useWindowDimensions();
   const locale = useAppLocale();
   const t: Messages = messages[locale];
-  const { status, detail, retry } = usePackage(slug, locale);
+  /* YER: kaynak katalog/vitrinle AYNI (cihazdaki onboarding kaydı). Kod sunucuya gider ve `route`
+     onunla dolar; ikinci çözüm (`usePlaceResolution`) yalnız "rota içinde miyim" sorusunu
+     cevaplar — cümlenin GEÇİCİ mi KALICI mı olduğu ondan çıkar. */
+  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const postalCode = onboarding?.postalCode ?? null;
+  const place = usePlaceResolution(postalCode ?? '');
+  const { status, detail, retry } = usePackage(slug, locale, postalCode);
 
   const [quantity, setQuantity] = useState(1);
   const cart = useCart();
@@ -154,6 +173,16 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
 
   const totalCents = detail.priceCents * quantity;
 
+  /* YER İŞARETİ — cümleyi ekran kurmaz, `stockMarkOf` kurar; paketin kendi gerçeği ona
+     `packageStockStatus` ile çevrilir (liste kartıyla TEK sözlük). Tükendide işaret basılmaz:
+     hiçbir yerde yokken "bu adrese gelmez" demek cevabı olmayan bir soruya cevap vermektir. */
+  const stockMark = detail.soldOut ? null : stockMarkOf(packageStockStatus(detail), place, locale);
+  /* "Kargoyla gelir" (`info`) detayda da yazılmaz: kargo kısıtı zaten kendi çipiyle (`noShip`)
+     konuşuyor ve rota dışındaki müşteri için bu cümle listelerin başındaki bantta duruyor. */
+  const placeMark = stockMark !== null && stockMark.tone !== 'info' ? stockMark : null;
+  /* Solma yalnız KAHRAMANA: kart listesindeki kararla aynı — bilgi katmanı tam opak kalır. */
+  const heroFaded = detail.soldOut || placeMark?.tone === 'blocked';
+
   /* Kahraman şeridi: ÖNCE paketin kendi kapağı, SONRA kalemlerin ana görselleri. Sıra kararın
      kendisidir — satılan şey pakettir, kalemler onun içeriği; kapağı araya karıştırmak paketi
      kalemlerinden biri gibi gösterirdi. Adressiz kalem ELENİR (boş kare çizilmez); tekrarlanan
@@ -187,18 +216,26 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
     <View style={styles.screen} testID="package-detail">
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="package-scroll">
-        {/* ── Foto 16:10 (v3:14-17), galeri şeridi olarak; rozet çizilmez — sapma 1 ── */}
+        {/* ── Foto 16:10 (v3:14-17), galeri şeridi olarak; tükendi rozeti v3:16 ── */}
         <View style={styles.hero}>
-          <PhotoGallery
-            uris={heroPhotos}
-            photoLabel={t.gallery.photo}
-            fallback={
-              <View style={styles.heroFallback}>
-                <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
-              </View>
-            }
-            testID="package-gallery"
-          />
+          {/* SOLAN GRUP yalnız galeri; rozet onun kardeşi ve tam opak (sapma 1). */}
+          <View style={[styles.heroPhotos, heroFaded ? styles.heroFaded : undefined]}>
+            <PhotoGallery
+              uris={heroPhotos}
+              photoLabel={t.gallery.photo}
+              fallback={
+                <View style={styles.heroFallback}>
+                  <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
+                </View>
+              }
+              testID="package-gallery"
+            />
+          </View>
+          {detail.soldOut ? (
+            <View style={styles.heroBadge} testID="package-soldout-badge">
+              <Text style={styles.heroBadgeLabel}>{t.badge.soldOut}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* ── Künye: ad · fiyat + ek · kargo kısıtı · açıklama (v3:18-22) ── */}
@@ -213,6 +250,14 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
             <Text style={styles.noShipChip} testID="package-noship">
               {t.noShip}
             </Text>
+          )}
+          {/* YER İŞARETİ — kitin ortak rozeti (`StockMark`), cümlesi katalogla AYNI. Sarmalayıcı
+              onu SOLA yaslar: rozetin kendi hizası daire kartın ortalı ekseni içindir, bu sayfa
+              ise sola hizalı bir gövde (kısıt çipiyle aynı sütun). */}
+          {placeMark === null ? null : (
+            <View style={styles.placeMarkSlot}>
+              <StockMark label={placeMark.label} tone={placeMark.tone} testID="package-place-mark" />
+            </View>
           )}
           {detail.description === null ? null : <Text style={styles.description}>{detail.description}</Text>}
 
@@ -252,6 +297,15 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
       {/* ── Yapışkan alt bar (v3:1254-1270) — krem cam, ürün barıyla aynı yüzey kararı ── */}
       <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="package-bar">
         <View style={styles.barGlass} pointerEvents="none" />
+        {/* TÜKENDİ BARI (v3:53-55) — sayaç ve ekleme düğmesi HİÇ çizilmez: karşılayamayacağımız
+            bir şeyi teklif eden bir düğme, müşteriyi sepette ya da ödemede duvara götürürdü.
+            "Bu adrese gönderemiyoruz" hâli burayı DEĞİŞTİRMEZ (sapma 1): paket bir yerde var,
+            yalnız bu adrese o yoldan gitmiyor — kararı sepet ve ödeme adımı veriyor. */}
+        {detail.soldOut ? (
+          <Text style={styles.barSoldOut} testID="package-soldout">
+            {t.soldOutBar.text}
+          </Text>
+        ) : (
         <View style={styles.barRow}>
           <View style={styles.stepper}>
             <PressableSurface
@@ -282,6 +336,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
             <PrimaryButton label={`${t.cta.add} · ${formatPrice(totalCents, locale)}`} onPress={addToCart} testID="package-add" />
           </View>
         </View>
+        )}
       </BlurView>
 
       {/* Sepet FAB'ı — v3:602: sepet doluyken vitrin·katalog·ürün·paket dörtlüsünde; barın
@@ -347,6 +402,29 @@ const styles = StyleSheet.create((theme, rt) => ({
   hero: {
     aspectRatio: 16 / 10,
   },
+  /** Galeri kutuyu doldurur; rozet onun kardeşi olduğu için ayrı bir katman gerekiyor. */
+  heroPhotos: { flex: 1 },
+  /* Solma durağı kart listesiyle AYNI (`soldOutOpacity`): iki yüzey aynı şeyi söylemeli. */
+  heroFaded: { opacity: theme.soldOutOpacity },
+  /* Tükendi rozeti (v3:16) — ürün detayının kahraman rozetiyle aynı yuva ve aynı mürekkep zemin. */
+  heroBadge: {
+    position: 'absolute',
+    top: theme.space.xl,
+    left: theme.space.xl,
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space.lg,
+    borderRadius: theme.radius.badge,
+    backgroundColor: theme.colors.ink,
+  },
+  heroBadgeLabel: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text['badge-sm'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
+    textTransform: 'uppercase',
+    color: theme.colors['sand-50'],
+  },
+  /** Yer işaretini SOLA yaslayan yuva (rozetin kendi hizası daire kartın ortalı ekseni içindir). */
+  placeMarkSlot: { alignSelf: 'flex-start' },
   heroFallback: {
     width: '100%',
     height: '100%',
@@ -482,6 +560,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.lg,
+  },
+  /** Tükendi barının tek satırı — ürün detayının aynı kademesi ve rengi (v3:53-55). */
+  barSoldOut: {
+    textAlign: 'center',
+    fontFamily: theme.font.body[theme.text['chip--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.muted,
+    paddingVertical: theme.space.md,
   },
   stepper: {
     flexDirection: 'row',

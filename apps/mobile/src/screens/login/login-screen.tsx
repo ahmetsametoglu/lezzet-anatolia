@@ -16,9 +16,13 @@ import { DEV_ADMIN_EMAIL, DEV_CUSTOMER_EMAIL, devSignIn } from '@/lib/auth/dev-l
 import { signInWithGoogle } from '@/lib/auth/oauth';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { fetchMe } from '@/lib/api/me';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { publishMe } from '@/screens/customer-kit/use-me.hook';
+import { hasProfileGap } from '@/screens/profile-setup/profile-gaps';
+import { profileSetupRoute } from '@/screens/profile-setup/use-profile-setup-gate.hook';
 import { CodeField } from './code-field';
 import messages from './messages.json';
 
@@ -93,8 +97,27 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
     // v3'ün `finishLogin` toast'ı: kapanan ekranın ARKASINDA görünür (host kökte) — giriş
     // başarısının tek görsel onayı; sekme zaten girişli hâle dönmüş oluyor.
     publishToast(t.verifiedToast);
-    const finish = onVerified ?? (() => router.back());
-    finish();
+    if (onVerified !== undefined) {
+      // Ekranı gömen host kendi akışını sürdürür; künye sorusu da onun yüzeyinin işidir.
+      onVerified();
+      return;
+    }
+    /* KÜNYE SORUSUNUN İLK ANI (kullanıcı kararı 10.08) — kimlik ŞU AN kuruldu; ad ve telefon
+       eksikse müşteri geldiği ekrana değil, tamamlama akışına gider. Açılışta sormak yerine
+       burada sormanın gerekçesi kapının künyesinde.
+       Profil BURADA okunup yayınlanır (`auth-callback`in ölçülmüş yarışının aynısı): `useMe`
+       oturum olayını gecikmeli işliyor, dönülen ekran o aralıkta "misafir" sanabiliyor. */
+    void fetchMe()
+      .then((result) => {
+        if (result.error !== null) return router.back();
+        publishMe(result.data);
+        if (hasProfileGap(result.data)) return router.replace(profileSetupRoute());
+        router.back();
+      })
+      /* SESSİZ CATCH DEĞİL, AÇIK ÇARE (CLAUDE §1): okuma beklenmedik biçimde patlarsa müşteri
+         doğrulanmış hâlde giriş ekranında ASILI kalırdı — künye sorusu yardımcı, giriş ise asıl
+         iştir. Okunamayan profil "künyesi eksik" demek de değildir; ekran normal kapanır. */
+      .catch(() => router.back());
   }, [stage, onVerified, router, t.verifiedToast]);
 
   /**

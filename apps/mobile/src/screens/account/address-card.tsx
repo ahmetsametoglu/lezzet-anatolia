@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { TextAction } from '@/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
+import { addressLine, addressTitle } from '@/screens/customer-kit/address-format';
 // Yalnız METİN BLOĞUNUN TİPİ için: komponent sözlüğü okumaz, çağıran geçirir.
 import type accountMessages from './messages.json';
 
@@ -20,21 +21,6 @@ import type accountMessages from './messages.json';
 */
 
 type AddressCopy = LocalizedCopy<typeof accountMessages>['addresses'];
-
-/** Etiketsiz adreste başlık ŞEHİRDİR — uydurma etiket yazılmaz (entity künyesindeki kural). */
-function addressTitle(address: MeAddress): string {
-  return address.label ?? address.city;
-}
-
-/**
- * Kartta okunan tek satır — şablonun birleşimi (`l + ', ' + zip + ' ' + city`, v3:2023) veriye
- * uyarlandı: `line2` (kat/daire) varsa sokağın peşine girer, yutulursa teslimat adresi eksik
- * görünür. SAKLANMAZ, TÜRETİLİR: iki yerde tutulan aynı gerçek bir gün ayrışır.
- */
-function addressLine(address: MeAddress): string {
-  const street = address.line2 === null ? address.line1 : `${address.line1}, ${address.line2}`;
-  return `${street}, ${address.postalCode} ${address.city}`;
-}
 
 interface AddressCardProps {
   address: MeAddress;

@@ -961,3 +961,62 @@ hizalı kalsın. Süzgeç satırının `📍`si de emoji olarak KALDI: kitin iko
 Kod: `apps/mobile/src/components/ui/product-photo-card.tsx` ·
 `apps/mobile/src/screens/catalog/place-notice-band.tsx` (yeni) ·
 `apps/mobile/src/screens/catalog/catalog-screen.tsx`.
+
+
+### Ürün detayında YER FİLİGRANI ve satın alma barının KALKMASI — v3 `vProduct`'ta yok (10.08)
+
+**Kullanıcı bildirimi (arıza).** Katalogda "Bölgenizde şu an yok" yazan ürüne tıklanınca detay
+sayfası hiçbir şey söylemiyordu ve satın alma düğmeleri normal duruyordu: müşteri alamayacağı
+ürünü sepete ekleyebiliyordu. Sebep ölçüldü — ekran yalnız `soldOut`a bakıyordu, yani
+`stockStatus`ün `elsewhere` hâli hiç okunmuyordu (`soldOut` o sözleşmenin yalnız `out_of_stock`
+hâlidir).
+
+**1. Filigran kahramanın üstüne, kart ailesinin diliyle.** v3'te böyle bir öğe YOK; yeni bir görsel
+dil de üretilmedi — katalog kartının (`noteVeil`) ve vitrin dairesinin (`markVeil`) ikizi kuruldu:
+kahramanı örten yarı saydam katman (`scrim`) + ortalanmış yazı, **rozet kabuğu yok** (kataloğun
+10.08 kararı). Örtü galeri şeridinin KARDEŞİ, çocuğu değil: içine konsaydı hem kaydırmayla birlikte
+kayar hem de solmaya ortak olurdu — okunması gereken cümle tam o anda okunaksızlaşırdı. Galerinin
+kendi kaydırması, göstergesi ve yüzen düğmeleri bozulmadı (`pointerEvents="none"`).
+
+**2. Satın alma barı KALKAR; iki hâl iki ayrı dala düşer.** Cümle sözlüğü de karar da katalogla
+ortak (`lib/places/place-view.ts` → `stockMarkOf`); ekranda ikinci bir sözlük açılmadı.
+· `pending` (rota İÇİ, "Bölgenizde şu an yok") — geçici, beklenen KALEM. Bar mevcut **"Stok gelince
+haber ver"** dalını paylaşır (yeni düğme kurulmadı), yalnız cümle yerin cümlesiyle değişir.
+· `blocked` (rota DIŞI, soğuk zincir) — kalıcı, beklenen BÖLGE. Bar tek satır bilgiye iner ve
+**eylem konmaz**: "Buraya da gelin" daveti kataloğun bilgi bandının işidir; müşteriyi alamayacağı
+bir ürünün sayfasında ikinci kez o işe çağırmak zorlama olurdu.
+· `shipping` ve `available` — bugünkü davranış aynen; filigran yok, satın alma açık.
+· `out_of_stock` — bugünkü "tükendi" dalı aynen; **üstüne yer işareti basılmaz** (kart künyelerinin
+aynı kuralı: cevabı olmayan soruya cevap verilmez). Fiyatsız ürün de aynı sebeple sessiz kalır.
+
+Barın yüksekliği, blur'u ve kahramanın yerleşimi v3'ün kendisi — değişmedi; filigrandaki iki
+satırlık cümle barda tek satıra iner ki bar büyümesin.
+
+Kod: `apps/mobile/src/screens/product/product-detail-screen.tsx`.
+
+
+### Doğrulama sonrası KÜNYE TAMAMLAMA akışı — v3'te yok (10.08)
+
+**Kullanıcı kararı (ölçülmüş arıza).** E-posta/OTP ile açılan hesapta müşterinin adı hiç dolmuyor:
+profil satırını açan tetik adı sağlayıcının künyesinden okuyor
+(`supabase/migrations/0002_auth_user_profile_trigger.sql` → `raw_user_meta_data->>'full_name'|'name'`)
+ve OTP yolunda orası boştur — uydurma ad yazılmaz, ad boş kalır. Uygulama da hiçbir yerde
+sormuyordu. Onboarding soramaz: o giriş ÖNCESİ akıştır ve girişsiz de geçilebiliyor, yani
+doğrulanmış kullanıcıyı hiç yakalamıyor. Karar: doğrulama bitince künye EKSİKSE üç bilgi adım adım
+istenir — ad-soyad → adres → telefon.
+
+**Yeni görsel dil ÜRETİLMEDİ, iki emsal birleştirildi.** Adım kabuğu onboarding'in kendisidir
+(üstbaşlık · Lora başlık · gövde · alt bölmede nokta göstergesi ve birincil düğme; geri bağlantısı
+aynı soluk rozet kademesi). Adres adımı `shAddr` çekmecesinin FORMUNU olduğu gibi kullanır —
+form 10.08'de kite çıkarıldı (`screens/customer-kit/address-form.tsx`) ve aynı dosyayı hesap
+ekranı ile "Siparişi tamamla" da çağırıyor; dördüncü bir adres formu yazılmadı. Ham değer yok,
+tüm ölçü ve renkler token'dan.
+
+**İki sapma, ikisi de bilinçli.** (1) Akışta "Atla" YOK: ad ve telefon zorunlu, akış onlarsız
+kapanmıyor; geçilebilen tek adım adrestir ("Sonra ekleyeceğim") — sipariş vermeyecek müşteriyi en
+pahalı adıma zorlamak, checkout zaten adresi kendi çekmecesinde sorarken gereksiz bir kapıdır.
+(2) Kapının açılma ölçütü AD + TELEFONdur, "adres yok" ölçüte girmez: geçilebilen bir adımı kapı
+ölçütü yapmak, adresi erteleyen müşteriye akışı her açılışta yeniden açardı (nag döngüsü).
+
+Kod: `apps/mobile/src/screens/profile-setup/*` · `apps/mobile/src/app/profile-setup.tsx` ·
+`apps/mobile/src/screens/customer-kit/address-form.tsx`.

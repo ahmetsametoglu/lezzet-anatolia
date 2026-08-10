@@ -472,9 +472,16 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    *
    * Kısmi unique indeks eşzamanlı iki yazımdan birini zaten reddediyor; bu okuma **tekrar gelen**
    * isteği (çift tıklama, ağın yeniden denemesi) ikinci sipariş açmadan cevaplamak için.
+   *
+   * **`customerId` ZORUNLU ve bu bir güvenlik kararı** (10.08) — kardeşi `findByReference`ın aynı
+   * hükmü, orada baştan vardı burada YOKTU. Anahtarı İSTEMCİ üretiyor: süzgeçsiz bir okumada
+   * başkasının anahtarını gönderen istemci, o siparişin kimliğini ve tutarını cevap olarak alırdı
+   * — üstelik kendi sepeti hiç işlenmeden. Çakışma kötü niyet gerektirmiyor da: iki istemcinin
+   * aynı anahtarı üretmesi yeter. Süzgeç SORGUYA gömülü, çağıranın sonradan yapacağı bir eşitlik
+   * kontrolüne bırakılmadı — unutan ilk çağıran başkasının siparişini okurdu.
    */
-  async findByIdempotencyKey(key: string): Promise<Order | null> {
-    const rows = await this.getAll({ idempotencyKey: key }, { limit: 1 });
+  async findByIdempotencyKey(key: string, customerId: string): Promise<Order | null> {
+    const rows = await this.getAll({ idempotencyKey: key, customerId }, { limit: 1 });
     return rows[0] ?? null;
   }
 

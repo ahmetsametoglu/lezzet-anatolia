@@ -1,0 +1,113 @@
+{
+  "tr": {
+    "brand": "Lezzet Anatolia",
+    "step": "Adım {n} / {total}",
+    "back": "Geri",
+    "next": "Devam",
+    "finish": "Bitir",
+    "saving": "Kaydediliyor…",
+    "loading": "Künyeniz okunuyor…",
+    "doneToast": "Teşekkürler — künyeniz tamam ✓",
+    "name": {
+      "kicker": "TANIŞALIM",
+      "title": "Adınız ve soyadınız",
+      "body": "Siparişi kime hazırladığımızı bilelim: teslimat fişinde ve size yazdığımız her mesajda bu ad geçer.",
+      "field": "Ad ve soyad",
+      "placeholder": "Ad ve soyad"
+    },
+    "address": {
+      "kicker": "TESLİMAT",
+      "title": "Nereye getirelim?",
+      "body": "Adresiniz teslimat gününü ve ücreti belirler. Şimdi eklemezseniz sipariş verirken sorulur.",
+      "save": "Kaydet ve devam et",
+      "later": "Sonra ekleyeceğim"
+    },
+    "phone": {
+      "kicker": "İLETİŞİM",
+      "title": "Telefon numaranız",
+      "body": "Kurye kapıya yaklaşınca ya da siparişinizde bir değişiklik olunca buradan ulaşırız.",
+      "field": "Telefon",
+      "placeholder": "Telefon (WhatsApp)"
+    },
+    "errors": {
+      "name_required": "Ad boş olamaz.",
+      "phone_invalid": "Telefon numarası çözülemedi — kontrol edin.",
+      "phone_taken": "Bu numara başka bir hesapta kayıtlı.",
+      "unexpected": "Kaydedilemedi — yeniden deneyin."
+    }
+  },
+  "fr": {
+    "brand": "Lezzet Anatolia",
+    "step": "Étape {n} / {total}",
+    "back": "Retour",
+    "next": "Continuer",
+    "finish": "Terminer",
+    "saving": "Enregistrement…",
+    "loading": "Lecture de votre profil…",
+    "doneToast": "Merci — votre profil est complet ✓",
+    "name": {
+      "kicker": "FAISONS CONNAISSANCE",
+      "title": "Votre nom et prénom",
+      "body": "Pour savoir pour qui nous préparons la commande : ce nom figure sur le bon de livraison et dans nos messages.",
+      "field": "Nom et prénom",
+      "placeholder": "Nom et prénom"
+    },
+    "address": {
+      "kicker": "LIVRAISON",
+      "title": "Où livrons-nous ?",
+      "body": "Votre adresse détermine le jour et les frais de livraison. Sans elle, nous vous la demanderons au moment de commander.",
+      "save": "Enregistrer et continuer",
+      "later": "Je l'ajouterai plus tard"
+    },
+    "phone": {
+      "kicker": "CONTACT",
+      "title": "Votre numéro de téléphone",
+      "body": "Nous vous joignons ici quand le livreur approche ou si votre commande change.",
+      "field": "Téléphone",
+      "placeholder": "Téléphone (WhatsApp)"
+    },
+    "errors": {
+      "name_required": "Le nom ne peut pas être vide.",
+      "phone_invalid": "Le numéro n'a pas pu être interprété — vérifiez-le.",
+      "phone_taken": "Ce numéro est déjà associé à un autre compte.",
+      "unexpected": "Impossible d'enregistrer — réessayez."
+    }
+  },
+  "de": {
+    "brand": "Lezzet Anatolia",
+    "step": "Schritt {n} / {total}",
+    "back": "Zurück",
+    "next": "Weiter",
+    "finish": "Fertig",
+    "saving": "Wird gespeichert…",
+    "loading": "Ihr Profil wird gelesen…",
+    "doneToast": "Danke — Ihr Profil ist vollständig ✓",
+    "name": {
+      "kicker": "LERNEN WIR UNS KENNEN",
+      "title": "Ihr Vor- und Nachname",
+      "body": "Damit wir wissen, für wen wir die Bestellung vorbereiten: Dieser Name steht auf dem Lieferschein und in unseren Nachrichten.",
+      "field": "Vor- und Nachname",
+      "placeholder": "Vor- und Nachname"
+    },
+    "address": {
+      "kicker": "LIEFERUNG",
+      "title": "Wohin liefern wir?",
+      "body": "Ihre Adresse bestimmt Liefertag und Liefergebühr. Ohne sie fragen wir beim Bestellen danach.",
+      "save": "Speichern und weiter",
+      "later": "Später hinzufügen"
+    },
+    "phone": {
+      "kicker": "KONTAKT",
+      "title": "Ihre Telefonnummer",
+      "body": "Hier erreichen wir Sie, wenn der Kurier fast da ist oder sich an Ihrer Bestellung etwas ändert.",
+      "field": "Telefon",
+      "placeholder": "Telefon (WhatsApp)"
+    },
+    "errors": {
+      "name_required": "Der Name darf nicht leer sein.",
+      "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden — bitte prüfen.",
+      "phone_taken": "Diese Nummer ist bereits mit einem anderen Konto verknüpft.",
+      "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
+    }
+  }
+}

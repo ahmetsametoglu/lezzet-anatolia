@@ -30,6 +30,11 @@ export function packageDetail(overrides: Partial<PackageDetail> = {}): PackageDe
     description: 'Bayram sofrasını tek kutuda kurar: baklava, su böreği, fıstık ve künefe.',
     priceCents: 4990,
     shippable: true,
+    /* Varsayılan hâl SATILABİLİR ve ROTA İÇİ: sayfanın her bölümü açık olsun. Tükendi ve "bu
+       adrese gönderemiyoruz" hâlleri `overrides` ile kurulur — fixture bir dünya kurar, karar
+       vermez. */
+    soldOut: false,
+    route: 'local',
     image: { url: 'https://cdn.test/bayram-sofrasi.jpg', crop: CROP_CENTER },
     items: [
       packageItem(1, { slug: 'fistikli-baklava', name: 'Fıstıklı Baklava', unitLabel: '500 g' }),
