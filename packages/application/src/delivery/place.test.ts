@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeliveryZoneService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import { resolvePlaceForPostalCode } from './place';
+import { resolveAddressCountry, resolvePlaceForPostalCode } from './place';
 
 /**
  * Posta kodu → yer çözümü, PAKET kapısı — girdilerin GERÇEKTEN okunduğunun kanıtı.
@@ -76,5 +76,37 @@ describe('posta kodundan yer çözümü (paket kapısı)', () => {
     // yanlış olan tek şey `unknown`/`route` olurdu. Dalların kilidi motorun birim testinde.
     expect(resolution.kind).not.toBe('unknown');
     expect(resolution.kind).not.toBe('route');
+  });
+});
+
+/**
+ * ADRESİN ÜLKESİ — koddan türer, beyandan değil (21.28).
+ *
+ * ── ADRES DEFTERİ HİZMET ALANINI BİLMEZ (kullanıcı kararı 10.08) ─────────────
+ * Kritik iddia: bu çözüm `postal_code_place`e bakar, DEPO tablosuna DEĞİL. Kardeşi
+ * `resolvePlaceForPostalCode` adayları hizmet ülkelerimizle kesiştiriyor (`activeCountries`) ve o
+ * doğru — "bu adrese nasıl gideriz" sorusunun cevabı; ama adresin ÜLKESİ coğrafi bir gerçektir ve
+ * deponun aktifliğinden etkilenemez. Hiçbir kod da kaydı reddettirmez.
+ *
+ * Kodlar üstteki bandın damgalıları ve İKİSİ DE referansta YOK (`009xx`/`008xx` bandı ne FR ne DE
+ * dökümünde var) — yani bu dosyada sınanan dal "referans tanımıyor" dalıdır. Çok ülkeli kodun
+ * (610 tane) dalı motorun birim testinde: paylaşılan DB'de ikinci bir ülke kaydı açmak başka
+ * ajanın yer çözümünü oynatırdı.
+ */
+describe('adresin ülkesi (21.28)', () => {
+  it('referansın tanımadığı kodda müşterinin SEÇİMİ geçerlidir — doğrulayacak veri yok', async () => {
+    expect(await resolveAddressCountry(db, { postalCode: bilinmezKod, country: 'DE' })).toBe('DE');
+  });
+
+  it('ne kod tanınıyor ne seçim var: `null` — kayıt yine geçer, kolon varsayılanına düşer', async () => {
+    // Reddetmek YANLIŞ olurdu: müşteri adresini dilediği yere girer, oraya gidip gidemediğimiz
+    // sipariş anının sorusudur (kullanıcı kararı 10.08).
+    expect(await resolveAddressCountry(db, { postalCode: bilinmezKod })).toBeNull();
+  });
+
+  it('kod BİZİM bölge tablomuzda ama referansta yoksa yine `null` — depo verisi ülkeyi belirlemez', async () => {
+    // `rotaKodu` aktif bölgemize bağlı, yani `resolvePlaceForPostalCode` onu FR olarak ÇÖZER.
+    // Bu kapı ise referansa bakıyor ve orada yok: adresin ülkesi hizmet alanımızdan türetilmez.
+    expect(await resolveAddressCountry(db, { postalCode: rotaKodu })).toBeNull();
   });
 });

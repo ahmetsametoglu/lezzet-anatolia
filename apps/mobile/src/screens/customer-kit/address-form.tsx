@@ -1,5 +1,6 @@
 import { addressLineOf } from '@lezzet/address-fr';
 import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Country } from '@lezzet/types';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -11,8 +12,10 @@ import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { createAddress, deleteAddress, updateAddress, type AddressWrite, type MeAddress } from '@/lib/api/addresses';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import type { PlaceOption } from '@/lib/api/places';
 import { publishToast } from '@/lib/toast/toast-store';
 import { useAddressSearch } from './use-address-search.hook';
+import { usePostalSuggest } from './use-postal-suggest.hook';
 import messages from './address-sheet-messages.json';
 
 /*
@@ -39,7 +42,7 @@ import messages from './address-sheet-messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Beş hane, yalnız rakam — Fransa posta kodu (form kapısı; asıl kural sunucuda). */
+/** Beş hane, yalnız rakam — FR ve DE'de ortak biçim (form kapısı; asıl kural sunucuda). */
 const POSTAL_CODE = /^\d{5}$/;
 
 interface AddressFormProps {
@@ -77,6 +80,29 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* ── ÜLKE: SEÇİLİR, YAZILMAZ (21.28) ────────────────────────────────────────
+     Ülke bir alan değil, posta kodundan türeyen bir SONUÇtur (`0033_postal_code_place.sql`:
+     müşterinin doldurduğu bir alan vergi sonucu doğuramaz) — ama koddan HER ZAMAN türemiyor:
+     ölçüldü (10.08), **610 kod iki ülkede birden geçerli** (`67240` → Bischwiller / Bobenheim-Roxheim).
+     Kodu listeden seçmek belirsizliği doğmadan kapatır: seçilen satır `(country, postalCode)`
+     ikilisini birlikte taşır.
+
+     `null` = "ülke bilinmiyor" ve bu geçerli bir hâldir: alan gövdeye HİÇ konmaz, kapı kodun
+     kendisinden çözer. Çözemezse de kayıt geçer — kolonun varsayılanı devreye girer. Adres defteri
+     hiçbir hâlde reddetmez (kullanıcı kararı 10.08).
+
+     Düzenlemede mevcut ülkeyle başlar: müşteri hiçbir şeyi değiştirmeden "Kaydet"e bastığında
+     seçilmiş ülke kaybolmamalı. */
+  const [country, setCountry] = useState<Country | null>(editing?.country ?? null);
+
+  /* Kod listesinden SEÇİLEN satır — yalnız ŞEHİR listesini çizmek için (çok yerleşimli kod).
+     Elle yazılan kodda `null` kalır. Teslimat durumu BİLEREK tutulmuyor: adres defterinin hizmet
+     alanımızla ilgisi yok, o soru sepetin ve sipariş ekranının (kullanıcı kararı 10.08). */
+  const [place, setPlace] = useState<PlaceOption | null>(null);
+  const [zipOpen, setZipOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+  const zipSuggestions = usePostalSuggest(draft.postalCode, { enabled: active && zipOpen });
+
   /* ADRES ARAMASI (BAN) — sokak alanına yazarken devletin adres servisinden öneri gelir ve
      dokunulan öneri ÜÇ alanı birden doldurur (sokak + posta kodu + şehir). Elle yazma yolu
      KAPANMAZ: servis düşerse ya da kota dolarsa liste hiç çizilmez, form bugünkü gibi çalışır —
@@ -93,12 +119,49 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
     setError(null);
   };
 
-  /** Öneriye dokunuldu: satır, posta kodu ve şehir BİRLİKTE yazılır, liste kapanır. */
+  /**
+   * BAN önerisine dokunuldu: satır, posta kodu ve şehir BİRLİKTE yazılır, liste kapanır.
+   *
+   * **Ülke `FR` olur ve bu bir tahmin değil:** kaynak Fransız devletinin adres tabanıdır (BAN) ve
+   * yalnız Fransız adreslerini bilir. Kapı bu değeri yine de DOĞRULAR (kodun FR'de geçerli olduğunu
+   * referanstan sorar) — yani yanlış olsa bile sessizce geçmez.
+   */
   const applySuggestion = (id: string): void => {
     const picked = search.suggestions.find((suggestion) => suggestion.id === id);
     if (picked === undefined) return;
     setSuggestOpen(false);
+    setZipOpen(false);
+    setCityOpen(false);
+    // Şehir öneriden geldi; kodun yerleşim listesine ihtiyaç yok.
+    setPlace(null);
+    setCountry('FR');
     editDraft({ line1: addressLineOf(picked), postalCode: picked.postalCode, city: picked.city });
+  };
+
+  /** Kod önerisinin satır kimliği: aynı kod iki ülkede geçerli olabiliyor, kod tek başına anahtar değil. */
+  const zipKey = (suggestion: PlaceOption): string => `${suggestion.country}:${suggestion.postalCode}`;
+
+  /**
+   * Posta kodu seçildi. Şehir de buradan gelir: kod tek yerleşimliyse doğrudan yazılır, çok
+   * yerleşimliyse alan BOŞALIR ve altında liste açılır — kodların ~%39'u çok yerleşimli ve birini
+   * seçmek "Bischheim'lı müşteriye Strasbourg yazmak" olurdu (19.17'nin kayıtlı dersi).
+   *
+   * Yerleşim adı HİÇ yoksa (kod yalnız kendi bölge tablomuzda var — 19.16a) alan elle yazmaya
+   * kalır: uydurulacak bir ad yok.
+   */
+  const applyZip = (id: string): void => {
+    const picked = zipSuggestions.find((suggestion) => zipKey(suggestion) === id);
+    if (picked === undefined) return;
+    setZipOpen(false);
+    setPlace(picked);
+    setCountry(picked.country);
+    setCityOpen(picked.places.length > 1);
+    editDraft({ postalCode: picked.postalCode, city: picked.places.length === 1 ? (picked.places[0] ?? '') : '' });
+  };
+
+  const applyCity = (name: string): void => {
+    setCityOpen(false);
+    editDraft({ city: name });
   };
 
   const save = (): void => {
@@ -109,8 +172,17 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
       return;
     }
     /* `line2` gövdede BİLEREK yok: form göstermiyor; gönderilmeyen alana kapı dokunmaz
-       (application patch kuralı) — web'den girilmiş kat/daire satırı burada kaybolmaz. */
-    const body: AddressWrite = { label: draft.label.trim() || null, line1, postalCode: draft.postalCode, city };
+       (application patch kuralı) — web'den girilmiş kat/daire satırı burada kaybolmaz.
+
+       `country` yalnız BİLİNİYORSA gönderilir: gönderilmeyen alanı kapı kodun kendisinden çözer.
+       `null` iken boş bir değer göndermek, "bilinmiyor"u bir değere çevirmek olurdu. */
+    const body: AddressWrite = {
+      label: draft.label.trim() || null,
+      line1,
+      postalCode: draft.postalCode,
+      city,
+      ...(country === null ? {} : { country }),
+    };
     const knownIds = new Set(addresses.map((address) => address.id));
     setSaving(true);
     setError(null);
@@ -179,7 +251,16 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
         <View style={styles.zipField}>
           <TextField
             value={draft.postalCode}
-            onChangeText={(value) => editDraft({ postalCode: value.replace(/\D/g, '').slice(0, 5) })}
+            onChangeText={(value) => {
+              /* Kod ELLE değişti: önceki seçim artık bu kodun cevabı değil. Ülkeyi ve teslimat
+                 cümlesini düşürmek şart — kalsalardı müşteri kodu değiştirdikten sonra hâlâ eski
+                 yerin cevabını okur, üstelik o ülkeyle kaydederdi. */
+              setZipOpen(true);
+              setCityOpen(false);
+              setCountry(null);
+              setPlace(null);
+              editDraft({ postalCode: value.replace(/\D/g, '').slice(0, 5) });
+            }}
             accessibilityLabel={t.zipLabel}
             placeholder={t.zipPlaceholder}
             content="postalCode"
@@ -197,6 +278,29 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
           />
         </View>
       </View>
+      {/* Kod önerileri — alanın ALTINDA, seçilince kodu ve (tek yerleşimliyse) şehri doldurur.
+          Künye satırı YOK: veri kendi referansımız (GeoNames, migration ile geliyor) ve kaynak
+          gösterimi orada yapılmış; BAN'ın Etalab yükümlülüğü buraya taşınmaz. */}
+      <SuggestionList
+        items={zipSuggestions.map((suggestion) => ({
+          id: zipKey(suggestion),
+          title: `${suggestion.postalCode} · ${suggestion.country}`,
+          // Ad yoksa (kod yalnız kendi tablomuzda) alt satır hiç çizilmez — uydurulacak ad yok.
+          subtitle: suggestion.places.length === 0 ? undefined : suggestion.places.join(', '),
+        }))}
+        onSelect={applyZip}
+        accessibilityLabel={t.zipSuggestLabel}
+        testID="address-zip-suggestions"
+      />
+      {/* Kodun yerleşimleri — yalnız ÇOK yerleşimli kodda ve yalnız kod seçildikten sonra. */}
+      {cityOpen && place !== null ? (
+        <SuggestionList
+          items={place.places.map((name) => ({ id: name, title: name }))}
+          onSelect={applyCity}
+          accessibilityLabel={t.citySuggestLabel}
+          testID="address-city-suggestions"
+        />
+      ) : null}
       <Text style={styles.zipNote}>{t.zipNote}</Text>
       {error === null ? null : <Note description={error} tone="terracotta" testID="address-error" />}
       <PrimaryButton label={saving ? t.saving : (saveLabel ?? t.save)} onPress={save} disabled={saving} testID="address-save" />

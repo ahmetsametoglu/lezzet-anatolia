@@ -4,10 +4,12 @@ import {
   DeliveryAreaListSchema,
   PlaceNoticeResultSchema,
   PlaceResolutionSchema,
+  PlaceOptionListSchema,
   type DeliveryAreaList,
   type PlaceNoticeBodySchema,
   type PlaceNoticeResult,
   type PlaceResolution,
+  type PlaceOption,
 } from '@lezzet/types';
 
 import { maybeAuthorizedFetch } from '../auth/authorized-fetch';
@@ -25,10 +27,24 @@ import { apiFetch, type ApiResult } from './client';
 /* `PlaceNoticeResult` BİLEREK yeniden ihraç EDİLMEZ: adını yazan bir çağıran yok (bant
    `submitPlaceNotice`in sonucunu doğrudan okuyor) ve kullanılmayan bir dışa verim `knip`in ölü
    listesine düşer — `place-view.ts`teki `PlaceMode` kararının aynısı. */
-export type { PlaceResolution };
+export type { PlaceResolution, PlaceOption };
 
 export function resolvePostalCode(code: string): Promise<ApiResult<PlaceResolution>> {
   return apiFetch(`/api/v1/places/by-postal-code?code=${encodeURIComponent(code)}`, PlaceResolutionSchema);
+}
+
+/**
+ * POSTA KODU ÖNERİLERİ — `GET /api/v1/places/suggest?prefix=672` (21.28).
+ *
+ * Çözüm ucuyla aynı gerekçeyle ÇIPLAK `apiFetch`: adres formu doğrulama sonrası profil tamamlama
+ * akışında da açılıyor ve orada henüz oturum yok.
+ *
+ * **Boş dizi geçerli bir cevaptır** (önek hiçbir koda düşmedi) ve kısa önek de boş döner — 400
+ * DEĞİL: "6" geçersiz bir soru değil, henüz hiçbir yeri işaret etmeyen bir sorudur. Okuma düşerse
+ * zarfın kendisi hata döner; ikisi karışmaz.
+ */
+export function suggestPostalCodes(prefix: string): Promise<ApiResult<PlaceOption[]>> {
+  return apiFetch(`/api/v1/places/suggest?prefix=${encodeURIComponent(prefix)}`, PlaceOptionListSchema);
 }
 
 /**

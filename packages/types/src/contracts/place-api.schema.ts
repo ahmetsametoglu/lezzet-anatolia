@@ -40,6 +40,36 @@ export const PlaceOptionSchema = z.object({
 export type PlaceOption = z.infer<typeof PlaceOptionSchema>;
 
 /**
+ * POSTA KODU ÖNERİSİ — `GET /places/suggest?prefix=672` (21.28, kullanıcı kararı 10.08).
+ *
+ * ── NEDEN VAR: ELLE YAZILAN KOD ÜLKESİNİ SÖYLEMİYOR ──────────────────────────
+ * Adres formu posta kodunu ve şehri SERBEST METİN alıyordu, ülkeyi ise hiç sormuyordu — kayıt
+ * veritabanı varsayılanıyla `FR` oluyordu. Şema künyesinin (`0033_postal_code_place.sql`)
+ * yasakladığı şey tam da bu: *"Ülke bir ALAN değil, posta kodundan türeyen bir SONUÇtur… müşterinin
+ * doldurduğu bir alanın vergi sonucu doğurması kabul edilemez."*
+ *
+ * Ölçüldü (10.08, yerel): **610 kod iki ülkede birden geçerli** — `67240` hem Bischwiller (FR) hem
+ * Bobenheim-Roxheim (DE). Elle yazılan kod hangisi olduğunu söylemez; LİSTEDEN seçilen satır
+ * `(country, postalCode)` ikilisini birlikte taşır ve belirsizlik doğmadan kapanır.
+ *
+ * ── ŞEKİL `PlaceOptionSchema`'NIN TA KENDİSİ ────────────────────────────────
+ * `ambiguous` seçicisi ile öneri listesi aynı satırı çiziyor ve aynı soruya cevap veriyor ("bu kod
+ * nerede, adı ne"). İkinci bir şekil yazmak, bir gün birine alan eklenip ötekine eklenmemesi
+ * demekti (CLAUDE §1) — ayrı bir tip DEĞİL, aynı tipin listesi.
+ *
+ * ── TESLİMAT DURUMU BİLEREK YOK (kullanıcı kararı 10.08) ────────────────────
+ * Bir ara satırda "bu adrese teslim edebiliyor muyuz" bayrağı vardı (`serviced`, depo tablosundan
+ * türetiliyordu) ve GERİ ALINDI: adres defterinin hizmet alanımızla ilgisi yok. Müşteri adresini
+ * dilediği yere girer; oraya gidip gidemediğimiz SİPARİŞ anının sorusudur ve cevabı sepette,
+ * checkout'ta zaten veriliyor. Depo verisinin adres formuna sızması, `KEHL` deposunun aktifliğinin
+ * müşterinin adres kaydını etkilemesi demekti.
+ *
+ * **Boş dizi geçerli bir cevaptır** (önek hiçbir koda düşmedi); okuma düşseydi zarfın kendisi hata
+ * dönerdi — ikisi karışmaz. Sıra sunucunun kararı (rota adayı önce), ekran korur.
+ */
+export const PlaceOptionListSchema = z.array(PlaceOptionSchema);
+
+/**
  * `GET /places/by-postal-code?code=67000` cevabı.
  *
  * `resolved.place.inRoute` onboarding'in ana sorusudur: `true` = rota içi (araçla teslim, soğuk

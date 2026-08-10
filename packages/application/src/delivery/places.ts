@@ -1,5 +1,7 @@
 import { PostalCodePlaceService, type Db } from '@lezzet/database';
-import type { Country } from '@lezzet/types';
+import { placeLabel } from '@lezzet/domain-core';
+import { normalizePostalCode } from '@lezzet/helper';
+import type { Country, PlaceOption } from '@lezzet/types';
 
 /**
  * Posta kodunun yerleşimleri — sunucu kapısı (19.17).
@@ -20,4 +22,32 @@ import type { Country } from '@lezzet/types';
  */
 export async function placesForPostalCode(db: Db, country: Country, postalCode: string): Promise<string[]> {
   return new PostalCodePlaceService(db).findPlaces(country, postalCode);
+}
+
+/**
+ * POSTA KODU ÖNERİLERİ — adres formunun kod alanı için (21.28).
+ *
+ * ── NEDEN BU KAPI, NEDEN UÇTA DEĞİL ──────────────────────────────────────────
+ * Servisin `searchPrefix`i öneriyi zaten getiriyor (önek indeksi, rota adayı önce — künyesi orada);
+ * burada yapılan tek şey sözleşme şekline indirgemek. Uçta yapılsaydı aynı indirgeme iki yüzeyde
+ * (mobil uç + web eylemi) ayrı ayrı yazılırdı (CLAUDE §1). Web bugün önerileri kendi server
+ * action'ından ham okuyor; benimsemesi web şeridinin işi.
+ *
+ * ── DEPO TABLOSUNA BAKILMAZ (kullanıcı kararı 10.08) ─────────────────────────
+ * İlk yazımda satır bir de `serviced` taşıyordu — "bu ülkeye fiilen gönderebiliyor muyuz",
+ * `findShippingWarehouse` ile. GERİ ALINDI: adres defterinin hizmet alanımızla ilgisi yok. Müşteri
+ * adresini dilediği yere girer; oraya gidip gidemediğimiz sipariş anının sorusudur. Depo okuması
+ * buradan düştüğü için kapı da tek sorguya indi.
+ */
+export async function suggestPlaces(db: Db, prefix: string): Promise<PlaceOption[]> {
+  const rows = await new PostalCodePlaceService(db).searchPrefix(normalizePostalCode(prefix));
+  return rows.map((row) => ({
+    country: row.country,
+    postalCode: row.postalCode,
+    // Ad TÜREVDİR, alan değil (`placeLabel`: tek yerleşimse adı, çoksa `null`) — kuralı burada
+    // ikinci kez yazmak 19.8'in yanlış ad üretmesinin sebebiydi.
+    placeName: placeLabel(row.places),
+    places: [...row.places],
+    inRoute: row.inRoute,
+  }));
 }

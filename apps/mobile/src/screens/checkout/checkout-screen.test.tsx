@@ -58,6 +58,7 @@ const ADDRESS = {
   line2: null,
   postalCode: '75011',
   city: 'Paris',
+  country: 'FR' as const,
   isDefault: true,
 };
 

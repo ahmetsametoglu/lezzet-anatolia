@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { listPublicDeliveryAreas, recordZoneNotice, resolvePlaceForPostalCode } from '@lezzet/application';
+import { listPublicDeliveryAreas, recordZoneNotice, resolvePlaceForPostalCode, suggestPlaces } from '@lezzet/application';
 import { placeLabel, type PostalCodeResolution } from '@lezzet/domain-core';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
 import {
@@ -9,6 +9,7 @@ import {
   PlaceNoticeBodySchema,
   PlaceNoticeResultSchema,
   PlaceResolutionSchema,
+  PlaceOptionListSchema,
 } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
@@ -91,6 +92,29 @@ places.get('/places/by-postal-code', async (c) => {
   const resolution = await resolvePlaceForPostalCode(serviceDb(), code);
   // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): şekil derlemede, fazla alan çalışma zamanında yakalanır.
   return ok(c, PlaceResolutionSchema.parse(toContract(code, resolution)));
+});
+
+/**
+ * `GET /places/suggest?prefix=672` — adres formunun kod alanı yazarken gösterdiği aday listesi (21.28).
+ *
+ * ── ÇÖZÜM UCUNUN BİR KİPİ DEĞİL, AYRI BİR KAPI (web emsali) ─────────────────
+ * Web'in aynı ayrımı `lib/delivery/actions.ts` künyesinde yazılı: **öneri bir OKUMA, onay bir
+ * NİYET.** Orada gerekçe sayaçtı (her tuşlanan kod "bölge dışı talep"e düşerdi); burada sayaç
+ * zaten bu yüzeyde yok (`/places/by-postal-code` sayaca dokunmuyor — kardeş ucun künyesi), ama
+ * ayrım yine doğru: bu uç LİSTE döner, öteki KARAR. Tek uca sıkıştırılsalardı cevap şekli
+ * sorgunun kipine göre değişirdi.
+ *
+ * Ziyaretçiye açık, kardeşleriyle aynı gerekçe: adres formu doğrulama sonrası profil tamamlama
+ * akışında da açılıyor ve orada henüz kimlik yok.
+ *
+ * Kısa önekte BOŞ liste, 400 değil: "6" geçersiz bir soru değil, henüz hiçbir yeri işaret etmeyen
+ * bir sorudur (kapı da aynı eşiği uyguluyor — `searchPrefix` künyesi). `by-postal-code`un
+ * `invalid_code` reddiyle karıştırılmamalı: orada TAM bir kod bekleniyor.
+ */
+places.get('/places/suggest', async (c) => {
+  const rows = await suggestPlaces(serviceDb(), c.req.query('prefix') ?? '');
+  // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): boş dizi geçerli bir cevaptır.
+  return ok(c, PlaceOptionListSchema.parse(rows));
 });
 
 /**

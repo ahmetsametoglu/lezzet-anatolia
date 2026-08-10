@@ -2,6 +2,8 @@ import { AddressService } from '@lezzet/database';
 import type { Address, AddressInsert } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { resolveAddressCountry } from '../delivery/place';
+
 /*
   MÜŞTERİ ADRES KAPISI — web hesap sayfasının `lib/account/addresses.ts` kurallarının paket hâli
   (21.15): ölçüt karşılandı — aynı kuralları iki yüzey istiyor (web hesap formu + mobil `shAddr`
@@ -76,10 +78,16 @@ export async function addCustomerAddress(
   const clean = normalized(write);
   if (!clean) return { status: 'invalid_address' };
 
+  /* ÜLKE KODDAN TÜRER (21.28), ama kaydı ENGELLEMEZ: çözülemezse alan hiç yazılmaz ve kolon kendi
+     varsayılanına düşer. Adres defteri hizmet alanımızı bilmez — müşteri adresini dilediği yere
+     girer (kullanıcı kararı 10.08). */
+  const country = await resolveAddressCountry(db, { postalCode: clean.postalCode ?? write.postalCode, country: write.country });
+
   const service = new AddressService(db);
   // Spread sırası bilinçli: `write` tam gövdenin TİPİNİ kurar, `clean` aynı alanların temizlenmiş
-  // DEĞERLERİNİ üstüne yazar — `as` cast'ine gerek kalmaz.
-  await service.addForCustomer({ ...write, ...clean, customerId });
+  // DEĞERLERİNİ üstüne yazar — `as` cast'ine gerek kalmaz. Ülke EN SONA yazılır: kapının doğruladığı
+  // değer kazanmalı, istemcinin gönderdiği ham alan değil.
+  await service.addForCustomer({ ...write, ...clean, ...(country === null ? {} : { country }), customerId });
   return { status: 'ok', addresses: await listCustomerAddresses(db, customerId) };
 }
 
@@ -88,15 +96,44 @@ export async function updateCustomerAddress(
   input: { customerId: string; addressId: string; patch: Partial<CustomerAddressWrite> },
 ): Promise<CustomerAddressOutcome> {
   const service = new AddressService(db);
-  if (!(await ownedAddress(service, input.customerId, input.addressId))) return { status: 'not_found' };
+  const current = await ownedAddress(service, input.customerId, input.addressId);
+  if (!current) return { status: 'not_found' };
 
   const clean = normalized(input.patch);
   if (!clean) return { status: 'invalid_address' };
 
   // Alanlar TEK TEK aktarılır, `patch` spread edilmez: tipin dışladığı `isDefault` çalışma
   // zamanında da (tipsiz çağıran, JSON gövde) bu kapıdan sızamaz — web künyesindeki ders.
-  const { label, recipient, line1, line2, postalCode, city, phone, country } = clean;
-  await service.update({ id: input.addressId, label, recipient, line1, line2, postalCode, city, phone, country });
+  const { label, recipient, line1, line2, postalCode, city, phone } = clean;
+
+  /* ÜLKE KODUN PEŞİNDEN GİDER (21.28): kod değişmişse ülke de değişmiş olabilir ve eski satırın
+     ülkesini olduğu yerde bırakmak, adresi Almanya'ya taşıyıp Fransız KDV'siyle faturalamak
+     demekti. Kod verilmediyse MEVCUT kod üzerinden doğrulanır — `country` tek başına da
+     gönderilebiliyor ve o hâlde de bir beyan değil, doğrulanmış bir seçim olmalı.
+
+     Çözülemezse (`null`) alan GÜNCELLENMEZ: mevcut satırın ülkesi olduğu gibi kalır. Burada `null`
+     yazmak, bilinmeyeni bir değere çevirmek olurdu.
+
+     **Ne kod ne ülke değiştiyse SORULMAZ:** cevap zaten satırda duruyor (`current.country`) ve
+     referansa gitmek her etiket düzenlemesine bir gidiş-dönüş eklerdi. Sorgu ucuz (indeks taraması,
+     0,14 ms ölçüldü) ama gereksiz bir tur, ölçülen bir yavaşlamadan önce de gereksizdir. */
+  const codeChanged = postalCode !== undefined && postalCode !== current.postalCode;
+  const country =
+    codeChanged || clean.country !== undefined
+      ? await resolveAddressCountry(db, { postalCode: postalCode ?? current.postalCode, country: clean.country })
+      : null;
+
+  await service.update({
+    id: input.addressId,
+    label,
+    recipient,
+    line1,
+    line2,
+    postalCode,
+    city,
+    phone,
+    ...(country === null ? {} : { country }),
+  });
   return { status: 'ok', addresses: await listCustomerAddresses(db, input.customerId) };
 }
 
