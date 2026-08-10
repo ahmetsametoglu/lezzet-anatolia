@@ -31,6 +31,7 @@ import { NavRow } from '@/screens/customer-kit/nav-row';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
+import { AccountAddressesSkeleton, AccountPointsSkeleton } from './account-skeleton';
 import { accountData, type AccountData } from './account-fixture';
 import { usePoints } from './use-points.hook';
 import messages from './messages.json';
@@ -326,6 +327,11 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
             bakiye göstermektense göstermemek). Bakiye SIFIRSA kart boş kalmaz: kullanıcı kararı
             09.08 — "burası boş kalmasın, puan kazanacağı yere itelim". Eşik ve kupon değeri
             SUNUCUDAN gelir (`redeem.minimumPoints`/`valueCents`), ekran sayı uydurmaz. */}
+        {/* Cüzdan OKUNURKEN kartın yeri tutulur (kullanıcı isteği 10.08): bölüm eskiden yüklenirken
+            hiç çizilmiyor, veri gelince ekranın ortasına girip altındaki her şeyi aşağı itiyordu.
+            Okuma DÜŞERSE ya da B2B ise kart yine hiç çizilmez — orada bekleyen bir şey yok. */}
+        {pointsWallet.status === 'loading' ? <AccountPointsSkeleton testID="account-points-loading" /> : null}
+
         {wallet === null ? null : (
           <View style={styles.pointsCard} testID="account-points">
             <View style={styles.pointsHead}>
@@ -454,6 +460,10 @@ export function AccountScreen({ data = accountData(), signedIn = true }: Account
             satırlar kesikli çizgiyle ayrılır. Adres kartının kendi zemini kalktı; kart zaten yüzey. */}
         <View style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t.addresses.title}</Text>
+          {/* Liste OKUNURKEN satırların yeri tutulur (kullanıcı isteği 10.08). Eskiden liste boş
+              dizi olarak başlıyordu ve ekran "hiç adresin yok" ile "adresler yükleniyor"u aynı
+              gösteriyordu — ölçülemeyen değeri sıfır saymanın ta kendisi (CLAUDE §1). */}
+          {addressBook.status === 'loading' ? <AccountAddressesSkeleton testID="account-addresses-loading" /> : null}
           {addressBook.addresses.map((address, index) => (
             <View key={address.id} style={index > 0 ? styles.settingsDivider : undefined}>
               <AddressCard

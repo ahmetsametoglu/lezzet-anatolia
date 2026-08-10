@@ -620,9 +620,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
       `order-picker` (52) · `order-line-picker` (46) — hepsi gömülü, ham, a11y'siz;
     · `BEKLEYEN(21.14)` skeleton olması gerekirken dönen halka: `checkout-screen` (ödeme özetinin
       tamamı sunucudan) ve `discover-screen` (tam ekran halka, arkasından kart destesi);
-    · `BEKLEYEN(21.14)` `account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK — liste boş dizi
-      olarak başlıyor, yani "hiç adresin yok" ile "adresler yükleniyor" ayırt edilemiyor. Taramanın
-      bulduğu tek sessizce YANLIŞ şey söyleyen yer budur.
+    · ~~`account-screen` adres defterinin YÜKLEME HÂLİ HİÇ YOK~~ → **KAPANDI 10.08** (aşağıdaki
+      durum notu).
     **Ek durum (10.08 — SİPARİŞ ŞERİDİ KAPANDI):** `order-detail-skeleton.tsx` ve
     `orders-skeleton.tsx` yazıldı; envanterin en ağır kalemi buydu (detayda dört ölçünün dördü de
     hamdı ve sayfanın hiçbir bölümü tanınmıyordu — `140`lık blok neyi temsil ettiği belli olmayan
@@ -638,6 +637,24 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     durağında yalnız AD çubuğu var (saat yalnız kaydı olan adımda yazılıyor — saati de çizseydik
     veri gelince satır KISALIR ve aşağısı yukarı kayardı) ve kalem sayısı 3.
     Doğrulama: mobil paket 77 suite / 541 test yeşil · tsc/eslint/knip temiz.
+
+    **Ek durum (10.08 — HESABIM: ağdan bekleyen iki bölüm, kullanıcı isteği):** hesap ekranı tek
+    parça yüklenmiyor — kimlik kartı rota `/me`yi çözdükten sonra çiziliyor (yani açılışta zaten
+    dolu), ama PUAN CÜZDANI (`/me/points`) ve ADRES DEFTERİ (`/me/addresses`) kendi çağrılarını
+    bekliyor ve ikisi de yüklenirken HİÇ çizilmiyordu: veri gelince ekranın ortasına girip
+    altındaki her şeyi aşağı itiyorlardı. Adres defterinde ayrıca yanlış bir cümle vardı — liste
+    boş dizi olarak başladığı için "yükleniyor" ile "hiç adresin yok" ayırt edilemiyordu (taramanın
+    bulduğu tek sessizce yanlış konuşan yer). `account-skeleton.tsx` iki AYRI bileşen veriyor
+    (`AccountPointsSkeleton` · `AccountAddressesSkeleton`): bölümler ayrı çağrılara bağlı ve ayrı
+    anlarda doluyor; tek bir tam ekran skeleton'ı hazır olan kimlik kartını ve menüyü de
+    gizlerdi — eldeki bilgiyi saklamak beklemeyi uzatmaktan kötüdür. Puan kartında düğme ve
+    "kazanma yolları" listesi çizilmez (hangisinin geleceği bakiyeye bağlı, ikisi çok farklı
+    yükseklikte); adreste satır sayısı 2 (en az makul). Her bileşen kendi `progressbar`ını taşır —
+    ekranda aynı anda iki bekleme olabilir. Doğrulama: 77 suite / 541 test yeşil · tsc/eslint/knip
+    temiz.
+    · `BEKLEYEN(21.14)` Kalan tek nokta hesapta: rota `/me` okunurken sekme TAMAMEN BOŞ
+      (`return null`) — künyesinde bilinçli ("misafir daveti yanıp sönmesin"), ama okuma uzarsa
+      kullanıcı boş ekran görüyor. Kimlik kartının skeleton'ı ayrı bir karar, kullanıcıya soruldu.
 
     Halkanın DOĞRU olduğu yerler (kusur değil, kayda geçti): `cart` (ekran zaten dolu, yalnız fiyat
     çözümü bekleniyor) · `delivery-zones` (künyesinde bilinçli) · `login`/`profile-setup`/
