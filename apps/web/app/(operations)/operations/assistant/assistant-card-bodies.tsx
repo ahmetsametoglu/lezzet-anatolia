@@ -3,17 +3,25 @@
 import type { ReactNode } from 'react';
 import { toCents } from '@lezzet/helper';
 import {
+  DECLARATION_GAP_LABELS,
   PROPOSAL_PAYLOAD_SCHEMAS,
+  resolveLocalizedText,
   type AssistantProposalKind,
+  type DeclarationGap,
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type MoneyMovementPayload,
+  type ProductCreatePayload,
+  type ProductDraftPayload,
+  type PurchaseOrderPayload,
+  type StockIntakePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
 import { MEDIA_H, SubjectCard } from '@/components/operation/ui/subject-card';
 import { CardFact } from './assistant-card';
+import { DECLARATION_FIELD_LABEL, draftFieldSummary } from './assistant-labels';
 import type { AssistantRowView } from './assistant-types';
 
 /**
@@ -64,6 +72,14 @@ export function cardBodyOf(row: AssistantRowView): ReactNode {
       return renderWith<BundleDraftPayload>(row, 'bundle_draft', (p) => <BundleCard payload={p} row={row} />);
     case 'money_movement':
       return renderWith<MoneyMovementPayload>(row, 'money_movement', (p) => <MoneyCard payload={p} />);
+    case 'purchase_order':
+      return renderWith<PurchaseOrderPayload>(row, 'purchase_order', (p) => <PurchaseOrderCard payload={p} row={row} />);
+    case 'stock_intake':
+      return renderWith<StockIntakePayload>(row, 'stock_intake', (p) => <StockIntakeCard payload={p} row={row} />);
+    case 'product_draft':
+      return renderWith<ProductDraftPayload>(row, 'product_draft', (p) => <ProductDraftCard payload={p} row={row} />);
+    case 'product_create':
+      return renderWith<ProductCreatePayload>(row, 'product_create', (p) => <ProductCreateCard payload={p} />);
     default:
       // Kalan yedi tip asistanın CÜMLESİYLE duruyor ve bu yeterli bir hâl, eksik bir hâl değil —
       // özet zaten tam bir cümle. Kendi dilleri tip tip kurulacak (fırsat ve paket kuruldu); desen
@@ -126,6 +142,7 @@ function PriceBlock({
   wasLabel,
   percentOff,
   tone,
+  note,
 }: {
   cents: number;
   /** Karşılaştırma tabanı — yoksa üst satır hiç çizilmez (uydurma bir "yerine" yazılmaz). */
@@ -134,6 +151,11 @@ function PriceBlock({
   wasLabel: string;
   percentOff: number | null;
   tone: string;
+  /**
+   * Tabanı OLMAYAN tutarın üst satırı — tedarikte "tahmini tutar" gibi. Sayının NE olduğunu söyleyen
+   * tek kelime; onsuz büyük bir rakam "kesin fiyat" diye okunur.
+   */
+  note?: string;
 }) {
   return (
     <span className="flex flex-col gap-0.5 pt-0.5">
@@ -142,6 +164,8 @@ function PriceBlock({
           <span>{wasLabel}</span>
           <span className="font-ops-mono line-through">{money(wasCents)}</span>
         </span>
+      ) : note ? (
+        <span className="font-ops-body text-ops-xs text-ops-muted">{note}</span>
       ) : null}
       <span className="flex items-baseline gap-2">
         <span className="font-ops-mono text-ops-section font-semibold leading-none text-ops-ink">{money(cents)}</span>
@@ -362,6 +386,243 @@ function BundleCard({ payload, row }: { payload: BundleDraftPayload; row: Assist
           />
         )}
         <CardFact label="İçerik" value={`${payload.items.length} kalem · ${num(payload.items.reduce((s, i) => s + i.qty, 0))} ad.`} />
+      </Facts>
+    </>
+  );
+}
+
+/** Kalemlerin toplam adedi — künyedeki "N kalem · M ad." ikilisinin ikinci yarısı. */
+function totalQty(lines: { qty: number }[]): number {
+  return lines.reduce((sum, l) => sum + l.qty, 0);
+}
+
+/**
+ * TEDARİK SİPARİŞİ — kararın konusu "ne kadar mal, kimden, hangi depoya, kaça".
+ *
+ * ── TAHMİNİ TUTAR: ÖNCE YOKTU, ÖLÇÜNCE ÇIKTI ────────────────────────────────
+ * İlk tur kartta tutar yoktu ve gerekçesi şuydu: "alış fiyatı siparişte değil mal kabulde
+ * kesinleşir, uydurma sayı onaylatmayalım." Kullanıcının sorusu doğru soruydu (*"bu ürünlerin
+ * yaklaşık kaç lira ettiğini biliyor muyuz?"*) ve ölçüm gerekçeyi çürüttü:
+ * `supplier_product.last_purchase_price` 23/23 dolu — **biliyoruz**. Bilinen bir sayıyı saklamak,
+ * kasadan ne çıkacağını görmeden sipariş onaylatmak demekti.
+ *
+ * Tutar TAHMİN olarak sunuluyor (`~`) ve **bir kalemin bile fiyatı eksikse hiç yazılmıyor**: eksik
+ * tabanla bulunan toplam, gerçeğinden daima azdır ve az görünen bir tutar onayı kolaylaştırır
+ * (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+ *
+ * **Adetleri MOTOR hesapladı, model değil** (`ReorderService`): kart adedi tartışmaya açmıyor,
+ * yalnız gösteriyor. Düzenleme diyaloğun işi.
+ */
+function PurchaseOrderCard({ payload, row }: { payload: PurchaseOrderPayload; row: AssistantRowView }) {
+  const eco = row.economics?.kind === 'supply' ? row.economics : null;
+  // Fiyat önce BUGÜNKÜ kayıttan, sonra dilekçeden: sipariş kuyrukta beklerken alış değişmiş
+  // olabilir ve onay anında geçerli olan bugünküdür (`batch_offer`daki liste fiyatıyla aynı sıra).
+  const unitOf = (line: PurchaseOrderPayload['lines'][number]) =>
+    eco?.unitCostByVariant[line.variantId] ?? line.lastPurchasePriceCents;
+  const unknownPrice = payload.lines.filter((l) => unitOf(l) == null).length;
+  const estimateCents = unknownPrice > 0 ? null : payload.lines.reduce((sum, l) => sum + (unitOf(l) ?? 0) * l.qty, 0);
+
+  return (
+    <>
+      {row.subject ? <SubjectBox subject={row.subject} /> : <SummaryLine summary={row.summary} />}
+
+      {estimateCents !== null ? (
+        <PriceBlock cents={estimateCents} wasCents={null} wasLabel="" percentOff={null} tone="" note="tahmini tutar" />
+      ) : null}
+
+      {/* ── KÜNYE SATIRLARI AYRI (kullanıcı düzeltmesi 10.08) ─────────────────
+          Bir tur depo/kalem/adet tek satıra sıkıştırılmıştı (`STR · 14 kalem · 411 ad.`) ve dar
+          sütunda üç değer birbirine giriyordu — üstelik kartın altında boş alan varken. Sıkıştırma
+          "kart en fazla üç künye satırı" kuralından geliyordu; kural yerinde ama burada yanlış
+          uygulanmıştı: sınırın amacı kartı kısa tutmak değil, OKUNUR tutmak. */}
+      <Facts>
+        {estimateCents === null ? (
+          <CardFact label="Tahmini tutar" value={`${num(unknownPrice)} kalemde fiyat yok`} />
+        ) : null}
+        <CardFact label="Depo" value={eco?.warehouseCode ?? payload.warehouseCode ?? '—'} />
+        <CardFact label="Kalem" value={`${num(payload.lines.length)} çeşit`} />
+        <CardFact label="Toplam" value={`${num(totalQty(payload.lines))} ad.`} />
+      </Facts>
+    </>
+  );
+}
+
+/**
+ * MAL KABUL — siparişten farkı: burada mal ELDE ve sayılar kesin.
+ *
+ * ── TOPLAM MALİYET HESAPLANIYOR ─────────────────────────────────────────────
+ * `Σ qty × unitCostCents`. Fırsat kartındaki indirim yüzdesiyle aynı bilinçli istisna: iş kuralı
+ * değil, dilekçede yan yana duran iki sayının çarpımı. **Bir kalemin bile alış fiyatı yoksa toplam
+ * YAZILMAZ** — eksik tabanla bulunan bir tutar, kasadan çıkacak parayı olduğundan az gösterir
+ * (`CLAUDE §1`: ölçülemeyen değer sıfır değildir). O hâlde kaç kalemin fiyatsız olduğu söylenir.
+ *
+ * ── EN YAKIN SKT KARARIN KENDİSİ ────────────────────────────────────────────
+ * Girişi yapılan partinin ömrü, malın satılabilirliğidir: üç ay sonra dolacak 40 adet ile bir yıl
+ * sonrası aynı karar değildir. Kalem başına tarih göstermek karta sığmaz; **en yakını** göstermek
+ * riski söyler, çünkü ilk dolan parti ilk sorunu çıkarır.
+ */
+function StockIntakeCard({ payload, row }: { payload: StockIntakePayload; row: AssistantRowView }) {
+  const unknownCost = payload.lines.filter((l) => l.unitCostCents === null).length;
+  const costCents = unknownCost > 0 ? null : payload.lines.reduce((sum, l) => sum + (l.unitCostCents ?? 0) * l.qty, 0);
+  // Tarihler dizge olarak ISO (YYYY-MM-DD) — sıralama için ayrıştırmaya gerek yok.
+  const soonest = payload.lines.map((l) => l.expiryDate).sort()[0];
+
+  return (
+    <>
+      {row.subject ? <SubjectBox subject={row.subject} /> : <SummaryLine summary={row.summary} />}
+
+      {costCents !== null ? (
+        <PriceBlock cents={costCents} wasCents={null} wasLabel="" percentOff={null} tone="" note="alış toplamı" />
+      ) : null}
+
+      {/* Künye satırları AYRI — tedarik siparişiyle aynı gerekçe (kullanıcı düzeltmesi 10.08):
+          dar sütunda birleştirilen değerler birbirine giriyor, oysa kartın altında yer var. */}
+      <Facts>
+        {costCents === null ? <CardFact label="Alış" value={`${num(unknownCost)} kalemde fiyat yok`} /> : null}
+        <CardFact label="En yakın SKT" value={soonest ? shortDate(soonest) : '—'} />
+        <CardFact label="Belge" value={payload.documentNo ?? '—'} />
+        <CardFact label="Parti" value={`${num(payload.lines.length)} çeşit · ${num(totalQty(payload.lines))} ad.`} />
+      </Facts>
+    </>
+  );
+}
+
+/**
+ * MODELİN NET OKUYAMADIĞI ALANLAR — ambalaj fotoğrafı bulanık, kesik ya da yansımalıydı.
+ *
+ * **Boşken satır ÇİZİLMEZ ve bu, "boş alan da gösterilir" kuralıyla çelişmez** (22.10): o kural
+ * asistanın doldurmadığı KARAR alanları içindi ("asgari sepete hiç girmemiş, haberi var mıydı?"),
+ * burada ise eksik bir veri değil, olmayan bir SORUN var. Boş dizi "hepsini net okudum" demektir ve
+ * her karta "belirsiz: yok" satırı koymak, asıl doluyken göze çarpması gereken uyarıyı sıradanlaştırır.
+ *
+ * Dolduğunda amber: patronun gözünü tek tek bütün alanları okumaya değil, şüpheli olana yönlendiriyor
+ * — ürünü zaten tanıyor, ona "şuraya bak" demek yeter (`ProductReviewSignalsSchema` künyesi).
+ */
+function UncertainFact({ fields }: { fields: string[] }) {
+  if (fields.length === 0) return null;
+  return (
+    <CardFact
+      label="Belirsiz okuma"
+      value={fields.map((f) => DECLARATION_FIELD_LABEL[f] ?? f).join(' · ')}
+      tone="text-ops-amber"
+    />
+  );
+}
+
+/**
+ * ONAY SONRASI HÂLÂ EKSİK KALACAK BEYANLAR. Ölçüt motordan (`missingDeclarations`), adlar tek
+ * kaynaktan (`DECLARATION_GAP_LABELS`) — ürün önizlemesi de aynı eksiği aynı kelimeyle yazıyor.
+ *
+ * `showEmpty` YENİ ürün içindir: orada "eksik beyan yok" gerçek bir cevaptır (kayıt tam doğacak).
+ * Tamamlama önerisinde ise satır yalnız doluyken çiziliyor — zaten eksikleri kapatmak için açılmış
+ * bir öneride "eksik yok" demek, kartın söylediği işi tekrar etmekten başka şey değil.
+ */
+function GapFact({ gaps, showEmpty = false }: { gaps: DeclarationGap[]; showEmpty?: boolean }) {
+  if (gaps.length === 0 && !showEmpty) return null;
+  return (
+    <CardFact
+      label="Eksik beyan"
+      value={gaps.length === 0 ? 'yok' : gaps.map((g) => DECLARATION_GAP_LABELS[g]).join(' · ')}
+      tone={gaps.length > 0 ? 'text-ops-amber' : undefined}
+    />
+  );
+}
+
+/**
+ * ÜRÜN TAMAMLAMA — kararın konusu ürün, ama asıl soru "NE KAYBEDİYORUM".
+ *
+ * ── ÜZERİNE YAZMA KARTIN EN ÖNEMLİ SAYISI ───────────────────────────────────
+ * `updateDetails` düz bir `update`tir ve sürüm tutmaz: dolu bir açıklama onaylandığı an kaybolur,
+ * geri getirilemez. Kart "3 kutu dolduruluyor" deyip geçseydi, patron geri alınamaz bir silmeyi
+ * "eksik tamamlama" sanarak onaylardı. O yüzden satır ayrı ve tonu uyarıyor.
+ *
+ * **`currentFields` hiç gelmediyse ne "0" ne de "var" denir** — "eski hâl okunamadı" ayrı bir
+ * cevaptır ve karta öyle yazılır (`CLAUDE §1`).
+ *
+ * ── GÖRSEL ÜRÜNÜN KENDİSİ ───────────────────────────────────────────────────
+ * Bu tipte ürün ZATEN VAR, yani fotoğrafı da var: kart onu gösteriyor (`SubjectBox`). Yeni ürün
+ * önerisinde (`product_create`) gösteremez, çünkü ortada henüz kayıt yoktur — iki kardeş tipin
+ * kartı bu yüzden aynı görünmüyor.
+ */
+function ProductDraftCard({ payload, row }: { payload: ProductDraftPayload; row: AssistantRowView }) {
+  const summary = draftFieldSummary(payload);
+
+  return (
+    <>
+      {row.subject ? <SubjectBox subject={row.subject} /> : <SummaryLine summary={row.summary} />}
+
+      <Facts>
+        <CardFact label="Doldurulan" value={summary.labels.length > 0 ? summary.labels.join(' · ') : '—'} />
+        <CardFact
+          label="Üzerine yazılan"
+          value={
+            summary.overwrites === null
+              ? 'eski hâl okunamadı'
+              : summary.overwrites === 0
+                ? 'yok — boş kutular'
+                : `${num(summary.overwrites)} dolu kutu`
+          }
+          tone={summary.overwrites ? 'text-ops-amber' : undefined}
+        />
+        <UncertainFact fields={payload.uncertainFields} />
+        <GapFact gaps={payload.remainingGaps} />
+      </Facts>
+    </>
+  );
+}
+
+/**
+ * YENİ ÜRÜN — görseli OLMAYAN ikinci tip, ama sebebi para hareketininkinden başka: ürün henüz
+ * DOĞMAMIŞTIR. Fotoğraf onaylandıktan sonra ürün ekranından yüklenir.
+ *
+ * ── BANDI ÜRÜNÜN KİMLİĞİ DOLDURUYOR ─────────────────────────────────────────
+ * Ad (TR) + kategori + boylar. Bir katalog kararında ilk sorulan üç şey bunlar; "kaç boyu var"
+ * özellikle önemli çünkü **varyantsız ürün satılamaz** (fiyat ve stok varyanta bağlı).
+ *
+ * ── EKSİK BEYAN GİZLENMİYOR ─────────────────────────────────────────────────
+ * `remainingGaps` yasal beyanın onaydan SONRA da eksik kalacak parçaları — adları tek kaynaktan
+ * (`DECLARATION_GAP_LABELS`), çünkü aynı eksiği ürün önizlemesi de yazıyor. Ürün eksik beyanla
+ * yaratılabilir (taslak olarak durur, vitrine çıkmaz); saklanması gereken bir kusur değil, onay
+ * sonrası yapılacak işin listesi.
+ */
+function ProductCreateCard({ payload }: { payload: ProductCreatePayload }) {
+  const name = resolveLocalizedText(payload.name, 'tr');
+  const description = payload.description ? resolveLocalizedText(payload.description, 'tr') : '';
+
+  return (
+    <>
+      <span
+        className={`flex ${MEDIA_H} flex-col justify-center gap-1.5 rounded-ops-card border border-ops-line bg-ops-white px-3.5`}
+      >
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
+          {payload.categoryName ?? 'kategorisiz'}
+        </span>
+        <span className="line-clamp-2 font-ops-display text-ops-lead font-semibold leading-snug text-ops-ink">{name}</span>
+        <span className="truncate font-ops-body text-ops-sm text-ops-muted">
+          {payload.variants.map((v) => resolveLocalizedText(v.label, 'tr')).join(' · ')}
+        </span>
+      </span>
+
+      {/* Asistanın yazdığı tanıtım metni — ürünün NE OLDUĞUNU söyleyen tek cümle ve onay anında
+          okunması gereken şeylerin başında geliyor: müşteri sayfasına aynen bu çıkacak. Bir tur
+          karta hiç konmamıştı (kullanıcı sorusu 11.08: *"başka eksik bir şey var mı?"*) — dilekçede
+          dolu duran bir metni göstermemek, onaylanan şeyi görünmez kılmaktı. */}
+      {description ? (
+        <span className="line-clamp-2 font-ops-body text-ops-base leading-snug text-ops-ink">{description}</span>
+      ) : null}
+
+      <Facts>
+        <UncertainFact fields={payload.uncertainFields} />
+        {/* Eksik beyan ÖNCE: onay sonrası iş yükünü söyleyen satır, KDV'den önce okunmalı. */}
+        <GapFact gaps={payload.remainingGaps} showEmpty />
+        <CardFact label="Boy" value={`${num(payload.variants.length)} çeşit`} />
+        {/* Tarih tipi ile raf ömrü tek satırda ve bu birleştirme bilinçli: ikisi TEK kuralın iki
+            yarısı — "DDM · 30 gün" bir partinin ne zaman düşeceğini söyler, ayrı ayrı hiçbir şey. */}
+        <CardFact
+          label="Tarih"
+          value={`${payload.dateType}${payload.shelfLifeDays ? ` · ${num(payload.shelfLifeDays)} gün` : ''}`}
+        />
+        <CardFact label="KDV" value={percent(payload.vatRate, 1)} />
       </Facts>
     </>
   );

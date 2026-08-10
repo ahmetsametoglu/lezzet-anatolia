@@ -1,5 +1,13 @@
 import 'server-only';
-import { PriceService, ProductService, ProductVariantService, StockService, serviceDb } from '@lezzet/database';
+import {
+  PriceService,
+  ProductService,
+  ProductVariantService,
+  StockService,
+  SupplierProductService,
+  WarehouseService,
+  serviceDb,
+} from '@lezzet/database';
 import { bundleEconomics as bundleEngine, markupPercent } from '@lezzet/domain-core';
 import { removeVat } from '@lezzet/helper';
 import type { AssistantProposal } from '@lezzet/types';
@@ -89,6 +97,32 @@ export type ProposalEconomics =
        * bir değer.
        */
       vatRate: number;
+    }
+  | {
+      /**
+       * TEDARİK SİPARİŞİ — dilekçenin taşımadığı iki şey BUGÜNKÜ kayıttan (22.11).
+       *
+       * ── NEDEN PAYLOAD YETMİYOR ────────────────────────────────────────────
+       * `warehouseCode` ve satır fiyatları dilekçeye 22.11'de eklendi; kuyrukta onlardan ÖNCE
+       * yazılmış öneriler var ve kart onlarda "—" ile "14 kalemde fiyat yok" gösteriyordu. Oysa
+       * ikisi de biliniyor: depo `warehouse` kaydında, fiyat `supplier_product`ta. Bilinen bir
+       * şeyi "bilinmiyor" diye göstermek, eksikliği önerinin kusuru gibi okutur.
+       *
+       * ── BUGÜNKÜ FİYAT ZATEN DAHA DOĞRU ────────────────────────────────────
+       * `batch_offer`daki ayrımın aynısı: payload önerinin dayandığı gerçeği taşır, buradaki değer
+       * BUGÜNKÜ. Sipariş üç gün kuyrukta beklediyse onay anında geçerli olan fiyat budur — kart
+       * ikisini de görüyor ve bugünküyü tercih ediyor.
+       */
+      kind: 'supply';
+      /** Deponun kodu (`STR` · `KEHL`); depo kaydı silinmişse `null`. */
+      warehouseCode: string | null;
+      /**
+       * Varyant → bu TEDARİKÇİDEN son alış (cent, KDV hariç). Eşlemesi olmayan varyant listede yok
+       * — sıfır yazmak, bedava mal ısmarlamak gibi okunurdu (`CLAUDE §1`).
+       *
+       * `Map` değil düz nesne: künye istemciye serileşerek gidiyor.
+       */
+      unitCostByVariant: Record<string, number>;
     };
 
 /**
@@ -102,7 +136,32 @@ export type ProposalEconomics =
 export async function economicsOf(proposal: AssistantProposal): Promise<ProposalEconomics | null> {
   if (proposal.kind === 'bundle_draft') return bundleEconomics(proposal.payload);
   if (proposal.kind === 'batch_offer') return offerEconomics(proposal.payload);
+  if (proposal.kind === 'purchase_order') return supplyEconomics(proposal.payload);
   return null;
+}
+
+/** Tedarik siparişinin bugünkü künyesi: deponun kodu + tedarikçinin son alış fiyatları. */
+async function supplyEconomics(raw: unknown): Promise<ProposalEconomics | null> {
+  const payload = raw as { warehouseId?: string; supplierId?: string | null; lines?: Array<{ variantId?: string }> };
+  const lines = Array.isArray(payload.lines) ? payload.lines : [];
+  if (lines.length === 0) return null;
+
+  const db = serviceDb();
+  const wanted = new Set(lines.flatMap((l) => (typeof l.variantId === 'string' ? [l.variantId] : [])));
+  const [warehouse, catalog] = await Promise.all([
+    payload.warehouseId ? new WarehouseService(db).getById(payload.warehouseId) : Promise.resolve(null),
+    // Tedarikçinin TÜM kataloğu tek sorguda; satır başına sorgu on dört kalemde on dört gidiş dönüş.
+    payload.supplierId ? new SupplierProductService(db).listBySupplier(payload.supplierId) : Promise.resolve([]),
+  ]);
+
+  const unitCostByVariant: Record<string, number> = {};
+  for (const item of catalog) {
+    if (item.lastPurchasePriceCents !== null && wanted.has(item.variantId)) {
+      unitCostByVariant[item.variantId] = item.lastPurchasePriceCents;
+    }
+  }
+
+  return { kind: 'supply', warehouseCode: warehouse?.code ?? null, unitCostByVariant };
 }
 
 async function bundleEconomics(raw: unknown): Promise<ProposalEconomics | null> {

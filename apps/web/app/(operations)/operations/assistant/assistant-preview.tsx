@@ -27,7 +27,7 @@ import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
-import { splitVariantName } from './assistant-labels';
+import { DECLARATION_FIELD_LABEL, splitVariantName } from './assistant-labels';
 
 /**
  * ÖNİZLEME — çizimin "tipe göre değişen tek bölüm"ü (`Operasyon - Asistan Kuyrugu.dc.html`).
@@ -798,16 +798,6 @@ interface DeclarationRow {
   /** Alan bugün DOLU ve üzerine yazılıyor — uyarı bu bayraktan çıkar. */
   overwrites: boolean;
 }
-
-const DECLARATION_FIELD_LABEL: Record<string, string> = {
-  name: 'Ad',
-  description: 'Açıklama',
-  ingredients: 'İçindekiler',
-  storageInstructions: 'Saklama',
-  nutrition: 'Besin künyesi',
-  allergens: 'Alerjenler',
-  traces: 'İzler',
-};
 
 /**
  * Beyan alanlarının ÇOK DİLLİ METİN olanlarını tabloya çevirir (ad · açıklama · içindekiler ·

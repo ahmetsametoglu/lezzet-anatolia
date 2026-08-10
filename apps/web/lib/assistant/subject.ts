@@ -70,7 +70,87 @@ export async function subjectOf(proposal: AssistantProposal): Promise<ProposalSu
   if (proposal.kind === 'bundle_draft') {
     return bundleSubject(proposal.payload as BundleDraftPayload);
   }
+  if (proposal.kind === 'purchase_order' || proposal.kind === 'stock_intake') {
+    return supplySubject(proposal.payload as SupplyPayload, proposal.kind);
+  }
+  if (proposal.kind === 'product_draft') {
+    const payload = proposal.payload as { productId?: string };
+    return typeof payload.productId === 'string' ? productSubject(payload.productId) : null;
+  }
   return null;
+}
+
+/**
+ * ÜRÜNÜN KENDİSİ — tamamlama önerisinin konusu (22.11).
+ *
+ * `variantSubject`ten ayrı, çünkü buradaki dilekçe VARYANT değil ÜRÜN taşıyor: tamamlanan alanlar
+ * (içindekiler, alerjen, açıklama) ürün düzeyindedir, boy düzeyinde değil. Aynı fonksiyonu iki
+ * anahtarla çağrılabilir yapmak, iki farklı kavramı tek imzada birleştirmek olurdu.
+ */
+async function productSubject(productId: string): Promise<ProposalSubject | null> {
+  const db = serviceDb();
+  const [product] = await new ProductService(db).listByIds([productId]);
+  if (!product) return null;
+
+  const name = resolveLocalizedText(product.name, 'tr');
+  return {
+    kind: 'product',
+    name,
+    detail: null,
+    imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
+    crop: cropOf(product),
+    images: [],
+    href: productsUrl({ tab: 'products', q: name, cat: 'all', status: 'all', incomplete: false, creating: false }),
+  };
+}
+
+/** Tedarik ikilisinin ortak şekli — ikisi de "hangi varyanttan kaç adet" taşıyor. */
+type SupplyPayload = { supplierName?: string | null; warehouseCode?: string | null; lines: { variantId: string }[] };
+
+/**
+ * TEDARİK KALEMLERİNİN GÖRSELLERİ (22.11).
+ *
+ * ── NEDEN GÖRSEL ────────────────────────────────────────────────────────────
+ * Kullanıcının sorusu yerindeydi: *"bu tedarik kartlarında neden resimler yok? Belli ki ürün
+ * tedarik ediyoruz."* Kalem listesinde ürünü adından önce fotoğrafı tanıtır.
+ *
+ * ── PAKETLE AYNI DESTE, ÇÜNKÜ AYNI SORU ─────────────────────────────────────
+ * Görseller bir tur satır satır diziliyordu (küçük künye + adet). Kullanıcı düzeltti: *"bizim diğer
+ * kartlardaki fotoğraf stilimiz bu değil."* Doğrusu bu — hem paket hem tedarik "bu öneride hangi
+ * ürünler var" sorusuna cevap veriyor ve iki ayrı dizilim, aynı sorunun iki farklı görünüşü olurdu.
+ * Kalem başına adet karta değil DİYALOĞA ait: kart "14 çeşit · 411 adet" der, hangi üründen kaç
+ * tane olduğu düzenleme ekranının işi.
+ *
+ * **Sıra DİLEKÇEDEN**, servisin döndürdüğü sıradan değil: deste ilk üç kalemi gösteriyor ve o "ilk
+ * üç" siparişin kendi sırasıdır — `listByIds` sırayı korumaz, koruduğunu varsaymak sessizce başka
+ * ürünleri gösterirdi.
+ */
+async function supplySubject(payload: SupplyPayload, kind: 'purchase_order' | 'stock_intake'): Promise<ProposalSubject | null> {
+  const db = serviceDb();
+  const variantIds = [...new Set(payload.lines.map((line) => line.variantId))];
+  if (variantIds.length === 0) return null;
+
+  const variants = await new ProductVariantService(db).listByIds(variantIds);
+  const byVariant = new Map(variants.map((v) => [v.id, v]));
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const byProduct = new Map(products.map((p) => [p.id, p]));
+
+  const images = variantIds.flatMap((variantId) => {
+    const product = byProduct.get(byVariant.get(variantId)?.productId ?? '');
+    const url = product ? publicImageUrl(product.imageKey, product.imageUpdatedAt) : null;
+    return url && product ? [{ url, crop: cropOf(product) }] : [];
+  });
+
+  return {
+    kind: 'product',
+    // Konu adı KİMDEN/NEREYE: siparişte tedarikçi, mal kabulde tedarikçi yoksa deponun kendisi.
+    name: payload.supplierName ?? (kind === 'purchase_order' ? 'Tedarik siparişi' : 'Doğrudan mal kabul'),
+    detail: payload.warehouseCode ?? null,
+    imageUrl: null,
+    crop: CROP_CENTER,
+    images,
+    href: null,
+  };
 }
 
 /**

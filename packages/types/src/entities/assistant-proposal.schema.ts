@@ -69,6 +69,18 @@ export const FeaturedFlagPayloadSchema = z.object({
 /** Tedarik siparişi taslağı — eşik-altı sinyalinden; hedef depo ZORUNLU (varsayılan depo yoktur). */
 export const PurchaseOrderPayloadSchema = z.object({
   warehouseId: z.string().uuid(),
+  /**
+   * Deponun KODU — kimlik onay ekranında okunmaz (22.11).
+   *
+   * **Depo bir boyut değil DEĞİŞMEZDİR** (`CLAUDE §1`): "hangi depoya mal isteniyor" tedarik
+   * siparişinin kararının kendisidir, yan bilgisi değil. Dilekçe yalnız `warehouseId` taşıyordu ve
+   * kart "STR mi KEHL mi" sorusunu cevaplayamıyordu — özet cümlesinde geçiyor olması yetmez, çünkü
+   * cümle serbest metindir ve bir gün başka türlü yazılır.
+   *
+   * `.default(null)` — alan sonradan açıldı; onsuz yazılmış dilekçeler `safeParse`ta düşmesin
+   * (`counterAccountName` ile aynı gerekçe).
+   */
+  warehouseCode: z.string().nullable().default(null),
   supplierId: z.string().uuid().nullable(),
   supplierName: z.string().nullable(),
   lines: z
@@ -77,6 +89,16 @@ export const PurchaseOrderPayloadSchema = z.object({
         variantId: z.string().uuid(),
         productName: z.string().min(1),
         qty: z.number().int().positive(),
+        /**
+         * Bu tedarikçiden SON alınan birim fiyat (cent) — siparişin tahmini tutarının tabanı (22.11).
+         *
+         * **Kesin fiyat değildir ve öyle sunulmaz:** alış siparişte değil MAL KABULDE kesinleşir
+         * (`stock_intake.unitCostCents`). Ama "yaklaşık ne kadara mal olacak" sorusu onaysız
+         * bırakılamaz — kasadan çıkacak parayı bilmeden verilen sipariş kararı, kararın kendisi
+         * değildir. Kaynak `supplier_product.last_purchase_price`; eşleme yoksa `null` ve kart
+         * toplamı hiç yazmaz (`CLAUDE §1` — eksik tabanla bulunan tutar, gerçeğinden azdır).
+         */
+        lastPurchasePriceCents: z.number().int().nonnegative().nullable().default(null),
       }),
     )
     .min(1),

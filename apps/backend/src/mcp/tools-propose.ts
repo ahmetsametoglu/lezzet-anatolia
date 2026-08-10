@@ -12,6 +12,7 @@ import {
   ReorderService,
   SettingsService,
   StockService,
+  SupplierProductService,
   SupplierService,
   WarehouseService,
   ZoneNoticeService,
@@ -276,14 +277,27 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
     ]),
   );
 
+  // Tedarikçinin kataloğu: "bu kalem bu tedarikçiden en son kaça alınmıştı". Sipariş tutarı buradan
+  // TAHMİN ediliyor — kesin fiyat mal kabulde doğuyor, ama patron kasadan ne çıkacağını görmeden
+  // sipariş onaylamamalı.
+  const catalog = group.supplierId ? await new SupplierProductService(db).listBySupplier(group.supplierId) : [];
+  const lastPriceByVariant = new Map(
+    catalog.filter((c) => c.lastPurchasePriceCents !== null).map((c) => [c.variantId, c.lastPurchasePriceCents]),
+  );
+
   const payload: PurchaseOrderPayload = {
     warehouseId: warehouse.id,
+    // Kod da yazılıyor: onay ekranı kimliği okuyamaz ve depo bu kararın DEĞİŞMEZİdir (`CLAUDE §1`).
+    warehouseCode: warehouse.code,
     supplierId: group.supplierId,
     supplierName: supplier?.name ?? null,
     lines: group.lines.map((line) => ({
       variantId: line.variantId,
       productName: nameByVariant.get(line.variantId) ?? line.variantId,
       qty: line.suggestedQty,
+      // Son alış fiyatı TEK sorguda (tedarikçinin kataloğu): satır başına sorgu, on dört kalemlik
+      // bir siparişte on dört gidiş dönüş demekti. Eşlemesi olmayan kalemde `null` — uydurulmuyor.
+      lastPurchasePriceCents: lastPriceByVariant.get(line.variantId) ?? null,
     })),
     ...(typeof args.note === 'string' && args.note.trim() ? { note: args.note.trim() } : {}),
   };

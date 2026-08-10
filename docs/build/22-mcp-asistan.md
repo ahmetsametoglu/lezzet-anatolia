@@ -647,9 +647,45 @@ satırında.
     - **Boş alan da GÖSTERİLİYOR** (kategori · karşı taraf · değer tarihi, yoksa "—"): 22.10'daki
       kararın aynısı. Defterde daha da ağır basıyor — kategorisiz bir gider ay sonunda hiçbir raporda
       görünmez, satırı gizlemek o eksiği verilmiş bir karar gibi gösterirdi.
+  - **Tedarik ikilisi (`purchase_order` · `stock_intake`) — kalemleri olan tiplerin dili.** İkisi de
+    paketle AYNI desteyi kullanıyor *(kullanıcı düzeltmesi 10.08: "bizim diğer kartlardaki fotoğraf
+    stilimiz bu değil")*: bir tur satır satır küçük künye + adet diziliyordu, ama "bu öneride hangi
+    ürünler var" sorusunun iki farklı görünüşü olmamalı. Kalem başına adet KARTA değil diyaloğa ait.
+    - **İki açık daha kapatıldı.** ① `purchase_order` dilekçesinde **depo kodu yoktu** (yalnız
+      `warehouseId`) — oysa hangi depoya mal isteneceği bu kararın DEĞİŞMEZİ (`CLAUDE §1`); özet
+      cümlesinde geçmesi yetmez, cümle serbest metindir. ② **Tutar hiç yoktu** ve gerekçem "alış mal
+      kabulde kesinleşir, uydurma sayı onaylatmayalım"dı; kullanıcı sordu (*"bu ürünlerin yaklaşık
+      kaç lira ettiğini biliyor muyuz?"*) ve ölçüm gerekçeyi çürüttü: `supplier_product
+      .last_purchase_price` **23/23 dolu**. Bilinen bir sayıyı saklamak, kasadan ne çıkacağını
+      görmeden sipariş onaylatmaktı. Tutar artık TAHMİN olarak (`~`) ve **bir kalemin bile fiyatı
+      eksikse hiç** yazılmıyor — eksik tabanlı toplam gerçeğinden daima azdır, az görünen tutar da
+      onayı kolaylaştırır.
+    - **Eski dilekçeler için okuma katmanı devrede** (`economics.supply`): iki alan da 22.11'de
+      eklendi, kuyrukta onlardan önce yazılmış öneriler var ve kart onlarda "—" ile "14 kalemde fiyat
+      yok" gösteriyordu. Depo `warehouse`, fiyat `supplier_product` kaydından okunuyor; bilinen bir
+      şeyi "bilinmiyor" diye göstermek eksikliği önerinin kusuru gibi okutur. Yan kazanç: sipariş
+      kuyrukta beklerken alış değişirse onay anında geçerli olan görünüyor (`batch_offer`daki liste
+      fiyatıyla aynı sıra — önce bugünkü, sonra dilekçe).
+  - **Ürün ikilisi (`product_draft` · `product_create`) — kardeşler ama kartları bilinçle farklı.**
+    - `product_draft`te ürün ZATEN VAR, yani fotoğrafı da var (`productSubject`). Asıl soru "ne
+      kazanıyorum" değil **"ne kaybediyorum"**: `updateDetails` düz bir `update` ve sürüm tutmuyor,
+      dolu bir açıklama onaylandığı an geri getirilemez. Kart bu yüzden **üzerine yazılan dolu kutu
+      sayısını** ayrı satırda ve amber tonda söylüyor; `currentFields` hiç gelmediyse "0" değil
+      "eski hâl okunamadı" yazıyor (`CLAUDE §1`).
+    - `product_create`te ürün henüz DOĞMAMIŞ, o yüzden görsel yok; bandı ürünün kimliği dolduruyor
+      (kategori · ad · boylar). Boy sayısı özellikle var: **varyantsız ürün satılamaz.**
+    - **Kullanıcı sorusu üzerine iki eksik kapandı** (11.08, *"başka eksik bir şey var mı?"*):
+      asistanın yazdığı **tanıtım metni** (müşteri sayfasına aynen o çıkacak — dilekçede dolu duran
+      bir metni göstermemek, onaylanan şeyi görünmez kılmaktı) ve **`uncertainFields`** (modelin
+      ambalajdan net okuyamadığı alanlar). İkincisi boşken satır çizilmiyor ve bu 22.10'daki "boş
+      alan da gösterilir" kuralıyla çelişmiyor: o kural asistanın doldurmadığı KARAR alanları
+      içindi, burada eksik bir veri değil olmayan bir SORUN var — her karta "belirsiz: yok" yazmak,
+      asıl doluyken göze çarpması gereken uyarıyı sıradanlaştırırdı.
+    - Beyan alanı adları sözlüğü `assistant-preview`ten `assistant-labels`a taşındı: kart da aynı
+      adları yazıyor ve iki yerde tutulsalardı aynı alan bir ekranda "Saklama", ötekinde "Saklama
+      koşulları" olurdu.
   - *Doğrulandı:* `typecheck` (web + backend) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346 ·
     `mcp.test.ts` + `proposal.test.ts` 26/26.
-  - **BEKLEYEN(22.11):** altı tipin kart gövdesi (`product_draft` · `product_create` · `purchase_order` ·
-    `stock_intake` · `recipe_draft` · `featured_flag`) asistanın cümlesiyle duruyor;
+  - **BEKLEYEN(22.11):** iki tipin kart gövdesi (`recipe_draft` · `featured_flag`) asistanın cümlesiyle duruyor;
     tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
     `assistant-preview.tsx` blokları o sırada düşecek.

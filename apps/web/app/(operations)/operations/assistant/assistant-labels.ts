@@ -176,3 +176,57 @@ export function splitVariantName(productName: string): { name: string; size: str
   if (at < 0) return { name: productName, size: null };
   return { name: productName.slice(0, at), size: productName.slice(at + 3) };
 }
+
+/**
+ * BEYAN ALANLARININ ADLARI — asistanın hangi kutuyu doldurduğunu söyleyen tek sözlük (22.11).
+ *
+ * `assistant-preview` içinde yaşıyordu; kart da aynı adları yazmaya başlayınca buraya taşındı.
+ * İki yerde tutulsalardı aynı alan bir ekranda "Saklama", ötekinde "Saklama koşulları" olurdu ve
+ * operatör iki ekranın aynı şeyden bahsettiğini anlamazdı (`CLAUDE §1`).
+ *
+ * `DECLARATION_GAP_LABELS` (`@lezzet/types`) ile karışmaz, çünkü ayrı soruları yanıtlıyorlar: orası
+ * "yasal beyanın hangi parçası EKSİK" (müşteri sayfasının zorunlu bölümleri), burası "dilekçe hangi
+ * KUTUYA yazıyor" — `name`, `description`, `traces` yasal eksik değildir ama yazılabilir alanlardır.
+ */
+export const DECLARATION_FIELD_LABEL: Record<string, string> = {
+  name: 'Ad',
+  description: 'Açıklama',
+  ingredients: 'İçindekiler',
+  storageInstructions: 'Saklama',
+  nutrition: 'Besin künyesi',
+  allergens: 'Alerjenler',
+  traces: 'İzler',
+};
+
+/**
+ * Ürün tamamlama dilekçesinin ÖZETİ: kaç kutu doldurulacak, kaçı DOLU bir kutunun üzerine yazacak.
+ *
+ * ── ÜZERİNE YAZMA NEDEN AYRI SAYILIYOR ──────────────────────────────────────
+ * `updateDetails` düz bir `update`tir ve sürüm tutmaz — dolu bir açıklama onaylandığı an kaybolur,
+ * geri getirilemez (`ProductDraftPayloadSchema.currentFields` künyesi). Boş kutuyu doldurmak ile
+ * dolu kutuyu ezmek aynı karar değildir ve kart bu ikisini karıştırırsa patron geri alınamaz bir
+ * silmeyi "eksik tamamlama" sanarak onaylar.
+ *
+ * `currentFields` HİÇ gelmemişse üzerine yazma sayısı `null` döner — "eski hâl okunamadı" ile
+ * "eski hâl boştu" aynı şey değildir (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
+ */
+export function draftFieldSummary(payload: {
+  fields: Record<string, unknown>;
+  currentFields?: Record<string, unknown>;
+}): { labels: string[]; overwrites: number | null } {
+  const written = Object.entries(payload.fields).filter(([, value]) => value !== undefined && value !== null);
+  const labels = written.map(([key]) => DECLARATION_FIELD_LABEL[key] ?? key);
+  if (!payload.currentFields) return { labels, overwrites: null };
+
+  const current = payload.currentFields;
+  const overwrites = written.filter(([key]) => {
+    const value = current[key];
+    if (value === undefined || value === null) return false;
+    // Çok dilli metin / künye nesnesi: en az bir dolu alanı varsa DOLU sayılır. Boş bir nesne
+    // ({tr: ''}) ezilecek bir şey taşımıyor ve uyarıyı hak etmiyor.
+    if (typeof value === 'object') return Object.values(value).some((v) => (typeof v === 'string' ? v.trim() : v != null));
+    return typeof value === 'string' ? value.trim().length > 0 : true;
+  }).length;
+
+  return { labels, overwrites };
+}
