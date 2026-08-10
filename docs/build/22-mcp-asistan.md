@@ -723,9 +723,19 @@ satırında.
       yerde duruyor.
   - *Doğrulandı:* `typecheck` (web + backend) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346 ·
     `mcp.test.ts` + `proposal.test.ts` 26/26.
-  - **BEKLEYEN(22.11):** `assistant-card-bodies.tsx` **926 satır** — on bir tipin gövdesi tek dosyada
-    birikti ve bu, ajanın her dokunuşta bütün dosyayı bağlama almasına yol açıyor (kullanıcı ölçümü
-    11.08: token tüketimi). Tip başına ya da öbek başına bölünecek. `featured_flag` kartı ekranda
-    DOĞRULANMADI: kuyrukta o tipten öneri yok (on tipin ikişer örneği var, bu tip hiç yazılmamış).
+  - **Gövdeler TİP BAŞINA dosyaya bölündü** *(kullanıcı ölçümü 11.08: token tüketimi)* — tek dosya
+    926 satıra çıkmıştı ve bedeli somut: bir kartı düzeltmek için ajanın bütün dosyayı bağlama
+    alması gerekiyordu (~14 bin token). Artık `cards/` altında on bir dosya (42–99 satır) + ortak
+    yapı taşları `cards/shared.tsx` (280); `assistant-card-bodies.tsx`ta yalnız DALLANMA kaldı (99).
+    Dallanmanın tek yerde durması bilinçli: bir tipin sessizce kartsız kalmasını engelleyen şey o.
+    Bölme sırasında dört ortak blok da doğdu (`BandBox` · `BandLabel` · `BandNote` · `CardLead`) —
+    görselsiz tiplerin bandı dört kartta birebir aynı yazılıydı.
+  - **`docs:check`e dosya boyutu UYARISI eklendi** (600 satır): hata değil bilgi, çünkü bölme her
+    zaman doğru cevap değil — tek bir durum makinesi 600 satır olabilir ve parçalamak onu okunmaz
+    kılar. Sert bir kapı, dokunulan her eski dosyayı önce refactor etmeye zorlardı. Bugün 24 dosya
+    eşiği aşıyor; en büyükleri mobil ekranlar ve `assistant-preview.tsx` (1115, tipe özel diyaloglar
+    yazıldıkça eriyecek).
+  - **BEKLEYEN(22.11):** `featured_flag` kartı ekranda DOĞRULANMADI — kuyrukta o tipten öneri yok
+    (on tipin ikişer örneği var, bu tip hiç yazılmamış).
     tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
     `assistant-preview.tsx` blokları o sırada düşecek.

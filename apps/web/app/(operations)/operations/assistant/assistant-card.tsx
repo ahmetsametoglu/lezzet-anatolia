@@ -137,9 +137,24 @@ const CARD_TONE: Record<OpsTone, string> = {
  * ortasından kesilmesi, kararın konusunu götürür. Uzun değer iki satıra iner — kartın boyu zaten
  * içeriğe göre uzuyor.
  */
-export function CardFact({ label, value, tone }: { label: string; value: string; tone?: string }) {
+export function CardFact({
+  label,
+  value,
+  tone,
+  title,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+  /**
+   * Fareyle bekleyince görünen AYRINTI — sayıya indirgenmiş bir değerin dökümü ("4 alan" →
+   * "içindekiler · besin değerleri · …"). Karta sığmayan bilgiyi silmek yerine bir adım geriye
+   * koyar; kararın kendisi sayıda, dökümü ipucunda.
+   */
+  title?: string;
+}) {
   return (
-    <span className="flex items-baseline justify-between gap-2.5">
+    <span className="flex items-baseline justify-between gap-2.5" title={title}>
       <span className="flex-none font-ops-body text-ops-sm text-ops-muted">{label}</span>
       <span className={`text-right font-ops-mono text-ops-sm font-semibold ${tone ?? 'text-ops-ink'}`}>{value}</span>
     </span>

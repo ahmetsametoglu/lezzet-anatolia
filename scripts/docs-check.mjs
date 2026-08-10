@@ -686,6 +686,88 @@ for (const dir of ['apps/web/app/(operations)/operations']) {
   }
 }
 
+// ── 3i. DB'siz test entegrasyon kuyruğunda kalmamalı ─────────────────────────
+//
+// **Denetim bulgusu K8-1 (10.08), ölçümle:** `apps/web/lib`in 68 test dosyasının 19'u DB'ye hiç
+// vurmuyor, ama klasör entegrasyon kökü olduğu için hepsi seri kuyrukta koşuyordu. Bedeli hız
+// değil ERİŞİM: `CLAUDE §4b` DB'ye vuran koşuyu şeritlere kapatıyor, dolayısıyla saf bir testi
+// yazan şerit onu koşamıyor ve commit öncesi tam paketi beklemek zorunda kalıyor.
+//
+// Çözüm `vitest.config.ts`teki `WEB_LIB_DBSIZ` listesi. Liste ELLE tutuluyor (yeniden adlandırma
+// başka şeritlerin dosyalarına dokunurdu) ve elle tutulan her liste çürür — bu kontrol çürümeyi
+// commit'te durdurur.
+//
+// **Kontrol TEK yönlü ve bu bilinçli.** Ters yön ("listede ama DB'ye vuruyor") buraya YAZILMADI
+// çünkü zaten daha iyi bir hakemi var: `pnpm test:unit`. Birim projesi `.env` yüklemez, öyle bir
+// dosya ilk satırında "Supabase env eksik" diye patlar — herkesin koşabildiği, saniyede cevap
+// veren, kesin bir sınav. Statik iz orada YANILIR: ölçüldü (10.08) altı dosya `serviceDb` açan bir
+// modülü import ediyor ama o yolu hiç çağırmıyor; beşi birim projesinde sorunsuz koşuyor. "DB'ye
+// ULAŞABİLİR" ile "DB'ye VURUR" aynı şey değil ve bu farkı ancak koşu bilir.
+//
+// Kalan yön güvenli çünkü tersi doğru: geçişli izi HİÇ olmayan bir dosya DB'ye vuramaz.
+//
+// Neden `typecheck`/`lint` göremez: eksik olan bir tip değil, iki dosya arasındaki bir MUTABAKAT.
+{
+  const cfg = existsSync(join(ROOT, 'vitest.config.ts')) ? read('vitest.config.ts') : '';
+  const blok = cfg.match(/const WEB_LIB_DBSIZ = \[([\s\S]*?)\];/);
+  const kok = 'apps/web/lib';
+  if (blok && existsSync(join(ROOT, kok))) {
+    // Yalnız yol görünümlü satırlar: blok içinde Türkçe açıklama da var ve oradaki kesme işareti
+    // ("grep'le") çıplak bir `'…'` deseninde string sınırı sanılıyordu.
+    const listelenen = new Set([...blok[1].matchAll(/'(apps\/[^']+)'/g)].map((m) => m[1]));
+    // Testin DB'ye vurduğunu söyleyen izler: servis istemcisi, paket girişi, temizlik kapıları.
+    const DB_IZI = /serviceDb|createClient|@lezzet\/database|purgeTestData|mustDelete/;
+
+    // **İz GEÇİŞLİ aranır, yoksa kontrol yalan söyler.** Ölçüldü (10.08): `delivery/map-codes.test.ts`
+    // kendi metninde tek DB izi taşımıyor ama `./map-codes`i çağırıyor ve o `serviceDb` açıyor —
+    // birim projesine alınınca 7 test birden patladı. Denetimin K8-1 listesi de aynı sebeple
+    // yanlıştı: dosya grep'i, dosyanın NE YAPTIĞININ yerini tutmaz.
+    const izBellek = new Map();
+    const cozumle = (spec, kaynak) => {
+      const ham = spec.startsWith('@/') ? `apps/web/${spec.slice(2)}` : join(dirname(kaynak), spec).replace(/\\/g, '/');
+      for (const aday of [`${ham}.ts`, `${ham}.tsx`, `${ham}/index.ts`]) {
+        if (existsSync(join(ROOT, aday))) return aday;
+      }
+      return null;
+    };
+    const dbIziVar = (file, gezilen = new Set()) => {
+      if (izBellek.has(file)) return izBellek.get(file);
+      if (gezilen.has(file)) return false; // döngüsel import
+      gezilen.add(file);
+      const src = read(file);
+      let sonuc = DB_IZI.test(src);
+      if (!sonuc) {
+        for (const m of src.matchAll(/from\s+'((?:\.|@\/)[^']+)'/g)) {
+          const hedef = cozumle(m[1], file);
+          if (hedef && dbIziVar(hedef, gezilen)) {
+            sonuc = true;
+            break;
+          }
+        }
+      }
+      izBellek.set(file, sonuc);
+      return sonuc;
+    };
+
+    const gorulen = new Set();
+
+    for (const file of walkSource(kok).filter((f) => /\.test\.tsx?$/.test(f))) {
+      if (listelenen.has(file)) {
+        gorulen.add(file);
+      } else if (!dbIziVar(file)) {
+        note(
+          `${file}: DB'ye vurmuyor ama entegrasyon kuyruğunda — vitest.config.ts'teki WEB_LIB_DBSIZ ` +
+            `listesine ekle, yoksa bu testi yazan şerit onu koşamaz (CLAUDE §4b · K8-1)`,
+        );
+      }
+    }
+    // Silinmiş dosya listede kalırsa liste sessizce yalan söylemeye başlar.
+    for (const yol of listelenen) {
+      if (!gorulen.has(yol)) note(`vitest.config.ts: WEB_LIB_DBSIZ satırı BAYAT — '${yol}' artık yok`);
+    }
+  }
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';
@@ -712,6 +794,46 @@ if (!readme.includes(BEGIN) || !readme.includes(END)) {
       note(`${readmePath}: durum özeti bayat — \`pnpm docs:sync\` çalıştır`);
     }
   }
+}
+
+// ── Dosya boyutu: BÖLÜNMESİ GEREKEN dosyalar (uyarı, hata değil) ──────────────
+//
+// Kullanıcı ölçümü (11.08): büyük dosyalar ajanın bağlamını yakıyor. Her düzenlemede dosyanın
+// TAMAMI okunuyor — 900 satırlık bir dosyada tek bir satırı değiştirmek ~14 bin token demek.
+// Yaygın öneri 150–500 satır aralığı; bu aralıkta ajan dosyayı bütünüyle çalışma belleğinde
+// tutabiliyor ve kırpmaya gerek kalmıyor.
+//
+// **Neden HATA değil UYARI:** bölme her zaman doğru cevap değildir. Bir tablo bileşeni ya da tek
+// bir durum makinesi 600 satır olabilir ve parçalamak onu okunmaz hâle getirir; kararı ölçüyü
+// gören insan verir. Ayrıca sert bir kapı, dokunulan her eski dosyayı önce refactor etmeye
+// zorlardı — iş bitmez, risk artar.
+//
+// Ölçü SATIR sayısıdır, token değil: token dosyanın yoğunluğuna göre değişir ama satır herkesin
+// aynı gördüğü tek sayıdır ve `wc -l` ile doğrulanabilir.
+const SIZE_WARN = 600;
+const SIZE_SKIP = /node_modules|\.next|dist|\.test\.|\.spec\./;
+
+function walkSources(dir, out = []) {
+  for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    const rel = `${dir}/${entry.name}`;
+    if (SIZE_SKIP.test(rel)) continue;
+    if (entry.isDirectory()) walkSources(rel, out);
+    else if (/\.tsx?$/.test(entry.name)) out.push(rel);
+  }
+  return out;
+}
+
+const oversized = ['apps', 'packages', 'scripts']
+  .flatMap((root) => (existsSync(join(ROOT, root)) ? walkSources(root) : []))
+  .map((rel) => ({ rel, lines: read(rel).split('\n').length }))
+  .filter((f) => f.lines > SIZE_WARN)
+  .sort((a, z) => z.lines - a.lines);
+
+if (oversized.length) {
+  const top = oversized.slice(0, 5).map((f) => `${f.rel} (${f.lines})`);
+  note(
+    `[bilgi] ${oversized.length} dosya ${SIZE_WARN} satırı aşıyor — dokunulduğunda bölünmeli: ${top.join(' · ')}${oversized.length > 5 ? ' …' : ''}`,
+  );
 }
 
 // ── Sonuç ─────────────────────────────────────────────────────────────────────
