@@ -3,11 +3,12 @@
 import type { ReactNode } from 'react';
 import { toCents } from '@lezzet/helper';
 import {
-  DECLARATION_GAP_LABELS,
+  LOCALIZED_TEXT_KEYS,
   PROPOSAL_PAYLOAD_SCHEMAS,
   resolveLocalizedText,
   type AssistantProposalKind,
   type DeclarationGap,
+  type LocalizedText,
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
@@ -53,23 +54,9 @@ export function cardBodyOf(row: AssistantRowView): ReactNode {
     case 'batch_offer':
       return renderWith<BatchOfferPayload>(row, 'batch_offer', (p) => <BatchOfferCard payload={p} row={row} />);
     case 'discount_draft':
-      return renderWith<DiscountDraftPayload>(row, 'discount_draft', (p) => (
-        <>
-          <SummaryLine summary={row.summary} amountCents={row.amountCents} />
-          <Facts>
-            <DiscountCard payload={p} />
-          </Facts>
-        </>
-      ));
+      return renderWith<DiscountDraftPayload>(row, 'discount_draft', (p) => <DiscountCard payload={p} />);
     case 'zone_extend':
-      return renderWith<ZoneExtendPayload>(row, 'zone_extend', (p) => (
-        <>
-          <SummaryLine summary={row.summary} amountCents={row.amountCents} />
-          <Facts>
-            <ZoneCard payload={p} />
-          </Facts>
-        </>
-      ));
+      return renderWith<ZoneExtendPayload>(row, 'zone_extend', (p) => <ZoneCard payload={p} />);
     case 'bundle_draft':
       return renderWith<BundleDraftPayload>(row, 'bundle_draft', (p) => <BundleCard payload={p} row={row} />);
     case 'money_movement':
@@ -268,7 +255,29 @@ function BatchOfferCard({ payload, row }: { payload: BatchOfferPayload; row: Ass
   );
 }
 
-/** KAMPANYA — değeri, kapsamı, ne zamana kadar. Kupon ise kodu kapsamın yerine geçer. */
+/**
+ * KAMPANYA / KUPON — dilekçenin en KALABALIK tipi, kartın en zayıfıydı (kullanıcı ölçümü 11.08).
+ *
+ * ── NEDEN YENİDEN KURULDU ───────────────────────────────────────────────────
+ * Payload on yedi alan taşıyor; kart bunlardan üçünü gösteriyordu (değer · kapsam · bitiş) ve
+ * gerisini asistanın cümlesine bırakıyordu. Bir indirim kararı o üç sayıyla verilemez: **asgari
+ * sepet**, **kaç kez kullanılabileceği** ve **kimin için geçerli olduğu** doğrudan cirodur.
+ * Kullanıcının bu ekrandaki ilk sorusu da tam buydu (22.10): *"asgari sepete hiç girmemiş, haberi
+ * var mıydı?"*
+ *
+ * ── HİYERARŞİ: DEĞER > KAPSAM > KOŞULLAR ────────────────────────────────────
+ * ① Bantta **indirimin kendisi** (`%10` · `10,00 €`) — bir kampanyada ilk okunan sayı odur, yeşil
+ *   çünkü müşterinin kazancıdır (`PriceBlock`taki "indirim" kararıyla aynı çizgi).
+ * ② Kupon kodu değerin YANINDA ve çerçeveli: kod kampanyanın kapısıdır, künyeye indirilirse
+ *   "kodsuz kupon" gibi okunur. Otomatik indirimde hiç çizilmez.
+ * ③ Bandın altında **kapsam cümlesi** — "Tatlı kategorisinde" ile "Sepetin tamamı" arasındaki fark
+ *   kampanyanın maliyetini belirler ve künye satırına sıkışacak kadar küçük bir bilgi değil.
+ * ④ Künyede koşullar: asgari sepet · geçerlilik aralığı · tavanlar · müşteriye görünen ad.
+ *
+ * ── BOŞ KOŞUL "—" İLE DURUR ─────────────────────────────────────────────────
+ * Girilmemiş bir tavan sınırsız demektir ve bunun bedeli vardır; satırı gizlemek, verilmemiş bir
+ * kararı verilmiş gibi gösterir (22.10 ilkesi).
+ */
 function DiscountCard({ payload }: { payload: DiscountDraftPayload }) {
   const value =
     payload.type === 'percent'
@@ -276,12 +285,47 @@ function DiscountCard({ payload }: { payload: DiscountDraftPayload }) {
         ? '—'
         : percent(payload.percent, payload.percent % 1 === 0 ? 0 : 1)
       : money(payload.amountCents);
+  const publicLabel = payload.publicLabel ? resolveLocalizedText(payload.publicLabel, 'tr') : '';
+  const period = [payload.validFrom, payload.validTo].some(Boolean)
+    ? `${payload.validFrom ? shortDate(payload.validFrom) : 'hemen'} → ${payload.validTo ? shortDate(payload.validTo) : 'süresiz'}`
+    : 'süresiz';
+  const caps = [
+    payload.maxUses ? `${num(payload.maxUses)} kullanım` : null,
+    payload.perCustomerLimit ? `kişi başı ${num(payload.perCustomerLimit)}` : null,
+    payload.firstOrderOnly ? 'yalnız ilk sipariş' : null,
+  ].filter(Boolean);
 
   return (
     <>
-      <CardFact label={payload.trigger === 'coupon' ? 'Kupon' : 'Otomatik'} value={value} />
-      <CardFact label="Kapsam" value={payload.scope === 'cart' ? 'Sepetin tamamı' : (payload.scopeName ?? '—')} />
-      <CardFact label="Bitiş" value={payload.validTo ? shortDate(payload.validTo) : 'süresiz'} />
+      <span
+        className={`flex ${MEDIA_H} flex-col justify-center gap-1.5 rounded-ops-card border border-ops-line bg-ops-white px-3.5`}
+      >
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
+          {payload.trigger === 'coupon' ? 'Kupon' : 'Otomatik indirim'}
+        </span>
+        <span className="flex items-baseline gap-2">
+          <span className="font-ops-mono text-ops-title font-semibold leading-none text-ops-olive-dark">{value}</span>
+          {payload.code ? (
+            <span className="rounded-ops-card border border-ops-line-strong px-1.5 py-0.5 font-ops-mono text-ops-sm font-semibold text-ops-ink">
+              {payload.code}
+            </span>
+          ) : null}
+        </span>
+        <span className="truncate font-ops-body text-ops-sm text-ops-muted">{payload.name}</span>
+      </span>
+
+      <span className="font-ops-body text-ops-base font-medium leading-snug text-ops-ink">
+        {payload.scope === 'cart' ? 'Sepetin tamamında' : `${payload.scopeName ?? '—'} ${payload.scope === 'category' ? 'kategorisinde' : 'koleksiyonunda'}`}
+      </span>
+
+      <Facts>
+        <CardFact label="Asgari sepet" value={payload.minBasketCents ? money(payload.minBasketCents) : '—'} />
+        <CardFact label="Geçerlilik" value={period} />
+        <CardFact label="Tavan" value={caps.length > 0 ? caps.join(' · ') : 'sınırsız'} />
+        {/* Müşteriye görünen ad: sepette/kasada yazacak metin. Boşsa indirim satırı ADSIZ görünür —
+            bu bir eksiklik değil, onaylanmadan görülmesi gereken bir sonuç. */}
+        <CardFact label="Müşteride" value={publicLabel || '—'} />
+      </Facts>
     </>
   );
 }
@@ -296,17 +340,58 @@ function ZoneCard({ payload }: { payload: ZoneExtendPayload }) {
   const codes = payload.postalCodes;
   const requests = codes.reduce((sum, c) => sum + (c.requestCount ?? 0), 0);
   const waiting = codes.reduce((sum, c) => sum + (c.waitingCount ?? 0), 0);
+  const places = codes.map((c) => c.placeName).filter(Boolean);
+  const shown = codes.slice(0, ZONE_CODES);
+  const rest = codes.length - shown.length;
 
   return (
     <>
-      <CardFact label={codes.length === 1 ? 'Posta kodu' : `${codes.length} posta kodu`} value={codes.map((c) => c.postalCode).join(' · ')} />
-      <CardFact label="Bölge" value={payload.zoneName} />
-      {/* Sıfır talep de BİLGİDİR ve gizlenmez: "0 talep" gören patron, öneriyi rota verimliliği
+      {/* ── BANT: POSTA KODU, ÇÜNKÜ KARARIN KONUSU O ─────────────────────────
+          Kart bir tur bantsızdı: asistanın cümlesi + üç künye satırı, yani ızgarada yarı boş bir
+          kutu. Üstelik kodlar tek bir künye değerine diziliydi (`67500 · 67380 · …`) ve beş kodda
+          o satır sarıp kartı şişiriyordu — dar sütunda sağa yaslı uzun değer, en kırılgan yerleşim.
+          Kodlar artık bandın kendisi: mono, iri, yan yana. Kırpma bandın içinde duyuruluyor. */}
+      <span
+        className={`flex ${MEDIA_H} flex-col justify-center gap-1.5 rounded-ops-card border border-ops-line bg-ops-white px-3.5`}
+      >
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
+          {payload.country} · {codes.length === 1 ? 'posta kodu' : `${num(codes.length)} posta kodu`}
+        </span>
+        <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+          {shown.map((code) => (
+            <span key={code.postalCode} className="font-ops-mono text-ops-title font-semibold leading-none text-ops-ink">
+              {code.postalCode}
+            </span>
+          ))}
+          {rest > 0 ? <span className="font-ops-body text-ops-sm text-ops-muted">+{num(rest)}</span> : null}
+        </span>
+        <span className="truncate font-ops-body text-ops-sm text-ops-muted">{payload.zoneName}</span>
+      </span>
+
+      {/* ── TALEP CÜMLESİ: ÖNERİNİN GEREKÇESİ ────────────────────────────────
+          En güçlü sinyal buydu ve künye satırına gömülüydü (`Talep  47 · 3 bekliyor`). Kırk yedi
+          kişinin adres girip "buraya gelmiyor musunuz" demesi, bölge açmanın tek gerçek gerekçesi.
+          Sıfır talep de BİLGİDİR ve gizlenmiyor: "0 istek" gören patron öneriyi rota verimliliği
           gerekçesiyle değerlendirir — satırı saklamak o kararı elinden alırdı. */}
-      <CardFact label="Talep" value={waiting > 0 ? `${num(requests)} · ${num(waiting)} bekliyor` : num(requests)} />
+      <span className="font-ops-body text-ops-base font-medium leading-snug text-ops-ink">
+        {requests === 0 ? 'Henüz talep yok — rota kararı' : `${num(requests)} kişi bu bölgeyi istedi`}
+      </span>
+
+      <Facts>
+        <CardFact
+          label="Bekleyen"
+          value={waiting > 0 ? `${num(waiting)} kişi haber bekliyor` : 'yok'}
+          tone={waiting > 0 ? 'text-ops-amber' : undefined}
+        />
+        <CardFact label="Yer" value={places.length > 0 ? places.join(' · ') : '—'} />
+        <CardFact label="Bölge" value={payload.zoneName} />
+      </Facts>
     </>
   );
 }
+
+/** Bantta gösterilen posta kodu sayısı — dörtten fazlası "+N" olur, bant iki satırı aşmasın. */
+const ZONE_CODES = 4;
 
 /**
  * PAKET — konusu kendisi ama YÜZÜ kalemleri (22.11).
@@ -526,6 +611,8 @@ function RecipeCard({ payload, row }: { payload: RecipeDraftPayload; row: Assist
           value={`${num(payload.items.length)} çeşit · ${num(totalQty(payload.items))} ad.`}
         />
         <CardFact label="Hazırlanış" value={steps.length > 0 ? `${num(steps.length)} adım` : 'yazılmamış'} />
+        <CardFact label="Kaç kişilik" value={payload.serves ? resolveLocalizedText(payload.serves, 'tr') : '—'} />
+        <LocaleFact texts={[payload.name, payload.steps, payload.description]} />
       </Facts>
     </>
   );
@@ -583,6 +670,32 @@ const TARGET_LABEL: Record<FeaturedFlagPayload['target'], string> = {
 };
 
 /**
+ * DİL KAPSAMASI — müşteri yüzeyine çıkacak metinler üç dilde var mı (22.11).
+ *
+ * ── NEDEN KARARIN PARÇASI ───────────────────────────────────────────────────
+ * Katalog üç dilli (`fr` · `de` · `tr`) ve eksik dil sessiz bir arıza üretir: kayıt onaylanır,
+ * vitrine çıkar, Fransız müşteri Türkçe bir tarif adı görür. Onay anında sorulacak soru "metin
+ * yazıldı mı" değil, **"hangi dillerde yazıldı"**dır — asistan çoğu zaman üçünü birden yazıyor
+ * ama yazmadığında bunu kimse söylemiyordu.
+ *
+ * Ölçüt SIKI: bir dil ancak VERİLEN METİNLERİN HEPSİNDE doluysa tam sayılır. Adı üç dilde olup
+ * açıklaması yalnız Türkçe olan bir kayıt "üç dilli" değildir; gevşek ölçüt, eksiği tam gösterirdi.
+ */
+function LocaleFact({ texts }: { texts: (LocalizedText | null | undefined)[] }) {
+  const present = texts.filter((t): t is LocalizedText => Boolean(t));
+  if (present.length === 0) return null;
+
+  const missing = LOCALIZED_TEXT_KEYS.filter((locale) => !present.every((text) => text[locale]?.trim()));
+  return (
+    <CardFact
+      label="Dil"
+      value={missing.length === 0 ? LOCALIZED_TEXT_KEYS.join(' · ') : `eksik: ${missing.join(', ')}`}
+      tone={missing.length > 0 ? 'text-ops-amber' : undefined}
+    />
+  );
+}
+
+/**
  * MODELİN NET OKUYAMADIĞI ALANLAR — ambalaj fotoğrafı bulanık, kesik ya da yansımalıydı.
  *
  * **Boşken satır ÇİZİLMEZ ve bu, "boş alan da gösterilir" kuralıyla çelişmez** (22.10): o kural
@@ -617,7 +730,13 @@ function GapFact({ gaps, showEmpty = false }: { gaps: DeclarationGap[]; showEmpt
   return (
     <CardFact
       label="Eksik beyan"
-      value={gaps.length === 0 ? 'yok' : gaps.map((g) => DECLARATION_GAP_LABELS[g]).join(' · ')}
+      // ── SAYI, LİSTE DEĞİL (kullanıcı kararı 11.08) ────────────────────────
+      // Dört eksik alanın adı ("içindekiler · besin değerleri · saklama koşulları · alerjen
+      // beyanı") dar sütunda üç satıra sarıyor ve kartın yüksekliğini tek başına belirliyordu.
+      // Kararı değiştiren şey hangi alanların eksik olduğu DEĞİL, kaç tanesinin eksik olduğu:
+      // "onaylarsan kayıt tam olmayacak" uyarısı sayıyla da tamdır. Adlar diyalogda, orada
+      // düzeltilecekleri yerde duruyor.
+      value={gaps.length === 0 ? 'yok' : `${num(gaps.length)} alan`}
       tone={gaps.length > 0 ? 'text-ops-amber' : undefined}
     />
   );
@@ -641,10 +760,32 @@ function GapFact({ gaps, showEmpty = false }: { gaps: DeclarationGap[]; showEmpt
  */
 function ProductDraftCard({ payload, row }: { payload: ProductDraftPayload; row: AssistantRowView }) {
   const summary = draftFieldSummary(payload);
+  const newName = payload.fields.name ? resolveLocalizedText(payload.fields.name, 'tr') : '';
+  // Ad yazılmıyorsa okunacak ilk metin ne ise o: açıklama → içindekiler → saklama. Kart "3 kutu
+  // dolduruluyor" deyip içeriği saklarsa, operatör onaylamak için diyaloğu açmak zorunda kalır ve
+  // ızgaranın "bir bakışta karar" vaadi biter.
+  const preview = newName
+    ? ''
+    : [payload.fields.description, payload.fields.ingredients, payload.fields.storageInstructions]
+        .filter(Boolean)
+        .map((text) => resolveLocalizedText(text!, 'tr'))
+        .find((text) => text.trim().length > 0) ?? '';
 
   return (
     <>
       {row.subject ? <SubjectBox subject={row.subject} /> : <SummaryLine summary={row.summary} />}
+
+      {/* ── ASİSTANIN YAZDIĞI DEĞER, KARARIN KENDİSİ ─────────────────────────
+          Ad yazılıyorsa büyük ve mor: mor bu ekranda "asistanın dokunduğu yer" rengi (form
+          işaretleriyle aynı dil). Ürünün ADI değişiyorsa bu, kartta okunması gereken tek şeydir —
+          künyeye "Doldurulan: Ad" yazıp yeni adı saklamak, kararın konusunu gizlemekti. */}
+      {newName ? (
+        <span className="line-clamp-2 font-ops-display text-ops-lead font-semibold leading-snug text-ops-violet">
+          {newName}
+        </span>
+      ) : preview ? (
+        <span className="line-clamp-2 font-ops-body text-ops-base leading-snug text-ops-ink">{preview}</span>
+      ) : null}
 
       <Facts>
         <CardFact label="Doldurulan" value={summary.labels.length > 0 ? summary.labels.join(' · ') : '—'} />
@@ -659,6 +800,7 @@ function ProductDraftCard({ payload, row }: { payload: ProductDraftPayload; row:
           }
           tone={summary.overwrites ? 'text-ops-amber' : undefined}
         />
+        <LocaleFact texts={[payload.fields.name, payload.fields.description, payload.fields.ingredients]} />
         <UncertainFact fields={payload.uncertainFields} />
         <GapFact gaps={payload.remainingGaps} />
       </Facts>

@@ -696,9 +696,34 @@ satırında.
     - **Üç yerdeki görsel toplama tek yere alındı** (`variantImages`): paket · tedarik · tarif aynı
       üç adımı yazıyordu (varyant → ürün → görsel + kırpma). Dördüncüsü yazılmadan birleştirildi;
       ayrı kalsalardı biri bir gün kırpmayı unutur, öteki sırayı bozardı.
+  - **Dört kart yeniden kuruldu** *(kullanıcı ölçümü 11.08: "indirim, ürün ve tarif kartlarını
+    yetersiz buldum, alanı yeterince doldurmamış")* — hepsinde aynı hiyerarşi sorusu: hangi bilgi
+    önemli, ne boyutta, kartın neresinde.
+    - **İndirim, dilekçenin en KALABALIK tipi ve kartın en zayıfıydı:** on yedi alandan üçü
+      görünüyordu. Bir indirim kararı üç sayıyla verilemez — asgari sepet, kullanım tavanı ve kimin
+      için geçerli olduğu doğrudan cirodur. Bant artık indirimin kendisi (`%10` · yeşil, müşterinin
+      kazancı), kupon kodu değerin yanında ve çerçeveli (kod kampanyanın KAPISI; künyeye inerse
+      "kodsuz kupon" gibi okunur), bandın altında kapsam cümlesi, künyede koşullar.
+    - **Ürün tamamlamada kart içeriği SAKLIYORDU:** "3 kutu dolduruluyor" deyip yeni değeri
+      göstermiyordu. Yeni ad artık büyük ve MOR (bu ekranda "asistanın dokunduğu yer" rengi); ad
+      yazılmıyorsa ilk metin alanının önizlemesi.
+    - **Dil kapsaması** (`LocaleFact`) ürün ve tarifte ortak: katalog üç dilli ve eksik dil SESSİZ
+      bir arıza üretir — kayıt onaylanır, vitrine çıkar, Fransız müşteri Türkçe başlık görür. Ölçüt
+      sıkı: bir dil ancak VERİLEN METİNLERİN HEPSİNDE doluysa tam sayılır.
+    - **Bölge kartında üç ayrı sorun vardı** *(kullanıcı: "büyük bir problem var")*: ① bandı yoktu,
+      ızgarada yarı boş duruyordu; ② posta kodları tek bir künye DEĞERİNE diziliydi ve beş kodda o
+      satır sarıp kartın boyunu tek başına belirliyordu (dar sütunda sağa yaslı uzun değer, en
+      kırılgan yerleşim); ③ en güçlü sinyal künyeye gömülüydü — kırk yedi kişinin adres girip
+      "buraya gelmiyor musunuz" demesi bölge açmanın tek gerçek gerekçesi. Kodlar artık bandın
+      kendisi, talep bandın altında cümle. Sıfır talep gizlenmiyor ("rota kararı"), bekleyen kişi
+      sayısı amber — onlara haber GİDECEK ve bu geri alınamaz.
+    - **Eksik beyan adede indi** *(kullanıcı kararı: "gereksiz yükseklik oluşturuyor, adedini
+      verelim")*: dört alanın adı dar sütunda üç satıra sarıyordu. Kararı değiştiren şey hangi
+      alanların eksik olduğu değil KAÇ tanesinin eksik olduğu; adlar diyalogda, düzeltilecekleri
+      yerde duruyor.
   - *Doğrulandı:* `typecheck` (web + backend) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346 ·
     `mcp.test.ts` + `proposal.test.ts` 26/26.
-  - **BEKLEYEN(22.11):** `assistant-card-bodies.tsx` **823 satır** — on bir tipin gövdesi tek dosyada
+  - **BEKLEYEN(22.11):** `assistant-card-bodies.tsx` **926 satır** — on bir tipin gövdesi tek dosyada
     birikti ve bu, ajanın her dokunuşta bütün dosyayı bağlama almasına yol açıyor (kullanıcı ölçümü
     11.08: token tüketimi). Tip başına ya da öbek başına bölünecek. `featured_flag` kartı ekranda
     DOĞRULANMADI: kuyrukta o tipten öneri yok (on tipin ikişer örneği var, bu tip hiç yazılmamış).
