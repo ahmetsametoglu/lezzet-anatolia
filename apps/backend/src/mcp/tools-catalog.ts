@@ -149,15 +149,25 @@ export async function stockWatch(days: number) {
       physicalQty: b.physicalQty,
       // Tarihi GEÇMİŞ mi yoksa yaklaşıyor mu — ikisi ayrı iş: geçen DLC imha, yaklaşan teklif.
       expired: b.expiryDate < today,
-      listPriceCents,
-      // Alış fiyatı KDV HARİÇ, liste fiyatı KDV DAHİL (b2c) — ikisini doğrudan çıkarmak marjı
-      // KDV oranı kadar şişirir. Oran da satırda, ki hesabı okuyan taraf doğru yapsın.
-      purchasePriceCents: b.purchasePriceCents,
+      /**
+       * ── KDV TABANI ALAN ADINDA DURUR (kullanıcı kararı 10.08) ───────────────
+       * Kural asistana ÜÇ yerde yazılıydı (sistem promptu · araç açıklaması · bu künye) ve
+       * `vatRate` de satırdaydı. Yine de KDV'siz çıkardı: teklif fiyatından alışı doğrudan düşüp
+       * "marj +0,35 €" yazdı, gerçeği 0,25 €. Ekran doğru hesaplıyordu — operatör çelişen iki
+       * sayıyı yan yana gördü.
+       *
+       * **Hazır marj vermek çözüm değil** (kullanıcı itirazı): o yalnız BU hesabı kurtarır, ajan
+       * kavramı anlamadığı sürece paket/indirim/tedarik tarafında aynı hatayı yapar. Taban artık
+       * **alan adının kendisinde**: ajan her okumada görür, talimat okumasa bile. `IncVat`/`ExVat`
+       * son ekleri bu yüzden var ve **kaldırılmamalı** — uzunluk bedeli, sessiz yanlış hesaptan ucuz.
+       */
+      listPriceCentsIncVat: listPriceCents,
+      purchasePriceCentsExVat: b.purchasePriceCents,
       vatRate: b.variant.product.vatRate,
-      offerPriceCents: b.offerPriceCents,
+      offerPriceCentsIncVat: b.offerPriceCents,
       /** `can_offer` · `offer_open` · `must_discard` · `none` — motorun kararı (`domain-core/stock/offer`). */
       decision,
-      suggestedOfferPriceCents: suggestedOfferPriceCents(listPriceCents),
+      suggestedOfferPriceCentsIncVat: suggestedOfferPriceCents(listPriceCents),
     };
   });
 
@@ -225,7 +235,7 @@ export async function catalogLookup(query: string, limit: number) {
           variantId: v.id,
           unit: resolveLocalizedText(v.label, 'tr'),
           isActive: v.isActive,
-          listPriceCents: priceMap.get(v.id)?.channelPrice?.amountCents ?? null,
+          listPriceCentsIncVat: priceMap.get(v.id)?.channelPrice?.amountCents ?? null,
           lastPurchasePriceCents: costByVariant.get(v.id) ?? null,
         })),
     })),
