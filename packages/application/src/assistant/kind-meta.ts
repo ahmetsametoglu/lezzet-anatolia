@@ -129,8 +129,13 @@ export const KIND_META = {
     impact:
       'Katalogda yeni bir ürün oluşur ve ADAY olarak doğar — vitrinde görünmez, satılamaz. Satışa çıkarmak ayrı bir karardır ve bu yoldan verilemez. Fiyat ve stok girilmez; ikisi de ayrı iştir.',
     tables: ['product', 'product_variant'],
-    // Kayıt aday doğuyor ve düzenlemesi ürün ekranında — paket/tarif ile aynı desen.
-    mode: 'draft_then_edit',
+    // ── FORM KUYRUĞA GELDİ, AMA "ADAY DOĞAR" CÜMLESİ BAYAT DEĞİL (22.16) ────
+    // `product_draft` ile AYNI gövdeyi kullanıyor (kullanıcı: *"yeni ürün ile ürün düzenleme ayna
+    // diyaloğu kullanabilir değil mi?"*), o yüzden mod `inline`. Ama üstteki etki cümlesi olduğu
+    // gibi kalıyor ve bu bilinçli: satış durumu seçicisi kuyrukta YOK (kullanıcı kararı 11.08 —
+    // kuyruk içeriği yazar, satış eksenine dokunmaz), yani öneriden doğan ürün gerçekten aday
+    // doğuyor. Devri körü körüne uygulamak, var olan bir kısıtı yok saymak olurdu.
+    mode: 'inline',
     target: 'product',
     resultKey: 'productId',
   },
@@ -176,9 +181,16 @@ export const KIND_META = {
     resultKey: 'discountId',
   },
   batch_offer: {
-    label: 'Fırsat',
+    // ── "FIRSAT" MÜŞTERİNİN KELİMESİ, OPERASYONUNKİ "TEKLİF" (kullanıcı kararı 11.08) ──
+    // Rozet bir tur "Fırsat" yazıyordu ve kullanıcının itirazı yerindeydi: *"bu fırsat ifadesi
+    // müşteri için; bizim için aslında stok eritme — eritilmesi gereken bir stoku eritmeye
+    // çalışıyoruz, o yüzden fırsat kelimesi çok garip."* Ölçüldü: operasyon yüzeyi zaten "Teklif"
+    // diyor (stok ekranı: "Teklif açık", teklif diyaloğu, teklif fiyatı) — sızan tek yer kuyruğun
+    // rozetiydi. Müşteri yüzeyi "Fırsat" demeye devam ediyor (`messages.json`); iki yüzey iki ayrı
+    // şey vaat ediyor ve aynı kelimeyi paylaşmaları gerekmiyor.
+    label: 'Teklif',
     impact:
-      'Partiye indirimli satış fiyatı yazılır ve o parti ANINDA fırsat olarak vitrine düşer — taslak evresi yoktur. Aynı ürünün öteki partileri tam fiyatta kalır. Geri almak teklifi kaldırmaktır.',
+      'Partiye indirimli satış fiyatı yazılır ve o parti ANINDA satışa çıkar (müşteri yüzeyinde "Fırsat" olarak görünür) — taslak evresi yoktur. Aynı ürünün öteki partileri tam fiyatta kalır. Geri almak teklifi kaldırmaktır.',
     tables: ['stock'],
     undoHint: 'Geri almak için: Stok → parti → Teklifi kaldır.',
     // ── ÜÇ TURDA ÜÇ CEVAP; SONUNCUSU İKİSİNİ DE KAPSIYOR ───────────────────

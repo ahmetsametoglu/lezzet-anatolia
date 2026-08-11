@@ -24,6 +24,54 @@ function requireName(name: LocalizedText | undefined): LocalizedText {
 }
 
 /**
+ * Yeni ürün oluşturur (varyantlar verilirse onlarla, yoksa varsayılan varyant). Slug addan türetilir.
+ *
+ * Ürün sekmesinin klasöründen buraya taşındı (11.08 · 22.16): aynı form asistan kuyruğunda da
+ * açılıyor ve `product_create` önerisi oradan uygulanıyor. Güncelleme eyleminin 22.14'te yaptığı
+ * devrin aynısı — kuyruk bir sayfa klasöründen import etseydi bağımlılık yatay olurdu (`CLAUDE §2`).
+ *
+ * **Kayıt ADAY doğar ve bu değişmedi:** durumu formdaki seçici belirliyor, kuyrukta o seçici yok,
+ * yani öneriden doğan ürün kapının kendi varsayılanıyla gelir. Satışa çıkarmak ürün ekranının kararı.
+ */
+export async function createProductAction(
+  input: ProductFormInput,
+  /** Asistan önerisinden gelindiyse o önerinin kimliği (22.16). */
+  proposalId?: string | null,
+): Promise<ActionResult> {
+  try {
+    const staff = await requireStaff();
+    const { variants, ...fields } = input;
+    const name = requireName(fields.name);
+
+    await withProposal(
+      proposalId,
+      staff.profileId,
+      () =>
+        new ProductService(serviceDb()).create({
+          ...fields,
+          name,
+          variants: variants.map((v) => ({
+            label: v.label,
+            netWeightG: v.netWeightG,
+            piecesCount: v.piecesCount,
+            minStockQty: v.minStockQty,
+            sku: v.sku,
+            isActive: v.isActive,
+          })),
+        }),
+      // DOĞAN kaydın kimliği künyeye yazılır: "bu ürünü hangi öneri kurdu" sorusunun cevabı ve
+      // arşivdeki köprünün dayanağı (`KIND_META.product_create.resultKey`).
+      ({ product }) => ({ productId: product.id }),
+    );
+
+    revalidatePath(PRODUCTS_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
  * Mevcut ürünü günceller (temel + çok dilli + beyan + marj) ve varyantları senkronlar. Slug sabit.
  *
  * **Kuyruk ikinci bir yazma yolu AÇMIYOR:** asistan önerisi onaylandığında da bu eylem koşuyor,

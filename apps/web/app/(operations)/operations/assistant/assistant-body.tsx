@@ -6,11 +6,12 @@ import {
   type AssistantProposalKind,
   type BatchOfferPayload,
   type DiscountDraftPayload,
+  type ProductCreatePayload,
   type ProductDraftPayload,
 } from '@lezzet/types';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
-import { updateProductAction } from '@/lib/catalog/product-actions';
+import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
 import { ProductFormSchema, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
 import {
   discountBlocked,
@@ -24,7 +25,7 @@ import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { BatchOfferBody } from './bodies/batch-offer-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
-import { ProductDraftBody, productDraftValuesFrom } from './bodies/product-draft-body';
+import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
 /**
  * ÖNERİ GÖVDELERİ — kuyruğun içinde karar verilen tiplerin kaydı (22.8).
@@ -149,7 +150,10 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     blocked: (cents) => (cents === null ? 'Teklif fiyatı girilmeli' : cents <= 0 ? 'Fiyat sıfırdan büyük olmalı' : null),
     submit: (payload, cents, proposalId) => setOfferPriceAction(payload.batchId, cents, proposalId),
     applyLabel: 'Teklifi aç',
-    appliedNote: 'Teklif açıldı — parti fırsat olarak vitrine düştü. Öneri karar geçmişine indi.',
+    // Cümle İKİ dili birden taşıyor ve bu bilinçli: yapılan iş "teklif açmak" (operasyonun kelimesi),
+    // müşterinin gördüğü şey "Fırsat" (müşteri yüzeyinin kelimesi). Operatör ikisinin aynı şey
+    // olduğunu bir yerde okumalı, yoksa iki ekran arasında bağı kendisi kurmak zorunda kalır.
+    appliedNote: 'Teklif açıldı — parti satışa çıktı; müşteri yüzeyinde "Fırsat" olarak görünüyor. Öneri karar geçmişine indi.',
   }),
 
   discount_draft: defineBody<DiscountDraftPayload, DiscountFormValues>({
@@ -209,11 +213,49 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // 11.08): formun sağ rayı (kargo · KDV · marj) ile içerik sütunu hâlâ sıkışıyordu.
     width: 1720,
     // "Kaydet" değil GÜNCELLE: `product_draft` VAR OLAN bir ürünün kaydına yazıyor
-    // (`payload.productId`) — yeni ürün ayrı bir tip (`product_create`). Kullanıcının sorusu tam
-    // buydu (11.08: *"yeni ürün mü oluşturuyorum yoksa güncelliyor muyum?"*): düğme cevabı
-    // vermiyordu ve "kaydet" iki işi birden anlatabilen tek kelime.
+    // (`payload.productId`) — yeni ürün ayrı bir tip (aşağıda). Kullanıcının sorusu tam buydu
+    // (11.08: *"yeni ürün mü oluşturuyorum yoksa güncelliyor muyum?"*): düğme cevabı vermiyordu ve
+    // "kaydet" iki işi birden anlatabilen tek kelime.
     applyLabel: 'Ürünü güncelle',
     appliedNote: 'Ürün güncellendi — katalogda görülebilir. Satış durumu değişmedi: kuyruk içeriği yazar, yayına almaz.',
+  }),
+
+  /**
+   * YENİ ÜRÜN — `product_draft` ile AYNI GÖVDE (22.16).
+   *
+   * Kullanıcının sorusu: *"yeni ürün ile ürün düzenleme ayna diyaloğu kullanabilir değil mi?"* Evet,
+   * ve ürün ekranında zaten öyle (`ProductFormDialog`, `mode: 'create' | 'edit'`). Değişen ÜÇ şey
+   * burada duruyor — açılış değeri (boş şablon + dilekçe), kaydeden kapı (`createProductAction`) ve
+   * düğmenin adı. Gövde ikiye bölünseydi bugün kopya olurdu, yarın ayrışırdı.
+   */
+  product_create: defineBody<ProductCreatePayload, ProductFormValues>({
+    parse: parseWith<ProductCreatePayload>('product_create'),
+    // Taban FORMUN kendi varsayılanları; dilekçenin `null` bıraktığı alan onları EZMEZ ("okuyamadım"
+    // ile "hayır" ayrı şeyler — `ProductCreatePayloadSchema` künyesi).
+    initial: (payload) => productCreateValuesFrom(payload),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <ProductDraftBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    blocked: (values) => {
+      const parsed = ProductFormSchema.safeParse(values);
+      return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Form eksik');
+    },
+    submit: (_payload, values, proposalId) => createProductAction(toActionPayload(values), proposalId),
+    width: 1720,
+    applyLabel: 'Ürünü oluştur',
+    // Kayıt ADAY doğar ve bu cümle bayat DEĞİL: durumu formdaki seçici belirliyor, o seçici kuyrukta
+    // yok (kullanıcı kararı 11.08 — kuyruk satış eksenine dokunmaz), yani ürün kapının kendi
+    // varsayılanıyla geliyor. Satışa çıkarmak ürün ekranının kararı.
+    appliedNote: 'Ürün oluşturuldu — katalogda ADAY olarak duruyor. Satışa çıkarmak ürün ekranının kararı.',
   }),
 };
 

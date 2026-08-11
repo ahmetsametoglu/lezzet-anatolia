@@ -9,6 +9,14 @@
 > **Ama `db:reset`/`db:refresh` yine de KULLANICININ kararıdır** — yereldeki elle girilmiş veriyi siler.
 > Şema değişikliği reset istiyorsa söyle, o çalıştırsın. Yerel DB'ye **okumak için** bağlanmak serbest → `WORKFLOW §4b`.
 
+> **YEREL VERİ SAHTEDİR — ondan İSTATİSTİK ÇIKARILMAZ** (kullanıcı kararı 11.08). Tablolardaki her şey
+> seed'in ürettiği ya da ajanların testte yazdığı uydurma kayıt: siparişler, satış sayıları, talep
+> sinyalleri, stok, müşteri davranışı. **Okumak serbest** ve teşhisin tek doğru yolu — "bu alan dolu
+> mu", "hangi kimlik yazılmış", "kısıt neden reddetti" hep DB'den ölçülür. Yasak olan o satırlardan
+> İŞ ÇIKARIMI yapmak: "en çok satan ürün", "talep şu bölgede yoğun", "şu kategori zayıf" gibi cümleler
+> kurmak, ya da bir eşiği/varsayılanı bu sayılara bakarak seçmek. Gerçek dünyadan tek veri kullanıcının
+> kendisidir; sayıya dayalı bir karar gerekiyorsa ona sor.
+
 ## 0. Kırmızı çizgiler
 - **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
 - **Çalışma ağacını topluca silen komut YOK** — `git checkout -- .`, `git restore .`, `git reset --hard`, `git clean`, yolsuz `git stash`. Bunlar KULLANICININ komutudur. Geri alma daima **yol adı vererek** ve önce doğrulanarak yapılır. → WORKFLOW §5

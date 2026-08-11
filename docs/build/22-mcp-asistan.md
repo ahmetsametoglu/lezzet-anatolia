@@ -1089,3 +1089,52 @@ satırında.
     içinde kart şeklinde görünüyor; en dıştaki kartı kaldır")*. Panellerin kendi kenarlığı zaten
     vardı; dıştaki kabuk ikinci bir kenarlık ve ikinci bir dolgu ekliyordu. Üçünde birden yapıldı,
     çünkü desen üçünde de aynıydı ve biri kalsaydı tipler arası geçişte fark göze çarpardı.
+
+- [x] (22.16) **Yeni ürün önerisi de kuyruğun içinde — `product_draft` ile AYNI gövde** *(kullanıcı
+  sorusu 11.08: "yeni ürün ile ürün düzenleme ayna diyaloğu kullanabilir değil mi?")*
+  `touches: apps/web/app/(operations)/operations/assistant/{assistant-body.tsx,bodies/product-draft-body.tsx} · apps/web/lib/catalog/product-actions.ts · apps/web/app/(operations)/operations/products/tabs/product/ · packages/application/src/assistant/kind-meta.ts`
+  - **Durum:** yapıldı. Cevap "evet"ti ve zaten büyük kısmı hazırdı: ürün ekranında da tek diyalog
+    iki işi görüyor (`ProductFormDialog`, `mode: 'create' | 'edit'`), şema ailesi ortak, görsel
+    bloğu `productId: null` hâlini zaten biliyor (kapak yükleme kilitli, galeri şeridi çizilmiyor).
+  - **İkinci gövde dosyası YAZILMADI.** `ProductDraftBody` iki tipe birden hizmet ediyor; değişen üç
+    şey `assistant-body`de duruyor — açılış değeri (kayıt ↔ boş şablon), kaydeden kapı (güncelle ↔
+    oluştur), düğmenin adı. Ayrımın ölçütü de uydurulmadı: `product_create` dilekçesinde `productId`
+    YOK, gövde bunu okuyor. Tipi ayrıca geçirmek ikinci bir gerçek olur ve bir gün ayrışırdı.
+  - **`createProductAction` `lib/catalog`e taşındı** (`withProposal` + `proposalId`), ürün
+    sekmesinin kendi `actions.ts`i böylece BOŞALDI ve silindi — üç dalganın (güncelleme 22.14,
+    görsel eylemleri 11.08, oluşturma 22.16) sonu. Doğan ürünün kimliği `result`a yazılıyor
+    (`productId`), köprü onunla kuruluyor.
+  - **Açılış değeri: form varsayılanları + dilekçe.** Dilekçenin `null` bıraktığı alan varsayılanı
+    EZMEZ — şemada `null` "asistan okuyamadı" demek (`shippable` künyesi: bilinmiyor ile "hayır"
+    ayrı şeyler). KDV formda dizge, dilekçede sayı; dönüşüm tek noktada.
+  - **Mod `inline` oldu ama "ADAY doğar" cümlesi KORUNDU** ve bu bilinçli: satış durumu seçicisi
+    kuyrukta yok (kuyruk içeriği yazar, satış eksenine dokunmaz), yani öneriden doğan ürün gerçekten
+    aday doğuyor. `product_draft`taki devri körü körüne uygulamak, var olan bir kısıtı yok saymak
+    olurdu. Test bunu makineyle tutuyor (`proposal.test.ts`: `impact` içinde "ADAY" geçmeli).
+  - **Ekran doğrulaması YAPILDI ve uçtan uca çalıştı.** İki `product_create` önerisi uygulandı;
+    ölçüm: adlar üç dilde, kategoriler doğru, KDV %5,5, Kadayıf DDM 365 gün · 2 boy (500g → net
+    500 g, 1000g → net 1000 g), Gözleme DLC 120 gün · 1 boy (3'lü paket → paket içi 3) ve **kargo
+    kapalı** (asistan saklama talimatından çıkarmış).
+  - **AMA ürünler SATIŞTA doğdu — ekran "ADAY doğar" diye söz veriyordu** *(ölçüldü 11.08:
+    `status: active`, üstelik `is_incomplete: true`)*. Sebep formun varsayılanıydı (`active`) ve
+    kuyrukta durum seçicisi olmadığı için sessizce satışa çıkarıyordu. **Düzeltme kuyruğa değil
+    FORMA yapıldı** (`buildDefaults(null)` → `candidate`): aynı yanlış elle oluşturmada da vardı,
+    "Yeni ürün" diyaloğu da Satışta doğuruyordu. Yeni ürün artık iki yüzeyde de **Aday** doğar —
+    fiyatı ve stoğu henüz yok, beyanı çoğu zaman eksik; yayına almak durum seçicisinin kararı.
+    "Pasif" değil "Aday", çünkü pasif geri çekilmiş kaydın hâli, aday henüz tamamlanmamışın.
+  - **BEKLEYEN(BACKLOG §1):** beyanı eksik ürün müşteri yüzeyinde SÜZÜLMÜYOR — vitrin okuması yalnız
+    `status = 'active'` bakıyor, `is_incomplete` kapısı yok. Fiyat ve stok girilse yasal beyanı
+    olmayan ürün satışa çıkardı. Sipariş/vitrin şeridinin alanı; kullanıcıya bildirildi.
+
+- [x] (22.17) **"Fırsat" müşterinin kelimesi, operasyonunki "Teklif"** *(kullanıcı tespiti 11.08:
+  "bu fırsat ifadesi müşteri için; bizim için aslında stok eritme — eritilmesi gereken bir stoku
+  eritmeye çalışıyoruz, o yüzden fırsat kelimesi çok garip")*
+  `touches: packages/application/src/assistant/kind-meta.ts · apps/web/app/(operations)/operations/assistant/assistant-body.tsx`
+  - **Durum:** yapıldı. Ölçüm tutarsızlığın dar olduğunu gösterdi: operasyon yüzeyi zaten "Teklif"
+    diyor (stok ekranı "Teklif açık", teklif diyaloğu, teklif fiyatı) — müşterinin kelimesi yalnız
+    kuyruğun rozetine sızmıştı. Rozet `Teklif` oldu; müşteri yüzeyi `messages.json`'daki "Fırsat"ı
+    korudu. **İki yüzey iki ayrı şey vaat ediyor ve aynı kelimeyi paylaşmak zorunda değil.**
+  - Uygulama sonrası cümle İKİ dili birden taşıyor ("teklif açıldı… müşteri yüzeyinde Fırsat olarak
+    görünüyor"): bağı operatör kendisi kurmak zorunda kalmasın.
+  - Kullanıcının seçeneği vardı ("Stok eritme" · "Teklif" · "SKT indirimi"); **"Teklif"** seçildi —
+    operasyonun zaten konuştuğu dil, iki ekran arasında tam tutarlılık.

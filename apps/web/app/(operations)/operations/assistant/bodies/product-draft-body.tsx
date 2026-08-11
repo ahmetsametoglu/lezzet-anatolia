@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { LocalizedText, ProductDraftPayload } from '@lezzet/types';
+import { resolveLocalizedText, type LocalizedText, type ProductCreatePayload, type ProductDraftPayload } from '@lezzet/types';
 import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/components/operation/form/product-form';
 import {
   ProductFormSchema,
@@ -22,7 +22,18 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
 import { DECLARATION_FIELD_LABEL } from '../assistant-labels';
 
 /**
- * ÜRÜN TASLAĞI — kuyruğun içinde, ÜRÜN EKRANININ KENDİ FORMUYLA (22.14).
+ * ÜRÜN — kuyruğun içinde, ÜRÜN EKRANININ KENDİ FORMUYLA (22.14 · 22.16).
+ *
+ * ── İKİ TİP, TEK GÖVDE ──────────────────────────────────────────────────────
+ * `product_draft` (var olan kaydı tamamla) ve `product_create` (yeni ürün) aynı gövdeyi kullanır.
+ * Kullanıcının sorusu bunu açtı: *"yeni ürün ile ürün düzenleme ayna diyaloğu kullanabilir değil
+ * mi?"* — evet, çünkü ürün ekranında da tek diyalog iki işi görüyor (`mode: 'create' | 'edit'`).
+ * İkinci bir gövde dosyası yazılsaydı bugün kopya olurdu, yarın ayrışırdı (`CLAUDE §1`).
+ *
+ * Değişen ÜÇ şey, üçü de dışarıdan geliyor: açılış değeri (kayıt ↔ boş şablon), kaydeden kapı
+ * (güncelle ↔ oluştur, `assistant-body`), ve `productId` — yeni üründe YOK. Kimliğin yokluğu
+ * galeriyi kendiliğinden doğru hâline düşürüyor: kapak yükleme kilitli ("kaydedince eklenebilir",
+ * R2 anahtarı slug'a bağlı), galeri şeridi hiç çizilmiyor (`ProductPhotos` künyesi).
  *
  * ── BİR TUR AYRI FORM YAZILDI, GERİ ALINDI ──────────────────────────────────
  * İlk denemede buraya alan alan seçim yapan yepyeni bir form yazılmıştı. Kullanıcının tespiti
@@ -67,8 +78,67 @@ function productDraftFilled(payload: ProductDraftPayload): ReadonlySet<keyof Pro
   return new Set(DRAFT_FIELDS.filter((key) => written[key] !== undefined) as Array<keyof ProductFormValues>);
 }
 
+/**
+ * YENİ ÜRÜNÜN açılış değeri: boş şablon + asistanın dilekçesi.
+ *
+ * Taban `buildDefaults(null)` — formun kendi varsayılanları (KDV %5,5, DDM, kargo açık, tek boş
+ * varyant). Dilekçedeki her alan bunun üzerine yazılır; **`null` bırakılanlar YAZILMAZ**, çünkü
+ * şemada `null` "asistan okuyamadı" demek ve varsayılanı ezmemeli (`shippable` künyesi: bilinmiyor
+ * ile "hayır" ayrı şeyler).
+ *
+ * Varyantlar dilekçeden geliyorsa formun satır şekline çevrilir: dilekçe yalnız etiket + ağırlık +
+ * adet taşır (fiyat ve stok ayrı kararlar), formun geri kalan kutuları boş doğar.
+ */
+export function productCreateValuesFrom(payload: ProductCreatePayload): ProductFormValues {
+  // Durum burada BAĞLANMIYOR: "yeni ürün aday doğar" kuralı FORMUN varsayılanında duruyor
+  // (`buildDefaults`), yani elle oluşturmada da geçerli. Burada ikinci kez yazılsaydı iki varsayılan
+  // olurdu ve biri bir gün ötekinden ayrılırdı (ölçüldü 11.08: iki ürün SATIŞTA doğmuştu).
+  const base = buildDefaults(null);
+  const patch: Record<string, unknown> = {};
+  for (const key of CREATE_FIELDS) {
+    const value = (payload as Record<string, unknown>)[key];
+    if (value !== undefined && value !== null) patch[key] = value;
+  }
+  // KDV formda dizge (segment kontrolü), dilekçede sayı — tek dönüşüm noktası.
+  if (payload.vatRate) patch.vatRate = payload.vatRate === 20 ? '20' : '5.5';
+  if (payload.variants.length > 0) {
+    patch.variants = payload.variants.map((v) => ({
+      label: v.label,
+      netWeightG: v.netWeightG,
+      piecesCount: v.piecesCount,
+      minStockQty: null,
+      sku: null,
+      isActive: true,
+    }));
+  }
+  return { ...base, ...patch } as ProductFormValues;
+}
+
+/** Yeni üründe asistanın DOLDURDUĞU alanlar — rozetin ölçütü aynı: yazdı mı, yazmadı mı. */
+function productCreateFilled(payload: ProductCreatePayload): ReadonlySet<keyof ProductFormValues> {
+  const written = payload as Record<string, unknown>;
+  const keys = CREATE_FIELDS.filter((key) => written[key] !== undefined && written[key] !== null);
+  return new Set([...keys, ...(payload.variants.length > 0 ? (['variants'] as const) : [])] as Array<keyof ProductFormValues>);
+}
+
+/** Dilekçeden forma birebir geçen alanlar (KDV ve varyantlar ayrı çevriliyor). */
+const CREATE_FIELDS = [
+  'name',
+  'description',
+  'categoryId',
+  'dateType',
+  'shelfLifeDays',
+  'shippable',
+  'ingredients',
+  'storageInstructions',
+  'nutrition',
+  'allergens',
+  'traces',
+] as const;
+
 interface ProductDraftBodyProps {
-  payload: ProductDraftPayload;
+  /** `product_draft` var olan kaydı tamamlar, `product_create` yeni ürün açar — gövde ortak. */
+  payload: ProductDraftPayload | ProductCreatePayload;
   subject: ProposalSubject | null;
   options: AssistantFormOptions;
   /** Teknik künye — dilekçe sütununun "Metadata" görünümü basıyor (11.08). */
@@ -81,8 +151,14 @@ interface ProductDraftBodyProps {
 }
 
 export function ProductDraftBody({ payload, subject, options, meta, values, onChange, disabled, readOnly }: ProductDraftBodyProps) {
-  const product = options.products[payload.productId] ?? null;
-  const filled = useMemo(() => productDraftFilled(payload), [payload]);
+  // Ayrımın ÖLÇÜTÜ kimliğin varlığı: `product_create` dilekçesinde `productId` YOKTUR. Tipi ekrana
+  // ayrıca geçirmek ikinci bir gerçek olurdu ve bir gün ötekinden ayrılırdı.
+  const draft = 'productId' in payload ? payload : null;
+  const product = draft ? (options.products[draft.productId] ?? null) : null;
+  const filled = useMemo(
+    () => (draft ? productDraftFilled(draft) : productCreateFilled(payload as ProductCreatePayload)),
+    [draft, payload],
+  );
   // Sekme YEREL: form içi bir görünüm tercihi, kararın parçası değil — çerçevenin taslağına girmez.
   const [tab, setTab] = useState<ProductFormTab>('product');
 
@@ -120,16 +196,19 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
     watch: form.watch,
     categories: options.categories,
     onAiTranslate: aiTranslate,
+    // YENİ ÜRÜNDE de çizilir ama kendi doğru hâliyle: kimlik yok → kapak yükleme kilitli ve galeri
+    // şeridi hiç yok (`ProductPhotos` bunu kendi biliyor). Blok tamamen gizlenseydi form iki tipte
+    // iki farklı düzen olurdu — kırpmanın ta kendisi.
     photosSlot:
-      product === null ? null : (
+      draft && product === null ? null : (
         <ProductPhotos
-          productId={payload.productId}
-          coverUrl={product.imageUrl}
+          productId={draft?.productId ?? null}
+          coverUrl={product?.imageUrl ?? null}
           coverCrop={crop}
           onCoverCropChange={setCrop}
           // Karar VERİLMİŞ öneride yükleme kapalı: arşiv satırı okunur bir kayıttır, oradan dosya
           // yazmak "olup bitmiş" bir kararı değiştirmek gibi okunurdu.
-          uploadCover={readOnly ? undefined : (fd) => uploadProductImageAction(payload.productId, fd)}
+          uploadCover={readOnly || !draft ? undefined : (fd) => uploadProductImageAction(draft.productId, fd)}
         />
       ),
     filled: readOnly ? undefined : filled,
@@ -171,7 +250,7 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
             İÇERİĞİNİ yazar, satış eksenine dokunmaz. Ürün pasifse pasif, aktifse aktif kalır — form
             mevcut durumu okuyup aynısını geri gönderiyor. */}
         <div className="flex flex-none flex-wrap items-baseline justify-between gap-3">
-          <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Ürün formu</span>
+          <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">{draft ? 'Ürün formu' : 'Yeni ürün'}</span>
           <ProductFormTabs value={tab} onChange={setTab} />
         </div>
 
@@ -180,7 +259,7 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
             `-mr-3 pr-3` çubuğa kendi şeridini açıyor — dilekçe sütunuyla aynı gerekçe
             (`proposal-aside` künyesi): overlay çubuk kutuların sağ kenarına biniyordu. */}
         <div className="-mr-3 flex min-h-0 flex-auto flex-col overflow-y-auto pr-3">
-          {product === null ? (
+          {draft && product === null ? (
             // Kayıt okunamadıysa FORM AÇILMAZ: boş bir formla kaydetmek, dokunulmamış alanları
             // sıfırlamak olurdu (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
             <span className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5 font-ops-body text-ops-base text-ops-amber-dark">
@@ -200,13 +279,15 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
           çünkü payload'ın kendisinden okunmuyor: iki nesnenin karşılaştırmasından çıkıyor. */}
       <ProposalAside
         subject={subject}
-        fallbackTitle={payload.productName}
+        fallbackTitle={draft ? draft.productName : resolveLocalizedText((payload as ProductCreatePayload).name)}
         facts={[
           {
             label: 'Asistanın yazdığı',
             value: filled.size > 0 ? [...filled].map((k) => DECLARATION_FIELD_LABEL[k as string] ?? k).join(' · ') : 'yok',
           },
-          { label: 'Üzerine yazılan', value: overwriteText(payload) },
+          // "Üzerine yazılan" YALNIZ var olan kayıtta anlamlı: yeni üründe üstüne yazılacak bir şey
+          // yok ve satırı "yok" diye çizmek olmayan bir riski varmış gibi okuturdu.
+          ...(draft ? [{ label: 'Üzerine yazılan', value: overwriteText(draft) }] : []),
         ]}
         payload={payload}
         meta={meta}

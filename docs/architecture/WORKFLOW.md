@@ -107,6 +107,21 @@ Canlı değerler `npx supabase status -o env` ile alınır (servis ayakta olmal�
 
 Gerekçe: yereldeki veri "değersiz" değildir. Kullanıcı elle ürün girmiş, görsel yüklemiş, hesap açmış olabilir; ajanın bir `reset`'i saatlerce süren kurgu işini siler. Şema değişikliği reset gerektiriyorsa **söylenir, kullanıcı çalıştırır.**
 
+### Veri SAHTEDİR — ondan istatistik çıkarılmaz (kullanıcı kararı 11.08)
+
+Erişimin serbest olması, satırların gerçek olduğu anlamına gelmez. Tablolardaki her şey seed'in ürettiği ya da ajanların testte yazdığı uydurma kayıt: siparişler, ciro, talep sinyalleri, arama kayıtları, stok hareketleri, müşteri davranışı. Canlı yok, müşteri yok (`CLAUDE.md` giriş notu).
+
+| Serbest — **ölçüm** | Yasak — **çıkarım** |
+| --- | --- |
+| "Bu alan dolu mu, hangi kimlik yazılmış?" | "En çok satan ürün şu" |
+| "Kısıt neden reddetti, satır kaç tane?" | "Talep şu bölgede yoğun, rota oraya açılmalı" |
+| "Payload snake_case mi yazılıyor?" | "Bu kategori zayıf, vitrinden çıkarılmalı" |
+| "Teardown kirlilik bıraktı mı?" | Bir eşiği/varsayılanı bu sayılara bakarak seçmek |
+
+Ayrım şudur: **ölçüm koda bakar, çıkarım işe.** Kodun ne yaptığını anlamak için DB'ye bakmak teşhisin tek doğru yoludur (`CLAUDE §0`: sebep kanıtlanmadan müdahale yok). İşin ne durumda olduğuna dair cümle kurmak ise gerçek veri ister ve o veri burada yok — parametrik bir değer gerekiyorsa makul bir varsayılan konur ve bildirilir (`CLAUDE §4`), gerçekten karar gerekiyorsa **kullanıcıya sorulur**.
+
+Asistanın (MCP) okuma araçları bu kuralın dışındadır ve olmalı: onlar üretimde gerçek veriyi okuyacak, geliştirmede sahtesini okuyorlar — çıktılarının **biçimi** doğrulanır, **içeriğinden** iş çıkarılmaz.
+
 ---
 
 ## 5. Sürüm kontrolü

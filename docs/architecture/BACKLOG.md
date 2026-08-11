@@ -85,6 +85,15 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Görsel yükleme (`packages/storage`, image_key deseni)
 - **Görsel okuma URL'i public'e iner:** bugün her render'da 30 dk'lık imzalı (signed) URL üretiliyor; katalog görselleri gizli olmadığı için imzanın koruma değeri yok, bedeli var — tarayıcı/CDN cache'i ölü, paylaşım (OG) kartı imza dolunca görselsiz kalıyor, vitrin statik cache'lenemiyor. R2 public okuma + `R2_PUBLIC_BASE_URL` + `?v=<updated_at>` sürüm damgası. Başlangıç: r2.dev geliştirme adresi (alan adı yok); özel alan (`cdn.<domain>`) sonra, yalnız env değeri değişir. → `build/05-katalog.md (05.11)`
 - `ProductImage` (galeri): ek görseller + sıralama; kapak üründe kalır
+- **Beyanı EKSİK ürün müşteri yüzeyinde süzülmüyor** *(ölçüldü 11.08, 22.16 sırasında)*. Vitrin ve
+  katalog okumaları yalnız `status = 'active'` bakıyor; `product.is_incomplete` (üretilmiş kolon:
+  ad dillerinden biri yok **veya** içindekiler/besin/saklama yok **veya** alerjen listesi boş) hiçbir
+  müşteri sorgusunda süzgeç değil. Yani fiyatı ve stoğu girilen eksik beyanlı bir ürün satışa çıkar —
+  INCO 1169/2011 kapsamında satılamayacak bir kayıt. **Ölçüm:** iki yeni ürün `active` +
+  `is_incomplete: true` olarak doğdu (o kısmı 22.16'da düzeltildi: yeni ürün artık `candidate`
+  doğuyor, ama operatör elle "Satışta" yaparsa kapı yine yok). Karar: süzgeç müşteri okumasına mı
+  eklenecek (sessiz gizleme), yoksa "Satışta"ya geçiş beyan tamamlanmadan ENGELLENECEK mi (görünür
+  ret)? İkincisi daha dürüst — operatör neden satamadığını öğrenir. Sipariş/vitrin şeridinin alanı.
 - ~~Operasyon ürün formu tasarımının güncellenmesi (claude_design)~~ — **karşılandı** (ölçüldü 10.08): "Yasal beyan" bölümü dört alanı da alıyor (`product-form-declaration.tsx`), galeri yönetimi de var (`product-photos.tsx`). Madde, bu ikisi tasarımda yokken açılmıştı.
 - Ürün skoru okuma önbelleği (`rating_avg`/`rating_count` ya da materialized view) — kaynak `Review`, katalog/detay/benzer listelerinde agregasyon tekrarlanmasın
 - AI çeviri önerisi: girilen dilden diğer ikisini üret, admin onayı

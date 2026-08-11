@@ -13,9 +13,10 @@ import { ProductPhotos } from '@/components/operation/form/product-form/photos';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
 import type { ProductFormTab } from '@/components/operation/form/product-form/types';
 import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
-import { updateProductAction } from '@/lib/catalog/product-actions';
+// Yazan kapıların ÜÇÜ DE ortak (`lib/catalog`): aynı form asistan kuyruğunda da açılıyor ve oradan
+// da kaydediliyor. Bu sekmenin kendi `actions.ts`i bu yüzden kalmadı.
+import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
 import { uploadProductImageAction } from '@/lib/catalog/product-photo-actions';
-import { createProductAction } from './actions';
 import { bundlesUsingVariants, type BundleView, type CategoryView, type ProductView } from '../../products-types';
 
 // Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.

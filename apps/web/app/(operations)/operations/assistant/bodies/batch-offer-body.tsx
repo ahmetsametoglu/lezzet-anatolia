@@ -102,20 +102,6 @@ export function BatchOfferBody({ payload, economics, subject, meta, valueCents, 
     // Sarmalayan kart KALKTI (11.08): panellerin kendi kenarlığı zaten var, dıştaki "kart içinde
     // kart" okunuyordu (kullanıcı tespiti — desen üç gövdede aynı).
     <div className="flex flex-wrap items-stretch gap-4">
-      {/* Önizleme sütunu ORTAK (`ProposalAside`, 22.10): konu kartı + asistanın dilekçesi + sapma.
-            Bir tur bu panel burada elle kuruluydu; indirim tipi gelince aynı kurgu ikinci kez
-            yazılacaktı — kullanıcının istediği düzen zaten buydu ("her tipte önizleme + tanıtım
-            kartı + form"), o yüzden ikinci kopya doğmadan tek yere alındı. */}
-      {/* Öne çıkan tek satır SAPMAYI gösteren teklif fiyatı — kararın konusu tam olarak o fark.
-            Dilekçenin geri kalanı altta, okunur ağaç olarak (22.15). */}
-      <ProposalAside
-        subject={subject}
-        fallbackTitle={size ? `${name} · ${size}` : name}
-        facts={[{ label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) }]}
-        payload={payload}
-        meta={meta}
-      />
-
       <Panel>
         {readOnly ? (
           <>
@@ -177,6 +163,24 @@ export function BatchOfferBody({ payload, economics, subject, meta, valueCents, 
           Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
         </span>
       </Panel>
+
+      {/* ── DİLEKÇE SÜTUNU EN SAĞDA (kullanıcı düzeltmesi 11.08) ────────────
+          Bu sütun bir tur EN SOLDA duruyordu ve o da bir kullanıcı kararıydı (10.08: *"en solda
+          kart olsun — ürün resmi, adı, bilgisi; sonra form; en kenarda bilgilendirme"*). Ama 22.15
+          sütunu bütün tiplerde standart yaptı ve standardın yeri SAĞ: indirim ve ürün gövdeleri
+          öyle çizildi, fırsat gövdesi eski yerinde kalınca tipler arası geçişte göz her seferinde
+          yer değiştiren bir sütun arıyordu — *"asistanın önerisi en sağda olacaktı, burada en solda
+          olmuş."* Konu kartı da bu sütunun içinde olduğu için 10.08'in "en solda kart" isteği
+          artık ayrı bir sütun gerektirmiyor. */}
+      <ProposalAside
+        subject={subject}
+        fallbackTitle={size ? `${name} · ${size}` : name}
+        // Öne çıkan tek satır SAPMAYI gösteren teklif fiyatı — kararın konusu tam olarak o fark.
+        // Dilekçenin geri kalanı altta, okunur ağaç olarak (22.15).
+        facts={[{ label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) }]}
+        payload={payload}
+        meta={meta}
+      />
     </div>
   );
 }

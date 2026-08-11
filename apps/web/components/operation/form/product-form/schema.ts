@@ -84,7 +84,16 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       dateType: 'DDM',
       shelfLifeDays: null,
       shippable: true,
-      status: 'active',
+      // ── YENİ ÜRÜN **ADAY** DOĞAR (kullanıcı kararı 11.08) ─────────────────
+      // Varsayılan bir tur `active` idi ve iki yüzeyde birden yanlıştı. Ölçüm: asistan önerisinden
+      // doğan iki ürün SATIŞTA doğdu, üstelik beyanları eksikti — oysa ekran "ADAY olarak doğar,
+      // vitrinde görünmez" diye söz veriyordu. Elle oluşturmada da aynı: yeni bir ürün doğduğu anda
+      // satılabilir olmamalı, çünkü fiyatı ve stoğu HENÜZ YOK ve beyanı çoğu zaman eksik.
+      // Yayına almak ayrı bir karar ve o karar durum seçicisinden veriliyor.
+      //
+      // "Pasif" değil "Aday": pasif geri çekilmiş bir kaydın hâli (arşiv değil, gizlenmiş), aday
+      // ise HENÜZ tamamlanmamış olanın. İkisi ayrı şey ve `catalog_health` adayları ayrı sayıyor.
+      status: 'candidate',
       targetMarginPercent: null,
       autoPrice: false,
       ...DEFAULT_CROP_FIELDS,
@@ -145,7 +154,10 @@ export function toActionPayload(values: ProductFormValues) {
     // ölçüt "etiketi boş olanı at"tı — etiketi silinen kayıtlı varyant sessizce silinirdi. Yeni satır
     // (id'siz) ise hiçbir alanı doldurulmamışsa atılır: "+ varyant"a basıp vazgeçmek boş satır bırakmaz.
     variants: values.variants
-      .filter((v) => v.id || resolveLocalizedText(v.label) || v.sku?.trim() || v.netWeightG != null || v.piecesCount != null || v.minStockQty != null)
+      .filter(
+        (v) =>
+          v.id || resolveLocalizedText(v.label) || v.sku?.trim() || v.netWeightG != null || v.piecesCount != null || v.minStockQty != null,
+      )
       .map((v) => ({
         id: v.id,
         label: cleanLocalized(v.label),

@@ -213,10 +213,13 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     // `product_draft` 11.08'de bu kümeye geçti: ürün ekranının kendi formu 22.14'te kuyruğa taşındı
     // ama künye `draft_then_edit` kalmıştı ve alt bar olmayan bir kısıtı anlatıyordu ("kayıt pasif
     // doğar, yayına alma kendi ekranının işi") — kullanıcı bunu ekranda gördü.
-    for (const kind of ['batch_offer', 'discount_draft', 'product_draft'] as const) {
+    for (const kind of ['batch_offer', 'discount_draft', 'product_draft', 'product_create'] as const) {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
     }
+    // `product_create` gövdeye taşındı ama ADAY doğurmaya devam ediyor: satış durumu seçicisi
+    // kuyrukta yok. Etki cümlesinin o kısmı bu yüzden korunuyor — mod değişti, kısıt değişmedi.
+    expect(KIND_META.product_create.impact).toContain('ADAY');
     for (const kind of ['bundle_draft', 'recipe_draft', 'purchase_order'] as const) {
       expect(modeOf(kind)).toBe('draft_then_edit');
       // Köprü ancak doğan kaydın kimliğiyle kurulabilir; anahtar uygulayıcının döndürdüğü adla aynı olmalı.
