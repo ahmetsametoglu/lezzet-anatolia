@@ -25,6 +25,8 @@ export interface LocalizedTextFieldProps {
   value: LocalizedText;
   onChange: (value: LocalizedText) => void;
   label: ReactNode;
+  /** Başlığın sağına düşen işaret (ör. "bu kutuyu asistan doldurdu"). AI düğmesiyle yan yana durur. */
+  labelAside?: ReactNode;
   required?: boolean;
   error?: string;
   onBlur?: () => void;
@@ -67,6 +69,7 @@ export function LocalizedTextField({
   value,
   onChange,
   label,
+  labelAside,
   required,
   error,
   onBlur,
@@ -127,7 +130,17 @@ export function LocalizedTextField({
 
   // Alan başlığı sağı: yalnız hedef dilde AI butonu (TR kaynak olduğundan onda yok). Stacked'te
   // her dil kendi başlığını taşır → burada boş.
-  const aside: ReactNode = stacked || lang === 'tr' || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, ...s })));
+  // Başlığın sağı: AI düğmesi + çağıranın işareti (ör. "asistan doldurdu" rozeti). İkisi BİRLİKTE
+  // durabilmeli — biri ötekini ezerse ya çeviri düğmesi kaybolur ya alanın kim tarafından
+  // doldurulduğu görünmez.
+  const aiAside: ReactNode = stacked || lang === 'tr' || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, ...s })));
+  const aside: ReactNode =
+    labelAside && aiAside ? (
+      <span className="flex items-center gap-2">
+        {labelAside}
+        {aiAside}
+      </span>
+    ) : (labelAside ?? aiAside);
 
   const placeholderFor = (l: Locale): string | undefined => {
     if (!placeholder) return undefined;

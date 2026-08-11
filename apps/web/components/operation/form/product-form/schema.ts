@@ -10,8 +10,18 @@ import {
   ProductVariantEntrySchema,
   resolveLocalizedText,
   type LocalizedText,
+  type Product,
+  type ProductVariant,
 } from '@lezzet/types';
-import { type ProductView } from '../../products-types';
+/**
+ * Formun okuduğu ürün — **şemadan türer, sayfa view-model'ine bağlanmaz.**
+ *
+ * Bir tur girdi `ProductView` idi ve form ürün sayfasının klasöründeyken bu doğruydu. Form ortak
+ * komponente taşınınca (22.14) o bağ ters yön olurdu: `components/` `app/`'e bakamaz (`STACK §4`,
+ * bağımlılık tek yönlü). Zaten kullanılan alanlar da `Product` + varyantlar; görsel URL'i, kategori
+ * adı ve koleksiyon adları formun hiç dokunmadığı türevlerdi.
+ */
+export type ProductFormSource = Product & { variants: ProductVariant[] };
 
 // Ürün formu şeması — ProductInsertSchema'dan TÜRETİLİR (referans deseni: .omit().extend()). Formda
 // olmayan alanlar çıkarılır (slug servis türetir; imageKey ayrı yükleme; isCandidate/sortOrder yok;
@@ -59,7 +69,7 @@ function cleanLocalized(t: LocalizedText): LocalizedText {
 }
 
 /** RHF varsayılanları — düzenlemede ProductView'dan, oluşturmada boş şablon (varsayılan varyant satırı). */
-export function buildDefaults(p: ProductView | null): ProductFormValues {
+export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
   if (!p) {
     return {
       name: {},

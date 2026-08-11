@@ -4,27 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ALLERGEN_LABELS, PRODUCT_STATUS_LABELS, ProductAllergenEnum, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
-import { type Locale } from '@lezzet/i18n';
+import { PRODUCT_STATUS_LABELS, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
-import { UnderlineTabs } from '@/components/operation/ui/underline-tabs';
-import { LocaleCard } from '@/components/operation/form/locale-card';
-import { FormNumber } from '@/components/operation/form/form-input';
-import { FormSelect } from '@/components/operation/form/form-select';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
-import { FormSwitch } from '@/components/operation/form/form-switch';
-import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
-import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
-import { FormNutrition } from '@/components/operation/form/form-nutrition';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
+import {
+  ProductFormPanels,
+  ProductFormTabs,
+  useProductFormFields,
+} from '@/components/operation/form/product-form';
+import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
+import type { ProductFormTab } from '@/components/operation/form/product-form/types';
 import { ProductPhotos } from './product-photos';
 import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
-import { createProductAction, updateProductAction, uploadProductImageAction } from './actions';
-import { VariantEditor } from './variant-editor';
-import { ProductFormDeclaration } from './product-form-declaration';
-import { ProductFormDesktop } from './product-form.desktop';
-import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from './product-form-schema';
-import type { ProductFormFields, ProductFormTab } from './product-form-types';
+import { updateProductAction } from '@/lib/catalog/product-actions';
+import { createProductAction, uploadProductImageAction } from './actions';
 import { bundlesUsingVariants, type BundleView, type CategoryView, type ProductView } from '../../products-types';
 
 // Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
@@ -82,22 +76,11 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     onClose();
   });
 
-  // Alerjen listesi İKİ alanda birden kullanılır (içerdikleri + çapraz bulaşma) → tek yerde kurulur.
-  const allergenOptions = ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a]) }));
-
-  // Çok dilli alan tanımları TEK yerde; dilini dışarıdan alır (dil kartının içi).
-  const nameField = (lang?: Locale) => (
-    <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} onAiTranslate={aiTranslate('ad')} />
-  );
-  const descriptionField = (lang?: Locale) => (
-    <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate('aciklama')} />
-  );
-
   // Görsel: kaynak 3:2, odak + zoom kırpması form değeri; düzenleme ayrı diyalogda. Kayıt yoksa yükleme
   // yapılamaz (R2 anahtarı slug'a bağlı) → istem gösterilir. Alt metin AYRI alan değil: boşsa müşteri
   // yüzeyinde ürün adına düşer (kopya tutulmaz) — bu yüzden formda alt-metin alanı yok.
   // Galeri (ek fotoğraflar) aynı blokta: kapak büyük, altında şerit. Galeri CANLI yönetilir —
-  // gerekçesi ProductPhotos'ta.
+  // gerekçesi ProductPhotos'ta. Forma SLOT olarak giriyor: canlı yazan bir blok, formun alanı değil.
   const [crop, setCrop] = useImageCrop(form);
   const imageField = (
     <ProductPhotos
@@ -109,66 +92,15 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     />
   );
 
-  // Alan elemanları tek kez kurulur; sunum yalnız YERLEŞTİRİR (ad + açıklama `content` kartında).
-  const fields: ProductFormFields = {
-    image: imageField,
-    content: (
-      <LocaleCard title="İçerik" completenessOf={form.watch('name')}>
-        {(lang) => (
-          <>
-            {nameField(lang)}
-            {descriptionField(lang)}
-          </>
-        )}
-      </LocaleCard>
-    ),
-    category: <FormSelect control={control} name="categoryId" label="Kategori" required placeholder="Kategori seç" options={categories.map((c) => ({ value: c.id, label: resolveLocalizedText(c.name) }))} />,
-    vat: <FormMultiToggle control={control} name="vatRate" label="KDV" required options={[{ key: '5.5', label: '%5,5' }, { key: '20', label: '%20' }]} />,
-    dateType: <FormMultiToggle control={control} name="dateType" label="Son tarih tipi" required options={[{ key: 'DLC', label: 'DLC · güvenlik' }, { key: 'DDM', label: 'DDM · kalite' }]} />,
-    shelfLife: <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
-    allergens: <FormMultiSelect control={control} name="allergens" label="Alerjenler" labelAside="ürünün İÇERDİKLERİ" options={allergenOptions} addLabel="+ alerjen seç" searchPlaceholder="Alerjen ara…" />,
-    traces: <FormMultiSelect control={control} name="traces" label="Çapraz bulaşma" labelAside="aynı tesiste işlenenler" options={allergenOptions} addLabel="+ alerjen seç" searchPlaceholder="Alerjen ara…" />,
-    nutrition: <FormNutrition control={control} name="nutrition" />,
-    // İçindekiler + saklama TEK dil kartında (ad/açıklama ile aynı desen): ikisi de çok dilli, dil bir
-    // kez seçilir. Ayrı ayrı sekme taşımaları hem üç sekme barı hem iki AI düğmesi doğuruyordu.
-    declarationTexts: (
-      <LocaleCard title="Beyan metinleri" completenessOf={form.watch('ingredients') ?? undefined}>
-        {(lang) => (
-          <>
-            <FormLocalizedText
-              control={control}
-              name="ingredients"
-              label="İçindekiler"
-              multiline
-              rows={5}
-              emphasis
-              emphasisHint="Alerjeni listede yazdığı hâliyle vurgula"
-              placeholder="Un, su, tuz…"
-              lang={lang}
-              onAiTranslate={aiTranslate('icindekiler')}
-            />
-            <FormLocalizedText
-              control={control}
-              name="storageInstructions"
-              label="Saklama ve hazırlama"
-              multiline
-              rows={4}
-              emphasis
-              emphasisHint="Önemli uyarıyı vurgula"
-              placeholder="Saklama ve hazırlama"
-              lang={lang}
-              onAiTranslate={aiTranslate('saklama')}
-            />
-          </>
-        )}
-      </LocaleCard>
-    ),
-    // Varyant adı bir ÜRÜN ADIDIR ("1 kg kutu"), açıklama değil.
-    variants: <VariantEditor control={control} onAiTranslate={aiTranslate('ad')} />,
-    shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
-    autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
-    margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
-  };
+  // Alan elemanları ORTAK gövdeden (22.14): aynı form asistan kuyruğunda da açılıyor. Burada yalnız
+  // kabın verdikleri var — kategoriler, AI çeviri kapısı ve canlı yazan galeri slotu.
+  const fields = useProductFormFields({
+    control,
+    watch: form.watch,
+    categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
+    onAiTranslate: aiTranslate,
+    photosSlot: imageField,
+  });
 
   // Alt bar SOL tarafı = aksiyon bölgesi (zorunlu-alan metni değil): satış durumu kaydetmenin hemen
   // yanında durur — katalog/paket dialoglarıyla aynı desen.
@@ -225,21 +157,8 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     />
   );
 
-  // Sekmeler başlıkta durur — gövde kaydırılırken kaybolmasın. İki sekme de AYNI formun içinde:
-  // gizlenen sekmenin alanları DOM'da kalır (`hidden`), çünkü sökülürlerse RHF kayıtları düşer ve
-  // "Beyan"da yazılan metin sekme değişince kaybolur. Kaydet ikisini birden gönderir.
-  const tabs = (
-    <UnderlineTabs
-      value={tab}
-      onChange={setTab}
-      className="flex-none self-end"
-      items={[
-        { key: 'product', label: 'Ürün' },
-        { key: 'declaration', label: 'Beyan', title: 'Yasal beyan — içindekiler, besin değerleri, alerjenler' },
-      ]}
-    />
-  );
-
+  // Sekmeler BAŞLIKTA durur — gövde kaydırılırken kaybolmasın. Barın kendisi ortak (`ProductFormTabs`),
+  // yeri kabın kararı: kuyrukta panelin kendi başlık satırına giriyor.
   return (
     <Dialog
       open
@@ -247,23 +166,11 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
       maxWidth={1180}
       title={editing ? 'Ürün düzenle' : 'Yeni ürün'}
       subtitle={editing ? (resolveLocalizedText(product.name) || 'Ürün') : 'Zorunlu alanları doldurun; beyanlar sonradan tamamlanabilir'}
-      headerAside={tabs}
+      headerAside={<ProductFormTabs value={tab} onChange={setTab} />}
       footer={footer}
     >
-      {/* İki sekme AYNI ızgara hücresinde üst üste durur → kabın yüksekliği UZUN olana göre sabitlenir,
-          sekme değişince diyalog zıplamaz. Pasif sekme `invisible`: DOM'da kalır (sökülürse RHF kayıtları
-          düşer ve yazılan metin kaybolur) ama tıklanamaz ve sekme sırasına girmez. */}
-      <form id={FORM_ID} onSubmit={onSubmit} className="grid">
-        <div className="col-start-1 row-start-1" aria-hidden={tab !== 'product'} inert={tab !== 'product'}>
-          <div className={tab === 'product' ? '' : 'invisible'}>
-            <ProductFormDesktop fields={fields} />
-          </div>
-        </div>
-        <div className="col-start-1 row-start-1" aria-hidden={tab !== 'declaration'} inert={tab !== 'declaration'}>
-          <div className={tab === 'declaration' ? '' : 'invisible'}>
-            <ProductFormDeclaration fields={fields} />
-          </div>
-        </div>
+      <form id={FORM_ID} onSubmit={onSubmit}>
+        <ProductFormPanels fields={fields} tab={tab} />
       </form>
     </Dialog>
   );

@@ -885,17 +885,39 @@ satırında.
   - **Ayrı bir eylem yazıldı ve gerekçesi somut:** ürün sekmesinin `updateProductAction`ı ürünün
     TAMAMINI yazar ve **varyantları senkronlar**. Kuyruğu ona bağlamak, asistanın hiç bilmediği bir
     kümeyi (varyant listesi) her onayda yeniden yazmak olurdu.
-  - **Yeni alan komponenti YAZILMADI** — metinler `LocalizedTextField`, alerjen/iz `MultiSelect`,
-    besin künyesi `NutritionField`. Sonuncusu bu iş için RHF sarmalayıcısından ayrıldı
+  - **İLK DENEME GERİ ALINDI — ürün formu YENİDEN YAZILMIŞTI** *(kullanıcı düzeltmesi 11.08: "sen
+    yeni form mu yazdın? bizim ürün formumuz bu değil ki")*. Doğruydu ve duplication'ın ta kendisiydi
+    (`CLAUDE §1`): aynı ürün iki ekranda iki farklı formla düzenlenirse bir gün biri KDV seçeneğini,
+    öteki alerjen vurgusunu ya da varyant etiketinin zorunluluğunu kaybeder. 22.10'da indirim formu
+    için doğru yapılan şey (formu diyalogdan çıkarıp ortak komponente taşımak) burada atlanmıştı.
+  - **Ürün formu ORTAK komponente taşındı** (`components/operation/form/product-form/`): alan
+    sözleşmesi, iki yerleşim (`layout.desktop` · `declaration`), şema ve varyant düzenleyici. Kapta
+    kalanlar: RHF örneği, kaydeden eylem, `Dialog` kabuğu, alt bar. İkisi de kendi kabuğunu kurar
+    çünkü kararları farklı — ürün ekranı "ürünü kaydet" der, kuyruk "öneriyi uygula" der ve kuyruk
+    satırını da kapatır.
+    - `buildDefaults`ın girdisi `ProductView`den `ProductFormSource`a (şemadan türer) çevrildi:
+      `components/` `app/`'e bakamaz (`STACK §4`, bağımlılık tek yönlü).
+    - **Galeri SLOT, alan değil.** `ProductPhotos` canlı yazar — yükleme, sıralama, kapak seçimi
+      anında kaydedilir. Kuyruğun içinde böyle bir blok olmamalı: onay beklemeyen bir yazma yolu,
+      "kuyruk hiçbir şeyi kendi yazmaz" vaadini deler. Kuyruk `null` veriyor.
+    - `updateProductAction` `lib/catalog/product-actions`e taşındı ve `proposalId` aldı — iki
+      yüzeyin ortak eylemi sayfa klasöründe duramaz (`discount-actions` ile aynı devir).
+  - **Form ürünün BUGÜNKÜ hâliyle açılır**, asistanın önerisi üzerine yazılır. Tersi (boş formu
+    dilekçeyle doldurmak) kaydetmede asistanın hiç dokunmadığı alanları sıfırlardı: bir onay, ürünün
+    varyantlarını silerdi. Kayıt okunamazsa form HİÇ AÇILMIYOR, uyarı çiziliyor.
+  - **Asistanın dokunduğu kutu işaretli** (`filled` → "asistan" rozeti, `DiscountFormBody`nin aynı
+    adlı prop'uyla aynı gerekçe): işaret olmasa operatör hangi kutunun kendi kaydı, hangisinin öneri
+    olduğunu ayıramazdı — formun tamamı "zaten böyleydi" gibi okunurdu.
+  - **Kilit `fieldset` ile, alan alan değil:** HTML'in kendi mekanizması bütün girdileri kapatıyor.
+    Yol boyunca üç ortak komponente `disabled` eklendi (`LocalizedTextField` · `MultiSelect` ·
+    `EmphasisTextarea`) — hiçbirinde yoktu; kilitli `MultiSelect` çipinden "✕" işareti kalkıyor,
+    tıklanamayan bir kaldırma işareti yalan söyler. `LocalizedTextField` ayrıca `labelAside` aldı
+    (rozet AI çeviri düğmesiyle yan yana durur, biri ötekini ezmez).
+  - **Yeni alan komponenti yazılmadı** — besin künyesi bu iş için RHF sarmalayıcısından ayrıldı
     (`nutrition-field` + ince `form-nutrition`): kopyalansaydı kJ↔kcal çevrimi, satırların yasal
-    sırası ve "0 bir beyandır" ayrımı bir gün iki yüzeyde ayrışırdı. Desen `LocalizedTextField`'ın
-    kendi künyesinde zaten verilmişti.
-  - **Üç ortak komponente `disabled` eklendi** (`LocalizedTextField` · `MultiSelect` ·
-    `EmphasisTextarea`) — hiçbirinde yoktu. Kilitli `MultiSelect` çipinden "✕" işareti KALKIYOR:
-    tıklanamayan bir kaldırma işareti yalan söyler.
-  - **Arşiv uydurmuyor (iki yerden düzeltildi).** Karar verilmiş öneride form `initial(payload)` ile
-    yeniden açılıyor, yani anahtarlar "hepsi seçili" dönerdi — oysa operatör yarısını seçmiş olabilir.
-    ① `readOnly` hâlinde seçim anahtarı hiç çizilmiyor; ② yazılan alan adları kuyruğun `result`ına
-    kaydediliyor. Yalnız `productId` yazsaydık "öneri uygulandı" derdik ama hangi alanların gerçekten
-    yazıldığını hiçbir yerden okuyamazdık.
-  - **BEKLEYEN(22.14):** ekran doğrulaması kullanıcıda — kuyrukta iki `product_draft` önerisi var.
+    sırası ve "0 bir beyandır" ayrımı bir gün iki yüzeyde ayrışırdı.
+  - **Ürünün tam kaydı seçenek havuzuna girdi** (`readAssistantFormOptions(productIds)`): form
+    kategori, KDV, tarih tipi, raf ömrü ve varyantları da ister; dilekçe bunları taşımaz ve
+    taşımamalı. Kataloğun tamamı değil, YALNIZ kuyruktaki taslakların ürünleri okunuyor.
+  - **BEKLEYEN(22.14):** ekran doğrulaması kullanıcıda — kuyrukta iki `product_draft` önerisi var
+    (*Chocolate Baklava* · *Sobiyet Baklava*, ikisi de `name` + `description`).

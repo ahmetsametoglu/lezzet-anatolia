@@ -1,169 +1,170 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { LocalizedText, ProductDraftPayload } from '@lezzet/types';
 import {
-  ALLERGEN_LABELS,
-  ProductAllergenEnum,
-  resolveLocalizedText,
-  type LocalizedText,
-  type Nutrition,
-  type ProductAllergen,
-  type ProductDetailsUpdate,
-  type ProductDraftPayload,
-} from '@lezzet/types';
-import { LocalizedTextField } from '@/components/operation/form/localized-text-field';
-import { MultiSelect } from '@/components/operation/form/multi-select';
-import { NutritionField } from '@/components/operation/form/nutrition-field';
-import { Toggle } from '@/components/operation/form/toggle';
+  ProductFormPanels,
+  ProductFormTabs,
+  useProductFormFields,
+} from '@/components/operation/form/product-form';
+import {
+  ProductFormSchema,
+  buildDefaults,
+  type ProductFormSource,
+  type ProductFormValues,
+} from '@/components/operation/form/product-form/schema';
+import type { ProductFormTab } from '@/components/operation/form/product-form/types';
+import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import { ProposalAside } from '@/components/operation/ui/proposal-aside';
+import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { DECLARATION_FIELD_LABEL } from '../assistant-labels';
 
 /**
- * ÜRÜN BEYANININ TAMAMLANMASI — kuyruğun içinde, ALAN ALAN karar (22.14).
+ * ÜRÜN TASLAĞI — kuyruğun içinde, ÜRÜN EKRANININ KENDİ FORMUYLA (22.14).
  *
- * ── NEDEN "HEPSİ YA DA HİÇBİRİ" YETMEDİ ─────────────────────────────────────
- * Bu tip bir tur yalnız önizlemeydi: fark tablosu çiziliyor, altında tek bir "Uygula" duruyordu.
- * Fırsat ve kampanyada bu yeterliydi çünkü karar TEK bir şeydi (bir fiyat, bir kural). Burada karar
- * yedi ayrı şey ve **her birinin ayrı riski var**: asistanın açıklaması iyi olabilir ama alerjen
- * satırı şüpheli; ya da tersi. Tek düğme, operatörü "iyi olanı almak için şüpheliyi de al" ikilemine
- * sokuyordu — ve `updateDetails` sürüm tutmadığı için yanlış giden alan geri getirilemiyordu.
+ * ── BİR TUR AYRI FORM YAZILDI, GERİ ALINDI ──────────────────────────────────
+ * İlk denemede buraya alan alan seçim yapan yepyeni bir form yazılmıştı. Kullanıcının tespiti
+ * kısaydı — *"bizim ürün formumuz bu değil ki."* Doğruydu: aynı ürün iki ekranda iki farklı formla
+ * düzenlenirse bir gün biri KDV seçeneğini, öteki alerjen vurgusunu ya da varyant etiketinin
+ * zorunluluğunu kaybeder (`CLAUDE §1`). Form ortak komponente taşındı; burası onu KULLANIYOR.
  *
- * Kullanıcı kararı (11.08): **alan alan seçim + düzenleme.** Patron açıklamayı alıp alerjeni
- * reddedebilir, aldığını da yazmadan önce düzeltebilir.
+ * ── FORM ÜRÜNÜN BUGÜNKÜ HÂLİYLE AÇILIR ──────────────────────────────────────
+ * Taban `buildDefaults(product)` — kategori, KDV, varyantlar, kargo izni hepsi kayıttan. Asistanın
+ * önerdiği alanlar bunun ÜZERİNE yazılır. Tersi (boş formu dilekçeyle doldurmak) kaydetmede
+ * asistanın hiç dokunmadığı alanları sıfırlardı: bir onay, ürünün varyantlarını silerdi.
  *
- * ── YENİ ALAN KOMPONENTİ YAZILMADI ──────────────────────────────────────────
- * Metinler `LocalizedTextField`, alerjen/iz `MultiSelect`, besin künyesi `NutritionField` —
- * üçü de ürün formunun kullandığı çekirdekler. Sonuncusu bu iş için RHF sarmalayıcısından
- * ayrıldı (`nutrition-field` künyesi): kopyalansaydı kJ↔kcal çevrimi, satırların yasal sırası ve
- * "0 bir beyandır" ayrımı bir gün iki yüzeyde ayrışırdı.
- *
- * ── SEÇİLMEYEN ALAN GÖNDERİLMEZ, BOŞALTILMAZ ────────────────────────────────
- * Kapı yalnız verilen alanlara dokunur (`saveProductDeclarationAction`). Seçim kaldırmak "bu alanı
- * boşalt" değil "bu alana hiç dokunma" demektir — ikisi karıştırılırsa reddedilen bir öneri, dolu
- * bir alanı silen bir onaya döner.
+ * ── ASİSTANIN DOKUNDUĞU KUTU İŞARETLİ ───────────────────────────────────────
+ * `filled` kümesi kutunun başlığına "asistan" rozetini koyuyor. İşaret olmasa operatör hangi
+ * kutunun kendi kaydı, hangisinin öneri olduğunu ayıramazdı — formun tamamı "zaten böyleydi" gibi
+ * okunurdu. Eski değer de görünür kalıyor: rozetin ipucunda değil, `ProposalAside`ın künyesinde.
  */
 
-/** Dilekçenin dokunabildiği alanlar — sıra ekranda da bu sırayla okunur (önce metin, sonra künye). */
-const FIELD_ORDER = ['name', 'description', 'ingredients', 'storageInstructions', 'allergens', 'traces', 'nutrition'] as const;
-type DeclField = (typeof FIELD_ORDER)[number];
-
-/** Uzun metin isteyen alanlar — kutu yüksekliği içeriğe göre değişsin diye ayrı. */
-const LONG_TEXT: ReadonlySet<DeclField> = new Set(['description', 'ingredients', 'storageInstructions']);
+/** Dilekçenin dokunabildiği alanlar — `filled` işareti ve künye bu sırayla okunur. */
+const DRAFT_FIELDS = ['name', 'description', 'ingredients', 'storageInstructions', 'allergens', 'traces', 'nutrition'] as const;
+type DraftField = (typeof DRAFT_FIELDS)[number];
 
 /**
- * Formun durumu: asistanın önerdiği değerler (düzenlenebilir) + hangilerinin yazılacağı.
+ * Formun açılış değeri: ürünün bugünkü hâli + asistanın önerisi.
  *
- * `fields` payload'ın şekliyle AYNI: ekran iki nesneyi alan alan yan yana koyabilsin diye
- * (`ProductDraftPayloadSchema` künyesindeki simetri gerekçesi). `selected` ayrı tutuluyor çünkü
- * "değeri var ama yazılmayacak" meşru bir hâl — alanı silmek o kararı geri alınamaz kılardı.
+ * Ürün kaydı OKUNAMADIYSA (silinmiş, ya da havuza girmemiş) boş şablona düşülür ve gövde bunu
+ * ekranda söyler — sessizce boş bir formla kaydetmek, dokunulmamış alanları sıfırlamak olurdu.
  */
-export interface ProductDraftValues {
-  fields: ProductDraftPayload['fields'];
-  selected: Partial<Record<DeclField, boolean>>;
-}
-
-/** Formun açılış hâli: asistanın yazdığı her alan SEÇİLİ gelir — dilekçenin kendisi budur. */
-export function productDraftValuesFrom(payload: ProductDraftPayload): ProductDraftValues {
-  const selected: Partial<Record<DeclField, boolean>> = {};
-  for (const key of FIELD_ORDER) {
-    if (payload.fields[key] !== undefined) selected[key] = true;
+export function productDraftValuesFrom(payload: ProductDraftPayload, product: ProductFormSource | null): ProductFormValues {
+  const base = buildDefaults(product);
+  const written = payload.fields as Partial<Record<DraftField, unknown>>;
+  const patch: Record<string, unknown> = {};
+  for (const key of DRAFT_FIELDS) {
+    if (written[key] !== undefined) patch[key] = written[key];
   }
-  return { fields: { ...payload.fields }, selected };
+  return { ...base, ...patch } as ProductFormValues;
 }
 
-/** Kaydetmenin engeli: tek bir alan bile seçilmediyse onay hiçbir şey yazmaz. */
-export function productDraftBlocked(values: ProductDraftValues): string | null {
-  return Object.values(values.selected).some(Boolean) ? null : 'En az bir alan seçilmeli';
-}
-
-/**
- * Yazılacak alanlar — **yalnız seçili olanlar.** Seçilmeyen alan girdiye HİÇ girmez (`undefined`
- * göndermek ile alanı hiç göndermemek aynı şey değil: birincisi dolu bir beyanı boşaltır).
- */
-export function productDraftInput(values: ProductDraftValues): ProductDetailsUpdate {
-  const out: Record<string, unknown> = {};
-  for (const key of FIELD_ORDER) {
-    if (values.selected[key] && values.fields[key] !== undefined) out[key] = values.fields[key];
-  }
-  return out as ProductDetailsUpdate;
+/** Asistanın DOKUNDUĞU alanlar — kutu başlıklarındaki rozet bundan çıkar. */
+function productDraftFilled(payload: ProductDraftPayload): ReadonlySet<keyof ProductFormValues> {
+  const written = payload.fields as Partial<Record<DraftField, unknown>>;
+  return new Set(DRAFT_FIELDS.filter((key) => written[key] !== undefined) as Array<keyof ProductFormValues>);
 }
 
 interface ProductDraftBodyProps {
   payload: ProductDraftPayload;
   subject: ProposalSubject | null;
-  values: ProductDraftValues;
-  onChange: (next: ProductDraftValues) => void;
+  options: AssistantFormOptions;
+  values: ProductFormValues;
+  onChange: (next: ProductFormValues) => void;
   disabled: boolean;
-  /** Karar VERİLMİŞ öneri — aynı gövde, düzenlenmeyen hâliyle. */
+  /** Karar VERİLMİŞ öneri — aynı form, düzenlenmeyen hâliyle. */
   readOnly: boolean;
 }
 
-export function ProductDraftBody({ payload, subject, values, onChange, disabled, readOnly }: ProductDraftBodyProps) {
-  const current = payload.currentFields;
-  /** Eski hâl BİLİNİYOR mu — bilinmiyorsa üzerine yazma iddia EDİLMEZ ("?" bir değer değil). */
-  const currentKnown = current !== undefined;
+export function ProductDraftBody({ payload, subject, options, values, onChange, disabled, readOnly }: ProductDraftBodyProps) {
+  const product = options.products[payload.productId] ?? null;
+  const filled = useMemo(() => productDraftFilled(payload), [payload]);
+  // Sekme YEREL: form içi bir görünüm tercihi, kararın parçası değil — çerçevenin taslağına girmez.
+  const [tab, setTab] = useState<ProductFormTab>('product');
 
-  const rows = FIELD_ORDER.filter((key) => payload.fields[key] !== undefined);
-  const picked = rows.filter((key) => values.selected[key]);
-  const overwriting = picked.filter((key) => currentKnown && hasValue(current?.[key]));
+  /**
+   * RHF örneği GÖVDEDE, ama gerçeğin sahibi ÇERÇEVE.
+   *
+   * Çerçeve taslağı (`draft`) tutuyor ve kaydeden kapıya onu veriyor; form ise RHF ister. `values`
+   * ile dış durum forma yansıtılıyor, her değişiklik `onChange` ile geri gidiyor. İki yönlü bağ
+   * kurulmasaydı ya alt bardaki "uygula" bayat değerle koşardı ya da form her tazelemede sıfırlanırdı.
+   */
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(ProductFormSchema),
+    defaultValues: values,
+    values,
+    mode: 'onChange',
+  });
 
-  const set = (key: DeclField, value: unknown) =>
-    onChange({ ...values, fields: { ...values.fields, [key]: value } });
-  const toggle = (key: DeclField, on: boolean) =>
-    onChange({ ...values, selected: { ...values.selected, [key]: on } });
+  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
+
+  const fields = useProductFormFields({
+    control: form.control,
+    watch: form.watch,
+    categories: options.categories,
+    onAiTranslate: aiTranslate,
+    // Galeri YOK: canlı yazan bir blok, kuyruğun içinde olmamalı (ortak komponentin künyesi).
+    photosSlot: null,
+    filled: readOnly ? undefined : filled,
+  });
+
+  /**
+   * Her değişiklikte çerçeveye haber — RHF'nin kendi durumu tek başına kaydedilmez.
+   *
+   * Geri çağrı REF'te tutuluyor: `onChange` her render'da yeniden kurulan bir kapanış ve doğrudan
+   * bağımlılığa yazılsaydı abonelik her render'da sökülüp kurulurdu (tuş başına iki iş). Abone bir
+   * kez kurulur, her zaman en güncel çağrıyı okur.
+   */
+  const notify = useRef(onChange);
+  notify.current = onChange;
+  useEffect(() => {
+    const sub = form.watch((next) => notify.current(next as ProductFormValues));
+    return () => sub.unsubscribe();
+  }, [form]);
 
   return (
     <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
-      {/* İKİ SÜTUN — indirim gövdesiyle aynı oran (2:1). Karar burada da FORMUN kendisi: yedi alan,
-          üçü çok dilli metin. Üçte bire sıkıştırmak metin kutularını okunmaz kılardı. */}
       <div className="flex flex-wrap items-stretch gap-4">
-        <div className="flex min-w-[22rem] flex-[2] basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Yazılacak alanlar</span>
-            <span className="font-ops-body text-ops-xs text-ops-muted">
-              {picked.length}/{rows.length} seçili
-              {overwriting.length > 0 ? ` · ${overwriting.length}’i dolu alanın üzerine` : ''}
-            </span>
+        <div className="flex min-w-[38rem] flex-[3] basis-0 flex-col gap-3 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Ürün formu</span>
+            <ProductFormTabs value={tab} onChange={setTab} />
           </div>
 
-          {rows.map((key) => (
-            <FieldRow
-              key={key}
-              label={DECLARATION_FIELD_LABEL[key] ?? key}
-              checked={Boolean(values.selected[key])}
-              onToggle={(on) => toggle(key, on)}
-              // Üzerine yazma UYARISI satırın kendisinde: toplu bir uyarı kutusu "hangisi?" sorusunu
-              // cevapsız bırakıyordu, oysa karar alan alan veriliyor.
-              overwrites={currentKnown && hasValue(current?.[key])}
-              currentText={currentKnown ? summarize(current?.[key]) : null}
-              disabled={disabled || readOnly}
-              selectable={!readOnly}
-            >
-              {renderControl({
-                field: key,
-                value: values.fields[key],
-                onChange: (next) => set(key, next),
-                // Seçilmeyen alan da GÖRÜNÜR ama düzenlenemez: gizlemek, asistanın o alanı
-                // yazdığını saklamak olurdu (22.10 ilkesi — boş alan da gösterilir).
-                disabled: disabled || readOnly || (!readOnly && !values.selected[key]),
-              })}
-            </FieldRow>
-          ))}
+          {product === null ? (
+            // Kayıt okunamadıysa FORM AÇILMAZ: boş bir formla kaydetmek, dokunulmamış alanları
+            // sıfırlamak olurdu (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+            <span className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5 font-ops-body text-ops-base text-ops-amber-dark">
+              Ürünün bugünkü kaydı okunamadı — silinmiş olabilir. Bu öneri uygulanamaz; ürün ekranından
+              doğrulayın.
+            </span>
+          ) : (
+            // Kilit TEK yerden: `fieldset` bütün girdileri HTML'in kendi mekanizmasıyla kapatır.
+            // Alan alan `disabled` geçmek, bir gün birinde unutulacak bir tekrar olurdu.
+            <fieldset disabled={disabled || readOnly} className="min-w-0 border-0 p-0">
+              <ProductFormPanels fields={fields} tab={tab} />
+            </fieldset>
+          )}
         </div>
 
         <ProposalAside
           subject={subject}
           fallbackTitle={payload.productName}
           facts={[
-            { label: 'Alan', value: `${rows.length} yazılacak`, now: `${picked.length} seçili` },
             {
-              label: 'Üzerine yazma',
-              value: currentKnown ? `${overwriting.length} dolu alan` : 'eski hâl okunamadı',
+              label: 'Asistanın yazdığı',
+              value: filled.size > 0 ? [...filled].map((k) => DECLARATION_FIELD_LABEL[k as string] ?? k).join(' · ') : 'yok',
+            },
+            {
+              label: 'Üzerine yazılan',
+              value: overwriteText(payload),
             },
             {
               label: 'Net okunmayan',
-              value: payload.uncertainFields.length > 0 ? payload.uncertainFields.map(labelOf).join(' · ') : 'yok',
+              value: payload.uncertainFields.length > 0 ? payload.uncertainFields.map((k) => DECLARATION_FIELD_LABEL[k] ?? k).join(' · ') : 'yok',
             },
             {
               label: 'Onay sonrası eksik',
@@ -177,155 +178,27 @@ export function ProductDraftBody({ payload, subject, values, onChange, disabled,
 }
 
 /**
- * Bir alanın satırı: seçim anahtarı · etiket · bugünkü değer · düzenlenebilir kutu.
+ * Kaç DOLU alanın üzerine yazılıyor — ve eski hâl hiç okunamadıysa bunu söyler.
  *
- * Bugünkü değer kutunun ÜSTÜNDE ve soluk: operatör yazacağı metni okurken neyi kaybedeceğini aynı
- * bakışta görmeli. Ayrı bir "fark tablosu"na bakmak, kararı iki ekran arasında bölerdi.
+ * Sayı değil ADLAR gerekiyordu ama künye satırı dar; adlar sığmadığında sayıya düşülüyor. Eski hâl
+ * BİLİNMİYORSA üzerine yazma İDDİA EDİLMEZ: `currentFields`in hiç gelmemesi "boştu" demek değil,
+ * "okunamadı" demektir ve ikisi ayrı şeydir (`ProductDraftPayloadSchema` künyesi).
  */
-function FieldRow({
-  label,
-  checked,
-  onToggle,
-  overwrites,
-  currentText,
-  disabled,
-  selectable,
-  children,
-}: {
-  label: string;
-  checked: boolean;
-  onToggle: (on: boolean) => void;
-  overwrites: boolean;
-  currentText: string | null;
-  disabled: boolean;
-  /** Seçim anahtarı çizilsin mi — karar verilmiş öneride `false` (yukarıdaki künye). */
-  selectable: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      className={`flex flex-col gap-2 rounded-ops-card border px-3 py-2.5 ${
-        checked && selectable ? 'border-ops-line-strong bg-ops-white' : 'border-ops-line bg-ops-surface-sunken'
-      }`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* ── KARAR VERİLMİŞ ÖNERİDE ANAHTAR ÇİZİLMEZ ────────────────────────
-            Arşiv satırı formu `initial(payload)` ile yeniden açıyor, yani anahtarlar HEPSİ SEÇİLİ
-            döner — oysa operatör o gün yarısını seçmiş olabilir. Kilitli bir anahtarı göstermek,
-            verilmemiş bir kararı verilmiş gibi okutur. Yazılanların kaydı `result`ta duruyor
-            (`saveProductDeclarationAction`), ekranın uydurmasına gerek yok. */}
-        {selectable ? (
-          // Anahtar ve etiket TEK tıklama hedefi: dar bir anahtarı avlamak yerine satırın adına
-          // basmak yeter. `onChange` verilmeyince `Toggle` dekoratife düşüyor (kendi künyesi).
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onToggle(!checked)}
-            className="flex cursor-pointer items-center gap-2.5 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <Toggle on={checked} size="sm" />
-            <span className={`font-ops-display text-ops-sm font-semibold ${checked ? 'text-ops-ink' : 'text-ops-muted'}`}>{label}</span>
-          </button>
-        ) : (
-          <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">{label}</span>
-        )}
-        {overwrites ? (
-          <span className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-2 py-0.5 font-ops-body text-ops-micro font-medium text-ops-amber-dark">
-            Bugün dolu — üzerine yazılacak
-          </span>
-        ) : null}
-      </div>
-
-      {/* Eski hâl: "—" boştu, `null` okunamadı. İkisi ayrı şey ve ikisi ayrı yazılır. */}
-      <span className="font-ops-body text-ops-xs text-ops-faint">
-        Bugün: {currentText === null ? 'okunamadı' : currentText || '—'}
-      </span>
-
-      {children}
-    </div>
+function overwriteText(payload: ProductDraftPayload): string {
+  if (payload.currentFields === undefined) return 'eski hâl okunamadı';
+  const current = payload.currentFields as Record<string, unknown>;
+  const written = payload.fields as Record<string, unknown>;
+  const names = DRAFT_FIELDS.filter((key) => written[key] !== undefined && hasValue(current[key])).map(
+    (key) => DECLARATION_FIELD_LABEL[key] ?? key,
   );
+  if (names.length === 0) return 'yok — hepsi boş alana';
+  return names.length <= 2 ? names.join(' · ') : `${names.length} dolu alan`;
 }
 
-/** Alanın tipine göre kontrol — hepsi ürün formunun kendi çekirdekleri, yenisi yazılmadı. */
-function renderControl({
-  field,
-  value,
-  onChange,
-  disabled,
-}: {
-  field: DeclField;
-  value: unknown;
-  onChange: (next: unknown) => void;
-  disabled: boolean;
-}): ReactNode {
-  if (field === 'allergens' || field === 'traces') {
-    return (
-      <MultiSelect
-        options={ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a]) }))}
-        selected={(value as ProductAllergen[] | undefined) ?? []}
-        onChange={(next) => onChange(next)}
-        disabled={disabled}
-        addLabel={field === 'allergens' ? '+ alerjen' : '+ iz'}
-        searchPlaceholder="Alerjen ara…"
-      />
-    );
-  }
-
-  if (field === 'nutrition') {
-    return (
-      <NutritionField
-        value={(value as Nutrition | undefined) ?? null}
-        onChange={(next) => onChange(next)}
-        disabled={disabled}
-        // Kabuk KAPALI: başlık ve "100 g başına" künyesi satırın kendi etiketinde zaten var,
-        // ikinci kez yazmak aynı şeyi iki kere söylerdi.
-        shell={false}
-      />
-    );
-  }
-
-  return (
-    <LocalizedTextField
-      value={(value as LocalizedText | undefined) ?? {}}
-      onChange={(next) => onChange(next)}
-      label={null}
-      disabled={disabled}
-      layout="stacked"
-      multiline={LONG_TEXT.has(field)}
-    />
-  );
-}
-
-/** Alan adının okunur karşılığı — `uncertainFields` ham anahtar taşıyor. */
-function labelOf(key: string): string {
-  return DECLARATION_FIELD_LABEL[key] ?? key;
-}
-
-/** Alanın BUGÜN dolu olup olmadığı — boş dizi ve boş metin DOLU sayılmaz. */
+/** Alan BUGÜN dolu mu — boş dizi ve boş metin dolu sayılmaz. */
 function hasValue(value: unknown): boolean {
   if (value === undefined || value === null) return false;
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'object') return Object.values(value).some((v) => (typeof v === 'string' ? v.trim() : v !== null));
   return true;
-}
-
-/** Bugünkü değerin tek satırlık özeti — kutunun üstünde okunur, tam metin ürün ekranında. */
-function summarize(value: unknown): string {
-  if (value === undefined || value === null) return '';
-  if (Array.isArray(value)) {
-    return value.length === 0 ? '' : value.map((v) => resolveLocalizedText(ALLERGEN_LABELS[v as ProductAllergen] ?? {}) || String(v)).join(', ');
-  }
-  if (typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    // Çok dilli metin: dolu dilleri ve ilk metnin başını göster.
-    const langs = (['tr', 'fr', 'de'] as const).filter((l) => typeof record[l] === 'string' && (record[l] as string).trim());
-    if (langs.length > 0) {
-      const first = (record[langs[0]!] as string).trim();
-      return `${langs.map((l) => l.toUpperCase()).join('/')} · ${first.length > 60 ? `${first.slice(0, 60)}…` : first}`;
-    }
-    // Besin künyesi: kaç kalem dolu.
-    const filled = Object.values(record).filter((v) => v !== null && v !== undefined).length;
-    return filled > 0 ? `${filled} kalem dolu` : '';
-  }
-  return String(value);
 }

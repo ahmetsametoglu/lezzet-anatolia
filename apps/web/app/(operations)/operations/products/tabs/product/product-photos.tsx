@@ -18,7 +18,7 @@ import {
   setGalleryCropAction,
   uploadGalleryPhotoAction,
 } from './actions';
-import type { ProductPhotoView } from './product-form-types';
+import type { ProductPhotoView } from './photos-types';
 
 /**
  * Ürün fotoğrafları — KAPAK (büyük) + GALERİ ŞERİDİ (küçük kareler).

@@ -45,11 +45,18 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
 
   // Sayaç sekmeden BAĞIMSIZ okunur: rozet "bekleyen iş" der ve arşive bakarken de doğru olmalı.
   // Seçenek havuzu da burada: kuyruğun içindeki formlar (indirim kapsamı) listesiz açılamaz.
-  const [queue, pendingCount, options] = await Promise.all([
-    readAssistantQueue(urlState.tab),
-    countPendingProposals(),
-    readAssistantFormOptions(),
-  ]);
+  const [queue, pendingCount] = await Promise.all([readAssistantQueue(urlState.tab), countPendingProposals()]);
+
+  // Seçenek havuzu KUYRUK OKUNDUKTAN sonra: ürün taslağı önerilerinin konusu olan ürünlerin tam
+  // kaydı da havuza giriyor (22.14) ve hangi ürünler olduğu ancak kuyruk elde olunca bilinir.
+  // Kataloğun tamamını indirmek yerine yalnız kuyruğun ihtiyacı okunuyor.
+  const options = await readAssistantFormOptions(
+    queue.flatMap((row) => {
+      if (row.kind !== 'product_draft') return [];
+      const id = (row.payload as { productId?: unknown } | null)?.productId;
+      return typeof id === 'string' ? [id] : [];
+    }),
+  );
 
   // Tek an, tüm yaşlar: kuyruk satırları ve kart künyesi aynı `now`'a göre hesaplanır — ayrı ayrı
   // okunsaydı aynı damga listede ve kartta farklı yaş gösterebilirdi.

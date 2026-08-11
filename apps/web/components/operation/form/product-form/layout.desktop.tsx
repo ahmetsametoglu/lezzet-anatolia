@@ -1,4 +1,4 @@
-import type { ProductFormFields } from './product-form-types';
+import type { ProductFormFields } from './types';
 
 // Ürün formu — masaüstü sunumu (operasyon web'i masaüstü-yalnız).
 //   ANA ALAN (sol): üst [görsel (geniş) | içerik: ad · açıklama · kategori · (tarih | raf)] +

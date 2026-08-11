@@ -10,7 +10,8 @@ import {
 } from '@lezzet/types';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
-import { saveProductDeclarationAction } from '@/lib/catalog/product-actions';
+import { updateProductAction } from '@/lib/catalog/product-actions';
+import { ProductFormSchema, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
 import {
   discountBlocked,
   discountInputOf,
@@ -22,13 +23,7 @@ import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { BatchOfferBody } from './bodies/batch-offer-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
-import {
-  ProductDraftBody,
-  productDraftBlocked,
-  productDraftInput,
-  productDraftValuesFrom,
-  type ProductDraftValues,
-} from './bodies/product-draft-body';
+import { ProductDraftBody, productDraftValuesFrom } from './bodies/product-draft-body';
 
 /**
  * ÖNERİ GÖVDELERİ — kuyruğun içinde karar verilen tiplerin kaydı (22.8).
@@ -155,28 +150,34 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
       'İndirim kuralı yazıldı — Fiyatlar → Kuponlar listesinde. Aktif bıraktıysanız koşulları tutan sepetlere işlemeye başladı.',
   }),
 
-  product_draft: defineBody<ProductDraftPayload, ProductDraftValues>({
+  product_draft: defineBody<ProductDraftPayload, ProductFormValues>({
     parse: parseWith<ProductDraftPayload>('product_draft'),
-    // Açılış hâli dilekçenin kendisi: asistanın yazdığı her alan SEÇİLİ gelir. Seçimi kaldırmak
-    // operatörün kararıdır ve "bu alana hiç dokunma" demektir — boşaltmak değil.
-    initial: (payload) => productDraftValuesFrom(payload),
-    render: ({ payload, subject, draft, onDraft, disabled, readOnly }) => (
+    // İlk değer ÜRÜNÜN BUGÜNKÜ HÂLİ + asistanın önerisi. Ürün kaydı burada yok (sözleşme payload
+    // veriyor, seçenek havuzunu değil) — o yüzden taban boş şablon, gerçek taban gövdede kuruluyor
+    // ve `values` ile forma yansıyor. Boş şablonla kaydetme YOLU YOK: kayıt okunamazsa gövde formu
+    // hiç açmıyor.
+    initial: (payload) => productDraftValuesFrom(payload, null),
+    render: ({ payload, subject, options, draft, onDraft, disabled, readOnly }) => (
       <ProductDraftBody
         payload={payload}
         subject={subject}
+        options={options}
         values={draft}
         onChange={onDraft}
         disabled={disabled}
         readOnly={readOnly}
       />
     ),
-    blocked: productDraftBlocked,
-    // Kapı YALNIZ seçili alanları alır; ürün ekranının `updateProductAction`ı değil, beyan yazan
-    // ayrı eylem (o biri varyantları da senkronlar — asistanın hiç bilmediği bir küme).
-    submit: (payload, values, proposalId) =>
-      saveProductDeclarationAction(payload.productId, productDraftInput(values), proposalId),
-    applyLabel: 'Seçilenleri yaz',
-    appliedNote: 'Beyan yazıldı — ürün ekranından görülebilir. Ürün taslakta kaldı; yayın ayrı bir karar.',
+    // Engel FORMUN kendi şemasından: aynı kural iki yüzeyde ayrışmasın (`ProductFormSchema`).
+    blocked: (values) => {
+      const parsed = ProductFormSchema.safeParse(values);
+      return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Form eksik');
+    },
+    // Kaydeden kapı ÜRÜN EKRANININKİ: kuyruk ikinci bir yazma yolu açmıyor, `withProposal` da
+    // kuyruk satırını kapatıyor.
+    submit: (payload, values, proposalId) => updateProductAction(payload.productId, toActionPayload(values), proposalId),
+    applyLabel: 'Ürünü kaydet',
+    appliedNote: 'Ürün kaydedildi — katalogda görülebilir. Satış durumu formda ne seçildiyse o.',
   }),
 };
 

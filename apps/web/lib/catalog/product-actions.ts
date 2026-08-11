@@ -1,63 +1,60 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ProductService, serviceDb } from '@lezzet/database';
-import type { ProductDetailsUpdate } from '@lezzet/types';
+import { ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
+import { resolveLocalizedText, type LocalizedText, type ProductDetailsUpdate, type ProductVariantEntry } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 
-// Ürün BEYANINI yazma yolu — asistan kuyruğunun ürün gövdesinin kapısı (22.14).
+// Ürün YAZMA yolu — İKİ yüzeyin ortak eylemi (ürün ekranı 05.x · asistan kuyruğu 22.14).
 //
-// Server action'lar kural gereği sayfa klasöründe kolokasyon eder (`CLAUDE §2`); bu eylem ürün
-// sekmesinin `updateProductAction`ından ayrı duruyor çünkü İKİ AYRI İŞ yapıyorlar: ürün formu
-// ürünün TAMAMINI yazar (ad, kategori, KDV, varyantlar, marj) ve varyantları senkronlar; kuyruk
-// yalnız beyan alanlarına dokunur ve varyantlara hiç bakmaz. Kuyruğu ürün eylemine bağlamak,
-// asistanın hiç bilmediği alanları (varyant listesi!) her onayda yeniden yazmak olurdu.
+// Server action'lar kural gereği sayfa klasöründe kolokasyon eder; bu eylem artık tek bir sayfaya
+// ait olmadığı için `lib/`'e taşındı (`CLAUDE §2`: paylaşılan yardımcı lib'te). Aynı devir indirim
+// ve teklif yazma yollarında da yaşanmıştı (`lib/prices/discount-actions`, `lib/stock/offer-actions`)
+// — desen o.
 
-/** Ürün listesinin yolu; beyan yazılınca liste tazelenir (eksik-beyan rozetleri değişir). */
+/** Ürün listesinin yolu; kayıt yazılınca liste tazelenir (eksik-beyan rozetleri değişir). */
 const PRODUCTS_PATH = '/operations/products';
 
+/** Formun gönderdiği tam girdi: düzenlenebilir ürün alanları (şemadan türer) + varyant satırları. */
+type ProductFormInput = ProductDetailsUpdate & { variants: ProductVariantEntry[] };
+
+function requireName(name: LocalizedText | undefined): LocalizedText {
+  if (!name || !resolveLocalizedText(name)) throw new Error('Ürün adı gerekli.');
+  return name;
+}
+
 /**
- * Ürünün beyan alanlarını yazar — **yalnız verilen alanlara dokunur.**
+ * Mevcut ürünü günceller (temel + çok dilli + beyan + marj) ve varyantları senkronlar. Slug sabit.
  *
- * `updateDetails` düz bir `update` ve sürüm tutmuyor: dolu bir açıklamanın üzerine yazmak geri
- * alınamaz. Bu yüzden hangi alanların yazılacağını ÇAĞIRAN seçer ve buraya yalnız onlar gelir —
- * `undefined` bir alan hiç gönderilmez, `null` ise "boşalt" demektir ve o da bilinçli bir karardır.
- *
- * `status` BU KAPIDAN GEÇMEZ ve geçmemeli: asistan beyanı doldurabilir ama ürünü satışa çıkaramaz
- * (`AI_ADMIN_ASSISTANT §6`). Yayın kararı katalog ekranının işi.
- *
- * **Boş girdi sessizce başarılı sayılmaz:** hiçbir alan seçilmediyse onay bir şey yapmayacak
- * demektir; kuyruk satırını "uygulandı" diye kapatmak, hiç yapılmamış bir işi yapılmış göstermek
- * olurdu.
+ * **Kuyruk ikinci bir yazma yolu AÇMIYOR:** asistan önerisi onaylandığında da bu eylem koşuyor,
+ * `withProposal` yalnız kuyruk satırını kapatıyor. `proposalId` yoksa akış tek satır bile farklı
+ * değil — ürün ekranının elle kullandığı yol hiç değişmedi.
  */
-export async function saveProductDeclarationAction(
-  productId: string,
-  fields: ProductDetailsUpdate,
-  /**
-   * Asistan önerisinden gelindiyse o önerinin kimliği. Yoksa akış değişmez — eylem elle de
-   * çağrılabilir ve o yol tek satır bile farklı koşmaz (`saveDiscountAction` ile aynı desen).
-   */
+export async function updateProductAction(
+  id: string,
+  input: ProductFormInput,
+  /** Asistan önerisinden gelindiyse o önerinin kimliği (22.14). */
   proposalId?: string | null,
 ): Promise<ActionResult> {
   try {
     const staff = await requireStaff();
-    if (Object.keys(fields).length === 0) {
-      return { data: null, error: 'Hiçbir alan seçilmedi — yazılacak bir şey yok.' };
-    }
-
     const db = serviceDb();
+    const { variants, ...fields } = input;
+    requireName(fields.name);
+
     await withProposal(
       proposalId,
       staff.id,
-      () => new ProductService(db).updateDetails(productId, fields),
-      // ── HANGİ ALANLAR YAZILDI, KAYITTA DURUR ────────────────────────────
-      // Operatör alan alan seçiyor (22.14) ve seçtiği küme dilekçeninkinden dar olabilir. Yalnız
-      // `productId` yazsaydık arşiv "öneri uygulandı" der, hangi alanların gerçekten yazıldığını
-      // hiçbir yerden okuyamazdık — üstelik ekran formu "hepsi seçili" hâliyle yeniden açtığı için
-      // uygulanmamış alanlar uygulanmış GİBİ görünürdü.
-      () => ({ productId, fields: Object.keys(fields).join(',') }),
+      async () => {
+        await new ProductService(db).updateDetails(id, fields);
+        await new ProductVariantService(db).syncVariants(id, variants);
+      },
+      // ── HANGİ ALANLARIN YAZILDIĞI KAYITTA DURUR ──────────────────────────
+      // Operatör formda asistanın önerisini değiştirmiş olabilir; arşiv "öneri uygulandı" derken
+      // neyin yazıldığını da söyleyebilmeli. Yalnız `productId` yazsaydık o soru cevapsız kalırdı.
+      () => ({ productId: id, fields: Object.keys(fields).join(',') }),
     );
 
     revalidatePath(PRODUCTS_PATH);

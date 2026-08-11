@@ -1,4 +1,4 @@
-import type { ProductFormFields } from './product-form-types';
+import type { ProductFormFields } from './types';
 
 // Ürün formu — BEYAN sekmesi (INCO yasal beyan). Ayrı sekmede olmasının sebebi hacim: dört alan daha
 // aynı kolona eklenirse operatör her ürün için baştan sona kaydıran bir duvarla karşılaşır.

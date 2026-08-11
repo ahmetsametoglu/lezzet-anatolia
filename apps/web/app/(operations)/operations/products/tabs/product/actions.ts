@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { ProductImageService, ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
+import { ProductImageService, ProductService, serviceDb } from '@lezzet/database';
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import {
   pickCropFields,
@@ -17,7 +17,7 @@ import {
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '../../products-paths';
-import type { ProductPhotoView } from './product-form-types';
+import type { ProductPhotoView } from './photos-types';
 
 // Galeri satırını client'ın gördüğü şekle indirger — okuma URL'i public bucket'tan saf birleştirmeyle
 // kurulur (05.11), sürüm damgası satırın kendi `imageUpdatedAt`'inden gelir.
@@ -38,21 +38,10 @@ function requireName(name: LocalizedText | undefined): LocalizedText {
   return name;
 }
 
-/** Mevcut ürünü günceller (Temel + çok dilli + alerjen + marj) ve varyantları senkronlar. Slug sabit. */
-export async function updateProductAction(id: string, input: ProductFormInput): Promise<ActionResult> {
-  try {
-    await requireStaff();
-    const db = serviceDb();
-    const { variants, ...fields } = input;
-    requireName(fields.name);
-    await new ProductService(db).updateDetails(id, fields);
-    await new ProductVariantService(db).syncVariants(id, variants);
-    revalidatePath(PRODUCTS_PATH);
-    return { data: null, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
+// GÜNCELLEME EYLEMİ BURADAN TAŞINDI (22.14) → `lib/catalog/product-actions`. Sebebi: aynı ürün
+// formu artık asistan kuyruğunun içinde de açılıyor ve oradan da kaydediliyor. İki yüzeyin ortak
+// eylemi sayfa klasöründe duramaz (`CLAUDE §2`) — kuyruk bir sayfa klasöründen import etseydi
+// bağımlılık yatay olurdu. Oluşturma eylemi burada KALDI: yeni ürün yalnız bu ekranda doğuyor.
 
 /** Yeni ürün oluşturur (varyantlar verilirse onlarla, yoksa varsayılan varyant). Slug addan türetilir. */
 export async function createProductAction(input: ProductFormInput): Promise<ActionResult> {

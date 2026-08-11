@@ -10,7 +10,7 @@ import { Toggle } from '@/components/operation/form/toggle';
 import { TranslateInput } from '@/components/operation/form/translate-input';
 import { TrashIcon } from '@/components/operation/ui/icons';
 import { SortableList } from '@/components/operation/ui/sortable-list';
-import type { ProductFormValues } from './product-form-schema';
+import type { ProductFormValues } from './schema';
 
 // Varyant editörü — ürün formunun RHF field-array'i (ekle/sil/sırala/düzenle). Sayfaya özel.
 // Satır içi girdiler operasyon form kontrolleri (Input/Toggle); ham <input> yok.
