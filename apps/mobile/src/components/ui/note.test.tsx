@@ -1,5 +1,6 @@
 import { customerAppColors, customerColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 import { Note } from './note';
 import { PrimaryButton } from './primary-button';
@@ -61,6 +62,29 @@ describe('Note', () => {
 
     expect(screen.getByTestId('note')).toBeOnTheScreen();
     expect(screen.queryByTestId('note-cta')).toBeNull();
+    expect(screen.queryByTestId('note-header')).toBeNull();
+  });
+
+  /* ÜST YUVA (11.08) — bölge dışı bandın posta kodu hapı için açıldı ve taşıdığı SÖZ SIRADIR:
+     buraya konan şey BAŞLIKTAN ÖNCE çizilir. Bir `toBeOnTheScreen` bunu kanıtlamaz (yuva altta da
+     olsa geçerdi), o yüzden ağacın çocuk sırasına bakılıyor: kutunun ilk çocuğu üst yuvadır. */
+  it('üst yuva kutunun İÇİNDE ve BAŞLIKTAN ÖNCE çizilir', async () => {
+    const view = await render(
+      <Note
+        description="Gönderebildiğimiz ürünler kargoyla gelir."
+        title="Bu bölgeye aracımız gitmiyor"
+        tone="warm"
+        header={<Text testID="note-header">67000 STRASBOURG ▾</Text>}
+        testID="note"
+      />,
+    );
+
+    expect(screen.getByTestId('note-header')).toBeOnTheScreen();
+
+    const box = view.toJSON();
+    const first = box !== null && !Array.isArray(box) ? box.children?.[0] : null;
+    expect(JSON.stringify(first)).toContain('note-header');
+    expect(JSON.stringify(first)).not.toContain('Bu bölgeye aracımız gitmiyor');
   });
 
   it('hata dışındaki tonlar alert rolü ÜRETMEZ', async () => {

@@ -6,6 +6,7 @@ import type { PlaceNoticeBodySchema } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { Note } from '@/components/ui/note';
+import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@/lib/i18n/app-locale';
@@ -14,7 +15,10 @@ import { publishToast } from '@/lib/toast/toast-store';
 // Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
 // çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
 import messages from '@/lib/places/messages.json';
+import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
+import { shippableChipLabel } from '@/lib/places/place-view';
 import { PlaceNoticeSheet } from './place-notice-sheet';
+import { ToggleSwitch } from './toggle-switch';
 import { PostalCodeSheet } from './postal-code-sheet';
 import { useMe } from './use-me.hook';
 import { useSheet } from './use-sheet.hook';
@@ -73,7 +77,10 @@ import { useSheet } from './use-sheet.hook';
       dosyanın künyesinde.
 
   KAYIT ALINDIĞINDA DÜĞME KALKAR: alınmış bir kaydı ikinci kez isteten düğme, "sayılmadım mı?"
-  sorusunu doğururdu — yerine sonucun tek satırı geçer.
+  sorusunu doğururdu — yerine sonucun tek satırı geçer. **Bu söz 11.08'e kadar YALNIZ bandın kendi
+  örneği içinde tutuluyordu** (`useState`) ve iki liste iki ayrı örnek olduğu için katalogda kaydını
+  bırakan müşteri paketler sekmesinde aynı düğmeyi yeniden görüyordu; hafıza `lib/places/
+  place-notice-store`a taşındı — cümle de, kararı da tek nüsha.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -94,20 +101,59 @@ interface PlaceNoticeBandProps {
   country: NoticeBody['country'];
   /** Normalize posta kodu (çözümden gelir, müşterinin yazdığı ham metin değil). */
   postalCode: string;
+  /**
+   * Kodun ŞEHRİ — kutudaki hapta kodun yanında yazılır (kullanıcı isteği 11.08), vitrin
+   * başlığındaki gibi: *"75001 PARIS ▾"*. Çözümden gelir ve `null` OLABİLİR (sözleşme öyle diyor:
+   * tanınan bir kodun adı bilinmeyebilir); o hâlde yalnız kod yazılır — boş bir yer tutucu ya da
+   * uydurma bir şehir basmak, müşteriye olmayan bir yeri göstermek olurdu.
+   */
+  placeName?: string | null;
   /** Talebin hangi listeden bırakıldığı — denetim izi; ekran adı, cümleyi değiştirmez. */
   source: PlaceNoticeSource;
+  /**
+   * **"Adresime gönderilebilir" süzgeci** — verilirse bandın içinde bir anahtar satırı çizilir.
+   *
+   * Süzgeç 11.08'e kadar "Sırala & filtrele" sayfasının içindeydi ve kullanıcı onu oradan aldı:
+   * *"zaten bu ancak teslimat noktalarımızın dışında çıkan bir filtreleme özelliği, bu sebepten
+   * doğrudan katalog sayfasının içine, uyarı kartının içerisine koyabiliriz."* Karar yalnız
+   * yerleşim değil, bir DOĞRULUK düzeltmesi: anahtar kapalı bir sayfanın içinde dururken açık
+   * kalıp listeyi ekranda hiçbir iz bırakmadan kısabiliyordu.
+   *
+   * **KOŞULU YOK, ÇÜNKÜ BANDIN KOŞULUYLA AYNI:** süzgeç yalnız rota dışında anlamlı
+   * (`shippableChipVisible` → `mode === 'shipping'`) ve bant da tam o hâlde çiziliyor (çağıranın
+   * kapısı: çözülmüş + rota dışı). İki ayrı kapı yazmak, bir gün birinin ötekinden ayrılması
+   * demekti — burada tek kapı var ve o çağıranın kapısıdır.
+   *
+   * Tek nesne, iki ayrı prop DEĞİL: değer ile onu değiştiren yol birbirsiz anlamsızdır; ikiye
+   * bölünseydi yalnız birini geçen bir çağıran derlenir ve anahtar sessizce ölü kalırdı.
+   * Verilmezse satır hiç çizilmez — paketler listesinde süzülecek bir şey yok.
+   */
+  shippableFilter?: { value: boolean; onChange: (next: boolean) => void };
   /** Alt öğelerin test kimlikleri bundan TÜREtilir — iki liste aynı bandı çiziyor, id'ler ayrışmalı. */
   testID?: string;
 }
 
-export function PlaceNoticeBand({ country, postalCode, source, testID }: PlaceNoticeBandProps) {
+export function PlaceNoticeBand({
+  country,
+  postalCode,
+  placeName,
+  source,
+  shippableFilter,
+  testID,
+}: PlaceNoticeBandProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
 
   const zipSheet = useSheet();
   const noticeSheet = useSheet();
-  /** Kayıt alındı mı — `null` = henüz istenmedi ya da tamamlanmadı. */
-  const [recorded, setRecorded] = useState<'ok' | 'already' | null>(null);
+  /* Kayıt alındı mı — `null` = henüz istenmedi ya da tamamlanmadı.
+
+     HAFIZA BANTTA DEĞİL DEPODA (kullanıcı bulgusu 11.08): bu bilgi iki listenin ORTAK gerçeği ve
+     `useState` bileşene aittir — katalogda kaydını bırakan müşteri paketler sekmesinde aynı düğmeyi
+     yeniden görüyordu, aşağıdaki "kayıt alındığında düğme kalkar" sözü tam da orada bozuluyordu.
+     Anahtarın neden YER olduğu ve neden diske yazılmadığı deponun künyesinde. */
+  const recorded = usePlaceNoticeRecord(country, postalCode);
+  const setRecorded = (record: 'ok' | 'already') => rememberPlaceNotice(country, postalCode, record);
   /** İstek uçuşta: çift dokunuş aynı talebi iki kez göndermesin. */
   const [sending, setSending] = useState(false);
 
@@ -174,38 +220,84 @@ export function PlaceNoticeBand({ country, postalCode, source, testID }: PlaceNo
     recordSignedIn(me.email);
   };
 
-  const actions = (
-    <View style={styles.columns}>
-      <View style={styles.column}>
-        {recorded === null ? (
-          <TextAction
-            label={t.placeNotice.cta}
-            align="center"
-            onPress={request}
-            disabled={sending}
-            accessibilityHint={t.placeNotice.ctaHint}
-            testID={idOf('cta')}
-          />
-        ) : (
-          <Text style={styles.recorded} testID={idOf('result')}>
-            {recorded === 'ok' ? t.placeNotice.recorded : t.placeNotice.alreadyRecorded}
-          </Text>
-        )}
-      </View>
-      <View style={styles.column}>
-        <TextAction
-          label={t.placeNotice.changeCode}
-          align="center"
-          onPress={zipSheet.open}
-          testID={idOf('change-zip')}
+  /* HAPIN ETİKETİ: kod + ŞEHİR, vitrin başlığındaki biçimin aynısı (`{postal} {ŞEHİR} ▾`). Şehir
+     BÜYÜK HARFE dilin kendi kuralıyla çevrilir (`toLocaleUpperCase(locale)`) — Türkçenin i/İ ayrımı
+     `toUpperCase()` ile bozulur ve vitrin başlığı da bunu böyle yapıyor. Ad yoksa yalnız kod kalır. */
+  const postalLabel =
+    placeName === undefined || placeName === null ? postalCode : `${postalCode} ${placeName.toLocaleUpperCase(locale)}`;
+
+  /* SÜZGEÇ EN ALTTA (kullanıcı kararı 11.08): kutunun içindeki sıra bilginin sırasıdır — önce
+     "aracımız gelmiyor" (başlık + cümle), sonra yerle ilgili iki eylem, EN SONDA listeyi daraltan
+     anahtar. Anahtar bir bilgi değil bir denetimdir; cümlenin arasına girseydi kutuyu okumak
+     eylemle kesilirdi. Etiket kendi sözlüğünden gelir (`shippableChipLabel`), banda ikinci bir
+     metin yazılmadı. */
+  const filterRow =
+    shippableFilter === undefined ? null : (
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>{shippableChipLabel(locale)}</Text>
+        <ToggleSwitch
+          value={shippableFilter.value}
+          onToggle={() => shippableFilter.onChange(!shippableFilter.value)}
+          accessibilityLabel={shippableChipLabel(locale)}
+          testID={idOf('shippable-toggle')}
         />
       </View>
-    </View>
+    );
+
+  /* POSTA KODU KUTUNUN EN ÜSTÜNDE, BAŞLIKTAN ÖNCE (kullanıcı kararı 11.08, ikinci tur). Sıra
+     cümlenin mantığı: önce "hangi yer için konuşuyoruz", sonra o yer hakkındaki hüküm ("bu bölgeye
+     aracımız gitmiyor"). Hap eylem yuvasındayken hükümden SONRA geliyordu ve kartı okuyan, hangi
+     kodun konuşulduğunu ancak sonda öğreniyordu.
+
+     Hap VİTRİNDEKİNİN TA KENDİSİ (aynı biçim, aynı ton, aynı çekmece — ikinci nüsha yazılmadı):
+     *"tıpkı vitrinde olduğu gibi posta kodu yazarız, daha anlaşılır ve görsel olur."* Eski "Posta
+     kodunu değiştir" cümlesi silinmedi, ekran okuyucunun adı oldu — dokunulan şeyin ne yaptığı
+     yine söyleniyor. */
+  const codeChip = (
+    <PressableSurface
+      onPress={zipSheet.open}
+      feedback="opacity"
+      compact
+      accessibilityLabel={t.placeNotice.changeCode}
+      testID={idOf('change-zip')}
+    >
+      <Text style={styles.code}>{t.placeNotice.code.replace('{postal}', postalLabel)}</Text>
+    </PressableSurface>
   );
+
+  /* KAYIT ALINDIYSA DÜĞME KOMPLE KALKAR (kullanıcı kararı 11.08) — yerine "kaydınız zaten var"
+     satırı GEÇMEZ. O cümle bir bilgi gibi görünüp yer kaplıyordu; müşteri kaydını bıraktığını zaten
+     toast'ta okudu. Cümlenin kendisi sözlükte duruyor: toast'ın metni odur. */
+  const cta =
+    recorded !== null ? null : (
+      <TextAction
+        label={t.placeNotice.cta}
+        onPress={request}
+        disabled={sending}
+        accessibilityHint={t.placeNotice.ctaHint}
+        testID={idOf('cta')}
+      />
+    );
+
+  /* Yuva BOŞSA HİÇ VERİLMEZ (paketler listesinde kayıt alınmışken tam da bu olur): boş bir
+     sarmalayıcı, kutunun altına sebepsiz bir nefes eklerdi. */
+  const actions =
+    cta === null && filterRow === null ? undefined : (
+      <View style={styles.stack}>
+        {cta}
+        {filterRow}
+      </View>
+    );
 
   return (
     <View style={styles.band} testID={testID}>
-      <Note tone="warm" title={t.placeNotice.title} description={t.placeNotice.body} action={actions} />
+      <Note
+        tone="warm"
+        header={codeChip}
+        title={t.placeNotice.title}
+        description={t.placeNotice.body}
+        action={actions}
+      />
 
       {/* Çekmeceler İLK AÇILIŞTA kurulur ve kapanınca sökülMEZ — gerekçe `use-sheet.hook`ta. */}
       {zipSheet.mounted ? (
@@ -239,24 +331,41 @@ const styles = StyleSheet.create((theme) => ({
     // Izgaranın üst nefesi kartlar için; bant listenin başında kendi payını taşır.
     paddingBottom: theme.space.md,
   },
-  /** İki eşit sütun — yuvanın sola yaslamasını EZER (`alignSelf`), satır kutunun enini kaplar. */
-  columns: {
+  /** Eylem yuvasının dikey yığını — "Buraya da gelin" (varsa) + süzgeç satırı. Yuvanın sola
+      yaslamasını EZER (`alignSelf`) ki süzgeç satırı kutunun enini kaplasın ve anahtar sağ kenara
+      otursun; yaslama kalsaydı satır yalnız etiketi kadar daralırdı. */
+  stack: {
     alignSelf: 'stretch',
+    rowGap: theme.space.lg,
+  },
+  /** Süzgeç satırı: etiket solda, anahtar sağda — süzgeç sayfasındaki satırın ta kendisi, oradan
+      taşındı (ikinci bir yerleşim uydurulmadı). */
+  switchRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    columnGap: theme.space.xl,
-  },
-  /** Eşit pay + ortalanmış içerik: iki satıra saran etiket sütunu kaydırmaz. */
-  column: {
-    flex: 1,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: theme.space.lg,
   },
-  /** Kaydın sonucu — eylemin yerine geçen tek satır; kutunun kendi tonunda kalır. */
-  recorded: {
+  switchLabel: {
+    // Kutunun kendi açıklama kademesiyle aynı aile: satır bir başlık değil, cümlenin devamı.
+    flexShrink: 1,
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
-    color: theme.colors['olive-dark'],
-    textAlign: 'center',
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.ink,
+  },
+  /* İKİ EŞİT SÜTUN KALKTI (11.08): hap kutunun üst yuvasına, "Buraya da gelin" tek başına yığına
+     geçti — yan yana iki eylem kalmayınca satırı bölecek bir şey de kalmadı. Sola yaslama artık
+     kutunun kendi hizasından geliyor (`Note` yuvaları `flex-start`), ayrı bir sütun stiline gerek
+     yok. */
+  /** Posta kodu hapı — vitrin başlığındaki `location` stilinin BİREBİR aynısı (aynı görsel dil:
+      vurgu tonu, kalın, hafif harf aralığı, sonunda açılır işareti). Kademe orada `micro`; burada
+      kutunun içinde tek başına duran bir denetim olduğu için `body-sm`e çıkıyor — müşterinin
+      dokunacağı şey, üstündeki cümleden küçük olmamalı. */
+  code: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text['body-sm'],
+    letterSpacing: theme.text['body-sm'] * 0.08,
+    color: theme.colors.terracotta,
   },
 }));

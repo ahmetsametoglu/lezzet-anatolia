@@ -210,6 +210,9 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
           <PlaceNoticeBand
             country={noticePlace.country}
             postalCode={noticePlace.postalCode}
+            /* Şehir de hapta yazılır (kullanıcı isteği 11.08); `null` olabilir, bant o hâlde
+               yalnız kodu basar. Katalogla AYNI çağrı — iki liste tek bandı besliyor. */
+            placeName={noticePlace.placeName}
             source="app-packages"
             testID="packages-place-notice"
           />

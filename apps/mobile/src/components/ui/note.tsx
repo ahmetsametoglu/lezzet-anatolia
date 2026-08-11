@@ -39,12 +39,22 @@ interface NoteProps {
   title?: string;
   /** Eylem yuvası: kutunun İÇİNDE, metnin altında çizilir (düğme / bağlantı satırı). */
   action?: ReactNode;
+  /**
+   * ÜST yuva — kutunun İÇİNDE ama başlığın ÜSTÜNDE (11.08, bölge dışı bandın posta kodu hapı).
+   *
+   * `action`ın ikizi ve aynı gerekçeyle var: bir kontrolü kutunun DIŞINA koymak, kutuyu bir cümleye
+   * indirip parçaları sayfaya döküyor (yuvanın 10.08 künyesi). Fark yalnız SIRA: buraya konan şey
+   * cümlenin ÖN KOŞULUdur — "hangi yer için konuşuyoruz" sorusunun cevabı başlıktan önce gelir.
+   * Metin bloğunun a11y kapsamı dışındadır, `action` gibi: içindeki denetim kendi başına odaklanır.
+   */
+  header?: ReactNode;
   testID?: string;
 }
 
-export function Note({ description, tone = 'olive', title, action, testID }: NoteProps) {
+export function Note({ description, tone = 'olive', title, action, header, testID }: NoteProps) {
   return (
     <View style={[styles.box, styles[tone]]} testID={testID}>
+      {header === undefined ? null : <View style={styles.header}>{header}</View>}
       {/* METİN TEK a11y öğesidir: başlık ve açıklama bir arada okunur, iki ayrı duraklama olmaz.
           Sarmalayıcı eylemi KAPSAMAZ (künye) — kapsasaydı düğme odaklanamazdı. */}
       <View style={styles.text} accessible accessibilityRole={tone === 'error' ? 'alert' : undefined}>
@@ -72,6 +82,10 @@ const styles = StyleSheet.create((theme) => ({
   action: {
     alignItems: 'flex-start',
     gap: theme.space.lg,
+  },
+  /** Üst yuva da metinle aynı hizadan başlar — kutunun içindeki her şey tek sütundan okunur. */
+  header: {
+    alignItems: 'flex-start',
   },
   olive: {
     backgroundColor: theme.colors['olive-bg'],

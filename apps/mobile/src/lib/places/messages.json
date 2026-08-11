@@ -5,8 +5,9 @@
     "lineBlocked": "Soğuk zincir ürün —\nbu adrese teslim edemiyoruz",
     "onlyShippable": "📍 Adresime gönderilebilir",
     "placeNotice": {
-      "title": "Bu adrese aracımız gitmiyor",
+      "title": "Bu bölgeye aracımız gitmiyor",
       "body": "Gönderebildiğimiz ürünler kargoyla gelir.",
+      "code": "{postal} ▾",
       "changeCode": "Posta kodunu değiştir",
       "zones": "Nerelere gidiyorsunuz?",
       "cta": "Buraya da gelin",
@@ -56,8 +57,9 @@
     "lineBlocked": "Produit chaîne du froid —\nnon livrable à cette adresse",
     "onlyShippable": "📍 Livrable chez moi",
     "placeNotice": {
-      "title": "Notre camion ne dessert pas cette adresse",
+      "title": "Notre camion ne dessert pas cette zone",
       "body": "Ce que nous pouvons expédier arrive par transporteur.",
+      "code": "{postal} ▾",
       "changeCode": "Changer le code postal",
       "zones": "Où livrez-vous ?",
       "cta": "Venez aussi chez moi",
@@ -107,8 +109,9 @@
     "lineBlocked": "Kühlkettenprodukt —\nan diese Adresse nicht lieferbar",
     "onlyShippable": "📍 An meine Adresse",
     "placeNotice": {
-      "title": "Unser Fahrzeug fährt diese Adresse nicht an",
+      "title": "Unser Fahrzeug fährt diese Region nicht an",
       "body": "Was wir versenden können, kommt per Versand.",
+      "code": "{postal} ▾",
       "changeCode": "Postleitzahl ändern",
       "zones": "Wohin liefern Sie?",
       "cta": "Kommt auch zu mir",

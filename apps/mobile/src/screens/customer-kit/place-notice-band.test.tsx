@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 
 import type { Me } from '@/lib/api/me';
 import messages from '@/lib/places/messages.json';
+import { rememberPlaceNotice, resetPlaceNotices } from '@/lib/places/place-notice-store';
 import { meFixture } from '@/screens/operations/me-fixture';
 import { PlaceNoticeBand } from './place-notice-band';
 
@@ -91,7 +92,12 @@ beforeEach(() => {
   mockPush.mockReset();
   mockToast.mockReset();
   mockSession = null;
+  /* Kayıt hafızası MODÜL düzeyinde yaşıyor (ekranlar arası ortak olması bunun için) — dosyalar
+     arası da yaşar. Her iddia kendi kurduğu hâli ölçmeli; kalıntı, bir sonraki testi sessizce
+     yeşile boyardı. */
+  resetPlaceNotices();
 });
+
 
 /** Girişli müşteri: `/me` okunabiliyor, talep tek dokunuşta bırakılıyor. */
 function mockSignedIn(noticeStatus: 'ok' | 'already' | 'place_unknown') {
@@ -108,6 +114,11 @@ function mockSignedIn(noticeStatus: 'ok' | 'already' | 'place_unknown') {
 
 function renderBand() {
   return render(<PlaceNoticeBand country="FR" postalCode="75001" source="app-catalog" testID="band" />);
+}
+
+/** Paketler sekmesinin bandı — AYNI yer, AYNI müşteri, ayrı ekran (ve ayrı bileşen örneği). */
+function renderPackagesBand() {
+  return render(<PlaceNoticeBand country="FR" postalCode="75001" source="app-packages" testID="pkg" />);
 }
 
 describe('PlaceNoticeBand', () => {
@@ -157,8 +168,10 @@ describe('PlaceNoticeBand', () => {
 
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith(t.toastRecorded.replace('{email}', 'girisli@musteri.fr')));
     expect(screen.queryByTestId('band-notice-sheet')).toBeNull();
-    // Kayıt alındı: eylem kalkar (misafir dalıyla aynı kural).
+    // Kayıt alındı: düğme KOMPLE kalkar, yerine bir cümle geçmez (kullanıcı kararı 11.08).
     await waitFor(() => expect(screen.queryByTestId('band-cta')).toBeNull());
+    expect(screen.queryByText(t.recorded)).toBeNull();
+    expect(screen.queryByText(t.alreadyRecorded)).toBeNull();
   });
 
   /* `already` AYRI bir cümledir: "kaydınız zaten var" demek, sessiz kalmaktan da "yeni kayıt
@@ -184,7 +197,7 @@ describe('PlaceNoticeBand', () => {
     expect(screen.getByTestId('band-cta')).toBeOnTheScreen();
   });
 
-  it('kayıt alınınca eylem KALKAR, yerine sonucun tek satırı geçer', async () => {
+  it('kayıt alınınca düğme KOMPLE kalkar — yerine bir cümle geçmez', async () => {
     mockNoticeFlow();
     await renderBand();
 
@@ -193,9 +206,61 @@ describe('PlaceNoticeBand', () => {
     await fireEvent.press(screen.getByTestId('band-notice-send'));
     await fireEvent.changeText(await screen.findByTestId('band-notice-code'), '123456');
 
-    await waitFor(() => expect(screen.getByTestId('band-result')).toHaveTextContent(t.recorded));
-    expect(screen.queryByTestId('band-cta')).toBeNull();
-    // Posta kodu eylemi yerinde kalır: kayıt bırakmak, kodun yanlış olma ihtimalini kapatmaz.
+    await waitFor(() => expect(screen.queryByTestId('band-cta')).toBeNull());
+    /* "Kaydınız zaten var" satırı KUTUYA YAZILMAZ (kullanıcı kararı 11.08). Metin ÇEKMECENİN
+       kendi başarı ekranında hâlâ var ve orada doğru — bu yüzden iddia kutunun yuvasına bakar. */
+    expect(screen.queryByTestId('band-result')).toBeNull();
+    // Posta kodu yerinde kalır: kayıt bırakmak, kodun yanlış olma ihtimalini kapatmaz.
     expect(screen.getByTestId('band-change-zip')).toBeOnTheScreen();
+  });
+
+  /* POSTA KODU BİR METİN EYLEMİ DEĞİL, VİTRİNDEKİ HAPIN AYNISI (kullanıcı kararı 11.08): kutu
+     müşterinin bugünkü cevabını GÖSTERİR ve dokununca aynı ortak çekmeceyi açar. */
+  it('posta kodu kutunun içinde YAZILI ve tıklanınca ortak çekmeceyi açar', async () => {
+    await renderBand();
+
+    expect(screen.getByText(messages.tr.placeNotice.code.replace('{postal}', '75001'))).toBeOnTheScreen();
+    // Eski "Posta kodunu değiştir" cümlesi ekranda YAZILI değil; ekran okuyucunun adı oldu.
+    expect(screen.queryByText(t.changeCode)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('band-change-zip'));
+    expect(await screen.findByTestId('band-zip-sheet')).toBeOnTheScreen();
+  });
+
+  /* İKİ LİSTE TEK HAFIZA (kullanıcı bulgusu 11.08) — bandın "kayıt alındığında düğme kalkar" sözü
+     ekranlar ARASINDA da geçerli olmalı. Hafıza bandın `useState`indeyken bu iddia kırmızıydı:
+     katalogda kaydını bırakan müşteri paketler sekmesinde aynı düğmeyi yeniden görüyordu.
+
+     Test iki AYRI render ile kurulur (aynı ağacın iki bandı değil): sekme değişimi bileşeni
+     söküp yeniden kuruyor ve arıza tam da orada doğuyordu. */
+  it('katalogda bırakılan kaydı PAKETLER sekmesindeki bant da bilir — düğme geri gelmez', async () => {
+    mockSignedIn('ok');
+    const catalog = await renderBand();
+
+    await fireEvent.press(await screen.findByTestId('band-cta'));
+    await waitFor(() => expect(screen.queryByTestId('band-cta')).toBeNull());
+
+    // Sekme değişimi: katalog bandı söküldü, paketler bandı sıfırdan kuruldu.
+    catalog.unmount();
+    await renderPackagesBand();
+
+    expect(screen.queryByTestId('pkg-cta')).toBeNull();
+    // Posta kodu ORADA da yerinde: kayıt, kodun yanlış olma ihtimalini kapatmaz.
+    expect(screen.getByTestId('pkg-change-zip')).toBeOnTheScreen();
+  });
+
+  /* Hafıza YERE anahtarlı: başka bir posta koduna geçen müşteri, o yer için kaydını HİÇ
+     bırakmamıştır ve düğme haklı olarak geri gelir. Bu iddia olmadan depo "bir kez bastı, bir daha
+     hiç sormayız" diye okunabilirdi. */
+  it('BAŞKA posta kodunun bandı kaydı devralmaz — eylem yerinde durur', async () => {
+    // Kayıt DOĞRUDAN depoya yazılır: ölçülen şey akış değil ANAHTAR — 75001'in kaydı 67000'e
+    // geçmemeli. Akışı bir kez daha koşturmak aynı iddiayı ölçmez, yalnız yavaşlatır.
+    rememberPlaceNotice('FR', '75001', 'ok');
+
+    const { findByTestId } = await render(
+      <PlaceNoticeBand country="FR" postalCode="67000" source="app-catalog" testID="other" />,
+    );
+
+    expect(await findByTestId('other-cta')).toBeOnTheScreen();
   });
 });

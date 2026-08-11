@@ -19,13 +19,12 @@ import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 import { formatPrice } from '@lezzet/helper';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { placeModeOf, shippableChipLabel, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
+import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 // Bant KİTE taşındı (10.08): paketler sekmesi ikinci çağıranı oldu (komponentin kendi künyesi).
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
-import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';
@@ -299,26 +298,14 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
           );
         })}
       </View>
-      {/* YER SÜZGECİ — şablonun anahtar satırı (v3 `shFilter`: etiket solda, anahtar sağda).
-          YALNIZ ROTA DIŞINDA çizilir (kuralı `shippableChipVisible`): rota içindeki müşteriye
-          süzecek bir şeyi olmayan bir denetim göstermek, web'de ölçülmüş bir arızaydı (67000 için
-          42 kalem gizleniyordu). Rota içindeki ve kodsuz müşteri bu satırı hiç görmez — sayfa
-          eskisi gibi yalnız sıralamadır. Varsayılan KAPALI: katalog kendiliğinden küçülmez.
+      {/* YER SÜZGECİ ARTIK BURADA DEĞİL (kullanıcı kararı 11.08) — bilgi bandının içinde
+          (`PlaceNoticeBand shippableFilter`). Sayfa yine yalnız SIRALAMADIR.
 
-          Sayfa BURADA KAPANMAZ (sıralamanın aksine): anahtar bir seçim değil bir açma/kapama ve
-          müşteri onu deneyip geri alabilmeli — her dokunuşta sayfayı kapatmak, geri almak için
-          sayfayı yeniden açtırırdı. */}
-      {!chipVisible ? null : (
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>{shippableChipLabel(locale)}</Text>
-          <ToggleSwitch
-            value={catalog.onlyShippable}
-            onToggle={() => catalog.setOnlyShippable(!catalog.onlyShippable)}
-            accessibilityLabel={shippableChipLabel(locale)}
-            testID="catalog-shippable-toggle"
-          />
-        </View>
-      )}
+          Gerekçe kullanıcının kendi cümlesi: süzgeç zaten *"ancak teslimat noktalarımızın dışında
+          çıkan"* bir denetim, yani bandın çizildiği hâlin ta kendisi — iki ayrı yerde iki ayrı
+          koşul tutmak yerine tek yerde duruyor. Yerleşimden öte bir doğruluk kazancı da var:
+          KAPALI bir sayfanın içindeki anahtar açık kalıp listeyi ekranda hiçbir iz bırakmadan
+          kısabiliyordu; bant görünürken anahtar da görünür. */}
     </BottomSheet>
   );
 
@@ -385,7 +372,15 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
             <PlaceNoticeBand
               country={noticePlace.country}
               postalCode={noticePlace.postalCode}
+              /* Şehir de hapta yazılır (kullanıcı isteği 11.08) — çözümden gelir, `null` olabilir
+                 ve o hâlde bant yalnız kodu basar (prop künyesi). */
+              placeName={noticePlace.placeName}
               source="app-catalog"
+              /* Süzgeç bandın İÇİNDE (kullanıcı kararı 11.08 — süzgeç sayfasından taşındı).
+                 Koşulu ayrıca yazılmaz: bant zaten `chipVisible` ile aynı hâlde çiziliyor
+                 (ikisi de "çözülmüş + rota dışı"). Paketler listesi bu prop'u vermez — orada
+                 süzülecek bir şey yok. */
+              shippableFilter={{ value: catalog.onlyShippable, onChange: catalog.setOnlyShippable }}
               testID="catalog-place-notice"
             />
           )
@@ -558,25 +553,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.control,
     color: theme.colors.ink,
   },
-  /* Anahtar satırı — şablon: `padding:4px 2px`, etiket solda, anahtar sağda. Yatay dolgu
-     ölçekte ara değer değil, `2xs`; dikey `xs`. Sayfanın kendi kenar boşluğu zaten var. */
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.space.xs,
-    paddingHorizontal: theme.space['2xs'],
-    gap: theme.space.lg,
-  },
-  switchLabel: {
-    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    // Şablon 14 çiziyor; sıralama satırıyla aynı kademede (13.5) tutuldu — iki satır aynı
-    // sayfada yan yana duruyor ve yarım puntoluk fark ikisini farklı ailedenmiş gibi okuturdu.
-    fontSize: theme.text.control,
-    color: theme.colors.ink,
-    // Uzun cümle anahtarı sıkıştırmasın; anahtar sabit genişlikte.
-    flexShrink: 1,
-  },
+  /* Anahtar satırının stili de BANDA TAŞINDI (11.08): satır artık süzgeç sayfasında değil, bilgi
+     kutusunun içinde — ölçüsü orada, komşusuyla birlikte veriliyor. */
   sortCheck: {
     fontFamily: theme.font.body[theme.text['step-sm--font-weight']],
     fontSize: theme.text['step-sm'],
