@@ -104,6 +104,11 @@ feedback.post('/feedback/:token/review', async (c) => {
  * eşiktir ve istemcide sayılsaydı iki yerde iki farklı memnuniyet tanımı olurdu. İkinci çağrı
  * puan vermez (`pointsAwarded: 0`) — davetin `completedAt` damgası + defter tekilliği.
  *
+ * **Turun TOPLAMI da buradan çıkar** (`invitePointsTotal`, MB-17): oy ve yorum uçları
+ * `{ recorded: true }` dönüyor, puanı söylemiyor — ekran kendi başına toplayamaz, toplasa motoru
+ * taklit etmiş olurdu (günlük tavan · B2B · kaynak tekilliği). Toplamı defterden motor okuyor;
+ * bu dosya yine hiçbir şey hesaplamıyor. İkinci çağrıda `pointsAwarded` 0'ken bu alan DOLU kalır.
+ *
  * `z.input` kilidi burada İKİ birliği birbirine çiviler: motorun `FeedbackOutcome`u sözleşmenin
  * `FeedbackOutcomeEnum`undan saparsa bu atama DERLENMEZ (types motor paketine bağlanamadığı için
  * bağ ancak burada kurulabilir — sözleşme künyesi).

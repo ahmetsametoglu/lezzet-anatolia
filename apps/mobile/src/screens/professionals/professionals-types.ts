@@ -29,8 +29,13 @@ export type Messages = LocalizedCopy<typeof messages>;
  * Sözlükte karşılığı olan alan adları — motorun birliği `kind`i de içerir (`keyof` ile türüyor)
  * ama o bir alan değil bir YOL, ve `messages.form`da karşılığı yok. Ayrımı tip düzeyinde tutmak,
  * cümleyi kuran tarafın var olmayan bir anahtarı okumasını derlemede keser.
+ *
+ * **`email` de dışarıda (MB-04):** o alan formdan kalktı — adres artık OTP ile doğrulanmış hesap
+ * adresidir ve sunucu onu oturumdan yazar. Sözlükten etiketi silindiği için ayrım burada da
+ * duruyor: motorun `email` reddini alan adıyla göstermeye kalkan kod DERLENMEZ, kendi cümlesini
+ * kurmak zorunda kalır (`errors.accountEmail`).
  */
-export type FieldLabelKey = Exclude<B2bApplicationField, 'kind'>;
+export type FieldLabelKey = Exclude<B2bApplicationField, 'kind' | 'email'>;
 
 /** Boş form — iki yol da aynı şekli taşır, `kind` hangi alanların görüneceğini söyler. */
 export function emptyApplication(): B2bApplicationInput {
