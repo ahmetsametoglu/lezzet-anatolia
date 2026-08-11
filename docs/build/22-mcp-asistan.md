@@ -849,3 +849,22 @@ satırında.
     parti için `must_discard` tespit ediliyor ama kaydı oluşturacak araç yok) ve **liste fiyatı
     değiştirme** (yalnız parti bazlı teklif önerilebiliyor). İkisi de yeni öneri tipi demek: şema +
     uygulayıcı + kart + onay ekranı. Ayrı bir tur.
+  - **Köprüler kurulduktan sonraki ÖLÇÜM (11.08, ikinci tur):** on bir tipin on biri ikişer öneri
+    yazdı — `featured_flag` altı turdur boş olan haneyi doldurdu (*"Dondurma vitrine çıkarılsın"* ve
+    *"Maraş Dondurma Seti vitrine çıkarılsın"*; ikincisi paket hedefi, `reference_data`ya paket
+    listesi eklendiği için mümkün oldu). Mal kabulün tedarikçi bağı 0/2'den 2/2'ye çıktı, 22.12'nin
+    on iki alanının hepsi 2/2 dolu geldi.
+  - **BEKLEYEN(22.13): iki bağ hâlâ boş ve ikisi de KİMLİK KÖPRÜSÜ SORUNU DEĞİL** — araç doğru
+    davranıyor, modelin sorusu cevapsız kalıyor. İkisi de araç tarafında kapatılabilir ve **ilgili
+    tipin kuyruk-içi FORMU yazılırken ele alınacak** (kullanıcı kararı 11.08: *"ilgili forma
+    geldiğimiz zaman tekrar konuşalım"*):
+    - **`stock_intake` → açık sipariş bağı (0/2).** İlkinde bağ kurulamaz ve bu doğru: `Alsace Frais
+      Distribution`ın hiç açık siparişi yok. İkincisi `Gaziantep Baklava Fabrikası`ndan ve o
+      tedarikçinin ÜÇ açık siparişi var — araç otomatik bağlamayıp "hangisini karşılıyor?" diye
+      sordu, model ikinci turu yapmadı. **Öneri:** araç kabuldeki varyantları açık siparişlerin
+      kalemleriyle eşleştirsin; tek sipariş örtüşüyorsa kendiliğinden bağlasın. Veri elimizde, model
+      uğraşmasın. Bağsız kabul siparişi sonsuza dek açık bırakıyor ("yolda" sayılan mal hiç inmiyor).
+    - **`money_movement` → alıcı (0/2).** Biri transfer, orada tedarikçi zaten olmaz. Öteki "ambalaj
+      gideri 150 €" ve ne `supplierName` ne `counterpartyName` dolu — para kime ödendi kayıtsız.
+      **Öneri:** gider tipinde alıcı hiç yoksa araç cevabında uyarsın; bugün sessiz geçiyor ve
+      alıcısı olmayan gider kaydı yarımdır.
