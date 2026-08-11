@@ -80,7 +80,17 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
           </button>
         </div>
 
-        <div className="flex flex-col gap-5 overflow-y-auto px-6 py-5">{children}</div>
+        {/* ── GÖVDE KAYDIRILIR: `min-h-0 flex-1` ŞART (11.08) ─────────────────
+            İkisi de yoktu ve kaydırma HİÇ ÇALIŞMIYORDU. Sebep flexbox'ın varsayılanı: `flex-col`
+            içindeki bir çocuğun asgari yüksekliği içeriği kadardır (`min-height: auto`), yani
+            `overflow-y-auto` verilse bile kutu taşan içeriğe göre büyüyor ve kaydıracak bir şey
+            kalmıyor. Dışarıdaki `overflow-hidden` de fazlalığı görünmez kılıyor: içerik kesiliyor
+            ama okunamıyor.
+
+            Arıza küçük diyaloglarda görünmüyordu (içerik `86vh`i aşmıyordu); ürün formu kuyruğun
+            içine girince ortaya çıktı. Düzeltme burada, çünkü hata Dialog'un kendisindeydi —
+            çağıran her ekran kazanıyor. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">{children}</div>
 
         {footer ? (
           <div className="flex items-center gap-2.5 border-t border-ops-line bg-ops-subtle px-6 py-3.5">{footer}</div>

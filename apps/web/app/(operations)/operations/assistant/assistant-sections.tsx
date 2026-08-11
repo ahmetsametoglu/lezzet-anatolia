@@ -188,7 +188,9 @@ export function ProposalDialog({
 
   // Taslak ÇERÇEVEDE durur, gövdede değil: kararı yürüten, hatayı gösteren ve kuyruğu tazeleyen
   // taraf burası. Kart `key={row.id}` ile sarılı olduğu için öneri değişince taslak da sıfırlanır.
-  const [draft, setDraft] = useState<unknown>(() => (inline && bodyPayload !== null ? inline.initial(bodyPayload) : null));
+  // Açılış değeri seçenek havuzunu da görür: ürün taslağı gibi tiplerin tabanı dilekçeden değil,
+  // KAYDIN bugünkü hâlinden çıkıyor (`InlineBody.initial` künyesi).
+  const [draft, setDraft] = useState<unknown>(() => (inline && bodyPayload !== null ? inline.initial(bodyPayload, options) : null));
   const blocked = inline ? inline.blocked(draft) : null;
 
   return (

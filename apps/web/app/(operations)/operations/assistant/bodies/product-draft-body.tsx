@@ -125,10 +125,20 @@ export function ProductDraftBody({ payload, subject, options, values, onChange, 
     return () => sub.unsubscribe();
   }, [form]);
 
+  // ── İKİ SÜTUN, İKİ AYRI KAYDIRMA (kullanıcı kararı 11.08) ──────────────────
+  // "O bölümün scroll'u ayrı olsun, form tarafının scroll'u ayrı olsun." Tek kaydırma kolonunda
+  // dilekçe sütunu formu aşağı itiyordu: formun altındaki varyant tablosuna inmek için önce
+  // dilekçenin sonuna kadar geçmek gerekiyordu, oysa ikisi yan yana duran ayrı okumalar. Yükseklik
+  // `70vh` ile sınırlı — diyalog kabuğu zaten `86vh`, kalanını başlık ve alt bar alıyor.
   return (
     <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
-      <div className="flex flex-wrap items-stretch gap-4">
-        <div className="flex min-w-[38rem] flex-[3] basis-0 flex-col gap-3 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+      {/* `flex-wrap` YOK ve yükseklik SABİT (`h-`, `max-h-` değil) — ikisi de kaydırmanın koşulu.
+          Sarmalayan bir flex kabında çocuklar kabın yüksekliğine gerilmez, doğal boylarında kalır;
+          `max-height` de yalnız bir tavandır, çocuğa aktarılacak bir yükseklik vermez. İkisi
+          birleşince `overflow-y-auto` hiç devreye girmiyordu (ölçüldü 11.08: iki sütun da
+          kaydırılamıyordu). Sabit yükseklik + `min-h-0` çocuğa gerçek bir sınır verir. */}
+      <div className="flex h-[68vh] items-stretch gap-4">
+        <div className="flex min-h-0 min-w-[38rem] flex-[3] basis-0 flex-col gap-3 overflow-y-auto rounded-ops-card border border-ops-line bg-ops-subtle p-3">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Ürün formu</span>
             <ProductFormTabs value={tab} onChange={setTab} />

@@ -67,7 +67,10 @@ interface ProposalAsideProps {
 
 export function ProposalAside({ subject, fallbackTitle, facts, payload, footer }: ProposalAsideProps) {
   return (
-    <div className="flex min-w-[15rem] flex-1 basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+    // `min-h-0` ŞART: sütun kendi içinde kaydırıyor (dilekçe ağacı uzun olabiliyor) ve flexbox'ın
+    // varsayılan `min-height: auto`'su altındaki `overflow-y-auto`yu etkisiz kılardı — Dialog
+    // gövdesinde yaşanan arızanın aynısı (`dialog.tsx` künyesi, 11.08).
+    <div className="flex min-h-0 min-w-[15rem] flex-1 basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
       <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
         Asistanın önerisi
       </span>

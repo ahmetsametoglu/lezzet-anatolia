@@ -130,10 +130,21 @@ function formatScalar(key: string, value: unknown): string | null {
     if (!value.trim()) return '—';
     // ISO tarih (YYYY-AA-GG ya da damga) kısa tarihe; ötekiler olduğu gibi.
     if (/^\d{4}-\d{2}-\d{2}/.test(value)) return shortDate(value);
-    return value;
+    return clamp(value);
   }
 
   return null;
+}
+
+/**
+ * Uzun metni sütuna sığdırır — dilekçe sütunu dar ve tek bir açıklama onu boydan boya kaydırırdı.
+ *
+ * Kesme noktası cömert (90 karakter): asıl soru "ne yazılmış", tam metin zaten formun kutusunda ve
+ * satırın `title` ipucunda duruyor.
+ */
+function clamp(text: string): string {
+  const t = text.trim();
+  return t.length > 90 ? `${t.slice(0, 90)}…` : t;
 }
 
 /** Çok dilli metin mi — öyleyse dolu dilleri ayrı satırlarda gösterilir. */
@@ -147,6 +158,8 @@ interface TreeRow {
   label: string;
   value: string | null;
   depth: number;
+  /** Kısaltılmışsa metnin tamamı — satırın ipucunda okunur. */
+  full?: string;
   /** Alt satırlar (nesne/dizi açılımı). */
   children?: TreeRow[];
 }
@@ -174,7 +187,9 @@ function buildRows(value: unknown, depth: number, keyPrefix: string): TreeRow[] 
 
     const id = `${keyPrefix}${key}`;
     const scalar = formatScalar(key, raw);
-    if (scalar !== null) return [{ key: id, label: labelOf(key), value: scalar, depth }];
+    if (scalar !== null) {
+      return [{ key: id, label: labelOf(key), value: scalar, depth, ...(typeof raw === 'string' ? { full: raw } : {}) }];
+    }
 
     if (Array.isArray(raw)) {
       if (raw.length === 0) return [{ key: id, label: labelOf(key), value: '—', depth }];
@@ -202,12 +217,13 @@ function buildRows(value: unknown, depth: number, keyPrefix: string): TreeRow[] 
           label: labelOf(key),
           value: langs.length > 0 ? langs.map((l) => l.toUpperCase()).join(' · ') : '—',
           depth,
-          children: langs.map((l) => ({
-            key: `${id}.${l}`,
-            label: l.toUpperCase(),
-            value: resolveLocalizedText(obj, l),
-            depth: depth + 1,
-          })),
+          children: langs.map((l) => {
+            // Metin KISALTILIR: sütun dar ve uzun bir açıklama tek başına ekranı kaydırır. Burada
+            // aranan "metnin tamamı" değil "ne yazılmış" — tamamı zaten formun kutusunda ve
+            // kısaltılmış hâlin ipucunda (`title`).
+            const text = resolveLocalizedText(obj, l);
+            return { key: `${id}.${l}`, label: l.toUpperCase(), value: clamp(text), full: text, depth: depth + 1 };
+          }),
         },
       ];
     }
@@ -251,6 +267,8 @@ function TreeLine({ row, changed }: { row: TreeRow; changed?: Record<string, str
         {row.value !== null ? (
           <dd className="flex min-w-0 items-baseline justify-end gap-1.5 text-right">
             <span
+              // Kısaltılan metnin TAMAMI ipucunda: kısaltma bir gösterim tercihi, bilgi kaybı değil.
+              title={row.value.endsWith('…') ? (row.full ?? undefined) : undefined}
               className={
                 drifted
                   ? 'font-ops-mono text-ops-xs text-ops-faint line-through'

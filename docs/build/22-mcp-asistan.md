@@ -947,3 +947,31 @@ satırında.
     için (fırsatta teklif fiyatı, indirimde formun oynattığı alanlar). Dilekçenin tamamı altında,
     kaydırılabilir bir ağaç olarak — tarifin malzeme listesiyle vitrin işaretinin üç satırı aynı
     sütunda yaşıyor ve sütun büyüyüp formu aşağı itmemeli.
+  - **`Dialog` KAYDIRMASI HİÇ ÇALIŞMIYORDU — ortak hata, ortak düzeltme** *(kullanıcı bildirimi
+    11.08: "bu diyalog içerisinde scroll hiç çalışmıyor")*. Gövdede `min-h-0 flex-1` yoktu ve
+    sebep flexbox'ın varsayılanı: `flex-col` içindeki çocuğun asgari yüksekliği içeriği kadardır
+    (`min-height: auto`), yani `overflow-y-auto` verilse bile kutu taşan içeriğe göre büyüyor,
+    kaydıracak bir şey kalmıyor; dıştaki `overflow-hidden` de fazlalığı görünmez kılıyor — içerik
+    kesiliyor ama okunamıyor. **Arıza küçük diyaloglarda görünmüyordu** (içerik `86vh`i aşmıyordu);
+    ürün formu kuyruğun içine girince ortaya çıktı. Düzeltme `Dialog`'un kendisinde: çağıran her
+    ekran kazandı. Aynı eksik `ProposalAside`ta da vardı.
+  - **İki sütun, İKİ AYRI kaydırma** *(kullanıcı kararı: "o bölümün scroll'u ayrı olsun, form
+    tarafının scroll'u ayrı olsun")*: tek kaydırma kolonunda dilekçe sütunu formu aşağı itiyordu —
+    varyant tablosuna inmek için önce dilekçenin sonuna kadar geçmek gerekiyordu, oysa ikisi yan
+    yana duran ayrı okumalar.
+  - **Genişlik 1560 → 1720** (ölçüm: 1560 dar kaldı, formun sağ rayı ile içerik sütunu sıkışıyordu)
+    ve dilekçedeki uzun metinler 90 karakterde kısaltılıyor, tamamı satırın ipucunda — kısaltma bir
+    gösterim tercihi, bilgi kaybı değil.
+  - **FORM ÜRÜNÜN KAYDINI HİÇ OKUMUYORDU — sessiz veri kaybı riski** *(kullanıcı bildirimi 11.08:
+    "kategori bölümü boş gelmiş, beyan sekmesindeki hiçbir bilgi dolu değil")*. Ölçüldü: Chocolate
+    Baklava'nın kategorisi "Tatlı", içindekiler/besin/saklama dolu, bir alerjeni var — ekranda
+    hepsi boştu. Sebep sözleşmedeydi: `initial(payload)` seçenek havuzunu görmüyordu, taslak boş
+    şablonla kuruluyor ve gövde gerçek kaydı okusa bile RHF o boş şablonu gösteriyordu. **Bedeli
+    kaydetmede ortaya çıkardı: "Ürünü kaydet" ürünün dolu beyanlarını silerdi** ve ekran zaten
+    "boş" dediği için kimse fark etmezdi. `initial` artık `(payload, options)` alıyor.
+  - **Kaydırmanın İKİNCİ kök sebebi** *(kullanıcı: "content scroll hâlâ çalışmıyor, her iki sütun
+    için de")*: `Dialog` düzeltmesi yetmedi çünkü gövdenin kendi kabı `flex-wrap` + `max-h`
+    kullanıyordu. Sarmalayan bir flex kabında çocuklar kabın yüksekliğine GERİLMEZ, doğal boylarında
+    kalır; `max-height` de yalnız bir tavandır, çocuğa aktarılacak bir yükseklik vermez. İkisi
+    birleşince `overflow-y-auto` hiç devreye girmiyordu. Sabit yükseklik (`h-[68vh]`) + `flex-nowrap`
+    + `min-h-0` üçlüsü çocuğa gerçek bir sınır veriyor.

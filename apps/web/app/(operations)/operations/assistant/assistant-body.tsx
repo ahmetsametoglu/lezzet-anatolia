@@ -70,8 +70,18 @@ interface InlineBodyArgs<Payload, Draft> {
 interface InlineBody<Payload, Draft> {
   /** Ham dilekçe → tipin payload'ı; şekil tutmuyorsa `null` (çerçeve o zaman önizlemeye düşer). */
   parse: (raw: unknown) => Payload | null;
-  /** Formun açılış değeri — asistanın önerdiği hâl. */
-  initial: (payload: Payload) => Draft;
+  /**
+   * Formun açılış değeri — asistanın önerdiği hâl.
+   *
+   * **Seçenek havuzu da geçilir** (11.08): bazı tiplerin açılış değeri dilekçeden ÇIKMAZ, kaydın
+   * bugünkü hâlinden çıkar. Ürün taslağı böyle — form ürünün mevcut kategorisi, KDV'si, varyantları
+   * ve beyanlarıyla açılıp asistanın önerisi üzerine yazılır.
+   *
+   * Havuz bir tur geçilmiyordu ve bedeli ölçüldü: taslak boş şablonla kuruluyor, gövde gerçek kaydı
+   * okusa bile form o boş şablonu gösteriyordu (kategori boş, beyan sekmesi tamamen boş). Kaydetme
+   * o hâlde ürünün DOLU beyanlarını silerdi — sessizce, çünkü ekran zaten "boş" diyordu.
+   */
+  initial: (payload: Payload, options: AssistantFormOptions) => Draft;
   render: (args: InlineBodyArgs<Payload, Draft>) => ReactNode;
   /** Kaydetmenin engeli ve SEBEBİ; `null` ise yol açık. Düğme etkin görünüp hiçbir şey yapmasın. */
   blocked: (draft: Draft) => string | null;
@@ -161,11 +171,10 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
 
   product_draft: defineBody<ProductDraftPayload, ProductFormValues>({
     parse: parseWith<ProductDraftPayload>('product_draft'),
-    // İlk değer ÜRÜNÜN BUGÜNKÜ HÂLİ + asistanın önerisi. Ürün kaydı burada yok (sözleşme payload
-    // veriyor, seçenek havuzunu değil) — o yüzden taban boş şablon, gerçek taban gövdede kuruluyor
-    // ve `values` ile forma yansıyor. Boş şablonla kaydetme YOLU YOK: kayıt okunamazsa gövde formu
-    // hiç açmıyor.
-    initial: (payload) => productDraftValuesFrom(payload, null),
+    // İlk değer ÜRÜNÜN BUGÜNKÜ HÂLİ + asistanın önerisi — ikisi bu sırayla, çünkü asistan yalnız
+    // birkaç alana dokunuyor ve geri kalanı kayıttan gelmeli. Kayıt okunamazsa gövde formu hiç
+    // açmıyor (boş formla kaydetmek dolu beyanları silerdi).
+    initial: (payload, options) => productDraftValuesFrom(payload, options.products[payload.productId] ?? null),
     render: ({ payload, subject, options, draft, onDraft, disabled, readOnly }) => (
       <ProductDraftBody
         payload={payload}
@@ -186,8 +195,9 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // kuyruk satırını kapatıyor.
     submit: (payload, values, proposalId) => updateProductAction(payload.productId, toActionPayload(values), proposalId),
     // Ürün formu tek başına 1180 px için tasarlandı (kendi diyaloğunun ölçüsü); yanına dilekçe
-    // sütunu geldiği için o kadar daha gerekiyor.
-    width: 1560,
+    // sütunu geldiği için o kadar daha gerekiyor. 1560 denendi ve DAR kaldı (kullanıcı ölçümü
+    // 11.08): formun sağ rayı (kargo · KDV · marj) ile içerik sütunu hâlâ sıkışıyordu.
+    width: 1720,
     applyLabel: 'Ürünü kaydet',
     appliedNote: 'Ürün kaydedildi — katalogda görülebilir. Satış durumu formda ne seçildiyse o.',
   }),
