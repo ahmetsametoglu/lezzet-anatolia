@@ -1,7 +1,7 @@
+import { linkReferrer } from '@lezzet/application';
 import { UserProfileService, serviceDb } from '@lezzet/database';
 import { resolveIdentity } from '@lezzet/domain-core';
 import type { UserProfile, UserProfileInsert } from '@lezzet/types';
-import { linkReferrer } from '../feedback/referral';
 
 /**
  * Bul-veya-oluştur: kimliğin **tek kapısı** (04.4/04.5) — DOMAIN §10.
@@ -27,8 +27,15 @@ interface FindOrCreateInput {
   /** Yeni kayıt açılırken uygulanacak ek alanlar (dil, ülke, izinler...). */
   defaults?: Partial<UserProfileInsert>;
   /**
-   * Davet kodu (17.7) — kayıt bağlantısındaki `?ref=…`. **Yalnız YENİ kayıtta** getiren bağını
-   * kurar; mevcut müşteriye bağlanırken yok sayılır.
+   * Davet kodu (17.7) — **yalnız YENİ kayıtta** getiren bağını kurar; mevcut müşteriye
+   * bağlanırken yok sayılır.
+   *
+   * **Müşteri yüzeyinin ASIL kayıt yolu buradan geçmiyor** (17.9 ölçümü): web ve mobil girişte
+   * kart `auth.users` trigger'ıyla doğuyor ve davet bağı orada kuruluyor
+   * (`@lezzet/application/auth/otp` → `attachReferrer`). Bu parametre WhatsApp'tan ve misafir
+   * doğrulamasından açılan kayıtların yolu; bugün onu dolduran bir çağıran YOK ve künyenin bunu
+   * söylemesi bilinçli — 17.7 satırı "kayıt akışı `?ref=…` değerini geçirir" diyordu ve o cümle
+   * hiç doğru olmamıştı. O yol daveti kabul edecekse kodu buraya taşır.
    *
    * Neden yalnız yeni kayıtta: davet, bir müşteriyi KAZANDIRMANIN ödülüdür. Zaten müşterimiz olan
    * birinin bir davet bağlantısına tıklaması onu yeniden kazandırmaz — ve o kapı açık olsaydı iki
@@ -99,10 +106,11 @@ export async function findOrCreateCustomer(input: FindOrCreateInput): Promise<Fi
       });
       // Getiren bağı kayıttan SONRA kurulur: `linkReferrer` kendini-getirme ve "ilk getiren kazanır"
       // kurallarını taşıyor ve bunlar yeni satırın kimliğini bilmeden uygulanamaz. Ödül burada
-      // DOĞMAZ — o, getirilen kişinin ilk siparişinde doğar (`rewardCompletedOrder`).
+      // DOĞMAZ — o, getirilen kişinin ilk siparişinin PARASI ALINDIĞINDA doğar (17.9:
+      // `application/order/payment.ts` → `finalize` → `rewardReferralOnPaidOrder`).
       if (input.referralCode) {
-        const bagli = await linkReferrer(profile.id, input.referralCode);
-        return { status: 'created', profile: bagli ? ((await profiles.getById(profile.id)) ?? profile) : profile };
+        const bagli = await linkReferrer(serviceDb(), profile.id, input.referralCode);
+        return { status: 'created', profile: bagli === 'linked' ? ((await profiles.getById(profile.id)) ?? profile) : profile };
       }
       return { status: 'created', profile };
     }

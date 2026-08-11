@@ -4,7 +4,7 @@ import { logger } from '@lezzet/observability';
 import type { CompanyInfo, CustomerType, MePointsEarnWayKey } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getPointsBalance } from '../feedback/points';
-import { ensureCustomerReferralCode } from './referral';
+import { ensureCustomerReferralCode, inviteUrl } from './referral';
 
 /*
   MÜŞTERİ PUAN CÜZDANI — bakiye + çevirme eşiği + kullanılabilir kuponlar + puan→kupon çevirme
@@ -82,6 +82,14 @@ export interface CustomerPointsCard {
   redeem: { minimumPoints: number; valueCents: number };
   /** Davet kodu — kart varsa GARANTİLİ (yoksa üretilir); `null` yalnız üretim başarısızsa. */
   referralCode: string | null;
+  /**
+   * Kodun paylaşılabilir TAM adresi (17.9) — kod varsa GARANTİLİ, yoksa `null`.
+   *
+   * **Adresi ekran KURMAZ, sunucu verir:** üç yüzey (web hesabı, mobil paylaş sayfası, ileride
+   * WhatsApp metni) kendi adresini kursaydı rota adı değiştiği gün ikisi sessizce 404'e düşerdi —
+   * `PATHNAMES` künyesinin kendi dersi. Dil PAYLAŞANIN dilidir (`inviteUrl` künyesi).
+   */
+  inviteUrl: string | null;
   /** Bakiyesi sıfır olan müşteriye "nereden kazanırım" cevabı; sıra ürün kararı (bkz. `EARN_WAYS`). */
   earnWays: CustomerEarnWay[];
 }
@@ -214,6 +222,9 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
       balance: balance.balance,
       redeem: { minimumPoints: settings.minimum, valueCents: settings.minimum * settings.centValue },
       referralCode,
+      // Adres kodun yanında doğuyor: kod `null`sa (üretim çakışması) paylaşılacak bağ da yoktur —
+      // "bu bağlantıyı paylaş" deyip boş bir adres vermek, çalışmayan bir düğme göstermektir.
+      inviteUrl: referralCode ? inviteUrl(referralCode, profile.preferredLanguage) : null,
       earnWays,
     },
     coupons,

@@ -73,13 +73,13 @@ export interface OrderEffects {
   /** Durum haberi (14.5) — web karşılığı `notifyOrderStatus`. */
   notifyStatus?: (orderId: string, status: OrderStatus) => Promise<unknown>;
   /** İstisna haberi (14.5) — web karşılığı `notifyOrderException`. */
-  notifyException?: (
-    orderId: string,
-    event: OrderExceptionEvent,
-    opts: { refundedAmountCents?: number | null },
-  ) => Promise<unknown>;
-  /** Sipariş puanı (17.4) — web karşılığı `rewardCompletedOrder`. */
-  rewardDelivered?: (orderId: string) => Promise<unknown>;
+  notifyException?: (orderId: string, event: OrderExceptionEvent, opts: { refundedAmountCents?: number | null }) => Promise<unknown>;
+  // `rewardDelivered` PORTU KALKTI (17.9). İki karar birden kaldırdı: sipariş puanı silindi
+  // (kullanıcı kararı 11.08) ve getirenin ödülü teslimattan ÖDEMEYE taşındı. Ödül artık ödeme
+  // durumunun türetildiği tek yerde doğuyor (`order/payment.ts` → `finalize`), yani bir porta
+  // ihtiyacı yok: `feedback/points` bu paketin İÇİNDE. Port dışarıdan doldurulan bir kanca olarak
+  // kaldığı sürece iki yüzey (web · mobil arka uç) onu ayrı ayrı bağlamak zorundaydı ve biri
+  // unutulursa ödül sessizce yazılmıyordu.
   /** Sağlayıcıya iade (07.11) — web karşılığı `stripeRefunder()`. */
   refunder?: ProviderRefunder;
 }
@@ -134,10 +134,6 @@ export function notifyExceptionEffect(
   opts: { refundedAmountCents?: number | null } = {},
 ): Promise<void> {
   return runEffect('notifyException', orderId, effects?.notifyException && (() => effects.notifyException!(orderId, event, opts)));
-}
-
-export function rewardDeliveredEffect(effects: OrderEffects | undefined, orderId: string): Promise<void> {
-  return runEffect('rewardDelivered', orderId, effects?.rewardDelivered && (() => effects.rewardDelivered!(orderId)));
 }
 
 /**

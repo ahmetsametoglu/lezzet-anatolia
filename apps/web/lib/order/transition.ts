@@ -2,7 +2,6 @@ import { serviceDb } from '@lezzet/database';
 import { transitionOrder as transitionOrderFor, type OrderEffects, type TransitionOutcome } from '@lezzet/application';
 import type { OrderStatus } from '@lezzet/types';
 import { notifyOrderStatus } from './notify';
-import { rewardCompletedOrder } from '../feedback/points';
 
 /**
  * Durum ilerletme kapısı (07.6) — **uygulama katmanı orkestrasyonu**.
@@ -13,15 +12,17 @@ import { rewardCompletedOrder } from '../feedback/points';
  * mobilin "Siparişi tamamla" ekranı da aynı geçişi yapacak. İki kopya, bir gün iki ayrı referans
  * numarası kuralı demekti.
  *
- * Köprünün taşıdığı şey WEB'E ÖZGÜ olan: **iki yan etki**. Müşteri haberi (`notifyOrderStatus`,
- * modül 14) `@lezzet/notify` + `@lezzet/i18n` ister, sipariş puanı (`rewardCompletedOrder`, modül
- * 17) `pointsSettings()` üstünde durur; ikisi de `@lezzet/application`ın bağımlılığı DEĞİL ve
- * sahipleri başka şeritler — gerekçenin tamamı paketin `order/effects.ts` künyesinde. Yutma
- * davranışı orada da aynı: etki patlarsa geçiş geri ALINMAZ, yalnız iz bırakılır.
+ * Köprünün taşıdığı şey WEB'E ÖZGÜ olan yan etki: müşteri haberi (`notifyOrderStatus`, modül 14)
+ * `@lezzet/notify` + `@lezzet/i18n` ister ve o ikisi `@lezzet/application`ın bağımlılığı DEĞİL —
+ * gerekçenin tamamı paketin `order/effects.ts` künyesinde. Yutma davranışı orada da aynı: etki
+ * patlarsa geçiş geri ALINMAZ, yalnız iz bırakılır.
+ *
+ * **`rewardDelivered` portu KALKTI (17.9):** sipariş puanı kaldırıldı, getirenin ödülü de artık
+ * teslimata değil ÖDEMEYE bağlı (`order/payment.ts` → `finalize`). Teslimat anında çağrılan bir
+ * ödül portu, ödenmemiş siparişte de puan yazabiliyordu.
  */
 export const webOrderEffects: OrderEffects = {
   notifyStatus: (orderId, status) => notifyOrderStatus(orderId, status),
-  rewardDelivered: (orderId) => rewardCompletedOrder(orderId),
 };
 
 interface TransitionInput {

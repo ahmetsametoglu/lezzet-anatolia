@@ -60,8 +60,12 @@ describe('emniyet ağı — beyaz listede OLMAYAN rotada da kimlik maskelenir', 
     expect(routePattern('/yeni-sayfa/3f8a1c22-5b7d-4e90-a1b2-c3d4e5f60718')).toBe('/yeni-sayfa/[id]');
   });
 
+  // Örnek yol bir zamanlar `/davet/…` idi ve 17.9'da GERÇEK bir rota oldu (davet karşılaması) —
+  // test o gün "beyaz listede yok" varsayımını kaybedip beklenen kalıbı `/invite/[code]` okumaya
+  // başladı. Uydurma yolun bir gün gerçekleşmesi bu bloğun doğasında var; örnek, hiçbir dile
+  // karşılığı olmayan bir sözcükle değiştirildi.
   it('uzun jeton maskelenir', () => {
-    expect(routePattern('/davet/AbCdEfGhIjKlMnOpQrStUvWx')).toBe('/davet/[id]');
+    expect(routePattern('/bilinmeyen/AbCdEfGhIjKlMnOpQrStUvWx')).toBe('/bilinmeyen/[id]');
   });
 
   it('sayı maskelenir', () => {

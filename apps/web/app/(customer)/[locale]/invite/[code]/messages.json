@@ -1,0 +1,101 @@
+{
+  "tr": {
+    "meta": {
+      "title": "Davet — Lezzet Anatolia",
+      "description": "Bir tanıdığınız sizi Lezzet Anatolia'ya davet etti. Türk mutfağının seçkin lezzetlerini keşfedin."
+    },
+    "ok": {
+      "eyebrow": "Davet",
+      "title": "{name} sizi Lezzet Anatolia'ya davet etti",
+      "someone": "Bir tanıdığınız",
+      "description": "Türkiye'nin dört bir yanından seçtiğimiz lezzetler, soğuk zincirle kapınıza kadar. Keşfetmeye buradan başlayın.",
+      "primary": "Katalogu keşfet",
+      "secondary": "Hesap oluştur"
+    },
+    "unknown": {
+      "eyebrow": "Davet",
+      "title": "Bu davet bağlantısı artık geçerli değil",
+      "description": "Bağlantı eksik kopyalanmış ya da süresi dolmuş olabilir. Yine de hoş geldiniz — lezzetlere göz atabilirsiniz.",
+      "primary": "Katalogu keşfet"
+    },
+    "self": {
+      "eyebrow": "Davet",
+      "title": "Bu sizin davet bağlantınız",
+      "description": "Bağlantı çalışıyor. Tanıdıklarınızla paylaşın; davet ettiğiniz kişi ilk siparişini tamamladığında puanınız hesabınıza geçer.",
+      "primary": "Hesabıma dön"
+    },
+    "alreadyCustomer": {
+      "eyebrow": "Davet",
+      "title": "Zaten aramızdasınız",
+      "description": "Davet yeni müşterilerimiz için. Sizin de kendi davet bağlantınız var — hesabınızdan paylaşabilirsiniz.",
+      "primary": "Katalogu keşfet",
+      "secondary": "Hesabıma dön"
+    }
+  },
+  "fr": {
+    "meta": {
+      "title": "Parrainage — Lezzet Anatolia",
+      "description": "Une connaissance vous invite chez Lezzet Anatolia. Découvrez les saveurs de la cuisine turque."
+    },
+    "ok": {
+      "eyebrow": "Parrainage",
+      "title": "{name} vous invite chez Lezzet Anatolia",
+      "someone": "Une personne",
+      "description": "Des saveurs choisies aux quatre coins de la Turquie, livrées chez vous en chaîne du froid. Commencez la découverte ici.",
+      "primary": "Découvrir le catalogue",
+      "secondary": "Créer un compte"
+    },
+    "unknown": {
+      "eyebrow": "Parrainage",
+      "title": "Ce lien de parrainage n'est plus valable",
+      "description": "Le lien a peut-être été copié en partie ou a expiré. Bienvenue tout de même — vous pouvez parcourir nos saveurs.",
+      "primary": "Découvrir le catalogue"
+    },
+    "self": {
+      "eyebrow": "Parrainage",
+      "title": "C'est votre lien de parrainage",
+      "description": "Le lien fonctionne. Partagez-le autour de vous : vos points arrivent dès que la personne invitée règle sa première commande.",
+      "primary": "Retour à mon compte"
+    },
+    "alreadyCustomer": {
+      "eyebrow": "Parrainage",
+      "title": "Vous êtes déjà des nôtres",
+      "description": "Le parrainage s'adresse aux nouveaux clients. Vous avez vous aussi un lien à partager — il se trouve dans votre compte.",
+      "primary": "Découvrir le catalogue",
+      "secondary": "Retour à mon compte"
+    }
+  },
+  "de": {
+    "meta": {
+      "title": "Einladung — Lezzet Anatolia",
+      "description": "Jemand lädt Sie zu Lezzet Anatolia ein. Entdecken Sie die Aromen der türkischen Küche."
+    },
+    "ok": {
+      "eyebrow": "Einladung",
+      "title": "{name} lädt Sie zu Lezzet Anatolia ein",
+      "someone": "Jemand",
+      "description": "Ausgewählte Spezialitäten aus der ganzen Türkei, per Kühlkette bis vor Ihre Tür. Starten Sie hier.",
+      "primary": "Katalog entdecken",
+      "secondary": "Konto erstellen"
+    },
+    "unknown": {
+      "eyebrow": "Einladung",
+      "title": "Dieser Einladungslink gilt nicht mehr",
+      "description": "Der Link wurde vielleicht unvollständig kopiert oder ist abgelaufen. Willkommen trotzdem — schauen Sie sich gern um.",
+      "primary": "Katalog entdecken"
+    },
+    "self": {
+      "eyebrow": "Einladung",
+      "title": "Das ist Ihr eigener Einladungslink",
+      "description": "Der Link funktioniert. Teilen Sie ihn — Ihre Punkte kommen, sobald die eingeladene Person ihre erste Bestellung bezahlt.",
+      "primary": "Zurück zum Konto"
+    },
+    "alreadyCustomer": {
+      "eyebrow": "Einladung",
+      "title": "Sie gehören schon dazu",
+      "description": "Einladungen sind für neue Kundinnen und Kunden. Auch Sie haben einen eigenen Link — er steht in Ihrem Konto.",
+      "primary": "Katalog entdecken",
+      "secondary": "Zurück zum Konto"
+    }
+  }
+}

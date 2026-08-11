@@ -82,6 +82,19 @@ export const PATHNAMES = {
   // ikisi de aynı satırı okusun ki yol tek kararla belirlensin.
   '/feedback/[token]': { fr: '/avis/[token]', de: '/bewertung/[token]', tr: '/degerlendirme/[token]' },
   /**
+   * Davet karşılaması (17.9) — **menüde yoktur, tek giriş yolu paylaşılan bağlantıdır** ve
+   * `[code]` müşterinin `referral_code`üdür (oturum yerine GEÇMEZ: kod kimlik değil, davetiyedir).
+   *
+   * Segment üç dilde de davetin kendi sözcüğü, çünkü bu adres bir ARAMA sözcüğü değil ama bir
+   * GÜVEN sözcüğüdür: bağlantı WhatsApp'ta tanıdıktan gelir ve alan kişi adresi okur. Fransızcada
+   * `parrainage` ("referans/sponsorluk") programın piyasadaki adıdır; Almanca `einladung` ve
+   * Türkçe `davet` düz karşılıklar.
+   *
+   * Kod dil-bağımsızdır (`/product/[slug]`in aynı kararı): paylaşılan bağ hangi dilde açılırsa
+   * açılsın aynı getirene düşer.
+   */
+  '/invite/[code]': { fr: '/parrainage/[code]', de: '/einladung/[code]', tr: '/davet/[code]' },
+  /**
    * Statik/yasal sayfalar (08.8). **Beş ayrı rota, tek `[slug]` DEĞİL** — ve sebebi burada yazılı
    * olmalı çünkü ilk bakışta dinamik segment daha ekonomik görünür.
    *

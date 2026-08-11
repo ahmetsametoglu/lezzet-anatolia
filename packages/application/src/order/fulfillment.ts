@@ -1,7 +1,7 @@
 import { OrderService, SettingsService } from '@lezzet/database';
 import type { CloseResult, DeliverResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { notifyStatusEffect, rewardDeliveredEffect, type OrderEffects } from './effects';
+import { notifyStatusEffect, type OrderEffects } from './effects';
 
 /**
  * Teslim ve kapanış kapısı (07.7; terfi 21.10 — kaynağı `apps/web/lib/order/fulfillment.ts`).
@@ -38,9 +38,9 @@ export async function deliverOrder(
   const result = await new OrderService(db).deliver(orderId, opts);
   if (result.ok) {
     await notifyStatusEffect(opts.effects, orderId, 'delivered');
-    // Sipariş puanı (17.4) — teslim `transition_order_status`'tan geçmediği için buradan da
-    // çağrılmak zorunda. İki kez çağrılması zararsız: defterin tekillik indeksi ikinciyi düşürür.
-    await rewardDeliveredEffect(opts.effects, orderId);
+    // ÖDÜL ÇAĞRISI BURADAN KALKTI (17.9): sipariş puanı silindi ve getirenin ödülü teslimata değil
+    // ÖDEMEYE bağlandı. Kapıda ödeyen müşteride ikisi aynı ana denk geliyor ama ölçüt artık paranın
+    // defterde görünmesi — teslim edilip ödenmemiş sipariş puan doğurmuyor.
   }
   return result;
 }

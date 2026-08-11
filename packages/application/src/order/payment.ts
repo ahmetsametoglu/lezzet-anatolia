@@ -1,5 +1,6 @@
 import { MoneyMovementService, OrderService } from '@lezzet/database';
 import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
+import { rewardReferralOnPaidOrder } from '../feedback/points';
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -86,12 +87,7 @@ export function recordOrderRefund(db: SupabaseClient, input: OrderMovementInput)
  * BEKLEYEN(12.11): bu arama atomik DEĞİL (birinci kilit durum makinesi); kalıcı kapanış
  * `money_movement.idempotency_key` kolonu + kısmi tekil indeks + RPC parametresi.
  */
-async function alreadyWritten(
-  db: SupabaseClient,
-  orderId: string,
-  type: 'order_payment' | 'order_refund',
-  key: string,
-): Promise<boolean> {
+async function alreadyWritten(db: SupabaseClient, orderId: string, type: 'order_payment' | 'order_refund', key: string): Promise<boolean> {
   const movements = await new MoneyMovementService(db).listByOrder(orderId);
   return movements.some((movement) => movement.type === type && movement.meta?.['idempotencyKey'] === key);
 }
@@ -152,6 +148,27 @@ async function finalize(
 
   if (derivation.status !== order.paymentStatus) {
     await new OrderService(db).update({ id: order.id, paymentStatus: derivation.status });
+
+    /**
+     * ── PARA ALINDI: GETİRENİN ÖDÜLÜ BURADA DOĞAR (17.9) ──────────────────
+     * Kural kullanıcının tek cümlesi: **puan, para gerçekten alındığında yazılır** — kartla
+     * ödeyende sipariş anı, kapıda ödeyende teslimat anı. İkisini de kapsayan tek an, ödeme
+     * durumunun `paid`e DÖNDÜĞÜ andır ve o an yalnız burada türetiliyor.
+     *
+     * Önce `delivered` etkisine bağlıydı (`rewardDelivered`); teslimat anı kartla ödeyen müşteri
+     * için geç, kapıda ödeyen için doğruydu. Buraya taşınınca ikisi de doğru oldu ve sömürü kapısı
+     * kapandı: ödenmemiş bir sipariş puan doğurmuyor.
+     *
+     * **GEÇİŞ anında, her senkronda değil:** `finalize` para dışındaki değişikliklerde de koşuyor
+     * (kısmi karşılama, iptal). Koşul `if` bloğunun İÇİNDE olduğu için ödül yalnız durum gerçekten
+     * değişince aranıyor; zaten `paid` olan bir siparişin yeniden senkronu ödülü tekrar tetiklemez.
+     * Tetiklese de zarar vermezdi (defterin tekillik indeksi düşürür) — ama boş sorgu da atmıyoruz.
+     *
+     * **Ödül asıl işlemi durdurmaz** (`DOMAIN §14`): `awardPoints` B2B'de, tavanda ve yarışta
+     * sessizce `null` döner; buradan yukarı yalnız gerçek bir arıza çıkar ve o da ödemeyi değil
+     * çağıran akışı ilgilendirir.
+     */
+    if (derivation.status === 'paid') await rewardReferralOnPaidOrder(db, order.id);
   }
 
   return {

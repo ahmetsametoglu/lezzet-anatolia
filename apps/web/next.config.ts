@@ -145,6 +145,22 @@ const config: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders() }];
   },
+  /**
+   * Mobil uygulama ilişkilendirmesi (17.9) — `/.well-known/*` → `/well-known/*`.
+   *
+   * İşletim sistemleri bu iki dosyayı **tam olarak `/.well-known/` altında** arar; adres
+   * pazarlık edilebilir değil. Rota klasörünün adı ise noktasız, çünkü `app/` altında nokta ile
+   * başlayan klasörün ele alınışı Next sürümlerine göre değişiyor ve bunu doğrulamanın tek yolu
+   * canlı bir sunucu — dev sunucusu kullanıcının (CLAUDE §4). Yeniden yazım o belirsizliği
+   * tamamen ortadan kaldırıyor: klasör sıradan, adres doğru.
+   *
+   * Middleware bu yolları zaten görmüyor (matcher noktalı yolları dışlıyor), yani dil öneki
+   * eklenmiyor — eklenseydi iOS `/fr/.well-known/...` diye bir dosya arayamayacağı için
+   * ilişkilendirme sessizce hiç kurulmazdı.
+   */
+  async rewrites() {
+    return [{ source: '/.well-known/:file', destination: '/well-known/:file' }];
+  },
 };
 
 export default withNextIntl(config);

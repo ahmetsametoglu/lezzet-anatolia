@@ -102,6 +102,14 @@ export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).ex
    * uydurma bir kod basmaktansa ekran davet yolunu hiç göstermesin.
    */
   referralCode: z.string().nullable(),
+  /**
+   * Kodun paylaşılabilir TAM adresi (17.9) — `https://…/fr/parrainage/AB12CD34`.
+   *
+   * **Kod ile adres AYRI alanlar** çünkü ikisinin işi ayrı: kod telefonda okunur/yazılır, adres
+   * paylaşılır. Ekran adresi kodu birleştirerek KURMAZ — kuran her yüzey, rota adı değiştiğinde
+   * sessizce 404'e düşen bir bağlantı taşır. `null` yalnız kod da `null`ken.
+   */
+  inviteUrl: z.string().nullable(),
   /** Puan kazanma yolları — sıra sunucudan gelir (bkz. `MePointsEarnWaySchema`). */
   earnWays: z.array(MePointsEarnWaySchema),
 });

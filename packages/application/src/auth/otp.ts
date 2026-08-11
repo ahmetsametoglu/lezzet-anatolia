@@ -5,6 +5,7 @@ import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { isValidEmail, normalizeEmail } from '@lezzet/helper';
 import { captureError, logger, maskEmail } from '@lezzet/observability';
 import type { PreferredLanguage } from '@lezzet/types';
+import { linkReferrer } from '../customer/referral';
 
 /**
  * **E-posta OTP orkestrasyonu — İKİ yüzeyin ortak akışı** (21.4a; kaynağı web'in `otp-actions.ts`'i,
@@ -133,10 +134,31 @@ export type VerifyOtpCodeResult =
  * insert'i trigger'ı (0002) çalıştırır: e-postası eşleşen sahipsiz profil bağlanır (misafir→üye),
  * yoksa profil açılır. `knownBefore` bu yüzden linkten ÖNCE ölçülür — sonra bakan herkes
  * "zaten vardı" okurdu.
+ *
+ * ── DAVET BAĞI DA BURADA KURULUR (17.9) ─────────────────────────────────────
+ * `referralCode` verilmişse ve müşteri GERÇEKTEN yeniyse (`!knownBefore`) getiren bağı yazılır.
+ * Neden bu akışın içinde: müşteri kartının doğduğu tek yer burası ve "yeni mi" sorusunun cevabı
+ * yalnız burada elde. Çağıran yüzeye bırakılsaydı her yüzey aynı sorguyu kendi yapardı — ve
+ * bugünkü sorunun aynısı doğardı: iki yüzeyden biri bağlamayı unutur, davetli sessizce bağsız
+ * kalır, ödül hiç yazılmaz, kimse fark etmez.
+ *
+ * **Yalnız YENİ müşteride** ve bu bir emniyet: zaten müşterimiz olan birinin davet bağlantısına
+ * tıklaması onu yeniden kazandırmaz. O kapı açık olsaydı iki müşteri birbirinin bağlantısını
+ * açıp puanı birbirine yazdırırdı.
  */
 export async function verifyOtpCode(
   admin: SupabaseClient,
-  input: { email: string; code: string; locale: PreferredLanguage },
+  input: {
+    email: string;
+    code: string;
+    locale: PreferredLanguage;
+    /**
+     * Davet bağlantısından taşınan kod (17.9). Yüzey nereden getirdiğini kendi bilir: web'de
+     * çerez, mobilde derin bağlantı. Geçersiz/kendine ait/geç kalmış kod kaydı DURDURMAZ —
+     * `linkReferrer` sessizce reddeder ve giriş normal tamamlanır.
+     */
+    referralCode?: string | null;
+  },
 ): Promise<VerifyOtpCodeResult> {
   const email = toValidEmail(input.email);
   if (!email) return { status: 'invalid_email' };
@@ -170,9 +192,41 @@ export async function verifyOtpCode(
   }
 
   // Yeni müşteri: geldiği dil kartına yazılır (04.9 — yalnız İLK kez; tercih müşterinindir).
-  if (!knownBefore) await seedPreferredLanguage(profiles, link.user.id, input.locale);
+  if (!knownBefore) {
+    await seedPreferredLanguage(profiles, link.user.id, input.locale);
+    if (input.referralCode) await attachReferrer(admin, profiles, link.user.id, input.referralCode);
+  }
 
   return { status: 'ok', hashedToken: link.properties.hashed_token, userId: link.user.id, knownBefore };
+}
+
+/**
+ * Yeni açılan kartı getirene bağlar (17.9).
+ *
+ * **Auth kimliği ile PROFİL kimliği ayrı** ve karıştırılırsa bağ sessizce kurulmaz: `link.user.id`
+ * `auth.users`ın kimliği, `referred_by` ise `user_profiles`a bakan bir yabancı anahtar. Trigger'ın
+ * yazdığı satır burada okunuyor (`findByAuthUserId`) — aynı ayrımın atlanması 04.11'de bir FK
+ * ihlaliyle ölçülmüştü.
+ *
+ * **Girişi ASLA düşürmez** (dil tohumunun aynı kararı, aynı gerekçe): davet bir kolaylıktır,
+ * kimlik değil. Ama SESSİZ de değil — reddin gerekçesi log'a düşer, çünkü "davet yazılmadı"
+ * şikâyeti geldiğinde tek cevap kaynağı bu satırdır. Kod LOG'A YAZILMAZ: paylaşılabilir olsa da
+ * başkasının kimliğine ait bir künyedir, kimlikler yeter (OBSERVABILITY §5).
+ */
+async function attachReferrer(admin: SupabaseClient, profiles: UserProfileService, authUserId: string, code: string): Promise<void> {
+  try {
+    const profile = await profiles.findByAuthUserId(authUserId);
+    if (!profile) return;
+    const outcome = await linkReferrer(admin, profile.id, code);
+    if (outcome !== 'linked') {
+      logger.info({ context: 'application/auth-otp', customerId: profile.id, outcome }, 'davet bağı kurulmadı');
+    }
+  } catch (err) {
+    logger.warn(
+      { context: 'application/auth-otp', authUserId, err: err instanceof Error ? err.message : String(err) },
+      'davet bağı kurulurken hata — giriş etkilenmedi',
+    );
+  }
 }
 
 /**

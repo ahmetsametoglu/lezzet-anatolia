@@ -25,6 +25,10 @@ const PRIVATE_ROUTES: AppRoute[] = [
   '/orders',
   '/support',
   '/feedback/[token]',
+  // Davet karşılaması (17.9): kod bir belirteç değil ama BAŞKASININ künyesidir — taranan bir
+  // davet bağlantısı, sahibinin adını arama sonucuna taşır. Sayfanın arama trafiğinden de
+  // beklentisi yok: tek giriş yolu paylaşılan bağlantı.
+  '/invite/[code]',
 ];
 
 export default function robots(): MetadataRoute.Robots {

@@ -44,10 +44,12 @@ export type { B2bApplicantView, B2bApplicationOutcome } from './customer/b2b';
 export { lookupCompanyBySiret } from './b2b/company-registry';
 export type { CompanyLookupFailure, CompanyRegistryRecord } from './b2b/company-registry';
 export { checkEuVatNumber } from './b2b/vat-check';
-// Davet kodu garantisi (17.7) — web `lib/feedback/referral.ts`teki tembel üretimin TERFİSİ; web
-// köprü olarak duruyor. Puan kapısı içeriden çağırıyor, barrel'da durması web'in köprüyü bırakıp
-// aynı kapıyı çağırabilmesi için.
-export { ensureCustomerReferralCode } from './customer/referral';
+// ── Davet altyapısı (17.7 zemin · 17.9 bağlantı) ────────────────────────────
+// Dört kapı tek dosyada: kodu ÜRET · kodu ADRESE çevir · karşılama durumunu OKU · bağı KUR.
+// `linkReferrer`ı doğrudan çağıran bir yüzey yok (kayıt akışının içinde, `verifyOtpCode`) ama
+// barrel'da: sözleşmenin görünür olması, ikinci bir yüzeyin kendi bağlama kodunu yazmasını önler.
+export { ensureCustomerReferralCode, inviteUrl, linkReferrer, readInviteWelcome, resolveReferrer } from './customer/referral';
+export type { InviteWelcome, LinkReferrerOutcome } from './customer/referral';
 // ── Müşteri sipariş okuması (08.5) — terfi 21.16 ────────────────────────────
 // Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı; web köprü olarak
 // duruyor. Detay kapısı İKİ anahtarı da kabul eder (kimlik ⟷ referans) — gerekçe künyede.
@@ -343,7 +345,7 @@ export type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem 
 export { notifyOrderException, notifyOrderStatus } from './order/notify';
 export { buildOrderNotification } from './order/notification-data';
 export type { NotificationBundle } from './order/notification-data';
-export { awardReferralPoints, rewardCompletedOrder } from './feedback/points';
+export { awardReferralPoints, rewardReferralOnPaidOrder } from './feedback/points';
 // ── "Buraya da gelin" kaydı — terfi 10.08 ───────────────────────────────────
 // Kaynağı `apps/web/lib/delivery/notice-actions.ts`in `recordZoneNoticeAction`ıydı; web köprü.
 // Mobil bant (21.20) aynı kaydı yazıyor ve kural TEK olmalı: yer adının KAYIT ANINDA dondurulması

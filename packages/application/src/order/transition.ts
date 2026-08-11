@@ -1,7 +1,7 @@
 import { OrderService, type Db } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
-import { notifyStatusEffect, rewardDeliveredEffect, type OrderEffects } from './effects';
+import { notifyStatusEffect, type OrderEffects } from './effects';
 
 /**
  * Durum ilerletme kapısı (07.6) — **uygulama katmanı orkestrasyonu**.
@@ -87,13 +87,10 @@ export async function transitionOrder(db: Db, input: TransitionInput): Promise<T
   //    ilerlemiş bir sipariş "olmadı" diye görünmez.
   await notifyStatusEffect(input.effects, order.id, input.to);
 
-  // 5) Sipariş puanı (17.4) — sipariş müşterinin eline GEÇTİĞİNDE. `delivered` ve `completed`
-  //    aynı gerçeğin iki yüzü; hangisi önce gelirse o yazar, ikincisi defterin tekillik indeksinde
-  //    sessizce düşer. **Ödül asıl işlemi durdurmaz** (DOMAIN §14): puan yazılamazsa sipariş yine
-  //    ilerlemiş sayılır — tersi, bir ödül yüzünden teslimatı geri almak olurdu.
-  if (input.to === 'delivered' || input.to === 'completed') {
-    await rewardDeliveredEffect(input.effects, order.id);
-  }
+  // 5) ÖDÜL ÇAĞRISI BURADAN KALKTI (17.9). Sipariş puanı kaldırıldı (kullanıcı kararı 11.08) ve
+  //    getirenin ödülü teslimattan ÖDEMEYE taşındı — `order/payment.ts` → `finalize`. Durum geçişi
+  //    paranın alındığını BİLMEZ: `delivered` ödenmemiş bir siparişte de olabiliyor, yani burada
+  //    yazılan puan "para alındığında yaz" kuralını deliyordu.
 
   return { status: 'ok', from: order.status, to: input.to, referenceNo: referenceNo ?? order.referenceNo };
 }

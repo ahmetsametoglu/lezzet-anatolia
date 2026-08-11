@@ -1,7 +1,6 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
-import { rewardCompletedOrder } from '../feedback/points';
 import { recordOrderPayment } from '../money/order-payment';
 import { suggestPicksForVariant } from '../stock/fefo';
 
@@ -134,11 +133,15 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     paymentRecorded = collected.status === 'ok';
   }
 
-  // 6) Sipariş puanı (17.4) — kapıda satış `completed`'a DOĞRUDAN gider, yani `transitionOrder`
-  //    yolundan geçmez; buradan çağrılmazsa kapıdan alan müşteri hiç puan kazanmazdı. Tahsilattan
-  //    SONRA ve ondan bağımsız: mal gitti, satış kapandı — ödülün hesabın belirsizliğine bakması
-  //    için bir sebep yok.
-  await rewardCompletedOrder(order.id);
+  // 6) ÖDÜL ÇAĞRISI BURADAN KALKTI (17.9). İki sebep birden:
+  //    · **Sipariş puanı kaldırıldı** (kullanıcı kararı 11.08) — yazılacak bir sipariş puanı yok.
+  //    · **Getirenin ödülü artık ödemeye bağlı**, teslimata/kapanışa değil: yukarıdaki
+  //      `recordOrderPayment` zaten ödeme durumunu `paid`e çeviriyor ve ödül orada doğuyor
+  //      (`order/payment.ts` → `finalize`). Buradan ikinci kez çağırmak aynı kuralı iki yerde
+  //      tutmak olurdu.
+  //    **Bilinçli sonuç:** hesap ayarlı değilse tahsilat kaydedilmez ve ödül de yazılmaz. Para
+  //    fiilen alınmış olabilir ama defter onu görmüyor; "para alındığında yaz" kuralının ölçütü
+  //    defterdir, elimizdeki nakit değil.
 
   return {
     status: 'ok',

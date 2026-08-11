@@ -1,26 +1,31 @@
 import { UserProfileService } from '@lezzet/database';
 import { readableCode } from '@lezzet/domain-core';
+import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
-  DAVET KODU KAPISI (17.7) — `apps/web/lib/feedback/referral.ts`teki `getOrCreateReferralCode`ın
-  TERFİSİ (kopya değil, CLAUDE §1). Ölçüt karşılandı: kodu artık İKİ yüzey istiyor — web'in davet
-  bloğu ve mobil hesap ekranının "puan kazanma yolları" bölümü. Web dosyası kendi ekranını
-  beslemeye devam ediyor (KÖPRÜ); benimsemesi web şeridinin işi (`customer/profile.ts` terfisinin
-  aynı sözleşmesi).
+  DAVET ALTYAPISI (17.7 zemin · 17.9 bağlantı) — kodun doğduğu, çözüldüğü, bağlandığı ve
+  paylaşılabilir bir ADRESE çevrildiği tek yer.
 
-  TERFİ EDEN YALNIZ KOD GARANTİSİ. `resolveReferrer` ve `linkReferrer` web'de KALDI ve bilerek:
-  ikisi de KAYIT akışının parçası (`lib/identity/find-or-create.ts`) ve bugün tek yüzeyleri var.
-  Mobil kayıt akışı daveti kabul etmeye başladığı gün aynı yoldan buraya taşınırlar — erken
-  taşımak, köprü/paket ikiliğini çağıransız kapılar için de açmak olurdu.
+  ── ARTIK BÜTÜN: dört kapı da burada ─────────────────────────────────────────
+  Kod garantisi (`ensureCustomerReferralCode`) 17.7'de terfi etmişti; `resolveReferrer` ve
+  `linkReferrer` web'de bırakılmıştı ve gerekçesi "bugün tek yüzeyleri var" idi. O gerekçe 17.9'da
+  düştü: davet bağını kuran çağrı artık OTP doğrulamasının içinde (`auth/otp.ts`) ve o akışı İKİ
+  yüzey çağırıyor — web action'ı ve mobil `/api/v1/auth/otp/verify`. Web'de kalsalardı mobilden
+  kaydolan davetli sessizce bağsız kalırdı: ödül yazılmaz, kimse de fark etmezdi.
 
-  KODUN NEREYE YAZILACAĞI (davet URL'i) BURADA YOK ve olmaması bir eksiklik beyanıdır: repoda
-  kodu bir bağlantıya çeviren TEK bir kural yok — `@lezzet/i18n`in `PATHNAMES` sözlüğünde davet
-  rotası tanımlı değil ve `findOrCreateCustomer`ın `referralCode` girdisini hiçbir çağıran
-  doldurmuyor. Uydurma bir biçim (`?ref=…`) yazmak, hiçbir yerin okumadığı bir bağlantı üretmek
-  olurdu. Bağlantı kuralı (biçim + karşılayan rota + kodu kayda bağlayan çağrı) doğduğunda evi
-  burasıdır; bugün ekran KODUN KENDİSİNİ paylaşır.
+  ── BAĞLANTI KURALI DA BURADA (17.9) ─────────────────────────────────────────
+  17.7 künyesi "kodu bir bağlantıya çeviren tek bir kural yok, doğduğunda evi burasıdır" diye
+  bitiyordu. Bugün doğdu: `/invite/[code]` rotası `PATHNAMES`te (üç dil) ve `inviteUrl` o tablodan
+  TAM adresi üretiyor. Adres bir yerde daha kurulmaz — kuran ikinci bir yer, rota adı değiştiğinde
+  sessizce 404'e düşen ikinci bir bağlantı demektir (`PATHNAMES` künyesinin kendi dersi).
+
+  ── DAVET EDENİN GÖRÜNEN YÜZÜ YALNIZ ADIDIR ──────────────────────────────────
+  Karşılama sayfası kodu bir İSME çevirir, kimliğe değil: bağlantı WhatsApp'ta dolaşır ve onu açan
+  herkes cevabı görür. Ad da TEK PARÇA (ilk sözcük) — soyadı, e-posta, telefon, sipariş sayısı
+  hiçbiri geçmez. Kod geçersizse cevap "yok"tur; "böyle bir kod var ama sana söylemem" demek,
+  olmayan bir kaydın varlığını doğrulamaktır (`openFeedbackInvite` künyesindeki aynı ders).
 */
 
 /** Kod uzunluğu — sipariş referansı ve kupon koduyla aynı alfabe (O/0, I/1 yok). */
@@ -62,4 +67,90 @@ export async function ensureCustomerReferralCode(db: SupabaseClient, customerId:
 
   logger.warn({ context: 'customer/referral', customerId }, 'davet kodu üretilemedi (çakışma tekrarı tükendi)');
   return null;
+}
+
+/**
+ * Kodun paylaşılabilir TAM adresi — `https://…/fr/parrainage/AB12CD34`.
+ *
+ * Dil PAYLAŞANIN dilidir, davetlininki değil: davetlinin dili bağlantı üretilirken bilinemez ve
+ * bir tahmin yapmak gerekiyorsa en iyisi paylaşanın kendi dilidir (çevresine kendi dilinde yazar).
+ * Ziyaretçi sayfada dilini değiştirebiliyor; kod dile bağlı değil.
+ */
+export function inviteUrl(code: string, locale: Locale): string {
+  return localizedUrl('/invite/[code]', locale, { code });
+}
+
+/** Kodun sahibi kim — davet bağlantısıyla gelen ziyaretçi için. Geçersiz kod `null`, hata değil. */
+export async function resolveReferrer(db: SupabaseClient, code: string): Promise<string | null> {
+  const referrer = await new UserProfileService(db).findByReferralCode(code.trim());
+  return referrer?.id ?? null;
+}
+
+/**
+ * Karşılama sayfasının gördüğü hâl. Beşinci başarısız hâl (`already_referred`) burada YOK ve
+ * olmaması doğru: o ancak kaydolma anında bilinebilir — ziyaretçi henüz kimse değilken "senin
+ * zaten bir getirenin var" denemez.
+ */
+export type InviteWelcome =
+  /** Kod bir müşteriye ait; ekran daveti çizer. `referrerName` yalnız ilk sözcüktür. */
+  | { status: 'ok'; referrerName: string }
+  /** Kod tanınmıyor — yanlış kopyalanmış ya da sahibinin hesabı kapanmış (`referral_code` düşer). */
+  | { status: 'unknown' }
+  /** Ziyaretçi kendi bağlantısını açtı; ekran "bu senin bağlantın" der, davet çizilmez. */
+  | { status: 'self' }
+  /** Ziyaretçi zaten müşteri — davet YENİ müşteri içindir; bağ kurulmaz, alışverişe devam. */
+  | { status: 'already_customer' };
+
+/**
+ * Davet bağlantısının karşılama durumu.
+ *
+ * `viewerId` giriş yapmış ziyaretçinin PROFİL kimliğidir (auth kimliği değil — ikisi ayrıdır).
+ * Verilmezse ziyaretçi tanınmıyor demektir ve yalnız kodun kendisine bakılır.
+ *
+ * **Sıralama önemli:** önce "bu benim kodum mu", sonra "zaten müşteri miyim". Tersi olsaydı kendi
+ * bağlantısını açan müşteri "zaten müşterimizsin" cevabını görürdü — doğru ama işe yaramaz bir
+ * cümle; oysa ona söylenecek şey bağlantısının ÇALIŞTIĞIDIR.
+ */
+export async function readInviteWelcome(db: SupabaseClient, code: string, viewerId?: string | null): Promise<InviteWelcome> {
+  const referrer = await new UserProfileService(db).findByReferralCode(code.trim());
+  if (!referrer) return { status: 'unknown' };
+  if (viewerId && viewerId === referrer.id) return { status: 'self' };
+  if (viewerId) return { status: 'already_customer' };
+  return { status: 'ok', referrerName: firstName(referrer.name) };
+}
+
+/**
+ * Adın yalnız ilk sözcüğü. Boş isim `null` DEĞİL boş dize dönmez — ekran isimsiz bir davet de
+ * çizebilmeli ("bir müşterimiz seni davet etti"), o cümleyi kuran taraf ekrandır.
+ */
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? '';
+}
+
+/** `linkReferrer`ın cevabı — dördü de gerçekten oluyor ve üçü sessiz REDDİR (aşağıdaki künye). */
+export type LinkReferrerOutcome = 'linked' | 'unknown_code' | 'self' | 'already_referred';
+
+/**
+ * Yeni müşteriyi getirene BAĞLAR. Kayıt akışı çağırır (`auth/otp.ts`, yalnız YENİ müşteride).
+ *
+ * Üç şey sessizce reddedilir ve üçü de gerçekten olur:
+ *   · **Kendi kodunu kullanmak** — kişi kendini getiremez.
+ *   · **Zaten bağlı bir müşteri** — ilk getiren kazanır; sonradan gelen bir kod, kazanılmış bir
+ *     bağı çalamaz. (Yoksa müşteri her yeni bağlantıya tıkladığında getiren değişirdi.)
+ *   · **Geçersiz kod** — kayıt yine tamamlanır; bir dize yüzünden müşteriyi çevirmek olmaz.
+ *
+ * **Reddin GEREKÇESİ dönüyor, yalnız "oldu/olmadı" değil** (17.9): çağıran akış giriş adımıdır ve
+ * müşteriye bir şey söylemez, ama gerekçe olmadan "davet neden yazılmadı" sorusu ancak veriye
+ * bakılarak yanıtlanabilirdi. Ödül burada DOĞMAZ — o, getirilen kişinin parası defterde
+ * göründüğünde doğar (`order/payment.ts` → `finalize`).
+ */
+export async function linkReferrer(db: SupabaseClient, newCustomerId: string, code: string): Promise<LinkReferrerOutcome> {
+  const profiles = new UserProfileService(db);
+  const [yeni, referrerId] = await Promise.all([profiles.getById(newCustomerId), resolveReferrer(db, code)]);
+  if (!yeni || !referrerId) return 'unknown_code';
+  if (referrerId === newCustomerId) return 'self';
+  if (yeni.referredBy) return 'already_referred';
+
+  await profiles.update({ id: newCustomerId, referredBy: referrerId });
+  return 'linked';
 }

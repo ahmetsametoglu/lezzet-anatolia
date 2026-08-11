@@ -1,8 +1,5 @@
 import 'server-only';
-import {
-  awardReferralPoints as awardReferralPointsFor,
-  rewardCompletedOrder as rewardCompletedOrderFor,
-} from '@lezzet/application';
+import { awardReferralPoints as awardReferralPointsFor } from '@lezzet/application';
 import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import {
   POINTS_SETTING_KEYS,
@@ -141,21 +138,10 @@ export function awardVisitPoints(customerId: string): Promise<PointsEntry | null
   return awardPoints({ customerId, reason: 'visit' });
 }
 
-/**
- * **Kapanan siparişin İKİ ödülü** — sipariş puanı (17.4) + getiren puanı (17.7). **Köprü.**
- *
- * Gövde `@lezzet/application`'ın `feedback/points`ine taşındı (terfi 21.21) ve kuralın tamamı —
- * neden sipariş VERİLİNCE değil eline GEÇİNCE, tekillik indeksinin neden çağıranı "zaten yazıldı
- * mı" sorusundan kurtardığı, getiren ödülünün neden kayıtta değil burada olduğu — orada yazılı.
- *
- * Taşınmasının sebebi ikinci yüzeyin doğmasıdır: mobil arka uç siparişi aynı `placeOrder`
- * zincirinden açıyor ve durum geçişinin `rewardDelivered` portunu dolduracak bir uygulamaya
- * ihtiyacı var; `apps/mobile-api` bu dosyayı import edemez. Yeni bağımlılık gerekmedi — puan yazım
- * çekirdeği (`awardPoints`) zaten pakette duruyordu.
- */
-export function rewardCompletedOrder(orderId: string): Promise<void> {
-  return rewardCompletedOrderFor(serviceDb(), orderId);
-}
+// KÖPRÜ KALKTI (17.9): `rewardCompletedOrder` artık YOK — sipariş puanı kaldırıldı, getirenin
+// ödülü de ödeme durumunun türetildiği yerde doğuyor (`application/order/payment.ts` → `finalize`).
+// Ödül ortak paketin İÇİNDEN çağrıldığı için web'in bir köprüye ihtiyacı kalmadı; köprüyü
+// bırakmak, hiç çağrılmayan bir kapıyı bakımda tutmak olurdu.
 
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */
 export async function getPointsBalance(customerId: string): Promise<PointsBalance> {
@@ -243,9 +229,12 @@ export async function adjustPointsManually(input: {
 }
 
 /**
- * **Getiren müşteriye puan** (17.7) — **köprü**. Gövde `rewardCompletedOrder` ile birlikte
- * `@lezzet/application`a taşındı (21.21); ikisi tek çağrı zincirinde ve ayrılsalardı kural iki
- * pakete bölünürdü. Künye orada: `refId` YENİ müşterinin kimliğidir, getirenin değil.
+ * **Getiren müşteriye puan** (17.7) — **köprü**. Gövde `@lezzet/application`ın `feedback/points`i;
+ * künye orada: `refId` YENİ müşterinin kimliğidir, getirenin değil.
+ *
+ * Bu köprü normal akışta ÇAĞRILMAZ — ödül ödeme yolunda kendiliğinden doğuyor (17.9). Duruyor,
+ * çünkü elle düzeltme yolları (destek, operasyon) tek bir müşterinin ödülünü yeniden denemek
+ * isteyebilir ve o zaman ikinci bir kapı açmak yerine bu kullanılır.
  */
 export function awardReferralPoints(newCustomerId: string): Promise<PointsEntry | null> {
   return awardReferralPointsFor(serviceDb(), newCustomerId);

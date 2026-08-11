@@ -1,58 +1,44 @@
-import { MoneyMovementService, OrderService, serviceDb } from '@lezzet/database';
-import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
-import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
+import { serviceDb } from '@lezzet/database';
+import {
+  recordOrderPayment as recordOrderPaymentFor,
+  recordOrderRefund as recordOrderRefundFor,
+  syncOrderPaymentStatus as syncOrderPaymentStatusFor,
+  type OrderMovementInput,
+  type PaymentOutcome,
+} from '@lezzet/application';
 
 /**
- * Siparişin para bağları (12.2) — **uygulama katmanı orkestrasyonu**. DOMAIN §7, §9.
+ * Siparişin para bağları (12.2) — **KÖPRÜ**. Kural `@lezzet/application`ın `order/payment`inde.
  *
- * Üç katman bir araya gelir:
- * - **Veritabanı** hareketi yazar ve `amount_*` cache'ini KAYNAKTAN yeniden hesaplar (tek transaction).
- * - **Motor** ödeme durumunu TÜRETİR (`derivePaymentStatus`): net tahsilat vs karşılanan tutar.
- * - **Burası** ikisini bağlar ve türetilen durumu siparişe yazar.
+ * ── KOPYAYDI, ÖLÇÜMLE KÖPRÜYE DÖNDÜ (17.9) ──────────────────────────────────
+ * Bu dosya 21.10'daki terfiden sonra da kendi gövdesini taşımaya devam ediyordu: aynı üç adım
+ * (hareketi yaz → durumu türet → siparişe yaz) hem burada hem pakette yazılıydı ve paketin künyesi
+ * bunu "geçiş köprüsü, benimsemesi ayrı talep dosyasıyla gider" diye kaydetmişti. Yani duplication
+ * BİLİNİYORDU ve bedeli bugün ölçüldü:
  *
- * `payment_status` neden saklanıyor: liste ekranları ("ödenmemiş vadeli siparişler") onu süzer;
- * her satırda kalemleri okuyup yeniden türetmek her listeyi N+1 yapardı. Saklanan türetim ancak
- * **her değişimde yeniden hesaplanırsa** doğru kalır — o yüzden tek yazım yolu buradan geçer.
+ * Getirenin ödülü teslimattan ÖDEMEYE taşındı ve kanca paketin `finalize`ına konuldu — web'den
+ * yapılan her tahsilat kendi kopyasından geçtiği için ödül HİÇ yazılmadı. Test kırmızı döndü,
+ * sebep koddaydı: iki kopya vardı, kural birine yazılmıştı. Aynı arıza yarın kısmi iade ya da
+ * ödeme durumu kuralında da olurdu.
+ *
+ * ── ADOPTE EDİLEN SÜRÜM DAHA GENİŞ ──────────────────────────────────────────
+ * Paketin kapısı `idempotencyKey` de taşıyor: tekrar eden istek ikinci bir hareket yazmaz, ilk
+ * isteğin sonucunu döner (`deduped: true`). Web kopyasında bu yoktu — Stripe webhook'unun aynı
+ * olayı iki kez göndermesi iki tahsilat satırı demekti. Köprüye geçmek o emniyeti de getiriyor.
+ *
+ * **Köprü NEDEN duruyor:** `serviceDb()` enjeksiyonu. Paket `db`yi çağırandan ister (test edilebilir
+ * olsun diye); web'in dört çağıranı (hızlı satış · Stripe webhook · kurye kapanışı · banka
+ * eşleştirme) her seferinde onu yazmasın diye tek satırlık kapılar burada duruyor.
  */
-
-type PaymentOutcome =
-  | { status: 'ok'; amountCollectedCents: number; amountRefundedCents: number; paymentStatus: PaymentStatus; derivation: PaymentDerivation }
-  | { status: 'not_found' };
-
-interface OrderMovementInput {
-  orderId: string;
-  /** Paranın girdiği/çıktığı hesap (kasa, banka, Stripe). */
-  accountId: string;
-  /** **Cent** (02.9 · STACK §8). */
-  amountCents: number;
-  valueDate?: string;
-  description?: string | null;
-  source?: 'manual' | 'bank_import';
-  /**
-   * Sağlayıcı künyesi (07.11) — tahsilatta `{ providerRef: 'pi_...' }` yazılır ve iade o referansın
-   * üzerinden döner. Kapıda nakit/kart tahsilatında yoktur: dönülecek bir sağlayıcı da yoktur.
-   */
-  meta?: Record<string, unknown> | null;
-}
 
 /** Tahsilat — kapıda nakit/kart, havale, Stripe onayı, kurye gün kapanışı. */
 export function recordOrderPayment(input: OrderMovementInput): Promise<PaymentOutcome> {
-  return writeOrderMovement(input, 'order_payment');
+  return recordOrderPaymentFor(serviceDb(), input);
 }
 
 /** İade — kısmi karşılama farkı (07.8), iptal/iade (07.9). */
 export function recordOrderRefund(input: OrderMovementInput): Promise<PaymentOutcome> {
-  return writeOrderMovement(input, 'order_refund');
-}
-
-async function writeOrderMovement(input: OrderMovementInput, type: 'order_payment' | 'order_refund'): Promise<PaymentOutcome> {
-  const db = serviceDb();
-  const found = await new OrderService(db).getWithItems(input.orderId);
-  if (!found) return { status: 'not_found' };
-
-  const amounts = await new MoneyMovementService(db).recordForOrder({ ...input, type });
-  // Para hareketi ailesi de cent'e geçti (02.9 dilim 6) — buradaki iki `toCents` düştü.
-  return finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);
+  return recordOrderRefundFor(serviceDb(), input);
 }
 
 /**
@@ -60,36 +46,6 @@ async function writeOrderMovement(input: OrderMovementInput, type: 'order_paymen
  * karşılamada `fulfilled_qty` düşünce (07.8) ya da sipariş iptal olunca karşılanan tutar değişir —
  * tahsilat hiç değişmese bile durum değişir.
  */
-export async function syncOrderPaymentStatus(orderId: string): Promise<PaymentOutcome> {
-  const db = serviceDb();
-  const found = await new OrderService(db).getWithItems(orderId);
-  if (!found) return { status: 'not_found' };
-
-  // Cache'i de tazele: hareket elle silinmiş/düzeltilmiş olabilir.
-  const amounts = await new MoneyMovementService(db).resyncOrder(orderId);
-  // Para hareketi ailesi de cent'e geçti (02.9 dilim 6) — buradaki iki `toCents` düştü.
-  return finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);
-}
-
-async function finalize(
-  db: ReturnType<typeof serviceDb>,
-  order: Order,
-  items: OrderItem[],
-  collectedCents: number,
-  refundedCents: number,
-): Promise<PaymentOutcome> {
-  // Eşleme motorda (kargo, indirim payı, iptal kuralı) — burada tekrarlanmaz.
-  const derivation = derivePaymentStatusForOrder(order, items, { collectedCents, refundedCents });
-
-  if (derivation.status !== order.paymentStatus) {
-    await new OrderService(db).update({ id: order.id, paymentStatus: derivation.status });
-  }
-
-  return {
-    status: 'ok',
-    amountCollectedCents: collectedCents,
-    amountRefundedCents: refundedCents,
-    paymentStatus: derivation.status,
-    derivation,
-  };
+export function syncOrderPaymentStatus(orderId: string) {
+  return syncOrderPaymentStatusFor(serviceDb(), orderId);
 }

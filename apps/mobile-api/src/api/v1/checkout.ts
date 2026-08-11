@@ -1,15 +1,7 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import type { z } from 'zod';
-import {
-  entryOfItem,
-  getPackagesByIds,
-  notifyOrderStatus,
-  placeOrder,
-  readCheckoutSnapshot,
-  rewardCompletedOrder,
-  type OrderEffects,
-} from '@lezzet/application';
+import { entryOfItem, getPackagesByIds, notifyOrderStatus, placeOrder, readCheckoutSnapshot, type OrderEffects } from '@lezzet/application';
 import { CartService, serviceDb, UserProfileService, type Db } from '@lezzet/database';
 import { CheckoutOrderBodySchema, CheckoutOrderResultSchema, CheckoutSnapshotSchema, type PreferredLanguage } from '@lezzet/types';
 import { readJsonBody } from '../../lib/request';
@@ -84,14 +76,15 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
  * diye bir adım yoktur. Kayıtsız port sessiz kalmaz — kapı süreç başına bir kez uyarır
  * (`application/order/effects.ts` → `warnMissing`).
  *
- * `rewardDelivered` bu uçtan bugün TETİKLENMEZ (`placeOrder` siparişi en fazla `confirmed`a
- * geçirir, puan `delivered`/`completed`ta yazılır) ama yine de geçiliyor: portu eksik bırakmak,
- * zincire yarın bir kapanış adımı eklendiğinde sessizce ödülsüz kalmak demekti.
+ * **`rewardDelivered` PORTU KALKTI (17.9 · web şeridi, mobil dosyasına tek satırlık dokunuş).**
+ * Sipariş puanı kaldırıldı (kullanıcı kararı 11.08) ve getirenin ödülü teslimattan ÖDEMEYE taşındı;
+ * ödül artık `application/order/payment.ts` → `finalize` içinde, yani bu uçtan geçen ödemeli
+ * siparişte de kendiliğinden yazılıyor. Port dışarıdan doldurulan bir kanca olarak kalsaydı iki
+ * yüzey onu ayrı ayrı bağlamak zorunda kalırdı. Gerekçe: `docs/talep/not-mobil-davet-baglantisi.md`.
  */
 function mobileOrderEffects(db: Db): OrderEffects {
   return {
     notifyStatus: (orderId, status) => notifyOrderStatus(db, orderId, status),
-    rewardDelivered: (orderId) => rewardCompletedOrder(db, orderId),
   };
 }
 

@@ -145,33 +145,36 @@ export async function awardReferralPoints(db: SupabaseClient, newCustomerId: str
 }
 
 /**
- * **Kapanan siparişin İKİ ödülü** — sipariş puanı (17.4) + getiren puanı (17.7).
+ * **Getirenin ödülü — siparişin PARASI ALINDIĞINDA** (17.9 · kullanıcı kararları 11.08).
  *
- * Tek kapı, çünkü tetikleri aynı: sipariş müşterinin eline geçtiği an. Ayrı ayrı çağrılsalardı üç
- * yazma yolunun (teslimat · genel geçiş · kapıda satış) her birinde ikisini de hatırlamak
- * gerekirdi ve biri mutlaka bir yerde unutulurdu.
+ * ── BİR KAPININ ARDINDA İKİ İŞ VARDI, AYRILDI ───────────────────────────────
+ * Bu fonksiyon `rewardCompletedOrder` adıyla İKİ ödül birden yazıyordu: siparişin kendi puanı
+ * (10) + getiren puanı. Kullanıcı sipariş puanını kaldırdı (*"sipariş verince puan vermeyelim;
+ * zaten o siparişteki ürünlere yorum yapınca veriyoruz"*) — ama kapıyı olduğu gibi kapatmak
+ * getiren ödülünü de öldürürdü, oysa hayata geçirilmeye çalışılan tam olarak o. Sipariş puanı
+ * satırı silindi, getiren ödülü kaldı ve fonksiyonun adı artık yaptığı tek işi söylüyor.
  *
- * **Sipariş VERİLİNCE değil, eline GEÇİNCE:** iptal edilen ya da hiç ödenmeyen bir sipariş de puan
- * öderdi. `delivered` ve `completed` aynı gerçeğin iki yüzü (kapıda satış doğrudan `completed`'a
- * gider); hangisi önce gelirse o yazar, ikincisi `points_entry`in `(customer_id, reason, ref_id)`
- * kısmi unique indeksinde sessizce düşer. Bu yüzden çağıran "acaba yazıldı mı" diye sormaz.
+ * **Sipariş puanı bir daha yazılmıyor** ve bu geriye dönük bir temizlik gerektirmiyor: defterdeki
+ * eski `order` satırları kazanılmış puandır, silinmez (`DOMAIN §14` — kazanılmış ödül geri alınmaz).
+ * `PointsReasonEnum`'daki `order` sebebi de duruyor; geçmişi okuyan ekranlar onu adlandırabilmeli.
  *
- * **Getiren ödülü KAYITTA değil BURADA** ve bu bilinçli: kayıt anında ödemek, sahte kayıtla puan
- * basmaya kapı açardı. Getiren, getirdiği kişi gerçekten müşteri olunca kazanır. "İlk sipariş"
- * kontrolü koda yazılmıyor — defterin tekillik indeksi ikinci siparişte yazımı zaten düşürür.
+ * ── ANI TESLİMAT DEĞİL, ÖDEME ───────────────────────────────────────────────
+ * Önce `delivered` etkisine bağlıydı. Kural değişti: **puan, para gerçekten alındığında yazılır**
+ * — kartla ödeyende sipariş anı, kapıda ödeyende teslimat anı. Tek cümlelik ölçüt sömürüyü de
+ * kapatıyor: bedava sipariş verip puan üretmek mümkün değil. Çağrı bu yüzden ödeme durumunun
+ * türetildiği tek yerde duruyor (`order/payment.ts` → `finalize`).
  *
- * **Hiçbiri asıl işlemi durdurmaz** (DOMAIN §14): ödül yazılamazsa sipariş yine kapanmıştır.
+ * **"İlk sipariş" kontrolü koda YAZILMIYOR** — defterin tekillik indeksi (`customer_id, reason,
+ * ref_id`) ikinci siparişte yazımı zaten düşürür; ayrıca sayarsak aynı kuralı iki yerde tutmuş
+ * olurduk. `refId` YENİ müşterinin kimliğidir (getirenin değil): tekillik "aynı kişiyi iki kez
+ * getiremezsin" demeli.
  *
- * **Bilinen sınır (yazılı olsun):** yeni bir "sipariş kapandı" yolu açılırsa buradan çağırmayı
- * unutmak sessiz bir ödül kaybıdır — hata vermez, yalnız müşteri puanını almaz.
+ * **Ödül asıl işlemi durdurmaz** (`DOMAIN §14`): yazılamazsa sipariş yine ödenmiştir.
  */
-export async function rewardCompletedOrder(db: SupabaseClient, orderId: string): Promise<void> {
+export async function rewardReferralOnPaidOrder(db: SupabaseClient, orderId: string): Promise<void> {
   const order = await new OrderService(db).getById(orderId);
   if (!order) return;
-  await Promise.all([
-    awardPoints(db, { customerId: order.customerId, reason: 'order', refId: orderId }),
-    awardReferralPoints(db, order.customerId),
-  ]);
+  await awardReferralPoints(db, order.customerId);
 }
 
 /**
