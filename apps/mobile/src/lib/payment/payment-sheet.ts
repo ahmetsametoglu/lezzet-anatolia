@@ -49,7 +49,7 @@ export type PaymentSheetOutcome =
       providerMessage: string | null;
     };
 
-export interface PaymentSheetInput {
+interface PaymentSheetInput {
   /**
    * `POST /api/v1/payments/intents` cevabındaki `clientSecret`.
    *

@@ -25,6 +25,10 @@ import { appendPendingSwipe, clearPendingSwipes, readPendingSwipes } from '@/lib
   dönmediyse toplam `null`dır: girişsiz kaydırmanın ödülü henüz sahipsizdir, SIFIR DEĞİLDİR
   (CLAUDE §1) — ekran o hâlde çip çizmez.
 
+  …AMA TOPLAM ANCAK YOLDA OY KALMAYINCA TAMDIR (MB-16, ölçüm aşağıdaki `writingCount` künyesinde):
+  turun son oyu bitiş ekranı çizildiğinde hâlâ geri alma penceresinde bekliyor. `pointsSettling`
+  bunu söyler; sayının kendisi değil, "sayı oturdu mu" bilgisi eksikti.
+
   YAZIM DÜŞERSE KART YİNE İLERLER (web kararı): müşteriyi düzeltemeyeceği bir arızada turun
   ortasında kilitlemeyiz. Düşen yazım yutulmuyor — sonucu burada okunuyor ve tek karşılığı var:
   o kaydırma sayılmaz (puanı eklenmez, kimliği saklanmaz), tur devam eder.
@@ -68,8 +72,17 @@ interface UseDiscoverResult {
   /**
    * Bu turda GERÇEKTEN yazılan puanların toplamı. `null` = hiç puan yazılmadı ve yazılamazdı
    * (girişsiz tur) — ekran o hâlde puan çipi çizmez.
+   *
+   * TAM OLDUĞU AN `pointsSettling === false` ANIDIR: yolda bir oy varken bu sayı turun toplamı
+   * değil, o ana kadar CEVABI GELMİŞ oyların toplamıdır.
    */
   awardedPoints: number | null;
+  /**
+   * Toplam henüz oturmadı mı — yazılmayı bekleyen (geri alma penceresindeki) ya da cevabı
+   * gelmemiş bir oy var demektir. `true` iken `awardedPoints` EKSİKTİR ve sayı olarak
+   * gösterilmemelidir (MB-16 ölçümü: 4 oy → deftere 8, ekranda 6).
+   */
+  pointsSettling: boolean;
   /** Bir kartın kaydırılması — cevabı beklemeden çağrılır, kart ilerlemesi ekranın işidir. */
   vote: (input: DiscoverVoteInput) => void;
   /** Geri alınabilir (henüz SUNUCUYA YAZILMAMIŞ) bir kaydırma var mı — "Geri al"ın tek koşulu. */
@@ -112,16 +125,35 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     setAwardedPoints((current) => (current ?? 0) + points);
   }, []);
 
+  /*
+    CEVABI BEKLENEN YAZIM SAYISI — puan toplamının "tam mı" sorusunun ikinci yarısı.
+
+    ÖLÇÜLDÜ (MB-16, cihaz 11.08): 4 oy verildi, deftere 8 puan yazıldı, bitiş ekranı "+6" dedi.
+    Sebep toplamada bir cevabın kaçması DEĞİL — dördüncü oy o an hâlâ geri alma penceresindeydi,
+    yani sunucuya hiç gitmemişti; pencere dolunca toplam kendiliğinden 8 oluyor. Yani sayı yanlış
+    hesaplanmıyor, HENÜZ TAMAMLANMAMIŞ bir sayı tam gibi gösteriliyordu.
+
+    Çare toplamı değiştirmek olamaz (sayı motorundur) ve kuyruğu turun sonunda zorla boşaltmak da
+    olamaz: bitiş ekranında "Geri al" hâlâ duruyor ve boşaltma onu yalana çevirirdi. Kalan doğru
+    davranış hâli SÖYLEMEK: yolda oy varken ekran sayı yazmaz.
+  */
+  const [writingCount, setWritingCount] = useState(0);
+
   /** Oyun SUNUCUYA gidişi — kuyruğun tek çıkışı; hem pencere dolunca hem toplu boşaltmada burası. */
   const send = useCallback(
     (input: DiscoverVoteInput) => {
-      void submitDiscoverVote(input).then((result) => {
-        if (result.error !== null) return;
-        if (result.data.pointsAwarded !== null) addAwarded(result.data.pointsAwarded);
-        // `id` YALNIZ girişsiz kaydırmada dolu: giriş dönüşünde talep kapısına götürülmek üzere
-        // cihazda saklanır. Girişli müşteride `null` gelir ve saklanacak bir şey yoktur.
-        if (result.data.id !== null) void appendPendingSwipe(result.data.id);
-      });
+      setWritingCount((count) => count + 1);
+      void submitDiscoverVote(input)
+        .then((result) => {
+          if (result.error !== null) return;
+          if (result.data.pointsAwarded !== null) addAwarded(result.data.pointsAwarded);
+          // `id` YALNIZ girişsiz kaydırmada dolu: giriş dönüşünde talep kapısına götürülmek üzere
+          // cihazda saklanır. Girişli müşteride `null` gelir ve saklanacak bir şey yoktur.
+          if (result.data.id !== null) void appendPendingSwipe(result.data.id);
+        })
+        // DÜŞEN YAZIM DA BEKLEMEYİ BİTİRİR: o kaydırma sayılmaz (yukarıdaki künye) ve sayının
+        // sonsuza kadar "hesaplanıyor" kalması, gelmeyecek bir puanı bekletmek olurdu.
+        .finally(() => setWritingCount((count) => count - 1));
     },
     [addAwarded],
   );
@@ -199,27 +231,42 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     if (claimed.current) return;
     claimed.current = true;
 
+    /* Talep de puan doğuran bir yazımdır: cevabı gelmeden turun toplamı oturmuş sayılmaz
+       (giriş dönüşünde bitiş ekranı açıkken kapı çalışıyor olabilir). */
+    setWritingCount((count) => count + 1);
     let alive = true;
-    void readPendingSwipes().then((swipeIds) => {
-      if (!alive || swipeIds.length === 0) return;
-      return claimDiscoverSwipes(swipeIds).then((result) => {
-        if (!alive) return;
-        if (result.error !== null) {
-          // Kuyruk DURUYOR ve kilit açılıyor: bağlanamamış kaydırma kaybedilmez, bir sonraki
-          // açılışta yeniden denenir (yutulan değil, ertelenen bir iş).
-          claimed.current = false;
-          return;
-        }
-        // Hiçbiri bağlanamasa bile (`linked: 0`) kuyruk temizlenir: aynı kimlikler her açılışta
-        // boşuna taşınırdı — sunucu onları zaten değerlendirdi.
-        void clearPendingSwipes();
-        if (result.data.points > 0) addAwarded(result.data.points);
-      });
-    });
+    void readPendingSwipes()
+      .then((swipeIds) => {
+        if (!alive || swipeIds.length === 0) return;
+        return claimDiscoverSwipes(swipeIds).then((result) => {
+          if (!alive) return;
+          if (result.error !== null) {
+            // Kuyruk DURUYOR ve kilit açılıyor: bağlanamamış kaydırma kaybedilmez, bir sonraki
+            // açılışta yeniden denenir (yutulan değil, ertelenen bir iş).
+            claimed.current = false;
+            return;
+          }
+          // Hiçbiri bağlanamasa bile (`linked: 0`) kuyruk temizlenir: aynı kimlikler her açılışta
+          // boşuna taşınırdı — sunucu onları zaten değerlendirdi.
+          void clearPendingSwipes();
+          if (result.data.points > 0) addAwarded(result.data.points);
+        });
+      })
+      .finally(() => setWritingCount((count) => count - 1));
     return () => {
       alive = false;
     };
   }, [signedIn, addAwarded]);
 
-  return { status, cards, awardedPoints, vote, canUndo: pendingCount > 0, undoLastVote, retry: load };
+  return {
+    status,
+    cards,
+    awardedPoints,
+    // Bekleyen kuyruk + cevabı gelmemiş yazım: ikisinden biri doluysa toplam henüz turun toplamı değil.
+    pointsSettling: pendingCount > 0 || writingCount > 0,
+    vote,
+    canUndo: pendingCount > 0,
+    undoLastVote,
+    retry: load,
+  };
 }

@@ -1,6 +1,7 @@
 import { OrderService, PointsBalanceService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
 import { POINTS_SETTING_KEYS, canEarnPoints, feedbackPointsReason, type EarnablePointsReason } from '@lezzet/domain-core';
-import type { PointsBalance, PointsEntry, ProductFeedback } from '@lezzet/types';
+import { logger } from '@lezzet/observability';
+import type { KeysetCursor, PointsBalance, PointsEntry, ProductFeedback } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
@@ -171,6 +172,73 @@ export async function rewardCompletedOrder(db: SupabaseClient, orderId: string):
     awardPoints(db, { customerId: order.customerId, reason: 'order', refId: orderId }),
     awardReferralPoints(db, order.customerId),
   ]);
+}
+
+/**
+ * Defter sayfası boyu ve kaçak tavanı — `sumInvitePoints`in tek ayarı.
+ *
+ * 100 seçildi çünkü aranan pencere DAR: davetin doğduğu andan bugüne kadarki hareketler. Gerçek
+ * hayatta bu 3–5 satır (oy · yorum · prim); günlük ziyaret puanı biriktiren bir müşteride bile 90
+ * günlük token ömrü boyunca yüzü zor bulur — yani tek tur genellikle yeter.
+ *
+ * Sayfa tavanı bir KAÇAK FRENİDİR, beklenen bir yol değil: imleç bir gün `null`a dönmezse döngü
+ * sonsuza gitmesin diye var. Tetiklenirse sessiz kalmaz (`logger.warn`).
+ */
+const INVITE_LEDGER_PAGE = 100;
+const INVITE_LEDGER_MAX_PAGES = 20;
+
+/**
+ * **Bir davete yazılmış TOPLAM puan** — defterden OKUNUR, hesaplanmaz (MB-17).
+ *
+ * Neden okumak zorunda: turun üç kaydı üç AYRI istekte doğuyor (oy · yorum · tamamlama primi) ve
+ * yazım uçları puanı geri söylemiyor. Toplamı "kart sayısı × ayar" diye kurmak motoru taklit etmek
+ * olurdu — günlük tavana takılan, B2B olduğu için hiç yazılmayan ya da tekillikte düşen kayıt o
+ * çarpımda görünmez. Defter tek gerçektir.
+ *
+ * **Kimlik `refId`dir:** tamamlama primi davetin kendisine (`request.id`), kart puanları o davetin
+ * `product_feedback` satırlarına yazılır. Sebep kolonuna bakılmaz — aynı satır hem `feedback_purchase`
+ * hem `review` doğurabiliyor (tekillik `(müşteri, sebep, kaynak)` üçlüsünde), ikisi de bu turundur.
+ *
+ * **`since` bir DOĞRULUK süzgecidir, hız numarası değil:** yazım kapısı var olan bir geri bildirim
+ * satırını günceller ve `feedback_request_id`sini YENİ davete çevirir (`write.ts` künyesi). O satır
+ * için ÖNCEKİ davette yazılmış puan bu turun kazancı değildir; davetin doğum anından eskisi sayılmaz.
+ * Defter yeniden eskiye sıralı olduğu için aynı süzgeç okumayı da kendiliğinden bitirir.
+ *
+ * **Servis ham sorgu yazmaz** (STACK §6): defterin genel sayfalı okuması kullanılıyor. `PointsEntry`
+ * servisine `refId` KÜMESİYLE süzen bir okuma eklenseydi bu döngü tek sorguya inerdi; o kapı bugün
+ * yok ve `packages/database` bu değişikliğin yazı alanı dışında (terfi ihtiyacı olarak bildirildi).
+ * Pencere dar olduğu için ölçülebilir bir bedeli de yok — okuma davetin doğumunda duruyor.
+ */
+export async function sumInvitePoints(
+  db: SupabaseClient,
+  input: { customerId: string; refIds: readonly string[]; since: string },
+): Promise<number> {
+  const wanted = new Set(input.refIds);
+  if (wanted.size === 0) return 0;
+
+  const entries = new PointsEntryService(db);
+  const sinceMs = Date.parse(input.since);
+  let cursor: KeysetCursor | undefined;
+  let total = 0;
+
+  for (let page = 0; page < INVITE_LEDGER_MAX_PAGES; page += 1) {
+    const { rows, nextCursor } = await entries.listByCustomer(input.customerId, cursor, INVITE_LEDGER_PAGE);
+    for (const row of rows) {
+      // Sıralama yeniden eskiye: davetten eski İLK satıra varıldıysa sonrası da eskidir.
+      if (Date.parse(row.createdAt) < sinceMs) return total;
+      if (row.refId !== null && wanted.has(row.refId)) total += row.points;
+    }
+    if (!nextCursor) return total;
+    cursor = nextCursor;
+  }
+
+  // Buraya düşmek bir arıza belirtisidir (imleç bitmiyor ya da defter beklenmedik büyüklükte):
+  // dönen sayı EKSİK olabilir, o yüzden gürültü bırakılır. Kimlik yazılır, içerik yazılmaz.
+  logger.warn(
+    { customerId: input.customerId, pages: INVITE_LEDGER_MAX_PAGES, pageSize: INVITE_LEDGER_PAGE },
+    'feedback: davet puan toplamı sayfa tavanında kesildi — toplam eksik olabilir',
+  );
+  return total;
 }
 
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */

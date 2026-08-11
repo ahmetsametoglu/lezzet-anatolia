@@ -71,7 +71,7 @@
     },
     "discover": {
       "title": "Keşif — yeni lezzetleri ilk siz oylayın ✦",
-      "body": "Her tamamlanan tur +10 puan kazandırır."
+      "body": "Beğenileriniz ne getireceğimize yön verir — tamamlanan tur puan kazandırır."
     },
     "professional": {
       "title": "Restoran ya da market misiniz?",
@@ -153,7 +153,7 @@
     },
     "discover": {
       "title": "Découverte — votez pour les nouveautés ✦",
-      "body": "Chaque tour terminé vous rapporte +10 points."
+      "body": "Vos avis orientent nos prochains choix — un tour terminé vous rapporte des points."
     },
     "professional": {
       "title": "Vous êtes restaurant ou épicerie ?",
@@ -235,7 +235,7 @@
     },
     "discover": {
       "title": "Entdecken — stimmen Sie zuerst ab ✦",
-      "body": "Jede abgeschlossene Runde bringt +10 Punkte."
+      "body": "Ihre Bewertungen lenken unsere Auswahl — eine abgeschlossene Runde bringt Punkte."
     },
     "professional": {
       "title": "Sind Sie Restaurant oder Markt?",

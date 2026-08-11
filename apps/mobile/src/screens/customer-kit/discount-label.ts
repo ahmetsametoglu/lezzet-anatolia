@@ -28,7 +28,7 @@ import messages from './discount-label-messages.json';
 type Messages = LocalizedCopy<typeof messages>;
 
 /** Özet satırının iki parçası; başına gelen "İndirim"/"Remise" öneki ÇAĞIRANIN metnidir. */
-export interface DiscountSummary {
+interface DiscountSummary {
   /**
    * Müşterinin okuduğu künye: kampanyanın adı, kupon kodu ya da sebebin okunabilir hâli.
    * `null` yalnız TEK hâlde doğar — kupon reddedilmiş ve yerine inen indirimin künyesi hiç yok;

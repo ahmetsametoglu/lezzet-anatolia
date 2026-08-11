@@ -31,9 +31,9 @@ import type { ApiResult } from './client';
 /** Turun tek kartı — sözleşmenin kendisi (fiyat/stok/varyant TAŞIMAZ, taşımamalı). */
 export type { DiscoverCard };
 /** Bir kaydırmanın cevabı: `id` (yalnız girişsizde dolu) + `pointsAwarded` (`null` = girişsiz). */
-export type DiscoverSwipe = z.infer<typeof DiscoverSwipeSchema>;
+type DiscoverSwipe = z.infer<typeof DiscoverSwipeSchema>;
 /** Talep sonucu — kaç kaydırma bağlandı, karşılığında kaç puan yazıldı. */
-export type DiscoverClaimResult = z.infer<typeof DiscoverClaimResultSchema>;
+type DiscoverClaimResult = z.infer<typeof DiscoverClaimResultSchema>;
 /**
  * Oy gövdesi — `z.input`: derleme kilidi şemanın GİRDİ şeklinden gelir (`me.ts` deseni), böylece
  * sözleşmede alan adı değişirse çağıran ekran da derlemede kırılır.

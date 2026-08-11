@@ -1478,6 +1478,141 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Kalanı `docs/uygulama/BACKLOG-musteri.md`: **MB-02** (klavye odaklanan alanın üstünü kapatıyor —
   `KeyboardAvoidingView` yalnız `BottomSheet`te kurulu) aynı ailedendir ama ayrı iştir.
 
+- [x] (21.34) **EKRANIN SÖYLEDİĞİ PUAN İLE DEFTERE YAZILAN TUTMUYORDU — üç ekranda üç ayrı kök (11.08).**
+  `touches:` `packages/types/src/contracts/feedback-api.schema.ts` ·
+  `packages/application/src/feedback/{invite.ts,points.ts}` · `apps/mobile-api/src/api/v1/feedback.ts` ·
+  `apps/mobile/src/screens/{discover/**,feedback/**,home/{messages.json,home-screen.tsx}}` ·
+  `apps/mobile/src/app/(tabs)/account.tsx` · `apps/mobile/app.config.ts`
+
+  Kapsam `docs/uygulama/BACKLOG-musteri.md` MB-15..17 · MB-35 · MB-41. **Ortak eksen §11.B'de
+  bulundu ve iş o eksende yapıldı:** soru "sayı yanlış mı" değil, **"ekran KİMİN sayısını okuyor"**.
+  Üç ekranın üçünde cevap farklı çıktı, yani üç ayrı düzeltme gerekti.
+
+  **MB-16 (keşif) — sebep TESTLE ÜRETİLDİ, teori kurulmadı.** Üç aday vardı; ikisi elendi
+  (talep kapısı ayrı kaynak değil, ikisi de tek toplayıcıdan geçiyor · geri alınan oy zaten hiç
+  gönderilmiyor), biri kanıtlandı: **tur bitiş ekranı çizildiğinde son oy hâlâ 6 sn'lik geri alma
+  penceresinde ve sunucuya HİÇ gitmemiş.** Yani "+6 ≠ 8" cihazdaki tesadüf değil, deterministik —
+  `use-discover.hook.test.ts` önce düşüyor, pencere dolunca 8 oluyor. Toplama mantığına
+  DOKUNULMADI (ölçüm desenin doğru olduğunu söyledi, künyesi de zaten yazmıştı); eklenen tek şey
+  "sayı oturdu mu" bilgisi: `pointsSettling` → yolda oy varken ekran **sayı yazmaz**, hesaplandığını
+  söyler. Kuyruğu bitişte zorla boşaltmak en kısa yoldu ve BİLEREK SEÇİLMEDİ: bitiş ekranında
+  "Geri al" duruyor (v3:370-378) ve boşaltma o düğmeyi yalana çevirirdi — sunucuda oyu geri alan uç
+  yok. Ödünleşme: müşteri en fazla 6 sn "hesaplanıyor" görür, ama gördüğü hiçbir sayı yanlış olmaz.
+
+  **MB-17 (geri bildirim) — sebep SÖZLEŞMEDEYDİ, ekranda değil.** Bir tur üç defter kaydı doğuruyor
+  (kart oyu `feedback_purchase` 5 · yorum `review` 20 · tamamlama primi 5 = 30) ama `/vote` ve
+  `/review` yalnız `{recorded:true}` dönüyordu, `/complete`in `pointsAwarded`ı ise sadece primi.
+  Toplam istemcide HESAPLANAMAZ — günlük tavan, B2B ve `(müşteri, sebep, kaynak)` tekilliği hep
+  motorun kararı; ekranda toplamak motoru taklit etmek olurdu (CLAUDE §1). **Uç açıldı:**
+  `invitePointsTotal` (zorunlu; `pointsAwarded`ın adı ve anlamı DEĞİŞMEDİ — web'in canlı tüketicisi
+  `feedback-outcome.tsx` kırılmasın diye additive). Motor toplamı `sumInvitePoints` ile KENDİ
+  DEFTERİNDEN okuyor: `ref_id ∈ {davet, o davetin product_feedback satırları}`, `since =
+  request.createdAt` (bir doğruluk süzgeci — `write.ts` var olan satırın davetini değiştirebiliyor,
+  önceki davetin puanı bu turun kazancı değil). "Kart sayısı × ayar" çarpımı bilerek yazılmadı:
+  tavana takılan ya da tekillikte düşen kayıt o çarpımda görünmezdi. **Ekran kapısı da prime değil
+  TOPLAMA bağlandı** — eskiden `pointsAwarded > 0` kapısındaydı ve tavan dolduğunda ya da davet
+  ikinci kez tamamlandığında prim 0'a düşüp müşteri, yorumundan 20 puan kazanmış olsa bile hiçbir
+  puan bilgisi görmüyordu.
+
+  **MB-15 (vitrin) — sayı hiçbir ayara karşılık gelmiyordu.** "+10 puan" muhtemelen `points_visit`
+  ile karışmıştı; gerçek kazanç kart sayısı × `points_feedback_candidate` (=2). Ayardan kurulamıyor
+  (vitrin sözleşmesinde puan yok, kart sayısı da orada bilinmiyor — deste `/discover` çağrılınca
+  kuruluyor), o yüzden cümle üç dilde **sayısız** hâle geçti. Vaadin kendisi doğru, yanlış olan
+  yalnız sayıydı.
+
+  **MB-35 · MB-41 (aynı turda):** hesap sekmesi `/me` okunurken `return null` veriyordu — artık nötr
+  yer tutucu çiziliyor (künyedeki asıl endişe korundu: "girişlisiniz/misafirsiniz" iddiası taşımaz).
+  Ölçümde bir düzeltme: tam ekran iskeleti **yoktu** — `account-skeleton.tsx` iki bölüm iskeleti
+  taşıyor ve ikisi de zaten kullanımdaydı. `BEKLEYEN(21.3)` ham hex ölçümle kapandı:
+  `@lezzet/design-tokens` importu `expo config`i düşürüyor (paket girişindeki uzantısız göreli
+  yeniden-ihraçlar → `ERR_MODULE_NOT_FOUND`); uzantılı denek modül aynı yükleyicide çalıştı, yani
+  engel paketin kendisi. Gerekçe künyeye yazıldı.
+
+  **⚠ BU İŞİN BİR PARÇASI BAŞKA BİR COMMIT'İN ALTINDA — `git log` yanıltır (kayıt, 11.08).**
+  `f521aef` (21.33, paralel şerit) yol adı vererek commit atarken çalışma ağacında BENİM o an
+  yazdığım değişiklikler de vardı ve onları da aldı: `feedback-screen.tsx`in TAMAMI (puan kapısının
+  `pointsAwarded > 0` → `invitePointsTotal > 0` çevrimi + MB-17 künyesi) ve
+  `docs/uygulama/BACKLOG-musteri.md`nin §11–§13 bölümleri (analiz · eklenen kalemler · sahiplik
+  tablosu). Kod kayıp değil, gerekçesi başkasının künyesinin altında. **CLAUDE §0'ın 08.08'de
+  kaydettiği vakanın aynısı, yönü ters** — ve o gün konan kuralın (`git commit -- <yollar>` +
+  add'siz tek adım) tek başına yetmediğini gösteriyor: iki ajan AYNI dosyada eşzamanlı çalışıyorsa
+  yol süzgeci koruma sağlamaz. Sahiplik tablosu (`BACKLOG-musteri.md` §13) tam bunun için açıldı;
+  bu satır da o tablonun ikinci sınavının kaydı.
+
+  **Doğrulama:** mobil **83 suite / 581 test** yeşil (yeni 8: keşifte bekleme hâlinin dört ölçümü,
+  ekranın çipi, geri bildirimde toplam/prim ayrımı, prim 0 iken kartın kalması, toplam 0 iken
+  kaybolması) · `pnpm test:unit` **1347 test** · types/application/mobile-api/**web** typecheck
+  rc=0 · eslint · boundaries temiz.
+
+  **Test borcu:** `invite.test.ts`e turun toplamını ölçen entegrasyon iddiası YAZILDI ama
+  KOŞULMADI (§4b: DB'ye vuran koşu denetmenin işi). İddia literal sayıya bakmıyor — ayarlar küresel
+  tekil olduğu için toplamın bakiyeye yaptığı FARKA bakıyor.
+
+  **BEKLEYEN(21.34):** `PointsEntryService`te `ref_id` KÜMESİYLE süzen okuma yok (`hasEntryFor`
+  yalnız "var mı" der); `sumInvitePoints` bugün sayfa döngüsüyle okuyor (sayfa 100, kaçak freni 20
+  sayfa + `logger.warn`). Pencere dar olduğu için ölçülebilir bedel yok, ama taban sınıfın `.in()`
+  süzgeciyle ~5 satırlık bir metot bunu tek sorguya indirir.
+
+  **Web'e devredilen:** `apps/web/app/(customer)/[locale]/feedback/[token]/components/feedback-outcome.tsx`
+  hâlâ yalnız `pointsAwarded` basıyor — yani web davet sayfası AYNI eksikliği yaşıyor. Alan
+  sözleşmede hazır, bağlaması tek satır; `docs/talep/koordinasyon-web-mobil.md`de bildirildi.
+
+- [x] (21.35) **PROFESYONEL BAŞVURUSUNUN BEŞ AÇIĞI + ÖLÜ İHRAÇLAR — kimlik artık oturumdan (11.08).**
+  `touches:` `apps/mobile/src/screens/professionals/**` · `apps/mobile-api/src/api/v1/b2b.ts` ·
+  `apps/mobile/src/lib/api/{b2b,discover,points}.ts` · `apps/mobile/src/lib/payment/{payment-sheet,stripe-config}.ts` ·
+  `apps/mobile/src/screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` ·
+  `apps/mobile/src/screens/home/use-home-orders.hook.ts`
+
+  Kapsam `docs/uygulama/BACKLOG-musteri.md` MB-04 · MB-05 · MB-07 · MB-08 · MB-11 · MB-39.
+
+  **MB-04 — KİMLİK GÖVDEDEN DEĞİL OTURUMDAN (kullanıcı kararı 11.08).** Kullanıcının kurgusu:
+  *"profesyonel bir kere oturum açsın, mailini girsin, OTP kodu gelsin ve onaylasın; bu bizim mail
+  adresimiz olsun."* Fatura için ayrı adres sorulunca: *"şimdilik her şeye yetsin, ileride küçük bir
+  özellik olarak eklenir"* → MB-44 olarak kaydedildi.
+  **Ölçüm:** formdaki e-posta hiçbir yere yazılmıyordu ama motor onu ZORUNLU tutuyordu
+  (`b2b-application.ts:156`) — müşteri, hiçbir işe yaramayan bir alanı doldurmak zorundaydı. Dahası
+  iki adres ayrışabiliyordu: misafir yolunda kimlik çekmecesi formdaki adresten beslenmiyor, kendi
+  boş alanıyla açılıyor; müşteri X yazıp Y ile doğrulayabiliyor ve karar maili Y'ye gidiyordu.
+  Asıl çelişki: formdaki adres DOĞRULANMAMIŞ bir metin, hesabınki OTP'den geçmiş.
+  **Yapıldı:** uç gövdedeki `email`i yok sayıp oturum sahibinin profilinden yazıyor (`b2b.ts`
+  künyesi); ekrandan alan kalktı, yerine hesabın adresi gösteriliyor.
+  **AJANIN YAKALADIĞI TUZAK — kaydediyorum:** alanı kaldırıp boş göndermek YETMEZDİ. `send()`
+  motoru İSTEMCİDE de koşuyor; boş e-posta ön denetimde takılır, istek uca hiç çıkmaz, 401 gelmez
+  ve **misafirin kimlik çekmecesi hiç açılmazdı** — yani düzeltme, misafir başvurusunu tamamen
+  öldürürdü. Çözüm kuralı gevşetmek değil taşımak oldu: ön denetimden yalnız `email` süzüldü,
+  denetim sunucuda yerinde duruyor.
+  **Misafirin cümlesi dürüst:** adres henüz yokken "hesabınızın adresi" denemezdi; ekran sırayı
+  söylüyor ("gönderirken doğrulayacağınız e-posta adresine"). Okuma sürerken satır HİÇ çizilmiyor —
+  girişliye bir an yanlış vaat okutmamak için, testle kilitli.
+
+  **MB-07 — kök sebep BACKLOG'DA YAZILANDAN FARKLI ÇIKTI.** Backlog "çipin yatay dolgusu yok"
+  diyordu; ölçüm başkasını söyledi: `PressableSurface` stili **iç** yüzeye veriyor, dış `Pressable`a
+  `flex: 1` geçmiyor — haplar ekranı yarılamıyor, kendi metni kadar daralıyordu. Kitin kendi çözümü
+  uygulandı (`bottom-tab-bar.tsx` yuva deseni); ölçü v3'ten
+  (`design/derived/mobil-musteri-v3/18-vPro-professionnels.html`), yatay dolgu aynı sayfanın mobil
+  çipinden. Etiket genişlikleri fontTools ile ölçüldü (en uzun 125,9 dp / yuva 158 dp) — improvise
+  edilmedi (CLAUDE §3).
+
+  **MB-05** ön dolgu ALAN BAZLI ve tek seferlik: dolu alanın üstüne yazmıyor (yarış, testte elle
+  tutulan cevapla kuruldu). **MB-08** girişliye kayıt adımı gösterilmiyor; ölçüt `b2b.status`
+  (`useMe` ikinci bir ağ okuması açardı). **MB-11** gövde başlığı tekrarlamıyor, üç dilde yeni metin.
+
+  **MB-39 — knip 9 → 0 ölü ihraç tipi.** Altısında yalnız `export` kalktı (tip kendi dosyasının
+  imzasında yaşıyor), `MeCoupon` tamamen silindi (kendi dosyasında bile kullanılmıyordu; yerine
+  "geri ekleme, kuponlar `MePointsView['coupons']`ten gelir" künyesi). "Tüketiciye bağla" seçeneği
+  hiçbirinde çıkmadı — tüketiciler tek tek okundu, hepsi çıkarımla okuyor.
+
+  **Doğrulama:** mobil **83 suite / 590 test** yeşil · `test:unit` 1347 · mobil + mobile-api
+  typecheck · eslint · boundaries · `docs:check` temiz. Düzeltmeler geçici geri alınınca yeni
+  testler kırmızı verdi (tautoloji değil).
+
+  **BEKLEYEN(21.35):** sözleşmedeki `B2bApplicationInput.email` ve motorun zorunluluğu DURUYOR —
+  ikisi de web yüzeyiyle ortak, kaldırma kararı iki yüzeyin. Bugünkü hâl kırılmıyor (uç doğruyu
+  yazıyor) ama sözleşme hâlâ yazılmayan bir alan taşıyor. Koordinasyon defterinde soruldu.
+
+  **Web'e devredilen:** web B2B formu da aynı arızayı taşıyor olabilir — gövdedeki adres orada da
+  hiçbir yere yazılmıyor. Aynı defterde bildirildi.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

@@ -20,7 +20,7 @@
     "done": {
       "title": "Değerlendirmeniz için teşekkürler",
       "points": "✦ +{points} puan",
-      "pointsNote": "hesabınıza eklendi",
+      "pointsNote": "bu değerlendirme için hesabınıza eklendi",
       "pointsTotal": "Toplam ✦ {points} puan",
       "reviewBody": "Memnuniyetinizi {platform}'da paylaşırsanız çok seviniriz — bir dakikanızı alır.",
       "reviewCta": "{platform}'da değerlendir ↗",
@@ -70,7 +70,7 @@
     "done": {
       "title": "Merci pour votre évaluation",
       "points": "✦ +{points} points",
-      "pointsNote": "ajoutés à votre compte",
+      "pointsNote": "crédités sur votre compte pour cette évaluation",
       "pointsTotal": "Total ✦ {points} points",
       "reviewBody": "Si vous partagiez votre satisfaction sur {platform}, cela nous ferait très plaisir — cela ne prend qu'une minute.",
       "reviewCta": "Évaluer sur {platform} ↗",
@@ -120,7 +120,7 @@
     "done": {
       "title": "Danke für Ihre Bewertung",
       "points": "✦ +{points} Punkte",
-      "pointsNote": "Ihrem Konto gutgeschrieben",
+      "pointsNote": "für diese Bewertung Ihrem Konto gutgeschrieben",
       "pointsTotal": "Gesamt ✦ {points} Punkte",
       "reviewBody": "Wir würden uns sehr freuen, wenn Sie Ihre Zufriedenheit auf {platform} teilen — es dauert nur eine Minute.",
       "reviewCta": "Auf {platform} bewerten ↗",

@@ -1,6 +1,9 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef } from 'react';
+import { View } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { AccountScreen } from '@/screens/account/account-screen';
 import { accountData } from '@/screens/account/account-fixture';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
@@ -40,8 +43,12 @@ export default function AccountRoute() {
     }, [isGuest, router]),
   );
 
-  // Kısa yükleme anında hiçbir hâl İDDİA EDİLMEZ (misafir daveti yanıp sönmesin) — boş sekme.
-  if (meState.status === 'loading') return null;
+  /* Yükleme anında hiçbir hâl İDDİA EDİLMEZ (misafir daveti yanıp sönmesin) — ama artık sekme BOŞ
+     da kalmaz (21.14 kalemi MB-35). Eski hâl `return null`dı: kimlik okuması uzayınca müşteri
+     bomboş bir sekmeye bakıyordu ve bu, oturumun sessizce misafire düştüğü AYRI arızayla
+     karışıyordu — "hesabım açılmıyor" şikâyetinin hangisinden geldiği ayırt edilemiyordu. Nabız
+     atan bir yer tutucu ikisini ayırır: bekleme görünür, boşluk arıza olur. */
+  if (meState.status === 'loading') return <AccountLoading />;
 
   if (meState.status !== 'ready' || meState.me === null) {
     return <AccountScreen signedIn={false} />;
@@ -69,3 +76,53 @@ export default function AccountRoute() {
     />
   );
 }
+
+/*
+  KİMLİK OKUNURKEN — SAYFA DÜZEYİ YER TUTUCU (MB-35).
+
+  NEDEN ROTADA, `screens/account/account-skeleton.tsx`TA DEĞİL: o dosya EKRANIN İÇİNDEKİ iki
+  beklemenin (puan cüzdanı · adres defteri) iskeletidir ve ekran onları kendi çiziyor. Buradaki
+  bekleme başkasıdır — kimlik okuması ROTADA yapılıyor (`useMe`), yani ekran daha hiç
+  kurulmamışken. Yerini tuttuğu bekleme burada olduğu için yer tutucu da burada duruyor.
+
+  NÖTR, ÇÜNKÜ HENÜZ KİMSE DEĞİLİZ: okuma bitince ekran ya girişli hâle (başlık + profil kartı +
+  puan + menü + adresler) ya misafir hâline (başlık + davet bloğu) açılıyor; ikisi birbirine
+  benzemiyor. O yüzden burada yalnız İKİ HÂLİN DE ORTAK olduğu iskelet çiziliyor: sayfa başlığı
+  ve altındaki ilk blok. Girişli sayfanın tamamını taklit etmek "girişlisiniz" demek olurdu ve
+  misafir çıkınca ekran bloklar kaybolarak zıplardı (vitrin iskeletinde ölçülen tuzağın aynısı).
+
+  ÖLÇÜLER TAHMİN DEĞİL, `account-screen`in kendi stillerinden: sayfa zemini `sand-50`, üst
+  güvenli alan + `space.sm` (başlığın kendi üst dolgusu), yatay dolgu `space['4xl']`, bloklar
+  arası `space['2xl']`. Kartın yüksekliği profil kartının gerçek yüksekliğidir (avatar çapı +
+  iki yanda `space['3xl']` dolgu) — veri gelince yer değişmesin diye.
+
+  METİN YOK: nabız zaten "bekleniyor" diyor, yanına bir de "Yükleniyor…" yazmak aynı şeyi iki kez
+  söylemek olurdu (kullanıcı bulgusu 09.08). Ekran okuyucuya tek ses gider — kök `progressbar` +
+  `busy`; blokların kendisi a11y'de görünmez (`Skeleton` künyesi).
+*/
+function AccountLoading() {
+  const { theme } = useUnistyles();
+
+  return (
+    <View
+      style={styles.screen}
+      testID="account-loading"
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityState={{ busy: true }}
+    >
+      <Skeleton width="42%" height={theme.text['card-title'] * theme.text['h1--line-height']} />
+      <Skeleton width="100%" height={theme.size.avatarLg + theme.space['3xl'] * 2} radius="card" />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create((theme, rt) => ({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors['sand-50'],
+    paddingTop: rt.insets.top + theme.space.sm,
+    paddingHorizontal: theme.space['4xl'],
+    gap: theme.space['2xl'],
+  },
+}));

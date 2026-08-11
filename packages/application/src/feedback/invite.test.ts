@@ -201,6 +201,36 @@ describe('akışın tamamlanması', () => {
     expect(second?.balance).toBe(first?.balance);
   });
 
+  /**
+   * MB-17'nin ölçülmüş arızası: oy ve yorum uçları puanı GERİ SÖYLEMİYOR (`{recorded:true}`), bu
+   * yüzden ekran yalnız tamamlama primini gösteriyordu ("+5") — deftere 5 + 20 + 5 = 30 yazılmışken.
+   *
+   * İddia LİTERAL SAYIYA bakmaz (ayarlar küresel tekil, başka şerit değiştirebilir): turun toplamı,
+   * turun müşteri bakiyesine yaptığı FARKIN kendisidir. Fark bu dosyanın kurduğu müşteride ölçülür,
+   * küresel bir sayaçta değil (CLAUDE §4b).
+   */
+  it('turun TOPLAMI dönüyor — oy + yorum + prim; çağrının primi ayrı alanda kalır', async () => {
+    const request = await inviteForOrder();
+    const oncekiBakiye = (await getPointsBalance(db, customerId)).balance;
+
+    await voteOnFeedbackInvite(db, { token: request.token, productId, vote: 'like' });
+    await reviewFeedbackInvite(db, { token: request.token, productId, comment: `Toplam ölçümü ${stamp}` });
+
+    const done = await completeFeedbackInvite(db, request.token);
+    expect(done).not.toBeNull();
+    if (!done) return;
+
+    const turunKazandirdigi = (await getPointsBalance(db, customerId)).balance - oncekiBakiye;
+    expect(done.invitePointsTotal).toBe(turunKazandirdigi);
+    // Prim toplamın yalnız bir PARÇASI — iki alan aynı sayı olsaydı arıza geri gelmiş demektir.
+    expect(done.pointsAwarded).toBeLessThan(done.invitePointsTotal);
+
+    // İkinci tamamlama prim vermez; turun toplamı yerinde durur (yeniden açılan teşekkür ekranı).
+    const again = await completeFeedbackInvite(db, request.token);
+    expect(again?.pointsAwarded).toBe(0);
+    expect(again?.invitePointsTotal).toBe(done.invitePointsTotal);
+  });
+
   it('memnun müşteri dış değerlendirmeye davet edilir; memnun olmayan sorun bildirmeye', async () => {
     await settings.override('review_platform_url', 'https://fr.trustpilot.com/evaluate/lezzet.test');
     await settings.override('review_platform_name', 'Trustpilot');

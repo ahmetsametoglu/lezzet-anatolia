@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { lightTheme } from '@/theme/unistyles';
 import { ProfessionalsScreen } from './professionals-screen';
 import messages from './messages.json';
 
@@ -57,6 +58,12 @@ const COMPANY = {
   city: 'Strasbourg',
 };
 
+/** Girişli müşterinin künyesi — `/me/b2b` bunu döndürüyor ve form ön dolgusunun kaynağı bu. */
+const PROFILE = { contactName: 'Elif Kaya', email: 'elif@ornek.com', phone: '+33612345678' };
+
+/** Başvurusu OLMAYAN girişli müşteri: durum bloğu değil, ön dolgulu form çizilir. */
+const SIGNED_IN = { status: 'none', ...PROFILE, rejectReason: null, rejectReasonTranslated: false };
+
 /**
  * Dört ucun cevabı. Varsayılan açılış MİSAFİR (`/me/b2b` → 401): form ziyaretçiye açık ve kimlik
  * ancak gönderirken isteniyor — ekranın normal hâli bu.
@@ -71,14 +78,16 @@ function wire(handlers: { applicant?: Response; company?: Response; vat?: Respon
   });
 }
 
-/** Formu tam doldurur — motor bu kümede sıfır eksik buluyor (`b2bApplicationIssues`). */
+/**
+ * Formu tam doldurur — E-POSTA YOK (MB-04): o alan kaldırıldı, adres oturumdan geliyor. Motorun
+ * `email` denetimi ekranın ön denetiminde süzülüyor, yani bu küme "sıfır eksik" sayılmalı.
+ */
 async function fillForm() {
   await fireEvent.changeText(screen.getByTestId('pro-legal-name'), 'Boulangerie Test');
   await fireEvent.changeText(screen.getByTestId('pro-line1'), '8 rue du Fossé');
   await fireEvent.changeText(screen.getByTestId('pro-postal-code'), '67000');
   await fireEvent.changeText(screen.getByTestId('pro-city'), 'Strasbourg');
   await fireEvent.changeText(screen.getByTestId('pro-contact-name'), 'Elif Kaya');
-  await fireEvent.changeText(screen.getByTestId('pro-email'), 'elif@ornek.com');
   await fireEvent.changeText(screen.getByTestId('pro-phone'), '0612345678');
 }
 
@@ -164,7 +173,11 @@ describe('ProfessionalsScreen', () => {
 
     await waitFor(() => expect(screen.getByTestId('pro-identity-email')).toBeOnTheScreen());
     /* Gövde gerçekten yola çıktı ve 401 aldı: kapı SUNUCUDA, ekranın tahmininde değil. İki çağrı,
-       çünkü `authorizedFetch` 401'de BİR tazeleme + BİR tekrar yapıyor (kendi sözleşmesi). */
+       çünkü `authorizedFetch` 401'de BİR tazeleme + BİR tekrar yapıyor (kendi sözleşmesi).
+
+       Bu satır aynı zamanda MB-04'ün KİLİDİ: misafirin `email`i artık boş (alan kaldırıldı) ve
+       motor o alanı zorunlu tutuyor. Ekranın ön denetimi `email`i süzmeseydi gönderim burada
+       dururdu — istek hiç çıkmaz, 401 gelmez, çekmece AÇILMAZDI. */
     expect(callsTo('/me/b2b/application')).toHaveLength(2);
   });
 
@@ -216,6 +229,116 @@ describe('ProfessionalsScreen', () => {
     await waitFor(() => expect(screen.getByTestId('pro-status-block')).toBeOnTheScreen());
     expect(screen.getByText(t.status.pendingTitle)).toBeOnTheScreen();
     expect(screen.queryByTestId('pro-submit')).toBeNull();
+  });
+
+  it('girişli müşterinin künyesi forma ÖN DOLGU olarak gelir', async () => {
+    wire({ applicant: ok(SIGNED_IN) });
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByTestId('pro-contact-name')).toHaveDisplayValue(PROFILE.contactName));
+    expect(screen.getByTestId('pro-phone')).toHaveDisplayValue(PROFILE.phone);
+  });
+
+  it('E-POSTA KUTUSU YOK; girişliye hesabın doğrulanmış adresi GÖSTERİLİR (MB-04)', async () => {
+    wire({ applicant: ok(SIGNED_IN) });
+    await renderScreen();
+
+    // Kutu hiçbir hâlde geri gelmemeli: adres artık bir girdi değil, kimliğin kendisi.
+    await waitFor(() => expect(screen.getByTestId('pro-account-email')).toHaveTextContent(PROFILE.email));
+    expect(screen.queryByTestId('pro-email')).toBeNull();
+    expect(screen.getByText(t.form.resultTo)).toBeOnTheScreen();
+  });
+
+  it('misafir adresini HENÜZ bilmiyoruz — vaat dürüst kurulur, adres uydurulmaz', async () => {
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByText(t.form.resultToGuest)).toBeOnTheScreen());
+    expect(screen.queryByTestId('pro-account-email')).toBeNull();
+    expect(screen.queryByTestId('pro-email')).toBeNull();
+  });
+
+  it('okuma bitmeden HİÇBİR vaat çizilmez — girişliye misafir cümlesi gösterilmez', async () => {
+    /* Kilidi elle tutuyoruz: `/me/b2b` cevabı gelmeden ekran çiziliyor (form beklemez). O anda
+       misafir cümlesini basmak, girişli müşteriye bir an yanlış bir adres vaadi okutmak olurdu. */
+    let release: (value: Response) => void = () => undefined;
+    const applicantLate = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/b2b/company/')) return Promise.resolve(ok({ status: 'not_found' }));
+      if (url.includes('/b2b/vat/')) return Promise.resolve(ok({ valid: null }));
+      if (url.includes('/me/b2b/application')) return Promise.resolve(fail(401, 'unauthorized'));
+      return applicantLate;
+    });
+    await renderScreen();
+
+    expect(screen.queryByTestId('pro-mail-to')).toBeNull();
+
+    await act(async () => {
+      release(ok(SIGNED_IN));
+    });
+    await waitFor(() => expect(screen.getByTestId('pro-account-email')).toHaveTextContent(PROFILE.email));
+  });
+
+  it('ön dolgu MÜŞTERİNİN YAZDIĞINI EZMEZ — geç gelen cevap dolu alana dokunmaz', async () => {
+    /* Yarış birebir kuruluyor: form okuma bitmeden çiziliyor, müşteri yazmaya başlıyor, cevap
+       SONRA geliyor. Kilidi elle açıyoruz ki sıra tesadüfe kalmasın. */
+    let release: (value: Response) => void = () => undefined;
+    const applicantLate = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/b2b/company/')) return Promise.resolve(ok({ status: 'not_found' }));
+      if (url.includes('/b2b/vat/')) return Promise.resolve(ok({ valid: null }));
+      if (url.includes('/me/b2b/application')) return Promise.resolve(fail(401, 'unauthorized'));
+      return applicantLate;
+    });
+    await renderScreen();
+
+    await fireEvent.changeText(screen.getByTestId('pro-contact-name'), 'Yaman Sametoğlu');
+    await act(async () => {
+      release(ok(SIGNED_IN));
+    });
+
+    // Boş alanlar dolar…
+    await waitFor(() => expect(screen.getByTestId('pro-phone')).toHaveDisplayValue(PROFILE.phone));
+    // …ama müşterinin yazdığı alan olduğu gibi kalır.
+    expect(screen.getByTestId('pro-contact-name')).toHaveDisplayValue('Yaman Sametoğlu');
+  });
+
+  it('"Kaydolun" adımı YALNIZ misafire gösterilir', async () => {
+    await renderScreen();
+    await waitFor(() => expect(screen.getByText(t.steps.signUp)).toBeOnTheScreen());
+  });
+
+  it('girişli müşteri kayıt adımını GÖRMEZ — kalan adımlar durur', async () => {
+    wire({ applicant: ok(SIGNED_IN) });
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByTestId('pro-contact-name')).toHaveDisplayValue(PROFILE.contactName));
+    expect(screen.queryByText(t.steps.signUp)).toBeNull();
+    expect(screen.getByText(t.steps.review)).toBeOnTheScreen();
+    expect(screen.getByText(t.steps.priceList)).toBeOnTheScreen();
+  });
+
+  it('ülke rozetleri ekranı EŞİT böler ve etiket çerçeveye değmez', async () => {
+    /* Bozukluğun sebebi dolgu değil `flex: 1`in kaybolmasıydı (künye `KindTab`te): stil İÇ
+       yüzeye gidiyor, genişliği yuva dağıtmalı. İkisi de burada ölçülüyor. */
+    await renderScreen();
+
+    expect(screen.getByTestId('pro-tab-siret-slot')).toHaveStyle({ flex: 1 });
+    expect(screen.getByTestId('pro-tab-vat-slot')).toHaveStyle({ flex: 1 });
+    /* Dolgu OLUMLU ölçülür: "0 değil" demek, özelliğin HİÇ olmadığı (arızanın kendisi) hâlde de
+       geçerdi. Değer ölçekten okunur — teste ham piksel yazılmaz. */
+    expect(screen.getByTestId('pro-tab-siret')).toHaveStyle({ paddingHorizontal: lightTheme.space.lg });
+  });
+
+  it('durum gövdesi başlığı TEKRAR ETMEZ — üç dilde', () => {
+    for (const copy of Object.values(messages)) {
+      expect(copy.status.pending).not.toContain(copy.status.pendingTitle);
+    }
   });
 
   it('reddedilen adaya GEREKÇE gösterilir ve yeniden başvuru yolu açılır', async () => {

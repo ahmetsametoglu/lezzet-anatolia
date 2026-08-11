@@ -631,6 +631,16 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         )}
 
         <View style={styles.invites}>
+          {/* KEŞİF DAVETİNİN CÜMLESİ SAYI VERMEZ (MB-15, ölçüldü 11.08). Burada bir süre
+              "Her tamamlanan tur +10 puan kazandırır" yazıyordu ve o sayı HİÇBİR ayara karşılık
+              gelmiyordu: gerçek kazanç kart sayısı × `points_feedback_candidate` (=2), yani dört
+              kartlık turda 8; "+10" muhtemelen `points_visit`/`points_order` ile karışmıştı.
+              Sayıyı ayardan KURAMIYORUZ: vitrin sözleşmesi puan taşımıyor (`home-api.schema`) ve
+              turdaki kart sayısı da burada bilinmiyor (deste `/discover` çağrılınca kuruluyor) —
+              ikisi de uç değişikliği ister. Ekrana sabit sayı gömmek ise 29.07 denetiminin
+              kapattığı arıza sınıfı: ayar değiştiği gün ekran, vermediğimiz bir ödülü vaat eder.
+              Vaadin kendisi (tamamlanan tur puan kazandırır) doğru ve ölçülebilir; yanlış olan
+              yalnız sayıydı. */}
           <DashedInvite
             title={t.discover.title}
             description={t.discover.body}

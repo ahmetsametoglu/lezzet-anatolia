@@ -124,11 +124,30 @@ b2b.post('/application', async (c) => {
 
   // ── DERLEME KİLİDİ (dosya künyesi) ─────────────────────────────────────────
   const { facts: rawFacts, ...rest } = body.data;
-  const input: B2bApplicationInput = rest;
   const facts: B2bCompanyFacts = rawFacts;
 
   const db = serviceDb();
   const customerId = c.get('customerId');
+
+  /* ── E-POSTA GÖVDEDEN DEĞİL OTURUMDAN (kullanıcı kararı 11.08 · MB-04) ──────
+     Kullanıcının kurgusu: *"profesyonel bir kere oturum açsın, mailini girsin, OTP kodu gelsin ve
+     onaylasın; bu bizim mail adresimiz olsun."* Yani başvurunun e-postası ARTIK BİR GİRDİ DEĞİL,
+     kimliğin kendisidir.
+
+     Neden gövdeye güvenilmiyor: gövdedeki adres DOĞRULANMAMIŞ bir metindi, hesabınki OTP'den
+     geçmiş. İkisi ayrışabiliyordu ve ölçüldü (11.08) — misafir yolunda kimlik çekmecesi formdaki
+     adresten beslenmiyor, kendi boş alanıyla açılıyor; müşteri X yazıp Y ile doğrulayabiliyor ve
+     karar maili Y'ye gidiyordu. Motor alanı zorunlu tuttuğu için (`b2bApplicationIssues`) müşteri,
+     hiçbir yere yazılmayan bir alanı doldurmak zorundaydı.
+
+     Alan SÖZLEŞMEDEN kaldırılmadı, çünkü motor ve sözleşme web yüzeyiyle ORTAK — kaldırma kararı
+     iki yüzeyin (koordinasyon defterinde soruldu). O güne dek burası tek doğruyu dayatıyor:
+     gövde ne gönderirse göndersin, kayda giren adres oturumun sahibinin adresidir. Profil yoksa
+     motorun kendi `profile_not_found` dalı zaten cevap veriyor; burada boş dize geçmek motorun
+     `email` denetimini tetikler ve müşteri adlı bir ret görür — sessiz bir kabul olmaz. */
+  const profile = await new UserProfileService(db).getById(customerId);
+  const input: B2bApplicationInput = { ...rest, email: profile?.email ?? '' };
+
   const outcome = await submitB2bApplication(db, customerId, input, facts);
   if (outcome.status === 'profile_not_found') return fail(c, 'profile_not_found', 404);
   if (outcome.status === 'invalid_application') {

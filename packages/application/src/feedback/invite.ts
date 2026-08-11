@@ -14,7 +14,7 @@ import { resolveLocalizedText, type PreferredLanguage, type ProductFeedback } fr
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { imageOf } from '../catalog/map';
 import type { StorefrontImage } from '../catalog/storefront-types';
-import { awardPoints, feedbackCompletionPoints, getPointsBalance } from './points';
+import { awardPoints, feedbackCompletionPoints, getPointsBalance, sumInvitePoints } from './points';
 
 /*
   ALIM-SONRASI DAVET AKIŞI (17.2 · 17.6) — web `lib/feedback/invite.ts`in paket hâli (terfi;
@@ -122,8 +122,16 @@ export async function openFeedbackInvite(
 
 export interface FeedbackCompletion {
   outcome: FeedbackOutcome;
-  /** Bu turda kazanılan puan; ikinci kez tamamlamada 0. */
+  /** Bu ÇAĞRININ yazdığı puan (tamamlama primi); ikinci kez tamamlamada 0. Turun toplamı bu değil. */
   pointsAwarded: number;
+  /**
+   * Bu davete yazılmış TOPLAM puan — oylar + yorum + tamamlama primi (`sumInvitePoints`).
+   *
+   * Ölçüldü (11.08): yazım uçları puanı geri söylemediği için ekran "+5" derken deftere 5+20+5 = 30
+   * yazılıyordu. İstemcide toplamak motoru taklit etmek olurdu; toplamı defter söyler.
+   * İkinci tamamlamada `pointsAwarded` 0'a düşer, bu alan turun gerçeğini söylemeye devam eder.
+   */
+  invitePointsTotal: number;
   balance: number;
   /** Yalnız `review_invite` sonucunda dolu — dış değerlendirme adresi ve düğmede yazacak ad. */
   reviewUrl: string | null;
@@ -158,14 +166,18 @@ export async function completeFeedbackInvite(db: SupabaseClient, token: string):
       ? { reviewUrl, reviewPlatform: await settings.get<string>('review_platform_name', 'Google') }
       : { reviewUrl: null, reviewPlatform: null };
 
-  // Zaten tamamlanmış: teşekkür durumu gösterilir, puan İKİNCİ KEZ verilmez.
+  // Turun puan kayıtlarının KAYNAKLARI: tamamlama primi davetin kendisine, kart puanları (oy ve
+  // yorum) o davetin geri bildirim satırlarına yazılır — defterdeki `ref_id` bu kümeden çıkar.
+  const roundRefIds = [request.id, ...given.map((g) => g.id)];
+
+  // Zaten tamamlanmış: teşekkür durumu gösterilir, puan İKİNCİ KEZ verilmez. Turun TOPLAMI yine de
+  // dolu döner — "bu çağrı ne verdi" ile "bu tur ne kazandırdı" ayrı sorular.
   if (request.completedAt) {
-    return {
-      outcome,
-      pointsAwarded: 0,
-      balance: (await getPointsBalance(db, request.customerId)).balance,
-      ...invite,
-    };
+    const [balance, invitePointsTotal] = await Promise.all([
+      getPointsBalance(db, request.customerId),
+      sumInvitePoints(db, { customerId: request.customerId, refIds: roundRefIds, since: request.createdAt }),
+    ]);
+    return { outcome, pointsAwarded: 0, invitePointsTotal, balance: balance.balance, ...invite };
   }
 
   // Tamamlama puanı davetin KENDİSİNE yazılır: tek tek kartların puanı zaten kart başına verildi.
@@ -173,10 +185,10 @@ export async function completeFeedbackInvite(db: SupabaseClient, token: string):
   const points = entry?.points ?? 0;
   await requests.markCompleted(request.id, points);
 
-  return {
-    outcome,
-    pointsAwarded: points,
-    balance: (await getPointsBalance(db, request.customerId)).balance,
-    ...invite,
-  };
+  // Toplam ve bakiye YAZIMDAN SONRA okunur: primin kaydı ikisine de girmeli.
+  const [balance, invitePointsTotal] = await Promise.all([
+    getPointsBalance(db, request.customerId),
+    sumInvitePoints(db, { customerId: request.customerId, refIds: roundRefIds, since: request.createdAt }),
+  ]);
+  return { outcome, pointsAwarded: points, invitePointsTotal, balance: balance.balance, ...invite };
 }

@@ -202,13 +202,45 @@ describe('FeedbackScreen', () => {
     await fireEvent.press(screen.getByTestId('feedback-finish'));
 
     await waitFor(() => expect(screen.getByText(t.done.title)).toBeOnTheScreen());
-    expect(screen.getByText('✦ +15 puan')).toBeOnTheScreen();
+    /* MB-17: yazılan sayı TURUN TOPLAMIDIR (`invitePointsTotal` = 40), tamamlama primi (15) değil.
+       Fixture ikisini bilerek ayrı tutuyor — eşit olsalardı bu iddia hiçbir şeyi kanıtlamazdı ve
+       ekran primi yazmaya geri dönse test yine yeşil kalırdı. Cihazda ölçülen arıza tam buydu:
+       ekran "+5" derken deftere 30 yazılmıştı. */
+    expect(screen.getByText('✦ +40 puan')).toBeOnTheScreen();
+    expect(screen.queryByText('✦ +15 puan')).toBeNull();
+    expect(screen.getByText('bu değerlendirme için hesabınıza eklendi')).toBeOnTheScreen();
     expect(screen.getByText('Toplam ✦ 255 puan')).toBeOnTheScreen();
     expect(screen.queryByTestId('feedback-issue')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('feedback-review'));
     expect(openURL).toHaveBeenCalledWith('https://g.page/lezzet-anatolia/review');
     openURL.mockRestore();
+  });
+
+  /* MB-17'nin İKİNCİ yarısı. Kart eskiden `pointsAwarded > 0` kapısındaydı ve bunun ölçülmüş bir
+     bedeli vardı: günlük tavan dolduğunda ya da davet İKİNCİ kez tamamlandığında prim 0'a düşüyor,
+     müşteri o turda yorum için puan kazanmış olsa bile hiçbir puan bilgisi görmüyordu. Kapı artık
+     toplamda; bu test o gerilemeyi kilitliyor. */
+  it('prim 0 olsa da TURUN TOPLAMI varsa puan kartı çizilir — tavan dolduğunda kart kaybolmaz', async () => {
+    wire({ complete: ok(feedbackCompletion({ pointsAwarded: 0, invitePointsTotal: 20 })) });
+    await renderFeedback();
+    await voteRemaining('feedback-like', 3);
+
+    await fireEvent.press(screen.getByTestId('feedback-finish'));
+
+    await waitFor(() => expect(screen.getByTestId('feedback-points')).toBeOnTheScreen());
+    expect(screen.getByText('✦ +20 puan')).toBeOnTheScreen();
+  });
+
+  it('turun toplamı SIFIRSA kart hiç çizilmez — B2B müşterisine olmayan ödül vaat edilmez', async () => {
+    wire({ complete: ok(feedbackCompletion({ pointsAwarded: 0, invitePointsTotal: 0 })) });
+    await renderFeedback();
+    await voteRemaining('feedback-like', 3);
+
+    await fireEvent.press(screen.getByTestId('feedback-finish'));
+
+    await waitFor(() => expect(screen.getByTestId('feedback-done')).toBeOnTheScreen());
+    expect(screen.queryByTestId('feedback-points')).toBeNull();
   });
 
   it('"sorun bildir" dalı da cevaptan gelir — ekran memnuniyeti kendi saymaz', async () => {

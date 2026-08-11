@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { MePointsRedeemResultSchema, MePointsViewSchema, type MeCouponSchema } from '@lezzet/types';
+import { MePointsRedeemResultSchema, MePointsViewSchema } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
@@ -14,8 +14,13 @@ import type { ApiResult } from './client';
   çevirir (web kararı, sözleşmede yazılı).
 */
 
+/*
+  Kupon satırının ayrı bir takma adı YOK: kuponlar cüzdanın içinde geliyor ve ekran onları
+  `MePointsView['coupons']` üzerinden çıkarımla okuyor (`account-screen`). `MeCouponSchema`dan
+  ikinci bir ad türetmek, aynı şekle iki isim vermek olurdu (CLAUDE §1) — gerekirse görünümden
+  indekslenerek alınır, yeniden türetilmez.
+*/
 export type MePointsView = z.infer<typeof MePointsViewSchema>;
-export type MeCoupon = z.infer<typeof MeCouponSchema>;
 
 export function fetchPoints(): Promise<ApiResult<MePointsView>> {
   return authorizedFetch('/api/v1/me/points', MePointsViewSchema);

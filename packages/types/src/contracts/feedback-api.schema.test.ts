@@ -83,7 +83,7 @@ describe('yazım gövdeleri', () => {
 
 describe('akış sonu', () => {
   it('üç sonuç da tanınır; tanınmayan sonuç reddedilir', () => {
-    const base = { pointsAwarded: 5, balance: 45, reviewUrl: null, reviewPlatform: null };
+    const base = { pointsAwarded: 5, invitePointsTotal: 30, balance: 45, reviewUrl: null, reviewPlatform: null };
     for (const outcome of ['review_invite', 'report_issue', 'thanks']) {
       expect(FeedbackCompletionSchema.safeParse({ ...base, outcome }).success).toBe(true);
     }
@@ -91,9 +91,28 @@ describe('akış sonu', () => {
   });
 
   it('ikinci tamamlama sıfır puanla geçerlidir; eksi puan geçemez', () => {
-    const base = { outcome: 'thanks', balance: 45, reviewUrl: null, reviewPlatform: null };
+    const base = { outcome: 'thanks', invitePointsTotal: 30, balance: 45, reviewUrl: null, reviewPlatform: null };
     expect(FeedbackCompletionSchema.safeParse({ ...base, pointsAwarded: 0 }).success).toBe(true);
     expect(FeedbackCompletionSchema.safeParse({ ...base, pointsAwarded: -5 }).success).toBe(false);
+  });
+
+  /**
+   * Turun toplamı ile çağrının primi AYRI alanlar (MB-17) — ölçülen arıza tam olarak buydu: ekran
+   * "+5 puan" derken deftere 5 + 20 + 5 = 30 yazılmıştı. Şema ikisinin bağımsızlığını kilitler ki
+   * bir gün biri ötekinden türetilmeye kalkılmasın.
+   */
+  it('turun toplamı ZORUNLU ve `pointsAwarded`tan bağımsız — ikinci tamamlamada prim 0, toplam dolu', () => {
+    const base = { outcome: 'thanks', balance: 45, reviewUrl: null, reviewPlatform: null };
+    // Alan yoksa geçmez: eksik toplam, ekranın sessizce yalnız primi göstermesi demekti.
+    expect(FeedbackCompletionSchema.safeParse({ ...base, pointsAwarded: 5 }).success).toBe(false);
+
+    const reopened = FeedbackCompletionSchema.parse({ ...base, pointsAwarded: 0, invitePointsTotal: 30 });
+    expect(reopened.pointsAwarded).toBe(0);
+    expect(reopened.invitePointsTotal).toBe(30);
+
+    // Hiç puan doğurmayan tur (B2B ya da tavan) sıfır toplamla geçerlidir; eksi toplam geçemez.
+    expect(FeedbackCompletionSchema.safeParse({ ...base, pointsAwarded: 0, invitePointsTotal: 0 }).success).toBe(true);
+    expect(FeedbackCompletionSchema.safeParse({ ...base, pointsAwarded: 0, invitePointsTotal: -1 }).success).toBe(false);
   });
 
   it('onay zarfı yalnız recorded:true taşır', () => {

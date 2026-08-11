@@ -483,9 +483,21 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
           </Text>
           <Text style={styles.doneBody}>{t.done.body}</Text>
 
-          {/* `null` = ödülün sahibi yok (girişsiz tur) · `0` = motor gerçekten yazmadı (günlük
-              tavan · B2B · ikinci oy). İkisinde de çip çizilmez: kazanılmamış puan vaat edilmez. */}
-          {discover.awardedPoints === null || discover.awardedPoints === 0 ? null : (
+          {/* ÇİP ÜÇ HÂLLİ, ve orta hâl MB-16'nın kendisidir (ölçüldü 11.08: 4 oy → deftere 8 puan,
+              ekran "+6"). Turun son oyu bitiş ekranı çizildiğinde hâlâ geri alma penceresinde
+              bekliyor; o oy sunucuya gitmeden toplam TAM DEĞİL. Kuyruğu burada zorla boşaltmak
+              çare olamazdı — "Geri al" bu ekranda da duruyor ve boşaltma onu yalana çevirirdi.
+              Yolda oy varken sayı YAZILMAZ, bekleme SÖYLENİR (aynı çip, aynı biçim).
+
+              Bekleme cümlesi yalnız GİRİŞLİ müşteriye: girişsiz turun ödülü sahipsizdir, ona
+              "puanların hesaplanıyor" demek olmayan bir ödülü vaat etmek olurdu (o hâlde altta
+              zaten giriş daveti var). Oturmuş toplamda `null` = ödülün sahibi yok · `0` = motor
+              gerçekten yazmadı (günlük tavan · B2B · ikinci oy); ikisinde de çip çizilmez. */}
+          {signedIn && discover.pointsSettling ? (
+            <Text style={styles.award} testID="discover-award-settling">
+              {t.done.awardSettling}
+            </Text>
+          ) : discover.awardedPoints === null || discover.awardedPoints === 0 ? null : (
             <Text style={styles.award} testID="discover-award">
               {t.done.award.replace('{points}', String(discover.awardedPoints))}
             </Text>

@@ -31,8 +31,13 @@ import { apiFetch, type ApiResult } from './client';
 
 /** Kayıt okumasının üç sonucu — `not_found` ve `unavailable` HTTP hatası değil, cevabın kendisi. */
 export type B2bCompanyLookup = z.infer<typeof B2bCompanyLookupSchema>;
-/** Yazımın sonucu — başarı güncel durumu, ret eksik ALANLARI taşır. */
-export type B2bApplicationResult = z.infer<typeof B2bApplicationResultSchema>;
+/**
+ * Yazımın sonucu — başarı güncel durumu, ret eksik ALANLARI taşır.
+ * İhraç KAPATILDI (knip bulgusu, ölçüldü 11.08): adı bu dosyanın dışında hiç geçmiyordu, çünkü
+ * çağıran hook cevabı `submit`in kendi birliğine (`SubmitOutcome`) çeviriyor — ihraç edilmiş ama
+ * tüketilmeyen tip, sözleşmenin ekrana kadar taşındığı yanılsamasını verir.
+ */
+type B2bApplicationResult = z.infer<typeof B2bApplicationResultSchema>;
 /**
  * Yazma gövdesi — `z.input`: derleme kilidi şemanın GİRDİ şeklinden gelir (`discover.ts` deseni).
  * İhraç EDİLMİYOR: çağıran hook gövdeyi nesne değişmeziyle kuruyor, adı dışarıda geçmiyor.

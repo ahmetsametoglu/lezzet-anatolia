@@ -12,7 +12,7 @@ import { useCallback, useState } from 'react';
      animasyonu ancak komponent ayakta kalırsa görünür (kitin künyesi: panel önce kayıp gider,
      `Modal` ondan sonra sökülür). Kapanırken sökseydik kapanış hiç görünmezdi.
 */
-export interface SheetState {
+interface SheetState {
   /** Kurulsun mu — ilk açılıştan sonra hep `true`. */
   mounted: boolean;
   visible: boolean;

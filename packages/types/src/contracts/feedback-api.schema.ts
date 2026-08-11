@@ -121,8 +121,28 @@ export const FeedbackOutcomeEnum = z.enum(['review_invite', 'report_issue', 'tha
 /** `POST /feedback/:token/complete` cevabı — v3 stage2'nin tüm malzemesi. */
 export const FeedbackCompletionSchema = z.object({
   outcome: FeedbackOutcomeEnum,
-  /** Bu turda kazanılan; ikinci tamamlamada 0 — puan çipi (`fv.ptsF`) yalnız >0 iken çizilir (B2B'de de 0). */
+  /**
+   * **Bu ÇAĞRININ yazdığı puan** — yani tamamlama primi; ikinci tamamlamada 0 (B2B'de de 0).
+   * Anlamı ve adı değişmedi, yalnız künyesi netleşti: turun TOPLAMI bu değil, `invitePointsTotal`.
+   */
   pointsAwarded: z.number().int().nonnegative(),
+  /**
+   * **Bu davete yazılmış TOPLAM puan** — kart oyları + yorum + tamamlama primi.
+   *
+   * Neden ayrı bir alan (ölçüldü 11.08): oy ve yorum uçları `{ recorded: true }` dönüyor, puanı
+   * SÖYLEMİYOR; cihazda ekran "+5 puan" yazarken deftere 5 + 20 + 5 = **30** yazılmıştı. Üç kayıt da
+   * doğru, eksik olan sözleşmeydi. Toplamı istemcide saymak MOTORU TAKLİT etmek olurdu (CLAUDE §1):
+   * hangi kaydın puan doğurduğuna günlük tavan (`points_daily_cap`), B2B kuralı ve
+   * `(müşteri, sebep, kaynak)` tekilliği karar veriyor — telefon bunların hiçbirini bilmez.
+   *
+   * `pointsAwarded` ile YAN YANA durur ve onun yerine geçmez: biri "bu çağrı ne verdi", öteki "bu
+   * tur ne kazandırdı". İkinci tamamlamada `pointsAwarded` 0 olurken bu alan DOLU kalır — yeniden
+   * açılan teşekkür ekranı turun gerçeğini söylemeye devam etmeli.
+   *
+   * Kaynağı defterdir, çarpım değil: kart sayısı × ayar hesaplaması tavana takılan ya da hiç
+   * yazılmayan kaydı göremezdi.
+   */
+  invitePointsTotal: z.number().int().nonnegative(),
   /** Güncel bakiye — "Toplam ✦ N puan" rozeti (`fv.ptsTotal`). */
   balance: z.number().int(),
   /** Yalnız `review_invite` sonucunda dolu — dış değerlendirme adresi ve düğmede yazacak ad (ayar). */

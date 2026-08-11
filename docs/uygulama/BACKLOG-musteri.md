@@ -46,15 +46,34 @@
 > Dilim 11.08'de yazıldı ve cihazda uçtan uca çalıştı (SIRET → resmî kayıt → gönderim → "inceleniyor").
 > Aşağıdakiler o turda ölçülen eksikler; **commit'ten önce kapanmaları önerilir.**
 
-- [ ] **MB-04 · Formdaki e-posta hiçbir yere yazılmıyor.** "İletişim" bloğu üç alan soruyor;
+- [x] **MB-04 · Formdaki e-posta hiçbir yere yazılmıyor.** "İletişim" bloğu üç alan soruyor;
   ölçüm (11.08, girişli müşteri): ad ve telefon **yalnız açılan işletme adresine** gidiyor
   (profil bilerek ezilmiyor — gerekçe `packages/application/src/customer/b2b.ts:99`), **e-posta
   ise hiçbir kayda düşmüyor.** Onay ekranı ise *"sonucu e-posta ile bildireceğiz"* diyor: işletme
   adresini yazan başvuran cevabı oraya bekler, cevap hesabın kişisel adresine gider.
-  **Karar gerekiyor:** ya alan kaldırılır (kimlik hesabın e-postasıdır denir), ya başvuruya
-  "iletişim e-postası" olarak yazılır. Ortası yok — bugünkü hâl kullanıcıyı yanıltıyor.
+  **KARAR VERİLDİ (kullanıcı, 11.08): alan KALKACAK — kimlik, OTP ile doğrulanmış HESAP
+  e-postasıdır ve şimdilik her şeye o yeter.** Kullanıcının sözleri: *"profesyonel müşteriler bir
+  kere oturum açsın, mailini girsin, OTP kodu gelsin ve onaylasın; bu bizim mail adresimiz olsun"*
+  ve faturalar için ayrı adres sorulunca *"şimdilik her şeye yetsin, ileride bu küçük bir özellik
+  olarak eklenir"*. Yani **fatura/muhasebe adresi ayrımı BUGÜN YOK ve bilinçli yok** — ileride
+  eklenecek küçük bir özellik olarak kaydedildi (MB-44).
 
-- [ ] **MB-05 · Girişli müşteride form ön dolgusu yapılmıyor.** Sözleşme `contactName`/`email`/
+  **Kararın dayandığı ölçüm (11.08):** iki e-posta bugün gerçekten ayrışabiliyor, üstelik iki
+  yoldan. (1) Misafir: formda X yazıyor → gönderim 401 → kimlik çekmecesi **kendi boş alanıyla**
+  açılıyor (`use-otp-sign-in.hook:68`, formdaki X'ten beslenmiyor) → Y ile doğruluyor → hesap Y,
+  X çöpe. (2) Girişli: hesap A, formda X → X çöpe, karar maili A'ya. Üstelik motor o alanı
+  **ZORUNLU** tutuyor (`b2b-application.ts:156`), yani müşteri hiçbir yere yazılmayacak bir alanı
+  doldurmak zorunda ve boş bırakırsa form reddediliyor. Asıl çelişki: formdaki adres
+  **doğrulanmamış** bir metin, hesabınki OTP'den geçmiş — ikisini yan yana tutmak, doğrulanmamış
+  olanı doğrulanmış gibi okutuyordu.
+
+  **Yapılacak (üç dokunuş):** (a) formdan e-posta alanı kalkar, yerine hesabın doğrulanmış adresi
+  gösterilir ("Sonuç şu adrese gönderilecek: …"); (b) misafir yolunda kimlik çekmecesi, müşteri
+  formda bir adres yazmışsa onunla açılır — iki kez yazdırmayalım; (c) motorun `email` zorunluluğu
+  ve sözleşmedeki alan **web'le birlikte** ele alınır (aynı motoru o da kullanıyor) — alan tümden
+  kalkacaksa kararı iki yüzey birlikte verir, koordinasyon defterine yazıldı.
+
+- [x] **MB-05 · Girişli müşteride form ön dolgusu yapılmıyor.** Sözleşme `contactName`/`email`/
   `phone` alanlarını taşıyor ve künyesinde *"Form ön dolgusu: profildeki künye"* yazıyor
   (`packages/types/src/contracts/b2b-api.schema.ts:70`); ekran okuyor ama kullanmıyor
   (`emptyApplication()` ile başlıyor). Müşteri sistemin zaten bildiği üç şeyi yeniden yazıyor.
@@ -71,11 +90,11 @@
   *Bağımlılık:* MB-03 kapanmadan BAN alanı başvuru formuna taşınmamalı — aynı yeniden yükleme
   buraya da bulaşır.
 
-- [ ] **MB-07 · Ülke seçim rozetlerinin (Fransız/Alman şirketi) tasarımı bozuk.** Kullanıcı
+- [x] **MB-07 · Ülke seçim rozetlerinin (Fransız/Alman şirketi) tasarımı bozuk.** Kullanıcı
   bulgusu 11.08 + ölçüm: çipin **yatay dolgusu yok**, metin kenarlığa yapışıyor/taşıyor. Doğrusu
   `.dc.html`den alınmalı (Claude Design), improvise edilmemeli (CLAUDE §3).
 
-- [ ] **MB-08 · "1 Kaydolun — bir dakikada" adımı girişli müşteriye de gösteriliyor.** Zaten
+- [x] **MB-08 · "1 Kaydolun — bir dakikada" adımı girişli müşteriye de gösteriliyor.** Zaten
   hesabı olan müşteriye kayıt adımı anlatılıyor. Web'de aynı adımın gövdesi var ve daha bilgilendirici
   (*"SIRET'inizle bir dakikada — bilgiler resmî kayıttan kendiliğinden dolar"*).
 
@@ -88,7 +107,7 @@
   `professionals_hero` slot'u tanımlı ve arka ucu 09.08'de yazıldı (`site_image` tablosu + kova);
   görsel künyesi hâlâ boş.
 
-- [ ] **MB-11 · "Başvurunuz inceleniyor" gövdesi başlığı birebir tekrarlıyor.** Başlık
+- [x] **MB-11 · "Başvurunuz inceleniyor" gövdesi başlığı birebir tekrarlıyor.** Başlık
   *"Başvurunuz inceleniyor"*, gövde *"Başvurunuz inceleniyor — sonuç e-posta ile."*
 
 - [ ] **MB-12 · İşletme adresi sessizce adres defterine ekleniyor.** Başvuru kabul edilince
@@ -125,16 +144,16 @@
 > `points_referral=50`, `points_visit=10`, `points_daily_cap=100`, `points_redeem_min=500`,
 > `points_cent_value=1`). Sorun değerlerde değil, **ekranların o değerleri okumamasında.**
 
-- [ ] **MB-15 · Ekrana gömülü puan vaadi.** Vitrin Keşif kartı: *"Her tamamlanan tur +10 puan
+- [x] **MB-15 · Ekrana gömülü puan vaadi.** Vitrin Keşif kartı: *"Her tamamlanan tur +10 puan
   kazandırır"* — sabit metin (`screens/home/messages.json`), hiçbir ayara karşılık gelmiyor.
   Gerçek kazanç = kart sayısı × `points_feedback_candidate`. Dört kartlık turda 8 oluyor.
   Cümle ya ayardan kurulmalı ya sayı vermemeli.
 
-- [ ] **MB-16 · Keşif bitişinde gösterilen puan eksik.** **Ölçüldü:** 4 oy verildi, deftere
+- [x] **MB-16 · Keşif bitişinde gösterilen puan eksik.** **Ölçüldü:** 4 oy verildi, deftere
   4 × 2 = **8 puan** yazıldı, ekran **"+6 puan"** dedi. Bir oyun karşılığı toplama girmiyor
   (`use-discover.hook` `awardedPoints` birikimi).
 
-- [ ] **MB-17 · Geri bildirim bitişinde gösterilen puan eksik.** **Ölçüldü:** ekran "+5 puan"
+- [x] **MB-17 · Geri bildirim bitişinde gösterilen puan eksik.** **Ölçüldü:** ekran "+5 puan"
   dedi, deftere `feedback_purchase 5` + `review 20` + `feedback_purchase 5` = **30 puan** yazıldı.
   *(İki `feedback_purchase` kaydı hata DEĞİL — biri kart başına, öteki tamamlama primi, gerekçesi
   `packages/application/src/feedback/invite.ts:170`.)* Ekran yalnız tamamlama primini gösteriyor.
@@ -357,7 +376,7 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
   `ScrollView` kullanımının lint'le kapatılması. MB-01 + MB-02 bunun içinde çözülür; ayrıca 40'ıncı
   ekranın aynı tuzağa düşmesini yapısal olarak engeller.
 
-- [ ] **MB-35 · Hesap sekmesi `/me` okunurken TAMAMEN BOŞ.** `app/(tabs)/account.tsx:44` yükleme
+- [x] **MB-35 · Hesap sekmesi `/me` okunurken TAMAMEN BOŞ.** `app/(tabs)/account.tsx:44` yükleme
   anında `return null` veriyor. Künyesi bilinçli (*"misafir daveti yanıp sönmesin"*), ama okuma
   uzarsa müşteri boş bir sekmeye bakıyor — ve MB-13'ün belirtisiyle karışıyor: "hesabım açılmıyor"
   şikâyeti hangisinden geldiği ayırt edilemez. Ekranın `account-skeleton.tsx`i ZATEN VAR, yalnız bu
@@ -380,16 +399,35 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
   `placeModeOf`). *Müşteri turunu bitirirken bu defter de kapanmalı, yoksa yeşil koşu bir şey
   kanıtlamıyor.*
 
-- [ ] **MB-39 · `knip` mobil pakette dokuz kullanılmayan ihraç tip görüyor** (ölçüldü 11.08):
+- [x] **MB-39 · `knip` mobil pakette dokuz kullanılmayan ihraç tip görüyor** (ölçüldü 11.08):
   `B2bApplicationResult` · `DiscoverSwipe` · `DiscoverClaimResult` · `MeCoupon` ·
   `PaymentSheetInput` · `StripeConfig` · `DiscountSummary` · `SheetState` · `UseHomeOrdersResult`.
   CLAUDE §2 "ölü kod yok" diyor; her biri ya tüketilmeli ya ihracı kapatılmalı. Ucuz, mekanik.
+
+- [ ] **MB-44 · B2B'de FATURA e-postasının ayrı verilebilmesi — ileriye bırakıldı (kullanıcı kararı 11.08).**
+  MB-04 kararının bilinçli açığı: bugün hesap e-postası her şeye gidiyor (karar maili, fatura,
+  bildirim). Muhasebede yetkili adresi ile fatura adresi genelde ayrıdır ve kullanıcı bunu
+  *"ileride küçük bir özellik olarak eklenir ve çalıştırılır"* diye kayda geçirdi. **Bugün bir
+  arıza DEĞİL, ertelenmiş bir yetenek** — o güne dek kimse "fatura adresi nerede" diye aramasın
+  diye buraya yazıldı. Geldiği gün dokunacağı yer: profil künyesi (ikinci bir adres alanı) +
+  mail gönderen taraf; başvuru formu değil.
+
+- [ ] **MB-42 · `packages/design-tokens` yerelden import edilemiyor — göreli ihraçlarında uzantı yok.**
+  Ölçüldü (11.08, MB-41 turunda): `app.config.ts`ten `@lezzet/design-tokens` import etmek
+  `expo config`i **düşürüyor** (`ERR_MODULE_NOT_FOUND`); sebep paketin girişindeki uzantısız göreli
+  yeniden-ihraçlar. Uzantılı denek modül AYNI yükleyicide çalıştı, yani engel yükleyici değil paketin
+  kendisi. Bugünkü bedeli: splash rengi token'a bağlanamıyor (`(21.34)`'te gerekçesiyle hex kaldı).
+  Paket web ve mobil ortak, o yüzden değişiklik iki yüzeyi de ilgilendirir.
+
+- [ ] **MB-43 · İkon/splash PNG'lerinin krem zemine yeniden üretimi HİÇBİR YERDE kayıtlı değil.**
+  MB-41 turunda görüldü: `app.config.ts` splash rengini taşıyor ama görsel varlıkların kendisi
+  eski zeminde. İş bir tasarım kararı ister (hangi zemin, hangi boyut seti); şimdilik yalnız kayıt.
 
 - [ ] **MB-40 · Talep maili kart genişliği açık** (`docs/talep/not-mobil-talep-maili-duzeltildi-
   genislik-acik.md`): arka-uç notun iki bulgusunu kapattı, üçüncüsünün ölçümünü mobile bıraktı ve
   hâlâ ölçülmedi.
 
-- [ ] **MB-41 · Ham hex yalnız `app.config.ts` splash'ta kaldı** (`BEKLEYEN(21.3)`). Tek satır;
+- [x] **MB-41 · Ham hex yalnız `app.config.ts` splash'ta kaldı** (`BEKLEYEN(21.3)`). Tek satır;
   token'a bağlanamıyorsa gerekçesi künyeye yazılıp işaret kapatılmalı.
 
 ### Şeridin sıra önerisine eki
@@ -422,13 +460,42 @@ verilmeli, yoksa koşu ortasında durur.
 > **Çakışma çıkarsa:** ilan eden önceliklidir; sonra gelen ya bekler ya kapsamını daraltır.
 > Bir kalemi bırakan, satırını `BIRAKILDI` yazıp sebebini ekler — sessizce terk etmez.
 
+### ⚑ FİZİKSEL CİHAZ TEK ELDE (kullanıcı kararı 11.08 — bağlayıcı)
+
+**Fiziksel cihazda yapılacak TÜM testler `cihaz` şeridinindir.** Kullanıcının sözü: *"fiziksel
+cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fiziksel cihaz kullanımında
+çakışma olmamalı."*
+
+- Cihaz: **OPPO CPH1907 · Android 11 · 1080×2400**, `adb` ile sürülüyor (`5cf6c351`).
+- **Başka bir şerit cihazda ölçüm isterse doğrudan denemez** — `docs/talep/not-cihaz-<konu>.md`
+  açar ya da `koordinasyon-web-mobil.md`ye girer ve **`cihaz` şeridine adıyla söyler.** İstek
+  şunları içermeli: hangi ekran/akış, hangi somut soru, beklenen ile şüphelenilen davranış.
+  Ölçümü `cihaz` yapar, bulguyu kanıtıyla (ekran görüntüsü + varsa DB/log satırı) geri yazar.
+- **Gerekçe teknik, nezaket değil:** cihazda tek uygulama örneği ve tek `adb` bağlantısı var. İki
+  şerit aynı anda sürerse dokunuşlar birbirinin ekranına düşer, ölçüm tekrarlanamaz hâle gelir —
+  ve yalancı bulgu, yavaş ölçümden pahalıdır (CLAUDE §4b'nin paylaşılan-DB dersiyle aynı mantık).
+- **Cihazda yazılan veri geri alınır.** Ölçüm yazma yapıyorsa (`başvuru`, `oy`, `yorum`, `sepet`)
+  `cihaz` şeridi önce mevcut hâli kaydeder, ölçümden sonra geri yükler ve raporunda bunu yazar.
+- Emülatör/simülatör ve birim/entegrasyon testleri bu kuralın DIŞINDA — herkes serbest.
+
 | kalem | ajan | ne zaman | dokunulan yollar | durum |
 | --- | --- | --- | --- | --- |
 | MB-15 · MB-16 · MB-17 (ekran yarısı) | mobil | 11.08 · 12:0x | `apps/mobile/src/screens/{discover/**,feedback/**,home/messages.json}` | **bitti** — MB-16 sebebi testle üretildi; MB-17'nin ekran yarısı |
 | MB-35 (hesap boş yükleme) · MB-41 (ham hex splash) | mobil | 11.08 · 12:0x | `apps/mobile/src/app/(tabs)/account.tsx` · `apps/mobile/app.config.ts` · `screens/account/account-routes.test.tsx` | **bitti** |
-| MB-17 (SÖZLEŞME yarısı — turun toplamı) | mobil/backend | 11.08 · 12:3x | `packages/types/src/contracts/feedback*` · `packages/application/src/feedback/**` · `apps/mobile-api/src/api/v1/feedback.ts` | **alındı** |
-| MB-01 (klavye tuzağı) | **başka ajan** | 11.08 — görev `(21.33)` | ~10 ekran dosyası (ölçüyle daraltılmış) | **bitti, commit edilmedi** |
+| MB-17 (SÖZLEŞME yarısı — turun toplamı) | mobil/backend | 11.08 · 12:3x | `packages/types/src/contracts/feedback*` · `packages/application/src/feedback/**` · `apps/mobile-api/src/api/v1/feedback.ts` | **bitti** — `invitePointsTotal` açıldı |
+| MB-01 (klavye tuzağı) | denetim/cihaz | 11.08 · 11:4x — görev `(21.33)` | 10 ekran dosyası: `screens/{feedback,professionals,login,catalog}` + `{courier/day-close,courier/delivery,management/offer-approval,warehouse/adjustment,warehouse/courier-return,warehouse/transfer}` | **bitti ve COMMİT EDİLDİ** — `f521aef` (11.08 · 11:5x). Cihazda doğrulandı: iki senaryo da tek dokunuşla çalıştı, geri bildirim yorumu veritabanında görüldü. **MB-34'ün önü açık.** |
 | MB-34 (kaydırma kabını kite alma) | — | — | — | ⛔ **ASKIYA ALINDI** — aşağıdaki nota bak |
+| MB-05 · MB-07 · MB-08 · MB-11 (B2B ekranının açık kalanları) | mobil | 11.08 · 12:4x | `apps/mobile/src/screens/professionals/**` · `apps/mobile/src/lib/api/b2b.ts` | **alındı** |
+| MB-04 (e-posta alanı kalkıyor — kimlik oturumdan) | mobil | 11.08 · 13:1x | `apps/mobile-api/src/api/v1/b2b.ts` (bitti) · `apps/mobile/src/screens/professionals/**` | **alındı** |
+| MB-39 (ölü ihraç tipler — B2B dışı yarısı) | mobil | 11.08 · 12:4x | `apps/mobile/src/lib/api/{discover,points}.ts` · `lib/payment/{payment-sheet,stripe-config}.ts` · `screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` · `screens/home/use-home-orders.hook.ts` | **alındı** |
+| MB-02 (klavye odaklanan alanı kapatıyor) | cihaz | 11.08 · 12:19 → yollar 12:3x'te kesinleşti | **YENİ:** `apps/mobile/src/components/ui/form-scroll.tsx` · **DEĞİŞEN:** `screens/{professionals/professionals-screen.tsx,login/login-screen.tsx,feedback/feedback-screen.tsx}` | **sürüyor** — sebep ölçüldü: tema `Theme.EdgeToEdge`, `adjustResize` ölü, pencere küçülmüyor (klavye açıkken kaydırma da işlemiyor — ölçüldü). Çözüm kite konuyor, `bottom-sheet`in 08.08'de verdiği kararın aynısı. **MB-34 ile kesişme:** kit kabı doğuyor ama yalnız FORM ekranlarına uygulanıyor; 30 kaydırıcılık geniş göç hâlâ MB-34'ün işi |
+| MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **alındı** — tablo "ölçümü kim yapacak, ilan edilsin" diye sormuştu; cihaz bu şeritte (üstteki ⚑ kuralı). Sebep çıkmadan kod yazılmaz (CLAUDE §0) |
+
+**Kapananların görev satırı `(21.34)`:** MB-15 · MB-16 · MB-17 · MB-35 · MB-41. Ölçümler, seçilmeyen
+yollar ve kalan borç orada. **Web şeridine bir iş doğdu:**
+`apps/web/app/(customer)/[locale]/feedback/[token]/components/feedback-outcome.tsx` hâlâ yalnız
+`pointsAwarded` basıyor — web davet sayfası da aynı eksikliği yaşıyor (ekranda tamamlama primi,
+defterde turun toplamı). Alan sözleşmede hazır, bağlaması tek satır; koordinasyon defterinde bildirildi.
 
 ### Boşta duran kalemler — alan ilan etsin
 

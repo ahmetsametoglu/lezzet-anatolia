@@ -31,7 +31,7 @@ export const MERCHANT_COUNTRY_CODE = 'FR';
  * Ayrık birlik, çünkü iki hâl iki farklı şey biliyor: yapılandırılmışsa anahtar KESİN vardır ve
  * çağıran `?` ile kontrol etmek zorunda kalmaz.
  */
-export type StripeConfig =
+type StripeConfig =
   | { configured: false }
   | {
       configured: true;

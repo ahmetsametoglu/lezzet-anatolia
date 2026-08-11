@@ -30,7 +30,7 @@ import { fetchOrders, type OrderSummary } from '@/lib/api/orders';
   teslimatı vaat etmek olurdu.
 */
 
-export interface UseHomeOrdersResult {
+interface UseHomeOrdersResult {
   /** Süren (teslim edilmemiş) EN YENİ sipariş; yoksa `null` → bant çizilmez. */
   live: OrderSummary | null;
   /** Teslim edilmiş EN YENİ sipariş; yoksa `null`. */

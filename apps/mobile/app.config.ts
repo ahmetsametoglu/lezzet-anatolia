@@ -37,10 +37,30 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.lezzetanatolia.app',
+    /*
+      NÖTR BEYAZ — HAM HEX, ÖLÇÜLMÜŞ ZORUNLULUK (21.3 kapandı, ölçüm 11.08).
+
+      Kural ham hex yazılmamasını söyler ve doğrusu `@lezzet/design-tokens`ten okumaktır
+      (`customerSurface.card` = #ffffff, setin tek saf beyazı). DENENDİ VE ÇÖZÜLEMEDİ: bu dosya
+      Metro'dan ÖNCE, Node'un kendi ESM yükleyicisiyle değerlendiriliyor ve paketin girişi
+      UZANTISIZ yeniden-ihraçlar taşıyor (`export … from './customer'`). Node uzantısız göreli
+      yola `.ts` eklemez; `expo config` şununla kesildi:
+          ERR_MODULE_NOT_FOUND · Cannot find module
+          '…/packages/design-tokens/src/customer' imported from '…/src/index.ts'
+      Sebep paket YOLU ya da workspace çözümü DEĞİL: `@lezzet/i18n` aynı biçimde okunuyor ve
+      çalışıyor — çünkü onun girişi tek dosya, göreli yeniden-ihracı yok. Uzantılı göreli
+      yeniden-ihraçla kurulmuş bir denek modül aynı yükleyicide SORUNSUZ okundu; yani engel tam
+      olarak paketin sekiz uzantısız belirtecidir (`packages/design-tokens/src/*`).
+
+      Düzeltme paketin KENDİ dosyalarında (uzantı eklemek ya da derlenmiş giriş yayımlamak) ve
+      web tarafını da ilgilendiriyor; mobil şeridin yazma alanı değil — TERFİ İHTİYACI olarak
+      raporlandı. O gün burası tek satırlık bir değişiklikle token'a bağlanır.
+
+      DEĞER NEDEN BEYAZ, KREM DEĞİL: ikon/splash PNG'lerinin zemini beyaz. Renk tek başına marka
+      kremine (`sand-50`) çekilirse beyaz zeminli görselin kenarı krem çerçevede görünür bir kare
+      bırakır — önce GÖRSELLER krem zemine göre yeniden üretilmeli (tasarım/varlık işi).
+    */
     adaptiveIcon: {
-      // BEKLEYEN(21.3): nötr beyaz — marka kremi (`sand-50`) değil. Token'dan gelmeli, ama önce
-      // ikon/splash GÖRSELLERİ krem zemine göre yeniden üretilmeli; renk tek başına değişirse
-      // beyaz zeminli PNG'lerin kenarı krem çerçevede görünür bir kare bırakır.
       backgroundColor: '#FFFFFF',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
@@ -53,7 +73,8 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        // BEKLEYEN(21.3): yukarıdaki ikon zeminiyle aynı borç, aynı gerekçe.
+        // Açılış perdesi ikon zeminiyle AYNI yüzeyi gösterir; ikisi ayrışırsa uygulama açılırken
+        // zemin bir kez zıplar. Ham hex olmasının gerekçesi ikon zemininin künyesinde (21.3).
         backgroundColor: '#FFFFFF',
         image: './assets/images/splash-icon.png',
         imageWidth: 76,

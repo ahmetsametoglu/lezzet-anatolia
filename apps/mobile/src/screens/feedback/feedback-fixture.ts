@@ -55,6 +55,11 @@ export function feedbackCompletion(overrides: Partial<FeedbackCompletion> = {}):
   return {
     outcome: 'review_invite',
     pointsAwarded: 15,
+    /* TOPLAM PRİMDEN BÜYÜK olmalı (MB-17): tur puanı üç kayıttan doğuyor — kart oyu, yorum ve
+       tamamlama primi — ve ekran artık primi değil TOPLAMI yazıyor. İkisini eşit yazsaydık
+       fixture, aradaki farkı hiç ölçmeyen bir dünya kurardı ve kapının prime mi toplama mı bağlı
+       olduğunu hiçbir test yakalayamazdı. Prim v3 maketinden (15), üstü kart+yorum payı. */
+    invitePointsTotal: 40,
     balance: 255,
     reviewUrl: 'https://g.page/lezzet-anatolia/review',
     reviewPlatform: 'Google',

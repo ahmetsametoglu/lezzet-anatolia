@@ -7,11 +7,11 @@
       "title": "Toptan fiyatlarla, düzenli teslimat",
       "body": "Hacimli sipariş kolaylığı, bölge içi düzenli teslimat ve tek dokunuşla tekrar sipariş. Başvurun, hızla dönüş yapalım."
     },
-    "steps": [
-      "Kaydolun — bir dakikada",
-      "Başvurunuzu inceleyelim — sonuç e-posta ile",
-      "Onayla birlikte fiyat listeniz açılır"
-    ],
+    "steps": {
+      "signUp": "Kaydolun — SIRET'inizle bir dakikada; bilgiler resmî kayıttan kendiliğinden dolar",
+      "review": "Başvurunuzu inceleyelim — sonuç e-posta ile",
+      "priceList": "Onayla birlikte fiyat listeniz açılır"
+    },
     "form": {
       "tabSiret": "Fransız şirketi",
       "tabVat": "Alman şirketi",
@@ -32,7 +32,8 @@
       "city": "Şehir",
       "contactTitle": "İletişim",
       "contactName": "Ad soyad",
-      "email": "E-posta",
+      "resultTo": "Başvurunun sonucunu hesabınızın e-posta adresine göndereceğiz:",
+      "resultToGuest": "Başvurunun sonucunu, gönderirken doğrulayacağınız e-posta adresine göndereceğiz.",
       "phone": "Telefon (WhatsApp)",
       "submit": "Başvuruyu gönder",
       "submitting": "Gönderiliyor…"
@@ -43,11 +44,12 @@
       "siretNotFound": "Bu SIRET ile kayıt bulamadık. Numarayı kontrol edin ya da bilgileri elle doldurun.",
       "registryDown": "Resmî kayda şu anda ulaşamıyoruz — bilgileri elle doldurabilirsiniz.",
       "unexpected": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
-      "network": "Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin."
+      "network": "Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+      "accountEmail": "Hesabınızın e-posta adresini okuyamadık; sonucu gönderemeyiz. Çıkıp e-posta adresinizle yeniden giriş yapın."
     },
     "identity": {
       "sheetTitle": "Başvuruyu kimin adına yazalım?",
-      "intro": "Başvuru bir hesaba bağlanır: sonucu oraya bildiririz ve onay gelince fiyat listeniz o hesapta açılır.",
+      "intro": "Başvuru bir hesaba bağlanır. E-posta adresinizi bir kez soruyoruz: kodu oraya gönderiyoruz, başvurunun sonucu da aynı adrese gelir ve onayla birlikte fiyat listeniz o hesapta açılır.",
       "emailPrompt": "Hangi e-posta adresini kullanalım?",
       "emailLabel": "E-posta adresiniz",
       "emailPlaceholder": "ornek@eposta.com",
@@ -64,7 +66,7 @@
     },
     "status": {
       "pendingTitle": "Başvurunuz inceleniyor",
-      "pending": "Başvurunuz inceleniyor — sonuç e-posta ile.",
+      "pending": "Sonucu e-posta ile bildireceğiz. Onaya kadar kataloğu perakende fiyatlarla gezebilirsiniz.",
       "approvedTitle": "Onaylandı",
       "approved": "Onaylandı! Toptan fiyat listeniz açıldı.",
       "rejectedTitle": "Başvurunuz şu an onaylanamadı",
@@ -90,11 +92,11 @@
       "title": "Tarifs de gros, livraisons régulières",
       "body": "Commandes en volume, livraisons régulières dans la zone et recommande en un geste. Faites votre demande, nous revenons vers vous rapidement."
     },
-    "steps": [
-      "Inscrivez-vous — en une minute",
-      "Nous étudions votre demande — réponse par e-mail",
-      "Vos tarifs s'ouvrent avec la validation"
-    ],
+    "steps": {
+      "signUp": "Inscrivez-vous — en une minute avec votre SIRET ; les informations viennent du registre officiel",
+      "review": "Nous étudions votre demande — réponse par e-mail",
+      "priceList": "Vos tarifs s'ouvrent avec la validation"
+    },
     "form": {
       "tabSiret": "Société française",
       "tabVat": "Société allemande",
@@ -115,7 +117,8 @@
       "city": "Ville",
       "contactTitle": "Contact",
       "contactName": "Nom et prénom",
-      "email": "E-mail",
+      "resultTo": "Nous enverrons la réponse à l'adresse e-mail de votre compte :",
+      "resultToGuest": "Nous enverrons la réponse à l'adresse e-mail que vous confirmerez au moment de l'envoi.",
       "phone": "Téléphone (WhatsApp)",
       "submit": "Envoyer la demande",
       "submitting": "Envoi…"
@@ -126,11 +129,12 @@
       "siretNotFound": "Aucun établissement trouvé avec ce SIRET. Vérifiez le numéro ou saisissez les informations manuellement.",
       "registryDown": "Le registre officiel est injoignable pour le moment — vous pouvez saisir les informations manuellement.",
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
-      "network": "Connexion impossible. Vérifiez votre connexion et réessayez."
+      "network": "Connexion impossible. Vérifiez votre connexion et réessayez.",
+      "accountEmail": "Nous n'avons pas pu lire l'adresse e-mail de votre compte ; la réponse ne pourrait pas vous parvenir. Déconnectez-vous et reconnectez-vous avec votre adresse e-mail."
     },
     "identity": {
       "sheetTitle": "À quel nom rattacher la demande ?",
-      "intro": "La demande est rattachée à un compte : nous y envoyons la réponse et, après validation, vos tarifs s'y ouvrent.",
+      "intro": "La demande est rattachée à un compte. Nous vous demandons votre adresse e-mail une seule fois : nous y envoyons le code, la réponse arrive à la même adresse et, après validation, vos tarifs s'y ouvrent.",
       "emailPrompt": "Quelle adresse e-mail utilisons-nous ?",
       "emailLabel": "Votre adresse e-mail",
       "emailPlaceholder": "exemple@email.com",
@@ -147,7 +151,7 @@
     },
     "status": {
       "pendingTitle": "Votre demande est à l'étude",
-      "pending": "Votre demande est à l'étude — réponse par e-mail.",
+      "pending": "Nous vous enverrons la réponse par e-mail. En attendant la validation, le catalogue reste accessible aux prix de détail.",
       "approvedTitle": "Validée",
       "approved": "Validée ! Vos tarifs de gros sont ouverts.",
       "rejectedTitle": "Votre demande n'a pas pu être validée",
@@ -173,11 +177,11 @@
       "title": "Großhandelspreise, regelmäßige Lieferung",
       "body": "Große Mengen einfach bestellen, regelmäßige Lieferung im Gebiet und Nachbestellung mit einer Geste. Stellen Sie Ihre Anfrage — wir melden uns zügig."
     },
-    "steps": [
-      "Anmelden — in einer Minute",
-      "Wir prüfen Ihre Anfrage — Antwort per E-Mail",
-      "Mit der Freigabe öffnet sich Ihre Preisliste"
-    ],
+    "steps": {
+      "signUp": "Anmelden — in einer Minute mit Ihrer USt-IdNr.; die Angaben tragen Sie einmal ein",
+      "review": "Wir prüfen Ihre Anfrage — Antwort per E-Mail",
+      "priceList": "Mit der Freigabe öffnet sich Ihre Preisliste"
+    },
     "form": {
       "tabSiret": "Französische Firma",
       "tabVat": "Deutsche Firma",
@@ -198,7 +202,8 @@
       "city": "Stadt",
       "contactTitle": "Kontakt",
       "contactName": "Vor- und Nachname",
-      "email": "E-Mail",
+      "resultTo": "Die Antwort senden wir an die E-Mail-Adresse Ihres Kontos:",
+      "resultToGuest": "Die Antwort senden wir an die E-Mail-Adresse, die Sie beim Senden bestätigen.",
       "phone": "Telefon (WhatsApp)",
       "submit": "Anfrage senden",
       "submitting": "Wird gesendet…"
@@ -209,11 +214,12 @@
       "siretNotFound": "Zu dieser SIRET-Nummer wurde kein Eintrag gefunden. Prüfen Sie die Nummer oder tragen Sie die Angaben manuell ein.",
       "registryDown": "Das amtliche Register ist derzeit nicht erreichbar — Sie können die Angaben manuell eintragen.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
-      "network": "Keine Verbindung. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+      "network": "Keine Verbindung. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "accountEmail": "Wir konnten die E-Mail-Adresse Ihres Kontos nicht lesen; die Antwort könnte Sie nicht erreichen. Melden Sie sich ab und mit Ihrer E-Mail-Adresse erneut an."
     },
     "identity": {
       "sheetTitle": "Auf welchen Namen sollen wir die Anfrage erfassen?",
-      "intro": "Die Anfrage wird einem Konto zugeordnet: dorthin senden wir die Antwort, und nach der Freigabe öffnen sich dort Ihre Preise.",
+      "intro": "Die Anfrage wird einem Konto zugeordnet. Ihre E-Mail-Adresse fragen wir nur einmal: Dorthin senden wir den Code, an dieselbe Adresse kommt auch die Antwort, und nach der Freigabe öffnen sich dort Ihre Preise.",
       "emailPrompt": "Welche E-Mail-Adresse verwenden wir?",
       "emailLabel": "Ihre E-Mail-Adresse",
       "emailPlaceholder": "beispiel@email.com",
@@ -230,7 +236,7 @@
     },
     "status": {
       "pendingTitle": "Ihre Anfrage wird geprüft",
-      "pending": "Ihre Anfrage wird geprüft — Antwort per E-Mail.",
+      "pending": "Die Antwort senden wir Ihnen per E-Mail. Bis zur Freigabe bleibt der Katalog zu Einzelhandelspreisen offen.",
       "approvedTitle": "Freigegeben",
       "approved": "Freigegeben! Ihre Großhandelspreise sind offen.",
       "rejectedTitle": "Ihre Anfrage konnte nicht freigegeben werden",

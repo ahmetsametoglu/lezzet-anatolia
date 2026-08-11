@@ -52,6 +52,13 @@ interface ApplicationFormProps {
   submitting: boolean;
   /** Tek satırlık bildirim — eksik alan, kayıt bulunamadı, gönderim düştü (cümleyi ekran kurar). */
   notice: string | null;
+  /**
+   * Sonucun gideceği adres — ÜÇ DEĞER (vergi işaretinin aynı deseni):
+   * `string` hesabın doğrulanmış adresi · `null` misafir (adres henüz yok) · `undefined` okuma
+   * sürüyor ya da düştü → satır HİÇ çizilmez. Yükleme anında misafir cümlesini göstermek,
+   * girişli müşteriye bir an yanlış bir vaat okutmak olurdu (ekranın adım künyesiyle aynı ölçüt).
+   */
+  accountEmail: string | null | undefined;
   onSubmit: () => void;
 }
 
@@ -67,6 +74,7 @@ export function ApplicationForm({
   vatChecking,
   submitting,
   notice,
+  accountEmail,
   onSubmit,
 }: ApplicationFormProps) {
   const isSiret = input.kind === 'siret';
@@ -197,15 +205,26 @@ export function ApplicationForm({
           shape="pill"
           testID="pro-contact-name"
         />
-        <TextField
-          value={input.email}
-          onChangeText={(value) => onChange({ email: value })}
-          accessibilityLabel={t.form.email}
-          placeholder={t.form.email}
-          shape="pill"
-          content="email"
-          testID="pro-email"
-        />
+        {/* ── E-POSTA ARTIK SORULMUYOR, GÖSTERİLİYOR (MB-04) ────────────────────────
+            Kullanıcı kararı (11.08): *"profesyonel müşteriler bir kere oturum açsın, mailini
+            girsin, OTP kodu gelsin ve onaylasın; bu bizim mail adresimiz olsun."* Yani başvurunun
+            adresi bir GİRDİ değil, kimliğin kendisi — sunucu da kayda oturumun sahibinin adresini
+            yazıyor (`apps/mobile-api/.../b2b.ts`), gövdeden geleni yok sayıyor.
+
+            Kutu yerine satır konmasının sebebi ölçülmüş bir çelişkiydi: müşteri buraya yazdığı
+            adrese cevap bekliyordu, cevap ise hesabın adresine gidiyordu. Boş bırakmak da olmazdı
+            — onay ekranı "sonucu e-posta ile bildireceğiz" diyor; NEREYE olduğunu söylemeyen bir
+            vaat, müşteriyi kendi gelen kutusunu tahmin etmeye bırakır. */}
+        {accountEmail === undefined ? null : (
+          <View style={styles.mailTo} testID="pro-mail-to">
+            <Text style={styles.note}>{accountEmail === null ? t.form.resultToGuest : t.form.resultTo}</Text>
+            {accountEmail === null ? null : (
+              <Text style={styles.mailToValue} testID="pro-account-email">
+                {accountEmail}
+              </Text>
+            )}
+          </View>
+        )}
         <TextField
           value={input.phone}
           onChangeText={(value) => onChange({ phone: value })}
@@ -245,22 +264,42 @@ interface KindTabProps {
  * Kitin `Chip`i KULLANILMADI: `alignSelf:'flex-start'` ile içeriği kadar genişliyor ve bu ekranda
  * iki hap ekranı EŞİT bölmek zorunda (bir sekme çiftidir, iki süzgeç çipi değil). Kite tam
  * genişlikli bir ikili seçici ihtiyacı raporlandı.
+ *
+ * ── ROZETİN BOZUKLUĞUNUN SEBEBİ ÖLÇÜLDÜ (MB-07) ────────────────────────────
+ * Şikâyet "yatay dolgu yok, metin kenarlığa yapışıyor"du; sebep dolgu DEĞİL, `flex: 1`in hiç
+ * uygulanmamasıydı: `PressableSurface` çağıranın stilini İÇ yüzeye veriyor, dış `Pressable`a
+ * geçmiyor — iç yüzeyin `flex: 1`i ise dikey eksene düşüyor. Sonuç: her hap ekranın yarısını
+ * değil kendi METNİ kadar yer kaplıyor ve çerçeve etiketin dibine oturuyor. Kitin kendi çözümü
+ * var ve aynı tuzağın künyesi orada yazılı (`bottom-tab-bar`: "genişliği YUVA dağıtır") — yuva
+ * buraya da o desenle kondu, ikinci bir yol icat edilmedi.
+ *
+ * Ölçüldü (Karla 700, 13.5 dp — `theme.text.control`): en uzun etiket "Französische Firma"
+ * 125,9 dp; 360 dp'lik ekranda yuvanın içi 158 dp. Yani yarım-ekran yuva geri gelince etiket
+ * varsayılan ölçekte rahat sığıyor; `space.lg` yatay dolgu (tasarımın aynı sayfadaki mobil
+ * çipi `padding:9px` diyor, ölçek kuralıyla 10) yazı ölçeği büyütülmüş cihazda da metnin
+ * çerçeveye değmesini engelliyor. v3 yatay dolguyu 0 yazabiliyor çünkü HTML'de span SATIRA
+ * BÖLÜNÜR; RN'de tek satıra kilitli etiket bölünemez — o yüzden sınır iki satır.
  */
 function KindTab({ label, active, onPress, testID }: KindTabProps) {
   return (
-    <PressableSurface
-      onPress={onPress}
-      feedback="scale-small"
-      selected={active}
-      accessibilityRole="tab"
-      accessibilityLabel={label}
-      style={[styles.tab, active ? styles.tabActive : styles.tabIdle]}
-      testID={testID}
-    >
-      <Text style={[styles.tabLabel, active ? styles.tabLabelActive : styles.tabLabelIdle]} numberOfLines={1}>
-        {label}
-      </Text>
-    </PressableSurface>
+    /* Genişliği YUVA dağıtır (yukarıdaki künye) — iki hap ekranı eşit böler. Yuvanın kendi
+       kimliği var (`bottom-tab-bar`in `-glass` deseni): kaybolan `flex` ancak burada ölçülebilir,
+       hapın stiline bakan test yuvayı hiç görmez. */
+    <View style={styles.tabSlot} testID={`${testID}-slot`}>
+      <PressableSurface
+        onPress={onPress}
+        feedback="scale-small"
+        selected={active}
+        accessibilityRole="tab"
+        accessibilityLabel={label}
+        style={[styles.tab, active ? styles.tabActive : styles.tabIdle]}
+        testID={testID}
+      >
+        <Text style={[styles.tabLabel, active ? styles.tabLabelActive : styles.tabLabelIdle]} numberOfLines={2}>
+          {label}
+        </Text>
+      </PressableSurface>
+    </View>
   );
 }
 
@@ -284,16 +323,20 @@ const styles = StyleSheet.create((theme) => ({
   },
 
   /* v3: iki hap yan yana, `gap:8`, her biri `flex:1` · `padding:12px 0` · `radius:14` ·
-     `border:1.5px solid ink`. Yarıçap resmî sete çekildi (14 → kontrol 16). */
+     `border:1.5px solid ink`. Yarıçap resmî sete çekildi (14 → kontrol 16); yatay dolgu 0 yerine
+     `space.lg` (tasarımın aynı sayfadaki mobil çipi `padding:9px`) — gerekçe `KindTab` künyesinde. */
   tabs: {
     flexDirection: 'row',
     gap: theme.space.md,
   },
-  tab: {
+  /** `flex: 1` BURADA durur, hapın kendisinde değil — gerekçe `KindTab` künyesinde. */
+  tabSlot: {
     flex: 1,
-    alignItems: 'center',
+  },
+  tab: {
     justifyContent: 'center',
     paddingVertical: theme.space.xl,
+    paddingHorizontal: theme.space.lg,
     borderWidth: theme.border.base,
     borderRadius: theme.radius.control,
   },
@@ -308,6 +351,8 @@ const styles = StyleSheet.create((theme) => ({
   tabLabel: {
     fontFamily: theme.font.body[theme.text['control--font-weight']],
     fontSize: theme.text.control,
+    // v3'ün `text-align:center`i — hizayı artık etiket kendi kutusunda kurar (kutu yarım ekran).
+    textAlign: 'center',
   },
   tabLabelIdle: { color: theme.colors.ink },
   tabLabelActive: { color: theme.colors.card },
@@ -334,6 +379,17 @@ const styles = StyleSheet.create((theme) => ({
   },
   /** Geçersiz numara uyarı tonunda; "doğrulanamadı" NÖTR kalır — o bir suçlama değil, bir boşluk. */
   vatMarkBad: { color: theme.colors['terracotta-bright'] },
+
+  /* Kaldırılan kutunun yerindeki satır — kutu değil, çünkü müşteri burada bir şey YAZMIYOR.
+     Boşluk `xs`: cümle ile adres tek bir bilgi, iki blok değil (alan aralığı `block`un `lg`si). */
+  mailTo: {
+    gap: theme.space.xs,
+  },
+  mailToValue: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
 
   pairRow: {
     flexDirection: 'row',
