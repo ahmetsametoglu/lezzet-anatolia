@@ -599,15 +599,31 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   (`missingForMinBasketCents`), yani karar eşiğin hangi tutara bakacağı: ya cümle tabanını söylesin
   ya eşik toplamdan hesaplansın.
 
-- [ ] **MB-22 · Sepetteki indirimin kaynağı söylenmiyor.** *"İndirim · Bayram Sofrası −3,00 €"*
-  satırı, müşteri hiçbir kupon girmeden çıkıyor; ürün sayfası bu ürünün kampanyalı olduğunu
-  söylemiyor. Ürün sayfası ile sepet aynı şeyi söylemeli.
+- [ ] **MB-22 · Sepetteki indirimin kaynağı — İKİ AYRI SORUN, biri düzeltildi diye yazılmıştı.**
+  **(a) Anonim kampanya — SEBEP ÖLÇÜLDÜ 11.08, kod hatası DEĞİL veri eksiği.** Sepette bazen
+  *"İndirim · **Bayram Sofrası** −3,00 €"* yazıyor, bazen *"İndirim · **Kampanya** · %8"*. Ölçüm:
+  `discount.public_label` dolu olan indirim adıyla görünüyor (`Bayram Sofrası seçkisi` — üç dilde
+  etiketi var), boş olan anonim "Kampanya"ya düşüyor (`Büyük sepet indirimi` — etiketi yok).
+  Mekanizma doğru; **indirim açılırken herkese açık etiketin zorunlu tutulmaması** sorun. Çözüm
+  operasyon yüzeyinde: etiketsiz indirim kaydedilememeli, çünkü müşteriye "Kampanya" demek hiçbir
+  şey söylemiyor. *(Bu yarısı web/operasyon şeridinin alanı.)*
+  **(b) Ürün sayfası kampanyayı hiç söylemiyor** — müşteri sepete gelene kadar indirimli olduğunu
+  bilmiyor. Ürün sayfası ile sepet aynı şeyi söylemeli. Bu yarısı mobil tarafta.
 
-- [ ] **MB-23 · Vitrindeki bölge ile sepetteki teslimat adresi farklı yer gösteriyor.**
-  Vitrin başlığı *"67000 STRASBOURG"*, sepet *"12, 10115 Berlin"*. Biri cihazdaki onboarding
-  koduna, öteki kayıtlı adrese bakıyor. Hangisinin bağlayıcı olduğu müşteriye anlatılmıyor.
-  *(Aynı ekranda bir de yer adının kaybolduğu bir kare yakalandı: "67000 STRASBOURG" yerine yalnız
-  "67000". Tekrarı ölçülmedi.)*
+- [x] ~~**MB-23 · Vitrindeki bölge ile sepetteki teslimat adresi farklı yer gösteriyor.**~~ →
+  **ELENDİ, ARIZA DEĞİL (kullanıcı kararı 11.08).** Tasarım zaten tutarlı: vitrindeki yer bir
+  **tarama bağlamıdır** (onboarding'de müşterinin kendi kodu; başkasına gönderecekse bilerek
+  değiştirir), sepetteki adres **bağlayıcıdır**, ve hangisinin geçerli olduğu kararın verildiği
+  yerde açıkça yazılıdır: *"Sepetiniz teslimat adresinize göre değerlendirildi."*
+  **Bulgunun neden yanlış olduğu:** ölçüm test hesabının yapaylığından doğmuştu — o hesapta beş
+  deneme adresi var (Berlin · Toulouse · Volckerinckhove…) ve onboarding kodu 67000'de bırakılıp
+  sipariş başka yere yönlendirilmişti; gerçek müşteri davranışı değil, test kurgusu. "Geç anlaşılıyor"
+  itirazı da sepetteki o cümleyi görmezden geliyordu. *Tekrar açılmasın diye kaydı duruyor.*
+
+- [ ] **MB-59 · Vitrin başlığında yer adının kaybolduğu bir kare — ÜRETİLEMEDİ.** 11.08'de bir kez
+  görüldü: *"67000 STRASBOURG"* yerine yalnız *"67000"*. Yer adı ayrı bir uçtan çözülüyor
+  (`usePlaceResolution`), yani çözüm gecikince ya da düşünce kod tek başına kalıyor olabilir —
+  **teori, ölçülmedi.** MB-23 elenirken tek gerçek gözlem olarak ayrıldı.
 
 - [ ] **MB-24 · Fiyat değişti bildirimi** (`DOMAIN §5`: fiyat arttıysa müşteriye söylenir ve onay
   istenir; düştüyse sessizce uygulanır) — `design/BACKLOG.md` §1'den devralındı. `CartItem.unitPrice`
@@ -735,7 +751,8 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
 5. **MB-15..MB-19** — puan sisteminin komple denetimi + teşekkür kartının yeniden tasarımı.
 6. **MB-20 + MB-28** — liste fiyatı/"…'dan" eki ve varyant sırası; web talebiyle (`musteri-liste-
    fiyati-baslangic.md`) **aynı turda**, iki yüzey ayrışmasın.
-7. **MB-21 + MB-22 + MB-23** — sepetteki sayı ve yer çelişkileri.
+7. **MB-21 + MB-22 + MB-51** — sepetteki sayı çelişkisi, indirimin anonim kalması ve adres
+   formunun yanlış bölge sözü. *(MB-23 bu kümeden çıktı — elendi, arıza değilmiş.)*
 8. **MB-31** — katalog dili; önce ölçüm (veri mi, yedek dil mi), sonra karar.
 9. Kalan yerleşim/içerik maddeleri ve §8'in görsel bekleyenleri.
 
@@ -841,7 +858,7 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
   Bugün yalnız ürün düzeyli "kargoya
   verilmez" künyesi var; `stockMarkOf` (yere bağlı işaret) ve "haber ver"in rota dışında BÖLGE
   notuna dönmesi yazılmadı (`BEKLEYEN(21.20)`). Müşteri detayda "var" görüp sepette bölge kısıtıyla
-  karşılaşabiliyor — MB-23'ün (vitrin bölgesi ≠ sepet adresi) akrabası.
+  karşılaşabiliyor.
 
 - [ ] **MB-38 · Test defteri boşaltılmadı** (`docs/talep/not-mobil-test-defteri.md`, kullanıcı
   talimatı 09.08: *"testleri sonra topluca yaz"*). İçinde ölçülmemiş bir düşüş var:
@@ -907,7 +924,7 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
    adlandırılsın — üç maddenin ortak kökü o (§11.C).
 
 Bir de kapsam sorusu: §10 dokuz adım sayıyor ve içinde **karar bekleyen** maddeler var (MB-04'ün
-e-posta kararı, MB-12'nin adres kararı, MB-23'ün hangi yerin bağlayıcı olduğu, MB-31'in katalog
+e-posta kararı, MB-12'nin adres kararı, MB-31'in katalog
 dili). Bunlar kod işi değil; "son bir koşuda müşteri tarafını bitirmek" için önce o dört karar
 verilmeli, yoksa koşu ortasında durur.
 
