@@ -28,11 +28,11 @@
   **Doğrulama cihazda:** aynı iki senaryo tek dokunuşla çalıştı; geri bildirim yorumu veritabanında
   doğrulandı, test verisi geri alındı.
 
-- [ ] **MB-02 · Klavye, yazılan alanın üstünü kapatıyor.** Odaklanan alan klavyenin altında
-  kalıyor; müşteri ne yazdığını göremiyor. **Ölçüldü:** Profesyonel formunda "Ad soyad" alanına
-  yazarken alan tamamen klavyenin altındaydı. `AndroidManifest`te `adjustResize` var ama içerik
-  odaklanan alana kaydırılmıyor. `KeyboardAvoidingView` yalnız `components/ui/bottom-sheet.tsx`'te
-  kurulu — tam ekran formlarda karşılığı yok. MB-01 ile aynı turda çözülmeli.
+- [x] **MB-02 · Klavye, yazılan alanın üstünü kapatıyor** → **KAPANDI, görev `(21.36)`**
+  (`9f680bbb`, 11.08). **Ölçüldü:** Profesyonel formunda "Ad soyad" alanına yazarken alan tamamen
+  klavyenin altındaydı. **Sebep ilk teşhisten farklı çıktı:** `adjustResize` yazılı ama ÖLÜ — tema
+  kenardan-kenara olduğu için Android pencereyi küçültmüyor. Çözüm kite kondu
+  (`components/ui/form-scroll.tsx`), form ekranları ona geçti. Kalan geniş göç MB-34'ün işi.
 
 - [ ] **MB-03 · Adres formunda sokak alanına yazınca uygulama yeniden yükleniyor** → görev
   `(21.30)` açık, ölçümü orada. **11.08 · 14:1x — BUGÜN ÜRETİLEMEDİ:** kullanıcı cihazda sokak
@@ -154,11 +154,18 @@
 > iş orada.** Uygulandığı gün `DOMAIN §14` bu bloktan güncellenir. Değerlerin hepsi `settings`
 > satırıdır, koda gömülmez.
 >
-> **SIRA (kullanıcı kararı 11.08): bu iş ŞİMDİ BAŞLAMAZ.** Önce backlog'un mevcut kalemleri
-> bitirilir, sonra buraya dönülüp puan seti komple uygulanır — parça parça yapmak, aynı motoru üç
-> kez açmak olurdu. **Web şeridinin görüşü de bekleniyor** (kullanıcı: *"aynı zamanda web tarafı da
-> bu konuyla alakalı düşüncelerini yazar"*); dosya açıldı: `docs/talep/musteri-puan-sistemi-web-
-> gorusu.md`. Uygulamaya geçmeden önce o dosyanın **Cevap** bölümü okunur.
+> **SIRA (kullanıcı kararı 11.08): PUAN SİSTEMİ MOBİL MÜŞTERİ İŞLERİNİN EN SONUNDA.** Kullanıcının
+> gerekçesi: *"puan sistemi bir anda büyüdü, kontrol etmek de zahmetli hale geldi."* Doğru okuma —
+> bir oturumda yedi kazanma yolu, iki davet türü, tavan ilkesi ve bir de beklemeye alınmış kolektif
+> sistem doğdu; bunu parça parça uygulamak aynı motoru defalarca açmak, hepsini birden doğrulamak
+> ise ayrı bir iş. **Önce backlog'un öteki kalemleri bitirilir**, puan seti en sona bırakılır ve
+> komple uygulanır.
+>
+> **BU SIRADA WEB ŞERİDİ DAVET İŞİNİ YÜRÜTÜR (kullanıcı kararı 11.08):** *"bu sırada web'de hem
+> müşteri daveti hem de sefer daveti konusunda çalışma yapar."* Yani web'den beklenen artık yalnız
+> görüş değil, **iş**: bağlantı biçimi, karşılayan rota, uygulamanın adresi sahiplenmesini sağlayan
+> dosyalar ve daveti kimliğe bağlayan çağrı. Ayrıntılı liste `docs/talep/musteri-puan-sistemi-web-
+> gorusu.md`'de. Mobil taraf sırası gelince o altyapının üstüne bağlanır.
 >
 > **BUGÜN ÇALIŞAN SİSTEM HÂLÂ ESKİ HÂLİYLE:** sipariş puanı veriliyor, onay ekranı yanlış sayı
 > söylüyor, ziyaret puanı native'de yok, davet zinciri kopuk. Karar seti YAZILDI, UYGULANMADI.
@@ -638,7 +645,8 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   ekrana göreydi ve klavyeyi hesaba katmıyordu; taşan içerik yukarı kaçıyor, kaydırma olmadığı için
   geri gelmiyordu. Adres önerileri tetikleyiciydi (beş satır = ekranın %36'sı) ama sebep listede
   değil kaptaydı — girdi taşıyan her çekmeceyi ilgilendiriyordu. `new-ticket-sheet`in yerel çözümü
-  kite taşındı. **iOS'ta ölçülmedi** (kullanıcı orada daha ağır olduğunu bildirdi).
+  kite taşındı. **iOS'ta da düzeldi** (kullanıcı doğrulaması 11.08): önce klavyenin üstünde ölü bir
+  şerit kalıyordu, alt güvenli alan payı klavye açıkken de eklendiği içindi; koşul eklenince kalktı.
 
 - [ ] **MB-30 · Unistyles uyarısı kütükte tekrarlıyor:** `we detected style object with 2 unistyles
   styles … use array syntax instead of object syntax`. Hangi bileşen olduğu bulunup düzeltilecek.
@@ -950,7 +958,7 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-04 (e-posta alanı kalkıyor — kimlik oturumdan) | mobil | 11.08 · 13:1x | `apps/mobile-api/src/api/v1/b2b.ts` (bitti) · `apps/mobile/src/screens/professionals/**` | **alındı** |
 | MB-39 (ölü ihraç tipler — B2B dışı yarısı) | mobil | 11.08 · 12:4x | `apps/mobile/src/lib/api/{discover,points}.ts` · `lib/payment/{payment-sheet,stripe-config}.ts` · `screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` · `screens/home/use-home-orders.hook.ts` | **alındı** |
 | MB-02 (klavye odaklanan alanı kapatıyor) | cihaz | 11.08 · 12:19 → yollar 12:3x'te kesinleşti | **YENİ:** `apps/mobile/src/components/ui/form-scroll.tsx` · **DEĞİŞEN:** `screens/{professionals/professionals-screen.tsx,login/login-screen.tsx,feedback/feedback-screen.tsx}` | **bitti ve COMMİT EDİLDİ** — `9f680bbb`, görev `(21.36)` (11.08). Sebep ölçüldü: tema `Theme.EdgeToEdge`, `adjustResize` ölü, pencere küçülmüyor (klavye açıkken kaydırma da işlemiyor). Çözüm kite kondu (`form-scroll.tsx`), `bottom-sheet`in 08.08'de verdiği kararın aynısı; şimdilik yalnız FORM ekranlarına uygulandı. **Kalan geniş göç MB-34'ün işi** — o satır da artık açık |
-| MB-48 (çekmece taşıyor · öneri listesi sınırsız) | cihaz | 11.08 · 14:2x — görev `(21.41)` | `apps/mobile/src/components/ui/{bottom-sheet.tsx,suggestion-list.tsx}` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` (yerel kaydırıcı kite taşındı) | **bitti** — cihazda doğrulandı (Android, "Büyük"); iOS'ta daha ağır olduğu kullanıcıdan bildirildi, aynı düzeltme oradaki üst güvenli alanı da kapsıyor ama **iOS'ta ölçülmedi** |
+| MB-48 (çekmece taşıyor · öneri listesi sınırsız) | cihaz | 11.08 · 14:2x — görev `(21.41)` | `apps/mobile/src/components/ui/{bottom-sheet.tsx,suggestion-list.tsx}` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` (yerel kaydırıcı kite taşındı) | **bitti** — Android'de ölçüldü ("Büyük" yazı boyutu), **iOS'ta kullanıcı doğruladı** (11.08) |
 | MB-09 (B2B misafir yolu cihazda hiç yürütülmedi) | cihaz | 11.08 · 14:2x | **yalnız ölçüm — kod değişikliği YOK.** Misafirle tur: e-posta → tek kullanımlık kod → başvurunun kendiliğinden gitmesi → "inceleniyor" | **alındı** — cihaz işi olduğu için bu şeritte (⚑ kuralı); MB-03/MB-13 turundan sonra |
 | MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **alındı** — tablo "ölçümü kim yapacak, ilan edilsin" diye sormuştu; cihaz bu şeritte (üstteki ⚑ kuralı). Sebep çıkmadan kod yazılmaz (CLAUDE §0) |
 

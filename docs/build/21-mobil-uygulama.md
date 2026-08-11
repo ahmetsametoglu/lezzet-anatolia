@@ -1897,7 +1897,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   nefesi ana ekran çubuğu payını (`insets.bottom`) klavye açıkken de ekliyordu; o pay çubuğun
   üstünü boş tutmak içindir, klavye zaten orayı kapatıyor. Android'de ölçü klavye açılınca sıfıra
   düşüyor, iOS'ta düşmüyordu — koşul (`insets.ime > 0`) ikisini aynı davranışa getirdi.
-  **iOS'ta ÖLÇÜLMEDİ** (cihaz kullanıcıda); Android'de gerileme olmadığı doğrulandı.
+  **iOS'ta KULLANICI DOĞRULADI** (11.08 — *"iOS'taki problem şimdilik düzeldi"*); Android'de
+  gerileme olmadığı ölçüldü.
 
   **Doğrulama:** mobil typecheck rc=0 · `customer-kit` + `components/ui` **25 suite / 142 test**
   yeşil · **cihazda ölçüldü** (OPPO CPH1907, yazı boyutu "Büyük"): düzeltmeden önce başlık ve kutu
