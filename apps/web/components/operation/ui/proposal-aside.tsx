@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { SubjectCard } from './subject-card';
+import { PayloadTree } from './payload-tree';
 
 /**
  * ÖNERİNİN ÖNİZLEMESİ — konu kartı + asistanın dilekçesi, formun YANINDA (22.10).
@@ -45,12 +46,26 @@ interface ProposalAsideProps {
   } | null;
   /** Konusu olmayan öneride tek satırlık karşılık ("Sepetin tamamı") — uydurma kart çizilmez. */
   fallbackTitle: string;
-  facts: ProposalFact[];
+  /**
+   * Elle kurulmuş künye satırları — tipin ÖNE ÇIKARDIĞI birkaç değer (fırsatta teklif ve liste
+   * fiyatı gibi). Dilekçenin tamamı ayrıca `payload` ile basılıyor; buradaki satırlar onun yerine
+   * değil, ÜSTÜNDE durur.
+   */
+  facts?: ProposalFact[];
+  /**
+   * Ham dilekçe — okunur bir ağaca çevrilip basılır (`PayloadTree`, 22.15).
+   *
+   * Kullanıcı kararı 11.08: *"ajandan gelen bilginin en sağda bir sütun şeklinde özeti olsun… JSON'ın
+   * daha okunabilir şekilde çevrilmiş hâli. Bu tüm öneri diyaloglarında standart olacak."* Tip başına
+   * elle künye yazmak şemaya eklenen alanı sessizce görünmez kılıyordu (22.12'de on iki alan açıldı,
+   * hiçbiri kendiliğinden ekrana çıkmadı).
+   */
+  payload?: unknown;
   /** Karara özel ek not (tipin kendi uyarısı). */
   footer?: ReactNode;
 }
 
-export function ProposalAside({ subject, fallbackTitle, facts, footer }: ProposalAsideProps) {
+export function ProposalAside({ subject, fallbackTitle, facts, payload, footer }: ProposalAsideProps) {
   return (
     <div className="flex min-w-[15rem] flex-1 basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
       <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-muted">
@@ -69,13 +84,24 @@ export function ProposalAside({ subject, fallbackTitle, facts, footer }: Proposa
         <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{fallbackTitle}</span>
       )}
 
-      <dl className="flex flex-col gap-1 border-t border-ops-line pt-2 font-ops-body text-ops-base text-ops-body">
-        {facts.map((fact) => (
-          <Row key={fact.label} fact={fact} />
-        ))}
-      </dl>
+      {facts && facts.length > 0 ? (
+        <dl className="flex flex-col gap-1 border-t border-ops-line pt-2 font-ops-body text-ops-base text-ops-body">
+          {facts.map((fact) => (
+            <Row key={fact.label} fact={fact} />
+          ))}
+        </dl>
+      ) : null}
 
-      {footer ? <div className="mt-auto pt-1">{footer}</div> : null}
+      {/* Dilekçenin TAMAMI — kaydırılabilir, çünkü tip başına uzunluğu değişiyor (tarifin malzeme
+          listesi ile vitrin işaretinin üç satırı aynı sütunda yaşıyor). Sütunun kendisi büyüyüp
+          formu aşağı itmemeli. */}
+      {payload !== undefined ? (
+        <div className="min-h-0 flex-1 overflow-y-auto border-t border-ops-line pt-2">
+          <PayloadTree payload={payload} />
+        </div>
+      ) : null}
+
+      {footer ? <div className="pt-1">{footer}</div> : null}
     </div>
   );
 }

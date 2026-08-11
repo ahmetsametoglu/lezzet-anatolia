@@ -76,7 +76,10 @@ export function DiscountDraftBody({
           subject={subject}
           // Sepet kapsamının bir KAYDI yok; kart uydurmak yerine tek satırla söyleniyor.
           fallbackTitle="Sepetin tamamı"
+          // Künye satırları SAPMA gösterenler (operatör formu değiştirdikçe asistanınki üstü çizili
+          // kalır); dilekçenin tamamı altta okunur ağaç olarak (22.15).
           facts={proposalFacts(payload, values)}
+          payload={payload}
         />
       </div>
     </div>

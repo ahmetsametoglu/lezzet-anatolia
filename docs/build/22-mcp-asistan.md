@@ -921,3 +921,29 @@ satırında.
     taşımamalı. Kataloğun tamamı değil, YALNIZ kuyruktaki taslakların ürünleri okunuyor.
   - **BEKLEYEN(22.14):** ekran doğrulaması kullanıcıda — kuyrukta iki `product_draft` önerisi var
     (*Chocolate Baklava* · *Sobiyet Baklava*, ikisi de `name` + `description`).
+
+- [x] (22.15) **Diyaloğun iki sütunu standartlaştı: solda iş, sağda DİLEKÇENİN KENDİSİ** *(kullanıcı
+  kararı 11.08, ekran görüntüsüyle: "ajandan gelen bilginin en sağda bir sütun şeklinde özeti olsun.
+  Düz metin değil. JSON'ın daha okunabilir şekilde çevrilmiş hâli. Bu tüm öneri diyaloglarında
+  standart olacak" + "farklı öneri diyalogları farklı genişlik olması gerekecek")*
+  `touches: apps/web/components/operation/ui/{payload-tree,proposal-aside}.tsx · apps/web/components/operation/form/product-form/layout.desktop.tsx · apps/web/app/(operations)/operations/assistant/{assistant-body,assistant-sections}.tsx · .../bodies/*`
+  - **Durum:** yapıldı. Üç ayrı sorun aynı ekran görüntüsünden çıktı.
+  - **① Dilekçe sütunu artık payload'ın KENDİSİNDEN türüyor** (`PayloadTree`). Tip başına elle künye
+    listesi yazmak iki şeyi bozuyordu: on bir tipte on bir ayrı "hangi alanı göstereyim" kararı
+    (biri mutlaka eksik kalır) ve şemaya eklenen alanın sessizce görünmez olması. **Ölçülmüş kanıt:**
+    22.12'de on iki alan açıldı, hiçbiri kendiliğinden ekrana çıkmadı. Çeviri üç şey yapıyor — alan
+    adı sözlükten Türkçeye, değer tipine göre (cent→euro, ISO tarih→kısa tarih, çok dilli metin dolu
+    dilleriyle, boolean evet/hayır), **kimlik gizlenir** (uuid okunmaz ve yanındaki `…Name` aynı şeyi
+    söyler; adsız kimlik kısaltılır ki satır sessizce kaybolmasın). `null` ve boş dizi satırdan
+    DÜŞMEZ, "—" yazılır (22.10 ilkesi).
+  - **② Diyalog genişliği TİPE GÖRE** (`InlineBody.width`). Tek sayı bütün tiplere dayatılıyordu:
+    ürün formu tek başına 1180 px için tasarlanmış, yanına dilekçe sütunu gelince taşıyor —
+    kutular kelime ortasından kırılıyordu (*"Gelene/ksel/baklav"*). Ürün taslağı 1560'a çıktı,
+    ötekiler 1180'de kaldı.
+  - **③ Galeri sütunu YOKSA çizilmiyor.** Kuyruk `photosSlot`u boş veriyor (canlı yazan blok kuyruğa
+    girmemeli) ama yerleşim 360 px'lik sütunu yine ayırıyordu: formun sol üstünde koca bir boşluk,
+    sağında sıkışmış kutular. Ölçüt `fields.image === null`.
+  - **Öne çıkan künye satırları KALDI ama azaldı:** `facts` artık yalnız SAPMA gösteren değerler
+    için (fırsatta teklif fiyatı, indirimde formun oynattığı alanlar). Dilekçenin tamamı altında,
+    kaydırılabilir bir ağaç olarak — tarifin malzeme listesiyle vitrin işaretinin üç satırı aynı
+    sütunda yaşıyor ve sütun büyüyüp formu aşağı itmemeli.

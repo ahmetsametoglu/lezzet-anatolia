@@ -195,9 +195,10 @@ export function ProposalDialog({
     <Dialog
       open
       onClose={onClose}
-      // Form gövdeleri iki-üç sütun çiziyor (indirim formu + dilekçe künyesi); ops varsayılanı 640
-      // bunları tek sütuna katlar ve taşıdığımız formu tanınmaz hâle getirirdi.
-      maxWidth={1180}
+      // Form gövdeleri iki-üç sütun çiziyor (indirim formu + dilekçe sütunu); ops varsayılanı 640
+      // bunları tek sütuna katlar ve taşıdığımız formu tanınmaz hâle getirirdi. Genişlik TİPE göre:
+      // ürün formu tek başına 1180 için tasarlandı, yanına dilekçe gelince taşıyordu (22.15).
+      maxWidth={inline?.width ?? 1180}
       title={row.summary}
       subtitle={`asistan · ${shortDateTime(row.createdAt)}${live && row.freshness === 'soon' ? ' · tazeliği doluyor' : ''}`}
       headerAside={

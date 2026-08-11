@@ -5,7 +5,7 @@ import { markupPercent } from '@lezzet/domain-core';
 import { removeVat } from '@lezzet/helper';
 import type { BatchOfferPayload } from '@lezzet/types';
 import { PriceTriple } from '@/components/operation/form/price-triple';
-import { money, num, percent, shortDate } from '@/components/operation/ui/format';
+import { money, percent } from '@/components/operation/ui/format';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { ProposalAside } from '@/components/operation/ui/proposal-aside';
@@ -110,18 +110,13 @@ export function BatchOfferBody({
             Bir tur bu panel burada elle kuruluydu; indirim tipi gelince aynı kurgu ikinci kez
             yazılacaktı — kullanıcının istediği düzen zaten buydu ("her tipte önizleme + tanıtım
             kartı + form"), o yüzden ikinci kopya doğmadan tek yere alındı. */}
+        {/* Öne çıkan tek satır SAPMAYI gösteren teklif fiyatı — kararın konusu tam olarak o fark.
+            Dilekçenin geri kalanı altta, okunur ağaç olarak (22.15). */}
         <ProposalAside
           subject={subject}
           fallbackTitle={size ? `${name} · ${size}` : name}
-          facts={[
-            { label: 'Depo', value: payload.warehouseCode },
-            { label: 'SKT', value: shortDate(payload.expiryDate) },
-            { label: 'Partide', value: `${num(payload.physicalQty)} ad.` },
-            // Teklif fiyatı SAPMA gösteren tek satır: operatör kutuyu değiştirdiğinde asistanın
-            // önerisi üstü çizili kalır — kararın konusu tam olarak bu fark.
-            { label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) },
-            ...(listCents !== null ? [{ label: 'Liste', value: money(listCents) }] : []),
-          ]}
+          facts={[{ label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) }]}
+          payload={payload}
         />
 
         <Panel>

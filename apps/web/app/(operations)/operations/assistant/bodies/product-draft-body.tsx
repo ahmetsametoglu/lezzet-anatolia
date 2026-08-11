@@ -150,6 +150,8 @@ export function ProductDraftBody({ payload, subject, options, values, onChange, 
           )}
         </div>
 
+        {/* Öne çıkan iki satır + dilekçenin TAMAMI (22.15). Üzerine yazma sayısı künyede duruyor
+            çünkü payload'ın kendisinden okunmuyor: iki nesnenin karşılaştırmasından çıkıyor. */}
         <ProposalAside
           subject={subject}
           fallbackTitle={payload.productName}
@@ -158,19 +160,9 @@ export function ProductDraftBody({ payload, subject, options, values, onChange, 
               label: 'Asistanın yazdığı',
               value: filled.size > 0 ? [...filled].map((k) => DECLARATION_FIELD_LABEL[k as string] ?? k).join(' · ') : 'yok',
             },
-            {
-              label: 'Üzerine yazılan',
-              value: overwriteText(payload),
-            },
-            {
-              label: 'Net okunmayan',
-              value: payload.uncertainFields.length > 0 ? payload.uncertainFields.map((k) => DECLARATION_FIELD_LABEL[k] ?? k).join(' · ') : 'yok',
-            },
-            {
-              label: 'Onay sonrası eksik',
-              value: payload.remainingGaps.length > 0 ? `${payload.remainingGaps.length} beyan` : 'kayıt tam olur',
-            },
+            { label: 'Üzerine yazılan', value: overwriteText(payload) },
           ]}
+          payload={payload}
         />
       </div>
     </div>

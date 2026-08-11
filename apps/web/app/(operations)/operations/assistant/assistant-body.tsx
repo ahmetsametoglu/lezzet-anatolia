@@ -76,6 +76,15 @@ interface InlineBody<Payload, Draft> {
   /** Kaydetmenin engeli ve SEBEBİ; `null` ise yol açık. Düğme etkin görünüp hiçbir şey yapmasın. */
   blocked: (draft: Draft) => string | null;
   submit: (payload: Payload, draft: Draft, proposalId: string) => Promise<{ error: string | null }>;
+  /**
+   * Diyaloğun genişliği — TİPE GÖRE (kullanıcı kararı 11.08: *"farklı öneri diyalogları farklı
+   * genişlik olması gerekecek, içinin yoğunluğuna, yapılan işe ve komponente göre"*).
+   *
+   * Tek bir sayı bütün tiplere dayatılıyordu ve ölçüldü: ürün formu tek başına 1180 px için
+   * tasarlanmış, yanına dilekçe sütunu gelince 1180'e sığmıyor — kutular kelime ortasından
+   * kırılıyordu ("Gelene/ksel/baklav"). Fırsat kartında ise aynı genişlik fazlaydı.
+   */
+  width?: number;
   /** Alt bardaki onay düğmesinin metni — "Uygula" değil, işin kendi adı. */
   applyLabel: string;
   /** Karardan sonra söylenecek cümle; kuyruk tazelendiğinde kart başka öneriye geçmiş olur. */
@@ -176,6 +185,9 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // Kaydeden kapı ÜRÜN EKRANININKİ: kuyruk ikinci bir yazma yolu açmıyor, `withProposal` da
     // kuyruk satırını kapatıyor.
     submit: (payload, values, proposalId) => updateProductAction(payload.productId, toActionPayload(values), proposalId),
+    // Ürün formu tek başına 1180 px için tasarlandı (kendi diyaloğunun ölçüsü); yanına dilekçe
+    // sütunu geldiği için o kadar daha gerekiyor.
+    width: 1560,
     applyLabel: 'Ürünü kaydet',
     appliedNote: 'Ürün kaydedildi — katalogda görülebilir. Satış durumu formda ne seçildiyse o.',
   }),
