@@ -142,6 +142,22 @@ export const StockIntakePayloadSchema = z.object({
   purchaseOrderId: z.string().uuid().nullable(),
   /** İrsaliye/fatura numarası — önizlemenin "belge no" satırı. */
   documentNo: z.string().nullable(),
+  /**
+   * ─── BELGENİN TARİHİ VE TOPLAMI (11.08 · alan denkliği taraması) ────────────
+   *
+   * `date`: mal kabulün tarihi. Verilmezse kabul BUGÜNE yazılır — ama fatura dünkü olabilir ve
+   * genelde öyledir (patron akşam fotoğraflar, ertesi gün onaylar). Yanlış tarihe yazılan bir
+   * kabul, stok yaşı ve dönem mutabakatı hesaplarını sessizce kaydırır. Belgede tarih yazıyor,
+   * asistan onu okuyabiliyordu; sorulmadığı için kayboluyordu.
+   *
+   * `totalAmountCents`: **faturanın kendi yazdığı toplam.** Satır maliyetlerinin toplamı DEĞİLDİR
+   * ve öyle hesaplanmamalı — ikisinin farkı tam da aranan şeydir: nakliye, iskonto, okunamayan bir
+   * satır. Kendi hesabımızı belgenin toplamıyla karşılaştırabilmek, "okuduğum fatura doğru mu"
+   * sorusunun tek makine cevabı. Uydurulmaz: belgede toplam görünmüyorsa `null` kalır
+   * (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+   */
+  date: z.string().nullable().default(null),
+  totalAmountCents: z.number().int().nonnegative().nullable().default(null),
   lines: z
     .array(
       z.object({
@@ -294,10 +310,35 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
   shelfLifeDays: z.number().int().positive().nullable(),
   vatRate: z.number().positive(),
   /**
+   * Kargoyla gönderilebilir mi (11.08 · alan denkliği taraması).
+   *
+   * Ürün formunun kutusu ve varsayılanı `true`. Ambalajdan OKUNABİLİR bir karar: "-18 °C'de
+   * saklayın" yazan bir ürün kargoya verilemez ve asistan saklama koşulunu zaten okuyor. Alan
+   * sorulmadığı için her ürün sessizce kargolanabilir doğuyordu — donmuş bir ürünün kargoya
+   * açılması, iadesi müşteride biten türden bir hatadır.
+   *
+   * `.default(null)` ve nullable: **bilinmiyor ile "hayır" ayrı şeyler** (`CLAUDE §1`). Model
+   * emin değilse boş bırakır, ürün kapının kendi varsayılanıyla doğar.
+   */
+  shippable: z.boolean().nullable().default(null),
+  /**
    * En az BİR boy — varyantsız ürün satılamaz (fiyat ve stok varyanta bağlıdır). Fiyat BURADA YOK
    * ve olmayacak: ayrı bir karar, ayrı bir ekran.
+   *
+   * `netWeightG` ve `piecesCount` 11.08'de eklendi: ikisi de ambalajın ÜSTÜNDE yazıyor ("500 g",
+   * "12 adet") ve varyant formunun kutusu. Etiket metni ("500 g") ile net ağırlık (500) ayrı
+   * alanlar — biri müşterinin okuduğu, öteki kilo başı fiyat ve kargo hesabının tabanı. Etiketi
+   * yazıp ağırlığı boş bırakmak, aynı bilgiyi yarım kaydetmek olurdu. Okunamıyorsa `null`.
    */
-  variants: z.array(z.object({ label: LocalizedTextSchema })).min(1),
+  variants: z
+    .array(
+      z.object({
+        label: LocalizedTextSchema,
+        netWeightG: z.number().positive().nullable().default(null),
+        piecesCount: z.number().int().positive().nullable().default(null),
+      }),
+    )
+    .min(1),
 });
 export type ProductCreatePayload = z.infer<typeof ProductCreatePayloadSchema>;
 
@@ -396,6 +437,24 @@ export const RecipeDraftPayloadSchema = z.object({
   steps: LocalizedTextSchema,
   /** "4 kişilik" gibi bir METİN — sayı değil (modelde `LocalizedText`). */
   serves: LocalizedTextSchema.nullable().optional(),
+  /**
+   * ─── TARİF FORMUNUN GERİ KALAN ÜÇ KUTUSU (11.08 · alan denkliği taraması) ──
+   *
+   * `duration` (süre) · `meal` (öğün) · `pantry` (evinizden gerekenler) — üçü de `Recipe`
+   * varlığında var ve tarif formunda operatörün önüne kutu olarak çıkıyor. Dilekçede YOKTULAR:
+   * asistan tarifi kurarken bu üçünü hiç doldurmuyordu ve onay ekranında boş kutu olarak
+   * görünüyorlardı.
+   *
+   * **Boş kutu "asistan atladı" diye okunur; gerçek ise "asistana sorulmadı"ydı** — ikisi bambaşka
+   * şeyler ve fark yalnız bu şema düzeltilerek kapanır (`publicLabel` ile aynı gerekçe, 10.08).
+   *
+   * `pantry` özellikle asistanın işi: tarifin bizden satın alınmayan malzemesi (tuz, su, zeytinyağı)
+   * satılabilir bir satır DEĞİLDİR (`recipe.pantry` künyesi) ama tarifin yapılabilmesi için
+   * söylenmesi gerekir. Modelin tarifi yazarken zaten bildiği bir şeydi, sorulmadığı için kayboluyordu.
+   */
+  duration: LocalizedTextSchema.nullable().optional(),
+  meal: LocalizedTextSchema.nullable().optional(),
+  pantry: LocalizedTextSchema.nullable().optional(),
   items: z
     .array(
       z.object({

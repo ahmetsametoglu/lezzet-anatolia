@@ -183,9 +183,18 @@ export const TOOLS = [
       properties: {
         name: { type: 'object', description: 'Product name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
         categoryName: { type: 'string', description: 'Category by NAME (resolved server-side); omit if unsure — the tool lists the existing ones.' },
-        variants: { type: 'array', description: 'Sizes: [{ "label": { "tr": "500 g" } }]. At least one — a product with no size cannot be sold.' },
+        variants: {
+          type: 'array',
+          description:
+            'Sizes: [{ "label": { "tr": "500 g" }, "netWeightG": 500 }]. At least one — a product with no size cannot be sold. label is the TEXT the customer reads; netWeightG (grams) and piecesCount are the NUMBERS behind it, and price-per-kilo and shipping are computed from them. Both are printed on the package — fill them in; leave a number out only when the package does not state it.',
+        },
         dateType: { type: 'string', description: "'DLC' or 'DDM' — read it off the label." },
         shelfLifeDays: { type: 'number', description: 'Total shelf life in days, if the label states it.' },
+        shippable: {
+          type: 'boolean',
+          description:
+            'Can this go out by parcel post? Read it off the storage line: a product that says "keep at -18 °C" cannot be shipped. Omit when you are not sure — omitting means "unknown", and the product is created shippable by default; false means you read a reason it cannot ship.',
+        },
         vatRate: { type: 'number', description: 'French food VAT: 5.5 (packaged/frozen) or 10 (immediate consumption). Default 5.5.' },
         description: { type: 'object', description: 'Per language.' },
         ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
@@ -241,6 +250,16 @@ export const TOOLS = [
         supplierId: { type: 'string', description: 'Supplier uuid, if known.' },
         purchaseOrderId: { type: 'string', description: 'Linked purchase order, if this receipt closes one.' },
         documentNo: { type: 'string', description: 'Invoice / delivery-note number.' },
+        date: {
+          type: 'string',
+          description:
+            "The DOCUMENT's date, YYYY-MM-DD. Omit only if the document does not show one — leaving it out books the receipt as TODAY, and an invoice photographed last night is yesterday's.",
+        },
+        totalAmountCents: {
+          type: 'number',
+          description:
+            'The total the INVOICE itself prints, in cents. Do not add the lines up yourself — the point is to compare our sum against the document and surface the gap (shipping, discount, a line you could not read). Omit if the document shows no total.',
+        },
         reason: { type: 'string', description: 'One line: what this is based on (e.g. "invoice photo sent by the admin").' },
       },
       required: ['warehouseCode', 'lines'],
@@ -255,6 +274,11 @@ export const TOOLS = [
       type: 'object',
       properties: {
         accountName: { type: 'string', description: 'Account name or part of it, e.g. "Kasa".' },
+        counterAccountName: {
+          type: 'string',
+          description:
+            'REQUIRED for type=transfer: the account the money goes TO, by name (e.g. "Banka"). A transfer with no destination is half a decision — the approval screen would read "Kasa → ?" and nobody can approve that.',
+        },
         direction: { type: 'string', description: "'out' = money leaves, 'in' = money arrives." },
         amountCents: { type: 'number', description: 'Positive integer, in cents.' },
         type: { type: 'string', description: "'expense' | 'transfer' | 'capital' | 'misc' — no 'purchase' (goods purchases go through propose_stock_intake)." },
@@ -278,6 +302,11 @@ export const TOOLS = [
       properties: {
         zoneName: { type: 'string', description: 'Target delivery zone, matched by name.' },
         postalCodes: { type: 'array', items: { type: 'string' }, description: 'Codes to add, e.g. ["67400","67540"].' },
+        country: {
+          type: 'string',
+          description:
+            "Two-letter country of these codes ('FR' | 'DE'), from demand_signals. A postal code is NOT unique across borders — 67000 exists in both France and Germany — so the country decides which place gets covered. Omit only for a single-country zone: it then follows the codes already in that zone.",
+        },
         reason: { type: 'string', description: 'Why these codes — cite the demand numbers.' },
       },
       required: ['zoneName', 'postalCodes'],
@@ -309,14 +338,12 @@ export const TOOLS = [
   {
     name: 'propose_bundle_draft',
     description:
-      "PROPOSE (does not apply): a new bundle (multi-product package sold at ONE price). You choose the items and the package price; the ENGINE distributes the per-item allocated prices proportionally to their list prices — you never compute shares yourself. If the target cannot be hit exactly (cent rounding), the response says so with the residual and you MUST tell the admin. Needs at least two items. The bundle is created INACTIVE — publishing is a separate decision.",
+      "PROPOSE (does not apply): a new bundle (multi-product package sold at ONE price). You choose the items and the package price; the ENGINE distributes the per-item allocated prices proportionally to their list prices — you never compute shares yourself. If the target cannot be hit exactly (cent rounding), the response says so with the residual and you MUST tell the admin. Needs at least two items. Name and description take one object per language ({ \"tr\": \"…\", \"fr\": \"…\", \"de\": \"…\" }, Turkish minimum) — a bundle is customer-facing and the storefront is France, so write the French too. The bundle is created INACTIVE — publishing is a separate decision.",
     inputSchema: {
       type: 'object',
       properties: {
-        nameTr: { type: 'string', description: 'Bundle name in Turkish (required).' },
-        nameFr: { type: 'string' },
-        nameDe: { type: 'string' },
-        descriptionTr: { type: 'string' },
+        name: { type: 'object', description: 'Bundle name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
+        description: { type: 'object', description: 'What is in it / who it is for, per language — the customer reads this.' },
         totalPrice: { type: 'number', description: 'The single customer-facing price, in EURO (e.g. 89.00).' },
         serves: { type: 'number', description: 'How many people it serves, if meaningful.' },
         items: {
@@ -333,7 +360,7 @@ export const TOOLS = [
         },
         reason: { type: 'string', description: 'Ground it — e.g. "these six were bought together in 41 orders last month".' },
       },
-      required: ['nameTr', 'totalPrice', 'items'],
+      required: ['name', 'totalPrice', 'items'],
       additionalProperties: false,
     },
   },
@@ -381,24 +408,24 @@ export const TOOLS = [
   {
     name: 'propose_recipe_draft',
     description:
-      'PROPOSE (does not apply): a "table idea" recipe that carries existing products into the cart. Ingredients bind to VARIANTS (the "350 g" row), never to a product alone. The recipe is created INACTIVE and — by a data rule — CANNOT be published until all three languages are filled; the response tells you which languages you supplied so you can warn the admin.',
+      'PROPOSE (does not apply): a "table idea" recipe that carries existing products into the cart. Ingredients bind to VARIANTS (the "350 g" row), never to a product alone. Every text field takes one object per language — { "tr": "…", "fr": "…", "de": "…" } — and Turkish is the minimum. FILL IN duration, serves, meal AND pantry: they are boxes on the admin\'s recipe form, so anything you leave out is a box they have to fill by hand. pantry is what the cook needs FROM THEIR OWN KITCHEN (salt, water, olive oil) — we do not sell it, so it can never be an ingredient row, but the recipe is not reproducible without it. The recipe is created INACTIVE and — by a data rule — CANNOT be published until all three languages are filled; the response tells you which languages you supplied so you can warn the admin.',
     inputSchema: {
       type: 'object',
       properties: {
-        nameTr: { type: 'string' },
-        nameFr: { type: 'string' },
-        nameDe: { type: 'string' },
-        stepsTr: { type: 'string', description: 'Preparation steps, Turkish (required).' },
-        stepsFr: { type: 'string' },
-        stepsDe: { type: 'string' },
-        descriptionTr: { type: 'string' },
-        descriptionFr: { type: 'string' },
-        descriptionDe: { type: 'string' },
-        servesTr: { type: 'string', description: 'Free text like "4 kişilik" — not a number.' },
-        servesFr: { type: 'string' },
-        servesDe: { type: 'string' },
+        name: { type: 'object', description: 'Recipe name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
+        steps: { type: 'object', description: 'Preparation steps per language, one text each — write the steps as numbered lines ("1. …\\n2. …").' },
+        description: { type: 'object', description: 'Short intro per language — what this dish is, when you would serve it.' },
+        duration: { type: 'object', description: 'Preparation time as FREE TEXT per language, not a number: { "tr": "35 dk", "fr": "35 min", "de": "35 Min." }.' },
+        serves: { type: 'object', description: 'How many it serves, free text: { "tr": "3–4 kişilik", "fr": "pour 3–4 personnes" }.' },
+        meal: { type: 'object', description: 'Which meal it belongs to: { "tr": "Akşam yemeği", "fr": "Dîner" }.' },
+        pantry: {
+          type: 'object',
+          description:
+            'What the cook needs from their OWN kitchen, per language — salt, water, olive oil. We do not sell these, so they cannot be ingredient rows, but the recipe cannot be made without them.',
+        },
         items: {
           type: 'array',
+          description: 'Ingredients WE sell — one row per variant.',
           items: {
             type: 'object',
             properties: { variantId: { type: 'string' }, qty: { type: 'number' } },
@@ -407,7 +434,7 @@ export const TOOLS = [
         },
         reason: { type: 'string' },
       },
-      required: ['nameTr', 'stepsTr', 'items'],
+      required: ['name', 'steps', 'items'],
       additionalProperties: false,
     },
   },

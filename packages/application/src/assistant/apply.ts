@@ -129,6 +129,9 @@ const applyStockIntake: Applier = async (db, raw) => {
     supplierId: payload.supplierId,
     purchaseOrderId: payload.purchaseOrderId,
     note: payload.documentNo,
+    // Belgenin tarihi (11.08): verilmezse kapı bugüne yazar. Fatura genelde dünkü olur — patron
+    // akşam fotoğraflar, ertesi gün onaylar — ve yanlış tarihe düşen kabul stok yaşını kaydırır.
+    ...(payload.date ? { date: payload.date } : {}),
     lines: payload.lines.map((line) => ({
       variantId: line.variantId,
       qty: line.qty,
@@ -245,7 +248,17 @@ const applyProductCreate: Applier = async (db, raw) => {
     shelfLifeDays: payload.shelfLifeDays,
     vatRate: payload.vatRate,
     status: 'candidate',
-    variants: payload.variants.map((v, index) => ({ label: v.label, sortOrder: index })),
+    // Kargolanabilirlik yalnız BİLİNİYORSA yazılır: `null` "okunamadı" demek ve kapının kendi
+    // varsayılanı (kargolanabilir) geçerli kalmalı — `false` yazmak bilinmeyeni "hayır"a çevirirdi.
+    ...(payload.shippable === null ? {} : { shippable: payload.shippable }),
+    variants: payload.variants.map((v, index) => ({
+      label: v.label,
+      // Ambalajdan okunan ölçüler (11.08): etiketi yazıp ağırlığı boş bırakmak aynı bilgiyi yarım
+      // kaydetmek olurdu — kilo başı fiyat ve kargo hesabı bu alandan çıkar.
+      netWeightG: v.netWeightG,
+      piecesCount: v.piecesCount,
+      sortOrder: index,
+    })),
   } as Parameters<ProductService['create']>[0]);
   return { productId: product.id };
 };
@@ -288,6 +301,11 @@ const applyRecipeDraft: Applier = async (db, raw) => {
     description: payload.description ?? null,
     steps: payload.steps,
     serves: payload.serves ?? null,
+    // Süre · öğün · evden gerekenler (11.08): dilekçede doldurulan alan burada da yazılmalı, yoksa
+    // asistanın verdiği bilgi kuyrukta kalır ve tarif eksik doğar.
+    duration: payload.duration ?? null,
+    meal: payload.meal ?? null,
+    pantry: payload.pantry ?? null,
     isActive: false,
     items: payload.items.map((item, index) => ({ variantId: item.variantId, qty: item.qty, sortOrder: index })),
   });

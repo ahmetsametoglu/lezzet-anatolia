@@ -381,6 +381,10 @@ function StockIntakePreview({ payload }: { payload: StockIntakePayload }) {
           { label: 'Hedef depo', value: payload.warehouseCode },
           ...(payload.supplierName ? [{ label: 'Tedarikçi', value: payload.supplierName }] : []),
           ...(payload.documentNo ? [{ label: 'Belge no', value: payload.documentNo, mono: true }] : []),
+          // Belge tarihi (11.08): verilmediyse kabul BUGÜNE yazılacak ve bu SÖYLENİR — sessiz
+          // varsayım onaylanmaz, çünkü fatura genelde dünküdür.
+          { label: 'Belge tarihi', value: payload.date ? shortDate(payload.date) : 'yok — bugüne yazılacak' },
+          ...(payload.totalAmountCents === null ? [] : [{ label: 'Fatura toplamı', value: money(payload.totalAmountCents), mono: true }]),
         ]}
       />
 
@@ -423,7 +427,15 @@ function MoneyPreview({ payload }: { payload: MoneyMovementPayload }) {
     // "Tür" satırı YÖNDEN gelir (çizimin iki hâli: Gider ↔ Tahsilat). Hareketin iç tipi
     // (`purchase`/`transfer`…) burada yazılmaz: onun sözlüğü Para ekranının kendi sözlüğüdür ve
     // ikinci kez yazılması kaçınılmaz olarak ayrışırdı; ayrımı zaten özet cümlesi taşıyor.
-    { k: 'Tür', v: incoming ? 'Tahsilat' : 'Gider', className: incoming ? 'text-ops-olive-dark' : 'text-ops-red' },
+    // Transfer ÜÇÜNCÜ bir hâl: para şirketten çıkmıyor, hesap değiştiriyor. "Gider" demek onu
+    // kaybedilmiş para gibi okutur ve kırmızıya boyardı (11.08).
+    {
+      k: 'Tür',
+      v: payload.counterAccountName ? 'Transfer' : incoming ? 'Tahsilat' : 'Gider',
+      className: payload.counterAccountName ? 'text-ops-ink' : incoming ? 'text-ops-olive-dark' : 'text-ops-red',
+    },
+    // Paranın gittiği hesap kararın YARISI: "Kasa → ?" diye bir transfer onaylanamaz.
+    ...(payload.counterAccountName ? [{ k: 'Hedef hesap', v: payload.counterAccountName }] : []),
     ...(payload.category ? [{ k: 'Kategori', v: payload.category }] : []),
     { k: 'Tutar', v: money(payload.amountCents), mono: true },
     ...(payload.counterpartyName ? [{ k: 'Karşı taraf', v: payload.counterpartyName }] : []),
@@ -618,7 +630,26 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
           // canlı bir öneride ekrana **%550** yazdı (ölçüldü). Ondalık ŞART: Fransa'nın gıda oranı
           // %5,5 ve tam sayıya yuvarlansaydı "%6" görünürdü — var olmayan bir oran.
           { label: 'KDV', value: percent(payload.vatRate, 1) },
-          { label: 'Boylar', value: payload.variants.map((v) => resolveLocalizedText(v.label)).join(' · ') },
+          // Kargolanabilirlik ambalajdan okunan bir karar (11.08) ve okunamadıysa öyle YAZILIR:
+          // "Hayır" ile "bilinmiyor" arasındaki fark, donmuş bir ürünün kargoya çıkıp çıkmamasıdır.
+          {
+            label: 'Kargo',
+            value: payload.shippable === null ? 'okunmadı — varsayılan: gönderilebilir' : payload.shippable ? 'Gönderilebilir' : 'Gönderilemez',
+          },
+          // Boy satırı artık ETİKETİ ve ÖLÇÜYÜ birlikte okur: "500 g" metni müşterinin gördüğü,
+          // ölçü ise kilo başı fiyatın ve kargo hesabının tabanı — biri yazılıp öteki boş kalırsa
+          // aynı bilgi yarım kaydedilmiş olur.
+          {
+            label: 'Boylar',
+            value: payload.variants
+              .map((v) => {
+                const size = [v.netWeightG ? `${num(v.netWeightG)} g` : null, v.piecesCount ? `${num(v.piecesCount)} ad.` : null]
+                  .filter(Boolean)
+                  .join(' · ');
+                return `${resolveLocalizedText(v.label)}${size ? ` (${size})` : ' (ölçü yok)'}`;
+              })
+              .join(' · '),
+          },
         ]}
       />
 
@@ -978,11 +1009,21 @@ function RecipeDraftPreview({ payload }: { payload: RecipeDraftPayload }) {
         <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
           {resolveLocalizedText(payload.name, OPERATIONS_LOCALE)}
         </span>
-        {payload.serves ? (
-          <span className="font-ops-body text-ops-sm text-ops-body">
-            {resolveLocalizedText(payload.serves, OPERATIONS_LOCALE)}
-          </span>
-        ) : null}
+        {/* Süre · porsiyon · öğün TEK satırda: üçü de tarif formunun kutusu ve üçü de kısa metin.
+            Doldurulmayan BOŞ GEÇİLMEZ, "yazılmadı" diye yazılır — verilmemiş bir kararı gizlemek,
+            onu verilmiş gibi gösterir (22.10 ilkesi). */}
+        <span className="font-ops-body text-ops-sm text-ops-body">
+          {[
+            payload.duration ? resolveLocalizedText(payload.duration, OPERATIONS_LOCALE) : 'süre yazılmadı',
+            payload.serves ? resolveLocalizedText(payload.serves, OPERATIONS_LOCALE) : 'porsiyon yazılmadı',
+            payload.meal ? resolveLocalizedText(payload.meal, OPERATIONS_LOCALE) : 'öğün yazılmadı',
+          ].join(' · ')}
+        </span>
+        {/* Evden gerekenler: bizden alınmayan malzeme (tuz, su, zeytinyağı). Satılabilir bir satır
+            değil ama tarif onsuz yapılamaz — onaylayan bunu görmeli. */}
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          Evinizden: {payload.pantry ? resolveLocalizedText(payload.pantry, OPERATIONS_LOCALE) : 'yazılmadı'}
+        </span>
         <span className="mt-1 flex flex-wrap items-center gap-1.5">
           {LANGS.map((l) => (
             <span

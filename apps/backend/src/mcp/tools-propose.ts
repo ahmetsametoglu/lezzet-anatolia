@@ -20,6 +20,7 @@ import {
 } from '@lezzet/database';
 import { discountPercentOf, offerDecisionOf, rebalanceAllocations, suggestedOfferPriceCents } from '@lezzet/domain-core';
 import {
+  CountryEnum,
   missingDeclarations,
   parseProposalPayload,
   ProductAllergenEnum,
@@ -337,10 +338,31 @@ export async function proposeZoneExtend(args: Record<string, unknown>) {
   const fresh = codes.filter((c) => !already.has(c));
   if (fresh.length === 0) return { error: 'Verilen kodların hepsi bu bölgede zaten var.' };
 
+  // ── ÜLKE: önce MODELİN dediği, sonra bölgenin kodları, en sonda DEPONUN ülkesi ──
+  //
+  // Posta kodu sınır ötesi benzersiz DEĞİL (`DeliveryZonePostalCode` künyesi: 67000 hem Fransa'da
+  // hem Almanya'da var), yani ülke kararın parçası. Araç bunu hiç sormuyordu ve bölgenin İLK
+  // kodundan türetiyordu — kodu olmayan yeni bir bölgede sabit `'FR'`e düşüyordu. Bir Alman
+  // bölgesinin ilk kodu böyle yanlış ülkeye yazılırdı ve hata sessiz olurdu: kod görünür, kapsama
+  // girmez. Sabit yerine deponun ülkesi son çare — bölge tek depoya bağlı (`DOMAIN §17`), yani
+  // dayanağı olan bir cevap.
+  //
+  // BEKLEYEN(BACKLOG §8): `postal_code_demand` ülke taşımıyor (anahtarı yalnız `postal_code`),
+  // o yüzden `demand_signals` çıktısı da ülkesiz — model ülkeyi ancak patrondan öğrenir.
+  const askedCountry = String(args.country ?? '').toUpperCase();
+  if (askedCountry && !CountryEnum.safeParse(askedCountry).success) {
+    return { error: `country geçersiz: '${askedCountry}'. Geçerli değerler: ${CountryEnum.options.join(' | ')}.` };
+  }
+  const warehouseCountry = (await new WarehouseService(db).getById(zone.warehouseId))?.countryCode ?? null;
+  const country = (askedCountry || zone.postalCodes[0]?.country || warehouseCountry) as ZoneExtendPayload['country'] | null;
+  if (!country) {
+    return { error: `Bu bölgenin ülkesi çözülemedi — country alanını verin (${CountryEnum.options.join(' | ')}).` };
+  }
+
   const payload: ZoneExtendPayload = {
     zoneId: zone.id,
     zoneName: zone.name,
-    country: zone.postalCodes[0]?.country ?? 'FR',
+    country,
     postalCodes: fresh.map((postalCode) => ({
       postalCode,
       placeName: null,
@@ -474,7 +496,19 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   if (rawVariants.length === 0) {
     return { error: 'variants boş — en az bir boy gerekir ("500 g", "1 kg"). Varyantsız ürün satılamaz: fiyat ve stok boya bağlıdır.' };
   }
-  const variants = rawVariants.flatMap((v) => (v.label && typeof v.label === 'object' ? [{ label: v.label as ProductCreatePayload['variants'][number]['label'] }] : []));
+  // Etiket ("500 g") ile ölçü (500) AYRI alanlar: biri müşterinin okuduğu metin, öteki kilo başı
+  // fiyatın ve kargo hesabının tabanı. İkisi de ambalajda yazıyor (11.08).
+  const variants = rawVariants.flatMap((v) =>
+    v.label && typeof v.label === 'object'
+      ? [
+          {
+            label: v.label as ProductCreatePayload['variants'][number]['label'],
+            netWeightG: typeof v.netWeightG === 'number' && v.netWeightG > 0 ? v.netWeightG : null,
+            piecesCount: Number.isInteger(v.piecesCount) && (v.piecesCount as number) > 0 ? (v.piecesCount as number) : null,
+          },
+        ]
+      : [],
+  );
   if (variants.length !== rawVariants.length) return { error: 'Her varyantın `label` alanı olmalı — { "tr": "500 g" }.' };
 
   const dateType = String(args.dateType ?? '').toUpperCase();
@@ -515,6 +549,9 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
     dateType,
     shelfLifeDays,
     vatRate,
+    // Kargolanabilirlik ambalajdan okunur ama emin olmadan yazılmaz: `undefined` bırakmak
+    // "bilmiyorum"dur ve ürün kapının varsayılanıyla doğar (11.08).
+    shippable: typeof args.shippable === 'boolean' ? args.shippable : null,
     variants,
     uncertainFields: readUncertain(args),
     remainingGaps,
@@ -593,10 +630,38 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     supplierName: supplier?.name ?? null,
     purchaseOrderId: typeof args.purchaseOrderId === 'string' ? args.purchaseOrderId : null,
     documentNo: typeof args.documentNo === 'string' && args.documentNo.trim() ? args.documentNo.trim() : null,
+    // Belgenin tarihi ve toplamı (11.08). Tarih biçimi burada süzülüyor: bozuk bir tarihi geçirmek,
+    // kabulü sessizce bugüne yazdırmaktan farksız olurdu.
+    date: /^\d{4}-\d{2}-\d{2}$/.test(String(args.date ?? '')) ? String(args.date) : null,
+    totalAmountCents: Number.isInteger(args.totalAmountCents) && (args.totalAmountCents as number) >= 0 ? (args.totalAmountCents as number) : null,
     lines,
   };
   const doc = payload.documentNo ? ` — irsaliye ${payload.documentNo}` : '';
-  return queue('stock_intake', payload, `${warehouse.code} deposuna ${lines.length} parti stok girişi${doc}`, args.reason);
+  const queued = await queue('stock_intake', payload, `${warehouse.code} deposuna ${lines.length} parti stok girişi${doc}`, args.reason);
+
+  // ── BELGENİN TOPLAMI İLE BİZİM TOPLAMIMIZ ────────────────────────────────
+  // Fark varsa MODEL ÖĞRENSİN: okunamamış bir satır, nakliye kalemi ya da iskonto demektir ve
+  // düzeltmenin ucuz anı burasıdır — onaydan sonra parti maliyetleri yazılmış olur.
+  const linesTotal = lines.reduce((sum, line) => sum + (line.unitCostCents ?? 0) * line.qty, 0);
+  const anyCost = lines.some((line) => line.unitCostCents !== null);
+  const gap = payload.totalAmountCents !== null && anyCost ? payload.totalAmountCents - linesTotal : null;
+  return {
+    ...queued,
+    ...(payload.date ? {} : { dateNote: 'Belge tarihi verilmedi — kabul BUGÜNE yazılacak. Fatura dünküyse date alanını doldurun.' }),
+    ...(gap === null
+      ? {}
+      : {
+          totalCheck: {
+            documentCents: payload.totalAmountCents,
+            linesCents: linesTotal,
+            gapCents: gap,
+            note:
+              gap === 0
+                ? 'Satır maliyetlerinin toplamı faturanın yazdığı toplamı tutuyor.'
+                : `DİKKAT: bizim toplamımız faturadan ${Math.abs(gap)} cent ${gap > 0 ? 'AZ' : 'FAZLA'}. Sebebi okunamamış bir satır, nakliye kalemi ya da iskonto olabilir — yöneticiye söyleyin.`,
+          },
+        }),
+  };
 }
 
 /**
@@ -625,12 +690,25 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const account = accounts.find((a) => a.name.toLowerCase().includes(accountName.toLowerCase()));
   if (!account) return { error: `Hesap bulunamadı: '${accountName}'. Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}` };
 
-  // Hedef hesap da AYNI listeden çözülüyor: transferde model uuid ezberlemesin diye kaynağı adla
-  // buluyoruz, hedefi kimlikle bulup adsız bırakmak o kolaylığı yarıda keserdi.
-  const counterAccountId = typeof args.counterAccountId === 'string' ? args.counterAccountId : null;
-  const counterAccount = counterAccountId ? (accounts.find((a) => a.id === counterAccountId) ?? null) : null;
-  if (counterAccountId && !counterAccount) {
-    return { error: `Hedef hesap bulunamadı: '${counterAccountId}'. Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}` };
+  // ── HEDEF HESAP DA ADLA ÇÖZÜLÜR (11.08 · alan denkliği taraması) ──────────
+  // Önce yalnız `counterAccountId` okunuyordu ve o alan araç girdisinde HİÇ TANIMLI DEĞİLDİ: kod
+  // hedefi bekliyor, model onu göndermeyi bilmiyordu. Sonuç sessiz — transfer önerisi kuruluyor,
+  // paranın nereye gittiği hep boş kalıyordu. Kaynağı adla bulup hedefi uuid'ye bağlamak zaten
+  // yarım bir kolaylıktı; ikisi de aynı listeden, aynı biçimde çözülüyor.
+  const counterName = typeof args.counterAccountName === 'string' ? args.counterAccountName.trim() : '';
+  const counterAccount = counterName ? (accounts.find((a) => a.name.toLowerCase().includes(counterName.toLowerCase())) ?? null) : null;
+  if (counterName && !counterAccount) {
+    return { error: `Hedef hesap bulunamadı: '${counterName}'. Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}` };
+  }
+  if (counterAccount && counterAccount.id === account.id) {
+    return { error: 'Kaynak ve hedef aynı hesap — transfer iki AYRI hesap arasında olur.' };
+  }
+  // Hedefsiz transfer YAZILMAZ: uygulanınca paranın gittiği yer kayıtsız kalır ve mutabakat
+  // "bir hesaptan çıkmış ama hiçbir hesaba girmemiş" bir tutarla bozulur.
+  if (type === 'transfer' && !counterAccount) {
+    return {
+      error: `Transferde counterAccountName zorunlu — para hangi hesaba gidiyor? Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}`,
+    };
   }
 
   const supplierId = typeof args.supplierId === 'string' ? args.supplierId : null;
@@ -651,8 +729,13 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
     counterAccountName: counterAccount?.name ?? null,
     valueDate: typeof args.valueDate === 'string' ? args.valueDate : null,
   };
-  const label = direction === 'out' ? 'gider' : 'tahsilat';
   const euro = (amountCents / 100).toFixed(2);
+  // Transferin özeti YÖN cümlesidir ("Kasa → Banka"), gider/tahsilat değil: para şirketten
+  // çıkmıyor, yer değiştiriyor. Aynı cümleyle anlatmak iki farklı işi tek görünüşe indirirdi.
+  if (payload.counterAccountName) {
+    return queue('money_movement', payload, `${account.name} → ${payload.counterAccountName}: ${euro} € transfer`, args.reason);
+  }
+  const label = direction === 'out' ? 'gider' : 'tahsilat';
   const who = payload.counterpartyName ? ` — ${payload.counterpartyName}` : '';
   return queue('money_movement', payload, `${account.name}: ${euro} € ${label}${who}`, args.reason);
 }
@@ -673,8 +756,8 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
   const db = serviceDb();
   const rawItems = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
   const totalPrice = Number(args.totalPrice);
-  const nameTr = String(args.nameTr ?? '').trim();
-  if (!nameTr) return { error: 'nameTr zorunlu — paketin Türkçe adı.' };
+  const name = localizedArg(args.name);
+  if (!name?.tr) return { error: 'name zorunlu — en az Türkçesi: { "tr": "Kahvaltı Paketi" }.' };
   if (!(totalPrice > 0)) return { error: 'totalPrice pozitif olmalı (euro).' };
   if (rawItems.length < 2) return { error: 'items en az İKİ kalem içermeli — tek ürünlük paket, paket değildir.' };
 
@@ -714,8 +797,10 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
   const balanced = rebalanceAllocations(seed, targetCents);
 
   const payload: BundleDraftPayload = {
-    name: { tr: nameTr, ...(typeof args.nameFr === 'string' ? { fr: args.nameFr } : {}), ...(typeof args.nameDe === 'string' ? { de: args.nameDe } : {}) },
-    description: typeof args.descriptionTr === 'string' && args.descriptionTr.trim() ? { tr: args.descriptionTr.trim() } : null,
+    name,
+    // Açıklama da ÜÇ DİL (11.08): araç yalnız Türkçesini alıyordu ve paket formunun fr/de kutuları
+    // hep boş açılıyordu. Paket müşteri yüzeyine çıkan bir kayıt — vitrini Fransa.
+    description: localizedArg(args.description),
     totalPrice,
     serves: Number.isInteger(args.serves) ? (args.serves as number) : null,
     items: prepared.map((p, i) => ({
@@ -727,7 +812,7 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
     })),
   };
 
-  const queued = await queue('bundle_draft', payload, `${nameTr} — ${prepared.length} kalemlik paket, ${totalPrice.toFixed(2)} €`, args.reason);
+  const queued = await queue('bundle_draft', payload, `${name.tr} — ${prepared.length} kalemlik paket, ${totalPrice.toFixed(2)} €`, args.reason);
   return {
     ...queued,
     allocation: {
@@ -818,10 +903,10 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
 export async function proposeRecipeDraft(args: Record<string, unknown>) {
   const db = serviceDb();
   const rawItems = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
-  const nameTr = String(args.nameTr ?? '').trim();
-  const stepsTr = String(args.stepsTr ?? '').trim();
-  if (!nameTr) return { error: 'nameTr zorunlu — tarifin Türkçe adı.' };
-  if (!stepsTr) return { error: 'stepsTr zorunlu — hazırlanış adımları.' };
+  const name = localizedArg(args.name);
+  const steps = localizedArg(args.steps);
+  if (!name?.tr) return { error: 'name zorunlu — en az Türkçesi: { "tr": "Kuru Fasulye" }.' };
+  if (!steps?.tr) return { error: 'steps zorunlu — hazırlanış adımları, en az Türkçe: { "tr": "1. …" }.' };
   if (rawItems.length === 0) return { error: 'items boş — tarifin malzemeleri (varyant kimlikleriyle).' };
 
   const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(isUuid);
@@ -848,25 +933,35 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
   }
   if (problems.length > 0) return { error: `${problems.length} malzeme sorunu:`, problems };
 
-  const localized = (tr: string, fr: unknown, de: unknown) => ({
-    tr,
-    ...(typeof fr === 'string' && fr.trim() ? { fr: fr.trim() } : {}),
-    ...(typeof de === 'string' && de.trim() ? { de: de.trim() } : {}),
-  });
-
   const payload: RecipeDraftPayload = {
-    name: localized(nameTr, args.nameFr, args.nameDe),
-    description:
-      typeof args.descriptionTr === 'string' && args.descriptionTr.trim()
-        ? localized(args.descriptionTr.trim(), args.descriptionFr, args.descriptionDe)
-        : null,
-    steps: localized(stepsTr, args.stepsFr, args.stepsDe),
-    serves: typeof args.servesTr === 'string' && args.servesTr.trim() ? localized(args.servesTr.trim(), args.servesFr, args.servesDe) : null,
+    name,
+    description: localizedArg(args.description),
+    steps,
+    serves: localizedArg(args.serves),
+    // Üçü de tarif formunun kutusu (11.08): sorulmadıkları için boş kalıyorlardı.
+    duration: localizedArg(args.duration),
+    meal: localizedArg(args.meal),
+    pantry: localizedArg(args.pantry),
     items,
   };
 
-  const langs = ['tr', typeof args.nameFr === 'string' ? 'fr' : null, typeof args.nameDe === 'string' ? 'de' : null].filter(Boolean);
-  const queued = await queue('recipe_draft', payload, `"${nameTr}" tarifi — ${items.length} malzeme`, args.reason);
+  const langs = ['tr', name.fr ? 'fr' : null, name.de ? 'de' : null].filter(Boolean);
+  // Doldurulmayan kutular SAYILIR ve modele geri söylenir: tarif formunda karşılığı olan her alan
+  // boş kalırsa operatörün elle dolduracağı bir kutuya dönüşür. Model neyi atladığını görmeden
+  // düzeltemez — cevap "kuyruğa yazıldı" deyip susarsa eksik sessizce operatöre devrolur.
+  const blanks = (
+    [
+      ['description', payload.description],
+      ['duration', payload.duration],
+      ['serves', payload.serves],
+      ['meal', payload.meal],
+      ['pantry', payload.pantry],
+    ] as const
+  )
+    .filter(([, value]) => !value)
+    .map(([field]) => field);
+
+  const queued = await queue('recipe_draft', payload, `"${name.tr}" tarifi — ${items.length} malzeme`, args.reason);
   return {
     ...queued,
     languages: langs,
@@ -876,6 +971,12 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
       langs.length === 3
         ? 'Üç dil de dolu — onaydan sonra yayına alınabilir.'
         : `Yalnız ${langs.join('/')} dolu. Tarif üç dil dolmadan YAYINLANAMAZ; taslak olarak kalır.`,
+    ...(blanks.length > 0
+      ? {
+          emptyFields: blanks,
+          emptyFieldsNote: `Şu alanlar boş kaldı ve onay ekranında boş kutu olarak görünecek: ${blanks.join(' · ')}. Bilgin varsa öneriyi yeniden kur; yoksa yöneticiye hangilerini elle dolduracağını söyle.`,
+        }
+      : {}),
   };
 }
 

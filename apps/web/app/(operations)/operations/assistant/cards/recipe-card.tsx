@@ -24,6 +24,12 @@ export function RecipeCard({ payload, row }: { payload: RecipeDraftPayload; row:
   const steps = resolveLocalizedText(payload.steps, 'tr')
     .split('\n')
     .filter((line) => line.trim().length > 0);
+  // Süre · öğün · evden gerekenler (11.08) — üçü de tarif formunun kutusu, kartta da okunmalı:
+  // onay ekranında dolu görünen bir alanın kartta hiç anılmaması, kartı özet olmaktan çıkarır.
+  const duration = payload.duration ? resolveLocalizedText(payload.duration, 'tr') : '';
+  const meal = payload.meal ? resolveLocalizedText(payload.meal, 'tr') : '';
+  const serves = payload.serves ? resolveLocalizedText(payload.serves, 'tr') : '';
+  const pantry = payload.pantry ? resolveLocalizedText(payload.pantry, 'tr') : '';
 
   return (
     <>
@@ -33,8 +39,11 @@ export function RecipeCard({ payload, row }: { payload: RecipeDraftPayload; row:
 
       <Facts>
         <CardFact label="Malzeme" value={`${num(payload.items.length)} çeşit · ${num(totalQty(payload.items))} ad.`} />
-        <CardFact label="Hazırlanış" value={steps.length > 0 ? `${num(steps.length)} adım` : 'yazılmamış'} />
-        <CardFact label="Kaç kişilik" value={payload.serves ? resolveLocalizedText(payload.serves, 'tr') : '—'} />
+        <CardFact label="Hazırlanış" value={`${steps.length > 0 ? `${num(steps.length)} adım` : 'yazılmamış'}${duration ? ` · ${duration}` : ''}`} />
+        <CardFact label="Kaç kişilik" value={`${serves || '—'}${meal ? ` · ${meal}` : ''}`} />
+        {/* Evden gerekenler kararın kendisi değil ama kartta okunur: tarifin bizden alınmayan
+            malzemesi varsa müşteri onu evinde bulmak zorunda — onaylayan bunu görmeli. */}
+        <CardFact label="Evinizden" value={pantry || 'yazılmamış'} title={pantry || undefined} />
         <LocaleFact texts={[payload.name, payload.steps, payload.description]} />
       </Facts>
     </>

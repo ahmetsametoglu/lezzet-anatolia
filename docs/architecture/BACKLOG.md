@@ -145,6 +145,13 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Kurye teslimat ekranı
 - Kurye gün kapanışı + kasa mutabakatı
 - `wa.me` deep-link "yola çıktık" mesajı
+- **Posta kodu talebi ÜLKESİZ** (ölçüldü 11.08): `postal_code_demand` anahtarı yalnız `postal_code`,
+  oysa `delivery_zone_postal_code` anahtarı `(country, postal_code)` — posta kodu sınır ötesi
+  benzersiz değil (67000 hem Fransa'da hem Almanya'da var). Yani "şu koda talep geldi" sinyali hangi
+  ülkeden geldiğini söylemiyor ve `demand_signals` da söyleyemiyor; asistan bölge önerirken ülkeyi
+  ancak patrondan öğreniyor (`propose_zone_extend.country`). Bugün zarar YOK — dört bölgenin hiçbiri
+  karışık değil (üçü FR, biri DE) — ama ADR-002 sınır ötesi rotayı meşru sayıyor, yani karışık bölge
+  doğduğu gün yanlış ülkeye yazılan kod sessizce kapsam dışı kalır.
 
 ## 9. İade/hasar
 

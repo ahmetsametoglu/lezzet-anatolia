@@ -739,3 +739,59 @@ satırında.
     (on tipin ikişer örneği var, bu tip hiç yazılmamış).
     tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
     `assistant-preview.tsx` blokları o sırada düşecek.
+
+- [x] (22.12) **Alan denkliği: dilekçedeki her alan modele SORULMUŞ olmalı** *(kullanıcı kararı
+  11.08: "benzer çalışmayı her öneri modeli için çalışmalıyız — olabildiğince maksimum alan
+  doldurmasına veya alandan haberdar olmasına müsaade etmeliyiz")*
+  `touches: packages/types/src/entities/assistant-proposal.schema.ts · apps/backend/src/mcp/{server-factory,tools-propose,proposal.test}.ts · packages/application/src/assistant/apply.ts · apps/web/app/(operations)/operations/assistant/{assistant-preview.tsx,cards/}`
+  - **Durum:** yapıldı. İş 22.10'da tek tipte yaşanan bir sorudan doğdu: kampanya formu kuyruğun
+    içine gelince boş kutular göründü ve kullanıcı *"bunlardan asistanın haberi var mıydı?"* diye
+    sordu. Yoktu. Aynı soru on bir tipe birden soruldu.
+  - **Ölçüm ÜÇ SÜTUNLU** — ① hedef ekranın gerçek formu · ② payload şeması · ③ **MCP aracının girdi
+    şeması**. Kullanıcının gördüğü boş kutu ①'de, sebebi ③'te: kod alanı bekliyor, model onun
+    varlığından habersiz. **Boş kutu "asistan atladı" diye okunur; gerçek "asistana sorulmadı"dır.**
+  - **Yedi tipte açık vardı, dördü tamdı:**
+    - `recipe_draft` — `duration` · `meal` · `pantry` şemada HİÇ YOKTU (tarif formunun üç kutusu).
+      `pantry` özellikle asistanın işi: bizden alınmayan malzeme (tuz, su, yağ) satılabilir satır
+      değildir ama tarif onsuz yapılamaz.
+    - `stock_intake` — `date` (belge tarihi) ve `totalAmountCents` (faturanın kendi yazdığı toplam).
+      Tarihsiz kabul BUGÜNE yazılıyordu; oysa fatura genelde dünkü. Toplam ise mutabakat içindir:
+      bizim topladığımızla belgenin yazdığı arasındaki fark = nakliye, iskonto ya da okunamamış satır.
+      Araç bu farkı ölçüp modele geri söylüyor, kart da onaylayana yazıyor.
+    - `product_create` — varyantta `netWeightG`/`piecesCount`, üründe `shippable`. Üçü de ambalajda
+      yazılı. Etiket ("500 g") ile ölçü (500) ayrı alanlar: biri müşterinin okuduğu metin, öteki
+      kilo başı fiyatın ve kargo hesabının tabanı. `shippable` saklama satırından çıkar — "-18 °C"
+      yazan ürün kargoya verilemez; sorulmadığı için her ürün sessizce kargolanabilir doğuyordu.
+    - `money_movement` — **en pahalısı**: `counterAccountId` işleyicide OKUNUYORDU, araç girdisinde
+      hiç tanımlı değildi. Transfer önerisi kurulabiliyor, paranın gittiği hesap hep boş kalıyordu.
+      Artık kaynak gibi ADLA çözülüyor ve `type: 'transfer'` için ZORUNLU — hedefsiz transfer
+      uygulanınca "bir hesaptan çıkmış, hiçbir hesaba girmemiş" bir tutar bırakırdı.
+    - `bundle_draft` — açıklamanın yalnız Türkçesi soruluyordu; paket müşteri yüzeyine çıkıyor ve
+      vitrin Fransa.
+    - `zone_extend` — `country` hiç sorulmuyor, bölgenin İLK kodundan türetiliyordu; kodu olmayan
+      bölgede sabit `'FR'`e düşüyordu. Posta kodu sınır ötesi benzersiz değil (67000 iki ülkede de
+      var), yani yanlış ülkeye yazılan kod sessizce kapsama girmez. Sıra artık: modelin dediği →
+      bölgenin kodları → **deponun ülkesi** (bölge tek depoya bağlı, `DOMAIN §17`).
+    - Tam olanlar: `product_draft` · `featured_flag` · `batch_offer` · `discount_draft` (sonuncusu
+      22.10'da kapanmıştı).
+  - **`purchase_order` eksik SANILDI, ölçümle çürüdü:** `createDraft` fiyat verilmezse tedarikçi
+    eşlemesindeki son alıştan kendisi dolduruyor (`purchase-order.service.ts`). Sebebi kanıtlanmadan
+    müdahale edilmedi (`CLAUDE §0`).
+  - **Çok dilli alanlarda İKİ DESEN vardı, tekleşti:** `product_create`/`discount` nesne alıyordu
+    (`name: {tr,fr,de}`), `recipe`/`bundle` düz alan (`nameTr`, `nameFr`…). Tarife üç alan eklemek
+    düz desende dokuz yeni girdi demekti — araç 15'ten 24 alana çıkardı ve model doğru doldurmakta
+    zorlanırdı. İkisi nesne desenine çekildi.
+  - **Bilerek DIŞARIDA bırakılanlar iki ayrı gerekçeyle:** *asistan bilemez* (`sku` iç kodumuz,
+    `minStockQty` operatörün eşiği, `location`/raf fiziksel yerleşim) — uydurmasına kapı açmak boş
+    bırakmaktan kötü; *bilinçli duvar* (`isFeatured`, `status`, `isActive`, fiyat alanları) — taslak
+    doğma kuralı, asistan beyanı doldurur satışa çıkarmaz.
+  - **Kalıcı çare — denklik testi** (`proposal.test.ts`, 11 tip): payload'da olup araç girdisinde
+    karşılığı olmayan her alan ya araca eklenir ya **gerekçesiyle** kayda geçer. Kör bir kural
+    yazılamazdı, çünkü alanların bir kısmı gerçekten modelden gelmez (`warehouseCode` → `warehouseId`
+    çözümü, motorun hesapladığı `lines`). Test kırıldığında eksik alanı ADIYLA söylüyor — kırıldığı
+    doğrulandı (gerekçe silinince `counterAccountId` diye düştü, geri konunca 24/24 yeşil).
+  - **Ekranlar da güncellendi:** tarif kartı süre/öğün/evinizden okuyor, mal kabul kartı belge
+    tarihini ve fatura farkını yazıyor, para önizlemesi transferi ÜÇÜNCÜ bir hâl olarak gösteriyor
+    ("Gider" demek yer değiştiren parayı kaybedilmiş gibi okuturdu), ürün önizlemesi boyların
+    ölçüsünü ve kargo kararını basıyor. Doldurulmayan alan boş geçilmiyor, "yazılmadı" diye
+    yazılıyor (22.10 ilkesi: verilmemiş kararı gizlemek onu verilmiş gibi gösterir).

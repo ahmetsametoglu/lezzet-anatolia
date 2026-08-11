@@ -238,3 +238,77 @@ describe('kayıt eşliği — yazıp uygulayamama hâli olamaz', () => {
     expect(forbidden).toEqual([]);
   });
 });
+
+/**
+ * ─── ALAN DENKLİĞİ: DİLEKÇEDE OLAN HER ALAN MODELE SORULMUŞ MU (11.08) ───────
+ *
+ * ── NEDEN BU TEST VAR ───────────────────────────────────────────────────────
+ * Aynı arıza üç kez yaşandı ve üçünde de sessizdi: payload bir alan taşıyor, kart onu gösteriyor,
+ * uygulama onu yazıyor — ama MCP aracının girdi şemasında o alan HİÇ TANIMLI DEĞİL. Model alanın
+ * varlığından habersiz olduğu için hiç doldurmuyor; onay ekranında boş bir kutu görünüyor ve boş
+ * kutu **"asistan atladı" diye okunuyor**, oysa gerçek "asistana sorulmadı"ydı.
+ *
+ * En pahalısı `money_movement` idi: `counterAccountId` işleyicide okunuyordu, araç girdisinde yoktu
+ * — yani transfer önerisi kurulabiliyor ama paranın nereye gittiği hep boş kalıyordu.
+ *
+ * ── NEDEN OTOMATİK DEĞİL, BEYANLI ───────────────────────────────────────────
+ * "Her payload alanının araçta karşılığı olsun" diye kör bir kural yazılamaz: alanların bir kısmı
+ * MODELDEN GELMEZ, araç onları veritabanından çözer (`warehouseCode` → `warehouseId`) ya da motor
+ * hesaplar (`lines`, `allocatedUnitPrice`). Bu yüzden karşılığı olmayan her alan aşağıda GEREKÇESİYLE
+ * yazılı. Yeni bir alan eklendiğinde iki yoldan biri şart olur: ya araca da eklenir, ya buraya
+ * gerekçesi yazılır. Sessiz üçüncü yol kapalı — testi kırmadan alan eklenemez.
+ */
+describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçelidir', () => {
+  /** Payload'da olup araç girdisinde KARŞILIĞI OLMAYAN alanlar; değer = neden sorulmadığı. */
+  const DERIVED: Record<string, Record<string, string>> = {
+    batch_offer: {
+      variantId: 'batchId üzerinden partiden çözülür',
+      productName: 'katalogdan okunur',
+      warehouseCode: 'partinin deposu',
+      expiryDate: 'partinin kendi tarihi',
+      listPriceCents: 'fiyat tablosundan',
+      physicalQty: 'stoktan',
+    },
+    featured_flag: { name: 'kayıttan okunur', currentlyFeaturedCount: 'vitrin sayımı — araç hesaplar' },
+    purchase_order: {
+      warehouseId: 'warehouseCode ile bulunur',
+      supplierName: 'tedarikçi kaydından',
+      lines: 'ADETLER MOTORDAN — eşik altı eksiği hesaplanır, model veremez',
+    },
+    bundle_draft: { items: 'kalem listesi araçta var; payların dağıtımı motorda' },
+    stock_intake: { warehouseId: 'warehouseCode ile bulunur', supplierName: 'tedarikçi kaydından' },
+    money_movement: {
+      accountId: 'accountName ile bulunur',
+      counterAccountId: 'counterAccountName ile bulunur',
+    },
+    zone_extend: { zoneId: 'zoneName ile bulunur' },
+    product_create: {
+      categoryId: 'categoryName ile bulunur',
+      remainingGaps: 'tamlık ölçütü MOTORDAN (missingDeclarations)',
+    },
+    product_draft: {
+      productName: 'ürün kaydından okunur',
+      fields: 'araçta düz alanlar olarak sorulur (name · description · ingredients · …)',
+      currentFields: 'ALANLARIN BUGÜNKÜ HÂLİ — veritabanından, üzerine yazılanı göstermek için',
+      remainingGaps: 'tamlık ölçütü MOTORDAN',
+    },
+    discount_draft: { categoryId: 'scopeName ile bulunur', collectionId: 'scopeName ile bulunur' },
+    recipe_draft: { items: 'kalem listesi araçta var; ad ve boy katalogdan yazılır' },
+  };
+
+  for (const kind of Object.keys(PROPOSAL_PAYLOAD_SCHEMAS)) {
+    it(`${kind}: modele sorulmayan her alanın gerekçesi var`, () => {
+      const schema = PROPOSAL_PAYLOAD_SCHEMAS[kind as keyof typeof PROPOSAL_PAYLOAD_SCHEMAS];
+      const payloadFields = Object.keys((schema as unknown as { shape: Record<string, unknown> }).shape);
+
+      const tool = TOOLS.find((t) => t.name === `propose_${kind}`);
+      expect(tool, `propose_${kind} aracı yok`).toBeTruthy();
+      const toolFields = Object.keys((tool as { inputSchema: { properties: Record<string, unknown> } }).inputSchema.properties);
+
+      const unexplained = payloadFields.filter((field) => !toolFields.includes(field) && !DERIVED[kind]?.[field]);
+      // Kırıldıysa yapılacak iki şey var: alanı `propose_${kind}` girdisine ekleyin (model
+      // doldurabilsin), ya da yukarıdaki DERIVED kaydına neden sorulmadığını yazın.
+      expect(unexplained, `${kind}: bu alanlar dilekçede var ama modele sorulmuyor`).toEqual([]);
+    });
+  }
+});
