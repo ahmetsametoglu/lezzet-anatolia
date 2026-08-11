@@ -1829,7 +1829,15 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   deponun `resetPlaceNotices`ı boşken haber salmıyor (kardeşlerinin erken dönüşü) — duyuru boşuna
   dinleyici uyandırıyordu. Ana dosyanın act hijyeni ayrı borç: `BACKLOG-musteri` MB-38.
 
-  **5 · HAPTA ŞEHİR DE VAR, HAP SOLA YASLI, BAŞLIK "BÖLGE" DİYOR** (ikinci tur, aynı gün).
+  **5 · HAP KUTUNUN EN ÜSTÜNE, BAŞLIKTAN ÖNCEYE** (üçüncü tur). Sıra cümlenin mantığı: önce
+  "hangi yer için konuşuyoruz", sonra o yer hakkındaki hüküm. Hap eylem yuvasındayken hükümden
+  SONRA geliyordu. Kutu başlığın üstünü bilmiyordu — kite **`Note header`** yuvası eklendi
+  (`action`ın ikizi, aynı gerekçe: kontrolü kutunun DIŞINA koymak kutuyu bir cümleye indirir).
+  Yuvanın taşıdığı söz SIRADIR, o yüzden testi `toBeOnTheScreen` değil ağacın ÇOCUK SIRASI:
+  kutunun ilk çocuğu üst yuvadır. Öteki on çağıran değişmedi. Hap tek başına kalınca iki eşit
+  sütun da gereksizleşti ve söküldü; "Buraya da gelin" artık yığında tek başına.
+
+  **6 · HAPTA ŞEHİR DE VAR, HAP SOLA YASLI, BAŞLIK "BÖLGE" DİYOR** (ikinci tur, aynı gün).
   Etiket vitrin başlığının biçimine tam oturdu: `67000 STRASBOURG ▾`. Şehir sözleşmede `null`
   olabiliyor (tanınan kodun adı bilinmeyebilir) — o hâlde yalnız kod yazılır, uydurma yer tutucu
   basılmaz; iki iddia da bunu tutuyor. Hap ORTALI değil SOLA yaslı: kutunun başlığı ve cümlesi de
@@ -1845,7 +1853,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   ihtiyaç doğarsa iş `BACKLOG-musteri`ye açılır.
 
   **Doğrulama:** mobil typecheck rc=0 · eslint · knip (yeni ölü ihraç yok) ·
-  **84 suite / 597 test** yeşil.
+  **84 suite / 598 test** yeşil.
 
 - [x] (21.41) **ÇEKMECE YUKARIDAN TAŞIYORDU — müşterinin yazdığı kutu ekranın dışına kaçıyordu
   (kullanıcı bulgusu 11.08, cihazda ölçüldü).**
@@ -1882,11 +1890,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   *"sığmayan adım sessizce kırpılırdı"*). Tek ekranda kalması, aynı taşmanın öteki yedi çekmecede
   sürmesi demekti — kaydırma kaba taşındı, ekrandan kaldırıldı (CLAUDE §1).
 
+  **3 · KLAVYE AÇIKKEN ALT GÜVENLİ ALAN EKLENMEZ (iPhone bulgusu, aynı gün — düzeltmenin ikinci
+  turu).** Kullanıcı iOS'ta klavyenin hemen üstünde kullanılamaz bir şerit gördü ve ekran ilk
+  bakışta kesilmiş gibi duruyordu; ikinci bakışta **işlev kaybı olmadığı** anlaşıldı (içerik
+  kayıyor, Kaydet düğmesine ulaşılıyor) — kusur görüntüde, davranışta değil. Sebep: panelin alt
+  nefesi ana ekran çubuğu payını (`insets.bottom`) klavye açıkken de ekliyordu; o pay çubuğun
+  üstünü boş tutmak içindir, klavye zaten orayı kapatıyor. Android'de ölçü klavye açılınca sıfıra
+  düşüyor, iOS'ta düşmüyordu — koşul (`insets.ime > 0`) ikisini aynı davranışa getirdi.
+  **iOS'ta ÖLÇÜLMEDİ** (cihaz kullanıcıda); Android'de gerileme olmadığı doğrulandı.
+
   **Doğrulama:** mobil typecheck rc=0 · `customer-kit` + `components/ui` **25 suite / 142 test**
   yeşil · **cihazda ölçüldü** (OPPO CPH1907, yazı boyutu "Büyük"): düzeltmeden önce başlık ve kutu
   kesikti, sonra başlık · etiket · yazılan kutu · üç öneri + künye · posta kodu · şehir · uyarı ·
-  Kaydet düğmesi hepsi ekranda. Ekran görüntüleri alındı; **veritabanına yazılmadı** (Kaydet'e
-  dokunulmadı).
+  Kaydet düğmesi hepsi ekranda; alt nefes değişikliğinden sonra da aynı. Ekran görüntüleri alındı;
+  **veritabanına yazılmadı** (Kaydet'e dokunulmadı).
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

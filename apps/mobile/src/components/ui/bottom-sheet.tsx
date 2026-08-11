@@ -257,8 +257,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderTopRightRadius: theme.radius.card,
     paddingTop: theme.space.lg,
     paddingHorizontal: theme.space['5xl'],
-    // Şablonun 30 px'lik alt nefesi + cihazın alt güvenli alanı (ana ekran çubuğu).
-    paddingBottom: theme.space['8xl'] + rt.insets.bottom,
+    /* Şablonun 30 px'lik alt nefesi + cihazın alt güvenli alanı (ana ekran çubuğu).
+       KLAVYE AÇIKKEN GÜVENLİ ALAN EKLENMEZ (kullanıcı bulgusu 11.08, iPhone): o pay ana ekran
+       çubuğunun ÜSTÜNÜ boş tutmak içindir, klavye zaten o bölgeyi kapatıyor — eklendiğinde
+       klavyenin hemen üstünde kullanılamaz bir şerit kalıyor ve ekran ilk bakışta kesilmiş gibi
+       duruyor (içerik aslında kayıyor, işlev kaybı yok). Android'de ölçü klavye açılınca zaten
+       sıfıra düşüyor, iOS'ta düşmüyordu; koşul ikisini aynı davranışa getiriyor. */
+    paddingBottom: theme.space['8xl'] + (rt.insets.ime > 0 ? 0 : rt.insets.bottom),
     gap: theme.space['2xl'],
     /* TAVAN İKİ ŞEYİN KÜÇÜĞÜ (kullanıcı bulgusu 11.08):
        (1) `sheetMaxHeightRatio` — çekmece hissi: arkadan bir şerit görünsün diye ekranın bir
