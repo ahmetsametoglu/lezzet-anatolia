@@ -53,6 +53,14 @@ export interface LocalizedTextFieldProps {
   emphasis?: boolean;
   /** Vurgu düğmesinin yanındaki kısa açıklama (alana özgü). */
   emphasisHint?: string;
+  /**
+   * Alan KİLİTLİ — girdiler ve AI çeviri düğmesi kapanır, dil sekmeleri okunur kalır.
+   *
+   * Kaydetme sürerken ve karar verilmiş bir öneride gerekiyor (asistan kuyruğu, 22.14): düzenlenebilir
+   * görünen ama yazılmayacak bir kutu, hâlâ seçenekmiş gibi okunur. Sekmeleri kilitlemiyoruz — kilitli
+   * bir alanda bile hangi dilin dolu olduğuna bakılabilmeli.
+   */
+  disabled?: boolean;
 }
 
 export function LocalizedTextField({
@@ -72,6 +80,7 @@ export function LocalizedTextField({
   layout = 'tabs',
   emphasis,
   emphasisHint,
+  disabled = false,
 }: LocalizedTextFieldProps) {
   const [langState, setLangState] = useState<Locale>('tr');
   const [aiPending, startAi] = useTransition();
@@ -107,7 +116,7 @@ export function LocalizedTextField({
   const aiButton = (onClick: () => void) => (
     <button
       type="button"
-      disabled={aiPending || !trSource}
+      disabled={aiPending || !trSource || disabled}
       onClick={onClick}
       title={aiTitle}
       className="cursor-pointer whitespace-nowrap font-ops-body text-ops-xs font-semibold text-ops-olive disabled:cursor-not-allowed disabled:opacity-60"
@@ -143,9 +152,9 @@ export function LocalizedTextField({
                 labelAside={isSource || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, [l]: s[l] ?? value[l] })))}
               >
                 {multiline ? (
-                  <Textarea value={value[l] ?? ''} onChange={(e) => onChangeLocale(e.target.value)} rows={rows} placeholder={ph} onBlur={onBlur} maxLength={maxLength} />
+                  <Textarea value={value[l] ?? ''} onChange={(e) => onChangeLocale(e.target.value)} rows={rows} placeholder={ph} onBlur={onBlur} maxLength={maxLength} disabled={disabled} />
                 ) : (
-                  <Input value={value[l] ?? ''} onChange={(e) => onChangeLocale(e.target.value)} placeholder={ph} onBlur={onBlur} maxLength={maxLength} />
+                  <Input value={value[l] ?? ''} onChange={(e) => onChangeLocale(e.target.value)} placeholder={ph} onBlur={onBlur} maxLength={maxLength} disabled={disabled} />
                 )}
               </FieldShell>
             );
@@ -155,11 +164,11 @@ export function LocalizedTextField({
         <>
           {controlled ? null : <LocaleTabs value={lang} onChange={setLangState} filled={filledLocales(value)} />}
           {multiline && emphasis ? (
-            <EmphasisTextarea value={value[lang] ?? ''} onChange={setLangValue} rows={rows} placeholder={placeholderText} onBlur={onBlur} hint={emphasisHint} />
+            <EmphasisTextarea value={value[lang] ?? ''} onChange={setLangValue} rows={rows} placeholder={placeholderText} onBlur={onBlur} hint={emphasisHint} disabled={disabled} />
           ) : multiline ? (
-            <Textarea value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} rows={rows} placeholder={placeholderText} onBlur={onBlur} maxLength={maxLength} />
+            <Textarea value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} rows={rows} placeholder={placeholderText} onBlur={onBlur} maxLength={maxLength} disabled={disabled} />
           ) : (
-            <Input value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} placeholder={placeholderText} onBlur={onBlur} maxLength={maxLength} />
+            <Input value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} placeholder={placeholderText} onBlur={onBlur} maxLength={maxLength} disabled={disabled} />
           )}
         </>
       )}

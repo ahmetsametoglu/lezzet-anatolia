@@ -6,9 +6,11 @@ import {
   type AssistantProposalKind,
   type BatchOfferPayload,
   type DiscountDraftPayload,
+  type ProductDraftPayload,
 } from '@lezzet/types';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
+import { saveProductDeclarationAction } from '@/lib/catalog/product-actions';
 import {
   discountBlocked,
   discountInputOf,
@@ -20,6 +22,13 @@ import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { BatchOfferBody } from './bodies/batch-offer-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
+import {
+  ProductDraftBody,
+  productDraftBlocked,
+  productDraftInput,
+  productDraftValuesFrom,
+  type ProductDraftValues,
+} from './bodies/product-draft-body';
 
 /**
  * ÖNERİ GÖVDELERİ — kuyruğun içinde karar verilen tiplerin kaydı (22.8).
@@ -144,6 +153,30 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     applyLabel: 'İndirimi kaydet',
     appliedNote:
       'İndirim kuralı yazıldı — Fiyatlar → Kuponlar listesinde. Aktif bıraktıysanız koşulları tutan sepetlere işlemeye başladı.',
+  }),
+
+  product_draft: defineBody<ProductDraftPayload, ProductDraftValues>({
+    parse: parseWith<ProductDraftPayload>('product_draft'),
+    // Açılış hâli dilekçenin kendisi: asistanın yazdığı her alan SEÇİLİ gelir. Seçimi kaldırmak
+    // operatörün kararıdır ve "bu alana hiç dokunma" demektir — boşaltmak değil.
+    initial: (payload) => productDraftValuesFrom(payload),
+    render: ({ payload, subject, draft, onDraft, disabled, readOnly }) => (
+      <ProductDraftBody
+        payload={payload}
+        subject={subject}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    blocked: productDraftBlocked,
+    // Kapı YALNIZ seçili alanları alır; ürün ekranının `updateProductAction`ı değil, beyan yazan
+    // ayrı eylem (o biri varyantları da senkronlar — asistanın hiç bilmediği bir küme).
+    submit: (payload, values, proposalId) =>
+      saveProductDeclarationAction(payload.productId, productDraftInput(values), proposalId),
+    applyLabel: 'Seçilenleri yaz',
+    appliedNote: 'Beyan yazıldı — ürün ekranından görülebilir. Ürün taslakta kaldı; yayın ayrı bir karar.',
   }),
 };
 

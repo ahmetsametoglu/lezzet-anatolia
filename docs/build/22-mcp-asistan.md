@@ -868,3 +868,34 @@ satırında.
       gideri 150 €" ve ne `supplierName` ne `counterpartyName` dolu — para kime ödendi kayıtsız.
       **Öneri:** gider tipinde alıcı hiç yoksa araç cevabında uyarsın; bugün sessiz geçiyor ve
       alıcısı olmayan gider kaydı yarımdır.
+
+- [x] (22.14) **Üçüncü gövde: ürün beyanı — ALAN ALAN karar** *(kullanıcı kararı 11.08: "daha önce
+  tecrübeli olduğumuz konuyla başlayalım… ürünle alakalı bilgilerin güncellendiği öneriler" + form
+  şekli seçimi: **alan alan seçim + düzenleme**)*
+  `touches: apps/web/app/(operations)/operations/assistant/{assistant-body.tsx,bodies/product-draft-body.tsx} · apps/web/lib/catalog/product-actions.ts · apps/web/components/operation/form/{nutrition-field,form-nutrition,localized-text-field,multi-select,emphasis-textarea}.tsx`
+  - **Durum:** yapıldı. Kuyruk içinde karar verilen üçüncü tip (`batch_offer` · `discount_draft`'tan
+    sonra) ve ilk kez karar TEK bir şey değil.
+  - **NEDEN "hepsi ya da hiçbiri" yetmedi:** fırsatta karar bir fiyat, kampanyada bir kuraldı.
+    Burada yedi ayrı alan var ve **her birinin ayrı riski**: asistanın açıklaması iyi olabilir ama
+    alerjen satırı şüpheli, ya da tersi. Tek düğme operatörü *"iyi olanı almak için şüpheliyi de al"*
+    ikilemine sokuyordu — ve `updateDetails` sürüm tutmadığı için yanlış giden alan geri gelmiyordu.
+  - **Seçim kaldırmak "boşalt" DEĞİL "dokunma" demek.** Kapı yalnız verilen alanlara dokunuyor
+    (`saveProductDeclarationAction`); seçilmeyen alan girdiye hiç girmiyor. İkisi karıştırılsaydı
+    reddedilen bir öneri, dolu bir alanı silen bir onaya dönerdi.
+  - **Ayrı bir eylem yazıldı ve gerekçesi somut:** ürün sekmesinin `updateProductAction`ı ürünün
+    TAMAMINI yazar ve **varyantları senkronlar**. Kuyruğu ona bağlamak, asistanın hiç bilmediği bir
+    kümeyi (varyant listesi) her onayda yeniden yazmak olurdu.
+  - **Yeni alan komponenti YAZILMADI** — metinler `LocalizedTextField`, alerjen/iz `MultiSelect`,
+    besin künyesi `NutritionField`. Sonuncusu bu iş için RHF sarmalayıcısından ayrıldı
+    (`nutrition-field` + ince `form-nutrition`): kopyalansaydı kJ↔kcal çevrimi, satırların yasal
+    sırası ve "0 bir beyandır" ayrımı bir gün iki yüzeyde ayrışırdı. Desen `LocalizedTextField`'ın
+    kendi künyesinde zaten verilmişti.
+  - **Üç ortak komponente `disabled` eklendi** (`LocalizedTextField` · `MultiSelect` ·
+    `EmphasisTextarea`) — hiçbirinde yoktu. Kilitli `MultiSelect` çipinden "✕" işareti KALKIYOR:
+    tıklanamayan bir kaldırma işareti yalan söyler.
+  - **Arşiv uydurmuyor (iki yerden düzeltildi).** Karar verilmiş öneride form `initial(payload)` ile
+    yeniden açılıyor, yani anahtarlar "hepsi seçili" dönerdi — oysa operatör yarısını seçmiş olabilir.
+    ① `readOnly` hâlinde seçim anahtarı hiç çizilmiyor; ② yazılan alan adları kuyruğun `result`ına
+    kaydediliyor. Yalnız `productId` yazsaydık "öneri uygulandı" derdik ama hangi alanların gerçekten
+    yazıldığını hiçbir yerden okuyamazdık.
+  - **BEKLEYEN(22.14):** ekran doğrulaması kullanıcıda — kuyrukta iki `product_draft` önerisi var.

@@ -44,6 +44,12 @@ interface MultiSelectProps<T extends string> {
   loading?: boolean;
   /** Sonuç yokken gösterilecek cümle. */
   emptyText?: string;
+  /**
+   * Seçim KİLİTLİ — çiplerin kaldırma davranışı ve "+ ekle" tetikleyicisi kapanır, seçilenler
+   * okunur kalır. Kilitliyken listeyi hiç çizmemek, o alanın neyi taşıdığını saklardı (asistan
+   * kuyruğu 22.14: seçilmemiş alan da görünür, ama düzenlenemez).
+   */
+  disabled?: boolean;
 }
 
 export function MultiSelect<T extends string>({
@@ -56,6 +62,7 @@ export function MultiSelect<T extends string>({
   onSearch,
   loading = false,
   emptyText = 'Sonuç yok',
+  disabled = false,
 }: MultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -79,14 +86,22 @@ export function MultiSelect<T extends string>({
         : selected.map((v) => {
             const o = optionOf(v);
             return (
-              <Chip key={v} active onClick={() => onChange(selected.filter((x) => x !== v))}>
+              <Chip key={v} active onClick={disabled ? undefined : () => onChange(selected.filter((x) => x !== v))}>
                 {o?.imageUrl !== undefined ? <Thumbnail src={o.imageUrl} alt="" size={18} iconSize={10} className="!rounded-[5px]" /> : null}
-                {o?.label ?? v} ✕
+                {/* Kilitliyken kaldırma işareti YAZILMAZ: tıklanamayan bir "✕" yalan söyler. */}
+                {o?.label ?? v}
+                {disabled ? '' : ' ✕'}
               </Chip>
             );
           })}
 
-      {remote || options.length > selected.length ? (
+      {disabled ? (
+        // Kilitli ve hiç seçim yoksa alan boş bir satır olarak kalmasın: "yok" demek, "bu alanda
+        // bir şey var ama göstermiyorum"dan farklıdır.
+        selected.length === 0 ? (
+          <span className="font-ops-body text-ops-sm text-ops-faint">—</span>
+        ) : null
+      ) : remote || options.length > selected.length ? (
         <>
           <div ref={anchorRef} className="inline-flex">
             <Chip

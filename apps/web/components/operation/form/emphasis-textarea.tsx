@@ -23,9 +23,11 @@ interface EmphasisTextareaProps {
   onBlur?: () => void;
   /** Düğmenin yanındaki kısa açıklama — alana göre değişir (alerjen vurgusu ↔ önemli uyarı). */
   hint?: string;
+  /** Alan kilitli: metin ve vurgu düğmesi kapanır, önizleme okunur kalır. */
+  disabled?: boolean;
 }
 
-export function EmphasisTextarea({ value, onChange, rows = 4, placeholder, onBlur, hint }: EmphasisTextareaProps) {
+export function EmphasisTextarea({ value, onChange, rows = 4, placeholder, onBlur, hint, disabled = false }: EmphasisTextareaProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const apply = () => {
@@ -49,15 +51,16 @@ export function EmphasisTextarea({ value, onChange, rows = 4, placeholder, onBlu
           type="button"
           onMouseDown={(e) => e.preventDefault()} // odak textarea'da kalsın → seçim kaybolmasın
           onClick={apply}
+          disabled={disabled}
           title="Seçili metni vurgula"
-          className="grid h-[20px] w-[20px] cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong font-ops-display text-ops-xs font-bold text-ops-strong transition-colors hover:border-ops-olive hover:text-ops-olive"
+          className="grid h-[20px] w-[20px] cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong font-ops-display text-ops-xs font-bold text-ops-strong transition-colors hover:border-ops-olive hover:text-ops-olive disabled:cursor-not-allowed disabled:opacity-60"
         >
           B
         </button>
         {hint ? <span className="font-ops-body text-ops-micro text-ops-faint">{hint}</span> : null}
       </div>
 
-      <Textarea textareaRef={ref} value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} onBlur={onBlur} />
+      <Textarea textareaRef={ref} value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} onBlur={onBlur} disabled={disabled} />
 
       {value.trim() ? (
         <div className="rounded-ops-card border border-ops-line-soft bg-ops-subtle px-3 py-2">
