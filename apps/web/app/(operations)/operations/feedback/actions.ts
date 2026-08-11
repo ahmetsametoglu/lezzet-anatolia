@@ -52,7 +52,10 @@ function rejectionText(reason: string): string {
 export async function moderateReviewAction(reviewId: string, to: Exclude<ReviewStatus, 'pending'>): Promise<ActionResult<null>> {
   try {
     const staff = await requireAdmin();
-    const result = await moderateReview({ reviewId, to, moderatorId: staff.id });
+    // PROFİL kimliği: `product_feedback.moderated_by` `user_profiles`'a FK'li
+    // (`0027_product_feedback.sql`). Auth kimliği yazılırsa satır `23503` ile reddedilir — aynı
+    // hata asistan kuyruğunda ölçüldü (11.08), süpürmede burası da çıktı (`lib/guard` künyesi).
+    const result = await moderateReview({ reviewId, to, moderatorId: staff.profileId });
     if (!result.ok) return { data: null, error: rejectionText(result.reason) };
 
     // Sayfa tazelenir çünkü karar İKİ yeri birden değiştirir: kart kuyruktan düşer ve sekme rozeti
@@ -79,7 +82,12 @@ export async function adjustPointsAction(input: { customerId: string; delta: num
 
   try {
     const staff = await requireAdmin();
-    const result = await adjustPointsManually({ customerId: input.customerId, points: input.delta, note: reason, staffId: staff.profileId });
+    const result = await adjustPointsManually({
+      customerId: input.customerId,
+      points: input.delta,
+      note: reason,
+      staffId: staff.profileId,
+    });
     if (!result.ok) return { data: null, error: rejectionText(result.reason) };
 
     revalidatePath(FEEDBACK_PATH);
@@ -96,10 +104,7 @@ export async function adjustPointsAction(input: { customerId: string; delta: num
  * imleci geri verir. `now` burada alınır — kuyruk saatlerce açık kalabilir ve ilk sayfanın `now`'u
  * ile devam sayfasınınki arasındaki fark yaş etiketlerinde birikirdi.
  */
-export async function loadMoreReviewsAction(
-  status: ReviewStatus,
-  cursor: KeysetCursor,
-): Promise<ActionResult<Page<ModerationCardView>>> {
+export async function loadMoreReviewsAction(status: ReviewStatus, cursor: KeysetCursor): Promise<ActionResult<Page<ModerationCardView>>> {
   try {
     await requireAdmin();
     const page = await listModerationQueue(status, cursor, DEFAULT_PAGE_SIZE);

@@ -4,20 +4,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { LocalizedText, ProductDraftPayload } from '@lezzet/types';
-import {
-  ProductFormPanels,
-  ProductFormTabs,
-  useProductFormFields,
-} from '@/components/operation/form/product-form';
+import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/components/operation/form/product-form';
 import {
   ProductFormSchema,
   buildDefaults,
   type ProductFormSource,
   type ProductFormValues,
 } from '@/components/operation/form/product-form/schema';
+import { ProductPhotos } from '@/components/operation/form/product-form/photos';
+import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
+import { uploadProductImageAction } from '@/lib/catalog/product-photo-actions';
 import type { ProductFormTab } from '@/components/operation/form/product-form/types';
 import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
-import { ProposalAside } from '@/components/operation/ui/proposal-aside';
+import { ProposalAside, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { DECLARATION_FIELD_LABEL } from '../assistant-labels';
@@ -72,6 +71,8 @@ interface ProductDraftBodyProps {
   payload: ProductDraftPayload;
   subject: ProposalSubject | null;
   options: AssistantFormOptions;
+  /** Teknik künye — dilekçe sütununun "Metadata" görünümü basıyor (11.08). */
+  meta: ProposalMeta;
   values: ProductFormValues;
   onChange: (next: ProductFormValues) => void;
   disabled: boolean;
@@ -79,7 +80,7 @@ interface ProductDraftBodyProps {
   readOnly: boolean;
 }
 
-export function ProductDraftBody({ payload, subject, options, values, onChange, disabled, readOnly }: ProductDraftBodyProps) {
+export function ProductDraftBody({ payload, subject, options, meta, values, onChange, disabled, readOnly }: ProductDraftBodyProps) {
   const product = options.products[payload.productId] ?? null;
   const filled = useMemo(() => productDraftFilled(payload), [payload]);
   // Sekme YEREL: form içi bir görünüm tercihi, kararın parçası değil — çerçevenin taslağına girmez.
@@ -101,13 +102,36 @@ export function ProductDraftBody({ payload, subject, options, values, onChange, 
 
   const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
 
+  /**
+   * GÖRSEL BLOĞU DA VAR — form ürün ekranındakinin BİREBİR aynısı (kullanıcı kararı 11.08).
+   *
+   * Bir tur bu slot `null` geçiliyordu: galeri canlı yazar (yükleme, sıralama, kapak seçimi anında
+   * kaydedilir) ve "kuyruk hiçbir şeyi kendi yazmaz" vaadini deldiği düşünülmüştü. Kullanıcı ekranda
+   * gördü ve kaldırttı — *"eğer ben sistemde bir form kullanıyorsam o formu mümkünse bire bir
+   * kopyala. Code duplication olmasın, ama görüntüde bazı şeyleri kırpma."*
+   *
+   * **Vaat de zarar görmüyor:** galeri ÖNERİYİ uygulamıyor, ürünün fotoğraflarını yönetiyor —
+   * operatörün kendi elinin işi, tıpkı ürün ekranındaki gibi. Kuyruğun onaya bağladığı şey
+   * asistanın DİLEKÇESİ; oraya dokunan tek yol hâlâ alt bardaki düğme.
+   */
+  const [crop, setCrop] = useImageCrop(form);
   const fields = useProductFormFields({
     control: form.control,
     watch: form.watch,
     categories: options.categories,
     onAiTranslate: aiTranslate,
-    // Galeri YOK: canlı yazan bir blok, kuyruğun içinde olmamalı (ortak komponentin künyesi).
-    photosSlot: null,
+    photosSlot:
+      product === null ? null : (
+        <ProductPhotos
+          productId={payload.productId}
+          coverUrl={product.imageUrl}
+          coverCrop={crop}
+          onCoverCropChange={setCrop}
+          // Karar VERİLMİŞ öneride yükleme kapalı: arşiv satırı okunur bir kayıttır, oradan dosya
+          // yazmak "olup bitmiş" bir kararı değiştirmek gibi okunurdu.
+          uploadCover={readOnly ? undefined : (fd) => uploadProductImageAction(payload.productId, fd)}
+        />
+      ),
     filled: readOnly ? undefined : filled,
   });
 
@@ -128,28 +152,39 @@ export function ProductDraftBody({ payload, subject, options, values, onChange, 
   // ── İKİ SÜTUN, İKİ AYRI KAYDIRMA (kullanıcı kararı 11.08) ──────────────────
   // "O bölümün scroll'u ayrı olsun, form tarafının scroll'u ayrı olsun." Tek kaydırma kolonunda
   // dilekçe sütunu formu aşağı itiyordu: formun altındaki varyant tablosuna inmek için önce
-  // dilekçenin sonuna kadar geçmek gerekiyordu, oysa ikisi yan yana duran ayrı okumalar. Yükseklik
-  // `70vh` ile sınırlı — diyalog kabuğu zaten `86vh`, kalanını başlık ve alt bar alıyor.
+  // dilekçenin sonuna kadar geçmek gerekiyordu, oysa ikisi yan yana duran ayrı okumalar.
+  //
+  // ── DIŞ KART KALKTI, YÜKSEKLİK DİYALOGTAN GELİYOR (11.08) ──────────────────
+  // Bir tur burada üçüncü bir kart daha vardı (`rounded-ops-card … p-3.5`) ve iki panel onun içinde
+  // duruyordu: kart içinde kart, iki kenarlık, iki dolgu — kullanıcının tespiti *"kart içinde kart
+  // şeklinde görünüyor"*. Kenarlık zaten panellerin kendisinde.
+  //
+  // Yükseklik de artık SABİT DEĞİL (`h-[68vh]` gitti): satır `flex-auto` ile diyaloğun gövdesinden
+  // pay alıyor. Sabit `vh` iki arızayı birden doğuruyordu — diyalog kabuğu `86vh`, gövdenin payı
+  // ondan küçük; 68vh + gerekçe kutusu + teknik döküm toplamı taşıyor ve DİYALOG da kayıyordu.
+  // İki kaydırma iç içe girince ne form ne dilekçe sonuna kadar okunabiliyordu. Şimdi kaydıran
+  // yalnız iki sütun: gövde taşmıyor, satır kalan boşluk kadar.
   return (
-    <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
-      {/* `flex-wrap` YOK ve yükseklik SABİT (`h-`, `max-h-` değil) — ikisi de kaydırmanın koşulu.
-          Sarmalayan bir flex kabında çocuklar kabın yüksekliğine gerilmez, doğal boylarında kalır;
-          `max-height` de yalnız bir tavandır, çocuğa aktarılacak bir yükseklik vermez. İkisi
-          birleşince `overflow-y-auto` hiç devreye girmiyordu (ölçüldü 11.08: iki sütun da
-          kaydırılamıyordu). Sabit yükseklik + `min-h-0` çocuğa gerçek bir sınır verir. */}
-      <div className="flex h-[68vh] items-stretch gap-4">
-        <div className="flex min-h-0 min-w-[38rem] flex-[3] basis-0 flex-col gap-3 overflow-y-auto rounded-ops-card border border-ops-line bg-ops-subtle p-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Ürün formu</span>
-            <ProductFormTabs value={tab} onChange={setTab} />
-          </div>
+    <div className="flex min-h-0 flex-auto items-stretch gap-4">
+      <div className="flex min-h-0 min-w-[38rem] flex-[3] basis-0 flex-col gap-3 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+        {/* Satış durumu seçicisi BURADA YOK ve olmayacak (kullanıcı kararı 11.08): kuyruk ürünün
+            İÇERİĞİNİ yazar, satış eksenine dokunmaz. Ürün pasifse pasif, aktifse aktif kalır — form
+            mevcut durumu okuyup aynısını geri gönderiyor. */}
+        <div className="flex flex-none flex-wrap items-baseline justify-between gap-3">
+          <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Ürün formu</span>
+          <ProductFormTabs value={tab} onChange={setTab} />
+        </div>
 
+        {/* Kaydıran kap SEKME BARININ ALTI, panelin kendisi değil: bar sabit kalmalı ki form
+            kaydırılırken "Ürün ↔ Beyan" geçişi ekrandan çıkmasın (`ProductFormTabs` künyesi).
+            `-mr-3 pr-3` çubuğa kendi şeridini açıyor — dilekçe sütunuyla aynı gerekçe
+            (`proposal-aside` künyesi): overlay çubuk kutuların sağ kenarına biniyordu. */}
+        <div className="-mr-3 flex min-h-0 flex-auto flex-col overflow-y-auto pr-3">
           {product === null ? (
             // Kayıt okunamadıysa FORM AÇILMAZ: boş bir formla kaydetmek, dokunulmamış alanları
             // sıfırlamak olurdu (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
             <span className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5 font-ops-body text-ops-base text-ops-amber-dark">
-              Ürünün bugünkü kaydı okunamadı — silinmiş olabilir. Bu öneri uygulanamaz; ürün ekranından
-              doğrulayın.
+              Ürünün bugünkü kaydı okunamadı — silinmiş olabilir. Bu öneri uygulanamaz; ürün ekranından doğrulayın.
             </span>
           ) : (
             // Kilit TEK yerden: `fieldset` bütün girdileri HTML'in kendi mekanizmasıyla kapatır.
@@ -159,22 +194,23 @@ export function ProductDraftBody({ payload, subject, options, values, onChange, 
             </fieldset>
           )}
         </div>
-
-        {/* Öne çıkan iki satır + dilekçenin TAMAMI (22.15). Üzerine yazma sayısı künyede duruyor
-            çünkü payload'ın kendisinden okunmuyor: iki nesnenin karşılaştırmasından çıkıyor. */}
-        <ProposalAside
-          subject={subject}
-          fallbackTitle={payload.productName}
-          facts={[
-            {
-              label: 'Asistanın yazdığı',
-              value: filled.size > 0 ? [...filled].map((k) => DECLARATION_FIELD_LABEL[k as string] ?? k).join(' · ') : 'yok',
-            },
-            { label: 'Üzerine yazılan', value: overwriteText(payload) },
-          ]}
-          payload={payload}
-        />
       </div>
+
+      {/* Öne çıkan iki satır + dilekçenin TAMAMI (22.15). Üzerine yazma sayısı künyede duruyor
+          çünkü payload'ın kendisinden okunmuyor: iki nesnenin karşılaştırmasından çıkıyor. */}
+      <ProposalAside
+        subject={subject}
+        fallbackTitle={payload.productName}
+        facts={[
+          {
+            label: 'Asistanın yazdığı',
+            value: filled.size > 0 ? [...filled].map((k) => DECLARATION_FIELD_LABEL[k as string] ?? k).join(' · ') : 'yok',
+          },
+          { label: 'Üzerine yazılan', value: overwriteText(payload) },
+        ]}
+        payload={payload}
+        meta={meta}
+      />
     </div>
   );
 }

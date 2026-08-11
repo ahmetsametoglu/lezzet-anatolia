@@ -36,11 +36,16 @@ import type { ProductFormFields, ProductFormTab } from './types';
  * kararları farklı: ürün ekranı "ürünü kaydet" der, kuyruk "öneriyi uygula" der ve kuyruk satırını
  * da kapatır.
  *
- * ── GALERİ SLOT, ALAN DEĞİL ─────────────────────────────────────────────────
+ * ── GALERİ SLOT, ALAN DEĞİL — AMA İKİ YÜZEYDE DE VAR ────────────────────────
  * Fotoğraf bloğu (`ProductPhotos`) CANLI yazar — yükleme, sıralama, kapak seçimi anında kaydedilir
- * ve forma bağlı değildir. Kuyruğun içinde böyle bir blok olmamalı: onay beklemeyen bir yazma yolu,
- * "kuyruk hiçbir şeyi kendi yazmaz" vaadini deler. Bu yüzden alan olarak değil SLOT olarak geliyor;
- * kuyruk `null` veriyor.
+ * ve formun "kaydet"ine bağlı değildir. Bu yüzden alan olarak değil SLOT olarak geliyor: kabı
+ * kuran taraf onu kendi verileriyle (ürün kimliği, kapak adresi, yükleme kapısı) örüyor.
+ *
+ * Bir tur kuyruk bu slotu `null` veriyordu — "onay beklemeyen bir yazma yolu kuyruğun vaadini
+ * deler" diye. Kullanıcı ekranda gördü ve kaldırttı (11.08): *"eğer ben sistemde bir form
+ * kullanıyorsam o formu mümkünse bire bir kopyala. Code duplication olmasın, ama görüntüde bazı
+ * şeyleri kırpma."* Vaat de zarar görmüyor: galeri ÖNERİYİ uygulamıyor, ürünün fotoğraflarını
+ * yönetiyor — operatörün kendi elinin işi. Kuyruğun onaya bağladığı şey asistanın DİLEKÇESİ.
  */
 
 interface ProductFormFieldsOptions {
@@ -143,8 +148,30 @@ export function useProductFormFields({
         options={categories.map((c) => ({ value: c.id, label: c.name }))}
       />
     ),
-    vat: <FormMultiToggle control={control} name="vatRate" label="KDV" required options={[{ key: '5.5', label: '%5,5' }, { key: '20', label: '%20' }]} />,
-    dateType: <FormMultiToggle control={control} name="dateType" label="Son tarih tipi" required options={[{ key: 'DLC', label: 'DLC · güvenlik' }, { key: 'DDM', label: 'DDM · kalite' }]} />,
+    vat: (
+      <FormMultiToggle
+        control={control}
+        name="vatRate"
+        label="KDV"
+        required
+        options={[
+          { key: '5.5', label: '%5,5' },
+          { key: '20', label: '%20' },
+        ]}
+      />
+    ),
+    dateType: (
+      <FormMultiToggle
+        control={control}
+        name="dateType"
+        label="Son tarih tipi"
+        required
+        options={[
+          { key: 'DLC', label: 'DLC · güvenlik' },
+          { key: 'DDM', label: 'DDM · kalite' },
+        ]}
+      />
+    ),
     shelfLife: <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
     allergens: (
       <FormMultiSelect
@@ -207,6 +234,10 @@ export function useProductFormFields({
     ),
     // Varyant adı bir ÜRÜN ADIDIR ("1 kg kutu"), açıklama değil.
     variants: <VariantEditor control={control} onAiTranslate={onAiTranslate('ad')} />,
+    // DURUM SEÇİCİ BURADA DEĞİL (kullanıcı kararı 11.08). Bir tur ortak alana taşınmıştı; kullanıcı
+    // geri aldırdı ve gerekçe kurgunun kendisi: **kuyruk ürünün İÇERİĞİNİ yazar, satış eksenine
+    // dokunmaz.** Ürün pasifse pasif, aktifse aktif kalır — form mevcut durumu okuyup aynısını geri
+    // gönderir. Seçici ürün ekranının alt barında kalıyor; yayına almak oranın kararı.
     shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,

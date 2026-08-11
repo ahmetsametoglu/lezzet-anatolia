@@ -108,8 +108,7 @@ export const KIND_META = {
   },
   money_movement: {
     label: 'Para',
-    impact:
-      'Muhasebe defterine bir hareket yazılır ve hesap bakiyesi değişir. Kayıt SİLİNMEZ — düzeltmesi ters kayıtladır.',
+    impact: 'Muhasebe defterine bir hareket yazılır ve hesap bakiyesi değişir. Kayıt SİLİNMEZ — düzeltmesi ters kayıtladır.',
     tables: ['money_movement'],
     // Silinemeyen bir defter satırı: tutar ve hesap onaydan önce görülüp düzeltilebilmeli.
     mode: 'handoff',
@@ -141,9 +140,19 @@ export const KIND_META = {
     // ambalaj fotoğrafından okuma senaryosuyla o alanlar açıldı (gıda duvarı şemadan ekrana taşındı).
     // Bayat bir etki cümlesi, olmayan bir güvenceyi vaat eder.
     impact:
-      'Ürünün beyan alanları güncellenir ama ürün TASLAKTA KALIR — satışa çıkarmak bu yoldan verilemez. DOLU bir alan yazılırsa eskisi KAYBOLUR (metinlerde sürüm tutulmuyor).',
+      'Ürünün kaydı kuyruktaki formdan güncellenir — kategori, beyanlar ve varyantlar onaydan ÖNCE elinizin altında. SATIŞ DURUMU DEĞİŞMEZ: pasifse pasif, satıştaysa satışta kalır. DOLU bir alan yazılırsa eskisi KAYBOLUR (metinlerde sürüm tutulmuyor).',
     tables: ['product'],
-    mode: 'draft_then_edit',
+    // ── `draft_then_edit` DEVRİ KAPANDI (kullanıcı kararı 11.08) ────────────
+    // Eski cümle şuydu: *"uygulanınca kayıt PASİF doğar; ince ayar ve yayına alma kendi ekranının
+    // işi."* 22.14'te ürün ekranının KENDİ formu kuyruğa taşınmıştı, yani cümle olmayan bir kısıtı
+    // anlatıyordu ve kullanıcı bunu ekranda gördü (*"burada her şeyi yapmıyor muyuz, neden böyle bir
+    // uyarı var?"*). Devir `discount_draft`ınkiyle aynı gerekçe: pasif doğurmanın sebebi operatörün
+    // formu GÖRMEMESİYDİ, artık görüyor.
+    //
+    // **Ama satış ekseni yine kuyruğun DIŞINDA** (kullanıcı kararı, aynı gün): bir tur durum seçicisi
+    // de forma taşınmıştı, geri alındı. Kuyruk ürünün İÇERİĞİNİ yazar; yayına almak ürün ekranının
+    // kararı. Form mevcut durumu okuyup aynısını geri gönderdiği için bu eksen hiç oynamıyor.
+    mode: 'inline',
     target: 'product',
     resultKey: 'productId',
   },
@@ -187,8 +196,7 @@ export const KIND_META = {
   },
   recipe_draft: {
     label: 'Tarif',
-    impact:
-      'Tarif PASİF doğar. Üç dil dolmadan yayına alınamaz; malzeme ve adım düzenlemesi tarif ekranında yapılır.',
+    impact: 'Tarif PASİF doğar. Üç dil dolmadan yayına alınamaz; malzeme ve adım düzenlemesi tarif ekranında yapılır.',
     tables: ['recipe', 'recipe_item'],
     mode: 'draft_then_edit',
     target: 'recipe',
@@ -258,13 +266,18 @@ export function impactOf(kind: AssistantProposalKind, payload: unknown): string 
         : `Onaylansa bile şu beyanlar EKSİK kalır: ${gaps.map((g) => DECLARATION_GAP_LABELS[g as DeclarationGap] ?? g).join(' · ')} — eksik beyanlı ürün satışa çıkamaz.`;
     if (kind === 'product_create') return `${base} ${tail}`;
     const fields = p.fields && typeof p.fields === 'object' ? Object.keys(p.fields as Record<string, unknown>) : [];
-    const head = fields.length > 0 ? `Ürünün ${fields.join(' ve ')} alanı güncellenir` : 'Ürünün beyan alanları güncellenir';
-    return `${head} ama ürün TASLAKTA KALIR. ${tail}`;
+    const head =
+      fields.length > 0
+        ? `Asistan ürünün ${fields.join(' ve ')} alanını dolduruyor; kaydedilecek olan formda DURAN hâl`
+        : 'Asistanın önerisi formda açılır; kaydedilecek olan formda DURAN hâl';
+    // "ama ürün TASLAKTA KALIR" CÜMLESİ KALKTI (11.08): kuyruk artık ürün ekranının kendi formunu
+    // taşıyor ve durum seçici de içinde — yani kısıt yok. Olmayan bir güvenceyi vaat eden cümle,
+    // operatörü yapabildiği bir işten alıkoyar.
+    return `${head}. ${tail}`;
   }
 
   return base;
 }
-
 
 /**
  * Önerinin TUTARI — tipe göre payload'dan türer; tutar kavramı olmayan tipte `null`.

@@ -8,7 +8,7 @@ import { PriceTriple } from '@/components/operation/form/price-triple';
 import { money, percent } from '@/components/operation/ui/format';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
 import type { ProposalSubject } from '@/lib/assistant/subject';
-import { ProposalAside } from '@/components/operation/ui/proposal-aside';
+import { ProposalAside, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import { splitVariantName } from '../assistant-labels';
 
 /**
@@ -36,6 +36,8 @@ interface BatchOfferBodyProps {
   economics: Extract<ProposalEconomics, { kind: 'offer' }> | null;
   /** Önerinin konusu — görsel + ad + ürün ekranı bağlantısı (22.9). */
   subject: ProposalSubject | null;
+  /** Teknik künye — dilekçe sütununun "Metadata" görünümü basıyor (11.08). */
+  meta: ProposalMeta;
   /** Operatörün girdiği fiyat (kuruş, KDV DAHİL). `null` = kutu boş. */
   valueCents: number | null;
   onChange: (cents: number | null) => void;
@@ -50,15 +52,7 @@ interface BatchOfferBodyProps {
   readOnly: boolean;
 }
 
-export function BatchOfferBody({
-  payload,
-  economics,
-  subject,
-  valueCents,
-  onChange,
-  disabled,
-  readOnly,
-}: BatchOfferBodyProps) {
+export function BatchOfferBody({ payload, economics, subject, meta, valueCents, onChange, disabled, readOnly }: BatchOfferBodyProps) {
   const { name, size } = splitVariantName(payload.productName);
 
   // Liste ŞU ANKİ olandır (künye), öneri anındaki değil — karar bugünkü fiyata göre verilir.
@@ -93,102 +87,96 @@ export function BatchOfferBody({
   const edited = valueCents !== null && valueCents !== payload.offerPriceCents;
 
   return (
-    <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
-      {/* ── ÜÇ PANEL (kullanıcı kararı 10.08) ───────────────────────────────
-          *"En solda kart olsun — ürün resmi, adı, bilgisi. Sonra form olsun. En kenarda da
-          bilgilendirme kısmı."* Sıra kararın akışını izliyor: NE (konu) → NE YAZIYORUM (form) →
-          NE OLUYOR (kâr ve uyarılar).
-
-          ÜÇÜ DE AYNI KABUKTA ve `items-stretch` ile AYNI BOYDA. Bir tur yalnız konu sütununun
-          çerçevesi vardı, öteki ikisi çıplak metindi: yüksek bir kutunun yanında havada duran iki
-          blok, boy farkını "ölü alan" olarak okutuyordu. Eşit boy o farkı panelin İÇ boşluğuna
-          çeviriyor — aynı piksel, ama artık dizilimin parçası (kullanıcı: *"üç bölüm birbiriyle
-          uyumlu olmalı"*). `basis-0` şart: `basis-auto` sütunları içeriklerinin uzunluğuna göre
-          farklı genişletirdi, oysa istenen eşit genişlik. */}
-      <div className="flex flex-wrap items-stretch gap-4">
-        {/* Önizleme sütunu ORTAK (`ProposalAside`, 22.10): konu kartı + asistanın dilekçesi + sapma.
+    // ── ÜÇ PANEL (kullanıcı kararı 10.08) ─────────────────────────────────
+    // *"En solda kart olsun — ürün resmi, adı, bilgisi. Sonra form olsun. En kenarda da
+    // bilgilendirme kısmı."* Sıra kararın akışını izliyor: NE (konu) → NE YAZIYORUM (form) →
+    // NE OLUYOR (kâr ve uyarılar).
+    //
+    // ÜÇÜ DE AYNI KABUKTA ve `items-stretch` ile AYNI BOYDA. Bir tur yalnız konu sütununun
+    // çerçevesi vardı, öteki ikisi çıplak metindi: yüksek bir kutunun yanında havada duran iki
+    // blok, boy farkını "ölü alan" olarak okutuyordu. Eşit boy o farkı panelin İÇ boşluğuna
+    // çeviriyor — aynı piksel, ama artık dizilimin parçası (kullanıcı: *"üç bölüm birbiriyle
+    // uyumlu olmalı"*). `basis-0` şart: `basis-auto` sütunları içeriklerinin uzunluğuna göre
+    // farklı genişletirdi, oysa istenen eşit genişlik.
+    //
+    // Sarmalayan kart KALKTI (11.08): panellerin kendi kenarlığı zaten var, dıştaki "kart içinde
+    // kart" okunuyordu (kullanıcı tespiti — desen üç gövdede aynı).
+    <div className="flex flex-wrap items-stretch gap-4">
+      {/* Önizleme sütunu ORTAK (`ProposalAside`, 22.10): konu kartı + asistanın dilekçesi + sapma.
             Bir tur bu panel burada elle kuruluydu; indirim tipi gelince aynı kurgu ikinci kez
             yazılacaktı — kullanıcının istediği düzen zaten buydu ("her tipte önizleme + tanıtım
             kartı + form"), o yüzden ikinci kopya doğmadan tek yere alındı. */}
-        {/* Öne çıkan tek satır SAPMAYI gösteren teklif fiyatı — kararın konusu tam olarak o fark.
+      {/* Öne çıkan tek satır SAPMAYI gösteren teklif fiyatı — kararın konusu tam olarak o fark.
             Dilekçenin geri kalanı altta, okunur ağaç olarak (22.15). */}
-        <ProposalAside
-          subject={subject}
-          fallbackTitle={size ? `${name} · ${size}` : name}
-          facts={[{ label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) }]}
-          payload={payload}
+      <ProposalAside
+        subject={subject}
+        fallbackTitle={size ? `${name} · ${size}` : name}
+        facts={[{ label: 'Teklif', value: money(payload.offerPriceCents), now: money(valueCents) }]}
+        payload={payload}
+        meta={meta}
+      />
+
+      <Panel>
+        {readOnly ? (
+          <>
+            <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
+            <StaticFace
+              label="İndirim"
+              aside="listeye göre"
+              value={listCents !== null && valueCents !== null ? percent(((listCents - valueCents) / listCents) * 100, 1) : '—'}
+            />
+            <StaticFace label="Kâr marjı" aside="alışa göre" value={marginPercent === null ? '—' : percent(marginPercent, 1)} />
+          </>
+        ) : (
+          <PriceTriple
+            valueCents={valueCents}
+            onChange={onChange}
+            channel="b2c"
+            vatRate={vatRate ?? 0}
+            listCents={listCents}
+            costCents={costCents}
+            priceLabel="Teklif fiyatı (€)"
+            priceLabelAside="KDV dahil"
+            pricePlaceholder="ör. 12,60"
+            required
+            idPrefix="proposal-offer"
+            layout="column"
+          />
+        )}
+      </Panel>
+
+      <Panel>
+        <MarginSentence
+          costCents={costCents}
+          offerHtCents={offerHtCents}
+          marginCents={marginCents}
+          marginPercent={marginPercent}
+          physicalQty={payload.physicalQty}
+          disabled={disabled}
         />
 
-        <Panel>
-          {readOnly ? (
-            <>
-              <StaticFace label="Teklif fiyatı" aside="KDV dahil" value={money(valueCents)} />
-              <StaticFace
-                label="İndirim"
-                aside="listeye göre"
-                value={
-                  listCents !== null && valueCents !== null
-                    ? percent(((listCents - valueCents) / listCents) * 100, 1)
-                    : '—'
-                }
-              />
-              <StaticFace
-                label="Kâr marjı"
-                aside="alışa göre"
-                value={marginPercent === null ? '—' : percent(marginPercent, 1)}
-              />
-            </>
-          ) : (
-            <PriceTriple
-              valueCents={valueCents}
-              onChange={onChange}
-              channel="b2c"
-              vatRate={vatRate ?? 0}
-              listCents={listCents}
-              costCents={costCents}
-              priceLabel="Teklif fiyatı (€)"
-              priceLabelAside="KDV dahil"
-              pricePlaceholder="ör. 12,60"
-              required
-              idPrefix="proposal-offer"
-              layout="column"
-            />
-          )}
-        </Panel>
+        {/* Sapma bir UYARI değil künye: cümle değil, iki sayı ve aralarındaki ok. */}
+        {edited && !readOnly ? (
+          <span className="rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3.5 py-2 font-ops-body text-ops-base text-ops-violet">
+            Öneriden sapıldı: <span className="font-ops-mono">{money(payload.offerPriceCents)}</span> →{' '}
+            <strong className="font-ops-mono font-semibold">{money(valueCents)}</strong>
+          </span>
+        ) : null}
 
-        <Panel>
-          <MarginSentence
-            costCents={costCents}
-            offerHtCents={offerHtCents}
-            marginCents={marginCents}
-            marginPercent={marginPercent}
-            physicalQty={payload.physicalQty}
-            disabled={disabled}
-          />
+        {listDrift ? (
+          <span className="rounded-ops-card border border-ops-amber-line border-l-[3px] border-l-ops-amber-dot bg-ops-amber-bg px-3.5 py-2 font-ops-body text-ops-base font-medium text-ops-amber-dark">
+            Liste öneriden sonra değişti: <span className="font-ops-mono">{money(listDrift.was)}</span> →{' '}
+            <span className="font-ops-mono font-semibold">{money(listDrift.now)}</span>
+          </span>
+        ) : null}
 
-          {/* Sapma bir UYARI değil künye: cümle değil, iki sayı ve aralarındaki ok. */}
-          {edited && !readOnly ? (
-            <span className="rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3.5 py-2 font-ops-body text-ops-base text-ops-violet">
-              Öneriden sapıldı: <span className="font-ops-mono">{money(payload.offerPriceCents)}</span> →{' '}
-              <strong className="font-ops-mono font-semibold">{money(valueCents)}</strong>
-            </span>
-          ) : null}
-
-          {listDrift ? (
-            <span className="rounded-ops-card border border-ops-amber-line border-l-[3px] border-l-ops-amber-dot bg-ops-amber-bg px-3.5 py-2 font-ops-body text-ops-base font-medium text-ops-amber-dark">
-              Liste öneriden sonra değişti: <span className="font-ops-mono">{money(listDrift.was)}</span> →{' '}
-              <span className="font-ops-mono font-semibold">{money(listDrift.now)}</span>
-            </span>
-          ) : null}
-
-          {/* Not panelin DİBİNE yaslanır (`mt-auto`): eşit boya çekilen sütunda artan boşluk
+        {/* Not panelin DİBİNE yaslanır (`mt-auto`): eşit boya çekilen sütunda artan boşluk
               künyenin altında kalırsa "eksik bir şey var" gibi durur; altta bir kapanış satırı
               varsa aynı boşluk paragraf arası olur. */}
-          <span className="mt-auto font-ops-body text-ops-base text-ops-muted">
-            Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
-          </span>
-        </Panel>
-      </div>
+        <span className="mt-auto font-ops-body text-ops-base text-ops-muted">
+          Parti tükenince teklif kendiliğinden kalkar · kupon ve genel indirim bu satıra işlemez.
+        </span>
+      </Panel>
     </div>
   );
 }
@@ -252,8 +240,7 @@ function MarginSentence({
   if (costCents === null) {
     return (
       <span className="font-ops-body text-ops-base leading-relaxed text-ops-muted">
-        Bu partinin alış fiyatı girilmemiş — kâr hesaplanamıyor. Karar yalnız liste fiyatına göre
-        verilebilir.
+        Bu partinin alış fiyatı girilmemiş — kâr hesaplanamıyor. Karar yalnız liste fiyatına göre verilebilir.
       </span>
     );
   }
@@ -262,8 +249,7 @@ function MarginSentence({
   }
 
   const tone = marginCents > 0 ? 'text-ops-olive-dark' : marginCents === 0 ? 'text-ops-body' : 'text-ops-amber';
-  const verdict =
-    marginCents > 0 ? `${money(marginCents)} kâr` : marginCents === 0 ? 'başa baş' : `${money(-marginCents)} zarar`;
+  const verdict = marginCents > 0 ? `${money(marginCents)} kâr` : marginCents === 0 ? 'başa baş' : `${money(-marginCents)} zarar`;
   const totalCents = Math.abs(marginCents) * physicalQty;
 
   /**
@@ -280,7 +266,13 @@ function MarginSentence({
    */
   return (
     <dl aria-live="polite" aria-busy={disabled || undefined} className="flex w-full flex-col gap-1">
-      <MoneyRow label="Adet başına" value={verdict} aside={marginPercent === null ? null : `${percent(marginPercent, 1)} marj`} tone={tone} strong />
+      <MoneyRow
+        label="Adet başına"
+        value={verdict}
+        aside={marginPercent === null ? null : `${percent(marginPercent, 1)} marj`}
+        tone={tone}
+        strong
+      />
       <MoneyRow label="KDV’siz gelir" value={money(offerHtCents)} />
       <MoneyRow label="Alış" value={money(costCents)} />
       {/* Toplam etki: karar tek adet için değil, elde kalan TÜM parti için veriliyor. */}

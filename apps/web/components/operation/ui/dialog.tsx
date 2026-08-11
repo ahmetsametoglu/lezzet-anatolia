@@ -20,7 +20,13 @@ interface DialogProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  subtitle?: string;
+  /**
+   * Başlığın altındaki tek satır. `ReactNode`, çünkü bazı ekranlar burada VURGU istiyor: asistan
+   * kuyruğunda önerinin gerekçesi buraya girdi ve dikkat çeken bir tonda yazılıyor (11.08 — eskiden
+   * gövdenin tepesinde ayrı bir banner'dı, formun alanını yiyordu). Sönük ton varsayılan kalır;
+   * renk veren çağıran kendi span'ını geçirir.
+   */
+  subtitle?: ReactNode;
   /** Alt bar içeriği (aksiyonlar). Verilmezse alt bar çizilmez. */
   footer?: ReactNode;
   /**
@@ -55,10 +61,7 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
   if (!open) return null;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ops-scrim p-6"
-    >
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-ops-scrim p-6">
       <div
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth }}
@@ -92,9 +95,7 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
             çağıran her ekran kazanıyor. */}
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">{children}</div>
 
-        {footer ? (
-          <div className="flex items-center gap-2.5 border-t border-ops-line bg-ops-subtle px-6 py-3.5">{footer}</div>
-        ) : null}
+        {footer ? <div className="flex items-center gap-2.5 border-t border-ops-line bg-ops-subtle px-6 py-3.5">{footer}</div> : null}
       </div>
     </div>
   );

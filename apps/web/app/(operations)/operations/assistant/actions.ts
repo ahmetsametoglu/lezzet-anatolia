@@ -53,7 +53,10 @@ export async function applyProposalAction(id: string): Promise<ActionResult<Appl
       return { data: { status: 'handoff', target: KIND_META[pending.kind].target }, error: null };
     }
 
-    const claimed = await service.claimForApply(id, staff.id);
+    // PROFİL kimliği: `decided_by` `user_profiles`'a FK'li (`0042_assistant_proposal.sql`). Auth
+    // kimliği yazılırsa satır `23503` ile reddedilir — dev bypass'ta iki kimlik ayrı olduğu için
+    // arıza ilk denemede görünür (`lib/guard` künyesi, 04.11 nöbeti).
+    const claimed = await service.claimForApply(id, staff.profileId);
     // Hata DEĞİL bilgi: başka bir sekmede/kişide karar verilmiş. Ekran bunu nazikçe söyler.
     if (!claimed) return { data: { status: 'gone' }, error: null };
 
@@ -85,7 +88,8 @@ export async function rejectProposalAction(id: string, note?: string): Promise<A
   try {
     const rejected = await new AssistantProposalService(serviceDb()).decide(id, {
       status: 'rejected',
-      decidedBy: staff.id,
+      // PROFİL kimliği — yukarıdaki `claimForApply` ile aynı gerekçe (FK `user_profiles`).
+      decidedBy: staff.profileId,
       note: note?.trim() || null,
     });
     revalidatePath('/operations/assistant');

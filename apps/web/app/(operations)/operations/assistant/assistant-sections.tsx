@@ -9,14 +9,7 @@ import { Button, buttonClass } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { ChevronDownIcon } from '@/components/operation/ui/icons';
 import { money, shortDateTime } from '@/components/operation/ui/format';
-import {
-  KIND_TONE,
-  STATUS_VIEW,
-  decisionByline,
-  decisionFooterNote,
-  decisionNote,
-  notifyCountOf,
-} from './assistant-labels';
+import { KIND_TONE, STATUS_VIEW, decisionByline, decisionFooterNote, decisionNote, notifyCountOf } from './assistant-labels';
 import { inlineBodyOf } from './assistant-body';
 import { ProposalPreview } from './assistant-preview';
 import type { AssistantRowView, DecisionKind } from './assistant-types';
@@ -46,10 +39,7 @@ export function QueueEmpty({ tab }: { tab: QueueTab }) {
       ? ['Süresi geçen öneri yok', 'Kuyruktan düşen bir öneri olmadı.']
       : tab === 'decided'
         ? ['Karar geçmişi boş', 'Henüz uygulanan ya da reddedilen bir öneri yok.']
-        : [
-            'Bekleyen öneri yok',
-            'Asistan çalışmıyor demek değil — sorulmadı demek. Bir şey hazırlaması için asistana yazın.',
-          ];
+        : ['Bekleyen öneri yok', 'Asistan çalışmıyor demek değil — sorulmadı demek. Bir şey hazırlaması için asistana yazın.'];
 
   // Ortak `EmptyState` DEĞİL, çizimin kendi bloğu: sola yaslı ve sütunun ÜSTÜNDE. Ortak bileşen
   // metni dikeyde ortalıyor ve 326 pikselik uzun bir sütunun tam ortasında duran bir cümle,
@@ -63,33 +53,39 @@ export function QueueEmpty({ tab }: { tab: QueueTab }) {
   );
 }
 
-/** "Neden bu öneri" — dolu ve BOŞ hâli ayrı çizilir (çizimin kendi ayrımı). */
-function ReasonBlock({ reason }: { reason: string | null }) {
-  if (!reason) {
-    return (
-      <div className="flex flex-col gap-1 rounded-ops-card border-[1.5px] border-dashed border-ops-gray-500 px-3.5 py-3">
-        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-faint">
-          Neden bu öneri
-        </span>
-        {/* Gerekçesiz öneri onaylanabilir — ama patron neye dayandığını göremediğini BİLMELİ
-            (brief §3). Kutu bu yüzden silinmiyor, zayıflatılıyor. */}
-        <span className="font-ops-body text-ops-base leading-relaxed text-ops-muted">
-          Asistan bir sinyal yazmadı. Onaylayabilirsiniz, ama neye dayandığını göremiyorsunuz.
-        </span>
-      </div>
-    );
-  }
+/**
+ * "Neden bu öneri" — BANNER DEĞİL, künye satırının kendisi (kullanıcı kararı 11.08).
+ *
+ * ── İKİ ADIMDA BURAYA GELDİ ─────────────────────────────────────────────────
+ * (1) Gövdenin tepesindeki kutu kalktı: iki satırlık metin için kenarlık, dolgu ve majüskül bir
+ *     başlık harcanıyordu — *"bu bannerı kaldıralım; önerinin nedeni header'daki subtitle kısmına,
+ *     dikkatimizi çekecek bir renk tonuyla."*
+ * (2) Sonra "asistan · saat" künyesinin ALTINDAN, künyenin İÇİNE alındı ve "asistan" kelimesinin
+ *     yerini aldı: *"asistan notunu asistan metninin yerine alalım; saat kalsın, bunun yanına
+ *     yazalım ve fontunu da büyütelim — çünkü bu aslında bize asistanın bir mesajı."* Kelime zaten
+ *     bilgi taşımıyordu (kuyruktaki her öneri asistanın), gerekçe ise kararın dayanağı.
+ *
+ * Ton `ops-amber`: envanterin "dikkat" rengi (kırmızı DEĞİL — gerekçe bir hata değil, okunması
+ * gereken bir bağlam). **Gerekçesiz öneri de bir şey söyler ve söylemeye devam ediyor** (brief §3):
+ * onaylanabilir, ama patron neye dayandığını göremediğini BİLMELİ.
+ */
+function ReasonLine({ reason }: { reason: string | null }) {
   return (
-    <div className="flex flex-col gap-1 rounded-ops-card border border-l-[3px] border-ops-olive-line border-l-ops-olive bg-ops-olive-bg px-3.5 py-3">
-      <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-olive">
-        Neden bu öneri
-      </span>
-      <span className="font-ops-body text-ops-base leading-relaxed text-ops-strong">{reason}</span>
-    </div>
+    <span className={`font-ops-body text-ops-base leading-relaxed ${reason ? 'text-ops-amber-dark' : 'text-ops-muted'}`}>
+      {reason ?? 'Asistan bir sinyal yazmadı — onaylayabilirsiniz, ama neye dayandığını göremiyorsunuz.'}
+    </span>
   );
 }
 
-/** Katlanmış teknik döküm — ham dilekçe, hedef tablolar, öneri kimliği. */
+/**
+ * Katlanmış teknik döküm — ham dilekçe, hedef tablolar, öneri kimliği.
+ *
+ * **YALNIZ gövdesi OLMAYAN tiplerde çizilir** (11.08). Gövdeli tiplerde aynı bilgi dilekçe
+ * sütununun "Metadata" görünümünde duruyor (`ProposalAside`): kullanıcının ölçtüğü arıza bu bloğun
+ * diyaloğun dibinde açılıp YUKARI doğru büyümesi, formun alanını yemesi ve kendi içinde
+ * kaydırılamamasıydı. Sütuna taşınınca üçü birden kalktı. Gövdesiz tiplerde ise dilekçe sütunu yok
+ * (önizleme çizilir), o yüzden blok orada kalıyor — yoksa ham dilekçeye bakılacak yer kalmazdı.
+ */
 function TechnicalBlock({ row }: { row: AssistantRowView }) {
   const [open, setOpen] = useState(false);
   return (
@@ -109,8 +105,7 @@ function TechnicalBlock({ row }: { row: AssistantRowView }) {
       {open ? (
         <div className="flex flex-col gap-2 border-t border-ops-line-soft bg-ops-subtle px-3.5 py-3">
           <span className="font-ops-body text-ops-xs text-ops-muted">
-            Hedef tablolar:{' '}
-            <span className="font-ops-mono text-ops-strong">{row.targetTables.join(', ') || '—'}</span> · öneri:{' '}
+            Hedef tablolar: <span className="font-ops-mono text-ops-strong">{row.targetTables.join(', ') || '—'}</span> · öneri:{' '}
             {/* İnsan-okunur numara YOK ve açılmadı (sözleşme §2d): sipariş referansı müşteriye
                 söylenen bir numaradır, bunun muhatabı yalnız patron ve bu ekran. Kimliğin ilk sekiz
                 hanesi konuşmada anılmaya yeter. */}
@@ -202,7 +197,19 @@ export function ProposalDialog({
       // ürün formu tek başına 1180 için tasarlandı, yanına dilekçe gelince taşıyordu (22.15).
       maxWidth={inline?.width ?? 1180}
       title={row.summary}
-      subtitle={`asistan · ${shortDateTime(row.createdAt)}${live && row.freshness === 'soon' ? ' · tazeliği doluyor' : ''}`}
+      // ── TEK KÜNYE SATIRI: SAAT · GEREKÇE (kullanıcı kararı 11.08) ─────────
+      // "asistan" kelimesi KALKTI — kuyruktaki her öneri zaten asistanın, kelime bilgi taşımıyordu
+      // ve yerini kararın dayanağına bıraktı: *"asistan notunu asistan metninin yerine alalım; saat
+      // kalsın, bunun yanına yazalım ve fontunu da büyütelim — çünkü bu aslında bize asistanın bir
+      // mesajı."* Gerekçe bu yüzden bir punto büyük ve amber; saat sönük kalıyor.
+      subtitle={
+        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="flex-none">
+            {`${shortDateTime(row.createdAt)}${live && row.freshness === 'soon' ? ' · tazeliği doluyor' : ''} ·`}
+          </span>
+          <ReasonLine reason={row.reason} />
+        </span>
+      }
       headerAside={
         <span className="flex items-center gap-2.5">
           <Badge tone={tone} className="uppercase tracking-[0.06em]">
@@ -252,11 +259,7 @@ export function ProposalDialog({
                 </Link>
               ) : null
             ) : (
-              <Button
-                variant={notifyCount === null ? 'primary' : 'warning'}
-                onClick={() => onDecision('apply')}
-                disabled={busy}
-              >
+              <Button variant={notifyCount === null ? 'primary' : 'warning'} onClick={() => onDecision('apply')} disabled={busy}>
                 {notifyCount === null ? 'Uygula' : 'Uygula ve bildirimi gönder'}
               </Button>
             )}
@@ -286,8 +289,6 @@ export function ProposalDialog({
         )
       }
     >
-      <ReasonBlock reason={row.reason} />
-
       {/* Gövde varsa ÖNİZLEME ÇİZİLMEZ — ikisi birden dururdu ve aynı sayı iki yerde iki farklı
           hâlde okunurdu (önizleme asistanın önerdiği fiyatı, form operatörün yazdığını). İki
           gösterim dili bakımı da ikiye böler; talebin birinci amacı bunu azaltmaktı. */}
@@ -297,16 +298,19 @@ export function ProposalDialog({
           economics: row.economics,
           subject: row.subject,
           options,
+          // Teknik künye gövdeye ORTAK geçiyor; dilekçe sütununun "Metadata" görünümü onu basıyor.
+          meta: { id: row.id, targetTables: row.targetTables, result: row.result },
           draft,
           onDraft: setDraft,
           disabled: busy || !live,
           readOnly: !live,
         })
       ) : (
-        <ProposalPreview kind={row.kind} payload={row.payload} economics={row.economics} />
+        <>
+          <ProposalPreview kind={row.kind} payload={row.payload} economics={row.economics} />
+          <TechnicalBlock row={row} />
+        </>
       )}
-
-      <TechnicalBlock row={row} />
     </Dialog>
   );
 }

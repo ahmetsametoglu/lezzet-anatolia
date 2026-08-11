@@ -206,14 +206,18 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     for (const kind of ['zone_extend', 'stock_intake', 'money_movement'] as const) {
       expect(modeOf(kind)).toBe('handoff');
     }
-    // `inline` = gövdesi kuyruğun içinde çizilen tipler. İkisi de bir tur devredilmişti; formları
+    // `inline` = gövdesi kuyruğun içinde çizilen tipler. Üçü de bir tur devredilmişti; formları
     // kuyruğa taşındıkça devir kalktı (`kind-meta` künyeleri). Yazan kapı yine varlığın kendi
     // eylemi, o yüzden `resultKey` burada da şart.
-    for (const kind of ['batch_offer', 'discount_draft'] as const) {
+    //
+    // `product_draft` 11.08'de bu kümeye geçti: ürün ekranının kendi formu 22.14'te kuyruğa taşındı
+    // ama künye `draft_then_edit` kalmıştı ve alt bar olmayan bir kısıtı anlatıyordu ("kayıt pasif
+    // doğar, yayına alma kendi ekranının işi") — kullanıcı bunu ekranda gördü.
+    for (const kind of ['batch_offer', 'discount_draft', 'product_draft'] as const) {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
     }
-    for (const kind of ['bundle_draft', 'recipe_draft', 'product_draft', 'purchase_order'] as const) {
+    for (const kind of ['bundle_draft', 'recipe_draft', 'purchase_order'] as const) {
       expect(modeOf(kind)).toBe('draft_then_edit');
       // Köprü ancak doğan kaydın kimliğiyle kurulabilir; anahtar uygulayıcının döndürdüğü adla aynı olmalı.
       expect(KIND_META[kind].resultKey).toBeTruthy();

@@ -8,17 +8,14 @@ import { PRODUCT_STATUS_LABELS, resolveLocalizedText, type LocalizedText } from 
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
-import {
-  ProductFormPanels,
-  ProductFormTabs,
-  useProductFormFields,
-} from '@/components/operation/form/product-form';
+import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/components/operation/form/product-form';
+import { ProductPhotos } from '@/components/operation/form/product-form/photos';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
 import type { ProductFormTab } from '@/components/operation/form/product-form/types';
-import { ProductPhotos } from './product-photos';
 import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import { updateProductAction } from '@/lib/catalog/product-actions';
-import { createProductAction, uploadProductImageAction } from './actions';
+import { uploadProductImageAction } from '@/lib/catalog/product-photo-actions';
+import { createProductAction } from './actions';
 import { bundlesUsingVariants, type BundleView, type CategoryView, type ProductView } from '../../products-types';
 
 // Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
@@ -109,7 +106,10 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
   // pasife almak, o ürünü içeren paketleri de vitrinden düşürür. Bağ ekranda hiç yazmıyordu, yani
   // operatör sonucu ancak sonradan (satış durunca) öğreniyordu. Sayı HER ZAMAN görünür, uyarı ise
   // yalnız gerçekten zarar verecek anda: satıştaki bir paketi olan ürünü satıştan çıkarırken.
-  const usedIn = bundlesUsingVariants(bundles, (product?.variants ?? []).map((v) => v.id));
+  const usedIn = bundlesUsingVariants(
+    bundles,
+    (product?.variants ?? []).map((v) => v.id),
+  );
   const activeUsedIn = usedIn.filter((b) => b.isActive);
   const leavingSale = form.watch('status') !== 'active' && (product?.status ?? 'active') === 'active';
   const bundleNames = (list: BundleView[]) => list.map((b) => resolveLocalizedText(b.name)).join(' · ');
@@ -128,6 +128,10 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
   // Üç durum TEK seçicide: "Satışta / Pasif / Aday" aynı bilginin değerleri. Önceden yalnız aktiflik
   // anahtarı vardı ve aday ürün çıkmazdaydı — anahtarı açmak `isActive` yazıyordu ama adaylık onu
   // ezdiği için ekranda hiçbir şey değişmiyordu. Vaat edilen "Etkinleştir" düğmesinin yerini bu alıyor.
+  //
+  // Seçici BURADA kalır, ortak alan DEĞİLDİR (kullanıcı kararı 11.08): asistan kuyruğu ürünün
+  // içeriğini yazar, satış eksenine dokunmaz — yayına almak bu ekranın kararı ve paket bağı da
+  // (üstteki `bundleNote`) yalnız burada okunuyor.
   const footer = (
     <DialogFooter
       formId={FORM_ID}
@@ -147,8 +151,18 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
               // rozetin kelimesi ayrışmıştı ("Satışta" ↔ "Aktif"). Açıklama (`title`) burada kalır —
               // o bir arayüz ipucudur, durumun adı değil.
               { key: 'active', label: PRODUCT_STATUS_LABELS.active, tone: 'olive', title: 'Katalogda görünür ve satılabilir' },
-              { key: 'passive', label: PRODUCT_STATUS_LABELS.passive, tone: 'neutral', title: 'Katalogda gizli — arşiv değil, geri açılabilir' },
-              { key: 'candidate', label: PRODUCT_STATUS_LABELS.candidate, tone: 'blue', title: 'Satılamaz; yalnız keşif akışında görünür' },
+              {
+                key: 'passive',
+                label: PRODUCT_STATUS_LABELS.passive,
+                tone: 'neutral',
+                title: 'Katalogda gizli — arşiv değil, geri açılabilir',
+              },
+              {
+                key: 'candidate',
+                label: PRODUCT_STATUS_LABELS.candidate,
+                tone: 'blue',
+                title: 'Satılamaz; yalnız keşif akışında görünür',
+              },
             ]}
           />
           {bundleNote}
@@ -165,7 +179,7 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
       onClose={onClose}
       maxWidth={1180}
       title={editing ? 'Ürün düzenle' : 'Yeni ürün'}
-      subtitle={editing ? (resolveLocalizedText(product.name) || 'Ürün') : 'Zorunlu alanları doldurun; beyanlar sonradan tamamlanabilir'}
+      subtitle={editing ? resolveLocalizedText(product.name) || 'Ürün' : 'Zorunlu alanları doldurun; beyanlar sonradan tamamlanabilir'}
       headerAside={<ProductFormTabs value={tab} onChange={setTab} />}
       footer={footer}
     >

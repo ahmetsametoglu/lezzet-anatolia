@@ -18,6 +18,7 @@ import {
   discountValuesFromProposal,
   type DiscountFormValues,
 } from '@/components/operation/form/discount-form';
+import type { ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
@@ -55,6 +56,13 @@ interface InlineBodyArgs<Payload, Draft> {
    * üç kez koşardı.
    */
   options: AssistantFormOptions;
+  /**
+   * Kararın teknik künyesi — dilekçe sütununun "Metadata" görünümü bunu basar (`ProposalAside`).
+   *
+   * Sözleşmeye TİP BAŞINA değil ortak eklendi ve gövdelerin hepsi olduğu gibi geçiriyor: bir tur bu
+   * bilgi diyaloğun dibinde ayrı bir blokta duruyordu ve formun alanını yiyordu (11.08).
+   */
+  meta: ProposalMeta;
   draft: Draft;
   onDraft: (next: Draft) => void;
   disabled: boolean;
@@ -124,11 +132,12 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   batch_offer: defineBody<BatchOfferPayload, number | null>({
     parse: parseWith<BatchOfferPayload>('batch_offer'),
     initial: (payload) => payload.offerPriceCents,
-    render: ({ payload, economics, subject, draft, onDraft, disabled, readOnly }) => (
+    render: ({ payload, economics, subject, meta, draft, onDraft, disabled, readOnly }) => (
       <BatchOfferBody
         payload={payload}
         economics={economics?.kind === 'offer' ? economics : null}
         subject={subject}
+        meta={meta}
         valueCents={draft}
         onChange={onDraft}
         disabled={disabled}
@@ -148,11 +157,12 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // Formun açılış hâli asistanın dilekçesi; hangi kutulara dokunduğu da aynı yerden türer, çünkü
     // ikisi tek bir gerçeğin iki yüzü ve ayrı hesaplanırsa bir gün ayrışırlar.
     initial: (payload) => discountValuesFromProposal(payload).values,
-    render: ({ payload, subject, options, draft, onDraft, disabled, readOnly }) => (
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
       <DiscountDraftBody
         payload={payload}
         subject={subject}
         options={options}
+        meta={meta}
         values={draft}
         filled={discountValuesFromProposal(payload).filled}
         onChange={onDraft}
@@ -165,8 +175,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     blocked: discountBlocked,
     submit: (_payload, values, proposalId) => saveDiscountAction(discountInputOf(values, null), proposalId),
     applyLabel: 'İndirimi kaydet',
-    appliedNote:
-      'İndirim kuralı yazıldı — Fiyatlar → Kuponlar listesinde. Aktif bıraktıysanız koşulları tutan sepetlere işlemeye başladı.',
+    appliedNote: 'İndirim kuralı yazıldı — Fiyatlar → Kuponlar listesinde. Aktif bıraktıysanız koşulları tutan sepetlere işlemeye başladı.',
   }),
 
   product_draft: defineBody<ProductDraftPayload, ProductFormValues>({
@@ -175,11 +184,12 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // birkaç alana dokunuyor ve geri kalanı kayıttan gelmeli. Kayıt okunamazsa gövde formu hiç
     // açmıyor (boş formla kaydetmek dolu beyanları silerdi).
     initial: (payload, options) => productDraftValuesFrom(payload, options.products[payload.productId] ?? null),
-    render: ({ payload, subject, options, draft, onDraft, disabled, readOnly }) => (
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
       <ProductDraftBody
         payload={payload}
         subject={subject}
         options={options}
+        meta={meta}
         values={draft}
         onChange={onDraft}
         disabled={disabled}
@@ -198,8 +208,12 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // sütunu geldiği için o kadar daha gerekiyor. 1560 denendi ve DAR kaldı (kullanıcı ölçümü
     // 11.08): formun sağ rayı (kargo · KDV · marj) ile içerik sütunu hâlâ sıkışıyordu.
     width: 1720,
-    applyLabel: 'Ürünü kaydet',
-    appliedNote: 'Ürün kaydedildi — katalogda görülebilir. Satış durumu formda ne seçildiyse o.',
+    // "Kaydet" değil GÜNCELLE: `product_draft` VAR OLAN bir ürünün kaydına yazıyor
+    // (`payload.productId`) — yeni ürün ayrı bir tip (`product_create`). Kullanıcının sorusu tam
+    // buydu (11.08: *"yeni ürün mü oluşturuyorum yoksa güncelliyor muyum?"*): düğme cevabı
+    // vermiyordu ve "kaydet" iki işi birden anlatabilen tek kelime.
+    applyLabel: 'Ürünü güncelle',
+    appliedNote: 'Ürün güncellendi — katalogda görülebilir. Satış durumu değişmedi: kuyruk içeriği yazar, yayına almaz.',
   }),
 };
 

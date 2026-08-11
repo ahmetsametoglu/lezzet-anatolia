@@ -1,5 +1,6 @@
 import 'server-only';
 import { CategoryService, CollectionService, ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
+import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { ProductFormSource } from '@/components/operation/form/product-form/schema';
 
@@ -34,8 +35,18 @@ export interface AssistantFormOptions {
    * Form ürünün BUGÜNKÜ hâliyle açılıp asistanın önerisi üzerine yazılıyor. Kayıt okunmasaydı form
    * boş açılır, kaydetme de dokunulmamış alanları (kategori, varyantlar) sıfırlardı.
    */
-  products: Record<string, ProductFormSource>;
+  products: Record<string, ProductFormSourceWithImage>;
 }
+
+/**
+ * Formun okuduğu ürün + KAPAK GÖRSELİNİN adresi.
+ *
+ * `imageUrl` formun alanı değil (kırpma dışında görsel formla kaydedilmiyor) ama görsel bloğu onu
+ * ister ve adres SUNUCUDA kurulmak zorunda: `publicImageUrl` `R2_PUBLIC_BASE_URL`i okuyor, o env
+ * tarayıcıya gitmiyor. Ürün ekranı da aynısını yapıyor (`ProductView.imageUrl`) — kuyruk kendi
+ * yolunu icat etmiyor, aynı türevi aynı yerde kuruyor.
+ */
+export type ProductFormSourceWithImage = ProductFormSource & { imageUrl: string | null };
 
 export async function readAssistantFormOptions(productIds: string[] = []): Promise<AssistantFormOptions> {
   const db = serviceDb();
@@ -54,7 +65,16 @@ export async function readAssistantFormOptions(productIds: string[] = []): Promi
     categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
     collections: collections.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
     products: Object.fromEntries(
-      products.map((p) => [p.id, { ...p, variants: variants.filter((v) => v.productId === p.id) }]),
+      products.map((p) => [
+        p.id,
+        {
+          ...p,
+          variants: variants.filter((v) => v.productId === p.id),
+          // Adres SUNUCUDA kurulur (env tarayıcıda yok) ve sürüm damgası satırın kendi
+          // `imageUpdatedAt`'inden gelir — yeni yüklenen kapak önbellekten dönmesin.
+          imageUrl: publicImageUrl(p.imageKey, p.imageUpdatedAt),
+        },
+      ]),
     ),
   };
 }

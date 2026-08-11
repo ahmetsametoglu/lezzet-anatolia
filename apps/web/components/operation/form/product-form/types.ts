@@ -33,3 +33,9 @@ export interface ProductFormFields {
   autoPrice: ReactNode;
   margin: ReactNode;
 }
+
+// SATIŞ DURUMU (Satışta · Pasif · Aday) BU SÖZLEŞMEDE YOK ve bilinçli (kullanıcı kararı 11.08).
+// Bir tur ortak alan yapılmıştı — kuyruğun formu da ürünü yayına alabilsin diye. Kullanıcı geri
+// aldırdı: **kuyruk ürünün İÇERİĞİNİ yazar, satış eksenine dokunmaz.** Seçici ürün ekranının alt
+// barında elle kurulu kalıyor; oradaki kap zaten paket bağını da (o ürünü içeren aktif paketler)
+// aynı satırda gösteriyor — karar oraya ait.

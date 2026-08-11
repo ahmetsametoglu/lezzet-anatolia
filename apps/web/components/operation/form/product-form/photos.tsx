@@ -17,7 +17,7 @@ import {
   reorderGalleryAction,
   setGalleryCropAction,
   uploadGalleryPhotoAction,
-} from './actions';
+} from '@/lib/catalog/product-photo-actions';
 import type { ProductPhotoView } from './photos-types';
 
 /**
@@ -114,37 +114,37 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
               [0, 1, 2].map((i) => <SkeletonBlock key={i} className="aspect-[3/2] w-full" />)
             ) : (
               <>
-            <SortableList
-              items={photos}
-              getId={(p) => p.id}
-              layout="grid"
-              grab="item"
-              onReorder={(ids) => run(() => reorderGalleryAction(ids))}
-              renderItem={(photo) => (
-                <PhotoTile
-                  photo={photo}
-                  disabled={busy}
-                  onEdit={() => setEditing(photo)}
-                  onMakeCover={() => run(() => makeCoverAction(productId, photo.id))}
-                  onDelete={() => run(() => deleteGalleryPhotoAction(photo.id))}
+                <SortableList
+                  items={photos}
+                  getId={(p) => p.id}
+                  layout="grid"
+                  grab="item"
+                  onReorder={(ids) => run(() => reorderGalleryAction(ids))}
+                  renderItem={(photo) => (
+                    <PhotoTile
+                      photo={photo}
+                      disabled={busy}
+                      onEdit={() => setEditing(photo)}
+                      onMakeCover={() => run(() => makeCoverAction(productId, photo.id))}
+                      onDelete={() => run(() => deleteGalleryPhotoAction(photo.id))}
+                    />
+                  )}
                 />
-              )}
-            />
 
-            {/* Ekleme karesi — sınıra gelince yerini bilgi notu alır (buton kaybolup şaşırtmasın) */}
-            {full ? (
-              <span className="grid place-items-center rounded-ops-card border border-dashed border-ops-line-soft p-2 text-center font-ops-body text-ops-micro leading-[1.4] text-ops-faint">
-                Sınır doldu
-              </span>
-            ) : (
-              <ImageUploadButton
-                upload={(fd) => uploadGalleryPhotoAction(productId, fd)}
-                multiple
-                className="grid aspect-[3/2] cursor-pointer place-items-center gap-1 rounded-ops-card border border-dashed border-ops-line-strong text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
-              >
-                <PlusIcon />
-              </ImageUploadButton>
-            )}
+                {/* Ekleme karesi — sınıra gelince yerini bilgi notu alır (buton kaybolup şaşırtmasın) */}
+                {full ? (
+                  <span className="grid place-items-center rounded-ops-card border border-dashed border-ops-line-soft p-2 text-center font-ops-body text-ops-micro leading-[1.4] text-ops-faint">
+                    Sınır doldu
+                  </span>
+                ) : (
+                  <ImageUploadButton
+                    upload={(fd) => uploadGalleryPhotoAction(productId, fd)}
+                    multiple
+                    className="grid aspect-[3/2] cursor-pointer place-items-center gap-1 rounded-ops-card border border-dashed border-ops-line-strong text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
+                  >
+                    <PlusIcon />
+                  </ImageUploadButton>
+                )}
               </>
             )}
           </div>
@@ -191,7 +191,8 @@ interface PhotoTileProps {
 }
 
 // İkon düğmeleri: küçük kare, kart zeminli daire — üstteki fotoğraf ne olursa olsun okunur kalsın.
-const TILE_ACTION = 'pointer-events-auto grid h-[22px] w-[22px] cursor-pointer place-items-center rounded-full bg-ops-card/90 shadow-sm transition-colors hover:bg-ops-card disabled:cursor-not-allowed';
+const TILE_ACTION =
+  'pointer-events-auto grid h-[22px] w-[22px] cursor-pointer place-items-center rounded-full bg-ops-card/90 shadow-sm transition-colors hover:bg-ops-card disabled:cursor-not-allowed';
 
 function PhotoTile({ photo, disabled, onEdit, onMakeCover, onDelete }: PhotoTileProps) {
   return (

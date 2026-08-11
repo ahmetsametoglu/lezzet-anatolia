@@ -9,19 +9,17 @@ import type { ProductFormFields } from './types';
 // Yalnız yerleştirir — alan elemanları kapta (product-form-dialog) kurulur, burada tekrarlanmaz.
 
 export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
-  // Görsel bloğu OLMAYABİLİR (asistan kuyruğu galeri slotunu boş veriyor — canlı yazan bir blok
-  // kuyruğa girmemeli). O zaman 360 px'lik sütun da ÇİZİLMEZ: boş bir sütun ayırmak, formu dar bir
-  // kutuya sıkıştırıp metin kutularını kelime ortasından kırıyordu (ölçüldü 11.08, ekran görüntüsü).
-  const withImage = fields.image !== null && fields.image !== undefined;
-
+  // Görsel bloğu KOŞULLU DEĞİL (11.08). Bir tur `fields.image === null` ise 360 px'lik sütun
+  // çizilmiyordu — kuyruk galeri slotunu boş veriyordu diye. Kullanıcı bunu kırpma saydı ve slot
+  // kuyruğa da geldi: *"o formu bire bir kopyala."* İki yüzeyde tek düzen, dallanma yok.
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_250px]">
       {/* Ana alan — içerik üstte, varyantlar altta */}
       <div className="flex flex-col pr-7">
         {/* Üst: görsel | içerik */}
-        <div className={withImage ? 'grid grid-cols-[360px_minmax(0,1fr)]' : ''}>
-          {withImage ? <div className="pr-6">{fields.image}</div> : null}
-          <div className={`flex flex-col gap-5 ${withImage ? 'border-l border-ops-line pl-7' : ''}`}>
+        <div className="grid grid-cols-[360px_minmax(0,1fr)]">
+          <div className="pr-6">{fields.image}</div>
+          <div className="flex flex-col gap-5 border-l border-ops-line pl-7">
             {fields.category}
             {/* Çok dilli içerik (ad + açıklama) tek dil kartında — dil sekmesi kartın başlığında */}
             {fields.content}

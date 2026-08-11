@@ -33,7 +33,7 @@ import {
  */
 
 const INSTRUCTIONS = [
-  "You are the admin assistant for Lezzet Anatolia (Turkish food e-commerce, Strasbourg). You talk to the OWNER, never to customers.",
+  'You are the admin assistant for Lezzet Anatolia (Turkish food e-commerce, Strasbourg). You talk to the OWNER, never to customers.',
   'Always answer the admin in TURKISH. Keep answers short and concrete; lead with what needs attention.',
   'You can PROPOSE actions but never perform them: propose_* tools write to an approval queue and the admin applies them from the operations panel. You cannot approve your own proposals — never say something is done because you proposed it; say it is waiting for approval. For actions with no propose_* tool (price changes, customer messages), explain what you would do and say that tool is not built yet.',
   'Two proposals need extra care when you present them. propose_zone_extend: applying it sends an irreversible notification to waiting customers — always tell the admin how many. propose_stock_intake: never invent an expiry date or lot number; if the document does not show it, ask.',
@@ -42,6 +42,15 @@ const INSTRUCTIONS = [
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
   'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
+  // ── `reason` PATRONUN OKUDUĞU CÜMLEDİR (kullanıcı tespiti 11.08) ───────────
+  // Ekranda çıkan gerekçe şuydu: *"catalog_health: lang eksik. İsim ve açıklama 3 dile
+  // tamamlandı."* Kullanıcının sorusu tek kelimeydi — *"neden alt çizgi var?"*. Model gerekçeyi
+  // dayandırırken KAYNAK ARACIN ADINI ve okuduğu alan anahtarını olduğu gibi yapıştırıyordu:
+  // `catalog_health` bizim okuma aracımızın adı, `lang` da onun döndürdüğü eksik-parça anahtarı.
+  // İkisi de makine kimliği; patronun ekranında yeri yok ve cümleyi yarı Türkçe yarı İngilizce
+  // bırakıyor. Kural araç açıklamalarına TEK TEK yazılmadı (on tane propose aracı var, biri mutlaka
+  // ayrışırdı) — talimat metnine bir kez yazılıyor.
+  'The `reason` you pass to a propose_* tool is shown to the admin VERBATIM on the approval screen, right under the title. Write it as one plain Turkish sentence he can read out loud: what you saw and why it matters. Never paste tool names, field keys or snake_case identifiers into it (write "adı yalnız Türkçe girilmiş" — not "catalog_health: lang eksik"). Cite the numbers you grounded it on; those are what make it credible.',
   'FOOD SAFETY: you may record allergen and storage declarations ONLY from a document the admin gave you (label photo, supplier sheet) — never from what a product name suggests. Allergens are a closed set: pick values, never phrase a sentence. When a line is blurred or cut off, list that field in uncertainFields instead of guessing; the approval screen puts those in front of the admin. Saying "I could not read it" is always the better answer.',
   'You are NOT the customer-facing agent: you never write to customers and you never see conversation content. customer_pulse gives you counts so you can tell the admin how the inbox stands — that is the extent of your role in messaging.',
 ].join('\n');
@@ -77,7 +86,7 @@ export const TOOLS = [
   {
     name: 'catalog_health',
     description:
-      "Catalog completeness: totals (products, candidates, products with incomplete legal declarations) + the incomplete products themselves with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens), whether they have an image, and shelf life — plus the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose). Use the candidates list — without it you can only ever discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.",
+      'Catalog completeness: totals (products, candidates, products with incomplete legal declarations) + the incomplete products themselves with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens), whether they have an image, and shelf life — plus the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose). Use the candidates list — without it you can only ever discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.',
     inputSchema: {
       type: 'object',
       properties: { limit: { type: 'number', description: 'Max incomplete products to list, 1-50. Default 15.' } },
@@ -121,7 +130,7 @@ export const TOOLS = [
   {
     name: 'reference_data',
     description:
-      "The names the propose_* tools make you type: cash/bank accounts, categories, collections and bundles (each with whether it is already on the showcase), suppliers, and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Every name here can be typed straight into a propose_* tool — categoryName, accountName, supplierName, or the showcase target name — and the server resolves it to the record. Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.",
+      'The names the propose_* tools make you type: cash/bank accounts, categories, collections and bundles (each with whether it is already on the showcase), suppliers, and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Every name here can be typed straight into a propose_* tool — categoryName, accountName, supplierName, or the showcase target name — and the server resolves it to the record. Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -168,7 +177,10 @@ export const TOOLS = [
       type: 'object',
       properties: {
         batchId: { type: 'string', description: 'Batch uuid from stock_watch.batchId.' },
-        offerPriceCents: { type: 'number', description: 'Optional offer price in cents (VAT-inclusive). Omit to use the engine suggestion.' },
+        offerPriceCents: {
+          type: 'number',
+          description: 'Optional offer price in cents (VAT-inclusive). Omit to use the engine suggestion.',
+        },
         reason: { type: 'string', description: 'Why now — e.g. "14 units, 4 days left, no other stock of this size".' },
       },
       required: ['batchId'],
@@ -183,7 +195,10 @@ export const TOOLS = [
       type: 'object',
       properties: {
         name: { type: 'object', description: 'Product name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
-        categoryName: { type: 'string', description: 'Category by NAME (resolved server-side); omit if unsure — the tool lists the existing ones.' },
+        categoryName: {
+          type: 'string',
+          description: 'Category by NAME (resolved server-side); omit if unsure — the tool lists the existing ones.',
+        },
         variants: {
           type: 'array',
           description:
@@ -200,7 +215,10 @@ export const TOOLS = [
         description: { type: 'object', description: 'Per language.' },
         ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
         storageInstructions: { type: 'object', description: 'Per language, as printed.' },
-        nutrition: { type: 'object', description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.' },
+        nutrition: {
+          type: 'object',
+          description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.',
+        },
         allergens: { type: 'array', description: 'Closed set of the 14 EU allergens — values only, no free text.' },
         traces: { type: 'array', description: 'Cross-contamination ("may contain"), same closed set.' },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly (blurred, cut off, glare).' },
@@ -218,7 +236,10 @@ export const TOOLS = [
       type: 'object',
       properties: {
         warehouseCode: { type: 'string', description: 'Warehouse code, e.g. "STR" (see morning_briefing.reorder).' },
-        supplierName: { type: 'string', description: 'Optional: restrict to one supplier, by name (see reference_data). Default is the largest group of shortfalls.' },
+        supplierName: {
+          type: 'string',
+          description: 'Optional: restrict to one supplier, by name (see reference_data). Default is the largest group of shortfalls.',
+        },
         note: { type: 'string', description: 'Optional note carried onto the draft order.' },
       },
       required: ['warehouseCode'],
@@ -228,7 +249,7 @@ export const TOOLS = [
   {
     name: 'propose_stock_intake',
     description:
-      "PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and write-only (you cannot read purchase prices back).",
+      'PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and write-only (you cannot read purchase prices back).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -251,7 +272,7 @@ export const TOOLS = [
         supplierName: {
           type: 'string',
           description:
-            'Who the goods came FROM, by name (see reference_data). Fill this in whenever the document names a supplier: without it the receipt cannot refresh that supplier\'s last purchase price, and the NEXT reorder proposal will have no idea what the goods cost.',
+            "Who the goods came FROM, by name (see reference_data). Fill this in whenever the document names a supplier: without it the receipt cannot refresh that supplier's last purchase price, and the NEXT reorder proposal will have no idea what the goods cost.",
         },
         purchaseOrderRef: {
           type: 'string',
@@ -290,7 +311,10 @@ export const TOOLS = [
         },
         direction: { type: 'string', description: "'out' = money leaves, 'in' = money arrives." },
         amountCents: { type: 'number', description: 'Positive integer, in cents.' },
-        type: { type: 'string', description: "'expense' | 'transfer' | 'capital' | 'misc' — no 'purchase' (goods purchases go through propose_stock_intake)." },
+        type: {
+          type: 'string',
+          description: "'expense' | 'transfer' | 'capital' | 'misc' — no 'purchase' (goods purchases go through propose_stock_intake).",
+        },
         category: { type: 'string', description: 'Free-text category, e.g. "tedarik".' },
         description: { type: 'string' },
         supplierName: {
@@ -334,11 +358,17 @@ export const TOOLS = [
       type: 'object',
       properties: {
         productId: { type: 'string', description: 'Product uuid from catalog_health or catalog_lookup.' },
-        name: { type: 'object', description: 'Product name per language. Changing it does NOT change the URL (the slug is fixed at creation).' },
+        name: {
+          type: 'object',
+          description: 'Product name per language. Changing it does NOT change the URL (the slug is fixed at creation).',
+        },
         description: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
         ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
         storageInstructions: { type: 'object', description: 'Per language, as printed.' },
-        nutrition: { type: 'object', description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.' },
+        nutrition: {
+          type: 'object',
+          description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.',
+        },
         allergens: { type: 'array', description: 'Closed set of the 14 EU allergens — values only.' },
         traces: { type: 'array', description: 'Cross-contamination, same closed set.' },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly.' },
@@ -351,7 +381,7 @@ export const TOOLS = [
   {
     name: 'propose_bundle_draft',
     description:
-      "PROPOSE (does not apply): a new bundle (multi-product package sold at ONE price). You choose the items and the package price; the ENGINE distributes the per-item allocated prices proportionally to their list prices — you never compute shares yourself. If the target cannot be hit exactly (cent rounding), the response says so with the residual and you MUST tell the admin. Needs at least two items. Name and description take one object per language ({ \"tr\": \"…\", \"fr\": \"…\", \"de\": \"…\" }, Turkish minimum) — a bundle is customer-facing and the storefront is France, so write the French too. The bundle is created INACTIVE — publishing is a separate decision.",
+      'PROPOSE (does not apply): a new bundle (multi-product package sold at ONE price). You choose the items and the package price; the ENGINE distributes the per-item allocated prices proportionally to their list prices — you never compute shares yourself. If the target cannot be hit exactly (cent rounding), the response says so with the residual and you MUST tell the admin. Needs at least two items. Name and description take one object per language ({ "tr": "…", "fr": "…", "de": "…" }, Turkish minimum) — a bundle is customer-facing and the storefront is France, so write the French too. The bundle is created INACTIVE — publishing is a separate decision.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -380,7 +410,7 @@ export const TOOLS = [
   {
     name: 'propose_discount_draft',
     description:
-      "PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The admin approves it INSIDE the queue, on the real discount form: every field you send lands in a box they can edit, and the boxes you leave empty stay empty. So fill in what the campaign actually needs — publicLabel above all (that is the text the CUSTOMER reads in the basket; leave it out and they just see \"Discount\"), and for coupons the usage limits, because an unlimited coupon is a commercial risk. Coupon codes are not minted here — uniqueness belongs to the database.",
+      'PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The admin approves it INSIDE the queue, on the real discount form: every field you send lands in a box they can edit, and the boxes you leave empty stay empty. So fill in what the campaign actually needs — publicLabel above all (that is the text the CUSTOMER reads in the basket; leave it out and they just see "Discount"), and for coupons the usage limits, because an unlimited coupon is a commercial risk. Coupon codes are not minted here — uniqueness belongs to the database.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -399,11 +429,13 @@ export const TOOLS = [
         minBasketCents: { type: 'number', description: 'Minimum basket in cents, if any.' },
         firstOrderOnly: {
           type: 'boolean',
-          description: 'True = valid only on the customer FIRST order. This is the defining condition of an acquisition campaign — say it explicitly instead of leaving it to the default (false = every order).',
+          description:
+            'True = valid only on the customer FIRST order. This is the defining condition of an acquisition campaign — say it explicitly instead of leaving it to the default (false = every order).',
         },
         maxUses: {
           type: 'number',
-          description: 'Total redemption cap across all customers. Omit only if the campaign is deliberately unlimited — omitting it IS the unlimited answer, not a neutral one.',
+          description:
+            'Total redemption cap across all customers. Omit only if the campaign is deliberately unlimited — omitting it IS the unlimited answer, not a neutral one.',
         },
         perCustomerLimit: {
           type: 'number',
@@ -426,9 +458,15 @@ export const TOOLS = [
       type: 'object',
       properties: {
         name: { type: 'object', description: 'Recipe name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
-        steps: { type: 'object', description: 'Preparation steps per language, one text each — write the steps as numbered lines ("1. …\\n2. …").' },
+        steps: {
+          type: 'object',
+          description: 'Preparation steps per language, one text each — write the steps as numbered lines ("1. …\\n2. …").',
+        },
         description: { type: 'object', description: 'Short intro per language — what this dish is, when you would serve it.' },
-        duration: { type: 'object', description: 'Preparation time as FREE TEXT per language, not a number: { "tr": "35 dk", "fr": "35 min", "de": "35 Min." }.' },
+        duration: {
+          type: 'object',
+          description: 'Preparation time as FREE TEXT per language, not a number: { "tr": "35 dk", "fr": "35 min", "de": "35 Min." }.',
+        },
         serves: { type: 'object', description: 'How many it serves, free text: { "tr": "3–4 kişilik", "fr": "pour 3–4 personnes" }.' },
         meal: { type: 'object', description: 'Which meal it belongs to: { "tr": "Akşam yemeği", "fr": "Dîner" }.' },
         pantry: {

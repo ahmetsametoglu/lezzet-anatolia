@@ -943,6 +943,8 @@ satırında.
   - **③ Galeri sütunu YOKSA çizilmiyor.** Kuyruk `photosSlot`u boş veriyor (canlı yazan blok kuyruğa
     girmemeli) ama yerleşim 360 px'lik sütunu yine ayırıyordu: formun sol üstünde koca bir boşluk,
     sağında sıkışmış kutular. Ölçüt `fields.image === null`.
+    → ~~Koşullu ızgara~~ **KALKTI (11.08):** slot artık kuyrukta da dolu, dallanacak bir hâl yok
+    (aşağıdaki "görsel bloğu kırpılmayacak" maddesi).
   - **Öne çıkan künye satırları KALDI ama azaldı:** `facts` artık yalnız SAPMA gösteren değerler
     için (fırsatta teklif fiyatı, indirimde formun oynattığı alanlar). Dilekçenin tamamı altında,
     kaydırılabilir bir ağaç olarak — tarifin malzeme listesiyle vitrin işaretinin üç satırı aynı
@@ -975,3 +977,115 @@ satırında.
     kalır; `max-height` de yalnız bir tavandır, çocuğa aktarılacak bir yükseklik vermez. İkisi
     birleşince `overflow-y-auto` hiç devreye girmiyordu. Sabit yükseklik (`h-[68vh]`) + `flex-nowrap`
     + `min-h-0` üçlüsü çocuğa gerçek bir sınır veriyor.
+  - **Kaydırmanın ÜÇÜNCÜ turu — sabit `vh` yanlış çareydi** *(kullanıcı ölçümü 11.08: "sağdaki
+    sütun kaydırılıyor ama en aşağı indiğimde bile en altı görünmüyor; form tarafında ise kendi
+    içinde kaydırma yok, ayrılmış alana sığmıyor")*. İki ayrı sebep vardı ve ikisi de
+    `h-[68vh]`ten doğuyordu:
+    - **Diyalogla satır aynı ölçüyü paylaşmıyordu.** Kabuk `86vh`, gövdenin payı ondan küçük
+      (başlık + alt bar + dolgu). `68vh` satırın yanına gerekçe kutusu ve teknik döküm eklenince
+      toplam gövdeyi aşıyor, DİYALOG da kaymaya başlıyordu: iki kaydırma iç içe girince ne form ne
+      dilekçe sonuna kadar okunabiliyordu. Sabit ölçü kalktı — satır `flex-auto` + `min-h-0` ile
+      gövdeden kalanı alıyor, kaydıran yalnız iki sütun. **Sonuç bir sayıya değil, kabuğun gerçek
+      boşluğuna bağlı.**
+    - **Dilekçe sütununda kaydıran bölge YANLIŞ yerdeydi:** yalnız ağaç kaydırılıyor, konu kartı ile
+      künye satırları üstte sabit duruyordu. Sütun daraldığında sabit kısım sütunu tek başına
+      doldurup ağaca sıfır yer bırakıyor, altta kalan kırpılıyordu. Başlık dışında ne varsa artık
+      aynı bölgede kayıyor.
+    - **Kaydırma çubuğu metnin üstüne biniyordu** *(kullanıcı 11.08)*: macOS'ta çubuk overlay
+      çizilir, yani kutunun sağ kenarını yer. `-mr-3 pr-3` ile kaydırma kutusu kartın iç kenarına
+      genişletildi, metin bugünkü yerinde kaldı — çubuk artık boş şeridin üstünde. Ölçü kartın
+      kendi dolgusundan (`p-3`) alınıyor; ayrı bir sayı yazılsaydı biri değişince öteki unutulurdu.
+  - **"Teknik döküm" bloğu diyaloğun DİBİNDEN dilekçe sütununa taşındı** *(kullanıcı kararı 11.08:
+    "asistanın önerisi başlığının sağına bir aksiyon ekle, metadata ve view; view şu hâli kalsın,
+    metadata da JSON görünsün; teknik döküm oradan kalksın")*. Katlanan blok yukarı doğru açılıp
+    formun alanını yiyordu ve kendi içinde kaydırılamıyordu. Artık sütunun ikinci görünümü
+    (`ProposalAside` · Görünüm ↔ Metadata): ham dilekçe + hedef tablolar + öneri kimliği + varsa
+    doğan kayıtlar, aynı kaydırma alanında. Künye gövdelere TİP BAŞINA değil ortak geçiyor
+    (`InlineBodyArgs.meta`). **Gövdesi olmayan tiplerde blok yerinde kaldı** — orada dilekçe sütunu
+    yok (önizleme çizilir), kalkarsa ham dilekçeye bakılacak yer kalmazdı.
+  - **`product_draft` ARTIK `inline` — üç yalan aynı ekranda görüldü** *(kullanıcı 11.08: "yeni ürün
+    mü oluşturuyorum yoksa güncelliyor muyum? Aşağıda 'uygulanınca kayıt pasif doğar, ince ayar ve
+    yayına alma kendi ekranının işi' yazıyor — burada her şeyi yapmıyor muyuz?")*
+    - Tip hâlâ `draft_then_edit` künyesindeydi, oysa 22.14'te ürün ekranının **kendi formu** kuyruğa
+      taşınmıştı. Alt bardaki cümle o künyeden geliyordu ve **olmayan bir kısıtı** anlatıyordu.
+      Devir `discount_draft`ınkiyle birebir aynı gerekçe: pasif doğurmanın sebebi operatörün formu
+      GÖRMEMESİYDİ (10.08); artık görüyor. `impact` metni de yenilendi.
+    - **Satış ekseni kuyruğun DIŞINDA kaldı** *(kullanıcı kararı, aynı gün)*. Bir tur durum seçicisi
+      ortak alana taşınmıştı — kuyruğun formu da yayına alabilsin diye; kullanıcı geri aldırdı ve
+      kural netleşti: **kuyruk ürünün İÇERİĞİNİ yazar, satış eksenine dokunmaz.** Ürün pasifse
+      pasif, satıştaysa satışta kalır; form mevcut durumu okuyup aynısını geri gönderiyor. Seçici
+      ürün ekranının alt barında elle kurulu kalıyor — paket bağı uyarısı da (o ürünü içeren aktif
+      paketler) yalnız orada okunuyor, karar oraya ait.
+    - **Düğme "Ürünü kaydet" → "Ürünü güncelle".** `product_draft` VAR OLAN kaydın üstüne yazıyor
+      (`payload.productId`); yeni ürün ayrı tip (`product_create`). "Kaydet" iki işi birden
+      anlatabilen tek kelimeydi ve soruyu doğuran da oydu.
+  - **"Neden bu öneri" banner'ı KALKTI, gerekçe başlığın altına indi** *(kullanıcı kararı 11.08:
+    "bu bannerı kaldıralım; önerinin nedeni diyaloğun header'daki subtitle kısmına, dikkatimizi
+    çekecek bir renk tonuyla")*. İki satırlık bir metin için kenarlık + dolgu + majüskül başlık
+    harcanıyordu ve blok formun alanını yiyordu. Ton `ops-amber` (envanterin "dikkat" rengi; kırmızı
+    DEĞİL — gerekçe bir hata değil, okunması gereken bağlam). `Dialog.subtitle` bunun için `string`
+    yerine `ReactNode` oldu. **Gerekçesiz önerinin cümlesi duruyor** (brief §3): onaylanabilir ama
+    patron neye dayandığını göremediğini bilmeli — kalkan yalnız kutu.
+  - **GÖRSEL BLOĞU KIRPILMAYACAK — form bire bir aynı olacak** *(kullanıcı kararı 11.08: "eğer ben
+    sistemde bir form kullanıyorsam o formu mümkünse bire bir kopyala. Code duplication olmasın, ama
+    görüntüde bazı şeyleri kırpma.")*
+    - 22.14'te galeri slotu kuyrukta bilerek `null` bırakılmıştı: blok CANLI yazıyor (yükleme,
+      sıralama, kapak seçimi anında kaydediliyor) ve "kuyruk hiçbir şeyi kendi yazmaz" vaadini
+      deleceği düşünülmüştü. Karar geri alındı — **galeri öneriyi uygulamıyor, ürünün fotoğraflarını
+      yönetiyor**; operatörün kendi elinin işi, tıpkı ürün ekranındaki gibi. Kuyruğun onaya
+      bağladığı şey asistanın DİLEKÇESİ ve oraya dokunan tek yol hâlâ alt bardaki düğme.
+    - Taşınanlar (kopya YOK, yer değişikliği): `product-photos.tsx` →
+      `components/operation/form/product-form/photos.tsx`, `photos-types.ts` aynı klasöre, altı görsel
+      eylemi → `lib/catalog/product-photo-actions.ts` (kapak yükleme + galeri listele/ekle/sil/sırala/
+      kapak yap/kırp). `updateProductAction`ın 22.14'teki devrinin aynısı ve aynı gerekçeyle: iki
+      yüzeyin ortak eylemi sayfa klasöründe duramaz (`CLAUDE §2`).
+    - `PRODUCTS_PATH` `lib/catalog/paths.ts`e alındı: iki eylem dosyası da tazeliyor ve `'use server'`
+      modülü sabit dışa veremez, yani iki kopya doğacaktı.
+    - Kapak adresi `AssistantFormOptions.products[...].imageUrl` ile SUNUCUDA kuruluyor —
+      `publicImageUrl` `R2_PUBLIC_BASE_URL`i okuyor ve o env tarayıcıya gitmiyor. Ürün ekranı da
+      aynısını yapıyor (`ProductView.imageUrl`); kuyruk kendi yolunu icat etmiyor.
+    - Karar VERİLMİŞ öneride kapak yükleme kapalı (`uploadCover` verilmiyor): arşiv satırı okunur bir
+      kayıttır.
+  - **"Ürünü güncelle" FK ihlaliyle düşüyordu — auth kimliği profil kolonuna yazılmış** *(kullanıcı
+    11.08: `assistant_proposal_decided_by_fkey [23503]`)*. `decided_by` `user_profiles`'a FK'li
+    (`0042_assistant_proposal.sql`), oysa `updateProductAction` `withProposal`a `staff.id`yi (auth
+    kimliği) geçiyordu — 22.14'te yazılmış bir hata; öteki beş `withProposal` çağrısı zaten
+    `profileId` geçiyordu. **Arızayı `lib/guard`ın 04.11'de kurduğu nöbet yakaladı:** dev bypass iki
+    kimliği ayrı tutuyor, o yüzden yanlış kolon ilk gerçek denemede patlıyor (aynı kod tek kimlikli
+    bypass'ta sessizce çalışırdı). Süpürmede aynı sınıftan iki yer daha çıktı ve düzeltildi:
+    kuyruğun kendi karar yolu (`claimForApply` + ret damgası — yani "Uygula"/"Reddet" de aynı hatayı
+    verecekti) ve yorum moderasyonu (`product_feedback.moderated_by`). **Ham veritabanı mesajının
+    ekrana çıkması ayrı bir konu ve bilinçli** (`lib/error` künyesi, denetim 09.08): operasyon
+    yüzeyinde personel kısıt adını görür — kaldırılırsa teşhis kaybolur.
+  - **Dilekçe sütununun üç gürültü kaynağı, üç karar** *(kullanıcı ölçümü 11.08: "dil konusu burayı
+    çok karmaşık gösteriyor ve bu iç içe JSON yapıların hepsinde aynı duruma sebep olacak" +
+    "besin künyesi de var… dolayısıyla asistanın önerisi değil hepsi")*
+    - **Dil bir EKSEN oldu, üç satır değil.** Çok dilli her alan üç çocuk satır doğuruyordu; on
+      alanlı bir dilekçe kırk satıra çıkıyordu. Artık ağacın tepesinde tek dil seçici var, her alan
+      seçili dilde tek satır. **Eksik gizlenmiyor, SAYILIYOR:** sekmenin yanındaki sayı o dilde boş
+      kalan alan adedi ("FR 2" = iki alan Fransızcasız). Bu, "eksik alan da gösterilir" ilkesinin
+      daha okunur hâli — üç satır yerine tek sayı.
+    - **İç içe yapı KATLANIR.** Nesne ve nesne dizileri açılıp kapanan başlık; kapalıyken kaç
+      alan/kalem taşıdığını söyler. Derin yapı sütunu boydan boya doldurmuyor.
+    - **BAĞLAM ÖNERİ DEĞİLDİR.** Ölçüldü: `product_draft` dilekçesinde `fields` yalnız
+      `name` + `description` taşıyor (asistanın gerçekten yazdıkları), `current_fields` ise yedi
+      alan — ad, açıklama, içindekiler, saklama, besin künyesi, alerjenler, izler. Ağaç ikisini aynı
+      tonda basınca "hepsi öneri" gibi okunuyordu. Artık kökteki bölümler ne olduklarını söylüyor
+      ("onaylarsan bunlar yazılır" ↔ "karşılaştırma için — asistan dokunmuyor") ve bağlam bölümü
+      KAPALI doğuyor.
+  - **Gerekçe künye satırına taşındı ve büyüdü** *(kullanıcı kararı 11.08: "asistan notunu asistan
+    metninin yerine alalım, saat kalsın yanına yazalım, fontunu da büyütelim — çünkü bu aslında bize
+    asistanın bir mesajı")*. "asistan" kelimesi kalktı: kuyruktaki her öneri zaten asistanın, kelime
+    bilgi taşımıyordu. Künye artık `<saat> · <gerekçe>` ve gerekçe bir gövde punto büyük.
+  - **Gerekçede makine kimliği vardı** *(kullanıcı 11.08: "neden alt çizgi var?")*. Ekranda
+    *"catalog_health: lang eksik. İsim ve açıklama 3 dile tamamlandı."* yazıyordu. Çizim değil,
+    asistanın kendi cümlesi: dayandığı OKUMA ARACININ adını (`catalog_health`) ve o aracın
+    döndürdüğü eksik-parça anahtarını (`lang`) olduğu gibi yapıştırmış. İkisi de makine kimliği ve
+    cümleyi yarı Türkçe bırakıyor. Kural MCP talimat metnine yazıldı: `reason` patrona AYNEN
+    gösterilir, düz Türkçe tek cümle, araç adı/alan anahtarı/snake_case yok, dayandığı sayılar var.
+    Araç açıklamalarına tek tek yazılmadı — on propose aracı var, biri mutlaka ayrışırdı.
+    **Kuyrukta duran öneriler eski metinleriyle kalır**; kural bundan sonrakiler için.
+  - **Sarmalayan kart üç gövdeden de kalktı** *(kullanıcı: "ürün formu ve asistan önerisi kart
+    içinde kart şeklinde görünüyor; en dıştaki kartı kaldır")*. Panellerin kendi kenarlığı zaten
+    vardı; dıştaki kabuk ikinci bir kenarlık ve ikinci bir dolgu ekliyordu. Üçünde birden yapıldı,
+    çünkü desen üçünde de aynıydı ve biri kalsaydı tipler arası geçişte fark göze çarpardı.

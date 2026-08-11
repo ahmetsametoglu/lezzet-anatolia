@@ -6,6 +6,7 @@ import { resolveLocalizedText, type LocalizedText, type ProductDetailsUpdate, ty
 import { requireStaff } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { PRODUCTS_PATH } from './paths';
 
 // Ürün YAZMA yolu — İKİ yüzeyin ortak eylemi (ürün ekranı 05.x · asistan kuyruğu 22.14).
 //
@@ -13,9 +14,6 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 // ait olmadığı için `lib/`'e taşındı (`CLAUDE §2`: paylaşılan yardımcı lib'te). Aynı devir indirim
 // ve teklif yazma yollarında da yaşanmıştı (`lib/prices/discount-actions`, `lib/stock/offer-actions`)
 // — desen o.
-
-/** Ürün listesinin yolu; kayıt yazılınca liste tazelenir (eksik-beyan rozetleri değişir). */
-const PRODUCTS_PATH = '/operations/products';
 
 /** Formun gönderdiği tam girdi: düzenlenebilir ürün alanları (şemadan türer) + varyant satırları. */
 type ProductFormInput = ProductDetailsUpdate & { variants: ProductVariantEntry[] };
@@ -46,7 +44,11 @@ export async function updateProductAction(
 
     await withProposal(
       proposalId,
-      staff.id,
+      // PROFİL kimliği — `assistant_proposal.decided_by` `user_profiles`'a FK'li. Bir tur `staff.id`
+      // (auth kimliği) geçiliyordu ve dev bypass'ta ikisi ayrı olduğu için ilk gerçek denemede FK
+      // ihlaliyle patladı (`23503`, kullanıcı 11.08) — `lib/guard` künyesindeki nöbet tam bunun için
+      // konmuştu. Öteki beş `withProposal` çağrısı zaten `profileId` geçiyordu.
+      staff.profileId,
       async () => {
         await new ProductService(db).updateDetails(id, fields);
         await new ProductVariantService(db).syncVariants(id, variants);

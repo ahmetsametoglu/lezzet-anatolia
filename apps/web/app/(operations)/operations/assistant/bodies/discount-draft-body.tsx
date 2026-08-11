@@ -1,12 +1,8 @@
 'use client';
 
 import type { DiscountDraftPayload } from '@lezzet/types';
-import {
-  DiscountFormBody,
-  type DiscountField,
-  type DiscountFormValues,
-} from '@/components/operation/form/discount-form';
-import { ProposalAside, type ProposalFact } from '@/components/operation/ui/proposal-aside';
+import { DiscountFormBody, type DiscountField, type DiscountFormValues } from '@/components/operation/form/discount-form';
+import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
@@ -37,6 +33,8 @@ interface DiscountDraftBodyProps {
   /** Önerinin konusu — kapsam kategorisi/koleksiyonu; sepet kapsamında `null`. */
   subject: ProposalSubject | null;
   options: AssistantFormOptions;
+  /** Teknik künye — dilekçe sütununun "Metadata" görünümü basıyor (11.08). */
+  meta: ProposalMeta;
   values: DiscountFormValues;
   filled: ReadonlySet<DiscountField>;
   onChange: (next: DiscountFormValues) => void;
@@ -49,6 +47,7 @@ export function DiscountDraftBody({
   payload,
   subject,
   options,
+  meta,
   values,
   filled,
   onChange,
@@ -56,32 +55,34 @@ export function DiscountDraftBody({
   readOnly,
 }: DiscountDraftBodyProps) {
   return (
-    <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-white p-3.5">
-      {/* İKİ SÜTUN, üç değil (fırsat kartından ayrılan yer). Fırsatta karar dört sayının
-          karşılaştırmasıydı ve künye kadar yer tutuyordu; burada karar FORMUN kendisi — on beş
-          kutu. Formu üçte bire sıkıştırmak, taşıdığımız formu tanınmaz hâle getirirdi. */}
-      <div className="flex flex-wrap items-stretch gap-4">
-        <div className="flex min-w-[22rem] flex-[2] basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
-          <DiscountFormBody
-            values={values}
-            onChange={onChange}
-            categories={options.categories}
-            collections={options.collections}
-            filled={readOnly ? undefined : filled}
-            disabled={disabled || readOnly}
-          />
-        </div>
-
-        <ProposalAside
-          subject={subject}
-          // Sepet kapsamının bir KAYDI yok; kart uydurmak yerine tek satırla söyleniyor.
-          fallbackTitle="Sepetin tamamı"
-          // Künye satırları SAPMA gösterenler (operatör formu değiştirdikçe asistanınki üstü çizili
-          // kalır); dilekçenin tamamı altta okunur ağaç olarak (22.15).
-          facts={proposalFacts(payload, values)}
-          payload={payload}
+    // İKİ SÜTUN, üç değil (fırsat kartından ayrılan yer). Fırsatta karar dört sayının
+    // karşılaştırmasıydı ve künye kadar yer tutuyordu; burada karar FORMUN kendisi — on beş kutu.
+    // Formu üçte bire sıkıştırmak, taşıdığımız formu tanınmaz hâle getirirdi.
+    //
+    // Sarmalayan kart KALKTI (11.08): panellerin kendi kenarlığı zaten var ve dıştaki kart "kart
+    // içinde kart" okunuyordu (kullanıcı tespiti, ürün diyaloğunda görüldü — desen üç gövdede aynı).
+    <div className="flex flex-wrap items-stretch gap-4">
+      <div className="flex min-w-[22rem] flex-[2] basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
+        <DiscountFormBody
+          values={values}
+          onChange={onChange}
+          categories={options.categories}
+          collections={options.collections}
+          filled={readOnly ? undefined : filled}
+          disabled={disabled || readOnly}
         />
       </div>
+
+      <ProposalAside
+        subject={subject}
+        // Sepet kapsamının bir KAYDI yok; kart uydurmak yerine tek satırla söyleniyor.
+        fallbackTitle="Sepetin tamamı"
+        // Künye satırları SAPMA gösterenler (operatör formu değiştirdikçe asistanınki üstü çizili
+        // kalır); dilekçenin tamamı altta okunur ağaç olarak (22.15).
+        facts={proposalFacts(payload, values)}
+        payload={payload}
+        meta={meta}
+      />
     </div>
   );
 }
