@@ -49,6 +49,10 @@ uyguladığı denetimi bu şeride de uygular.
   21 ekran, ~35 tekrar kullanılabilir komponent adayı, token açıkları (renk/yazı/yarıçap),
   navigasyon modeli, eksik durumlar, API imaları ve **18 maddelik karar listesi** (§8 —
   kullanıcıyla konuşulacak; ekran işi bu kararlar verilmeden başlamaz).
+- `BACKLOG-musteri.md` — **KAPSAM** (11.08): native MÜŞTERİ yüzeyinin açık işleri tek listede —
+  fiziksel cihaz turunda ölçülen bulgular + kullanıcı yönergeleri + `design/BACKLOG.md`'nin
+  müşteriyi ilgilendiren maddeleri. Kimlikler `MB-nn`; **ilerleme tutmaz**, durumun sahibi
+  `docs/build/21-mobil-uygulama.md` görev satırıdır (CLAUDE §5).
 
 ## Planlanan (teknoloji kararı kesinleşince)
 
