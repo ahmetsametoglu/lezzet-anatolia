@@ -718,14 +718,14 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   groupNote: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
   placeNote: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
   screen: {

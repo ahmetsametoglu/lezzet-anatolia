@@ -758,7 +758,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   companyNote: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
+    fontSize: theme.text['body-sm'],
     color: theme.colors['neutral-400'],
     marginTop: theme.space.xs,
   },
@@ -787,8 +787,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   cardBody: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
   pointsGap: {
@@ -813,8 +813,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   earnBody: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
   couponRow: {
@@ -938,8 +938,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   switchNote: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors['sand-600'],
   },
 
@@ -956,8 +956,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   dataBody: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
   logoutRow: {

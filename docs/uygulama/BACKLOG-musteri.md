@@ -446,6 +446,22 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
 - [x] **MB-41 · Ham hex yalnız `app.config.ts` splash'ta kaldı** (`BEKLEYEN(21.3)`). Tek satır;
   token'a bağlanamıyorsa gerekçesi künyeye yazılıp işaret kapatılmalı.
 
+- [x] **MB-47 · "Buraya da gelin" kaydını katalog ile paketler AYRI AYRI hatırlıyordu** (kullanıcı
+  bulgusu 11.08) → **KAPANDI, görev `(21.39)`.** Bant iki listenin başında çiziliyor ve künyesi
+  *"kayıt alındığında düğme kalkar"* diyor; hafıza bandın kendi `useState`inde olduğu için söz
+  yalnız TEK ekranda tutuluyordu — katalogda kaydını bırakan müşteri paketler sekmesinde aynı
+  düğmeyi yeniden görüyordu (aynısı sayfadan çıkıp geri gelince de). Hafıza modül deposuna taşındı
+  (`lib/places/place-notice-store.ts`), anahtar YER. Arıza düzeltmeden önce testle üretildi.
+
+- [x] **MB-36 · MB-37 → ÖLÇÜLDÜ, İKİSİ DE ZATEN KAPALI** (11.08). Kalemler eski bir okumayla
+  girmiş: **MB-37**'nin istediği yere bağlı işaret ürün detayında var
+  (`product-detail-screen.tsx` — `stockMarkOf`, `info` eleniyor, "haber ver" `pending`de açılıp
+  `blocked`ta kapanıyor). **MB-36**'nın dayandığı `BEKLEYEN(21.6)` 09.08'de kapanmış: mobil katalog
+  ucu yeri istekten, alıcıyı oturumdan çözüyor (`readViewer` → `pricingViewerOf`) — web'in
+  çağırdığı fonksiyonun aynısı; teklif alanları (`wasCents`/`limitLabel`/`stockId`) ekranlarda
+  tüketiliyor. **Kapanış KOD OKUMASINA dayanıyor, cihaz ölçümüne değil** — B2B onaylı bir hesapla
+  görsel doğrulama istenirse cihaz şeridinin işi.
+
 ### Şeridin sıra önerisine eki
 
 §10'un sırası doğru; iki düzeltme öneriyorum:
@@ -501,6 +517,8 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-17 (SÖZLEŞME yarısı — turun toplamı) | mobil/backend | 11.08 · 12:3x | `packages/types/src/contracts/feedback*` · `packages/application/src/feedback/**` · `apps/mobile-api/src/api/v1/feedback.ts` | **bitti** — `invitePointsTotal` açıldı |
 | MB-01 (klavye tuzağı) | denetim/cihaz | 11.08 · 11:4x — görev `(21.33)` | 10 ekran dosyası: `screens/{feedback,professionals,login,catalog}` + `{courier/day-close,courier/delivery,management/offer-approval,warehouse/adjustment,warehouse/courier-return,warehouse/transfer}` | **bitti ve COMMİT EDİLDİ** — `f521aef` (11.08 · 11:5x). Cihazda doğrulandı: iki senaryo da tek dokunuşla çalıştı, geri bildirim yorumu veritabanında görüldü. **MB-34'ün önü açık.** |
 | MB-34 (kaydırma kabını kite alma) | — | — | — | ⛔ **ASKIYA ALINDI** — aşağıdaki nota bak |
+| MB-46 (küçük duraklara bağlı İÇERİK metinleri) | cihaz | 11.08 · 13:35 | `apps/mobile/src/components/ui/{note.tsx,suggestion-list.tsx}` · `screens/{account/{account-screen,address-card}.tsx,cart/{cart-screen,cart-line-row}.tsx,checkout/{checkout-screen,order-confirmed-screen}.tsx,customer-kit/{address-form,dashed-invite,option-row,summary-panel}.tsx,feedback/feedback-screen.tsx,home/home-screen.tsx,orders/{order-detail-screen,order-timeline,orders-screen}.tsx,package/package-detail-screen.tsx,packages-list/packages-list-screen.tsx,product/product-detail-screen.tsx,professionals/{professionals-screen,application-form}.tsx,support/{new-ticket-sheet,order-line-picker,tickets-screen}.tsx}` | **alındı** — kullanıcı kararı 11.08: 1.+2. kademe birlikte. Ölçüt: *müşterinin karar için okuduğu metin `body-sm` (14) altına inmez*; `helper`/`micro` yalnız gerçek yardımcı role kalır. **YALNIZ MÜŞTERİ yüzeyi** — operasyon/kurye/depo ekranları listeye alınmadı (başka şeridin tasarım alanı) |
+| MB-47 (bant kaydının hafızası) · MB-36 · MB-37 (ölçüm) | mobil | 11.08 · 14:0x — görev `(21.39)` | **YENİ:** `apps/mobile/src/lib/places/place-notice-store.ts` · **DEĞİŞEN:** `screens/customer-kit/place-notice-band.{tsx,test.tsx}` | **bitti** — MB-46'nın dosya listesiyle kesişmiyor. MB-36/MB-37 kod okumasıyla kapatıldı, cihaz ölçümü YAPILMADI |
 | MB-05 · MB-07 · MB-08 · MB-11 (B2B ekranının açık kalanları) | mobil | 11.08 · 12:4x | `apps/mobile/src/screens/professionals/**` · `apps/mobile/src/lib/api/b2b.ts` | **alındı** |
 | MB-04 (e-posta alanı kalkıyor — kimlik oturumdan) | mobil | 11.08 · 13:1x | `apps/mobile-api/src/api/v1/b2b.ts` (bitti) · `apps/mobile/src/screens/professionals/**` | **alındı** |
 | MB-39 (ölü ihraç tipler — B2B dışı yarısı) | mobil | 11.08 · 12:4x | `apps/mobile/src/lib/api/{discover,points}.ts` · `lib/payment/{payment-sheet,stripe-config}.ts` · `screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` · `screens/home/use-home-orders.hook.ts` | **alındı** |

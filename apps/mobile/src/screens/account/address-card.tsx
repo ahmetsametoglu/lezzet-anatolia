@@ -91,7 +91,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   line: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.muted,
   },
 }));

@@ -102,8 +102,12 @@ const styles = StyleSheet.create((theme) => ({
   description: {
     // Ağırlıksız gövde — RN'in varsayılanı da 400; aile o ağırlıkla indekslenir.
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
+    /* `helper` (12) DEĞİL `body-sm` (14) — MB-46'nın kuralı: müşterinin KARAR için okuduğu metin
+       14'ün altına inmez; `helper`/`micro` yalnız gerçek yardımcı role kalır (form ipucu, birim,
+       sayaç, zaman damgası). Ölçüm: `helper` yazı boyutu "Büyük"te bile 13,8'de kalıyordu. Bu
+       kutu uyarı ve hata taşıyor, yani tanım gereği içerik — kural burada en görünür hâliyle. */
+    fontSize: theme.text['body-sm'],
     // Gövde satır aralığı: oran da token (`lead--line-height`) — ham çarpan yazılmadı.
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
   },
 }));

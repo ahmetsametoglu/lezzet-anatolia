@@ -301,7 +301,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space.lg,
     textAlign: 'center',
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.muted,
   },
 }));

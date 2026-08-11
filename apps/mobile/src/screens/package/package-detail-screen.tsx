@@ -523,8 +523,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   note: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * 1.5,
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * 1.5,
     color: theme.colors.muted,
   },
   barSpace: {

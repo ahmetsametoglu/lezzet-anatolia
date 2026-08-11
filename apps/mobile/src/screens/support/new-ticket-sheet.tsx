@@ -362,8 +362,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   note: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors['sand-600'],
   },
 }));

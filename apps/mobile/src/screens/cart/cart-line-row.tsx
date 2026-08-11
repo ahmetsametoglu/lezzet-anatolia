@@ -186,8 +186,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   subtitle: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
   },
   total: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],

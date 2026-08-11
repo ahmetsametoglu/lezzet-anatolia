@@ -142,8 +142,8 @@ const styles = StyleSheet.create((theme) => ({
   inkTitle: { color: theme.colors.ink },
   description: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
 }));

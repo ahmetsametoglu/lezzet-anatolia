@@ -1681,6 +1681,85 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **Doğrulama:** mobil typecheck rc=0 · eslint · `pnpm test:unit` 116 dosya / **1347 test** yeşil.
 
+- [x] (21.38) **MÜŞTERİNİN OKUDUĞU METİN 14'ÜN ALTINA İNMEZ — küçük duraklara çakılı içerik
+  taranıp yükseltildi (kullanıcı isteği 11.08, MB-46).**
+  `touches:` `apps/mobile/src/components/ui/{note,suggestion-list}.tsx` ·
+  `apps/mobile/src/screens/account/{account-screen,address-card}.tsx` ·
+  `apps/mobile/src/screens/cart/{cart-screen,cart-line-row}.tsx` ·
+  `apps/mobile/src/screens/checkout/{checkout-screen,order-confirmed-screen}.tsx` ·
+  `apps/mobile/src/screens/customer-kit/{address-form,dashed-invite,option-row,summary-panel}.tsx` ·
+  `apps/mobile/src/screens/orders/{order-detail-screen,order-timeline,orders-screen}.tsx` ·
+  `apps/mobile/src/screens/support/{new-ticket-sheet,order-line-picker,tickets-screen}.tsx` ·
+  `apps/mobile/src/screens/professionals/{professionals-screen,application-form}.tsx` ·
+  `apps/mobile/src/screens/feedback/feedback-screen.tsx` ·
+  `apps/mobile/src/screens/package/package-detail-screen.tsx` ·
+  `apps/mobile/src/screens/product/product-detail-screen.tsx`
+  *(`home/home-screen.tsx` ve `packages-list/packages-list-screen.tsx`teki aynı düzeltme `(21.37)`
+  commit'ine bindi — o dosyalar o sırada başka şeridin elindeydi.)*
+
+  **SORU KULLANICIDAN GELDİ:** `(21.36)`da onboarding'in teslimat/ödeme metinleri düzeltilince
+  *"başka yerlerde de kullanıcı Büyük seçse bile çok küçük font gösteriliyor olabilir, aynı
+  kontrolü tüm sayfalarda yap"* dendi.
+
+  **YÖNTEM — önce ölçüm, sonra kalem.** Tüm `apps/mobile/src` taranıp `StyleSheet.create` blokları
+  ayrıştırıldı: **255 stil** küçük duraklardan okuyor (`micro` 54 · `note` 77 · `helper` 58 ·
+  `eyebrow` 49 · `badge` 17). Bunların adından İÇERİK taşıdığı anlaşılan **63'ü** ayrıldı, cihazda
+  "Büyük" seçiliyken doğrulandı ve kullanıcı kararıyla ilk iki kademe alındı.
+
+  **KURAL (tek cümle, artık ölçüt):** *müşterinin KARAR için okuduğu metin `body-sm` (14) altına
+  inmez; `helper` ve `micro` yalnız gerçek yardımcı role kalır* — form ipucu, birim, sayaç, zaman
+  damgası. Kuralın en görünür yeri kitin uyarı kutusu (`components/ui/note.tsx` künyesi).
+
+  Neden ölçekle çözülemiyordu: yazı boyutu ayarı ÇALIŞIYOR ama çarpan küçük bir sayıyı yine küçük
+  bırakır — `helper` "Büyük"te (×1,15) **13,8**'de, `micro` **13,2**'de kalıyordu; `body-sm` ise
+  **16,1**'e çıkıyor.
+
+  Yükseltilenlerden bazıları ve neden: **alerjen satırı** (sağlık bilgisi, `micro`) · **kitin
+  uyarı/hata kutusu** (tüm ekranlarda) · **adres satırları** (müşteri teslimatı oradan doğruluyor) ·
+  ödeme adımının bilgi satırları · sepetteki ürünün boyu · veri hakları ve izin sonucu cümleleri ·
+  geri bildirimin hata satırı.
+
+  **DOKUNULMAYANLAR bilinçli:** operasyon · kurye · depo ekranları listeye ALINMADI (başka şeridin
+  tasarım alanı) ve 3. kademe (`note` 13 → "Büyük"te 14,9) bugün yeterli sayıldı. `helper` hâlâ
+  ~100 yerde ve çoğu meşru; topluca değiştirmek ölçülmemiş bir toplu müdahale olurdu.
+
+  **Doğrulama:** cihazda hesap ekranı önce/sonra karşılaştırıldı — izin ve veri hakları cümleleri
+  ile adres satırları gözle görülür büyüdü. typecheck · eslint temiz. **Tam test paketi bu
+  pencerede GÜVENİLİR DEĞİL ve sebebi ölçüldü:** makine yük ortalaması 13,99 (sanallaştırma VM'i
+  %212, Next %73 CPU) ve düşen testler her koşuda DEĞİŞİYOR; aynı yedi dosya birlikte koşturulunca
+  **89 test 8,5 saniyede geçiyor**. Yani zaman aşımı, kırılma değil. Makine sakinleştiğinde tam
+  paket bir kez daha koşturulmalı — `BEKLEYEN(21.38)`.
+
+- [x] (21.39) **"BURAYA DA GELİN" KAYDINI İKİ LİSTE AYRI AYRI HATIRLIYORDU (kullanıcı bulgusu 11.08).**
+  `touches:` `apps/mobile/src/lib/places/place-notice-store.ts` (YENİ) ·
+  `apps/mobile/src/screens/customer-kit/place-notice-band.{tsx,test.tsx}`
+
+  Bölge dışı bant iki listenin başında çiziliyor (katalog · paketler) ve künyesi açık bir söz
+  veriyordu: *"kayıt alındığında düğme kalkar — alınmış bir kaydı ikinci kez isteten düğme
+  'sayılmadım mı?' sorusunu doğururdu."* Söz **ekranlar arasında tutulmuyordu**: hafıza bandın
+  kendi `useState`indeydi, iki liste iki ayrı bileşen örneği, yani iki ayrı hafıza. Katalogda
+  kaydını bırakan müşteri paketler sekmesine geçince aynı düğmeyi yeniden görüyordu. Aynı arıza
+  tek ekranda da vardı — sayfadan çıkıp geri gelen müşteri bandı sıfırlanmış buluyordu.
+
+  **Sebep ölçüldü, varsayılmadı:** düzeltmeden ÖNCE yazılan iddia kırmızı koştu (`pkg-cta` ekranda
+  duruyordu), depo bağlandıktan sonra yeşile döndü. Ölçüm ekranda değil testte yapıldı — arıza
+  görsel değil, durumun nerede saklandığıyla ilgili.
+
+  Hafıza modül deposuna taşındı (`place-notice-store`), sepetin ve teslimat adresi seçiminin aynı
+  kalıbı: `useSyncExternalStore` + modül düzeyinde kayıt. **Anahtar YER** (`ülke:posta kodu`) —
+  kodunu değiştiren müşteride düğme haklı olarak geri gelir; **kimlik anahtara girmez** çünkü
+  misafir akışında hesap kaydın tam ortasında kuruluyor ve kimliği anahtarlasaydık kayıt biter
+  bitmez hafıza başka kovaya düşerdi. **Diske yazılmaz:** kaydın kalıcı sahibi sunucu ve ikinci
+  istek zaten `already` dönüyor, yani yeniden açılışta düğme görünse bile müşteri yanlış cevap
+  almaz.
+
+  **Sınıf taraması yapıldı:** kitin öteki `useState`leri form taslağı ya da çekmece safhası —
+  sunucu gerçeğini yansıtan tek yerel durum buydu. Aynı sınıfın kalan üyesi `BACKLOG-musteri`
+  **MB-23** (vitrindeki bölge ≠ sepetteki adres) ve o **karar bekliyor**, kod işi değil.
+
+  **Doğrulama:** mobil typecheck rc=0 · eslint · knip temiz (yeni ölü ihraç yok) ·
+  **83 suite / 592 test** yeşil (bandın kendi dosyası 9/9).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

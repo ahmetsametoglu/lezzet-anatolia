@@ -147,8 +147,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   note: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.terracotta,
   },
 }));

@@ -94,14 +94,14 @@ const styles = StyleSheet.create((theme) => ({
   },
   subtitle: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.muted,
   },
   footnote: {
     paddingHorizontal: theme.space['3xl'],
     paddingBottom: theme.space.lg,
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.muted,
   },
 }));

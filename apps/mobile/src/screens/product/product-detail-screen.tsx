@@ -864,7 +864,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   allergenLine: {
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.micro,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.terracotta,
   },
   netWeight: {

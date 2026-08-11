@@ -417,7 +417,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   /** Yazım reddi — talep ekranının `sendError` deseni (hata rengi + `micro`), akışın ortalanmışı. */
   errorLine: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.error,
     textAlign: 'center',
     paddingHorizontal: theme.space['6xl'],
