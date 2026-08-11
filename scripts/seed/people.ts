@@ -170,6 +170,12 @@ const KISILER: SeedKisi[] = [
   //   bypass kimliğiyle aynıdır; aksi halde operasyon ekranı ilk durum geçişini yazarken
   //   `actor_id` FK'sinden düşerdi. E-posta kimsenin giriş yapmayacağı bir yerel adres.
   { key: 'devAdmin', id: DEV_ADMIN_PROFILE_ID, name: 'Dev Admin (bypass)', email: 'dev-admin@lezzet.local', phone: '+33600000100', roles: ['admin'], preferredLanguage: 'tr' },
+  // — YÖNETİCİ: web bypass'ının dev admin'inden AYRI ve bilerek (21.32). Bypass hiç giriş yapmaz,
+  //   bu hesap yapar: mobilde bypass yoktur, personel gerçek oturumla girer. Ayrılığın ÖLÇÜLMÜŞ
+  //   sebebi adres: `dev-admin@lezzet.local` ile `generateLink` ilk denemede reddedildi (`.local`
+  //   uzantısı), gerçek alan adlı personel adreslerinin altısı da ilk denemede geçti. Bypass'ın
+  //   e-postasını değiştirmek ise seçenek değil — kimliği webin guard'ına sabit bağlı.
+  { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolia.fr', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
   // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
   { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
@@ -214,5 +220,64 @@ export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
   }
   console.log(`✓ kişi: ${harita.size} kart (dev admin dâhil — gerçek hesabı admin yapmak: pnpm set-role <e-posta> admin)`);
   return harita;
+}
+
+// ── Personelin GİRİŞ hesapları (21.32) ───────────────────────────────────────────────────────────
+
+/**
+ * Personel profillerine `auth.users` satırı açar — yani personel gerçekten GİRİŞ YAPABİLİR olur.
+ *
+ * ── NEDEN SEED'İN İŞİ ────────────────────────────────────────────────────────
+ * `db:refresh` = `supabase db reset && seed`, yani `auth.users` da siliniyor. Bağ elle kurulursa
+ * her sıfırlamada kayboluyordu ve operasyon yüzeyi yerelde denenemez hâle geliyordu (kullanıcı
+ * bulgusu 11.08: *"operasyon tarafına giriş yapamadım"*). Profil satırları zaten seed'in malı;
+ * giriş hesabının da burada doğması, "yenilemeden sonra çalışır" sözünü tek yerde tutuyor.
+ *
+ * ── ROLLERİ BOZMAZ ──────────────────────────────────────────────────────────
+ * Satırı biz bağlamıyoruz, `0002` trigger'ı bağlıyor: yeni auth kullanıcısı e-postayla eşleşen ve
+ * `auth_user_id`'si boş olan profili bulup kendine bağlar, rolüne DOKUNMAZ. Ölçüldü (11.08):
+ * `kurye@lezzetanatolia.fr` bağlandıktan sonra `/me` `roles: ['courier']` döndü, `/courier/day`
+ * 200, `/warehouse/preparation` 403. Trigger'ın "ilk hesap admin olur" bootstrap'ı da tetiklenmez:
+ * bu fonksiyon `seedKisiler`den SONRA koşar ve o an admin rollü profil zaten vardır.
+ *
+ * ── MÜŞTERİ HESABI AÇILMAZ ──────────────────────────────────────────────────
+ * Yalnız personel: müşterinin girişi OTP akışının kendisidir ve o akış test edilirken hazır bir
+ * auth satırı, sınanan şeyin yarısını atlatırdı. Dev girişinin müşteri düğmesi de gerçek bir
+ * hesaba (kullanıcının kendi adresine) basar, seed'in ürettiği bir hesaba değil.
+ *
+ * İdempotent: bağlı profil atlanır, yani seed tekrar tekrar koşabilir.
+ */
+export async function seedStaffLogins(db: Db): Promise<void> {
+  const profiles = new UserProfileService(db);
+  console.log('▸ PERSONEL GİRİŞ HESABI seed');
+  let created = 0;
+  let skipped = 0;
+
+  for (const k of KISILER) {
+    if (k.roles.every((role) => role === 'customer')) continue;
+    /* `.local` uzantısı ELENİR: `generateLink`/`createUser` onu reddedebiliyor (ölçüldü 11.08 —
+       `dev-admin@lezzet.local` ilk denemede düştü). O hesap zaten webin auth'suz bypass'ının
+       profil satırı; giriş yapması hiç beklenmiyor (mobilin yöneticisi `yonetici` anahtarı). */
+    if (k.email.endsWith('.local')) continue;
+
+    const mevcut = await profiles.findByEmail(k.email);
+    if (mevcut?.authUserId) {
+      skipped += 1;
+      continue;
+    }
+
+    // `email_confirm` şart: onaysız kullanıcı giriş yapamaz ve yerelde onay maili diye bir şey yok.
+    const { error } = await db.auth.admin.createUser({ email: k.email, email_confirm: true });
+    if (error) {
+      // SESSİZ GEÇİLMEZ (CLAUDE §1): giriş hesabı açılmadıysa o rol yerelde denenemez ve bunu
+      // ancak deneyen fark eder. Seed'i kesmiyoruz — kalan roller yine açılsın.
+      console.log(`  ! ${k.email} · giriş hesabı AÇILAMADI: ${error.message}`);
+      continue;
+    }
+    created += 1;
+    console.log(`  ✓ ${k.email} · ${k.roles.join('+')} — giriş açıldı`);
+  }
+
+  console.log(`✓ personel girişi: ${created} yeni / ${skipped} zaten bağlı`);
 }
 

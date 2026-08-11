@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
+import { logger, maskEmail } from '@lezzet/observability';
 import { fail, ok } from '../../lib/respond';
 
 /*
@@ -13,6 +14,18 @@ import { fail, ok } from '../../lib/respond';
   ÜRETİMDE YOKTUR: mount `router.ts`te `NODE_ENV !== 'production'` koşuluna bağlı — bu dosya
   üretim sürecinde zincire hiç girmez. Yerel geliştirmede uç, verilen HER e-postaya oturum verir
   (yerel DB, yerel ağ); e-posta süzgeci bilerek yok — test kullanıcısı değiştikçe uca dokunulmasın.
+
+  ── KULLANICI YOKSA YARATILIR (ölçüm düzeltmesi 11.08) ──────────────────────
+  Burada bir süre *"dev kapısı kullanıcı YARATMAZ"* yazıyordu ve YANLIŞTI: `generateLink` kayıtsız
+  e-postada auth kullanıcısını AÇAR (aynı çağrının gerçek OTP akışındaki künyesi bunu zaten
+  söylüyordu — `packages/application/src/auth/otp.ts`). Ölçüldü: `kurye@lezzetanatolia.fr` çağrı
+  öncesi `auth_user_id`'siz, çağrı sonrası bağlı; `0002` trigger'ı profili e-postadan bulup bağlıyor
+  ve ROLÜ koruyor (`/me` → `roles: ['courier']`, `/courier/day` 200, `/warehouse/preparation` 403).
+  Yanlış cümlenin bedeli ölçülebilirdi: "personel yerelde giriş yapamaz" diye bir teşhis üretmişti.
+
+  YETKİYİ AÇMAZ: kurulan oturum sıradan bir müşteri oturumuyla aynıdır; hangi uca girilebileceğine
+  yine `bearerAuth` + `requireStaffRole` karar verir. Web'in guard'ı sunucuda kısa devre yapan bir
+  bypass taşıyor (`apps/web/lib/guard.ts`), burada öyle bir şey YOK ve olmamalı.
 */
 
 const DevSessionBodySchema = z.object({ email: z.string().email() });
@@ -25,8 +38,18 @@ devLogin.post('/dev-session', async (c) => {
 
   const { data, error } = await serviceDb().auth.admin.generateLink({ type: 'magiclink', email: body.data.email });
   const tokenHash = data?.properties?.hashed_token;
-  // Kayıtsız e-posta da buraya düşer — dev kapısı kullanıcı YARATMAZ (yaratma ayrı ve bilinçli iş).
-  if (error !== null || !tokenHash) return fail(c, 'dev_session_failed', 400);
+  if (error !== null || !tokenHash) {
+    /* SEBEP YUTULMAZ (21.32). Buradaki ret bir süre gerekçesiz dönüyordu ve teşhis edilemiyordu:
+       ekranda yalnız "uç: dev_session_failed" görülüyordu, Supabase'in söylediği ("email adresi
+       geçersiz", "kullanıcı yaratılamadı") kayboluyordu. Ölçüldü (11.08): `.local` uzantılı adres
+       reddediliyor, gerçek alan adlı altı personel adresi geçiyor — o farkı ancak mesaj söyler.
+       Dev kapısı olduğu için mesaj HAM gidiyor (dosya künyesindeki aynı gerekçe). */
+    logger.warn(
+      { context: 'dev-session', email: maskEmail(body.data.email), reason: error?.message ?? 'jeton boş' },
+      'dev giriş hesabı açılamadı',
+    );
+    return fail(c, 'dev_session_failed', 400);
+  }
 
   return ok(c, { tokenHash });
 });

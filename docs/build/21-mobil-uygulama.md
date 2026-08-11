@@ -1387,6 +1387,63 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `apps/web/lib/b2b/application.test.ts`i köprü üzerinden AYNI gövdeyi koşuyor, imza korundu);
   uçların entegrasyon testi de yok (§4b: DB'ye vuran koşu denetmenin işi).
 
+- [x] (21.32) **OPERASYON YÜZEYİNE YERELDE GİRİLEMİYORDU — üç kopuk halka (kullanıcı bulgusu 11.08).**
+  `touches:` `scripts/{seed.ts,seed/people.ts}` · `apps/mobile-api/src/api/v1/dev-login.ts` ·
+  `apps/mobile/src/{lib/auth/dev-login.ts,screens/login/{login-screen.tsx,auth-callback-screen.tsx,post-login-route.ts}}`
+
+  **Belirti:** *"hesap sayfasından tıklayıp girebiliyoruz… operasyon tarafına giriş yapamadım."*
+  Ölçüm üç ayrı sebep buldu, her biri tek başına yeterliydi:
+
+  | # | sebep | ölçüm |
+  |---|---|---|
+  | 1 | "Operasyon (test)" düğmesi `sametoglu@ayas.fr`e basıyordu | o hesap `{customer}` → `operationsSectionsOf` boş → kapı `denied` |
+  | 2 | rol doğru olsa bile kabuğa giden **hiçbir bağlantı yoktu** | giriş sonrası `router.back()`; `/courier`·`/warehouse` adreslerine müşteri yüzeyinden tek bağ yok (arandı) |
+  | 3 | personel profillerinin `auth_user_id`'si boştu | altı personelin altısı da bağsız; `db:refresh` bağı zaten siliyor |
+
+  **YANLIŞ ÇIKAN BİR TEŞHİS — kayda geçiyor.** Önce *"dev kapısı kullanıcı yaratmadığı için personel
+  hiç giriş yapamaz, seed auth kullanıcısı açmalı"* denmişti; dayanak `dev-login.ts` künyesindeki
+  bir cümleydi ve **ölçülmemişti**. Ölçünce tersi çıktı: `generateLink` kayıtsız e-postada auth
+  kullanıcısını AÇIYOR (aynı çağrının `packages/application/src/auth/otp.ts` künyesi bunu zaten
+  söylüyordu — iki künye çelişiyordu) ve `0002` trigger'ı onu e-postayla eşleşen profile bağlayıp
+  **rolünü koruyor**. Kanıt: `kurye@lezzetanatolia.fr` çağrı öncesi bağsız → sonrası bağlı, `/me`
+  `roles: ['courier']`, `/courier/day` **200**, `/warehouse/preparation` **403**. Yanlış künye
+  düzeltildi.
+
+  Yapılanlar:
+  · **SEED (`seedStaffLogins`)** — personel profillerine `auth.users` satırı açar, `seedKisiler`den
+    SONRA (trigger profilin var olmasını ister). `db:refresh` = `db reset && seed` olduğu için bağ
+    ancak burada doğarsa yenilemeden sağ çıkar. İdempotent; müşteri hesabı AÇILMAZ (müşterinin
+    girişi OTP akışının kendisidir, hazır auth satırı sınananın yarısını atlatırdı).
+  · **YÖNETİCİ HESABI (`yonetim@lezzetanatolia.fr`)** — web bypass'ının `dev-admin@lezzet.local`
+    satırından AYRI. Sebep ölçüldü: `.local` adresi `generateLink`te reddedildi, gerçek alan adlı
+    altı personel adresi ilk denemede geçti. Bypass'ın e-postası değiştirilemez (kimliği webin
+    guard'ına sabit bağlı), o yüzden ikinci bir yönetici profili açıldı.
+  · **DÖRT DEV DÜĞMESİ** — Müşteri · Kurye · Depo · Yönetim (kullanıcı kararı 11.08). Rol → bölüm
+    eşlemesi birebir olduğu için tek düğme bölümlerin yalnız birini açardı; webin ölçülmüş
+    arızasının (dört kurye ekranının yalnız erişimsiz hâliyle doğrulanabilmesi) mobil karşılığı.
+    Muhasebe çok bölümlüdür, yani sekme çubuğunun görünür hâli de denenebilir hâle geldi.
+  · **YÖNLENDİRME (`post-login-route.ts`)** — personel giriş yapınca doğrudan kabuğa gider (webin
+    tek `/connexion` modeli). Kararı İKİ kapı da aynı dosyadan okuyor (OTP girişi + OAuth dönüşü):
+    kopyalansaydı "Google ile girince neden operasyona gitmiyor" diye aranan bir fark doğardı.
+    Rol kuralı yeniden yazılmadı, kabuğun okuduğu `operationsSectionsOf`a soruluyor. Künye sorusu
+    personele SORULMAZ (ad/telefon sipariş yolunun ön şartı, personel o yoldan geçmez).
+  · **YUTULAN SEBEP AÇILDI** — `dev-session` reddi gerekçesiz dönüyordu; artık Supabase'in mesajı
+    `logger.warn` ile kayda düşüyor (e-posta maskeli). `.local` farkını ancak o mesaj söylüyordu.
+
+  **GÜVENLİK — bypass mobile TAŞINMADI ve taşınmamalı.** Web'in bypass'ı SUNUCUDA `requireStaff`i
+  kısa devre yapıyor (`apps/web/lib/guard.ts`); mobilin dev girişi ise gerçek Supabase oturumu
+  kuruyor ve sunucu kontrolleri tam işliyor. Ölçüldü: jetonsuz **401**, uydurma jeton **401**,
+  müşteri jetonuyla `/courier/day` **403**, kurye jetonuyla **200**. Bypass'ı taşımak, dev'de
+  yakalanabilen yetki hatalarını görünmez kılardı.
+
+  **Doğrulama:** mobil **81 suite / 572 test** yeşil (yeni 10: rol→bölüm kararının 8 hâli · OTP
+  girişinde personel yönlendirmesi · OAuth dönüşünde aynısı) · mobil + mobile-api typecheck ·
+  scripts typecheck · eslint temiz; yeni ihraç edilen kullanılmayan tip yok.
+
+  **BEKLEYEN(21.13): kabuktan müşteri yüzeyine DÖNÜŞ yolu hâlâ yok** — personel giriyor ama
+  çıkamıyor (uygulamayı kapatıp açmak gerekiyor). Kabuğun künyesi bu geçişin tema dikişini de
+  şart koşuyor (odak/blur), o yüzden ayrı ve bilinçli bırakıldı.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

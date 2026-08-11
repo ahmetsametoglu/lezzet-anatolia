@@ -12,7 +12,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
-import { DEV_ADMIN_EMAIL, DEV_CUSTOMER_EMAIL, devSignIn } from '@/lib/auth/dev-login';
+import { DEV_ACCOUNTS, devSignIn } from '@/lib/auth/dev-login';
 import { authErrorText } from '@/lib/auth/error-text';
 import { signInWithGoogle } from '@/lib/auth/oauth';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
@@ -25,6 +25,7 @@ import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { hasProfileGap } from '@/screens/profile-setup/profile-gaps';
 import { profileSetupRoute } from '@/screens/profile-setup/use-profile-setup-gate.hook';
 import { CodeField } from './code-field';
+import { operationsHomeRoute } from './post-login-route';
 import messages from './messages.json';
 
 /*
@@ -114,6 +115,11 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
       .then((result) => {
         if (result.error !== null) return router.back();
         publishMe(result.data);
+        /* PERSONEL MÜŞTERİ SEKMESİNE DÖNMEZ (21.32): rolü olan kişi doğrudan operasyon kabuğuna
+           gider — webin tek `/connexion` modelinin karşılığı. Künye sorusundan ÖNCE: ad/telefon
+           sipariş yolunun ön şartıdır ve personel o yoldan geçmez (kapının künyesi). */
+        const operationsRoute = operationsHomeRoute(result.data);
+        if (operationsRoute !== null) return router.replace(operationsRoute);
         if (hasProfileGap(result.data)) return router.replace(profileSetupRoute());
         router.back();
       })
@@ -350,16 +356,20 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
 
         {/* GELİŞTİRME GİRİŞLERİ (kullanıcı isteği 09.08) — yalnız dev derlemesinde çizilir;
             OTP/Google turunu atlayan ama Supabase doğrulamasından geçen GERÇEK oturum
-            (`lib/auth/dev-login` künyesi). Metin sabit Türkçe: müşteri bu satırı hiç görmez. */}
+            (`lib/auth/dev-login` künyesi). Metin sabit Türkçe: müşteri bu satırı hiç görmez.
+            ROL BAŞINA BİR DÜĞME (21.32): rol → bölüm eşlemesi birebir olduğu için tek düğme
+            bölümlerin yalnız birini açardı; hangi hesabın hangi rolü taşıdığı listede. */}
         {__DEV__ ? (
           <View style={styles.devRow}>
-            <TextAction label="Müşteri (test)" onPress={() => startDevSignIn(DEV_CUSTOMER_EMAIL)} testID="login-dev-customer" />
-            <TextAction
-              label="Operasyon (test)"
-              onPress={() => startDevSignIn(DEV_ADMIN_EMAIL)}
-              tone="terracotta"
-              testID="login-dev-admin"
-            />
+            {DEV_ACCOUNTS.map((account) => (
+              <TextAction
+                key={account.email}
+                label={account.label}
+                onPress={() => startDevSignIn(account.email)}
+                tone={account.operations ? 'terracotta' : undefined}
+                testID={`login-dev-${account.label.toLocaleLowerCase('tr')}`}
+              />
+            ))}
           </View>
         ) : null}
       </ScrollView>
@@ -373,10 +383,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors['sand-50'],
     paddingTop: rt.insets.top,
   },
+  /* Dört düğme tek satıra sığmıyor: `wrap` + daha dar boşluk. Dar cihazda ikinci satıra iner,
+     taşıp kesilmez (yalnız dev satırı — müşteri bunu hiç görmez). */
   devRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: theme.space['4xl'],
+    gap: theme.space['2xl'],
     paddingTop: theme.space['3xl'],
   },
   topBar: {

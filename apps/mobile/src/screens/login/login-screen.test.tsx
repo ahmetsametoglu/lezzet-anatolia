@@ -33,8 +33,10 @@ jest.mock('@/lib/auth/oauth', () => ({ signInWithGoogle: () => mockGoogle() }));
 
 const mockDevSignIn = jest.fn(async (_email: string): Promise<{ error: string | null }> => ({ error: null }));
 jest.mock('@/lib/auth/dev-login', () => ({
-  DEV_CUSTOMER_EMAIL: 'musteri@test.local',
-  DEV_ADMIN_EMAIL: 'admin@test.local',
+  DEV_ACCOUNTS: [
+    { label: 'Müşteri', email: 'musteri@test.fr', operations: false },
+    { label: 'Kurye', email: 'kurye@test.fr', operations: true },
+  ],
   devSignIn: (email: string) => mockDevSignIn(email),
 }));
 
@@ -133,21 +135,44 @@ describe('hızlı doğrulama', () => {
     fetchMock.mockResolvedValue(meReply());
     await render(<LoginScreen />);
 
-    await fireEvent.press(screen.getByTestId('login-dev-customer'));
-    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('musteri@test.local'));
+    await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('musteri@test.fr'));
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     expect(mockToast).toHaveBeenCalled();
   });
 
-  it('dev operasyon düğmesi admin e-postasıyla çağırır; ret seçim aşamasında söylenir', async () => {
+  it('dev operasyon düğmesi KENDİ hesabıyla çağırır; ret seçim aşamasında söylenir', async () => {
     mockDevSignIn.mockResolvedValueOnce({ error: 'dev_session_failed' });
     await render(<LoginScreen />);
 
-    await fireEvent.press(screen.getByTestId('login-dev-admin'));
+    await fireEvent.press(screen.getByTestId('login-dev-kurye'));
 
-    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('admin@test.local'));
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('kurye@test.fr'));
     await waitFor(() => expect(screen.getByTestId('login-notice')).toBeOnTheScreen());
     expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  /* 21.32'nin ASIL İDDİASI: personel müşteri sekmesine DÖNMEZ. Bu test olmadan yönlendirme sessizce
+     kaybolabilirdi — `router.back()` de "giriş başarılı" gibi görünür ve arıza ancak cihazda,
+     "operasyona giremiyorum" diye ortaya çıkardı (kullanıcı bulgusu 11.08). */
+  it('PERSONEL girişi operasyon kabuğuna yönlenir, hesap sekmesine dönmez', async () => {
+    fetchMock.mockResolvedValue(reply(200, { data: meFixture(['courier']), error: null }));
+    await render(<LoginScreen />);
+
+    await fireEvent.press(screen.getByTestId('login-dev-kurye'));
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/courier'));
+    expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('MÜŞTERİ girişi operasyona GİTMEZ — bölümü olmayan rol geldiği ekrana döner', async () => {
+    fetchMock.mockResolvedValue(meReply());
+    await render(<LoginScreen />);
+
+    await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
+
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
   it('geçersiz e-posta UCA GİTMEDEN yakalanır', async () => {

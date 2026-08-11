@@ -116,7 +116,7 @@ import { seedJobRuns } from './seed/jobs';
 import { seedBankQueue, seedMoney } from './seed/money';
 import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedCarts, seedOrders } from './seed/orders';
-import { seedDraftCustomers, seedKisiler } from './seed/people';
+import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
 import { seedPrices } from './seed/pricing';
 import { seedSiteImages } from './seed/site-image';
 import { seedRecipes } from './seed/recipe';
@@ -190,6 +190,9 @@ async function main(): Promise<void> {
 
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
   const kisiler = await seedKisiler(db, depolar);
+  // Giriş hesapları profillerden SONRA: trigger yeni auth kullanıcısını e-postayla eşleşen profile
+  // bağlıyor, yani profil önce var olmak zorunda (gerekçe `seedStaffLogins` künyesinde).
+  await seedStaffLogins(db);
   const varyantlar = await katalogVaryantlari(db);
   await seedPrices(db, varyantlar, kisiler);
   // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle yazılan

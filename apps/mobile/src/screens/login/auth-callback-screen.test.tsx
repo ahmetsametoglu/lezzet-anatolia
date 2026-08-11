@@ -74,6 +74,21 @@ describe('AuthCallbackScreen', () => {
     expect(mockReplace).not.toHaveBeenCalledWith('/account');
   });
 
+  /* İKİ KAPI AYNI KARARI VERİR (21.32). OTP girişinin testi kardeş dosyada; bu ikisi ayrışırsa
+     "Google ile girince neden operasyona gitmiyor" diye aranan bir fark doğar — ortak kapının
+     (`post-login-route`) varlık sebebi bu. */
+  it('PERSONEL operasyon kabuğuna gider — hesap sekmesine de künye akışına da uğramaz', async () => {
+    fetchMock.mockResolvedValue({
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ data: meFixture(['warehouse'], { phone: null }), error: null }),
+    } as unknown as Response);
+    await render(<AuthCallbackScreen code="pkce-kodu-1" />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/warehouse'));
+    expect(mockReplace).not.toHaveBeenCalledWith('/account');
+  });
+
   it('değişim reddi ADLI anahtarla login’e döner — toast basılmaz', async () => {
     mockExchange.mockResolvedValueOnce({ error: 'oauth_failed' });
     await render(<AuthCallbackScreen code="bozuk-kod" />);

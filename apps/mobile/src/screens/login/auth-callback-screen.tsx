@@ -11,6 +11,7 @@ import { publishToast } from '@/lib/toast/toast-store';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { hasProfileGap } from '@/screens/profile-setup/profile-gaps';
 import { profileSetupRoute } from '@/screens/profile-setup/use-profile-setup-gate.hook';
+import { operationsHomeRoute } from './post-login-route';
 import messages from './messages.json';
 
 /*
@@ -54,6 +55,14 @@ export function AuthCallbackScreen({ code }: AuthCallbackScreenProps) {
       const me = await fetchMe().catch(() => null);
       if (me !== null && me.error === null) publishMe(me.data);
       publishToast(t.verifiedToast);
+      /* PERSONEL OPERASYON KABUĞUNA GİDER (21.32) — OTP girişiyle AYNI karardan (`post-login-route`).
+         İki kapı da aynı soruyu soruyor; kural kopyalansaydı "Google ile girince neden operasyona
+         gitmiyor" diye aranan bir fark doğardı. */
+      const operationsRoute = me !== null && me.error === null ? operationsHomeRoute(me.data) : null;
+      if (operationsRoute !== null) {
+        router.replace(operationsRoute);
+        return;
+      }
       /* KÜNYE EKSİKSE ÖNCE O SORULUR (kullanıcı kararı 10.08) — kimlik şu an kuruldu, soru da
          şimdi anlamlı. Okuma düştüyse hesap sekmesine gidilir: okunamayan bir profil "künyesi
          eksik" demek değildir (CLAUDE §1 — ölçülemeyen değer sıfır değildir). */
