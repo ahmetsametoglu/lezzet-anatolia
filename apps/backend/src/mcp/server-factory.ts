@@ -121,7 +121,7 @@ export const TOOLS = [
   {
     name: 'reference_data',
     description:
-      "The names the propose_* tools make you type: cash/bank accounts, categories, collections (with whether each is already on the showcase), suppliers, and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.",
+      "The names the propose_* tools make you type: cash/bank accounts, categories, collections and bundles (each with whether it is already on the showcase), suppliers, and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Every name here can be typed straight into a propose_* tool — categoryName, accountName, supplierName, or the showcase target name — and the server resolves it to the record. Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.",
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -147,15 +147,16 @@ export const TOOLS = [
   {
     name: 'propose_featured_flag',
     description:
-      'PROPOSE (does not apply): put a category/collection/bundle on the homepage showcase, or take it off. Writes a proposal to the approval queue — the admin applies it from the operations panel. You cannot approve your own proposals. Pass target (category|collection|bundle), id, and isFeatured.',
+      'PROPOSE (does not apply): put a category/collection/bundle on the homepage showcase, or take it off. Matched BY NAME — reference_data lists every category, collection and bundle with its current showcase state, so read it there and pass the name. The showcase is a SELECTION, not a list: adding one pushes another down, and the reply tells you how many are on it today. A proposal that would change nothing (already on / already off) is refused rather than queued.',
     inputSchema: {
       type: 'object',
       properties: {
         target: { type: 'string', description: "'category' | 'collection' | 'bundle'" },
-        id: { type: 'string', description: 'Record id (uuid) — get it from catalog_health or ask the admin.' },
+        name: { type: 'string', description: 'Record name or part of it, e.g. "Dondurma" (see reference_data).' },
         isFeatured: { type: 'boolean', description: 'true = put on the showcase (default), false = remove.' },
+        reason: { type: 'string', description: 'Why this one, why now.' },
       },
-      required: ['target', 'id'],
+      required: ['target', 'name'],
       additionalProperties: false,
     },
   },
@@ -217,7 +218,7 @@ export const TOOLS = [
       type: 'object',
       properties: {
         warehouseCode: { type: 'string', description: 'Warehouse code, e.g. "STR" (see morning_briefing.reorder).' },
-        supplierId: { type: 'string', description: 'Optional: restrict to one supplier; default is the largest group.' },
+        supplierName: { type: 'string', description: 'Optional: restrict to one supplier, by name (see reference_data). Default is the largest group of shortfalls.' },
         note: { type: 'string', description: 'Optional note carried onto the draft order.' },
       },
       required: ['warehouseCode'],
@@ -247,8 +248,16 @@ export const TOOLS = [
             required: ['variantId', 'qty', 'expiryDate'],
           },
         },
-        supplierId: { type: 'string', description: 'Supplier uuid, if known.' },
-        purchaseOrderId: { type: 'string', description: 'Linked purchase order, if this receipt closes one.' },
+        supplierName: {
+          type: 'string',
+          description:
+            'Who the goods came FROM, by name (see reference_data). Fill this in whenever the document names a supplier: without it the receipt cannot refresh that supplier\'s last purchase price, and the NEXT reorder proposal will have no idea what the goods cost.',
+        },
+        purchaseOrderRef: {
+          type: 'string',
+          description:
+            'Which open order this receipt fulfils, by its reference number. Omit when the supplier has exactly one open order (it is linked automatically) or when this was an unplanned purchase; the reply lists the open ones when there is more than one.',
+        },
         documentNo: { type: 'string', description: 'Invoice / delivery-note number.' },
         date: {
           type: 'string',
@@ -284,7 +293,11 @@ export const TOOLS = [
         type: { type: 'string', description: "'expense' | 'transfer' | 'capital' | 'misc' — no 'purchase' (goods purchases go through propose_stock_intake)." },
         category: { type: 'string', description: 'Free-text category, e.g. "tedarik".' },
         description: { type: 'string' },
-        supplierId: { type: 'string', description: 'Supplier uuid when paying a supplier.' },
+        supplierName: {
+          type: 'string',
+          description:
+            'When the money goes to a SUPPLIER, name them here (see reference_data) — that binds the payment to their account. Use counterpartyName instead for anyone we do not keep a supplier record for.',
+        },
         counterpartyName: { type: 'string', description: 'Who the money went to / came from, when there is no supplier record.' },
         valueDate: { type: 'string', description: 'YYYY-MM-DD; defaults to today.' },
         reason: { type: 'string' },

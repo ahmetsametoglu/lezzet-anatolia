@@ -231,13 +231,33 @@ export async function catalogLookup(query: string, limit: number) {
       vatRate: p.vatRate,
       variants: variants
         .filter((v) => v.productId === p.id)
-        .map((v) => ({
-          variantId: v.id,
-          unit: resolveLocalizedText(v.label, 'tr'),
-          isActive: v.isActive,
-          listPriceCentsIncVat: priceMap.get(v.id)?.channelPrice?.amountCents ?? null,
-          lastPurchasePriceCents: costByVariant.get(v.id) ?? null,
-        })),
+        .map((v) => {
+          const listIncVat = priceMap.get(v.id)?.channelPrice?.amountCents ?? null;
+          const costExVat = costByVariant.get(v.id) ?? null;
+          return {
+            variantId: v.id,
+            unit: resolveLocalizedText(v.label, 'tr'),
+            isActive: v.isActive,
+            listPriceCentsIncVat: listIncVat,
+            lastPurchasePriceCents: costExVat,
+            // ── ALIŞ SATIŞTAN PAHALIYSA BU BİR VERİ ŞÜPHESİDİR ─────────────
+            //
+            // (11.08 · denetim raporu madde 10.) Model kârlılık hesabı yaparken bu satırı gerçek
+            // sanıp "zararına satıyoruz" diye rapor ediyordu; ölçülen sebep başkaydı — eksik ya da
+            // yanlış girilmiş bir alış fiyatı. İkisi bambaşka cevap gerektirir: biri fiyat kararı,
+            // öteki veri düzeltmesi.
+            //
+            // Karşılaştırma KDV TABANI EŞİTLENEREK yapılır: liste KDV dahil, alış hariç — çıplak
+            // karşılaştırma her ürünü %5,5 daha kârsız gösterirdi (`STACK §8`). Bayrak bir KARAR
+            // değil bir SORU: "bu veriye güvenme, önce doğrula".
+            ...(listIncVat !== null && costExVat !== null && costExVat > Math.round(listIncVat / (1 + p.vatRate / 100))
+              ? {
+                  dataDoubt:
+                    'Alış fiyatı satış fiyatından YÜKSEK (KDV hariç karşılaştırıldı). Bunu kârlılık sonucu diye raporlamayın — büyük ihtimalle alış fiyatı eksik ya da yanlış girilmiş. Yöneticiye VERİ ŞÜPHESİ olarak söyleyin.',
+                }
+              : {}),
+          };
+        }),
     })),
   };
 }

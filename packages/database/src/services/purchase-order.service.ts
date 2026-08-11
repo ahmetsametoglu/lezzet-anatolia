@@ -113,6 +113,24 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
+   * Bir tedarikçinin HENÜZ KAPANMAMIŞ siparişleri — mal kabulün hangi siparişi karşıladığını
+   * bulmak için (11.08).
+   *
+   * `listBySupplier` tek bir duruma bakabiliyor; açıklık ise üç durumun birleşimidir ve o küme
+   * `openProgress` künyesinde bir kez tarif edilmiş: `received` zaten stoğa girdi, `cancelled` hiç
+   * gelmeyecek. Aynı kümeyi çağıranın elde kurması, ikinci bir "açık" tanımı doğururdu — bir gün
+   * ötekinden ayrılacak bir tanım.
+   *
+   * Sayfalama YOK ve gerekmiyor: küme veriyle büyümez, kabul edildikçe kapanır (`CLAUDE §1`).
+   */
+  async listOpenBySupplier(supplierId: string): Promise<PurchaseOrder[]> {
+    return this.getAll(
+      { supplierId, status: ['draft', 'sent', 'partially_received'] },
+      { orderBy: 'createdAt', orderDirection: 'desc' },
+    );
+  }
+
+  /**
    * Siparişler ekranının sayfası (09.14) — **tek turda**, keyset imleçli.
    *
    * ── NEDEN AYRI BİR OKUMA ────────────────────────────────────────────────────

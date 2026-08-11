@@ -795,3 +795,57 @@ satırında.
     ("Gider" demek yer değiştiren parayı kaybedilmiş gibi okuturdu), ürün önizlemesi boyların
     ölçüsünü ve kargo kararını basıyor. Doldurulmayan alan boş geçilmiyor, "yazılmadı" diye
     yazılıyor (22.10 ilkesi: verilmemiş kararı gizlemek onu verilmiş gibi gösterir).
+
+- [x] (22.13) **Kimlik köprüsü: modelden istenen her kimliğin bir kaynağı olmalı** *(MCP denetim
+  raporu 11.08, madde 12 — altı turdur açık; kullanıcı kararı: "bu rapor doğrultusunda yapman
+  gereken değişiklikler varsa bunları yap")*
+  `touches: apps/backend/src/mcp/{server-factory,tools-propose,tools-reference,tools-catalog,proposal.test}.ts · packages/database/src/services/purchase-order.service.ts`
+  - **Durum:** yapıldı. 22.12 yazma eksenini kapatmıştı (dilekçedeki alan modele soruluyor mu);
+    bu görev **okuma eksenini** kapatıyor: modelden istenen kimliği veren bir okuma aracı var mı.
+  - **Ayrımı denetim raporu gösterdi.** `featured_flag` 22.12'nin denklik testinden TAM geçiyordu
+    ve altı tur boyunca **tek bir kez bile kullanılamadı**: araç `id: uuid` istiyor, o kimliği veren
+    hiçbir okuma aracı yok (`reference_data` kategoriyi/koleksiyonu yalnız ADIYLA listeliyor,
+    paketleri hiç listelemiyor). Soru soruluyordu, cevabı elde etmenin yolu yoktu. Rapor bunu
+    *"güvenlik açığı değil, erişilebilirlik"* diye doğru adlandırmış: veri var, asistana verilmiyor.
+  - **Ölçünce üç kopukluk daha çıktı** ve ikisinin bedeli SESSİZDİ:
+    - `stock_intake.supplierId` — son turdaki iki kabulün ikisi de tedarikçisiz yazılmıştı. Bedeli
+      zincirleme: `receive_intake` son alış fiyatını `where supplier_id = p_supplier_id` ile
+      tazeliyor (`0010_supply.sql:236`), yani tedarikçi boşken **hiçbir satır güncellenmiyor** —
+      fiyat tazelenmeyince 22.12'de açılan `lastPurchasePriceCents` de hep boş kalırdı.
+    - `stock_intake.purchaseOrderId` — iki kabulün ikisi de siparişsizdi, yani hiçbir sipariş
+      kapanmıyor ve "yolda" sayılan mal sonsuza dek yolda kalıyordu.
+    - `money_movement.supplierId` — iki giderin ikisi de tedarikçisiz; ödeme kime yapıldığı serbest
+      metinde kalıyor, tedarikçi bakiyesine düşmüyor.
+    - `purchase_order.supplierId` — alan opsiyonel olduğu için arıza görünmüyordu: "şu tedarikçiye
+      sipariş aç" isteği karşılanamıyor, araç her seferinde en büyük gruba düşüyordu.
+  - **Çözüm projenin kendi deseni: ADLA çözüm.** `zone_extend` (zoneName), `money_movement`
+    (accountName), `discount_draft` (scopeName), `product_create` (categoryName) zaten böyle
+    çalışıyordu; kimlik isteyen araçlar istisnaydı. Ortak kapı `resolveSupplier` — ad verilmezse
+    `null` (tedarikçisiz alım meşru), **bulunamayan ad ise HATA** ve mevcutları yazar: sessizce
+    `null`a düşmek, modelin kurduğunu sandığı bağı sessizce koparırdı.
+  - **Sipariş bağı MODELE SORULMUYOR, türetiliyor:** tedarikçinin tek açık siparişi varsa
+    kendiliğinden bağlanır; birden fazlaysa seçim modelin ama **referans numarasıyla**, uuid'yle
+    değil. Kapı `PurchaseOrderService.listOpenBySupplier` — "açık" tanımı (`draft` · `sent` ·
+    `partially_received`) `openProgress` künyesinde bir kez tarif edilmişti, ikinci bir tanım
+    doğurmamak için servise taşındı.
+  - **Bağ kurulamadığında araç SUSMUYOR:** cevap "tedarikçi bağlanmadı — bu kabul son alış fiyatını
+    tazelemez" ya da "şu tedarikçinin 3 açık siparişi var, hangisi?" diyor. Sessiz eksik, modelin
+    düzeltemeyeceği tek eksiktir.
+  - **`reference_data` paketleri de listeliyor** (yoktu — `target: 'bundle'` bu yüzden hiç
+    kullanılamıyordu) ve künyesi artık şunu söylüyor: buradaki her ad bir `propose_*` girdisine
+    birebir yazılabilir. Kimlik hâlâ YAZILMIYOR ve bilerek: uuid modelin bağlamında yer kaplar,
+    ezberlenemez, bir kez yanlış hatırlandığında panelde "(silinmiş kayıt)" doğurur.
+  - **Rapor madde 10 da kapandı:** `catalog_lookup` alış fiyatı satıştan yüksekse `dataDoubt`
+    işareti basıyor. Model bunu kârlılık sonucu sanıp "zararına satıyoruz" diye raporluyordu; ölçülen
+    sebep başkaydı — eksik girilmiş alış fiyatı. Karşılaştırma **KDV tabanı eşitlenerek** yapılıyor
+    (liste dahil, alış hariç); çıplak karşılaştırma her ürünü %5,5 daha kârsız gösterirdi.
+  - **Vitrin önerisi artık DEĞİŞTİRMEYECEĞİ hâli reddediyor:** zaten vitrindeki bir kaydı "vitrine
+    çıkar" diye kuyruğa yazmak, onaylandığında hiçbir şey yapmayan bir kalem bırakırdı — kuyruğun en
+    sinsi çürüme yolu (`money_movement`'tan `purchase`ın çıkarılmasıyla aynı gerekçe).
+  - **Denklik testi ikinci eksene genişledi** (`proposal.test.ts`): bir araç modelden uuid istiyorsa,
+    o kimliği veren okuma aracı `READABLE_IDS`te yazılı olmalı. Bugün kaynaksız kimlik YOK —
+    `ID_WITHOUT_SOURCE` boş ve boş kalması gerekiyor; doluysa açık bir borçtur.
+  - **BEKLEYEN(22.13):** rapordaki iki "eksik araç" maddesi açık — **imha kaydı** (DLC'si geçmiş
+    parti için `must_discard` tespit ediliyor ama kaydı oluşturacak araç yok) ve **liste fiyatı
+    değiştirme** (yalnız parti bazlı teklif önerilebiliyor). İkisi de yeni öneri tipi demek: şema +
+    uygulayıcı + kart + onay ekranı. Ayrı bir tur.

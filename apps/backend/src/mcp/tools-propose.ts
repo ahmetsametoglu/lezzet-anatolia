@@ -9,6 +9,7 @@ import {
   PriceService,
   ProductService,
   ProductVariantService,
+  PurchaseOrderService,
   ReorderService,
   SettingsService,
   StockService,
@@ -83,6 +84,26 @@ function localizedArg(raw: unknown): Record<string, string> | null {
       .map(([lang, text]) => [lang, (text as string).trim()]),
   );
   return Object.keys(cleaned).length > 0 ? cleaned : null;
+}
+
+/**
+ * Tedarikçiyi ADIYLA bulur — üç aracın ortak kapısı (`stock_intake` · `money_movement`).
+ *
+ * Kimlik yerine ad, çünkü uuid'yi veren bir okuma aracı YOK (`reference_data` yalnız ad listeler).
+ * Ad verilmediyse hata değil `null` döner: tedarikçi ikisinde de isteğe bağlı — plansız alım ve
+ * tedarikçisiz gider meşru hâllerdir. Bulunamayan ad ise HATADIR ve mevcutları yazar: sessizce
+ * `null`a düşmek, modelin yazdığını sandığı bağı sessizce koparırdı.
+ */
+async function resolveSupplier(
+  db: ReturnType<typeof serviceDb>,
+  raw: unknown,
+): Promise<{ supplier: { id: string; name: string } | null; error?: string }> {
+  const wanted = typeof raw === 'string' ? raw.trim() : '';
+  if (!wanted) return { supplier: null };
+  const suppliers = await new SupplierService(db).list({ activeOnly: true });
+  const match = suppliers.find((s) => s.name.toLowerCase().includes(wanted.toLowerCase()));
+  if (!match) return { supplier: null, error: `Tedarikçi bulunamadı: '${wanted}'. Mevcutlar: ${suppliers.map((s) => s.name).join(' · ')}` };
+  return { supplier: { id: match.id, name: match.name } };
 }
 
 /** Pozitif tam sayı argümanı; verilmediyse ya da anlamsızsa `null` ("sınır yok"). */
@@ -201,44 +222,67 @@ export async function proposeBatchOffer(args: Record<string, unknown>) {
   return queue('batch_offer', payload, summary, args.reason);
 }
 
-/** Vitrin işareti önerisi: kayıt kimlikten ÇÖZÜLÜR (ad ve varlık doğrulanır). */
+/**
+ * Vitrin işareti önerisi — hedef **ADIYLA** bulunur (11.08 · MCP denetim raporu, madde 12).
+ *
+ * ── ARAÇ ALTI TUR BOYUNCA KULLANILAMADI ─────────────────────────────────────
+ * Girdi `id: uuid` istiyordu ve o kimliği veren HİÇBİR okuma aracı yoktu: `catalog_health` ürün
+ * ve varyant kimliği veriyor, `reference_data` kategori/koleksiyonu yalnız ADIYLA listeliyordu.
+ * Yani model "Dondurma kategorisini vitrine al" isteğine karşılık gelecek öneriyi **fiziksel
+ * olarak yazamıyordu** — denetim raporunda altı turun altısında `0/2` ile düştü ve on bir öneri
+ * tipinden biri tamamen kapalı kaldı.
+ *
+ * Kopukluk bir güvenlik kuralı değildi, bir eksikti: veri vardı, asistana verilmiyordu. Çözüm de
+ * projenin kendi deseni — `zone_extend` (zoneName), `money_movement` (accountName),
+ * `discount_draft` (scopeName), `product_create` (categoryName) hepsi adla çözüyor. Kimlik isteyen
+ * tek araç buydu.
+ *
+ * **Ad bulunamazsa mevcutlar YAZILIR:** model doğrusunu seçebilsin diye (öteki araçların hepsi
+ * böyle yapıyor). Kimlik hâlâ payload'a yazılıyor — uygulama kimlikle çalışır, çünkü kayıt onay
+ * beklerken yeniden adlandırılabilir.
+ */
 export async function proposeFeaturedFlag(args: Record<string, unknown>) {
   const target = String(args.target ?? '');
-  const id = String(args.id ?? '');
+  const wanted = String(args.name ?? '').trim();
   const isFeatured = args.isFeatured !== false;
   if (!['category', 'collection', 'bundle'].includes(target)) {
     return { error: "target 'category' | 'collection' | 'bundle' olmalı." };
   }
-  if (!id) return { error: 'id zorunlu.' };
-  if (!isUuid(id)) return badIdError('id', id);
+  if (!wanted) return { error: 'name zorunlu — hangi kayıt? (örn. "Dondurma"). Mevcutları reference_data verir.' };
 
   const db = serviceDb();
   // Vitrinin BUGÜNKÜ doluluğu da okunur: "bir tane daha ekle" ile "sekizinciyi ekle" aynı karar
   // değil — vitrin bir liste değil seçkidir, dolu olan aşağı iter (denetim taraması 09.08).
-  const [name, featuredCount] = await Promise.all([
+  const rows =
     target === 'category'
-      ? new CategoryService(db).getById(id).then((r) => r?.name)
+      ? await new CategoryService(db).list({ activeOnly: true })
       : target === 'collection'
-        ? new CollectionService(db).getById(id).then((r) => r?.name)
-        : new BundleService(db).getById(id).then((r) => r?.name),
-    target === 'category'
-      ? new CategoryService(db).list({ activeOnly: true, featuredOnly: true }).then((r) => r.length)
-      : target === 'collection'
-        ? new CollectionService(db).list({ activeOnly: true, featuredOnly: true }).then((r) => r.length)
-        : new BundleService(db).listAll({ activeOnly: true, featuredOnly: true }).then((r) => r.length),
-  ]);
-  if (!name) return { error: `Kayıt bulunamadı (${target}): ${id}` };
+        ? await new CollectionService(db).list({ activeOnly: true })
+        : await new BundleService(db).listAll({ activeOnly: true });
 
-  const label = resolveLocalizedText(name, 'tr');
+  const named = rows.map((r) => ({ id: r.id, label: resolveLocalizedText(r.name, 'tr'), isFeatured: r.isFeatured }));
+  const match = named.find((r) => r.label.toLowerCase().includes(wanted.toLowerCase()));
+  if (!match) {
+    return { error: `Kayıt bulunamadı (${target}): '${wanted}'. Mevcutlar: ${named.map((r) => r.label).join(' · ')}` };
+  }
+
+  // İSTENEN HÂL ZATEN GEÇERLİYSE öneri kurulmaz: onaylandığında hiçbir şey değiştirmeyecek bir
+  // kalem, patronun onay refleksini köreltir (`money_movement`teki `purchase` ile aynı gerekçe).
+  if (match.isFeatured === isFeatured) {
+    return {
+      error: `'${match.label}' zaten ${isFeatured ? 'vitrinde' : 'vitrin dışında'} — bu öneri uygulandığında hiçbir şey değişmezdi.`,
+    };
+  }
+
   const payload: FeaturedFlagPayload = {
     target: target as FeaturedFlagPayload['target'],
-    id,
+    id: match.id,
     isFeatured,
-    name: label,
-    currentlyFeaturedCount: featuredCount,
+    name: match.label,
+    currentlyFeaturedCount: named.filter((r) => r.isFeatured).length,
   };
   const verb = isFeatured ? 'vitrine çıkarılsın' : 'vitrinden çıkarılsın';
-  return queue('featured_flag', payload, `${label} ${verb} (${target})`);
+  return queue('featured_flag', payload, `${match.label} ${verb} (${target})`, args.reason);
 }
 
 /**
@@ -263,9 +307,21 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
 
   // Tedarikçi seçilmediyse EN BÜYÜK grup; birden çok tedarikçi varsa modele söylenir ki
   // patrona "hangisi" diye sorabilsin — sessizce birini seçmek, öbür eksiği görünmez kılardı.
-  const wanted = typeof args.supplierId === 'string' ? args.supplierId : null;
-  const group = wanted ? withSupplier.find((g) => g.supplierId === wanted) : [...withSupplier].sort((a, b) => b.lines.length - a.lines.length)[0];
-  if (!group) return { error: `Bu tedarikçi için eşik altı kalem yok: ${wanted}` };
+  //
+  // Seçim ADLA (11.08): burada da `supplierId: uuid` isteniyordu ve model o kimliği hiçbir okuma
+  // aracından alamıyordu — yani "Anadolu Gıda'ya sipariş aç" isteği karşılanamıyor, araç her
+  // seferinde en büyük gruba düşüyordu. Alan opsiyonel olduğu için arıza sessizdi: öneri kuruluyor
+  // ama istenen tedarikçiye değil.
+  const { supplier: wantedSupplier, error: supplierError } = await resolveSupplier(db, args.supplierName);
+  if (supplierError) return { error: supplierError };
+  const group = wantedSupplier
+    ? withSupplier.find((g) => g.supplierId === wantedSupplier.id)
+    : [...withSupplier].sort((a, b) => b.lines.length - a.lines.length)[0];
+  if (!group) {
+    const names = await new SupplierService(db).list({ activeOnly: true });
+    const eligible = withSupplier.map((g) => names.find((s) => s.id === g.supplierId)?.name ?? '?').join(' · ');
+    return { error: `'${wantedSupplier?.name}' için ${warehouseCode} deposunda eşik altı kalem yok. Eksiği olanlar: ${eligible}` };
+  }
 
   const supplier = group.supplierId ? await new SupplierService(db).getById(group.supplierId) : null;
   const variants = await new ProductVariantService(db).listByIds(group.lines.map((l) => l.variantId));
@@ -621,14 +677,45 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   }
   if (problems.length > 0) return { error: `${problems.length} kalem sorunu — hepsini düzeltip tekrar gönderin:`, problems };
 
-  const supplierId = typeof args.supplierId === 'string' ? args.supplierId : null;
-  const supplier = supplierId ? await new SupplierService(db).getById(supplierId) : null;
+  // ── TEDARİKÇİ ADLA BULUNUR (11.08 · denetim raporu, okuma yönü taraması) ──
+  //
+  // Önce `supplierId: uuid` isteniyordu ve o kimliği veren hiçbir okuma aracı yoktu — `reference_data`
+  // tedarikçileri yalnız adlarıyla listeliyor. Sonuç ÖLÇÜLDÜ: son turdaki iki mal kabulün ikisi de
+  // tedarikçisiz yazılmıştı. Bedeli görünmez ve zincirleme: `receive_intake` son alış fiyatını
+  // `where supplier_id = p_supplier_id` ile tazeliyor, yani tedarikçi boşken HİÇBİR satır
+  // güncellenmiyor (0010_supply.sql:236). Fiyat tazelenmeyince `propose_purchase_order` da
+  // "yaklaşık ne kadara mal olacak" sorusunu cevaplayamıyor — 22.12'de açılan alan hep boş kalırdı.
+  const { supplier, error: supplierError } = await resolveSupplier(db, args.supplierName);
+  if (supplierError) return { error: supplierError };
+
+  // ── AÇIK SİPARİŞ TEDARİKÇİDEN BULUNUR, MODEL UUID TAŞIMAZ ─────────────────
+  //
+  // `purchaseOrderId` de elde edilemeyen bir kimlikti: açık siparişleri listeleyen okuma aracı yok.
+  // Ölçüldü — son turdaki iki kabulün ikisi de siparişsizdi, yani hiçbir sipariş kapanmıyordu ve
+  // "yolda" sayılan mal sonsuza dek yolda kalıyordu.
+  //
+  // Bağ MODELE SORULMUYOR, tedarikçiden türetiliyor: tek açık sipariş varsa bağlanır. Birden
+  // fazlaysa SEÇİM MODELİNDİR ama kimlikle değil referans numarasıyla — ve seçilmezse kabul
+  // bağsız yazılır (plansız alım meşrudur), ama açık siparişler cevapta SAYILIR ki bağ sessizce
+  // düşmesin.
+  const openOrders = supplier ? await new PurchaseOrderService(db).listOpenBySupplier(supplier.id) : [];
+  const wantedRef = typeof args.purchaseOrderRef === 'string' ? args.purchaseOrderRef.trim() : '';
+  const linkedOrder = wantedRef
+    ? openOrders.find((o) => (o.referenceNo ?? '').toLowerCase() === wantedRef.toLowerCase())
+    : openOrders.length === 1
+      ? openOrders[0]
+      : undefined;
+  if (wantedRef && !linkedOrder) {
+    const refs = openOrders.map((o) => o.referenceNo ?? `(numarasız · ${o.status})`).join(' · ');
+    return { error: `Açık sipariş bulunamadı: '${wantedRef}'. ${supplier?.name} için açık olanlar: ${refs || 'yok'}` };
+  }
+
   const payload: StockIntakePayload = {
     warehouseId: warehouse.id,
     warehouseCode: warehouse.code,
     supplierId: supplier?.id ?? null,
     supplierName: supplier?.name ?? null,
-    purchaseOrderId: typeof args.purchaseOrderId === 'string' ? args.purchaseOrderId : null,
+    purchaseOrderId: linkedOrder?.id ?? null,
     documentNo: typeof args.documentNo === 'string' && args.documentNo.trim() ? args.documentNo.trim() : null,
     // Belgenin tarihi ve toplamı (11.08). Tarih biçimi burada süzülüyor: bozuk bir tarihi geçirmek,
     // kabulü sessizce bugüne yazdırmaktan farksız olurdu.
@@ -648,6 +735,22 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   return {
     ...queued,
     ...(payload.date ? {} : { dateNote: 'Belge tarihi verilmedi — kabul BUGÜNE yazılacak. Fatura dünküyse date alanını doldurun.' }),
+    // Tedarikçi bağı: kurulmadıysa SESSİZ KALINMAZ. Bedeli görünmez ve zincirleme — son alış fiyatı
+    // tazelenmez, sonraki tedarik siparişi tahmini tutar veremez.
+    ...(supplier
+      ? { supplier: supplier.name }
+      : {
+          supplierNote:
+            'Tedarikçi bağlanmadı — bu kabul son alış fiyatını TAZELEMEZ ve sonraki sipariş önerisi "yaklaşık ne kadar" diyemez. Faturada tedarikçi yazıyorsa supplierName ile gönderin (adlar: reference_data).',
+        }),
+    ...(linkedOrder
+      ? { linkedPurchaseOrder: linkedOrder.referenceNo ?? '(numarasız taslak)' }
+      : openOrders.length > 1
+        ? {
+            openPurchaseOrders: openOrders.map((o) => o.referenceNo ?? `(numarasız · ${o.status})`),
+            purchaseOrderNote: `${supplier?.name} için ${openOrders.length} açık sipariş var; hangisini karşıladığını purchaseOrderRef ile söyleyin, yoksa hiçbiri kapanmaz.`,
+          }
+        : {}),
     ...(gap === null
       ? {}
       : {
@@ -711,8 +814,11 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
     };
   }
 
-  const supplierId = typeof args.supplierId === 'string' ? args.supplierId : null;
-  const supplier = supplierId ? await new SupplierService(db).getById(supplierId) : null;
+  // Tedarikçi burada da ADLA (11.08): uuid'yi veren okuma aracı yoktu ve ölçüldü — son turdaki iki
+  // gider de tedarikçisiz yazılmıştı. Bağ kurulmayınca ödeme kime yapıldığı serbest metinde kalır,
+  // tedarikçi bakiyesine düşmez.
+  const { supplier, error: supplierError } = await resolveSupplier(db, args.supplierName);
+  if (supplierError) return { error: supplierError };
   const payload: MoneyMovementPayload = {
     accountId: account.id,
     accountName: account.name,

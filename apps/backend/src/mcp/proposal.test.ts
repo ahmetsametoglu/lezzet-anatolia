@@ -269,17 +269,24 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
       listPriceCents: 'fiyat tablosundan',
       physicalQty: 'stoktan',
     },
-    featured_flag: { name: 'kayıttan okunur', currentlyFeaturedCount: 'vitrin sayımı — araç hesaplar' },
+    featured_flag: { id: 'name ile bulunur', currentlyFeaturedCount: 'vitrin sayımı — araç hesaplar' },
     purchase_order: {
       warehouseId: 'warehouseCode ile bulunur',
-      supplierName: 'tedarikçi kaydından',
+      supplierId: 'supplierName ile bulunur',
+      supplierName: 'tedarikçi kaydından — araç adı doğrulayıp yazar',
       lines: 'ADETLER MOTORDAN — eşik altı eksiği hesaplanır, model veremez',
     },
     bundle_draft: { items: 'kalem listesi araçta var; payların dağıtımı motorda' },
-    stock_intake: { warehouseId: 'warehouseCode ile bulunur', supplierName: 'tedarikçi kaydından' },
+    stock_intake: {
+      warehouseId: 'warehouseCode ile bulunur',
+      supplierId: 'supplierName ile bulunur',
+      supplierName: 'tedarikçi kaydından — araç adı doğrulayıp yazar',
+      purchaseOrderId: 'purchaseOrderRef ile bulunur; tek açık sipariş varsa kendiliğinden bağlanır',
+    },
     money_movement: {
       accountId: 'accountName ile bulunur',
       counterAccountId: 'counterAccountName ile bulunur',
+      supplierId: 'supplierName ile bulunur',
     },
     zone_extend: { zoneId: 'zoneName ile bulunur' },
     product_create: {
@@ -309,6 +316,53 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
       // Kırıldıysa yapılacak iki şey var: alanı `propose_${kind}` girdisine ekleyin (model
       // doldurabilsin), ya da yukarıdaki DERIVED kaydına neden sorulmadığını yazın.
       expect(unexplained, `${kind}: bu alanlar dilekçede var ama modele sorulmuyor`).toEqual([]);
+    });
+  }
+});
+
+/**
+ * ─── OKUMA YÖNÜ: MODELDEN İSTENEN KİMLİK ELDE EDİLEBİLİYOR MU (11.08) ────────
+ *
+ * ── ÜSTTEKİ TESTİN KÖR NOKTASI ──────────────────────────────────────────────
+ * Yukarıdaki denklik yazma eksenini ölçüyor: dilekçedeki alan modele soruluyor mu. `featured_flag`
+ * o testten TAM geçiyordu — ve altı tur boyunca **tek bir kez bile kullanılamadı**. Çünkü arıza
+ * öteki uçtaydı: araç `id: uuid` istiyordu ve o kimliği veren hiçbir OKUMA aracı yoktu. Soru
+ * soruluyordu, cevabı elde etmenin yolu yoktu.
+ *
+ * Aynı kopukluk ölçünce üç yerde daha çıktı (`supplierId` × 3, `purchaseOrderId`) ve ikisinin
+ * bedeli sessizdi: tedarikçisiz mal kabul son alış fiyatını tazelemiyor, siparişsiz kabul siparişi
+ * kapatmıyor. Hiçbir hata patlamıyor — sadece bir bağ hiç kurulmuyor.
+ *
+ * ── KURAL ───────────────────────────────────────────────────────────────────
+ * Bir `propose_*` aracı MODELDEN uuid istiyorsa, o uuid'yi veren bir okuma aracı olmalı. Yoksa
+ * alan ADLA sorulmalı ve kimliği sunucu çözmeli — projenin deseni bu. İstisna varsa aşağıya
+ * gerekçesiyle yazılır.
+ */
+describe('okuma yönü — modelden istenen her kimliğin bir kaynağı var', () => {
+  /** Okuma araçlarının modele VERDİĞİ kimlik alanları (araç adı → alan). */
+  const READABLE_IDS: Record<string, string> = {
+    batchId: 'stock_watch',
+    variantId: 'stock_watch · catalog_lookup',
+    productId: 'catalog_health · catalog_lookup',
+  };
+
+  /** Kimlik isteyen ama kaynağı OLMAYAN alanlar için gerekçe — boş olmalı, doluysa açık bir borç. */
+  const ID_WITHOUT_SOURCE: Record<string, string> = {};
+
+  const idFieldsOf = (tool: { inputSchema: { properties: Record<string, { description?: string }> } }) =>
+    Object.entries(tool.inputSchema.properties)
+      // Kimlik alanı: adı `Id`/`id` ile biten. `…Name`/`…Code`/`…Ref` alanları adla çözülen
+      // kapılardır ve zaten aranan çözümün ta kendisi.
+      .filter(([name]) => /(^id$|Id$)/.test(name))
+      .map(([name]) => name);
+
+  for (const tool of TOOLS.filter((t) => t.name.startsWith('propose_'))) {
+    it(`${tool.name}: istediği kimliklerin kaynağı var`, () => {
+      const orphans = idFieldsOf(tool as never).filter((field) => !READABLE_IDS[field] && !ID_WITHOUT_SOURCE[field]);
+      // Kırıldıysa: ya alanı ADLA sorun (sunucu çözsün — `resolveSupplier` deseni), ya kimliği
+      // veren okuma aracını `READABLE_IDS`e yazın, ya da gerçekten kaynaksız kalacaksa
+      // `ID_WITHOUT_SOURCE`a gerekçesini bırakın. Sessiz dördüncü yol yok.
+      expect(orphans, `${tool.name}: bu kimlikler modelden isteniyor ama hiçbir okuma aracı vermiyor`).toEqual([]);
     });
   }
 });

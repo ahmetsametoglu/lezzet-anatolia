@@ -1,5 +1,6 @@
 import {
   AccountService,
+  BundleService,
   CategoryService,
   CollectionService,
   DeliveryZoneService,
@@ -231,11 +232,15 @@ function nearestFarthest(origin: { lat: number; lng: number } | null, points: ({
  */
 export async function referenceData() {
   const db = serviceDb();
-  const [accounts, categories, collections, suppliers] = await Promise.all([
+  const [accounts, categories, collections, suppliers, bundles] = await Promise.all([
     new AccountService(db).list({ activeOnly: true }),
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).list({ activeOnly: true }),
     new SupplierService(db).list({ activeOnly: true }),
+    // Paketler de vitrine çıkarılabilen üç şeyden biri (11.08 · denetim raporu madde 12) ve hiçbir
+    // okuma aracında listelenmiyordu: `propose_featured_flag`ın `bundle` hedefi bu yüzden
+    // kullanılamıyordu — model paketin adını bile göremiyordu.
+    new BundleService(db).listAll({ activeOnly: true }),
   ]);
 
   const settings = new SettingsService(db);
@@ -243,8 +248,14 @@ export async function referenceData() {
 
   return {
     accounts: accounts.map((a) => ({ name: a.name, type: a.type })),
+    // ── ADLAR YAZMA ARAÇLARININ ANAHTARIDIR ────────────────────────────────
+    // Buradaki her ad bir `propose_*` girdisine BİREBİR verilebilir (kategori → `categoryName`,
+    // hesap → `accountName`, tedarikçi → `supplierName`, vitrin hedefi → `name`). Kimlik
+    // yazılmıyor ve bilerek: uuid modelin bağlamında yer kaplar, ezberlenemez ve bir kez yanlış
+    // hatırlandığında panelde "(silinmiş kayıt)" diye çizilecek bir kalem doğurur. Çözüm sunucuda.
     categories: categories.map((c) => ({ name: resolveLocalizedText(c.name, 'tr'), isFeatured: c.isFeatured })),
     collections: collections.map((c) => ({ name: resolveLocalizedText(c.name, 'tr'), isFeatured: c.isFeatured })),
+    bundles: bundles.map((b) => ({ name: resolveLocalizedText(b.name, 'tr'), isFeatured: b.isFeatured })),
     suppliers: suppliers.map((s) => ({ name: s.name })),
     /**
      * İş parametreleri — BEYAZ listeyle (künye yukarıda). `null` = ayar hiç girilmemiş, yani kod
