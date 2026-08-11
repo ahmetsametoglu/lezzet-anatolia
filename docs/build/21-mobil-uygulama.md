@@ -1661,6 +1661,26 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **Doğrulama:** mobil typecheck · eslint · **83 suite / 581 test** yeşil.
 
+- [x] (21.37) **PAKET KARTININ YER NOTU VURGU TONUNA GEÇTİ (kullanıcı kararı 11.08).**
+  `touches:` `apps/mobile/src/screens/{packages-list/packages-list-screen.tsx,home/home-screen.tsx}`
+
+  Soğuk zincirli paket müşterinin posta koduna gidemiyorken kart zaten bir not taşıyordu ("Bu adrese
+  gönderemiyoruz" / "Bölgenizde şu an yok"); kullanıcı o notun **vurgu renginde** yazılmasını istedi.
+  Renk krem (`on-image`) → `terracotta`; token'dan, ham hex yok. Kremin sorunu tondan öteydi: ad ve
+  üstbaşlık da kremdi, yani not bir UYARI değil ÜÇÜNCÜ bir künye satırı gibi okunuyordu.
+
+  **İKİ EKRAN TEK KARAR** (kullanıcı onayı, şıkla): aynı cümle vitrindeki "Hazır paketler" karosunda
+  da var ve iki ekranın künyesi zaten *"işaret yalnız birinde çizilseydi müşteri iki farklı gerçek
+  okurdu"* diyor — rengin ayrışması aynı cümleyi iki ekranda iki ağırlıkta gösterirdi. Kataloğun
+  kare kartı DIŞARIDA: oradaki not kartı örten koyu filigranın üstünde duruyor ve terracotta orada
+  kremden daha az okunur (kullanıcıya şıkta soruldu, dışarıda bırakıldı).
+
+  Cümlenin kendisine ve hangi hâlde basılacağına DOKUNULMADI — o karar `stockMarkOf`un
+  (`lib/places/place-view.ts`), ekranın değil. Not iki hâli birden taşıyor (`blocked` kalıcı ·
+  `pending` geçici) ve ikisi tek `Text` ile çiziliyor, yani ikisi de vurgu tonunda.
+
+  **Doğrulama:** mobil typecheck rc=0 · eslint · `pnpm test:unit` 116 dosya / **1347 test** yeşil.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

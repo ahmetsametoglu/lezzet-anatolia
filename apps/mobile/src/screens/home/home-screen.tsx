@@ -800,7 +800,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   repeatBody: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.muted,
   },
   repeatChevron: {
@@ -918,7 +918,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   offerText: { gap: theme.space['2xs'] },
   offerName: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.helper,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.ink,
   },
   offerPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: theme.space.sm },
@@ -1069,13 +1069,16 @@ const styles = StyleSheet.create((theme, rt) => ({
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
   },
-  /* YER NOTU — paket listesindeki kardeşiyle AYNI karar: zeminsiz yazı, künyenin son satırı,
-     rengi adınki (`on-image`) çünkü okunması gereken bir cümle üstbaşlıktan sönük olmamalı. */
+  /* YER NOTU — paket listesindeki kardeşiyle AYNI karar: zeminsiz yazı, künyenin son satırı.
+     RENK VURGU TONU (kullanıcı kararı 11.08, paketler sekmesiyle tek karar): krem (`on-image`) adın
+     ve üstbaşlığın rengiydi, not onların arasında üçüncü bir künye satırı gibi okunuyordu — oysa
+     taşıdığı şey künye değil bir UYARI. İki ekran aynı karta bakıyor (yukarıdaki satırın künyesi);
+     rengin ayrışması aynı cümleyi iki ekranda iki ayrı ağırlıkta gösterirdi. */
   packagePlaceNote: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
-    color: theme.colors['on-image'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.terracotta,
   },
   /* Tükendi rozeti — kare ürün kartının tükendi rozetiyle aynı geometri ve örtü tonu. */
   packageSoldOut: {

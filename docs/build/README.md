@@ -46,7 +46,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/12 (+2 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 17/24 (+6 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 26/36 (+7 kısmi) |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 27/37 (+7 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 7/14 (+6 kısmi) |
 <!-- durum:son -->
 

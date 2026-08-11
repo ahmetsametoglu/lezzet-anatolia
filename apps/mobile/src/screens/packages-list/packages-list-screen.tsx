@@ -43,7 +43,8 @@ import { usePackagesList } from './use-packages-list.hook';
     1. Gidemeyeceğimiz kartın yalnız FOTOĞRAFI solar; rozet ve künye tam opak kalır — yoksa
        solmanın sebebini açıklayan cümle tam da gerektiği anda okunaksızlaşır.
     2. "Bu adrese gönderemiyoruz" ROZET İÇİNDE DEĞİL, künyenin son satırında düz yazı; okunurluk
-       alt gradyandan gelir ("her şey rozet içindeymiş gibi görünüyor, hoş olmuyor").
+       alt gradyandan gelir ("her şey rozet içindeymiş gibi görünüyor, hoş olmuyor"). Rengi 11.08'de
+       kremden VURGU tonuna geçti (`terracotta`) — gerekçe stil künyesinde.
     3. "Kargoyla gelir" işareti KARTA YAZILMAZ — rota dışında kartların çoğu onu taşırdı ve bilgi
        olmaktan çıkardı; cümlenin genel hâli listenin başındaki bantta.
   Cümleyi kuran yer ekran değil `stockMarkOf` (`lib/places/place-view.ts`); paketin kendi gerçeği
@@ -339,13 +340,21 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors['olive-light'],
   },
   /* YER NOTU — künye ailesinin içinde, kare ürün kartıyla AYNI karar: zemin/kenarlık YOK
-     (okunurluk gradyandan gelir), renk adınki (`on-image`) çünkü okunması gereken bir cümle
-     altyazıdan sönük olmamalı. */
+     (okunurluk gradyandan gelir).
+
+     RENK VURGU TONU (kullanıcı kararı 11.08): `on-image` krem, adın ve altyazının rengiydi — not
+     onların arasında ÜÇÜNCÜ bir künye satırı gibi okunuyordu, oysa taşıdığı şey künye değil bir
+     UYARI. Vurgu ailesi (`terracotta`) markanın kendi aksanı ve bu sayfada zaten konuşuyor
+     (üstbaşlık, fiyat çipi) — yeni bir görsel dil üretilmedi.
+     Okunurluk bakımından da krem'den güvenli: kart gönderilemez hâlde SOLUYOR (`fadedPhoto`) ve
+     solan şey fotoğrafla birlikte onun karartma gradyanıdır — açık bir fotoğrafın üstünde krem
+     yazı zemine karışıyordu (kare kartın 10.08 künyesindeki `on-image` ↔ `sand-50` ölçümü).
+     Terracotta orta tonlu: hem açılmış hem koyu kalmış zeminde ayrışıyor. */
   placeNote: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.micro,
-    lineHeight: theme.text.micro * theme.text['lead--line-height'],
-    color: theme.colors['on-image'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.terracotta,
   },
   cardBody: {
     paddingVertical: theme.space['2xl'],
