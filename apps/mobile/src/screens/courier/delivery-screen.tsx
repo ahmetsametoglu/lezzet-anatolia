@@ -93,7 +93,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         testID="courier-delivery-header"
       />
 
-      <ScrollView contentContainerStyle={styles.body} testID="courier-delivery-body">
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" testID="courier-delivery-body">
         <View style={styles.addressBlock}>
           <View style={styles.addressRow}>
             <Text style={styles.address}>{stop.address ?? t.day.stop.noAddress}</Text>

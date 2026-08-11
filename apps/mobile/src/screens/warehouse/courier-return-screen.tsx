@@ -60,7 +60,7 @@ export function CourierReturnScreen() {
         testID="warehouse-return-header"
       />
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-return-body">
+      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="warehouse-return-body">
         <Text style={styles.heading}>{t.return.heading}</Text>
 
         {drop.lines.map((line) => {

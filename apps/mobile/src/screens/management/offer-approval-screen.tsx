@@ -58,7 +58,7 @@ export function OfferApprovalScreen() {
         testID="management-offer-approval-header"
       />
 
-      <ScrollView contentContainerStyle={styles.body} testID="management-offer-approval-body">
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" testID="management-offer-approval-body">
         {OFFER_CANDIDATES.map((candidate) => {
           const isRemoved = removed[candidate.id] === true;
           return (

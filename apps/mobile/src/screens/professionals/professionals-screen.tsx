@@ -276,7 +276,8 @@ export function ProfessionalsScreen() {
   return (
     <View style={styles.screen}>
       {bar}
-      <ScrollView contentContainerStyle={styles.content} testID="pro-form">
+      {/* Klavye açıkken "Bul"a ilk dokunuş yutuluyordu (ölçüldü 11.08) — künye `feedback-screen`de. */}
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="pro-form">
         {/* Tanıtım kartı — v3'ün mürekkep bloğu: üstbaşlık · vaat · gerekçe. */}
         <View style={styles.hero}>
           <Text style={styles.heroEyebrow}>{t.hero.eyebrow}</Text>

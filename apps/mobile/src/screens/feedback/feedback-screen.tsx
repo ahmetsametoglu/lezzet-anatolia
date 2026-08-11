@@ -211,7 +211,10 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
   return (
     <View style={styles.screen} testID="feedback-screen">
       {bar}
-      <ScrollView contentContainerStyle={styles.content} testID="feedback-scroll">
+      {/* `keyboardShouldPersistTaps`: klavye açıkken "Değerlendirmeyi tamamla"ya ilk dokunuş
+          yalnız klavyeyi kapatıyor, yorum GÖNDERİLMİYORDU (cihazda ölçüldü 11.08) — müşteri
+          yazdığını sanıp çıkıyordu. Aynı kapı `support/new-ticket-sheet` künyesinde. */}
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="feedback-scroll">
         {card !== null && !alreadyDone ? (
           /* ── Oy aşaması: fotoğraf + rozet + künye, iki oy düğmesi, alt not (v3:1014-1030) ── */
           <View testID="feedback-vote">
@@ -311,11 +314,25 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
             {completion === null ? <Text style={styles.doneBody}>{t.already.body}</Text> : null}
 
             {/* Puan TAMAMLAMAYA bağlıdır, beğeniye değil (DOMAIN §14); 0 → kart çizilmez
-                (B2B'de ve ikinci tamamlamada puan yok — şablonun `sc-if fv.ptsF` kapısı). */}
-            {completion !== null && completion.pointsAwarded > 0 ? (
+                (B2B'de puan yok — şablonun `sc-if fv.ptsF` kapısı).
+
+                YAZILAN SAYI TURUN TOPLAMIDIR (`invitePointsTotal`), tamamlama primi değil (MB-17).
+                Ölçüldü 11.08: ekran "+5 puan" diyordu, deftere `feedback_purchase 5` + `review 20`
+                + `feedback_purchase 5` = 30 yazılmıştı. Üç kaydın üçü de doğruydu (kart oyu · yorum ·
+                tamamlama primi — `packages/application/src/feedback/invite.ts`), eksik olan
+                SÖZLEŞMEYDİ: `/vote` ve `/review` yalnız `{ recorded: true }` dönüyor, `/complete`in
+                `pointsAwarded`ı da yalnız primi taşıyor. Toplam istemcide HESAPLANAMAZ (günlük tavan ·
+                B2B · aynı kayda ikinci puan hep motorun kararı), o yüzden uç açıldı: motor kendi
+                defterini toplayıp `invitePointsTotal` olarak dönüyor.
+
+                KAPI DA TOPLAMA BAĞLANDI, prime değil. Eskiden kart `pointsAwarded > 0` kapısındaydı
+                ve bunun ölçülmüş bir bedeli vardı: günlük tavan dolduysa ya da davet İKİNCİ kez
+                tamamlandıysa prim 0'a düşüyor, müşteri o turda yorum için 20 puan kazanmış olsa bile
+                HİÇBİR puan bilgisi görmüyordu. Toplam o hâllerde de doludur. */}
+            {completion !== null && completion.invitePointsTotal > 0 ? (
               <View style={styles.pointsCard} testID="feedback-points">
                 <Text style={styles.pointsValue}>
-                  {t.done.points.replace('{points}', String(completion.pointsAwarded))}
+                  {t.done.points.replace('{points}', String(completion.invitePointsTotal))}
                 </Text>
                 <Text style={styles.pointsNote}>{t.done.pointsNote}</Text>
                 <View style={styles.pointsTotal}>

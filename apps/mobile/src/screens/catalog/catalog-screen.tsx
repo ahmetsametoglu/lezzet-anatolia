@@ -235,7 +235,15 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
           />
         </PressableSurface>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRail} testID="catalog-chips">
+      {/* Şerit arama alanının hemen altında: klavye açıkken kategori çipine dokunmak yalnız
+          klavyeyi kapatırdı, süzgeç değişmezdi (künye `feedback-screen`). */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRail}
+        keyboardShouldPersistTaps="handled"
+        testID="catalog-chips"
+      >
         {/* "Tümü" bir kategori DEĞİL, süzgecin yokluğudur — listenin başında ve her zaman var. */}
         <Chip label={t.all} selected={catalog.activeCategory === null} onPress={() => catalog.selectCategory(null)} />
         {catalog.categories.map((category) => (

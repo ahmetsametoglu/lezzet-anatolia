@@ -84,7 +84,7 @@ export function CourierDayCloseScreen() {
     <View style={styles.screen} testID="courier-day-close">
       {header}
 
-      <ScrollView contentContainerStyle={styles.body} testID="courier-day-close-body">
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" testID="courier-day-close-body">
         {dayClose.closed ? (
           <View style={styles.closedBox} testID="courier-day-close-readonly">
             <Text style={styles.closedText}>{t.dayClose.closed}</Text>

@@ -1444,6 +1444,40 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   çıkamıyor (uygulamayı kapatıp açmak gerekiyor). Kabuğun künyesi bu geçişin tema dikişini de
   şart koşuyor (odak/blur), o yüzden ayrı ve bilinçli bırakıldı.
 
+- [x] (21.33) **KLAVYE AÇIKKEN DÜĞMEYE İLK DOKUNUŞ YUTULUYORDU — geri bildirim yorumu sessizce
+  kayboluyordu (cihazda ölçüldü 11.08).**
+  `touches:` `apps/mobile/src/screens/{feedback/feedback-screen.tsx,professionals/professionals-screen.tsx,login/login-screen.tsx,catalog/catalog-screen.tsx,courier/{day-close-screen.tsx,delivery-screen.tsx},management/offer-approval-screen.tsx,warehouse/{adjustment-screen.tsx,courier-return-screen.tsx,transfer-screen.tsx}}`
+
+  **Belirti (fiziksel cihaz, OPPO CPH1907 · Android 11):** klavye açıkken bir düğmeye basılınca
+  yalnız klavye kapanıyor, düğmenin işi çalışmıyordu. İki ekranda birebir ölçüldü — Profesyonel
+  "Bul" (1. dokunuş sonuçsuz, 2. dokunuşta resmî kayıt geldi) ve Geri bildirim "Değerlendirmeyi
+  tamamla" (1. dokunuş sonuçsuz, 2. dokunuşta gönderildi). **İkincisi veri kaybettiriyordu:**
+  müşteri yorumunu yazıp bastığını sanarak çıkarsa değerlendirme hiç kaydedilmiyordu.
+
+  **Sebep:** `ScrollView`in `keyboardShouldPersistTaps` varsayılanı `'never'` — klavyeyi kapatan
+  dokunuş çocuklara HİÇ ulaşmıyor. Aynı tuzak bir kez çözülmüş ve künyesi yazılmıştı
+  (`support/new-ticket-sheet.tsx`), ama kural yayılmamıştı.
+
+  **KAPSAM ÖLÇÜLEREK DARALTILDI — 40 `ScrollView`den 10'u.** İlk tarama "dosyada hem `ScrollView`
+  hem alan var mı" diye sorup 13 dosya saymıştı; o soru YANLIŞTI, iki yönden birden: alanı çocuk
+  bileşende olan ekranı (Profesyonel → `ApplicationForm`) kaçırıyor, alanı ÇEKMECEDE olanı ise
+  boşuna sayıyordu. Doğru ölçüt **klavyenin açılabildiği yüzeyde dokunulabilir öğe taşıyan
+  kaydırıcı**: alan çekmecedeyse (`BottomSheet`) arkadaki kaydırıcıya dokunulamaz, ayrıca çekmecenin
+  kendisinde kaydırıcı yoksa dokunuş zaten yutulmaz — `keyboardShouldPersistTaps` bir `ScrollView`
+  davranışıdır. Nesting satır satır ölçüldü; `home` (4 kaydırıcı) · `cart` · `account` · `checkout` ·
+  `legal` · `packages-list` · `intake` · `preparation` gibi 30 kaydırıcı **bilerek dokunulmadı**.
+  Tek istisna katalog: alan kaydırıcının içinde DEĞİL ama çip şeridi arama alanının hemen altında,
+  yani klavye açıkken kategori çipine dokunmak süzgeci değiştirmiyordu — o da girdi.
+
+  **Doğrulama CİHAZDA, ölçümün aynısı tekrarlanarak:** Profesyonel "Bul" → tek dokunuşta resmî
+  kayıt geldi (QUALITE · 46 RUE DES PRES · 67380 LINGOLSHEIM) ve klavye açık kaldı; Geri bildirim
+  → yorum yazılıp tek dokunuşta tamamlandı, veritabanında `vote=like` + yorum + `completed_at`
+  doğrulandı. Test verisi (puan kayıtları · oy · davetin tamamlanma damgası) geri alındı.
+  Kapılar: mobil **81 suite / 572 test** · typecheck · eslint temiz.
+
+  Kalanı `docs/uygulama/BACKLOG-musteri.md`: **MB-02** (klavye odaklanan alanın üstünü kapatıyor —
+  `KeyboardAvoidingView` yalnız `BottomSheet`te kurulu) aynı ailedendir ama ayrı iştir.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

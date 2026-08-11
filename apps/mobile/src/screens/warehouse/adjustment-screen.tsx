@@ -85,7 +85,7 @@ export function AdjustmentScreen() {
     <View style={styles.screen} testID="warehouse-adjustment">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-adjustment-body">
+      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="warehouse-adjustment-body">
         <View style={styles.section}>
           <Text style={styles.heading}>{t.adjustment.reasonHeading}</Text>
           <View style={styles.chipRow}>

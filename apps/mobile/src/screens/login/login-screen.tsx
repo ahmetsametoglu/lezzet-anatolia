@@ -224,7 +224,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
       <View style={styles.topBar}>
         <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="login-back" />
       </View>
-      <ScrollView contentContainerStyle={styles.content} testID="login-scroll">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="login-scroll">
         {/* Logo yükseklikten ölçülür (şablon: 52). Varlık ŞEFFAF PNG: kaynak jpg beyaz zeminliydi
             ve şablonun `multiply` karışımı iOS'ta uygulanmadı (ölçüldü 08.08 — beyaz kutu görünüyordu);
             beyaz→alfa dönüşümü türetim script'iyle yapıldı, karışıma gerek kalmadı. */}

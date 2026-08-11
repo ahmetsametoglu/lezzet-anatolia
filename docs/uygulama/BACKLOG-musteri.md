@@ -15,20 +15,18 @@
 
 ## 1. Bloke edici — müşterinin işini fiilen bozanlar
 
-- [ ] **MB-01 · Klavye açıkken düğmeye ilk dokunuş yutuluyor.** Klavye açıkken bir düğmeye
-  basıldığında yalnız klavye kapanıyor, düğmenin işi ÇALIŞMIYOR; kullanıcı iki kez basmak zorunda.
-  **Ölçüldü 11.08, iki ekranda birebir:** Profesyonel → "Bul" (1. dokunuş sonuçsuz, 2. dokunuşta
-  resmî kayıt geldi) ve Geri bildirim → "Değerlendirmeyi tamamla" (1. dokunuş sonuçsuz, 2. dokunuşta
-  gönderildi). İkincisi **veri kaybettiriyor**: müşteri yorumunu yazıp bastığını sanarak çıkarsa
-  değerlendirme kaydedilmiyor.
-  **Sebep kanıtlandı:** `ScrollView`de `keyboardShouldPersistTaps` yok. Tuzak zaten bir kez çözülmüş
-  ve künyesi yazılmış (`screens/support/new-ticket-sheet.tsx:184`).
-  **Yayılım — 13 dosya** (`ScrollView` + form alanı var, ayar yok): `courier/delivery-screen` ·
-  `courier/day-close-screen` · `catalog/catalog-screen` · `management/complaint-screen` ·
-  `management/offer-approval-screen` · `feedback/feedback-screen` · `support/ticket-detail-screen` ·
-  `cart/cart-screen` · `account/account-screen` · `warehouse/courier-return-screen` ·
-  `warehouse/adjustment-screen` · `warehouse/intake-screen` · `login/login-screen`.
-  *Müşteri yüzeyi öncelikli; kurye/depo/yönetim ekranları aynı düzeltmeyle gider.*
+- [x] **MB-01 · Klavye açıkken düğmeye ilk dokunuş yutuluyor** → **KAPANDI, görev `(21.33)`**
+  (11.08). Klavye açıkken bir düğmeye basıldığında yalnız klavye kapanıyor, düğmenin işi
+  çalışmıyordu. **Ölçüldü, iki ekranda birebir:** Profesyonel → "Bul" ve Geri bildirim →
+  "Değerlendirmeyi tamamla"; ikincisi **veri kaybettiriyordu** (müşteri yorumunu yazıp bastığını
+  sanarak çıkarsa değerlendirme hiç kaydedilmiyordu).
+  **Sebep:** `ScrollView`in `keyboardShouldPersistTaps` varsayılanı `'never'`; tuzak
+  `screens/support/new-ticket-sheet.tsx` künyesinde zaten çözülmüştü ama kural yayılmamıştı.
+  **Kapsam ölçülerek daraltıldı — 40 kaydırıcıdan 10'u.** Buradaki ilk "13 dosya" sayımı YANLIŞTI:
+  alanı çocuk bileşende olan ekranı kaçırıyor, alanı çekmecede olanı boşuna sayıyordu. Gerekçe ve
+  dokunulmayanların listesi `(21.33)` görev satırında.
+  **Doğrulama cihazda:** aynı iki senaryo tek dokunuşla çalıştı; geri bildirim yorumu veritabanında
+  doğrulandı, test verisi geri alındı.
 
 - [ ] **MB-02 · Klavye, yazılan alanın üstünü kapatıyor.** Odaklanan alan klavyenin altında
   kalıyor; müşteri ne yazdığını göremiyor. **Ölçüldü:** Profesyonel formunda "Ad soyad" alanına
@@ -281,3 +279,190 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
 7. **MB-21 + MB-22 + MB-23** — sepetteki sayı ve yer çelişkileri.
 8. **MB-31** — katalog dili; önce ölçüm (veri mi, yedek dil mi), sonra karar.
 9. Kalan yerleşim/içerik maddeleri ve §8'in görsel bekleyenleri.
+
+---
+
+## 11. Mobil şeridin okuması — dört madde tek karara bağlı (11.08)
+
+> Bu bölüm listeyi yargılamıyor, **grupluyor**: aşağıdaki maddeler ayrı ayrı yapılırsa aynı iş üç
+> kez kurulur. Her başlıkta ölçüm var; ölçmediğim yerde "ölçülmedi" yazıyor.
+
+### A. MB-01'in yayılımı 13 değil 39 — ve dosya dosya prop eklemek yanlış çare
+
+**Ölçüldü (11.08):** `keyboardShouldPersistTaps` ayarı `ScrollView` kullanan **39** ekranın yalnız
+**birinde** var (`support/new-ticket-sheet.tsx`). Listedeki 13, "kaydırma kabı ile metin alanı AYNI
+dosyada" olanlar; kalan 26'da alan bir alt bileşende yaşıyor ve arama onları görmüyor.
+
+**Kanıt, listenin kendi içinde:** MB-01 arızayı **Profesyonel → "Bul"** düğmesinde ölçmüş, ama
+`professionals-screen` 13'lük listede YOK. Sebebi tam olarak bu: o dosya `ScrollView`u tutuyor,
+`TextField`ları `application-form.tsx` çiziyor. Yani liste doğru ölçülmüş bir arızayı, yanlış
+ölçülmüş bir yayılımla eşleştiriyor — 13 dosya düzeltilse Profesyonel formu **düzelmezdi**.
+
+**Çare de değişiyor.** 39 dosyaya aynı prop'u yazmak CLAUDE §1'in yasakladığı duplikasyondur ve
+40'ıncı ekranı yazan kişi onu unutur — bugün 39/40 unutulmuş olması bunun kanıtı. Doğrusu kaydırma
+kabını **kitten tek bir bileşene** almak (`components/ui/`), ayarı orada bir kez vermek ve ekranların
+ham `ScrollView`u kullanmasını lint ile kapatmak. O zaman MB-02 (klavyenin alanı kapatması) da aynı
+bileşenin içinde çözülür — `KeyboardAvoidingView` bugün yalnız `bottom-sheet.tsx`te kurulu ve
+tam-ekran formlarda karşılığı yok.
+
+**Ama MB-01 ile MB-02 "tek tur" DEĞİL.** MB-01 tek satırlık bir ayar; MB-02 platform davranışı
+(`adjustResize` + odaklanan alana kaydırma) ve iOS/Android'de ayrı ölçüm ister. Aynı bileşende
+buluşurlar, aynı sürede bitmezler.
+
+### B. MB-15..MB-18'in ekseni "sayı yanlış" değil, **"ekran kimin sayısını okuyor"**
+
+Üç maddenin kökü aynı değil, ama tek bir kuralla ayrılıyorlar:
+
+| madde | ekran ne yapıyor | kök |
+| --- | --- | --- |
+| MB-15 (vitrin "+10 puan") | sabit metin | ayara hiç bakmıyor |
+| MB-16 (keşif +6 ≠ 8) | sunucunun `pointsAwarded`ını topluyor — **desen DOĞRU** (`use-discover.hook:120`) | toplama bir cevabı kaçırıyor; **sebep ölçülmedi** |
+| MB-17 (geri bildirim +5 ≠ 30) | yalnız tamamlama primini gösteriyor | eksik okuma, hesap hatası değil |
+
+Yani MB-18'in denetimi "ekran ne diyor" diye değil, **"ekran sunucunun yazdığını mı okuyor, yoksa
+kendisi mi hesaplıyor"** diye yapılmalı. Bu tek soru dokuz senaryonun dokuzunu da kapsıyor ve
+gelecekte eklenen onuncuyu da — çünkü kural ekranın değil, sözleşmenin kuralı olur.
+
+**Kayda değer:** motor zaten ayardan okuyor ve `use-discover.hook`un künyesi bu kuralı **zaten
+yazmış** (*"kart sayısı × ayar DEĞİL"*). Yani doğru desen biliniyor, tek yerde uygulanmış.
+
+### C. MB-20 + MB-28 + arka-uç notu = **tek sözleşme kararı**
+
+Üçü ayrı madde gibi duruyor ama tek bir eksik alanın üç yüzü:
+· MB-20 detay en pahalı boyu seçili açıyor · MB-28 varyant sırası düzensiz · `docs/talep/
+not-mobil-detay-en-pahali-boyu-secili-aciyor.md` (arka-uç → mobil) aynı şeyi söylüyor ve **web'de
+çözüldüğünü** bildiriyor.
+
+Karar tek: **"birincil boy" hangi alandan okunur.** O alan sözleşmeye girince kartın "…'dan" eki,
+detayın açılış boyu ve listenin sırası kendiliğinden aynı kaynağa oturur. Ayrı ayrı yapılırsa üç
+farklı sıralama kuralı doğar. `docs/talep/musteri-liste-fiyati-baslangic.md` de aynı turda kapanır —
+web ile native ayrışmasın.
+
+### D. MB-03 ile MB-13 gerçekten aynı ölçüm hattında
+
+MB-13 (oturum misafire düşüyor) bir teori istemiyor ama bir **eleme** öneriyor: `useMe` bellekte
+duran bir modül deposudur; JS bundle yeniden yüklenirse depo sıfırlanır ve oturum geri okunana dek
+ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi aynı turda ölçülürse
+**tek ölçüm iki maddeyi kapatabilir** — ya da MB-13'ün bağımsız olduğu kanıtlanır. Bugün ikisi de
+`BEKLEYEN(21.30)`'a asılı, bu doğru.
+
+---
+
+## 12. Mobil şeridin eklediği kalemler (11.08)
+
+> Yeni ölçülenler + şeridin elinde duran, listeye girmemiş açıklar. Kimlikler MB dizisini sürdürüyor.
+
+- [ ] **MB-34 · Kaydırma kabı kitte yok — 39 ekran ham `ScrollView` kullanıyor.** §11.A'nın işi:
+  `components/ui/` altına klavye davranışı doğru kurulmuş tek bir kap, ekranların ona geçmesi ve ham
+  `ScrollView` kullanımının lint'le kapatılması. MB-01 + MB-02 bunun içinde çözülür; ayrıca 40'ıncı
+  ekranın aynı tuzağa düşmesini yapısal olarak engeller.
+
+- [ ] **MB-35 · Hesap sekmesi `/me` okunurken TAMAMEN BOŞ.** `app/(tabs)/account.tsx:44` yükleme
+  anında `return null` veriyor. Künyesi bilinçli (*"misafir daveti yanıp sönmesin"*), ama okuma
+  uzarsa müşteri boş bir sekmeye bakıyor — ve MB-13'ün belirtisiyle karışıyor: "hesabım açılmıyor"
+  şikâyeti hangisinden geldiği ayırt edilemez. Ekranın `account-skeleton.tsx`i ZATEN VAR, yalnız bu
+  dalda kullanılmıyor. `BEKLEYEN(21.14)` olarak kayıtlı.
+
+- [ ] **MB-36 · B2B müşterisi teklif tutarını mobilde GÖRMÜYOR.** Katalog uçları teklif fiyatını
+  okumuyor (`BEKLEYEN(21.6)` `catalog.ts`te); bilinçli bir bekletme — yer çözümü terfi etmeden
+  indirimi gösterip ödemede yükseltmek verilmiş sözü bozardı. Ama sonuç şu: onaylı B2B müşterisi
+  web'de indirimli fiyat görüyor, native'de görmüyor. **Aynı müşteri iki yüzeyde iki fiyat görüyor.**
+
+- [ ] **MB-37 · Ürün detayında YERE BAĞLI stok işareti yok.** Bugün yalnız ürün düzeyli "kargoya
+  verilmez" künyesi var; `stockMarkOf` (yere bağlı işaret) ve "haber ver"in rota dışında BÖLGE
+  notuna dönmesi yazılmadı (`BEKLEYEN(21.20)`). Müşteri detayda "var" görüp sepette bölge kısıtıyla
+  karşılaşabiliyor — MB-23'ün (vitrin bölgesi ≠ sepet adresi) akrabası.
+
+- [ ] **MB-38 · Test defteri boşaltılmadı** (`docs/talep/not-mobil-test-defteri.md`, kullanıcı
+  talimatı 09.08: *"testleri sonra topluca yaz"*). İçinde ölçülmemiş bir düşüş var:
+  `account-routes.test` TAM koşuda düşüyor, tekil koşuda geçiyor — hata metni hâlâ yakalanmadı.
+  Ayrıca "Jest did not exit" uyarısı ve 21.20'nin birim test borcu (`StockMark`, `stockMarkOf`,
+  `placeModeOf`). *Müşteri turunu bitirirken bu defter de kapanmalı, yoksa yeşil koşu bir şey
+  kanıtlamıyor.*
+
+- [ ] **MB-39 · `knip` mobil pakette dokuz kullanılmayan ihraç tip görüyor** (ölçüldü 11.08):
+  `B2bApplicationResult` · `DiscoverSwipe` · `DiscoverClaimResult` · `MeCoupon` ·
+  `PaymentSheetInput` · `StripeConfig` · `DiscountSummary` · `SheetState` · `UseHomeOrdersResult`.
+  CLAUDE §2 "ölü kod yok" diyor; her biri ya tüketilmeli ya ihracı kapatılmalı. Ucuz, mekanik.
+
+- [ ] **MB-40 · Talep maili kart genişliği açık** (`docs/talep/not-mobil-talep-maili-duzeltildi-
+  genislik-acik.md`): arka-uç notun iki bulgusunu kapattı, üçüncüsünün ölçümünü mobile bıraktı ve
+  hâlâ ölçülmedi.
+
+- [ ] **MB-41 · Ham hex yalnız `app.config.ts` splash'ta kaldı** (`BEKLEYEN(21.3)`). Tek satır;
+  token'a bağlanamıyorsa gerekçesi künyeye yazılıp işaret kapatılmalı.
+
+### Şeridin sıra önerisine eki
+
+§10'un sırası doğru; iki düzeltme öneriyorum:
+
+1. **Adım 1, MB-01 + MB-02 yerine MB-34 olsun.** Aynı işi yapıyor ama 39 ekranı kapsıyor ve
+   Profesyonel formunu da gerçekten düzeltiyor (§11.A). MB-02 aynı bileşende ama ayrı ölçümle.
+2. **Adım 6'ya (MB-20 + MB-28) arka-uç notu eklensin** ve iş "birincil boy alanı" olarak
+   adlandırılsın — üç maddenin ortak kökü o (§11.C).
+
+Bir de kapsam sorusu: §10 dokuz adım sayıyor ve içinde **karar bekleyen** maddeler var (MB-04'ün
+e-posta kararı, MB-12'nin adres kararı, MB-23'ün hangi yerin bağlayıcı olduğu, MB-31'in katalog
+dili). Bunlar kod işi değil; "son bir koşuda müşteri tarafını bitirmek" için önce o dört karar
+verilmeli, yoksa koşu ortasında durur.
+
+---
+
+## 13. SAHİPLİK TABLOSU — çakışmayı önleyen tek yer
+
+> **Kullanıcı kararı 11.08:** *"her kalemde şunu sen şunu sen yapacaksın diye ben söylemeyeceğim"* —
+> ajanlar kendi aralarında **not düşerek** anlaşır. Bu bölüm o anlaşmanın kaydı.
+>
+> **Kural:** bir kalemi alan ajan, işe BAŞLAMADAN önce buraya satırını yazar (ajan · tarih·saat ·
+> dokunacağı yollar). **Yolu ilan edilmemiş dosyaya dokunulmaz.** İş bitince satır silinmez,
+> `bitti` işaretlenir — ki sıradaki ajan neyin taze değiştiğini görsün. Gerekçe CLAUDE §0: üç şerit
+> tek çalışma ağacını ve tek indeksi paylaşıyor; ilan edilmemiş bir dokunuş, başkasının commit'ine
+> giren ve `git log`'dan bulunamayan bir kayıptır (yaşandı 08.08).
+>
+> **Çakışma çıkarsa:** ilan eden önceliklidir; sonra gelen ya bekler ya kapsamını daraltır.
+> Bir kalemi bırakan, satırını `BIRAKILDI` yazıp sebebini ekler — sessizce terk etmez.
+
+| kalem | ajan | ne zaman | dokunulan yollar | durum |
+| --- | --- | --- | --- | --- |
+| MB-15 · MB-16 · MB-17 (ekran yarısı) | mobil | 11.08 · 12:0x | `apps/mobile/src/screens/{discover/**,feedback/**,home/messages.json}` | **bitti** — MB-16 sebebi testle üretildi; MB-17'nin ekran yarısı |
+| MB-35 (hesap boş yükleme) · MB-41 (ham hex splash) | mobil | 11.08 · 12:0x | `apps/mobile/src/app/(tabs)/account.tsx` · `apps/mobile/app.config.ts` · `screens/account/account-routes.test.tsx` | **bitti** |
+| MB-17 (SÖZLEŞME yarısı — turun toplamı) | mobil/backend | 11.08 · 12:3x | `packages/types/src/contracts/feedback*` · `packages/application/src/feedback/**` · `apps/mobile-api/src/api/v1/feedback.ts` | **alındı** |
+| MB-01 (klavye tuzağı) | **başka ajan** | 11.08 — görev `(21.33)` | ~10 ekran dosyası (ölçüyle daraltılmış) | **bitti, commit edilmedi** |
+| MB-34 (kaydırma kabını kite alma) | — | — | — | ⛔ **ASKIYA ALINDI** — aşağıdaki nota bak |
+
+### Boşta duran kalemler — alan ilan etsin
+
+**MB-03 · MB-13** ölçüm işi ve **fiziksel cihaz ister**; cihaz mobil şeritte DEĞİL (11.08 itibarıyla
+kullanıcı başka ajana verdi). Ölçümü kimin yapacağı ilan edilmeli.
+
+**MB-20 · MB-28** tek karara bağlı (§11.C "birincil boy") ve **web şeridiyle ortak** — açık talep
+`docs/talep/musteri-liste-fiyati-baslangic.md`. İki yüzey ayrışmasın diye tek turda kapanmalı;
+sahibi web ile mobil arasında `koordinasyon-web-mobil.md`den kararlaştırılacak.
+
+**MB-04 · MB-12 · MB-23 · MB-31** kod işi değil, **karar** işi (§11 sonu). Kararlar verilmeden
+kimse almasın.
+
+### ⛔ MB-34 askıya alındı — ve bu tablonun ilk sınavıydı
+
+**Yaşananın kaydı (11.08, iki ajan aynı dakikalarda):** mobil şerit §11.A'da MB-01'in yayılımını
+ölçüp "13 değil 39" dedi ve çareyi *"kaydırma kabını kite al"* diye önerdi (MB-34). Aynı saatlerde
+BAŞKA bir ajan MB-01'i zaten kapatmıştı: aynı sayım hatasını bağımsız olarak buldu, kapsamı
+**40 kaydırıcıdan 10'a** ölçerek daralttı ve görev `(21.33)` olarak yazdı. İki ajan aynı arızayı
+iki kez ölçtü; ikinci ölçüm birincisinden daha iyiydi (yayılımı yalnız düzeltmekle kalmadı,
+gereksizleri de eledi).
+
+**Sonuç:** MB-34'ün gerekçesi (39 dosyaya prop dağıtmak duplikasyondur) hâlâ geçerli ama ACİL
+DEĞİL — arıza kapandı, geriye yapısal bir borç kaldı. Kite alma işi `(21.33)` commit edildikten
+SONRA, onun ölçtüğü 10 dosyanın üstüne konuşulur. Şimdi başlanırsa taze ve commit edilmemiş bir
+işin üstüne yazılır.
+
+**Tablonun öğrettiği:** bu bölüm bir dakika önce açılsaydı çift ölçüm hiç olmazdı. Kural bu yüzden
+sıkı yazıldı — *işe başlamadan* satır yazılır. Bir ajan ölçüme başlarken de yazmalı, yalnız kod
+yazarken değil: burada boşa giden şey kod değil, iki kere yapılan ölçümdü.
+
+**Çalışma ağacında ŞU AN duran, commit edilmemiş 10 dosya** (`(21.33)`, başka ajanın):
+`catalog-screen` · `courier/day-close-screen` · `courier/delivery-screen` · `feedback-screen` ·
+`login-screen` · `management/offer-approval-screen` · `professionals-screen` ·
+`warehouse/adjustment-screen` · `warehouse/courier-return-screen` · `warehouse/transfer-screen`.
+Bu dosyalara dokunan herkes **Write değil Edit** kullanmalı ve **yol adı vererek commit ederken**
+o satırları kendi commit'ine almamaya dikkat etmeli (CLAUDE §0'ın 08.08 künye kayması vakası).

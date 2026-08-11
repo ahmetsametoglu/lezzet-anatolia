@@ -144,7 +144,7 @@ export function TransferScreen() {
     <View style={styles.screen} testID="warehouse-transfer">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-transfer-lines">
+      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="warehouse-transfer-lines">
         <Text style={styles.heading}>{t.transfer.heading}</Text>
 
         {transfer.lines.map((line) => {
