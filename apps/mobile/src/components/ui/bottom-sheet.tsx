@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -210,7 +210,25 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
           <Text style={styles.title} accessibilityRole="header">
             {title}
           </Text>
-          {children}
+          {/* İÇERİK KAYAR — kitte, bir kez (kullanıcı bulgusu 11.08, cihazda ölçüldü).
+              Panelin boyu içerikten gelir ve tavanı vardır; tavanı aşan içerik daha önce sessizce
+              kırpılmıyor, panel ALTA yaslı olduğu için YUKARIDAN taşıyordu: başlık, ilk alan ve
+              müşterinin YAZDIĞI kutu ekranın dışına — durum çubuğunun altına — kaçıyordu ve geri
+              getirmenin hiçbir yolu yoktu (iOS'ta üst güvenli alan daha yüksek olduğu için kutu
+              tamamen kayboluyordu). Tetikleyicisi adres önerileriydi ama sebep listede değil
+              buradaydı: girdi taşıyan HER çekmece aynı taşmayı yapabilir.
+              Bu çözümü `new-ticket-sheet` 09.08'de kendi içinde bulmuştu (*"sığmayan adım sessizce
+              kırpılırdı"*); tek ekranda kalması CLAUDE §1'in duplikasyonuydu — kaba taşındı, oradan
+              kaldırıldı. `keyboardShouldPersistTaps`: klavye açıkken gönder düğmesi İLK dokunuşta
+              çalışsın (`(21.33)` tuzağı). */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            testID={testID === undefined ? undefined : `${testID}-scroll`}
+          >
+            {children}
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -242,7 +260,40 @@ const styles = StyleSheet.create((theme, rt) => ({
     // Şablonun 30 px'lik alt nefesi + cihazın alt güvenli alanı (ana ekran çubuğu).
     paddingBottom: theme.space['8xl'] + rt.insets.bottom,
     gap: theme.space['2xl'],
-    maxHeight: rt.screen.height * theme.sheetMaxHeightRatio,
+    /* TAVAN İKİ ŞEYİN KÜÇÜĞÜ (kullanıcı bulgusu 11.08):
+       (1) `sheetMaxHeightRatio` — çekmece hissi: arkadan bir şerit görünsün diye ekranın bir
+           kısmını hep boş bırakır. Klavye kapalıyken bağlayıcı olan budur.
+       (2) GERÇEKTEN BOŞTA OLAN YER — ekran eksi klavye eksi üstteki güvenli alan. Eskiden yalnız
+           (1) vardı ve TAM EKRANA göre hesaplanıyordu: klavye ekranın ~%35'ini alırken panel
+           %82'ye kadar büyümeye yetkiliydi, aradaki fark yukarıdan taşıyordu. Üst güvenli alan da
+           hiç düşülmüyordu — alt taraf için `insets.bottom` vardı, üst taraf için karşılığı yoktu;
+           taşan içerik durum çubuğunun/çentiğin altına giriyordu.
+       `insets.ime` klavye yüksekliğidir ve klavye açılıp kapandıkça bu stil kendiliğinden yeniden
+       hesaplanır — ölçüyü ekranların tek tek taşımasına gerek kalmaz. */
+    maxHeight: Math.min(
+      rt.screen.height * theme.sheetMaxHeightRatio,
+      rt.screen.height - rt.insets.ime - rt.insets.top,
+    ),
+    /* TAVAN TEK BAŞINA YETMİYOR (cihazda ölçüldü 11.08, düzeltmenin ilk turu): yukarıdaki ölçü
+       `insets.ime`ye dayanıyor ve klavye yüksekliği HER ZAMAN raporlanmıyor — raporlanmadığında
+       ikinci sınır düşüyor, oran sınırı da tam ekrana göre olduğu için bağlamıyor ve panel yine
+       yukarıdan taşıyordu (başlık durum çubuğunun altında kesildi).
+       `flexShrink` ölçüye değil KABIN KENDİSİNE dayanır: klavyeden kaçınma katmanı ne kadar yer
+       bırakmışsa panel en fazla o kadar olur — klavye ölçüsü hiç okunamasa bile taşma imkânsız.
+       Sığmayan içerik artık yukarıdaki kaydırma alanında kayar. */
+    flexShrink: 1,
+    /* Üstteki güvenli alan: panel tavana dayandığında durum çubuğunun/çentiğin altına girmesin.
+       Alt taraf `paddingBottom`da zaten hesaplanıyordu, üst tarafın karşılığı yoktu. */
+    marginTop: rt.insets.top,
+  },
+  /** Kayan bölge: panelin geri kalanı (tutamak + başlık) sabit kalsın, yalnız içerik kaysın. */
+  scroll: {
+    flexShrink: 1,
+  },
+  /* Panelin `gap`i yalnız KARDEŞLER arasında çalışır; kaydırma kabına girdikten sonra içeriğin
+     kendi alt nefesi kalmaz — son alan panelin dolgusuna yapışırdı. */
+  scrollContent: {
+    gap: theme.space['2xl'],
   },
   /** Panel zemininin klavye arkasına taşan uzantısı — yükseklik "her klavyeyi örtecek kadar". */
   keyboardBleed: {

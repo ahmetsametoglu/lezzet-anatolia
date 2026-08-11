@@ -1321,6 +1321,40 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   prop'u geçici kaldırılıp aynı metin yazılır. Logcat'te JS istisnası, `FATAL`, ANR, autofill izi ya
   da lowmemory-kill YOK; yalnız `Running "main"` var.
 
+  **Durum (11.08 · 14:1x — BUGÜN ÜRETİLEMEDİ, şüpheli (3) başa geçti):** kullanıcı cihazda aynı işi
+  yaptı — yeni adres çekmecesinde sokak alanına **`Eyr` (3 karakter)** yazdı, öneri listesi geldi
+  (`Eyres-Moncube 40500` · `Aux Eyres 33410`), bir öneri seçildi ve adres kaydedildi. **Hiçbir
+  yeniden yükleme olmadı, çekmece kapanmadı.** Ekran görüntüsü kanıt olarak alındı. Yani yukarıdaki
+  "3+ karakterde her seferinde" bağıntısı bugün tutmadı.
+
+  **Şüpheli (3) — Metro/dev ortamı — artık BİRİNCİ, ve mekanizması ölçüldü:** cihazdaki uygulama
+  geliştirme yapısı (`dumpsys package com.lezzetanatolia.app` → `flags=[ DEBUGGABLE … ]`, kurulum
+  08.08) ve bilgisayarda kod sunucusu **şu an dinliyor** (8081'de node süreci). Bu ikisi varken
+  mobil kaynak dosyalarından biri kaydedildiği anda paket tazeleniyor: JS baştan koşuyor
+  (`Running "main"`), açık çekmece kapanıyor ve bellekteki oturum deposu sıfırlanıyor. İlk ölçümün
+  yapıldığı dakikalarda **üç ajan aynı anda `apps/mobile` altına yazıyordu** — kullanıcının okuması
+  da bu yönde (*"muhtemelen sen o testleri yaparken paralel ajan çalışıyordu"*).
+
+  **Yine de KAPATILMIYOR.** İlk ölçüm üç tekrarlı ve iki karakterlik bir kontrol turu içeriyor;
+  tazeleme rastgele olsaydı o kontrolün de düşmesi beklenirdi. İki ihtimal de ayakta: (a) tazeleme
+  o kontrol turunun 6 saniyesine denk gelmedi, (b) gerçek bir tetikleyici var ve bugün koşulları
+  oluşmadı. **Kesin kapanış tek ölçümle gelir:** ağaç sakinken (hiçbir ajan `apps/mobile` altına
+  yazmazken) ya da üretim derlemesinde aynı tur tekrarlanır. Üretilemezse kayıt "geliştirme
+  ortamının yan etkisi" diye kapanır, üretim müşterisini hiç ilgilendirmez.
+
+  **Durum (11.08 · 14:2x — CANLI TEKRAR, ve tetikleyici ölçüldü):** aynı tur `(21.41)` çalışması
+  sırasında bir kez daha yaşandı — sokak alanına yazılırken uygulama baştan yüklendi, çekmece
+  kapandı, açılış sekmesine dönüldü. Aynı dakikalarda ekranın tepesinde Metro'nun mavi
+  **"Refreshing…"** şeridi yakalandı (ekran görüntüsü var). Dosya kayıt zamanları ölçüldü:
+  `catalog-screen.tsx` **14:24:39**, `place-notice-band.tsx` **14:24:09** — ikisi de PARALEL
+  ŞERİDİN dosyaları; bu şeridin son kaydı 14:20:39'du. Yani mobil kaynak dosyaları yarım dakikada
+  bir kaydediliyor ve her kayıt paketi tazeliyor.
+  **Sonuç:** başka bir ajan `apps/mobile` altına yazarken cihazda yapılan HİÇBİR ölçüm güvenilir
+  değil. Bu, `(21.30)`'un ilk ölçümündeki üç tekrarı da açıklıyor.
+  **BEKLEYEN(21.30) yine de yerinde duruyor** — kalan tek adım, ağaç sakinken ya da üretim
+  derlemesinde bir doğrulama turu; o da üretilemezse kayıt "geliştirme ortamının yan etkisi" diye
+  kapanır.
+
   Sıra: 21.29'dan önce (adres kaydetmeyi fiilen engelliyor). Kullanıcı kararı 11.08: 21.28 önce
   commit edilsin, bu ayrı görev olarak açılsın.
 
@@ -1759,6 +1793,100 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **Doğrulama:** mobil typecheck rc=0 · eslint · knip temiz (yeni ölü ihraç yok) ·
   **83 suite / 592 test** yeşil (bandın kendi dosyası 9/9).
+
+- [x] (21.40) **BÖLGE DIŞI KART YENİDEN DÜZENLENDİ — süzgeç sayfadan kartın içine, kod tıklanabilir
+  (kullanıcı kararı 11.08, dört dokunuş).**
+  `touches:` `apps/mobile/src/screens/customer-kit/place-notice-band.tsx` ·
+  `apps/mobile/src/screens/customer-kit/place-notice-band-filter.test.tsx` (YENİ) ·
+  `apps/mobile/src/screens/catalog/catalog-screen.tsx` · `apps/mobile/src/lib/places/messages.json`
+
+  **1 · "Adresime gönderilebilir" süzgeci "Sırala & filtrele" SAYFASINDAN ÇIKTI.** Kullanıcının
+  gerekçesi: *"zaten bu ancak teslimat noktalarımızın dışında çıkan bir filtreleme özelliği, bu
+  sebepten doğrudan katalog sayfasının içine — uyarı kartının içerisine koyabiliriz."* Yerleşim
+  kazancının yanında bir DOĞRULUK kazancı da var: kapalı bir sayfanın içindeki anahtar açık kalıp
+  listeyi ekranda hiçbir iz bırakmadan kısabiliyordu. **İkinci bir görünürlük kapısı yazılmadı:**
+  süzgecin koşulu (`shippableChipVisible` → rota dışı) ile bandın koşulu (çözülmüş + rota dışı)
+  AYNI — kapı çağıranın kapısıdır. Bant paylaşılan olduğu için yuva isteğe bağlı tek nesne
+  (`shippableFilter: {value, onChange}`); paketler listesi vermez, orada süzülecek bir şey yok.
+
+  **2 · Süzgeç kartın EN ALTINDA:** kutunun içindeki sıra bilginin sırası — başlık + cümle, sonra
+  yerle ilgili eylemler, en sonda listeyi daraltan denetim.
+
+  **3 · "Kaydınız zaten var" satırı KALKTI, düğme komple gidiyor.** Kayıt alınınca eylemin yerine
+  geçen cümle bir bilgi gibi görünüp yer kaplıyordu; müşteri kaydını bıraktığını zaten toast'ta
+  okuyor. Cümle sözlükte duruyor — toast'ın metni odur.
+
+  **4 · "Posta kodunu değiştir" metin eylemi → TIKLANABİLİR POSTA KODU** (*"tıpkı vitrinde olduğu
+  gibi… daha anlaşılır ve görsel olur"*). Vitrin başlığındaki hapın aynı görsel dili (`{postal} ▾`,
+  vurgu tonu) ve AYNI çekmece — ikinci nüsha yok. Eski cümle silinmedi: ekran okuyucunun adı oldu,
+  yani dokunulan şeyin ne yaptığı hâlâ söyleniyor.
+
+  **KOŞUCUDA ÖLÇÜLEN TUZAK — kayda geçiyor.** Yeni iddialar tek koşarken geçip PAKET İÇİNDE
+  düşüyordu; sebep aranınca kod değil koşucu çıktı: `use-me.hook`un modül deposu cevabını `act`
+  dışında yayınlıyor, yayın bir sonraki testin `render`ıyla üst üste biniyor ("You seem to have
+  overlapping act() calls") ve React o testte ağacı HİÇ KURMUYOR — boş ağaç. İki sonuç: (a) süzgeç
+  iddiaları kimlikle işi olmadığı için `useMe`yi misafire sabitleyen AYRI dosyaya alındı; (b) yeni
+  deponun `resetPlaceNotices`ı boşken haber salmıyor (kardeşlerinin erken dönüşü) — duyuru boşuna
+  dinleyici uyandırıyordu. Ana dosyanın act hijyeni ayrı borç: `BACKLOG-musteri` MB-38.
+
+  **5 · HAPTA ŞEHİR DE VAR, HAP SOLA YASLI, BAŞLIK "BÖLGE" DİYOR** (ikinci tur, aynı gün).
+  Etiket vitrin başlığının biçimine tam oturdu: `67000 STRASBOURG ▾`. Şehir sözleşmede `null`
+  olabiliyor (tanınan kodun adı bilinmeyebilir) — o hâlde yalnız kod yazılır, uydurma yer tutucu
+  basılmaz; iki iddia da bunu tutuyor. Hap ORTALI değil SOLA yaslı: kutunun başlığı ve cümlesi de
+  sola yaslı, ortalanmış hap onlarla aynı sütundan başlamıyordu — ayrıca kayıt alınıp "Buraya da
+  gelin" kalkınca ortalı hap kutunun ortasına kayardı. Başlıktaki *"Bu adrese"* → **"Bu bölgeye"**
+  (üç dilde): kart bir ADRESİ değil, posta kodunun tarif ettiği BÖLGEYİ konuşuyor.
+
+  **AÇIK BIRAKILAN, gerekçesiyle:** "Buraya da gelin"e basınca *"zaten kayıtlısınız"* deyip düğmenin
+  kaybolması bir gecikme gibi görünüyor ama başka türlü olamaz — kaydın varlığını **ancak POST'un
+  cevabı** söylüyor (`ok`/`already`), okuma ucu YOK. Düğmeyi baştan gizlemek için ya bir okuma ucu
+  açılmalı (`zone_notice` sorgusu, iki yüzeyin ortak motoru) ya da her liste açılışında fazladan
+  bir istek atılmalı. Kullanıcı ölçümü duyunca *"gerekiyorsa kalabilir, problem değil"* dedi;
+  ihtiyaç doğarsa iş `BACKLOG-musteri`ye açılır.
+
+  **Doğrulama:** mobil typecheck rc=0 · eslint · knip (yeni ölü ihraç yok) ·
+  **84 suite / 597 test** yeşil.
+
+- [x] (21.41) **ÇEKMECE YUKARIDAN TAŞIYORDU — müşterinin yazdığı kutu ekranın dışına kaçıyordu
+  (kullanıcı bulgusu 11.08, cihazda ölçüldü).**
+  `touches:` `apps/mobile/src/components/ui/bottom-sheet.tsx` ·
+  `apps/mobile/src/components/ui/suggestion-list.tsx` ·
+  `apps/mobile/src/screens/support/new-ticket-sheet.tsx`
+
+  **Belirti (Android, yazı boyutu "Büyük"):** yeni adres çekmecesinde sokak alanına yazınca öneri
+  listesi açılıyor, çekmecenin başlığı · etiket alanı · **yazılan kutunun kendisi** ekranın üstünden
+  taşıyor ve durum çubuğunun altında kalıyordu. Kullanıcı iOS'ta daha ağır olduğunu bildirdi
+  (*"komple ekranın dışına kaçıyor"*) — üstteki güvenli alan orada daha yüksek.
+
+  **İKİ AYRI KUSUR, biri zemin biri tetikleyici:**
+
+  **1 · Panelin tavanı klavyeyi ve üst güvenli alanı hesaba katmıyordu.** `maxHeight` TAM EKRANIN
+  %82'siydi; klavye ekranın ~%35'ini alırken panel yine %82'ye kadar büyümeye yetkiliydi. Panel
+  ALTA yaslı olduğu için fazlalık yukarıdan taşıyordu ve **içerik kaydırılamadığı için** geri
+  getirmenin yolu yoktu. Üst güvenli alan hiç düşülmüyordu (alt taraf için `insets.bottom` vardı).
+
+  **2 · Öneri listesinin boyu sınırsızdı.** Adres servisi beş öneri dönüyor, her satır iki satırlık;
+  liste ekranın **%36'sını** yiyordu. Tavan `VISIBLE_ROWS = 3.5` ile kondu — yarım satır bilerek,
+  "aşağısı var"ın kendisi. Yükseklik token'lardan hesaplanıyor, yazı boyutu ayarıyla ölçekleniyor.
+  Lisans künyesi kaydırma alanının DIŞINDA sabitlendi (içeride olsaydı kayınca ekrandan çıkardı ve
+  Etalab şartı ihlal edilirdi) ve kendi ayıracını aldı — üçüncü bir öneri gibi okunuyordu.
+
+  **ÖLÇÜ TEK BAŞINA YETMEDİ (ilk turda cihazda görüldü):** klamp `insets.ime`ye dayanıyor, klavye
+  yüksekliği her zaman raporlanmıyor; raporlanmayınca sınır düşüyor ve başlık yine kesiliyordu.
+  Çare ölçüye değil KABA dayandırıldı: panel `flexShrink: 1` — klavyeden kaçınma katmanı ne kadar
+  yer bırakmışsa panel en fazla o kadar olur, klavye ölçüsü hiç okunamasa bile taşma imkânsız.
+  Sığmayan içerik panelin kendi kaydırma alanında kayar. `marginTop: insets.top` üst güvenli alanı
+  kapatır.
+
+  **DUPLİKASYON KAPANDI:** aynı çözümü `new-ticket-sheet` 09.08'de kendi içinde bulmuştu (künyesi:
+  *"sığmayan adım sessizce kırpılırdı"*). Tek ekranda kalması, aynı taşmanın öteki yedi çekmecede
+  sürmesi demekti — kaydırma kaba taşındı, ekrandan kaldırıldı (CLAUDE §1).
+
+  **Doğrulama:** mobil typecheck rc=0 · `customer-kit` + `components/ui` **25 suite / 142 test**
+  yeşil · **cihazda ölçüldü** (OPPO CPH1907, yazı boyutu "Büyük"): düzeltmeden önce başlık ve kutu
+  kesikti, sonra başlık · etiket · yazılan kutu · üç öneri + künye · posta kodu · şehir · uyarı ·
+  Kaydet düğmesi hepsi ekranda. Ekran görüntüleri alındı; **veritabanına yazılmadı** (Kaydet'e
+  dokunulmadı).
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

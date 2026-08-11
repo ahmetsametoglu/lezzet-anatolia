@@ -35,9 +35,15 @@
   kurulu — tam ekran formlarda karşılığı yok. MB-01 ile aynı turda çözülmeli.
 
 - [ ] **MB-03 · Adres formunda sokak alanına yazınca uygulama yeniden yükleniyor** → görev
-  `(21.30)` açık, ölçümü orada. Adres kaydetmeyi fiilen engelliyor. **Bu dosyadan bağ:** MB-13'ün
-  (oturum misafire düşüyor) tetikleyicisi de bir yeniden yükleme olabilir; ikisi aynı turda
-  bakılırsa ölçüm paylaşılır.
+  `(21.30)` açık, ölçümü orada. **11.08 · 14:1x — BUGÜN ÜRETİLEMEDİ:** kullanıcı cihazda sokak
+  alanına üç harf yazdı, öneriler geldi, birini seçti, adres kaydedildi; hiçbir sıfırlanma olmadı.
+  Görevin kendi listesindeki üçüncü şüpheli — **geliştirme ortamının kod tazelemesi** — birinci
+  sıraya geçti ve mekanizması ölçüldü (uygulama geliştirme yapısı, kod sunucusu dinliyor; mobil
+  dosyası kaydedilince paket baştan koşuyor). İlk ölçüm sırasında üç ajan aynı anda mobil dosyalarına
+  yazıyordu. **Kapatılmadı:** ilk ölçüm üç tekrarlı ve kontrol turlu; kesin karar ağaç sakinken
+  ya da üretim derlemesinde tekrarla verilir.
+  **Bu dosyadan bağ:** MB-13'ün (oturum misafire düşüyor) tetikleyicisi de bir yeniden yükleme
+  olabilir — aynı tazeleme bellekteki oturum deposunu da siliyor. İkisi aynı ölçümle kapanabilir.
 
 ---
 
@@ -124,6 +130,11 @@
   dakikalarda oturum canlıydı (10:53'te Bearer isteği B2B başvurusunu yazdı, 11:00'da Vitrin
   *"Merhaba, Yaman"* dedi). Soğuk açılış her seferinde düzeltti.
   **Elenenler:** elle "Reload" tetiklemedi · Keşif'e girip çıkmak tetiklemedi.
+  **11.08 · 14:1x — MB-03 ile ORTAK ADAY ÇIKTI:** cihazdaki uygulama geliştirme yapısı ve kod
+  sunucusu dinliyor; mobil kaynak dosyası kaydedilince paket baştan koşuyor ve **bellekteki oturum
+  deposu sıfırlanıyor** — ekranın "misafir" demesi ve soğuk açılışın düzeltmesi tam olarak buna uyar.
+  Ölçümün yapıldığı dakikalarda üç ajan aynı anda mobil dosyalarına yazıyordu. Kanıtlanmadı;
+  kesin karar ağaç sakinken ya da üretim derlemesinde tekrarla verilir.
   **BEKLEYEN(21.30): sebep ölçülmedi, teori kurulmuyor.** Sıradaki ölçüm önerisi: `useMe`'nin
   `guest`e düştüğü anı ve `authorizedFetch`in yerel 401 kısa devresini izlenebilir kılmak
   (`lib/auth/authorized-fetch` + `screens/customer-kit/use-me.hook`). MB-03 ile birlikte bakılmalı.
@@ -229,6 +240,13 @@
   Bağlantılı: `design/BACKLOG.md` §1 — **boş sepet kahraman görseli** (native 180×140) ve
   **paketler kahraman görseli** (3:2) hâlâ görselsiz.
 
+- [x] **MB-48 · Alttan açılan çekmece YUKARIDAN taşıyordu; öneri listesinin boyu sınırsızdı**
+  → **KAPANDI, görev `(21.41)`** (11.08, kullanıcı bulgusu + cihazda ölçüldü). Panelin tavanı tam
+  ekrana göreydi ve klavyeyi hesaba katmıyordu; taşan içerik yukarı kaçıyor, kaydırma olmadığı için
+  geri gelmiyordu. Adres önerileri tetikleyiciydi (beş satır = ekranın %36'sı) ama sebep listede
+  değil kaptaydı — girdi taşıyan her çekmeceyi ilgilendiriyordu. `new-ticket-sheet`in yerel çözümü
+  kite taşındı. **iOS'ta ölçülmedi** (kullanıcı orada daha ağır olduğunu bildirdi).
+
 - [ ] **MB-30 · Unistyles uyarısı kütükte tekrarlıyor:** `we detected style object with 2 unistyles
   styles … use array syntax instead of object syntax`. Hangi bileşen olduğu bulunup düzeltilecek.
 
@@ -302,7 +320,12 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
 
 ## 10. Önerilen sıra
 
-1. **MB-01 + MB-02** — klavye tuzağı ve kapanan alan. Tek turda, 13 dosya. En ucuz, en geniş kazanç.
+1. ~~**MB-01 + MB-02** — klavye tuzağı ve kapanan alan. Tek turda, 13 dosya.~~ → **İKİSİ DE KAPANDI
+   (11.08), ve "13 dosya / tek tur" tahmini YANLIŞ ÇIKTI.** Klavye tuzağı `(21.33)`'te ölçülerek
+   40 kaydırıcıdan **10**'una daraltıldı (`f521aef`); kapanan alan ayrı bir sebepti (tema
+   kenardan-kenara olduğu için Android'in pencere küçültmesi ölü) ve `(21.36)`'da kite konan
+   kaydırma kabıyla çözüldü (`9f680bbb`). Aynı turda bitmediler — §11.A'nın son paragrafı zaten
+   bunu söylüyordu.
 2. **MB-04 + MB-05 + MB-07 + MB-08 + MB-11** — 21.31'in açık kalanları; dilim **commit edilmeden**
    kapanırsa git geçmişi bütün olur.
 3. **MB-03 → MB-13** — adres formunun yeniden yüklemesi ve oturumun misafire düşmesi; ikisi de
@@ -322,7 +345,12 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
 > Bu bölüm listeyi yargılamıyor, **grupluyor**: aşağıdaki maddeler ayrı ayrı yapılırsa aynı iş üç
 > kez kurulur. Her başlıkta ölçüm var; ölçmediğim yerde "ölçülmedi" yazıyor.
 
-### A. MB-01'in yayılımı 13 değil 39 — ve dosya dosya prop eklemek yanlış çare
+### A. MB-01'in yayılımı 13 değil — ve dosya dosya prop eklemek yanlış çare
+
+> **DÜZELTME (11.08, `(21.33)`'ün ölçümü):** aşağıdaki "39" ayarı **olmayan** dosyaların sayısıdır,
+> ayara **ihtiyacı olan**ların değil. Gerçek kapsam ölçüldü: 40 kaydırıcıdan **10**'u. Kalan 30'da
+> ya klavye açan alan yok ya kaydırma kabı ile alan arasında dokunuş ilişkisi kurulmuyor. Yani
+> aşağıdaki teşhis (13'lük liste yanlış sayılmış) doğru, önerilen çare de doğru; yalnız sayı yüksek.
 
 **Ölçüldü (11.08):** `keyboardShouldPersistTaps` ayarı `ScrollView` kullanan **39** ekranın yalnız
 **birinde** var (`support/new-ticket-sheet.tsx`). Listedeki 13, "kaydırma kabı ile metin alanı AYNI
@@ -398,12 +426,18 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
   şikâyeti hangisinden geldiği ayırt edilemez. Ekranın `account-skeleton.tsx`i ZATEN VAR, yalnız bu
   dalda kullanılmıyor. `BEKLEYEN(21.14)` olarak kayıtlı.
 
-- [ ] **MB-36 · B2B müşterisi teklif tutarını mobilde GÖRMÜYOR.** Katalog uçları teklif fiyatını
+- [x] **MB-36 · B2B müşterisi teklif tutarını mobilde GÖRMÜYOR** → **BU KAYIT ESKİDİR, aşağıdaki
+  ölçüm geçerlidir** (bu dosyada "MB-36 · MB-37 → ÖLÇÜLDÜ, İKİSİ DE ZATEN KAPALI" satırı, 11.08).
+  Aynı kimlik iki kez kullanılmıştı ve iki satır birbirini çürütüyordu; karar kod okumasından yana:
+  dayandığı bekleyen işaret 09.08'de kapanmış. Metin tarih kaydı olarak duruyor.
+  Katalog uçları teklif fiyatını
   okumuyor (`BEKLEYEN(21.6)` `catalog.ts`te); bilinçli bir bekletme — yer çözümü terfi etmeden
   indirimi gösterip ödemede yükseltmek verilmiş sözü bozardı. Ama sonuç şu: onaylı B2B müşterisi
   web'de indirimli fiyat görüyor, native'de görmüyor. **Aynı müşteri iki yüzeyde iki fiyat görüyor.**
 
-- [ ] **MB-37 · Ürün detayında YERE BAĞLI stok işareti yok.** Bugün yalnız ürün düzeyli "kargoya
+- [x] **MB-37 · Ürün detayında YERE BAĞLI stok işareti yok** → **BU KAYIT ESKİDİR** (MB-36 ile aynı
+  gerekçe: kimlik iki kez kullanılmış, geçerli olan aşağıdaki 11.08 ölçümü). Metin tarih kaydı.
+  Bugün yalnız ürün düzeyli "kargoya
   verilmez" künyesi var; `stockMarkOf` (yere bağlı işaret) ve "haber ver"in rota dışında BÖLGE
   notuna dönmesi yazılmadı (`BEKLEYEN(21.20)`). Müşteri detayda "var" görüp sepette bölge kısıtıyla
   karşılaşabiliyor — MB-23'ün (vitrin bölgesi ≠ sepet adresi) akrabası.
@@ -516,13 +550,15 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-35 (hesap boş yükleme) · MB-41 (ham hex splash) | mobil | 11.08 · 12:0x | `apps/mobile/src/app/(tabs)/account.tsx` · `apps/mobile/app.config.ts` · `screens/account/account-routes.test.tsx` | **bitti** |
 | MB-17 (SÖZLEŞME yarısı — turun toplamı) | mobil/backend | 11.08 · 12:3x | `packages/types/src/contracts/feedback*` · `packages/application/src/feedback/**` · `apps/mobile-api/src/api/v1/feedback.ts` | **bitti** — `invitePointsTotal` açıldı |
 | MB-01 (klavye tuzağı) | denetim/cihaz | 11.08 · 11:4x — görev `(21.33)` | 10 ekran dosyası: `screens/{feedback,professionals,login,catalog}` + `{courier/day-close,courier/delivery,management/offer-approval,warehouse/adjustment,warehouse/courier-return,warehouse/transfer}` | **bitti ve COMMİT EDİLDİ** — `f521aef` (11.08 · 11:5x). Cihazda doğrulandı: iki senaryo da tek dokunuşla çalıştı, geri bildirim yorumu veritabanında görüldü. **MB-34'ün önü açık.** |
-| MB-34 (kaydırma kabını kite alma) | — | — | — | ⛔ **ASKIYA ALINDI** — aşağıdaki nota bak |
-| MB-46 (küçük duraklara bağlı İÇERİK metinleri) | cihaz | 11.08 · 13:35 | `apps/mobile/src/components/ui/{note.tsx,suggestion-list.tsx}` · `screens/{account/{account-screen,address-card}.tsx,cart/{cart-screen,cart-line-row}.tsx,checkout/{checkout-screen,order-confirmed-screen}.tsx,customer-kit/{address-form,dashed-invite,option-row,summary-panel}.tsx,feedback/feedback-screen.tsx,home/home-screen.tsx,orders/{order-detail-screen,order-timeline,orders-screen}.tsx,package/package-detail-screen.tsx,packages-list/packages-list-screen.tsx,product/product-detail-screen.tsx,professionals/{professionals-screen,application-form}.tsx,support/{new-ticket-sheet,order-line-picker,tickets-screen}.tsx}` | **alındı** — kullanıcı kararı 11.08: 1.+2. kademe birlikte. Ölçüt: *müşterinin karar için okuduğu metin `body-sm` (14) altına inmez*; `helper`/`micro` yalnız gerçek yardımcı role kalır. **YALNIZ MÜŞTERİ yüzeyi** — operasyon/kurye/depo ekranları listeye alınmadı (başka şeridin tasarım alanı) |
+| MB-34 (kaydırma kabını kite alma) | — | — | — | **ÖNÜ AÇIK, sahibi yok** — askı şartı *"(21.33) commit edilsin"*di, `f521aef` ile doldu (11.08). Kit kabı da `(21.36)`'da doğdu (`components/ui/form-scroll.tsx`); kalan iş o kabın geri kalan ekranlara yayılması + ham `ScrollView`un lint'le kapatılması. Alan ilan etsin |
+| MB-46 (küçük duraklara bağlı İÇERİK metinleri) | cihaz | 11.08 · 13:35 | `apps/mobile/src/components/ui/{note.tsx,suggestion-list.tsx}` · `screens/{account/{account-screen,address-card}.tsx,cart/{cart-screen,cart-line-row}.tsx,checkout/{checkout-screen,order-confirmed-screen}.tsx,customer-kit/{address-form,dashed-invite,option-row,summary-panel}.tsx,feedback/feedback-screen.tsx,home/home-screen.tsx,orders/{order-detail-screen,order-timeline,orders-screen}.tsx,package/package-detail-screen.tsx,packages-list/packages-list-screen.tsx,product/product-detail-screen.tsx,professionals/{professionals-screen,application-form}.tsx,support/{new-ticket-sheet,order-line-picker,tickets-screen}.tsx}` | **bitti ve COMMİT EDİLDİ** — `429fd85f`, görev `(21.38)` (11.08); 23 ekran dosyası. Doğrulama KOD tarafında yapıldı (kullanıcı kararı: süpürmede cihaz turu gerekmez) — müşteri yüzeyinde 14'ün altında kalan içerik metni sıfır. Kullanıcı kararı 11.08: 1.+2. kademe birlikte. Ölçüt: *müşterinin karar için okuduğu metin `body-sm` (14) altına inmez*; `helper`/`micro` yalnız gerçek yardımcı role kalır. **YALNIZ MÜŞTERİ yüzeyi** — operasyon/kurye/depo ekranları listeye alınmadı (başka şeridin tasarım alanı) |
 | MB-47 (bant kaydının hafızası) · MB-36 · MB-37 (ölçüm) | mobil | 11.08 · 14:0x — görev `(21.39)` | **YENİ:** `apps/mobile/src/lib/places/place-notice-store.ts` · **DEĞİŞEN:** `screens/customer-kit/place-notice-band.{tsx,test.tsx}` | **bitti** — MB-46'nın dosya listesiyle kesişmiyor. MB-36/MB-37 kod okumasıyla kapatıldı, cihaz ölçümü YAPILMADI |
 | MB-05 · MB-07 · MB-08 · MB-11 (B2B ekranının açık kalanları) | mobil | 11.08 · 12:4x | `apps/mobile/src/screens/professionals/**` · `apps/mobile/src/lib/api/b2b.ts` | **alındı** |
 | MB-04 (e-posta alanı kalkıyor — kimlik oturumdan) | mobil | 11.08 · 13:1x | `apps/mobile-api/src/api/v1/b2b.ts` (bitti) · `apps/mobile/src/screens/professionals/**` | **alındı** |
 | MB-39 (ölü ihraç tipler — B2B dışı yarısı) | mobil | 11.08 · 12:4x | `apps/mobile/src/lib/api/{discover,points}.ts` · `lib/payment/{payment-sheet,stripe-config}.ts` · `screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` · `screens/home/use-home-orders.hook.ts` | **alındı** |
-| MB-02 (klavye odaklanan alanı kapatıyor) | cihaz | 11.08 · 12:19 → yollar 12:3x'te kesinleşti | **YENİ:** `apps/mobile/src/components/ui/form-scroll.tsx` · **DEĞİŞEN:** `screens/{professionals/professionals-screen.tsx,login/login-screen.tsx,feedback/feedback-screen.tsx}` | **sürüyor** — sebep ölçüldü: tema `Theme.EdgeToEdge`, `adjustResize` ölü, pencere küçülmüyor (klavye açıkken kaydırma da işlemiyor — ölçüldü). Çözüm kite konuyor, `bottom-sheet`in 08.08'de verdiği kararın aynısı. **MB-34 ile kesişme:** kit kabı doğuyor ama yalnız FORM ekranlarına uygulanıyor; 30 kaydırıcılık geniş göç hâlâ MB-34'ün işi |
+| MB-02 (klavye odaklanan alanı kapatıyor) | cihaz | 11.08 · 12:19 → yollar 12:3x'te kesinleşti | **YENİ:** `apps/mobile/src/components/ui/form-scroll.tsx` · **DEĞİŞEN:** `screens/{professionals/professionals-screen.tsx,login/login-screen.tsx,feedback/feedback-screen.tsx}` | **bitti ve COMMİT EDİLDİ** — `9f680bbb`, görev `(21.36)` (11.08). Sebep ölçüldü: tema `Theme.EdgeToEdge`, `adjustResize` ölü, pencere küçülmüyor (klavye açıkken kaydırma da işlemiyor). Çözüm kite kondu (`form-scroll.tsx`), `bottom-sheet`in 08.08'de verdiği kararın aynısı; şimdilik yalnız FORM ekranlarına uygulandı. **Kalan geniş göç MB-34'ün işi** — o satır da artık açık |
+| MB-48 (çekmece taşıyor · öneri listesi sınırsız) | cihaz | 11.08 · 14:2x — görev `(21.41)` | `apps/mobile/src/components/ui/{bottom-sheet.tsx,suggestion-list.tsx}` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` (yerel kaydırıcı kite taşındı) | **bitti** — cihazda doğrulandı (Android, "Büyük"); iOS'ta daha ağır olduğu kullanıcıdan bildirildi, aynı düzeltme oradaki üst güvenli alanı da kapsıyor ama **iOS'ta ölçülmedi** |
+| MB-09 (B2B misafir yolu cihazda hiç yürütülmedi) | cihaz | 11.08 · 14:2x | **yalnız ölçüm — kod değişikliği YOK.** Misafirle tur: e-posta → tek kullanımlık kod → başvurunun kendiliğinden gitmesi → "inceleniyor" | **alındı** — cihaz işi olduğu için bu şeritte (⚑ kuralı); MB-03/MB-13 turundan sonra |
 | MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **alındı** — tablo "ölçümü kim yapacak, ilan edilsin" diye sormuştu; cihaz bu şeritte (üstteki ⚑ kuralı). Sebep çıkmadan kod yazılmaz (CLAUDE §0) |
 
 **Kapananların görev satırı `(21.34)`:** MB-15 · MB-16 · MB-17 · MB-35 · MB-41. Ölçümler, seçilmeyen
@@ -533,8 +569,8 @@ defterde turun toplamı). Alan sözleşmede hazır, bağlaması tek satır; koor
 
 ### Boşta duran kalemler — alan ilan etsin
 
-**MB-03 · MB-13** ölçüm işi ve **fiziksel cihaz ister**; cihaz mobil şeritte DEĞİL (11.08 itibarıyla
-kullanıcı başka ajana verdi). Ölçümü kimin yapacağı ilan edilmeli.
+~~**MB-03 · MB-13** ölçümü kimin yapacağı ilan edilmeli.~~ → **İLAN EDİLDİ:** `cihaz` şeridi aldı
+(tabloda satırı var, 11.08 · 12:19). Boşta duran kalem değil.
 
 **MB-20 · MB-28** tek karara bağlı (§11.C "birincil boy") ve **web şeridiyle ortak** — açık talep
 `docs/talep/musteri-liste-fiyati-baslangic.md`. İki yüzey ayrışmasın diye tek turda kapanmalı;
@@ -543,7 +579,7 @@ sahibi web ile mobil arasında `koordinasyon-web-mobil.md`den kararlaştırılac
 **MB-04 · MB-12 · MB-23 · MB-31** kod işi değil, **karar** işi (§11 sonu). Kararlar verilmeden
 kimse almasın.
 
-### ⛔ MB-34 askıya alındı — ve bu tablonun ilk sınavıydı
+### MB-34'ün askısı KALKTI (11.08) — ama kaydı duruyor, bu tablonun ilk sınavıydı
 
 **Yaşananın kaydı (11.08, iki ajan aynı dakikalarda):** mobil şerit §11.A'da MB-01'in yayılımını
 ölçüp "13 değil 39" dedi ve çareyi *"kaydırma kabını kite al"* diye önerdi (MB-34). Aynı saatlerde
@@ -561,9 +597,8 @@ işin üstüne yazılır.
 sıkı yazıldı — *işe başlamadan* satır yazılır. Bir ajan ölçüme başlarken de yazmalı, yalnız kod
 yazarken değil: burada boşa giden şey kod değil, iki kere yapılan ölçümdü.
 
-**Çalışma ağacında ŞU AN duran, commit edilmemiş 10 dosya** (`(21.33)`, başka ajanın):
-`catalog-screen` · `courier/day-close-screen` · `courier/delivery-screen` · `feedback-screen` ·
-`login-screen` · `management/offer-approval-screen` · `professionals-screen` ·
-`warehouse/adjustment-screen` · `warehouse/courier-return-screen` · `warehouse/transfer-screen`.
-Bu dosyalara dokunan herkes **Write değil Edit** kullanmalı ve **yol adı vererek commit ederken**
-o satırları kendi commit'ine almamaya dikkat etmeli (CLAUDE §0'ın 08.08 künye kayması vakası).
+~~**Çalışma ağacında ŞU AN duran, commit edilmemiş 10 dosya** (`(21.33)`, başka ajanın)~~ →
+**COMMİT EDİLDİ, uyarı düştü** (`f521aef`, 11.08). Ondan sonra aynı ekranların üçü `(21.36)` ile
+kit kabına geçti (`9f680bbb`). Kalıcı olan kısım şu: **paylaşılan dosyalara dokunan herkes Write
+değil Edit kullanır** ve **yol adı vererek commit eder** — üç şerit tek indeksi paylaşıyor
+(CLAUDE §0'ın 08.08 künye kayması vakası).

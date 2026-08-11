@@ -2,7 +2,7 @@ import type { LocalizedCopy, Locale } from '@lezzet/i18n';
 import { TicketTypeEnum, type TicketType } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -174,16 +174,12 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
 
   return (
     <BottomSheet visible title={t.new.title} onClose={onClose} testID="new-ticket-sheet">
-      {/* İçerik KENDİ kaydırmasını taşır: çekmece paneli ekranın %82'siyle sınırlı ve bu form
-          (sipariş listesi + kalemler + anlatım) o sınırı aşabilir — sığmayan adım sessizce
-          kırpılırdı. `keyboardShouldPersistTaps`: klavye açıkken gönder düğmesi ilk dokunuşta
-          çalışır, önce klavyeyi kapatıp ikinci dokunuş beklemez. */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        testID="new-ticket-form"
-      >
+      {/* Kaydırma ARTIK KİTTE (11.08): bu form (sipariş listesi + kalemler + anlatım) panelin
+          tavanını aşabiliyor ve sığmayan adım kırpılıyordu — çözüm burada bulunmuştu, ama tek
+          ekranda kalması aynı taşmanın öteki çekmecelerde sürmesi demekti. `BottomSheet` kendi
+          kaydırmasını ve `keyboardShouldPersistTaps`ini taşıyor; burada yalnız içeriğin dikey
+          düzeni kaldı. */}
+      <View style={styles.content} testID="new-ticket-form">
         {backStep === null ? null : (
           <TextAction label={t.back} onPress={() => setStep(backStep)} testID="new-ticket-back" />
         )}
@@ -319,15 +315,12 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
             />
           </>
         ) : null}
-      </ScrollView>
+      </View>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  /* Panel yüksekliği sınırlı; kaydırma alanı kalan boşluğu alır ve İÇERİK KADAR yer kaplar
-     (`flexShrink`) — kısa adımlarda çekmece boşuna uzamaz. */
-  scroll: { flexShrink: 1 },
   content: { gap: theme.space['2xl'] },
   question: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
