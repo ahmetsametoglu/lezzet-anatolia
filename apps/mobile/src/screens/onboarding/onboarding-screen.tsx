@@ -1,7 +1,7 @@
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Text, TextInput, View } from 'react-native';
+import { Image, Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '@/components/ui/icon';
@@ -193,7 +193,22 @@ export function OnboardingScreen() {
   ] as const;
 
   return (
-    <View style={styles.screen}>
+    /* BOŞLUĞA DOKUNUNCA KLAVYE KAPANIR (kullanıcı bulgusu 11.08, iPhone'da yaşandı).
+
+       Bu davranış RN'de PLATFORMDAN GELMEZ: arka plandaki `View` dokunuşu hiç yakalamaz, dokunma
+       bir "responder" ister. Klavye yalnız üç yoldan kapanır — kaydırıcıda sürükleme
+       (`keyboardDismissMode`), alanın blur olması, ya da açıkça `Keyboard.dismiss()`. Bu ekranda
+       üçü de yoktu, yani boşluğa dokunmak gerçekten hiçbir şeye dokunmamaktı.
+
+       Adım ÇIKIŞSIZ kalıyordu ve sebebi ikiliydi: posta kodu alanı `keyboardType="number-pad"`
+       açıyor ve o klavyede iOS'ta return/Done tuşu YOK (Android'in ✓ tuşunun karşılığı yok);
+       "Devam" düğmesi de alt şeritte, klavyenin altında. Ne kapatılabiliyor ne ilerlenebiliyordu.
+
+       Katman ŞEFFAF ve geri bildirimsiz: kitin `PressableSurface`i değil ham `Pressable`, çünkü
+       burada basılan bir yüzey yok — yalnız "boşluğa dokunuldu" haberi var. `accessible={false}`
+       ekran okuyucuya ekranı tek bir devasa düğme gibi göstermemek için; içteki düğmeler kendi
+       dokunuşlarını almaya devam eder (çocuk dokunulabilir öncelikli). */
+    <Pressable style={styles.screen} onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.header}>
         {/* Login ekranıyla aynı varlık ve ölçü: şeffaf PNG, yükseklik 52, genişlik orandan. */}
         <Image
@@ -424,7 +439,7 @@ export function OnboardingScreen() {
           testID="onboarding-next"
         />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -620,11 +635,16 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.control,
     color: theme.colors.ink,
   },
-  // v3:315 — 400 12/1,45 (`helper`; 1,45'lik durak yok, en yakını `lead` 1,6 — kitteki davet kutusuyla aynı çeviri).
+  /* ~~v3:315 — 400 12/1,45 (`helper`)~~ → **`body-sm` (14)**, kullanıcı bulgusu 11.08.
+     Şablonun 12'si bu ekranda YANLIŞ durakdı: `helper` formların "yardımcı ipucu" basamağıdır,
+     oysa bu satırlar teslimat ve ödeme adımlarının ASIL İÇERİĞİ — müşteri kuralı buradan okuyor.
+     Ölçüldü: yazı boyutu "Büyük" seçilse bile `helper` 13,8 pikselde kalıyor, aynı ekranın üst
+     gövdesi (`control`) 18,4'e çıkıyordu; yani aynı işi gören iki metin arasında kalıcı 4 px'lik
+     bir uçurum vardı. Yeni merdiven: başlık 16 · açıklama 14 · güvence 13. */
   paySub: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
   // v3:326 — `gap:10px; background:#efdfc2; border-radius:14px; padding:12px 15px` (15 → 16).
@@ -637,12 +657,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingVertical: theme.space.xl,
     paddingHorizontal: theme.space['3xl'],
   },
-  // v3:328 — 600 12/1,45 koyu zeytin.
+  /* ~~v3:328 — 600 12/1,45~~ → **`note` (13)**, `paySub` ile aynı gerekçe (üstteki künye).
+     Bir tık altta kalıyor çünkü bu bir kapanış güvencesi, listenin kendisi değil. */
   secureText: {
     flex: 1,
     fontFamily: theme.font.body[600],
-    fontSize: theme.text.helper,
-    lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors['olive-dark'],
   },
   // v3:332 — `padding:0 22px 30px; gap:14px`; alt güvenli alan payı login deseniyle aynı.

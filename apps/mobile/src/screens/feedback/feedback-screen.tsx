@@ -2,12 +2,13 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Linking, ScrollView, Text, View } from 'react-native';
+import { Image, Linking, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -211,10 +212,10 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
   return (
     <View style={styles.screen} testID="feedback-screen">
       {bar}
-      {/* `keyboardShouldPersistTaps`: klavye açıkken "Değerlendirmeyi tamamla"ya ilk dokunuş
-          yalnız klavyeyi kapatıyor, yorum GÖNDERİLMİYORDU (cihazda ölçüldü 11.08) — müşteri
-          yazdığını sanıp çıkıyordu. Aynı kapı `support/new-ticket-sheet` künyesinde. */}
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="feedback-scroll">
+      {/* Kaydırıcı KİTTEN (`form-scroll`): klavye açıkken "Değerlendirmeyi tamamla"ya ilk dokunuş
+          yalnız klavyeyi kapatıyor ve yorum GÖNDERİLMİYORDU — müşteri yazdığını sanıp çıkıyordu
+          (cihazda ölçüldü 11.08). Aynı kap yorum alanını da klavyenin üstünde tutar. */}
+      <FormScroll contentContainerStyle={styles.content} testID="feedback-scroll">
         {card !== null && !alreadyDone ? (
           /* ── Oy aşaması: fotoğraf + rozet + künye, iki oy düğmesi, alt not (v3:1014-1030) ── */
           <View testID="feedback-vote">
@@ -370,7 +371,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
             </View>
           </View>
         )}
-      </ScrollView>
+      </FormScroll>
     </View>
   );
 }

@@ -1613,6 +1613,54 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Web'e devredilen:** web B2B formu da aynı arızayı taşıyor olabilir — gövdedeki adres orada da
   hiçbir yere yazılmıyor. Aynı defterde bildirildi.
 
+- [x] (21.36) **KLAVYE ÜÇ AÇIK KAPATTI + ONBOARDING'DE YAZI BOYUTU GERÇEKTEN İŞLİYOR (11.08).**
+  `touches:` `apps/mobile/src/components/ui/form-scroll.tsx` (YENİ) ·
+  `apps/mobile/src/screens/{login/login-screen.tsx,feedback/feedback-screen.tsx,onboarding/onboarding-screen.tsx}`
+  *(`professionals/professionals-screen.tsx`in kaydırıcı takası `(21.35)` commit'ine bindi —
+  aynı dosyada iki şeridin işi vardı, koordinasyon defterinde anlaşıldı.)*
+
+  **1 · ODAKLANAN ALAN KLAVYENİN ALTINDA KALIYORDU** (MB-02). Sebep ölçüldü, varsayılmadı:
+  `AndroidManifest`teki `adjustResize` İŞLEMİYOR. Üç ölçüm — klavye açılınca içerik hiç kaymadı ·
+  klavye açıkken kaydırma denendi, pikseller birebir aynı kaldı (yani kaydırıcı "sığmış" sayıyor) ·
+  `res/values/styles.xml` → `AppTheme` **`Theme.EdgeToEdge`**'den türüyor
+  (`react-native-edge-to-edge@1.8.1`). Kenardan kenara modda Android pencereyi klavye için
+  küçültmez; boşluğu uygulamanın KENDİSİ tüketmek zorundadır.
+
+  Çare **kite** kondu (`form-scroll.tsx`): `KeyboardAvoidingView` + `ScrollView`, iki korumayı
+  birlikte taşır — alan görünür kalır VE ilk dokunuş yutulmaz. Bu, `bottom-sheet`in 08.08'de aynı
+  arıza için verdiği kararın tekrarı; prop'u ekran ekran dağıtmak bir gün unutulacak bir kural
+  olurdu (nitekim `(21.33)`te on ekrana tek tek yazılmıştı). **Yeni bağımlılık YOK:** kenardan
+  kenara için yaygın çare `react-native-keyboard-controller` ama depoda çalışan emsal zaten vardı
+  (WORKFLOW §6). Kap yalnız FORM ekranlarına kondu; 30 kaydırıcılık geniş göç ayrı iş
+  (`BACKLOG-musteri` MB-34).
+
+  **Doğrulama cihazda:** profesyonel formunda en alttaki telefon alanına odaklanıldı — içerik
+  yukarı kaydı, tanıtım kartı üstten kırpıldı ve alan klavyenin hemen üstünde imleçle göründü.
+  Aynı ölçüm düzeltmeden önce alanı klavyenin ALTINDA bırakıyordu.
+
+  **2 · ONBOARDING'DE BOŞLUĞA DOKUNUNCA KLAVYE KAPANMIYORDU** (kullanıcı bulgusu, iPhone).
+  Bu davranış RN'de PLATFORMDAN GELMEZ: arka plandaki `View` dokunuşu yakalamaz. Klavye yalnız üç
+  yoldan kapanır — kaydırıcıda sürükleme, alanın blur olması, açıkça `Keyboard.dismiss()`; bu
+  ekranda üçü de yoktu. Adım ÇIKIŞSIZDI çünkü posta kodu alanı `keyboardType="number-pad"` açıyor
+  ve o klavyede **iOS'ta return/Done tuşu YOK** (Android'in ✓ tuşunun karşılığı yok), "Devam"
+  düğmesi de klavyenin altında kalıyordu. Kök `View` şeffaf bir `Pressable`a döndü
+  (`onPress={Keyboard.dismiss}`, `accessible={false}`). **Otomatik ilerleme YAZILMADI** — önce
+  beşinci hanede klavyeyi kapatan bir sürüm yazıldı, kullanıcı istemeyince geri alındı. Kullanıcı
+  iOS'ta doğruladı; Android'de de ölçüldü.
+
+  **3 · TESLİMAT/ÖDEME ADIMLARI YAZI BOYUTU AYARINI ALMIYOR GİBİ GÖRÜNÜYORDU** (MB-45).
+  Ayar çalışıyor; kusur o iki adımın hangi DURAĞA bağlandığındaydı: satır açıklamaları (`paySub`)
+  ve güvence cümlesi (`secureText`) `helper`e (12) çakılıydı — formların "yardımcı ipucu"
+  basamağı — oysa aynı ekranların üst gövdesi `control` (16) kullanıyor. Ölçüm: "Büyük"te (×1,15)
+  `helper` **13,8**'de kalıyor, `control` **18,4**'e çıkıyor; aynı işi gören iki metin arasında
+  kalıcı 4 px uçurum. Yeni merdiven: başlık 16 · açıklama **`body-sm` 14** · güvence **`note` 13**.
+
+  **Kalan borç:** `theme.text.helper` uygulamada 124 yerde geçiyor ve bir kısmı yine ASIL içerik
+  taşıyor olabilir. Topluca değiştirilMEDİ — ölçülmemiş toplu müdahale olurdu; ekran ekran tarama
+  `BACKLOG-musteri` **MB-46** olarak açıldı (kullanıcı istedi, cihaz işi).
+
+  **Doğrulama:** mobil typecheck · eslint · **83 suite / 581 test** yeşil.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

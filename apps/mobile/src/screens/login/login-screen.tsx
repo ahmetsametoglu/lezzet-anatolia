@@ -2,10 +2,11 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AuthErrorKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@/components/ui/back-button';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -224,7 +225,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
       <View style={styles.topBar}>
         <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="login-back" />
       </View>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="login-scroll">
+      <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
         {/* Logo yükseklikten ölçülür (şablon: 52). Varlık ŞEFFAF PNG: kaynak jpg beyaz zeminliydi
             ve şablonun `multiply` karışımı iOS'ta uygulanmadı (ölçüldü 08.08 — beyaz kutu görünüyordu);
             beyaz→alfa dönüşümü türetim script'iyle yapıldı, karışıma gerek kalmadı. */}
@@ -372,7 +373,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
             ))}
           </View>
         ) : null}
-      </ScrollView>
+      </FormScroll>
     </View>
   );
 }

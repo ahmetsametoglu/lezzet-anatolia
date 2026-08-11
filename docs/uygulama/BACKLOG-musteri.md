@@ -232,6 +232,22 @@
 - [ ] **MB-30 · Unistyles uyarısı kütükte tekrarlıyor:** `we detected style object with 2 unistyles
   styles … use array syntax instead of object syntax`. Hangi bileşen olduğu bulunup düzeltilecek.
 
+- [x] **MB-45 · Onboarding teslimat/ödeme adımlarının metinleri "Büyük"te bile küçük kalıyordu**
+  → **KAPANDI (11.08, kullanıcı bulgusu).** Yazı boyutu özelliği çalışıyor; kusur o iki adımın
+  **hangi durağa bağlandığındaydı**: satır açıklamaları (`paySub`) ve güvence cümlesi
+  (`secureText`) `helper`e (12) çakılıydı — yani formların "yardımcı ipucu" basamağına — oysa
+  aynı ekranların üst gövdesi `control` (16) kullanıyor.
+  **Ölçüm:** `helper` "Büyük"te (×1,15) **13,8**'de kalıyor, `control` **18,4**'e çıkıyor; aynı
+  işi gören iki metin arasında kalıcı 4 px uçurum. Yeni merdiven: başlık 16 · açıklama
+  **`body-sm` 14** · güvence **`note` 13**. Cihazda doğrulandı.
+
+- [ ] **MB-46 · `helper` durağı ASIL İÇERİK taşıyan başka yerlerde de kullanılıyor olabilir.**
+  MB-45'in genel hâli. Ölçüm: `theme.text.helper` uygulamada **124 yerde** geçiyor ve çoğu
+  meşru (form ipucu, alt yazı, resim künyesi). **Topluca değiştirilMEZ** — her kullanım "bu metin
+  ipucu mu, içerik mi" diye tek tek bakılmalı, yoksa ölçülmemiş bir toplu müdahale olur.
+  Yöntem önerisi: yazı boyutu "Büyük"ken ekran ekran gezip 13,8 pikselde kalan ama müşterinin
+  KARAR için okuduğu metinleri işaretlemek. Cihaz işi (§13 ⚑).
+
 ---
 
 ## 7. İçerik ve dil
