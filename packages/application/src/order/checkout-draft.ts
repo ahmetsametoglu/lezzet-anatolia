@@ -12,6 +12,7 @@ import { cityMatchesPlaces, deriveChannel, meetsMinBasket, resolveVatTreatment }
 import { toCents } from '@lezzet/helper';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
+import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
 import {
   discountAmountOf,
@@ -142,6 +143,10 @@ export interface CheckoutDraftInput {
   couponCode?: string | null;
   /** Çift sipariş kalkanı (0015) — istemcinin o checkout denemesi için ürettiği anahtar. */
   idempotencyKey?: string | null;
+  // Komşu davetinin BELİRTECİ artık girdi DEĞİL (12.08 kararı): davet kimlik doğduğu an kişiye
+  // yazılıyor (`neighbor_invite_claim`) ve sipariş anında müşterinin kendi kaydından okunuyor.
+  // Belirteci buraya kadar taşımak, aynı gerçeği iki yerde tutmaktı — ve çerezi olmayan yüzey
+  // (uygulama sonradan yüklendiğinde) daveti sessizce kaybederdi.
   /**
    * Bu taslak, sepetin KARGO grubundan açılan ikinci sipariş mi (19.15).
    *
@@ -447,6 +452,17 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // 5) Taslak. Kanal müşteri tipinden TÜRER ve bir daha değişmez (DOMAIN §3); adres ANLIK GÖRÜNTÜ
   //    olarak da yazılır — müşteri adresini sonradan düzenlerse sipariş nereye gittiğini unutmamalı.
   const deliveryDate = deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
+  const orderZoneId = input.shippingOrder ? null : delivery.zoneId;
+
+  // Komşu daveti (17.10) — kaynağı artık ÇEREZ DEĞİL, kişiye yazılmış kabul kaydı (12.08 kararı):
+  // davet kimlik doğduğu an kişiye geçiyor, sipariş anında sorulacak yer onun kendi kaydı. Ancak
+  // SEFER belli olduktan sonra sorulabilir; ret sessiz ve sonuçsuzdur, künye yazılmaz.
+  const neighborInviteId = await matchedNeighborInviteId(db, {
+    customerId: customer.id,
+    deliveryZoneId: orderZoneId,
+    deliveryDate,
+  });
+
   const { order } = await new OrderService(db).create(
     {
       customerId: customer.id,
@@ -461,8 +477,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       onAccount: input.onAccount ?? false,
       deliveryType,
       // Kargo siparişi bir BÖLGEYE ait değildir: rota bölgesi yalnız araçla gidilen teslimatın kaydı.
-      deliveryZoneId: input.shippingOrder ? null : delivery.zoneId,
+      deliveryZoneId: orderZoneId,
       deliveryDate,
+      neighborInviteId,
       addressId: address.id,
       addressSnapshot: { ...address },
       deliveryCountry: address.country,
@@ -619,4 +636,26 @@ function discountIdOf(cart: { discount: { status: string; discountId?: string | 
  */
 function discountLabelOf(cart: CartView): LocalizedText | null {
   return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? cart.discount.label : null;
+}
+
+/**
+ * Bu siparişin seferine uyan kabul edilmiş komşu daveti — kimlik ya da `null` (17.10 · 12.08).
+ *
+ * Eşleşmeme SEBEBİ taşınmıyor ve bu bilinçli: hiçbiri siparişi durdurmuyor ve hiçbiri müşteriye
+ * gösterilmiyor — ödeme adımında "davetin tutmadı" demek ilgisiz bir kaygı yaratırdı. Sebep
+ * gerekirse davetin kendi karşılama sayfasında görülür; orada söylenecek yer var.
+ *
+ * Beklenmedik hata da siparişi düşürmez: davet bir kolaylıktır, ödeme değil.
+ */
+async function matchedNeighborInviteId(
+  db: Db,
+  input: { customerId: string; deliveryZoneId: string | null; deliveryDate: string | null },
+): Promise<string | null> {
+  try {
+    return await matchNeighborInviteForOrder(db, input);
+  } catch {
+    // Yalnız ödeme akışını ayakta tutmak için — davetin kendi yolu zaten iz bırakıyor ve ikinci
+    // bir log satırı aynı olayı iki kez anlatırdı.
+    return null;
+  }
 }

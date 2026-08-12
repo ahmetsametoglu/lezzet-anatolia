@@ -4,6 +4,7 @@ import {
   CelebrationBand,
   DeliveryCard,
   HelpBand,
+  NeighborBand,
   PaymentCard,
   SummaryCard,
   TimelineCard,
@@ -36,6 +37,11 @@ export function ConfirmationDesktop(props: ConfirmationViewProps) {
           </div>
 
           <TimelineCard {...props} />
+          {/* Komşu daveti YARDIMIN ÜSTÜNDE (17.10): ikisi de şerit ama biri eylem, öteki güvence.
+              Eylem şeridi zaman çizgisinin hemen ardında duruyor — müşteri "ne zaman gelecek"i
+              okuduğu anda "komşunu da bu güne çağır" cümlesi anlamlı; en altta sorulsa geç kalırdı.
+              Bağlantı yoksa hiç çizilmiyor, sıra da bozulmuyor. */}
+          <NeighborBand t={props.t} compact={false} view={props.view} />
           <HelpBand t={props.t} compact={false} />
         </div>
 

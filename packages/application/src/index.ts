@@ -6,7 +6,7 @@
 // giriş akışı — web'in `otp-actions.ts`'i geçiş döneminde köprü olarak durur, benimsemesi talep
 // dosyasıyla gider. Buraya giren her akışın ölçütü aynıdır: EN AZ İKİ yüzeyin çağırdığı (ya da
 // çağıracağı) bir orkestrasyon olması. Tek yüzeyin işi kendi uygulamasında kalır.
-export { requestOtpCode, verifyOtpCode } from './auth/otp';
+export { requestOtpCode, tryAttachReferral, verifyOtpCode } from './auth/otp';
 export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
 // Müşteri profil güncellemesi (21.14c) — web hesap formunun kuralları paket hâlinde; web köprü.
 export { updateCustomerProfile } from './customer/profile';
@@ -48,8 +48,29 @@ export { checkEuVatNumber } from './b2b/vat-check';
 // Dört kapı tek dosyada: kodu ÜRET · kodu ADRESE çevir · karşılama durumunu OKU · bağı KUR.
 // `linkReferrer`ı doğrudan çağıran bir yüzey yok (kayıt akışının içinde, `verifyOtpCode`) ama
 // barrel'da: sözleşmenin görünür olması, ikinci bir yüzeyin kendi bağlama kodunu yazmasını önler.
-export { ensureCustomerReferralCode, inviteUrl, linkReferrer, readInviteWelcome, resolveReferrer } from './customer/referral';
+export {
+  attachReferralOnLogin,
+  ensureCustomerReferralCode,
+  inviteUrl,
+  linkReferrer,
+  readInviteWelcome,
+  resolveReferrer,
+} from './customer/referral';
 export type { InviteWelcome, LinkReferrerOutcome } from './customer/referral';
+// ── Komşu daveti (17.10) — davetin İKİNCİ türü: kimliğe değil SEFERE bağlı ──
+// Üç ucu da iki yüzeyden çağrılıyor: daveti AÇMA (sipariş sonrası ekran) · KARŞILAMA (bağlantının
+// indiği sayfa) · SEFERE BAĞLAMA (checkout). Ödül burada değil, para tarafında (`feedback/points`).
+export {
+  acceptNeighborInvite,
+  countNeighborInviteUses,
+  matchNeighborInviteForOrder,
+  neighborInviteUrl,
+  openNeighborInvite,
+  readNeighborWelcome,
+  readPendingNeighborInvite,
+  tryOpenNeighborInvite,
+} from './customer/neighbor';
+export type { NeighborWelcome, OpenNeighborInviteOutcome, PendingNeighborInvite } from './customer/neighbor';
 // ── Müşteri sipariş okuması (08.5) — terfi 21.16 ────────────────────────────
 // Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı; web köprü olarak
 // duruyor. Detay kapısı İKİ anahtarı da kabul eder (kimlik ⟷ referans) — gerekçe künyede.
@@ -87,7 +108,10 @@ export { completeFeedbackInvite, openFeedbackInvite } from './feedback/invite';
 export type { FeedbackCard, FeedbackCompletion, FeedbackInviteView } from './feedback/invite';
 export { reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
 export type { FeedbackWriteOutcome } from './feedback/write';
-export { awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
+// `POINTS_DEFAULTS` dışa veriliyor (17.11): ayar satırı yazılmamışken geçerli olan sayılar TEK
+// yerde durmalı. Web kendi tablosunu taşıyordu ve 11.08 kararından (getiren 500) habersizdi —
+// ekran 50 der, motor 500 yazardı; 29.07 denetiminin kapattığı "ekran ile motor ayrışması"nın aynısı.
+export { POINTS_DEFAULTS, awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
 
 // ── Keşif turu (08.7 · 17.3) — terfi 21.19: web keşif sayfası + mobil keşif ekranı ──────────
 // Kaynak `apps/web/lib/feedback/{discover,discover-claim}.ts` ve `product-feedback.ts`in

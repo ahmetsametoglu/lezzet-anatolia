@@ -503,6 +503,21 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
+   * **Bir komşu davetinden doğan siparişler** (17.10) — davetin kaç kez kullanıldığının TEK kaynağı.
+   *
+   * `neighbor_invite` satırında azalan bir sayaç yok: sipariş iptal olunca sayacın geri alınması
+   * gerekirdi ve bir gün biri unuturdu. Kullanım burada SAYILIR (iptalleri eleme kararı çağıranın:
+   * `countNeighborInviteUses`) — defterin, para hareketlerinin ve kupon kotasının aynı deseni.
+   *
+   * `customerId` süzgeci YOK ve bu kardeşlerinin tersi bir karar, bilerek: soru "bu davet doldu mu",
+   * yani cevabı BAŞKALARININ siparişleri. Kimlik süzgeci konsaydı sayı hep sıfır çıkar, sınır hiç
+   * uygulanmazdı. Kapı dışarıya sipariş içeriği vermiyor — sayan taraf yalnız durumları okuyor.
+   */
+  listByNeighborInvite(neighborInviteId: string): Promise<Order[]> {
+    return this.getAll({ neighborInviteId });
+  }
+
+  /**
    * Müşterinin AÇIK VADELİ siparişleri — vade pozisyonunun (açık bakiye, gecikme) girdisi (09.9).
    *
    * Sayfalanmıyor ve bu bilinçli: küme "ödenmemiş borç"tur, yani doğal tavanı olan bir kümedir ve
@@ -575,6 +590,25 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    */
   countForCustomer(customerId: string): Promise<number> {
     return this.count({ customerId });
+  }
+
+  /**
+   * Müşterinin **gerçekten verdiği** sipariş sayısı — taslak ve iptal HARİÇ (17.11).
+   *
+   * `countForCustomer`dan ayrı olması şart ve sebebi ölçülmüş bir kenar hâl: davet kapısı "bu kişi
+   * bizden hiç alışveriş yaptı mı" diye soruyor ve o soruya **yarıda bırakılmış bir checkout**
+   * (`draft`) ya da **iptal edilmiş bir sipariş** "evet" cevabı veremez. Ham sayımla sorulsaydı,
+   * ödeme adımında vazgeçmiş bir ziyaretçi "zaten müşterimiz" sayılır ve bir daha HİÇ davet
+   * edilemezdi — sessizce, çünkü bir davetin yazılmaması hiçbir yerde hata vermez.
+   *
+   * `returned` DAHİL: iade edilmiş sipariş olmuş bir sipariştir (iptal "hiç olmadı", iade "oldu ve
+   * döndü" — indirim kotası sayımının aynı ayrımı).
+   */
+  countPlacedForCustomer(customerId: string): Promise<number> {
+    return this.count({
+      customerId,
+      status: ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed', 'returned'],
+    });
   }
 
   listByCustomer(customerId: string, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {

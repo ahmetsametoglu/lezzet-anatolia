@@ -47,6 +47,12 @@
       "body": "Sipariş numaranızla WhatsApp'tan yazın, aynı gün dönüyoruz.",
       "cta": "WhatsApp'tan yaz"
     },
+    "neighbor": {
+      "title": "Komşunuzu bu teslimata çağırın",
+      "body": "Aynı gün, aynı araç: komşunuz bu sefere sipariş verirse ikiniz de birlikte teslim alırsınız — ve siz puan kazanırsınız.",
+      "cta": "Bağlantıyı kopyala",
+      "copied": "Kopyalandı"
+    },
     "track": "Siparişi takip et",
     "soon": "yakında",
     "incomplete": "Siparişiniz tamamlanmadı",
@@ -100,6 +106,12 @@
       "body": "Écrivez-nous sur WhatsApp avec votre numéro de commande, nous répondons le jour même.",
       "cta": "Écrire sur WhatsApp"
     },
+    "neighbor": {
+      "title": "Invitez votre voisin à cette livraison",
+      "body": "Même jour, même véhicule : si votre voisin commande pour cette tournée, vous êtes livrés ensemble — et vous gagnez des points.",
+      "cta": "Copier le lien",
+      "copied": "Lien copié"
+    },
     "track": "Suivre ma commande",
     "soon": "bientôt",
     "incomplete": "Votre commande n'a pas abouti",
@@ -152,6 +164,12 @@
       "title": "Noch Fragen?",
       "body": "Schreiben Sie uns mit Ihrer Bestellnummer über WhatsApp, wir antworten am selben Tag.",
       "cta": "Über WhatsApp schreiben"
+    },
+    "neighbor": {
+      "title": "Laden Sie Ihre Nachbarschaft zu dieser Lieferung ein",
+      "body": "Gleicher Tag, gleiches Fahrzeug: bestellt Ihre Nachbarschaft für diese Tour, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
+      "cta": "Link kopieren",
+      "copied": "Kopiert"
     },
     "track": "Bestellung verfolgen",
     "soon": "bald",

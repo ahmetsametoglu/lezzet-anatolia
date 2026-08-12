@@ -6,7 +6,7 @@ import { serviceDb } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { Locale } from '@lezzet/i18n';
 import { createClient } from '@/lib/supabase/server';
-import { forgetInvite, readInvite } from '@/lib/identity/invite-cookie';
+import { handOffInvitesToCustomer } from '@/lib/identity/invite-handoff';
 import { resolvePostLoginRedirect } from './redirect';
 import type { AuthErrorKey } from './errors';
 
@@ -73,15 +73,12 @@ export async function sendEmailOtp(emailRaw: string): Promise<AuthResult<true>> 
  */
 export async function verifyEmailOtp(emailRaw: string, token: string, next?: string | null): Promise<AuthResult<{ redirect: string }>> {
   const locale = (await getLocale()) as Locale;
-  // Davet kodu ziyaretten beri çerezde bekliyor (17.9). Paket onu YALNIZ yeni müşteride kullanır;
-  // burada koşul yok — "yeni mi" sorusunun tek doğru cevabı orada, kartın doğduğu yerde.
-  const referralCode = await readInvite();
-  const verified = await verifyOtpCode(serviceDb(), { email: emailRaw, code: token, locale, referralCode });
+  const verified = await verifyOtpCode(serviceDb(), { email: emailRaw, code: token, locale });
   if (verified.status !== 'ok') return { data: null, errorKey: verified.status };
 
-  // Kod TÜKETİLDİ — bağ kurulsun ya da kurulmasın çerez düşer (`invite-cookie` künyesi). Kimlik
-  // adımı geçtikten sonra çağrılıyor: kod yanlış girilip akış yarıda kalırsa davet kaybolmasın.
-  await forgetInvite();
+  // **Davetler çerezden KİŞİYE devredilir** (17.11 · 12.08) — iki davet de, tek kapıdan. Kimlik
+  // adımı geçtikten SONRA: kod yanlış girilip akış yarıda kalırsa davet kaybolmasın.
+  await handOffInvitesToCustomer(verified.userId);
 
   // Jetonu SSR istemcisi tüketir: oturum çereze düşer (yukarıdaki künye — taşımanın işi).
   const supabase = await createClient();

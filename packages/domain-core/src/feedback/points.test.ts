@@ -3,7 +3,10 @@ import { PointsReasonEnum } from '@lezzet/types';
 import { POINTS_SETTING_KEYS, canEarnPoints, canRedeem, feedbackPointsReason } from './points';
 
 describe('puan kazanımı', () => {
-  const base = { customerType: 'individual' as const, actionPoints: 20, earnedToday: 0, dailyCap: 100 };
+  // Taban TAVANA TABİ bir sebep: tavan sınamalarının ölçtüğü şey tam olarak o kural. Sebep
+  // eklendiğinde (11.08) taban `review`dı ve o artık tavanın DIŞINDA — testler geçmeye devam
+  // ederdi ama ölçtükleri kural ortadan kalkmış olurdu.
+  const base = { customerType: 'individual' as const, reason: 'feedback_candidate' as const, actionPoints: 20, earnedToday: 0, dailyCap: 100 };
 
   it('son kullanıcı kazanır', () => {
     expect(canEarnPoints(base)).toEqual({ allowed: true, points: 20 });
@@ -26,6 +29,54 @@ describe('puan kazanımı', () => {
 
   it('değeri sıfır olan aksiyon puan doğurmaz', () => {
     expect(canEarnPoints({ ...base, actionPoints: 0 })).toEqual({ allowed: false, reason: 'no_value' });
+  });
+});
+
+/**
+ * **Tavan yalnız PARA ÖDENMEDEN yapılabilen eylemleri kapsar** (kullanıcı onayı 11.08).
+ *
+ * Bu blok bir kuralı değil, o kural olmadan doğan ARIZAYI çiviliyor: değer merdiveni 500/100'e
+ * çıkınca (17.9 · 17.10) tavan 100'de kalıyor ve tavan kısmi uygulanmadığı için davet ödülleri
+ * hiçbir zaman yazılamaz hâle gelirdi — hata vermeden, sessizce.
+ */
+describe('günlük tavanın kapsamı', () => {
+  const paid = { customerType: 'individual' as const, earnedToday: 0, dailyCap: 100 };
+
+  it('GETİREN ödülü tavanı görmez — 500 puan, tavan 100', () => {
+    expect(canEarnPoints({ ...paid, reason: 'referral', actionPoints: 500 })).toEqual({ allowed: true, points: 500 });
+  });
+
+  it('KOMŞU ödülü tavanı görmez — tavan dolmuşken bile yazılır', () => {
+    expect(canEarnPoints({ ...paid, reason: 'neighbor', actionPoints: 100, earnedToday: 100 })).toEqual({
+      allowed: true,
+      points: 100,
+    });
+  });
+
+  it('arkasında ödenmiş sipariş olan öteki ödüller de tavan dışında (yorum · alım-sonrası beğeni)', () => {
+    expect(canEarnPoints({ ...paid, reason: 'review', actionPoints: 20, earnedToday: 99 })).toEqual({ allowed: true, points: 20 });
+    expect(canEarnPoints({ ...paid, reason: 'feedback_purchase', actionPoints: 5, earnedToday: 99 })).toEqual({
+      allowed: true,
+      points: 5,
+    });
+  });
+
+  it('BEDAVA yapılabilen ikisi tavana tabidir — ziyaret ve keşif oyu', () => {
+    expect(canEarnPoints({ ...paid, reason: 'visit', actionPoints: 10, earnedToday: 95 })).toEqual({
+      allowed: false,
+      reason: 'daily_cap',
+    });
+    expect(canEarnPoints({ ...paid, reason: 'feedback_candidate', actionPoints: 2, earnedToday: 99 })).toEqual({
+      allowed: false,
+      reason: 'daily_cap',
+    });
+  });
+
+  it('B2B hâlâ hiçbir sebepten kazanmaz — tavan muafiyeti bunu delmez', () => {
+    expect(canEarnPoints({ ...paid, customerType: 'company', reason: 'referral', actionPoints: 500 })).toEqual({
+      allowed: false,
+      reason: 'b2b',
+    });
   });
 });
 

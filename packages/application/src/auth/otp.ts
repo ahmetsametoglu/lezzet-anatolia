@@ -5,7 +5,7 @@ import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { isValidEmail, normalizeEmail } from '@lezzet/helper';
 import { captureError, logger, maskEmail } from '@lezzet/observability';
 import type { PreferredLanguage } from '@lezzet/types';
-import { linkReferrer } from '../customer/referral';
+import { attachReferralOnLogin } from '../customer/referral';
 
 /**
  * **E-posta OTP orkestrasyonu — İKİ yüzeyin ortak akışı** (21.4a; kaynağı web'in `otp-actions.ts`'i,
@@ -192,34 +192,33 @@ export async function verifyOtpCode(
   }
 
   // Yeni müşteri: geldiği dil kartına yazılır (04.9 — yalnız İLK kez; tercih müşterinindir).
-  if (!knownBefore) {
-    await seedPreferredLanguage(profiles, link.user.id, input.locale);
-    if (input.referralCode) await attachReferrer(admin, profiles, link.user.id, input.referralCode);
-  }
+  if (!knownBefore) await seedPreferredLanguage(profiles, link.user.id, input.locale);
+
+  // Davet bağı ORTAK kapıdan (17.11) ve `knownBefore` koşulu OLMADAN: "yeni müşteri" ölçütü artık
+  // kaydın anı değil, siparişsizlik — ve kararı o kapı veriyor. Koşulu burada da tutsaydık iki
+  // ölçüt olurdu ve OAuth yolu ötekini görmezdi (mobil şeridin 11.08 notu).
+  if (input.referralCode) await tryAttachReferral(admin, link.user.id, input.referralCode);
 
   return { status: 'ok', hashedToken: link.properties.hashed_token, userId: link.user.id, knownBefore };
 }
 
 /**
- * Yeni açılan kartı getirene bağlar (17.9).
+ * Davet bağını kurar ve **girişi ASLA düşürmez** (dil tohumunun aynı kararı, aynı gerekçe): davet
+ * bir kolaylıktır, kimlik değil.
  *
- * **Auth kimliği ile PROFİL kimliği ayrı** ve karıştırılırsa bağ sessizce kurulmaz: `link.user.id`
- * `auth.users`ın kimliği, `referred_by` ise `user_profiles`a bakan bir yabancı anahtar. Trigger'ın
- * yazdığı satır burada okunuyor (`findByAuthUserId`) — aynı ayrımın atlanması 04.11'de bir FK
- * ihlaliyle ölçülmüştü.
+ * Ama SESSİZ de değil — reddin gerekçesi log'a düşer, çünkü "davet yazılmadı" şikâyeti geldiğinde
+ * tek cevap kaynağı bu satırdır. Kod LOG'A YAZILMAZ: paylaşılabilir olsa da başkasının kimliğine
+ * ait bir künyedir, kimlikler yeter (OBSERVABILITY §5).
  *
- * **Girişi ASLA düşürmez** (dil tohumunun aynı kararı, aynı gerekçe): davet bir kolaylıktır,
- * kimlik değil. Ama SESSİZ de değil — reddin gerekçesi log'a düşer, çünkü "davet yazılmadı"
- * şikâyeti geldiğinde tek cevap kaynağı bu satırdır. Kod LOG'A YAZILMAZ: paylaşılabilir olsa da
- * başkasının kimliğine ait bir künyedir, kimlikler yeter (OBSERVABILITY §5).
+ * **Dışa veriliyor** çünkü çağıranı iki tane: bu akış ve OAuth dönüşleri (web `auth/callback`,
+ * mobil PKCE). Yutma davranışının da tek kopyası olmalı — ikinci bir çağıran kendi `try/catch`ini
+ * yazsaydı biri bir gün hatayı yutmayı unutur ve davet yüzünden giriş düşerdi.
  */
-async function attachReferrer(admin: SupabaseClient, profiles: UserProfileService, authUserId: string, code: string): Promise<void> {
+export async function tryAttachReferral(admin: SupabaseClient, authUserId: string, code: string): Promise<void> {
   try {
-    const profile = await profiles.findByAuthUserId(authUserId);
-    if (!profile) return;
-    const outcome = await linkReferrer(admin, profile.id, code);
+    const outcome = await attachReferralOnLogin(admin, { authUserId, referralCode: code });
     if (outcome !== 'linked') {
-      logger.info({ context: 'application/auth-otp', customerId: profile.id, outcome }, 'davet bağı kurulmadı');
+      logger.info({ context: 'application/auth-otp', authUserId, outcome }, 'davet bağı kurulmadı');
     }
   } catch (err) {
     logger.warn(

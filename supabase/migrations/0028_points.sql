@@ -24,8 +24,14 @@ create type points_reason as enum (
   'feedback_candidate',
   -- Sipariş verme.
   'order',
-  -- Getiren müşteri (17.7 zemini).
+  -- Getiren müşteri (17.7 zemini · 17.9 bağlantı) — HESAPSIZ birini müşteri yapmanın ödülü.
   'referral',
+  -- **Komşu daveti (17.10)** — `referral`dan AYRI ve ayrılması şart, çünkü ölçtükleri şey farklı:
+  -- `referral` yeni bir MÜŞTERİ kazandırır, `neighbor` var olan bir SEFERE ikinci bir sipariş
+  -- ekler (aynı bölge, aynı gün → durak başına maliyet düşer). Davet edilen kişi zaten müşterimiz
+  -- de olabilir; o hâlde `referral` hiç doğmaz ama komşu ödülü doğar. Tek sebebe yığılsalardı
+  -- "davet bize ne kazandırdı" sorusunun iki farklı cevabı tek sayının içinde kaybolurdu.
+  'neighbor',
   -- **Günlük ziyaret** — günde bir kez, site/keşif ziyareti için. Öteki sebeplerden AYRI durur ve
   -- ayrılması şart: onlar "veri bedeli"dir (müşteri bir beyanda bulundu), bu "gelme bedeli"dir
   -- (müşteri geri döndü). Aynı sebebe yığılsalardı aday panosunu okuyan kişi, ziyaretle beslenen
@@ -147,9 +153,17 @@ insert into public.settings (key, value, description) values
   ('points_feedback_purchase',  '5',   'Alım-sonrası beğeni puanı (aldığı ürünü değerlendirme).'),
   ('points_feedback_candidate', '2',   'Keşifte aday ürün kaydırma puanı — en ucuz aksiyon.'),
   ('points_order',              '10',  'Sipariş başına puan.'),
-  ('points_referral',           '50',  'Getiren müşteriye puan (17.7).'),
+  -- DEĞER MERDİVENİ (kullanıcı kararı 11.08) — oran bilinçli BEŞ KAT: kalıcı bir müşteri
+  -- kazandırmak, bir seferi doldurmaktan değerli. 500 aynı zamanda çevirme eşiğinin tamıdır
+  -- (`points_redeem_min`), yani hesap ekranının "size de 5 € kupon" sözünü gerçek yapar.
+  ('points_referral',           '500', 'Getiren müşteriye puan (17.7 · 17.9) — YENİ müşteri kazandırmanın ödülü.'),
+  ('points_neighbor',           '100', 'Komşu daveti puanı (17.10) — var olan bir SEFERE ikinci sipariş eklemenin ödülü.'),
   ('points_visit',              '10',  'Günde bir kez site/keşif ziyareti puanı (≈0,10 €) — geri getirme enstrümanı, veri bedeli değil.'),
-  ('points_daily_cap',          '100', 'Bir müşterinin GÜNDE kazanabileceği azami puan — istismar freni.'),
+  -- Tavan YALNIZ para ödenmeden yapılabilen eylemleri kapsar (kullanıcı onayı 11.08): giriş +
+  -- keşif oyu, azami 18 puan. Parayla gelen ödüller (yorum, alım-sonrası beğeni, iki davet)
+  -- tavanın DIŞINDADIR — kural motorda (`CAPPED_POINTS_REASONS`). Bu yüzden 100 yeterli kalıyor:
+  -- yükseltilseydi 500'lük davet ödülü yine de kısmi uygulanmayan tavana takılırdı.
+  ('points_daily_cap',          '100', 'Bir müşterinin GÜNDE kazanabileceği azami puan — YALNIZ bedava eylemler için (istismar freni).'),
   ('points_redeem_min',         '500', 'Kupona çevirmek için asgari puan (500 puan = 5 €).'),
   ('points_cent_value',         '1',   'Bir puanın kuruş değeri. 1 = puan başına 1 cent.')
 -- Global satırın kısmi unique indeksi `scope_id is null` üzerindedir (0013).

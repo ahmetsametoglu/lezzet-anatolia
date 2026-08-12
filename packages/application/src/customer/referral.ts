@@ -1,4 +1,4 @@
-import { UserProfileService } from '@lezzet/database';
+import { OrderService, UserProfileService } from '@lezzet/database';
 import { readableCode } from '@lezzet/domain-core';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
@@ -153,4 +153,47 @@ export async function linkReferrer(db: SupabaseClient, newCustomerId: string, co
 
   await profiles.update({ id: newCustomerId, referredBy: referrerId });
   return 'linked';
+}
+
+/**
+ * **Girişten sonra davet bağını kuran TEK kapı** — hangi giriş yolundan gelinirse gelinsin (17.11).
+ *
+ * ── NEDEN DOĞDU: ÖLÇÜLMÜŞ SESSİZ BOŞLUK ─────────────────────────────────────
+ * 17.9 bağı OTP akışının içine koymuştu ve gerekçesi doğruydu — *"müşteri kartının doğduğu tek yer
+ * burası"*. Ama o cümle YALNIZ OTP için doğruydu: **Google (OAuth) akışı oradan geçmiyor.** Web'de
+ * `auth/callback/route.ts`, mobilde PKCE doğrudan Supabase'e gidiyor ve profili `0002` trigger'ı
+ * açıyor. Sonuç: davet bağlantısına tıklayıp *"Google ile devam et"* diyen davetli **sessizce
+ * bağsız** kalıyordu — hata yok, log yok, ödül yok. Üstelik en olası yol bu: davetli çoğu zaman
+ * telefonunda oturumu açık bir Google hesabıyla geliyor. (Mobil şeridin notu, 11.08.)
+ *
+ * Çare iki yüzeyi ayrı ayrı yamamak DEĞİL — o, 17.9'da kapatılan boşluğun ikizini açardı. Kapı tek
+ * ve ortak: her giriş yolu, oturum kurulduktan sonra bunu çağırır.
+ *
+ * ── "YENİ MÜŞTERİ" ÖLÇÜTÜ DEĞİŞTİ: KAYIT ANI → SİPARİŞSİZLİK ────────────────
+ * OTP yolunda ölçüt `!knownBefore` idi (kart bu çağrıda mı doğdu). OAuth'ta o an ölçülemiyor:
+ * oturum kurulduğunda trigger profili çoktan yazmış olur ve "az önce mi yazıldı" sorusunun cevabı
+ * ancak bir ZAMAN PENCERESİYLE tahmin edilebilirdi — saniyelere bağlı, sessizce yanlışlanabilir
+ * bir ölçüt. Onun yerine alan bir soru soruluyor: **bu kişi bizden hiç alışveriş yaptı mı?**
+ *
+ * Ölçüt daha geniş ve genişlemesi bilinçli: aylar önce hesap açıp hiç sipariş vermemiş biri, bir
+ * arkadaşının davetiyle gerçekten kazanılıyorsa o davet ödülü hak ediyor. Sömürüye de kapı açmıyor,
+ * çünkü ödül hâlâ **karşı tarafın parasının defterde görünmesine** bağlı (17.9): bağ kurmak tek
+ * başına hiçbir şey ödemiyor.
+ *
+ * Öteki üç ret aynen yürürlükte (`linkReferrer`): kendini getirme · ilk getiren kazanır · geçersiz
+ * kod. Kapı **idempotent**: ikinci giriş bağı değiştirmez.
+ */
+export async function attachReferralOnLogin(
+  db: SupabaseClient,
+  input: { authUserId: string; referralCode: string },
+): Promise<LinkReferrerOutcome | 'no_profile' | 'already_customer'> {
+  const profile = await new UserProfileService(db).findByAuthUserId(input.authUserId);
+  // Profil yoksa trigger henüz yazmamıştır: davet yüzünden girişi bekletmeyiz, çerez duruyor ve
+  // bir sonraki giriş aynı kapıdan geçer.
+  if (!profile) return 'no_profile';
+  if (profile.referredBy) return 'already_referred';
+  // Taslak ve iptal SAYILMAZ (`countPlacedForCustomer`): ödeme adımında vazgeçmiş bir ziyaretçi
+  // "zaten müşterimiz" değildir ve bir daha hiç davet edilememesi sessiz bir kayıp olurdu.
+  if ((await new OrderService(db).countPlacedForCustomer(profile.id)) > 0) return 'already_customer';
+  return linkReferrer(db, profile.id, input.referralCode);
 }

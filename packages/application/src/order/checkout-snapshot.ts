@@ -1,5 +1,6 @@
 import { AddressService, type Db } from '@lezzet/database';
 import type { Address, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import { readPendingNeighborInvite } from '../customer/neighbor';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { orderScopeOf } from '../cart/cart-types';
 import type { CartEntry } from '../cart/cart-types';
@@ -39,6 +40,19 @@ export interface CheckoutSnapshot {
     deliveryType: 'route' | 'shipping';
     availableDates: string[];
     requiresDateChoice: boolean;
+    /**
+     * **Komşu davetinin çağırdığı sefer** (17.10 · kullanıcı vurgusu 12.08) — `null` = davet yok
+     * ya da bu adrese/güne uymuyor.
+     *
+     * Kullanıcının cümlesi: *"komşusunun seçtiği seferi göstermemiz lazım — komşunuz sizi bu sefere
+     * davet etti diye. Bunun kaybolmaması lazım."* Ekran iki şey yapar: cümleyi kurar ve o günü
+     * **önseçili** getirir. Önseçim şart, çünkü davetin tek işlevi o güne denk gelmek: davetli günü
+     * kendi bulmak zorunda kalırsa ve bulamazsa davet hiçbir işe yaramaz — üstelik kimse fark etmez.
+     *
+     * Süzgeç burada: gün `availableDates` içinde DEĞİLSE alan `null` döner. Ekranda seçilemeyen bir
+     * günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
+     */
+    neighborInvite: { inviterName: string; deliveryDate: string } | null;
     /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli (K32). */
     blocked: boolean;
   } | null;
@@ -191,12 +205,20 @@ export async function readCheckoutSnapshot(
     warehouseId: place.warehouseId,
   });
 
+  // Komşu daveti: kişiye yazılı kabuttan okunur (çerezden değil — 12.08 kararı). Kargo siparişinde
+  // hiç sorulmaz: orada sefer diye bir şey yok.
+  const pendingInvite = input.shippingOrder ? null : await readPendingNeighborInvite(db, input.customerId);
+  const inviteMatches =
+    pendingInvite && pendingInvite.deliveryZoneId === place.zoneId && delivery.availableDates.includes(pendingInvite.deliveryDate);
+
   return {
     addresses,
     delivery: {
       deliveryType,
       availableDates: input.shippingOrder ? [] : delivery.availableDates,
       requiresDateChoice: input.shippingOrder ? false : delivery.requiresDateChoice,
+      neighborInvite:
+        inviteMatches && pendingInvite ? { inviterName: pendingInvite.inviterName, deliveryDate: pendingInvite.deliveryDate } : null,
       // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ — adres rota içinde olsa bile. Taslak
       // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
       blocked: input.shippingOrder ? cart.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',

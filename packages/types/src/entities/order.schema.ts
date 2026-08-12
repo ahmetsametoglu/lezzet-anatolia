@@ -71,6 +71,13 @@ export const OrderSchema = z.object({
   /** Rota-içiyse hangi bölge. Bölge düzenlenebilir olduğu için bu alan aynı zamanda snapshot'tır. */
   deliveryZoneId: z.string().uuid().nullable(),
   deliveryDate: z.string().nullable(),
+  /**
+   * Bu sipariş bir komşu davetinden mi geldi (17.10). Künye alanı: davetin ödülü buradan doğar
+   * (`order/payment.ts` → `finalize`) ve davetin kaç kez kullanıldığı bu kolondan SAYILIR —
+   * davet satırında azalan bir sayaç yok, çünkü sipariş iptal olunca sayacın da geri alınması
+   * gerekirdi ve biri mutlaka unuturdu.
+   */
+  neighborInviteId: z.string().uuid().nullable(),
   addressId: z.string().uuid().nullable(),
   /** Adresin sipariş anındaki kopyası — adres sonradan düzeltilse sipariş bozulmaz. */
   addressSnapshot: z.record(z.unknown()).nullable(),
@@ -137,6 +144,8 @@ export const OrderInsertSchema = z.object({
   deliveryType: DeliveryTypeEnum.optional(),
   deliveryZoneId: z.string().uuid().nullish(),
   deliveryDate: z.string().nullish(),
+  /** Komşu davetinin künyesi (17.10) — checkout, çerezden gelen daveti burada yazar. */
+  neighborInviteId: z.string().uuid().nullish(),
   addressId: z.string().uuid().nullish(),
   addressSnapshot: z.record(z.unknown()).nullish(),
   courierId: z.string().uuid().nullish(),

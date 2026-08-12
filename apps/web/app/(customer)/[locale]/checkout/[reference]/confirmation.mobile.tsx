@@ -4,6 +4,7 @@ import {
   CelebrationBand,
   DeliveryCard,
   HelpBand,
+  NeighborBand,
   PaymentCard,
   SummaryCard,
   TimelineCard,
@@ -30,6 +31,8 @@ export function ConfirmationMobile(props: ConfirmationViewProps) {
         <DeliveryCard {...props} />
         <PaymentCard {...props} />
         <TimelineCard {...props} />
+        {/* Sıra masaüstüyle AYNI (gerekçe orada): eylem şeridi zaman çizgisinin ardında. */}
+        <NeighborBand t={props.t} compact view={props.view} />
         <HelpBand t={props.t} compact />
         <SummaryCard {...props} />
       </div>

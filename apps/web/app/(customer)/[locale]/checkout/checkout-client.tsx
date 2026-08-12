@@ -129,7 +129,14 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
         // Gün SEÇİMİ korunmaz: adres değişince eski gün başka bölgenin günü olabilir. Tek gün
         // varsa seçim sunulmadığı için o gün doğrudan yazılır — ekran boş seçimle kilitlenmesin.
         const dates = data.delivery?.availableDates ?? [];
-        const keepDate = prev.deliveryDate && dates.includes(prev.deliveryDate) ? prev.deliveryDate : (dates.length === 1 ? dates[0]! : null);
+        // Komşu daveti varsa o gün ÖNSEÇİLİ gelir (17.10): davetin tek işlevi o güne denk gelmek
+        // ve davetliyi günü kendi bulmaya bırakmak, daveti sessizce işlevsiz kılardı. Müşterinin
+        // KENDİ seçimi yine üstte: `prev.deliveryDate` geçerliyse ona dokunulmuyor.
+        const invited = data.delivery?.neighborInvite?.deliveryDate ?? null;
+        const keepDate =
+          prev.deliveryDate && dates.includes(prev.deliveryDate)
+            ? prev.deliveryDate
+            : (invited ?? (dates.length === 1 ? dates[0]! : null));
         return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate };
       });
     },

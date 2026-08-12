@@ -126,6 +126,32 @@ export function upcomingDeliveryDates(input: UpcomingDatesInput): string[] {
   return dates;
 }
 
+/**
+ * Bir SEFER hâlâ sipariş kabul ediyor mu (17.10 — komşu daveti).
+ *
+ * Sefer = `(bölge, tarih)`. Ayrı bir kural DEĞİL, `upcomingDeliveryDates`in aynı kuralının tekil
+ * hâli: bugünün seferi ancak kesim saatinden önce açıktır, gelecek günler açık, geçmiş günler
+ * kapalı. İkisi ayrı yazılsaydı komşu daveti müşteriye "bu sefere yetişirsin" der, checkout aynı
+ * günü listesinde hiç göstermezdi — ve fark yalnız kesim saati civarında görünürdü.
+ *
+ * Cevap üç hâlli, çünkü ekranın kuracağı cümle üçünde de ayrı: **`open`** davet çalışır ·
+ * **`cutoff_passed`** bugün için geç kalındı (yarın başka bir sefer olabilir) · **`past`** sefer
+ * geçmişte kaldı.
+ */
+export type DeliveryRunWindow = 'open' | 'cutoff_passed' | 'past';
+
+export function deliveryRunWindow(input: { deliveryDate: string; now: Date; cutoffTime?: string }): DeliveryRunWindow {
+  const today = toIsoDate(input.now);
+  if (input.deliveryDate < today) return 'past';
+  if (input.deliveryDate > today) return 'open';
+
+  // Bugünün seferi: kesim saati geçtiyse kapalı. Kesim saati yoksa (ya da bozuksa) kural
+  // uygulanmaz — `upcomingDeliveryDates`in davranışıyla birebir; bozuk bir ayar akışı kilitlemez.
+  const cutoff = input.cutoffTime ? minutesOfDay(input.cutoffTime) : null;
+  if (cutoff === null) return 'open';
+  return input.now.getHours() * 60 + input.now.getMinutes() < cutoff ? 'open' : 'cutoff_passed';
+}
+
 /** Yerel takvim günü — `toISOString()` UTC'ye kaydırdığı için gün atlatabilir, elle biçimlenir. */
 function toIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');

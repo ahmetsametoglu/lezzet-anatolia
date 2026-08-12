@@ -7,7 +7,7 @@ import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
-import { imageOf } from '@lezzet/application';
+import { imageOf, neighborInviteUrl, tryOpenNeighborInvite } from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
@@ -84,8 +84,21 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     }),
   );
 
+  /**
+   * Komşu daveti (17.10) — **okuma YAZABİLİR ve bu bilinçli**, puan kartındaki (`readCustomerPoints`)
+   * aynı karar ve aynı gerekçe: ekran "komşunu çağır" diyecekse paylaşılacak bir bağlantı VAR olmalı;
+   * müşteri düğmeye dokunduğunda hiçbir şey olmaması daha kötüdür. Yazım idempotent — sipariş başına
+   * tek davet (veride unique) ve ikinci render aynı satırı döndürür.
+   *
+   * Yalnız KESİNLEŞMİŞ ROTA siparişinde denenir: kargoda sefer yok, taslakta çağrılacak bir gün yok.
+   * Kapı ayrıca seferin kesim saatine de bakıyor ve kapanmışsa davet açmıyor (`openNeighborInvite`).
+   */
+  const invite =
+    placed && order.deliveryType === 'route' ? await tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id }) : null;
+
   const view: ConfirmationView = {
     orderId: order.id,
+    neighborInviteUrl: invite ? neighborInviteUrl(invite.token, locale as Locale) : null,
     referenceNo: order.referenceNo,
     createdAt: order.createdAt,
     placed,

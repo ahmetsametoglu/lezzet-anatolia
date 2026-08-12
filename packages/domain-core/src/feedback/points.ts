@@ -25,6 +25,7 @@ export const POINTS_SETTING_KEYS: Record<EarnablePointsReason, string> = {
   feedback_candidate: 'points_feedback_candidate',
   order: 'points_order',
   referral: 'points_referral',
+  neighbor: 'points_neighbor',
   visit: 'points_visit',
 };
 
@@ -58,6 +59,36 @@ export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
  */
 export const SOURCELESS_POINTS_REASONS: readonly EarnablePointsReason[] = ['visit'];
 
+/**
+ * **Günlük tavanın KAPSADIĞI sebepler** — kullanıcı onayı 11.08 (`BACKLOG-musteri §4`).
+ *
+ * Kural tek cümle: *tavan yalnız PARA ÖDENMEDEN yapılabilen eylemleri kapsar; parayla gelen
+ * ödüller tavanın DIŞINDADIR.* Bedava yapılabilen yalnız iki şey var — siteye gelmek (zaten günde
+ * bir) ve keşif turunda oy vermek (bizim yayınladığımız kart sayısı kadar). Ötekilerin hepsinin
+ * arkasında **ödenmiş bir sipariş** durur: yorum ve alım-sonrası beğeni satın almayı şart koşuyor,
+ * getiren ve komşu ödülleri de karşı tarafın parasının defterde görünmesini.
+ *
+ * ── NEDEN ŞART: TAVAN KIRPMAZ, TAMAMINI REDDEDER ────────────────────────────
+ * `canEarnPoints` kısmi puan yazmıyor (aşağıdaki künye) — yani tavana takılan bir ödül HİÇ
+ * yazılmıyor ve tekillik yüzünden yarın telafi de edilemiyor. Değer merdiveni 11.08'de yükselince
+ * (getiren 500, komşu 100) tavan `100`da kaldığı için **davet ödülleri hiçbir zaman yazılamaz**
+ * hâle gelirdi: 500 > 100. Ölçüm değil aritmetik — ve hata vermeden, sessizce.
+ *
+ * Tavanın içinde kalan azami bugün **18 puan** (giriş 10 + 4 aday kart × 2), dolayısıyla
+ * `points_daily_cap` 100'de kalabiliyor: yükseltmeye gerek yok ve en çok istediğimiz davranışlar
+ * (yorum, davet) artık hiç reddedilmiyor.
+ *
+ * **`earnedToday` de bu kümeyle sayılır**, tüm defterle değil: 500 puanlık bir getiren ödülü
+ * pencereyi doldursaydı müşteri aynı gün keşif oyundan puan alamazdı — tavanın dışında tuttuğumuz
+ * bir ödül, tavanın içindekileri yemiş olurdu.
+ */
+export const CAPPED_POINTS_REASONS: readonly EarnablePointsReason[] = ['visit', 'feedback_candidate'];
+
+/** Bu sebep günlük tavana tabi mi (`CAPPED_POINTS_REASONS` künyesi). */
+export function isCappedReason(reason: EarnablePointsReason): boolean {
+  return CAPPED_POINTS_REASONS.includes(reason);
+}
+
 export type EarnCheck = { allowed: true; points: number } | { allowed: false; reason: 'b2b' | 'daily_cap' | 'no_value' };
 
 /**
@@ -88,13 +119,17 @@ export function isPointsEligible(customerType: CustomerType): boolean {
 
 export function canEarnPoints(input: {
   customerType: CustomerType;
+  /** Aksiyonun sebebi — tavanın uygulanıp uygulanmayacağını BU belirler (`CAPPED_POINTS_REASONS`). */
+  reason: EarnablePointsReason;
   actionPoints: number;
-  /** Müşterinin bugün kazandığı toplam puan. */
+  /** Müşterinin bugün **tavana tabi sebeplerden** kazandığı toplam puan. */
   earnedToday: number;
   dailyCap: number;
 }): EarnCheck {
   if (!isPointsEligible(input.customerType)) return { allowed: false, reason: 'b2b' };
   if (input.actionPoints <= 0) return { allowed: false, reason: 'no_value' };
+  // Parayla gelen ödül tavan görmez (kullanıcı onayı 11.08): kimse bize para ödeyerek bizi sömüremez.
+  if (!isCappedReason(input.reason)) return { allowed: true, points: input.actionPoints };
   if (input.earnedToday + input.actionPoints > input.dailyCap) return { allowed: false, reason: 'daily_cap' };
   return { allowed: true, points: input.actionPoints };
 }

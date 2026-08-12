@@ -113,6 +113,8 @@ export interface PlaceOrderInput {
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — anlık görüntüyle AYNI bayrak (19.15). */
   shippingOrder?: boolean;
+  // Komşu davetinin belirteci girdi DEĞİL (12.08): davet kişiye yazılı, taslak onu müşterinin
+  // kendi kaydından okuyor. Yüzeyin taşıyacak bir şeyi kalmadı.
   /** Paket çözümünün kapısı — taslağa olduğu gibi geçilir (aşama 1'in `CartBundlePort`u). */
   bundles?: CartBundlePort;
   /** Edinim kaynağı kapısı (13.2) — taslağa olduğu gibi geçilir; web'de çerez okur. */

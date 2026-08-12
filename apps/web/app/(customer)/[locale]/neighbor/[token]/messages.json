@@ -1,0 +1,116 @@
+{
+  "tr": {
+    "meta": {
+      "title": "Komşu daveti — Lezzet Anatolia",
+      "description": "Komşunuz sizi aynı gün teslimatına çağırıyor. Aynı sefere sipariş verin, birlikte teslim alın."
+    },
+    "ok": {
+      "eyebrow": "Komşu daveti",
+      "title": "{name} sizi {date} teslimatına çağırıyor",
+      "someone": "Komşunuz",
+      "description": "Aynı gün, aynı araç, aynı sokak. Siparişinizi bu sefere verirseniz komşunuzla birlikte teslim alırsınız.",
+      "primary": "Bu sefere sipariş ver",
+      "secondary": "Önce katalogu göreyim"
+    },
+    "unknown": {
+      "eyebrow": "Komşu daveti",
+      "title": "Bu davet bağlantısı tanınmıyor",
+      "description": "Bağlantı eksik kopyalanmış olabilir. Yine de hoş geldiniz — teslimat günlerimizi katalogda görebilirsiniz.",
+      "primary": "Katalogu keşfet"
+    },
+    "runClosed": {
+      "eyebrow": "Komşu daveti",
+      "title": "{date} seferi için geç kalındı",
+      "description": "Bu davetin çağırdığı teslimat kapandı. Bölgenizin bir sonraki teslimat günü ödeme adımında görünür — sipariş vermeye devam edebilirsiniz.",
+      "primary": "Katalogu keşfet"
+    },
+    "full": {
+      "eyebrow": "Komşu daveti",
+      "title": "Bu davetin kontenjanı doldu",
+      "description": "{date} seferi için davet edilebilecek komşu sayısına ulaşıldı. Siz yine sipariş verebilirsiniz; teslimat günü ödeme adımında seçilir.",
+      "primary": "Katalogu keşfet"
+    },
+    "self": {
+      "eyebrow": "Komşu daveti",
+      "title": "Bu sizin davet bağlantınız",
+      "description": "Bağlantı çalışıyor. Komşularınıza gönderin; onların siparişi bu sefere düştüğünde puanınız hesabınıza geçer.",
+      "primary": "Siparişlerime dön"
+    }
+  },
+  "fr": {
+    "meta": {
+      "title": "Invitation voisin — Lezzet Anatolia",
+      "description": "Votre voisin vous invite à la même tournée de livraison. Commandez pour le même jour et recevez ensemble."
+    },
+    "ok": {
+      "eyebrow": "Invitation voisin",
+      "title": "{name} vous invite à la livraison du {date}",
+      "someone": "Votre voisin",
+      "description": "Même jour, même véhicule, même rue. Commandez pour cette tournée et vous serez livrés ensemble.",
+      "primary": "Commander pour cette tournée",
+      "secondary": "Voir d'abord le catalogue"
+    },
+    "unknown": {
+      "eyebrow": "Invitation voisin",
+      "title": "Ce lien d'invitation n'est pas reconnu",
+      "description": "Le lien a peut-être été copié en partie. Bienvenue tout de même — nos jours de livraison s'affichent au catalogue.",
+      "primary": "Découvrir le catalogue"
+    },
+    "runClosed": {
+      "eyebrow": "Invitation voisin",
+      "title": "La tournée du {date} est déjà bouclée",
+      "description": "La livraison visée par cette invitation est close. Le prochain jour de livraison de votre secteur apparaît à l'étape de commande — vous pouvez continuer.",
+      "primary": "Découvrir le catalogue"
+    },
+    "full": {
+      "eyebrow": "Invitation voisin",
+      "title": "Cette invitation a atteint sa limite",
+      "description": "Le nombre de voisins invités pour la tournée du {date} est atteint. Vous pouvez tout de même commander ; le jour se choisit à l'étape de commande.",
+      "primary": "Découvrir le catalogue"
+    },
+    "self": {
+      "eyebrow": "Invitation voisin",
+      "title": "C'est votre lien d'invitation",
+      "description": "Le lien fonctionne. Envoyez-le à vos voisins : vos points arrivent dès que leur commande rejoint cette tournée.",
+      "primary": "Retour à mes commandes"
+    }
+  },
+  "de": {
+    "meta": {
+      "title": "Nachbarschafts-Einladung — Lezzet Anatolia",
+      "description": "Ihre Nachbarin oder Ihr Nachbar lädt Sie zur selben Liefertour ein. Bestellen Sie für denselben Tag."
+    },
+    "ok": {
+      "eyebrow": "Nachbarschafts-Einladung",
+      "title": "{name} lädt Sie zur Lieferung am {date} ein",
+      "someone": "Ihre Nachbarschaft",
+      "description": "Gleicher Tag, gleiches Fahrzeug, gleiche Straße. Bestellen Sie für diese Tour und Sie werden zusammen beliefert.",
+      "primary": "Für diese Tour bestellen",
+      "secondary": "Erst den Katalog ansehen"
+    },
+    "unknown": {
+      "eyebrow": "Nachbarschafts-Einladung",
+      "title": "Dieser Einladungslink ist unbekannt",
+      "description": "Der Link wurde vielleicht unvollständig kopiert. Willkommen trotzdem — unsere Liefertage stehen im Katalog.",
+      "primary": "Katalog entdecken"
+    },
+    "runClosed": {
+      "eyebrow": "Nachbarschafts-Einladung",
+      "title": "Für die Tour am {date} ist es zu spät",
+      "description": "Die eingeladene Lieferung ist geschlossen. Der nächste Liefertag Ihres Gebiets erscheint beim Bestellen — Sie können fortfahren.",
+      "primary": "Katalog entdecken"
+    },
+    "full": {
+      "eyebrow": "Nachbarschafts-Einladung",
+      "title": "Diese Einladung ist ausgeschöpft",
+      "description": "Für die Tour am {date} sind bereits genug Nachbarn eingeladen. Bestellen können Sie trotzdem; den Tag wählen Sie beim Bestellen.",
+      "primary": "Katalog entdecken"
+    },
+    "self": {
+      "eyebrow": "Nachbarschafts-Einladung",
+      "title": "Das ist Ihr eigener Einladungslink",
+      "description": "Der Link funktioniert. Schicken Sie ihn Ihren Nachbarn — Ihre Punkte kommen, sobald deren Bestellung zu dieser Tour gehört.",
+      "primary": "Zurück zu meinen Bestellungen"
+    }
+  }
+}

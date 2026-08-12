@@ -310,6 +310,16 @@ export const PointsReasonEnum = z.enum([
   'order',
   'referral',
   /**
+   * **Komşu daveti** (17.10) — `referral`dan AYRI ve ayrılması şart, çünkü ölçtükleri şey farklı:
+   * `referral` yeni bir MÜŞTERİ kazandırır, `neighbor` var olan bir SEFERE ikinci bir sipariş
+   * ekler (aynı bölge + aynı gün → durak başına maliyet düşer). Davet edilen kişi zaten müşterimiz
+   * olabilir; o hâlde `referral` hiç doğmaz ama komşu ödülü doğar. Tek sebebe yığılsalardı "davet
+   * bize ne kazandırdı" sorusunun iki farklı cevabı tek sayının içinde kaybolurdu.
+   *
+   * `ref_id` komşunun SİPARİŞİDİR: tekillik "aynı siparişten iki kez ödül yok" demeli.
+   */
+  'neighbor',
+  /**
    * Günlük ziyaret — günde bir kez. Öteki sebeplerden AYRI ve ayrılması şart: onlar **veri
    * bedeli**dir (müşteri bir beyanda bulundu), bu **gelme bedeli**dir (müşteri geri döndü).
    * Aynı sebebe yığılsalardı aday panosunu okuyan kişi ziyaretle beslenen puanı ürün sinyali

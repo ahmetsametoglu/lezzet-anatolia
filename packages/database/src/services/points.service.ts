@@ -70,11 +70,18 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
    * çalışır; sunucu UTC'de koşarsa gün Fransa'da 01:00/02:00'de döner ve müşteri gece yarısından
    * sonraki aksiyonunda dünün tavanına takılır. Bölge sabittir çünkü işletme tektir (Strasbourg);
    * müşterinin kendi saat dilimi burada ölçüt değil — tavan BİZİM günümüzün sınırıdır.
+   *
+   * **`reasons` verilirse yalnız o sebepler sayılır** (kullanıcı onayı 11.08): tavan artık tüm
+   * defteri değil, YALNIZ tavana tabi eylemleri ölçüyor (`CAPPED_POINTS_REASONS`). Tümünü saysaydık
+   * 500 puanlık bir getiren ödülü pencereyi tek başına doldurur ve müşteri aynı gün keşif oyundan
+   * puan alamazdı — tavanın DIŞINDA tuttuğumuz bir ödül, tavanın içindekileri yemiş olurdu.
+   * Süzgeç sorguda: çağıranın sonradan yapacağı bir filtreye bırakılsaydı unutan ilk çağıran eski
+   * davranışa döner ve fark hiçbir yerde hata vermezdi.
    */
-  async earnedToday(customerId: string, now: Date = new Date()): Promise<number> {
+  async earnedToday(customerId: string, reasons?: readonly PointsReason[], now: Date = new Date()): Promise<number> {
     const dayStart = startOfBusinessDay(now);
     const rows = await this.getAll(
-      { customerId },
+      reasons ? { customerId, reason: [...reasons] } : { customerId },
       { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: dayStart.toISOString() }] },
     );
     return rows.filter((r) => r.points > 0).reduce((sum, r) => sum + r.points, 0);

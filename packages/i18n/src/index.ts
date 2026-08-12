@@ -95,6 +95,17 @@ export const PATHNAMES = {
    */
   '/invite/[code]': { fr: '/parrainage/[code]', de: '/einladung/[code]', tr: '/davet/[code]' },
   /**
+   * Komşu daveti karşılaması (17.10) — `/invite/[code]`in KARDEŞİ ama AYRI rota, bilerek.
+   *
+   * İkisi de bir davet bağlantısı ama sözleri farklı: getiren daveti "bize katıl" der ve süresizdir;
+   * bu "şu güne, bu sefere yetiş" der ve kesim saatinde ölür. Tek rotada birleştirilselerdi karşılama
+   * sayfası belirtecin türünü tahmin etmek zorunda kalır, iki farklı ömür tek adresin arkasında
+   * gizlenirdi. Ayrı adres, sayfanın ne söyleyeceğini adresin kendisinden belli ediyor.
+   *
+   * Segment üç dilde de "komşu" sözcüğüdür: bağlantıyı alan kişi kimden geldiğini adreste görüyor.
+   */
+  '/neighbor/[token]': { fr: '/voisin/[token]', de: '/nachbarn/[token]', tr: '/komsu/[token]' },
+  /**
    * Statik/yasal sayfalar (08.8). **Beş ayrı rota, tek `[slug]` DEĞİL** — ve sebebi burada yazılı
    * olmalı çünkü ilk bakışta dinamik segment daha ekonomik görünür.
    *

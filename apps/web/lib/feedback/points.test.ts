@@ -150,14 +150,27 @@ describe('geri bildirim puanı', () => {
     expect((await getPointsBalance(b2bId)).balance).toBe(0);
   });
 
-  it('günlük tavana takılan müşterinin aksiyonu yine de kaydedilir', async () => {
-    // Tavan 100; elle 95 puan yazıp yorum puanının (20) sığmamasını sağlıyoruz.
+  /**
+   * ── TAVANIN KAPSAMI DEĞİŞTİ (kullanıcı onayı 11.08) ────────────────────────
+   * Bu test bir tur "tavana takılan yorum yazılmaz" diyordu ve o gün doğruydu. Kural değişti:
+   * **tavan yalnız PARA ÖDENMEDEN yapılabilen eylemleri kapsar** — yorumun arkasında ödenmiş bir
+   * sipariş var, yani tavanı görmüyor. Eski hâlini bırakmak, artık var olmayan bir davranışı
+   * ölçmek olurdu.
+   *
+   * Kapsam kuralının kendisi birim testlerde çivili (`domain-core/feedback/points.test.ts`);
+   * burada sınanan şey KABLO: `awardPoints` sebebi motora geçiriyor ve günlük pencereyi yalnız
+   * tavana tabi sebeplerle sayıyor mu.
+   *
+   * **Elle düzeltme de pencereye girmiyor** ve bu bilinçli: `manual` müşterinin bir eylemi değil,
+   * personelin düzeltmesidir — müşterinin günlük kazanma sınırını doldurmamalı.
+   */
+  it('parayla gelen ödül tavanı GÖRMEZ — gün dolu görünse bile yorum puanı yazılır', async () => {
     await adjustPointsManually({ customerId: b2cId, points: 95, note: 'tavan zemini', staffId });
     const result = await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Sığmayan.' });
 
     expect(result.ok).toBe(true);
-    // Tavan KISMİ uygulanmaz: 5 puan yazmak yerine hiç yazılmaz.
-    expect((await getPointsBalance(b2cId)).balance).toBe(95);
+    // 95 (elle) + 20 (yorum): tavan 100 olmasına rağmen ödül tam yazıldı.
+    expect((await getPointsBalance(b2cId)).balance).toBe(115);
   });
 });
 
@@ -250,7 +263,9 @@ describe('getiren müşteri (17.7)', () => {
     expect(await awardReferralPoints(invited.id)).not.toBeNull();
     // Kaynak YENİ müşteridir: "aynı kişiyi iki kez getiremezsin".
     expect(await awardReferralPoints(invited.id)).toBeNull();
-    expect((await getPointsBalance(b2cId)).balance).toBe(50);
+    // Değer merdiveni (kullanıcı kararı 11.08): getiren 500 — çevirme eşiğinin tamı, yani hesap
+    // ekranının "size de 5 € kupon" sözünü gerçek yapan sayı.
+    expect((await getPointsBalance(b2cId)).balance).toBe(500);
   });
 });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
@@ -239,6 +239,60 @@ export function HelpBand({ t, compact }: Pick<ConfirmationViewProps, 't' | 'comp
           {t.help.cta} · {t.soon}
         </Button>
       )}
+    </div>
+  );
+}
+
+/**
+ * **Komşunu bu sefere çağır** (17.10) — yardım şeridinin KARDEŞİ, aynı görsel gramer.
+ *
+ * Kendi düzenini kurmuyor ve bu bilinçli (CLAUDE §3 — improvise etme): şerit `HelpBand`in kutusunu,
+ * boşluklarını ve tipografisini birebir kullanıyor. Yeni bir blok dili icat etmek, tasarımı
+ * görmeden verilmiş görsel bir karar olurdu; var olan gramerde kalmak ise yalnız içerik ekliyor.
+ * Nihai görsel karar Claude Design'da verilecek (`design/pages/musteri-checkout.md`'ye brief yazıldı).
+ *
+ * **Bağlantı yoksa blok HİÇ çizilmez** (`neighborInviteUrl === null`): kargo siparişi, taslak ya da
+ * kesim saati dolmuş sefer. Boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
+ *
+ * Kopyalama `coupons-card`taki desenin aynısı: başarısızlık sessiz ama SONUÇSUZ değil — adres zaten
+ * ekranda seçilebilir hâlde duruyor, hata cümlesi açmak müşterinin hâlâ yapabildiği bir işi arıza
+ * gibi gösterirdi. Sistem paylaşım menüsü (`navigator.share`) varsa o açılır: davet WhatsApp'a
+ * gidiyor ve uygulama sırasını işletim sistemi bizden iyi biliyor (`ShareButton` künyesi).
+ */
+export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
+  const [copied, setCopied] = useState(false);
+  const url = view.neighborInviteUrl;
+  if (!url) return null;
+
+  const share = async () => {
+    if (navigator.share) {
+      // İptal hata değildir: vazgeçen müşteriye uyarı çıkmamalı.
+      await navigator.share({ url }).catch(() => undefined);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className={['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ')}>
+      <span className="text-icon" aria-hidden="true">
+        🚚
+      </span>
+      <div className="flex flex-1 flex-col gap-0.5">
+        <span className="font-sans text-body-sm font-bold text-ink">{t.neighbor.title}</span>
+        <span className="font-sans text-note leading-relaxed text-body">{t.neighbor.body}</span>
+      </div>
+      {/* Mobilde de çizilir — yardım şeridinden farkı bu: orada düğme bir "yakında"dır (tasarım),
+          burada bloğun TEK işlevi paylaşmak; düğmesiz bir davet şeridi hiçbir şey yapmaz. */}
+      <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share()}>
+        {copied ? t.neighbor.copied : t.neighbor.cta}
+      </Button>
     </div>
   );
 }

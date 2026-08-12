@@ -97,6 +97,11 @@ create table public.order (
   -- aynı zamanda SNAPSHOT'tır — sonradan bölge sınırı değişse sipariş bozulmaz.
   delivery_zone_id uuid,
   delivery_date date,                                -- rota günü; kargoda null
+  -- Bu sipariş bir KOMŞU DAVETİNDEN mi geldi (17.10). Künye alanı: davetin ödülü buradan doğar ve
+  -- davetin kaç kez kullanıldığı bu kolondan SAYILIR — davet satırında azalan bir sayaç yok, çünkü
+  -- sipariş iptal olunca sayacın da geri alınması gerekirdi ve biri mutlaka unuturdu.
+  -- FK YOK: `neighbor_invite` tablosu 0044'te açılıyor (`delivery_zone_id` ile birebir aynı desen).
+  neighbor_invite_id uuid,
   address_id uuid references public.address (id) on delete set null,
   -- Adresin sipariş anındaki kopyası: adres sonradan düzeltilse bile sipariş neyi nereye gönderdiğini bilir.
   address_snapshot jsonb,

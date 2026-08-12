@@ -203,6 +203,50 @@ Teslim sonrası (~10 gün) swipe/yorum daveti; tamamlayınca ödül kuponu (bkz.
 
 **Yarıda bırakma ayrı alan istemez:** "2/5" ilerlemesi tamamlanmış değerlendirmelerden türetilir (siparişin kalemleri ↔ o kalemler için düşmüş beğeni/yorum). `completed_at` yalnız akışın sonuna basılır ve puanın **tek kez** verilmesini o sağlar.
 
+## NeighborInvite (komşu daveti)
+
+Rota-içi siparişi olan müşterinin komşusunu **aynı sefere** çağırdığı bağlantı (17.10, migration 0044). Getiren davetinden (`user_profiles.referred_by`) AYRI bir kavram: o **hesapsız birini müşteri yapmayı** ödüllendirir ve kimlik eksenlidir; bu **var olan bir sefere ikinci sipariş eklemeyi** ödüllendirir ve sefer eksenlidir. Davet edilen kişi zaten müşterimiz olabilir (kullanıcı kararı 11.08).
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| token | text | **unique** — bağlantının anahtarı; sipariş referansıyla aynı okunabilir alfabe, CSPRNG |
+| inviter_id | uuid | daveti açan müşteri (`restrict` — kazanılmış ödülün kaynağı) |
+| order_id | uuid | **unique** — davetin doğduğu sipariş; "hangi sefer" sorusunun kaynağı |
+| delivery_zone_id | uuid | seferin bölgesi |
+| delivery_date | date | sefer günü |
+| max_uses | int | kaç komşu kullanabilir (varsayılan 3, 1–20) |
+| created_at | timestamptz | |
+
+**Sefer ayrı bir varlık DEĞİL:** rota günü zaten `(delivery_zone_id, delivery_date)` ikilisiyle tanımlı (`order` + `delivery_zone`) ve kurye ekranı da siparişleri bu ikiliyle topluyor. Ayrı bir `trip` tablosu, bugün türetilen bir gerçeği saklamak ve iki kaynağın bir gün ayrışmasını göze almak olurdu.
+
+**İkili KOPYALANIYOR ve bu bilinçli bir snapshot istisnası:** siparişin bölgesi ya da günü operasyonda değişebilir, oysa komşuya SÖZ VERİLEN gün davetin doğduğu gündür. Canlı bağ olsaydı, komşunun tıkladığı bağlantı ertesi gün başka bir günü gösterirdi — ve kimse fark etmezdi.
+
+**Kullanım sayılmaz, türetilir:** azalan bir sayaç yok; kullanım o daveti künyesinde taşıyan siparişlerdir (`order.neighbor_invite_id`, iptaller elenir). Sayaç tutulsaydı iptal edilen siparişte elle geri alınması gerekirdi ve biri mutlaka unuturdu — defterin ve para hareketlerinin aynı kuralı.
+
+**Güncelleme yolu yok:** davet doğduğu andaki seferin fotoğrafıdır. Günü ya da sınırı sonradan değiştirilebilseydi, paylaşılmış bir bağlantının sözü sahibinin haberi olmadan değişirdi. Yanlış açılmış davet düzeltilmez — süresi geçer ya da yenisi açılır.
+
+**Geçerlilik saklanmaz, hesaplanır:** davet, seferin gününe ve **kesim saatine** bakılarak açık/kapalı sayılır (`deliveryRunWindow`, `order_cutoff_time` ayarı). `expires_at` kolonu bilerek yok — kesim saati ayarlanabilir bir değer ve saklanan bir son kullanma anı, ayar değiştiği gün yalan söylerdi.
+
+## NeighborInviteClaim (kabul edilmiş komşu daveti)
+
+Davetin **kişiye yapıştığı** yer (kullanıcı sorusu 12.08: *"web'de hesap açsın, gezsin, sonra uygulamayı yüklesin — sepete geldiğinde daveti görebilmeli"*). Çerez yalnız kimliği olmayan ziyaretçinin köprüsüdür; kimlik doğduğu an kabul buraya geçer.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| invite_id | uuid | hangi davet (`NeighborInvite`) |
+| customer_id | uuid | kabul eden müşteri |
+| created_at | timestamptz | |
+
+**Tekillik `(invite_id, customer_id)`:** aynı kişi aynı daveti bir kez kabul eder; ikinci tıklama yeni satır açmaz.
+
+**Neden profilde bir kolon değil:** getiren daveti (`referred_by`) ömürde bir kezdir; komşu daveti bir SEFERE bağlıdır, tekrarlanır ve **aynı kişiyi iki komşusu iki ayrı sefere çağırabilir**. Tek kolon o hâlde veri kaybettirir.
+
+**Durum kolonu YOK — "bekliyor" türetilir:** o daveti künyesinde taşıyan (iptal olmayan) sipariş yoksa ve seferin penceresi hâlâ açıksa. İkisi de zaten başka yerde ölçülüyor; üçüncü bir damga, iptal edilen siparişte elle geri alınacak bir durum daha demekti.
+
+**Satır silinmez:** kabul olmuş bir olaydır ve "kaç davet kabul edildi, kaçı siparişe döndü" sorusunun tek kaynağıdır. Hesap silinirse `cascade` ile düşer (kişisel veri, 0037).
+
 ## PointsEntry (puan hareketi)
 
 Oyunlaştırma/sadakat: müşteri aksiyonları puan kazandırır, biriken puan kişisel kupona çevrilir. Ledger; bakiye **türetilir** (Σ points).
@@ -212,7 +256,7 @@ Oyunlaştırma/sadakat: müşteri aksiyonları puan kazandırır, biriken puan k
 | id | uuid | |
 | customer_id | uuid | |
 | points | int | +kazanım / −harcama (delta) |
-| reason | enum(`review`,`feedback_purchase`,`feedback_candidate`,`order`,`referral`,`redemption`,`manual`) | bağlam adları `ProductFeedback.context` ile **hizalı** — aynı olayı iki sözlükle adlandırmamak için |
+| reason | enum(`review`,`feedback_purchase`,`feedback_candidate`,`order`,`referral`,`neighbor`,`visit`,`redemption`,`manual`) | bağlam adları `ProductFeedback.context` ile **hizalı** — aynı olayı iki sözlükle adlandırmamak için |
 | ref_id | uuid \| null | ilgili kayıt (review/order/discount…) |
 | note | text \| null | serbest sebep — **yalnız `manual`'da**: "gecikme telafisi — jest" |
 | created_by | uuid \| null | elle girişte personel; sistemin verdiği puanda boş |
@@ -223,6 +267,8 @@ Puan bakiyesi = Σ `points` (saklanmaz, türetilir). Kupona çevirme: `redemptio
 **Elle düzeltme iz bırakır:** operasyon ekranı "± puan + sebep" ister; sebep yazılmadan kayıt olmaz. `reason` neden verildiğinin **sınıfıdır**, `note` o tek olayın hikâyesidir — ikisi ayrı sorular, biri diğerinin yerini tutmaz.
 
 **İstismar tavanı defterin kendisinde:** "aynı ürüne bir kez" kuralı `(customer_id, reason, ref_id)` üzerinde kısmi unique indeksle durur — uygulama katmanı unutsa bile ikinci puan yazılamaz. Günlük tavan sayımla bakılır (aynı gün, aynı sebep).
+
+**İki davet, iki sebep ve ikisi AYNI turda doğabilir** (17.10): hesapsız bir komşu, komşu bağlantısından gelip kaydolur ve sipariş verirse davet eden hem `referral` (bir müşteri kazandırdı) hem `neighbor` (bir sefere sipariş ekletti) kazanır. Çift ödeme değildir — iki farklı şey oldu. Kaynakları da ayrı: `referral`ın `ref_id`si yeni MÜŞTERİ, `neighbor`ınki komşunun SİPARİŞİ.
 
 ## Ticket (müşteri talebi / şikâyet)
 

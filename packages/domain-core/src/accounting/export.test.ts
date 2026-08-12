@@ -29,6 +29,7 @@ const BASE_SALE: OrderSale = {
   deliveryType: 'route',
   deliveryZoneId: null,
   deliveryDate: null,
+  neighborInviteId: null,
   addressId: null,
   addressSnapshot: null,
   courierId: null,

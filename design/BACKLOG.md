@@ -415,6 +415,23 @@ uydurulmadı, en yakın karşılıkla kuruldu ve buraya yazıldı — çizim gel
 
 ---
 
+### Sipariş Alındı — "komşunu bu sefere çağır" şeridi geçici gramerde (12.08, 17.10)
+
+`Musteri - Checkout.dc.html`ın "Sipariş Alındı" karesi üç blok tanımlıyor: teslimat/ödeme kartları,
+zaman çizgisi ve **yardım şeridi**. Komşu daveti bu kareden sonra doğdu (kullanıcı kararı 11.08) ve
+onay sayfası davetin **tek doğal yeri**: müşteri teslimat gününü orada okuyor, "aynı güne komşunu da
+çağır" cümlesi tam o anda anlamlı — hesapta ya da sipariş detayında sorulsa geç kalırdı.
+
+Çizim olmadığı için **yeni bir blok dili icat edilmedi** (`CLAUDE.md §3`): `NeighborBand`,
+`HelpBand`in kutusunu (`rounded-card bg-cream-deep`), boşluklarını ve tipografisini birebir
+kullanıyor; eklenen tek şey içerik ve çalışan bir düğme. Yardım şeridinden bir farkı var ve bilinçli:
+orada mobilde düğme çizilmiyor (tasarımın kararı), burada çiziliyor — bloğun TEK işlevi paylaşmak,
+düğmesiz bir davet şeridi hiçbir şey yapmaz.
+
+Beklenen: Claude Design'ın bu şeridi kendi diliyle çizmesi. Şeridin taşıması gereken bilgi
+`design/pages/musteri-checkout.md`'ye yazıldı. Bağlantı yoksa (kargo siparişi · taslak · kesim saati
+dolmuş sefer) blok **hiç çizilmiyor** — boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
+
 ## 4. Tasarımı olmayan yüzeyler
 
 Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel karar var (üstteki

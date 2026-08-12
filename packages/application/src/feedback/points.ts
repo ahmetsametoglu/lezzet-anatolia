@@ -1,7 +1,14 @@
-import { OrderService, PointsBalanceService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
-import { POINTS_SETTING_KEYS, canEarnPoints, feedbackPointsReason, type EarnablePointsReason } from '@lezzet/domain-core';
+import {
+  NeighborInviteService,
+  OrderService,
+  PointsBalanceService,
+  PointsEntryService,
+  SettingsService,
+  UserProfileService,
+} from '@lezzet/database';
+import { CAPPED_POINTS_REASONS, POINTS_SETTING_KEYS, canEarnPoints, feedbackPointsReason, type EarnablePointsReason } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { KeysetCursor, PointsBalance, PointsEntry, ProductFeedback } from '@lezzet/types';
+import type { KeysetCursor, Order, PointsBalance, PointsEntry, ProductFeedback } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
@@ -32,12 +39,28 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * okuması) ve iki literal bir gün ayrışırdı: ekran müşteriye sistemin vermeyeceği bir sayı
  * söylerdi (hesap kartındaki 300/500 eşik ayrışmasının aynısı — 29.07 denetimi).
  */
-const POINTS_DEFAULTS: Record<EarnablePointsReason, number> = {
+export const POINTS_DEFAULTS: Record<EarnablePointsReason, number> = {
   review: 20,
   feedback_purchase: 5,
   feedback_candidate: 2,
   order: 10,
-  referral: 50,
+  /**
+   * ── DEĞER MERDİVENİ: 500 / 100 (kullanıcı kararı 11.08) ────────────────────
+   * Değerler `docs/uygulama/BACKLOG-musteri.md §2f`de yazılı ve buradaki varsayılanlar onunla
+   * hizalı olmak zorunda: ayar satırı hiç yazılmamışsa geçerli olan sayı burasıdır, yani ayrışma
+   * "kullanıcının kararı hiç uygulanmamış" demektir.
+   *
+   * **Oran bilinçli beş kat:** kalıcı bir müşteri kazandırmak, bir seferi doldurmaktan değerli —
+   * birincisi yıllarca alışveriş yapar, ikincisi tek seferlik bir verim kazancıdır. 500 aynı
+   * zamanda çevirme eşiğinin (`points_redeem_min`) tamıdır: hesap ekranının zaten verdiği "size de
+   * 5 € kupon" sözünü GERÇEK yapıyor. 100 ise üç komşuda 300 eder, yani *"üç komşu çağır, kuponu
+   * al"* denemez — metin sayıyı söyler, vaat uydurmaz.
+   *
+   * **İkisi de günlük tavanın DIŞINDADIR** (`CAPPED_POINTS_REASONS`) ve bu şart: tavan 100'de ve
+   * kısmi uygulanmıyor, yani kural olmasaydı 500 puanlık ödül hiçbir zaman yazılamazdı.
+   */
+  referral: 500,
+  neighbor: 100,
   visit: 10,
 };
 
@@ -52,17 +75,18 @@ export function feedbackCompletionPoints(db: SupabaseClient): Promise<number> {
 /** Puan ayarları tek turda — her aksiyonda ayar başına ayrı sorgu atmamak için. */
 async function pointsSettings(db: SupabaseClient): Promise<{ values: Record<string, number>; dailyCap: number }> {
   const settings = new SettingsService(db);
-  const [review, purchase, candidate, order, referral, visit, dailyCap] = await Promise.all([
+  const [review, purchase, candidate, order, referral, neighbor, visit, dailyCap] = await Promise.all([
     settings.getNumber(POINTS_SETTING_KEYS.review, POINTS_DEFAULTS.review),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_purchase, POINTS_DEFAULTS.feedback_purchase),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_candidate, POINTS_DEFAULTS.feedback_candidate),
     settings.getNumber(POINTS_SETTING_KEYS.order, POINTS_DEFAULTS.order),
     settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
+    settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
     settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
     settings.getNumber('points_daily_cap', 100),
   ]);
   return {
-    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, visit },
+    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },
     dailyCap,
   };
 }
@@ -100,8 +124,10 @@ export async function awardPoints(
 
   const check = canEarnPoints({
     customerType: profile.type,
+    reason: input.reason,
     actionPoints: settings.values[input.reason] ?? 0,
-    earnedToday: await entries.earnedToday(input.customerId),
+    // Pencere YALNIZ tavana tabi sebepleri sayar (kullanıcı onayı 11.08 — `CAPPED_POINTS_REASONS`).
+    earnedToday: await entries.earnedToday(input.customerId, CAPPED_POINTS_REASONS),
     dailyCap: settings.dailyCap,
   });
   // B2B, tavan ya da değersiz aksiyon — hiçbiri asıl işlemi durdurmaz.
@@ -174,7 +200,30 @@ export async function awardReferralPoints(db: SupabaseClient, newCustomerId: str
 export async function rewardReferralOnPaidOrder(db: SupabaseClient, orderId: string): Promise<void> {
   const order = await new OrderService(db).getById(orderId);
   if (!order) return;
-  await awardReferralPoints(db, order.customerId);
+  await Promise.all([awardReferralPoints(db, order.customerId), awardNeighborPoints(db, order)]);
+}
+
+/**
+ * **Komşu davetinin ödülü** (17.10) — davet EDENE, davet edilenin siparişinin parası alınınca.
+ *
+ * Getiren ödülüyle AYNI anda ve aynı kapıdan yazılır ama iki ayrı sebeple, ve ikisi birlikte de
+ * doğabilir: hesapsız bir komşu davet bağlantısından gelip kaydolur ve sipariş verirse davet eden
+ * hem `referral` hem `neighbor` kazanır. Bu bir çift ödeme DEĞİL — iki farklı şey oldu: bir müşteri
+ * kazanıldı VE bir sefere ikinci sipariş eklendi.
+ *
+ * `refId` KOMŞUNUN SİPARİŞİDİR (davet değil): tekillik "aynı siparişten iki kez ödül yok" demeli.
+ * Davet kimliği kaynak olsaydı, o davetten gelen İKİNCİ komşu hiç ödül doğurmazdı — oysa davetin
+ * sınırı `maxUses` ve o sınır kullanım anında uygulanıyor (`attachNeighborInvite`).
+ *
+ * **Kendi davetini kullanmak burada da elenir** ve bu ikinci kapıdır: birincisi bağlama anındadır
+ * (`attachNeighborInvite`). İkisi de gerekli çünkü sipariş oraya uğramadan da künye taşıyabilir
+ * (operasyon elle yazarsa) — ve o hâlde müşteri kendi kendine puan basardı.
+ */
+async function awardNeighborPoints(db: SupabaseClient, order: Order): Promise<PointsEntry | null> {
+  if (!order.neighborInviteId) return null;
+  const invite = await new NeighborInviteService(db).getById(order.neighborInviteId);
+  if (!invite || invite.inviterId === order.customerId) return null;
+  return awardPoints(db, { customerId: invite.inviterId, reason: 'neighbor', refId: order.id });
 }
 
 /**

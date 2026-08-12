@@ -43,6 +43,8 @@ export * from './conversation.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
 export * from './feedback-request.schema';
+// Komşu daveti (17.10) — davetin İKİNCİ türü: kimliğe değil SEFERE bağlıdır (gerekçe dosyada).
+export * from './neighbor-invite.schema';
 export * from './error-log.schema';
 export * from './system-health.schema';
 export * from './analytics.schema';

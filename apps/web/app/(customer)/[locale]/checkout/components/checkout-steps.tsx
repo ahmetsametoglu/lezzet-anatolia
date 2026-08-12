@@ -355,6 +355,18 @@ export function DeliveryStep(props: CheckoutViewProps) {
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.delivery.blocked}</p>
       )}
 
+      {/* **Komşu daveti — günün ÜSTÜNDE** (17.10, kullanıcı vurgusu 12.08: *"bunun kaybolmaması
+          lazım"*). Seçimin altında dursaydı davetli önce günü seçer, sonra neden o günü seçtiğini
+          okurdu. Cümle davet edenin YALNIZ adını taşır; gün zaten aşağıda önseçili geliyor. */}
+      {inRoute && !delivery.blocked && delivery.neighborInvite && (
+        <p className="rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive-dark">
+          🚚{' '}
+          {t.delivery.neighborInvite
+            .replace('{name}', delivery.neighborInvite.inviterName)
+            .replace('{date}', formatDeliveryDate(delivery.neighborInvite.deliveryDate, locale))}
+        </p>
+      )}
+
       {/* Kargoda gün SEÇİLMEZ: tarih taşıyıcıya bağlı, söz vermiyoruz (DOMAIN §6). */}
       {inRoute && !delivery.blocked && (
         delivery.requiresDateChoice ? (

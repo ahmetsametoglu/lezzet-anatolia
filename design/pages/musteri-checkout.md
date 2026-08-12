@@ -39,10 +39,36 @@ Müşterinin kimliğini, adresini, teslimat gününü ve ödeme yolunu netleşti
 - **Alman B2B (geçerli vergi no)** — KDV'siz fiyatlandırma otomatik uygulanır; müşteri yalnız doğru toplamı görür
 - Üç dil
 
+## 4b. Sipariş alındı ekranı — komşu daveti şeridi (12.08, 17.10)
+
+Onay ekranının blokları (kutlama · teslimat · ödeme · zaman çizgisi · yardım şeridi · özet) çizimde
+var. Bunlara **bir şerit daha** ekleniyor ve buranın seçilmesi tesadüf değil: müşteri teslimat
+gününü tam o anda okuyor — "aynı güne komşunu da çağır" cümlesi ancak orada anlamlı. Hesap
+sayfasında ya da sipariş detayında sorulsa geç kalırdı.
+
+- **Hangi bilgi:** kısa bir başlık ("komşunuzu bu teslimata çağırın"), bir cümlelik gerekçe (aynı
+  gün, aynı araç, birlikte teslim; davet edene puan) ve **paylaşılabilir bir bağlantı** — tek eylem.
+- **Hangi amaçla:** aynı durakta ikinci bir sipariş, teslimatın maliyetini bölüyor. Müşteriye
+  söylenen şey bu değil (o işletmenin muhasebesi); müşteriye söylenen şey komşusuyla **aynı gün**
+  teslim alacağı ve puan kazanacağı.
+- **Ne YAZILMAZ:** indirim ya da ücretsiz teslimat vaadi — rota içi teslimat zaten ücretsiz, bölünecek
+  bir ücret yok. "Sefer", "rota", "kesim saati" gibi iç terimler de geçmez (§6'nın kuralı); gün
+  müşterinin okuduğu biçimde yazılır ("Perşembe, 14 Ağustos").
+- **Kaç komşu çağrılabildiği yazılmaz:** sınır vardır (varsayılan 3) ama onu ekranda saymak, daveti
+  bir kotaya çevirir. Sınır dolduğunda bağlantının kendi karşılama sayfası bunu söyler.
+- **Blok KOŞULLU:** bağlantı yoksa hiç çizilmez — kargo siparişinde (sefer diye bir şey yok), sipariş
+  henüz kesinleşmemişken ve seferin kesim saati dolmuşken. Boş bir şerit, çalışmayan bir düğmedir.
+- **Bağlantının indiği sayfa ayrı bir yüzeydir** (`/neighbor/[token]`) ve envanteri kendi
+  dosyasında değil, burada özetlenir: davet edenin **yalnız adı**, teslimat günü ve tek bir eylem
+  ("bu sefere sipariş ver"). Adres, sipariş içeriği, tutar hiçbiri geçmez — komşu daveti bir
+  teslimat gününü paylaşır, bir siparişi değil.
+
 ## 5. Akış bağlantıları
 
 Gelinen: sepet; giriş sayfasından dönüş.
 Gidilen: online ödeme sayfası → sipariş onay/teşekkür; sipariş detay; sepet (geri).
+Komşu davetinden gelen ziyaretçi: davet karşılaması → sepet/katalog → aynı checkout (davet belirteci
+çerezde taşınır; teslimat günü doğal olarak o sefere düşer).
 
 ## 6. Yapmaması gerekenler
 

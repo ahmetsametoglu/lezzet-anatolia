@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findZoneForPostalCode, isInRoute, upcomingDeliveryDates } from './delivery-days';
+import { deliveryRunWindow, findZoneForPostalCode, isInRoute, upcomingDeliveryDates } from './delivery-days';
 
 // Posta kodu artık (ülke, kod) ikilisi (DOMAIN §17): `67000` iki ülkede de geçerli.
 const fr = (postalCode: string) => ({ country: 'FR' as const, postalCode });
@@ -81,5 +81,44 @@ describe('teslimat günleri ve kesim saati', () => {
   it('Pazar (ISO 7) doğru eşleşir — 0/7 karışıklığı yok', () => {
     const cumartesi = new Date(2026, 7, 1, 9, 0); // 2026-08-01 Cumartesi
     expect(upcomingDeliveryDates({ weekdays: [7], now: cumartesi, count: 1 })[0]).toBe('2026-08-02'); // Pazar
+  });
+});
+
+/**
+ * **Sefer hâlâ sipariş kabul ediyor mu** (17.10 — komşu daveti).
+ *
+ * Ayrı bir kural DEĞİL, yukarıdaki kesim kuralının tekil hâli; testler bunu ÇİVİLİYOR: `deliveryRunWindow`
+ * ile `upcomingDeliveryDates` ayrışırsa davet müşteriye "bu sefere yetişirsin" der ama checkout o
+ * günü listesinde hiç göstermez — ve fark yalnız kesim saati civarında görünür, yani neredeyse
+ * hiç fark edilmez.
+ */
+describe('sefer penceresi (komşu daveti)', () => {
+  const saliSabah = new Date(2026, 6, 28, 9, 0); // 2026-07-28 Salı 09:00, kesim 16:00
+
+  it('gelecek günün seferi açıktır', () => {
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-31', now: saliSabah, cutoffTime: '16:00' })).toBe('open');
+  });
+
+  it('BUGÜNÜN seferi kesim saatinden önce açık, sonra kapalı', () => {
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: saliSabah, cutoffTime: '16:00' })).toBe('open');
+    const saliAksam = new Date(2026, 6, 28, 17, 0);
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: saliAksam, cutoffTime: '16:00' })).toBe('cutoff_passed');
+  });
+
+  it('tam kesim saatinde kapalıdır — `upcomingDeliveryDates` ile AYNI sınır', () => {
+    const tamKesim = new Date(2026, 6, 28, 16, 0);
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: tamKesim, cutoffTime: '16:00' })).toBe('cutoff_passed');
+    // Aynı an, aynı gün: tarih listesi de bugünü atlıyor. İki kuralın tek olduğunun kanıtı.
+    expect(upcomingDeliveryDates({ weekdays: [2], now: tamKesim, cutoffTime: '16:00' })[0]).not.toBe('2026-07-28');
+  });
+
+  it('geçmiş gün `past` — "geç kaldın" ile "o gün geçti" ayrı cümlelerdir', () => {
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-27', now: saliSabah, cutoffTime: '16:00' })).toBe('past');
+  });
+
+  it('bozuk/eksik kesim saati pencereyi KİLİTLEMEZ — bugün açık kalır', () => {
+    const saliAksam = new Date(2026, 6, 28, 17, 0);
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: saliAksam, cutoffTime: 'bozuk' })).toBe('open');
+    expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: saliAksam })).toBe('open');
   });
 });

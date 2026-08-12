@@ -29,6 +29,8 @@ const PRIVATE_ROUTES: AppRoute[] = [
   // davet bağlantısı, sahibinin adını arama sonucuna taşır. Sayfanın arama trafiğinden de
   // beklentisi yok: tek giriş yolu paylaşılan bağlantı.
   '/invite/[code]',
+  // Komşu daveti (17.10): belirteç başkasının künyesi, sayfanın arama trafiğinden beklentisi yok.
+  '/neighbor/[token]',
 ];
 
 export default function robots(): MetadataRoute.Robots {

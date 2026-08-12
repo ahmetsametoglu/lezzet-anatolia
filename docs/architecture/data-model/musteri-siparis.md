@@ -114,6 +114,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | delivery_type | enum(`route`,`shipping`) | rota içi / kargo |
 | delivery_zone_id | uuid \| null | rota-içi ise hangi bölge (bkz. `DeliveryZone`) |
 | delivery_date | date \| null | seçilen/atanan rota günü; kargoda null |
+| neighbor_invite_id | uuid \| null | bu sipariş bir **komşu davetinden** mi geldi (17.10) — künye; davetin ödülü buradan doğar ve davetin kullanımı bu kolondan **sayılır** (davet satırında sayaç yok) |
 | address_id | uuid \| null | teslimat adresi; hızlı satışta null |
 | address_snapshot | jsonb \| null | sipariş anında adresin kopyası — adres sonradan değişse de sipariş bozulmaz (zone editable olduğu için `delivery_zone_id` de snapshot'tır) |
 | courier_id | uuid \| null | atanan kurye (rota teslimatı; atamada dolar) |

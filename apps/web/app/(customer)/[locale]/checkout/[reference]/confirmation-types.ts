@@ -85,6 +85,14 @@ export interface ConfirmationView {
   customerEmail: string;
   /** Adresin ANLIK GÖRÜNTÜSÜ: müşteri adresini sonradan düzenlerse bu sipariş nereye gittiğini unutmaz. */
   address: { label?: string; line1?: string; line2?: string; postalCode?: string; city?: string } | null;
+  /**
+   * Komşu davetinin paylaşılabilir adresi (17.10) — `null` ise bloğu HİÇ çizilmez.
+   *
+   * `null` üç meşru hâlde: kargo siparişi (sefer diye bir şey yok), sipariş henüz kesinleşmedi ya
+   * da seferin kesim saati doldu (çağırmanın anlamı kalmadı). Üçü de "bugün değil" der ve boş bir
+   * blok göstermek, müşteriye çalışmayan bir düğme sunmak olurdu.
+   */
+  neighborInviteUrl: string | null;
   lines: ConfirmationLine[];
 }
 

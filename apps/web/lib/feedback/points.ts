@@ -1,14 +1,12 @@
 import 'server-only';
-import { awardReferralPoints as awardReferralPointsFor } from '@lezzet/application';
-import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import {
-  POINTS_SETTING_KEYS,
-  canEarnPoints,
-  canRedeem,
-  feedbackPointsReason,
-  redemptionCode,
-  type EarnablePointsReason,
-} from '@lezzet/domain-core';
+  POINTS_DEFAULTS,
+  awardFeedbackPoints as awardFeedbackPointsFor,
+  awardPoints as awardPointsFor,
+  awardReferralPoints as awardReferralPointsFor,
+} from '@lezzet/application';
+import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import { POINTS_SETTING_KEYS, canRedeem, redemptionCode, type EarnablePointsReason } from '@lezzet/domain-core';
 import type { KeysetCursor, Page, PointsBalance, PointsEntry, ProductFeedback, RedemptionResult } from '@lezzet/types';
 
 /**
@@ -36,19 +34,23 @@ export async function pointsValueOf(reason: EarnablePointsReason): Promise<{ poi
 
 async function pointsSettings(): Promise<{ values: Record<string, number>; dailyCap: number; minimum: number; centValue: number }> {
   const settings = new SettingsService(serviceDb());
-  const [review, purchase, candidate, order, referral, visit, dailyCap, minimum, centValue] = await Promise.all([
-    settings.getNumber(POINTS_SETTING_KEYS.review, 20),
-    settings.getNumber(POINTS_SETTING_KEYS.feedback_purchase, 5),
-    settings.getNumber(POINTS_SETTING_KEYS.feedback_candidate, 2),
-    settings.getNumber(POINTS_SETTING_KEYS.order, 10),
-    settings.getNumber(POINTS_SETTING_KEYS.referral, 50),
-    settings.getNumber(POINTS_SETTING_KEYS.visit, 10),
+  // VARSAYILANLAR PAKETTEN (17.11): burada kendi tablosu vardı ve 11.08'in değer merdiveninden
+  // (getiren 500, komşu 100) habersizdi — ayar satırı yazılmamış bir kurulumda ekran 50 der, motor
+  // 500 yazardı. İki kopya bugün ayrışmıştı bile; 29.07 denetiminin kapattığı arıza sınıfının aynısı.
+  const [review, purchase, candidate, order, referral, neighbor, visit, dailyCap, minimum, centValue] = await Promise.all([
+    settings.getNumber(POINTS_SETTING_KEYS.review, POINTS_DEFAULTS.review),
+    settings.getNumber(POINTS_SETTING_KEYS.feedback_purchase, POINTS_DEFAULTS.feedback_purchase),
+    settings.getNumber(POINTS_SETTING_KEYS.feedback_candidate, POINTS_DEFAULTS.feedback_candidate),
+    settings.getNumber(POINTS_SETTING_KEYS.order, POINTS_DEFAULTS.order),
+    settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
+    settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
+    settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
     settings.getNumber('points_daily_cap', 100),
     settings.getNumber('points_redeem_min', 500),
     settings.getNumber('points_cent_value', 1),
   ]);
   return {
-    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, visit },
+    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },
     dailyCap,
     minimum,
     centValue,
@@ -56,70 +58,37 @@ async function pointsSettings(): Promise<{ values: Record<string, number>; daily
 }
 
 /**
- * Bir aksiyona puan yazar — **kazanamıyorsa sessizce geçer** (`null` döner).
+ * Bir aksiyona puan yazar — **KÖPRÜ** (17.11). Kural `@lezzet/application/feedback/points`ta.
  *
- * Aynı kaynaktan ikinci kez puan verilmez: defterdeki tekillik `(müşteri, sebep, kaynak)`
- * üzerinde ve veritabanı seviyesinde. Burada da bakılır ama o bir NEZAKET — asıl güvence indekste,
- * çünkü ikinci bir yazma yolu açıldığı gün buradaki kontrol atlanabilir.
+ * ── KOPYAYDI, ÖLÇÜMLE KÖPRÜYE DÖNDÜ ─────────────────────────────────────────
+ * Bu gövde 21.21'deki terfiden sonra da burada yazılı kalmaya devam etti: aynı beş adım (tekillik
+ * nezaketi → profil → motor → yazım → `23505` yutma) hem burada hem paketteydi. Bedeli 12.08'de
+ * ölçüldü ve **iki ayrı yerden birden** çıktı:
+ *
+ *   1. **Günlük tavan kuralı** (kullanıcı onayı 11.08: *parayla gelen ödüller tavanın dışındadır*)
+ *      pakete yazıldı, buraya yazılmadı. Web'in yazdığı ziyaret/geri bildirim puanları eski kuralla
+ *      koşmaya devam ederdi ve fark hiçbir yerde hata vermezdi.
+ *   2. **Değer merdiveni** (getiren 500, komşu 100) pakette güncellendi, buradaki tablo `50`de
+ *      kalmıştı — ekranın söylediği ile motorun yazdığı sayı ayrışırdı.
+ *
+ * `order-payment.ts`in 17.9'da yaşadığının aynısı. Kapı tek olunca ikisi de kendiliğinden düzeldi.
+ *
+ * **Köprü NEDEN duruyor:** `serviceDb()` enjeksiyonu — paket `db`yi çağırandan ister (test
+ * edilebilir olsun diye); web'in dört çağıranı (ziyaret · keşif · ürün geri bildirimi · davet) her
+ * seferinde onu yazmasın diye tek satırlık kapılar burada duruyor.
  */
-export async function awardPoints(input: {
-  customerId: string;
-  reason: EarnablePointsReason;
-  /**
-   * Kaynak satır. **Kaynaksız sebeplerde verilmez** (`SOURCELESS_POINTS_REASONS`) — ziyaretin
-   * işaret edeceği bir satır yok ve `ref_id`ye tarihten türetilmiş sentetik bir uuid yazmak, o
-   * kolonun sözleşmesini ("kaynak satır") okuyan herkesi yanıltırdı.
-   */
-  refId?: string;
-}): Promise<PointsEntry | null> {
-  const db = serviceDb();
-  const entries = new PointsEntryService(db);
-
-  // Tekillik iki AYRI indekste duruyor, çünkü iki ayrı soru: kaynaklı sebepte "bu satırdan zaten
-  // verildi mi" (`points_entry_source_key`), kaynaksızda "bugün zaten verildi mi"
-  // (`points_entry_visit_day`). Buradaki kontroller ikisinin de NEZAKETİ — asıl güvence veritabanında,
-  // çünkü ikinci bir yazma yolu açıldığı gün buradaki kontrol atlanabilir.
-  const zatenVar = input.refId
-    ? await entries.hasEntryFor(input.customerId, input.reason, input.refId)
-    : await entries.hasEntryOnBusinessDay(input.customerId, input.reason);
-  if (zatenVar) return null;
-
-  const [profile, settings] = await Promise.all([new UserProfileService(db).getById(input.customerId), pointsSettings()]);
-  if (!profile) return null;
-
-  const check = canEarnPoints({
-    customerType: profile.type,
-    actionPoints: settings.values[input.reason] ?? 0,
-    earnedToday: await entries.earnedToday(input.customerId),
-    dailyCap: settings.dailyCap,
-  });
-  // B2B, tavan ya da değersiz aksiyon — hiçbiri asıl işlemi durdurmaz.
-  if (!check.allowed) return null;
-
-  try {
-    return await entries.insert({ customerId: input.customerId, points: check.points, reason: input.reason, refId: input.refId });
-  } catch (error) {
-    // **Yarışta da sessiz.** Yukarıdaki `hasEntryFor` ile bu yazım arasında kilit yok: müşteri
-    // "Gönder"e iki kez basarsa iki istek de "puan yok" görür, biri yazar, öteki tekillik ihlaliyle
-    // (`23505`) düşer. Bu istisna yukarı çıksaydı yorum KAYDEDİLMİŞKEN ekrana hata gelirdi —
-    // dosyanın baştaki sözünün tam tersi. İkinci yazımın engellenmesi zaten doğru sonuçtur.
-    if ((error as { code?: string })?.code === '23505') return null;
-    throw error;
-  }
+export function awardPoints(input: { customerId: string; reason: EarnablePointsReason; refId?: string }): Promise<PointsEntry | null> {
+  return awardPointsFor(serviceDb(), input);
 }
 
 /**
  * Geri bildirim kaydına puan yazar — sebebi **içerikten** çözerek (metin varsa yorum puanı).
  *
- * Kimliksiz kayıt (ziyaretçi kaydırması) puan doğurmaz: ödülün sahibi yok.
+ * Kimliksiz kayıt (ziyaretçi kaydırması) puan doğurmaz: ödülün sahibi yok. Kural pakette;
+ * burası köprü.
  */
 export function awardFeedbackPoints(feedback: ProductFeedback): Promise<PointsEntry | null> {
-  if (!feedback.customerId) return Promise.resolve(null);
-  const reason = feedbackPointsReason({
-    context: feedback.context,
-    hasText: (feedback.comment?.trim().length ?? 0) > 0,
-  });
-  return awardPoints({ customerId: feedback.customerId, reason, refId: feedback.id });
+  return awardFeedbackPointsFor(serviceDb(), feedback);
 }
 
 /**

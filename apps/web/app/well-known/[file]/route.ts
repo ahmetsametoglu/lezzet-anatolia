@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { LOCALES, localizedPath } from '@lezzet/i18n';
 
 /**
  * **Mobil uygulama ilişkilendirme dosyaları** (17.9) — `/.well-known/apple-app-site-association`
@@ -30,13 +31,27 @@ const ANDROID_PACKAGE = process.env.MOBILE_ANDROID_PACKAGE;
 const ANDROID_FINGERPRINT = process.env.MOBILE_ANDROID_SHA256;
 
 /**
- * Uygulamanın karşılayacağı yollar. **Davet TEK BAŞINA değil**: derin bağlantı bir kez kurulunca
- * ürün ve sipariş sayfaları da uygulamada açılmalı, yoksa müşteri aynı markanın iki farklı
- * davranışını görür. Liste dile göre değil, `*` ile: yol tablosu üç dilde üç ayrı segment
- * üretiyor ve burada onları tek tek saymak, `PATHNAMES` değiştiğinde sessizce eskiyen dördüncü
- * bir kopya olurdu.
+ * Uygulamanın karşılayacağı yollar — **`PATHNAMES`ten TÜRETİLİR, elle sayılmaz.**
+ *
+ * İlk hâli üç segmenti tek tek yazıyordu (`parrainage` · `einladung` · `davet`, her biri joker
+ * arasında) ve komşu daveti eklendiğinde (17.10) bedeli anında ölçüldü: yeni rota kendi segmentlerini
+ * kullanıyor
+ * (`komsu` · `voisin` · `nachbarn`) ve **komşu bağlantısı uygulamayı hiç açmıyordu** — sessizce,
+ * çünkü açılmayan bir derin bağlantı tarayıcıda açılır ve kimse arıza sanmaz. (Mobil şerit aynı
+ * boşluğu kendi tarafında da gördü, defter A5.)
+ *
+ * Tablodan türetmek bu sınıfı tamamen kapatıyor: yarın dördüncü bir davet rotası eklenirse liste
+ * kendiliğinden büyür. `PATHNAMES` künyesinin kendi dersi de buydu — "iki kopyadan biri sessizce
+ * eskir ve giden bağlantı 404'e düşer".
+ *
+ * Dil öneki `*` ile geçiliyor (`/fr/…`, `/de/…`, `/tr/…`) ve parametre de öyle: işletim sistemi
+ * kalıp eşleştiriyor, somut değer bizi ilgilendirmiyor.
  */
-const DEEP_LINK_PATHS = ['*/parrainage/*', '*/einladung/*', '*/davet/*'];
+const DEEP_LINK_ROUTES = ['/invite/[code]', '/neighbor/[token]'] as const;
+
+const DEEP_LINK_PATHS = DEEP_LINK_ROUTES.flatMap((route) =>
+  LOCALES.map((locale) => `*${localizedPath(route, locale).replace(/\[[^\]]+\]$/, '*')}`),
+);
 
 function appleAssociation(appId: string): unknown {
   return {

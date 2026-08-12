@@ -86,3 +86,4 @@ export { ConversationService, MessageService, ConversationInboxService } from '.
 export { ProductFeedbackService, ProductRatingService } from './services/product-feedback.service';
 export { PointsEntryService, PointsBalanceService } from './services/points.service';
 export { FeedbackRequestService, FeedbackProgressService, FeedbackDueOrderService } from './services/feedback-request.service';
+export { NeighborInviteService, NeighborInviteClaimService } from './services/neighbor-invite.service';

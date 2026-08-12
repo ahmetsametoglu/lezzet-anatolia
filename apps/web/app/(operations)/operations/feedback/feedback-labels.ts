@@ -77,6 +77,9 @@ export const POINTS_REASON_LABELS: Record<PointsReason, string> = {
   feedback_candidate: 'keşifte kaydırdı',
   order: 'sipariş verdi',
   referral: 'yeni müşteri getirdi',
+  // İki davet, iki ayrı cümle — operatör "hangisi" diye sormamalı: getiren yeni bir MÜŞTERİ
+  // kazandırdı, komşu var olan bir SEFERE sipariş ekletti (17.10).
+  neighbor: 'komşusunu sefere çağırdı',
   visit: 'günlük ziyaret',
   redemption: 'kupona çevirdi',
   manual: 'elle düzeltme',
