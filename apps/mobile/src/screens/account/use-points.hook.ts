@@ -20,8 +20,10 @@ export function usePoints(enabled: boolean): {
   publish: (next: MePointsView) => void;
   /**
    * Yeniden okur ve BİTİNCE çözülür (21.29c) — adres kapısının aynı deseni. Bu ekranda özellikle
-   * gerekli: sipariş puanı TESLİMATTA yazılıyor (`rewardCompletedOrder`), yani bakiye ekran
-   * açıkken değişebiliyor ve müşterinin onu görmesinin tek yolu uygulamayı kapatıp açmaktı.
+   * gerekli: puan ekran AÇIKKEN yazılabiliyor (getiren ödülü, davet ettiği kişi siparişini
+   * ödediğinde — `application/order/payment.ts`) ve müşterinin onu görmesinin tek yolu uygulamayı
+   * kapatıp açmaktı. ~~Sipariş puanı~~ 11.08'de kaldırıldı (kullanıcı kararı); yenilemenin
+   * gerekçesi düşmedi, yalnız tetikleyeni değişti.
    */
   reload: () => Promise<void>;
 } {

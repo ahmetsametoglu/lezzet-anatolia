@@ -14,6 +14,7 @@ import { devLogin } from './dev-login';
 import { discover, discoverClaim } from './discover';
 import { feedback } from './feedback';
 import { home } from './home';
+import { invite } from './invite';
 import { orders } from './orders';
 import { packages } from './packages';
 import { payments } from './payments';
@@ -75,6 +76,12 @@ v1.route('/cart', cartView);
 // kimse hesap açmaya ikna olmaz (webde de ziyaretçiye açık). Başvurunun YAZIMI Bearer'ın
 // arkasında; maruziyet ve sınırı `b2b.ts` künyesinde.
 v1.route('/', b2bPublic);
+// Davet karşılaması da açık kümededir (21.43) ve gerekçesi geri bildirim davetininkiyle aynı
+// soydan: bağlantıyı açan kişi HENÜZ MÜŞTERİMİZ DEĞİL — davetin bütün amacı o. Bearer istemek,
+// hesap açsın diye çağırdığımız kişiden kapıda hesap istemek olurdu. Jeton VARSA yine de okunur
+// (keşif turunun `optionalCustomerId` zinciri): kimlik yalnız cevabı zenginleştirir, kapıyı
+// kapatmaz — kendi bağlantısını açan müşteri "bu senin bağlantın" cevabını alır.
+v1.route('/', invite);
 
 v1.use('*', bearerAuth);
 

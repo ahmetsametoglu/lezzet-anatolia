@@ -390,13 +390,18 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   kazanamıyor, aynı müşteri web'e girse kazanıyor — **aynı müşteri iki yüzeyde iki farklı kural.**
   MB-36'nın (iki yüzeyde iki fiyat) akrabası.
 
-- [ ] **MB-51 · Adres formu "67 ile başlayan posta kodları teslimat bölgemizdedir" diyor — YANLIŞ.**
+- [x] **MB-51 · Adres formu "67 ile başlayan posta kodları teslimat bölgemizdedir" diyor — YANLIŞ.**
   Ölçüldü 11.08 (cihaz + veritabanı): aktif bölgeler yalnız **67000 · 67100 · 67200 · 67300 ·
   67400 · 67540 · 67800**. Müşterinin kayıtlı adresi 67380 (Lingolsheim) ve ödeme ekranı aynı adres
   için *"Bu adres teslimat bölgemizin dışında"* diyor, kapıya teslim kapanıyor, 7,90 € kargo
   çıkıyor. Yani **iki ekran aynı adres için zıt şey söylüyor**; müşteri ücretsiz teslimat
-  bekleyerek adresini kaydediyor, ödemede kargo ücretiyle karşılaşıyor. Cümle ya bölge listesinden
-  kurulmalı ya sayı vermemeli.
+  bekleyerek adresini kaydediyor, ödemede kargo ücretiyle karşılaşıyor.
+  **KAPANDI (11.08) — cümle TÜMDEN KALDIRILDI.** Kullanıcı kararı: *"genellenmiş ve statik bir metin
+  istemiyoruz, böyle bir şey yazmaya gerek yok — zaten tüm posta kodlarının listesine kullanıcı
+  erişebiliyor."* Yerine yenisi yazılmadı; iki sebeple gerek de yok: kodların tam listesi teslimat
+  bölgeleri sayfasında duruyor, ve **girilen kodun durumunu onboarding zaten GERÇEK veriden
+  söylüyor** (`usePlaceResolution` → dört hâlin her biri kendi cümlesini alıyor). Yani doğru bilgi
+  zaten iki yerde var; kaldırılan şey yalnız uydurma genellemeydi.
 
 - [ ] **MB-52 · Keşif'ten kataloğa dönerken native çökme — BİR KEZ görüldü, ÜRETİLEMEDİ.**
   11.08: *"addViewAt: failed to insert view … child already has a parent"*. Aynı geçiş sonradan
@@ -404,7 +409,21 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   geliştirme yapısı — kod tazelemesinin yeniden bağlama hatası olması kuvvetle muhtemel. **Teori
   kurulmadı, kayıt tutuluyor:** üretim derlemesinde ya da ağaç sakinken tekrarlarsa gerçek arızadır.
 
-- [ ] **MB-53 · "Arkadaşını getir" zinciri ORTASINDAN KOPUK — bugün kimse davet puanı kazanamaz.**
+- [x] **MB-53 · "Arkadaşını getir" zinciri ORTASINDAN KOPUK — bugün kimse davet puanı kazanamaz.**
+
+  **KAPANDI (11.08 gecesi · iki şerit birlikte).** Sunucu yarısı web şeridinde (`17.9`): karşılama
+  sayfası `/[dil]/davet/[kod]`, `PATHNAMES`e davet rotası, `inviteUrl`, `linkReferrer`ın OTP
+  akışına girmesi, ilişkilendirme dosyaları, ve getiren ödülünün teslimattan **ödemeye** taşınması.
+  Cihaz yarısı bu şeritte (`21.43`): bağlantının uygulamada açılması (iOS `associatedDomains` +
+  Android `intentFilters` + `+native-intent` çevirisi), dört hâlli karşılama ekranı, kabul edilen
+  kodun cihazda saklanıp ilk girişte kayda bağlanması, ve kartın metni. **Artık paylaşılan şey kod
+  değil bağlantı** — aşağıdaki "ekran kodu paylaşıyor, arkadaş onu hiçbir yere yazamıyor" cümlesi
+  tarihe karıştı. Metnin üç yanlışı da düzeltildi: 5 € vaadi kalktı, ödülün gerçek anı yazıldı
+  (*"hesabını açıp ilk siparişinin ödemesini tamamladığında"*), sayı yazılmadı çünkü miktar ayardan
+  gelir. **Değer merdiveni (§2f: yeni müşteri 500) HENÜZ UYGULANMADI** — ayar hâlâ
+  `points_referral=50`; o, puan setinin kendi işidir ve mobil müşteri işlerinin sonuna bırakıldı.
+  Kalan tek açık MB-60'ta.
+
   Ölçüldü 11.08 (kod). Var olanlar: kod üretimi (`ensureCustomerReferralCode`, 8 hane), kodun
   profilde saklanması (`referral_code`), getirene 50 puan yazan motor (`awardReferralPoints`,
   yeni müşterinin ilk siparişi teslim edilince). **Olmayan:** kodu GİREBİLECEĞİ hiçbir alan —
@@ -593,11 +612,18 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   09.08) aynı iki maddeyi web için istiyor: (1) kartta "…'dan" eki, yalnız çok boylu üründe;
   (2) detay AYNI boyu seçili açsın. **Native yüzeyde de aynen geçerli** ve burada ölçüldü.
 
-- [ ] **MB-21 · Sepette asgari sepet uyarısı ekrandaki toplamla çelişiyor.** **Ölçüldü:** ekranda
-  `Toplam 3,80 €`, hemen altında `Asgari sepet 40,00 € — 33,20 € eksik`. Eksik, indirim ÖNCESİ ara
-  toplamdan (6,80) hesaplanıyor; müşteri 36,20 bekliyor. Değer uçtan geliyor
-  (`missingForMinBasketCents`), yani karar eşiğin hangi tutara bakacağı: ya cümle tabanını söylesin
-  ya eşik toplamdan hesaplansın.
+- [x] **MB-21 · Sepette asgari sepet uyarısı ekrandaki toplamla çelişiyor** → **KAPANDI (11.08).**
+  **Ölçüldü:** ekranda `Toplam 3,80 €`, hemen altında `Asgari sepet 40,00 € — 33,20 € eksik`. Eksik,
+  indirim ÖNCESİ ara toplamdan (6,80) hesaplanıyordu; müşteri 36,20 bekliyordu.
+  **KARAR (kullanıcı 11.08): eşik İNDİRİMSİZ toplam fiyata bakar.** Yani motor zaten doğru
+  çalışıyormuş — `read.ts` → `meets(subtotalCents - undeliverableSubtotalCents, …)`. Hesapta
+  değişiklik YOK; kusur cümlenin tabanını söylememesindeydi.
+  **Yapılan:** cümleye tabanı yazıldı — *"Asgari sepet {minimum} — **ara toplamınıza** {missing}
+  eksik"* (fr *au sous-total*, de *Ihrer Zwischensumme*). Müşteri hemen üstteki **Ara toplam**
+  satırına bakıp çıkarmayı kendi yapabiliyor; indirimlerin sayılmadığı da cümleden anlaşılıyor.
+  **Web'de aynı mantık geçerli** (kullanıcı: *"bu sepet eşik konusu web'de de aynı mantıkla
+  çalışmalı"*) — motor ortak olduğu için hesap zaten aynı; cümle için dosya açıldı:
+  `docs/talep/musteri-asgari-sepet-cumlesi.md`.
 
 - [ ] **MB-22 · Sepetteki indirimin kaynağı — İKİ AYRI SORUN, biri düzeltildi diye yazılmıştı.**
   **(a) Anonim kampanya — SEBEP ÖLÇÜLDÜ 11.08, kod hatası DEĞİL veri eksiği.** Sepette bazen
@@ -624,6 +650,16 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   görüldü: *"67000 STRASBOURG"* yerine yalnız *"67000"*. Yer adı ayrı bir uçtan çözülüyor
   (`usePlaceResolution`), yani çözüm gecikince ya da düşünce kod tek başına kalıyor olabilir —
   **teori, ölçülmedi.** MB-23 elenirken tek gerçek gözlem olarak ayrıldı.
+
+- [ ] **MB-60 · Google ile kaydolan davetlinin davet bağı KURULMUYOR — iki yüzeyde de.** Ölçüldü
+  11.08 (kod, `21.43` turunda). Davet kodu yalnız OTP doğrulamasının içinde okunuyor
+  (`packages/application/src/auth/otp.ts` → `verifyOtpCode`, yeni müşteride `linkReferrer`). Google
+  akışı Supabase'e doğrudan gidiyor: profil satırını auth trigger'ı açıyor ve o yoldan geçen hiçbir
+  yerde davet kodu sorulmuyor. Yani bağlantıya tıklayıp Google ile kaydolan davetli sessizce bağsız
+  kalır — hata vermez, getiren de puanını hiç almaz. **Web'de de aynı** (`otp-actions` ve misafir
+  checkout'u dışında okuyan yok), yani kapatılacak yer ortak kayıt yoludur; tek yüzeyde yamamak
+  ikinci bir sessiz boşluk açar. Ölçüt basit: "yeni müşteri kartı DOĞDUĞU an" nerede biliniyorsa
+  bağ orada kurulmalı.
 
 - [ ] **MB-24 · Fiyat değişti bildirimi** (`DOMAIN §5`: fiyat arttıysa müşteriye söylenir ve onay
   istenir; düştüyse sessizce uygulanır) — `design/BACKLOG.md` §1'den devralındı. `CartItem.unitPrice`

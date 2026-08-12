@@ -62,3 +62,6 @@ export * from './checkout-api.schema';
 // Bildirim — tablo değil, müşteriye giden mesajın veri şekli; üç yer okur (şablon `packages/email`,
 // sürücü `packages/notify`, veriyi kuran uygulama kapısı).
 export * from './notification.schema';
+// Davet karşılaması — paylaşılan davet bağlantısı uygulamada açıldığında sorulan tek soru. Dört
+// hâl ayrık; getirenin YALNIZ adı geçer, kimlik alanları sözleşmede hiç yok (gerekçe dosyada).
+export * from './invite-api.schema';

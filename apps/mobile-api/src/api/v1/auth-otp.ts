@@ -16,7 +16,21 @@ import { fail, ok } from '../../lib/respond';
  * cihazın seçtiği dildir.
  */
 const RequestBodySchema = z.object({ email: z.string().min(1), locale: PreferredLanguageEnum });
-const VerifyBodySchema = z.object({ email: z.string().min(1), code: OtpCodeSchema, locale: PreferredLanguageEnum });
+const VerifyBodySchema = z.object({
+  email: z.string().min(1),
+  code: OtpCodeSchema,
+  locale: PreferredLanguageEnum,
+  /**
+   * Davet bağlantısından taşınan kod (21.43) — web'in çerezinin mobil karşılığı. Cihaz onu
+   * karşılama ekranında saklamıştır (`lib/invite/invite-store.ts`) ve doğrulama anında yollar.
+   *
+   * **Bozuk değer GİRİŞİ DÜŞÜRMEZ** (`.catch`): davet bir kolaylıktır, kimlik değil — eski bir
+   * sürümün yazdığı ya da bozulmuş bir kayıt yüzünden müşteriyi kapıda çevirmek, çözdüğünden
+   * büyük bir arıza olurdu. Geçersiz/kendine ait/geç kalmış kodun süzgeci zaten kapıda
+   * (`linkReferrer` üç hâli de sessizce reddeder ve gerekçesini log'a düşer).
+   */
+  referralCode: z.string().min(1).optional().catch(undefined),
+});
 
 /**
  * Gövde `safeParse`ten düşünce anahtar seçimi: `code` biçimsizse `invalid_code` (kullanıcının

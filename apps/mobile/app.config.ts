@@ -1,5 +1,5 @@
 import type { ExpoConfig } from 'expo/config';
-import { LOCALES } from '@lezzet/i18n';
+import { LOCALES, localizedPath } from '@lezzet/i18n';
 
 /*
   EXPO YAPILANDIRMASI — `app.json`ın yerine geçti (21.7).
@@ -15,6 +15,47 @@ import { LOCALES } from '@lezzet/i18n';
   DEĞER SAYISI DEĞİŞMEDİ: bu bir taşımadır, yeni bir yapılandırma kararı değil — `app.json`daki
   her alan buraya birebir geçti.
 */
+
+/*
+  DAVET BAĞLANTISININ SAHİPLENİLMESİ (21.43) — uygulamanın "bu adresler benim" beyanı.
+
+  Davet bağlantısı bir WEB adresidir (`https://…/fr/parrainage/AB12CD34`) ve uygulaması olmayan
+  davetli onu tarayıcıda açar. Uygulaması OLAN davetlide aynı adresin uygulamayı açması iki tarafın
+  el sıkışmasını gerektirir: burası uygulamanın beyanı, karşılığı alan adı kökünden servis edilen
+  ilişkilendirme dosyaları (`apps/web/app/well-known` — o dosya değerleri boşken 404 döner ve bu
+  bilinçli, künyesi orada).
+
+  ── ALAN ADI YOKSA BEYAN DA YOK ─────────────────────────────────────────────
+  Değer ortamdan gelir ve YERELDE BOŞTUR: `localhost` bir alan adı değildir, ilişkilendirilemez.
+  Uydurma bir alan adı yazmak daha kötüdür — işletim sistemi doğrulamayı bir kez yapar ve BAŞARISIZ
+  sonucu uzun süre önbelleğe alır; gerçek alan adı geldiğinde bağlantı hâlâ tarayıcıda açılır ve
+  sebebi bulunmayan bir arıza olur (CLAUDE §1: ölçülemeyen değer sıfır değildir — burada da
+  "bilinmeyen alan adı" boş bir alan adı değildir, beyanın hiç yazılmamasıdır).
+
+  ── YOLLAR TÜRETİLİYOR, YAZILMIYOR ──────────────────────────────────────────
+  Üç dilin davet segmenti `PATHNAMES`ten geliyor (`+native-intent.tsx` ile aynı kaynak ve aynı
+  gerekçe): elle yazılan bir liste, rota adı değiştiğinde sessizce eskir ve bağlantı bir gün
+  uygulamayı açmaz olur — hata da vermez.
+*/
+
+/** Beyan edilecek alan adı; boş/yerel/bozuk değerde `null` — o hâlde derin bağlantı yazılmaz. */
+function deepLinkHost(siteUrl: string | undefined): string | null {
+  if (!siteUrl) return null;
+  try {
+    const { hostname } = new URL(siteUrl);
+    return hostname === 'localhost' || hostname === '127.0.0.1' ? null : hostname;
+  } catch {
+    // Bozuk değer beyanı KURMAZ: yarım bir ilişkilendirme, hiç ilişkilendirmemekten kötüdür.
+    return null;
+  }
+}
+
+/** `/tr/davet` gibi — dil öneki + o dilin davet segmenti, sondaki eğik çizgi atılmış. */
+function invitePathPrefix(locale: (typeof LOCALES)[number]): string {
+  return `/${locale}${localizedPath('/invite/[code]', locale, { code: '' })}`.replace(/\/$/, '');
+}
+
+const deepLinkDomain = deepLinkHost(process.env.EXPO_PUBLIC_SITE_URL);
 
 const config: ExpoConfig = {
   name: 'Lezzet Anatolia',
@@ -34,6 +75,10 @@ const config: ExpoConfig = {
   */
   ios: {
     bundleIdentifier: 'com.lezzetanatolia.app',
+    /* Apple tarafında yol SÜZGECİ burada değil, `apple-app-site-association` dosyasındadır
+       (`paths` alanı); uygulama yalnız ALAN ADINI beyan eder. Android'in tersi — orada süzgeç
+       manifest'te durur (aşağıdaki `intentFilters`). */
+    ...(deepLinkDomain ? { associatedDomains: [`applinks:${deepLinkDomain}`] } : {}),
   },
   android: {
     package: 'com.lezzetanatolia.app',
@@ -67,6 +112,31 @@ const config: ExpoConfig = {
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    /*
+      `autoVerify` olmadan Android bağlantıyı "hangi uygulamayla açayım?" seçicisine düşürür —
+      davetliye, hiç görmediği bir uygulamayı kendi seçtirmek olurdu. Doğrulama `assetlinks.json`
+      üzerinden yapılır; dosya yoksa (bugünkü hâl) bağlantı sessizce tarayıcıda açılır ve akış
+      yine çalışır. `BROWSABLE` kategorisi şart: onsuz tarayıcıdan/mesajdan gelen tıklama filtreye
+      hiç uğramaz.
+
+      Üç dil TEK filtrede: aynı eylem, aynı alan adı, yalnız yol öneki farklı.
+    */
+    ...(deepLinkDomain
+      ? {
+          intentFilters: [
+            {
+              action: 'VIEW',
+              autoVerify: true,
+              data: LOCALES.map((locale) => ({
+                scheme: 'https',
+                host: deepLinkDomain,
+                pathPrefix: invitePathPrefix(locale),
+              })),
+              category: ['BROWSABLE', 'DEFAULT'],
+            },
+          ],
+        }
+      : {}),
   },
   plugins: [
     'expo-router',

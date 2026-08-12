@@ -113,9 +113,16 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
      native'de karşılığı SİSTEM paylaşım sayfasıdır ve ikisini de zaten içerir (üstelik müşterinin
      kendi seçtiği uygulamayı). Kendi çekmecemizi çizmek panoya kopyalama için ikinci bir paket
      (rebuild) isterdi ve sistemin seçeneklerini daraltırdı — sapma bilinçli. */
+  /* PAYLAŞILAN ŞEY KOD DEĞİL BAĞLANTIDIR (21.43). Eskiden mesaja çıplak kod yazılıyordu
+     ("Davet kodum: AB12CD34") ve o kodun girilebileceği bir yer HİÇBİR ekranda yoktu — davetli
+     kodu eline alıp yapacak bir şey bulamıyordu, zincir orada kopuyordu. Kullanıcı kararı 11.08:
+     *"kod göndermek gibi bir yöntem istemiyorum, her hâlükârda link gönderilsin"*.
+
+     ADRESİ EKRAN KURMAZ, SUNUCU VERİR (`wallet.inviteUrl`): rota adı üç dilde ayrı ve web'de
+     yaşıyor; burada birleştirilseydi bir gün 404'e düşen ikinci bir bağlantı taşırdık. */
   const shareReferral = () => {
-    if (data.referralCode === null) return;
-    void Share.share({ message: t.referral.shareMessage.replace('{code}', data.referralCode) });
+    if (wallet?.inviteUrl == null) return;
+    void Share.share({ message: t.referral.shareMessage.replace('{url}', wallet.inviteUrl) });
   };
 
   /* PUAN KAZANMA YOLLARI (kullanıcı kararı 09.08) — bakiye sıfırken kart boş kalmaz, kullanıcı
@@ -447,12 +454,18 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
           </View>
         )}
 
-        {data.referralCode === null ? null : (
+        {/* KOŞUL PROFİLDEN DEĞİL CÜZDANDAN OKUNUR (21.43): `data.referralCode` profil satırının HAM
+            aynasıdır ve boş olabilir — kart ise kodu GARANTİLER (yoksa üretir). Eskiden bu blok
+            profile bakıyordu, yani kodu henüz üretilmemiş müşteri davet bölümünü hiç görmüyordu.
+            Bağlantı da aynı yerden geliyor; ikisi tek koşulla düşer (sözleşmenin kendi kararı). */}
+        {wallet?.inviteUrl == null || wallet.referralCode === null ? null : (
           <View style={styles.pointsCard} testID="account-referral">
             <Text style={styles.cardTitle}>{t.referral.title}</Text>
             <Text style={styles.cardBody}>{t.referral.body}</Text>
             <View style={styles.referralRow}>
-              <Text style={styles.referralCode}>{data.referralCode}</Text>
+              {/* Kod GÖRÜNMEYE devam ediyor ama paylaşılan şey bağlantı: kod telefonda okunur/
+                  söylenir, bağlantı paylaşılır — ikisinin işi ayrı (sözleşmedeki aynı ayrım). */}
+              <Text style={styles.referralCode}>{wallet.referralCode}</Text>
               <SecondaryButton
                 label={t.referral.share}
                 onPress={shareReferral}

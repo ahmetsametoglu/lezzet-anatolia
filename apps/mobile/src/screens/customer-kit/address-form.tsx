@@ -2,7 +2,7 @@ import { addressLineOf } from '@lezzet/address-fr';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Note } from '@/components/ui/note';
@@ -301,7 +301,13 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
           testID="address-city-suggestions"
         />
       ) : null}
-      <Text style={styles.zipNote}>{t.zipNote}</Text>
+      {/* BÖLGE CÜMLESİ KALDIRILDI (kullanıcı kararı 11.08). Burada *"67 ile başlayan posta kodları
+          teslimat bölgemizdedir"* yazıyordu; **genellenmiş ve statik** olduğu için de yanlıştı —
+          ölçüldü: aktif bölgeler yalnız 67000 · 67100 · 67200 · 67300 · 67400 · 67540 · 67800.
+          Müşterinin kayıtlı 67380 adresi bu cümleye göre bölge içindeydi ama ödeme ekranı aynı
+          adrese "bölge dışı" diyordu; iki ekran zıt şey söylüyordu. Yerine yenisi YAZILMADI:
+          kullanıcı kararı — kodların tam listesine zaten erişilebiliyor (teslimat bölgeleri
+          sayfası), ve girilen kodun durumunu onboarding zaten GERÇEK veriden söylüyor. */}
       {error === null ? null : <Note description={error} tone="terracotta" testID="address-error" />}
       <PrimaryButton label={saving ? t.saving : (saveLabel ?? t.save)} onPress={save} disabled={saving} testID="address-save" />
       {editing === null ? null : (
@@ -324,11 +330,5 @@ const styles = StyleSheet.create((theme) => ({
   },
   zipField: { width: 120 },
   cityField: { flex: 1 },
-  zipNote: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text['body-sm'],
-    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
-    color: theme.colors.muted,
-  },
   deleteRow: { alignItems: 'center' },
 }));

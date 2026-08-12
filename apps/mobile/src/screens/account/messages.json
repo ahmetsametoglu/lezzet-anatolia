@@ -38,7 +38,7 @@
     "points": {
       "title": "Puanlarım",
       "value": "✦ {n}",
-      "body": "Sipariş, yorum ve keşif turlarıyla birikir. {threshold} puan = {value} indirim kuponu.",
+      "body": "Yorum, davet ve keşif turlarıyla birikir. {threshold} puan = {value} indirim kuponu.",
       "gap": "Kupona {n} puan kaldı.",
       "convert": "{threshold} puanı {value} kupona çevir",
       "couponValue": "{value} indirim",
@@ -50,7 +50,7 @@
       "earn": {
         "referral": {
           "title": "Arkadaşını davet et",
-          "body": "Kodunla ilk siparişini veren arkadaşın da kazanır.",
+          "body": "Bağlantını paylaş; davet ettiğin kişi ilk siparişini ödediğinde kazanırsın.",
           "cta": "Paylaş"
         },
         "review": {
@@ -67,11 +67,11 @@
       "earnPoints": "+{n} puan"
     },
     "referral": {
-      "title": "Arkadaşını getir, ikiniz de kazanın",
-      "body": "Kodunuzla ilk siparişini veren arkadaşınız 5 € indirim kazanır; teslimattan sonra size de 5 € kupon yüklenir.",
+      "title": "Arkadaşını getir",
+      "body": "Bağlantınızı paylaşın. Davet ettiğiniz kişi hesabını açıp ilk siparişinin ödemesini tamamladığında puanınız yazılır.",
       "share": "Paylaş",
-      "shareLabel": "Referans kodunu paylaş",
-      "shareMessage": "Lezzet Anatolia'da ev yapımı lezzetler! Davet kodum: {code} — ilk siparişinde indirim kazanırsın."
+      "shareLabel": "Davet bağlantısını paylaş",
+      "shareMessage": "Lezzet Anatolia'da ev yapımı Anadolu lezzetleri — soğuk zincirle kapına kadar. Davetim: {url}"
     },
     "menu": {
       "orders": "Siparişlerim",
@@ -163,7 +163,7 @@
     "points": {
       "title": "Mes points",
       "value": "✦ {n}",
-      "body": "Cumulés avec les commandes, les avis et les tours de découverte. {threshold} points = bon de {value}.",
+      "body": "Cumulés avec les avis, les parrainages et les tours de découverte. {threshold} points = bon de {value}.",
       "gap": "Encore {n} points pour un bon.",
       "convert": "Convertir {threshold} points en bon de {value}",
       "couponValue": "{value} de remise",
@@ -175,7 +175,7 @@
       "earn": {
         "referral": {
           "title": "Parrainez un ami",
-          "body": "Avec votre code, votre ami gagne aussi sur sa première commande.",
+          "body": "Partagez votre lien ; vous gagnez lorsque la personne invitée règle sa première commande.",
           "cta": "Partager"
         },
         "review": {
@@ -192,11 +192,11 @@
       "earnPoints": "+{n} points"
     },
     "referral": {
-      "title": "Parrainez, gagnez à deux",
-      "body": "Avec votre code, votre ami obtient 5 € de remise sur sa première commande ; après la livraison, vous recevez aussi un bon de 5 €.",
+      "title": "Parrainez un ami",
+      "body": "Partagez votre lien. Vos points sont crédités lorsque la personne invitée crée son compte et règle sa première commande.",
       "share": "Partager",
-      "shareLabel": "Partager le code de parrainage",
-      "shareMessage": "Des saveurs faites maison chez Lezzet Anatolia ! Mon code de parrainage : {code} — remise sur ta première commande."
+      "shareLabel": "Partager le lien d’invitation",
+      "shareMessage": "Des saveurs anatoliennes faites maison chez Lezzet Anatolia — livrées chez vous en chaîne du froid. Mon invitation : {url}"
     },
     "menu": {
       "orders": "Mes commandes",
@@ -288,7 +288,7 @@
     "points": {
       "title": "Meine Punkte",
       "value": "✦ {n}",
-      "body": "Gesammelt durch Bestellungen, Bewertungen und Entdeckungsrunden. {threshold} Punkte = Gutschein über {value}.",
+      "body": "Gesammelt durch Bewertungen, Empfehlungen und Entdeckungsrunden. {threshold} Punkte = Gutschein über {value}.",
       "gap": "Noch {n} Punkte bis zum Gutschein.",
       "convert": "{threshold} Punkte in {value}-Gutschein umwandeln",
       "couponValue": "{value} Rabatt",
@@ -300,7 +300,7 @@
       "earn": {
         "referral": {
           "title": "Freunde werben",
-          "body": "Mit Ihrem Code gewinnt auch Ihr Freund bei der ersten Bestellung.",
+          "body": "Teilen Sie Ihren Link; Sie gewinnen, sobald die eingeladene Person ihre erste Bestellung bezahlt.",
           "cta": "Teilen"
         },
         "review": {
@@ -317,11 +317,11 @@
       "earnPoints": "+{n} Punkte"
     },
     "referral": {
-      "title": "Freunde werben, beide gewinnen",
-      "body": "Mit Ihrem Code erhält Ihr Freund 5 € Rabatt auf die erste Bestellung; nach der Lieferung bekommen auch Sie einen 5-€-Gutschein.",
+      "title": "Freunde werben",
+      "body": "Teilen Sie Ihren Link. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto eröffnet und ihre erste Bestellung bezahlt.",
       "share": "Teilen",
-      "shareLabel": "Empfehlungscode teilen",
-      "shareMessage": "Hausgemachte Köstlichkeiten bei Lezzet Anatolia! Mein Empfehlungscode: {code} — Rabatt auf deine erste Bestellung."
+      "shareLabel": "Einladungslink teilen",
+      "shareMessage": "Hausgemachte anatolische Köstlichkeiten bei Lezzet Anatolia — per Kühlkette bis vor Ihre Tür. Meine Einladung: {url}"
     },
     "menu": {
       "orders": "Meine Bestellungen",

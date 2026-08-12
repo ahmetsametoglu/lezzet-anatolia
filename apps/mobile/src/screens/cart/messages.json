@@ -77,7 +77,7 @@
       "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.",
       "undeliverableNote": "Toplam sepetinizin tamamını gösterir; bu adrese gelemeyen kalemler siparişe girmez ve ödemeye eklenmez."
     },
-    "minimum": "Asgari sepet {minimum} — {missing} eksik",
+    "minimum": "Asgari sepet {minimum} — ara toplamınıza {missing} eksik",
     "blocked": "Devam etmek için tükenen ya da satışa kapanan kalemi sepetten çıkarın.",
     "unresolved": {
       "loading": "Sepetiniz getiriliyor",
@@ -173,7 +173,7 @@
       "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
       "undeliverableNote": "Le total reflète l'ensemble de votre panier ; les articles non livrables à cette adresse ne font pas partie de la commande et ne sont pas facturés."
     },
-    "minimum": "Panier minimum {minimum} — il manque {missing}",
+    "minimum": "Panier minimum {minimum} — il manque {missing} au sous-total",
     "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
     "unresolved": {
       "loading": "Chargement de votre panier",
@@ -269,7 +269,7 @@
       "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt.",
       "undeliverableNote": "Die Summe zeigt Ihren gesamten Warenkorb; nicht lieferbare Artikel gehören nicht zur Bestellung und werden nicht berechnet."
     },
-    "minimum": "Mindestbestellwert {minimum} — es fehlen {missing}",
+    "minimum": "Mindestbestellwert {minimum} — Ihrer Zwischensumme fehlen {missing}",
     "blocked": "Bitte entfernen Sie den ausverkauften oder nicht mehr verkäuflichen Artikel, um fortzufahren.",
     "unresolved": {
       "loading": "Ihr Warenkorb wird geladen",

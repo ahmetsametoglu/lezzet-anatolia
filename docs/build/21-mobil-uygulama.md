@@ -1906,6 +1906,99 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Kaydet düğmesi hepsi ekranda; alt nefes değişikliğinden sonra da aynı. Ekran görüntüleri alındı;
   **veritabanına yazılmadı** (Kaydet'e dokunulmadı).
 
+- [x] (21.42) **SEPET VE ADRESTE İKİ ÇELİŞKİ KAPANDI — biri cümlenin tabanını söylemesi, öteki
+  uydurma bir genellemenin kaldırılması (kullanıcı kararları 11.08).**
+  `touches:` `apps/mobile/src/screens/cart/messages.json` ·
+  `apps/mobile/src/screens/customer-kit/address-form.tsx` ·
+  `apps/mobile/src/screens/customer-kit/address-sheet-messages.json`
+
+  **1 · ASGARİ SEPET CÜMLESİ TABANINI SÖYLÜYOR (MB-21).** Cihazda ölçülmüştü: ekranda
+  `Toplam 3,80 €` yazarken altında `Asgari sepet 40,00 € — 33,20 € eksik` çıkıyordu; eksik indirim
+  ÖNCESİ ara toplamdan (6,80) hesaplanıyor, müşteri 36,20 bekliyordu.
+  **Kullanıcı kararı: eşik İNDİRİMSİZ toplam fiyata bakar** — yani motor zaten doğruymuş
+  (`packages/application/src/cart/read.ts` → `meets(subtotalCents - undeliverableSubtotalCents, …)`).
+  **Hesapta tek satır değişmedi**; kusur cümlenin hangi tutara baktığını söylememesiydi. Yeni metin:
+  *"Asgari sepet {minimum} — **ara toplamınıza** {missing} eksik"* (fr *au sous-total*, de *Ihrer
+  Zwischensumme*). Müşteri hemen üstteki **Ara toplam** satırını görüp çıkarmayı kendi yapıyor;
+  indirimlerin sayılmadığı da cümleden anlaşılıyor. Web'de aynı mantık geçerli, motor ortak olduğu
+  için hesap zaten aynı — cümle için `docs/talep/musteri-asgari-sepet-cumlesi.md` açıldı.
+
+  **2 · ADRES FORMUNDAKİ BÖLGE GENELLEMESİ KALDIRILDI (MB-51).** Form *"67 ile başlayan posta
+  kodları teslimat bölgemizdedir — kapıya ücretsiz teslim"* diyordu. **Ölçüldü (cihaz + veritabanı):
+  aktif bölgeler yalnız 67000 · 67100 · 67200 · 67300 · 67400 · 67540 · 67800.** Müşterinin kayıtlı
+  67380 adresi bu cümleye göre bölge içindeydi, ödeme ekranı ise aynı adrese *"teslimat bölgemizin
+  dışında"* deyip 7,90 € kargo çıkarıyordu — iki ekran zıt şey söylüyordu.
+  **Yerine yenisi YAZILMADI** (kullanıcı: *"genellenmiş ve statik bir metin istemiyoruz… zaten tüm
+  posta kodlarının listesine kullanıcı erişebiliyor"*). Doğru bilgi zaten iki yerde: teslimat
+  bölgeleri sayfasındaki tam liste, ve onboarding'in GERÇEK veriden kurduğu dört hâlli cümle
+  (`usePlaceResolution`). Kaldırılan yalnız uydurma genellemeydi. Sözlükten üç dilde silindi.
+
+  **Doğrulama:** mobil typecheck rc=0 · eslint (kullanılmayan `Text` importu da temizlendi) ·
+  `customer-kit` **24 test** + `cart` **9 test** yeşil.
+
+- [x] (21.43) **DAVET ZİNCİRİNİN MOBİL YARISI — bağlantı uygulamada açılıyor, kabul cihazda
+  saklanıyor, ilk girişte kayda bağlanıyor; hesap ekranındaki üç kat yanlış vaat kalktı.**
+  `touches:` `packages/types/src/contracts/{invite-api.schema.ts,index.ts}` ·
+  `apps/mobile-api/src/api/v1/{invite.ts,router.ts,auth-otp.ts}` ·
+  `apps/mobile/app.config.ts` · `apps/mobile/.env.example` ·
+  `apps/mobile/src/app/{+native-intent.tsx,invite/[code].tsx}` ·
+  `apps/mobile/src/screens/invite/*` · `apps/mobile/src/lib/invite/*` ·
+  `apps/mobile/src/lib/{auth/otp.ts,storage/device-store.ts}` ·
+  `apps/mobile/src/screens/account/{account-screen.tsx,messages.json,use-points.hook.ts}`
+
+  **BAĞLAM:** zincirin sunucu yarısını web şeridi kurdu (17.9 — karşılama sayfası, `/invite/[code]`
+  rotası, `inviteUrl`, `linkReferrer`ın OTP akışına girmesi, ilişkilendirme dosyaları, ve getiren
+  ödülünün teslimattan **ödemeye** taşınması). Bu satır o zincirin cihaz ucudur; ikisi birlikte
+  17.7'nin iki yıldır kopuk duran halkasını kapatıyor.
+
+  **1 · BAĞLANTI UYGULAMADA AÇILIYOR.** Davet bağlantısı bir web adresi
+  (`https://…/<dil>/davet/<kod>`) ve öyle kalması gerekiyor — uygulaması olmayan davetli onu
+  tarayıcıda açar. Uygulaması olanda açılabilmesi için üç parça yazıldı: `app.config.ts`e iOS
+  `associatedDomains` + Android `autoVerify`lı `intentFilters`, ve `+native-intent.tsx` — gelen
+  adresi (`/fr/parrainage/AB12CD34`) iç rotaya (`/invite/AB12CD34`) çeviren kanca. **Üç dilin
+  davet segmenti YAZILMADI, `PATHNAMES`ten türetiliyor** (`localizedPath`): elle yazılan liste,
+  rota adı değiştiğinde sessizce eskir ve bağlantı bir gün uygulamayı hiç açmaz — hata da vermez.
+  **Alan adı yoksa beyan da yok:** `EXPO_PUBLIC_SITE_URL` boş/yerelken derin bağlantı yapılandırması
+  hiç yazılmıyor; `localhost` ilişkilendirilemez ve uydurma bir alan adı, işletim sisteminin
+  BAŞARISIZ doğrulamayı önbelleğe almasına yol açar (gerçek alan adı geldiğinde de çalışmaz).
+
+  **2 · KARŞILAMA EKRANI — dört hâl, web sayfasıyla birebir.** `GET /api/v1/invite/:code` (açık uç,
+  `optionalCustomerId` ile kimlikten yararlanır) `readInviteWelcome`i çağırıyor; ekran `ok` ·
+  `self` · `already_customer` · `unknown` hâllerini kitin boş-durum bloğuyla çiziyor. **Tanınmayan
+  kod hata ekranı DEĞİL** — bağlantı WhatsApp'ta kırpılmış olabilir; katalog kapısı açık kalır.
+  Ağ hatası ondan AYRI çizilir: ikisini birleştirmek, geçici bir bağlantı sorununda davetliye
+  kodunun geçersiz olduğunu söylemek olurdu.
+
+  **3 · KABUL DOKUNUŞTA, BAĞ İLK GİRİŞTE.** Kod cihaza ancak davetli bir düğmeye bastığında yazılır
+  (`lib/invite/invite-store.ts` — web çerezinin native karşılığı; bağlantıyı açmak bir niyet
+  değildir). Doğrulama anında `verifyOtp` onu gövdeye ekleyip tüketiyor. **Kodu ekranlar değil bu
+  kapı taşıyor** ve bilerek: uygulamada giriş iki yerden yapılıyor (giriş ekranı · akış içi kimlik
+  adımı) ve çağıranlara bırakılsaydı sunucuda yaşanan arızanın aynısı istemcide kurulurdu — bir
+  yüzey unutur, davetli sessizce bağsız kalır, ödül hiç yazılmaz, kimse fark etmez.
+
+  **4 · HESAP EKRANINDAKİ VAAT GERÇEĞE ÇEKİLDİ (MB-53).** Metin üç kat yanlıştı: arkadaşa vaat
+  edilen 5 € indirim hiç üretilmiyor, davet edene yazılan şey kupon değil puan, ve paylaşılan şey
+  **kodun kendisiydi** — o kodun girilebileceği bir yer hiçbir ekranda yoktu, zincir orada
+  kopuyordu. Artık **bağlantı paylaşılıyor** (`wallet.inviteUrl` — adresi ekran KURMAZ, sunucu
+  verir) ve cümle ödülün gerçek anını söylüyor: *"davet ettiğiniz kişi hesabını açıp ilk siparişinin
+  ödemesini tamamladığında puanınız yazılır"*. Sayı yazılmadı — miktar ayardan gelir ve kazanma
+  yolları kartı onu zaten sunucudan okuyor. Bir yan arıza da kapandı: blok koşulu profilin HAM
+  `referralCode`üne bakıyordu, yani kodu henüz üretilmemiş müşteri davet bölümünü hiç görmüyordu;
+  koşul artık kodu GARANTİLEYEN cüzdan kartından okunuyor. Sipariş puanı kalktığı için "Sipariş,
+  yorum ve keşif turlarıyla birikir" cümlesi de üç dilde düzeltildi.
+
+  **AÇIK KALAN (kayda geçti: `docs/uygulama/BACKLOG-musteri.md` MB-60): Google ile kaydolan
+  davetlinin bağı kurulmuyor.** Davet kodu
+  yalnız OTP doğrulamasında okunuyor (`verifyOtpCode`) — Google akışı Supabase'e doğrudan gidiyor ve
+  oradan geçmiyor. **İki yüzeyde de aynı** (web'de de yalnız `otp-actions` ve misafir checkout'u
+  okuyor), yani kapatılacak yer ortak kayıt yolu; `docs/talep/` üzerinden web şeridine bildirildi.
+
+  **Doğrulama:** `pnpm typecheck` **18/18** rc=0 · `pnpm lint` temiz · `pnpm knip` yeni bulgu
+  üretmedi · `pnpm test:unit` **1347 test** yeşil · mobil jest **84 suite / 598 test** yeşil.
+  **Cihaz turu YAPILMADI:** derin bağlantının cihazda sınanması gerçek bir alan adı + ilişkilendirme
+  dosyaları ister (ikisi de mağaza başvurusuyla doğar), yerelde `localhost` ilişkilendirilemez.
+  Karşılama ekranının kendisi rota üzerinden sınanabilir.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

@@ -55,6 +55,8 @@ export const DEVICE_STORE_KEYS = {
   discoverPending: 'lezzet.discover.pending',
   /** Vitrinin son başarılı yüklemesinde hangi bölümler kaç elemanla vardı — iskelet bunu taklit eder. */
   homeLayout: 'lezzet.home.layout',
+  /** Kabul edilmiş davet kodu; ilk girişte kayda bağlanır ve silinir (`lib/invite/invite-store`). */
+  invite: 'lezzet.invite',
 } as const;
 
 /**

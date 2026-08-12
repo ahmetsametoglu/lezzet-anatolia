@@ -8,6 +8,7 @@ import {
 } from '@lezzet/types';
 import { z } from 'zod';
 import { apiFetch } from '../api/client';
+import { clearInvite, readInvite } from '../invite/invite-store';
 import { getSupabase } from './supabase';
 
 /*
@@ -51,19 +52,35 @@ export async function requestOtp(email: string, locale: PreferredLanguage): Prom
 /**
  * Kod doğrulama. Başarıda oturum cihaza yazılır (supabase `setSession` → SecureStore) ve
  * `AuthSession` döner. Biçimsiz kod API'ye HİÇ gitmez (`OtpCodeSchema` — deneme sayacı boşa yanmaz).
+ *
+ * ── BEKLEYEN DAVET KODU BURADAN GEÇER (21.43) ───────────────────────────────
+ * Kodu ekranlar taşımıyor, bu kapı taşıyor — ve bu bilinçli. Uygulamada giriş İKİ yerden
+ * yapılıyor (giriş ekranı ve akış içi kimlik adımı `useOtpSignIn`) ve yarın bir üçüncüsü doğarsa
+ * o da unutmadan taşımalı. Kodu çağıranlara bıraksaydık, sunucu tarafında yaşanan arızanın
+ * aynısını istemcide kurmuş olurduk: bir yüzey bağlamayı unutur, davetli sessizce bağsız kalır,
+ * ödül hiç yazılmaz, kimse fark etmez (`application/auth/otp.ts` künyesi, aynı ders).
+ *
+ * **Kod okunamazsa giriş yine olur:** `readInvite` düşerse `null` döner, gövdeye alan eklenmez.
+ * Davet bir kolaylıktır, kimlik değil.
  */
 export async function verifyOtp(email: string, code: string, locale: PreferredLanguage): Promise<OtpResult<AuthSession>> {
   if (!OtpCodeSchema.safeParse(code).success) {
     return { data: null, error: 'invalid_code', retryAfterSec: null };
   }
 
+  const referralCode = await readInvite();
   const result = await apiFetch('/api/v1/auth/otp/verify', VerifyResponseSchema, {
     method: 'POST',
-    body: { email, code, locale },
+    body: { email, code, locale, ...(referralCode === null ? {} : { referralCode }) },
   });
   if (result.error !== null) {
     return { data: null, error: toAuthErrorKey(result.error), retryAfterSec: result.retryAfterSec };
   }
+
+  /* Kod TÜKETİLDİ — bağ kurulmuş olsun ya da olmasın (sunucu yeni müşteri değilse ya da kod
+     geçersizse sessizce reddeder). Bırakılsaydı aynı cihazdan kaydolan her kişi aynı kodla
+     bağlanmayı denerdi; motor reddeder, yani zarar vermez ama her girişe ölü bir yazma eklerdi. */
+  if (referralCode !== null) await clearInvite();
 
   const { session } = result.data;
   const { error } = await getSupabase().auth.setSession({
