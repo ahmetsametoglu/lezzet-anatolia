@@ -687,6 +687,23 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   ikinci bir sessiz boşluk açar. Ölçüt basit: "yeni müşteri kartı DOĞDUĞU an" nerede biliniyorsa
   bağ orada kurulmalı.
 
+- [ ] **MB-61 · Birden fazla komşu daveti — arayüz tek daveti gösteriyor, ödül sırası tanımsız.**
+  Ölçüldü 12.08 (kod + cihaz). Bir müşteri birden çok komşusundan davet almış olabilir; davetler
+  aynı sefere de olabilir farklı seferlere de. **Bugün:** sunucu yalnız EN YAKIN açık daveti dönüyor
+  (`readPendingNeighborInvite`), yani ikinci davet hiç görünmüyor; aynı gündeki iki davette ise hem
+  ekranda yazılan ad hem ödülün yazıldığı komşu **dizinin geldiği sıraya** bağlı — aynı girdi farklı
+  sonuç verebiliyor.
+
+  **KARAR (kullanıcı 12.08, onaylandı):** (a) *farklı seferler* için yeni bir kontrol yok — seçim
+  zaten gün seçicidir: davet olan günün çipi işaretlenir ve bant **seçili güne göre** konuşur;
+  (b) *aynı sefer* için müşteriye sorulmaz, **ilk kabul edilen kazanır** (`linkReferrer`in "ilk
+  getiren kazanır" kuralıyla aynı soydan). Ödül bölünmez ve ikiye verilmez: bu bir lojistik
+  ödülüdür, araca eklenen tek bir durak vardır.
+
+  **İş bölümü:** sözleşmenin çoğula dönmesi ve sıralamanın kabul tarihine bağlanması web şeridinde
+  (deftere yazıldı); gün çipindeki işaret ve bandın seçili güne göre konuşması bizde — sözleşme
+  gelince mekanik.
+
 - [ ] **MB-24 · Fiyat değişti bildirimi** (`DOMAIN §5`: fiyat arttıysa müşteriye söylenir ve onay
   istenir; düştüyse sessizce uygulanır) — `design/BACKLOG.md` §1'den devralındı. `CartItem.unitPrice`
   yazılıyor ama karşılaştırılmıyor; native sepette de karşılığı yok.

@@ -12,6 +12,7 @@ import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { rememberInvite } from '@/lib/invite/invite-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import messages from './messages.json';
@@ -63,11 +64,19 @@ export function InviteScreen({ code }: InviteScreenProps) {
   const welcome = useInviteWelcome(code);
 
   /**
-   * Daveti KABUL eder ve gidilecek yere götürür. Kod yazımı beklenmiyor (`void`): yazma düşse de
-   * davetli yoluna devam etmeli — bedeli ölçülü ve künyesi depoda (bağ kurulmaz, akış kesilmez).
+   * Daveti KABUL eder ve gidilecek yere götürür.
+   *
+   * **Kabulden hemen sonra devir denenir** (21.46 — komşu ekranında ölçülen arızanın ikizi burada
+   * da kapatıldı): kapı oturum VARSA şimdi yazar, yoksa 401'e düşer ve kod cihazda kalıp ilk
+   * girişte yazılır (`claimPendingInvite` yalnız başarıda tüketir). Getiren davetinde girişli
+   * ziyaretçi zaten `already_customer` görüyor ve bu düğmeyi hiç görmüyor — deneme yine de var,
+   * çünkü iki davet ekranının aynı şeyi farklı yapması, birini okuyup ötekini varsayan kişiyi
+   * yanıltır.
+   *
+   * Beklenmiyor (`void`): yazma düşse de davetli yoluna devam etmeli.
    */
   const accept = (target: '/catalog' | '/login') => {
-    void rememberInvite(code);
+    void rememberInvite(code).then(() => claimPendingInvite());
     router.replace(target);
   };
 

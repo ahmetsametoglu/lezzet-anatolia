@@ -2084,8 +2084,52 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `pnpm typecheck` **18/18** rc=0 · `pnpm lint` temiz · `pnpm knip` yeni bulgu yok ·
   `pnpm test:unit` **1358 test** yeşil · mobil jest **84 suite / 598 test** yeşil. *(Bir koşuda dört
   rota testi zaman aşımına düştü — 29,6 sn süren yüklü koşu; tekil ve sonraki iki tam koşuda hepsi
-  yeşil, 11 sn. Kod değil yük.)* **Cihaz turu YAPILMADI:** derin bağlantı gerçek bir alan adı +
-  ilişkilendirme dosyaları ister, davet akışının tamamı da `db:reset` bekleyen bir şema üzerinde.
+  yeşil, 11 sn. Kod değil yük.)*
+
+- [x] (21.46) **CİHAZ TURU — üç arıza ölçüldü ve düzeltildi; ikisi metin, biri akışı sessizce
+  öldürüyordu.** `touches:` `apps/mobile/src/screens/{invite,neighbor,checkout,account}/*`
+  (sözlükler + iki `accept` + checkout bandı)
+
+  Şema `db:reset`siz tamamlandı (kullanıcı, 12.08) ve akış OPPO CPH1907'de uçtan uca sürüldü.
+  Karşılama ekranları derin bağlantıyla açıldı, kabul yazıldı, checkout'ta bant ve önseçili gün
+  görüldü. **Üç arıza çıktı:**
+
+  **1 · GİRİŞLİ MÜŞTERİDE KABUL SUNUCUYA HİÇ YAZILMIYORDU.** Ölçüldü: daveti kabul ettik,
+  `neighbor_invite_claim` boş kaldı. Sebep: devir yalnız GİRİŞ anında koşuyordu, oysa oturum
+  kalıcı — o an hiç gelmeyebilir. Ve komşu davetinin alıcısı **çoğu zaman zaten müşterimiz**
+  (kullanıcı kararı 11.08), yani akışın en olası yolu sessizce ölüydü. Kabulden hemen sonra devir
+  deneniyor artık; kapı oturum varsa şimdi yazar, yoksa 401'e düşer ve belirteç ilk girişte
+  değerlendirilir — **kullanıcının vurgusu:** *"her halükarda ihtiyacımızı karşılayan bir yapı
+  olması lazım"*. Tekrar ölçüldü: kayıt düşüyor.
+
+  **2 · BANT SEÇİMDEN BAĞIMSIZ KONUŞUYORDU.** Tek metin yazılmıştı: *"…çağırdı — o gün sizin için
+  seçili."* Müşteri başka güne dokununca cümle YALANA dönüyordu ve zararsız değildi: davet yalnız
+  tam gün eşleşmesinde bağlanıyor, yani müşteri komşusunun seferine katıldığını sanırken ödül hiç
+  yazılmayacaktı. İkinci cümle eklendi — uyarı değil ÇAĞRI: *"Birlikte teslim alıp puan kazanmak
+  için o günü seçin."*
+
+  **3 · METİNLER ÜÇ YERDE FAZLA SÖZ VERİYORDU** (kullanıcı sorusu: *"kullandığın cümlelerin
+  kullanıcıyı yanlış yönlendirmediğinden emin misin"*):
+  · *"hesabını açtığında / sipariş verdiğinde puanınız yazılır"* → ödül **ödeme** anındadır;
+  · paylaşım metnindeki *"bu hafta"* → gün gelecek haftaya da düşebilir, bilmediğimiz bir şeydi;
+  · davetliye *"soğuk zincirle kapınıza kadar"* → **adresini bilmiyoruz**; bölge dışındaysa kargoyla
+    gider ve soğuk zincir ürünü hiç gidemez. Getiren davetinden ve paylaşım metninden çıkarıldı,
+    komşu davetinde bırakıldı (orada araç gerçekten o güne çıkıyor). Komşu ekranındaki *"aracımız
+    SİZİN sokağınızda"* da *"komşunuzun sokağında"* oldu.
+
+  **DOĞRULANAN KURGU (kullanıcı sorusu 12.08 — çoklu sefer):** davet ÜÇÜNCÜ sefere kurulup ölçüldü;
+  checkout en yakın günü değil **davetin gününü** önseçili getirdi. Bağ da tam eşleşme istiyor
+  (`matchNeighborInviteForOrder`), yani başka güne verilen sipariş daveti tüketmiyor.
+
+  **AÇIK KALAN (denetim şeridine iletildi):** `readPendingNeighborInvite` bekleyen davetlerden
+  yalnız EN YAKINI dönüyor. Bir kişi iki ayrı sefere çağrılmışsa bant ötekini hiç anmaz ve yeni
+  "o günü seçin" cümlesi onu geçerli bir seçimden geri çağırır. Alan sözleşmesi web'de.
+
+  **Doğrulama:** `pnpm typecheck` 18/18 · `pnpm lint` temiz · mobil jest **598 test** yeşil ·
+  **cihazda ölçüldü** (OPPO CPH1907): getiren `self`, komşu `unknown`/`ok`, kabul → kayıt,
+  checkout bandı + önseçili gün + gün değişince cümlenin dönmesi. Ekran görüntüleri alındı.
+  **Sipariş sonrası paylaşım şeridi denenmedi** — gerçek sipariş açmayı gerektiriyor.
+  **Gerçek `https://` bağlantısı yerelde sınanamaz** (`localhost` ilişkilendirilemez).
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

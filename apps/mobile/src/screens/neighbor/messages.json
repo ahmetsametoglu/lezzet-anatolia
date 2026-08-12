@@ -8,13 +8,13 @@
     "ok": {
       "title": "{name} sizi {day} teslimatına çağırdı",
       "someone": "Komşunuz",
-      "body": "Aracımız o gün zaten sokağınızda olacak. Siz de o güne sipariş verirseniz birlikte teslim alırsınız — soğuk zincir bozulmadan, kapınıza kadar.",
+      "body": "Aracımız o gün komşunuzun sokağında olacak. Siz de aynı güne sipariş verirseniz birlikte teslim alırsınız — soğuk zincir bozulmadan, kapınıza kadar.",
       "primary": "Kataloğa göz at",
       "secondary": "Hesabımı aç"
     },
     "self": {
       "title": "Bu sizin davet bağlantınız",
-      "body": "Bağlantınız çalışıyor. Komşunuz bu güne sipariş verdiğinde puanınız yazılır.",
+      "body": "Bağlantınız çalışıyor. Komşunuz bu güne sipariş verip ödemesini tamamladığında puanınız yazılır.",
       "primary": "Siparişlerime dön"
     },
     "runClosed": {
@@ -42,13 +42,13 @@
     "ok": {
       "title": "{name} vous invite à la livraison du {day}",
       "someone": "Votre voisin",
-      "body": "Notre camion sera déjà dans votre rue ce jour-là. Commandez pour la même date et vous serez livrés ensemble — chaîne du froid préservée, jusqu'à votre porte.",
+      "body": "Notre camion sera dans la rue de votre voisin ce jour-là. Commandez pour la même date et vous serez livrés ensemble — chaîne du froid préservée, jusqu'à votre porte.",
       "primary": "Voir le catalogue",
       "secondary": "Créer mon compte"
     },
     "self": {
       "title": "C'est votre lien d'invitation",
-      "body": "Votre lien fonctionne. Vos points seront crédités lorsque votre voisin commandera pour cette date.",
+      "body": "Votre lien fonctionne. Vos points seront crédités lorsque votre voisin aura commandé pour cette date et réglé sa commande.",
       "primary": "Voir mes commandes"
     },
     "runClosed": {
@@ -76,13 +76,13 @@
     "ok": {
       "title": "{name} lädt Sie zur Lieferung am {day} ein",
       "someone": "Ihre Nachbarin oder Ihr Nachbar",
-      "body": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Straße. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
+      "body": "Unser Fahrzeug ist an diesem Tag in der Straße Ihrer Nachbarschaft. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
       "primary": "Katalog ansehen",
       "secondary": "Konto eröffnen"
     },
     "self": {
       "title": "Das ist Ihr Einladungslink",
-      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald Ihre Nachbarschaft für diesen Tag bestellt.",
+      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald Ihre Nachbarschaft für diesen Tag bestellt und bezahlt hat.",
       "primary": "Zu meinen Bestellungen"
     },
     "runClosed": {

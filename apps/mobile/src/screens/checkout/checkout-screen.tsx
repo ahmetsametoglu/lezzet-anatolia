@@ -644,7 +644,13 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                 {isRoute && neighborInvite !== null ? (
                   <Note
                     tone="olive"
-                    description={t.delivery.neighborInvite
+                    /* CÜMLE SEÇİME BAĞLI (12.08 · cihazda ölçüldü). Tek metin yazılmıştı ve müşteri
+                       başka güne dokununca *"o gün sizin için seçili"* yalana dönüyordu — üstelik
+                       zararsız değil: davet YALNIZ tam gün eşleşmesinde bağlanıyor
+                       (`matchNeighborInviteForOrder`), yani müşteri komşusunun seferine katıldığını
+                       sanırken ödül hiç yazılmayacaktı. İkinci cümle bir uyarı değil ÇAĞRIDIR:
+                       seçimi geri almıyor, o güne dönmenin ne kazandırdığını söylüyor. */
+                    description={(chosenDate === neighborInvite.deliveryDate ? t.delivery.neighborInvite : t.delivery.neighborInviteOtherDay)
                       .replace('{name}', neighborInvite.inviterName || t.delivery.neighborSomeone)
                       .replace('{day}', formatDeliveryDate(neighborInvite.deliveryDate, locale))}
                     testID="checkout-neighbor-invite"

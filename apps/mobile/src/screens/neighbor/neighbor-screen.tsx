@@ -12,6 +12,7 @@ import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { rememberNeighborInvite } from '@/lib/invite/invite-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
@@ -40,10 +41,11 @@ import { useNeighborWelcome } from './use-neighbor-welcome.hook';
   Belirteç cihaza ancak davetli bir düğmeye bastığında yazılır; girişten sonra kişiye devredilir
   (`claimPendingInvite`). Bağlantıyı açmak bir NİYET değildir — web çerezinin aynı kararı.
 
-  ── ZATEN GİRİŞLİYSE DE AYNI YOL ────────────────────────────────────────────
-  Girişli müşteride de belirteç cihaza yazılıp devir kapısından geçiyor, ekran ayrı bir "hemen
-  kabul et" yolu KURMUYOR. İkinci bir kabul yolu, aynı kuralın ikinci kopyası olurdu; devir kapısı
-  zaten oturum varsa anında çağrılabiliyor.
+  ── ZATEN GİRİŞLİYSE DE AYNI KAPI, AMA HEMEN ────────────────────────────────
+  Girişli müşteride de belirteç cihaza yazılıp AYNI devir kapısından geçiyor — ekran ikinci bir
+  "kabul" yolu kurmuyor. Fark yalnız ZAMAN: kabul anında bir kez denenir, düşerse girişte yeniden.
+  İlk yazımda bu deneme YOKTU ve cihazda ölçüldü (12.08): oturumu açık müşteri daveti kabul edince
+  sunucuya hiçbir şey yazılmıyordu (`accept` künyesi).
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -60,9 +62,23 @@ export function NeighborScreen({ token }: NeighborScreenProps) {
   const router = useRouter();
   const welcome = useNeighborWelcome(token);
 
-  /** Daveti KABUL eder ve gidilecek yere götürür; yazım beklenmiyor (depo künyesi). */
+  /**
+   * Daveti KABUL eder ve gidilecek yere götürür.
+   *
+   * **Kabul yazıldıktan HEMEN SONRA devir denenir** ve bu ölçülmüş bir arızanın düzeltmesi
+   * (12.08, cihazda): oturumu AÇIK bir müşteri daveti kabul edince sunucuya hiçbir şey
+   * yazılmıyordu — belirteç cihazda bekliyor, devir yalnız bir sonraki GİRİŞTE koşuyordu ve
+   * oturum kalıcı olduğu için o an hiç gelmeyebiliyordu. Komşu davetinin alıcısı ise çoğu zaman
+   * ZATEN müşterimiz (kullanıcı kararı 11.08) — yani akışın en olası yolu sessizce ölüydü.
+   *
+   * Kapı giriş yolunu bilmediği gibi "ne zaman" sorusunu da bilmiyor: oturum VARSA şimdi yazar,
+   * yoksa 401'e düşer ve belirteç cihazda kalır (`claimPendingInvite` künyesi: yalnız başarıda
+   * tüketir). İki hâl için iki ayrı kod yazmaya gerek yok.
+   *
+   * Beklenmiyor (`void`): yazma düşse de davetli yoluna devam etmeli.
+   */
   const accept = (target: '/catalog' | '/login') => {
-    void rememberNeighborInvite(token);
+    void rememberNeighborInvite(token).then(() => claimPendingInvite());
     router.replace(target);
   };
 

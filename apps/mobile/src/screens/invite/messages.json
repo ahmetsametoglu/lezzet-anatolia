@@ -8,13 +8,13 @@
     "ok": {
       "title": "{name} sizi Lezzet Anatolia'ya davet etti",
       "someone": "Bir tanıdığınız",
-      "body": "Ev yapımı Anadolu lezzetleri, soğuk zincirle kapınıza kadar. Önce kataloğa göz atın; hesabınızı dilediğiniz an açarsınız.",
+      "body": "Ev yapımı Anadolu lezzetleri. Önce kataloğa göz atın; hesabınızı dilediğiniz an açarsınız.",
       "primary": "Kataloğa göz at",
       "secondary": "Hesabımı aç"
     },
     "self": {
       "title": "Bu sizin davet bağlantınız",
-      "body": "Bağlantınız çalışıyor. Onu paylaştığınız kişi buradan hesabını açtığında puanınız yazılır.",
+      "body": "Bağlantınız çalışıyor. Onu paylaştığınız kişi hesabını açıp ilk siparişinin ödemesini tamamladığında puanınız yazılır.",
       "primary": "Hesabıma dön"
     },
     "alreadyCustomer": {
@@ -37,13 +37,13 @@
     "ok": {
       "title": "{name} vous invite chez Lezzet Anatolia",
       "someone": "Une connaissance",
-      "body": "Des saveurs anatoliennes faites maison, livrées chez vous en chaîne du froid. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
+      "body": "Des saveurs anatoliennes faites maison. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
       "primary": "Voir le catalogue",
       "secondary": "Créer mon compte"
     },
     "self": {
       "title": "C'est votre lien d'invitation",
-      "body": "Votre lien fonctionne. Vos points seront crédités lorsque la personne invitée créera son compte.",
+      "body": "Votre lien fonctionne. Vos points seront crédités lorsque la personne invitée aura créé son compte et réglé sa première commande.",
       "primary": "Retour à mon compte"
     },
     "alreadyCustomer": {
@@ -66,13 +66,13 @@
     "ok": {
       "title": "{name} lädt Sie zu Lezzet Anatolia ein",
       "someone": "Jemand, den Sie kennen",
-      "body": "Hausgemachte anatolische Spezialitäten, per Kühlkette bis vor Ihre Tür. Sehen Sie sich zuerst den Katalog an; Ihr Konto eröffnen Sie, wann Sie möchten.",
+      "body": "Hausgemachte anatolische Spezialitäten. Sehen Sie sich zuerst den Katalog an; Ihr Konto eröffnen Sie, wann Sie möchten.",
       "primary": "Katalog ansehen",
       "secondary": "Konto eröffnen"
     },
     "self": {
       "title": "Das ist Ihr Einladungslink",
-      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ihr Konto eröffnet.",
+      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto eröffnet und ihre erste Bestellung bezahlt hat.",
       "primary": "Zurück zu meinem Konto"
     },
     "alreadyCustomer": {
