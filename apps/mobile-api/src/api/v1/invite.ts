@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import type { z } from 'zod';
-import { readInviteWelcome } from '@lezzet/application';
+import { z } from 'zod';
+import { readInviteWelcome, tryAttachReferral } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { InviteWelcomeSchema } from '@lezzet/types';
 import type { AppEnv } from '../../context';
-import { ok } from '../../lib/respond';
-import { optionalCustomerId } from './auth';
+import { fail, ok } from '../../lib/respond';
+import { optionalCustomerId, type V1Env } from './auth';
 
 /**
  * Davet karşılaması (21.43) — `GET /api/v1/invite/:code`. Web'in `/[dil]/davet/[code]` sayfasının
@@ -43,4 +43,39 @@ invite.get('/invite/:code', async (c) => {
   // (keşif destesinin kurduğu kilit) — sessiz bir uyumsuzluk yerine derleme hatası.
   const body: z.input<typeof InviteWelcomeSchema> = welcome;
   return ok(c, InviteWelcomeSchema.parse(body));
+});
+
+const ClaimBodySchema = z.object({ referralCode: z.string().min(1) });
+
+/**
+ * **Bekleyen daveti hesaba bağlar** (21.44) — `POST /api/v1/me/invite/claim`, Bearer'ın ARDINDA.
+ *
+ * ── NEDEN AYRI BİR UÇ, OTP GÖVDESİ DURURKEN ─────────────────────────────────
+ * Kod eskiden yalnız `/auth/otp/verify` gövdesinde taşınıyordu ve o cümle YALNIZ OTP için doğruydu:
+ * Google akışı Supabase'e doğrudan gidiyor, profili trigger açıyor ve kodu soran hiçbir çağrı
+ * yoktu. Davet bağlantısına tıklayıp *"Google ile devam et"* diyen davetli **sessizce bağsız**
+ * kalıyordu — hata yok, log yok, ödül yok; üstelik en olası yol buydu (telefonda oturumu açık
+ * Google hesabı). Web aynı boşluğu `auth/callback` rotasında kapattı (17.11); bu, onun mobil ikizi.
+ *
+ * **Çare iki yolu ayrı ayrı yamamak DEĞİL:** cihazda da tek kapı var artık
+ * (`lib/invite/claimPendingInvite`) ve OTP gövdesindeki alan kaldırıldı — iki mekanizma bırakmak,
+ * yarın doğacak üçüncü giriş yolunun (WhatsApp) hangisini çağıracağını belirsiz bırakırdı.
+ *
+ * **Kural burada DEĞİL:** "yeni müşteri" ölçütü (siparişsizlik), kendini-getirme, ilk getiren
+ * kazanır ve idempotentlik `@lezzet/application`ın ortak kapısında (`attachReferralOnLogin`).
+ * Yutma davranışı da orada (`tryAttachReferral`): davet yüzünden bir giriş akışı düşmez.
+ *
+ * **Cevap HEP 200 ve hep `true`.** Bağın kurulup kurulmadığı istemciyi ilgilendirmiyor: davetli
+ * ekranda bunun için bir şey görmüyor, göstermesi de yanlış olurdu ("davetin geçersiz" demek,
+ * kaydolmayı yeni bitirmiş kişiye söylenecek ilk cümle değil). Reddin gerekçesi log'a düşer —
+ * "davet neden yazılmadı" sorusunun cevap kaynağı orası.
+ */
+export const inviteClaim = new Hono<V1Env>();
+
+inviteClaim.post('/claim', async (c) => {
+  const body = ClaimBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  await tryAttachReferral(serviceDb(), c.get('authUser').id, body.data.referralCode);
+  return ok(c, true);
 });

@@ -8,7 +8,7 @@ import {
 } from '@lezzet/types';
 import { z } from 'zod';
 import { apiFetch } from '../api/client';
-import { clearInvite, readInvite } from '../invite/invite-store';
+import { claimPendingInvite } from '../invite/invite-api';
 import { getSupabase } from './supabase';
 
 /*
@@ -53,34 +53,21 @@ export async function requestOtp(email: string, locale: PreferredLanguage): Prom
  * Kod doğrulama. Başarıda oturum cihaza yazılır (supabase `setSession` → SecureStore) ve
  * `AuthSession` döner. Biçimsiz kod API'ye HİÇ gitmez (`OtpCodeSchema` — deneme sayacı boşa yanmaz).
  *
- * ── BEKLEYEN DAVET KODU BURADAN GEÇER (21.43) ───────────────────────────────
- * Kodu ekranlar taşımıyor, bu kapı taşıyor — ve bu bilinçli. Uygulamada giriş İKİ yerden
- * yapılıyor (giriş ekranı ve akış içi kimlik adımı `useOtpSignIn`) ve yarın bir üçüncüsü doğarsa
- * o da unutmadan taşımalı. Kodu çağıranlara bıraksaydık, sunucu tarafında yaşanan arızanın
- * aynısını istemcide kurmuş olurduk: bir yüzey bağlamayı unutur, davetli sessizce bağsız kalır,
- * ödül hiç yazılmaz, kimse fark etmez (`application/auth/otp.ts` künyesi, aynı ders).
- *
- * **Kod okunamazsa giriş yine olur:** `readInvite` düşerse `null` döner, gövdeye alan eklenmez.
- * Davet bir kolaylıktır, kimlik değil.
+ * ── BEKLEYEN DAVET GÖVDEDE DEĞİL, GİRİŞTEN SONRA (21.44 · 21.43'ün düzeltmesi) ──
+ * Kod önce bu isteğin gövdesine ekleniyordu ve o çözüm yalnız e-posta yolunu kapsıyordu: Google
+ * turu bu uçtan hiç geçmiyor, yani oradan kaydolan davetli sessizce bağsız kalıyordu. Bağlama
+ * artık oturum kurulduktan SONRA, giriş yöntemini bilmeyen tek bir kapıdan geçiyor
+ * (`claimPendingInvite`) — künyesi ve iki çağıranının gerekçesi orada.
  */
 export async function verifyOtp(email: string, code: string, locale: PreferredLanguage): Promise<OtpResult<AuthSession>> {
   if (!OtpCodeSchema.safeParse(code).success) {
     return { data: null, error: 'invalid_code', retryAfterSec: null };
   }
 
-  const referralCode = await readInvite();
-  const result = await apiFetch('/api/v1/auth/otp/verify', VerifyResponseSchema, {
-    method: 'POST',
-    body: { email, code, locale, ...(referralCode === null ? {} : { referralCode }) },
-  });
+  const result = await apiFetch('/api/v1/auth/otp/verify', VerifyResponseSchema, { method: 'POST', body: { email, code, locale } });
   if (result.error !== null) {
     return { data: null, error: toAuthErrorKey(result.error), retryAfterSec: result.retryAfterSec };
   }
-
-  /* Kod TÜKETİLDİ — bağ kurulmuş olsun ya da olmasın (sunucu yeni müşteri değilse ya da kod
-     geçersizse sessizce reddeder). Bırakılsaydı aynı cihazdan kaydolan her kişi aynı kodla
-     bağlanmayı denerdi; motor reddeder, yani zarar vermez ama her girişe ölü bir yazma eklerdi. */
-  if (referralCode !== null) await clearInvite();
 
   const { session } = result.data;
   const { error } = await getSupabase().auth.setSession({
@@ -91,6 +78,10 @@ export async function verifyOtp(email: string, code: string, locale: PreferredLa
     // Kod doğruydu ama cihaz oturumu kurulamadı — sunucunun aynı hâl için seçtiği anahtar (502 send_failed).
     return { data: null, error: 'send_failed', retryAfterSec: null };
   }
+
+  // Oturum KURULDU: bekleyen davet varsa buradan bağlanır. Beklenmiyor değil — bağın kurulması
+  // girişin bir parçası; ama düşerse akış devam eder (kapının kendi künyesi).
+  await claimPendingInvite();
 
   return { data: session, error: null, retryAfterSec: null };
 }

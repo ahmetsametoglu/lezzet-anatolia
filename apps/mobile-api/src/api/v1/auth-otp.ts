@@ -16,21 +16,14 @@ import { fail, ok } from '../../lib/respond';
  * cihazın seçtiği dildir.
  */
 const RequestBodySchema = z.object({ email: z.string().min(1), locale: PreferredLanguageEnum });
-const VerifyBodySchema = z.object({
-  email: z.string().min(1),
-  code: OtpCodeSchema,
-  locale: PreferredLanguageEnum,
-  /**
-   * Davet bağlantısından taşınan kod (21.43) — web'in çerezinin mobil karşılığı. Cihaz onu
-   * karşılama ekranında saklamıştır (`lib/invite/invite-store.ts`) ve doğrulama anında yollar.
-   *
-   * **Bozuk değer GİRİŞİ DÜŞÜRMEZ** (`.catch`): davet bir kolaylıktır, kimlik değil — eski bir
-   * sürümün yazdığı ya da bozulmuş bir kayıt yüzünden müşteriyi kapıda çevirmek, çözdüğünden
-   * büyük bir arıza olurdu. Geçersiz/kendine ait/geç kalmış kodun süzgeci zaten kapıda
-   * (`linkReferrer` üç hâli de sessizce reddeder ve gerekçesini log'a düşer).
-   */
-  referralCode: z.string().min(1).optional().catch(undefined),
-});
+/*
+  DAVET KODU BU GÖVDEDE DEĞİL (21.44'te kaldırıldı, 21.43'te eklenmişti). Gerekçe ölçülmüş bir
+  boşluk: kodu buraya koymak onu YALNIZ e-posta yoluna bağlıyordu ve Google akışı bu uçtan hiç
+  geçmiyor — o yoldan kaydolan davetli sessizce bağsız kalıyordu. Cihaz artık her giriş yolundan
+  sonra tek bir kapıya uğruyor (`POST /me/invite/claim`, künyesi `invite.ts`te) ve iki mekanizma
+  bırakmak, yarın doğacak üçüncü giriş yolunun hangisini çağıracağını belirsiz bırakırdı.
+*/
+const VerifyBodySchema = z.object({ email: z.string().min(1), code: OtpCodeSchema, locale: PreferredLanguageEnum });
 
 /**
  * Gövde `safeParse`ten düşünce anahtar seçimi: `code` biçimsizse `invalid_code` (kullanıcının

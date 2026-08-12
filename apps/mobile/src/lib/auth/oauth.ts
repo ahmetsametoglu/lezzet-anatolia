@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import type { AuthErrorKey } from '@lezzet/types';
 
+import { claimPendingInvite } from '../invite/invite-api';
 import { getSupabase } from './supabase';
 
 /*
@@ -53,8 +54,23 @@ export async function signInWithGoogle(): Promise<OAuthResult> {
 export async function exchangeOAuthCode(code: string): Promise<OAuthResult> {
   const supabase = getSupabase();
   const exchange = await supabase.auth.exchangeCodeForSession(code);
-  if (exchange.error === null) return { error: null };
+  if (exchange.error === null) {
+    /* ── DAVET BAĞI BURADA KURULUR (21.44 · ölçülmüş boşluk) ──────────────────
+       Bu akış `/auth/otp/verify` ucundan HİÇ geçmiyor: değişim doğrudan Supabase ile yapılıyor ve
+       profili trigger açıyor. Kod yalnız OTP gövdesinde taşındığı sürece, davet bağlantısına
+       tıklayıp *"Google ile devam et"* diyen davetli sessizce bağsız kalıyordu — hata yok, log
+       yok, ödül yok; üstelik en olası yol buydu. Web aynı boşluğu `auth/callback` rotasında
+       kapattı (17.11). Kapı giriş yöntemini BİLMEZ, yalnız "oturum kuruldu"yu bilir. */
+    await claimPendingInvite();
+    return { error: null };
+  }
 
   const { data } = await supabase.auth.getSession();
-  return { error: data.session ? null : 'oauth_failed' };
+  if (!data.session) return { error: 'oauth_failed' };
+
+  /* Değişim düştü ama oturum VAR: derin bağlantı iki kez işlenmiş (soğuk açılış + olay) ve giriş
+     ilk turda tamamlanmış demektir. Bekleyen davet o turda zaten tüketildi; kapı idempotent
+     olduğu için ikinci çağrı da zararsız — bekleyen kod yoksa hiçbir şey yapmaz. */
+  await claimPendingInvite();
+  return { error: null };
 }

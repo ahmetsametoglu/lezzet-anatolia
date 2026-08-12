@@ -1999,6 +1999,42 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   dosyaları ister (ikisi de mağaza başvurusuyla doğar), yerelde `localhost` ilişkilendirilemez.
   Karşılama ekranının kendisi rota üzerinden sınanabilir.
 
+- [x] (21.44) **DAVET BAĞI GİRİŞ YÖNTEMİNİ ARTIK BİLMİYOR — Google ile kaydolan davetli sessizce
+  bağsız kalıyordu.**
+  `touches:` `apps/mobile-api/src/api/v1/{invite.ts,router.ts,auth-otp.ts}` ·
+  `apps/mobile/src/lib/invite/invite-api.ts` · `apps/mobile/src/lib/auth/{otp.ts,oauth.ts}`
+
+  **ÖLÇÜLMÜŞ BOŞLUK.** `(21.43)`te davet kodu `/auth/otp/verify` gövdesine konmuştu ve gerekçesi
+  o gün doğruydu — "müşteri kartının doğduğu tek yer burası". **Ama o cümle yalnız OTP için
+  doğruydu:** Google akışı Supabase'e doğrudan gidiyor, profili trigger açıyor ve o uçtan hiç
+  geçmiyor. Davet bağlantısına tıklayıp *"Google ile devam et"* diyen davetli bağsız kalıyordu —
+  hata yok, log yok, ödül yok. Üstelik **en olası yol buydu**: davetli çoğu zaman telefonunda
+  oturumu açık bir Google hesabıyla geliyor. (Kullanıcının kendi sorusu da buradan çıktı:
+  daveti yalnız e-postaya bağlamak bunu çözer miydi — çözerdi ama tek kapıya indirerek; doğru
+  çözüm yolu kapatmak değil, bağı yöntemden bağımsız kılmaktı.)
+
+  **ÇARE İKİ YOLU AYRI AYRI YAMAMAK DEĞİL.** Web aynı boşluğu 17.11'de ortak bir kapıyla kapattı
+  (`attachReferralOnLogin`) ve "yeni müşteri" ölçütünü kayıt anından **siparişsizliğe** çevirdi —
+  OAuth'ta "kart az önce mi doğdu" sorusu ancak bir zaman penceresiyle tahmin edilebilirdi, o da
+  sessizce yanlışlanabilir bir ölçüt olurdu. Mobil yarısı bu satır: yeni uç
+  `POST /api/v1/me/invite/claim` (Bearer'ın ardında, gövdesi tek alan) aynı ortak kapıyı çağırıyor;
+  cihazda da tek bir çağrı var (`claimPendingInvite`) ve **oturumun gerçekten kurulduğu iki noktadan**
+  çağrılıyor — `verifyOtp`un `setSession`i ve `exchangeOAuthCode`un değişimi.
+
+  **OTP GÖVDESİNDEKİ ALAN KALDIRILDI.** İki mekanizma bırakmak, yarın doğacak üçüncü giriş yolunun
+  (WhatsApp — bugün her iki yüzeyde de yalnız "çok yakında" düğmesi) hangisini çağıracağını
+  belirsiz bırakırdı; CLAUDE §1'in duplikasyon yasağı burada bir davranış kuralı olarak işliyor.
+  Tek kapıya inmenin ikinci faydası: kapı **idempotent** olduğu için derin bağlantının iki kez
+  işlendiği hâlde (soğuk açılış + olay) ikinci çağrı zararsız.
+
+  **Tek kaynağa inilmedi, İNİLEMEDİ:** `onAuthStateChange` dinleyicisi tek nokta olurdu ama abone
+  olur olmaz `INITIAL_SESSION` ile de tetikleniyor (sepet deposunun künyesi) — her açılışa ölü bir
+  bağlama denemesi eklerdi. İki çağıran da `lib/auth/` içinde ve ikisi de tek satır.
+
+  **Doğrulama:** `pnpm typecheck` 18/18 rc=0 · `pnpm lint` temiz · `pnpm knip` yeni bulgu yok ·
+  `pnpm test:unit` **1357 test** yeşil · mobil jest **84 suite / 598 test** yeşil. Cihaz turu
+  yapılmadı: Google turu gerçek bir OAuth istemcisi ve derin bağlantı dönüşü ister.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

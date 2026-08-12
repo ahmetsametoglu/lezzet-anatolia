@@ -14,7 +14,7 @@ import { devLogin } from './dev-login';
 import { discover, discoverClaim } from './discover';
 import { feedback } from './feedback';
 import { home } from './home';
-import { invite } from './invite';
+import { invite, inviteClaim } from './invite';
 import { orders } from './orders';
 import { packages } from './packages';
 import { payments } from './payments';
@@ -158,6 +158,11 @@ v1.route('/payments', payments);
 // Puan uçları (21.17) — Bearer'ın ARKASINDA: cüzdan müşterinin kendisidir. Kural ve B2B kısa
 // devresi `points.ts` + `@lezzet/application/customer/points` künyesinde.
 v1.route('/me/points', points);
+
+// Davetin hesaba bağlanması (21.44) — Bearer'ın ARDINDA, karşılamanın aksine: "bu daveti BENİM
+// hesabıma yaz" cümlesinin oturumsuz hâli yoktur (keşif talep kapısının aynı ayrımı). Cihaz her
+// giriş yolundan sonra buraya uğrar; kural ortak kapıda (`attachReferralOnLogin`).
+v1.route('/me/invite', inviteClaim);
 
 // Keşif turunun hesaba bağlanması (21.19) — Bearer'ın ARKASINDA: "bu kaydırmaları BENİM hesabıma
 // yaz" cümlesinin oturumsuz hâli yoktur. Kimlik bağlamdan çözülür, gövdeden ASLA; kural

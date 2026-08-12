@@ -651,8 +651,17 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   (`usePlaceResolution`), yani çözüm gecikince ya da düşünce kod tek başına kalıyor olabilir —
   **teori, ölçülmedi.** MB-23 elenirken tek gerçek gözlem olarak ayrıldı.
 
-- [ ] **MB-60 · Google ile kaydolan davetlinin davet bağı KURULMUYOR — iki yüzeyde de.** Ölçüldü
-  11.08 (kod, `21.43` turunda). Davet kodu yalnız OTP doğrulamasının içinde okunuyor
+- [x] **MB-60 · Google ile kaydolan davetlinin davet bağı KURULMUYOR — iki yüzeyde de.** Ölçüldü
+  11.08 (kod, `21.43` turunda).
+
+  **KAPANDI (12.08 · iki şerit birlikte).** Web yarısı 17.11: ortak kapı `attachReferralOnLogin` ve
+  "yeni müşteri" ölçütünün kayıt anından **siparişsizliğe** çevrilmesi — OAuth'ta kaydın anı
+  ölçülemiyor, zaman penceresiyle tahmin etmek sessizce yanlışlanabilir bir ölçüt olurdu. Mobil
+  yarısı `21.44`: `POST /api/v1/me/invite/claim` + cihazda tek çağrı (`claimPendingInvite`), OTP
+  gövdesindeki alan kaldırıldı. **Bağ artık giriş yöntemini bilmiyor** — WhatsApp açıldığında
+  ayrıca bir şey yazılmayacak. *(Aşağıdaki eski metin, arızanın kaydı olarak duruyor.)*
+
+  Davet kodu yalnız OTP doğrulamasının içinde okunuyor
   (`packages/application/src/auth/otp.ts` → `verifyOtpCode`, yeni müşteride `linkReferrer`). Google
   akışı Supabase'e doğrudan gidiyor: profil satırını auth trigger'ı açıyor ve o yoldan geçen hiçbir
   yerde davet kodu sorulmuyor. Yani bağlantıya tıklayıp Google ile kaydolan davetli sessizce bağsız
