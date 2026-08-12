@@ -1,7 +1,7 @@
 import { publicImageUrl } from '@lezzet/storage';
 import { titleOf } from '@/lib/catalog/title';
-import { resolveLocalizedText, type BundleListRow, type ProductPool, type ProductWithRelations } from '@lezzet/types';
-import type { BundleView, ProductView, VariantOption } from './products-types';
+import { resolveLocalizedText, type BundleListRow, type ProductWithRelations } from '@lezzet/types';
+import type { BundleView, ProductView } from './products-types';
 
 // Sunucu-tarafı okuma yardımcıları. Ürün sayfası İKİ yerden okunur — ilk sayfa RSC'de (page.tsx),
 // devamı action'da (actions/list.ts) — ve ikisi de aynı indirgemeyi yapar: public görsel URL'i +
@@ -31,46 +31,8 @@ export function toBundleViews(rows: BundleListRow[]): BundleView[] {
   }));
 }
 
-/**
- * Katalogdaki TÜM satılabilir birimler, "Ürün · boy" adıyla. Boy etiketi boşsa (tek boylu ürün)
- * yalnız ürün adı kalır — "Baklava · " gibi sarkan bir ayraç bırakılmaz.
- *
- * PASİF OLAN DA GELİR: havuz hem "pakete ne eklenebilir" (yalnız aktif) hem "pakette duran kalemin adı
- * ne" (hepsi) sorusuna hizmet ediyor. Aktifle sınırlıyken pasif ürünün kalemi adsız kalıyordu ve ekran
- * onu "silinmiş" sanıyordu — oysa pakette duran varyant FK gereği (`restrict`) silinemez. Eklenebilirlik
- * artık ayrı bir alan (`addable`), süzgeç değil.
- *
- * TEK KAYNAK: paket formunun seçicisi de, liste satırındaki kalem adları da bunu kullanır. İki yerde
- * ayrı kurulsaydı biri "500 g" öbürü "Baklava 500 g" yazar, aynı kalem iki adla görünürdü.
- */
-export function toVariantOptions(
-  rows: ProductPool[],
-  listPriceCents: Map<string, number>,
-  unitCosts: Map<string, number>,
-): VariantOption[] {
-  return rows.flatMap((p) => {
-    const productName = resolveLocalizedText(p.name);
-    const imageUrl = publicImageUrl(p.imageKey, p.imageUpdatedAt);
-    // Ürün düzeyindeki engel varyantın hepsini kapsar; boy düzeyindeki yalnız o boyu.
-    const productBlock = p.status === 'active' ? null : p.status === 'candidate' ? 'aday ürün' : 'pasif ürün';
-    return p.variants.map((v) => {
-      const boy = resolveLocalizedText(v.label);
-      const blockedReason = productBlock ?? (v.isActive ? null : 'pasif boy');
-      return {
-        variantId: v.id,
-        label: titleOf(productName, boy),
-        imageUrl,
-        listPriceCents: listPriceCents.get(v.id) ?? null,
-        // Maliyet ve KDV oranı ÜRÜNDEN gelir; marj ikisi olmadan hesaplanamaz.
-        unitCostCents: unitCosts.get(v.id) ?? null,
-        vatRate: p.vatRate,
-        targetMarginPercent: p.targetMarginPercent ?? null,
-        addable: blockedReason === null,
-        blockedReason,
-      };
-    });
-  });
-}
+// `toVariantOptions` BURADAN TAŞINDI (22.18) → `@/lib/catalog/variant-options`. Tek çağıranı paket
+// eylemleriydi ve o eylemler ortak alana çıktı (kuyruk da aynı formu açıyor); türev onlarla gitti.
 
 export function toProductViews(rows: ProductWithRelations[], names: NameMaps): ProductView[] {
   return rows.map((row) => {

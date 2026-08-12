@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { MovementDirectionEnum, type Account, type AccountLedgerRow, type MovementType } from '@lezzet/types';
+import type { Account, AccountLedgerRow } from '@lezzet/types';
+import type { ManualMovementForm } from '@/components/operation/form/movement-form/schema';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { SuggestionStrength } from './finance-labels';
 import type { FinanceUrlState } from './finance-url';
@@ -166,40 +167,15 @@ export interface FinanceViewProps {
  * (elle girilirse aynı para iki kez sayılır), `purchase` mal kabule bağlıdır (motor bağsızını
  * reddediyor), `transfer` kendi diyaloğunda — çünkü tek alanı değil, iki hesabı sorar.
  */
-export const MANUAL_TYPES = ['expense', 'capital', 'misc'] as const satisfies readonly MovementType[];
-export type ManualType = (typeof MANUAL_TYPES)[number];
-
 /**
- * Elle hareket formu.
+ * ── ELLE HAREKET ŞEMASI ARTIK FORMUN YANINDA (22.18) ────────────────────────
+ * `MANUAL_TYPES`, `ManualType`, `ManualMovementSchema` ve `ManualMovementForm` buradan
+ * `components/operation/form/movement-form/schema.ts`e taşındı: form ortak alana çıktı (asistan
+ * kuyruğu da onu açıyor) ve bir komponentin sayfa klasöründen şema okuması ters yönlü bağımlılıktır.
  *
- * Tutar **cent** taşınır (STACK §8) ve `MoneyField` zaten cent veriyor — forma euro koyup sunucuda
- * çevirseydik yuvarlama iki yerde olurdu. `null` başlangıç değeri "boş kutu" demek; sıfır değil.
+ * **Yeniden ihraç YOK:** çağıranların hepsi (diyalog · kuyruk gövdesi · devir okuması) şemayı
+ * doğrudan oradan okuyor. Buradan da vermek, aynı tanıma ikinci bir adres açmak olurdu.
  */
-/**
- * **Form alanı EURO taşır, cent DEĞİL** — ve adı bir tur `amountCents`ti, tam da bu yüzden
- * değiştirildi (ölçüldü 09.08).
- *
- * `MoneyField` birimden habersiz: verdiğiniz sayıyı iki ondalıkla gösterir, operatörün yazdığını
- * olduğu gibi geri verir. Katalogdaki kardeş diyaloglar bu yüzden sınırda çeviriyor
- * (`price-dialog` · `discount-dialog`: `fromCents` yükler, `toCents` gönderir). Para diyalogları
- * çevirmiyordu ve alan `amountCents` adını taşıdığı için doğru görünüyordu: operatörün yazdığı
- * "340,00" kapıya 340 CENT olarak gidiyordu — deftere 3,40 € yazılırdı. Transfer önizlemesi de
- * aynı sebeple 100 kat yanlış bakiye gösteriyordu.
- *
- * Ad artık birimi söylüyor; çevrim gönderme anında (`toCents`).
- */
-export const ManualMovementSchema = z.object({
-  accountId: z.string().min(1),
-  type: z.enum(MANUAL_TYPES),
-  /** **EURO** — kapıya `toCents` ile gider. */
-  amount: z.number().positive().nullable(),
-  direction: MovementDirectionEnum,
-  category: z.string(),
-  campaign: z.string(),
-  valueDate: z.string(),
-  description: z.string(),
-});
-export type ManualMovementForm = z.infer<typeof ManualMovementSchema>;
 
 export const TransferFormSchema = z.object({
   fromAccountId: z.string().min(1),

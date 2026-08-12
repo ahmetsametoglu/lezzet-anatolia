@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { RecipeDialog } from './recipe-dialog';
 import { RecipesDesktop } from './recipes.desktop';
-import { setRecipeActiveAction } from './recipes-actions';
+import { setRecipeActiveAction } from '@/lib/catalog/recipe-actions';
 import type { RecipeView, RecipesData } from './recipes-types';
 
 /**

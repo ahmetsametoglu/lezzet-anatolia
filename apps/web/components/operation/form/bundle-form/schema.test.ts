@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bundleBlock, type BundleFormValues } from './bundle-form-schema';
+import { bundleBlock, type BundleFormValues } from './schema';
 
 /**
  * Kaydetme kapısı — şema doğrulaması VE altlıktaki kilit sebebi aynı fonksiyondan okuyor. Birim test

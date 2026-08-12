@@ -2,7 +2,8 @@ import 'server-only';
 import { fromCents } from '@lezzet/helper';
 import { MoneyMovementPayloadSchema } from '@lezzet/types';
 import { readHandoffProposal } from '@/lib/assistant/handoff';
-import { MANUAL_TYPES, type ManualMovementForm, type MoneyHandoff } from './finance-types';
+import { MANUAL_TYPES, type ManualMovementForm } from '@/components/operation/form/movement-form/schema';
+import type { MoneyHandoff } from './finance-types';
 
 /**
  * Asistan önerisi → para ekranının ön dolgusu (22.5).

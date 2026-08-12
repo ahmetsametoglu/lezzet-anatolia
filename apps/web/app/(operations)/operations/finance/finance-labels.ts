@@ -133,27 +133,12 @@ export const NO_ACCOUNTS =
  * ekranı kullanan her zaman muhasebeci değil (`requireFinance` yöneticiyi de içeri alıyor). Seçim
  * yanlış yapılırsa para doğru yere girer ama raporda yanlış kovaya düşer — sessiz bir hata.
  */
-export const MANUAL_TYPE_VIEW: Record<'expense' | 'capital' | 'misc', { label: string; hint: string }> = {
-  expense: { label: 'Gider', hint: 'İşletmenin harcaması: kira, akaryakıt, maaş, ambalaj, reklam…' },
-  capital: { label: 'Sermaye', hint: 'İşletmeye dışarıdan konan para — bir satışın karşılığı değil.' },
-  misc: { label: 'Sınıflandırılmadı', hint: 'Sebebi henüz belli değil; sonradan adı konabilir.' },
-};
+// `MANUAL_TYPE_VIEW` FORMUN yanına taşındı (`movement-form/schema`, 22.11) — tür seçicisini artık
+// iki yüzey çiziyor ve etiketin tek tanımı olmalı.
 
-/**
- * En sık girilen gider kategorileri — hızlı seçim çipleri.
- *
- * Kategori serbest METİNDİR (şemanın kararı: kalemler işletmeyle büyür, enum olsaydı her yeni kalem
- * migration isterdi) ve bu liste onu KISITLAMAZ, yalnız kısayol sunar. İki kazancı var: yazım
- * farkını keser ("Kira" ile "kira" iki ayrı kategori olurdu) ve **reklamın ham sabitini erişilebilir
- * kılar** — raporun süzdüğü değer `advertising`tir ve operatörden onu İngilizce yazması beklenemez.
- */
-export const QUICK_CATEGORIES = [
-  { value: 'kira', label: 'Kira' },
-  { value: 'akaryakıt', label: 'Akaryakıt' },
-  { value: 'maaş', label: 'Maaş' },
-  { value: 'ambalaj', label: 'Ambalaj' },
-  { value: 'advertising', label: 'Reklam' },
-] as const;
+// Hızlı gider kategorileri de FORMUN yanına taşındı (`movement-form/schema`): çipleri hem elle
+// hareket formu hem sınıflandırma satırı (`finance-sections`) çiziyor. Tanım tek, adres iki değil.
+export { QUICK_CATEGORIES } from '@/components/operation/form/movement-form/schema';
 
 /**
  * Motorun reddi (`validateMovement`) → operatörün cümlesi.

@@ -8,7 +8,8 @@ import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
-import { RecipeFormSchema, type RecipeVariantOption } from './recipes-types';
+import { RecipeFormSchema, type RecipeVariantOption } from '@/components/operation/form/recipe-form/schema';
+import { withProposal } from '@/lib/assistant/handoff';
 
 /**
  * Tarif yönetiminin yazma yolları (09.21).
@@ -35,19 +36,29 @@ const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT
  * bırakırdı (metin güncellendi, malzemeler eski). Slug ADDAN türer ve operatörden istenmez —
  * sormak, aynı tarifin iki kez farklı slug'la açılmasına kapı açardı (05.16 kararı).
  */
-export async function saveRecipeAction(input: unknown): Promise<ActionResult<{ id: string }>> {
+export async function saveRecipeAction(input: unknown, proposalId?: string): Promise<ActionResult<{ id: string }>> {
   try {
-    await requireAdmin();
+    const staff = await requireAdmin();
     const parsed = RecipeFormSchema.parse(input);
     const { id, items, ...fields } = parsed;
 
     const service = new RecipeService(serviceDb());
-    const saved = id
-      ? await service.updateWithItems({ id, ...fields, items })
-      : await service.createWithItems({ ...fields, items });
+    // **Kuyruk ikinci bir yazma yolu AÇMIYOR** (22.18): asistanın tarif önerisi onaylandığında da
+    // bu eylem koşuyor, `withProposal` yalnız kuyruk satırını kapatıyor. `proposalId` yoksa akış
+    // tek satır bile farklı değil.
+    const savedId = await withProposal(
+      proposalId,
+      staff.profileId,
+      async () => {
+        const saved = id ? await service.updateWithItems({ id, ...fields, items }) : await service.createWithItems({ ...fields, items });
+        return saved.id;
+      },
+      // DOĞAN kaydın kimliği künyeye yazılır (`KIND_META.recipe_draft.resultKey`).
+      (recipeId) => ({ recipeId }),
+    );
 
     revalidatePath('/operations/recipes');
-    return { data: { id: saved.id }, error: null };
+    return { data: { id: savedId }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
   }

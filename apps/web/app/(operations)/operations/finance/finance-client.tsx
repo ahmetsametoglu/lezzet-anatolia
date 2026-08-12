@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { applyMatchAction, classifyExpenseAction, dismissMatchAction } from './actions';
+import { applyMatchAction, classifyExpenseAction, dismissMatchAction } from '@/lib/finance/actions';
 import { MatchDialog } from './match-dialog';
 import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';

@@ -158,7 +158,16 @@ function formatScalar(key: string, value: unknown): string | null {
   if (typeof value === 'number') {
     // Para alanları adından tanınır (`STACK §8` — cent tek birim). Oran ve sayaçlar ham kalır.
     if (/Cents$/.test(key)) return money(value);
-    return num(value);
+    /**
+     * **ONDALIK YUTULMAZ** (ölçüldü 12.08, kullanıcı ekranda gördü): `num` varsayılanı sıfır
+     * basamak ve dilekçedeki 12,50 "13", 5,74 "6" diye yazılıyordu — künyenin tek işi dilekçeyi
+     * OLDUĞU GİBİ göstermek, oysa değeri sessizce değiştiriyordu.
+     *
+     * Tam sayı olanlar (adet, sayaç, gün) yine basamaksız: onlara ",00" eklemek gürültü olurdu.
+     * Ayrım değerin KENDİSİNDEN geliyor, alan adından değil — paket ailesi euro taşıyor
+     * (`Cents` soneki yok) ve adla tanınamazdı.
+     */
+    return Number.isInteger(value) ? num(value) : num(value, 2);
   }
 
   if (typeof value === 'string') {

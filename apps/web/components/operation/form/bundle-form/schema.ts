@@ -12,7 +12,7 @@ import {
   type BundleItemEntry,
   type LocalizedText,
 } from '@lezzet/types';
-import type { BundleView } from '../../products-types';
+import type { BundleView } from './types';
 
 // Paket formu şeması — `BundleInsertSchema`'dan TÜRETİLİR (ürün formunun deseni). Formda olmayanlar
 // çıkarılır: slug servis türetir, imageKey ayrı yükleme akışında, sortOrder kürasyon sırası (liste

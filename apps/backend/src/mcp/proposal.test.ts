@@ -203,7 +203,10 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
   it('geri alınamaz tipler DEVREDİLİR, kendi formu kuyruğa gelenler İÇERİDE karar alır', () => {
     // Geri alınamaz üçlü: bildirim gider, stok/defter yazılır. Kararın konusu formda değil ekranda
     // (harita, mal kabul akışı, defter satırı) — kuyruk bunları uygulamaz, ön doldurup devreder.
-    for (const kind of ['zone_extend', 'stock_intake', 'money_movement'] as const) {
+    // `money_movement` 12.08'de bu kümeden ÇIKTI (22.11): finans ekranının elle hareket formu ortak
+    // alana ayrılıp kuyruğa taşındı. Devrin gerekçesi ("defter silinemez, karar öncesi düzenleme
+    // şart") kalkmadı — düzenleme hâlâ karardan önce, yalnız formun yeri değişti.
+    for (const kind of ['zone_extend', 'stock_intake'] as const) {
       expect(modeOf(kind)).toBe('handoff');
     }
     // `inline` = gövdesi kuyruğun içinde çizilen tipler. Üçü de bir tur devredilmişti; formları
@@ -213,14 +216,28 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     // `product_draft` 11.08'de bu kümeye geçti: ürün ekranının kendi formu 22.14'te kuyruğa taşındı
     // ama künye `draft_then_edit` kalmıştı ve alt bar olmayan bir kısıtı anlatıyordu ("kayıt pasif
     // doğar, yayına alma kendi ekranının işi") — kullanıcı bunu ekranda gördü.
-    for (const kind of ['batch_offer', 'discount_draft', 'product_draft', 'product_create'] as const) {
+    // `bundle_draft` 12.08'de bu kümeye geçti (22.11): paket formu ortak alana ayrılıp kuyruğa
+    // taşındı. Etki cümlesi de düzeltildi — paket artık PASİF DOĞMUYOR, durum seçicisi formda.
+    for (const kind of [
+      'batch_offer',
+      'discount_draft',
+      'product_draft',
+      'product_create',
+      'bundle_draft',
+      'recipe_draft',
+      'money_movement',
+    ] as const) {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
     }
     // `product_create` gövdeye taşındı ama ADAY doğurmaya devam ediyor: satış durumu seçicisi
     // kuyrukta yok. Etki cümlesinin o kısmı bu yüzden korunuyor — mod değişti, kısıt değişmedi.
     expect(KIND_META.product_create.impact).toContain('ADAY');
-    for (const kind of ['bundle_draft', 'recipe_draft', 'purchase_order'] as const) {
+    // Paketin kısıtı ise KALKTI: cümle artık "pasif doğar" demiyor, çünkü öyle olmuyor.
+    expect(KIND_META.bundle_draft.impact).not.toContain('PASİF');
+    // Geriye TEK devir-sonrası-düzenleme tipi kaldı: tedarik. Formu var ama RHF'siz (durumu elle
+    // taşıyor), yani kuyruğa taşınması önce o formun standarda gelmesini istiyor.
+    for (const kind of ['purchase_order'] as const) {
       expect(modeOf(kind)).toBe('draft_then_edit');
       // Köprü ancak doğan kaydın kimliğiyle kurulabilir; anahtar uygulayıcının döndürdüğü adla aynı olmalı.
       expect(KIND_META[kind].resultKey).toBeTruthy();

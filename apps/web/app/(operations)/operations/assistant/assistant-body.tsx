@@ -5,10 +5,30 @@ import {
   PROPOSAL_PAYLOAD_SCHEMAS,
   type AssistantProposalKind,
   type BatchOfferPayload,
+  type BundleDraftPayload,
   type DiscountDraftPayload,
+  type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
+  type RecipeDraftPayload,
 } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
+import { recordManualMovementAction } from '@/lib/finance/actions';
+import {
+  ManualMovementSchema,
+  movementBlock,
+  movementToday,
+  type ManualMovementForm,
+} from '@/components/operation/form/movement-form/schema';
+import { saveRecipeAction } from '@/lib/catalog/recipe-actions';
+import { RecipeFormSchema, recipeBlock, type RecipeFormValues } from '@/components/operation/form/recipe-form/schema';
+import { createBundleAction } from '@/lib/catalog/bundle-actions';
+import {
+  BundleFormSchema,
+  bundleBlock,
+  toBundlePayload,
+  type BundleFormValues,
+} from '@/components/operation/form/bundle-form/schema';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
 import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
@@ -24,6 +44,9 @@ import type { ProposalEconomics } from '@/lib/assistant/economics';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { BatchOfferBody } from './bodies/batch-offer-body';
+import { BundleDraftBody, bundleDraftValuesFrom } from './bodies/bundle-draft-body';
+import { RecipeDraftBody, recipeDraftValuesFrom } from './bodies/recipe-draft-body';
+import { MoneyMovementBody, movementValuesFrom } from './bodies/money-movement-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
@@ -154,6 +177,127 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // müşterinin gördüğü şey "Fırsat" (müşteri yüzeyinin kelimesi). Operatör ikisinin aynı şey
     // olduğunu bir yerde okumalı, yoksa iki ekran arasında bağı kendisi kurmak zorunda kalır.
     appliedNote: 'Teklif açıldı — parti satışa çıktı; müşteri yüzeyinde "Fırsat" olarak görünüyor. Öneri karar geçmişine indi.',
+  }),
+
+  bundle_draft: defineBody<BundleDraftPayload, BundleFormValues>({
+    parse: parseWith<BundleDraftPayload>('bundle_draft'),
+    // Açılış BOŞ ŞABLON + asistanın önerisi: paket taslağı var olan bir kaydın üstüne yazmıyor,
+    // yeni bir paket kuruyor (ürün taslağının tersi durum — orada kaydın bugünkü hâli tabandı).
+    initial: (payload) => bundleDraftValuesFrom(payload),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <BundleDraftBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    /**
+     * Engel İKİ kaynaktan ve ikisi de FORMUN kendi dosyasından: şema (ad, fiyat) ve MUTABAKAT
+     * (`bundleBlock` — kalem payları paket fiyatını tutuyor mu). Kuyruk kendi kuralını yazmıyor;
+     * yazsaydı aynı paket kuyrukta kaydedilir, paket ekranında reddedilirdi.
+     */
+    blocked: (values) => {
+      const parsed = BundleFormSchema.safeParse(values);
+      if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
+      return bundleBlock(values)?.message ?? null;
+    },
+    // Kaydeden kapı PAKET EKRANININKİ: kuyruk ikinci bir yazma yolu açmıyor, `withProposal` da
+    // kuyruk satırını kapatıyor ve doğan paketin kimliğini künyeye yazıyor.
+    submit: (_payload, values, proposalId) => createBundleAction(toBundlePayload(values), proposalId),
+    // Paket formu iki sütun + kalem editörü taşıyor; yanına dilekçe sütunu gelince ürün formuyla
+    // aynı sıkışma doğuyordu. Kalem satırı (ad · adet · birim fiyat · pay · marj) dar alanda
+    // okunmuyor — 1560 ölçüldü ve kalem satırı hâlâ kırılıyordu.
+    width: 1640,
+    applyLabel: 'Paketi oluştur',
+    appliedNote: 'Paket oluşturuldu — Ürünler → Paketler sekmesinde. Satışta bıraktıysanız müşteri yüzeyinde görünüyor.',
+  }),
+
+  recipe_draft: defineBody<RecipeDraftPayload, RecipeFormValues>({
+    parse: parseWith<RecipeDraftPayload>('recipe_draft'),
+    initial: (payload) => recipeDraftValuesFrom(payload),
+    render: ({ payload, subject, meta, draft, onDraft, disabled, readOnly }) => (
+      <RecipeDraftBody
+        payload={payload}
+        subject={subject}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    // Engel FORMUN kendi dosyasından — tarif ekranının altlığı da aynı fonksiyonu okuyor.
+    blocked: (values) => {
+      const parsed = RecipeFormSchema.safeParse(values);
+      if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
+      return recipeBlock(values);
+    },
+    submit: (_payload, values, proposalId) => saveRecipeAction(values, proposalId),
+    // Tarif formu tek sütun ve alanları uzun metin: paket kadar genişliğe ihtiyacı yok, ama üç
+    // dilli çok satırlı kutular dar alanda okunmuyor.
+    width: 1320,
+    applyLabel: 'Tarifi kaydet',
+    appliedNote: 'Tarif kaydedildi — Tarifler ekranında. Yayına almak ayrı bir karar ve orada yapılır.',
+  }),
+
+  /**
+   * PARA — `handoff`tan geldi (22.11). Transfer hâlâ devirle: iki hesap ister ve kendi kapısı var.
+   * O tipte gövde formu hiç açmaz, sebebini yazar (`MoneyMovementBody` künyesi).
+   */
+  money_movement: defineBody<MoneyMovementPayload, ManualMovementForm>({
+    parse: parseWith<MoneyMovementPayload>('money_movement'),
+    // Transferde form kurulamaz; boş bir taban veriliyor ve `blocked` yolu kapatıyor. Uydurma
+    // değerlerle açılan bir form, kaydedilebilir görünen yanlış bir defter satırı demekti.
+    initial: (payload) =>
+      movementValuesFrom(payload) ?? {
+        accountId: payload.accountId,
+        type: 'misc',
+        amount: null,
+        direction: payload.direction,
+        category: '',
+        campaign: '',
+        valueDate: movementToday(),
+        description: payload.description ?? '',
+      },
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <MoneyMovementBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    blocked: (values) => {
+      const parsed = ManualMovementSchema.safeParse(values);
+      if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
+      return movementBlock(values);
+    },
+    submit: (_payload, values, proposalId) =>
+      recordManualMovementAction({
+        accountId: values.accountId,
+        type: values.type,
+        // EURO → CENT sınırda (`ManualMovementSchema` künyesi): kapı cent istiyor.
+        amountCents: toCents(values.amount ?? 0),
+        direction: values.direction,
+        category: values.category,
+        campaign: values.campaign,
+        valueDate: values.valueDate,
+        description: values.description,
+        proposalId,
+      }),
+    // Form dar ve tek sütun (finans diyaloğu 560 px için tasarlandı); yanına dilekçe sütunu geliyor.
+    width: 1120,
+    applyLabel: 'Hareketi kaydet',
+    appliedNote: 'Defter satırı yazıldı — Para ekranındaki hareketler listesinde. Hesabın bakiyesi güncellendi.',
   }),
 
   discount_draft: defineBody<DiscountDraftPayload, DiscountFormValues>({

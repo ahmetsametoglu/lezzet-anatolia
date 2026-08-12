@@ -7,7 +7,7 @@ import {
   type BundleEconomics,
 } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { VariantOption } from '../../products-types';
+import type { VariantOption } from './types';
 
 /**
  * Paket formunun TEK hesap yeri: kalemler + havuz + paket fiyatı → satır verileri ve toplamlar.

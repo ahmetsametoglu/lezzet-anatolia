@@ -10,7 +10,7 @@ import { FormInput } from '@/components/operation/form/form-input';
 import { FormMoney } from '@/components/operation/form/money-input';
 import { FormSelect } from '@/components/operation/form/form-select';
 import { money } from '@/components/operation/ui/format';
-import { recordTransferAction } from './actions';
+import { recordTransferAction } from '@/lib/finance/actions';
 import { TransferFormSchema, type AccountView, type TransferForm } from './finance-types';
 
 // **Transfer** (tasarım §3, "⇄ Transfer") — nakit→banka, Stripe→banka payout.

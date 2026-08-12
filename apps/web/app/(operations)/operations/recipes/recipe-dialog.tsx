@@ -5,15 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
-import { Button } from '@/components/operation/ui/button';
-import { FieldShell } from '@/components/operation/form/field-shell';
-import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
-import { Combobox } from '@/components/operation/form/combobox';
-import { Input } from '@/components/operation/form/input';
-import { suggestTranslationAction } from '@/lib/ai/translate';
-import { saveRecipeAction, searchRecipeVariantsAction } from './recipes-actions';
+import { RecipeFormBody } from '@/components/operation/form/recipe-form/body';
+import { RecipeFormSchema, recipeBlock, type RecipeFormValues, type RecipeVariantOption } from '@/components/operation/form/recipe-form/schema';
+import { saveRecipeAction, searchRecipeVariantsAction } from '@/lib/catalog/recipe-actions';
 import { RECIPE_NOTES } from './recipes-labels';
-import { RecipeFormSchema, type RecipeFormValues, type RecipeVariantOption, type RecipeView } from './recipes-types';
+import type { RecipeView } from './recipes-types';
 
 const FORM_ID = 'recipe-form';
 
@@ -102,9 +98,10 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
       onCancel={onClose}
       submitting={form.formState.isSubmitting}
       error={error}
-      // Engelin SEBEBİ düğmenin yanında yazar: ad boşken submit tarayıcıda sessizce yutulurdu ve
-      // operatör düğmeye basıp hiçbir şey olmadığını görürdü.
-      blockedReason={form.watch('name') && Object.values(form.watch('name')).some((v) => v?.trim()) ? undefined : 'Tarif adı gerekli'}
+      // Engel FORMUN kendi dosyasından (`recipeBlock`): kuyruk da aynı emniyeti kullanıyor, yoksa
+      // tarif bir yüzeyde kaydedilir ötekinde reddedilirdi. Sebep düğmenin yanında yazar — ad
+      // boşken submit tarayıcıda sessizce yutuluyordu ve operatör hiçbir şey olmadığını görüyordu.
+      blockedReason={recipeBlock(form.watch()) ?? undefined}
     />
   );
 
@@ -117,101 +114,16 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
       footer={footer}
     >
       <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-5">
-        {/* Ad ZORUNLU ve üç dilli; yayın kapısının ölçütü bu alan. AI önerisi TR'den ötekilere. */}
-        <FormLocalizedText
+        {/* Gövde ORTAK (22.18): asistan kuyruğu da aynı formu kendi içinde açıyor. */}
+        <RecipeFormBody
           control={form.control}
-          name="name"
-          label="Tarif adı"
-          required
-          placeholder="Bulgur pilavı"
-          onAiTranslate={(text) => suggestTranslationAction(text, 'ad')}
-        />
-
-        <div className="grid grid-cols-3 gap-2.5">
-          {/* Üçü de SERBEST METİN, sayı değil (05.16): "3–4 kişilik" bir aralıktır, "35 dk" bir
-              hesap değil. Sayıya indirmek, yazılamayan bir gerçeği zorlamak olurdu. */}
-          <FormLocalizedText control={form.control} name="duration" label="Süre" placeholder="35 dk" layout="stacked" />
-          <FormLocalizedText control={form.control} name="serves" label="Porsiyon" placeholder="3–4 kişilik" layout="stacked" />
-          <FormLocalizedText control={form.control} name="meal" label="Öğün" placeholder="Akşam yemeği" layout="stacked" />
-        </div>
-
-        <FormLocalizedText
-          control={form.control}
-          name="description"
-          label="Kısa açıklama"
-          hint="müşteri kartında ve detay başında görünür"
-          multiline
-          onAiTranslate={(text) => suggestTranslationAction(text, 'aciklama')}
-        />
-
-        <FieldShell label="Malzemeler — bizden" labelAside={RECIPE_NOTES.itemsAside}>
-          <div className="flex flex-col gap-2">
-            {items.map((item, index) => (
-              <div key={`${item.variantId}-${index}`} className="flex items-center gap-2">
-                <Combobox
-                  value={item.variantId}
-                  onChange={(variantId) => setItems(items.map((row, i) => (i === index ? { ...row, variantId } : row)))}
-                  options={options.map((option) => ({ value: option.variantId, label: option.label }))}
-                  selectedLabel={knownLabels[item.variantId]}
-                  onSearch={onSearch}
-                  loading={searching}
-                  placeholder="Ürün ara…"
-                  searchPlaceholder="Ürün adının bir parçasını yazın"
-                  emptyText="Eşleşen ürün yok — malzeme ürün kaydından seçilir, serbest metin girilmez."
-                  className="min-w-0 flex-1"
-                />
-                {/* `fullWidth={false}` ŞART: kabuğun `w-full`'ü açık kalırsa adet kutusu satırı
-                    kaplar ve yanındaki ürün seçicisi 28 piksele düşer (ölçüldü 08.08 — tam olarak
-                    `Input` künyesinin uyardığı hâl). Satır içine giren her kutu bunu verir. */}
-                <Input
-                  type="number"
-                  min={1}
-                  fullWidth={false}
-                  value={String(item.qty)}
-                  onChange={(e) =>
-                    setItems(items.map((row, i) => (i === index ? { ...row, qty: Math.max(1, Number(e.target.value) || 1) } : row)))
-                  }
-                  className="w-16 text-center"
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setItems(items.filter((_row, i) => i !== index))}
-                  aria-label="Malzemeyi çıkar"
-                >
-                  ✕
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="self-start"
-              onClick={() => setItems([...items, { variantId: '', qty: 1 }])}
-            >
-              + malzeme
-            </Button>
-          </div>
-        </FieldShell>
-
-        {/* Satır = madde (KARARLAR §3z). `multiline` alanlar dil dil ayrı yazılır; AI önerisi
-            adımlarda "aciklama" alanıyla çalışır — tarif ADIMI ile tarif ADI aynı ölçüde çevrilmez. */}
-        <FormLocalizedText
-          control={form.control}
-          name="steps"
-          label="Hazırlanışı"
-          hint={RECIPE_NOTES.lineIsItem}
-          multiline
-          onAiTranslate={(text) => suggestTranslationAction(text, 'aciklama')}
-        />
-
-        <FormLocalizedText
-          control={form.control}
-          name="pantry"
-          label="Evinizden"
-          hint={RECIPE_NOTES.pantryAside}
-          multiline
-          onAiTranslate={(text) => suggestTranslationAction(text, 'aciklama')}
+          items={items}
+          onItemsChange={setItems}
+          options={options}
+          onSearch={onSearch}
+          searching={searching}
+          knownLabels={knownLabels}
+          notes={RECIPE_NOTES}
         />
 
         {error ? (

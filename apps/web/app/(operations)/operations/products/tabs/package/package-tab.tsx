@@ -12,7 +12,7 @@ import { money, percent } from '@/components/operation/ui/format';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { Toggle } from '@/components/operation/form/toggle';
-import { reorderBundlesAction, setBundleActiveAction, setBundleFeaturedAction } from './actions';
+import { reorderBundlesAction, setBundleActiveAction, setBundleFeaturedAction } from '@/lib/catalog/bundle-actions';
 import { BundleFormDialog } from './bundle-form-dialog';
 import type { BundleView } from '../../products-types';
 

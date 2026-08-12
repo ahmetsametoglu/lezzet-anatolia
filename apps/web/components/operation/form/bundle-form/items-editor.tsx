@@ -11,9 +11,9 @@ import { MultiSelect } from '@/components/operation/form/multi-select';
 import { TrashIcon } from '@/components/operation/ui/icons';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
-import type { VariantOption } from '../../products-types';
-import { bundlePricing } from './bundle-pricing';
-import type { BundleFormValues } from './bundle-form-schema';
+import type { VariantOption } from './types';
+import { bundlePricing } from './pricing';
+import type { BundleFormValues } from './schema';
 
 // Paket kalemleri — pakete giren birimler, adetleri ve ATANMIŞ birim fiyatları. Atanmış fiyat müşteriye
 // GÖRÜNMEZ: faturada her kalemin KDV'si kendi ürününün oranından işlensin diye tutulur (baklava %5,5,

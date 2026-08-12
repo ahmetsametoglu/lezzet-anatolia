@@ -5,7 +5,7 @@ import { AccountTypeEnum, type AccountType } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Input } from '@/components/operation/form/input';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
-import { createAccountAction } from './actions';
+import { createAccountAction } from '@/lib/finance/actions';
 import { ACCOUNT_TYPE_LABEL, NO_ACCOUNTS } from './finance-labels';
 
 // **İlk hesap** — hesabı olmayan kurulumun tek eylemi.

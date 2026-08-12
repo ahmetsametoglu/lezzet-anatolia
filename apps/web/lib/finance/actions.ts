@@ -9,9 +9,9 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
 import { applyOrderMatch, classifyAsExpense, dismissRow } from '@/lib/bank/reconcile';
 import { ADVERTISING_CATEGORY } from '@lezzet/types';
-import { INVALID_REASON, RECONCILE_REASON } from './finance-labels';
-import { FINANCE_PATH } from './finance-url';
-import type { ManualType } from './finance-types';
+import { INVALID_REASON, RECONCILE_REASON } from '@/app/(operations)/operations/finance/finance-labels';
+import { FINANCE_PATH } from '@/app/(operations)/operations/finance/finance-url';
+import type { ManualType } from '@/components/operation/form/movement-form/schema';
 
 // Para ekranı server action'ları — 'use server' + guard ilk + kapıya devret + `{ data, error }`
 // döner (throw yok) + `revalidatePath`.

@@ -56,6 +56,18 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
       const id = (row.payload as { productId?: unknown } | null)?.productId;
       return typeof id === 'string' ? [id] : [];
     }),
+    // Paket önerilerinin kalem kimlikleri (22.18): havuz olmadan kalem editörü adsız satırlarla
+    // açılır ve mutabakat şeridi hesaplanamaz. Kimlikler yine yalnız KUYRUKTAKİLERDEN toplanıyor —
+    // katalogun tamamı indirilmiyor.
+    queue.flatMap((row) => {
+      if (row.kind !== 'bundle_draft') return [];
+      const items = (row.payload as { items?: unknown } | null)?.items;
+      if (!Array.isArray(items)) return [];
+      return items.flatMap((i) => {
+        const id = (i as { variantId?: unknown } | null)?.variantId;
+        return typeof id === 'string' ? [id] : [];
+      });
+    }),
   );
 
   // Tek an, tüm yaşlar: kuyruk satırları ve kart künyesi aynı `now`'a göre hesaplanır — ayrı ayrı

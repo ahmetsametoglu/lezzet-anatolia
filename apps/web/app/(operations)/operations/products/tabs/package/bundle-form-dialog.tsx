@@ -1,21 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { fromCents } from '@lezzet/helper';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
-import { LocaleCard } from '@/components/operation/form/locale-card';
-import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
-import { FormSwitch } from '@/components/operation/form/form-switch';
-import { FormNumber } from '@/components/operation/form/form-input';
-import { FormMoney, PercentField } from '@/components/operation/form/money-input';
-import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
-import { FormSection } from '../../components/form-section';
+import { BundleFormBody } from '@/components/operation/form/bundle-form/body';
+import {
+  BundleFormSchema,
+  buildBundleDefaults,
+  bundleBlock,
+  toBundlePayload,
+  type BundleFormValues,
+} from '@/components/operation/form/bundle-form/schema';
+import type { BundleView, VariantOption } from '@/components/operation/form/bundle-form/types';
 import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import {
   createBundleAction,
@@ -23,12 +24,7 @@ import {
   searchBundleVariantsAction,
   updateBundleAction,
   uploadBundleImageAction,
-} from './actions';
-import { BundleItemsEditor } from './bundle-items-editor';
-import { priceFromDiscountPercent } from '@lezzet/domain-core';
-import { bundlePricing } from './bundle-pricing';
-import { BundleFormSchema, buildBundleDefaults, bundleBlock, toBundlePayload, type BundleFormValues } from './bundle-form-schema';
-import type { BundleView, VariantOption } from '../../products-types';
+} from '@/lib/catalog/bundle-actions';
 
 // Paket oluştur/düzenle — KAP: RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
 // Referans ürün form diyaloğu; ondan AYRILAN tek yer sekme yokluğu: paketin alanı çok daha az
@@ -119,14 +115,9 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
   // bağlı, slug da kayıtla doğuyor.
   const [crop, setCrop] = useImageCrop(form);
 
-  // TEK okuma: kaydetme engeli de fiyat türetmesi de aynı değerlerden beslenir.
+  // TEK okuma: kaydetme engeli buradan beslenir. Fiyat türetmesi (`bundlePricing`) artık GÖVDEDE —
+  // orada çiziliyor, burada kullanılan bir yeri yoktu ve iki kez hesaplanması boşunaydı.
   const values = form.watch();
-  const poolById = useMemo(() => new Map((pool ?? []).map((p) => [p.variantId, p])), [pool]);
-  const pricing = bundlePricing(
-    (values.items ?? []).map((i) => ({ variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
-    poolById,
-    values.totalPrice ?? 0,
-  );
 
   // Kaydetmenin engeli ŞEMANIN sorduğu soruyla aynı fonksiyondan gelir — düğme kilitlenir ve sebebi
   // yanında yazar. Eskiden düğme etkin görünüyordu ama şema geçersiz olduğu için submit yutuluyordu:
@@ -181,122 +172,22 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
           <span className="font-ops-body text-ops-base text-ops-muted">Paket bilgileri yükleniyor…</span>
         </div>
       ) : (
-      <form id={FORM_ID} onSubmit={onSubmit} className="grid gap-5 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-4">
-            <FormSection title="İçerik">
-              <LocaleCard title="Ad ve açıklama" completenessOf={values.name}>
-                {(lang) => (
-                  <>
-                    <FormLocalizedText
-                      control={control}
-                      name="name"
-                      label="Paket adı"
-                      required
-                      placeholder="ör. Bayram Sofrası"
-                      lang={lang}
-                      onAiTranslate={aiTranslate('ad')}
-                    />
-                    <FormLocalizedText
-                      control={control}
-                      name="description"
-                      label="Kısa açıklama"
-                      multiline
-                      rows={3}
-                      placeholder="Hangi durum için uygun"
-                      lang={lang}
-                      onAiTranslate={aiTranslate('aciklama')}
-                    />
-                  </>
-                )}
-              </LocaleCard>
-            </FormSection>
-  
-            <FormSection title="Görsel">
-              <ImageCropField
-                role="package"
-                src={bundle?.imageUrl ?? null}
-                crop={crop}
-                onCropChange={setCrop}
-                upload={editing ? (fd) => uploadBundleImageAction(bundle.id, fd) : undefined}
-                uploadDisabledHint="Görsel için paketi önce kaydedin (adres adından türüyor)."
-              />
-            </FormSection>
-
-            {/* ── VİTRİNDE (05.18) — SOL sütun, görselin altı (kullanıcı kararı 08.08) ──────
-                Altlıkta değil: orada "Durum" var ve iki etiketli kontrol yan yana taşıyor
-                (kategori diyaloğunda ölçüldü — ikincisi "Kaydet"in altına giriyor ve
-                tıklanamıyordu). Sağ sütunda da değil: orası fiyat/sunum ve kalemler, yani paketin
-                TİCARİ tarafı; vitrin işareti bir yayın/seçki kararı ve görselle aynı sütunda
-                durması onu "bu paket dışarıda nasıl görünüyor" grubuna sokuyor.
-
-                Satırdaki hızlı anahtarın ikizi; buradaki asıl olarak OLUŞTURMA içindir — yeni
-                pakette satır henüz yoktur. */}
-            <FormSection title="Vitrin">
-              <FormSwitch control={control} name="isFeatured" label="Vitrinde göster (ana sayfa)" />
-              <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
-                Satışta olmaktan ayrıdır: satıştaki her paket paketler sayfasında görünür, ana sayfada yalnız burada
-                işaretlenenler. Satışta olmayan paket işaretli olsa da vitrine çıkmaz.
-              </span>
-            </FormSection>
-          </div>
-  
-          <div className="flex flex-col gap-4">
-            <FormSection title="Fiyat ve sunum">
-              <div className="grid grid-cols-3 gap-3">
-                <FormMoney
-                  control={control}
-                  name="totalPrice"
-                  label="Paket fiyatı (€)"
-                  required
-                  placeholder="ör. 49,90"
-                />
-                {/* İndirim yüzdesi AYNI kararın ikinci yazımı — saklanan bir alan değil, fiyattan türer
-                    ve yazılınca fiyatı doldurur. Operatör kimi zaman "34,90 olsun", kimi zaman "%10
-                    vereyim" diye düşünür; ikisini de yazabilmeli ve ikisi asla çelişmemeli. */}
-                <PercentField
-                  label="İndirim (%)"
-                  labelAside="fiyatla bağlı"
-                  // EKSİ yüzde gösterilmez: paket ayrı ayrı almaktan pahalıysa ortada indirim YOKTUR,
-                  // "-66,3" ise geçerli bir değermiş gibi durur (üstelik kutuya eksi yazılamıyor da).
-                  // O hâli şerit anlatıyor: "19,90 € pahalı".
-                  value={pricing.discountPercent != null && pricing.discountPercent >= 0 ? pricing.discountPercent : null}
-                  disabled={pricing.listTotalCents == null}
-                  placeholder={pricing.listTotalCents == null ? '—' : 'ör. 10'}
-                  onChange={(percent) => {
-                    if (percent == null) return;
-                    // Hesap MOTORDAN (`priceFromDiscountPercent`): aynı "%10", teklif ve özel fiyat
-                    // ekranlarıyla aynı kuruşu vermeli.
-                    const next = priceFromDiscountPercent(pricing.listTotalCents, percent);
-                    if (next === null) return;
-                    setValue('totalPrice', fromCents(next), { shouldValidate: true, shouldDirty: true });
-                  }}
-                />
-                <FormNumber
-                  control={control}
-                  name="serves"
-                  label="Kaç kişilik"
-                  integer
-                  placeholder="ör. 6"
-                  labelAside="isteğe bağlı"
-                />
-              </div>
-              <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-                Müşteri yalnız paket fiyatını görür (KDV dahil) ve o fiyat sabittir — kupon ve genel indirim pakete
-                uygulanmaz. İndirim yüzdesi kalemlerin tek fiyatları toplamına göre hesaplanır; birini yazarsan öbürü
-                dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
-              </span>
-
-            </FormSection>
-  
-            {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}
-            <BundleItemsEditor
-              control={control}
-              pool={pool}
-              setValue={setValue}
-              onSearch={searchVariants}
-              searching={searching}
-            />
-          </div>
+        <form id={FORM_ID} onSubmit={onSubmit}>
+          {/* Gövde ORTAK (22.18): asistan kuyruğu da aynı formu kendi içinde açıyor. Burada kalan
+              her şey diyaloğa ait — kabuk, altlık, kaydeden eylem ve kapanış. */}
+          <BundleFormBody
+            control={control}
+            setValue={setValue}
+            values={values}
+            pool={pool}
+            onSearch={searchVariants}
+            searching={searching}
+            crop={crop}
+            onCropChange={setCrop}
+            imageUrl={bundle?.imageUrl ?? null}
+            upload={editing ? (fd) => uploadBundleImageAction(bundle.id, fd) : undefined}
+            onAiTranslate={aiTranslate}
+          />
         </form>
       )}
     </Dialog>

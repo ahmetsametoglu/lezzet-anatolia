@@ -72,10 +72,21 @@ interface KindMeta {
 export const KIND_META = {
   bundle_draft: {
     label: 'Paket',
+    /**
+     * ── `draft_then_edit` → `inline` (22.18) ───────────────────────────────
+     * Tip pasif bir paket doğurup operatörü Ürünler ekranına yolluyordu ve künyesi de bunu
+     * anlatıyordu: *"kalem çıkarmak/eklemek ve payları değiştirmek paket ekranının işi"*. Kullanıcının
+     * 10.08'de indirim için söylediği cümle burada da geçerliydi — *"asistan sayfasından çıkınca
+     * konseptten kopuyorum"*. Paket artık kuyrukta, GERÇEK formuyla kuruluyor.
+     *
+     * **Etki cümlesi de değişti ve bu bir düzeltme:** paket artık pasif DOĞMUYOR — form durumu da
+     * kalemleri de operatörün önünde ve karar tek adımda veriliyor. Eski cümle kalsaydı ekran,
+     * yapmadığı bir şeyi vaat ederdi.
+     */
     impact:
-      'Katalogda yeni bir paket oluşur ve PASİF doğar — müşteri vitrininde görünmez. Kalem çıkarmak/eklemek ve payları değiştirmek paket ekranının işi; yayına almak ayrı bir karardır.',
+      'Katalogda yeni bir paket oluşur. Adı, fiyatı, kalemleri ve payları onaydan ÖNCE bu ekranda düzenlenir; satışta mı pasif mi doğacağı da formdaki durum seçiciyle belirlenir.',
     tables: ['bundle', 'bundle_item'],
-    mode: 'draft_then_edit',
+    mode: 'inline',
     target: 'bundle',
     resultKey: 'bundleId',
   },
@@ -106,13 +117,28 @@ export const KIND_META = {
     mode: 'handoff',
     target: 'receiving',
   },
+  /**
+   * ── `handoff` → `inline` (22.18) ─────────────────────────────────────────
+   * Devrin gerekçesi *"etki geri alınamaz (defter yazılır), yani karar ÖNCESİ düzenleme şart"*tı ve
+   * o şart AYNEN duruyor — düzenleme hâlâ karardan önce; değişen tek şey formun nerede DURDUĞU.
+   * Finans ekranının elle hareket formu ortak alana ayrıldı, kuyruk onu kendi içinde açıyor.
+   *
+   * **Transfer hâlâ devirle:** iki hesap ister ve kendi kapısı vardır ("⇄ Transfer"). Gövde o tipte
+   * formu hiç açmaz, sebebini yazar — kuyruğa uymayan bir kararı zorla oraya sığdırmak, yanlış
+   * doldurulmuş bir defter satırı demekti.
+   */
   money_movement: {
     label: 'Para',
     impact: 'Muhasebe defterine bir hareket yazılır ve hesap bakiyesi değişir. Kayıt SİLİNMEZ — düzeltmesi ters kayıtladır.',
     tables: ['money_movement'],
-    // Silinemeyen bir defter satırı: tutar ve hesap onaydan önce görülüp düzeltilebilmeli.
-    mode: 'handoff',
+    // Silinemeyen bir defter satırı: tutar ve hesap onaydan önce görülüp düzeltilebilmeli — ve
+    // artık kuyruğun İÇİNDE düzeltiliyor (yukarıdaki künye).
+    mode: 'inline',
     target: 'finance',
+    // Doğan defter satırının kimliği künyeye yazılır: "bu hareketi hangi öneri kurdu" sorusunun
+    // cevabı. Anahtar uygulayıcının döndürdüğü adla BİREBİR aynı (`recordManualMovementAction` →
+    // `moneyMovementId`); ölçüldü, uydurulmadı.
+    resultKey: 'moneyMovementId',
   },
   zone_extend: {
     label: 'Bölge',
@@ -208,9 +234,20 @@ export const KIND_META = {
   },
   recipe_draft: {
     label: 'Tarif',
-    impact: 'Tarif PASİF doğar. Üç dil dolmadan yayına alınamaz; malzeme ve adım düzenlemesi tarif ekranında yapılır.',
+    /**
+     * ── `draft_then_edit` → `inline` (22.18) ───────────────────────────────
+     * Tarif formu ortak alana ayrılıp kuyruğa taşındı; paket ve indirimle aynı gerekçe (kullanıcı
+     * kararı 10.08). Etki cümlesinin *"malzeme ve adım düzenlemesi tarif ekranında yapılır"* kısmı
+     * artık doğru değil — ikisi de onaydan ÖNCE burada düzenleniyor.
+     *
+     * **"PASİF doğar" KORUNDU ve bu bilinçli:** yayın ayrı bir karar ve ayrı bir eylemi var
+     * (`setRecipeActiveAction`). Form o anahtarı taşımıyor — kaydetme akışına gömülseydi bir yazım
+     * hatasını düzeltmek tarifi istemeden yayına alabilirdi (05.16 kararı).
+     */
+    impact:
+      'Tarif PASİF doğar — yayına almak ayrı bir karardır ve tarif ekranında yapılır. Ad, adımlar, malzemeler ve künye alanları onaydan ÖNCE bu ekranda düzenlenir.',
     tables: ['recipe', 'recipe_item'],
-    mode: 'draft_then_edit',
+    mode: 'inline',
     target: 'recipe',
     resultKey: 'recipeId',
   },

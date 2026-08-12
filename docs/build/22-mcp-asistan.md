@@ -1138,3 +1138,53 @@ satırında.
     görünüyor"): bağı operatör kendisi kurmak zorunda kalmasın.
   - Kullanıcının seçeneği vardı ("Stok eritme" · "Teklif" · "SKT indirimi"); **"Teklif"** seçildi —
     operasyonun zaten konuştuğu dil, iki ekran arasında tam tutarlılık.
+
+- [x] (22.18) **Formu olan ÜÇ tip daha kuyruğa taşındı: Paket · Tarif · Para** *(kullanıcı talimatı
+  12.08: "içinde form kullanılan üç çevirmediğimiz öneri tipini tamamen çevir")*
+  `touches: apps/web/components/operation/form/{bundle-form,recipe-form,movement-form} · apps/web/lib/catalog/{bundle-actions,recipe-actions,variant-options}.ts · apps/web/lib/finance/actions.ts · apps/web/app/(operations)/operations/assistant/bodies/{bundle-draft-body,recipe-draft-body,money-movement-body}.tsx · packages/application/src/assistant/kind-meta.ts`
+  - *Bitti:* üçünde de öneriye basınca hedef ekranın GERÇEK formu kuyruğun içinde açılıyor; kaydeden
+    kapı yine varlığın kendi eylemi ve `withProposal` kuyruk satırını kapatıyor
+  - **Durum (12.08):** 11 tipin 7'si inline oldu (önceki dördüne bu üçü eklendi). Kalan dört tip:
+    `featured_flag` (tek tık, formu yok) · `purchase_order` · `stock_intake` · `zone_extend`.
+  - **ÖNCE AYRIM, SONRA BAĞLAMA — ve ayrım işin büyük yarısıydı.** Üç formun üçü de kendi
+    diyaloglarının içine gömülüydü (RHF kurulumu + sunucu okuması + `Dialog` kabuğu + JSX tek
+    dosyada). Kopyalamak dört kez bedelini ödediğimiz sınıftı; gövdeler `components/operation/form/`
+    altına ayrıldı ve diyaloglar onları kullanmaya başladı. **Davranış değişmedi** — ayrım
+    typecheck/lint/knip ve birim testlerle doğrulandıktan SONRA kuyruğa bağlandı.
+  - **ŞEMA VE TİPLER DE TAŞINDI, kopyalanmadı.** `BundleView`/`VariantOption` (ürün sayfası),
+    `RecipeFormSchema` (tarif sayfası), `ManualMovementSchema` + `MANUAL_TYPE_VIEW` +
+    `QUICK_CATEGORIES` (finans sayfası) form klasörlerine geçti; sayfalar gerektiği yerde yeniden
+    ihraç ediyor. Sebep tek: bir komponentin sayfa klasöründen okuması TERS yönlü bağımlılıktır ve
+    `docs:check §3e` kardeş sayfadan import'u zaten yasaklıyor.
+  - **EYLEMLER `lib/`'e ÇIKTI** (`bundle-actions` · `recipe-actions` · `finance/actions`): server
+    action'lar kural gereği sayfada kolokasyon eder, ama artık tek sayfaya ait değiller.
+    `createBundleAction` ve `saveRecipeAction` `proposalId` aldı; `recordManualMovementAction`
+    zaten alıyordu (devir yolundan).
+  - **`variantOptionsForProducts` de ortak alana çıktı:** `bundle-actions` içinde özel bir
+    fonksiyondu ve üçüncü çağıranı doğdu (kuyruk). `'use server'` bir modülden yardımcı dışa vermek
+    onu tarayıcıya açılan bir uca çevirirdi — o yüzden `lib/catalog/variant-options.ts`.
+  - **PAKET havuzu KUYRUK SAYFASINDA okunuyor** (`AssistantFormOptions.bundleVariants`): kalem satırı
+    ad, birim fiyat ve marj gösteriyor ve bunlar dilekçede yok. Gövde kendi okumasını açsaydı her
+    öneri kartı ayrı bir tur atardı. **TARİFTE gerek yok** — dilekçe `productName` taşıyor (ölçüldü)
+    ve satır bir seçici + adetten ibaret.
+  - **ÜÇ ETKİ CÜMLESİ DE DÜZELTİLDİ, çünkü ikisi artık yalan söylüyordu:** paket "PASİF doğar"
+    diyordu (durum seçicisi formda), tarif "malzeme ve adım düzenlemesi tarif ekranında" diyordu
+    (ikisi de kuyrukta). **Tarifin "PASİF doğar"ı KORUNDU** ve bu bilinçli: yayın ayrı bir karar ve
+    ayrı bir eylemi var (05.16). Para için devrin gerekçesi de korundu — "defter silinemez, karar
+    ÖNCESİ düzenleme şart" şartı kalkmadı, yalnız formun DURDUĞU yer değişti.
+  - **TRANSFER hâlâ devirle:** `money_movement` payload'ı `type: 'transfer'` taşıyorsa gövde formu
+    hiç açmaz — iki hesap ister ve kendi kapısı vardır. Kuyruğa uymayan bir kararı zorla oraya
+    sığdırmak, yanlış doldurulmuş bir defter satırı demekti.
+  - **BEKLEYEN(22.19): üç ortak kontrol `disabled` taşımıyor** — `BundleItemsEditor` · `FormSwitch` ·
+    `MultiToggle`/`FormSelect`. Karar VERİLMİŞ bir öneride kalem satırları, vitrin anahtarı ve hesap
+    seçicisi düzenlenebilir GÖRÜNÜYOR (yazım engelli, alt bar kapalı — ama ekran bunu söylemiyor).
+    Ürün formunda da aynı iş ayrı turda yapılmıştı; üçü tek turda geçilecek.
+
+- [ ] (22.19) **Ortak form kontrollerine `disabled`** — karar verilmiş öneride form GERÇEKTEN kilitli görünsün
+  - *Bitti:* `readOnly` bir öneride kalem satırları, anahtarlar ve seçiciler düzenlenemez görünüyor
+  - **Neden açık bir madde:** bugün yazım engelli (alt bar kapalı, `disabled` gövdeye iniyor) ama üç
+    ortak kontrol bayrağı TAŞIMIYOR: `BundleItemsEditor` (dört düğme + iki alan) · `FormSwitch` ·
+    `MultiToggle` ve `FormSelect`. Operatör arşivdeki bir kararı açtığında kutulara yazabiliyor,
+    yazdığı hiçbir yere gitmiyor — ekranın söylediği ile sistemin yaptığı ayrışıyor.
+  - Ürün formunda aynı iş 22.14'te ayrı bir turda yapılmıştı (`LocalizedTextField` · `MultiSelect` ·
+    `EmphasisTextarea`); bu üçü de aynı desenle geçilecek. İş mekanik, kapsamı dar.

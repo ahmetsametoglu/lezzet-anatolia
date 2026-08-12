@@ -1,15 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import {
-  BundleService,
-  PriceService,
-  ProductService,
-  ProductVariantService,
-  StockService,
-  VARIANT_POOL_LIMIT,
-  serviceDb,
-} from '@lezzet/database';
+import { BundleService, ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
 import { bundleBalance } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { getR2, r2Keys } from '@lezzet/storage';
@@ -21,10 +13,11 @@ import {
 } from '@lezzet/types';
 import { amount } from '@/components/operation/ui/format';
 import { requireStaff } from '@/lib/guard';
+import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { PRODUCTS_PATH } from '../../products-paths';
-import { toVariantOptions } from '../../products-read';
-import type { VariantOption } from '../../products-types';
+import { PRODUCTS_PATH } from '@/lib/catalog/paths';
+import { variantOptionsForProducts } from '@/lib/catalog/variant-options';
+import type { VariantOption } from '@/components/operation/form/bundle-form/types';
 
 // Paket sekmesi server action'ları — 'use server' + requireStaff + servise devret + {data,error} DÖNER
 // (throw yok) + revalidatePath. Alanlar `BundleDetailsUpdate`'ten türer (no-duplication).
@@ -88,27 +81,9 @@ interface BundleFormData {
 /** Aramada kaç ürün döner — seçici bir liste değil, daralt-ve-seç aracıdır. */
 const VARIANT_SEARCH_LIMIT = 20;
 
-/**
- * Verilen ürünlerin seçenek verisi: havuz satırı + b2c liste fiyatı + birim maliyet.
- *
- * İki çağıranı var (form açılışı ve arama) ve ikisi de AYNI üç okumayı ister; ayrı yazılsalardı
- * kalemin formda gördüğü fiyatla aramada gördüğü fiyat bir gün ayrışırdı.
- */
-async function optionsForProducts(db: ReturnType<typeof serviceDb>, productIds: string[]): Promise<VariantOption[]> {
-  if (productIds.length === 0) return [];
-  const poolRows = await new ProductService(db).listPool(VARIANT_POOL_LIMIT, productIds);
-
-  // Fiyat ve maliyet havuz kimliklerini bekler; ikisi de TEK turda (varyant başına sorgu yok).
-  const variantIds = poolRows.flatMap((p) => p.variants.map((v) => v.id));
-  const [priceRows, unitCosts] = await Promise.all([
-    new PriceService(db).findApplicableMap(variantIds, 'b2c'),
-    new StockService(db).unitCostCentsMap(variantIds),
-  ]);
-  const listPrices = new Map(
-    [...priceRows].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amountCents] as const] : [])),
-  );
-  return toVariantOptions(poolRows, listPrices, unitCosts);
-}
+// `optionsForProducts` BURADAN ÇIKTI (22.18) → `@/lib/catalog/variant-options`. Üçüncü bir çağıranı
+// doğdu (asistan kuyruğunun paket önerisi) ve bu dosya `'use server'` olduğu için oradan çağrılamaz:
+// server action modülünden yardımcı fonksiyon dışa vermek, tarayıcıya açılan bir uca dönüşür.
 
 /**
  * Kalem seçicisinin kaynağı — **arama SUNUCUDA**, katalog forma indirilmez.
@@ -125,7 +100,7 @@ export async function searchBundleVariantsAction(term: string): Promise<ActionRe
 
     const db = serviceDb();
     const page = await new ProductService(db).listPriceRows({ filters: { query }, limit: VARIANT_SEARCH_LIMIT });
-    return { data: await optionsForProducts(db, page.rows.map((p) => p.id)), error: null };
+    return { data: await variantOptionsForProducts(db, page.rows.map((p) => p.id)), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -150,7 +125,7 @@ export async function loadBundleFormAction(bundleId: string | null): Promise<Act
 
     // Kalemlerin ürünleri: varyanttan ürüne çıkmak tek okuma, oradan seçenek verisi türetilir.
     const itemVariants = await new ProductVariantService(db).listByIds(items.map((i) => i.variantId));
-    const options = await optionsForProducts(db, [...new Set(itemVariants.map((v) => v.productId))]);
+    const options = await variantOptionsForProducts(db, [...new Set(itemVariants.map((v) => v.productId))]);
 
     return {
       data: {
@@ -166,21 +141,39 @@ export async function loadBundleFormAction(bundleId: string | null): Promise<Act
   }
 }
 
-/** Yeni paket. Slug addan türer; kalemler aynı turda yazılır. */
-export async function createBundleAction(input: BundleFormInput): Promise<ActionResult<{ id: string }>> {
+/**
+ * Yeni paket. Slug addan türer; kalemler aynı turda yazılır.
+ *
+ * **Kuyruk ikinci bir yazma yolu AÇMIYOR** (22.18): asistanın paket önerisi onaylandığında da bu
+ * eylem koşuyor, `withProposal` yalnız kuyruk satırını kapatıyor. `proposalId` yoksa akış tek satır
+ * bile farklı değil — paket ekranının elle kullandığı yol hiç değişmedi.
+ */
+export async function createBundleAction(input: BundleFormInput, proposalId?: string): Promise<ActionResult<{ id: string }>> {
   try {
-    await requireStaff();
+    const staff = await requireStaff();
     const { items, isFeatured, ...fields } = input;
     const name = requireName(fields.name);
     const totalPrice = requireTotal(fields.totalPrice);
     requireBalanced(items, totalPrice);
     const svc = new BundleService(serviceDb());
-    const { bundle } = await svc.create({ ...fields, name, totalPrice, items });
-    // Vitrin işareti YALNIZ işaretliyse: varsayılan `false` ve her doğan paket için ikinci bir tur
-    // atmanın karşılığı yok.
-    if (isFeatured) await svc.setFeatured(bundle.id, true);
+
+    const bundleId = await withProposal(
+      proposalId,
+      staff.profileId,
+      async () => {
+        const { bundle } = await svc.create({ ...fields, name, totalPrice, items });
+        // Vitrin işareti YALNIZ işaretliyse: varsayılan `false` ve her doğan paket için ikinci bir
+        // tur atmanın karşılığı yok. İşaret kaydın İÇİNDE atılıyor ki öneri sonucu tek bir iş olsun.
+        if (isFeatured) await svc.setFeatured(bundle.id, true);
+        return bundle.id;
+      },
+      // DOĞAN kaydın kimliği künyeye yazılır: "bu paketi hangi öneri kurdu" sorusunun cevabı ve
+      // arşivdeki köprünün dayanağı (`KIND_META.bundle_draft.resultKey`).
+      (id) => ({ bundleId: id }),
+    );
+
     revalidatePath(PRODUCTS_PATH);
-    return { data: { id: bundle.id }, error: null };
+    return { data: { id: bundleId }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
