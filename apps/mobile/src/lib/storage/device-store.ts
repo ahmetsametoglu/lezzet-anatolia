@@ -57,6 +57,8 @@ export const DEVICE_STORE_KEYS = {
   homeLayout: 'lezzet.home.layout',
   /** Kabul edilmiş davet kodu; ilk girişte kayda bağlanır ve silinir (`lib/invite/invite-store`). */
   invite: 'lezzet.invite',
+  /** Kabul edilmiş KOMŞU daveti belirteci; aynı kapıdan aynı anda devredilir. */
+  neighborInvite: 'lezzet.invite.neighbor',
 } as const;
 
 /**

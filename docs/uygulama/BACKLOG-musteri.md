@@ -465,7 +465,24 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   gömülMEZ** — ayardan gelen kazanma yolları uçtan okunur (MB-15'in dersi). Onboarding'in adım
   deseni yeniden kullanılır; giriş noktası hesap ekranındaki puan kartı.
 
-- [ ] **MB-56 · SEFER DAVETİ — yeni puan enstrümanı. TASARIM KAPANDI (kullanıcı kararları 11.08).**
+- [x] **MB-56 · SEFER DAVETİ — yeni puan enstrümanı. TASARIM KAPANDI (kullanıcı kararları 11.08).**
+
+  **UYGULANDI (12.08 · iki şerit birlikte).** Sunucu yarısı web'de (`17.10`): `neighbor_invite`
+  tablosu (sefer = `(bölge, gün)` fotoğrafı, kullanım sayaçla değil siparişten türetilir), ayrı
+  `neighbor` puan sebebi, karşılama sayfası, checkout bağı, ödeme anında doğan ödül. Kullanıcının
+  12.08 sorusu üzerine kabul **kişiye** yazılır oldu (`neighbor_invite_claim`) — çerez artık yalnız
+  kimlik doğana kadar taşıyan bir köprü. Cihaz yarısı bu şeritte (`21.45`): derin bağlantı, beş
+  hâlli karşılama ekranı, belirtecin devri, checkout'ta davet cümlesi + **önseçili gün**, ve
+  sipariş sonrası paylaşım şeridi.
+
+  **Değerler kullanıcının merdivenine çekildi:** komşu daveti **100** (getiren 500 — beş kat fark).
+  ~~Bugünkü değer 3 × 100 = 300 puan~~ artık gerçek: üç komşu 300 puan eder, kupon 500 olduğu için
+  *"üç komşu çağır kuponu al"* denemiyor — metin sayıyı söylüyor, vaat uydurmuyor.
+
+  **Uygulanmayan tek parça:** zincirin kendiliğinden yayılması ("her komşu sipariş verince onun
+  ekranında kendi daveti doğar") — teknik olarak zaten böyle çalışıyor, çünkü her rota siparişi
+  kendi davetini açabiliyor; ayrıca kodlanacak bir şey kalmadı.
+
   Kullanıcının çıkış cümlesi: *"aracım bir rotaya çıkacak ve o rotadan sipariş vermiş bir müşterim
   var; bu müşterim o rotadaki bir arkadaşının — hesabı olsun veya olmasın — sipariş vermesini teşvik
   ederse müşterime puan vermek istiyorum."*

@@ -129,6 +129,9 @@ checkout.get('/', async (c) => {
   // taşıdığı ama ekranın işi olmayan alanlar (adresin telefonu, alıcı adı) zarfa sızamaz.
   const body: z.input<typeof CheckoutSnapshotSchema> = {
     addresses: snapshot.addresses,
+    // Teslimat dilimi kapıdan OLDUĞU GİBİ geçer — bekleyen komşu daveti dâhil (21.45). Alanın
+    // süzgeci de kapıda: davetin günü seçilebilir günlerden biri değilse orada `null` oluyor,
+    // yani ekran seçilemeyen bir günü hiç görmüyor (`CheckoutDeliverySchema` künyesi).
     delivery: snapshot.delivery,
     payment: snapshot.payment === null ? null : { ...snapshot.payment, codBlockedReason: codReasonOf(snapshot.payment.codBlockedReason) },
   };

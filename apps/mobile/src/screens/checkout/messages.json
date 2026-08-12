@@ -36,7 +36,9 @@
       "shipping": "Kargoyla gönderim",
       "shippingBody": "2–4 iş günü. Teslimat: {fee}",
       "shippingUnavailable": "Bu adres teslimat bölgemizde — sipariş aracımızla gelir.",
-      "dayLabel": "Teslimat günü: {day}"
+      "dayLabel": "Teslimat günü: {day}",
+      "neighborInvite": "{name} sizi {day} teslimatına çağırdı — o gün sizin için seçili.",
+      "neighborSomeone": "Komşunuz"
     },
     "payment": {
       "eyebrow": "Ödeme",
@@ -124,7 +126,11 @@
       "points": "✦ Teslimatta +{n} puan kazanacaksınız",
       "note": "Sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz.",
       "orders": "Siparişlerimi görüntüle",
-      "home": "Alışverişe dön"
+      "home": "Alışverişe dön",
+      "neighborTitle": "🚚 Komşunuzu da bu güne çağırın",
+      "neighborBody": "Aracımız o gün zaten sokağınızda olacak. Komşunuz da aynı güne sipariş verirse birlikte teslim alırsınız — ve siz puan kazanırsınız.",
+      "neighborShare": "Davet bağlantısını paylaş",
+      "neighborMessage": "Lezzet Anatolia aracı bu hafta sokağımıza geliyor — aynı güne sipariş verirsen birlikte teslim alırız: {url}"
     }
   },
   "fr": {
@@ -164,7 +170,9 @@
       "shipping": "Envoi par transporteur",
       "shippingBody": "2–4 jours ouvrés. Livraison : {fee}",
       "shippingUnavailable": "Cette adresse est dans notre zone — notre véhicule vous livre.",
-      "dayLabel": "Jour de livraison : {day}"
+      "dayLabel": "Jour de livraison : {day}",
+      "neighborInvite": "{name} vous invite à la livraison du {day} — cette date est présélectionnée.",
+      "neighborSomeone": "Votre voisin"
     },
     "payment": {
       "eyebrow": "Paiement",
@@ -252,7 +260,11 @@
       "points": "✦ +{n} points à la livraison",
       "note": "Suivez l'état de votre commande par e-mail et WhatsApp.",
       "orders": "Voir mes commandes",
-      "home": "Retour aux achats"
+      "home": "Retour aux achats",
+      "neighborTitle": "🚚 Invitez votre voisin pour ce jour-là",
+      "neighborBody": "Notre camion sera déjà dans votre rue ce jour-là. Si votre voisin commande pour la même date, vous serez livrés ensemble — et vous gagnez des points.",
+      "neighborShare": "Partager le lien d'invitation",
+      "neighborMessage": "Le camion Lezzet Anatolia passe dans notre rue cette semaine — commande pour le même jour et nous serons livrés ensemble : {url}"
     }
   },
   "de": {
@@ -292,7 +304,9 @@
       "shipping": "Versand per Paketdienst",
       "shippingBody": "2–4 Werktage. Lieferung: {fee}",
       "shippingUnavailable": "Diese Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
-      "dayLabel": "Liefertag: {day}"
+      "dayLabel": "Liefertag: {day}",
+      "neighborInvite": "{name} lädt Sie zur Lieferung am {day} ein — dieser Tag ist für Sie vorausgewählt.",
+      "neighborSomeone": "Ihre Nachbarschaft"
     },
     "payment": {
       "eyebrow": "Zahlung",
@@ -380,7 +394,11 @@
       "points": "✦ +{n} Punkte bei Lieferung",
       "note": "Den Status Ihrer Bestellung verfolgen Sie per E-Mail und WhatsApp.",
       "orders": "Meine Bestellungen ansehen",
-      "home": "Weiter einkaufen"
+      "home": "Weiter einkaufen",
+      "neighborTitle": "🚚 Laden Sie Ihre Nachbarschaft für diesen Tag ein",
+      "neighborBody": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Straße. Bestellt Ihre Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
+      "neighborShare": "Einladungslink teilen",
+      "neighborMessage": "Der Lezzet-Anatolia-Wagen kommt diese Woche in unsere Straße — bestell für denselben Tag, dann werden wir zusammen beliefert: {url}"
     }
   }
 }

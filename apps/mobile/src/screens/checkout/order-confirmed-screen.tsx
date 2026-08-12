@@ -1,7 +1,7 @@
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -10,6 +10,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';
 import messages from './messages.json';
+import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
 
 /*
   SİPARİŞ ONAYI (v3 `vConfirm`) — büyük onay işareti, sipariş numarası, teslimat/ödeme/toplam
@@ -37,6 +38,12 @@ import messages from './messages.json';
 type Messages = LocalizedCopy<typeof messages>;
 
 interface OrderConfirmedScreenProps {
+  /**
+   * Açılan siparişin kimliği — **ekranda GÖRÜNMEZ**, yalnız komşu davetini açmak için (21.45).
+   * `null` = parametre gelmedi; şerit çizilmez. Uuid müşteriye gösterilecek bir numara değil
+   * (dosya künyesindeki `reference` ayrımı).
+   */
+  orderId: string | null;
   /** Müşteriye gösterilen sipariş numarası; `null` = bilinmiyor → satır çizilmez (dosya künyesi). */
   reference: string | null;
   /** Genel toplam (cent); `null` = parametre okunamadı — sıfır YAZILMAZ (CLAUDE §1). */
@@ -49,6 +56,7 @@ interface OrderConfirmedScreenProps {
 }
 
 export function OrderConfirmedScreen({
+  orderId,
   reference,
   totalCents,
   deliveryLabel,
@@ -58,6 +66,7 @@ export function OrderConfirmedScreen({
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
+  const neighborInviteUrl = useOrderNeighborInvite(orderId, locale);
 
   return (
     <View style={styles.screen}>
@@ -90,6 +99,30 @@ export function OrderConfirmedScreen({
           </Text>
         ) : null}
         <Text style={styles.note}>{t.confirmed.note}</Text>
+
+        {/*
+          KOMŞUNU BU GÜNE ÇAĞIR (21.45) — kullanıcının işaret ettiği an: *"nerede görünür — sipariş
+          tamamlandı ekranında; en değerli an orası, sefer somut, gün belli."* Hesap sayfasındaki
+          durgun kutu bu anı hiç yakalamıyordu.
+
+          Sistem paylaşım sayfası kullanılıyor, kendi çekmecemiz çizilmiyor: davet WhatsApp'a
+          gidiyor ve uygulama sırasını işletim sistemi bizden iyi biliyor (hesap ekranının aynı
+          kararı). Bağlantı YOKSA şerit hiç çizilmez — boş bir şerit "burada bir şey vardı ama
+          çalışmıyor" der.
+        */}
+        {neighborInviteUrl === null ? null : (
+          <View style={styles.neighbor} testID="confirmed-neighbor">
+            <Text style={styles.neighborTitle}>{t.confirmed.neighborTitle}</Text>
+            <Text style={styles.neighborBody}>{t.confirmed.neighborBody}</Text>
+            <SecondaryButton
+              label={t.confirmed.neighborShare}
+              onPress={() => void Share.share({ message: t.confirmed.neighborMessage.replace('{url}', neighborInviteUrl) })}
+              tone="olive"
+              shape="pill"
+              testID="confirmed-neighbor-share"
+            />
+          </View>
+        )}
 
         <View style={styles.actions}>
           <PrimaryButton label={t.confirmed.orders} onPress={() => router.replace('/orders')} testID="confirmed-orders" />
@@ -157,5 +190,30 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignSelf: 'stretch',
     gap: theme.space.lg,
     marginTop: theme.space.md,
+  },
+  /* Şerit kitin BİLGİ KUTUSU dilinde (zeytin zemin, kart yarıçapı) — yeni bir blok dili icat
+     edilmedi (CLAUDE §3: improvise etme). Web'in `NeighborBand`i de yardım şeridinin gramerini
+     ödünç aldı; iki yüzey aynı kararı verdi. */
+  neighbor: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: theme.space.md,
+    backgroundColor: theme.colors['olive-bg'],
+    borderRadius: theme.radius.card,
+    paddingVertical: theme.space['2xl'],
+    paddingHorizontal: theme.space['4xl'],
+  },
+  neighborTitle: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text['body-sm'],
+    color: theme.colors.ink,
+    textAlign: 'center',
+  },
+  neighborBody: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
+    color: theme.colors.muted,
+    textAlign: 'center',
   },
 }));

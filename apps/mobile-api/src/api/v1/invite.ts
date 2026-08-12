@@ -1,11 +1,21 @@
 import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
 import { z } from 'zod';
-import { readInviteWelcome, tryAttachReferral } from '@lezzet/application';
-import { serviceDb } from '@lezzet/database';
-import { InviteWelcomeSchema } from '@lezzet/types';
+import {
+  acceptNeighborInvite,
+  neighborInviteUrl,
+  readInviteWelcome,
+  readNeighborWelcome,
+  tryAttachReferral,
+  tryOpenNeighborInvite,
+} from '@lezzet/application';
+import { serviceDb, UserProfileService } from '@lezzet/database';
+import { InviteWelcomeSchema, NeighborWelcomeSchema, OrderNeighborInviteSchema } from '@lezzet/types';
+import { logger } from '@lezzet/observability';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { optionalCustomerId, type V1Env } from './auth';
+import { localeOf } from './cart-view';
 
 /**
  * Davet karşılaması (21.43) — `GET /api/v1/invite/:code`. Web'in `/[dil]/davet/[code]` sayfasının
@@ -45,7 +55,52 @@ invite.get('/invite/:code', async (c) => {
   return ok(c, InviteWelcomeSchema.parse(body));
 });
 
-const ClaimBodySchema = z.object({ referralCode: z.string().min(1) });
+/**
+ * **Komşu davetinin karşılaması** (21.45) — `GET /api/v1/neighbor/:token`. Web'in
+ * `/[dil]/komsu/[token]` sayfasının uygulama karşılığı; ikisi de `readNeighborWelcome`i çağırır.
+ *
+ * Getiren davetiyle aynı kimlik rejimi (açık uç, jeton varsa okunur) ama **beş hâl**: buradaki
+ * davet bir SEFERE çağırıyor, yani seferi geçebilir (`run_closed`) ve kontenjanı dolabilir
+ * (`full`). Getiren davetinde ikisinin de karşılığı yok.
+ *
+ * **Reddedilen hâller de tarih taşır:** "sefer geçti" cümlesi hangi seferin geçtiğini
+ * söyleyebilmeli — tarihsiz bir ret, komşuya neyi kaçırdığını söylemez.
+ */
+invite.get('/neighbor/:token', async (c) => {
+  const db = serviceDb();
+  const viewerId = await optionalCustomerId(db, c.req.header('authorization'));
+  const welcome = await readNeighborWelcome(db, c.req.param('token'), viewerId);
+
+  /* Motorun hâli `deliveryZoneId` de taşıyor; şemada YOK ve `parse` onu süzüyor — bölge kimliği
+     operasyonun iç künyesidir, komşuya söylenecek şey gündür. Bu yüzden `z.input` kilidi de
+     kurulmuyor: kapının kümesi telin kümesinden BİLEREK geniş. */
+  return ok(c, NeighborWelcomeSchema.parse(welcome));
+});
+
+/**
+ * Gövde: iki davetten en az biri. **İkisi birden gelebilir ve bu gerçek bir hâl** — davetli bir
+ * arkadaşının bağlantısıyla tanışıp, sonra bir komşusunun sefer davetine tıklayıp, en sonunda
+ * hesabını açabilir. İkisi ayrı ayrı yazılsaydı cihaz iki tur atardı ve biri düşerse öteki de
+ * yarım kalırdı.
+ */
+const ClaimBodySchema = z
+  .object({ referralCode: z.string().min(1).optional(), neighborToken: z.string().min(1).optional() })
+  .refine((body) => body.referralCode !== undefined || body.neighborToken !== undefined, {
+    message: 'en az bir davet gerekli',
+  });
+
+/** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — komşu kapılarının istediği ikincisi. */
+interface CustomerEnv {
+  Variables: V1Env['Variables'] & { customerId: string };
+}
+
+/** Profil çözümü tek middleware'de (puan uçlarının deseni); profili olmayan auth kullanıcısı 404. */
+async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Response | void> {
+  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(c.get('authUser').id);
+  if (!profile) return fail(c, 'profile_not_found', 404);
+  c.set('customerId', profile.id);
+  await next();
+}
 
 /**
  * **Bekleyen daveti hesaba bağlar** (21.44) — `POST /api/v1/me/invite/claim`, Bearer'ın ARDINDA.
@@ -70,12 +125,72 @@ const ClaimBodySchema = z.object({ referralCode: z.string().min(1) });
  * kaydolmayı yeni bitirmiş kişiye söylenecek ilk cümle değil). Reddin gerekçesi log'a düşer —
  * "davet neden yazılmadı" sorusunun cevap kaynağı orası.
  */
-export const inviteClaim = new Hono<V1Env>();
+export const inviteClaim = new Hono<CustomerEnv>();
+inviteClaim.use('*', resolveCustomer);
 
 inviteClaim.post('/claim', async (c) => {
   const body = ClaimBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return fail(c, 'invalid_body', 400);
 
-  await tryAttachReferral(serviceDb(), c.get('authUser').id, body.data.referralCode);
+  if (body.data.referralCode) await tryAttachReferral(serviceDb(), c.get('authUser').id, body.data.referralCode);
+  if (body.data.neighborToken) await claimNeighbor(c.get('customerId'), body.data.neighborToken);
   return ok(c, true);
+});
+
+/**
+ * Komşu davetini kişiye yazar — web'in `handOffInvitesToCustomer`ındaki `handOffNeighbor`ın ikizi
+ * ve AYNI hükümle: **girişi asla düşürmez, ama sessiz de değil.**
+ *
+ * Ret gerçek ve sık: sefer geçmiş olabilir, kontenjan dolmuş olabilir, kişi kendi bağlantısını
+ * açmış olabilir. Üçü de müşteriye burada söylenmez — karşılama ekranı zaten söylemişti; bu çağrı
+ * yalnız kaydı kuruyor. Gerekçe log'a düşer, çünkü "davet neden yazılmadı" sorusunun tek cevap
+ * kaynağı orası.
+ */
+async function claimNeighbor(customerId: string, token: string): Promise<void> {
+  try {
+    const outcome = await acceptNeighborInvite(serviceDb(), { token, customerId });
+    if (outcome.status !== 'ok') {
+      logger.info({ context: 'api/invite', customerId, reason: outcome.reason }, 'komşu daveti kabul edilmedi');
+    }
+  } catch (err) {
+    logger.warn(
+      { context: 'api/invite', customerId, err: err instanceof Error ? err.message : String(err) },
+      'komşu daveti kişiye yazılamadı — giriş etkilenmedi',
+    );
+  }
+}
+
+const OpenBodySchema = z.object({ orderId: z.string().uuid() });
+
+/**
+ * **Siparişin komşu davetini açar ve paylaşılabilir adresini döner** (21.45) —
+ * `POST /api/v1/me/invite/neighbor`. Sipariş tamamlandı ekranının çağırdığı tek uç.
+ *
+ * ── NEDEN POST, OKUMA GİBİ GÖRÜNÜYOR OLSA DA ────────────────────────────────
+ * İlk çağrı daveti ÜRETİR (`openNeighborInvite` idempotent: ikinci çağrı aynısını döner). Yani bu
+ * bir yazma. GET yapsaydık, ekranı önizleyen/önyükleyen her şey sessizce satır açardı.
+ *
+ * **Davet peşinen açılmıyor** ve bu `getOrCreateReferralCode`un aynı kararı: müşterilerin çoğu
+ * komşusunu çağırmaz, her siparişe davet satırı yazmak kullanılmayacak kayıt üretmek olurdu.
+ *
+ * **`inviteUrl: null` ARIZA DEĞİL, meşru hâl:** kargo siparişinde "aynı sefer" diye bir şey yok,
+ * kesim saati dolmuş seferde de çağrılacak kimse kalmamıştır. Ekran o hâlde şeridi hiç çizmez.
+ * Adresi sunucu üretiyor — üç yüzey kendi adresini kursa, rota adı değiştiği gün ikisi 404'e düşer.
+ *
+ * **Sipariş başkasınınsa da `null`:** sahiplik kontrolü kapının içinde (`not_owner`) ve dışarıya
+ * ayrı bir cevap verilmiyor — "bu sipariş senin değil" demek, olmayan bir siparişin varlığını
+ * doğrulamaktır (geri bildirim davetindeki aynı ders).
+ */
+inviteClaim.post('/neighbor', async (c) => {
+  const body = OpenBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  /* Dil ZORUNLU ve varsayılansız (sepet/checkout ailesiyle aynı okuma): bağlantının dili
+     PAYLAŞANIN dilidir ve sessizce Türkçeye düşmek, Alsaslı bir müşteriye Türkçe bir adres
+     paylaştırmak olurdu. */
+  const locale = localeOf(c);
+  if (!locale.success) return fail(c, 'invalid_locale', 400);
+
+  const invite = await tryOpenNeighborInvite(serviceDb(), { orderId: body.data.orderId, customerId: c.get('customerId') });
+  return ok(c, OrderNeighborInviteSchema.parse({ inviteUrl: invite === null ? null : neighborInviteUrl(invite.token, locale.data) }));
 });

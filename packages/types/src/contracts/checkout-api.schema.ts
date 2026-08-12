@@ -39,6 +39,20 @@ export const CheckoutDeliverySchema = z.object({
   /** Tek tarih varsa ekran seçim sunmaz, onu gösterir (DOMAIN §6). */
   requiresDateChoice: z.boolean(),
   /**
+   * **Bekleyen komşu daveti** (17.10 · 21.45) — davet edenin adı + çağrıldığı gün; yoksa `null`.
+   *
+   * Kabul edilmiş bir davet KİŞİYE yazılı (`neighbor_invite_claim`), yani bu alan cihazda saklanan
+   * bir şeyden değil, sunucudan geliyor. Kullanıcının 12.08'deki sorusunun cevabı bu: davetli
+   * web'de hesap açıp uygulamayı sonra yüklese bile davet burada duruyor — çerezde değil, kişide.
+   *
+   * **Süzgeç SUNUCUDA:** gün `availableDates` içinde değilse alan `null` gelir. Seçilemeyen bir
+   * günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
+   *
+   * Ekranın işi iki cümle: daveti YAZMAK ve o günü ÖNSEÇİLİ getirmek. Seçimin kendisi yine
+   * müşterinin — davet bir çağrıdır, kilit değil.
+   */
+  neighborInvite: z.object({ inviterName: z.string(), deliveryDate: z.string() }).nullable(),
+  /**
    * Bu adrese HİÇBİR yoldan gidilemiyor: rota dışı adres + sepette soğuk zincir kalemi. Kargo
    * dolgusu ona açılmaz (DOMAIN §6) — sipariş verilemez, sepet bölünmeli (K32).
    */

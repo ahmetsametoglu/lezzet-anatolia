@@ -1,9 +1,16 @@
 import { z } from 'zod';
-import { InviteWelcomeSchema, type InviteWelcomeView } from '@lezzet/types';
+import {
+  InviteWelcomeSchema,
+  NeighborWelcomeSchema,
+  OrderNeighborInviteSchema,
+  type InviteWelcomeView,
+  type NeighborWelcomeView,
+} from '@lezzet/types';
+import type { Locale } from '@lezzet/i18n';
 
 import { authorizedFetch, maybeAuthorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from '../api/client';
-import { clearInvite, readInvite } from './invite-store';
+import { clearInvite, clearNeighborInvite, readInvite, readNeighborInvite } from './invite-store';
 
 /*
   `GET /api/v1/invite/:code` — davet karşılamasının cihaz ucu. Şema `@lezzet/types`ta ve UÇ DA
@@ -40,13 +47,50 @@ export function fetchInviteWelcome(code: string): Promise<ApiResult<InviteWelcom
  * girişin durması, çözdüğünden büyük bir arıza olurdu. Sunucu da zaten hep `true` döner; reddin
  * gerekçesi orada log'a düşer.
  *
- * **Kod ne olursa olsun tüketilir** (sunucu cevabına bakılmadan): reddedilmiş bir davet cihazda
- * kalsaydı, aynı telefondan giriş yapan herkes onu yeniden denerdi ve hiçbiri tutmazdı.
+ * **Tüketim YALNIZ çağrı BAŞARIYSA** (web'in `handOffNeighbor`ındaki *"profil yoksa çerez
+ * korunur"* kuralının aynısı). Ayrım ince ama önemli:
+ *   · Sunucu **200** döndüyse davet gerçekten değerlendirildi — kabul edilmiş ya da gerekçesiyle
+ *     reddedilmiş olabilir; ikisinde de tekrar denenecek bir şey yok, kayıt silinir. Reddedilmiş
+ *     bir davet cihazda kalsaydı aynı telefondan giriş yapan herkes onu yeniden denerdi.
+ *   · **404** (profil henüz yazılmamış — trigger yarışı) ya da **ağ hatası** ise davet HİÇ
+ *     sorulmadı. Silmek, kullanıcının şikâyet ettiği sessiz kaybın ta kendisi olurdu: kayıt durur
+ *     ve bir sonraki giriş aynı kapıdan geçer.
  */
 export async function claimPendingInvite(): Promise<void> {
-  const referralCode = await readInvite();
-  if (referralCode === null) return;
+  const [referralCode, neighborToken] = await Promise.all([readInvite(), readNeighborInvite()]);
+  if (referralCode === null && neighborToken === null) return;
 
-  await authorizedFetch('/api/v1/me/invite/claim', z.literal(true), { method: 'POST', body: { referralCode } });
-  await clearInvite();
+  /* İKİSİ TEK GÖVDEDE (21.45): davetli bir arkadaşının bağlantısıyla tanışıp, sonra bir komşusunun
+     sefer davetine tıklayıp, en sonunda hesabını açabilir — ikisi de bekliyor olabilir. Ayrı ayrı
+     yollasaydık cihaz iki tur atardı ve biri düşerse öteki yarım kalırdı. */
+  const result = await authorizedFetch('/api/v1/me/invite/claim', z.literal(true), {
+    method: 'POST',
+    body: {
+      ...(referralCode === null ? {} : { referralCode }),
+      ...(neighborToken === null ? {} : { neighborToken }),
+    },
+  });
+  if (result.error !== null) return;
+
+  await Promise.all([referralCode === null ? undefined : clearInvite(), neighborToken === null ? undefined : clearNeighborInvite()]);
+}
+
+/** Komşu davetinin karşılama durumu — beş hâl; ekran hangisini çizeceğini bundan bilir. */
+export function fetchNeighborWelcome(token: string): Promise<ApiResult<NeighborWelcomeView>> {
+  return maybeAuthorizedFetch(`/api/v1/neighbor/${encodeURIComponent(token)}`, NeighborWelcomeSchema);
+}
+
+/**
+ * Siparişin komşu davetini AÇAR ve paylaşılabilir adresini getirir (21.45) — sipariş tamamlandı
+ * ekranının çağırdığı tek uç.
+ *
+ * **POST, çünkü ilk çağrı daveti ÜRETİYOR** (uç idempotent: ikincisi aynısını döner). Peşinen
+ * açılmıyor — müşterilerin çoğu komşusunu çağırmaz ve her siparişe davet satırı yazmak
+ * kullanılmayacak kayıt üretmek olurdu.
+ *
+ * `inviteUrl: null` ARIZA DEĞİL: kargo siparişinde "aynı sefer" yok, kesim saati dolmuş seferde de
+ * çağrılacak kimse kalmamıştır. Ekran o hâlde şeridi hiç çizmez.
+ */
+export function openOrderNeighborInvite(orderId: string, locale: Locale): Promise<ApiResult<{ inviteUrl: string | null }>> {
+  return authorizedFetch(`/api/v1/me/invite/neighbor?locale=${locale}`, OrderNeighborInviteSchema, { method: 'POST', body: { orderId } });
 }

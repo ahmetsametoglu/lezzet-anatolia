@@ -26,41 +26,88 @@ import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
   ikinci bir depo paketi açmak yeni bir bağımlılık demekti.
 */
 
-/** Depo anahtarı — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */
+/*
+  ── İKİ DAVET, TEK UYGULAMA (21.45) ─────────────────────────────────────────
+  Komşu daveti (17.10) de aynı yolculuğu yaşıyor: bağlantı kimliği olmayan birinde açılıyor, kabul
+  cihazda bekliyor, giriş olunca kişiye yazılıyor. Web de ikisini aynı dosyada tutuyor
+  (`invite-cookie.ts`) ve gerekçesi aynı: ayrı ayrı yazılsalardı biri bir gün ötekinden ayrışırdı
+  — sessizce, çünkü yanlış saklanan bir davet hata vermez, yalnız kaybolur.
+
+  İKİSİNİN ÖMRÜ BURADA AYRILMIYOR (web'de ayrılıyor: 30 gün ↔ 7 gün). Sebep kabın kendisi:
+  SecureStore'da süre yok, kayıt uygulama silinene dek durur. Ama bu bir kayıp değil — ölmüş bir
+  komşu davetini sunucu zaten reddediyor (`run_closed`) ve reddedilen kabul cihazdan siliniyor.
+  Süreyi istemciye taklit ettirmek, aynı kuralın ikinci ve yanlışlanabilir bir kopyası olurdu.
+*/
+
+/** Depo anahtarları — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */
 const INVITE_KEY = DEVICE_STORE_KEYS.invite;
+const NEIGHBOR_KEY = DEVICE_STORE_KEYS.neighborInvite;
 
 /**
- * Kabul edilen kodu cihaza yazar. Hata YUTULMAZ, çağırana taşınmaz da: yazılamayan kodun
- * müşteriye söylenecek bir karşılığı yok (mobilde log altyapısı da yok — 01-teknoloji §9) ve
- * bedeli ölçülü: davet bağı kurulmaz, akışın kendisi etkilenmez. Karşılama ekranı yine açılır,
- * davetli yine kataloğa girer.
+ * Kabul edileni cihaza yazar. Hata YUTULMAZ, çağırana taşınmaz da: yazılamayan bir davetin
+ * müşteriye söylenecek karşılığı yok (mobilde log altyapısı da yok — 01-teknoloji §9) ve bedeli
+ * ölçülü: bağ kurulmaz, akışın kendisi etkilenmez. Karşılama ekranı yine açılır, davetli yine
+ * kataloğa girer.
  */
-export async function rememberInvite(code: string): Promise<void> {
-  const trimmed = code.trim();
+async function remember(key: string, value: string): Promise<void> {
+  const trimmed = value.trim();
   if (trimmed.length === 0) return;
   try {
-    await deviceStore.setItem(INVITE_KEY, trimmed);
+    await deviceStore.setItem(key, trimmed);
   } catch {
     /* Yukarıdaki künye: sessizliğin gerekçesi yazılı, boş `catch` değil. */
   }
 }
 
-/** Bekleyen kod; yoksa `null`. Okuma düşerse "kayıt yok" ile aynı kapıya çıkar. */
-export async function readInvite(): Promise<string | null> {
+/** Bekleyen değer; yoksa `null`. Okuma düşerse "kayıt yok" ile aynı kapıya çıkar. */
+async function read(key: string): Promise<string | null> {
   try {
-    const raw = await deviceStore.getItem(INVITE_KEY);
+    const raw = await deviceStore.getItem(key);
     return raw && raw.trim().length > 0 ? raw.trim() : null;
   } catch {
-    /* Aynı hüküm: ölçemediğimiz kod "yok" sayılır — bağ kurulmaz, giriş etkilenmez. */
+    /* Aynı hüküm: ölçemediğimiz davet "yok" sayılır — bağ kurulmaz, giriş etkilenmez. */
     return null;
   }
 }
 
-/** Kod tüketildi (giriş tamamlandı) — bir daha denenmesin. */
-export async function clearInvite(): Promise<void> {
+async function forget(key: string): Promise<void> {
   try {
-    await deviceStore.removeItem(INVITE_KEY);
+    await deviceStore.removeItem(key);
   } catch {
-    /* Silinemeyen kod bir sonraki girişte yeniden denenir; motor `already_referred` ile reddeder. */
+    /* Silinemeyen kayıt bir sonraki girişte yeniden denenir; sunucu tekrarı sessizce reddeder. */
   }
+}
+
+/** Getiren davetinin kodunu saklar. */
+export function rememberInvite(code: string): Promise<void> {
+  return remember(INVITE_KEY, code);
+}
+
+/** Bekleyen getiren kodu. */
+export function readInvite(): Promise<string | null> {
+  return read(INVITE_KEY);
+}
+
+/** Kod tüketildi (giriş tamamlandı) — bir daha denenmesin. */
+export function clearInvite(): Promise<void> {
+  return forget(INVITE_KEY);
+}
+
+/** Komşu davetinin belirtecini saklar (21.45). */
+export function rememberNeighborInvite(token: string): Promise<void> {
+  return remember(NEIGHBOR_KEY, token);
+}
+
+/** Bekleyen komşu belirteci. */
+export function readNeighborInvite(): Promise<string | null> {
+  return read(NEIGHBOR_KEY);
+}
+
+/**
+ * Komşu belirteci tüketildi. **Reddedilse de silinir** (sefer geçti, kontenjan doldu, kendi
+ * daveti): o davetin yeniden denenecek bir hâli yok ve cihazda durması yalnız gürültü olurdu —
+ * web çerezinin aynı kararı.
+ */
+export function clearNeighborInvite(): Promise<void> {
+  return forget(NEIGHBOR_KEY);
 }

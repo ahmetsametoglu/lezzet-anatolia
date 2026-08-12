@@ -159,9 +159,10 @@ v1.route('/payments', payments);
 // devresi `points.ts` + `@lezzet/application/customer/points` künyesinde.
 v1.route('/me/points', points);
 
-// Davetin hesaba bağlanması (21.44) — Bearer'ın ARDINDA, karşılamanın aksine: "bu daveti BENİM
-// hesabıma yaz" cümlesinin oturumsuz hâli yoktur (keşif talep kapısının aynı ayrımı). Cihaz her
-// giriş yolundan sonra buraya uğrar; kural ortak kapıda (`attachReferralOnLogin`).
+// Davetin hesaba bağlanması (21.44 · 21.45) — Bearer'ın ARDINDA, karşılamanın aksine: "bu daveti
+// BENİM hesabıma yaz" cümlesinin oturumsuz hâli yoktur (keşif talep kapısının aynı ayrımı). Cihaz
+// her giriş yolundan sonra buraya uğrar (iki davet türü tek gövdede); siparişin komşu davetini
+// açan uç da burada. Kurallar ortak kapılarda (`attachReferralOnLogin` · `acceptNeighborInvite`).
 v1.route('/me/invite', inviteClaim);
 
 // Keşif turunun hesaba bağlanması (21.19) — Bearer'ın ARKASINDA: "bu kaydırmaları BENİM hesabıma

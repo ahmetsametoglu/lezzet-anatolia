@@ -10,8 +10,14 @@ import { LOCALES, localizedPath } from '@lezzet/i18n';
   Uygulamanın rota ağacında ne dil öneki var (dil bir CİHAZ tercihi, adresin parçası değil) ne de
   üç ayrı davet klasörü. Bu kanca aradaki çeviriyi yapar: gelen adres `/invite/<kod>`a indirilir.
 
+  ── İKİ DAVET TÜRÜ, TEK KANCA (21.45) ───────────────────────────────────────
+  Komşu daveti (17.10) kendi segmentlerini kullanıyor (`komsu` · `voisin` · `nachbarn`). Ayrı bir
+  kanca yazılamaz — expo-router tek `+native-intent` okur; ama liste hâline getirilmesinin asıl
+  sebebi başka: tek rotaya göre yazılmış bir eşleme, ikinci rota doğduğunda SESSİZCE eksik kalır.
+  Açılmayan bir derin bağlantı tarayıcıda açılır ve kimse arıza sanmaz.
+
   ── SEGMENTLER YAZILMIYOR, TÜRETİLİYOR ──────────────────────────────────────
-  Üç sözcüğü ("davet", "parrainage", "einladung") buraya elle yazmak, `PATHNAMES`in dördüncü
+  Sözcükleri ("davet", "parrainage", "einladung"…) buraya elle yazmak, `PATHNAMES`in dördüncü
   kopyası olurdu (CLAUDE §1) — ve sessizce eskiyen türden: rota adı web'de değişse bu dosya
   derlenmeye devam eder, yalnız bağlantı bir gün uygulamayı açmaz olur. `localizedPath` aynı
   tablodan üretiyor; tablo değişirse eşleme kendiliğinden değişir.
@@ -27,23 +33,39 @@ import { LOCALES, localizedPath } from '@lezzet/i18n';
   yüzden gövde tek bir `try` içinde ve düşerse adres olduğu gibi geri verilir.
 */
 
-/** `/invite/[code]` rotasının bir dildeki karşılığı — `/davet/` gibi, kodsuz ve eğik çizgili. */
-function invitePrefix(locale: (typeof LOCALES)[number]): string {
+/**
+ * Karşılanan davet rotaları — web'in ilişkilendirme dosyasındaki listenin AYNISI
+ * (`apps/web/app/well-known/[file]/route.ts` → `DEEP_LINK_ROUTES`). İki taraf da aynı tabloyu
+ * okuduğu için segmentler kendiliğinden eşleşiyor; burada eşleşen ama orada beyan edilmeyen bir
+ * yol, uygulamanın hiç çağrılmadığı sessiz bir boşluk olurdu.
+ *
+ * Uygulamanın İÇ rotası web'in yolundan bağımsız (dil öneki yok, segment İngilizce) — o yüzden
+ * eşleme burada elle veriliyor; türetilebilecek olan tek şey web tarafıdır ve o da türetiliyor.
+ */
+const DEEP_LINK_ROUTES = [
+  { route: '/invite/[code]', screen: '/invite' },
+  { route: '/neighbor/[token]', screen: '/neighbor' },
+] as const;
+
+/** Bir rotanın bir dildeki öneki — `/tr/davet/` gibi, parametresiz ve eğik çizgili. */
+function prefixOf(route: (typeof DEEP_LINK_ROUTES)[number]['route'], locale: (typeof LOCALES)[number]): string {
   // Yer tutucuyu boş geçiriyoruz: geriye segmentin kendisi kalıyor ("/davet/").
-  return localizedPath('/invite/[code]', locale, { code: '' });
+  return `/${locale}${localizedPath(route, locale).replace(/\[[^\]]+\]$/, '')}`;
 }
 
 /**
- * Gelen yolun davet bağlantısı olup olmadığına bakar; öyleyse uygulamanın iç rotasını döner.
+ * Gelen yolun bir davet bağlantısı olup olmadığına bakar; öyleyse uygulamanın iç rotasını döner.
  * Değilse `null` — çağıran adrese dokunmaz.
  */
 function inviteRouteOf(pathname: string): string | null {
-  for (const locale of LOCALES) {
-    const prefix = `/${locale}${invitePrefix(locale)}`;
-    if (!pathname.startsWith(prefix)) continue;
-    // Segmentin kalanı koddur; sondaki eğik çizgi ve fazlalık yol parçaları atılır.
-    const code = pathname.slice(prefix.length).split('/')[0]?.trim();
-    if (code) return `/invite/${code}`;
+  for (const { route, screen } of DEEP_LINK_ROUTES) {
+    for (const locale of LOCALES) {
+      const prefix = prefixOf(route, locale);
+      if (!pathname.startsWith(prefix)) continue;
+      // Önekten sonrası parametredir; sondaki eğik çizgi ve fazlalık yol parçaları atılır.
+      const param = pathname.slice(prefix.length).split('/')[0]?.trim();
+      if (param) return `${screen}/${param}`;
+    }
   }
   return null;
 }

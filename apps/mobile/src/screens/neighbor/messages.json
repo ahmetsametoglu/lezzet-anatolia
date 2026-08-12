@@ -1,0 +1,104 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Komşu daveti",
+    "loading": "Davet açılıyor",
+    "errorBody": "Daveti açamadık. Bağlantınızı kontrol edip tekrar deneyin.",
+    "retry": "Tekrar dene",
+    "ok": {
+      "title": "{name} sizi {day} teslimatına çağırdı",
+      "someone": "Komşunuz",
+      "body": "Aracımız o gün zaten sokağınızda olacak. Siz de o güne sipariş verirseniz birlikte teslim alırsınız — soğuk zincir bozulmadan, kapınıza kadar.",
+      "primary": "Kataloğa göz at",
+      "secondary": "Hesabımı aç"
+    },
+    "self": {
+      "title": "Bu sizin davet bağlantınız",
+      "body": "Bağlantınız çalışıyor. Komşunuz bu güne sipariş verdiğinde puanınız yazılır.",
+      "primary": "Siparişlerime dön"
+    },
+    "runClosed": {
+      "title": "{day} teslimatı için artık geç",
+      "body": "O günün siparişleri kapandı. Yaklaşan günler için kataloğa göz atabilirsiniz.",
+      "primary": "Kataloğa göz at"
+    },
+    "full": {
+      "title": "{day} teslimatının komşu kontenjanı doldu",
+      "body": "Bu davetten sipariş verebilecek komşu sayısına ulaşıldı. Siz yine sipariş verebilirsiniz; teslimat gününü ödeme adımında seçersiniz.",
+      "primary": "Kataloğa göz at"
+    },
+    "unknown": {
+      "title": "Bu davet bağlantısını tanımadık",
+      "body": "Bağlantı eksik kopyalanmış olabilir. Yine de buyurun — kataloğu davetsiz de gezebilirsiniz.",
+      "primary": "Kataloğa göz at"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Invitation voisin",
+    "loading": "Ouverture de l'invitation",
+    "errorBody": "Impossible d'ouvrir l'invitation. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer",
+    "ok": {
+      "title": "{name} vous invite à la livraison du {day}",
+      "someone": "Votre voisin",
+      "body": "Notre camion sera déjà dans votre rue ce jour-là. Commandez pour la même date et vous serez livrés ensemble — chaîne du froid préservée, jusqu'à votre porte.",
+      "primary": "Voir le catalogue",
+      "secondary": "Créer mon compte"
+    },
+    "self": {
+      "title": "C'est votre lien d'invitation",
+      "body": "Votre lien fonctionne. Vos points seront crédités lorsque votre voisin commandera pour cette date.",
+      "primary": "Voir mes commandes"
+    },
+    "runClosed": {
+      "title": "Il est trop tard pour la livraison du {day}",
+      "body": "Les commandes de cette date sont closes. Vous pouvez consulter le catalogue pour les prochaines dates.",
+      "primary": "Voir le catalogue"
+    },
+    "full": {
+      "title": "Le nombre de voisins pour le {day} est atteint",
+      "body": "Cette invitation a atteint son nombre de voisins. Vous pouvez tout de même commander ; la date de livraison se choisit au moment du paiement.",
+      "primary": "Voir le catalogue"
+    },
+    "unknown": {
+      "title": "Nous ne reconnaissons pas ce lien",
+      "body": "Le lien a peut-être été copié partiellement. Entrez quand même : le catalogue se visite sans invitation.",
+      "primary": "Voir le catalogue"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Nachbarschaftseinladung",
+    "loading": "Einladung wird geöffnet",
+    "errorBody": "Die Einladung konnte nicht geöffnet werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "retry": "Erneut versuchen",
+    "ok": {
+      "title": "{name} lädt Sie zur Lieferung am {day} ein",
+      "someone": "Ihre Nachbarin oder Ihr Nachbar",
+      "body": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Straße. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
+      "primary": "Katalog ansehen",
+      "secondary": "Konto eröffnen"
+    },
+    "self": {
+      "title": "Das ist Ihr Einladungslink",
+      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald Ihre Nachbarschaft für diesen Tag bestellt.",
+      "primary": "Zu meinen Bestellungen"
+    },
+    "runClosed": {
+      "title": "Für die Lieferung am {day} ist es zu spät",
+      "body": "Die Bestellungen für diesen Tag sind geschlossen. Für die kommenden Termine können Sie den Katalog ansehen.",
+      "primary": "Katalog ansehen"
+    },
+    "full": {
+      "title": "Die Nachbarplätze für den {day} sind belegt",
+      "body": "Diese Einladung hat ihre Anzahl an Nachbarinnen und Nachbarn erreicht. Bestellen können Sie trotzdem; den Liefertag wählen Sie beim Bezahlen.",
+      "primary": "Katalog ansehen"
+    },
+    "unknown": {
+      "title": "Diesen Einladungslink kennen wir nicht",
+      "body": "Der Link wurde vielleicht unvollständig kopiert. Kommen Sie trotzdem herein — der Katalog ist auch ohne Einladung offen.",
+      "primary": "Katalog ansehen"
+    }
+  }
+}

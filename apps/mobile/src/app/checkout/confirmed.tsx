@@ -20,6 +20,7 @@ function intOf(value: string | undefined): number | null {
 
 export default function OrderConfirmedRoute() {
   const params = useLocalSearchParams<{
+    orderId?: string;
     reference?: string;
     total?: string;
     delivery?: string;
@@ -29,6 +30,9 @@ export default function OrderConfirmedRoute() {
 
   return (
     <OrderConfirmedScreen
+      /* Ekranda GÖRÜNMEZ (21.45): yalnız komşu davetini açmaya yarıyor. Uuid müşteriye
+         gösterilecek bir numara değil — gösterilen numara `reference`tır ve o hâlâ taşınmıyor. */
+      orderId={params.orderId ?? null}
       reference={params.reference ?? null}
       totalCents={intOf(params.total)}
       deliveryLabel={params.delivery ?? ''}

@@ -2035,6 +2035,58 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `pnpm test:unit` **1357 test** yeşil · mobil jest **84 suite / 598 test** yeşil. Cihaz turu
   yapılmadı: Google turu gerçek bir OAuth istemcisi ve derin bağlantı dönüşü ister.
 
+- [x] (21.45) **KOMŞU DAVETİNİN CİHAZ YARISI — bağlantı uygulamada açılıyor, davet sepete kadar
+  taşınıyor, komşunun günü önseçili geliyor ve sipariş sonrası paylaşılıyor.**
+  `touches:` `packages/types/src/contracts/{invite-api.schema.ts,checkout-api.schema.ts}` ·
+  `apps/mobile-api/src/api/v1/{invite.ts,router.ts,checkout.ts}` ·
+  `apps/mobile/app.config.ts` · `apps/mobile/src/app/{+native-intent.tsx,neighbor/[token].tsx,checkout/confirmed.tsx}` ·
+  `apps/mobile/src/screens/neighbor/*` · `apps/mobile/src/screens/checkout/*` ·
+  `apps/mobile/src/lib/invite/*` · `apps/mobile/src/lib/storage/device-store.ts`
+
+  **BAĞLAM:** sunucu yarısı web şeridinde (17.10 + 12.08 düzeltmesi). Bu satır cihaz ucu; ikisi
+  birlikte davetin İKİNCİ türünü — kullanıcının *"sefer daveti"* dediği şeyi — çalışır hâle
+  getiriyor. Getiren davetinden farkı kavramsal: o bir KİŞİYE çağırır, bu bir GÜNE.
+
+  **1 · BAĞLANTI UYGULAMADA AÇILIYOR.** Komşu rotası kendi segmentlerini kullanıyor (`komsu` ·
+  `voisin` · `nachbarn`) ve `(21.43)`ün filtresi yalnız getiren davetini tanıyordu — yani komşu
+  bağlantısı uygulamayı **hiç açmıyordu**, sessizce: açılmayan bir derin bağlantı tarayıcıda
+  açılır ve kimse arıza sanmaz. Hem Android filtresi hem `+native-intent` eşlemesi artık bir
+  LİSTE üzerinden çalışıyor ve segmentler yine `PATHNAMES`ten türüyor; üçüncü bir davet rotası
+  doğsa tek satırla katılır. Web tarafı da aynı turda aynı şeyi yaptı (ilişkilendirme dosyası
+  artık tablodan türetiyor) — iki taraf aynı kümeyi okuduğu için el sıkışma kendiliğinden eşleşiyor.
+
+  **2 · KARŞILAMA EKRANI — beş hâl.** Getiren davetinin dördüne karşılık burada iki hâl daha var
+  ve ikisi de gerçek: seferi GEÇMİŞ olabilir, kontenjanı DOLMUŞ olabilir. Ayrı ekran yazıldı,
+  ortak ekrana sığdırılmadı: hiç dolmayan dallar taşıyan bir bileşen olurdu. **Reddedilen hâller
+  de tarih taşıyor** — "sefer geçti" cümlesi hangi seferin geçtiğini söyleyebilmeli. Müşteri
+  yüzeyinde *"sefer"* kelimesi geçmiyor (kullanıcı kararı): gün söyleniyor.
+
+  **3 · DAVET SEPETE KADAR TAŞINIYOR — kullanıcının asıl sorusu buydu.** *"Kullanıcı ister önce
+  gitsin, hesap açsın, gezinsin. Sonra mobil uygulamayı yüklesin. Sepete geldiğinde bunu
+  görebilmeli."* Cihaz belirteci yalnız KİMLİK doğana dek taşıyor; giriş anında kişiye devrediliyor
+  (`/me/invite/claim`, iki davet türü tek gövdede) ve ondan sonrası **sunucudan** okunuyor.
+  Checkout anlık görüntüsü `neighborInvite` alanını taşıyor: ekran davet cümlesini gün seçiminin
+  hemen ÜSTÜNDE yazıyor (cümle o seçimin gerekçesi) ve **komşunun günü önseçili** geliyor — ama
+  kilitli değil: müşteri dokunduğu an kendi seçimi geçerli. Davet bir çağrıdır, kısıt değil.
+
+  **4 · SİPARİŞ SONRASI PAYLAŞIM ŞERİDİ.** Kullanıcının işaret ettiği an: *"nerede görünür —
+  sipariş tamamlandı ekranında; en değerli an orası, sefer somut, gün belli."* Ekran `orderId`
+  taşımaya başladı (görünmüyor, yalnız daveti açıyor) ve `POST /me/invite/neighbor` daveti
+  ÜRETİYOR — peşinen açılmıyor, çünkü müşterilerin çoğu komşusunu çağırmaz. Bağlantı yoksa şerit
+  hiç çizilmiyor (kargo siparişi · kesim saati dolmuş sefer): süzgeç sunucuda, iki yerde
+  süzülmüyor.
+
+  **DÜZELTİLEN KUSUR (kendi turumuzda ölçüldü):** devir çağrısı düşse bile cihazdaki davet
+  siliniyordu. Profil henüz yazılmamışsa (trigger yarışı) ya da ağ koparsa davet HİÇ sorulmadan
+  kaybolurdu — kullanıcının şikâyet ettiği sessiz kaybın ta kendisi. Artık tüketim yalnız çağrı
+  başarılıysa; web'in *"profil yoksa çerez korunur"* kuralının aynısı.
+
+  **Doğrulama:** `pnpm typecheck` **18/18** rc=0 · `pnpm lint` temiz · `pnpm knip` yeni bulgu yok ·
+  `pnpm test:unit` **1358 test** yeşil · mobil jest **84 suite / 598 test** yeşil. *(Bir koşuda dört
+  rota testi zaman aşımına düştü — 29,6 sn süren yüklü koşu; tekil ve sonraki iki tam koşuda hepsi
+  yeşil, 11 sn. Kod değil yük.)* **Cihaz turu YAPILMADI:** derin bağlantı gerçek bir alan adı +
+  ilişkilendirme dosyaları ister, davet akışının tamamı da `db:reset` bekleyen bir şema üzerinde.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

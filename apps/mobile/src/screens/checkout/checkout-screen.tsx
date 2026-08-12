@@ -170,15 +170,28 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const isRoute = delivery?.deliveryType === 'route';
   const dates = delivery?.availableDates ?? [];
 
+  /* KOMŞU DAVETİ (21.45) — kabul edilmiş ve seferi hâlâ açık bir davet varsa sunucu buraya koyar.
+     Alan cihazdan değil KİŞİDEN geliyor: davetli web'de kabul edip uygulamayı sonra yüklemiş
+     olabilir (kullanıcı kararı 12.08). Süzgeç de sunucuda — gün `availableDates` içinde değilse
+     alan zaten `null`, yani ekran seçilemeyen bir günü hiç görmüyor. */
+  const neighborInvite = delivery?.neighborInvite ?? null;
+
   /* SEÇİLEN GÜN TÜRETİLİR, saklanan değer körü körüne kullanılmaz: adres değişince eski gün artık
      uygun günlerden biri olmayabilir. Tek gün varsa seçim SUNULMAZ, o gün kullanılır
-     (`requiresDateChoice` — sözleşmenin hükmü: seçeneksiz bir seçim sahte karardır). */
+     (`requiresDateChoice` — sözleşmenin hükmü: seçeneksiz bir seçim sahte karardır).
+
+     DAVETİN GÜNÜ ÖNSEÇİLİ ama KİLİTLİ DEĞİL: müşteri henüz bir gün seçmediyse komşusunun günü
+     gelir; dokunduğu an kendi seçimi geçerlidir. Davet bir ÇAĞRIDIR — seçimi elinden almak,
+     "komşunla aynı gün" kolaylığını bir kısıtlamaya çevirirdi. Sıra da bu yüzden böyle: müşterinin
+     kendi seçimi (`deliveryDate`) her zaman önce sorulur. */
   const chosenDate =
     deliveryDate !== null && dates.includes(deliveryDate)
       ? deliveryDate
-      : delivery !== null && !delivery.requiresDateChoice
-        ? (dates[0] ?? null)
-        : null;
+      : neighborInvite !== null && dates.includes(neighborInvite.deliveryDate)
+        ? neighborInvite.deliveryDate
+        : delivery !== null && !delivery.requiresDateChoice
+          ? (dates[0] ?? null)
+          : null;
 
   const methods = payment?.methods ?? [];
   const codBlockedReason = payment?.codBlockedReason ?? null;
@@ -384,8 +397,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    * (`GET /me/orders/:reference` yalnız numarayla adresleniyor). Uuid'i "sipariş no" diye yazmak
    * müşteriye kullanamayacağı bir numara vermek olurdu; onay ekranı o satırı hiç çizmiyor.
    * Terfi ihtiyacı raporlandı — BEKLEYEN(21.14).
+   *
+   * **`orderId` TAŞINIYOR ama gösterilmiyor** (21.45): onay ekranı komşu davetini onunla açıyor
+   * (`POST /me/invite/neighbor`). Müşteriye çizilmiyor — uuid onun kullanabileceği bir numara
+   * değil; ekranın gerekçesi yukarıda. Yalnız ROTA siparişinde anlamlı, ama süzgeç ekranda değil
+   * SUNUCUDA: kargo siparişinde davet zaten açılmıyor ve cevap `null` dönüyor. İki yerde süzmek,
+   * "hangi sipariş komşu çağırabilir" kuralının ikinci kopyası olurdu.
    */
-  const finish = (totalCents: number, deliveryType: 'route' | 'shipping'): void => {
+  const finish = (orderId: string, totalCents: number, deliveryType: 'route' | 'shipping'): void => {
     const points = Math.round((totalCents / 100) * POINTS_PER_EURO);
     /* SEPET YERELDE BOŞALTILMAZ, SUNUCUDAN TAZELENİR (21.29a): sunucu o siparişin kalemlerini
        zaten düşürdü (`placeOrder` → `clearOrderedLines`) ve `resetCart()` iki gruplu sepette kargo
@@ -398,6 +417,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     router.replace({
       pathname: '/checkout/confirmed',
       params: {
+        orderId,
         total: String(totalCents),
         delivery: deliveryLabelOf(deliveryType, chosenDate, t, locale),
         payment: selectedPayment?.label ?? '',
@@ -433,7 +453,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
     const outcome = result.data;
     if (outcome.status === 'placed') {
-      finish(outcome.totalCents, outcome.deliveryType);
+      finish(outcome.orderId, outcome.totalCents, outcome.deliveryType);
       return;
     }
     if (outcome.status === 'payment_required') {
@@ -442,7 +462,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
          yerinde durur), başarısızlık sebebiyle söylenir. */
       const sheet = await presentPayment({ clientSecret: outcome.clientSecret });
       if (sheet.status === 'succeeded') {
-        finish(outcome.totalCents, outcome.deliveryType);
+        finish(outcome.orderId, outcome.totalCents, outcome.deliveryType);
         return;
       }
       setSubmitting(false);
@@ -617,6 +637,20 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   onPress={keepDelivery}
                   testID="checkout-mode-shipping"
                 />
+                {/* KOMŞU DAVETİ — gün seçiminin HEMEN ÜSTÜNDE ve bilerek: cümle o seçimin
+                    gerekçesidir. Aşağıda dursaydı müşteri günü çoktan seçmiş olurdu; kullanıcının
+                    "kaybolmaması lazım" dediği şey tam olarak bu bağ. "Sefer" kelimesi geçmez —
+                    müşteriye gün söylenir. */}
+                {isRoute && neighborInvite !== null ? (
+                  <Note
+                    tone="olive"
+                    description={t.delivery.neighborInvite
+                      .replace('{name}', neighborInvite.inviterName || t.delivery.neighborSomeone)
+                      .replace('{day}', formatDeliveryDate(neighborInvite.deliveryDate, locale))}
+                    testID="checkout-neighbor-invite"
+                  />
+                ) : null}
+
                 {/* Gün YALNIZ rota-içi teslimatta: kargonun günü müşterinin kararı değil. */}
                 {isRoute && dates.length > 0 ? (
                   delivery.requiresDateChoice ? (

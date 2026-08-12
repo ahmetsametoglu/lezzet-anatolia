@@ -33,9 +33,11 @@ import { LOCALES, localizedPath } from '@lezzet/i18n';
   "bilinmeyen alan adı" boş bir alan adı değildir, beyanın hiç yazılmamasıdır).
 
   ── YOLLAR TÜRETİLİYOR, YAZILMIYOR ──────────────────────────────────────────
-  Üç dilin davet segmenti `PATHNAMES`ten geliyor (`+native-intent.tsx` ile aynı kaynak ve aynı
-  gerekçe): elle yazılan bir liste, rota adı değiştiğinde sessizce eskir ve bağlantı bir gün
-  uygulamayı açmaz olur — hata da vermez.
+  Davet segmentleri `PATHNAMES`ten geliyor (`+native-intent.tsx` ve web'in ilişkilendirme rotası ile
+  aynı kaynak, aynı gerekçe): elle yazılan bir liste, rota adı değiştiğinde sessizce eskir ve
+  bağlantı bir gün uygulamayı açmaz olur — hata da vermez. **İki davet türü de listede** (21.45):
+  komşu daveti kendi segmentlerini kullanıyor (`komsu` · `voisin` · `nachbarn`) ve tek rotaya göre
+  yazılmış bir filtre, ikinci rota doğduğunda sessizce eksik kalırdı.
 */
 
 /** Beyan edilecek alan adı; boş/yerel/bozuk değerde `null` — o hâlde derin bağlantı yazılmaz. */
@@ -50,9 +52,14 @@ function deepLinkHost(siteUrl: string | undefined): string | null {
   }
 }
 
-/** `/tr/davet` gibi — dil öneki + o dilin davet segmenti, sondaki eğik çizgi atılmış. */
-function invitePathPrefix(locale: (typeof LOCALES)[number]): string {
-  return `/${locale}${localizedPath('/invite/[code]', locale, { code: '' })}`.replace(/\/$/, '');
+/** Uygulamanın sahiplendiği davet rotaları — web'in `DEEP_LINK_ROUTES` listesiyle aynı küme. */
+const DEEP_LINK_ROUTES = ['/invite/[code]', '/neighbor/[token]'] as const;
+
+/** `/tr/davet` gibi — dil öneki + o dilin segmenti, parametre ve sondaki eğik çizgi atılmış. */
+function deepLinkPrefixes(): string[] {
+  return DEEP_LINK_ROUTES.flatMap((route) =>
+    LOCALES.map((locale) => `/${locale}${localizedPath(route, locale)}`.replace(/\/\[[^\]]+\]$/, '')),
+  );
 }
 
 const deepLinkDomain = deepLinkHost(process.env.EXPO_PUBLIC_SITE_URL);
@@ -119,7 +126,7 @@ const config: ExpoConfig = {
       yine çalışır. `BROWSABLE` kategorisi şart: onsuz tarayıcıdan/mesajdan gelen tıklama filtreye
       hiç uğramaz.
 
-      Üç dil TEK filtrede: aynı eylem, aynı alan adı, yalnız yol öneki farklı.
+      Her dil ve her davet türü TEK filtrede: aynı eylem, aynı alan adı, yalnız yol öneki farklı.
     */
     ...(deepLinkDomain
       ? {
@@ -127,11 +134,7 @@ const config: ExpoConfig = {
             {
               action: 'VIEW',
               autoVerify: true,
-              data: LOCALES.map((locale) => ({
-                scheme: 'https',
-                host: deepLinkDomain,
-                pathPrefix: invitePathPrefix(locale),
-              })),
+              data: deepLinkPrefixes().map((pathPrefix) => ({ scheme: 'https', host: deepLinkDomain, pathPrefix })),
               category: ['BROWSABLE', 'DEFAULT'],
             },
           ],
