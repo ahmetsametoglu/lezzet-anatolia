@@ -1188,3 +1188,62 @@ satırında.
     yazdığı hiçbir yere gitmiyor — ekranın söylediği ile sistemin yaptığı ayrışıyor.
   - Ürün formunda aynı iş 22.14'te ayrı bir turda yapılmıştı (`LocalizedTextField` · `MultiSelect` ·
     `EmphasisTextarea`); bu üçü de aynı desenle geçilecek. İş mekanik, kapsamı dar.
+
+- [x] (22.20) **Tarif formu dil kartına geçti, adım numarası kaynağında kırpılıyor** *(kullanıcı
+  tespiti 12.08: "bu form hazırlanışı itibariyle komple yanlış … her input'un dil tabı ayrı değil
+  grup halinde olmalı")*
+  `touches: apps/web/components/operation/form/recipe-form/body.tsx · apps/web/app/(operations)/operations/recipes/{recipe-dialog.tsx,recipes-labels.ts} · apps/web/app/(operations)/operations/assistant/bodies/recipe-draft-body.tsx · apps/backend/src/mcp/{server-factory.ts,tools-propose.ts} · packages/helper/src/rich-text.ts`
+  - *Bitti:* tarifin yedi metin alanı TEK dil sekmesiyle değişiyor; kuyruğa yazılan adımlar
+    numarasız; iki yüzeyin alan açıklamaları tek yerden geliyor
+  - **Dil TEK yerden seçilir.** Her alan kendi sekmesini çiziyordu, üçlü künye (süre · porsiyon ·
+    öğün) ise üç dili birden alt alta yığıyordu: Fransızcayı tamamlamak için yedi ayrı sekmeye tek
+    tek basmak gerekiyordu ve hangi alanın hangi dilde eksik kaldığı ekranda görünmüyordu. Alanlar
+    ürün/kategori formunun kullandığı `LocaleCard`'a alındı — **yeni komponent yazılmadı.**
+    Malzemeler kartın DIŞINDA: kart "dile bağlı olan" demek, malzeme satırı ise ürün kaydını
+    gösteriyor ve adı müşteriye kendi dilinde çözülüyor.
+  - **Numarayı ekran veriyordu, asistan da veriyordu.** Sebep bizdeydi: `propose_recipe_draft`
+    açıklaması modelden numaralı satır İSTİYORDU (*"write the steps as numbered lines"*), oysa hem
+    operasyon önizlemesi hem müşteri detayı `index + 1` basıyor — müşteri sayfasına
+    **"1. 1. Baklavayı ısıtın"** olarak çıkacaktı. Açıklama düzeltildi ve kuyruk kapısı ayrıca
+    kırpıyor (`stripLineOrdinals`, `@lezzet/helper`): modelin biçim alışkanlığına güvenip veriyi ona
+    bırakmak, düzeltilmesi kayıt üstünde kalan bir hata biriktirirdi. Kırpma YAZARKEN yapılıyor,
+    okurken değil — gösterimde kırpsaydık dışa açılan her yeni okuma aynı arızayı yeniden bulurdu.
+    Kuyrukta bekleyen iki eski öneri de aynı desenle temizlendi.
+  - **`notes` parametresi KALKTI** (duplikasyon): iki çağıran aynı kutuya iki ayrı cümle veriyordu —
+    tarif ekranı "her satır bir adım", kuyruk "her satır bir madde"; malzeme başlığı birinde fiyatın
+    nereden okunduğunu söylüyor, ötekinde söylemiyordu. Alanın nasıl doldurulacağı alanın kendi
+    bilgisi; cümleler gövdeye taşındı ve `BEKLEYEN(22.18)` işareti kapandı.
+  - **Ölçülüp kapatılan şüphe:** müşteri tarif detayında ürün adları seçili dilde geliyor
+    (`storefront/recipe.ts` → `resolveLocalizedText(product.name, locale)`; boy etiketi de
+    `toVariant(…, locale, …)`). Mobil uç da aynı okumayı `locale` ile çağırıyor ve dili varsayılansız
+    zorunlu tutuyor. Tek sınır: ürün adı o dilde boşsa yedek zincir TR'ye düşer — tarifin üç-dil
+    yayın kısıtı ürün adlarını KAPSAMIYOR.
+
+- [x] (22.21) **Çeviri düğmesi alanın kendi yeteneği oldu · onay ekranının üç görüntüleme arızası** *(kullanıcı
+  tespitleri 12.08: "etiketin yanında otomatik kendisi çıkıyor olması lazım" · "burada bazı problemler var gibi")*
+  `touches: apps/web/components/operation/form/localized-text-field.tsx · apps/web/components/operation/form/product-form · apps/web/components/operation/form/bundle-form/body.tsx · apps/web/components/operation/ui/{proposal-aside,payload-tree}.tsx · apps/web/app/(operations)/operations/assistant/bodies/money-movement-body.tsx · apps/backend/src/mcp/{tools,tools-propose}.ts`
+  - *Bitti:* çok dilli her alanda çeviri düğmesi kendiliğinden çıkıyor; para künyesi doğru tutarı,
+    Türkçe biçimde ve okunur enum'larla gösteriyor
+  - **`onAiTranslate` KALKTI — düğme prop ile açılan bir şey olmaktan çıktı.** Aynı satır
+    (`onAiTranslate={(t) => suggestTranslationAction(t, 'ad')}`) YİRMİ yerde tekrar ediyordu; iki form
+    gövdesi (`product-form` · `bundle-form`) prop'u zincirle iç alanlara dağıtıyor, dört kap da kendi
+    `aiTranslate` lambda'sını kuruyordu. Bedeli görünürdü: **yazmayı unutulan alanda düğme sessizce yok
+    oluyordu** — tarifin süre/porsiyon/öğün kutuları böyle çevirisiz kalmıştı ve "3–4 kişilik" Fransız
+    müşteriye Türkçe gidiyordu (yayın kapısı yalnız ADA bakıyor, künye alanları eksik kalsa da tarif
+    yayınlanıyor). Alan artık yalnız TÜRÜNÜ söylüyor (`field="ad"`), çağrıyı komponent yapıyor.
+    04.08'de kazanılan ton ayrımı korundu — ad · açıklama · içindekiler · saklama hâlâ ayrı ölçülerde.
+  - **Para künyesi 100 kat küçük yazıyordu:** `money(payload.amountCents / 100)` — dilekçenin centi
+    euroya bölünüp cent bekleyen biçimlendiriciye veriliyordu, 150,00 € ekranda **"1,50 €"** oluyordu.
+    Formun eurosu da cent sanılmıştı. Paket künyesindeki tuzağın (22.18) tersi; çevrim artık sınırda.
+  - **Euro biçimi elle kuruluyordu, BEŞ yerde:** `(cents / 100).toFixed(2)` Türkçede yanlış ayraç
+    veriyor ve öneri başlığı "150.00 €" diye okunuyordu. Hepsi `formatPrice(cents, 'tr')`e geçti
+    (`@lezzet/helper`; backend'e bağımlılık bu turda eklendi). Paket özetinde `toCents` de gerekti —
+    paket ailesi euro taşıyor.
+  - **Dilekçe ağacı enum'ları ham basıyordu:** "Yön: out", "Tür: expense" — üstündeki künye satırı aynı
+    şeye "Hesaptan çıktı" derken. Alan adı + değer çiftiyle eşleşen sözlük eklendi (`ENUM_LABEL`);
+    karşılıklar formların kendi kelimeleri, yeniden adlandırma yok. Sözlükte olmayan enum ham kalıyor:
+    uydurma çeviri, olmayan bir alanı varmış gibi gösterirdi.
+  - **Künye satırı artık sapmada konuşuyor** (kullanıcı kararı): Tutar · Hesap · Yön hem künyede hem
+    ağaçta yazıyordu. `now` taşıyan satır yalnız değiştirildiğinde çiziliyor; `now` taşımayan satır
+    (türetilmiş özet — "asistan hangi beyanları doldurdu", "kaç dil dolu") hep duruyor, çünkü ağaçta
+    karşılığı yok. Para künyesinde Hesap ve Yön'e canlı değer bağlandı, yoksa sapmaları görünmezdi.

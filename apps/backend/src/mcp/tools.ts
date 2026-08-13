@@ -9,6 +9,7 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
+import { formatPrice } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 
 /**
@@ -74,7 +75,7 @@ export async function morningBriefing() {
   if (reorder.totalLines > 0) attention.push(`${reorder.totalLines} varyant stok eşiğinin altında — tedarik önerisi hazır`);
   if (tickets.open > 0) attention.push(`${tickets.open} açık müşteri talebi bekliyor`);
   if (todayCounts.cod.count > 0) {
-    attention.push(`bugün kapıda tahsilat: ${todayCounts.cod.count} sipariş · ${(todayCounts.cod.totalCents / 100).toFixed(2)} €`);
+    attention.push(`bugün kapıda tahsilat: ${todayCounts.cod.count} sipariş · ${formatPrice(todayCounts.cod.totalCents, 'tr')}`);
   }
 
   return {

@@ -20,6 +20,10 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { discountPercentOf, offerDecisionOf, rebalanceAllocations, suggestedOfferPriceCents } from '@lezzet/domain-core';
+// Para biçimi TEK YERDEN (`formatPrice`): özet cümleleri operasyon yüzeyinde okunuyor ve elle
+// kurulan `(cents / 100).toFixed(2)` Türkçede yanlış ayraç veriyordu — "150.00 €" değil "150,00 €"
+// (kullanıcı tespiti 12.08, onay ekranının başlığında görüldü).
+import { formatPrice, stripLineOrdinals, toCents } from '@lezzet/helper';
 import {
   CountryEnum,
   missingDeclarations,
@@ -84,6 +88,21 @@ function localizedArg(raw: unknown): Record<string, string> | null {
       .map(([lang, text]) => [lang, (text as string).trim()]),
   );
   return Object.keys(cleaned).length > 0 ? cleaned : null;
+}
+
+/**
+ * MADDE LİSTESİ taşıyan çok dilli alan (tarif adımları · "Evinizden") — satır başındaki sıra
+ * işareti SÖKÜLÜR.
+ *
+ * Sırayı ekran veriyor (`stripLineOrdinals` künyesi): metinde de numara olursa müşteri sayfasında
+ * "1. 1. Baklavayı ısıtın" çıkıyor — ölçüldü 12.08. Araç açıklaması artık numarasız satır istiyor
+ * ama kırpma yine de burada duruyor: modelin biçim alışkanlığına güvenip veriyi ona bırakmak,
+ * düzeltilmesi imkânsız bir yerde (kayıtta) hata biriktirir.
+ */
+function linesArg(raw: unknown): Record<string, string> | null {
+  const value = localizedArg(raw);
+  if (!value) return null;
+  return Object.fromEntries(Object.entries(value).map(([lang, text]) => [lang, stripLineOrdinals(text).trim()]));
 }
 
 /**
@@ -217,8 +236,8 @@ export async function proposeBatchOffer(args: Record<string, unknown>) {
   };
 
   const percent = discountPercentOf(listPriceCents, offerPriceCents);
-  const off = listPriceCents ? ` (liste ${(listPriceCents / 100).toFixed(2)} €, %${percent === null ? '?' : Math.round(percent)} indirim)` : '';
-  const summary = `${productName} — ${batch.physicalQty} adet ${(offerPriceCents / 100).toFixed(2)} € fırsat fiyatına${off}; SKT ${batch.expiryDate}`;
+  const off = listPriceCents ? ` (liste ${formatPrice(listPriceCents, 'tr')}, %${percent === null ? '?' : Math.round(percent)} indirim)` : '';
+  const summary = `${productName} — ${batch.physicalQty} adet ${formatPrice(offerPriceCents, 'tr')} fırsat fiyatına${off}; SKT ${batch.expiryDate}`;
   return queue('batch_offer', payload, summary, args.reason);
 }
 
@@ -835,15 +854,15 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
     counterAccountName: counterAccount?.name ?? null,
     valueDate: typeof args.valueDate === 'string' ? args.valueDate : null,
   };
-  const euro = (amountCents / 100).toFixed(2);
+  const euro = formatPrice(amountCents, 'tr');
   // Transferin özeti YÖN cümlesidir ("Kasa → Banka"), gider/tahsilat değil: para şirketten
   // çıkmıyor, yer değiştiriyor. Aynı cümleyle anlatmak iki farklı işi tek görünüşe indirirdi.
   if (payload.counterAccountName) {
-    return queue('money_movement', payload, `${account.name} → ${payload.counterAccountName}: ${euro} € transfer`, args.reason);
+    return queue('money_movement', payload, `${account.name} → ${payload.counterAccountName}: ${euro} transfer`, args.reason);
   }
   const label = direction === 'out' ? 'gider' : 'tahsilat';
   const who = payload.counterpartyName ? ` — ${payload.counterpartyName}` : '';
-  return queue('money_movement', payload, `${account.name}: ${euro} € ${label}${who}`, args.reason);
+  return queue('money_movement', payload, `${account.name}: ${euro} ${label}${who}`, args.reason);
 }
 
 /**
@@ -918,7 +937,13 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
     })),
   };
 
-  const queued = await queue('bundle_draft', payload, `${name.tr} — ${prepared.length} kalemlik paket, ${totalPrice.toFixed(2)} €`, args.reason);
+  // `toCents` ŞART: paket ailesi EURO taşıyor, `formatPrice` ise cent istiyor (şemanın künyesi).
+  const queued = await queue(
+    'bundle_draft',
+    payload,
+    `${name.tr} — ${prepared.length} kalemlik paket, ${formatPrice(toCents(totalPrice), 'tr')}`,
+    args.reason,
+  );
   return {
     ...queued,
     allocation: {
@@ -1000,7 +1025,7 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
     code: typeof args.code === 'string' && args.code.trim() ? args.code.trim().toUpperCase() : null,
   };
 
-  const value = type === 'percent' ? `%${percent}` : `${((amountCents ?? 0) / 100).toFixed(2)} €`;
+  const value = type === 'percent' ? `%${percent}` : formatPrice(amountCents ?? 0, 'tr');
   const where = scopeName ? ` (${scopeName})` : '';
   return queue('discount_draft', payload, `${name}: ${value} indirim${where}`, args.reason);
 }
@@ -1010,9 +1035,10 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
   const db = serviceDb();
   const rawItems = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
   const name = localizedArg(args.name);
-  const steps = localizedArg(args.steps);
+  const steps = linesArg(args.steps);
   if (!name?.tr) return { error: 'name zorunlu — en az Türkçesi: { "tr": "Kuru Fasulye" }.' };
-  if (!steps?.tr) return { error: 'steps zorunlu — hazırlanış adımları, en az Türkçe: { "tr": "1. …" }.' };
+  if (!steps?.tr)
+    return { error: 'steps zorunlu — hazırlanış adımları, her satır bir adım, NUMARASIZ: { "tr": "Fasulyeyi ıslatın\\nSoğanı kavurun" }.' };
   if (rawItems.length === 0) return { error: 'items boş — tarifin malzemeleri (varyant kimlikleriyle).' };
 
   const variantIds = rawItems.map((i) => String(i.variantId ?? '')).filter(isUuid);
@@ -1047,7 +1073,8 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
     // Üçü de tarif formunun kutusu (11.08): sorulmadıkları için boş kalıyorlardı.
     duration: localizedArg(args.duration),
     meal: localizedArg(args.meal),
-    pantry: localizedArg(args.pantry),
+    // "Evinizden" de MADDE listesi (ekran her satırın başına • basar) — adımlarla aynı kırpma.
+    pantry: linesArg(args.pantry),
     items,
   };
 

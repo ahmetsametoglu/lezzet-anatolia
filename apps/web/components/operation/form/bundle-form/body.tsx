@@ -10,7 +10,6 @@ import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormNumber } from '@/components/operation/form/form-input';
 import { FormMoney, PercentField } from '@/components/operation/form/money-input';
 import { ImageCropField } from '@/components/operation/form/image-crop-field';
-import type { TranslateField } from '@/lib/ai/translate';
 import { FormSection } from './section';
 import { BundleItemsEditor } from './items-editor';
 import { bundlePricing } from './pricing';
@@ -58,8 +57,8 @@ interface BundleFormBodyProps {
    * slug da kayıtla doğuyor — kaydedilmemiş pakete görsel yüklenemez.
    */
   upload?: ComponentProps<typeof ImageCropField>['upload'];
-  /** Çeviri önerisi kapısı — alan türüyle çağrılır (ad kısa vitrin metni, açıklama bir cümle). */
-  onAiTranslate: (field: TranslateField) => NonNullable<ComponentProps<typeof FormLocalizedText>['onAiTranslate']>;
+  // `onAiTranslate` prop'u KALKTI (12.08): çeviri düğmesi çok dilli alanın kendi yeteneği, çağıranın
+  // taşıdığı bir kapı değil (`localized-text-field` künyesi). Zincir buradan iki alana dağılıyordu.
   /** Karar verilmiş öneri ya da gönderim sürerken: form okunur ama düzenlenemez. */
   disabled?: boolean;
 }
@@ -75,7 +74,6 @@ export function BundleFormBody({
   onCropChange,
   imageUrl,
   upload,
-  onAiTranslate,
   disabled = false,
 }: BundleFormBodyProps) {
   const poolById = new Map(pool.map((p) => [p.variantId, p]));
@@ -99,7 +97,7 @@ export function BundleFormBody({
                   required
                   placeholder="ör. Bayram Sofrası"
                   lang={lang}
-                  onAiTranslate={onAiTranslate('ad')}
+                  field="ad"
                   disabled={disabled}
                 />
                 <FormLocalizedText
@@ -110,7 +108,6 @@ export function BundleFormBody({
                   rows={3}
                   placeholder="Hangi durum için uygun"
                   lang={lang}
-                  onAiTranslate={onAiTranslate('aciklama')}
                   disabled={disabled}
                 />
               </>

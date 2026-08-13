@@ -8,6 +8,7 @@ import { Input } from '@/components/operation/form/input';
 import { LocaleTabs } from '@/components/operation/form/locale-tabs';
 import { Toggle } from '@/components/operation/form/toggle';
 import { TranslateInput } from '@/components/operation/form/translate-input';
+import { suggestTranslationAction } from '@/lib/ai/translate';
 import { TrashIcon } from '@/components/operation/ui/icons';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import type { ProductFormValues } from './schema';
@@ -55,11 +56,9 @@ function NumberCell({
 
 interface VariantEditorProps {
   control: Control<ProductFormValues>;
-  /** AI çeviri önerisi (TR kaynak) — verilmezse etiket kolonunda çeviri düğmesi çizilmez. */
-  onAiTranslate?: (text: LocalizedText) => Promise<LocalizedText>;
 }
 
-export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
+export function VariantEditor({ control }: VariantEditorProps) {
   const { fields, append, remove, replace } = useFieldArray({ control, name: 'variants' });
   const [lang, setLang] = useState<Locale>('tr');
   // Silme onayı satırın RHF anahtarıyla tutulur, indeksle DEĞİL: araya satır eklenince ya da sıra
@@ -147,11 +146,14 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
                         onChange={(v) => field.onChange({ ...text, [lang]: v })}
                         onBlur={field.onBlur}
                         placeholder="ör. 500 g"
-                        // TR kaynak dildir → kendisini çevirmez, orada düğme yok.
+                        // TR kaynak dildir → kendisini çevirmez, orada düğme yok. Çeviri çağrısı
+                        // BURADA: prop'la dışarıdan verilmesi, düğmenin yazılması unutulabilen bir
+                        // şey olması demekti (`localized-text-field` künyesi, 12.08). Varyant
+                        // etiketi bir ÜRÜN ADIDIR ("1 kg kutu") — alan türü `ad`.
                         onTranslate={
-                          onAiTranslate && lang !== 'tr'
+                          lang !== 'tr'
                             ? async () => {
-                                const suggestion = await onAiTranslate(text);
+                                const suggestion = await suggestTranslationAction(text, 'ad');
                                 field.onChange({ ...text, [lang]: suggestion[lang] ?? text[lang] });
                               }
                             : undefined

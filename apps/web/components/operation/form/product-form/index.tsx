@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { Control, UseFormWatch } from 'react-hook-form';
-import { ALLERGEN_LABELS, ProductAllergenEnum, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { ALLERGEN_LABELS, ProductAllergenEnum, resolveLocalizedText } from '@lezzet/types';
 import { type Locale } from '@lezzet/i18n';
 import { UnderlineTabs } from '@/components/operation/ui/underline-tabs';
 import { LocaleCard } from '@/components/operation/form/locale-card';
@@ -13,7 +13,6 @@ import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormNutrition } from '@/components/operation/form/form-nutrition';
-import type { TranslateField } from '@/lib/ai/translate';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDeclaration } from './declaration';
 import { ProductFormDesktop } from './layout.desktop';
@@ -54,8 +53,9 @@ interface ProductFormFieldsOptions {
   watch: UseFormWatch<ProductFormValues>;
   /** Kategori seçenekleri — adı ÇÖZÜLMÜŞ gelir; hangi dilde okunacağı kabın kararı. */
   categories: Array<{ id: string; name: string }>;
-  /** TR metinden FR/DE öneren kapı; alan türü tona ve uzunluğa karar verir. */
-  onAiTranslate: (field: TranslateField) => (text: LocalizedText) => Promise<LocalizedText>;
+  // `onAiTranslate` KALKTI (12.08): çeviri düğmesi çok dilli alanın kendi yeteneği; buradan dört
+  // alana + varyant editörüne dağıtılan zincir, düğmeyi "yazmayı unutulabilir" bir şey yapıyordu
+  // (`localized-text-field` künyesi).
   /** Kapak + galeri bloğu — canlı yazdığı için SLOT (yukarıdaki künye). Kuyrukta `null`. */
   photosSlot?: ReactNode;
   /**
@@ -81,7 +81,6 @@ export function useProductFormFields({
   control,
   watch,
   categories,
-  onAiTranslate,
   photosSlot,
   filled,
 }: ProductFormFieldsOptions): ProductFormFields {
@@ -109,7 +108,7 @@ export function useProductFormFields({
       required
       placeholder="Ürün adı"
       lang={lang}
-      onAiTranslate={onAiTranslate('ad')}
+      field="ad"
     />
   );
   const descriptionField = (lang?: Locale) => (
@@ -121,7 +120,6 @@ export function useProductFormFields({
       multiline
       placeholder="Açıklama"
       lang={lang}
-      onAiTranslate={onAiTranslate('aciklama')}
     />
   );
 
@@ -213,7 +211,7 @@ export function useProductFormFields({
               emphasisHint="Alerjeni listede yazdığı hâliyle vurgula"
               placeholder="Un, su, tuz…"
               lang={lang}
-              onAiTranslate={onAiTranslate('icindekiler')}
+              field="icindekiler"
             />
             <FormLocalizedText
               control={control}
@@ -226,14 +224,14 @@ export function useProductFormFields({
               emphasisHint="Önemli uyarıyı vurgula"
               placeholder="Saklama ve hazırlama"
               lang={lang}
-              onAiTranslate={onAiTranslate('saklama')}
+              field="saklama"
             />
           </>
         )}
       </LocaleCard>
     ),
     // Varyant adı bir ÜRÜN ADIDIR ("1 kg kutu"), açıklama değil.
-    variants: <VariantEditor control={control} onAiTranslate={onAiTranslate('ad')} />,
+    variants: <VariantEditor control={control} />,
     // DURUM SEÇİCİ BURADA DEĞİL (kullanıcı kararı 11.08). Bir tur ortak alana taşınmıştı; kullanıcı
     // geri aldırdı ve gerekçe kurgunun kendisi: **kuyruk ürünün İÇERİĞİNİ yazar, satış eksenine
     // dokunmaz.** Ürün pasifse pasif, aktifse aktif kalır — form mevcut durumu okuyup aynısını geri

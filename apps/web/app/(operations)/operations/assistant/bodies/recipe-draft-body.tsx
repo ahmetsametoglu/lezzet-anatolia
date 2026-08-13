@@ -109,7 +109,6 @@ export function RecipeDraftBody({ payload, subject, meta, values, onChange, disa
           onSearch={onSearch}
           searching={searching}
           knownLabels={knownLabels}
-          notes={NOTES}
           disabled={disabled || readOnly}
         />
       </div>
@@ -119,17 +118,8 @@ export function RecipeDraftBody({ payload, subject, meta, values, onChange, disa
   );
 }
 
-/**
- * Not metinleri — tarif ekranının sözlüğü (`RECIPE_NOTES`) SAYFA klasöründe ve kuyruk oradan
- * okuyamaz (`docs:check §3e`). Cümleler burada tekrar edilmiyor, gövdeye PARAMETRE olarak geçiyor;
- * iki yüzeyin aynı cümleyi kullanması için sözlüğün ortak alana taşınması ayrı bir tur.
- * BEKLEYEN(22.18)
- */
-const NOTES = {
-  itemsAside: 'ürün kaydından seçilir',
-  lineIsItem: 'her satır bir madde',
-  pantryAside: 'bizden alınmayanlar (tuz, su, zeytinyağı)',
-};
+// Alan altı cümleleri ARTIK GÖVDENİN kendi bilgisi (12.08): buradaki kopya ile tarif ekranınınki
+// ayrışmıştı — aynı kutu bir yüzeyde "her satır bir adım", ötekinde "her satır bir madde" diyordu.
 
 /** Dilekçenin öne çıkan sayıları — `value` asistanın önerisi, `now` yalnız farklıysa çizilir. */
 function factsOf(payload: RecipeDraftPayload, values: RecipeFormValues): ProposalFact[] {

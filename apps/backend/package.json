@@ -16,6 +16,7 @@
     "@lezzet/application": "workspace:*",
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",
+    "@lezzet/helper": "workspace:*",
     "@lezzet/i18n": "workspace:*",
     "@lezzet/notify": "workspace:*",
     "@lezzet/observability": "workspace:*",

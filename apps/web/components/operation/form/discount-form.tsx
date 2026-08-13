@@ -20,7 +20,6 @@ import { LocaleCard } from './locale-card';
 import { LocalizedTextField } from './localized-text-field';
 import { Select } from './select';
 import { Toggle } from './toggle';
-import { suggestTranslationAction } from '@/lib/ai/translate';
 
 /**
  * İNDİRİM / KUPON FORMUNUN GÖVDESİ — dialog'dan AYRI, çünkü iki yerde çiziliyor (22.10).
@@ -418,7 +417,7 @@ export function DiscountFormBody({
               label="Ad"
               placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
               maxLength={PUBLIC_LABEL_MAX}
-              onAiTranslate={(t) => suggestTranslationAction(t, 'ad')}
+              field="ad"
               hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
             />
 

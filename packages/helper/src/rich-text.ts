@@ -66,6 +66,29 @@ export function splitLines(text: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+/**
+ * **Satır başındaki SIRA İŞARETİNİ söker** — "1. Baklavayı ısıtın" → "Baklavayı ısıtın".
+ *
+ * Sıra `splitLines`'ın ayırdığı maddelerde GÖRSEL bir karardır: numarayı ekran basar (operasyon
+ * önizlemesi ve müşteri detayı, ikisi de `index + 1`). Metnin kendisi numara taşırsa aynı adım iki
+ * kez numaralanır — ölçüldü (12.08): asistanın önerdiği tarif "1. …" diye geliyordu ve müşteri
+ * sayfasında **"1. 1. Baklavayı ısıtın"** çıkıyordu. Kaynağı da bizdik: `propose_recipe_draft`
+ * modelden numaralı satır İSTİYORDU.
+ *
+ * **Yazarken uygulanır, okurken değil.** Gösterimde kırpsaydık ekran doğru görünür, veride numara
+ * kalırdı — dışa açılan her yeni okuma (mobil, e-posta, dışa aktarım) aynı arızayı yeniden bulurdu.
+ *
+ * Satır YAPISI korunur (boş satırlar dahil): burada niyet metni düzeltmek değil, yalnız sırayı
+ * geri almak. Tanınan işaretler `1.` · `1)` · `1-` · madde imleri (`-` `•` `*`); "180°C'de ısıtın"
+ * gibi sayıyla başlayan gerçek bir cümle işaretsiz olduğu için dokunulmaz kalır.
+ */
+export function stripLineOrdinals(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:\d+\s*[.)\-–]|[-•*])\s+/, ''))
+    .join('\n');
+}
+
 /** Vurgu işaretlerini söker — arama, özet ve paylaşım (OG) açıklaması ham metni ister. */
 export function stripEmphasis(text: string): string {
   return parseEmphasis(text)

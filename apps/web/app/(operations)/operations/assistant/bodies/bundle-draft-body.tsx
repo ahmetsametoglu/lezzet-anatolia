@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toCents } from '@lezzet/helper';
-import type { BundleDraftPayload, LocalizedText } from '@lezzet/types';
+import type { BundleDraftPayload } from '@lezzet/types';
 import { BundleFormBody } from '@/components/operation/form/bundle-form/body';
 import { BundleFormSchema, buildBundleDefaults, type BundleFormValues } from '@/components/operation/form/bundle-form/schema';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { searchBundleVariantsAction } from '@/lib/catalog/bundle-actions';
-import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import { money } from '@/components/operation/ui/format';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
@@ -93,9 +92,6 @@ export function BundleDraftBody({ payload, subject, options, meta, values, onCha
 
   const [crop, setCrop] = useImageCrop(form);
 
-  // Alan türü geçiliyor: paket ADI kısa bir vitrin metni, açıklaması "hangi durum için uygun" diye
-  // okunan bir cümle — ton ve uzunluk buradan çıkıyor (paket diyaloğuyla aynı çağrı).
-  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
 
   /**
    * Kalem ARAMASI kuyrukta da açık: operatör asistanın seçtiği boyu değiştirmek ya da yeni bir kalem
@@ -135,7 +131,6 @@ export function BundleDraftBody({ payload, subject, options, meta, values, onCha
           // Yeni pakette görsel YOK ve yükleme de yapılamaz: R2 anahtarı slug'a bağlı, slug kayıtla
           // doğuyor. Blok yine çiziliyor (form birebir aynı olsun) ama kendi doğru hâliyle.
           imageUrl={null}
-          onAiTranslate={aiTranslate}
           disabled={disabled || readOnly}
         />
       </div>

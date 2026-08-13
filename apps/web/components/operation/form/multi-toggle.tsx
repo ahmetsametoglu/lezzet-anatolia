@@ -137,7 +137,20 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
         moveBy(e.currentTarget, fwd ? 1 : -1);
       }}
       ref={railRef}
-      className={['relative flex rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-[2px]', className].filter(Boolean).join(' ')}
+      /**
+       * Ray İÇERİĞİ KADAR (`w-fit`) — genişliği çağıran verirse onunki geçerli (12.08).
+       *
+       * `div` blok kutusudur ve `flex` bunu değiştirmez: ray satırın tamamını kaplıyordu. Düğmeler
+       * 03.08'de içerik genişliğine geçince (`flex-none`, uzun etiketin komşusuna binmesi) rayın
+       * sağında **kocaman boş gri bir alan** kaldı — kullanıcı tespiti 12.08: *"bütün bulunduğu
+       * satırı komple kaplamaya çalışıyor"*. Bir segment kontrolü kaç seçenek taşıyorsa o kadar
+       * yer tutar; kalan boşluk ona ait değildir.
+       *
+       * `w-fit` çağıranın sınıfıyla ÇAKIŞMASIN diye yalnız `className` yokken ekleniyor: ikisi de
+       * `width` yazan iki utility'nin hangisinin kazanacağı sınıf sırasına değil CSS sırasına bağlı
+       * olurdu ve sessizce yanlış tarafa düşerdi.
+       */
+      className={['relative flex rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-[2px]', className ?? 'w-fit'].join(' ')}
     >
       {/* Kayan hap — yeri ve genişliği SEÇİLİ DÜĞMEDEN ölçülür (aşağıdaki künye). Ölçüm gelmeden
           çizilmez: yanlış yerde bir kare bir kare bile görünmemeli. */}
@@ -159,12 +172,18 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
             disabled={o.disabled}
             onClick={() => onChange(o.key)}
             className={[
-              // Genişlik İÇERİKTEN (`flex-none`, `whitespace-nowrap`): etiket ne kadar uzunsa
-              // düğme o kadar geniş. Eskiden üçü de eşit genişlikteydi (`flex-1 basis-0`) çünkü
+              // Genişlik İÇERİKTEN BAŞLAR, fazlasını PAYLAŞIR (`flex-1 basis-auto`,
+              // `whitespace-nowrap`). Eskiden üçü de eşit genişlikteydi (`flex-1 basis-0`) çünkü
               // kayan hap `translateX(i × 100%)` ile yer değiştiriyordu — ve uzun bir etiket
               // (`İlgileniliyor`) komşusunun ÜSTÜNE biniyordu. Kırpmak (`truncate`) taşmayı
-              // durduruyordu ama etiketi de yiyordu ("İlgilen…"); asıl çözüm hapın ÖLÇÜLMESİ.
-              'relative z-[1] flex-none whitespace-nowrap rounded-md px-3 text-center font-ops-display font-semibold transition-colors',
+              // durduruyordu ama etiketi de yiyordu ("İlgilen…"); asıl çözüm hapın ÖLÇÜLMESİ oldu
+              // ve düğmeler `flex-none`a geçti.
+              //
+              // `basis-auto` o düzeltmeyi bozmadan bir eksiği kapatıyor (12.08): ray genişliği
+              // DIŞARIDAN verildiğinde (`w-full`, `w-[248px]`) düğmeler onu doldurmuyor, sağda boş
+              // gri bir alan kalıyordu. Taşma geri gelmez — `min-width: auto` + `nowrap` düğmeyi
+              // kendi metninin altına indirmez; büyürler, küçülmezler.
+              'relative z-[1] flex-1 basis-auto whitespace-nowrap rounded-md px-3 text-center font-ops-display font-semibold transition-colors',
               SIZE[size],
               // Kapalı seçenek SOLUK ama okunur: gizlemiyoruz, "şu an olmaz" diyoruz.
               o.disabled ? 'cursor-not-allowed text-ops-faint' : 'cursor-pointer',

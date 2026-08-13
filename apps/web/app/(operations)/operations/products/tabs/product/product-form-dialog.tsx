@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PRODUCT_STATUS_LABELS, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
@@ -12,7 +12,6 @@ import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/comp
 import { ProductPhotos } from '@/components/operation/form/product-form/photos';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
 import type { ProductFormTab } from '@/components/operation/form/product-form/types';
-import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 // Yazan kapıların ÜÇÜ DE ortak (`lib/catalog`): aynı form asistan kuyruğunda da açılıyor ve oradan
 // da kaydediliyor. Bu sekmenin kendi `actions.ts`i bu yüzden kalmadı.
 import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
@@ -52,15 +51,10 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
   });
   const { control, handleSubmit, formState } = form;
 
-  /**
-   * AI çeviri: TR metinden FR/DE önerir; dönüş eksik dilleri doldurur.
-   *
-   * **Alan türü geçiliyor** (04.08, arka uç bildirimi): ton ve uzunluk ondan çıkıyor. Ürün ADI iki
-   * kelimelik bir vitrin metnidir, SAKLAMA TALİMATI bir yönergedir, İÇİNDEKİLER ise yasal bir
-   * listedir — üçünü aynı ölçüde çevirmek, birini mutlaka bozar. Varsayılan `aciklama` idi ve
-   * dördü de onunla gidiyordu.
-   */
-  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
+  // AI çeviri kapısı BURADAN KALKTI (12.08): alan türü artık kutunun kendi `field` prop'unda
+  // (`localized-text-field` künyesi). 04.08'de kazanılan ayrım korunuyor — ürün ADI iki kelimelik
+  // bir vitrin metni, SAKLAMA bir yönerge, İÇİNDEKİLER yasal bir liste — yalnız o türü taşıyan
+  // zincir kısaldı: dört alan + varyant editörü kendi türünü kendi söylüyor.
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -96,7 +90,6 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     control,
     watch: form.watch,
     categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
-    onAiTranslate: aiTranslate,
     photosSlot: imageField,
   });
 

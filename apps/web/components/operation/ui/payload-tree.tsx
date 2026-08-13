@@ -51,6 +51,35 @@ import { money, num, shortDate } from './format';
  * girmemiş, acaba haberi var mıydı?"*
  */
 
+/**
+ * Şema ENUM'larının okunur karşılığı — **alan adı + değer** çiftiyle eşleşir (12.08).
+ *
+ * Künye "dilekçenin okunur hâli" diyor ama enum alanlarını ham basıyordu: para hareketinde "Yön: out",
+ * "Tür: expense" yazıyor, hemen üstündeki künye satırı ise aynı şeye "Hesaptan çıktı" diyordu — aynı
+ * ekranda iki dil. Eşleşme yalnız değere bakmıyor, çünkü aynı kelime başka bir alanda başka anlama
+ * gelebilir ("type" hem hareket türü hem indirim türü).
+ *
+ * Sözlükte olmayan enum ham kalır ve bu bilinçli: uydurma bir çeviri, olmayan bir alanı varmış gibi
+ * gösterirdi. Karşılıklar formların kendi sözlüklerinden geliyor (`MANUAL_TYPE_VIEW`,
+ * `discount-form`) — burada yeniden ADLANDIRMA yapılmıyor, aynı kelimeler kullanılıyor.
+ */
+const ENUM_LABEL: Record<string, Record<string, string>> = {
+  direction: { in: 'Hesaba girdi', out: 'Hesaptan çıktı' },
+  type: {
+    // para hareketi (`MANUAL_TYPE_VIEW` ile aynı kelimeler)
+    expense: 'Gider',
+    capital: 'Sermaye',
+    misc: 'Sınıflandırılmadı',
+    transfer: 'Transfer',
+    // indirim
+    percent: 'Yüzde',
+    fixed: 'Sabit tutar',
+  },
+  trigger: { coupon: 'Kupon kodu', automatic: 'Otomatik' },
+  scope: { cart: 'Sepetin tamamı', category: 'Kategori', collection: 'Koleksiyon' },
+  target: { category: 'Kategori', collection: 'Koleksiyon', bundle: 'Paket' },
+};
+
 /** Alan adlarının okunur karşılığı — sözlükte olmayan anahtar kelimelere ayrılıp yazılır. */
 const FIELD_LABEL: Record<string, string> = {
   // ortak
@@ -174,6 +203,11 @@ function formatScalar(key: string, value: unknown): string | null {
     if (!value.trim()) return '—';
     // ISO tarih (YYYY-AA-GG ya da damga) kısa tarihe; ötekiler olduğu gibi.
     if (/^\d{4}-\d{2}-\d{2}/.test(value)) return shortDate(value);
+    // Şema ENUM'ları Türkçeye — künyenin iddiası "okunur hâl" ama "Yön: out", "Tür: expense" diye
+    // yazıyordu (kullanıcı tespiti 12.08). Eşleşme ALAN ADI + DEĞER çifti üzerinden: aynı kelimenin
+    // başka bir alanda başka anlama gelmesi hâlinde yanlış çeviri üretmesin.
+    const enumLabel = ENUM_LABEL[key]?.[value];
+    if (enumLabel) return enumLabel;
     return clamp(value);
   }
 

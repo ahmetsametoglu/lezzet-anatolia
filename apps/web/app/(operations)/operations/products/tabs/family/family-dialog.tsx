@@ -12,7 +12,6 @@ import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { Combobox } from '@/components/operation/form/combobox';
 import { Input } from '@/components/operation/form/input';
 import { LocalizedTextField } from '@/components/operation/form/localized-text-field';
-import { suggestTranslationAction } from '@/lib/ai/translate';
 import {
   addFamilyMemberAction,
   createFamilyAction,
@@ -202,7 +201,7 @@ export function FamilyDialog({ family, onClose }: FamilyDialogProps) {
                     onChange={setEditLabel}
                     required
                     maxLength={40}
-                    onAiTranslate={(text) => suggestTranslationAction(text, 'ad')}
+                    field="ad"
                   />
                   <div className="flex gap-2">
                     <Button
@@ -254,7 +253,7 @@ export function FamilyDialog({ family, onClose }: FamilyDialogProps) {
                 maxLength={40}
                 placeholder={(lang) => (lang === 'tr' ? 'Limonlu' : lang === 'fr' ? 'Citron' : 'Zitrone')}
                 hint="Kartta okunan ad. Ürün adını tekrar etmeyin — “Limonlu kek” değil, “Limonlu”."
-                onAiTranslate={(text) => suggestTranslationAction(text, 'ad')}
+                field="ad"
               />
 
               <Button

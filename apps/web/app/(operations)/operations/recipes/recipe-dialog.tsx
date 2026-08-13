@@ -123,7 +123,6 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
           onSearch={onSearch}
           searching={searching}
           knownLabels={knownLabels}
-          notes={RECIPE_NOTES}
         />
 
         {error ? (

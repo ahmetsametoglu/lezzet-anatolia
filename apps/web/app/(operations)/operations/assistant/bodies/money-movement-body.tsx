@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { fromCents } from '@lezzet/helper';
+import { fromCents, toCents } from '@lezzet/helper';
 import type { MoneyMovementPayload } from '@lezzet/types';
 import { MovementFormBody } from '@/components/operation/form/movement-form/body';
 import {
@@ -80,7 +80,13 @@ export function MoneyMovementBody({ payload, subject, options, meta, values, onC
         <MovementFormBody control={form.control} setValue={form.setValue} values={live} accounts={options.accounts} disabled={disabled || readOnly} />
       </div>
 
-      <ProposalAside subject={subject} fallbackTitle="Defter satırı" facts={factsOf(payload, live)} payload={payload} meta={meta} />
+      <ProposalAside
+        subject={subject}
+        fallbackTitle="Defter satırı"
+        facts={factsOf(payload, live, options.accounts)}
+        payload={payload}
+        meta={meta}
+      />
     </div>
   );
 }
@@ -89,10 +95,18 @@ export function MoneyMovementBody({ payload, subject, options, meta, values, onC
  * Dilekçenin öne çıkan sayıları. Hesap ADI da burada: kararın yarısı "hangi hesaptan" sorusudur ve
  * form onu kimlikle değil adla gösteriyor — künye ikisinin aynı hesap olduğunu doğrulatıyor.
  */
-function factsOf(payload: MoneyMovementPayload, values: ManualMovementForm): ProposalFact[] {
+function factsOf(payload: MoneyMovementPayload, values: ManualMovementForm, accounts: AssistantFormOptions['accounts']): ProposalFact[] {
+  // Hesabın ADI dilekçede yazılı ama formda seçili olan KİMLİK — karşılaştırma için ad gerekiyor.
+  // Liste zaten kuyruk sayfasında okunmuştu (`AssistantFormOptions`), ikinci sorgu açılmıyor.
+  const nowAccount = accounts.find((a) => a.id === values.accountId)?.name ?? '—';
+  const directionText = (d: 'in' | 'out') => (d === 'in' ? 'Hesaba girdi' : 'Hesaptan çıktı');
   return [
-    { label: 'Tutar', value: money(payload.amountCents / 100), now: money(values.amount ?? 0) },
-    { label: 'Hesap', value: payload.accountName },
-    { label: 'Yön', value: payload.direction === 'in' ? 'Hesaba girdi' : 'Hesaptan çıktı' },
+    // **`money()` CENT ister** — dilekçe zaten cent taşıyor, form ise EURO (`ManualMovementSchema`
+    // künyesi). Burada iki yanlış birden vardı: dilekçenin centi 100'e bölünüp euro geçiliyordu ve
+    // formun eurosu cent sanılıyordu; ekranda 150,00 € yerine "1,50 €" yazıyordu (ölçüldü 12.08,
+    // paket künyesindeki tuzağın aynısı). Çevrim SINIRDA yapılır, para birimi geçtiği yerde değil.
+    { label: 'Tutar', value: money(payload.amountCents), now: money(toCents(values.amount ?? 0)) },
+    { label: 'Hesap', value: payload.accountName, now: nowAccount },
+    { label: 'Yön', value: directionText(payload.direction), now: directionText(values.direction) },
   ];
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition, type ReactNode } from 'react';
 import type { LocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
+import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import { EmphasisTextarea } from './emphasis-textarea';
 import { FieldShell } from './field-shell';
 import { Input, Textarea } from './input';
@@ -42,8 +43,19 @@ export interface LocalizedTextFieldProps {
   maxLength?: number;
   /** Alanın ALTINDA duran açıklama: metin nereye çıkacak, boş bırakılırsa ne olur. */
   hint?: ReactNode;
-  /** Verilirse AI çeviri düğmesi; TR metinden FR/DE önerir ve alanı günceller. */
-  onAiTranslate?: (text: LocalizedText) => Promise<LocalizedText>;
+  /**
+   * Çeviri için alanın TÜRÜ — ton ve uzunluk buradan çıkar (ürün adı ile saklama talimatı aynı
+   * ölçüde çevrilmez). Varsayılan `aciklama`, motorun kendi varsayılanıyla aynı.
+   *
+   * **Düğme prop ile AÇILMAZ, kendiliğinden çıkar** (kullanıcı kararı 12.08). Önceden her çağıran
+   * `onAiTranslate={(t) => suggestTranslationAction(t, 'ad')}` yazıyordu: aynı satır YİRMİ yerde
+   * tekrar ediyor, iki form gövdesi (`product-form` · `bundle-form`) bunu prop zinciriyle iç
+   * alanlara dağıtıyordu ve **yazmayı unutulan alanda düğme sessizce yok oluyordu** — tarifin
+   * süre/porsiyon/öğün kutuları böyle çevirisiz kalmıştı, "3–4 kişilik" Fransız müşteriye Türkçe
+   * gidiyordu. Çeviri, çok dilli bir alanın kendi yeteneğidir; çağıranın hatırlaması gereken bir
+   * şey değil.
+   */
+  field?: TranslateField;
   /** Kontrollü dil (form geneli): verilirse iç sekmeler GİZLENİR, dil dışarıdan gelir. */
   lang?: Locale;
   /** Düzen: 'tabs' (varsayılan) | 'stacked' (tüm diller ayrı girdi). `lang` verilince yok sayılır. */
@@ -78,7 +90,7 @@ export function LocalizedTextField({
   placeholder,
   maxLength,
   hint,
-  onAiTranslate,
+  field = 'aciklama',
   lang: langProp,
   layout = 'tabs',
   emphasis,
@@ -98,11 +110,10 @@ export function LocalizedTextField({
   // AI çeviri TR kaynaktan üretir. `apply` sonucu mevcut değere nasıl işleyeceğini belirler
   // (kontrollü modda tüm hedefler; stacked'te yalnız o dil). Buton yalnız hedef dillerde.
   const runAi = (apply: (s: LocalizedText) => LocalizedText) => {
-    if (!onAiTranslate) return;
     setAiNote(null);
     startAi(async () => {
       try {
-        const suggestion = await onAiTranslate(value);
+        const suggestion = await suggestTranslationAction(value, field);
         onChange(apply(suggestion));
       } catch (e) {
         setAiNote(e instanceof Error ? e.message : 'AI çeviri başarısız.');
@@ -133,7 +144,7 @@ export function LocalizedTextField({
   // Başlığın sağı: AI düğmesi + çağıranın işareti (ör. "asistan doldurdu" rozeti). İkisi BİRLİKTE
   // durabilmeli — biri ötekini ezerse ya çeviri düğmesi kaybolur ya alanın kim tarafından
   // doldurulduğu görünmez.
-  const aiAside: ReactNode = stacked || lang === 'tr' || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, ...s })));
+  const aiAside: ReactNode = stacked || lang === 'tr' ? undefined : aiButton(() => runAi((s) => ({ ...value, ...s })));
   const aside: ReactNode =
     labelAside && aiAside ? (
       <span className="flex items-center gap-2">
@@ -162,7 +173,7 @@ export function LocalizedTextField({
               <FieldShell
                 key={l}
                 label={<span className={`font-ops-display text-ops-xs font-semibold ${isSource ? 'text-ops-ink' : 'text-ops-muted'}`}>{l.toUpperCase()}</span>}
-                labelAside={isSource || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, [l]: s[l] ?? value[l] })))}
+                labelAside={isSource ? undefined : aiButton(() => runAi((s) => ({ ...value, [l]: s[l] ?? value[l] })))}
               >
                 {multiline ? (
                   <Textarea value={value[l] ?? ''} onChange={(e) => onChangeLocale(e.target.value)} rows={rows} placeholder={ph} onBlur={onBlur} maxLength={maxLength} disabled={disabled} />

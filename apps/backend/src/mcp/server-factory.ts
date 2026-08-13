@@ -460,7 +460,8 @@ export const TOOLS = [
         name: { type: 'object', description: 'Recipe name per language: { "tr": "…", "fr": "…", "de": "…" }. Turkish required.' },
         steps: {
           type: 'object',
-          description: 'Preparation steps per language, one text each — write the steps as numbered lines ("1. …\\n2. …").',
+          description:
+            'Preparation steps per language, one text each. ONE STEP PER LINE, and write NO numbers or bullets: the screen numbers the lines itself, so "1. Heat the oven" reaches the customer as "1. 1. Heat the oven". Line breaks are the only structure this field carries.',
         },
         description: { type: 'object', description: 'Short intro per language — what this dish is, when you would serve it.' },
         duration: {
@@ -472,7 +473,7 @@ export const TOOLS = [
         pantry: {
           type: 'object',
           description:
-            'What the cook needs from their OWN kitchen, per language — salt, water, olive oil. We do not sell these, so they cannot be ingredient rows, but the recipe cannot be made without them.',
+            'What the cook needs from their OWN kitchen, per language — salt, water, olive oil. We do not sell these, so they cannot be ingredient rows, but the recipe cannot be made without them. ONE ITEM PER LINE, no bullets or numbers — the screen draws the bullet.',
         },
         items: {
           type: 'array',

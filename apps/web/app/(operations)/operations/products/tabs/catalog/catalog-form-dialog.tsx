@@ -26,7 +26,6 @@ import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { MultiSelect } from '@/components/operation/form/multi-select';
-import { suggestTranslationAction } from '@/lib/ai/translate';
 import {
   createCatalogAction,
   loadCollectionMembersAction,
@@ -273,9 +272,9 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
           <LocaleCard title="İçerik" completenessOf={nameValue}>
             {(lang) => (
               <>
-                {/* Alan türü geçiliyor: ad kısa bir vitrin metni, ikinci alan bir cümle — ikisi
-                    aynı ölçüde çevrilmemeli. */}
-                <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" lang={lang} onAiTranslate={(t) => suggestTranslationAction(t, 'ad')} />
+                {/* Alan türü: ad kısa bir vitrin metni, ikinci alan bir cümle — ikisi aynı ölçüde
+                    çevrilmemeli. İkincisi varsayılanı (`aciklama`) kullanıyor. */}
+                <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" lang={lang} field="ad" />
                 {isCollection ? (
                   <FormLocalizedText
                     control={form.control}
@@ -285,7 +284,6 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
                     rows={3}
                     placeholder="Açıklama"
                     lang={lang}
-                    onAiTranslate={(t) => suggestTranslationAction(t, 'aciklama')}
                   />
                 ) : (
                   /* ALT YAZI (05.17) — vitrindeki kategori bandının ikinci satırı. Bugüne kadar
@@ -304,7 +302,6 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
                     rows={2}
                     placeholder="Tek cümlelik tanıtım — boş bırakılabilir"
                     lang={lang}
-                    onAiTranslate={(t) => suggestTranslationAction(t, 'aciklama')}
                   />
                 )}
               </>

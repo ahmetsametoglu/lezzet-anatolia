@@ -1,12 +1,12 @@
 'use client';
 
-import type { Control } from 'react-hook-form';
+import { useWatch, type Control } from 'react-hook-form';
 import { Button } from '@/components/operation/ui/button';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
+import { LocaleCard } from '@/components/operation/form/locale-card';
 import { Combobox } from '@/components/operation/form/combobox';
 import { Input } from '@/components/operation/form/input';
-import { suggestTranslationAction } from '@/lib/ai/translate';
 import type { RecipeFormValues, RecipeVariantOption } from './schema';
 
 /**
@@ -24,6 +24,18 @@ import type { RecipeFormValues, RecipeVariantOption } from './schema';
  * **Adım ve ev malzemesi ÇOK SATIRLI METİN** (kullanıcı kararı 07.08 · `KARARLAR §3z`): diller madde
  * SAYISINDA eşitlenemez, veri zaten tek alan, AI çeviri tek alan çeviriyor. Satır = madde.
  * **Üçlü künye (süre · porsiyon · öğün) SERBEST METİN**, sayı değil: "3–4 kişilik" bir aralıktır.
+ *
+ * ── DİL TEK YERDEN SEÇİLİR (kullanıcı kararı 12.08) ─────────────────────────
+ * Her alan kendi dil sekmesini çiziyordu; üçlü künye ise üç dili birden alt alta yığıyordu. Tarifin
+ * yedi metin alanı var — operatör Fransızcayı tamamlamak için yedi ayrı sekmeye tek tek basıyordu ve
+ * hangi alanı hangi dilde bıraktığı ekranda görünmüyordu. Alanlar artık TEK dil kartında: sekme
+ * kartın başlığında, içerideki her kutu o dilin kutusu. Kart deseni ürün/kategori formuyla ORTAK
+ * (`locale-card` künyesi) — burada yeniden yazılmadı.
+ *
+ * **Malzemeler kartın DIŞINDA ve bu ayrımın kendisi bir cümle:** kart "dile bağlı olan" demektir.
+ * Malzeme satırı ürün kaydını gösterir; ürünün adı da boyu da kendi kaydında üç dilli durur ve
+ * müşteriye onun dilinde çözülür (`storefront/recipe.ts`). Dil kartının içine alınsaydı, dil
+ * seçilince değişiyormuş gibi okunurdu.
  */
 interface RecipeFormBodyProps {
   control: Control<RecipeFormValues>;
@@ -39,10 +51,31 @@ interface RecipeFormBodyProps {
    * kalemlerin adı okumadan geliyor ve çağıranda tutuluyor — yoksa satır kimliğini gösterirdi.
    */
   knownLabels: Record<string, string>;
-  /** Not metinleri ekranın sözlüğünden geçer — gövde kendi cümlesini uydurmaz. */
-  notes: { itemsAside: string; lineIsItem: string; pantryAside: string };
   disabled?: boolean;
 }
+
+/**
+ * Alan altı açıklamaları — **gövdenin kendi cümleleri, dışarıdan geçmez** (12.08).
+ *
+ * `notes` bir PARAMETREYDİ ve iki çağıran iki ayrı metin veriyordu: tarif ekranı "her satır bir
+ * adım", kuyruk "her satır bir madde"; malzeme başlığı birinde fiyatın nereden okunduğunu
+ * söylüyordu, ötekinde söylemiyordu. Aynı kutunun kuralı yüzeye göre değişemez — alanın nasıl
+ * doldurulacağı alanın kendi bilgisidir, ekranın değil.
+ */
+const NOTES = {
+  /** Fiyat burada girilmez (tasarımın kuralı) — form fiyatın sahibi değil, okuyucusu. */
+  items: 'ürün kaydından seçilir · fiyat oradan okunur',
+  /**
+   * Satır = madde; kullanıcı kararı 07.08 (`KARARLAR §3z`). Numarayı ÖNİZLEME veriyor.
+   *
+   * "Numara yazmayın" 12.08'de eklendi: asistan adımları "1. …" diye numaralı öneriyordu ve ekran
+   * kendi numarasını basınca müşteri sayfasında "1. 1. Baklavayı ısıtın" çıkıyordu. Kaynağı
+   * düzeltildi (`propose_recipe_draft` numaralı satır İSTİYORDU) ama elle yapıştıran operatör de
+   * aynı hatayı yapabilir — ipucu bu yüzden alanın altında duruyor.
+   */
+  steps: 'her satır bir adım · numara yazmayın, sırayı ekran veriyor',
+  pantry: 'her satır bir madde · bizden alınmayanlar (tuz, su, zeytinyağı), satışa bağlanmaz',
+};
 
 export function RecipeFormBody({
   control,
@@ -52,41 +85,74 @@ export function RecipeFormBody({
   onSearch,
   searching,
   knownLabels,
-  notes,
   disabled = false,
 }: RecipeFormBodyProps) {
+  // Doluluk ipucunun dayanağı AD: yayın kapısının ölçütü o alan (`is_active` kısıtı üç dilde ad
+  // ister). Sekmedeki amber nokta böylece "bu dilde tarif yayınlanamaz" demiş oluyor.
+  const nameValue = useWatch({ control, name: 'name' });
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Ad ZORUNLU ve üç dilli; yayın kapısının ölçütü bu alan. AI önerisi TR'den ötekilere. */}
-      <FormLocalizedText
-        control={control}
-        name="name"
-        label="Tarif adı"
-        required
-        placeholder="Bulgur pilavı"
-        onAiTranslate={(text) => suggestTranslationAction(text, 'ad')}
-        disabled={disabled}
-      />
+      <LocaleCard title="İçerik" completenessOf={nameValue ?? {}}>
+        {(lang) => (
+          <>
+            {/* Ad ZORUNLU ve üç dilli; yayın kapısının ölçütü bu alan. AI önerisi TR'den ötekilere. */}
+            <FormLocalizedText
+              control={control}
+              name="name"
+              label="Tarif adı"
+              required
+              placeholder="Bulgur pilavı"
+              lang={lang}
+              field="ad"
+              disabled={disabled}
+            />
 
-      <div className="grid grid-cols-3 gap-2.5">
-        {/* Üçü de SERBEST METİN, sayı değil (05.16): "3–4 kişilik" bir aralıktır, "35 dk" bir
-            hesap değil. Sayıya indirmek, yazılamayan bir gerçeği zorlamak olurdu. */}
-        <FormLocalizedText control={control} name="duration" label="Süre" placeholder="35 dk" layout="stacked" disabled={disabled} />
-        <FormLocalizedText control={control} name="serves" label="Porsiyon" placeholder="3–4 kişilik" layout="stacked" disabled={disabled} />
-        <FormLocalizedText control={control} name="meal" label="Öğün" placeholder="Akşam yemeği" layout="stacked" disabled={disabled} />
-      </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* Üçü de SERBEST METİN, sayı değil (05.16): "3–4 kişilik" bir aralıktır, "35 dk" bir
+                  hesap değil. Sayıya indirmek, yazılamayan bir gerçeği zorlamak olurdu.
+                  Alan türü `ad`: üçü de kısa etiket, cümle değil — "Akşam yemeği" → "Dîner". */}
+              <FormLocalizedText control={control} name="duration" label="Süre" placeholder="35 dk" lang={lang} field="ad" disabled={disabled} />
+              <FormLocalizedText control={control} name="serves" label="Porsiyon" placeholder="3–4 kişilik" lang={lang} field="ad" disabled={disabled} />
+              <FormLocalizedText control={control} name="meal" label="Öğün" placeholder="Akşam yemeği" lang={lang} field="ad" disabled={disabled} />
+            </div>
 
-      <FormLocalizedText
-        control={control}
-        name="description"
-        label="Kısa açıklama"
-        hint="müşteri kartında ve detay başında görünür"
-        multiline
-        onAiTranslate={(text) => suggestTranslationAction(text, 'aciklama')}
-        disabled={disabled}
-      />
+            <FormLocalizedText
+              control={control}
+              name="description"
+              label="Kısa açıklama"
+              hint="müşteri kartında ve detay başında görünür"
+              multiline
+              lang={lang}
+              disabled={disabled}
+            />
 
-      <FieldShell label="Malzemeler — bizden" labelAside={notes.itemsAside}>
+            {/* Satır = madde (KARARLAR §3z). Alan türü varsayılan (`aciklama`) — tarif ADIMI ile
+                tarif ADI aynı ölçüde çevrilmez. */}
+            <FormLocalizedText
+              control={control}
+              name="steps"
+              label="Hazırlanışı"
+              hint={NOTES.steps}
+              multiline
+              lang={lang}
+              disabled={disabled}
+            />
+
+            <FormLocalizedText
+              control={control}
+              name="pantry"
+              label="Evinizden"
+              hint={NOTES.pantry}
+              multiline
+              lang={lang}
+              disabled={disabled}
+            />
+          </>
+        )}
+      </LocaleCard>
+
+      <FieldShell label="Malzemeler — bizden" labelAside={NOTES.items}>
         <div className="flex flex-col gap-2">
           {items.map((item, index) => (
             <div key={`${item.variantId}-${index}`} className="flex items-center gap-2">
@@ -138,28 +204,6 @@ export function RecipeFormBody({
           </Button>
         </div>
       </FieldShell>
-
-      {/* Satır = madde (KARARLAR §3z). AI önerisi adımlarda "aciklama" alanıyla çalışır — tarif
-          ADIMI ile tarif ADI aynı ölçüde çevrilmez. */}
-      <FormLocalizedText
-        control={control}
-        name="steps"
-        label="Hazırlanışı"
-        hint={notes.lineIsItem}
-        multiline
-        onAiTranslate={(text) => suggestTranslationAction(text, 'aciklama')}
-        disabled={disabled}
-      />
-
-      <FormLocalizedText
-        control={control}
-        name="pantry"
-        label="Evinizden"
-        hint={notes.pantryAside}
-        multiline
-        onAiTranslate={(text) => suggestTranslationAction(text, 'aciklama')}
-        disabled={disabled}
-      />
     </div>
   );
 }

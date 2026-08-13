@@ -47,12 +47,29 @@ export interface ProposalMeta {
   result: Record<string, string> | null;
 }
 
-/** Önizlemenin tek satırı. `now` doluysa ve `value`dan farklıysa satır sapmayı gösterir. */
+/**
+ * Önizlemenin tek satırı. **`now` verilmişse satır YALNIZ SAPMA VARKEN çizilir** (kullanıcı kararı
+ * 12.08).
+ *
+ * Bu satırlar bir tur hep duruyordu ve dilekçe ağacının hemen üstünde aynı alanları tekrar
+ * ediyordu: para hareketinde Tutar · Hesap · Yön üstte bir kez, ağaçta bir kez daha. Blokla ağacın
+ * işi zaten farklıydı — biri "ne değiştirdim", öteki "asistan ne yazmıştı" — ama fark ancak sapma
+ * OLDUĞUNDA görünüyor; sapma yokken ikisi birebir aynı şeyi söylüyordu.
+ *
+ * **`now` VERİLMEYEN satır her zaman çizilir** ve bu ayrım bilinçli: o satırlar dilekçenin bir
+ * alanını tekrar etmiyor, ondan TÜRETİLMİŞ bir özet taşıyor — "asistan hangi beyanları doldurdu",
+ * "hangi alanların üstüne yazılacak", "kaç dil dolu". Ağaçta karşılığı yok; gizlenselerdi tekrar
+ * değil, bilgi kaybolurdu. Kural şu: **karşılaştırılabilir olan sapmada konuşur, türetilmiş olan
+ * hep konuşur.**
+ */
 export interface ProposalFact {
   label: string;
   /** ASİSTANIN önerdiği değer — değişmez. */
   value: string;
-  /** Operatörün şu anki değeri; yalnız farklıysa çizilir. */
+  /**
+   * Operatörün şu anki değeri. Verilirse satır KARŞILAŞTIRMA olur ve yalnız `value`dan farklıyken
+   * çizilir; verilmezse satır türetilmiş bir özettir ve hep durur.
+   */
   now?: string | null;
 }
 
@@ -90,6 +107,8 @@ interface ProposalAsideProps {
 export function ProposalAside({ subject, fallbackTitle, facts, payload, meta, footer }: ProposalAsideProps) {
   // Görünüm YEREL: hangi hâle bakıldığı kararın parçası değil, okuma tercihi.
   const [view, setView] = useState<'view' | 'meta'>('view');
+  // Karşılaştırma satırı sapmada, türetilmiş satır her zaman (`ProposalFact` künyesi).
+  const shownFacts = (facts ?? []).filter((fact) => fact.now == null || fact.now !== fact.value);
 
   return (
     // `min-h-0` ŞART: sütun kendi içinde kaydırıyor (dilekçe ağacı uzun olabiliyor) ve flexbox'ın
@@ -137,9 +156,11 @@ export function ProposalAside({ subject, fallbackTitle, facts, payload, meta, fo
               <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{fallbackTitle}</span>
             )}
 
-            {facts && facts.length > 0 ? (
+            {/* Süzgeç BURADA, `Row`un içinde değil: satır kendi kendini gizleseydi blok boşken de
+                kenarlığını ve boşluğunu çizmeye devam ederdi — sütunda sebepsiz bir çizgi kalırdı. */}
+            {shownFacts.length > 0 ? (
               <dl className="flex flex-col gap-1 border-t border-ops-line pt-2 font-ops-body text-ops-base text-ops-body">
-                {facts.map((fact) => (
+                {shownFacts.map((fact) => (
                   <Row key={fact.label} fact={fact} />
                 ))}
               </dl>
@@ -194,7 +215,7 @@ function MetaFace({ payload, meta }: { payload: unknown; meta?: ProposalMeta }) 
  * Künye satırı — etiket solda sönük, değer sağda mono (fırsat kartıyla aynı okuma biçimi).
  *
  * Sapmada asistanın değeri ÜSTÜ ÇİZİLİ kalır, silinmez: "ne önerilmişti" sorusunun cevabı tam da
- * değiştirildiği anda değerlenir.
+ * değiştirildiği anda değerlenir. Sapmasız satır (türetilmiş özet) tek değerle çizilir.
  */
 function Row({ fact }: { fact: ProposalFact }) {
   const changed = fact.now != null && fact.now !== fact.value;

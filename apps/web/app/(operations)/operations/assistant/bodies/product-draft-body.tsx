@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resolveLocalizedText, type LocalizedText, type ProductCreatePayload, type ProductDraftPayload } from '@lezzet/types';
+import { resolveLocalizedText, type ProductCreatePayload, type ProductDraftPayload } from '@lezzet/types';
 import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/components/operation/form/product-form';
 import {
   ProductFormSchema,
@@ -15,7 +15,6 @@ import { ProductPhotos } from '@/components/operation/form/product-form/photos';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { uploadProductImageAction } from '@/lib/catalog/product-photo-actions';
 import type { ProductFormTab } from '@/components/operation/form/product-form/types';
-import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import { ProposalAside, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
@@ -176,7 +175,6 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
     mode: 'onChange',
   });
 
-  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
 
   /**
    * GÖRSEL BLOĞU DA VAR — form ürün ekranındakinin BİREBİR aynısı (kullanıcı kararı 11.08).
@@ -195,7 +193,6 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
     control: form.control,
     watch: form.watch,
     categories: options.categories,
-    onAiTranslate: aiTranslate,
     // YENİ ÜRÜNDE de çizilir ama kendi doğru hâliyle: kimlik yok → kapak yükleme kilitli ve galeri
     // şeridi hiç yok (`ProductPhotos` bunu kendi biliyor). Blok tamamen gizlenseydi form iki tipte
     // iki farklı düzen olurdu — kırpmanın ta kendisi.

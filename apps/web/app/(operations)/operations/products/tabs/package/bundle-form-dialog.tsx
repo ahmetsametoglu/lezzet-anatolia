@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { resolveLocalizedText } from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
@@ -17,7 +17,6 @@ import {
   type BundleFormValues,
 } from '@/components/operation/form/bundle-form/schema';
 import type { BundleView, VariantOption } from '@/components/operation/form/bundle-form/types';
-import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import {
   createBundleAction,
   loadBundleFormAction,
@@ -95,9 +94,6 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
   }, [bundle?.id]);
   const { control, handleSubmit, formState, setValue } = form;
 
-  // Alan türü geçiliyor (04.08): paket ADI kısa bir vitrin metni, açıklaması "hangi durum için
-  // uygun" diye okunan bir cümle — ton ve uzunluk buradan çıkıyor.
-  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -186,7 +182,6 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
             onCropChange={setCrop}
             imageUrl={bundle?.imageUrl ?? null}
             upload={editing ? (fd) => uploadBundleImageAction(bundle.id, fd) : undefined}
-            onAiTranslate={aiTranslate}
           />
         </form>
       )}

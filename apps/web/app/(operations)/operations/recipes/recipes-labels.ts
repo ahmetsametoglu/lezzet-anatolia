@@ -36,11 +36,8 @@ export const RECIPE_NOTES = {
   pick: 'Soldaki listeden bir tarif seçin; malzemeleri, adımları ve yayın durumu burada görünür.',
   /** Yeni tarif taslak DOĞAR — yayın ayrı bir karar ve ayrı bir düğme. */
   newSubtitle: 'Taslak olarak açılır; üç dilde ad dolunca yayına alınabilir.',
-  /** Fiyat burada girilmez (tasarımın kuralı) — ekran fiyatın sahibi değil, okuyucusu. */
-  itemsAside: 'ürün kaydından seçilir · fiyat oradan okunur',
-  /** Satır = madde; kullanıcı kararı 07.08 (`KARARLAR §3z`). Numarayı önizleme veriyor. */
-  lineIsItem: 'her satır bir adım',
-  pantryAside: 'her satır bir madde · satışa bağlanmaz',
+  // Form alanlarının açıklamaları (malzeme · adım · evinizden) BURADAN ÇIKTI (12.08) → gövdenin
+  // kendi `NOTES`u. Kuyruğun kopyası bu üçünden ayrışmıştı; alanın kuralı yüzeye göre değişemez.
   /** Kalemi olmayan tarif geçerli bir taslaktır — eksiklik değil, henüz bağlanmamış demek. */
   noItems: 'Henüz bağlı malzeme yok — bu tarif müşteride sepete eklenebilir bir şey göstermez.',
 
