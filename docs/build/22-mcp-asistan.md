@@ -1247,3 +1247,28 @@ satırında.
     ağaçta yazıyordu. `now` taşıyan satır yalnız değiştirildiğinde çiziliyor; `now` taşımayan satır
     (türetilmiş özet — "asistan hangi beyanları doldurdu", "kaç dil dolu") hep duruyor, çünkü ağaçta
     karşılığı yok. Para künyesinde Hesap ve Yön'e canlı değer bağlandı, yoksa sapmaları görünmezdi.
+
+- [x] (22.22) **Transfer önerisi de kuyruğun içinde — para tipinin İKİNCİ hâli** *(kullanıcı tespiti
+  12.08: "ikinci öneride form bu şekilde açılıyor, sağlıklı bir şekilde yüklenmeli fiyat bilgisi")*
+  `touches: apps/web/components/operation/form/transfer-form · apps/web/app/(operations)/operations/finance/{transfer-dialog.tsx,finance-types.ts} · apps/web/app/(operations)/operations/assistant/{assistant-body.tsx,bodies/transfer-body.tsx} · apps/web/lib/finance/actions.ts · apps/web/lib/assistant/form-options.ts · apps/web/components/operation/form/{select.tsx,form-select.tsx}`
+  - *Bitti:* transfer önerisi kuyrukta kendi formuyla açılıyor, dilekçenin tutarı ve iki hesabı dolu
+    geliyor, kayıt `withProposal` ile kuyruk satırını kapatıyor
+  - **Yarım bir devir, devir değildi.** `money_movement` 22.18'de `inline` oldu ama transfer hâli
+    dışarıda bırakılmıştı: gövde "formu açmam" diyor, çerçeve ise BOŞ BİR TABAN formla açıyordu —
+    tutar boş, tür "Sınıflandırılmadı", yön "Hesaba girdi" ve künyede **500,00 € → 0,00 €**, yani
+    dilekçe operatör silmiş gibi görünüyordu. Niyet doğruydu (uydurma değerlerle açılan form yanlış
+    bir defter satırı demektir) ama ekranda olan bambaşkaydı.
+  - **İki hâl, iki form, TEK tip.** Elle giriş tek hesap + bir yön sorar, transfer iki hesap sorar ve
+    yön sormaz; tek forma sıkıştırmak "para ne yaptı" sorusunu transferde anlamsız bırakırdı
+    (`transfer-dialog` kararı korundu). Çatal çerçevede: taslak **ayrımcı birleşim** (`MoneyDraft`),
+    çünkü düz bir nesnede her hâl ötekinin boş alanlarını da taşırdı. Ayrı bir öneri KİND'i
+    açılmadı — şemayı ve asistanın araç kataloğunu ikiye bölerdi.
+  - **Yön dilekçeden OKUNUR, varsayılmaz:** `direction: 'out'` ise `accountId` kaynak, `in` ise
+    hedeftir. Sabit bir sıra yazsaydık "kasaya nakit çek" önerisi ekranda "kasadan bankaya" diye
+    açılırdı — ve o hata bakiyeleri İKİ KAT kaydırır.
+  - **Bakiye önizlemesi kuyrukta da var:** `AssistantFormOptions.accounts` artık `balanceCents`
+    taşıyor (`account_balance` görünümü, ek tur yok). Transferin en sık hatası yanlış yön ve tek
+    emniyeti sonucu kaydetmeden önce okumak.
+  - **`Select`/`FormSelect` `disabled` kazandı** — 22.19'un üç maddesinden biri kapandı. Karar
+    verilmiş bir öneride hesap seçicisi açılıyor, operatör bir seçenek işaretliyor ve seçtiği
+    hiçbir yere gitmiyordu.

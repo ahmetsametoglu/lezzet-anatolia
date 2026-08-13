@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import type { Account, AccountLedgerRow } from '@lezzet/types';
 import type { ManualMovementForm } from '@/components/operation/form/movement-form/schema';
 import type { OpsTone } from '@/components/operation/ui/tone';
@@ -177,15 +176,9 @@ export interface FinanceViewProps {
  * doğrudan oradan okuyor. Buradan da vermek, aynı tanıma ikinci bir adres açmak olurdu.
  */
 
-export const TransferFormSchema = z.object({
-  fromAccountId: z.string().min(1),
-  toAccountId: z.string().min(1),
-  /** **EURO** — kapıya `toCents` ile gider (`ManualMovementSchema` künyesi). */
-  amount: z.number().positive().nullable(),
-  valueDate: z.string(),
-  description: z.string(),
-});
-export type TransferForm = z.infer<typeof TransferFormSchema>;
+// `TransferFormSchema`/`TransferForm` de aynı yolu izledi (22.22) →
+// `components/operation/form/transfer-form/schema.ts`. Sebep aynı: transfer formu artık kuyruğun
+// içinde de açılıyor ve iki yüzey tek tanımı paylaşmalı.
 
 /**
  * Asistan önerisinden gelen ön dolgu (22.5).

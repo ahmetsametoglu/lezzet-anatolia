@@ -13,13 +13,9 @@ import {
   type RecipeDraftPayload,
 } from '@lezzet/types';
 import { toCents } from '@lezzet/helper';
-import { recordManualMovementAction } from '@/lib/finance/actions';
-import {
-  ManualMovementSchema,
-  movementBlock,
-  movementToday,
-  type ManualMovementForm,
-} from '@/components/operation/form/movement-form/schema';
+import { recordManualMovementAction, recordTransferAction } from '@/lib/finance/actions';
+import { ManualMovementSchema, movementBlock, type ManualMovementForm } from '@/components/operation/form/movement-form/schema';
+import { TransferFormSchema, transferBlock, type TransferForm } from '@/components/operation/form/transfer-form/schema';
 import { saveRecipeAction } from '@/lib/catalog/recipe-actions';
 import { RecipeFormSchema, recipeBlock, type RecipeFormValues } from '@/components/operation/form/recipe-form/schema';
 import { createBundleAction } from '@/lib/catalog/bundle-actions';
@@ -47,6 +43,7 @@ import { BatchOfferBody } from './bodies/batch-offer-body';
 import { BundleDraftBody, bundleDraftValuesFrom } from './bodies/bundle-draft-body';
 import { RecipeDraftBody, recipeDraftValuesFrom } from './bodies/recipe-draft-body';
 import { MoneyMovementBody, movementValuesFrom } from './bodies/money-movement-body';
+import { TransferBody, transferValuesFrom } from './bodies/transfer-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
@@ -132,6 +129,15 @@ interface InlineBody<Payload, Draft> {
   /** Karardan sonra söylenecek cümle; kuyruk tazelendiğinde kart başka öneriye geçmiş olur. */
   appliedNote: string;
 }
+
+/**
+ * Para önerisinin taslağı — tek tip, İKİ HÂL (22.22).
+ *
+ * `money_movement` hem elle girişi hem transferi taşıyor ve ikisinin alanları hiç örtüşmüyor. Düz
+ * bir nesnede birleştirilseydi her hâl ötekinin boş alanlarını da taşırdı; ayrımcı birleşim
+ * hangisinin gerçek olduğunu tipin kendisine söyletiyor.
+ */
+type MoneyDraft = { kind: 'manual'; values: ManualMovementForm } | { kind: 'transfer'; values: TransferForm };
 
 /** Tip güvenliğini kaydın İÇİNDE tutar, dışarıya silinmiş (`unknown`) hâliyle verir. */
 type ErasedBody = InlineBody<unknown, unknown>;
@@ -246,54 +252,88 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   }),
 
   /**
-   * PARA — `handoff`tan geldi (22.11). Transfer hâlâ devirle: iki hesap ister ve kendi kapısı var.
-   * O tipte gövde formu hiç açmaz, sebebini yazar (`MoneyMovementBody` künyesi).
+   * PARA — `handoff`tan geldi (22.11) ve İKİ HÂLİ var: elle giriş (gider · sermaye ·
+   * sınıflandırılmadı) ve transfer.
+   *
+   * ── ÇATAL BURADA, GÖVDEDE DEĞİL (22.22) ───────────────────────────────────
+   * Transfer bir tur "kuyruktan geçmez" sayılıyordu: gövde formu açmıyor, boş bir taban veriliyor
+   * ve `blocked` kaydetmeyi kapatıyordu. Niyet doğruydu (uydurma değerlerle açılan form yanlış bir
+   * defter satırı demektir) ama ekranda olan başkaydı — tutarı boş, türü "Sınıflandırılmadı"
+   * gösteren, künyesinde 500,00 € → 0,00 € yazan bir form (kullanıcı tespiti 12.08). Yarım bir
+   * devir devir değildir: iki hâlin ikisi de artık kendi formuyla açılıyor, taslak da ayrımcı bir
+   * birleşimle taşınıyor.
+   *
+   * İki hâl tek `defineBody`de kalıyor çünkü tek bir öneri TİPİ; ayrı bir kind açmak şemayı ve
+   * asistanın araç kataloğunu ikiye bölerdi.
    */
-  money_movement: defineBody<MoneyMovementPayload, ManualMovementForm>({
+  // Para taslağı AYRIMCI BİRLEŞİM: iki hâlin alanları hiç örtüşmüyor (elle giriş tek hesap + yön,
+  // transfer iki hesap) ve tek bir düz nesnede birleştirilseydi her iki hâl de ötekinin boş
+  // alanlarını taşırdı — hangisinin gerçek olduğu ancak `type` okunarak anlaşılırdı.
+  money_movement: defineBody<MoneyMovementPayload, MoneyDraft>({
     parse: parseWith<MoneyMovementPayload>('money_movement'),
-    // Transferde form kurulamaz; boş bir taban veriliyor ve `blocked` yolu kapatıyor. Uydurma
-    // değerlerle açılan bir form, kaydedilebilir görünen yanlış bir defter satırı demekti.
-    initial: (payload) =>
-      movementValuesFrom(payload) ?? {
-        accountId: payload.accountId,
-        type: 'misc',
-        amount: null,
-        direction: payload.direction,
-        category: '',
-        campaign: '',
-        valueDate: movementToday(),
-        description: payload.description ?? '',
-      },
-    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
-      <MoneyMovementBody
-        payload={payload}
-        subject={subject}
-        options={options}
-        meta={meta}
-        values={draft}
-        onChange={onDraft}
-        disabled={disabled}
-        readOnly={readOnly}
-      />
-    ),
-    blocked: (values) => {
-      const parsed = ManualMovementSchema.safeParse(values);
-      if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
-      return movementBlock(values);
+    initial: (payload) => {
+      const manual = movementValuesFrom(payload);
+      return manual ? { kind: 'manual', values: manual } : { kind: 'transfer', values: transferValuesFrom(payload) };
     },
-    submit: (_payload, values, proposalId) =>
-      recordManualMovementAction({
-        accountId: values.accountId,
-        type: values.type,
-        // EURO → CENT sınırda (`ManualMovementSchema` künyesi): kapı cent istiyor.
-        amountCents: toCents(values.amount ?? 0),
-        direction: values.direction,
-        category: values.category,
-        campaign: values.campaign,
-        valueDate: values.valueDate,
-        description: values.description,
-        proposalId,
-      }),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) =>
+      draft.kind === 'transfer' ? (
+        <TransferBody
+          payload={payload}
+          subject={subject}
+          options={options}
+          meta={meta}
+          values={draft.values}
+          onChange={(next) => onDraft({ kind: 'transfer', values: next })}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
+      ) : (
+        <MoneyMovementBody
+          payload={payload}
+          subject={subject}
+          options={options}
+          meta={meta}
+          values={draft.values}
+          onChange={(next) => onDraft({ kind: 'manual', values: next })}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
+      ),
+    blocked: (draft) => {
+      if (draft.kind === 'transfer') {
+        const parsed = TransferFormSchema.safeParse(draft.values);
+        if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
+        return transferBlock(draft.values);
+      }
+      const parsed = ManualMovementSchema.safeParse(draft.values);
+      if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
+      return movementBlock(draft.values);
+    },
+    submit: (_payload, draft, proposalId) =>
+      draft.kind === 'transfer'
+        ? recordTransferAction(
+            {
+              fromAccountId: draft.values.fromAccountId,
+              toAccountId: draft.values.toAccountId,
+              // EURO → CENT sınırda: kapı cent istiyor.
+              amountCents: toCents(draft.values.amount ?? 0),
+              valueDate: draft.values.valueDate,
+              description: draft.values.description,
+            },
+            proposalId,
+          )
+        : recordManualMovementAction({
+            accountId: draft.values.accountId,
+            type: draft.values.type,
+            // EURO → CENT sınırda (`ManualMovementSchema` künyesi): kapı cent istiyor.
+            amountCents: toCents(draft.values.amount ?? 0),
+            direction: draft.values.direction,
+            category: draft.values.category,
+            campaign: draft.values.campaign,
+            valueDate: draft.values.valueDate,
+            description: draft.values.description,
+            proposalId,
+          }),
     // Form dar ve tek sütun (finans diyaloğu 560 px için tasarlandı); yanına dilekçe sütunu geliyor.
     width: 1120,
     applyLabel: 'Hareketi kaydet',

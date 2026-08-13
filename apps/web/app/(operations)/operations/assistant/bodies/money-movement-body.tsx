@@ -27,13 +27,14 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
  * çıkınca konseptten kopuyorum"*. Kaydeden kapı yine finans ekranının kendi eylemi
  * (`recordManualMovementAction` + `withProposal`); kuyruk ikinci bir yazma yolu açmıyor.
  *
- * ── TRANSFER BURADAN GEÇMEZ ─────────────────────────────────────────────────
- * `type: 'transfer'` iki hesap ister ve kendi kapısı vardır ("⇄ Transfer"). Gövde o hâlde formu
- * hiç açmaz, sebebini yazar ve karar devirle verilir — devir kapısı bu tip için KALDI, çünkü
- * gerçekten başka bir form.
+ * ── TRANSFER BU GÖVDEDE DEĞİL, KENDİ GÖVDESİNDE ─────────────────────────────
+ * `type: 'transfer'` iki hesap ister ve yön sormaz — başka bir form (`TransferBody`, 22.22). Bir
+ * tur bu gövde onu "geçmez" diye reddediyordu ama çerçeve yine de boş bir taban formla açıyordu:
+ * tutar boş, tür yanlış, künye dilekçeyi silinmiş gibi gösteriyordu. Çatal artık çerçevede ve iki
+ * hâlin ikisi de kendi formuyla açılıyor.
  */
 
-/** Asistanın önerdiği hareket → formun açılış değerleri. Transfer ise `null` (kendi kapısı var). */
+/** Asistanın önerdiği hareket → formun açılış değerleri. Transfer ise `null` — o `TransferBody`nin. */
 export function movementValuesFrom(payload: MoneyMovementPayload): ManualMovementForm | null {
   if (!(MANUAL_TYPES as readonly string[]).includes(payload.type)) return null;
   return {

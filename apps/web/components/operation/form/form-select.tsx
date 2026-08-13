@@ -15,16 +15,27 @@ interface FormSelectProps<T extends FieldValues> {
   placeholder?: string;
   required?: boolean;
   labelAside?: ReactNode;
+  /** Kilitli hâl — karar verilmiş öneride kutu tıklanmaz (22.19, `Select` künyesi). */
+  disabled?: boolean;
 }
 
-export function FormSelect<T extends FieldValues>({ control, name, label, options, placeholder, required, labelAside }: FormSelectProps<T>) {
+export function FormSelect<T extends FieldValues>({
+  control,
+  name,
+  label,
+  options,
+  placeholder,
+  required,
+  labelAside,
+  disabled,
+}: FormSelectProps<T>) {
   return (
     <Controller
       control={control}
       name={name}
       render={({ field, fieldState }) => (
         <FieldShell label={label} required={required} labelAside={labelAside} error={fieldState.error?.message}>
-          <Select value={field.value ?? ''} onChange={field.onChange} options={options} placeholder={placeholder} />
+          <Select value={field.value ?? ''} onChange={field.onChange} options={options} placeholder={placeholder} disabled={disabled} />
         </FieldShell>
       )}
     />

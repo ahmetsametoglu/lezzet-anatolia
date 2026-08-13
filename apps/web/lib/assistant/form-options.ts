@@ -55,8 +55,14 @@ export interface AssistantFormOptions {
    * Dilekçe `accountId` ve `accountName` taşıyor ama SEÇİCİ tüm hesapları ister: operatör asistanın
    * seçtiği kasadan başka bir hesabı işaret etmek isteyebilir ve o an listenin orada olması gerekir.
    * Hesap kümesi operatörün elle kurduğu, doğal tavanı olan bir küme — tek turda çekilir (`CLAUDE §1`).
+   *
+   * **Bakiye de taşınıyor (22.22)**, çünkü transfer formu onu gösteriyor: "Kasa 1.240,00 € →
+   * 740,00 € · Banka 3.100,00 € → 3.600,00 €". Transferin en sık hatası yanlış yönü seçmektir ve o
+   * hata bakiyeleri İKİ KAT kaydırır; sonucu kaydetmeden önce okumak bunun tek emniyeti. Bakiye
+   * saklanmaz, `account_balance` görünümünden toplanır — liste zaten okunuyordu, bir tur daha
+   * eklenmedi.
    */
-  accounts: Array<{ id: string; name: string }>;
+  accounts: Array<{ id: string; name: string; balanceCents: number }>;
 }
 
 /**
@@ -76,14 +82,16 @@ export async function readAssistantFormOptions(
 ): Promise<AssistantFormOptions> {
   const db = serviceDb();
   const wanted = [...new Set(productIds)];
-  const [categories, collections, products, bundleVariants, accounts] = await Promise.all([
+  const accountService = new AccountService(db);
+  const [categories, collections, products, bundleVariants, accounts, balances] = await Promise.all([
     new CategoryService(db).list(),
     new CollectionService(db).list(),
     wanted.length > 0 ? new ProductService(db).listByIds(wanted) : Promise.resolve([]),
     // Kalem havuzu kendi okumasını yapıyor (`variant-options`): paket formunun ve kuyruğun gördüğü
     // fiyat/maliyet aynı yerden gelsin — ikisi ayrışırsa aynı kalem iki ekranda iki marj gösterir.
     variantOptionsForVariants(db, bundleVariantIds),
-    new AccountService(db).list(),
+    accountService.list(),
+    accountService.balances(),
   ]);
 
   // Varyantlar AYRI okunur ve tek turda: form varyant satırlarını da düzenletiyor, ürün kaydı onları
@@ -106,6 +114,9 @@ export async function readAssistantFormOptions(
       ]),
     ),
     bundleVariants,
-    accounts: accounts.map((a) => ({ id: a.id, name: a.name })),
+    // Bakiyesi olmayan hesap 0 DEĞİL, hiç hareket görmemiş hesaptır — görünüm o satırı üretmiyor
+    // ve `balances()` de onu taşımıyor. Sıfır yazmak burada doğru: defterde hareketi olmayan
+    // hesabın bakiyesi gerçekten sıfırdır (`AccountService.balance` aynı cevabı veriyor).
+    accounts: accounts.map((a) => ({ id: a.id, name: a.name, balanceCents: balances.get(a.id)?.balanceCents ?? 0 })),
   };
 }

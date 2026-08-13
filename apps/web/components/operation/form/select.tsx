@@ -31,9 +31,17 @@ interface SelectProps {
    * çiplerin yanında yabancı bir kutu bırakıyordu.
    */
   variant?: TriggerVariant;
+  /**
+   * Kutu KİLİTLİ — tıklanmaz ve soluk çizilir (22.19, 12.08).
+   *
+   * Karar verilmiş bir öneride (asistan kuyruğunun arşivi) form okunur kalıyor ama yazılmıyordu:
+   * seçici açılıyor, operatör bir seçenek işaretliyor ve seçtiği hiçbir yere gitmiyordu — ekranın
+   * söylediği ile sistemin yaptığı ayrışıyordu.
+   */
+  disabled?: boolean;
 }
 
-export function Select({ value, onChange, options, placeholder = 'Seç', className, variant = 'field' }: SelectProps) {
+export function Select({ value, onChange, options, placeholder = 'Seç', className, variant = 'field', disabled = false }: SelectProps) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value) ?? null;
@@ -45,7 +53,10 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={triggerClass({ variant, open, filled: selected !== null })}
+        disabled={disabled}
+        className={[triggerClass({ variant, open, filled: selected !== null }), disabled ? 'cursor-not-allowed opacity-60' : '']
+          .filter(Boolean)
+          .join(' ')}
       >
         <span className="truncate">{selected ? selected.label : placeholder}</span>
         {variant === 'chip' ? null : <span className="flex-none text-ops-faint">{open ? '▴' : '▾'}</span>}

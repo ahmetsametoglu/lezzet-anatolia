@@ -127,20 +127,37 @@ interface TransferInput {
  * hesapta simetrik hareket; kullanıcı 'gelir/gider' diye düşünmek zorunda kalmaz"*. Nakit bankaya
  * yatırıldığında işletme ne kazandı ne kaybetti — iki kutu arasında yer değiştirdi.
  */
-export async function recordTransferAction(input: TransferInput): Promise<ActionResult<{ movementId: string }>> {
+export async function recordTransferAction(input: TransferInput, proposalId?: string): Promise<ActionResult<{ movementId: string }>> {
   try {
-    await requireFinance();
+    const staff = await requireFinance();
 
-    const outcome = await transfer({
-      fromAccountId: input.fromAccountId,
-      toAccountId: input.toAccountId,
-      amountCents: input.amountCents,
-      valueDate: input.valueDate || undefined,
-      description: input.description.trim() || null,
-    });
-    if (outcome.status === 'invalid') return { data: null, error: invalidMessage(outcome.reason) };
+    /**
+     * Öneriden gelindiyse kayıt ile kuyruk satırı BİRLİKTE koşar (22.22) — elle hareketin aynı
+     * deseni. Transfer bir tur kuyruğun DIŞINDA bırakılmıştı ("kendi kapısı var") ama kuyruk yine
+     * de boş bir form açıyordu: tutarsız, kaydedilemez ve dilekçeyi silinmiş gibi gösteren bir hâl.
+     *
+     * `invalid` FIRLATILIR, döndürülmez: hiçbir şey yazılmadı demektir ve sessizce dönseydi satır
+     * "uygulandı" damgası yerdi (`recordManualMovementAction` künyesi).
+     */
+    const outcome = await withProposal(
+      proposalId,
+      staff.profileId,
+      async () => {
+        const result = await transfer({
+          fromAccountId: input.fromAccountId,
+          toAccountId: input.toAccountId,
+          amountCents: input.amountCents,
+          valueDate: input.valueDate || undefined,
+          description: input.description.trim() || null,
+        });
+        if (result.status === 'invalid') throw new Error(invalidMessage(result.reason));
+        return result;
+      },
+      (result) => ({ moneyMovementId: result.movement.id }),
+    );
 
     revalidatePath(FINANCE_PATH);
+    revalidatePath('/operations/assistant');
     return { data: { movementId: outcome.movement.id }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
