@@ -11,11 +11,14 @@ import {
   type ProductCreatePayload,
   type ProductDraftPayload,
   type RecipeDraftPayload,
+  type StockIntakePayload,
 } from '@lezzet/types';
 import { toCents } from '@lezzet/helper';
 import { recordManualMovementAction, recordTransferAction } from '@/lib/finance/actions';
 import { ManualMovementSchema, movementBlock, type ManualMovementForm } from '@/components/operation/form/movement-form/schema';
 import { TransferFormSchema, transferBlock, type TransferForm } from '@/components/operation/form/transfer-form/schema';
+import { receiveIntakeFromProposalAction } from '@/lib/warehouse/intake-actions';
+import { countedLines, intakeBlock, type IntakeFormValues } from '@/components/operation/form/intake-form/schema';
 import { saveRecipeAction } from '@/lib/catalog/recipe-actions';
 import { RecipeFormSchema, recipeBlock, type RecipeFormValues } from '@/components/operation/form/recipe-form/schema';
 import { createBundleAction } from '@/lib/catalog/bundle-actions';
@@ -44,6 +47,7 @@ import { BundleDraftBody, bundleDraftValuesFrom } from './bodies/bundle-draft-bo
 import { RecipeDraftBody, recipeDraftValuesFrom } from './bodies/recipe-draft-body';
 import { MoneyMovementBody, movementValuesFrom } from './bodies/money-movement-body';
 import { TransferBody, transferValuesFrom } from './bodies/transfer-body';
+import { StockIntakeBody, intakeValuesFrom } from './bodies/stock-intake-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
@@ -440,6 +444,57 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // yok (kullanıcı kararı 11.08 — kuyruk satış eksenine dokunmaz), yani ürün kapının kendi
     // varsayılanıyla geliyor. Satışa çıkarmak ürün ekranının kararı.
     appliedNote: 'Ürün oluşturuldu — katalogda ADAY olarak duruyor. Satışa çıkarmak ürün ekranının kararı.',
+  }),
+
+  /**
+   * MAL KABUL — `handoff`tan geldi (22.23). Devrin gerekçesi *"geri alınamaz: giren parti satılabilir
+   * olur ve SKT o an sabitlenir; faturadan okunan miktar gözle doğrulanmadan yazılmamalı"*tı ve o
+   * şart AYNEN duruyor — doğrulama hâlâ karardan önce, değişen tek şey formun nerede DURDUĞU.
+   *
+   * Kaydeden kapı kuyruğun kendi eylemi (`receiveIntakeFromProposalAction`): fiyat FORMDAN gider,
+   * dilekçeden değil — patron faturayı yanlış okunmuş görürse maliyeti onaydan önce düzeltebilmeli.
+   */
+  stock_intake: defineBody<StockIntakePayload, IntakeFormValues>({
+    parse: parseWith<StockIntakePayload>('stock_intake'),
+    initial: (payload) => intakeValuesFrom(payload),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <StockIntakeBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    blocked: (values) => intakeBlock(values),
+    submit: (_payload, values, proposalId) =>
+      receiveIntakeFromProposalAction({
+        warehouseId: values.warehouseId,
+        // Tedarikçi seçilmemiş olabilir — plansız/küçük alım meşru bir hâl ve `null` onu söylüyor.
+        supplierId: values.supplierId || null,
+        note: values.documentNo.trim() || null,
+        // Belgenin tarihi — boşsa kapı bugüne yazar. Alan dilekçede vardı ama HİÇBİR yola bağlı
+        // değildi (ölçüldü 13.08): fatura tarihi kayda geçmiyor, kabul her hâlde bugüne yazılıyordu.
+        date: values.date.trim() || null,
+        lines: countedLines(values).map((line) => ({
+          variantId: line.variantId,
+          qty: line.qty ?? 0,
+          expiryDate: line.expiryDate,
+          lotNumber: line.lotNumber.trim() || null,
+          location: line.location.trim() || null,
+          // EURO → CENT sınırda (`IntakeLineSchema` künyesi): kapı cent istiyor. `null` = fiyatı
+          // bilmiyorum ve öyle gider — sıfır yazmak bedava alınmış gibi okunurdu.
+          unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),
+        })),
+        proposalId,
+      }),
+    // Satır ızgarası altı kolon + fiyat: dar sütunda kalemler okunmuyor.
+    width: 1560,
+    applyLabel: 'Girişi kaydet',
+    appliedNote: 'Partiler stoğa girdi — Stok ekranında görünüyor ve satılabilir hâle geldi.',
   }),
 };
 

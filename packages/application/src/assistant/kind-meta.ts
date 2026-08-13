@@ -112,10 +112,22 @@ export const KIND_META = {
     impact:
       'Partiler stoğa girer ve satılabilir hâle gelir; son kullanma tarihleri bu tabloyla sabitlenir. Bağlı tedarik siparişi varsa kapanışı da bu kabulden türer.',
     tables: ['stock_intake', 'stock'],
-    // Geri alınamaz: giren parti satılabilir olur ve SKT o an sabitlenir. Faturadan okunan
-    // miktar/tarih gözle doğrulanmadan yazılmamalı — mal kabul ekranı ön doldurulur.
-    mode: 'handoff',
+    /**
+     * ── `handoff` → `inline` (22.23) ───────────────────────────────────────
+     * Devrin gerekçesi *"geri alınamaz: giren parti satılabilir olur ve SKT o an sabitlenir;
+     * faturadan okunan miktar/tarih gözle doğrulanmadan yazılmamalı"*tı ve o şart AYNEN duruyor —
+     * doğrulama hâlâ karardan önce, değişen tek şey formun nerede DURDUĞU. Geri alınamazlık formun
+     * YERİNİ değil VARLIĞINI şart koşuyor; aynı çıkarım para tipinde 22.18'de yapılmıştı.
+     *
+     * Kullanıcının kurgusu (12.08): fatura fotoğrafı asistana gönderilir, model okur, bu araç
+     * okunanı DOĞRULAR (varyant var mı, depo kodu geçerli mi, her satırda tarih var mı) ve patron
+     * satırları kuyruğun içinde düzeltip tek kararla stoğa alır.
+     */
+    mode: 'inline',
     target: 'receiving',
+    // Doğan kabul belgesinin kimliği künyeye yazılır. Anahtar uygulayıcının döndürdüğü adla birebir
+    // aynı (`receiveIntakeFromProposalAction` → `stockIntakeId`); ölçüldü, uydurulmadı.
+    resultKey: 'stockIntakeId',
   },
   /**
    * ── `handoff` → `inline` (22.18) ─────────────────────────────────────────

@@ -7,7 +7,7 @@ import { Combobox } from '@/components/operation/form/combobox';
 import { Input } from '@/components/operation/form/input';
 import { num } from '@/components/operation/ui/format';
 import { RECEIVING_NOTES } from './receiving-labels';
-import { createSupplierAction, searchIntakeVariantsAction } from './receiving-actions';
+import { createSupplierAction, searchIntakeVariantsAction } from '@/lib/warehouse/intake-actions';
 import type { IntakeRow } from './receiving-types';
 
 /**

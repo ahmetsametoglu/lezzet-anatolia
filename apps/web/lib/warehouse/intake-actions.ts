@@ -1,7 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { openIntakeForm, receiveGoods, receivePurchase, type IntakeFormLine, type IntakeFormRow } from '@lezzet/application';
+import {
+  openIntakeForm,
+  receiveGoods,
+  receivePurchase,
+  type IntakeFormLine,
+  type IntakeFormRow,
+  type PurchaseIntakeLine,
+} from '@lezzet/application';
 import { ProductService, SupplierService, serviceDb } from '@lezzet/database';
 import { StockIntakePayloadSchema, resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
@@ -9,8 +16,8 @@ import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
 import { readHandoffProposal, withProposal } from '@/lib/assistant/handoff';
-import { costsForLines } from './receiving-handoff';
-import type { ReceiveOutcome } from './receiving-types';
+import { costsForLines } from './intake-costs';
+import type { ReceiveOutcome } from '@/app/(operations)/operations/receiving/receiving-types';
 
 /**
  * Mal kabulün yazma ve okuma yolları (10.4).
@@ -161,6 +168,72 @@ export async function createSupplierAction(name: string, phone: string | null): 
     });
     revalidatePath(RECEIVING_PATH);
     return { data: { id: supplier.id, name: supplier.name }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **ÖNERİDEN MAL KABUL** — asistan kuyruğunun kendi kapısı (22.23).
+ *
+ * ── NEDEN AYRI BİR EYLEM, `receiveGoodsAction`A BAYRAK DEĞİL ────────────────
+ * Depocu yolu fiyat GÖNDEREMEZ ve bu bir ekran kuralı değil TİP sınırı: `IntakeFormLine`de maliyet
+ * alanı yok, `PurchaseIntakeLine`de var — "iki ayrı tip, iki ayrı kapı" (09.14). Ortak eyleme
+ * isteğe bağlı bir fiyat alanı eklemek, o sınırı yalnız iyi niyetle ayakta bırakırdı: depo ekranı
+ * da gönderebilir hâle gelirdi ve tip artık hiçbir şey söylemezdi.
+ *
+ * ── FİYAT DİLEKÇEDEN DEĞİL FORMDAN GELİR (kullanıcı kararı 12.08) ───────────
+ * Devir yolunda maliyet sunucuda dilekçeden eşleştiriliyor (`costsForLines`), çünkü orada ekran
+ * depocunun ve fiyatı görmemeli. Kuyruk ise patronun ekranı: fatura yanlış okunmuşsa maliyet
+ * onaydan ÖNCE düzeltilebilmeli. Düzeltilen değeri yok sayıp dilekçedekini yazsaydık, ekranda
+ * görünen ile deftere geçen ayrışırdı — sistemin söyleyebileceği en sessiz yalan.
+ */
+export async function receiveIntakeFromProposalAction(input: {
+  warehouseId: string;
+  supplierId: string | null;
+  note: string | null;
+  /** Belgenin tarihi — boşsa kapı BUGÜNE yazar (`StockIntakeService.receive`). */
+  date: string | null;
+  lines: PurchaseIntakeLine[];
+  proposalId: string;
+}): Promise<ActionResult<ReceiveOutcome>> {
+  try {
+    // Depo kapsamı BU depo için doğrulanıyor — kuyruktan gelmek yetkiyi atlatmaz.
+    const { user: staff } = await requireWarehouseScope(input.warehouseId);
+    if (input.lines.length === 0) throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
+
+    // Kuyruk satırı kayıtla BİRLİKTE kapanır; sıra tek yerde (`withProposal`). Motorun `empty`
+    // cevabı FIRLATILIR: hiçbir parti yazılmadı demektir ve sessizce dönseydi satır "uygulandı"
+    // damgası yerdi (`recordManualMovementAction` künyesi).
+    const result = await withProposal(
+      input.proposalId,
+      staff.profileId,
+      async () => {
+        const outcome = await receivePurchase(serviceDb(), {
+          warehouseId: input.warehouseId,
+          // Tedarik siparişi bağı YOK: bu yol belgeden okunan doğrudan girişin yolu. PO'lu kabul
+          // depo ekranının kendi akışı ve sayım orada yapılır.
+          purchaseOrderId: null,
+          supplierId: input.supplierId,
+          note: input.note,
+          ...(input.date ? { date: input.date } : {}),
+          lines: input.lines,
+        });
+        if (outcome.status === 'empty') throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
+        return outcome;
+      },
+      (outcome) => ({ stockIntakeId: outcome.result.intakeId }),
+    );
+
+    revalidatePath(RECEIVING_PATH);
+    // Stok ekranı da tazelenir: kabul edilen mal aynı anda satılabilir hâle geliyor.
+    revalidatePath('/operations/stock');
+    revalidatePath('/operations/assistant');
+
+    return {
+      data: { warnings: result.warnings, differences: result.differences, batches: result.result.stockIds.length },
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

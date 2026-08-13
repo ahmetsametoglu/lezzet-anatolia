@@ -1272,3 +1272,69 @@ satırında.
   - **`Select`/`FormSelect` `disabled` kazandı** — 22.19'un üç maddesinden biri kapandı. Karar
     verilmiş bir öneride hesap seçicisi açılıyor, operatör bir seçenek işaretliyor ve seçtiği
     hiçbir yere gitmiyordu.
+
+- [~] (22.23) **Mal kabul kuyruğun içinde — fatura fotoğrafından tek kararla stok girişi** *(kullanıcı
+  kurgusu 12.08: "MCP ajanına ekran görüntüsü gönderip 'bu ürünlerin depo kabulünü yaptık' derse … kullanıcı
+  bunları düzenleyip kaydet deyip hepsinin depo girişini yapabilecek")*
+  `touches: apps/web/components/operation/form/intake-form · apps/web/app/(operations)/operations/assistant/bodies/stock-intake-body.tsx · apps/web/app/(operations)/operations/assistant/assistant-body.tsx · apps/web/lib/warehouse/{intake-actions.ts,intake-costs.ts} · apps/web/lib/assistant/form-options.ts · packages/application/src/assistant/kind-meta.ts`
+  - *Bitti:* fatura önerisi kuyrukta satırlarıyla açılıyor, adet/SKT/lot/raf ve **birim alış** düzenlenebiliyor,
+    tek kararla partiler stoğa giriyor
+  - **Öneri üretimi zaten hazırdı, eksik olan tek adım formdu.** `propose_stock_intake` çok kalemli ve
+    okunanı DOĞRULUYOR (varyant var mı, depo kodu geçerli mi, her satırda tarih var mı); talimatı SKT ve
+    lot uydurmayı yasaklıyor, okunamayan alanı `uncertainFields`e yazdırıyor. Kaydeden kapı da `proposalId`
+    alıyordu. Devir gerekçesi ("geri alınamaz, gözle doğrulanmalı") kalkmadı — doğrulama hâlâ karardan
+    önce, yalnız formun yeri değişti. **Geriye tek devir kaldı: bölge** (kararın konusu haritada).
+  - **ALIŞ FİYATI KUYRUKTA GÖRÜNÜR VE DÜZELTİLEBİLİR** (kullanıcı kararı 12.08). Depo ekranı fiyatı
+    görmez ve bu bir ekran kuralı değil TİP sınırı (`IntakeFormLine` fiyatsız, `PurchaseIntakeLine`
+    fiyatlı — "iki ayrı tip, iki ayrı kapı"). Devir yolunda maliyet sunucuda dilekçeden eşleştiriliyor
+    (`costsForLines`); kuyrukta ise formdan gidiyor, çünkü fatura yanlış okunmuşsa düzeltilebilmeli.
+    Kuyruğun kapısı bu yüzden AYRI (`receiveIntakeFromProposalAction`): ortak eyleme isteğe bağlı bir
+    fiyat alanı eklemek, tip sınırını yalnız iyi niyetle ayakta bırakırdı.
+  - **Mutabakat satırı:** satırların toplamı ↔ belgenin kendi yazdığı toplam, fark ayrıca. Fark bir hata
+    değil bir SORU — nakliye mi, iskonto mu, okunamayan bir satır mı. Fiyatı bilinmeyen satır toplama 0
+    olarak girmez, "eksik" sayılır: bilinmeyen bir maliyeti sıfır saymak mutabakatı sessizce doğru
+    gösterirdi (`CLAUDE §1`).
+  - **Satır editörü ortak alana ayrıldı** (`intake-form/`), fiyat kolonu `showCost` ile açılıyor — rampadaki
+    depo ekranı istemez, kuyruk ister. Depo VARSAYILANSIZ (`CLAUDE §1`): kabul deposuz yazılamaz.
+  - **FATURA TARİHİ ARTIK KAYDA GEÇİYOR.** Dilekçe `date` taşıyor, kapı (`receivePurchase`) `date`
+    alıyor — ama HİÇBİR yol ikisini bağlamıyordu (ölçüldü 13.08): kabul her hâlde bugüne yazılıyordu.
+    Şemanın kendi künyesi bunu uyarıyordu bile (*"fatura dünkü olabilir ve genelde öyledir; yanlış
+    tarihe yazılan kabul stok yaşını ve dönem mutabakatını sessizce kaydırır"*). Forma "Belge tarihi"
+    alanı eklendi ve kapıya geçiyor; boş bırakılırsa kapı bugüne yazar.
+  - **BEKLEYEN(22.24): ölü kalan iki devir yolu.** `finance-handoff` ve `receiving-handoff` hâlâ kodda ama
+    ikisi de artık `inline`; `?proposal=` linki elle yazılmadıkça tetiklenmiyor. Sökülmesi ekranların
+    `handoff` prop'unu da kaldırmayı gerektiriyor, bu turda kapsam dışı bırakıldı.
+  - **DURUM 13.08 — ÖNERİ ONAYLANMADI, forma geri dönülecek** *(kullanıcı: "mal kabul öneri diyaloğunu
+    kabul edemiyorum")*. Yazma yolu (kapı · fiyat · tarih · mutabakat) ayakta ve doğru; reddedilen
+    FORMUN KENDİSİ. İki gerekçe: **(a)** mal kabul, ortak komponent havuzunu kullanmıyor — SKT alanı
+    ham `<input type="date">` olarak yeniden çizilmiş, oysa `DateField` var; öteki formlar diyalog
+    kurgusuna oturmuşken bu form kendi düzenini kurmuş. **(b)** Mal kabul · stok · stoktan düşme
+    **üç ayrı sayfaya** yayılmış, oysa üçü tek işin üç anıdır. Bu yüzden form tek başına düzeltilmiyor:
+    üç ekranın birleşimiyle birlikte ele alınacak → **BEKLEYEN(22.26)**.
+
+- [ ] (22.24) **Ölü devir yollarını sök** — `finance-handoff` · `receiving-handoff` ve ekranların `handoff` prop'ları
+  - *Bitti:* devir okuması yalnız `zone_extend` için kalır; iki ekran `?proposal=` parametresini artık okumaz
+  - Para (22.18) ve mal kabul (22.23) kuyruğa taşınınca bu iki yol ölü kaldı: kuyruk devir düğmesi
+    çizmiyor, yani kimse oraya yönlenmiyor. Bugün zararsızlar ama okuyan ajana "bu tip devrediliyor"
+    diye yanlış bilgi veriyorlar — ve bir gün biri o yolu düzeltmeye çalışır.
+
+- [ ] (22.25) **Mal kabul ekranı da ortak satır editörüne geçsin** — `FreeIntake` ↔ `intake-form/body`
+  - *Bitti:* iki yüzey aynı satır editörünü kullanır; "adet boşsa kabule girmez" ve SKT zorunluluğu tek yerde
+  - Kuyruk 22.23'te ortak gövdeye geçti, depo ekranı geçmedi: aynı satır iki yerde çiziliyor ve bir gün
+    biri ötekinden ayrışacak. Geçiş `IntakeRow` state modelini değiştirmeyi gerektiriyor — o model PO'lu
+    kabulde de kullanılıyor (`expectedQty` · `isMissing`), yani iş mekanik değil.
+  - **13.08: bu madde 22.26'nın İÇİNE düşüyor** — depo ekranı zaten yeniden kurulacak, satır editörünü
+    ayrıca taşımanın anlamı kalmaz. Kimliği duruyor ki 22.23'ün `BEKLEYEN` işareti asılı kalmasın.
+
+- [ ] (22.26) **Depo yüzeyi TEK SAYFA — mal kabul · stok · stoktan düşme bir araya** *(kullanıcı tespiti
+  13.08: "bu üçü bir sayfa olması gerekirken üç sayfaya yayılmış … komponentler ortak komponent
+  havuzundan kullanılmamış, yeniden tasarlanmış")*
+  `touches: apps/web/app/(operations)/operations/{receiving,stock,adjustments} · apps/web/components/operation/form/intake-form`
+  - *Bitti:* depo işi tek rotadan yürür; üç ekranın satır editörü ve alan komponentleri **ortak havuzdan**
+    gelir; asistan kuyruğundaki mal kabul formu aynı düzeni kullanır ve onaylanabilir hâle gelir
+  - **Neden tek sayfa:** üçü ayrı ekran değil, tek stoğun üç anı — mal GİRER, DURUR, ÇIKAR. Bugün
+    operatör "elimde ne var" sorusunu bir sayfada, "bunu düş" kararını başka sayfada veriyor; ikisi
+    arasında bağlam elle taşınıyor.
+  - **Önce inceleme, sonra tasarım:** birleşimin kurgusu ve sayfanın düzeni yazılmadan koda girilmez;
+    genel operasyon tasarım dilini bozan bir birleşme, dağınıklığı tek sayfaya toplamaktan ibaret olur.
+  - 22.23'ün reddedilen formu ve 22.25'in çift satır editörü bu madde içinde kapanır.

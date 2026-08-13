@@ -9,13 +9,19 @@ import type { AssistantProposalKind } from '@lezzet/types';
  *
  * Kuyruk ilk hâlinde tek kapılıydı — onayla ya da reddet. Gerçek kullanım bunu çürüttü: *"bölgeye
  * hangi posta kodlarının gireceğine haritaya bakmadan karar veremem"*. Geri alınamaz üç tip
- * (`zone_extend` · `stock_intake` · `money_movement`) bu yüzden kuyrukta UYGULANMAZ; ilgili
- * operasyon ekranı ÖN DOLDURULUR, düzenleme orada yapılır, kayıt oradan ve normal akışla olur.
+ * (`zone_extend` · `stock_intake` · `money_movement`) bu yüzden kuyrukta UYGULANMIYORDU; ilgili
+ * operasyon ekranı ön doldurulup düzenleme orada yapılıyordu.
+ *
+ * **Üçün ikisi geri döndü** (22.18 · 22.23): para ve mal kabul formları ortak alana ayrılıp kuyruğun
+ * içinde açıldı. Devrin gerekçesi ikisinde de "geri alınamaz, karar öncesi düzenleme şart"tı ve o
+ * şart kalkmadı — düzenleme hâlâ karardan önce, yalnız formun yeri değişti. Geriye TEK devir kaldı:
+ * **bölge**, çünkü orada kararın konusu gerçekten formda değil HARİTADA.
  *
  * ── NEDEN İKİ FONKSİYON, HER EKRANDA BEŞ SATIR DEĞİL ────────────────────────
- * Üç hedef ekranın üçü de aynı şeyi yapacak: öneriyi oku → formu doldur → kaydederken kuyruğu
- * kapat. Üç yere kopyalansaydı biri bir gün `claimForApply`i atlar ve aynı öneri iki kez
- * uygulanırdı — kuyruğun TEK vaadi de o olurdu. Sıra burada, tek yerde durur.
+ * Hedef ekranların hepsi aynı şeyi yapacak: öneriyi oku → formu doldur → kaydederken kuyruğu kapat.
+ * Her yere kopyalansaydı biri bir gün `claimForApply`i atlar ve aynı öneri iki kez uygulanırdı —
+ * kuyruğun TEK vaadi de o olurdu. Sıra burada, tek yerde durur ve **kuyruk içi kapılar da onu
+ * kullanıyor** (`withProposal`), yani "devir" adı artık dar kalıyor.
  *
  * ── İKİNCİ YAZMA YOLU YİNE AÇILMIYOR ────────────────────────────────────────
  * Bu dosya hiçbir iş tablosuna dokunmaz. Ekranın kendi action'ı ne yapıyorsa onu yapar (mal kabul

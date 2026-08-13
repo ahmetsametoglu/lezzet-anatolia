@@ -1,5 +1,14 @@
 import 'server-only';
-import { AccountService, CategoryService, CollectionService, ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
+import {
+  AccountService,
+  CategoryService,
+  CollectionService,
+  ProductService,
+  ProductVariantService,
+  SupplierService,
+  WarehouseService,
+  serviceDb,
+} from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { ProductFormSource } from '@/components/operation/form/product-form/schema';
@@ -63,6 +72,15 @@ export interface AssistantFormOptions {
    * eklenmedi.
    */
   accounts: Array<{ id: string; name: string; balanceCents: number }>;
+  /**
+   * MAL KABUL formunun iki listesi (22.23) — hangi depoya girdiği ve kimden geldiği.
+   *
+   * **Depo VARSAYILANSIZ** (`CLAUDE §1`): dilekçe deposunu söylüyor ama operatör onu değiştirebilir
+   * ve seçenekler o an elde olmalı. İkisi de doğal tavanlı, operatörün elle kurduğu kümeler —
+   * sayfalanmaz, tek turda çekilir.
+   */
+  warehouses: Array<{ id: string; name: string }>;
+  suppliers: Array<{ id: string; name: string }>;
 }
 
 /**
@@ -83,7 +101,7 @@ export async function readAssistantFormOptions(
   const db = serviceDb();
   const wanted = [...new Set(productIds)];
   const accountService = new AccountService(db);
-  const [categories, collections, products, bundleVariants, accounts, balances] = await Promise.all([
+  const [categories, collections, products, bundleVariants, accounts, balances, warehouses, suppliers] = await Promise.all([
     new CategoryService(db).list(),
     new CollectionService(db).list(),
     wanted.length > 0 ? new ProductService(db).listByIds(wanted) : Promise.resolve([]),
@@ -92,6 +110,10 @@ export async function readAssistantFormOptions(
     variantOptionsForVariants(db, bundleVariantIds),
     accountService.list(),
     accountService.balances(),
+    // Kabul yalnız AÇIK depoya yazılır; kapalı bir depo listede durursa operatör onu seçebilir ve
+    // kimsenin bakmadığı bir rafa mal girer.
+    new WarehouseService(db).list({ activeOnly: true }),
+    new SupplierService(db).list({ activeOnly: true }),
   ]);
 
   // Varyantlar AYRI okunur ve tek turda: form varyant satırlarını da düzenletiyor, ürün kaydı onları
@@ -118,5 +140,7 @@ export async function readAssistantFormOptions(
     // ve `balances()` de onu taşımıyor. Sıfır yazmak burada doğru: defterde hareketi olmayan
     // hesabın bakiyesi gerçekten sıfırdır (`AccountService.balance` aynı cevabı veriyor).
     accounts: accounts.map((a) => ({ id: a.id, name: a.name, balanceCents: balances.get(a.id)?.balanceCents ?? 0 })),
+    warehouses: warehouses.map((w) => ({ id: w.id, name: w.name })),
+    suppliers: suppliers.map((s) => ({ id: s.id, name: s.name })),
   };
 }

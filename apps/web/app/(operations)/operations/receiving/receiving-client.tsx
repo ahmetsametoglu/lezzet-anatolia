@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { titleOf } from '@/lib/catalog/title';
-import { openIntakeFormAction, receiveGoodsAction } from './receiving-actions';
+import { openIntakeFormAction, receiveGoodsAction } from '@/lib/warehouse/intake-actions';
 import { ReceivingDesktop } from './receiving.desktop';
 import { FinishDialog } from './finish-dialog';
 import { FreeIntake } from './free-intake';

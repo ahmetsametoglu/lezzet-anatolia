@@ -206,7 +206,11 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     // `money_movement` 12.08'de bu kümeden ÇIKTI (22.11): finans ekranının elle hareket formu ortak
     // alana ayrılıp kuyruğa taşındı. Devrin gerekçesi ("defter silinemez, karar öncesi düzenleme
     // şart") kalkmadı — düzenleme hâlâ karardan önce, yalnız formun yeri değişti.
-    for (const kind of ['zone_extend', 'stock_intake'] as const) {
+    // `stock_intake` 13.08'de bu kümeden ÇIKTI (22.23): mal kabul satırları kuyruğun içine taşındı.
+    // Devrin gerekçesi ("giren parti satılabilir olur, SKT o an sabitlenir; okunan miktar gözle
+    // doğrulanmalı") kalkmadı — doğrulama hâlâ karardan önce, yalnız formun yeri değişti.
+    // Geriye TEK devir kaldı: bölge. Orada kararın konusu gerçekten formda değil HARİTADA.
+    for (const kind of ['zone_extend'] as const) {
       expect(modeOf(kind)).toBe('handoff');
     }
     // `inline` = gövdesi kuyruğun içinde çizilen tipler. Üçü de bir tur devredilmişti; formları
@@ -226,6 +230,7 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
       'bundle_draft',
       'recipe_draft',
       'money_movement',
+      'stock_intake',
     ] as const) {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
