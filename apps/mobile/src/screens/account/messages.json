@@ -42,29 +42,13 @@
       "gap": "Kupona {n} puan kaldı.",
       "convert": "{threshold} puanı {value} kupona çevir",
       "couponValue": "{value} indirim",
-      "emptyBody": "Henüz puanınız yok. Puan biriktirmenin üç yolu var — biri şimdi, elinizin altında:",
+      "emptyBody": "Henüz puanınız yok. Biriktirmenin yolları — biri şimdi, elinizin altında:",
       "converting": "Çevriliyor…",
       "converted": "Kupon hesabınıza eklendi ✓",
       "failed": "Puan işlemi tamamlanamadı — yeniden deneyin.",
       "couponPercent": "%{n} indirim",
-      "earn": {
-        "referral": {
-          "title": "Arkadaşını davet et",
-          "body": "Bağlantını paylaş; davet ettiğin kişi ilk siparişini ödediğinde kazanırsın.",
-          "cta": "Paylaş"
-        },
-        "review": {
-          "title": "Siparişini değerlendir",
-          "body": "Teslimattan sonra beğendiklerini söyle.",
-          "cta": "Siparişlerim"
-        },
-        "feedback_candidate": {
-          "title": "Yeni lezzetler — ilk siz oylayın",
-          "body": "Henüz satışta olmayan adayları beğenin ya da geçin.",
-          "cta": "Keşfet"
-        }
-      },
-      "earnPoints": "+{n} puan"
+      "howTo": "Nasıl puan kazanırım?",
+      "howToTitle": "Puan kazanma yolları"
     },
     "referral": {
       "title": "Arkadaşını getir",
@@ -167,29 +151,13 @@
       "gap": "Encore {n} points pour un bon.",
       "convert": "Convertir {threshold} points en bon de {value}",
       "couponValue": "{value} de remise",
-      "emptyBody": "Vous n’avez pas encore de points. Trois façons d’en gagner — la première est à portée de main :",
+      "emptyBody": "Vous n’avez pas encore de points. Voici comment en gagner — la première est à portée de main :",
       "converting": "Conversion…",
       "converted": "Bon ajouté à votre compte ✓",
       "failed": "L’opération sur les points a échoué — réessayez.",
       "couponPercent": "{n} % de remise",
-      "earn": {
-        "referral": {
-          "title": "Parrainez un ami",
-          "body": "Partagez votre lien ; vous gagnez lorsque la personne invitée règle sa première commande.",
-          "cta": "Partager"
-        },
-        "review": {
-          "title": "Évaluez votre commande",
-          "body": "Après la livraison, dites-nous ce que vous avez aimé.",
-          "cta": "Mes commandes"
-        },
-        "feedback_candidate": {
-          "title": "Nouvelles saveurs — votez en avant-première",
-          "body": "Aimez ou passez les candidats pas encore en vente.",
-          "cta": "Découvrir"
-        }
-      },
-      "earnPoints": "+{n} points"
+      "howTo": "Comment gagner des points ?",
+      "howToTitle": "Façons de gagner des points"
     },
     "referral": {
       "title": "Parrainez un ami",
@@ -292,29 +260,13 @@
       "gap": "Noch {n} Punkte bis zum Gutschein.",
       "convert": "{threshold} Punkte in {value}-Gutschein umwandeln",
       "couponValue": "{value} Rabatt",
-      "emptyBody": "Sie haben noch keine Punkte. Es gibt drei Wege zu sammeln — einer davon sofort:",
+      "emptyBody": "Sie haben noch keine Punkte. So sammeln Sie welche — der erste Weg ist sofort möglich:",
       "converting": "Wird umgewandelt…",
       "converted": "Gutschein Ihrem Konto gutgeschrieben ✓",
       "failed": "Die Punkteaktion ist fehlgeschlagen — bitte erneut versuchen.",
       "couponPercent": "{n} % Rabatt",
-      "earn": {
-        "referral": {
-          "title": "Freunde werben",
-          "body": "Teilen Sie Ihren Link; Sie gewinnen, sobald die eingeladene Person ihre erste Bestellung bezahlt.",
-          "cta": "Teilen"
-        },
-        "review": {
-          "title": "Bestellung bewerten",
-          "body": "Sagen Sie uns nach der Lieferung, was Ihnen geschmeckt hat.",
-          "cta": "Bestellungen"
-        },
-        "feedback_candidate": {
-          "title": "Neue Spezialitäten — stimmen Sie zuerst ab",
-          "body": "Bewerten Sie Kandidaten, die noch nicht im Sortiment sind.",
-          "cta": "Entdecken"
-        }
-      },
-      "earnPoints": "+{n} Punkte"
+      "howTo": "Wie sammle ich Punkte?",
+      "howToTitle": "Wege zu Punkten"
     },
     "referral": {
       "title": "Freunde werben",

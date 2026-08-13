@@ -1,5 +1,12 @@
 import { DiscountCodeService, DiscountService, PointsEntryService, SettingsService, UserProfileService } from '@lezzet/database';
-import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, POINTS_SETTING_KEYS, canRedeem, redemptionCode } from '@lezzet/domain-core';
+import {
+  NEIGHBOR_INVITE_MAX_USES,
+  POINTS_CENT_VALUE_KEY,
+  POINTS_REDEEM_MIN_KEY,
+  POINTS_SETTING_KEYS,
+  canRedeem,
+  redemptionCode,
+} from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
 import type { CompanyInfo, CustomerType, MePointsEarnWayKey } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -75,11 +82,27 @@ export interface CustomerEarnWay {
   points: number;
 }
 
-/** Puan kartı — `null` hâli çağıranda değil, `CustomerPointsView.points`ta yaşıyor. */
-export interface CustomerPointsCard {
-  balance: number;
+/**
+ * **Programın kuralları — kimlikten BAĞIMSIZ kısım.** Şekli sözleşmede (`PointsRulesSchema`).
+ *
+ * Ayrı bir tip olmasının sebebi ikinci bir tüketici: onboarding'in puan adımını MİSAFİR görüyor ve
+ * o ekranın bakiyesi, kodu, kuponu yok — yalnız "program neyi ne kadar ödüllendirir" sorusu var.
+ * Kart bunu `extends` ile alır, kendi içinde ikinci kez saymaz.
+ */
+export interface CustomerPointsRules {
   /** `minimumPoints` puan = `valueCents` cent. İkisi de ayardan. */
   redeem: { minimumPoints: number; valueCents: number };
+  /** Bir puanın CENT karşılığı — bir yolun para değeri `points × centValue`. */
+  centValue: number;
+  /** Bir komşu davetinden kaç komşu ödül doğurabilir (`NEIGHBOR_INVITE_MAX_USES`). */
+  neighborMaxUses: number;
+  /** Kazanma yolları ve sırası (bkz. `EARN_WAYS`). */
+  earnWays: CustomerEarnWay[];
+}
+
+/** Puan kartı — `null` hâli çağıranda değil, `CustomerPointsView.points`ta yaşıyor. */
+export interface CustomerPointsCard extends CustomerPointsRules {
+  balance: number;
   /** Davet kodu — kart varsa GARANTİLİ (yoksa üretilir); `null` yalnız üretim başarısızsa. */
   referralCode: string | null;
   /**
@@ -90,8 +113,6 @@ export interface CustomerPointsCard {
    * `PATHNAMES` künyesinin kendi dersi. Dil PAYLAŞANIN dilidir (`inviteUrl` künyesi).
    */
   inviteUrl: string | null;
-  /** Bakiyesi sıfır olan müşteriye "nereden kazanırım" cevabı; sıra ürün kararı (bkz. `EARN_WAYS`). */
-  earnWays: CustomerEarnWay[];
 }
 
 export interface CustomerPointsView {
@@ -144,16 +165,34 @@ async function redeemSettings(db: SupabaseClient): Promise<{ minimum: number; ce
 }
 
 /**
- * **Gösterilecek kazanma yolları ve SIRASI** — en yüksek getiriden en düşüğe değil, ÜRÜN sırasına
- * göre: davet (getiri en yüksek ve tek "başkasını getir" hamlesi) → değerlendirme (elindeki
- * siparişten kazanır) → keşif turu (hemen şimdi, hiçbir ön koşulsuz yapılabilen).
+ * **Gösterilecek kazanma yolları ve SIRASI** — ödül merdiveni, en yüksek basamaktan en düşüğe.
  *
- * Sıra sunucudan gelir ki üç yüzey (mobil hesap, ileride web hesap, kampanya maili) aynı öncelik
- * sırasını göstersin; istemcinin kendi sıralaması, aynı programı iki farklı hikâyeyle anlatmak
- * olurdu. Liste bir DOMAIN kuralı DEĞİL — "hangi aksiyon kaç puan" motorda/ayarda, "hangisini
- * ekranda önce anlatırız" burada; o yüzden `domain-core`a değil bu kapıya yazıldı.
+ * ── SIRANIN GEREKÇESİ DEĞİŞTİ (kullanıcı kararı 12.08) ──────────────────────
+ * Eskiden üç yol vardı ve sıra *"ürün sırası"* diye anlatılıyordu: davet → değerlendirme → keşif.
+ * Liste artık ALTI yolu taşıyor ve ikinci bir tüketicisi var — *"nasıl puan kazanırım"* anlatımı.
+ * Bir merdiveni basamak sırasına göre dizmemek, okuyana keyfî görünür: müşteri "en çok ne
+ * kazandırır" sorusuyla bakıyor ve cevabı listenin KENDİ sırasından okuyabilmeli.
+ *
+ * Çelişki de yok: değer sırası eski ürün sırasını zaten koruyor (davet 500 → komşu 100 → yorum 20
+ * → giriş 10 → beğeni 5 → keşif oyu 2). Değişen şey listenin gerekçesi, dizilişi değil.
+ *
+ * Sıra sunucudan gelir ki üç yüzey (mobil hesap, onboarding anlatımı, ileride web hesap) aynı
+ * hikâyeyi anlatsın; istemcinin kendi sıralaması, aynı programı iki farklı düzende sunmak olurdu.
+ * Liste bir DOMAIN kuralı DEĞİL — "hangi aksiyon kaç puan" motorda/ayarda, "hangisini ekranda önce
+ * anlatırız" burada; o yüzden `domain-core`a değil bu kapıya yazıldı.
+ *
+ * **Sıra ELLE yazılı, puana göre `sort` EDİLMİYOR** ve bu bilinçli: bir ayar değiştiğinde listenin
+ * anlatım düzeni sessizce başkalaşmamalı. Ayrıca sıfır/okunamayan değerli yol listeye hiç girmiyor
+ * (`readEarnWays`), yani sıralanacak sayının var olduğu bile garanti değil.
  */
-const EARN_WAYS: readonly MePointsEarnWayKey[] = ['referral', 'review', 'feedback_candidate'];
+const EARN_WAYS: readonly MePointsEarnWayKey[] = [
+  'referral',
+  'neighbor',
+  'review',
+  'visit',
+  'feedback_purchase',
+  'feedback_candidate',
+];
 
 /**
  * Kazanma yollarının ayardaki değerleri — **okunamayan yol LİSTEYE GİRMEZ.**
@@ -170,7 +209,7 @@ const EARN_WAYS: readonly MePointsEarnWayKey[] = ['referral', 'review', 'feedbac
  * Sıfır da aynı kapıdan düşer: `canEarnPoints` sıfır değerli aksiyonu `no_value` diye reddediyor,
  * yani "0 puan kazandıran yol" diye bir şey yok (CLAUDE §1: ölçülemeyen değer sıfır değildir).
  */
-async function readEarnWays(db: SupabaseClient, customerId: string): Promise<CustomerEarnWay[]> {
+async function readEarnWays(db: SupabaseClient, customerId: string | null): Promise<CustomerEarnWay[]> {
   const settings = new SettingsService(db);
   const values = await Promise.all(EARN_WAYS.map((key) => settings.get<unknown>(POINTS_SETTING_KEYS[key], null)));
 
@@ -179,6 +218,8 @@ async function readEarnWays(db: SupabaseClient, customerId: string): Promise<Cus
     const points = Number(values[index]);
     if (!Number.isFinite(points) || !Number.isInteger(points) || points <= 0) {
       logger.warn(
+        // Kimlik YOKSA da uyarı basılır (kural okuması misafire açık): eksik ayar bir müşterinin
+        // değil PROGRAMIN arızasıdır ve kimliksiz yolda da görülmelidir.
         { context: 'customer/points', customerId, earnWay: key, settingKey: POINTS_SETTING_KEYS[key] },
         'kazanım puanı ayardan okunamadı — yol ekranda gösterilmiyor',
       );
@@ -187,6 +228,29 @@ async function readEarnWays(db: SupabaseClient, customerId: string): Promise<Cus
     ways.push({ key, points });
   });
   return ways;
+}
+
+/**
+ * **Programın kuralları — KİMLİKSİZ** (`GET /api/v1/points/rules`, kullanıcı kararı 12.08).
+ *
+ * Onboarding'in son adımı puanı anlatıyor ve o ekranı gören kişi henüz misafir: bakiyesi yok, davet
+ * kodu yok, `/me` ailesine hiç gidemez. Ama söylediği her sayı motorun uyguladığı sayı olmalı — bu
+ * kapı tam olarak o ortak zemini verir.
+ *
+ * Kartla arasında kopya YOK: `readCustomerPoints` bu kapıyı çağırır ve üstüne yalnız kimliğe bağlı
+ * olanı (bakiye, kod, adres) ekler. İki ayrı okuma yazsaydık, bir gün biri altı yol öteki üç yol
+ * gösterirdi — ve ikisi de "doğru" görünürdü.
+ */
+export async function readPointsRules(db: SupabaseClient): Promise<CustomerPointsRules> {
+  const [settings, earnWays] = await Promise.all([redeemSettings(db), readEarnWays(db, null)]);
+  return {
+    redeem: { minimumPoints: settings.minimum, valueCents: settings.minimum * settings.centValue },
+    centValue: settings.centValue,
+    // Ayardan DEĞİL motordan: sınır davet satırına yazılıyor, ayarlar tablosunda karşılığı yok
+    // (`NEIGHBOR_INVITE_MAX_USES` künyesi — davetin sözü doğduğu gün donuyor).
+    neighborMaxUses: NEIGHBOR_INVITE_MAX_USES,
+    earnWays,
+  };
 }
 
 /**
@@ -206,26 +270,26 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { points: null, coupons: [] };
 
-  const [balance, settings, coupons, referralCode, earnWays] = await Promise.all([
+  const [balance, rules, coupons, referralCode] = await Promise.all([
     getPointsBalance(db, customerId),
-    redeemSettings(db),
+    // Kural kapısı KOPYALANMIYOR, çağrılıyor: kartın gösterdiği yollar ile misafirin onboarding'de
+    // gördüğü yollar bir gün ayrışırsa ikisi de "doğru" görünür ve fark edilmez.
+    readPointsRules(db),
     listCustomerCoupons(db, customerId),
     // Kod ZATEN varsa kapı hiç çağrılmaz: `ensureCustomerReferralCode` profili yeniden okuyor ve o
     // tur her puan okumasında boşuna atılırdı — elimizdeki satır aynı cevabı taşıyor. Kapı yine de
     // kimliği alır (profili değil): üretim yolunda tek doğrulanmış kaynak vardır, o da DB satırı.
     profile.referralCode ?? ensureCustomerReferralCode(db, customerId),
-    readEarnWays(db, customerId),
   ]);
 
   return {
     points: {
+      ...rules,
       balance: balance.balance,
-      redeem: { minimumPoints: settings.minimum, valueCents: settings.minimum * settings.centValue },
       referralCode,
       // Adres kodun yanında doğuyor: kod `null`sa (üretim çakışması) paylaşılacak bağ da yoktur —
       // "bu bağlantıyı paylaş" deyip boş bir adres vermek, çalışmayan bir düğme göstermektir.
       inviteUrl: referralCode ? inviteUrl(referralCode, profile.preferredLanguage) : null,
-      earnWays,
     },
     coupons,
   };

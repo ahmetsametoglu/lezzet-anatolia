@@ -34,12 +34,12 @@
     },
     "zip": {
       "kicker": "TESLİMAT BÖLGESİ",
-      "title": "Size nasıl ulaştıralım?",
-      "body": "Posta kodunuzu girin, teslimat şeklinizi söyleyelim.",
+      "title": "Siparişinizi size nasıl ulaştıralım?",
+      "body": "Posta kodunuzu girin; size nasıl ulaşacağımızı hemen söyleyelim.",
       "field": "Posta kodu",
       "placeholder": "Posta kodu — örn. 67000",
       "insideNote": "Harika — kapınıza ücretsiz teslim ediyoruz! Kapıda ödeme de kullanabilirsiniz.",
-      "shippingNote": "Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız; 60 € üzeri kargo ücretsiz.",
+      "shippingNote": "Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız. Belirli bir tutarın üzerinde kargo ücretsiz — tutarı sepetinizde görürsünüz.",
       "ambiguousNote": "Bu kod birden çok yerde geçerli — teslimat adresinizi girerken netleştireceğiz.",
       "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
       "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız."
@@ -48,16 +48,16 @@
     "delivery": {
       "kicker": "TESLİMAT NASIL ÇALIŞIR",
       "title": "İki teslimat yolumuz var",
-      "body": "Posta kodunuza göre size ulaşabilen ürünleri gösteriyoruz — bu yüzden katalogda gördükleriniz bulunduğunuz yere göre değişir.",
+      "body": "Kataloğun tamamını herkese gösteriyoruz; posta kodunuz hangi ürünün size hangi yolla ulaşacağını söyler.",
       "route": {
         "title": "Kendi soğutuculu aracımızla",
-        "body": "Teslimat bölgemizdeyseniz her ürün gelir — donuk ve soğuk zincir dâhil."
+        "body": "Teslimat bölgemizdeyseniz katalogdaki her ürünü ısmarlayabilirsiniz — donuk ve soğuk zincir dâhil."
       },
       "shipping": {
         "title": "Kargoyla",
         "body": "Bölge dışında yalnız kargolanabilir ürünler; soğuk zincir gerektirenler kargoyla gönderilemez."
       },
-      "note": "Posta kodunuzu bu yüzden soruyoruz: size ulaşamayacak bir ürünü sepetinizde görmeyin diye."
+      "note": "Posta kodunuzu bu yüzden soruyoruz: her ürünün yanında size nasıl ulaşacağını yazabilelim diye."
     },
     "payment": {
       "kicker": "ÖDEME",
@@ -75,6 +75,31 @@
         "body": "Profesyonel müşterilerimize özel"
       },
       "secure": "Ödemeleriniz Stripe güvencesinde — bankanızın uyguladığı korumanın aynısı. Bir sorun olursa iade kolay."
+    },
+    "points": {
+      "kicker": "PUAN",
+      "title": "Kullandıkça kazanın",
+      "body": "Uygulamaya uğradıkça, aldığınız ürünleri değerlendirdikçe ve çevrenizi çağırdıkça puan biriktirirsiniz. Puanlar indirim kuponuna dönüşür.",
+      "rate": "{points} puan = {value} kupon",
+      "highlight": "Tek bir arkadaşınızı getirmeniz {value} kazandırır.",
+      "how": "Nasıl puan kazanılır?",
+      "signUp": "Hesap aç, kazanmaya başla",
+      "later": "Sonra bakarım",
+      "unavailable": "Puan bilgilerini şu an gösteremiyoruz. Hesabınızı açtıktan sonra Hesabım sayfasında bulabilirsiniz.",
+      "groups": {
+        "invite": {
+          "title": "Çağırdıkça",
+          "body": "En büyük ödül burada. İki davette de puanınız, çağırdığınız kişi ödemesini tamamladığı anda hesabınıza geçer."
+        },
+        "review": {
+          "title": "Anlattıkça",
+          "body": "Aldığınız üründen memnun kaldınız mı? Anlatmanız hem bize hem de sonraki müşteriye yarar; üstelik puan kazandırır."
+        },
+        "visit": {
+          "title": "Uğradıkça",
+          "body": "Alışveriş yapmadan da kazanırsınız. Uygulamayı açmanız günde bir kez puan kazandırır; yeni lezzet kartlarına verdiğiniz her oy da ayrıca."
+        }
+      }
     }
   },
   "fr": {
@@ -117,7 +142,7 @@
       "field": "Code postal",
       "placeholder": "Code postal — ex. 67000",
       "insideNote": "Parfait — nous livrons gratuitement à votre porte ! Le paiement à la livraison est aussi possible.",
-      "shippingNote": "Expédition sous chaîne du froid en 2–4 jours ouvrés ; frais de port offerts dès 60 €.",
+      "shippingNote": "Expédition sous chaîne du froid en 2–4 jours ouvrés. Les frais de port sont offerts à partir d'un certain montant — vous le verrez dans votre panier.",
       "ambiguousNote": "Ce code correspond à plusieurs lieux — nous préciserons lors de la saisie de l'adresse.",
       "unknownNote": "Nous n'avons pas trouvé ce code — pouvez-vous vérifier la saisie ?",
       "unresolvedNote": "Nous ne pouvons pas encore préciser la livraison pour ce code ; nous verrons cela à la commande."
@@ -126,16 +151,16 @@
     "delivery": {
       "kicker": "COMMENT NOUS LIVRONS",
       "title": "Deux modes de livraison",
-      "body": "Nous affichons les produits qui peuvent vous être livrés selon votre code postal — le catalogue change donc selon l'endroit où vous êtes.",
+      "body": "Nous montrons le catalogue entier à tout le monde ; votre code postal indique par quel moyen chaque produit vous parvient.",
       "route": {
         "title": "Avec notre véhicule réfrigéré",
-        "body": "Dans notre zone, tout arrive — surgelés et chaîne du froid compris."
+        "body": "Dans notre zone, vous pouvez commander tout le catalogue — surgelés et chaîne du froid compris."
       },
       "shipping": {
         "title": "Par colis",
         "body": "Hors zone, uniquement les produits expédiables ; ceux qui exigent la chaîne du froid ne partent pas en colis."
       },
-      "note": "C'est pourquoi nous demandons votre code postal : pour ne pas vous montrer un produit qui ne peut pas vous parvenir."
+      "note": "C'est pourquoi nous demandons votre code postal : pour indiquer à côté de chaque produit comment il vous parviendra."
     },
     "payment": {
       "kicker": "PAIEMENT",
@@ -153,6 +178,31 @@
         "body": "Réservé à nos clients professionnels"
       },
       "secure": "Vos paiements sont sous la protection de Stripe — la même que celle appliquée par votre banque. En cas de problème, le remboursement est simple."
+    },
+    "points": {
+      "kicker": "POINTS",
+      "title": "Gagnez en utilisant l'application",
+      "body": "Vous cumulez des points en passant sur l'application, en donnant votre avis sur les produits reçus et en invitant votre entourage. Les points deviennent des bons de réduction.",
+      "rate": "{points} points = bon de {value}",
+      "highlight": "Parrainer un ami rapporte à lui seul {value}.",
+      "how": "Comment gagner des points ?",
+      "signUp": "Créer un compte et commencer",
+      "later": "Plus tard",
+      "unavailable": "Les informations sur les points n'ont pas pu être chargées — vous les retrouverez dans l'application.",
+      "groups": {
+        "invite": {
+          "title": "En invitant",
+          "body": "C'est ici que la récompense est la plus forte. Dans les deux cas, les points arrivent une fois le paiement de la personne invitée encaissé."
+        },
+        "review": {
+          "title": "En donnant votre avis",
+          "body": "Un produit vous a plu ? Le dire aide le prochain client autant que nous — et vous rapporte des points."
+        },
+        "visit": {
+          "title": "En passant nous voir",
+          "body": "Vous gagnez aussi sans acheter. Les deux sont quotidiens : venir, et voter pour les nouvelles saveurs."
+        }
+      }
     }
   },
   "de": {
@@ -195,7 +245,7 @@
       "field": "Postleitzahl",
       "placeholder": "Postleitzahl — z. B. 67000",
       "insideNote": "Wunderbar — wir liefern kostenlos bis an Ihre Tür! Auch Zahlung bei Lieferung ist möglich.",
-      "shippingNote": "Versand mit geschützter Kühlkette in 2–4 Werktagen; ab 60 € versandkostenfrei.",
+      "shippingNote": "Versand mit geschützter Kühlkette in 2–4 Werktagen. Ab einem bestimmten Bestellwert ist der Versand kostenlos — den Betrag sehen Sie im Warenkorb.",
       "ambiguousNote": "Dieser Code gilt für mehrere Orte — wir klären das bei der Adresseingabe.",
       "unknownNote": "Diesen Code konnten wir nicht finden — bitte die Eingabe prüfen.",
       "unresolvedNote": "Für diesen Code können wir die Lieferart noch nicht sagen; wir klären das bei der Bestellung."
@@ -204,16 +254,16 @@
     "delivery": {
       "kicker": "SO LIEFERN WIR",
       "title": "Zwei Lieferwege",
-      "body": "Wir zeigen die Produkte, die Sie erreichen können — abhängig von Ihrer Postleitzahl ändert sich der Katalog.",
+      "body": "Wir zeigen allen den gesamten Katalog; Ihre Postleitzahl sagt, auf welchem Weg jedes Produkt zu Ihnen kommt.",
       "route": {
         "title": "Mit unserem Kühlfahrzeug",
-        "body": "In unserem Liefergebiet kommt alles an — auch Tiefkühl- und Kühlkettenware."
+        "body": "In unserem Liefergebiet können Sie den gesamten Katalog bestellen — auch Tiefkühl- und Kühlkettenware."
       },
       "shipping": {
         "title": "Per Paketversand",
         "body": "Außerhalb nur versandfähige Produkte; Kühlkettenware kann nicht per Paket verschickt werden."
       },
-      "note": "Deshalb fragen wir nach der Postleitzahl: damit Sie kein Produkt sehen, das Sie nicht erreichen kann."
+      "note": "Deshalb fragen wir nach der Postleitzahl: damit neben jedem Produkt steht, wie es zu Ihnen kommt."
     },
     "payment": {
       "kicker": "ZAHLUNG",
@@ -231,6 +281,31 @@
         "body": "Exklusiv für unsere Geschäftskunden"
       },
       "secure": "Ihre Zahlungen sind durch Stripe geschützt — derselbe Schutz wie bei Ihrer Bank. Bei Problemen ist die Erstattung einfach."
+    },
+    "points": {
+      "kicker": "PUNKTE",
+      "title": "Sammeln Sie beim Einkaufen",
+      "body": "Sie sammeln Punkte, wenn Sie in der App vorbeischauen, erhaltene Produkte bewerten und Ihr Umfeld einladen. Punkte werden zu Rabattgutscheinen.",
+      "rate": "{points} Punkte = Gutschein über {value}",
+      "highlight": "Allein eine Freundschaftseinladung bringt {value}.",
+      "how": "Wie sammle ich Punkte?",
+      "signUp": "Konto erstellen und loslegen",
+      "later": "Später",
+      "unavailable": "Die Punkteinformationen konnten nicht geladen werden — Sie finden sie jederzeit in der App.",
+      "groups": {
+        "invite": {
+          "title": "Durch Einladen",
+          "body": "Hier ist die Belohnung am größten. In beiden Fällen werden die Punkte gutgeschrieben, sobald die Zahlung der eingeladenen Person eingegangen ist."
+        },
+        "review": {
+          "title": "Durch Bewerten",
+          "body": "Hat Ihnen ein Produkt geschmeckt? Das zu sagen hilft dem nächsten Gast genauso wie uns — und bringt Ihnen Punkte."
+        },
+        "visit": {
+          "title": "Durch Vorbeischauen",
+          "body": "Sie sammeln auch ohne Einkauf. Beides gibt es täglich: vorbeischauen und über neue Sorten abstimmen."
+        }
+      }
     }
   }
 }

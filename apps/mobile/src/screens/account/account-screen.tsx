@@ -1,8 +1,7 @@
 import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
-import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -29,6 +28,7 @@ import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
+import { PointsEarnList, type PointsEarnActions } from '@/screens/customer-kit/points-earn-list';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
@@ -125,31 +125,25 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
     void Share.share({ message: t.referral.shareMessage.replace('{url}', wallet.inviteUrl) });
   };
 
-  /* PUAN KAZANMA YOLLARI (kullanıcı kararı 09.08) — bakiye sıfırken kart boş kalmaz, kullanıcı
-     puanı KAZANACAĞI yere itilir. LİSTE SUNUCUDAN gelir (`card.earnWays`): hem sıra hem PUAN
-     MİKTARI oradan — ekranın uydurduğu bir sayı, ödenmeyen bir vaattir. Ekranın işi anahtarı
-     görsele/metne/hedefe bağlamak; tanımadığı anahtar sessizce düşer (sunucu yeni bir yol
-     eklerse eski uygulama çökmez, o satırı çizmez).
+  /* PUAN KAZANMA YOLLARININ DÜĞMELERİ — liste, ikonlar ve metinler artık KİTTE
+     (`customer-kit/points-earn-list.tsx`, kullanıcı kararı 12.08); burada kalan tek şey "bu
+     yüzeyde bu satıra basınca nereye gidilir" sorusunun cevabı, çünkü hedefler ekranın kendi
+     gezinme ağacına ait.
 
-     ANAHTAR SÖZLEŞMENİN ANAHTARIDIR (arıza düzeltildi 09.08 — ÖLÇÜLDÜ): burada eskiden `discovery`
-     yazıyordu, uç ise `feedback_candidate` gönderiyor (`GET /api/v1/me/points` cevabında
-     `earnWays: [referral, review, feedback_candidate]`) — eşleşmediği için keşif satırı hiç
-     ÇİZİLMİYORDU. Sözlük artık `MePointsEarnWayKey`e bağlı: ekrana özel ikinci bir ad açmak
-     (`points-api.schema.ts`in kendi uyarısı) sözlüğü ayrıştırıyor. `Record` tam kapsam ister —
-     sunucu yeni bir yol eklerse burası DERLEMEDE kırılır, sessizce eksik çizmez. */
-  const EARN_ICONS: Record<MePointsEarnWayKey, ReactElement> = {
-    referral: <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />,
-    review: <Icon name="orders" size={theme.size.inlineIcon} color={theme.colors.muted} />,
-    feedback_candidate: <CustomerIcon name="star" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />,
-  };
-  const EARN_ACTIONS: Record<MePointsEarnWayKey, () => void> = {
+     `Partial` ve bu bilinçli: `visit` kendiliğinden yazılır, `feedback_purchase` zaten teslim
+     edilmiş siparişin ekranında yapılır — ikisi de müşterinin gidebileceği bir yere işaret etmez
+     ve düğme koymak basınca hiçbir şey olmayan bir yüzey demekti. Tanımadığı anahtar sessizce
+     düşer: kit satırı düğmesiz çizer, çökmez.
+
+     (Tarihçe: burada eskiden `discovery` yazıyordu, uç ise `feedback_candidate` gönderiyordu ve
+     keşif satırı hiç ÇİZİLMİYORDU — ölçüldü 09.08. Sözlük o günden beri `MePointsEarnWayKey`e
+     bağlı; ekrana özel ikinci bir ad açmak sözlüğü ayrıştırır.) */
+  const earnActions: PointsEarnActions = {
     referral: shareReferral,
+    neighbor: () => router.push('/orders'),
     review: () => router.push('/orders'),
     feedback_candidate: () => router.push('/discover'),
   };
-  /* Çalışma zamanı süzgeci DURUYOR: derleme kilidi yalnız BUGÜNKÜ paketi bağlar, cihazdaki eski
-     sürüm yarının anahtarını yine tanımayacak — o satırı çizmemek çökmekten iyidir. */
-  const isKnownWay = (key: string): key is MePointsEarnWayKey => key in EARN_ICONS;
 
   /* Dil seçimi ÖNCE yerele (anında, tüm ekranlar), SONRA karta (`PATCH /me/preferences` — asıl
      kaynak orası; dil yazışmanın dilidir). Başarıda dönen profil `publishMe` ile yayınlanır ve
@@ -186,6 +180,8 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
   const coupons = pointsWallet.view?.coupons ?? [];
   const [redeeming, setRedeeming] = useState(false);
   const [redeemFailed, setRedeemFailed] = useState(false);
+  /* "Nasıl puan kazanılır" çekmecesi (kullanıcı isteği 12.08) — kartın merak sorusuna cevabı. */
+  const [earnSheetOpen, setEarnSheetOpen] = useState(false);
 
   /* Profil çekmecesi (v3 `shPf`) — GERÇEK kayıt (21.14c): taslak alanlar açılışta karttan dolar,
      Kaydet `PATCH /me`ye gider; başarı `publishMe` ile yayınlanır (kart ve vitrin selamlaması
@@ -391,24 +387,12 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
             {wallet.balance === 0 ? (
               <>
                 <Text style={styles.cardBody}>{t.points.emptyBody}</Text>
-                <View style={styles.earnList}>
-                  {wallet.earnWays.filter((way) => isKnownWay(way.key)).map((way, index) => {
-                    const key = way.key;
-                    const copy = t.points.earn[key];
-                    return (
-                      <View key={key} style={[styles.earnRow, index > 0 ? styles.settingsDivider : undefined]}>
-                        {EARN_ICONS[key]}
-                        <View style={styles.earnText}>
-                          <Text style={styles.earnTitle}>{copy.title}</Text>
-                          <Text style={styles.earnBody}>
-                            {t.points.earnPoints.replace('{n}', String(way.points))} · {copy.body}
-                          </Text>
-                        </View>
-                        <TextAction label={copy.cta} onPress={EARN_ACTIONS[key]} testID={`account-earn-${key}`} />
-                      </View>
-                    );
-                  })}
-                </View>
+                {/* Liste ARTIK KİTTEN (kullanıcı kararı 12.08): aynı anlatım onboarding'in son
+                    adımında ve aşağıdaki çekmecede de çiziliyor. Üç kopya, bir ödül değiştiğinde
+                    ikisinin unutulduğu üç ayrı metin demekti. `wallet` sözleşme gereği kuralın
+                    kendisini de taşıyor (`MePointsCardSchema` = kural + kimlik), o yüzden ayrı bir
+                    okuma turu atılmıyor. */}
+                <PointsEarnList rules={wallet} actions={earnActions} testID="account-earn-list" />
               </>
             ) : (
               <>
@@ -438,6 +422,17 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
             )}
 
             {redeemFailed ? <Note description={t.points.failed} tone="terracotta" testID="account-points-error" /> : null}
+
+            {/* "NASIL PUAN KAZANIRIM?" — kullanıcı isteği 12.08. Kart bir BAŞVURU YERİ, öğretmen
+                değil (karar seti 2h): öğretme işini bağlam mesajları yapar, burası merak edene
+                cevap verir. Bakiyesi OLAN müşteri de görüyor — eski kurguda liste yalnız bakiye
+                sıfırken çiziliyordu, yani ilk puanını kazanan müşteri geri kalan yolları bir daha
+                hiç göremiyordu. */}
+            <TextAction
+              label={t.points.howTo}
+              onPress={() => setEarnSheetOpen(true)}
+              testID="account-points-howto"
+            />
 
             {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
             {coupons.map((coupon) => (
@@ -640,6 +635,50 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
           />
         </View>
       </ScrollView>
+
+      {/* ── "Nasıl puan kazanılır" çekmecesi (kullanıcı isteği 12.08) ────────────────
+          Kaynağı KART, ayrı bir okuma değil: `wallet` sözleşme gereği kuralın kendisini de taşıyor
+          (`MePointsCardSchema` = kural + kimlik). Çekmece yalnız kart varken açılabildiği için
+          `wallet` burada hiç `null` olmaz — B2B'de düğme de çizilmiyor.
+
+          ÇEKMECE, ayrı bir SAYFA değil: müşteri bir merak sorusu soruyor ve cevabı aldıktan sonra
+          bulunduğu yere dönmek istiyor. Sayfa açsaydık geri tuşuyla dönülen bir gezinme adımı
+          doğardı — kartın "başvuru yeri" rolüne ağır kaçardı. */}
+      <BottomSheet
+        visible={earnSheetOpen && wallet !== null}
+        title={t.points.howToTitle}
+        onClose={() => setEarnSheetOpen(false)}
+        testID="account-earn-sheet"
+      >
+        {wallet === null ? null : (
+          <PointsEarnList
+            rules={wallet}
+            actions={{
+              ...earnActions,
+              /* Çekmeceden gidilen her hedef ÖNCE çekmeceyi kapatır: altında açık bir modal
+                 bırakıp gezinmek, geri dönüldüğünde ekranı kilitli gösterirdi. */
+              referral: () => {
+                setEarnSheetOpen(false);
+                shareReferral();
+              },
+              neighbor: () => {
+                setEarnSheetOpen(false);
+                router.push('/orders');
+              },
+              review: () => {
+                setEarnSheetOpen(false);
+                router.push('/orders');
+              },
+              feedback_candidate: () => {
+                setEarnSheetOpen(false);
+                router.push('/discover');
+              },
+            }}
+            showRules
+            testID="account-earn-sheet-list"
+          />
+        )}
+      </BottomSheet>
 
       {/* ── Profil çekmecesi (v3 `shPf`, v3:253-260) — üç alan + WhatsApp notu + Kaydet ── */}
       <BottomSheet

@@ -27,11 +27,12 @@ export type { CustomerConsentToggles, UpdateCustomerPreferencesOutcome } from '.
 // ── Müşteri puan cüzdanı (21.17) — bakiye + eşik + kullanılabilir kuponlar + puan→kupon çevirme.
 // Web `lib/account/coupons.ts` + `lib/feedback/points.ts`in TERFİSİ (web köprü). Kazanım çekirdeği
 // `feedback/points.ts`te KALIYOR: çevirme bir cüzdan hareketi, geri bildirim aksiyonu değil.
-export { listCustomerCoupons, readCustomerPoints, redeemCustomerPoints } from './customer/points';
+export { listCustomerCoupons, readCustomerPoints, readPointsRules, redeemCustomerPoints } from './customer/points';
 export type {
   CustomerCoupon,
   CustomerEarnWay,
   CustomerPointsCard,
+  CustomerPointsRules,
   CustomerPointsView,
   RedeemCustomerPointsOutcome,
 } from './customer/points';

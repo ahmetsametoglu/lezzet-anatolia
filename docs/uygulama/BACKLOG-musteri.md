@@ -384,11 +384,21 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   sözleşmeye alan eklenmez. Bulgu geçerliliğini korumuyor, **kaydı ölçümün kendisi için duruyor** —
   ekranın kendi sabitiyle hesap yapması bir desen hatasıydı ve tekrarlamaması gereken bir şey.
 
-- [ ] **MB-50 · Günlük ziyaret puanı native uygulamada HİÇ yazılmıyor.** Ölçüldü 11.08 (kod):
-  `awardVisitPoints` yalnız web yüzeyinden çağrılıyor (`apps/web/lib/feedback/visit-actions.ts`);
-  mobil arka uçta karşılığı yok. Sonuç: yalnız uygulamayı kullanan müşteri günde 10 puanı hiç
-  kazanamıyor, aynı müşteri web'e girse kazanıyor — **aynı müşteri iki yüzeyde iki farklı kural.**
-  MB-36'nın (iki yüzeyde iki fiyat) akrabası.
+- [x] **MB-50 · Günlük ziyaret puanı native uygulamada HİÇ yazılmıyor** → **KAPANDI, görev `(21.47)`
+  (12.08).** Ölçüldü 11.08 (kod): `awardVisitPoints` yalnız web yüzeyinden çağrılıyor
+  (`apps/web/lib/feedback/visit-actions.ts`); mobil arka uçta karşılığı yok. Sonuç: yalnız
+  uygulamayı kullanan müşteri günde 10 puanı hiç kazanamıyor, aynı müşteri web'e girse kazanıyor —
+  **aynı müşteri iki yüzeyde iki farklı kural.** MB-36'nın (iki yüzeyde iki fiyat) akrabası.
+
+  **Kapanış:** `POST /api/v1/me/points/visit` + `lib/points/use-visit-points.hook.ts` (kök layout).
+  Kalemin ACELEYE GELMESİNİN sebebi başka bir iş: onboarding'in yeni puan adımı bu ödülü müşteriye
+  SÖYLÜYOR, yani açık kapanmadan metin yazmak ekranı motordan cömert yapardı.
+
+  **Cihazda ölçülen ikinci açık (12.08):** ilk kurgu iki tetikleyiciyle geldi — ilk kare ve
+  uygulamanın öne gelmesi. İkisi de müşteri MİSAFİRKEN koşuyor, giriş sonrası hiçbir şey
+  tetiklemiyordu; `points_entry`de satır doğmadı. Yani **uygulamayı indirip hesap açan yeni
+  müşteri ilk gününün puanını hiç alamıyordu** — tam olarak onboarding'in vaat ettiği kişi.
+  Üçüncü tetikleyici (`onAuthStateChange`) eklendi, satır doğdu (bakiye 18 → 28).
 
 - [x] **MB-51 · Adres formu "67 ile başlayan posta kodları teslimat bölgemizdedir" diyor — YANLIŞ.**
   Ölçüldü 11.08 (cihaz + veritabanı): aktif bölgeler yalnız **67000 · 67100 · 67200 · 67300 ·
@@ -449,7 +459,12 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   açan bağlantı tanımı (evrensel/uygulama bağlantıları) + `findOrCreateCustomer`a daveti geçiren
   çağrı. Bu altyapı **MB-56'nın da zemini** — ikisi aynı bağlantı mekanizmasını paylaşır.
 
-- [ ] **MB-54 · Ziyaret puanı native'de yazılacak + hesap sayfasında görünecek (kullanıcı kararı 11.08).**
+- [~] **MB-54 · Ziyaret puanı native'de yazılacak + hesap sayfasında görünecek (kullanıcı kararı 11.08).**
+  **İKİ PARÇANIN İKİSİ DE İLERLEDİ, BİRİ AÇIK KALDI — görev `(21.47)` (12.08).** (a) yazım kapısı
+  KAPANDI (MB-50) · sözleşme üçten altıya genişledi, ziyaret satırı listede. (c) **AÇIK:** *"o gün
+  ziyaret puanı alınmışsa satır İŞARETLİ görünür"* — bugünkü hakkının kullanılıp kullanılmadığı
+  ekranda görünmüyor. Sözleşme bunu taşımıyor: `earnWays` yalnız "hangi yol, kaç puan" diyor,
+  "bugün alındı mı" demiyor. `BEKLEYEN(MB-54)`.
   MB-50'nin kararı: *"ziyaret puanı native'de yazılmalı… hesabım sayfasında bu da olmalı ve
   kullanıcı geldiği zaman o tik yanmalı."* İki parça: (a) mobil arka uçta günlük ziyaret kapısı
   (web'deki `awardVisitPoints` aynı motoru kullanır, ikinci nüsha YAZILMAZ); (b) hesap ekranındaki
@@ -458,12 +473,26 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   kazanma yolu anahtarları bugün üç tane (`referral` · `review` · `feedback_candidate`); ziyaret
   eklenince liste dörde çıkar, yani sözleşme işi de var.
 
-- [ ] **MB-55 · "Nasıl puan kazanılır" anlatım sayfası (kullanıcı isteği 11.08).**
+- [x] **MB-55 · "Nasıl puan kazanılır" anlatımı** → **KAPANDI, görev `(21.47)` (12.08).**
   *"Puan kazanma olayını çok daha anlaşılabilir yapmak için hangi durumlarda puan kazanılıyor,
   tıpkı onboarding gibi bir sayfa yapmak istiyorum."* Bugün bu bilgi hesap ekranındaki üç satırlık
   kutuya sıkışmış durumda ve sipariş/ziyaret/günlük tavan hiç anlatılmıyor. **Sayılar sözlüğe
-  gömülMEZ** — ayardan gelen kazanma yolları uçtan okunur (MB-15'in dersi). Onboarding'in adım
-  deseni yeniden kullanılır; giriş noktası hesap ekranındaki puan kartı.
+  gömülMEZ** — ayardan gelen kazanma yolları uçtan okunur (MB-15'in dersi).
+
+  **~~Ayrı SAYFA~~ → ÇEKMECE + ONBOARDING ADIMI** (kullanıcı isteği 12.08: *"kod ve komponent
+  istemediğim için kullanıcı hesap sayfasından puan dönüştürdüğü yerde 'nasıl puan kazanabilirim'
+  gibi bir metin butonuna tıklayıp puan kazanma yöntemlerini inceleyebilsin"*). Sayfa yerine
+  çekmece: müşteri bir MERAK sorusu soruyor ve cevabı aldıktan sonra bulunduğu yere dönmek istiyor;
+  sayfa geri tuşuyla dönülen bir gezinme adımı doğururdu. Anlatımın kendisi üç yüzeyin ORTAK
+  bileşeninde (`customer-kit/points-earn-list.tsx`) — onboarding'in son adımı da aynı listeyi
+  çiziyor, yani "onboarding gibi" isteği kopyayla değil ortak bileşenle karşılandı.
+
+  **Liste üçten ALTIYA çıktı** (MB-54'ün sözleşme yarısı burada kapandı): sözleşmedeki daraltma
+  ölçütü *"müşterinin kendi iradesiyle başlatabileceği yollar"*dı ve tek tüketicisi düğmeli hesap
+  kartıydı. Anlatım ekranında soru başka: *"bu sistem beni neyle ödüllendiriyor"*. `visit`,
+  `feedback_purchase` ve `neighbor` artık listede; düğme haritası `Partial` (ikisi bir yere
+  gitmiyor). **Liste artık bakiyesi OLAN müşteriye de açık** — eskiden yalnız bakiye sıfırken
+  çiziliyordu, yani ilk puanını kazanan müşteri geri kalan yolları bir daha hiç göremiyordu.
 
 - [x] **MB-56 · SEFER DAVETİ — yeni puan enstrümanı. TASARIM KAPANDI (kullanıcı kararları 11.08).**
 

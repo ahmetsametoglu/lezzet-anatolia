@@ -7,7 +7,8 @@ import { OnboardingScreen } from './onboarding-screen';
   ONBOARDING — depo mock'lu (görev kısıtı): sınanan şey akışın kendisi — adım geçişleri, dil
   seçiminin ANINDA arayüze yansıması, maske, yer cevabının cümlesi ve çıkışta ne saklandığı.
 
-  BEŞ ADIM: dil · yazı boyutu · posta kodu · teslimat · ödeme (yazı boyutu adımı 09.08'de eklendi).
+  ALTI ADIM: dil · yazı boyutu · posta kodu · teslimat · ödeme · puan (yazı boyutu 09.08'de, puan
+  12.08'de eklendi).
 
   DİL: uygulamanın dili modül durumunda yaşıyor ve testler arasında SIFIRLANMAZ (üretimde de öyle:
   seçim kalıcıdır) — her test kendi başlangıcını `setAppLocale('tr')` ile kurar, yoksa bir önceki
@@ -29,6 +30,26 @@ jest.mock('@/lib/onboarding/onboarding-store', () => ({
 const mockResolve = jest.fn();
 jest.mock('@/lib/api/places', () => ({
   resolvePostalCode: (code: string) => mockResolve(code),
+}));
+
+/* PUAN KURALLARI da gerçek uçtan geliyor (12.08) ve MİSAFİRE açık: test o ucu mock'lar. Sayılar
+   burada UYDURMA değil ölçüt — ekranın sunucudan geleni bastığını, sabit bir sayı gömmediğini
+   sınıyoruz (bu yüzden 500/5 € çifti seçildi: gerçek ayarla aynı). */
+jest.mock('@/lib/api/points', () => ({
+  fetchPointsRules: () =>
+    Promise.resolve({
+      data: {
+        redeem: { minimumPoints: 500, valueCents: 500 },
+        centValue: 1,
+        neighborMaxUses: 3,
+        earnWays: [
+          { key: 'referral', points: 500 },
+          { key: 'visit', points: 10 },
+        ],
+      },
+      error: null,
+      status: 200,
+    }),
 }));
 
 /** Ucun zarfı — `apiFetch` sözleşmesi: başarıda `error: null`. */
@@ -56,8 +77,14 @@ async function pressNext() {
   await fireEvent.press(screen.getByTestId('onboarding-next'));
 }
 
-/** Posta kodu adımı üçüncüdür (dil → yazı boyutu → posta kodu). */
+/**
+ * Posta kodu adımı DÖRDÜNCÜDÜR: dil → yazı boyutu → **teslimat** → posta kodu.
+ *
+ * Sıra 13.08'de değişti (kullanıcı kararı): kodu istemeden ÖNCE neden istediğimizi anlatan kart
+ * gelir. Sebebini bilmeyen kişi alanı boş geçiyor.
+ */
 async function goToZipStep() {
+  await pressNext();
   await pressNext();
   await pressNext();
 }
@@ -118,33 +145,70 @@ describe('onboarding', () => {
     await fireEvent.changeText(input, '75000');
     await waitFor(() =>
       expect(screen.getByTestId('onboarding-zip-note')).toHaveTextContent(
-        'Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız; 60 € üzeri kargo ücretsiz.',
+        // Eşik SAYISI metinden çıkarıldı (13.08): `free_shipping_threshold_cents` kapsamlı —
+        // global 60 €, ülke 90 €, b2b 250 €. Sabit "60 €" Alman müşteriye yanlış söz veriyordu.
+        'Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız. Belirli bir tutarın üzerinde kargo ücretsiz — tutarı sepetinizde görürsünüz.',
       ),
     );
   });
 
-  it('beş adım uçtan uca: son adımın CTA etiketi değişir; bitirince seçimler saklanır ve vitrine dönülür', async () => {
+  it('uçtan uca: puan bölümü KART KART ilerler, hesap teklifi ancak SON kartta çıkar', async () => {
     await render(<OnboardingScreen />);
     expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Devam');
 
     await pressNext(); // → yazı boyutu
     expect(screen.getByText('Yazı boyutunu seçin')).toBeOnTheScreen();
 
-    await pressNext(); // → posta kodu
-    await fireEvent.changeText(screen.getByTestId('onboarding-zip'), '67000');
-
+    // GEREKÇE ÖNCE, SORU SONRA (kullanıcı kararı 13.08).
     await pressNext(); // → teslimat
     expect(screen.getByText('İki teslimat yolumuz var')).toBeOnTheScreen();
+
+    await pressNext(); // → posta kodu
+    await fireEvent.changeText(screen.getByTestId('onboarding-zip'), '67000');
 
     await pressNext(); // → ödeme
     expect(screen.getByText('Nasıl isterseniz öyle ödeyin')).toBeOnTheScreen();
     expect(screen.getByText('Online ödeme')).toBeOnTheScreen();
     expect(screen.getByText('Kapıda ödeme')).toBeOnTheScreen();
     expect(screen.getByText('Havale ve vadeli hesap')).toBeOnTheScreen();
-    expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Alışverişe başla');
+    expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Devam');
 
-    await pressNext(); // → bitir
+    await pressNext(); // → puanın GİRİŞ kartı
+    expect(screen.getByText('Kullandıkça kazanın')).toBeOnTheScreen();
+    // SAYI SUNUCUDAN: eşik de para karşılığı da mock'un verdiği değerler — ekran sabit gömmüyor.
+    await waitFor(() => expect(screen.getByTestId('onboarding-points-rate')).toHaveTextContent('500 puan = 5,00 € kupon'));
+    // Giriş kartı döküm YAPMAZ ve hesap TEKLİF ETMEZ — soruyu düğmenin kendisi sorar.
+    expect(screen.queryByTestId('onboarding-points-ways-invite')).toBeNull();
+    expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Nasıl puan kazanılır?');
+
+    await pressNext(); // → 1. grup kartı
+    expect(screen.getByTestId('onboarding-points-group-invite')).toBeOnTheScreen();
+    expect(screen.getByText('Çağırdıkça')).toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Devam');
+
+    await pressNext(); // → 2. (ve mock'ta SON) grup kartı
+    expect(screen.getByTestId('onboarding-points-group-visit')).toBeOnTheScreen();
+    // Teklif ancak puan anlatıldıktan SONRA (kullanıcı kararı 13.08).
+    expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Hesap aç, kazanmaya başla');
+
+    await pressNext(); // → hesap aç
     expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: '67000' });
+    expect(mockReplace).toHaveBeenCalledWith('/login');
+  });
+
+  it('grup kartı yalnız KENDİ yollarını çizer; "Sonra bakarım" her puan kartında vitrine düşürür', async () => {
+    await render(<OnboardingScreen />);
+    for (let step = 0; step < 6; step += 1) await pressNext(); // → 1. grup kartı
+
+    await waitFor(() => expect(screen.getByTestId('onboarding-points-group-invite')).toBeOnTheScreen());
+    // Kart KENDİ grubunu çizer: `visit` bu kartta YOK, kendi kartında.
+    expect(screen.getByTestId('points-earn-referral')).toBeOnTheScreen();
+    expect(screen.queryByTestId('points-earn-visit')).toBeNull();
+    // Ödül rozeti puanı ve parasını BİRLİKTE taşır; para `points × centValue` ile türetilir.
+    expect(within(screen.getByTestId('points-earn-referral')).getByText('+500 · 5,00 €')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('onboarding-later'));
+    expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: null });
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 

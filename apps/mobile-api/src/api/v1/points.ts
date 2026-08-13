@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
-import { readCustomerPoints, redeemCustomerPoints } from '@lezzet/application';
+import { awardPoints, readCustomerPoints, readPointsRules, redeemCustomerPoints } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { MePointsRedeemResultSchema, MePointsViewSchema } from '@lezzet/types';
+import { MePointsRedeemResultSchema, MePointsViewSchema, PointsRulesSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
 
@@ -17,6 +17,22 @@ import type { V1Env } from './auth';
   çevirme bakiyeyi düşürür ve listeye kupon ekler, tek kaydı dönmek istemciyi ikinci okuma turuna
   mecbur bırakırdı — adres uçlarının "cevap hep güncel liste" kararıyla birebir aynı gerekçe.
 */
+
+/**
+ * **`GET /points/rules` — AÇIK UÇ, kimlik istemez** (kullanıcı kararı 12.08).
+ *
+ * Onboarding'in son adımı puan programını anlatıyor ve o ekranı gören kişi henüz misafirdir: hesabı
+ * yok, `bearerAuth`ın arkasına hiç geçemez. Ama ekranın söylediği her sayı motorun uyguladığı sayı
+ * olmak zorunda — alternatif, onboarding'e sabit sayı gömmek ve ayar değiştiği gün müşteriye
+ * gerçekleşmeyecek bir vaat vermekti (29.07 denetiminin kapattığı arıza sınıfı).
+ *
+ * **Kişisel hiçbir şey taşımaz:** bakiye, davet kodu, kupon burada YOK — hepsi `/me/points`in işi.
+ * Yani açık olması bir ödün değil, doğru sınır: bunlar zaten katalog fiyatı gibi herkese açık
+ * program kuralları.
+ */
+export const pointsRules = new Hono<V1Env>();
+
+pointsRules.get('/points/rules', async (c) => ok(c, PointsRulesSchema.parse(await readPointsRules(serviceDb()))));
 
 /** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — kapıların istediği hep ikincisi. */
 interface CustomerEnv {
@@ -56,6 +72,31 @@ points.get('/', async (c) => {
   const view = await readCustomerPoints(serviceDb(), c.get('customerId'));
   // `parse` süzgeçtir: pick dışı alan (kuponun `trigger`/`scope`ı, kotası) zarfa sızamaz.
   return ok(c, MePointsViewSchema.parse(view));
+});
+
+/**
+ * **Günlük giriş puanı** (MB-50 · kullanıcı kararı 11.08) — günde bir kez, `points_visit` kadar.
+ *
+ * ── AÇIK NEYDİ ──────────────────────────────────────────────────────────────
+ * Ödül yalnız WEB'de yazılıyordu (`apps/web/lib/feedback/visit-actions.ts`); native uygulamayı her
+ * gün açan müşteri hiç kazanmıyordu. Ölçüldü 12.08: `awardPoints(reason:'visit')`ın tek çağrı yeri
+ * web köprüsüydü. Onboarding artık bu ödülü müşteriye SÖYLEDİĞİ için açık kapanmak zorundaydı —
+ * söylenip yazılmayan puan, ekranın motordan cömert olması demektir.
+ *
+ * ── NEDEN AYRI BİR UÇ, BAŞKA BİR ÇAĞRIYA İLİŞTİRME DEĞİL ────────────────────
+ * Açılışta zaten atılan bir isteğe (vitrin okuması) iliştirmek daha ucuzdu ama o okuma misafirde de
+ * çalışıyor, önbelleğe alınıyor ve bir gün başka bir sebeple değişebilir; defter yazımı o zaman
+ * sessizce kaybolurdu. Yazımın kendi kapısı olsun ki tetikleyeni tek satırda görünür kalsın.
+ *
+ * **Tekillik veritabanında** (`points_entry_visit_day` — iş günü başına tek satır), burada değil:
+ * uygulama gün içinde defalarca öne gelirse ikinci istek bir arıza değil normal davranıştır ve
+ * motor onu zaten düşürür. **Cevap hep `true`** — ekranın söyleyeceği bir şey yok, ödül sessizdir
+ * (karar seti 2h: *"uygulama açılınca — sessiz"*). Yazıldı mı yazılmadı mı bilgisini dönmek,
+ * istemciyi "bugün kazandın mı" diye bir dal yazmaya davet ederdi.
+ */
+points.post('/visit', async (c) => {
+  await awardPoints(serviceDb(), { customerId: c.get('customerId'), reason: 'visit' });
+  return ok(c, true);
 });
 
 /**

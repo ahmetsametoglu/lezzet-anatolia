@@ -1,5 +1,5 @@
 import { NeighborInviteClaimService, NeighborInviteService, OrderService, SettingsService, UserProfileService } from '@lezzet/database';
-import { deliveryRunWindow, readableCode, type DeliveryRunWindow } from '@lezzet/domain-core';
+import { deliveryRunWindow, NEIGHBOR_INVITE_MAX_USES, readableCode, type DeliveryRunWindow } from '@lezzet/domain-core';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
 import type { NeighborInvite } from '@lezzet/types';
@@ -83,6 +83,10 @@ export async function openNeighborInvite(
     orderId: order.id,
     deliveryZoneId: order.deliveryZoneId,
     deliveryDate: order.deliveryDate,
+    // Sınır AÇIKÇA geçiliyor, veritabanı varsayılanına bırakılmıyor (13.08): müşteri yüzeyi
+    // *"o güne en fazla 3 komşu"* diyecek ve o sayıyı motorun uyguladığı yerden okumalı
+    // (`NEIGHBOR_INVITE_MAX_USES` künyesi). Migration'daki `default 3` artık yedek.
+    maxUses: NEIGHBOR_INVITE_MAX_USES,
   });
   return { status: 'ok', invite };
 }

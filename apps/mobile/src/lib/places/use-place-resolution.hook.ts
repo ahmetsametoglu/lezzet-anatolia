@@ -28,21 +28,62 @@ export function maskPostalCode(value: string): string {
   return value.replace(/\D/g, '').slice(0, POSTAL_CODE_LENGTH);
 }
 
-/** `null` = kod eksik ya da cevap henüz yok. Dört hâlin anlamı sözleşmede (`place-api.schema.ts`). */
-export function usePlaceResolution(code: string): PlaceResolution | null {
+export interface PlaceLookup {
+  /** `null` = kod eksik, cevap henüz yok ya da istek düştü. Dört hâlin anlamı sözleşmede. */
+  place: PlaceResolution | null;
+  /**
+   * **İstek UÇUŞTA mı** — ekranın iskelet göstereceği tek hâl (kullanıcı isteği 13.08).
+   *
+   * `place === null` üç ayrı şey demek olabiliyordu: *"kod daha tamamlanmadı"*, *"soruldu, cevap
+   * bekleniyor"* ve *"soruldu, istek düştü"*. Ekran ikincisinde iskelet göstermeli, ötekilerde
+   * göstermemeli — üçüncüsünde gösterirse **iskelet sonsuza kadar döner** ve müşteri hiç gelmeyecek
+   * bir cevabı bekler (ölçüldü 13.08: ilk kurgu `code.length` + `place === null` ile türetiliyordu
+   * ve tam olarak bu tuzağa düşüyordu; ağ kesintisinde ekran ebediyen "yükleniyor" derdi).
+   *
+   * Bu yüzden bayrak TÜRETİLMİYOR, efektin kendisi tarafından yazılıyor: istek biterken `false`a
+   * döner — cevap geldi ya da GELMEDİ, ikisi de "artık beklemiyoruz" demek.
+   */
+  pending: boolean;
+}
+
+/**
+ * Yer çözümünün TAM hâli — cevap + bekleyiş.
+ *
+ * `usePlaceResolution` bunun üstünde duran ince bir sarmalayıcıdır: çağıranların çoğu yalnız cevabı
+ * istiyor ve sekiz çağrı yerini `{ place }` yazmaya zorlamak, hiçbir şey kazandırmadan hepsini
+ * değiştirmek olurdu. Efekt ve kural TEK yerde — burada.
+ */
+export function usePlaceLookup(code: string): PlaceLookup {
   const [place, setPlace] = useState<PlaceResolution | null>(null);
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     setPlace(null);
-    if (code.length < POSTAL_CODE_LENGTH) return;
+    if (code.length < POSTAL_CODE_LENGTH) {
+      setPending(false);
+      return;
+    }
+    setPending(true);
     let current = true;
-    void resolvePostalCode(code).then((result) => {
-      if (current && result.error === null) setPlace(result.data);
-    });
+    void resolvePostalCode(code)
+      .then((result) => {
+        if (current && result.error === null) setPlace(result.data);
+      })
+      // `finally` ÇÜNKÜ ret de bir bitiştir: düşen istekte bekleyiş sürseydi iskelet hiç sönmezdi.
+      .finally(() => {
+        if (current) setPending(false);
+      });
     return () => {
       current = false;
     };
   }, [code]);
+
+  return { place, pending };
+}
+
+/** `null` = kod eksik ya da cevap henüz yok. Dört hâlin anlamı sözleşmede (`place-api.schema.ts`). */
+export function usePlaceResolution(code: string): PlaceResolution | null {
+  const { place } = usePlaceLookup(code);
 
   return place;
 }

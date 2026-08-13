@@ -48,6 +48,21 @@ export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
 export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
 
 /**
+ * **Bir komşu davetinden kaç komşu ödül doğurabilir** — `neighbor_invite.max_uses`in kaynağı.
+ *
+ * Sayı SATIRDA yaşar (davet doğduğu gün dondurulur: ayar sonradan değişse de o gün paylaşılmış
+ * davetin sözü değişmemeli — `0044_neighbor_invite.sql` künyesi). Ama satıra YAZILAN değerin bir
+ * kaynağı olmalı ve o kaynak veritabanı varsayılanı olamaz: ekran müşteriye *"o güne en fazla 3
+ * komşu"* diyecekse, o 3'ü motorun gerçekten uyguladığı yerden okumalı. Migration'daki `default 3`
+ * artık bir yedek; yazan taraf bu sabiti AÇIKÇA geçiyor.
+ *
+ * **Neden bir sınır var:** davet "komşum" içindir, sosyal medya kampanyası için değil — ödülün
+ * gerekçesi aracın o sokakta zaten duruyor olması, ve bir durağa sığdırılabilecek sipariş sayısı
+ * sonsuz değil.
+ */
+export const NEIGHBOR_INVITE_MAX_USES = 3;
+
+/**
  * **Kaynak satırı OLMAYAN sebepler** — tekillikleri `ref_id` üzerinden kurulamaz.
  *
  * `points_entry_source_key` kısmi indeksi `ref_id is not null` ile sınırlı; ziyaretin işaret

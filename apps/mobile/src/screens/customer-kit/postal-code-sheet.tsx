@@ -1,17 +1,18 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import messages from '@/lib/places/messages.json';
-import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
+import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { publishToast } from '@/lib/toast/toast-store';
 import { useMe } from './use-me.hook';
 
@@ -89,7 +90,12 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
     if (visible) setDraft(code ?? '');
   }, [code, visible]);
 
-  const place = usePlaceResolution(draft);
+  /* Bekleyiş bayrağı hook'tan gelir, TÜRETİLMEZ: `place === null` "istek düştü" hâlini de kapsıyor
+     ve türetilmiş bir bayrak orada sönmezdi — iskelet ebediyen dönerdi (künyesi hook'ta). */
+  const { place, pending } = usePlaceLookup(draft);
+  /* İskelet çubuklarının boyu METİN KADEMESİNDEN okunur, sabit yazılmaz: yazı boyutu "Büyük"
+     seçildiğinde bekleyiş de cevapla birlikte büyür (görev 21.38'in ölçtüğü merdivenin gereği). */
+  const { theme } = useUnistyles();
   const inRoute = place?.kind === 'resolved' && place.place.inRoute;
   const placeName = place?.kind === 'resolved' ? place.place.placeName : null;
   const note =
@@ -137,6 +143,17 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
         numeric
         testID={idOf('field')}
       />
+      {/* CEVAP BEKLENİRKEN İSKELET (kullanıcı isteği 13.08) — onboarding'in posta kodu adımıyla
+          AYNI davranış. İki yüzey aynı soruyu soruyor ve aynı kapıdan cevap alıyor; birinde bekleyiş
+          görünür öteki sessiz kalsaydı, aynı sistemin iki farklı hâli olurdu. İskelet cevabın
+          ŞEKLİNİ taklit eder (kısa satır = yer adı, uzun satır = teslimat cümlesi), böylece cevap
+          geldiğinde çekmece yeniden düzenlenmez. */}
+      {pending ? (
+        <View style={styles.skeleton} testID={idOf('skeleton')}>
+          <Skeleton width={140} height={theme.text.control} radius="badge" />
+          <Skeleton width="100%" height={theme.text.note} radius="badge" tone="soft" />
+        </View>
+      ) : null}
       {placeName === null ? null : (
         <Text style={styles.place} testID={idOf('place')}>
           {draft} · {placeName}
@@ -180,6 +197,9 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text['body-sm'],
     color: theme.colors.ink,
   },
+  /* İskeletin iki çubuğu, yerini tuttukları iki metnin ritmini taşır — cevap gelince hiçbir şey
+     oynamasın. Çekmecenin kendi dikey boşluğu zaten kapsayıcıdan geliyor, burada yalnız çubuk arası. */
+  skeleton: { gap: theme.space.xs },
   /** İkinci yol düğmenin ALTINDA ve ortada: bir kapı değil, aynı sorunun öteki yüzü. */
   zonesRow: { alignItems: 'center' },
   note: {

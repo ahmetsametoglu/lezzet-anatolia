@@ -1,0 +1,125 @@
+{
+  "tr": {
+    "rate": "{points} puan = {value} indirim kuponu",
+    "footnote": "{threshold} puan biriktirdiğinizde {value} kupona çevirirsiniz. Kupon sepette kullanılır.",
+    "paidNote": "Davet ödülleri, davet ettiğiniz kişinin ödemesi alındığında hesabınıza geçer.",
+    "ways": {
+      "referral": {
+        "title": "Arkadaşınızı getirin",
+        "cadence": "her kişi için",
+        "body": "Davet bağlantınızı paylaşın. Bizde hesabı olmayan bir arkadaşınız ilk siparişini verip ödediğinde kazanırsınız.",
+        "cta": "Bağlantımı paylaş"
+      },
+      "neighbor": {
+        "title": "Komşunuzu çağırın",
+        "cadence": "o güne çağırdığınız her komşu için · en fazla {max}",
+        "body": "Aracımız sokağınıza geldiği gün için komşunuzu davet edin. O güne sipariş verip ödeyen her komşu size puan kazandırır. Her sefer için yeni bir davet açılır.",
+        "cta": "Siparişlerim"
+      },
+      "review": {
+        "title": "Aldığınız ürüne yorum yazın",
+        "cadence": "her üründe bir kez",
+        "body": "Teslimattan sonra ürünü anlatın.",
+        "cta": "Siparişlerim"
+      },
+      "visit": {
+        "title": "Uygulamayı açın",
+        "cadence": "her gün",
+        "body": "Günde bir kez, siz hiçbir şey yapmadan hesabınıza yazılır."
+      },
+      "feedback_purchase": {
+        "title": "Aldığınız ürünü beğenin",
+        "cadence": "her üründe bir kez",
+        "body": "Yorum yazacak vaktiniz yoksa beğenmeniz de yeter. Yorum da yazarsanız ikisini birden kazanırsınız."
+      },
+      "feedback_candidate": {
+        "title": "Yeni lezzetleri oylayın",
+        "cadence": "her kartta",
+        "body": "Henüz satışta olmayan adayları beğenin ya da geçin.",
+        "cta": "Keşfet"
+      }
+    }
+  },
+  "fr": {
+    "rate": "{points} points = bon de réduction de {value}",
+    "footnote": "Dès {threshold} points, échangez-les contre un bon de {value}, utilisable dans votre panier.",
+    "paidNote": "Les points de parrainage arrivent une fois le paiement de la personne invitée encaissé.",
+    "ways": {
+      "referral": {
+        "title": "Parrainez un ami",
+        "cadence": "par personne",
+        "body": "Partagez votre lien. Vous gagnez lorsqu'un ami qui n'a pas encore de compte passe et règle sa première commande.",
+        "cta": "Partager mon lien"
+      },
+      "neighbor": {
+        "title": "Invitez votre voisin",
+        "cadence": "par voisin invité pour ce jour · {max} au maximum",
+        "body": "Invitez votre voisin pour le jour où notre camion passe dans votre rue. Chaque voisin qui commande pour ce jour-là et règle sa commande vous rapporte des points. Une nouvelle invitation s'ouvre à chaque passage.",
+        "cta": "Mes commandes"
+      },
+      "review": {
+        "title": "Donnez votre avis sur un produit reçu",
+        "cadence": "une fois par produit",
+        "body": "Après la livraison, racontez le produit.",
+        "cta": "Mes commandes"
+      },
+      "visit": {
+        "title": "Ouvrez l'application",
+        "cadence": "chaque jour",
+        "body": "Une fois par jour, crédités sans rien avoir à faire."
+      },
+      "feedback_purchase": {
+        "title": "Aimez un produit reçu",
+        "cadence": "une fois par produit",
+        "body": "Pas le temps d'écrire ? Un simple j'aime suffit. Avec un avis écrit, vous gagnez les deux."
+      },
+      "feedback_candidate": {
+        "title": "Votez pour les nouvelles saveurs",
+        "cadence": "par carte",
+        "body": "Aimez ou passez les candidats pas encore en vente.",
+        "cta": "Découvrir"
+      }
+    }
+  },
+  "de": {
+    "rate": "{points} Punkte = {value} Rabattgutschein",
+    "footnote": "Ab {threshold} Punkten tauschen Sie diese gegen einen Gutschein über {value} — einlösbar im Warenkorb.",
+    "paidNote": "Einladungspunkte werden gutgeschrieben, sobald die Zahlung der eingeladenen Person eingegangen ist.",
+    "ways": {
+      "referral": {
+        "title": "Bringen Sie Freunde mit",
+        "cadence": "je Person",
+        "body": "Teilen Sie Ihren Einladungslink. Sie erhalten die Punkte, wenn eine Person ohne Konto ihre erste Bestellung aufgibt und bezahlt.",
+        "cta": "Meinen Link teilen"
+      },
+      "neighbor": {
+        "title": "Laden Sie Ihre Nachbarn ein",
+        "cadence": "je für diesen Tag eingeladenem Nachbarn · höchstens {max}",
+        "body": "Laden Sie Ihre Nachbarn für den Tag ein, an dem unser Wagen in Ihre Straße kommt. Jeder Nachbar, der für diesen Tag bestellt und bezahlt, bringt Ihnen Punkte. Bei jeder Tour öffnet sich eine neue Einladung.",
+        "cta": "Meine Bestellungen"
+      },
+      "review": {
+        "title": "Bewerten Sie ein erhaltenes Produkt",
+        "cadence": "einmal je Produkt",
+        "body": "Erzählen Sie nach der Lieferung von dem Produkt.",
+        "cta": "Meine Bestellungen"
+      },
+      "visit": {
+        "title": "Öffnen Sie die App",
+        "cadence": "täglich",
+        "body": "Einmal am Tag, ohne dass Sie etwas tun müssen."
+      },
+      "feedback_purchase": {
+        "title": "Gefällt mir für ein erhaltenes Produkt",
+        "cadence": "einmal je Produkt",
+        "body": "Keine Zeit zum Schreiben? Ein Gefällt mir genügt. Mit einer Bewertung erhalten Sie beides."
+      },
+      "feedback_candidate": {
+        "title": "Stimmen Sie über neue Sorten ab",
+        "cadence": "je Karte",
+        "body": "Bewerten Sie Kandidaten, die noch nicht im Verkauf sind.",
+        "cta": "Entdecken"
+      }
+    }
+  }
+}

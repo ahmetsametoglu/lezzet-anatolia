@@ -1,19 +1,25 @@
+import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
+import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
-import { maskPostalCode, usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
+import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
+import { usePointsRules } from '@/screens/customer-kit/use-points-rules.hook';
 import { emToDp } from '@/theme/parse';
 import { StepDots } from './step-dots';
 import messages from './messages.json';
@@ -54,8 +60,38 @@ import messages from './messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Adım sayısı ve sırası v3'ün kendisi (s1 dil · s2 posta kodu · s3 soğuk zincir · s4 ödeme). */
-const STEP_COUNT = 5;
+/** Puan ÖNCESİ adımlar: dil · yazı boyutu · posta kodu · teslimat · ödeme. */
+const BASE_STEP_COUNT = 5;
+
+/** Puan bölümünün GİRİŞ kartı — oranı ve en güçlü sayıyı söyler, dökümü değil. */
+const POINTS_INTRO_STEP = BASE_STEP_COUNT;
+
+/**
+ * **PUAN KARTLARI — liste değil, grup grup** (kullanıcı kararı 13.08).
+ *
+ * ── NEDEN LİSTE DEĞİL ───────────────────────────────────────────────────────
+ * İlk kurgu (12.08) altı yolu tek ekranda açılır bir liste olarak veriyordu. Kullanıcı cihazda
+ * görüp eledi: *"listeyi beğendim, fakat bu liste HESAP SAYFASINDAN açılmak için uygun. Bilgi
+ * verme stilimiz bu şekilde liste değil — onboarding KART KART bilgi veriyor."* Liste hesapta
+ * kaldı (`points-earn-list` çekmecesi); burada aynı bileşen her kartta yalnız KENDİ grubunu çizer.
+ *
+ * ── GRUPLAR CEVABI OLAN BİR SORUYA GÖRE ─────────────────────────────────────
+ * Ayrım "kaç puan" değil **"ne yaparak"**: birini çağırarak · aldığını anlatarak · sadece uğrayarak.
+ * Müşteri kendini bir gruba yerleştirebilir ("ben alışveriş yapmam ama uğrarım"), oysa puan
+ * sırasına göre bölünmüş bir liste yalnız bizim muhasebemizi anlatırdı.
+ *
+ * **Sıra ödülün büyüklüğüne göre:** en güçlü grup önce — kart kart ilerleyen müşteri en çok
+ * kazandıran yolu ilk görür ve son karta gelmeden de tam cevabı almış olur.
+ *
+ * Anahtarlar SÖZLEŞMEDEN (`MePointsEarnWayKey`): sunucu bir yol eklerse ve buraya yazılmazsa o yol
+ * hiçbir grupta çıkmaz — sessiz eksilme. Bu yüzden `satisfies` ile tam kapsam ARANMAZ ama
+ * kapsanmayan anahtar `docs`ta değil KODDA görünür: `POINTS_GROUPS`un birleşimi tek yerdedir.
+ */
+const POINTS_GROUPS = [
+  { key: 'invite', ways: ['referral', 'neighbor'] },
+  { key: 'review', ways: ['review', 'feedback_purchase'] },
+  { key: 'visit', ways: ['visit', 'feedback_candidate'] },
+] as const satisfies readonly { key: string; ways: readonly MePointsEarnWayKey[] }[];
 
 /** Dil seçiminin kendiliğinden ilerleme gecikmesi (v3: `setTimeout(…, 250)`). */
 const LANGUAGE_ADVANCE_MS = 250;
@@ -91,6 +127,35 @@ export function OnboardingScreen() {
   const [zip, setZip] = useState('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* Kural ekran açılır açılmaz istenir, son adıma gelince değil: müşteri beş adımı geçerken cevap
+     çoktan gelmiş olur ve puan ekranı boş bir kareyle açılmaz. Kimliksiz uç, misafirde de çalışır. */
+  const pointsRules = usePointsRules();
+
+  /* Getiren ödülünün PARA karşılığı — listeden türer, sabit yazılmaz. Yol listede yoksa (ayar
+     okunamadı) cümle hiç kurulmaz: söylenecek sayı yoksa susmak, uydurmaktan iyidir. */
+  const referralWay = pointsRules.status === 'ready' ? pointsRules.rules.earnWays.find((w) => w.key === 'referral') : undefined;
+  const referralValueCents =
+    pointsRules.status === 'ready' && referralWay !== undefined ? referralWay.points * pointsRules.rules.centValue : null;
+
+  /* ÇİZİLECEK GRUPLAR — kuraldan TÜRER, sabit değil. Ayarı okunamayan yol listeye hiç girmiyor
+     (`readEarnWays` künyesi), yani bir grup boş kalabilir; boş grubun kartı da AÇILMAZ. Adım sayısı
+     bu yüzden sabit bir sayı değil, gerçekten gösterilecek kart sayısıdır — "3/9" derken var
+     olmayan bir kartı saymak, müşteriye tamamlanamayacak bir ilerleme göstermek olurdu. */
+  const pointsGroups =
+    pointsRules.status === 'ready'
+      ? POINTS_GROUPS.map((group) => ({
+          key: group.key,
+          ways: pointsRules.rules.earnWays.filter((way) => (group.ways as readonly string[]).includes(way.key)),
+        })).filter((group) => group.ways.length > 0)
+      : [];
+
+  const stepCount = POINTS_INTRO_STEP + 1 + pointsGroups.length;
+  /** Grup kartındaysak kaçıncı grup; giriş kartında ve öncesinde `-1`. */
+  const groupIndex = step - POINTS_INTRO_STEP - 1;
+  const isLastStep = step === stepCount - 1;
+  /** Alt şeritteki "Sonra bakarım" — puan bölümünün TAMAMINDA durur, öncesinde değil. */
+  const inPointsSection = step >= POINTS_INTRO_STEP;
+
   useEffect(
     () => () => {
       if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
@@ -122,7 +187,9 @@ export function OnboardingScreen() {
 
   /* YER ÇÖZÜMÜ GERÇEK UÇTAN (kullanıcı kararı 09.08 — eski yerel '67' kuralı kalktı): kod beş
      haneye ulaşınca sorulur, cevap ŞEHRİ de söyler. Davranışın gerekçeleri hook'un künyesinde. */
-  const place = usePlaceResolution(zip);
+  /* Bekleyiş bayrağı hook'tan gelir, TÜRETİLMEZ: `place === null` "istek düştü" hâlini de kapsıyor
+     ve türetilmiş bir bayrak orada sönmezdi — iskelet ebediyen dönerdi (künyesi hook'ta). */
+  const { place, pending: zipPending } = usePlaceLookup(zip);
 
   /* Ekranda söylenen cümle — dört hâlin her biri KENDİ cümlesini alır; bilinmeyen kod bir kapı
      değil uyarıdır, çözülemeyen hâl ise BİZİM eksiğimiz olabilir (sözleşme künyesi). */
@@ -141,20 +208,32 @@ export function OnboardingScreen() {
             ? t.zip.unknownNote
             : t.zip.unresolvedNote;
 
-  /** Her iki çıkış da (bitir/atla) o ana dek yapılan seçimleri saklar — yarım bilgi de bilgidir. */
-  const leave = () => {
+  /**
+   * Her çıkış (bitir/atla/hesap aç) o ana dek yapılan seçimleri saklar — yarım bilgi de bilgidir.
+   *
+   * Hedef parametre çünkü son adımın İKİ çıkışı var (kullanıcı kararı 12.08): "Hesap aç" giriş
+   * ekranına, "Sonra bakarım" vitrine. İkisi de onboarding'i BİTMİŞ sayar — kapı yeniden açılırsa
+   * müşteri aynı beş adımı tekrar görürdü.
+   */
+  const leave = (target: '/' | '/login') => {
     void saveOnboarding({ done: true, locale, postalCode: zip === '' ? null : zip });
     void saveFontScale(fontScale);
-    router.replace('/');
+    router.replace(target);
+  };
+
+  /** Son adımdan çıkış — hedef ne olursa olsun karşılama toast'ı basılır (Atla hâlâ sessiz). */
+  const finish = (target: '/' | '/login') => {
+    leave(target);
+    // Karşılama toast'ı yalnız BİTİR dallarında (v3:649) — başlıktaki "Atla" sessiz çıkar.
+    publishToast(t.doneToast);
   };
 
   const next = () => {
-    if (step < STEP_COUNT - 1) setStep(step + 1);
-    else {
-      leave();
-      // Karşılama toast'ı yalnız BİTİR'de (v3:649 `next` dalı) — Atla sessiz çıkar, v3'te de öyle.
-      publishToast(t.doneToast);
-    }
+    if (!isLastStep) setStep(step + 1);
+    // Son kart hesap açmayı önerir (kullanıcı kararı 13.08: *"en son adıma gelirse puan sisteminde,
+    // o zaman hesap açmayı öneririz"*) — puanı anlatmadan hesap istemek, sebebini söylemeden
+    // kapıda kimlik sormaktı.
+    else finish('/login');
   };
 
   /* İki teslimat yolu — sistemin kuralı (kullanıcı kararı 09.08): rota içi kendi soğutuculu
@@ -220,7 +299,7 @@ export function OnboardingScreen() {
           accessibilityLabel={t.brand}
         />
         <PressableSurface
-          onPress={leave}
+          onPress={() => leave('/')}
           feedback="opacity"
           compact
           accessibilityLabel={t.skip}
@@ -232,8 +311,14 @@ export function OnboardingScreen() {
 
       {/* TÜM adımlar dikeyde ortalanır. v3'ün "üstten akan" istisnası fotoğraflı soğuk zincir
           adımınındı; o adım kalkınca (kullanıcı kararı 09.08) istisna da kalktı — kalan tek
-          hizalama kuralı ortalamadır (kullanıcı bulgusu: teslimat adımı tepeye yapışıyordu). */}
-      <View style={[styles.content, styles.contentCenter]}>
+          hizalama kuralı ortalamadır (kullanıcı bulgusu: teslimat adımı tepeye yapışıyordu).
+
+          KAYDIRICI KİTTEN (12.08): puan adımının açılabilir listesi altı satır ve ekrana sığmıyor;
+          "Büyük" yazı boyutunda öteki adımlar da taşma sınırında. Ham `ScrollView` değil `FormScroll`
+          çünkü bu ekranda metin alanı VAR (posta kodu) — kitin kabı klavye kaçınmasını ve "ilk
+          dokunuş yutulmasın" korumasını birlikte taşıyor (künyesi `form-scroll.tsx`).
+          `flexGrow` ortalamayı korur: içerik kısayken ortada durur, uzayınca kaydırılır. */}
+      <FormScroll contentContainerStyle={[styles.content, styles.contentCenter, styles.contentGrow]} testID="onboarding-scroll">
         {step === 0 ? (
           <>
             <Text style={styles.kicker}>{t.language.kicker}</Text>
@@ -312,7 +397,12 @@ export function OnboardingScreen() {
           </>
         ) : null}
 
-        {step === 2 ? (
+        {/* POSTA KODU, TESLİMAT ANLATIMINDAN SONRA (kullanıcı kararı 13.08): *"posta kodunu
+            istediğimiz sayfa, posta kodunu NEDEN istediğimizi anlattığımız sayfadan sonra
+            olmalı."* Doğru sıra bu: bir kişisel veri istemeden önce ne işe yarayacağını söylemek,
+            hem nezaket hem dönüşüm — sebebini bilmeyen kişi alanı boş geçiyor. Eskiden kod önce
+            soruluyor, gerekçesi bir adım SONRA anlatılıyordu. */}
+        {step === 3 ? (
           <>
             <Text style={styles.kicker}>{t.zip.kicker}</Text>
             <Text style={styles.title} accessibilityRole="header">
@@ -329,8 +419,21 @@ export function OnboardingScreen() {
               accessibilityLabel={t.zip.field}
               testID="onboarding-zip"
             />
-            {/* Cevap alanı HEP AYRILMIŞ (kullanıcı bulgusu 09.08): içerik gelince ekran zıplamaz. */}
+            {/* Cevap alanı HEP AYRILMIŞ (kullanıcı bulgusu 09.08): içerik gelince ekran zıplamaz.
+
+                CEVAP BEKLENİRKEN İSKELET (kullanıcı isteği 13.08): alan eskiden boş duruyordu ve
+                beş haneyi yazan kişi hiçbir şey olmuyormuş gibi bakıyordu — soru sunucuya gitti mi
+                gitmedi mi belli değildi. İskelet cevabın ŞEKLİNİ taklit ediyor (bir kısa satır =
+                yer adı, bir uzun satır = teslimat cümlesi), yani gelen şey ekranı yeniden
+                düzenlemiyor. Boşluk ile iskelet arasındaki fark bir süsleme değil: biri "burada bir
+                şey yok" der, öteki "birazdan burada bir şey olacak". */}
             <View style={styles.zipAnswer}>
+              {zipPending ? (
+                <View style={styles.zipSkeleton} testID="onboarding-zip-skeleton">
+                  <Skeleton width={140} height={theme.text.control} radius="badge" />
+                  <Skeleton width="100%" height={theme.text.note} radius="badge" tone="soft" />
+                </View>
+              ) : null}
               {placeName === null ? null : (
                 <Text style={styles.zipPlace} testID="onboarding-zip-place">
                   {zip} · {placeName}
@@ -351,8 +454,11 @@ export function OnboardingScreen() {
         {/* TESLİMAT MANTIĞI (kullanıcı kararı 09.08 — v3'ün "soğuk zincir" anlatısının YERİNE):
             burada anlatılan bir vaat değil SİSTEMİN KURALI — katalog posta koduna göre süzülür,
             iki teslimat yolu vardır ve kargo soğuk zincir ürünü taşımaz. Müşteri bunu baştan
-            bilirse "ürün neden görünmüyor" sorusu hiç doğmaz. */}
-        {step === 3 ? (
+            bilirse "ürün neden görünmüyor" sorusu hiç doğmaz.
+
+            POSTA KODUNDAN ÖNCE (kullanıcı kararı 13.08): bu kart artık sorunun GEREKÇESİ —
+            "neden posta kodu istiyoruz"un cevabı burada, soru bir sonraki adımda. */}
+        {step === 2 ? (
           <>
             <Text style={styles.kicker}>{t.delivery.kicker}</Text>
             <Text style={styles.title} accessibilityRole="header">
@@ -406,7 +512,81 @@ export function OnboardingScreen() {
             </View>
           </>
         ) : null}
-      </View>
+
+        {/* PUANIN GİRİŞ KARTI — oranı ve en güçlü sayıyı söyler, dökümü SÖYLEMEZ. Döküm sonraki
+            kartların işi (kullanıcı kararı 13.08: onboarding kart kart bilgi verir).
+
+            EKRAN SAYI UYDURMAZ: kural kimliksiz uçtan geliyor (`usePointsRules`), sabit gömülü
+            tek bir puan yok. Okunamazsa kutu hiç çizilmez ve nedeni yazılır — uydurma bir sayı
+            basmak, motorun vermeyeceği bir vaat vermektir (29.07 denetiminin arıza sınıfı). */}
+        {step === POINTS_INTRO_STEP ? (
+          <>
+            <Text style={styles.kicker}>{t.points.kicker}</Text>
+            <Text style={styles.title} accessibilityRole="header">
+              {t.points.title}
+            </Text>
+            <Text style={styles.body}>{t.points.body}</Text>
+
+            {/* Kural okunamadığında kendi durağıyla söylenir, `scaleNote`u ödünç ALMAZ: o bir
+                yardımcı ipucu ("boyutu sonra değiştirebilirsiniz"), bu ise ekranın müşteriye
+                verdiği CEVAP — neden sayı göremediğini ve nereden görebileceğini söylüyor. */}
+            {pointsRules.status === 'failed' ? (
+              <Text style={styles.pointsUnavailable} testID="onboarding-points-unavailable">
+                {t.points.unavailable}
+              </Text>
+            ) : null}
+
+            {pointsRules.status === 'ready' ? (
+              <>
+                <View style={styles.secureBox}>
+                  <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+                  <View style={styles.pointsHeadline}>
+                    <Text style={styles.pointsRate} testID="onboarding-points-rate">
+                      {t.points.rate
+                        .replace('{points}', String(pointsRules.rules.redeem.minimumPoints))
+                        .replace('{value}', formatPrice(pointsRules.rules.redeem.valueCents, locale))}
+                    </Text>
+                    {/* En güçlü sayı ayrıca söyleniyor ama UYDURULMUYOR: getiren ödülü listede
+                        yoksa (ayar okunamadı) bu cümle de hiç çizilmez. */}
+                    {referralValueCents === null ? null : (
+                      <Text style={styles.pointsHighlight} testID="onboarding-points-highlight">
+                        {t.points.highlight.replace('{value}', formatPrice(referralValueCents, locale))}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+              </>
+            ) : null}
+          </>
+        ) : null}
+
+        {/* PUAN GRUP KARTLARI (kullanıcı kararı 13.08) — her kart bir SORUYA cevap verir:
+            "birini çağırarak" · "aldığını anlatarak" · "sadece uğrayarak". Satırları çizen bileşen
+            hesap ekranındakiyle AYNI (`PointsEarnList`); değişen tek şey ona verilen kümedir —
+            `earnWays` grubun yollarına daraltılıyor. İkinci bir satır çizici yazsaydık aynı ödül
+            iki farklı biçimde anlatılırdı (bileşenin kendi künyesindeki gerekçe). */}
+        {groupIndex >= 0 && groupIndex < pointsGroups.length && pointsRules.status === 'ready'
+          ? (() => {
+              const group = pointsGroups[groupIndex];
+              if (group === undefined) return null;
+              const copy = t.points.groups[group.key];
+              return (
+                <View key={group.key} style={styles.groupCard} testID={`onboarding-points-group-${group.key}`}>
+                  <Text style={styles.kicker}>{t.points.kicker}</Text>
+                  <Text style={styles.title} accessibilityRole="header">
+                    {copy.title}
+                  </Text>
+                  <Text style={styles.body}>{copy.body}</Text>
+                  <PointsEarnList
+                    rules={{ ...pointsRules.rules, earnWays: group.ways }}
+                    testID={`onboarding-points-ways-${group.key}`}
+                  />
+                </View>
+              );
+            })()
+          : null}
+      </FormScroll>
 
       <View style={styles.footer}>
         {/* Geri (kullanıcı isteği 09.08 — v3'te yok): nokta göstergesiyle AYNI satırda, solda.
@@ -426,18 +606,43 @@ export function OnboardingScreen() {
             )}
           </View>
           <StepDots
-            count={STEP_COUNT}
+            count={stepCount}
             active={step}
-            accessibilityLabel={t.step.replace('{n}', String(step + 1)).replace('{total}', String(STEP_COUNT))}
+            accessibilityLabel={t.step.replace('{n}', String(step + 1)).replace('{total}', String(stepCount))}
             testID="onboarding-dots"
           />
           <View style={styles.footerSide} />
         </View>
+        {/* ANA DÜĞMENİN ÜÇ HÂLİ (kullanıcı kararı 13.08):
+            · puan öncesi → "Devam"
+            · puanın GİRİŞ kartı → **"Nasıl puan kazanılır?"** — soruyu düğmenin kendisi soruyor ve
+              cevabı bir sonraki kart veriyor. Müşteri merakını bir açılır listeye değil, akışın
+              kendisine bağlıyor.
+            · son puan kartı → "Hesap aç, kazanmaya başla"
+            Kural tek cümle: **hesap teklifi ancak puan anlatıldıktan SONRA gelir.** Grup kartı
+            hiç yoksa (ayarlar okunamadı) giriş kartı zaten son karttır ve teklifi o yapar —
+            cevabı olmayan bir soruyu sormaktansa.
+
+            "Sonra bakarım" puan bölümünün TAMAMINDA durur: bir vazgeçme değil, gecikmiş bir evet —
+            onboarding yine BİTMİŞ sayılır ve müşteri vitrine düşer.
+            `t.start` ("Alışverişe başla") artık kullanılmıyor: bölümün son eylemi alışveriş değil
+            hesap açmak. */}
         <PrimaryButton
-          label={step === STEP_COUNT - 1 ? t.start : t.next}
+          label={isLastStep ? t.points.signUp : step === POINTS_INTRO_STEP ? t.points.how : t.next}
           onPress={next}
           testID="onboarding-next"
         />
+        {inPointsSection ? (
+          <PressableSurface
+            onPress={() => finish('/')}
+            feedback="opacity"
+            compact
+            accessibilityLabel={t.points.later}
+            testID="onboarding-later"
+          >
+            <Text style={styles.laterLink}>{t.points.later}</Text>
+          </PressableSurface>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -479,6 +684,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space['2xl'],
   },
   contentCenter: { justifyContent: 'center' },
+  /* Kaydırıcının içeriği ekranı doldurmuyorsa ortalanır, doluyorsa uzayıp kaydırılır. `flex: 1`
+     OLMAZ: kaydırıcı kabında yüksekliği ekrana çivilerdi ve uzun içerik kırpılırdı. */
+  contentGrow: { flexGrow: 1 },
   // v3:280 — üstbaşlık kademesi token'ın kendisi (10/700/.18em), renk terracotta.
   kicker: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
@@ -493,11 +701,16 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text['h1-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,
   },
-  // v3:293/307 — 400 13,5/1,55; login gövdesiyle aynı çeviri (`control` × `lead` oranı).
+  /* ~~v3:293/307 — 400 13,5 (`control`)~~ → **`body` (15)**, kullanıcı bulgusu 13.08.
+     Bu satır her adımın ASIL ANLATIMI (yeri neden soruyoruz · iki teslimat yolu · puan nasıl
+     birikir) ve `control` bir DÜĞME/SÜZGEÇ durağıdır — kitin kendi sözlüğünde "süzgeç ve sıralama
+     düğmesi" diye yazılı. Okunacak metni oraya koymak 21.38'in kapattığı arıza sınıfının aynısı:
+     müşterinin karar için okuduğu metin 14'ün altına inmez. Kartın gövdesi satır açıklamalarından
+     (`body-sm`, 14) bir kademe yukarıda durur — anlatım sırası boyutla da okunsun. */
   body: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.control,
-    lineHeight: theme.text.control * theme.text['lead--line-height'],
+    fontSize: theme.text.body,
+    lineHeight: theme.text.body * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
   /* Yazı boyutu örneği — ürün detayının kesiti. Her satır gerçek ekranın kendi durağını kullanır
@@ -598,6 +811,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     minHeight: ZIP_NOTE_HEIGHT,
     gap: theme.space.xs,
   },
+  /* İskeletin iki çubuğu arasındaki boşluk, gelecek metnin iki satırı arasındakiyle AYNI durak
+     (`zipAnswer.gap`): bekleyiş ile cevap aynı ritimde durur, geçişte hiçbir şey oynamaz. */
+  zipSkeleton: {
+    gap: theme.space.xs,
+    paddingTop: theme.space['2xs'],
+  },
   zipPlace: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
@@ -629,10 +848,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     gap: theme.space['2xs'],
   },
-  // v3:315 — 700 13,5 (`control` çifti birebir).
+  /* ~~v3:315 — 700 13,5 (`control`)~~ → **`body` (15)**, kullanıcı bulgusu 13.08.
+     TERS KADEME ÖLÇÜLDÜ: 21.38 açıklamayı `helper`dan `body-sm`e (14) çıkarmış ama başlığa
+     dokunmamıştı — satır başlığı 13,5'te kalıp KENDİ AÇIKLAMASINDAN küçük görünüyordu. Kalın
+     olması farkı kapatmıyor; göz önce boyutu okur. Merdiven artık düz: başlık 15 · açıklama 14 ·
+     güvence 13. */
   payTitle: {
     fontFamily: theme.font.body[theme.text['control--font-weight']],
-    fontSize: theme.text.control,
+    fontSize: theme.text.body,
     color: theme.colors.ink,
   },
   /* ~~v3:315 — 400 12/1,45 (`helper`)~~ → **`body-sm` (14)**, kullanıcı bulgusu 11.08.
@@ -679,6 +902,48 @@ const styles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'space-between',
   },
   footerSide: { flex: 1 },
+  /* Grup kartı — kendi başlığını, cümlesini ve iki satırını taşır. Kabın kendi dolgusu YOK:
+     adımın dış boşluğu zaten `content`ten geliyor; ikinci bir çerçeve, kart dilini kutu diline
+     çevirirdi (v3'ün öteki adımları da çerçevesiz). Yalnız dikey ritmi tutar. */
+  groupCard: { gap: theme.space['2xl'] },
+  /* Puan başlığının iki satırı — oran ve en güçlü sayı; güvence kutusunun içinde, ikon sağında. */
+  pointsHeadline: { flex: 1, gap: theme.space['2xs'] },
+  /* Oran satırı `body` (15): ekranın SÖYLEDİĞİ tek sayı bu ("500 puan = 5,00 € kupon") ve
+     müşterinin aklında kalması istenen şey o. Kutunun içindeki en yüksek kademe olması bilinçli. */
+  pointsRate: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text.body,
+    color: theme.colors['olive-dark'],
+  },
+  /* `secureText` YENİDEN KULLANILAMADI ve sebebi ölçüldü (cihazda, 12.08): o stil `flex: 1`
+     taşıyor — güvence kutusunun SATIR düzeninde doğru (metin ikonun yanında kalan genişliği alır),
+     ama burada kutunun içinde DİKEY bir yığın var ve dikeyde `flex: 1` yüksekliği içerikten değil
+     kaptan almaya çalışıyor. Kap da içeriğe göre büyüdüğü için sonuç sıfır yükseklik: satır
+     çiziliyor ama GÖRÜNMÜYORDU (uiautomator dökümünde metin düğümü hiç yoktu). Aynı görünen iki
+     kademe için ayrı durak açmak değil, YANLIŞ EKSENİN stilini almamak söz konusu. */
+  /* Kural okunamadığında söylenen cümle — içerik kademesinde (14), yardımcı ipucu kademesinde değil. */
+  pointsUnavailable: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  /* Vurgu satırı `body-sm` (14): oranın bir kademe altında ama içerik sınırının üstünde — bu bir
+     güvence cümlesi değil, ekranın ikinci iddiası ("bir arkadaş 5,00 € kazandırır"). */
+  pointsHighlight: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors['olive-dark'],
+  },
+  /* "Sonra bakarım" — ana düğmenin ALTINDA ve sessiz: bir reddetme değil, ertelenmiş bir evet. */
+  laterLink: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text.badge,
+    color: theme.colors.muted,
+    textAlign: 'center',
+    paddingVertical: theme.space.sm,
+  },
   backLink: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
     fontSize: theme.text.badge,

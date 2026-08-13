@@ -1,7 +1,7 @@
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AuthErrorKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -97,6 +97,26 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
     return () => clearTimeout(timer);
   }, [cooldownSec]);
 
+  /**
+   * **Ekranı kapat — geri gidilecek yer YOKSA vitrine düş** (cihazda ölçüldü 12.08).
+   *
+   * ── ÖLÇÜLEN ARIZA ───────────────────────────────────────────────────────────
+   * Bu ekran kendini `router.back()` ile kapatıyordu ve bu, "birisi beni ÜSTÜNE itti" varsayımıdır.
+   * Onboarding'in yeni son adımı (12.08) giriş ekranına `replace` ile geliyor — yığında altında
+   * hiçbir şey yok. Sonuç cihazda görüldü: dev girişi başarılı oldu, ekran *"Doğrulandı — hoş
+   * geldiniz"* dedi ve ORADA ASILI KALDI; navigatör de `The action 'GO_BACK' was not handled by any
+   * navigator` uyarısını bastı. Aynı ölü kapı geri okundaki `‹` düğmesinde de vardı.
+   *
+   * ── NEDEN ÇARE BURADA, ONBOARDING'DE DEĞİL ──────────────────────────────────
+   * Onboarding'i `push`a çevirmek bu vakayı kapatırdı ama kuralı kapatmazdı: bir bildirimden ya da
+   * derin bağlantıdan doğrudan `/login`e düşen her yol aynı duvara çarpar. "Kendimi kapat" cümlesi,
+   * çağıranı olmadığında da bir anlam taşımalı — o anlam uygulamanın yaşadığı yerdir (vitrin).
+   */
+  const closeLogin = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }, [router]);
+
   useEffect(() => {
     if (stage !== 'done') return;
     // v3'ün `finishLogin` toast'ı: kapanan ekranın ARKASINDA görünür (host kökte) — giriş
@@ -114,7 +134,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
        oturum olayını gecikmeli işliyor, dönülen ekran o aralıkta "misafir" sanabiliyor. */
     void fetchMe()
       .then((result) => {
-        if (result.error !== null) return router.back();
+        if (result.error !== null) return closeLogin();
         publishMe(result.data);
         /* PERSONEL MÜŞTERİ SEKMESİNE DÖNMEZ (21.32): rolü olan kişi doğrudan operasyon kabuğuna
            gider — webin tek `/connexion` modelinin karşılığı. Künye sorusundan ÖNCE: ad/telefon
@@ -122,13 +142,13 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
         const operationsRoute = operationsHomeRoute(result.data);
         if (operationsRoute !== null) return router.replace(operationsRoute);
         if (hasProfileGap(result.data)) return router.replace(profileSetupRoute());
-        router.back();
+        closeLogin();
       })
       /* SESSİZ CATCH DEĞİL, AÇIK ÇARE (CLAUDE §1): okuma beklenmedik biçimde patlarsa müşteri
          doğrulanmış hâlde giriş ekranında ASILI kalırdı — künye sorusu yardımcı, giriş ise asıl
          iştir. Okunamayan profil "künyesi eksik" demek de değildir; ekran normal kapanır. */
-      .catch(() => router.back());
-  }, [stage, onVerified, router, t.verifiedToast]);
+      .catch(() => closeLogin());
+  }, [stage, onVerified, router, closeLogin, t.verifiedToast]);
 
   /**
    * Bekleme cezası TEK kaynaktan söylenir: saniye sayacı yalnız DÜĞME etiketinde işler
@@ -223,7 +243,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="login-back" />
+        <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" />
       </View>
       <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
         {/* Logo yükseklikten ölçülür (şablon: 52). Varlık ŞEFFAF PNG: kaynak jpg beyaz zeminliydi

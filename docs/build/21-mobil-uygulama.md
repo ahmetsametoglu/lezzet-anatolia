@@ -2131,6 +2131,138 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Sipariş sonrası paylaşım şeridi denenmedi** — gerçek sipariş açmayı gerektiriyor.
   **Gerçek `https://` bağlantısı yerelde sınanamaz** (`localhost` ilişkilendirilemez).
 
+- [~] (21.47) **PUAN ARTIK ANLATILIYOR — VE NATIVE'DE GERÇEKTEN YAZILIYOR** (kullanıcı kararı 12.08).
+  `touches: packages/types/src/contracts/points-api.schema.ts, packages/application/src/customer/points.ts,
+  apps/mobile-api/src/api/v1/{points,router}.ts, apps/mobile/src/{app/_layout.tsx,lib/api/points.ts,
+  lib/points,screens/{customer-kit/points-earn-*,onboarding,account,login}}`
+
+  **İSTEK:** onboarding'in SON adımı puan olsun; kazanılabilecek puan **paraya çevrilerek** söylensin;
+  detayını isteyene her yolun mantığı anlatılsın; hesap ekranında puanı kupona çevirdiği yerde
+  *"nasıl puan kazanırım"* bağlantısı olsun. *"Eğer sonra derse uygulamaya giriş yapsın."*
+
+  ── ÖNCE ÖLÇÜM: SÖYLEYECEĞİMİZ ŞEYİN YARISI DOĞRU DEĞİLDİ ───────────────────
+  Metni yazmadan önce motorun ne yazdığı ölçüldü. **Günlük giriş puanı native'de HİÇ yazılmıyordu**
+  (MB-50): `awardPoints(reason:'visit')`ın tek çağrı yeri `apps/web/lib/feedback/visit-actions.ts`
+  köprüsüydü. Onboarding o ödülü müşteriye söyleyecekti — yani açık kapanmadan metin yazmak,
+  ekranı motordan cömert yapmaktı (29.07 denetiminin arıza sınıfı). Açık bu görevde kapandı.
+
+  ── SÖZLEŞME: KURAL KİMLİKTEN AYRILDI ───────────────────────────────────────
+  Onboarding'i gören kişi MİSAFİR: bakiyesi yok, `/me`ye gidemez. Yeni `PointsRulesSchema`
+  (`redeem` + `centValue` + `earnWays`) kimliksiz okunur (`GET /api/v1/points/rules`, `bearerAuth`
+  ÖNCESİ); `MePointsCardSchema` onu `merge` ile alır ve üstüne bakiye/kod/adres bindirir — iki
+  okuma **kopya değil**, kart kural kapısını çağırıyor. `MePointsEarnWayKeyEnum` üçten **altıya**
+  genişledi (`referral · neighbor · review · visit · feedback_purchase · feedback_candidate`);
+  `order` DIŞARIDA çünkü sipariş puanı kaldırıldı (karar 1) — kazanılamayan yolu listelemek
+  motorun vermeyeceği bir sözdür. Genişleme hesap ekranını DERLEMEDE kırdı, tasarlandığı gibi.
+
+  ── ÜÇ YÜZEY, TEK ANLATIM ───────────────────────────────────────────────────
+  `screens/customer-kit/points-earn-list.tsx` + kendi sözlüğü: onboarding kartları · hesap kartının
+  boş hâli · hesaptan açılan çekmece. Üç ayrı metin kümesi, bir ödül değiştiğinde ikisinin
+  unutulduğu üç ayrı hikâye olurdu. Para karşılığı `points × centValue` ile TÜRETİLİR, metne
+  gömülmez. **Onboarding sayı UYDURMAZ:** kural okunamazsa satırlar hiç çizilmez ve nedeni yazılır.
+
+  ── ONBOARDING'DE LİSTE DEĞİL, KART KART (kullanıcı kararı 13.08) ───────────
+  İlk kurgu altı yolu tek adımda açılır bir liste yapıyordu. Kullanıcı cihazda görüp eledi:
+  *"listeyi beğendim, fakat bu liste HESAP SAYFASINDAN açılmak için uygun. Bilgi verme stilimiz
+  bu şekilde liste değil — onboarding KART KART bilgi veriyor."* Puan bölümü **dört karta** bölündü:
+  giriş kartı (oran + en güçlü sayı) → **Çağırdıkça** (500 + 100) → **Anlattıkça** (20 + 5) →
+  **Uğradıkça** (10 + 2). Gruplar "kaç puan"a göre değil **"ne yaparak"**a göre: müşteri kendini
+  bir gruba yerleştirebiliyor ("ben alışveriş yapmam ama uğrarım"). Sıra ödülün büyüklüğüne göre —
+  kart kart ilerleyen müşteri en çok kazandıran yolu ilk görür.
+
+  **Ana düğme soruyu KENDİSİ soruyor:** giriş kartında *"Nasıl puan kazanılır?"* yazıyor ve cevabı
+  bir sonraki kart veriyor; merak açılır bir listeye değil akışın kendisine bağlanıyor.
+  **Hesap teklifi ancak SON kartta** (kullanıcı: *"en son adıma gelirse puan sisteminde, o zaman
+  hesap açmayı öneririz"*) — puanı anlatmadan hesap istemek, sebebini söylemeden kapıda kimlik
+  sormaktı. *"Sonra bakarım"* puan bölümünün her kartında duruyor ve doğrudan vitrine sokuyor.
+
+  **Adım sayısı SABİT DEĞİL, karttan türer:** ayarı okunamayan yol listeye girmiyor, yani bir grup
+  boş kalabilir — boş grubun kartı da açılmıyor ve noktalar onu saymıyor. Var olmayan bir kartı
+  saymak, müşteriye tamamlanamayacak bir ilerleme göstermek olurdu.
+
+  **"Bol puan" paraya çevrildi ama VAAT edilmedi:** ekran *"ayda şu kadar kazanırsınız"* demiyor —
+  o bir davranış varsayımıdır. Söylenen şey oran (`500 puan = 5,00 € kupon`) ve her yolun kendi
+  para karşılığı; en güçlü sayı ayrıca anılıyor (*"bir arkadaşınızı getirmek tek başına 5,00 €"*).
+
+  **11.08'in kararı GÜNCELLENDİ:** o gün *"onboarding'de tek cümle, liste yok, sayı yok"* denmişti
+  (`BACKLOG-musteri §4` karar 2h). Yeni kurgu itirazı karşılıyor — ekranda özet + tek sayı, altı
+  satırlık döküm yalnız İSTEYENE açılıyor.
+
+  ── CİHAZ TURU: ÜÇ ARIZA ÖLÇÜLDÜ VE DÜZELTİLDİ ──────────────────────────────
+  1. **Vurgu satırı çizilmiyordu.** `secureText` stili `flex: 1` taşıyor; güvence kutusunun SATIR
+     düzeninde doğru, ama yeni DİKEY yığında yüksekliği sıfıra düşürüyor. Metin render ediliyor
+     ama görünmüyordu — `uiautomator` dökümünde düğüm hiç yoktu. Kendi durağı açıldı.
+  2. **Giriş ekranı ÖLÜ KAPI ile açılıyordu.** Onboarding `/login`e `replace` ile geliyor, oysa o
+     ekran kendini `router.back()` ile kapatıyordu — yığında altında hiçbir şey yok. Cihazda
+     görüldü: dev girişi başarılı oldu, ekran *"Doğrulandı — hoş geldiniz"*te ASILI kaldı,
+     navigatör `The action 'GO_BACK' was not handled by any navigator` bastı. Çare onboarding'de
+     değil giriş ekranında (`closeLogin`): çağıranı olmayan her yol — bildirim, derin bağlantı —
+     aynı duvara çarpardı.
+  3. **Giriş puanı hâlâ yazılmıyordu** — ilk iki tetikleyici (ilk kare · öne gelme) müşteri
+     MİSAFİRKEN koşuyordu, giriş sonrası hiçbir şey tetiklemiyordu. Yani uygulamayı indirip hesap
+     açan yeni müşteri ilk gününün puanını hiç alamıyordu. Üçüncü tetikleyici eklendi
+     (`onAuthStateChange`). **Ölçüldü:** `points_entry`de `visit` satırı doğdu, bakiye 18 → 28.
+  4. **Çekmecede iki başlık üst üste bindi** (kabuğun başlığı + listenin kendi başlığı). Başlık
+     bileşenden söküldü; başlık her zaman ÇAĞIRANIN işi.
+
+  **Doğrulama:** `pnpm typecheck` (mobil · mobile-api · types · application yeşil; `apps/web`in
+  düşen 12 satırı BAŞKA ŞERİDİN commit edilmemiş dosyaları) · `pnpm lint` temiz · `pnpm knip`
+  yeni bulgu yok · `pnpm test:unit` **1358 test** yeşil · mobil jest **599 test** yeşil ·
+  `GET /api/v1/points/rules` kimliksiz ölçüldü (altı yol, gerçek ayar değerleriyle) ·
+  **cihazda ölçüldü** (OPPO CPH1907): onboarding altı adım, puan ekranı, açılır liste, iki çıkış,
+  giriş → vitrin, `visit` satırı, hesap çekmecesi.
+
+  ── AYNI TURDA KAPANAN ÜÇ İŞ DAHA (kullanıcı istekleri 13.08) ───────────────
+  **1 · POSTA KODU GEREKÇEDEN SONRA.** Adım sırası `dil → yazı boyutu → **teslimat** → posta kodu →
+  ödeme` oldu: *"posta kodunu istediğimiz sayfa, neden istediğimizi anlattığımız sayfadan sonra
+  olmalı."* Sebebini bilmeyen kişi kişisel veri alanını boş geçiyor.
+
+  **2 · CEVAP BEKLENİRKEN SKELETON.** Posta kodu çözümü uçuştayken mesaj alanı boş duruyordu; artık
+  cevabın ŞEKLİNİ taklit eden bir iskelet var (kısa satır = yer adı, uzun satır = teslimat cümlesi),
+  yani cevap gelince ekran yeniden düzenlenmiyor. Aynı alan vitrinin teslimat çekmecesinde de var,
+  iskelet oraya da kondu. **Ölçülmüş tuzak:** bekleyiş ilk kurguda `place === null`dan TÜRETİLİYORDU
+  ve o hâl "istek düştü"yü de kapsıyor — ağ kesilse iskelet sonsuza kadar dönerdi. Bayrak artık
+  isteğin kendisinden geliyor (`usePlaceLookup`, `finally` ile sönüyor); `usePlaceResolution` onun
+  üstünde ince bir sarmalayıcı, sekiz çağrı yeri değişmedi.
+
+  **3 · METİN DENETİMİ — üç olgusal yanlış (üç dilde birden).**
+  · *"Yaptığınız her şey puan kazandırır — **alışveriş**…"* → alışveriş puan KAZANDIRMIYOR (sipariş
+    puanı 11.08'de kaldırıldı). Ekran ilk cümlesinde motorun vermediği ödülü vaat ediyordu.
+  · *"Posta kodunuza göre size ulaşabilen ürünleri gösteriyoruz — katalog yere göre değişir."* →
+    katalog SÜZÜLMÜYOR (21.20 kararı, `catalog-screen.tsx`); posta kodu yalnız CÜMLEYİ değiştirir.
+  · *"60 € üzeri kargo ücretsiz"* → `free_shipping_threshold_cents` KAPSAMLI: global 60 € · ülke
+    90 € · b2b 250 €. Sabit sayı Alman müşteriye tutmayacak bir sözdü; sayı metinden çıkarıldı,
+    gerçek tutar sepette söyleniyor. (Rota teslimatının ücretsizliği DOĞRU — `resolveShippingFee`
+    rotada `feeCents: 0` dönüyor, o cümle korundu.)
+  Ayrıca dilbilgisi: *"hem bize hem sonraki"* → **hem de** · *"getirmek tek başına 5,00 €"* fiyat
+  gibi okunuyordu · *"İkisi de günlük"* yanlıştı (keşif oyu kart başına) · *"Size nasıl
+  ulaştıralım?"* nesnesizdi.
+
+  **4 · TERS YAZI KADEMESİ.** Kullanıcı *"fontlar küçük gibi, sanki daha önce üzerinde çalıştığımız
+  konu"* dedi ve haklı çıktı: satır başlıkları `control` (13,5), açıklamaları `body-sm` (14) idi —
+  **başlık kendi açıklamasından küçük**. `control` bir DÜĞME/SÜZGEÇ durağıdır, okunacak metnin
+  değil. Aynı ters kademe teslimat/ödeme satırlarında da vardı (21.38 açıklamayı 14'e çıkarmış,
+  başlığa dokunmamış). Yeni merdiven: **başlık ve rozet 15 · açıklama ve koşul 14 · güvence 13.**
+  Sıklık satırı özellikle yükseldi — orada yazan şey süsleme değil ödülün KOŞULU ("en fazla 3").
+
+  **5 · KOMŞU SINIRI SÖYLENİYOR.** *"Her komşu için 1,00 €"* iki şeyi gizliyordu: davet TEK BİR
+  SEFERE ait ve kullanım hakkı SINIRLI. Ölçüldü (`0044_neighbor_invite.sql`): `max_uses` varsayılanı
+  **3**. Sayı ekrana gömülmedi — `NEIGHBOR_INVITE_MAX_USES` `domain-core`da adlı bir sabit, davet
+  açılırken AÇIKÇA o değerle yazılıyor ve aynı sabit kural ucundan ekrana geliyor.
+
+  **Kalan (`BEKLEYEN(21.47)`):** kazanma yollarının BAĞLAM mesajları (karar 2h'nin tablosu —
+  teslimat sonrası bant, keşif kartı bildirimi) yazılmadı; `feedbackPointsReason` keşifte metin
+  varsa hâlâ `review` (20) döndürüyor (karar 6 — bugün keşifte metin alanı YOK, gizli tuzak).
+
+- [ ] (21.48) **CİHAZ TURU — MİSAFİR VE MÜŞTERİ YÜZEYİ, KAPSAMLI** (kullanıcı kararı 12.08).
+  `touches: docs/uygulama/05-cihaz-turu-musteri.md, apps/mobile/src`
+
+  Senaryo ve kapsam defteri: `docs/uygulama/05-cihaz-turu-musteri.md`. Gerekçe ölçüldü — cihaz
+  testlerimiz bugüne dek NOKTASAL yapıldı (her tur bir arıza şüphesiyle başladı), hangi ekranın
+  cihazda hiç açılmadığını söyleyen kayıt YOKTU. Kapsam yalnız misafir + müşteri (kullanıcı:
+  *"operasyon kısmına yetiştirme"*). Her ekranda İKİ soru: çalışıyor mu · anlaşılıyor mu.
+  **Durum:** A1–A2 ve A6–A7 ile B1–B2, B5–B6 geçildi (görev 21.47'nin turu); geri kalanı açık.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

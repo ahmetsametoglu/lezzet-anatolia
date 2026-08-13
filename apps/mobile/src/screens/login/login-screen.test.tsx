@@ -12,7 +12,10 @@ import { LoginScreen } from './login-screen';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-const mockRouter = { back: jest.fn(), push: jest.fn(), replace: jest.fn() };
+/* `canGoBack` VARSAYILAN true: bu ekranın olağan girişi "üstüne itilmek"tir (sepet, hesap, keşif
+   duvarı). Yığın boşken ne olduğu ayrı bir testin konusu — cihazda ölçülmüş arıza oydu (12.08,
+   onboarding'in `replace` ile gelen yeni son adımı) ve çaresi `closeLogin`in kendisi. */
+const mockRouter = { back: jest.fn(), push: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => true) };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 
 const mockSetSession = jest.fn(async () => ({ error: null }));

@@ -12,6 +12,7 @@ import { ToastHost } from '@/components/ui/toast-host';
 import { initAppLocale } from '@/lib/i18n/app-locale';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
 import { PaymentProvider } from '@/lib/payment/payment-provider';
+import { useVisitPoints } from '@/lib/points/use-visit-points.hook';
 import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
 import { ensureFreshInstall } from '@/lib/storage/device-store';
 import { appFontAssets } from '@/theme/fonts';
@@ -89,6 +90,10 @@ export default function RootLayout() {
   useEffect(() => {
     void initAppLocale().then(() => setLocaleReady(true));
   }, []);
+
+  /* GÜNLÜK GİRİŞ PUANI (MB-50) — bir KAPI DEĞİL, sessiz bir yan etki: ilk karede ve uygulama her
+     öne geldiğinde tetiklenir, sonucu beklenmez. Kökte olmasının gerekçesi hook'un künyesinde. */
+  useVisitPoints();
 
   /* KÜNYE KAPISI BURADA DEĞİL (kullanıcı kararı 10.08): kökte dururken açık oturumla uygulamayı
      her açanın önüne çıkıyordu. Soru artık anlamlı olduğu üç anda soruluyor — giriş, OAuth

@@ -40,14 +40,32 @@ export const MeCouponSchema = DiscountSchema.pick({
  * çeviri gerektirirdi (enum künyesinin `ProductFeedback.context` ile hizalanma gerekçesi birebir
  * aynı).
  *
- * Küme `.extract` ile DARALTILMIŞ, tüm kazanım sebepleri değil: buradakiler müşterinin **kendi
- * iradesiyle başlatabileceği** yollar. Dışarıda kalanlar bilinçli — `order` ve
- * `feedback_purchase` bir satın almanın peşinden gelir (kazanma yolu değil, alışverişin yan ödülü)
- * ve `visit` uygulamayı açmakla kendiliğinden yazılır, yani gösterilecek bir "yap" yok. Ekran bu
- * anahtar kümesi üzerinde TAM bir metin haritası kurabilir; enum genişlerse derleme kırılır ve
- * eksik metin üretimde değil, o an fark edilir.
+ * ── KÜME ÜÇTEN ALTIYA GENİŞLEDİ (kullanıcı kararı 12.08) ────────────────────
+ * Eskiden `.extract(['referral','review','feedback_candidate'])`ti ve ölçütü *"müşterinin kendi
+ * iradesiyle başlatabileceği yollar"*dı — çünkü tek tüketicisi hesap kartıydı ve o kartın her
+ * satırında bir düğme vardı. Şimdi ikinci bir tüketici doğdu: **"nasıl puan kazanırım" anlatımı**
+ * (onboarding'in son adımı + hesaptaki başvuru sayfası), ve orada soru "ne yapabilirim" değil
+ * **"bu sistem beni neyle ödüllendiriyor"**dur. `visit` kendiliğinden yazılır ama müşterinin
+ * bilmesi gereken en düzenli gelirdir; `feedback_purchase` ve `neighbor` de gerçek ödüllerdir.
+ * Eksik anlatmak, kazandığı puanın nereden geldiğini bilmeyen bir müşteri bırakırdı.
+ *
+ * **`order` DIŞARIDA ve bu bir eksiklik değil:** sipariş puanı kaldırıldı (kullanıcı kararı 11.08,
+ * `BACKLOG-musteri §4` karar 1) — sebep enum'unda geçmişi okuyabilmek için duruyor ama artık
+ * yazılmıyor, yani bir "kazanma yolu" değil. Kazanılamayan bir yolu listelemek, motorun vermeyeceği
+ * bir sözü ekrana yazmaktır.
+ *
+ * Ekran bu anahtar kümesi üzerinde TAM bir metin haritası kurar; enum genişlerse derleme kırılır ve
+ * eksik metin üretimde değil, o an fark edilir. **Düğme haritası ise TAM DEĞİL** (`Partial`):
+ * `visit`/`feedback_purchase` müşterinin gidebileceği bir yere işaret etmez.
  */
-export const MePointsEarnWayKeyEnum = PointsReasonEnum.extract(['referral', 'review', 'feedback_candidate']);
+export const MePointsEarnWayKeyEnum = PointsReasonEnum.extract([
+  'referral',
+  'neighbor',
+  'review',
+  'feedback_purchase',
+  'feedback_candidate',
+  'visit',
+]);
 export type MePointsEarnWayKey = z.infer<typeof MePointsEarnWayKeyEnum>;
 
 /**
@@ -71,6 +89,44 @@ export const MePointsEarnWaySchema = z.object({
 });
 
 /**
+ * **PROGRAMIN KURALLARI — kimliksiz okunabilir** (`GET /api/v1/points/rules`, kullanıcı kararı 12.08).
+ *
+ * Onboarding'in son adımı puanı anlatıyor ve o ekranı gören kişi henüz MİSAFİR: hesabı yok, bakiyesi
+ * yok, `/me/points`e hiç gidemez. Ama ekranın söylediği her sayı yine motorun uyguladığı sayı olmak
+ * zorunda — sabit gömmek, ayarlar değiştiği gün müşteriye gerçekleşmeyecek bir vaat vermek olurdu
+ * (29.07 denetiminin kapattığı arıza sınıfı, `MePointsCardSchema` künyesindeki aynı gerekçe).
+ *
+ * Bu yüzden kural KİMLİKTEN AYRILDI: burada "program neyi ne kadar ödüllendirir" var, kartta ise
+ * onun üstüne "bu müşterinin bakiyesi ve kodu" biniyor (`MePointsCardSchema` bunu `merge` ile alır —
+ * iki şema aynı alanları iki kez saymaz).
+ *
+ * `centValue` AYRICA taşınıyor, `valueCents / minimumPoints` diye türetilmiyor: bölme tam sayı
+ * vermeyebilir ve ekran "yorum yazınca 0,20 €" cümlesini tek tek yollar için kurar. Türetme, eşik
+ * bir gün kuruşa bölünemeyen bir sayı olduğunda sessizce yanlış para basardı.
+ */
+export const PointsRulesSchema = z.object({
+  redeem: z.object({
+    minimumPoints: z.number().int(),
+    valueCents: z.number().int(),
+  }),
+  /** Bir puanın CENT karşılığı — bir yolun para değeri `points × centValue`. */
+  centValue: z.number().int().positive(),
+  /**
+   * **Bir komşu davetinden kaç komşu ödül doğurabilir** (`NEIGHBOR_INVITE_MAX_USES`).
+   *
+   * Taşınmasının sebebi ölçülmüş bir yanlış metin (kullanıcı bulgusu 13.08): ekran *"her komşu için
+   * 1,00 €"* diyordu ve iki şeyi birden gizliyordu — davet **tek bir sefere** ait (o günün
+   * teslimatı), ve kullanım hakkı **sınırlı**. Sınırsız ve süresiz bir ödül gibi okunuyordu.
+   *
+   * Sayı ekrana GÖMÜLMEZ: sınır bir gün değişirse (kolon 1–20 arası kabul ediyor) müşteriye
+   * söylenen ile motorun uyguladığı ayrışırdı — bu şemanın baştan sona kurduğu ilkenin aynısı.
+   */
+  neighborMaxUses: z.number().int().positive(),
+  /** Puan kazanma yolları — sıra sunucudan gelir (bkz. `MePointsEarnWaySchema`). */
+  earnWays: z.array(MePointsEarnWaySchema),
+});
+
+/**
  * Puan kartının gövdesi — bakiye + çevirme kuralı.
  *
  * **Eşik AYARDAN gelir, tele sabit gömülmez** (29.07 denetimi): ekranın söylediği eşik ile motorun
@@ -87,11 +143,7 @@ export const MePointsEarnWaySchema = z.object({
  * gerekirdi — ve iki koşuldan biri bir gün ötekinden ayrılırdı (kuponların `read.ts` künyesindeki
  * gerekçenin aynısı: tek koşul, tek karar).
  */
-export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).extend({
-  redeem: z.object({
-    minimumPoints: z.number().int(),
-    valueCents: z.number().int(),
-  }),
+export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).merge(PointsRulesSchema).extend({
   /**
    * Müşterinin davet kodu — **kart çizildiyse GARANTİLİ** (kapı yoksa üretir). `/me`nin aynı adlı
    * alanı profil satırının HAM aynasıdır ve boş olabilir; burada kod bir kimlik künyesi değil,
@@ -110,8 +162,6 @@ export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).ex
    * sessizce 404'e düşen bir bağlantı taşır. `null` yalnız kod da `null`ken.
    */
   inviteUrl: z.string().nullable(),
-  /** Puan kazanma yolları — sıra sunucudan gelir (bkz. `MePointsEarnWaySchema`). */
-  earnWays: z.array(MePointsEarnWaySchema),
 });
 
 /**

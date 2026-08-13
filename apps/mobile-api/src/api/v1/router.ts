@@ -19,7 +19,7 @@ import { orders } from './orders';
 import { packages } from './packages';
 import { payments } from './payments';
 import { places } from './places';
-import { points } from './points';
+import { points, pointsRules } from './points';
 import { preferences } from './preferences';
 import { recipes } from './recipes';
 import { tickets } from './tickets';
@@ -82,6 +82,11 @@ v1.route('/', b2bPublic);
 // (keşif turunun `optionalCustomerId` zinciri): kimlik yalnız cevabı zenginleştirir, kapıyı
 // kapatmaz — kendi bağlantısını açan müşteri "bu senin bağlantın" cevabını alır.
 v1.route('/', invite);
+// Puan programının KURALLARI da açık kümededir (kullanıcı kararı 12.08): onboarding'in son adımı
+// programı anlatıyor ve o ekranı gören kişi henüz misafir — hesabı yok. Taşınan şey kişisel değil
+// PROGRAM: kaç puan ne eder, kupon eşiği kaç. Kimliğe bağlı ne varsa (bakiye, davet kodu, kupon)
+// `bearerAuth`ın arkasındaki `/me/points`te kalıyor; ayrım künyesi `points.ts`te.
+v1.route('/', pointsRules);
 
 v1.use('*', bearerAuth);
 
