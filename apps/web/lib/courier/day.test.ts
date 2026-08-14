@@ -3,7 +3,7 @@ import {
   AccountService, AddressService, CategoryService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { listCourierDay, markUndelivered, type CourierStop } from './day';
 import { recordOrderPayment } from '../money/order-payment';
 import { transitionOrder } from '../order/transition';
@@ -76,10 +76,10 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Hareketin anahtarı hesap; sipariş silinince `order_id` `set null` ile buharlaşır (denetim R1).
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
-  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  await mustDelete(db, 'address', (q) => q.eq('id', addressId));
+  // Sipariş, rezervasyon ve adres AYRICA silinmez: üçü de `purgeTestData`'nın bildiği bağlar
+  // (sipariş `profileIds`ten, rezervasyon `productIds`ten, adres profil cascade'inden). Elle
+  // yazılan bu satırlar teardown'ı öldürüyordu — `beforeAll` düşünce kimlik `undefined` kalıyor,
+  // uuid hatasıyla fırlıyor ve purge HİÇ çağrılmıyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

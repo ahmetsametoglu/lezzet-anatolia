@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeliveryZoneService, ZoneNoticeService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { zoneAvailableJob } from './zone-available';
 
 /**
@@ -35,8 +35,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'zone_notice', (q) => q.in('postal_code', [coveredCode, uncoveredCode]));
-  await purgeTestData(db, { warehouseIds: [warehouseId] });
+  await purgeTestData(db, {
+    zoneNoticePostalCodes: [coveredCode, uncoveredCode],
+    warehouseIds: [warehouseId],
+  });
 });
 
 describe('zone_available', () => {

@@ -236,16 +236,11 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Kurulum yarıda kaldıysa (kısıt ihlali gibi) kimlikler BOŞ kalır; boş bir kimlikle silmeye
-  // çalışmak "invalid input syntax for uuid" fırlatır ve ASIL hatayı gizler — teardown'ın hatası
-  // kurulumun hatasının üstüne yazılmamalı.
-  const known = [courierId, otherCourierId].filter(Boolean);
-  // Kapanış kaydı PROFİLDEN ÖNCE: `courier_day_close.courier_id` `restrict` ile bağlı ve Supabase
-  // `delete()` hatayı fırlatmaz döndürür — bakılmazsa teardown sessizce yarım kalırdı (CLAUDE §4b).
-  if (known.length > 0) await mustDelete(db, 'courier_day_close', (q) => q.in('courier_id', known));
-  if (customerId) await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
-  if (variantId) await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  if (addressId) await mustDelete(db, 'address', (q) => q.eq('id', addressId));
+  // Kapanış, sipariş, rezervasyon ve adres AYRICA silinmez: dördü de `purgeTestData`'nın bildiği
+  // bağlar ve dördünün de kimliği `profileIds`/`productIds` içinde. Buradaki `if (…)` korumaları
+  // doğru bir tehlikeyi görmüştü — kurulum yarıda kalınca boş kimlikle silme "invalid input syntax
+  // for uuid" fırlatır — ama kalkanı yanlış yere koyuyordu: doğru cevap silmeyi kimliğin BİLİNDİĞİ
+  // yere, purge'e bırakmak (`cleanup.ts`).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

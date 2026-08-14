@@ -54,7 +54,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  // Sipariş AYRICA silinmez: `purgeTestData` onu `profileIds`ten buluyor. Elle yazılan bu satır
+  // teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

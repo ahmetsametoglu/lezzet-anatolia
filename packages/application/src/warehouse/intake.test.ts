@@ -57,7 +57,9 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  // Partiler AYRICA silinmez: `purgeTestData` onları `productIds`ten buluyor (§1). Elle yazılan bu
+  // satır teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi). `beforeEach`teki silme
+  // başka iş görür: testler arası izolasyon.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

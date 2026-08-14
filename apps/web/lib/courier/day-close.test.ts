@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService,
   UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
 import { markUndelivered } from './day';
@@ -69,10 +69,9 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Hareketin anahtarı hesap; sipariş silinince `order_id` `set null` ile buharlaşır (denetim R1).
-  await mustDelete(db, 'courier_day_close', (q) => q.eq('courier_id', courierId));
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
-  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  // Gün kapanışı, sipariş ve rezervasyon AYRICA silinmez: üçü de `purgeTestData`'nın bildiği
+  // bağlar (ilk ikisi `profileIds`ten — kurye de listede —, rezervasyon `productIds`ten). Elle
+  // yazılan bu satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

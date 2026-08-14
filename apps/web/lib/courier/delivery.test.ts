@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { transitionOrder } from '../order/transition';
@@ -68,10 +68,10 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş ÖNCE gider ama hareketin anahtarı hesaptır: `money_movement.order_id` `set null`'dur,
-  // sipariş silinince hareket siparişten bulunamaz olur (denetim R1). Hesap → `purgeTestData`.
-  for (const id of [customerId, b2bCustomerId]) await mustDelete(db, 'order', (q) => q.eq('customer_id', id));
-  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  // Sipariş ve rezervasyon AYRICA silinmez: ikisi de `purgeTestData`'nın bildiği bağlar (sipariş
+  // `profileIds`ten, rezervasyon `productIds`ten) ve hareketin anahtarı zaten hesaptır
+  // (`money_movement.order_id` `set null` — denetim R1). Elle yazılan bu satırlar teardown'ı
+  // öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

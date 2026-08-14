@@ -84,8 +84,10 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
-  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  // Sipariş ve rezervasyon AYRICA silinmez: ikisi de `purgeTestData`'nın bildiği bağlar (sipariş
+  // `profileIds`ten, rezervasyon `productIds`ten). Elle yazılan bu satırlar teardown'ı öldürüyordu
+  // (ölçüldü 14.08, `cleanup.ts` künyesi). `beforeEach`teki silme başka iş görür: testler arası
+  // izolasyon, ve orada kimlikler zaten kurulmuş durumda.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

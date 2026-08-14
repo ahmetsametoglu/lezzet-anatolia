@@ -65,7 +65,9 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'feedback_request', (q) => q.eq('order_id', orderId));
+  // Davet satırı AYRICA silinmez: `feedback_request.order_id` FK'si `cascade` — sipariş gidince o
+  // da gidiyor (ölçüldü 14.08). Elle yazılan bu satır teardown'ı öldürüyordu; `beforeEach`teki
+  // silme başka iş görür: testler arası izolasyon.
   await purgeTestData(db, {
     orderIds: [orderId],
     productIds: [productId],

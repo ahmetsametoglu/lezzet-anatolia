@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
 import { closeOrder, deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
@@ -60,11 +60,9 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Silme hatayı FIRLATSIN (§4b): Supabase `delete()` hatayı döndürür, kimse bakmazsa teardown
-  // sessizce yarım kalır ve kirlilik haftalarca birikir.
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
-  // Rezervasyonun siparişe FK'sı yok (0007) — elle temizlenir, yoksa TTL süpürme testini yanıltır.
-  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  // Sipariş ve rezervasyon AYRICA silinmez: `purgeTestData` ikisini de biliyor — siparişi
+  // `profileIds`ten, rezervasyonu hem sipariş üzerinden (FK'sız bağ, 0007) hem `productIds`ten.
+  // Elle yazılan bu satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

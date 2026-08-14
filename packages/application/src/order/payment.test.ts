@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, MoneyMovementService, OrderService, ProductService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
 
 /**
@@ -55,7 +55,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  // Sipariş AYRICA silinmez: `purgeTestData` onu `profileIds`ten buluyor. Elle yazılan bu satır
+  // teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

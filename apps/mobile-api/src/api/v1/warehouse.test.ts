@@ -266,15 +266,12 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Kurulum yarıda kaldıysa kimlikler BOŞ kalır; boş bir kimlikle silmeye çalışmak "invalid input
-  // syntax for uuid" fırlatır ve ASIL hatayı gizler — teardown'ın hatası kurulumun hatasının
-  // üstüne yazılmamalı.
+  // Transfer, sipariş, rezervasyon ve adres AYRICA silinmez: dördü de `purgeTestData`'nın bildiği
+  // bağlar (transfer `warehouseIds`ten, sipariş `profileIds`ten, rezervasyon `productIds`ten, adres
+  // profil cascade'inden). Buradaki `if (…)` korumaları doğru bir tehlikeyi görmüştü — kurulum
+  // yarıda kalınca boş kimlikle silme "invalid input syntax for uuid" fırlatır — ama kalkanı yanlış
+  // yere koyuyordu: doğru cevap silmeyi kimliğin BİLİNDİĞİ yere, purge'e bırakmak (`cleanup.ts`).
   const warehouses = [warehouseId, otherWarehouseId].filter(Boolean);
-  // Transferler ÖNCE: satırları partiyi `restrict` ile tutuyor (application transfer testinin sırası).
-  if (warehouses.length > 0) await mustDelete(db, 'warehouse_transfer', (q) => q.in('from_warehouse_id', warehouses));
-  if (customerId) await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
-  if (variantId) await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  if (addressId) await mustDelete(db, 'address', (q) => q.eq('id', addressId));
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

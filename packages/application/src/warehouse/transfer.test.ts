@@ -62,8 +62,9 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'warehouse_transfer', (q) => q.eq('from_warehouse_id', fromWarehouseId));
-  await mustDelete(db, 'warehouse_transfer', (q) => q.eq('from_warehouse_id', toWarehouseId));
+  // Transferler AYRICA silinmez: `purgeTestData` onları `warehouseIds`ten iki uçtan da topluyor
+  // (§8). Elle yazılan bu satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // `beforeEach`teki silme başka iş görür: testler arası izolasyon.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
