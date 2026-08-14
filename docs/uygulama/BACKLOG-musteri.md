@@ -760,7 +760,7 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
 
 ## 6. Yerleşim ve tasarım
 
-- [ ] **MB-25 · Koleksiyon bandı uzun başlıkta sayaç satırını kırpıyor.** **Ölçüldü:** dört
+- [x] **MB-25 · Koleksiyon bandı uzun başlıkta sayaç satırını kırpıyor.** **Ölçüldü:** dört
   satırlık başlıkta *"23 çeşit ›"* satırının yalnız üst yarısı görünüyor, altını sonraki bant
   boyuyor. Sebep: sabit `132 dp` yükseklik (`screens/home/collection-band.tsx:115`) + alt başlıkta
   satır sınırı yok. **Dikkat:** yükseklik serbest bırakılamaz — üst katman dairesi
