@@ -2310,9 +2310,38 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **Doğrulama:** `tsc` iki pakette temiz; `jest src/screens/account src/screens/checkout
   src/lib/api` → 4 dosya / 17 test geçti; uç mount'u ölçüldü (`DELETE /api/v1/me` jetonsuz
-  **401** dönüyor — 404 dönseydi rota hiç bağlanmamış olurdu). **Silme cihazda ÇALIŞTIRILMADI**
-  ve bu bilinçli: tek yönlü bir işlem, test hesabını geri getiremezdik; cihaz doğrulaması
-  `(21.48)` turunda kullan-at bir hesapla yapılacak.
+  **401** dönüyor — 404 dönseydi rota hiç bağlanmamış olurdu).
+
+  **CİHAZ TURU YAPILDI (14.08, kullanıcı yönlendirmesi).** İlk yazımda *"tek yönlü işlem, test
+  hesabını geri getiremeyiz"* diye ertelenmişti; kullanıcı düzeltti — müşteri girişi hesabı
+  KENDİLİĞİNDEN açıyor, yani kullan-at hesap serbest. **Seed müşterisine
+  (`yamansehzade@gmail.com`, dev "Müşteri" düğmesi) DOKUNULMADI:** o hesabın siparişleri var ve
+  silinmesi `db:refresh` gerektirirdi — tur iki kullan-at adresle yürütüldü, ikisi de silindi,
+  curl ile açılan üçüncü deneme hesabı da temizlendi.
+  Ölçülenler: hesap kartının altında **"Hesabımı sil"** görünüyor · çekmece giden/kalan bloklarını
+  tasarlandığı gibi çiziyor · onaydan sonra uygulama misafire düşüyor · **silmeden önce alınmış
+  jeton sonrasında `401` dönüyor**, yani `auth.users` satırı gerçekten yok edilmiş.
+  **ÖlçülMEYEN sınır:** profil satırının silinmek yerine kimliksizleştiği ve sipariş/fatura
+  kayıtlarının kaldığı bu turda GÖRÜLMEDİ — test hesaplarının siparişi yoktu. O yarı motorun
+  sözleşmesi (`anonymize_customer`, 0037) ve web tarafında testli.
+
+  **CİHAZ TURUNUN İKİ BULGUSU — ikisi de tur olmadan görünmezdi:**
+
+  **(a) Onay düğmesi DOLGULU zeytin çizilmişti — kendi künyemizle çelişiyordu.** Çekmecenin
+  künyesi *"bu bir birincil eylem değil"* diyor, düğme ise ekranın en güçlü çağrısıydı; web'in
+  aynı diyaloğu bu kararı zaten vermiş (`delete-account.tsx`: *"dolgulu kırmızı bir düğme…
+  müşteriyi silmeye davet ederdi"*) ve dolgusuz kullanıyor. **Kitte yıkıcı onayın karşılığı
+  YOKTU** — `SecondaryButton` yalnız `sand` ve `olive` taşıyordu. Üçüncü ton (`terracotta`)
+  eklendi (ikinci bir düğme türü açmak yerine — CLAUDE §1), vazgeç sessiz metne indi. Cihazda
+  yeniden bakıldı: ikisi de dolgusuz, yıkıcı olan çerçeveli terracotta.
+
+  **(b) `OTP_TEST_CODE` mobile-api'nin env'inde YOKTU — native'de OTP gerektiren hiçbir akış
+  cihazda yürütülemiyordu.** Kök `.env` bunu taşıyor ve web/e2e kullanıyor; mobile-api kendi
+  `.env.local`ini okuyor (`src/env.ts`) ve orada yoktu. Belirti yanıltıcıydı: kod isteniyor,
+  ekran *"gönderdik"* diyor, girilen kod hep *"yanlış"* çıkıyor — çünkü gerçek rastgele kod
+  üretilip Resend'e veriliyor ve kimse okuyamıyor. Yerel dosyaya eklendi (git dışı) ve **kalıcı
+  çözüm `apps/mobile-api/.env.example`'a gerekçesiyle yazıldı**, yoksa bir sonraki kurulumda aynı
+  duvara çarpılırdı. Kapı üretimde kendini kapatıyor (`NODE_ENV === 'production'` → kod yok).
 
   **2 · SİPARİŞ ONAYINDAKİ PUAN SATIRI SİLİNDİ (MB-49).** Ekran *"✦ Teslimatta +{n} puan
   kazanacaksınız"* diyor ve sayıyı KENDİSİ hesaplıyordu (`POINTS_PER_EURO = 1`, `tutar ÷ 100`);

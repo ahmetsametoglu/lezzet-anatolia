@@ -1052,6 +1052,23 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
   MB-41 turunda görüldü: `app.config.ts` splash rengini taşıyor ama görsel varlıkların kendisi
   eski zeminde. İş bir tasarım kararı ister (hangi zemin, hangi boyut seti); şimdilik yalnız kayıt.
 
+- [x] **MB-65 · `OTP_TEST_CODE` mobile-api'nin env'inde YOKTU — native'de kimlik akışları cihazda
+  hiç yürütülemiyordu** (ölçüldü 14.08, cihaz turunda) → **KAPANDI, görev `(21.49)`.**
+  Kök `.env` deterministik dev kodunu taşıyor ve web/e2e kullanıyor; mobile-api kendi
+  `.env.local`ini okuyor (`src/env.ts`) ve orada yoktu. **Belirti yanıltıcı:** kod isteniyor,
+  ekran "gönderdik" diyor, girilen kod hep "yanlış" çıkıyor — çünkü gerçek rastgele kod üretilip
+  Resend'e veriliyor ve kimse okuyamıyor. Yani hata mesajı doğruyu söylüyordu ama sebebi
+  söylemiyordu. Yerel dosyaya eklendi; **kalıcı çözüm `apps/mobile-api/.env.example`'a gerekçesiyle
+  yazıldı** — yoksa bir sonraki kurulum aynı duvara çarpardı. Kapı üretimde kendini kapatıyor.
+
+- [x] **MB-64 · Kitte YIKICI onay düğmesinin karşılığı yoktu** (ölçüldü 14.08, cihaz turunda)
+  → **KAPANDI, görev `(21.49)`.** `SecondaryButton` yalnız `sand` ve `olive` taşıyordu; hesap
+  silme çekmecesi bu yüzden onayı `PrimaryButton` ile çizmişti — dolgulu zeytin, ekranın en güçlü
+  çağrısı — ve çekmecenin kendi künyesiyle (*"bu bir birincil eylem değil"*) çelişiyordu. Web'in
+  aynı diyaloğu kararı zaten vermişti. Üçüncü ton (`terracotta`) eklendi, ikinci bir düğme türü
+  açılmadı (CLAUDE §1); vazgeç sessiz metne indi. **Ders kayda değer:** çelişki kodu okurken
+  değil, ekrana bakarken görüldü — künye doğruydu, uygulaması değildi.
+
 - [ ] **MB-63 · Native uygulama HİÇ ölçülmüyor — analitikte karşılığı yok** (denetim ölçtü 10.08,
   kayıt bu listede yoktu). Ölçüm: `apps/mobile` ve `apps/mobile-api` içinde tek `recordEvent`
   çağrısı yok, `/api/v1`'de analitik ucu yok, şemada yüzey kolonu yok. Sonuç `analytics_daily`
@@ -1077,8 +1094,11 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
   hesabın uygulama içinden silinebilmesini istiyor ve e-posta yönlendirmesini kabul etmiyor.
   **Kapanış:** `DELETE /api/v1/me` (web'in çağırdığı kapının AYNISI — ikinci bir silme kuralı
   yazılmadı) + hesap kartının altında metin düğmesi + giden/kalan bloklarını aynı ağırlıkta çizen
-  onay çekmecesi. Silme cihazda ÇALIŞTIRILMADI (tek yönlü işlem, test hesabı geri gelmezdi);
-  cihaz doğrulaması `(21.48)` turunda kullan-at hesapla.
+  onay çekmecesi. **CİHAZDA UÇTAN UCA YÜRÜTÜLDÜ (14.08):** iki kullan-at hesap açıldı ve
+  silindi; silmeden önce alınmış jeton sonrasında `401` döndü, yani `auth.users` satırı gerçekten
+  yok edildi. Seed müşterisine dokunulmadı (siparişleri var, silinmesi `db:refresh` isterdi).
+  Tur iki bulgu çıkardı — MB-64 (kitte yıkıcı onay tonu yoktu) ve MB-65 (`OTP_TEST_CODE`
+  mobile-api env'inde yoktu).
 
 - [ ] **MB-40 · Talep maili kart genişliği açık** (`docs/talep/not-mobil-talep-maili-duzeltildi-
   genislik-acik.md`): arka-uç notun iki bulgusunu kapattı, üçüncüsünün ölçümünü mobile bıraktı ve

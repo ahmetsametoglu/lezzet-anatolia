@@ -4,9 +4,20 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PressableSurface } from './pressable-surface';
 
 /*
-  İKİNCİL DÜĞME — çerçeveli, dolgusuz. İki ton (tasarımın ikisini de kullandığı ayrım):
+  İKİNCİL DÜĞME — çerçeveli, dolgusuz. Üç ton:
   · `sand`  — nötr ikinci yol ("Alışverişe dön"): kum çerçeve, mürekkep metin
   · `olive` — olumlu ama ikincil ("Stok haberi ver"): zeytin çerçeve, koyu zeytin metin
+  · `terracotta` — YIKICI onay ("Hesabımı sil"): terracotta çerçeve ve metin
+
+  ── ÜÇÜNCÜ TON NEDEN AÇILDI (14.08, cihazda görülerek) ──────────────────────
+  Kitte yıkıcı bir onayın karşılığı YOKTU ve hesap silme çekmecesi ilk sürümünde onayı
+  `PrimaryButton` ile çizmişti: dolgulu zeytin, yani ekranın EN GÜÇLÜ çağrısı. Cihazda
+  bakınca çelişki görüldü — çekmecenin kendi künyesi *"bu bir birincil eylem değil"* diyordu
+  ama düğme tam tersini söylüyordu. Web'in aynı diyaloğu bu kararı zaten vermişti
+  (`delete-account.tsx`: *"dolgulu kırmızı bir düğme sayfanın en güçlü çağrısı olurdu ve
+  müşteriyi silmeye davet ederdi"*) — dolgusuz `outlineTerracotta` kullanıyor.
+  Ton EKLENDİ, kopyalanmadı: aynı bileşene üçüncü bir renk çifti: ikinci bir düğme türü
+  açmak kitin sözlüğünü sebepsiz büyütürdü (CLAUDE §1).
 
   Biçim ve basılı davranış birincil düğmeyle AYNI kuraldan (Token Kararlari #8): blok sert
   gölge + `translate(2,2)`, hap gölgesiz + `scale(.97)`.
@@ -16,7 +27,7 @@ interface SecondaryButtonProps {
   /** Düğme etiketi — i18n üstte çözülür. */
   label: string;
   onPress: () => void;
-  tone?: 'sand' | 'olive';
+  tone?: 'sand' | 'olive' | 'terracotta';
   shape?: 'block' | 'pill';
   disabled?: boolean;
   accessibilityHint?: string;
@@ -78,6 +89,8 @@ const styles = StyleSheet.create((theme) => ({
   sandLabel: { color: theme.colors.ink },
   olive: { borderColor: theme.colors['olive-line'] },
   oliveLabel: { color: theme.colors['olive-dark'] },
+  terracotta: { borderColor: theme.colors['terracotta-line'] },
+  terracottaLabel: { color: theme.colors.terracotta },
   disabled: { borderColor: theme.colors['disabled-line'] },
   disabledLabel: { color: theme.colors['disabled-text'] },
   label: {

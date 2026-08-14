@@ -758,18 +758,24 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
           <Text style={styles.deleteWarning}>{t.deleteAccount.irreversible}</Text>
           {deleteFailed ? <Note description={t.deleteAccount.failed} tone="terracotta" testID="account-delete-error" /> : null}
 
+          {/* HİÇBİRİ DOLGULU DEĞİL (14.08, cihazda görülerek düzeltildi): ilk sürüm onayı
+              `PrimaryButton` ile çiziyordu — dolgulu zeytin, ekranın en güçlü çağrısı — ve
+              çekmecenin kendi künyesiyle çelişiyordu. Web'in aynı diyaloğunun kararı: vazgeç
+              sessiz metin, onay DOLGUSUZ terracotta. Sıra da bilinçli: geri çekilme yolu solda
+              ve ilk okunan, yıkıcı olan sağda. */}
           <View style={styles.deleteActions}>
-            <SecondaryButton
+            <TextAction
               label={t.deleteAccount.cancel}
               onPress={() => setDeleteSheetOpen(false)}
               disabled={deleting}
-              shape="pill"
               testID="account-delete-cancel"
             />
-            <PrimaryButton
+            <SecondaryButton
               label={deleting ? t.deleteAccount.deleting : t.deleteAccount.confirm}
               onPress={() => void confirmDelete()}
               disabled={deleting}
+              tone="terracotta"
+              shape="pill"
               testID="account-delete-confirm"
             />
           </View>
