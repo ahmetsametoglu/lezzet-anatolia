@@ -131,6 +131,33 @@ v1.patch('/me', async (c) => {
   return ok(c, MeSchema.parse(outcome.profile));
 });
 
+/**
+ * **Hesabın silinmesi** (GDPR md. 17 · App Store 5.1.1(v)) — web hesap sayfasının
+ * `deleteAccountAction`ının native karşılığı, AYNI motor kapısıyla (`UserProfileService.anonymize`
+ * → `anonymize_customer` RPC). İkinci bir silme kuralı yazılMAZ: hangi tablonun silineceği,
+ * hangisinin kimliksizleşeceği kararı 0037 migration'ının içinde tek yerde durur.
+ *
+ * **Kimlik gövdeden ALINMAZ, jetondan çözülür** — web eyleminin künyesindeki aynı kalkan:
+ * `anonymize` verilen kimliği sorgusuz anonimleştirir, yani bir parametre kabul etmek "bu benim
+ * hesabım mı" sorusunu burada doğru sormayı şart koşardı. Soruyu ortadan kaldırmanın tek güvenli
+ * yolu parametreyi hiç almamak; silinecek hesap, oturumun kendisidir.
+ *
+ * **`DELETE /me`, `/me/delete` DEĞİL:** kaynak profildir ve yöntem zaten fiili söylüyor.
+ *
+ * **Cevap `true`, boş gövde değil:** istemcinin okuyacağı tek şey "oldu mu" — `anonymize` bir hata
+ * fırlatırsa zarf `error` taşır ve ekran çekmeceyi AÇIK bırakır. Oturumun cihazdan silinmesi
+ * istemcinin işi (`auth.users` satırı burada gidiyor ama cihazdaki jeton yerinde kalır) — web'de
+ * ölçülmüş aynı tuzak, orada `signOutAction` ile kapatılmıştı.
+ */
+v1.delete('/me', async (c) => {
+  const db = serviceDb();
+  const profile = await new UserProfileService(db).findByAuthUserId(c.get('authUser').id);
+  if (!profile) return fail(c, 'profile_not_found', 404);
+
+  await new UserProfileService(db).anonymize(profile.id);
+  return ok(c, true);
+});
+
 // Adres uçları (21.15) — Bearer'ın ARKASINDA: adres müşterinin kendisidir, oturumsuz gezilmez.
 // Kural ve gerekçeler `addresses.ts` künyesinde; kimlik çözümü orada tek middleware'de.
 v1.route('/me/addresses', addresses);

@@ -18,7 +18,7 @@ import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { makeDefaultAddress, type MeAddress } from '@/lib/api/addresses';
 import { redeemPoints } from '@/lib/api/points';
-import { updateMe, updatePreferences } from '@/lib/api/me';
+import { deleteAccount, updateMe, updatePreferences } from '@/lib/api/me';
 import { resolvePostalCode } from '@/lib/api/places';
 import { signOut } from '@/lib/auth/sign-out';
 import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
@@ -183,6 +183,13 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
   /* "Nasıl puan kazanılır" çekmecesi (kullanıcı isteği 12.08) — kartın merak sorusuna cevabı. */
   const [earnSheetOpen, setEarnSheetOpen] = useState(false);
 
+  /* Hesabı silme çekmecesi (GDPR md. 17 · App Store 5.1.1(v)) — iki adım, gerekçesi çekmecenin
+     kendi künyesinde. `deleting` düğmeyi kilitler: `anonymize` idempotent ama ikinci çağrı
+     silinmiş bir profili arayıp 404 döner ve müşteri "olmadı" sanır. */
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
+
   /* Profil çekmecesi (v3 `shPf`) — GERÇEK kayıt (21.14c): taslak alanlar açılışta karttan dolar,
      Kaydet `PATCH /me`ye gider; başarı `publishMe` ile yayınlanır (kart ve vitrin selamlaması
      aynı anda döner), adlı retler (`name_required` · `phone_invalid` · `phone_taken`) cümleye
@@ -272,6 +279,28 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
       setProfileSheetOpen(false);
       publishToast(t.edit.saved);
     });
+  };
+
+  /**
+   * Hesabın silinmesi — SIRA KRİTİK: önce sunucu siler, sonra cihaz çıkış yapar (çekmecenin
+   * künyesi). Düşen bir silmede oturum korunur, yani müşteri hesabıyla kalır ve neden olmadığını
+   * çekmecede okur.
+   *
+   * Çıkış BAŞARI DALINDA yutulmuyor, `signOut` zaten yarım kalmıyor (`clearStoredSession` her
+   * durumda koşar). Çekmece kapatılMAZ ve toast basılmaz: `useMe` dinleyicisi oturum ölünce
+   * ekranı misafir hâline döndürüyor — kapanış zaten geliyor, ayrıca bir "silindi" ekranı
+   * yazmak silinmiş bir hesabın son karesini uzatmak olurdu.
+   */
+  const confirmDelete = async (): Promise<void> => {
+    setDeleting(true);
+    setDeleteFailed(false);
+    const result = await deleteAccount();
+    if (result.error !== null) {
+      setDeleting(false);
+      setDeleteFailed(true);
+      return;
+    }
+    await signOut();
   };
 
   if (!signedIn) {
@@ -618,6 +647,18 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
             onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'privacy' } })}
             testID="account-privacy"
           />
+          {/* HESABI SİLME — kartın EN ALTINDA ve terracotta, ama vurgulu düğme DEĞİL: hesap
+              sayfasının işi hesabı yönetmek, silmek onun en uç ucu (web'in aynı kararı). Dolgulu
+              bir düğme sayfanın en güçlü çağrısı olur ve müşteriyi silmeye davet ederdi. */}
+          <TextAction
+            label={t.deleteAccount.action}
+            onPress={() => {
+              setDeleteFailed(false);
+              setDeleteSheetOpen(true);
+            }}
+            tone="terracotta"
+            testID="account-delete"
+          />
         </View>
 
         <View style={styles.logoutRow}>
@@ -678,6 +719,61 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
             testID="account-earn-sheet-list"
           />
         )}
+      </BottomSheet>
+
+      {/* ── Hesabı silme çekmecesi (GDPR md. 17 · App Store 5.1.1(v)) ───────────────
+          NEDEN İKİ ADIM: işlem geri alınamaz ve düğmenin kendisi bunu anlatamaz. Çekmece bir
+          "emin misiniz?" değil, NE OLACAĞINI söyleyen bir ekran — web'in `delete-account.tsx`
+          künyesindeki karar, native'de aynen.
+
+          KALANI SÖYLEMEK, GİDENİ SÖYLEMEK KADAR ÖNEMLİ: silme bir `DELETE` değil; sipariş ve
+          fatura kayıtları yasal olarak duruyor, FATURADAKİ AD VE ADRES DÂHİL. Yazmazsak
+          "hesabımı sildim" diyen müşteri bir gün faturasında adını gördüğünde haklı olarak
+          yanıltıldığını düşünür. İki blok da AYNI AĞIRLIKTA çizilir; dipnot olsaydı okunmazdı
+          ve tam da okunmayan yer, sonradan "bana söylenmedi" denilecek yerdir.
+
+          SİLDİKTEN SONRA ÇIKIŞ DA YAPILIR: sunucu `auth.users` satırını siliyor ama cihazdaki
+          jetona dokunamıyor — web'de ÖLÇÜLMÜŞ tuzak (08.08: silme bitince oturum çerezi yerinde
+          kalıyordu). Sıra da oradaki gibi: önce silme başarılı olur, SONRA oturum kapanır.
+          Tersi olsaydı silmenin düştüğü bir koşuda müşteri hem hesabıyla hem çıkışla kalırdı. */}
+      <BottomSheet
+        visible={deleteSheetOpen}
+        title={t.deleteAccount.title}
+        onClose={() => setDeleteSheetOpen(false)}
+        testID="account-delete-sheet"
+      >
+        <View style={styles.deleteBody}>
+          <Text style={styles.deleteIntro}>{t.deleteAccount.body}</Text>
+
+          <View style={styles.deleteBlock}>
+            <Text style={styles.deleteBlockTitle}>{t.deleteAccount.goesTitle}</Text>
+            <Text style={styles.deleteBlockBody}>{t.deleteAccount.goes}</Text>
+          </View>
+
+          <View style={[styles.deleteBlock, styles.deleteStays]}>
+            <Text style={[styles.deleteBlockTitle, styles.deleteStaysTitle]}>{t.deleteAccount.staysTitle}</Text>
+            <Text style={styles.deleteBlockBody}>{t.deleteAccount.stays}</Text>
+          </View>
+
+          <Text style={styles.deleteWarning}>{t.deleteAccount.irreversible}</Text>
+          {deleteFailed ? <Note description={t.deleteAccount.failed} tone="terracotta" testID="account-delete-error" /> : null}
+
+          <View style={styles.deleteActions}>
+            <SecondaryButton
+              label={t.deleteAccount.cancel}
+              onPress={() => setDeleteSheetOpen(false)}
+              disabled={deleting}
+              shape="pill"
+              testID="account-delete-cancel"
+            />
+            <PrimaryButton
+              label={deleting ? t.deleteAccount.deleting : t.deleteAccount.confirm}
+              onPress={() => void confirmDelete()}
+              disabled={deleting}
+              testID="account-delete-confirm"
+            />
+          </View>
+        </View>
       </BottomSheet>
 
       {/* ── Profil çekmecesi (v3 `shPf`, v3:253-260) — üç alan + WhatsApp notu + Kaydet ── */}
@@ -1015,5 +1111,56 @@ const styles = StyleSheet.create((theme, rt) => ({
   logoutRow: {
     alignItems: 'center',
     paddingVertical: theme.space.md,
+  },
+
+  /* Silme çekmecesi — iki blok AYNI ağırlıkta, yalnız rengi ayrı: giden nötr zeminde, kalan
+     bal renginde (uyarı değil, "dikkat: bu duruyor"). Metinler `body-sm`in altına inmez
+     (MB-46'nın ölçütü): burada okunan her satır müşterinin KARAR için okuduğu metindir. */
+  deleteBody: {
+    gap: theme.space.lg,
+    paddingBottom: theme.space.xl,
+  },
+  deleteIntro: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  deleteBlock: {
+    gap: theme.space.xs,
+    backgroundColor: theme.colors['sand-150'],
+    borderRadius: theme.radius.control,
+    paddingVertical: theme.space.lg,
+    paddingHorizontal: theme.space['2xl'],
+  },
+  deleteStays: {
+    backgroundColor: theme.colors['honey-bg'],
+    borderWidth: theme.border.hairline,
+    borderColor: theme.colors['honey-line'],
+  },
+  deleteBlockTitle: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text['body-sm'],
+    color: theme.colors.ink,
+  },
+  deleteStaysTitle: {
+    color: theme.colors.honey,
+  },
+  deleteBlockBody: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  deleteWarning: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text['body-sm'],
+    color: theme.colors.terracotta,
+  },
+  deleteActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: theme.space.lg,
   },
 }));

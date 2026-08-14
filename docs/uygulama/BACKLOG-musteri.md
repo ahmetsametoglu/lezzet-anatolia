@@ -370,7 +370,12 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   *(İki `feedback_purchase` kaydı hata DEĞİL — biri kart başına, öteki tamamlama primi, gerekçesi
   `packages/application/src/feedback/invite.ts:170`.)* Ekran yalnız tamamlama primini gösteriyor.
 
-- [ ] **MB-49 · Sipariş onayındaki puan vaadi ekranda HESAPLANIYOR — motorun kuralıyla ilgisi yok.**
+- [x] **MB-49 · Sipariş onayındaki puan vaadi ekranda HESAPLANIYOR — motorun kuralıyla ilgisi yok.**
+  → **KAPANDI, görev `(21.49)` (14.08).** Satır, taşıyan rota parametresi, üç dildeki metin ve
+  `POINTS_PER_EURO` sabiti birlikte söküldü; yerine bir sayı KONMADI (★ karar 1: sipariş puanı yok).
+  İki yan kusur da kendiliğinden düştü — ekranın müşteri tipini bilmemesi ve tavanı gözetmemesi,
+  artık olmayan bir satırın kusuru.
+
   **Cihazda ölçüldü 11.08 (uçtan uca, kanıtlı):** 47,40 €'luk sipariş verildi, onay ekranı
   *"✦ Teslimatta +47 puan kazanacaksınız"* dedi; motorun ödül kapısı (`rewardCompletedOrder`)
   çalıştırıldı ve deftere **10** yazıldı. Ekran `POINTS_PER_EURO = 1` diye kendi sabitiyle
@@ -733,9 +738,23 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   (deftere yazıldı); gün çipindeki işaret ve bandın seçili güne göre konuşması bizde — sözleşme
   gelince mekanik.
 
-- [ ] **MB-24 · Fiyat değişti bildirimi** (`DOMAIN §5`: fiyat arttıysa müşteriye söylenir ve onay
-  istenir; düştüyse sessizce uygulanır) — `design/BACKLOG.md` §1'den devralındı. `CartItem.unitPrice`
-  yazılıyor ama karşılaştırılmıyor; native sepette de karşılığı yok.
+- [~] **MB-24 · Fiyat değişti bildirimi** (`DOMAIN §5`: fiyat arttıysa müşteriye söylenir ve onay
+  istenir; düştüyse sessizce uygulanır) — `design/BACKLOG.md` §1'den devralındı.
+
+  **KAYIT BAYATTI — ÖLÇÜLDÜ 13.08 (kod), native yarısı ZATEN ÇALIŞIYOR.** *"`CartItem.unitPrice`
+  yazılıyor ama karşılaştırılmıyor; native sepette de karşılığı yok"* cümlesinin iki yarısı da
+  bugün yanlış: (a) karşılaştırma var — `priceChangeOf` (`apps/web/lib/cart/read.ts`) yalnız
+  ARTIŞTA `priceChange: { previousCents }` üretiyor, düşüş sessiz; (b) native sepet bunu
+  ÇİZİYOR — `cart-screen.tsx:273`, *"Fiyat güncellendi — önceki {price}"*. Onay kapısı da
+  yazılmış ve testli: checkout taslağı artışta AÇILMIYOR, `price_changed` ile eski ve yeni tutarı
+  birlikte döndürüyor, ikinci deneme geçiyor (`apps/web/lib/order/checkout-draft.test.ts`).
+  Yani `DOMAIN §5`'in *"bağlayıcı fiyat checkout başlangıcında sabitlenir"* kararı uygulanmış
+  durumda ve **ayrı bir bildirim altyapısı gerektirmiyor** — bu bir sepet/checkout kuralı,
+  itilen bir mesaj değil.
+
+  **Kalan tek açık BİZDE DEĞİL:** web sepeti `priceChange` alanını okumuyor. Aynı müşteri
+  native'de uyarıyı görüyor, web'de görmüyor — MB-36'nın "iki yüzeyde iki kural" soyundan.
+  Web şeridine bildirilecek; bu satır o kapanınca kapanır.
 
 ---
 
@@ -747,14 +766,29 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   satır sınırı yok. **Dikkat:** yükseklik serbest bırakılamaz — üst katman dairesi
   `index * collectionBand` ile konumlanıyor (`:97`); ya başlığa satır sınırı konur ya ikisi birlikte
   ölçülür.
+  → **KAPANDI, görev `(21.49)` (14.08) — satır sınırı seçildi, yükseklik sözleşme olarak durdu.**
+  Sınır göze göre değil bütçeye göre: 132 dp'den "Büyük" yazı boyutunda göz üstü ~15 + sayaç ~17 +
+  iki boşluk 4 düşünce başlığa 96 kalıyor, satır boyu ≈ 26,5 dp — üç satır 79 (sığar), **dört
+  satır 106 (taşar, ölçülen hâl)**. Başlık iki satırda durduruldu (üçüncü aritmetik olarak sığsa
+  da payı sıfırlıyor ve daha büyük erişilebilirlik ölçeklerinde ilk taşan o olurdu); göz üstü tek
+  satır — o bir koleksiyon adı, sarsa aynı bütçeden yiyecekti.
 
-- [ ] **MB-26 · Şirket bilgileri alanları dolduktan sonra etiketsiz kalıyor.** Yalnız yer tutucu
-  var; "67380" ve "LINGOLSHEIM"in ne olduğu içerikten tahmin ediliyor. Form kitinin etiketli alan
-  deseniyle karşılaştırılmalı.
+- [x] **MB-26 · Şirket bilgileri alanları dolduktan sonra etiketsiz kalıyor.** Yalnız yer tutucu
+  var; "67380" ve "LINGOLSHEIM"in ne olduğu içerikten tahmin ediliyor.
+  → **KAPANDI, görev `(21.49)` (14.08).** Karşılaştırma yapıldı ve kitte bu rol ZATEN vardı
+  (`TextField.label`, künyesi: *"görünür etiket isteyen ekran ayrıca `label` verir"*) — hiçbir
+  ekran kullanmıyordu. Başvuru formunun sekiz alanının hepsi etiketlendi. Neden hepsi: kusur
+  yalnız resmî kayıttan KENDİLİĞİNDEN dolan alanlarda görünüyor (yer tutucu dolunca kaybolur),
+  ama formun yarısını etiketlemek ötekini bozuk gösterirdi.
 
-- [ ] **MB-27 · Vitrin altındaki iki davet kartı iki ayrı görsel dilde.** Keşif kartı canlı
+- [x] **MB-27 · Vitrin altındaki iki davet kartı iki ayrı görsel dilde.** Keşif kartı canlı
   terracotta kesikli çerçeve, Profesyonel kartı soluk gri — ikincisi **devre dışı gibi** duruyor.
   İkisi de aynı işi yapıyor (bir sayfaya davet).
+  → **KAPANDI, görev `(21.49)` (14.08).** Kusur tonun kendisinde değil, KURALIMIZA aykırı
+  seçilmiş olmasındaydı: `dashed-invite.tsx` künyesi *"`terracotta` çağırıdır (yeni bir şey
+  teklif eder), `sand` bilgidir (durum bildirir)"* diyor — bu kart durum bildirmiyor, davet
+  ediyor. Ton `terracotta`ya, işaret Keşif kartıyla aynı `›`e döndü; ölü kalan `inviteArrow`
+  stili silindi.
 
 - [ ] **MB-28 · Ürün varyantlarının sırası düzensiz.** Ölçülen sıra: `450g · 225g · 2500g · 1250g`
   — ne artan ne azalan. MB-20 ile aynı turda (hangi boyun seçili açılacağı kararıyla birlikte).
@@ -803,6 +837,19 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
 
 - [ ] **MB-32 · Süresi dolmuş davet ile bozuk bağlantı aynı cümleyi alıyor:** *"bağlantı eksik ya
   da eskimiş olabilir"*. Süresi dolmuş davete kendi cümlesi gerekiyor.
+
+  **ÖLÇÜLDÜ 14.08 (kod) — METİN İŞİ DEĞİL, ve ayrımın olmaması BİLİNÇLİ.** Ekran iki hâli
+  ayıramıyor çünkü **sunucu da ayırmıyor**: davet 90 gün yaşıyor (`0029_feedback_request.sql`:
+  `expires_at … + interval '90 days'`) ve süzgeç okumanın kendisinde
+  (`FeedbackRequestService.findByToken` → `expiresAt > now`), yani süresi geçmiş token `null`
+  dönüyor — "yok" ile tam olarak aynı cevap. Servisin künyesi bunu gerekçesiyle yazmış: *"süzgeç
+  burada, tek yerde; kapıya bırakılsaydı ikinci bir okuma yolu açıldığı gün unutulurdu."*
+  Ayrım için gereken: ikinci bir okuma yolu + `openFeedbackInvite`in ayrık bir sonuç döndürmesi +
+  uçta yeni bir hâl + **web davet sayfasının da aynı ayrımı öğrenmesi** (motor ortak). Yani
+  "cümle yazma" işi değil, iki yüzeyi ilgilendiren bir sözleşme işi.
+  **Kazanç ölçüldü ve küçük:** bugünkü cümle iki hâli zaten "ya … ya" ile birlikte söylüyor;
+  kazanılan tek şey 90 günü aşmış bir e-postayı tıklayan müşteriye sebebini söylemek.
+  **Karar: sıraya konmuyor, ama kaydı ölçümüyle duruyor** — bir daha "ucuz metin işi" sanılmasın.
 
 - [ ] **MB-33 · Ekran başlığı "Professionnels"** — üç dilde de aynı. Web'in kararıyla tutarlı
   (orada da program adı), ama native başlıkta tek başına duruyor ve Türkçe yüzeyde ne olduğu
@@ -971,6 +1018,12 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
 - [ ] **MB-38 · Test defteri boşaltılmadı** (`docs/talep/not-mobil-test-defteri.md`, kullanıcı
   talimatı 09.08: *"testleri sonra topluca yaz"*). İçinde ölçülmemiş bir düşüş var:
   `account-routes.test` TAM koşuda düşüyor, tekil koşuda geçiyor — hata metni hâlâ yakalanmadı.
+  **İKİNCİ ÖRNEK ÖLÇÜLDÜ (14.08):** `app-shell.test.tsx` de aynı şekilde davrandı — tam koşuda
+  *"seçili sekmeye tekrar dokunmak rotayı OYNATMAZ"* düştü (`toHavePathname('/')`), tekil koşuda
+  geçti, ve **aynı tam koşu ikinci kez çalıştırıldığında 84/84 · 599/599 yeşil geldi.** Yani
+  düşüş dosyaya değil KOŞUYA bağlı; iki örnek de rota durumu okuyan testler. Ortak şüpheli
+  expo-router'ın modül düzeyinde yaşayan bellek durumu ve testler arası sızması — ölçülmedi,
+  teori kurulmuyor. Defter kapanırken bu iki dosya birlikte bakılmalı.
   Ayrıca "Jest did not exit" uyarısı ve 21.20'nin birim test borcu (`StockMark`, `stockMarkOf`,
   `placeModeOf`). *Müşteri turunu bitirirken bu defter de kapanmalı, yoksa yeşil koşu bir şey
   kanıtlamıyor.*
@@ -998,6 +1051,34 @@ ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi ayn
 - [ ] **MB-43 · İkon/splash PNG'lerinin krem zemine yeniden üretimi HİÇBİR YERDE kayıtlı değil.**
   MB-41 turunda görüldü: `app.config.ts` splash rengini taşıyor ama görsel varlıkların kendisi
   eski zeminde. İş bir tasarım kararı ister (hangi zemin, hangi boyut seti); şimdilik yalnız kayıt.
+
+- [ ] **MB-63 · Native uygulama HİÇ ölçülmüyor — analitikte karşılığı yok** (denetim ölçtü 10.08,
+  kayıt bu listede yoktu). Ölçüm: `apps/mobile` ve `apps/mobile-api` içinde tek `recordEvent`
+  çağrısı yok, `/api/v1`'de analitik ucu yok, şemada yüzey kolonu yok. Sonuç `analytics_daily`
+  sayılarının **web'in sayıları olması ama ekranda "toplam" yazması** — her gün biraz daha yanlış
+  olan ve hata vermeyen bir cümle.
+  **İnceleme dosyası:** `docs/talep/inceleme-analitik-web-native.md` — beş kırılma noktası ölçülü,
+  iki seçenek ve denetimin önerisi (tek defter + `surface` boyutu) orada.
+  **Bu şeridin altı sorusu CEVAPLANDI (14.08)**, dosyanın §5'inde: UA'da kuruluma özgü entropi
+  olamayacağı kod düzeyinde kanıtlandı · kurulum kimliği YOK ve iOS Keychain'in silinmemesi
+  yüzünden yeri `NSUserDefaults` tarafı · rol JWT'de değil profil satırında · huninin beş adımından
+  üçü sunucudan atılabilir, `add_to_cart`ın MİSAFİR yarısı yapısal olarak ölçülemez, `page_view`
+  tümden istemci beyanı olmalı · ekran→rota eşlemesi üç sınıfa ayrılıyor · ortak kapının sahibi
+  web şeridi olmalı.
+  **Bloke: kullanıcı kararları A1–A4** (tek/iki defter · rota kalıbı · kurulum kimliğinin
+  hash'lenme yeri ve yeniden kurulum · sıra). Ön koşul kurulum kimliği; ondan önce kod yazmak,
+  sonradan değişecek bir anahtarla veri toplamak olur.
+
+- [x] **MB-62 · Hesabını silme native'de YOKTU — mağaza yayın engeliydi** (ölçüldü 13.08, kod)
+  → **KAPANDI, görev `(21.49)` (14.08).** Web hesap sayfası 08.21'den beri siliyor
+  (`deleteAccountAction` → `UserProfileService.anonymize` → `anonymize_customer` RPC); native'de
+  karşılığı yoktu ve ekran müşteriyi *"bonjour@lezzetanatolia.fr adresine yazın"* diye e-postaya
+  yolluyordu. **Eksik özellik değil, YAYIN ENGELİ:** App Store 5.1.1(v) hesap açtıran uygulamadan
+  hesabın uygulama içinden silinebilmesini istiyor ve e-posta yönlendirmesini kabul etmiyor.
+  **Kapanış:** `DELETE /api/v1/me` (web'in çağırdığı kapının AYNISI — ikinci bir silme kuralı
+  yazılmadı) + hesap kartının altında metin düğmesi + giden/kalan bloklarını aynı ağırlıkta çizen
+  onay çekmecesi. Silme cihazda ÇALIŞTIRILMADI (tek yönlü işlem, test hesabı geri gelmezdi);
+  cihaz doğrulaması `(21.48)` turunda kullan-at hesapla.
 
 - [ ] **MB-40 · Talep maili kart genişliği açık** (`docs/talep/not-mobil-talep-maili-duzeltildi-
   genislik-acik.md`): arka-uç notun iki bulgusunu kapattı, üçüncüsünün ölçümünü mobile bıraktı ve
@@ -1079,6 +1160,7 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-34 (kaydırma kabını kite alma) | — | — | — | **ÖNÜ AÇIK, sahibi yok** — askı şartı *"(21.33) commit edilsin"*di, `f521aef` ile doldu (11.08). Kit kabı da `(21.36)`'da doğdu (`components/ui/form-scroll.tsx`); kalan iş o kabın geri kalan ekranlara yayılması + ham `ScrollView`un lint'le kapatılması. Alan ilan etsin |
 | MB-46 (küçük duraklara bağlı İÇERİK metinleri) | cihaz | 11.08 · 13:35 | `apps/mobile/src/components/ui/{note.tsx,suggestion-list.tsx}` · `screens/{account/{account-screen,address-card}.tsx,cart/{cart-screen,cart-line-row}.tsx,checkout/{checkout-screen,order-confirmed-screen}.tsx,customer-kit/{address-form,dashed-invite,option-row,summary-panel}.tsx,feedback/feedback-screen.tsx,home/home-screen.tsx,orders/{order-detail-screen,order-timeline,orders-screen}.tsx,package/package-detail-screen.tsx,packages-list/packages-list-screen.tsx,product/product-detail-screen.tsx,professionals/{professionals-screen,application-form}.tsx,support/{new-ticket-sheet,order-line-picker,tickets-screen}.tsx}` | **bitti ve COMMİT EDİLDİ** — `429fd85f`, görev `(21.38)` (11.08); 23 ekran dosyası. Doğrulama KOD tarafında yapıldı (kullanıcı kararı: süpürmede cihaz turu gerekmez) — müşteri yüzeyinde 14'ün altında kalan içerik metni sıfır. Kullanıcı kararı 11.08: 1.+2. kademe birlikte. Ölçüt: *müşterinin karar için okuduğu metin `body-sm` (14) altına inmez*; `helper`/`micro` yalnız gerçek yardımcı role kalır. **YALNIZ MÜŞTERİ yüzeyi** — operasyon/kurye/depo ekranları listeye alınmadı (başka şeridin tasarım alanı) |
 | MB-47 (bant kaydının hafızası) · MB-36 · MB-37 (ölçüm) | mobil | 11.08 · 14:0x — görev `(21.39)` | **YENİ:** `apps/mobile/src/lib/places/place-notice-store.ts` · **DEĞİŞEN:** `screens/customer-kit/place-notice-band.{tsx,test.tsx}` | **bitti** — MB-46'nın dosya listesiyle kesişmiyor. MB-36/MB-37 kod okumasıyla kapatıldı, cihaz ölçümü YAPILMADI |
+| MB-62 (hesabını silme) · MB-49 (onaydaki uydurma puan satırı) | cihaz | 14.08 — görev `(21.49)` | `apps/mobile-api/src/api/v1/router.ts` · `apps/mobile/src/lib/api/me.ts` · `screens/account/{account-screen.tsx,messages.json}` · `screens/checkout/{checkout-screen.tsx,order-confirmed-screen.tsx,messages.json}` · `app/checkout/confirmed.tsx` | **bitti** — `tsc` iki pakette temiz, 4 test dosyası/17 test geçti, uç mount'u ölçüldü (jetonsuz `DELETE /me` → 401). Silmenin CİHAZ turu yapılmadı (tek yönlü işlem) — `(21.48)`'e bırakıldı |
 | MB-05 · MB-07 · MB-08 · MB-11 (B2B ekranının açık kalanları) | mobil | 11.08 · 12:4x | `apps/mobile/src/screens/professionals/**` · `apps/mobile/src/lib/api/b2b.ts` | **alındı** |
 | MB-04 (e-posta alanı kalkıyor — kimlik oturumdan) | mobil | 11.08 · 13:1x | `apps/mobile-api/src/api/v1/b2b.ts` (bitti) · `apps/mobile/src/screens/professionals/**` | **alındı** |
 | MB-39 (ölü ihraç tipler — B2B dışı yarısı) | mobil | 11.08 · 12:4x | `apps/mobile/src/lib/api/{discover,points}.ts` · `lib/payment/{payment-sheet,stripe-config}.ts` · `screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` · `screens/home/use-home-orders.hook.ts` | **alındı** |

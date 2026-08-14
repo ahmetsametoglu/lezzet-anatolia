@@ -648,12 +648,19 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             action={<Text style={styles.inviteChevron}>›</Text>}
             testID="home-discover"
           />
+          {/* İKİ DAVET AYNI GÖRSEL DİLDE (MB-27, 14.08 — kullanıcı bulgusu 11.08).
+              Profesyonel kartı `sand` tonundaydı ve yanındaki canlı Keşif kartının yanında
+              DEVRE DIŞI gibi duruyordu. Kusur tonun kendisinde değil, YANLIŞ SEÇİLMİŞ olmasında:
+              `dashed-invite.tsx` künyesi tonların ne demek olduğunu zaten yazıyor —
+              *"`terracotta` çağırıdır (yeni bir şey teklif eder), `sand` bilgidir (durum
+              bildirir)"*. Bu kart bir durum bildirmiyor, bir sayfaya davet ediyor; yani kendi
+              kuralımıza göre baştan `terracotta` olmalıydı. İşaret de aynılaştı (`›`) — iki kart
+              aynı işi yapıyorsa aynı jesti göstermeli. */}
           <DashedInvite
             title={t.professional.title}
             description={t.professional.body}
-            tone="sand"
             onPress={() => router.push('/professionals')}
-            action={<Text style={styles.inviteArrow}>→</Text>}
+            action={<Text style={styles.inviteChevron}>›</Text>}
             testID="home-professional"
           />
         </View>
@@ -1119,11 +1126,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['icon-sm'],
     lineHeight: theme.text['icon-sm'],
     color: theme.colors.terracotta,
-  },
-  inviteArrow: {
-    fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.olive,
   },
 
   /* Yüzen düğme: sekme çubuğunun üstünde, sağ altta (şablon: `right:18px; bottom:84px` — çubuğun

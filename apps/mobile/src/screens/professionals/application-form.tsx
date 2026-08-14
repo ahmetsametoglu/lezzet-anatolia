@@ -34,6 +34,14 @@ import type { Messages } from './professionals-types';
      başvuruyu ENGELLEMEZ (üye ülke sunucuları düzenli olarak susuyor).
   3. **Kit'te MÜREKKEP tonlu düğme yok** (birincil zeytin, ikincil çerçeveli); "Bul" düğmesinin
      yüzeyi bu yüzden ekranda kuruldu — ihtiyaç raporlandı.
+
+  ── ALANLAR GÖRÜNÜR ETİKETLİ (MB-26, 14.08) ─────────────────────────────────
+  Her alan `label` de veriyor, yalnız `placeholder` değil. Ölçülen kusur: yer tutucu DOLUNCA
+  kaybolur ve bu formun alanları resmî kayıttan KENDİLİĞİNDEN doluyor — müşteri "67380" ile
+  "LINGOLSHEIM"i hiç yazmadan karşısında buluyor, ne olduklarını içerikten tahmin ediyor.
+  Kendi yazdığı alanda tahmin gerekmez, doldurulanda gerekir; ama formun yarısını etiketlemek
+  ötekini bozuk gösterirdi, o yüzden hepsi etiketli. Kitte bu rol ZATEN vardı (`TextField.label`,
+  künyesi: *"görünür etiket isteyen ekran ayrıca `label` verir"*) — yeni bir desen açılmadı.
 */
 
 interface ApplicationFormProps {
@@ -106,6 +114,7 @@ export function ApplicationForm({
             value={formatSiret(input.siret)}
             onChangeText={(value) => onChange({ siret: normalizeSiret(value).slice(0, 14) })}
             accessibilityLabel={t.form.siret}
+            label={t.form.siret}
             placeholder={t.form.siret}
             shape="pill"
             numeric
@@ -130,6 +139,7 @@ export function ApplicationForm({
             value={input.vatNumber}
             onChangeText={(value) => onChange({ vatNumber: normalizeVatNumber(value).slice(0, 14) })}
             accessibilityLabel={t.form.vatNumber}
+            label={t.form.vatNumber}
             placeholder={t.form.vatNumber}
             shape="pill"
             trailing={
@@ -154,6 +164,7 @@ export function ApplicationForm({
             value={input.legalName}
             onChangeText={(value) => onChange({ legalName: value })}
             accessibilityLabel={t.form.legalName}
+            label={t.form.legalName}
             placeholder={t.form.legalName}
             shape="pill"
             testID="pro-legal-name"
@@ -162,6 +173,7 @@ export function ApplicationForm({
             value={input.line1}
             onChangeText={(value) => onChange({ line1: value })}
             accessibilityLabel={t.form.line1}
+            label={t.form.line1}
             placeholder={t.form.line1}
             shape="pill"
             testID="pro-line1"
@@ -173,6 +185,7 @@ export function ApplicationForm({
                 value={input.postalCode}
                 onChangeText={(value) => onChange({ postalCode: value })}
                 accessibilityLabel={t.form.postalCode}
+                label={t.form.postalCode}
                 placeholder={t.form.postalCode}
                 shape="pill"
                 numeric
@@ -184,6 +197,7 @@ export function ApplicationForm({
                 value={input.city}
                 onChangeText={(value) => onChange({ city: value })}
                 accessibilityLabel={t.form.city}
+                label={t.form.city}
                 placeholder={t.form.city}
                 shape="pill"
                 testID="pro-city"
@@ -201,6 +215,7 @@ export function ApplicationForm({
           value={input.contactName}
           onChangeText={(value) => onChange({ contactName: value })}
           accessibilityLabel={t.form.contactName}
+          label={t.form.contactName}
           placeholder={t.form.contactName}
           shape="pill"
           testID="pro-contact-name"
@@ -229,6 +244,7 @@ export function ApplicationForm({
           value={input.phone}
           onChangeText={(value) => onChange({ phone: value })}
           accessibilityLabel={t.form.phone}
+          label={t.form.phone}
           placeholder={t.form.phone}
           shape="pill"
           testID="pro-phone"

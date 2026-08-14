@@ -56,11 +56,36 @@ export function CollectionBand({ name, subtitle, countLabel, index, photoUri, on
       testID={testID}
     >
       <View style={[styles.text, mirrored ? styles.textMirrored : styles.textNormal]}>
-        <Text style={[styles.eyebrow, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}>
+        <Text
+          style={[styles.eyebrow, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}
+          numberOfLines={1}
+        >
           {name.toLocaleUpperCase('tr-TR')}
         </Text>
+        {/*
+          SATIR SINIRI, YÜKSEKLİK SERBESTLİĞİ DEĞİL (MB-25, 14.08 — kullanıcı bulgusu 11.08).
+          Ölçülen arıza: dört satırlık bir başlıkta *"23 çeşit ›"* satırının yalnız üst yarısı
+          görünüyor, altını sonraki bant boyuyordu. Bant kırpmıyor (`overflow: 'visible'`), taşan
+          metin komşu bandın ALTINDA kalıyor — kardeş sırası z-sırası olduğu için.
+
+          Bandın boyu SERBEST BIRAKILAMAZ: üst katman dairesi bantları `index * collectionBand`
+          ile konumlandırıyor (aşağıdaki `CollectionPhotoOverlay`), yani yükseklik bir ölçü değil
+          bir SÖZLEŞME — değişse daireler kayardı.
+
+          Sınır ölçüden geliyor, gözden değil. Bütçe 132 dp; en zorlu hâl "Büyük" yazı boyutu
+          (×1,15): göz üstü ~15 + sayaç ~17 + iki boşluk 4 = 36, başlığa kalan 96. Başlık satırı
+          20 × 1,15 × 1,15 ≈ 26,5 dp → üç satır 79 (sığar), dört satır 106 (TAŞAR — ölçülen hâl).
+          İki satırda durduruyoruz: üçüncü satır aritmetik olarak sığsa da payı sıfıra indiriyor
+          ve daha büyük erişilebilirlik ölçeklerinde ilk taşan o olurdu. Göz üstü de tek satır —
+          o bir koleksiyon ADI, sarması beklenmiyor ama sarsa aynı bütçeden yiyecekti.
+        */}
         {subtitle === null ? null : (
-          <Text style={[styles.title, styles[`${tone}Title`], mirrored ? styles.alignEnd : undefined]}>{subtitle}</Text>
+          <Text
+            style={[styles.title, styles[`${tone}Title`], mirrored ? styles.alignEnd : undefined]}
+            numberOfLines={2}
+          >
+            {subtitle}
+          </Text>
         )}
         <Text style={[styles.count, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}>{countLabel}</Text>
       </View>

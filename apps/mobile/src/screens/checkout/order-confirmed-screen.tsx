@@ -14,7 +14,15 @@ import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
 
 /*
   SİPARİŞ ONAYI (v3 `vConfirm`) — büyük onay işareti, sipariş numarası, teslimat/ödeme/toplam
-  özeti, kazanılan puan ve iki çıkış yolu.
+  özeti ve iki çıkış yolu.
+
+  ── PUAN SATIRI KALDIRILDI (MB-49, 14.08) ───────────────────────────────────
+  Ekran *"✦ Teslimatta +{n} puan kazanacaksınız"* diyordu ve sayıyı KENDİSİ hesaplıyordu
+  (`tutar ÷ 100`), oysa motor `points_order` ayarını okuyup sabit yazıyordu — cihazda ölçüldü
+  (11.08): ekran 47, defter 10. Sonra kullanıcı kararıyla (11.08) SİPARİŞ PUANI TÜMDEN KALKTI,
+  yani vaat edilecek bir puan da kalmadı. Satır geri gelmez; yerine bir sayı KONMAZ da —
+  bu ekranın puandan haberi olmaması bilinçli. Puanın anlatıldığı yer hesap ekranı ve
+  onboarding'in ortak listesidir (`customer-kit/points-earn-list.tsx`).
 
   ── DEĞERLER GERÇEK SİPARİŞTEN (21.14 ikinci etap) ──────────────────────────
   Tutar ve teslimat/ödeme künyesi checkout'un AÇTIĞI siparişten geliyor (`POST /me/checkout/order`
@@ -51,8 +59,6 @@ interface OrderConfirmedScreenProps {
   /** Teslimat satırı: seçilen gün ya da kargo yazısı. */
   deliveryLabel: string;
   paymentLabel: string;
-  /** Kazanılan puan; 0 ise rozet çizilmez (B2B ve misafirde puan yok). */
-  points: number;
 }
 
 export function OrderConfirmedScreen({
@@ -61,7 +67,6 @@ export function OrderConfirmedScreen({
   totalCents,
   deliveryLabel,
   paymentLabel,
-  points,
 }: OrderConfirmedScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
@@ -93,11 +98,6 @@ export function OrderConfirmedScreen({
           testID="confirmed-summary"
         />
 
-        {points > 0 ? (
-          <Text style={styles.points} testID="confirmed-points">
-            {t.confirmed.points.replace('{n}', String(points))}
-          </Text>
-        ) : null}
         <Text style={styles.note}>{t.confirmed.note}</Text>
 
         {/*
@@ -168,16 +168,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['body-sm'],
     color: theme.colors.muted,
-  },
-  points: {
-    fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.control,
-    color: theme.colors.terracotta,
-    backgroundColor: theme.colors['terracotta-bg'],
-    borderRadius: theme.radius.card,
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space['4xl'],
-    overflow: 'hidden',
   },
   note: {
     fontFamily: theme.font.body[400],

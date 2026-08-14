@@ -103,8 +103,22 @@
     },
     "data": {
       "title": "Verileriniz",
-      "body": "Bilgilerinizi bu sayfada görebilir ve düzenleyebilirsiniz. Verilerinizin silinmesini bonjour@lezzetanatolia.fr adresine yazarak talep edebilirsiniz.",
+      "body": "Bilgilerinizi bu sayfada görebilir ve düzenleyebilirsiniz.",
       "privacy": "Gizlilik politikası"
+    },
+    "deleteAccount": {
+      "action": "Hesabımı sil",
+      "title": "Hesabınızı silmek üzeresiniz",
+      "body": "Hesabınızı sildiğinizde bir daha giriş yapamazsınız ve kişisel bilgileriniz kayıtlarımızdan çıkarılır.",
+      "goesTitle": "Silinenler",
+      "goes": "Adınız, e-posta ve telefonunuz, kayıtlı adresleriniz, talep yazışmalarınız, bildirim istekleriniz, puanlarınız ve kişisel kuponlarınız, yazdığınız yorum metinleri ve giriş bilgileriniz.",
+      "staysTitle": "Yasal olarak kalanlar",
+      "stays": "Geçmiş sipariş ve fatura kayıtlarınız — faturanın üzerindeki ad ve adres dâhil. Fransız mevzuatı faturanın bu bilgileri içermesini zorunlu kılıyor, bu yüzden silinemez. Ürünlere verdiğiniz puan da kalır ama adınıza bağlı olmaktan çıkar.",
+      "irreversible": "Bu işlem geri alınamaz.",
+      "cancel": "Vazgeç",
+      "confirm": "Hesabımı sil",
+      "deleting": "Siliniyor…",
+      "failed": "Hesabınız silinemedi — yeniden deneyin."
     },
     "logout": "Çıkış yap"
   },
@@ -212,8 +226,22 @@
     },
     "data": {
       "title": "Vos données",
-      "body": "Vous pouvez consulter et modifier vos informations sur cette page. Pour demander leur suppression, écrivez à bonjour@lezzetanatolia.fr.",
+      "body": "Vous pouvez consulter et modifier vos informations sur cette page.",
       "privacy": "Politique de confidentialité"
+    },
+    "deleteAccount": {
+      "action": "Supprimer mon compte",
+      "title": "Vous êtes sur le point de supprimer votre compte",
+      "body": "Une fois votre compte supprimé, vous ne pourrez plus vous connecter et vos données personnelles seront retirées de nos fichiers.",
+      "goesTitle": "Ce qui est supprimé",
+      "goes": "Votre nom, votre e-mail et votre téléphone, vos adresses enregistrées, vos demandes et leurs échanges, vos alertes de disponibilité, vos points et bons personnels, le texte de vos avis et vos identifiants de connexion.",
+      "staysTitle": "Ce qui est conservé, par obligation légale",
+      "stays": "Vos commandes et factures passées — y compris le nom et l'adresse figurant sur la facture. La réglementation française impose que la facture contienne ces informations : elles ne peuvent donc pas être effacées. La note que vous avez donnée aux produits reste également, mais elle n'est plus rattachée à votre nom.",
+      "irreversible": "Cette action est irréversible.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer mon compte",
+      "deleting": "Suppression…",
+      "failed": "La suppression a échoué — veuillez réessayer."
     },
     "logout": "Se déconnecter"
   },
@@ -321,8 +349,22 @@
     },
     "data": {
       "title": "Ihre Daten",
-      "body": "Sie können Ihre Angaben auf dieser Seite einsehen und bearbeiten. Die Löschung können Sie unter bonjour@lezzetanatolia.fr beantragen.",
+      "body": "Sie können Ihre Angaben auf dieser Seite einsehen und bearbeiten.",
       "privacy": "Datenschutzerklärung"
+    },
+    "deleteAccount": {
+      "action": "Konto löschen",
+      "title": "Sie sind dabei, Ihr Konto zu löschen",
+      "body": "Nach der Löschung können Sie sich nicht mehr anmelden, und Ihre personenbezogenen Daten werden aus unseren Unterlagen entfernt.",
+      "goesTitle": "Was gelöscht wird",
+      "goes": "Ihr Name, Ihre E-Mail-Adresse und Telefonnummer, Ihre gespeicherten Adressen, Ihre Anfragen und deren Verlauf, Ihre Benachrichtigungswünsche, Ihre Punkte und persönlichen Gutscheine, der Text Ihrer Bewertungen und Ihre Anmeldedaten.",
+      "staysTitle": "Was aus rechtlichen Gründen bleibt",
+      "stays": "Ihre bisherigen Bestellungen und Rechnungen — einschließlich des Namens und der Adresse auf der Rechnung. Das französische Recht schreibt vor, dass die Rechnung diese Angaben enthält; sie können daher nicht gelöscht werden. Auch Ihre Produktbewertung bleibt bestehen, ist aber nicht mehr mit Ihrem Namen verknüpft.",
+      "irreversible": "Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "cancel": "Abbrechen",
+      "confirm": "Konto löschen",
+      "deleting": "Wird gelöscht…",
+      "failed": "Ihr Konto konnte nicht gelöscht werden — bitte erneut versuchen."
     },
     "logout": "Abmelden"
   }

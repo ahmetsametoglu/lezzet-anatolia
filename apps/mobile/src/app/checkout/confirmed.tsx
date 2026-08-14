@@ -25,7 +25,6 @@ export default function OrderConfirmedRoute() {
     total?: string;
     delivery?: string;
     payment?: string;
-    points?: string;
   }>();
 
   return (
@@ -37,7 +36,6 @@ export default function OrderConfirmedRoute() {
       totalCents={intOf(params.total)}
       deliveryLabel={params.delivery ?? ''}
       paymentLabel={params.payment ?? ''}
-      points={intOf(params.points) ?? 0}
     />
   );
 }

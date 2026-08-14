@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import { MeSchema, type MePreferencesSchema, type MeUpdateSchema } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
@@ -47,4 +47,15 @@ export function updateMe(input: z.input<typeof MeUpdateSchema>): Promise<ApiResu
  */
 export function updatePreferences(input: z.input<typeof MePreferencesSchema>): Promise<ApiResult<Me>> {
   return authorizedFetch('/api/v1/me/preferences', MeSchema, { method: 'PATCH', body: input });
+}
+
+/**
+ * **Hesabı silme** (GDPR md. 17 · App Store 5.1.1(v)) — geri alınamaz, gövdesiz.
+ *
+ * Kimlik GÖNDERİLMEZ: silinecek hesap oturumun kendisidir ve sunucu onu jetondan çözer (uç
+ * künyesi). Cevap yalnız "oldu mu" der; başarıdan SONRA çıkış yapmak çağıranın işidir — sunucu
+ * `auth.users` satırını siliyor ama cihazdaki jetona dokunamıyor.
+ */
+export function deleteAccount(): Promise<ApiResult<true>> {
+  return authorizedFetch('/api/v1/me', z.literal(true), { method: 'DELETE' });
 }

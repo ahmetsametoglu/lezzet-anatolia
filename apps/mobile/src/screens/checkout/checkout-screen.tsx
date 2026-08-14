@@ -80,9 +80,6 @@ import messages from './messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Puan kazancı: her tam euro 1 puan (şablonun `Math.round(total)` kuralı, cent'e uyarlanmış). */
-const POINTS_PER_EURO = 1;
-
 /** Ödeme satırı — v3'ün `payOpts()`u; web checkout'unun kurduğu kümenin AYNISI (tek karar iki yüzey). */
 interface PaymentOption {
   /** Satır anahtarı: `bank_transfer` iki kez geçer (peşin havale ⟷ vadeli), yöntem anahtar olamaz. */
@@ -405,7 +402,6 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    * "hangi sipariş komşu çağırabilir" kuralının ikinci kopyası olurdu.
    */
   const finish = (orderId: string, totalCents: number, deliveryType: 'route' | 'shipping'): void => {
-    const points = Math.round((totalCents / 100) * POINTS_PER_EURO);
     /* SEPET YERELDE BOŞALTILMAZ, SUNUCUDAN TAZELENİR (21.29a): sunucu o siparişin kalemlerini
        zaten düşürdü (`placeOrder` → `clearOrderedLines`) ve `resetCart()` iki gruplu sepette kargo
        yarısını da silerdi — müşterinin henüz sipariş etmediği kalemleri.
@@ -421,7 +417,6 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         total: String(totalCents),
         delivery: deliveryLabelOf(deliveryType, chosenDate, t, locale),
         payment: selectedPayment?.label ?? '',
-        points: String(points),
       },
     });
   };

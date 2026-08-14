@@ -2263,6 +2263,100 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   *"operasyon kısmına yetiştirme"*). Her ekranda İKİ soru: çalışıyor mu · anlaşılıyor mu.
   **Durum:** A1–A2 ve A6–A7 ile B1–B2, B5–B6 geçildi (görev 21.47'nin turu); geri kalanı açık.
 
+- [x] (21.49) **HESABINI SİLME NATIVE'E GELDİ — ve dört backlog kalemi aynı turda kapandı**
+  (14.08). `touches: apps/mobile-api/src/api/v1/router.ts, apps/mobile/src/lib/api/me.ts,
+  apps/mobile/src/screens/account/{account-screen.tsx,messages.json},
+  apps/mobile/src/screens/checkout/{checkout-screen.tsx,order-confirmed-screen.tsx,messages.json},
+  apps/mobile/src/app/checkout/confirmed.tsx,
+  apps/mobile/src/screens/professionals/application-form.tsx,
+  apps/mobile/src/screens/home/{home-screen.tsx,collection-band.tsx},
+  docs/talep/inceleme-analitik-web-native.md`
+
+  Kapananlar: **MB-62** (hesabını silme) · **MB-49** (onaydaki uydurma puan satırı) · **MB-26**
+  (etiketsiz form alanları) · **MB-27** (iki davet kartı iki görsel dilde) · **MB-25** (koleksiyon
+  bandının kırptığı sayaç). Ayrıca **MB-24 ve MB-32'nin kayıtları ölçümle düzeltildi** (ikisi de
+  sanıldığından başka çıktı) ve **analitik incelemesinin altı sorusu cevaplandı** — o dosya
+  *"mobil cevabı gelmeden kod yazılmaz"* diyordu, yani başka bir şerit bekliyordu.
+
+  **1 · HESABINI SİLME (MB-62) — MAĞAZA ŞARTIYDI, ölçüldü.** Web hesap sayfası 08.21'den beri
+  siliyor (`deleteAccountAction` → `UserProfileService.anonymize` → `anonymize_customer` RPC);
+  native'de karşılığı YOKTU ve ekran müşteriye *"silinmesini bonjour@lezzetanatolia.fr adresine
+  yazarak talep edebilirsiniz"* diyordu. Bu bir eksik özellik değil **yayın engeli**: App Store
+  5.1.1(v), hesap açtıran uygulamadan hesabın UYGULAMA İÇİNDEN silinebilmesini istiyor — e-posta
+  yönlendirmesi kabul edilmiyor. Yani uygulama bugünkü hâliyle incelemeden geçmezdi.
+
+  **İkinci bir silme kuralı YAZILMADI:** `DELETE /api/v1/me` web eyleminin çağırdığı kapının
+  aynısını çağırıyor. Hangi tablonun silineceği, hangisinin kimliksizleşeceği kararı `0037`
+  migration'ının içinde tek yerde duruyor; ikinci bir nüsha, iki yüzeyin bir gün farklı şey
+  silmesi demekti (MB-50'nin "aynı müşteri iki yüzeyde iki kural" dersi).
+
+  **Kimlik gövdeden alınmıyor, jetondan çözülüyor** — web eyleminin künyesindeki kalkanın aynısı:
+  `anonymize` verilen kimliği sorgusuz anonimleştirir, yani bir parametre kabul etmek "bu benim
+  hesabım mı" sorusunu uçta doğru sormayı şart koşardı. Soruyu ortadan kaldırmanın tek güvenli
+  yolu parametreyi hiç almamak.
+
+  **Çekmece bir "emin misiniz?" değil, NE OLACAĞINI söyleyen ekran** — ve GİDENLE KALAN aynı
+  ağırlıkta çiziliyor. Gerekçe web'in künyesinden: silme bir `DELETE` değil, fatura kayıtları
+  yasal olarak duruyor **faturadaki ad ve adres dâhil** (Fransız mevzuatı zorunlu kılıyor). Bunu
+  yazmayan bir ekran, müşteriyi "hesabımı sildim" sanmaya bırakır ve faturasında adını gördüğü
+  gün haklı olan o olur. Metin web'den KOPYALANMADI, birebir aynı karar üç dilde aynı cümlelerle
+  verildiği için aynı metin kullanıldı — iki yüzeyin aynı yasal beyanı farklı kelimelerle
+  yapması, hangisinin doğru olduğunu sorduracaktı.
+
+  **Sıra ölçülmüş bir tuzağa göre:** önce sunucu siler, SONRA cihaz çıkış yapar. Sunucu
+  `auth.users` satırını siliyor ama cihazdaki jetona dokunamıyor — web'de 08.08'de tarayıcıda
+  ölçülmüştü (silme bitince oturum çerezi yerinde kalıyordu). Ters sıra, silmenin düştüğü bir
+  koşuda müşteriyi hem hesabıyla hem çıkışla bırakırdı.
+
+  **Doğrulama:** `tsc` iki pakette temiz; `jest src/screens/account src/screens/checkout
+  src/lib/api` → 4 dosya / 17 test geçti; uç mount'u ölçüldü (`DELETE /api/v1/me` jetonsuz
+  **401** dönüyor — 404 dönseydi rota hiç bağlanmamış olurdu). **Silme cihazda ÇALIŞTIRILMADI**
+  ve bu bilinçli: tek yönlü bir işlem, test hesabını geri getiremezdik; cihaz doğrulaması
+  `(21.48)` turunda kullan-at bir hesapla yapılacak.
+
+  **2 · SİPARİŞ ONAYINDAKİ PUAN SATIRI SİLİNDİ (MB-49).** Ekran *"✦ Teslimatta +{n} puan
+  kazanacaksınız"* diyor ve sayıyı KENDİSİ hesaplıyordu (`POINTS_PER_EURO = 1`, `tutar ÷ 100`);
+  motor ise `points_order` ayarını okuyup sabit yazıyordu. Cihazda ölçülmüştü (11.08): 47,40 €'luk
+  siparişte ekran **47**, defter **10** — 4,7 kat. Sonra kullanıcı kararıyla (11.08) sipariş puanı
+  TÜMDEN kalktı, yani vaat edilecek puan da kalmadı. Satır, taşıyan rota parametresi, üç dildeki
+  metin ve sabit birlikte söküldü — yerine bir sayı KONMADI. Ekranın puandan haberi olmaması
+  artık bilinçli; puanın anlatıldığı yer hesap ekranı ve onboarding'in ortak listesi.
+
+  **Kaldırılan iki yan kusur da kendiliğinden düştü:** ekran müşteri TİPİNİ bilmiyordu (B2B puan
+  kazanamaz ama aynı vaadi görüyordu) ve günlük tavanı gözetmiyordu (tavana dayanmış müşteriye
+  "kazanacaksınız" diyordu). İkisi de olmayan bir satırın kusuruydu.
+
+  **3 · ÜÇ YERLEŞİM KUSURU (MB-26 · MB-27 · MB-25) — üçü de KENDİ KURALIMIZIN uygulanmaması.**
+  Ortak dersi bu: hiçbiri yeni bir desen istemedi, üçünde de doğru davranış zaten bir künyede
+  yazılıydı ve kullanılmamıştı.
+  · **MB-26** — başvuru formunun sekiz alanı yalnız yer tutucu taşıyordu, oysa `TextField` künyesi
+  *"görünür etiket isteyen ekran ayrıca `label` verir"* diyor ve hiçbir ekran vermiyordu. Kusur
+  resmî kayıttan KENDİLİĞİNDEN dolan alanlarda görünür (yer tutucu dolunca kaybolur): müşteri
+  "67380" ile "LINGOLSHEIM"i hiç yazmadan karşısında bulup ne olduklarını tahmin ediyordu.
+  · **MB-27** — vitrindeki Profesyonel kartı `sand` tonundaydı ve canlı Keşif kartının yanında
+  devre dışı gibi duruyordu. `dashed-invite.tsx` künyesi tonu zaten tanımlamış: *"`terracotta`
+  çağırıdır, `sand` bilgidir."* Bu kart bilgi vermiyor, davet ediyor. Ton ve işaret aynılaştı;
+  ölü kalan `inviteArrow` stili silindi.
+  · **MB-25** — koleksiyon bandı dört satırlık başlıkta sayaç satırını kırpıyordu. Yükseklik
+  SERBEST BIRAKILAMAZ (üst katman dairesi `index * collectionBand` ile konumlanıyor), o yüzden
+  satır sınırı konuldu — ve sınır bütçeden türetildi: 132 dp'den "Büyük" yazı boyutunda göz üstü
+  ~15 + sayaç ~17 + boşluklar 4 düşünce başlığa 96 kalıyor, satır ≈ 26,5 dp → üç satır sığar,
+  dört satır 106 ile taşar (ölçülen hâl). İki satırda durduruldu; üçüncü aritmetik olarak sığsa
+  da payı sıfırlıyordu.
+
+  **4 · ANALİTİK İNCELEMESİNİN ALTI SORUSU CEVAPLANDI**
+  (`docs/talep/inceleme-analitik-web-native.md` §5). Dosya 10.08'de denetim tarafından açılmış ve
+  *"mobil cevabı gelmeden kod yazılmaz"* diyordu — yani bir şerit bekliyordu. Cevapların üçü
+  denetimin varsayımını DEĞİŞTİRDİ: (a) UA'da kuruluma özgü entropi olmadığı tek cihazdan string
+  okuyarak değil, **kod düzeyinde** kanıtlandı — `apiFetch` `User-Agent` başlığını hiç yazmıyor,
+  yani değere kurulumdan gelen bir girdi giremiyor; (b) `staff_role` diye bir JWT talebi native'de
+  YOK, rol `user_profiles.roles`ta ve bir profil okuması gerektiriyor; (c) huninin
+  `add_to_cart` adımının **misafir yarısı yapısal olarak ölçülemez** — misafirin sepeti cihazda
+  yaşıyor, uca hiç uğramıyor; oradaki tek uç bir GÖRÜNÜM okuması ve ona niyet yazmak
+  `ANALYTICS §1` İlke 1'i tersinden ihlal ederdi. Ayrıca iOS Keychain uygulama silinince
+  silinmediği için "yeniden kurulum yeni ziyaretçidir" kararının iki platformda farklı
+  davranacağı önden söylendi. Backlog kaydı da açıldı (**MB-63**) — listede hiç yoktu.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
