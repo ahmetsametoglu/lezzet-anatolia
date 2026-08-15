@@ -34,14 +34,20 @@
   kenardan-kenara olduğu için Android pencereyi küçültmüyor. Çözüm kite kondu
   (`components/ui/form-scroll.tsx`), form ekranları ona geçti. Kalan geniş göç MB-34'ün işi.
 
-- [ ] **MB-03 · Adres formunda sokak alanına yazınca uygulama yeniden yükleniyor** → görev
-  `(21.30)` açık, ölçümü orada. **11.08 · 14:1x — BUGÜN ÜRETİLEMEDİ:** kullanıcı cihazda sokak
+- [x] **MB-03 · Adres formunda sokak alanına yazınca uygulama yeniden yükleniyor**
+  → **KAPANDI (kullanıcı kararı 15.08) ve TEKRAR GÖZLEMLENMEDİKÇE BİR DAHA AÇILMAZ.** Sebep
+  ölçülerek yakalandı: Metro'nun paket tazelemesi (paralel şerit `apps/mobile` altına yazınca).
+  Yani geliştirme ortamının yan etkisi — üretim müşterisini ilgilendirmiyor. Görev `(21.30)`
+  aynı kararla kapandı; ona asılı `BEKLEYEN` işaretleri kaldırıldı. Ölçüm zinciri orada duruyor.
+  *(Kapanışın dayanağı olan eski durum notu aşağıda bırakıldı.)*
+  **11.08 · 14:1x — ÜRETİLEMEDİ:** kullanıcı cihazda sokak
   alanına üç harf yazdı, öneriler geldi, birini seçti, adres kaydedildi; hiçbir sıfırlanma olmadı.
   Görevin kendi listesindeki üçüncü şüpheli — **geliştirme ortamının kod tazelemesi** — birinci
   sıraya geçti ve mekanizması ölçüldü (uygulama geliştirme yapısı, kod sunucusu dinliyor; mobil
   dosyası kaydedilince paket baştan koşuyor). İlk ölçüm sırasında üç ajan aynı anda mobil dosyalarına
-  yazıyordu. **Kapatılmadı:** ilk ölçüm üç tekrarlı ve kontrol turlu; kesin karar ağaç sakinken
-  ya da üretim derlemesinde tekrarla verilir.
+  yazıyordu. *(O gün kapatılmamıştı: ilk ölçüm üç tekrarlı ve kontrol turluydu, kesin kararın ağaç
+  sakinken ya da üretim derlemesinde verilmesi bekleniyordu. 15.08'de kullanıcı o turu beklemeden
+  kapattı — belirti bir daha gözlenmedi.)*
   **Bu dosyadan bağ:** MB-13'ün (oturum misafire düşüyor) tetikleyicisi de bir yeniden yükleme
   olabilir — aynı tazeleme bellekteki oturum deposunu da siliyor. İkisi aynı ölçümle kapanabilir.
 
@@ -125,7 +131,18 @@
 
 ## 3. Kimlik ve oturum
 
-- [ ] **MB-13 · Girişli müşteriye misafir ekranı gösteriliyor — tetikleyici üretilemedi.**
+- [x] **MB-13 · Girişli müşteriye misafir ekranı gösteriliyor — tetikleyici üretilemedi.**
+  → **KAPANDI (kullanıcı kararı 15.08), AMA GÖZLEMDE KALIYOR: peşinden koşulmaz, tekrarlarsa
+  yeniden açılır.** MB-03 ile aynı ortak aday geçerli — Metro'nun paket tazelemesi bellekteki
+  oturum deposunu da sıfırlıyor; belirtinin her karesi (ekranın "misafir" demesi, soğuk açılışın
+  düzeltmesi) buna uyuyor. **Fark MB-03'ten şu:** orada tetikleyici doğrudan yakalandı, burada
+  yalnız aynı mekanizmanın bu belirtiyi de açıklaması var — yani kapanış "sebep kanıtlandı" değil,
+  "kovalamaya değmez" kapanışıdır. Cihazda bir daha görülürse kayıt yeniden açılır ve ilk adım
+  hazır: `useMe`nin `guest`e düştüğü anı ve `authorizedFetch`in yerel 401 kısa devresini
+  izlenebilir kılmak (`lib/auth/authorized-fetch` + `screens/customer-kit/use-me.hook`).
+  **MB-14'ün savunmacı düzeltmesi bu kayıttan bağımsız olarak yerinde duruyor** — iki doğruluk
+  kaynağı ayrışsa bile aynı karede hem ödül hem davet görünmez.
+
   **Ölçüldü 11.08, iki ayrı kez:** Hesap sekmesi *"Hoş geldiniz / Hızlı doğrulama"* verdi; oysa o
   dakikalarda oturum canlıydı (10:53'te Bearer isteği B2B başvurusunu yazdı, 11:00'da Vitrin
   *"Merhaba, Yaman"* dedi). Soğuk açılış her seferinde düzeltti.
@@ -135,9 +152,8 @@
   deposu sıfırlanıyor** — ekranın "misafir" demesi ve soğuk açılışın düzeltmesi tam olarak buna uyar.
   Ölçümün yapıldığı dakikalarda üç ajan aynı anda mobil dosyalarına yazıyordu. Kanıtlanmadı;
   kesin karar ağaç sakinken ya da üretim derlemesinde tekrarla verilir.
-  **BEKLEYEN(21.30): sebep ölçülmedi, teori kurulmuyor.** Sıradaki ölçüm önerisi: `useMe`'nin
-  `guest`e düştüğü anı ve `authorizedFetch`in yerel 401 kısa devresini izlenebilir kılmak
-  (`lib/auth/authorized-fetch` + `screens/customer-kit/use-me.hook`). MB-03 ile birlikte bakılmalı.
+  *(O günün notu: sebep ölçülmemişti, teori kurulmuyordu. Sıradaki ölçüm önerisi yukarıdaki kapanış
+  notuna taşındı — kayıt yeniden açılırsa oradan devam edilir.)*
 
 - [x] **MB-14 · Keşif bitiş ekranı girişli müşteriye "Giriş yaparsanız… / Hızlı doğrulama"
   gösterdi** — üstelik aynı ekranda *"+6 puan kazandınız"* yazarken.
@@ -433,11 +449,15 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   söylüyor** (`usePlaceResolution` → dört hâlin her biri kendi cümlesini alıyor). Yani doğru bilgi
   zaten iki yerde var; kaldırılan şey yalnız uydurma genellemeydi.
 
-- [ ] **MB-52 · Keşif'ten kataloğa dönerken native çökme — BİR KEZ görüldü, ÜRETİLEMEDİ.**
+- [x] **MB-52 · Keşif'ten kataloğa dönerken native çökme — BİR KEZ görüldü, ÜRETİLEMEDİ.**
+  → **KAPANDI (kullanıcı kararı 15.08), GÖZLEMDE KALIYOR: peşinden koşulmaz, tekrarlarsa yeniden
+  açılır.** Tek kare, üretilemedi ve koşulları MB-03'ünkiyle birebir aynı (paralel şerit
+  `catalog-screen.tsx`e yazıyordu, paket tazeleniyordu) — tazelemenin yeniden bağlama hatası
+  olması en yakın açıklama. Kapanış "sebep kanıtlandı" değil, "tek kareye makine kurulmaz"dır.
+  Üretim derlemesinde ya da ağaç sakinken tekrarlarsa gerçek arızadır ve kayıt yeniden açılır.
+
   11.08: *"addViewAt: failed to insert view … child already has a parent"*. Aynı geçiş sonradan
-  sorunsuz çalıştı. Ölçüm sırasında paralel şerit `catalog-screen.tsx`e yazıyordu ve uygulama
-  geliştirme yapısı — kod tazelemesinin yeniden bağlama hatası olması kuvvetle muhtemel. **Teori
-  kurulmadı, kayıt tutuluyor:** üretim derlemesinde ya da ağaç sakinken tekrarlarsa gerçek arızadır.
+  sorunsuz çalıştı.
 
 - [x] **MB-53 · "Arkadaşını getir" zinciri ORTASINDAN KOPUK — bugün kimse davet puanı kazanamaz.**
 
@@ -980,8 +1000,11 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
    bunu söylüyordu.
 2. **MB-04 + MB-05 + MB-07 + MB-08 + MB-11** — 21.31'in açık kalanları; dilim **commit edilmeden**
    kapanırsa git geçmişi bütün olur.
-3. **MB-03 → MB-13** — adres formunun yeniden yüklemesi ve oturumun misafire düşmesi; ikisi de
-   **ölçüm işi**, düzeltme işi değil. Sebep çıkmadan kod yazılmaz (CLAUDE §0).
+3. ~~**MB-03 → MB-13** — adres formunun yeniden yüklemesi ve oturumun misafire düşmesi.~~
+   → **İKİSİ DE KAPANDI (kullanıcı kararı 15.08), MB-52 ile birlikte.** Üçünün de ortak açıklaması
+   Metro'nun paket tazelemesiydi ve hiçbiri üretim müşterisini ilgilendirmiyor. MB-03 **bir daha
+   açılmaz**; MB-13 ve MB-52 **gözlemde** — tekrarlarsa açılır, peşinden koşulmaz. Kod yazılmadı,
+   çünkü sebep düzeltilecek bir yerde değildi (CLAUDE §0).
 4. **MB-06** — ortak adres bloğu (BAN önerili) başvuru formuna. MB-03 kapandıktan sonra.
 5. **MB-15..MB-19** — puan sisteminin komple denetimi + teşekkür kartının yeniden tasarımı.
 6. **MB-20 + MB-28** — liste fiyatı/"…'dan" eki ve varyant sırası; web talebiyle (`musteri-liste-
@@ -1059,8 +1082,10 @@ web ile native ayrışmasın.
 MB-13 (oturum misafire düşüyor) bir teori istemiyor ama bir **eleme** öneriyor: `useMe` bellekte
 duran bir modül deposudur; JS bundle yeniden yüklenirse depo sıfırlanır ve oturum geri okunana dek
 ekran "misafir" der. MB-03 tam olarak bir yeniden yükleme arızası. İkisi aynı turda ölçülürse
-**tek ölçüm iki maddeyi kapatabilir** — ya da MB-13'ün bağımsız olduğu kanıtlanır. Bugün ikisi de
-`BEKLEYEN(21.30)`'a asılı, bu doğru.
+**tek ölçüm iki maddeyi kapatabilir** — ya da MB-13'ün bağımsız olduğu kanıtlanır.
+**Öyle de oldu, ama ölçümle değil kararla (15.08):** ikisi de aynı gerekçeyle kapandı. Bu bölümün
+tespiti — `useMe`nin bellekte duran bir modül deposu olması ve paket yeniden yüklenince
+sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ölçüm buradan başlar.
 
 ---
 
@@ -1267,7 +1292,7 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-02 (klavye odaklanan alanı kapatıyor) | cihaz | 11.08 · 12:19 → yollar 12:3x'te kesinleşti | **YENİ:** `apps/mobile/src/components/ui/form-scroll.tsx` · **DEĞİŞEN:** `screens/{professionals/professionals-screen.tsx,login/login-screen.tsx,feedback/feedback-screen.tsx}` | **bitti ve COMMİT EDİLDİ** — `9f680bbb`, görev `(21.36)` (11.08). Sebep ölçüldü: tema `Theme.EdgeToEdge`, `adjustResize` ölü, pencere küçülmüyor (klavye açıkken kaydırma da işlemiyor). Çözüm kite kondu (`form-scroll.tsx`), `bottom-sheet`in 08.08'de verdiği kararın aynısı; şimdilik yalnız FORM ekranlarına uygulandı. **Kalan geniş göç MB-34'ün işi** — o satır da artık açık |
 | MB-48 (çekmece taşıyor · öneri listesi sınırsız) | cihaz | 11.08 · 14:2x — görev `(21.41)` | `apps/mobile/src/components/ui/{bottom-sheet.tsx,suggestion-list.tsx}` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` (yerel kaydırıcı kite taşındı) | **bitti** — Android'de ölçüldü ("Büyük" yazı boyutu), **iOS'ta kullanıcı doğruladı** (11.08) |
 | MB-09 (B2B misafir yolu cihazda hiç yürütülmedi) | cihaz | 11.08 · 14:2x | **yalnız ölçüm — kod değişikliği YOK.** Misafirle tur: e-posta → tek kullanımlık kod → başvurunun kendiliğinden gitmesi → "inceleniyor" | **alındı** — cihaz işi olduğu için bu şeritte (⚑ kuralı); MB-03/MB-13 turundan sonra |
-| MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **alındı** — tablo "ölçümü kim yapacak, ilan edilsin" diye sormuştu; cihaz bu şeritte (üstteki ⚑ kuralı). Sebep çıkmadan kod yazılmaz (CLAUDE §0) |
+| MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **bitti — İKİSİ DE KAPANDI (kullanıcı kararı 15.08), kod değişikliği YOK.** Ortak açıklama Metro'nun paket tazelemesi; MB-03 bir daha açılmaz, MB-13 gözlemde kalır. MB-52 de aynı kararla kapandı. Görev `(21.30)` kapandı, ona asılı `BEKLEYEN` işaretleri kaldırıldı |
 
 **Kapananların görev satırı `(21.34)`:** MB-15 · MB-16 · MB-17 · MB-35 · MB-41. Ölçümler, seçilmeyen
 yollar ve kalan borç orada. **Web şeridine bir iş doğdu:**

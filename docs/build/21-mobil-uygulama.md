@@ -1282,7 +1282,15 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `return`ların ALTINDAYDI ve ekran *"Rendered more hooks than during the previous render"* ile
   çöküyordu. Birim testler bunu görmedi (misafir dalı ayrı render ağacı); hook en üste taşındı.
 
-- [ ] (21.30) **ADRES FORMUNDA SOKAK ALANINA YAZINCA UYGULAMA YENİDEN YÜKLENİYOR — form kapanıyor (ölçüldü 11.08).**
+- [x] (21.30) **ADRES FORMUNDA SOKAK ALANINA YAZINCA UYGULAMA YENİDEN YÜKLENİYOR — form kapanıyor (ölçüldü 11.08).**
+  → **KAPANDI (kullanıcı kararı 15.08): geliştirme ortamının yan etkisi, üretim müşterisini
+  ilgilendirmiyor. Tekrar gözlemlenmedikçe BİR DAHA AÇILMAZ.** Aşağıdaki ölçüm zinciri zaten bu
+  kapanışın şartını yazmıştı ("üretilemezse kayıt geliştirme ortamının yan etkisi diye kapanır");
+  eksik olan tek şey kararın verilmesiydi. Kanıt sırası: BAN çağrısı elendi (ağ turu olmadan da
+  tekrarladı) → tetikleyici Metro'nun tazelemesi olarak YAKALANDI (mavi "Refreshing…" şeridi +
+  paralel şeridin dosya kayıt zamanları) → 11.08 · 14:1x'te kullanıcı aynı turu yaptı, hiç
+  yeniden yükleme olmadı. **`BEKLEYEN(21.30)` işaretleri bu kararla kaldırıldı** — açık bir
+  ölçüm borcu kalmadı.
   `touches:` `apps/mobile/src/screens/customer-kit/use-address-search.hook.ts` ·
   `apps/mobile/src/lib/hooks/use-debounced-lookup.hook.ts` · `packages/address-fr/src/ban-client.ts`
 
@@ -1314,7 +1322,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   yapmıyor — buna rağmen yeniden yükleme oluyor. Hook'un state mantığı sebep olsaydı burada
   susması gerekirdi.
 
-  **BEKLEYEN(21.30): sebep hâlâ ölçülmedi, teori kurulmuyor.** Elenmemiş şüpheliler: (1) sokak
+  **(O GÜNÜN NOTU — sebep hâlâ ölçülmemişti, teori kurulmuyordu.)** Elenmemiş şüpheliler: (1) sokak
   alanının `content="streetAddress"` beyanı — Android Autofill yalnız BU alanda devrede (posta kodu
   `postalCode`, şehir `city` alanlarında aynı davranış YOK); (2) `SuggestionList`in açılıp kapanması;
   (3) Metro/dev ortamının kendisi — o hâlde üretim derlemesinde görünmez. Sıradaki ölçüm: `content`
@@ -1351,9 +1359,9 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   bir kaydediliyor ve her kayıt paketi tazeliyor.
   **Sonuç:** başka bir ajan `apps/mobile` altına yazarken cihazda yapılan HİÇBİR ölçüm güvenilir
   değil. Bu, `(21.30)`'un ilk ölçümündeki üç tekrarı da açıklıyor.
-  **BEKLEYEN(21.30) yine de yerinde duruyor** — kalan tek adım, ağaç sakinken ya da üretim
-  derlemesinde bir doğrulama turu; o da üretilemezse kayıt "geliştirme ortamının yan etkisi" diye
-  kapanır.
+  O gün işaret yerinde bırakılmıştı — kalan tek adım, ağaç sakinken ya da üretim derlemesinde bir
+  doğrulama turuydu. **15.08'de kullanıcı o turu beklemeden kapattı** (yukarıdaki kapanış notu):
+  belirti bir daha gözlenmedi, ve tetikleyici zaten yakalanmıştı.
 
   Sıra: 21.29'dan önce (adres kaydetmeyi fiilen engelliyor). Kullanıcı kararı 11.08: 21.28 önce
   commit edilsin, bu ayrı görev olarak açılsın.
