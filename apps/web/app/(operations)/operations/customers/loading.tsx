@@ -1,4 +1,6 @@
 import { LoadingRegion } from '@/components/loading-region';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { CONTROL_H } from '@/components/operation/ui/control';
 import { Skeleton, SkeletonTable } from '@/components/operation/ui/skeleton';
 import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
 
@@ -20,14 +22,13 @@ import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Müşteriler yükleniyor">
-      {/* Başlık şeridi — `PageHeader` ölçüsü (px-6 py-4). */}
-      <header className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4">
-        <span className="mr-auto flex flex-col gap-px">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-3 w-48" />
-        </span>
-        <Skeleton className="h-9 w-[210px] rounded-ops-btn" />
-      </header>
+      {/* Başlık GERÇEK `PageHeader` (15.08, emsal: fiyatlar): eski elle dizilmiş şerit kabuk
+          bloklarını (depo · ⌘K · avatar) HİÇ çizmiyordu — gerçek bar gelince sağ taraf birden
+          doluyor, başlık sola kayıyordu. Alt satır sayaçtır (veri), arama kutusunun yerini aynı
+          genişlikte çubuk tutar. */}
+      <PageHeader title="Müşteriler" subtitle={<Skeleton className="h-3 w-48" />}>
+        <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
+      </PageHeader>
 
       {/* Çip şeridi — Tümü + iki tip + üç daraltma = 6. */}
       <div className="flex flex-wrap items-center gap-2 border-b border-ops-gray-100 px-6 py-2.5">
