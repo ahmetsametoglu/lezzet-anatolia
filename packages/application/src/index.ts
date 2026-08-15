@@ -241,6 +241,9 @@ export type { ReturnDrop, ReturnDropLine } from './warehouse/returns';
 // Yakın-SKT kararının TEK adresi. Kaynağı `apps/web/lib/stock/batch-view.ts`ti ve `server-only`
 // olduğu için `apps/mobile-api` okuyamıyordu — mobil D3 ekranı bu yüzden açılamıyordu. Eşiği
 // kopyalamak iki yüzeyin aynı parti için farklı karar göstermesi demekti. Web tarafı ince köprü.
+// Ürün geçmişi (22.30) — seçili boyun parti/çıkış/fire geçmişi; okuma TIKLANDIĞINDA yapılır.
+export { readVariantStockHistory } from './warehouse/variant-history';
+export type { VariantBatchHistory, VariantStockHistory } from './warehouse/variant-history';
 export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
 export type { BatchView } from './warehouse/batch-types';
 export * from './assistant/apply';

@@ -10,7 +10,22 @@ import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 const STOCK_PATH = '/operations/stock';
 
-export const STOCK_TABS = ['levels', 'attention', 'losses'] as const;
+/**
+ * **DÖRT SEKME — depo yüzeyinin tamamı tek sayfada** (22.26).
+ *
+ * Mal kabul (`/operations/receiving`) ve stoktan düş (`/operations/adjustments`) ayrı sayfalardı;
+ * tasarımın 01.08 kararı ikisini de buraya alıyordu ve gerekçesi paranın emsalidir: *"kasa hareketi
+ * ile banka hareketi aynı şeydir, yalnız hesabı farklı"* (`DOMAIN §7`). Stokta karşılığı: mal girer,
+ * durur, çıkar — üçü tek stoğun üç anıdır. Ayrı sayfalar "bu depoya ne girdi" sorusunun cevabını
+ * bölüyordu.
+ *
+ * Sayfaların ayrı doğmasının sebebi düşmüş bir varsayımdı: *form depocunun telefonunda, kayıt
+ * yöneticinin masaüstünde*. 06.08'de operasyon web'i masaüstü-yalnız oldu (telefon native
+ * uygulamanın), yani ayrımın dayanağı kalmadı.
+ *
+ * `losses` → `outgoing`: sekme artık yalnız imhayı değil çıkan malın tamamını adlandırıyor.
+ */
+export const STOCK_TABS = ['levels', 'attention', 'intake', 'outgoing'] as const;
 export type StockTab = (typeof STOCK_TABS)[number];
 
 /**
@@ -30,7 +45,7 @@ export const STOCK_SCOPES = ['all', 'expiry', 'offer'] as const;
 export type StockScope = (typeof STOCK_SCOPES)[number];
 
 /**
- * İmha geçmişinin DÖNEMİ. Hareket kaydı zamanla sınırsız büyür; "ne kadar çöpe gitti" sorusunun
+ * Çıkışlar sekmesinin DÖNEMİ. Hareket kaydı zamanla sınırsız büyür; "ne kadar çöpe gitti" sorusunun
  * cevabı ancak bir dönemle anlamlıdır. Varsayılan çeyrek: aylık dalgalanmayı yutacak kadar geniş,
  * mevsim değişimini gizlemeyecek kadar dar.
  *
@@ -99,12 +114,21 @@ export function stockLink(patch: Partial<StockUrlState> = {}): string {
  * "yaklaşan tarihli" bir raf ömrü KARARIDIR (motorun işi), veritabanı süzgeci değil. Ölçütü SQL'e
  * kopyalamak, eşiği iki yerde tutmak demekti — biri değişince ekran ile sayaç ayrışırdı.
  */
-export function toStockFilters(state: StockUrlState): { categoryId?: string } {
-  // `q` BURADA YOK ve bu bilinçli: arama kutusu yalnız imha sekmesinde var ve orada yüklenmiş
-  // satırlarda çalışıyor. Terimi ürün sorgusuna vermek, kutuya yazılan kelimenin görünmeyen bir
-  // listeyi (stok seviyeleri) süzmesi demekti.
+export function toStockFilters(state: StockUrlState): { categoryId?: string; query?: string } {
+  /**
+   * **`q` ARTIK SEKMEYE GÖRE** (22.31, kullanıcı tespiti: *"bu bölümde ürünü arama yok"*).
+   *
+   * Eskiden hiç geçmiyordu ve gerekçesi doğruydu: arama yalnız Çıkışlar sekmesinde vardı, orada
+   * yüklenmiş satırlarda çalışıyor ve terimi ürün sorgusuna vermek, kutuya yazılan kelimenin
+   * GÖRÜNMEYEN bir listeyi süzmesi olurdu.
+   *
+   * Seviyeler sekmesine kendi araması gelince koşul değişti: orada terim tam da ürün sorgusuna
+   * aittir ve sunucuda süzülmelidir — liste keyset sayfalı, istemcide süzmek yalnız yüklenmiş ilk
+   * sayfayı daraltır ve operatör "aradığım ürün yok" sanır.
+   */
   return {
     categoryId: state.cat === 'all' ? undefined : state.cat,
+    query: state.tab === 'levels' && state.q ? state.q : undefined,
   };
 }
 

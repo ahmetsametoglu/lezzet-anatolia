@@ -5,19 +5,18 @@ import {
   openIntakeForm,
   receiveGoods,
   receivePurchase,
-  type IntakeFormLine,
   type IntakeFormRow,
   type PurchaseIntakeLine,
 } from '@lezzet/application';
 import { ProductService, SupplierService, serviceDb } from '@lezzet/database';
-import { StockIntakePayloadSchema, resolveLocalizedText } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
+import { resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
-import { readHandoffProposal, withProposal } from '@/lib/assistant/handoff';
-import { costsForLines } from './intake-costs';
-import type { ReceiveOutcome } from '@/app/(operations)/operations/receiving/receiving-types';
+import { withProposal } from '@/lib/assistant/handoff';
+import type { ReceiveOutcome } from './intake-types';
 
 /**
  * Mal kabulün yazma ve okuma yolları (10.4).
@@ -38,74 +37,79 @@ export async function openIntakeFormAction(purchaseOrderId: string): Promise<Act
   }
 }
 
+
 /**
- * **Kabulü tamamla.** Fark ve uyarı GERİ DÖNER, iş DURMAZ.
+ * **STOK EKRANININ KABUL KAPISI** (22.26) — mal kabul artık Stok'un bir sekmesi ve bu sekme HEM
+ * yöneticiye HEM depocuya açık.
  *
- * Uyarı (kısa raf ömrü) ve fark (eksik/fazla) birer red değil, birer bilgidir: malı kabul edip
- * etmemek sahadaki insanın kararı (DOMAIN §4), tedarikçinin eksik göndermesi de bizim hatamız
- * değil. Ekran ikisini de gösteriyor ama hiçbiri kaydı geri almıyor.
+ * ── TEK EYLEM, İKİ KAPI — VE SEÇİMİ SUNUCU YAPAR ────────────────────────────
+ * Rol duvarı yerinde duruyor: `receiveGoods` maliyet taşıyan satırı kabul etmiyor (`IntakeFormLine`
+ * fiyatsız), `receivePurchase` ediyor (`PurchaseIntakeLine`). Değişen tek şey, hangi kapıdan
+ * geçileceğine **istemcinin değil sunucunun** karar vermesi: kapsam depo-üstüyse (yönetici/muhasebe)
+ * fiyat yazılır, depoya bağlı personelde satırların maliyeti sunucuda DÜŞÜRÜLÜR — göndermiş olsa
+ * bile. Ekranı gizlemeye güvenmiyoruz; ekran gizlemek bir yetki kontrolü değildir.
+ *
+ * Öneri kuyruğunun kendi kapısıyla (`receiveIntakeFromProposalAction`) da çakışmıyor: orada
+ * satırlar bir faturadan geliyor ve karar kuyrukta veriliyor; burada operatör formu kendisi
+ * dolduruyor.
  */
-export async function receiveGoodsAction(input: {
+export async function receiveIntakeAction(input: {
   warehouseId: string;
+  /** Siparişli kabulde PO kimliği; irsaliyesiz/serbest kabulde `null`. */
   purchaseOrderId: string | null;
   supplierId: string | null;
+  /** Belgenin tarihi — boşsa kapı BUGÜNE yazar (`StockIntakeService.receive`). */
+  date: string | null;
   note: string | null;
-  lines: IntakeFormLine[];
-  /** Asistan önerisinden gelindiyse o önerinin kimliği (22.5); yoksa akış hiç değişmez. */
-  proposalId?: string | null;
+  /** Satırlar; `unitCost` **EURO** (form birimi) — cent'e çevrim burada, sınırda. */
+  lines: Array<{
+    variantId: string;
+    qty: number;
+    expiryDate: string;
+    lotNumber: string | null;
+    location: string | null;
+    unitCost: number | null;
+  }>;
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
-    // Depo kapsamı BU depo için doğrulanıyor: yöneticinin açık seçimi de, depocunun kimliğinden
-    // geleni de aynı kapıdan geçer. Kapsamı olmayan personel hiçbir depoya kabul yazamaz.
-    const { user: staff } = await requireWarehouseScope(input.warehouseId);
-
+    // Depo kapsamı BU depo için doğrulanıyor: sekmeden gelmek yetkiyi atlatmaz.
+    const { scope } = await requireWarehouseScope(input.warehouseId);
     if (input.lines.length === 0) throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 
-    /**
-     * **Öneriden gelen kabul FİYATLI yoldan yazılır** (`receivePurchase`), elle kabul fiyatsız
-     * yoldan (`receiveGoods`) — ve fiyat istemciye hiç inmez.
-     *
-     * Fatura fotoğrafından okunan birim maliyet payload'da duruyor; ekranın tipi onu taşıyamıyor
-     * (rol duvarı, `IntakeFormLine`). Burada payload sunucuda yeniden okunup maliyet operatörün
-     * onayladığı satırlara ekleniyor. Böylece depocu fiyatı görmüyor ama "son alış fiyatı" da
-     * kaybolmuyor — `auto_price` onu bu kayıttan öğreniyor.
-     */
-    const proposal = input.proposalId ? await readHandoffProposal(input.proposalId) : null;
-    const payload = proposal?.kind === 'stock_intake' ? StockIntakePayloadSchema.safeParse(proposal.payload) : null;
-
-    const run = async () =>
-      payload?.success
-        ? receivePurchase(serviceDb(), {
-            warehouseId: input.warehouseId,
-            purchaseOrderId: input.purchaseOrderId,
-            supplierId: input.supplierId,
-            note: input.note,
-            lines: costsForLines(payload.data, input.lines),
-          })
-        : receiveGoods(serviceDb(), {
-            warehouseId: input.warehouseId,
-            purchaseOrderId: input.purchaseOrderId,
-            supplierId: input.supplierId,
-            note: input.note,
-            lines: input.lines,
-          });
-
-    // Kuyruk satırı kayıtla BİRLİKTE kapanır; sıra tek yerde (`withProposal`).
-    const result = await withProposal(input.proposalId, staff.profileId, run, (outcome) => ({
-      stockIntakeId: outcome.status === 'empty' ? '' : outcome.result.intakeId,
+    const base = input.lines.map((line) => ({
+      variantId: line.variantId,
+      qty: line.qty,
+      expiryDate: line.expiryDate,
+      lotNumber: line.lotNumber?.trim() || null,
+      location: line.location?.trim() || null,
+      // Form EURO taşır, kapı CENT ister — çevrim tek noktada (`STACK §8`). Fiyatsız kapıya
+      // giderken bu alan hiç okunmuyor; `receiveGoods`un satır tipinde karşılığı yok.
+      unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),
     }));
+
+    const common = {
+      warehouseId: input.warehouseId,
+      purchaseOrderId: input.purchaseOrderId,
+      supplierId: input.supplierId,
+      note: input.note,
+      ...(input.date ? { date: input.date } : {}),
+    };
+
+    const result =
+      scope.kind === 'all'
+        ? await receivePurchase(serviceDb(), { ...common, lines: base })
+        : // Depoya bağlı personelde maliyet SUNUCUDA düşürülüyor: `receiveGoods`un satır tipi onu
+          // taşımıyor ve `intake` çekirdeği hepsini `null`a çeviriyor (kendi künyesi).
+          await receiveGoods(serviceDb(), { ...common, lines: base });
 
     if (result.status === 'empty') throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 
     revalidatePath(RECEIVING_PATH);
-    // Stok ekranı da tazelenir: kabul edilen mal aynı anda satılabilir hâle geliyor ve o ekran
-    // aynı gerçeği gösteriyor.
     revalidatePath('/operations/stock');
 
-    // **Kapının sonucu OLDUĞU GİBİ geçirilmiyor, süzülüyor:** `ReceiveIntakeResult` içinde
-    // `totalAmountCents` var (girişin parasal toplamı). Sonucu yayarak döndürmek, depocunun
-    // ekranına para taşımanın en sessiz yolu olurdu — rol duvarı tam burada delinirdi.
-    // Ekrana giden tek sayı yazılan parti ADEDİ.
+    // **Kapının sonucu OLDUĞU GİBİ geçirilmiyor, süzülüyor:** `ReceiveIntakeResult` girişin parasal
+    // toplamını da taşıyor. Sonucu yayarak döndürmek, depocunun ekranına para taşımanın en sessiz
+    // yolu olurdu. Ekrana giden tek sayı yazılan parti ADEDİ.
     return {
       data: { warnings: result.warnings, differences: result.differences, batches: result.result.stockIds.length },
       error: null,
@@ -176,15 +180,12 @@ export async function createSupplierAction(name: string, phone: string | null): 
 /**
  * **ÖNERİDEN MAL KABUL** — asistan kuyruğunun kendi kapısı (22.23).
  *
- * ── NEDEN AYRI BİR EYLEM, `receiveGoodsAction`A BAYRAK DEĞİL ────────────────
- * Depocu yolu fiyat GÖNDEREMEZ ve bu bir ekran kuralı değil TİP sınırı: `IntakeFormLine`de maliyet
- * alanı yok, `PurchaseIntakeLine`de var — "iki ayrı tip, iki ayrı kapı" (09.14). Ortak eyleme
- * isteğe bağlı bir fiyat alanı eklemek, o sınırı yalnız iyi niyetle ayakta bırakırdı: depo ekranı
- * da gönderebilir hâle gelirdi ve tip artık hiçbir şey söylemezdi.
+ * ── NEDEN AYRI BİR EYLEM ────────────────────────────────────────────────────
+ * Kuyruğun kaydı bir ÖNERİYİ kapatıyor (`withProposal`): satır ve kayıt birlikte yazılır, ikinci bir
+ * yazma yolu açılmaz. Ekranın kendi kapısında (`receiveIntakeAction`) böyle bir öneri yok.
  *
  * ── FİYAT DİLEKÇEDEN DEĞİL FORMDAN GELİR (kullanıcı kararı 12.08) ───────────
- * Devir yolunda maliyet sunucuda dilekçeden eşleştiriliyor (`costsForLines`), çünkü orada ekran
- * depocunun ve fiyatı görmemeli. Kuyruk ise patronun ekranı: fatura yanlış okunmuşsa maliyet
+ * Kuyruk patronun ekranı: fatura yanlış okunmuşsa maliyet
  * onaydan ÖNCE düzeltilebilmeli. Düzeltilen değeri yok sayıp dilekçedekini yazsaydık, ekranda
  * görünen ile deftere geçen ayrışırdı — sistemin söyleyebileceği en sessiz yalan.
  */

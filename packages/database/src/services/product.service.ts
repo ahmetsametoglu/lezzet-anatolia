@@ -290,7 +290,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       // satırın bu değerinden kuruluyor (bkz. `pageOf`). Dar şema onu taşımaz — Zod düşürür, ham
       // satırda okunur. Select'ten çıkarsa ikinci sayfa istenemez ve `pageOf` bunu fırlatarak söyler.
       select:
-        'id,sort_order,name,category_id,date_type,shelf_life_days,status,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
+        'id,sort_order,name,category_id,date_type,shelf_life_days,status,image_key,image_updated_at,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,

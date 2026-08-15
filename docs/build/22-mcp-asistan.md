@@ -1318,23 +1318,196 @@ satırında.
     çizmiyor, yani kimse oraya yönlenmiyor. Bugün zararsızlar ama okuyan ajana "bu tip devrediliyor"
     diye yanlış bilgi veriyorlar — ve bir gün biri o yolu düzeltmeye çalışır.
 
-- [ ] (22.25) **Mal kabul ekranı da ortak satır editörüne geçsin** — `FreeIntake` ↔ `intake-form/body`
+- [x] (22.25) **Mal kabul ekranı da ortak satır editörüne geçsin** — `FreeIntake` ↔ `intake-form/body`
   - *Bitti:* iki yüzey aynı satır editörünü kullanır; "adet boşsa kabule girmez" ve SKT zorunluluğu tek yerde
   - Kuyruk 22.23'te ortak gövdeye geçti, depo ekranı geçmedi: aynı satır iki yerde çiziliyor ve bir gün
     biri ötekinden ayrışacak. Geçiş `IntakeRow` state modelini değiştirmeyi gerektiriyor — o model PO'lu
     kabulde de kullanılıyor (`expectedQty` · `isMissing`), yani iş mekanik değil.
-  - **13.08: bu madde 22.26'nın İÇİNE düşüyor** — depo ekranı zaten yeniden kurulacak, satır editörünü
-    ayrıca taşımanın anlamı kalmaz. Kimliği duruyor ki 22.23'ün `BEKLEYEN` işareti asılı kalmasın.
+  - **14.08 kapandı — 22.26'nın içinde.** `FreeIntake` söküldü; siparişli kabul de irsaliyesiz kabul de
+    `intake-form/body`yi kullanıyor. Kip ayrı bir bayrakla değil satırın `expectedQty`siyle okunuyor:
+    ikinci bir bayrak, veriyle çelişebilecek ikinci bir gerçek olurdu.
 
-- [ ] (22.26) **Depo yüzeyi TEK SAYFA — mal kabul · stok · stoktan düşme bir araya** *(kullanıcı tespiti
+- [~] (22.26) **Depo yüzeyi TEK SAYFA — mal kabul · stok · stoktan düşme bir araya** *(kullanıcı tespiti
   13.08: "bu üçü bir sayfa olması gerekirken üç sayfaya yayılmış … komponentler ortak komponent
   havuzundan kullanılmamış, yeniden tasarlanmış")*
-  `touches: apps/web/app/(operations)/operations/{receiving,stock,adjustments} · apps/web/components/operation/form/intake-form`
+  `touches: apps/web/app/(operations)/operations/{receiving,stock,temperature} · apps/web/components/operation/form/{intake-form,date-field.tsx} · apps/web/lib/warehouse · packages/database/src/services/purchase-order.service.ts`
   - *Bitti:* depo işi tek rotadan yürür; üç ekranın satır editörü ve alan komponentleri **ortak havuzdan**
     gelir; asistan kuyruğundaki mal kabul formu aynı düzeni kullanır ve onaylanabilir hâle gelir
-  - **Neden tek sayfa:** üçü ayrı ekran değil, tek stoğun üç anı — mal GİRER, DURUR, ÇIKAR. Bugün
-    operatör "elimde ne var" sorusunu bir sayfada, "bunu düş" kararını başka sayfada veriyor; ikisi
-    arasında bağlam elle taşınıyor.
-  - **Önce inceleme, sonra tasarım:** birleşimin kurgusu ve sayfanın düzeni yazılmadan koda girilmez;
-    genel operasyon tasarım dilini bozan bir birleşme, dağınıklığı tek sayfaya toplamaktan ibaret olur.
-  - 22.23'ün reddedilen formu ve 22.25'in çift satır editörü bu madde içinde kapanır.
+  - **Neden tek sayfa:** üçü ayrı ekran değil, tek stoğun üç anı — mal GİRER, DURUR, ÇIKAR. Operatör
+    "elimde ne var" sorusunu bir sayfada, "bunu düş" kararını başka sayfada veriyordu.
+    **Karar zaten verilmişti, uygulanmamıştı:** `design/pages/admin-stok.md` 01.08'de sayfayı dört
+    sekmeye kurmuş (Seviyeler · Yaklaşan tarihli · Mal kabul · Çıkışlar) ve gerekçesini paranın
+    emsaline dayamış (`DOMAIN §7` — "kasa hareketi ile banka hareketi aynı şeydir, yalnız hesabı farklı").
+  - **Ayrı sayfaların dayanağı DÜŞMÜŞ bir varsayımdı:** *form depocunun telefonunda, kayıt yöneticinin
+    masaüstünde*. 06.08'de operasyon web'i masaüstü-yalnız oldu (telefon native uygulamanın işi), yani
+    ayrım kendi gerekçesini kaybetti ama sayfalar kaldı.
+  - **Dört sekme + iki diyalog.** `/operations/receiving` → `?tab=intake`e yönlendiriyor, nav'da tek
+    "Stok" satırı kaldı. Kabul ve düşüm formları liste ÜSTÜNDE diyalogda (bu ekranın kendi deseni:
+    teklif diyaloğu, lot sorgusu) — kullanıcı kararı 13.08.
+  - **Rol daralması ekranın değil KAPININ işi** (kullanıcı kararı 13.08: "aynı sayfa, role göre
+    daralır"). Alış fiyatı kolonu depo-üstü kapsamda çiziliyor; kaydeden kapı kapsamı YENİDEN sorup
+    depoya bağlı personelin gönderdiği maliyeti düşürüyor (`receiveIntakeAction`). Ekran gizlemek bir
+    yetki kontrolü değildir. Tip duvarı yerinde: `IntakeFormLine` fiyatsız, `PurchaseIntakeLine` fiyatlı.
+  - **SATIR EDİTÖRÜ ARTIK TEK** — 22.25 burada kapandı. `FreeIntake` söküldü; siparişli kabul de
+    irsaliyesiz kabul de aynı gövdeyi kullanıyor (`intake-form/body`), kip satırın `expectedQty`sinden
+    okunuyor. "Gelmedi" beyanı boş adetten ayrı bir alan olarak şemaya girdi.
+  - **ORTAK HAVUZ İHLALİ KAPANDI** (kullanıcının tespiti). SKT ham `<input type="date">` ile
+    çiziliyordu — oysa `date-field.tsx`in kendi künyesi onu yasaklıyor (tarayıcı takvimi her platformda
+    başka görünür, dili tarayıcının dilidir). Kural vardı, **satır içi karşılığı yoktu**: `DateInput`
+    (etiketsiz, `sm`) eklendi ve `DateField` onu sarmalıyor. Üç ihlalin üçü de düştü.
+  - **SICAKLIK KAYDI AYRI KALDI** ve yolu düzeldi (`/operations/adjustments` → `/operations/temperature`):
+    hijyen defteri bir stok hareketi değil, tesisin günlük kaydıdır. Kalıcı evi açık → `BEKLEYEN(22.29)`.
+  - **Ölü devir yolunun MAL KABUL yarısı söküldü** (22.24'ten): `receiving-handoff` · `receiveGoodsAction`
+    · `costsForLines` gitti — öneri kuyruğun içinde karara bağlanıyor, o yola yönlendiren düğme kalmadı.
+  - **Yol üstünde bir N+1 kırıldı:** bekleyen sipariş kartları sipariş başına `getById` atıyordu;
+    künyeler tek sorguda geliyor (`PurchaseOrderService.listOpen`). Sekme okuması da daraldı — her sekme
+    yalnız kendi sorgularını atıyor, eskiden dört sekmenin verisi her açılışta okunuyordu.
+  - **SEÇİCİLER KISALMIYORDU — üç tetikleyicide aynı hata** *(kullanıcı bildirimi 14.08: "stoktan düş
+    diyaloğunun içindeki form diyalog içerisine sığmıyor")*. `truncate` vardı ama `min-w-0` yoktu:
+    flex çocuğunun asgari genişliği varsayılan olarak İÇERİĞİ kadardır (`min-width:auto`), yani
+    `overflow-hidden` verilse de kutu kısalmıyor. Uzun bir parti adı tetikleyiciyi, tetikleyici satırı,
+    satır da pencereyi taşırıyordu. Düzeltme komponentlerin kendisinde (`Combobox` · `Select` ·
+    `DateField` tetikleyicisi) — her çağıran kazanıyor; `MultiSelect` bunu zaten doğru yapıyordu.
+    Ayrıca parti seçeneği tek uzun metin olmaktan çıktı: ad · ikinci satır (tarih · depo) · sağda adet.
+  - **DURUM 14.08:** iskelet, iki form ve söküm tamam; doğrulandı (typecheck · lint · knip · boundaries
+    temiz, birim 1358/1358). Eksik kalan iki liste ayrı maddede: `BEKLEYEN(22.27)` · `BEKLEYEN(22.28)`.
+    Kullanıcı ekranda görmeden `[x]` yazılmıyor.
+
+- [ ] (22.27) **Çıkışlar sekmesi TÜM çıkışları göstersin** — hazırlık · kapı satışı
+  - *Bitti:* "bu dönemde ne çıktı" sorusunun cevabı tam olur; dönem toplamı eksik bir sayı vermez
+  - Bugün sekme yalnız `stock_adjustment` kayıtlarını okuyor (imha · hasar · sayım farkı · kayıp ·
+    stoğa geri alma). Tasarımın istediği küme daha geniş ama **hazırlık ve kapı satışının hareket
+    kaydı YOK** (ölçüldü 14.08): stok siparişten doğrudan eriyor. Ekran bunu yazıyor, sessizce
+    toplamıyor — eksik bir toplam, doğru bir toplam gibi okunurdu.
+  - Sevk (`warehouse_transfer`) de burada: kaydı var ama listeye bağlı değil.
+
+- [ ] (22.28) **Mal kabul sekmesine "kabul edilenler" listesi** — geçmiş girişler
+  - *Bitti:* sekme iki bölüm olur (bekleyenler + kabul edilenler); "ne geldi" sorusu Stok'tan yanıtlanır
+  - `stock_intake` için sayfalı bir okuma yok (bugün yalnız tedarikçi bazlı `listBySupplier`). Boş bir
+    bölüm çizilmedi: veri olmadan başlık koymak, olmayan bir listeyi vaat etmektir.
+
+- [ ] (22.29) **Sıcaklık kaydının kalıcı evi** — Depolar mı, native uygulama mı
+  - *Bitti:* ölçüm kaydı ait olduğu yüzeyde yaşar; `/operations/temperature` ya taşınır ya gerekçesiyle kalır
+  - Ölçüm dolabın önünde, ayakta, tek elle girilir (`docs/uygulama` D-serisi) — asıl adayı native.
+    Web'deki adayı Depolar sayfasının tesis künyesi. Bugün kendi sayfasında duruyor ve işlevi tam;
+    karar verilmeden taşımak, ikinci kez taşımak olurdu.
+- [~] (22.30) **Seviyeler sekmesi: ürün görseli + seçili ürünün STOK GEÇMİŞİ** *(kullanıcı tespiti
+  14.08: "ürünlerin resmi ile beraber görmek daha kalıcı olur … bir ürüne tıkladığım zaman o ürünle
+  alakalı geçmiş stok girişleri, tarihleri, fiyatları … bize teknik bir yük çıkartmadan")*
+  `touches: apps/web/app/(operations)/operations/stock/tabs · apps/web/lib/stock/history-actions.ts · packages/{domain-core,application,database,types}`
+  - *Bitti:* satır tıklanınca sağ panel o boyun geçmişini açar; liste ürünü görseliyle gösterir
+  - **SEÇİMİN TÜKETENİ YOKTU** — `selectedId` yazılıyor ama hiçbir yerde okunmuyordu; tıklamanın satır
+    vurgusundan başka karşılığı yoktu. Panel bilerek seçimden bağımsız yazılmıştı ve gerekçesi
+    tutarlıydı, ama sonucu bir TEKRARDI: aynı kuyruk bir sekme ötede duruyor ve başlık satırı kaç parti
+    beklediğini zaten söylüyor. Kullanıcının sorusu buydu: *"bir tık ötemdeki bir listeyi koymak çok
+    anlamlı mı?"*
+  - **Panelde dört blok:** giriş geçmişi (tarih · giren→kalan · SKT · lot · birim alış · depo) ·
+    satış hızı ve stok kaç gün yeter · tükenmiş partilerin ortalama ömrü · fire oranı ve sebep kırılımı.
+  - **AĞIR DEĞİL, ÇÜNKÜ SORU TEK VARYANTIN.** Okuma tıklandığında yapılıyor ve üç sorgu, üçü de
+    indeksli: partiler · çıkışlar (`order_item_variant_idx`) · düzeltmeler. Sayfa açılışında hiç
+    çalışmıyor; listedeki yirmi ürünün geçmişini önden getirmek, on dokuzunu boşa okumak olurdu.
+  - **Satış hızı `order_item`ten DEĞİL `order_item_batch`ten** geliyor: birincisi "sipariş edildi",
+    ikincisi "depodan fiilen çıktı" (hazırlıkta depocunun onayladığı gerçek). Stok sorusunun doğru
+    paydası ikincisidir.
+  - **ÖLÇÜLEMEYEN DEĞER SIFIR DEĞİL** (`CLAUDE §1`) — dosyanın omurgası bu. Hiç satış görmemiş ürün
+    "günde 0 satıyor" diye okunursa stok sonsuza kadar yeter görünür; hız `null` döner ve yeterlilik
+    "—" yazar. Parti ömrü yalnız TÜKENMİŞ partiden ölçülür (elde durana "3 günde eridi" denemez) ve
+    ortalama en az iki örnek ister — kaç partiye dayandığı ekranda YAZILI.
+  - Kararlar motorda (`domain-core/stock/history`), okuma uygulamada (`warehouse/variant-history`),
+    ekran ikisini de bilmiyor. Görsel iki kolonla geldi (`image_key`, `image_updated_at`) — ek sorgu
+    yok; kutu ortak havuzdan (`Thumbnail`), ham `<img>` yazılmadı.
+  - **DURUM 14.08:** yazıldı ve doğrulandı (typecheck · lint · knip · boundaries temiz, birim
+    1358/1358); kullanıcı ekranda görmedi.
+
+- [~] (22.31) **"Elde 0" yalanı · malın akışı · ayrılmışın sahibi · seviyelerde arama** *(kullanıcı
+  ekran görüntüsü 14.08: "36 tane alınmış, 34 kalmış ama aktif adet yok … 1 ayrılmış, o neye ayrılmış
+  bilmiyorum … bu bölümde ürünü arama yok")*
+  `touches: packages/database/src/services/{stock,reservation,order-item-batch}.service.ts · packages/application/src/warehouse/variant-history.ts · apps/web/app/(operations)/operations/stock`
+  - *Bitti:* ekrandaki adet ile partilerin toplamı çelişmez; panel malın nereye gittiğini tek satırda
+    söyler; ayrılmış mal sahibini gösterir; seviyeler sekmesinde ortak arama kutusu çalışır
+  - **KÖK SEBEP ÖLÇÜLDÜ — SESSİZ SATIR KIRPMASI.** `available_stock` bir `varyant × depo` ÇAPRAZ
+    birleşimidir: malı olmayan çift için de satır üretir ve hepsi sıfırdır. `listAvailableAcross`
+    süzgeçsiz sorduğu için istenen satır sayısı `depo × boy` kadardı ve PostgREST'in tavanına
+    (`max_rows`, yerelde 1000) dayanınca kalanı **sessizce kesiyordu**; sıralama da olmadığı için
+    hangi boyun satırının düştüğü rastgeleydi. Ölçüm (14.08, yerel DB): **53 aktif depo** × ~50 boy =
+    2650 satır isteniyor, 1000 dönüyordu. Çikolatalı Baklava 2000g'nin `available_stock` satırı
+    gerçekte `physical 34 / available 34` — ekranda "elde 0" yazmasının sebebi veri değil okumaydı.
+    Düzeltme: sıfır satırlar istenmiyor (`physical_qty>0 or reserved_qty>0`) — sıfırın bilgisi yok,
+    çağıran zaten topluyor ve eksik satır 0 demek. Tüm çağıranlar denetlendi: hepsi `?? 0` ya da
+    `<= 0 continue` ile eksik satırı zaten 0 sayıyor.
+  - **YAN OLGU — 52 ARTIK TEST DEPOSU.** Aktif 53 deponun 51'i entegrasyon testlerinden kalmış
+    (`TYERUC-…`, `TA-MSSB…`). Kırpmayı görünür yapan şey buydu. `CLAUDE §4b` bu sızıntıyı zaten
+    uyarıyor (`warehouse` `restrict` FK'lerle korunuyor, Supabase `delete()` hatayı fırlatmaz
+    döndürür). Temizlik `db:reset` gerektirir → **kullanıcının kararı**, kod tarafı ondan bağımsız
+    düzeltildi.
+  - **MALIN AKIŞI tek satırda:** giren − satılan − düşülen = elde. Denklem EKRANDA duruyor çünkü asıl
+    soru sayılar değil birbirini tutup tutmadığı; tutmuyorsa kayda geçmemiş bir hareket var demektir
+    ve ekran bunu söylüyor. Liste tavana dayandıysa satır çizilmiyor — eksik toplam, tutuyormuş gibi
+    görünen bir denklem üretirdi.
+  - **"HİÇ SATILDI MI" PENCERESİZ SORULUR.** Çıkış okuması tarih süzgecini bıraktı: son 90 günde çıkış
+    olmaması "hiç satılmadı" demek değil. Panel artık ayırıyor — *"bu boy HİÇ satılmamış"* ile
+    *"son 90 günde çıkış yok · toplam N satılmış (son gün)"* aynı cümle değil.
+  - **AYRILMIŞ MALIN SAHİBİ GÖRÜNÜYOR:** hangi sipariş, hangi durumda, ne kadar. Ayrılmış mal depoda
+    duruyor ama satılamaz; sahibi görünmezse operatör ya kayıp sanır ya elle aramaya çıkar. Müşteri
+    bilgisi okunmuyor — soru "hangi sipariş", "kim" değil.
+  - **SEVİYELERDE ARAMA** ortak `SearchInput` ile ve süzgeç ŞERİDİNDE (eylem barında değil: bir eylem
+    değil, kategori/depo çipleriyle aynı aileden bir daraltma). Terim SUNUCUYA gidiyor — liste keyset
+    sayfalı, istemcide süzmek ikinci sayfadaki ürünü "yok" gösterirdi.
+  - **REZERVASYONUN SİPARİŞİ GÖMÜLÜ OKUNAMAZ — çalışırken patladı** (`PGRST200`, kullanıcı bildirimi).
+    `reservation.order_id`nin **FK'sı YOK** ve bu bilinçli: tablo 0006'da açıldı, `order` 07'de
+    (kolonun kendi künyesi yazıyor). FK olmadan PostgREST ilişki kuramıyor. Künye ikinci ve TEK bir
+    turda çözülüyor (`OrderService.listByIds`) — `created_by` adlarının çözüldüğü desenin aynısı.
+    **Tipler bunu göremez**; okuma bu yüzden gerçek DB'ye karşı koşturularak doğrulandı.
+  - **"1530 GÜN YETER" — doğru bölme, yanlış cümle** (ölçüldü 14.08). 90 günde 2 adet satan üründe
+    34 adet dört yıllık bir yeterlilik veriyordu ve o sayıyı okuyan onu bir ÖLÇÜM sanar. Sonuç gözlem
+    penceresiyle sınırlandı ve sınırlandığı söyleniyor: **"90+ gün · gözlem penceresini aşıyor"**.
+  - **DURUM 14.08:** yazıldı ve doğrulandı — typecheck 18 paket · lint · knip · boundaries temiz,
+    birim 1358/1358, ve okuma **gerçek yerel DB'ye karşı** koşturuldu (baklava: giren 36 − satılan 2
+    = elde 34 ✓; limonlu kek: 1 ayrılmış → `LA-26-WTGHQA` ✓). Kullanıcı ekranda görmedi.
+
+- [~] (22.32) **Panel satırla AYNI evreni gösterir · arama şeridin sağ ucunda** *(kullanıcı sorusu
+  14.08: "yüz depoyu seçiyorum ve ürünü seçiyorum, sadece o depoyla alakalı görünmeli, değil mi?")*
+  `touches: apps/web/lib/stock/history-actions.ts · apps/web/app/(operations)/operations/stock`
+  - *Bitti:* depo süzgeci aktifken panelin TAMAMI o deponun gerçeği ve panel bunu yazıyor; arama
+    kutusu süzgeç şeridinin sağ ucunda
+  - **SORU HAKLIYDI VE ALTINDA BİR TUTARSIZLIK VARDI.** Süzgeç aktifken satırın sayıları zaten o
+    deponundu (`available_stock` süzgeçle okunuyor, parti listesi süzgeçle daraltılıyor) ama panel
+    kapsamın TAMAMINI okuyordu: aynı pencerede başlık bir deponun, alttaki parti geçmişi bütün
+    depoların gerçeğini gösteriyordu. Bir tercih değil, iki evrenin tek panele karışmasıydı — ve
+    "stok kaç gün yeter" hesabı ikisini birden kullandığı için **sayı da yanlıştı** (payı süzülmüş,
+    paydası süzülmemiş).
+  - **VERİ MODELİ BUNU ZATEN DESTEKLİYOR:** panelin her sayısı depo taneli bir kayıttan çıkıyor —
+    parti (`stock.warehouse_id` not null, "parti her zaman TEK depodadır"), rezervasyon
+    (`reservation.warehouse_id`, türetme ilkesinin gerekçeli istisnası), çıkış (`order_item_batch`
+    partiye bağlı, parti de bir depoda), fire (düzeltme partiye yazılır). Yani depoya daraltmak bir
+    yaklaşıklık değil, kaydın kendi taneliği.
+  - **AMA HER SÜZGEÇ DEĞİL — YALNIZ DEPO.** Arama ve kategori hangi ÜRÜNLERİN listeleneceğini
+    seçer; bir ürünün geçmişi arama terimine bağlı değildir. Depo bir EKSENDİR (`operasyon-depo-ekseni`),
+    veri o eksende taneli; arama bir bulma aracıdır. İkisini aynı kefeye koyup paneli aramaya da
+    bağlamak, olmayan bir bağ kurmak olurdu.
+  - Kod → kimlik çevrimi sunucuda ve kapsama karşı doğrulanıyor (`warehouseFilterOf`, eksen kural 7):
+    kapsam dışı bir kod süzgeç olarak geçemez, sessizce düşer ve bağlamın evreni kalır.
+  - **ARAMA ŞERİDİN SAĞ UCUNDA** (kullanıcı kararı): çiplerin arasında değil. Çipler kapalı bir
+    kümeden seçim yaptırır, arama açık uçlu bir daraltmadır; yan yana dizilince ikisi aynı türden
+    şeymiş gibi okunuyordu. Şerit yine tek — ikisi de "bu listede neye bakıyorum"un parçası.
+  - **DEPO KIRILIMI SÜTUNLARA OTURMUYORDU** *(kullanıcı ekran görüntüsü 14.08: "açılan satırdaki
+    ayrılmış bilgisi yukarıdaki Ayrılmış sütununun altına denk gelmiyor")*. Blok kendi `flex`
+    düzenini kurmuş, sayıları elle verilmiş genişliklerle sağa itiyordu. Kırılım satırın PARÇASIDIR:
+    artık tablonun kendi ızgarasını kullanıyor (`STOCK_COLUMN_TRACKS` + `templateOf`, aynı dolgu ve
+    sütun boşluğu) ve Fiili sütunu da kazandı — üç sayı üç başlığın tam altında. Bu, iskeletlerin
+    ölçüyü elle yazıp tutturamadığı hatanın aynısıydı (`table-columns` künyesi). Girinti 46px:
+    kırılım ürün ADININ hizasından başlıyor, görselin altından değil.
+  - **"DENKLEM TUTMUYOR" UYARISI KENDİ ARIZAMDI** *(kullanıcı ekran görüntüsü 14.08)*. Panel
+    `56 − 8 − 3 = 53` yazıp "tutmuyor" diyordu ve **haklıydı, ama sebebi yazdığım şey değildi** —
+    uyarı operatörü olmayan bir transferi aramaya gönderiyordu. Ölçüldü: `record_preparation`
+    yalnız `order_item_batch` satırını yazıyor, `physical_qty`ye DOKUNMUYOR ve rezervasyonu
+    bırakıyor; stok `deliver_order`da düşüyor. Yani hazırlanmış mal AYNI ANDA üç yerde sayılıyor:
+    çıkış kaydında, fiili stokta ve rezervasyonda. Ekrandaki 8 adet tam olarak buydu
+    (`LA-26-RC3HX9`, `preparing`) — hem "satılan" hem "ayrılmış" hem "elde".
+    **Düzeltme:** çıkışlar siparişin durumuna göre ayrıldı (`hasLeftShelf`). Denklem artık
+    `giren − TESLİM − düşülen = elde` ve hazırlanan mal ayrı bir satırda: *"eldekinin N adedi
+    hazırlanmış siparişlerde — rafta duruyor, teslimde düşecek"*. Aynı veriyle doğrulandı:
+    `56 − 0 − 3 = 53` ✓.
+  - **DURUM 14.08:** yazıldı ve doğrulandı (typecheck 18 paket · lint · birim 1358/1358 · boundaries
+    temiz) ve akış **gerçek yerel DB'ye karşı** koşuldu; kullanıcı ekranda görmedi.
+

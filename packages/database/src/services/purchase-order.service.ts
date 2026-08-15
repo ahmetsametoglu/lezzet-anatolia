@@ -131,6 +131,17 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
+   * **TÜM açık siparişler** — mal kabulün "kabul bekliyor" listesinin künyeleri (22.26).
+   *
+   * `openProgress` kalem satırlarını döndürüyor; kartın gösterdiği ise siparişin kendisi (numara,
+   * tedarikçi, gönderim tarihi). Ekran bunu sipariş başına `getById` ile topluyordu — açık sipariş
+   * sayısı kadar tur, yani N+1. Küme burada tek sorguda gelir ve "açık" tanımı yine tek yerde durur.
+   */
+  async listOpen(): Promise<PurchaseOrder[]> {
+    return this.getAll({ status: ['draft', 'sent', 'partially_received'] }, { orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
+  /**
    * Siparişler ekranının sayfası (09.14) — **tek turda**, keyset imleçli.
    *
    * ── NEDEN AYRI BİR OKUMA ────────────────────────────────────────────────────

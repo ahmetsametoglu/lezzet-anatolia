@@ -6,8 +6,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Input } from '@/components/operation/form/input';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { recordTemperatureAction } from './temperature-actions';
-import { ADJ_NOTES } from './adjustments-labels';
-import type { TemperaturePoint } from './adjustments-types';
+import { TEMPERATURE_NOTES, type TemperaturePoint } from './temperature-types';
 
 /**
  * **Sıcaklık kaydı formu** (10.6) — `design/project/Operasyon - Depo Imha Sayim.dc.html`:
@@ -79,7 +78,7 @@ export function TemperatureCard({ points }: TemperatureCardProps) {
     <div className="mt-2 flex flex-col gap-3 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
       <div className="flex flex-col gap-0.5">
         <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Sıcaklık kaydı</span>
-        <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{ADJ_NOTES.temperatureHint}</span>
+        <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{TEMPERATURE_NOTES.hint}</span>
       </div>
 
       {known.length > 0 ? (
@@ -160,6 +159,6 @@ export function TemperatureCard({ points }: TemperatureCardProps) {
  * yanında bir ayraç gibi okunuyor ("18,5 ile 3,6 arası" gibi). `toLocaleString` ASCII tire
  * verdiği için burada çevriliyor.
  */
-export function fmt(celsius: number): string {
+function fmt(celsius: number): string {
   return `${celsius.toLocaleString('tr-TR', { maximumFractionDigits: 1 }).replace('-', '−')}°`;
 }

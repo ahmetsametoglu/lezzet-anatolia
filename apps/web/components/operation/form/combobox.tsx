@@ -116,7 +116,14 @@ export function Combobox({
         })}
       >
         {label ? <span className="flex-none opacity-70">{label}:</span> : null}
-        <span className="truncate">{triggerText || placeholder}</span>
+        {/* `min-w-0 flex-1` ŞART, `truncate` tek başına YETMEZ (ölçüldü 14.08, kullanıcı bildirimi):
+            flex çocuğunun asgari genişliği varsayılan olarak İÇERİĞİ kadardır (`min-width:auto`), yani
+            `overflow-hidden` verilse bile kutu kısalmaz — uzun bir seçim tetikleyiciyi büyütür,
+            tetikleyici satırı, satır da diyaloğu taşırır. Arıza stoktan düş penceresinde göründü:
+            parti etiketi ürün+tarih+adet+depo taşıyor ve form pencereye sığmıyordu. Düzeltme burada,
+            çünkü hata `Combobox`ın kendisindeydi — her çağıran kazanıyor (`MultiSelect` bunu zaten
+            doğru yapıyordu). */}
+        <span className="min-w-0 flex-1 truncate text-left">{triggerText || placeholder}</span>
         <span className="flex-none text-ops-faint">
           {variant === 'chip' ? <ChevronDownIcon /> : open ? '▴' : '▾'}
         </span>

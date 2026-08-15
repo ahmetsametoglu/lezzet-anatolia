@@ -341,10 +341,14 @@ export type ProductPool = z.infer<typeof ProductPoolSchema>;
 /**
  * Stok ekranının ürün SATIRI — havuzun kardeşi, aynı gerekçeyle dar (09.13).
  *
- * Stok listesi ürünün beyanını, görselini, fiyat alanlarını hiç kullanmaz; ihtiyacı üç şeydir: kimin
- * stoğu (ad, kategori), hangi tarih rejimi (`dateType` + `shelfLifeDays` — raf ömrü kararlarının
- * girdisi) ve hangi boylar. Tarih alanları ÜRÜNDE durduğu için parti satırı tek başına "yaklaşan mı"
- * sorusunu yanıtlayamaz; bu okuma o eksiği kapatır.
+ * Stok listesi ürünün beyanını ve fiyat alanlarını hiç kullanmaz; ihtiyacı dört şeydir: kimin stoğu
+ * (ad, kategori, **görsel**), hangi tarih rejimi (`dateType` + `shelfLifeDays` — raf ömrü
+ * kararlarının girdisi) ve hangi boylar. Tarih alanları ÜRÜNDE durduğu için parti satırı tek başına
+ * "yaklaşan mı" sorusunu yanıtlayamaz; bu okuma o eksiği kapatır.
+ *
+ * **Görsel 22.30'da eklendi** (kullanıcı tespiti 14.08: *"ürünlerin resmi ile beraber görmek daha
+ * kalıcı olur"*). Adla birlikte gelen küçük görsel, uzun listede satırı okumadan tanımayı sağlıyor —
+ * depoda ürünler adlarıyla değil görünüşleriyle hatırlanır. Ek sorgu değil: iki kolon, aynı okumada.
  *
  * `minStockQty` boyla gelir: "eşiğin altına düştü" göstergesi ayrı bir sorgu istemesin.
  */
@@ -355,6 +359,8 @@ export const ProductStockRowSchema = ProductSchema.pick({
   dateType: true,
   shelfLifeDays: true,
   status: true,
+  imageKey: true,
+  imageUpdatedAt: true,
 }).extend({
   variants: z.array(
     ProductVariantSchema.pick({ id: true, label: true, isActive: true, minStockQty: true, sku: true }),

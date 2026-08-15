@@ -72,6 +72,28 @@ export class ReservationService extends BaseDbService<Reservation, ReservationIn
   }
 
   /**
+   * **"Ayrılmış" mal hangi siparişe ayrılmış** — varyantın aktif rezervasyonları, DEPO süzgeçli (22.31).
+   *
+   * Ekranda "1 ayrılmış" yazıyordu ve neye ayrıldığı hiçbir yerde yazmıyordu (kullanıcı tespiti
+   * 14.08). Ayrılmış mal depoda DURUYOR ama satılamaz; sayının kime ait olduğu görünmezse operatör
+   * ya "kayıp" sanır ya da elle aramaya çıkar.
+   *
+   * **Sipariş künyesi BURADA gelmiyor ve gelemez:** `order_id`nin FK'sı YOK — tablo 0006'da açıldı,
+   * `order` ise 07'de (kolonun kendi künyesi bunu yazıyor). FK olmadan PostgREST gömülü okuma
+   * kuramıyor ve denemek `PGRST200` ile dönüyor (ölçüldü 14.08). Numarayı çağıran ikinci ve TEK bir
+   * turda çözüyor (`OrderService.listByIds`) — `created_by` isimlerinin çözüldüğü desenin aynısı.
+   */
+  async listActiveByVariantScoped(
+    variantId: string,
+    warehouseIds: readonly string[] | undefined,
+  ): Promise<Reservation[]> {
+    if (warehouseIds?.length === 0) return [];
+    const filters: Record<string, unknown> = { variantId };
+    if (warehouseIds) filters.warehouseId = [...warehouseIds];
+    return this.getAll(filters, { orFilters: [`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`] });
+  }
+
+  /**
    * Siparişin rezervasyonlarını serbest bırakır — iptalde ve teslimde çağrılır. Teslimde ayrıca
    * fiili stok düşer; o iki-tablolu yazım teslim RPC'sindedir (modül 07), burada değil.
    */

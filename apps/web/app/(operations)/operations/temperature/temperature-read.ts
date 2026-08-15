@@ -1,6 +1,6 @@
 import 'server-only';
 import { SettingsService, TemperatureLogService, serviceDb } from '@lezzet/database';
-import type { TemperaturePoint } from './adjustments-types';
+import type { TemperaturePoint } from './temperature-types';
 
 /**
  * **Sıcaklık kaydının okuması** (10.6) — `design/pages/depo-imha-sayim.md §2`,

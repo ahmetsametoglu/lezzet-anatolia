@@ -118,8 +118,11 @@ interface DecisionCardProps {
  *
  * Sol kenar rengi kararı taşır. Öneri metni SİSTEMİN sesidir ve öyle yazılır: "öneri" der, "indirim
  * uygulandı" demez — karar operatörün (design/pages/admin-stok §6).
+ *
+ * **Dışa verilmiyor** (22.30): seviyeler sekmesinin "en acil partiler" önizlemesi bu kartı kullanıyordu
+ * ve o panel kalktı. Kart kuyruğun kendi sekmesinde yaşıyor.
  */
-export function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
+function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
   const router = useRouter();
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);

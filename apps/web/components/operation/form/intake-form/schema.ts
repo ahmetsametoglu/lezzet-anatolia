@@ -26,6 +26,21 @@ export const IntakeLineSchema = z.object({
    * bilmiyorum" ve meşrudur: faturada okunamayan bir satır uydurulmaz (`CLAUDE §1`).
    */
   unitCost: z.number().nonnegative().nullable(),
+  /**
+   * Siparişte ısmarlanan adet — **siparişli kabulde dolu**, serbest kabulde `null` (22.26).
+   *
+   * Beklenen adet "gelen" hanesine ÖNDEN YAZILMAZ: kabulün bütün amacı fiilen geleni saymaktır ve
+   * dolu bir hane, depocuya saymadan onaylamayı teklif ederdi.
+   */
+  expectedQty: z.number().int().nullable(),
+  /**
+   * **"Gelmedi" beyanı** — boş adetten AYRI bir karardır (22.26).
+   *
+   * Boş satır *"henüz saymadım"*, işaretli satır *"saydım, gelmemiş"* demektir. İkisi karışırsa yarım
+   * kabul tam sanılır. İşaretli satır kabule girmez: kaydı adet değil FARKIN kendisidir ve sipariş
+   * kapanışında eksik olarak görünür.
+   */
+  isMissing: z.boolean(),
 });
 export type IntakeLine = z.infer<typeof IntakeLineSchema>;
 
@@ -48,9 +63,9 @@ export const IntakeFormSchema = z.object({
 });
 export type IntakeFormValues = z.infer<typeof IntakeFormSchema>;
 
-/** Boş satır — "+ satır" ve dilekçeden gelmeyen alanlar için tek yerden. */
-export function emptyIntakeLine(variantId: string, title: string): IntakeLine {
-  return { variantId, title, qty: null, expiryDate: '', lotNumber: '', location: '', unitCost: null };
+/** Boş satır — "+ satır", dilekçe ve sipariş kalemleri için tek yerden. */
+export function emptyIntakeLine(variantId: string, title: string, expectedQty: number | null = null): IntakeLine {
+  return { variantId, title, qty: null, expiryDate: '', lotNumber: '', location: '', unitCost: null, expectedQty, isMissing: false };
 }
 
 /**
@@ -62,16 +77,19 @@ export function emptyIntakeLine(variantId: string, title: string): IntakeLine {
  */
 export function intakeBlock(values: IntakeFormValues): string | null {
   if (!values.warehouseId) return 'Hangi depoya girdiğini seçin — kabul deposuz yazılamaz.';
-  const counted = values.lines.filter((line) => line.qty !== null && line.qty > 0);
+  const counted = countedLines(values);
   if (counted.length === 0) return 'En az bir kaleme adet girin.';
   const missingDate = counted.find((line) => !line.expiryDate.trim());
   if (missingDate) return `Son kullanma tarihi eksik: ${missingDate.title || 'bir kalem'}.`;
   return null;
 }
 
-/** Kabule GİRECEK satırlar — adedi girilmiş olanlar. Ekran ve kaydeden kapı aynı süzgeci kullanır. */
+/**
+ * Kabule GİRECEK satırlar — adedi girilmiş VE "gelmedi" işaretlenmemiş olanlar. Ekran ve kaydeden
+ * kapı aynı süzgeci kullanır; iki yerde ayrı yazılsaydı biri "gelmedi"yi bir gün unuturdu.
+ */
 export function countedLines(values: IntakeFormValues): IntakeLine[] {
-  return values.lines.filter((line) => line.qty !== null && line.qty > 0);
+  return values.lines.filter((line) => !line.isMissing && line.qty !== null && line.qty > 0);
 }
 
 /**

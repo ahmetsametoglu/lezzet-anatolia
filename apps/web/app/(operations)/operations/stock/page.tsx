@@ -9,32 +9,58 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { needsExpiryAttention } from '@lezzet/domain-core';
-import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
+import {
+  DEFAULT_PAGE_SIZE,
+  resolveLocalizedText,
+  type Page,
+  type ProductStockRow,
+  type StockAdjustmentDetail,
+  type StockAdjustmentReason,
+} from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { StockClient } from './stock-client';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readOfferHandoff } from './stock-handoff';
+import { pendingOrderCount, readIntakeProgress, readIntakeTab } from './intake-read';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
-// Stok görünümü (09.13) — parti gözü ve tarihe bağlı kararların ekranı. Okuma burada (RSC).
+// Stok (09.13 · 22.26) — DEPO YÜZEYİNİN TAMAMI: ne var · ne karar bekliyor · ne girdi · ne çıktı.
+// Okuma burada (RSC).
 //
-// OKUMA PLANI — iki dalga, altı sorgu; hiçbiri satır sayısıyla ÇARPMAZ (N+1 yok):
-//   1. dalga · ürün sayfası (dar, keyset) · eldeki TÜM partiler · kategoriler · imha geçmişi sayfası
-//   2. dalga · sayfadaki boyların kullanılabilirliği · YALNIZ karar bekleyen boyların liste fiyatı
+// OKUMA PLANI — sekmeye göre daralır. HER açılışta okunan çekirdek:
+//   · eldeki TÜM partiler (sayaçların ve iki sekmenin ortak kaynağı) · kategoriler · eşikler
+//   · açık siparişlerin bekleyen kalemleri (yalnız Mal kabul ROZETİ için — tek sorgu)
+// Sekmeye özel:
+//   · Seviyeler → ürün sayfası (keyset) + sayfadaki boyların kullanılabilirliği
+//   · Yaklaşan tarihli → karar bekleyen boyların liste fiyatı (teklif önerisi için)
+//   · Mal kabul → sipariş künyeleri + tedarikçiler + depo seçenekleri
+//   · Çıkışlar → düşüm sayfası + dönem toplamı + kaydı girenlerin adları
+//
+// SEKME ARTIK SUNUCUYA GİDİYOR (22.26): eskiden üçü aynı okumadan besleniyordu ve sekme değişimi
+// sığdı (`replaceState`). Dört sekmenin verisi ayrıştığı için sığ geçiş, açılan sekmeyi boş
+// bırakırdı. Karşılığında her sekme kendi turunda ÖNCEKİNDEN AZ sorgu atıyor.
 //
 // İki farklı sayfalama ölçütü bilinçli (CLAUDE.md §1): ürün ve hareket kaydı veriyle SINIRSIZ büyür →
 // keyset. Eldeki parti ise fiziksel gerçekle sınırlıdır (depoda ne varsa o kadar) ve mal tükendikçe
 // erir → tek turda. Üstelik sayfalanamaz: "yaklaşan tarihli" uyarısının TAM olması gerekir, kuyrukta
 // kalan bir partiyi kaçırmak imha edilecek malı satmak demektir.
-//
-// Fiyat okuması ikinci dalgada ve DAR: teklif önerisi yalnız karar bekleyen partiler için anlamlı,
-// katalogun tamamının fiyatını taşımanın gerekçesi yok.
 
 interface StockPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
+
+/**
+ * Kapalı sekmenin BOŞ karşılıkları — okuma hiç yapılmadığında `Promise.all`ın yerine geçerler.
+ *
+ * Boş sayfa "sonuç yok" DEMEZ, "bakılmadı" der: kapalı sekmenin listesi zaten çizilmiyor ve sayaçlar
+ * onlardan türemiyor (`counts` partilerden çıkar). Tek şart imlecin `null` olması — dolu bir imleç,
+ * hiç okunmamış bir listeye "devamı var" dedirtirdi.
+ */
+const EMPTY_PRODUCT_PAGE: Page<ProductStockRow> = { rows: [], nextCursor: null };
+const EMPTY_LOSS_PAGE: Page<StockAdjustmentDetail> = { rows: [], nextCursor: null };
+const EMPTY_LOSS_TOTALS = { byReason: new Map<StockAdjustmentReason, { qty: number; costCents: number }>(), qty: 0, costCents: 0 };
 
 export default async function StockPage({ searchParams }: StockPageProps) {
   const params = await searchParams;
@@ -44,6 +70,9 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const db = serviceDb();
   const productSvc = new ProductService(db);
   const stockSvc = new StockService(db);
+  // Sekme okumanın kapsamını belirliyor; boş küme okumak yerine hiç okumamak (22.26 künyesi).
+  const onLevels = urlState.tab === 'levels';
+  const onOutgoing = urlState.tab === 'outgoing';
 
   // Eşikler İŞLETMENİN kararıdır (`Setting`, 0016) — kod varsayılanı yalnız satır hiç yoksa geçerli.
   // `SettingsService` süreç içinde önbelleklidir: ilk istekte üç okuma, sonrakilerde sıfır.
@@ -62,15 +91,19 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   // bekleyen 20 kararı yok saymaz — o kararlar hâlâ operatörün önünde. Süzgeç yalnız SEVİYE
   // tablosunun satırlarını daraltır ve daraltmayı in-memory yaparız: partiler zaten tamamen
   // yüklü (sayfalanmıyor), ikinci bir sorgu atmanın karşılığı yok.
-  const [productPage, batchRows, categories, lossPage, lossTotals, thresholds, warehouseLabels] = await Promise.all([
-    productSvc.listStockRows({ filters, limit: DEFAULT_PAGE_SIZE }),
-    stockSvc.listInStockDetailed(undefined, ctx.warehouseIds),
-    new CategoryService(db).list(),
-    lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }),
-    lossSvc.reasonSummary(from),
-    readExpiryThresholds(new SettingsService(db)),
-    readWarehouseLabels(),
-  ]);
+  const [productPage, batchRows, categories, lossPage, lossTotals, thresholds, warehouseLabels, intakeProgress] =
+    await Promise.all([
+      onLevels ? productSvc.listStockRows({ filters, limit: DEFAULT_PAGE_SIZE }) : EMPTY_PRODUCT_PAGE,
+      stockSvc.listInStockDetailed(undefined, ctx.warehouseIds),
+      new CategoryService(db).list(),
+      onOutgoing ? lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }) : EMPTY_LOSS_PAGE,
+      onOutgoing ? lossSvc.reasonSummary(from) : EMPTY_LOSS_TOTALS,
+      readExpiryThresholds(new SettingsService(db)),
+      readWarehouseLabels(),
+      // Rozet HER sekmede okunuyor: "bugün ne bekliyorum" bir bakışta görünmeli (tasarım §7);
+      // sekmenin detayı ise yalnız açıkken (`readIntakeTab`).
+      readIntakeProgress(),
+    ]);
 
   // TEK "şimdi": okumanın tüm satırları aynı ana göre değerlendirilsin. İstek ortasında gün dönerse
   // listenin yarısı "yaklaşan", yarısı "geçmiş" görünürdü.
@@ -83,13 +116,16 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   ];
   const pageVariantIds = productPage.rows.flatMap((p) => p.variants.map((v) => v.id));
 
-  const [available, priceMap, actorNames] = await Promise.all([
+  const [available, priceMap, actorNames, intake] = await Promise.all([
     // Depo TANELİ okuma (19.5): satırın toplamı da kırılımı da bu tek kaynaktan türer. Depo-üstü
     // görünüm (`getNetworkAvailabilityMap`) burada YANLIŞ olurdu — birleştirilmiş stok kimsenin
     // stoğu değildir ve operatör "5 var" görüp iki şehirdeki malı tek siparişe yazamaz.
-    stockSvc.listAvailableAcross(warehouse.active ? [warehouse.active.id] : ctx.visibleWarehouseIds, pageVariantIds),
+    onLevels
+      ? stockSvc.listAvailableAcross(warehouse.active ? [warehouse.active.id] : ctx.visibleWarehouseIds, pageVariantIds)
+      : [],
     new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c'),
     readActorNames(new UserProfileService(db), lossPage.rows),
+    urlState.tab === 'intake' ? readIntakeTab(intakeProgress) : null,
   ]);
 
   // Liste fiyatı = b2c kanal fiyatı (KDV dahil). Müşteriye özel fiyat burada aranmaz: teklif herkese
@@ -123,6 +159,20 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         attention,
         losses: toLossRows(lossPage.rows, actorNames),
         lossCursor: lossPage.nextCursor,
+        // Düşüm formunun seçenekleri — zaten okunmuş partilerden türer, ek sorgu yok. Yalnız Çıkışlar
+        // sekmesinde taşınıyor: form orada açılıyor ve öteki sekmelere yüz kayıtlık bir liste
+        // göndermenin karşılığı yok.
+        writeOffBatches: onOutgoing
+          ? batches.map((batch) => ({
+              stockId: batch.id,
+              title: batch.title,
+              expiryDate: batch.expiryDate,
+              physicalQty: batch.physicalQty,
+              // Kararın kendisi motorun (`domain-core/stock`): "geçti" bilgisi satırla birlikte geldi.
+              isExpired: batch.daysLeft < 0,
+              warehouseName: batch.warehouse?.name ?? null,
+            }))
+          : [],
         lossSummary: {
           // Sıra tutara göre: en pahalı sebep başta dursun — dağılıma bakan kişi onu arıyor.
           byReason: [...lossTotals.byReason]
@@ -137,7 +187,12 @@ export default async function StockPage({ searchParams }: StockPageProps) {
           inStock: new Set(batches.map((b) => b.variantId)).size,
           attention: attention.length,
           blocked: batches.filter((b) => b.decision === 'must_discard').length,
+          pendingIntake: pendingOrderCount(intakeProgress),
         },
+        intake,
+        // Maliyet depo-ÜSTÜ kapsamda görünür (yönetici/muhasebe); depoya bağlı personelde çizilmez
+        // ve kapı da yazmaz (`StockData.canSeeCost` künyesi).
+        canSeeCost: ctx.scope.kind === 'all',
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
         nearExpiryPercent: thresholds.nearExpiryPercent,
         warehouse: {

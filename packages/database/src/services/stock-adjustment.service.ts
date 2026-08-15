@@ -103,6 +103,15 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
   }
 
   /**
+   * Birden çok partinin düzeltmeleri TEK turda (22.30) — ürün geçmişi paneli parti başına soruyor,
+   * satır başına sorgu N+1 olurdu (`stock_adjustment_stock_idx`).
+   */
+  async listByStocks(stockIds: readonly string[]): Promise<StockAdjustment[]> {
+    if (stockIds.length === 0) return [];
+    return this.getAll({ stockId: [...stockIds] }, { orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
+  /**
    * İmha/fire geçmişi SAYFASI — kayıt + hangi partinin, hangi ürünün (09.13).
    *
    * Hareket kaydı zamanla **sınırsız** büyür (CLAUDE.md: veriyle büyüyen küme) → keyset sayfalama.

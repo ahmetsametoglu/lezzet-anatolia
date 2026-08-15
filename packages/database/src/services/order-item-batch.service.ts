@@ -107,6 +107,43 @@ export class OrderItemBatchService extends BaseDbService<OrderItemBatch, OrderIt
   }
 
   /**
+   * **Varyantın PARTİDEN ÇIKIŞLARI** — hangi partiden, ne zaman, ne kadar mal gitti (22.30).
+   *
+   * `recallByStocks`in kardeşi ama sorusu başka: orada "kime gitti" (müşteri), burada "ne zaman
+   * gitti" (hız ve parti ömrü). Müşteri hiç okunmuyor — bu bir stok sorusudur ve kişisel veriyi
+   * gereksiz yere taşımak, en ucuz sızıntı yoludur.
+   *
+   * **Süzgeç VARYANTTA, parti listesinde değil:** partiden gitseydik yalnız elimizdeki N partinin
+   * çıkışını görürdük ve hız hesabı, kaç parti okuduğumuza göre değişirdi. `order_item.variant_id`
+   * indeksli (`order_item_variant_idx`).
+   *
+   * **Kaynak HAZIRLIK kaydıdır:** bu tabloya depocu FEFO'yu onayladığında yazılır. Yani sayı
+   * "sipariş edildi" değil "depodan fiilen çıktı" demektir — stok sorusunun doğru paydası budur.
+   *
+   * **TARİH SÜZGECİ YOK ve bu bilinçli** (22.31): *"bu ürün hiç satıldı mı"* sorusu 90 günle
+   * sınırlanamaz — pencere okumanın değil hesabın işi. Küme bir varyantın çıkışlarıyla sınırlı,
+   * yani listenin boyu ürünün satış geçmişi kadar; tavan gerekirse ölçülüp konur, şimdiden konan bir
+   * tavan "hiç satılmamış" diyen yanlış bir cevap üretebilirdi.
+   */
+  async exitsByVariant(
+    variantId: string,
+  ): Promise<Array<{ stockId: string; qty: number; at: string; status: OrderStatus }>> {
+    const rows = (await this.selectRows(
+      { 'order_item.variant_id': variantId },
+      { select: 'stock_id,qty,order_item!inner(variant_id,order:order!inner(created_at,status))' },
+    )) as Array<{ stock_id: string; qty: number; order_item: { order: { created_at: string; status: OrderStatus } } }>;
+
+    return rows.map((row) => ({
+      stockId: row.stock_id,
+      qty: row.qty,
+      at: row.order_item.order.created_at,
+      // **Durum ŞART** (22.34): hazırlanmış ile teslim edilmiş mal aynı şey değil — birincisi hâlâ
+      // rafta ve `physical_qty`de duruyor (`deliver_order` künyesi).
+      status: row.order_item.order.status,
+    }));
+  }
+
+  /**
    * **Kalem başına gerçek maliyet** (cent) — fiilen çıkan partilerin alış fiyatından (12.6).
    * Ortalama değil gerçek: hangi partiden çıktığı bu tabloda yazılı.
    *

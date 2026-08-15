@@ -31,9 +31,8 @@ export type NavIconName =
   | 'fiyatlar'
   | 'tarifler'
   | 'hazirlik'
-  | 'malkabul'
   | 'stock'
-  | 'stokdus'
+  | 'sicaklik'
   | 'satinalma'
   | 'depolar'
   | 'para'
@@ -101,15 +100,6 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <path d="m8.5 13 2 2 4-4" />
     </>
   ),
-  // Mal kabul — kutu, içine inen okla. Yön ŞART: aynı kutu çıkışı da anlatabilirdi ve depo grubunda
-  // giren malla çıkan malın ekranları yan yana duruyor.
-  malkabul: (
-    <>
-      <path d="M4 9h16v10.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5z" />
-      <path d="M12 3v5" />
-      <path d="m9.5 6 2.5 2.5L14.5 6" />
-    </>
-  ),
   stock: (
     <>
       <path d="m12 2 9 5-9 5-9-5z" />
@@ -117,13 +107,12 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <path d="m3 17 9 5 9-5" />
     </>
   ),
-  // Stoktan düş — kutu, dışarı çıkan okla. Mal kabulün ikizi ve YÖNÜ ters: ikisi rayda birbirine
-  // yakın duruyor, ayırt edilmesi gereken tek şey okun yönü.
-  stokdus: (
+  // Sıcaklık — termometre. Depo grubundaki tek ölçüm ekranı; kutu/ok ailesinden bilerek ayrı
+  // duruyor, çünkü mal hareketi değil tesis kaydı (22.26).
+  sicaklik: (
     <>
-      <path d="M4 9h16v10.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5z" />
-      <path d="M12 8V3" />
-      <path d="m9.5 5 2.5-2.5L14.5 5" />
+      <path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z" />
+      <path d="M12 16.5v-4" />
     </>
   ),
   satinalma: (

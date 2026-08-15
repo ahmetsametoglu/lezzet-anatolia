@@ -6,7 +6,7 @@ import { CalendarIcon } from '@/components/operation/ui/icons';
 import { FieldShell } from './field-shell';
 import { Calendar, initialMonth, shiftMonth } from './calendar';
 import { RANGE_PRESETS, formatDay, matchingPreset, toDay } from './calendar-math';
-import { CONTROL_H } from '../ui/control';
+import { CONTROL_H, type ControlSize } from '../ui/control';
 
 // TARİH ve TARİH ARALIĞI seçicileri (envanter O8) — operasyon yüzeyinin ortak alanları.
 //
@@ -28,10 +28,13 @@ interface TriggerProps {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   /** Değeri temizleme — yalnız dolu ve `clearable` alanlarda. */
   onClear?: () => void;
+  size?: ControlSize;
+  /** Etiketsiz kullanımda (`DateInput`) erişilebilir ad — kabuk olmadığı için buradan gelir. */
+  ariaLabel?: string;
 }
 
 /** Alanın kendisi gibi görünen tetikleyici: dolu hâlde tarih, boşta yer tutucu, sağda takvim ikonu. */
-function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear }: TriggerProps) {
+function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear, size = 'md', ariaLabel }: TriggerProps) {
   return (
     <div className="relative">
       <button
@@ -39,9 +42,10 @@ function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear }: 
         type="button"
         onClick={onClick}
         disabled={disabled}
+        aria-label={ariaLabel}
         className={[
           // Yükseklik ORTAK: tarih alanı bir form kontrolüdür, yanındaki `Input`/`Select` ile hizalanır.
-          `flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border border-ops-line bg-ops-white px-3 text-left transition-colors ${CONTROL_H.md}`,
+          `flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border border-ops-line bg-ops-white px-3 text-left transition-colors ${CONTROL_H[size]}`,
           'hover:border-ops-line-strong focus-visible:border-ops-olive focus-visible:outline-none',
           disabled ? 'cursor-not-allowed opacity-60' : '',
         ]
@@ -51,9 +55,11 @@ function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear }: 
         {/* Temizleme düğmesi metinle takvim ikonunun ARASINA konumlanır; metnin sağ payı onun
             yerini açar — paysız bırakıldığında uzun tarih ✕'in altından geçer, ✕ de ikonun
             üstüne binip takvimi "üzeri çizili" gösterir. */}
+        {/* `min-w-0 flex-1` — `truncate` tek başına yetmez (gerekçe `Combobox` künyesinde, 14.08):
+            dar bir ızgara hücresinde (mal kabul satırının SKT kolonu) metin kutuyu taşırırdı. */}
         <span
           className={[
-            'truncate font-ops-body text-ops-sm',
+            'min-w-0 flex-1 truncate font-ops-body text-ops-sm',
             text ? 'text-ops-ink' : 'text-ops-faint',
             onClear ? 'me-4' : '',
           ]
@@ -97,30 +103,53 @@ interface DateFieldProps {
   className?: string;
 }
 
-/** Tekil tarih seçici — etiketli alan + takvim açılır kutusu. */
-export function DateField({
-  label,
+interface DateInputProps {
+  /** `YYYY-MM-DD` ya da boş. */
+  value: string;
+  onChange: (day: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  clearable?: boolean;
+  /** Satır içi hücrede `sm` (32px), form alanında `md` (36px) — ortak sözlük (`CONTROL_H`). */
+  size?: ControlSize;
+  /** Etiket kabuğu olmadığı için erişilebilir ad BURADAN gelir (tablo başlığı ekran okuyucuya yetmez). */
+  ariaLabel?: string;
+}
+
+/**
+ * **ETİKETSİZ tarih seçici — tablo hücresinin içinde yaşar** (22.26).
+ *
+ * `DateField` bir form alanıdır: etiketi, zorunluluk yıldızı ve hata satırı vardır. Bir ızgara
+ * satırında bunların hiçbiri yoktur — kolonun başlığı zaten etikettir. İkisi aynı tetikleyiciyi ve
+ * aynı takvimi kullanır; ayrılan tek şey kabuk.
+ *
+ * **Var olma sebebi bir ihlaldi:** mal kabul satırlarında son kullanma tarihi ham `<input type="date">`
+ * ile çiziliyordu — oysa bu dosyanın kendi künyesi onu yasaklıyor (tarayıcının takvimi her platformda
+ * başka görünür ve dili tarayıcının dilidir; operasyon yüzeyi Türkçedir). Kural vardı, satır içi
+ * karşılığı yoktu; yasak da böyle delinir.
+ */
+export function DateInput({
   value,
   onChange,
-  required,
-  labelAside,
-  error,
   placeholder = 'Tarih seç',
   disabled,
   clearable = true,
-  className,
-}: DateFieldProps) {
+  size = 'md',
+  ariaLabel,
+}: DateInputProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const today = new Date();
   const [view, setView] = useState(() => initialMonth(value, today));
 
   return (
-    <FieldShell label={label} required={required} labelAside={labelAside} error={error} className={className}>
+    <>
       <Trigger
         text={formatDay(value)}
         placeholder={placeholder}
         disabled={disabled}
+        size={size}
+        ariaLabel={ariaLabel}
         triggerRef={triggerRef}
         onClick={() => {
           // Açılışta seçili günün ayına dön: takvim en son bakılan ayda kalırsa, dolu bir alanı
@@ -147,6 +176,32 @@ export function DateField({
           />
         </div>
       </AnchoredMenu>
+    </>
+  );
+}
+
+/** Tekil tarih seçici — etiketli alan + takvim açılır kutusu. */
+export function DateField({
+  label,
+  value,
+  onChange,
+  required,
+  labelAside,
+  error,
+  placeholder = 'Tarih seç',
+  disabled,
+  clearable = true,
+  className,
+}: DateFieldProps) {
+  return (
+    <FieldShell label={label} required={required} labelAside={labelAside} error={error} className={className}>
+      <DateInput
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        clearable={clearable}
+      />
     </FieldShell>
   );
 }

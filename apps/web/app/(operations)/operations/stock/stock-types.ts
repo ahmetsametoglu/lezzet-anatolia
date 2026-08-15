@@ -53,6 +53,13 @@ export interface StockLevelRow {
   variantLabel: string;
   /** Listede görünen tam ad — "Fıstıklı Baklava · 1 kg". */
   title: string;
+  /**
+   * Ürünün görseli (22.30) — `null` = görsel yüklenmemiş, ekran yer tutucu çizer.
+   *
+   * Adres SUNUCUDA kuruluyor (`publicImageUrl`, `R2_PUBLIC_BASE_URL` sunucu env'i) ve sürüm damgası
+   * `imageUpdatedAt`ten geliyor: görsel değişince adres de değişir, tarayıcı bayat kopyayı göstermez.
+   */
+  imageUrl: string | null;
   categoryName: string;
   status: ProductStatus;
   /** Boy satışa kapalıysa stok yine görünür; ekran sebebi söyler. */
@@ -91,6 +98,25 @@ export type LossRow = StockAdjustmentDetail & {
   actorName: string | null;
 };
 
+/**
+ * Stoktan düşülebilecek parti — düşüm formunun seçeneği (22.26).
+ *
+ * **Alış fiyatı TAŞIMIYOR** ve bu bir ekran disiplini değil verinin şekli: tasarımın kuralı *"fire
+ * maliyeti, imhanın parasal değeri asla görünmez"* — depocu adet düşer, paraya çevirmek raporların
+ * işi. Alanı burada susturmak, ekranda unutmaktan güvenlidir.
+ */
+export interface WriteOffBatch {
+  stockId: string;
+  title: string;
+  expiryDate: string;
+  /** Eldeki fiziksel adet — "partide 3 var, 5 düşülemez" cevabını ekran önceden söyleyebilsin. */
+  physicalQty: number;
+  /** Son tarihi geçmiş mi — düşülecek ilk şey odur, gizlenmesi ters etki yapardı. */
+  isExpired: boolean;
+  /** Partinin deposu — çok depolu bakışta hangi rafın malı olduğu satırdan okunur. */
+  warehouseName: string | null;
+}
+
 /** Dönemin sebep dağılımı — "bu çeyrek ne kadar, neden". Sayfalı liste bu soruyu yanıtlayamaz. */
 export interface LossSummary {
   byReason: Array<{ reason: StockAdjustmentReason; qty: number; costCents: number }>;
@@ -115,6 +141,56 @@ export interface StockCounts {
   attention: number;
   /** DLC'si geçmiş, yalnız imha yolu kalan parti sayısı. */
   blocked: number;
+  /**
+   * Kabul bekleyen açık tedarik siparişi sayısı — Mal kabul sekmesinin rozeti (22.26).
+   *
+   * **Sekme kapalıyken de okunur** ve bu bilinçli bir masraf: tasarımın kuralı *"'bugün ne
+   * bekliyorum' bir bakışta okunmalı"* — sayıyı yalnız sekmeye girince göstermek, girmeyene hiç
+   * göstermemek olurdu. Okuma tek sorgu (`openProgress`); sekmenin kendi detayları (sipariş künyesi,
+   * tedarikçi listesi) yalnız sekme açıkken çekilir.
+   */
+  pendingIntake: number;
+}
+
+/**
+ * Kabul bekleyen tedarik siparişi — Mal kabul sekmesindeki kart (22.26; `receiving-types`ten geldi).
+ *
+ * **Liste depo-üstüdür ve öyle kalır:** tedarik siparişi bir depoya ait değildir, mal kabul edilirken
+ * bir kapıdan girer. Depo sorusu okumanın değil YAZMANIN sorusudur — cevabı kabul diyaloğunda verilir
+ * ve varsayılan üretilmez (`CLAUDE §1`).
+ */
+export interface PendingPurchase {
+  purchaseOrderId: string;
+  referenceNo: string | null;
+  supplierName: string;
+  /** Kaç kalem ısmarlandı. */
+  lineCount: number;
+  /** Kaç kalemin malı hâlâ gelmedi — "3/5 girildi" ilerlemesi bundan doğar. */
+  missingLineCount: number;
+  /** Sipariş gönderileli kaç gün oldu; "14 gündür bekliyor" uyarısı. `null` = hiç gönderilmemiş. */
+  ageDays: number | null;
+  /** Kısmen geldi mi. */
+  isPartial: boolean;
+}
+
+/**
+ * Mal kabul sekmesinin YALNIZ o sekmede okunan verisi (22.26) — `null` = sekme kapalı.
+ *
+ * Sayfanın her açılışında sipariş künyelerini ve tedarikçi listesini çekmek, üç sekmede bakılmayan
+ * bir listeyi her seferinde kurmak olurdu. Rozetin sayısı `counts.pendingIntake`te ve o hep okunuyor
+ * — yani sekmeye girmeyen de "kaç sipariş bekliyor" bilgisini kaybetmiyor.
+ */
+export interface IntakeTabData {
+  pending: PendingPurchase[];
+  /**
+   * Siparişsiz kabulde seçilecek tedarikçiler — doğal tavanlı küme (operatörün elle kurduğu liste),
+   * tek turda okunur ve sayfalanmaz (`CLAUDE §1`).
+   */
+  suppliers: Array<{ id: string; name: string }>;
+  /** Kabulün yazılabileceği depolar — kapsamdan gelir; **varsayılan seçim YOK** (`CLAUDE §1`). */
+  warehouseOptions: Array<{ id: string; name: string }>;
+  /** Bağlamda tek depo seçiliyse onun kimliği — diyalogda ÖN SEÇİLİ gelir, sorulmadan yazılmaz. */
+  warehouseId: string | null;
 }
 
 /** Kategori seçeneği — süzgeç menüsünü besler (tavanı sınırlı, tek turda gelir). */
@@ -132,9 +208,22 @@ export interface StockData {
   attention: BatchView[];
   losses: LossRow[];
   lossCursor: KeysetCursor | null;
+  /** Düşüm formunun parti seçenekleri — yalnız Çıkışlar sekmesi açıkken dolu (form orada açılıyor). */
+  writeOffBatches: WriteOffBatch[];
   /** Seçili dönemin toplamı ve sebep kırılımı — dönemin TAMAMI üzerinden, sayfadan değil. */
   lossSummary: LossSummary;
   counts: StockCounts;
+  /** Mal kabul sekmesinin verisi — yalnız o sekme açıkken dolu (yukarıdaki künye). */
+  intake: IntakeTabData | null;
+  /**
+   * **Alış fiyatı/maliyet görünür mü** — depo-üstü kapsamda (yönetici/muhasebe) evet, depoya bağlı
+   * personelde hayır (`design/pages/admin-stok.md §6`).
+   *
+   * Bayrak yalnız ÇİZİMİ yönetir; yetkinin kendisi sunucudadır — kaydeden kapı kapsamı yeniden
+   * sorup depoya bağlı personelin gönderdiği maliyeti düşürüyor (`receiveIntakeAction`). Ekran
+   * gizlemek bir yetki kontrolü değildir.
+   */
+  canSeeCost: boolean;
   categories: CategoryOption[];
   /**
    * Kararın verildiği eşik (`Setting`) — ekranda YAZILI durur. "Neden bu parti listede" sorusu
@@ -208,6 +297,13 @@ export interface StockViewProps {
   onToggleSplit: (variantId: string) => void;
   /** Teklif diyaloğunu bu parti için aç. */
   onOpenOffer: (stockId: string) => void;
+  /**
+   * Mal kabul formunu aç — sipariş kimliğiyle (siparişten kabul) ya da `null` (irsaliyesiz kabul).
+   * İkisi AYNI formdur; kip satırların `expectedQty`sinden okunur.
+   */
+  onOpenIntake: (purchaseOrderId: string | null) => void;
+  /** Stoktan düş tutanağını aç; parti verilirse o satırla dolu başlar (satırdan gelen kısayol). */
+  onOpenWriteOff: (stockId?: string) => void;
   /** Geri çağırma sorgusunu aç. Lot verilirse kutu DOLU açılır — satırdaki numarayı elle yeniden
    *  yazdırmak, acil bir akışta en gereksiz adımdır. */
   onOpenRecall: (lot?: string) => void;

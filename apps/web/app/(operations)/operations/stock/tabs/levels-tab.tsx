@@ -4,21 +4,20 @@ import { Badge } from '@/components/operation/ui/badge';
 import { STOCK_COLUMN_TRACKS } from '../stock-columns';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
-import { money, shortDate } from '@/components/operation/ui/format';
+import { templateOf } from '@/components/operation/ui/table-columns';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
+import { shortDate } from '@/components/operation/ui/format';
 import { expiryBadge } from '@/lib/stock/batch-labels';
-import { totalRiskCents } from '@/lib/stock/batch-labels';
-import { DecisionCard } from './attention-tab';
-import type { BatchView, StockLevelRow, StockViewProps } from '../stock-types';
-
-/** Sağ panelin önizleme sınırı — kuyruğun tamamı kendi sekmesinde; burası "bugün ne bekliyor" bakışı. */
-const URGENT_PREVIEW = 3;
+import { ProductHistoryPanel } from './product-history-panel';
+import type { StockLevelRow, StockViewProps } from '../stock-types';
 
 // Stok seviyeleri — SOL tabloda boylar (fiili/ayrılmış/kullanılabilir + en yakın tarih), SAĞ panelde
-// KARAR KUYRUĞUNUN ilk üçü.
+// SEÇİLİ BOYUN stok geçmişi (22.30).
 //
-// Panel seçili satıra bağlı DEĞİL: aciliyet listeden bağımsızdır. Operatör hangi ürüne bakarsa baksın
-// aynı üç parti bekliyordur; paneli seçime bağlamak, kuyruğu ancak doğru satıra tıklayınca görünür
-// kılardı. Tam karar yüzeyi kendi sekmesinde, burası ona giden kapı.
+// Panelde eskiden karar kuyruğunun ilk üçü vardı ve seçime bağlı DEĞİLDİ; gerekçesi tutarlıydı ama
+// sonucu bir tekrardı — aynı liste bir sekme ötede duruyor ve başlık satırı kaç parti beklediğini
+// zaten söylüyor. Aynı alan artık başka hiçbir yerde cevabı olmayan soruya ayrılıyor: "bu üründen ne
+// zaman, kaça girdi; ne kadarı satıldı, ne kadarı çöpe gitti".
 
 export function LevelsTab({
   data,
@@ -28,34 +27,44 @@ export function LevelsTab({
   hasMoreLevels,
   loadingLevels,
   onLoadMoreLevels,
-  onOpenOffer,
-  onTab,
   navPending,
   openVariantId,
   onToggleSplit,
+  warehouseFilter,
 }: StockViewProps) {
   const { warehouse } = data;
+  // Seçili satır KİMLİKLE bulunur, kopya tutulmaz: liste tazelenince satır nesnesi değişir ama
+  // kimlik durur ve panel bayat bir kopyayı göstermez.
+  const selected = levels.find((r) => r.variantId === selectedId) ?? null;
+  const warehouseNames = new Map(warehouse.options.map((w) => [w.id, w.name]));
   const columns: Column<StockLevelRow>[] = withCells<StockLevelRow>(STOCK_COLUMN_TRACKS, {
     name: (r) => (
-      <div className="flex min-w-0 flex-col gap-px">
-        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
-        <span className="flex items-center gap-1.5 font-ops-body text-ops-xs text-ops-muted">
-          <span className="truncate">
-            {r.categoryName} · {r.batches.length === 0 ? 'parti yok' : `${r.batches.length} parti`}
-            {/* Satılamaz olmak stoğu yok saymaz — mal duruyor, satışı kapalı. İkisini ayırmak, "neden
-                satmıyorum" sorusunu ekranda cevaplar. */}
-            {r.status === 'passive' ? ' · ürün pasif' : r.status === 'candidate' ? ' · aday ürün' : ''}
-            {r.variantActive ? '' : ' · boy kapalı'}
+      <div className="flex min-w-0 items-center gap-2.5">
+        {/* Görsel ADIN SOLUNDA ve küçük (22.30, kullanıcı tespiti): depoda ürünler adlarıyla değil
+            görünüşleriyle hatırlanır, uzun listede satırı okumadan tanıtır. Görsel yoksa YER TUTULUR
+            (`Thumbnail` zaten yer tutucu çiziyor) — kayan bir sütun, tarama düzenini görselin
+            kendisinden çok bozar. Ham `<img>` yazılmıyor: kutu ortak havuzda. */}
+        <Thumbnail src={r.imageUrl} alt="" size={36} />
+        <div className="flex min-w-0 flex-col gap-px">
+          <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
+          <span className="flex items-center gap-1.5 font-ops-body text-ops-xs text-ops-muted">
+            <span className="truncate">
+              {r.categoryName} · {r.batches.length === 0 ? 'parti yok' : `${r.batches.length} parti`}
+              {/* Satılamaz olmak stoğu yok saymaz — mal duruyor, satışı kapalı. İkisini ayırmak, "neden
+                  satmıyorum" sorusunu ekranda cevaplar. */}
+              {r.status === 'passive' ? ' · ürün pasif' : r.status === 'candidate' ? ' · aday ürün' : ''}
+              {r.variantActive ? '' : ' · boy kapalı'}
+            </span>
+            {/* "N depoda" — sayı DİZİDEN okunur, ayrıca tutulmaz: iki gerçek ayrışamaz. Tek depoda
+                doğrudan kod yazılır, çünkü "1 depoda" hiçbir şey söylemez. */}
+            {warehouse.showSplit && r.warehouses.length > 0 ? (
+              <Badge tone="blue" className="flex-none font-ops-mono">
+                {r.warehouses.length > 1 ? `${r.warehouses.length} depoda` : r.warehouses[0]?.code}
+                {r.warehouses.length > 1 ? (openVariantId === r.variantId ? ' ▴' : ' ▾') : ''}
+              </Badge>
+            ) : null}
           </span>
-          {/* "N depoda" — sayı DİZİDEN okunur, ayrıca tutulmaz: iki gerçek ayrışamaz. Tek depoda
-              doğrudan kod yazılır, çünkü "1 depoda" hiçbir şey söylemez. */}
-          {warehouse.showSplit && r.warehouses.length > 0 ? (
-            <Badge tone="blue" className="flex-none font-ops-mono">
-              {r.warehouses.length > 1 ? `${r.warehouses.length} depoda` : r.warehouses[0]?.code}
-              {r.warehouses.length > 1 ? (openVariantId === r.variantId ? ' ▴' : ' ▾') : ''}
-            </Badge>
-          ) : null}
-        </span>
+        </div>
       </div>
     ),
     available: (r) => (
@@ -120,7 +129,18 @@ export function LevelsTab({
         />
       </div>
 
-      <UrgentPanel batches={data.attention} onOpenOffer={onOpenOffer} onSeeAll={() => onTab('attention')} />
+      {/* Sağ panel SEÇİLİ ÜRÜNÜN geçmişi (22.30). Burada karar kuyruğunun ilk üçü duruyordu ve tamamı
+          bir sekme ötedeydi; ekranın en geniş boş alanı artık başka hiçbir yerde cevabı olmayan bir
+          soruya ayrılıyor. Aciliyet başlık satırında sayıyla ve kendi sekmesinde duruyor. */}
+      <ProductHistoryPanel
+        row={selected}
+        warehouseNames={warehouseNames}
+        // Depo adı yalnız çok depolu bakışta anlamlı — tek depoda aynı bilgi gürültüdür (eksen kural 4).
+        // Süzgeç aktifken de gereksiz: panelin tamamı zaten o depo ve başlıkta yazıyor.
+        showWarehouse={(warehouse.showSplit || warehouse.available) && warehouse.active === null}
+        warehouseFilter={warehouseFilter}
+        warehouseFilterName={warehouse.active?.name ?? null}
+      />
     </div>
   );
 }
@@ -133,26 +153,45 @@ export function LevelsTab({
  * karşılaştırmayı gerektirir ve o karşılaştırma Transfer ekranının işidir.
  */
 function WarehouseSplit({ row }: { row: StockLevelRow }) {
+  /**
+   * **KIRILIM TABLONUN KENDİ IZGARASINI KULLANIR** (22.33, kullanıcı tespiti 14.08).
+   *
+   * Blok kendi `flex` düzenini kurmuştu ve sayıları elle verilmiş genişliklerle sağa itiyordu:
+   * "ayrılmış" değeri Ayrılmış sütununun altına denk gelmiyordu, ötekiler de kaymıştı. Kırılım
+   * satırın PARÇASIDIR — aynı sütunların altında durmalı, yoksa okuyan hangi sayının hangi başlığa
+   * ait olduğunu göz kararı eşleştirir.
+   *
+   * Şablon, dolgu ve sütun boşluğu tablonunkiyle BİREBİR aynı kaynaktan (`STOCK_COLUMN_TRACKS` +
+   * `templateOf`); iskeletin elle yazılmış ölçüleri tutmadığında yaşanan hatanın aynısı
+   * (`table-columns` künyesi).
+   */
   return (
-    <div className="flex flex-col gap-1.5 border-b border-ops-line-soft bg-ops-subtle px-5 py-2.5">
+    <div className="flex flex-col gap-1.5 border-b border-ops-line-soft bg-ops-subtle py-2.5">
       {row.warehouses.map((w) => (
-        <div key={w.warehouseId} className="flex items-center gap-2.5 pl-4">
-          <span className="h-1.5 w-1.5 flex-none rounded-full bg-ops-blue" />
-          <span className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-strong">
-            {w.name} <span className="font-ops-mono text-ops-micro text-ops-muted">{w.code}</span>
+        <div
+          key={w.warehouseId}
+          style={{ gridTemplateColumns: templateOf(STOCK_COLUMN_TRACKS) }}
+          className="grid items-center gap-x-2.5 px-5"
+        >
+          {/* Girinti 46px = görsel (36) + boşluk (10): kırılım satırları ürün ADININ hizasından
+              başlıyor, görselin altından değil — böylece "bunlar o ürünün parçası" okunuyor. */}
+          <span className="flex min-w-0 items-center gap-2 pl-[46px]">
+            <span className="h-1.5 w-1.5 flex-none rounded-full bg-ops-blue" />
+            <span className="min-w-0 truncate font-ops-body text-ops-xs text-ops-strong">
+              {w.name} <span className="font-ops-mono text-ops-micro text-ops-muted">{w.code}</span>
+            </span>
           </span>
-          <span className="flex-none font-ops-mono text-ops-xs text-ops-ink" title="Kullanılabilir">
-            {w.availableQty}
+          <span className="justify-self-end font-ops-mono text-ops-xs text-ops-ink">{w.availableQty}</span>
+          <span className="justify-self-end font-ops-mono text-ops-xs text-ops-muted">
+            {w.reservedQty > 0 ? w.reservedQty : ''}
           </span>
-          <span className="w-14 flex-none text-right font-ops-mono text-ops-micro text-ops-muted" title="Ayrılmış">
-            {w.reservedQty > 0 ? `${w.reservedQty} ayrılmış` : ''}
-          </span>
-          <span className="w-20 flex-none text-right font-ops-mono text-ops-micro text-ops-muted" title="En yakın son tarih">
+          <span className="justify-self-end font-ops-mono text-ops-xs text-ops-muted">{w.physicalQty}</span>
+          <span className="justify-self-end font-ops-mono text-ops-micro text-ops-muted">
             {w.nearestExpiry ? shortDate(w.nearestExpiry) : ''}
           </span>
         </div>
       ))}
-      <span className="pl-4 font-ops-body text-ops-micro text-ops-faint">
+      <span className="pl-[66px] pr-5 font-ops-body text-ops-micro text-ops-faint">
         Transfer kararı burada verilmez — Transfer ekranından. Eşik ve karar kuyruğu depo bazlıdır,
         yaklaşan tarihli sekmesinde deposuyla görünür.
       </span>
@@ -160,74 +199,3 @@ function WarehouseSplit({ row }: { row: StockLevelRow }) {
   );
 }
 
-interface UrgentPanelProps {
-  batches: BatchView[];
-  onOpenOffer: (stockId: string) => void;
-  onSeeAll: () => void;
-}
-
-/**
- * **En acil partiler** — karar kuyruğunun ilk üçü, seviyelere bakarken görünen önizleme.
- *
- * Tam karar yüzeyi kendi sekmesinde (gruplu, filtreli); burası "bugün bir şey bekliyor mu" sorusunun
- * cevabı. Panel BOYA değil KUYRUĞA bağlıdır: seçili satır değişince içeriği değişmez — aciliyet
- * listeden bağımsızdır, operatör hangi ürüne bakarsa baksın aynı üç parti bekliyordur.
- *
- * Riskteki tutar başlıkta: "3 parti" ile "620 € çöpe gidecek" aynı cümle değildir ve ikincisi
- * operatörü sekmeye götüren şeydir.
- */
-function UrgentPanel({ batches, onOpenOffer, onSeeAll }: UrgentPanelProps) {
-  if (batches.length === 0) {
-    return (
-      <div className="flex items-start justify-center bg-ops-subtle p-6">
-        <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-white px-4 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-ops-olive-bg font-ops-display text-ops-base font-semibold text-ops-olive-dark">
-              ✓
-            </span>
-            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Tarih riski yok</span>
-          </div>
-          <span className="font-ops-body text-ops-sm leading-[1.6] text-ops-body">
-            Eşik altına inen parti yok. Bir parti eşiği geçtiğinde burada ve “Yaklaşan tarihli” sekmesinde görünür.
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // En az kalan üstte; ömrü bilinmeyen sona. Satılamazlar her hâlde önce — geri dönüşü yok.
-  const sorted = [...batches].sort((a, b) => {
-    const blocked = Number(b.decision === 'must_discard') - Number(a.decision === 'must_discard');
-    if (blocked !== 0) return blocked;
-    return (a.remainingPercent ?? Number.POSITIVE_INFINITY) - (b.remainingPercent ?? Number.POSITIVE_INFINITY);
-  });
-  const top = sorted.slice(0, URGENT_PREVIEW);
-  const risk = totalRiskCents(batches);
-
-  return (
-    <div className="flex min-h-0 flex-col bg-ops-subtle">
-      <div className="flex flex-none flex-col gap-0.5 border-b border-ops-line px-5 py-3">
-        <div className="flex items-baseline gap-2">
-          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">En acil partiler</span>
-          {risk !== null ? <span className="font-ops-mono text-ops-xs text-ops-red">{money(risk)} riskte</span> : null}
-        </div>
-        <span className="font-ops-body text-ops-xs text-ops-muted">En az kalan üstte · tam karar yüzeyi “Yaklaşan tarihli” sekmesinde</span>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-[11px] overflow-y-auto px-5 py-3.5">
-        {top.map((b) => (
-          <DecisionCard key={b.id} batch={b} onOpenOffer={onOpenOffer} />
-        ))}
-        {/* Kuyruğun tamamı sekmede: önizleme üçle sınırlı ve bunu SÖYLER — sessizce kesilen bir liste,
-            "hepsi bu kadarmış" sanılır. */}
-        <button
-          type="button"
-          onClick={onSeeAll}
-          className="cursor-pointer rounded-ops-btn border border-ops-olive-line px-3 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-olive-dark hover:bg-ops-olive-bg"
-        >
-          {batches.length} partinin tümü →
-        </button>
-      </div>
-    </div>
-  );
-}

@@ -80,14 +80,15 @@ const NAV_SECTIONS: NavSection[] = [
       // Hazırlık grubun BAŞINDA: depocunun günü bu ekranda başlıyor (`design/pages/depo-hazirlik.md §5`),
       // stok sayfası ise günün içinde bakılan bir defter. Sıra kullanım sıklığını izliyor.
       { key: 'hazirlik', label: 'Hazırlık', href: '/operations/preparation', roles: STOCK_FLOOR },
-      // Mal kabul hazırlığın hemen ardında: ikisi de deponun GÜNLÜK işi ve mal önce girer, sonra
-      // çıkar. Tedarik (sipariş verme) ise haftalık bir karar — sırada onların altında.
-      { key: 'malkabul', label: 'Mal kabul', href: '/operations/receiving', roles: STOCK_FLOOR },
+      /**
+       * **Depo yüzeyi TEK SATIR** (22.26). "Mal kabul" ve "Stoktan düş" ayrı girişlerdi; ikisi de
+       * Stok'un sekmesi oldu — mal girer, durur, çıkar: üçü tek stoğun üç anı. Üç satır, aynı sayının
+       * üç yüzünü üç ayrı yer gibi gösteriyordu.
+       */
       { key: 'stock', label: 'Stok', href: '/operations/stock', roles: STOCK_FLOOR },
-      // Stoktan düş, Stok'un HEMEN ALTINDA: ikisi aynı sayının iki yüzü — biri "ne var", öteki
-      // "ne eksildi". Günlük işlerin (hazırlık/kabul) arasına girmemesi de bilinçli; düşüm
-      // rutin değil istisnadır.
-      { key: 'stokdus', label: 'Stoktan düş', href: '/operations/adjustments', roles: STOCK_FLOOR },
+      // Sıcaklık AYRI kaldı ve bilinçli: hijyen defteri bir stok hareketi değil, tesisin günlük
+      // kaydıdır (`temperature/page.tsx` künyesi). Kalıcı evi tartışmalı — BEKLEYEN(22.29).
+      { key: 'sicaklik', label: 'Sıcaklık', href: '/operations/temperature', roles: STOCK_FLOOR },
       // Tedarik muhasebeye de açık: tedarikçi borcu ve vadesi onun da sorusu.
       { key: 'satinalma', label: 'Tedarik', href: '/operations/procurement', roles: FINANCE },
       { key: 'depolar', label: 'Depolar', href: '/operations/warehouses', roles: ADMIN_ONLY },

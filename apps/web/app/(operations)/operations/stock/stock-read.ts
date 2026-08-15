@@ -1,6 +1,7 @@
 import { needsExpiryAttention } from '@lezzet/domain-core';
 import { resolveLocalizedText, type AvailableStock, type ProductStockRow, type StockAdjustmentDetail } from '@lezzet/types';
 import type { UserProfileService } from '@lezzet/database';
+import { publicImageUrl } from '@lezzet/storage';
 import type { BatchView } from '@/lib/stock/batch-types';
 import { titleOf } from '@/lib/catalog/title';
 import { type LossRow, type StockLevelRow, type StockWarehouseSplit } from './stock-types';
@@ -80,6 +81,9 @@ export function toLevelRows({ products, batches, available, categoryNames, wareh
         productName,
         variantLabel,
         title: titleOf(productName, variantLabel),
+        // Görsel ÜRÜNÜN, boyun değil: aynı ürünün iki boyu aynı fotoğrafı paylaşır ve boy başına
+        // ayrı görsel diye bir kavram yok (22.30).
+        imageUrl: publicImageUrl(p.imageKey, p.imageUpdatedAt),
         categoryName: (p.categoryId && categoryNames.get(p.categoryId)) || '—',
         status: p.status,
         variantActive: v.isActive,

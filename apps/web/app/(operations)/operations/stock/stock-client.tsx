@@ -5,9 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreLevelsAction, loadMoreLossesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
+import { IntakeDialog } from './dialogs/intake-dialog';
+import { WriteOffDialog } from './dialogs/write-off-dialog';
 import { RecallDialog } from './recall-dialog';
 import { StockDesktop } from './stock.desktop';
 import { stockUrl, type LossPeriod, type StockScope, type StockTab, type StockUrlState } from './stock-url';
+import type { ReceiveOutcome } from '@/lib/warehouse/intake-types';
 import type { OfferHandoff } from './stock-handoff';
 import type { BatchView, StockData, StockLevelRow } from './stock-types';
 
@@ -49,31 +52,34 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
   };
 
   // Arama: giriş yerel (anında yazılır), adrese gecikmeli — mekanizma ortak (`useSearchDraft`).
-  //
-  // Arama YALNIZ imha sekmesinde var ve yüklenmiş satırlarda çalışır — bu yüzden sunucuya GİTMEZ,
-  // adrese SIĞ yazılır (yenilemede terim kaybolmasın). Gecikme yine de gerekli: sığ yazım da bir
-  // `replaceState`, her tuşta tarayıcı geçmişine dokunmanın karşılığı yok.
-  //
-  // Eskiden `applyFilters` çağırıyordu ve terim servise `query` olarak gidiyordu: imha kutusuna
-  // yazılan kelime SEVİYELER listesini süzüyordu — yani hiç görünmeyen bir listeyi. Her tuşta bir
-  // sunucu turu, karşılığında yanlış listede bir süzgeç.
-  const { draft: search, onDraft: onSearch, reset: resetSearch } = useSearchDraft(urlState.q, (q) => writeUrl({ q }));
+  // Gecikme her iki yolda da gerekli: sığ yazım da bir `replaceState`, her tuşta tarayıcı geçmişine
+  // dokunmanın (ya da sunucuya gitmenin) karşılığı yok.
+  /**
+   * **Terim SEKMEYE göre farklı yere gidiyor** (22.31).
+   *
+   * Seviyelerde arama SUNUCUDA yapılır: liste keyset sayfalı ve yalnız ilk sayfa yüklü — istemcide
+   * süzmek, sayfa 2'deki ürünü "yok" göstermek olurdu. Çıkışlarda ise terim yüklenmiş satırlarda
+   * çalışıyor (dönemle sınırlı bir liste) ve adrese SIĞ yazılır: her tuşta sunucuya gitmenin karşılığı
+   * yok, yenilemede terimin kaybolmaması yeter.
+   */
+  const { draft: search, onDraft: onSearch, reset: resetSearch } = useSearchDraft(urlState.q, (q) =>
+    tab === 'levels' ? applyFilters({ q }) : writeUrl({ q }),
+  );
 
+  /**
+   * **Sekme artık SUNUCUYA gidiyor** (22.26).
+   *
+   * Eskiden sığdı (`replaceState`) ve doğruydu: üç sekme de aynı okumadan besleniyordu. Dört sekmenin
+   * verisi ayrı — mal kabul bekleyen siparişleri, çıkışlar dönem kayıtlarını okuyor — ve sığ geçiş
+   * açılan sekmeyi boş bırakırdı. Karşılığında her sekme yalnız kendi sorgularını atıyor.
+   *
+   * Sekme değişince ARAMA düşer: terim sekmeye bağlıdır ("baklava" seviye listesinde anlamlı,
+   * çıkışlarda başka bir şey arar). Taşınsaydı yeni sekme, sebebi görünmeyen bir süzgeçle açılırdı.
+   */
   const onTab = (next: StockTab) => {
-    // Sekme değişince ARAMA düşer: terim sekmeye bağlıdır ("baklava" seviye listesinde anlamlı, imha
-    // geçmişinde başka bir şey arar). Taşınsaydı yeni sekme, sebebi görünmeyen bir süzgeçle açılırdı.
     setTab(next);
     resetSearch();
-
-    // Terim VARSA sunucuya gidilir: sığ yazım (`replaceState`) RSC'yi yeniden okutmaz, liste eski
-    // terimle süzülü kalırdı — kutusu boş, sebebi görünmeyen bir süzgeç.
-    if (urlState.q) {
-      // `applyFilters` sondaki `tab`'ı kendi durumundan alıyor (henüz eski değer) — adres burada
-      // doğrudan kurulur.
-      startNav(() => router.replace(stockUrl({ ...urlState, tab: next, q: '' }), { scroll: false }));
-      return;
-    }
-    writeUrl({ tab: next, q: '' });
+    startNav(() => router.replace(stockUrl({ ...urlState, tab: next, q: '' }), { scroll: false }));
   };
 
   // ── Seviye listesi: ilk sayfa sunucudan, devamı action ile EKLENİR ──
@@ -162,6 +168,18 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
   // `null` = kapalı, '' = boş kutuyla açık, dolu = satırdan gelen lot ile açık.
   const [recallLot, setRecallLot] = useState<string | null>(null);
 
+  /**
+   * Mal kabul formu — `null` kapalı; açıkken `{ purchaseOrderId }` (sipariş kimliği ya da `null` =
+   * irsaliyesiz). Sarmalayıcı nesne ŞART: düz `string | null` durumunda "irsaliyesiz kabul açık" ile
+   * "form kapalı" ayırt edilemezdi.
+   */
+  const [intakeOpen, setIntakeOpen] = useState<{ purchaseOrderId: string | null } | null>(null);
+  const [intakeOutcome, setIntakeOutcome] = useState<ReceiveOutcome | null>(null);
+
+  // Stoktan düş tutanağı — `null` kapalı, '' boş formla açık, dolu = satırdan gelen parti seçili.
+  const [writeOffStockId, setWriteOffStockId] = useState<string | null>(null);
+  const [writeOffDone, setWriteOffDone] = useState<string | null>(null);
+
   // Depo kırılımı açık olan boy — aynı anda tek satır (19.5). Kimlikle tutulur: liste tazelenince
   // satır nesnesi değişir ama kimlik durur, açık kırılım kapanmaz.
   const [openVariantId, setOpenVariantId] = useState<string | null>(null);
@@ -198,6 +216,8 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
     openVariantId,
     onToggleSplit: (variantId: string) => setOpenVariantId((cur) => (cur === variantId ? null : variantId)),
     onOpenOffer: setOfferStockId,
+    onOpenIntake: (purchaseOrderId: string | null) => setIntakeOpen({ purchaseOrderId }),
+    onOpenWriteOff: (stockId?: string) => setWriteOffStockId(stockId ?? ''),
     onOpenRecall: (lot?: string) => setRecallLot(lot ?? ''),
     // Yalnız BULUNAMAYAN devir sayfaya iner; bulunan hâlin künyesi diyaloğun içinde.
     handoffMissing: handoffMissing ? handoff : null,
@@ -217,7 +237,84 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
         />
       ) : null}
       {recallLot !== null ? <RecallDialog initialLot={recallLot} onClose={() => setRecallLot(null)} /> : null}
+
+      {/* Mal kabul formu — sekmenin verisi yoksa açılmaz (sekme kapalıyken zaten tetiklenemez). */}
+      {intakeOpen && data.intake ? (
+        <IntakeDialog
+          key={intakeOpen.purchaseOrderId ?? 'free'}
+          purchaseOrderId={intakeOpen.purchaseOrderId}
+          intake={data.intake}
+          showCost={data.canSeeCost}
+          onClose={() => setIntakeOpen(null)}
+          onDone={(outcome) => {
+            setIntakeOpen(null);
+            setIntakeOutcome(outcome);
+          }}
+        />
+      ) : null}
+
+      {intakeOutcome ? <IntakeOutcomeNotice outcome={intakeOutcome} onClose={() => setIntakeOutcome(null)} /> : null}
+
+      {writeOffStockId !== null ? (
+        <WriteOffDialog
+          batches={data.writeOffBatches}
+          initialStockId={writeOffStockId}
+          onClose={() => setWriteOffStockId(null)}
+          onDone={(message) => {
+            setWriteOffStockId(null);
+            setWriteOffDone(message);
+          }}
+        />
+      ) : null}
+
+      {/* Belge numarası kaydın hemen ardından okunabilmeli — denetmenin elindeki kâğıt onunla eşleşir. */}
+      {writeOffDone ? (
+        <div className="fixed bottom-4 right-4 z-50 flex max-w-[420px] items-center gap-3 rounded-ops-card border border-ops-olive-line bg-ops-white px-4 py-3 shadow-lg">
+          <span className="font-ops-body text-ops-sm text-ops-ink">{writeOffDone}</span>
+          <button
+            type="button"
+            onClick={() => setWriteOffDone(null)}
+            className="cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-muted hover:text-ops-ink"
+          >
+            Kapat
+          </button>
+        </div>
+      ) : null}
     </>
+  );
+}
+
+/**
+ * Kabul sonrası özet — uyarılar ve farklar.
+ *
+ * Kabul TAMAMLANDI; bu pencere bir onay istemiyor, olan biteni söylüyor. Kısa raf ömrü uyarısı
+ * burada görünüyor çünkü kabul anında engellemedi (`DOMAIN §4`) ama kayda geçti — operatörün bunu
+ * bilmesi, aynı tedarikçiden gelen sonraki paleti daha dikkatli açmasını sağlar.
+ */
+function IntakeOutcomeNotice({ outcome, onClose }: { outcome: ReceiveOutcome; onClose: () => void }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex max-w-[420px] flex-col gap-2 rounded-ops-card border border-ops-olive-line bg-ops-white px-4 py-3 shadow-lg">
+      <span className="font-ops-display text-ops-sm font-semibold text-ops-olive-dark">
+        Kabul tamamlandı — {outcome.batches} parti yazıldı
+      </span>
+      {outcome.warnings.length > 0 ? (
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
+          {outcome.warnings.length} partide kısa raf ömrü uyarısı var; kabul engellenmedi.
+        </span>
+      ) : null}
+      {outcome.differences.length > 0 ? (
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
+          {outcome.differences.length} kalemde fark kayda geçti.
+        </span>
+      ) : null}
+      <button
+        type="button"
+        onClick={onClose}
+        className="cursor-pointer self-end font-ops-body text-ops-xs font-semibold text-ops-muted hover:text-ops-ink"
+      >
+        Kapat
+      </button>
+    </div>
   );
 }
 

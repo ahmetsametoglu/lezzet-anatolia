@@ -70,6 +70,26 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
+   * **Varyantın PARTİ GEÇMİŞİ — tükenmişler DAHİL** (22.30).
+   *
+   * `listByVariant` yalnız bir deponun elindekini FEFO sırasında verir; burada soru başka: *"bu
+   * üründen ne zaman, ne kadar, kaça girdi ve ne oldu"*. Cevap tükenmiş partileri de gerektirir —
+   * onları eleyen bir liste, geçmişin tam da anlatmak istediği kısmını siler.
+   *
+   * En YENİ önce ve TAVANLI: parti kaydı veriyle sınırsız büyüyen bir kümedir (`CLAUDE §1`), ama
+   * burası bir defter değil bir bakış — "son N giriş" sorusunun cevabı. Tavana dayanıldığını çağıran
+   * satır sayısından anlar ve ekranda söyler; sessiz kırpma yok.
+   */
+  async listVariantHistory(variantId: string, warehouseIds: readonly string[] | undefined, limit: number): Promise<Stock[]> {
+    // Boş dizi = "hiçbir depo": süzgeci hiç uygulamamak TÜM depoları getirirdi (`listInStockDetailed`
+    // ile aynı sözleşme).
+    if (warehouseIds?.length === 0) return [];
+    const filters: Record<string, unknown> = { variantId };
+    if (warehouseIds) filters.warehouseId = [...warehouseIds];
+    return this.getAll(filters, { orderBy: 'createdAt', orderDirection: 'desc', limit });
+  }
+
+  /**
    * Partiler + ürünün tarih alanları (tip, toplam raf ömrü) TEK sorguda. Raf ömrü kararlarının
    * (satılabilirlik, yaklaşan son tarih, MLOR) girdisi budur; hesabı çağıran motora yaptırır.
    */
@@ -210,6 +230,18 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * **`warehouseIds` zorunlu ve varsayılansız (T8).** Boş dizi "hepsi" DEĞİL "hiçbiri"dir —
    * kapsamsız personel hiçbir şey görmez. O hâlde sorgu HİÇ atılmaz: PostgREST'te `in.()` boş
    * listesi güvenilmez ve fail-closed niyetini veriye değil koda yazıyoruz.
+   *
+   * ── BOŞ SATIRLAR İSTENMİYOR — VE BU BİR PERFORMANS SÜSÜ DEĞİL, ARIZA DÜZELTMESİ (22.31) ──
+   * Görünüm `varyant × depo` ÇAPRAZ birleşimidir: malı olmayan her çift için de bir satır üretir ve
+   * hepsi sıfırdır. Süzgeçsiz sorgu bu yüzden `varyant sayısı × depo sayısı` satır ister ve
+   * PostgREST'in satır tavanına (`max_rows`, yerelde 1000) dayanınca kalanı **sessizce keser** —
+   * sıralama da olmadığı için hangi varyantın satırının düştüğü rastgeledir. Sonuç: elde 34 adet
+   * duran ürün ekranda "elde 0" görünür (ölçüldü 14.08: 53 aktif depo × ~50 boy = 2650 satır
+   * istenirken 1000 dönüyordu; kullanıcı ekran görüntüsü).
+   *
+   * Sıfır satırın taşıdığı bilgi yok: çağıran satırları TOPLUYOR, eksik satır zaten 0 demek. Süzgeç
+   * kümeyi "gerçekten malı ya da rezervasyonu olan çiftler"e indiriyor — aynı cevap, tavana
+   * dayanmayan bir sorgu.
    */
   async listAvailableAcross(warehouseIds: readonly string[], variantIds: readonly string[]): Promise<AvailableStock[]> {
     if (warehouseIds.length === 0 || variantIds.length === 0) return [];
@@ -217,7 +249,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       .from('available_stock')
       .select('*')
       .in('warehouse_id', [...warehouseIds])
-      .in('variant_id', [...variantIds]);
+      .in('variant_id', [...variantIds])
+      .or('physical_qty.gt.0,reserved_qty.gt.0');
     if (error) throw error;
     return (data ?? []).map((row) => AvailableStockSchema.parse(dbToApp(row)));
   }

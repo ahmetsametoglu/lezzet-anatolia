@@ -58,7 +58,9 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
           .filter(Boolean)
           .join(' ')}
       >
-        <span className="truncate">{selected ? selected.label : placeholder}</span>
+        {/* `min-w-0 flex-1` — `truncate` tek başına yetmiyor (gerekçe `Combobox` künyesinde, 14.08):
+            uzun bir seçenek adı tetikleyiciyi ve içinde durduğu satırı büyütürdü. */}
+        <span className="min-w-0 flex-1 truncate text-left">{selected ? selected.label : placeholder}</span>
         {variant === 'chip' ? null : <span className="flex-none text-ops-faint">{open ? '▴' : '▾'}</span>}
       </button>
 

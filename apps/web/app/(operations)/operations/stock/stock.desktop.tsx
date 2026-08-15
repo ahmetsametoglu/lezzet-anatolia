@@ -5,11 +5,13 @@ import { Chip } from '@/components/operation/ui/chip';
 import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Select } from '@/components/operation/form/select';
+import { SearchInput } from '@/components/operation/ui/search-input';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { SearchIcon } from '@/components/operation/ui/icons';
 import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { LevelsTab } from './tabs/levels-tab';
-import { LossesTab } from './tabs/losses-tab';
+import { IntakeTab } from './tabs/intake-tab';
+import { OutgoingTab } from './tabs/outgoing-tab';
 import { AttentionTab } from './tabs/attention-tab';
 import { STOCK_SCOPES, type StockScope, type StockTab } from './stock-url';
 import type { StockViewProps } from './stock-types';
@@ -17,11 +19,17 @@ import type { StockViewProps } from './stock-types';
 // Stok — web KABUĞU: ortak üst bar + sekmeler + süzgeç şeridi; sekme içerikleri kendi dosyalarında.
 // Kabuk veriyi bilmez, yalnız yönlendirir (ürünler ekranının deseni).
 
-/** Sekmeler; "Yaklaşan tarihli" karar bekleyen parti sayısını rozet olarak taşır (sayı runtime'da). */
+/**
+ * Sekmeler — malın üç anı, soldan sağa: NE VAR · NE KARAR BEKLİYOR · NE GİRDİ · NE ÇIKTI (22.26).
+ *
+ * İkisi rozet taşır ve ikisi de bir İŞ YÜKÜ göstergesidir: karar bekleyen parti ve kabul bekleyen
+ * sipariş. Sayılar runtime'da bağlanır.
+ */
 const TABS: Array<{ key: StockTab; label: string }> = [
   { key: 'levels', label: 'Stok seviyeleri' },
   { key: 'attention', label: 'Yaklaşan tarihli' },
-  { key: 'losses', label: 'İmha geçmişi' },
+  { key: 'intake', label: 'Mal kabul' },
+  { key: 'outgoing', label: 'Çıkışlar' },
 ];
 
 // Süzgeç çipleri PARTİ ölçütüdür ama SATIR süzer (bkz. stock-url). Sıra aciliyete göre: önce karar
@@ -44,7 +52,7 @@ const SCOPE_LABEL: Record<StockScope, string> = {
 
 export function StockDesktop(props: StockViewProps) {
   const { data, tab, onTab, catFilter, onCatFilter, scope, onScope, onOpenRecall, warehouseFilter, onWarehouseFilter } = props;
-  const { inStock, attention, blocked } = data.counts;
+  const { inStock, attention, blocked, pendingIntake } = data.counts;
   const { warehouse } = data;
 
   // Alt başlık sekmeye ait: her sekmede aynı üç sayıyı yazmak, imha geçmişine bakarken stok
@@ -54,7 +62,8 @@ export function StockDesktop(props: StockViewProps) {
   const SUBTITLE: Record<StockTab, string> = {
     levels: `${scopeLine}${inStock} boyda stok var · ${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} DLC geçti` : ''}`,
     attention: `${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} yalnız imha` : ''}`,
-    losses: 'Stoktan düşen ve stoğa dönen kayıtlar — en yeni önce',
+    intake: `${scopeLine}${pendingIntake} sipariş kabul bekliyor`,
+    outgoing: 'Stoktan düşen ve stoğa dönen kayıtlar — en yeni önce',
   };
 
   return (
@@ -70,7 +79,16 @@ export function StockDesktop(props: StockViewProps) {
       {/* Sekme çubuğunda EYLEM YOK (tasarım): arama ekran çapında bir süzgeç değil, imha geçmişinin
           kendi şeridinde yaşayan bir daraltma. Seviyeler kategori süzgeciyle, karar kuyruğu zaten
           kısa olduğu için süzgeçsiz çalışır. */}
-      <Tabs items={TABS.map((t) => (t.key === 'attention' ? { ...t, badge: attention } : t))} active={tab} onSelect={onTab} />
+      <Tabs
+        items={TABS.map((t) => {
+          if (t.key === 'attention') return { ...t, badge: attention };
+          // Rozet SIFIRKEN yazılmaz: "0 sipariş bekliyor" bir iş yükü değil, gürültüdür.
+          if (t.key === 'intake' && pendingIntake > 0) return { ...t, badge: pendingIntake };
+          return t;
+        })}
+        active={tab}
+        onSelect={onTab}
+      />
 
       {/* **Devredilen parti bulunamadı** (22.5) — künye YALNIZ bu hâlde sayfada durur; bulunan
           hâlde diyaloğun içinde, kararın verildiği yerde. Sessiz geçilemez: operatör kuyruktan
@@ -117,6 +135,17 @@ export function StockDesktop(props: StockViewProps) {
           {warehouse.available ? (
             <WarehouseFilterChip value={warehouseFilter} onChange={onWarehouseFilter} options={warehouse.options} />
           ) : null}
+
+          {/* **ARAMA AYNI ŞERİTTE AMA EN SAĞDA** (22.31, kullanıcı kararı 14.08). Çiplerin arasında
+              değil: çipler kapalı bir kümeden SEÇİM yaptırır (kategori, durum, depo), arama ise açık
+              uçlu bir daraltmadır — yan yana dizilince ikisi aynı türden şeymiş gibi okunuyordu.
+              Şerit yine tek: ikisi de "bu listede neye bakıyorum" sorusunun parçası. */}
+          <SearchInput
+            value={props.search}
+            onChange={props.onSearch}
+            placeholder="Ürün veya boy ara"
+            className="ml-auto w-[220px]"
+          />
         </div>
       ) : null}
 
@@ -133,7 +162,8 @@ export function StockDesktop(props: StockViewProps) {
 
       {tab === 'levels' && <LevelsTab {...props} />}
       {tab === 'attention' && <AttentionTab {...props} />}
-      {tab === 'losses' && <LossesTab {...props} />}
+      {tab === 'intake' && <IntakeTab {...props} />}
+      {tab === 'outgoing' && <OutgoingTab {...props} />}
     </div>
   );
 }

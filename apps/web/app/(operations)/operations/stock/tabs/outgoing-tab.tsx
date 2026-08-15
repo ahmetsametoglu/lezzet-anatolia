@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
@@ -23,8 +24,14 @@ const REASON_CHIP: Record<OpsTone, string> = {
   violet: 'border-ops-violet-line bg-ops-violet-bg text-ops-violet',
 };
 
-// İmha / fire geçmişi — "bu üründen ne kadar çöpe gitti" görünür kalır. Ayrıntılı analiz raporlarda
-// (DOMAIN §12); burası olayın kendisidir.
+// ÇIKIŞLAR — depodan çıkan mal (22.26; eski adı "İmha geçmişi"). "Bu üründen ne kadar çöpe gitti"
+// görünür kalır; ayrıntılı analiz raporlarda (DOMAIN §12), burası olayın kendisidir.
+//
+// **BUGÜN YALNIZ DÜZELTME KAYITLARI VAR** (`stock_adjustment`: imha · hasar · sayım farkı · kayıp ·
+// stoğa geri alma) ve bu eksiklik ekranda YAZILI. Tasarımın istediği çıkış kümesi daha geniş:
+// hazırlık (siparişe çıkan) ve kapı satışı da bir çıkıştır — ama ikisinin hareket kaydı YOK, stok
+// doğrudan siparişten eriyor (ölçüldü 14.08). Sessizce toplasaydık "bu çeyrek ne çıktı" sorusuna
+// eksik bir sayı doğru bir sayı gibi cevap verirdi. Açık madde: `BEKLEYEN(22.27)`.
 //
 // DÖNEM + DAĞILIM + TABLO, bu sırayla: önce "ne kadar", sonra "neden", sonra "hangi kayıt". Toplam
 // dönemin TAMAMI üzerinden gelir (sunucudan), tablo ise sayfalı — ilk 30 satırın toplamı dönemin
@@ -33,7 +40,7 @@ const REASON_CHIP: Record<OpsTone, string> = {
 // Miktar İŞARETLİ: pozitif stoktan düşüm, negatif stoğa geri ekleme. Tek alanda tutulur ki toplam NET
 // kaybı versin. Ekran işareti YÖNLE söyler — geri ekleme bir kayıp değildir, kırmızı olmamalı.
 
-export function LossesTab({
+export function OutgoingTab({
   losses,
   search,
   onSearch,
@@ -44,6 +51,7 @@ export function LossesTab({
   onPeriod,
   data,
   onOpenRecall,
+  onOpenWriteOff,
   navPending,
 }: StockViewProps) {
   const term = search.trim().toLocaleLowerCase('tr');
@@ -164,11 +172,18 @@ export function LossesTab({
         {/* Arama bu ŞERİDİN içinde (tasarım): dönemle birlikte okunan bir daraltma, ekran çapında bir
             süzgeç değil. Yer tutucu da neyin arandığını söyler — ürün ya da lot. */}
         <SearchInput value={search} onChange={onSearch} placeholder="Ürün veya lot ara" className="w-[190px]" />
-        <div className="ml-auto flex flex-col items-end gap-px">
-          <span className="font-ops-mono text-ops-base font-medium text-ops-ink">
-            {summary.qty} ad. · {money(summary.costCents)}
-          </span>
-          <span className="font-ops-body text-ops-micro text-ops-muted">{PERIOD_LABEL[period]} · maliyet değeri</span>
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex flex-col items-end gap-px">
+            <span className="font-ops-mono text-ops-base font-medium text-ops-ink">
+              {summary.qty} ad. · {money(summary.costCents)}
+            </span>
+            <span className="font-ops-body text-ops-micro text-ops-muted">{PERIOD_LABEL[period]} · maliyet değeri</span>
+          </div>
+          {/* Kaydın kendisi bu sekmenin işi: liste "ne çıktı"yı gösteriyor, düğme "çıkar"ı açıyor.
+              Form liste ÜSTÜNDE diyalogda (bu ekranın deseni). */}
+          <Button variant="secondary" size="sm" onClick={() => onOpenWriteOff()}>
+            − Stoktan düş
+          </Button>
         </div>
       </div>
 
@@ -245,7 +260,7 @@ function CleanState({ filtered, periodLabel }: CleanStateProps) {
     <div className="flex flex-1 items-start justify-center p-8">
       <div className="flex w-[420px] max-w-full flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white px-6 py-5">
         <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-          İmha geçmişi — dönemde kayıt yok
+          Çıkışlar — dönemde kayıt yok
         </span>
         <div className="flex items-center gap-2.5">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-ops-olive-bg font-ops-display text-ops-base font-semibold text-ops-olive-dark">
