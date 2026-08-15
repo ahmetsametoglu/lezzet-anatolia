@@ -11,18 +11,21 @@ import type { ColumnTrack } from '@/components/operation/ui/table-columns';
  * Dosya JSX TAŞIMAZ ve `'use client'` DEĞİL: sunucuda çizilen `loading.tsx` bunu ek bir istemci
  * paketi sürüklemeden okuyabilsin.
  */
+// Ölçüler SAĞ PANELLİ dar listeye göre (15.08): tablo artık genişliğin ~2/3'ünde yaşıyor.
+// Tahsilat hücresi iki satıra bölündüğü için (tutar üstte, yöntem altta) kolonu daraltmak
+// bilgi kaybetmedi.
 export const ORDERS_COLUMN_TRACKS: ColumnTrack[] = [
-  { key: 'no', header: 'No', width: '104px' },
-  { key: 'customer', header: 'Müşteri', width: 'minmax(160px,1fr)' },
-  { key: 'total', header: 'Tutar', width: '84px', align: 'right' },
-  { key: 'channel', header: 'Kanal', width: '54px' },
-  { key: 'delivery', header: 'Teslim', width: 'minmax(110px,140px)' },
-  { key: 'status', header: 'Durum', width: '116px' },
-  { key: 'payment', header: 'Tahsilat', width: 'minmax(120px,150px)' },
+  { key: 'no', header: 'No', width: '100px' },
+  { key: 'customer', header: 'Müşteri', width: 'minmax(132px,1fr)' },
+  { key: 'total', header: 'Tutar', width: '76px', align: 'right' },
+  { key: 'channel', header: 'Kanal', width: '48px' },
+  { key: 'delivery', header: 'Teslim', width: 'minmax(96px,128px)' },
+  { key: 'status', header: 'Durum', width: '110px' },
+  { key: 'payment', header: 'Tahsilat', width: 'minmax(104px,130px)' },
 ];
 
 /** Depo sütunu — kanal ile teslim ARASINA girer (tasarımın grid'i); kod taşır, ad künyededir. */
-const WAREHOUSE_TRACK: ColumnTrack = { key: 'warehouse', header: 'Depo', width: '62px' };
+const WAREHOUSE_TRACK: ColumnTrack = { key: 'warehouse', header: 'Depo', width: '54px' };
 
 /**
  * Şerit + (varsa) depo sütunu.

@@ -1140,3 +1140,17 @@ native uygulama paleti bilinçli olarak dokunulmadı. `.dc` envanteri (§0.1-0.6
 değerleri taşıyor — tasarım turunda güncellenmeli; bu dosyadaki kayıt o tura gerekçedir.
 
 Kod: `apps/web/app/globals.css` (§0.1, §0.2, §0.5 takma adlar, §0.4 etkileşim, koyu blok §0.6).
+
+### SİPARİŞ HIZLI BAKIŞI PENCEREDEN SAĞ PANELE TAŞINDI (15.08)
+
+**Kullanıcı kararı (15.08, sipariş sayfası turu):** tasarımın "Bu bir bakıştır" penceresi
+(Operasyon - Siparisler .dc, satır tıklaması → diyalog) SÖKÜLDÜ; hızlı bakış artık Ürünler
+ekranının deseniyle SAĞ PANEL (liste 1.95fr / panel 1fr, `order-preview.tsx`). Gerekçe: pencere
+listeyi örtüyor — operatör bir satıra bakarken ötekileri göremiyor, karşılaştırma aç-kapa turu
+gerektiriyordu. İçerik ve ilke penceredekiyle AYNI: panel yalnız satırın kısaltmalarını açar,
+hiçbir kayıt değiştirmez (durum ilerletme detay sayfasının işi), tek eylem müşteriye ulaşmak;
+sipariş numarası listede de panelde de doğrudan detaya gider. `.dc` tasarımı hâlâ pencereyi
+çiziyor — tasarım turunda güncellenmeli; bu kayıt o tura gerekçedir.
+
+Kod: `orders/order-preview.tsx` (yeni) · `orders/order-dialog.tsx` (silindi) ·
+`orders.desktop.tsx` (grid), commit 15.08.

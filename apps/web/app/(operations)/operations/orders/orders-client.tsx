@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreOrdersAction } from './actions';
-import { OrderDialog } from './order-dialog';
 import { OrdersDesktop } from './orders.desktop';
 import { ordersUrl, type OrdersUrlState } from './orders-url';
 import type { OrderRow, OrdersData } from './orders-types';
@@ -61,14 +60,10 @@ export function OrdersClient({ data, urlState }: OrdersClientProps) {
 
   const rows = [...data.rows, ...extra];
 
-  // Açık sipariş KİMLİKLE tutulur, kayıt taze listeden türetilir: durum ilerletildikten sonra
-  // diyalog kopyaya değil yeni gerçeğe bakar. Satır listeden düşerse (süzgeç dışına çıktı)
-  // diyalog kendiliğinden kapanır.
-  const [openId, setOpenId] = useState<string | null>(null);
-  const open = rows.find((r) => r.id === openId) ?? null;
-  useEffect(() => {
-    if (openId && !open) setOpenId(null);
-  }, [openId, open]);
+  // Seçili sipariş KİMLİKLE tutulur, kayıt taze listeden türetilir (masaüstü çözer): durum
+  // ilerledikten sonra panel kopyaya değil yeni gerçeğe bakar; satır süzgeç dışına düşerse panel
+  // kendiliğinden davete döner.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const view = {
     rows,
@@ -82,13 +77,9 @@ export function OrdersClient({ data, urlState }: OrdersClientProps) {
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,
-    onOpen: setOpenId,
+    selectedId,
+    onSelect: setSelectedId,
   };
 
-  return (
-    <>
-      <OrdersDesktop {...view} />
-      {open ? <OrderDialog key={open.id} row={open} onClose={() => setOpenId(null)} /> : null}
-    </>
-  );
+  return <OrdersDesktop {...view} />;
 }

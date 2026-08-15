@@ -39,8 +39,13 @@ export default function Loading() {
         <Skeleton className={`${CONTROL_H.sm} w-[230px] rounded-ops-btn`} />
       </SkeletonFilterBar>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <SkeletonTable tracks={ORDERS_COLUMN_TRACKS} />
+      {/* Liste + sağ panel (15.08): gerçek ekranla aynı grid — panel bekleme hâlinde boş zemin,
+          davet metni çizilmez (o bir karar metnidir, iskelet vaat etmez). */}
+      <div className="grid min-h-0 flex-1 grid-cols-[2.1fr_1fr] overflow-hidden">
+        <div className="flex min-h-0 flex-col overflow-hidden border-r border-ops-line">
+          <SkeletonTable tracks={ORDERS_COLUMN_TRACKS} />
+        </div>
+        <div className="bg-ops-subtle" />
       </div>
     </LoadingRegion>
   );

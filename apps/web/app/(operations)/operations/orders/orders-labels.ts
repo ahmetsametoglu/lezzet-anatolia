@@ -1,5 +1,6 @@
 import { ORDER_STATUS_LABELS, type OrderStatus, type PaymentMethod } from '@lezzet/types';
 import { paymentTone, type OpsTone } from '@/components/operation/ui/tone';
+import { shortDate } from '@/components/operation/ui/format';
 import type { OrderCountsView, OrderRow } from './orders-types';
 
 // Sipariş satırının SÖZLERİ — durum rengi, tahsilat cümlesi, teslim yazısı. Tek yerde durur ki
@@ -53,7 +54,8 @@ export function paymentText(row: OrderRow, money: (cents: number) => string): st
 
   if (status === 'refunded') return 'İade edildi';
   if (status === 'paid') return `Ödendi${methodText}`;
-  if (onAccount) return `Vade ${dueDate ?? '—'}${row.payment.overdue ? ' · geçti' : ''}`;
+  // Vade tarihi OKUNUR biçimde ("29 Ağu 2026") — ham ISO dar kolonda kırpılıyordu (15.08).
+  if (onAccount) return `Vade${row.payment.overdue ? ' geçti' : ''} · ${dueDate ? shortDate(dueDate) : '—'}`;
   const prefix = status === 'partial' ? 'Kalan' : 'Kapıda';
   return `${prefix} ${money(openCents)}${methodText}`;
 }

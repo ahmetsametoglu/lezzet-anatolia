@@ -73,7 +73,9 @@ export function DateFilterChip({ value, placeholder, label, onChange, className 
       {/* 236 = `DateInput` ile aynı ölçü (3 kenarlık + 24 dolgu + 208 ızgara). */}
       <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={236}>
         <div className="flex gap-1.5 px-3 pt-3">
+          {/* "Dün" de kısayol (15.08, kullanıcı isteği): "dün ne teslim ettik" en sık geçmiş sorgu. */}
           {[
+            { label: 'Dün', offset: -1 },
             { label: 'Bugün', offset: 0 },
             { label: 'Yarın', offset: 1 },
           ].map((quick) => (

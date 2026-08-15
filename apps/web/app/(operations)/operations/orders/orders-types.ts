@@ -125,6 +125,9 @@ export interface OrdersViewProps {
   onFilter: (patch: Partial<OrdersUrlState>) => void;
   search: string;
   onSearch: (q: string) => void;
+  /** Sağ paneldeki seçim — kayıt görünen listeden çözülür, düşerse panel davete döner. */
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
   hasMore: boolean;
   loadingMore: boolean;
   /**
@@ -134,5 +137,4 @@ export interface OrdersViewProps {
   navPending: boolean;
   onLoadMore: () => void;
   /** Satırın hızlı bakış diyaloğunu aç. */
-  onOpen: (orderId: string) => void;
 }

@@ -10,6 +10,7 @@ import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
+import { OrderPreview } from './order-preview';
 import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { Tabs } from '@/components/operation/ui/tabs';
@@ -36,8 +37,10 @@ import type { OrderRow, OrdersViewProps } from './orders-types';
 // değil. Kendi tablosunu yazan ekran, bir gün başlık hizasını da kaydırır.
 
 export function OrdersDesktop(props: OrdersViewProps) {
-  const { rows, counts, warehouse, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen, navPending } =
+  const { rows, counts, warehouse, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, selectedId, onSelect, navPending } =
     props;
+  // Seçili kayıt GÖRÜNEN listeden çözülür (ürünler deseni): süzgeç değişip satır düşerse panel davete döner.
+  const selected = rows.find((r) => r.id === selectedId) ?? null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -116,19 +119,26 @@ export function OrdersDesktop(props: OrdersViewProps) {
         onClear={() => onFilter({ depo: '' })}
       />
 
-      <Table
-        busy={navPending}
-        columns={columnsOf(warehouse.showColumn)}
-        rows={rows}
-        rowKey={(r) => r.id}
-        onRowClick={(r) => onOpen(r.id)}
-        empty={
-          <div className="flex flex-1 items-center justify-center p-10">
-            <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen sipariş yok.</span>
-          </div>
-        }
-        footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
-      />
+      {/* Liste + seçili panel (15.08, kullanıcı kararı — ürünler ekranının deseni): hızlı bakış
+          artık pencere değil sağ sütun; liste görünür kalır, seçim satırdan satıra tek tıkla gezer. */}
+      <div className="grid min-h-0 flex-1 grid-cols-[2.1fr_1fr] overflow-hidden">
+        <div className="flex min-h-0 flex-col border-r border-ops-line">
+          <Table
+            busy={navPending}
+            columns={columnsOf(warehouse.showColumn)}
+            rows={rows}
+            rowKey={(r) => r.id}
+            onRowClick={(r) => onSelect(r.id)}
+            empty={
+              <div className="flex flex-1 items-center justify-center p-10">
+                <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen sipariş yok.</span>
+              </div>
+            }
+            footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
+          />
+        </div>
+        <OrderPreview row={selected} />
+      </div>
 
       {/* Alt şerit — tasarımın özeti. Sayılar SÜZGECİN TAMAMINA ait; "kaydırdıkça yüklenir" notu
           listenin bir parçasının görünür olduğunu söyler. */}
@@ -206,7 +216,17 @@ const CELLS: Record<string, (row: OrderRow) => ReactNode> = {
       {statusLabel(row.status)}
     </Badge>
   ),
-  payment: (row) => <span className={`truncate font-ops-mono text-ops-micro ${paymentToneClass(row)}`}>{paymentText(row, money)}</span>,
+  // İKİ SATIR (15.08, panelli dar liste): karar üstte ("Kapıda 16,60 €"), yöntem altta ("nakit").
+  // Tek satırken dar kolonda yöntem kırpılıyordu; ayraç (`·`) zaten iki ayrı bilgiyi yapıştırıyordu.
+  payment: (row) => {
+    const [main, ...rest] = paymentText(row, money).split(' · ');
+    return (
+      <div className={`flex min-w-0 flex-col gap-px font-ops-mono text-ops-micro ${paymentToneClass(row)}`}>
+        <span className="truncate">{main}</span>
+        {rest.length > 0 ? <span className="truncate opacity-75">{rest.join(' · ')}</span> : null}
+      </div>
+    );
+  },
 };
 
 /** Şerit + hücreler; depo sütunu yalnız çok depolu bakışta (bkz. `ordersColumnTracks`). */
