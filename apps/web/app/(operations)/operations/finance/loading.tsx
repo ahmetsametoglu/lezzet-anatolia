@@ -1,19 +1,29 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { SkeletonFilterBar, SkeletonMetric, SkeletonPageHeader, SkeletonRows } from '@/components/operation/ui/skeleton';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { buttonClass } from '@/components/operation/ui/button';
+import { SkeletonFilterBar, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 
 // Para ekranının yükleme hâli (09.2'nin iskelet kuralı): iskelet GERÇEK ekranın iskeletidir —
 // bakiye şeridi, süzgeç barı, iki sütunlu gövde. Tek bir dönen çark, sayfanın neye benzeyeceğini
 // söylemez ve gelince ekran zıplar.
+//
+// ── STATİK KİMLİK GERÇEK (15.08, emsal: fiyatlar) ───────────────────────────
+// Bu ekranın başlık bandında VERİ YOK: başlık, alt başlık ve iki eylem metni de statik — hepsi
+// gerçek çizilir, tek çubuk kalmaz. Eylemler tıklanmaz süs (`buttonClass`lı span): davranışları
+// sayfayla gelir, görünümleri sayfadan önce de doğru. Eski hâl `SkeletonPageHeader
+// actions={['+ Hareket', …]}` yazmıştı — o parametre GENİŞLİK SINIFI bekler, metinler geçersiz
+// class olarak yutuluyor ve çubuklar sıfır genişlikte hiç görünmüyordu (raporlarla aynı arıza).
 //
 // **Kolon başlıkları gerçek metin**, çubuk değil: statik oldukları için bekleyen bir şey yok, çubuk
 // yapmak bilgi saklamak olurdu.
 
 export default function FinanceLoading() {
   return (
-    <LoadingRegion label="Para yükleniyor">
-      {/* Başlığın eylemleri GERÇEK metinle: "+ Hareket" ve "⇄ Transfer" sayfa gelince değişmiyor,
-          çubuk yapmak sayfa yüklenince barı zıplatırdı. */}
-      <SkeletonPageHeader actions={['+ Hareket', '⇄ Transfer']} />
+    <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Para yükleniyor">
+      <PageHeader title="Para" subtitle="İşletme para takibi · resmî muhasebe değil">
+        <span className={buttonClass({ variant: 'secondary', size: 'sm' })}>+ Hareket</span>
+        <span className={buttonClass({ variant: 'secondary', size: 'sm' })}>⇄ Transfer</span>
+      </PageHeader>
 
       <div className="flex items-stretch gap-6 border-b border-ops-line-soft bg-ops-surface-sunken px-6 py-4">
         {[0, 1, 2, 3].map((index) => (
