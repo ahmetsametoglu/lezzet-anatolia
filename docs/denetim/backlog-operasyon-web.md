@@ -87,18 +87,5 @@
     - Mevcut tasarım dokümanlarının/arayüz taslaklarının incelenerek yapay zeka desteğinin tasarımda bulunup bulunmadığının (veya sonradan dahil edilip edilmediğinin) tespiti.
     - Yapay zeka motorunun talepler sayfasına cevap önerisi getirecek şekilde entegre edilmesi.
 
-- [ ] **OB-13 · Fiyatlar sayfasındaki "ürün/boy ara" filtre alanının en sağa konumlandırılması**
-  - **Talep:** Fiyatlar sayfasındaki ürün veya boy arama filtre satırının sayfanın en sağ tarafında yer alması.
-  - **Cevap (web, 15.08):** TESLİM EDİLDİ — arama kanal sekmesinin süzgeç şeridinde en sağda; "Otomatik fiyatları hedefe çek" düğmesi de aynı gerekçeyle (yalnız o sekmeyi ilgilendirir) başlıktan şeride indi, başlık barı artık sekmeye bağlı kontrol taşımıyor. Commit `2fb8fe1d`.
-
-- [ ] **OB-14 · Otomatik fiyatlandırmada B2B ve B2C için ayrı hedef marj (Target Margin) tanımlanması**
-  - **Talep:** Fiyat güncelleme ekranında ve otomatik fiyatlandırma mantığında B2B (profesyonel) ve B2C (bireysel) müşteri tipleri için tek bir ortak hedef marj yerine, ayrı ayrı marjların belirlenebilmesi.
-  - **Cevap (web, 15.08):** TESLİM EDİLDİ — ürüne `target_margin_b2b_percent` eklendi (boş = ortak hedef geçerli); çözüm tek yerde (`targetMarginFor`, domain-core), diyalog önizlemesi + otomatik fiyat + marj-altı uyarısı + müşteriye özel panel aynı fonksiyonu okur; marj-altı kararı kanal başına döndü. Diyalogda "B2B hedefi (%)" alanı. Yerel DB'ye kolon doğrudan eklendi (kullanıcı kararı — refresh yok). Commit `d9a0808e`, detay `09-admin.md 09.5` Durum notu.
-
-- [ ] **OB-15 · Fiyatlar listesindeki satırların en soluna (başına) ürün görselinin eklenmesi**
-  - **Talep:** Fiyat listesindeki ürün satırlarının başına (en soluna) ürünlerin küçük birer görselinin (thumbnail) eklenmesi. Sayfa mevcut haliyle çok boş göründüğü için bu ekleme ile görsel zenginliğin artırılması amaçlanmaktadır.
-  - **Cevap (web, 15.08):** TESLİM EDİLDİ — kimlik hücresinin başında ortak `Thumbnail` (36px, görselsiz üründe placeholder ikon); görsel `ProductPriceRowSchema` üzerinden şemadan türedi, `publicImageUrl` ürünler sayfasıyla aynı. Commit `4afb1c96`.
-
-- [ ] **OB-16 · Müşteriye özel tek tek fiyat eşleştirmesi yerine genel yüzde indirimi (iskonto) seçeneği**
-  - **Talep:** Müşteriye özel fiyat atama aşamasında, her ürün için tek tek özel fiyat girmek yerine, ilgili müşteriye (veya müşteri grubuna) liste fiyatı üzerinden genel bir yüzde indirimi (%10, %20 iskonto gibi) tanımlama seçeneğinin eklenmesi. Tek tek ürün eşleştirmesi yapmanın uzun vadede veri kirliliğine ve yönetim zorluğuna yol açmasının engellenmesi amaçlanmaktadır.
-  - **Cevap (web, 15.08):** MÜŞTERİ BAŞINA hali ZATEN VAR — `user_profile.discount_percent`: Müşteriler sayfasının kontrol kartından girilir, Fiyatlar → Müşteriye özel sekmesi "genel indirimli müşteriler" listesinde salt-okunur gösterir (oranın sahibi müşteri kaydı). Eksik olan tek parça MÜŞTERİ GRUBU bazlı oran (segment tanımı yok) — o ayrı bir veri modeli işi; istenirse kapsamı konuşulmalı.
+- [ ] **OB-16 · Müşteri GRUBU bazlı genel yüzde indirimi (iskonto)**
+  - **Talep (daraltıldı 15.08):** Maddenin müşteri BAŞINA kısmı zaten mevcut: `user_profile.discount_percent` Müşteriler sayfasının kontrol kartından girilir, Fiyatlar → Müşteriye özel sekmesi "genel indirimli müşteriler" listesinde gösterir. Açık kalan tek parça müşteri GRUBUNA (segment) oran tanımlamak — segment varlığı yok, ayrı bir veri modeli işi; kapsam kararı bekliyor.
