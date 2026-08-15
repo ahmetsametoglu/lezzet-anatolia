@@ -35,8 +35,10 @@ const EXCLUDED_FONT_TOKENS = [
    token ekleyen, bu sayıyı da güncelleyip farkın iki tarafta da olduğunu göstermiş olur.
    CSS tarafı ayrıca sayılmaz, MODÜLDEN TÜRETİLİR (modül + fontlar) — iki sayıyı elle tutmak,
    birini güncelleyip ötekini unutmayı davet ederdi. */
-const EXPECTED_LIGHT_COUNT = 158; // @theme bloğu, fontlar hariç (100 renk + 51 yazı + 7 yarıçap)
-const EXPECTED_DARK_COUNT = 60; // operasyon karanlık bloğu (tümü --color-ops-*)
+// 15.08: +2 (`ops-skeleton`, `ops-skeleton-soft`) — iskelet çubuğu kendi takma adını aldı.
+// 15.08 (2): +1 `ops-surface-sunken` — 10+ kullanımı olan token tanımsızdı, envantere alındı.
+const EXPECTED_LIGHT_COUNT = 161; // @theme bloğu, fontlar hariç (103 renk + 51 yazı + 7 yarıçap)
+const EXPECTED_DARK_COUNT = 63; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));
 

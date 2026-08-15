@@ -40,38 +40,48 @@ export const operationsText = {
   'ops-micro': '12px', //   tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5
 } as const satisfies Record<string, string>;
 
-/* §0.1 Yüzey ve mürekkep */
+/* §0.1 Yüzey ve mürekkep
+   NÖTRLEŞTİRME (kullanıcı kararı 15.08): zeytin alt tonu kalktı, tüm nötrler aynı algısal
+   açıklıkta saf gri (globals.css §0.1 künyesi). Zeytin yalnız vurgu — §0.3 aileleri değişmedi. */
 export const operationsSurface = {
-  'ops-ink': '#22251f', // başlık, koyu buton, birincil metin, "L"
-  'ops-strong': '#3a3f37', // mürekkep yumuşak: ikincil başlık, nötr tutar/tarih
-  'ops-body': '#6a7065', // gövde açıklaması, tablo alt satırı
-  'ops-muted': '#8b9086', // etiket, yardımcı satır, placeholder
-  'ops-faint': '#9aa094', // placeholder ikonu
-  'ops-bg': '#dedbd3', // sayfa zemini (pane arkası)
-  'ops-card': '#fbfbf9', // kart, tablo, sidebar zemini
+  'ops-ink': '#242424', // başlık, koyu buton, birincil metin, "L"
+  'ops-strong': '#3d3d3d', // mürekkep yumuşak: ikincil başlık, nötr tutar/tarih
+  'ops-body': '#6e6e6e', // gövde açıklaması, tablo alt satırı
+  'ops-muted': '#8e8e8e', // etiket, yardımcı satır, placeholder
+  'ops-faint': '#9e9e9e', // placeholder ikonu
+  'ops-bg': '#dbdbdb', // sayfa zemini (pane arkası)
+  'ops-card': '#fbfbfb', // kart, tablo, sidebar zemini
   'ops-white': '#ffffff', // dialog ve girdi zemini, dolu çip metni
 } as const satisfies Record<string, string>;
 
 /* §0.2 Nötr gri skalası — kademe atlanmaz; iki komşu adım aynı kartta yan yana kullanılmaz */
 export const operationsGray = {
-  'ops-gray-25': '#f8f9f5', // sekme çubuğu, tablo başlığı
-  'ops-gray-50': '#f0f1ec', // iç ayraç, satır ayracı
-  'ops-gray-100': '#eef0ea', // kapanmış rozet zemini, satır hover
-  'ops-gray-200': '#e6e7e1', // standart kenarlık (kart, tablo)
-  'ops-gray-300': '#e0e2da', // iç kart kenarlığı, 2. ayraç
-  'ops-gray-400': '#d9dbd2', // girdi/select kenarı, nötr çip
-  'ops-gray-500': '#d4d7ce', // kesikli çerçeve, boş durum
-  'ops-gray-600': '#c9ccc3', // pasif buton dolgusu/çerçevesi
-  'ops-gray-700': '#b3b7ac', // pasif ikon, pasif metin
+  'ops-gray-25': '#f8f8f8', // sekme çubuğu, tablo başlığı
+  'ops-gray-50': '#f0f0f0', // iç ayraç, satır ayracı
+  'ops-gray-100': '#efefef', // kapanmış rozet zemini, satır hover
+  'ops-gray-200': '#e6e6e6', // standart kenarlık (kart, tablo)
+  'ops-gray-300': '#e1e1e1', // iç kart kenarlığı, 2. ayraç
+  'ops-gray-400': '#dadada', // girdi/select kenarı, nötr çip
+  'ops-gray-500': '#d6d6d6', // kesikli çerçeve, boş durum
+  'ops-gray-600': '#cbcbcb', // pasif buton dolgusu/çerçevesi
+  'ops-gray-700': '#b5b5b5', // pasif ikon, pasif metin
 } as const satisfies Record<string, string>;
 
 /* Skala takma adları — kullanımdaki adlar korunur (envanter §0.5 eşlemesi) */
 export const operationsAliases = {
-  'ops-subtle': '#f8f9f5', // = gray-25
-  'ops-panel': '#f8f9f5', // = gray-25; sidebar zemini (#f3f4f0 kalktı)
-  'ops-line-soft': '#f0f1ec', // = gray-50
-  'ops-line': '#e6e7e1', // = gray-200
-  'ops-line-strong': '#d9dbd2', // = gray-400
+  'ops-subtle': '#f8f8f8', // = gray-25
+  'ops-panel': '#f8f8f8', // = gray-25; sidebar zemini (#f3f4f0 kalktı)
+  'ops-line-soft': '#f0f0f0', // = gray-50
+  'ops-line': '#e6e6e6', // = gray-200
+  'ops-line-strong': '#dadada', // = gray-400
+  /* İskelet çubuğu AYRI takma ad (15.08): çubuk `ops-card` ZEMİNİNE çizilir, gray-100 ise beyaz kart
+     ÜSTÜ dolgusudur — kart zemininde fark ~%5'e düşüyor ve `animate-pulse` yarıya inince açık modda
+     görünmez oluyordu (koyu modda skala adımları geniş, sorun yoktu). İki mod ayrı ayarlanabilsin
+     diye takma ad. */
+  'ops-skeleton': '#dadada', // = gray-400; iskelet çubuğu dolgusu
+  'ops-skeleton-soft': '#e6e6e6', // = gray-200; iskelet gradyanının açık ucu
+  /* Kartın İÇİNDE hafifçe çukur duran zemin (15.08'e kadar tanımsızdı — globals.css künyesi). */
+  'ops-surface-sunken': '#f0f0f0', // = gray-50
 } as const satisfies Record<string, string>;
 
 /* §0.3 Semantik aileler — metin · koyu · zemin · kenarlık (+ grafik/nokta) */
@@ -148,20 +158,20 @@ export const operationsViolet = {
 export const operationsScrim = {
   /* Yüzen katman — dialog örtüsü (scrim). Temayla döner: koyuda daha koyu, çünkü panel
      zemini de koyudur ve ayrışma yalnız örtü + kenarlıkla kurulur (gölge işe yaramaz). */
-  'ops-scrim': 'rgba(34, 37, 31, 0.42)',
+  'ops-scrim': 'rgba(36, 36, 36, 0.42)',
   /* Görsel ÜSTÜ örtü (yükleme/değiştirme hover'ı) — fotoğrafın üstünde durur, bu yüzden
      temayla dönmez: her iki temada da koyu kalır ki üstündeki açık metin okunsun. */
-  'ops-image-scrim': 'rgba(30, 33, 27, 0.5)',
+  'ops-image-scrim': 'rgba(30, 30, 30, 0.5)',
 } as const satisfies Record<string, string>;
 
 /* §0.4 Etkileşim durumları — odak halkası ayrı renk taşımaz (2px olive, 2px offset) */
 export const operationsInteraction = {
-  'ops-ink-hover': '#33372e', // koyu butonun hover/active durumu
+  'ops-ink-hover': '#363636', // koyu butonun hover/active durumu
   // Eşdeğerlik notları AÇIK TEMA için geçerli; karanlıkta ikisi de ayrı kademeye kayar (aşağıdaki
   // koyu bloğun künyesi — bilinçli, kontrastı korumak için).
-  'ops-disabled-fill': '#c9ccc3', // disabled buton zemini (açıkta = gray-600)
-  'ops-disabled-text': '#8b9086', // disabled buton/girdi metni (açıkta = muted)
-  'ops-row-selected': '#eef0ea', // tablo satırı hover ve seçim (= gray-100)
+  'ops-disabled-fill': '#cbcbcb', // disabled buton zemini (açıkta = gray-600)
+  'ops-disabled-text': '#8e8e8e', // disabled buton/girdi metni (açıkta = muted)
+  'ops-row-selected': '#efefef', // tablo satırı hover ve seçim (= gray-100)
 } as const satisfies Record<string, string>;
 
 /* Operasyon renklerinin tam kümesi (AÇIK tema) — CSS dosya sırasıyla (`--color-` öneki). */
@@ -202,32 +212,37 @@ export const operationsRadius = {
    temada da koyu); `brand-whatsapp` da yok — marka rengi temayla dönmez.
    ═══════════════════════════════════════════════════════════════════════════ */
 export const operationsDarkColors = {
-  /* §0.6 Yüzey ve mürekkep — ters çevrilir */
-  'ops-ink': '#e9ebe3',
-  'ops-strong': '#c8ccc2',
-  'ops-body': '#b4b9ad',
-  'ops-muted': '#8f9688',
-  'ops-faint': '#757c6d',
-  'ops-bg': '#1b1e18',
-  'ops-card': '#23261f',
-  'ops-white': '#2a2e26', // dialog/girdi zemini — koyuda "beyaz" kart altıdır
+  /* §0.6 Yüzey ve mürekkep — ters çevrilir. Nötrleştirme (15.08) burada da. */
+  'ops-ink': '#eaeaea',
+  'ops-strong': '#cacaca',
+  'ops-body': '#b7b7b7',
+  'ops-muted': '#939393',
+  'ops-faint': '#797979',
+  'ops-bg': '#1d1d1d',
+  'ops-card': '#252525',
+  'ops-white': '#2d2d2d', // dialog/girdi zemini — koyuda "beyaz" kart altıdır
 
   /* §0.6 Gri skalası — aynı kademeler, koyu yönde */
-  'ops-gray-25': '#23261f',
-  'ops-gray-50': '#2a2e26',
-  'ops-gray-100': '#31352c',
-  'ops-gray-200': '#3c4038',
-  'ops-gray-300': '#464b41',
-  'ops-gray-400': '#545a4e',
-  'ops-gray-500': '#646a5d',
-  'ops-gray-600': '#757c6d',
-  'ops-gray-700': '#8f9688',
+  'ops-gray-25': '#252525',
+  'ops-gray-50': '#2d2d2d',
+  'ops-gray-100': '#343434',
+  'ops-gray-200': '#3f3f3f',
+  'ops-gray-300': '#494949',
+  'ops-gray-400': '#585858',
+  'ops-gray-500': '#686868',
+  'ops-gray-600': '#797979',
+  'ops-gray-700': '#939393',
 
-  'ops-subtle': '#23261f',
-  'ops-panel': '#23261f',
-  'ops-line-soft': '#2a2e26',
-  'ops-line': '#3c4038',
-  'ops-line-strong': '#545a4e',
+  'ops-subtle': '#252525',
+  'ops-panel': '#252525',
+  // Koyuda bugünkü onaylı görünüm korunuyor (gray-100 / gray-50): skala adımları geniş, açık moddaki
+  // görünmezlik sorunu burada hiç yaşanmadı.
+  'ops-skeleton': '#343434',
+  'ops-skeleton-soft': '#2d2d2d',
+  'ops-line-soft': '#2d2d2d',
+  'ops-line': '#3f3f3f',
+  'ops-line-strong': '#585858',
+  'ops-surface-sunken': '#1d1d1d', // = bg; çukur koyuda karttan koyu
 
   /* §0.6 Semantik aileler — koyu zeminde okunur kalacak şekilde açılır */
   'ops-olive': '#a9c46b',
@@ -274,14 +289,14 @@ export const operationsDarkColors = {
   'ops-violet-line': '#3e3560',
   'ops-violet-dot': '#8a7ae0',
 
-  'ops-scrim': 'rgba(8, 9, 7, 0.74)',
+  'ops-scrim': 'rgba(8, 8, 8, 0.74)',
 
   /* §0.6 Etkileşim — koyu buton açık zemine döner (mürekkep ters) */
-  'ops-ink-hover': '#d3d8ca',
+  'ops-ink-hover': '#d6d6d6',
   // DEĞERLER DOĞRU, açıktaki eşdeğerlik burada BİLEREK bozulur (ölçüldü 07.08): eşleme korunsaydı
-  // dolgu #757c6d, metin #8f9688 olurdu — birbirine yapışık iki ton, yani okunmayan bir buton.
+  // dolgu ile metin birbirine yapışık iki ton olurdu — okunmayan bir buton.
   // Korunan şey renk eşleşmesi değil, dolgu ile metin arasındaki KONTRAST.
-  'ops-disabled-fill': '#3c4038', // karanlıkta = gray-200
-  'ops-disabled-text': '#757c6d', // karanlıkta = faint
-  'ops-row-selected': '#31352c',
+  'ops-disabled-fill': '#3f3f3f', // karanlıkta = gray-200
+  'ops-disabled-text': '#797979', // karanlıkta = faint
+  'ops-row-selected': '#343434',
 } as const satisfies Record<string, string>;
