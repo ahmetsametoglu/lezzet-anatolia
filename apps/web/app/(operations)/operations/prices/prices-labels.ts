@@ -1,3 +1,4 @@
+import { targetMarginFor } from '@lezzet/domain-core';
 import { percent } from '@/components/operation/ui/format';
 import type { ChipTone } from '@/components/operation/ui/chip';
 import type { OpsTone } from '@/components/operation/ui/tone';
@@ -34,7 +35,11 @@ export function marginHint(row: PriceRow): string {
   if (row.costCents === null) return 'Maliyet bilinmiyor — fiyatlı parti girilmemiş, marj hesaplanamaz.';
   if (row.marginPercent === null) return 'Hiçbir kanalda fiyat yok — marj hesaplanamaz.';
   const channel = row.marginChannel === 'b2b' ? 'B2B' : 'B2C';
-  const target = row.targetMarginPercent === null ? 'hedef yazılmamış' : `hedef ${percent(row.targetMarginPercent)}`;
+  // Hedef, EN DAR marjın kanalına göre çözülür (15.08): B2B'ye özel hedef varsa ve dar kanal
+  // B2B ise ipucu o hedefi söyler — ortak hedefi söylemek yanlış kıyası doğrularmış gibi olurdu.
+  const effective = targetMarginFor(row.marginChannel ?? 'b2c', row.targetMarginPercent, row.targetMarginB2bPercent);
+  const b2bNote = row.marginChannel === 'b2b' && row.targetMarginB2bPercent !== null ? ' (B2B’ye özel)' : '';
+  const target = effective === null ? 'hedef yazılmamış' : `hedef ${percent(effective)}${b2bNote}`;
   return `En dar marj ${channel} fiyatından · ${target}`;
 }
 

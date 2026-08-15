@@ -1,6 +1,6 @@
 import 'server-only';
 import { PriceService, ProductService, ProductVariantService, type Db } from '@lezzet/database';
-import { autoPriceCents } from '@lezzet/domain-core';
+import { autoPriceCents, targetMarginFor } from '@lezzet/domain-core';
 import { readCostBasis } from './cost-basis';
 import type { Channel } from '@lezzet/types';
 
@@ -60,9 +60,12 @@ export async function repriceVariants(db: Db, variantIds: readonly string[]): Pr
 
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   // Yalnız otomatik VE hedefi olan ürünler: hedefsiz otomatik ürün diye bir şey yok (eylem onu
-  // zorunlu tutuyor), ama veri elle bozulmuşsa fiyat uydurmak yerine dokunmuyoruz.
+  // zorunlu tutuyor), ama veri elle bozulmuşsa fiyat uydurmak yerine dokunmuyoruz. Hedef kanal
+  // başına çözülür (`targetMarginFor`) — burada yalnız "hiç hedef var mı" elenir.
   const autoProducts = new Map(
-    products.filter((p) => p.autoPrice && p.targetMarginPercent != null).map((p) => [p.id, p]),
+    products
+      .filter((p) => p.autoPrice && (p.targetMarginPercent != null || p.targetMarginB2bPercent != null))
+      .map((p) => [p.id, p]),
   );
   const targets = variants.filter((v) => autoProducts.has(v.productId));
   if (targets.length === 0) return EMPTY;
@@ -93,10 +96,15 @@ export async function repriceVariants(db: Db, variantIds: readonly string[]): Pr
       const current = currentOf(channel).get(variant.id)?.channelPrice;
       if (!current) continue;
 
+      // Kanalın KENDİ hedefi (15.08): B2B'ye özel hedef varsa o, yoksa ortak. Hedefi olmayan
+      // kanala dokunulmaz — yalnız B2B hedefi girilmiş üründe B2C fiyatı elle kalır.
+      const channelTarget = targetMarginFor(channel, product.targetMarginPercent, product.targetMarginB2bPercent);
+      if (channelTarget === null) continue;
+
       const next = autoPriceCents({
         channel,
         costCents: basis.costCents,
-        targetMarginPercent: product.targetMarginPercent!,
+        targetMarginPercent: channelTarget,
         vatRate: product.vatRate,
       });
       const currentCents = current.amountCents;

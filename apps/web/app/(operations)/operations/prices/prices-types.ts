@@ -48,7 +48,12 @@ export interface PriceRow {
   /** Dar marjın hangi kanaldan geldiği — tek sayının hangi fiyata ait olduğu görünsün. */
   marginChannel: Channel | null;
   targetMarginPercent: number | null;
-  /** Hedefin altında mı; maliyet ya da hedef bilinmiyorsa karar YOKTUR (`null`). */
+  /** B2B'ye özel hedef (15.08); `null` = ortak hedef B2B'de de geçerli (`targetMarginFor`). */
+  targetMarginB2bPercent: number | null;
+  /**
+   * HERHANGİ bir kanal KENDİ hedefinin altında mı; hiçbir kanal için karar verilemiyorsa `null`.
+   * Kanal başına hedefle (15.08) tek soruya indirgenemezdi: uyarının işi riski göstermek.
+   */
   belowTarget: boolean | null;
   autoPrice: boolean;
   /**

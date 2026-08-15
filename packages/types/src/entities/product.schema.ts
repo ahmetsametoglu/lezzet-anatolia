@@ -195,6 +195,11 @@ export const ProductSchema = z.object({
   /** Satış durumu — TEK alan (DB'de `product_status` enum'u). Bkz. ProductStatusEnum. */
   status: ProductStatusEnum,
   targetMarginPercent: dbNumericNullable,
+  /**
+   * B2B'ye ÖZEL hedef marj (15.08, kullanıcı kararı): toptan marjı perakendeden farklı kurulabilir.
+   * `null` = ortak hedef (`targetMarginPercent`) B2B'de de geçerli — çözüm `targetMarginFor` (motor).
+   */
+  targetMarginB2bPercent: dbNumericNullable,
   autoPrice: z.boolean(),
   sortOrder: z.number().int(),
 
@@ -235,6 +240,7 @@ export const ProductInsertSchema = z.object({
   shippable: z.boolean().optional(),
   status: ProductStatusEnum.optional(),
   targetMarginPercent: z.number().nullish(),
+  targetMarginB2bPercent: z.number().nullish(),
   autoPrice: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   // Aile üç alan birden verilir ya da hiç verilmez — kısmi gönderim veri kısıtına takılır
@@ -385,6 +391,7 @@ export const ProductPriceRowSchema = ProductSchema.pick({
   categoryId: true,
   vatRate: true,
   targetMarginPercent: true,
+  targetMarginB2bPercent: true,
   autoPrice: true,
   status: true,
   // Görsel künyesi (15.08): fiyat satırının başında ürün görseli var — operatör listeyi ürünle
@@ -423,6 +430,7 @@ export const ProductDetailsUpdateSchema = ProductSchema.pick({
   shippable: true,
   status: true,
   targetMarginPercent: true,
+  targetMarginB2bPercent: true,
   autoPrice: true,
 }).partial();
 export type ProductDetailsUpdate = z.infer<typeof ProductDetailsUpdateSchema>;

@@ -95,7 +95,8 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 | shelf_life_days | int \| null | toplam raf ömrü (gün); kalan % hesabı için |
 | shippable | boolean | kargoyla gönderilebilir mi — **varsayılan `false`** (kullanıcı kararı 08.08: unutulan alanın bedeli "satılamadı" olmalı, "bozuk gitti" değil); false = yalnız rota/kapı teslim (soğuk zincir) |
 | status | product_status | satış durumu TEK alanda: `active` (satışta) · `passive` (satışa kapalı) · `candidate` (aday ürün — stokta yok, tedarik edilebilir; keşif bölümünde gösterilir, SATILAMAZ, bkz. `DOMAIN.md §13`). Önce `is_candidate` + `is_active` ikilisiydi: iki bayrak üç durum için dört bileşim üretiyordu ve "aday + pasif" gibi anlamsız bir hâl mümkündü — enum bunu kapatır; varsayılan `active` |
-| target_margin_percent | number \| null | hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için |
+| target_margin_percent | number \| null | hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için — ORTAK hedef, B2B'ye özel değer yoksa iki kanalda da geçerli |
+| target_margin_b2b_percent | number \| null | B2B'ye ÖZEL hedef marj (kullanıcı kararı 15.08): toptan marjı perakendeden farklı kurulabilir; null = ortak hedef geçerli. Çözüm tek yerde: `targetMarginFor` (domain-core) — diyalog önizlemesi, otomatik fiyat ve marj-altı uyarısı aynı fonksiyonu okur |
 | auto_price | boolean | otomatik fiyatlandırma açık mı (varsayılan false) — açıksa fiyat hedef marja göre otomatik güncellenir, kapalıysa sistem uyarır |
 | sort_order | int | |
 | family_id | uuid \| null | **ÇEŞİT EKSENİ** (`ProductFamily`, yukarıda). `null` = ailesiz → çeşit bloğu HİÇ çizilmez. `on delete set null` |

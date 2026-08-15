@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { autoPriceCents, markupPercent, priceForMargin, vatBaseOf } from '@lezzet/domain-core';
+import { autoPriceCents, markupPercent, priceForMargin, targetMarginFor, vatBaseOf } from '@lezzet/domain-core';
 import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -42,6 +42,10 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
   // ekranı yoktu): o güne kadar eski fiyat satılmaya devam eder.
   const [effectiveFrom, setEffectiveFrom] = useState('');
   const [target, setTarget] = useState<number | null>(row.targetMarginPercent);
+  // B2B'ye ÖZEL hedef (15.08, kullanıcı kararı): toptan marjı perakendeden farklı kurulabilir.
+  // Boş = ortak hedef B2B'de de geçerli; çözüm motorda (`targetMarginFor`) — önizleme, otomatik
+  // fiyat ve marj-altı uyarısı aynı fonksiyonu okur.
+  const [targetB2b, setTargetB2b] = useState<number | null>(row.targetMarginB2bPercent);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -68,12 +72,15 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
    * kanalı açmaz (fiyat satırının yokluğu "o kanalda satışa kapalı" demektir).
    */
   const autoPreviewText =
-    cost === null || target === null
+    cost === null
       ? ''
       : (['b2c', 'b2b'] as const)
           .filter((channel) => row[channel].amountCents !== null)
           .map((channel) => {
-            const next = autoPriceCents({ channel, costCents: cost, targetMarginPercent: target, vatRate: row.vatRate });
+            // Kanalın KENDİ hedefi (15.08) — motorun yazacağı fiyatla birebir aynı çözüm.
+            const channelTarget = targetMarginFor(channel, target, targetB2b);
+            if (channelTarget === null) return null;
+            const next = autoPriceCents({ channel, costCents: cost, targetMarginPercent: channelTarget, vatRate: row.vatRate });
             return next === null ? null : `${channel.toUpperCase()} ${money(next)}`;
           })
           .filter(Boolean)
@@ -85,7 +92,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
 
     // Sıra bilinçli: önce ürün ayarı (anahtar + hedef), sonra fiyatlar. Anahtar açılırken hedef
     // eksikse action reddeder ve fiyat hiç yazılmaz — yarım kaydedilmiş bir durum doğmaz.
-    const settings = await setAutoPriceAction(row.productId, autoPrice, target);
+    const settings = await setAutoPriceAction(row.productId, autoPrice, target, targetB2b);
     if (settings.error) {
       setBusy(false);
       setError(settings.error);
@@ -161,7 +168,17 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
           tone={row.belowTarget === true || (row.marginPercent ?? 0) < 0 ? 'red' : undefined}
           hint={row.marginChannel === null ? 'Fiyat yok' : `En dar: ${row.marginChannel === 'b2b' ? 'B2B' : 'B2C'}`}
         />
-        <Metric label="Hedef marj" value={target === null ? '—' : percent(target)} hint="Ürün genelinde geçerli" />
+        <Metric
+          label="Hedef marj"
+          value={
+            target === null && targetB2b === null
+              ? '—'
+              : [target === null ? null : percent(target), targetB2b === null ? null : `B2B ${percent(targetB2b)}`]
+                  .filter(Boolean)
+                  .join(' · ')
+          }
+          hint={targetB2b === null ? 'İki kanalda da geçerli' : 'B2B kendi hedefini kullanır'}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -240,14 +257,26 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
           <Toggle on={autoPrice} onChange={setAutoPrice} label="Otomatik fiyat" />
         </div>
 
-        <PercentField
-          label="Hedef marj (%)"
-          labelAside={autoPrice ? 'zorunlu' : 'uyarı eşiği'}
-          id="price-target"
-          value={target}
-          onChange={setTarget}
-          placeholder="ör. 42"
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <PercentField
+            label="Hedef marj (%)"
+            labelAside={autoPrice ? 'zorunlu' : 'uyarı eşiği'}
+            id="price-target"
+            value={target}
+            onChange={setTarget}
+            placeholder="ör. 42"
+          />
+          {/* Toptan marjı perakendeden farklı kurulabilir (15.08). Boş bırakmak bir karar:
+              ortak hedef B2B'de de geçerli — kutu bunu placeholder'ıyla söyler. */}
+          <PercentField
+            label="B2B hedef marj (%)"
+            labelAside="boş = ortak hedef"
+            id="price-target-b2b"
+            value={targetB2b}
+            onChange={setTargetB2b}
+            placeholder={target === null ? 'ör. 30' : `ortak: ${percent(target)}`}
+          />
+        </div>
 
         {/* SÜRPRİZ FİYAT OLMAZ (tasarım): otomatik hesap kaydederken çalışır, o yüzden sonucu
             ÖNCEDEN gösteriyoruz. Önizleme motorun kendi fonksiyonundan çıkar — ayrı bir formülle

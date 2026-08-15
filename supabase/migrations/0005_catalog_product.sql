@@ -63,6 +63,7 @@ create table public.product (
   shippable boolean not null default false,
   status product_status not null default 'active',   -- satışta / pasif / aday (tek alan, yukarıdaki enum)
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
+  target_margin_b2b_percent numeric(5, 2),          -- B2B'ye ÖZEL hedef (15.08); boş = ortak hedef geçerli
   auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
   sort_order int not null default 0,
 

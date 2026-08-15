@@ -45,6 +45,20 @@ export function tightestMargin(
   return tightest;
 }
 
+/**
+ * Kanalın GEÇERLİ hedef marjı (15.08, kullanıcı kararı): toptan marjı perakendeden farklı
+ * kurulabilir — `targetMarginB2bPercent` yalnız B2B'yi ezer, boşsa ortak hedef iki kanalda da
+ * geçerli. Çözüm TEK yerde durur: diyalog önizlemesi, otomatik fiyat kablosu ve marj-altı uyarısı
+ * aynı fonksiyonu çağırır — üçü ayrı çözseydi "hangi hedefe göre" sorusu ekrandan ekrana değişirdi.
+ */
+export function targetMarginFor(
+  channel: string,
+  targetMarginPercent: number | null,
+  targetMarginB2bPercent: number | null,
+): number | null {
+  return channel === 'b2b' && targetMarginB2bPercent != null ? targetMarginB2bPercent : targetMarginPercent;
+}
+
 /** Gerçekleşen markup hedefin altında mı? Maliyet ya da hedef bilinmiyorsa karar YOKTUR (`null`). */
 export function isBelowTargetMargin(
   revenueHtCents: number,

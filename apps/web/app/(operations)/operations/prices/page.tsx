@@ -215,7 +215,9 @@ async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; di
   const variantContext = new Map(
     variants.flatMap((v) => {
       const product = productOf.get(v.productId);
-      return product ? [[v.id, { vatRate: product.vatRate, targetMarginPercent: product.targetMarginPercent }] as const] : [];
+      return product
+        ? [[v.id, { vatRate: product.vatRate, targetMarginPercent: product.targetMarginPercent, targetMarginB2bPercent: product.targetMarginB2bPercent }] as const]
+        : [];
     }),
   );
   const variantTitles = new Map(

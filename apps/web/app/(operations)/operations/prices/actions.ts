@@ -69,18 +69,25 @@ export async function setAutoPriceAction(
   productId: string,
   autoPrice: boolean,
   targetMarginPercent: number | null,
+  /** B2B'ye özel hedef (15.08) — `null` = ortak hedef B2B'de de geçerli. */
+  targetMarginB2bPercent: number | null,
 ): Promise<ActionResult<{ changed: number; held: number }>> {
   try {
     await requireAdmin();
+    // Ortak hedef otomatikte ZORUNLU kalır (B2B hedefi tek başına yetmez): ortak hedef B2C'nin de
+    // hedefi ve hedefsiz kanalın fiyatı sessizce donardı.
     if (autoPrice && (targetMarginPercent === null || !Number.isFinite(targetMarginPercent))) {
       throw new Error('Otomatik fiyat için hedef marj girilmeli.');
     }
     if (targetMarginPercent !== null && targetMarginPercent < 0) {
       throw new Error('Hedef marj negatif olamaz.');
     }
+    if (targetMarginB2bPercent !== null && (!Number.isFinite(targetMarginB2bPercent) || targetMarginB2bPercent < 0)) {
+      throw new Error('B2B hedef marjı negatif olamaz.');
+    }
 
     const db = serviceDb();
-    await new ProductService(db).updateDetails(productId, { autoPrice, targetMarginPercent });
+    await new ProductService(db).updateDetails(productId, { autoPrice, targetMarginPercent, targetMarginB2bPercent });
     // Anahtar kapatıldıysa fiyata dokunulmaz: elle yönetime dönen ürünün son otomatik fiyatı
     // geçerli fiyatıdır, "eski elle fiyata dön" diye bir kayıt yoktur.
     const outcome = autoPrice ? await repriceProduct(db, productId) : null;

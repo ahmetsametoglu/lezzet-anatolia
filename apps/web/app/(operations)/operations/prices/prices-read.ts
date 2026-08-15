@@ -1,4 +1,4 @@
-import { costOf, isBelowTargetMargin, revenueHtOf, tightestMargin, type CostBasis } from '@lezzet/domain-core';
+import { costOf, isBelowTargetMargin, revenueHtOf, targetMarginFor, tightestMargin, type CostBasis } from '@lezzet/domain-core';
 import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText, type Channel, type Discount, type DiscountCode, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
 import type { DiscountUsage } from '@lezzet/database';
@@ -67,7 +67,18 @@ export function toPriceRows({ products, prices, costs, categoryNames }: PriceRow
       if (b2b.amountCents !== null) entries.push({ channel: 'b2b', revenueHtCents: revenueHtOf('b2b', b2b.amountCents, product.vatRate) });
 
       const tightest = tightestMargin(entries, costCents);
-      const tightestRevenue = entries.find((e) => e.channel === tightest?.channel)?.revenueHtCents ?? null;
+
+      // Marj-altı kararı KANAL BAŞINA (15.08): her kanal KENDİ hedefine kıyaslanır (B2B'ye özel
+      // hedef varsa o). Uyarı herhangi bir kanal hedef altındaysa yanar — en dar marjı tek ortak
+      // hedefe kıyaslamak, B2B hedefi ayrışınca yanlış kanalı suçlardı.
+      const channelVerdicts = entries.map((e) =>
+        isBelowTargetMargin(
+          e.revenueHtCents,
+          costCents,
+          targetMarginFor(e.channel, product.targetMarginPercent, product.targetMarginB2bPercent),
+        ),
+      );
+      const decided = channelVerdicts.filter((v): v is boolean => v !== null);
 
       return {
         variantId: variant.id,
@@ -86,8 +97,8 @@ export function toPriceRows({ products, prices, costs, categoryNames }: PriceRow
         marginPercent: tightest?.percent ?? null,
         marginChannel: (tightest?.channel as Channel | undefined) ?? null,
         targetMarginPercent: product.targetMarginPercent,
-        belowTarget:
-          tightestRevenue === null ? null : isBelowTargetMargin(tightestRevenue, costCents, product.targetMarginPercent),
+        targetMarginB2bPercent: product.targetMarginB2bPercent,
+        belowTarget: decided.length === 0 ? null : decided.some(Boolean),
         autoPrice: product.autoPrice,
         // Maliyet sıçraması satırla birlikte taşınır: otomatik fiyatın neden beklediğini ekran
         // ancak bu bilgiyle söyleyebilir (sessiz duran otomatik, bozuk otomatiktir).
@@ -118,7 +129,7 @@ interface CustomerPriceInput {
   /** Varyant başına yenileme maliyeti (kuruş) — ekranın geri kalanıyla aynı taban. */
   costs: Map<string, number>;
   /** Boyun ürününden gelen karar girdileri (KDV oranı, hedef marj). */
-  products: Map<string, { vatRate: number; targetMarginPercent: number | null }>;
+  products: Map<string, { vatRate: number; targetMarginPercent: number | null; targetMarginB2bPercent: number | null }>;
 }
 
 /** Özel fiyat satırları — kimlikler adlara, tutarlar kuruşa çevrilir; sıra müşteri adına göre. */
@@ -138,7 +149,13 @@ export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents, 
         listCents: listCents.get(`${row.variantId}·${row.channel}`) ?? null,
         costCents: costs.get(row.variantId) ?? null,
         vatRate: products.get(row.variantId)?.vatRate ?? 0,
-        targetMarginPercent: products.get(row.variantId)?.targetMarginPercent ?? null,
+        // Hedef, satırın KANALINA göre çözülür (15.08): b2b satırı B2B'ye özel hedefi görür.
+        // Diyaloğun karar paneli bu tek sayıyı okur — çözümü buraya koymak paneli kanaldan habersiz bırakır.
+        targetMarginPercent: targetMarginFor(
+          row.channel,
+          products.get(row.variantId)?.targetMarginPercent ?? null,
+          products.get(row.variantId)?.targetMarginB2bPercent ?? null,
+        ),
         validFrom: row.validFrom,
       };
     })
