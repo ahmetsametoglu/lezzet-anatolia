@@ -2386,6 +2386,75 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   silinmediği için "yeniden kurulum yeni ziyaretçidir" kararının iki platformda farklı
   davranacağı önden söylendi. Backlog kaydı da açıldı (**MB-63**) — listede hiç yoktu.
 
+- [x] (21.50) **KEŞİF YÜZEYİNİN İKİ YALANI KAPANDI — biri ölçülmüş bir SEBEBE dayanıyordu**
+  (14.08). `touches: apps/mobile/src/screens/discover/discover-screen.tsx,
+  apps/mobile/src/screens/home/{home-screen.tsx,home-skeleton.tsx}`
+
+  **1 · MB-14 — bitiş ekranı aynı karede hem ödül hem giriş daveti gösteriyordu.** 11.08'de
+  ölçülmüştü ama sebebi *"MB-13'ün görünen yüzü OLABİLİR"* diye tahmin olarak duruyordu.
+
+  **DİKKAT — BU SATIR BİR KEZ FAZLA İDDİALI YAZILDI ve düzeltildi (kullanıcı denetimi 15.08).**
+  İlk yazımda *"sebep bulundu, teori değil"* deniyordu; doğrusu şu: **kod düzeyinde belirtiyi
+  açıklamaya YETEN bir mekanizma bulundu, ama o mekanizmanın gerçekten işlediği ÖLÇÜLMEDİ.**
+  11.08'deki kare ne yeniden üretildi ne de ayrışma anı yakalandı — MB-13 zaten "tetikleyici
+  üretilemedi" diye açık duruyor. Aradaki fark önemli: bulunan şey yeterli bir açıklama, kanıt
+  değil. Aşağıdaki mekanizma bu çekinceyle okunmalı.
+
+  Mekanizma: **"giriş yaptım mı" sorusunun uygulamada İKİ AYRI KAYNAĞI
+  var.** Ekran `useMe`nin `signedIn`ini okuyor; ağ katmanı Supabase'e KENDİSİ soruyor
+  (`maybeAuthorizedFetch` → `auth.getSession()`). İkisi ayrıştığı an — jeton geçerliyken
+  arayüzün misafire düşmesi — sunucu oyu müşterinin üstüne yazıp puanı döndürüyor, ekran davet
+  gösteriyor.
+  **Çare, davetin KENDİ ölçütünü kullanması:** davet *"bu turun sahibi yok"* der ve bunun kanıtı
+  `signedIn` değil, ödülün yazılıp yazılmadığıdır (motor kimliksiz oya puan vermiyor,
+  `pointsAwarded: null`). Koşul `signedIn || awardedPoints !== null` oldu. **MB-13'ü kapatmaz** —
+  iki kaynak hâlâ ayrışabilir — ama yalanı kapatır.
+  **Bu değişikliğin DOKUNDUĞU dal cihazda ÜRETİLEMEZ** (ekranın misafir sanıp jetonun geçerli
+  olduğu an, yani MB-13'ün kendisi) ve testi de yok; mevcut test yalnız *misafir + puan yok*
+  hâlini tutuyor (`discover-screen.test.tsx:130`, koşuda geçiyor — gerileme yok). Yani bu
+  düzeltme **savunmacıdır ve doğrulanmamıştır**; öyle kaydediliyor.
+
+  **2 · MB-58 (a + c) — vitrindeki keşif daveti misafire çizilmiyor artık.** Davetin vaadi puan,
+  puan ise kimliğe yazılıyor: misafire gösterilen davet karşılığı olmayan bir davetti. **Turun
+  KENDİSİ misafire açık kaldı** (tasarımın kararı: *"misafirin oyu da talep sinyalidir"*),
+  kapanan yalnız ödül vaat eden çağrı. İskelet de düzeltildi: misafirde iki değil TEK davet
+  kutusu tutuyor — yer ayırdığı ama gelmeyen kutu, sayfanın oturduğu an zıplaması demekti, yani
+  iskeletin önlemek için var olduğu şey. Bayrak `HomeLayout`a EKLENMEDİ (o şema cihazda saklanıyor
+  ve bu bilgi saklanacak cinsten değil, her açılışta oturumdan türer) — ayrı prop, sıfır göç.
+
+  **(a) CİHAZDA ÖNCE-SONRA ÖLÇÜLDÜ (15.08, kullanıcı talimatı: "hatanı da doğrula, düzeltmeni
+  de").** Aynı cihaz, aynı misafir oturum, aynı ekran:
+  · **12:06 — eski paket (düzeltme öncesi kod):** vitrinin altında İKİ davet; *"Keşif — yeni
+  lezzetleri ilk siz oylayın"* misafire çiziliyordu. **Hata üretildi.**
+  · **12:08 — taze paket (düzeltmeden sonra):** yalnız Profesyonel daveti; Keşif daveti YOK.
+  **Düzeltme doğrulandı.**
+  *(Aradaki ders ayrıca kayda değer: uygulama arka plandan `monkey` ile öne getirildiğinde BAYAT
+  paketi sürdürdü ve düzeltme yokmuş gibi göründü. Ölçüm `force-stop` + yeniden açılışla
+  tekrarlanınca doğru sonuç geldi. Cihazda ölçüm yapan herkes için: öne getirmek yeniden
+  yüklemek değildir.)*
+
+  **(c) GÖRSEL OLARAK DOĞRULANAMADI ve öyle yazılıyor.** İskeletin çizildiği `uiautomator`
+  dökümüyle kanıtlandı (`home-skeleton` düğümü yakalandı, 9. denemede), ama davet kutuları
+  **ekranın altında kaldığı** için döküm onları görmüyor ve iskelet penceresi saniyenin altında
+  olduğundan kaydırıp bakmak da mümkün olmadı. Yani (c) bugün yalnız kod düzeyinde doğru; ekranda
+  gösterilmedi.
+
+  **3 · DÖRT KALEM ÖLÇÜLDÜ VE "HIZLI DEĞİL" ÇIKTI — sessizce yapılmadı, gerekçesi yazıldı.**
+  Turun kazancının yarısı bu: hangi kalemin ucuz OLMADIĞINI bilmek de ilerlemedir.
+  · **MB-58b** ("kart kalmadıysa bölüm kalksın") — bilgi sunucuda var ama vitrin sözleşmesi
+  taşımıyor; taşıtmak `openDiscoverDeck`in iki sorgusunu **uygulamanın en çok vurulan ucuna**
+  eklemek demek. Kuyruk hâli zaten nazikçe karşılanıyor. Bedel sıcak yolda, karar olarak bırakıldı.
+  · **MB-22b** ("ürün sayfası kampanyayı söylesin") — ekran işi değil, önce bir DOMAİN kararı
+  istiyor: sepet kapsamlı indirim ürüne atfedilemez ("bu ürün indirimli" demek sepet toplamına
+  bağlı bir şeyi ürünün özelliğiymiş gibi söylemek olurdu). Hangi kapsamların gösterilebilir
+  olduğu kararlaşmadan yazılan ekran yanlış vaat üretir.
+  · **MB-29** (görselsiz kartta tek harf) — ölçüldü: harf 148 dp dairede 30 px, çapın ~%20'si ve
+  tonlar zaten sessiz. Rahatsız eden oran değil BAĞLAM; asıl eksik olan görselin kendisi. Yedek
+  gösterime dokunulmadı çünkü o bir tasarım kararıdır (CLAUDE §3, improvise edilmez).
+  · **MB-30** (unistyles uyarısı) — klasik sebebi olan nesne-birleştirme deseni depoda HİÇ yok
+  (dizi sözdizimi 64 yerde doğru kullanılmış), yani kaynak dolaylı ve çalışma anında yakalanmalı.
+  `adb logcat` bu turda zaman aşımına düştü; cihaz turuna bırakıldı.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

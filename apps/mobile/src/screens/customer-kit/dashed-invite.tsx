@@ -13,7 +13,10 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
   (sapma 2) — burada kuruldu. Kite terfisi raporlandı; müşteri ekranlarında dördü de bu kutuyu
   kullanıyor, beşinci bir kopya doğmuyor.
 
-  İKİ TON: `terracotta` çağırıdır (yeni bir şey teklif eder), `sand` bilgidir (durum bildirir).
+  ÜÇ TON: `terracotta` çağırıdır (yeni bir şey teklif eder), `olive` de çağırıdır ama BAŞKA bir
+  yüzeye (kullanıcı kararı 15.08 — vitrinde alt alta duran iki davetin aynı renkte olması
+  istenmedi; ayrım "biri sönük" diye değil, "ikisi ayrı yere götürüyor" diye kuruldu),
+  `sand` bilgidir (durum bildirir).
   Fark yalnız çerçeve ve başlık rengindedir; şablonun 2 px ⟷ 1,5 px kalınlık ayrımı ÇİZİLMEDİ —
   ölçü katmanında 2'lik bir durak yok ve vurgu farkını zaten RENK taşıyor.
 
@@ -25,7 +28,7 @@ interface DashedInviteProps {
   title: string;
   description?: string;
   /** Çerçeve ve başlık ailesi. */
-  tone?: 'terracotta' | 'sand';
+  tone?: 'terracotta' | 'olive' | 'sand';
   layout?: 'row' | 'stack' | 'center';
   /** `center` yerleşiminde başlığın üstündeki ikon. */
   icon?: ReactNode;
@@ -56,7 +59,7 @@ export function DashedInvite({
         <Text
           style={[
             styles.title,
-            tone === 'terracotta' ? styles.terracottaTitle : styles.inkTitle,
+            styles[`${tone}Title`],
             layout === 'center' ? styles.centeredText : undefined,
           ]}
         >
@@ -70,11 +73,7 @@ export function DashedInvite({
     </>
   );
 
-  const boxStyle = [
-    styles.box,
-    tone === 'terracotta' ? styles.terracottaBorder : styles.sandBorder,
-    styles[`${layout}Layout`],
-  ];
+  const boxStyle = [styles.box, styles[`${tone}Border`], styles[`${layout}Layout`]];
 
   if (onPress === undefined) {
     return (
@@ -106,6 +105,7 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space['3xl'],
   },
   terracottaBorder: { borderColor: theme.colors.terracotta },
+  oliveBorder: { borderColor: theme.colors['olive-line'] },
   sandBorder: { borderColor: theme.colors['sand-500'] },
   rowLayout: {
     flexDirection: 'row',
@@ -139,7 +139,10 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text.control,
   },
   terracottaTitle: { color: theme.colors.terracotta },
-  inkTitle: { color: theme.colors.ink },
+  oliveTitle: { color: theme.colors['olive-dark'] },
+  /* Ad TONLA eşleşiyor (`sandTitle`, `${tone}Title`) — eskiden `inkTitle`di ve ton adıyla
+     bağı yoktu; üçüncü ton eklenince eşleme elle yazılan bir `if` olmaktan çıktı. */
+  sandTitle: { color: theme.colors.ink },
   description: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],

@@ -503,7 +503,27 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
             </Text>
           )}
 
-          {signedIn ? null : (
+          {/*
+            GİRİŞ DAVETİ, `signedIn`e DEĞİL "turun sahibi var mı"ya bakar (MB-14, 14.08).
+
+            **Ölçülen çelişki (11.08):** ekran aynı anda hem *"+6 puan kazandınız"* hem *"Giriş
+            yaparsanız…"* diyordu. Sebep bulundu ve tek cümlelik: **"giriş yaptım mı" sorusunun
+            uygulamada İKİ AYRI KAYNAĞI var.** Ekran `useMe`nin `signedIn`ini okuyor; ağ katmanı
+            ise Supabase'e kendisi soruyor (`maybeAuthorizedFetch` → `auth.getSession()`). İkisi
+            ayrıştığı an — jeton hâlâ geçerliyken arayüzün misafire düşmesi, yani MB-13'ün
+            belirtisi — sunucu oyu müşterinin üstüne yazıp puanı döndürüyor, ekran ise davet
+            gösteriyor. Yani çelişki bir çizim hatası değil, iki doğruluk kaynağının sonucu.
+
+            **Çare, davetin KENDİ ölçütünü kullanması.** Davetin söylediği şey *"bu turun sahibi
+            yok, giriş yaparsan sana yazılır"*dır. Bunun gerçek kanıtı `signedIn` değil, ödülün
+            yazılıp yazılmadığıdır: sunucu kimliksiz oya puan YAZMIYOR ve `pointsAwarded: null`
+            dönüyor (`application/feedback/discover.ts:158`). Yani `awardedPoints` bir sayıysa
+            turun sahibi VARDIR — ekran ne sanıyorsa sansın, davet o hâlde yanlıştır.
+
+            MB-13'ü bu KAPATMAZ (iki kaynak hâlâ ayrışabilir) ama yalanı kapatır: bir daha aynı
+            karede hem ödül hem davet görünmez.
+          */}
+          {signedIn || discover.awardedPoints !== null ? null : (
             <>
               <Text style={styles.loginHint}>{t.done.loginHint}</Text>
               <SecondaryButton

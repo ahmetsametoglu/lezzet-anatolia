@@ -215,7 +215,14 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      kopyalasın"). Yalnız İLK yük: aşağı çekerek yenilemede hook `loading`e düşmez (künyesi),
      bölümler yerinde kalır. Bütün kancalar bu satırın ÜSTÜNDE çağrılıyor; erken dönüş çağrı
      sırasını bozmaz. Hangi bölümlerin çizileceğini son açılışın izi söyler (yukarıdaki künye). */
-  if (home.status === 'loading') return <HomeSkeleton sections={skeletonSections} testID="home-skeleton" />;
+  if (home.status === 'loading')
+    return (
+      /* Keşif daveti misafirde çizilmiyor (MB-58a) — iskelet de o kutuya yer AYIRMAMALI, yoksa
+         sayfa oturduğu an yukarı zıplar. `knownGuest` ölçütü sipariş bandınınkiyle AYNI: "henüz
+         bilmiyorum" hâli misafir sayılmaz, çünkü bilinmeyeni yok saymak bilinen bir bilgiyi
+         çöpe atmaktır (yukarıdaki künye). */
+      <HomeSkeleton sections={skeletonSections} discoverInvite={!knownGuest} testID="home-skeleton" />
+    );
 
   const header = (
     <View style={styles.header}>
@@ -640,27 +647,41 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               ikisi de uç değişikliği ister. Ekrana sabit sayı gömmek ise 29.07 denetiminin
               kapattığı arıza sınıfı: ayar değiştiği gün ekran, vermediğimiz bir ödülü vaat eder.
               Vaadin kendisi (tamamlanan tur puan kazandırır) doğru ve ölçülebilir; yanlış olan
-              yalnız sayıydı. */}
-          <DashedInvite
-            title={t.discover.title}
-            description={t.discover.body}
-            onPress={() => router.push('/discover')}
-            action={<Text style={styles.inviteChevron}>›</Text>}
-            testID="home-discover"
-          />
-          {/* İKİ DAVET AYNI GÖRSEL DİLDE (MB-27, 14.08 — kullanıcı bulgusu 11.08).
-              Profesyonel kartı `sand` tonundaydı ve yanındaki canlı Keşif kartının yanında
-              DEVRE DIŞI gibi duruyordu. Kusur tonun kendisinde değil, YANLIŞ SEÇİLMİŞ olmasında:
-              `dashed-invite.tsx` künyesi tonların ne demek olduğunu zaten yazıyor —
-              *"`terracotta` çağırıdır (yeni bir şey teklif eder), `sand` bilgidir (durum
-              bildirir)"*. Bu kart bir durum bildirmiyor, bir sayfaya davet ediyor; yani kendi
-              kuralımıza göre baştan `terracotta` olmalıydı. İşaret de aynılaştı (`›`) — iki kart
-              aynı işi yapıyorsa aynı jesti göstermeli. */}
+              yalnız sayıydı.
+
+              ── MİSAFİRE ÇİZİLMEZ (MB-58a, 14.08) ─────────────────────────────
+              Davetin vaadi puandır, puan ise KİMLİĞE yazılıyor: motor kimliksiz oya puan
+              vermiyor ve `pointsAwarded: null` dönüyor (`application/feedback/discover.ts:158`).
+              Yani misafire gösterilen bu davet, karşılığı olmayan bir davetti — turu bitirir,
+              vaat edilen şeyi almaz. Turun KENDİSİ misafire açık kalmaya devam ediyor (tasarımın
+              kararı: *"misafirin oyu da talep sinyalidir"*), kapanan yalnız ödül vaat eden
+              çağrı. Keşfe girmek isteyen misafir sekmeden ya da bitiş ekranının giriş davetinden
+              geçer. */}
+          {!signedIn ? null : (
+            <DashedInvite
+              title={t.discover.title}
+              description={t.discover.body}
+              onPress={() => router.push('/discover')}
+              action={<Text style={styles.inviteChevron}>›</Text>}
+              testID="home-discover"
+            />
+          )}
+          {/* İKİ DAVET AYNI GÖRSEL DİLDE AMA AYNI RENKTE DEĞİL (MB-27).
+              **Birinci adım (14.08):** kart `sand` tonundaydı ve canlı Keşif kartının yanında
+              DEVRE DIŞI gibi duruyordu (kullanıcı bulgusu 11.08). Kusur tonun kendisinde değil,
+              yanlış seçilmiş olmasındaydı: `sand` bilgi tonudur, bu kart ise bir sayfaya davet
+              ediyor. Terracotta'ya çevrildi.
+              **İkinci adım (15.08, kullanıcı kararı):** o zaman da iki kart alt alta AYNI renkte
+              kaldı ve bu istenmedi. Zeytine geçti — ayrım *"biri sönük"* diye değil, **ikisi ayrı
+              yere götürüyor** diye kuruldu; zeytin uygulamanın olumlu/birincil rengi olduğu için
+              kart canlı kalıyor. İşaret ikisinde de aynı (`›`): renk NEREYE gittiğini söyler,
+              jest ise ne yapıldığını — ikisi farklı sorular. */}
           <DashedInvite
             title={t.professional.title}
             description={t.professional.body}
+            tone="olive"
             onPress={() => router.push('/professionals')}
-            action={<Text style={styles.inviteChevron}>›</Text>}
+            action={<Text style={styles.inviteChevronOlive}>›</Text>}
             testID="home-professional"
           />
         </View>
@@ -1126,6 +1147,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['icon-sm'],
     lineHeight: theme.text['icon-sm'],
     color: theme.colors.terracotta,
+  },
+  /* Zeytin kartın işareti — biçim aynı, YALNIZ renk ayrı. İşaret kartın çerçevesiyle aynı
+     aileden olmazsa kutunun içine yapıştırılmış yabancı bir öğe gibi durur. */
+  inviteChevronOlive: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['icon-sm'],
+    lineHeight: theme.text['icon-sm'],
+    color: theme.colors['olive-dark'],
   },
 
   /* Yüzen düğme: sekme çubuğunun üstünde, sağ altta (şablon: `right:18px; bottom:84px` — çubuğun

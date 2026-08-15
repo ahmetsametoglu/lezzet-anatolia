@@ -139,10 +139,25 @@
   `guest`e düştüğü anı ve `authorizedFetch`in yerel 401 kısa devresini izlenebilir kılmak
   (`lib/auth/authorized-fetch` + `screens/customer-kit/use-me.hook`). MB-03 ile birlikte bakılmalı.
 
-- [ ] **MB-14 · Keşif bitiş ekranı girişli müşteriye "Giriş yaparsanız… / Hızlı doğrulama"
-  gösterdi** — üstelik aynı ekranda *"+6 puan kazandınız"* yazarken. MB-13'ün görünen yüzü olabilir;
-  ayrıca `signedIn === false` iken puan çipinin çizilebilmesi kendi başına bir tutarsızlık
-  (`screens/discover/discover-screen.tsx:488` ve `:494` aynı anda doğru olamaz).
+- [x] **MB-14 · Keşif bitiş ekranı girişli müşteriye "Giriş yaparsanız… / Hızlı doğrulama"
+  gösterdi** — üstelik aynı ekranda *"+6 puan kazandınız"* yazarken.
+  → **KAPANDI (14.08). SEBEP DEĞİL, YETERLİ BİR AÇIKLAMA bulundu — ilk yazım fazla iddialıydı ve
+  kullanıcı denetiminde düzeltildi (15.08).** Kod düzeyinde belirtiyi açıklamaya YETEN bir
+  mekanizma var, ama işlediği ÖLÇÜLMEDİ: 11.08'deki kare ne yeniden üretildi ne de ayrışma anı
+  yakalandı (MB-13 zaten "tetikleyici üretilemedi" diye açık). Mekanizma:
+  **"giriş yaptım mı" sorusunun uygulamada İKİ AYRI KAYNAĞI var.** Ekran `useMe`nin `signedIn`ini okuyor; ağ katmanı ise Supabase'e KENDİSİ soruyor
+  (`maybeAuthorizedFetch` → `auth.getSession()`, `lib/auth/authorized-fetch.ts:57`). İkisi
+  ayrıştığı an — jeton hâlâ geçerliyken arayüzün misafire düşmesi — sunucu oyu müşterinin üstüne
+  yazıp puanı döndürüyor, ekran ise davet gösteriyor. Yani çelişki bir çizim hatası değildi.
+  **Çare, davetin kendi ölçütünü kullanması:** davetin söylediği şey *"bu turun sahibi yok"*tur
+  ve bunun kanıtı `signedIn` değil, ödülün yazılıp yazılmadığıdır — motor kimliksiz oya puan
+  vermiyor, `pointsAwarded: null` dönüyor (`application/feedback/discover.ts:158`). Koşul artık
+  `signedIn || awardedPoints !== null`.
+  **MB-13'ü KAPATMAZ** (iki kaynak hâlâ ayrışabilir) ama yalanı kapatır: bir daha aynı karede hem
+  ödül hem davet görünmez.
+  **DOĞRULANMADI:** değiştirilen dal (ekran misafir sanıyor + puan yazılmış) cihazda üretilemez,
+  testi de yok. Mevcut test yalnız *misafir + puan yok* hâlini tutuyor ve geçiyor — yani gerileme
+  yok, ama düzeltmenin kendisi **savunmacıdır**.
 
 ---
 
@@ -639,6 +654,28 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   (c) **İskelete dahil edilir** — bölüm gerçek uçtan besleniyorsa yükleme anında da yeri tutulmalı,
   yoksa vitrin kart sayısı belli olunca zıplıyor.
 
+  **(a) ve (c) KAPANDI (14.08).** (a) davet artık `signedIn` şartına bağlı; gerekçe künyede:
+  puan KİMLİĞE yazılıyor, yani misafire gösterilen davet karşılığı olmayan bir davetti. Turun
+  KENDİSİ misafire açık kaldı (tasarımın kararı: *"misafirin oyu da talep sinyalidir"*), kapanan
+  yalnız ödül vaat eden çağrı. (c) iskelet artık iki değil, misafirde tek davet kutusu tutuyor —
+  `HomeSkeleton`a ayrı bir `discoverInvite` prop'u eklendi; `HomeLayout`a EKLENMEDİ çünkü o şema
+  cihazda SAKLANIYOR ve bu bilgi saklanacak cinsten değil (her açılışta oturumdan türer).
+
+  **(a) CİHAZDA ÖNCE-SONRA ÖLÇÜLDÜ (15.08).** Aynı misafir, aynı ekran: **12:06 eski paketle
+  Keşif daveti VAR** (hata üretildi) · **12:08 taze paketle YOK** (düzeltme doğrulandı).
+  *Yan ders:* uygulamayı arka plandan öne getirmek BAYAT paketi sürdürüyor ve düzeltme yokmuş
+  gibi gösteriyor; ölçüm `force-stop` + yeniden açılışla yapılmalı.
+  **(c) GÖRSEL OLARAK DOĞRULANAMADI:** iskeletin çizildiği `uiautomator` dökümüyle kanıtlandı ama
+  davet kutuları ekranın ALTINDA kaldığı için sayılamadı; iskelet penceresi de saniyenin altında.
+  Bugün yalnız kod düzeyinde doğru.
+
+  **(b) AÇIK — ve ölçüldü: ucuz değil.** *"Kaç kart kaldı"* bilgisi sunucuda var ama vitrin
+  sözleşmesi taşımıyor (`home-api.schema`). Taşıtmanın bedeli ölçüldü: `openDiscoverDeck` iki
+  sorgu koşuyor (aday ürünler + müşterinin oyladıkları, `feedback/discover.ts:65,68`) ve bu ikisi
+  **uygulamanın en çok vurulan ucuna** eklenirdi. Kuyruk hâli de zaten nazikçe karşılanıyor
+  (keşif ekranı *"tur bitmedi, hiç başlamadı"* boş hâlini çiziyor). Yani kalan iş bir cila ve
+  bedeli sıcak yolda — sessizce alınmadı, karar olarak burada duruyor.
+
 - [ ] **MB-18 · Tüm puan senaryolarının uçtan uca denetimi.** Kapsam: sipariş · ürün yorumu ·
   keşif turu · davet (referans) · ziyaret · günlük tavan (`points_daily_cap`) · B2B'de puan
   verilmemesi · ikinci kez tamamlamada puan verilmemesi · kupona çevirme eşiği
@@ -686,6 +723,17 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   şey söylemiyor. *(Bu yarısı web/operasyon şeridinin alanı.)*
   **(b) Ürün sayfası kampanyayı hiç söylemiyor** — müşteri sepete gelene kadar indirimli olduğunu
   bilmiyor. Ürün sayfası ile sepet aynı şeyi söylemeli. Bu yarısı mobil tarafta.
+  **ÖLÇÜLDÜ 14.08 — ekran işi DEĞİL, ve önce bir DOMAİN kararı istiyor.** Katalog sözleşmesindeki
+  tek indirim alanı `wasCents` ve künyesi kapsamını açıkça daraltıyor: *"yalnız yakın-SKT teklifi
+  normal fiyatı yendiğinde dolar"* (`catalog-api.schema.ts:105`) — yani parti teklifi, kampanya
+  değil. Sepetteki indirim ise ayrı bir yerde hesaplanıyor (`cart/read.ts`).
+  **Asıl engel teknik değil:** sepet indirimlerinin bir kısmı **SEPET kapsamlıdır** (MB-22a'nın
+  ölçtüğü *"Büyük sepet indirimi"* gibi) ve o, ürüne atfedilemez — ürün sayfasında *"bu ürün
+  indirimli"* demek, sepet toplamına bağlı bir şeyi ürünün özelliğiymiş gibi söylemek olurdu ve
+  müşteri sepette indirimi göremediğinde haklı olarak yanıltıldığını düşünürdü. Yani önce
+  **hangi indirim kapsamlarının ürün sayfasında gösterilebilir olduğu** kararlaştırılmalı
+  (ürün/koleksiyon kapsamlı → evet; sepet kapsamlı → hayır), sonra sözleşmeye alan açılmalı.
+  Karar verilmeden ekran yazılırsa yanlış vaat üretir.
 
 - [x] ~~**MB-23 · Vitrindeki bölge ile sepetteki teslimat adresi farklı yer gösteriyor.**~~ →
   **ELENDİ, ARIZA DEĞİL (kullanıcı kararı 11.08).** Tasarım zaten tutarlı: vitrindeki yer bir
@@ -784,11 +832,18 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
 - [x] **MB-27 · Vitrin altındaki iki davet kartı iki ayrı görsel dilde.** Keşif kartı canlı
   terracotta kesikli çerçeve, Profesyonel kartı soluk gri — ikincisi **devre dışı gibi** duruyor.
   İkisi de aynı işi yapıyor (bir sayfaya davet).
-  → **KAPANDI, görev `(21.49)` (14.08).** Kusur tonun kendisinde değil, KURALIMIZA aykırı
-  seçilmiş olmasındaydı: `dashed-invite.tsx` künyesi *"`terracotta` çağırıdır (yeni bir şey
-  teklif eder), `sand` bilgidir (durum bildirir)"* diyor — bu kart durum bildirmiyor, davet
-  ediyor. Ton `terracotta`ya, işaret Keşif kartıyla aynı `›`e döndü; ölü kalan `inviteArrow`
-  stili silindi.
+  → **KAPANDI, görev `(21.49)` (14.08) — sonra 15.08'de bir adım daha atıldı.**
+  **Birinci adım:** kusur tonun kendisinde değil, KURALIMIZA aykırı seçilmiş olmasındaydı;
+  `dashed-invite.tsx` künyesi *"`terracotta` çağırıdır, `sand` bilgidir"* diyor ve bu kart durum
+  bildirmiyor, davet ediyor. Ton `terracotta`ya, işaret Keşif kartıyla aynı `›`e döndü; ölü kalan
+  `inviteArrow` stili silindi.
+  **İkinci adım (kullanıcı kararı 15.08):** o zaman da iki davet alt alta AYNI renkte kaldı ve
+  bu istenmedi. Profesyonel kartı **zeytine** geçti — kite üçüncü ton eklendi (`olive`), ok
+  işaretinin rengi de eşlendi. Ayrım *"biri sönük"* diye değil, **ikisi ayrı yere götürüyor**
+  diye kuruldu; zeytin uygulamanın olumlu rengi olduğu için kart canlı kalıyor.
+  **Cihazda doğrulandı (15.08, 12:25):** iki kart yan yana ayrışıyor, hiçbiri devre dışı
+  görünmüyor. Aynı karede MB-58a'nın ters yönü de kanıtlandı — girişli kullanıcıda Keşif daveti
+  GÖRÜNÜYOR (misafirde 12:08'de gizliydi).
 
 - [ ] **MB-28 · Ürün varyantlarının sırası düzensiz.** Ölçülen sıra: `450g · 225g · 2500g · 1250g`
   — ne artan ne azalan. MB-20 ile aynı turda (hangi boyun seçili açılacağı kararıyla birlikte).
@@ -797,6 +852,15 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   ("Y", "F"). Yedek gösterim bilinçli ama fotoğraflı kartların yanında arıza gibi duruyor.
   Bağlantılı: `design/BACKLOG.md` §1 — **boş sepet kahraman görseli** (native 180×140) ve
   **paketler kahraman görseli** (3:2) hâlâ görselsiz.
+  **ÖLÇÜLDÜ 14.08 (cihazda görüldü + kod) — "ekranın yarısı" abartı, ve kusur BOYUTTA DEĞİL.**
+  Harf 148 dp'lik dairenin içinde 30 px, yani çapın ~%20'si; tonlar da zaten sessiz seçilmiş
+  (daire `scrim-soft`, harf `on-image-soft`). Rahatsız eden şey oran değil **BAĞLAM**: fotoğraflı
+  bantların arasında çıplak bir harf, eksik bir şey varmış hissi veriyor — ki gerçekten de eksik
+  olan GÖRSELİN KENDİSİ. Yani asıl çözüm içerik tarafında (§8'deki görsel bekleyenleri), yedek
+  gösterimi kurcalamak değil.
+  **Bu şerit yedek gösterime DOKUNMADI ve bu bilinçli (CLAUDE §3):** görsel karar `.dc.html`den
+  gelir, improvise edilmez. Harfi küçültmek/silmek bir tasarım kararıdır — Claude Design'a
+  sorulmalı. **Karar maddesi olarak işaretlendi**, kod işi değil.
 
 - [x] **MB-48 · Alttan açılan çekmece YUKARIDAN taşıyordu; öneri listesinin boyu sınırsızdı**
   → **KAPANDI, görev `(21.41)`** (11.08, kullanıcı bulgusu + cihazda ölçüldü). Panelin tavanı tam
@@ -808,6 +872,13 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
 
 - [ ] **MB-30 · Unistyles uyarısı kütükte tekrarlıyor:** `we detected style object with 2 unistyles
   styles … use array syntax instead of object syntax`. Hangi bileşen olduğu bulunup düzeltilecek.
+  **STATİK ARAMA SONUÇ VERMEDİ (14.08).** Uyarının klasik sebebi iki unistyles stilini NESNE
+  olarak birleştirmektir (`style={{ ...styles.a, ...styles.b }}`); depoda böyle tek bir kullanım
+  YOK — aranan desenlerin hiçbiri eşleşmedi, buna karşılık dizi sözdizimi 64 yerde doğru
+  kullanılmış. Yani kaynak daha dolaylı (bir bileşenin aldığı `style`ı içeride birleştirmesi ya
+  da kitin bir kabı olabilir) ve **çalışma anında yakalanmalı**: cihaz kütüğü okunacak. `adb
+  logcat` bu turda zaman aşımına düştü, ölçüm yapılamadı. Cihaz işi (§13 ⚑) — bir sonraki
+  cihaz turunda uygulama açıkken kütük süzülerek bulunur.
 
 - [x] **MB-45 · Onboarding teslimat/ödeme adımlarının metinleri "Büyük"te bile küçük kalıyordu**
   → **KAPANDI (11.08, kullanıcı bulgusu).** Yazı boyutu özelliği çalışıyor; kusur o iki adımın
@@ -887,6 +958,15 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
   `packages/application/src/feedback/invite.ts:170`.
 - **Ekranın sağ alt köşesindeki dişli simgesi uygulamanın değil** — test cihazının kendi yardımcı
   topu; ekran görüntülerinin hepsinde aynı yerde duruyor.
+- **İlk-açılışta adres önerilerinin gelmemesi arıza değil (ölçüldü 15.08, kullanıcı kararı).**
+  Şikâyet *"adres yazıyorum, seçim bölümü gelmiyor"*du. Ölçüm: BAN ucu (`api-adresse.data.gouv.fr`)
+  yarım sokak adına — girilen metin `192c Rue` — `{"features":[]}` döndürüyor, hata değil **boş
+  sonuç**; tam sokak adı yazılınca liste geliyor (cihazda ` de Vaugirard` yazılarak doğrulandı).
+  Yani müşteri yazmayı bıraktığı için öneri yoktu. **Müdahale edilmedi:** "bulunamadı" uyarısı
+  koymak, müşteri hâlâ yazarken yanlış bilgi vermek olurdu (kullanıcı kararı 15.08). Kancanın
+  dört hata durumunu (`too_short`/`rate_limited`/`unavailable`/`invalid_response`) ayırdığını,
+  "sonuçsuz ama başarılı" beşinci durumun bilinçli olarak sessiz kaldığını da not düşüyoruz —
+  bu bir boşluk değil, tercih.
 
 ---
 

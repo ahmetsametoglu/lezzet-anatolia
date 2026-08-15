@@ -63,10 +63,17 @@ const bandTone = (index: number): (typeof BAND_TONES)[number] =>
 interface HomeSkeletonProps {
   /** Çizilecek yerleşim — son açılışın izi. Verilmezse ilk kurulum varsayılanı. */
   sections?: HomeLayout;
+  /**
+   * Keşif daveti çizilecek mi (MB-58c) — `HomeLayout`a EKLENMEDİ ve bu bilinçli: `HomeLayout`
+   * cihazda SAKLANAN bir şema (`home-layout-memory`), yani alan eklemek kayıtlı değerin şeklini
+   * değiştirir. Bu bilgi zaten saklanacak cinsten değil — oturum durumundan her açılışta
+   * yeniden türer. Ayrı prop, sıfır göç.
+   */
+  discoverInvite?: boolean;
   testID?: string;
 }
 
-export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSkeletonProps) {
+export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, discoverInvite = true, testID }: HomeSkeletonProps) {
   const { theme, rt } = useUnistyles();
 
   /* Bir metin satırının kapladığı yer. Oran sayfanın kendi hesabıdır: `home-screen` başlıklarını
@@ -249,9 +256,12 @@ export function HomeSkeleton({ sections = DEFAULT_HOME_LAYOUT, testID }: HomeSke
         </>
       )}
 
-      {/* ── Davet blokları (Keşif · profesyonel hesap) ──────────────────────── */}
+      {/* ── Davet blokları (Keşif · profesyonel hesap) ──────────────────────────
+          Keşif daveti MİSAFİRDE ÇİZİLMİYOR (MB-58a), yani iskelet de iki kutu tutamaz: yer
+          ayırdığı ama gelmeyen kutu, sayfanın oturduğu an yukarı zıplaması demektir — iskeletin
+          önlemek için var olduğu şeyin ta kendisi. */}
       <View style={styles.invites}>
-        <Skeleton width="100%" height={inviteHeight} radius="card" />
+        {discoverInvite ? <Skeleton width="100%" height={inviteHeight} radius="card" /> : null}
         <Skeleton width="100%" height={inviteHeight} radius="card" />
       </View>
     </View>
