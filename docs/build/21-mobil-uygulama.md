@@ -2792,6 +2792,46 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     kapsam kararıyla çelişirdi; doğru kural "girdisi olan kaydırıcı ham olamaz" ve onu makineyle
     ifade etmek ayrı bir iş.
 
+- [x] (21.58) **TEŞEKKÜR SAYFASI KUTUSUZ VE BÜTÜNLEŞİK — kahraman işaret puan yıldızı oldu (MB-19)**
+  `touches:` `apps/mobile/src/screens/feedback/feedback-screen.tsx` ·
+  `apps/mobile/src/screens/feedback/feedback-icons.tsx`
+
+  **Yön üç turda oturdu ve her turda kullanıcı yönlendirdi — ekran görüntüsüyle.**
+
+  1. **Kart büyüsün, metinleri içine alsın** (11.08 kaydı). Yapıldı: kalp + başlık kartın içine
+     girdi, kart `stretch` oldu. *Bu turda bir regresyon önlendi:* kartın kapısı puana bağlıydı
+     (`invitePointsTotal > 0`), yani B2B'de ya da puan yazılmayan turlarda kart hiç çizilmiyordu —
+     kalbi olduğu gibi içine taşımak o hâllerde ekranı BOŞ bırakırdı.
+  2. **"Kart görmek istemiyorum, sayfa bütünleşik olsun"** (15.08). Kutu tamamen kalktı: zemin,
+     çerçeve, gölge, −2° eğim gitti; blok ekranın kalan yüksekliğini doldurup içeriği dikey
+     ortalıyor (`contentFill` yalnız sonuç aşamasında eklenir — öteki aşamalarda zorlanan yükseklik
+     boşluk üretirdi). Hiyerarşi artık kutuyla değil ölçek ve boşlukla.
+  3. **"Görsel daha da büyütülebilir, farklı bir görsel de seçilebilir"** (15.08, ekran
+     görüntüsünden sonra). Ölçüm: daire 88 → 148'e büyütülünce `olive-bg` kum zeminde **leke** gibi
+     okundu, kalp de boş bir halkanın ortasında kaldı — düşük karşıtlık ölçek büyüdükçe kusura
+     döndü. Seçenekler sunuldu, kullanıcı **puan yıldızı**nı seçti.
+
+  **Sonuç:** daire ve kalp kalktı; yerine **`✦` puan yıldızı** (terracotta, 120 dp) doğrudan
+  sayfanın zemini üstünde. Gerekçe yalnız görsel değil ANLAMSAL: kalp "beğeni" der, oysa anın
+  konusu PUAN — ve `✦` uygulamanın puan dilinin kendisidir (hesap kartı `✦ 10`, sonuç satırı
+  `✦ +15 puan`). İşaret artık yanındaki metinlerle aynı şeyi söylüyor.
+  Geometri `feedback-icons.tsx`e, o dosyanın kendi künyesindeki gerekçeyle eklendi (ikon
+  sözlükleri bu etapta yazıya kapalı); kenarlar merkeze doğru içbükey — dolu bir eşkenar dörtgen
+  büyük ölçekte ağır dururdu.
+
+  **TASARIM KAYNAĞI — açık bir borç.** Yerel `design/project/Mobil - Musteri v3.dc.html`
+  **9 Ağustos** tarihli, yani kullanıcının 11.08 kararından ÖNCE; o dosyada kalp ve başlık hâlâ
+  kartın dışında, yani **eski kod tasarımla birebir uyuyordu** — sorun uygulamada değil tasarımdaydı.
+  `claude_design` MCP bu oturumda bağlı değildi, güncel sürüm çekilemedi. Yerleşim kullanıcının
+  kendi cümlelerinden türetildi ve yeni bir görsel dil icat edilmedi (mevcut token'lar, mevcut ikon
+  deseni). **Tasarım dosyası bu üç turun sonucuyla güncellenmeli.**
+
+  **Doğrulama:** `tsc` temiz · `eslint` temiz · `jest src/screens/{feedback,discover}` **4 dosya /
+  25 test** (`HeartIcon` keşif ekranında kullanılmaya devam ediyor, ihracı korundu) · cihazda
+  üç turun üçü de görüldü ve ekran görüntüleri kullanıcıya sunuldu.
+  **Puanlı hâl cihazda ÖLÇÜLMEDİ** — görüntülemek daveti tamamlamayı, yani deftere puan yazmayı
+  gerektiriyor; kod ve testlerle doğrulandı.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

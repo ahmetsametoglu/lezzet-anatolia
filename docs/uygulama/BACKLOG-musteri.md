@@ -720,7 +720,28 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   ne diyor · ikisi tutuyor mu.** Bugünkü turda yalnız keşif ve geri bildirim ölçüldü; ikisi de
   tutmadı — bu, kalanların da ölçülmesi için yeterli sebep.
 
-- [ ] **MB-19 · Puan/teşekkür kartının tasarımı elden geçecek (kullanıcı kararı 11.08).**
+- [x] **MB-19 · Puan/teşekkür kartının tasarımı elden geçecek (kullanıcı kararı 11.08).**
+  → **YAPILDI (15.08), görev `(21.58)` — ve yön TUR TUR değişti, üçüncüde durdu.**
+  **Sonuç: KUTU YOK.** Kullanıcı kararı 15.08: *"kart görmek istemiyorum… tüm sayfayı kullanan…
+  sayfa ekran ile bütünleşik olsun, bölüm bölüm görünmesini istemiyorum."* Kum zeminli, eğik,
+  gölgeli etiket kaldırıldı; hiyerarşi artık ÖLÇEK ve BOŞLUKLA kuruluyor. Blok ekranın kalan
+  yüksekliğini doldurup içeriği dikey ortalıyor, renk kırılması yok.
+  **Kahraman işaret değişti:** kalp → **puan yıldızı `✦`** (terracotta, 120 dp, dairesiz).
+  Gerekçe ölçümle çıktı: daire 88'den 148'e büyütülünce `olive-bg` kum zeminde LEKE gibi okundu ve
+  kalp boş bir halkanın ortasında kaldı — düşük karşıtlık ölçek büyüdükçe kusura döndü. Ayrıca
+  kalp jenerikti; anın konusu beğeni değil PUAN, ve `✦` uygulamanın puan dilinin kendisi
+  (hesap kartı `✦ 10`, sonuç satırı `✦ +15 puan`). İkon `feedback-icons.tsx`e eklendi.
+  **Bir regresyon önlendi:** kartın kapısı puana bağlıydı (`invitePointsTotal > 0`), yani B2B'de
+  ya da puanın yazılmadığı turlarda hiç çizilmiyordu; kutu kalkınca bu kapı da doğru yere taşındı.
+  **TASARIM KAYNAĞI UYARISI:** yerel `.dc.html` **9 Ağustos** tarihli, yani 11.08 kararından ÖNCE,
+  ve o dosyada kalp/başlık kartın dışında — yani eski kod tasarımla birebir uyuyordu, sorun
+  uygulamada değil tasarımdaydı. `claude_design` MCP bu oturumda bağlı değildi, güncel tasarım
+  çekilemedi. **Tasarım dosyası bu üç turun sonucuyla güncellenmeli.**
+  **Cihazda üç tur da görüldü** (kartlı → kutusuz+daire → kutusuz+yıldız); ekran görüntüleri
+  kullanıcıya sunuldu ve yön her turda onun kararıyla değişti. Görülen hâl "zaten tamamlanmış"
+  olanıdır; **puanlı hâl cihazda ölçülmedi** çünkü görüntülemek veri yazmayı gerektiriyor.
+
+  *(Özgün kayıt:)*
   Sipariş ya da ürün yorumu sonrasında kazanılan puan + mevcut bakiyeyi gösteren ekran
   (`screens/feedback/feedback-screen.tsx` sonuç bloğu; cihaz görüntüsü 11.08). İstenen:
   **ortadaki kart büyüsün ve çevresindeki metinleri de içine alsın** — bugün kalp ve başlık kartın

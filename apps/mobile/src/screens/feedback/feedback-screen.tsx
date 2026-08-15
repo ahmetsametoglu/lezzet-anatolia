@@ -20,7 +20,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { emToDp } from '@/theme/parse';
 import { FeedbackSkeleton } from './feedback-skeleton';
-import { HeartIcon, ThumbIcon } from './feedback-icons';
+import { SparkIcon, ThumbIcon } from './feedback-icons';
 import messages from './messages.json';
 import { useFeedback } from './use-feedback.hook';
 
@@ -82,10 +82,14 @@ type Messages = LocalizedCopy<typeof messages>;
   buradakiler oraya terfi eder (raporlandı).
 */
 const feedbackMetrics = {
-  /** Teşekkür dairesi (v3:1035 — 88; onay ekranının 92'lik işaretinden AYRI ölçü). */
-  thanksMark: 88,
-  /** Teşekkür kalbi (v3:1035 — 38). */
-  heartIcon: 38,
+  /* SAPMA — tasarımda teşekkür işareti 88'lik bir daire + 38'lik kalpti (v3:1035) ve o ölçü
+     KARTLI yerleşimindi: dar bir etiketin üstünde duran küçük rozet. Kutu kalkıp sayfa
+     bütünleşince (kullanıcı kararı 15.08) hiyerarşiyi taşıyan tek şey ÖLÇEK kaldı.
+     İki adımda ölçüldü: 148'e büyütülen daire solgun kaldı ve leke gibi okundu; kullanıcı
+     *"daha da büyütülebilir ve daha farklı bir görsel de seçilebilir"* dedi. Sonuç: daire ve
+     kalp kalktı, yerine tek ve dolu bir işaret geldi. */
+  /** Puan yıldızı — sayfanın kahraman işareti, doğrudan zemin üstünde. */
+  sparkIcon: 120,
 } as const;
 
 /*
@@ -131,6 +135,8 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
   const card = index === -1 ? null : (cards[index] ?? null);
   /* Davet zaten tamamlanmış: akış HİÇ kurulmaz (sapma 7) — puan ikinci kez verilmez. */
   const alreadyDone = invite !== null && invite.completedAt !== null;
+  /** Sonuç aşaması — kaydırıcı yalnız BURADA ekranı doldurur (`contentFill` künyesi). */
+  const showDone = completion !== null || alreadyDone;
 
   const bar = (
     <AppBar
@@ -215,7 +221,10 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
       {/* Kaydırıcı KİTTEN (`form-scroll`): klavye açıkken "Değerlendirmeyi tamamla"ya ilk dokunuş
           yalnız klavyeyi kapatıyor ve yorum GÖNDERİLMİYORDU — müşteri yazdığını sanıp çıkıyordu
           (cihazda ölçüldü 11.08). Aynı kap yorum alanını da klavyenin üstünde tutar. */}
-      <FormScroll contentContainerStyle={styles.content} testID="feedback-scroll">
+      <FormScroll
+        contentContainerStyle={[styles.content, showDone ? styles.contentFill : undefined]}
+        testID="feedback-scroll"
+      >
         {card !== null && !alreadyDone ? (
           /* ── Oy aşaması: fotoğraf + rozet + künye, iki oy düğmesi, alt not (v3:1014-1030) ── */
           <View testID="feedback-vote">
@@ -303,9 +312,20 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
         ) : (
           /* ── Sonuç: kalp + teşekkür + puan kartı + akış-sonu köprüsü (v3:1040-1060) ── */
           <View style={styles.doneBlock} testID="feedback-done">
-            <View style={styles.thanksMark}>
-              <HeartIcon size={feedbackMetrics.heartIcon} color={theme.colors.olive} />
-            </View>
+            {/* SONUÇ SAYFASI KUTUSUZ — kullanıcı kararı 15.08: *"kart görmek istemiyorum… tüm
+                sayfayı kullanan… sayfa ekran ile bütünleşik olsun, bölüm bölüm görünmesini
+                istemiyorum."* Eskiden puanlar kum zeminli, eğik, sert gölgeli bir ETİKETİN
+                içindeydi (v3:1040-1060) ve ekran üç ayrı parçaya bölünüyordu: kalp, başlık, kutu.
+
+                Şimdi hiyerarşi KUTUYLA değil ÖLÇEK ve BOŞLUKLA kuruluyor — zemin ekranın kendi
+                zemini, renk kırılması yok, çerçeve yok. Blok ekranın kalan yüksekliğini doldurup
+                içeriği dikey ortalıyor (`doneBlock` + `contentFill`), yani sayfa "bir kutunun
+                durduğu ekran" değil, teşekkürün kendisi oluyor. */}
+            {/* KAHRAMAN İŞARET — daire YOK (kullanıcı kararı 15.08). Solgun zeytin daire 148'e
+                büyüyünce şekil değil LEKE gibi okunuyordu ve içindeki kalp boş bir halkanın
+                ortasında kalıyordu; ölçek büyüdükçe düşük karşıtlık kusura dönüştü. Artık tek,
+                güvenli bir şekil var: puan yıldızı, doğrudan sayfanın zemini üstünde. */}
+            <SparkIcon size={feedbackMetrics.sparkIcon} color={theme.colors.terracotta} />
             <Text style={styles.doneTitle} accessibilityRole="header">
               {completion === null ? t.already.title : t.done.title}
             </Text>
@@ -331,7 +351,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
                 tamamlandıysa prim 0'a düşüyor, müşteri o turda yorum için 20 puan kazanmış olsa bile
                 HİÇBİR puan bilgisi görmüyordu. Toplam o hâllerde de doludur. */}
             {completion !== null && completion.invitePointsTotal > 0 ? (
-              <View style={styles.pointsCard} testID="feedback-points">
+              <View style={styles.pointsLines} testID="feedback-points">
                 <Text style={styles.pointsValue}>
                   {t.done.points.replace('{points}', String(completion.invitePointsTotal))}
                 </Text>
@@ -531,20 +551,19 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
   },
 
-  /* ── Sonuç aşaması ── */
+  /* ── Sonuç aşaması — SAYFANIN TAMAMI, kutusuz ── */
+  /** Kaydırıcının içeriği ekranın kalan yüksekliğini DOLDURUR; yalnız sonuç aşamasında eklenir
+      (öteki aşamalar içerikleri kadar uzun, zorlanan yükseklik onlarda boşluk üretirdi). */
+  contentFill: { flexGrow: 1 },
   doneBlock: {
+    flexGrow: 1,
+    /* Dikey ORTALAMA sayfayı bütünleşik yapan şeyin kendisi: içerik ekranın ortasında durur,
+       üstte bir kutu + altta boşluk diye ikiye bölünmez. */
+    justifyContent: 'center',
     alignItems: 'center',
     gap: theme.space['2xl'],
     paddingVertical: theme.space['9xl'],
     paddingHorizontal: theme.space['8xl'],
-  },
-  thanksMark: {
-    width: feedbackMetrics.thanksMark,
-    height: feedbackMetrics.thanksMark,
-    borderRadius: feedbackMetrics.thanksMark / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors['olive-bg'],
   },
   doneTitle: {
     fontFamily: theme.font.display[theme.text['card-title--font-weight']],
@@ -559,16 +578,15 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
     textAlign: 'center',
   },
-  pointsCard: {
+  /* Puanın üç satırı — KUTU DEĞİL, yalnız kendi aralığı olan bir küme (kullanıcı kararı 15.08:
+     kutu yok, sayfa bütünleşik). Zemin, çerçeve, gölge ve eğim KALDIRILDI; öne çıkan şey artık
+     sayının kendi ölçeği (`h1-sm` — mobilin kahraman durağı) ve çevresindeki boşluk.
+     Üstteki `marginTop` başlıktan ayırır; blok aralığından biraz daha geniştir ki puan, teşekkür
+     cümlesinin devamı değil kendi anı olarak okunsun. */
+  pointsLines: {
     alignItems: 'center',
     gap: theme.space.xs,
-    backgroundColor: theme.colors['sand-150'],
-    borderRadius: theme.radius.card,
-    paddingVertical: theme.space['4xl'],
-    paddingHorizontal: theme.space['8xl'],
-    marginVertical: theme.space.sm,
-    transform: [{ rotate: '-2deg' }],
-    boxShadow: theme.shadow.hard,
+    marginTop: theme.space.lg,
   },
   pointsValue: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
