@@ -15,11 +15,9 @@ import type { OrderRow, OrdersData } from './orders-types';
 interface OrdersClientProps {
   data: OrdersData;
   urlState: OrdersUrlState;
-  /** Bugünün günü (YYYY-AA-GG) — SUNUCUDAN; gün süzgecinin etiketleri buradan doğar. */
-  today: string;
 }
 
-export function OrdersClient({ data, urlState, today }: OrdersClientProps) {
+export function OrdersClient({ data, urlState }: OrdersClientProps) {
   const router = useRouter();
   /**
    * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
@@ -77,7 +75,6 @@ export function OrdersClient({ data, urlState, today }: OrdersClientProps) {
     counts: data.counts,
     warehouse: data.warehouse,
     urlState,
-    today,
     onFilter: go,
     search,
     onSearch,

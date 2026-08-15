@@ -23,7 +23,6 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const urlState = parseOrdersUrl(await searchParams);
   const data = await readOrdersPage(serviceDb(), urlState);
 
-  // Bugün SUNUCUDAN: gün süzgecinin etiketleri iki tarafta aynı günü göstersin (bkz. `deliveryDayOptions`).
-  return <OrdersClient data={data} urlState={urlState} today={new Date().toISOString().slice(0, 10)} />;
+  return <OrdersClient data={data} urlState={urlState} />;
 }
 

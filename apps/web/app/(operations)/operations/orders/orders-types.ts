@@ -122,8 +122,6 @@ export interface OrdersViewProps {
   counts: OrderCountsView;
   warehouse: OrdersWarehouseView;
   urlState: OrdersUrlState;
-  /** Bugün (YYYY-AA-GG), sunucudan — gün süzgecinin etiketleri buradan doğar. */
-  today: string;
   onFilter: (patch: Partial<OrdersUrlState>) => void;
   search: string;
   onSearch: (q: string) => void;

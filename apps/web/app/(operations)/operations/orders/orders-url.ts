@@ -1,6 +1,5 @@
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatusEnum, type Channel, type DeliveryType, type OrderStatus, type PaymentStatus } from '@lezzet/types';
 import { WAREHOUSE_PARAM } from '@/lib/warehouse/filter';
-import { dayMonth } from '@/components/operation/ui/format';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Sipariş ekranının URL SÖZLEŞMESİ — fiyat/stok/ürün ekranlarının deseni. Sekme ve süzgeçler adreste
@@ -142,22 +141,6 @@ export const PAYMENT_LABEL: Record<(typeof PAYMENT_FILTERS)[number], string> = {
   ...PAYMENT_STATUS_LABELS,
 };
 
-
-/**
- * Teslim günü süzgecinin seçenekleri — tasarımın "bugün · 24 Tem ▾" kontrolü.
- *
- * **Bugün SUNUCUDAN gelir**, `new Date()` ekranda çağrılmaz: client bileşen sunucuda da render
- * edilir ve gece yarısını geçen bir istekte iki taraf farklı gün üretirdi.
- *
- * Liste yakın günlerle sınırlı ve bu bilinçli: rota günü operasyonel bir yakın gelecektir — "üç ay
- * sonrası" diye bir teslim günü süzgeci yok, o soru raporların işi.
- */
-export function deliveryDayOptions(today: string, span = 7): Array<{ value: string; label: string }> {
-  const base = new Date(`${today}T00:00:00Z`);
-  return Array.from({ length: span }, (_, i) => {
-    const day = new Date(base.getTime() + i * 86_400_000);
-    const value = day.toISOString().slice(0, 10);
-    const label = i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : dayMonth(value);
-    return { value, label };
-  });
-}
+// `deliveryDayOptions` SÖKÜLDÜ (15.08, kullanıcı bildirimi): "bugün + 7 gün"lük kapalı liste geçmiş
+// günü süzmeye izin vermiyordu. Teslim günü artık takvimli süzgeç çipidir (`ui/date-filter-chip`);
+// URL sözleşmesindeki `day` alanı ve okuma yolu (`deliveryFrom/To`) değişmedi.

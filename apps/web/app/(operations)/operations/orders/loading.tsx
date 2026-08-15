@@ -31,12 +31,13 @@ import { ORDER_TABS, tabLabel } from './orders-url';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Siparişler yükleniyor">
-      {/* Arama kutusunun yerini aynı ölçüde çubuk tutar (gerçek bar `search` yuvasında w-[210px]). */}
-      <PageHeader title="Siparişler" subtitle={<SkeletonLine className="w-48" />}>
-        <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
-      </PageHeader>
+      <PageHeader title="Siparişler" subtitle={<SkeletonLine className="w-48" />} />
       <SkeletonTabs labels={ORDER_TABS.map((t) => tabLabel(t))} />
-      <SkeletonFilterBar count={6} />
+      {/* Arama süzgeç şeridinin SAĞINDA (15.08 — header kontrol taşımaz); yer tutucusu gerçek
+          kutunun ölçüsünde (`sm`, w-[230px]). */}
+      <SkeletonFilterBar count={5}>
+        <Skeleton className={`${CONTROL_H.sm} w-[230px] rounded-ops-btn`} />
+      </SkeletonFilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <SkeletonTable tracks={ORDERS_COLUMN_TRACKS} />

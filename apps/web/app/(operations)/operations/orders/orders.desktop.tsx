@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { ordersColumnTracks } from './orders-columns';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
+import { DateFilterChip } from '@/components/operation/ui/date-filter-chip';
+import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { Select } from '@/components/operation/form/select';
+import { SearchInput } from '@/components/operation/ui/search-input';
 import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { Tabs } from '@/components/operation/ui/tabs';
@@ -22,7 +24,6 @@ import {
   ORDERS_PATH,
   ORDER_TABS,
   PAYMENT_FILTERS,
-  deliveryDayOptions,
   PAYMENT_LABEL,
   tabLabel,
 } from './orders-url';
@@ -35,7 +36,7 @@ import type { OrderRow, OrdersViewProps } from './orders-types';
 // değil. Kendi tablosunu yazan ekran, bir gün başlık hizasını da kaydırır.
 
 export function OrdersDesktop(props: OrdersViewProps) {
-  const { rows, counts, warehouse, urlState, today, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen, navPending } =
+  const { rows, counts, warehouse, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen, navPending } =
     props;
 
   return (
@@ -43,11 +44,9 @@ export function OrdersDesktop(props: OrdersViewProps) {
       {/* BEKLEYEN(09.8): başlıktaki "+ Sipariş" girişi — elle sipariş/kapı satışı ekranı yok. Arka
           ucu hazır (`lib/order/quick-sale.ts`) ama düğme bugün açacak bir yer bulamazdı; ölü
           düğme, olmayan sayfaya davet eden linkten daha kötüdür (basılır, hiçbir şey olmaz). */}
-      <PageHeader
-        title="Siparişler"
-        subtitle={summaryText(counts)}
-        search={{ value: search, onChange: onSearch, placeholder: 'Referans no, müşteri ara' }}
-      />
+      {/* Arama HEADER'DA DEĞİL (15.08, kullanıcı kararı — fiyatlar emsali): header sekmelere ve
+          süzgeçlere bağlı kontrol taşımaz; arama süzgeç şeridinin sağ ucunda, süzdüğü listenin yanında. */}
+      <PageHeader title="Siparişler" subtitle={summaryText(counts)} />
 
       {/* Sekmeler = DURUMLAR; sayılar süzgecin TAMAMINDAN gelir (yüklenmiş sayfadan değil). */}
       <Tabs
@@ -70,19 +69,24 @@ export function OrdersDesktop(props: OrdersViewProps) {
           </Chip>
         ))}
         <span className="ml-1 h-4 w-px bg-ops-line" />
-        <Select
-          variant="chip"
-          value={urlState.del === 'all' ? '' : urlState.del}
-          onChange={(del) => onFilter({ del: del as OrdersViewProps['urlState']['del'] })}
+        {/* Süzgeçler `FilterChip` (15.08, kullanıcı bildirimi: "seçtiğim filtreyi kaldıramıyorum"):
+            `Select variant="chip"`in süzgeç olarak kullanılmayacağı kitin kendi künyesinde yazılıydı —
+            form alanının "boş" hâli yoktur, süzgecin vardır ve TEK tıkla kalkmalıdır. */}
+        <FilterChip
+          value={urlState.del}
+          emptyValue="all"
           placeholder="+ teslim türü"
-          options={DELIVERY_FILTERS.map((d) => ({ value: d, label: DELIVERY_LABEL[d] }))}
+          menuWidth={150}
+          options={DELIVERY_FILTERS.filter((d) => d !== 'all').map((d) => ({ value: d, label: DELIVERY_LABEL[d] }))}
+          onChange={(del) => onFilter({ del })}
         />
-        <Select
-          variant="chip"
-          value={urlState.pay === 'all' ? '' : urlState.pay}
-          onChange={(pay) => onFilter({ pay: pay as OrdersViewProps['urlState']['pay'] })}
+        <FilterChip
+          value={urlState.pay}
+          emptyValue="all"
           placeholder="+ tahsilat"
-          options={PAYMENT_FILTERS.map((p) => ({ value: p, label: PAYMENT_LABEL[p] }))}
+          menuWidth={170}
+          options={PAYMENT_FILTERS.filter((p) => p !== 'all').map((p) => ({ value: p, label: PAYMENT_LABEL[p] }))}
+          onChange={(pay) => onFilter({ pay })}
         />
 
         {/* DEPO — bir karar süzgeci değil bir BAKIŞ daraltmasıdır; bu yüzden dolu hâli mavi, olive
@@ -96,17 +100,12 @@ export function OrdersDesktop(props: OrdersViewProps) {
           />
         ) : null}
 
-        {/* TESLİM GÜNÜ — tasarımın şerit sağındaki "bugün · 24 Tem ▾" kontrolü. Alan URL
-            sözleşmesinde baştan vardı ve servise gidiyordu ama ekranda hiçbir kontrolü yoktu:
-            yalnız adresi elle yazan kullanabiliyordu. Yazılmış ama bağlanmamış kod. */}
-        <span className="ml-auto">
-          <Select
-            variant="chip"
-            value={urlState.day}
-            onChange={(day) => onFilter({ day })}
-            placeholder="+ teslim günü"
-            options={deliveryDayOptions(today)}
-          />
+        {/* TESLİM GÜNÜ artık TAKVİM (15.08, kullanıcı bildirimi): eski kontrol "bugün + 7 gün"lük
+            kapalı listeydi — geçmiş bir günü süzmenin yolu yoktu. Takvim her günü açar; okuma yolu
+            (`deliveryFrom/To`) zaten herhangi bir tarihi kabul ediyordu, kısıt yalnız ekrandaydı. */}
+        <span className="ml-auto flex items-center gap-2">
+          <DateFilterChip value={urlState.day} placeholder="+ teslim günü" label="Teslim" onChange={(day) => onFilter({ day })} />
+          <SearchInput value={search} onChange={onSearch} placeholder="Referans no, müşteri ara" size="sm" className="w-[230px]" />
         </span>
       </div>
 
