@@ -1,4 +1,6 @@
+import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { LoadingRegion } from '@/components/loading-region';
+import { PageHeader } from '@/components/operation/ui/page-header';
 import { Skeleton, SkeletonCard, SkeletonMetric, SkeletonTable } from '@/components/operation/ui/skeleton';
 import { ERROR_COLUMN_TRACKS } from './system-columns';
 import { cardClass } from '@/components/operation/ui/card';
@@ -27,16 +29,18 @@ export default function Loading() {
 function DesktopShell() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Kontrol barı — `PageHeader` ölçüsü (px-6 py-4) + canlı göstergesi + iki düğme. */}
-      <header className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4">
-        <span className="mr-auto flex flex-col gap-px">
-          <Skeleton className="h-7 w-24" />
-          <Skeleton className="h-3 w-64" />
-        </span>
+      {/* Başlık GERÇEK `PageHeader` (15.08, emsal: fiyatlar) — alt satır bile statik (sabit
+          `HEALTH_COLLECT_INTERVAL_MIN` domain-core'dan, sunucuda da okunur). Eski elle şerit kabuk
+          bloklarını hiç çizmiyordu. Canlı göstergesi ve düğme metinleri DURUMA bağlı (hüküm rengi,
+          duraklat/aç) — bilinmeden çizilmez, çubuk kalır. */}
+      <PageHeader
+        title="Sistem"
+        subtitle={`Sağlık görüntüsü ${HEALTH_COLLECT_INTERVAL_MIN} dakikada bir yazılır · 14 gün saklanır`}
+      >
         <Skeleton className="h-9 w-[190px] rounded-[7px]" />
         <Skeleton className="h-8 w-20 rounded-ops-btn" />
         <Skeleton className="h-8 w-28 rounded-ops-btn" />
-      </header>
+      </PageHeader>
 
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-[22px] px-6 py-[22px]">
