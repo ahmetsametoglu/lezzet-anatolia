@@ -26,6 +26,8 @@ import { discountPercentOf, offerDecisionOf, rebalanceAllocations, suggestedOffe
 import { formatPrice, stripLineOrdinals, toCents } from '@lezzet/helper';
 import {
   CountryEnum,
+  FEATURED_PLACEMENT,
+  FEATURED_SLOTS,
   missingDeclarations,
   parseProposalPayload,
   ProductAllergenEnum,
@@ -35,6 +37,7 @@ import {
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
+  type FeaturedTarget,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
@@ -146,7 +149,24 @@ async function expiryIso(): Promise<string> {
 async function queue(kind: AssistantProposalKind, payload: unknown, summary: string, reason?: unknown) {
   // Şema kapısı BURADA da geçilir: kuyruğa şekli bozuk bir dilekçe girerse panel onu çizemez.
   parseProposalPayload(kind, payload);
-  const row = await new AssistantProposalService(serviceDb()).create({
+
+  /**
+   * **BENZER ÖNERİ UYARISI** (MCP tur 8 raporu §3.3 · 15.08).
+   *
+   * Kuyrukta bekleyen bir öneri varken aynı içerikli ikincisi sorunsuz kabul ediliyordu — raporun
+   * kendi turunda "Gaziantep — STR" siparişi iki kez açıldı. Model kendi geçmişini hatırlamıyor ve
+   * `list_proposals`'ı her yazımdan önce çağırmıyor; sonuç, patronun önüne çıkan mükerrer kalemler.
+   *
+   * **ENGEL DEĞİL UYARI ve bu bilinçli:** aynı özetli ikinci bir öneri meşru olabilir (ilki bayat
+   * kaldı, koşullar değişti, ilki reddedilmek üzere). Reddetseydik doğru bir öneriyi de keserdik.
+   * Sayım YAZMADAN ÖNCE yapılıyor ki cümle "senden önce N tane bekliyordu" olsun — kendini saymak
+   * her öneriyi mükerrer gösterirdi.
+   */
+  const service = new AssistantProposalService(serviceDb());
+  const waiting = (await service.listPending()).filter((row) => row.kind === kind);
+  const identical = waiting.filter((row) => row.summary === summary).length;
+
+  const row = await service.create({
     kind,
     payload,
     summary,
@@ -161,6 +181,20 @@ async function queue(kind: AssistantProposalKind, payload: unknown, summary: str
     status: row.status,
     expiresAt: row.expiresAt,
     note: 'Öneri onay kuyruğuna yazıldı. Uygulanması için yöneticinin operasyon panelinden onaylaması gerekir — sen onaylayamazsın.',
+    // Satır YALNIZ bekleyen varken çizilir: her yanıta "0 bekliyor" koymak, bilgi olmayan bir alanı
+    // her seferinde okutmak olurdu.
+    ...(waiting.length > 0
+      ? {
+          queueContext: {
+            pendingSameKind: waiting.length,
+            identicalSummary: identical,
+            note:
+              identical > 0
+                ? 'AYNI ÖZETLİ bir öneri zaten kuyrukta bekliyor — mükerrer olabilir. Gerekçen farklıysa sürdür, değilse yöneticiye söyle.'
+                : 'Bu türden başka öneriler de kuyrukta bekliyor; patron hepsini birlikte görecek.',
+          },
+        }
+      : {}),
   };
 }
 
@@ -301,7 +335,50 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
     currentlyFeaturedCount: named.filter((r) => r.isFeatured).length,
   };
   const verb = isFeatured ? 'vitrine çıkarılsın' : 'vitrinden çıkarılsın';
-  return queue('featured_flag', payload, `${match.label} ${verb} (${target})`, args.reason);
+  const queued = await queue('featured_flag', payload, `${match.label} ${verb} (${target})`, args.reason);
+
+  /**
+   * **IZGARANIN DOLULUĞU YANITTA** (MCP tur 8 raporu §3.9 · ölçüldü 15.08).
+   *
+   * Araç tanımı *"the reply tells you how many are on it today"* diye söz veriyordu ve tutmuyordu:
+   * sayı `payload.currentlyFeaturedCount`a yazılıp orada kalıyor, model onu hiç görmüyordu. Vitrin
+   * bir SEÇKİ — dolu bir ızgaraya ekleme yapmak sıradaki birini aşağı iter; bunu bilmeden verilen
+   * öneri, etkisini bilmeden verilmiş demektir.
+   *
+   * **Kuyrukta bekleyen vitrin önerileri de sayılıyor** ve bu ikinci yarısı: model kendi açtığı
+   * önerileri hatırlamıyor, aynı ızgaraya üst üste öneri yığabiliyordu (raporun kendi vakası — dört
+   * vitrin önerisi biriktirdi). Bekleyenler henüz uygulanmadı, yani ızgarada GÖRÜNMÜYORLAR; ayrı
+   * söyleniyor ki toplamla karıştırılmasın.
+   *
+   * Sayı ONAY ANININ değil ÖNERİNİN kurulduğu anın gerçeğidir — panel kendi hesabını yeniden yapar.
+   */
+  const pendingSameTarget = (await new AssistantProposalService(db).listPending()).filter(
+    (row) => row.kind === 'featured_flag' && (row.payload as { target?: string }).target === target,
+  ).length;
+  const placement = FEATURED_PLACEMENT[target as FeaturedTarget];
+  const slots = FEATURED_SLOTS[target as FeaturedTarget];
+
+  return {
+    ...queued,
+    showcase: {
+      target,
+      // **HANGİ BÖLÜM ve HANGİ KURAL** (kullanıcı düzeltmesi 15.08): üçüne de "vitrin" deniyor ama
+      // üçü ayrı yerde, ayrı mantıkla çiziliyor. Bunu söylemeyen bir yanıt, modeli koleksiyon için
+      // "biri düşecek" diye yanlış uyarır — orada düşme yok, rotasyon var.
+      section: placement.where,
+      rule: placement.note,
+      onShowcaseNow: payload.currentlyFeaturedCount,
+      slots: slots,
+      // Bu öneri de dahil: model "kaç tane bekliyor" diye sorduğunda kendi eklediğini de saymalı.
+      pendingProposals: pendingSameTarget,
+      note:
+        payload.currentlyFeaturedCount !== undefined && isFeatured && payload.currentlyFeaturedCount >= slots
+          ? placement.rotates
+            ? 'Bant zaten dolu ama kayıp yok — işaretliler güne göre dönüyor, yenisi sırasını bekler.'
+            : 'Izgara dolu — onaylanırsa sıradaki biri ana sayfada görünmez olur.'
+          : undefined,
+    },
+  };
 }
 
 /**

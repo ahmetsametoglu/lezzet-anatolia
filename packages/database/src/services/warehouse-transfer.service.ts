@@ -187,4 +187,28 @@ export class WarehouseTransferLineService extends BaseDbService<WarehouseTransfe
   listByTransfer(transferId: string): Promise<WarehouseTransferLine[]> {
     return this.getAll({ transferId }, { orderBy: 'id' });
   }
+
+  /**
+   * **YOLDAKİ MAL** — bu partilerden ÇIKMIŞ ama hedefe varmamış adet (22.34).
+   *
+   * Transferin ortasında mal iki depoda da yoktur: kaynaktan `dispatch` anında düşer, hedefte ancak
+   * `receive` ile yeni parti olarak doğar. Aradaki adet hiçbir partinin `physical_qty`sinde
+   * görünmez — ve bir stok geçmişi ekranı bunu bilmezse *"giren − çıkan = elde"* denklemi tam o
+   * kadar sapar (ölçüldü 15.08: kullanıcı ekran görüntüsü, 4 adet yolda ve denklem 4 kaymıştı).
+   *
+   * Yalnız `in_transit` sayılır: `completed` transferin karşılığı hedefte bir PARTİ olarak duruyor
+   * ve o parti zaten listeye giriyor — ikisini birden saymak malı iki kez düşürürdü. `cancelled`
+   * ise kaynağa geri konmuştur.
+   *
+   * Süzgeç GÖMÜLÜ kolona bakıyor (`warehouse_transfer.status`): satırın kendisinde durum yok, başlık
+   * taşıyor. `!inner` şart — dış birleştirme başlıksız satır üretir ve süzgeç hiçbir şeyi elemezdi.
+   */
+  async inTransitFromStocks(stockIds: readonly string[]): Promise<Array<{ stockId: string; qty: number }>> {
+    if (stockIds.length === 0) return [];
+    const rows = (await this.selectRows(
+      { sourceStockId: [...stockIds], 'warehouse_transfer.status': 'in_transit' },
+      { select: 'source_stock_id,qty,warehouse_transfer!inner(status)' },
+    )) as Array<{ source_stock_id: string; qty: number }>;
+    return rows.map((row) => ({ stockId: row.source_stock_id, qty: row.qty }));
+  }
 }

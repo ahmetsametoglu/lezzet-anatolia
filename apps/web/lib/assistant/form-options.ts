@@ -1,6 +1,7 @@
 import 'server-only';
 import {
   AccountService,
+  BundleService,
   CategoryService,
   CollectionService,
   ProductService,
@@ -34,8 +35,21 @@ import { variantOptionsForVariants } from '@/lib/catalog/variant-options';
  * çekilir. Veriyle büyüyen bir küme olsaydı `Select` zaten yanlış kontrol olurdu.
  */
 export interface AssistantFormOptions {
-  categories: Array<{ id: string; name: string }>;
-  collections: Array<{ id: string; name: string }>;
+  /**
+   * Kategoriler — `isFeatured`/`isActive` DE taşınıyor (22.35).
+   *
+   * Vitrin önerisinin gövdesi ızgaranın BUGÜNKÜ hâlini gösteriyor ve düzenletiyor: kontenjan
+   * doluyken hangi kaydın çıkacağına karar vermek, kuyruğun içinde verilmesi gereken bir karardır —
+   * başka ekrana yollamak, öneriyi reddedip aynı işi elle yapmakla aynı şey olurdu. İki bayrak AYRI
+   * kalıyor çünkü ayrı sorular: `isFeatured` = seçkide mi, `isActive` = yayında mı. İşaretli ama
+   * pasif kayıt ana sayfada ÇİZİLMEZ ve sayaç bunu ayrı söyler (`catalog-tab` künyesi).
+   *
+   * Ek okuma yok: liste zaten tam kayıt olarak çekiliyordu, yalnız iki alanı daha taşınıyor.
+   */
+  categories: Array<{ id: string; name: string; isFeatured: boolean; isActive: boolean }>;
+  collections: Array<{ id: string; name: string; isFeatured: boolean; isActive: boolean }>;
+  /** Paketler — vitrin önerisinin üçüncü hedefi (`target: 'bundle'`); aynı gerekçe. */
+  bundles: Array<{ id: string; name: string; isFeatured: boolean; isActive: boolean }>;
   /**
    * ÜRÜN TASLAĞI önerilerinin konusu olan ürünlerin TAM kaydı (22.14).
    *
@@ -101,9 +115,11 @@ export async function readAssistantFormOptions(
   const db = serviceDb();
   const wanted = [...new Set(productIds)];
   const accountService = new AccountService(db);
-  const [categories, collections, products, bundleVariants, accounts, balances, warehouses, suppliers] = await Promise.all([
+  const [categories, collections, bundles, products, bundleVariants, accounts, balances, warehouses, suppliers] =
+    await Promise.all([
     new CategoryService(db).list(),
     new CollectionService(db).list(),
+    new BundleService(db).listAll(),
     wanted.length > 0 ? new ProductService(db).listByIds(wanted) : Promise.resolve([]),
     // Kalem havuzu kendi okumasını yapıyor (`variant-options`): paket formunun ve kuyruğun gördüğü
     // fiyat/maliyet aynı yerden gelsin — ikisi ayrışırsa aynı kalem iki ekranda iki marj gösterir.
@@ -121,8 +137,24 @@ export async function readAssistantFormOptions(
   const variants = products.length > 0 ? await new ProductVariantService(db).listByProducts(products.map((p) => p.id)) : [];
 
   return {
-    categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
-    collections: collections.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
+    categories: categories.map((c) => ({
+      id: c.id,
+      name: resolveLocalizedText(c.name),
+      isFeatured: c.isFeatured,
+      isActive: c.isActive,
+    })),
+    collections: collections.map((c) => ({
+      id: c.id,
+      name: resolveLocalizedText(c.name),
+      isFeatured: c.isFeatured,
+      isActive: c.isActive,
+    })),
+    bundles: bundles.map((b) => ({
+      id: b.id,
+      name: resolveLocalizedText(b.name),
+      isFeatured: b.isFeatured,
+      isActive: b.isActive,
+    })),
     products: Object.fromEntries(
       products.map((p) => [
         p.id,

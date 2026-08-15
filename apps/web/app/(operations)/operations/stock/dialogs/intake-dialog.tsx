@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { IntakeFormBody } from '@/components/operation/form/intake-form/body';
 import {
   countedLines,
@@ -155,7 +156,18 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
       }
     >
       {loading ? (
-        <p className="px-1 py-6 font-ops-body text-ops-sm text-ops-muted">Sipariş kalemleri yükleniyor…</p>
+        /* **Formun ŞEKLİ önden çizilir** (22.34) — burada da çıplak metin vardı ve ortak iskelet
+           künyesinin yasakladığı şeydi: kalemler gelince diyalog bir anda dolup alt bardaki
+           "Kabulü tamamla" düğmesini aşağı itiyordu, yani operatörün tıklamak üzere olduğu düğme
+           yer değiştiriyordu. İki alan satırı (depo/tedarikçi · belge/tarih) + kalem satırları. */
+        <div className="flex flex-col gap-4 px-1 py-2" aria-hidden="true">
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 4 }, (_, i) => (
+              <SkeletonMetric key={i} boxed={false} />
+            ))}
+          </div>
+          <SkeletonRows rows={3} />
+        </div>
       ) : (
         <IntakeFormBody
           values={values}

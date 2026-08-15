@@ -9,7 +9,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { cropOf, IMAGE_ROLES, pickCropFields, resolveLocalizedText, type ImageRole } from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
-import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
+import { FEATURED_SLOTS } from '@lezzet/types';
 import { reorderCatalogAction, setCatalogFeaturedAction } from './actions';
 import { CatalogFormDialog } from './catalog-form-dialog';
 import { matchesCatalogFilter, type CatalogKind, type CatalogRow, type CollectionView } from '../../products-types';

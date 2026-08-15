@@ -4,6 +4,7 @@ import {
   ProductService,
   ProductVariantService,
   ReorderService,
+  SupplierService,
   SystemHealthService,
   TicketService,
   WarehouseService,
@@ -124,6 +125,9 @@ export async function systemErrors(limit: number) {
  * Depo başına eşik-altı tedarik önerisi özeti. Depo dolaşılır çünkü öneri DEPO BAŞINA hesaplanır
  * (varsayılan depo yoktur — DOMAIN §17); depo başına ilk 8 satır: brifing özettir, sipariş formu değil.
  */
+/** Brifingin depo başına satır tavanı — sayı ile `truncated` hesabı AYNI yerden okunur. */
+const BRIEFING_LINE_LIMIT = 8;
+
 async function reorderOverview() {
   const db = serviceDb();
   const warehouses = await new WarehouseService(db).list({ activeOnly: true });
@@ -132,7 +136,12 @@ async function reorderOverview() {
   const perWarehouse = await Promise.all(
     warehouses.map(async (warehouse) => {
       const groups = await reorder.suggestions(warehouse.id);
-      const lines = groups.flatMap((group) => group.lines);
+      // **TEDARİKÇİ SATIRA TAŞINIR** (MCP tur 8 raporu §3.10 · 15.08): motor eksikleri zaten
+      // tedarikçiye göre grupluyordu, ama düzleştirme onu yutuyordu. Sonuç dene-yanıl bir akıştı —
+      // "hangi tedarikçiden sipariş açabilirim" sorusu ancak `propose_purchase_order`ı deneyip
+      // hatasından öğreniliyordu ("… için STR deposunda eşik altı kalem yok"). Hata mesajı iyi ama
+      // bir okuma aracının cevaplaması gereken soruyu hataya sordurmak, akışı tersine çeviriyordu.
+      const lines = groups.flatMap((group) => group.lines.map((line) => ({ ...line, supplierId: group.supplierId })));
       return { code: warehouse.code, lineCount: lines.length, lines };
     }),
   );
@@ -151,18 +160,58 @@ async function reorderOverview() {
     }),
   );
 
+  // Tedarikçi adları (§3.10 künyesi). Küme kimlikle daraltılmıyor: tedarikçi listesi operatörün
+  // elle kurduğu, doğal tavanı olan bir küme (`CLAUDE §1` sayfalama ölçütü) — tek turda okumak,
+  // kimlik listesi çıkarıp süzmekten hem ucuz hem de daha az koddur.
+  const supplierById = new Map((await new SupplierService(db).list({})).map((s) => [s.id, s.name]));
+
   return {
     totalLines: perWarehouse.reduce((sum, w) => sum + w.lineCount, 0),
     warehouses: perWarehouse.map((w) => ({
       code: w.code,
       lineCount: w.lineCount,
+      /**
+       * **KIRPMA SÖYLENİR** (MCP tur 8 raporu §3.5 · ölçüldü 15.08).
+       *
+       * `lineCount` 20 derken listede 8 satır olması sessiz bir kesmeydi ve bedeli raporun kendi
+       * içinde görüldü: okuyan taraf o 8 satırı "deponun eksikleri" sanıp `propose_purchase_order`
+       * çıktısıyla karşılaştırdı, kesişim az çıkınca **"depo süzgeci çalışmıyor" diye kritik bir
+       * arıza bildirdi** — oysa süzgeç doğru, listeler farklı çünkü biri kırpılmış. Yanlış teşhis
+       * ölçümle çürütüldü ama maliyeti bir tur oldu.
+       *
+       * `stock_watch` bu deseni zaten doğru uyguluyordu (`truncated` alanı); aynısı buraya geldi.
+       */
+      truncated: w.lineCount > BRIEFING_LINE_LIMIT,
+      /**
+       * **HANGİ TEDARİKÇİDEN SİPARİŞ AÇILABİLİR** — kırpmadan BAĞIMSIZ özet (§3.10 · ölçüldü 15.08).
+       *
+       * Satır başına tedarikçi adı tek başına yetmedi: ölçümde STR'nin ilk 8 satırında hiç eşleme
+       * yokken 9-11 arasında vardı, yani listeye bakan model "bu depodan sipariş açılamaz" sanırdı
+       * — oysa `propose_purchase_order(STR)` üç kalemlik bir taslak açıyor. Kırpma doğru
+       * bildirilse bile yanlış çıkarım mümkündü.
+       *
+       * Bu özet TÜM satırları sayar ve doğrudan aracın girdisini verir: hangi adı yazarsan sipariş
+       * açılır. Rapor bunu "dene-yanıl akışı" diye bildirmişti — hata mesajından öğrenilen bilgi,
+       * okuma aracının cevaplaması gereken bir soruydu.
+       */
+      suppliersWithShortfall: [...new Map(w.lines.flatMap((l) => (l.supplierId ? [[l.supplierId, l] as const] : []))).keys()]
+        .map((id) => ({
+          name: supplierById.get(id) ?? '?',
+          lineCount: w.lines.filter((l) => l.supplierId === id).length,
+        }))
+        .sort((a, b) => b.lineCount - a.lineCount),
+      /** Tedarikçisi eşlenmemiş kalem sayısı — o kalemlerden sipariş AÇILAMAZ, sebebi eşleme eksiği. */
+      unmappedLineCount: w.lines.filter((l) => !l.supplierId).length,
       // Alan SEÇİMİ güvenlik sınırıdır: `lastPurchasePriceCents` (tedarikçi alışı) buraya
       // GİRMEZ — AI_ADMIN_ASSISTANT §6 finans sınırı; testi bu yokluğu doğrular.
-      lines: w.lines.slice(0, 8).map((line) => ({
+      lines: w.lines.slice(0, BRIEFING_LINE_LIMIT).map((line) => ({
         name: nameByVariant.get(line.variantId) ?? line.variantId,
         availableQty: line.availableQty,
         minStockQty: line.minStockQty,
         suggestedQty: line.suggestedQty,
+        // `null` = bu varyantın tedarikçi eşlemesi yok; o kalemden sipariş AÇILAMAZ ve sebebi
+        // burada görünür (`propose_purchase_order` da aynı sebeple reddeder).
+        supplier: line.supplierId ? (supplierById.get(line.supplierId) ?? null) : null,
       })),
     })),
   };

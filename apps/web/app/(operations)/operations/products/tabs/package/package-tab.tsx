@@ -6,7 +6,7 @@ import { bundleBalance, markupPercent } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { IMAGE_ROLES, cropOf, resolveLocalizedText } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
-import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
+import { FEATURED_SLOTS } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { money, percent } from '@/components/operation/ui/format';
 import { ImageIcon } from '@/components/operation/ui/icons';
@@ -62,7 +62,7 @@ function Stacked({ value, hint, alert, title }: { value: string; hint?: string; 
   );
 }
 
-/** Vitrin ızgarasının paket slotu — sayı ve gerekçe `lib/catalog/featured-slots`'ta, tek yerde. */
+/** Vitrin ızgarasının paket slotu — sayı ve gerekçe `@lezzet/types`te, tek yerde. */
 const BUNDLE_SLOTS = FEATURED_SLOTS.bundle;
 
 function bundleColumns(

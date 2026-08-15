@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
+import { Select } from '@/components/operation/form/select';
+import { Skeleton, SkeletonCard, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { money, num, shortDate } from '@/components/operation/ui/format';
 import { LOSS_REASON } from '../stock-labels';
 import { readVariantHistoryAction } from '@/lib/stock/history-actions';
 import { ORDER_STATUS_LABELS, type OrderStatus } from '@lezzet/types';
 import type { VariantBatchHistory, VariantStockHistory } from '@lezzet/application';
-import type { StockLevelRow } from '../stock-types';
+import type { StockLevelRow, StockWarehouseSplit } from '../stock-types';
 
 /**
  * **SEÇİLİ ÜRÜNÜN STOK GEÇMİŞİ** — sağ panel (22.30).
@@ -47,8 +50,23 @@ export function ProductHistoryPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * **PANEL İÇİ DEPO SEÇİMİ** (22.34) — `''` = tümü, aksi hâlde depo KODU.
+   *
+   * Tablo süzgeci başlangıcı belirler ama panele KİLİT değildir: operatör tek üründe kalıp
+   * depolar arasında gezinebilmeli — 22.32'de kurulan "panel satırla aynı evreni gösterir"
+   * kuralı bununla çelişmiyor, onu genişletiyor: evren yine YAZILI, sadece artık seçilebilir.
+   */
+  const [pane, setPane] = useState(warehouseFilter);
+  // Tablo süzgeci değişince panel ona döner: kullanıcı üstte depo seçtiyse kastettiği odur ve
+  // panelin eski seçimi sessizce direnirse iki ekran farklı gerçeği gösterirdi.
+  useEffect(() => setPane(warehouseFilter), [warehouseFilter]);
+
   const variantId = row?.variantId ?? null;
-  const availableQty = row?.availableQty ?? 0;
+  const splits = row?.warehouses ?? [];
+  /** Seçili evrenin kırılımı — `null` = tümü. Başlıktaki sayılar da buradan okunur. */
+  const activeSplit = pane ? (splits.find((split) => split.code === pane) ?? null) : null;
+  const availableQty = activeSplit?.availableQty ?? row?.availableQty ?? 0;
 
   useEffect(() => {
     if (!variantId) {
@@ -58,7 +76,12 @@ export function ProductHistoryPanel({
     let alive = true;
     setLoading(true);
     setError(null);
-    void readVariantHistoryAction(variantId, availableQty, warehouseFilter)
+    // **ÖNCEKİ ÜRÜNÜN VERİSİ BIRAKILIR** (kullanıcı tespiti 15.08). Durmasının iki bedeli vardı:
+    // (1) iskelet eski içeriğin ÜSTÜNE ekleniyordu — liste bir uzayıp sonra kısalıyordu; (2) o kısa
+    // an boyunca ekranda BAŞKA bir ürünün satış hızı, yeterliliği ve giriş geçmişi duruyordu, üstelik
+    // başlıkta yeni ürünün adıyla. İkincisi daha tehlikelisi: yanlış veri, geç gelen veriden kötüdür.
+    setHistory(null);
+    void readVariantHistoryAction(variantId, availableQty, pane)
       .then(({ data, error: failed }) => {
         if (!alive) return;
         if (failed || !data) {
@@ -74,9 +97,9 @@ export function ProductHistoryPanel({
     return () => {
       alive = false;
     };
-    // Süzgeç bağımlılıkta: depo değişince panel YENİDEN okunur — yoksa başlık yeni deponun,
+    // Seçili evren bağımlılıkta: depo değişince panel YENİDEN okunur — yoksa başlık yeni deponun,
     // gövde eski deponun gerçeğini gösterirdi.
-  }, [variantId, availableQty, warehouseFilter]);
+  }, [variantId, availableQty, pane]);
 
   if (!row) {
     return (
@@ -94,32 +117,48 @@ export function ProductHistoryPanel({
 
   return (
     <div className="flex min-h-0 flex-col bg-ops-subtle">
-      <div className="flex flex-none flex-col gap-0.5 border-b border-ops-line px-5 py-3">
-        <span className="truncate font-ops-display text-ops-base font-semibold text-ops-ink" title={row.title}>
-          {row.title}
-        </span>
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          Kullanılabilir {num(row.availableQty)} · elde {num(row.physicalQty)}
-          {row.reservedQty > 0 ? ` · ${num(row.reservedQty)} ayrılmış` : ''}
-        </span>
-        {/* **Hangi evren** — süzgeç aktifken panelin tamamı o deponun gerçeğidir ve bunu YAZAR.
-            Söylenmeseydi operatör aynı sayıları bütün depoların toplamı sanardı. */}
-        {warehouseFilterName ? (
-          <span className="font-ops-body text-ops-micro text-ops-blue-dark">
-            Yalnız {warehouseFilterName} — tablo süzgeci panele de uygulandı
-          </span>
-        ) : null}
+      <div className="flex flex-none flex-col gap-2 border-b border-ops-line px-5 py-3">
+        <div className="flex items-center gap-3">
+          {/* Görsel BAŞLIKTA (kullanıcı isteği 15.08): listede satırı tanıtan şey burada da
+              duruyor — panel açılınca "doğru ürüne mi baktım" sorusu okumadan cevaplanmalı. */}
+          <Thumbnail src={row.imageUrl} alt={row.title} size={40} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="truncate font-ops-display text-ops-base font-semibold text-ops-ink" title={row.title}>
+              {row.title}
+            </span>
+            {/* Sayılar SEÇİLİ EVRENİN sayılarıdır: depo sekmesi değişince başlık da değişir, yoksa
+                gövde bir deponun, başlık hepsinin gerçeğini söylerdi. */}
+            <span className="font-ops-body text-ops-xs text-ops-muted">
+              Kullanılabilir {num(activeSplit?.availableQty ?? row.availableQty)} · elde{' '}
+              {num(activeSplit?.physicalQty ?? row.physicalQty)}
+              {(activeSplit?.reservedQty ?? row.reservedQty) > 0
+                ? ` · ${num(activeSplit?.reservedQty ?? row.reservedQty)} ayrılmış`
+                : ''}
+            </span>
+          </div>
+        </div>
+
+        <WarehouseSwitch
+          splits={splits}
+          value={pane}
+          onChange={setPane}
+          lockedName={warehouseFilterName}
+          lockedCode={warehouseFilter}
+        />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-3.5">
-        {loading ? <span className="font-ops-body text-ops-sm text-ops-muted">Geçmiş okunuyor…</span> : null}
-        {error ? (
+        {/* **TEK KARAR, ÜÇ HÂL** — iskelet · hata · içerik birbirini DIŞLAR. Üçü ayrı `{x ? … : null}`
+            olarak durduğunda ikisi aynı anda çizilebiliyordu ve tam olarak öyle oldu (yukarıdaki
+            künye). Ayrı koşullar "hangisi ne zaman görünür" sorusunu okuyana bıraktı; zincir onu
+            koda yazıyor. */}
+        {loading ? (
+          <HistorySkeleton />
+        ) : error ? (
           <p className="rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">
             {error}
           </p>
-        ) : null}
-
-        {history ? (
+        ) : history ? (
           <>
             <FlowLine history={history} />
             <ReservationBlock history={history} />
@@ -151,10 +190,15 @@ function FlowLine({ history }: { history: VariantStockHistory }) {
       </span>
     );
   }
-  const { intakeQty, deliveredQty, pickedQty, lostQty, onHandQty } = history.flow;
+  const { intakeQty, deliveredQty, pickedQty, lostQty, inTransitQty, onHandQty } = history.flow;
   // Denklem tutuyor mu — tutmuyorsa sebebi kayda geçmemiş bir harekettir ve ekran bunu SÖYLER.
+  //
   // **Hazırlanan mal denklemde YOK** ve olmamalı: teslim edilene kadar `physical_qty`de duruyor.
-  const balanced = intakeQty - deliveredQty - lostQty === onHandQty;
+  // **Yoldaki mal ise VAR** (22.34): transferin ortasında mal hiçbir deponun stoğunda değildir —
+  // kaynaktan `dispatch`te düştü, hedefte ancak `receive` ile parti olacak. Onsuz denklem tam
+  // transfer adedi kadar sapıyordu ve ekran bunu "kayda geçmemiş hareket" sanıp operatörü olmayan
+  // bir arızayı aramaya gönderiyordu (ölçüldü 15.08, kullanıcı ekran görüntüsü).
+  const balanced = intakeQty - deliveredQty - lostQty - inTransitQty === onHandQty;
   return (
     <div className="flex flex-col gap-1 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 font-ops-body text-ops-sm">
@@ -163,6 +207,14 @@ function FlowLine({ history }: { history: VariantStockHistory }) {
         <Flow label="teslim" value={deliveredQty} tone="olive" />
         <span className="text-ops-faint">−</span>
         <Flow label="düşülen" value={lostQty} tone={lostQty > 0 ? 'amber' : 'muted'} />
+        {/* Yolda satırı YALNIZ varken çizilir: sıfır bir "0 yolda" terimi, denklemi hiç transfer
+            görmemiş ürünlerde gereksiz yere uzatırdı. */}
+        {inTransitQty > 0 ? (
+          <>
+            <span className="text-ops-faint">−</span>
+            <Flow label="yolda" value={inTransitQty} tone="amber" />
+          </>
+        ) : null}
         <span className="text-ops-faint">=</span>
         <Flow label="elde" value={onHandQty} tone="ink" />
       </div>
@@ -174,12 +226,133 @@ function FlowLine({ history }: { history: VariantStockHistory }) {
           hazırlanmış siparişlerde — rafta duruyor, teslimde düşecek.
         </span>
       ) : null}
+      {/* Yoldaki mal AÇIKLANIR: "yolda 4" tek başına nereye gittiğini söylemez ve operatör
+          transferi aramak zorunda kalır. */}
+      {inTransitQty > 0 ? (
+        <span className="font-ops-body text-ops-micro text-ops-muted">
+          <span className="font-ops-mono font-semibold text-ops-amber">{num(inTransitQty)}</span> adet
+          transferde — kaynak depodan çıktı, hedefte henüz teslim alınmadı.
+        </span>
+      ) : null}
       {balanced ? null : (
         <span className="font-ops-body text-ops-micro text-ops-amber">
-          Denklem tutmuyor — kayda geçmemiş bir hareket var (transferle gelen/giden parti ya da elle
-          düzeltilmiş adet).
+          Denklem tutmuyor — kayda geçmemiş bir hareket var (elle düzeltilmiş adet ya da bu ekranın
+          bilmediği bir yazım).
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * **PANELİN BEKLEME HÂLİ** (22.34) — çıplak *"Geçmiş okunuyor…"*ın yerine.
+ *
+ * Ortak iskelet künyesinin yasakladığı şey buradaydı: çıplak metnin gelecek içeriğin ŞEKLİ yoktur ve
+ * veri gelince panel bir anda dolup yerleşimi zıplatır. Panel her ürün tıklamasında yeniden okuduğu
+ * için o zıplama sürekli yaşanıyordu — bir sayfa açılışında bir kez değil.
+ *
+ * Sıra GERÇEK gövdenin sırasıdır: akış satırı → dört ölçüm kutusu → giriş geçmişi. Rezervasyon ve
+ * fire blokları çizilmez, çünkü ikisi de KOŞULLU (yalnız veri varken görünürler) — olmayabilecek bir
+ * şeyin yerini önden ayırmak, iskeletin verdiği sözü tutmamak olurdu.
+ */
+function HistorySkeleton() {
+  return (
+    <div className="flex flex-col gap-3.5">
+      <SkeletonCard>
+        <Skeleton className="h-4 w-3/5" />
+      </SkeletonCard>
+      <div className="grid grid-cols-2 gap-2">
+        {Array.from({ length: 4 }, (_, i) => (
+          <SkeletonMetric key={i} />
+        ))}
+      </div>
+      {/* Üç satır: giriş geçmişi tipik olarak birkaç parti — gelenden belirgin fazla çizmek, yükleme
+          bitince listenin küçülmesi demekti (`SkeletonRows` künyesi). */}
+      <SkeletonRows rows={3} />
+    </div>
+  );
+}
+
+/** Sekme yerine seçiciye geçiş eşiği — bunun üstünde şerit taşıyor, altında sekme okunur kalıyor. */
+const TAB_LIMIT = 3;
+
+/**
+ * **DEPOLAR ARASI GEÇİŞ** (kullanıcı isteği 15.08: *"tümü ve ayrı ayrı depoları görebileyim"*).
+ *
+ * ── ÜÇ HÂL, TEK KAYNAK ──────────────────────────────────────────────────────
+ * Küme `row.warehouses` — yalnız MALI OLAN depolar (`StockWarehouseSplit` künyesi). Boş ya da tek
+ * elemanlıysa geçiş ÇİZİLMEZ: seçenek sunmayan bir seçici, operatöre tıklanacak bir şey vaat edip
+ * hiçbir şey yapmaz. Tek depoluysa hangi depo olduğu zaten parti satırlarında yazılı.
+ *
+ * ── SEKME Mİ SEÇİCİ Mİ ──────────────────────────────────────────────────────
+ * `TAB_LIMIT`e kadar sekme: hepsi bir bakışta görünür ve tek tıkla geçilir. Üstünde seçici —
+ * kullanıcının kuralı (*"üç depodan daha fazlaysa seçiciyle geçiş"*) ve sebebi ölçülebilir: yedi
+ * depolu bir şerit panelin dar sütununda ya taşar ya da okunmayacak kadar küçülür.
+ *
+ * ── TABLO SÜZGECİ KİLİTLER ──────────────────────────────────────────────────
+ * Üstte bir depo süzgeci aktifse panel o depoyu AŞAMAZ: tablo tek deponun satırlarını gösterirken
+ * panelin başka bir depoyu açması, aynı ekranda iki farklı gerçek olurdu (22.32'nin kararı).
+ * O hâlde geçiş yerine hangi depoya bakıldığı YAZILIR.
+ */
+function WarehouseSwitch({
+  splits,
+  value,
+  onChange,
+  lockedName,
+  lockedCode,
+}: {
+  splits: StockWarehouseSplit[];
+  value: string;
+  onChange: (next: string) => void;
+  lockedName: string | null;
+  lockedCode: string;
+}) {
+  if (lockedCode) {
+    return (
+      <span className="font-ops-body text-ops-micro text-ops-blue-dark">
+        Yalnız {lockedName ?? lockedCode} — tablo süzgeci panele de uygulandı
+      </span>
+    );
+  }
+  if (splits.length < 2) return null;
+
+  const options = [{ code: '', label: 'Tümü' }, ...splits.map((split) => ({ code: split.code, label: split.code }))];
+
+  if (splits.length > TAB_LIMIT) {
+    return (
+      <Select
+        value={value}
+        onChange={onChange}
+        options={options.map((option) => ({
+          value: option.code,
+          // Seçicide KOD yetmez: liste açıkken depo adı da görünmeli, kısaltma ancak şeritte okunur.
+          label: option.code === '' ? 'Tümü' : (splits.find((s) => s.code === option.code)?.name ?? option.code),
+        }))}
+        className="max-w-[16rem]"
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {options.map((option) => {
+        const active = option.code === value;
+        return (
+          <button
+            key={option.code || 'all'}
+            type="button"
+            onClick={() => onChange(option.code)}
+            title={option.code === '' ? 'Bütün depolar' : (splits.find((s) => s.code === option.code)?.name ?? option.code)}
+            className={`cursor-pointer rounded-ops-btn px-2.5 py-1 font-ops-body text-ops-xs transition-colors ${
+              active
+                ? 'bg-ops-ink font-semibold text-ops-white'
+                : 'border border-ops-line text-ops-body hover:border-ops-line-strong hover:bg-ops-subtle'
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

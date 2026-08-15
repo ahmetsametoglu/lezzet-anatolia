@@ -42,7 +42,7 @@ export { VariantStockNoticeService } from './services/variant-stock-notice.servi
 export { ZoneNoticeService } from './services/zone-notice.service';
 export { PostalCodeDemandService } from './services/postal-code-demand.service';
 export { WarehouseService } from './services/warehouse.service';
-export { WarehouseTransferService } from './services/warehouse-transfer.service';
+export { WarehouseTransferService, WarehouseTransferLineService } from './services/warehouse-transfer.service';
 export { CartService } from './services/cart.service';
 export { OrderItemBatchService } from './services/order-item-batch.service';
 export {

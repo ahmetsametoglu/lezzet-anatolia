@@ -9,6 +9,9 @@
 // `db-numeric` BİLEREK dışa açılmaz: sürücü ayrıntısıdır, şema yazarının aracıdır. Paketin
 // tüketicisi zaten sayı görür — o dönüşümü kendi yapması gerekmez.
 export * from './enums.schema';
+// Vitrin kontenjanı bir ŞEMA değil bir SABİT — ama ölçüt aynı: birden çok tablonun (kategori ·
+// koleksiyon · paket) paylaştığı tek bir kural ve artık iki uygulama birden okuyor (web + MCP).
+export * from './featured-slots';
 export * from './localized-text.schema';
 export * from './user-text.schema';
 export * from './pagination.schema';

@@ -1546,7 +1546,126 @@ satırında.
       STR deposu için 3 kalemlik dilekçe düştü (Gaziantep Baklava Fabrikası · 27+12+36 adet). Okunan
       payload'ın camelCase'e döndüğü ayrıca ölçüldü — jsonb dönüşümü çalışıyor, `parseProposalPayload`
       geçiyor. typecheck · lint · knip temiz.
+- [~] (22.34) **Panel başlığı: ürün görseli + depolar arası geçiş · denklemin İKİ eksik hareketi**
+  *(kullanıcı isteği ve iki ekran görüntüsü 15.08)* — `touches:
+  apps/web/app/(operations)/operations/stock/tabs/product-history-panel.tsx,
+  packages/{domain-core,application,database}/src/**`
+    - *Bitti:* başlıkta görsel ve depo şeridi var; denklem iade ve transferi doğru sayıyor.
+    - **İKİ ARIZA DA ÖLÇÜLDÜ VE İKİSİ DE BENİM PANELİMDEYDİ — veri her ikisinde de doğruydu.**
+    - **(1) İADE İKİ KEZ SAYILIYORDU.** Kullanıcı ekranı: `120 − 3 − (−1) = 117` ve "denklem tutmuyor".
+      Ölçüm: teslim sonrası iade `restock` ile geri alınınca `0020_order_return` İKİ şeyi birden yapar —
+      `physical_qty` artar (`return_restock` kaydı) **ve aynı adet `order_item_batch`ten düşülür**.
+      Migration künyesi bunu yazıyordu: *"`order_item_batch`'in anlamı bu kuralla keskinleşir: bizden
+      çıkıp GERİ GELMEYEN mal."* Yani `deliveredQty` zaten net rakam; restoku bir de fireye katmak aynı
+      iadeyi iki kez saymaktı. `countsAsLoss(reason)` (domain-core) ile ayrıldı — kırılımda GÖRÜNMEYE
+      devam ediyor, çünkü saklanan şey olay değil onun fire toplamına katkısı. Fire %−0,8 → %0.
+    - **(2) TRANSFER DENKLEMDE HİÇ YOKTU.** İkinci ekran: `141 − 6 − (−3) = 134` ve yine "tutmuyor".
+      Ölçüm: `A227-04` partisinden **4 adet `in_transit`** — `dispatch`te kaynaktan düştü, hedefte ancak
+      `receive` ile parti olacak, yani o an HİÇBİR deponun stoğunda değil. `66 − 4 + 3 = 65` ✓.
+      İronik olan, uyarı metni doğru şüpheliyi adıyla söylüyordu (*"transferle gelen/giden parti"*) ama
+      kod onu denkleme katmıyordu. `inTransitFromStocks` eklendi (**yalnız `in_transit`**: `completed`
+      transferin karşılığı hedefte parti olarak duruyor, ikisini saymak malı iki kez düşürürdü;
+      `cancelled` kaynağa geri konmuştur). Denklem artık `giren − teslim − düşülen − yolda = elde` ve
+      yolda satırı yalnız varken çiziliyor, açıklamasıyla birlikte.
+    - **Doğrulama (gerçek veri):** `141 − 6 − (−3) − 4 = 134` ✓ · `120 − 3 − 0 − 0 = 117` ✓.
+      Regresyon yok: gerçek fire'lı ürün (`expired` 3 adet) hâlâ %5,4 ve denklemi tutuyor.
+    - **BAŞLIK** (kullanıcı isteği): ürün görseli 40px `Thumbnail` ile geldi — listede satırı tanıtan
+      şey panelde de duruyor. Depo geçişi `row.warehouses`ten (yalnız MALI OLAN depolar): tek depoluysa
+      hiç çizilmez (seçenek sunmayan seçici, tıklanacak bir şey vaat edip hiçbir şey yapmaz), üçe kadar
+      SEKME, üstünde SEÇİCİ — kullanıcının kuralı ve sebebi ölçülebilir: yedi depolu şerit dar sütunda
+      taşar. **Başlıktaki sayılar da seçili evrenden okunuyor**, yoksa gövde bir deponun başlık
+      hepsinin gerçeğini söylerdi.
+    - **Tablo süzgeci hâlâ KİLİTLER** (22.32 kararı): üstte depo seçiliyken panel onu aşamaz — aynı
+      ekranda iki farklı gerçek olurdu; o hâlde geçiş yerine hangi depoya bakıldığı yazılıyor.
+    - **ÇIPLAK "yükleniyor…" METİNLERİ İSKELETE ÇEVRİLDİ** *(kullanıcı tespiti 15.08)*. İkisi de bu
+      turda BENİM yazdığım koddu ve ortak iskeletin künyesinin açıkça yasakladığı şeydi: *"Çıplak metin
+      — `Yükleniyor…`. Gelecek içeriğin ŞEKLİ yok; içerik gelince yerleşim zıplar ve operatörün
+      tıklamak üzere olduğu düğme yer değiştirir."* Panelde bu her ürün tıklamasında yaşanıyordu (bir
+      sayfa açılışında bir kez değil); mal kabul diyaloğunda ise kalemler gelince alt bardaki "Kabulü
+      tamamla" düğmesi aşağı itiliyordu. Panel iskeleti gerçek gövdenin sırasını izliyor (akış → dört
+      ölçüm → geçmiş); KOŞULLU bloklar (rezervasyon, fire) çizilmiyor — olmayabilecek bir şeyin yerini
+      önden ayırmak, iskeletin verdiği sözü tutmamak olurdu.
+    - **BEKLEYEN(22.34):** operasyon yüzeyinde AYNI ihlalden üç tane daha var ve bu turun dışında:
+      `bundle-form-dialog` ("Paket bilgileri yükleniyor…") · `order-dialog` ("yükleniyor…") ·
+      `catalog-form-dialog` (ad çözülemezken yer tutucu). Üçü de kendi ekranlarının işi.
+    - **BEKLEYEN(22.34):** kullanıcı ekranda denemedi. Ayrıca fire oranı `count_diff` negatifken hâlâ
+      eksi çıkıyor (%−2,1) — ölçüm doğru (net kayıp) ama "FİRE" başlığı altında eksi sayı garip okunuyor;
+      sayım farkını kendi satırına ayırmak kullanıcının kararına bırakıldı.
     - **BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
       Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag` (üç alan — form gerekmeyebilir,
-      ama o tipten hiç öneri üretilmediği için ölçülemedi: `BEKLEYEN(22.11)`).
+      ama o tipten hiç öneri üretilmediği için ölçülemedi: `BEKLEYEN(22.11)`). *(`featured_flag`
+      `22.35`'te yazıldı; `zone_extend` duruyor.)*
+
+- [~] (22.35) **ARAÇ TAKIMININ AÇIKLARI KAPATILDI + VİTRİN GÖVDESİ** *(kullanıcı kararı 15.08:
+  «taşıma yerine düzeltmen gereken yerler varsa düzelt» — MCP 8. turunun kendi raporu üzerine)* ·
+  `touches: apps/backend/src/mcp/{server-factory,tools,tools-catalog,tools-propose,tools-signals}.ts,
+  packages/types/src/primitives/featured-slots.ts,
+  apps/web/components/operation/form/featured-form/**, apps/web/lib/catalog/featured-actions.ts,
+  apps/web/app/(operations)/operations/assistant/{assistant-body.tsx,bodies/featured-flag-body.tsx}`
+    - *Bitti:* araç sayısı **23 → 25**; asistanın kör yazdığı üç yer görür oldu; vitrin önerisi
+      diyaloğun içinde düzenlenebiliyor.
+    - **RAPOR TAŞINMADI, İŞLENDİ.** 8. tur kendi raporunu `temp/`e yazmıştı; kullanıcı onu backlog'a
+      taşımak yerine düzeltilmesini istedi. Maddeler tek tek ölçüldü ve **raporun KRİTİK dediği
+      §3.1 ölçümle ÇÜRÜTÜLDÜ** — "depo süzgeci çalışmıyor" diye bildirilen şey aslında `§3.5`'in
+      sessiz kırpmasıydı: brifing depo başına 8 satır çiziyor ama `lineCount` 20 diyordu, okuyan taraf
+      o 8 satırı deponun tamamı sanıp `propose_purchase_order` çıktısıyla karşılaştırınca kesişim az
+      çıktı ve **doğru çalışan bir süzgeci arızalı ilan etti.** Ders sessiz kesmenin bedelidir:
+      kırpma söylenmediğinde okuyan taraf yanlış teşhis üretir ve maliyeti bir tur olur.
+    - **YENİ ARAÇ · `product_detail` (§3.8).** `propose_product_draft` ÜZERİNE YAZAR ve sürüm geçmişi
+      yok; asistanın ürünün bugünkü metnini okuyacak hiçbir aracı yoktu — yani her metin önerisi
+      birinin emeğini silme riskiydi. Artık dil başına (`tr/fr/de`) alanın **dolu mu** olduğu ve kısa
+      bir önizlemesi dönüyor; alerjen kapalı küme olduğu için listenin kendisi, besin değeri evet/hayır.
+      `declarationGaps` motorun gördüğü eksikleri tekrarlıyor ki ikinci bir `catalog_health` turu
+      gerekmesin. Ad parçasıyla da aranıyor, birden çok eşleşmede tahmin etmiyor — eşleşmeleri döndürüyor.
+    - **YENİ ARAÇ · `money_overview` (§3.11).** `propose_money_movement` vardı, hesapların durumunu
+      okuyan araç yoktu: asistan bu türde ancak adminin dikte ettiğini yazabiliyordu. Artık hesap
+      başına bakiye, tür × yön kırılımıyla dönem toplamı ve son 15 hareket okunuyor. **Sınır korundu:**
+      kâr/marj/nakit tahmini YOK (`AI_ADMIN_ASSISTANT §6`) — hareket önermek kapsamda, işletmenin
+      finansal yorumu değil. Hiç hareket görmemiş hesabın bakiyesi `null` döner, sıfır değil.
+    - **§3.10 · TEDARİKÇİ SATIRA TAŞINDI.** Motor eksikleri zaten tedarikçiye göre gruplarken
+      düzleştirme bunu yutuyordu; "hangi tedarikçiden sipariş açabilirim" sorusu ancak
+      `propose_purchase_order`ı deneyip **hatasından** öğreniliyordu. Satıra ad geldi, ayrıca
+      **kırpmadan bağımsız** `suppliersWithShortfall` özeti: ölçümde STR'nin ilk 8 satırında hiç eşleme
+      yokken 9–11 arasında vardı — kırpma doğru bildirilse bile yanlış çıkarım mümkündü. Eşlemesi
+      olmayan kalem sayısı da ayrı (`unmappedLineCount`): o kalemlerden sipariş AÇILAMAZ ve sebebi görünür.
+    - **§3.5 · `truncated`.** `stock_watch` bu deseni zaten doğru uyguluyordu; brifinge de geldi.
+    - **§3.3 · MÜKERRER UYARISI.** Kuyrukta bekleyen bir öneri varken aynı özetli ikincisi sorunsuz
+      kabul ediliyordu (raporun kendi turunda "Gaziantep — STR" iki kez açıldı). Model kendi geçmişini
+      hatırlamıyor. **Engel değil UYARI ve bu bilinçli:** ilki bayat kalmış olabilir, koşullar değişmiş
+      olabilir — reddetmek doğru bir öneriyi de keserdi. Sayım YAZMADAN ÖNCE yapılıyor, yoksa her öneri
+      kendini sayıp mükerrer görünürdü.
+    - **§3.2 · KAPSANAN POSTA KODU İŞARETLİ.** `demand_signals` ham talebi sayıyor ve kodun zaten
+      dağıtım yaptığımız bölgede olup olmadığını bilmiyordu; sonuç `delivery_map` ile ZIT cevaptı —
+      orası 67400'ü "kapsanıyor" derken burası aynı kodu bölge genişletme adayı gibi sunuyordu.
+      Kapsanan kod **gizlenmiyor, işaretleniyor** (`coveredBy` bölge ADI ile): oradaki yüksek talep de
+      bir bilgidir (daha sık gitmek, kapasite artırmak) — yanlış olan onu "gidemediğimiz yer" diye
+      sunmaktı.
+    - **§3.9 · «VİTRİN» TEK BİR YER DEĞİL** *(kullanıcı tespiti 15.08: «hepsinde vitrin diyoruz ama
+      hepsi vitrinde farklı mantıklar ve yerlerde görünüyor»)*. Üç hedefin üç ayrı kuralı vardı ve
+      hiçbiri asistana söylenmiyordu: **kategori** 6'lık ızgarayı sırayla doldurur (fazlası çizilmez) ·
+      **koleksiyon** 2 kartlık bandda GÜNLÜK DÖNER (işaretlinin tamamı sırayla görünür, fazlası
+      kaybolmaz — sırasını bekler) · **paket** 2 kartlık banda girer ama **stoğu tükenen paket işaretli
+      olsa da hiç girmez**. Bunu bilmeden verilen "vitrine çıkar" önerisi, etkisini bilmeden verilmiş
+      demekti. Kural tek kaynağa yazıldı: `FEATURED_SLOTS` + **`FEATURED_PLACEMENT`**
+      (`packages/types/src/primitives/featured-slots.ts`) — sabit `apps/web/lib`den `@lezzet/types`e
+      **TAŞINDI**, çünkü artık iki uygulama birden okuyor (web + MCP) ve iki kopya bir gün ayrışırdı.
+      Araç yanıtı artık bölümü, kuralı, bugünkü doluluğu, kontenjanı ve **kuyrukta bekleyen aynı
+      hedefli öneri sayısını** söylüyor — bekleyenler henüz ızgarada GÖRÜNMÜYOR, o yüzden ayrı sayılıyor.
+    - **VİTRİN GÖVDESİ — `featured_flag` artık diyaloğun içinde düzenleniyor** *(kullanıcı kuralı
+      15.08: «biz yönlendirme yapmıyoruz; doğrudan açılan diyaloğun içerisinde düzenlenecek ORTAK
+      komponent yapıyoruz»)*. Karar iki uçlu görünüyordu (onayla/reddet) ama vitrin bir SEÇKİ ve
+      kontenjanı var: dolu ızgaraya ekleme sıradakini düşürür ve kimin düşeceğine karar vermenin yolu
+      yoktu. Form `components/operation/form/featured-form/`te — **ortak havuzda**, `intake-form` ve
+      `purchase-order-form` deseninin aynısı: `schema.ts` saf (RHF'siz, kontrollü) + `body.tsx`
+      çizim. Izgaranın tamamı Toggle listesi olarak geliyor, canlı sayaç kontenjanı gösteriyor,
+      altında o hedefin yerleşim cümlesi (`FEATURED_PLACEMENT`) yazılı.
+      **ENGEL YOK ve bu bilinçli:** ızgarayı boşaltmak da geçerli bir karardır (vitrini kapatmak).
+    - **DOĞRULAMA:** `typecheck` 18/18 · `lint` temiz · `docs:check` temiz · araç kayıt tablosu
+      `araç: 25 · handler: 25` (eşleşme tam, `product_detail` ✓ `money_overview` ✓) · `db:refresh`
+      sonrası kuyruk 31 → 0, 3 gerçek depo, 0 test artığı.
+    - **BEKLEYEN(22.35):** `zone_extend` hâlâ gövdesiz — harita gerektiriyor; `ZoneMap` ortak havuzda
+      hazır ama diyaloğa bağlanmadı. Kalan TEK gövdesiz tip bu.
+    - **BEKLEYEN(22.35):** kullanıcı ekranda denemedi; yeni araçlarla henüz öneri turu atılmadı.
+      `product_detail`in çürüttüğü vaka duruyor: ölçümde 124 üründe `en` alanı boş görünüyordu ve o
+      turun `product_draft` önerisi onaylansaydı dolu TR metni silecekti.
 

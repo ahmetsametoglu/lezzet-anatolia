@@ -5,12 +5,14 @@ import {
   ReservationService,
   StockAdjustmentService,
   StockService,
+  WarehouseTransferLineService,
 } from '@lezzet/database';
 import {
   averageBatchLife,
   batchLifeDays,
   dailyExitRate,
   daysOfCover,
+  countsAsLoss,
   hasLeftShelf,
   lossPercent,
 } from '@lezzet/domain-core';
@@ -95,7 +97,15 @@ export interface VariantStockHistory {
    * DURUYOR — stok teslimde düşüyor (`deliver_order`), hazırlıkta değil (`record_preparation`).
    * Denklemden düşseydik her hazırlıktaki sipariş sahte bir "tutmuyor" uyarısı üretirdi.
    */
-  flow: { intakeQty: number; deliveredQty: number; pickedQty: number; lostQty: number; onHandQty: number };
+  flow: {
+    intakeQty: number;
+    deliveredQty: number;
+    pickedQty: number;
+    lostQty: number;
+    /** Yolda — kaynaktan düştü, hedefte henüz parti değil (`inTransitFromStocks` künyesi). */
+    inTransitQty: number;
+    onHandQty: number;
+  };
   /** Penceredeki toplam çıkış ve günlük ortalama; hiç çıkış yoksa `null`. */
   rate: { windowDays: number; qty: number; perDay: number } | null;
   /**
@@ -176,6 +186,11 @@ export async function readVariantStockHistory(
   // iki tarafı farklı kümeden almak, oranı sessizce yanlış yapardı.
   const adjustments = stockIds.length > 0 ? await new StockAdjustmentService(db).listByStocks(stockIds) : [];
 
+  // **Yoldaki mal** — kaynaktan düşmüş, hedefte henüz parti değil. Hiçbir `physical_qty`de
+  // görünmediği için denklem onsuz tam o kadar sapıyordu (`inTransitFromStocks` künyesi).
+  const inTransitLines = stockIds.length > 0 ? await new WarehouseTransferLineService(db).inTransitFromStocks(stockIds) : [];
+  const inTransitQty = inTransitLines.reduce((sum, line) => sum + line.qty, 0);
+
   // Parti başına: bu partiden ne kadar çıktı ve en SON ne zaman çıktı.
   const soldQty = new Map<string, number>();
   const lastExit = new Map<string, string>();
@@ -188,7 +203,10 @@ export async function readVariantStockHistory(
   const lostQty = new Map<string, number>();
   const byReason = new Map<StockAdjustmentReason, number>();
   for (const row of adjustments) {
-    lostQty.set(row.stockId, (lostQty.get(row.stockId) ?? 0) + row.qty);
+    // Kırılım HEPSİNİ taşır (iade de bir olaydır ve görünmeli); fire TOPLAMI ise yalnız gerçek
+    // kayıpları sayar — iade restokunun karşılığı `order_item_batch`ten zaten düşülmüştür
+    // (`countsAsLoss` künyesi). İkisini ayırmamak aynı iadeyi iki kez saydırıyordu.
+    if (countsAsLoss(row.reason)) lostQty.set(row.stockId, (lostQty.get(row.stockId) ?? 0) + row.qty);
     byReason.set(row.reason, (byReason.get(row.reason) ?? 0) + row.qty);
   }
 
@@ -228,6 +246,7 @@ export async function readVariantStockHistory(
       deliveredQty,
       pickedQty,
       lostQty: totalLost,
+      inTransitQty,
       // Elde kalan EKRANIN sayısıdır (görünüm), partilerin toplamı değil: ikisi ayrışırsa yanlış olan
       // liste değil okumadır ve o zaman akış satırı sorunu gizlemek yerine göstermeli.
       onHandQty: history.reduce((sum, batch) => sum + batch.physicalQty, 0),

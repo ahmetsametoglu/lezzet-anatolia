@@ -2,8 +2,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { captureError, errorMessageOf, logger, SOURCES } from '@lezzet/observability';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
-import { catalogHealth, catalogLookup, soldOutWatch, stockWatch } from './tools-catalog';
-import { customerPulse, demandSignals } from './tools-signals';
+import { catalogHealth, catalogLookup, productDetail, soldOutWatch, stockWatch } from './tools-catalog';
+import { customerPulse, demandSignals, moneyOverview } from './tools-signals';
 import { deliveryMap, referenceData } from './tools-reference';
 import {
   listProposals,
@@ -118,6 +118,19 @@ export const TOOLS = [
     },
   },
   {
+    name: 'product_detail',
+    description:
+      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text) and nutrition as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        product: { type: 'string', description: 'productId (uuid) or part of the product name.' },
+      },
+      required: ['product'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'delivery_map',
     description:
       "The delivery picture in one call — call it BEFORE proposing a zone extension. Warehouses (code, city, postal code, active), delivery zones with the WAREHOUSE each belongs to, the WEEKDAYS it runs (1 = Monday) and the postal codes it already covers, plus every requested postal code we do NOT cover yet. For each of those you get how it FITS each existing route, not just how far it is: on_route (the van already passes there), extends_route (same direction, past the current end — lengthens the tour), detour (right direction but off the corridor), opposite (the wrong way from the warehouse — that means a separate trip, however short the distance looks). Distance alone misleads: a code 5 km away in the opposite direction costs more than one 15 km along the route. Zones whose codes all sit on the warehouse have no direction at all and come back separately under zonesWithoutDirection with distance only — that is 'unknown', not 'unsuitable'. Figures are straight-line approximations for RANKING, not a routing calculation.",
@@ -156,7 +169,7 @@ export const TOOLS = [
   {
     name: 'propose_featured_flag',
     description:
-      'PROPOSE (does not apply): put a category/collection/bundle on the homepage showcase, or take it off. Matched BY NAME — reference_data lists every category, collection and bundle with its current showcase state, so read it there and pass the name. The showcase is a SELECTION, not a list: adding one pushes another down, and the reply tells you how many are on it today. A proposal that would change nothing (already on / already off) is refused rather than queued.',
+      'PROPOSE (does not apply): put a category/collection/bundle on the homepage showcase, or take it off. Matched BY NAME — reference_data lists every category, collection and bundle with its current showcase state, so read it there and pass the name. "Showcase" is NOT one place: each target lands in its own homepage section with its own rule, and the reply tells you which — CATEGORIES fill a 6-slot grid in sort order (extras are not drawn); COLLECTIONS feed a 2-card band that ROTATES DAILY (every marked collection shows in turn, so an extra one is not lost — it waits its turn); BUNDLES fill a 2-card band but a bundle that is out of stock never enters it, marked or not. The reply also states how many are on that section today, its capacity, and how many proposals for the same target are already waiting in the queue. A proposal that would change nothing (already on / already off) is refused rather than queued.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -506,6 +519,16 @@ export const TOOLS = [
       'Customer-facing workload: support tickets by status, reviews awaiting moderation, and conversations awaiting a reply. COUNTS ONLY — message content and customer identities are deliberately out of scope for this assistant (the customer-facing agent and the operations screen own those). Use it to tell the admin how the inbox stands, never to answer a customer.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
+  {
+    name: 'money_overview',
+    description:
+      'Where the money stands: balance per cash/bank account, totals for the window broken down by movement type and direction, and the latest ledger lines (signed amount, account, description). Call it BEFORE propose_money_movement — without it that tool can only write what the admin dictated; with it you can see that the till has built up, or that an expense category jumped. READS ONLY, and deliberately raw: no profit, no margin, no cash forecast — proposing a movement is in scope, interpreting the business finances is not. A balance of null means the account has never been touched; do not read it as zero.',
+    inputSchema: {
+      type: 'object',
+      properties: { days: { type: 'number', description: 'Window in days, 1-90. Default 30.' } },
+      additionalProperties: false,
+    },
+  },
 ] as const;
 
 /** Sayısal argüman — model bazen dizgi gönderir; şema reddetmek yerine varsayılana düşmek daha az kırılgan. */
@@ -526,11 +549,13 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   catalog_health: (a) => catalogHealth(num(a.limit, 15)),
   stock_watch: (a) => stockWatch(num(a.days, 14)),
   catalog_lookup: (a) => catalogLookup(String(a.query ?? ''), num(a.limit, 10)),
+  product_detail: (a) => productDetail(String(a.product ?? '')),
   delivery_map: (a) => deliveryMap(num(a.demandLimit, 15)),
   reference_data: () => referenceData(),
   sold_out_watch: (a) => soldOutWatch(num(a.limit, 20)),
   demand_signals: (a) => demandSignals(num(a.days, 7)),
   customer_pulse: () => customerPulse(),
+  money_overview: (a) => moneyOverview(num(a.days, 30)),
   propose_featured_flag: (a) => proposeFeaturedFlag(a),
   propose_batch_offer: (a) => proposeBatchOffer(a),
   propose_purchase_order: (a) => proposePurchaseOrder(a),

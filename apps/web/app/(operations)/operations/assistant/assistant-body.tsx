@@ -7,6 +7,7 @@ import {
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
+  type FeaturedFlagPayload,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
@@ -22,6 +23,8 @@ import { receiveIntakeFromProposalAction } from '@/lib/warehouse/intake-actions'
 import { countedLines, intakeBlock, type IntakeFormValues } from '@/components/operation/form/intake-form/schema';
 import { createDraftFromProposalAction } from '@/lib/stock/purchase-order-actions';
 import { purchaseOrderBlock, type PurchaseOrderFormValues } from '@/components/operation/form/purchase-order-form/schema';
+import { setFeaturedGridFromProposalAction } from '@/lib/catalog/featured-actions';
+import type { FeaturedFormValues } from '@/components/operation/form/featured-form/schema';
 import { saveRecipeAction } from '@/lib/catalog/recipe-actions';
 import { RecipeFormSchema, recipeBlock, type RecipeFormValues } from '@/components/operation/form/recipe-form/schema';
 import { createBundleAction } from '@/lib/catalog/bundle-actions';
@@ -52,6 +55,7 @@ import { MoneyMovementBody, movementValuesFrom } from './bodies/money-movement-b
 import { TransferBody, transferValuesFrom } from './bodies/transfer-body';
 import { StockIntakeBody, intakeValuesFrom } from './bodies/stock-intake-body';
 import { PurchaseOrderBody, purchaseOrderValuesFrom } from './bodies/purchase-order-body';
+import { FeaturedFlagBody, featuredValuesFrom } from './bodies/featured-flag-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
@@ -448,6 +452,45 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // yok (kullanıcı kararı 11.08 — kuyruk satış eksenine dokunmaz), yani ürün kapının kendi
     // varsayılanıyla geliyor. Satışa çıkarmak ürün ekranının kararı.
     appliedNote: 'Ürün oluşturuldu — katalogda ADAY olarak duruyor. Satışa çıkarmak ürün ekranının kararı.',
+  }),
+
+  /**
+   * VİTRİN İŞARETİ — gövdesizdi, ızgaranın tamamı düzenlenemiyordu (22.35).
+   *
+   * Karar iki uçluydu (onayla/reddet) ama vitrin bir SEÇKİ ve kontenjanı var: dolu bir ızgaraya
+   * ekleme yapmak sıradaki birini ana sayfadan düşürür. Önizleme bunu söylüyordu ama kimin
+   * düşeceğine karar vermenin yolu yoktu. Form ORTAK (`featured-form/`) ve kararın tamamı diyaloğun
+   * içinde veriliyor — kullanıcı kararı 15.08: *"biz yönlendirme yapmıyoruz."*
+   *
+   * `initial` SEÇENEKLERİ de okuyor: açılış değeri ızgaranın bugünkü hâli + dilekçenin istediği
+   * değişiklik. Dilekçe tek bayrak taşıyor, ızgara ise kayıtta duruyor.
+   */
+  featured_flag: defineBody<FeaturedFlagPayload, FeaturedFormValues>({
+    parse: parseWith<FeaturedFlagPayload>('featured_flag'),
+    initial: (payload, options) => featuredValuesFrom(payload, options),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <FeaturedFlagBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    // **ENGEL YOK ve bu bilinçli:** ızgarayı boşaltmak da geçerli bir karardır (vitrini kapatmak),
+    // kontenjan aşımı ise bir kural değil uyarıdır — operatör bilerek fazla işaretleyip yayın
+    // sırasını sonra düzenleyebilir (`catalog-tab` kararı). Engel koymak, ekranda serbest olan bir
+    // işi kuyrukta yasaklamak olurdu.
+    blocked: () => null,
+    submit: (payload, values, proposalId) =>
+      setFeaturedGridFromProposalAction({ target: payload.target, featuredIds: values.featuredIds, proposalId }),
+    // Liste dar: tek sütun + sağda dilekçe. Kalemli formlar kadar yer istemiyor.
+    width: 980,
+    applyLabel: 'Vitrini güncelle',
+    appliedNote: 'Vitrin ızgarası güncellendi — ana sayfada görünen seçki değişti.',
   }),
 
   /**

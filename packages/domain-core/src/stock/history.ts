@@ -41,6 +41,29 @@ export function hasLeftShelf(status: string): boolean {
 }
 
 /**
+ * **İADE RESTOKU FİRE DEĞİLDİR ve denkleme GİRMEZ** (ölçüldü 15.08).
+ *
+ * Teslim sonrası iade `restock` ile geri alınınca iki şey birden olur (`0020_order_return`):
+ * fiili stok artar (`return_restock` kaydı) **ve aynı adet `order_item_batch`ten düşülür**.
+ * Migration bunu künyesinde şöyle diyor: *"`order_item_batch`'in anlamı bu kuralla keskinleşir:
+ * bizden çıkıp GERİ GELMEYEN mal."*
+ *
+ * Yani `deliveredQty` zaten iadesi düşülmüş NET rakamdır. Restok kaydını bir de fire toplamına
+ * katmak, aynı iadeyi İKİ KEZ saymak olur — ve denklem tam o kadar sapar (yaşandı: kullanıcı ekran
+ * görüntüsü, `120 − 3 − (−1) = 118` ama elde 117; fark bire bir iadenin kendisiydi). Aynı sınıf hata
+ * hazırlıkta da yaşanmıştı (`hasLeftShelf` künyesi): bir hareketin iki yerde sayılması.
+ *
+ * Kırılımda GÖRÜNMEYE devam eder — *"iade → stoğa döndü"* operatörün bilmesi gereken bir olaydır;
+ * saklanan şey olay değil, onun fire toplamına katkısıdır.
+ *
+ * Öteki negatif düzeltmeler (sayımda fazla çıkan mal) fireyi AZALTMAYA devam eder ve bu doğrudur:
+ * orada karşı kayıt yoktur, net kayıp gerçekten daha azdır (`StockAdjustmentService.reasonSummary`).
+ */
+export function countsAsLoss(reason: string): boolean {
+  return reason !== 'return_restock';
+}
+
+/**
  * Ortalamanın anlamlı sayılması için gereken EN AZ parti sayısı.
  *
  * Tek partiden çıkan bir "ortalama ömür", ortalama değil o partinin kendisidir; ikinci bir örnek

@@ -11,6 +11,7 @@ import {
 } from '@lezzet/database';
 import { offerDecisionOf, suggestedOfferPriceCents } from '@lezzet/domain-core';
 import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
+import { LOCALES } from '@lezzet/i18n';
 
 /**
  * Katalog ve stok gözü (22.1 · Faz A) — asistanın "neyi tamamlamam gerekiyor" ve "neyin ömrü
@@ -277,4 +278,78 @@ export async function soldOutWatch(limit: number) {
     .map((v) => ({ product: nameById.get(v.productId) ?? '?', unit: resolveLocalizedText(v.label, 'tr') }));
 
   return { totalActiveVariants: active.length, soldOutCount: empty.length, truncated: empty.length > clamped, soldOut: empty.slice(0, clamped) };
+}
+
+/**
+ * **ÜRÜN DETAYI — ÜÇ DİLDE, ALAN ALAN** (MCP tur 8 raporu §3.8 · ölçüldü 15.08).
+ *
+ * ── NEDEN VAR: KÖR YAZMAYI BİTİRMEK İÇİN ────────────────────────────────────
+ * `propose_product_draft` bir ürünün beyan alanlarını DOLDURUYOR ve kendi tanımı uyarıyor: *"üzerine
+ * yazmak kalıcıdır, sürüm geçmişi yok."* Ama asistanın mevcut metni okuyabileceği hiçbir araç yoktu:
+ * `catalog_health` yalnız "lang eksik" diyor, `catalog_lookup` isim/açıklama çevirilerini hiç
+ * döndürmüyor. Yani model dolu bir açıklamayı ezip ezmediğini BİLEMEDEN gönderiyordu — raporun
+ * kendi turunda iki öneri bu belirsizlikle açıldı.
+ *
+ * Bu, öteki bulguların aksine bir kalite sorunu değil **geri alınamaz veri kaybı riskidir**; o yüzden
+ * eksik araçların ilki bu kapandı.
+ *
+ * ── NE DÖNER: DOLULUK, İÇERİĞİN KENDİSİ DEĞİL ───────────────────────────────
+ * Metnin TAMAMI değil, dil başına DOLU MU + kısa bir önizleme dönüyor. Sebep bağlam maliyeti değil
+ * karar ekonomisi: modelin cevaplaması gereken soru *"buraya yazabilir miyim, yoksa birinin emeğini
+ * mi silerim"*dır ve o soruyu doluluk cevaplar. Önizleme ise "ne tür bir metin duruyor" sorusunu
+ * karşılar — üç dilde tam metin çekmek, on ürünlük bir taramada bağlamı gereksiz doldururdu.
+ *
+ * ── BEYANLAR DA BURADA ──────────────────────────────────────────────────────
+ * `missingDeclarations` motorunun gördüğü eksikler (`lang` · içindekiler · besin · saklama ·
+ * alerjen) aynı yanıtta: `catalog_health`e ikinci bir tur atmadan "bu üründe ne eksik" cevaplanır.
+ */
+export async function productDetail(productIdOrName: string) {
+  const wanted = productIdOrName.trim();
+  if (!wanted) return { error: 'productId ya da ürün adının bir parçası zorunlu.' };
+
+  const db = serviceDb();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(wanted);
+  const rows = isUuid
+    ? await new ProductService(db).listByIds([wanted])
+    : (await new ProductService(db).list({ filters: { query: wanted }, limit: 5 })).rows;
+
+  if (rows.length === 0) return { error: `Ürün bulunamadı: '${wanted}'. catalog_lookup ile arayın.` };
+  // Birden çok eşleşme: SEÇİM MODELE BIRAKILMAZ, adlar döner. Rastgele birini açmak, yanlış ürünün
+  // açıklamasını ezmenin en kısa yolu olurdu.
+  if (rows.length > 1) {
+    return {
+      ambiguous: true,
+      matches: rows.map((p) => ({ productId: p.id, name: resolveLocalizedText(p.name, 'tr') })),
+      note: 'Birden çok ürün eşleşti — productId ile tekrar sorun.',
+    };
+  }
+
+  const product = rows[0]!;
+  const variants = await new ProductVariantService(db).listByProducts([product.id]);
+
+  /** Dil başına doluluk + kısa önizleme — metnin kendisi değil, KARARIN girdisi (künye). */
+  const fields = (text: Record<string, string | undefined> | null | undefined) =>
+    Object.fromEntries(
+      LOCALES.map((locale) => {
+        const value = text?.[locale]?.trim() ?? '';
+        return [locale, value ? { filled: true, preview: value.slice(0, 120) } : { filled: false, preview: null }];
+      }),
+    );
+
+  return {
+    productId: product.id,
+    status: product.status,
+    name: fields(product.name as Record<string, string | undefined>),
+    description: fields(product.description as Record<string, string | undefined> | null),
+    ingredients: fields(product.ingredients as Record<string, string | undefined> | null),
+    storageInstructions: fields(product.storageInstructions as Record<string, string | undefined> | null),
+    // Alerjen bir METİN değil kapalı bir küme (`ProductAllergenEnum`) — dil başına doluluk sorusu
+    // burada anlamsız; listenin kendisi dönüyor.
+    allergens: product.allergens,
+    hasNutrition: product.nutrition !== null && product.nutrition !== undefined,
+    variants: variants.map((v) => ({ variantId: v.id, unit: resolveLocalizedText(v.label, 'tr'), isActive: v.isActive })),
+    /** Motorun gördüğü eksikler — `catalog_health`e ikinci tur atmadan (künye). */
+    declarationGaps: missingDeclarations(product),
+    note: 'Dolu bir alana yazmak ONU SİLER — sürüm geçmişi yok. filled:true olan alanı ancak bilerek değiştirin.',
+  };
 }

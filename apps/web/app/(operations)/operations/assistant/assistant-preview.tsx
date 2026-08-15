@@ -23,7 +23,7 @@ import {
   type ZoneExtendPayload,
 } from '@lezzet/types';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
-import { FEATURED_SLOTS } from '@/lib/catalog/featured-slots';
+import { FEATURED_SLOTS } from '@lezzet/types';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
