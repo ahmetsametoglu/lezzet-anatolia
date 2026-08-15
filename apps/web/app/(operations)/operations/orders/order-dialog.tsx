@@ -7,6 +7,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Badge } from '@/components/operation/ui/badge';
 import { Metric } from '@/components/operation/ui/metric';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { WhatsAppIcon } from '@/components/operation/ui/icons';
 import { money, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { contentText, deliveryText, paymentText, paymentToneClass, statusLabel, statusTone } from './orders-labels';
@@ -144,6 +145,8 @@ export function OrderDialog({ row, onClose }: OrderDialogProps) {
               >
                 {short ? `${line.fulfilledQty}/${line.qty}` : `${line.qty}×`}
               </span>
+              {/* Görsel adetle ad arasında (15.08, kullanıcı isteği): hızlı bakışın işi tanımaktır. */}
+              <Thumbnail src={line.imageUrl} alt={line.title} size={24} />
               <span className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-ink">{line.title}</span>
               <span className="font-ops-mono text-ops-xs text-ops-ink">{money(line.lineTotalCents)}</span>
             </div>

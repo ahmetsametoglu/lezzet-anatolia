@@ -27,6 +27,7 @@ import {
   type Stock,
   type Ticket,
 } from '@lezzet/types';
+import { publicImageUrl } from '@lezzet/storage';
 import {
   allowedDecisions,
   allowedTransitions,
@@ -106,6 +107,15 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
+  // Kalem görseli ÜRÜNDEN gelir (15.08, kullanıcı isteği — fiyatlar emsali): ürünler bu okumada
+  // zaten çekili, ek sorgu yok. Görselsiz ürün `null` taşır, ekran yer tutucu ikon çizer.
+  const productsById = new Map(products.map((p) => [p.id, p]));
+  const variantImages = new Map(
+    variants.map((v) => {
+      const product = productsById.get(v.productId);
+      return [v.id, publicImageUrl(product?.imageKey ?? null, product?.imageUpdatedAt ?? null)];
+    }),
+  );
   // Başlık haritası BURADA kuruluyor, ortak `readVariantTitles` ile DEĞİL: bu okuma varyantları ve
   // ürünleri zaten çekti (aşağıdaki `variantSubs`/`variantProducts` haritaları için) — yardımcıyı
   // çağırmak aynı iki sorguyu tekrar sormak olurdu. Ortaklaşan şey `titleOf` formatlayıcısı; yalnız
@@ -135,6 +145,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     id: item.id,
     title: variantTitles.get(item.variantId) ?? 'Bilinmeyen boy',
     sub: variantSubs.get(item.variantId) ?? '',
+    imageUrl: variantImages.get(item.variantId) ?? null,
     qty: item.qty,
     fulfilledQty: item.fulfilledQty,
     unitPriceCents: item.unitPriceCents,

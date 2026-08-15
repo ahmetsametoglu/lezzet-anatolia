@@ -20,6 +20,8 @@ export interface OrderLineView {
   title: string;
   /** Boy etiketi ya da ürün notu; yoksa boş. */
   sub: string;
+  /** Ürün görseli (public URL) — görselsiz üründe `null`, ekran yer tutucu ikon çizer. */
+  imageUrl: string | null;
   qty: number;
   /** Fiziksel olarak giden adet — `qty`'den azsa eksik gitmiştir. */
   fulfilledQty: number;
