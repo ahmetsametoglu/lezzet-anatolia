@@ -155,6 +155,11 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             settled={order.fulfillmentSettled}
           />
 
+          {/* PARA ile ZAMAN ÇİZELGESİ YAN YANA (15.08, kullanıcı kararı — geniş ekran turu): ikisi
+              de kısa/dar içerik ve tam genişlikte "satırda üç kelime, bin piksel boşluk" okunuyordu
+              (1920'de ölçüldü). Kalemler ve Kararlar tam genişlikte kalır — biri tablo, öteki eylem
+              şeridi. `items-start`: hareket listesi uzayınca çizelge kartı gerilmez. */}
+          <div className="grid grid-cols-2 items-start gap-4">
           <section className={cardClass()}>
             <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3.5 py-[11px]">
               <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">Para</span>
@@ -248,6 +253,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               <Timeline steps={timelineSteps(order)} />
             </div>
           </section>
+          </div>
 
           {/* KARARLAR — kaydın altında, çünkü karar okumanın SONUCUDUR: kalemleri, parayı ve
               geçmişi gördükten sonra verilir. Hangi kararın açık olduğunu motor söyler
