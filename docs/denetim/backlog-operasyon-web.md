@@ -55,12 +55,6 @@
   - ✅ **YAZILDI (15.08).** Kök sandığımdan derindi: adı `null`a çeviren karar (`placeLabel`) doğruydu ama **iki okuma da ham listeyi orada atıyordu**, yani ekranın elinde hiç ad kalmıyordu. Artık `places` ham geçiyor; kalıcı etiket **3 ad**, üzerine gelince **tam liste**. Ayrıntı: `docs/build/19-coklu-depo.md` → `(19.20)`. Ekranda denenmedi.
   - **Talep:** Haritadaki noktaların üzerine gelindiğinde (hover/tooltip) posta kodu ve ait olduğu yerleşim adı gösterilmektedir. Ancak bir posta kodu birden fazla şehre/yerleşime hizmet ediyorsa (örneğin Fransa'da kırsal kesimdeki bir posta kodunun birden fazla kasaba veya köyü kapsaması durumunda) etiket üzerinde bu yerleşimlerin tamamı gösterilmemektedir. Hover durumunda bu posta koduna bağlı tüm şehir isimlerinin virgülle ayrılarak veya tek tek etiket üzerinde listelenmesi istenmektedir.
 
-- [ ] **OB-05 · Siparişler sayfasında detayların diyalog (Modal) yerine sağ panelde açılması**
-  - **Talep:** Ürünler sayfasındaki tasarıma benzer şekilde; Siparişler sayfasında bir siparişe tıklandığında, sipariş detaylarının ekranı kaplayan bir diyalog penceresi (modal) yerine ekranın sağ tarafında açılan bir yan panelde (right pane/drawer) gösterilmesi istenmektedir.
-  - **Detaylar:**
-    - Mevcut diyalog bileşeni yapısı (`dialog.tsx`) bozulmamalı ve korunmalıdır (çünkü sistemde diyalog yapısını kullanan başka ekranlar mevcuttur).
-    - Açılacak olan bu sağ panelde, siparişle ilgili operasyonel açıdan gerekli olan tüm bilgiler and aksiyonlar yer almalıdır.
-
 - [ ] **OB-06 · Sipariş detay panelinde müşteri güvenilirlik geçmişi ve güven puanı gösterimi**
   - **Talep:** Sipariş detaylarının gösterildiği yan panelde, siparişi veren müşterinin güvenilirliğini analiz etmek amacıyla bazı ek göstergeler yer almalıdır:
     - Müşterinin daha önce yapmış olduğu geçmiş siparişlerin listesi ve özet bilgileri (geçmiş alışveriş davranışını hızlıca görebilmek için).
