@@ -229,50 +229,45 @@
   --text-ops-xs: 13px;        /* etiket, yardım metni     ← 11 · 11,5 */
   --text-ops-micro: 12px;     /* tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5 */
 
-  /* §0.1 Yüzey ve mürekkep
-     NÖTRLEŞTİRME (kullanıcı kararı 15.08): nötr skala ZEYTİN ALT TONLUYDU (gri kademeleri ton ~80°,
-     zeminler ~40-60°, %4-14 doygunluk) ve geniş yüzeylere yayılınca sarımtırak bir örtü gibi gözü
-     yoruyordu. Tüm nötrler aynı ALGISAL AÇIKLIKTA saf griye çevrildi (luma korunarak); zeytin artık
-     yalnız VURGU (aktif sekme, rozet, olumlu durum — §0.3 aileleri değişmedi). Eski değerler git
-     geçmişinde; kademe eşlemeleri ("= gray-X") aynen geçerli. */
-  --color-ops-ink: #242424; /* başlık, koyu buton, birincil metin, "L" */
-  --color-ops-strong: #3d3d3d; /* mürekkep yumuşak: ikincil başlık, nötr tutar/tarih */
-  --color-ops-body: #6e6e6e; /* gövde açıklaması, tablo alt satırı */
-  --color-ops-muted: #8e8e8e; /* etiket, yardımcı satır, placeholder */
-  --color-ops-faint: #9e9e9e; /* placeholder ikonu */
-  --color-ops-bg: #dbdbdb; /* sayfa zemini (pane arkası) */
-  --color-ops-card: #fbfbfb; /* kart, tablo, sidebar zemini */
+  /* §0.1 Yüzey ve mürekkep */
+  --color-ops-ink: #22251f; /* başlık, koyu buton, birincil metin, "L" */
+  --color-ops-strong: #3a3f37; /* mürekkep yumuşak: ikincil başlık, nötr tutar/tarih */
+  --color-ops-body: #6a7065; /* gövde açıklaması, tablo alt satırı */
+  --color-ops-muted: #8b9086; /* etiket, yardımcı satır, placeholder */
+  --color-ops-faint: #9aa094; /* placeholder ikonu */
+  --color-ops-bg: #dedbd3; /* sayfa zemini (pane arkası) */
+  --color-ops-card: #fbfbf9; /* kart, tablo, sidebar zemini */
   --color-ops-white: #ffffff; /* dialog ve girdi zemini, dolu çip metni */
 
   /* §0.2 Nötr gri skalası — kademe atlanmaz; iki komşu adım aynı kartta yan yana kullanılmaz */
-  --color-ops-gray-25: #f8f8f8; /* sekme çubuğu, tablo başlığı */
-  --color-ops-gray-50: #f0f0f0; /* iç ayraç, satır ayracı */
-  --color-ops-gray-100: #efefef; /* kapanmış rozet zemini, satır hover */
-  --color-ops-gray-200: #e6e6e6; /* standart kenarlık (kart, tablo) */
-  --color-ops-gray-300: #e1e1e1; /* iç kart kenarlığı, 2. ayraç */
-  --color-ops-gray-400: #dadada; /* girdi/select kenarı, nötr çip */
-  --color-ops-gray-500: #d6d6d6; /* kesikli çerçeve, boş durum */
-  --color-ops-gray-600: #cbcbcb; /* pasif buton dolgusu/çerçevesi */
-  --color-ops-gray-700: #b5b5b5; /* pasif ikon, pasif metin */
+  --color-ops-gray-25: #f8f9f5; /* sekme çubuğu, tablo başlığı */
+  --color-ops-gray-50: #f0f1ec; /* iç ayraç, satır ayracı */
+  --color-ops-gray-100: #eef0ea; /* kapanmış rozet zemini, satır hover */
+  --color-ops-gray-200: #e6e7e1; /* standart kenarlık (kart, tablo) */
+  --color-ops-gray-300: #e0e2da; /* iç kart kenarlığı, 2. ayraç */
+  --color-ops-gray-400: #d9dbd2; /* girdi/select kenarı, nötr çip */
+  --color-ops-gray-500: #d4d7ce; /* kesikli çerçeve, boş durum */
+  --color-ops-gray-600: #c9ccc3; /* pasif buton dolgusu/çerçevesi */
+  --color-ops-gray-700: #b3b7ac; /* pasif ikon, pasif metin */
 
   /* Skala takma adları — kullanımdaki adlar korunur (envanter §0.5 eşlemesi) */
-  --color-ops-subtle: #f8f8f8; /* = gray-25 */
-  --color-ops-panel: #f8f8f8; /* = gray-25; sidebar zemini (#f3f4f0 kalktı) */
-  --color-ops-line-soft: #f0f0f0; /* = gray-50 */
-  --color-ops-line: #e6e6e6; /* = gray-200 */
-  --color-ops-line-strong: #dadada; /* = gray-400 */
+  --color-ops-subtle: #f8f9f5; /* = gray-25 */
+  --color-ops-panel: #f8f9f5; /* = gray-25; sidebar zemini (#f3f4f0 kalktı) */
+  --color-ops-line-soft: #f0f1ec; /* = gray-50 */
+  --color-ops-line: #e6e7e1; /* = gray-200 */
+  --color-ops-line-strong: #d9dbd2; /* = gray-400 */
   /* İskelet çubuğu AYRI takma ad (15.08): çubuk `ops-card` ZEMİNİNE çizilir, gray-100 ise beyaz kart
      ÜSTÜ dolgusudur — kart zemininde fark ~%5'e düşüyor ve `animate-pulse` yarıya inince açık modda
      görünmez oluyordu (koyu modda skala adımları geniş, sorun yoktu). Açıkta 400 kademesi, koyuda
      bugünkü onaylı görünüm (gray-100) — iki mod ayrı ayarlanabilsin diye takma ad. */
-  --color-ops-skeleton: #dadada; /* = gray-400; iskelet çubuğu dolgusu */
-  --color-ops-skeleton-soft: #e6e6e6; /* = gray-200; iskelet gradyanının açık ucu */
+  --color-ops-skeleton: #d9dbd2; /* = gray-400; iskelet çubuğu dolgusu */
+  --color-ops-skeleton-soft: #e6e7e1; /* = gray-200; iskelet gradyanının açık ucu */
   /* `surface-sunken` 15.08'e kadar HİÇ TANIMLI DEĞİLDİ ama 10+ yerde kullanılıyordu (para ekranı
      kolon zemini, aile diyaloğu, rapor ölçü şeridi, hover dolguları) — Tailwind tanımsız utility'yi
      üretmez, sınıflar sessizce hiçbir şey yapmıyordu. Kod haklı, envanter eksikti: kartın İÇİNDE
      hafifçe çukur duran zemin. Açıkta karttan bir kademe koyu, koyuda karttan koyu (çukur içeri
      gider); iki değer de skaladan, uydurma hex yok. */
-  --color-ops-surface-sunken: #f0f0f0; /* = gray-50 */
+  --color-ops-surface-sunken: #f0f1ec; /* = gray-50 */
 
   /* §0.3 Semantik aileler — metin · koyu · zemin · kenarlık (+ grafik/nokta) */
   --color-ops-olive: #5f7a2c; /* ikon, etiket, bağlantı, dolu çip */
@@ -331,18 +326,18 @@
 
   /* Yüzen katman — dialog örtüsü (scrim). Temayla döner: koyuda daha koyu, çünkü panel
      zemini de koyudur ve ayrışma yalnız örtü + kenarlıkla kurulur (gölge işe yaramaz). */
-  --color-ops-scrim: rgba(36, 36, 36, 0.42);
+  --color-ops-scrim: rgba(34, 37, 31, 0.42);
   /* Görsel ÜSTÜ örtü (yükleme/değiştirme hover'ı) — fotoğrafın üstünde durur, bu yüzden
      temayla dönmez: her iki temada da koyu kalır ki üstündeki açık metin okunsun. */
-  --color-ops-image-scrim: rgba(30, 30, 30, 0.5);
+  --color-ops-image-scrim: rgba(30, 33, 27, 0.5);
 
   /* §0.4 Etkileşim durumları — odak halkası ayrı renk taşımaz (2px olive, 2px offset) */
-  --color-ops-ink-hover: #363636; /* koyu butonun hover/active durumu */
+  --color-ops-ink-hover: #33372e; /* koyu butonun hover/active durumu */
   /* Eşdeğerlik notları AÇIK TEMA için geçerli — karanlıkta iki token da ayrı kademeye kayıyor
      ve bu bilinçli (koyu bloğun künyesi). Ekini yazmasak "yorum yanlış" diye okunuyordu. */
-  --color-ops-disabled-fill: #cbcbcb; /* disabled buton zemini (açıkta = gray-600) */
-  --color-ops-disabled-text: #8e8e8e; /* disabled buton/girdi metni (açıkta = muted) */
-  --color-ops-row-selected: #efefef; /* tablo satırı hover ve seçim (= gray-100) */
+  --color-ops-disabled-fill: #c9ccc3; /* disabled buton zemini (açıkta = gray-600) */
+  --color-ops-disabled-text: #8b9086; /* disabled buton/girdi metni (açıkta = muted) */
+  --color-ops-row-selected: #eef0ea; /* tablo satırı hover ve seçim (= gray-100) */
 
   /* Köşe yarıçapları (operasyon) */
   --radius-ops-card: 8px;
@@ -381,35 +376,35 @@ body {
 [data-surface='operations'][data-theme='dark'] {
   color-scheme: dark;
 
-  /* §0.6 Yüzey ve mürekkep — ters çevrilir. Nötrleştirme (15.08) burada da: açık bloğun künyesi. */
-  --color-ops-ink: #eaeaea;
-  --color-ops-strong: #cacaca;
-  --color-ops-body: #b7b7b7;
-  --color-ops-muted: #939393;
-  --color-ops-faint: #797979;
-  --color-ops-bg: #1d1d1d;
-  --color-ops-card: #252525;
-  --color-ops-white: #2d2d2d; /* dialog/girdi zemini — koyuda "beyaz" kart altıdır */
+  /* §0.6 Yüzey ve mürekkep — ters çevrilir */
+  --color-ops-ink: #e9ebe3;
+  --color-ops-strong: #c8ccc2;
+  --color-ops-body: #b4b9ad;
+  --color-ops-muted: #8f9688;
+  --color-ops-faint: #757c6d;
+  --color-ops-bg: #1b1e18;
+  --color-ops-card: #23261f;
+  --color-ops-white: #2a2e26; /* dialog/girdi zemini — koyuda "beyaz" kart altıdır */
 
   /* §0.6 Gri skalası — aynı kademeler, koyu yönde */
-  --color-ops-gray-25: #252525;
-  --color-ops-gray-50: #2d2d2d;
-  --color-ops-gray-100: #343434;
-  --color-ops-gray-200: #3f3f3f;
-  --color-ops-gray-300: #494949;
-  --color-ops-gray-400: #585858;
-  --color-ops-gray-500: #686868;
-  --color-ops-gray-600: #797979;
-  --color-ops-gray-700: #939393;
+  --color-ops-gray-25: #23261f;
+  --color-ops-gray-50: #2a2e26;
+  --color-ops-gray-100: #31352c;
+  --color-ops-gray-200: #3c4038;
+  --color-ops-gray-300: #464b41;
+  --color-ops-gray-400: #545a4e;
+  --color-ops-gray-500: #646a5d;
+  --color-ops-gray-600: #757c6d;
+  --color-ops-gray-700: #8f9688;
 
-  --color-ops-subtle: #252525;
-  --color-ops-panel: #252525;
-  --color-ops-line-soft: #2d2d2d;
-  --color-ops-line: #3f3f3f;
-  --color-ops-line-strong: #585858;
-  --color-ops-skeleton: #343434; /* = gray-100; koyuda bugünkü onaylı görünüm */
-  --color-ops-skeleton-soft: #2d2d2d; /* = gray-50 */
-  --color-ops-surface-sunken: #1d1d1d; /* = bg; çukur koyuda karttan koyu */
+  --color-ops-subtle: #23261f;
+  --color-ops-panel: #23261f;
+  --color-ops-line-soft: #2a2e26;
+  --color-ops-line: #3c4038;
+  --color-ops-line-strong: #545a4e;
+  --color-ops-skeleton: #31352c; /* = gray-100; koyuda bugünkü onaylı görünüm */
+  --color-ops-skeleton-soft: #2a2e26; /* = gray-50 */
+  --color-ops-surface-sunken: #1b1e18; /* = bg; çukur koyuda karttan koyu */
 
   /* §0.6 Semantik aileler — koyu zeminde okunur kalacak şekilde açılır */
   --color-ops-olive: #a9c46b;
@@ -456,18 +451,18 @@ body {
   --color-ops-violet-line: #3e3560;
   --color-ops-violet-dot: #8a7ae0;
 
-  --color-ops-scrim: rgba(8, 8, 8, 0.74);
+  --color-ops-scrim: rgba(8, 9, 7, 0.74);
 
   /* §0.6 Etkileşim — koyu buton açık zemine döner (mürekkep ters) */
-  --color-ops-ink-hover: #d6d6d6;
+  --color-ops-ink-hover: #d3d8ca;
   /* DEĞERLER DOĞRU, açıktaki eşdeğerlik burada BİLEREK bozulur (ölçüldü 07.08, mobil gözlemi).
      Açıkta dolgu = gray-600, metin = muted; karanlıkta o eşleme korunsaydı dolgu #757c6d, metin
      #8f9688 olurdu — birbirine yapışık iki ton, yani okunmayan bir buton. Karanlıkta dolgu bir
      kademe daha koyuya (= koyu gray-200), metin bir kademe daha açığa (= koyu faint) taşınıyor;
      korunan şey renk eşleşmesi değil, dolgu ile metin arasındaki KONTRAST. */
-  --color-ops-disabled-fill: #3f3f3f; /* karanlıkta = gray-200 */
-  --color-ops-disabled-text: #797979; /* karanlıkta = faint */
-  --color-ops-row-selected: #343434;
+  --color-ops-disabled-fill: #3c4038; /* karanlıkta = gray-200 */
+  --color-ops-disabled-text: #757c6d; /* karanlıkta = faint */
+  --color-ops-row-selected: #31352c;
 }
 
 /* Harita karolarının soluklaştırması (19.20) — tasarımın kendi değerleri

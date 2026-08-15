@@ -1121,7 +1121,12 @@ kargo" diye bir şey yoktur.
 Kod: `apps/mobile/src/screens/cart/cart-screen.tsx` · `cart-line-row.tsx` ·
 `apps/mobile/src/screens/checkout/checkout-screen.tsx`.
 
-### OPERASYON NÖTR PALETİ SAFLAŞTI — zeytin alt tonu kalktı, zeytin yalnız vurgu (15.08)
+### ~~OPERASYON NÖTR PALETİ SAFLAŞTI — zeytin alt tonu kalktı, zeytin yalnız vurgu (15.08)~~ GERİ ALINDI (15.08, aynı gün)
+
+**Yeni karar (15.08 akşamı, kullanıcı):** nötrleştirme GERİ ALINDI — zeytin alt tonlu özgün palet
+döndü. Bağlam: kullanıcının monitör kontrast ayarı bozukmuş; "sarımtırak, gözü yoruyor" algısının
+kaynağı kısmen kalibrasyondu. Aynı gün eklenen üç token (`ops-skeleton`, `ops-skeleton-soft`,
+`ops-surface-sunken`) KALDI, değerleri zeytinli skalaya döndü. Aşağıdaki kayıt tarihçe için duruyor.
 
 **Kullanıcı kararı (15.08, production turu):** operasyon evreninin nötr skalası zeytin alt
 tonluydu — dokuz gri kademesi ton ~80°, zeminler ~40-60°, %4-14 doygunluk (`bg` #dedbd3 en
