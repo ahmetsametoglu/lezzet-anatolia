@@ -1,9 +1,13 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { SkeletonPageHeader, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { Skeleton, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
  * Asistan kuyruğunun ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
  * tarayıcıda ESKİ sayfayı bırakır ve operatör tıklamanın işlediğini anlamaz.
+ *
+ * Başlık GERÇEK `PageHeader` (15.08, emsal: fiyatlar — statik kimlik çubuklaştırılmaz; kabuk
+ * blokları `OpsShellProvider`'dan). Alt satır VERİDİR (bekleyen sayısı + yaş aralığı) — çubuk kalır.
  *
  * İskelet ekranın gerçek yerleşimini çiziyor — İKİ SÜTUN: solda kuyruk, sağda karar çerçevesi.
  * Tek sütunluk bir iskelet, yüklenme bitince yerleşimin sıçramasına yol açardı.
@@ -11,7 +15,7 @@ import { SkeletonPageHeader, SkeletonRows, SkeletonText } from '@/components/ope
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Asistan kuyruğu yükleniyor">
-      <SkeletonPageHeader />
+      <PageHeader title="Asistan Onay Kuyruğu" subtitle={<Skeleton className="h-3 w-64" />} />
       <div className="grid min-h-0 flex-1 grid-cols-[326px_1fr] overflow-hidden">
         <div className="min-h-0 overflow-hidden border-r border-ops-line">
           <SkeletonRows rows={6} />
