@@ -90,7 +90,7 @@
       "terms": "Onaylayarak satış koşullarını kabul etmiş olursunuz.",
       "termsLink": "Satış koşullarını okuyun",
       "coldChain": "❄ Siparişiniz soğuk zincir bozulmadan, {date} günü kapınıza gelir.",
-      "minBasket": "{place} için sipariş alt sınırı {min} — {missing} daha ekleyin.",
+      "minBasket": "{place} için sipariş alt sınırı {min} — ara toplamınıza {missing} daha ekleyin.",
       "packageSuffix": "(paket)",
       "blockedTotal": "Toplam, gönderilemeyen kalemler yukarıda çözülünce netleşir.",
       "cartUnreachable": "Sepetiniz şu an okunamadı. Sayfayı yenileyip tekrar deneyin."
@@ -232,7 +232,7 @@
       "terms": "En confirmant, vous acceptez les conditions de vente.",
       "termsLink": "Lire les conditions générales de vente",
       "coldChain": "❄ Votre commande arrive chez vous le {date}, chaîne du froid préservée.",
-      "minBasket": "Minimum de commande pour {place} : {min} — ajoutez encore {missing}.",
+      "minBasket": "Minimum de commande pour {place} : {min} — ajoutez encore {missing} au sous-total.",
       "packageSuffix": "(coffret)",
       "blockedTotal": "Le total sera définitif une fois les articles non livrables réglés ci-dessus.",
       "cartUnreachable": "Votre panier n’a pas pu être chargé. Actualisez la page et réessayez."
@@ -374,7 +374,7 @@
       "terms": "Mit der Bestätigung akzeptieren Sie die Verkaufsbedingungen.",
       "termsLink": "Allgemeine Geschäftsbedingungen lesen",
       "coldChain": "❄ Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
-      "minBasket": "Mindestbestellwert für {place}: {min} — fügen Sie noch {missing} hinzu.",
+      "minBasket": "Mindestbestellwert für {place}: {min} — fügen Sie Ihrer Zwischensumme noch {missing} hinzu.",
       "packageSuffix": "(Paket)",
       "blockedTotal": "Die Summe steht fest, sobald die nicht lieferbaren Artikel oben geklärt sind.",
       "cartUnreachable": "Ihr Warenkorb konnte nicht geladen werden. Bitte Seite neu laden und erneut versuchen."

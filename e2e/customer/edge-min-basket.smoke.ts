@@ -79,7 +79,10 @@ test.describe('uç senaryo · asgari sepetin sözü ile kuralı aynı sayı', ()
       await expect(stepper).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 30_000 });
 
-    // SÖZ: "Commande minimum 45,00 € — ajoutez encore 0,10 €." (bal kutusu — bilgi, hata değil).
+    // SÖZ: "Commande minimum 45,00 € — ajoutez encore 0,10 € au sous-total." (bal kutusu — bilgi,
+    // hata değil). Cümlenin sonundaki "au sous-total" 15.08'de eklendi: eksik İNDİRİMSİZ ara
+    // toplamdan hesaplanıyor ve cümle bunu söylemiyordu (mobil şeridin cihaz ölçümü). İddia
+    // parçalı arıyor, yani ek eklendi diye kırılmadı — ama okuyan ajanın gördüğü metin bu.
     // İddia YENİLEMELİ: dev server'ın ayar önbelleği 30 sn'lik sözleşme (`SETTINGS_CACHE_TTL_MS`),
     // fikstürün az önce açtığı bölge satırını sunucu en geç o sürede görür — ilk kare kanıt
     // değildir (bulgu-doğrulama dersi, 07.08).

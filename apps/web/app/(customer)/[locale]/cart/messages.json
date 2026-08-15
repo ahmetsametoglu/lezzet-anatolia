@@ -23,7 +23,7 @@
     "vatShort": "KDV dahil",
     "checkout": "Ödemeye geç",
     "checkoutBlocked": "Devam etmek için tükenen kalemi çıkarın",
-    "minBasket": "Sipariş için en az {min} gerekir — {missing} daha ekleyin.",
+    "minBasket": "Sipariş için en az {min} gerekir — ara toplamınıza {missing} daha ekleyin.",
     "empty": {
       "title": "Sepetiniz şu an boş",
       "titleEmptied": "Sepetiniz boşaldı",
@@ -131,7 +131,7 @@
     "vatShort": "TTC",
     "checkout": "Passer à la commande",
     "checkoutBlocked": "Retirez l'article épuisé pour continuer",
-    "minBasket": "Commande minimum {min} — ajoutez encore {missing}.",
+    "minBasket": "Commande minimum {min} — ajoutez encore {missing} au sous-total.",
     "empty": {
       "title": "Votre panier est vide",
       "titleEmptied": "Votre panier a été vidé",
@@ -239,7 +239,7 @@
     "vatShort": "inkl. MwSt.",
     "checkout": "Zur Kasse",
     "checkoutBlocked": "Entfernen Sie den ausverkauften Artikel, um fortzufahren",
-    "minBasket": "Mindestbestellwert {min} — fügen Sie noch {missing} hinzu.",
+    "minBasket": "Mindestbestellwert {min} — fügen Sie Ihrer Zwischensumme noch {missing} hinzu.",
     "empty": {
       "title": "Ihr Warenkorb ist leer",
       "titleEmptied": "Ihr Warenkorb wurde geleert",

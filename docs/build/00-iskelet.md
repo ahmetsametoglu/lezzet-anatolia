@@ -31,6 +31,7 @@ Yok — ilk modül.
   - *Bitti:* lokal çalışıyor, `/health` 200 dönüyor
 - [x] (00.6) Paket sınırı aracı (eslint-boundaries veya dependency-cruiser) — `STACK §4` kuralları makine-zorlamalı
   - *Bitti:* bilerek yapılan bir ihlal derlemede/lint'te yakalanıyor
+  - **Durum (15.08 — son korumasız köprü kapandı).** `lib/storefront/featured.ts` barrel'dan DEĞER açıyordu ve bu klasördeki dört köprünün `server-only` taşımayan tekiydi. Bugün arıza değildi (yalnız sunucudan çağrılıyor) ama vitrin seçicisi istemciye taşındığı gün hata **sessizce** `node:crypto`'ya dönerdi — bir kez yaşandı ve ödeme sayfasını 500'e düşürdü (10.08, tek dosyadan 48 istemci dosyası). **Çare `server-only` değil DERİN YOL** (`@lezzet/application/catalog/featured`): `server-only` yanlış kullanımı okunur bir hataya çevirir, derin yol onu ORTADAN KALDIRIR — ve kaynak modül hiç import taşımıyor, yani yasaklanması gereken bir şey değil, saf. Doğrulama: `typecheck` temiz · `featured.test.ts` 17/17.
 - [x] (00.7) Kök script'ler: `dev`, `build`, `typecheck`, `lint`, `test` (turbo pipeline)
   - *Bitti:* hepsi kökte tek komutla koşuyor
 - [x] (00.8) `.env.example` + README (lokal kurulum üç adımda)
@@ -124,6 +125,12 @@ Yok — ilk modül.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
   - **Kademe 3 — ERTELENDİ (canlı öncesi):** production-build koşusu + geniş regresyon + piksel-diff kararı. Bugün kurulmaz.
   - Müşteri OTP'si için test ortamında kod-yakalama kapısı gerekir (Resend'e gitmeden) — Kademe 2'nin tek yeni parçası; tasarımı iskeleti alan şeridin.
+
+- [ ] (00.10) **İstemciden barrel'a DEĞER yolu `docs:check` ile zorlansın** *(kalıbın kendi önerisi, 10.08; kayda geçirildi 15.08)* · `touches: scripts/docs-check.mjs`
+  - Kalıp üç sebeple gözden kaçıyor ve üçü bir vakada aynı anda çalıştı: *(1)* `export … from` bir import gibi **görünmez** — dosyada "import" kelimesi hiç geçmez, göz de grep de kaçırır; *(2)* **`typecheck` göremez** — tip olarak her şey doğru, kırılma yalnız webpack'in istemci grafiğinde; *(3)* `import type` **güvenlidir** ve bu ayrımı bilmeyen "type de import" diye düşünüp yanlış tarafa geçebilir.
+  - İstenen kontrol: `'use client'` dosyalarından başlayıp geçişli izle `@lezzet/application` barrel'ına **değer** kenarıyla ulaşan bir yol var mı. `export … from` kenarı sayılır, `import type`/`export type` sayılmaz.
+  - **Bedeli ölçülmüş:** barrel'dan tek bir değer açmak paketin tamamını tarayıcıya sokuyor (veritabanı istemcisi · e-posta şablonları · `pino` · `node:crypto`). 10.08'de tek dosyadan 48 istemci dosyasına yayıldı ve ödeme sayfası 500 verdi.
+  - Emsali `docs:check §3f` (teardown'da elle silme): `typecheck` göremiyor (çağrı tip olarak geçerli), `lint` de göremiyor (proje disiplini, dil kuralı değil) — o boşluğun tek çaresi makineyle zorlamaktı.
 
 **Modül durumu:** tamam (00.9 sonradan açıldı — araç katmanı, iskelet değil). Kabuk paketlerin bir kısmı hâlâ kabuk (`domain-core` yalnız paket sabiti taşıyor — içeriği `03`'te); iskelet görevi bu, dolduran modüller ayrı.
 

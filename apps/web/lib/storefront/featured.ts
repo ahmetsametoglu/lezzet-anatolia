@@ -11,7 +11,26 @@
  * web ana sayfasıdır (koleksiyon rotasyonu ve fırsat bandı) ve paketin ölçütü "en az iki yüzeyin
  * çağırdığı orkestrasyon" — tek yüzeyin işi kendi uygulamasında kalır.
  */
-export { pickFeatured } from '@lezzet/application';
+/**
+ * **DERİN YOL, barrel DEĞİL** (15.08 · `not-herkese-application-barreli-istemciye-girmesin`).
+ *
+ * Bu satır `from '@lezzet/application'` idi ve dosya bu klasördeki dört köprünün **korumasız
+ * olanıydı**: ötekiler (`read-viewer`, `batch-view`, b2b ikilisi) `server-only` taşıyor, bu
+ * taşımıyordu. Bugün arıza değil — `pickFeatured` yalnız sunucudan çağrılıyor. Ama vitrin seçicisi
+ * bir gün istemciye taşınırsa (*"daha fazla göster"*) hata **sessizce** `node:crypto`'ya döner:
+ * barrel'dan tek bir DEĞER açmak paketin tamamını çeker — veritabanı istemcisi, e-posta şablonları,
+ * `pino`. Bir kez yaşandı ve ödeme sayfasını 500'e düşürdü (10.08, tek dosyadan 48 istemci dosyası).
+ *
+ * **Çare `server-only` DEĞİL, derin yol seçildi** ve fark önemli: `server-only` yanlış kullanımı
+ * okunur bir hataya çevirir, derin yol ise **yanlış kullanımı ortadan kaldırır**. Kaynak modül
+ * (`packages/application/src/catalog/featured.ts`) hiç import taşımıyor — tamamen saf, yani
+ * istemciden okunması yasaklanması gereken bir şey değil. Bu dosyanın öteki iki dışa verimi
+ * (`rotateDaily`, `pickRandom`) da saf; dosya artık bütünüyle istemci-güvenli.
+ *
+ * Ölçüt "istemci görebiliyor mu", "kural saf mı" değil (notun kendi cümlesi). `export … from` bir
+ * import gibi görünmez ve `typecheck` göremez — kırılma yalnız webpack'in istemci grafiğinde.
+ */
+export { pickFeatured } from '@lezzet/application/catalog/featured';
 
 /**
  * **Güne bağlı deterministik seçim** — koleksiyon slotlarının rotasyonu (kullanıcı kararı 08.08).
