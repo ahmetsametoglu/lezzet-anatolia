@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { DiscountSchema } from '../entities/discount.schema';
-import { PointsBalanceSchema } from '../entities/points.schema';
+import { PointsBalanceSchema, PointsEntrySchema } from '../entities/points.schema';
 import { PointsReasonEnum } from '../primitives/enums.schema';
 
 /**
@@ -181,6 +181,58 @@ export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).me
 export const MePointsViewSchema = z.object({
   points: MePointsCardSchema.nullable(),
   coupons: z.array(MeCouponSchema),
+});
+
+/**
+ * **PUAN GEÇMİŞİNİN BİR SATIRI** (`GET /api/v1/me/points/history`, kullanıcı isteği 15.08).
+ *
+ * ── NEDEN VAR: EN BÜYÜK İKİ ÖDÜL GÖRÜNMEZDİ ─────────────────────────────────
+ * Kullanıcının cümlesi: *"hangi puan nereden geldi konusunu da gösterebileceğimiz bir bölümümüz
+ * olmalı."* Ölçüm bunun bir süsleme olmadığını gösterdi (15.08): `referral` (500) ve `neighbor`
+ * (100) **başkasının** eylemiyle doğuyor — davet edilen kişi parasını ödediğinde — ve müşteri o an
+ * uygulamada değil. Yani programın en değerli iki ödülünün gösterilebileceği bir "sonuç sayfası"
+ * YOK; tek yeri geçmiştir. Günlük ziyaret puanı da bilinçli sessiz yazılıyor (karar 11.08) ve
+ * müşterinin onu görebildiği ilk yer yine burası.
+ *
+ * ── SEBEP KÜMESİ TAM: `PointsReasonEnum`, `MePointsEarnWayKey` DEĞİL ─────────
+ * Kazanma yolları kümesi (`MePointsEarnWayKeyEnum`) altı üye taşıyor ve ölçütü *"program neyle
+ * ödüllendirir"*. Geçmiş bunu SORMUYOR: defterde ne varsa onu gösteriyor — `redemption` (kupona
+ * çevirme, eksi), `manual` (personelin elle düzeltmesi) ve artık yazılmayan `order` da dahil.
+ * Kazanma yolları kümesini genişletmek, "kazanma yolu" listesine hiç kazanma olmayan iki anahtar
+ * sokardı; ayrı kalmalarının sebebi bu (web şeridinin 15.08 cevabındaki aynı gerekçe).
+ *
+ * ── DIŞARIDA BIRAKILANLAR ───────────────────────────────────────────────────
+ * `note` — YALNIZ `manual`da dolu ve **personelin gerekçesi**dir ("gecikme telafisi — jest"), iç
+ * yazışma; müşteriye gösterilmek üzere yazılmadı. `refId` — iç kimlik, müşterinin açabileceği bir
+ * şeye işaret etmiyor (bir `product_feedback` satırı ya da bir davet). `createdBy` — personel
+ * kimliği; müşteriye kimin düzelttiğini söylemenin bir işlevi yok.
+ */
+export const MePointsHistoryEntrySchema = PointsEntrySchema.pick({
+  id: true,
+  /** İşaretli: **+ kazanım, − harcama.** Ekran işareti hem renkten hem rakamdan okutur. */
+  points: true,
+  reason: true,
+}).extend({
+  /** Hareketin anı — `createdAt`in taşıma adı; ekran onu tarihe çevirir, ham damgayı yazmaz. */
+  at: PointsEntrySchema.shape.createdAt,
+});
+
+/**
+ * Geçmişin sayfa zarfı — sipariş listesinin BİREBİR aynı kararı (`MeOrderPageSchema` künyesi).
+ *
+ * **Defter veriyle SINIRSIZ büyür** (CLAUDE §1: sayfalama ölçütü liste olmak değil, sınırsız
+ * büyümek): günde bir ziyaret puanı yazan bir müşteride bile satır sayısı yıllarla artar. Keyset,
+ * offset değil — liste akarken araya kayıt girdiğinde offset satır atlar.
+ *
+ * `nextCursor` **opak bir dize**: istemci onu yorumlamaz, bir sonraki isteğe aynen geri verir.
+ * **İmleç URL'e yazılmaz** — süzgeç yok, yani paylaşılabilecek bir seçim de yok.
+ *
+ * `total` YOK: tasarımda "N hareket" diye bir başlık yok ve olmayan bir sayacı taşımak, bir gün
+ * süzgeç eklendiğinde sessizce yalan söyleyen bir alan bırakırdı.
+ */
+export const MePointsHistoryPageSchema = z.object({
+  entries: z.array(MePointsHistoryEntrySchema),
+  nextCursor: z.string().nullable(),
 });
 
 /**

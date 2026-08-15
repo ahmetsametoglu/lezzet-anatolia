@@ -1,0 +1,113 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Puan geçmişi",
+    "subtitle": "Hangi puan nereden geldi",
+    "empty": {
+      "title": "Henüz puan hareketi yok",
+      "body": "Puan kazandıkça hareketleriniz burada listelenir.",
+      "cta": "Nasıl puan kazanırım?"
+    },
+    "error": {
+      "title": "Geçmiş yüklenemedi",
+      "body": "Bağlantınızı kontrol edip tekrar deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "guest": {
+      "title": "Puan geçmişi hesabınıza özel",
+      "body": "Giriş yaparsanız kazandığınız puanların dökümünü burada görürsünüz.",
+      "cta": "Giriş yap"
+    },
+    "denied": {
+      "title": "Puan programı kurumsal hesaplara açık değil",
+      "body": "Şirket hesabınızda zaten kuruma özel fiyatlar geçerli."
+    },
+    "count": "{n} hareket",
+    "tailRetry": "Devamını yükle",
+    "reason": {
+      "review": "Ürün yorumu",
+      "feedback_purchase": "Sipariş değerlendirmesi",
+      "feedback_candidate": "Yeni lezzet oyu",
+      "order": "Sipariş puanı",
+      "referral": "Getirdiğiniz müşteri",
+      "neighbor": "Komşu daveti",
+      "visit": "Günlük giriş",
+      "redemption": "Kupona çevrildi",
+      "manual": "Elle düzeltme"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Historique des points",
+    "subtitle": "D'où viennent vos points",
+    "empty": {
+      "title": "Aucun mouvement de points",
+      "body": "Vos mouvements apparaîtront ici au fur et à mesure de vos gains.",
+      "cta": "Comment gagner des points ?"
+    },
+    "error": {
+      "title": "Historique indisponible",
+      "body": "Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
+    "guest": {
+      "title": "L'historique est lié à votre compte",
+      "body": "Connectez-vous pour voir le détail des points que vous avez gagnés.",
+      "cta": "Se connecter"
+    },
+    "denied": {
+      "title": "Le programme de points n'est pas ouvert aux comptes professionnels",
+      "body": "Votre compte entreprise bénéficie déjà de tarifs dédiés."
+    },
+    "count": "{n} mouvements",
+    "tailRetry": "Charger la suite",
+    "reason": {
+      "review": "Avis produit",
+      "feedback_purchase": "Évaluation de commande",
+      "feedback_candidate": "Vote nouvelle saveur",
+      "order": "Points de commande",
+      "referral": "Client parrainé",
+      "neighbor": "Invitation voisin",
+      "visit": "Visite du jour",
+      "redemption": "Converti en bon",
+      "manual": "Ajustement manuel"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Punkteverlauf",
+    "subtitle": "Woher Ihre Punkte kommen",
+    "empty": {
+      "title": "Noch keine Punktebewegungen",
+      "body": "Ihre Bewegungen erscheinen hier, sobald Sie Punkte sammeln.",
+      "cta": "Wie sammle ich Punkte?"
+    },
+    "error": {
+      "title": "Verlauf nicht ladbar",
+      "body": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
+    "guest": {
+      "title": "Der Verlauf gehört zu Ihrem Konto",
+      "body": "Melden Sie sich an, um Ihre gesammelten Punkte im Detail zu sehen.",
+      "cta": "Anmelden"
+    },
+    "denied": {
+      "title": "Das Punkteprogramm gilt nicht für Geschäftskonten",
+      "body": "Für Ihr Firmenkonto gelten bereits eigene Preise."
+    },
+    "count": "{n} Bewegungen",
+    "tailRetry": "Mehr laden",
+    "reason": {
+      "review": "Produktbewertung",
+      "feedback_purchase": "Bestellbewertung",
+      "feedback_candidate": "Stimme für neue Sorte",
+      "order": "Bestellpunkte",
+      "referral": "Geworbener Kunde",
+      "neighbor": "Nachbarschaftseinladung",
+      "visit": "Täglicher Besuch",
+      "redemption": "In Gutschein umgewandelt",
+      "manual": "Manuelle Korrektur"
+    }
+  }
+}

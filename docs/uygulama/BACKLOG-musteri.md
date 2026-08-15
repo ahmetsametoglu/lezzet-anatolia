@@ -740,7 +740,20 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   **En büyük iki ödül bu yüzden görünmez.** Cevapları sonuç sayfası değil: **puan geçmişi**
   (aşağıda) ve bildirim.
 
-- [ ] **MB-59 · Puan geçmişi native'de HİÇ YOK — en büyük iki ödül görünmez (kullanıcı isteği 15.08).**
+- [x] **MB-59 · Puan geçmişi native'de HİÇ YOK — en büyük iki ödül görünmez (kullanıcı isteği 15.08).**
+  → **KAPANDI, görev `(21.60)` (15.08).** `GET /api/v1/me/points/history` (keyset, en yeni önce,
+  opak imleç) + `/points-history` ekranı; kapısı hesap kartının içinde ("Puan geçmişim").
+  Sebep sözlüğü ekranda, üç dilde, **dokuz sebebin dokuzu** (`redemption` ve `manual` dahil) — küme
+  `Record` ile tam kapsanıyor, defter yeni bir sebep öğrenirse ekran derlenmez. B2B 403
+  `not_eligible` alır, boş liste değil.
+  **AYNI GÜN + AYNI SEBEP TEK SATIRDA** (kullanıcı isteği 15.08, ekran görüntüsünden sonra): bir
+  keşif turu dokuz satır üretiyordu ve sekizi özdeşti. Birleştirme ÇİZİMDE, defterde değil —
+  ölçüt sebep değil ayırt edilebilirlik, grup anahtarı ekrana yazılan tarih.
+  **Cihazda ölçüldü:** 8 oy (+16, "8 hareket") + günlük giriş (+10) = 26, kartın bakiyesiyle birebir.
+  **Ölçülemeyen dallar** (yerelde tek B2C hesap, tek sayfalık defter): boş · misafir · B2B · hata
+  ve ikinci sayfa. `BEKLEYEN(MB-18)`.
+
+  *(Özgün kayıt:)*
   **Ölçüldü 15.08:** `/api/v1/me/points` üç uç veriyor (kart · ziyaret · çevirme); kart bilerek
   yalnız `balance` taşıyor, `earned`/`spent` sözleşmeden çıkarılmış
   (`points-api.schema.ts` künyesi). Defterin okuması (`listPointsHistory`) uygulama katmanına

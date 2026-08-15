@@ -1,10 +1,31 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
-import { awardPoints, readCustomerPoints, readPointsRules, redeemCustomerPoints } from '@lezzet/application';
+import { z } from 'zod';
+import {
+  awardPoints,
+  readCustomerPoints,
+  readCustomerPointsHistory,
+  readPointsRules,
+  redeemCustomerPoints,
+} from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { MePointsRedeemResultSchema, MePointsViewSchema, PointsRulesSchema } from '@lezzet/types';
+import {
+  DEFAULT_PAGE_SIZE,
+  MePointsHistoryPageSchema,
+  MePointsRedeemResultSchema,
+  MePointsViewSchema,
+  PointsRulesSchema,
+} from '@lezzet/types';
+import { decodeCursor, encodeCursor } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
+
+/** Geçmiş sorgusu — imleç opak, boy tavanlı (sipariş listesinin aynı sözleşmesi). */
+const HISTORY_MAX_PAGE_SIZE = 50;
+const HistoryQuerySchema = z.object({
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(HISTORY_MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+});
 
 /*
   `/me/points` (21.17) — hesap ekranının "Puanlarım" kartı ve puan → kupon çevirmesi. KURAL BURADA
@@ -97,6 +118,45 @@ points.get('/', async (c) => {
 points.post('/visit', async (c) => {
   await awardPoints(serviceDb(), { customerId: c.get('customerId'), reason: 'visit' });
   return ok(c, true);
+});
+
+/**
+ * **Puan geçmişi** — *"hangi puan nereden geldi"* (kullanıcı isteği 15.08).
+ *
+ * Keyset sayfalı, en yeni önce; imleç OPAK bir dize (sipariş listesinin aynı sözleşmesi) ve
+ * bozuk gelirse listeyi baştan verir, 400 dönmez (`decodeCursor` künyesi).
+ *
+ * **Neden `/me/points` kartına eklenmedi:** kart tek turda okunan sabit bir küme (bakiye · eşik ·
+ * kuponlar · kazanma yolları); geçmiş ise veriyle SINIRSIZ büyüyen bir defter. İkisini tek zarfa
+ * koymak, hesap ekranını her açılışta ilk sayfa kadar satır okumaya mecbur ederdi — oysa geçmiş
+ * ayrı bir ekranda ve müşteri oraya gitmeyebilir.
+ *
+ * **B2B 403 `not_eligible`** — çevirme kapısıyla aynı ret (`redeem`in künyesi): program dışı
+ * profile boş liste dönmek *"hiç hareketiniz yok"* demek olurdu.
+ */
+points.get('/history', async (c) => {
+  const parsed = HistoryQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return fail(c, 'invalid_query', 400);
+
+  const outcome = await readCustomerPointsHistory(serviceDb(), {
+    customerId: c.get('customerId'),
+    cursor: decodeCursor(parsed.data.cursor),
+    limit: parsed.data.limit,
+  });
+  if (outcome.status !== 'ok') return fail(c, outcome.status, 403);
+
+  // Gövde `z.input<…>` ile TİPLENİR: kapının şekli sözleşmeden saparsa burası DERLENMEZ (sipariş
+  // ucunun emsali). `parse` ayrıca süzgeçtir — `note`/`refId`/`createdBy` zarfa sızamaz.
+  const body: z.input<typeof MePointsHistoryPageSchema> = {
+    entries: outcome.entries.map((entry) => ({
+      id: entry.id,
+      points: entry.points,
+      reason: entry.reason,
+      at: entry.createdAt,
+    })),
+    nextCursor: outcome.nextCursor ? encodeCursor(outcome.nextCursor) : null,
+  };
+  return ok(c, MePointsHistoryPageSchema.parse(body));
 });
 
 /**

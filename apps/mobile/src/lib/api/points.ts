@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { MePointsRedeemResultSchema, MePointsViewSchema, PointsRulesSchema } from '@lezzet/types';
+import type { MePointsHistoryEntrySchema } from '@lezzet/types';
+import {
+  MePointsHistoryPageSchema,
+  MePointsRedeemResultSchema,
+  MePointsViewSchema,
+  PointsRulesSchema,
+} from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import { apiFetch, type ApiResult } from './client';
@@ -28,6 +34,23 @@ export function fetchPoints(): Promise<ApiResult<MePointsView>> {
 
 export function redeemPoints(): Promise<ApiResult<z.infer<typeof MePointsRedeemResultSchema>>> {
   return authorizedFetch('/api/v1/me/points/redeem', MePointsRedeemResultSchema, { method: 'POST' });
+}
+
+export type PointsHistoryEntry = z.infer<typeof MePointsHistoryEntrySchema>;
+
+/**
+ * **Puan geçmişi sayfası** — *"hangi puan nereden geldi"* (kullanıcı isteği 15.08).
+ *
+ * İmleç OPAKTIR: istemci onu yorumlamaz, bir sonraki isteğe aynen geri verir (sipariş listesinin
+ * aynı sözleşmesi). URL'e de yazılmaz — süzgeç yok, paylaşılabilecek bir seçim de yok.
+ *
+ * B2B'de uç 403 `not_eligible` döner ve bu bir arıza DEĞİL: program dışı profile boş liste dönmek
+ * "hiç hareketiniz yok" demek olurdu. Ekran zaten oraya gitmez — geçmişin kapısı puan kartının
+ * içinde ve kart B2B'de hiç çizilmiyor.
+ */
+export function fetchPointsHistory(cursor?: string): Promise<ApiResult<z.infer<typeof MePointsHistoryPageSchema>>> {
+  const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
+  return authorizedFetch(`/api/v1/me/points/history${query}`, MePointsHistoryPageSchema);
 }
 
 export type PointsRules = z.infer<typeof PointsRulesSchema>;

@@ -48,6 +48,7 @@
       "failed": "Puan işlemi tamamlanamadı — yeniden deneyin.",
       "couponPercent": "%{n} indirim",
       "howTo": "Nasıl puan kazanırım?",
+      "history": "Puan geçmişim",
       "howToTitle": "Puan kazanma yolları"
     },
     "referral": {
@@ -171,6 +172,7 @@
       "failed": "L’opération sur les points a échoué — réessayez.",
       "couponPercent": "{n} % de remise",
       "howTo": "Comment gagner des points ?",
+      "history": "Mon historique de points",
       "howToTitle": "Façons de gagner des points"
     },
     "referral": {
@@ -294,6 +296,7 @@
       "failed": "Die Punkteaktion ist fehlgeschlagen — bitte erneut versuchen.",
       "couponPercent": "{n} % Rabatt",
       "howTo": "Wie sammle ich Punkte?",
+      "history": "Mein Punkteverlauf",
       "howToTitle": "Wege zu Punkten"
     },
     "referral": {

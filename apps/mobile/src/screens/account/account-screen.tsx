@@ -463,6 +463,21 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
               testID="account-points-howto"
             />
 
+            {/* PUAN GEÇMİŞİ (MB-59 · kullanıcı isteği 15.08) — *"hangi puan nereden geldi."*
+                Kartın YANINDA değil İÇİNDE, çünkü aynı cüzdanın üçüncü yüzü: bakiye (ne kadarım
+                var) · kuponlar (ne harcayabilirim) · geçmiş (nereden geldi). Ayrı bir ekrana
+                gidiyor, kartın içine liste konmuyor: defter veriyle sınırsız büyüyor ve sonsuz
+                kaydırma istiyor (ekranın kendi künyesi).
+
+                Kapı kartın İÇİNDE olduğu için B2B ölçütü ikinci kez yazılmıyor — kart zaten
+                `wallet !== null` koşulunda çiziliyor (`MePointsCardSchema` künyesinin "tek koşul,
+                tek karar" gerekçesi). */}
+            <TextAction
+              label={t.points.history}
+              onPress={() => router.push('/points-history')}
+              testID="account-points-history"
+            />
+
             {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
             {coupons.map((coupon) => (
               <View key={coupon.id} style={styles.couponRow} testID={`account-coupon-${coupon.code}`}>

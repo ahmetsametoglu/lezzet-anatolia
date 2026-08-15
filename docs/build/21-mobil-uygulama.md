@@ -2896,6 +2896,59 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   müşteri o an uygulamada değil, gösterilecek bir sonuç sayfası yok. En büyük iki ödül bu yüzden
   hâlâ görünmez; cevapları **puan geçmişi** (sıradaki iş) ve bildirimdir. `BEKLEYEN(MB-18)`.
 
+- [x] (21.60) **PUAN GEÇMİŞİ — "hangi puan nereden geldi" (MB-59 · kullanıcı isteği 15.08)**
+  `touches:` `packages/types/src/contracts/points-api.schema.ts` ·
+  `packages/application/src/customer/points.ts` · `apps/mobile-api/src/api/v1/points.ts` ·
+  `apps/mobile/src/screens/points-history/**` · `apps/mobile/src/app/points-history.tsx` ·
+  `apps/mobile/src/screens/account/**` · `apps/mobile/src/lib/api/points.ts`
+
+  **Neden bir süsleme değil:** `(21.59)`un ölçümü şunu bıraktı — `referral` (500) ve `neighbor`
+  (100) **başkasının** eylemiyle doğuyor (davet edilen kişi parasını ödediğinde) ve müşteri o an
+  uygulamada değil, yani gösterilecek bir "sonuç sayfası" YOK. Programın en değerli iki ödülü
+  hiçbir yerde görünmüyordu. Günlük ziyaret puanı da bilinçli sessiz (karar 11.08). Üçünün de
+  müşteriye görünür olduğu ilk yer bu ekran.
+
+  **Terfi, kopya değil.** `feedback/points.ts` künyesi puan geçmişi okumalarını bilerek dışarıda
+  bırakmıştı: *"bugün tek yüzeyleri var; ikinci yüzeyleri doğduğu gün AYNI yoldan buraya
+  taşınırlar."* Doğdu → `readCustomerPointsHistory` uygulama katmanına taşındı.
+
+  **Üç karar:**
+  1. **Sebep kümesi TAM** (`PointsReasonEnum`), kazanma yolları kümesi değil: geçmiş "program neyle
+     ödüllendirir" sorusunu değil "defterde ne var" sorusunu yanıtlıyor — `redemption`, `manual` ve
+     artık yazılmayan `order` da listede. Cümleler ekranda kurulur, `Record` derlemede tam kapsam
+     ister (defter yeni bir sebep öğrenirse ekran DERLENMEZ, eksik çizmez).
+  2. **Ayrı ekran, kart içi liste değil:** defter veriyle sınırsız büyüyor ve sonsuz kaydırma
+     istiyor; karta koymak hesap ekranını her açılışta defter okumaya mecbur ederdi. Kart bir ÖZET,
+     geçmiş bir ARŞİV. Kapı yine de kartın İÇİNDE — B2B ölçütü ikinci kez yazılmasın diye.
+  3. **B2B adlı retle düşer** (403 `not_eligible`), boş sayfayla değil: boş liste "hiç hareketiniz
+     yok" der, doğrusu "bu program size açık değil" (CLAUDE §1). Ölçüt kartınkiyle AYNI kapıdan
+     (`isOutsideProgram`).
+
+  **Dışarıda bırakılanlar ve gerekçesi:** `note` (yalnız `manual`da dolu ve PERSONELİN gerekçesi —
+  müşteriye gösterilmek üzere yazılmadı) · `refId` (iç kimlik, açılabilecek bir şeye işaret etmiyor)
+  · `createdBy` (personel kimliği).
+
+  **DÖRDÜNCÜ KARAR — ekran görüntüsünden sonra geldi (kullanıcı isteği 15.08):** *"bu lezzet
+  oylarının hepsi teker teker değil de birleşik gelse olmaz mı?"* İlk çekimde bir keşif turu
+  DOKUZ satır üretiyordu ve sekizi özdeşti ("Yeni lezzet oyu · 15 Ağu 2026 · +2") — satırları
+  ayıran hiçbir şey yoktu, çünkü oyun hangi ürüne verildiği zaten gösterilmiyor (`refId` bilerek
+  dışarıda). Özdeş satırlar bilgi değil GÜRÜLTÜ ve arşivde asıl aranan şeyi (davet ödülü, kupona
+  çevirme) aşağı itiyor.
+  Birleştirme **ÇİZİMDE**, defterde değil (`points-history-group.ts`): defterdeki tekillik
+  `(müşteri, sebep, kaynak)` üçlüsünde ve "aynı ürüne bir kez puan" kuralı oradan geliyor.
+  Ölçüt sebep DEĞİL ayırt edilebilirlik — "şu sebepler birleşsin" listesi tutulmuyor; ekranda özdeş
+  görünen satırlar hangi sebepten olursa olsun tek satır. Grup anahtarı ham damga değil **ekrana
+  yazılan tarih**, ki cihaz ve sunucu saat dilimi ayrıştığında "aynı gün yazıyor ama ayrı gruplar"
+  tuhaflığı doğmasın. Bilinen sınır: sayfa sınırına düşen grubun sayacı sonraki sayfayla büyür
+  (künyede yazılı) — tamamlanmamış bir sayıdır, yanlış değil.
+  **Cihazda ölçüldü 18:02:** dokuz satır ikiye indi — *"8 hareket · +16"* ve *"+10"*, toplam yine 26.
+
+  **Doğrulama:** `tsc` · `eslint` · `knip` temiz · `jest src/screens/account` 2 dosya / 10 test ·
+  **cihazda ölçüldü 17:51** — 8 × "Yeni lezzet oyu" (+2) + "Günlük giriş" (+10) = **26**, hesap
+  kartındaki bakiyenin aynısı; hesaptaki "Puan geçmişim" bağlantısı da ekranı açıyor.
+  **Ölçülemeyenler:** boş · misafir · B2B · hata dalları ve sonsuz kaydırmanın ikinci sayfası —
+  yerelde tek B2C hesap ve tek sayfalık defter var. `BEKLEYEN(MB-18)`.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

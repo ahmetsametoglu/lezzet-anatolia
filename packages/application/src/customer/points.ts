@@ -8,7 +8,7 @@ import {
   redemptionCode,
 } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { CompanyInfo, CustomerType, MePointsEarnWayKey } from '@lezzet/types';
+import type { CompanyInfo, CustomerType, KeysetCursor, MePointsEarnWayKey, PointsEntry } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getPointsBalance } from '../feedback/points';
 import { ensureCustomerReferralCode, inviteUrl } from './referral';
@@ -398,4 +398,39 @@ export async function redeemCustomerPoints(db: SupabaseClient, input: { customer
   }
 
   throw new Error('redeemCustomerPoints: benzersiz kupon kodu üretilemedi');
+}
+
+/**
+ * **Puan geçmişinin bir sayfası** (kullanıcı isteği 15.08) — *"hangi puan nereden geldi."*
+ *
+ * ── NEDEN ŞİMDİ TERFİ ETTİ ──────────────────────────────────────────────────
+ * `feedback/points.ts` künyesi puan geçmişi okumalarını BİLEREK dışarıda bırakmıştı: *"bugün tek
+ * yüzeyleri var (web hesap sayfası · operasyon); ikinci yüzeyleri doğduğu gün AYNI yoldan buraya
+ * taşınırlar."* Doğdu — native hesap ekranı istiyor. Söz gereğince taşındı, kopyalanmadı.
+ *
+ * ── SIRA VE İMLEÇ SERVİSİN ──────────────────────────────────────────────────
+ * `listByCustomer` yeniden eskiye sıralı ve keyset imleçli (`points.service.ts`); burada ikinci bir
+ * sıralama ya da elle bir pencere KURULMAZ. Defter veriyle sınırsız büyüyen bir küme (CLAUDE §1) ve
+ * sayfalayan okumanın tüketeni de var: ekran `nextCursor`ı sonsuz kaydırmada harcıyor.
+ *
+ * ── B2B ADLI RETLE DÜŞER, BOŞ SAYFAYLA DEĞİL ────────────────────────────────
+ * Program dışı profile boş bir sayfa dönmek *"hiç hareketiniz yok"* demektir; doğrusu *"bu program
+ * size açık değil"* (`CLAUDE §1`: ölçülemeyen değer sıfır değildir — kartın `points: null` dönmesiyle
+ * aynı karar). Ölçüt de kartınkiyle AYNI kapıdan geçiyor (`isOutsideProgram`), ikinci bir tanım
+ * yazılmadı: iki koşuldan biri bir gün ötekinden ayrılırsa müşteri kartı göremediği hâlde geçmişi
+ * görebilirdi.
+ */
+export type ReadPointsHistoryOutcome =
+  | { status: 'ok'; entries: PointsEntry[]; nextCursor: KeysetCursor | null }
+  | { status: 'not_eligible' };
+
+export async function readCustomerPointsHistory(
+  db: SupabaseClient,
+  input: { customerId: string; cursor?: KeysetCursor; limit?: number },
+): Promise<ReadPointsHistoryOutcome> {
+  const profile = await new UserProfileService(db).getById(input.customerId);
+  if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { status: 'not_eligible' };
+
+  const page = await new PointsEntryService(db).listByCustomer(input.customerId, input.cursor, input.limit);
+  return { status: 'ok', entries: page.rows, nextCursor: page.nextCursor };
 }
