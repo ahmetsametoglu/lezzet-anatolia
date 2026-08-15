@@ -88,7 +88,10 @@ describe('CatalogScreen', () => {
     expect(screen.getByText('Ürün 1')).toBeOnTheScreen();
     // Fiyat cihazda biçimlendi: sözleşme 1290 cent taşıyor, ekran "12,90 €" yazıyor.
     expect(screen.getByText('12,90 €')).toBeOnTheScreen();
-    expect(screen.getByText('8,50 €')).toBeOnTheScreen();
+    /* ÇOK BOYLU ÜRÜNDE "…'dan" (MB-20/1, 15.08): kartta yazan sayı en ucuz boyunundur, yani
+       başlangıç fiyatıdır — eki yazmamak tutulamayacak bir söz olurdu. Tek boylu Ürün 1 düz
+       yazılıyor, üç boylu Ürün 2 ekli; ikisi bir arada olmasa kural yarım çivilenirdi. */
+    expect(screen.getByText("8,50 €'dan")).toBeOnTheScreen();
     /* Çeşit satırı yalnız ÇOK boylu üründe ve cümlesi cihazda kuruluyor (API sayı gönderir).
        Tek boylu ürün "1 seçenek" YAZMAZ. */
     expect(screen.getByText('3 seçenek')).toBeOnTheScreen();

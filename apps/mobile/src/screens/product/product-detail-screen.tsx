@@ -26,6 +26,7 @@ import { publishToast } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { fromPriceLabel, productPriceLabel } from '@/screens/customer-kit/price-label';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
 import { ProductSkeleton } from './product-skeleton';
@@ -366,11 +367,10 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                     <View>
                       <Text style={styles.familyName}>{member.label}</Text>
                       <Text style={styles.familyPrice}>
-                        {member.isCurrent
-                          ? t.family.current
-                          : member.fromPriceCents === null
-                            ? ''
-                            : fill(t.family.from, 'price', formatPrice(member.fromPriceCents, locale))}
+                        {/* "…'dan" eki KİTTEN (`customer-kit/price-label`): aynı cümle katalog ve
+                            vitrin kartlarında da yazılıyor, iki yerde tanımlansaydı bir gün
+                            ayrışırdı (CLAUDE §1). Fiyat yoksa satır boş kalır — sıfır yazılmaz. */}
+                        {member.isCurrent ? t.family.current : (fromPriceLabel(member.fromPriceCents, locale) ?? '')}
                       </Text>
                     </View>
                   </PressableSurface>
@@ -488,7 +488,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                 <ProductCircleCard
                   key={product.slug}
                   name={product.name}
-                  priceLabel={formatPrice(product.priceCents ?? 0, locale)}
+                  priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
                   size="sm"
                   photoUri={product.image.url}
                   initial={product.name.slice(0, 1)}

@@ -19,7 +19,6 @@
     "noShip": "Yalnız bölge içi kapıya teslim — kargoya verilmez",
     "family": {
       "browse": "{name} — GÖZ ATIN",
-      "from": "{price}'dan",
       "current": "Bakıyorsunuz"
     },
     "accordion": {
@@ -92,7 +91,6 @@
     "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
     "family": {
       "browse": "{name} — À DÉCOUVRIR",
-      "from": "dès {price}",
       "current": "Vous consultez"
     },
     "accordion": {
@@ -165,7 +163,6 @@
     "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
     "family": {
       "browse": "{name} — ENTDECKEN",
-      "from": "ab {price}",
       "current": "Sie sehen gerade"
     },
     "accordion": {

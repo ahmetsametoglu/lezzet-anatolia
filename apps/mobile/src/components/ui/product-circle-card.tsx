@@ -28,8 +28,14 @@ import { Tag } from './tag';
 interface ProductCircleCardProps {
   /** Ürün adı — i18n gerektirmez, veriden gelir. */
   name: string;
-  /** Biçimlenmiş fiyat ("12,90 €") — biçimleme çağıranın (`@lezzet/helper`) işi. */
-  priceLabel: string;
+  /**
+   * Biçimlenmiş fiyat ("12,90 €" ya da çok boyluda "12,90 €'dan") — türetme çağıranın işi
+   * (`customer-kit/price-label`).
+   * **VERİLMEZSE ÇİP HİÇ ÇİZİLMEZ** — kare kartın (`ProductPhotoCard`) aynı kararı. Fiyatı
+   * bilinmeyen ürün VERİDE var (`priceCents: null`) ve zorunlu olduğu sürece çağıranlar `?? 0`
+   * yazıp müşteriye **"0,00 €"** gösteriyordu; ölçülemeyen değer sıfır değildir (`CLAUDE §1`).
+   */
+  priceLabel?: string;
   onPress: () => void;
   /** `lg` vitrin rayı (146) · `sm` benzer ürünler rayı (96). */
   size?: 'sm' | 'lg';
@@ -129,9 +135,11 @@ export function ProductCircleCard({
             </Text>
           </View>
         )}
-        <View style={styles.priceBadge}>
-          <Tag label={priceLabel} rotate={4} shadow />
-        </View>
+        {priceLabel === undefined ? null : (
+          <View style={styles.priceBadge}>
+            <Tag label={priceLabel} rotate={4} shadow />
+          </View>
+        )}
       </View>
       <Text style={styles.name} numberOfLines={2}>
         {name}

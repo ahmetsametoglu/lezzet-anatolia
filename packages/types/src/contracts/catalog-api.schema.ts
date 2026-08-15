@@ -240,7 +240,10 @@ export const CatalogFamilyMemberSchema = ProductSchema.pick({ slug: true }).exte
   label: z.string(),
   image: CatalogImageSchema,
   /**
-   * **Başlangıç fiyatı** — çeşidin ilk aktif boyu, kartta "…'dan" ekiyle yazılır.
+   * **Başlangıç fiyatı** — çeşidin fiyatı olan EN UCUZ aktif boyu, kartta "…'dan" ekiyle yazılır.
+   * *Künye 15.08'de düzeltildi: "ilk aktif boyu" yazıyordu ve `08.10`'dan beri yanlıştı — ölçüt
+   * o gün `primaryVariantOf`a bağlandı (`application/catalog/product.ts:177` → `card.priceCents`).
+   * Eki haklı çıkaran şey tam olarak budur: en ucuzun önüne "…'dan" yazmak tutulabilir bir sözdür.*
    * **`null` = fiyat çözülemedi** (kanal fiyatı girilmemiş) → ekran o kartta fiyat satırını çizmez.
    * Sıfır YAZILMAZ (`CLAUDE §1`) — bedava görünürdü.
    */

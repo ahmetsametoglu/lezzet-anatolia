@@ -2635,6 +2635,56 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` temiz · `eslint` temiz · `jest src/screens/catalog` **2 dosya / 30 test** ·
   cihazda klavye açıkken tek dokunuş (yukarıda).
 
+- [x] (21.55) **ÇOK BOYLU ÜRÜNÜN KARTI ARTIK "…'dan" DİYOR — ve fiyatsız ürün 0,00 € yazamıyor (MB-20/1)**
+  `touches:` **YENİ:** `apps/mobile/src/screens/customer-kit/{price-label.ts,price-label-messages.json}` ·
+  **DEĞİŞEN:** `screens/{catalog/catalog-screen.tsx,home/home-screen.tsx,product/product-detail-screen.tsx,product/messages.json}` ·
+  `components/ui/product-circle-card.tsx` · `packages/types/src/contracts/catalog-api.schema.ts` (yalnız künye)
+
+  Kartta yazan sayı ürünün EN UCUZ fiyatlı boyunundur (`primaryVariantOf`, `08.10`). Çok boylu
+  üründe bu bir **başlangıç fiyatıdır** ve ekini yazmamak tutulamayacak bir sözdür: müşteri
+  4,11 € görüp giriyor, üründe 35,95 €'luk bir boy da var. Ailenin çeşit kartları bu eki zaten
+  kullanıyordu; kural kite taşındı.
+
+  **TEK TÜRETME, DÖRT ÇAĞIRAN.** `customer-kit/price-label` — katalog ızgarası, vitrin rayı,
+  detayın "benzer ürünler" rayı ve ailenin çeşit kartları. Üç ekran ayrı ayrı
+  `formatPrice(...)` çağırıyordu; ek de oraya üç kez yazılsaydı bir gün ayrışırdı (CLAUDE §1) ve
+  o gün müşteri aynı ürünü iki ekranda iki farklı cümleyle görürdü. `family.from` metni üç dilden
+  **silindi**, kaynağı artık kitin kendi mesaj dosyası.
+
+  **Ölçüt BOY SAYISI, fiyat aralığı değil:** iki boyu aynı fiyata satılan üründe de "…'dan" doğru
+  kalır (müşteri ikinci boyu seçince sayı değişmez, söz tutulur); "fiyatlar farklıysa yaz" kuralı
+  ise sunucudan tüm boy fiyatlarını istemeyi gerektirirdi.
+
+  ## Yan bulgu: gizli bir "0,00 €"
+
+  Aynı satırlara bakarken çıktı. Katalog fiyatsız ürünü baştan doğru ele alıyordu (çip çizilmez),
+  ama **vitrin ve detayın benzerler rayı `?? 0` yazıyordu**. Vitrinin künyesi gerekçeliydi (*"uç
+  fiyatsızı zaten süzer"*); detay o gerekçe OLMADAN aynı satırı taşıyordu ve `readSimilar` fiyat
+  süzgeci uygulamıyor — yalnız kategori + `status='active'` (`application/catalog/product.ts:117`).
+  Asıl engel kitteydi: `ProductCircleCard.priceLabel` **zorunluydu**, yani çağıranın sıfıra düşmekten
+  başka çaresi yoktu. Alan isteğe bağlı yapıldı ve fiyat yoksa çip hiç çizilmiyor — kare kartın
+  (`ProductPhotoCard`) zaten verdiği karar. *"Ölçülemeyen değer SIFIR değildir"* (CLAUDE §1).
+
+  **ÖLÇÜLDÜ, ABARTILMIYOR:** bugün fiyatsız dört ürün var ve **dördü de `candidate`** — `active`
+  süzgecini geçemiyorlar, yani yol ekrana çıkmıyor. Düzeltme yaşayan bir arızayı değil, sessiz
+  duran bir tuzağı kapatıyor. Cihazda "0,00 €" GÖRÜLMEDİ ve görülmüş gibi yazılmadı.
+
+  **Bir künye daha bayat çıktı:** `CatalogFamilyMemberSchema.fromPriceCents` *"çeşidin ilk aktif
+  boyu"* diyordu; `08.10`'dan beri yanlış — ölçüt o gün `primaryVariantOf`a bağlandı
+  (`product.ts:177` → `card.priceCents`). Düzeltildi. Bugünün ikinci bayat künyesi; ilki
+  `(21.53)`'teydi. **İkisi de aynı commit'in (`da91ea97`) mobil sözleşmeye yansımayan yüzüydü.**
+
+  **Mevcut bir test güncellendi, yenisi yazılmadı** (kullanıcı kararı 11.08): `catalog-screen.test`
+  çok boylu ürün için düz `8,50 €` bekliyordu, değişiklik o beklentiyi kasten geçersiz kıldı.
+
+  **Doğrulama:** `tsc` temiz · `eslint` temiz · `knip` yeni ölü ihraç yok ·
+  `jest` **84 dosya / 599 test** · cihazda katalog: `5,00 €'dan (2 seçenek)` · `4,11 €'dan
+  (4 seçenek)` · `4,82 €'dan`, tek boylular düz (`2,30 €` · `11,85 €`); vitrin rayı da doğru.
+
+  **Web yarısı AÇIK:** aynı ek web müşteri kartlarında yok. Talep dosyası duruyor
+  (`docs/talep/musteri-liste-fiyati-baslangic.md`); iki yüzey bir süre ayrışacak ama **ayrışma
+  doğru yönde** — mobil daha dürüst.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

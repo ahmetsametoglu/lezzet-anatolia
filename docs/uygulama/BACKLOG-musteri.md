@@ -742,9 +742,19 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   detay **225g / 4,11 €** seçili açılıyor (eskiden 450g / 6,80 €); `18,27 €/kg` de 225g'ı doğruluyor.
   Boy sırası bilerek DEĞİŞMEDİ (`450 · 225 · 2500 · 1250`) — `08.10` kararı: sıra operatörün.
 
-  **(1) AÇIK ve web'e bağlı:** kartta "…'dan" eki. Motor tarafı hazır (`fromPriceCents` artık
-  gerçekten en ucuz boyu gösteriyor, `08.10`'un yan kazancı); kalan iş metin ve iki yüzeyde birden
-  yapılmalı — talep dosyası açık.
+  **(1) MOBİL YARISI KAPANDI (15.08), görev `(21.55)`.** Kartta "…'dan" eki artık **çok boylu**
+  üründe yazılıyor; ölçüt boy sayısı (`variantCount > 1`), fiyat aralığı değil. Türetme kite
+  taşındı (`customer-kit/price-label`) ve dört çağıranın dördü — katalog ızgarası, vitrin rayı,
+  detayın benzerler rayı, ailenin çeşit kartları — aynı kaynaktan okuyor; `family.from` metni üç
+  dilden silindi. Cihazda doğrulandı: `5,00 €'dan (2 seçenek)` · `4,11 €'dan (4 seçenek)`, tek
+  boylular düz (`2,30 €`).
+  **Yan bulgu aynı turda kapandı:** `ProductCircleCard.priceLabel` zorunluydu, bu yüzden vitrin ve
+  detay `?? 0` yazıp fiyatsız üründe **0,00 €** gösterebiliyordu. Alan isteğe bağlı yapıldı, çip
+  çizilmiyor. Ölçüldü: bugün fiyatsız dört ürünün dördü de `candidate`, yani yol ekrana çıkmıyordu
+  — düzeltme yaşayan bir arızayı değil, sessiz bir tuzağı kapattı.
+  **WEB YARISI AÇIK:** aynı ek web müşteri kartlarında yok — talep dosyası duruyor
+  (`docs/talep/musteri-liste-fiyati-baslangic.md`). İki yüzey bir süre ayrışacak; ayrışma doğru
+  yönde, mobil daha dürüst.
 
 - [x] **MB-21 · Sepette asgari sepet uyarısı ekrandaki toplamla çelişiyor** → **KAPANDI (11.08).**
   **Ölçüldü:** ekranda `Toplam 3,80 €`, hemen altında `Asgari sepet 40,00 € — 33,20 € eksik`. Eksik,

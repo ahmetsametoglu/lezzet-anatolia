@@ -1,0 +1,11 @@
+{
+  "tr": {
+    "from": "{price}'dan"
+  },
+  "fr": {
+    "from": "dès {price}"
+  },
+  "de": {
+    "from": "ab {price}"
+  }
+}

@@ -16,7 +16,6 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
-import { formatPrice } from '@lezzet/helper';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
@@ -25,6 +24,7 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 // Bant KİTE taşındı (10.08): paketler sekmesi ikinci çağıranı oldu (komponentin kendi künyesi).
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
+import { productPriceLabel } from '@/screens/customer-kit/price-label';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';
@@ -182,7 +182,7 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
     return {
       name: product.name,
       photoUri: product.image.url,
-      priceLabel: product.priceCents === null ? undefined : formatPrice(product.priceCents, locale),
+      priceLabel: productPriceLabel(product.priceCents, product.variantCount, locale),
       soldOut: product.soldOut,
       soldOutLabel: t.card.soldOut,
       discountLabel: product.wasCents === undefined ? undefined : t.card.offer,

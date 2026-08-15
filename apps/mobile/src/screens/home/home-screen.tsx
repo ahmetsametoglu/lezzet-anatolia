@@ -20,6 +20,7 @@ import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { productPriceLabel } from '@/screens/customer-kit/price-label';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
@@ -483,8 +484,10 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   <ProductCircleCard
                     key={product.slug}
                     name={product.name}
-                    /* Fiyatsız ürünü uç zaten süzer (satışa kapalı raya giremez); `?? 0` tip daraltması. */
-                    priceLabel={formatPrice(product.priceCents ?? 0, locale)}
+                    /* Etiket kitin türetmesinden: çok boyluda "…'dan" eki, fiyat yoksa çip hiç
+                       çizilmez. Buradaki eski `?? 0` gerekçeliydi (uç fiyatsızı süzer) ama artık
+                       gereksiz — kural tek yerde ve sıfıra düşmüyor (`customer-kit/price-label`). */
+                    priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
                     photoUri={product.image.url}
                     stockMark={placeMark}
                     // Solma yalnız KAPALI kapıda (gerekçe: katalog ekranının aynı satırı).
