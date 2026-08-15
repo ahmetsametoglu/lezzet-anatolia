@@ -22,7 +22,10 @@ export interface OrderLineView {
   sub: string;
   /** Ürün görseli (public URL) — görselsiz üründe `null`, ekran yer tutucu ikon çizer. */
   imageUrl: string | null;
-  /** Müşteri ürün sayfasının slug'ı — ürün silinmişse `null`, ad köprüsüz düz metin kalır. */
+  /**
+   * Müşteri ürün sayfasının slug'ı — YALNIZ satıştaki (aktif) üründe dolu. Pasif/aday ürünün
+   * müşteri sayfası yoktur (404); köprüsüz kalem ad olarak düz metin kalır.
+   */
   productSlug: string | null;
   qty: number;
   /** Fiziksel olarak giden adet — `qty`'den azsa eksik gitmiştir. */

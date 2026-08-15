@@ -117,7 +117,15 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     }),
   );
   // Kalemden müşteri ürün sayfasına köprü (15.08, kullanıcı isteği) — slug da üründen gelir.
-  const variantSlugs = new Map(variants.map((v) => [v.id, productsById.get(v.productId)?.slug ?? null]));
+  // YALNIZ SATIŞTAKİ ürün köprülenir (yaşandı 15.08): müşteri sayfası pasif/aday ürün için YOK —
+  // eski siparişin pasifleşmiş kalemine köprü koymak operatörü 404'e yollamaktı (ölçüldü:
+  // `crispy-chicken-nugget` pasif, sayfası 404). Köprüsüz kalem düz metin kalır.
+  const variantSlugs = new Map(
+    variants.map((v) => {
+      const product = productsById.get(v.productId);
+      return [v.id, product?.status === 'active' ? product.slug : null];
+    }),
+  );
   // Başlık haritası BURADA kuruluyor, ortak `readVariantTitles` ile DEĞİL: bu okuma varyantları ve
   // ürünleri zaten çekti (aşağıdaki `variantSubs`/`variantProducts` haritaları için) — yardımcıyı
   // çağırmak aynı iki sorguyu tekrar sormak olurdu. Ortaklaşan şey `titleOf` formatlayıcısı; yalnız
