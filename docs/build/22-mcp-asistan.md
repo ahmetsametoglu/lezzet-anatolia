@@ -1669,3 +1669,26 @@ satırında.
       `product_detail`in çürüttüğü vaka duruyor: ölçümde 124 üründe `en` alanı boş görünüyordu ve o
       turun `product_draft` önerisi onaylansaydı dolu TR metni silecekti.
 
+### KARAR (kullanıcı, 15.08) — besleme dosyası asistan önerisi YAZMAZ
+
+`docs/talep/arka-uc-seed-asistan-onerileri.md` 10.08'de açılmıştı: seed `assistant_proposal`
+tablosunu hiç yazmıyor, dolayısıyla her `db:refresh` kuyruğu boşaltıyor ve asistan ekranı boş
+açılıyor. 15.08'de birebir yaşandı — refresh sonrası kuyruk **31 → 0** ve kullanıcının incelemek
+istediği iki gövde (`22.33` tedarik siparişi, `22.35` vitrin) bakılamaz hâle geldi.
+
+**Talep REDDEDİLDİ, gerekçesi kullanıcınındır ve sağlamdır:**
+
+> *"Asistan bölümüyle alakalı önerileri ben CANLI almak istiyorum. En iyi testin o şekilde
+> yapılacağına inanıyorum."*
+
+Seed'in ürettiği öneri, ajanın gerçekten üretebileceği öneri **değildir**. Uydurulmuş bir payload
+ekranı doğru gösterir ama asistanın o payload'ı hiç kuramayacağını gizler — yani ekran yeşil,
+zincir kırık olabilir ve seed bunu görünmez yapar. Test edilmek istenen şey ekranın çizimi değil,
+**ajan → kuyruk → gövde → uygulama** zincirinin tamamı.
+
+**Bedeli kayda geçiyor ve bilinerek kabul edildi:** ajanın hiç üretmediği bir tipin gövdesi de
+sınanamaz. Bunun emsali bu dosyada zaten var — `featured_flag` gövdesi uzun süre yazılamadı ve
+sebebi `BEKLEYEN(22.11)`'de aynen yazılı: *"o tipten hiç öneri üretilmediği için ölçülemedi"*.
+Bir tip turlarca üretilmezse çözüm seed değil, **o tipin neden önerilmediğini ölçmektir** (aracın
+tanımı mı yetersiz, veri mi o durumu hiç doğurmuyor).
+
