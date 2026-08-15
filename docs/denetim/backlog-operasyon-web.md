@@ -89,3 +89,7 @@
 
 - [ ] **OB-16 · Müşteri GRUBU bazlı genel yüzde indirimi (iskonto)**
   - **Talep (daraltıldı 15.08):** Maddenin müşteri BAŞINA kısmı zaten mevcut: `user_profile.discount_percent` Müşteriler sayfasının kontrol kartından girilir, Fiyatlar → Müşteriye özel sekmesi "genel indirimli müşteriler" listesinde gösterir. Açık kalan tek parça müşteri GRUBUNA (segment) oran tanımlamak — segment varlığı yok, ayrı bir veri modeli işi; kapsam kararı bekliyor.
+
+- [ ] **OB-17 · Müşteriye özel, TEK ÜRÜN kapsamlı, TEK SEFERLİK indirim yapılamıyor**
+  - **Tespit (15.08, kullanıcı sorusu üzerine ölçüldü):** "Bir müşterime bir defalık, bir ürünle ilgili indirim" üçlüsünü tek adımda yapan özellik yok. Müşteriye özel fiyat müşteri+ürün hedefler ama SÜREKLİDİR (fiyatta yalnız `validFrom` var, bitiş yok — elle kaldırılana dek geçerli); kişisel kupon müşteri+tek kullanım (`maxUses`) hedefler ama kapsamı tek ürüne DARALTILAMAZ (`discount` şemasında yalnız `categoryId | collectionId`, `productId` yok).
+  - **Öneri:** kupon kapsamına ürün hedefi (`discount.product_id`) — kapsam seçicide "kategori · koleksiyon" yanına "ürün"; kota, tek-en-büyük ve sepet kapısı zaten motorda çalışıyor, eksik yalnız kapsamın üçüncü türü. Alternatif (özel fiyata bitiş/tek sipariş) reddedildi sayılmaz ama zayıf: "bir defa"nın tanımı belirsizleşir ve fiyat geçmişi modeline yabancı kavram girer.
