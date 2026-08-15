@@ -100,7 +100,17 @@
   "net 0'a indi" gibi gerçek kullanımlar elbette serbest — yasak yalnız "teslim edildi" anlamına.)*
 - **Petit referans:** `~/dev/petitcigogne` kanonik; işe başlamadan karşılığına bak, saptığında (ne/neden) bildir.
 - Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
-- **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken `next build` **çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap; gerçek build şartsa dev'i durdurmasını iste. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.
+- **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken **çıplak `next build` çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.
+  - **PARALEL PRODUCTION SUNUCUSU VAR (kullanıcı isteği 14.08) — "dev'i durdur" artık son çare değil.**
+    Çakışan şey PORT değil DİZİN'di: `next.config.ts` artık çıktı dizinini env'den okuyor
+    (`distDir: process.env.NEXT_DIST_DIR ?? '.next'`), yani production derlemesi dev'in okuduğu
+    klasöre hiç dokunmuyor. `pnpm prod:web` (derler, `.next-prod`) + `pnpm prod:web:start`
+    (**3001**). **Ölçüldü 14.08:** derleme koşarken dev 3000'de `200` verdi (1,3 sn); ikisi
+    ayaktayken prod **45 ms**, dev **260–315 ms**. Kullanıcının derdi buydu — dev'de sayfa sürekli
+    yenilenip yavaş yükleniyor, test edilemiyor.
+    **Sunucu DONMUŞ bir kopyadır:** kod değişince güncellenmez, yeniden derlenir. Veritabanı ortak
+    (`db:refresh` ikisini birden etkiler). `.next-prod` `.gitignore`da ayrıca yazılı — `.next/`
+    kalıbı onu yakalamaz.
   - **İSTİSNA — bellek tazeleme YALNIZ DENETİMDE (kullanıcı kararı 09.08):** dev server dokunulan
     her rotayı derleyip bellekte tutuyor ve uzun oturumlarda birikiyor (ölçüldü: 38 dakikada tepe
     **3,2 GB**, sonra 740 MB'a inen dalgalı bir seyir; tek e2e dosyası koşarken 600 → 1284 MB).

@@ -3,6 +3,9 @@ node_modules/
 .env.*
 !.env.example
 .next/
+# Paralel production derlemesinin çıktısı (`NEXT_DIST_DIR`, 14.08) — dev sunucusu ile aynı
+# klasörü paylaşmasın diye ayrı. `.next/` kalıbı bunu YAKALAMAZ, ayrıca yazılmalı.
+.next-prod/
 next-env.d.ts
 *.tsbuildinfo
 dist/
