@@ -80,12 +80,20 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
   const suggestedProfit =
     batch.suggestedOfferCents === null || cost === null ? null : removeVat(batch.suggestedOfferCents, vatRate) - cost;
 
-  const submit = async (next: number | null) => {
+  // Parametre KURUŞTUR ve adı bunu söyler (yaşandı 15.08): buraya euro hâli (`price`) bağlanmıştı —
+  // 2,91 gibi kesirli fiyatı Zod "integer bekliyordum" diye reddediyordu; asıl tehlike TAM euro'ydu:
+  // 5,00 € doğrulamadan geçer ve teklif sessizce 5 KURUŞ yazılırdı. Action kuruş konuşur, ekran da
+  // ona kuruş verir.
+  const submit = async (nextCents: number | null) => {
     setBusy(true);
     setError(null);
     // Kuyruk satırı YALNIZ teklif AÇILDIĞINDA kapanır: `null` göndermek teklifi kaldırmaktır ve
     // öneriyi "uygulandı" saymak, tam tersini yapan bir kaydı onay diye damgalamak olurdu.
-    const { error: actionError } = await setOfferPriceAction(batch.id, next, next === null ? null : handoff?.proposalId);
+    const { error: actionError } = await setOfferPriceAction(
+      batch.id,
+      nextCents,
+      nextCents === null ? null : handoff?.proposalId,
+    );
     setBusy(false);
     if (actionError) {
       setError(actionError);
@@ -112,22 +120,25 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
       subtitle={`${batch.title}${batch.lotNumber ? ` · Lot ${batch.lotNumber}` : ''}`}
       footer={
         <>
-          <span className="mr-auto font-ops-body text-ops-xs text-ops-muted">
+          {/* Mesaj `min-w-0` ile SARAR, düğmeler `shrink-0` ile sabittir: uzun bir hata metni
+              düğmeleri sıkıştırıp iki satıra kırıyordu (yaşandı 15.08, Zod hatasıyla). */}
+          <span className="mr-auto min-w-0 font-ops-body text-ops-xs text-ops-muted">
             {error ? <span className="font-semibold text-ops-red">{error}</span> : 'Karar sizin — sistem yalnız önerdi'}
           </span>
           {/* Teklifi kapatma yalnız AÇIKKEN görünür ve hiçbir koşulda engellenmez: yanlışlıkla
               açılmış bir teklif her zaman geri alınabilmeli. */}
           {editing ? (
-            <Button variant="secondary" onClick={() => void submit(null)} disabled={busy}>
+            <Button variant="secondary" className="shrink-0" onClick={() => void submit(null)} disabled={busy}>
               Teklifi kapat
             </Button>
           ) : null}
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <Button variant="secondary" className="shrink-0" onClick={onClose} disabled={busy}>
             İptal
           </Button>
           <Button
             variant="primary"
-            onClick={() => void submit(price)}
+            className="shrink-0"
+            onClick={() => void submit(priceCents)}
             disabled={busy || blocked !== null}
             title={blocked ?? undefined}
           >

@@ -17,6 +17,18 @@
  * 03.08). Bu fonksiyon yalnız "hangi alan mesajdır" sorusunu cevaplar.
  */
 export function errorMessageOf(error: unknown): string {
+  // ZodError'un `.message`'ı issue dizisinin HAM JSON'udur ve o hâliyle ekrana düştü (yaşandı 15.08:
+  // teklif diyaloğunun alt barında köşeli parantezli blok). Personel yüzeyi detayı hak eder ama
+  // JSON'u değil — alan + sebep tek satıra iner. Zod'a paket bağımlılığı YOK: `name` + `issues`
+  // duck-typing'i yeter, observability şema kütüphanesini tanımak zorunda değil.
+  if (error instanceof Error && error.name === 'ZodError') {
+    const issues = (error as unknown as { issues?: Array<{ path?: Array<string | number>; message?: string }> }).issues;
+    if (Array.isArray(issues) && issues.length > 0) {
+      const parts = issues.slice(0, 3).map((i) => `${(i.path ?? []).join('.') || 'veri'}: ${i.message ?? 'geçersiz'}`);
+      const more = issues.length > 3 ? ` (+${issues.length - 3} sorun daha)` : '';
+      return `Veri doğrulaması reddetti — ${parts.join(' · ')}${more}`;
+    }
+  }
   if (error instanceof Error) return error.message;
 
   if (error !== null && typeof error === 'object') {
