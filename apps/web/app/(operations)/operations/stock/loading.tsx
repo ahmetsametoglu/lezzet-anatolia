@@ -1,6 +1,10 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { SkeletonFilterBar, SkeletonPageHeader, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { buttonClass } from '@/components/operation/ui/button';
+import { SearchIcon } from '@/components/operation/ui/icons';
+import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { STOCK_COLUMN_TRACKS } from './stock-columns';
+import { STOCK_TABS, STOCK_TAB_LABEL } from './stock-url';
 
 /**
  * Stok ekranının ROTA DÜZEYİ beklemesi (09.2).
@@ -19,8 +23,17 @@ import { STOCK_COLUMN_TRACKS } from './stock-columns';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Stok yükleniyor">
-      <SkeletonPageHeader actions={['w-[210px]']} />
-      <SkeletonTabs count={3} />
+      {/* Başlık ve "Lot / geri çağırma" eylemi GERÇEK (15.08, emsal: fiyatlar/para) — ikisi de
+          statik; eylem tıklanmaz süs (`buttonClass`lı span), davranışı sayfayla gelir. Alt satır
+          sayaçtır (veri), çubuk. Sekme adları gerçek ve `stock-url.ts` tek kaynağından — eski hâl
+          3 çubuk çiziyordu, gerçek çubukta 4 sekme vardı ("Çıkışlar" 22.26'da eklenmişti). */}
+      <PageHeader title="Stok" subtitle={<Skeleton className="h-3 w-72" />}>
+        <span className={buttonClass({ variant: 'secondary', size: 'sm' })}>
+          <SearchIcon />
+          Lot / geri çağırma
+        </span>
+      </PageHeader>
+      <SkeletonTabs labels={STOCK_TABS.map((t) => STOCK_TAB_LABEL[t])} />
       <SkeletonFilterBar count={3} />
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] overflow-hidden">

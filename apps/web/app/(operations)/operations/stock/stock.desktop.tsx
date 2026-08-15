@@ -13,7 +13,7 @@ import { LevelsTab } from './tabs/levels-tab';
 import { IntakeTab } from './tabs/intake-tab';
 import { OutgoingTab } from './tabs/outgoing-tab';
 import { AttentionTab } from './tabs/attention-tab';
-import { STOCK_SCOPES, type StockScope, type StockTab } from './stock-url';
+import { STOCK_SCOPES, STOCK_TABS, STOCK_TAB_LABEL, type StockScope, type StockTab } from './stock-url';
 import type { StockViewProps } from './stock-types';
 
 // Stok — web KABUĞU: ortak üst bar + sekmeler + süzgeç şeridi; sekme içerikleri kendi dosyalarında.
@@ -25,12 +25,9 @@ import type { StockViewProps } from './stock-types';
  * İkisi rozet taşır ve ikisi de bir İŞ YÜKÜ göstergesidir: karar bekleyen parti ve kabul bekleyen
  * sipariş. Sayılar runtime'da bağlanır.
  */
-const TABS: Array<{ key: StockTab; label: string }> = [
-  { key: 'levels', label: 'Stok seviyeleri' },
-  { key: 'attention', label: 'Yaklaşan tarihli' },
-  { key: 'intake', label: 'Mal kabul' },
-  { key: 'outgoing', label: 'Çıkışlar' },
-];
+// Sıra ve ad `stock-url.ts`ten (15.08): `loading.tsx` de aynı kaynağı okur — liste burada
+// yazılıyken iskelet 3 çubukta kalmıştı, "Çıkışlar" gelince bar genişliyordu.
+const TABS = STOCK_TABS.map((key) => ({ key, label: STOCK_TAB_LABEL[key] }));
 
 // Süzgeç çipleri PARTİ ölçütüdür ama SATIR süzer (bkz. stock-url). Sıra aciliyete göre: önce karar
 // bekleyen, sonra verilmiş karar, sonra tedarik sorunu.

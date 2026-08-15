@@ -28,6 +28,17 @@ const STOCK_PATH = '/operations/stock';
 export const STOCK_TABS = ['levels', 'attention', 'intake', 'outgoing'] as const;
 export type StockTab = (typeof STOCK_TABS)[number];
 
+// Sekme ADLARI kimliklerin yanında (15.08, emsal: ürünler): desktop `'use client'` olduğundan
+// sunucuda çizilen `loading.tsx` oradan okuyamıyordu ve iskelet 3 çubukta kalmıştı — dördüncü
+// sekme ("Çıkışlar") gelince bar genişliyordu. Ad ile kimlik aynı dosyada durunca sekme eklemek
+// ikisini birden günceller.
+export const STOCK_TAB_LABEL: Record<StockTab, string> = {
+  levels: 'Stok seviyeleri',
+  attention: 'Yaklaşan tarihli',
+  intake: 'Mal kabul',
+  outgoing: 'Çıkışlar',
+};
+
 /**
  * Parti süzgeci — "hangi partiler görünsün".
  *  · `all`     → hepsi
