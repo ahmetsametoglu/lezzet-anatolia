@@ -19,6 +19,8 @@
     "build": "turbo run build",
     "build:web": "pnpm --filter @lezzet/web run build",
     "build:backend": "pnpm --filter @lezzet/backend run build",
+    "prod:web": "pnpm --filter @lezzet/web run build:prod",
+    "prod:web:start": "pnpm --filter @lezzet/web run start:prod",
     "start": "turbo run start",
     "typecheck": "turbo run typecheck && tsc -p scripts/tsconfig.json",
     "lint": "eslint .",

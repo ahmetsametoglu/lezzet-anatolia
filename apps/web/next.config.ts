@@ -112,6 +112,23 @@ function securityHeaders(): Array<{ key: string; value: string }> {
 
 const config: NextConfig = {
   reactStrictMode: true,
+  /**
+   * ÇIKTI DİZİNİ ENV'DEN — dev sunucusu ile production derlemesinin YAN YANA koşabilmesi için
+   * (kullanıcı isteği 14.08). Varsayılan `.next`, yani dağıtımda ve CI'da hiçbir şey değişmez.
+   *
+   * **Neden gerekti:** ikisi de varsayılan `.next`i kullandığı sürece `next build`, dev
+   * sunucusunun O AN OKUDUĞU chunk'ların üstüne yazıyor ve dev server `Cannot find module
+   * './vendor-chunks/…'` ile çöküyor — CLAUDE §4'ün kayıt altına aldığı arıza. Çakışan şey PORT
+   * değil DİZİN; ayrı port açmak bunu çözmez.
+   *
+   * Kullanımı (dev 3000'de kesintisiz sürerken):
+   *   pnpm --filter @lezzet/web run build:prod
+   *   pnpm --filter @lezzet/web run start:prod      → 3001
+   *
+   * **Production sunucusu DONMUŞ bir kopyadır:** kod değişince kendiliğinden güncellenmez,
+   * yeniden derlenir. İstenen davranış bu — sayfa sürekli yenilenmesin diye açılıyor.
+   */
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // pino sunucu paketine GÖMÜLMEZ (ölçüldü 08.08): `@lezzet/application` (transpile listesinde)
   // `@lezzet/observability` üzerinden pino'yu içeri çekince webpack pino+thread-stream'i
   // vendor-chunks'a gömdü; pino'nun transport worker'ı `__dirname`den dosya arar ve

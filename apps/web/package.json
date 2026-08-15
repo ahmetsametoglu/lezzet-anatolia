@@ -7,8 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:prod": "NEXT_DIST_DIR=.next-prod next build",
+    "start:prod": "NEXT_DIST_DIR=.next-prod next start -p 3001",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .turbo .next node_modules"
+    "clean": "rm -rf .turbo .next .next-prod node_modules"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
