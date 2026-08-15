@@ -106,7 +106,7 @@ export const TOOLS = [
   {
     name: 'catalog_lookup',
     description:
-      'Search the catalog by product name (matches all three languages) and get the IDENTIFIERS the propose_* tools need: productId, variantId per size, plus list price (b2c, VAT-INCLUSIVE) and last purchase price (VAT-EXCLUSIVE, null when unknown — never treat null as zero). This is the bridge between reading tools (which speak names) and writing tools (which need ids). Use it before proposing a bundle, a recipe or a product draft.',
+      'Search the catalog by product name (matches all three languages) and get the IDENTIFIERS the propose_* tools need: productId, variantId per size, plus list price (b2c, VAT-INCLUSIVE) and stockBatchCostCents (VAT-EXCLUSIVE, null when unknown — never treat null as zero). This is the bridge between reading tools (which speak names) and writing tools (which need ids). Use it before proposing a bundle, a recipe or a product draft. NOTE ON COST: stockBatchCostCents is what we paid for the NEWEST BATCH WE ARE HOLDING. It is NOT the supplier\'s current price. The purchase-order lines returned by propose_purchase_order carry lastPurchasePriceCents, which comes from the SUPPLIER MAPPING — a different question, and the two legitimately differ (the batch may have come from another supplier, or the price moved). Do not compare them and do not report a discrepancy between them as a fault; that mistake was made three rounds running.',
     inputSchema: {
       type: 'object',
       properties: {

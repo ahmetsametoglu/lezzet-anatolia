@@ -240,7 +240,33 @@ export async function catalogLookup(query: string, limit: number) {
             unit: resolveLocalizedText(v.label, 'tr'),
             isActive: v.isActive,
             listPriceCentsIncVat: listIncVat,
-            lastPurchasePriceCents: costExVat,
+            /**
+             * **ADI DEĞİŞTİ: `lastPurchasePriceCents` → `stockBatchCostCents`** (MCP §3.1 · 15.08).
+             *
+             * ── ÜÇ TUR BOYUNCA "KRİTİK ARIZA" DİYE BİLDİRİLDİ, ARIZA YOKTU ────
+             * Bu alan **elde duran en yeni PARTİNİN** maliyeti (`stock.purchase_price`).
+             * `propose_purchase_order`ın satırlarındaki `lastPurchasePriceCents` ise bambaşka bir
+             * şey: **tedarikçi eşlemesindeki** son alış fiyatı (`supplier_product`). İki ayrı
+             * soru — *"stoktaki malı kaça almışız"* ile *"bu tedarikçi bu kalemi kaça veriyor"* —
+             * ve farklı çıkmaları normaldir (parti başka tedarikçiden gelmiş olabilir, fiyat
+             * değişmiş olabilir).
+             *
+             * İkisi de `lastPurchasePriceCents` adını taşıdığı için asistan onları aynı sayı sandı,
+             * tutmayınca **kritik bir arıza bildirdi ve üç turda tekrarladı** (Tur 8, 9, 10). Ölçüm
+             * çürüttü: kod doğru çalışıyor, ad yanlış.
+             *
+             * Bu, `§3.5`in (sessiz kırpma) birebir aynı sınıfı: **araç yanlış bir şey söylemiyor,
+             * söylediğinin NE olduğunu söylemiyor.** Çözüm de aynı — alanı adıyla ayırmak. Ad artık
+             * kaynağını taşıyor; `note` da hangi soruya cevap verdiğini yazıyor ki model iki sayıyı
+             * bir daha karşılaştırmasın.
+             */
+            stockBatchCostCents: costExVat,
+            ...(costExVat === null
+              ? {}
+              : {
+                  stockBatchCostNote:
+                    'Bu, elde duran EN YENİ PARTİNİN alış maliyeti (KDV hariç) — tedarikçinin bugünkü fiyatı DEĞİL. propose_purchase_order satırlarındaki lastPurchasePriceCents tedarikçi eşlemesinden gelir ve bu sayıdan farklı olması normaldir; ikisini karşılaştırıp arıza çıkarmayın.',
+                }),
             // ── ALIŞ SATIŞTAN PAHALIYSA BU BİR VERİ ŞÜPHESİDİR ─────────────
             //
             // (11.08 · denetim raporu madde 10.) Model kârlılık hesabı yaparken bu satırı gerçek
