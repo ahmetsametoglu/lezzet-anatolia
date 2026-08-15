@@ -1,4 +1,5 @@
 import { costOf, isBelowTargetMargin, revenueHtOf, tightestMargin, type CostBasis } from '@lezzet/domain-core';
+import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText, type Channel, type Discount, type DiscountCode, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
 import type { DiscountUsage } from '@lezzet/database';
 import { titleOf } from '@/lib/catalog/title';
@@ -74,6 +75,8 @@ export function toPriceRows({ products, prices, costs, categoryNames }: PriceRow
         productName,
         variantLabel: resolveLocalizedText(variant.label),
         title: titleOf(productName, resolveLocalizedText(variant.label)),
+        // Görsel ÜRÜNÜN — aynı ürünün boyları aynı görseli taşır (products-read ile aynı türetme).
+        imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
         categoryName,
         status: product.status,
         variantActive: variant.isActive,

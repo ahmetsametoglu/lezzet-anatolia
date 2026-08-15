@@ -387,6 +387,10 @@ export const ProductPriceRowSchema = ProductSchema.pick({
   targetMarginPercent: true,
   autoPrice: true,
   status: true,
+  // Görsel künyesi (15.08): fiyat satırının başında ürün görseli var — operatör listeyi ürünle
+  // eşleştirerek okur. İki alan birlikte gelir: `imageUpdatedAt` önbellek kırıcıdır (publicImageUrl).
+  imageKey: true,
+  imageUpdatedAt: true,
 }).extend({
   // `sortOrder` boyla gelir: fiyat tablosunda aynı ürünün boyları alt alta ve HER ZAMAN aynı sırada
   // durmalı. Gömülü seçim sırayı garanti etmez — iki yenilemede satırların yer değiştirdiği bir

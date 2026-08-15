@@ -30,6 +30,8 @@ export interface PriceRow {
   variantLabel: string;
   /** Listede görünen tam ad — "Fıstıklı Baklava · 1 kg". */
   title: string;
+  /** Ürün görseli (public URL) — satır başındaki küçük görsel; yoksa placeholder ikon (`Thumbnail`). */
+  imageUrl: string | null;
   categoryName: string;
   status: ProductStatus;
   /** Boy satışa kapalıysa fiyatı yine görünür; ekran sebebi söyler. */

@@ -313,7 +313,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       // Sondaki, gömülü seçimin içindeki ise BOYUN sıra numarası; ikisi ayrı alanlar. Eskiden yalnız
       // ikincisi vardı ve "sort_order geçiyor" diye bakan göz farkı görmüyordu — hata orada saklandı.
       select:
-        'id,sort_order,name,category_id,vat_rate,target_margin_percent,auto_price,status,variants:product_variant(id,label,is_active,sort_order)',
+        'id,sort_order,name,category_id,vat_rate,target_margin_percent,auto_price,status,image_key,image_updated_at,variants:product_variant(id,label,is_active,sort_order)',
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,

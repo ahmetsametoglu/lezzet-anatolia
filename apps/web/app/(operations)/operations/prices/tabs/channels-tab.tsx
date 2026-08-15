@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PRICES_COLUMN_TRACKS } from '../prices-columns';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { amount, money } from '@/components/operation/ui/format';
 import { channelHint, marginHint, marginText, marginTone, rowStateNote } from '../prices-labels';
 import { SCOPE_LABEL } from '../prices-url';
@@ -20,12 +21,17 @@ import type { PriceRow, PricesViewProps } from '../prices-types';
 export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search, counts, navPending }: PricesViewProps) {
   const columns: Column<PriceRow>[] = withCells<PriceRow>(PRICES_COLUMN_TRACKS, {
     name: (r) => (
-      <div className="flex min-w-0 flex-col gap-px">
-        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
-        <span className="truncate font-ops-body text-ops-xs text-ops-muted">
-          {r.categoryName || 'kategorisiz'}
-          {rowStateNote(r)}
-        </span>
+      // Görsel satır içeriğinden (iki metin satırı ≈ 40px) KISA (36px): satır yüksekliğini görsel
+      // değil metin belirlemeye devam eder — iskelet satırıyla ritim bozulmaz (15.08).
+      <div className="flex min-w-0 items-center gap-2.5">
+        <Thumbnail src={r.imageUrl} alt={r.productName} size={36} />
+        <div className="flex min-w-0 flex-col gap-px">
+          <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
+          <span className="truncate font-ops-body text-ops-xs text-ops-muted">
+            {r.categoryName || 'kategorisiz'}
+            {rowStateNote(r)}
+          </span>
+        </div>
       </div>
     ),
     b2c: (r) => <ChannelCell channel="b2c" cents={r.b2c.amountCents} />,
