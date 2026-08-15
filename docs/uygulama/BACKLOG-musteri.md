@@ -900,8 +900,17 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   kite taşındı. **iOS'ta da düzeldi** (kullanıcı doğrulaması 11.08): önce klavyenin üstünde ölü bir
   şerit kalıyordu, alt güvenli alan payı klavye açıkken de eklendiği içindi; koşul eklenince kalktı.
 
-- [ ] **MB-30 · Unistyles uyarısı kütükte tekrarlıyor:** `we detected style object with 2 unistyles
+- [x] **MB-30 · Unistyles uyarısı kütükte tekrarlıyor:** `we detected style object with 2 unistyles
   styles … use array syntax instead of object syntax`. Hangi bileşen olduğu bulunup düzeltilecek.
+  → **KAPANDI (15.08), görev `(21.52)` — sebep cihazda ölçülerek bulundu: `components/ui/skeleton.tsx`.**
+  **Ve suç dizi sözdiziminde değildi:** `Skeleton` zaten diziyi doğru kullanıyordu; `Animated.View`
+  diziyi İÇERİDE tek nesneye düzleştiriyor ve düzleşen nesnede iki unistyles anahtarı yan yana
+  geliyordu. Yani uyarının önerdiği düzeltme ("dizi kullan") burada zaten yapılmıştı — statik
+  aramanın 14.08'de boş dönmesinin sebebi de buydu. Riski gerçek: tema değişiminin (karanlık mod)
+  iskelete işlememesi. Çözüm: zemin ton başına TAM stile taşındı (`soft`/`default`/`deep`), diziye
+  tek unistyles stili giriyor. Uyarı açılışta **2–3 → 0**; iskelet cihazda görsel olarak doğrulandı.
+  Ölçüm yolu (iki yanlış adım dahil — Metro kitaplığın `src/`ini çözüyor, derlenmiş çıktısını
+  değil) `(21.52)`de yazılı.
   **STATİK ARAMA SONUÇ VERMEDİ (14.08).** Uyarının klasik sebebi iki unistyles stilini NESNE
   olarak birleştirmektir (`style={{ ...styles.a, ...styles.b }}`); depoda böyle tek bir kullanım
   YOK — aranan desenlerin hiçbiri eşleşmedi, buna karşılık dizi sözdizimi 64 yerde doğru

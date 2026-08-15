@@ -67,8 +67,13 @@ export function Skeleton({ width, height, radius = 'full', tone = 'default', tes
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[
-        styles.block,
-        tone === 'deep' ? styles.deep : tone === 'soft' ? styles.soft : null,
+        /* TEK unistyles stili — iki tane OLAMAZ (ölçüldü 15.08, MB-30). Burada dizi sözdizimi
+           doğru kullanılıyordu ama `Animated.View` diziyi İÇERİDE tek nesneye düzleştiriyor;
+           düzleşen nesnede iki unistyles anahtarı yan yana gelince kitaplık "no updates or
+           unpredictable behavior" uyarısını basıyordu — yani tema değişiminin (karanlık mod)
+           iskelete işlemeyeceği gerçek bir risk. Çözüm zemini ton başına TAM stile taşımak:
+           `block` + üstüne binen `soft`/`deep` yerine üç bağımsız ton. */
+        styles[tone],
         {
           width,
           height,
@@ -80,12 +85,15 @@ export function Skeleton({ width, height, radius = 'full', tone = 'default', tes
   );
 }
 
+/* Adlar TONLA eşleşiyor (`styles[tone]`) — üçü de TAM stil, biri ötekinin üstüne binmiyor.
+   `default` ton adının kendisidir; `block` adı kalksın diye değil, üç tonun eşit hâle gelmesi
+   için gitti (üstteki künye). */
 const styles = StyleSheet.create((theme) => ({
-  block: {
-    backgroundColor: theme.colors['sand-300'],
-  },
   soft: {
     backgroundColor: theme.colors['sand-250'],
+  },
+  default: {
+    backgroundColor: theme.colors['sand-300'],
   },
   deep: {
     backgroundColor: theme.colors['sand-400'],

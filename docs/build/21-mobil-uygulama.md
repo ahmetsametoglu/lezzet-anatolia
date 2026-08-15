@@ -2507,6 +2507,47 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `home-professional` VAR — `(21.50)`'nin MB-58a düzeltmesi taze paketle ikinci kez doğrulandı.
   **Yan gözlem:** Türkçe yüzeyde ekran başlığı hâlâ *"Professionnels"* (MB-33, açık kalem).
 
+- [x] (21.52) **UNISTYLES UYARISININ SEBEBİ BULUNDU — `Skeleton`, ve suç dizi sözdiziminde değildi (MB-30)**
+  `touches:` `apps/mobile/src/components/ui/skeleton.tsx`
+
+  **Statik arama 14.08'de sonuç vermemişti ve haklıydı:** uyarının klasik sebebi olan nesne
+  birleştirme (`style={{ ...styles.a, ...styles.b }}`) depoda gerçekten YOK — tüm uygulamada tek
+  bir `style={{` var, o da animasyon değeri. Sebep bu yüzden statik olarak bulunamıyordu.
+
+  **Çalışma anında yakalandı (cihaz `5cf6c351`).** Sıra, ve iki yanlış adım da dahil:
+  1. `adb logcat` bu kez çalıştı: uyarı **açılışta 2–3 kez**, `displayName = "View"`.
+  2. Kitaplığın koşulu okundu (`core/warn.ts`): `style` prop'u DİZİ DEĞİL bir nesne olacak ve
+     içinde birden çok `unistyles_*` anahtarı bulunacak.
+  3. Yığın izi konuldu → uyarı **`ref` geri çağrısından** çıkıyor (`commitAttachRef`), yani
+     yığında hiç uygulama karesi yok; bileşen bu yolla bulunamaz.
+  4. *(Yanlış adım 1)* İz `lib/module/core/warn.js`'e konuldu, hiç görünmedi. **Sebep ölçüldü:**
+     `package.json`'ın `exports["."]["react-native"]` girişi `./src/index.ts` — Metro derlenmiş
+     çıktıyı DEĞİL, kitaplığın kaynak TypeScript'ini çözüyor. Yamanan dosya hiç bundle'a girmiyordu.
+  5. *(Yanlış adım 2)* İz `react/jsx-dev-runtime` üzerinden yakalanmak istendi; ad alanı salt
+     okunur çıktı (`Cannot assign to property 'jsxDEV'`) ve kök layout bir tur çöktü. Geri alındı.
+  6. İz doğru dosyaya (`src/core/warn.ts`) konunca **stil parmak izi düştü:**
+     `{"unistyles_c587f081":{},"backgroundColor":"#ece3c8","unistyles_a79fa174":{},"width":"100%","height":132,"borderRadius":0,"opacity":0.45}`
+     — `#ece3c8` = `sand-250`, `#d8cfb6` = `sand-300`, `opacity 0.45` = iskeletin nabız tabanı.
+     Bileşen: **`components/ui/skeleton.tsx`**.
+
+  **Asıl bulgu — kod DOĞRU yazılmıştı.** `Skeleton` zaten dizi sözdizimi kullanıyordu
+  (`style={[styles.block, ton, {…}]}`); ama `Animated.View` diziyi **içeride tek nesneye
+  düzleştiriyor** ve düzleşen nesnede `block` ile `soft`/`deep` anahtarları yan yana geliyordu.
+  Yani uyarı yanlış değildi, yalnız işaret ettiği yer çağıranın dizisi değil kitaplığın düzleştirmesiydi.
+  **Riski gerçek:** kitaplığın dediği "no updates" hâli, tema değişiminin (karanlık mod) iskelete
+  işlememesi demek.
+
+  **Çözüm zemini ton başına TAM stile taşımak:** `block` + üstüne binen `soft`/`deep` yerine üç
+  bağımsız ton (`soft` · `default` · `deep`), ve seçim ton adıyla eşleşiyor (`styles[tone]`) —
+  `(21.50)`'de `DashedInvite`e konan desenin aynısı. Diziye artık TEK unistyles stili giriyor.
+  Görünen renkler değişmedi: eskiden de `soft`/`deep` `block`un zeminini eziyordu.
+
+  **Doğrulama:** aynı açılış turunda uyarı **2–3 → 0**; uygulama ayakta (`Running "main"`);
+  `tsc` temiz; `jest src/components src/screens/home` **30 dosya / 161 test** geçti; katalog
+  iskeleti cihazda görsel olarak yakalandı (kum kutular, kart yarıçapı, nabız yerinde).
+  Ölçüm için kitaplığa konan iki iz de geri alındı — `node_modules` commit'e girmez ama
+  **ölçüm bitince geri alınmayan yama, bir sonraki ajanın açıklayamayacağı bir davranıştır.**
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
