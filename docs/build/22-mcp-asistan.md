@@ -1753,8 +1753,26 @@ sınamış olacaktık.
       - **HARİTA YÜKSEKLİĞİ KÖTÜYDÜ** (*"genişliği fena değil ama yüksekliği kötü"*). Diyalog
         1320 → **1600**, harita 260 → **420 piksel**. Harita bir ORAN işidir: pencere genişleyince
         sabit kalan yükseklik onu bant gibi gösteriyordu.
-    - **BEKLEYEN(22.36):** kuyrukta gerçek dilekçe var (Schiltigheim + 67500), TTL 16.08; rota
-      seçicili hâli henüz ekranda denenmedi.
+    - **İKİNCİ EKRAN TURU — İKİ KUSUR DAHA, ikisi de aynı kökten** *(kullanıcı, 15.08)*:
+      - **AÇILIŞTA ÖNERİLER SEÇİLİ GELİYORDU.** Gerekçem hızdı (*"patron çoğu zaman öneriyi olduğu
+        gibi onaylar"*) ve yanlıştı: *"önerilen posta kodları haritada mor görünmesi gerekirken
+        seninki doğrudan seçili geliyor."* **Seçili açılış, kararı verilmiş gibi gösterir.** Öneri
+        mor durmalı ki operatör onu bir TEKLİF olarak görsün; kabul bir EYLEM olmalı, varsayılan
+        değil — üstelik geri alınamaz bir bildirim tetikleyen bir kararda "hepsi seçili" açılış
+        dikkatsiz onayı davet ediyordu. Açılış artık boş. *(Rota seçili gelmeye devam ediyor ve bu
+        farklı: rota bir seçenektir, kabul değil.)*
+      - **SEÇİLEN İLE ESKİ AYIRT EDİLEMİYORDU:** *"hangi nokta eski seçilenlerle yeni seçilen
+        karışıyor."* Kabul edilen öneri `mine` oluyordu, yani bölgenin YILLARDIR taşıdığı kodla bu
+        diyalogda AZ ÖNCE eklenen kod aynı yeşil noktaydı — **kararın kendisi haritada görünmüyordu.**
+        Haritaya beşinci hâl eklendi: **`adding`** — zeytin dolgu + **mor çember** (*"asistanın
+        önerisiydi, bu kararla bölgeye giriyor"*), `mine`'dan bir tık iri çünkü gözün ilk gideceği
+        yer az önce verilen karar olmalı. Rota kurulum ekranı bu hâli hiç üretmiyor, o yüzden lejant
+        satırı da **yalnız o hâlden nokta varken** çiziliyor: lejant haritanın aynası olmalı,
+        sözlüğü değil.
+      - **HARİTA 420 → 630 piksel** (*"bir buçuk kat daha arttır"*). Karar coğrafi olduğu için
+        haritanın ekranın baskın öğesi olması gerekiyor; kod listesi onun SONUCU.
+    - **BEKLEYEN(22.36):** kuyrukta gerçek dilekçe var (Schiltigheim + 67500), TTL 16.08; son hâli
+      henüz ekranda denenmedi.
     - **BEKLEYEN(22.36):** rota ekranının devir yolu (`routes-handoff.ts` + `?proposal=` ön dolgusu)
       artık HİÇBİR öneri tarafından tetiklenmiyor — `zone_extend` onun tek tüketicisiydi. Kod ölü
       değil (sayfa hâlâ okuyor), ama pratikte ulaşılamaz. Sökülmesi rota ekranının kendi turunun işi;

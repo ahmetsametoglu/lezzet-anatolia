@@ -107,9 +107,19 @@ export function ZoneFormBody({
   const stateOf = useCallback(
     (point: ZoneMapPoint): ZoneCodeState => {
       const key = keyOfPoint(point);
-      // Sıra ÖNEMLİ: seçilen bir aday artık "benim"dir. Önce adaylığa bakılsaydı seçim haritada
-      // hiç görünmezdi ve iki yol (liste/harita) birbirini doğrulamazdı.
-      if (currentKeys.has(key) || chosen.has(key)) return 'mine';
+      /**
+       * **SIRA VE AYRIM — kullanıcının ekranda gördüğü kusurun düzeltmesi (15.08).**
+       *
+       * Önce `chosen` da `mine` dönüyordu ve sonuç şuydu: *"hangi nokta eski, hangisi yeni seçilen
+       * karışıyor."* Bölgenin yıllardır taşıdığı kod ile bu diyalogda az önce eklenen kod aynı
+       * yeşil noktaydı, yani KARARIN KENDİSİ haritada görünmüyordu.
+       *
+       * Artık üç ayrı hâl: bölgenin kodu (`mine`) · bu kararla eklenen (`adding`) · henüz kabul
+       * edilmemiş öneri (`suggested`). `adding` önce sorulur, çünkü seçilen bir kod aynı zamanda
+       * adaydır — aday dalına düşseydi seçim yine görünmezdi.
+       */
+      if (currentKeys.has(key)) return 'mine';
+      if (chosen.has(key)) return 'adding';
       if (heldKeys.has(key)) return 'taken';
       return candidateKeys.has(key) ? 'suggested' : 'free';
     },
@@ -150,10 +160,11 @@ export function ZoneFormBody({
 
       {/* Harita SABİT yükseklikte: `flex-1` verilseydi kutu içeriğe göre büyüyüp küçülür, kod
           listesi uzadıkça harita ezilirdi.
-          420px — kullanıcı 15.08'de *"genişliği fena değil ama yüksekliği kötü"* dedi. Harita bir
-          ORAN işidir: diyalog 1600'e genişleyince sol sütun da genişledi ve 320px'lik bir şerit
-          orada bant gibi duruyordu. */}
-      <div className="h-[420px] overflow-hidden rounded-ops-card border border-ops-line">
+          630px — kullanıcı iki kez ölçtü: önce *"yüksekliği kötü"* (260 → 420), sonra *"bir buçuk
+          kat daha arttır"* (420 → 630). Harita bir ORAN işidir; 1600 piksellik diyalogda sol sütun
+          ~1100 piksel ve altındaki bir şerit bant gibi duruyordu. Karar coğrafi olduğu için
+          haritanın kendisi ekranın baskın öğesi olmalı — kod listesi onun SONUCU. */}
+      <div className="h-[630px] overflow-hidden rounded-ops-card border border-ops-line">
         <ZoneMap
           points={points}
           stateOf={stateOf}

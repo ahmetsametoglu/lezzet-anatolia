@@ -32,15 +32,26 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
  * hesaplanıyor ve onaydan ÖNCE görünüyor.
  */
 
-/** Dilekçe → formun açılış değeri: **önerilen rota + önerilen kodların tamamı seçili.** */
+/**
+ * Dilekçe → formun açılış değeri: **önerilen rota seçili, kodlar SEÇİLİ DEĞİL.**
+ *
+ * ── AÇILIŞ BİR TUR "KABUL EDİLMİŞ HÂL"DİYDİ VE YANLIŞTI (kullanıcı, 15.08) ──
+ * İlk yazımda öneriler seçili açılıyordu; gerekçem *"patron çoğu zaman öneriyi olduğu gibi
+ * onaylar, o yolu üç tıklamaya çıkarmayalım"*dı. Kullanıcı ekranda gördü ve iki kusuru birden
+ * söyledi: *"önerilen posta kodları haritada mor renkte görünmesi gerekirken seninki doğrudan
+ * seçili geliyor, bu iyi bir şey değil."*
+ *
+ * Haklı, ve sebebi hızdan ağır basıyor: **seçili açılış, kararı verilmiş gibi gösterir.** Öneri
+ * mor (`suggested`) durmalı ki operatör onu bir TEKLİF olarak görsün; kabul etmek bir eylem
+ * olmalı, varsayılan değil. Üstelik geri alınamaz bir bildirim tetikleyen bir kararda "hepsi
+ * seçili" açılış, dikkatsiz bir onayı davet ediyordu.
+ *
+ * Rota ise seçili geliyor ve bu farklı: rota bir SEÇENEKTİR, kabul değil — boş bırakmak operatörü
+ * hiçbir bilgi eklemeyen bir seçime zorlardı ve asistanın hesabı (`delivery_map` en yakın
+ * güzergâh) makul bir başlangıçtır.
+ */
 export function zoneValuesFrom(payload: ZoneExtendPayload): ZoneFormValues {
-  // Açılış "önerinin kabul edilmiş hâli"dir, boş liste değil: patron çoğu zaman öneriyi olduğu
-  // gibi onaylar ve o yolu üç tıklamaya çıkarmak, kuyruğun hızını alırdı. Çıkarmak bir tıklama.
-  // Rota da öyle: asistanın önerdiği rota seçili gelir, değiştirmek tek seçim.
-  return {
-    zoneId: payload.zoneId,
-    selectedKeys: payload.postalCodes.map((code) => zoneCodeKey({ country: payload.country, postalCode: code.postalCode })),
-  };
+  return { zoneId: payload.zoneId, selectedKeys: [] };
 }
 
 /**

@@ -55,8 +55,19 @@ export interface ZoneMapPoint {
  * Ayrı bir hâl, `free`'nin bir alt kümesi olarak değil kendi rengiyle çiziliyor çünkü operatörün
  * gözü haritada önce oraya gitmeli: 157 boş noktanın içinde "47 kez sorulmuş" olanı aramak, aramayı
  * operatöre yıkmaktır.
+ *
+ * **BEŞİNCİSİ `adding` (15.08, kullanıcı ekranda gördü):** *"hangi nokta eski, hangisi yeni seçilen
+ * karışıyor."* Asistan kuyruğunun bölge gövdesinde operatör bir öneriyi kabul edince nokta `mine`
+ * oluyordu — yani bölgenin YILLARDIR taşıdığı kodla, bu diyalogda AZ ÖNCE eklenen kod aynı yeşil
+ * noktaya dönüşüyordu. Kararın kendisi görünmez oluyordu: operatör "ne değiştirdim" sorusunu
+ * haritaya soramıyordu.
+ *
+ * `adding` o boşluğu kapatıyor ve rengi iki aileyi birleştiriyor — **zeytin dolgu + mor çember**:
+ * *"asistanın önerisiydi (mor), bu kararla bölgeye giriyor (zeytin)."* Rota kurulum ekranı bu hâli
+ * hiç üretmiyor (`stateOf` orada dört daldan dönüyor), dolayısıyla lejantı da kirletmiyor: satır
+ * yalnız haritada o hâlden bir nokta VARSA çiziliyor.
  */
-export type ZoneCodeState = 'mine' | 'taken' | 'suggested' | 'free';
+export type ZoneCodeState = 'mine' | 'taken' | 'suggested' | 'adding' | 'free';
 
 /** Görünen alan — "boşta" kod okumasının girdisi. */
 export interface MapViewport {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { placesLabel } from './labels';
@@ -83,6 +83,23 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
       fillOpacity: 1,
     };
   }
+  /**
+   * **BU KARARLA EKLENEN** (15.08) — zeytin dolgu, MOR çember.
+   *
+   * İki aile bilerek birleşti: dolgu "artık bu rotanın" der (`mine` ile aynı zeytin), çember
+   * "asistanın önerisiydi" der (`suggested`in moru). Yarıçap `mine`'dan bir tık iri (9) çünkü bu
+   * nokta operatörün AZ ÖNCE verdiği karardır — gözün ilk gideceği yer o olmalı; bölgenin yıllardır
+   * taşıdığı kodla aynı ağırlıkta çizilseydi karar yine kalabalığın içinde kaybolurdu.
+   */
+  if (state === 'adding') {
+    return {
+      radius: 9,
+      color: token('--color-ops-violet', '#5a4a8a'),
+      weight: 3,
+      fillColor: token('--color-ops-olive', '#5f7a2c'),
+      fillOpacity: 1,
+    };
+  }
   if (state === 'taken') {
     return {
       radius: 7,
@@ -138,6 +155,10 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
   const viewportRef = useRef(onViewport);
   viewportRef.current = onViewport;
   const [visibleHint, setVisibleHint] = useState<string | null>(null);
+
+  // Lejantta hangi satırların çizileceği — haritada FİİLEN bulunan hâller. Tek geçiş; nokta kümesi
+  // ya da hâl fonksiyonu değişmedikçe yeniden hesaplanmıyor.
+  const shownStates = useMemo(() => new Set(points.map(stateOf)), [points, stateOf]);
 
   useEffect(() => {
     const box = boxRef.current;
@@ -252,6 +273,10 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
           Kod hâlleri
         </span>
         <LegendRow state="mine" label="bu rotanın kodu" />
+        {/* `adding` satırı YALNIZ o hâlden nokta varken çizilir: rota kurulum ekranı bu hâli hiç
+            üretmiyor ve orada duran bir "bu kararla ekleniyor" satırı, hiç görünmeyecek bir rengi
+            tarif ederdi — lejant haritanın aynası olmalı, sözlüğü değil. */}
+        {shownStates.has('adding') ? <LegendRow state="adding" label="bu kararla ekleniyor" /> : null}
         <LegendRow state="suggested" label="önerilen — üzerine gelin" />
         <LegendRow state="taken" label="başka rotada tanımlı" />
         <LegendRow state="free" label="boşta" />
@@ -274,11 +299,14 @@ function LegendRow({ state, label }: { state: ZoneCodeState; label: string }) {
   const dot =
     state === 'mine'
       ? 'bg-ops-olive ring-1 ring-ops-olive'
-      : state === 'suggested'
-        ? 'bg-ops-violet-dot ring-1 ring-ops-violet'
-        : state === 'taken'
-          ? 'bg-ops-blue-line ring-1 ring-ops-blue'
-          : 'bg-ops-card ring-[1.5px] ring-ops-gray-700';
+      : // Haritadaki noktanın birebir aynısı: zeytin dolgu, mor çember.
+        state === 'adding'
+        ? 'bg-ops-olive ring-2 ring-ops-violet'
+        : state === 'suggested'
+          ? 'bg-ops-violet-dot ring-1 ring-ops-violet'
+          : state === 'taken'
+            ? 'bg-ops-blue-line ring-1 ring-ops-blue'
+            : 'bg-ops-card ring-[1.5px] ring-ops-gray-700';
   return (
     <span className="flex items-center gap-2 font-ops-body text-ops-xs text-ops-body">
       <span className={`size-3 rounded-full border-2 border-ops-card ${dot}`} />
