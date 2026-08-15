@@ -64,15 +64,11 @@ const PUBLIC_LABEL_PLACEHOLDER: Record<Locale, string> = {
   de: 'ör. Willkommensrabatt',
 };
 
-/**
- * Kod örnekleri de DİLE göre: müşteri kendi dilinde okuyabildiği bir şey yazacak.
- * "ör." öneki YOK: üç kutu tek satırda duruyor (dar hücre) ve mono + soluk placeholder zaten
- * örnek olduğunu söylüyor — önek en uzun örneği hücreden taşırıyordu.
- */
+/** Kod örnekleri de DİLE göre: müşteri kendi dilinde okuyabildiği bir şey yazacak. */
 const CODE_PLACEHOLDER: Record<Locale, string> = {
-  tr: 'HOSGELDIN',
-  fr: 'BIENVENUE',
-  de: 'WILLKOMMEN',
+  tr: 'ör. HOSGELDIN',
+  fr: 'ör. BIENVENUE',
+  de: 'ör. WILLKOMMEN',
 };
 
 /**
@@ -352,12 +348,6 @@ interface DiscountFormBodyProps {
    * gövdesi yalnız kuralın içeriğini taşır. Asistan kuyruğunda footer yok — gövdede kalır.
    */
   showActiveToggle?: boolean;
-  /**
-   * Tetik anahtarı gövdede mi çizilsin? Diyalog `false` verir ve anahtarı BAŞLIK barına taşır
-   * (15.08, kullanıcı kararı): kupon/kampanya seçimi formun bir alanı değil, formun KİMLİĞİDİR —
-   * başlıkla aynı satırda durur. Asistan kuyruğunda başlık yuvası yok — gövdede kalır.
-   */
-  showTriggerToggle?: boolean;
 }
 
 export function DiscountFormBody({
@@ -370,7 +360,6 @@ export function DiscountFormBody({
   disabled = false,
   columns = 1,
   showActiveToggle = true,
-  showTriggerToggle = true,
 }: DiscountFormBodyProps) {
   const set = <K extends keyof DiscountFormValues>(key: K, next: DiscountFormValues[K]) =>
     onChange({ ...values, [key]: next });
@@ -406,77 +395,70 @@ export function DiscountFormBody({
   const tanimSection = (
     <>
       <SectionCard title="Tanım">
-        {showTriggerToggle ? (
-          <FieldShell label="Tetik" labelAside={aside('trigger')}>
-            <MultiToggle
-              value={values.trigger}
-              onChange={(next) => set('trigger', next)}
-              label="Tetik"
-              options={[
-                { key: 'coupon', label: 'Kupon (kodlu)' },
-                { key: 'automatic', label: 'Otomatik kampanya' },
-              ]}
-            />
-          </FieldShell>
-        ) : null}
+        {/* Tetik TANIM'DA (15.08 üçüncü tur, kullanıcı kararı — başlık barı denendi, geri alındı):
+            kupon/kampanya seçimi kuralın kimliği ve kimliğin kartı Tanım. Her kabukta aynı yerde
+            durur; diyalog artık başlığına ayrı bir anahtar koymaz. */}
+        <FieldShell label="Tetik" labelAside={aside('trigger')}>
+          <MultiToggle
+            value={values.trigger}
+            onChange={(next) => set('trigger', next)}
+            label="Tetik"
+            options={[
+              { key: 'coupon', label: 'Kupon (kodlu)' },
+              { key: 'automatic', label: 'Otomatik kampanya' },
+            ]}
+          />
+        </FieldShell>
 
         <FieldShell label="Ad" labelAside={aside('name', 'Yalnız sizin listeniz için — müşteri görmez')}>
           <Input value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="ör. Bayram indirimi" />
         </FieldShell>
-
-        {/* KOD TANIM'DA, üç dil TEK SATIRDA (15.08 ikinci tur, kullanıcı kararı): kod da kuralın
-            kimliği — operatör önce "hangi kod" der, sonra çevirilere geçer. Dil sekmesinin arkasında
-            dururken kaç dilde kod açıldığı görünmüyordu; üç kutu yan yana o soruyu tek bakışta yanıtlar.
-            KOD YİNE DİLE BAĞLI: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a hiçbir şey.
-            Üç kod TEK kuponun kapılarıdır — koşulları, değeri ve **kullanım tavanı ortaktır**;
-            ayrı kupon açmak "toplam 100 kullanım" sınırını sessizce 300 yapardı. */}
-        {values.trigger === 'coupon' ? (
-          <FieldShell label="Kupon kodu" labelAside={aside('code', 'dil başına bir kapı — boş dil kod açmaz')}>
-            <div className="grid grid-cols-3 gap-3">
-              {LOCALES.map((lang) => (
-                <div key={lang} className="flex min-w-0 flex-col gap-1">
-                  {/* Kullanım sayısı etikette: hiç kullanılmamış kodu değiştirmek bedelsizdir,
-                      yüz kez kullanılmışı değiştirmek dolaşımdaki kodu kapatır — karar buradan besleniyor. */}
-                  <span className="font-ops-body text-ops-micro uppercase tracking-[0.08em] text-ops-faint">
-                    {lang}
-                    {usedCountOf(lang) > 0 ? ` · ${usedCountOf(lang)} kez` : ''}
-                  </span>
-                  {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur
-                      (arama harf ayrımsız), ama listede tek bir yazım görünsün. */}
-                  <Input
-                    value={values.codes[lang] ?? ''}
-                    mono
-                    onChange={(e) => set('codes', { ...values.codes, [lang]: e.target.value.toUpperCase() })}
-                    placeholder={CODE_PLACEHOLDER[lang]}
-                  />
-                </div>
-              ))}
-            </div>
-            <span className="font-ops-body text-ops-micro leading-[1.6] text-ops-faint">
-              Hepsi AYNI kuponu açar ve aynı kullanım tavanını paylaşır — kaç kez hangi kodla girildiği
-              ayrı sayılır.
-            </span>
-          </FieldShell>
-        ) : null}
       </SectionCard>
 
-      {/* Müşteri metni dil sekmeli kartta (ürün formunun deseni). Kod bir tur bu kartın içindeydi
-          (ad ile aynı dile bağlı diye); 15.08 ikinci turda kullanıcı kararıyla Tanım'a taşındı —
-          dil eşleşmesini artık kod kutularının kendi dil etiketleri söylüyor. */}
+      {/* MÜŞTERİ METNİ TEK KARTTA, dil kartın SEKMESİNDEN gelir (ürün formunun deseni). İki alan da
+          aynı dile bağlı: Fransız müşteri "Offre de bienvenue" adını görür ve "BIENVENUE" kodunu
+          yazar. Kod bir tur Tanım'a alınmıştı; kullanıcı geri çevirdi (15.08 üçüncü tur) — kod çok
+          dilli bir müşteri metnidir, dil eşleşmesi ancak aynı sekmede görünür.
+
+          KOD DİLE BAĞLIDIR ve bu keyfi değil: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a
+          hiçbir şey. Üç kod TEK kuponun kapılarıdır — koşulları, değeri ve **kullanım tavanı ortaktır**.
+          Ayrı kupon açmak "toplam 100 kullanım" sınırını sessizce 300 yapardı. */}
       <LocaleCard title="Müşteriye görünen" completenessOf={values.publicLabel}>
         {(lang) => (
-          /* Çeviri alan türü `ad`: indirim etiketi sepette tek satır ve kısa. Açıklama tonunda
-             çevrilse "Hoş geldin indirimi" bir cümleye dönüşür ve satıra sığmaz. */
-          <LocalizedTextField
-            value={values.publicLabel}
-            onChange={(next) => set('publicLabel', next)}
-            lang={lang}
-            label="Ad"
-            placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
-            maxLength={PUBLIC_LABEL_MAX}
-            field="ad"
-            hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
-          />
+          <>
+            {/* Çeviri alan türü `ad`: indirim etiketi sepette tek satır ve kısa. Açıklama tonunda
+                çevrilse "Hoş geldin indirimi" bir cümleye dönüşür ve satıra sığmaz. */}
+            <LocalizedTextField
+              value={values.publicLabel}
+              onChange={(next) => set('publicLabel', next)}
+              lang={lang}
+              label="Ad"
+              placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
+              maxLength={PUBLIC_LABEL_MAX}
+              field="ad"
+              hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
+            />
+
+            {values.trigger === 'coupon' ? (
+              <FieldShell
+                label="Kupon kodu"
+                labelAside={aside('code', usedCountOf(lang) > 0 ? `${usedCountOf(lang)} kez kullanıldı` : 'boş = bu dilde kod yok')}
+              >
+                {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur
+                    (arama harf ayrımsız), ama listede tek bir yazım görünsün. */}
+                <Input
+                  value={values.codes[lang] ?? ''}
+                  mono
+                  onChange={(e) => set('codes', { ...values.codes, [lang]: e.target.value.toUpperCase() })}
+                  placeholder={CODE_PLACEHOLDER[lang]}
+                />
+                <span className="font-ops-body text-ops-micro leading-[1.6] text-ops-faint">
+                  Bu dildeki kapı. Hepsi AYNI kuponu açar ve aynı kullanım tavanını paylaşır — kaç kez
+                  hangi kodla girildiği ayrı sayılır.
+                </span>
+              </FieldShell>
+            ) : null}
+          </>
         )}
       </LocaleCard>
     </>
