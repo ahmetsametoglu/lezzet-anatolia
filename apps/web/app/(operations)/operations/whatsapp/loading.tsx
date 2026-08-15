@@ -1,7 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { CONTROL_H } from '@/components/operation/ui/control';
-import { Skeleton, SkeletonFilterBar, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonFilterBar, SkeletonLine, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
  * WhatsApp ekranının ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
@@ -14,8 +14,9 @@ export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="WhatsApp konuşmaları yükleniyor">
       {/* Başlık GERÇEK (15.08, emsal: fiyatlar); alt satır sayaçtır — veridir, çubuk kalır. */}
-      <PageHeader title="WhatsApp" subtitle={<Skeleton className="h-3 w-64" />}>
-        <Skeleton className={`${CONTROL_H.md} w-[120px] rounded-ops-btn`} />
+      <PageHeader title="WhatsApp" subtitle={<SkeletonLine className="w-64" />}>
+        {/* "+ Elle DM" gerçekte `sm` (32px). */}
+        <Skeleton className={`${CONTROL_H.sm} w-[120px] rounded-ops-btn`} />
       </PageHeader>
       <SkeletonFilterBar count={2} />
       <div className="flex min-h-0 flex-1 overflow-hidden">

@@ -37,7 +37,8 @@ function DesktopShell() {
         title="Sistem"
         subtitle={`Sağlık görüntüsü ${HEALTH_COLLECT_INTERVAL_MIN} dakikada bir yazılır · 14 gün saklanır`}
       >
-        <Skeleton className="h-9 w-[190px] rounded-[7px]" />
+        {/* Canlı göstergesi ~32px (py-[7px] hap), düğmeler `sm` — hepsi gerçek boyda (15.08). */}
+        <Skeleton className="h-8 w-[190px] rounded-[7px]" />
         <Skeleton className="h-8 w-20 rounded-ops-btn" />
         <Skeleton className="h-8 w-28 rounded-ops-btn" />
       </PageHeader>

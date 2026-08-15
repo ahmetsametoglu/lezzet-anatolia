@@ -1,6 +1,6 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { Skeleton, SkeletonFilterBar, SkeletonRows } from '@/components/operation/ui/skeleton';
+import { SkeletonFilterBar, SkeletonLine, SkeletonRows } from '@/components/operation/ui/skeleton';
 
 /**
  * Geri Bildirim ekranının ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana
@@ -18,7 +18,7 @@ export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Geri bildirim yükleniyor">
       {/* Başlık GERÇEK (15.08, emsal: fiyatlar); alt satır İKİ SAYI taşıyor — veridir, çubuk kalır. */}
-      <PageHeader title="Geri Bildirim" subtitle={<Skeleton className="h-3 w-64" />} />
+      <PageHeader title="Geri Bildirim" subtitle={<SkeletonLine className="w-64" />} />
       <SkeletonFilterBar count={3} />
       <SkeletonRows rows={6} />
     </LoadingRegion>

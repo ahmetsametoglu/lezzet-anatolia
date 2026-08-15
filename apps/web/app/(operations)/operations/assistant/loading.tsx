@@ -1,6 +1,6 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { Skeleton, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
+import { SkeletonLine, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
  * Asistan kuyruğunun ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
@@ -15,7 +15,7 @@ import { Skeleton, SkeletonRows, SkeletonText } from '@/components/operation/ui/
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Asistan kuyruğu yükleniyor">
-      <PageHeader title="Asistan Onay Kuyruğu" subtitle={<Skeleton className="h-3 w-64" />} />
+      <PageHeader title="Asistan Onay Kuyruğu" subtitle={<SkeletonLine className="w-64" />} />
       <div className="grid min-h-0 flex-1 grid-cols-[326px_1fr] overflow-hidden">
         <div className="min-h-0 overflow-hidden border-r border-ops-line">
           <SkeletonRows rows={6} />

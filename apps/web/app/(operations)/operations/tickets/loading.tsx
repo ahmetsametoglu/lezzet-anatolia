@@ -1,7 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { CONTROL_H } from '@/components/operation/ui/control';
-import { Skeleton, SkeletonFilterBar, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonFilterBar, SkeletonLine, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
  * Talepler ekranının ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
@@ -16,8 +16,9 @@ import { Skeleton, SkeletonFilterBar, SkeletonRows, SkeletonText } from '@/compo
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Talepler yükleniyor">
-      <PageHeader title="Talepler" subtitle={<Skeleton className="h-3 w-64" />}>
-        <Skeleton className={`${CONTROL_H.md} w-[104px] rounded-ops-btn`} />
+      {/* "+ Elle talep" gerçekte `sm` (32px) — yer tutucu da öyle (15.08). */}
+      <PageHeader title="Talepler" subtitle={<SkeletonLine className="w-64" />}>
+        <Skeleton className={`${CONTROL_H.sm} w-[104px] rounded-ops-btn`} />
       </PageHeader>
       <SkeletonFilterBar count={4} />
       <div className="grid min-h-0 flex-1 grid-cols-[330px_1fr] overflow-hidden">

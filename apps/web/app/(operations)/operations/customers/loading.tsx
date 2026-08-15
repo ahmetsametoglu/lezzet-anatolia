@@ -1,7 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { CONTROL_H } from '@/components/operation/ui/control';
-import { Skeleton, SkeletonTable } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonLine, SkeletonTable } from '@/components/operation/ui/skeleton';
 import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
 
 /**
@@ -26,7 +26,7 @@ export default function Loading() {
           bloklarını (depo · ⌘K · avatar) HİÇ çizmiyordu — gerçek bar gelince sağ taraf birden
           doluyor, başlık sola kayıyordu. Alt satır sayaçtır (veri), arama kutusunun yerini aynı
           genişlikte çubuk tutar. */}
-      <PageHeader title="Müşteriler" subtitle={<Skeleton className="h-3 w-48" />}>
+      <PageHeader title="Müşteriler" subtitle={<SkeletonLine className="w-48" />}>
         <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
       </PageHeader>
 

@@ -1,6 +1,6 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { Skeleton, SkeletonRows, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonLine, SkeletonRows, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { PROCUREMENT_TABS, TAB_LABEL } from './procurement-url';
 
 /**
@@ -15,7 +15,7 @@ import { PROCUREMENT_TABS, TAB_LABEL } from './procurement-url';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Tedarik yükleniyor">
-      <PageHeader title="Tedarik" subtitle={<Skeleton className="h-3 w-56" />} />
+      <PageHeader title="Tedarik" subtitle={<SkeletonLine className="w-56" />} />
       <SkeletonTabs labels={PROCUREMENT_TABS.map((t) => TAB_LABEL[t])} />
 
       {/* Öneri kartları — başlıklı kart kabuğu + satırlar. */}

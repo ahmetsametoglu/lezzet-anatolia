@@ -1,6 +1,6 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { SkeletonFilterBar, SkeletonLine, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { PRODUCTS_COLUMN_TRACKS } from './products-columns';
 import { PRODUCT_TABS, PRODUCT_TAB_LABEL } from './products-paths';
 
@@ -32,8 +32,9 @@ import { PRODUCT_TABS, PRODUCT_TAB_LABEL } from './products-paths';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Ürünler yükleniyor">
-      <PageHeader title="Ürünler" subtitle={<Skeleton className="h-3 w-48" />} />
-      <SkeletonTabs labels={PRODUCT_TABS.map((t) => PRODUCT_TAB_LABEL[t])} actions={['w-[210px]', 'w-24']} />
+      <PageHeader title="Ürünler" subtitle={<SkeletonLine className="w-48" />} />
+      {/* Arama gerçekte `w-56` (224px) — yer tutucu aynı genişlikte, yoksa düğme yatayda kayıyor. */}
+      <SkeletonTabs labels={PRODUCT_TABS.map((t) => PRODUCT_TAB_LABEL[t])} actions={['w-56', 'w-24']} />
       <SkeletonFilterBar count={4} />
 
       <div className="grid min-h-0 flex-1 grid-cols-[1.95fr_1fr] overflow-hidden">

@@ -1,7 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { CONTROL_H } from '@/components/operation/ui/control';
-import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonFilterBar, SkeletonLine, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { PRICES_COLUMN_TRACKS } from './prices-columns';
 import { PRICE_TABS, TAB_LABEL } from './prices-url';
 
@@ -34,8 +34,10 @@ import { PRICE_TABS, TAB_LABEL } from './prices-url';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Fiyatlar yükleniyor">
-      <PageHeader title="Fiyatlar" subtitle={<Skeleton className="h-3 w-48" />}>
-        <Skeleton className={`${CONTROL_H.md} w-32 rounded-ops-btn`} />
+      {/* Oto fiyat düğmesi gerçekte `sm` (32px) — yer tutucu da öyle; arama `md` (36px). Boylar
+          gerçek kontrolle birebir, yoksa içerik gelince öğe gözle görülür küçülüyor (15.08). */}
+      <PageHeader title="Fiyatlar" subtitle={<SkeletonLine className="w-48" />}>
+        <Skeleton className={`${CONTROL_H.sm} w-32 rounded-ops-btn`} />
         <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
       </PageHeader>
       {/* Sıra `PRICE_TABS`ten, ad `TAB_LABEL`den — ikisi de gerçek sekmelerin okuduğu kaynak. */}

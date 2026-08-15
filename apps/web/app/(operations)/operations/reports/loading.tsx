@@ -1,7 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { CONTROL_H } from '@/components/operation/ui/control';
-import { Skeleton, SkeletonMetric, SkeletonRows, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonLine, SkeletonMetric, SkeletonRows, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { TAB_LABEL } from './reports-labels';
 import { REPORT_TABS } from './reports-url';
 
@@ -25,9 +25,10 @@ export default function ReportsLoading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Raporlar yükleniyor">
       {/* Ay seçici (`Select` field kipi) + "↳ geçen aya göre" düğmesinin yer tutucuları. */}
-      <PageHeader title="Raporlar" subtitle={<Skeleton className="h-3 w-56" />}>
+      {/* Ay seçici `md` (form alanı hizası), karşılaştırma düğmesi ~32px (`py-2` ham buton) — `sm`. */}
+      <PageHeader title="Raporlar" subtitle={<SkeletonLine className="w-56" />}>
         <Skeleton className={`${CONTROL_H.md} w-36 rounded-ops-btn`} />
-        <Skeleton className={`${CONTROL_H.md} w-36 rounded-ops-btn`} />
+        <Skeleton className={`${CONTROL_H.sm} w-36 rounded-ops-btn`} />
       </PageHeader>
       <SkeletonTabs labels={REPORT_TABS.map((t) => TAB_LABEL[t])} />
 

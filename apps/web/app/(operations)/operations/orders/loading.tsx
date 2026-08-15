@@ -1,7 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { CONTROL_H } from '@/components/operation/ui/control';
-import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonFilterBar, SkeletonLine, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { ORDERS_COLUMN_TRACKS } from './orders-columns';
 import { ORDER_TABS, tabLabel } from './orders-url';
 
@@ -32,7 +32,7 @@ export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Siparişler yükleniyor">
       {/* Arama kutusunun yerini aynı ölçüde çubuk tutar (gerçek bar `search` yuvasında w-[210px]). */}
-      <PageHeader title="Siparişler" subtitle={<Skeleton className="h-3 w-48" />}>
+      <PageHeader title="Siparişler" subtitle={<SkeletonLine className="w-48" />}>
         <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
       </PageHeader>
       <SkeletonTabs labels={ORDER_TABS.map((t) => tabLabel(t))} />

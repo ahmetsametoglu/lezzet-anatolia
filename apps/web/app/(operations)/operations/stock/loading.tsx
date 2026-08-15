@@ -2,7 +2,7 @@ import { LoadingRegion } from '@/components/loading-region';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { buttonClass } from '@/components/operation/ui/button';
 import { SearchIcon } from '@/components/operation/ui/icons';
-import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { SkeletonFilterBar, SkeletonLine, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { STOCK_COLUMN_TRACKS } from './stock-columns';
 import { STOCK_TABS, STOCK_TAB_LABEL } from './stock-url';
 
@@ -27,7 +27,7 @@ export default function Loading() {
           statik; eylem tıklanmaz süs (`buttonClass`lı span), davranışı sayfayla gelir. Alt satır
           sayaçtır (veri), çubuk. Sekme adları gerçek ve `stock-url.ts` tek kaynağından — eski hâl
           3 çubuk çiziyordu, gerçek çubukta 4 sekme vardı ("Çıkışlar" 22.26'da eklenmişti). */}
-      <PageHeader title="Stok" subtitle={<Skeleton className="h-3 w-72" />}>
+      <PageHeader title="Stok" subtitle={<SkeletonLine className="w-72" />}>
         <span className={buttonClass({ variant: 'secondary', size: 'sm' })}>
           <SearchIcon />
           Lot / geri çağırma

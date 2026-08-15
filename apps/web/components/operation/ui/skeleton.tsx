@@ -196,27 +196,28 @@ export function SkeletonTable({ tracks, rows = 12 }: { tracks: readonly ColumnTr
  * "içerik gelince hiçbir şey kaymasın".
  */
 
-/** `PageHeader` ölçüsü (px-6 py-4): başlık + alt bilgi satırı, sağda ekran aksiyonları. */
-export function SkeletonPageHeader({ actions = [] }: { actions?: readonly string[] }) {
+/*
+ * `SkeletonPageHeader` SİLİNDİ (15.08): başlık barı artık her `loading.tsx`'te GERÇEK `PageHeader`
+ * ile çizilir (09-admin O3 REVİZE notu) — statik kimlik çubuklaştırılmaz, kabuk blokları
+ * `OpsShellProvider`'dan gelir. Son kullanıcı taşınınca komponent ölü koda düştü.
+ */
+
+/**
+ * Tek METİN SATIRI yer tutucusu — çubuğu, çevresindeki metnin TAM BİR SATIRI kadar yer kaplayan
+ * kutuya sarar (`h-[1lh]`), çubuk içinde dikey ortalı.
+ *
+ * Çıplak `Skeleton h-3` (12px) bir metin satırının yerine geçemez: gerçek satır font + satır
+ * yüksekliğiyle ~20px'tir ve içerik gelince kap 8px uzar — bar sayfanın EN ÜSTÜNDE olduğu için
+ * altındaki her şey topluca kayar (kullanıcı bildirimi 15.08, başlık altı açıklama satırı).
+ * `1lh` birimi kutuyu tam bir satır yapar ve ölçü elle yazılmaz: font ya da satır yüksekliği
+ * değişse de yükseklik gerçek metinle birebir kalır. `PageHeader subtitle` yuvasının bekleme hâli
+ * budur; başka metin satırı yer tutucuları da bunu kullanmalı.
+ */
+export function SkeletonLine({ className = '' }: { className?: string }) {
   return (
-    <header className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4">
-      <span className="mr-auto flex flex-col gap-px">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-3 w-48" />
-      </span>
-      {/* Yükseklik `CONTROL_H.md` — iskeletin ölçüsü gerçek kontrolün ölçüsüdür, elle yazılmaz. */}
-      {actions.map((width, i) => (
-        <Skeleton key={i} className={`${CONTROL_H.md} rounded-ops-btn ${width}`} />
-      ))}
-      {/* Kabuk blokları (depo · ⌘K · kullanıcı) barın SABİT parçasıdır ve yüklenirken de yer tutar —
-          çizilmezse gerçek bar geldiğinde sağ taraf bir anda dolar ve başlık sola kayar (09.19). */}
-      <span className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
-        <Skeleton className={`${CONTROL_H.md} w-[150px] rounded-ops-btn`} />
-        <Skeleton className={`${CONTROL_H.md} w-[132px] rounded-ops-btn`} />
-        {/* Avatar YUVARLAK: iskelet de öyle olmalı, yoksa yükleme bitince biçim değişir. */}
-        <Skeleton className={`${CONTROL_H.md} w-9 rounded-full`} />
-      </span>
-    </header>
+    <span className="flex h-[1lh] items-center" aria-hidden="true">
+      <Skeleton className={`h-3 ${className}`} />
+    </span>
   );
 }
 
