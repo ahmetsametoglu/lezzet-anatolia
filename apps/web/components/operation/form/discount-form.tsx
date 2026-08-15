@@ -64,11 +64,15 @@ const PUBLIC_LABEL_PLACEHOLDER: Record<Locale, string> = {
   de: 'ör. Willkommensrabatt',
 };
 
-/** Kod örnekleri de DİLE göre: müşteri kendi dilinde okuyabildiği bir şey yazacak. */
+/**
+ * Kod örnekleri de DİLE göre: müşteri kendi dilinde okuyabildiği bir şey yazacak.
+ * "ör." öneki YOK: üç kutu tek satırda duruyor (dar hücre) ve mono + soluk placeholder zaten
+ * örnek olduğunu söylüyor — önek en uzun örneği hücreden taşırıyordu.
+ */
 const CODE_PLACEHOLDER: Record<Locale, string> = {
-  tr: 'ör. HOSGELDIN',
-  fr: 'ör. BIENVENUE',
-  de: 'ör. WILLKOMMEN',
+  tr: 'HOSGELDIN',
+  fr: 'BIENVENUE',
+  de: 'WILLKOMMEN',
 };
 
 /**
@@ -420,95 +424,104 @@ export function DiscountFormBody({
           <Input value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="ör. Bayram indirimi" />
         </FieldShell>
 
-        {/* Kapsam TANIM'da (15.08, kullanıcı kararı): "bu indirim NEYİN indirimi" sorusu kuralın
-            kimliğine ait — adın hemen altında durur; hedef seçici kapsam daraldığında yanına gelir. */}
-        <div className="grid grid-cols-2 gap-3">
-          <FieldShell label="Kapsam" labelAside={aside('scope')}>
-            <Select
-              value={values.scope}
-              onChange={(next) => onChange({ ...values, scope: next as DiscountScope, targetId: '' })}
-              options={[
-                { value: 'cart', label: 'Sepet (tümü)' },
-                { value: 'category', label: 'Kategori' },
-                { value: 'collection', label: 'Koleksiyon' },
-              ]}
-            />
+        {/* KOD TANIM'DA, üç dil TEK SATIRDA (15.08 ikinci tur, kullanıcı kararı): kod da kuralın
+            kimliği — operatör önce "hangi kod" der, sonra çevirilere geçer. Dil sekmesinin arkasında
+            dururken kaç dilde kod açıldığı görünmüyordu; üç kutu yan yana o soruyu tek bakışta yanıtlar.
+            KOD YİNE DİLE BAĞLI: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a hiçbir şey.
+            Üç kod TEK kuponun kapılarıdır — koşulları, değeri ve **kullanım tavanı ortaktır**;
+            ayrı kupon açmak "toplam 100 kullanım" sınırını sessizce 300 yapardı. */}
+        {values.trigger === 'coupon' ? (
+          <FieldShell label="Kupon kodu" labelAside={aside('code', 'dil başına bir kapı — boş dil kod açmaz')}>
+            <div className="grid grid-cols-3 gap-3">
+              {LOCALES.map((lang) => (
+                <div key={lang} className="flex min-w-0 flex-col gap-1">
+                  {/* Kullanım sayısı etikette: hiç kullanılmamış kodu değiştirmek bedelsizdir,
+                      yüz kez kullanılmışı değiştirmek dolaşımdaki kodu kapatır — karar buradan besleniyor. */}
+                  <span className="font-ops-body text-ops-micro uppercase tracking-[0.08em] text-ops-faint">
+                    {lang}
+                    {usedCountOf(lang) > 0 ? ` · ${usedCountOf(lang)} kez` : ''}
+                  </span>
+                  {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur
+                      (arama harf ayrımsız), ama listede tek bir yazım görünsün. */}
+                  <Input
+                    value={values.codes[lang] ?? ''}
+                    mono
+                    onChange={(e) => set('codes', { ...values.codes, [lang]: e.target.value.toUpperCase() })}
+                    placeholder={CODE_PLACEHOLDER[lang]}
+                  />
+                </div>
+              ))}
+            </div>
+            <span className="font-ops-body text-ops-micro leading-[1.6] text-ops-faint">
+              Hepsi AYNI kuponu açar ve aynı kullanım tavanını paylaşır — kaç kez hangi kodla girildiği
+              ayrı sayılır.
+            </span>
           </FieldShell>
-          {values.scope !== 'cart' ? (
-            <FieldShell label={values.scope === 'category' ? 'Kategori' : 'Koleksiyon'} labelAside={aside('target')}>
-              <Select
-                value={values.targetId}
-                onChange={(next) => set('targetId', next)}
-                placeholder="Seç"
-                options={targets.map((t) => ({ value: t.id, label: t.name }))}
-              />
-            </FieldShell>
-          ) : null}
-        </div>
+        ) : null}
       </SectionCard>
 
-      {/* MÜŞTERİ METNİ TEK KARTTA, dil kartın SEKMESİNDEN gelir (ürün formunun deseni). İki alan da
-          aynı dile bağlı: Fransız müşteri "Offre de bienvenue" adını görür ve "BIENVENUE" kodunu
-          yazar. Ayrı kutulara bölünseydi hangi kodun hangi adla gittiği ekranda hiç görünmezdi.
-
-          KOD DİLE BAĞLIDIR ve bu keyfi değil: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a
-          hiçbir şey. Üç kod TEK kuponun kapılarıdır — koşulları, değeri ve **kullanım tavanı ortaktır**.
-          Ayrı kupon açmak "toplam 100 kullanım" sınırını sessizce 300 yapardı. */}
+      {/* Müşteri metni dil sekmeli kartta (ürün formunun deseni). Kod bir tur bu kartın içindeydi
+          (ad ile aynı dile bağlı diye); 15.08 ikinci turda kullanıcı kararıyla Tanım'a taşındı —
+          dil eşleşmesini artık kod kutularının kendi dil etiketleri söylüyor. */}
       <LocaleCard title="Müşteriye görünen" completenessOf={values.publicLabel}>
         {(lang) => (
-          <>
-            {/* Çeviri alan türü `ad`: indirim etiketi sepette tek satır ve kısa. Açıklama tonunda
-                çevrilse "Hoş geldin indirimi" bir cümleye dönüşür ve satıra sığmaz. */}
-            <LocalizedTextField
-              value={values.publicLabel}
-              onChange={(next) => set('publicLabel', next)}
-              lang={lang}
-              label="Ad"
-              placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
-              maxLength={PUBLIC_LABEL_MAX}
-              field="ad"
-              hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
-            />
-
-            {values.trigger === 'coupon' ? (
-              <FieldShell
-                label="Kupon kodu"
-                labelAside={aside('code', usedCountOf(lang) > 0 ? `${usedCountOf(lang)} kez kullanıldı` : 'boş = bu dilde kod yok')}
-              >
-                {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur
-                    (arama harf ayrımsız), ama listede tek bir yazım görünsün. */}
-                <Input
-                  value={values.codes[lang] ?? ''}
-                  mono
-                  onChange={(e) => set('codes', { ...values.codes, [lang]: e.target.value.toUpperCase() })}
-                  placeholder={CODE_PLACEHOLDER[lang]}
-                />
-                <span className="font-ops-body text-ops-micro leading-[1.6] text-ops-faint">
-                  Bu dildeki kapı. Hepsi AYNI kuponu açar ve aynı kullanım tavanını paylaşır — kaç kez
-                  hangi kodla girildiği ayrı sayılır.
-                </span>
-              </FieldShell>
-            ) : null}
-          </>
+          /* Çeviri alan türü `ad`: indirim etiketi sepette tek satır ve kısa. Açıklama tonunda
+             çevrilse "Hoş geldin indirimi" bir cümleye dönüşür ve satıra sığmaz. */
+          <LocalizedTextField
+            value={values.publicLabel}
+            onChange={(next) => set('publicLabel', next)}
+            lang={lang}
+            label="Ad"
+            placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
+            maxLength={PUBLIC_LABEL_MAX}
+            field="ad"
+            hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
+          />
         )}
       </LocaleCard>
     </>
   );
 
-  // Tip ile değer ALT ALTA (15.08, kullanıcı kararı): yarım sütunda yan yana sıkışıyorlardı.
+  // Kapsam ile tip AYNI SATIRDA (15.08 ikinci tur, kullanıcı kararı: ikisi de yarım sütunluk kısa
+  // kutular, alt alta boşa yer yiyorlardı); değer altlarında tam genişlikte kalır (önceki tur kararı).
   const indirimSection = (
     <SectionCard title="İndirim">
-      <FieldShell label="İndirim tipi" labelAside={aside('type')}>
-        <MultiToggle
-          value={values.type}
-          onChange={(next) => set('type', next)}
-          label="İndirim tipi"
-          options={[
-            { key: 'percent', label: 'Yüzde' },
-            { key: 'fixed', label: 'Sabit tutar' },
-          ]}
-        />
-      </FieldShell>
+      <div className="grid grid-cols-2 gap-3">
+        <FieldShell label="Kapsam" labelAside={aside('scope')}>
+          <Select
+            value={values.scope}
+            onChange={(next) => onChange({ ...values, scope: next as DiscountScope, targetId: '' })}
+            options={[
+              { value: 'cart', label: 'Sepet (tümü)' },
+              { value: 'category', label: 'Kategori' },
+              { value: 'collection', label: 'Koleksiyon' },
+            ]}
+          />
+        </FieldShell>
+        <FieldShell label="İndirim tipi" labelAside={aside('type')}>
+          <MultiToggle
+            value={values.type}
+            onChange={(next) => set('type', next)}
+            label="İndirim tipi"
+            options={[
+              { key: 'percent', label: 'Yüzde' },
+              { key: 'fixed', label: 'Sabit tutar' },
+            ]}
+          />
+        </FieldShell>
+      </div>
+      {/* Hedef seçici kapsam daraldığında TAM genişlikte açılır: kategori/koleksiyon adları uzun,
+          yarım hücrede kırpılıyordu. */}
+      {values.scope !== 'cart' ? (
+        <FieldShell label={values.scope === 'category' ? 'Kategori' : 'Koleksiyon'} labelAside={aside('target')}>
+          <Select
+            value={values.targetId}
+            onChange={(next) => set('targetId', next)}
+            placeholder="Seç"
+            options={targets.map((t) => ({ value: t.id, label: t.name }))}
+          />
+        </FieldShell>
+      ) : null}
       {values.type === 'percent' ? (
         <PercentField
           label="Değer (%)"
@@ -534,16 +547,29 @@ export function DiscountFormBody({
 
   const kosulSection = (
     <SectionCard title="Koşullar & sınırlar">
-      {/* Alanlar TAM genişlik (15.08): yarım sütunun yarısında etiketler ve anahtar metni sarıp
-          sıkışıyordu — kart zaten dar, ikinci kez bölmek her metni kırıyordu. */}
-      <MoneyField
-        label="Asgari sepet (€)"
-        labelAside={aside('minBasket', 'boş = koşul yok')}
-        id="discount-min-basket"
-        value={values.minBasket}
-        onChange={(next) => set('minBasket', next)}
-        placeholder="ör. 50,00"
-      />
+      {/* Asgari sepet ile geçerlilik AYNI SATIRDA (15.08 ikinci tur, kullanıcı kararı) — ikisi de
+          kısa kutular. Kenar notları yarım hücreye göre kısaldı; "hemen başlar" bilgisini
+          placeholder ("Süresiz") zaten taşıyor. */}
+      <div className="grid grid-cols-2 gap-3">
+        <MoneyField
+          label="Asgari sepet (€)"
+          labelAside={aside('minBasket', 'boş = yok')}
+          id="discount-min-basket"
+          value={values.minBasket}
+          onChange={(next) => set('minBasket', next)}
+          placeholder="ör. 50,00"
+        />
+        {/* Geçerlilik TEK alan: başlangıç ve bitiş ayrı kutularda dururken ikisi arasındaki ilişki
+            (ters aralık) ancak kaydederken görülüyordu. Aralık seçicide ters seçim zaten kurulamaz. */}
+        <DateRangeField
+          label="Geçerlilik"
+          labelAside={aside('validity', 'boş = süresiz')}
+          from={values.validFrom}
+          to={values.validTo}
+          onChange={(nextFrom, nextTo) => onChange({ ...values, validFrom: nextFrom, validTo: nextTo })}
+          placeholder="Süresiz"
+        />
+      </div>
       {/* Kitin kartlı anahtarı (`ToggleField`) — elle kutu yazılmaz (kullanıcı düzeltmesi 15.08);
           etiket anahtarın HÂLİNİ söyler, karar FieldShell başlığında. */}
       <FieldShell label="Yalnız ilk sipariş" labelAside={aside('firstOrderOnly')}>
@@ -553,17 +579,6 @@ export function DiscountFormBody({
           onChange={(next) => set('firstOrderOnly', next)}
         />
       </FieldShell>
-
-      {/* Geçerlilik TEK alan: başlangıç ve bitiş ayrı kutularda dururken ikisi arasındaki ilişki
-          (ters aralık) ancak kaydederken görülüyordu. Aralık seçicide ters seçim zaten kurulamaz. */}
-      <DateRangeField
-        label="Geçerlilik"
-        labelAside={aside('validity', 'boş = hemen başlar, süresiz')}
-        from={values.validFrom}
-        to={values.validTo}
-        onChange={(nextFrom, nextTo) => onChange({ ...values, validFrom: nextFrom, validTo: nextTo })}
-        placeholder="Süresiz"
-      />
 
       {/* Kenar notu tek kutuya sığmıyordu ("boş = sınırsız" ikiye kırılıyordu) — iki kutunun ortak
           kuralı tek ipucu satırına indi (aşağıda); işaret (`aside`) etikette kaldı. */}
