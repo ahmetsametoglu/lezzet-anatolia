@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { KeysetCursor, Product } from '@lezzet/types';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { CollectionService } from './collection.service';
 import { ProductService } from './product.service';
@@ -65,9 +66,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  for (const id of createdProductIds) await products.delete(id).catch(() => {});
-  for (const id of createdCollectionIds) await new CollectionService(db).delete(id).catch(() => {});
-  for (const id of createdCategoryIds) await categories.delete(id).catch(() => {});
+  // **`.catch(() => {})` KALDIRILDI** (02.16): susturulmuş silme, teardown'ın yalan söylemesidir —
+  // ürünler hiç silinmese de test yeşil kalırdı. `stock.test`te aynı sessizlik 02.12'de bulunmuştu,
+  // burası atlanmış. Silme sırası tek yerde (`cleanup.ts`), üstelik doğru sırayla: koleksiyon bağı
+  // ürünle CASCADE gider, kategori en sonda.
+  await purgeTestData(db, {
+    productIds: createdProductIds,
+    collectionIds: createdCollectionIds,
+    categoryIds: createdCategoryIds,
+  });
 });
 
 describe('ProductService.list — süzme', () => {

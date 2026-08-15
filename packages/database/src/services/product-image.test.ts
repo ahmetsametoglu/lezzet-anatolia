@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductImageService } from './product-image.service';
 import { ProductService } from './product.service';
@@ -25,8 +26,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await products.delete(productId).catch(() => {}); // galeri satırları CASCADE ile gider
-  await categories.delete(categoryId).catch(() => {});
+  // **`.catch(() => {})` KALDIRILDI** (02.16): susturulmuş silme, teardown'ın yalan söylemesidir —
+  // ürün hiç silinmese de test yeşil kalırdı. `stock.test`te aynı sessizlik 02.12'de bulunmuştu,
+  // burası atlanmış. Silme sırası tek yerde (`cleanup.ts`); galeri satırları CASCADE ile gider.
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
 });
 
 /** Her senaryo kendi zeminini kurar: galeriyi boşaltır, kapağı verilen anahtara çeker. */
