@@ -165,15 +165,8 @@ export function SkeletonTable({ tracks, rows = 12 }: { tracks: readonly ColumnTr
             {tracks.map((t, ci) => (
               <div key={t.key} className={t.align && t.align !== 'left' ? SELF[t.align] : 'min-w-0'}>
                 {/* İlk kolon genelde iki satırlık kimliktir (ad + kod/telefon); gerisi tek çubuk.
-                    Genişlik dönüşümlü: eşit çubuklar tabloyu bir tarama deseni gibi gösteriyor. */}
-                {ci === 0 ? (
-                  <span className="flex flex-col gap-1">
-                    <Skeleton className={`h-3 ${i % 2 === 0 ? 'w-3/5' : 'w-2/5'}`} />
-                    <Skeleton className="h-2.5 w-2/5" />
-                  </span>
-                ) : (
-                  <Skeleton className={`h-3 ${i % 2 === 0 ? 'w-4/5' : 'w-3/5'} max-w-[80px]`} />
-                )}
+                    Hücre ölçüsü `SkeletonCell`de — gerçek satır kutusuyla birebir (15.08). */}
+                <SkeletonCell twoLine={ci === 0} wide={i % 2 === 0} />
               </div>
             ))}
           </div>
@@ -217,6 +210,39 @@ export function SkeletonLine({ className = '' }: { className?: string }) {
   return (
     <span className="flex h-[1lh] items-center" aria-hidden="true">
       <Skeleton className={`h-3 ${className}`} />
+    </span>
+  );
+}
+
+/**
+ * Tablo HÜCRESİ iskeleti — `SkeletonLine` ilkesinin hücre hâli: çubuk, gerçek yazı kademesinin
+ * satır kutusunda durur (`h-[1lh]` + `text-ops-base`/`text-ops-xs`).
+ *
+ * Çıplak çubuk satır yüksekliğini tutturamıyordu (fiyatlar ölçümü 15.08): gerçek kimlik hücresi
+ * iki metin satırıdır (~40px), çubuklar 26px kalıyordu — iskelet satırı ~50px, gerçek satır ~64px.
+ * İskelet gerçeğinden SIK ritimli görünüyor, içerik gelince tablo seyrekleşiyordu. Satır kutusu
+ * fonttan türediği için ölçü elle yazılmaz; yazı kademesi değişirse iskelet kendiliğinden uyar.
+ *
+ * TEK KAYNAK: `SkeletonTable` (rota iskeleti) ve `Table busy` (satırsız yeniden okuma) aynı hücreyi
+ * buradan çizer — önceden iki kopyaydı ve ayrışmıştı bile (`max-w-[80px]` ↔ `max-w-[90px]`).
+ *
+ * `twoLine` kimlik hücresi (ad + alt satır, gerçek desendeki `gap-px` ile); `wide` genişlik
+ * dönüşümü — eşit çubuklar tabloyu bir tarama deseni gibi gösteriyor, çağıran satır sırasına göre
+ * değiştirir.
+ */
+export function SkeletonCell({ twoLine = false, wide = false }: { twoLine?: boolean; wide?: boolean }) {
+  return twoLine ? (
+    <span className="flex flex-col gap-px" aria-hidden="true">
+      <span className="flex h-[1lh] items-center text-ops-base">
+        <Skeleton className={`h-3 ${wide ? 'w-3/5' : 'w-2/5'}`} />
+      </span>
+      <span className="flex h-[1lh] items-center text-ops-xs">
+        <Skeleton className="h-2.5 w-2/5" />
+      </span>
+    </span>
+  ) : (
+    <span className="flex h-[1lh] items-center text-ops-base" aria-hidden="true">
+      <Skeleton className={`h-3 ${wide ? 'w-4/5' : 'w-3/5'} max-w-[90px]`} />
     </span>
   );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Skeleton } from './skeleton';
+import { SkeletonCell } from './skeleton';
 import { COLUMN_SELF, type Column } from './table-columns';
 
 // Yerleşim sözleşmesi ALT modülde (`table-columns`) — iskelet de aynı şeritleri okuyor ve tipler
@@ -161,15 +161,8 @@ export function Table<Row>({
               {columns.map((c, ci) => (
                 <div key={c.key} className={c.align && c.align !== 'left' ? SELF[c.align] : 'min-w-0'}>
                   {/* İlk kolon genelde iki satırlık kimliktir (ad + telefon/kod); gerisi tek çubuk.
-                      Genişlik dönüşümlü: eşit çubuklar tabloyu bir tarama deseni gibi gösteriyor. */}
-                  {ci === 0 ? (
-                    <span className="flex flex-col gap-1">
-                      <Skeleton className="h-3 w-3/5" />
-                      <Skeleton className="h-2.5 w-2/5" />
-                    </span>
-                  ) : (
-                    <Skeleton className={`h-3 ${i % 2 === 0 ? 'w-4/5' : 'w-3/5'} max-w-[90px]`} />
-                  )}
+                      Hücre ölçüsü `SkeletonCell`de — gerçek satır kutusuyla birebir (15.08). */}
+                  <SkeletonCell twoLine={ci === 0} wide={i % 2 === 0} />
                 </div>
               ))}
             </div>
