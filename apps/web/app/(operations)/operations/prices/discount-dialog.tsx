@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { Toggle } from '@/components/operation/form/toggle';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
 import {
   DiscountFormBody,
@@ -71,12 +72,17 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       }
       footer={
         <>
-          <span className="mr-auto font-ops-body text-ops-xs text-ops-muted">
-            {error ? (
-              <span className="font-semibold text-ops-red">{error}</span>
-            ) : (
-              'Tek-en-büyük: indirimler üst üste binmez'
-            )}
+          {/* Aktif anahtarı FOOTER'DA (15.08, kullanıcı kararı — footer'lı aktiflik deseni): kayıt
+              kararıyla aynı satırda durur, gövde yalnız kuralın içeriğini taşır. */}
+          <span className="flex items-center gap-2.5">
+            <Toggle on={values.isActive} onChange={(next) => setValues({ ...values, isActive: next })} label="Aktif" />
+            <span className="flex flex-col gap-px">
+              <span className="font-ops-body text-ops-sm font-medium text-ops-ink">Aktif</span>
+              <span className="font-ops-body text-ops-micro text-ops-muted">kapalı kural uygulanmaz, listede kalır</span>
+            </span>
+          </span>
+          <span className="mr-auto pl-3 font-ops-body text-ops-xs text-ops-muted">
+            {error ? <span className="font-semibold text-ops-red">{error}</span> : null}
           </span>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             İptal
@@ -100,6 +106,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
         codeUsage={editing?.codes}
         disabled={busy}
         columns={2}
+        showActiveToggle={false}
       />
     </Dialog>
   );

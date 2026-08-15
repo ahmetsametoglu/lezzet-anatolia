@@ -342,6 +342,12 @@ interface DiscountFormBodyProps {
    * AYNI — ayrışan yalnız dizilim; bölümler her iki hâlde de başlıklarıyla kategorili.
    */
   columns?: 1 | 2;
+  /**
+   * Aktif anahtarı gövdede mi çizilsin? Diyalog `false` verir ve anahtarı KENDİ footer'ına taşır
+   * (15.08, kullanıcı kararı — footer'lı aktiflik deseni): kayıt düğmesinin yanında durur, formun
+   * gövdesi yalnız kuralın içeriğini taşır. Asistan kuyruğunda footer yok — gövdede kalır.
+   */
+  showActiveToggle?: boolean;
 }
 
 export function DiscountFormBody({
@@ -353,6 +359,7 @@ export function DiscountFormBody({
   filled,
   disabled = false,
   columns = 1,
+  showActiveToggle = true,
 }: DiscountFormBodyProps) {
   const set = <K extends keyof DiscountFormValues>(key: K, next: DiscountFormValues[K]) =>
     onChange({ ...values, [key]: next });
@@ -387,21 +394,23 @@ export function DiscountFormBody({
   // başına ikinci kez yazmak, bir gün yalnız birinde güncellenen bir kutu demekti (no-duplication).
   const tanimSection = (
     <>
-      <FieldShell label="Tetik" labelAside={aside('trigger')}>
-        <MultiToggle
-          value={values.trigger}
-          onChange={(next) => set('trigger', next)}
-          label="Tetik"
-          options={[
-            { key: 'coupon', label: 'Kupon (kodlu)' },
-            { key: 'automatic', label: 'Otomatik kampanya' },
-          ]}
-        />
-      </FieldShell>
+      <SectionCard title="Tanım">
+        <FieldShell label="Tetik" labelAside={aside('trigger')}>
+          <MultiToggle
+            value={values.trigger}
+            onChange={(next) => set('trigger', next)}
+            label="Tetik"
+            options={[
+              { key: 'coupon', label: 'Kupon (kodlu)' },
+              { key: 'automatic', label: 'Otomatik kampanya' },
+            ]}
+          />
+        </FieldShell>
 
-      <FieldShell label="Ad" labelAside={aside('name', 'Yalnız sizin listeniz için — müşteri görmez')}>
-        <Input value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="ör. Bayram indirimi" />
-      </FieldShell>
+        <FieldShell label="Ad" labelAside={aside('name', 'Yalnız sizin listeniz için — müşteri görmez')}>
+          <Input value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="ör. Bayram indirimi" />
+        </FieldShell>
+      </SectionCard>
 
       {/* MÜŞTERİ METNİ TEK KARTTA, dil kartın SEKMESİNDEN gelir (ürün formunun deseni). İki alan da
           aynı dile bağlı: Fransız müşteri "Offre de bienvenue" adını görür ve "BIENVENUE" kodunu
@@ -452,7 +461,7 @@ export function DiscountFormBody({
   );
 
   const indirimSection = (
-    <>
+    <SectionCard title="İndirim">
       <div className="grid grid-cols-2 gap-3">
         <FieldShell label="İndirim tipi" labelAside={aside('type')}>
           <MultiToggle
@@ -510,11 +519,11 @@ export function DiscountFormBody({
           </FieldShell>
         ) : null}
       </div>
-    </>
+    </SectionCard>
   );
 
   const kosulSection = (
-    <>
+    <SectionCard title="Koşullar & sınırlar">
       <div className="grid grid-cols-2 gap-3">
         <MoneyField
           label="Asgari sepet (€)"
@@ -549,8 +558,10 @@ export function DiscountFormBody({
         placeholder="Süresiz"
       />
 
+      {/* Etiketler KISA ("Toplam kullanım", "Müşteri başına"): yarım sütunda uzun etiket + kenar
+          notu sarıp kutuyu kaydırıyordu (15.08 ekran görüntüsü). */}
       <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Toplam kullanım sınırı" labelAside={aside('limits', 'boş = sınırsız')}>
+        <FieldShell label="Toplam kullanım" labelAside={aside('limits', 'boş = sınırsız')}>
           <Input
             value={values.maxUses}
             mono
@@ -559,7 +570,7 @@ export function DiscountFormBody({
             placeholder="ör. 100"
           />
         </FieldShell>
-        <FieldShell label="Müşteri başına sınır" labelAside={aside('limits', 'boş = sınırsız')}>
+        <FieldShell label="Müşteri başına" labelAside={aside('limits', 'boş = sınırsız')}>
           <Input
             value={values.perCustomerLimit}
             mono
@@ -569,18 +580,21 @@ export function DiscountFormBody({
           />
         </FieldShell>
       </div>
-
-      <div className="flex items-center justify-between gap-3 rounded-ops-card border border-ops-line px-3.5 py-2.5">
-        <div className="flex flex-col gap-px">
-          <span className="font-ops-body text-ops-sm font-medium text-ops-ink">Aktif</span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            Kapalı kural hiç uygulanmaz ama listede kalır — geçmişi silinmez
-          </span>
-        </div>
-        <Toggle on={values.isActive} onChange={(next) => set('isActive', next)} label="Aktif" />
-      </div>
-    </>
+    </SectionCard>
   );
+
+  // Aktif anahtarı yalnız footer'sız kabukta (asistan) gövdede durur — diyalog kendi footer'ında çizer.
+  const activeBox = showActiveToggle ? (
+    <div className="flex items-center justify-between gap-3 rounded-ops-card border border-ops-line px-3.5 py-2.5">
+      <div className="flex flex-col gap-px">
+        <span className="font-ops-body text-ops-sm font-medium text-ops-ink">Aktif</span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          Kapalı kural hiç uygulanmaz ama listede kalır — geçmişi silinmez
+        </span>
+      </div>
+      <Toggle on={values.isActive} onChange={(next) => set('isActive', next)} label="Aktif" />
+    </div>
+  ) : null;
 
   const ruleNote = (
     <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
@@ -597,26 +611,20 @@ export function DiscountFormBody({
       {columns === 2 ? (
         // İki sütun (diyalog): solda kimlik — kim, hangi adla, hangi kapıdan; sağda kural — ne kadar,
         // neye, hangi koşulla. Sütunlar `items-start`: sol kart uzayınca sağ sütun gerilmez.
-        <div className="grid grid-cols-2 items-start gap-x-7 gap-y-5">
+        <div className="grid grid-cols-2 items-start gap-x-6 gap-y-5">
+          <div className="flex min-w-0 flex-col gap-5">{tanimSection}</div>
           <div className="flex min-w-0 flex-col gap-5">
-            <SectionTitle>Tanım</SectionTitle>
-            {tanimSection}
-          </div>
-          <div className="flex min-w-0 flex-col gap-5">
-            <SectionTitle>İndirim</SectionTitle>
             {indirimSection}
-            <SectionTitle>Koşullar &amp; sınırlar</SectionTitle>
             {kosulSection}
+            {activeBox}
           </div>
         </div>
       ) : (
         <>
-          <SectionTitle>Tanım</SectionTitle>
           {tanimSection}
-          <SectionTitle>İndirim</SectionTitle>
           {indirimSection}
-          <SectionTitle>Koşullar &amp; sınırlar</SectionTitle>
           {kosulSection}
+          {activeBox}
         </>
       )}
       {ruleNote}
@@ -624,12 +632,21 @@ export function DiscountFormBody({
   );
 }
 
-/** Bölüm başlığı — tablo başlığının tipografisi (büyük harf mikro); form kategorilerini adlandırır. */
-function SectionTitle({ children }: { children: ReactNode }) {
+/**
+ * Bölüm kartı — `LocaleCard` ile AYNI görsel aile (başlık şeridi + gövde): form kategorileri artık
+ * çizgiyle değil KARTLA ayrılıyor (15.08, kullanıcı bildirimi: beyaz diyalog zemininde `line-soft`
+ * ayraç görünmüyordu; kart çerçevesi + zeminli başlık şeridi her temada okunur).
+ */
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <span className="border-b border-ops-line-soft pb-1.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-      {children}
-    </span>
+    <div className="flex min-w-0 shrink-0 flex-col overflow-hidden rounded-ops-card border border-ops-line">
+      <div className="border-b border-ops-line-soft bg-ops-subtle px-3.5 py-2">
+        <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">
+          {title}
+        </span>
+      </div>
+      <div className="flex flex-col gap-4 p-3.5">{children}</div>
+    </div>
   );
 }
 
