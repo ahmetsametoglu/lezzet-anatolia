@@ -68,6 +68,20 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
         return typeof id === 'string' ? [id] : [];
       });
     }),
+    // Bölge önerilerinin bölgesi ve önerdiği kodlar (22.36): gövde haritayı bunlarla çiziyor.
+    // Kodlar ayrıca toplanıyor çünkü henüz hiçbir bölgede değiller — bölge okumasından gelmezler.
+    queue.flatMap((row) => {
+      if (row.kind !== 'zone_extend') return [];
+      const payload = row.payload as { zoneId?: unknown; postalCodes?: unknown } | null;
+      if (typeof payload?.zoneId !== 'string') return [];
+      const codes = Array.isArray(payload.postalCodes)
+        ? payload.postalCodes.flatMap((c) => {
+            const code = (c as { postalCode?: unknown } | null)?.postalCode;
+            return typeof code === 'string' ? [code] : [];
+          })
+        : [];
+      return [{ zoneId: payload.zoneId, postalCodes: codes }];
+    }),
   );
 
   // Tek an, tüm yaşlar: kuyruk satırları ve kart künyesi aynı `now`'a göre hesaplanır — ayrı ayrı

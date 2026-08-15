@@ -157,9 +157,23 @@ export const KIND_META = {
     impact:
       'Posta kodları bölgeye eklenir, o adreslerde teslimat açılır ve haber bekleyen müşterilere "bölgeniz açıldı" bildirimi gider. BİLDİRİM GERİ ALINAMAZ: bölgeyi sonra kapatsanız bile mesaj gitmiş olur.',
     tables: ['delivery_zone_postal_code', 'zone_notice'],
-    // Kuyruğun tek kapılı hâlinin çöktüğü yer (kullanıcı 09.08): "hangi kod girsin" sorusu
-    // haritasız cevaplanamaz ve bildirim kısmi seçime bağlıdır. Rota ekranı ön doldurulur.
-    mode: 'handoff',
+    /**
+     * **`handoff` → `inline` (22.36 · 15.08).**
+     *
+     * Bu tip son gövdesiz tipti. Devir gerekçesi kayıtlıydı ve doğruydu — kullanıcının 09.08'de
+     * kuyruğun tek kapılı hâline itiraz ettiği yer burasıydı: *"hangi kod girsin"* sorusu haritasız
+     * cevaplanamaz ve bildirim kısmi seçime bağlıdır. Ama çözüm rota ekranına yollamak değilmiş:
+     * kullanıcının 15.08 kuralı *"biz yönlendirme yapmıyoruz; doğrudan açılan diyaloğun içerisinde
+     * düzenlenecek ortak komponent yapıyoruz"* diyor ve ikisi çelişmiyor — **haritayı diyaloğa
+     * getirdik** (`components/operation/form/zone-form/`, `ZoneMap` aynı bileşen).
+     *
+     * Bildirimin kısmi seçime bağlı olması da korundu ve artık ONAYDAN ÖNCE görünüyor: bekleyen
+     * sayısı taslaktan hesaplanıyor, kod çıkarınca düşüyor.
+     */
+    mode: 'inline',
+    // `target` inline tiplerde de yazılı (`bundle_draft` → `bundle`, `stock_intake` → `receiving`):
+    // alan "hangi VARLIK" der, "nereye yönlendir" demez. Kayıt uygulandıktan sonra ekranın
+    // bağlantısını kurarken hâlâ bu varlık okunuyor.
     target: 'routes',
   },
   product_create: {

@@ -15,6 +15,7 @@ import { resolveLocalizedText } from '@lezzet/types';
 import type { ProductFormSource } from '@/components/operation/form/product-form/schema';
 import type { VariantOption } from '@/components/operation/form/bundle-form/types';
 import { variantOptionsForVariants } from '@/lib/catalog/variant-options';
+import { readZoneProposalContext, type ZoneProposalContext } from '@/lib/delivery/zone-proposal-map';
 
 /**
  * KUYRUKTAKİ FORMLARIN SEÇENEK HAVUZU (22.10).
@@ -50,6 +51,17 @@ export interface AssistantFormOptions {
   collections: Array<{ id: string; name: string; isFeatured: boolean; isActive: boolean }>;
   /** Paketler — vitrin önerisinin üçüncü hedefi (`target: 'bundle'`); aynı gerekçe. */
   bundles: Array<{ id: string; name: string; isFeatured: boolean; isActive: boolean }>;
+  /**
+   * Bölge önerilerinin harita bağlamı (22.36) — kimlik başına bir kayıt, YALNIZ kuyruktakiler.
+   *
+   * `zone_extend` gövdesi haritasız çizilemez (`kind-meta`: *"hangi kod girsin sorusu haritasız
+   * cevaplanamaz"*) ve harita koordinat ister; dilekçe koordinat taşımıyor, yalnız kod taşıyor.
+   * Okuma dar tutuldu ve gerekçesi `zone-proposal-map` künyesinde: boştaki kodların keşfi bu
+   * diyaloğun sorusu değil.
+   *
+   * Boş nesne = kuyrukta bölge önerisi yok; okuma hiç yapılmaz.
+   */
+  zones: Record<string, ZoneProposalContext>;
   /**
    * ÜRÜN TASLAĞI önerilerinin konusu olan ürünlerin TAM kaydı (22.14).
    *
@@ -111,6 +123,13 @@ export async function readAssistantFormOptions(
   productIds: string[] = [],
   /** Paket önerilerinin kalem kimlikleri — havuz bunlardan türer (`bundleVariants`). */
   bundleVariantIds: string[] = [],
+  /**
+   * Bölge önerilerinin bölge kimlikleri + önerdikleri kodlar (22.36).
+   *
+   * Kodlar AYRICA veriliyor çünkü henüz hiçbir bölgede değiller: bölge okumasından gelmezler ve
+   * koordinatları istenmezse haritada hiç çizilmezler — yani önerinin kendisi görünmez olurdu.
+   */
+  zoneRequests: ReadonlyArray<{ zoneId: string; postalCodes: string[] }> = [],
 ): Promise<AssistantFormOptions> {
   const db = serviceDb();
   const wanted = [...new Set(productIds)];
@@ -136,6 +155,12 @@ export async function readAssistantFormOptions(
   // taşımıyor. Ürün başına sorgu açmak listenin uzunluğu kadar tur demekti (`STACK §13`).
   const variants = products.length > 0 ? await new ProductVariantService(db).listByProducts(products.map((p) => p.id)) : [];
 
+  // Bölge bağlamı yalnız İSTENİRSE okunur: kuyrukta bölge önerisi yoksa üç sorgu hiç açılmaz.
+  const zones = await readZoneProposalContext(
+    zoneRequests.map((request) => request.zoneId),
+    zoneRequests.flatMap((request) => request.postalCodes),
+  );
+
   return {
     categories: categories.map((c) => ({
       id: c.id,
@@ -155,6 +180,7 @@ export async function readAssistantFormOptions(
       isFeatured: b.isFeatured,
       isActive: b.isActive,
     })),
+    zones,
     products: Object.fromEntries(
       products.map((p) => [
         p.id,

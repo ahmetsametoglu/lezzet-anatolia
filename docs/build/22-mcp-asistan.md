@@ -1692,3 +1692,56 @@ sebebi `BEKLEYEN(22.11)`'de aynen yazılı: *"o tipten hiç öneri üretilmediğ
 Bir tip turlarca üretilmezse çözüm seed değil, **o tipin neden önerilmediğini ölçmektir** (aracın
 tanımı mı yetersiz, veri mi o durumu hiç doğurmuyor).
 
+**VE KARAR AYNI GÜN HAKLI ÇIKTI.** Ajan 15.08 akşamı Tur 9'u attı ve kuyruğa **12 öneri** düştü —
+içinde tam da ölçülemeyen iki tip vardı: **`featured_flag`** (Dondurma → vitrine) ve
+**`zone_extend`** (Schiltigheim + 67500, 47 istek · 3 bekleyen müşteri). İkisi de seed'le değil,
+ajan gerçek veriyi okuyunca kendiliğinden geldi. Seed yazılsaydı bu iki gövdeyi uydurma payload'la
+sınamış olacaktık.
+
+- [~] (22.36) **`zone_extend` gövdesi — SON gövdesiz tip kuyruğun içine girdi, haritasıyla**
+  *(kullanıcı kararı 15.08; ilk gerçek dilekçe aynı gün geldi)* — `touches:
+  apps/web/components/operation/form/zone-form/**, apps/web/lib/delivery/{zone-actions.ts,zone-proposal-map.ts},
+  apps/web/app/(operations)/operations/assistant/bodies/zone-extend-body.tsx,
+  packages/application/src/assistant/kind-meta.ts`
+    - *Bitti:* **on bir öneri tipinin on biri de artık diyaloğun içinde düzenleniyor.** Yönlendirme
+      kalmadı.
+    - **İKİ KAYITLI KARAR ÇELİŞİYOR GÖRÜNÜYORDU, ÇELİŞMİYORMUŞ.** `kind-meta` künyesi bu tipi
+      `handoff`ta tutuyordu ve gerekçesi sağlamdı (kullanıcı 09.08): *"hangi kod girsin sorusu
+      haritasız cevaplanamaz."* Kullanıcının 15.08 kuralı ise *"biz yönlendirme yapmıyoruz"*
+      diyordu. Çözüm ikisinden birini feda etmek değildi — **haritayı diyaloğa getirmekti.** Rota
+      ekranının bileşeni (`ZoneMap`) olduğu gibi kullanıldı: operatör iki ekranda aynı renkleri,
+      aynı hâl sözlüğünü okuyor.
+    - **KARAR "HEPSİ" DEĞİL, "HANGİLERİ".** Kullanıcının 09.08 itirazının kalbi buydu: *"hepsine
+      birden gidiyor, ben belki bir bölgeyi istiyorum."* Form dilekçenin kodlarını tek tek
+      seçtiriyor; her satırda kanıtı duruyor (kaç istek, kaç bekleyen). **Bekleyen sayısı
+      SEÇİMDEN hesaplanıyor**, dilekçeden değil — kod çıkarınca düşüyor, yani kaç kişiye geri
+      alınamaz mesaj gideceği onaydan ÖNCE görünüyor. Açılış değeri "önerinin kabul edilmiş hâli":
+      çoğu onay olduğu gibi geçer, çıkarmak tek tıklama.
+    - **BAŞKA ROTANIN TUTTUĞU KOD SEÇİLEMİYOR** ama sayısı yazılıyor. Kural veritabanında (bir kod
+      tek bölgede) ve burada yeniden uygulanmıyor — yalnız reddedilecek bir seçimin önü kesiliyor.
+      Sessizce yok saymak, önerinin bir parçasının nereye gittiğini gizlerdi. `heldBy` payload'dan
+      değil bölge okumasından geliyor: dilekçe kurulduğunda boşta olan kod onay anında başka rotaya
+      girmiş olabilir.
+    - **AYRI YAZMA KAPISI** (`addZoneCodesFromProposalAction`), rota ekranınınki DEĞİL. O kapı
+      bölgenin TAMAMINI yazıyor (ad, günler, aktiflik + kod kümesinin son hâli); kuyruğun işi ise
+      dar — **var olan bölgeye kod EKLEMEK**. Onu çağırmak taşımadığımız üç alanı da göndermeyi
+      gerektirirdi ve patron kod eklerken teslim günlerini kaybedebilirdi. Kapı **ekler,
+      değiştirmez**: mevcut kodlar önce okunuyor, seçilenler üstüne biniyor. Bölgede zaten olan kod
+      ikinci kez yazılmıyor — kısıt onu reddeder ve tüm yazım düşerdi.
+    - **BİLDİRİMİ BU KAPI GÖNDERMİYOR:** `zone_available` uzlaştırma işi (saatte bir) "kapsanmış ve
+      haberi gitmemiş" bekleyişleri buluyor (14.10 · 19.21). İkinci bir gönderim yolu açmak aynı
+      mesajı iki kez yollardı. Ekranın uyarısı yine de doğru — mesaj gidecek, yalnız birkaç dakika
+      gecikmeli ve geri alınamaz.
+    - **HARİTA OKUMASI DAR** (`zone-proposal-map`): bölgeler + kodların koordinatları + depo adı.
+      `routes-read` tam bu bağlamı üretiyor ama kardeş sayfa klasöründe (`STACK §7`) ve çok
+      fazlasını okuyor. **Boştaki kodların keşfi bilerek YOK:** kuyruğun sorusu *"asistanın önerdiği
+      kodları kabul ediyor muyum"*, *"başka nereye gidelim"* değil — ikinci bir keşif aracı kararı
+      genişletip önerinin kendisini gölgede bırakırdı.
+    - **Doğrulama:** typecheck 18/18 · lint temiz · knip değişmedi.
+    - **BEKLEYEN(22.36):** kullanıcı ekranda denemedi. Kuyrukta gerçek dilekçe var (Schiltigheim +
+      67500) ve TTL'i 16.08.
+    - **BEKLEYEN(22.36):** rota ekranının devir yolu (`routes-handoff.ts` + `?proposal=` ön dolgusu)
+      artık HİÇBİR öneri tarafından tetiklenmiyor — `zone_extend` onun tek tüketicisiydi. Kod ölü
+      değil (sayfa hâlâ okuyor), ama pratikte ulaşılamaz. Sökülmesi rota ekranının kendi turunun işi;
+      bu turda dokunulmadı çünkü ekranı bozma riski kazancından büyük.
+

@@ -14,6 +14,7 @@ import {
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
+  type ZoneExtendPayload,
 } from '@lezzet/types';
 import { toCents } from '@lezzet/helper';
 import { recordManualMovementAction, recordTransferAction } from '@/lib/finance/actions';
@@ -25,6 +26,8 @@ import { createDraftFromProposalAction } from '@/lib/stock/purchase-order-action
 import { purchaseOrderBlock, type PurchaseOrderFormValues } from '@/components/operation/form/purchase-order-form/schema';
 import { setFeaturedGridFromProposalAction } from '@/lib/catalog/featured-actions';
 import type { FeaturedFormValues } from '@/components/operation/form/featured-form/schema';
+import { addZoneCodesFromProposalAction } from '@/lib/delivery/zone-actions';
+import { zoneBlock, type ZoneFormValues } from '@/components/operation/form/zone-form/schema';
 import { saveRecipeAction } from '@/lib/catalog/recipe-actions';
 import { RecipeFormSchema, recipeBlock, type RecipeFormValues } from '@/components/operation/form/recipe-form/schema';
 import { createBundleAction } from '@/lib/catalog/bundle-actions';
@@ -56,6 +59,7 @@ import { TransferBody, transferValuesFrom } from './bodies/transfer-body';
 import { StockIntakeBody, intakeValuesFrom } from './bodies/stock-intake-body';
 import { PurchaseOrderBody, purchaseOrderValuesFrom } from './bodies/purchase-order-body';
 import { FeaturedFlagBody, featuredValuesFrom } from './bodies/featured-flag-body';
+import { ZoneExtendBody, zoneValuesFrom } from './bodies/zone-extend-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
@@ -465,6 +469,50 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
    * `initial` SEÇENEKLERİ de okuyor: açılış değeri ızgaranın bugünkü hâli + dilekçenin istediği
    * değişiklik. Dilekçe tek bayrak taşıyor, ızgara ise kayıtta duruyor.
    */
+  /**
+   * BÖLGE GENİŞLETME — son gövdesiz tip, artık haritayla kuyruğun içinde (22.36).
+   *
+   * `handoff`tan `inline`a geçti: rota ekranını ön doldurup oraya yollamak yerine haritayı buraya
+   * getirdik. Karar zaten burada veriliyordu; eksik olan kararın DAYANAĞIYDI.
+   */
+  zone_extend: defineBody<ZoneExtendPayload, ZoneFormValues>({
+    parse: parseWith<ZoneExtendPayload>('zone_extend'),
+    initial: (payload) => zoneValuesFrom(payload),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <ZoneExtendBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    // Tek engel BOŞ seçim (`zoneBlock`): seçimsiz onay bölgeye hiçbir şey eklemez. Az kod seçmek
+    // engel DEĞİL — dilekçenin üç kodundan birini almak bu formun varlık sebebi.
+    blocked: (values) => zoneBlock(values),
+    submit: async (payload, values, proposalId) => {
+      const chosen = new Set(values.selectedKeys);
+      const result = await addZoneCodesFromProposalAction({
+        zoneId: payload.zoneId,
+        // Gönderilen küme dilekçenin kodlarından SÜZÜLÜYOR, taslaktan çözülmüyor: anahtarlar
+        // istemcide kuruluyor ve sunucuya kod listesi gitmeli, anahtar dizesi değil.
+        codes: payload.postalCodes
+          .filter((code) => chosen.has(`${payload.country}:${code.postalCode}`))
+          .map((code) => ({ country: payload.country, postalCode: code.postalCode })),
+        proposalId,
+      });
+      return { error: result.error };
+    },
+    // Harita + kanıt listesi yan yana duruyor; dar bir pencerede harita kullanılamaz hâle gelirdi.
+    width: 1320,
+    applyLabel: 'Bölgeye ekle',
+    appliedNote:
+      'Kodlar bölgeye eklendi. Haber bekleyen müşterilere "bölgeniz açıldı" bildirimi uzlaştırma işiyle gidiyor (saatte bir) — geri alınamaz.',
+  }),
+
   featured_flag: defineBody<FeaturedFlagPayload, FeaturedFormValues>({
     parse: parseWith<FeaturedFlagPayload>('featured_flag'),
     initial: (payload, options) => featuredValuesFrom(payload, options),
