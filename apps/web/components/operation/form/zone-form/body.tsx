@@ -64,6 +64,30 @@ export function ZoneFormBody({
   const candidateKeys = useMemo(() => new Set(candidates.map(zoneCodeKey)), [candidates]);
   const currentKeys = useMemo(() => new Set(currentCodes.map(zoneCodeKey)), [currentCodes]);
 
+  /**
+   * **HARİTA KARARIN ÜSTÜNE AÇILIR** — merkez, bu diyalogda tartışılan kodların ortalaması.
+   *
+   * `ZoneMap`in varsayılan merkezi Strasbourg (`48.583, 7.75`) ve rota sayfası için doğru: orada
+   * operatör zaten haritayı gezdiriyor. Diyalogda ise gezinme YOK — harita 260 piksellik bir kart
+   * ve tek işi "bu kodlar nerede" demek. Merkez verilmeseydi Colmar'a ya da Kehl'e ait bir bölge
+   * önerisi Strasbourg'a bakan bir haritayla açılır, tartışılan noktalar kadrajın dışında kalırdı;
+   * operatör boş bir harita görüp öneriyi "yersiz" sanabilirdi.
+   *
+   * Ortalama SEÇİLEBİLİR kodlardan alınıyor (bölgenin kendi kodları + adaylar), başka rotanınkiler
+   * dışarıda: kadrajı ilgisiz bir güzergâha doğru çekmesinler.
+   */
+  const center = useMemo(() => {
+    const focus = points.filter((point) => {
+      const key = keyOfPoint(point);
+      return currentKeys.has(key) || candidateKeys.has(key);
+    });
+    if (focus.length === 0) return undefined;
+    return {
+      lat: focus.reduce((sum, p) => sum + p.lat, 0) / focus.length,
+      lng: focus.reduce((sum, p) => sum + p.lng, 0) / focus.length,
+    };
+  }, [candidateKeys, currentKeys, points]);
+
   const toggle = useCallback(
     (key: string) => {
       if (disabled) return;
@@ -98,6 +122,7 @@ export function ZoneFormBody({
           points={points}
           stateOf={stateOf}
           onPick={(point) => toggle(keyOfPoint(point))}
+          center={center}
           note={`${zoneName}${warehouseName ? ` · ${warehouseName}` : ''} — önerilen kodlar mor; tıklayınca bölgeye girer.`}
         />
       </div>
