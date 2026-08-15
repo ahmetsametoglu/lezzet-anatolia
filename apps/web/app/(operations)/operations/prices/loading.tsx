@@ -1,6 +1,9 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { SkeletonFilterBar, SkeletonPageHeader, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { CONTROL_H } from '@/components/operation/ui/control';
+import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { PRICES_COLUMN_TRACKS } from './prices-columns';
+import { PRICE_TABS, TAB_LABEL } from './prices-url';
 
 /**
  * Fiyatlar ekranının ROTA DÜZEYİ beklemesi (09.2).
@@ -8,6 +11,18 @@ import { PRICES_COLUMN_TRACKS } from './prices-columns';
  * Bu dosya olmadan sidebar'dan bu ekrana geçmek ekranı DONDURUYORDU: RSC okuması bitene kadar tarayıcıda
  * ESKİ sayfa duruyor ve hiçbir bekleme işareti yok — operatör tıklamanın işlediğini anlamıyor, ikinci
  * kez tıklıyor. Okumalar hafif de değil (bu ekranlar 5-9 paralel sorgu atıyor).
+ *
+ * ── STATİK KİMLİK GERÇEK, YALNIZ VERİ İSKELET (15.08) ───────────────────────
+ * Başlık barı GERÇEK `PageHeader`: başlık metni bu dosya yazılırken statik olarak belli, kabuk
+ * blokları (depo · ⌘K · avatar) ise SAYFANIN değil OTURUMUN verisi — layout'taki `OpsShellProvider`
+ * geçişte ayakta kalıyor ve `PageHeader` onları oradan okuyor. Önceden üçü de çubuk çiziliyordu ve
+ * production'da bu, hiç değişmeyen kontrollerin her geçişte bir karelik griye dönmesi demekti
+ * (kullanıcı bildirimi 15.08 — "başlık kayboluyor, renklerde kayma var"; Tarifler `loading.tsx`süz
+ * olduğu için bu titremeyi hiç yaşamıyordu ve fark oradan ölçüldü). Sekme adları da aynı gerekçeyle
+ * gerçek metin (`SkeletonTabs labels` — `SkeletonTable`ın sütun başlığı ilkesi).
+ *
+ * İskelet YALNIZ gerçekten bilinmeyeni örtüyor: alt başlık sayacı, sekmeye bağlı kontroller
+ * (hangi sekmede olduğumuzu URL söyler ve o bilgi burada yok), süzgeç çipleri ve tablo gövdesi.
  *
  * **Kolon ölçüleri UYDURULMUYOR, gerçek tablodan geliyor** (`PRICES_COLUMN_TRACKS`). İlk turda elle
  * yazılmıştı ve beşin dördü tutmuyordu; iskeletin tek işi "içerik gelince hiçbir şey kaymasın" iken
@@ -19,8 +34,12 @@ import { PRICES_COLUMN_TRACKS } from './prices-columns';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Fiyatlar yükleniyor">
-      <SkeletonPageHeader actions={['w-32', 'w-[210px]']} />
-      <SkeletonTabs count={4} />
+      <PageHeader title="Fiyatlar" subtitle={<Skeleton className="h-3 w-48" />}>
+        <Skeleton className={`${CONTROL_H.md} w-32 rounded-ops-btn`} />
+        <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
+      </PageHeader>
+      {/* Sıra `PRICE_TABS`ten, ad `TAB_LABEL`den — ikisi de gerçek sekmelerin okuduğu kaynak. */}
+      <SkeletonTabs labels={PRICE_TABS.map((t) => TAB_LABEL[t])} />
       <SkeletonFilterBar count={4} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

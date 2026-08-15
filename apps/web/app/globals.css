@@ -256,6 +256,12 @@
   --color-ops-line-soft: #f0f1ec; /* = gray-50 */
   --color-ops-line: #e6e7e1; /* = gray-200 */
   --color-ops-line-strong: #d9dbd2; /* = gray-400 */
+  /* İskelet çubuğu AYRI takma ad (15.08): çubuk `ops-card` ZEMİNİNE çizilir, gray-100 ise beyaz kart
+     ÜSTÜ dolgusudur — kart zemininde fark ~%5'e düşüyor ve `animate-pulse` yarıya inince açık modda
+     görünmez oluyordu (koyu modda skala adımları geniş, sorun yoktu). Açıkta 400 kademesi, koyuda
+     bugünkü onaylı görünüm (gray-100) — iki mod ayrı ayarlanabilsin diye takma ad. */
+  --color-ops-skeleton: #d9dbd2; /* = gray-400; iskelet çubuğu dolgusu */
+  --color-ops-skeleton-soft: #e6e7e1; /* = gray-200; iskelet gradyanının açık ucu */
 
   /* §0.3 Semantik aileler — metin · koyu · zemin · kenarlık (+ grafik/nokta) */
   --color-ops-olive: #5f7a2c; /* ikon, etiket, bağlantı, dolu çip */
@@ -390,6 +396,8 @@ body {
   --color-ops-line-soft: #2a2e26;
   --color-ops-line: #3c4038;
   --color-ops-line-strong: #545a4e;
+  --color-ops-skeleton: #31352c; /* = gray-100; koyuda bugünkü onaylı görünüm */
+  --color-ops-skeleton-soft: #2a2e26; /* = gray-50 */
 
   /* §0.6 Semantik aileler — koyu zeminde okunur kalacak şekilde açılır */
   --color-ops-olive: #a9c46b;

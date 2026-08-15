@@ -23,9 +23,15 @@ import { CONTROL_H } from './control';
  * `animate-pulse` bilinçli olarak sönük: iskelet bir bekleme göstergesidir, ekranın ilgi merkezi değil.
  */
 
-/** Çubuk — metin satırı, rozet, sayı yerine geçen temel parça. Ölçüyü çağıran verir. */
+/**
+ * Çubuk — metin satırı, rozet, sayı yerine geçen temel parça. Ölçüyü çağıran verir.
+ *
+ * Dolgu `ops-skeleton` (15.08): önceki `gray-100` beyaz kart ÜSTÜ dolgusuydu, çubuk ise `ops-card`
+ * zeminine çiziliyor — açık modda fark görünmez kalıyordu (token künyesindeki ölçüm). Takma ad iki
+ * modu ayrı ayarlar: açıkta koyulaştı, koyu bugünkü görünümünde kaldı.
+ */
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <span className={`block animate-pulse rounded-[6px] bg-ops-gray-100 ${className}`} aria-hidden="true" />;
+  return <span className={`block animate-pulse rounded-[6px] bg-ops-skeleton ${className}`} aria-hidden="true" />;
 }
 
 /**
@@ -35,7 +41,7 @@ export function Skeleton({ className = '' }: { className?: string }) {
 export function SkeletonBlock({ className = '' }: { className?: string }) {
   return (
     <span
-      className={`block animate-pulse rounded-ops-card bg-gradient-to-r from-ops-gray-100 via-ops-gray-50 to-ops-gray-100 ${className}`}
+      className={`block animate-pulse rounded-ops-card bg-gradient-to-r from-ops-skeleton via-ops-skeleton-soft to-ops-skeleton ${className}`}
       aria-hidden="true"
     />
   );
@@ -217,15 +223,40 @@ export function SkeletonPageHeader({ actions = [] }: { actions?: readonly string
 /**
  * `Tabs` ölçüsü (px-3.5 py-[11px]). Hangi sekmenin seçili olduğu URL'den gelir ve o bilgi henüz
  * elimizde YOK — hepsi eşit çizilir; birini vurgulamak yanlış sekmeyi işaretlemek olurdu.
+ *
+ * **`labels` verilirse sekme adları GERÇEK metin** — `SkeletonTable`ın sütun başlığı ilkesi
+ * (yukarıda): `loading.tsx` rota başına bir dosyadır, sekme adları o dosya yazılırken statik olarak
+ * bellidir; onları çubuk yapmak elde olan bilgiyi saklamak olurdu. Production'da bu fark GÖRÜNÜR bir
+ * titremeydi: geçiş hızlı olduğu için çubuklar bir karelik gri flaş gibi algılanıyordu (kullanıcı
+ * bildirimi 15.08 — "başlık kayboluyor, renklerde kayma var"). Tipografi gerçek `Tabs`tan birebir;
+ * seçili göstergesi yine YOK (üstteki gerekçe geçerli). `count` yalnız etiketi taşınmamış eski
+ * çağıranlar için duruyor.
  */
-export function SkeletonTabs({ count, actions = [] }: { count: number; actions?: readonly string[] }) {
+export function SkeletonTabs({
+  count,
+  labels,
+  actions = [],
+}: {
+  count?: number;
+  labels?: readonly string[];
+  actions?: readonly string[];
+}) {
   return (
     <div className="flex gap-0.5 border-b border-ops-line bg-ops-subtle px-6">
-      {Array.from({ length: count }, (_, i) => (
-        <span key={i} className="px-3.5 py-[11px]">
-          <Skeleton className="h-4 w-20" />
-        </span>
-      ))}
+      {labels
+        ? labels.map((label) => (
+            <span
+              key={label}
+              className="-mb-px border-b-2 border-transparent px-3.5 py-[11px] font-ops-display text-ops-sm font-semibold text-ops-muted"
+            >
+              {label}
+            </span>
+          ))
+        : Array.from({ length: count ?? 0 }, (_, i) => (
+            <span key={i} className="px-3.5 py-[11px]">
+              <Skeleton className="h-4 w-20" />
+            </span>
+          ))}
       {/* Sekmeye BAĞLI kontroller (arama, "+ Kategori") çubuğun sağında yaşıyor — `Tabs.action`
           yuvası (09.4 kararı); iskelet de onları orada tutar, yoksa sayfa gelince bar zıplar. */}
       {actions.length > 0 ? (
