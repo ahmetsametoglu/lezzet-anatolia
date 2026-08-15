@@ -173,8 +173,23 @@ async function finishResolved(
 export async function suggestPostalCodesAction(prefix: string): Promise<PlaceSuggestion[]> {
   const normalized = normalizePostalCode(prefix);
   if (normalized.length < 2) return [];
+  /**
+   * **MÜŞTERİ YÜZEYİ BU TURDA GENİŞLEMİYOR** (`OB-03` · 15.08).
+   *
+   * Kapı artık harf gören terimi yerleşim adı sayıyor (`PostalCodePlaceService.search`) ve bu
+   * kapıyı olduğu gibi bıraksaydık müşteri adres formu da yan etkiyle ad aramaya başlardı —
+   * istenmemiş, tasarlanmamış ve müşteri yüzeyinde ölçülmemiş bir davranış.
+   *
+   * Bugünkü davranış birebir korunuyor: harfli terim zaten boş liste dönüyordu (kod öneki
+   * `STRAS%` hiçbir satırla eşleşmez), burada aynı sonuç bir sorgu HARCAMADAN veriliyor.
+   *
+   * **Genişletmek istenen bir şey ve kaydı var:** `docs/talep/not-denetim-adres-posta-kodu-secilebilir.md`
+   * — kullanıcı 10.08'de web adres formunda posta kodunun SEÇİLEREK gelmesini istedi ve mobil
+   * tarafı bunu yaptı. O iş kendi turunda yapılır; ad araması onun bir parçası olacak.
+   */
+  if (/\p{L}/u.test(normalized)) return [];
   try {
-    return await new PostalCodePlaceService(serviceDb()).searchPrefix(normalized);
+    return await new PostalCodePlaceService(serviceDb()).search(normalized);
   } catch (err) {
     await captureError(err, { source: SOURCES.webAction, context: { prefix: normalized } });
     return [];

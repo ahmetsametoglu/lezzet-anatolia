@@ -22,6 +22,7 @@
   - **Çözüm Önerisi:** 
     - [`routes.desktop.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/app/(operations)/operations/deliveries/routes.desktop.tsx) üzerindeki taslak formuna (örneğin "Rota adı" alanının hemen üstüne veya altına), sistemdeki depoların listelendiği (`data.warehouses`) bir depo seçim alanı (`FieldShell` + `Select`/`Dropdown` bileşeni) eklenmelidir.
     - Taslak veri modeli (`Draft` interface'i) `warehouseId` değerini de tutacak şekilde güncellenmeli ve [`routes-client.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/app/(operations)/operations/deliveries/routes-client.tsx#L129) altındaki depo çözümleme sırasına dahil edilmelidir.
+  - ✅ **YAZILDI (15.08)** — teşhisiniz birebir doğruydu, iki öneriniz de aynen uygulandı. Ayrıntı ve kalıcı kayıt: `docs/build/19-coklu-depo.md` → `(19.20)`. Üç ek karar: seçici **addan ÖNCE** (depo rotanın ülkesini belirliyor), Kaydet düğmesi depo seçilene kadar KAPALI (engel tıklamadan önce okunsun), pasif depo süzülmüyor **işaretleniyor**. Ekranda denenmedi.
 
 - [ ] **OB-08 · Sipariş tamamlandıktan sonra bile finansal bölümde "mal maliyeti tahmini" ve "kar sipariş kapandığında hesaplanır" uyarısı kalması**
   - **Bulgu:** Sipariş detay sayfasındaki sağ finansal panelde, sipariş adımları takip edilip sipariş tamamen kapatıldıktan (completed/delivered) sonra bile "mal maliyeti tahmini" başlığı değişmemekte ve altında "kar sipariş kapandığında hesaplanır" açıklaması gösterilmeye devam etmektedir.
@@ -46,10 +47,12 @@
     - Harita bileşenindeki ([`zone-map-leaflet.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/components/operation/ui/zone-map-leaflet.tsx)) varsayılan `boxZoom` davranışı (`boxZoom: false` ile) devre dışı bırakılıp `mousedown`/`mousemove`/`mouseup` olayları Shift tuşu basılıyken dinlenerek `L.Rectangle` ile görsel bir seçim kutusu çizilmelidir.
     - Çizilen alanın `LatLngBounds` koordinatları içindeki noktalar süzülmeli ve form bileşenine toplu seçim olarak iletilmelidir.
 
-- [ ] **OB-03 · Posta kodu arama kutusunda yerleşim/şehir adına göre arama yapılabilmesi**
+- [~] **OB-03 · Posta kodu arama kutusunda yerleşim/şehir adına göre arama yapılabilmesi**
   - **Talep:** Rota düzenleme ekranındaki posta kodu ekleme alanında (`PostalCodePicker` bileşeni) şu an sadece sayısal kod ile arama yapılabilmektedir. Operatörün posta kodunu bilmediği durumlarda şehir/yerleşim adı arayarak da (ör. "Strasbourg" veya "Kehl") o yerleşime ait posta kodunu/kodlarını getirebilmesi ve seçebilmesi istenmektedir.
+  - 🟡 **KOD YAZILDI (15.08), `db:reset` BEKLİYOR.** `places` bir dizi ve elemanlarında parça araması okuma katmanından yapılamıyor; aranabilir hâli veritabanı tutuyor (`places_search` üretilmiş kolon + trigram indeksi, `0033`). Migration mantığı geri alınan bir işlemde doğrulandı ama **uygulanmadı** — reset sizin kararınız. O ana kadar harfli terim boş liste döner, yani bugünkü davranış aynen sürer; bozulan bir şey yok. Ayrıntı: `docs/build/19-coklu-depo.md` → `(19.20)`.
 
-- [ ] **OB-04 · Harita hover etiketlerinde (Tooltip) posta koduna bağlı tüm şehir isimlerinin listelenmesi**
+- [x] **OB-04 · Harita hover etiketlerinde (Tooltip) posta koduna bağlı tüm şehir isimlerinin listelenmesi**
+  - ✅ **YAZILDI (15.08).** Kök sandığımdan derindi: adı `null`a çeviren karar (`placeLabel`) doğruydu ama **iki okuma da ham listeyi orada atıyordu**, yani ekranın elinde hiç ad kalmıyordu. Artık `places` ham geçiyor; kalıcı etiket **3 ad**, üzerine gelince **tam liste**. Ayrıntı: `docs/build/19-coklu-depo.md` → `(19.20)`. Ekranda denenmedi.
   - **Talep:** Haritadaki noktaların üzerine gelindiğinde (hover/tooltip) posta kodu ve ait olduğu yerleşim adı gösterilmektedir. Ancak bir posta kodu birden fazla şehre/yerleşime hizmet ediyorsa (örneğin Fransa'da kırsal kesimdeki bir posta kodunun birden fazla kasaba veya köyü kapsaması durumunda) etiket üzerinde bu yerleşimlerin tamamı gösterilmemektedir. Hover durumunda bu posta koduna bağlı tüm şehir isimlerinin virgülle ayrılarak veya tek tek etiket üzerinde listelenmesi istenmektedir.
 
 - [ ] **OB-05 · Siparişler sayfasında detayların diyalog (Modal) yerine sağ panelde açılması**

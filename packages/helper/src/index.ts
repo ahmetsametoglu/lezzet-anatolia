@@ -9,5 +9,6 @@ export * from './format';
 export * from './identity';
 export * from './money';
 export * from './postal-code';
+export * from './place-name';
 export * from './rich-text';
 export * from './slug';

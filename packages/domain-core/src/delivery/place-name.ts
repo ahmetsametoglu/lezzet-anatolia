@@ -20,24 +20,17 @@
  */
 
 /**
- * Karşılaştırma için ad normalizasyonu — **yalnız yazım farklarını siler, anlamı değiştirmez.**
+ * Ad normalizasyonu `@lezzet/helper`a TAŞINDI (`OB-03` · 15.08) — burada doğmuştu, ama bir karar
+ * değil yazım temizliği olduğu için kardeşi `normalizePostalCode`in yanına gitti.
  *
- * Diyakritik, ligatür (`Hœnheim` ↔ `Hoenheim`), tire/boşluk/kesme ve büyük-küçük harf farkı aynı
- * yerin farklı yazımlarıdır; müşteri "HOENHEIM" yazdığında yanlış alarm ötmemeli. Ötesine
- * geçilmiyor: "St" ↔ "Saint" gibi genişletmeler kulağa makul gelir ama ayrı belediyeleri
- * birbirine karıştırabilir ve o hatanın kaynağı sonradan bulunamaz.
+ * Somut sebep: aynı kuralı artık `packages/database` de uyguluyor (yerleşim adıyla posta kodu
+ * araması) ve **`database` `domain-core`'u bilemez** (`STACK §4`); ikisi de `helper`ı bilir.
+ * Yeniden yazmak, bir gün ayrışacak iki kural demekti.
+ *
+ * Buradan yeniden dışa VERİLMİYOR: tek tüketicisi aşağıdaki `cityMatchesPlaces` ve isteyen
+ * doğrudan `helper`dan alır — köprü bırakmak, taşımayı yarıda kesmek olurdu.
  */
-export function normalizePlaceName(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/œ/gi, 'oe')
-    .replace(/æ/gi, 'ae')
-    .replace(/ß/g, 'ss')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
+import { normalizePlaceName } from '@lezzet/helper';
 
 /**
  * Kodun TEK ve kesin adı — yoksa `null`.

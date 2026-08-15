@@ -13,10 +13,6 @@ import type { Country } from '@lezzet/types';
 
 /**
  * Haritanın çizdiği tek nokta.
- *
- * `place` **isteğe bağlı ve tek ad**: etiket yalnız z13'ten sonra ve yalnız görünen kodlar için
- * gerekiyor. Kodun TÜM yerleşim listesini yüzlerce noktada taşımak, hiç görünmeyecek bir yükü
- * ağdan geçirmek olurdu (`arka-uc-harita-icin-posta-kodu-okumasi` talebinin tek tasarım kararı).
  */
 export interface ZoneMapPoint {
   /**
@@ -28,7 +24,22 @@ export interface ZoneMapPoint {
   postalCode: string;
   lat: number;
   lng: number;
-  place?: string;
+  /**
+   * Kodun yerleşim adları — **HAM liste** (`OB-04`, 15.08).
+   *
+   * Eskiden `place?: string` idi (tek ad) ve künyesi *"TÜM yerleşim listesini yüzlerce noktada
+   * taşımak, hiç görünmeyecek bir yükü ağdan geçirmek olurdu"* diyordu. Yük gerekçesi ölçülünce
+   * tutmadı: kod başına ortalama ~1,4 ad var ve nokta tavanı 1200 — fark okunacak bir sayı değil.
+   * Bedeli ise ağırdı: çok yerleşimli kodlar (~%39) haritada **adsız** çiziliyordu, çünkü tek adı
+   * üreten motor (`placeLabel`) onlarda `null` döner. Operatör en kalabalık bölgelerde tam olarak
+   * nereye baktığını göremiyordu.
+   *
+   * Kırpma kararı ÇİZİM anında veriliyor (`placesLabel`): kalıcı etiket dar, üzerine gelince
+   * açılan ipucu tam. Veriyi kaynağında kırpmak o iki farklı ihtiyacı tek cevaba mahkûm ediyordu.
+   *
+   * Boş dizi = ad bilinmiyor; etiket yalnız kodu yazar.
+   */
+  places?: readonly string[];
   /**
    * Etikete eklenen GEREKÇE — bugün yalnız önerilen kodlarda dolu ("3 kişi bekliyor · 47 kez
    * soruldu"). Harita metni KURMAZ, taşır: gerekçenin dili ekranın sözlüğünde yaşıyor

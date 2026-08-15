@@ -1,6 +1,5 @@
 import 'server-only';
 import { PostalCodePlaceService, serviceDb } from '@lezzet/database';
-import { placeLabel } from '@lezzet/domain-core';
 import type { Country } from '@lezzet/types';
 
 /**
@@ -12,9 +11,14 @@ import type { Country } from '@lezzet/types';
  * yani bu okuma olmadan harita yalnız zaten tanımlı olanı gösterebilirdi.
  *
  * ── NEDEN UYGULAMA KATMANINDA, SERVİSTE DEĞİL ───────────────────────────────
- * Servis satır getirir (`listInBounds`), burası **gösterilecek adı seçer**. Ad bir karardır ve
- * kararı veren motor `domain-core`'dadır (`placeLabel`); `database` motoru bilmez (`STACK §4`).
- * İkisini birleştiren yer burasıdır.
+ * Servis satır getirir (`listInBounds`), burası **ekranın sözleşmesini kurar**: koordinatı
+ * daraltır (`lat!`/`lng!` → `number`), alan kümesini ekranın ihtiyacına indirir.
+ *
+ * **Ad KARARI burada DEĞİL ve 15.08'de buradan çıktı** (`OB-04`). Bir dönem `placeLabel` burada
+ * çağrılıyordu ve künye *"burası gösterilecek adı seçer"* diyordu; ölçüldü ki bu fazla erken bir
+ * karardı — çok yerleşimli kodda `null` üretip diziyi atıyordu ve ekran adı bir daha hiç
+ * göremiyordu. `placeLabel`in kendi künyesi zaten doğruyu yazıyordu: *"ne yazılacağı ekranın
+ * kararıdır ve `places` onun elinde."* Artık dizi ham geçiyor; biçim ekranda (`placesLabel`).
  */
 
 /** Adıyla dışa AÇILMIYOR: tüketicisi doğduğu gün `export` eklenir (bugün `knip` doğru işaretliyor). */
@@ -24,18 +28,26 @@ interface MapPostalCode {
   lat: number;
   lng: number;
   /**
-   * Etikette basılacak ad — **tek yerleşimliyse adı, çok yerleşimliyse `null`.**
+   * Kodun yerleşim adları — **HAM liste, karar verilmemiş** (`OB-04`, 15.08).
    *
-   * Talep `places[0]` demişti; öyle yapılmadı ve sebebi kayda değer. Bu tablo bir kez tek ad
-   * tutuyordu ve çok yerleşimli kodda üst idari birime çıkıyordu; üretilen ad geçerli bir belediye
-   * adı gibi okunduğu için **yanlışlığı görünmüyordu** — `67800` "Strasbourg" yazıyordu, orası
-   * Bischheim / Hœnheim. Kodların ~%39'unu etkiliyordu (`0033` künyesi).
+   * ── ÖNCEKİ HÂL VE NEDEN DEĞİŞTİ ─────────────────────────────────────────
+   * Burada `place: string | null` vardı ve `placeLabel(row.places)` ile dolduruluyordu: tek
+   * yerleşimliyse adı, çok yerleşimliyse **`null`**. Gerekçesi doğruydu ve bugün de doğru —
+   * `places[0]` keyfi bir seçimdir, otorite gibi okunur (`67800` "Strasbourg" değil,
+   * Bischheim/Hœnheim; kodların ~%39'u çok yerleşimli).
    *
-   * `places[0]` o hatanın aynısını geri getirirdi: keyfi bir seçim, otorite gibi okunur. Alternatif
-   * "hepsi" değil **hiçbiri**: etiket yalnız kodu gösterir (`67800`), ki bu dürüsttür. Tamamı
-   * gerektiğinde `findPlaces` zaten var.
+   * **Ama seçilen alternatif fazla daraldı:** "hepsi değil hiçbiri" denince ekran çok yerleşimli
+   * kodu adsız çiziyordu ve operatör haritada dolaşırken nereye baktığını göremiyordu. Kullanıcı
+   * bunu arayüz testinde bildirdi (`OB-04`): hover'da adların **tamamı** yazılsın.
+   *
+   * Doğru yer ayrımı zaten `placeLabel` künyesinde yazılıydı: *"`null` gördüğünde ne yazılacağı …
+   * ekranın kararıdır ve `places` onun elinde."* Bu okuma o diziyi ekrana hiç vermiyordu. Artık
+   * ham geçiyor; biçimlendirmeyi `placesLabel` (operasyon sözlüğü) yapıyor.
+   *
+   * Yük: dizi tek ad yerine ortalama ~1,4 ad taşıyor ve tavan zaten 1200 nokta — ölçülebilir bir
+   * fark değil. Karar veriyi kırpmak değil, doğru katmanda kırpmaktı.
    */
-  place: string | null;
+  places: readonly string[];
 }
 
 interface MapPostalCodes {
@@ -59,7 +71,7 @@ export async function readPostalCodesForMap(input: {
       postalCode: row.postalCode,
       lat: Number(row.lat),
       lng: Number(row.lng),
-      place: placeLabel(row.places),
+      places: row.places,
     })),
     truncated,
   };

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import type { PostalCodeSuggestion } from '@lezzet/database';
-import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
+import { COUNTRY_LABELS, placesLabel } from '@/components/operation/ui/labels';
 import { MultiSelect } from '@/components/operation/form/multi-select';
 import { searchPostalCodesAction } from './routes-actions';
 import type { PostalCodePick } from './routes-types';
@@ -59,8 +59,10 @@ export function PostalCodePicker({
       onSearch={onSearch}
       loading={loading}
       addLabel="+ posta kodu"
-      searchPlaceholder="Kodun ilk hanelerini yazın (67…)"
-      emptyText="Bu önekle kod yok — referans tablosunda olmayan kod eklenemez."
+      /* Yer tutucu ARTIK iki yolu birden söylüyor (`OB-03`): eskiden yalnız kodu anlatıyordu ve
+         kodu bilmeyen operatör ad yazmayı denemiyordu bile — ekran o yeteneği hiç duyurmuyordu. */
+      searchPlaceholder="Kodun ilk haneleri (67…) ya da yerleşim adı (Strasbourg)"
+      emptyText="Eşleşen kod yok — referans tablosunda olmayan kod eklenemez."
     />
   );
 }
@@ -75,17 +77,24 @@ function parseKey(key: string): PostalCodePick {
   return { country: country as PostalCodePick['country'], postalCode: postalCode ?? '' };
 }
 
+/** Açılır listenin satırı dar — iki ad + sayı; kalanı `placesLabel` sayıyor (`+2`). */
+const OPTION_MAX_PLACES = 2;
+
 /**
  * Seçenek etiketi. Yer adları HAM geliyor (servis bilerek etiket kurmuyor); kısaltma kararı burada:
  * ilk iki yerleşim yazılır, kalanı sayılır. Çok yerleşimli kodda tek ad yazmak yanlış olurdu —
  * `67800` "Strasbourg" değil, Bischheim/Hœnheim'dır.
+ *
+ * **Kırpma artık ORTAK** (`placesLabel`, 15.08): aynı "iki ad + kaç tane daha" biçimi haritanın
+ * etiketinde de kullanılıyordu ve iki yerde ayrı yazılmıştı. İki kopya bir gün ayrışır — aynı kod
+ * seçicide "Bischheim, Hœnheim +1", haritada başka türlü okunurdu (`CLAUDE §1`).
  */
 function labelOf(
   c: { country: PostalCodePick['country']; postalCode: string },
   places: readonly string[],
   homeCountry: PostalCodePick['country'],
 ): string {
-  const where = places.length === 0 ? '' : places.length <= 2 ? places.join(', ') : `${places.slice(0, 2).join(', ')} +${places.length - 2}`;
+  const where = placesLabel(places, OPTION_MAX_PLACES);
   // Ülke eki yalnız deponun kendi ülkesinden farklıysa: aynı ülkede her satıra "FR" yazmak gürültü.
   const country = c.country === homeCountry ? '' : ` · ${COUNTRY_LABELS[c.country]}`;
   return where ? `${c.postalCode} · ${where}${country}` : `${c.postalCode}${country}`;

@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { DeliveryTabs } from './delivery-tabs';
 import { Input } from '@/components/operation/form/input';
 import { FieldShell } from '@/components/operation/form/field-shell';
+import { Select } from '@/components/operation/form/select';
 import { ToggleField } from '@/components/operation/form/toggle';
 import { WEEKDAYS } from '@/components/operation/form/calendar-math';
 import { ZoneMap } from '@/components/operation/ui/zone-map';
@@ -20,6 +21,7 @@ import {
   type ZoneMapPoint,
 } from '@/components/operation/ui/zone-map-model';
 import { agoShort, money, num } from '@/components/operation/ui/format';
+import { placesLabel } from '@/components/operation/ui/labels';
 import { PostalCodePicker } from './postal-code-picker';
 import { distanceKm } from './routes-suggest';
 import { ROUTE_NOTES } from './deliveries-labels';
@@ -39,7 +41,14 @@ import type { ZoneHandoff } from './routes-handoff';
 interface RoutesViewProps {
   data: RoutesData;
   selected: RouteView | null;
-  draft: { name: string; weekdays: number[]; isActive: boolean; codes: RouteView['postalCodes'] } | null;
+  draft: {
+    name: string;
+    /** Güzergâhın çıkacağı depo; `null` = seçilmedi — kaydet düğmesi o hâlde kapalı (`OB-01`). */
+    warehouseId: string | null;
+    weekdays: number[];
+    isActive: boolean;
+    codes: RouteView['postalCodes'];
+  } | null;
   onSelect: (routeId: string | null) => void;
   onDraft: (patch: Partial<NonNullable<RoutesViewProps['draft']>>) => void;
   onPick: (point: ZoneMapPoint) => void;
@@ -234,6 +243,21 @@ export function RoutesDesktop(props: RoutesViewProps) {
               </HandoffNote>
             ) : null}
 
+            {/* **ÇIKIŞ DEPOSU EN ÜSTTE ve bu bir sıralama tercihi değil** (`OB-01`): depo rotanın
+                ülkesini belirliyor (`homeCountry` → kod etiketleri) ve hangi kodların anlamlı
+                olduğunu o karar veriyor. Addan sonra sorulsaydı, operatör kod eklemeye başladıktan
+                sonra depoyu değiştirdiğinde seçtiği kodlar sessizce yabancı ülkeye düşerdi. */}
+            <WarehouseField
+              warehouses={data.warehouses}
+              value={draft.warehouseId}
+              onChange={(warehouseId) => props.onDraft({ warehouseId })}
+              /* Var olan rotanın deposu DEĞİŞTİRİLEBİLİR ve bu yeni bir yetenek değil: yazma yolu
+                 (`saveZoneAction` → `zoneSvc.update`) `warehouseId`'yi zaten her kaydetmede
+                 yazıyordu, yalnız hep aynı değeri. Kilitlemek, aynı kayıt için iki farklı form
+                 çizmek olurdu. */
+              existing={selected !== null}
+            />
+
             <FieldShell label="Rota adı" required>
               <Input value={draft.name} onChange={(e) => props.onDraft({ name: e.target.value })} placeholder="Strasbourg Merkez" />
             </FieldShell>
@@ -288,11 +312,14 @@ export function RoutesDesktop(props: RoutesViewProps) {
 
             <div className="flex items-center gap-3">
               <ToggleField on={draft.isActive} onChange={(on) => props.onDraft({ isActive: on })} label="Rota aktif" bare />
+              {/* Depo seçilmeden kaydetmek reddediliyordu ve reddin sebebi ancak tıklandıktan
+                  SONRA görünüyordu. Düğme artık ad gibi depoyu da bekliyor — engel tıklamadan önce
+                  okunur (`OB-01`). */}
               <Button
                 variant="primary"
                 className="ml-auto"
                 onClick={props.onSave}
-                disabled={props.busy || draft.name.trim().length === 0}
+                disabled={props.busy || draft.name.trim().length === 0 || draft.warehouseId === null}
               >
                 Kaydet
               </Button>
@@ -304,6 +331,64 @@ export function RoutesDesktop(props: RoutesViewProps) {
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * **Çıkış deposu** — rotanın hangi tesisten dağıtıma çıkacağı (`OB-01`, kullanıcının arayüz
+ * testi 14.08).
+ *
+ * Alan eskiden HİÇ YOKTU: depo yalnız kaydetme anında adresten ya da "tek depo varsa o"dan
+ * çözülüyordu ve çok depolu bir kurulumda Rotalar sekmesinden yeni rota kurmak **imkânsızdı** —
+ * ekran operatörü Depolar sayfasına yolluyordu.
+ *
+ * **Pasif depo listeden SÜZÜLMEZ, işaretlenir.** Süzmek iki şeyi birden bozardı: bugün pasif bir
+ * depoya bağlı olan bir rotayı açan operatör kendi deposunu göremez (seçici boş görünür), ve
+ * "kapalı tesise rota bağlıyorum" kararı operatörün önünde değil kodun içinde verilmiş olurdu.
+ * Aynı ayrım katalogda da var (`isActive` ≠ `isFeatured`): işaretlemek yasaklamak değildir.
+ */
+function WarehouseField({
+  warehouses,
+  value,
+  onChange,
+  existing,
+}: {
+  warehouses: RoutesData['warehouses'];
+  value: string | null;
+  onChange: (warehouseId: string) => void;
+  /** Var olan bir rota mı düzenleniyor — uyarı cümlesi ona göre değişir. */
+  existing: boolean;
+}) {
+  const chosen = warehouses.find((w) => w.id === value) ?? null;
+
+  return (
+    <FieldShell
+      label="Çıkış deposu"
+      required
+      // Tek depolu kurulumda seçenek yok, seçim de yok: alan yine çizilir (rotanın nereden
+      // çıktığı bilgidir) ama "seçin" demek yanıltıcı olurdu.
+      labelAside={warehouses.length === 1 ? 'tek depo' : undefined}
+    >
+      <Select
+        value={value ?? ''}
+        onChange={onChange}
+        placeholder="Depo seçin"
+        options={warehouses.map((warehouse) => ({
+          value: warehouse.id,
+          label: warehouse.isActive ? `${warehouse.name} · ${warehouse.code}` : `${warehouse.name} · ${warehouse.code} — pasif`,
+        }))}
+      />
+      {chosen && !chosen.isActive ? (
+        <p className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
+          {chosen.name} pasif — bu rota kaydedilir ama depo açılana kadar dağıtıma çıkmaz.
+        </p>
+      ) : null}
+      {existing && chosen ? (
+        <p className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
+          Depoyu değiştirmek güzergâhı başka tesise bağlar; kodlar ve günler aynen kalır.
+        </p>
+      ) : null}
+    </FieldShell>
   );
 }
 
@@ -353,7 +438,9 @@ function Suggestions({
                   <span className="flex items-baseline gap-2">
                     <span className="font-ops-mono text-ops-xs text-ops-ink">{row.postalCode}</span>
                     <span className="truncate font-ops-body text-ops-xs text-ops-muted">
-                      {ROUTE_NOTES.suggestionWhere(distanceOf(row), row.place)}
+                      {/* Öneri satırı dar bir rayda duruyor — iki ad + sayı (`OB-04`); tam liste
+                          haritanın ipucunda. */}
+                      {ROUTE_NOTES.suggestionWhere(distanceOf(row), placesLabel(row.places ?? [], 2) ?? undefined)}
                     </span>
                     {/* Talebin YAŞI: üç ay önce susmuş bir ilgi, dünkü kadar davet etmez. */}
                     {row.lastAskedMinutes !== null ? (

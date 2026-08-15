@@ -7,7 +7,6 @@ import {
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
-import { placeLabel } from '@lezzet/domain-core';
 import type { ZoneMapPoint } from '@/components/operation/ui/zone-map-model';
 import { buildSuggestions, type LocatedPlace } from './routes-suggest';
 import type { CodeStatsView, PostalCodePick, SuggestionView } from './routes-types';
@@ -37,7 +36,13 @@ export interface RouteView {
 
 export interface RoutesData {
   routes: RouteView[];
-  warehouses: { id: string; name: string; code: string; countryCode: string }[];
+  /**
+   * Rota formunun depo seçicisini besleyen liste (`OB-01`). **Pasifler de GELİR ve işaretlenir**,
+   * süzülmez: bir rota bugün pasif bir depoya bağlı olabilir ve o kaydı listeden düşürmek seçiciyi
+   * "seçim yok" hâline sokup operatöre kendi rotasının deposunu gizlerdi. `isActive` ekranın
+   * uyarabilmesi için taşınıyor — kapalı tesise güzergâh bağlamak sessizce yapılmamalı.
+   */
+  warehouses: { id: string; name: string; code: string; countryCode: string; isActive: boolean }[];
   /**
    * Kod → ağırlık. Anahtar YALNIZ posta kodu (ülke yok) çünkü `analytics_postal_code_orders` da
    * öyle eşliyor; `67000` hem FR hem DE'de geçerli olduğu için iki ülkenin siparişi bu sayıda
@@ -163,6 +168,7 @@ export async function readRoutes(): Promise<RoutesData> {
       name: warehouse.name,
       code: warehouse.code,
       countryCode: warehouse.countryCode,
+      isActive: warehouse.isActive,
     })),
     stats,
     suggestions,
@@ -185,10 +191,13 @@ export async function readRoutes(): Promise<RoutesData> {
         postalCode: place.postalCode,
         lat: place.lat,
         lng: place.lng,
-        // Ad KARARI motorun (`placeLabel`): çok yerleşimli kodda `null` döner. `places[0]` keyfi bir
-        // seçimdir ve otorite gibi okunur — `67800` "Strasbourg" değil, Bischheim/Hœnheim (arka uç
-        // şeridinin uyarısı 07.08; bu tablo o hatayı bir kez yaşamış, kodların ~%39'unu etkilemiş).
-        place: placeLabel(place.places) ?? undefined,
+        /**
+         * Adlar HAM geçiyor (`OB-04`, 15.08). Burada bir dönem `placeLabel(place.places)` vardı ve
+         * çok yerleşimli kodda `undefined` üretiyordu — gerekçesi doğruydu (`places[0]` keyfidir,
+         * `67800` "Strasbourg" değil Bischheim/Hœnheim) ama sonucu fazla sessizdi: kodların ~%39'u
+         * haritada adsız çiziliyordu. Karar ekranın (`placesLabel`), veri buradan tam gider.
+         */
+        places: place.places,
       })),
   };
 }

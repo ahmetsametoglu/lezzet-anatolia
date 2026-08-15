@@ -8,6 +8,7 @@ import {
   type MapViewport,
   type ZoneMapPoint,
 } from '@/components/operation/ui/zone-map-model';
+import { placesLabel } from '@/components/operation/ui/labels';
 import { readMapCodesAction, saveZoneAction } from './routes-actions';
 import { RoutesDesktop } from './routes.desktop';
 import { ROUTE_NOTES } from './deliveries-labels';
@@ -16,8 +17,28 @@ import type { ZoneHandoff } from './routes-handoff';
 import type { PostalCodePick } from './routes-types';
 import type { Country } from '@lezzet/types';
 
+/**
+ * Sönen ipucu şeridinin taşıdığı en fazla yerleşim adı (`OB-04`). Şerit 2,6 saniye görünüyor —
+ * okunabilecek kadar kısa olmalı; haritanın kendi ipucu tam listeyi zaten veriyor.
+ */
+const HINT_MAX_PLACES = 2;
+
 interface Draft {
   name: string;
+  /**
+   * Güzergâhın çıkacağı depo — **taslağın alanı** (`OB-01`, kullanıcının arayüz testi 14.08).
+   *
+   * Eskiden taslakta hiç yoktu; depo yalnız KAYDETME anında üç kaynaktan çözülüyordu (seçili
+   * rotanın deposu · adresteki `warehouseId` · sistemde tek depo varsa o). Üçü de sağlanmadığında —
+   * yani çok depolu bir kurulumda operatör doğrudan Rotalar sekmesine girip "+ Rota" dediğinde —
+   * kayıt reddediliyor ve ekran *"Depolar sayfasından depoyu seçip 'Rota ekle' ile gelin"* diyordu.
+   * **Formda depo seçecek hiçbir kontrol yoktu**, yani ekran operatöre kendi sayfasında
+   * yapamayacağı bir şeyi tarif ediyordu: yeni rota oradan hiç kurulamıyordu.
+   *
+   * `null` = henüz seçilmedi. Boş dizgi DEĞİL: "seçilmedi" ile "seçildi ve boş" ayrı hâller ve
+   * seçicinin yer tutucusunu ancak `null` doğru gösterir.
+   */
+  warehouseId: string | null;
   weekdays: number[];
   isActive: boolean;
   codes: PostalCodePick[];
@@ -57,9 +78,6 @@ export function RoutesClient({
   const [truncated, setTruncated] = useState(false);
 
   const selected: RouteView | null = routeId ? (data.routes.find((route) => route.id === routeId) ?? null) : null;
-  // Kod aramasında ülke etiketi yalnız YABANCI kod için basılır; "kendi ülkemiz" seçili rotanın
-  // deposundan gelir, yeni rotada adresten ya da tek depodan.
-  const home = data.warehouses.find((w) => w.id === (selected?.warehouseId ?? warehouseId)) ?? data.warehouses[0];
   /**
    * Taslak seçili rotadan doğar; `key` ile bileşen yeniden kurulduğu için seçim değişince tazelenir.
    *
@@ -70,13 +88,42 @@ export function RoutesClient({
    */
   const [draft, setDraft] = useState<Draft | null>(() => {
     const base = selected
-      ? { name: selected.name, weekdays: selected.weekdays, isActive: selected.isActive, codes: selected.postalCodes }
-      : { name: handoff?.zoneName ?? '', weekdays: [], isActive: true, codes: [] as PostalCodePick[] };
+      ? {
+          name: selected.name,
+          warehouseId: selected.warehouseId as string | null,
+          weekdays: selected.weekdays,
+          isActive: selected.isActive,
+          codes: selected.postalCodes,
+        }
+      : {
+          name: handoff?.zoneName ?? '',
+          /**
+           * Yeni rotanın açılış deposu — eski KAYDETME anı çözümünün aynısı, ama artık bir
+           * ÖNERİ olarak taslağa konuyor, gizli bir varsayım olarak değil. Depolar'dan köprüyle
+           * gelindiyse adresteki depo seçili açılır (operatörün niyeti belli), tek depolu
+           * kurulumda tek seçenek zaten odur. İkisi de yoksa `null` — ve seçici bunu söyler.
+           */
+          warehouseId: warehouseId ?? (data.warehouses.length === 1 ? (data.warehouses[0]?.id ?? null) : null),
+          weekdays: [],
+          isActive: true,
+          codes: [] as PostalCodePick[],
+        };
     if (!handoff) return base;
     const have = new Set(base.codes.map((code) => `${code.country}:${code.postalCode}`));
     const added = handoff.codes.filter((code) => !have.has(`${code.country}:${code.postalCode}`));
     return { ...base, codes: [...base.codes, ...added] };
   });
+
+  /**
+   * Kod aramasında ülke etiketi yalnız YABANCI kod için basılır; "kendi ülkemiz" rotanın deposundan
+   * gelir.
+   *
+   * **Artık TASLAKTAN okunuyor** (`OB-01`), seçili rotadan ya da adresten değil: depo seçilebilir
+   * hâle gelince ülke de seçimle birlikte değişmeli. Aksi hâlde Kehl deposunu seçen operatör hâlâ
+   * Fransız kodlarını sade, Alman kodlarını "· Almanya" etiketiyle görürdü — yani etiket seçtiği
+   * depoyu değil, sayfaya girdiği andaki depoyu anlatırdı.
+   */
+  const home = data.warehouses.find((w) => w.id === draft?.warehouseId) ?? data.warehouses[0];
 
   const select = (id: string | null) => {
     setError(null);
@@ -103,7 +150,7 @@ export function RoutesClient({
 
     if (draft.codes.some((code) => keyOfPoint(code) === key)) {
       setDraft({ ...draft, codes: draft.codes.filter((code) => keyOfPoint(code) !== key) });
-      setHint(ROUTE_NOTES.removed(point.postalCode, point.place));
+      setHint(ROUTE_NOTES.removed(point.postalCode, placesLabel(point.places ?? [], HINT_MAX_PLACES) ?? undefined));
       return;
     }
 
@@ -119,16 +166,25 @@ export function RoutesClient({
     }
 
     setDraft({ ...draft, codes: [...draft.codes, { country: point.country, postalCode: point.postalCode }] });
-    setHint(ROUTE_NOTES.added(point.postalCode, point.place));
+    setHint(ROUTE_NOTES.added(point.postalCode, placesLabel(point.places ?? [], HINT_MAX_PLACES) ?? undefined));
   };
 
   const save = () => {
     if (!draft) return;
-    // Yeni rotanın deposu ADRESTEN gelir (Depolar'dan köprüyle) ya da tek depo varsa odur; iki depolu
-    // kurulumda seçimsiz kaydetmek, güzergâhı yanlış tesise bağlardı.
-    const targetWarehouse = selected?.warehouseId ?? warehouseId ?? (data.warehouses.length === 1 ? data.warehouses[0]!.id : null);
+    /**
+     * Depo TASLAKTAN gelir (`OB-01`). Eskiden burada üç kaynaklı bir çözüm vardı ve hiçbiri
+     * tutmadığında ekran operatörü başka sayfaya yolluyordu — oysa gideceği yerde de yapacağı iş
+     * aynıydı, yalnız bu formda seçemiyordu.
+     *
+     * **Guard KALDIRILMADI, ama artık son çare:** düğme depo seçilmeden zaten kapalı
+     * (`routes.desktop`). Yine de duruyor çünkü bir gün taslağı başka bir yol kurabilir (öneri
+     * köprüsü, adres bağlantısı) ve deposuz bir kayıt güzergâhı hiçbir tesise bağlamaz — sessizce
+     * geçmesindense burada durması iyidir. Cümle de değişti: artık operatöre yapabileceği şeyi
+     * söylüyor.
+     */
+    const targetWarehouse = draft.warehouseId;
     if (!targetWarehouse) {
-      setError('Bu rotanın hangi depodan çıkacağı belli değil — Depolar sayfasından depoyu seçip "Rota ekle" ile gelin.');
+      setError('Bu rotanın hangi depodan çıkacağı seçilmedi — yukarıdaki "Çıkış deposu" alanından seçin.');
       return;
     }
 
@@ -202,7 +258,7 @@ export function RoutesClient({
           postalCode: point.postalCode,
           lat: point.lat,
           lng: point.lng,
-          place: point.place ?? undefined,
+          places: point.places,
         })),
       );
       setTruncated(result.data.truncated);

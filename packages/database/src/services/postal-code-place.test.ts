@@ -85,12 +85,16 @@ describe('posta kodu referansı', () => {
   });
 
   /**
-   * Önek araması (19.19) — adres alanının autocomplete'i. Bu uç TUŞ YOLUNDA, o yüzden şekli kadar
-   * sınırları da sınanıyor.
+   * Arama (19.19 · `OB-03`) — adres alanının ve rota seçicisinin autocomplete'i. Bu uç TUŞ
+   * YOLUNDA, o yüzden şekli kadar sınırları da sınanıyor.
+   *
+   * Aşağıdaki blok KOD dalını sürüyor ve kapı `searchPrefix` → `search` diye yeniden adlandırılınca
+   * beklentileri hiç değişmedi — değişmemesi de bu turun iddiasıydı: ad araması EKLENDİ, kod
+   * araması olduğu gibi kaldı. Ad dalı ayrı blokta.
    */
-  describe('önek araması', () => {
+  describe('kodla arama', () => {
     it('öneki taşıyan kodları verir ve tavanı aşmaz', async () => {
-      const rows = await svc.searchPrefix('6724', 8);
+      const rows = await svc.search('6724', 8);
 
       expect(rows.length).toBeGreaterThan(0);
       expect(rows.length).toBeLessThanOrEqual(8);
@@ -98,14 +102,14 @@ describe('posta kodu referansı', () => {
     });
 
     it('aynı kodun iki ülkesi de ayrı satır gelir — ayrımı müşteri yapacak', async () => {
-      const rows = await svc.searchPrefix('67240');
+      const rows = await svc.search('67240');
       // 67240 hem FR (Bischwiller çevresi) hem DE (Bobenheim-Roxheim). Ülke süzgeci YOK: müşteri
       // ülke seçmiyor, satırdaki yer adı ve ülke ile ayırt ediyor.
       expect([...rows.map((r) => r.country)].sort()).toEqual(['DE', 'FR']);
     });
 
     it('yer adları HAM gelir — kısaltma ekranın işi', async () => {
-      const [row] = await svc.searchPrefix('51300');
+      const [row] = await svc.search('51300');
       // Etiket kurulsaydı ("51300 · Marolles +45") üç dilde çalışmazdı ve "+45"in eşiği veri
       // katmanında donardı.
       expect(row?.places.length).toBeGreaterThan(40);
@@ -113,7 +117,7 @@ describe('posta kodu referansı', () => {
 
     it('rota içindeki kod ÖNE alınır — doğru cevap listenin dibinde saklanmaz', async () => {
       // Bölge tablosu ortamdan ortama değişir; sınanan şey SIRA kuralı: rota adayı varsa başta olur.
-      const rows = await svc.searchPrefix('67');
+      const rows = await svc.search('67');
       const first = rows.findIndex((row) => row.inRoute);
       if (first === -1) return; // yerelde bu önekte rota kodu yoksa kural sınanamaz
       expect(rows.slice(0, first).every((row) => !row.inRoute)).toBe(true);
@@ -122,13 +126,13 @@ describe('posta kodu referansı', () => {
     it('tek harflik önek REDDEDİLİR — hiçbir yeri işaret etmiyor', async () => {
       // Başarım değil anlam kararı: "6" on altı bin kodun onda birine uyar ve müşteriye
       // gösterilecek sekiz satır rastgele olurdu.
-      expect(await svc.searchPrefix('6')).toEqual([]);
+      expect(await svc.search('6')).toEqual([]);
     });
 
     it('boşluklu ve küçük harfli yazım normalize edilir', async () => {
       // `like` büyük/küçük harfe duyarlı (indeks için şart) — normalizasyon kapıda yapılmazsa
       // "67 24" yazan müşteri boş liste görürdü.
-      expect((await svc.searchPrefix('67 24')).length).toBeGreaterThan(0);
+      expect((await svc.search('67 24')).length).toBeGreaterThan(0);
     });
   });
 });

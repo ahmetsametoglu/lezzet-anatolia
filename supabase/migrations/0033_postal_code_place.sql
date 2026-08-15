@@ -25,6 +25,72 @@
 -- koridorunda: Bas-Rhin ile Rheinland-Pfalz aynı `67` önekini paylaşıyor
 -- (67240 Bischwiller ↔ Bobenheim-Roxheim, 67150 Nordhouse ↔ Niederkirchen).
 
+-- ── ARANABİLİR AD METNİ İÇİN İKİ ÖN ŞART (OB-03, 15.08) ─────────────────────────────────────
+--
+-- İhtiyaç: operatör rota kurarken posta kodunu BİLMİYOR. Kullanıcının arayüz testinde bildirdiği
+-- eksik bu — "Strasbourg" ya da "Kehl" yazıp o yerleşimin kodlarını bulabilmeli. Bugün yalnız kodun
+-- ilk haneleriyle arama var (`67…`), yani kodu bilmeyenin hiçbir yolu yok.
+--
+-- `places` bir DİZİ (`text[]`) ve dizinin İÇİNDEKİ adlarda parça araması PostgREST'ten yapılamaz:
+-- kolonun tamamına bakılabiliyor, elemanlarına değil. Bu yüzden aranabilir hâli veritabanı
+-- tutuyor — üretilmiş (`generated ... stored`) bir kolon olarak, yani hiçbir yazma yolu onu
+-- güncellemeyi unutamaz.
+
+-- (1) `pg_trgm` — üç harfli parça indeksi.
+--
+-- Aranan şey ÖNEK değil PARÇA (`%strasb%`): düzleştirilmiş metin kodun TÜM adlarını taşıyor
+-- ("bischheim hoenheim") ve önek araması yalnız ilk adı bulurdu — yani çok yerleşimli kodların
+-- ikinci ve sonraki adları aranamaz kalırdı, ki bu tam olarak `OB-04`'te kapattığımız körlüğün
+-- arama tarafı olurdu. İki taraflı joker hiçbir btree indeksini kullanamaz (`base.service`
+-- künyesi bunu zaten yazıyor); trigram indeksi kullanabilen tek yapı.
+--
+-- Şema `extensions`: Supabase'in kendi eklentileri orada duruyor (`uuid-ossp`, `pgcrypto`, `pg_net`)
+-- ve `public`i eklenti nesneleriyle karıştırmamak onların kuralı.
+create extension if not exists pg_trgm with schema extensions;
+create extension if not exists unaccent with schema extensions;
+
+-- (2) Düzleştirme fonksiyonu — ve **NEDEN BİR FONKSİYON GEREKTİ.**
+--
+-- İlk tasarım kolonun içine doğrudan `array_to_string(places, ' ')` yazıyordu. **Ölçüldü ve
+-- OLMUYOR:** `array_to_string` `provolatile = 's'` (STABLE), üretilmiş kolon ise yalnız IMMUTABLE
+-- ifade kabul eder — migration uygulanırken patlardı. STABLE olmasının sebebi genel: dizi eleman
+-- tipi `timestamptz` olsaydı çıktı oturumun saat dilimine bağlı olurdu. **`text[]` için böyle bir
+-- bağımlılık yok**, o yüzden sarmalayıcı `text[]` alıp IMMUTABLE ilan ediyor — bu, yazarın
+-- daraltılmış girdi üzerinden verdiği geçerli bir taahhüt, kaçamak değil.
+--
+-- Normalleştirme `domain-core`'daki `normalizePlaceName`in AYNISI olmak zorunda: aranan terim orada
+-- normalleşiyor, aranan metin burada. İkisi ayrışırsa "Hœnheim" yazan operatör kendi kaydını
+-- bulamaz. Sıra da aynı — önce bire-çok harfler (œ→oe, æ→ae, ß→ss), sonra NFD ayrıştırıp birleşen
+-- işaretleri atmak. Ters sırada `ß` çözülmeden kalırdı.
+create or replace function public.place_search_text(places text[])
+  returns text
+  language sql
+  immutable
+  strict
+  parallel safe
+as $$
+  -- Sıra ÖNEMLİ: önce bire-çok harfler, sonra aksan atma.
+  --
+  -- `œ → oe` · `æ → ae` · `ß → ss` ELLE yazılıyor ve `unaccent`e bırakılmıyor: bunlar aksan değil
+  -- AYRI harfler, ve sözlüğün onları nasıl açtığı sürümden sürüme değişebilir (bazı sürümlerde
+  -- `œ → o`). Kural `domain-core`daki `normalizePlaceName` ile bire bir aynı olmak zorunda —
+  -- ayrışırlarsa "Hœnheim" yazan operatör kendi kaydını bulamaz — o yüzden bu dört eşleme burada
+  -- açıkça duruyor, sözlüğe emanet edilmiyor.
+  --
+  -- Aksanlar `unaccent`in İKİ ARGÜMANLI biçimiyle atılıyor: sözlük adı açıkça verildiğinde
+  -- fonksiyon IMMUTABLE olur (tek argümanlı biçim varsayılan sözlüğü aradığı için yalnız STABLE
+  -- ve üretilmiş kolonda kullanılamaz).
+  select lower(
+    extensions.unaccent(
+      'extensions.unaccent',
+      replace(replace(replace(replace(array_to_string(places, ' '), 'œ', 'oe'), 'Œ', 'OE'), 'æ', 'ae'), 'ß', 'ss')
+    )
+  );
+$$;
+
+comment on function public.place_search_text(text[]) is
+  'Yerleşim adları dizisini aranabilir tek metne indirger (küçük harf, aksansız). domain-core normalizePlaceName ile AYNI kuralı uygular — ikisi ayrışırsa arama kendi kaydını bulamaz.';
+
 create table public.postal_code_place (
   country       country_code not null,
   postal_code   text not null,
@@ -40,6 +106,19 @@ create table public.postal_code_place (
   -- gömmek yerine tek bir saf fonksiyonda tutmak, aynı listenin adres doğrulamasına da hizmet
   -- etmesini sağlıyor. Kolon `not null`: liste BOŞ olabilir, ama yokluk bir değer değildir.
   places        text[] not null,
+  -- ARANABİLİR HÂLİ — `places`in düzleştirilmiş, küçük harfli, aksansız ikizi (OB-03).
+  --
+  -- **Türetilmiş, kopya DEĞİL** (`generated ... stored`): değeri veritabanı hesaplıyor, yani
+  -- `places` değişince bu da değişir ve hiçbir yazma yolu güncellemeyi unutamaz. Elle tutulan bir
+  -- kolon olsaydı bir gün ikisi ayrışır ve arama var olmayan bir adı bulur (ya da var olanı
+  -- bulamaz) hâle gelirdi — üstelik sessizce.
+  --
+  -- Neden ayrı kolon: aranan şey dizinin İÇİ ve dizinin elemanlarında parça araması okuma
+  -- katmanımızdan (PostgREST) yapılamıyor. Düzleştirilmiş metin, mevcut arama altyapısının
+  -- (`searchFilters` → `ilike '%q%'`) hiç değişmeden çalışabildiği tek şekil.
+  --
+  -- `stored`, çünkü `virtual` üretilmiş kolon indekslenemez ve bu kolonun VARLIK SEBEBİ indeks.
+  places_search text generated always as (public.place_search_text(places)) stored,
   -- MERKEZ NOKTA (19.18) — bölge kurulumu haritadan yapılıyor ve harita kod başına tek işaret
   -- basıyor (`design/pages/admin-depolar.md`). Kodun kapsadığı yerleşimlerin ORTALAMASI: birini
   -- seçmek keyfi olurdu, aynı "tek ad" hatasının coğrafi karşılığı.
@@ -73,6 +152,19 @@ comment on table public.postal_code_place is
 -- Bu yüzden ikinci bir indeks eklenmiyor: aynı işi iki indeksle yapmak, her yazımda iki ağaç
 -- güncellemek demekti.
 create index postal_code_place_code on public.postal_code_place (postal_code text_pattern_ops);
+
+-- **AD ARAMASI — trigram indeksi** (OB-03).
+--
+-- Yukarıdaki `text_pattern_ops` ÖNEK içindir (`like '672%'`) ve ad aramasına yaramaz: aranan şey
+-- parçadır (`ilike '%strasb%'`), çünkü düzleştirilmiş metin kodun BÜTÜN adlarını yan yana taşıyor
+-- ("bischheim hoenheim") ve önek yalnız ilkini bulurdu — çok yerleşimli kodların (~%39) ikinci ve
+-- sonraki adları aranamaz kalırdı.
+--
+-- İki taraflı joker hiçbir btree indeksini kullanamaz; GIN + trigram bunu yapabilen tek yapı.
+-- Aynı dosyadaki önek ölçümünün gösterdiği şey burada da geçerli: 16.878 satırda indekssiz bir
+-- `ilike` her tuş vuruşunda tam tarama demektir ve bu yol tam olarak tuş yoludur.
+create index postal_code_place_places_search
+  on public.postal_code_place using gin (places_search extensions.gin_trgm_ops);
 
 -- Referans verisi herkese açık okunur: yer çözümü giriş yapmamış ziyaretçi için de çalışır ve
 -- burada kişisel veri yoktur (kamuya açık coğrafi liste).

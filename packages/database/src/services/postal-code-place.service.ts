@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
-import { normalizePostalCode } from '@lezzet/helper';
+import { normalizePlaceName, normalizePostalCode } from '@lezzet/helper';
 import { DeliveryZonePostalCodeService } from './delivery-zone.service';
 
 /**
@@ -89,18 +89,76 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
    * **Ülke süzgeci alınmaz:** müşteri ülke seçmiyor (19.16b); önek hangi ülkeye düşerse gelsin,
    * ayrımı yer adı ve ülke ile müşteri yapar.
    */
-  async searchPrefix(prefix: string, limit = 8): Promise<PostalCodeSuggestion[]> {
+  async search(term: string, limit = 8): Promise<PostalCodeSuggestion[]> {
+    /**
+     * **İKİ DAL, TEK KAPI** (`OB-03` · kullanıcının arayüz testi 14.08).
+     *
+     * Kapı bir dönem yalnız kod öneki arıyordu (adı da `searchPrefix`ti) ve rota kurarken bunun
+     * bedeli ölçüldü: operatör posta kodunu BİLMİYOR. "Strasbourg" yazınca sıfır sonuç alıyordu,
+     * yani kodu bilmeyenin hiçbir yolu yoktu.
+     *
+     * Dal seçimi terimin KENDİSİNDEN okunuyor, çağırandan bayrak istenmiyor: bir bayrak, onu
+     * geçirmeyi unutan ilk çağrıda sessizce eski davranışa düşerdi. Ölçüt basit ve iki pazarımız
+     * için kesin — FR ve DE kodları tamamen sayısaldır, dolayısıyla harf içeren bir terim asla bir
+     * kod olamaz.
+     *
+     * Kod dalı BİREBİR eskisi gibi kaldı: önek indeksi, aynı tavan, aynı sıralama. Yani bu
+     * değişiklik yalnız EKLER — sayısal terimle gelen üç çağıranın (adres formu, mobil öneri ucu,
+     * rota seçicisi) davranışı değişmiyor.
+     */
+    const byName = /\p{L}/u.test(term);
+    return byName ? this.searchByPlace(term, limit) : this.searchByCode(term, limit);
+  }
+
+  /** Kodun ilk haneleriyle arama — önek indeksi (`postal_code_place_code`) üstünde. */
+  private async searchByCode(prefix: string, limit: number): Promise<PostalCodeSuggestion[]> {
     // Tek harflik önek 16.9k satırın onda birini gezdirir ve hiçbir şey ayırt etmez (ölçüldü:
     // `6%` → 11,7 ms, `672%` → 0,11 ms). Kısa öneki reddetmek başarım değil ANLAM meselesi:
     // "6" hiçbir yeri işaret etmiyor.
     const normalized = normalizePostalCode(prefix);
     if (normalized.length < 2) return [];
 
-    const rows = await this.getAll(undefined, {
-      prefixFilters: [{ field: 'postalCode', value: normalized }],
-      orderBy: 'postalCode',
-      limit,
-    });
+    return this.enrich(
+      await this.getAll(undefined, {
+        prefixFilters: [{ field: 'postalCode', value: normalized }],
+        orderBy: 'postalCode',
+        limit,
+      }),
+    );
+  }
+
+  /**
+   * **Yerleşim adıyla arama** (`OB-03`) — `places_search` üstünde parça araması.
+   *
+   * Terim `normalizePlaceName` ile normalleşiyor; kolonun kendisi migration'daki
+   * `place_search_text()` ile AYNI kuralla üretilmiş (`0033` künyesi). İki taraf aynı kuralı iki
+   * dilde uyguluyor ve ayrışmaları sessiz bir arıza olurdu — "Hœnheim" yazan operatör kendi
+   * kaydını bulamazdı. Bu yüzden TS tarafındaki kural `@lezzet/helper`a taşındı: iki paket de
+   * onu okuyor.
+   *
+   * **Neden ÖNEK değil PARÇA:** `places_search` kodun BÜTÜN adlarını yan yana taşıyor
+   * ("bischheim hoenheim"); önek araması yalnız ilkini bulur ve çok yerleşimli kodların (~%39)
+   * ikinci adı aranamaz kalırdı. Trigram indeksi (`postal_code_place_places_search`) bunun için var.
+   *
+   * Eşik ÜÇ harf, kodun ikisine karşılık: iki harflik bir ad parçası ("st") yüzlerce yerleşime
+   * uyar ve tavana takılan liste rastgele bir kesitle döner — cevap gibi görünen bir gürültü.
+   * Trigram indeksinin kendi birimi de üç harftir; kısa terim indeksi zaten kullanamaz.
+   */
+  private async searchByPlace(term: string, limit: number): Promise<PostalCodeSuggestion[]> {
+    const normalized = normalizePlaceName(term);
+    if (normalized.length < 3) return [];
+
+    return this.enrich(
+      await this.getAll(undefined, {
+        searchFilters: [{ field: 'placesSearch', query: normalized }],
+        orderBy: 'postalCode',
+        limit,
+      }),
+    );
+  }
+
+  /** İki dalın ORTAK kuyruğu: rota üyeliğini işaretler ve sıralar. */
+  private async enrich(rows: PostalCodePlace[]): Promise<PostalCodeSuggestion[]> {
     if (rows.length === 0) return [];
 
     // İkinci tur YALNIZ bulunan kodlar için (en çok `limit` tane) — kod başına sorgu N+1 olurdu.

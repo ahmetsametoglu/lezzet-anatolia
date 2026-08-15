@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { placesLabel } from './labels';
 import type { ZoneCodeState, ZoneMapPoint, ZoneMapProps } from './zone-map-model';
 
 /**
@@ -101,14 +102,29 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
 }
 
 /**
+ * KALICI etiketin taşıdığı en fazla yerleşim adı (`OB-04`). Kalanı sayılır (`+2`), susturulmaz.
+ *
+ * İki değil de üç olmasının sebebi ölçüm: etiketler yalnız z13'ten sonra kalıcı ve o kademede
+ * görüş alanında ~14 kod var (`FREE_CODE_MIN_ZOOM` tablosu) — üç ad haritayı örtmüyor. Üzerine
+ * gelince açılan ipuçta tavan YOK; oradaki soru zaten "burası tam olarak neresi".
+ */
+const LABEL_MAX_PLACES = 3;
+
+/**
  * Etiket metni — ad varsa kodla birlikte, yoksa yalnız kod; gerekçe varsa arkasına.
  *
  * Gerekçe ÜZERİNE GELİNCE okunuyor ve bu bilinçli: haritada kalıcı olarak yazılsaydı önerilen her
  * noktanın yanında bir cümle dururdu ve harita okunmaz olurdu. Soru sırayla geliyor — önce "nerede",
  * sonra "neden".
+ *
+ * **`permanent` iki farklı metin üretiyor** (`OB-04`): kalıcı etiket dar (üç ad), üzerine gelince
+ * açılan ipucu TAM. Leaflet katman başına tek ipucu bağlıyor, yani ikisini aynı anda taşıyamayız —
+ * ama gerek de yok: kalıcı etiket zaten hover'ın yerine geçiyor, dolayısıyla her yakınlıkta
+ * operatörün gördüğü metin o anki soruya uygun oluyor.
  */
-function labelOf(point: ZoneMapPoint): string {
-  const head = point.place ? `${point.postalCode} · ${point.place}` : point.postalCode;
+function labelOf(point: ZoneMapPoint, permanent: boolean): string {
+  const where = placesLabel(point.places ?? [], permanent ? LABEL_MAX_PLACES : undefined);
+  const head = where ? `${point.postalCode} · ${where}` : point.postalCode;
   return point.note ? `${head} — ${point.note}` : head;
 }
 
@@ -199,7 +215,7 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
 
       for (const point of points) {
         L.circleMarker([point.lat, point.lng], styleOf(stateOf(point)))
-          .bindTooltip(labelOf(point), { permanent: labelsOn, direction: 'right', offset: [9, 0] })
+          .bindTooltip(labelOf(point, labelsOn), { permanent: labelsOn, direction: 'right', offset: [9, 0] })
           .on('click', () => pickRef.current(point))
           .addTo(layer);
       }

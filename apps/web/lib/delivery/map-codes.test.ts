@@ -58,16 +58,29 @@ describe('kesme SESSİZ kalmaz', () => {
   });
 });
 
-describe('etiket adı', () => {
-  it('çok yerleşimli kodda ad NULL — keyfi bir seçim otorite gibi okunurdu', async () => {
-    // `places[0]` bu tabloda bir kez denendi ve yanlışlığı görünmüyordu (67800 → "Strasbourg",
-    // orası Bischheim/Hœnheim). Alternatif "hepsi" değil, hiçbiri: etiket yalnız kodu gösterir.
+describe('yerleşim adları', () => {
+  /**
+   * **Sözleşme 15.08'de DEĞİŞTİ** (`OB-04`, kullanıcının arayüz testi).
+   *
+   * Bu blok eskiden tersini çiviliyordu: *"çok yerleşimli kodda ad NULL"*. O karar `places[0]`
+   * hatasına karşı alınmıştı ve o yarısı hâlâ doğru — keyfi bir ilk ad otorite gibi okunur
+   * (`67800` "Strasbourg" değil, Bischheim/Hœnheim). Ama seçilen alternatif ("hepsi değil hiçbiri")
+   * kodların ~%39'unu haritada adsız bırakıyordu ve operatör nereye baktığını göremiyordu.
+   *
+   * Yeni kural: okuma **karar vermez**, ham listeyi taşır. Kaç adın yazılacağı çizim anında
+   * veriliyor (`placesLabel`) — kalıcı etiket dar, üzerine gelince açılan ipucu tam.
+   */
+  it('adlar HAM geçer — okuma kırpmaz, seçmez, tek ada indirmez', async () => {
     const { points } = await readPostalCodesForMap({ bbox: STRASBOURG });
-    const cok = points.find((p) => p.place === null);
-    const tek = points.find((p) => p.place !== null);
+    expect(points.length).toBeGreaterThan(0);
 
-    // Strasbourg çevresinde her iki hâl de var; ikisi de bulunamazsa test bir şey sınamıyor demektir.
-    expect(cok ?? tek).toBeDefined();
-    if (tek) expect(typeof tek.place).toBe('string');
+    // Her nokta bir dizi taşır: "ad yok" boş dizidir, `null` değil — okuyan taraf dallanmasın.
+    for (const point of points) expect(Array.isArray(point.places)).toBe(true);
+
+    // Asıl iddia: çok yerleşimli kod ARTIK adsız değil. Strasbourg çevresi bu hâli içeriyor
+    // (kodların ~%39'u çok yerleşimli); hiç bulunamazsa test bir şey sınamıyor demektir.
+    const cok = points.find((p) => p.places.length > 1);
+    expect(cok, 'Strasbourg kutusunda çok yerleşimli kod bekleniyordu').toBeDefined();
+    expect(cok!.places.every((name) => name.length > 0)).toBe(true);
   });
 });

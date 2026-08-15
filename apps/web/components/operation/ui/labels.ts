@@ -32,3 +32,33 @@ export { COUNTRY_LABELS };
 
 /** Ülke seçicisinin seçenekleri — sıra enum'un sırasıdır (tek kaynak). */
 export const COUNTRY_OPTIONS = CountryEnum.options.map((c) => ({ value: c, label: COUNTRY_LABELS[c] }));
+
+/**
+ * **Bir posta kodunun yerleşim adları, okunur hâlde** (`OB-04`, kullanıcının arayüz testi 14.08).
+ *
+ * ── NEDEN BURADA, `domain-core`'da DEĞİL ────────────────────────────────────
+ * `placeLabel` (motor) *"bu kodun tartışmasız bir adı var mı"* sorusunu cevaplar ve çok yerleşimli
+ * kodda `null` döner. Künyesi bu fonksiyonu adıyla tarif ediyor:
+ *
+ * > *"`null` gördüğünde ne yazılacağı — liste mi, ilk üç ad + '+X' mi, çıplak kod mu — **ekranın
+ * > kararıdır ve `places` onun elinde.**"*
+ *
+ * Yani ayrım baştan tasarlanmıştı; eksik olan, okumaların `places`'i ekrana hiç GEÇİRMEMESİydi —
+ * `placeLabel`e çevirip diziyi atıyorlardı, dolayısıyla ekranın elinde bir şey kalmıyordu ve çok
+ * yerleşimli kod (kodların ~%39'u) haritada adsız görünüyordu.
+ *
+ * ── NEDEN "İLKİNİ YAZ" DEĞİL ────────────────────────────────────────────────
+ * `places[0]` bir kez denendi ve yanlıştı: keyfi seçim otorite gibi okunur — `67800` "Strasbourg"
+ * değil, Bischheim/Hœnheim. Hepsini yazmak dürüsttür; kırpma gerektiğinde **kaç tanesinin
+ * gizlendiği sayılır** (`+2`), susturulmaz.
+ *
+ * `max` çağıranın kararı, çünkü iki yer iki farklı yüke dayanır: kalıcı harita etiketi dar
+ * (noktaların üstünü örtmemeli), üzerine gelince açılan ipucu geniş (soru zaten "burası neresi").
+ *
+ * `null` = ad bilinmiyor (`places` boş). Boş dizgi DEĞİL: çağıran "kodu tek başına yaz" diyebilsin.
+ */
+export function placesLabel(places: readonly string[], max = Number.POSITIVE_INFINITY): string | null {
+  if (places.length === 0) return null;
+  if (places.length <= max) return places.join(', ');
+  return `${places.slice(0, max).join(', ')} +${places.length - max}`;
+}

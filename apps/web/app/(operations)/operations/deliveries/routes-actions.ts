@@ -136,7 +136,10 @@ async function findConflict(
 export async function searchPostalCodesAction(term: string): Promise<ActionResult<PostalCodeSuggestion[]>> {
   try {
     await requireAdmin();
-    const rows = await new PostalCodePlaceService(serviceDb()).searchPrefix(term, 12);
+    // Terim HAM geçiyor (`OB-03`): kapı kodu mu adı mı aradığına terimin kendisinden karar veriyor.
+    // Burada normalleştirmek (eski hâl `normalizePostalCode` uyguluyordu) harfleri büyütüp yolu
+    // kod dalına kilitlerdi — operatör "Strasbourg" yazdığında yine sıfır sonuç alırdı.
+    const rows = await new PostalCodePlaceService(serviceDb()).search(term, 12);
     return { data: rows, error: null };
   } catch (error) {
     // `readable` DEĞİL, çıplak funnel — ve bu bilinçli (denetim S2): bu uç salt OKUMA yapıyor

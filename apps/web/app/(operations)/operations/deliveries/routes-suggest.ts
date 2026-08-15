@@ -1,4 +1,3 @@
-import { placeLabel } from '@lezzet/domain-core';
 import type { Country } from '@lezzet/types';
 import type { CodeStatsView, SuggestionView } from './routes-types';
 
@@ -112,8 +111,8 @@ export function buildSuggestions(
     rows.push({
       country: place.country,
       postalCode: place.postalCode,
-      // Ad KARARI motorun: çok yerleşimli kodda `null` — keyfi bir ilk ad otorite gibi okunur.
-      place: placeLabel(place.places) ?? undefined,
+      // Adlar HAM taşınıyor (`OB-04`): kırpma kararı çizim anında, `placesLabel` ile veriliyor.
+      places: place.places,
       lat: place.lat,
       lng: place.lng,
       waitingCount,

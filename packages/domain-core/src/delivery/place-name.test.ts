@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressAnomalies, cityMatchesPlaces, normalizePlaceName, placeLabel } from './place-name';
+import { addressAnomalies, cityMatchesPlaces, placeLabel } from './place-name';
 
 /**
  * Yer adının güvenilirliği (19.17).
@@ -28,19 +28,8 @@ describe('kodun tartışmasız adı var mı', () => {
   });
 });
 
-describe('yazım farkı anlam farkı değildir', () => {
-  it('ligatür açılır — müşteri "Hoenheim" yazar, veri "Hœnheim" tutar', () => {
-    expect(normalizePlaceName('Hœnheim')).toBe(normalizePlaceName('HOENHEIM'));
-  });
-
-  it('diyakritik ve tire silinir', () => {
-    expect(normalizePlaceName('Vitry-le-François')).toBe(normalizePlaceName('vitry le francois'));
-  });
-
-  it('Alman eszett açılır', () => {
-    expect(normalizePlaceName('Weißenburg')).toBe(normalizePlaceName('Weissenburg'));
-  });
-});
+// `normalizePlaceName`in kendi testleri `@lezzet/helper`a taşındı (`OB-03` · 15.08), fonksiyonla
+// birlikte. Aşağıdaki `cityMatchesPlaces` testleri onu dolaylı olarak zaten sürüyor.
 
 /**
  * Adres tutarlılığı — YAŞANMIŞ arızanın kapısı.

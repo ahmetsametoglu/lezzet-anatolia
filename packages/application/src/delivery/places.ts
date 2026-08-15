@@ -28,10 +28,17 @@ export async function placesForPostalCode(db: Db, country: Country, postalCode: 
  * POSTA KODU ÖNERİLERİ — adres formunun kod alanı için (21.28).
  *
  * ── NEDEN BU KAPI, NEDEN UÇTA DEĞİL ──────────────────────────────────────────
- * Servisin `searchPrefix`i öneriyi zaten getiriyor (önek indeksi, rota adayı önce — künyesi orada);
+ * Servisin `search`i öneriyi zaten getiriyor (önek indeksi, rota adayı önce — künyesi orada);
  * burada yapılan tek şey sözleşme şekline indirgemek. Uçta yapılsaydı aynı indirgeme iki yüzeyde
  * (mobil uç + web eylemi) ayrı ayrı yazılırdı (CLAUDE §1). Web bugün önerileri kendi server
  * action'ından ham okuyor; benimsemesi web şeridinin işi.
+ *
+ * ── AD ARAMASI BU KAPIDAN GEÇMİYOR (OB-03 · 15.08) ──────────────────────────
+ * Servis artık harf gören terimi yerleşim adı sayıyor, ama burada terim `normalizePostalCode`ten
+ * geçiyor ve harfli girdi kod dalına düşüp boş dönüyor — yani **davranış değişmedi.** Bilerek:
+ * bu kapı müşteri adres formunu ve mobil ucu besliyor, ikisi de bu turun kapsamı dışında ve
+ * ikisinde de ölçüm yapılmadı. Genişletmesi `21.28`in web karşılığıyla aynı turda yapılır
+ * (`docs/talep/not-denetim-adres-posta-kodu-secilebilir.md`).
  *
  * ── DEPO TABLOSUNA BAKILMAZ (kullanıcı kararı 10.08) ─────────────────────────
  * İlk yazımda satır bir de `serviced` taşıyordu — "bu ülkeye fiilen gönderebiliyor muyuz",
@@ -40,7 +47,7 @@ export async function placesForPostalCode(db: Db, country: Country, postalCode: 
  * buradan düştüğü için kapı da tek sorguya indi.
  */
 export async function suggestPlaces(db: Db, prefix: string): Promise<PlaceOption[]> {
-  const rows = await new PostalCodePlaceService(db).searchPrefix(normalizePostalCode(prefix));
+  const rows = await new PostalCodePlaceService(db).search(normalizePostalCode(prefix));
   return rows.map((row) => ({
     country: row.country,
     postalCode: row.postalCode,
