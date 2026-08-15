@@ -49,6 +49,9 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
       image: { url: null, crop: CROP_CENTER },
     },
     variants: [productVariant(1), productVariant(2)],
+    /* Fiyatı olan EN UCUZ boy — burada 1. boy (890 vs 1780). Sunucu bu ölçütü kendisi uygular
+       (`primaryVariantOf`); fikstür yalnız sonucunu taşır, kuralı tekrar etmez. */
+    primaryVariantId: uuid(1101),
     declaration: {
       ingredients: [
         { text: 'Buğday unu ', strong: false },

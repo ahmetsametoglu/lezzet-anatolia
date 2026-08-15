@@ -723,12 +723,28 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
 
 ## 5. Fiyat ve sayı tutarlılığı
 
-- [ ] **MB-20 · Katalog kartındaki fiyat ile detayın açılış fiyatı farklı.** **Ölçüldü:** kart
+- [~] **MB-20 · Katalog kartındaki fiyat ile detayın açılış fiyatı farklı.** **Ölçüldü:** kart
   *4,11 €* gösterdi, detay *6,80 €* (450g) seçili açıldı. Kartta **"…'dan" eki yok** — oysa aynı
   ürün sayfasında aile kartı *"Cevizli 4,82 €'dan"* diye doğru yazıyor.
   **Zaten açık bir talep var:** `docs/talep/musteri-liste-fiyati-baslangic.md` (denetim → müşteri,
   09.08) aynı iki maddeyi web için istiyor: (1) kartta "…'dan" eki, yalnız çok boylu üründe;
   (2) detay AYNI boyu seçili açsın. **Native yüzeyde de aynen geçerli** ve burada ölçüldü.
+
+  **(2) KAPANDI (15.08), görev `(21.53)` — ve sebep kanıtlandı.** MB-28'in sebebi aranırken çıktı:
+  mobil detay açılış boyunu `variants[0]`dan seçiyordu, oysa kartta yazan fiyat `primaryVariantOf`
+  ile (fiyatı olan EN UCUZ aktif boy) hesaplanıyor. `variants` listesi `sort_order`da, yani
+  operatörün sırasında ve fiyatı bilmiyor — ikisi ayrışınca kart bir fiyat, detay başka bir fiyat
+  gösteriyordu. **Web müşteri yüzeyi aynı kararı `08.10`'da almıştı**
+  (`product-client.tsx:45` → `primaryVariantId ?? variants[0]`); mobil geride kalmıştı çünkü
+  **alan mobil sözleşmesinde hiç yoktu** ve `CatalogProductDetailSchema.parse` onu düşürüyordu.
+  Yapılan: `primaryVariantId` sözleşmeye eklendi (uç değişmedi — gövde zaten taşıyordu),
+  ekran onu okuyor. **Cihazda doğrulandı:** aynı ürün (`baklava-with-pistachio`) kartta 4,11 €,
+  detay **225g / 4,11 €** seçili açılıyor (eskiden 450g / 6,80 €); `18,27 €/kg` de 225g'ı doğruluyor.
+  Boy sırası bilerek DEĞİŞMEDİ (`450 · 225 · 2500 · 1250`) — `08.10` kararı: sıra operatörün.
+
+  **(1) AÇIK ve web'e bağlı:** kartta "…'dan" eki. Motor tarafı hazır (`fromPriceCents` artık
+  gerçekten en ucuz boyu gösteriyor, `08.10`'un yan kazancı); kalan iş metin ve iki yüzeyde birden
+  yapılmalı — talep dosyası açık.
 
 - [x] **MB-21 · Sepette asgari sepet uyarısı ekrandaki toplamla çelişiyor** → **KAPANDI (11.08).**
   **Ölçüldü:** ekranda `Toplam 3,80 €`, hemen altında `Asgari sepet 40,00 € — 33,20 € eksik`. Eksik,
@@ -875,8 +891,24 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   görünmüyor. Aynı karede MB-58a'nın ters yönü de kanıtlandı — girişli kullanıcıda Keşif daveti
   GÖRÜNÜYOR (misafirde 12:08'de gizliydi).
 
-- [ ] **MB-28 · Ürün varyantlarının sırası düzensiz.** Ölçülen sıra: `450g · 225g · 2500g · 1250g`
-  — ne artan ne azalan. MB-20 ile aynı turda (hangi boyun seçili açılacağı kararıyla birlikte).
+- [x] **MB-28 · Ürün varyantlarının sırası düzensiz.** Ölçülen sıra: `450g · 225g · 2500g · 1250g`
+  — ne artan ne azalan.
+  → **KAPANDI (15.08), görev `(21.53)` — MOBİL ARIZASI DEĞİL, kod değişikliği YOK.**
+  Okuma zaten sıralı: `catalog/product-context.ts:64` varyantları `sortOrder`a, eşitlikte
+  `createdAt`e göre diziyor. Ekrandaki sıra veritabanındaki `sort_order`ın kendisi — ürün
+  `11850393-…` için ölçüldü: `0→450g · 1→225g · 2→2500g · 3→1250g`. Makine doğru, veri öyle
+  yazılmış; **yerel veri sahte olduğu için buradan iş çıkarımı yapılmadı** (CLAUDE.md).
+  **Ve sıranın operatörde kalması ZATEN KARARA BAĞLANMIŞ** — `08.10` / commit `da91ea97`
+  (kullanıcı hatırlattı, 15.08): *"`sort_order`'A DOKUNULMADI ve dokunulmamalı: o kolonu detayın
+  boy seçicisi, mobil ana ekran ve fikirler şeridi de okuyor — fiyata bağlansaydı operatör '1 kg'ı
+  öne al' diyemezdi."* Yani "ağırlığa göre sırala" diye bir seçenek YOK; o karar verilmiş.
+  Değişen şey sıra değil, **hangi boyun fiyatının kartta yazacağıydı** (`primaryVariantOf`).
+  **Asıl açık operasyon alanında:** `sort_order`u yazan tek metot (`syncVariants`,
+  `product-variant.service.ts:55`) kaynak ağacında HİÇ ÇAĞRILMIYOR — yani `08.10`'da operatöre
+  bırakılan kaldıraç bugün operatörün elinde değil. Not düşüldü:
+  `docs/talep/not-operasyon-varyant-sirasini-kimse-yazmiyor.md`.
+  **Bu turun asıl kazancı MB-20'ye gitti:** sebebi ararken mobilin `primaryVariantId`i hiç
+  okumadığı bulundu — aşağıya bak.
 
 - [ ] **MB-29 · Görselsiz koleksiyon/paket kartında ekranın yarısı kadar tek harf çiziliyor**
   ("Y", "F"). Yedek gösterim bilinçli ama fotoğraflı kartların yanında arıza gibi duruyor.
@@ -1324,9 +1356,14 @@ defterde turun toplamı). Alan sözleşmede hazır, bağlaması tek satır; koor
 ~~**MB-03 · MB-13** ölçümü kimin yapacağı ilan edilmeli.~~ → **İLAN EDİLDİ:** `cihaz` şeridi aldı
 (tabloda satırı var, 11.08 · 12:19). Boşta duran kalem değil.
 
-**MB-20 · MB-28** tek karara bağlı (§11.C "birincil boy") ve **web şeridiyle ortak** — açık talep
-`docs/talep/musteri-liste-fiyati-baslangic.md`. İki yüzey ayrışmasın diye tek turda kapanmalı;
-sahibi web ile mobil arasında `koordinasyon-web-mobil.md`den kararlaştırılacak.
+~~**MB-20 · MB-28** tek karara bağlı (§11.C "birincil boy") ve **web şeridiyle ortak**.~~
+→ **BÜYÜK KISMI ÇÖZÜLDÜ (15.08, görev `(21.53)`) ve "karar bekliyor" tespiti YANLIŞTI:** karar
+`08.10`'da zaten verilmişti (birincil boy = fiyatı olan en ucuz aktif boy, `primaryVariantId`;
+sıra ise operatörün `sort_order`ı). Web müşteri yüzeyi bunu 10.08'den beri uyguluyordu; mobil
+geride kalmıştı çünkü alan mobil sözleşmesinde yoktu. **MB-28 kapandı** (arıza değildi),
+**MB-20'nin (2). maddesi kapandı** (detay artık kartla aynı boyu açıyor, cihazda doğrulandı).
+**Açık kalan tek şey MB-20'nin (1). maddesi:** kartta *"…'dan"* eki — metin işi, iki yüzeyde
+birden yapılmalı, açık talep `docs/talep/musteri-liste-fiyati-baslangic.md`.
 
 **MB-04 · MB-12 · MB-23 · MB-31** kod işi değil, **karar** işi (§11 sonu). Kararlar verilmeden
 kimse almasın.

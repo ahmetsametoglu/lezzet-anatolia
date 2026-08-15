@@ -2548,6 +2548,64 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Ölçüm için kitaplığa konan iki iz de geri alındı — `node_modules` commit'e girmez ama
   **ölçüm bitince geri alınmayan yama, bir sonraki ajanın açıklayamayacağı bir davranıştır.**
 
+- [x] (21.53) **VARYANT SIRASI ARIZA DEĞİLMİŞ — ama sebebi ararken KARTLA DETAYIN FİYAT ÇELİŞKİSİ çıktı (MB-28 + MB-20/2)**
+  `touches:` `packages/types/src/contracts/catalog-api.schema.ts` ·
+  `apps/mobile/src/screens/product/{product-detail-screen.tsx,product-fixture.ts}`
+
+  Şikâyet: ürün detayında boylar `450g · 225g · 2500g · 1250g` sırasıyla çıkıyor, ne artan ne
+  azalan. İlk refleks "mobil sıralamıyor" demekti; ölçüm bunu çürüttü.
+
+  **Okuma zaten sıralı:** `packages/application/src/catalog/product-context.ts:64` varyantları
+  `sortOrder`a, eşitlikte `createdAt`e göre diziyor. Ekranda görünen şey veritabanındaki
+  `sort_order`ın kendisi — ürün `11850393-564f-477e-b7a5-b18c937aca64` için doğrudan okundu:
+  `0→450g · 1→225g · 2→2500g · 3→1250g`. **Yerel veri sahte olduğu için buradan iş çıkarımı
+  yapılmadı** (CLAUDE.md); ölçüm yalnız "makine mi bozuk, veri mi böyle" sorusunu yanıtladı.
+
+  **Sebebi ararken çıkan asıl açık — ve alanı bu şerit DEĞİL:** `sort_order`u yazan tek metot
+  `ProductVariantService.syncVariants` (`product-variant.service.ts:55`, `sortOrder: i` satır 76)
+  ve kaynak ağacında **hiç çağıranı yok** — yalnız kendi testi çağırıyor (`apps/web/app`,
+  `apps/backend/src`, `packages/application/src`, `scripts` tarandı: sıfır). Yani bugün hiçbir
+  ekran varyant ekleyemiyor, düzenleyemiyor ya da sıralayamıyor; varyantlar yalnız seed'den
+  geliyor ve operatör bir ürünün boylarını yeniden dizemiyor. Ürün formu
+  (`operations/products/tabs/product/product-form-dialog.tsx:105`) varyantlara yalnız `id`
+  üzerinden bakıyor.
+
+  **Sıranın operatörde kalması ZATEN KARARA BAĞLIYMIŞ — kullanıcı hatırlattı (15.08).**
+  `08.10` / commit `da91ea97`: *"`sort_order`'A DOKUNULMADI ve dokunulmamalı: o kolonu detayın boy
+  seçicisi, mobil ana ekran ve fikirler şeridi de okuyor — fiyata bağlansaydı operatör '1 kg'ı öne
+  al' diyemezdi."* **Bu, bir önceki turda kullanıcıya sorduğum soruyu geçersiz kılıyor:**
+  "sıra operatörden mi gelsin, `net_weight_g`ten mi türesin" diye iki seçenek sunmuştum; ikincisi
+  zaten elenmiş bir seçenekti ve sormadan önce git geçmişine bakmalıydım. Not da düzeltildi.
+  Kalan tek açık: kaldıracı kullanacak arayüz yok
+  (`docs/talep/not-operasyon-varyant-sirasini-kimse-yazmiyor.md`).
+
+  ## Ve asıl kazanç: MB-20'nin ikinci maddesi kapandı
+
+  `08.10`'un ne yaptığına bakarken ayrım netleşti: **sıra operatörün, ama hangi boyun fiyatının
+  kartta yazacağı FİYATIN** — `primaryVariantOf` (fiyatı olan en ucuz aktif boy, depo boyutlu,
+  fiyatsızlar sona) ve sonucu `primaryVariantId`. Web müşteri detayı bunu 10.08'den beri okuyor
+  (`product-client.tsx:45`, künyesi: *"Ölçüt artık SUNUCUDAN geliyor… ekran hesap yapmıyor, okuyor"*).
+
+  **Mobil okumuyordu — ve okuyamıyordu:** `product-detail-screen.tsx` açılış boyunu `variants[0]`
+  seçiyordu, çünkü **alan mobil sözleşmesinde hiç yoktu**; uç gövdeyi zaten taşıyor ama
+  `CatalogProductDetailSchema.parse` bilinmeyen anahtarı düşürüyordu. Üstelik sözleşmenin kendi
+  künyesi eski varsayımı yazılı taşıyordu: *"ilk boy başlangıç fiyatıdır"* — `08.10` tam da bunu
+  çürütmüştü. Künye de düzeltildi.
+
+  **Belirti buydu ve ölçülmüştü (MB-20):** kart *4,11 €*, detay *6,80 € (450g)* seçili açılıyordu.
+  **Cihazda önce-sonra doğrulandı** (`baklava-with-pistachio`): kart 4,11 € → detay artık
+  **225g / 4,11 €** seçili açılıyor, sepet düğmesi de 4,11 €, `18,27 €/kg` 225g'ı doğruluyor.
+  Boy sırası bilerek değişmedi: `450 · 225 · 2500 · 1250` (operatörün sırası).
+
+  **Uç DEĞİŞMEDİ** — tek satır sözleşmede, tek satır ekranda. Fikstür sözleşme kilidini yaptı:
+  alan eklenince `product-fixture.ts` derlemede kırıldı ve güncellenmeden yeşile dönmedi.
+  **Testle korunmuyor:** mevcut fikstürde en ucuz boy zaten ilk boy, yani düzeltmenin değiştirdiği
+  dal örtülmüyor. Yeni test yazılmadı (kullanıcı kararı 11.08: istenmeden test yazılmaz);
+  doğrulama cihazda yapıldı ve kanıtı yukarıda.
+
+  **Doğrulama:** `tsc` üç pakette temiz (`types`, `mobile-api`, `mobile`);
+  `jest src/screens/product src/screens/catalog` **3 dosya / 39 test** geçti; cihaz turu yukarıda.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

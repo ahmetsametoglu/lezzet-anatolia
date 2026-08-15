@@ -257,7 +257,12 @@ export type CatalogFamilyMember = z.infer<typeof CatalogFamilyMemberSchema>;
  * alanıdır (seçim değişince fiyat değişir). Kartı genişletseydik sayfada iki fiyat kaynağı olurdu —
  * ürün düzeyindeki "başlangıç fiyatı" ile seçili boyunki — ve ikisi ilk çelişkide birbirini
  * yalanlardı. Kartın alanlarından burada duranlar (`unitLabel`, `purchaseMode`, `priceCents`)
- * `variants` listesinden okunur: ilk boy başlangıç fiyatıdır, boy sayısı satın alma yolunu söyler.
+ * `variants` listesinden okunur; boy sayısı satın alma yolunu söyler.
+ *
+ * **"İlk boy başlangıç fiyatıdır" varsayımı ÇÜRÜTÜLDÜ (`08.10`, commit `da91ea97`)** ve bu künyede
+ * de yazılıydı — düzeltildi. `variants` listesi `sort_order`dadır, yani OPERATÖRÜN sırasıdır ve
+ * fiyatı bilmez; başlangıç fiyatı ayrı bir ölçütle (`primaryVariantOf` — fiyatı olan en ucuz aktif
+ * boy, depo boyutlu, fiyatsızlar sona) seçilir ve `primaryVariantId` ile gelir.
  *
  * **`reviews` alanı YOK ve olmayacak** (17.1): yorum/puan geri bildirim modülüne ait — moderasyon
  * durumu ve "kim yazabilir" kararı orada yaşıyor.
@@ -271,8 +276,17 @@ export const CatalogProductDetailSchema = ProductSchema.pick({ id: true, slug: t
   gallery: z.array(CatalogImageSchema),
   /** Breadcrumb ve "benzer ürünler" başlığı için; **`null` = ürünün kategorisi yok**. */
   category: CatalogCategorySchema.nullable(),
-  /** Yalnız AKTİF boylar; tek boylu üründe seçim adımı hiç gösterilmez. */
+  /** Yalnız AKTİF boylar; tek boylu üründe seçim adımı hiç gösterilmez. Sıra `sort_order`dır —
+      OPERATÖRÜN sırası; "en ucuz" ya da "en küçük" DEĞİL (bkz. `primaryVariantId`). */
   variants: z.array(CatalogVariantSchema),
+  /**
+   * Sayfanın SEÇİLİ AÇILACAĞI boy — ölçüt sunucudan gelir, ekran hesap yapmaz (web müşteri
+   * yüzeyinin `08.10`'da aldığı kararın aynısı: `product-client.tsx:37`). Kartta yazan fiyat da
+   * bu boyunkidir; alan taşınmazsa ekran `variants[0]`a düşer ve **kartla detay farklı fiyat
+   * gösterir** — ölçülmüş belirti buydu (MB-20: kart 4,11 €, detay 6,80 € seçili açıldı).
+   * **`null` = hiçbir boyun fiyatı yok** (ürün satışa kapalı); ekran ilk boya düşer.
+   */
+  primaryVariantId: z.string().uuid().nullable(),
   declaration: CatalogDeclarationSchema,
   /** Ailenin öteki çeşitleri; boşsa bölüm çizilmez (bkz. `CatalogFamilyMemberSchema`). */
   family: z.array(CatalogFamilyMemberSchema),

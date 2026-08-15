@@ -186,7 +186,16 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   }
 
   const variants = detail.variants;
-  const variant: CatalogVariant | undefined = variants.find((v) => v.id === variantId) ?? variants[0];
+  /* AÇILIŞ BOYU SUNUCUDAN (`primaryVariantId`) — `variants[0]` DEĞİL. Liste `sort_order`dadır,
+     yani operatörün sırası, ve fiyatı bilmez; kartta yazan fiyat ise fiyatı olan EN UCUZ boyunkidir
+     (`primaryVariantOf`). İkisi ayrışınca kart bir fiyat, detay başka bir fiyat gösteriyordu —
+     ölçüldü (MB-20: kart 4,11 €, detay 6,80 €/450g seçili açıldı). Web müşteri yüzeyi aynı kararı
+     `08.10`'da almıştı (`product-client.tsx:45`); mobil sözleşmede alan yoktu, o yüzden geride
+     kalmıştı. Ölçüt EKRANDA HESAPLANMAZ, okunur — iki yüzeyin ayrışmaması buna bağlı. */
+  const variant: CatalogVariant | undefined =
+    variants.find((v) => v.id === variantId) ??
+    variants.find((v) => v.id === detail.primaryVariantId) ??
+    variants[0];
   const price = variant?.priceCents ?? null;
   const was = variant?.wasCents;
   const soldOut = variant?.soldOut ?? true;
