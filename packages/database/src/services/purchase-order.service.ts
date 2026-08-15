@@ -99,6 +99,12 @@ export class PurchaseOrderItemService extends BaseDbService<PurchaseOrderItem, P
  * (06 "Netleşecekler"). Servis veriyi tedarikçinin diliyle hazırlar, biçimlendirmeye karışmaz.
  */
 export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseOrderInsert, PurchaseOrderUpdate> {
+  /**
+   * `supplier:supplier_id(...)` + `items:purchase_order_item(...)` — kalemin altında **üç kat**
+   * daha var (`batches:stock(...)` → `warehouse:warehouse_id(...)`). Üst iki takma ad yeter: gömülü
+   * alt ağaç bütünüyle çevrilir (bkz. `BaseDbService.embeds`).
+   */
+  protected override readonly embeds = ['supplier', 'items'];
   private readonly items: PurchaseOrderItemService;
   private readonly mappings: SupplierProductService;
 

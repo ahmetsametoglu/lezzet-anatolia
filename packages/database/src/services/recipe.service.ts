@@ -28,6 +28,8 @@ import { RecipeItemService } from './recipe-item.service';
 export type CreateRecipeInput = Omit<RecipeInsert, 'slug'> & { items?: readonly RecipeItemEntry[] };
 
 export class RecipeService extends BaseDbService<Recipe, RecipeInsert, RecipeUpdate> {
+  /** `*,items:recipe_item(*)` (bkz. `BaseDbService.embeds`). */
+  protected override readonly embeds = ['items'];
   private readonly items: RecipeItemService;
 
   constructor(supabase: SupabaseClient) {

@@ -38,6 +38,15 @@ import { BaseDbService } from '../core/base.service';
  * yol açmak olurdu.
  */
 export class OrderItemBatchService extends BaseDbService<OrderItemBatch, OrderItemBatchInsert, OrderItemBatchUpdate> {
+  /**
+   * `order_item!inner(...)` ve içindeki `order:order!inner(...)` → `customer:user_profiles(...)`;
+   * ayrıca `stock:stock(purchase_price)` (bkz. `BaseDbService.embeds`).
+   *
+   * Takma ad **app tarafı yazımıyla** beyan edilir: PostgREST anahtarı `order_item`, çevrilmiş hâli
+   * `orderItem` — beyan `moneyFields` ile aynı düzende kalsın diye ikincisi yazılır.
+   */
+  protected override readonly embeds = ['orderItem', 'stock'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'order_item_batch', OrderItemBatchSchema, OrderItemBatchInsertSchema, OrderItemBatchUpdateSchema, false);
   }

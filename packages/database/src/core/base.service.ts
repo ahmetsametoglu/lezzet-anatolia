@@ -134,6 +134,27 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return field.slice(0, -'Cents'.length);
   }
 
+  /**
+   * Bu servisin projeksiyonlarında geçen **gömülü ilişki takma adları** — app tarafı yazımıyla
+   * (`items`, `variants`, `orderItem`), `moneyFields` ile aynı düzen.
+   *
+   * ── NEDEN BEYAN GEREKİYOR ────────────────────────────────────────────────────
+   * Dönüşüm 15.08'den beri **satır düzeyinde kalıyor**: anahtarlar çevrilir, değerlerin İÇİNE
+   * inilmez (`case-transformers` künyesi — jsonb anahtarı veridir, kolon adı değil). Gömülü ilişki
+   * (`alias:tablo(...)`) ise değer değil **başka bir tablonun satırıdır** ve alan adlarının
+   * çevrilmesi gerekir; bu yüzden tek istisna odur ve açıkça bildirilir.
+   *
+   * **Beyan unutulursa arıza SESSİZ DEĞİLDİR** ve varsayılanın ters çevrilme sebebi tam olarak bu:
+   * iç satır `snake_case` kalır, projeksiyon şeması onu tanımaz ve sorgu **o anda** patlar. Ters
+   * kurguda (jsonb'yi bildirmek) unutulan beyan veriyi sessizce bozardı.
+   *
+   * Boş bırakan servis hiçbir şey kaybetmez — gömülü seçimi yoksa inilecek bir şey de yok.
+   */
+  protected readonly embeds: readonly string[] = [];
+
+  /** Beyan Set'e bir kez çevrilir; her satırda yeniden kurulmasın. */
+  private embedSet?: ReadonlySet<string>;
+
   /** Alan adını DB kolonuna çevirir; para alanında `Cents` eki düşer. */
   private column(field: string): string {
     return camelToSnake(this.moneyFields.includes(field) ? BaseDbService.withoutCents(field) : field);
@@ -145,9 +166,10 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return fromCents(value);
   }
 
-  /** DB satırı → app modeli: snake→camel, sonra para kolonları cent'e iner. */
+  /** DB satırı → app modeli: snake→camel (yalnız satır düzeyi + beyan edilen gömmeler), sonra para kolonları cent'e iner. */
   private toApp(row: unknown): unknown {
-    const app = dbToApp<Record<string, unknown>>(row);
+    this.embedSet ??= new Set(this.embeds);
+    const app = dbToApp<Record<string, unknown>>(row, this.embedSet);
     if (!this.moneyFields.length || app === null || typeof app !== 'object') return app;
     for (const field of this.moneyFields) {
       const source = BaseDbService.withoutCents(field);

@@ -522,12 +522,20 @@ stable
 security definer
 set search_path = public
 as $$
-  select upper(regexp_replace(o.address_snapshot->>'postal_code', '\s', '', 'g')) as postal_code,
+  -- ── ANAHTAR camelCase (15.08) ──────────────────────────────────────────────────────────────
+  -- `address_snapshot` jsonb'si artık uygulamanın YAZDIĞI gibi saklanıyor: satır dönüştürücüsü
+  -- kolon adlarını çevirir ama değerin içine inmez (kullanıcı kararı; `case-transformers` künyesi).
+  -- Önceden diskte `postal_code` duruyordu çünkü çevirici jsonb'nin de içine iniyordu.
+  --
+  -- **Bu üç satır değişikliğin en sessiz kırılma noktasıydı:** eski anahtarla sorgu hata vermez,
+  -- `null` döner — `where … is not null` her satırı eler ve fonksiyon boş küme döndürür. Posta kodu
+  -- başına sipariş/ciro sayacı sıfırlanır, hiçbir yerde bir hata görünmez.
+  select upper(regexp_replace(o.address_snapshot->>'postalCode', '\s', '', 'g')) as postal_code,
          count(*)::int,
          round(sum(o.total) * 100)::bigint
     from public.analytics_order_base o
-   where o.address_snapshot->>'postal_code' is not null
-     and upper(regexp_replace(o.address_snapshot->>'postal_code', '\s', '', 'g')) = any (p_codes)
+   where o.address_snapshot->>'postalCode' is not null
+     and upper(regexp_replace(o.address_snapshot->>'postalCode', '\s', '', 'g')) = any (p_codes)
    group by 1;
 $$;
 

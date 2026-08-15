@@ -158,9 +158,24 @@ describe('önce ayır, sonra öde (07.4)', () => {
     );
     const second = await profiles.getById(customerId);
 
-    // jsonb anahtarları da case dönüşümünden geçer: `utm_source` okumada `utmSource` olur.
-    expect(first?.acquisitionSource).toMatchObject({ utmSource: 'instagram' });
+    /**
+     * **jsonb YAZILDIĞI GİBİ okunur — iddia 15.08'de düzeltildi.**
+     *
+     * Bu satır eskiden `utmSource` bekliyordu ve yorumu da onu anlatıyordu: *"jsonb anahtarları da
+     * case dönüşümünden geçer."* Geçiyordu — ama **tek yönde**: yazarken `utm_source` olduğu gibi
+     * gidiyor (`camelToSnake` alt tireye dokunmaz), okurken `snakeToCamel` onu `utmSource` yapıyordu.
+     * Yani uygulama bir şekil yazıp başka bir şekil okuyordu ve test tam olarak o asimetriyi
+     * çiviliyordu.
+     *
+     * Dönüşüm artık satır düzeyinde kalıyor (kullanıcı kararı; `case-transformers` künyesi): ne
+     * yazıldıysa o okunuyor. UTM etiketleri zaten adreste `utm_source` diye geliyor — onları
+     * "düzeltmek" bu katmanın işi değildi.
+     *
+     * *(`marketingConsent` iddiası dokunulmadan geçti: anahtarları tek kelime, çevirici onlara iki
+     * yönde de dokunmuyor — kuralın neden yıllarca fark edilmediğinin de cevabı bu.)*
+     */
+    expect(first?.acquisitionSource).toMatchObject({ utm_source: 'instagram' });
     expect(first?.marketingConsent).toMatchObject({ email: { granted: true, source: 'checkout' } });
-    expect(second?.acquisitionSource).toMatchObject({ utmSource: 'instagram' }); // google EZMEDİ
+    expect(second?.acquisitionSource).toMatchObject({ utm_source: 'instagram' }); // google EZMEDİ
   });
 });

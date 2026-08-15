@@ -60,20 +60,25 @@ export class SystemHealthService extends BaseDbService<
    * onlar için beş alan yetiyor. jsonb yolları `select`'te açılınca 5.000 satırlık bir pencere
    * megabaytlardan kilobaytlara iner — aynı sorgu, aynı indeks, yüzde birlik yük.
    *
-   * **Yollar snake_case:** `metrics` jsonb'si kaydedilirken anahtarları da dönüştürülüyor
-   * (`appToDb` derin çalışır), yani diskte `disk_used_pct` duruyor. Okurken `dbToApp` geri çeviriyor;
-   * burada araya girdiğimiz için diskteki adı yazmak zorundayız.
+   * **Yollar camelCase (15.08'de değişti):** `metrics` jsonb'si artık **uygulamanın yazdığı gibi**
+   * saklanıyor — dönüşüm satır düzeyinde kalıyor, değerin içine inmiyor (`case-transformers`
+   * künyesi, kullanıcı kararı). Önceki hâlde diskte `disk_used_pct` duruyordu ve bu künye onu bir
+   * mecburiyet olarak anlatıyordu (*"burada araya girdiğimiz için diskteki adı yazmak zorundayız"*);
+   * mecburiyetin kaynağı kalktı, yol adları da yazıldıkları hâle döndü.
+   *
+   * **Bu satırlar değişikliğin sessiz kırılma noktasıydı:** yol eskisi gibi kalsaydı sorgu hata
+   * vermez, yalnız `null` döndürürdü — grafik boş çizer, kimse sebebini aramazdı.
    */
   async trendSince(cutoff: string, limit = 6000): Promise<HealthTrendPoint[]> {
     return this.getAllAs(HealthTrendPointSchema, undefined, {
       select: [
         'at:created_at',
         'status',
-        'disk:metrics->system->>disk_used_pct',
-        'mem_used:metrics->system->>mem_used_mb',
-        'mem_total:metrics->system->>mem_total_mb',
-        'load1:metrics->system->load_avg->>0',
-        'cores:metrics->system->>cpu_count',
+        'disk:metrics->system->>diskUsedPct',
+        'mem_used:metrics->system->>memUsedMb',
+        'mem_total:metrics->system->>memTotalMb',
+        'load1:metrics->system->loadAvg->>0',
+        'cores:metrics->system->>cpuCount',
       ].join(','),
       rangeFilters: [{ field: 'createdAt', operator: 'gte', value: cutoff }],
       orderBy: 'createdAt',

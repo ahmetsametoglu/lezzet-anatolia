@@ -208,7 +208,10 @@ yeniden bakılır — o gün gelmeden yapılan iyileştirme, bugün var olmayan 
 doğruluk riskiyle ödemektir.
 
 **Bu projeye özgü not — jsonb ve eşzamanlılık:**
-- `LocalizedText` jsonb alanları taban sınıfta özel işlem gerektirmez; sıradan kolon gibi geçer (camelCase dönüşümü nesne içine inmez, değer olduğu gibi saklanır — dönüştürücünün jsonb değerini **çevirmemesi** sağlanır).
+- **jsonb değeri ÇEVRİLMEZ** — dönüşüm satır düzeyinde kalır: kolon adları çevrilir, değerlerin içine inilmez. Ölçüt tek cümlede: **kolon adı şemanın sözlüğüdür, jsonb anahtarı uygulamanın yazdığı veridir.** Adı çevirmek adlandırma köprüsüdür, veriyi çevirmek başka bir iştir.
+  - **Bu satır 15.08'e kadar bir NİYETTİ, koda hiç geçmemişti** (*"sağlanır"* diyordu, sağlanmış gibi anlatıyordu). Fark edilmemesinin sebebi kayıtlı: kural `LocalizedText` için yazılmıştı ve `tr`/`fr`/`de` anahtarlarında ne alt tire ne büyük harf var — dönüştürücü onlara iki yönde de dokunmuyor. Yani koruma, yazıldığı durumda zaten gereksizdi; gerekli olduğu durumlar (serbest anahtarlı ve dış kaynaklı jsonb) sonradan geldi ve o arada repoda **iki biçim yan yana** oluştu (`assistant_proposal.payload` snake_case, `error_log.context` camelCase).
+  - **Tek istisna gömülü ilişkidir** (`alias:tablo(...)`): o bir değer değil **başka bir tablonun satırıdır**, alan adları çevrilmeli. Servis onu `BaseDbService.embeds` ile beyan eder. Varsayılan bilinçli olarak TERS: inmemek esas, inmek beyan — çünkü unutulan bir jsonb beyanı veriyi **sessizce** bozar, unutulan bir gömme beyanı ise Zod'da **anında** patlar.
+  - Değişikliğin iki sessiz kırılma noktası ölçülerek bulunmuştu ve düzeltildi: sağlık grafiğinin `metrics->system->>...` yolları ve `analytics_postal_code_orders`ın `address_snapshot->>'postal_code'` okuması. İkisi de hata vermez, `null` döndürürdü.
 - Stok düşürme/ayırma **atomik** olmalı (bkz. `DOMAIN.md §4`): "oku-sonra-yaz" değil, koşullu update veya kilitli RPC. Bu mantık `domain-core` + bir DB fonksiyonu olarak yazılır, serviste değil.
 
 ---

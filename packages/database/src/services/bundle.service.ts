@@ -32,6 +32,8 @@ import { BundleItemService } from './bundle-item.service';
 export type CreateBundleInput = Omit<BundleInsert, 'slug'> & { items?: BundleItemEntry[] };
 
 export class BundleService extends BaseDbService<Bundle, BundleInsert, BundleUpdate> {
+  /** `*,items:bundle_item(*)` — gömülü kalem satırları (bkz. `BaseDbService.embeds`). */
+  protected override readonly embeds = ['items'];
   private readonly items: BundleItemService;
 
   constructor(supabase: SupabaseClient) {

@@ -45,6 +45,13 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   /** Kolonlar `stock.purchase_price` / `stock.offer_price` (euro numeric); app tarafı cent (STACK §8). */
   protected override readonly moneyFields = ['purchasePriceCents', 'offerPriceCents'];
 
+  /**
+   * `*,variant:product_variant(id,product:product(date_type,shelf_life_days))` — **iki katlı** gömme
+   * (bkz. `BaseDbService.embeds`). Yalnız üst takma ad beyan edilir: gömülü alt ağaç bütünüyle
+   * çevrilir, yani içteki `product` da kapsam altında (`date_type` → `dateType`).
+   */
+  protected override readonly embeds = ['variant'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'stock', StockSchema, StockInsertSchema, StockUpdateSchema);
   }

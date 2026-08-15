@@ -197,6 +197,16 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
  * ifade eder (0043 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur.
  */
 export class ProductListingService extends BaseDbService<ProductListingRow, never, never> {
+  /**
+   * `*,variants:product_variant(*)` + koleksiyon bağı (`listingSelect`) — bkz. `BaseDbService.embeds`.
+   *
+   * **Bu beyan ilk turda ATLANMIŞTI** ve arıza tam da tasarımın vaat ettiği gibi çıktı: gömülü
+   * satır `snake_case` kaldı, şema `variants[0].productId`i bulamadı ve sorgu **o anda** patladı
+   * (`ProductListing` müşteri kataloğunun ve mobil ucun okuma yolu). Ters varsayılanın gerekçesi
+   * buydu — beyanı unutmak veriyi sessizce bozmuyor, ekranı hemen kırıyor.
+   */
+  protected override readonly embeds = ['variants', 'collections'];
+
   constructor(supabase: SupabaseClient) {
     super(
       supabase,
@@ -246,6 +256,9 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
 }
 
 export class ProductService extends BaseDbService<Product, ProductInsert, ProductUpdate> {
+  /** `variants:product_variant(...)` + `collections:product_collections(...)` (bkz. `BaseDbService.embeds`). */
+  protected override readonly embeds = ['variants', 'collections'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'product', ProductSchema, ProductInsertSchema, ProductUpdateSchema);
   }

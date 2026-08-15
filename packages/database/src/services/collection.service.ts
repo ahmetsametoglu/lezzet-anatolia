@@ -40,6 +40,8 @@ interface EditCollectionInput extends Partial<ImageCropFields> {
  * (product_collections) Product ile birlikte task 3'te eklenir.
  */
 export class CollectionService extends BaseDbService<Collection, CollectionInsert, CollectionUpdate> {
+  /** `*,products:product_collections(product_id,position)` (bkz. `BaseDbService.embeds`). */
+  protected override readonly embeds = ['products'];
   private readonly links: ProductCollectionService;
 
   constructor(supabase: SupabaseClient) {

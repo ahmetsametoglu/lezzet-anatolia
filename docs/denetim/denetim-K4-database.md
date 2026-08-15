@@ -168,10 +168,29 @@ camel→snake, okurken snake→camel; şema camelCase görüyor, `parseProposalP
 arızayı değil, yalnız bir adlandırma tercihini düzeltmek için veri geçişi ister. Ama **kuralın
 yanlış olması kabul edilemez** — kural okunup güvenilen bir şeydir.
 
-**AÇIK TARTIŞMAYA TAŞINDI (kullanıcı kararı 10.08):** konu tek şeridi aşıyor — jsonb 30+ tabloda
-var ve dış kaynaklı gövdeler (Stripe webhook) de aynı yoldan geçiyor. Dört şerit de görüşünü
-yazacak: **`docs/talep/ortak-jsonb-case-cevrimi.md`**. Orada üçüncü bir seçenek doğdu (karma: dış
-kaynaklı olanlar korunur, kapalı sözlükler çevrilir) ve denetim görüşü ona kaydı.
+**KAPANDI — (a) uygulandı (kullanıcı kararı 15.08).** Tartışma `ortak-jsonb-case-cevrimi.md`de
+yürüdü; kullanıcı *"her tabanı yenilemek problem değil, en iyi çözüm hangisiyse onu uygulamak
+istiyorum"* dedi ve bedel kalkınca karar tasarım kalitesine kaldı.
+
+**İki denetim görüşü de ölçümle çürüdü — kayda geçiyor:**
+1. Denetim (c)'ye kaymıştı ve tek gerekçesi *"`webhook_event.payload` Stripe'ın ham gövdesidir"*di.
+   **Değilmiş:** oraya yazılan şey elle kurulmuş üç anahtarlık bir özet (`raw: { type, charge,
+   paymentIntent }`, `api/webhooks/stripe/route.ts`); imza doğrulaması da `req.text()` ile HAM gövde
+   üzerinde ve saklamadan ÖNCE yapılıyor. Yani korunacak bir ham gövde bugün hiç yok.
+2. İlk turdaki (b) görüşü *"gerçek bir arızayı değil yalnız adlandırma tercihini düzeltir"*
+   diyordu. Bu da eksikti: ölçüm **iki sessiz kırılma noktası** buldu — `system-health`in
+   `metrics->system->>disk_used_pct` yolları ve `analytics_postal_code_orders`ın
+   `address_snapshot->>'postal_code'` okuması. İkisi de hata vermez, `null` döner.
+
+**Uygulanan kurgu, talebin önerdiğinden FARKLI:** talep *"servis `jsonbFields` bildirsin"* diyordu;
+varsayılan ters çevrildi — çevirici **hiç inmez**, servis **gömülü ilişkileri** (`embeds`) bildirir.
+Gerekçe arızanın sesi: jsonb beyanı unutulursa veri sessizce bozulur, gömme beyanı unutulursa Zod o
+sorguda anında patlar. Beyan ayrıca elle yazılmış `select` dizesinin yanında, görünür yerde durur.
+
+Dokunulanlar: `case-transformers.ts` (satır düzeyi + `transformDeep` yalnız gömmeler) ·
+`base.service.ts` (`embeds`) · yedi serviste beyan (bundle · collection · product · recipe · stock ·
+order-item-batch · purchase-order) · `system-health` beş yolu · `0036_analytics_signals.sql` üç
+okuması · `STACK §211`. `db:refresh` kullanıcının.
 
 **Cevap (arka-uc):** *(görüş ortak dosyada)*
 
