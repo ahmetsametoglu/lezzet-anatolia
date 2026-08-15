@@ -1,9 +1,14 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { SkeletonFilterBar, SkeletonPageHeader, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { CONTROL_H } from '@/components/operation/ui/control';
+import { Skeleton, SkeletonFilterBar, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
  * Talepler ekranının ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
  * tarayıcıda ESKİ sayfayı bırakır ve operatör tıklamanın işlediğini anlamaz.
+ *
+ * Başlık GERÇEK `PageHeader` (15.08, emsal: fiyatlar — statik kimlik çubuklaştırılmaz). Alt satır
+ * sayaçtır (açık · işlemde) — veridir, çubuk kalır; "+ Elle talep" düğmesinin yerini çubuk tutar.
  *
  * İskelet ekranın gerçek iskeletini çiziyor — İKİ SÜTUN: solda kuyruk, sağda detay. Tek sütunluk
  * bir iskelet, yüklenme bitince yerleşimin sıçramasına yol açardı.
@@ -11,7 +16,9 @@ import { SkeletonFilterBar, SkeletonPageHeader, SkeletonRows, SkeletonText } fro
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Talepler yükleniyor">
-      <SkeletonPageHeader actions={['w-[104px]']} />
+      <PageHeader title="Talepler" subtitle={<Skeleton className="h-3 w-64" />}>
+        <Skeleton className={`${CONTROL_H.md} w-[104px] rounded-ops-btn`} />
+      </PageHeader>
       <SkeletonFilterBar count={4} />
       <div className="grid min-h-0 flex-1 grid-cols-[330px_1fr] overflow-hidden">
         <div className="min-h-0 overflow-hidden border-r border-ops-line">
