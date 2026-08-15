@@ -298,13 +298,45 @@ export function SkeletonTabs({
 }
 
 /**
+ * `SegmentedNav` (başlık barının içindeki görünüm hapı) yer tutucusu — `SkeletonTabs` ilkesinin
+ * kardeşi: kabuk gerçek kontrolden birebir (ray zemini, kenarlık, hap dolgusu), **etiketler GERÇEK
+ * metin** çünkü `loading.tsx` yazılırken bellidirler ve çubuğa çevirmek elde olan bilgiyi saklamak
+ * olurdu.
+ *
+ * Seçili hap İŞARETLENMEZ: hangi görünümde olduğumuz URL'den gelir ve o bilgi henüz elimizde yok —
+ * birini vurgulamak yanlış sekmeyi işaretlemek olurdu (`SkeletonTabs` ile aynı gerekçe).
+ */
+export function SkeletonSegmentedNav({ labels }: { labels: readonly string[] }) {
+  return (
+    <div className="flex flex-none items-center gap-0.5 rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-0.5" aria-hidden="true">
+      {labels.map((label) => (
+        <span
+          key={label}
+          className="rounded-md border border-transparent px-3.5 py-[7px] font-ops-display text-ops-sm font-semibold text-ops-body"
+        >
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Çip süzgeci şeridi — ilki dar ("Tümü"), gerisi geniş. `children` şeridin SAĞ yuvası: sekmeye
  * bağlı kontrollerin (arama, toplu eylem) yer tutucuları — gerçek şeritteki `ml-auto` grubun eşi
  * (fiyatlar 15.08); çizilmezse içerik gelince şeridin sağı bir anda dolar.
+ *
+ * `label` şeridin BAŞINDAKİ eksen adı ("Hesap", "Tip") ve gerçek metin basılır — statiktir, elde
+ * olan bilgiyi çubuklaştırmanın karşılığı yok (`SkeletonTabs labels` ile aynı ilke).
  */
-export function SkeletonFilterBar({ count, children }: { count: number; children?: ReactNode }) {
+export function SkeletonFilterBar({ label, count, children }: { label?: string; count: number; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft px-6 py-2.5">
+      {label ? (
+        <span className="mr-0.5 font-ops-display text-ops-micro font-semibold uppercase tracking-[0.08em] text-ops-faint">
+          {label}
+        </span>
+      ) : null}
       {Array.from({ length: count }, (_, i) => (
         <Skeleton key={i} className={`h-7 rounded-ops-chip ${i === 0 ? 'w-16' : 'w-24'}`} />
       ))}

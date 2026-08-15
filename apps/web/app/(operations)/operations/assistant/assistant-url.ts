@@ -1,9 +1,10 @@
 import type { ProposalMode } from '@lezzet/application';
+import { AssistantProposalKindEnum, type AssistantProposalKind } from '@lezzet/types';
 import type { QueueTab } from '@/lib/assistant/assistant-types';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
-// Asistan onay kuyruğunun URL SÖZLEŞMESİ (22.3) — iki soru taşır: **hangi sekmedeyim** ve
-// **hangi öneri açık**.
+// Asistan onay kuyruğunun URL SÖZLEŞMESİ (22.3) — üç soru taşır: **hangi sekmedeyim**, **hangi
+// tipi süzüyorum** ve **hangi öneri açık**.
 //
 // Seçili öneri adreste durur çünkü bu ekranın paylaşılan şeyi bir ÖNERİDİR ("şuna bir bak, onaylıyor
 // muyuz?"). Ayrıca detayı sunucunun okumasını sağlar: seçim istemcide tutulsaydı her tıklama bir
@@ -31,14 +32,36 @@ export const QUEUE_TAB_LABELS: Record<QueueTab, string> = {
   decided: 'Karar geçmişi',
 };
 
+/**
+ * TİP SÜZGECİ — kuyruğun üçüncü sorusu (kullanıcı isteği 15.08: *"bu öneri tiplerini tiplerine göre
+ * filtreleyemiyorum, bence böyle bir filtreyi hak ediyor bu sayfa"*).
+ *
+ * ── NEDEN SEKME DEĞİL, SÜZGEÇ ───────────────────────────────────────────────
+ * Sekmeler kuyruğun HÂLİNİ ayırıyor (bekleyen · düşen · arşiv) ve üçü de birbirini dışlayan üç ayrı
+ * iştir. Tip ise aynı işin içindeki bir daraltmadır: "bugün yalnız stok girişlerine bakacağım."
+ * On bir tipi sekmeye çevirmek on dört sekmelik bir bar üretirdi ve o barda asıl ayrım — hangi
+ * kararı verdiğim — kaybolurdu.
+ *
+ * ── KAPALI HÂL BOŞ DİZE ─────────────────────────────────────────────────────
+ * `'all'` gibi bir sözde-tip yazılmadı: o değer bir gün gerçek bir öneri tipiyle karışabilirdi ve
+ * `AssistantProposalKind` ile aynı kümede yaşamak zorunda kalırdı. Boş dize adreste de yazılmaz
+ * (varsayılan yazılmaz kuralı), yani süzgeçsiz görünümün adresi temiz kalır.
+ */
+export type KindFilter = AssistantProposalKind | '';
+
+/** Adresten kabul edilen tip değerleri — kaynak ENUM'un kendisi, elle yazılmış ikinci bir liste değil. */
+const KIND_FILTERS = ['', ...AssistantProposalKindEnum.options] as const satisfies readonly KindFilter[];
+
 export interface AssistantUrlState {
   /** Açık sekme. */
   tab: QueueTab;
+  /** Tip süzgeci; boş = tümü. */
+  kind: KindFilter;
   /** Açık önerinin kimliği; boş = seçim adreste taşınmıyor. */
   p: string;
 }
 
-const DEFAULTS: AssistantUrlState = { tab: 'pending', p: '' };
+const DEFAULTS: AssistantUrlState = { tab: 'pending', kind: '', p: '' };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,6 +76,8 @@ export function parseAssistantUrl(params: RawParams): AssistantUrlState {
   const p = one(params.p).trim();
   return {
     tab: oneOf(params.tab, QUEUE_TABS, DEFAULTS.tab),
+    // Tanınmayan tip sessizce "tümü"ne düşer: eskimiş bir bağlantı ekranı boş göstermemeli.
+    kind: oneOf(params.kind, KIND_FILTERS, DEFAULTS.kind),
     p: UUID.test(p) ? p : DEFAULTS.p,
   };
 }
@@ -64,10 +89,12 @@ export function parseAssistantUrl(params: RawParams): AssistantUrlState {
  * varlığın hangi ADRESTE olduğu operasyon yüzeyinin sözleşmesi (`STACK §4` — uygulama katmanı ekran
  * bilmez). Bu yüzden eşleme burada, kuyruğun kendi `*-url` dosyasında duruyor.
  *
- * **Devredilen üç tipte adres `?proposal=` taşır.** Hedef ekranlar bu parametreyi HENÜZ okumuyor —
- * yani bugün düğme operatörü doğru ekrana götürür ama formu doldurmaz. Düğmenin sözü de tam olarak
- * bu ("… ekranında aç", "hazır doldur" değil): kuyruğun asıl zararı zaten körlemesine uygulanan bir
- * kayıttı ve o kalktı. Ön doldurma sıradaki iş. BEKLEYEN(22.5)
+ * **Devir hâli BUGÜN BOŞ** (22.36 · 15.08): `zone_extend` son `handoff` tipiydi ve haritası
+ * diyaloğun içine gelince küme boşaldı — kuyruktaki on bir tipin on biri kendi yerinde karar alıyor
+ * (kanıtı `proposal.test.ts`, "hiçbir künye `handoff` değil" iddiası). Aşağıdaki `handoff` dalı yine
+ * de duruyor: `ProposalMode` o hâli taşımaya devam ediyor ve yarın bir tip gerçekten devredilirse
+ * (kararın konusu formda değil bir akışta olabilir) adresin kimlik taşıması gerekir. Dal silinseydi
+ * o gün öneri, kendisini taşımayan bir ekrana giderdi — bir kez yaşandı (`batch_offer`, 10.08).
  *
  * `null` dönen tek hâl vitrin işareti: uygulandığında açılacak ayrı bir kayıt yok, değişen şey
  * zaten var olan bir kaydın bir alanı.
@@ -121,6 +148,7 @@ const TARGET_SCREENS: Record<string, { path: string; open: string; list: string 
 export function assistantUrl(state: AssistantUrlState): string {
   const params = new URLSearchParams();
   if (state.tab !== DEFAULTS.tab) params.set('tab', state.tab);
+  if (state.kind) params.set('kind', state.kind);
   if (state.p) params.set('p', state.p);
   const qs = params.toString();
   return qs ? `${ASSISTANT_PATH}?${qs}` : ASSISTANT_PATH;

@@ -1,7 +1,7 @@
 import type { ProposalMode } from '@lezzet/application';
 import type { AssistantQueueRow, QueueTab } from '@/lib/assistant/assistant-types';
 import type { AssistantFormOptions } from '@/lib/assistant/form-options';
-import type { AssistantUrlState } from './assistant-url';
+import type { AssistantUrlState, KindFilter } from './assistant-url';
 
 /**
  * Asistan onay kuyruğu ekranının GÖRÜNÜM sözleşmesi.
@@ -61,6 +61,8 @@ export interface AssistantViewProps {
   busy: boolean;
   error: string | null;
   onTab: (tab: QueueTab) => void;
+  /** Tip süzgeci; boş dize = süzgeç kalkar. */
+  onKind: (kind: KindFilter) => void;
   onSelect: (id: string) => void;
   /**
    * Karar. `draft` YALNIZ kuyruğun içinde karar verilen tiplerde dolu (22.8) — gövdenin o an

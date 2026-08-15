@@ -209,10 +209,23 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     // `stock_intake` 13.08'de bu kümeden ÇIKTI (22.23): mal kabul satırları kuyruğun içine taşındı.
     // Devrin gerekçesi ("giren parti satılabilir olur, SKT o an sabitlenir; okunan miktar gözle
     // doğrulanmalı") kalkmadı — doğrulama hâlâ karardan önce, yalnız formun yeri değişti.
-    // Geriye TEK devir kaldı: bölge. Orada kararın konusu gerçekten formda değil HARİTADA.
-    for (const kind of ['zone_extend'] as const) {
-      expect(modeOf(kind)).toBe('handoff');
-    }
+    // `zone_extend` 15.08'de ÇIKTI (22.36) ve küme BOŞALDI: son devir gerekçesi *"hangi kod girsin
+    // sorusu haritasız cevaplanamaz"*dı ve doğruydu — ama çözüm haritayı diyaloğa getirmekmiş
+    // (`components/operation/form/zone-form/`), rota ekranına yollamak değil.
+    //
+    // Bu yüzden döngü değil İDDİA: kullanıcının kuralı (15.08) *"biz yönlendirme yapmıyoruz;
+    // doğrudan açılan diyaloğun içerisinde düzenlenecek ortak komponent yapıyoruz"* — ve bir
+    // kuralın kanıtı, o kuralın bozulduğu gün kırmızıya dönen bir satır olmalı. Boş bırakılmış bir
+    // döngü hiçbir şey doğrulamaz; yeni bir `handoff` künyesi sessizce geçerdi.
+    //
+    // Karşılaştırma `modeOf` üzerinden yapılıyor, `meta.mode` üzerinden DEĞİL: künye sözlüğü sabit
+    // olduğu için TypeScript alanı `'inline' | 'apply' | 'draft_then_edit'` diye daraltıyor ve
+    // `=== 'handoff'` satırı **derlenmiyor** (TS2367). Derleyicinin bu itirazı testten daha güçlü
+    // bir kanıt — ama kanıtı derleme hatasına bırakmak, künyeye yeniden `handoff` eklendiği gün
+    // sessizleşen bir güvence demekti. `modeOf` geniş `ProposalMode` döndürüyor: satır bugün de
+    // derleniyor, yarın da; ve o gün gelirse kırmızıya döner.
+    const devredilen = AssistantProposalKindEnum.options.filter((kind) => modeOf(kind) === 'handoff');
+    expect(devredilen).toEqual([]);
     // `inline` = gövdesi kuyruğun içinde çizilen tipler. Üçü de bir tur devredilmişti; formları
     // kuyruğa taşındıkça devir kalktı (`kind-meta` künyeleri). Yazan kapı yine varlığın kendi
     // eylemi, o yüzden `resultKey` burada da şart.
@@ -235,6 +248,15 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
     }
+    // `zone_extend` inline ama üstteki döngüde DEĞİL, çünkü `resultKey` taşımıyor — ve taşımaması
+    // doğru: uygulandığında yeni bir kayıt doğmuyor, var olan bölgenin kod listesi genişliyor.
+    // Köprü ancak doğan kaydın kimliğiyle kurulur; olmayan bir kimliğe anahtar uydurmak kuyruğa
+    // hiçbir yere gitmeyen bir bağlantı koyardı.
+    //
+    // Yokluğu burada AYRICA doğrulanmıyor: künye sabit olduğu için `KIND_META.zone_extend.resultKey`
+    // ifadesi hiç derlenmiyor (TS2339). Alan bir gün eklenirse satır derlenir ama bu döngüye de
+    // girmesi gerekir — orası zaten kırmızıya döner.
+    expect(modeOf('zone_extend')).toBe('inline');
     // `product_create` gövdeye taşındı ama ADAY doğurmaya devam ediyor: satış durumu seçicisi
     // kuyrukta yok. Etki cümlesinin o kısmı bu yüzden korunuyor — mod değişti, kısıt değişmedi.
     expect(KIND_META.product_create.impact).toContain('ADAY');

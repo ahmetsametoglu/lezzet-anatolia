@@ -8,7 +8,7 @@ import { inlineBodyOf } from './assistant-body';
 import { notifyCountOf } from './assistant-labels';
 import { AssistantDecisionDialog } from './assistant-decision-dialog';
 import { AssistantDesktop } from './assistant.desktop';
-import { assistantUrl, type AssistantUrlState } from './assistant-url';
+import { assistantUrl, type AssistantUrlState, type KindFilter } from './assistant-url';
 import type { AssistantData, DecisionKind } from './assistant-types';
 
 // Asistan onay kuyruğu client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız.
@@ -119,6 +119,15 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
         onTab={(tab: QueueTab) => {
           setNotice(null);
           go({ tab, p: '' });
+        }}
+        // Sekme değişince tip süzgeci DURUR (yukarıdaki `p: ''` ile karıştırılmasın): süzgeç "hangi
+        // işe bakıyorum" sorusunun cevabı ve o soru sekmeyle değişmiyor — stok girişlerini süzüp
+        // "peki bunların kararı ne olmuştu" diye arşive geçen operatör süzgecini elde tutmalı.
+        // Tanınmayan bir tip zaten adres ayrıştırmasında düşüyor; boş kalan bir ızgaranın da kendi
+        // cümlesi var ("bu süzgeçte öneri yok").
+        onKind={(kind: KindFilter) => {
+          setNotice(null);
+          go({ kind });
         }}
         onSelect={(p: string) => {
           setNotice(null);

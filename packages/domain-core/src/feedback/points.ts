@@ -46,6 +46,23 @@ export const POINTS_SETTING_KEYS: Record<EarnablePointsReason, string> = {
 export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
 /** Bir puanın CENT karşılığı — "500 puan = 5 €" cümlesi bu ikisinin çarpımıdır. */
 export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
+/** Günlük tavan — kapsamı `CAPPED_POINTS_REASONS`, sayısı ayardan. */
+export const POINTS_DAILY_CAP_KEY = 'points_daily_cap';
+
+/**
+ * Günlük tavanın VARSAYILANI — ayar satırı okunamazsa geçerli olan sayı.
+ *
+ * **Değer neden burada, öteki varsayılanlar `POINTS_DEFAULTS`teyken:** o tablo sebep başına ödül
+ * miktarını tutuyor ve `EarnablePointsReason` ile anahtarlanmış; tavan bir sebep değil, sebeplerin
+ * ÜSTÜNDE bir sınır. O tabloya sığdırmak, tipini bozmak pahasına olurdu.
+ *
+ * **Üç kopya bugün ayrıştı ve sabit tam bu yüzden var** (mobil şeridinin notu, 15.08): kullanıcı
+ * tavanı 100'den 270'e çıkardı; migration ve motor güncellendi, web'in iki kopyası 100'de kaldı.
+ * Hata veren bir şey yoktu — Ayarlar ekranı operatöre motorun uygulamayacağı bir eşiği gösteriyordu
+ * (yukarıdaki künyenin harfiyen tarif ettiği hâl). Sayı artık tek yerde; migration'daki `'270'` ise
+ * satırın kendisi, yedek değil.
+ */
+export const POINTS_DAILY_CAP_DEFAULT = 270;
 
 /**
  * **Bir komşu davetinden kaç komşu ödül doğurabilir** — `neighbor_invite.max_uses`in kaynağı.

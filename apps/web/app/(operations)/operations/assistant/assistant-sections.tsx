@@ -32,8 +32,22 @@ import type { AssistantRowView, DecisionKind } from './assistant-types';
  * anlamına gelmez, sorulmadığı anlamına gelir"*). Ötekilerin boşluğu ise yalnızca geçmişin henüz
  * oluşmamış olmasıdır — aynı cümleyi üçüne birden yazmak, operatörü olmayan bir işe bakmaya
  * gönderirdi.
+ *
+ * **`filtered` DÖRDÜNCÜ bir cümledir ve ayrı olması şart:** tip süzgeci açıkken boş kalan ızgaraya
+ * "bekleyen öneri yok" yazmak DÜPEDÜZ YANLIŞ olurdu — kuyrukta öneri var, operatörün süzgeci onları
+ * dışarıda bırakıyor. Aynı görüntüye iki farklı gerçeği bindirmek, ekranı okuyanın süzgeci
+ * unutmasına ve dolu bir kuyruğu boş sanmasına yol açar.
  */
-export function QueueEmpty({ tab }: { tab: QueueTab }) {
+export function QueueEmpty({ tab, filtered = false }: { tab: QueueTab; filtered?: boolean }) {
+  if (filtered) {
+    return (
+      <EmptyBlock
+        title="Bu süzgeçte öneri yok"
+        description="Seçili tip bu sekmede bir öneri taşımıyor. Şeritteki “Tümü” çipiyle süzgeci kaldırın."
+      />
+    );
+  }
+
   const [title, description] =
     tab === 'expired'
       ? ['Süresi geçen öneri yok', 'Kuyruktan düşen bir öneri olmadı.']
@@ -41,10 +55,13 @@ export function QueueEmpty({ tab }: { tab: QueueTab }) {
         ? ['Karar geçmişi boş', 'Henüz uygulanan ya da reddedilen bir öneri yok.']
         : ['Bekleyen öneri yok', 'Asistan çalışmıyor demek değil — sorulmadı demek. Bir şey hazırlaması için asistana yazın.'];
 
-  // Ortak `EmptyState` DEĞİL, çizimin kendi bloğu: sola yaslı ve sütunun ÜSTÜNDE. Ortak bileşen
-  // metni dikeyde ortalıyor ve 326 pikselik uzun bir sütunun tam ortasında duran bir cümle,
-  // kuyruğun boş olduğunu değil ekranın yüklenmediğini düşündürüyor. Sağdaki karar panosunun boş
-  // hâli ortak bileşende kalıyor — orası geniş bir alan, ortalama orada doğru.
+  return <EmptyBlock title={title} description={description} />;
+}
+
+// Ortak `EmptyState` DEĞİL, çizimin kendi bloğu: sola yaslı ve sütunun ÜSTÜNDE. Ortak bileşen
+// metni dikeyde ortalıyor ve uzun bir alanın tam ortasında duran bir cümle, kuyruğun boş olduğunu
+// değil ekranın yüklenmediğini düşündürüyor.
+function EmptyBlock({ title, description }: { title: string; description: string }) {
   return (
     <div className="flex flex-col items-start gap-1.5 px-6 py-9">
       <span className="font-ops-display text-ops-base font-semibold text-ops-body">{title}</span>

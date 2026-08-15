@@ -6,7 +6,16 @@ import {
   awardReferralPoints as awardReferralPointsFor,
 } from '@lezzet/application';
 import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
-import { POINTS_SETTING_KEYS, canRedeem, redemptionCode, type EarnablePointsReason } from '@lezzet/domain-core';
+import {
+  POINTS_CENT_VALUE_KEY,
+  POINTS_DAILY_CAP_DEFAULT,
+  POINTS_DAILY_CAP_KEY,
+  POINTS_REDEEM_MIN_KEY,
+  POINTS_SETTING_KEYS,
+  canRedeem,
+  redemptionCode,
+  type EarnablePointsReason,
+} from '@lezzet/domain-core';
 import type { KeysetCursor, Page, PointsBalance, PointsEntry, ProductFeedback, RedemptionResult } from '@lezzet/types';
 
 /**
@@ -45,9 +54,14 @@ async function pointsSettings(): Promise<{ values: Record<string, number>; daily
     settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
     settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
     settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
-    settings.getNumber('points_daily_cap', 100),
-    settings.getNumber('points_redeem_min', 500),
-    settings.getNumber('points_cent_value', 1),
+    // Anahtar ve tavan varsayılanı MOTORDAN (`@lezzet/domain-core`), literal değil: burada
+    // `'points_daily_cap', 100` yazıyordu ve kullanıcı tavanı 270'e çıkarınca sessizce geride
+    // kaldı — motorun uygulamadığı bir eşiği gösteren bir kapı. `POINTS_SETTING_KEYS` zaten
+    // buradan okunuyordu; kalan üç literal de köprü olmaktan çıktı (domain-core künyesi:
+    // *"benimsemesi web şeridinin işi"*).
+    settings.getNumber(POINTS_DAILY_CAP_KEY, POINTS_DAILY_CAP_DEFAULT),
+    settings.getNumber(POINTS_REDEEM_MIN_KEY, 500),
+    settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
   ]);
   return {
     values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },

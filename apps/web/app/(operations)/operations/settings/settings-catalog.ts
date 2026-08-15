@@ -14,7 +14,7 @@ import { SettingScopeEnum } from '@lezzet/types';
  */
 export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
-import { POINTS_SETTING_KEYS } from '@lezzet/domain-core';
+import { POINTS_DAILY_CAP_DEFAULT, POINTS_DAILY_CAP_KEY, POINTS_SETTING_KEYS } from '@lezzet/domain-core';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, SHIPPING_FEE_KEY } from '@/lib/settings-keys';
 
 /**
@@ -363,7 +363,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     fallback: 100,
   },
   {
-    key: 'points_daily_cap',
+    key: POINTS_DAILY_CAP_KEY,
     label: 'Günlük puan tavanı',
     help: 'Bir günde kazanılabilecek azami puan. YALNIZ para ödemeden yapılabilen eylemleri kapsar (siteye gelmek, keşifte oy vermek); yorum ve davet ödülleri bu tavanı görmez.',
     group: 'points',
@@ -372,7 +372,10 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     min: 0,
     impact: 'Tavan kırpmaz, ödülün TAMAMINI reddeder. Kapsamı dışındaki ödüller etkilenmez.',
     exceptionScopes: NONE,
-    fallback: 100,
+    // Yedek MOTORDAN: burada `100` yazılıydı ve tavan 270'e çıkınca ekran motorun uygulamayacağı
+    // bir sayı gösterir olmuştu. `fallback` operatörün gördüğü değerdir — ayrışması, ayarın kendisi
+    // silinmiş bir kurulumda yanlış bilgiyle karar verdirir.
+    fallback: POINTS_DAILY_CAP_DEFAULT,
   },
   {
     key: POINTS_REDEEM_MIN_KEY,

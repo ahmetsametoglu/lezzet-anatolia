@@ -1,13 +1,14 @@
 'use client';
 
+import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SegmentedNav } from '@/components/operation/ui/segmented-nav';
 import { agoLabel, num } from '@/components/operation/ui/format';
 import { ProposalCard } from './assistant-card';
 import { cardBodyOf } from './assistant-card-bodies';
 import { ProposalDialog, QueueEmpty } from './assistant-sections';
-import { QUEUE_TABS, QUEUE_TAB_LABELS } from './assistant-url';
-import type { AssistantViewProps } from './assistant-types';
+import { QUEUE_TABS, QUEUE_TAB_LABELS, type KindFilter } from './assistant-url';
+import type { AssistantRowView, AssistantViewProps } from './assistant-types';
 
 /**
  * Asistan Onay Kuyruğu — web (22.3). `Operasyon - Asistan Kuyrugu.dc.html`.
@@ -32,15 +33,23 @@ export function AssistantDesktop({
   busy,
   error,
   onTab,
+  onKind,
   onSelect,
   onDecision,
 }: AssistantViewProps) {
   // Yaş aralığı YALNIZ bekleyen sekmesinde söylenir: arşivin en eskisi bir bilgi değil, bekleyen
   // işin en eskisi bir uyarıdır ("unutulmasın" — kuyruğun sıralama gerekçesi).
   // Kuyruk ESKİDEN YENİYE sıralı (kısmi indeks `created_at` artan): en eskisi ilk, en yenisi son.
+  //
+  // Aralık SÜZGEÇSİZ kuyruktan okunur: başlık altı satırı "bu sekmede ne var" der ve o cümle
+  // operatörün o an neyi süzdüğüne göre değişemez — değişseydi süzgeç açıkken "en eski 2 saat
+  // önce" yazar, kuyrukta bir günlük bir öneri beklerken kimse görmezdi.
   const pendingRows = urlState.tab === 'pending' ? data.rows : [];
   const oldest = pendingRows[0];
   const newest = pendingRows.length > 1 ? pendingRows[pendingRows.length - 1] : undefined;
+
+  const kinds = kindCountsOf(data.rows);
+  const visibleRows = urlState.kind ? data.rows.filter((row) => row.kind === urlState.kind) : data.rows;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -73,6 +82,39 @@ export function AssistantDesktop({
           onSelect={onTab}
         />
       </PageHeader>
+
+      {/* ── TİP SÜZGECİ (kullanıcı isteği 15.08) ────────────────────────────────
+          Şerit YALNIZ kuyrukta birden ÇOK tip varken çizilir: tek tipli bir kuyrukta "Tümü" ve o
+          tek tip yan yana durur ve ikisi de aynı şeyi gösterir — kullanıcıya seçim gibi görünen,
+          seçilecek bir şeyi olmayan bir kontrol. Kuyruk boşken de yok: süzülecek bir şey yok.
+
+          Çipler KUYRUKTA VAR OLAN tiplerden türer, on bir tipin sabit listesinden değil. Sabit
+          liste her açılışta sekiz boş çip gösterirdi ve "0" yazan bir süzgeç, tıklanınca boş bir
+          ekran vaat eden bir düğmedir. Sayı da bu yüzden çipin içinde: şerit aynı anda kuyruğun
+          BİLEŞİMİNİ okutuyor (bugün ne çoğunlukta geldi), yani süzmeden önce de bir işe yarıyor. */}
+      {kinds.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft bg-ops-card px-6 py-2.5">
+          <span className="mr-0.5 font-ops-display text-ops-micro font-semibold uppercase tracking-[0.08em] text-ops-faint">
+            Tip
+          </span>
+          {/* "Tümü" MENÜDE değil şeritte ve bilinçli: `FilterChip`in kesikli "+ tür" haplı deseni
+              süzgeci gizler, oysa burada süzgecin kendisi bir özet. Temizleme yolu tek — bu çip. */}
+          <Chip active={urlState.kind === ''} onClick={() => onKind('')}>
+            Tümü <KindCount value={data.rows.length} active={urlState.kind === ''} />
+          </Chip>
+          {kinds.map((entry) => (
+            <Chip
+              key={entry.kind}
+              active={urlState.kind === entry.kind}
+              // Aynı çipe ikinci tık süzgeci KALDIRIR: seçili bir süzgecin kapanma yolu hep aynı
+              // yerde olmalı, operatörü şeridin başındaki "Tümü"ne dönmeye zorlamamalı.
+              onClick={() => onKind(urlState.kind === entry.kind ? '' : entry.kind)}
+            >
+              {entry.label} <KindCount value={entry.count} active={urlState.kind === entry.kind} />
+            </Chip>
+          ))}
+        </div>
+      ) : null}
 
       {/* ── IZGARA (kullanıcı kararı 10.08) ─────────────────────────────────────
           Bir tur burada iki sütun vardı: 326 piksellik kuyruk listesi + karar panosu. Izgara ikisini
@@ -110,11 +152,11 @@ export function AssistantDesktop({
           </div>
         ) : null}
 
-        {data.rows.length === 0 ? (
-          <QueueEmpty tab={urlState.tab} />
+        {visibleRows.length === 0 ? (
+          <QueueEmpty tab={urlState.tab} filtered={data.rows.length > 0} />
         ) : (
           <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-3.5">
-            {data.rows.map((row) => (
+            {visibleRows.map((row) => (
               <ProposalCard key={row.id} row={row} onOpen={onSelect}>
                 {cardBodyOf(row)}
               </ProposalCard>
@@ -140,4 +182,37 @@ export function AssistantDesktop({
       ) : null}
     </div>
   );
+}
+
+/**
+ * Kuyrukta GERÇEKTEN bulunan tipler + adetleri.
+ *
+ * Etiket `KIND_META`'dan DEĞİL satırın kendi `kindLabel`'ından okunur ve bu zorunlu: o sözlük
+ * `@lezzet/application` içinde ve paket `node:crypto` taşıyan sunucu modüllerine açılıyor —
+ * istemciden import edildiği gün sayfa 500'e düşüyor (`AssistantRowView` künyesi, ölçüldü 09.08).
+ * Okuma kapısı etiketi zaten her satıra yazıyor; ikinci bir kaynak aramak hem gereksiz hem tehlikeli.
+ *
+ * Sıra ALFABETİK, adede göre değil: sayı her kararla değişiyor ve adede göre sıralanan bir şeritte
+ * çipler operatörün parmağının altında yer değiştirirdi. Alfabetik sıra ise kuyruk değişse de aynı
+ * çipi aynı yerde tutuyor — şeridin işi taramak, sıralamak değil.
+ */
+function kindCountsOf(rows: readonly AssistantRowView[]): Array<{ kind: KindFilter; label: string; count: number }> {
+  const counts = new Map<string, { kind: KindFilter; label: string; count: number }>();
+  for (const row of rows) {
+    const entry = counts.get(row.kind);
+    if (entry) entry.count += 1;
+    else counts.set(row.kind, { kind: row.kind, label: row.kindLabel, count: 1 });
+  }
+  return [...counts.values()].sort((a, b) => a.label.localeCompare(b.label, 'tr'));
+}
+
+/**
+ * Çipin içindeki adet — etiketten SOLUK, seçiliyken de okunur.
+ *
+ * Renk `active`'e bağlı çünkü dolu çipin zemini koyu: `text-ops-muted` orada okunmaz hâle gelirdi.
+ * Sınıf HARİTADAN değil koşuldan geliyor ama iki sabit dize olarak — `text-ops-${…}` biçiminde bir
+ * ifade Tailwind taramasında hiçbir sınıf üretmez ve renk sessizce düşerdi.
+ */
+function KindCount({ value, active }: { value: number; active: boolean }) {
+  return <span className={`font-ops-mono text-ops-xs ${active ? 'opacity-70' : 'text-ops-muted'}`}>{num(value)}</span>;
 }

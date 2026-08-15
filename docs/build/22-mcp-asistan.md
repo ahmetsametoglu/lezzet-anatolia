@@ -1777,4 +1777,78 @@ sınamış olacaktık.
       artık HİÇBİR öneri tarafından tetiklenmiyor — `zone_extend` onun tek tüketicisiydi. Kod ölü
       değil (sayfa hâlâ okuyor), ama pratikte ulaşılamaz. Sökülmesi rota ekranının kendi turunun işi;
       bu turda dokunulmadı çünkü ekranı bozma riski kazancından büyük.
+    - **KURALIN KANITI GERİDE KALMIŞTI — düzeltildi (15.08).** `proposal.test.ts` hâlâ *"geriye tek
+      devir kaldı: bölge"* diyip `zone_extend`den `handoff` bekliyordu; mod `inline` olunca test
+      kırmızıya döndü ve bunu **birim koşusu göremiyor** (dosya entegrasyon projesinde). Aynı sınıf
+      bir düşüş 10.08'de de yaşanmıştı (`stock_offer`, mobil şeridin notu) — kural değişiyor, kuralın
+      kanıtı değişmiyor. Satır artık boş bir döngü değil İDDİA: *"hiçbir künye `handoff` değil"*.
+      Karşılaştırma `modeOf` üzerinden yapılıyor çünkü künye sabit olduğu için TypeScript alanı
+      daraltıyor ve `meta.mode === 'handoff'` **hiç derlenmiyor** (TS2367) — derleyicinin itirazı
+      daha güçlü bir kanıt ama künyeye yeniden `handoff` eklendiği gün sessizleşirdi.
+
+- [x] (22.37) **Kuyrukta TİP SÜZGECİ · bekleme hâli KART IZGARASI çiziyor** *(kullanıcı isteği
+  15.08: "bu öneri tiplerini tiplerine göre filtreleyemiyorum… ayrıca buradaki skeleton düzgün
+  kurgulanmamış, card view şeklinde olmalı")* — `touches:
+  apps/web/app/(operations)/operations/assistant/{assistant-url.ts,assistant-types.ts,assistant-client.tsx,assistant.desktop.tsx,assistant-sections.tsx,loading.tsx},
+  apps/web/components/operation/ui/skeleton.tsx`
+    - **SÜZGEÇ SEKME DEĞİL, ÜÇÜNCÜ URL SORUSU.** Sekmeler kuyruğun HÂLİNİ ayırıyor (bekleyen ·
+      düşen · arşiv) ve üçü birbirini dışlayan üç ayrı iş; tip ise aynı işin içinde bir daraltma
+      ("bugün yalnız stok girişlerine bakacağım"). On bir tipi sekmeye çevirmek on dört sekmelik bir
+      bar üretir ve asıl ayrımı — hangi kararı verdiğimi — gölgede bırakırdı. Adres artık `?kind=`
+      taşıyor (varsayılan yazılmaz), yani süzülmüş bir görünüm paylaşılabiliyor.
+    - **ÇİPLER KUYRUKTA VAR OLAN TİPLERDEN TÜRÜYOR**, on bir tipin sabit listesinden değil: sabit
+      liste her açılışta sekiz boş çip gösterirdi ve "0" yazan bir süzgeç, tıklanınca boş ekran vaat
+      eden bir düğmedir. Adet çipin içinde, çünkü şerit süzmeden önce de bir işe yarıyor — kuyruğun
+      BİLEŞİMİNİ okutuyor. Sıra alfabetik, adede göre değil: sayı her kararla değişiyor ve adede
+      göre sıralanan bir şeritte çipler operatörün parmağının altında yer değiştirirdi.
+    - Etiket satırın kendi `kindLabel`'ından okunuyor, `KIND_META`'dan DEĞİL: o sözlük
+      `@lezzet/application` içinde ve paket `node:crypto`'ya açılıyor — istemciden import edildiği
+      gün sayfa 500'e düşüyor (ölçüldü 09.08). Şerit yalnız birden çok tip varken çiziliyor.
+    - **İSKELET YANLIŞ EKRANI ÇİZİYORDU.** `loading.tsx` hâlâ 10.08'de terk edilmiş iki sütunlu
+      yerleşimi (326 px kuyruk + karar panosu) çiziyordu; ızgaraya geçiş bu dosyayı atlamış. Yani
+      iskeletin tek işinin tam tersi oluyordu — bekleyen ekran bir şekil vaat ediyor, içerik gelince
+      sayfa baştan diziliyordu. Artık gerçek yerleşim: başlık + görünüm hapı · süzgeç şeridi · sekiz
+      kartlık ızgara. Ölçüler gerçeğinden birebir (`auto-rows-fr`, `minmax(18rem,1fr)`, `min-h-22rem`,
+      kalın üst şerit); üst şerit RENKSİZ çünkü hangi tipin geleceği bilinmiyor.
+    - Kite iki parça eklendi: `SkeletonSegmentedNav` (`SkeletonTabs`ın kardeşi — sekme adları gerçek
+      metin, seçili hap işaretlenmez) ve `SkeletonFilterBar`a `label` yuvası (şeridin baştaki eksen
+      adı: "Hesap", "Tip").
+    - **Süzgeç açıkken boş kalan ızgaranın AYRI cümlesi var** ("Bu süzgeçte öneri yok"): oraya
+      "bekleyen öneri yok" yazmak düpedüz yanlış olurdu — kuyrukta öneri var, süzgeç dışarıda
+      bırakıyor. Aynı görüntüye iki farklı gerçeği bindirmek, dolu bir kuyruğu boş sandırır.
+    - **Doğrulama:** typecheck (web · backend · domain-core) temiz · lint temiz · `knip` değişmedi ·
+      birim 1358/1358.
+
+- [ ] (22.38) **Fırsat kararında TARİH TİPİ ve kalan gün ekranda yok** *(10.08 talimatının kapanmamış
+  iki maddesi; talep dosyası kapatılırken ölçülerek doğrulandı 15.08)* — `touches:
+  apps/web/app/(operations)/operations/assistant/bodies/batch-offer-body.tsx`
+    - **`DDM` ↔ `DLC` ayrımı gösterilmiyor.** Alan veride var (`product.date_type`) ve fark gıda
+      güvenliğinin özü: **DLC** geçince mal satılamaz (tek yol imha), **DDM** geçince satılabilir,
+      yalnız kalite garantisi düşer. Fırsat kararı tam olarak "bu partiyi ne yapalım" kararıdır ve
+      operatör bugün hangi tipe baktığını gövdeden okuyamıyor. Emsali var: `product_create`
+      önizlemesi *"DLC · güvenlik" / "DDM · kalite"* diye yazıyor (`assistant-preview.tsx`).
+    - **Kalan/geçen gün sayısı yok.** Talimatın biçimi: `DDM · 16 Ağu 2026 · 6 gün kaldı` (nötr) ·
+      `DDM · 4 Ağu 2026 · 6 gün geçti` (amber; DLC ise kırmızı). Hesap ekranda yapılır, `expiryDate`
+      payload'da duruyor.
+    - **Neden bugün yok:** 10.08 talimatı yazıldığında kartın kendi künye satırı vardı; 22.15 o satırı
+      `ProposalAside`'a taşıdı (haklı olarak — iki kopya vardı) ama tarih oraya **ham ağaç** olarak
+      düştü, yani okunan bir karar girdisi olmaktan çıktı. Talimatın öteki maddeleri (gri paragrafın
+      silinmesi, üç bağlı kutu, başlıktan oranın çıkması, kâr satırı) uygulandı ve yerinde.
+
+- [ ] (22.39) **`product_create` KATEGORİSİZ kayıt açabiliyor** *(kapatılan bir talep dosyasının
+  açık maddesi; 15.08'de koda karşı ölçüldü)* — `touches:
+  apps/web/app/(operations)/operations/assistant/assistant-body.tsx`
+    - Dilekçe `categoryId: null` taşıyabiliyor (`ProductCreatePayloadSchema`), form da onu zorunlu
+      kılmıyor (`categoryId` şemada `nullable`) — yani asistan kategoriyi okuyamadığında operatör
+      **hiçbir uyarı görmeden** kategorisiz bir ürün açabilir. Önizleme "Kategori: seçilmedi" diyor
+      ama bu bir bilgi satırı, bir engel değil.
+    - **Karar gerekiyor, düzeltme değil:** kategorisiz ürün katalog listelerinde hiçbir kategoriye
+      düşmez, yani kayıt açılır ama görünmez. `blocked` ile engellemek mi doğru, yoksa uyarı satırı
+      mı — ikincisi "aday" statüsüyle zaten uyumlu olabilir (ürün nasılsa satışa çıkarken ürün
+      ekranından geçiyor).
+    - ⚠ **KAYIT EKSİK OLABİLİR:** bu madde `docs/talep/operasyon-belgeden-urun-onizlemesi.md`
+      dosyasındaydı; dosya 15.08'de **doğrulanmadan silindi** (`docs/talep` `.gitignore`'da, geri
+      gelmiyor). Buradaki tarif envanterin kendi satırından ve koddan yeniden ölçülerek kuruldu;
+      dosyada başka bir açık madde varsa kaybolmuştur. Aynı dosyanın öteki maddesi (22.6 belgeden
+      ürün önizlemeleri) 09.08'de teslim edilmişti ve kaydı 271. satırda duruyor.
 

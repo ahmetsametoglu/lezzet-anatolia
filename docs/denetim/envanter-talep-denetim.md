@@ -1,5 +1,31 @@
 # Envanter — `docs/talep` + `docs/denetim` (15.08.2026)
 
+> ## SÜPÜRME GÜNLÜĞÜ (kullanıcı kararı 15.08: *"onları kapatalım ve silelim"*)
+>
+> **13 dosya silindi, 41 → 28.** Her biri silinmeden ÖNCE koda karşı ölçüldü; açık çıkanların kaydı
+> görev satırına düştü. Envanterin kendi kovaları aşağıda duruyor ama **kovalar bayat** — silme
+> sırasında iki madde envanterin dediğinden farklı çıktı (aşağıda yazılı).
+>
+> | Silinen | Neden |
+> |---|---|
+> | `arka-uc-product-listing-satir-semasi` | Cevabı "yapıldı"; `ProductListingRowSchema` yerinde |
+> | `musteri-application-storefront-benimseme` | Cevabı "karşılandı, silebilirsiniz"; `lib/storefront` köprüleri yok |
+> | `not-arka-uc-detay-birincil-boy-alani` | `primaryVariantId` HEAD'de · `variant-choice.ts` silinmiş |
+> | `not-arka-uc-iki-isim-commitinize-bagli` | Beklenen üç tipin üçü de HEAD'de (ölçüldü) |
+> | `arka-uc-application-alt-yol-disa-verimi` | Kendi başlığı "KAPANDI" |
+> | `not-arka-uc-proposal-testi-inline-moduyla-kirmizi` | `stock_offer` düşüşü kapandı; **aynı sınıf yeni düşüş bugün bulundu ve düzeltildi** (22.36 notu) |
+> | `arka-uc-seed-asistan-onerileri` | Kullanıcı REDDETTİ; karar `22-mcp-asistan` §KARAR'da |
+> | `not-musteri-gunluk-tavan-270-oldu` | **İş yapıldı:** tavan tek kaynağa bağlandı (`17.4` Durum notu) |
+> | `musteri-liste-fiyati-baslangic` | ⚠ **envanter yanılmıştı:** "…'dan" eki üç dilde YAPILMIŞ (`fromPrice`) |
+> | `operasyon-firsat-karti-talimat` | Maddeleri uygulanmış; **iki madde açık çıktı → `(22.38)`** |
+> | `operasyon-oneri-onayi-formun-icinde` | 22.8 teslim; iki sorusu da olaylarla cevaplandı |
+> | `operasyon-asistan-kuyrugu-uc-kapili-karar` | 22.5 teslim |
+> | `operasyon-belgeden-urun-onizlemesi` | ⚠ **DOĞRULANMADAN silindi (hata).** İçeriği envanter satırından + koddan yeniden kuruldu → `(22.39)`; başka madde varsa kayıp |
+>
+> **`not-mobil-*` dosyalarına DOKUNULMADI** (6 dosya) ve bu bilinçli: onlar mobil şeridin gelen
+> kutusudur, silme hakkı ALAN şeridindir (`docs/talep/README` yaşam döngüsü). Web projesi tek ajana
+> döndü ama mobil şerit ayrı yürüyor.
+
 > **Neden bu dosya var.** Kullanıcı kararı 15.08: proje artık **tek ajanla** yürüyor. `docs/talep`
 > şeritler arası iletişim için kurulmuştu (*"X şeridi Y şeridinden şunu istiyor"*) — o mekanizmanın
 > muhatabı kalmadı. Ama dosyaların İÇERİĞİ değerli: ölçülmüş, gerekçelendirilmiş, `dosya:satır`

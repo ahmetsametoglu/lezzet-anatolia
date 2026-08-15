@@ -6,7 +6,15 @@ import {
   SettingsService,
   UserProfileService,
 } from '@lezzet/database';
-import { CAPPED_POINTS_REASONS, POINTS_SETTING_KEYS, canEarnPoints, feedbackPointsReason, type EarnablePointsReason } from '@lezzet/domain-core';
+import {
+  CAPPED_POINTS_REASONS,
+  POINTS_DAILY_CAP_DEFAULT,
+  POINTS_DAILY_CAP_KEY,
+  POINTS_SETTING_KEYS,
+  canEarnPoints,
+  feedbackPointsReason,
+  type EarnablePointsReason,
+} from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
 import type { KeysetCursor, Order, PointsBalance, PointsEntry, ProductFeedback } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -83,7 +91,7 @@ async function pointsSettings(db: SupabaseClient): Promise<{ values: Record<stri
     settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
     settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
     settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
-    settings.getNumber('points_daily_cap', 270),
+    settings.getNumber(POINTS_DAILY_CAP_KEY, POINTS_DAILY_CAP_DEFAULT),
   ]);
   return {
     values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },
