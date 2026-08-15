@@ -24,7 +24,7 @@ import {
 } from './order-detail-labels';
 import type { OrderDetailView } from './order-detail-types';
 import type { OrderDecision } from '@lezzet/domain-core';
-import type { OrderStatus } from '@lezzet/types';
+import type { OrderSource, OrderStatus } from '@lezzet/types';
 import { cardClass } from '@/components/operation/ui/card';
 
 // Sipariş DETAYI — MASAÜSTÜ. Tasarım "Operasyon - Siparis Detay" birebir.
@@ -141,11 +141,13 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_336px] overflow-y-auto">
         {/* ── SOL: KAYIT ── */}
         <div className="flex flex-col gap-4 border-r border-ops-line-soft px-6 py-5">
+          {/* Kimlik şeridi BÜYÜK ve RENKLİ (15.08, kullanıcı isteği — "her yer çok metin"): değerler
+              başlık kademesinde, kaynak kendi tonunda, eşleşmemiş fatura amber uyarır. */}
           <div className="grid grid-cols-4 overflow-hidden rounded-ops-card border border-ops-line bg-ops-white">
             <MetaCell label="Referans" value={order.referenceNo ?? '—'} mono strong />
-            <MetaCell label="Kaynak" value={sourceLabel(order.source)} />
+            <MetaCell label="Kaynak" value={sourceLabel(order.source)} tone={SOURCE_TONE[order.source]} />
             <MetaCell label="Sipariş anı" value={shortDateTime(order.placedAt)} mono />
-            <MetaCell label="Resmî fatura" value={order.invoiceNo ?? '— eşleşmedi'} mono muted={!order.invoiceNo} />
+            <MetaCell label="Resmî fatura" value={order.invoiceNo ?? '— eşleşmedi'} mono tone={order.invoiceNo ? undefined : 'amber'} />
           </div>
 
           <OrderLines
@@ -158,8 +160,9 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           {/* PARA ile ZAMAN ÇİZELGESİ YAN YANA (15.08, kullanıcı kararı — geniş ekran turu): ikisi
               de kısa/dar içerik ve tam genişlikte "satırda üç kelime, bin piksel boşluk" okunuyordu
               (1920'de ölçüldü). Kalemler ve Kararlar tam genişlikte kalır — biri tablo, öteki eylem
-              şeridi. `items-start`: hareket listesi uzayınca çizelge kartı gerilmez. */}
-          <div className="grid grid-cols-2 items-start gap-4">
+              şeridi. Kartlar EŞİT BOYDA gerilir (`items-start` denendi, geri alındı — 15.08 ikinci
+              bildirim: farklı yükseklikler kötü görünüyordu). */}
+          <div className="grid grid-cols-2 gap-4">
           <section className={cardClass()}>
             <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3.5 py-[11px]">
               <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">Para</span>
@@ -266,11 +269,12 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                   yalnız bu siparişe ait · gün planı Rotalar'da
                 </span>
               </div>
-              {/* Kartlar genişlik yettikçe YAN YANA — `auto-fit`, `md:` kırılımı değil (CLAUDE.md
-                  §2: akışkan responsive yok). Kırılım noktası cihaza aittir; buradaki ölçü kartın
-                  KENDİ okunabilirlik tabanıdır (250px altında alt metin üç satıra düşüyor). Kolon
-                  daraldığında dizilim kendiliğinden tek sütuna iner, ayrı bir kural yazılmaz. */}
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2 px-3.5 py-[13px]">
+              {/* Kartlar genişlik yettikçe YAN YANA — `auto-fill`, `auto-fit` DEĞİL (15.08, kullanıcı
+                  bildirimi): karar sayısı duruma göre 1-3 arası değişiyor ve `auto-fit` tek kararı
+                  bütün satıra yayıp devasa boş bir kutu çiziyordu. `auto-fill` boş rayları korur —
+                  tek karar da üç karar da aynı ölçüde kart alır, satır dengeli kalır. Ölçü kartın
+                  KENDİ okunabilirlik tabanıdır (250px altında alt metin üç satıra düşüyor). */}
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2 px-3.5 py-[13px]">
                 {order.decisions.map((decision) => {
                   const copy = DECISION_COPY[decision];
                   return (
@@ -503,8 +507,10 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               dokunuyor?"). Hedef ekranı olan satır davet eder, olmayan yalnız kaydı gösterir. */}
           {order.links.length > 0 ? (
             <div className={cardClass()}>
+              {/* Başlık soruyu kendisi sorar (15.08, kullanıcı bildirimi: "Bağlar" tek başına
+                  anlaşılmıyordu); satır notları da tam cümle (`linksOf`). */}
               <div className="border-b border-ops-line-soft px-3.5 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-ink">
-                Bağlar
+                Bu siparişe bağlı kayıtlar
               </div>
               {order.links.map((link) => (
                 <div
@@ -530,51 +536,52 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </div>
           ) : null}
 
-          {/* Sınır notu (tasarım) — kartların BOŞ olmasıyla karışmasın diye burada: "bu sipariş için
-              kurye atanmadı" ile "kurye buradan atanmaz" farklı şeylerdir. Aramayı kesen not budur;
-              yolu olan hedef bağlanır, henüz yazılmamış ekran düz metin kalır.
-
-              Notun iki hedefi de artık YAZILDI ve bağlı: gün planı + kurye ataması Teslimat'ta
-              (09.15, 07.08), kuryenin kendi listesi de aynı adresin öbür dalında (11.1, 06.08). */}
-          <div className="flex flex-col gap-1.5 rounded-ops-card border border-dashed border-ops-line-strong px-3.5 py-[11px]">
-            <span className="font-ops-display text-ops-xs font-semibold text-ops-body">Buraya girmeyenler</span>
-            <span className="font-ops-body text-ops-micro leading-[1.55] text-ops-muted">
-              {/* Gün planı ile kuryenin listesi TEK giriş: ikisi aynı adresin iki dalı, iki ayrı
-                  bağlantı yazmak aynı yeri iki farklı yer gibi gösterirdi. */}
-              Gün planı, kurye ataması ve kuryenin kendi listesi →{' '}
-              <Link href="/operations/deliveries" className="cursor-pointer font-medium text-ops-olive-dark hover:underline">
-                Teslimat
-              </Link>{' '}
-              · hazırlık kuyruğu ve parti seçimi →{' '}
-              <Link href="/operations/stock" className="cursor-pointer font-medium text-ops-olive-dark hover:underline">
-                Depo
-              </Link>{' '}
-              · müşteriye giden metin → bildirim şablonları.
-            </span>
-          </div>
+          {/* "Buraya girmeyenler" kartı SÖKÜLDÜ (15.08, kullanıcı kararı): sayfada OLMAYANI anlatan
+              not operatöre değil geliştiriciye konuşuyordu. Sınırın kendisi geçerli kalır — gün
+              planı/kurye Teslimat'ın, hazırlık kuyruğu Depo'nun işidir; bu sayfa o kararları almaz. */}
         </aside>
       </div>
     </div>
   );
 }
 
+/** Kaynağın tonu — kimlik şeridinde kaynak renkle de okunur (15.08): WhatsApp yeşil, kapı önü amber. */
+const SOURCE_TONE: Record<OrderSource, MetaTone> = {
+  web: 'blue',
+  whatsapp: 'olive',
+  door: 'amber',
+  manual: 'slate',
+};
+
+type MetaTone = 'blue' | 'olive' | 'amber' | 'slate';
+
+const META_TONE_CLASS: Record<MetaTone, string> = {
+  blue: 'text-ops-blue-dark',
+  olive: 'text-ops-olive-dark',
+  amber: 'text-ops-amber-dark',
+  slate: 'text-ops-strong',
+};
+
 interface MetaCellProps {
   label: string;
   value: string;
   mono?: boolean;
   strong?: boolean;
-  muted?: boolean;
+  /** Değerin rengi — durum taşıyan hücrede (kaynak, eşleşmemiş fatura); yoksa mürekkep. */
+  tone?: MetaTone;
 }
 
-function MetaCell({ label, value, mono, strong, muted }: MetaCellProps) {
+function MetaCell({ label, value, mono, strong, tone }: MetaCellProps) {
   return (
-    <div className="flex min-w-0 flex-col gap-[3px] border-r border-ops-line-soft px-[13px] py-[11px] last:border-r-0">
+    <div className="flex min-w-0 flex-col gap-[3px] border-r border-ops-line-soft px-[13px] py-[13px] last:border-r-0">
       <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.07em] text-ops-muted">
         {label}
       </span>
+      {/* Değer BAŞLIK kademesinde (15.08, kullanıcı isteği: şerit "daha büyük ve renkli") —
+          kimlik şeridi sayfanın en üst bilgisi, gövde metni gibi fısıldamaz. */}
       <span
-        className={`truncate ${mono ? 'font-ops-mono' : 'font-ops-body'} text-ops-xs ${
-          muted ? 'text-ops-muted' : strong ? 'font-medium text-ops-ink' : 'text-ops-strong'
+        className={`truncate ${mono ? 'font-ops-mono' : 'font-ops-body'} text-ops-base ${
+          tone ? `font-medium ${META_TONE_CLASS[tone]}` : strong ? 'font-semibold text-ops-ink' : 'text-ops-strong'
         }`}
       >
         {value}

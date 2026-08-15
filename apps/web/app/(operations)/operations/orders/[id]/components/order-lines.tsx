@@ -28,8 +28,8 @@ interface OrderLinesProps {
   settled: boolean;
 }
 
-// İlk kolonun asgarisi görselle birlikte büyüdü (32px görsel + boşluk, 15.08).
-const GRID = 'grid grid-cols-[minmax(160px,1fr)_46px_58px_78px_54px_46px_86px] gap-x-2';
+// İlk kolonun asgarisi görselle birlikte büyüdü (44px görsel + boşluk, 15.08 — "biraz daha büyük").
+const GRID = 'grid grid-cols-[minmax(172px,1fr)_46px_58px_78px_54px_46px_86px] gap-x-2';
 
 export function OrderLines({ lines, bundles, totals, settled }: OrderLinesProps) {
   const grouped = new Set(bundles.flatMap((b) => b.lineIds));
@@ -55,7 +55,7 @@ export function OrderLines({ lines, bundles, totals, settled }: OrderLinesProps)
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[600px]">
+        <div className="min-w-[616px]">
           <div
             className={`${GRID} border-b border-ops-line bg-ops-subtle px-3.5 py-2 font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted`}
           >
@@ -154,11 +154,25 @@ function Line({ line, indented, settled }: LineProps) {
             içinde olduğunu, ağırlık neyin satın alındığını söyler. Görsel satır başında (15.08,
             kullanıcı isteği — fiyatlar emsali): operatör ürünü adından önce yüzünden tanır. */}
         <div className={`flex min-w-0 items-center gap-2.5 ${indented ? 'pl-3.5' : ''}`}>
-          <Thumbnail src={line.imageUrl} alt={line.title} size={32} />
+          <Thumbnail src={line.imageUrl} alt={line.title} size={44} />
           <div className="flex min-w-0 flex-col gap-px">
-            <span className={`truncate font-ops-body text-ops-sm text-ops-ink ${indented ? '' : 'font-semibold'}`}>
-              {line.title}
-            </span>
+            {/* Ad, MÜŞTERİNİN GÖRDÜĞÜ ürün sayfasına gider (15.08, kullanıcı isteği) — yeni sekmede:
+                operatör sipariş kaydından kopmaz. Yol TR: operasyon yüzeyinin dili Türkçe, dış URL
+                dile göre (`/tr/urun/…`). Ürün silinmişse (slug yok) ad köprüsüz düz metin kalır. */}
+            {line.productSlug ? (
+              <a
+                href={`/tr/urun/${line.productSlug}`}
+                target="_blank"
+                rel="noreferrer"
+                className={`cursor-pointer truncate font-ops-body text-ops-sm text-ops-ink transition-colors hover:text-ops-olive-dark hover:underline ${indented ? '' : 'font-semibold'}`}
+              >
+                {line.title}
+              </a>
+            ) : (
+              <span className={`truncate font-ops-body text-ops-sm text-ops-ink ${indented ? '' : 'font-semibold'}`}>
+                {line.title}
+              </span>
+            )}
             {line.batchNos.length > 0 ? (
               // Parti izi burada DURUR ama öne çıkmaz: geri çağırma bağlamı dışında operatörün işi değil.
               <span className="truncate font-ops-mono text-ops-micro text-ops-faint">Lot {line.batchNos.join(' · ')}</span>

@@ -116,6 +116,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       return [v.id, publicImageUrl(product?.imageKey ?? null, product?.imageUpdatedAt ?? null)];
     }),
   );
+  // Kalemden müşteri ürün sayfasına köprü (15.08, kullanıcı isteği) — slug da üründen gelir.
+  const variantSlugs = new Map(variants.map((v) => [v.id, productsById.get(v.productId)?.slug ?? null]));
   // Başlık haritası BURADA kuruluyor, ortak `readVariantTitles` ile DEĞİL: bu okuma varyantları ve
   // ürünleri zaten çekti (aşağıdaki `variantSubs`/`variantProducts` haritaları için) — yardımcıyı
   // çağırmak aynı iki sorguyu tekrar sormak olurdu. Ortaklaşan şey `titleOf` formatlayıcısı; yalnız
@@ -146,6 +148,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     title: variantTitles.get(item.variantId) ?? 'Bilinmeyen boy',
     sub: variantSubs.get(item.variantId) ?? '',
     imageUrl: variantImages.get(item.variantId) ?? null,
+    productSlug: variantSlugs.get(item.variantId) ?? null,
     qty: item.qty,
     fulfilledQty: item.fulfilledQty,
     unitPriceCents: item.unitPriceCents,
@@ -395,9 +398,11 @@ function linksOf(
     state: TICKET_STATUS_LABELS[ticket.status],
     tone: ticket.status === 'resolved' ? 'olive' : ticket.status === 'open' ? 'amber' : 'slate',
     title: ticket.subject?.trim() || 'Konu yazılmamış',
+    // Cümleler operatöre "bu satır ne ve bana ne söylüyor" diye anlatır (15.08, kullanıcı
+    // bildirimi: kart anlaşılmıyordu) — kısaltılmış iç jargon değil.
     note: ticket.returnTriggeredAt
-      ? 'İade bu talepten tetiklendi — tutar siparişin hareketlerinden okunur.'
-      : 'Yazışma talebin kendi sayfasında.',
+      ? 'Bu siparişin iadesi bu müşteri talebinden başlatıldı; iade tutarı yandaki Para kartında.'
+      : 'Müşteri bu siparişle ilgili bir talep açtı — yazışma talebin kendi sayfasında sürer.',
     // BEKLEYEN(09.12): talep kuyruğu/detay ekranı — açılınca `href` buradan bağlanır. Bugün rozet
     // durur, olmayan sayfaya davet edilmez.
     href: null,
@@ -425,9 +430,9 @@ function linksOf(
       state: 'Parti izi',
       tone: 'slate',
       title: [...entry.titles].join(' · '),
-      note: 'Geri çağırmada bu partinin gittiği siparişler tek sorguyla bulunur.',
+      note: `Bu kalem ${lot} numaralı stok partisinden hazırlandı. Ürün geri çağrılırsa aynı partinin gittiği bütün siparişler stoktan tek aramayla bulunur.`,
       href: only ? `/operations/stock?q=${encodeURIComponent(only)}` : null,
-      cta: only ? 'Stokta aç →' : '',
+      cta: only ? 'Partiyi stokta aç →' : '',
     });
   }
 
@@ -459,7 +464,13 @@ function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): Order
   const refunded = order.amountRefundedCents;
 
   const rows: OrderTotalLine[] = [{ label: 'Kalemler', amountCents: subtotal, kind: 'sum' }];
-  if (discount > 0) rows.push({ label: 'Sepet indirimi', amountCents: discount, kind: 'deduction' });
+  // İndirimin SEBEBİ de yazılır (15.08, kullanıcı isteği): müşteri sepette "İndirim — Hoş geldin
+  // indirimi" görüyor, operatör yalnız tutarı görüyordu. Ad sipariş anındaki kopyadan gelir
+  // (`discountLabel`) — kampanya sonradan silinse de satır sebebini söylemeye devam eder.
+  if (discount > 0) {
+    const label = order.discountLabel ? resolveLocalizedText(order.discountLabel) : '';
+    rows.push({ label: label ? `Sepet indirimi — ${label}` : 'Sepet indirimi', amountCents: discount, kind: 'deduction' });
+  }
   if (shipping > 0) rows.push({ label: 'Kargo', amountCents: shipping, kind: 'sum' });
   if (short > 0) rows.push({ label: 'Karşılanmayan adet', amountCents: short, kind: 'deduction' });
   // KDV bir DÜŞÜM DEĞİL, bilgi: b2c fiyatı zaten dahil, b2b'de fatura ayrı gösterir. Satırın işi
