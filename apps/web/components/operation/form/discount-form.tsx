@@ -335,6 +335,13 @@ interface DiscountFormBodyProps {
   filled?: ReadonlySet<DiscountField>;
   /** Karar verilmiş öneri / kaydetme sürerken: alanlar gerçekten devre dışı (`fieldset`). */
   disabled?: boolean;
+  /**
+   * Yerleşim KABUĞUN kararı (15.08, kullanıcı bildirimi: tek sütun "çok karışık ve kötü yerleşim").
+   * Diyalog geniş pencerede İKİ sütun ister (solda Tanım, sağda İndirim + Koşullar); asistan
+   * kuyruğu kendi çerçevesinde tek sütunda kalır. Alanların kendisi ve sırası iki yerleşimde de
+   * AYNI — ayrışan yalnız dizilim; bölümler her iki hâlde de başlıklarıyla kategorili.
+   */
+  columns?: 1 | 2;
 }
 
 export function DiscountFormBody({
@@ -345,6 +352,7 @@ export function DiscountFormBody({
   codeUsage,
   filled,
   disabled = false,
+  columns = 1,
 }: DiscountFormBodyProps) {
   const set = <K extends keyof DiscountFormValues>(key: K, next: DiscountFormValues[K]) =>
     onChange({ ...values, [key]: next });
@@ -375,10 +383,10 @@ export function DiscountFormBody({
       base
     );
 
-  return (
-    // `fieldset` HTML'in kendi devre dışı bırakma mekanizması: içindeki her kutu gerçekten kapanır.
-    // Elle her kontrole `disabled` geçirmek, bir gün eklenen kutuda unutulurdu.
-    <fieldset disabled={disabled} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+  // Bölüm gövdeleri DEĞİŞKENDE: iki yerleşim (tek/çift sütun) aynı JSX'i dizer — alanları yerleşim
+  // başına ikinci kez yazmak, bir gün yalnız birinde güncellenen bir kutu demekti (no-duplication).
+  const tanimSection = (
+    <>
       <FieldShell label="Tetik" labelAside={aside('trigger')}>
         <MultiToggle
           value={values.trigger}
@@ -398,9 +406,6 @@ export function DiscountFormBody({
       {/* MÜŞTERİ METNİ TEK KARTTA, dil kartın SEKMESİNDEN gelir (ürün formunun deseni). İki alan da
           aynı dile bağlı: Fransız müşteri "Offre de bienvenue" adını görür ve "BIENVENUE" kodunu
           yazar. Ayrı kutulara bölünseydi hangi kodun hangi adla gittiği ekranda hiç görünmezdi.
-
-          Kart, tek alanlı bir değer için kurulmazdı — burada iki alan var ve ikisi tek dil bağlamını
-          paylaşıyor, kartın var olma sebebi tam bu.
 
           KOD DİLE BAĞLIDIR ve bu keyfi değil: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a
           hiçbir şey. Üç kod TEK kuponun kapılarıdır — koşulları, değeri ve **kullanım tavanı ortaktır**.
@@ -443,7 +448,11 @@ export function DiscountFormBody({
           </>
         )}
       </LocaleCard>
+    </>
+  );
 
+  const indirimSection = (
+    <>
       <div className="grid grid-cols-2 gap-3">
         <FieldShell label="İndirim tipi" labelAside={aside('type')}>
           <MultiToggle
@@ -479,7 +488,7 @@ export function DiscountFormBody({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Kapsam" labelAside={aside('scope', 'Kupon daima sepet kapsamındadır')}>
+        <FieldShell label="Kapsam" labelAside={aside('scope')}>
           <Select
             value={values.scope}
             onChange={(next) => onChange({ ...values, scope: next as DiscountScope, targetId: '' })}
@@ -501,7 +510,11 @@ export function DiscountFormBody({
           </FieldShell>
         ) : null}
       </div>
+    </>
+  );
 
+  const kosulSection = (
+    <>
       <div className="grid grid-cols-2 gap-3">
         <MoneyField
           label="Asgari sepet (€)"
@@ -566,13 +579,57 @@ export function DiscountFormBody({
         </div>
         <Toggle on={values.isActive} onChange={(next) => set('isActive', next)} label="Aktif" />
       </div>
+    </>
+  );
 
-      <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-        Tek-en-büyük kuralı: birden çok indirim uygun olsa bile müşteriye yalnız en büyüğü uygulanır — müşterinin
-        genel indirim oranı da aynı havuzda yarışır. Paketlere ve yaklaşan tarihli teklife hiçbir genel indirim
-        binmez; o kalemler kendi özel fiyatındadır.
-      </span>
+  const ruleNote = (
+    <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+      Tek-en-büyük kuralı: birden çok indirim uygun olsa bile müşteriye yalnız en büyüğü uygulanır — müşterinin
+      genel indirim oranı da aynı havuzda yarışır. Paketlere ve yaklaşan tarihli teklife hiçbir genel indirim
+      binmez; o kalemler kendi özel fiyatındadır.
+    </span>
+  );
+
+  return (
+    // `fieldset` HTML'in kendi devre dışı bırakma mekanizması: içindeki her kutu gerçekten kapanır.
+    // Elle her kontrole `disabled` geçirmek, bir gün eklenen kutuda unutulurdu.
+    <fieldset disabled={disabled} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+      {columns === 2 ? (
+        // İki sütun (diyalog): solda kimlik — kim, hangi adla, hangi kapıdan; sağda kural — ne kadar,
+        // neye, hangi koşulla. Sütunlar `items-start`: sol kart uzayınca sağ sütun gerilmez.
+        <div className="grid grid-cols-2 items-start gap-x-7 gap-y-5">
+          <div className="flex min-w-0 flex-col gap-5">
+            <SectionTitle>Tanım</SectionTitle>
+            {tanimSection}
+          </div>
+          <div className="flex min-w-0 flex-col gap-5">
+            <SectionTitle>İndirim</SectionTitle>
+            {indirimSection}
+            <SectionTitle>Koşullar &amp; sınırlar</SectionTitle>
+            {kosulSection}
+          </div>
+        </div>
+      ) : (
+        <>
+          <SectionTitle>Tanım</SectionTitle>
+          {tanimSection}
+          <SectionTitle>İndirim</SectionTitle>
+          {indirimSection}
+          <SectionTitle>Koşullar &amp; sınırlar</SectionTitle>
+          {kosulSection}
+        </>
+      )}
+      {ruleNote}
     </fieldset>
+  );
+}
+
+/** Bölüm başlığı — tablo başlığının tipografisi (büyük harf mikro); form kategorilerini adlandırır. */
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <span className="border-b border-ops-line-soft pb-1.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
+      {children}
+    </span>
   );
 }
 

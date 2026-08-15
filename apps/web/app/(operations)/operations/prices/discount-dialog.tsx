@@ -63,7 +63,8 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
     <Dialog
       open
       onClose={onClose}
-      maxWidth={560}
+      // İki sütunlu gövde (15.08, kullanıcı bildirimi: tek sütun "çok karışık") — genişlik ona göre.
+      maxWidth={880}
       title={isEdit ? 'İndirimi düzenle' : 'Yeni indirim / kupon'}
       subtitle={
         values.trigger === 'coupon' ? 'Müşteri kodu yazarak kullanır' : 'Koşullar tutunca kendiliğinden uygulanır'
@@ -98,6 +99,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
         collections={collections}
         codeUsage={editing?.codes}
         disabled={busy}
+        columns={2}
       />
     </Dialog>
   );
