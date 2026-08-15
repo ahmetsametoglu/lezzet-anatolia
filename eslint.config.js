@@ -29,6 +29,12 @@ export default [
       // `.test-results` dersinin aynısı: üretilmiş dosya denetlenmez.
       '**/android/**',
       '**/ios/**',
+      // Kullanıcının çalışma kâğıdı (15.08). `temp/` `.gitignore`ın 13. satırında ama eslint'te
+      // değildi: içine konan tek bir `check.mjs` `pnpm lint`i 20 `no-console` hatasıyla ÜÇ ŞERİT
+      // İÇİN BİRDEN kırmızıya çevirdi — kaynak kodda tek hata yokken. `.test-results`/`.next-prod`
+      // dersinin aynısı, tek farkla: bu üretilmiş değil, repoya HİÇ girmeyen bir dosya. Repoya
+      // girmeyen kod da denetlenmez — kuralı ancak commit'lenen koda uygulayabiliriz.
+      'temp/**',
     ],
   },
   ...baseConfig,
