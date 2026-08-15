@@ -16,7 +16,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, settingsSnapshot, type SettingsSnapshot } from '@lezzet/database/testing';
 import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import { createCheckoutDraft } from './checkout-draft';
 
@@ -55,6 +55,8 @@ let customerId: string;
 let addressId: string;
 let zoneId: string;
 let authUserId: string;
+/** Asgari sepet eşiğinin geri koyma tutamağı — gerekçesi `beforeAll`da. */
+let minBasket: SettingsSnapshot;
 const createdProfiles: string[] = [];
 
 beforeAll(async () => {
@@ -121,6 +123,27 @@ beforeAll(async () => {
   zoneId = (await zoneSvc.insert({ name: `Test bölgesi ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5] })).id;
   await zoneSvc.replacePostalCodes(zoneId, [{ country: 'FR', postalCode: rotaKodu }]);
   addressId = (await new AddressService(db).addForCustomer({ customerId, line1: '1 rue du Test', postalCode: rotaKodu, city: 'Strasbourg' })).id;
+
+  /**
+   * **ASGARİ SEPET BU DOSYANIN KONUSU DEĞİL — susturuluyor** (10.08 kural değişimi · düzeltildi 15.08).
+   *
+   * 10.08'de kapıya teslime **40 € lojistik taban** geldi ve taban KÜRESEL satıra yazıldı
+   * (`0013_settings.sql`, kullanıcı kararı). Buradaki sepetler 10–40 € arası — çünkü ölçtükleri şey
+   * kupon kotası, gün doğrulaması ve fiyat sabitlemesi; tutarın büyüklüğü hiçbirinin konusu değil.
+   * Sonuç: sekiz test beş gündür kırmızıydı ve **kod haklıydı**, testler eski eşikte kalmıştı.
+   *
+   * **Tutarları büyütmek YANLIŞ düzeltme olurdu:** iddiaların bir kısmı sayıya çivili
+   * (`unitPriceCents` 2000, paket payı 2700) ve onları da büyütmek testin ölçtüğü şeyi değiştirirdi
+   * — eşiği geçmek için yazılmış bir aritmetik, bir gün eşik yine değişince yine kırılır.
+   *
+   * Eşik bu yüzden dosya boyunca sıfırlanıp `afterAll`da GERİ KONUYOR (`settingsSnapshot`, CLAUDE
+   * §4b: küresel tekil satır kirletilmez — okunan değer geri konur, sabit yeniden yazılmaz).
+   * Küresel satırı bir dosya boyunca tutmak entegrasyon projesinde güvenli: `fileParallelism: false`
+   * (vitest.config künyesi), yani aynı anda başka bir dosya bu satırı okumuyor. Kuralın KENDİSİ
+   * `checkout-options.test.ts`te sınanıyor — eşiğin varlığı ve yokluğu oranın konusu.
+   */
+  minBasket = settingsSnapshot(db);
+  await minBasket.override('min_basket_cents', 0);
   SettingsService.invalidate();
 });
 
@@ -129,6 +152,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  // Ayar ÖNCE geri konur: sonraki dosya bu satırı okuyacak ve onu bekleten hiçbir şey yok.
+  await minBasket.restore();
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('stock').delete().in('variant_id', [variantId, coldVariantId]);
   await db.from('bundle').delete().eq('id', bundleId);

@@ -178,9 +178,26 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
 });
 
 describe('asgari sepet', () => {
+  /**
+   * **"Asgari YOK" hâli artık KURULMASI gereken bir hâl** (10.08 kural değişimi · düzeltildi 15.08).
+   *
+   * Test beş gün kırmızıydı ve kod haklıydı: kullanıcı kararıyla kapıya teslime **40 € lojistik
+   * taban** geldi ve taban KÜRESEL satıra yazıldı (`0013_settings.sql`). O günden beri "asgari yok"
+   * diye bir hâl kendiliğinden var olmuyor — testin varsayımı ortadan kalkmıştı, iddiası değil.
+   *
+   * Bu yüzden eşik sıfırlanıp geri konuyor, iddia aynen korunuyor. **Sıfıra çekmek bir varsayım
+   * değil, snapshot'ın kendisi** (`settingsSnapshot`, CLAUDE §4b): önce okunur, sonra geri konur —
+   * "boşa çek" deseydik küresel satırı bir gün yanlış değerde bırakırdık.
+   */
   it('asgari yoksa her sepet geçer', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
-    expect(r.minBasketOk).toBe(true);
+    const settings = settingsSnapshot(db);
+    await settings.override('min_basket_cents', 0);
+    try {
+      const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
+      expect(r.minBasketOk).toBe(true);
+    } finally {
+      await settings.restore();
+    }
   });
 
   it('asgari konursa eksik tutar bildirilir', async () => {

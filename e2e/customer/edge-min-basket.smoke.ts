@@ -15,25 +15,41 @@ import { createStampedProduct, type StampedProduct } from '../fixtures/product-f
  * ile kural ayrışmıştır — tam da 29.07'nin arızası.
  *
  * Eşik damgalı bölgenin KENDİ ayar satırından gelir (fikstür `minBasketCents`) — küresel satıra
- * dokunulmaz (e2e README kural 3). Not: yerelde küresel değer bugün 0 (`0013_settings.sql` seed'i),
- * yani b2c'de kural fiilen kapalı; o çelişki ayrı bir bulgu olarak raporlandı (08.08).
+ * dokunulmaz (e2e README kural 3).
  *
  * Gezinme sözleşmesi: `storefront.smoke.ts` başındaki gerekçe (dev'de `load` asılı kalabiliyor).
  */
 const NAV = { waitUntil: 'domcontentloaded' as const };
 
 /**
- * Eşik, tek adet fiyatın (12,90 € — fikstür sabiti) 10 cent üstü: 1 adet sepet "0,10 € ekleyin"
- * der, 2. adet eşiği aşar. Fark BİLEREK bir cümlede telaffuz edilecek kadar küçük — sözün tutarı
- * ekranda birebir aranır.
+ * ── SAYILAR 13 €'DAN 45 €'YA ÇIKTI, KURGU AYNI (10.08 kural değişimi · düzeltildi 15.08) ──
+ *
+ * Bu dosyanın künyesi bir tur *"yerelde küresel değer bugün 0, yani b2c'de kural fiilen kapalı"*
+ * diyordu ve o cümle 10.08'de bayatladı: kullanıcı kararıyla kapıya teslime **40 € lojistik taban**
+ * geldi ve taban küresel satıra yazıldı. `min_basket_cents` **STRICTEST_WINS** üyesi — eşleşen
+ * kapsamların EN YÜKSEĞİ uygulanır — yani `max(bölge 1300, küresel 4000) = 4000`. Fikstürün bölgeye
+ * yazdığı 13,00 € eziliyordu; ekran "40,00 €" derken test "13,00" arıyordu ve üç iddia birden
+ * düşüyordu.
+ *
+ * Dar kapsam eşiği **yükseltebilir, düşüremez** (`SettingsService` künyesinin kendi cümlesi), yani
+ * tek yol tutarları tabanın üstüne taşımaktı. Fiyat artık fikstür parametresi: **44,90 €** ürün,
+ * **45,00 €** eşik — "1 adet = eşikten 10 cent aşağı, 2. adet aşar" kurgusu birebir korunuyor ve
+ * fark hâlâ bir cümlede telaffuz edilecek kadar küçük. İddianın kendisi (sözün tutarı ile kuralın
+ * tutarı aynı sayı mı) hiç değişmedi.
  */
-const MIN_BASKET_CENTS = 1300;
+const PRICE_CENTS = 4490;
+const MIN_BASKET_CENTS = 4500;
 
 test.describe('uç senaryo · asgari sepetin sözü ile kuralı aynı sayı', () => {
   let fixture: StampedProduct;
 
   test.beforeAll(async () => {
-    fixture = await createStampedProduct({ stockQty: 5, withZone: true, minBasketCents: MIN_BASKET_CENTS });
+    fixture = await createStampedProduct({
+      stockQty: 5,
+      withZone: true,
+      minBasketCents: MIN_BASKET_CENTS,
+      priceCents: PRICE_CENTS,
+    });
   });
 
   test.afterAll(async () => {
@@ -63,7 +79,7 @@ test.describe('uç senaryo · asgari sepetin sözü ile kuralı aynı sayı', ()
       await expect(stepper).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 30_000 });
 
-    // SÖZ: "Commande minimum 13,00 € — ajoutez encore 0,10 €." (bal kutusu — bilgi, hata değil).
+    // SÖZ: "Commande minimum 45,00 € — ajoutez encore 0,10 €." (bal kutusu — bilgi, hata değil).
     // İddia YENİLEMELİ: dev server'ın ayar önbelleği 30 sn'lik sözleşme (`SETTINGS_CACHE_TTL_MS`),
     // fikstürün az önce açtığı bölge satırını sunucu en geç o sürede görür — ilk kare kanıt
     // değildir (bulgu-doğrulama dersi, 07.08).
@@ -71,7 +87,7 @@ test.describe('uç senaryo · asgari sepetin sözü ile kuralı aynı sayı', ()
       await page.goto('/fr/panier', NAV);
       await expect(page.getByText(/ajoutez encore 0,10/i).first()).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 45_000 });
-    await expect(page.getByText(/commande minimum 13,00/i).first()).toBeVisible();
+    await expect(page.getByText(/commande minimum 45,00/i).first()).toBeVisible();
 
     // KURAL: checkout kapısı kapalı — aksiyon bağlantı değil PASİF düğmedir (masaüstünde özet
     // kartı, mobil webde alt çubuk; ikisi de aynı `checkoutBlockReason`ı okur).
@@ -80,7 +96,7 @@ test.describe('uç senaryo · asgari sepetin sözü ile kuralı aynı sayı', ()
     await expect(blockedAction).toBeDisabled();
     await expect(page.getByRole('link', { name: /passer à la commande/i })).toHaveCount(0);
 
-    // Cümlenin istediği tutar eklenir: sepet satırının "+" seçicisi (25,80 € ≥ 13,00 €)…
+    // Cümlenin istediği tutar eklenir: sepet satırının "+" seçicisi (89,80 € ≥ 45,00 €)…
     await page.getByRole('button', { name: '+' }).first().click();
 
     // …ve İKİSİ BİRDEN açılır: cümle kalkar, aksiyon bağlantıya döner. Söz ile kural aynı satırı

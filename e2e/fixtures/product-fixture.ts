@@ -62,6 +62,20 @@ interface StampedProductOptions {
    * sözleşme (`SETTINGS_CACHE_TTL_MS`) — ilk iddiayı yenilemeli/sabırlı yaz.
    */
   minBasketCents?: number;
+  /**
+   * Varyantın b2c liste fiyatı (cent) — verilmezse `PRICE_CENTS`.
+   *
+   * **Parametre KÜRESEL TABAN yüzünden gerekti** (10.08 kural değişimi · eklendi 15.08): kapıya
+   * teslime 40 € lojistik taban geldi ve taban küresel satıra yazıldı. `min_basket_cents`
+   * **STRICTEST_WINS** üyesi, yani eşleşen kapsamların EN YÜKSEĞİ uygulanır — bölgeye yazılan
+   * 13,00 €'yu küresel 40,00 € eziyor ve `minBasketCents` seçeneği fiilen etkisiz kalıyordu.
+   *
+   * Dar kapsam eşiği **yükseltebilir, düşüremez** (`SettingsService.STRICTEST_WINS` künyesinin
+   * kendi cümlesi). Yani senaryonun tek yolu tutarları tabanın ÜSTÜNE taşımak; fiyat sabitken
+   * "1 adet = eşikten 10 cent aşağı" kurgusu kurulamıyordu. Fiyat parametrik olunca kurgu aynen
+   * korunuyor, yalnız sayılar büyüyor — iddianın kendisi (söz ↔ kural aynı sayı) hiç değişmiyor.
+   */
+  priceCents?: number;
 }
 
 /** Varyantın b2c liste fiyatı — satılabilirliğin ön koşulu; tutarın kendisi senaryoda önemsiz. */
@@ -103,7 +117,7 @@ export async function createStampedProduct(opts: StampedProductOptions = {}): Pr
   // Varsayılanlar vitrin koşullarını zaten karşılar: status 'active', shippable true, tek varyant.
   const { product, variants } = await new ProductService(db).create({ name: { tr: productName }, categoryId: category.id });
   const variantId = variants[0]!.id;
-  await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: PRICE_CENTS });
+  await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: opts.priceCents ?? PRICE_CENTS });
 
   if ((opts.stockQty ?? 0) > 0) {
     await new StockService(db).insert({

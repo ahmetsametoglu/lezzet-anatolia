@@ -174,7 +174,15 @@ export function PointsCard({
         {points.history.length === 0 && <span className="font-sans text-note text-neutral-400">{t.pointsEmpty}</span>}
         {points.history.map((entry) => (
           <div key={entry.id} className="flex items-baseline justify-between gap-3 font-sans text-note text-neutral-400">
-            <span className="min-w-0 truncate">{entry.reason}</span>
+            {/* Sebep MÜŞTERİ CÜMLESİNE çevrilir — burada `entry.reason` HAM basılıyordu ve Fransız
+                müşteri hesap sayfasında `feedback_candidate` okuyordu (mobil şeridin ölçümü, 15.08).
+                Gözden kaçmasının sebebi de kayıtlı: liste yalnız masaüstü kartta çiziliyor ve yalnız
+                puan hareketi olan hesapta doluyor.
+
+                Bilinmeyen sebep ham dizeye DÜŞER, boş bırakılmaz: defter yeni bir sebep öğrendiğinde
+                satırın kendisi kaybolmamalı — eksik olan çeviridir, hareket değil. Müşterinin gördüğü
+                tuhaf bir kelime, kaybolmuş bir puan hareketinden iyidir. */}
+            <span className="min-w-0 truncate">{t.pointsReason[entry.reason] ?? entry.reason}</span>
             {/* İşaret RENKTEN de okunur: kazanım açık yeşil, harcama sıcak ton. */}
             <span className={['flex-none font-bold', entry.points >= 0 ? 'text-olive-light' : 'text-terracotta-line'].join(' ')}>
               {entry.points >= 0 ? '+' : '\u2212'}
