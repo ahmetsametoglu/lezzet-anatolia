@@ -161,9 +161,13 @@ insert into public.settings (key, value, description) values
   ('points_visit',              '10',  'Günde bir kez site/keşif ziyareti puanı (≈0,10 €) — geri getirme enstrümanı, veri bedeli değil.'),
   -- Tavan YALNIZ para ödenmeden yapılabilen eylemleri kapsar (kullanıcı onayı 11.08): giriş +
   -- keşif oyu, azami 18 puan. Parayla gelen ödüller (yorum, alım-sonrası beğeni, iki davet)
-  -- tavanın DIŞINDADIR — kural motorda (`CAPPED_POINTS_REASONS`). Bu yüzden 100 yeterli kalıyor:
-  -- yükseltilseydi 500'lük davet ödülü yine de kısmi uygulanmayan tavana takılırdı.
-  ('points_daily_cap',          '100', 'Bir müşterinin GÜNDE kazanabileceği azami puan — YALNIZ bedava eylemler için (istismar freni).'),
+  -- tavanın DIŞINDADIR — kural motorda (`CAPPED_POINTS_REASONS`). Tavanı YÜKSELTMEK davet
+  -- ödüllerini kurtarmazdı: 500'lük ödül kısmi uygulanmayan tavana yine takılırdı; kurtaran şey
+  -- kapsamın daralmasıydı (kullanıcı onayı 11.08).
+  -- **270 (kullanıcı kararı 15.08)** — tavana tabi azami kazanç bugün 18 puan (giriş 10 +
+  -- 4 aday kart × 2), yani sayı bugünkü davranışı DEĞİŞTİRMİYOR; kart sayısı ya da ziyaret puanı
+  -- büyüdüğünde nefes payı bırakıyor. Değer geçici: kullanıcı *"sonra bakalım gene"* dedi.
+  ('points_daily_cap',          '270', 'Bir müşterinin GÜNDE kazanabileceği azami puan — YALNIZ bedava eylemler için (istismar freni).'),
   ('points_redeem_min',         '500', 'Kupona çevirmek için asgari puan (500 puan = 5 €).'),
   ('points_cent_value',         '1',   'Bir puanın kuruş değeri. 1 = puan başına 1 cent.')
 -- Global satırın kısmi unique indeksi `scope_id is null` üzerindedir (0013).

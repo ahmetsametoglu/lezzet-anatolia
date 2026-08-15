@@ -89,9 +89,11 @@ export const SOURCELESS_POINTS_REASONS: readonly EarnablePointsReason[] = ['visi
  * (getiren 500, komşu 100) tavan `100`da kaldığı için **davet ödülleri hiçbir zaman yazılamaz**
  * hâle gelirdi: 500 > 100. Ölçüm değil aritmetik — ve hata vermeden, sessizce.
  *
- * Tavanın içinde kalan azami bugün **18 puan** (giriş 10 + 4 aday kart × 2), dolayısıyla
- * `points_daily_cap` 100'de kalabiliyor: yükseltmeye gerek yok ve en çok istediğimiz davranışlar
- * (yorum, davet) artık hiç reddedilmiyor.
+ * Tavanın içinde kalan azami bugün **18 puan** (giriş 10 + 4 aday kart × 2), yani tavanın SAYISI
+ * bugünkü davranışı belirlemiyor — kapsamı belirliyor. `points_daily_cap` **270**
+ * (kullanıcı kararı 15.08; daha önce 100'dü). Sayı bugün hiçbir ödülü reddetmiyor, ileride aday
+ * kart sayısı ya da ziyaret puanı büyürse nefes payı bırakıyor. **Değer geçici** — kullanıcı
+ * *"sonra bakalım gene"* dedi.
  *
  * **`earnedToday` de bu kümeyle sayılır**, tüm defterle değil: 500 puanlık bir getiren ödülü
  * pencereyi doldursaydı müşteri aynı gün keşif oyundan puan alamazdı — tavanın dışında tuttuğumuz

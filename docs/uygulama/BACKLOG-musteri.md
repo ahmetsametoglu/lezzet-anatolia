@@ -364,8 +364,15 @@ eylemleri kapsar; parayla gelen ödüller tavanın DIŞINDADIR.**
 Gerekçe: bedava yapılabilen yalnız iki şey var — uygulamaya girme (zaten günde bir) ve keşif oyu
 (bizim yayınladığımız kart sayısı kadar). Ötekilerin hepsinin arkasında ödenmiş bir sipariş var;
 *kimse bize para ödeyerek bizi sömüremez.* Tavanın içinde kalan azami bugün **18 puan**
-(giriş 10 + 4 aday kart × 2), dolayısıyla `points_daily_cap` **100'de kalır** — yükseltmeye gerek
-yok, ve en çok istediğimiz davranışları (yorum, davet) artık hiç reddetmez.
+(giriş 10 + 4 aday kart × 2), dolayısıyla ~~`points_daily_cap` **100'de kalır**~~ — yükseltmeye
+gerek yok, ve en çok istediğimiz davranışları (yorum, davet) artık hiç reddetmez.
+**GÜNCELLENDİ (kullanıcı kararı 15.08): `points_daily_cap` = 270.** Kullanıcı tavanın 100
+olmadığını hatırlıyordu; beş kaynak (canlı ayar · migration · iki kod varsayılanı · git geçmişi)
+tarandı ve hepsi 100 diyordu, `250`/`270` puan bağlamında hiçbir dosyada geçmiyordu — **ama
+`docs/talep/` repoya gitmediği için silinmiş bir notun izi kurtarılamaz**, o yüzden "yok" diye
+kapatılmadı. Kullanıcı sayıyı doğrudan 270 yaptı: *"sonra bakalım gene."*
+**Bugünkü davranış DEĞİŞMİYOR** — tavana tabi azami kazanç 18 puan, yani 100 de 270 de hiçbir
+ödülü reddetmiyor; sayı yalnız ileriye nefes payı. Kapsam kararı (§4'ün kendisi) aynen geçerli.
 **Neden önemliydi:** tavan kırpmıyor, ödülün TAMAMINI reddediyor. Eski kurguda dört ürününü
 yorumlayan müşteri üçüncüde duvara çarpıp dördüncü yorumundan hiçbir şey alamıyordu, sebebini de
 göremiyordu.

@@ -83,7 +83,7 @@ async function pointsSettings(db: SupabaseClient): Promise<{ values: Record<stri
     settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
     settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
     settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
-    settings.getNumber('points_daily_cap', 100),
+    settings.getNumber('points_daily_cap', 270),
   ]);
   return {
     values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },

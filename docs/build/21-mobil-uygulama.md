@@ -2685,6 +2685,56 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (`docs/talep/musteri-liste-fiyati-baslangic.md`); iki yüzey bir süre ayrışacak ama **ayrışma
   doğru yönde** — mobil daha dürüst.
 
+- [~] (21.56) **PUAN SİSTEMİNİN UÇTAN UCA DENETİMİ — İLK TUR + GÜNLÜK TAVAN 270 (MB-18)**
+  `touches:` `supabase/migrations/0028_points.sql` ·
+  `packages/{domain-core,application}/src/feedback/points.ts`
+
+  ## Tavan: 100 → 270 (kullanıcı kararı 15.08)
+
+  **Önce bir güven meselesi vardı ve ölçümle çözüldü.** Kullanıcı tavanın 100 değil 250 (ya da 270)
+  olduğunu, bunu konuşup **not aldığımızı** hatırlıyordu. Beş kaynak tarandı — canlı `settings`
+  satırı · `0028_points.sql` · iki kod varsayılanı · `BACKLOG-musteri` (dört yer) · o satırın TÜM
+  git geçmişi — **hepsi 100**, ve git geçmişi o satırın ömrü boyunca yalnız AÇIKLAMASININ
+  değiştiğini gösteriyor. `250`/`270` puan bağlamında hiçbir dosyada geçmiyor.
+
+  **Ama "yok" diye kapatılmadı, çünkü kapatılamaz:** `docs/talep/` ve koordinasyon defteri
+  **repoya gönderilmiyor** (`.gitignore`), yani o dosyaların eski sürümleri hiçbir yerde durmuyor;
+  yazılıp silinmiş bir notun izi git'ten kurtarılamaz. Ölçemediğim tek yer burasıydı ve öyle
+  söylendi. *(Koordinasyon defterinde tavan tartışması BULUNDU — 12.08: `500 > 100` olduğu için
+  davet ödüllerinin hiç yazılamayacağı görülmüş, ama seçilen çözüm tavanı yükseltmek değil
+  KAPSAMINI daraltmak olmuş. Kullanıcının hatırladığı tartışma büyük olasılıkla bu.)*
+
+  Kullanıcı sayıyı doğrudan **270** yaptı (*"sonra bakalım gene"* — değer geçici).
+  **Bugünkü davranış DEĞİŞMİYOR ve bu abartılmadı:** tavana tabi tek iki sebep var
+  (`visit`, `feedback_candidate`), azami günlük kazanç **18 puan** — 100 de 270 de hiçbir ödülü
+  reddetmiyor. Sayı yalnız ileriye nefes payı; kapsam kararı (11.08) aynen geçerli.
+
+  **VERİTABANI HENÜZ 100** — migration değişti ama çalışan satır değişmedi. `db:refresh`
+  kullanıcının komutu; daha ucuz yol Ayarlar ekranından elle yazmak (anahtar orada tanımlı).
+  **Web'de iki kopya 100'de kaldı** (`web/lib/feedback/points.ts:48`, `settings-catalog` `fallback`)
+  — web'e dokunmama kararı gereği elleşilmedi; not düşüldü
+  (`docs/talep/not-musteri-gunluk-tavan-270-oldu.md`). İkisi de yalnız YEDEK değer, ayar satırı
+  durdukça okunmuyor; ama `domain-core` künyesinin uyardığı "ayrışan kopya" hâli tam olarak budur.
+
+  ## Denetimin ilk turu — dört ölçüm
+
+  · **Korkulan arıza sınıfı YAPISAL OLARAK engellenmiş.** Ekranın sayıları sunucudan, sunucununki
+    ayardan geliyor (`customer/points.ts` → `readEarnWays`); ayar okunamazsa ya da sıfırsa **yol
+    ekranda hiç gösterilmiyor**. Künyesinin deyişiyle *"kart hiçbir zaman motordan cömert olmaz."*
+  · **Yazım kapısı dört kapıyı da tutuyor** (`feedback/points.ts:120-145`): B2B reddi · tavan
+    (kısmi değil, ya hep ya hiç) · `no_value` · tekillik (ön kontrol + DB kısıtı, `23505` yarışı
+    sessizce yutuluyor ve asıl işlemi durdurmuyor).
+  · **Kupon eşiği tutuyor:** `points_redeem_min=500` × `points_cent_value=1` = **5,00 €**; hesap
+    ekranının cümlesi ve cihazda görülen *"Kupona 490 puan kaldı"* (bakiye 10) ikisi de doğru.
+  · **`points_order` YETİM AYAR.** Sipariş puanı 11.08'de kaldırıldı; kodda yazan yok, defterdeki
+    6 `order` kaydının altısı da TEMMUZ tarihli seed satırı, ekran da onu listelemiyor (sözleşme
+    künyesi gerekçeli). Ama `settings`te `points_order = 10` duruyor — Ayarlar'a bakan operatör
+    "siparişten 10 puan veriliyor" sonucuna varır. Bugün kimse okumuyor, yani zararsız; **yanlış
+    bilgi veren bir kayıt.** Kaldırmak migration işi → kullanıcının kararı, sıraya kondu.
+
+  **AÇIK KALAN (bu yüzden `[~]`):** yorum · ziyaret · getiren · komşu ödüllerinin gerçek yazım
+  yolları, teşekkür kartının sayıları ve "ikinci kez tamamlamada puan yok" hâli ölçülmedi.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
