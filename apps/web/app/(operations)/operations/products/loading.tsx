@@ -1,6 +1,8 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { SkeletonFilterBar, SkeletonPageHeader, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { Skeleton, SkeletonFilterBar, SkeletonTable, SkeletonTabs } from '@/components/operation/ui/skeleton';
 import { PRODUCTS_COLUMN_TRACKS } from './products-columns';
+import { PRODUCT_TABS, PRODUCT_TAB_LABEL } from './products-paths';
 
 /**
  * Ürünler ekranının ROTA DÜZEYİ beklemesi (09.2).
@@ -8,6 +10,14 @@ import { PRODUCTS_COLUMN_TRACKS } from './products-columns';
  * Bu dosya olmadan sidebar'dan bu ekrana geçmek ekranı DONDURUYORDU: RSC okuması bitene kadar tarayıcıda
  * ESKİ sayfa duruyor ve hiçbir bekleme işareti yok — operatör tıklamanın işlediğini anlamıyor, ikinci
  * kez tıklıyor. Okumalar hafif de değil (bu ekranlar 5-9 paralel sorgu atıyor).
+ *
+ * ── STATİK KİMLİK GERÇEK, YALNIZ VERİ İSKELET (15.08 — emsal: fiyatlar) ─────
+ * Başlık barı GERÇEK `PageHeader`: başlık statik, kabuk blokları oturumun verisi ve layout'taki
+ * `OpsShellProvider` geçişte ayakta. Sekme adları gerçek ve `products-paths.ts` tek kaynağından —
+ * eski hâli sayının bile yanlış olduğunu kanıtladı: iskelet 4 çubuk çiziyordu, gerçek çubukta 5
+ * sekme vardı ("Aileler" 04.08'de eklenmiş, iskelet güncellenmemişti) ve içerik gelince bar
+ * genişliyordu. Ad kimliğin yanında durunca bu sınıf hata bir daha yazılamıyor.
+ * Alt başlık sekmeye bağlı (`SUBTITLE[tab]`) ve sekme URL'den gelir — burada bilinmez, çubuk kalır.
  *
  * **Kolon ölçüleri UYDURULMUYOR, gerçek tablodan geliyor** (`PRODUCTS_COLUMN_TRACKS`). İlk turda elle
  * yazılmıştı ve beşin dördü tutmuyordu; iskeletin tek işi "içerik gelince hiçbir şey kaymasın" iken
@@ -22,8 +32,8 @@ import { PRODUCTS_COLUMN_TRACKS } from './products-columns';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Ürünler yükleniyor">
-      <SkeletonPageHeader />
-      <SkeletonTabs count={4} actions={['w-[210px]', 'w-24']} />
+      <PageHeader title="Ürünler" subtitle={<Skeleton className="h-3 w-48" />} />
+      <SkeletonTabs labels={PRODUCT_TABS.map((t) => PRODUCT_TAB_LABEL[t])} actions={['w-[210px]', 'w-24']} />
       <SkeletonFilterBar count={4} />
 
       <div className="grid min-h-0 flex-1 grid-cols-[1.95fr_1fr] overflow-hidden">

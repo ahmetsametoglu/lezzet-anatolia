@@ -9,20 +9,16 @@ import { CatalogTab } from './tabs/catalog/catalog-tab';
 import { FamilyTab } from './tabs/family/family-tab';
 import { PackagesTab } from './tabs/package/package-tab';
 import { ProductsTab } from './tabs/product/product-tab.desktop';
-import type { ProductTab } from './products-paths';
+import { PRODUCT_TABS, PRODUCT_TAB_LABEL, type ProductTab } from './products-paths';
 import type { ProductsViewProps } from './products-types';
 
 // Ürünler — web ("Veri Masası") KABUĞU: ortak üst bar (PageHeader) + O2 sekmeler; sekme içerikleri
 // kendi klasörlerinde (tabs/product · tabs/catalog · tabs/package) — bu dosya yalnız yönlendirir.
 // Kategoriler ve Koleksiyonlar AYNI katalog modülüdür, yalnız `kind` ile ayrışır (no-duplication).
 
-const TABS: Array<{ key: ProductTab; label: string }> = [
-  { key: 'products', label: 'Ürünler' },
-  { key: 'categories', label: 'Kategoriler' },
-  { key: 'collections', label: 'Koleksiyonlar' },
-  { key: 'packages', label: 'Paketler' },
-  { key: 'families', label: 'Aileler' },
-];
+// Sıra ve ad `products-paths.ts`ten (15.08): `loading.tsx` de aynı kaynağı okur — liste burada
+// yazılıyken iskelet 4 çubukta kalmıştı, beşinci sekme ("Aileler") gelince bar genişliyordu.
+const TABS = PRODUCT_TABS.map((key) => ({ key, label: PRODUCT_TAB_LABEL[key] }));
 
 // "Yeni …" düğmesinin etiketi sekmeden gelir — düğme sekme çubuğunun sağında durur ve neyi
 // yarattığını sekme söyler. Etiketler TABS ile aynı sırayı izler ama ondan TÜRETİLEMEZ: sekme adı
