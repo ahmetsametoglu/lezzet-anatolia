@@ -496,7 +496,10 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     submit: async (payload, values, proposalId) => {
       const chosen = new Set(values.selectedKeys);
       const result = await addZoneCodesFromProposalAction({
-        zoneId: payload.zoneId,
+        // Hedef TASLAKTAN: operatör dilekçenin önerdiği rotayı değiştirmiş olabilir
+        // (kullanıcı tespiti 15.08). `payload.zoneId` yazsaydık seçici çizilir ama seçim
+        // hiçbir yere gitmezdi — ekranın söylediği ile sistemin yaptığı ayrışırdı.
+        zoneId: values.zoneId,
         // Gönderilen küme dilekçenin kodlarından SÜZÜLÜYOR, taslaktan çözülmüyor: anahtarlar
         // istemcide kuruluyor ve sunucuya kod listesi gitmeli, anahtar dizesi değil.
         codes: payload.postalCodes
@@ -506,8 +509,15 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
       });
       return { error: result.error };
     },
-    // Harita + kanıt listesi yan yana duruyor; dar bir pencerede harita kullanılamaz hâle gelirdi.
-    width: 1320,
+    /**
+     * Harita + kanıt listesi + künye rayı yan yana duruyor (kullanıcı isteği 15.08: *"diyaloğun
+     * büyüklüğünü ona göre ayarlayabilirsin"*).
+     *
+     * 1320'de sol sütuna ~800 piksel düşüyordu ve harita ile kod listesi aynı dar kolonu
+     * paylaşıyordu. 1600'de harita nefes alıyor; en geniş iki gövdenin (1720) altında kalması da
+     * bilinçli — buradaki karar üç kodluk bir seçim, bir sipariş tablosu değil.
+     */
+    width: 1600,
     applyLabel: 'Bölgeye ekle',
     appliedNote:
       'Kodlar bölgeye eklendi. Haber bekleyen müşterilere "bölgeniz açıldı" bildirimi uzlaştırma işiyle gidiyor (saatte bir) — geri alınamaz.',

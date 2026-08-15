@@ -23,8 +23,17 @@ export interface ZoneCandidateCode {
   heldBy: string | null;
 }
 
-/** Formun tuttuğu tek şey: hangi kodlar bölgeye girecek. */
+/** Formun iki kararı: kodlar HANGİ rotaya, ve hangileri. */
 export interface ZoneFormValues {
+  /**
+   * **HEDEF ROTA — dilekçeninki değil, operatörünki** (kullanıcı tespiti 15.08).
+   *
+   * Asistan `delivery_map` ile en yakın güzergâhı buluyor ve onu öneriyor; ama hangi aracın o kodu
+   * taşıyacağı operatörün bilgisidir (kapasite, sürücü, gün). Rota kendi deposunu belirlediği için
+   * "farklı depoya ver" kararı da buradan veriliyor — ayrı bir depo seçicisi rotasız bir atama
+   * doğururdu ve öyle bir kayıt yok.
+   */
+  zoneId: string;
   /** Seçili kodlar — `postalCode` değil TAM anahtar, çünkü `67000` iki ülkede geçerli. */
   selectedKeys: string[];
 }
@@ -68,5 +77,6 @@ export function zoneSummary(
  * yalnız birini almak meşru bir karardır ve zaten bu formun varlık sebebi.
  */
 export function zoneBlock(values: ZoneFormValues): string | null {
+  if (!values.zoneId) return 'Kodların gireceği rotayı seçin.';
   return values.selectedKeys.length === 0 ? 'En az bir posta kodu seçin — seçimsiz onay bölgeye hiçbir şey eklemez.' : null;
 }

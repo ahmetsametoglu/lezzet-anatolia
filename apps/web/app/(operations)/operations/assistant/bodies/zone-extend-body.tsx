@@ -32,11 +32,15 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
  * hesaplanıyor ve onaydan ÖNCE görünüyor.
  */
 
-/** Dilekçe → formun açılış değeri: **önerilen kodların tamamı seçili.** */
+/** Dilekçe → formun açılış değeri: **önerilen rota + önerilen kodların tamamı seçili.** */
 export function zoneValuesFrom(payload: ZoneExtendPayload): ZoneFormValues {
   // Açılış "önerinin kabul edilmiş hâli"dir, boş liste değil: patron çoğu zaman öneriyi olduğu
   // gibi onaylar ve o yolu üç tıklamaya çıkarmak, kuyruğun hızını alırdı. Çıkarmak bir tıklama.
-  return { selectedKeys: payload.postalCodes.map((code) => zoneCodeKey({ country: payload.country, postalCode: code.postalCode })) };
+  // Rota da öyle: asistanın önerdiği rota seçili gelir, değiştirmek tek seçim.
+  return {
+    zoneId: payload.zoneId,
+    selectedKeys: payload.postalCodes.map((code) => zoneCodeKey({ country: payload.country, postalCode: code.postalCode })),
+  };
 }
 
 /**
@@ -46,10 +50,10 @@ export function zoneValuesFrom(payload: ZoneExtendPayload): ZoneFormValues {
  * onay anında başka bir rotaya girmiş olabilir ve o hâlde seçim kısıtla reddedilirdi. Ekran bunu
  * önden söylüyor.
  */
-function candidatesOf(payload: ZoneExtendPayload, options: AssistantFormOptions): ZoneCandidateCode[] {
-  const context = options.zones[payload.zoneId];
-  const zoneOfKey = new Map((context?.points ?? []).map((point) => [zoneCodeKey(point), point.zoneId]));
-  const placesOfKey = new Map((context?.points ?? []).map((point) => [zoneCodeKey(point), point.places]));
+function candidatesOf(payload: ZoneExtendPayload, options: AssistantFormOptions, targetZoneId: string): ZoneCandidateCode[] {
+  const points = Object.values(options.zones)[0]?.points ?? [];
+  const zoneOfKey = new Map(points.map((point) => [zoneCodeKey(point), point.zoneId]));
+  const placesOfKey = new Map(points.map((point) => [zoneCodeKey(point), point.places]));
   const nameOfZone = new Map(Object.values(options.zones).map((zone) => [zone.zoneId, zone.zoneName]));
 
   return payload.postalCodes.map((code) => {
@@ -63,7 +67,9 @@ function candidatesOf(payload: ZoneExtendPayload, options: AssistantFormOptions)
       places: placesOfKey.get(key) ?? (code.placeName ? [code.placeName] : []),
       requestCount: code.requestCount,
       waitingCount: code.waitingCount,
-      heldBy: holder && holder !== payload.zoneId ? (nameOfZone.get(holder) ?? 'başka rota') : null,
+      // Engel SEÇİLİ rotaya göre: operatör hedefi değiştirince "başka rotada" hâli de değişir.
+      // Kodu zaten hedef rota tutuyorsa engel yok — kapı onu ikinci kez yazmıyor.
+      heldBy: holder && holder !== targetZoneId ? (nameOfZone.get(holder) ?? 'başka rota') : null,
     };
   });
 }
@@ -80,11 +86,22 @@ interface ZoneExtendBodyProps {
 }
 
 export function ZoneExtendBody({ payload, subject, options, meta, values, onChange, disabled, readOnly }: ZoneExtendBodyProps) {
-  const context = options.zones[payload.zoneId];
-  const candidates = candidatesOf(payload, options);
+  // Bağlam SEÇİLİ rotadan okunuyor, dilekçeninkinden değil: operatör hedefi değiştirdiğinde
+  // haritadaki "bu rotanın kodu" kümesi de, engel listesi de onunla birlikte değişmeli.
+  const context = options.zones[values.zoneId] ?? options.zones[payload.zoneId];
+  const candidates = candidatesOf(payload, options, values.zoneId);
   const heldKeys = new Set(
-    (context?.points ?? []).filter((p) => p.zoneId !== null && p.zoneId !== payload.zoneId).map(zoneCodeKey),
+    (context?.points ?? []).filter((p) => p.zoneId !== null && p.zoneId !== values.zoneId).map(zoneCodeKey),
   );
+  // Rota listesi: hepsi, deposuyla ve kod sayısıyla — seçim "hangi araç taşıyacak" kararıdır.
+  const routes = Object.values(options.zones)
+    .map((zone) => ({
+      id: zone.zoneId,
+      name: zone.zoneName,
+      warehouseName: zone.warehouseName,
+      codeCount: zone.currentCodes.length,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 
   /**
    * **BÖLGE OKUNAMADIYSA GÖVDE ÇİZİLMEZ** ve sebebi yazılır.
@@ -119,7 +136,7 @@ export function ZoneExtendBody({ payload, subject, options, meta, values, onChan
           currentCodes={context.currentCodes}
           points={points}
           heldKeys={heldKeys}
-          zoneName={context.zoneName}
+          routes={routes}
           warehouseName={context.warehouseName}
           disabled={disabled || readOnly}
         />
@@ -128,7 +145,7 @@ export function ZoneExtendBody({ payload, subject, options, meta, values, onChan
       <ProposalAside
         subject={subject}
         fallbackTitle="Bölge genişletme"
-        facts={factsOf(payload, values, candidates, context.currentCodes.length)}
+        facts={factsOf(payload, values, candidates, context)}
         payload={payload}
         meta={meta}
       />
@@ -141,12 +158,16 @@ function factsOf(
   payload: ZoneExtendPayload,
   values: ZoneFormValues,
   candidates: ZoneCandidateCode[],
-  currentCount: number,
+  context: { zoneName: string; warehouseName: string | null; currentCodes: readonly unknown[] },
 ): ProposalFact[] {
   const summary = zoneSummary(values, candidates);
+  const moved = context.zoneName !== payload.zoneName;
   return [
-    { label: 'Bölge', value: payload.zoneName },
-    { label: 'Bugünkü kod', value: num(currentCount) },
+    // Operatör hedefi değiştirdiyse "şimdi" sütunu belirir: dilekçe hangi rotayı istemişti,
+    // kayıt hangisine gidiyor — arşiv bu farkı okuyabilmeli.
+    { label: 'Rota', value: payload.zoneName, ...(moved ? { now: context.zoneName } : {}) },
+    ...(context.warehouseName ? [{ label: 'Depo', value: context.warehouseName }] : []),
+    { label: 'Bugünkü kod', value: num(context.currentCodes.length) },
     // Dilekçenin önerdiği sayı ile operatörün seçtiği: fark varsa "şimdi" sütunu belirir.
     { label: 'Eklenecek', value: num(payload.postalCodes.length), now: num(summary.selected) },
     { label: 'Bildirim', value: `${num(summary.waiting)} müşteri` },

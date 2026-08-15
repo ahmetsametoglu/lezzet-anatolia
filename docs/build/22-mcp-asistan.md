@@ -1738,8 +1738,23 @@ sınamış olacaktık.
       kodları kabul ediyor muyum"*, *"başka nereye gidelim"* değil — ikinci bir keşif aracı kararı
       genişletip önerinin kendisini gölgede bırakırdı.
     - **Doğrulama:** typecheck 18/18 · lint temiz · knip değişmedi.
-    - **BEKLEYEN(22.36):** kullanıcı ekranda denemedi. Kuyrukta gerçek dilekçe var (Schiltigheim +
-      67500) ve TTL'i 16.08.
+    - **EKRANDA DENENDİ VE İKİ EKSİK ÇIKTI** *(kullanıcı, 15.08)* — ikisi de düzeltildi:
+      - **HEDEF ROTA SEÇİLEMİYORDU.** Gövde kodları yalnız dilekçenin işaret ettiği rotaya
+        atıyordu. Kullanıcının cümlesi: *"belki de bu posta kodunu farklı rotaya atamak istiyorum,
+        belki farklı depoya."* Haklıydı ve eksik BENDEYDİ: asistanın rota seçimi bir ÖNERİDİR —
+        `delivery_map` en yakın güzergâhı bulur ama hangi aracın o kodu taşıyacağı operatörün
+        bilgisidir (kapasite, sürücü, gün). Rota seçici en üste geldi; seçenek etiketi **depoyu da
+        yazıyor**, çünkü "farklı depoya ver" kararı buradan veriliyor — rota kendi deposuna bağlı,
+        başka deponun rotasını seçmek kodu o depoya bağlamaktır. **Ayrı bir depo seçicisi
+        KONULMADI:** rotasız bir depo ataması diye bir kayıt yok, olsaydı uygulanamayan bir seçim
+        doğardı. Hedef değişince haritadaki "bu rotanın kodu" kümesi, engel listesi ve künye
+        satırları da onunla birlikte değişiyor; künyede dilekçenin istediği rota ile kaydın gittiği
+        rota **yan yana** duruyor, ki arşiv farkı okuyabilsin.
+      - **HARİTA YÜKSEKLİĞİ KÖTÜYDÜ** (*"genişliği fena değil ama yüksekliği kötü"*). Diyalog
+        1320 → **1600**, harita 260 → **420 piksel**. Harita bir ORAN işidir: pencere genişleyince
+        sabit kalan yükseklik onu bant gibi gösteriyordu.
+    - **BEKLEYEN(22.36):** kuyrukta gerçek dilekçe var (Schiltigheim + 67500), TTL 16.08; rota
+      seçicili hâli henüz ekranda denenmedi.
     - **BEKLEYEN(22.36):** rota ekranının devir yolu (`routes-handoff.ts` + `?proposal=` ön dolgusu)
       artık HİÇBİR öneri tarafından tetiklenmiyor — `zone_extend` onun tek tüketicisiydi. Kod ölü
       değil (sayfa hâlâ okuyor), ama pratikte ulaşılamaz. Sökülmesi rota ekranının kendi turunun işi;

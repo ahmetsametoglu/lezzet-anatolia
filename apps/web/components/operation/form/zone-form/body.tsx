@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { FieldShell } from '@/components/operation/form/field-shell';
+import { Select } from '@/components/operation/form/select';
 import { Toggle } from '@/components/operation/form/toggle';
 import { num } from '@/components/operation/ui/format';
 import { placesLabel } from '@/components/operation/ui/labels';
@@ -33,13 +34,14 @@ interface ZoneFormBodyProps {
   onChange: (next: ZoneFormValues) => void;
   /** Dilekçenin önerdiği kodlar — form YALNIZ bunları düzenletir. */
   candidates: readonly ZoneCandidateCode[];
-  /** Bölgenin BUGÜNKÜ kodları — haritada "bu rotanın kodu" olarak çizilir. */
+  /** SEÇİLİ rotanın bugünkü kodları — haritada "bu rotanın kodu" olarak çizilir. */
   currentCodes: ReadonlyArray<{ country: ZoneCandidateCode['country']; postalCode: string }>;
   /** Haritanın çizeceği tüm noktalar (bölge kodları + öneriler + başka bölgelerinkiler). */
   points: readonly ZoneMapPoint[];
-  /** Kodu başka bölge tutuyorsa `stateOf` onu `taken` çizsin diye: anahtar → bölge kimliği. */
+  /** Kodu SEÇİLİ rotadan başkası tutuyorsa `stateOf` onu `taken` çizsin diye. */
   heldKeys: ReadonlySet<string>;
-  zoneName: string;
+  /** Seçilebilecek rotalar — hepsi, deposuyla birlikte (kullanıcı tespiti 15.08). */
+  routes: ReadonlyArray<{ id: string; name: string; warehouseName: string | null; codeCount: number }>;
   warehouseName: string | null;
   disabled: boolean;
 }
@@ -51,10 +53,11 @@ export function ZoneFormBody({
   currentCodes,
   points,
   heldKeys,
-  zoneName,
+  routes,
   warehouseName,
   disabled,
 }: ZoneFormBodyProps) {
+  const zoneName = routes.find((route) => route.id === values.zoneId)?.name ?? '—';
   const chosen = useMemo(() => new Set(values.selectedKeys), [values.selectedKeys]);
   const summary = zoneSummary(values, candidates);
 
@@ -96,7 +99,7 @@ export function ZoneFormBody({
       // basıp kısıt ihlaliyle karşılaşmasın.
       if (heldKeys.has(key)) return;
       const next = chosen.has(key) ? values.selectedKeys.filter((k) => k !== key) : [...values.selectedKeys, key];
-      onChange({ selectedKeys: next });
+      onChange({ ...values, selectedKeys: next });
     },
     [chosen, disabled, heldKeys, onChange, values.selectedKeys],
   );
@@ -115,9 +118,42 @@ export function ZoneFormBody({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Harita sabit yükseklikte: diyalog içinde `flex-1` verilseydi kutu içeriğe göre büyüyüp
-          küçülür, kod listesi uzadıkça harita ezilirdi. 260px tasarımın kart yüksekliği. */}
-      <div className="h-[260px] overflow-hidden rounded-ops-card border border-ops-line">
+      {/**
+       * **HEDEF ROTA — kararın ilk sorusu, o yüzden en üstte** (kullanıcı tespiti 15.08).
+       *
+       * Gövde ilk yazımda bu seçiciyi hiç taşımıyordu: dilekçe hangi rotayı işaret ediyorsa kod
+       * ona giriyordu. Kullanıcı ekranda gördü — *"belki de bu posta kodunu farklı rotaya atamak
+       * istiyorum, belki farklı depoya"* — ve haklıydı: asistanın rota seçimi bir ÖNERİDİR.
+       * `delivery_map` en yakın güzergâhı bulur ama hangi aracın o kodu taşıyacağı operatörün
+       * bilgisidir (kapasite, sürücü, gün).
+       *
+       * Seçenek etiketi DEPOYU da yazıyor, çünkü "farklı depoya ver" kararı buradan veriliyor:
+       * rota kendi deposuna bağlı, dolayısıyla başka deponun rotasını seçmek kodu o depoya
+       * bağlamaktır. Ayrı bir depo seçicisi rotasız bir atama doğururdu ve öyle bir kayıt yok.
+       */}
+      <FieldShell
+        label="Hangi rotaya girsin"
+        required
+        labelAside={values.zoneId ? `${num(currentCodes.length)} kod` : undefined}
+      >
+        <Select
+          value={values.zoneId}
+          onChange={(zoneId) => onChange({ ...values, zoneId })}
+          placeholder="Rota seçin"
+          disabled={disabled}
+          options={routes.map((route) => ({
+            value: route.id,
+            label: `${route.name}${route.warehouseName ? ` · ${route.warehouseName}` : ''} — ${route.codeCount} kod`,
+          }))}
+        />
+      </FieldShell>
+
+      {/* Harita SABİT yükseklikte: `flex-1` verilseydi kutu içeriğe göre büyüyüp küçülür, kod
+          listesi uzadıkça harita ezilirdi.
+          420px — kullanıcı 15.08'de *"genişliği fena değil ama yüksekliği kötü"* dedi. Harita bir
+          ORAN işidir: diyalog 1600'e genişleyince sol sütun da genişledi ve 320px'lik bir şerit
+          orada bant gibi duruyordu. */}
+      <div className="h-[420px] overflow-hidden rounded-ops-card border border-ops-line">
         <ZoneMap
           points={points}
           stateOf={stateOf}

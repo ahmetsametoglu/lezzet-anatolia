@@ -66,7 +66,6 @@ export async function readZoneProposalContext(
     new WarehouseService(db).list(),
   ]);
 
-  const wanted = new Set(zoneIds);
   const warehouseName = new Map(warehouses.map((w) => [w.id, w.name]));
 
   const zoneOfCode = new Map<string, string>();
@@ -91,9 +90,23 @@ export async function readZoneProposalContext(
       zoneId: zoneOfCode.get(`${place.country}:${place.postalCode}`) ?? null,
     }));
 
+  /**
+   * **TÜM bölgeler dönüyor, yalnız dilekçeninki değil** (kullanıcı tespiti 15.08).
+   *
+   * İlk yazımda yalnız `wanted` içindekiler dönüyordu ve gövde de öyle çizilmişti: dilekçe hangi
+   * rotayı işaret ediyorsa kod ona giriyordu. Kullanıcı ekranda gördü ve doğru olanı söyledi —
+   * *"belki de bu posta kodunu farklı rotaya atamak istiyorum, belki farklı depoya."*
+   *
+   * Asistanın seçtiği rota bir ÖNERİDİR, veri değil: `delivery_map` en yakın güzergâhı buluyor ama
+   * hangi aracın o kodu taşıyacağı operatörün bilgisidir (kapasite, sürücü, gün). Rota da deposunu
+   * belirlediği için "farklı depo" kararı buradan veriliyor — ayrı bir depo seçicisi gerekmez,
+   * gerekseydi rotasız bir depo ataması doğardı ve öyle bir şey yok.
+   *
+   * Yük yok: bölge listesi operatörün elle kurduğu, doğal tavanı olan bir küme (`CLAUDE §1`) ve
+   * zaten tek sorguda okunuyordu — süzgeç yalnız dönüşü daraltıyordu.
+   */
   const out: Record<string, ZoneProposalContext> = {};
   for (const zone of zones) {
-    if (!wanted.has(zone.id)) continue;
     out[zone.id] = {
       zoneId: zone.id,
       zoneName: zone.name,
