@@ -19,7 +19,7 @@ import { MultiToggle } from './multi-toggle';
 import { LocaleCard } from './locale-card';
 import { LocalizedTextField } from './localized-text-field';
 import { Select } from './select';
-import { Toggle } from './toggle';
+import { ToggleField } from './toggle';
 
 /**
  * İNDİRİM / KUPON FORMUNUN GÖVDESİ — dialog'dan AYRI, çünkü iki yerde çiziliyor (22.10).
@@ -533,17 +533,14 @@ export function DiscountFormBody({
           onChange={(next) => set('minBasket', next)}
           placeholder="ör. 50,00"
         />
+        {/* Kitin kartlı anahtarı (`ToggleField`) — elle kutu yazılmaz (kullanıcı düzeltmesi 15.08);
+            etiket anahtarın HÂLİNİ söyler, karar FieldShell başlığında. */}
         <FieldShell label="Yalnız ilk sipariş" labelAside={aside('firstOrderOnly')}>
-          <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-line px-3 py-2">
-            <Toggle
-              on={values.firstOrderOnly}
-              onChange={(next) => set('firstOrderOnly', next)}
-              label="Yalnız ilk sipariş"
-            />
-            <span className="font-ops-body text-ops-xs text-ops-muted">
-              {values.firstOrderOnly ? 'Yalnız ilk siparişte geçerli' : 'Her siparişte geçerli'}
-            </span>
-          </div>
+          <ToggleField
+            label={values.firstOrderOnly ? 'Yalnız ilk siparişte' : 'Her siparişte geçerli'}
+            on={values.firstOrderOnly}
+            onChange={(next) => set('firstOrderOnly', next)}
+          />
         </FieldShell>
       </div>
 
@@ -585,15 +582,13 @@ export function DiscountFormBody({
 
   // Aktif anahtarı yalnız footer'sız kabukta (asistan) gövdede durur — diyalog kendi footer'ında çizer.
   const activeBox = showActiveToggle ? (
-    <div className="flex items-center justify-between gap-3 rounded-ops-card border border-ops-line px-3.5 py-2.5">
-      <div className="flex flex-col gap-px">
-        <span className="font-ops-body text-ops-sm font-medium text-ops-ink">Aktif</span>
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          Kapalı kural hiç uygulanmaz ama listede kalır — geçmişi silinmez
-        </span>
-      </div>
-      <Toggle on={values.isActive} onChange={(next) => set('isActive', next)} label="Aktif" />
-    </div>
+    <FieldShell label="Aktif" labelAside="kapalı kural uygulanmaz, listede kalır — geçmişi silinmez">
+      <ToggleField
+        label={values.isActive ? 'Aktif' : 'Kapalı'}
+        on={values.isActive}
+        onChange={(next) => set('isActive', next)}
+      />
+    </FieldShell>
   ) : null;
 
   const ruleNote = (

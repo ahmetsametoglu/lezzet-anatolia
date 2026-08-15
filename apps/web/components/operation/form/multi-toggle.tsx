@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
+import { CONTROL_H } from '@/components/operation/ui/control';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
 /**
@@ -26,9 +27,13 @@ import type { OpsTone } from '@/components/operation/ui/tone';
  */
 type MultiToggleSize = 'sm' | 'md';
 
+// Yükseklik ORTAK sözlükten (15.08): boy dolgudan doğuyordu (md ≈ 39px) ve yan yana durduğu girdi
+// 36px'ti — aynı satırda iki farklı yükseklik, control.ts'in "beş farklı yükseklik" dersinin
+// küçük tekrarı (kullanıcı bildirimi: kupon formunda satırlar hizasız). Dolgu yerine açık yükseklik:
+// içerik ne olursa olsun ray girdiyle aynı boyda.
 const SIZE: Record<MultiToggleSize, string> = {
-  sm: 'py-[6px] text-ops-sm',
-  md: 'py-[8px] text-ops-sm',
+  sm: CONTROL_H.sm,
+  md: CONTROL_H.md,
 };
 
 // Seçili hapın dolgusu + üstündeki metin. Her çift İKİ temada da aynı yönde çalışır: dolgu koyu
@@ -150,7 +155,7 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
        * `width` yazan iki utility'nin hangisinin kazanacağı sınıf sırasına değil CSS sırasına bağlı
        * olurdu ve sessizce yanlış tarafa düşerdi.
        */
-      className={['relative flex rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-[2px]', className ?? 'w-fit'].join(' ')}
+      className={['relative flex rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-[2px]', SIZE[size], className ?? 'w-fit'].join(' ')}
     >
       {/* Kayan hap — yeri ve genişliği SEÇİLİ DÜĞMEDEN ölçülür (aşağıdaki künye). Ölçüm gelmeden
           çizilmez: yanlış yerde bir kare bir kare bile görünmemeli. */}
@@ -184,7 +189,7 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
               // gri bir alan kalıyordu. Taşma geri gelmez — `min-width: auto` + `nowrap` düğmeyi
               // kendi metninin altına indirmez; büyürler, küçülmezler.
               'relative z-[1] flex-1 basis-auto whitespace-nowrap rounded-md px-3 text-center font-ops-display font-semibold transition-colors',
-              SIZE[size],
+              'flex items-center justify-center text-ops-sm',
               // Kapalı seçenek SOLUK ama okunur: gizlemiyoruz, "şu an olmaz" diyoruz.
               o.disabled ? 'cursor-not-allowed text-ops-faint' : 'cursor-pointer',
               on ? tone.text : o.disabled ? '' : 'text-ops-body hover:text-ops-ink',
