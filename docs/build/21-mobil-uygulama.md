@@ -2463,6 +2463,50 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (dizi sözdizimi 64 yerde doğru kullanılmış), yani kaynak dolaylı ve çalışma anında yakalanmalı.
   `adb logcat` bu turda zaman aşımına düştü; cihaz turuna bırakıldı.
 
+- [x] (21.51) **B2B BAŞVURUSUNUN MİSAFİR YOLU CİHAZDA YÜRÜTÜLDÜ — kod kuruyordu, ölçüm yoktu (MB-09)**
+  `touches:` **yalnız ölçüm — kod değişikliği YOK.**
+
+  11.08 turunda başvurunun yalnız **girişli** yolu yürütülmüştü; misafir yolu (401 → kimlik
+  çekmecesi → doğrulama → aynı gövdenin kendiliğinden yeniden gönderimi) kod ve birim testleriyle
+  kuruyor ama cihazda hiç koşmamıştı. 15.08'de baştan sona koşuldu.
+
+  **Tur ve kanıtları (cihaz `5cf6c351`, 13:0x):**
+  1. Oturum kapatıldı, vitrin *"Hoş geldiniz"* dedi — misafir.
+  2. Profesyonel ekranı misafire açıldı; **resmî kayıt sorgusu misafirken çalıştı** (uç public):
+     SIRET `907 496 640 00026` → `QUALITE` · `46 RUE DES PRES` · `67380 LINGOLSHEIM` alanlara doldu.
+  3. *"Başvuruyu gönder"* → **kimlik çekmecesi açıldı** (*"Başvuruyu kimin adına yazalım?"*).
+  4. E-posta → kod → **başvuru KENDİLİĞİNDEN gitti**, form yeniden doldurulmadı:
+     *"Başvurunuz alındı · İnceliyoruz — sonucu e-posta ile bildireceğiz."*
+  5. **Veritabanı kanıtı:** `user_profiles.b2b_pending = true`, `b2b_applied_at` 11:04:06Z,
+     `company_info` resmî kayıttan (`siret`, `legal_name`, `activity_code`, `founded_year`).
+
+  **YANLIŞ ALARM ELENDİ — telefon boş kalıyor ama bu KASITLI.** Profilde `phone: null` görüldü,
+  oysa forma numara yazılmıştı. Ölçüldü: numara zaten **başka bir kayıtta** duruyor (seed müşterisi
+  `Élodie Martin`, `+33612345678`). Telefon kimlik anahtarı ve tekil (`user_profiles_phone_key`);
+  `customer/b2b.ts:86-93` künyesi bunu satır satır anlatıyor — numara sessizce atlanır, mükerrer
+  sinyali onay kartına düşer, kararı operatör verir. Yani sözleşmeye uygun davranış.
+
+  **AÇIKLANAMAYAN BİR KARE — teori kurulmadı, ölçüm kaydedildi.** Turun ortasında bir kez
+  *"Kod gönderilemedi — biraz sonra yeniden deneyin."* göründü; ikinci denemede **aynı kod** çalıştı.
+  Ölçüm sebebi DIŞLADI, bulmadı: `email_verifications`ta o adresin **tek** satırı var ve
+  `attempts = 0` — yani sunucuya başarısız bir doğrulama isteği HİÇ ulaşmamış, yeniden gönderim de
+  satır yazmamış. `error_log`da o dakikalarda kayıt yok. Test kodu açıkken sunucu Resend'e zaten
+  hiç gitmiyor (`application/auth/otp.ts:99`), yani sunucu kaynaklı `send_failed` o dalda imkânsız.
+  **Kayda değer olan yapısal bulgu:** `send_failed` cümlesi ÜÇ ayrı hâlin ortak karşılığı —
+  (a) ağ/beklenmedik anahtar (`lib/auth/otp.ts:35`), (b) kod doğruydu ama cihaz oturumu kurulamadı
+  (`:79`), (c) sunucunun 502'si. Ekrana bakarak hangisi olduğu anlaşılamaz. MB-32'nin ailesinden
+  bir kalem; **`design/BACKLOG.md`ye değil buraya yazıldı** çünkü açık bir tasarım borcu değil,
+  tekrarlarsa teşhis edilecek bir gözlem.
+
+  **Cihazda yazılan veri geri alındı** (⚑ kuralı): hesap **uygulamanın kendi silme akışıyla**
+  kapatıldı — `anonymized_at` 11:09:06Z, `name` boş, `email` null, `b2b_pending` false. Bu aynı
+  zamanda `(21.49)`'un hesap silmesini **başvurusu olan gerçek bir hesapta** ikinci kez doğruladı.
+  Ölçüm için açılan tek `email_verifications` sonda satırı da silindi.
+
+  **Yan doğrulama (bedava çıktı):** aynı misafir turunda `home-discover` ekranda YOK,
+  `home-professional` VAR — `(21.50)`'nin MB-58a düzeltmesi taze paketle ikinci kez doğrulandı.
+  **Yan gözlem:** Türkçe yüzeyde ekran başlığı hâlâ *"Professionnels"* (MB-33, açık kalem).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

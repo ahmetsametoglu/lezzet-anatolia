@@ -110,10 +110,20 @@
   hesabı olan müşteriye kayıt adımı anlatılıyor. Web'de aynı adımın gövdesi var ve daha bilgilendirici
   (*"SIRET'inizle bir dakikada — bilgiler resmî kayıttan kendiliğinden dolar"*).
 
-- [ ] **MB-09 · Doğrulanmamış: misafir yolu cihazda ölçülmedi.** Kod ve birim testleri kuruyor
+- [x] **MB-09 · Doğrulanmamış: misafir yolu cihazda ölçülmedi.** Kod ve birim testleri kuruyor
   (401 → kimlik çekmecesi → doğrulama → aynı gövdenin yeniden gönderimi), ama 11.08 turunda yalnız
-  **girişli** yol yürütüldü. Misafirle bir tur atılmalı: e-posta → OTP → başvurunun kendiliğinden
-  gitmesi → "inceleniyor" bloğu.
+  **girişli** yol yürütüldü.
+  → **KAPANDI (15.08), görev `(21.51)` — cihazda baştan sona koşuldu, kod değişikliği YOK.**
+  Misafirken: resmî kayıt sorgusu çalıştı (SIRET → `QUALITE` · `67380 LINGOLSHEIM`) → gönderimde
+  kimlik çekmecesi açıldı → e-posta + kod → **başvuru kendiliğinden gitti**, form yeniden
+  doldurulmadı → *"Başvurunuz alındı · İnceliyoruz"*. Veritabanı kanıtı: `b2b_pending = true`,
+  `b2b_applied_at` 11:04:06Z, `company_info` resmî kayıttan.
+  **Yanlış alarm elendi:** profilde `phone` boş kalıyor ama bu kasıtlı — numara zaten başka bir
+  kayıtta (seed müşterisi) ve telefon tekil kimlik anahtarı; `customer/b2b.ts:86-93` künyesi bunu
+  anlatıyor. **Açıklanamayan bir kare** (`send_failed` cümlesi bir kez göründü, ikinci denemede
+  aynı kod çalıştı) ölçümle DIŞLANDI ama bulunamadı; ayrıntısı ve `send_failed`in üç ayrı hâli
+  birden karşılaması `(21.51)`de yazılı. Cihazda yazılan veri uygulamanın kendi silme akışıyla
+  geri alındı (`anonymized_at` 11:09:06Z).
 
 - [ ] **MB-10 · Başvuru ekranının kahraman görseli yok.** `design/BACKLOG.md` §1'de
   `professionals_hero` slot'u tanımlı ve arka ucu 09.08'de yazıldı (`site_image` tablosu + kova);
@@ -1291,7 +1301,7 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-39 (ölü ihraç tipler — B2B dışı yarısı) | mobil | 11.08 · 12:4x | `apps/mobile/src/lib/api/{discover,points}.ts` · `lib/payment/{payment-sheet,stripe-config}.ts` · `screens/customer-kit/{discount-label.ts,use-sheet.hook.ts}` · `screens/home/use-home-orders.hook.ts` | **alındı** |
 | MB-02 (klavye odaklanan alanı kapatıyor) | cihaz | 11.08 · 12:19 → yollar 12:3x'te kesinleşti | **YENİ:** `apps/mobile/src/components/ui/form-scroll.tsx` · **DEĞİŞEN:** `screens/{professionals/professionals-screen.tsx,login/login-screen.tsx,feedback/feedback-screen.tsx}` | **bitti ve COMMİT EDİLDİ** — `9f680bbb`, görev `(21.36)` (11.08). Sebep ölçüldü: tema `Theme.EdgeToEdge`, `adjustResize` ölü, pencere küçülmüyor (klavye açıkken kaydırma da işlemiyor). Çözüm kite kondu (`form-scroll.tsx`), `bottom-sheet`in 08.08'de verdiği kararın aynısı; şimdilik yalnız FORM ekranlarına uygulandı. **Kalan geniş göç MB-34'ün işi** — o satır da artık açık |
 | MB-48 (çekmece taşıyor · öneri listesi sınırsız) | cihaz | 11.08 · 14:2x — görev `(21.41)` | `apps/mobile/src/components/ui/{bottom-sheet.tsx,suggestion-list.tsx}` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` (yerel kaydırıcı kite taşındı) | **bitti** — Android'de ölçüldü ("Büyük" yazı boyutu), **iOS'ta kullanıcı doğruladı** (11.08) |
-| MB-09 (B2B misafir yolu cihazda hiç yürütülmedi) | cihaz | 11.08 · 14:2x | **yalnız ölçüm — kod değişikliği YOK.** Misafirle tur: e-posta → tek kullanımlık kod → başvurunun kendiliğinden gitmesi → "inceleniyor" | **alındı** — cihaz işi olduğu için bu şeritte (⚑ kuralı); MB-03/MB-13 turundan sonra |
+| MB-09 (B2B misafir yolu cihazda hiç yürütülmedi) | cihaz | 11.08 · 14:2x | **yalnız ölçüm — kod değişikliği YOK.** Misafirle tur: e-posta → tek kullanımlık kod → başvurunun kendiliğinden gitmesi → "inceleniyor" | **bitti (15.08) — görev `(21.51)`.** Tur baştan sona koştu, DB'de doğrulandı (`b2b_pending`, `b2b_applied_at`, `company_info`). Telefonun boş kalması yanlış alarm çıktı (tekil kimlik anahtarı, kasıtlı atlanıyor). Yazılan veri uygulamanın kendi silme akışıyla geri alındı |
 | MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **bitti — İKİSİ DE KAPANDI (kullanıcı kararı 15.08), kod değişikliği YOK.** Ortak açıklama Metro'nun paket tazelemesi; MB-03 bir daha açılmaz, MB-13 gözlemde kalır. MB-52 de aynı kararla kapandı. Görev `(21.30)` kapandı, ona asılı `BEKLEYEN` işaretleri kaldırıldı |
 
 **Kapananların görev satırı `(21.34)`:** MB-15 · MB-16 · MB-17 · MB-35 · MB-41. Ölçümler, seçilmeyen
