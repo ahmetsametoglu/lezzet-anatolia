@@ -34,15 +34,15 @@ import { PRICE_TABS, TAB_LABEL } from './prices-url';
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Fiyatlar yükleniyor">
-      {/* Oto fiyat düğmesi gerçekte `sm` (32px) — yer tutucu da öyle; arama `md` (36px). Boylar
-          gerçek kontrolle birebir, yoksa içerik gelince öğe gözle görülür küçülüyor (15.08). */}
-      <PageHeader title="Fiyatlar" subtitle={<SkeletonLine className="w-48" />}>
-        <Skeleton className={`${CONTROL_H.sm} w-32 rounded-ops-btn`} />
-        <Skeleton className={`${CONTROL_H.md} w-[210px] rounded-ops-btn`} />
-      </PageHeader>
+      {/* Başlık barı sekmeye bağlı kontrol taşımaz (15.08) — arama ve hizalama süzgeç şeridinde. */}
+      <PageHeader title="Fiyatlar" subtitle={<SkeletonLine className="w-48" />} />
       {/* Sıra `PRICE_TABS`ten, ad `TAB_LABEL`den — ikisi de gerçek sekmelerin okuduğu kaynak. */}
       <SkeletonTabs labels={PRICE_TABS.map((t) => TAB_LABEL[t])} />
-      <SkeletonFilterBar count={4} />
+      {/* Sağ yuva: hizalama düğmesi + arama, ikisi de `sm` (32px) — gerçek şeritle birebir. */}
+      <SkeletonFilterBar count={4}>
+        <Skeleton className={`${CONTROL_H.sm} w-48 rounded-ops-btn`} />
+        <Skeleton className={`${CONTROL_H.sm} w-[210px] rounded-ops-btn`} />
+      </SkeletonFilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <SkeletonTable tracks={PRICES_COLUMN_TRACKS} />

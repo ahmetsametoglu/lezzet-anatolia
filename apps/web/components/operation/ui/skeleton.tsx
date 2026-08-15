@@ -297,13 +297,18 @@ export function SkeletonTabs({
   );
 }
 
-/** Çip süzgeci şeridi — ilki dar ("Tümü"), gerisi geniş. */
-export function SkeletonFilterBar({ count }: { count: number }) {
+/**
+ * Çip süzgeci şeridi — ilki dar ("Tümü"), gerisi geniş. `children` şeridin SAĞ yuvası: sekmeye
+ * bağlı kontrollerin (arama, toplu eylem) yer tutucuları — gerçek şeritteki `ml-auto` grubun eşi
+ * (fiyatlar 15.08); çizilmezse içerik gelince şeridin sağı bir anda dolar.
+ */
+export function SkeletonFilterBar({ count, children }: { count: number; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft px-6 py-2.5">
       {Array.from({ length: count }, (_, i) => (
         <Skeleton key={i} className={`h-7 rounded-ops-chip ${i === 0 ? 'w-16' : 'w-24'}`} />
       ))}
+      {children ? <span className="ml-auto flex items-center gap-2">{children}</span> : null}
     </div>
   );
 }

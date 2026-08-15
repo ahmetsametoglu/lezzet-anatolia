@@ -34,17 +34,10 @@ export function PricesDesktop(props: PricesViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      {/* Arama ve yeniden fiyatlama YALNIZ kanal listesinde anlamlı — ikisi de SEKMEYE bağlı, ekran
-          çapında değil. Bu yüzden barın `search` yuvasında değil `children`'da: yuva "bu ekranda
-          arama var" der ve sekme değişince o söz yalan olurdu (ürün ekranının `Tabs.action` dersi). */}
-      <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, data, counts)}>
-        {tab === 'channels' ? (
-          <>
-            <AutoRepriceButton />
-            <SearchInput value={search} onChange={onSearch} placeholder="Ürün veya boy ara" className="w-[210px]" />
-          </>
-        ) : null}
-      </PageHeader>
+      {/* Başlık barı sekmeye bağlı HİÇBİR kontrol taşımaz (kullanıcı kararı 15.08): en üstte duran
+          düğme "tüm sekmeleri ilgilendiriyor" der ve yalan olurdu. Arama ve toplu hizalama yalnız
+          kanal listesinin işidir — ikisi de o sekmenin süzgeç satırında yaşar (aşağıda). */}
+      <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, data, counts)} />
 
       <Tabs
         items={TABS.map((t) => (t.key === 'offers' && tab === 'offers' ? { ...t, badge: data.offers.length } : t))}
@@ -70,6 +63,12 @@ export function PricesDesktop(props: PricesViewProps) {
               ...data.categories.map((c) => ({ value: c.id, label: c.name })),
             ]}
           />
+          {/* Sekmeye bağlı kontroller şeridin SAĞINDA (15.08): arama en sağda, hizalama yanında.
+              Boy `sm` — çip şeridinin ölçeği; `md` arama kutusu şeridi tek başına yükseltiyordu. */}
+          <span className="ml-auto flex items-center gap-2">
+            <AutoRepriceButton />
+            <SearchInput value={search} onChange={onSearch} placeholder="Ürün veya boy ara" size="sm" className="w-[210px]" />
+          </span>
         </div>
       ) : null}
 
