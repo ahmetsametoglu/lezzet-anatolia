@@ -1327,7 +1327,7 @@ satırında.
     `intake-form/body`yi kullanıyor. Kip ayrı bir bayrakla değil satırın `expectedQty`siyle okunuyor:
     ikinci bir bayrak, veriyle çelişebilecek ikinci bir gerçek olurdu.
 
-- [~] (22.26) **Depo yüzeyi TEK SAYFA — mal kabul · stok · stoktan düşme bir araya** *(kullanıcı tespiti
+- [x] (22.26) **Depo yüzeyi TEK SAYFA — mal kabul · stok · stoktan düşme bir araya** *(kullanıcı tespiti
   13.08: "bu üçü bir sayfa olması gerekirken üç sayfaya yayılmış … komponentler ortak komponent
   havuzundan kullanılmamış, yeniden tasarlanmış")*
   `touches: apps/web/app/(operations)/operations/{receiving,stock,temperature} · apps/web/components/operation/form/{intake-form,date-field.tsx} · apps/web/lib/warehouse · packages/database/src/services/purchase-order.service.ts`
@@ -1391,7 +1391,7 @@ satırında.
   - Ölçüm dolabın önünde, ayakta, tek elle girilir (`docs/uygulama` D-serisi) — asıl adayı native.
     Web'deki adayı Depolar sayfasının tesis künyesi. Bugün kendi sayfasında duruyor ve işlevi tam;
     karar verilmeden taşımak, ikinci kez taşımak olurdu.
-- [~] (22.30) **Seviyeler sekmesi: ürün görseli + seçili ürünün STOK GEÇMİŞİ** *(kullanıcı tespiti
+- [x] (22.30) **Seviyeler sekmesi: ürün görseli + seçili ürünün STOK GEÇMİŞİ** *(kullanıcı tespiti
   14.08: "ürünlerin resmi ile beraber görmek daha kalıcı olur … bir ürüne tıkladığım zaman o ürünle
   alakalı geçmiş stok girişleri, tarihleri, fiyatları … bize teknik bir yük çıkartmadan")*
   `touches: apps/web/app/(operations)/operations/stock/tabs · apps/web/lib/stock/history-actions.ts · packages/{domain-core,application,database,types}`
@@ -1419,7 +1419,7 @@ satırında.
   - **DURUM 14.08:** yazıldı ve doğrulandı (typecheck · lint · knip · boundaries temiz, birim
     1358/1358); kullanıcı ekranda görmedi.
 
-- [~] (22.31) **"Elde 0" yalanı · malın akışı · ayrılmışın sahibi · seviyelerde arama** *(kullanıcı
+- [x] (22.31) **"Elde 0" yalanı · malın akışı · ayrılmışın sahibi · seviyelerde arama** *(kullanıcı
   ekran görüntüsü 14.08: "36 tane alınmış, 34 kalmış ama aktif adet yok … 1 ayrılmış, o neye ayrılmış
   bilmiyorum … bu bölümde ürünü arama yok")*
   `touches: packages/database/src/services/{stock,reservation,order-item-batch}.service.ts · packages/application/src/warehouse/variant-history.ts · apps/web/app/(operations)/operations/stock`
@@ -1465,7 +1465,7 @@ satırında.
     birim 1358/1358, ve okuma **gerçek yerel DB'ye karşı** koşturuldu (baklava: giren 36 − satılan 2
     = elde 34 ✓; limonlu kek: 1 ayrılmış → `LA-26-WTGHQA` ✓). Kullanıcı ekranda görmedi.
 
-- [~] (22.32) **Panel satırla AYNI evreni gösterir · arama şeridin sağ ucunda** *(kullanıcı sorusu
+- [x] (22.32) **Panel satırla AYNI evreni gösterir · arama şeridin sağ ucunda** *(kullanıcı sorusu
   14.08: "yüz depoyu seçiyorum ve ürünü seçiyorum, sadece o depoyla alakalı görünmeli, değil mi?")*
   `touches: apps/web/lib/stock/history-actions.ts · apps/web/app/(operations)/operations/stock`
   - *Bitti:* depo süzgeci aktifken panelin TAMAMI o deponun gerçeği ve panel bunu yazıyor; arama
@@ -1509,5 +1509,44 @@ satırında.
     hazırlanmış siparişlerde — rafta duruyor, teslimde düşecek"*. Aynı veriyle doğrulandı:
     `56 − 0 − 3 = 53` ✓.
   - **DURUM 14.08:** yazıldı ve doğrulandı (typecheck 18 paket · lint · birim 1358/1358 · boundaries
-    temiz) ve akış **gerçek yerel DB'ye karşı** koşuldu; kullanıcı ekranda görmedi.
+    temiz) ve akış **gerçek yerel DB'ye karşı** koşuldu.
+  - **KAPANDI 15.08 — kullanıcı ekranda inceledi ve onayladı.** 22.26 · 22.30 · 22.31 · 22.32 dörtlüsü
+    birlikte kapanıyor: tek sayfa, ürün geçmişi paneli, üç ölçülmüş arıza ve depo süzgecinin panele
+    de uygulanması. Kalanlar ayrı satırlarda duruyor (`22.27` çıkışların tamamı · `22.28` kabul
+    edilenler listesi · `22.29` sıcaklığın kalıcı evi).
+- [~] (22.33) **Tedarik siparişi önerisi kuyruğun içinde — kalemler DÜZENLENEBİLİR** *(kullanıcı
+  talimatı 15.08: "kalan öneri diyalogları hangileri tespit edelim")* — `touches:
+  apps/web/components/operation/form/purchase-order-form/**, apps/web/app/(operations)/operations/{assistant,procurement}/**`
+    - *Bitti:* `purchase_order` tipinin gövdesi var; adet/kalem/tedarikçi onaydan önce düzeltilebiliyor
+      ve kayıt formdan gidiyor (`createDraftFromProposalAction`).
+    - **ÖNCE ÖLÇÜLDÜ — 11 tipin 8'inde gövde vardı, 3'ünde yoktu** (`purchase_order` · `zone_extend` ·
+      `featured_flag`). Kuyruk BOŞTU (`assistant_proposal` 0 satır): DB sıfırlanmıştı ve **seed öneri
+      üretmiyor** — dilekçeler yalnız MCP'nin `propose_*` araçlarıyla doğuyor.
+    - **NEDEN GEREKTİ:** tip gövdesiz olduğu için karar iki uçluydu — onayla ya da reddet — ve onay
+      `applyPurchaseOrder`'a gidip **dilekçede ne yazıyorsa onu** taslağa çeviriyordu. Adetleri MOTOR
+      hesaplıyor (`ReorderService`); motor eşiği bilir, kasayı bilmez. *"Bu hafta bu kadarını alalım"*
+      ya da *"şunu şimdilik geçelim"* kararı patronundur. Reddetmek de çözüm değildi: öneriyi reddedip
+      aynı siparişi elle kurmak kuyruğun var oluş sebebini siliyordu.
+    - **FORM YENİDEN YAZILMADI** (`CLAUDE §1`): tedarik ekranının "elle sipariş" penceresi aynı formu
+      zaten açıyordu. Gövde ortak alana çıktı (`purchase-order-form/{schema,body}`) ve İKİ yüzey onu
+      paylaşıyor — `intake-form`un 22.23'te kurduğu desen. İkinci bir satır editörü yazmak, kullanıcının
+      22.23'te reddettiği şeyin ta kendisi olurdu (*"komponentler ortak komponent havuzundan
+      kullanılmamış, yeniden tasarlanmış"*).
+    - **Elle sipariş penceresi RHF'ten ÇIKTI** ve bu geçişin şartıydı: ortak gövde kontrollü bir liste
+      (`IntakeFormBody`'nin aynı kararı — gerçeğin sahibi çağıran). İki yüzey aynı gövdeyi ancak aynı
+      sözleşmeyle paylaşabilir. Doğrulama da ortaklaştı: `purchaseOrderBlock` hem pencerenin hem
+      kuyruğun engel cümlesini yazıyor. `ManualOrderSchema` böylece ölü kaldı ve silindi (`knip` yakaladı).
+    - **TEDARİKÇİ ENGELİ ARAYÜZE TAŞINDI:** `applyPurchaseOrder` tedarikçisiz dilekçeyi reddediyordu ama
+      bu, onay anında öğrenilen bir kuraldı — "Onayla"ya basıp hata okumak. Asistan eşleşme bulamadan da
+      öneri üretebilir; artık form soruyor.
+    - **Fiyat SALT OKUNUR** (`lastPurchasePriceCents`): alış siparişte değil MAL KABULDE kesinleşir, giriş
+      alanı koymak henüz bilinmeyen bir sayıyı yazdırmak olurdu. Ama gizlenmiyor da — tahmini tutar
+      başlıkta canlı oynuyor ve bir kalemin bile fiyatı eksikse sayı hiç yazılmıyor (`CLAUDE §1`).
+    - **DOĞRULAMA:** `propose_purchase_order` GERÇEK yolundan çağrıldı (`ReorderService` → kuyruk) ve
+      STR deposu için 3 kalemlik dilekçe düştü (Gaziantep Baklava Fabrikası · 27+12+36 adet). Okunan
+      payload'ın camelCase'e döndüğü ayrıca ölçüldü — jsonb dönüşümü çalışıyor, `parseProposalPayload`
+      geçiyor. typecheck · lint · knip temiz.
+    - **BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
+      Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag` (üç alan — form gerekmeyebilir,
+      ama o tipten hiç öneri üretilmediği için ölçülemedi: `BEKLEYEN(22.11)`).
 

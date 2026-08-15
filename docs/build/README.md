@@ -29,7 +29,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 01 | `01-types.md` | `packages/types`: Şemalar ve Enum'lar | sürüyor | 4/12 (+5 kısmi) |
 | 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 14/16 (+1 kısmi) |
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | tamam | 11/11 |
-| 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 9/11 |
+| 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 10/12 |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 14/20 (+4 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 13/13 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/15 (+2 kısmi) |
@@ -47,7 +47,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 17/24 (+6 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 37/49 (+8 kısmi) |
-| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 15/32 (+11 kısmi) |
+| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 19/33 (+8 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

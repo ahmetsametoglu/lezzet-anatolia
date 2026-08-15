@@ -10,6 +10,7 @@ import {
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
+  type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
 } from '@lezzet/types';
@@ -19,6 +20,8 @@ import { ManualMovementSchema, movementBlock, type ManualMovementForm } from '@/
 import { TransferFormSchema, transferBlock, type TransferForm } from '@/components/operation/form/transfer-form/schema';
 import { receiveIntakeFromProposalAction } from '@/lib/warehouse/intake-actions';
 import { countedLines, intakeBlock, type IntakeFormValues } from '@/components/operation/form/intake-form/schema';
+import { createDraftFromProposalAction } from '@/lib/stock/purchase-order-actions';
+import { purchaseOrderBlock, type PurchaseOrderFormValues } from '@/components/operation/form/purchase-order-form/schema';
 import { saveRecipeAction } from '@/lib/catalog/recipe-actions';
 import { RecipeFormSchema, recipeBlock, type RecipeFormValues } from '@/components/operation/form/recipe-form/schema';
 import { createBundleAction } from '@/lib/catalog/bundle-actions';
@@ -48,6 +51,7 @@ import { RecipeDraftBody, recipeDraftValuesFrom } from './bodies/recipe-draft-bo
 import { MoneyMovementBody, movementValuesFrom } from './bodies/money-movement-body';
 import { TransferBody, transferValuesFrom } from './bodies/transfer-body';
 import { StockIntakeBody, intakeValuesFrom } from './bodies/stock-intake-body';
+import { PurchaseOrderBody, purchaseOrderValuesFrom } from './bodies/purchase-order-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
@@ -444,6 +448,52 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // yok (kullanıcı kararı 11.08 — kuyruk satış eksenine dokunmaz), yani ürün kapının kendi
     // varsayılanıyla geliyor. Satışa çıkarmak ürün ekranının kararı.
     appliedNote: 'Ürün oluşturuldu — katalogda ADAY olarak duruyor. Satışa çıkarmak ürün ekranının kararı.',
+  }),
+
+  /**
+   * TEDARİK SİPARİŞİ — gövdesizdi, kalemleri düzenlenemiyordu (22.33).
+   *
+   * Onay `applyPurchaseOrder`'a gidiyor ve dilekçede ne yazıyorsa o taslağa dönüşüyordu. Adetleri
+   * MOTOR hesapladı (`ReorderService`) ve motor eşiği bilir, kasayı bilmez — "bu hafta bu kadarını
+   * alalım" kararı patronundur. Form ORTAK (`purchase-order-form/`): tedarik ekranının elle sipariş
+   * penceresiyle aynı gövde, ikinci bir satır editörü yazılmadı (`CLAUDE §1`).
+   *
+   * Kaydeden kapı kuyruğun kendi eylemi (`createDraftFromProposalAction`): kalemler FORMDAN gider,
+   * dilekçeden değil — düzeltilen değeri yok sayıp dilekçedekini yazmak, ekranda görünen ile deftere
+   * geçen arasında sessiz bir ayrışma bırakırdı (`receiveIntakeFromProposalAction` künyesi).
+   */
+  purchase_order: defineBody<PurchaseOrderPayload, PurchaseOrderFormValues>({
+    parse: parseWith<PurchaseOrderPayload>('purchase_order'),
+    initial: (payload) => purchaseOrderValuesFrom(payload),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <PurchaseOrderBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    blocked: (values) => purchaseOrderBlock(values),
+    submit: (_payload, values, proposalId) =>
+      createDraftFromProposalAction({
+        supplierId: values.supplierId,
+        // Boş bırakmak GEÇERLİ ve `null` onu söylüyor — hedefi bilinmeyen sipariş hiçbir deponun
+        // eksiğini kapatmış sayılmaz (şema künyesi).
+        targetWarehouseId: values.targetWarehouseId || null,
+        note: values.note.trim() || null,
+        lines: values.lines.map((line) => ({ variantId: line.variantId, qty: line.qty })),
+        proposalId,
+      }),
+    // Satır ızgarası dört kolon; dar sütunda ürün adı ile adet birbirine giriyor.
+    width: 1180,
+    applyLabel: 'Taslağı oluştur',
+    // Taslak GÖNDERİLMEZ ve bu ayrım kayıtta duruyor (`applyPurchaseOrder` künyesi): onay "bu
+    // siparişi hazırla" demektir, "tedarikçiye yolla" değil. Gönderme ayrı ve insanlı bir adım.
+    appliedNote: 'Sipariş TASLAK olarak açıldı — Tedarik ekranından gözden geçirip gönderin.',
   }),
 
   /**

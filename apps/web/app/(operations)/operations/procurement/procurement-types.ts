@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import {
-  PurchaseOrderInsertSchema,
-  PurchaseOrderItemInsertSchema,
-  SupplierInsertSchema,
-  type KeysetCursor,
-  type PurchaseOrderStatus,
-} from '@lezzet/types';
+import { SupplierInsertSchema, type KeysetCursor, type PurchaseOrderStatus } from '@lezzet/types';
 
 // Tedarik ekranının görünüm modelleri — sunucu okur ve bu biçime indirger, ekran yalnız çizer.
 
@@ -198,19 +192,11 @@ export interface WarehouseOption {
   name: string;
 }
 
-/**
- * Elle sipariş formunun girdisi — **varlık şemalarından türetilir** (elle interface yazılmaz, §1).
- *
- * `targetWarehouseId` burada `string` (boş = seçilmedi), varlıktaki gibi `uuid | null` değil: HTML
- * seçicisinin boş değeri boş metindir ve `null`'a çeviren tek yer gönderim anıdır. Tipi burada
- * gevşetmek, o dönüşümü tek noktada tutuyor.
- */
-export const ManualOrderSchema = PurchaseOrderInsertSchema.pick({ supplierId: true, note: true }).extend({
-  targetWarehouseId: z.string(),
-  // Kalemsiz sipariş yok: `createDraft` da reddediyor, form da baştan söylüyor.
-  lines: z.array(PurchaseOrderItemInsertSchema.pick({ variantId: true, qty: true })).min(1),
-});
-export type ManualOrderInput = z.infer<typeof ManualOrderSchema>;
+// Elle sipariş formunun girdisi ARTIK BURADA DEĞİL (22.33): şema ortak alana taşındı
+// (`components/operation/form/purchase-order-form/schema.ts`), çünkü aynı formu asistan kuyruğunun
+// `purchase_order` önerisi de açıyor. Buradaki tanım o taşımadan sonra hiçbir yerden okunmuyordu —
+// `knip` yakaladı. Boş = seçilmedi kuralı ve `null`'a çevrimin gönderim anında olması aynen duruyor,
+// yeni şemanın `targetWarehouseId` künyesinde.
 
 export interface ProcurementData {
   /** Yalnız `suggestions` sekmesinde dolu (okuma sekmeye bağlı). */

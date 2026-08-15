@@ -272,6 +272,10 @@ export async function createManualDraftAction(input: {
   }
 }
 
+// Öneriden sipariş açan kapı BURADA DEĞİL: `lib/stock/purchase-order-actions.ts` (22.33). Sebep
+// kolokasyonun sınırı — o eylemi asistan kuyruğu çağırıyor ve kardeş sayfadan import yasak
+// (`STACK §7`, `docs:check` zorluyor).
+
 // ─── Taslak kalemleri ─────────────────────────────────────────────────────────
 // Öneri bir başlangıçtır, son söz değil: adet değişir, vazgeçilen kalem çıkarılır. Düzenlenemeyen
 // bir taslak, "sipariş taslağı" değil bir dayatmadır.
