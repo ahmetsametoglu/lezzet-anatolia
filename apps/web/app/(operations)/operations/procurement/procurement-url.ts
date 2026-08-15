@@ -9,7 +9,8 @@ import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 const PROCUREMENT_PATH = '/operations/procurement';
 
-const PROCUREMENT_TABS = ['suggestions', 'orders', 'suppliers'] as const;
+// Export (15.08): `loading.tsx` sekme adlarını gerçek metinle çizmek için sırayı buradan okur.
+export const PROCUREMENT_TABS = ['suggestions', 'orders', 'suppliers'] as const;
 export type ProcurementTab = (typeof PROCUREMENT_TABS)[number];
 
 /**
