@@ -2735,6 +2735,63 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **AÇIK KALAN (bu yüzden `[~]`):** yorum · ziyaret · getiren · komşu ödüllerinin gerçek yazım
   yolları, teşekkür kartının sayıları ve "ikinci kez tamamlamada puan yok" hâli ölçülmedi.
 
+- [~] (21.57) **YEDİ OPERASYON EKRANI KAYDIRMA KABINA GEÇTİ — ve MB-34'ün "39 ekran"ı beş kat abartılıymış**
+  `touches:` `apps/mobile/src/screens/courier/delivery-screen.tsx` ·
+  `apps/mobile/src/screens/courier/day-close-screen.tsx` ·
+  `apps/mobile/src/screens/warehouse/transfer-screen.tsx` ·
+  `apps/mobile/src/screens/warehouse/adjustment-screen.tsx` ·
+  `apps/mobile/src/screens/warehouse/courier-return-screen.tsx` ·
+  `apps/mobile/src/screens/warehouse/intake-screen.tsx` ·
+  `apps/mobile/src/screens/management/offer-approval-screen.tsx`
+
+  ## Önce kapsam ölçüldü, sonra kod yazıldı
+
+  MB-34'ün kaydı *"39 ekran ham `ScrollView` kullanıyor, hepsi kite geçsin"* diyordu. Süzgeç süzgeç
+  ölçüm:
+
+  | süzgeç | sayı |
+  |---|---|
+  | ham `ScrollView` kullanan dosya | 40 |
+  | …içinde **girdisi olan** | 14 |
+  | …girdi gerçekten **kaydırıcının içinde** | **7** |
+  | …bunlardan **müşteri yüzeyi** | **0** |
+
+  **Üç yanlış aday, üçü de haklı sebeple elendi:** katalogda arama kutusu kaydırıcının DIŞINDA
+  (bugün `(21.54)`te cihazda da ölçüldü) · hesap ve sepetteki alanlar ÇEKMECENİN içinde ve
+  `BottomSheet` korumayı 08.08'den beri kendisi taşıyor · onboarding zaten `FormScroll` kullanıyor.
+  **Yani müşteri yüzeyi zaten kapalıymış; MB-34 ölçülünce bir OPERASYON işi çıktı.**
+
+  **Kabın kendi künyesi de bu daraltmayı zaten söylüyordu:** *"Kaydırıcısı olan ama klavyesi
+  açılmayan ekranlar (vitrin, ürün, sipariş detayı…) sarılMAZ: klavye kaçınması olmayan bir yerde
+  bedava değildir."* Yani "40 kaydırıcının hepsini sar" hedefi kabın tasarım kararına aykırıydı.
+
+  ## Ölçülen asıl açık: koruma YARIM kalmış
+
+  Bu 14 ekranın **hiçbirinde `KeyboardAvoidingView` yoktu.** Yedisinde `keyboardShouldPersistTaps`
+  vardı — `(21.33)`'ün on ekrana tek tek yazdığı noktasal düzeltme. Yani **MB-01 (yutulan ilk
+  dokunuş) kapatılmış, MB-02 (alanın klavye altında kalması) açık kalmıştı.** `FormScroll` ikisini
+  birlikte taşıyor; geçiş yedi ekrana ikinci yarıyı getirdi. Mal kabul ekranı ikisini birden aldı
+  (onda `keyboardShouldPersistTaps` de yoktu).
+
+  **Transfer ekranında İKİ kaydırıcı var ve yalnız biri geçti:** kuyruk listesi (girdisiz) ham
+  `ScrollView` olarak BIRAKILDI — sarmak kabın künyesine aykırı olurdu.
+
+  ## Doğrulama
+
+  `tsc` temiz · `eslint` temiz · `jest` **84 dosya / 599 test** · cihazda **Kurye Dönüşü Kabulü**
+  ekranı açıldı (depo hesabıyla): kaydırıcı yerinde (`warehouse-return-body`), başlık · içerik ·
+  alttaki yapışkan düğme yerleşimi bozulmadı. **Yedi ekranın hepsi cihazda gezilmedi** — kullanıcı
+  operasyon yüzeyine ayrıca çalışacağımızı söyledi (15.08), görsel tur o çalışmaya bırakıldı.
+
+  **AÇIK KALAN (bu yüzden `[~]`):**
+  · **Talep detayı ve şikâyet ekranı farklı kalıpta** — yazma alanı kaydırıcının ALTINDA sabit
+    duruyor (mesaj çubuğu). `FormScroll` sarmak yanlış olur: kaydırıcı mesaj listesi, alan onun
+    kardeşi. Ayrı bir çözüm gerekiyor.
+  · **Ham `ScrollView`u lint'le kapatma adımı YAPILMADI.** 33 dosya hâlâ ham kullanıyor ve çoğu
+    HAKLI (klavyesiz kaydırıcı). Kuralı "ham `ScrollView` yasak" diye yazmak, kabın künyesindeki
+    kapsam kararıyla çelişirdi; doğru kural "girdisi olan kaydırıcı ham olamaz" ve onu makineyle
+    ifade etmek ayrı bir iş.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

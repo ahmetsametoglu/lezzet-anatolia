@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { centsToAmountText, money, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
@@ -58,7 +59,7 @@ export function OfferApprovalScreen() {
         testID="management-offer-approval-header"
       />
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" testID="management-offer-approval-body">
+      <FormScroll contentContainerStyle={styles.body} testID="management-offer-approval-body">
         {OFFER_CANDIDATES.map((candidate) => {
           const isRemoved = removed[candidate.id] === true;
           return (
@@ -105,7 +106,7 @@ export function OfferApprovalScreen() {
         })}
 
         <Text style={styles.footnote}>{t.offer.footnote}</Text>
-      </ScrollView>
+      </FormScroll>
 
       <View style={styles.footer}>
         <PressableSurface

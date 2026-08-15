@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ReturnDispositionEnum, type ReturnDisposition } from '@lezzet/types';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
@@ -60,7 +61,7 @@ export function CourierReturnScreen() {
         testID="warehouse-return-header"
       />
 
-      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="warehouse-return-body">
+      <FormScroll contentContainerStyle={styles.list} testID="warehouse-return-body">
         <Text style={styles.heading}>{t.return.heading}</Text>
 
         {drop.lines.map((line) => {
@@ -116,7 +117,7 @@ export function CourierReturnScreen() {
         ))}
 
         <Text style={styles.footnote}>{t.return.footnote}</Text>
-      </ScrollView>
+      </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {returnState.notice === null ? null : (

@@ -1161,10 +1161,26 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
 
 > Yeni ölçülenler + şeridin elinde duran, listeye girmemiş açıklar. Kimlikler MB dizisini sürdürüyor.
 
-- [ ] **MB-34 · Kaydırma kabı kitte yok — 39 ekran ham `ScrollView` kullanıyor.** §11.A'nın işi:
+- [~] **MB-34 · Kaydırma kabı kitte yok — 39 ekran ham `ScrollView` kullanıyor.** §11.A'nın işi:
   `components/ui/` altına klavye davranışı doğru kurulmuş tek bir kap, ekranların ona geçmesi ve ham
   `ScrollView` kullanımının lint'le kapatılması. MB-01 + MB-02 bunun içinde çözülür; ayrıca 40'ıncı
   ekranın aynı tuzağa düşmesini yapısal olarak engeller.
+
+  → **KAP ZATEN VARDI** (`(21.36)`, `components/ui/form-scroll.tsx`) ve **"39 ekran" ÖLÇÜLÜNCE
+  BEŞ KAT ABARTILI ÇIKTI (15.08, görev `(21.57)`).** Süzgeç süzgeç: ham `ScrollView` kullanan 40
+  dosya → içinde girdisi olan **14** → girdi gerçekten kaydırıcının İÇİNDE olan **7** → bunlardan
+  müşteri yüzeyi **0**. Üç yanlış aday haklı sebeple elendi: katalogda arama kutusu kaydırıcının
+  DIŞINDA (cihazda da ölçüldü), hesap ve sepetteki alanlar ÇEKMECENİN içinde (`BottomSheet`
+  korumayı 08.08'den beri kendisi taşıyor), onboarding zaten `FormScroll` kullanıyor.
+  **Yani müşteri yüzeyi kapalıydı; MB-34 ölçülünce bir OPERASYON işi çıktı.**
+  **Yedi operasyon ekranı geçirildi** (kurye teslimat + gün kapanışı · depo transfer, sayım, kurye
+  iadesi, mal kabul · yönetim teklif onayı). **Ölçülen asıl açık:** bu 14 ekranın hiçbirinde
+  `KeyboardAvoidingView` YOKTU — yedisinde `keyboardShouldPersistTaps` vardı (`(21.33)`'ün noktasal
+  düzeltmesi), yani MB-01 kapatılmış ama **MB-02 açık kalmıştı.**
+  **AÇIK KALAN (bu yüzden `[~]`):** (a) talep detayı ve şikâyet ekranı farklı kalıpta — yazma alanı
+  kaydırıcının ALTINDA sabit duruyor, `FormScroll` sarmak yanlış olur, ayrı çözüm gerekiyor;
+  (b) ham `ScrollView`u lint'le kapatma adımı yapılmadı (33 dosya hâlâ ham kullanıyor ve
+  ÇOĞU HAKLI — klavyesiz kaydırıcıyı sarmak kabın kendi künyesine aykırı).
 
 - [x] **MB-35 · Hesap sekmesi `/me` okunurken TAMAMEN BOŞ.** `app/(tabs)/account.tsx:44` yükleme
   anında `return null` veriyor. Künyesi bilinçli (*"misafir daveti yanıp sönmesin"*), ama okuma

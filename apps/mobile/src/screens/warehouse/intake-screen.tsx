@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { IntakeFormRowContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
@@ -127,7 +128,7 @@ export function IntakeScreen() {
     <View style={styles.screen} testID="warehouse-intake">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-intake-lines">
+      <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-lines">
         {intake.rows.map((row) => (
           <IntakeRow
             key={row.variantId}
@@ -164,7 +165,7 @@ export function IntakeScreen() {
 
         <Text style={styles.footnote}>{t.intake.footnote}</Text>
         <Text style={styles.footnote}>{t.intake.photoNote}</Text>
-      </ScrollView>
+      </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {intake.notice === null ? null : (

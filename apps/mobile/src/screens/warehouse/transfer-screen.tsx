@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
@@ -144,7 +145,7 @@ export function TransferScreen() {
     <View style={styles.screen} testID="warehouse-transfer">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="warehouse-transfer-lines">
+      <FormScroll contentContainerStyle={styles.list} testID="warehouse-transfer-lines">
         <Text style={styles.heading}>{t.transfer.heading}</Text>
 
         {transfer.lines.map((line) => {
@@ -175,7 +176,7 @@ export function TransferScreen() {
         })}
 
         <Text style={styles.footnote}>{t.transfer.footnote}</Text>
-      </ScrollView>
+      </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {transferState.notice === null ? null : (

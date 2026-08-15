@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { WarehouseAdjustmentReasonEnum, type WarehouseAdjustmentReason } from '@lezzet/types';
 
@@ -8,6 +8,7 @@ import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -85,7 +86,7 @@ export function AdjustmentScreen() {
     <View style={styles.screen} testID="warehouse-adjustment">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="warehouse-adjustment-body">
+      <FormScroll contentContainerStyle={styles.list} testID="warehouse-adjustment-body">
         <View style={styles.section}>
           <Text style={styles.heading}>{t.adjustment.reasonHeading}</Text>
           <View style={styles.chipRow}>
@@ -149,7 +150,7 @@ export function AdjustmentScreen() {
           </Text>
           <Text style={styles.hint}>{t.adjustment.refHelp}</Text>
         </View>
-      </ScrollView>
+      </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {adjustment.notice === null ? null : (

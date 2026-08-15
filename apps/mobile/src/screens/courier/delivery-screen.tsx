@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
-import { Linking, ScrollView, Text, TextInput, View } from 'react-native';
+import { Linking, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperButton } from '@/components/operations/stepper-button';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -93,7 +94,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         testID="courier-delivery-header"
       />
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" testID="courier-delivery-body">
+      <FormScroll contentContainerStyle={styles.body} testID="courier-delivery-body">
         <View style={styles.addressBlock}>
           <View style={styles.addressRow}>
             <Text style={styles.address}>{stop.address ?? t.day.stop.noAddress}</Text>
@@ -359,7 +360,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             ) : null}
           </View>
         )}
-      </ScrollView>
+      </FormScroll>
 
       {/* ── SONUÇ ALANI ───────────────────────────────────────────────────── */}
       <View style={styles.footer}>

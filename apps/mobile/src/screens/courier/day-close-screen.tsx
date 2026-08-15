@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
@@ -84,7 +85,7 @@ export function CourierDayCloseScreen() {
     <View style={styles.screen} testID="courier-day-close">
       {header}
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" testID="courier-day-close-body">
+      <FormScroll contentContainerStyle={styles.body} testID="courier-day-close-body">
         {dayClose.closed ? (
           <View style={styles.closedBox} testID="courier-day-close-readonly">
             <Text style={styles.closedText}>{t.dayClose.closed}</Text>
@@ -168,7 +169,7 @@ export function CourierDayCloseScreen() {
             testID="courier-day-close-note"
           />
         </View>
-      </ScrollView>
+      </FormScroll>
 
       <View style={styles.footer}>
         {dayClose.notice === null ? null : (
