@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { markupPercent } from '@lezzet/domain-core';
+import { discountPercentOf, markupPercent } from '@lezzet/domain-core';
 import { fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -75,6 +75,11 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
   const revenueHtCents = priceCents === null ? null : removeVat(priceCents, vatRate);
   const margin = revenueHtCents === null || cost === null ? null : markupPercent(revenueHtCents, cost);
 
+  // Önerinin KDV'siz getirisi − alış: sistem önerisi listeden düz % iner ve maliyeti hiç görmez;
+  // zararına düşen öneri, öneri cümlesinin içinde işaretlenir (uydurma taban yok — biri null'sa null).
+  const suggestedProfit =
+    batch.suggestedOfferCents === null || cost === null ? null : removeVat(batch.suggestedOfferCents, vatRate) - cost;
+
   const submit = async (next: number | null) => {
     setBusy(true);
     setError(null);
@@ -99,7 +104,10 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
     <Dialog
       open
       onClose={onClose}
-      maxWidth={520}
+      // Genişlik EN KALABALIK hâle göre (15.08, kullanıcı bildirimi): 520'de fiyat üçlüsünün ilk
+      // etiketi ("Teklif fiyatı (€) * KDV dahil") hücreye sığmayıp kırılıyor ve kutu aşağı kayıyordu;
+      // düzenleme footer'ında da dördüncü öğe ("Teklifi kapat") iki satıra düşüyordu.
+      maxWidth={640}
       title={editing ? 'Teklifi düzenle' : 'Tarihi yaklaşan partiye teklif aç'}
       subtitle={`${batch.title}${batch.lotNumber ? ` · Lot ${batch.lotNumber}` : ''}`}
       footer={
@@ -139,20 +147,25 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
 
       <div className="grid grid-cols-3 gap-2.5">
         <Metric label="Kalan" value={`${batch.physicalQty} ad.`} />
+        {/* Tarih GÖRÜNÜR satırda, tooltip'te değil (15.08, kullanıcı bildirimi): "tarihi yaklaşan"
+            kararının asıl girdisi tarih ve kalan gün — fareyle keşfedilecek bir ayrıntı değil.
+            Ton da kademeli: tarihi GEÇMİŞ parti amber değil kırmızı, %0 ile %10 aynı renkte durmasın. */}
         <Metric
           label="Kalan raf"
           value={batch.remainingPercent === null ? '—' : percent(batch.remainingPercent)}
-          tone={batch.flag === 'ok' ? undefined : 'amber'}
-          hint={`${shortDate(batch.expiryDate)} · ${daysLabel(batch.daysLeft)}`}
+          tone={batch.flag === 'ok' ? undefined : batch.daysLeft < 0 ? 'red' : 'amber'}
+          sub={`${shortDate(batch.expiryDate)} · ${daysLabel(batch.daysLeft)}`}
         />
-        <Metric label="Maliyet" value={money(batch.purchasePriceCents)} hint="Partinin alış fiyatı" />
+        <Metric label="Maliyet" value={money(batch.purchasePriceCents)} sub="Partinin alış fiyatı" />
       </div>
 
       {batch.belowMlor ? (
         <div className="flex items-start gap-2.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5">
           <span className="flex-none font-ops-display text-ops-sm font-bold text-ops-amber">MLOR</span>
+          {/* Rozet yüzeyin yerleşik terimi (stok "MLOR · kısa" çipi); cümle onu düz Türkçeyle açıyor. */}
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-            Bu partinin kalan ömrü kabul eşiğinin (%{batch.mlorPercent}) altında — teklif kararına bağlam.
+            Bu parti, kalan ömrü kabul eşiğinin (%{batch.mlorPercent}) altındayken teslim alınmış — raf ömrü
+            baştan kısaydı, hızlı eritilmesi bekleniyordu. Teklif kararınızı buna göre verin.
           </span>
         </div>
       ) : null}
@@ -163,8 +176,22 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
             <>Bu boyun liste fiyatı girilmemiş — sistem öneri üretemiyor, fiyatı siz belirleyin.</>
           ) : (
             <>
-              Sistem önerisi: <strong className="text-ops-body">%{batch.offerDiscountPercent} indirim</strong> · liste{' '}
-              {money(batch.listPriceCents)} → önerilen {money(batch.suggestedOfferCents)}
+              {/* Yüzde ÖNERİLEN FİYATTAN türer, ayardan değil: ayar %30 der ama önerilen fiyat kuruşa
+                  yuvarlanır ve kutu %29,9 gösterir — cümleyle kutu farklı sayı söyleyemez (15.08).
+                  Ayarın kendisi indirim kutusunun placeholder'ında yaşamaya devam ediyor. */}
+              Sistem önerisi:{' '}
+              <strong className="text-ops-body">
+                {percent(discountPercentOf(batch.listPriceCents, batch.suggestedOfferCents), 1)} indirim
+              </strong>{' '}
+              · liste {money(batch.listPriceCents)} → önerilen {money(batch.suggestedOfferCents)}
+              {/* Öneri MALİYETİ GÖRMEZ (listeden düz % iner) — zararına bir öneri, öneri cümlesinin
+                  kendisinde işaretlenir; kâr satırı zaten anlatıyor ama oraya kadar inmeden görülsün. */}
+              {suggestedProfit !== null && suggestedProfit < 0 ? (
+                <span className="font-semibold text-ops-amber">
+                  {' '}
+                  — dikkat: öneri alış maliyetinin ({money(cost)}) altında.
+                </span>
+              ) : null}
             </>
           )}
         </span>
@@ -191,10 +218,11 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
             uydurma bir maliyetle marj göstermek, olmayan bir hesabı doğruymuş gibi sunardı. */}
         <MarginRow batch={batch} margin={margin} revenueHtCents={revenueHtCents} />
 
+        {/* Ders metni İKİ cümleye indi (15.08, metin yoğunluğu bildirimi): "iç terim taşımaz" cümlesi
+            operatörün kararını değiştirmeyen bir güvenceydi, her açılışta tekrarlanmayı hak etmiyor. */}
         <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-          Teklif bu PARTİYE bağlıdır: miktar tavanı partinin kalanı ({batch.physicalQty} ad.) ve parti tükenince teklif
-          kendiliğinden kalkar. Kupon ve genel indirim teklifli satıra uygulanmaz. Müşteriye giden metin “parti”, “lot”,
-          “DLC” gibi iç terimleri taşımaz.
+          Teklif bu partiye bağlıdır: en çok kalan {batch.physicalQty} ad. bu fiyattan satılır, parti tükenince teklif
+          kendiliğinden kalkar. Kupon ve genel indirim teklifli satıra uygulanmaz.
         </span>
       </div>
     </Dialog>
@@ -230,16 +258,26 @@ function MarginRow({ batch, margin, revenueHtCents }: MarginRowProps): ReactNode
 
   const profit = revenueHtCents - cost;
   const tone = profit > 0 ? 'text-ops-olive-dark' : profit === 0 ? 'text-ops-body' : 'text-ops-amber';
-  const verdict = profit > 0 ? `${money(profit)} kâr` : profit === 0 ? 'başa baş' : `${money(-profit)} zarar`;
+  // Mono YALNIZ sayıda: "kâr/zarar" kelimesi de mono dizilince cümle ortasında daktilo adası
+  // oluşuyordu (15.08, kullanıcı bildirimi) — kelime gövde yazısında, renk ikisinde ortak.
+  const word = profit >= 0 ? 'kâr' : 'zarar';
 
   return (
     <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-      Adet başına <span className={`font-ops-mono ${tone}`}>{verdict}</span> ({percent(margin, 1)}) ·{' '}
-      {money(revenueHtCents)} KDV’siz gelir − {money(cost)} alış.{' '}
+      Adet başına{' '}
+      {profit === 0 ? (
+        <span className={tone}>başa baş</span>
+      ) : (
+        <>
+          <span className={`font-ops-mono ${tone}`}>{money(Math.abs(profit))}</span>{' '}
+          <span className={tone}>{word}</span>
+        </>
+      )}{' '}
+      ({percent(margin, 1)}) · {money(revenueHtCents)} KDV’siz gelir − {money(cost)} alış.{' '}
       {/* Toplam etki: karar tek adet için değil, elde kalan tüm parti için veriliyor. */}
       Parti tükenirse toplam{' '}
       <span className={`font-ops-mono ${tone}`}>{money(Math.abs(profit) * batch.physicalQty)}</span>{' '}
-      {profit >= 0 ? 'kâr' : 'zarar'}.
+      <span className={tone}>{word}</span>.
     </span>
   );
 }
@@ -247,16 +285,23 @@ function MarginRow({ batch, margin, revenueHtCents }: MarginRowProps): ReactNode
 interface MetricProps {
   label: string;
   value: string;
-  hint?: string;
-  tone?: 'amber';
+  /** Sayının altında GÖRÜNÜR küçük satır — tooltip değil: karar girdisi fareyle keşfedilmez (15.08). */
+  sub?: string;
+  tone?: 'amber' | 'red';
 }
 
+const METRIC_TONE: Record<NonNullable<MetricProps['tone']>, string> = {
+  amber: 'text-ops-amber',
+  red: 'text-ops-red',
+};
+
 /** Diyalogun üst künyesi — etiket küçük ve sessiz, sayı büyük ve mono (rakam sütunları hizalansın). */
-function Metric({ label, value, hint, tone }: MetricProps): ReactNode {
+function Metric({ label, value, sub, tone }: MetricProps): ReactNode {
   return (
-    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5" title={hint}>
+    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5">
       <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted">{label}</span>
-      <span className={`font-ops-mono text-ops-section ${tone === 'amber' ? 'text-ops-amber' : 'text-ops-ink'}`}>{value}</span>
+      <span className={`font-ops-mono text-ops-section ${tone ? METRIC_TONE[tone] : 'text-ops-ink'}`}>{value}</span>
+      {sub ? <span className="font-ops-body text-ops-micro leading-[1.4] text-ops-faint">{sub}</span> : null}
     </div>
   );
 }
