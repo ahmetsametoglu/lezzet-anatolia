@@ -1120,3 +1120,18 @@ kargo" diye bir şey yoktur.
 
 Kod: `apps/mobile/src/screens/cart/cart-screen.tsx` · `cart-line-row.tsx` ·
 `apps/mobile/src/screens/checkout/checkout-screen.tsx`.
+
+### OPERASYON NÖTR PALETİ SAFLAŞTI — zeytin alt tonu kalktı, zeytin yalnız vurgu (15.08)
+
+**Kullanıcı kararı (15.08, production turu):** operasyon evreninin nötr skalası zeytin alt
+tonluydu — dokuz gri kademesi ton ~80°, zeminler ~40-60°, %4-14 doygunluk (`bg` #dedbd3 en
+belirgini). Geniş yüzeylere yayılınca "sarımtırak bir örtü" gibi gözü yoruyordu. Tüm nötr
+token'lar (yüzey + mürekkep + gri skalası + takma adlar + scrim/etkileşim) aynı algısal
+açıklıkta SAF GRİYE çevrildi; luma korundu, kademe eşlemeleri ("= gray-X") aynen geçerli.
+Zeytin ailesi (§0.3) DEĞİŞMEDİ ve artık tek görevi vurgu: aktif sekme, rozet, olumlu durum.
+
+Kapsam sınırı: YALNIZ `--color-ops-*` (operasyon yüzeyi). Müşteri yüzeyi (`kum-*`/`cream`) ve
+native uygulama paleti bilinçli olarak dokunulmadı. `.dc` envanteri (§0.1-0.6) hâlâ eski zeytinli
+değerleri taşıyor — tasarım turunda güncellenmeli; bu dosyadaki kayıt o tura gerekçedir.
+
+Kod: `apps/web/app/globals.css` (§0.1, §0.2, §0.5 takma adlar, §0.4 etkileşim, koyu blok §0.6).
