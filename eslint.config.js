@@ -6,6 +6,12 @@ export default [
     ignores: [
       '**/node_modules/**',
       '**/.next/**',
+      // Prod derlemesinin AYRI çıktı dizini (`NEXT_DIST_DIR=.next-prod`) — dev sunucusu dururken
+      // build alabilmek için var. `.gitignore`'a eklenmişti ama eslint'e değil ve sonuç `.test-results`
+      // ile birebir aynıydı (04.08 künyesi aşağıda): tek bir prod derlemesinden sonra Next'in ürettiği
+      // 57 tip dosyası lint'e giriyor ve `pnpm lint` ÜÇ ŞERİT İÇİN BİRDEN kırmızıya dönüyordu —
+      // kaynak kodda hiçbir hata yokken. Üretilmiş dosya denetlenmez.
+      '**/.next-prod/**',
       '**/dist/**',
       '**/.turbo/**',
       '**/*.cjs',
