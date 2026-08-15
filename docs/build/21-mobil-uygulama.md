@@ -2606,6 +2606,35 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` üç pakette temiz (`types`, `mobile-api`, `mobile`);
   `jest src/screens/product src/screens/catalog` **3 dosya / 39 test** geçti; cihaz turu yukarıda.
 
+- [x] (21.54) **KATALOG ARAMASI TEK DOKUNUŞLA TEMİZLENİYOR (kullanıcı isteği 15.08)**
+  `touches:` `apps/mobile/src/screens/catalog/{catalog-screen.tsx,messages.json}`
+
+  Arama kutusunda yazılanı silmenin tek yolu harf harf geri almaktı. Kutuya, **yalnız yazı varken**
+  çizilen bir temizle düğmesi kondu (`catalog-search-clear`); boşken çizilmiyor, çünkü hiçbir işi
+  olmayan bir düğme kutunun içinde kalıcı gürültüdür.
+
+  **İki şey uydurulmadı, kitten alındı:**
+  · Dokunma payı — ikon `inlineIcon` (16 dp) ve o boy parmakla ıskalanır; `PressableSurface`ın
+    `compact` işareti kitin TEK payını getiriyor (`theme.touchSlop`). Kendi `hitSlop` değerimi
+    yazacaktım, kit bu kararı zaten vermişti (`pressable-surface` künyesi: *"pay tek değerdir,
+    öğe başına hesaplanmaz"*).
+  · Basılı geri bildirimi `scale-small` — küçük yuvarlak ikon düğmesinin kitteki karşılığı.
+
+  **KLAVYE TUZAĞI (MB-01) ÖLÇÜLDÜ, VARSAYILMADI.** Kuralın klasik hâli şu: `keyboardShouldPersistTaps`
+  varsayılanı `'never'` olan bir kaydırıcının içindeki düğme, klavye açıkken ilk dokunuşu yutar ve
+  yalnız klavyeyi kapatır. Burada arama satırı listenin DIŞINDA, kardeş bir `View`de duruyor, yani
+  `FlatList`in ayarı ona işlemiyor — ama bu bir çıkarımdı, **cihazda sınandı**: `baklava` yazıldı,
+  klavye açıkken düğmeye BİR kez dokunuldu, alan yer tutucuya döndü ve düğme kayboldu.
+
+  Metin üç dilde (`Aramayı temizle` · `Effacer la recherche` · `Suche löschen`) — ekran okuyucunun
+  duyduğu ad, çünkü çarpı işaretinin kendisi bir ad değildir.
+
+  **Kapsam bilerek dar:** onboarding'in adres alanına dokunulmadı. O bir arama kutusu değil,
+  öneri listesi olan bir FORM alanı; temizlenmesi formun kendi akışının parçası ve ayrı bir karar.
+
+  **Doğrulama:** `tsc` temiz · `eslint` temiz · `jest src/screens/catalog` **2 dosya / 30 test** ·
+  cihazda klavye açıkken tek dokunuş (yukarıda).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

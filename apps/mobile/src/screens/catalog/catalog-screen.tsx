@@ -219,6 +219,25 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
             style={styles.searchInput}
             testID="catalog-search"
           />
+          {/* TEMİZLE — yalnız yazı VARKEN çizilir (kullanıcı isteği 15.08). Boşken de dursaydı
+              hiçbir işi olmayan bir düğme, kutunun içinde kalıcı gürültü olurdu.
+              Dokunma hedefi ikondan büyük: `compact` işareti kitin tek dokunma payını getiriyor
+              (`theme.touchSlop`) — 16 px'lik bir çarpı, parmakla ıskalanan bir düğmedir. Pay
+              öğe başına hesaplanmaz, kitin kararıdır (`pressable-surface` künyesi).
+              KLAVYE TUZAĞI (MB-01) burada YOK: arama satırı listenin DIŞINDA, kardeş bir `View`
+              içinde duruyor, yani FlatList'in `keyboardShouldPersistTaps` varsayılanı bu dokunuşu
+              yutmuyor — yine de cihazda klavye açıkken ölçüldü. */}
+          {catalog.searchText.length === 0 ? null : (
+            <PressableSurface
+              onPress={() => catalog.search('')}
+              feedback="scale-small"
+              compact
+              accessibilityLabel={t.search.clear}
+              testID="catalog-search-clear"
+            >
+              <Icon name="close" size={theme.size.inlineIcon} color={theme.colors.muted} />
+            </PressableSurface>
+          )}
         </View>
         <PressableSurface
           onPress={() => setSortSheetOpen(true)}

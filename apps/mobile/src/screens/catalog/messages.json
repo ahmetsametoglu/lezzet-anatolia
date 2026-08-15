@@ -6,7 +6,8 @@
     "listEnd": "— hepsi bu kadar —",
     "search": {
       "placeholder": "Ürün ara…",
-      "label": "Ürün ara"
+      "label": "Ürün ara",
+      "clear": "Aramayı temizle"
     },
     "filter": {
       "label": "Sırala ve filtrele",
@@ -43,7 +44,8 @@
     "listEnd": "— c'est tout —",
     "search": {
       "placeholder": "Rechercher un produit…",
-      "label": "Rechercher un produit"
+      "label": "Rechercher un produit",
+      "clear": "Effacer la recherche"
     },
     "filter": {
       "label": "Trier et filtrer",
@@ -80,7 +82,8 @@
     "listEnd": "— das war alles —",
     "search": {
       "placeholder": "Produkt suchen…",
-      "label": "Produkt suchen"
+      "label": "Produkt suchen",
+      "clear": "Suche löschen"
     },
     "filter": {
       "label": "Sortieren und filtern",
