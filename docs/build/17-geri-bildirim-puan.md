@@ -223,6 +223,12 @@ imzasıdır. Gerekçe migration'a yazıldı.
 ediliyor. Puan tarafı korunuyor (kimliksiz kayıt puan doğurmaz); korunmayan şey iş kararını besleyen
 sinyal. Bilinçli bir kabuldü (kimlik tutmamak) ama bedeli artık yazılı → `architecture/BACKLOG §16`.
 
+- [ ] (17.11) **İADE EDİLEN SİPARİŞİN PUANI GERİ ALINMIYOR** *(mobil şeridin puan incelemesinden, 11.08; 15.08'de ölçülerek doğrulandı)* · `touches: packages/application/src/order/refund.ts, packages/application/src/feedback/points.ts, packages/types/src/primitives/enums.schema.ts`
+  - **Ölçüm (15.08):** iade yolunda puan defterine hiçbir dokunuş yok — `refund.ts` içinde tek bir `points` geçmiyor. Yani müşteri sipariş verip puan kazanıyor, siparişi iade ediyor, parası dönüyor **ve puanı duruyor**. Bugün ödül `order` sebebiyle değil `referral`/`neighbor` sebebiyle yazılıyor (17.9 · 17.10), yani açık şu an davet ödüllerinde: getirilen kişinin ödediği sipariş iade edilirse getirenin 500 puanı yerinde kalır.
+  - **Defter satırı SİLİNMEZ, KARŞI KAYIT yazılır** — `PointsEntry`in kendi kuralı (`17.4`: *"update/delete yok — defter satırı düzeltilmez, karşı kayıt yazılır"*). Yani gereken şey yeni bir sebep türü (`PointsReasonEnum`'a ek) ve iade yolundan ona bir çağrı.
+  - **Karar gerektiren iki nokta:** *(1)* kısmi iadede puan orantılı mı geri alınır yoksa tamamı mı — ödül sipariş BAŞINA yazıldığı için "tamamı" tutarlı görünüyor ama kısmi iade siparişi yok etmiyor; *(2)* bakiye eksiye düşerse ne olur — müşteri puanı çoktan kupona çevirmiş olabilir. `canRedeem` negatif bakiyeyi zaten çevirtmez, ama eksi bakiye ekranda müşteriye ne der?
+  - **Öteki iki madde KAPANDI ve kaydı burada:** sipariş puanının kalkması `17.9` ① notunda (`rewardCompletedOrder` → `rewardReferralOnPaidOrder`), günlük ziyaret puanının native'e taşınması mobil şeridin `21.x` turunda (ikinci nüsha yazılmadı, aynı motor çağrıldı).
+
 ## Netleşecekler
 
 - **Puan değerleri:** hangi aksiyona kaç puan, puan→kupon oranı/eşiği — `Setting`'te parametrik; başlangıç değerleri iş kararıyla konur (kurgu hazır, rakam sonra).
