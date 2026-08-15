@@ -40,6 +40,11 @@ const AUTH_OTP_SOURCE = 'application-auth';
  *   2. `OTP_TEST_CODE` VAR ve tam altı rakam olmalı; bozuk değer sessizce yok sayılır —
  *      yarım yazılmış bir env "kod sabitlendi" sanılıp gerçek akışı zayıflatamaz.
  * Kod LOGLANMAZ; uyarı yalnız modun açık olduğunu söyler ve süreç başına bir kez basılır.
+ *
+ * **BEKLEYEN(18.13): bu kapı üretime çıkmadan SÖKÜLECEK** (kullanıcı kararı 15.08). Bugün gerçek
+ * bir ihtiyaç ve kalıyor; borç olmasının sebebi iki kilidin de tek bir okumaya dayanması —
+ * `NODE_ENV` üretimde yanlış kurulursa kimlik doğrulaması sabit bir koda düşer. Bitti kriteri ve
+ * seçenekler (tamamen sökmek / derleme zamanında elemek) görev satırında.
  */
 let otpTestWarned = false;
 

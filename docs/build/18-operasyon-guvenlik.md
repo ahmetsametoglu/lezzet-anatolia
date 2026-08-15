@@ -102,6 +102,33 @@ Fiilen tüm modüllerin ürettiği yüzeyler; ama **VPS kurulumu, CI ve staging 
     - **`packages/observability` vitest listesinde YOKTU** — eklenmeseydi `mask.test.ts` sessizce hiç koşmazdı. "Test yazdım" ile "test koşuyor" arasındaki fark tam olarak budur.
     - **BEKLEYEN(18.12):** "verilerimi indir" (taşınabilirlik) tarafı yazılmadı; silme aracıyla aynı yüzeyde doğması gerekiyor (`09.10` künyesinin şartı).
 
+- [ ] (18.13) **`OTP_TEST_CODE` kapısı üretime çıkmadan SÖKÜLECEK** (kullanıcı kararı 15.08:
+  *"şimdilik kalsın ama ileride kaldırılması gereken bir özellik"*).
+  `touches:` `packages/application/src/auth/otp.ts` ·
+  `packages/database/src/services/email-verification.service.ts` · `apps/mobile-api/.env.example`
+
+  **Ne:** tek kullanımlık kod, `OTP_TEST_CODE` env'i doluyken sabitlenir ve mail HİÇ gönderilmez
+  (`00.9 Parti 3b`). E2E ve cihaz turları kimlik adımını başka türlü geçemiyor — kod hiçbir yere
+  yazılamaz (`OBSERVABILITY §5`: OTP maskeli bile loglanmaz), dolayısıyla testin kodu önceden
+  bilmesi tek yol. Bugün gerçek bir ihtiyaç ve **kalıyor**.
+
+  **Neden yine de borç:** kapı bugün iki kilitle korunuyor — (1) `NODE_ENV === 'production'` →
+  env ne olursa olsun `null`; (2) `OTP_TEST_CODE` tam altı rakam değilse sessizce yok sayılır.
+  Yani yanlışlıkla açılması zor. Ama **savunma tek bir env değişkenine ve tek bir `NODE_ENV`
+  okumasına dayanıyor**; üretim sunucusunda `NODE_ENV` yanlış kurulursa (ya da bir yardımcı süreç
+  onu farklı okursa) kimlik doğrulaması sabit bir koda düşer. Bir güvenlik kapısının "yanlış
+  yapılandırılırsa açılan" hâlde bırakılması, kapının kendisinin kalıcı olmasıyla aynı şey değildir.
+
+  **Bitti kriteri:** üretime çıkmadan önce ya kapı tamamen sökülür (E2E başka bir yolla — örneğin
+  test ortamına özel bir mail yakalayıcıyla — kodu okur), ya da kapı **derleme zamanında** elenir
+  (üretim paketinde kodun kendisi bulunmaz). Karar `18.9`/`18.8` (VPS + CI/staging) kurulurken
+  verilir; o iki görev ortamların nasıl ayrıldığını da belirleyecek.
+
+  **İşaretin bulunduğu yerler:** `BEKLEYEN(18.13)` — kapının kendisi (`auth/otp.ts`), ikinci
+  anıldığı servis künyesi (`email-verification.service.ts`) ve `apps/mobile-api/.env.example`.
+  Web'in `.env.example`ında bu değer YOK (yalnız izlenmeyen `.env.local`ında var), o yüzden orada
+  işaret de yok — kapı sökülürken web'in yerel env'i de temizlenmeli.
+
 ## Not
 
 Bu modülün çıktısı çoğunlukla **konfigürasyon ve karar kaydı**dır, ürün kodu değil. Her karar alındıkça ilgili yer (`STACK.md §13` taslak → kesinleşmiş) güncellenir; "taslak" işareti kalkar.

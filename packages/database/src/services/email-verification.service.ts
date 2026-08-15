@@ -53,6 +53,9 @@ export class EmailVerificationService extends BaseDbService<EmailVerification, E
    *
    * **Üretimde kimse kod GEÇMEZ** ve tek kilit bu değil: geçen tek yer `sendEmailOtp` ve orası
    * `NODE_ENV !== 'production'` + biçimi doğrulanmış `OTP_TEST_CODE` şartına bağlı.
+   *
+   * **BEKLEYEN(18.13):** o kapı üretime çıkmadan sökülecek (kullanıcı kararı 15.08). Buradaki
+   * `code` parametresi kapının TEK girişidir — kapı gidince bu parametre de gerekçesini kaybeder.
    */
   async requestCode(email: string, code: string = generateSixDigitCode()): Promise<RequestCodeResult> {
     const tokenHash = sha256(code);
