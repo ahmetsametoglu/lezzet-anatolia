@@ -136,10 +136,11 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
       : null;
 
   return (
+    // Genişlik kitin varsayılanı (640): 520'ye sıkıştırmak iki sütunlu alanlarda etiketleri
+    // sardırıyor ve alanları kaydırıyordu (kullanıcı bildirimi 15.08 — "çok sıkışık, kaymalar var").
     <Dialog
       open
       onClose={onClose}
-      maxWidth={520}
       title="Fiyat düzenle"
       subtitle={row.title}
       footer={
@@ -267,10 +268,11 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
             placeholder="ör. 42"
           />
           {/* Toptan marjı perakendeden farklı kurulabilir (15.08). Boş bırakmak bir karar:
-              ortak hedef B2B'de de geçerli — kutu bunu placeholder'ıyla söyler. */}
+              ortak hedef B2B'de de geçerli — kutu bunu placeholder'ıyla söyler. Etiket ve kenar
+              notu KISA: yarım sütunda sarınca alan aşağı kayıyordu (15.08 bildirimi). */}
           <PercentField
-            label="B2B hedef marj (%)"
-            labelAside="boş = ortak hedef"
+            label="B2B hedefi (%)"
+            labelAside="boş = ortak"
             id="price-target-b2b"
             value={targetB2b}
             onChange={setTargetB2b}
@@ -302,15 +304,15 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
           )
         ) : (
           <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-            Kapalıyken sistem yalnız UYARIR: marj hedefin altına düşerse satır “marj-altı” listesine girer, fiyata
-            dokunulmaz.
+            Kapalıyken fiyata dokunulmaz; hedefin altına düşen satır yalnız “marj-altı” uyarısı alır.
           </span>
         )}
       </div>
 
+      {/* Tek kısa satır (15.08): "verilmiş siparişleri etkilemez" zaten footer'da yazıyor — burada
+          tekrarı metin yoğunluğuydu. Kalan iki bilgi başka hiçbir yerde söylenmiyor. */}
       <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-        Fiyat değişikliği YENİ bir satır yazar; eski fiyat geçmişte kalır ve verilmiş siparişlerin tutarı değişmez.
-        Müşteriye özel fiyatlar bu listeden bağımsızdır ve çözümde önce gelir.
+        Her değişiklik yeni fiyat satırı yazar (geçmiş korunur); müşteriye özel fiyatlar bu listeden bağımsızdır.
       </span>
     </Dialog>
   );
