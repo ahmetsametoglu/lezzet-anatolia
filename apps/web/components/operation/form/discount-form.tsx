@@ -348,6 +348,12 @@ interface DiscountFormBodyProps {
    * gövdesi yalnız kuralın içeriğini taşır. Asistan kuyruğunda footer yok — gövdede kalır.
    */
   showActiveToggle?: boolean;
+  /**
+   * Tetik anahtarı gövdede mi çizilsin? Diyalog `false` verir ve anahtarı BAŞLIK barına taşır
+   * (15.08, kullanıcı kararı): kupon/kampanya seçimi formun bir alanı değil, formun KİMLİĞİDİR —
+   * başlıkla aynı satırda durur. Asistan kuyruğunda başlık yuvası yok — gövdede kalır.
+   */
+  showTriggerToggle?: boolean;
 }
 
 export function DiscountFormBody({
@@ -360,6 +366,7 @@ export function DiscountFormBody({
   disabled = false,
   columns = 1,
   showActiveToggle = true,
+  showTriggerToggle = true,
 }: DiscountFormBodyProps) {
   const set = <K extends keyof DiscountFormValues>(key: K, next: DiscountFormValues[K]) =>
     onChange({ ...values, [key]: next });
@@ -395,21 +402,49 @@ export function DiscountFormBody({
   const tanimSection = (
     <>
       <SectionCard title="Tanım">
-        <FieldShell label="Tetik" labelAside={aside('trigger')}>
-          <MultiToggle
-            value={values.trigger}
-            onChange={(next) => set('trigger', next)}
-            label="Tetik"
-            options={[
-              { key: 'coupon', label: 'Kupon (kodlu)' },
-              { key: 'automatic', label: 'Otomatik kampanya' },
-            ]}
-          />
-        </FieldShell>
+        {showTriggerToggle ? (
+          <FieldShell label="Tetik" labelAside={aside('trigger')}>
+            <MultiToggle
+              value={values.trigger}
+              onChange={(next) => set('trigger', next)}
+              label="Tetik"
+              options={[
+                { key: 'coupon', label: 'Kupon (kodlu)' },
+                { key: 'automatic', label: 'Otomatik kampanya' },
+              ]}
+            />
+          </FieldShell>
+        ) : null}
 
         <FieldShell label="Ad" labelAside={aside('name', 'Yalnız sizin listeniz için — müşteri görmez')}>
           <Input value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="ör. Bayram indirimi" />
         </FieldShell>
+
+        {/* Kapsam TANIM'da (15.08, kullanıcı kararı): "bu indirim NEYİN indirimi" sorusu kuralın
+            kimliğine ait — adın hemen altında durur; hedef seçici kapsam daraldığında yanına gelir. */}
+        <div className="grid grid-cols-2 gap-3">
+          <FieldShell label="Kapsam" labelAside={aside('scope')}>
+            <Select
+              value={values.scope}
+              onChange={(next) => onChange({ ...values, scope: next as DiscountScope, targetId: '' })}
+              options={[
+                { value: 'cart', label: 'Sepet (tümü)' },
+                { value: 'category', label: 'Kategori' },
+                { value: 'collection', label: 'Koleksiyon' },
+              ]}
+            />
+          </FieldShell>
+          {values.scope !== 'cart' ? (
+            <FieldShell label={values.scope === 'category' ? 'Kategori' : 'Koleksiyon'} labelAside={aside('target')}>
+              <Select
+                value={values.targetId}
+                onChange={(next) => set('targetId', next)}
+                placeholder="Seç"
+                options={targets.map((t) => ({ value: t.id, label: t.name }))}
+              />
+            </FieldShell>
+          ) : null}
+        </div>
       </SectionCard>
 
       {/* MÜŞTERİ METNİ TEK KARTTA, dil kartın SEKMESİNDEN gelir (ürün formunun deseni). İki alan da
@@ -460,89 +495,64 @@ export function DiscountFormBody({
     </>
   );
 
+  // Tip ile değer ALT ALTA (15.08, kullanıcı kararı): yarım sütunda yan yana sıkışıyorlardı.
   const indirimSection = (
     <SectionCard title="İndirim">
-      <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="İndirim tipi" labelAside={aside('type')}>
-          <MultiToggle
-            value={values.type}
-            onChange={(next) => set('type', next)}
-            label="İndirim tipi"
-            options={[
-              { key: 'percent', label: 'Yüzde' },
-              { key: 'fixed', label: 'Sabit tutar' },
-            ]}
-          />
-        </FieldShell>
-        {values.type === 'percent' ? (
-          <PercentField
-            label="Değer (%)"
-            labelAside={aside('value', 'zorunlu')}
-            id="discount-value"
-            value={values.value}
-            onChange={(next) => set('value', next)}
-            placeholder="ör. 10"
-          />
-        ) : (
-          <MoneyField
-            label="Değer (€)"
-            required
-            labelAside={aside('value')}
-            id="discount-value"
-            value={values.value}
-            onChange={(next) => set('value', next)}
-            placeholder="ör. 5,00"
-          />
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Kapsam" labelAside={aside('scope')}>
-          <Select
-            value={values.scope}
-            onChange={(next) => onChange({ ...values, scope: next as DiscountScope, targetId: '' })}
-            options={[
-              { value: 'cart', label: 'Sepet (tümü)' },
-              { value: 'category', label: 'Kategori' },
-              { value: 'collection', label: 'Koleksiyon' },
-            ]}
-          />
-        </FieldShell>
-        {values.scope !== 'cart' ? (
-          <FieldShell label={values.scope === 'category' ? 'Kategori' : 'Koleksiyon'} labelAside={aside('target')}>
-            <Select
-              value={values.targetId}
-              onChange={(next) => set('targetId', next)}
-              placeholder="Seç"
-              options={targets.map((t) => ({ value: t.id, label: t.name }))}
-            />
-          </FieldShell>
-        ) : null}
-      </div>
+      <FieldShell label="İndirim tipi" labelAside={aside('type')}>
+        <MultiToggle
+          value={values.type}
+          onChange={(next) => set('type', next)}
+          label="İndirim tipi"
+          options={[
+            { key: 'percent', label: 'Yüzde' },
+            { key: 'fixed', label: 'Sabit tutar' },
+          ]}
+        />
+      </FieldShell>
+      {values.type === 'percent' ? (
+        <PercentField
+          label="Değer (%)"
+          labelAside={aside('value', 'zorunlu')}
+          id="discount-value"
+          value={values.value}
+          onChange={(next) => set('value', next)}
+          placeholder="ör. 10"
+        />
+      ) : (
+        <MoneyField
+          label="Değer (€)"
+          required
+          labelAside={aside('value')}
+          id="discount-value"
+          value={values.value}
+          onChange={(next) => set('value', next)}
+          placeholder="ör. 5,00"
+        />
+      )}
     </SectionCard>
   );
 
   const kosulSection = (
     <SectionCard title="Koşullar & sınırlar">
-      <div className="grid grid-cols-2 gap-3">
-        <MoneyField
-          label="Asgari sepet (€)"
-          labelAside={aside('minBasket', 'boş = koşul yok')}
-          id="discount-min-basket"
-          value={values.minBasket}
-          onChange={(next) => set('minBasket', next)}
-          placeholder="ör. 50,00"
+      {/* Alanlar TAM genişlik (15.08): yarım sütunun yarısında etiketler ve anahtar metni sarıp
+          sıkışıyordu — kart zaten dar, ikinci kez bölmek her metni kırıyordu. */}
+      <MoneyField
+        label="Asgari sepet (€)"
+        labelAside={aside('minBasket', 'boş = koşul yok')}
+        id="discount-min-basket"
+        value={values.minBasket}
+        onChange={(next) => set('minBasket', next)}
+        placeholder="ör. 50,00"
+      />
+      {/* Kitin kartlı anahtarı (`ToggleField`) — elle kutu yazılmaz (kullanıcı düzeltmesi 15.08);
+          etiket anahtarın HÂLİNİ söyler, karar FieldShell başlığında. */}
+      <FieldShell label="Yalnız ilk sipariş" labelAside={aside('firstOrderOnly')}>
+        <ToggleField
+          label={values.firstOrderOnly ? 'Yalnız ilk siparişte' : 'Her siparişte geçerli'}
+          on={values.firstOrderOnly}
+          onChange={(next) => set('firstOrderOnly', next)}
         />
-        {/* Kitin kartlı anahtarı (`ToggleField`) — elle kutu yazılmaz (kullanıcı düzeltmesi 15.08);
-            etiket anahtarın HÂLİNİ söyler, karar FieldShell başlığında. */}
-        <FieldShell label="Yalnız ilk sipariş" labelAside={aside('firstOrderOnly')}>
-          <ToggleField
-            label={values.firstOrderOnly ? 'Yalnız ilk siparişte' : 'Her siparişte geçerli'}
-            on={values.firstOrderOnly}
-            onChange={(next) => set('firstOrderOnly', next)}
-          />
-        </FieldShell>
-      </div>
+      </FieldShell>
 
       {/* Geçerlilik TEK alan: başlangıç ve bitiş ayrı kutularda dururken ikisi arasındaki ilişki
           (ters aralık) ancak kaydederken görülüyordu. Aralık seçicide ters seçim zaten kurulamaz. */}
@@ -555,10 +565,10 @@ export function DiscountFormBody({
         placeholder="Süresiz"
       />
 
-      {/* Etiketler KISA ("Toplam kullanım", "Müşteri başına"): yarım sütunda uzun etiket + kenar
-          notu sarıp kutuyu kaydırıyordu (15.08 ekran görüntüsü). */}
+      {/* Kenar notu tek kutuya sığmıyordu ("boş = sınırsız" ikiye kırılıyordu) — iki kutunun ortak
+          kuralı tek ipucu satırına indi (aşağıda); işaret (`aside`) etikette kaldı. */}
       <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Toplam kullanım" labelAside={aside('limits', 'boş = sınırsız')}>
+        <FieldShell label="Toplam kullanım" labelAside={aside('limits')}>
           <Input
             value={values.maxUses}
             mono
@@ -567,7 +577,7 @@ export function DiscountFormBody({
             placeholder="ör. 100"
           />
         </FieldShell>
-        <FieldShell label="Müşteri başına" labelAside={aside('limits', 'boş = sınırsız')}>
+        <FieldShell label="Müşteri başına" labelAside={aside('limits')}>
           <Input
             value={values.perCustomerLimit}
             mono
@@ -577,6 +587,9 @@ export function DiscountFormBody({
           />
         </FieldShell>
       </div>
+      <span className="font-ops-body text-ops-micro leading-[1.6] text-ops-faint">
+        Boş bırakılan sınır: sınırsız.
+      </span>
     </SectionCard>
   );
 

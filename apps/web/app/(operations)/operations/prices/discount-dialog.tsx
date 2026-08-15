@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { ToggleField } from '@/components/operation/form/toggle';
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
 import {
   DiscountFormBody,
@@ -70,6 +71,20 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       subtitle={
         values.trigger === 'coupon' ? 'Müşteri kodu yazarak kullanır' : 'Koşullar tutunca kendiliğinden uygulanır'
       }
+      // Tetik BAŞLIKTA (15.08, kullanıcı kararı): kupon/kampanya seçimi formun bir alanı değil,
+      // formun kimliği — başlık ve alt başlıkla aynı satırda döner, gövde `showTriggerToggle=false`.
+      headerAside={
+        <MultiToggle
+          value={values.trigger}
+          onChange={(next) => setValues({ ...values, trigger: next })}
+          label="Tetik"
+          size="sm"
+          options={[
+            { key: 'coupon', label: 'Kupon (kodlu)' },
+            { key: 'automatic', label: 'Otomatik kampanya' },
+          ]}
+        />
+      }
       footer={
         <>
           {/* Aktif anahtarı FOOTER'DA, kitin `bare` çeşidiyle (15.08, kullanıcı kararı — ToggleField
@@ -106,6 +121,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
         disabled={busy}
         columns={2}
         showActiveToggle={false}
+        showTriggerToggle={false}
       />
     </Dialog>
   );
