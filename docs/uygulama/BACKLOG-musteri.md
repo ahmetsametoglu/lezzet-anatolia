@@ -720,6 +720,43 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   ne diyor · ikisi tutuyor mu.** Bugünkü turda yalnız keşif ve geri bildirim ölçüldü; ikisi de
   tutmadı — bu, kalanların da ölçülmesi için yeterli sebep.
 
+  **İKİNCİ TUR (15.08, görev `(21.59)`) — soru "sayı doğru mu"dan "ekran BUNU SÖYLÜYOR MU"ya
+  döndü.** Kullanıcı isteği: *"her puan kazanma durumunun sonucunda aynı sayfayı göstermek lazım —
+  ne kadar kazandı ve şu ana kadar ne oldu?"* Denetimin çıkardığı tablo:
+
+  | Sebep | Ne kadar | Ekran ne diyordu | Bugün |
+  | --- | --- | --- | --- |
+  | `visit` | 10 | hiçbir şey (bilinçli sessiz, karar 11.08) | değişmedi |
+  | `feedback_candidate` | 2 | *"+N puan kazandınız"* — **toplam yok** | ortak blok: kazanılan + toplam |
+  | `feedback_purchase`/`review` | 5 / 20 | kazanılan + toplam | ortak blok (biçim buradan alındı) |
+  | `neighbor` | 100 | **hiçbir şey** | **hâlâ hiçbir şey** |
+  | `referral` | 500 | **hiçbir şey** | **hâlâ hiçbir şey** |
+
+  **KAPANDI:** iki sonuç ekranı tek bloğa indi (`customer-kit/points-award.tsx`), keşif turu artık
+  güncel bakiyeyi de söylüyor (`DiscoverSwipeSchema.balance`).
+
+  **AÇIK ve yapısal:** `referral`/`neighbor` **başkasının** eylemiyle doğuyor (davet edilen kişi
+  parasını ödediğinde) — müşteri o an uygulamada değil, yani gösterilecek bir "sonuç sayfası" YOK.
+  **En büyük iki ödül bu yüzden görünmez.** Cevapları sonuç sayfası değil: **puan geçmişi**
+  (aşağıda) ve bildirim.
+
+- [ ] **MB-59 · Puan geçmişi native'de HİÇ YOK — en büyük iki ödül görünmez (kullanıcı isteği 15.08).**
+  **Ölçüldü 15.08:** `/api/v1/me/points` üç uç veriyor (kart · ziyaret · çevirme); kart bilerek
+  yalnız `balance` taşıyor, `earned`/`spent` sözleşmeden çıkarılmış
+  (`points-api.schema.ts` künyesi). Defterin okuması (`listPointsHistory`) uygulama katmanına
+  BİLEREK terfi etmemiş — künyesi *"bugün tek yüzeyleri var"* diyor, yani unutulmuş değil
+  ERTELENMİŞ bir karar. Kullanıcının isteğiyle ikinci yüzey doğdu.
+
+  **İstek:** *"hangi puan nereden geldi konusunu da gösterebileceğimiz bir bölümümüz olmalı."*
+
+  **Kapsam:** `GET /api/v1/me/points/history` (keyset + sonsuz kaydırma — defter veriyle SINIRSIZ
+  büyüyen bir küme, CLAUDE §1) + hesap kartından açılan liste. Satır = *tarih · sebep · ±N*. Sebep
+  metni İSTEMCİDE kurulur (`points-earn-list`in deseni), ama küme **tam** olmalı: `redemption` ve
+  `manual` da geçmişte görünür — `MePointsEarnWayKey` yalnız KAZANMA yollarını kapsıyor, geçmiş
+  harcamayı da göstermek zorunda.
+
+  **Web'de karşılığı VAR ama bozuk** — not bırakıldı: `not-web-puan-gecmisi-ham-enum.md`.
+
 - [x] **MB-19 · Puan/teşekkür kartının tasarımı elden geçecek (kullanıcı kararı 11.08).**
   → **YAPILDI (15.08), görev `(21.58)` — ve yön TUR TUR değişti, üçüncüde durdu.**
   **Sonuç: KUTU YOK.** Kullanıcı kararı 15.08: *"kart görmek istemiyorum… tüm sayfayı kullanan…

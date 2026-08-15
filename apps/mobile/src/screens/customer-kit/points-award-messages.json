@@ -1,0 +1,20 @@
+{
+  "tr": {
+    "points": "✦ +{points} puan",
+    "note": "hesabınıza eklendi",
+    "total": "Toplam ✦ {points} puan",
+    "settling": "Puanlarınız hesaplanıyor…"
+  },
+  "fr": {
+    "points": "✦ +{points} points",
+    "note": "crédités sur votre compte",
+    "total": "Total ✦ {points} points",
+    "settling": "Calcul de vos points en cours…"
+  },
+  "de": {
+    "points": "✦ +{points} Punkte",
+    "note": "Ihrem Konto gutgeschrieben",
+    "total": "Gesamt ✦ {points} Punkte",
+    "settling": "Ihre Punkte werden berechnet…"
+  }
+}

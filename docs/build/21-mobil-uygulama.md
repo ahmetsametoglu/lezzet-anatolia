@@ -2830,7 +2830,71 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   25 test** (`HeartIcon` keşif ekranında kullanılmaya devam ediyor, ihracı korundu) · cihazda
   üç turun üçü de görüldü ve ekran görüntüleri kullanıcıya sunuldu.
   **Puanlı hâl cihazda ÖLÇÜLMEDİ** — görüntülemek daveti tamamlamayı, yani deftere puan yazmayı
-  gerektiriyor; kod ve testlerle doğrulandı.
+  gerektiriyor; kod ve testlerle doğrulandı. *(Bu boşluk `(21.59)`da kapandı: aynı blok keşif
+  turunun bitişine de konuldu ve orada puanlı hâl cihazda görüldü.)*
+
+- [x] (21.59) **HER PUAN KAZANIMI ARTIK AYNI ŞEYİ SÖYLÜYOR — kazanılan + güncel toplam (kullanıcı isteği 15.08)**
+  `touches:` `apps/mobile/src/screens/customer-kit/points-award.tsx` ·
+  `apps/mobile/src/screens/customer-kit/points-award-messages.json` ·
+  `apps/mobile/src/components/ui/empty-state.tsx` ·
+  `apps/mobile/src/screens/{feedback,discover}/**` ·
+  `packages/types/src/contracts/discover-api.schema.ts` ·
+  `packages/application/src/feedback/discover.ts`
+
+  **İstek:** *"bu bir puan alma durumuysa ne kadar kazandığı, sonra mevcut puanın ne olduğu —
+  her puan kazanma durumunun sonucunda aynı sayfayı göstermek lazım."*
+
+  **ÖLÇÜM ÖNCE, MÜDAHALE SONRA.** Puan sistemi uçtan uca okundu (motor · uygulama katmanı · uçlar ·
+  üç ekran · web karşılığı) ve tablo şu çıktı: `visit` (10) sessiz — bilinçli (karar 11.08);
+  `feedback_candidate` (2) keşif bitişinde **yalnız kazanılanı** yazıyor; `feedback_purchase`/
+  `review` (5/20) teşekkür sayfasında kazanılan + **toplam** yazıyor; `referral` (500) ve
+  `neighbor` (100) **hiçbir yerde görünmüyor**. Yani "aynı sayfa" diye bir şey yoktu: iki ayrı
+  biçim, iki ayrı metin kümesi, iki sessiz yol.
+
+  **Yapılan üç şey:**
+  1. **Blok kite terfi etti** — `customer-kit/points-award.tsx` (`PointsAward` + `PointsSpark`).
+     Kazanan biçim teşekkür sayfasınınkiydi ve bu zevk kararı değil: kullanıcı onu `(21.58)`de üç
+     tur döndürerek onayladı. Keşif bitişindeki tek satırlık hap çip ve 88'lik solgun daire kalktı.
+  2. **Sözleşme büyüdü** — `DiscoverSwipeSchema.balance`. Bakiye ekranda HESAPLANAMAZ ("açılıştaki
+     bakiye + bu turda kazanılan" defterle ayrışır: ziyaret puanı sessizce yazılıyor, davet ödülü
+     o sırada doğabilir, müşteri kupona çevirmiş olabilir). Tur sonunda `/me/points`e gitmek yerine
+     her oy cevabında taşınıyor: o uç kart+kupon+kural okuyor ve davet kodu ÜRETİYOR — bakiye
+     öğrenmek için tetiklenecek bir yan etki değil.
+  3. **Not satırı bağlamı bıraktı** — *"bu değerlendirme için hesabınıza eklendi"* →
+     *"hesabınıza eklendi"*. Ortak blokta bağlam cümlesi taşımak ikiliği geri getirirdi; bağlamı
+     zaten üstteki başlık söylüyor.
+
+  **DÖRDÜNCÜ ŞEY, ve bir KURAL olarak yazıldı — ekran görüntüsünden sonra geldi.** Kullanıcı ilk
+  çekimi görünce: *"sayfa ortada olsun, içerik ortada olsun. Çünkü biz puan verdiğimiz zaman ekran
+  ortalanıyor — ekranın ortasında bir puan verme sayfası varken bu bir TASARIM DESENİDİR, bunu
+  takip etmek lazım."* Yani `(21.58)`de tek bir ekran için verilmiş görünen karar aslında puan
+  kazanma anının kuralıymış. Kural künye olarak `points-award.tsx`e yazıldı: kazanımı gösteren her
+  ekran içeriği dikeyde ortalar. Blok bunu kendi içinde YAPAMAZ — ortalanan şey blok değil SAYFA
+  (başlık, gövde, düğme dahil), o yüzden her yüzey kendi kaydırma kabına uygular.
+
+  **BEŞİNCİ ŞEY — aynı kusur BOŞ HÂLDE de görüldü, ama bileşene gömülmedi.** Kullanıcı cihazdan
+  o an açık olan ekranı istedi; gelen görüntü kazanım sayfası değil *"değerlendirecek yenilik yok"*
+  boş hâliydi (deste tükenmişti) ve o da üst üçte birde toplanmıştı. `EmptyState` **20 yerde**
+  kullanılıyor ve hepsi tam ekran DEĞİL — kataloğun "sonuç yok"u bir listenin içinde, hesabın
+  misafir bloğu kaydırılan sayfanın ortasında. Bileşene ortalama gömmek onları da bozardı.
+  Bunun yerine **isteğe bağlı `fill` kapısı** açıldı (varsayılan kapalı) ve yalnız keşfin iki
+  tam-ekran hâli (boş + hata) açtı. Kalan 18 çağrı yeri **bilerek dokunulmadı**: görülmeden
+  değiştirilmiş bir yerleşim, düzelttiğinden fazlasını bozar. Cihazda ölçüldü 17:33 — üst ve alt
+  nefes eşit.
+
+  **Doğrulama:** `tsc` temiz (dokunulan beş paket) · `eslint` temiz · `knip` yeni ölü kod
+  görmüyor · `jest src/screens/{feedback,discover}` **4 dosya / 25 test** · **cihazda ölçüldü
+  16:57** — 4 kart oylandı, ekran `✦ +8 puan` · `hesabınıza eklendi` · `Toplam ✦ 18 puan` yazdı
+  (8 = 4×2 oy, 18 = 8 + o günün ziyaret puanı 10); bekleme hâli de görüldü.
+  **Ortalanmış hâl AYRICA ölçüldü 17:24** — ilk çekimde ortalama henüz yoktu ve deste tükenmişti
+  (oylanan aday deste dışına düşer), o yüzden cihazda görülemiyordu. Turun kendi yazdığı dört
+  `product_feedback` satırı silinip deste yenilendi ve tur tekrarlandı: `✦ +8 puan` ·
+  `Toplam ✦ 26 puan` (26 = önceki 18 + yeni tur 8 — satırlar yeni kimlikle doğduğu için puan
+  ikinci kez yazıldı, yerel veri zaten sahte). Üst ve alt nefes eşitlendi.
+
+  **AÇIK KALAN, ve bu görevin kapsamı DEĞİL:** `referral`/`neighbor` başkasının eylemiyle doğuyor —
+  müşteri o an uygulamada değil, gösterilecek bir sonuç sayfası yok. En büyük iki ödül bu yüzden
+  hâlâ görünmez; cevapları **puan geçmişi** (sıradaki iş) ve bildirimdir. `BEKLEYEN(MB-18)`.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

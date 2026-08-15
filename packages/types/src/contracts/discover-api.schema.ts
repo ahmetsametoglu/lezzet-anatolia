@@ -91,6 +91,23 @@ export const DiscoverSwipeSchema = z.object({
    * (29.07 denetiminin kapattığı arıza sınıfı).
    */
   pointsAwarded: z.number().int().nonnegative().nullable(),
+  /**
+   * Bu yazımdan SONRAKİ bakiye — turun bitiş ekranı *"Toplam ✦ N puan"* diyebilsin diye
+   * (kullanıcı isteği 15.08: *"ne kadar kazandı ve şu ana kadar ne oldu?"*).
+   *
+   * **İstemcide HESAPLANAMAZ** ve bu `pointsAwarded`ın künyesindeki gerekçenin aynısı: müşterinin
+   * bakiyesi bu turun dışında da değişiyor (günlük giriş puanı sessizce yazılıyor, davet ettiği
+   * kişi o sırada siparişini ödemiş olabilir, kupona çevirmiş olabilir). "Açılıştaki bakiye +
+   * bu turda kazanılan" toplamı ekranın kendi tuttuğu bir sayı olurdu ve defterle ayrışırdı.
+   *
+   * **Her oyda taşınır, tur sonunda ayrı bir okumayla değil:** bitişte `/me/points`e gitmek bir
+   * gidiş-dönüş daha eklerdi ve o uç kart+kupon+kural okuyup davet kodu ÜRETİYOR — bakiyeyi
+   * öğrenmek için tetiklenecek bir yan etki değil. Sayı zaten yazımın yapıldığı yerde, tek satır
+   * okumayla elde. Ekran son cevabı tutar; turun son oyu oturduğunda toplam da oturur.
+   *
+   * `null` = kimliksiz kaydırma (`pointsAwarded` ile aynı koşul, aynı sebep): bakiyenin sahibi yok.
+   */
+  balance: z.number().int().nullable(),
 });
 
 /**

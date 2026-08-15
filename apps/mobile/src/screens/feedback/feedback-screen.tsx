@@ -18,9 +18,10 @@ import { TextField } from '@/components/ui/text-field';
 import { CLIENT_ERROR } from '@/lib/api/client';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
 import { emToDp } from '@/theme/parse';
 import { FeedbackSkeleton } from './feedback-skeleton';
-import { SparkIcon, ThumbIcon } from './feedback-icons';
+import { ThumbIcon } from './feedback-icons';
 import messages from './messages.json';
 import { useFeedback } from './use-feedback.hook';
 
@@ -325,7 +326,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
                 büyüyünce şekil değil LEKE gibi okunuyordu ve içindeki kalp boş bir halkanın
                 ortasında kalıyordu; ölçek büyüdükçe düşük karşıtlık kusura dönüştü. Artık tek,
                 güvenli bir şekil var: puan yıldızı, doğrudan sayfanın zemini üstünde. */}
-            <SparkIcon size={feedbackMetrics.sparkIcon} color={theme.colors.terracotta} />
+            <PointsSpark size={feedbackMetrics.sparkIcon} color={theme.colors.terracotta} />
             <Text style={styles.doneTitle} accessibilityRole="header">
               {completion === null ? t.already.title : t.done.title}
             </Text>
@@ -349,20 +350,14 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
                 KAPI DA TOPLAMA BAĞLANDI, prime değil. Eskiden kart `pointsAwarded > 0` kapısındaydı
                 ve bunun ölçülmüş bir bedeli vardı: günlük tavan dolduysa ya da davet İKİNCİ kez
                 tamamlandıysa prim 0'a düşüyor, müşteri o turda yorum için 20 puan kazanmış olsa bile
-                HİÇBİR puan bilgisi görmüyordu. Toplam o hâllerde de doludur. */}
-            {completion !== null && completion.invitePointsTotal > 0 ? (
-              <View style={styles.pointsLines} testID="feedback-points">
-                <Text style={styles.pointsValue}>
-                  {t.done.points.replace('{points}', String(completion.invitePointsTotal))}
-                </Text>
-                <Text style={styles.pointsNote}>{t.done.pointsNote}</Text>
-                <View style={styles.pointsTotal}>
-                  <Text style={styles.pointsTotalLabel}>
-                    {t.done.pointsTotal.replace('{points}', String(completion.balance))}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
+                HİÇBİR puan bilgisi görmüyordu. Toplam o hâllerde de doludur.
+
+                BLOK ARTIK KİTİN (kullanıcı isteği 15.08): üç satırın biçimi ve metni
+                `customer-kit/points-award.tsx`te — keşif turunun bitişi de aynısını çiziyor. Burada
+                kalan tek şey hangi SAYININ geçileceği, ve o bu ekranın bilgisi. */}
+            {completion === null ? null : (
+              <PointsAward points={completion.invitePointsTotal} balance={completion.balance} testID="feedback-points" />
+            )}
 
             {completion !== null &&
             completion.outcome === 'review_invite' &&
@@ -577,39 +572,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors.body,
     textAlign: 'center',
-  },
-  /* Puanın üç satırı — KUTU DEĞİL, yalnız kendi aralığı olan bir küme (kullanıcı kararı 15.08:
-     kutu yok, sayfa bütünleşik). Zemin, çerçeve, gölge ve eğim KALDIRILDI; öne çıkan şey artık
-     sayının kendi ölçeği (`h1-sm` — mobilin kahraman durağı) ve çevresindeki boşluk.
-     Üstteki `marginTop` başlıktan ayırır; blok aralığından biraz daha geniştir ki puan, teşekkür
-     cümlesinin devamı değil kendi anı olarak okunsun. */
-  pointsLines: {
-    alignItems: 'center',
-    gap: theme.space.xs,
-    marginTop: theme.space.lg,
-  },
-  pointsValue: {
-    fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
-    fontSize: theme.text['h1-sm'],
-    color: theme.colors.terracotta,
-  },
-  pointsNote: {
-    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text['field-label'],
-    color: theme.colors.body,
-  },
-  pointsTotal: {
-    backgroundColor: theme.colors.olive,
-    borderRadius: theme.radius.badge,
-    paddingVertical: theme.space.sm,
-    paddingHorizontal: theme.space['2xl'],
-    marginTop: theme.space['2xs'],
-    transform: [{ rotate: '2deg' }],
-  },
-  pointsTotalLabel: {
-    fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    fontSize: theme.text.badge,
-    color: theme.colors.card,
   },
   /** "Sorun bildir" — kitin ikincil hap düğmesi TERRACOTTA metin varyantı taşımıyor (v3:1057);
       yüzey ve ölçüler `SecondaryButton`ın hap durağıyla bire bir, yalnız metin rengi ekranın. */

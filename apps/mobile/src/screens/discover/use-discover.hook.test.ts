@@ -62,6 +62,8 @@ const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 /** Sunucunun yazdığı puan — girişli müşteride dolu, girişsizde `null` (sözleşme). */
 let awardPerVote: number | null = CANDIDATE_POINTS;
+/** Yazımdan sonraki bakiye — puanla AYNI koşulda `null` (girişsiz kaydırmanın sahibi yok). */
+let balanceAfterVote: number | null = 42;
 
 beforeAll(() => {
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
@@ -71,11 +73,12 @@ beforeAll(() => {
 beforeEach(() => {
   jest.useFakeTimers();
   awardPerVote = CANDIDATE_POINTS;
+  balanceAfterVote = 42;
   fetchMock.mockReset();
   fetchMock.mockImplementation((url) =>
     Promise.resolve(
       String(url).includes('/vote')
-        ? okResponse({ id: null, pointsAwarded: awardPerVote })
+        ? okResponse({ id: null, pointsAwarded: awardPerVote, balance: balanceAfterVote })
         : okResponse({ cards: [1, 2, 3, 4].map(card) }),
     ),
   );
@@ -134,7 +137,7 @@ describe('useDiscover — turun puan toplamı', () => {
     fetchMock.mockImplementation((url) =>
       String(url).includes('/vote')
         ? new Promise<Response>((resolve) => {
-            releaseVote = () => resolve(okResponse({ id: null, pointsAwarded: CANDIDATE_POINTS }));
+            releaseVote = () => resolve(okResponse({ id: null, pointsAwarded: CANDIDATE_POINTS, balance: 42 }));
           })
         : Promise.resolve(okResponse({ cards: [1].map(card) })),
     );
@@ -173,11 +176,14 @@ describe('useDiscover — turun puan toplamı', () => {
 
   it('girişsiz turda puan SIFIR değil YOKTUR — bekleme hâli de bitmiş sayılır', async () => {
     awardPerVote = null;
+    // Bakiye de `null`: ikisi sözleşmede AYNI koşula bağlı (kimliksiz kaydırmanın sahibi yok).
+    balanceAfterVote = null;
     const result = await openTour(false);
 
     await swipe(result, 1, true);
 
     expect(result.current.awardedPoints).toBeNull();
+    expect(result.current.balance).toBeNull();
     expect(result.current.pointsSettling).toBe(false);
   });
 });

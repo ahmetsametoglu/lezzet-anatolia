@@ -19,9 +19,6 @@
     },
     "done": {
       "title": "Değerlendirmeniz için teşekkürler",
-      "points": "✦ +{points} puan",
-      "pointsNote": "bu değerlendirme için hesabınıza eklendi",
-      "pointsTotal": "Toplam ✦ {points} puan",
       "reviewBody": "Memnuniyetinizi {platform}'da paylaşırsanız çok seviniriz — bir dakikanızı alır.",
       "reviewCta": "{platform}'da değerlendir ↗",
       "issueBody": "Beğenmediğiniz bir ürün mü vardı? Sorunu bize iletin, düzeltelim.",
@@ -69,9 +66,6 @@
     },
     "done": {
       "title": "Merci pour votre évaluation",
-      "points": "✦ +{points} points",
-      "pointsNote": "crédités sur votre compte pour cette évaluation",
-      "pointsTotal": "Total ✦ {points} points",
       "reviewBody": "Si vous partagiez votre satisfaction sur {platform}, cela nous ferait très plaisir — cela ne prend qu'une minute.",
       "reviewCta": "Évaluer sur {platform} ↗",
       "issueBody": "Un produit ne vous a pas plu ? Signalez-le-nous, nous arrangerons cela.",
@@ -119,9 +113,6 @@
     },
     "done": {
       "title": "Danke für Ihre Bewertung",
-      "points": "✦ +{points} Punkte",
-      "pointsNote": "für diese Bewertung Ihrem Konto gutgeschrieben",
-      "pointsTotal": "Gesamt ✦ {points} Punkte",
       "reviewBody": "Wir würden uns sehr freuen, wenn Sie Ihre Zufriedenheit auf {platform} teilen — es dauert nur eine Minute.",
       "reviewCta": "Auf {platform} bewerten ↗",
       "issueBody": "War ein Produkt nicht in Ordnung? Sagen Sie es uns, wir kümmern uns darum.",

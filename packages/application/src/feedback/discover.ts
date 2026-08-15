@@ -4,7 +4,7 @@ import { resolveLocalizedText, type FeedbackVote, type PreferredLanguage, type P
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { imageOf } from '../catalog/map';
 import type { StorefrontImage } from '../catalog/storefront-types';
-import { awardFeedbackPoints } from './points';
+import { awardFeedbackPoints, getPointsBalance } from './points';
 
 /*
   KEŞİF TURU (08.7 · 17.3 · terfi 21.19) — web'de üç dosyaya dağılmış olan aday ürün akışının paket
@@ -121,6 +121,16 @@ export interface DiscoverSwipeRecord {
    * yazdığı ayrışırsa müşteri gelmeyecek bir ödül için hareket eder).
    */
   pointsAwarded: number | null;
+  /**
+   * Yazımdan SONRAKİ bakiye — bitiş ekranının *"Toplam ✦ N puan"* satırı (kullanıcı isteği 15.08).
+   *
+   * Ekran bunu kendisi TOPLAYAMAZ: bakiye turun dışında da değişiyor (günlük giriş puanı, davet
+   * ödülü, kupona çevirme). Sözleşme künyesinde tam gerekçe.
+   *
+   * `pointsAwarded` ile AYNI koşulda `null` olur (kimliksiz kaydırma) — ikisi de aynı şeyi söyler:
+   * ödülün henüz sahibi yok.
+   */
+  balance: number | null;
 }
 
 /**
@@ -165,7 +175,7 @@ export async function recordDiscoverSwipe(
       dwellMs: input.dwellMs ?? null,
       status,
     });
-    return { status: 'ok', swipe: { id: created.id, pointsAwarded: null } };
+    return { status: 'ok', swipe: { id: created.id, pointsAwarded: null, balance: null } };
   }
 
   // Tekillik `(müşteri, ürün, bağlam)` üzerinde: aynı ürüne ikinci oy YENİ satır açmaz, fikrini
@@ -188,7 +198,10 @@ export async function recordDiscoverSwipe(
   // İkinci oyda puan İKİNCİ KEZ verilmez: defterdeki tekillik `(müşteri, sebep, kaynak)` üzerinde
   // ve satır aynı satır (DOMAIN §14: "aynı ürüne swipe BİR KEZ puan verir").
   const entry = await awardFeedbackPoints(db, saved);
-  return { status: 'ok', swipe: { id: null, pointsAwarded: entry?.points ?? 0 } };
+  // Bakiye ödül YAZILMASA DA okunur (tavan dolu · ikinci oy · B2B): ekranın söyleyeceği toplam
+  // "bu turda ne kazandın" değil "şu an ne kadarın var" — ikincisi ödülden bağımsız doğrudur.
+  const { balance } = await getPointsBalance(db, input.customerId);
+  return { status: 'ok', swipe: { id: null, pointsAwarded: entry?.points ?? 0, balance } };
 }
 
 /**

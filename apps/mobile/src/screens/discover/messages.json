@@ -28,8 +28,6 @@
     "done": {
       "title": "Hepsi bu kadardı — teşekkürler!",
       "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni adaylar geldikçe burası yeniden dolar.",
-      "award": "+{points} puan kazandınız",
-      "awardSettling": "Puanlarınız hesaplanıyor…",
       "loginHint": "Giriş yaparsanız keşif turları puan kazandırır.",
       "loginCta": "Hızlı doğrulama",
       "catalog": "Kataloğa dön"
@@ -75,8 +73,6 @@
     "done": {
       "title": "C'était tout — merci !",
       "body": "Vos avis orientent les saveurs que nous ferons venir. De nouveaux candidats rempliront cette page.",
-      "award": "Vous avez gagné +{points} points",
-      "awardSettling": "Calcul de vos points en cours…",
       "loginHint": "Connectez-vous et vos tours de découverte vous rapportent des points.",
       "loginCta": "Vérification rapide",
       "catalog": "Voir le catalogue"
@@ -122,8 +118,6 @@
     "done": {
       "title": "Das war alles — vielen Dank!",
       "body": "Ihre Bewertungen lenken, welche Spezialitäten wir holen. Sobald neue Kandidaten da sind, füllt sich diese Seite wieder.",
-      "award": "Sie haben +{points} Punkte erhalten",
-      "awardSettling": "Ihre Punkte werden berechnet…",
       "loginHint": "Mit Anmeldung bringen Ihnen Entdeckungsrunden Punkte.",
       "loginCta": "Schnelle Verifizierung",
       "catalog": "Zum Katalog"

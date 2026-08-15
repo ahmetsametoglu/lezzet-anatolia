@@ -78,6 +78,18 @@ interface UseDiscoverResult {
    */
   awardedPoints: number | null;
   /**
+   * Müşterinin GÜNCEL bakiyesi — bitiş ekranının *"Toplam ✦ N puan"* satırı (kullanıcı isteği 15.08).
+   *
+   * Cevabı gelmiş SON oydan alınır, toplanarak kurulmaz: her yazım kendisinden sonraki bakiyeyi
+   * taşıyor (`DiscoverSwipeSchema.balance`) ve sonuncusu en günceli. "Açılıştaki bakiye + bu turda
+   * kazanılan" diye kursaydık defterle ayrışırdı — bakiye turun dışında da değişiyor (günlük giriş
+   * puanı, davet ödülü, kupona çevirme).
+   *
+   * `null` = girişsiz tur (hiçbir cevap bakiye taşımadı) ya da hiç yazım oturmadı; ekran o hâlde
+   * toplam satırını çizmez, sıfır yazmaz (CLAUDE §1).
+   */
+  balance: number | null;
+  /**
    * Toplam henüz oturmadı mı — yazılmayı bekleyen (geri alma penceresindeki) ya da cevabı
    * gelmemiş bir oy var demektir. `true` iken `awardedPoints` EKSİKTİR ve sayı olarak
    * gösterilmemelidir (MB-16 ölçümü: 4 oy → deftere 8, ekranda 6).
@@ -99,6 +111,8 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
   const [status, setStatus] = useState<DiscoverStatus>('loading');
   const [cards, setCards] = useState<DiscoverCard[]>([]);
   const [awardedPoints, setAwardedPoints] = useState<number | null>(null);
+  /** Son cevabın taşıdığı bakiye — biriktirilmez, ÜZERİNE YAZILIR (arayüz künyesi). */
+  const [balance, setBalance] = useState<number | null>(null);
   const generation = useRef(0);
 
   const load = useCallback(() => {
@@ -147,6 +161,9 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
         .then((result) => {
           if (result.error !== null) return;
           if (result.data.pointsAwarded !== null) addAwarded(result.data.pointsAwarded);
+          // Bakiye ödül YAZILMASA DA gelir (tavan · ikinci oy): "şu an ne kadarın var" sorusunun
+          // cevabı bu turda ne kazanıldığından bağımsız doğrudur.
+          if (result.data.balance !== null) setBalance(result.data.balance);
           // `id` YALNIZ girişsiz kaydırmada dolu: giriş dönüşünde talep kapısına götürülmek üzere
           // cihazda saklanır. Girişli müşteride `null` gelir ve saklanacak bir şey yoktur.
           if (result.data.id !== null) void appendPendingSwipe(result.data.id);
@@ -262,6 +279,7 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     status,
     cards,
     awardedPoints,
+    balance,
     // Bekleyen kuyruk + cevabı gelmemiş yazım: ikisinden biri doluysa toplam henüz turun toplamı değil.
     pointsSettling: pendingCount > 0 || writingCount > 0,
     vote,

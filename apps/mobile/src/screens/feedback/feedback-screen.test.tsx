@@ -208,7 +208,9 @@ describe('FeedbackScreen', () => {
        ekran "+5" derken deftere 30 yazılmıştı. */
     expect(screen.getByText('✦ +40 puan')).toBeOnTheScreen();
     expect(screen.queryByText('✦ +15 puan')).toBeNull();
-    expect(screen.getByText('bu değerlendirme için hesabınıza eklendi')).toBeOnTheScreen();
+    /* Not satırı 15.08'de bağlamı bıraktı ("bu değerlendirme için…" → "hesabınıza eklendi"): blok
+       artık keşif turunun bitişiyle ORTAK ve bağlamı üstündeki başlık söylüyor. */
+    expect(screen.getByText('hesabınıza eklendi')).toBeOnTheScreen();
     expect(screen.getByText('Toplam ✦ 255 puan')).toBeOnTheScreen();
     expect(screen.queryByTestId('feedback-issue')).toBeNull();
 

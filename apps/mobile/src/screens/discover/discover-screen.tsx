@@ -18,6 +18,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
+import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
 import { HeartIcon } from '@/screens/feedback/feedback-icons';
 import { emToDp, withAlpha } from '@/theme/parse';
 import messages from './messages.json';
@@ -106,9 +107,12 @@ const discoverMetrics = {
   passIcon: 24,
   likeButton: 72,
   likeIcon: 30,
-  /** Teşekkür dairesi ve içindeki ✦ (v3:437 — 88 / 38). */
+  /**
+   * Bitişin kahraman işareti — şablonda 88'lik bir DAİRE ve içinde 38'lik `✦` vardı (v3:437).
+   * Daire kaldırıldı (kullanıcı kararı 15.08, geri bildirim sonucundaki aynı gerekçe); ölçü
+   * dairenin dış çapında KALDI, çünkü bloğun çevresindeki boşluk ona göre kurulmuştu.
+   */
   thanksMark: 88,
-  thanksGlyph: 38,
   /** Kartın çıkışı (v3:24-25 `kOutL/kOutR` + `kGo`): 330 ms, %130 yol, 9° dönüş. */
   exitMs: 330,
   exitTravel: 1.3,
@@ -431,7 +435,10 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     return (
       <View style={styles.screen} testID="discover-screen">
         {bar}
+        {/* `fill`: bu ekranda boş hâl SAYFANIN TAMAMIDIR (liste içi bir boşluk değil), o yüzden
+            içerik dikeyde ortalanır — kullanıcı gözlemi 15.08. */}
         <EmptyState
+          fill
           icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
           title={t.error.title}
           description={t.error.body}
@@ -448,6 +455,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
       <View style={styles.screen} testID="discover-screen">
         {bar}
         <EmptyState
+          fill
           title={t.empty.title}
           description={t.empty.body}
           action={
@@ -472,9 +480,12 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
         {/* Bitiş bloğu KAYDIRILABİLİR: v3'ün 80'lik dikey nefesi + çip + giriş daveti küçük
             telefonda ekranı taşırıyor; kaydırma payı olmasa "Kataloğa dön" erişilemez kalırdı. */}
         <ScrollView contentContainerStyle={styles.done} testID="discover-done">
-          <View style={styles.thanksMark}>
-            <Text style={styles.thanksGlyph}>✦</Text>
-          </View>
+          {/* KAHRAMAN İŞARET, geri bildirim sonucununkiyle AYNI (kullanıcı isteği 15.08 — "her puan
+              kazanma durumunun sonucunda aynı sayfa"). Eskiden solgun zeytin bir DAİRE içinde metin
+              `✦` vardı; daire aynı gerekçeyle orada da kaldırıldı (15.08): düşük karşıtlıklı büyük
+              daire şekil değil leke gibi okunuyor ve içindeki işareti boş bir halkanın ortasında
+              bırakıyor. Artık tek, çizili bir geometri var. */}
+          <PointsSpark size={discoverMetrics.thanksMark} color={theme.colors.terracotta} />
           <Text style={styles.doneTitle} accessibilityRole="header">
             {t.done.title}
           </Text>
@@ -492,16 +503,19 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
               Bekleme cümlesi yalnız GİRİŞLİ müşteriye: girişsiz turun ödülü sahipsizdir, ona
               "puanların hesaplanıyor" demek olmayan bir ödülü vaat etmek olurdu (o hâlde altta
               zaten giriş daveti var). Oturmuş toplamda `null` = ödülün sahibi yok · `0` = motor
-              gerçekten yazmadı (günlük tavan · B2B · ikinci oy); ikisinde de çip çizilmez. */}
-          {signedIn && discover.pointsSettling ? (
-            <Text style={styles.award} testID="discover-award-settling">
-              {t.done.awardSettling}
-            </Text>
-          ) : discover.awardedPoints === null || discover.awardedPoints === 0 ? null : (
-            <Text style={styles.award} testID="discover-award">
-              {t.done.award.replace('{points}', String(discover.awardedPoints))}
-            </Text>
-          )}
+              gerçekten yazmadı (günlük tavan · B2B · ikinci oy); ikisinde de blok çizilmez.
+
+              BİÇİM ARTIK KİTİN (kullanıcı isteği 15.08): burada tek satırlık bir hap çip vardı ve
+              TOPLAMI HİÇ SÖYLEMİYORDU — geri bildirim sonucu ise üç satır yazıyordu. Aynı sistemin
+              iki ödülü iki ayrı biçimle anlatılıyordu; ortak blok o ikiliği kapatıyor
+              (`customer-kit/points-award.tsx`). Üç hâlin kapısı da oraya taşındı, burada kalan
+              yalnız "bekliyor muyuz" sorusu. */}
+          <PointsAward
+            points={discover.awardedPoints}
+            balance={discover.balance}
+            settling={signedIn && discover.pointsSettling}
+            testID="discover-award"
+          />
 
           {/*
             GİRİŞ DAVETİ, `signedIn`e DEĞİL "turun sahibi var mı"ya bakar (MB-14, 14.08).
@@ -979,6 +993,16 @@ const styles = StyleSheet.create((theme, rt) => ({
 
   /* ── Bitiş hâli (v3:435-444) — geri bildirim ekranının teşekkür bloğuyla aynı kalıp ── */
   done: {
+    /* İÇERİK DİKEYDE ORTALANIR — puan kazanma anının DESENİ, bu ekranın tercihi değil (kullanıcı
+       kararı 15.08: *"biz puan verdiğimiz zaman ekran ortalanıyor… bu bir tasarım desenidir, bunu
+       takip etmek lazım"*). Kuralın künyesi `customer-kit/points-award.tsx`te; geri bildirim sonucu
+       da aynısını uyguluyor.
+
+       Ölçüldü cihazda 15.08: ortalamasız hâlde içerik üst yarıda toplanıp altında ekran boyu boşluk
+       bırakıyordu; `flexGrow` sonrası üst/alt nefes eşitlendi. `flexGrow` kaydırmayı BOZMAZ —
+       içerik ekrandan uzunsa kap yine büyür ve kaydırma payı korunur. */
+    flexGrow: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: theme.space['2xl'],
     paddingTop: theme.space['9xl'],
@@ -986,19 +1010,6 @@ const styles = StyleSheet.create((theme, rt) => ({
        inset dolgunun içinde yaşar, yoksa son düğme çubuğun altında kalır. */
     paddingBottom: rt.insets.bottom + theme.space['9xl'],
     paddingHorizontal: theme.space['8xl'],
-  },
-  thanksMark: {
-    width: discoverMetrics.thanksMark,
-    height: discoverMetrics.thanksMark,
-    borderRadius: discoverMetrics.thanksMark / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors['olive-bg'],
-  },
-  thanksGlyph: {
-    fontFamily: theme.font.body[400],
-    fontSize: discoverMetrics.thanksGlyph,
-    color: theme.colors.ink,
   },
   doneTitle: {
     fontFamily: theme.font.display[theme.text['card-title--font-weight']],
@@ -1018,18 +1029,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.note,
     lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors.body,
-    textAlign: 'center',
-  },
-  /** Puan çipi (v3:441) — fırsat ailesinin zemini, hap yarıçapı; `overflow` Android'de şart. */
-  award: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.chip,
-    color: theme.colors.terracotta,
-    backgroundColor: theme.colors['terracotta-bg'],
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space['4xl'],
-    borderRadius: theme.radius.pill,
-    overflow: 'hidden',
     textAlign: 'center',
   },
   loginHint: {
