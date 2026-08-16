@@ -25,6 +25,7 @@ import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 // Bant KİTE taşındı (10.08): paketler sekmesi ikinci çağıranı oldu (komponentin kendi künyesi).
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { productPriceLabel } from '@/screens/customer-kit/price-label';
+import { emToDp } from '@/theme/parse';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';
@@ -92,13 +93,19 @@ type Messages = LocalizedCopy<typeof messages>;
 interface CatalogScreenProps {
   /**
    * Vitrin bandından iletilen kategori SLUG'ı (21.14b); `null` = istek yok. Süzgecin SAHİBİ
-   * değildir — yalnız bir seçim iletir: değer (yeniden) geldiğinde çip seçilir, müşteri sonra
-   * elle değiştirebilir. Aynı değerle tekrar gelmek no-op (`selectCategory` kendi kapısında).
+   * değildir — yalnız bir seçim iletir: değer geldiğinde çip seçilir, müşteri sonra elle
+   * değiştirebilir. **Uygulanınca TÜKETİLİR** (rotadan silinir) — gerekçesi ve ölçülen arıza
+   * aşağıdaki etkinin künyesinde.
    */
   requestedCategory?: string | null;
+  /**
+   * Vitrin bandından iletilen koleksiyon SLUG'ı (21.64); `null` = istek yok. Kategorinin ikizi ve
+   * aynı kurallarla: yalnız bir seçim iletir, sahibi ekrandır — müşteri bandın çarpısıyla kapatır.
+   */
+  requestedCollection?: string | null;
 }
 
-export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) {
+export function CatalogScreen({ requestedCategory = null, requestedCollection = null }: CatalogScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -144,12 +151,39 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
      banda basışta yeni bir mount olmaz — parametreyi ancak bir etki izleyebilir. İlk yük "Tümü"
      ile başlayıp hemen kategoriye geçebilir (tek fazladan istek, yalnız sekme hiç açılmamışken);
      eskimiş cevabı hook'un `generation` koruması düşürür. */
-  const { selectCategory } = catalog;
+  /*
+    BANTTAN GELEN İSTEK TEK SEFERLİK BİR MESAJDIR — VE OKUNDUĞUNDA TÜKETİLİR (21.64).
+
+    Parametre eskiden ekranda ASILI kalıyordu ve şu ÖLÇÜLEN arızayı doğuruyordu (cihazda, 16.08):
+    banda bas → kesit açılır → çarpıyla kapat → vitrine dön → AYNI banda bas → **hiçbir şey olmaz.**
+    Sebep parametre değil etkiydi: sekme mount kalıyor (navigatör tembel), yani ikinci basışta yeni
+    bir mount yok; etkinin tek bağımlılığı olan değer de `'bayram-sofrasi'`ten `'bayram-sofrasi'`e
+    "değişmediği" için etki hiç koşmuyordu. Kanıt: farklı bir slug'la (`cay-saati`) aynı an çalıştı.
+
+    Çare parametreyi uygulandığı anda SİLMEK: mesaj alındı, kutu boşaldı. Böylece bir sonraki basış
+    — değeri aynı olsa bile — `null → değer` geçişidir ve etki koşar. `setParams` yığına sayfa
+    EKLEMEZ (ürün detayının aile çiplerinde kurulmuş desen), yani geri tuşu bundan etkilenmez.
+
+    Aynı arıza kategoride de vardı ve aynı yerden düzeltildi: "Fırın" bandına basıp çipi "Tümü"ye
+    çekince, o banda ikinci kez basmak da işe yaramıyordu.
+  */
+  const { selectCategory, selectCollection } = catalog;
   useEffect(() => {
     // Bağımlılık BİLEREK yalnız istek: `selectCategory` her render'da tazelenir, ona bağlanmak
     // etkiyi her çizimde koşturur ve müşterinin elle seçimini bantla ezerdi.
-    if (requestedCategory !== null) selectCategory(requestedCategory);
+    if (requestedCategory === null) return;
+    selectCategory(requestedCategory);
+    router.setParams({ category: undefined });
   }, [requestedCategory]);
+
+  /* Koleksiyon AYRI etkide, aynı gerekçelerle. Tek etkide birleştirilmedi çünkü ikisinin
+     bağımlılığı ayrı: bir bandın türü ya kategori ya koleksiyondur (`HomeBandKindEnum`), yani her
+     geçişte ikisinden yalnız biri değişir — birleşik etki ötekini de boşuna yeniden uygulardı. */
+  useEffect(() => {
+    if (requestedCollection === null) return;
+    selectCollection(requestedCollection);
+    router.setParams({ collection: undefined });
+  }, [requestedCollection]);
 
   const cart = useCart();
   const fabCount = cartCount(cart);
@@ -253,6 +287,35 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
           />
         </PressableSurface>
       </View>
+      {/* KOLEKSİYON BANDI (21.64 · kullanıcı kararı 16.08) — arama ile çip rayının ARASINDA.
+          Kaynak sunucunun cevabı: bant `activeCollection` doluyken çizilir, süzgeç kalkınca cevap
+          `null` döner ve bant kendiliğinden söner (ayrı bir görünürlük bayrağı YOK — iki kaynak bir
+          gün ayrışır ve bant boş bir kesitin adını yazardı).
+
+          WEB'DEN BİLİNÇLİ SAPMA: orada koleksiyon sayfanın BAŞLIĞI olur ve kategori şeridi tamamen
+          gizlenir. Mobilde sayfa başlığı alanı yok, çip rayı ise ana gezinme — kullanıcı kararı
+          bant lehine: kesit görünür kalıyor AMA içinde daraltılabiliyor (uç ikisini AND'liyor). */}
+      {catalog.activeCollection === null ? null : (
+        <View style={styles.collectionBand} testID="catalog-collection-band">
+          <View style={styles.collectionText}>
+            <Text style={styles.collectionEyebrow}>{t.collection.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+            <Text style={styles.collectionName} numberOfLines={1}>
+              {catalog.activeCollection.name}
+            </Text>
+          </View>
+          {/* Dokunma hedefi ikondan büyük (`compact` → kitin tek dokunma payı) — arama temizle
+              düğmesiyle aynı karar, aynı gerekçe. */}
+          <PressableSurface
+            onPress={() => catalog.selectCollection(null)}
+            feedback="scale-small"
+            compact
+            accessibilityLabel={t.collection.clear}
+            testID="catalog-collection-clear"
+          >
+            <Icon name="close" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+          </PressableSurface>
+        </View>
+      )}
       {/* Şerit arama alanının hemen altında: klavye açıkken kategori çipine dokunmak yalnız
           klavyeyi kapatırdı, süzgeç değişmezdi (künye `feedback-screen`). */}
       <ScrollView
@@ -531,6 +594,36 @@ const styles = StyleSheet.create((theme, rt) => ({
      Boştaki hâli ZEMİNSİZDİR (şablon: `background:transparent`) — "saydam" bir renk token'ı
      açmak yerine zemin hiç verilmiyor; ikisi aynı sonuç, ikincisi palete sahte bir renk eklemiyor. */
   filterActive: { backgroundColor: theme.colors['sand-150'] },
+  /* KOLEKSİYON BANDI — arama satırıyla aynı yatay dolguda (kenardan kenara kayan çip rayının
+     aksine), yani ekranın kenar hizasını bozmuyor. Zemin `sand-150`: süzgeç düğmesinin ETKİN
+     hâliyle aynı ton, çünkü ikisi de aynı şeyi söylüyor — "burada açık bir daraltma var". */
+  collectionBand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+    marginHorizontal: theme.space['4xl'],
+    paddingVertical: theme.space.lg,
+    paddingHorizontal: theme.space['2xl'],
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors['sand-150'],
+  },
+  // Metin bloğu esner, çarpı sabit kalır: uzun koleksiyon adı düğmeyi ekran dışına itmesin.
+  collectionText: {
+    flex: 1,
+    gap: theme.space.xs,
+  },
+  collectionEyebrow: {
+    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
+    fontSize: theme.text.eyebrow,
+    // Aralık token'da `em` (yazı boyuna göreli); RN mutlak dp ister — çeviri tek yerde (`emToDp`).
+    letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
+    color: theme.colors['olive-dark'],
+  },
+  collectionName: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
   chipRail: {
     flexDirection: 'row',
     gap: theme.space.md,

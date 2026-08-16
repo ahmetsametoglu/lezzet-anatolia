@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { CategoryService, serviceDb } from '@lezzet/database';
+import { CategoryImageService, CategoryService, serviceDb } from '@lezzet/database';
 import {
   getCatalogData,
   getProductDetail,
@@ -114,6 +114,17 @@ const ProductQuerySchema = z.object({
   /** Kategori SLUG'ı (dil-bağımsız). Tanınmayan slug 400 alır — bkz. `/products` ucu. */
   category: z.string().trim().min(1).optional(),
   /**
+   * **Koleksiyon SLUG'ı** (21.64) — web'in URL'siyle AYNI kelime (`?collection=<slug>`,
+   * `apps/web/app/(customer)/[locale]/catalog/page.tsx`). Kategoriyle aynı sözleşme: dil-bağımsız,
+   * tanınmayan slug 400.
+   *
+   * Kategoriyle BİRLİKTE gelebilir ve gelmelidir: mobilde koleksiyon görünümü kategori çiplerini
+   * gizlemiyor (kullanıcı kararı 16.08 — web'den bilinçli sapma), yani müşteri "Bayram Sofrası"
+   * içinde "Tatlılar"a daralta bilsin diye iki süzgeç aynı anda açık olabiliyor. Sorgu ikisini
+   * AND'liyor (`getCatalogData` künyesi, ölçüm orada).
+   */
+  collection: z.string().trim().min(1).optional(),
+  /**
    * Bozuk sıralama değeri hata DEĞİL: istemci ya da kayıtlı bir bağlantı eskimiş olabilir, ve
    * yanlış sıralama listeyi YANLIŞ yapmaz — yalnız beklenenden farklı sıralar. Web de aynı şeyi
    * yapıyor (`catalog/page.tsx` — `CATALOG_SORTS.includes(...) ? ... : 'featured'`).
@@ -177,8 +188,14 @@ catalog.get('/categories', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   // Kategori DOĞAL TAVANLI bir küme (operatör elle kurar) → tek turda, sayfalamasız (`CLAUDE §1`).
-  const rows = await new CategoryService(serviceDb()).list({ activeOnly: true });
-  const categories = rows.map((row) => toCategory(row, locale.data));
+  const db = serviceDb();
+  const rows = await new CategoryService(db).list({ activeOnly: true });
+  // Fotoğraf havuzu (05.23) — kart görseli günden güne buradan seçiliyor. Web'le AYNI indirgemeden
+  // geçtiği için iki yüzey aynı gün aynı kareyi gösterir; havuz da tek turda okunur (kart başına
+  // sorgu yok). Havuzu boş olan kategori kapağını gösterir, yani bu satır hiçbir şeyi bozmadan
+  // eklendi.
+  const pools = await new CategoryImageService(db).listByCategories(rows.map((row) => row.id));
+  const categories = rows.map((row) => toCategory(row, locale.data, pools.get(row.id)));
   // Zarf da sözleşmedir: satırlar tek tek değil, zarf bütün hâlinde tek kaynaktan doğrulanır.
   return ok(c, CatalogCategoryListSchema.parse({ categories } satisfies z.input<typeof CatalogCategoryListSchema>));
 });
@@ -200,7 +217,7 @@ catalog.get('/products', async (c) => {
   if (!parsed.success) {
     return fail(c, parsed.error.issues[0]?.path[0] === 'locale' ? 'invalid_locale' : 'invalid_query', 400);
   }
-  const { locale, q, category, sort, limit } = parsed.data;
+  const { locale, q, category, collection, sort, limit } = parsed.data;
 
   const db = serviceDb();
   const [viewer, place] = await Promise.all([
@@ -212,6 +229,7 @@ catalog.get('/products', async (c) => {
     query: {
       search: q,
       categorySlug: category,
+      collectionSlug: collection,
       sort,
       // Süzgeç SQL'de çözülür (`ProductService` filtresi), sayfa çekildikten sonra elenmez —
       // eleseydik keyset imleci ve `total` birlikte bozulurdu. İstenmesi yetmez, YERİN de uygun
@@ -233,6 +251,11 @@ catalog.get('/products', async (c) => {
   // arasından çözülür (pasif kategori de tanınmaz). Önden ayrı bir kategori sorgusu atmak, geçerli
   // her istekte bir tur daha demekti — bedelin geçersiz isteğe yüklenmesi doğrusu.
   if (category && !data.activeCategory) return fail(c, 'unknown_category', 400);
+  // Koleksiyon slug'ı da AYNI kuralda (21.64): sessizce yok saymak, müşterinin açtığı kesit yerine
+  // TÜM katalogu göstermek olurdu — bandın "Bayram Sofrası" yazıp 131 ürün listelemesi. Ayrım
+  // yalnız kaynakta: kategori kendi listesinden, koleksiyon `readCollectionHead`ten çözülüyor;
+  // ikisi de yalnız AKTİF satırlar arasından, yani pasif koleksiyon da tanınmaz.
+  if (collection && !data.activeCollection) return fail(c, 'unknown_collection', 400);
 
   return ok(
     c,
@@ -240,6 +263,10 @@ catalog.get('/products', async (c) => {
       products: data.products,
       total: data.total,
       nextCursor: data.nextCursor ? encodeCursor(data.nextCursor) : null,
+      /* Ad SUNUCUDA çözülmüş hâlde gidiyor (sözleşme künyesi); `id`/`description` sözleşmede yok,
+         o yüzden burada da indirgeniyor — fazlası `parse`ta düşerdi ama düşen alanı göndermek
+         okuyanı yanıltır. */
+      activeCollection: data.activeCollection ? { slug: data.activeCollection.slug, name: data.activeCollection.name } : null,
     } satisfies z.input<typeof CatalogPageSchema>),
   );
 });

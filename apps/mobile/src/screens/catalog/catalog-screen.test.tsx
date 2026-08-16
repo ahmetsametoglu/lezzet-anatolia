@@ -36,10 +36,16 @@ function failResponse(): Response {
 }
 
 const categories = { categories: [catalogCategory(1, 'baklava', 'Baklava')] };
-const page = (products: ReturnType<typeof catalogProduct>[], nextCursor: string | null) => ({
+const page = (
+  products: ReturnType<typeof catalogProduct>[],
+  nextCursor: string | null,
+  activeCollection: { slug: string; name: string } | null = null,
+) => ({
   products,
   total: products.length,
   nextCursor,
+  // Sözleşmede ZORUNLU ve nullable (21.64): koleksiyon süzgeci yokken uç `null` döner.
+  activeCollection,
 });
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();

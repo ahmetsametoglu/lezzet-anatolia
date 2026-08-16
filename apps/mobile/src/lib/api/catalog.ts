@@ -35,6 +35,13 @@ interface ProductPageQuery {
   /** Kategori SLUG'ı; `null` = "Tümü" (süzgeç yok). */
   category: string | null;
   /**
+   * Koleksiyon SLUG'ı (21.64); `null` = kesit yok, katalogun tamamı.
+   *
+   * Kategoriden BAĞIMSIZ bir eksen: ikisi birlikte gönderilebilir ve uç AND'ler. Tel üstündeki
+   * adı web'in URL'siyle aynı (`?collection=`) — `shippable`ın kuralı birebir.
+   */
+  collection: string | null;
+  /**
    * Ad araması — uç üç dilde birden arıyor (`q`). BOŞ DİZE GÖNDERİLMEZ: uç `min(1)` istiyor ve
    * "arama yok" ile "boş dize aradım" aynı şey değil; ayrımı burada, tek yerde yapıyoruz.
    */
@@ -93,6 +100,7 @@ export function fetchProducts(query: ProductPageQuery): Promise<ApiResult<z.infe
   const path = `/api/v1/products${queryOf({
     locale: query.locale,
     category: query.category ?? undefined,
+    collection: query.collection ?? undefined,
     q: search === undefined || search.length === 0 ? undefined : search,
     sort: query.sort,
     cursor: query.cursor,

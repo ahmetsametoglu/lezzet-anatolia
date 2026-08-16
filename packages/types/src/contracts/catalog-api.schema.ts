@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CategorySchema } from '../entities/category.schema';
+import { CollectionSchema } from '../entities/collection.schema';
 import { StockStatusEnum } from '../primitives/enums.schema';
 import { ImageCropSchema } from '../primitives/image.schema';
 import { ProductSchema } from '../entities/product.schema';
@@ -68,6 +69,20 @@ export type CatalogCategory = z.infer<typeof CatalogCategorySchema>;
  * iki taraf tek kaynaktan (ürünler tarafındaki `CatalogPageSchema` ile aynı desen).
  */
 export const CatalogCategoryListSchema = z.object({ categories: z.array(CatalogCategorySchema) });
+
+/**
+ * **Etkin koleksiyon** — katalogun bir kesitine açılmış olduğunu söyleyen künye (21.64).
+ * Kategori ikizinin (`CatalogCategorySchema`) kuralları aynen geçerli: `name` sunucuda ÇÖZÜLMÜŞ
+ * tek dizedir, `slug` dil-bağımsızdır.
+ *
+ * **`id` ve `description` bilerek YOK.** Kategori satırında `id` var çünkü liste çiziliyor ve
+ * anahtar gerekiyor; koleksiyon TEK bir bant, listelenmiyor. `description` da yok: mobilde
+ * koleksiyon bir bant, web'deki gibi sayfa başlığı DEĞİL (kullanıcı kararı 16.08) — açıklamanın
+ * çizileceği yer yok, ve gönderilip çizilmeyen alan bir gün "neden boş?" diye aranır.
+ * İkisi de gerektiği gün `.pick`e eklenir; bugünden göndermek kullanılmayan sözleşme olurdu.
+ */
+export const CatalogCollectionSchema = CollectionSchema.pick({ slug: true }).extend({ name: z.string() });
+export type CatalogCollection = z.infer<typeof CatalogCollectionSchema>;
 
 /**
  * Satın alma yolu — kart aksiyonunu belirler. `quick`: tek boylu, listeden doğrudan sepete eklenir.
@@ -191,13 +206,26 @@ export type CatalogProduct = z.infer<typeof CatalogProductSchema>;
 export const CatalogPageSchema = z.object({
   products: z.array(CatalogProductSchema),
   /**
-   * Süzgeçli sonuç sayısı ("24 ürün"). Sayaç RPC'si YALNIZ arama + kategori + durum süzgecini
-   * tanıyor; bu uç da sadece o üçünü sunduğu için sayı listeyle tutarlıdır. Sayaçtan habersiz bir
-   * süzgeç eklenirse (ör. "yalnız indirimliler") bu alan sessizce yalan söylemeye başlar —
-   * raporlanan web arızası tam olarak budur.
+   * Süzgeçli sonuç sayısı ("24 ürün") — listeyle TUTARLI olmak zorunda.
+   *
+   * Künye eskiden *"sayaç RPC'si yalnız arama + kategori + durum tanıyor, bu uç da sadece o üçünü
+   * sunuyor"* diyordu; ikisi de artık doğru değil. Uç `shippable`ı (21.20) ve `collection`ı (21.64)
+   * da sunuyor, sayaç da RPC değil `productSvc.countMatching(filters)` — süzgeç nesnesinin TAM
+   * AYNISINDAN geçiyor (`packages/application/src/catalog/catalog.ts`). Tutarlılık işte oradan
+   * geliyor, süzgeç sayısının azlığından değil.
+   *
+   * Kural değişmedi: **sayaçtan habersiz bir süzgeç eklenirse bu alan sessizce yalan söyler.**
+   * Raporlanan web arızası tam olarak buydu — çip açıkken liste 1 satır basarken başlık 131 diyordu.
    */
   total: z.number().int(),
   nextCursor: z.string().nullable(),
+  /**
+   * Etkin koleksiyon, yoksa `null`. **Adı sunucudan gelmek ZORUNDA** — istemci elinde yalnız slug
+   * var ve slug bir ad değil; üstelik ad dile göre çözülüyor (zincir sunucuda, `resolveLocalizedText`).
+   * Gezinme parametresiyle taşımak (vitrin bandı adı zaten biliyor) kısa yoldu ama derin bağlantıda
+   * ve dil değişiminde adsız kalırdı.
+   */
+  activeCollection: CatalogCollectionSchema.nullable(),
 });
 export type CatalogPage = z.infer<typeof CatalogPageSchema>;
 

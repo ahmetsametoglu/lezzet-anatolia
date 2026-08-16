@@ -30,10 +30,12 @@ function failResponse(error: string, status = 500): Response {
 }
 
 const categories = { categories: [catalogCategory(1, 'baklava', 'Baklava'), catalogCategory(2, 'zeytin', 'Zeytin')] };
-const page = (products: number[], nextCursor: string | null) => ({
+const page = (products: number[], nextCursor: string | null, activeCollection: { slug: string; name: string } | null = null) => ({
   products: products.map((index) => catalogProduct(index)),
   total: 40,
   nextCursor,
+  // Sözleşmede ZORUNLU ve nullable (21.64): koleksiyon süzgeci yokken uç `null` döner.
+  activeCollection,
 });
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();

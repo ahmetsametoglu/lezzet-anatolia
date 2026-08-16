@@ -442,12 +442,13 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   index={index}
                   photoUri={band.image.url}
                   onPress={() =>
-                    /* Kategori bandı katalogu O SÜZGEÇLE açar; koleksiyon kesiti mobil katalogda
-                       henüz yok — koleksiyon bandı kataloğun köküne gider (BEKLEYEN(21.14) —
-                       katalog koleksiyon süzgeci, doc 21 kalan listesinde). */
+                    /* Her iki tür de katalogu KENDİ süzgeciyle açar (21.64 — koleksiyon kesiti
+                       eklenene kadar koleksiyon bandı kataloğun köküne gidiyordu ve müşteri
+                       "Bayram Sofrası"na basıp tüm katalogu görüyordu). Parametre adları uçtakiyle
+                       ve web'in URL'siyle aynı; süzgecin sahibi katalog ekranıdır. */
                     band.kind === 'category'
                       ? router.push({ pathname: '/catalog', params: { category: band.slug } })
-                      : router.push('/catalog')
+                      : router.push({ pathname: '/catalog', params: { collection: band.slug } })
                   }
                   testID={`home-collection-${band.slug}`}
                   photoInOverlay

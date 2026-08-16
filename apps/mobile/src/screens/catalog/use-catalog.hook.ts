@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CatalogCategory, CatalogProduct, CatalogSort } from '@lezzet/types';
+import type { CatalogCategory, CatalogCollection, CatalogProduct, CatalogSort } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchCategories, fetchProducts } from '@/lib/api/catalog';
@@ -44,6 +44,15 @@ type CatalogStatus = 'loading' | 'ready' | 'error';
 interface CatalogFilters {
   /** Kategori SLUG'ı; `null` = "Tümü". */
   category: string | null;
+  /**
+   * Koleksiyon SLUG'ı; `null` = kesit yok (21.64). Kategoriden AYRI bir eksen ve ikisi birlikte
+   * açık olabilir: bant çizilirken çip rayı gizlenmiyor, yani müşteri kesitin içinde daraltabiliyor
+   * (kullanıcı kararı 16.08). Sorguyu uç AND'liyor.
+   *
+   * Süzgeç kümesine girmesinin ölçütü öteki üçüyle aynı: uca gidiyor, sayfalamayı sıfırlıyor,
+   * `total`ı değiştiriyor.
+   */
+  collection: string | null;
   /** Aranan metin; boş dize = arama yok (uca hiç gitmez). */
   search: string;
   sort: CatalogSort;
@@ -65,6 +74,15 @@ interface UseCatalogResult {
   categories: CatalogCategory[];
   /** Seçili kategori SLUG'ı; `null` = "Tümü". */
   activeCategory: string | null;
+  /**
+   * Etkin koleksiyon — bandın çizileceği tek kaynak; `null` = bant yok.
+   *
+   * ADI SUNUCUDAN gelir (`CatalogPage.activeCollection`), gezinme parametresinden DEĞİL: vitrin
+   * bandı adı biliyor ama derin bağlantıyla gelen ya da dili değişen bir ekran bilmez, ve ad dile
+   * göre çözülüyor. Slug ile ad böylece hep aynı cevaptan çıkar; ikisini ayrı kaynaklardan almak,
+   * bir gün "Bayram Sofrası" yazıp başka bir kesiti listelemenin yolu olurdu.
+   */
+  activeCollection: CatalogCollection | null;
   /** Arama kutusunun GÖSTERDİĞİ metin (uca gitmiş olması gerekmez). */
   searchText: string;
   sort: CatalogSort;
@@ -80,6 +98,14 @@ interface UseCatalogResult {
   tailFailed: boolean;
   refreshing: boolean;
   selectCategory: (slug: string | null) => void;
+  /**
+   * Koleksiyon kesiti — `null` bandın çarpısıdır (kesitten çık, katalogun tamamına dön), slug ise
+   * vitrin bandından gelen istektir. Kategorinin ikizi: TEK kapı, iki yön.
+   *
+   * Öteki süzgeçlere DOKUNMAZ: müşteri kesitin içinde bir kategori seçtiyse o seçim onundur ve
+   * bandı kapatmak onu da iptal etmek anlamına gelmez.
+   */
+  selectCollection: (slug: string | null) => void;
   /** Kutuya yazılan metin; uca gecikmeyle gider. */
   search: (text: string) => void;
   selectSort: (sort: CatalogSort) => void;
@@ -99,7 +125,18 @@ interface UseCatalogResult {
 export function useCatalog(locale: Locale, postalCode: string | null): UseCatalogResult {
   const [status, setStatus] = useState<CatalogStatus>('loading');
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
-  const [filters, setFilters] = useState<CatalogFilters>({ category: null, search: '', sort: DEFAULT_SORT, onlyShippable: false });
+  const [filters, setFilters] = useState<CatalogFilters>({
+    category: null,
+    /* Başlangıç DEĞERİ olarak dışarıdan alınmıyor: sekme mount kalıyor (navigatör tembel), yani
+       ikinci kez banda basıldığında yeni bir mount olmuyor ve `useState`in başlangıcı hiç
+       koşmuyordu. Banttan gelen istek kategoriyle AYNI kapıdan, bir etkiyle uygulanıyor. */
+    collection: null,
+    search: '',
+    sort: DEFAULT_SORT,
+    onlyShippable: false,
+  });
+  /** Bandın adı — cevabın kendisinden; süzgeç `null`ken sunucu da `null` döner. */
+  const [activeCollection, setActiveCollection] = useState<CatalogCollection | null>(null);
   const [searchText, setSearchText] = useState('');
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -130,6 +167,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
         fetchProducts({
           locale,
           category: next.category,
+          collection: next.collection,
           search: next.search,
           sort: next.sort,
           onlyShippable: next.onlyShippable,
@@ -152,6 +190,10 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
       }
 
       if (categoryResult !== null) setCategories(categoryResult.data.categories);
+      /* Bant HER ilk sayfada tazelenir, yalnız açılışta değil: koleksiyon kalkınca `null` gelir ve
+         bandın kendiliğinden sönmesi gerekir. Kuyruk cevabında okunmaz — orada değeri aynıdır ve
+         yazmak bant metnini boşuna yeniden çizerdi. */
+      setActiveCollection(pageResult.data.activeCollection);
       setProducts(pageResult.data.products);
       setCursor(pageResult.data.nextCursor);
       setStatus('ready');
@@ -194,6 +236,14 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
     (slug: string | null) => {
       if (slug === filters.category) return;
       applyFilters({ ...filters, category: slug });
+    },
+    [applyFilters, filters],
+  );
+
+  const selectCollection = useCallback(
+    (slug: string | null) => {
+      if (slug === filters.collection) return;
+      applyFilters({ ...filters, collection: slug });
     },
     [applyFilters, filters],
   );
@@ -249,6 +299,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
     void fetchProducts({
       locale,
       category: filters.category,
+      collection: filters.collection,
       search: filters.search,
       sort: filters.sort,
       onlyShippable: filters.onlyShippable,
@@ -273,6 +324,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
     status,
     categories,
     activeCategory: filters.category,
+    activeCollection,
     searchText,
     sort: filters.sort,
     onlyShippable: filters.onlyShippable,
@@ -281,7 +333,11 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
 
        KARGO SÜZGECİ ARTIK GİRER (kullanıcı isteği 10.08): çipken ekranda kendi seçili hâliyle
        duruyordu ve bu sayıya girmesi gereksizdi; süzgeç sayfasına taşınınca kapalı sayfanın
-       arkasında görünmez oldu — düğmenin dolu hâli onun var olduğunu söyleyen TEK işaret. */
+       arkasında görünmez oldu — düğmenin dolu hâli onun var olduğunu söyleyen TEK işaret.
+
+       KOLEKSİYON GİRMEZ (21.64), ölçüt yine aynı: bant ekranda, adıyla ve çarpısıyla duruyor.
+       Görünen bir süzgeci düğmede ikinci kez işaretlemek, müşteriye kapalı süzgeç sayfasında
+       arayacağı bir şey varmış demek olurdu. */
     filtersActive: filters.sort !== DEFAULT_SORT || filters.onlyShippable,
     products,
     hasMore: cursor !== null,
@@ -289,6 +345,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
     tailFailed,
     refreshing,
     selectCategory,
+    selectCollection,
     search,
     selectSort,
     setOnlyShippable,

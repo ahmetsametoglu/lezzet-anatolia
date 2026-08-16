@@ -3082,6 +3082,44 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Kullanıcının kendi kartı DB'den değil, Hesabım ekranından düzeltilecek (onun kararı) —
   gerçek akış da böylece sınanmış olur.
 
+- [x] (21.64) **KATALOGDA KOLEKSİYON KESİTİ — bant + çarpı (kullanıcı isteği 16.08)**
+  `touches:` `packages/types/src/contracts/catalog-api.schema.ts` · `apps/mobile-api/src/api/v1/catalog.ts` ·
+  `apps/mobile/src/lib/api/catalog.ts` · `apps/mobile/src/screens/catalog/**` ·
+  `apps/mobile/src/app/(tabs)/catalog.tsx` · `apps/mobile/src/screens/home/home-screen.tsx`
+
+  Kullanıcı: *"Kategorilerde süzme var ama koleksiyonlarda yok. Koleksiyon üzerinden gelindiyse
+  süzme satırına bir bant gelsin, çarpıya basılınca koleksiyon süzgeci iptal olsun."* Açık zaten
+  kayıtlıydı: koleksiyon bandı kataloğun KÖKÜNE gidiyordu, yani müşteri "Bayram Sofrası"na basıp
+  116 ürünün tamamını görüyordu (`BEKLEYEN(21.14)`, o işaret kaldırıldı).
+
+  **İŞ KURALI YAZILMADI — ortak okuma zaten biliyordu.** `getCatalogData` `collectionSlug` alıp
+  `activeCollection`ı çözüyor ve sorguya `collectionId` süzgeci koyuyor (web bunu kullanıyor).
+  Eksik olan tek şey mobil ucun parametreyi geçirmesiydi. Koordinasyon defterindeki (08.08) *"gömülü
+  ilişkiyle yazmayın, `ids`e çözün"* uyarısı ARTIK GEÇERSİZ: `productSelect` koşullu `!inner`
+  kuruyor, ölçüm de bunu doğruluyor (131 değil 24).
+
+  **Tasarımda karar YOKTU** (mobil `.dc` dosyalarının hiçbirinde "koleksiyon" geçmiyor) ve web
+  farklı çözmüş: orada koleksiyon sayfanın BAŞLIĞI olur, kategori şeridi tamamen gizlenir.
+  Kullanıcıya iki seçenek sunuldu, **bant seçildi** (16.08): mobilde sayfa başlığı alanı yok, çip
+  rayı ana gezinme — ve kesit içinde daraltma mümkün kalıyor. Uç ikisini AND'liyor.
+
+  **Ölçüm (uçta, seed sonrası):** süzgeçsiz 116 · `bayram-sofrasi` 24 · `cay-saati` 12 ·
+  `l-amour-de-paris` 29. Kesişim gerçek: `bayram-sofrasi`+`tatli` 24, +`firin` 0. Ad üç dilde
+  çözülüyor (Çay Saati · L'heure du thé · Teestunde). PASİF koleksiyon (`yilbasi-sofrasi`) ve
+  tanınmayan slug 400 `unknown_collection` — kategorinin kuralıyla aynı, gerekçesi uçta yazılı.
+
+  **CİHAZDA BİR ARIZA YAKALANDI VE DÜZELTİLDİ (aynı gün).** Banda bas → kesit açılır → çarpıyla
+  kapat → vitrine dön → **AYNI banda bas → hiçbir şey olmuyordu.** Sebep parametre değil ETKİYDİ:
+  sekme mount kalıyor, etkinin tek bağımlılığı olan değer `'bayram-sofrasi'` → `'bayram-sofrasi'`
+  "değişmediği" için hiç koşmuyordu. Kanıt: farklı slug (`cay-saati`) aynı an çalıştı. Çare
+  parametreyi uygulandığı anda `setParams`la SİLMEK — istek tek seferlik bir mesajdır, okununca
+  tüketilir. **Aynı arıza kategoride de vardı** ("Fırın" bandına basıp çipi "Tümü"ye çekince o
+  banda ikinci basış işe yaramıyordu) ve aynı satırda kapandı.
+
+  **Doğrulama:** `tsc` · `eslint` temiz · **84 dosya / 599 test** yeşil · cihazda üç tur
+  (aç → çarpı → aynı slugla tekrar aç) ölçüldü. Ölçüm ortasında başka bir şerit `db:refresh`
+  çalıştırdı (`collection` 5 → 0 → 5); ilk turun sayıları seed dönünce birebir tekrarlandı.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

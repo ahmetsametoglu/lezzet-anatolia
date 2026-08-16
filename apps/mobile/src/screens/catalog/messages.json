@@ -9,6 +9,10 @@
       "label": "Ürün ara",
       "clear": "Aramayı temizle"
     },
+    "collection": {
+      "eyebrow": "Koleksiyon",
+      "clear": "Koleksiyondan çık"
+    },
     "filter": {
       "label": "Sırala ve filtrele",
       "title": "Sırala & filtrele"
@@ -47,6 +51,10 @@
       "label": "Rechercher un produit",
       "clear": "Effacer la recherche"
     },
+    "collection": {
+      "eyebrow": "Collection",
+      "clear": "Quitter la collection"
+    },
     "filter": {
       "label": "Trier et filtrer",
       "title": "Trier & filtrer"
@@ -84,6 +92,10 @@
       "placeholder": "Produkt suchen…",
       "label": "Produkt suchen",
       "clear": "Suche löschen"
+    },
+    "collection": {
+      "eyebrow": "Kollektion",
+      "clear": "Kollektion verlassen"
     },
     "filter": {
       "label": "Sortieren und filtern",
