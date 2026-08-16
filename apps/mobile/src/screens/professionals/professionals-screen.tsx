@@ -283,7 +283,10 @@ export function ProfessionalsScreen() {
       <View style={styles.screen}>
         {bar}
         <ScrollView contentContainerStyle={styles.content} testID="pro-status">
+          {/* `fill={false}`: kaydırma kabının içinde ve altında başka içerik var (başvuru künyesi) —
+              bu bir boş EKRAN değil, bir DURUM bloğu. */}
           <EmptyState
+            fill={false}
             icon={<CustomerIcon name="mail" size={theme.size.emptyIcon} color={theme.colors['olive-dark']} />}
             title={
               applicant.status === 'pending'

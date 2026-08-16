@@ -2,7 +2,7 @@
   "tr": {
     "back": "Geri",
     "title": "Puan geçmişi",
-    "subtitle": "Hangi puan nereden geldi",
+    "eyebrow": "Hesabım",
     "empty": {
       "title": "Henüz puan hareketi yok",
       "body": "Puan kazandıkça hareketleriniz burada listelenir.",
@@ -39,7 +39,7 @@
   "fr": {
     "back": "Retour",
     "title": "Historique des points",
-    "subtitle": "D'où viennent vos points",
+    "eyebrow": "Mon compte",
     "empty": {
       "title": "Aucun mouvement de points",
       "body": "Vos mouvements apparaîtront ici au fur et à mesure de vos gains.",
@@ -76,7 +76,7 @@
   "de": {
     "back": "Zurück",
     "title": "Punkteverlauf",
-    "subtitle": "Woher Ihre Punkte kommen",
+    "eyebrow": "Mein Konto",
     "empty": {
       "title": "Noch keine Punktebewegungen",
       "body": "Ihre Bewegungen erscheinen hier, sobald Sie Punkte sammeln.",

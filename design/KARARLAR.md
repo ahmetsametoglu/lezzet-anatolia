@@ -1154,3 +1154,53 @@ sipariş numarası listede de panelde de doğrudan detaya gider. `.dc` tasarım�
 
 Kod: `orders/order-preview.tsx` (yeni) · `orders/order-dialog.tsx` (silindi) ·
 `orders.desktop.tsx` (grid), commit 15.08.
+
+### MÜŞTERİ MOBİL — ÜÇ HEADER, KURALI YAZILI DEĞİLDİ (16.08)
+
+**Kullanıcı bulgusu (16.08, dört ekran görüntüsü turu):** *"Bu kadar header farklılığı neden var?
+Hangi header hangi sayfada doğru seçim?"* Ölçüldü ve cevap şaşırtıcı: **üçü de tasarımın kendi
+kararı, uygulama sapması DEĞİL** (`Mobil - Musteri v3.dc.html`: sepet 449, siparişler 686,
+talepler 1028). Sapma yoktu; **yazılı kural** yoktu.
+
+Bedeli ölçülebilir: puan geçmişi ekranı (`(21.60)`) yazılırken bakacak bir kural olmadığı için
+DÖRDÜNCÜ bir varyant doğdu (başlık + alt başlık). Kural bu yüzden burada.
+
+**Üç durak ve seçim ölçütü — "kaydırırken erişilebilir kalması gereken bir eylem var mı":**
+
+1. **Sayfa başlığı** — `‹` KENDİ satırında → eyebrow (terracotta, `.18em` aralık, büyük harf) →
+   26px Lora başlık. *Eylemi olmayan bölüm girişleri:* Siparişlerim, Puan geçmişi.
+2. **Sıkışık satır** — `‹ Başlık … sayaç`, 17px Lora, çizgisiz, kaydırmayla akar. *Eylemi ALTTA
+   yapışkan barda olan ekranlar:* Sepet. Üstteki sayı bir sayaçtır, düğme değil.
+3. **Yapışkan çubuk** — `AppBar`: `‹ Başlık … eylem`, alt çizgili (`border-bottom`), blur zemin.
+   *Kaydırırken erişilebilir kalması gereken bir eylemi olanlar:* Talepler (`＋ Yeni`).
+
+**Sınır durumu:** Talepler de Siparişler de hesap menüsünden açılıyor — yani ölçüt "nereden
+gelindiği" DEĞİL, eylemin varlığı. Yeni bir ekran yazan önce bu soruyu sorar.
+
+**Aynı turda tasarımın DEĞİŞTİĞİ üç şey** (bunlar sapma düzeltmesi değil, tasarım kararı):
+- **Boş hâl dikeyde ortalanır.** Tasarım `padding:60px` ile başlığın altına koyuyordu; 2400 px'lik
+  gerçek ekranda içerik üst üçte bire düşüyor. `EmptyState.fill` varsayılan `true` (37 kullanımın
+  32'si tam ekran; istisna liste/kap içi olanlar).
+- **Boş hâl ikonu 44 → 80.** Sayfanın tek görseli olduğu hâlde başlıkla aynı ağırlıktaydı.
+  120 KAHRAMAN ölçüsüdür (puan yıldızı) ve bilerek ayrı tutuldu.
+- **Geri okunun negatif payı −8 → −16.** Daire 40 dp, glif ortalı; −8 ile glif başlığın 8 dp
+  sağında kalıyordu (kullanıcı cihazda gördü). −16 glifin sol kenarını başlığın soluna oturtur.
+
+**Düğme biçimi — bu ise BİZİM sapmamızdı, düzeltildi:** tasarımın iki biçimi var ve kuralı net —
+boş hâl çağrısı **hap** (`radius:22`, gölgesiz), form/seçim eylemi **blok** (`radius:16` + `3px 3px
+0` sert gölge). Boş hâllerde 10 düğme blok çiziyordu (siparişler · davet · komşu); hepsi hapa
+çevrildi.
+
+**`.dc` dosyası bu turun sonucunu HENÜZ TAŞIMIYOR** — tasarım turunda güncellenmeli; bu kayıt o
+tura gerekçedir.
+
+Kod: `components/ui/empty-state.tsx` · `theme/metrics.ts` (`emptyIcon` 80, `decorIcon` 44 ayrıldı) ·
+`screens/{orders,points-history}` (hiza) · `screens/{orders,invite,neighbor}` (hap), commit 16.08.
+
+**EK (aynı gün, ikinci tur): "ortala" yetmedi — boş hâl kalan alanın %40'ına oturur.**
+`justifyContent: 'center'` bloğu başlığın ALTINDA kalan alanın ortasına koyuyordu; hesap doğru ama
+göz sayfaya bakıyor. Ölçüldü: blok merkezi 1170, sayfa merkezi 1000 (900×2000). İki sapma aynı
+yöne biniyordu — başlığın yüksekliği bloğu yarısı kadar aşağı itiyor, ve optik merkez zaten
+geometrik merkezin biraz üstündedir. Sabit kaydırma çare değil (başlık boyu ekrandan ekrana
+değişiyor); blok artık **4:6** oranlı iki esnek payın arasında (üstte %40, altta %60) ve oran
+kendini ayarlıyor. Sonuç: sepette 1095 → 987.

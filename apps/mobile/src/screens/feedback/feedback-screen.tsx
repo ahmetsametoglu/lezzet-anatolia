@@ -311,7 +311,13 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
             {errorLine}
           </View>
         ) : (
-          /* ── Sonuç: kalp + teşekkür + puan kartı + akış-sonu köprüsü (v3:1040-1060) ── */
+          /* ── Sonuç: teşekkür + puan bloğu + akış-sonu köprüsü ──
+             ÜST PAY, bloğu optik merkeze çeker (kullanıcı bulgusu 16.08). Blok `flexGrow: 1` ile
+             kalan alanı alıp ORTALIYORDU; hesabı doğruydu ama göz sayfaya bakıyor ve başlık
+             çubuğunun yüksekliği bloğu yarısı kadar aşağı itiyordu. Kural `EmptyState`inkiyle aynı,
+             tek yerde yazılı (`design/KARARLAR.md`): kalan boşluk **4:6** — üstte %40, altta %60. */
+          <>
+            <View style={styles.spacerTop} />
           <View style={styles.doneBlock} testID="feedback-done">
             {/* SONUÇ SAYFASI KUTUSUZ — kullanıcı kararı 15.08: *"kart görmek istemiyorum… tüm
                 sayfayı kullanan… sayfa ekran ile bütünleşik olsun, bölüm bölüm görünmesini
@@ -385,6 +391,8 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
               <PrimaryButton label={t.done.home} shape="pill" onPress={() => router.replace('/')} testID="feedback-home" />
             </View>
           </View>
+            <View style={styles.spacerBottom} />
+          </>
         )}
       </FormScroll>
     </View>
@@ -550,11 +558,14 @@ const styles = StyleSheet.create((theme, rt) => ({
   /** Kaydırıcının içeriği ekranın kalan yüksekliğini DOLDURUR; yalnız sonuç aşamasında eklenir
       (öteki aşamalar içerikleri kadar uzun, zorlanan yükseklik onlarda boşluk üretirdi). */
   contentFill: { flexGrow: 1 },
+  /* 4:6 — `EmptyState`in optik yerleşimiyle AYNI oran, aynı gerekçe (`design/KARARLAR.md`).
+     Sayılar ölçü durağı değil ORAN, o yüzden `theme.space`ten gelmez. */
+  spacerTop: { flex: 4 },
+  spacerBottom: { flex: 6 },
+  /* Blok BÜYÜMEZ (16.08): kalan boşluğu artık iki pay paylaşıyor (`spacerTop` 4 / `spacerBottom` 6)
+     ve blok tam ortalarında duruyor. Eskiden `flexGrow: 1` + `justifyContent: 'center'` vardı;
+     bu, bloğu BAŞLIĞIN ALTINDA kalan alanın ortasına koyuyordu — sayfanın değil. Künye üstte. */
   doneBlock: {
-    flexGrow: 1,
-    /* Dikey ORTALAMA sayfayı bütünleşik yapan şeyin kendisi: içerik ekranın ortasında durur,
-       üstte bir kutu + altta boşluk diye ikiye bölünmez. */
-    justifyContent: 'center',
     alignItems: 'center',
     gap: theme.space['2xl'],
     paddingVertical: theme.space['9xl'],

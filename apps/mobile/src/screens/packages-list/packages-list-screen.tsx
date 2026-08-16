@@ -220,7 +220,10 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
         {/* Boş hâl KESİKLİ ÇERÇEVELİ kutu (v3:866) — kitin boş durumu o kutunun içinde durur. */}
         {list.packages.length === 0 ? (
           <View style={styles.emptyBox}>
+            {/* `fill={false}`: boş hâl kesikli çerçeveli KUTUNUN içinde (v3:866) — sayfanın gövdesi
+                değil. Ortalama kutuyu ekran boyuna şişirirdi. */}
             <EmptyState
+              fill={false}
               title={t.empty.title}
               description={t.empty.body}
               action={

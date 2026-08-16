@@ -60,15 +60,22 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   const router = useRouter();
   const history = usePointsHistory();
 
+  /* HEADER: "sayfa başlığı" durağı — `‹` kendi satırında → eyebrow → 26px başlık
+     (`design/KARARLAR.md` 16.08, "üç header" kuralı). Ölçüt: kaydırırken erişilebilir kalması
+     gereken bir eylem YOK, yani bu bir bölüm girişi — siparişlerle aynı aile.
+
+     BU EKRAN KURALIN NEDEN YAZILDIĞININ KANITI: ilk hâlinde başlık + ALT BAŞLIK vardı ve bu
+     dördüncü bir varyanttı — kural yazılı olmadığı için uydurulmuştu. Alt başlık ("Hangi puan
+     nereden geldi") kaldırıldı; sözü listenin kendisi zaten veriyor. */
   const header = (
     <View style={styles.header}>
       <View style={styles.backRow}>
         <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="points-history-back" />
       </View>
+      <Text style={styles.eyebrow}>{t.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
       </Text>
-      <Text style={styles.subtitle}>{t.subtitle}</Text>
     </View>
   );
 
@@ -260,20 +267,22 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space['3xl'],
     paddingBottom: theme.space['2xl'],
   },
-  /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (sipariş ekranının ölçüsü). */
+  /** Geri düğmesi: glif başlıkla hizalanır — künyesi sipariş ekranında (16.08 hizalama kararı). */
   backRow: {
     flexDirection: 'row',
-    marginLeft: -theme.space.md,
+    marginLeft: -theme.space['3xl'],
+  },
+  /** Eyebrow — siparişler ekranının ölçüleriyle BİREBİR (aynı header durağı, tek görünüm). */
+  eyebrow: {
+    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
+    fontSize: theme.text.eyebrow,
+    letterSpacing: theme.text.eyebrow * 0.18,
+    color: theme.colors.terracotta,
   },
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
     color: theme.colors.ink,
-  },
-  subtitle: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.note,
-    color: theme.colors.muted,
   },
   /* SATIR KUTU DEĞİL: hareketler bir liste, kart yığını değil — her satıra zemin ve çerçeve
      vermek 200 satırlık bir arşivi okunamaz kılardı. Ayrım ince bir çizgiyle. */

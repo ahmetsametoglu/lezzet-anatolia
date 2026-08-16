@@ -77,8 +77,31 @@ export const appMetrics = {
     spinnerLg: 44,
     spinnerMd: 40,
     spinnerSm: 18,
-    /** Boş durum ikonu (tasarım: 40–46). */
-    emptyIcon: 44,
+    /**
+     * **Boş durumun ikonu — 44'ten 80'e çıktı (kullanıcı kararı 16.08).**
+     *
+     * Tasarım 40–46 çiziyordu ve uygulama ona uyuyordu; yani bu bir sapma düzeltmesi DEĞİL,
+     * tasarımın kendisinin değişmesi. Gerekçe cihazda ölçüldü: ikon sayfanın TEK görseli olduğu
+     * hâlde 19px'lik serif başlıkla neredeyse aynı ağırlıkta duruyor — üç ekranda birden
+     * (sepet · siparişler · talepler) kullanıcı *"ikon küçük"* dedi. Tasarım tuvalinde kısa bir
+     * çerçeveye çizildiği için orada dengeliydi; 2400 px'lik gerçek ekranda değil.
+     *
+     * 80 seçildi, 120 değil: 120 KAHRAMAN ölçüsüdür ve zaten kullanımda (puan yıldızı, sonuç
+     * sayfası) — boş hâlin ikonu bir kahraman değil, "burada bir şey yok" diyen bir denge işareti.
+     * İkisi aynı ölçüye çıksaydı ödül anı ile boşluk anı aynı sesle konuşurdu.
+     *
+     * `errorIcon` (34) BİLEREK dokunulmadı — künyesi aşağıda: o ikon dar bir kutunun içinde.
+     */
+    emptyIcon: 80,
+    /**
+     * Dekoratif ikon — bir çerçevenin/dairenin İÇİNDE duran, sayfanın konusu olmayan ikon.
+     *
+     * `emptyIcon`den ayrıldı (16.08): vitrindeki katalog daveti bu ölçüyü sabit bir dairenin
+     * içinde kullanıyor (`catalogCircle`) ve boş durum ikonu 80'e çıkınca o daireyi taşırdı.
+     * İki kavram bir sayıyı paylaşıyordu; ayrılmalarının sebebi sayı değil ANLAM — biri sayfanın
+     * tek öğesi, öteki bir kutunun süsü.
+     */
+    decorIcon: 44,
     /**
      * Toast'un alt kenardan yüksekliği (tasarım: `bottom:104` — tab çubuğu 88 + 16 nefes).
      * Cihaz alt inset'i ÜSTÜNE eklenir: çubuk inset kadar büyüyünce mesaj da onunla kalkar.

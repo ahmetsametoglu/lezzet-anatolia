@@ -417,7 +417,10 @@ export function CatalogScreen({ requestedCategory = null }: CatalogScreenProps) 
           />
         }
         ListEmptyComponent={
+          /* `fill={false}`: burası sayfanın gövdesi DEĞİL, listenin boş hâli — üstünde arama
+             çubuğu ve süzgeç şeridi duruyor. `flex: 1` liste kabını bozardı (bileşenin künyesi). */
           <EmptyState
+            fill={false}
             icon={<Icon name="search-empty" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
             title={t.empty.title}
             description={t.empty.body}

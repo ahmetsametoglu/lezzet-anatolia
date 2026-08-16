@@ -510,9 +510,10 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               >
                 <View style={styles.catalogCircleFrame}>
                   <View style={styles.catalogCircle}>
-                    {/* v3:133 ikonu 46; kitin büyük dekoratif ikon durağı `emptyIcon` (44) tam
-                        bu aralık için açıldı (metrics künyesi: "tasarım 40–46"). */}
-                    <Icon name="catalog" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />
+                    {/* v3:133 ikonu 46; kitin dekoratif ikon durağı `decorIcon` (44) tam bu aralık.
+                        Eskiden `emptyIcon`di ve o durak 16.08'de 80'e çıktı (boş hâl ikonu büyüdü) —
+                        bu ikon sabit bir dairenin İÇİNDE, sayfanın konusu değil; ayrıldılar. */}
+                    <Icon name="catalog" size={theme.size.decorIcon} color={theme.colors['sand-600']} />
                   </View>
                   <View style={styles.catalogArrow}>
                     <Tag label="→" rotate={4} shadow />

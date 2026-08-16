@@ -85,7 +85,7 @@
       },
       "typeTitle": "Konu",
       "message": {
-        "title": "Bize anlatın",
+        "title": "Ne oldu?",
         "placeholder": "Kısaca anlatın — ne oldu, nasıl yardımcı olabiliriz?",
         "label": "Talebinizin açıklaması",
         "error": "Kısa bir açıklama yazın."
@@ -191,7 +191,7 @@
       },
       "typeTitle": "Sujet",
       "message": {
-        "title": "Expliquez-nous",
+        "title": "Que s'est-il passé ?",
         "placeholder": "Racontez brièvement — que s'est-il passé, comment pouvons-nous aider ?",
         "label": "Description de votre demande",
         "error": "Écrivez une courte description."
@@ -297,7 +297,7 @@
       },
       "typeTitle": "Thema",
       "message": {
-        "title": "Erzählen Sie es uns",
+        "title": "Was ist passiert?",
         "placeholder": "Kurz beschrieben — was ist passiert, wie können wir helfen?",
         "label": "Beschreibung Ihrer Anfrage",
         "error": "Schreiben Sie eine kurze Beschreibung."

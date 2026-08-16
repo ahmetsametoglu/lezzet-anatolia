@@ -128,7 +128,8 @@ function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
           description={t.ok.body}
           action={
             <View style={styles.actions}>
-              <PrimaryButton label={t.ok.primary} onPress={() => accept('/catalog')} testID="invite-accept-catalog" />
+              {/* HAP: boş hâl çağrısının biçimi (tasarım kuralı — `radius:22`, gölgesiz). */}
+              <PrimaryButton label={t.ok.primary} shape="pill" onPress={() => accept('/catalog')} testID="invite-accept-catalog" />
               <SecondaryButton label={t.ok.secondary} onPress={() => accept('/login')} testID="invite-accept-login" />
             </View>
           }
@@ -141,7 +142,7 @@ function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
           icon={icon('check')}
           title={t.self.title}
           description={t.self.body}
-          action={<PrimaryButton label={t.self.primary} onPress={() => router.replace('/account')} />}
+          action={<PrimaryButton label={t.self.primary} shape="pill" onPress={() => router.replace('/account')} />}
         />
       );
     case 'already_customer':
@@ -151,7 +152,7 @@ function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
           icon={icon('check')}
           title={t.alreadyCustomer.title}
           description={t.alreadyCustomer.body}
-          action={<PrimaryButton label={t.alreadyCustomer.primary} onPress={() => router.replace('/catalog')} />}
+          action={<PrimaryButton label={t.alreadyCustomer.primary} shape="pill" onPress={() => router.replace('/catalog')} />}
         />
       );
     case 'unknown':
@@ -163,7 +164,7 @@ function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
           icon={icon('coupon')}
           title={t.unknown.title}
           description={t.unknown.body}
-          action={<PrimaryButton label={t.unknown.primary} onPress={() => router.replace('/catalog')} />}
+          action={<PrimaryButton label={t.unknown.primary} shape="pill" onPress={() => router.replace('/catalog')} />}
         />
       );
   }

@@ -480,6 +480,13 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
         {/* Bitiş bloğu KAYDIRILABİLİR: v3'ün 80'lik dikey nefesi + çip + giriş daveti küçük
             telefonda ekranı taşırıyor; kaydırma payı olmasa "Kataloğa dön" erişilemez kalırdı. */}
         <ScrollView contentContainerStyle={styles.done} testID="discover-done">
+          {/* ÜST PAY — bloğu optik merkeze çeker (kullanıcı bulgusu 16.08). Kap `justifyContent:
+              'center'` ile ORTALIYORDU ve hesabı doğruydu, ama göz sayfaya bakıyor: başlık
+              çubuğunun yüksekliği bloğu yarısı kadar aşağı itiyordu. Kural `EmptyState` ve geri
+              bildirim sonucuyla AYNI, tek yerde yazılı (`design/KARARLAR.md`): kalan boşluk **4:6**
+              — üstte %40, altta %60; oran başlık boyuna göre kendini ayarlar. */}
+          <View style={styles.spacerTop} />
+          <View style={styles.doneBlock}>
           {/* KAHRAMAN İŞARET, geri bildirim sonucununkiyle AYNI (kullanıcı isteği 15.08 — "her puan
               kazanma durumunun sonucunda aynı sayfa"). Eskiden solgun zeytin bir DAİRE içinde metin
               `✦` vardı; daire aynı gerekçeyle orada da kaldırıldı (15.08): düşük karşıtlıklı büyük
@@ -558,6 +565,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
               testID="discover-catalog"
             />
           </View>
+          </View>
+          <View style={styles.spacerBottom} />
         </ScrollView>
       </View>
     );
@@ -993,24 +1002,25 @@ const styles = StyleSheet.create((theme, rt) => ({
 
   /* ── Bitiş hâli (v3:435-444) — geri bildirim ekranının teşekkür bloğuyla aynı kalıp ── */
   done: {
-    /* İÇERİK DİKEYDE ORTALANIR — puan kazanma anının DESENİ, bu ekranın tercihi değil (kullanıcı
-       kararı 15.08: *"biz puan verdiğimiz zaman ekran ortalanıyor… bu bir tasarım desenidir, bunu
-       takip etmek lazım"*). Kuralın künyesi `customer-kit/points-award.tsx`te; geri bildirim sonucu
-       da aynısını uyguluyor.
-
-       Ölçüldü cihazda 15.08: ortalamasız hâlde içerik üst yarıda toplanıp altında ekran boyu boşluk
-       bırakıyordu; `flexGrow` sonrası üst/alt nefes eşitlendi. `flexGrow` kaydırmayı BOZMAZ —
-       içerik ekrandan uzunsa kap yine büyür ve kaydırma payı korunur. */
+    /* İÇERİK OPTİK MERKEZDE — puan kazanma anının DESENİ, bu ekranın tercihi değil (kullanıcı
+       kararı 15.08: *"biz puan verdiğimiz zaman ekran ortalanıyor… bu bir tasarım desenidir"*).
+       Yerleşim `spacerTop`/`spacerBottom` ile 4:6 (16.08 düzeltmesi — künye orada); kap yalnız
+       kalan yüksekliği alır. `flexGrow` kaydırmayı BOZMAZ: içerik ekrandan uzunsa kap büyür. */
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: theme.space['2xl'],
     paddingTop: theme.space['9xl'],
     /* Alt güvenli alan kaydırma payına EKLENİR (bloğun kendi nefesi 70): kaydırılabilir içerikte
        inset dolgunun içinde yaşar, yoksa son düğme çubuğun altında kalır. */
     paddingBottom: rt.insets.bottom + theme.space['9xl'],
     paddingHorizontal: theme.space['8xl'],
   },
+  /** Bitiş içeriğinin kendisi — hizalama ve aralık burada, yerleşim paylarda. */
+  doneBlock: {
+    alignItems: 'center',
+    gap: theme.space['2xl'],
+  },
+  /* 4:6 — `EmptyState` ve geri bildirim sonucuyla AYNI oran (`design/KARARLAR.md`). */
+  spacerTop: { flex: 4 },
+  spacerBottom: { flex: 6 },
   doneTitle: {
     fontFamily: theme.font.display[theme.text['card-title--font-weight']],
     fontSize: theme.text['card-title'],

@@ -111,7 +111,10 @@ export function DeliveryZonesScreen() {
         <TextAction label={t.retry} onPress={zones.retry} testID="zones-retry" />
       </View>
     ) : zones.areas.length === 0 ? (
+      /* `fill={false}`: kaydırma kabının içinde bir gövde parçası — üstünde başlık, altında açıklama
+         blokları var; ortalama onları aşağı iterdi. */
       <EmptyState
+        fill={false}
         icon={<CustomerIcon name="truck" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
         title={t.empty.title}
         description={t.empty.body}

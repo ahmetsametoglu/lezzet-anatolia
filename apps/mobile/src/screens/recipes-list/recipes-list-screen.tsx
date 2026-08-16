@@ -106,7 +106,10 @@ export function RecipesListScreen({ locale: forcedLocale }: RecipesListScreenPro
       >
         {header}
         {list.recipes.length === 0 ? (
+          /* `fill={false}`: kaydırma kabının İÇİNDE, başlığın altında duruyor — sayfanın gövdesi
+             değil. Ortalama için kabın `contentContainerStyle`ı büyümeli, o ayrı bir iş. */
           <EmptyState
+            fill={false}
             icon={<Icon name="search-empty" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
             title={t.empty.title}
             description={t.empty.body}

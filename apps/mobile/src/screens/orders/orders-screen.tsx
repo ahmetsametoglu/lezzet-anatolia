@@ -137,7 +137,10 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
           icon={<Icon name="orders" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.empty.title}
           description={t.empty.body}
-          action={<PrimaryButton label={t.empty.cta} onPress={() => router.push('/catalog')} testID="orders-browse" />}
+          /* HAP, blok değil (16.08): tasarımın iki düğme biçimi var ve kuralı net — boş hâl çağrısı
+             hap (`radius:22`, gölgesiz), form/seçim eylemi blok (`radius:16` + sert gölge). Burası
+             boş hâl; blok biçim bizim sapmamızdı ve kullanıcı cihazda gördü. */
+          action={<PrimaryButton label={t.empty.cta} shape="pill" onPress={() => router.push('/catalog')} testID="orders-browse" />}
           testID="orders-empty"
         />
       </View>
@@ -263,7 +266,13 @@ const styles = StyleSheet.create((theme, rt) => ({
   /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (v3:141 `margin-left:-8px`). */
   backRow: {
     flexDirection: 'row',
-    marginLeft: -theme.space.md,
+    /* GLİF BAŞLIKLA HİZALANIR (kullanıcı bulgusu 16.08 · tasarım değişikliği).
+       Pay −8'di ve tasarım da öyle çiziyordu; ama ölçünce hizasızlık göründü: daire 40 dp, `‹`
+       glifi ortalı, yani glifin sol kenarı dairenin solundan **16** içeride. −8 ile glif başlığın
+       8 dp sağında kalıyordu — kullanıcı bunu cihazda fark etti ("buton ile başlıklar aynı hizada
+       değil"). −16 glifin sol kenarını başlığın sol kenarına oturtur; dokunma hedefi (40 dp)
+       değişmez, yalnız daire sayfa dolgusunun dışına taşar. */
+    marginLeft: -theme.space['3xl'],
   },
   /* Başlık LİSTEDE kaydırma kabının dolgusunu alır; misafir/boş/hata dallarında o kap YOK ve
      başlık sola yapışıyordu (kullanıcı bulgusu 09.08). Dolgu bu dallarda sarmalayıcıdan gelir —
