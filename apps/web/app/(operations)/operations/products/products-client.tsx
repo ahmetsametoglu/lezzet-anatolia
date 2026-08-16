@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreProductsAction } from './actions/list';
@@ -63,8 +63,9 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     // süzülüdür. Kutu boşalır, çip kalmaz, ama liste ve başlık sayaçları süzülü kalırdı — görünmez
     // bir süzgeç. Devamını yükleyen action da adresi (artık terimsiz) okuduğu için ikinci sayfa
     // SÜZÜLMEMİŞ gelir ve liste kendi içinde tutarsızlaşırdı.
-    if (urlState.q) {
-      startNav(() => router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '' }), { scroll: false }));
+    // Ürün hedefi (`productId`) de sekmeyle düşer — süzgeç gibi o da ürünler sekmesine bağlı.
+    if (urlState.q || urlState.productId) {
+      startNav(() => router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '', productId: '' }), { scroll: false }));
       return;
     }
     writeUrl({ tab: next, creating: false, q: '' });
@@ -111,10 +112,29 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
 
   // Seçim KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // DÜZENLEME adreste değil: seçili satıra bağlı, seçim de yerel. Yalnız düzenlemeyi adrese taşımak
-  // yarım iş olurdu (link açılır, hangi kaydın düzenlendiği bilinmez). Oluşturma ise satır gerektirmez.
   const [editing, setEditing] = useState(false);
   const selected = products.find((p) => p.id === selectedId) ?? products[0] ?? null;
+
+  // URL'DEN GELEN ÜRÜNLE DÜZENLEME AÇIK GELİR (16.08, fiyat ekranının deseni): `?productId=` ile
+  // gelen köprüde liste sunucuda o ürüne süzülü (`toProductFilters.ids`), satır seçilir ve düzenleme
+  // diyaloğu açılır. `ref` ile TEK SEFER: kapatınca parametre düşene kadar efekt yeniden açmasın.
+  // (Eski künye "düzenlemeyi adrese taşımak yarım iş — hangi kayıt bilinmez" diyordu; kimlik
+  // adreste taşınınca itiraz düştü. Oluşturma niyeti `new=1` ile zaten adresteydi.)
+  const openedFromUrl = useRef<string | null>(null);
+  useEffect(() => {
+    if (!urlState.productId || openedFromUrl.current === urlState.productId) return;
+    if (!products.some((p) => p.id === urlState.productId)) return;
+    openedFromUrl.current = urlState.productId;
+    setSelectedId(urlState.productId);
+    setEditing(true);
+  }, [urlState.productId, products]);
+
+  // Kapanışta URL hedefi de düşer: parametre kalsaydı liste tek ürüne süzülü kalır (gizli süzgeç)
+  // ve yenilemede diyalog yeniden açılırdı. Gerçek gezinme şart — sığ yazım listeyi tazelemez.
+  const closeEdit = () => {
+    setEditing(false);
+    if (urlState.productId) applyFilters({ productId: '' });
+  };
 
   const view = {
     data,
@@ -155,7 +175,7 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
           product={selected}
           categories={data.categories}
           bundles={data.bundles}
-          onClose={() => (productDialog === 'create' ? setCreatingIntent(false) : setEditing(false))}
+          onClose={() => (productDialog === 'create' ? setCreatingIntent(false) : closeEdit())}
         />
       ) : null}
     </>

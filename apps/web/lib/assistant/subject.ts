@@ -182,7 +182,9 @@ async function productSubject(productId: string): Promise<ProposalSubject | null
     imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
     crop: cropOf(product),
     images: [],
-    href: productsUrl({ tab: 'products', q: name, cat: 'all', status: 'all', incomplete: false, creating: false }),
+    // Derin bağ (16.08): ad aramasıyla "en yakın karşılık" yerine ürünün kendisi — liste ürüne
+    // süzülü, düzenleme diyaloğu açık gelir.
+    href: productsUrl({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: product.id }),
   };
 }
 
@@ -334,8 +336,8 @@ async function variantSubject(variantId: string): Promise<ProposalSubject | null
     crop: cropOf(product),
     // Tek ürünlü konuda çoğul görsel yok: `imageUrl` zaten "bu neye benziyor" cevabını veriyor.
     images: [],
-    // Ürün ekranı bir DİYALOG kullanıyor, doğrudan derin bağlantısı yok; arama süzgeci en yakın
-    // karşılık ve tek satırda kuruluyor (`productsUrl` — rota sözleşmesi orada, `STACK §4`).
-    href: productsUrl({ tab: 'products', q: name, cat: 'all', status: 'all', incomplete: false, creating: false }),
+    // Derin bağ (16.08): ürün diyaloğu artık `?productId=` ile açılıyor — ad aramasıyla "en yakın
+    // karşılık" dönemi bitti (rota sözleşmesi `products-url`, `STACK §4`).
+    href: productsUrl({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: product.id }),
   };
 }

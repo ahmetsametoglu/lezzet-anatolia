@@ -109,7 +109,7 @@ export function FeedbackClient({ data, urlState }: FeedbackClientProps) {
      */
     onActivate: (productId: string) => {
       const name = data.candidates?.find((c) => c.productId === productId)?.productName ?? '';
-      startNav(() => router.push(productsUrl({ tab: 'products', q: name, cat: 'all', status: 'all', incomplete: false, creating: false })));
+      startNav(() => router.push(productsUrl({ tab: 'products', q: name, cat: 'all', status: 'all', incomplete: false, creating: false, productId: '' })));
     },
   };
 

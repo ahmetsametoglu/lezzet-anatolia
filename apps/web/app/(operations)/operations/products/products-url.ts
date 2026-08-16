@@ -23,9 +23,16 @@ export interface ProductsUrlState {
    * niyet TEK yerde düşer (ayrı bir sıfırlama etkisine gerek yok).
    */
   creating: boolean;
+  /**
+   * DIŞ KÖPRÜNÜN hedefi (16.08, fiyat ekranının deseni): doluyken liste o ürüne süzülür, satır
+   * seçili ve DÜZENLEME diyaloğu açık gelir; kapanınca parametre düşer, tam liste geri gelir.
+   * (Eski künye "yalnız düzenlemeyi adrese taşımak yarım iş olurdu — hangi kaydın düzenlendiği
+   * bilinmez" diyordu; kimlik adreste taşınınca o itiraz düştü.)
+   */
+  productId: string;
 }
 
-const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false };
+const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: '' };
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseProductsUrl(params: RawParams): ProductsUrlState {
@@ -36,6 +43,7 @@ export function parseProductsUrl(params: RawParams): ProductsUrlState {
     status: oneOf(params.status, ProductStatusEnum.options, DEFAULT_URL_STATE.status),
     incomplete: one(params.incomplete) === '1',
     creating: one(params.new) === '1',
+    productId: one(params.productId).trim(),
   };
 }
 
@@ -51,6 +59,7 @@ export function productsUrl(state: ProductsUrlState): string {
   if (state.status !== DEFAULT_URL_STATE.status) p.set('status', state.status);
   if (state.incomplete) p.set('incomplete', '1');
   if (state.creating) p.set('new', '1');
+  if (state.productId) p.set('productId', state.productId);
   const qs = p.toString();
   return qs ? `${PRODUCTS_PATH}?${qs}` : PRODUCTS_PATH;
 }
@@ -61,11 +70,14 @@ export function toProductFilters(state: ProductsUrlState): {
   categoryId?: string;
   status?: ProductStatus;
   onlyIncomplete?: boolean;
+  ids?: string[];
 } {
   return {
     query: state.q || undefined,
     categoryId: state.cat === 'all' ? undefined : state.cat,
     status: state.status === 'all' ? undefined : state.status,
     onlyIncomplete: state.incomplete || undefined,
+    // Tek ürün hedefi servis `ids` süzgecine biner (fiyat ekranıyla aynı yol).
+    ids: state.productId ? [state.productId] : undefined,
   };
 }
