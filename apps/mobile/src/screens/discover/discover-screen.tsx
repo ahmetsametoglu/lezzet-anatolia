@@ -2,10 +2,18 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { DiscoverCard, FeedbackVote } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Image, ScrollView, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type AnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -191,6 +199,229 @@ function CardPhoto({ card }: CardPhotoProps) {
   return <Image source={{ uri: card.image.url }} style={styles.photoImage} accessibilityIgnoresInvertColors />;
 }
 
+/**
+ * Uçuşun UI-THREAD kapanışı — jest ve düğme yolunun ortak sonu.
+ *
+ * MODÜL DÜZEYİNDE ve tekil bir worklet: bileşenin içinde kurulan bir worklet, animasyonun
+ * tamamlanma çağrısına kapanışıyla birlikte taşınır ve her çizimde kimliği değişir. Modül
+ * düzeyindeki bir bildirimde dönüşüm tartışmasız ve kimlik sabittir — iki giriş kapısının (jest ·
+ * düğme) aynı kapanışı paylaşmasının da tek ucuz yolu bu.
+ *
+ * Sıra önemli: parmak izi ve kilit React'ten ÖNCE temizlenir. `finishExit`in commit'i geldiğinde
+ * öne geçen kart ne eski izi okur ne kilidi açık görür.
+ */
+function clearFlight(
+  flyingId: SharedValue<string | null>,
+  dragX: SharedValue<number>,
+  dragY: SharedValue<number>,
+  locked: SharedValue<number>,
+): void {
+  'worklet';
+  flyingId.value = null;
+  dragX.value = 0;
+  dragY.value = 0;
+  locked.value = 0;
+}
+
+interface DeckLayerProps {
+  card: DiscoverCard;
+  /** 0 = üstteki kart, 1 = arkadaki. Değişince kart yeni derinliğine ANİMASYONLA gider. */
+  depth: number;
+  /** Parmağın yeri — yalnız `interactive` kartta okunur. */
+  dragX: SharedValue<number>;
+  dragY: SharedValue<number>;
+  /** Parmağı izlesin mi: üstteki kart, ve yalnız uçan bir kart yokken. */
+  interactive: boolean;
+  /*
+    UÇUŞ DEĞERLERİ — üstteki kart, kendisini uçan katmana taşıyan React commit'ini BEKLEMEDEN yola
+    çıksın diye. Kart uçtuğunu `flyingId`den anlar; bayrak değil KİMLİK, çünkü bayrak olsaydı öne
+    geçen yeni kart da onu okur ve o da uçardı. Uçan katman commit gelince aynı formülü devralır.
+  */
+  flyingId: SharedValue<string | null>;
+  exitProgress: SharedValue<number>;
+  exitStartX: SharedValue<number>;
+  exitStartY: SharedValue<number>;
+  exitDirection: SharedValue<number>;
+  /** Kartın kat edeceği yol — ekran genişliğinden türer, uçuş boyunca sabit. */
+  travel: number;
+  glow: ReactNode;
+  stamp: ReactNode;
+  testID: string;
+}
+
+/**
+ * DESTEDEKİ bir kart — kendi derinliğini bilir ve derinlik değişince oraya ANİMASYONLA gider.
+ *
+ * ── NEDEN (kullanıcı bulgusu 16.08, ikinci tur) ─────────────────────────────
+ * Arkadaki kart tasarım gereği 30 px aşağıda, %94 ölçekte ve %55 krem tülün altında duruyor
+ * (`discoverMetrics`). Öne geçtiğinde bu üçü birden ANİMASYONSUZ sıfırlanıyordu: resim tek karede
+ * 30 px yukarı fırlıyor, %6 büyüyor, tülü kalkıyordu. Kullanıcının tarifi: *"anlık resimde bir
+ * oynama oluyor sanki"* — yabancı bir resim değil, aynı resmin bir karede yer ve boyut
+ * değiştirmesi. İlk turda düzeltilen "kart merkeze geri geliyor" arızasının ARDINDA duran ikinci
+ * kusurdu; ikisi birlikte tek bir göz kırpması gibi okunuyordu.
+ *
+ * `progress` MOUNT ANINDA `depth`e eşitlenir, sonra `withTiming` ile takip eder — yani yeni doğan
+ * arka kart animasyonsuz yerinde başlar, öne geçen kart yumuşakça yükselir. Sıralama yarışı YOK:
+ * başlangıç değeri prop'tan gelir, paylaşılan bir değere sonradan yazılmaz.
+ *
+ * **Kart LİSTEDE ve `key={productId}` ile çizilir** (çağıranın sorumluluğu): derinlik değişince
+ * React aynı örneği korur. Korumasaydı `<Image>` yeniden bağlanır ve fotoğraf bir kare yeniden
+ * yüklenirdi — aynı kırpmanın başka bir kaynağı.
+ */
+function DeckLayer({
+  card,
+  depth,
+  dragX,
+  dragY,
+  interactive,
+  flyingId,
+  exitProgress,
+  exitStartX,
+  exitStartY,
+  exitDirection,
+  travel,
+  glow,
+  stamp,
+  testID,
+}: DeckLayerProps) {
+  const progress = useSharedValue(depth);
+  useEffect(() => {
+    progress.value = withTiming(depth, { duration: discoverMetrics.exitMs, easing: EXIT_EASING });
+  }, [depth, progress]);
+
+  const style = useAnimatedStyle(() => {
+    /*
+      ── HER PAYLAŞILAN DEĞER KOŞULSUZ OKUNUR ──────────────────────────────────
+      Reanimated, worklet'in hangi değerlere ABONE olacağını onu bir kez koşturup OKUDUKLARINA
+      bakarak belirler. Okumalar `if (uçuyor)` dalının içinde kalsaydı, kart uçmazken o dal hiç
+      girilmez, `exitProgress` hiç okunmaz ve ABONE OLUNMAZDI: uçuş başlayınca stil bir kez
+      hesaplanır, sonra ilerleyen `exitProgress` bir daha çalıştırmazdı — kart bırakıldığı yerde
+      donup kalırdı. Kitaplığın belgelenmiş davranışı; sessiz olduğu için de en pahalısı.
+
+      Değerler bu yüzden dalların DIŞINDA, en başta okunuyor. Ucuz: hepsi tek sayı.
+    */
+    const flying = flyingId.value === card.productId;
+    const flightProgress = exitProgress.value;
+    const startX = exitStartX.value;
+    const startY = exitStartY.value;
+    const direction = exitDirection.value;
+    const depthProgress = progress.value;
+    const dx = dragX.value;
+    const dy = dragY.value;
+
+    if (flying) {
+      const fx = startX + flightProgress * direction * travel;
+      return {
+        zIndex: 3,
+        opacity: 1 - flightProgress,
+        transform: [
+          { translateX: fx },
+          { translateY: startY * discoverMetrics.verticalFollow },
+          { scale: 1 },
+          {
+            rotate: `${startX / discoverMetrics.rotateDivisor + flightProgress * direction * discoverMetrics.exitRotateDeg}deg`,
+          },
+        ],
+      };
+    }
+    /* Parmak izi derinlikle SÖNER: arka konumdaki kart (p=1) sürüklenmez, öne geldikçe (p→0)
+       parmağı tam olarak izler. Böylece promosyon ortasında yakalanan bir jest de zıplatmaz. */
+    const lead = interactive ? 1 - depthProgress : 0;
+    const x = dx * lead;
+    return {
+      zIndex: depth === 0 ? 2 : 1,
+      opacity: 1,
+      transform: [
+        { translateX: x },
+        { translateY: dy * discoverMetrics.verticalFollow * lead + depthProgress * discoverMetrics.nextDrop },
+        { scale: 1 - depthProgress * (1 - discoverMetrics.nextScale) },
+        { rotate: `${x / discoverMetrics.rotateDivisor}deg` },
+      ],
+    };
+  });
+
+  /** Krem tül derinlikle gelir gider — kartın öne geçişiyle AYNI eğride çözülür. */
+  const veilStyle = useAnimatedStyle(() => ({ opacity: progress.value * discoverMetrics.nextVeilOpacity }));
+
+  return (
+    <DeckCard
+      card={card}
+      style={style}
+      glow={glow}
+      stamp={stamp}
+      veil={<Animated.View style={[styles.nextVeil, veilStyle]} pointerEvents="none" />}
+      decorative={depth !== 0}
+      testID={testID}
+    />
+  );
+}
+
+interface DeckCardProps {
+  card: DiscoverCard;
+  /** Kartın hareketi: destedeki için derinlik+parmak stili, uçan için uçuş stili. */
+  style: StyleProp<AnimatedStyle<ViewStyle>>;
+  /** Gölge halesi katmanı — üstte üç animasyonlu kardeş, uçanda seçilen tek sabit hale. */
+  glow: ReactNode;
+  /** Rozet(ler) — üstte parmağa bağlı iki tane, uçanda seçilen tek rozet. */
+  stamp: ReactNode;
+  /** Arkadaki kartın üstündeki krem tül — öne geçerken opaklığı animasyonla çözülür. */
+  veil?: ReactNode;
+  /** Uçan kopya ekran okuyucudan gizlenir: aynı ürün adı iki kez okunmasın. */
+  decorative?: boolean;
+  testID: string;
+}
+
+/**
+ * Kartın GÖVDESİ — üç katmanın da çizdiği tek kaynak (16.08): üstteki, arkadaki ve uçan. Ayrı bir
+ * bileşene çıkarılmasının sebebi bu üçlü: aynı yüzeyi ikinci kez elle yazmak, bir gün birinin
+ * ötekinden ayrışması demekti (CLAUDE §1). Ayrışan şeyler PROP olarak dışarıda kaldı — hareket,
+ * hale, rozet, tül; çünkü üstteki kart parmağı okur, arkadaki ve uçan okumaz.
+ *
+ * **Kimlik (`key`) çağıranın sorumluluğu ve KRİTİK:** kart derinlik değiştirdiğinde React aynı
+ * örneği korumalı, yoksa `<Image>` yeniden bağlanır ve fotoğraf bir kare boyunca yeniden yüklenir.
+ */
+function DeckCard({ card, style, glow, stamp, veil, decorative = false, testID }: DeckCardProps) {
+  const { theme } = useUnistyles();
+  return (
+    <Animated.View
+      style={[styles.card, style]}
+      testID={testID}
+      pointerEvents={decorative ? 'none' : 'auto'}
+      accessibilityElementsHidden={decorative}
+      importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
+    >
+      {/* Gölge DIŞ katmanlarda, kırpma İÇTE: aynı görünümde `overflow: 'hidden'` gölgeyi de keser. */}
+      {glow}
+      <View style={styles.cardSurface}>
+        <CardPhoto card={card} />
+        {/* Fotoğrafın üstündeki yazının okunması için koyu gradyan (v3:416). */}
+        <LinearGradient {...theme.gradient.photoBottom} style={styles.cardScrim} pointerEvents="none" />
+        {stamp}
+        <View style={styles.cardText} pointerEvents="none">
+          <Text style={styles.cardName} accessibilityRole={decorative ? 'none' : 'header'}>
+            {card.name}
+          </Text>
+          {card.description === null ? null : <Text style={styles.cardDescription}>{card.description}</Text>}
+        </View>
+        {veil}
+      </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Uçmakta olan kartın künyesi — desteden ÇIKMIŞ, ekrandan henüz çıkmamış kart.
+ *
+ * Başlangıç yeri (`startX/startY`) DURUMDA taşınır, paylaşılan değerde değil: katman mount olduğu
+ * İLK karede parmağın bıraktığı yerde durmak zorunda. Paylaşılan değere yazsaydık o yazım UI
+ * thread'e bir kare sonra düşerdi ve kart bir kare merkezde görünürdü — düzeltilen arızanın ta
+ * kendisi (künye `DiscoverScreen` gövdesinde).
+ */
+interface ExitingCard {
+  card: DiscoverCard;
+  choice: FeedbackVote;
+}
+
 interface DiscoverScreenProps {
   /** Girişli mi — puan davetinin ve talep kapısının tek koşulu; rota `useMe` ile çözer. */
   signedIn: boolean;
@@ -218,13 +449,61 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
      kart iki yandan 18'er dolgunun içinde durur. */
   const travel = (width - 2 * theme.space['4xl']) * discoverMetrics.exitTravel;
 
-  /** Parmağın yatay/dikey yeri (drag) — çıkış animasyonu bunları sıfıra çekerken devralır. */
+  /** Parmağın yatay/dikey yeri (drag) — YALNIZ üstteki kartı, yalnız o sürüklenirken taşır. */
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
-  /** Çıkışın ilerlemesi: 0 durgun, +1 sağa tamamen çıkmış, −1 sola. */
-  const exit = useSharedValue(0);
+  /** Uçan kartın ilerlemesi: 0 bırakıldığı yer, 1 ekrandan tamamen çıkmış. */
+  const exitProgress = useSharedValue(0);
+  /*
+    UÇUŞUN BAŞLANGICI PAYLAŞILAN DEĞERDE, REACT DURUMUNDA DEĞİL (kullanıcı bulgusu 16.08, dördüncü
+    tur). Önce `exiting.startX` durumundan okunuyordu ve kullanıcı şunu gördü: *"anlık olarak orta
+    noktaya gidiyor, sonra parmağımın olduğu yere geri gelip oradan dışarı gidiyor."*
+
+    Sebep animasyonlu stilin JS KAPANIŞI: `useAnimatedStyle` içindeki `startX` bir React değeri ve
+    katman mount olduğu karede worklet hâlâ ESKİ kapanışla (startX = 0) koşuyor — kart bir kare
+    merkezde çiziliyor, kapanış yenilenince yerine sıçrıyor. Değerler artık jest bırakılırken
+    DOĞRUDAN UI thread'de yazılıyor: worklet'in yeniden bağlanmasını bekleyen hiçbir şey kalmadı.
+  */
+  const exitStartX = useSharedValue(0);
+  const exitStartY = useSharedValue(0);
+  const exitDirection = useSharedValue(1);
+  /*
+    UÇAN KARTIN KİMLİĞİ — ve uçuşun BIRAKMA ANINDA başlamasının anahtarı (kullanıcı bulgusu 16.08,
+    altıncı tur). Uçuş önce bir React etkisiyle, yani katman doğduktan SONRA başlıyordu; kullanıcı
+    *"kartı kenarda bıraktığım anda birkaç saniye bekliyor, sonra hareket ediyor"* dedi. Beklenen
+    şey React'in gidiş-dönüşüydü.
+
+    Artık animasyon jest bırakılırken UI thread'de başlıyor. Hangi kartın uçtuğunu da React değil
+    BU DEĞER söylüyor: her katman kendi `cardId`siyle karşılaştırır. Bayrak yerine KİMLİK olması
+    şart — bayrak olsaydı, öne geçen yeni kart da onu okur ve o da uçardı.
+  */
+  const flyingId = useSharedValue<string | null>(null);
   /** Çıkış sürerken ikinci karar YUTULUR (v3 `kGo`nun ilk satırı) — iki kart birden geçmesin. */
   const locked = useSharedValue(0);
+
+  /*
+    ── UÇAN KART AYRI KATMAN (kullanıcı bulgusu + kararı 16.08) ────────────────
+    Önceki kurgu TEK kart çiziyordu ve çıkış animasyonunun sonunda onu merkeze geri alıyordu:
+
+        exit.value = withTiming(±1, timing, () => {
+          exit.value = 0;             // UI thread — kart ANINDA merkeze döner
+          runOnJS(advance)(choice);   // JS thread — içerik 1-3 kare SONRA değişir
+        });
+
+    Kartın opaklığı `1 - |exit|` olduğu için sıfırlama, kartı TAM OPAKLIKLA ve HÂLÂ ESKİ ÜRÜNLE
+    merkeze basıyordu; `setIndex` ancak birkaç kare sonra yetişiyordu. Kullanıcının gördüğü:
+    *"beğenme bittiği anda araya bir resim giriyor, sonra arkadan görünen resim yeniden geliyor"* —
+    araya giren yabancı bir kart değil, az önce kaydırılan kartın kendisiydi. Sıralama yarışı
+    `runOnJS`in TANIMI gereği kaçınılmazdı: UI thread'in sıfırlaması ile JS thread'in içerik
+    değişimi aynı kareye hiçbir zaman düşemez.
+
+    Yeni kurgu yarışı ortadan kaldırır, geciktirmez: kaydırılan kart AYRI bir katmana kopyalanır ve
+    orada uçar; alttaki deste aynı React commit'inde ilerler. Üstteki kart artık geri alınacak bir
+    yere hiç gitmediği için sıfırlanacak bir şey de yok — `exiting` doluyken üst kart parmağı HİÇ
+    okumaz, durgun çizilir (aşağıda `cardStyle`). Katman ile içerik tek commit'te değiştiği için
+    ikisi arasında kare farkı olamaz.
+  */
+  const [exiting, setExiting] = useState<ExitingCard | null>(null);
 
   const cards = discover.cards;
   const card = cards[index] ?? null;
@@ -238,15 +517,23 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     shownAt.current = Date.now();
   }, [index, cards]);
 
-  /** Oy kuyruğa girer, kart ilerler, tur bitiyorsa onay verilir. JS tarafı — worklet'ten çağrılır. */
-  const advance = useCallback(
+  /**
+   * Kart desteden ÇIKAR: uçan katmana kopyalanır, oy kuyruğa girer, deste ilerler. Hepsi TEK React
+   * commit'inde — uçan katmanın mount'u ile üstteki kartın içerik değişimi aynı kareye düşsün diye.
+   * JS tarafı; jest worklet'inden `runOnJS` ile, düğmeden doğrudan çağrılır.
+   */
+  const beginExit = useCallback(
     (choice: FeedbackVote) => {
       const current = cards[index];
       if (current === undefined) return;
-      /* Çıkış animasyonu SÜREDEN DÜŞÜLÜR: karar jest bırakıldığında (ya da düğmeye basıldığında)
-         verildi, kartın uçup gittiği 330 ms düşünme süresi değil. Eklenseydi her kaydırma sabit
-         bir payla şişer, motorun "hızlı kaydırma" ölçüsü kayardı. */
-      const dwellMs = Math.max(0, Date.now() - shownAt.current - discoverMetrics.exitMs);
+      setExiting({ card: current, choice });
+      /* ÇIKIŞ SÜRESİ ARTIK DÜŞÜLMÜYOR — ve bu bir sadeleştirme değil, düzeltme (16.08). Kural
+         aynı: `dwellMs` DÜŞÜNME süresidir, kartın uçtuğu 330 ms ona dahil değil. Değişen şey bu
+         satırın KOŞTUĞU AN: eski kurguda burası çıkış animasyonu BİTTİKTEN sonra çalışıyordu, yani
+         geçen süre uçuşu da içeriyordu ve `exitMs` geri çıkarılmak zorundaydı. Artık karar anında
+         (jest bırakıldığında / düğmeye basıldığında) çalışıyor — uçuş henüz BAŞLAMADI. Çıkarma
+         kalsaydı her kaydırma 330 ms EKSİK ölçülür, motorun "hızlı kaydırma" eşiği kayardı. */
+      const dwellMs = Math.max(0, Date.now() - shownAt.current);
       /* Yazım DÜŞSE BİLE kart ilerler (web kararı): müşteriyi düzeltemeyeceği bir arızada turun
          ortasında kilitlemeyiz. Düşen yazımın karşılığı hook'ta: o kaydırma sayılmaz. */
       discover.vote({ productId: current.productId, vote: choice, dwellMs });
@@ -255,30 +542,92 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
       /* Tur bitişi tek onay noktası — v3'te toast yok ama akışın sonu sessiz kalmamalı
          (kitin toast katmanı tam bu iş için var). */
       if (index + 1 >= cards.length) publishToast(t.toast);
+      /* ── PARMAK İZİ BURADA SİLİNMEZ (kullanıcı bulgusu 16.08, üçüncü tur) ──────
+         Siliniyordu ve ölçülen sonuç şuydu (yavaşlatılmış uçuşla görüldü): kullanıcı kartı sağa
+         çekip bırakıyor, kart ÖNCE MERKEZE ATLIYOR, uçuş oradan başlıyor. Kullanıcının cümlesi:
+         *"parmağımı bıraktığım konumdan hareket etmiyor, orta noktaya geliyor ve oradan gidiyor."*
+
+         Sebep yine iki thread: bu yazım UI thread'e ANINDA düşüyor, ama uçan katmanı doğuran
+         `setExiting` bir React commit'i bekliyor. O aradaki 1-2 karede ESKİ kart hâlâ ekranda ve
+         hâlâ parmağı okuyor — izi silinince merkeze snap ediyor.
+
+         Silme artık uçuşun BİTİŞİNDE, `exiting` hâlâ doluyken yapılıyor: o anda destedeki kart
+         parmağı zaten okumuyor (`interactive` false), yani sıfırlama görünmez. Kod aşağıda,
+         `exitProgress`in tamamlanma çağrısında.
+
+         Uçuşun BAŞLANGIÇ değerleri de burada yazılmaz: onları iki giriş kapısı (jest bırakma ·
+         düğme) katman doğmadan önce kendi thread'inde yazıyor. Burada tekrarlamak, aynı gerçeği
+         iki yere yazmak olurdu. */
     },
-    [cards, discover, index, t.toast],
+    [cards, discover, exitProgress, index, t.toast],
   );
 
-  /* Çıkış animasyonu: jest de düğme de buradan geçer — iki ayrı yol yazılsaydı biri bir gün
-     ötekinden farklı bir süreyle çıkardı (yüzen sayfanın `animateClose` dersi).
-     Parmağın bıraktığı yer (`dragX/dragY`) sıfıra çekilirken `exit` yolu devralır: böylece
-     eğim `x/16`dan şablonun çıkış açısına (9°) KESİNTİSİZ geçer, kart zıplamaz. */
-  const commit = useCallback(
+  /** Uçuş bitti: katman sökülür. Kilidi AÇMAZ — onu UI thread'de `clearFlight` açıyor. */
+  const finishExit = useCallback(() => {
+    setExiting(null);
+  }, []);
+
+  /*
+    UÇUŞ BIRAKMA ANINDA BAŞLAR — React'in commit'i beklenmez (kullanıcı bulgusu 16.08).
+    Animasyon önce `exiting` durumuna bağlı bir etkide kuruluyordu, yani jest bırakıldıktan sonra
+    bir JS gidiş-dönüşü geçiyordu: kart bırakıldığı yerde bekliyor, sonra hareket ediyordu
+    (kullanıcı: *"bıraktığım yerde birkaç saniye bekliyor"*). Artık iki giriş kapısı da uçuşu kendi
+    thread'inde başlatıyor (jest: UI · düğme: JS) ve üstteki kart `flyingId` sayesinde commit'i
+    beklemeden yola çıkıyor.
+
+    Kapanış animasyonun KENDİ geri çağrısında: paylaşılan değerler React'ten önce temizlenir, sonra
+    katmanı sökecek olan `finishExit` çağrılır.
+
+    ── BU EKRAN SICAK YENİDEN YÜKLEMEYLE DOĞRULANMAZ (ders 16.08) ──────────────
+    Metro sıcak yeniden yükleme yaptığında UÇMAKTA olan `withTiming` ölür ama React durumu ayakta
+    kalır: `exiting` dolu, `locked` 1. Kilidi açacak olan tamamlanma çağrısı hiç gelmez, yani deste
+    KALICI olarak taşlaşır. Bu, saatlerce koda yüklenen bir hayalet arızaydı; kod hiç sebep
+    olmamıştı. Kural: bu ekranın her ölçümü uygulama KOMPLE yeniden başlatıldıktan sonra ve EN AZ
+    BEŞ ARDIŞIK kaydırmayla yapılır — tek kaydırma kilidi hiçbir zaman göstermez.
+  */
+
+  /* Jest de düğme de buradan geçer — iki ayrı yol yazılsaydı biri bir gün ötekinden farklı
+     davranırdı (yüzen sayfanın `animateClose` dersi). Düğmede parmak izi yok, o yüzden başlangıç
+     noktası sıfır: kart merkezden uçar. */
+  const commitFromButton = useCallback(
     (choice: FeedbackVote) => {
-      'worklet';
       if (locked.value === 1) return;
       locked.value = 1;
-      const timing = { duration: discoverMetrics.exitMs, easing: EXIT_EASING };
-      dragX.value = withTiming(0, timing);
-      dragY.value = withTiming(0, timing);
-      exit.value = withTiming(choice === 'like' ? 1 : -1, timing, () => {
-        exit.value = 0;
-        locked.value = 0;
-        runOnJS(advance)(choice);
+      /* Düğmede parmak izi yok: kart merkezden uçar. Jest yolundaki başlatmanın ikizi — orada UI
+         thread'de, burada JS'te; ikisi de `clearFlight` ile biter. */
+      const flying = cards[index];
+      if (flying === undefined) return;
+      exitStartX.value = 0;
+      exitStartY.value = 0;
+      exitDirection.value = choice === 'like' ? 1 : -1;
+      exitProgress.value = 0;
+      flyingId.value = flying.productId;
+      exitProgress.value = withTiming(1, { duration: discoverMetrics.exitMs, easing: EXIT_EASING }, (completed) => {
+        if (completed !== true) return;
+        clearFlight(flyingId, dragX, dragY, locked);
+        runOnJS(finishExit)();
       });
+      beginExit(choice);
     },
-    [advance, dragX, dragY, exit, locked],
+    [
+      beginExit,
+      cards,
+      dragX,
+      dragY,
+      exitDirection,
+      exitProgress,
+      exitStartX,
+      exitStartY,
+      finishExit,
+      flyingId,
+      index,
+      locked,
+    ],
   );
+
+  /* Jestin worklet'i React nesnesi okuyamaz; uçacak kartın kimliği bu yüzden düz bir dizge olarak
+     dışarıda çözülür. Değeri her çizimde tazelenir, yani bırakma anında hep güncel karttır. */
+  const flyingCardId = card?.productId ?? null;
 
   const swipe = Gesture.Pan()
     .onUpdate((event) => {
@@ -297,23 +646,76 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
       }
       /* Yön mesafeden okunur; mesafe tam sıfırsa (yerinde fırlatma) hızın işareti karar verir. */
       const forward = event.translationX === 0 ? event.velocityX : event.translationX;
-      commit(forward > 0 ? 'like' : 'dislike');
+      locked.value = 1;
+      /* Uçuş TAM BURADA başlar — değerler de animasyon da UI thread'de. React'e yalnız "oyu yaz,
+         desteyi ilerlet" haberi gider; kartın hareketi o habere BAĞLI DEĞİL (künye `flyingId`). */
+      exitStartX.value = dragX.value;
+      exitStartY.value = dragY.value;
+      exitDirection.value = forward > 0 ? 1 : -1;
+      exitProgress.value = 0;
+      flyingId.value = flyingCardId;
+      exitProgress.value = withTiming(1, { duration: discoverMetrics.exitMs, easing: EXIT_EASING }, (completed) => {
+        if (completed !== true) return;
+        clearFlight(flyingId, dragX, dragY, locked);
+        runOnJS(finishExit)();
+      });
+      /* React'e giden haber SONDA: oyu yaz, desteyi ilerlet. Kartın hareketi bu habere bağlı
+         değil — o yukarıda, bu thread'de çoktan başladı. */
+      runOnJS(beginExit)(forward > 0 ? 'like' : 'dislike');
     });
 
-  /** Kartın kendisi: parmağı takip eder, eğilir, çıkarken soluklaşır (v3:2060 + `kOut*`). */
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: 1 - Math.abs(exit.value),
-    transform: [
-      { translateX: dragX.value + exit.value * travel },
-      { translateY: dragY.value * discoverMetrics.verticalFollow },
-      {
-        rotate: `${dragX.value / discoverMetrics.rotateDivisor + exit.value * discoverMetrics.exitRotateDeg}deg`,
-      },
-    ],
-  }));
+  /**
+   * DESTENİN KATMANLARI — arkadan öne. Tek liste, `key={productId}`: kart derinlik değiştirdiğinde
+   * React aynı örneği korur, yani hem fotoğraf yeniden yüklenmez hem derinlik animasyonla çözülür
+   * (`DeckLayer` künyesi). Ayrı JSX yuvalarında dursalardı ikisi de olmazdı.
+   */
+  const deckLayers = [
+    ...(nextCard === null ? [] : [{ card: nextCard, depth: 1 }]),
+    ...(card === null ? [] : [{ card, depth: 0 }]),
+  ];
+  /** Parmağa bağlı süsler (rozet · yön haleleri) çizilsin mi — uçuş sürerken HAYIR. */
+  const dragDecor = exiting === null;
+
+  /**
+   * Uçan kart: bırakıldığı yerden başlar, seçilen yöne kayar, eğilir ve soluklaşır.
+   *
+   * Worklet YALNIZ paylaşılan değer okur ve hepsini KOŞULSUZ okur — Reanimated aboneliği
+   * okuduklarına bakarak kurar, bir dalın içinde kalan değer hiç izlenmez.
+   */
+  const exitingStyle = useAnimatedStyle(() => {
+    const p = exitProgress.value;
+    const startX = exitStartX.value;
+    const startY = exitStartY.value;
+    const direction = exitDirection.value;
+    return {
+      opacity: 1 - p,
+      transform: [
+        { translateX: startX + p * direction * travel },
+        { translateY: startY * discoverMetrics.verticalFollow },
+        {
+          rotate: `${startX / discoverMetrics.rotateDivisor + p * direction * discoverMetrics.exitRotateDeg}deg`,
+        },
+      ],
+    };
+  });
 
   /* Basılı rozetler ve gölge halesi — üçü de AYNI oranı okur (`min(1, |x|/92)`), yani karar
      eşiğine yaklaşan kartın üç işareti birlikte koyulaşır. */
+  /*
+    PARMAK İZİ UÇUŞ BOYUNCA SUSAR (16.08). `dragX` bırakma anındaki değerini uçuş bitene kadar
+    korur — sıfırlamak eski kartı merkeze atlatıyordu (künye `beginExit`te). Ama o değer rozet ve
+    haleyi de besliyor, yani öne geçen YENİ kart bir anda "İSTERİM" rozetiyle çiziliyordu.
+
+    ── KAPI `locked`, BİR REACT DEĞERİ DEĞİL (kullanıcı bulgusu 16.08, beşinci tur) ──
+    Kapı önce `exiting === null` idi ve kullanıcı şunu gördü: *"merkeze gelen artık resim değil,
+    İSTERİM yazısı geliyor."* Sebep, uçuşun başlangıç noktasında düzeltilen hatanın İKİZİ: React
+    değeri worklet'in KAPANIŞINDA yaşıyor, katmanın doğduğu karede kapanış hâlâ eski — yani kapı
+    bir kare boyunca "açık" kalıyor ve rozet, merkezdeki kartın üstünde parlıyordu.
+
+    `locked` paylaşılan bir değer ve tam bu soruyu cevaplıyor: 1 = uçuş sürüyor. Jest bırakılırken
+    UI thread'de yazılır, uçuş bitince yine UI thread'de silinir — arada React'i bekleyen tek bir
+    kare yok. Kararı taşıyan rozet zaten uçan kartın üstünde, sabit opaklıkla duruyor.
+  */
   const likeStampStyle = useAnimatedStyle(() => ({
     opacity: dragX.value > 0 ? Math.min(1, dragX.value / SWIPE_THRESHOLD) : 0,
   }));
@@ -343,8 +745,13 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     if (undone.vote === 'like') setLikes((count) => Math.max(0, count - 1));
     dragX.value = 0;
     dragY.value = 0;
-    exit.value = 0;
-  }, [discover, dragX, dragY, exit]);
+    /* Uçuş sürerken geri alınabilir (pencere 330 ms'den uzun): katman ANINDA sökülür, yoksa geri
+       gelen kartın kopyası ekranda uçmaya devam ederdi. Kilit de burada açılır — animasyonun
+       kendi bitiş çağrısı `completed === false` ile gelip hiçbir şey yapmayacak. */
+    setExiting(null);
+    exitProgress.value = 0;
+    locked.value = 0;
+  }, [discover, dragX, dragY, exitProgress, locked]);
 
   const showUndo = discover.status === 'ready' && cards.length > 0;
   const bar = (
@@ -620,58 +1027,117 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
           </View>
         </View>
 
-        <View style={styles.deck}>
-          {/* Üçüncü kart yalnız DERİNLİK: fotoğrafı bile yok, kum bir yüzey (v3:406). */}
-          {!hasThirdCard ? null : <View style={styles.thirdCard} pointerEvents="none" testID="discover-third" />}
+        <GestureDetector gesture={swipe}>
+          <View style={styles.deck}>
+            {/* Üçüncü kart yalnız DERİNLİK: fotoğrafı bile yok, kum bir yüzey (v3:406). Desteye
+                GİRMEZ — kimliği olmayan bir süstür, öne geçen bir kartı temsil etmez. */}
+            {!hasThirdCard ? null : <View style={styles.thirdCard} pointerEvents="none" testID="discover-third" />}
 
-          {/* Sıradaki kart: fotoğrafı görünür ama krem bir tülün altında (v3:408-412). */}
-          {nextCard === null ? null : (
-            <View style={styles.nextCard} pointerEvents="none" testID="discover-next">
-              <CardPhoto card={nextCard} />
-              <View style={styles.nextVeil} />
-            </View>
-          )}
+            {/* ÜSTTEKİ VE ARKADAKİ KART TEK LİSTEDE, `key={productId}` ile (16.08). Ayrı JSX
+                yuvalarında dursalardı React onları FARKLI öğe sayardı: arkadaki kart öne geçerken
+                yeniden bağlanır, fotoğrafı yeniden yüklenir ve derinliği animasyonla çözülemezdi.
+                Sıra ARKADAN ÖNE; üst üste binme yine de `zIndex`ten okunur (liste yeniden
+                sıralandığında görsel sıra yerinden oynamasın). */}
+            {deckLayers.map((layer) => (
+              <DeckLayer
+                key={layer.card.productId}
+                card={layer.card}
+                depth={layer.depth}
+                dragX={dragX}
+                dragY={dragY}
+                flyingId={flyingId}
+                exitProgress={exitProgress}
+                exitStartX={exitStartX}
+                exitStartY={exitStartY}
+                exitDirection={exitDirection}
+                travel={travel}
+                interactive={layer.depth === 0 && exiting === null}
+                testID={layer.depth === 0 ? 'discover-card' : 'discover-next'}
+                glow={
+                  /* Hale YALNIZ üstteki kartta: üç kardeş katman, hangisinin görüneceğini
+                        opaklık söyler. Arkadaki kart tasarımda halesizdir. */
+                  layer.depth !== 0 ? null : !dragDecor ? (
+                    // Uçuş sürerken hale SABİT durgun: parmak izi hâlâ dolu olduğu için animasyonlu
+                    // hâli okusaydı öne geçen kart gölgesiz kalırdı.
+                    <View style={[styles.glow, styles.glowRest]} pointerEvents="none" />
+                  ) : (
+                    <>
+                      <Animated.View style={[styles.glow, styles.glowRest, restGlowStyle]} pointerEvents="none" />
+                      <Animated.View style={[styles.glow, styles.glowLike, likeGlowStyle]} pointerEvents="none" />
+                      <Animated.View style={[styles.glow, styles.glowPass, passGlowStyle]} pointerEvents="none" />
+                    </>
+                  )
+                }
+                stamp={
+                  /* ROZET, UÇUŞ SÜRERKEN ÖNDEKİ KARTTA ÇİZİLMEZ (kullanıcı bulgusu 16.08).
+                     `dragX` bırakma değerini uçuş boyunca koruyor (kartın merkeze atlamaması için),
+                     ama o değer rozeti de besliyor — öne geçen YENİ kart "İSTERİM" damgasıyla
+                     çiziliyordu. Kapı worklet'te DEĞİL burada: React commit'iyle uygulanınca
+                     arada bir kare kalmıyor. Uçan kartın kendi rozeti aşağıda, sabit opaklıkta. */
+                  layer.depth !== 0 || !dragDecor ? null : (
+                    <>
+                      <Animated.View
+                        style={[styles.stamp, styles.stampLike, likeStampStyle]}
+                        pointerEvents="none"
+                        testID="discover-stamp-like"
+                      >
+                        <Text style={[styles.stampLabel, styles.stampLikeLabel]}>{t.stamp.like}</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[styles.stamp, styles.stampPass, passStampStyle]}
+                        pointerEvents="none"
+                        testID="discover-stamp-pass"
+                      >
+                        <Text style={[styles.stampLabel, styles.stampPassLabel]}>{t.stamp.pass}</Text>
+                      </Animated.View>
+                    </>
+                  )
+                }
+              />
+            ))}
 
-          <GestureDetector gesture={swipe}>
-            <Animated.View style={[styles.card, cardStyle]} testID="discover-card">
-              {/* Gölge DIŞ katmanlarda, kırpma İÇTE: aynı görünümde `overflow: 'hidden'` gölgeyi
-                  de keser. Üç hale kardeş katman — hangisinin görüneceğini opaklık söyler. */}
-              <Animated.View style={[styles.glow, styles.glowRest, restGlowStyle]} pointerEvents="none" />
-              <Animated.View style={[styles.glow, styles.glowLike, likeGlowStyle]} pointerEvents="none" />
-              <Animated.View style={[styles.glow, styles.glowPass, passGlowStyle]} pointerEvents="none" />
-              <View style={styles.cardSurface}>
-                <CardPhoto card={card} />
-                {/* Fotoğrafın üstündeki yazının okunması için koyu gradyan (v3:416). */}
-                <LinearGradient {...theme.gradient.photoBottom} style={styles.cardScrim} pointerEvents="none" />
-                <Animated.View
-                  style={[styles.stamp, styles.stampLike, likeStampStyle]}
-                  pointerEvents="none"
-                  testID="discover-stamp-like"
-                >
-                  <Text style={[styles.stampLabel, styles.stampLikeLabel]}>{t.stamp.like}</Text>
-                </Animated.View>
-                <Animated.View
-                  style={[styles.stamp, styles.stampPass, passStampStyle]}
-                  pointerEvents="none"
-                  testID="discover-stamp-pass"
-                >
-                  <Text style={[styles.stampLabel, styles.stampPassLabel]}>{t.stamp.pass}</Text>
-                </Animated.View>
-                <View style={styles.cardText} pointerEvents="none">
-                  <Text style={styles.cardName} accessibilityRole="header">
-                    {card.name}
-                  </Text>
-                  {card.description === null ? null : <Text style={styles.cardDescription}>{card.description}</Text>}
-                </View>
-              </View>
-            </Animated.View>
-          </GestureDetector>
-        </View>
+            {/* UÇAN KART — desteden çıkmış KOPYA, kendi katmanında ve hepsinin ÜSTÜNDE.
+                Kopya, çünkü deste `key={productId}` ile çiziliyor: aynı kartı desteden uçan
+                katmana TAŞIMAK, React'in o elemanı sökülmüş sayması demek. Fotoğraf yeniden
+                bağlanır ve tam uçuşun başında bir kare boşluk doğar. Kopya bir `<Image>` daha
+                yaratıyor ama görsel önbellekte, bedeli yok.
+                Rozeti ve halesi SABİT: kart eşiği geçtiği için uçuyor, kararı zaten belli. */}
+            {exiting === null ? null : (
+              <DeckCard
+                card={exiting.card}
+                style={[styles.exitingLayer, exitingStyle]}
+                decorative
+                testID="discover-card-exiting"
+                glow={
+                  <View
+                    style={[styles.glow, exiting.choice === 'like' ? styles.glowLike : styles.glowPass]}
+                    pointerEvents="none"
+                  />
+                }
+                stamp={
+                  <View
+                    style={[styles.stamp, exiting.choice === 'like' ? styles.stampLike : styles.stampPass]}
+                    pointerEvents="none"
+                  >
+                    <Text
+                      style={[
+                        styles.stampLabel,
+                        exiting.choice === 'like' ? styles.stampLikeLabel : styles.stampPassLabel,
+                      ]}
+                    >
+                      {exiting.choice === 'like' ? t.stamp.like : t.stamp.pass}
+                    </Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+        </GestureDetector>
 
         {/* ── İki oy düğmesi (v3:428-431): geç (beyaz, kum çerçeveli) · beğen (zeytin dolgulu) ── */}
         <View style={styles.voteRow}>
           <PressableSurface
-            onPress={() => commit('dislike')}
+            onPress={() => commitFromButton('dislike')}
             feedback="scale-small"
             style={[styles.voteButton, styles.passButton]}
             accessibilityLabel={t.vote.pass}
@@ -680,7 +1146,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
             <Icon name="close" size={discoverMetrics.passIcon} color={theme.colors.terracotta} />
           </PressableSurface>
           <PressableSurface
-            onPress={() => commit('like')}
+            onPress={() => commitFromButton('like')}
             feedback="scale-small"
             style={[styles.voteButton, styles.likeButton]}
             accessibilityLabel={t.vote.like}
@@ -868,6 +1334,10 @@ const styles = StyleSheet.create((theme, rt) => ({
     right: 0,
     top: 0,
     bottom: discoverMetrics.deckFootroom,
+  },
+  /** Uçan kartın katmanı — destedeki en üst karttan (2) da yukarıda. */
+  exitingLayer: {
+    zIndex: 3,
   },
   /** Halelerin ortak kutusu — kartla birebir; yalnız gölge çizerler, yüzeyleri yoktur. */
   glow: {

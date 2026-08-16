@@ -3120,6 +3120,49 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (aç → çarpı → aynı slugla tekrar aç) ölçüldü. Ölçüm ortasında başka bir şerit `db:refresh`
   çalıştırdı (`collection` 5 → 0 → 5); ilk turun sayıları seed dönünce birebir tekrarlandı.
 
+- [x] (21.65) **KEŞİF DESTESİNİN GEÇİŞİ — altı kusur, ve bir ölçüm dersi (kullanıcı turu 16.08)**
+  `touches:` `apps/mobile/src/screens/discover/discover-screen.tsx`
+
+  Kullanıcı: *"beğenme işlemi bittiği anda araya bir resim giriyor sonra arkadan görünen resim
+  yeniden geliyor"*, sonra *"o göz kırpması devam ediyor"*. Tek bir arıza gibi görünen şey **altı
+  ayrı kusurdu**; her tur bir tanesini açığa çıkardı, çünkü öndeki kusur arkadakini gizliyordu.
+  Ölçüm için `exitMs` geçici olarak 2200/800 ms'ye çekildi ve `adb exec-out screencap` ile kare
+  yakalandı (cihazda `screenrecord` yok; `uiautomator dump` ~0,5 sn, 330 ms'lik uçuş için kör).
+
+  1. **Eski kart merkeze dönüyordu** — oy yazılırken `dragX` sıfırlanıyordu, kart uçarken bir kare
+     merkeze atlıyordu. Sıfırlama uçuşun BİTİŞİNE alındı.
+  2. **Öne geçen kart zıplıyordu** — arkadaki kart 30 px aşağıda, %94 ölçekte, %55 tülün altında
+     duruyor; öne geçince üçü birden ANİMASYONSUZ sıfırlanıyordu. Kart artık kendi derinliğini
+     paylaşılan bir değerde tutuyor ve `withTiming` ile yeni derinliğine gidiyor (`DeckLayer`).
+  3. **Fotoğraf yeniden yükleniyordu** — üstteki ve arkadaki kart ayrı JSX yuvalarındaydı, derinlik
+     değişince React elemanı sökülmüş sayıyordu. Tek listeye ve `key={productId}`ye geçildi.
+  4. **Uçuş bırakma anında değil, React commit'inden sonra başlıyordu** (*"bıraktığım yerde birkaç
+     saniye bekliyor"*). Kullanıcının kendi teşhisi yol gösterdi: *"aşağıdaki buton kullanıldığı
+     zaman çok akıcı"* — düğme yolu JS'te başlıyordu, jest yolu ise bir thread gidiş-dönüşü
+     bekliyordu. Artık iki kapı da uçuşu KENDİ thread'inde başlatıyor; üstteki kart uçtuğunu
+     `flyingId` paylaşılan kimliğinden anlıyor, React'in haberini beklemiyor.
+  5. **Yeni kart "İSTERİM" rozetiyle doğuyordu** — rozet kapısı bir React değeriydi (`exiting`), o
+     da worklet'in kapanışında bir kare bayat kalıyordu. Kapı paylaşılan `locked`a çevrildi.
+  6. **Uçan kart öne geçen kartın ALTINDA çiziliyordu** — kendi katmanına `zIndex: 3` verildi.
+
+  **ÖLÇÜM DERSİ — bu ekran sıcak yeniden yüklemeyle DOĞRULANMAZ.** Aralarda "kaydırdım, deste
+  taşlaştı" diye bir arıza bildirdim, dört ayrı düzeltme denedim ve **çalışan bir değişikliği
+  bozuk sanıp geri aldım.** Kullanıcı komple yeniden başlatma isteyince gerçek çıktı: Metro sıcak
+  yeniden yükleme yaptığında UÇMAKTA olan `withTiming` ölüyor, ama React durumu ayakta kalıyor —
+  `exiting` dolu, `locked` 1, kilidi açacak tamamlanma çağrısı hiç gelmiyor. Kod hiç sebep
+  olmamıştı. İkinci hata bendeydi: her turu TEK kaydırmayla doğruluyordum, kilit ancak İKİNCİ
+  kaydırmada görünüyor. Kural yazıldı ve dosyanın künyesine geçti: **komple yeniden başlatma + en
+  az beş ardışık kaydırma.** `BEKLEYEN(21.65)` işareti (o zaman "sebebi ölçülemedi" diye
+  bırakılmıştı) bu ölçümle kapandı ve kaldırıldı.
+
+  **Doğrulama (komple yeniden başlatılmış uygulamada):** 6 ardışık kaydırma 1/20 → 7/20, kilit her
+  turda açıldı · beğen düğmesi 7/20 → 8/20 · geri al 8/20 → 7/20 · `logcat -s ReactNativeJS:V`
+  yalnız `Running "main"`, sıfır hata · `tsc` · `eslint` temiz · **84 dosya / 599 test** yeşil.
+
+  *Durum:* Deste ölçüm için 20 aday ürünle koşuldu (yerel DB'de `status='candidate'`); bu seed'de
+  yazılı DEĞİL, `db:refresh` 4 adaya döndürür. Ölçümün kendisini etkilemez — kusurların hiçbiri
+  aday sayısına bağlı değil.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
