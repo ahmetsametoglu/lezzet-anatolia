@@ -3047,6 +3047,41 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   görüldü (sepet · siparişler · puan geçmişi): ortalı, ikon 80, düğme hap, ok başlıkla hizalı.
   **`.dc` dosyası bu turun sonucunu taşımıyor** — tasarım turunda güncellenmeli, kayıt `KARARLAR`da.
 
+- [x] (21.63) **YAPIŞKAN DİL KAYDI — cihaz Türkçe, uygulama Fransızca (kullanıcı bulgusu 16.08)**
+  `touches:` `apps/mobile/src/lib/i18n/app-locale.ts` · `apps/mobile/src/lib/auth/sign-out.ts`
+
+  Kullanıcı sordu: *"Fiziksel cihazın dili uygulama ilk açıldığında otomatik seçiliyor mu? Şu an
+  Fransızca fakat neden Fransızca bilmiyorum — besleme dosyasında mı varsayılan Fransızca?"*
+
+  **ÖLÇÜLDÜ, ÜÇ HALKA AYRI AYRI:**
+  · **Cihaz yolu SAĞLAM.** Telefon `persist.sys.locale = tr-TR`; `deviceLocale()` → `getLocales()` →
+    expo-localization Android'de `LocaleListCompat.getDefault()`, yani SİSTEMİN listesi (uygulama
+    kaynaklarına süzülmüş hâli değil) → `tr`. Otomatik seçim çalışıyor.
+  · **Besleme DEĞİL.** Kullanıcının kartı seed'in değil: seed profilleri `07:36:30`, onunki
+    `07:54:02` ve `provider = email` (OTP). *Ama* `fr` üç yerde birden varsayılan — şemada
+    `not null default 'fr'`, `DEFAULT_LOCALE`, seed'de `?? 'fr'`.
+  · **SEBEP: kartın dili.** `user_profiles.preferred_language = 'fr'`, ve `use-me.hook` her `/me`
+    okumasında `applyProfileLocale`la cihazın Türkçesini eziyor (09.08 önceliği — doğru davranış).
+
+  **ASIL KUSUR bir alt katmandaydı ve döngüseldi:** yerel kayıt ÇIPLAK bir dil dizgesiydi, yani
+  *kullanıcının seçimi* ile *kartın önbelleği* aynı gözde duruyordu. Çıkış yalnız oturum anahtarını
+  siliyordu (`clearStoredSession`), dil kalıyordu; sonraki YENİ kart açılırken uygulama o değeri
+  gönderiyor ve sunucu onu tohumluyordu (`seedPreferredLanguage`). Sonuç: Fransızcaya bir kez değen
+  cihaz, telefonu Türkçe olsa ve kullanıcı Fransızcayı hiç seçmemiş olsa bile sonsuza dek Fransızca
+  hesap açıyordu — tek çare uygulamayı silip kurmaktı. *(Cihazdaki `lezzet.locale` kaydının VARLIĞI
+  görüldü; DEĞERİ okunamadı — SecureStore AES şifreli. O halka ölçüm değil, çıkarımdır.)*
+
+  **Çare — kayıt kaynağını da taşıyor:** `{ locale, source: 'user' | 'profile' }`. `user` seçimdir,
+  cihazın malıdır, çıkışta durur; `profile` yansımadır, çıkışta düşer (`forgetAccountLocale`, tek
+  kapı — hesap silme de `signOut`tan geçtiği için o akış da kapsanıyor). Okuma sırası DEĞİŞMEDİ.
+  Eski çıplak kayıt `profile` sayılır: cihazlarda duran değer zaten atılması gereken yapışkan
+  değerdir. Değer aynıysa kaynak KORUNUR — kullanıcı `fr` seçtiyse kartın `fr` demesi o seçimi
+  önbelleğe çevirmez.
+
+  **Doğrulama:** `tsc` · `eslint` temiz · **84 dosya / 599 test** yeşil (`sign-out.test.ts` dahil).
+  Kullanıcının kendi kartı DB'den değil, Hesabım ekranından düzeltilecek (onun kararı) —
+  gerçek akış da böylece sınanmış olur.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
