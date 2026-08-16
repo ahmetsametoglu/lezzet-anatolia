@@ -29,6 +29,17 @@ kapatır.
   sıradan soruya yanıt, izlenebilirlik).
 - **Zemin ÇALIŞIYOR:** `Conversation`/`Message` + elle işleme + admin izleme ekranı yazıldı
   (15.1 ✓ · 15.5 ✓, 08.08); telefon kimliği E.164 çözümleyicisi kararlı (`CHANNELS §3`).
+- **ENVANTER GÜNCELLENDİ (17.08) — reaktif yarının motoru ARTIK ÇALIŞIYOR.** Bu doküman 09.08'de
+  yazıldığında sınıf 4 yalnız *tanımlıydı*; 16.08–17.08'de talep kanalında uçtan uca koştu ve bu,
+  §3'teki kurgunun yarısının artık varsayım değil ölçüm olduğu anlamına geliyor:
+  - **Üç mod** (`human` · `hybrid` · `ai`) talepte ve sohbette; `support_ai` turu (5 dk) hibrite
+    taslak üretiyor, `ai` moduna özerk cevap yazıyor, şüphede modu `human`'a düşürüp susuyor (16.5).
+  - **Ajanın ARAÇLARI var** (16.9): rota günleri ve müşterinin kendi siparişleri — kimlik araca
+    kapatılmış, salt okuma, tutar yok. Yani "domain-core'dan okur, uydurmaz" kırmızı çizgisi artık
+    prompt temennisi değil, imza kısıtı.
+  - **Kalan boşluk yine PROAKTİF taraf ve TAŞIYICI:** WhatsApp'a mesaj GÖNDEREN kanal yok (15.7/15.11),
+    dolayısıyla sohbet ajanı (15.8) hâlâ açık. Bu dokümanın önerisi o yüzden geçerliliğini koruyor —
+    değişen tek şey, reaktif yarının artık sıfırdan yazılmayacak olması.
 - **İzin modeli kurulu** (`DOMAIN §11`): `marketing_consent` kanal bazlı, verildiği an + kaynak
   kanıtıyla; kutu baştan işaretli gelemez; broadcast yalnız double opt-in. Faz 1'de yalnız liste
   birikir — tek bir kampanya bile gönderilmez.
