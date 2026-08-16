@@ -3227,6 +3227,51 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     (`system_profiler SPUSBDataType` bu ortamda hiç çıktı vermiyor — ölçüm aracı olarak kullanılamaz).
   - Temiz prebuild sonrası ilk Android derlemesi **1 sa 11 dk**; iOS simülatör derlemesi 0 hata.
 
+- [x] (21.67) **ASGARİ SEPET UYARISI KARARIN VERİLDİĞİ YERDE (kullanıcı bulgusu 16.08)**
+  `touches:` `apps/mobile/src/screens/cart/cart-screen.tsx` · `apps/mobile/src/screens/cart/messages.json` ·
+  `apps/mobile/src/screens/product/product-detail-screen.tsx` · `apps/mobile/src/screens/product/messages.json`
+
+  Kullanıcı: *"Sepet hazırken müşteriyi asgari sepet için uyarmıyoruz, ödemeye kalkınca
+  uyarıyoruz."* **Ölçüm bunu KISMEN çürüttü ve asıl kusuru gösterdi** (cihazda, OPPO CPH1907):
+  uyarı VARDI ve düğmeyi de kilitliyordu — ama kaydırma alanının EN DİBİNDE, kalemlerin ve özet
+  tablosunun altında. Tek kalemlik sepette y≈1401/2400 ile görünür; 23 kalemlik sepette ekranın
+  çok altında kalıyor. Müşterinin gördüğü tek şey **gerekçesiz kilitli bir düğme** oluyordu.
+
+  Ölçülen ikinci gerçek: **kargo yolunda uyarı ÇIKMAMASI hata değil, kural.** Asgari sepet
+  ayarı kanal kapsamlı (`min_basket_cents`); kargoda ayar yoksa varsayılan **0** (`min-basket.ts`),
+  kapıya teslimde **4000**. 67400'de 1,84 €'luk sepet gerçekten geçerli, 67000'de değil.
+
+  **İKİ YERE UYARI KONDU (kullanıcı kararı 16.08 — "ikisi birden"):**
+  - **Sepet:** yapışkan barın İÇİNDE, kilitli düğmenin hemen üstünde kısa gerekçe
+    (`Asgari sepete {missing} eksik`). Sıra anlamlı — satılamayan kalem asgari sepetten ÖNCE
+    söylenir (kalem çıkarılınca tutar da değişir); aynı sıra sunucunun `cartBlockReason`ında
+    yazılı, mobil o paketi bilmediği için sıra ekranda tekrar ediyor. `unresolved` hâlinde SUSAR:
+    ortada engel değil bilinmezlik var.
+  - **Ürün ekranı:** ekleme toast'ı eşiğe kalanı yazıyor (`Sepete eklendi ✓ · asgari sepete
+    38,16 € kaldı`). **İki kademeli, bilerek:** anlık onay (ve titreşimi) basma anında verilir,
+    RAKAM sunucunun cevabı gelince aynı toast'a eklenir — toast deposu tek satır taşıdığı için bu
+    ikinci bir bildirim değil, aynı satırın zenginleşmesi (`toastInfo`, yani ikinci titreşim yok).
+    Tahmini sayı YAZILMADI: eklenen kalemin hangi gruba düştüğünü bilmeden yapılan hesap yanlış
+    rakam gösterirdi — yanlış sayı, hiç sayı olmamasından kötüdür.
+
+  **CİHAZ İKİ GERÇEK HATA YAKALADI.** (1) `useEffect` önce `addToCart`ın yanındaydı, yani ekranın
+  erken `return`lerinden SONRA: React *"Rendered more hooks than during the previous render"* deyip
+  ekranı kırmızıya çevirdi — hook'lar ilk `return`den öne toplandı. (2) Sepetin `network_error`
+  vermesi koddan değil, `db:reset` öncesinden kalan yerel sepettendi; cihaz verisi temizlenince
+  düzeldi.
+
+  **Doğrulama:** `tsc` · `eslint` temiz · **84 dosya / 599 test** yeşil · cihazda ölçüldü: bar
+  satırı y≈2134, düğme y≈2244 (yapışkan barın içinde, her zaman görünür); ekleme toast'ı
+  *"Sepete eklendi ✓ · asgari sepete 38,16 € kaldı"*.
+
+  *Durum:* Sepet ile kasanın asgari sepeti FARKLI matrahla ölçtüğünden şüphelenildi
+  (`read.ts:344` sepetin tamamı ⟷ `checkout-draft.ts:365` siparişe giren kapsam) ama
+  **kanıtlanamadı**, o yüzden paylaşılan `packages/application`a DOKUNULMADI — orası web sepetini
+  de sürüyor. `orderScopeOf` okunduğunda iki yolun tek bir matrah farkından fazlasında ayrıştığı
+  görüldü (rota adresinde kasa hiçbir kalemi düşmüyor, sepet gelemeyenleri düşüyor — bu yönde sepet
+  kasadan daha KATI). Kanıt yolu: girişli hesapla rota+kargo karışık sepet kurup iki cevabı yan
+  yana ölçmek; kanıt çıkarsa iş bu satırın altına yeni bir kalem olarak yazılır.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

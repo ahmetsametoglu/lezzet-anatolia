@@ -197,6 +197,27 @@ export function CartScreen() {
      ve asgari sepet tutmuyor (eşiğin matrahından gelemeyen kalemler zaten sunucuda düşülüyor). */
   const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk;
 
+  /*
+    Kilitli düğmenin GEREKÇESİ — kısa hâli, barın içinde.
+
+    SIRA ANLAMLI: satılamayan kalem asgari sepetten ÖNCE söylenir, çünkü kalem çıkarılınca tutar da
+    değişir. Önce "şu kalemi çıkarın", sonra kalan tutarı konuşmak doğru sıra; tersi müşteriye
+    karşılayamayacağı bir eşik gösterip ardından sepeti küçültmesini istemek olurdu. Aynı sıra
+    sunucunun `cartBlockReason`ında da yazılı — mobil o paketi (`@lezzet/application`) bilmiyor,
+    bu yüzden sıra burada tekrar ediyor.
+
+    `unresolved` hâlinde SUSAR: sepet daha getirilemediyse ortada bir engel değil, bir bilinmezlik
+    var ve onun kendi bloğu yukarıda çiziliyor (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+  */
+  const barBlockText = ((): string | null => {
+    if (unresolved) return null;
+    if (view.hasBlocked) return t.barBlock.blocked;
+    if (!view.minBasketOk) {
+      return t.barBlock.minimum.replace('{missing}', formatPrice(view.missingForMinBasketCents, locale));
+    }
+    return null;
+  })();
+
   /* Künye TÜRETMESİ kitte (`discountSummaryOf`): aynı indirim sipariş özetinde de anılıyor ve iki
      ekranın aynı kampanyaya iki farklı ad vermesi, müşteriye "bu aynı indirim mi" diye sayıları
      karşılaştırtırdı. Ekranın kendi işi yalnız öneki koymak — o metin ekranın sözlüğünde. */
@@ -596,6 +617,25 @@ export function CartScreen() {
 
       {/* Yapışkan bar kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kendi kalıbı). */}
       <View style={styles.stickyBar}>
+        {/*
+          ENGELİN SEBEBİ DÜĞMENİN YANINDA (kullanıcı bulgusu 16.08, cihazda ölçüldü).
+
+          Sebep zaten yazılıydı — ama kaydırma alanının EN DİBİNDE, kalemlerin ve özet tablosunun
+          altında. Tek kalemlik sepette görünüyor; 23 kalemlik sepette ekranın çok altında kalıyor.
+          Müşterinin gördüğü tek şey kilitli bir düğme oluyor ve düğme neden kilitli olduğunu
+          söylemiyordu. Kullanıcının cümlesi: *"sepet hazırken uyarmıyoruz, ödemeye kalkınca
+          uyarıyoruz"* — uyarı vardı, kararın verildiği yerde değildi.
+
+          Sebep TİPTEN geliyor (`cartBlockReason`, `@lezzet/application`), ekranın kendi `if`inden
+          değil: aynı iki koşul üç ekranda birden sorulacaktı ve ayrıştıkları gün biri düğmeyi açıp
+          öteki kapatırdı. Dipteki uzun açıklama KALIYOR — orası "ne yapmalıyım"ı anlatıyor, burası
+          yalnız "neden basamıyorum"u.
+        */}
+        {barBlockText === null ? null : (
+          <Text style={styles.barBlock} testID="cart-bar-block">
+            {barBlockText}
+          </Text>
+        )}
         <PressableSurface
           onPress={() => router.push('/checkout')}
           feedback="shadow"
@@ -818,6 +858,15 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingRight: theme.space.md,
     borderRadius: theme.radius.control,
     boxShadow: theme.shadow.hard,
+  },
+  /* Barın kendi zemini `cream-glass`; uyarı onun üstünde okunaklı kalsın diye terracotta metin —
+     kutu YOK: bar zaten çerçeveli ve ikinci bir çerçeve düğmeyi aşağı iterdi. */
+  barBlock: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.terracotta,
+    paddingBottom: theme.space.lg,
+    textAlign: 'center',
   },
   checkoutEnabled: { backgroundColor: theme.colors.olive },
   checkoutDisabled: { backgroundColor: theme.colors['disabled-fill'] },

@@ -2,6 +2,7 @@
   "tr": {
     "back": "Geri",
     "addedToast": "Sepete eklendi ✓",
+    "minimumHint": "Sepete eklendi ✓ · asgari sepete {missing} kaldı",
     "share": "Paylaş",
     "badge": {
       "soldOut": "Tükendi",
@@ -74,6 +75,7 @@
   "fr": {
     "back": "Retour",
     "addedToast": "Ajouté au panier ✓",
+    "minimumHint": "Ajouté au panier ✓ · il manque {missing} pour le panier minimum",
     "share": "Partager",
     "badge": {
       "soldOut": "Épuisé",
@@ -146,6 +148,7 @@
   "de": {
     "back": "Zurück",
     "addedToast": "Zum Warenkorb hinzugefügt ✓",
+    "minimumHint": "Zum Warenkorb hinzugefügt ✓ · zum Mindestbestellwert fehlen {missing}",
     "share": "Teilen",
     "badge": {
       "soldOut": "Ausverkauft",

@@ -5,7 +5,7 @@ import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/t
 import type { CatalogVariant, Nutrition, ProductAllergen } from '@lezzet/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -22,7 +22,7 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { toastInfo, toastSuccess } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -154,8 +154,42 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const [variantId, setVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [alertOn, setAlertOn] = useState(false);
+  /** Eklemenin ANINDAKİ kalem sayısı — sunucunun cevabını bu sayının değişmesinden anlıyoruz. */
+  const [awaitingMinimumHint, setAwaitingMinimumHint] = useState<number | null>(null);
   const cart = useCart();
   const fabCount = cartCount(cart);
+
+  /*
+    ASGARİ SEPET HATIRLATMASI — eklemeden hemen sonra, ama SUNUCUNUN cevabıyla (kullanıcı isteği
+    16.08). Müşteri katalogdayken öğrensin ki sepete gidip kilitli bir düğmeyle karşılaşmasın.
+
+    ── BURADA, ÇÜNKÜ HOOK KOŞULSUZ OLMALI (cihazda ölçüldü 16.08) ─────────────
+    Etki önce `addToCart`ın yanında duruyordu ve orası ekranın erken `return`lerinden SONRASI:
+    yükleme/bulunamadı hâllerinde bileşen o satıra hiç varmıyor, veri gelince varıyordu. React
+    bunu "önceki render'dan daha fazla hook" diye reddetti ve ekran KIRMIZI hata verdi. Hook'ların
+    sırası her render'da aynı olmalı — o yüzden bütün hook'lar ilk `return`den önce toplanır.
+
+    ── NEDEN İKİNCİ BİR TOAST DEĞİL, AYNI TOAST'IN GÜNCELLENMESİ ──────────────
+    Toast deposu tek satır taşır ve yeni mesaj eskisinin yerine geçer (`toast-store` künyesi).
+    Yani bu çağrı ikinci bir bildirim ÜRETMİYOR, ilkinin metnini zenginleştiriyor. Ve `toastInfo`
+    ile: titreşim ZATEN basma anında verildi, ikinci bir titreşim tek harekete iki cevap olurdu.
+
+    ── NEDEN `itemCount` NÖBETİ ───────────────────────────────────────────────
+    Ekleme anındaki sayı saklanıyor ve etki yalnız sayı DEĞİŞİNCE konuşuyor. `resolving` bayrağına
+    bakmak yetmezdi: eklemenin hemen ardından tur henüz başlamamış olabilir ve etki o karede ESKİ
+    görünümü okuyup eski rakamı yazardı. Sayının değişmesi, sunucunun bu eklemeyi görmüş olmasının
+    kendisidir.
+
+    Eşiği geçen sepette SESSİZ: söylenecek bir şey yok, ilk onay zaten yerinde duruyor. Eşik
+    tanımsızsa (`minBasketCents === 0`, sözleşmenin "bilinmiyor" hâli) de susar — sıfır bir eşik
+    değil, ölçülmemiş bir değerdir.
+  */
+  useEffect(() => {
+    if (awaitingMinimumHint === null || cart.view.itemCount === awaitingMinimumHint) return;
+    setAwaitingMinimumHint(null);
+    if (cart.view.minBasketOk || cart.view.minBasketCents === 0) return;
+    toastInfo(t.minimumHint.replace('{missing}', formatPrice(cart.view.missingForMinBasketCents, locale)));
+  }, [awaitingMinimumHint, cart.view, locale, t.minimumHint]);
   /* Akordeonlar kapalı açılır (şablonun `acc` başlangıcı boş). */
   const [accordion, setAccordion] = useState({ ingredients: false, nutrition: false, storage: false });
 
@@ -248,7 +282,13 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
       quantity,
     );
     toastSuccess(t.addedToast);
+    /* Eşik hatırlatması İKİNCİ kademede (aşağıdaki etki): eklemenin sepeti eşiğin neresine
+       taşıdığını ancak SUNUCU söyleyebilir. Burada tahmini bir sayı yazmak, kalemin hangi gruba
+       (kapıya teslim / kargo) düştüğünü bilmeden hesap yapmak olurdu — yanlış bir sayı, hiç sayı
+       olmamasından kötüdür. Anlık onay yine anında veriliyor; eksik kalan yalnız RAKAM. */
+    setAwaitingMinimumHint(cart.view.itemCount);
   };
+
 
   return (
     <View style={styles.screen} testID="product-detail">

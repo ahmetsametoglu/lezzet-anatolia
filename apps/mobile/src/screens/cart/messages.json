@@ -79,6 +79,10 @@
     },
     "minimum": "Asgari sepet {minimum} — ara toplamınıza {missing} eksik",
     "blocked": "Devam etmek için tükenen ya da satışa kapanan kalemi sepetten çıkarın.",
+    "barBlock": {
+      "minimum": "Asgari sepete {missing} eksik",
+      "blocked": "Sepette şu an satılamayan bir kalem var"
+    },
     "unresolved": {
       "loading": "Sepetiniz getiriliyor",
       "failed": "Sepetiniz şu an getirilemedi. Kalemleriniz duruyor, tutarlarını gösteremiyoruz."
@@ -175,6 +179,10 @@
     },
     "minimum": "Panier minimum {minimum} — il manque {missing} au sous-total",
     "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
+    "barBlock": {
+      "minimum": "Il manque {missing} pour le panier minimum",
+      "blocked": "Un article de votre panier n'est pas disponible"
+    },
     "unresolved": {
       "loading": "Chargement de votre panier",
       "failed": "Votre panier n'a pas pu être récupéré. Vos articles sont conservés, mais nous ne pouvons pas afficher les montants."
@@ -271,6 +279,10 @@
     },
     "minimum": "Mindestbestellwert {minimum} — Ihrer Zwischensumme fehlen {missing}",
     "blocked": "Bitte entfernen Sie den ausverkauften oder nicht mehr verkäuflichen Artikel, um fortzufahren.",
+    "barBlock": {
+      "minimum": "Zum Mindestbestellwert fehlen {missing}",
+      "blocked": "Ein Artikel im Warenkorb ist nicht verfügbar"
+    },
     "unresolved": {
       "loading": "Ihr Warenkorb wird geladen",
       "failed": "Ihr Warenkorb konnte gerade nicht geladen werden. Ihre Artikel bleiben erhalten, die Beträge können wir nicht anzeigen."
