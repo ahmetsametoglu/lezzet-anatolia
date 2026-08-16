@@ -1,70 +1,59 @@
 'use server';
 
-import { PriceService, ProductService, ProductVariantService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
-import { resolveLocalizedText } from '@lezzet/types';
-import { requireAdmin, requireStaff } from '@/lib/guard';
+import { PriceService, ProductService, SettingsService, StockService, serviceDb } from '@lezzet/database';
+import { requireAdmin, requireWarehouseScope } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toChannelMaps, toPriceRows, type PriceRow } from '@/lib/pricing/price-rows';
+import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
+import { toLevelRows, type StockLevelRow } from '@/lib/stock/level-rows';
+import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 
 // Önizleme panelinin BAKIŞ okumaları (16.08, kullanıcı kararı): "Stok" düğmesi artık sayfaya
 // yönlendirmez, ürünün stok özetini DİYALOGDA açar. Okuma tıklamada yapılır (sipariş hızlı
 // bakışının deseni): liste sorgusu her ürünün stok kırılımını taşıyamaz.
 //
-// DEPO BİR BOYUT DEĞİL DEĞİŞMEZ (CLAUDE.md §1): özet depo başına verilir, tek sayıya İNDİRGENMEZ —
-// toplam yalnız "hiç var mı" sorusunun cevabıdır ve ekranda o adla durur.
+// SATIR STOK EKRANININKİYLE AYNI (16.08, ikinci tur): diyalog artık stok sayfasının ürün geçmişi
+// panelini açıyor, o yüzden okuma da `toLevelRows`tan geçer — kullanılabilir/ayrılmış, depo
+// kırılımı, eşik kararı iki yüzeyde tek kurulumdan çıkar. Depo kapsamı da stok sayfasıyla aynı
+// kapıdan sorulur (`readWarehouseContext`, DOMAIN §17): personel görmediği deponun partisini
+// bakışta da göremez.
 
 export interface ProductStockPeek {
-  /** Aktif depolar — kolonlar bu sırayla çizilir. */
+  /** Ürünün boyları — stok ekranının seviye satırıyla BİREBİR aynı kurulum. */
+  rows: StockLevelRow[];
+  /** Kapsamdaki depolar (bağlam sırasıyla) — çok boylu seçicinin kolonları, panelin depo adları. */
   warehouses: Array<{ id: string; code: string; name: string }>;
-  rows: Array<{
-    variantId: string;
-    label: string;
-    isActive: boolean;
-    /** Boyun asgari stok eşiği; `null` = eşik tanımsız (uyarı verilmez). */
-    minStockQty: number | null;
-    /** Depo başına kullanılabilir (rezervasyon düşülmüş) ve rezerve adet. */
-    byWarehouse: Array<{ warehouseId: string; availableQty: number; reservedQty: number }>;
-    /** Ağ geneli toplam — yalnız "hiç var mı" okuması, satış kararının sayısı değil. */
-    totalAvailable: number;
-  }>;
+  /** Depo adları/kırılım çizilir mi — stok sayfasının kuralı (yalnız çok depolu bakışta). */
+  showWarehouse: boolean;
 }
 
 export async function loadProductStockPeekAction(productId: string): Promise<ActionResult<ProductStockPeek>> {
   try {
-    await requireStaff();
+    await requireWarehouseScope();
+    const ctx = await readWarehouseContext();
     const db = serviceDb();
+    const stockSvc = new StockService(db);
 
-    const [variants, warehouses] = await Promise.all([
-      new ProductVariantService(db).listByProduct(productId),
-      new WarehouseService(db).list({ activeOnly: true }),
+    const [page, thresholds, warehouseLabels] = await Promise.all([
+      new ProductService(db).listStockRows({ filters: { ids: [productId] }, limit: 1 }),
+      readExpiryThresholds(new SettingsService(db)),
+      readWarehouseLabels(),
+    ]);
+    const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
+
+    const [batchRows, available] = await Promise.all([
+      stockSvc.listInStockDetailed(variantIds, ctx.warehouseIds),
+      stockSvc.listAvailableAcross(ctx.visibleWarehouseIds, variantIds),
     ]);
 
-    const available = await new StockService(db).listAvailableAcross(
-      warehouses.map((w) => w.id),
-      variants.map((v) => v.id),
-    );
-    const byKey = new Map(available.map((a) => [`${a.variantId}:${a.warehouseId}`, a]));
-
+    const batches = toBatchViews(batchRows, { now: new Date(), thresholds, warehouseLabels });
     return {
       data: {
-        warehouses: warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name })),
-        rows: [...variants]
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((v) => {
-            const byWarehouse = warehouses.map((w) => {
-              const cell = byKey.get(`${v.id}:${w.id}`);
-              return { warehouseId: w.id, availableQty: cell?.availableQty ?? 0, reservedQty: cell?.reservedQty ?? 0 };
-            });
-            return {
-              variantId: v.id,
-              label: resolveLocalizedText(v.label),
-              isActive: v.isActive,
-              minStockQty: v.minStockQty,
-              byWarehouse,
-              totalAvailable: byWarehouse.reduce((sum, c) => sum + c.availableQty, 0),
-            };
-          }),
+        // Kategori adı bakışta çizilmiyor — boş harita bilinçli (satır alanı '—' bırakır).
+        rows: toLevelRows({ products: page.rows, batches, available, categoryNames: new Map(), warehouseLabels }),
+        warehouses: ctx.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name })),
+        showWarehouse: ctx.activeWarehouseId === null && ctx.warehouses.length > 1,
       },
       error: null,
     };

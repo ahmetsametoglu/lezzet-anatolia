@@ -7,12 +7,12 @@
 // vermediği bir eylemi sunar hâle gelirdi.
 import type {
   KeysetCursor,
-  ProductStatus,
   RecallHit,
   StockAdjustmentDetail,
   StockAdjustmentReason,
 } from '@lezzet/types';
 import type { BatchView } from '@/lib/stock/batch-types';
+import type { StockLevelRow } from '@/lib/stock/level-rows';
 import type { OfferHandoff } from './stock-handoff';
 import type { LossPeriod, StockScope, StockTab } from './stock-url';
 
@@ -20,70 +20,10 @@ import type { LossPeriod, StockScope, StockTab } from './stock-url';
 // yeniden veriliyor: bu klasördeki 30+ kullanım yerinin yolu değişmesin.
 export type { BatchView } from '@/lib/stock/batch-types';
 
-/**
- * Bir boyun TEK depodaki gerçeği — satır açılınca görünen kırılım (19.5).
- *
- * Satırın toplamı bu parçaların toplamıdır; iki ayrı okumadan gelmez. "3 STR'de + 2 KEHL'de duran
- * maldan 5 kişilik sipariş çıkmaz" (`DOMAIN §17`) — operatörün transfer kararı bu kırılımda doğar,
- * ama kararın kendisi burada VERİLMEZ (Transfer ekranının işi).
- */
-export interface StockWarehouseSplit {
-  warehouseId: string;
-  code: string;
-  name: string;
-  physicalQty: number;
-  reservedQty: number;
-  availableQty: number;
-  /** O depodaki en yakın son tarih — hangi şehirdeki malın daha acil olduğu kırılımda okunur. */
-  nearestExpiry: string | null;
-}
-
-/**
- * Stok seviyesi satırı — ekranın ana listesi. Satır BOYDUR (satılabilir birim), ama adı ve tarih
- * rejimi üründen gelir.
- *
- * `batches` satırla birlikte taşınır: partiler zaten toplu okundu (depoda duran parti sayısı fiziksel
- * olarak sınırlı), o yüzden satırı açmak yeni bir tur gerektirmez. Ürün formunun tersi bir karar
- * ve sebebi ölçüdür: orada katalogun tamamı taşınıyordu, burada elde ne varsa o kadar.
- */
-export interface StockLevelRow {
-  variantId: string;
-  productId: string;
-  productName: string;
-  variantLabel: string;
-  /** Listede görünen tam ad — "Fıstıklı Baklava · 1 kg". */
-  title: string;
-  /**
-   * Ürünün görseli (22.30) — `null` = görsel yüklenmemiş, ekran yer tutucu çizer.
-   *
-   * Adres SUNUCUDA kuruluyor (`publicImageUrl`, `R2_PUBLIC_BASE_URL` sunucu env'i) ve sürüm damgası
-   * `imageUpdatedAt`ten geliyor: görsel değişince adres de değişir, tarayıcı bayat kopyayı göstermez.
-   */
-  imageUrl: string | null;
-  categoryName: string;
-  status: ProductStatus;
-  /** Boy satışa kapalıysa stok yine görünür; ekran sebebi söyler. */
-  variantActive: boolean;
-  physicalQty: number;
-  reservedQty: number;
-  availableQty: number;
-  /** Eşik (varsa) ve altına düşmüş mü — "sipariş zamanı" göstergesi. */
-  minStockQty: number | null;
-  belowMin: boolean;
-  /**
-   * Depo kırılımı — yalnız MALI OLAN depolar, operatörün seçici sırasıyla (19.5).
-   *
-   * Boş = hiçbir depoda stok yok. Tek elemanlı = mal tek yerde (satır kodu doğrudan söyler).
-   * Çok elemanlı = "N depoda" ipucu + açılır kırılım. Üç hâl de aynı diziden okunur; ayrı bir
-   * "kaç depoda" alanı tutmak, sayının listeden sapabileceği ikinci bir gerçek yaratırdı.
-   */
-  warehouses: StockWarehouseSplit[];
-  batches: BatchView[];
-  /** En yakın son tarihli parti (FEFO'da ilk çıkacak olan) — yoksa stok yok demektir. */
-  nearest: BatchView | null;
-  /** Karar bekleyen parti sayısı (yaklaşan · açık teklif · imhalık). */
-  attentionCount: number;
-}
+// Seviye satırı da AYNI devri yaşadı (16.08): ürünler önizlemesinin stok bakışı satırı paylaşınca
+// tanım `lib/stock/level-rows`a taşındı — bu klasördeki kullanım yerlerinin yolu değişmesin.
+// (Kırılım tipi `StockWarehouseSplit`i yalnız lib ve ortak panel okuyor; burada yeniden verilmez.)
+export type { StockLevelRow } from '@/lib/stock/level-rows';
 
 /** İmha/fire geçmişi satırı — kayıt + çözülmüş adlar; maliyet cent'e indirgenmiş. */
 export type LossRow = StockAdjustmentDetail & {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { amount, percent } from '@/components/operation/ui/format';
+import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { PriceDialog } from '@/components/operation/prices/price-dialog';
 import { loadProductPricesPeekAction } from '../../actions/peek';
 import type { PriceRow } from '@/lib/pricing/price-rows';
@@ -22,10 +23,48 @@ import type { PriceRow } from '@/lib/pricing/price-rows';
 interface PricePeekDialogProps {
   productId: string;
   productName: string;
+  /** Ürünün boy sayısı — listeden zaten biliniyor; iskeletin ŞEKLİ buna göre seçilir. */
+  variantCount: number;
   onClose: () => void;
 }
 
-export function PricePeekDialog({ productId, productName, onClose }: PricePeekDialogProps) {
+/**
+ * Düzenleme formunun BEKLEME hâli — tek boylu üründe düğme doğrudan forma gideceği için iskelet de
+ * formun şeklini alır (skeleton künyesi: gelecek içeriğin şekli, çıplak "yükleniyor" değil):
+ * üç ölçüm kutusu → 2×2 fiyat/marj alanı → otomatik fiyat kartı. Veri gelince aynı kabuk
+ * `PriceDialog`la dolar, yerleşim zıplamaz.
+ */
+function PriceFormSkeleton() {
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2.5">
+        {Array.from({ length: 3 }, (_, i) => (
+          <SkeletonMetric key={i} />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flex flex-col gap-1.5" aria-hidden="true">
+            <Skeleton className="h-2.5 w-24" />
+            <Skeleton className="h-9 w-full rounded-ops-btn" />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-3 rounded-ops-card border border-ops-line px-3.5 py-3" aria-hidden="true">
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton className="h-3.5 w-32" />
+          <Skeleton className="h-5 w-9 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-9 w-full rounded-ops-btn" />
+          <Skeleton className="h-9 w-full rounded-ops-btn" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function PricePeekDialog({ productId, productName, variantCount, onClose }: PricePeekDialogProps) {
   const [rows, setRows] = useState<PriceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Düzenlenen boy KİMLİKLE tutulur, satır taze listeden türetilir (fiyat ekranının deseni).
@@ -46,6 +85,16 @@ export function PricePeekDialog({ productId, productName, onClose }: PricePeekDi
   }, [productId, reload]);
 
   const editing = rows?.find((r) => r.variantId === editingId) ?? null;
+
+  // Bekleme hâli: tek boylu ürün doğrudan forma gidecek — iskelet de formun kabuğunda ve şeklinde
+  // çizilir ("Fiyat düzenle" başlığıyla). Çok boylu ürünün iskeleti aşağıdaki kabukta satır dizisi.
+  if (rows === null && error === null && variantCount === 1) {
+    return (
+      <Dialog open onClose={onClose} title="Fiyat düzenle" subtitle={productName}>
+        <PriceFormSkeleton />
+      </Dialog>
+    );
+  }
 
   // Tek boy: ara tablo yok, doğrudan düzenleme formu. Kapatınca bakışın tamamı kapanır — geride
   // dönülecek bir tablo yok. Kaydetme `router.refresh()` ile listeyi zaten tazeler.
@@ -78,7 +127,7 @@ export function PricePeekDialog({ productId, productName, onClose }: PricePeekDi
       {error ? (
         <p className="font-ops-body text-ops-xs text-ops-red">{error}</p>
       ) : rows === null ? (
-        <p className="font-ops-body text-ops-xs text-ops-muted">yükleniyor…</p>
+        <SkeletonRows rows={Math.min(Math.max(variantCount, 2), 6)} />
       ) : (
         <div className="overflow-hidden rounded-ops-card border border-ops-line">
           <div className="grid grid-cols-[minmax(110px,1fr)_82px_82px_82px_96px] gap-x-2 border-b border-ops-line bg-ops-subtle px-3.5 py-2 font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted">

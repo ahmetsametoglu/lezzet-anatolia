@@ -6,14 +6,20 @@ import { Select } from '@/components/operation/form/select';
 import { Skeleton, SkeletonCard, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { money, num, shortDate } from '@/components/operation/ui/format';
-import { LOSS_REASON } from '../stock-labels';
+import { LOSS_REASON } from '@/lib/stock/loss-labels';
 import { readVariantHistoryAction } from '@/lib/stock/history-actions';
 import { ORDER_STATUS_LABELS, type OrderStatus } from '@lezzet/types';
 import type { VariantBatchHistory, VariantStockHistory } from '@lezzet/application';
-import type { StockLevelRow, StockWarehouseSplit } from '../stock-types';
+import type { StockLevelRow, StockWarehouseSplit } from '@/lib/stock/level-rows';
 
 /**
  * **SEÇİLİ ÜRÜNÜN STOK GEÇMİŞİ** — sağ panel (22.30).
+ *
+ * İKİ YÜZEYİN ORTAK PANELİ (16.08, kullanıcı kararı): stok ekranının sağ sütunu VE ürünler
+ * önizlemesinin "Stok" bakış diyaloğu aynı gövdeyi çizer — stok sayfasında nasıl açılıyorsa
+ * diyalogda da öyle açılır. Sayfa klasöründen buraya taşındı (kardeş sayfadan yalnız `*-url`
+ * import edilir, STACK §7); satır tipi ve sebep sözlüğü de lib'e indi
+ * (`lib/stock/level-rows` · `lib/stock/loss-labels`).
  *
  * ── NEDEN "EN ACİL PARTİLER"İN YERİNE GEÇTİ ─────────────────────────────────
  * Burada karar kuyruğunun ilk üçü duruyordu; tamamı bir sekme ötedeydi ve başlık satırı zaten kaç
@@ -37,6 +43,8 @@ interface ProductHistoryPanelProps {
   warehouseFilter: string;
   /** Süzgeç aktifse deponun adı — panel hangi evrene baktığını YAZAR, tahmin ettirmez. */
   warehouseFilterName: string | null;
+  /** Kabın ek sınıfları — diyalog kullanımı yükseklik verir (`h-full`), sayfa grid'i vermez. */
+  className?: string;
 }
 
 export function ProductHistoryPanel({
@@ -45,6 +53,7 @@ export function ProductHistoryPanel({
   showWarehouse,
   warehouseFilter,
   warehouseFilterName,
+  className = '',
 }: ProductHistoryPanelProps) {
   const [history, setHistory] = useState<VariantStockHistory | null>(null);
   const [loading, setLoading] = useState(false);
@@ -116,7 +125,7 @@ export function ProductHistoryPanel({
   }
 
   return (
-    <div className="flex min-h-0 flex-col bg-ops-subtle">
+    <div className={`flex min-h-0 flex-col bg-ops-subtle ${className}`}>
       <div className="flex flex-none flex-col gap-2 border-b border-ops-line px-5 py-3">
         <div className="flex items-center gap-3">
           {/* Görsel BAŞLIKTA (kullanıcı isteği 15.08): listede satırı tanıtan şey burada da
@@ -254,8 +263,11 @@ function FlowLine({ history }: { history: VariantStockHistory }) {
  * Sıra GERÇEK gövdenin sırasıdır: akış satırı → dört ölçüm kutusu → giriş geçmişi. Rezervasyon ve
  * fire blokları çizilmez, çünkü ikisi de KOŞULLU (yalnız veri varken görünürler) — olmayabilecek bir
  * şeyin yerini önden ayırmak, iskeletin verdiği sözü tutmamak olurdu.
+ *
+ * DIŞA AÇIK (16.08): stok bakış diyaloğu, satır verisi henüz yoldayken de aynı iskeleti çizer —
+ * bekleme hâli iki yüzeyde aynı şekli almalı, yoksa diyalog kendi "yükleniyor" metnini uydururdu.
  */
-function HistorySkeleton() {
+export function HistorySkeleton() {
   return (
     <div className="flex flex-col gap-3.5">
       <SkeletonCard>

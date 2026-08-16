@@ -15,8 +15,9 @@ import type { PriceScope, PriceTab } from './prices-url';
 
 // Fiyat satırı tipleri LIB'E TAŞINDI (16.08): ikinci tüketen doğdu (ürünler önizlemesinin fiyat
 // bakışı) ve kardeş sayfadan yalnız `*-url` import edilir (STACK §7). Buradaki re-export, sayfanın
-// kendi dosyalarının import yollarını korur — tanım tek yerde.
-export type { ChannelPriceCell, PriceRow } from '@/lib/pricing/price-rows';
+// kendi dosyalarının import yollarını korur — tanım tek yerde. (`ChannelPriceCell`i yalnız lib'in
+// kendisi okuyor; burada yeniden verilmez.)
+export type { PriceRow } from '@/lib/pricing/price-rows';
 
 /** Müşteriye özel fiyat satırı — çözüm sırasının en üstündeki basamak. */
 export interface CustomerPriceRow {

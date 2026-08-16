@@ -8,7 +8,7 @@ import { templateOf } from '@/components/operation/ui/table-columns';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { shortDate } from '@/components/operation/ui/format';
 import { expiryBadge } from '@/lib/stock/batch-labels';
-import { ProductHistoryPanel } from './product-history-panel';
+import { ProductHistoryPanel } from '@/components/operation/stock/product-history-panel';
 import type { StockLevelRow, StockViewProps } from '../stock-types';
 
 // Stok seviyeleri — SOL tabloda boylar (fiili/ayrılmış/kullanılabilir + en yakın tarih), SAĞ panelde

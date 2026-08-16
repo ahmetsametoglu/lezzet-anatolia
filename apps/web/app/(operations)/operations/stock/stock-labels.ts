@@ -65,14 +65,9 @@ export function groupOf(batch: BatchView): ExpiryGroupKey {
   return batch.variant.product.dateType === 'DLC' ? 'dlc' : 'ddm';
 }
 
-/** İmha/fire sebebinin Türkçesi — DB enum'u operatöre ham görünmez. */
-export const LOSS_REASON: Record<StockAdjustmentReason, string> = {
-  expired: 'Tarihi geçti',
-  damaged: 'Hasar / soğuk zincir',
-  count_diff: 'Sayım farkı',
-  lost: 'Kayıp',
-  return_restock: 'İade → stoğa döndü',
-};
+// Sebep sözlüğü LIB'E TAŞINDI (16.08 — `lib/stock/loss-labels`): parti geçmişi paneli ortak
+// komponente çıkınca metin iki yüzeyin oldu. Re-export bu klasördeki çağıranların yolunu korur.
+export { LOSS_REASON } from '@/lib/stock/loss-labels';
 
 /**
  * Sebebin TONU — tasarım her sebep çipini kendi rengiyle çiziyor. Renk burada da anlam taşır: tarihi

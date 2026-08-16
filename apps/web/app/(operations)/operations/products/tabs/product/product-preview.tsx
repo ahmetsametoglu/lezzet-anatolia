@@ -251,6 +251,7 @@ export function ProductPreview({ product, onEdit, families, onSelectProduct }: P
               key={product.id}
               productId={product.id}
               productName={resolveLocalizedText(product.name)}
+              variantCount={product.variants.length}
               onClose={() => setPeek(null)}
             />
           ) : null}
@@ -259,6 +260,7 @@ export function ProductPreview({ product, onEdit, families, onSelectProduct }: P
               key={product.id}
               productId={product.id}
               productName={resolveLocalizedText(product.name)}
+              variantCount={product.variants.length}
               onClose={() => setPeek(null)}
             />
           ) : null}
