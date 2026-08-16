@@ -23,6 +23,7 @@
     "noticeSubmit": "Not al",
     "noticeDone": "Not aldık. {code} bölgemize girdiğinde haber vereceğiz.",
     "noticeDoneHere": "Not aldık — {code} için bu kalemleri bekleyenler arasındasınız.",
+    "noticeSaved": "Not aldık — bölge açılınca haber vereceğiz.",
     "close": "Kapat",
     "changeAddressCta": "Bölge içi bir adres seç",
     "errors": {
@@ -57,6 +58,7 @@
     "noticeSubmit": "Noter",
     "noticeDone": "C'est noté. Nous vous préviendrons dès que {code} entre dans notre zone.",
     "noticeDoneHere": "C'est noté — vous faites partie des personnes qui attendent ces articles pour {code}.",
+    "noticeSaved": "C'est noté — nous vous préviendrons dès l'ouverture de la zone.",
     "close": "Fermer",
     "changeAddressCta": "Choisir une adresse dans la zone",
     "errors": {
@@ -91,6 +93,7 @@
     "noticeSubmit": "Vormerken",
     "noticeDone": "Vorgemerkt. Wir melden uns, sobald {code} in unserem Gebiet liegt.",
     "noticeDoneHere": "Notiert — Sie gehören zu denen, die diese Artikel für {code} erwarten.",
+    "noticeSaved": "Vorgemerkt — wir melden uns, sobald wir hier liefern.",
     "close": "Schließen",
     "changeAddressCta": "Adresse im Liefergebiet wählen",
     "errors": {

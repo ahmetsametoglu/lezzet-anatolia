@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { buttonClass } from '@/components/customer/ui/button';
 import { recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
@@ -46,6 +46,37 @@ export function noticeButtonClass(emphasis: NoticeEmphasis): string {
   });
 }
 
+/**
+ * ── "BİR KEZ NOT ALDIK" HAFIZASI (16.08, kullanıcı tespiti) ─────────────────
+ * Bekleyiş BÖLGENİNDİR, ürünün değil — ama düğme her ürün kartında ve sepette beliriyor ve not
+ * bırakan müşteri her yerde aynı daveti görmeye devam ediyordu: "kaydım alınmadı mı?" Sunucu kaydı
+ * zaten idempotent (`already` de başarı sayılır); eksik olan tarayıcının HATIRLAMASIYDI.
+ *
+ * Hafıza `localStorage`'da ve POSTA KODUYLA anahtarlı: yer değişirse (yeni kod) davet yeniden
+ * görünür — yeni bölge yeni bir bekleyiştir. Çerez değil, çünkü sunucunun bu bilgiye ihtiyacı yok;
+ * hesap da değil, çünkü kayıt hesapsız verilebiliyor. Depolama kapalıysa (gizli sekme) sessizce
+ * unutulur: düğme yeniden görünür, mükerrer kaydı sunucu zaten yutuyor — hata değil, en kötüsü
+ * bir kez daha sorulmuş olur.
+ */
+const NOTED_KEY = 'lz-zone-notice';
+
+function notedCodes(): Record<string, string> {
+  try {
+    return JSON.parse(window.localStorage.getItem(NOTED_KEY) ?? '{}') as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function rememberNoted(postalCode: string): void {
+  try {
+    window.localStorage.setItem(NOTED_KEY, JSON.stringify({ ...notedCodes(), [postalCode]: new Date().toISOString() }));
+  } catch {
+    // Depolama yazılamıyorsa (dolu/kapalı) davet bir dahaki ziyarette yeniden görünür — sunucu
+    // kaydı idempotent, mükerrer istek zararsız.
+  }
+}
+
 interface ZoneNoticeButtonProps {
   locale: Locale;
   /** Müşterinin cevabındaki posta kodu — kaydın anahtarı ve panelde geçen yer. */
@@ -56,8 +87,20 @@ interface ZoneNoticeButtonProps {
 export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card' }: ZoneNoticeButtonProps) {
   const t = messages[locale];
   const [open, setOpen] = useState(false);
+  // Hafıza EFEKTTE okunur, ilk çizimde değil: sunucu HTML'i düğmeyle gelir, `localStorage` ancak
+  // tarayıcıda okunabilir — ilk çizimde okumak hydration uyuşmazlığı doğururdu.
+  const [noted, setNoted] = useState(false);
+  useEffect(() => {
+    setNoted(Boolean(notedCodes()[postalCode]));
+  }, [postalCode]);
 
   const fill = (text: string) => text.replace('{code}', postalCode);
+
+  // Not zaten alınmışsa davet TEKRARLANMAZ; yerine sessiz bir onay satırı durur — düğmeyi büsbütün
+  // yok etmek "kaydım kayboldu mu" sorusunu açık bırakırdı.
+  if (noted && !open) {
+    return <span className="font-sans text-note leading-relaxed text-olive-dark">✓ {t.noticeSaved}</span>;
+  }
 
   return (
     <>
@@ -77,7 +120,16 @@ export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card' }: Zone
            * Alman müşteri Fransızca bir haber okur. Kapının kendi künyesi bunu istiyordu, çağıran
            * geçmiyordu.
            */
-          onSubmit={(email) => recordZoneNoticeAction(postalCode, email, locale)}
+          onSubmit={async (email) => {
+            const result = await recordZoneNoticeAction(postalCode, email, locale);
+            // Hafıza yalnız BAŞARIDA yazılır: reddedilen bir kayıt düğmeyi susturursa müşteri
+            // hiç not bırakamadan "not aldık" okur.
+            if (!result.errorKey) {
+              rememberNoted(postalCode);
+              setNoted(true);
+            }
+            return result;
+          }}
           onClose={() => setOpen(false)}
         />
       )}
