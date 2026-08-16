@@ -154,7 +154,14 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
       >
         {blocked ? (
           <>
-            <span className="leading-relaxed">{t.blockedHere.replace('{code}', place.postalCode)}</span>
+            {/* Kısıt BÜYÜK konuşur (16.08, kullanıcı tespiti): sepete ekleme yolu bilinçli olarak
+                açık (yer bir filtre değil — bölge içindeki birine gönderiyor olabilir), yani bu
+                kutu müşterinin "buraya gelmiyor" gerçeğini okuyacağı TEK yer. Küçük puntoda
+                kaçıyordu ve müşteri alabileceğini sanıyordu. Başlık kod adıyla, gövde sebeple. */}
+            <span className={compact ? 'font-serif text-body font-bold' : 'font-serif text-lead font-bold'}>
+              {t.blockedTitle.replace('{code}', place.postalCode)}
+            </span>
+            <span className={`leading-relaxed ${compact ? 'text-note' : 'text-body-sm'}`}>{t.blockedHere}</span>
             {blockedActions}
             <span className="font-normal">{change}</span>
           </>

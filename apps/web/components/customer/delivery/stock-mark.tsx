@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Badge } from '@/components/customer/ui/badge';
 import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
@@ -89,9 +89,11 @@ interface StockNoticeButtonProps {
   locale: Locale;
   /** Kartta çerçeveli ve küçük; ürün detayında dolu ve tam genişlik. */
   emphasis?: NoticeEmphasis;
+  /** Bölge notu ALINMIŞSA düğmenin yerine geçecek detay köprüsü — yalnız kart verir (künye orada). */
+  productHref?: ComponentProps<typeof ZoneNoticeButton>['productHref'];
 }
 
-export function StockNoticeButton({ variantId, productName, locale, emphasis = 'card' }: StockNoticeButtonProps) {
+export function StockNoticeButton({ variantId, productName, locale, emphasis = 'card', productHref }: StockNoticeButtonProps) {
   const t = messages[locale];
   const { place } = useDeliveryPlace();
   const [open, setOpen] = useState(false);
@@ -104,7 +106,7 @@ export function StockNoticeButton({ variantId, productName, locale, emphasis = '
   // Rota DIŞI: kalem notu yerine bölge notu. Ürünün gelmesini beklemek burada bir şey çözmez —
   // geldiğinde de kargoya verilemeyecek; değişmesi gereken şey bölgedir.
   if (elsewhereReasonOf(place) === 'out_of_route') {
-    return <ZoneNoticeButton locale={locale} postalCode={place.postalCode} emphasis={emphasis} />;
+    return <ZoneNoticeButton locale={locale} postalCode={place.postalCode} emphasis={emphasis} productHref={productHref} />;
   }
 
   const fill = (text: string) => text.replace('{product}', productName).replace('{code}', place.postalCode);

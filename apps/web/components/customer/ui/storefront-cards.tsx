@@ -305,7 +305,14 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
                kapanmıyor — ürün detayında "sonraya kaydet" ile sürüyor.
                Neyin haberi olduğunu düğme KENDİ seçiyor: rota içinde kalemin (`variant_stock_notice`),
                rota dışında bölgenin (`zone_notice`). Kart o ayrımı bilmez. */
-            <StockNoticeButton variantId={product.variantId} productName={product.name} locale={locale} />
+            <StockNoticeButton
+              variantId={product.variantId}
+              productName={product.name}
+              locale={locale}
+              /* Bölge notu alındıktan sonra düğmenin yerine detay köprüsü geçer (16.08): kartta
+                 uzun onay cümlesi taşıyordu, boş kalan eylem yuvası detaya davet ediyor. */
+              productHref={productHref(product.slug)}
+            />
           ) : product.purchaseMode === 'options' ? (
             /* Mobilde düğme belirgin şekilde küçülür (tasarım: 11px · 5/9 ped): dar kartta fiyatla
                aynı satırı paylaşıyor, masaüstü ölçüsüyle kalınca kartın dışına taşıyordu. `nowrap`

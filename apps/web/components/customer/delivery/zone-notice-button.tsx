@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
 import { NoticeDialog } from './notice-dialog';
@@ -60,6 +61,13 @@ export function noticeButtonClass(emphasis: NoticeEmphasis): string {
  */
 const NOTED_KEY = 'lz-zone-notice';
 
+/**
+ * Hafıza değişince SAYFADAKİ ÖTEKİ düğmelere de haber (16.08, kullanıcı tespiti): vitrinde aynı
+ * düğme onlarca kartta duruyor ve `storage` olayı yalnız BAŞKA sekmelere gider — not bırakılan
+ * sekmede kalan kartlar yenilemeye kadar daveti göstermeye devam ediyordu.
+ */
+const NOTED_EVENT = 'lz-zone-notice-change';
+
 function notedCodes(): Record<string, string> {
   try {
     return JSON.parse(window.localStorage.getItem(NOTED_KEY) ?? '{}') as Record<string, string>;
@@ -71,6 +79,7 @@ function notedCodes(): Record<string, string> {
 function rememberNoted(postalCode: string): void {
   try {
     window.localStorage.setItem(NOTED_KEY, JSON.stringify({ ...notedCodes(), [postalCode]: new Date().toISOString() }));
+    window.dispatchEvent(new Event(NOTED_EVENT));
   } catch {
     // Depolama yazılamıyorsa (dolu/kapalı) davet bir dahaki ziyarette yeniden görünür — sunucu
     // kaydı idempotent, mükerrer istek zararsız.
@@ -82,23 +91,45 @@ interface ZoneNoticeButtonProps {
   /** Müşterinin cevabındaki posta kodu — kaydın anahtarı ve panelde geçen yer. */
   postalCode: string;
   emphasis?: NoticeEmphasis;
+  /**
+   * Not alındıktan sonra düğmenin yerine geçecek ÜRÜN DETAYI köprüsü — yalnız kart bağlamı verir
+   * (16.08, kullanıcı kararı): kartta uzun bir onay cümlesi taşar, oysa boş kalan eylem yuvasına
+   * detaya davet koymak kartın işine devam eder. Detay sayfası ve sepet vermez — orada zaten
+   * detaydasın / köprünün anlamı yok, kısa onay metni kalır.
+   */
+  productHref?: ComponentProps<typeof Link>['href'];
 }
 
-export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card' }: ZoneNoticeButtonProps) {
+export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card', productHref }: ZoneNoticeButtonProps) {
   const t = messages[locale];
   const [open, setOpen] = useState(false);
   // Hafıza EFEKTTE okunur, ilk çizimde değil: sunucu HTML'i düğmeyle gelir, `localStorage` ancak
   // tarayıcıda okunabilir — ilk çizimde okumak hydration uyuşmazlığı doğururdu.
   const [noted, setNoted] = useState(false);
   useEffect(() => {
-    setNoted(Boolean(notedCodes()[postalCode]));
+    const sync = () => setNoted(Boolean(notedCodes()[postalCode]));
+    sync();
+    // Aynı sekmedeki öteki kartlar (özel olay) + öteki sekmeler (`storage`) aynı anda döner.
+    window.addEventListener(NOTED_EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(NOTED_EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
   }, [postalCode]);
 
   const fill = (text: string) => text.replace('{code}', postalCode);
 
-  // Not zaten alınmışsa davet TEKRARLANMAZ; yerine sessiz bir onay satırı durur — düğmeyi büsbütün
-  // yok etmek "kaydım kayboldu mu" sorusunu açık bırakırdı.
+  // Not zaten alınmışsa davet TEKRARLANMAZ: kartta yerine ürün detayı köprüsü, öbür bağlamlarda
+  // kısa bir onay — düğmeyi büsbütün yok etmek "kaydım kayboldu mu" sorusunu açık bırakırdı.
   if (noted && !open) {
+    if (productHref) {
+      return (
+        <Link href={productHref} className={noticeButtonClass('card')}>
+          {t.detailCta}
+        </Link>
+      );
+    }
     return <span className="font-sans text-note leading-relaxed text-olive-dark">✓ {t.noticeSaved}</span>;
   }
 
