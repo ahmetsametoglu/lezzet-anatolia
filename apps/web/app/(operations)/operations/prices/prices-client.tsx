@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMorePricesAction } from './actions';
@@ -47,7 +47,8 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     // anlamlı, özel fiyat listesinde karşılığı yok). Taşınsaydı yeni sekme, sebebi görünmeyen bir
     // süzgeçle açılırdı.
     resetSearch();
-    go({ tab, q: '', scope: 'all' });
+    // Ürün hedefi de düşer: kanal sekmesinin diyaloğu başka sekmede karşılıksız kalırdı.
+    go({ tab, q: '', scope: 'all', productId: '' });
   };
 
   // ── Liste: ilk sayfa sunucudan, devamı action ile EKLENİR ──
@@ -92,6 +93,28 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
   useEffect(() => {
     if (editingId && !editing) setEditingId(null);
   }, [editingId, editing]);
+
+  // URL'DEN GELEN ÜRÜNLE DİYALOG AÇIK GELİR (16.08): ürünler önizlemesinin "Fiyatlar →" köprüsü
+  // 26.07'den beri `?productId=` gönderiyordu, sayfa hiç okumuyordu — köprü süzgeçsiz listeye
+  // düşüyordu. Liste sunucuda o ürüne süzülü gelir (`toPriceFilters.ids`), ilk boyun satırı
+  // düzenlemede açılır. `ref` ile TEK SEFER: kapatınca parametre düşene kadar efekt yeniden
+  // açmasın — "kapatılamayan diyalog" tam böyle doğar.
+  const openedFromUrl = useRef<string | null>(null);
+  useEffect(() => {
+    if (!urlState.productId || openedFromUrl.current === urlState.productId) return;
+    const row = all.find((r) => r.productId === urlState.productId);
+    if (row) {
+      openedFromUrl.current = urlState.productId;
+      setEditingId(row.variantId);
+    }
+  }, [urlState.productId, all]);
+
+  // Kapanışta URL hedefi de düşer: parametre kalsaydı liste tek ürüne süzülü kalır (gizli süzgeç)
+  // ve yenilemede diyalog yeniden açılırdı.
+  const closePriceDialog = () => {
+    setEditingId(null);
+    if (urlState.productId) go({ productId: '' });
+  };
 
   // Özel fiyat diyaloğu üç hâlli: kapalı · yeni kayıt (`'new'`) · düzenleme (satır kimliği). Tek
   // durumda tutuluyor ki "hem yeni hem düzenleme açık" gibi imkânsız bir hâl doğmasın.
@@ -151,7 +174,7 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
   return (
     <>
       <PricesDesktop {...view} />
-      {editing ? <PriceDialog key={editing.variantId} row={editing} onClose={() => setEditingId(null)} /> : null}
+      {editing ? <PriceDialog key={editing.variantId} row={editing} onClose={closePriceDialog} /> : null}
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
       ) : null}

@@ -29,9 +29,16 @@ export interface PricesUrlState {
   /** Kategori id'si ya da 'all'. */
   cat: string;
   scope: PriceScope;
+  /**
+   * DIŞ KÖPRÜNÜN hedefi (16.08): ürünler önizlemesindeki "Fiyatlar →" 26.07'den beri
+   * `?productId=` gönderiyordu ama sayfa parametreyi hiç okumamıştı — köprü sessizce süzgeçsiz
+   * listeye düşüyordu. Doluyken liste o ürüne süzülür ve fiyat diyaloğu AÇIK gelir; diyalog
+   * kapanınca parametre düşer, tam liste geri gelir (gizli süzgeç bırakılmaz).
+   */
+  productId: string;
 }
 
-const DEFAULTS: PricesUrlState = { tab: 'channels', q: '', cat: 'all', scope: 'all' };
+const DEFAULTS: PricesUrlState = { tab: 'channels', q: '', cat: 'all', scope: 'all', productId: '' };
 
 type RawParams = Record<string, string | string[] | undefined>;
 const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
@@ -45,6 +52,7 @@ export function parsePricesUrl(params: RawParams): PricesUrlState {
     q: one(params.q).trim(),
     cat: one(params.cat) || DEFAULTS.cat,
     scope: PRICE_SCOPES.find((s) => s === scopeRaw) ?? DEFAULTS.scope,
+    productId: one(params.productId).trim(),
   };
 }
 
@@ -55,15 +63,18 @@ export function pricesUrl(state: PricesUrlState): string {
   if (state.q) p.set('q', state.q);
   if (state.cat !== DEFAULTS.cat) p.set('cat', state.cat);
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
+  if (state.productId) p.set('productId', state.productId);
   const qs = p.toString();
   return qs ? `${PRICES_PATH}?${qs}` : PRICES_PATH;
 }
 
 /** SERVİS süzgeçleri — yalnız sunucunun uygulayabileceği olanlar (`scope` motorun işi, bkz. yukarı). */
-export function toPriceFilters(state: PricesUrlState): { query?: string; categoryId?: string } {
+export function toPriceFilters(state: PricesUrlState): { query?: string; categoryId?: string; ids?: string[] } {
   return {
     query: state.q || undefined,
     categoryId: state.cat === 'all' ? undefined : state.cat,
+    // Tek ürün hedefi servis `ids` süzgecine biner — okuma yolunda yeni bir dal yok.
+    ids: state.productId ? [state.productId] : undefined,
   };
 }
 
