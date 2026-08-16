@@ -13,7 +13,10 @@ import type { PriceRow } from '@/lib/pricing/price-rows';
 // yönlendirme yerine diyalog). Satırlar fiyat ekranıyla AYNI kurulumdan gelir (`toPriceRows`);
 // buradaki tablo yalnız diziliştir, hiçbir marj burada hesaplanmaz.
 //
-// SATIRA TIKLAYINCA fiyat ekranının DÜZENLEME FORMU açılır (`PriceDialog`, ortak komponent) —
+// TEK BOYLU ÜRÜNDE TABLO HİÇ GÖRÜNMEZ (16.08, kullanıcı kararı): seçilecek boy yokken araya giren
+// tablo fazladan bir perdeydi — düğme doğrudan fiyat ekranının DÜZENLEME FORMUNU açar
+// (`PriceDialog`, ortak komponent). Çok boylu üründe tablo BOY SEÇİCİ olarak kalır: form tek boyu
+// düzenler, hangi boy sorusunu birinin sorması gerekir. Satıra tıklayınca aynı form açılır;
 // kaydedip kapatınca bakış yeniden okunur ki tablo eski sayıyı göstermesin.
 
 interface PricePeekDialogProps {
@@ -43,6 +46,13 @@ export function PricePeekDialog({ productId, productName, onClose }: PricePeekDi
   }, [productId, reload]);
 
   const editing = rows?.find((r) => r.variantId === editingId) ?? null;
+
+  // Tek boy: ara tablo yok, doğrudan düzenleme formu. Kapatınca bakışın tamamı kapanır — geride
+  // dönülecek bir tablo yok. Kaydetme `router.refresh()` ile listeyi zaten tazeler.
+  if (rows !== null && rows.length === 1) {
+    const only = rows[0]!;
+    return <PriceDialog key={only.variantId} row={only} onClose={onClose} />;
+  }
 
   return (
     <Dialog
