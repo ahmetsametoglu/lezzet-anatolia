@@ -7,7 +7,7 @@ import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCurso
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
-import { repriceAllAuto, repriceProduct } from '@/lib/pricing/auto-price';
+import { repriceAllAuto } from '@/lib/pricing/auto-price';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toPriceRows, type ChannelPriceMaps } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
@@ -20,83 +20,8 @@ import { type PriceRow, type VariantOption } from './prices-types';
 // Guard `requireAdmin`: fiyat yazmak ve maliyet görmek yönetici işidir (brief §6). Ekranın düğmeyi
 // göstermemesi bir güvence değildir — action kendi kapısını kendi tutar.
 
-/**
- * Kanal liste fiyatını yazar. `setPrice` YENİ SATIR ekler, mevcut satırı değiştirmez: fiyat geçmişi
- * korunur ve verilmiş siparişler etkilenmez (fiyat sipariş anında sabitlenir).
- *
- * `null` tutar "bu kanalda fiyat yok" demektir ve bugün DESTEKLENMEZ: fiyat satırı silmek geçmişi de
- * silerdi, "satışa kapat" ise boyun kendi anahtarıdır (`is_active`). Ekran bu yüzden sıfır/boş
- * tutarı reddeder.
- *
- * `validFrom` İLERİ tarihli yazmayı açar (05.4'ün baştan beri desteklediği ama ekranı olmayan
- * yetenek): zam bugünden hazırlanır, o güne kadar eski fiyat geçerli kalır. Boşsa "şimdi".
- */
-export async function setChannelPriceAction(
-  variantId: string,
-  channel: Channel,
-  amountCents: number,
-  validFrom?: string | null,
-): Promise<ActionResult> {
-  try {
-    await requireAdmin();
-    if (!Number.isFinite(amountCents) || amountCents <= 0) throw new Error('Fiyat sıfırdan büyük olmalı.');
-
-    await new PriceService(serviceDb()).setPrice({
-      variantId,
-      channel,
-      amountCents: Math.round(amountCents),
-      customerId: null,
-      validFrom: validFrom ?? undefined,
-    });
-    revalidatePath(PRICES_PATH);
-    return { data: null, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/**
- * Ürünün otomatik fiyat anahtarı + hedef marjı. İkisi TEK action'da, çünkü tek karardır: otomatik
- * fiyat açıksa hedef marj zorunlu girdidir — açıp hedefi boş bırakmak, motoru hesaplayamayacağı bir
- * durumda bırakırdı.
- *
- * **Anahtar açıksa fiyat AYNI ANDA hedefe çekilir.** Niyeti kaydedip hesabı bir sonraki mal kabule
- * bırakmak, "otomatik" dediğimiz ürünü stok girene kadar donmuş fiyatta bırakırdı — bayrağın
- * motorsuz yaşadığı dönemin hatası buydu. Dönen sayı kaç fiyatın değiştiğidir; ekran onu söyler,
- * çünkü otomatik de olsa fiyat değişimi sürpriz olmamalı (tasarım notu).
- */
-export async function setAutoPriceAction(
-  productId: string,
-  autoPrice: boolean,
-  targetMarginPercent: number | null,
-  /** B2B'ye özel hedef (15.08) — `null` = ortak hedef B2B'de de geçerli. */
-  targetMarginB2bPercent: number | null,
-): Promise<ActionResult<{ changed: number; held: number }>> {
-  try {
-    await requireAdmin();
-    // Ortak hedef otomatikte ZORUNLU kalır (B2B hedefi tek başına yetmez): ortak hedef B2C'nin de
-    // hedefi ve hedefsiz kanalın fiyatı sessizce donardı.
-    if (autoPrice && (targetMarginPercent === null || !Number.isFinite(targetMarginPercent))) {
-      throw new Error('Otomatik fiyat için hedef marj girilmeli.');
-    }
-    if (targetMarginPercent !== null && targetMarginPercent < 0) {
-      throw new Error('Hedef marj negatif olamaz.');
-    }
-    if (targetMarginB2bPercent !== null && (!Number.isFinite(targetMarginB2bPercent) || targetMarginB2bPercent < 0)) {
-      throw new Error('B2B hedef marjı negatif olamaz.');
-    }
-
-    const db = serviceDb();
-    await new ProductService(db).updateDetails(productId, { autoPrice, targetMarginPercent, targetMarginB2bPercent });
-    // Anahtar kapatıldıysa fiyata dokunulmaz: elle yönetime dönen ürünün son otomatik fiyatı
-    // geçerli fiyatıdır, "eski elle fiyata dön" diye bir kayıt yoktur.
-    const outcome = autoPrice ? await repriceProduct(db, productId) : null;
-    revalidatePath(PRICES_PATH);
-    return { data: { changed: outcome?.changes.length ?? 0, held: outcome?.heldVariantIds.length ?? 0 }, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
+// `setChannelPriceAction` + `setAutoPriceAction` LIB'E TAŞINDI (16.08 — `lib/prices/price-actions`):
+// fiyat düzenleme diyaloğu artık ürünler önizlemesinden de açılıyor, eylemleri tek sayfanın malı değil.
 
 /**
  * Katalogdaki tüm otomatik ürünleri hedefe çeker — elle toplu hizalama.

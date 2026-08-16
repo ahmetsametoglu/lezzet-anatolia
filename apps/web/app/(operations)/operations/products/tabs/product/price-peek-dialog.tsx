@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { amount, percent } from '@/components/operation/ui/format';
+import { PriceDialog } from '@/components/operation/prices/price-dialog';
 import { loadProductPricesPeekAction } from '../../actions/peek';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 
@@ -12,9 +13,8 @@ import type { PriceRow } from '@/lib/pricing/price-rows';
 // yönlendirme yerine diyalog). Satırlar fiyat ekranıyla AYNI kurulumdan gelir (`toPriceRows`);
 // buradaki tablo yalnız diziliştir, hiçbir marj burada hesaplanmaz.
 //
-// BEKLEYEN(09.5): satıra tıklayınca fiyat düzenleme formu — form bugün fiyat sayfasının yerelinde
-// (`prices/price-dialog`), ortak komponente taşınınca buradan da açılacak; o güne dek düzenleme
-// başlıktaki köprünün ardında (derin bağ diyaloğu açık getirir).
+// SATIRA TIKLAYINCA fiyat ekranının DÜZENLEME FORMU açılır (`PriceDialog`, ortak komponent) —
+// kaydedip kapatınca bakış yeniden okunur ki tablo eski sayıyı göstermesin.
 
 interface PricePeekDialogProps {
   productId: string;
@@ -25,6 +25,10 @@ interface PricePeekDialogProps {
 export function PricePeekDialog({ productId, productName, onClose }: PricePeekDialogProps) {
   const [rows, setRows] = useState<PriceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Düzenlenen boy KİMLİKLE tutulur, satır taze listeden türetilir (fiyat ekranının deseni).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // Düzenleme kapandıkça artan sayaç — bakış yeniden okunur (kaydedilen fiyat tabloya yansısın).
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -36,7 +40,9 @@ export function PricePeekDialog({ productId, productName, onClose }: PricePeekDi
     return () => {
       alive = false;
     };
-  }, [productId]);
+  }, [productId, reload]);
+
+  const editing = rows?.find((r) => r.variantId === editingId) ?? null;
 
   return (
     <Dialog
@@ -73,9 +79,12 @@ export function PricePeekDialog({ productId, productName, onClose }: PricePeekDi
             <span className="text-right">Marj</span>
           </div>
           {rows.map((row) => (
-            <div
+            <button
               key={row.variantId}
-              className="grid grid-cols-[minmax(110px,1fr)_82px_82px_82px_96px] items-center gap-x-2 border-b border-ops-line-soft px-3.5 py-2.5 last:border-b-0"
+              type="button"
+              onClick={() => setEditingId(row.variantId)}
+              title="Fiyatı düzenle"
+              className="grid w-full cursor-pointer grid-cols-[minmax(110px,1fr)_82px_82px_82px_96px] items-center gap-x-2 border-b border-ops-line-soft px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-ops-subtle"
             >
               <span className="flex min-w-0 items-baseline gap-1.5">
                 <span className="truncate font-ops-body text-ops-sm font-medium text-ops-ink">{row.variantLabel}</span>
@@ -106,13 +115,24 @@ export function PricePeekDialog({ productId, productName, onClose }: PricePeekDi
                   <span className="font-ops-body text-ops-micro text-ops-muted">fiyat eksik</span>
                 ) : null}
               </span>
-            </div>
+            </button>
           ))}
           {rows.length === 0 ? (
             <p className="px-3.5 py-3 font-ops-body text-ops-xs text-ops-muted">Bu ürünün boyu yok.</p>
           ) : null}
         </div>
       )}
+      {editing ? (
+        <PriceDialog
+          key={editing.variantId}
+          row={editing}
+          onClose={() => {
+            setEditingId(null);
+            setRows(null);
+            setReload((n) => n + 1);
+          }}
+        />
+      ) : null}
     </Dialog>
   );
 }

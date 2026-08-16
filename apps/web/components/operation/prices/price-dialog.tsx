@@ -11,10 +11,14 @@ import { DateField } from '@/components/operation/form/date-field';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
 import { money, percent } from '@/components/operation/ui/format';
 import { Metric } from '@/components/operation/ui/metric';
-import { setAutoPriceAction, setChannelPriceAction } from './actions';
-import type { PriceRow } from './prices-types';
+import { setAutoPriceAction, setChannelPriceAction } from '@/lib/prices/price-actions';
+import type { PriceRow } from '@/lib/pricing/price-rows';
 
 // Fiyat düzenleme diyaloğu — iki kanalın liste fiyatı + otomatik fiyat anahtarı + hedef marj.
+//
+// İKİ YÜZEYİN ORTAK DİYALOĞU (16.08, kullanıcı kararı): fiyat ekranı satırdan, ürünler önizlemesi
+// fiyat bakışındaki boydan açar. Sayfa klasöründen buraya taşındı (kardeş sayfadan yalnız `*-url`
+// import edilir, STACK §7); eylemleri de birlikte taşındı (`lib/prices/price-actions`).
 //
 // TABAN FARKI EKRANDA YAZILI: B2C fiyatı KDV DAHİL, B2B hariç (DOMAIN §5). İki kutu yan yana durunca
 // aynı tabandaymış gibi okunur; etiket bunu söylemezse operatör toptan fiyatı perakendeye göre

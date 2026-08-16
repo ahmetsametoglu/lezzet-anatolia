@@ -7,7 +7,7 @@ import { loadMorePricesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { CustomerPriceDialog } from './customer-price-dialog';
 import { DiscountDialog } from './discount-dialog';
-import { PriceDialog } from './price-dialog';
+import { PriceDialog } from '@/components/operation/prices/price-dialog';
 import { PricesDesktop } from './prices.desktop';
 import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
 import type { CustomerPriceRow, DiscountRow, PriceRow, PricesData } from './prices-types';
