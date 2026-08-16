@@ -27,6 +27,18 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // **yolların tek yerde sayılması**. Liste ikiye bölünmez: birim projesi bunu `include`a ekler,
 // entegrasyon `exclude`a — aynı sabitten. Çürümesini `docs:check §3g` engelliyor: DB'siz olup
 // listede olmayan bir test dosyası commit'ten geçmez.
+/**
+ * `packages/database` de entegrasyon köküdür ama `utils/` altındaki dönüştürücüler **saf**: DB
+ * istemcisi hiç kurulmuyor, dosya kendinden başka hiçbir şey import etmiyor.
+ *
+ * **Ayrı sabit ve bu bilinçli:** `WEB_LIB_DBSIZ`i `docs:check §3g` **adıyla** okuyor ve içindeki
+ * yolları `'apps/…'` önekiyle tarıyor; oraya bir paket yolu koymak denetimin kapsamını sessizce
+ * bulandırırdı (liste ile taranan ağaç birbirini tutmaz hâle gelirdi). Yukarıdaki *"liste ikiye
+ * bölünmez"* kuralı **kök başına** geçerli: aynı kökün iki listesi olmaz, ayrı köklerin ayrı
+ * listesi olur.
+ */
+const PAKET_DBSIZ = ['packages/database/src/utils/case-transformers.test.ts'];
+
 const WEB_LIB_DBSIZ = [
   'apps/web/lib/analytics/availability.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',
@@ -90,6 +102,7 @@ export default defineConfig({
             'apps/web/components/**/*.test.ts?(x)',
             // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).
             ...WEB_LIB_DBSIZ,
+            ...PAKET_DBSIZ,
           ],
           setupFiles: ['./vitest.setup.unit.ts'],
         },
@@ -111,7 +124,7 @@ export default defineConfig({
           // Birim projesine alınan 19 dosya buradan DÜŞER, yoksa İKİ projede birden koşarlardı.
           // `configDefaults.exclude` korunuyor: `exclude` verildiğinde vitest varsayılanı EZER ve
           // `node_modules` yeniden taranmaya başlardı.
-          exclude: [...configDefaults.exclude, ...WEB_LIB_DBSIZ],
+          exclude: [...configDefaults.exclude, ...WEB_LIB_DBSIZ, ...PAKET_DBSIZ],
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.
           fileParallelism: false,
