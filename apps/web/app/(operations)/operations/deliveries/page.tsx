@@ -1,6 +1,7 @@
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { listCourierDay } from '@/lib/courier/day';
 import { guarded, requireAdmin, requireCourier } from '@/lib/guard';
+import { readWarehouseContext } from '@/lib/warehouse/context';
 import { DeliveriesClient } from './deliveries-client';
 import { DISPATCH_NOTES } from './deliveries-labels';
 import { parseDeliveriesUrl, toIsoDate } from './deliveries-url';
@@ -42,7 +43,19 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
     // çıkar" (kullanıcı kararı 07.08). İkisini iki sayfaya bölmek, operatörü aynı işin ortasında
     // gezinmeye zorluyordu.
     if (urlState.tab === 'routes') {
-      const warehouseId = typeof params.depo === 'string' ? params.depo : null;
+      /**
+       * **Başlıktaki depo bağlamı buraya kadar geliyordu ama HİÇBİR ŞEYE dokunmuyordu** (ölçüldü
+       * 17.08): sayfa yalnız `?depo=`yi okuyor, o da bir süzgeç değil yeni rota taslağının
+       * varsayılan deposuydu. Yani operatör "Kehl" seçse bile rota listesi bütün kalıyordu —
+       * seçici bu sayfada işlevsizdi (öteki operasyon ekranlarının hepsi bu bağlamı okuyor).
+       *
+       * Bağlam artık YALNIZ seçicinin listesini daraltıyor; harita ve öneriler bütün kalıyor
+       * (kullanıcı kararı 17.08 — gerekçe `routes.desktop`'ta).
+       */
+      const ctx = await readWarehouseContext();
+      // Adresteki depo (Depolar'dan gelen köprü) bağlamı EZER: operatörün o tıklamadaki niyeti
+      // kalıcı tercihinden tazedir.
+      const warehouseId = typeof params.depo === 'string' ? params.depo : ctx.activeWarehouseId;
       /**
        * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) rota kurulumu ÖN DOLDURULUR (22.5).
        *
@@ -66,6 +79,7 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
           // "hangi rotaydı" diye aramak zorunda kalmamalı.
           routeId={urlState.routeId ?? handoff?.zoneId ?? null}
           warehouseId={warehouseId}
+          contextWarehouseId={ctx.activeWarehouseId}
           handoff={handoff}
         />
       );

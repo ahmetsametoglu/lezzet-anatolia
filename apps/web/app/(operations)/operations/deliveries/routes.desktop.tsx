@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
+import { ChevronDownIcon } from '@/components/operation/ui/icons';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PageHeader } from '@/components/operation/ui/page-header';
@@ -40,6 +42,16 @@ import type { ZoneHandoff } from './routes-handoff';
  */
 interface RoutesViewProps {
   data: RoutesData;
+  /**
+   * Başlıktaki depo bağlamı; `null` = "tüm depolar".
+   *
+   * **YALNIZ seçicinin listesini daraltır** (kullanıcı kararı 17.08). Haritanın kümesine ve
+   * `membership.taken` hesabına DOKUNMAZ, çünkü dokunsaydı komşu deponun kodları "boşta" görünür,
+   * operatör onları tıklayıp kendi rotasına eklemeye çalışır ve reddin sebebi ekranda hiç yazmazdı —
+   * çakışan posta kodu tam orada doğuyor (`routes-read` başlığındaki eski karar bunu koruyordu).
+   * Süzgeç odak verir, körlük vermez.
+   */
+  contextWarehouseId: string | null;
   selected: RouteView | null;
   draft: {
     name: string;
@@ -55,6 +67,11 @@ interface RoutesViewProps {
   onSave: () => void;
   /** Haritanın görüş alanı oturunca — yakınlık eşiği buradan hesaplanıyor. */
   onViewport: (viewport: MapViewport) => void;
+  /**
+   * Son oturmuş görüş alanı. `null` = henüz ölçülmedi ve o hâlde "ekran dışında mı" sorusu
+   * SORULAMAZ — ölçülemeyen değer sıfır değildir (`CLAUDE §1`), ray o ana kadar hiçbir şey yazmaz.
+   */
+  viewport: MapViewport | null;
   /** Yakınlık ölçülen eşiğin (`FREE_CODE_MIN_ZOOM`) altında mı — boştaki kodlar okunmaz. */
   tooFar: boolean;
   /** Görüş alanındaki boştaki kodlar. `null` = okunmadı; boş dizi = gerçekten yok. */
@@ -73,6 +90,38 @@ interface RoutesViewProps {
 
 export function RoutesDesktop(props: RoutesViewProps) {
   const { data, selected, draft, tooFar } = props;
+
+  /**
+   * **Ray açık mı** — kapanınca yalnız başlığı kalır ve harita tamamen görünür.
+   *
+   * Katlamak, rayı DARALTMANIN alternatifi: operatörün iki ayrı anı var — güzergâhı kurarken forma
+   * bakar, kurduğunu okurken haritaya. Paneli kalıcı olarak küçültmek ikisini birden kötüleştirirdi;
+   * kapatılabilir olması ise hiçbir yeteneği elinden almıyor, yalnız o anda bakmadığı şeyi kaldırıyor.
+   */
+  const [railOpen, setRailOpen] = useState(true);
+
+  /**
+   * Haritaya verilen "şuraya git" emri — ekran dışındaki bir öneriye tıklanınca doğuyor.
+   *
+   * Her tıklamada YENİ nesne kuruluyor (`{lat, lng}` yeniden yazılıyor): emri taşıyan şey nesnenin
+   * kimliği, değeri değil. Aynı öneriye ikinci kez tıklamak da bir emirdir — operatör aradan
+   * kaydırmış olabilir ve değere bakan bir karşılaştırma o ikinci tıklamayı görmezdi.
+   */
+  const [focus, setFocus] = useState<{ lat: number; lng: number } | null>(null);
+
+  /**
+   * Seçicinin listesi — depo bağlamıyla süzülmüş.
+   *
+   * **Seçili rota bağlam dışı kalsa bile listede durur.** Aksi hâlde adresten (ya da asistan
+   * devrinden) başka deponun rotasıyla gelen operatör, açık olan kaydı listede bulamaz ve seçiciyi
+   * "yanlış" sanırdı — süzgeç, düzenlemekte olduğun şeyi saklamamalı.
+   */
+  const visibleRoutes = useMemo(() => {
+    if (props.contextWarehouseId === null) return data.routes;
+    return data.routes.filter(
+      (route) => route.warehouseId === props.contextWarehouseId || route.id === selected?.id,
+    );
+  }, [data.routes, props.contextWarehouseId, selected?.id]);
 
   // Kimlik SABİT tutuluyor: harita `points`/`stateOf` değişince tüm katmanı yeniden çiziyor ve bu
   // ikisi her render'da yeniden kurulsaydı, sönen bir ipucu şeridi bile yüzlerce noktayı baştan
@@ -126,6 +175,29 @@ export function RoutesDesktop(props: RoutesViewProps) {
    * şeklini onlar veriyor.
    */
   /**
+   * Önerinin uzaklığı DÜZENLENEN rotanın kendi kodlarına göre ölçülüyor, tüm rotalara göre değil.
+   *
+   * Sunucuda hesaplanırken bu bir kusurdu (07.08, kontrol sırasında bulundu): Strasbourg'u
+   * düzenlerken Kehl rotasının 5 km yanındaki kod da "rotaya 5 km" diye görünüyordu — oysa onu
+   * Strasbourg'un güzergâhına eklemek coğrafi olarak anlamsız. İstemcide, taslağa göre hesaplanınca
+   * hem doğru oluyor hem de kod ekledikçe canlı güncelleniyor.
+   *
+   * **Noktaların ÜSTÜNDE duruyor** (17.08): uzaklık artık haritanın ipucuna da giriyor, yani
+   * `points` ona bağımlı — bağımlının altında kalamaz.
+   */
+  const anchors = useMemo(() => {
+    const coords = new Map(data.points.map((point) => [keyOfPoint(point), point]));
+    return (draft?.codes ?? []).map((code) => coords.get(keyOfPoint(code))).filter((point) => point !== undefined);
+  }, [data.points, draft?.codes]);
+
+  /** Rotanın hiç kodu yoksa uzaklık ÖLÇÜLEMEZ ve yazılmaz (`CLAUDE §1`) — "0 km" ölçmüş gibi okuturdu. */
+  const distanceOf = useCallback(
+    (point: { lat: number; lng: number }): number | null =>
+      anchors.length === 0 ? null : Math.round(Math.min(...anchors.map((anchor) => distanceKm(anchor, point)))),
+    [anchors],
+  );
+
+  /**
    * Haritanın çizdiği küme İKİ KAYNAKTAN birleşiyor ve ayrım kasıtlı:
    *
    * - **Sayfa okuması** (`data.points`): tanımlı kodlar + öneriler. Görüş alanına bağlı DEĞİL —
@@ -137,29 +209,32 @@ export function RoutesDesktop(props: RoutesViewProps) {
    */
   const points = useMemo(() => {
     const seen = new Set(data.points.map(keyOfPoint));
-    // Önerilen kodun GEREKÇESİ etikete iliştiriliyor: "üzerine gelince neden önerildiği görünsün"
-    // (kullanıcı isteği 07.08). Harita metni kurmuyor, taşıyor — sözlük ekranın tarafında.
+    /**
+     * Önerilen kodun TAM künyesi etikete iliştiriliyor: "üzerine gelince neden önerildiği görünsün"
+     * (kullanıcı isteği 07.08), 17.08'de genişledi — noktanın neden mor olduğu, rotaya uzaklığı ve
+     * talebin yaşı da buraya girdi. Üçü yalnız sağdaki listede vardı ve liste tam da bu yüzden
+     * kaldırılamıyordu; harita aynı soruyu cevaplayamıyordu.
+     *
+     * Harita metni KURMUYOR, taşıyor — sözlük ekranın tarafında (`deliveries-labels`).
+     */
     const own = data.points.map((point) => {
       const row = suggested.get(keyOfPoint(point));
-      return row ? { ...point, note: ROUTE_NOTES.suggestionReason(row) } : point;
+      if (!row) return point;
+      return {
+        ...point,
+        facts: ROUTE_NOTES.suggestionTip({
+          waitingCount: row.waitingCount,
+          orderCount: row.orderCount,
+          requestCount: row.requestCount,
+          distanceKm: distanceOf(row),
+          age: row.lastAskedMinutes === null ? null : agoShort(row.lastAskedMinutes),
+        }),
+      };
     });
     return [...own, ...(props.freePoints ?? []).filter((point) => !seen.has(keyOfPoint(point)))];
-  }, [data.points, props.freePoints, suggested]);
+  }, [data.points, props.freePoints, suggested, distanceOf]);
 
   const freeCount = useMemo(() => points.filter((point) => stateOf(point) === 'free').length, [points, stateOf]);
-
-  /**
-   * Önerinin uzaklığı DÜZENLENEN rotanın kendi kodlarına göre ölçülüyor, tüm rotalara göre değil.
-   *
-   * Sunucuda hesaplanırken bu bir kusurdu (07.08, kontrol sırasında bulundu): Strasbourg'u
-   * düzenlerken Kehl rotasının 5 km yanındaki kod da "rotaya 5 km" diye görünüyordu — oysa onu
-   * Strasbourg'un güzergâhına eklemek coğrafi olarak anlamsız. İstemcide, taslağa göre hesaplanınca
-   * hem doğru oluyor hem de kod ekledikçe canlı güncelleniyor.
-   */
-  const anchors = useMemo(() => {
-    const coords = new Map(data.points.map((point) => [keyOfPoint(point), point]));
-    return (draft?.codes ?? []).map((code) => coords.get(keyOfPoint(code))).filter((point) => point !== undefined);
-  }, [data.points, draft?.codes]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -167,60 +242,75 @@ export function RoutesDesktop(props: RoutesViewProps) {
         <DeliveryTabs value="routes" />
       </PageHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[1fr_380px] overflow-hidden">
-      {/* Harita her zaman çizilir — rota seçilmemişken bile tanımlı güzergâhların şekli görünür;
-          boş bir gri kutu, ekranın ne işe yaradığını anlatmazdı. */}
-      <div className="min-h-0 border-r border-ops-line">
-        <ZoneMap
-          points={points}
-          stateOf={stateOf}
-          onPick={props.onPick}
-          onViewport={props.onViewport}
-          note={
-            tooFar
-              ? ROUTE_NOTES.mapTooFar
-              : props.freePoints === null
-                ? ROUTE_NOTES.mapUnread
-                : ROUTE_NOTES.mapFree(freeCount, props.truncated)
-          }
-          hint={props.hint}
-        />
-      </div>
+      {/* **Harita artık ZEMİN, sütun değil** (kullanıcı isteği 17.08). Eskiden ekran ikiye
+          bölünüyordu (`1fr` + 380 piksel ray) ve haritanın sağ kenarı rayın altında hiç yoktu —
+          oysa bu sayfada asıl iş yüzeyi harita: operatör kaydırır, yakınlaşır, komşu güzergâhla
+          karşılaştırır. Ray onun ÜSTÜNE yüzüyor; kapladığı yer artık haritadan çalınmıyor, yalnız
+          bir köşesini örtüyor ve katlanınca o köşe de geri geliyor.
 
-      <aside className="flex min-h-0 flex-col overflow-y-auto">
-        <div className="flex items-center gap-2 border-b border-ops-line-soft px-4 py-2.5">
-          <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Rotalar</span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">{num(data.routes.length)}</span>
-          <Button size="sm" variant="secondary" className="ml-auto" onClick={() => props.onSelect(null)}>
-            + Rota
-          </Button>
+          Lejant SOL üstte (`zone-map-leaflet`), ray SAĞ üstte: ikisi aynı yüzeyde ama çakışmıyor. */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* Harita her zaman çizilir — rota seçilmemişken bile tanımlı güzergâhların şekli görünür;
+            boş bir gri kutu, ekranın ne işe yaradığını anlatmazdı. */}
+        <div className="absolute inset-0">
+          <ZoneMap
+            points={points}
+            stateOf={stateOf}
+            onPick={props.onPick}
+            onViewport={props.onViewport}
+            focus={focus}
+            note={
+              tooFar
+                ? ROUTE_NOTES.mapTooFar
+                : props.freePoints === null
+                  ? ROUTE_NOTES.mapUnread
+                  : ROUTE_NOTES.mapFree(freeCount, props.truncated)
+            }
+            hint={props.hint}
+          />
         </div>
 
-        <ul className="border-b border-ops-line-soft">
-          {data.routes.map((route) => (
-            <li key={route.id}>
-              <button
-                type="button"
-                onClick={() => props.onSelect(route.id)}
-                className={`flex w-full flex-col gap-0.5 border-b border-ops-line-soft px-4 py-2 text-left transition-colors last:border-b-0 hover:bg-ops-subtle ${
-                  route.id === selected?.id ? 'bg-ops-olive-bg' : ''
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="font-ops-body text-ops-base text-ops-ink">{route.name}</span>
-                  {route.isActive ? null : <Badge tone="slate">Pasif</Badge>}
-                </span>
-                <span className="font-ops-body text-ops-xs text-ops-muted">
-                  {route.warehouseName} · {num(route.postalCodes.length)} kod
-                  {route.weekdays.length > 0 ? ` · ${route.weekdays.map((d) => WEEKDAYS[d - 1]).join(' ')}` : ' · gün yok'}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {/* `z-[500]` lejantla aynı kat: Leaflet'in kendi katmanları 400'de biter, işaretçiler 600'e
+            çıkar — 500 ikisinin arasıdır, yani ray çizime binmez ama nokta tıklamasını da yutmaz.
+            Açıkken boy tavana dayanır ve içerik kendi içinde kayar; kapalıyken o sınıf düşer, panel
+            başlığı kadar kalır. Alt boşluk `bottom-8` — 3 değil: sağ altta OSM atıf yazısı duruyor
+            ve lisans gereği görünür kalmak zorunda, panel oraya kadar inseydi üstünü örterdi. */}
+        <aside
+          className={`absolute right-3 top-3 z-[500] flex w-[320px] flex-col rounded-ops-card border border-ops-line bg-ops-card/95 shadow-[0_8px_24px_rgba(20,22,18,0.12)] backdrop-blur-sm ${
+            railOpen ? 'bottom-8 overflow-y-auto' : 'overflow-hidden'
+          }`}
+        >
+          {/* Başlık YAPIŞIK: ray artık kendi içinde kayıyor, katlama düğmesi ve rota seçici form
+              dibine kaydırıldığında da erişilebilir kalmalı. */}
+          <div className="sticky top-0 z-10 flex shrink-0 items-center gap-1.5 border-b border-ops-line-soft bg-ops-card px-2.5 py-2">
+            <button
+              type="button"
+              onClick={() => setRailOpen((on) => !on)}
+              aria-expanded={railOpen}
+              aria-label={railOpen ? 'Rota panelini kapat' : 'Rota panelini aç'}
+              className="flex shrink-0 cursor-pointer items-center rounded-ops-btn p-0.5 text-ops-muted transition-colors hover:bg-ops-subtle hover:text-ops-ink"
+            >
+              <span className={`block transition-transform ${railOpen ? '' : '-rotate-90'}`}>
+                <ChevronDownIcon size={14} />
+              </span>
+            </button>
+            {/* Seçici başlıkta ve KAPALIYKEN DE duruyor: panel katlanınca operatörün "neyi
+                düzenliyordum" sorusu cevapsız kalmamalı, ve başka bir rotaya geçmek için paneli
+                açmak zorunda olmamalı. */}
+            <RoutePicker
+              routes={visibleRoutes}
+              hidden={data.routes.length - visibleRoutes.length}
+              selected={selected}
+              onSelect={props.onSelect}
+            />
+          </div>
+
+          {/* **Katlama koşullu render DEĞİL, `hidden`** ve sebebi işlevsel: panel her açılışta
+              yeniden kurulsaydı kod arama kutusundaki yazı ve rayın kaydırma yeri silinirdi —
+              operatör haritayı görmek için paneli kapattığında, açtığında kaldığı yeri kaybederdi. */}
 
         {draft ? (
-          <div className="flex flex-col gap-3.5 px-4 py-3">
+          <div className={`flex flex-col gap-3 px-3 py-3 ${railOpen ? '' : 'hidden'}`}>
             {/* **Öneriden gelindiyse künye** (22.5): operatör neyi düzenlediğini bilmeli. Mor bu
                 yüzeyde "makine konuştu" demek (`OpsTone.violet`) — kodların kendiliğinden seçili
                 gelmesi bir arıza değil, asistanın işi. Gerekçe varsa yazılır; yoksa satır kısalır,
@@ -300,7 +390,13 @@ export function RoutesDesktop(props: RoutesViewProps) {
             {/* Haritanın durumu LEJANTTA (`note`): operatörün gözü haritadayken cümleyi sağ rayda
                 aramak, aynı bilgiyi iki yere yazmak demekti. */}
 
-            <Suggestions rows={data.suggestions} mine={membership.mine} anchors={anchors} onPick={props.onPick} />
+            <OffscreenSuggestions
+              rows={data.suggestions}
+              mine={membership.mine}
+              viewport={props.viewport}
+              distanceOf={distanceOf}
+              onFocus={(row) => setFocus({ lat: row.lat, lng: row.lng })}
+            />
 
             <CodeWeights codes={draft.codes} stats={data.stats} />
 
@@ -326,11 +422,120 @@ export function RoutesDesktop(props: RoutesViewProps) {
             </div>
           </div>
         ) : (
-          <EmptyState title="Rota seçin" description={ROUTE_NOTES.pickRoute} />
+          <div className={railOpen ? '' : 'hidden'}>
+            <EmptyState title="Rota seçin" description={ROUTE_NOTES.pickRoute} />
+          </div>
         )}
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * **Rota seçici** — seçmek ve YENİ KURMAK aynı açılır kutuda (kullanıcı isteği 17.08).
+ *
+ * Önceden rotalar rayın tepesinde bir liste, "+ Rota" ise onun yanında ayrı bir düğmeydi. İki kusuru
+ * vardı: liste panelin en değerli yerini yiyordu (rota sayısı arttıkça form aşağı kayıyordu) ve
+ * satırların TIKLANABİLİR bir seçim olduğu görünmüyordu — kullanıcının kendi cümlesiyle *"seçimi hiç
+ * anlaşılır olmamış"*. Açılır kutu ikisini de çözüyor: kapalıyken tek satır yer kaplar, açıldığında
+ * ne seçilebileceği listelenir, ve "yeni rota" o listenin son maddesi olur — çünkü operatörün sorusu
+ * tek: *"hangi rotayı düzenliyorum?"* Cevaplardan biri "henüz yok, kuruyorum".
+ *
+ * Seçili rotanın künyesi (depo · kod · gün) menüde durur, başlıkta değil: başlıkta yalnız AD var,
+ * çünkü künye zaten formun kendisinde satır satır yazılı.
+ */
+interface RoutePickerProps {
+  routes: RoutesData['routes'];
+  /**
+   * Depo bağlamının listeden düşürdüğü rota sayısı. **YAZILIYOR, sessizce yutulmuyor** — süzülmüş
+   * bir liste, süzüldüğünü söylemezse "hepsi bu" diye okunur ve operatör var olan bir rotayı
+   * yokmuş sanıp ikinciyi kurar.
+   */
+  hidden: number;
+  /** `null` = yeni rota kuruluyor — kutu bunu bir hâl olarak yazar, boş bırakmaz. */
+  selected: RouteView | null;
+  onSelect: (routeId: string | null) => void;
+}
+
+function RoutePicker({ routes, hidden, selected, onSelect }: RoutePickerProps) {
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+
+  const choose = (routeId: string | null) => {
+    onSelect(routeId);
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setOpen((on) => !on)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-ops-btn border border-ops-line bg-ops-card px-2.5 py-1.5 text-left transition-colors hover:bg-ops-subtle"
+      >
+        <span className="min-w-0 flex-1 truncate font-ops-body text-ops-sm text-ops-ink">
+          {selected ? selected.name : 'Yeni rota'}
+        </span>
+        {selected && !selected.isActive ? <Badge tone="slate">Pasif</Badge> : null}
+        <span className={`shrink-0 text-ops-muted transition-transform ${open ? 'rotate-180' : ''}`}>
+          <ChevronDownIcon size={12} />
+        </span>
+      </button>
+
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)}>
+        <ul className="max-h-[15rem] overflow-y-auto" role="listbox">
+          {routes.length === 0 ? (
+            <li className="px-3 py-2 font-ops-body text-ops-xs text-ops-muted">Henüz rota kurulmadı.</li>
+          ) : (
+            routes.map((route) => (
+              <li key={route.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={route.id === selected?.id}
+                  onClick={() => choose(route.id)}
+                  className={`flex w-full cursor-pointer flex-col gap-0.5 px-3 py-1.5 text-left transition-colors hover:bg-ops-subtle ${
+                    route.id === selected?.id ? 'bg-ops-olive-bg' : ''
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="font-ops-body text-ops-sm text-ops-ink">{route.name}</span>
+                    {route.isActive ? null : <Badge tone="slate">Pasif</Badge>}
+                  </span>
+                  <span className="font-ops-body text-ops-xs text-ops-muted">
+                    {route.warehouseName} · {num(route.postalCodes.length)} kod
+                    {route.weekdays.length > 0
+                      ? ` · ${route.weekdays.map((d) => WEEKDAYS[d - 1]).join(' ')}`
+                      : ' · gün yok'}
+                  </span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+        {/* Ayraçla ayrı: "yeni kur" bir rota DEĞİL, listenin altındaki bir eylem. Aynı kutuda
+            olması onu seçimin kardeşi yapıyor; ayracı kaldırmak var olan bir rotayla karıştırırdı. */}
+        <button
+          type="button"
+          onClick={() => choose(null)}
+          className={`flex w-full cursor-pointer items-center gap-1.5 border-t border-ops-line-soft px-3 py-2 text-left font-ops-body text-ops-sm transition-colors hover:bg-ops-subtle ${
+            selected === null ? 'bg-ops-olive-bg text-ops-strong' : 'text-ops-ink'
+          }`}
+        >
+          + Yeni rota
+        </button>
+        {hidden > 0 ? (
+          <p className="border-t border-ops-line-soft bg-ops-subtle px-3 py-1.5 font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
+            Başka depoya bağlı {num(hidden)} rota bu listede yok — başlıktaki depo seçiminden
+            değiştirebilirsiniz. Haritada hepsi çizili.
+          </p>
+        ) : null}
+      </AnchoredMenu>
+    </>
   );
 }
 
@@ -393,71 +598,83 @@ function WarehouseField({
 }
 
 /**
- * **Önerilen kodlar** (kullanıcı isteği 07.08: *"akıllı şekilde bölge oluşturmak"*).
+ * **Ekran dışındaki öneriler** (kullanıcı kararı 17.08) — eskiden burada önerilerin TAM listesi vardı.
  *
- * Ekranın tek yeri burası değil — asıl gösterim HARİTADA, mor noktalarda; bu ray onların okunabilir
- * hâli. İkisi aynı kümeyi gösteriyor çünkü operatörün iki farklı sorusu var: *"nerede"* (haritaya
- * bakar) ve *"neden"* (listeye bakar). Aynı bilgiyi iki yere yazmak değil, aynı bilgiyi iki soruya
- * cevap verecek şekilde sunmak.
+ * Liste haritayla neredeyse tamamen örtüşüyordu: aynı kodlar orada zaten mor noktalar olarak
+ * çiziliydi ve 17.08'de ipucu zenginleşince gerekçe · uzaklık · yaş da haritaya geçti. Geriye
+ * listenin tek gerçek işi kaldı ve o iş haritanın **yapısal olarak** yapamadığı şey: bakılmayan yeri
+ * göstermek. `68000 Colmar` görüş alanının dışındayken haritada hiç yoktur; operatör oraya
+ * kaydırmayı aklından geçirmedikçe o talebi asla görmez.
+ *
+ * Bu yüzden ray artık yalnız **ekranda olmayanları** yazıyor ve tıklama "ekle" değil **"oraya bak"**
+ * demek — kodu görmeden eklemek zaten bu ekranın reddettiği şeydi (kullanıcının kendi cümlesi:
+ * *"haritaya bakmadan karar veremem"*).
  *
  * **Taslağa eklenmiş öneri listeden düşer** — kalsaydı operatör aynı kodu ikinci kez eklemeye
  * çalışır, hiçbir şey olmaz ve ekran bozuk görünürdü.
  */
-function Suggestions({
+function OffscreenSuggestions({
   rows,
   mine,
-  anchors,
-  onPick,
+  viewport,
+  distanceOf,
+  onFocus,
 }: {
   rows: readonly SuggestionView[];
   mine: ReadonlySet<string>;
-  /** Düzenlenen rotanın kodlarının koordinatları — uzaklık bunlara göre ölçülür. */
-  anchors: ReadonlyArray<{ lat: number; lng: number }>;
-  onPick: (point: ZoneMapPoint) => void;
+  /** `null` = görüş alanı henüz ölçülmedi; "dışarıda mı" sorusu o hâlde sorulamaz. */
+  viewport: MapViewport | null;
+  distanceOf: (point: { lat: number; lng: number }) => number | null;
+  onFocus: (row: SuggestionView) => void;
 }) {
   const open = rows.filter((row) => !mine.has(keyOfPoint(row)));
-  // Rotanın hiç kodu yoksa uzaklık ÖLÇÜLEMEZ ve yazılmaz — "0 km" demek, ölçemediğimizi ölçmüş
-  // göstermek olurdu (`CLAUDE §1`).
-  const distanceOf = (row: SuggestionView): number | null =>
-    anchors.length === 0 ? null : Math.round(Math.min(...anchors.map((anchor) => distanceKm(anchor, row))));
+  const offscreen =
+    viewport === null
+      ? []
+      : open.filter(
+          (row) =>
+            row.lat < viewport.minLat ||
+            row.lat > viewport.maxLat ||
+            row.lng < viewport.minLng ||
+            row.lng > viewport.maxLng,
+        );
+
+  // Görüş alanı ölçülmeden ekran hiçbir şey İDDİA ETMEZ: "0 öneri dışarıda" demek, ölçmediğimizi
+  // ölçmüş göstermek olurdu (`CLAUDE §1`).
+  if (viewport === null) return null;
 
   return (
-    <FieldShell label="Önerilen kodlar" labelAside={open.length > 0 ? num(open.length) : undefined}>
-      {open.length === 0 ? (
-        <p className="font-ops-body text-ops-xs leading-[1.55] text-ops-muted">{ROUTE_NOTES.suggestionEmpty}</p>
+    <FieldShell
+      label={ROUTE_NOTES.offscreenTitle}
+      labelAside={offscreen.length > 0 ? num(offscreen.length) : undefined}
+    >
+      {offscreen.length === 0 ? (
+        <p className="font-ops-body text-ops-xs leading-[1.55] text-ops-muted">
+          {open.length === 0 ? ROUTE_NOTES.suggestionEmpty : ROUTE_NOTES.offscreenNone}
+        </p>
       ) : (
         <>
           <ul className="flex flex-col rounded-ops-card border border-ops-violet-line bg-ops-violet-bg/40">
-            {open.map((row) => (
+            {offscreen.map((row) => (
               <li key={keyOfPoint(row)} className="border-b border-ops-violet-line/60 last:border-b-0">
                 <button
                   type="button"
-                  onClick={() => onPick(row)}
-                  className="flex w-full cursor-pointer flex-col gap-0.5 px-2.5 py-2 text-left transition-colors hover:bg-ops-violet-bg"
+                  onClick={() => onFocus(row)}
+                  className="flex w-full cursor-pointer items-baseline gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-ops-violet-bg"
                 >
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-ops-mono text-ops-xs text-ops-ink">{row.postalCode}</span>
-                    <span className="truncate font-ops-body text-ops-xs text-ops-muted">
-                      {/* Öneri satırı dar bir rayda duruyor — iki ad + sayı (`OB-04`); tam liste
-                          haritanın ipucunda. */}
-                      {ROUTE_NOTES.suggestionWhere(distanceOf(row), placesLabel(row.places ?? [], 2) ?? undefined)}
-                    </span>
-                    {/* Talebin YAŞI: üç ay önce susmuş bir ilgi, dünkü kadar davet etmez. */}
-                    {row.lastAskedMinutes !== null ? (
-                      <span className="ml-auto shrink-0 font-ops-body text-ops-micro text-ops-muted">
-                        {agoShort(row.lastAskedMinutes)}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="font-ops-body text-ops-xs text-ops-violet">
-                    {ROUTE_NOTES.suggestionReason(row)}
+                  <span className="shrink-0 font-ops-mono text-ops-xs text-ops-ink">{row.postalCode}</span>
+                  {/* Tek satır: ad + uzaklık. GEREKÇE burada YAZILMIYOR — haritada, noktanın
+                      ipucunda tam hâliyle duruyor ve operatör oraya gittiğinde zaten onu okuyacak.
+                      İki yere yazmak, rayı kısaltma kararını geri almak olurdu. */}
+                  <span className="truncate font-ops-body text-ops-xs text-ops-muted">
+                    {ROUTE_NOTES.suggestionWhere(distanceOf(row), placesLabel(row.places ?? [], 2) ?? undefined)}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
           <p className="mt-1.5 font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
-            {ROUTE_NOTES.suggestionHint}
+            {ROUTE_NOTES.offscreenHint}
           </p>
         </>
       )}

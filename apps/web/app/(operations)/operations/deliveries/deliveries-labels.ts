@@ -2,6 +2,7 @@ import type { Carrier, PaymentMethod } from '@lezzet/types';
 import type { StopOutcome } from '@/lib/courier/day';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { money } from '@/components/operation/ui/format';
+import type { ZoneMapFact } from '@/components/operation/ui/zone-map-model';
 import type { DoorMethod } from './[orderId]/delivery-types';
 import type { PrepStage } from './dispatch-types';
 
@@ -259,26 +260,49 @@ export const ROUTE_NOTES = {
 
   // ── Öneriler ──────────────────────────────────────────────────────────────
   /**
-   * Önerinin GEREKÇESİ — haritada üzerine gelince, rayda satırın altında.
+   * **Haritadaki önerinin TAM künyesi** — mor noktanın üzerine gelince okunan cümle (kullanıcı
+   * kararı 17.08).
    *
-   * Puan YAZILMAZ, kanıt yazılır. Bir "87 puan" operatöre hiçbir şey söylemez ve sorgulanamaz;
-   * *"3 kişi bekliyor · 6 sipariş gitti · 47 kez soruldu"* hem sebebi hem de büyüklüğü verir ve
-   * operatör istemezse reddeder. Öneri bir emir değil, bir hatırlatmadır.
+   * Gerekçe eskiden de buradaydı ama üç şey eksikti ve üçü de yalnız sağdaki listede vardı:
+   * noktanın NEDEN mor olduğu (lejanta bakmak gerekiyordu), rotaya uzaklığı, ve talebin yaşı.
+   * Eksik oldukları sürece liste kaldırılamazdı — çünkü harita aynı soruyu cevaplayamıyordu.
    *
-   * Sıra sinyalin AĞIRLIĞINA göre: bekleyen kişi (iletişim bilgisi verdi) → sipariş (ödedi) →
-   * soru (yalnız yazdı). Boş sinyal cümleye HİÇ girmez; "0 sipariş" yazmak gerekçeyi seyreltirdi.
+   * Sıra karar sırasıdır: önce "bu ne" (önerilen kod), sonra "neden" (kanıtlar), sonra "nerede"
+   * (uzaklık), en sonda "ne kadar taze". Ölçülemeyen parça cümleye HİÇ girmez — rotanın kodu
+   * yoksa uzaklık yazılmaz, sorulma yoksa yaş yazılmaz (`CLAUDE §1`).
    */
-  suggestionReason: (parts: { waitingCount: number; orderCount: number; requestCount: number }): string =>
+  suggestionTip: (parts: {
+    waitingCount: number;
+    orderCount: number;
+    requestCount: number;
+    /** `null` = rotanın hiç kodu yok, uzaklık ÖLÇÜLEMİYOR — "0 km" yazmak ölçmüş gibi okuturdu. */
+    distanceKm: number | null;
+    /** Son sorunun yaşı, hazır metin (`agoShort`); `null` = hiç sorulmamış. */
+    age: string | null;
+  }): ZoneMapFact[] =>
     [
-      parts.waitingCount > 0 ? `${parts.waitingCount} kişi haber bekliyor` : null,
-      parts.orderCount > 0 ? `${parts.orderCount} sipariş gitti` : null,
-      parts.requestCount > 0 ? `${parts.requestCount} kez soruldu` : null,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-  /** Rayın başlığı altındaki tek cümle: önerinin ne OLMADIĞINI da söyler. */
-  suggestionHint:
-    'Hiçbir rotada olmayan, ama veride izi olan kodlar. Sıra sinyalin gücüne göre — eklemek için tıklayın, haritada mor noktalar bunlar.',
+      // Sıra sinyalin AĞIRLIĞINA göre: bekleyen kişi (iletişim bilgisi verdi) → sipariş (ödedi) →
+      // soru (yalnız yazdı) → uzaklık → yaş. Boş sinyal çipe HİÇ dönmez; "0 sipariş" bir kanıt
+      // değil, gürültüdür ve gerçek kanıtı seyreltir.
+      parts.waitingCount > 0 ? { icon: 'waiting' as const, label: `${parts.waitingCount} bekliyor` } : null,
+      parts.orderCount > 0 ? { icon: 'orders' as const, label: `${parts.orderCount} sipariş` } : null,
+      parts.requestCount > 0 ? { icon: 'asked' as const, label: `${parts.requestCount} soru` } : null,
+      parts.distanceKm === null ? null : { icon: 'distance' as const, label: `${parts.distanceKm} km` },
+      // "önerilen kod" ibaresi KALKTI (kullanıcı 17.08): noktanın moru zaten onu söylüyor ve
+      // lejantta yazılı — ipucunda tekrarlamak, kartın en üst satırını bilgisiz bırakmaktı.
+      parts.age === null ? null : { icon: 'age' as const, label: parts.age },
+    ].filter((fact): fact is ZoneMapFact => fact !== null),
+  /**
+   * **Ekran dışındaki öneriler** — rayın kısaldıktan sonra taşıdığı TEK iş (kullanıcı kararı 17.08).
+   *
+   * Liste tam hâliyle dururken haritayla neredeyse tamamen örtüşüyordu; ayakta kalmasının tek
+   * gerekçesi haritanın yapısal olarak yapamadığı şeydi: **bakılmayan yeri göstermek.** `68000
+   * Colmar` ekranda yokken de önerilir, çünkü öneri operatörün gözünün gitmediği yeri de söylemeli.
+   */
+  offscreenTitle: 'Ekran dışında',
+  offscreenHint: 'Görüş alanının dışında kalan öneriler — tıklayınca harita oraya gider.',
+  /** Hepsi ekranda: bu bir eksiklik değil, iyi hâl — cümle onu öyle söyler. */
+  offscreenNone: 'Öneri kalmadı ya da hepsi ekranda — haritadaki mor noktalar.',
   /** Sinyal yoksa öneri de yok; bu bir arıza değil, sessiz bir dönem. */
   suggestionEmpty:
     'Şimdilik öneri yok — rota dışında kalan kodlarda talep, bekleyen ya da sipariş izi görünmüyor.',

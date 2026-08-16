@@ -4,7 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { placesLabel } from './labels';
-import type { ZoneCodeState, ZoneMapPoint, ZoneMapProps } from './zone-map-model';
+import {
+  FREE_CODE_MIN_ZOOM,
+  type ZoneCodeState,
+  type ZoneMapFact,
+  type ZoneMapPoint,
+  type ZoneMapProps,
+} from './zone-map-model';
 
 /**
  * **Rota haritası — Leaflet gövdesi** (19.20). `design/project/Depolar - Bolge Haritasi.html`.
@@ -128,24 +134,111 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
 const LABEL_MAX_PLACES = 3;
 
 /**
- * Etiket metni — ad varsa kodla birlikte, yoksa yalnız kod; gerekçe varsa arkasına.
+ * Etiket — kod, yerleşim adları ve gerekçe **ayrı satırlarda**.
  *
- * Gerekçe ÜZERİNE GELİNCE okunuyor ve bu bilinçli: haritada kalıcı olarak yazılsaydı önerilen her
- * noktanın yanında bir cümle dururdu ve harita okunmaz olurdu. Soru sırayla geliyor — önce "nerede",
- * sonra "neden".
+ * Metin dizesi değil DOM kuruyor ve iki sebebi var. Birincisi kullanıcının gördüğü kusur (17.08):
+ * her şey tek satırdaydı, çok yerleşimli bir kodda ad listesi uzayınca ipucu ekranı kesen bir şerit
+ * hâline geliyor ve okunmuyordu — Leaflet'in kendi ipucu `white-space: nowrap` ile çiziliyor.
+ * İkincisi güvenlik: satırların içinde veritabanından gelen yerleşim adları var; HTML dizesi kurup
+ * `innerHTML`e vermek onları işaretleme olarak yorumlatırdı. `textContent` ile yazılan DOM'da böyle
+ * bir kapı yok.
  *
- * **`permanent` iki farklı metin üretiyor** (`OB-04`): kalıcı etiket dar (üç ad), üzerine gelince
- * açılan ipucu TAM. Leaflet katman başına tek ipucu bağlıyor, yani ikisini aynı anda taşıyamayız —
- * ama gerek de yok: kalıcı etiket zaten hover'ın yerine geçiyor, dolayısıyla her yakınlıkta
- * operatörün gördüğü metin o anki soruya uygun oluyor.
+ * **`permanent` yine iki farklı metin üretiyor** (`OB-04`): kalıcı etiket dar (üç ad), üzerine
+ * gelince açılan ipucu TAM. Leaflet katman başına tek ipucu bağlıyor, yani ikisini aynı anda
+ * taşıyamayız — ama gerek de yok: kalıcı etiket zaten hover'ın yerine geçiyor.
  */
-function labelOf(point: ZoneMapPoint, permanent: boolean): string {
-  const where = placesLabel(point.places ?? [], permanent ? LABEL_MAX_PLACES : undefined);
-  const head = where ? `${point.postalCode} · ${where}` : point.postalCode;
-  return point.note ? `${head} — ${point.note}` : head;
+/**
+ * Künye ikonları — 24'lük kutuda tek `path`, `currentColor` ile boyanır.
+ *
+ * `components/operation/ui/icons.tsx`teki React ikonları BURADA kullanılamıyor: ipucu React
+ * ağacının dışında, elle kurulan bir DOM. Bir React ağacını her ipucu için ayrıca boyamak, tek
+ * `path` kopyalamaktan pahalı olurdu.
+ */
+/**
+ * **ÇİZGİSEL, dolgulu değil** (17.08): ilk tur dolgu yollarla yazılmıştı ve 13 pikselde hepsi aynı
+ * mor lekeye dönüştü — zil de torba da soru işareti de ayırt edilemiyordu. Çizgi, küçük boyda
+ * biçimi korur; ikonun tek işi zaten "bu sayı neyin sayısı" demek.
+ */
+const FACT_ICONS: Record<ZoneMapFact['icon'], readonly string[]> = {
+  // Zil — haber bekleyen kişi (izin vermiş, kimlikli).
+  waiting: ['M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9z', 'M10.2 20.5a2 2 0 0 0 3.6 0'],
+  // Torba — bu koda gitmiş sipariş.
+  orders: ['M6.5 3 4 7v12.5a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V7l-2.5-4z', 'M4 7h16', 'M16 11a4 4 0 0 1-8 0'],
+  // Soru — anonim "buraya geliyor musunuz" sayacı.
+  asked: ['M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19z', 'M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4', 'M12 17.6h.01'],
+  // İğne — rotaya uzaklık.
+  distance: ['M20 10.2c0 5.7-8 11.9-8 11.9s-8-6.2-8-11.9a8 8 0 0 1 16 0z', 'M12 12.9a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z'],
+  // Saat — son sorunun yaşı.
+  age: ['M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19z', 'M12 6.8V12l3.6 2.1'],
+};
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function iconOf(name: ZoneMapFact['icon']): SVGSVGElement {
+  // `createElementNS` + `setAttribute`: `innerHTML` ile kurulsaydı ipucunun içine işaretleme
+  // yazmanın kapısı açık kalırdı — komşusundaki yerleşim adları veritabanından geliyor.
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.9');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const d of FACT_ICONS[name]) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  }
+  return svg;
 }
 
-export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint, center, className }: ZoneMapProps) {
+function labelOf(point: ZoneMapPoint, permanent: boolean): HTMLElement {
+  const box = document.createElement('div');
+
+  const head = document.createElement('span');
+  head.className = 'ops-map-tip-code';
+  head.textContent = point.postalCode;
+  box.appendChild(head);
+
+  const where = placesLabel(point.places ?? [], permanent ? LABEL_MAX_PLACES : undefined);
+  if (where) {
+    const place = document.createElement('span');
+    place.className = 'ops-map-tip-place';
+    place.textContent = where;
+    box.appendChild(place);
+  }
+
+  const facts = point.facts ?? [];
+  if (facts.length > 0) {
+    const strip = document.createElement('div');
+    strip.className = 'ops-map-tip-stats';
+    for (const fact of facts) {
+      const chip = document.createElement('span');
+      chip.className = 'ops-map-tip-stat';
+      chip.appendChild(iconOf(fact.icon));
+      const value = document.createElement('span');
+      value.textContent = fact.label;
+      chip.appendChild(value);
+      strip.appendChild(chip);
+    }
+    box.appendChild(strip);
+  }
+
+  return box;
+}
+
+export function ZoneMapLeaflet({
+  points,
+  stateOf,
+  onPick,
+  onViewport,
+  note,
+  hint,
+  center,
+  focus,
+  className,
+}: ZoneMapProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -164,14 +257,24 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
     const box = boxRef.current;
     if (!box || mapRef.current) return;
 
-    // Yakınlaştırma denetimi SAĞ ÜSTTE (tasarım): sol üst lejanta ayrıldı ve iki kutu üst üste binerdi.
+    /**
+     * Yakınlaştırma denetimi SOL ALTTA — üç köşe de dolu, dördüncüsü boş.
+     *
+     * Sağ üstteydi ve 17.08'de ölçülen bir çakışma çıkardı: Rotalar sekmesinde ray haritanın
+     * üstüne yüzen bir panele dönünce denetim tam onun köşesine, "+ Rota" düğmesinin üzerine
+     * bindi. Leaflet kendi denetimlerini `z-index: 1000`de çiziyor, panel 500'de — yani sıra
+     * değil KONUM sorunuydu; z değeriyle oynamak düğmeleri bu kez panelin altına gömerdi.
+     *
+     * Kalan köşeler: sol üst lejant, alt orta ipucu şeridi, sağ alt OSM atıf yazısı (lisans
+     * gereği görünür kalmalı). Sol alt hepsinde boş.
+     */
     const map = L.map(box, {
       center: center ? [center.lat, center.lng] : [48.583, 7.75],
       zoom: 11,
       zoomControl: false,
       renderer: L.canvas(),
     });
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // `className` tasarımın soluklaştırmasını taşıyor (`globals.css` → `.ops-map-tiles`): zemin
     // sönükleşir, noktalar öne çıkar. Raster olduğu için tek CSS filtresi yetiyor.
     L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 18, className: 'ops-map-tiles' }).addTo(map);
@@ -236,7 +339,29 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
 
       for (const point of points) {
         L.circleMarker([point.lat, point.lng], styleOf(stateOf(point)))
-          .bindTooltip(labelOf(point, labelsOn), { permanent: labelsOn, direction: 'right', offset: [9, 0] })
+          /**
+           * İçerik **FONKSİYON olarak** veriliyor ve bu bir üslup değil ölçülü bir tasarruf
+           * (kullanıcı uyarısı 17.08): Leaflet fonksiyonu ipucu AÇILDIĞINDA çağırıyor, kurulurken
+           * değil. Etiket bir metin dizesiyken bunun önemi yoktu; kart DOM'una dönünce her çizimde
+           * **nokta sayısı kadar** kart (tavan 1200: svg + span'ler) kurulur olurdu — hepsi de
+           * aynı anda en fazla BİRİ görünen kartlar. Şimdi yalnız üzerine gelinen nokta ödüyor.
+           *
+           * `labelsOn` (z ≥ 13) hâlinde ipuçları zaten açık olduğu için hepsi kurulur — ama o
+           * yakınlıkta görüş alanında ~14 kod var (`FREE_CODE_MIN_ZOOM` tablosu), yani tavan 1200
+           * değil bir avuç.
+           *
+           * Stil `globals.css`te (`.ops-map-tip`): içerik React ağacının dışında, ve renk/genişlik
+           * Leaflet'in kendi kuralıyla eşit özgüllükte yarışmamalı.
+           */
+          .bindTooltip(() => labelOf(point, labelsOn), {
+            permanent: labelsOn,
+            direction: 'right',
+            offset: [9, 0],
+            // Geniş taban YALNIZ künyesi olan noktaya: sıradan bir kodda iki sütunluk ızgara yok,
+            // orada 15 rem'lik kutu boşluktan başka bir şey göstermezdi. Sınıf bağlama anında
+            // seçiliyor — `facts` o an biliniyor, içeriğin geç kurulması bunu değiştirmiyor.
+            className: point.facts && point.facts.length > 0 ? 'ops-map-tip ops-map-tip-wide' : 'ops-map-tip',
+          })
           .on('click', () => pickRef.current(point))
           .addTo(layer);
       }
@@ -252,6 +377,20 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
   }, [points, stateOf]);
 
   /**
+   * **Taşıma emri** (`focus`) — ekran dışındaki bir öneriye tıklandığında harita oraya gider.
+   *
+   * Yakınlaşma `FREE_CODE_MIN_ZOOM`in altına DÜŞMEZ ve bu kritik: eşiğin altında boştaki kodlar hiç
+   * çizilmiyor, yani uzaktan bakarken taşınan operatör gittiği yerde tam da aradığı noktayı
+   * göremezdi. Zaten daha yakındaysa yakınlık korunur — emir "oraya bak" demek, "yakınlığını
+   * sıfırla" değil.
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focus) return;
+    map.setView([focus.lat, focus.lng], Math.max(map.getZoom(), FREE_CODE_MIN_ZOOM), { animate: true });
+  }, [focus]);
+
+  /**
    * İpucu şeridi 2,6 sn sonra söner (tasarım). Ölçüt DEĞERİN kendisidir: art arda gelen iki AYNI
    * cümle sayaç sıfırlamaz — pratikte imkânsız, çünkü cümlenin içinde kodun kendisi geçiyor.
    */
@@ -263,7 +402,17 @@ export function ZoneMapLeaflet({ points, stateOf, onPick, onViewport, note, hint
   }, [hint]);
 
   return (
-    <div className={`relative h-full w-full ${className ?? ''}`}>
+    /**
+     * `isolate` = kendi katman kutusu, ve bu bir süsleme değil ÖLÇÜLMÜŞ bir arızanın çözümü
+     * (17.08): Leaflet kendi panellerini `z-index: 400`, denetimlerini `1000` ile çiziyor. Bu
+     * sayılar bir yalıtım olmadan sayfanın kökünde yarışıyordu — başlıktaki depo seçicisinin açılan
+     * listesi `body`'ye portal edilip `z-[60]` ile çiziliyor, yani haritanın ALTINDA kalıyordu.
+     *
+     * `isolation: isolate` Leaflet'in bütün iç sayılarını bu kutunun içine hapsediyor: dışarıda
+     * haritanın tek bir katmanı var, iç 1000'i artık kimseyle yarışmıyor. z değerlerini tek tek
+     * büyütmek yerine burada durmasının sebebi bu — yarışı kazanmak değil, yarışı bitirmek.
+     */
+    <div className={`relative isolate h-full w-full ${className ?? ''}`}>
       <div ref={boxRef} className="absolute inset-0" />
 
       {/* Lejant — tasarımın "Kod hâlleri" kutusu. Harita chrome'u olduğu için burada yaşıyor:

@@ -471,3 +471,88 @@ body {
 .ops-map-tiles {
   filter: saturate(0.32) brightness(1.06) contrast(0.94);
 }
+
+/* Harita ipucu (19.20) — noktanın çok satırlı künyesi.
+
+   Stil BURADA, ekranda değil: ipucunun içeriği React ağacının dışında, elle kurulan bir DOM
+   (Leaflet katmana bağlıyor). Tailwind sınıflarıyla yazılmıştı ve ilk turda okunmaz çıktı
+   (kullanıcı 17.08) — kutu daralınca her yerleşim adı ayrı satıra düşüyor, başlıkla gövde
+   ayrışmıyordu. Kendi sınıfına taşınınca hem genişlik açıkça verilebiliyor hem de renkler
+   Leaflet'in kendi `.leaflet-tooltip` kuralıyla eşit özgüllükte yarışmıyor. */
+.leaflet-tooltip.ops-map-tip {
+  /* **`width: max-content` bir süs değil, ÖLÇÜLMÜŞ bir kusurun çözümü** (17.08). Yalnız
+     `max-width` verilmişti ve kutu yine daracık çıkıyordu: Leaflet ipucunu `.leaflet-tooltip-pane`
+     içine koyuyor, o pane ise SIFIR genişlikte konumlanmış bir katman. Mutlak konumlu bir kutunun
+     genişliği "kullanılabilir alan"a göre hesaplanır; alan sıfır olunca kutu `min-content`e, yani
+     en uzun TEK KELİMEYE çöküyordu — "Niederschaeffolsheim" bir satır, sonraki ad başka satır.
+     `max-content` doğal genişliği ister, `max-width` onu makul bir yerde keser: kısa künye dar
+     kalır, uzun ad listesi sarmalanır. */
+  width: max-content;
+  max-width: 20rem;
+  white-space: normal;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-ops-line);
+  border-radius: var(--radius-ops-card);
+  background: var(--color-ops-card);
+  box-shadow: 0 8px 24px rgb(20 22 18 / 0.12);
+  font-family: var(--font-ops-body);
+  font-size: var(--text-ops-xs);
+  line-height: 1.45;
+}
+
+/* Leaflet ipucunun sivri ucu zemin rengini kendi kuralından alıyor; kart zeminine çekilmezse
+   beyaz bir üçgen olarak kutunun dışında duruyor. */
+.leaflet-tooltip.ops-map-tip::before {
+  border-top-color: var(--color-ops-card);
+  border-bottom-color: var(--color-ops-card);
+}
+
+.ops-map-tip-code {
+  display: block;
+  font-family: var(--font-ops-mono);
+  font-weight: 600;
+  color: var(--color-ops-ink);
+}
+
+.ops-map-tip-place {
+  display: block;
+  color: var(--color-ops-body);
+}
+
+/* Künyesi olan noktanın kartı GENİŞ TABAN alır: iki sütunluk künye ızgarası dar kutuda tek sütuna
+   çöker ve "1 bekliyor" ile "2 saat" alt alta düşerdi. Künyesiz noktalarda (sıradan kod) bu sınıf
+   hiç verilmiyor — orada geniş kutu boşluk demek olurdu. */
+.leaflet-tooltip.ops-map-tip-wide {
+  min-width: 15rem;
+}
+
+/* Künye ızgarası — CÜMLE DEĞİL, ikon + sayı; ve **iki sütun** (kullanıcı kararı 17.08).
+
+   Önce satır satır cümlelerdi ("3 kişi haber bekliyor", "son soru 1 saat önce") ve okunmadı:
+   operatörün ipucundan istediği bir paragraf değil üç sayı. Tek sütunda ise kart uzayıp inceliyordu;
+   iki sütun hem kartı toparlıyor hem yukarıdaki yerleşim adlarına genişlik bırakıyor. */
+.ops-map-tip-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3125rem 0.75rem;
+  margin-top: 0.4375rem;
+  padding-top: 0.4375rem;
+  border-top: 1px solid var(--color-ops-line);
+}
+
+.ops-map-tip-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--text-ops-micro);
+  color: var(--color-ops-violet);
+  white-space: nowrap;
+}
+
+.ops-map-tip-stat svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  /* İkon sayının hizmetinde: aynı tonda ama bir tık geride, gözü önce rakama götürsün. */
+  opacity: 0.75;
+}

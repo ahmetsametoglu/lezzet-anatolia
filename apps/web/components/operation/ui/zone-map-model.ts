@@ -41,11 +41,32 @@ export interface ZoneMapPoint {
    */
   places?: readonly string[];
   /**
-   * Etikete eklenen GEREKÇE — bugün yalnız önerilen kodlarda dolu ("3 kişi bekliyor · 47 kez
-   * soruldu"). Harita metni KURMAZ, taşır: gerekçenin dili ekranın sözlüğünde yaşıyor
-   * (`deliveries-labels`), tıpkı servislerin ham veri döndürüp etiket kurmaması gibi.
+   * Noktanın KÜNYE SAYILARI — bugün yalnız önerilen kodlarda dolu.
+   *
+   * **Cümle değil, ikon + sayı** (kullanıcı kararı 17.08). Önce tek satırlık bir cümleydi, sonra
+   * satır dizisi oldu; ikisi de okunmadı çünkü sorun uzunluk değil BİÇİMDİ — *"her şeyi metin
+   * olarak yazmaya çalışıyorsun… bunu bir kart gibi düşünsen, haber bekleyenleri bir ikonla
+   * gösterebilirsin."* Operatörün ipucundan istediği bir paragraf değil üç sayı: kaç kişi bekliyor,
+   * kaç kez soruldu, ne kadar uzakta. İkon bu sayılara sözcük harcamadan bağlam veriyor.
+   *
+   * Harita **metni kurmaz, taşır**: sözcükler ekranın sözlüğünde yaşıyor (`deliveries-labels`),
+   * harita yalnız hangi ikonun çizileceğini bilir.
    */
-  note?: string;
+  facts?: readonly ZoneMapFact[];
+}
+
+/**
+ * İpucu kartının tek künye satırı — **ikon + kısa değer**, cümle değil.
+ *
+ * Sözcük tamamen kalkmadı ve bu bilinçli: çıplak ikon "3" ile "47"nin hangisinin ne olduğunu
+ * söylemiyor, lejant da ipucunun içinde değil. Bir-iki kelimelik ek ("bekliyor", "soru") ikonun
+ * anlamını çiviliyor ve yine de bir cümle kurmuyor.
+ */
+export interface ZoneMapFact {
+  /** Hangi ikon çizilecek — anlam haritanın DEĞİL, sözlüğün kararı; harita yalnız çizer. */
+  icon: 'waiting' | 'orders' | 'asked' | 'distance' | 'age';
+  /** Sayı + en fazla bir kelime: "3 bekliyor", "22 km", "1 sa". */
+  label: string;
 }
 
 /**
@@ -118,5 +139,14 @@ export interface ZoneMapProps {
   /** Kısa geri bildirim şeridi (tasarımın `hint` kutusu) — 2,6 sn sonra söner. */
   hint?: string | null;
   center?: { lat: number; lng: number };
+  /**
+   * **Haritayı bir noktaya taşıma emri** — `center`den farkı zamanıdır: `center` açılış konumudur ve
+   * yalnız harita KURULURKEN okunur, bu ise sonradan gelir.
+   *
+   * Her tetiklemede **yeni nesne** beklenir; emri taşıyan şey nesnenin KİMLİĞİDİR, değeri değil.
+   * Sebep somut: aynı öneriye ikinci kez tıklamak da bir emirdir (operatör kaydırıp geri dönmüş
+   * olabilir), ama değerler aynı olduğu için değere bakan bir karşılaştırma onu görmezdi.
+   */
+  focus?: { lat: number; lng: number } | null;
   className?: string;
 }

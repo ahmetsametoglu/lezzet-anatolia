@@ -55,11 +55,17 @@ export function RoutesClient({
   data,
   routeId,
   warehouseId,
+  contextWarehouseId,
   handoff = null,
 }: {
   data: RoutesData;
   routeId: string | null;
   warehouseId: string | null;
+  /**
+   * Başlıktaki depo bağlamı (19.14) — `null` = "tüm depolar". YALNIZ seçicinin listesini daraltır;
+   * haritanın kümesine dokunmaz (kullanıcı kararı 17.08, gerekçe `routes.desktop`'ta).
+   */
+  contextWarehouseId: string | null;
   /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
   handoff?: ZoneHandoff | null;
 }) {
@@ -271,6 +277,7 @@ export function RoutesClient({
       freePoints={freePoints}
       truncated={truncated}
       data={data}
+      contextWarehouseId={contextWarehouseId}
       selected={selected}
       draft={draft}
       onSelect={select}
@@ -278,6 +285,7 @@ export function RoutesClient({
       onPick={pick}
       onSave={save}
       onViewport={setViewport}
+      viewport={viewport}
       hint={hint}
       homeCountry={(home?.countryCode ?? 'FR') as Country}
       busy={busy}
