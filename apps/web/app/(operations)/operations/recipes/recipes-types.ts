@@ -16,6 +16,8 @@ export interface RecipeItemView {
   productName: string;
   /** "350 g" — boy etiketi. Bağ VARYANTA kurulur (05.16): sepete eklenebilen tek şey odur. */
   variantLabel: string;
+  /** Ürünün görseli (16.08) — form ve önizleme satırında küçük resim; `null` = yer tutucu. */
+  imageUrl: string | null;
   /**
    * Liste fiyatı (b2c) — `null` ise fiyat TANIMSIZ, bedava değil. Tarif ekranı fiyat YAZMAZ,
    * okur: fiyat ürün kaydının kararıdır (tasarım: *"Fiyat burada girilmez"*).

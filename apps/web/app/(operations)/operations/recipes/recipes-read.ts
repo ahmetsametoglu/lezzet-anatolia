@@ -11,6 +11,7 @@ import {
 // (08.24) aynı. İki kopya bir gün ayrışsaydı operatörün önizlemede saydığı adım sayısı müşterinin
 // gördüğüyle tutmazdı — ve kimse fark etmezdi, çünkü iki taraf da kendi içinde tutarlı olurdu.
 import { splitLines } from '@lezzet/helper';
+import { publicImageUrl } from '@lezzet/storage';
 import { LOCALIZED_TEXT_KEYS, resolveLocalizedText } from '@lezzet/types';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import type { RecipeItemView, RecipeView, RecipesData } from './recipes-types';
@@ -116,6 +117,7 @@ async function describeItems(
         // adı yalnız Fransızca yazılmış olabilir ve o hâlde boş satır göstermek yanlış olurdu.
         productName: product ? resolveLocalizedText(product.name, OPERATIONS_LOCALE) || 'Adsız ürün' : 'Ürün çözülemedi',
         variantLabel: variant ? resolveLocalizedText(variant.label, OPERATIONS_LOCALE) : '—',
+        imageUrl: product ? publicImageUrl(product.imageKey, product.imageUpdatedAt) : null,
         priceCents: prices.get(item.variantId)?.channelPrice?.amountCents ?? null,
         isAvailable: variant?.isActive === true && product?.status === 'active',
       };

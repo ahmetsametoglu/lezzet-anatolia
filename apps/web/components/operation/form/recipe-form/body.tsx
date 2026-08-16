@@ -7,6 +7,7 @@ import { FormLocalizedText } from '@/components/operation/form/form-localized-te
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { Combobox } from '@/components/operation/form/combobox';
 import { Input } from '@/components/operation/form/input';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import type { RecipeFormValues, RecipeVariantOption } from './schema';
 
 /**
@@ -51,6 +52,14 @@ interface RecipeFormBodyProps {
    * kalemlerin adı okumadan geliyor ve çağıranda tutuluyor — yoksa satır kimliğini gösterirdi.
    */
   knownLabels: Record<string, string>;
+  /** Satır görselleri — etiketle aynı kural: okumadan tohumlanır, aramayla birikir. Yoksa yer tutucu. */
+  knownImages?: Record<string, string | null>;
+  /**
+   * `2` = İÇERİK SOL, MALZEME SAĞ (16.08, kullanıcı kararı): diyalog geniş açılır ve iki iş yan
+   * yana durur — dile bağlı metinler bir gözde, ürün kayıtları öbüründe. Varsayılan tek kolon:
+   * asistan kuyruğunun gövdesi kendi genişliğini bilemez (yanında dilekçe künyesi var).
+   */
+  columns?: 1 | 2;
   disabled?: boolean;
 }
 
@@ -64,7 +73,7 @@ interface RecipeFormBodyProps {
  */
 const NOTES = {
   /** Fiyat burada girilmez (tasarımın kuralı) — form fiyatın sahibi değil, okuyucusu. */
-  items: 'ürün kaydından seçilir · fiyat oradan okunur',
+  items: 'ürün kaydından seçilir · fiyat oradan okunur · boş satırdan yeni malzeme',
   /**
    * Satır = madde; kullanıcı kararı 07.08 (`KARARLAR §3z`). Numarayı ÖNİZLEME veriyor.
    *
@@ -85,14 +94,25 @@ export function RecipeFormBody({
   onSearch,
   searching,
   knownLabels,
+  knownImages = {},
+  columns = 1,
   disabled = false,
 }: RecipeFormBodyProps) {
   // Doluluk ipucunun dayanağı AD: yayın kapısının ölçütü o alan (`is_active` kısıtı üç dilde ad
   // ister). Sekmedeki amber nokta böylece "bu dilde tarif yayınlanamaz" demiş oluyor.
   const nameValue = useWatch({ control, name: 'name' });
 
+  // Seçici seçenekleri GÖRSELLİ (16.08): ürün fotoğrafı ada eşlik eder, listede de satırda da.
+  const comboOptions = options.map((option) => ({
+    value: option.variantId,
+    label: option.label,
+    thumb: <Thumbnail src={option.imageUrl} alt="" size={22} iconSize={10} className="!rounded-[5px]" />,
+  }));
+  const imageOf = (variantId: string) =>
+    knownImages[variantId] ?? options.find((o) => o.variantId === variantId)?.imageUrl ?? null;
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className={columns === 2 ? 'grid grid-cols-[1.15fr_1fr] items-start gap-5' : 'flex flex-col gap-5'}>
       <LocaleCard title="İçerik" completenessOf={nameValue ?? {}}>
         {(lang) => (
           <>
@@ -156,10 +176,13 @@ export function RecipeFormBody({
         <div className="flex flex-col gap-2">
           {items.map((item, index) => (
             <div key={`${item.variantId}-${index}`} className="flex items-center gap-2">
+              {/* Görsel SATIRDA (16.08, kullanıcı kararı): operatör malzemeyi fotoğrafından tanır;
+                  görselsiz üründe yer tutucu — kayan bir kolon hizayı bozardı. */}
+              <Thumbnail src={imageOf(item.variantId)} alt="" size={30} iconSize={12} className="!rounded-[6px]" />
               <Combobox
                 value={item.variantId}
                 onChange={(variantId) => onItemsChange(items.map((row, i) => (i === index ? { ...row, variantId } : row)))}
-                options={options.map((option) => ({ value: option.variantId, label: option.label }))}
+                options={comboOptions}
                 selectedLabel={knownLabels[item.variantId]}
                 onSearch={onSearch}
                 loading={searching}
@@ -193,15 +216,33 @@ export function RecipeFormBody({
               </Button>
             </div>
           ))}
-          <Button
-            variant="secondary"
-            size="sm"
-            className="self-start"
-            disabled={disabled}
-            onClick={() => onItemsChange([...items, { variantId: '', qty: 1 }])}
-          >
-            + malzeme
-          </Button>
+
+          {/* "+ malzeme" DÜĞMESİ YOK — SON SATIR HEP BOŞ DURUR (16.08, kullanıcı kararı: projedeki
+              hazır-satır deseni burada da geçerli). Boş satırdan ürün seçilince kalem listeye girer
+              ve yeni bir boş satır kendiliğinden belirir; adet kutusu varsayılanını (1) baştan
+              gösterir. `key` items uzunluğuna bağlı: seçim sonrası seçici boş hâline döner. */}
+          <div className="flex items-center gap-2">
+            <Thumbnail src={null} alt="" size={30} iconSize={12} className="!rounded-[6px] opacity-60" />
+            <Combobox
+              key={`empty-${items.length}`}
+              value=""
+              onChange={(variantId) => {
+                if (variantId) onItemsChange([...items, { variantId, qty: 1 }]);
+              }}
+              options={comboOptions}
+              onSearch={onSearch}
+              loading={searching}
+              placeholder="Ürün ara — malzeme ekle…"
+              searchPlaceholder="Ürün adının bir parçasını yazın"
+              emptyText="Eşleşen ürün yok — malzeme ürün kaydından seçilir, serbest metin girilmez."
+              className="min-w-0 flex-1"
+              disabled={disabled}
+            />
+            {/* Varsayılan adet GÖRÜNÜR ama kilitli: değer ürün seçilince satıra taşınır. */}
+            <Input type="number" fullWidth={false} value="1" disabled readOnly className="w-16 text-center opacity-60" />
+            {/* Sil düğmesinin YERİ ayrılır, kendisi çizilmez: üstteki satırlarla hiza bozulmasın. */}
+            <span className="w-[38px]" aria-hidden />
+          </div>
         </div>
       </FieldShell>
     </div>

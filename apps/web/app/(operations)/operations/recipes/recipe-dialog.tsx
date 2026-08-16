@@ -46,6 +46,10 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
   const [knownLabels, setKnownLabels] = useState<Record<string, string>>(
     Object.fromEntries((recipe?.itemViews ?? []).map((item) => [item.variantId, `${item.productName} · ${item.variantLabel}`])),
   );
+  // Görseller aynı kuralla: okumadan tohumlanır, aramayla birikir (16.08 — satırda ürün fotoğrafı).
+  const [knownImages, setKnownImages] = useState<Record<string, string | null>>(
+    Object.fromEntries((recipe?.itemViews ?? []).map((item) => [item.variantId, item.imageUrl])),
+  );
 
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(RecipeFormSchema),
@@ -74,7 +78,10 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
       .then(({ data }) => {
         setOptions(data ?? []);
         // Bulunan etiketleri sakla: seçildikten sonra arama kutusu temizlense de satır adını korur.
-        if (data) setKnownLabels((current) => ({ ...current, ...Object.fromEntries(data.map((o) => [o.variantId, o.label])) }));
+        if (data) {
+          setKnownLabels((current) => ({ ...current, ...Object.fromEntries(data.map((o) => [o.variantId, o.label])) }));
+          setKnownImages((current) => ({ ...current, ...Object.fromEntries(data.map((o) => [o.variantId, o.imageUrl])) }));
+        }
       })
       .finally(() => setSearching(false));
   }, []);
@@ -106,9 +113,12 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
   );
 
   return (
+    // Genişlik İKİ SÜTUN için (16.08, kullanıcı kararı): içerik solda, malzemeler sağda — varsayılan
+    // 640'ta iki göz yan yana sığmıyordu ve malzeme listesi metinlerin altında kayboluyordu.
     <Dialog
       open
       onClose={onClose}
+      maxWidth={980}
       title={recipe ? 'Tarifi düzenle' : 'Yeni tarif'}
       subtitle={recipe ? recipe.title : RECIPE_NOTES.newSubtitle}
       footer={footer}
@@ -123,6 +133,8 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
           onSearch={onSearch}
           searching={searching}
           knownLabels={knownLabels}
+          knownImages={knownImages}
+          columns={2}
         />
 
         {error ? (

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { ProductService, RecipeService, serviceDb } from '@lezzet/database';
+import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
@@ -115,9 +116,12 @@ export async function searchRecipeVariantsAction(term: string): Promise<ActionRe
     return {
       data: pool.flatMap((product) => {
         const name = resolveLocalizedText(product.name, OPERATIONS_LOCALE) || 'Adsız ürün';
+        // Görsel ÜRÜNÜN (boyun değil) — malzeme satırı ve seçici listesi küçük resmi buradan alır.
+        const imageUrl = publicImageUrl(product.imageKey, product.imageUpdatedAt);
         return product.variants.map((variant) => ({
           variantId: variant.id,
           label: titleOf(name, resolveLocalizedText(variant.label, OPERATIONS_LOCALE)),
+          imageUrl,
         }));
       }),
       error: null,

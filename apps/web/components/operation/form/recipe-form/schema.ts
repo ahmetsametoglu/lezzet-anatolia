@@ -46,6 +46,8 @@ export interface RecipeVariantOption {
   variantId: string;
   /** "Ezine Beyaz Peynir · 350 g" — `titleOf` ile kurulur, ekran ikinci kez kurmaz. */
   label: string;
+  /** Ürünün görseli (16.08) — satırda ve seçici listesinde küçük resim; `null` = yer tutucu. */
+  imageUrl: string | null;
 }
 
 /** Boş form — yeni tarif ve asistan taslağının ortak tabanı. */
