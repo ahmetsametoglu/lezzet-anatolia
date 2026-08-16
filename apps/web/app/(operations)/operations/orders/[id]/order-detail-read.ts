@@ -134,7 +134,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     variants.map((v) => [v.id, titleOf(productNames.get(v.productId) ?? '—', resolveLocalizedText(v.label))]),
   );
   const variantSubs = new Map(variants.map((v) => [v.id, resolveLocalizedText(v.label)]));
-  // Parti izi bağının arama anahtarı: stok ekranı ÜRÜN ADIYLA arar (parti numarasıyla değil).
+  // Kalemdeki LOT köprüsünün arama anahtarı: stok ekranı ÜRÜN ADIYLA arar (parti numarasıyla değil).
   const variantProducts = new Map(variants.map((v) => [v.id, productNames.get(v.productId) ?? '']));
 
   // Parti numaraları kalem başına: geri çağırma izi satırın kendi altında okunur.
@@ -157,6 +157,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     sub: variantSubs.get(item.variantId) ?? '',
     imageUrl: variantImages.get(item.variantId) ?? null,
     productSlug: variantSlugs.get(item.variantId) ?? null,
+    productName: variantProducts.get(item.variantId) ?? '',
     qty: item.qty,
     fulfilledQty: item.fulfilledQty,
     unitPriceCents: item.unitPriceCents,
@@ -258,7 +259,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
           }
         : null,
     },
-    links: linksOf(tickets, lotByItem, lines, new Map(items.map((i) => [i.id, variantProducts.get(i.variantId) ?? '']))),
+    links: linksOf(tickets),
     finance: financeOf(order, items, cogsOf(batches, stocks)),
   };
 }
@@ -389,18 +390,13 @@ const ROUTE_LABELS: Record<Account['type'], string> = {
 };
 
 /**
- * "Bağlar" — bu siparişin değdiği diğer kayıtlar: açılmış talepler ve çıkmış partiler.
+ * "Bağlı talepler" — bu siparişe açılmış müşteri talepleri.
  *
- * Parti izi burada durur çünkü sorusu operasyonel: geri çağırma olursa bu siparişin hangi partiden
- * ne kadar aldığı, kaydın kendi sayfasında değil, siparişe bakarken lazım olur.
+ * Parti izi satırları SÖKÜLDÜ (16.08, kullanıcı kararı): aynı bilgi kalemin altındaki LOT
+ * numarasında duruyor ve artık oradan tıklanıyor — sağ rayda ikinci kez anlatmak yer yiyordu.
  */
-function linksOf(
-  tickets: readonly Ticket[],
-  lotByItem: Map<string, string[]>,
-  lines: OrderLineView[],
-  productNameByLine: Map<string, string>,
-): OrderLinkView[] {
-  const links: OrderLinkView[] = tickets.map((ticket) => ({
+function linksOf(tickets: readonly Ticket[]): OrderLinkView[] {
+  return tickets.map((ticket) => ({
     key: `ticket-${ticket.id}`,
     ref: TICKET_TYPE_LABELS[ticket.type],
     state: TICKET_STATUS_LABELS[ticket.status],
@@ -416,35 +412,6 @@ function linksOf(
     href: null,
     cta: '',
   }));
-
-  // Parti başına TEK satır: aynı lot iki kalemden çıkmış olabilir, iz aynı izdir.
-  const ofLot = new Map<string, { titles: Set<string>; products: Set<string> }>();
-  for (const line of lines) {
-    for (const lot of lotByItem.get(line.id) ?? []) {
-      const entry = ofLot.get(lot) ?? { titles: new Set<string>(), products: new Set<string>() };
-      entry.titles.add(line.title);
-      const product = productNameByLine.get(line.id);
-      if (product) entry.products.add(product);
-      ofLot.set(lot, entry);
-    }
-  }
-  for (const [lot, entry] of ofLot) {
-    // Stok ekranı ÜRÜN ADIYLA arar; parti numarasını sorgu olarak yollamak boş sayfa açardı. Tek
-    // ürüne düşen partide arama anlamlı, karışık partide (aynı lot birden çok ürün) davet edilmez.
-    const only = entry.products.size === 1 ? [...entry.products][0] : null;
-    links.push({
-      key: `lot-${lot}`,
-      ref: lot,
-      state: 'Parti izi',
-      tone: 'slate',
-      title: [...entry.titles].join(' · '),
-      note: `Bu kalem ${lot} numaralı stok partisinden hazırlandı. Ürün geri çağrılırsa aynı partinin gittiği bütün siparişler stoktan tek aramayla bulunur.`,
-      href: only ? `/operations/stock?q=${encodeURIComponent(only)}` : null,
-      cta: only ? 'Partiyi stokta aç →' : '',
-    });
-  }
-
-  return links;
 }
 
 /** Satır tutarı: sipariş edilen adet × birim − kalemin indirim payı. Kalemin TAMAMI için. */

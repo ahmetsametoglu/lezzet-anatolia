@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { discountPercentOf } from '@lezzet/domain-core';
 import { amount, money, percent } from '@/components/operation/ui/format';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
@@ -174,8 +175,26 @@ function Line({ line, indented, settled }: LineProps) {
               </span>
             )}
             {line.batchNos.length > 0 ? (
-              // Parti izi burada DURUR ama öne çıkmaz: geri çağırma bağlamı dışında operatörün işi değil.
-              <span className="truncate font-ops-mono text-ops-micro text-ops-faint">Lot {line.batchNos.join(' · ')}</span>
+              // LOT TIKLANIR (16.08, kullanıcı kararı — sağ raydaki "parti izi" kartının yerine):
+              // köprü ürün adıyla stok aramasına gider, çünkü stok ekranı ADLA arar (parti
+              // numarası sorgu olarak boş sayfa açardı). Geri çağırma izi artık tek yerde, kalemde.
+              <span className="flex flex-wrap items-center gap-x-1.5 font-ops-mono text-ops-micro text-ops-faint">
+                Lot
+                {line.batchNos.map((lot) =>
+                  line.productName ? (
+                    <Link
+                      key={lot}
+                      href={`/operations/stock?q=${encodeURIComponent(line.productName)}`}
+                      className="cursor-pointer transition-colors hover:text-ops-olive-dark hover:underline"
+                      title="Partiyi stokta aç"
+                    >
+                      {lot}
+                    </Link>
+                  ) : (
+                    <span key={lot}>{lot}</span>
+                  ),
+                )}
+              </span>
             ) : indented ? (
               <span className="font-ops-body text-ops-micro text-ops-muted">paket içeriği</span>
             ) : null}

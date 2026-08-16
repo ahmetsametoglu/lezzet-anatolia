@@ -507,10 +507,10 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               dokunuyor?"). Hedef ekranı olan satır davet eder, olmayan yalnız kaydı gösterir. */}
           {order.links.length > 0 ? (
             <div className={cardClass()}>
-              {/* Başlık soruyu kendisi sorar (15.08, kullanıcı bildirimi: "Bağlar" tek başına
-                  anlaşılmıyordu); satır notları da tam cümle (`linksOf`). */}
+              {/* Kart artık YALNIZ talepleri taşır (16.08, kullanıcı kararı): parti izi kalemdeki
+                  LOT köprüsüne taşındı — aynı bilgiyi sağ rayda ikinci kez anlatmak yer yiyordu. */}
               <div className="border-b border-ops-line-soft px-3.5 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-ink">
-                Bu siparişe bağlı kayıtlar
+                Bağlı talepler
               </div>
               {order.links.map((link) => (
                 <div

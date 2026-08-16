@@ -27,6 +27,8 @@ export interface OrderLineView {
    * müşteri sayfası yoktur (404); köprüsüz kalem ad olarak düz metin kalır.
    */
   productSlug: string | null;
+  /** Ürünün çözülmüş adı — kalemdeki LOT köprüsünün stok arama anahtarı (stok adla arar). */
+  productName: string;
   qty: number;
   /** Fiziksel olarak giden adet — `qty`'den azsa eksik gitmiştir. */
   fulfilledQty: number;
