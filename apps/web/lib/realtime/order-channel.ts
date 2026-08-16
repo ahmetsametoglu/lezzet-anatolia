@@ -18,5 +18,6 @@ export function orderChannelName(orderId: string): string {
   return `order:${orderId}`;
 }
 
-/** Tek olay adı: "bir şey değişti". Ne değiştiği söylenmez — cevabı sunucu render'ı verir. */
-export const ORDER_CHANGED_EVENT = 'changed';
+// Olay adı BURADAN KALKTI (16.8): zili çalan taraf ortak modüle terfi edince aynı sabit iki yerde
+// yaşamaya başlamıştı — biri değişse zil sessizce çalmaz olurdu. Tek kaynak:
+// `@lezzet/application/realtime/bell-event` → `BELL_EVENT`.

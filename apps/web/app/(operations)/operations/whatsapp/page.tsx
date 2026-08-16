@@ -1,6 +1,8 @@
+import { conversationsChannelName } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
+import { LiveRefresh } from '@/components/operation/ui/live-refresh';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { readCustomerContext } from '@/lib/customer/context';
 import { readConversationDetail } from '@/lib/whatsapp/read';
@@ -96,5 +98,13 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
     detail: detailView,
   };
 
-  return <WhatsappClient data={data} urlState={{ ...urlState, c: selectedId }} />;
+  return (
+    <>
+      {/* CANLI BAĞ (16.8): bugün tek arka plan yazarı AI cron'unun hibrit taslağı — ekran açıkken
+          taslak belirmeli. Kanal talep kuyruğununkinden AYRI: her müşteri talebinde bu ekranı da
+          tazelemek, konuşmayı okuyan operatörün altından sayfayı çekerdi. */}
+      <LiveRefresh channel={conversationsChannelName()} />
+      <WhatsappClient data={data} urlState={{ ...urlState, c: selectedId }} />
+    </>
+  );
 }

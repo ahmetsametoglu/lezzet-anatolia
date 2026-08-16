@@ -14,6 +14,7 @@ import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { ringConversationsBell, ringTicketsBell } from '../realtime/bell';
 import { notifyTicketReplied } from './notify';
 
 /**
@@ -121,6 +122,9 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   await tickets.update({ id: ticket.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
+  // Taslağı çoğu zaman CRON yazıyor (5 dakikada bir tur) — yani ekranda hiçbir şey olmadan beliriyor.
+  // Zil çalmazsa operatör taslağı ancak sayfayı elle yenileyince görürdü (16.8).
+  await ringTicketsBell();
   return { status: 'generated' };
 }
 
@@ -161,6 +165,8 @@ export async function generateConversationDraft(
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   await conversations.update({ id: conversation.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
+  // Taslağı cron yazdı — WhatsApp ekranı açık duran operatör onu elle yenilemeden görsün (16.8).
+  await ringConversationsBell();
   return { status: 'generated' };
 }
 
@@ -197,6 +203,9 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
     const reason = result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.';
     await tickets.setMode(ticket.id, 'human');
     logger.info({ context: 'application/ticket-ai', ticketId: ticket.id }, `özerk ajan insana devretti: ${reason}`);
+    // Devir de EKRANA yansımalı: talep az önce AI'daydı, artık operatörü bekliyor. Zil çalmazsa
+    // kuyruk hâlâ "AI yürütüyor" yazar ve kimse o talebe bakmaz (16.8).
+    await ringTicketsBell();
     return { status: 'handoff', reason };
   }
 
@@ -210,5 +219,6 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   // okunur — cevap durumu değiştirmiş olabilir. Aynı kurucu, aynı mail: personel cevabıyla bir.
   const fresh = (await tickets.getById(ticket.id)) ?? ticket;
   await notifyTicketReplied(db, fresh);
+  await ringTicketsBell();
   return { status: 'replied' };
 }

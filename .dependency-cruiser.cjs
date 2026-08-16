@@ -69,7 +69,10 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(\\.next|\\.turbo|dist)/' },
+    // `.next-prod` de dışarıda: paralel production derlemesinin çıktısı (`NEXT_DIST_DIR`), kaynak
+    // değil. `\.next` kalıbı onu YAKALAMIYOR (araya `-prod` giriyor) ve derlenmiş 283 dosya
+    // "orphan" diye uyarıya düşüp gerçek ihlalleri gömüyordu — eslint'te aynısı düzeltilmişti.
+    exclude: { path: '(\\.next(-prod)?|\\.turbo|dist)/' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       exportsFields: ['exports'],

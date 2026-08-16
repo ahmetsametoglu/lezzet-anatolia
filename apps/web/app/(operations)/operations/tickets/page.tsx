@@ -1,4 +1,6 @@
+import { ticketsChannelName } from '@lezzet/application';
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
+import { LiveRefresh } from '@/components/operation/ui/live-refresh';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
@@ -90,5 +92,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     context,
   };
 
-  return <TicketsClient data={data} urlState={{ ...urlState, t: selectedId }} />;
+  return (
+    <>
+      {/* CANLI BAĞ (16.8): müşteri mobilden ya da web `/support`tan yazınca, AI cron'u taslak/cevap
+          yazınca zil çalar ve bu sayfa SUNUCUDAN yeniden istenir — kuyruk da, açık yazışma da tek
+          turda tazelenir. Kanal adı guard'ın arkasında üretiliyor (`ticketsChannelName` künyesi):
+          tahmin edilebilir bir ad, oturumsuz birine "desteğe şu an mesaj düştü" derdi. */}
+      <LiveRefresh channel={ticketsChannelName()} />
+      <TicketsClient data={data} urlState={{ ...urlState, t: selectedId }} />
+    </>
+  );
 }

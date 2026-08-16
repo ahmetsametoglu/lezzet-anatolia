@@ -121,6 +121,17 @@ Müşteri talebinin doğuşundan çözümüne: `Ticket` + `TicketMessage`, müş
   - **Aynı sınıf hata iki kez daha yaşandı:** `site-image.ts` (09.16'da düzeltildi) ve tarif kapakları (05.25'te düzeltildi). Kural her ikisinde de aynı: **seed'in ihtiyaç duyduğu fikstür, seed'in erişebildiği bir yerde durmalı** — repoda bir dosya ya da künyesi repoda duran bir uzak adres. 05.25'in kurduğu `data/fixture-images.json` deseni buraya da uyar.
   - *Bitti sayılır:* `db:refresh` sonrası şikâyet ekinin R2 anahtarı dolu.
 
+- [x] (16.8) **Canlı yenileme:** müşteri (mobil/web) yazınca ya da AI turu yazınca operasyon ekranı kendiliğinden tazelensin — elle F5 yok · `touches: packages/application/src/realtime/, apps/web/components/operation/ui/live-refresh.tsx`
+  - *Bitti:* Talepler ekranı açıkken mobilden gelen mesaj hem kuyrukta hem açık yazışmada belirir.
+  - **Durum (16.08) — YAZILDI, taşıma ölçüldü; ekran turu bekliyor.** İstek kullanıcıdan geldi: "mobil tarafından mesaj gönderilince talep bölümü otomatik yenilensin; hem liste hem içindeysem o mesajlaşma".
+    - **Desen: ZİL, veri borusu değil.** `postgres_changes` KULLANILMADI — projede RLS yok, her okuma sunucuda service-role ile yapılıyor; tarayıcıyı `ticket`/`ticket_message` tablosuna abone etmek o duvarda ilk delik olurdu. Sunucu boş bir broadcast atar, tarayıcı duyunca `router.refresh()` ile sayfayı SUNUCUDAN ister. Yük daima boş: kanal adını bilene tek bir alan bile sızmasın diye.
+    - **Tek zil, iki iş:** Talepler sayfası kuyruğu ve seçili yazışmayı (`?t=`) TEK sunucu render'ında çiziyor, yani "liste değişti" ile "açık yazışmaya mesaj geldi" ayrı zil istemiyor. Talep başına kanal açılmadı: operatör hangi talebe mesaj geleceğini bilmediği için hepsine abone olmak gerekirdi.
+    - **Çalan taraf ORTAK modül** (`@lezzet/application/realtime/bell`, terfi): üç süreç de aynı çağrıyı yapıyor — web, mobil arka uç (`replyToCustomerTicket`/`openCustomerTicket` kapıları), backend cron (taslak · özerk cevap · insana devir). Web'in sipariş zili (`broadcastOrderChanged`) de artık buraya bağlı; ikinci `fetch` kopyası kalmadı ve olay adı tek kaynakta (`bell-event.ts` — istemci de o dosyadan okuyor).
+    - **Kanal adı sırdan türetiliyor** (`sha256(SUPABASE_SECRET_KEY)` ön eki): `ops:tickets` gibi tahmin edilebilir bir ad, anon anahtarı olan herkese "desteğe şu an mesaj düştü" zaman bilgisini verirdi. İçerik değil ama TRAFİK sızardı. Adı yalnız guard'ın arkasındaki sayfa öğreniyor.
+    - **Arka plandaki sekme yenilenmiyor;** sekmeye dönülünce bir kez yenileniyor (`visibilitychange`) — gecikme var, kayıp yok.
+    - **WhatsApp ekranına da takıldı, AYRI kanalla:** oradaki tek arka plan yazarı bugün AI cron'unun hibrit taslağı. Ortak kanal olsaydı her müşteri talebi, konuşmayı okuyan operatörün altından sayfayı çekerdi.
+    - **Ölçüldü:** anon istemci (tarayıcının kullandığı istemci) zili duydu (`payload {}`); `replyToCustomerTicket` — mobil ucun çağırdığı kapının ta kendisi — çağrılınca da duydu. **Ekran turu YAPILAMADI:** katalog şeridinin çalışma ağacındaki `product.storage_type` değişikliği yerel DB'ye inmediği için ürün okuyan her operasyon ekranı doğrulamada patlıyor (dev'de hata kartı, prod derlemesi `/sitemap.xml`de düşüyor). `db:reset` sonrası bakılacak.
+
 ## Netleşecekler
 
 - **AI devir eşiği:** AI'ın hangi güven düzeyinin altında insana devredeceği — pratikte ayarlanır; başlangıçta muhafazakâr (şüphede insana).

@@ -5,6 +5,7 @@ import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Order, PreferredLanguage, Ticket, TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CustomerOrderLookup } from '../order/customer-orders';
+import { ringTicketsBell } from '../realtime/bell';
 import { getCustomerTicket } from './read';
 import type { CustomerTicketView } from './ticket-types';
 
@@ -189,6 +190,9 @@ export async function openCustomerTicket(
   // Teyit maili talep KAYDEDİLDİKTEN SONRA ve beklenerek: beklemezsek çağıran süreç (server action /
   // Hono isteği) mail gitmeden sonlanabilir. Etki kendi içinde sessiz — hata yukarı çıkmaz.
   await runEffect('notifyReceived', ticket.id, effects?.notifyReceived && (() => effects.notifyReceived!(ticket)));
+  // Yeni talep kuyruğa düştü — operatörün ekranı elle yenilenmeden görsün (16.8). Zil PORT DEĞİL:
+  // teyit maili gibi paket bağımlılığı istemiyor, tek `fetch` ve sessiz.
+  await ringTicketsBell();
   return { status: 'ok', ticket };
 }
 
@@ -231,6 +235,11 @@ export async function replyToCustomerTicket(
     attachments: input.attachments ? [...input.attachments] : undefined,
     newStatus: statusAfterCustomerReply(ticket.status),
   });
+
+  // Müşterinin mesajı YAZILDI — kuyruğu izleyen operatör ekranı zili duyup sunucudan yeniden
+  // istesin (16.8). Kullanıcının istediği asıl akış budur: mobilden yazılan mesaj, açık duran
+  // Talepler ekranında hem kuyruk satırında hem yazışmada kendiliğinden belirir.
+  await ringTicketsBell();
 
   const view = await getCustomerTicket(db, { customerId: input.customerId, ticketId: ticket.id, locale: input.locale });
   // Az önce yazdığımız talebi okuyamıyorsak ortada bir arıza vardır; "bulunamadı" demek doğru cevap

@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ORDER_CHANGED_EVENT, orderChannelName } from '@/lib/realtime/order-channel';
+import { BELL_EVENT } from '@lezzet/application/realtime/bell-event';
+import { orderChannelName } from '@/lib/realtime/order-channel';
 
 /**
  * Ödeme bekleyen onay ekranının canlı bağı. Çizdiği bir şey yok — tek işi **zili duyunca sayfayı
@@ -25,7 +26,7 @@ export function OrderWatch({ orderId }: { orderId: string }) {
     const supabase = createClient();
     const channel = supabase
       .channel(orderChannelName(orderId))
-      .on('broadcast', { event: ORDER_CHANGED_EVENT }, () => router.refresh())
+      .on('broadcast', { event: BELL_EVENT }, () => router.refresh())
       .subscribe();
 
     router.refresh();

@@ -121,6 +121,18 @@ export {
   type SupportAiOutcome,
 } from './ticket/ai';
 
+// ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
+// Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden
+// tazelenmesi için, zili çalan üç süreç (web · mobil arka uç · backend cron) tek çağrıyı paylaşsın.
+export {
+  BELL_EVENT,
+  conversationsChannelName,
+  ringBell,
+  ringConversationsBell,
+  ringTicketsBell,
+  ticketsChannelName,
+} from './realtime/bell';
+
 // ── Geri bildirim akışı (17.2 · 17.6) — terfi: web davet sayfası + mobil vFb ────────────────
 // Kaynak `apps/web/lib/feedback/{invite,product-feedback,points}.ts`in TOKEN akışı dilimi; web
 // köprü, benimsemesi web şeridinin işi. Kimlik TOKEN'dan çözülür; kapılar customerId almaz.
