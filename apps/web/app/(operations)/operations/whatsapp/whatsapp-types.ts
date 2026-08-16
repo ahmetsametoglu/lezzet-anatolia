@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { TicketTypeEnum, type KeysetCursor, type MessageDirection, type MessageKind } from '@lezzet/types';
+import {
+  TicketTypeEnum,
+  type KeysetCursor,
+  type MessageDirection,
+  type MessageKind,
+  type TicketHandler,
+  type TicketSender,
+} from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { WhatsappFilterKey, WhatsappUrlState } from './whatsapp-url';
 
@@ -39,6 +46,8 @@ export interface InboxRowView {
   awaitingReply: boolean;
   /** Kimlik çözülmemiş konuşma (webhook önce yazar, sonra çözer — ve elle işlemede çakışma olabilir). */
   unidentified: boolean;
+  /** Sohbeti kim yürütüyor (16.08) — satırdaki AI/Hibrit rozetinin kaynağı. */
+  handledBy: TicketHandler;
   window: WindowView;
 }
 
@@ -46,6 +55,8 @@ export interface InboxRowView {
 export interface MessageView {
   id: string;
   direction: MessageDirection;
+  /** Kim yazdı (16.08) — AI'ın gönderdiği balon ayrı tonda okunur; "bunu kim söyledi" sonradan da cevaplanmalı. */
+  author: TicketSender;
   kind: MessageKind;
   /** Gövde metni; yoksa türün okunabilir adı (kart/medya adım 2'de dolacak). */
   text: string;
@@ -78,6 +89,10 @@ export interface ConversationDetailView {
   context: CustomerContextData | null;
   /** Bu konuşmadan açılmış talepler — köprü iki yönlü olsun diye. */
   tickets: { id: string; subject: string; statusLabel: string }[];
+  /** Sohbeti kim yürütüyor (16.08): human · hybrid · ai — başlıktaki mod anahtarının değeri. */
+  handledBy: TicketHandler;
+  /** Hibrit modun bekleyen AI taslağı — kesikli kartın metni; `null` = taslak yok. */
+  aiDraft: string | null;
 }
 
 export interface WhatsappData {
@@ -142,6 +157,10 @@ export interface WhatsappViewProps {
   onFilter: (f: WhatsappFilterKey) => void;
   onSelect: (c: string) => void;
   onRecordOutbound: (text: string) => Promise<boolean>;
+  /** Yürütücü modu (16.08): human · hybrid · ai — Devral da bu kapıdan geçer (`mode='human'`). */
+  onMode: (mode: TicketHandler) => void;
+  /** Hibrit taslağı tüket — metni döndürür, ekran defter kutusuna taşır (gönderim kanalı yok, 15.7/15.11). */
+  onConsumeDraft: () => Promise<string | null>;
   /** Açık sohbete GELEN mesaj — numarası kilitli pencereyi açar. */
   onIncoming: () => void;
   onNewDm: () => void;

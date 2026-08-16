@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadMoreConversationsAction, recordOutboundAction } from './actions';
+import type { TicketHandler } from '@lezzet/types';
+import {
+  consumeConversationDraftAction,
+  loadMoreConversationsAction,
+  recordOutboundAction,
+  setConversationModeAction,
+} from './actions';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
 import { ManualDmDialog } from './manual-dm-dialog';
 import { WhatsappDesktop } from './whatsapp.desktop';
@@ -101,6 +107,21 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
     onSelect: (c: string) => go({ c }),
     onRecordOutbound: (text: string) =>
       detail ? run(() => recordOutboundAction({ conversationId: detail.id, text })) : Promise.resolve(false),
+    // Mod anahtarı (16.08) — onaysız: anahtar kararın kendisi; Devral düğmesi de buradan geçer.
+    onMode: (mode: TicketHandler) => {
+      if (detail) void run(() => setConversationModeAction(detail.id, mode));
+    },
+    /** Hibrit taslağı tüket — dönen metni ekran defter kutusuna taşır (16.08). */
+    onConsumeDraft: async (): Promise<string | null> => {
+      if (!detail) return null;
+      let draft: string | null = null;
+      await run(async () => {
+        const result = await consumeConversationDraftAction(detail.id);
+        draft = result.data?.draft ?? null;
+        return result;
+      });
+      return draft;
+    },
     onIncoming: () => setDmMode('follow'),
     onNewDm: () => setDmMode('new'),
     onNewTicket: () => setTicketOpen(true),

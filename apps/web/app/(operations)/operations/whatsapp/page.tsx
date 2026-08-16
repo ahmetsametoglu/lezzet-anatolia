@@ -25,12 +25,12 @@ import type { ConversationDetailView, WhatsappData } from './whatsapp-types';
 // bağlanıyor; istemcide tutulan bir seçim o bağlantıyı imkânsız kılardı.
 //
 // ── ÇİZİMİN ÇİZİP DE BUGÜN YAZILMAYANLARI ────────────────────────────────────
-// **"Devral" düğmesi ve AI rozeti YOK:** ajan yazılmadı (15.8/15.13) — bugün her sohbet zaten
-// insanda. Var olmayan bir durumdan devralma düğmesi, olmayan bir yetenek vaat ederdi.
 // **"Sipariş oluştur" düğmesi YOK:** köprü 15.4, hedefi ise elle sipariş girişi (09.8) ve o ekran
 // yazılmadı. Rayın kendi dersi burada da geçerli — var olmayan yere götüren düğme konmaz.
 // **"Kalıp mesaj" düğmesi YOK:** onaylı şablon da gönderim sürücüsü de 15.11'in işi. Pencere
 // kapalıyken UYARI yine de gösteriliyor, çünkü uyarı ölçülmüş bir gerçek; eylem ise henüz yok.
+// (AI rozeti + mod anahtarı + hibrit taslak 16.08'de geldi: mod bir VERİ ve `conversation.handled_by`
+// gerçek — motorun kendisi hâlâ 15.8/15.13'ün işi.)
 
 interface WhatsappPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -82,6 +82,8 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
       subject: t.subject?.trim() || 'Başlıksız talep',
       statusLabel: TICKET_STATUS_LABELS[t.status],
     })),
+    handledBy: detail.conversation.handledBy,
+    aiDraft: detail.conversation.aiDraftReply,
   };
 
   const data: WhatsappData = {

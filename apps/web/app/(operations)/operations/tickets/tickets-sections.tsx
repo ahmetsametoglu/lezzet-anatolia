@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TICKET_STATUS_LABELS, TICKET_TYPE_LABELS, type TicketStatus } from '@lezzet/types';
+import { TICKET_STATUS_LABELS, TICKET_TYPE_LABELS, type TicketHandler, type TicketStatus } from '@lezzet/types';
+import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import {
@@ -84,6 +85,9 @@ export function QueueRow({ row, active, onSelect }: QueueRowProps) {
             </Badge>
           ) : null}
           {row.handledBy === 'ai' ? <Badge tone="violet">AI yürütüyor</Badge> : null}
+          {/* Hibrit satır KUYRUKTAN seçilmeli: bekleyen taslak ancak açılınca görünür, rozet
+              operatörü oraya çağırır (16.08). */}
+          {row.handledBy === 'hybrid' ? <Badge tone="violet">Hibrit</Badge> : null}
           {/* Fotoğraf işareti YALNIZ İKON — sipariş numarası buradan kalktı (03.08). İkisi birlikte
               rozet şeridini taşırıp yaşı alt satıra atıyordu; sipariş bağı zaten detayda kartıyla
               duruyor ve kuyrukta okunması gereken şey "kim, ne tipte, ne durumda, ne kadar bekledi". */}
@@ -124,16 +128,23 @@ interface TicketDetailProps {
   error: string | null;
   onStatus: (to: TicketStatus) => void;
   onReply: (body: string) => Promise<boolean>;
+  /** Yürütücü modu (16.08): human · hybrid · ai — operatörün açık kararı. */
+  onMode: (mode: TicketHandler) => void;
+  /** Hibrit taslağı tüket: `send=true` olduğu gibi gönderir, `send=false` metni döndürür (kutuya taşınır). */
+  onConsumeDraft: (send: boolean) => Promise<string | null>;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
 }
 
-export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOver, onTriggerReturn }: TicketDetailProps) {
+export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, onConsumeDraft, onTakeOver, onTriggerReturn }: TicketDetailProps) {
   const { ticket, customer, order, messages, returnOutcome, returnTrigger } = detail;
   // İlk mesaj MÜŞTERİNİN ANLATIMIDIR (`TicketMessage` künyesi: ayrı bir `description` alanı yok).
   // Çizim onu "Müşterinin anlatımı" başlığı altında, yazışmadan ayrı gösteriyor — aynı kayıt, iki
   // farklı okuma işi: biri şikâyetin kendisi, öteki konuşmanın seyri.
   const [first, ...rest] = messages;
+  // "Düzenleyerek gönder"in taşıdığı metin — nesne kimliği tetikleyicidir: aynı taslak iki kez
+  // taşınabilmeli (operatör kutuyu temizleyip vazgeçmiş olabilir), düz string ikinciyi yutardı.
+  const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-ops-subtle">
@@ -184,14 +195,25 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOve
           ) : null}
         </div>
 
-        <MultiToggle
-          size="sm"
-          label="Talep durumu"
-          className="flex-none"
-          value={ticket.status}
-          options={statusOptions(ticket.status, detail.allowedTransitions, busy)}
-          onChange={onStatus}
-        />
+        {/* İki anahtar ÜST ÜSTE ve aynı hizada: durum "iş nerede", mod "cevabı kim yazıyor" —
+            ikisi de talebin künyesidir ve karar yeri başlıktır (kullanıcı kararı 16.08; modun
+            görsel dili mobil çizimden taşındı, `Operasyon Mobil v2` YZ deseni). */}
+        <div className="flex flex-none flex-col items-end gap-1.5">
+          <MultiToggle
+            size="sm"
+            label="Talep durumu"
+            value={ticket.status}
+            options={statusOptions(ticket.status, detail.allowedTransitions, busy)}
+            onChange={onStatus}
+          />
+          <MultiToggle
+            size="sm"
+            label="Yürütücü modu"
+            value={ticket.handledBy}
+            options={handlerOptions(busy)}
+            onChange={onMode}
+          />
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
@@ -222,10 +244,8 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOve
       </div>
 
       <div className="flex flex-col gap-2.5 border-t border-ops-line px-5 py-3.5">
-        {/* AI şeridi yalnız AI yürütürken: bugün her talep `human` (16.5 yazılmadı), yani bu şerit
-            pratikte hiç çıkmıyor — ama kapısı (`takeOverTicket`) hazır ve şerit AI geldiğinde
-            kendiliğinden görünür. Çizili olduğu için de yazıldı: sonradan eklenen bir uyarı, AI'ın
-            ilk çalıştığı gün eksik kalırdı. */}
+        {/* AI şeridi yalnız AI ÖZERK yürütürken (mod anahtarı + seed ile artık gerçek veri var;
+            motorun kendisi 16.5). Devral = insana in + bekleyen taslağı düşür (`takeOverTicket`). */}
         {ticket.handledBy === 'ai' ? (
           <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3 py-2.5">
             <span className="flex-1 font-ops-body text-ops-xs leading-[1.6] text-ops-violet">
@@ -237,6 +257,39 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOve
               Devral
             </Button>
           </div>
+        ) : null}
+
+        {/* HİBRİT (16.08): AI'ın taslağı — mobildeki desen (`Operasyon Mobil v2` v2:548) web'e
+            taşındı. Kesikli çerçeve taslak olduğunu ŞEKLİNDEN söyler; mor = makine konuştu
+            (envanter sözlüğü). Taslak yoksa dürüst cümle: "üretilmedi" — boş bir kart, bekleyen
+            bir cevap varmış gibi okunurdu. */}
+        {ticket.handledBy === 'hybrid' ? (
+          ticket.aiDraftReply ? (
+            <AiDraftCard draft={ticket.aiDraftReply}>
+              {/* İki çıkış AYRIŞIR ve ikisi de taslağı tüketir (mobil desen, `complaint-screen`):
+                  çevirmek olduğu gibi gönderir, düzenlemek metni kutuya taşır — düzenleme yeri
+                  zaten orasıdır. */}
+              <Button size="sm" variant="violet" disabled={busy} onClick={() => void onConsumeDraft(true)}>
+                Cevaba çevir →
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  void onConsumeDraft(false).then((draft) => {
+                    if (draft) setPrefill({ text: draft });
+                  });
+                }}
+              >
+                Düzenleyerek gönder
+              </Button>
+            </AiDraftCard>
+          ) : (
+            <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+              Hibrit mod — AI taslağı henüz üretilmedi; müşteriden yeni mesaj geldiğinde hazırlanır.
+            </span>
+          )
         ) : null}
 
         {error ? (
@@ -255,6 +308,7 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOve
           busy={busy}
           returnAllowed={returnTrigger.allowed}
           returnReason={returnTrigger.allowed ? undefined : RETURN_BLOCKED_REASON[returnTrigger.reason]}
+          prefill={prefill}
           onReply={onReply}
           onTriggerReturn={onTriggerReturn}
         />
@@ -303,6 +357,8 @@ function statusOptions(status: TicketStatus, allowed: readonly TicketStatus[], b
     disabled: busy || (key !== status && !allowed.includes(key)),
   }));
 }
+
+// Mod seçenekleri ve taslak kartı ORTAK (`ui/ai-handling`): WhatsApp ekranı da aynısını kullanıyor.
 
 /** Bağlı sipariş + müşterinin işaretlediği kalemler — şikâyetin somut zemini (brief §2). */
 function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> }) {
@@ -454,6 +510,8 @@ interface ReplyBarProps {
   busy: boolean;
   returnAllowed: boolean;
   returnReason?: string;
+  /** "Düzenleyerek gönder"in taşıdığı taslak — nesne kimliği değişince kutuya yazılır (16.08). */
+  prefill?: { text: string } | null;
   onReply: (body: string) => Promise<boolean>;
   onTriggerReturn: () => void;
 }
@@ -478,9 +536,16 @@ interface ReplyBarProps {
  * **Gönderilemeyen metin SİLİNMEZ** — kapı reddederse kutu olduğu gibi kalır; operatörün yazdığı
  * üç paragrafı bir hata mesajı uğruna kaybetmesi kabul edilemez.
  */
-function ReplyBar({ busy, returnAllowed, returnReason, onReply, onTriggerReturn }: ReplyBarProps) {
+function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTriggerReturn }: ReplyBarProps) {
   const [body, setBody] = useState('');
   const empty = body.trim().length === 0;
+
+  // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Düzenleyerek gönder") — kutudaki metni ezmesi bu
+  // yüzden kabul: basılan düğme zaten "bu metinle çalışacağım" demek. Kendiliğinden dolan bir kutu
+  // olsaydı yazılmakta olan cevabı silmek olurdu.
+  useEffect(() => {
+    if (prefill) setBody(prefill.text);
+  }, [prefill]);
 
   const send = () => {
     if (empty || busy) return;

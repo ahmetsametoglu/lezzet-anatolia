@@ -62,8 +62,14 @@ interface Talep {
   iadeTetiklendi?: boolean;
   /** AI ilgileniyor (`handled_by='ai'`); WhatsApp zemininde anlamlı. */
   ai?: boolean;
-  /** AI başlamış, insan DEVRALMIŞ (16.5) — tek yönlü geçiş. */
+  /** AI başlamış, insan DEVRALMIŞ (16.5). */
   devralindi?: boolean;
+  /**
+   * HİBRİT mod (16.08): AI'ın bekleyen taslağı — `handled_by='hybrid'` + `ai_draft_reply`.
+   * Motor (16.5) yok; ekranın "Cevaba çevir / Düzenleyerek gönder" deseni ancak taslaklı bir
+   * satırla görülebilir, o satırı bugün seed üretir.
+   */
+  hibritTaslak?: string;
   /** Müşteri fotoğraf ekledi mi — R2 ayarsızsa sessizce eksiz kalır. */
   fotograf?: string;
   yas: number;
@@ -199,7 +205,21 @@ const TALEPLER: Talep[] = [
     yas: 4,
     etiket: 'AÇIK · 5 mesajlık yazışma · cevap bekliyor',
   },
-  // 9) **SİSTEMDE OLMAYAN DİL, İKİ YÖNLÜ ÇEVİRİ** (20.2 · kullanıcı kararı 03.08).
+  // 9) HİBRİT MOD (16.08): AI taslak yazdı, operatör henüz bakmadı. Ekran taslağı kesikli çerçeveli
+  //    baloncukta gösterir; "Cevaba çevir" olduğu gibi gönderir (gönderen `admin` olur, `ai` değil),
+  //    "Düzenleyerek gönder" metni cevap kutusuna taşır. Son söz MÜŞTERİDE → cevap bekliyor.
+  {
+    kisi: 'b2cAlman',
+    source: 'form',
+    type: 'question',
+    subject: 'Teslimat ertelemesi · Perşembe',
+    ilkMesaj: 'Guten Tag, kann ich meine Lieferung von Dienstag auf Donnerstag verschieben? Ich bin dienstags nicht zu Hause.',
+    hibritTaslak:
+      'Merhaba! Teslimatınızı perşembe gününe alabiliriz — perşembe rotamız Neudorf tarafından geçiyor ve adresiniz güzergâhta. Saat 14:00–18:00 aralığı uygun mudur? Onaylarsanız kurye listesini güncelliyorum.',
+    yas: 1,
+    etiket: 'AÇIK · HİBRİT — AI taslağı onay bekliyor',
+  },
+  // 10) **SİSTEMDE OLMAYAN DİL, İKİ YÖNLÜ ÇEVİRİ** (20.2 · kullanıcı kararı 03.08).
   //
   //    Yazışmanın iki yönü de burada görülür ve ölçüt tam olarak budur: müşteri Boşnakça yazar,
   //    PERSONEL Türkçe okur; personel Türkçe yazar, MÜŞTERİ kendi dilinde okur. Tek yön çevirmek
@@ -309,6 +329,9 @@ async function waKonusmaKur(db: Db, customerId: string, t: Talep): Promise<strin
         await messages.record({
           conversationId: konusma.id,
           direction: gelen ? 'inbound' : 'outbound',
+          // Kim yazdı (16.08): AI da personel de aynı numaradan çıkar, defter farkı yazar —
+          // ekran AI baloncuğunu bu alandan ayrı tonda gösterir.
+          author: m.sender,
           body: { text: m.body },
           // Pencereyi yalnız gelen mesaj açar; giden mesaj ona dokunmaz.
           windowExpiresAt: gelen ? serviceWindowExpiry(alindi) : null,
@@ -420,9 +443,15 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
     if (durum === 'open' && t.hedefDurum) await tickets.setStatus(ticket.id, t.hedefDurum);
 
     // AI ilgileniyor → `handled_by='ai'`. Devralma AYRI bir olaydır ve kendi kapısı vardır
-    // (`takeOver`, tek yönlü): önce AI'a verilir, sonra insan alır — sıra tersine çevrilemez.
+    // (`takeOver`): önce AI'a verilir, sonra insan alır.
     if (t.ai || t.devralindi) await tickets.update({ id: ticket.id, handledBy: 'ai' });
     if (t.devralindi) await tickets.takeOver(ticket.id);
+    // AI özerk yürütüyorsa ARKASINDAKİ sohbet de AI'dadır — iki ekran aynı gerçeği okumalı.
+    if (t.ai && !t.devralindi && conversationId) await new ConversationService(db).setMode(conversationId, 'ai');
+    // Hibrit (16.08): taslak satırda bekler, damgası önbellek anahtarıdır (mesajdan sonra üretildi).
+    if (t.hibritTaslak) {
+      await tickets.update({ id: ticket.id, handledBy: 'hybrid', aiDraftReply: t.hibritTaslak, aiDraftGeneratedAt: an(0) });
+    }
     if (t.iadeTetiklendi) await tickets.markReturnTriggered(ticket.id);
 
     await ceviriDamgala(db, ticket.id, t);
@@ -442,5 +471,36 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
     sayi += 1;
     console.log(`  ✓ ${t.subject} · ${t.etiket}`);
   }
-  console.log(`✓ talep: ${sayi} kayıt (3 durum · 4 kaynak · AI + devralma · iade tetikli · fotoğraflı · iki yönlü çevrili)`);
+  // ── HİBRİT SOHBET (16.08): taslak deseni WhatsApp ekranında da görülsün ─────
+  // Talepsiz bir konuşma — müşteri sipariş niyeti yazdı, AI taslak hazırladı, operatör henüz
+  // bakmadı. Gönderim kanalı olmadığı için ekrandaki tek çıkış taslağı defter kutusuna taşımaktır;
+  // o desen ancak taslaklı bir konuşma satırıyla denenebilir. Telefonu olmayan müşteride kurulamaz
+  // ve atlanır (`waKonusmaKur` sözleşmesi).
+  const hibritKisi = kisiler.get('b2bOnayli');
+  if (hibritKisi) {
+    const sohbet: Talep = {
+      kisi: 'b2bOnayli',
+      source: 'whatsapp',
+      type: 'question',
+      subject: 'WhatsApp · sipariş niyeti',
+      ilkMesaj: 'Merhaba, cumartesi için 2 tepsi su böreği ve 1 kg fıstıklı baklava alabilir miyiz? Restorana teslim olacak.',
+      yas: 0,
+      etiket: 'HİBRİT sohbet · AI taslağı bekliyor',
+    };
+    const konusmaId = await waKonusmaKur(db, hibritKisi, sohbet);
+    if (konusmaId) {
+      await new ConversationService(db).update({
+        id: konusmaId,
+        handledBy: 'hybrid',
+        aiDraftReply:
+          'Merhaba! Cumartesi için 2 tepsi su böreği + 1 kg fıstıklı baklava ayırıyoruz. Restoran teslimatı 10:00–12:00 aralığında uygun mudur? Onaylarsanız siparişi kayda alıyorum.',
+        aiDraftGeneratedAt: an(0),
+      });
+      console.log(`  ✓ ${sohbet.subject} · ${sohbet.etiket}`);
+    } else {
+      console.log(`  · ${sohbet.subject} atlandı (müşterinin telefonu yok)`);
+    }
+  }
+
+  console.log(`✓ talep: ${sayi} kayıt (3 durum · 4 kaynak · AI + devralma + HİBRİT taslak · iade tetikli · fotoğraflı · iki yönlü çevrili)`);
 }

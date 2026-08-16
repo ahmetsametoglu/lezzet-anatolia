@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ConversationInboxService, serviceDb } from '@lezzet/database';
-import { DEFAULT_PAGE_SIZE, type KeysetCursor, type Page } from '@lezzet/types';
+import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
+import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { openTicket } from '@/lib/ticket/write';
@@ -108,6 +108,54 @@ export async function recordOutboundAction(input: unknown): Promise<ActionResult
     const message = await recordOutboundMessage({ conversationId: parsed.conversationId, text: parsed.text });
     refresh();
     return { data: { id: message.id }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Yürütücü modu (kullanıcı kararı 16.08): human · hybrid · ai — talep ekranıyla aynı üçlü.
+ * Hedef enum'dan doğrulanır; aynı moda ikinci çağrı bir yarışın işaretidir ve reddedilir.
+ * "Devral" da bu kapıdan geçer (`mode='human'`) — ayrı bir devralma ucu, aynı yazımın ikinci
+ * adresi olurdu.
+ */
+export async function setConversationModeAction(
+  conversationId: string,
+  mode: TicketHandler,
+): Promise<ActionResult<{ mode: TicketHandler }>> {
+  try {
+    await requireAdmin();
+    const target = TicketHandlerEnum.parse(mode);
+    const service = new ConversationService(serviceDb());
+    const conversation = await service.getById(conversationId);
+    if (!conversation) return { data: null, error: 'Konuşma bulunamadı — ekranı tazeleyin.' };
+    if (conversation.handledBy === target) {
+      return { data: null, error: 'Sohbet zaten bu modda — bir başkası az önce değiştirmiş olabilir, ekranı tazeleyin.' };
+    }
+    const updated = await service.setMode(conversationId, target);
+    refresh();
+    return { data: { mode: updated.handledBy }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Hibrit taslağı tüket (16.08). Talep ekranından farkı: burada GÖNDERME yolu yok (kanal 15.7/15.11)
+ * — taslağın tek dürüst çıkışı defter kutusuna taşınmaktır; operatör metni telefonundan gönderir,
+ * gönderdiğini deftere işler. "Gönderildi" demeden tüketir, dönen metni kutu alır.
+ */
+export async function consumeConversationDraftAction(conversationId: string): Promise<ActionResult<{ draft: string }>> {
+  try {
+    await requireAdmin();
+    const service = new ConversationService(serviceDb());
+    const conversation = await service.getById(conversationId);
+    if (!conversation) return { data: null, error: 'Konuşma bulunamadı — ekranı tazeleyin.' };
+    const draft = conversation.aiDraftReply;
+    if (!draft) return { data: null, error: 'Bekleyen AI taslağı yok — bu sırada tüketilmiş olabilir. Ekranı tazeleyin.' };
+    await service.clearDraft(conversationId);
+    refresh();
+    return { data: { draft }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

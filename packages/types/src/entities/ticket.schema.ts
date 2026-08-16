@@ -25,6 +25,14 @@ export const TicketSchema = z.object({
   type: TicketTypeEnum,
   status: TicketStatusEnum,
   handledBy: TicketHandlerEnum,
+  /**
+   * Hibrit modun bekleyen AI taslağı (16.5'in deposu; UI 16.08) — SATIRDA durur, mesaj değil:
+   * yazışma müşteriye görünen defterdir, onaylanmamış taslak oraya giremez. Operatör tüketir
+   * (cevaba çevirir ya da düzenlemeye alır), tüketilince damgayla birlikte boşalır.
+   */
+  aiDraftReply: z.string().nullable(),
+  /** Taslağın üretim anı — önbellek anahtarı: son mesajdan sonraysa model yeniden çağrılmaz. */
+  aiDraftGeneratedAt: z.string().nullable(),
   subject: z.string().nullable(),
   /** Admin bu talepten iade akışını başlattı; tutar BURADAN okunmaz, siparişten türetilir. */
   returnTriggeredAt: z.string().nullable(),

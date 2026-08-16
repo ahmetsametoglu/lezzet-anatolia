@@ -17,6 +17,8 @@ import {
   type MessageInsert,
   type MessageKind,
   type TemplateCategory,
+  type TicketHandler,
+  type TicketSender,
   type KeysetCursor,
   type Page,
   DEFAULT_PAGE_SIZE,
@@ -90,6 +92,22 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   setOptIn(id: string, granted: boolean): Promise<Conversation> {
     return this.update({ id, optIn: granted, optInAt: granted ? new Date().toISOString() : null });
   }
+
+  /**
+   * Yürütücü modunu değiştir (kullanıcı kararı 16.08) — `TicketService.setMode` ile aynı sözleşme:
+   * hibritten düşerken bekleyen taslak birlikte düşer, yoksa bir sonraki dönüşte bayat bir cevap
+   * "hazır" diye sunulurdu.
+   */
+  setMode(id: string, mode: TicketHandler): Promise<Conversation> {
+    return mode === 'hybrid'
+      ? this.update({ id, handledBy: mode })
+      : this.update({ id, handledBy: mode, aiDraftReply: null, aiDraftGeneratedAt: null });
+  }
+
+  /** Bekleyen AI taslağını tüket (16.08) — `TicketService.clearDraft` ile aynı sözleşme. */
+  clearDraft(id: string): Promise<Conversation> {
+    return this.update({ id, aiDraftReply: null, aiDraftGeneratedAt: null });
+  }
 }
 
 /**
@@ -114,6 +132,8 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     conversationId: string;
     direction: MessageDirection;
     body: MessageBody;
+    /** Kim yazdı (16.08). Verilmezse RPC yönden türetir: gelen → customer, giden → admin. */
+    author?: TicketSender | null;
     kind?: MessageKind;
     templateName?: string | null;
     /** Şablonun ücret sınıfı — adla birlikte gelir, ondan ayrı düşemez (DB kısıtı zorlar). */
@@ -130,6 +150,7 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
       p_template_category: input.templateCategory ?? null,
       p_provider_message_id: input.providerMessageId ?? null,
       p_window_expires_at: input.windowExpiresAt ?? null,
+      p_author: input.author ?? null,
     });
     return MessageSchema.parse(dbToApp(raw));
   }

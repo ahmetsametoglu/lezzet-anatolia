@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TicketTypeEnum, type KeysetCursor, type TicketStatus } from '@lezzet/types';
+import { TicketTypeEnum, type KeysetCursor, type TicketHandler, type TicketStatus } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { StaffTicketDetail, TicketQueueItem } from '@/lib/ticket/ticket-types';
 import type { TicketFilterKey, TicketsUrlState } from './tickets-url';
@@ -71,6 +71,10 @@ export interface TicketsViewProps {
   /** Cevabı gönderir; `true` dönerse yazma kutusu temizlenir (gönderilmiş metni silmemek için). */
   onReply: (body: string) => Promise<boolean>;
   onStatus: (to: TicketStatus) => void;
+  /** Yürütücü modu (16.08): human · hybrid · ai. */
+  onMode: (mode: TicketHandler) => void;
+  /** Hibrit taslağı tüket — `send=false` metni döndürür, ekran cevap kutusuna taşır. */
+  onConsumeDraft: (send: boolean) => Promise<string | null>;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
   onNewTicket: () => void;

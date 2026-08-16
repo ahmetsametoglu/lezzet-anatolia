@@ -80,6 +80,7 @@ export function toInboxRows(rows: readonly ConversationInboxRow[], now: Date): I
     ago: row.lastMessageAt ? agoShort(ageMinutes(row.lastMessageAt, nowMs)) : '—',
     awaitingReply: row.awaitingReply,
     unidentified: row.customerId === null,
+    handledBy: row.handledBy,
     window: toWindowView(row.windowExpiresAt, now),
   }));
 }
@@ -101,6 +102,7 @@ export function toMessageViews(messages: readonly Message[]): MessageView[] {
   return messages.map((m) => ({
     id: m.id,
     direction: m.direction,
+    author: m.author,
     kind: m.kind,
     text: m.body.text?.trim() || MESSAGE_KIND_LABELS[m.kind],
     stamp: shortDateTime(m.createdAt),

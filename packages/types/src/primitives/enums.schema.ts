@@ -258,11 +258,22 @@ export const TicketSourceEnum = z.enum(['order', 'form', 'whatsapp', 'admin']);
 export type TicketSource = z.infer<typeof TicketSourceEnum>;
 
 /**
- * Talebi kim yürütüyor (16.5). Faz 1'de hep `human`; devralmada `ai → human` döner ve AI o talepte
- * susar. Alan baştan var — sonradan eklenseydi o güne kadarki taleplerin geçmişi belirsiz kalırdı.
+ * Talebi/sohbeti kim yürütüyor (16.5 · kullanıcı kararı 16.08). Alan baştan var — sonradan
+ * eklenseydi o güne kadarki taleplerin geçmişi belirsiz kalırdı.
+ *
+ * `hybrid`: AI cevap yazmaz, TASLAK yazar (`aiDraftReply`) — operatör onaylamadan hiçbir şey
+ * müşteriye gitmez. `ai`: özerk — cevap kendiliğinden gider, operatör izler/devralır. Devralmada
+ * `ai/hybrid → human` döner ve AI o talepte susar. `conversation.handledBy` de bu enum'u kullanır.
  */
-export const TicketHandlerEnum = z.enum(['human', 'ai']);
+export const TicketHandlerEnum = z.enum(['human', 'hybrid', 'ai']);
 export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
+
+/** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */
+export const TICKET_HANDLER_LABELS: Record<TicketHandler, string> = {
+  human: 'İnsan',
+  hybrid: 'Hibrit',
+  ai: 'AI',
+};
 
 /**
  * Yazışmada kim konuştu. `ai` ÜÇÜNCÜ bir göndericidir: "AI yazdı" bilgisini `admin` içine gömmek,

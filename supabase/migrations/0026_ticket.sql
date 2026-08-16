@@ -26,7 +26,12 @@ create type ticket_status as enum ('open', 'in_progress', 'resolved');
 create type ticket_source as enum ('order', 'form', 'whatsapp', 'admin');
 -- Talebi kim yürütüyor. Faz 1'de hep `human`; alan yine de BAŞTAN var, çünkü sonradan eklenseydi o
 -- güne kadarki her talebin geçmişi belirsiz kalırdı (16.5 AI işletme).
-create type ticket_handler as enum ('human', 'ai');
+--
+-- `hybrid` (kullanıcı kararı 16.08): AI cevap YAZMAZ, TASLAK yazar — operatör onaylamadan hiçbir
+-- şey müşteriye gitmez (taslağın deposu `ai_draft_reply`). `ai` ise özerktir: cevap kendiliğinden
+-- gider, operatör izler/devralır. İki hâli tek `ai` değerine sıkıştırmak, "AI ne yapabilir"
+-- sorusunun cevabını satırdan silmek olurdu. Enum'u `conversation.handled_by` de kullanır (0039).
+create type ticket_handler as enum ('human', 'hybrid', 'ai');
 -- `ai` üçüncü bir göndericidir: "AI yazdı" bilgisini `admin` içine gömmek, sonradan "bunu kim
 -- söyledi" sorusunu cevapsız bırakırdı. Müşteriye giden metin aynıdır; ayrım iç izlenebilirliktir.
 create type ticket_sender as enum ('customer', 'admin', 'ai');
@@ -49,6 +54,14 @@ create table public.ticket (
   type ticket_type not null,
   status ticket_status not null default 'open',
   handled_by ticket_handler not null default 'human',
+
+  -- ── AI taslağı (16.5'in deposu; UI 16.08'de öne çekildi) ───────────────────
+  -- Hibrit modun bekleyen cevabı. SATIRDA durur, mesaj DEĞİL (20-yapay-zeka §75 kararı): yazışma
+  -- müşteriye görünen defterdir, onaylanmamış taslak oraya giremez. Damga önbellek anahtarıdır —
+  -- son mesajdan SONRA üretildiyse model yeniden çağrılmaz. Motor (16.5) yazar, bugün seed yazar;
+  -- operatör tüketir (cevaba çevirir ya da düzenlemeye alır), tüketilince ikisi birden boşalır.
+  ai_draft_reply text,
+  ai_draft_generated_at timestamptz,
 
   -- Kuyrukta ve müşterinin listesinde okunan kısa başlık ("Eksik geldi · Gözleme").
   subject text,
@@ -73,7 +86,10 @@ create table public.ticket (
   constraint ticket_source_link check (
     (source <> 'whatsapp' or conversation_id is not null)
     and (source <> 'order' or order_id is not null)
-  )
+  ),
+  -- Taslak ile damgası ayrışamaz: damgasız taslak önbellek kararını (yeniden üret mi?) imkânsız
+  -- kılar, taslaksız damga ise "tüketildi" ile "hiç üretilmedi"yi aynı gösterirdi.
+  constraint ticket_ai_draft_stamp check ((ai_draft_reply is null) = (ai_draft_generated_at is null))
 );
 
 alter table public.ticket enable row level security;

@@ -12,12 +12,12 @@
 -- `ticket_queue` (0026) ile aynı desen ve aynı gerekçe: alanlar KOPYA DEĞİL, görünüm her okumada
 -- kaynaktan üretir — bayatlayacak bir kopya kalmaz.
 --
--- ── BURADA OLMAYAN İKİ ŞEY, İKİSİ DE BİLEREK ────────────────────────────────
--- **Devralma alanı yok:** ajan yok (zemin dönemi), devir 15.13'ün işi. Bugün her sohbet zaten
--- insanda; olmayan bir durumu şimdiden modellemek boşa şema olurdu.
+-- ── BURADA OLMAYAN BİR ŞEY, BİLEREK ─────────────────────────────────────────
 -- **Okunmamış sayacı yok:** "okundu" bilgisini yazan bir yüzey yok, yani sayaç ilk günden yalan
 -- söylerdi. `awaiting_reply` aynı soruyu yazma yükü olmadan cevaplıyor — son sözü müşteri
 -- söylediyse top bizdedir.
+-- (Devralma alanı ilk yazımda yoktu; 16.08'de `conversation.handled_by` geldi ve `c.*` ile buraya
+-- kendiliğinden akıyor — üç mod: human · hybrid · ai.)
 
 create or replace view public.conversation_inbox as
 select c.*,

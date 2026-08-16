@@ -131,13 +131,34 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * AI'dan devralma (16.5) — talep insana geçer ve AI o talepte susar.
-   *
-   * Tek yönlüdür ve öyle kalmalı: insandan AI'a geri vermek, müşterinin konuştuğu muhatabın
-   * habersiz değişmesi olurdu.
+   * AI'dan devralma (16.5) — talep insana geçer ve AI o talepte susar. `ai`'dan da `hybrid`'den
+   * de iner; bekleyen taslak varsa birlikte düşer (devralan taslağı değil sohbeti istedi).
    */
   takeOver(id: string): Promise<Ticket> {
-    return this.update({ id, handledBy: 'human' });
+    return this.update({ id, handledBy: 'human', aiDraftReply: null, aiDraftGeneratedAt: null });
+  }
+
+  /**
+   * Yürütücü modunu değiştir (kullanıcı kararı 16.08): human · hybrid · ai — üçü de operatörün
+   * AÇIK kararıyla seçilir; ilk yazımdaki "insandan AI'a geri verilmez" duruşu, mod anahtarı
+   * ekrana çıkınca kalktı (kararı veren zaten muhatabın kendisi, sessiz bir değişim yok).
+   *
+   * Moddan düşerken taslak temizlenir: `human`/`ai` modunda bekleyen taslağın tüketicisi yoktur —
+   * kalsaydı hibride bir sonraki dönüşte BAYAT bir cevap "hazır" diye sunulurdu.
+   */
+  setMode(id: string, mode: TicketHandler): Promise<Ticket> {
+    return mode === 'hybrid'
+      ? this.update({ id, handledBy: mode })
+      : this.update({ id, handledBy: mode, aiDraftReply: null, aiDraftGeneratedAt: null });
+  }
+
+  /**
+   * Bekleyen AI taslağını tüket (16.08) — gönderilmiş ya da düzenlemeye alınmış taslak satırdan
+   * düşer. Cevabın kendisi buradan YAZILMAZ (`reply` ayrı kapı): tüketmek ile göndermek ayrı
+   * işler ve gönderim düşerse taslak yerinde kalmalıydı — sıra bu yüzden çağıranda.
+   */
+  clearDraft(id: string): Promise<Ticket> {
+    return this.update({ id, aiDraftReply: null, aiDraftGeneratedAt: null });
   }
 
   /**

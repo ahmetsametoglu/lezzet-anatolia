@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { TicketHandler } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
+import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import {
   ContextConsent,
   ContextIdentity,
@@ -19,7 +22,7 @@ import { QueueRow } from '@/components/operation/ui/queue-pane';
 import { Textarea } from '@/components/operation/form/input';
 import { TICKETS_PATH } from '../tickets/tickets-url';
 import { customersUrl } from '../customers/customers-url';
-import { OUTBOUND_LABEL, WINDOW_NOTE, WINDOW_TONE } from './whatsapp-labels';
+import { AI_OUTBOUND_LABEL, OUTBOUND_LABEL, WINDOW_NOTE, WINDOW_TONE } from './whatsapp-labels';
 import type { ConversationDetailView, InboxRowView, MessageView } from './whatsapp-types';
 
 // WhatsApp izleme ekranının PANOLARI (15.5) — sol kuyruk satırı, orta sohbet, sağ müşteri bağlamı.
@@ -56,6 +59,10 @@ export function InboxRow({ row, active, onSelect }: InboxRowProps) {
               Cevap bekliyor
             </Badge>
           ) : null}
+          {/* Çizimin "AI" çipi (16.08) — dar sütunda tek kelime; Hibrit satır seçilmeli, çünkü
+              bekleyen taslak ancak açılınca görünür. */}
+          {row.handledBy === 'ai' ? <Badge tone="violet">AI</Badge> : null}
+          {row.handledBy === 'hybrid' ? <Badge tone="violet">Hibrit</Badge> : null}
           {row.unidentified ? <Badge tone="slate">kimlik yok</Badge> : null}
           <Badge tone={WINDOW_TONE[row.window.tone]} className="ml-auto">
             {row.window.chip}
@@ -108,12 +115,19 @@ export function DetailPlaceholder() {
  */
 function Bubble({ message }: { message: MessageView }) {
   const mine = message.direction === 'outbound';
+  // AI'ın KENDİ gönderdiği mesaj ayrı tonda (16.08): müşteri farkı görmez ama operatör görmeli —
+  // "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep yazışmasıyla aynı kural).
+  const ai = message.author === 'ai';
   return (
     <MessageRow
       side={mine ? 'out' : 'in'}
       meta={
         <>
-          {mine ? <span className="font-ops-display text-ops-micro font-semibold text-ops-olive-dark">{OUTBOUND_LABEL}</span> : null}
+          {mine ? (
+            <span className={`font-ops-display text-ops-micro font-semibold ${ai ? 'text-ops-violet' : 'text-ops-olive-dark'}`}>
+              {ai ? AI_OUTBOUND_LABEL : OUTBOUND_LABEL}
+            </span>
+          ) : null}
           <span className="font-ops-mono text-ops-micro text-ops-faint">{message.stamp}</span>
           {/* Şablon etiketi rozet DEĞİL, künye: mesajın kendisi değil, ücret sınıfı hakkında bir not. */}
           {message.templateLabel ? (
@@ -122,7 +136,7 @@ function Bubble({ message }: { message: MessageView }) {
         </>
       }
     >
-      <div className={bubbleClass(mine ? 'olive' : 'neutral')}>{message.text}</div>
+      <div className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral')}>{message.text}</div>
     </MessageRow>
   );
 }
@@ -133,20 +147,38 @@ interface ConversationPaneProps {
   error: string | null;
   onIncoming: () => void;
   onRecordOutbound: (text: string) => Promise<boolean>;
+  /** Yürütücü modu (16.08) — Devral da buradan geçer (`mode='human'`). */
+  onMode: (mode: TicketHandler) => void;
+  /** Hibrit taslağı tüket — metni döndürür, ekran defter kutusuna taşır. */
+  onConsumeDraft: () => Promise<string | null>;
 }
 
-export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutbound }: ConversationPaneProps) {
+export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutbound, onMode, onConsumeDraft }: ConversationPaneProps) {
+  // "Kutuya taşı"nın taşıdığı metin — nesne kimliği tetikleyicidir (talep ekranıyla aynı desen).
+  const [prefill, setPrefill] = useState<{ text: string } | null>(null);
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-ops-gray-25">
-      {/* Başlık barındaki eylem yeri ÇİZİMİN yeri ("Devral" · "Sipariş oluştur"); ikisi de bugün
-          yok (ajan 15.13, köprü 15.4) ve yerlerine bu sohbete ait tek gerçek eylem konuyor. */}
+      {/* Başlık barı ÇİZİMİN yeri: mod anahtarı + (AI'daysa) Devral (16.08). "Sipariş oluştur"
+          hâlâ yok (köprü 15.4) — var olmayan yere götüren düğme konmaz. */}
       <div className="flex flex-none items-center gap-3 border-b border-ops-line bg-ops-card px-5 py-3">
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{detail.title}</span>
           <span className="font-ops-body text-ops-xs text-ops-muted">
-            {detail.context ? (detail.context.isCompany ? 'B2B' : 'B2C') : 'kimlik çözülmedi'} · {detail.messages.length} mesaj
+            {detail.context ? (detail.context.isCompany ? 'B2B' : 'B2C') : 'kimlik çözülmedi'} · {detail.messages.length} mesaj ·{' '}
+            {/* Alt satır modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
+                anahtar seçimi, cümle durumu okur. */}
+            {detail.handledBy === 'ai' ? 'AI ajanı yürütüyor' : detail.handledBy === 'hybrid' ? 'hibrit — AI taslak yazar' : 'insan yürütüyor'}
           </span>
         </div>
+        <MultiToggle size="sm" label="Yürütücü modu" value={detail.handledBy} options={handlerOptions(busy)} onChange={onMode} />
+        {/* Devral yalnız AI özerkken: kararın kendisi (AI susar), mod anahtarındaki "İnsan" ile aynı
+            kapı — ama çizimin tek dokunuşluk sözü burada duruyor. */}
+        {detail.handledBy === 'ai' ? (
+          <Button size="sm" variant="violet" className="flex-none" onClick={() => onMode('human')} disabled={busy}>
+            Devral
+          </Button>
+        ) : null}
         <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
         <Button variant="secondary" size="sm" className="flex-none whitespace-nowrap" onClick={onIncoming}>
           Gelen mesaj işle
@@ -168,6 +200,35 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
         </MessageThread>
       )}
 
+      {/* HİBRİT taslak (16.08) — talep ekranından TEK farkı eylemler: burada gönderim kanalı yok
+          (15.7/15.11), taslağın tek dürüst çıkışı defter kutusuna taşınmak. Operatör metni
+          telefonundan gönderir, kutu zaten "gönderdiğini işle" kutusudur. Pencere kapalıyken
+          taşınacak kutu da yok — kart yine görünür ama eylem yerine sebep yazar. */}
+      {detail.handledBy === 'hybrid' && detail.aiDraft ? (
+        <div className="flex flex-none flex-col border-t border-ops-line bg-ops-card px-5 pt-3">
+          <AiDraftCard draft={detail.aiDraft}>
+            {detail.window.state === 'open' ? (
+              <Button
+                size="sm"
+                variant="violet"
+                disabled={busy}
+                onClick={() => {
+                  void onConsumeDraft().then((draft) => {
+                    if (draft) setPrefill({ text: draft });
+                  });
+                }}
+              >
+                Cevap kutusuna taşı
+              </Button>
+            ) : (
+              <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+                Pencere kapalı — serbest mesaj gönderilemediği için taslak da gönderilemez.
+              </span>
+            )}
+          </AiDraftCard>
+        </div>
+      ) : null}
+
       <ReplyBox
         // Konuşma değişince kutu SIFIRLANIR: yarım kalmış bir metin bir sonraki müşterinin
         // penceresinde durursa yanlış sohbetin defterine işlenir.
@@ -175,6 +236,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
         window={detail.window}
         busy={busy}
         error={error}
+        prefill={prefill}
         onRecordOutbound={onRecordOutbound}
       />
     </div>
@@ -185,6 +247,8 @@ interface ReplyBoxProps {
   window: ConversationDetailView['window'];
   busy: boolean;
   error: string | null;
+  /** Hibrit taslağın taşıdığı metin — nesne kimliği değişince kutuya yazılır (16.08). */
+  prefill?: { text: string } | null;
   onRecordOutbound: (text: string) => Promise<boolean>;
 }
 
@@ -202,8 +266,14 @@ interface ReplyBoxProps {
  * **GELEN mesaj burada işlenmez** — o iş "Gelen mesaj işle" penceresinin, çünkü gelen mesaj
  * pencereyi AÇAN olaydır ve alınma anını ister.
  */
-function ReplyBox({ window: win, busy, error, onRecordOutbound }: ReplyBoxProps) {
+function ReplyBox({ window: win, busy, error, prefill, onRecordOutbound }: ReplyBoxProps) {
   const [text, setText] = useState('');
+
+  // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Cevap kutusuna taşı") — ezmesi bu yüzden kabul:
+  // basılan düğme zaten "bu metinle çalışacağım" demek (talep ekranıyla aynı kural).
+  useEffect(() => {
+    if (prefill) setText(prefill.text);
+  }, [prefill]);
 
   const submit = async () => {
     if (!text.trim()) return;

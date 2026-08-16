@@ -49,6 +49,17 @@ create table public.conversation (
   -- konuşma açar ve geçmiş ikiye bölünür.
   external_ref text not null check (length(btrim(external_ref)) > 0),
 
+  -- Sohbeti kim yürütüyor (15.13/16.5 · kullanıcı kararı 16.08). `ticket.handled_by` ile aynı
+  -- gerekçe ve AYNI enum: iki yüzeyde iki ayrı "yürütücü" kümesi, bir gün ayrışan iki gerçek
+  -- olurdu. `hybrid` = AI taslak yazar, operatör onaylamadan gitmez; `ai` = özerk.
+  handled_by ticket_handler not null default 'human',
+
+  -- ── AI taslağı — `ticket.ai_draft_reply` ile aynı sözleşme (0026'daki künye) ─
+  -- Satırda durur, mesaj değil: `message` defteri gönderilmiş gerçeği yazar, onaylanmamış taslak
+  -- oraya giremez. Damga önbellek anahtarı; tüketilince ikisi birden boşalır.
+  ai_draft_reply text,
+  ai_draft_generated_at timestamptz,
+
   -- Ticari mesaj izni (DOMAIN §11). Faz 2 broadcast'inin dayanağı; bugün yalnız kaydedilir.
   opt_in boolean not null default false,
   opt_in_at timestamptz,
@@ -62,7 +73,9 @@ create table public.conversation (
   created_at timestamptz not null default now(),
 
   -- İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
-  constraint conversation_opt_in_stamp check (opt_in = false or opt_in_at is not null)
+  constraint conversation_opt_in_stamp check (opt_in = false or opt_in_at is not null),
+  -- Taslak ile damgası ayrışamaz (`ticket_ai_draft_stamp` ile aynı gerekçe).
+  constraint conversation_ai_draft_stamp check ((ai_draft_reply is null) = (ai_draft_generated_at is null))
 );
 
 alter table public.conversation enable row level security;
@@ -79,6 +92,12 @@ create table public.message (
   conversation_id uuid not null references public.conversation (id) on delete cascade,
 
   direction message_direction not null,
+  -- Kim yazdı (16.08) — yön "hangi tarafa aktı" der, bu alan "bunu kim söyledi" der. Bizim
+  -- adımıza AI da personel de yazar ve müşteri farkı görmez; iç izlenebilirlik görsün diye alan
+  -- BAŞTAN var (`ticket_message.sender` ile aynı gerekçe: sonradan eklenen kolon, o güne kadarki
+  -- her mesajın yazarını belirsiz bırakırdı). Enum ortak: `ticket_sender`. Varsayılan YOK —
+  -- yazan taraf söyler; unutursa `record_message` yönden türetir, alttaki kısıt da yanlışı keser.
+  author ticket_sender not null,
   kind message_kind not null default 'text',
 
   -- Metin ya da kart/interaktif yapı. jsonb, çünkü `text` dışındaki türlerin şekli sağlayıcıya
@@ -111,7 +130,10 @@ create table public.message (
   constraint message_template_category check ((kind = 'template') = (template_category is not null)),
   -- Template İŞLETME-BAŞLATANDIR; gelen mesaj template olamaz. Tersi mümkün olsaydı, gelen bir
   -- mesaj pencere hesabında "biz gönderdik" gibi okunurdu.
-  constraint message_inbound_kind check (direction = 'outbound' or kind <> 'template')
+  constraint message_inbound_kind check (direction = 'outbound' or kind <> 'template'),
+  -- Yazar yönle ÇELİŞEMEZ: gelen mesajın yazarı daima müşteridir, giden mesajı müşteri yazamaz.
+  -- Kısıt olmasaydı yanlış eşleşme sessizce geçer ve "AI mı cevapladı" sorusu yalan okurdu.
+  constraint message_author_direction check ((direction = 'inbound') = (author = 'customer'))
 );
 
 alter table public.message enable row level security;
@@ -191,7 +213,10 @@ create or replace function public.record_message(
   p_template_name text default null,
   p_template_category template_category default null,
   p_provider_message_id text default null,
-  p_window_expires_at timestamptz default null
+  p_window_expires_at timestamptz default null,
+  -- Kim yazdı (16.08). `null` = yönden türet: gelen daima müşteri, giden personel varsayılır —
+  -- AI kendi gönderdiğinde 'ai' der. Yanlış eşleşmeyi tablo kısıtı keser.
+  p_author ticket_sender default null
 ) returns public.message
 language plpgsql
 security invoker
@@ -200,8 +225,17 @@ as $$
 declare
   v_message public.message;
 begin
-  insert into public.message (conversation_id, direction, kind, body, template_name, template_category, provider_message_id)
-  values (p_conversation_id, p_direction, p_kind, p_body, p_template_name, p_template_category, p_provider_message_id)
+  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id)
+  values (
+    p_conversation_id,
+    p_direction,
+    coalesce(p_author, case when p_direction = 'inbound' then 'customer'::ticket_sender else 'admin'::ticket_sender end),
+    p_kind,
+    p_body,
+    p_template_name,
+    p_template_category,
+    p_provider_message_id
+  )
   returning * into v_message;
 
   update public.conversation
@@ -214,7 +248,7 @@ end;
 $$;
 
 revoke all on function public.open_conversation(conversation_source, text, uuid) from anon;
-revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz) from anon;
+revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender) from anon;
 
 comment on table public.conversation is
   'WhatsApp/mesajlaşma konuşması (15.1): kimlik bağı, opt-in, 24s servis penceresi, son hareket.';

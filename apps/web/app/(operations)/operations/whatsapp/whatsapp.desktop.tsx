@@ -34,6 +34,8 @@ export function WhatsappDesktop({
   onFilter,
   onSelect,
   onRecordOutbound,
+  onMode,
+  onConsumeDraft,
   onIncoming,
   onNewDm,
   onNewTicket,
@@ -87,6 +89,8 @@ export function WhatsappDesktop({
               error={error}
               onIncoming={onIncoming}
               onRecordOutbound={onRecordOutbound}
+              onMode={onMode}
+              onConsumeDraft={onConsumeDraft}
             />
             <WhatsappContextPane
               context={data.detail.context}

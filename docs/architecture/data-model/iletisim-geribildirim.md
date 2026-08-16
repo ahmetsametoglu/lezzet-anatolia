@@ -16,6 +16,9 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | customer_id | uuid \| null | telefonla çözülür; taslakta boş olabilir |
 | source | enum(`whatsapp`) | ileride başka mesajlaşma kaynağı eklenebilir |
 | external_ref | string | sağlayıcıdaki kişi/thread anahtarı (WhatsApp: telefon) |
+| handled_by | enum(`human`,`hybrid`,`ai`) | sohbeti kim yürütüyor (16.08) — `ticket.handled_by` ile aynı enum ve sözleşme |
+| ai_draft_reply | text \| null | hibrit modun bekleyen AI taslağı — satırda durur, mesaj DEĞİL (defter gönderilmişi yazar) |
+| ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
 | opt_in | boolean | ticari mesaj izni (double opt-in, `DOMAIN.md §11`) |
 | opt_in_at | timestamptz \| null | |
 | window_expires_at | timestamptz \| null | 24s servis penceresi bitişi (ücretsiz/template kararı) |
@@ -39,6 +42,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | id | uuid | |
 | conversation_id | uuid | |
 | direction | enum(`inbound`,`outbound`) | müşteri→biz / biz→müşteri |
+| author | enum(`customer`,`admin`,`ai`) | kim yazdı (16.08) — yönle çelişemez (kısıt): gelen daima `customer` |
 | kind | enum(`text`,`interactive`,`template`,`media`) | |
 | body | jsonb | metin veya kart/interaktif yapı |
 | template_name | string \| null | outbound template ise (Meta-onaylı) |
@@ -48,7 +52,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 
 **Defterdir — yazılır, güncellenmez.** `TicketMessage` ile aynı gerekçe: gönderilmiş mesaj değişmez. Servisin güncelleme tipi bu yüzden `never`; bir gün biri "mesajı düzelt" demek istese derlemede durur.
 
-**`direction` ile `TicketMessage.sender` karıştırılmaz** ve ayrım kalıcı: orada "kim yazdı" (müşteri/personel/AI), burada "hangi tarafa aktı" sorulur. WhatsApp'ta bizim adımıza AI da personel de yazabilir; ikisi de aynı numaradan çıkar ve müşteri farkı görmez.
+**`direction` ile `author` iki AYRI eksendir** ve ayrım kalıcı: `author` "kim yazdı" (müşteri/personel/AI), `direction` "hangi tarafa aktı" sorusudur. WhatsApp'ta bizim adımıza AI da personel de yazar; ikisi de aynı numaradan çıkar ve müşteri farkı görmez — farkı defter yazar (16.08), operasyon ekranı AI balonunu ayrı tonda gösterir. Kısıt yanlış eşleşmeyi keser: gelen mesajın yazarı daima `customer`.
 
 **`kind = template` bir SÜS değil ÜCRET sınıfıdır:** servis penceresi dışında yalnız Meta-onaylı şablon gidebilir — ADR-005'in "önce müşteri yazsın" ilkesi bu satırdan doğuyor.
 
@@ -284,14 +288,16 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 | source | enum(`order`,`form`,`whatsapp`,`admin`) | **geliş yolu**: sipariş detayından / genel formdan / WhatsApp'tan / personelin elle açtığı |
 | type | enum(`damaged`,`missing`,`question`,`other`) | bozuk / eksik / soru / diğer |
 | status | enum(`open`,`in_progress`,`resolved`) | yeniden açılabilir → `open` |
-| handled_by | enum(`human`,`ai`) | talebi kim yürütüyor; devralmada `human`'a döner ve AI o talepte susar |
+| handled_by | enum(`human`,`hybrid`,`ai`) | talebi kim yürütüyor (16.08); devralmada `human`'a döner ve AI o talepte susar |
+| ai_draft_reply | text \| null | hibrit modun bekleyen AI taslağı (16.5 deposu, UI 16.08) — mesaj DEĞİL, onaylanmadan gitmez |
+| ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
 | subject | text \| null | kısa başlık |
 | return_triggered_at | timestamptz \| null | admin bu talepten iade akışını başlattı |
 | created_at / resolved_at | timestamptz | |
 
 **Geliş yolu `conversation_id`'den türetilemez:** konuşma bağı yalnız WhatsApp'ı ayırır; "sipariş detayından geldi" ile "genel formdan gelip sipariş seçti" ikisi de `order_id` dolu bırakır, ama admin için farklı şeylerdir — birincisinde müşteri neyden şikâyet ettiğini biliyordu, ikincisinde aradı buldu.
 
-**`handled_by` Faz 1'de de var, AI olmadan.** Alan bugün hep `human`'dır; ama kuyruk ekranı "AI yürütüyor / devralındı" ayrımını **baştan** çizer (`16.5` sonra gelir). Alanı sonra eklemek, o güne kadar yazılmış her talebin geçmişini belirsiz bırakırdı.
+**`handled_by` Faz 1'de de var, AI olmadan.** Alanı sonra eklemek, o güne kadar yazılmış her talebin geçmişini belirsiz bırakırdı. **Üç mod 16.08'de netleşti (kullanıcı kararı):** `human` = bugünkü hâl; `hybrid` = AI cevap yazmaz TASLAK yazar (`ai_draft_reply`), operatör "cevaba çevir / düzenleyerek gönder" ile tüketir ve giden mesajın göndereni `admin`dir (`ai` yalnız AI'ın KENDİ gönderdiği — 20-yapay-zeka §75); `ai` = özerk, operatör izler/devralır. Mod ekrandan seçilir, motorun kendisi 16.5'in işidir — motor geldiğinde hangi talebi nasıl yürüteceğini bu alandan okuyacak. Moddan düşerken bekleyen taslak temizlenir (bayat cevap "hazır" diye sunulmasın).
 
 **İade sonucu SAKLANMAZ, türetilir:** tutar ve durum siparişin iade hareketlerinden okunur (`MoneyMovement.order_refund`, `OrderItem.fulfilled_qty`). Talepte duran tek şey **tetiğin çekildiği an**dır — o da türetilemez, çünkü bir siparişe birden çok talep açılabilir ve iadeyi hangisinin doğurduğu ancak yazılırsa bilinir. İade **siparişte yaşar**, talep ona bağlanır (DOMAIN §8, §15).
 

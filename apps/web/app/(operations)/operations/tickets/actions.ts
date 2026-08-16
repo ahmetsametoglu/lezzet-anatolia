@@ -5,9 +5,11 @@ import { OrderService, serviceDb } from '@lezzet/database';
 import {
   DEFAULT_PAGE_SIZE,
   ORDER_STATUS_LABELS,
+  TicketHandlerEnum,
   TicketStatusEnum,
   type KeysetCursor,
   type Page,
+  type TicketHandler,
   type TicketStatus,
 } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -16,7 +18,15 @@ import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-optio
 import { shortDate } from '@/components/operation/ui/format';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { listTicketQueue } from '@/lib/ticket/read';
-import { changeTicketStatus, openTicket, replyAsStaff, takeOverTicket, triggerReturnFromTicket } from '@/lib/ticket/write';
+import {
+  changeTicketStatus,
+  consumeTicketDraft,
+  openTicket,
+  replyAsStaff,
+  setTicketMode,
+  takeOverTicket,
+  triggerReturnFromTicket,
+} from '@/lib/ticket/write';
 import { toRowViews, toTicketFilter } from './tickets-read';
 import { ManualTicketSchema, TICKET_ORDER_OPTION_LIMIT, type TicketOrderOption, type TicketRowView } from './tickets-types';
 import { parseTicketsUrl, TICKETS_PATH } from './tickets-url';
@@ -48,6 +58,8 @@ const REJECTION: Record<string, string> = {
   items_not_in_order: 'İşaretlenen kalemler bu siparişe ait değil.',
   attachment_not_yours: 'Ek dosya bu talebe ait değil.',
   invalid_transition: 'Bu durum değişikliği bu talepte yapılamaz — ekranı tazeleyin.',
+  already_in_mode: 'Talep zaten bu modda — bir başkası az önce değiştirmiş olabilir, ekranı tazeleyin.',
+  no_draft: 'Bekleyen AI taslağı yok — bu sırada tüketilmiş olabilir. Ekranı tazeleyin.',
 };
 
 const readable = (reason: string): string => REJECTION[reason] ?? reason;
@@ -92,7 +104,7 @@ export async function changeTicketStatusAction(ticketId: string, to: TicketStatu
   }
 }
 
-/** AI'dan devralma (16.5'in ucu). Bugün her talep `human` — düğme çizili, çağıracağı kapı hazır. */
+/** AI'dan devralma (16.5'in ucu) — `ai`'dan da `hybrid`'den de insana indirir, bekleyen taslağı düşürür. */
 export async function takeOverTicketAction(ticketId: string): Promise<ActionResult<{ id: string }>> {
   try {
     await requireAdmin();
@@ -100,6 +112,41 @@ export async function takeOverTicketAction(ticketId: string): Promise<ActionResu
     if (!result.ok) return { data: null, error: readable(result.reason) };
     refresh();
     return { data: { id: result.data.id }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Yürütücü modu (kullanıcı kararı 16.08): human · hybrid · ai. Hedef enum'dan DOĞRULANIR — action
+ * doğrudan çağrılabilir ve uydurma bir dizge servise kadar gitmemeli (`changeTicketStatusAction`
+ * ile aynı gerekçe).
+ */
+export async function setTicketModeAction(ticketId: string, mode: TicketHandler): Promise<ActionResult<{ mode: TicketHandler }>> {
+  try {
+    await requireAdmin();
+    const target = TicketHandlerEnum.parse(mode);
+    const result = await setTicketMode(ticketId, target);
+    if (!result.ok) return { data: null, error: readable(result.reason) };
+    refresh();
+    return { data: { mode: result.data.handledBy }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Hibrit taslağı tüket (16.08) — iki çıkışın tek kapısı: `send=true` taslak olduğu gibi personel
+ * cevabı olur (gönderen `admin`, AI değil — 20-yapay-zeka §75); `send=false` taslak satırdan düşer
+ * ve dönen metni ekran cevap kutusuna taşır.
+ */
+export async function consumeTicketDraftAction(ticketId: string, send: boolean): Promise<ActionResult<{ draft: string }>> {
+  try {
+    const actor = await requireAdmin();
+    const result = await consumeTicketDraft({ ticketId, authorId: actor.profileId, send });
+    if (!result.ok) return { data: null, error: readable(result.reason) };
+    refresh();
+    return { data: { draft: result.data.draft }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

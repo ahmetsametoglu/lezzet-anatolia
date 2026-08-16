@@ -63,3 +63,6 @@ export const WINDOW_NOTE: Record<WindowView['state'], string> = {
  * başlık söylüyor ve her balona ad koymak diziyi gürültüye boğardı (çizim de öyle yapıyor).
  */
 export const OUTBOUND_LABEL = 'Siz';
+
+/** AI'ın KENDİ gönderdiği balonun künyesi (16.08) — çizimin sözcüğü ("AI ajanı"), mor tonla okunur. */
+export const AI_OUTBOUND_LABEL = 'AI ajanı';

@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { ConversationSourceEnum, MessageDirectionEnum, MessageKindEnum, TemplateCategoryEnum } from '../primitives/enums.schema';
+import {
+  ConversationSourceEnum,
+  MessageDirectionEnum,
+  MessageKindEnum,
+  TemplateCategoryEnum,
+  TicketHandlerEnum,
+  TicketSenderEnum,
+} from '../primitives/enums.schema';
 
 // Conversation / Message — WhatsApp konuşma zemini (15.1, migration 0039). CHANNELS §7.
 //
@@ -23,6 +30,15 @@ export const ConversationSchema = z.object({
    * konuşma açar ve geçmiş ikiye bölünür.
    */
   externalRef: z.string(),
+  /**
+   * Sohbeti kim yürütüyor (15.13/16.5 · kullanıcı kararı 16.08) — `ticket.handledBy` ile aynı
+   * enum ve aynı sözleşme: `hybrid` = AI taslak yazar, operatör onaylamadan gitmez; `ai` = özerk.
+   */
+  handledBy: TicketHandlerEnum,
+  /** Hibrit modun bekleyen AI taslağı — satırda durur, mesaj değil (`ticket.aiDraftReply` künyesi). */
+  aiDraftReply: z.string().nullable(),
+  /** Taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (DB kısıtı). */
+  aiDraftGeneratedAt: z.string().nullable(),
   /** Ticari mesaj izni (DOMAIN §11) — Faz 2 broadcast'inin dayanağı; bugün yalnız kaydedilir. */
   optIn: z.boolean(),
   /** İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez. */
@@ -77,6 +93,12 @@ export const MessageSchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),
   direction: MessageDirectionEnum,
+  /**
+   * Kim yazdı (16.08) — yön "hangi tarafa aktı" der, bu alan "bunu kim söyledi". Bizim adımıza AI
+   * da personel de yazar ve müşteri farkı görmez; ayrım iç izlenebilirliktir ve ekranda AI
+   * baloncuğunu ayrı tonda gösterir. Yönle çelişemez (DB kısıtı): gelen daima `customer`.
+   */
+  author: TicketSenderEnum,
   kind: MessageKindEnum,
   body: MessageBodySchema,
   /** Meta-onaylı şablonun adı — yalnız `template` mesajında dolu (DB kısıtı da bunu zorlar). */
@@ -99,6 +121,8 @@ export type Message = z.infer<typeof MessageSchema>;
 export const MessageInsertSchema = z.object({
   conversationId: z.string().uuid(),
   direction: MessageDirectionEnum,
+  /** Verilmezse `record_message` yönden türetir (gelen → customer, giden → admin); AI kendisi 'ai' der. */
+  author: TicketSenderEnum.nullish(),
   kind: MessageKindEnum.default('text'),
   body: MessageBodySchema,
   templateName: z.string().nullish(),

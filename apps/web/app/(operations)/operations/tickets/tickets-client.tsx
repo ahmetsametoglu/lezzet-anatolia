@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { TicketStatus } from '@lezzet/types';
+import type { TicketHandler, TicketStatus } from '@lezzet/types';
 import { ORDERS_PATH } from '../orders/orders-url';
 import {
   changeTicketStatusAction,
+  consumeTicketDraftAction,
   loadMoreTicketsAction,
   replyToTicketAction,
+  setTicketModeAction,
   takeOverTicketAction,
   triggerReturnAction,
 } from './actions';
@@ -105,6 +107,20 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     void run(() => takeOverTicketAction(detail.ticket.id)).then(() => setConfirm(null));
   };
 
+  // Mod anahtarı (16.08) — onaysız: anahtar kararın kendisi, ikinci bir pencere aynı soruyu iki
+  // kez sormak olurdu. (Devral şeridi ONAYLI kalıyor: o tek düğme ve dönüşü olmayan bir susturma.)
+  const onMode = (mode: TicketHandler) => {
+    if (!detail) return;
+    void run(() => setTicketModeAction(detail.ticket.id, mode));
+  };
+
+  /** Hibrit taslağı tüket — `send=false` dönen metni ekran cevap kutusuna taşır (16.08). */
+  const onConsumeDraft = async (send: boolean): Promise<string | null> => {
+    if (!detail) return null;
+    const result = await run(() => consumeTicketDraftAction(detail.ticket.id, send));
+    return result?.draft ?? null;
+  };
+
   /**
    * İade tetikleme İKİ ADIMDIR ve ikincisi atlanamaz: damga talebi siparişe bağlar, iadeyi
    * yürütmez (DOMAIN §8). Operatör bu yüzden siparişe GÖTÜRÜLÜR — damgayla baş başa bırakmak,
@@ -132,6 +148,8 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     onSelect: (t: string) => go({ t }),
     onReply,
     onStatus,
+    onMode,
+    onConsumeDraft,
     onTakeOver: () => setConfirm('takeover'),
     onTriggerReturn: () => setConfirm('return'),
     onNewTicket: () => setManualOpen(true),

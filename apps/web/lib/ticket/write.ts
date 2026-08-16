@@ -210,8 +210,8 @@ export async function changeTicketStatus(input: {
 }
 
 /**
- * AI'dan devralma (16.5'in arka ucu). Bugün her talep zaten `human`'dır; kapı yine de var, çünkü
- * ekranın "Devral" düğmesi AI gelmeden önce çizilecek ve çağıracağı bir uç olmalı.
+ * AI'dan devralma (16.5'in arka ucu) — `ai`'dan da `hybrid`'den de iner; bekleyen taslak servis
+ * katında birlikte düşer (devralan taslağı değil sohbeti istedi).
  */
 export async function takeOverTicket(ticketId: string): Promise<TicketWriteResult<Ticket>> {
   const service = new TicketService(serviceDb());
@@ -219,6 +219,51 @@ export async function takeOverTicket(ticketId: string): Promise<TicketWriteResul
   if (!ticket) return { ok: false, reason: 'not_found' };
   if (ticket.handledBy === 'human') return { ok: false, reason: 'already_human' };
   return { ok: true, data: await service.takeOver(ticket.id) };
+}
+
+/**
+ * Yürütücü modunu değiştir (kullanıcı kararı 16.08): human · hybrid · ai. Motor (16.5) henüz yok
+ * ama mod bir VERİ kararıdır ve bugünden yazılır — motor geldiğinde hangi talebi nasıl yürüteceğini
+ * buradan okuyacak. Aynı moda "geçmek" reddedilir: ekran o düğmeyi zaten seçili gösterir, yine de
+ * gelen çağrı bir yarışın işaretidir ve sessizce yutulmamalı.
+ */
+export async function setTicketMode(ticketId: string, mode: Ticket['handledBy']): Promise<TicketWriteResult<Ticket>> {
+  const service = new TicketService(serviceDb());
+  const ticket = await service.getById(ticketId);
+  if (!ticket) return { ok: false, reason: 'not_found' };
+  if (ticket.handledBy === mode) return { ok: false, reason: 'already_in_mode' };
+  return { ok: true, data: await service.setMode(ticket.id, mode) };
+}
+
+/**
+ * Hibrit taslağı tüket (16.08) — mobildeki desenin arka ucu (`complaint-screen` v2:548).
+ *
+ * İki çıkış, tek kapı:
+ *   · `send=true` — "Cevaba çevir": taslak OLDUĞU GİBİ personel cevabı olur. Gönderen `admin`dir,
+ *     `ai` değil (20-yapay-zeka §75: `ai` yalnız AI'ın KENDİ gönderdiği mesajdır; insanın
+ *     onayladığı taslak insanın cevabıdır — karıştırmak "AI yanıtladı" süzgecini yalancı yapardı).
+ *   · `send=false` — "Düzenleyerek gönder": taslak satırdan düşer, metni ekran cevap kutusuna
+ *     taşır; düzenleme yeri zaten orasıdır.
+ *
+ * Sıra bilinçli: önce gönder, SONRA temizle — gönderim düşerse taslak yerinde kalır ve operatör
+ * yeniden deneyebilir. Ters sıra, düşen gönderimde taslağı sessizce yutardı.
+ */
+export async function consumeTicketDraft(input: {
+  ticketId: string;
+  authorId: string;
+  send: boolean;
+}): Promise<TicketWriteResult<{ ticket: Ticket; draft: string }>> {
+  const service = new TicketService(serviceDb());
+  const ticket = await service.getById(input.ticketId);
+  if (!ticket) return { ok: false, reason: 'not_found' };
+  const draft = ticket.aiDraftReply;
+  if (!draft) return { ok: false, reason: 'no_draft' };
+
+  if (input.send) {
+    const sent = await replyAsStaff({ ticketId: ticket.id, authorId: input.authorId, body: draft });
+    if (!sent.ok) return sent;
+  }
+  return { ok: true, data: { ticket: await service.clearDraft(ticket.id), draft } };
 }
 
 /**

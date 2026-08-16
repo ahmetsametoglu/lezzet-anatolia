@@ -36,6 +36,8 @@ export function TicketsDesktop({
   onSelect,
   onReply,
   onStatus,
+  onMode,
+  onConsumeDraft,
   onTakeOver,
   onTriggerReturn,
   onNewTicket,
@@ -91,6 +93,8 @@ export function TicketsDesktop({
                 error={error}
                 onStatus={onStatus}
                 onReply={onReply}
+                onMode={onMode}
+                onConsumeDraft={onConsumeDraft}
                 onTakeOver={onTakeOver}
                 onTriggerReturn={onTriggerReturn}
               />
