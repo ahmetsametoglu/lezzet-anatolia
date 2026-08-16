@@ -166,12 +166,25 @@ export async function seedStock(
   //    partileri Kehl'e düşerse o ürün ana depoda hiç bulunmaz — rezervasyon reddedilir, hazırlık
   //    parti bulamaz ve seed'in kendisi tutarsız veri üretir. Ek partiler Kehl'e gider; sonuç yine
   //    gerçek bir işletme hâli: bazı ürünler iki depoda, bazıları yalnız birinde bol.
+  //
+  // ── HACİM İNCELTİLDİ (kullanıcı kararı 16.08) ve azaltma KAPSAMI ARTIRDI ────────────────────────
+  // Önce HER satılabilir varyantın 1-3 partisi vardı (334 satır) — yani katalogda stoksuz tek bir
+  // ürün yoktu ve **"bu ürün şu an stokta yok" hâli seed'de hiç doğmuyordu.** Şimdi katalogun bir
+  // bölümü bilerek stoksuz: hem satır sayısı düştü hem eksik olan hâl geldi.
+  //
+  // **İlk 45 varyant HER HÂLDE stoklu** ve bu bir eşik değil bir bağımlılık: sipariş bölümü
+  // kalemlerini o aralıktan seçiyor (`kalem(0…38)`). Oradaki bir varyant stoksuz kalırsa rezervasyon
+  // reddedilir, hazırlık parti bulamaz ve seed kendi içinde tutarsız veri üretir.
+  const stokluMu = (i: number) => i < 45 || i % 3 === 0;
   let ekParti = 0;
   for (const [i, v] of satilabilir.entries()) {
-    const partiSayisi = 1 + (i % 3);
+    if (!stokluMu(i)) continue;
+    const partiSayisi = 1 + (i % 2);
     for (let p = 0; p < partiSayisi; p += 1) {
       await stocks.insert({
-        warehouseId: p > 0 && (i + p) % 3 === 0 ? depolar.kehl : depolar.str,
+        // Kehl payı `% 3`ten `% 2`ye çıktı: toplam parti azalınca ikinci depoya düşen sayı da
+        // düşüyordu ve sipariş bölümü "Kehl'de 8+ adetli parti yok" diyip o senaryoları atlıyor.
+        warehouseId: p > 0 && (i + p) % 2 === 0 ? depolar.kehl : depolar.str,
         variantId: v.id,
         physicalQty: 6 + ((i + p * 5) % 40),
         expiryDate: gun(20 + ((i * 7 + p * 45) % 300)),
@@ -322,8 +335,12 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
   const depocu = kisiler.get('depocu') ?? null;
   let sayi = 0;
 
-  // 21 gün × sabah/akşam ölçüm — liste ve tarih süzgeci gerçekçi bir seride denenebilsin.
-  for (let g = 21; g >= 0; g -= 1) {
+  // **Seri 22 günden 5 güne indi (kullanıcı kararı 16.08: test verisi incelsin).** 176 ölçüm
+  // üretiyordu ve bu, listenin ne kadar uzayabileceğini göstermekten başka bir şey sınamıyordu —
+  // tarih süzgeci beş günlük bir seride de aynı yolu koşuyor. **Korunan üç şey:** dört ölçüm
+  // noktası (konum çeşitliliği), günde iki ölçüm (sabah/akşam ikilisi) ve aralık DIŞI kayıtlar —
+  // aşağıdaki `% 9` ölçütü beş günde de üç kaza üretiyor (ölçüldü), yani uyarı eşiği hâlâ deneniyor.
+  for (let g = 4; g >= 0; g -= 1) {
     for (const [n, nokta] of SICAKLIK_NOKTALARI.entries()) {
       for (const saat of [7, 18]) {
         const dalga = Math.sin((g * 2 + n + saat) / 3) * nokta.sapma;
@@ -349,7 +366,7 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
   // tek noktalı: ikinci depo küçük, kayıt hacmi de öyle olmalı — eşit hacim gerçeği yalanlar.
   const kehlNokta = SICAKLIK_NOKTALARI[0];
   if (kehlNokta) {
-    for (let g = 7; g >= 0; g -= 1) {
+    for (let g = 2; g >= 0; g -= 1) {
       for (const saat of [8, 17]) {
         const zaman = new Date(Date.now() - g * 86_400_000);
         zaman.setHours(saat, 0, 0, 0);
@@ -357,7 +374,9 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
           warehouseId: depolar.kehl,
           location: kehlNokta.location,
           // Kehl'de bir gün ARALIK DIŞI: uyarı ikinci depoda da tetiklenebilmeli.
-          temperatureC: euro(kehlNokta.taban + Math.sin(g + saat / 4) * kehlNokta.sapma + (g === 3 ? 6.2 : 0)),
+          // **Gün 3'ten 1'e taşındı (16.08):** seri üç güne indi, `g === 3` artık hiç oluşmuyordu ve
+          // ikinci deponun aralık-dışı hâli sessizce kaybolurdu.
+          temperatureC: euro(kehlNokta.taban + Math.sin(g + saat / 4) * kehlNokta.sapma + (g === 1 ? 6.2 : 0)),
           recordedBy: depocu,
           recordedAt: zaman.toISOString(),
         });

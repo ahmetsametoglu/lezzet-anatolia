@@ -436,6 +436,15 @@ Kataloğun veri ve iş katmanı: `Category / Collection / Product / ProductVaria
   - Doğrulama: `tsc -p scripts` temiz · `eslint scripts/seed` temiz. **Satır sayıları `db:refresh` sonrası ölçülmeli** — bu şerit DB'ye yazmıyor.
 
 
+- [x] (05.25) **Tarif ve paket kapakları — sessizce boş kalan görseller onarıldı** *(kullanıcı isteği 16.08: "sofradan fikirler ve hazır paketler için internetten bulduğun resimleri besleme dosyasına tanımlayabilirsin")* · `touches: scripts/seed/data/fixture-images.json, scripts/seed/{shared,recipe,catalog}.ts`
+  - ⚠ **ÖNCE BİR ARIZA BULUNDU:** tarif görselleri hiç yüklenmiyordu. `RECIPE_IMAGE_FILES` `temp/1.jpeg`…`5.jpeg` arıyordu ve **o dosyaların hiçbiri repoda yok** (`temp/` .gitignore'da). `uploadImage` her koşuda `null` dönüyor, tarifler görselsiz kuruluyor, hata verilmediği için kimse fark etmiyordu. **Aynı sınıf hata 09.16'da `site-image.ts`'de yaşanmış** ve oraya şu not düşülmüştü: *"seed'in ihtiyaç duyduğu fikstür seed'in klasöründe durur."* Tarif tarafı o düzeltmeden payını almamış.
+  - **Yeni kaynak: `data/fixture-images.json`** — her tarif/paket kendi kapak anahtarını taşıyor (`image`), künye dosyası adresi ve **lisansı** tutuyor. Görseller Wikimedia Commons'tan, yalnız serbest lisanslı kayıtlar (2'si Public domain, 8'i CC BY-SA); **her adres indirilerek doğrulandı** (HTTP 200 + `image/*`). Yol ürün görselleriyle aynı: `uploadImageFromUrl` → `lezza-cache` önbelleği → R2, yani ikinci koşu ağa çıkmıyor.
+  - **Paket kapağı ürün fotoğrafı olmaktan çıktı.** Eskiden içindeki ilk ürünün çekimiydi; paket tek ürün değil bir SOFRA fikri ve üç kalemi bir arada anlatan bir kapak daha doğru. Pasif "Kış İkramları" paketi bilerek kapaksız kaldı (kapsam kovası).
+  - **Sıra düzeldi ve okunur oldu:** eskiden `sira % 5` ile dağıtılıyordu, yani hangi tarifin hangi fotoğrafı aldığı koddan anlaşılmıyordu. Taslak tarif `image` alanı hiç taşımıyor — görselsizliği artık bir kural değil, bir veri.
+  - ⚠ **Lisans yükümlülüğü kayda geçsin:** CC BY-SA görseller **atıf ister**. Yayına çıkacak bir ekranda kullanılırlarsa `kaynak`/`lisans` alanları görünür bir yerde gösterilmeli. Bunlar bizim ürünümüzün fotoğrafı DEĞİL — gerçek çekimler yapılınca künye dosyasından değiştirilmeli.
+  - **Aynı arıza `support.ts`'de de var:** talep fotoğrafı `temp/2.jpeg` arıyor, o da yok → `BEKLEYEN(16.7)`. Bu şeridin alanı değil, talep/şikayet modülünün.
+  - Doğrulama: `tsc -p scripts` temiz · `eslint scripts/seed` temiz · `knip` bu iki dosyada temiz (ölü kalan `lezzaGorselBySlug` silindi) · 10 adresin 10'u indirilebilir durumda.
+
 ## Netleşecekler
 
 - **AI sağlayıcı kurulumu — ANAHTAR KURULDU, tek satır kaldı (ölçüldü 07.08, denetim):** `GOOGLE_GENERATIVE_AI_API_KEY` `apps/web/.env.local`'da dolu ve gerçek çağrı `pnpm ai:smoke` ile kanıtlandı (gemini-2.5-flash, üç dilde doğru çeviri, 1.360 token). **Ama zincir dev'de hâlâ kapalı:** `AI_PROVIDER` satırı boş ve paket varsayılanı `anthropic` (anahtarı yok) — `apps/web/.env.local`'a `AI_PROVIDER=google` yazılınca açılır (dev restart kullanıcının). Backend'de (`apps/backend/.env.local`) İKİSİ de boş — haftalık içgörü işi (13.7) çalışmak için aynı iki satırı orada da ister.

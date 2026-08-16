@@ -1,0 +1,1003 @@
+{
+  "_not": "ELLE YAZILAN dosya — üretilmiş değil, `lezza:catalog` buna dokunmaz. Kaynak katalog yalnız İngilizce; ürün adı ve açıklamasının Türkçe/Fransızca/Almanca karşılığı burada duruyor (kullanıcı isteği 16.08). Açıklamalarda kaynağın B2B kuyruğu ('wholesale supply and private label from Lezza Foods', 'for horeca') ATILDI: o metin arama motoruna yazılmış bir satış cümlesiydi, müşteriye gösterilecek ürün açıklaması değil. Kaynakta açıklaması olmayan ürüne açıklama UYDURULMADI — `description` alanı yok, seed onu null bırakır.",
+  "_kapsam": "Yalnız seed sahnesine giren 126 ürün. `mono` kalemleri katalogda var ama sahneye girmiyor, çevirileri de yok.",
+
+  "adana-borek-with-cheese": {
+    "name": { "tr": "Peynirli Adana Böreği", "fr": "Börek d'Adana au fromage", "de": "Adana-Börek mit Käse" },
+    "description": {
+      "tr": "Tereyağlı çıtır yufka ve uzayan peynir dolgusuyla, altı dilim hâlinde dondurulmuş.",
+      "fr": "Six parts prédécoupées, pâte yufka croustillante au beurre et fromage fondant.",
+      "de": "Sechs vorgeschnittene Stücke mit knusprigem Butter-Yufka und ziehendem Käse."
+    }
+  },
+  "cheese-calzone": {
+    "name": { "tr": "Peynirli Kalzone", "fr": "Calzone au fromage", "de": "Calzone mit Käse" },
+    "description": {
+      "tr": "Tek kişilik, çiğ dondurulmuş kalzone — çözdürmeden fırınlanır.",
+      "fr": "Calzone individuelle crue surgelée, à cuire sans décongeler.",
+      "de": "Einzelne rohe Calzone, tiefgekühlt — ohne Auftauen backen."
+    }
+  },
+  "cheese-filled-pastry": {
+    "name": { "tr": "Peynirli Poğaça", "fr": "Poğaça au fromage", "de": "Poğaça mit Käse" },
+    "description": {
+      "tr": "Dört adet önceden pişmiş peynirli poğaça; ısıtıp servis edilir.",
+      "fr": "Quatre poğaça au fromage précuits : réchauffer et servir.",
+      "de": "Vier vorgebackene Käse-Poğaça: erwärmen und servieren."
+    }
+  },
+  "cheese-pastry-su-borek": {
+    "name": { "tr": "Su Böreği", "fr": "Su Börek (feuilleté au fromage)", "de": "Su Börek (Käseblätterteig)" },
+    "description": {
+      "tr": "Tam pişmiş, yuvarlak su böreği — ısıtıp sofraya. Kat kat yufka ve beyaz peynir.",
+      "fr": "Su börek rond entièrement cuit, à réchauffer. Feuilles superposées et fromage blanc.",
+      "de": "Rundes, fertig gebackenes Su Börek zum Erwärmen. Schichtteig mit Weißkäse."
+    }
+  },
+  "cheese-rolls-handmade": {
+    "name": { "tr": "El Açması Peynirli Rulo", "fr": "Rouleaux au fromage faits main", "de": "Handgerollte Käserollen" },
+    "description": {
+      "tr": "On iki adet el açması peynirli rulo; ince yufkadan, elde sarılmış.",
+      "fr": "Douze rouleaux au fromage roulés à la main, en pâte yufka fine.",
+      "de": "Zwölf handgerollte Käserollen aus dünnem Yufka-Teig."
+    }
+  },
+  "doner-lavash": {
+    "name": { "tr": "Dönerlik Lavaş", "fr": "Lavash pour döner", "de": "Lavash für Döner" },
+    "description": {
+      "tr": "Pişmiş dondurulmuş lavaş — çözdürüp kebap ve dürümde kullanılır.",
+      "fr": "Lavash cuit surgelé : décongeler et garnir pour kebab ou dürüm.",
+      "de": "Gebackenes Lavash, tiefgekühlt — auftauen und für Kebap oder Dürüm verwenden."
+    }
+  },
+  "dough-leaves": {
+    "name": { "tr": "Böreklik Yufka", "fr": "Feuilles de yufka", "de": "Yufka-Teigblätter" },
+    "description": {
+      "tr": "Sekiz kat çiğ yufka — börek yapımı için.",
+      "fr": "Huit feuilles de yufka crues, pour préparer des böreks.",
+      "de": "Acht rohe Yufka-Blätter zur Börek-Zubereitung."
+    }
+  },
+  "e-shaped-borek-with-cheese": {
+    "name": { "tr": "Peynirli E Böreği", "fr": "Börek en E au fromage", "de": "E-Börek mit Käse" },
+    "description": {
+      "tr": "Çiğ dondurulmuş peynirli börek — çözdürmeden fırınlanır.",
+      "fr": "Börek au fromage cru surgelé, à cuire sans décongeler.",
+      "de": "Rohes Käse-Börek, tiefgekühlt — ohne Auftauen backen."
+    }
+  },
+  "e-shaped-borek-with-meat": {
+    "name": { "tr": "Kıymalı E Böreği", "fr": "Börek en E à la viande", "de": "E-Börek mit Hackfleisch" },
+    "description": {
+      "tr": "Çiğ dondurulmuş kıymalı börek — baharatlı Anadolu iç harcıyla.",
+      "fr": "Börek cru surgelé à la viande, farce anatolienne épicée.",
+      "de": "Rohes Hackfleisch-Börek mit würziger anatolischer Füllung."
+    }
+  },
+  "e-shaped-borek-with-potato": {
+    "name": { "tr": "Patatesli E Böreği", "fr": "Börek en E à la pomme de terre", "de": "E-Börek mit Kartoffel" },
+    "description": {
+      "tr": "Çiğ dondurulmuş patatesli börek — doyurucu Anadolu iç harcı.",
+      "fr": "Börek cru surgelé à la pomme de terre, farce anatolienne généreuse.",
+      "de": "Rohes Kartoffel-Börek mit herzhafter anatolischer Füllung."
+    }
+  },
+  "e-shaped-borek-with-spinach-cheese": {
+    "name": { "tr": "Ispanaklı Peynirli E Böreği", "fr": "Börek en E épinards & fromage", "de": "E-Börek mit Spinat & Käse" },
+    "description": {
+      "tr": "Çiğ dondurulmuş ıspanaklı peynirli börek — çözdürmeden fırınlanır.",
+      "fr": "Börek cru surgelé aux épinards et fromage, à cuire sans décongeler.",
+      "de": "Rohes Spinat-Käse-Börek, tiefgekühlt — ohne Auftauen backen."
+    }
+  },
+  "gobit-bread": {
+    "name": { "tr": "Gobit Ekmeği", "fr": "Pain gobit", "de": "Gobit-Brot" },
+    "description": {
+      "tr": "Dört adet pişmiş cepli ekmek — ısıtıp kebap ve sandviçte kullanılır.",
+      "fr": "Quatre pains à poche cuits : réchauffer pour kebab ou sandwich.",
+      "de": "Vier gebackene Taschenbrote: erwärmen für Kebap oder Sandwich."
+    }
+  },
+  "izmir-boyoz": {
+    "name": { "tr": "İzmir Boyozu", "fr": "Boyoz d'Izmir", "de": "İzmir Boyoz" },
+    "description": {
+      "tr": "Çiğ dondurulmuş boyoz — çözdürmeden fırınlanır. Katmerli Ege hamur işi.",
+      "fr": "Boyoz cru surgelé, à cuire sans décongeler. Pâte feuilletée égéenne.",
+      "de": "Rohes Boyoz, tiefgekühlt — ohne Auftauen backen. Blättriges Ägäis-Gebäck."
+    }
+  },
+  "kumru-bagel": {
+    "name": { "tr": "Kumru Ekmeği", "fr": "Petit pain kumru", "de": "Kumru-Brötchen" },
+    "description": {
+      "tr": "Çiğ dondurulmuş susamlı kumru ekmeği — çözdürmeden fırınlanır. Çeşme usulü.",
+      "fr": "Petit pain kumru au sésame, cru surgelé, à cuire sans décongeler. Recette de Çeşme.",
+      "de": "Rohes Sesam-Kumru-Brötchen, tiefgekühlt — ohne Auftauen backen. Nach Çeşme-Art."
+    }
+  },
+  "lahmacun": {
+    "name": { "tr": "Lahmacun", "fr": "Lahmacun", "de": "Lahmacun" },
+    "description": {
+      "tr": "Beş adet dondurulmuş lahmacun — baharatlı kıymalı harçla.",
+      "fr": "Cinq lahmacun surgelés, garniture de viande hachée épicée.",
+      "de": "Fünf tiefgekühlte Lahmacun mit würziger Hackfleischauflage."
+    }
+  },
+  "mini-pide-with-cheese": {
+    "name": { "tr": "Peynirli Mini Pide", "fr": "Mini pide au fromage", "de": "Mini-Pide mit Käse" },
+    "description": {
+      "tr": "Beş adet 50 g'lık çiğ dondurulmuş peynirli pide — evde fırınlanır.",
+      "fr": "Cinq mini pide de 50 g au fromage, crus surgelés, à cuire au four.",
+      "de": "Fünf rohe Mini-Pide à 50 g mit Käse, tiefgekühlt, zum Backen."
+    }
+  },
+  "mini-pide-with-spinach-cheese": {
+    "name": { "tr": "Ispanaklı Peynirli Mini Pide", "fr": "Mini pide épinards & fromage", "de": "Mini-Pide mit Spinat & Käse" },
+    "description": {
+      "tr": "Beş adet 50 g'lık dondurulmuş pide — ıspanak ve peynirli.",
+      "fr": "Cinq mini pide de 50 g surgelés, aux épinards et au fromage.",
+      "de": "Fünf tiefgekühlte Mini-Pide à 50 g mit Spinat und Käse."
+    }
+  },
+  "mini-roll-borek-with-cheese": {
+    "name": { "tr": "Peynirli Mini Rulo Börek", "fr": "Mini rouleaux de börek au fromage", "de": "Mini-Rollbörek mit Käse" },
+    "description": {
+      "tr": "On adet 50 g'lık çiğ peynirli rulo börek — çözdürmeden fırınlanır.",
+      "fr": "Dix rouleaux de börek au fromage de 50 g, à cuire sans décongeler.",
+      "de": "Zehn rohe Käse-Rollbörek à 50 g — ohne Auftauen backen."
+    }
+  },
+  "mini-roll-borek-with-spinach-cheese": {
+    "name": { "tr": "Ispanaklı Peynirli Mini Rulo Börek", "fr": "Mini rouleaux épinards & fromage", "de": "Mini-Rollbörek mit Spinat & Käse" },
+    "description": {
+      "tr": "On adet 50 g'lık ıspanaklı peynirli rulo börek — çözdürmeden fırınlanır.",
+      "fr": "Dix rouleaux de 50 g aux épinards et fromage, à cuire sans décongeler.",
+      "de": "Zehn Spinat-Käse-Rollbörek à 50 g — ohne Auftauen backen."
+    }
+  },
+  "olive-filled-pastry": {
+    "name": { "tr": "Zeytinli Poğaça", "fr": "Poğaça aux olives", "de": "Poğaça mit Oliven" },
+    "description": {
+      "tr": "Çiğ dondurulmuş zeytinli poğaça — Akdeniz tadında.",
+      "fr": "Poğaça aux olives cru surgelé, aux saveurs méditerranéennes.",
+      "de": "Rohe Oliven-Poğaça, tiefgekühlt, mit mediterranem Aroma."
+    }
+  },
+  "plain-pastry": {
+    "name": { "tr": "Sade Poğaça", "fr": "Poğaça nature", "de": "Poğaça natur" },
+    "description": {
+      "tr": "Dört adet önceden pişmiş sade poğaça; ısıtıp servis edilir.",
+      "fr": "Quatre poğaça nature précuits : réchauffer et servir.",
+      "de": "Vier vorgebackene Poğaça natur: erwärmen und servieren."
+    }
+  },
+  "potato-filled-pastry": {
+    "name": { "tr": "Patatesli Poğaça", "fr": "Poğaça à la pomme de terre", "de": "Poğaça mit Kartoffel" },
+    "description": {
+      "tr": "Çiğ dondurulmuş patatesli poğaça — doyurucu iç harcıyla.",
+      "fr": "Poğaça à la pomme de terre cru surgelé, farce généreuse.",
+      "de": "Rohe Kartoffel-Poğaça, tiefgekühlt, mit herzhafter Füllung."
+    }
+  },
+  "savoury-bun": {
+    "name": { "tr": "Sade Çörek", "fr": "Brioche salée nature", "de": "Herzhaftes Hefegebäck natur" },
+    "description": {
+      "tr": "Çiğ dondurulmuş açma — fırına hazır, yumuşak burgu hamur.",
+      "fr": "Açma crue surgelée, prête à cuire : pâte torsadée moelleuse.",
+      "de": "Rohe Açma, tiefgekühlt und backfertig: weicher, gedrehter Teig."
+    }
+  },
+  "savoury-bun-acma": {
+    "name": { "tr": "Açma", "fr": "Açma", "de": "Açma" },
+    "description": {
+      "tr": "Dört adet 80 g'lık, %80 pişmiş açma — ısıtınca fırından yeni çıkmış gibi.",
+      "fr": "Quatre açma de 80 g cuites à 80 % : réchauffer pour un moelleux de sortie de four.",
+      "de": "Vier Açma à 80 g, zu 80 % gebacken — nach dem Erwärmen wie frisch aus dem Ofen."
+    }
+  },
+  "savoury-bun-with-cheese": {
+    "name": { "tr": "Peynirli Açma", "fr": "Açma au fromage", "de": "Açma mit Käse" },
+    "description": {
+      "tr": "Çiğ dondurulmuş peynirli açma — fırına hazır, yumuşak burgu hamur.",
+      "fr": "Açma au fromage crue surgelée, prête à cuire : pâte torsadée moelleuse.",
+      "de": "Rohe Käse-Açma, tiefgekühlt und backfertig: weicher, gedrehter Teig."
+    }
+  },
+  "spiral-pie-borek-with-cheese": {
+    "name": { "tr": "Peynirli Kol Böreği", "fr": "Börek en spirale au fromage", "de": "Spiral-Börek mit Käse" },
+    "description": {
+      "tr": "Dondurulmuş peynirli kol böreği — evde fırınlanmaya hazır.",
+      "fr": "Börek en spirale au fromage surgelé, prêt à cuire à la maison.",
+      "de": "Tiefgekühltes Spiral-Börek mit Käse, backfertig für zu Hause."
+    }
+  },
+  "spiral-pie-borek-with-potato": {
+    "name": { "tr": "Patatesli Kol Böreği", "fr": "Börek en spirale à la pomme de terre", "de": "Spiral-Börek mit Kartoffel" },
+    "description": {
+      "tr": "Baharatlı patates harcıyla, ince yufkadan sarılıp spiral verilmiş; şoklanarak dondurulmuş.",
+      "fr": "Farce de pomme de terre épicée, fines feuilles roulées en spirale et surgelées rapidement.",
+      "de": "Würzige Kartoffelfüllung in dünnem Teig, spiralförmig gerollt und schockgefrostet."
+    }
+  },
+  "spiral-pie-borek-with-spinach-cheese": {
+    "name": { "tr": "Ispanaklı Peynirli Kol Böreği", "fr": "Börek en spirale épinards & fromage", "de": "Spiral-Börek mit Spinat & Käse" },
+    "description": {
+      "tr": "Dondurulmuş ıspanaklı peynirli kol böreği — evde fırınlanmaya hazır.",
+      "fr": "Börek en spirale aux épinards et fromage, surgelé et prêt à cuire.",
+      "de": "Tiefgekühltes Spiral-Börek mit Spinat und Käse, backfertig."
+    }
+  },
+  "spiral-rose-borek-with-cheese": {
+    "name": { "tr": "Peynirli Gül Böreği", "fr": "Börek en rose au fromage", "de": "Rosen-Börek mit Käse" },
+    "description": {
+      "tr": "Altı adet gül biçimli peynirli börek — çözdürmeden fırınlanır.",
+      "fr": "Six böreks au fromage en forme de rose, à cuire sans décongeler.",
+      "de": "Sechs rosenförmige Käse-Börek — ohne Auftauen backen."
+    }
+  },
+  "spiral-rose-borek-with-meat": {
+    "name": { "tr": "Kıymalı Gül Böreği", "fr": "Börek en rose à la viande", "de": "Rosen-Börek mit Hackfleisch" },
+    "description": {
+      "tr": "Gül biçimli kıymalı börek — dondurulmuş, çözdürmeden fırınlanır.",
+      "fr": "Börek à la viande en forme de rose, surgelé, à cuire sans décongeler.",
+      "de": "Rosenförmiges Hackfleisch-Börek, tiefgekühlt — ohne Auftauen backen."
+    }
+  },
+  "spiral-rose-borek-with-potato": {
+    "name": { "tr": "Patatesli Gül Böreği", "fr": "Börek en rose à la pomme de terre", "de": "Rosen-Börek mit Kartoffel" },
+    "description": {
+      "tr": "Gül biçimli patatesli börek — dondurulmuş, çözdürmeden fırınlanır.",
+      "fr": "Börek à la pomme de terre en forme de rose, à cuire sans décongeler.",
+      "de": "Rosenförmiges Kartoffel-Börek — ohne Auftauen backen."
+    }
+  },
+  "spiral-rose-borek-with-spinach-cheese": {
+    "name": { "tr": "Ispanaklı Peynirli Gül Böreği", "fr": "Börek en rose épinards & fromage", "de": "Rosen-Börek mit Spinat & Käse" },
+    "description": {
+      "tr": "Altı adet gül biçimli ıspanaklı börek — çözdürmeden fırınlanır.",
+      "fr": "Six böreks en rose aux épinards, à cuire sans décongeler.",
+      "de": "Sechs rosenförmige Spinat-Börek — ohne Auftauen backen."
+    }
+  },
+  "stick-borek-with-cheese": {
+    "name": { "tr": "Peynirli Çubuk Börek", "fr": "Bâtonnets de börek au fromage", "de": "Börek-Sticks mit Käse" },
+    "description": {
+      "tr": "İnce uzun peynirli börek ruloları — elde yenir, açık büfeye uygun.",
+      "fr": "Fins bâtonnets de börek au fromage, à manger à la main ou en buffet.",
+      "de": "Schlanke Käse-Börek-Röllchen — zum Snacken und fürs Buffet."
+    }
+  },
+  "stick-borek-with-meat": {
+    "name": { "tr": "Kıymalı Çubuk Börek", "fr": "Bâtonnets de börek à la viande", "de": "Börek-Sticks mit Hackfleisch" },
+    "description": {
+      "tr": "İnce uzun kıymalı börek ruloları — dondurulmuş, fırına hazır.",
+      "fr": "Fins bâtonnets de börek à la viande, surgelés et prêts à cuire.",
+      "de": "Schlanke Hackfleisch-Börek-Röllchen, tiefgekühlt und backfertig."
+    }
+  },
+  "stick-borek-with-potato": {
+    "name": { "tr": "Patatesli Çubuk Börek", "fr": "Bâtonnets de börek à la pomme de terre", "de": "Börek-Sticks mit Kartoffel" },
+    "description": {
+      "tr": "İnce uzun patatesli börek ruloları — dondurulmuş, fırına hazır.",
+      "fr": "Fins bâtonnets de börek à la pomme de terre, surgelés et prêts à cuire.",
+      "de": "Schlanke Kartoffel-Börek-Röllchen, tiefgekühlt und backfertig."
+    }
+  },
+  "stick-borek-with-spinach-cheese": {
+    "name": { "tr": "Ispanaklı Peynirli Çubuk Börek", "fr": "Bâtonnets épinards & fromage", "de": "Börek-Sticks mit Spinat & Käse" },
+    "description": {
+      "tr": "İnce uzun ıspanaklı peynirli börek ruloları — dondurulmuş, fırına hazır.",
+      "fr": "Fins bâtonnets aux épinards et fromage, surgelés et prêts à cuire.",
+      "de": "Schlanke Spinat-Käse-Börek-Röllchen, tiefgekühlt und backfertig."
+    }
+  },
+  "sweet-turkish-bagel-simit": {
+    "name": { "tr": "Tatlı Simit", "fr": "Simit sucré", "de": "Süßes Simit" },
+    "description": {
+      "tr": "Çiğ, susam kaplı hafif tatlı simit — fırınlandığında taze simit tadı.",
+      "fr": "Simit cru enrobé de sésame, légèrement sucré : saveur de simit frais après cuisson.",
+      "de": "Rohes, mit Sesam bestreutes, leicht süßes Simit — nach dem Backen wie frisch."
+    }
+  },
+  "turkish-bagel-simit": {
+    "name": { "tr": "Simit", "fr": "Simit", "de": "Simit" },
+    "description": {
+      "tr": "Dört adet 105 g'lık, %80 pişmiş susamlı simit — ısıtıp servis edilir.",
+      "fr": "Quatre simit de 105 g cuits à 80 %, au sésame : réchauffer et servir.",
+      "de": "Vier Simit à 105 g, zu 80 % gebacken, mit Sesam: erwärmen und servieren."
+    }
+  },
+  "turkish-fermented-bagel": {
+    "name": { "tr": "Ekşi Mayalı Simit", "fr": "Simit au levain", "de": "Simit mit Sauerteig" },
+    "description": {
+      "tr": "Mayalanması tamamlanmış simit — doğrudan fırınlanır, iki saat bekleme yok.",
+      "fr": "Simit déjà fermenté, à cuire directement : deux heures de repos en moins.",
+      "de": "Bereits fermentiertes Simit — direkt backen, zwei Stunden Gehzeit entfallen."
+    }
+  },
+  "vegetable-calzone": {
+    "name": { "tr": "Sebzeli Kalzone", "fr": "Calzone aux légumes", "de": "Calzone mit Gemüse" },
+    "description": {
+      "tr": "Tek kişilik, çiğ dondurulmuş sebzeli kalzone — çözdürmeden fırınlanır.",
+      "fr": "Calzone individuelle aux légumes, crue surgelée, à cuire sans décongeler.",
+      "de": "Einzelne rohe Gemüse-Calzone, tiefgekühlt — ohne Auftauen backen."
+    }
+  },
+
+  "artisan-lemon-cake": {
+    "name": { "tr": "Limonlu Artisan Kek", "fr": "Gâteau artisan citron", "de": "Artisan-Kuchen Zitrone" },
+    "description": {
+      "tr": "Limon biçiminde, tek kişilik artisan kek — çözdürüp tabakta servis edilir.",
+      "fr": "Gâteau artisan individuel en forme de citron : décongeler et dresser.",
+      "de": "Einzelner Artisan-Kuchen in Zitronenform: auftauen und anrichten."
+    }
+  },
+  "artisan-mango-cake": {
+    "name": { "tr": "Mangolu Artisan Kek", "fr": "Gâteau artisan mangue", "de": "Artisan-Kuchen Mango" },
+    "description": {
+      "tr": "Mango biçiminde, tek kişilik artisan kek — çözdürüp tabakta servis edilir.",
+      "fr": "Gâteau artisan individuel en forme de mangue : décongeler et dresser.",
+      "de": "Einzelner Artisan-Kuchen in Mangoform: auftauen und anrichten."
+    }
+  },
+  "artisan-pistachio-cake": {
+    "name": { "tr": "Fıstıklı Artisan Kek", "fr": "Gâteau artisan pistache", "de": "Artisan-Kuchen Pistazie" },
+    "description": {
+      "tr": "Fıstık biçiminde artisan kek — çözdürüp tabakta servis edilir.",
+      "fr": "Gâteau artisan en forme de pistache : décongeler et dresser.",
+      "de": "Artisan-Kuchen in Pistazienform: auftauen und anrichten."
+    }
+  },
+  "artisan-strawberry-cake": {
+    "name": { "tr": "Çilekli Artisan Kek", "fr": "Gâteau artisan fraise", "de": "Artisan-Kuchen Erdbeere" },
+    "description": {
+      "tr": "Çilek biçiminde artisan kek — çözdürüp tabakta servis edilir.",
+      "fr": "Gâteau artisan en forme de fraise : décongeler et dresser.",
+      "de": "Artisan-Kuchen in Erdbeerform: auftauen und anrichten."
+    }
+  },
+  "black-forest-whole-cake": {
+    "name": { "tr": "Kara Orman Pastası", "fr": "Forêt-Noire", "de": "Schwarzwälder Kirschtorte" },
+    "description": {
+      "tr": "On iki dilimlik dondurulmuş Kara Orman pastası — çözdürüp servis edilir.",
+      "fr": "Forêt-Noire surgelée de douze parts : décongeler et servir.",
+      "de": "Tiefgekühlte Schwarzwälder Torte mit zwölf Stücken: auftauen und servieren."
+    }
+  },
+  "blueberry-peach-cake": {
+    "name": { "tr": "Yaban Mersinli Şeftalili Pasta", "fr": "Gâteau myrtille & pêche", "de": "Heidelbeer-Pfirsich-Torte" },
+    "description": {
+      "tr": "Yedi dilimlik meyveli pasta — yaban mersini ve şeftali ile.",
+      "fr": "Gâteau aux fruits de sept parts, myrtille et pêche.",
+      "de": "Fruchttorte mit sieben Stücken, Heidelbeere und Pfirsich."
+    }
+  },
+  "chocolate-cake-cup": {
+    "name": { "tr": "Çikolatalı Kek Bardağı", "fr": "Coupe gâteau chocolat", "de": "Schokoladen-Dessertbecher" },
+    "description": {
+      "tr": "Tek kişilik çikolatalı bardak tatlı — çözdürüp servis edilir.",
+      "fr": "Coupe individuelle au chocolat : décongeler et servir.",
+      "de": "Einzelner Schokoladenbecher: auftauen und servieren."
+    }
+  },
+  "dark-chocolate-profiterol-cake": {
+    "name": { "tr": "Bitter Çikolatalı Profiterol Dilimi", "fr": "Part de profiterole chocolat noir", "de": "Profiterole-Stück Zartbitter" },
+    "description": {
+      "tr": "Tek kişilik profiterol dilimi — çözdürüp servis edilir.",
+      "fr": "Part individuelle de profiterole : décongeler et servir.",
+      "de": "Einzelnes Profiterole-Stück: auftauen und servieren."
+    }
+  },
+  "dark-chocolate-profiterol-whole-cake": {
+    "name": { "tr": "Bitter Çikolatalı Profiterol Pastası", "fr": "Gâteau profiterole chocolat noir", "de": "Profiterole-Torte Zartbitter" },
+    "description": {
+      "tr": "On iki dilimlik profiterol pastası — bitter çikolata soslu.",
+      "fr": "Gâteau profiterole de douze parts, sauce chocolat noir.",
+      "de": "Profiterole-Torte mit zwölf Stücken und Zartbitterguss."
+    }
+  },
+  "dark-chocolate-whole-cake": {
+    "name": { "tr": "Bitter Çikolatalı Pasta", "fr": "Gâteau au chocolat noir", "de": "Zartbitter-Schokoladentorte" },
+    "description": {
+      "tr": "On iki dilimlik katlı bitter çikolatalı pasta — çözdürüp servis edilir.",
+      "fr": "Gâteau étagé au chocolat noir, douze parts : décongeler et servir.",
+      "de": "Zwölfteilige Schichttorte mit Zartbitterschokolade: auftauen und servieren."
+    }
+  },
+  "italian-tiramisu-cup": {
+    "name": { "tr": "İtalyan Tiramisu Bardağı", "fr": "Coupe tiramisu italien", "de": "Italienischer Tiramisu-Becher" },
+    "description": {
+      "tr": "Şeffaf bardakta tiramisu — çözdürüp servis edilir.",
+      "fr": "Tiramisu en coupe transparente : décongeler et servir.",
+      "de": "Tiramisu im transparenten Becher: auftauen und servieren."
+    }
+  },
+  "latte-whole-cake": {
+    "name": { "tr": "Latte Pastası", "fr": "Gâteau latte", "de": "Latte-Torte" },
+    "description": {
+      "tr": "On iki dilimlik beyaz kremalı pasta, karamel sosuyla.",
+      "fr": "Gâteau à la crème blanche de douze parts, filet de caramel.",
+      "de": "Zwölfteilige Torte mit heller Creme und Karamellsauce."
+    }
+  },
+  "lemon-cheesecake": {
+    "name": { "tr": "Limonlu Cheesecake", "fr": "Cheesecake au citron", "de": "Zitronen-Cheesecake" },
+    "description": {
+      "tr": "On iki dilimlik limonlu cheesecake — çözdürüp servis edilir.",
+      "fr": "Cheesecake au citron de douze parts : décongeler et servir.",
+      "de": "Zitronen-Cheesecake mit zwölf Stücken: auftauen und servieren."
+    }
+  },
+  "lemon-cheesecake-slice": {
+    "name": { "tr": "Limonlu Cheesecake Dilimi", "fr": "Part de cheesecake au citron", "de": "Zitronen-Cheesecake-Stück" },
+    "description": {
+      "tr": "Tek kişilik üçgen limonlu cheesecake dilimi — çözdürüp servis edilir.",
+      "fr": "Part triangulaire individuelle de cheesecake au citron.",
+      "de": "Einzelnes dreieckiges Zitronen-Cheesecake-Stück."
+    }
+  },
+  "lotus-caramel-cake-with-nutella": {
+    "name": { "tr": "Lotus Karamelli Pasta", "fr": "Gâteau caramel Lotus", "de": "Lotus-Karamell-Torte" },
+    "description": {
+      "tr": "Lotus bisküvili karamelli pasta — çözdürüp servis edilir.",
+      "fr": "Gâteau au caramel et biscuits Lotus : décongeler et servir.",
+      "de": "Karamelltorte mit Lotus-Keks: auftauen und servieren."
+    }
+  },
+  "pistachio-cake-cup": {
+    "name": { "tr": "Fıstıklı Kek Bardağı", "fr": "Coupe gâteau pistache", "de": "Pistazien-Dessertbecher" },
+    "description": {
+      "tr": "Tek kişilik fıstıklı bardak tatlı — çözdürüp servis edilir.",
+      "fr": "Coupe individuelle à la pistache : décongeler et servir.",
+      "de": "Einzelner Pistazienbecher: auftauen und servieren."
+    }
+  },
+  "pistachio-cream-cake": {
+    "name": { "tr": "Fıstık Kremalı Pasta", "fr": "Gâteau crème de pistache", "de": "Pistaziencreme-Torte" },
+    "description": {
+      "tr": "Yedi dilimlik fıstık kremalı pasta — çözdürüp servis edilir.",
+      "fr": "Gâteau à la crème de pistache, sept parts : décongeler et servir.",
+      "de": "Siebenteilige Torte mit Pistaziencreme: auftauen und servieren."
+    }
+  },
+  "rainbow-velvet-cake": {
+    "name": { "tr": "Gökkuşağı Kadife Kek", "fr": "Gâteau velours arc-en-ciel", "de": "Regenbogen-Samtkuchen" },
+    "description": {
+      "tr": "Tek kişilik renkli katlı kek dilimi — çözdürüp servis edilir.",
+      "fr": "Part individuelle de gâteau étagé multicolore : décongeler et servir.",
+      "de": "Einzelnes Stück bunter Schichtkuchen: auftauen und servieren."
+    }
+  },
+  "raspberry-cheesecake": {
+    "name": { "tr": "Frambuazlı Cheesecake", "fr": "Cheesecake à la framboise", "de": "Himbeer-Cheesecake" },
+    "description": {
+      "tr": "On iki dilimlik cheesecake, frambuaz soslu — çözdürüp servis edilir.",
+      "fr": "Cheesecake de douze parts nappé de framboise : décongeler et servir.",
+      "de": "Zwölfteiliger Cheesecake mit Himbeerspiegel: auftauen und servieren."
+    }
+  },
+  "raspberry-cheesecake-cup": {
+    "name": { "tr": "Frambuazlı Cheesecake Bardağı", "fr": "Coupe cheesecake framboise", "de": "Himbeer-Cheesecake-Becher" },
+    "description": {
+      "tr": "Bardakta frambuazlı cheesecake — çözdürüp servis edilir.",
+      "fr": "Cheesecake à la framboise en coupe : décongeler et servir.",
+      "de": "Himbeer-Cheesecake im Becher: auftauen und servieren."
+    }
+  },
+  "raspberry-cheesecake-slice": {
+    "name": { "tr": "Frambuazlı Cheesecake Dilimi", "fr": "Part de cheesecake framboise", "de": "Himbeer-Cheesecake-Stück" },
+    "description": {
+      "tr": "Üçgen cheesecake dilimi, frambuaz soslu — çözdürüp servis edilir.",
+      "fr": "Part triangulaire de cheesecake nappée de framboise.",
+      "de": "Dreieckiges Cheesecake-Stück mit Himbeerspiegel."
+    }
+  },
+  "red-velvet-cake": {
+    "name": { "tr": "Kırmızı Kadife Kek", "fr": "Gâteau velours rouge", "de": "Roter Samtkuchen" },
+    "description": {
+      "tr": "Tek kişilik kırmızı kadife kek dilimi — çözdürüp servis edilir.",
+      "fr": "Part individuelle de gâteau velours rouge : décongeler et servir.",
+      "de": "Einzelnes Stück roter Samtkuchen: auftauen und servieren."
+    }
+  },
+  "red-velvet-cup": {
+    "name": { "tr": "Kırmızı Kadife Bardak", "fr": "Coupe velours rouge", "de": "Roter-Samt-Becher" },
+    "description": {
+      "tr": "Bardakta kırmızı kadife tatlı — çözdürüp servis edilir.",
+      "fr": "Dessert velours rouge en coupe : décongeler et servir.",
+      "de": "Roter-Samt-Dessert im Becher: auftauen und servieren."
+    }
+  },
+  "red-velvet-whole-cake": {
+    "name": { "tr": "Kırmızı Kadife Pasta", "fr": "Gâteau velours rouge entier", "de": "Rote-Samt-Torte" },
+    "description": {
+      "tr": "On iki dilimlik kırmızı kadife pasta — çözdürüp servis edilir.",
+      "fr": "Gâteau velours rouge de douze parts : décongeler et servir.",
+      "de": "Rote-Samt-Torte mit zwölf Stücken: auftauen und servieren."
+    }
+  },
+  "san-sebastian-cheesecake": {
+    "name": { "tr": "San Sebastian Cheesecake", "fr": "Cheesecake basque brûlé", "de": "Baskischer Cheesecake" },
+    "description": {
+      "tr": "On iki dilimlik Bask usulü yanık cheesecake — çözdürüp servis edilir.",
+      "fr": "Cheesecake basque brûlé de douze parts : décongeler et servir.",
+      "de": "Baskischer gebrannter Cheesecake mit zwölf Stücken."
+    }
+  },
+  "special-pistachio-garden-whole-cake": {
+    "name": { "tr": "Fıstık Bahçesi Pastası", "fr": "Gâteau jardin de pistaches", "de": "Pistaziengarten-Torte" },
+    "description": {
+      "tr": "On iki dilimlik katlı fıstıklı pasta — çözdürüp servis edilir.",
+      "fr": "Gâteau étagé à la pistache, douze parts : décongeler et servir.",
+      "de": "Zwölfteilige Pistazien-Schichttorte: auftauen und servieren."
+    }
+  },
+  "tiramisu": {
+    "name": { "tr": "Tiramisu", "fr": "Tiramisu", "de": "Tiramisu" },
+    "description": {
+      "tr": "Tek kişilik tiramisu porsiyonu — çözdürüp servis edilir.",
+      "fr": "Portion individuelle de tiramisu : décongeler et servir.",
+      "de": "Einzelne Tiramisu-Portion: auftauen und servieren."
+    }
+  },
+  "tiramisu-cake": {
+    "name": { "tr": "Tiramisu Pastası", "fr": "Gâteau tiramisu", "de": "Tiramisu-Torte" },
+    "description": {
+      "tr": "Yedi dilimlik tiramisu pastası — çözdürüp servis edilir.",
+      "fr": "Gâteau tiramisu de sept parts : décongeler et servir.",
+      "de": "Siebenteilige Tiramisu-Torte: auftauen und servieren."
+    }
+  },
+  "tiramisu-whole-cake": {
+    "name": { "tr": "Bütün Tiramisu Pastası", "fr": "Tiramisu entier", "de": "Ganze Tiramisu-Torte" },
+    "description": {
+      "tr": "On iki dilimlik tiramisu pastası — klasik İtalyan tatlısı.",
+      "fr": "Tiramisu de douze parts, grand classique italien.",
+      "de": "Tiramisu mit zwölf Stücken — italienischer Klassiker."
+    }
+  },
+  "toffee-caramel-cake-cup": {
+    "name": { "tr": "Karamelli Kek Bardağı", "fr": "Coupe gâteau caramel", "de": "Karamell-Dessertbecher" },
+    "description": {
+      "tr": "Tek kişilik karamelli bardak tatlı — çözdürüp servis edilir.",
+      "fr": "Coupe individuelle au caramel : décongeler et servir.",
+      "de": "Einzelner Karamellbecher: auftauen und servieren."
+    }
+  },
+  "tres-leches-caramel-cup": {
+    "name": { "tr": "Karamelli Trileçe Bardağı", "fr": "Coupe tres leches caramel", "de": "Tres-Leches-Becher Karamell" },
+    "description": {
+      "tr": "Bardakta karamelli trileçe — çözdürüp servis edilir.",
+      "fr": "Tres leches au caramel en coupe : décongeler et servir.",
+      "de": "Tres Leches mit Karamell im Becher: auftauen und servieren."
+    }
+  },
+
+  "assorted-baklava": {
+    "name": { "tr": "Karışık Baklava", "fr": "Baklava assorti", "de": "Baklava gemischt" },
+    "description": {
+      "tr": "On iki dilim baklava: fıstıklı, cevizli ve çikolatalı bir arada.",
+      "fr": "Douze parts de baklava : pistache, noix et chocolat réunis.",
+      "de": "Zwölf Baklava-Stücke: Pistazie, Walnuss und Schokolade zusammen."
+    }
+  },
+  "baklava-with-pistachio": {
+    "name": { "tr": "Fıstıklı Baklava", "fr": "Baklava à la pistache", "de": "Baklava mit Pistazie" },
+    "description": {
+      "tr": "On iki dilim fıstıklı baklava — porsiyonlanmış, dondurulmuş.",
+      "fr": "Douze parts de baklava à la pistache, prédécoupées et surgelées.",
+      "de": "Zwölf Stück Pistazien-Baklava, vorportioniert und tiefgekühlt."
+    }
+  },
+  "baklava-with-walnut": {
+    "name": { "tr": "Cevizli Baklava", "fr": "Baklava aux noix", "de": "Baklava mit Walnuss" },
+    "description": {
+      "tr": "On iki dilim cevizli baklava — porsiyonlanmış, dondurulmuş.",
+      "fr": "Douze parts de baklava aux noix, prédécoupées et surgelées.",
+      "de": "Zwölf Stück Walnuss-Baklava, vorportioniert und tiefgekühlt."
+    }
+  },
+  "carrot-slice-baklava": {
+    "name": { "tr": "Havuç Dilimi Baklava", "fr": "Baklava en part de carotte", "de": "Karottenscheiben-Baklava" },
+    "description": {
+      "tr": "Dört adet üçgen kesim fıstıklı baklava dilimi.",
+      "fr": "Quatre parts triangulaires de baklava à la pistache.",
+      "de": "Vier dreieckige Stücke Pistazien-Baklava."
+    }
+  },
+  "chocolate-baklava": {
+    "name": { "tr": "Çikolatalı Baklava", "fr": "Baklava au chocolat", "de": "Baklava mit Schokolade" },
+    "description": {
+      "tr": "Büyük tepside 54 dilim çikolatalı baklava.",
+      "fr": "Cinquante-quatre parts de baklava au chocolat sur grand plateau.",
+      "de": "54 Stück Schokoladen-Baklava auf großem Tablett."
+    }
+  },
+  "chocolate-souffle-lava-cake": {
+    "name": { "tr": "Çikolatalı Sufle", "fr": "Soufflé au chocolat", "de": "Schokoladensoufflé" }
+  },
+  "cold-baklava-with-pistachio": {
+    "name": { "tr": "Fıstıklı Soğuk Baklava", "fr": "Baklava froid à la pistache", "de": "Kaltes Baklava mit Pistazie" },
+    "description": {
+      "tr": "Sütle buluşmuş 28 dilim, üzeri kakaolu — soğuk servis edilir.",
+      "fr": "Vingt-huit parts imbibées de lait, saupoudrées de cacao, servies froides.",
+      "de": "28 in Milch getränkte Stücke mit Kakaohaube — kalt serviert."
+    }
+  },
+  "cold-baklava-with-walnut": {
+    "name": { "tr": "Cevizli Soğuk Baklava", "fr": "Baklava froid aux noix", "de": "Kaltes Baklava mit Walnuss" },
+    "description": {
+      "tr": "On dilim cevizli soğuk baklava, üzeri kakaolu.",
+      "fr": "Dix parts de baklava froid aux noix, saupoudrées de cacao.",
+      "de": "Zehn Stück kaltes Walnuss-Baklava mit Kakaohaube."
+    }
+  },
+  "homemade-style-walnut-baklava": {
+    "name": { "tr": "Ev Usulü Cevizli Baklava", "fr": "Baklava aux noix façon maison", "de": "Walnuss-Baklava nach Hausart" },
+    "description": {
+      "tr": "Yirmi sekiz dilim cevizli baklava — ev yapımı kıvamında.",
+      "fr": "Vingt-huit parts de baklava aux noix, au caractère fait maison.",
+      "de": "28 Stück Walnuss-Baklava mit hausgemachtem Charakter."
+    }
+  },
+  "kunefe-bulk": {
+    "name": { "tr": "Künefe (Dökme)", "fr": "Künefe (vrac)", "de": "Künefe (lose)" },
+    "description": {
+      "tr": "Klasik künefe porsiyonu, 65 g hazır şerbetiyle birlikte.",
+      "fr": "Portion de künefe classique avec 65 g de sirop prêt à l'emploi.",
+      "de": "Klassische Künefe-Portion mit 65 g fertigem Sirup."
+    }
+  },
+  "kunefe-including-syrup": {
+    "name": { "tr": "Şerbetli Künefe", "fr": "Künefe avec sirop", "de": "Künefe mit Sirup" },
+    "description": {
+      "tr": "İki künefe porsiyonu ve iki şerbet poşeti — sıcak peynirli kadayıf tatlısı.",
+      "fr": "Deux portions de künefe et deux sachets de sirop : dessert chaud au fromage.",
+      "de": "Zwei Künefe-Portionen mit zwei Sirupbeuteln — warmes Käsegebäck."
+    }
+  },
+  "kunefe-with-plate-and-syrup": {
+    "name": { "tr": "Tabaklı Şerbetli Künefe", "fr": "Künefe en assiette avec sirop", "de": "Künefe mit Teller und Sirup" }
+  },
+  "mussel-baklava": {
+    "name": { "tr": "Midye Baklava", "fr": "Baklava moule", "de": "Muschel-Baklava" },
+    "description": {
+      "tr": "Kırk sekiz adet fıstıklı ve kaymaklı midye baklava.",
+      "fr": "Quarante-huit baklavas moule à la pistache et à la crème.",
+      "de": "48 Muschel-Baklava mit Pistazie und Sahne."
+    }
+  },
+  "pista-leaves": {
+    "name": { "tr": "Fıstıklı Katmer", "fr": "Katmer à la pistache", "de": "Katmer mit Pistazie" },
+    "description": {
+      "tr": "Tek kişilik fıstıklı kaymaklı katmer — çıtır kat kat hamur.",
+      "fr": "Katmer individuel pistache et crème, en fines couches croustillantes.",
+      "de": "Einzelner Katmer mit Pistazie und Sahne, knusprig geschichtet."
+    }
+  },
+  "pista-leaves-bulk": {
+    "name": { "tr": "Fıstıklı Katmer (Dökme)", "fr": "Katmer à la pistache (vrac)", "de": "Katmer mit Pistazie (lose)" },
+    "description": {
+      "tr": "Dikdörtgen kesim fıstıklı kaymaklı katmer porsiyonları.",
+      "fr": "Portions rectangulaires de katmer pistache et crème.",
+      "de": "Rechteckige Katmer-Portionen mit Pistazie und Sahne."
+    }
+  },
+  "pistachio-kadaifi": {
+    "name": { "tr": "Fıstıklı Kadayıf", "fr": "Kadaïf à la pistache", "de": "Kadayıf mit Pistazie" },
+    "description": {
+      "tr": "Büyük tepside fıstıklı tel kadayıf.",
+      "fr": "Grand plateau de kadaïf en cheveux d'ange à la pistache.",
+      "de": "Großes Tablett Engelshaar-Kadayıf mit Pistazie."
+    }
+  },
+  "pistachio-rolls-baklava": {
+    "name": { "tr": "Fıstık Sarma Baklava", "fr": "Baklava roulé à la pistache", "de": "Pistazienrollen-Baklava" },
+    "description": {
+      "tr": "Büyük tepside 56 adet fıstık sarma baklava.",
+      "fr": "Cinquante-six baklavas roulés à la pistache sur grand plateau.",
+      "de": "56 Pistazienrollen-Baklava auf großem Tablett."
+    }
+  },
+  "sobiyet-baklava": {
+    "name": { "tr": "Sobiyet Baklava", "fr": "Baklava sobiyet", "de": "Sobiyet-Baklava" },
+    "description": {
+      "tr": "Büyük tepside 40 adet kaymaklı ve fıstıklı sobiyet.",
+      "fr": "Quarante sobiyet à la crème et à la pistache sur grand plateau.",
+      "de": "40 Sobiyet mit Sahne und Pistazie auf großem Tablett."
+    }
+  },
+  "special-antep-baklava": {
+    "name": { "tr": "Özel Antep Baklavası", "fr": "Baklava spécial d'Antep", "de": "Antep-Baklava Spezial" },
+    "description": {
+      "tr": "Yetmiş altı adet küçük, bol fıstıklı Antep baklavası.",
+      "fr": "Soixante-seize petits baklavas d'Antep, généreux en pistache.",
+      "de": "76 kleine Antep-Baklava mit reichlich Pistazie."
+    }
+  },
+  "special-kunefe": {
+    "name": { "tr": "Özel Künefe", "fr": "Künefe spécial", "de": "Künefe Spezial" }
+  },
+  "special-square-baklava": {
+    "name": { "tr": "Özel Kare Baklava", "fr": "Baklava carré spécial", "de": "Quadrat-Baklava Spezial" },
+    "description": {
+      "tr": "Yirmi sekiz adet kare kesim baklava — özenli sunum.",
+      "fr": "Vingt-huit baklavas carrés, présentation soignée.",
+      "de": "28 quadratische Baklava-Stücke, sorgfältig präsentiert."
+    }
+  },
+  "tres-leches-caramel": {
+    "name": { "tr": "Karamelli Trileçe", "fr": "Tres leches au caramel", "de": "Tres Leches Karamell" },
+    "description": {
+      "tr": "Dokuz dilim trileçe — üç sütlü pandispanya ve karamel sos.",
+      "fr": "Neuf parts de tres leches : génoise aux trois laits et sauce caramel.",
+      "de": "Neun Stück Tres Leches: Drei-Milch-Biskuit mit Karamellsauce."
+    }
+  },
+  "tres-leches-raspberry": {
+    "name": { "tr": "Frambuazlı Trileçe", "fr": "Tres leches à la framboise", "de": "Tres Leches Himbeere" },
+    "description": {
+      "tr": "Dokuz dilim trileçe — üç sütlü pandispanya ve frambuaz sos.",
+      "fr": "Neuf parts de tres leches : génoise aux trois laits et coulis de framboise.",
+      "de": "Neun Stück Tres Leches: Drei-Milch-Biskuit mit Himbeersauce."
+    }
+  },
+  "tulumba-dessert": {
+    "name": { "tr": "Tulumba Tatlısı", "fr": "Tulumba", "de": "Tulumba" },
+    "description": {
+      "tr": "Yaklaşık 25 adet şerbetli tulumba tatlısı.",
+      "fr": "Environ vingt-cinq tulumba imbibés de sirop.",
+      "de": "Etwa 25 sirupgetränkte Tulumba."
+    }
+  },
+  "turkish-ring-churros": {
+    "name": { "tr": "Halka Tatlı", "fr": "Beignet en couronne", "de": "Ring-Gebäck" },
+    "description": {
+      "tr": "Dört adet halka biçimli şerbetli tatlı.",
+      "fr": "Quatre beignets en couronne imbibés de sirop.",
+      "de": "Vier ringförmige, sirupgetränkte Gebäckstücke."
+    }
+  },
+  "wreathing-kunefe-bulk": {
+    "name": { "tr": "Burma Künefe (Dökme)", "fr": "Künefe torsadé (vrac)", "de": "Gedrehtes Künefe (lose)" },
+    "description": {
+      "tr": "Burgu biçimli fıstıklı kadayıf porsiyonu, 65 g şerbetiyle.",
+      "fr": "Portion de kadaïf torsadé à la pistache, avec 65 g de sirop.",
+      "de": "Gedrehte Kadayıf-Portion mit Pistazie und 65 g Sirup."
+    }
+  },
+  "wreathing-kunefe-including-syrup": {
+    "name": { "tr": "Şerbetli Burma Künefe", "fr": "Künefe torsadé avec sirop", "de": "Gedrehtes Künefe mit Sirup" },
+    "description": {
+      "tr": "Burgu biçimli fıstıklı kadayıf, şerbet poşetiyle birlikte.",
+      "fr": "Kadaïf torsadé à la pistache, sachet de sirop inclus.",
+      "de": "Gedrehtes Pistazien-Kadayıf mit beiliegendem Sirupbeutel."
+    }
+  },
+
+  "carrot-tarator": {
+    "name": { "tr": "Havuç Tarator", "fr": "Tarator de carotte", "de": "Karotten-Tarator" },
+    "description": {
+      "tr": "Yoğurtlu havuç mezesi — çözdürüp servis edilir.",
+      "fr": "Mezzé de carotte au yaourt : décongeler et servir.",
+      "de": "Karotten-Mezze mit Joghurt: auftauen und servieren."
+    }
+  },
+  "eggplant-with-yogurt": {
+    "name": { "tr": "Yoğurtlu Patlıcan", "fr": "Aubergine au yaourt", "de": "Aubergine mit Joghurt" },
+    "description": {
+      "tr": "Közlenmiş patlıcanla hazırlanmış yoğurtlu meze — çözdürüp servis edilir.",
+      "fr": "Mezzé d'aubergine fumée au yaourt : décongeler et servir.",
+      "de": "Mezze aus gerösteter Aubergine mit Joghurt: auftauen und servieren."
+    }
+  },
+  "falafel-hummus-filled": {
+    "name": { "tr": "Humus Dolgulu Falafel", "fr": "Falafel fourré au houmous", "de": "Falafel mit Hummus-Füllung" },
+    "description": {
+      "tr": "Isıtıp servis edilen, humus dolgulu bitkisel falafel.",
+      "fr": "Falafel végétal fourré au houmous : réchauffer et servir.",
+      "de": "Pflanzliches Falafel mit Hummus-Füllung: erwärmen und servieren."
+    }
+  },
+  "hummus": {
+    "name": { "tr": "Humus", "fr": "Houmous", "de": "Hummus" },
+    "description": {
+      "tr": "Nohut ezmesi mezesi — çözdürüp servis edilir.",
+      "fr": "Mezzé de pois chiches : décongeler et servir.",
+      "de": "Kichererbsen-Mezze: auftauen und servieren."
+    }
+  },
+  "saksuka": {
+    "name": { "tr": "Şakşuka", "fr": "Şakşuka", "de": "Şakşuka" },
+    "description": {
+      "tr": "Domates sosunda kızarmış sebzeler — çözdürüp servis edilir.",
+      "fr": "Légumes frits en sauce tomate : décongeler et servir.",
+      "de": "Gebratenes Gemüse in Tomatensauce: auftauen und servieren."
+    }
+  },
+  "spicy-turkish-tomato-dip": {
+    "name": { "tr": "Acılı Ezme", "fr": "Ezme (sauce tomate épicée)", "de": "Ezme (scharfe Tomatenpaste)" },
+    "description": {
+      "tr": "Acılı domates ve biber mezesi — çözdürüp servis edilir.",
+      "fr": "Mezzé épicé de tomate et poivron : décongeler et servir.",
+      "de": "Scharfe Tomaten-Paprika-Mezze: auftauen und servieren."
+    }
+  },
+  "stuffed-vine-leaves": {
+    "name": { "tr": "Yaprak Sarma", "fr": "Feuilles de vigne farcies", "de": "Gefüllte Weinblätter" },
+    "description": {
+      "tr": "Baharatlı pirinçle sarılmış asma yaprağı.",
+      "fr": "Feuilles de vigne farcies au riz épicé.",
+      "de": "Weinblätter mit würzigem Reis gefüllt."
+    }
+  },
+  "turkish-ravioli-with-meat-manti": {
+    "name": { "tr": "Kıymalı Mantı", "fr": "Mantı à la viande", "de": "Mantı mit Hackfleisch" },
+    "description": {
+      "tr": "Çiğ dondurulmuş kıymalı mantı — haşlanarak pişirilir.",
+      "fr": "Mantı crus surgelés à la viande hachée, à cuire à l'eau.",
+      "de": "Rohe Mantı mit Hackfleisch, tiefgekühlt — in Wasser garen."
+    }
+  },
+  "vegan-cig-kofte": {
+    "name": { "tr": "Vegan Çiğ Köfte", "fr": "Çiğ köfte végane", "de": "Veganes Çiğ Köfte" },
+    "description": {
+      "tr": "Nar ekşisi ve acı sosuyla, yemeye hazır bitkisel çiğ köfte.",
+      "fr": "Çiğ köfte végane prêt à consommer, mélasse de grenade et sauce piquante.",
+      "de": "Veganes Çiğ Köfte, verzehrfertig, mit Granatapfelsirup und scharfer Sauce."
+    }
+  },
+  "vegan-falafel": {
+    "name": { "tr": "Vegan Falafel", "fr": "Falafel végane", "de": "Veganes Falafel" },
+    "description": {
+      "tr": "Yirmi adet 25 g'lık pişmiş falafel — ısıtıp servis edilir.",
+      "fr": "Vingt falafels cuits de 25 g : réchauffer et servir.",
+      "de": "Zwanzig gegarte Falafel à 25 g: erwärmen und servieren."
+    }
+  },
+  "vegan-kibbeh": {
+    "name": { "tr": "Vegan İçli Köfte", "fr": "Kibbeh végane", "de": "Veganes Kibbeh" },
+    "description": {
+      "tr": "Beş adet 70 g'lık bitkisel içli köfte — hızlı öğün için.",
+      "fr": "Cinq kibbeh végétaux de 70 g, pour un repas rapide.",
+      "de": "Fünf pflanzliche Kibbeh à 70 g für die schnelle Mahlzeit."
+    }
+  },
+  "vegan-raw-meatballs": {
+    "name": { "tr": "Vegan Çiğ Köfte Topu", "fr": "Boulettes de çiğ köfte véganes", "de": "Vegane Çiğ-Köfte-Bällchen" },
+    "description": {
+      "tr": "Yemeye hazır bitkisel çiğ köfte — bulgurlu ve baharatlı.",
+      "fr": "Çiğ köfte végane prêt à consommer, à base de boulgour épicé.",
+      "de": "Verzehrfertiges veganes Çiğ Köfte aus würzigem Bulgur."
+    }
+  },
+
+  "chicken-tender-fillet": {
+    "name": { "tr": "Tavuk Fileto", "fr": "Aiguillettes de poulet", "de": "Hähnchen-Filetstreifen" },
+    "description": {
+      "tr": "Önceden pişmiş galeta unlu tavuk fileto — ısıtıp servis edilir.",
+      "fr": "Aiguillettes de poulet panées précuites : réchauffer et servir.",
+      "de": "Vorgegarte panierte Hähnchenstreifen: erwärmen und servieren."
+    }
+  },
+  "crispy-chicken-burger": {
+    "name": { "tr": "Çıtır Tavuk Burger", "fr": "Burger de poulet croustillant", "de": "Knuspriger Hähnchenburger" },
+    "description": {
+      "tr": "Önceden pişmiş çıtır tavuk burger köftesi — ısıtıp servis edilir.",
+      "fr": "Steak de poulet croustillant précuit : réchauffer et servir.",
+      "de": "Vorgegartes knuspriges Hähnchen-Patty: erwärmen und servieren."
+    }
+  },
+  "crispy-chicken-nugget": {
+    "name": { "tr": "Çıtır Tavuk Nugget", "fr": "Nuggets de poulet croustillants", "de": "Knusprige Hähnchen-Nuggets" },
+    "description": {
+      "tr": "Önceden pişmiş çıtır tavuk nugget — ısıtıp servis edilir.",
+      "fr": "Nuggets de poulet croustillants précuits : réchauffer et servir.",
+      "de": "Vorgegarte knusprige Hähnchen-Nuggets: erwärmen und servieren."
+    }
+  },
+  "crispy-chicken-wings": {
+    "name": { "tr": "Çıtır Tavuk Kanat", "fr": "Ailes de poulet croustillantes", "de": "Knusprige Hähnchenflügel" },
+    "description": {
+      "tr": "Önceden pişmiş galeta unlu tavuk kanat — ısıtıp servis edilir.",
+      "fr": "Ailes de poulet panées précuites : réchauffer et servir.",
+      "de": "Vorgegarte panierte Hähnchenflügel: erwärmen und servieren."
+    }
+  },
+  "crispy-spicy-chicken-wings": {
+    "name": { "tr": "Çıtır Acılı Tavuk Kanat", "fr": "Ailes de poulet croustillantes épicées", "de": "Knusprige scharfe Hähnchenflügel" },
+    "description": {
+      "tr": "Önceden pişmiş acılı çıtır tavuk kanat — ısıtıp servis edilir.",
+      "fr": "Ailes de poulet croustillantes épicées précuites : réchauffer et servir.",
+      "de": "Vorgegarte knusprige scharfe Hähnchenflügel: erwärmen und servieren."
+    }
+  },
+  "crispy-spicy-tender-fillet": {
+    "name": { "tr": "Çıtır Acılı Tavuk Fileto", "fr": "Aiguillettes croustillantes épicées", "de": "Knusprige scharfe Filetstreifen" },
+    "description": {
+      "tr": "Önceden pişmiş acılı çıtır tavuk fileto — ısıtıp servis edilir.",
+      "fr": "Aiguillettes de poulet croustillantes épicées précuites : réchauffer et servir.",
+      "de": "Vorgegarte knusprige scharfe Hähnchenstreifen: erwärmen und servieren."
+    }
+  },
+  "crispy-tender-fillet": {
+    "name": { "tr": "Çıtır Tavuk Fileto", "fr": "Aiguillettes de poulet croustillantes", "de": "Knusprige Hähnchen-Filetstreifen" },
+    "description": {
+      "tr": "Önceden pişmiş galeta unlu çıtır tavuk fileto — ısıtıp servis edilir.",
+      "fr": "Aiguillettes de poulet panées croustillantes précuites : réchauffer et servir.",
+      "de": "Vorgegarte panierte knusprige Hähnchenstreifen: erwärmen und servieren."
+    }
+  },
+  "spicy-chicken-tender-fillet": {
+    "name": { "tr": "Acılı Tavuk Fileto", "fr": "Aiguillettes de poulet épicées", "de": "Scharfe Hähnchen-Filetstreifen" },
+    "description": {
+      "tr": "Önceden pişmiş acılı tavuk fileto — ısıtıp servis edilir.",
+      "fr": "Aiguillettes de poulet épicées précuites : réchauffer et servir.",
+      "de": "Vorgegarte scharfe Hähnchenstreifen: erwärmen und servieren."
+    }
+  },
+  "spicy-chicken-wings": {
+    "name": { "tr": "Acılı Tavuk Kanat", "fr": "Ailes de poulet épicées", "de": "Scharfe Hähnchenflügel" },
+    "description": {
+      "tr": "Önceden pişmiş acılı tavuk kanat — ısıtıp servis edilir.",
+      "fr": "Ailes de poulet épicées précuites : réchauffer et servir.",
+      "de": "Vorgegarte scharfe Hähnchenflügel: erwärmen und servieren."
+    }
+  },
+
+  "maras-ice-cream-cocoa": {
+    "name": { "tr": "Kakaolu Maraş Dondurması", "fr": "Glace de Maraş au cacao", "de": "Maraş-Eis mit Kakao" },
+    "description": {
+      "tr": "Salepli Maraş dondurması, bol kakaolu.",
+      "fr": "Glace de Maraş au salep, riche en cacao.",
+      "de": "Maraş-Eis mit Salep und reichlich Kakao."
+    }
+  },
+  "maras-ice-cream-pistachio": {
+    "name": { "tr": "Fıstıklı Maraş Dondurması", "fr": "Glace de Maraş à la pistache", "de": "Maraş-Eis mit Pistazie" },
+    "description": {
+      "tr": "Salepli Maraş dondurması, Antep fıstıklı.",
+      "fr": "Glace de Maraş au salep et à la pistache.",
+      "de": "Maraş-Eis mit Salep und Pistazie."
+    }
+  },
+  "maras-ice-cream-plain": {
+    "name": { "tr": "Sade Maraş Dondurması", "fr": "Glace de Maraş nature", "de": "Maraş-Eis natur" },
+    "description": {
+      "tr": "Paylaşımlık boyda sade salepli Maraş dondurması.",
+      "fr": "Glace de Maraş nature au salep, format à partager.",
+      "de": "Maraş-Eis natur mit Salep, Familienpackung."
+    }
+  },
+  "maras-ice-cream-slice-cocoa": {
+    "name": { "tr": "Kakaolu Maraş Dondurma Dilimi", "fr": "Tranche de glace de Maraş au cacao", "de": "Maraş-Eisscheibe mit Kakao" },
+    "description": {
+      "tr": "Porsiyonlanmış kakaolu salepli dondurma dilimi.",
+      "fr": "Tranche de glace au salep et cacao, prédécoupée.",
+      "de": "Vorportionierte Salep-Eisscheibe mit Kakao."
+    }
+  },
+  "maras-ice-cream-slice-lemon": {
+    "name": { "tr": "Limonlu Maraş Dondurma Dilimi", "fr": "Tranche de glace de Maraş au citron", "de": "Maraş-Eisscheibe mit Zitrone" },
+    "description": {
+      "tr": "Porsiyonlanmış limonlu salepli dondurma dilimi — ferahlatıcı.",
+      "fr": "Tranche de glace au salep et citron, prédécoupée et rafraîchissante.",
+      "de": "Vorportionierte Salep-Eisscheibe mit Zitrone — erfrischend."
+    }
+  },
+  "maras-ice-cream-slice-plain": {
+    "name": { "tr": "Sade Maraş Dondurma Dilimi", "fr": "Tranche de glace de Maraş nature", "de": "Maraş-Eisscheibe natur" },
+    "description": {
+      "tr": "Porsiyonlanmış sade salepli dondurma dilimi.",
+      "fr": "Tranche de glace au salep nature, prédécoupée.",
+      "de": "Vorportionierte Salep-Eisscheibe natur."
+    }
+  },
+  "maras-ice-cream-trio-mix": {
+    "name": { "tr": "Üçlü Maraş Dondurması", "fr": "Glace de Maraş trio", "de": "Maraş-Eis Trio" },
+    "description": {
+      "tr": "Sade, kakaolu ve fıstıklı salepli dondurma bir arada.",
+      "fr": "Glace au salep : nature, cacao et pistache réunis.",
+      "de": "Salep-Eis: natur, Kakao und Pistazie vereint."
+    }
+  }
+}

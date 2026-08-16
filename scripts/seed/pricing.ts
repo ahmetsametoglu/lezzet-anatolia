@@ -53,9 +53,21 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
       await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2cTtc * 0.92), validFrom: gun(-120) });
       satir += 1;
     }
+    // **b2c fiyatı HERKESE, b2b fiyatı bir bölüme (kullanıcı kararı 16.08: fiyat satırları incelsin).**
+    //
+    // b2c'yi seyreltmek olmazdı: fiyatsız ürün vitrinde alınamaz kart olur ve katalogun üçte biri
+    // öyle olsaydı ekran boşalırdı. **b2b farklı bir soru soruyor** — "bu ürün toptan satışta mı?" —
+    // ve gerçek bir katalogda cevabı her üründe evet değildir. Seyreltme burada hem satır düşürüyor
+    // hem "toptan fiyatı girilmemiş ürün" hâlini doğuruyor.
+    //
+    // İlk 45 HER HÂLDE b2b fiyatı alır: sipariş bölümü toptan kalemlerini o aralıktan seçiyor
+    // (`kalem(0…38)`) ve fiyatsız bir varyant oraya düşerse sipariş tutarı sıfırlanırdı.
     await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2cTtc), validFrom: gun(-30) });
-    await prices.setPrice({ variantId: v.id, channel: 'b2b', amountCents: toCents(b2bHt), validFrom: gun(-30) });
-    satir += 2;
+    satir += 1;
+    if (i < 45 || i % 3 === 0) {
+      await prices.setPrice({ variantId: v.id, channel: 'b2b', amountCents: toCents(b2bHt), validFrom: gun(-30) });
+      satir += 1;
+    }
 
     // Her 17'ncisinde İLERİ TARİHLİ zam: "zam önceden planlanır" kuralı denenebilsin.
     if (i % 17 === 0) {

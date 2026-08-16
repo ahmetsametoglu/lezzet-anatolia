@@ -2,8 +2,19 @@
 /**
  * Gerçek Lezza Foods katalogunu seed veri dosyasına ÇEVİRİR (05 · kullanıcı kararı 04.08).
  *
- * Kaynak: `https://lezzafoods.eu/wp-json/wc/store/v1/products` (WooCommerce Store API, açık uç).
  * Çıktı: `scripts/seed/data/lezza-catalog.json` — **ÜRETİLMİŞ, elle düzenlenmez.**
+ *
+ * ── ÜÇ KAYNAK, TEK OMURGA (15.08) ────────────────────────────────────────────
+ * 1. **WooCommerce Store API** (`…/wc/store/v1/products`, ağ) — **OMURGA.** Ürün, boy, kategori,
+ *    açıklama, görsel, kanal. Kapsamı en geniş kaynak budur (166 SKU) ve ötekiler onu zenginleştirir.
+ * 2. **`data/sources/catalog-pdf.json`** (repo) — 2026 basılı kataloğun lojistiği: koli içi adet,
+ *    kolinin paket sayısı, paletteki paket. API'de bu bilgi HİÇ yok. Ayrıca API'nin listelemediği
+ *    9 SKU'yu taşır (perakende `mono` paketleri, tabaklı künefeler).
+ * 3. **`data/sources/specs-docx.json`** (repo) — 6 ürünün ÜRETİCİ SPESİFİKASYONU: gerçek içindekiler,
+ *    alerjen, besin değeri, saklama, raf ömrü.
+ *
+ * PDF ve spek kaynakları **ağdan yeniden üretilemez** (basılı katalogdan ve .docx belgelerinden elle
+ * çıkarıldı), o yüzden repoda dururlar; künyeleri `data/sources/README.md`'de.
  *
  * ── NEDEN ÜRETEÇ + REPODA DURAN DOSYA ────────────────────────────────────────
  * Seed her koşuşta ağa çıkmamalı: `db:refresh` internetsiz de çalışmalı, ve uzaktaki site
@@ -16,12 +27,17 @@
  * Bunlar **fikstür**dür ve seed'in işidir; ikisini karıştırmak, uydurulmuş bir değeri "kaynaktan
  * geldi" sanmanın en kolay yoludur. Ayrım tek cümleyle: **üreteç ayna, seed sahne.**
  *
- * **Yasal beyanlar (alerjen/içindekiler/besin) BİLEREK BOŞ BIRAKILIR ve bu bir eksiklik değil,
- * bir karardır.** Kaynakta yoklar. Uydurmak burada sıradan bir fikstürden farklıdır: ürün adları
- * GERÇEK ve marka gerçek — "fıstık içerir" diye uydurulmuş bir satır, bir gün bir ekrana düşerse
- * yanlış bir yasal beyan olur. Üstelik BOŞ LİSTE DE BİR BEYANDIR ("alerjen içermez"), yani
- * "boş geçelim" demek de güvenli değil. Doğrusu: alan hiç yazılmaz, seed onları
- * `null` bırakır ve ürün "beyan eksik" hâlinde durur — süzgeçlerin zaten tanıdığı bir hâl.
+ * **Yasal beyan (alerjen/içindekiler/besin) YALNIZ SPEK BELGESİ OLAN 6 ÜRÜNDE YAZILIR; ötekilerde
+ * bilerek boş kalır ve bu bir eksiklik değil, bir karardır.** Uydurmak burada sıradan bir fikstürden
+ * farklıdır: ürün adları GERÇEK ve marka gerçek — "fıstık içerir" diye uydurulmuş bir satır, bir gün
+ * bir ekrana düşerse yanlış bir yasal beyan olur. Üstelik BOŞ LİSTE DE BİR BEYANDIR ("alerjen
+ * içermez"), yani "boş geçelim" demek de güvenli değil. Doğrusu: kaynağı olmayan üründe alan hiç
+ * yazılmaz, seed onu `null` bırakır ve ürün "beyan eksik" hâlinde durur — süzgeçlerin tanıdığı bir hâl.
+ *
+ * Spek belgesi olan 6 üründe beyan **belgeden birebir** taşınır. Belgelerin kendi içindeki çelişkiler
+ * (alerjen tablosu ↔ metin) kaynak dosyanın `_reliability` künyesinde yazılı: oraya yalnız GÜVENİLİR
+ * bulunan alanlar alındı, tablolar hiç alınmadı. Bu ayrımı burada yeniden yapmıyoruz — kaynak dosya
+ * zaten süzülmüş geliyor; süzgeci iki yerde tutmak, bir gün ikisinin ayrışması demektir.
  *
  * ── ÇEVİRİ KURALLARI ─────────────────────────────────────────────────────────
  * **1) Gramaj addan ayrılır: ürün + VARYANT.** Kaynakta her boy ayrı bir "ürün"; bizim modelde
@@ -44,13 +60,16 @@
  *
  * **Ne zaman çalıştırılır:** katalog kaynakta değiştiğinde. `pnpm lezza:catalog`
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'scripts/seed/data/lezza-catalog.json');
+const KAYNAKLAR = join(ROOT, 'scripts/seed/data/sources');
 const API = 'https://lezzafoods.eu/wp-json/wc/store/v1/products';
+
+const oku = (dosya) => JSON.parse(readFileSync(join(KAYNAKLAR, dosya), 'utf8'));
 
 /**
  * Aile kategorileri — kaynak slug'ı → bizim anahtarımız + üç dilli ad.
@@ -73,6 +92,37 @@ const AILELER = {
  * bu bir kategori değil, ürünün hangi kanala açık olduğu.
  */
 const KANAL_ONEKI = { horeca: 'b2b', retail: 'b2c' };
+
+/**
+ * PDF kataloğun bölüm başlıkları → aile anahtarı.
+ *
+ * `retail` BİLEREK YOK ve sebebi API tarafındaki `retail-products` ile aynı: basılı katalog da
+ * perakende kalemleri kendi bölümünde topluyor, yani o bir kanal kovası. Bölümü `retail` olan
+ * PDF-only ürünün ailesi aşağıdaki elle tabloda verilir — üç kalem, hepsi künefe.
+ */
+const PDF_BOLUM = { bakery: 'bakery', dessert: 'dessert', lamour: 'cake', chicken: 'chicken', icecream: 'ice-cream', anatolian: 'anatolian' };
+
+/**
+ * ── PDF SKU YAMASI: API'de SKU'SU BOŞ kalan varyanta basılı katalogdan kimlik ────────────────────
+ *
+ * İki varyant API'ye SKU'suz düşüyor (ölçüldü 15.08) ve SKU'suzluk sessiz bir arızadır: parti
+ * kabulünde, tedarik siparişinde ve sayımda varyantı BULUNAMAZ yapar — ekranda ürün görünür ama
+ * hiçbir operasyon kalemi ona bağlanamaz. Basılı katalog ikisinin de kodunu veriyor.
+ *
+ * Eşleme neden ELLE: adlar iki kaynakta ayrışıyor (`Spiral Gul Borek` ↔ `Spiral Rose Börek` — aynı
+ * ürünün Türkçe ve İngilizce adı). Otomatik bir benzerlik eşiği burada yanlış varyanta SKU bağlayıp
+ * iki ürünü birbirine karıştırabilirdi; iki satırlık bir tablo, sessizce yanlış eşleşmeden iyidir.
+ */
+const PDF_SKU_YAMASI = {
+  200410: { slug: 'eggplant-with-yogurt', etiket: '1000g' },
+  700703: { slug: 'spiral-rose-borek-with-spinach-cheese', etiket: '6x80g' },
+};
+
+/**
+ * Bölümü `retail` (yani kanal) olduğu için ailesi PDF'ten çözülemeyen tek-başına kalemler.
+ * Üçü de künefe; tatlı olduklarını katalog değil ürünün kendisi söylüyor.
+ */
+const PDF_TEK_BASINA_AILE = { 500104: 'dessert', 500105: 'dessert', 500109: 'dessert' };
 
 /**
  * Gramaj/adet eki — addan ayrılıp varyanta gider. Ad SONUNDA da ORTASINDA da olabilir.
@@ -291,6 +341,8 @@ for (const p of ham) {
       // Kapak + galeri; uzaktaki adresler. Seed bunları indirip R2'ye yükler.
       imageUrls: [],
       channels: [],
+      // Yasal beyan — yalnız spek belgesi olan üründe dolar (aşağıdaki 4. adım), ötekilerde `null`.
+      declarations: null,
       variants: [],
     });
   }
@@ -315,15 +367,135 @@ for (const p of ham) {
   });
 }
 
+// ── BASILI KATALOG + ÜRETİCİ SPEKLERİ: omurgayı zenginleştiren dört adım ─────────────────────────
+//
+// Sıra bağlayıcı: yama SKU yazar → dizin kurulur → eksik kalemler eklenir → dizin yenilenir →
+// lojistik ve beyan o dizin üzerinden bağlanır. Dizini bir kez kurup baştan sona kullansaydık,
+// yamayla kimlik kazanan iki varyant ile PDF'ten gelen dokuz kalem lojistik alamazdı.
+const uyarilar = [];
+
+/** SKU → { urun, varyant }. Yama ve ekleme SKU yazdığı için her adımdan sonra yeniden kurulur. */
+function skuDizini() {
+  const d = new Map();
+  for (const u of urunler.values()) for (const v of u.variants) if (v.sku) d.set(String(v.sku), { urun: u, varyant: v });
+  return d;
+}
+
+// 1) SKU YAMASI — API'de kimliksiz kalan varyanta basılı katalogdan kod.
+for (const [sku, hedef] of Object.entries(PDF_SKU_YAMASI)) {
+  const v = urunler.get(hedef.slug)?.variants.find((x) => !x.sku && x.label?.tr === hedef.etiket);
+  if (!v) {
+    uyarilar.push(`SKU yaması tutmadı: ${sku} → ${hedef.slug} / ${hedef.etiket} (varyant yok ya da SKU'su dolu)`);
+    continue;
+  }
+  v.sku = sku;
+}
+
+const pdfKatalog = oku('catalog-pdf.json').products;
+let dizin = skuDizini();
+
+// 2) API'NİN LİSTELEMEDİĞİ KALEMLER — basılı kataloğun kapsamı API'den geniş (9 SKU).
+//
+// Hepsi `b2c`: biri perakende bölümünde, ötekiler `mono` (tek porsiyon) biçiminde listelenmiş ve
+// ikisi de son tüketici paketidir. **Görsel ve açıklama YOK** — onların kaynağı API'ydi ve burada
+// uydurulmaz; ürün onlarsız doğar, operatör sonra doldurur.
+let pdfDenGelen = 0;
+for (const [sku, p] of Object.entries(pdfKatalog)) {
+  if (dizin.has(sku)) continue;
+  const { taban, boy, adet } = boyAyir(varlikCoz(p.name));
+  const slug = slugla(taban);
+  const aile = PDF_BOLUM[p.section] ?? PDF_TEK_BASINA_AILE[sku] ?? null;
+  if (!aile) uyarilar.push(`PDF kalemi ailesiz: ${sku} ${p.name} (bölüm: ${p.section})`);
+
+  if (!urunler.has(slug)) {
+    urunler.set(slug, {
+      slug,
+      name: { tr: taban, fr: taban, de: taban },
+      sourceLanguage: 'en',
+      category: aile,
+      brand: 'Lezza',
+      description: null,
+      imageUrls: [],
+      channels: ['b2c'],
+      declarations: null,
+      variants: [],
+    });
+  }
+  const u = urunler.get(slug);
+  // Etiket PDF'in kendi gramaj sütunundan: basılı katalogda ad gramajsız yazılıyor ("Tiramisu mono"),
+  // ağırlık ayrı bir alanda duruyor — `boyAyir` orada tutunacak bir ek bulamaz.
+  const etiket = boy?.etiket ?? (p.netWtG ? `${p.netWtG}g` : null);
+  u.variants.push({
+    label: etiket ? { tr: etiket, fr: etiket, de: etiket } : null,
+    netWeightG: boy?.netWeightG ?? p.netWtG ?? null,
+    piecesCount: adet,
+    sku,
+    // Kaynağı API OLMADIĞI için izlenecek bir uzak kayıt da yok — `null` bunu söylüyor.
+    sourceId: null,
+    sourceSlug: null,
+  });
+  pdfDenGelen += 1;
+}
+dizin = skuDizini();
+
+// 3) LOJİSTİK — koli içi adet, kolinin paket sayısı, paletteki paket.
+//
+// `piecesCount` API'den geldiyse KORUNUR: o ürün ADININ beyanıdır (`(12 Pieces)`) ve müşteri raftaki
+// kutuda onu görüyor; koli içi adet ise depo bilgisidir. Boşsa PDF'ten dolar, ama **yalnız 1'den
+// büyükse**: "kolide 1 adet" bir paketleme bilgisi değil, adet bilgisinin yokluğudur — `null`
+// kalması gerekir (`CLAUDE §1`: ölçülemeyen değer sıfır/bir değildir).
+let lojistikli = 0;
+for (const [sku, p] of Object.entries(pdfKatalog)) {
+  const hedef = dizin.get(sku);
+  if (!hedef) continue;
+  hedef.varyant.logistics = {
+    piecesPerBox: p.piecesPerBox ?? null,
+    boxesPerParcel: p.boxesPerParcel ?? null,
+    parcelsPerPallet: p.parcelsPerPallet ?? null,
+  };
+  if (hedef.varyant.piecesCount == null && (p.piecesPerBox ?? 0) > 1) hedef.varyant.piecesCount = p.piecesPerBox;
+  lojistikli += 1;
+}
+
+// 4) ÜRETİCİ SPEKLERİ — 6 ürünün GERÇEK yasal beyanı, belgeden birebir.
+//
+// Spek kodu bazen sonuna harf alıyor (`200302A` — üreticinin kendi revizyon eki); katalogdaki
+// karşılığı harfsizdir. Harf ancak birinci arama tutmazsa soyulur: önce tam kod denenir ki
+// gerçekten `…A` diye bir SKU varsa yanlış varyanta beyan bağlanmasın.
+const spekler = oku('specs-docx.json').specs;
+let beyanli = 0;
+for (const [sku, s] of Object.entries(spekler)) {
+  const hedef = dizin.get(sku) ?? dizin.get(sku.replace(/[A-Za-z]+$/, ''));
+  if (!hedef) {
+    uyarilar.push(`spek eşleşmedi: ${sku} (${s.specName ?? s.docNo})`);
+    continue;
+  }
+  hedef.urun.declarations = {
+    specDoc: `${s.docNo} ${s.rev}`,
+    ingredientsEU: s.ingredientsEU ?? null,
+    allergens: s.allergens ?? [],
+    traces: s.traces ?? [],
+    nutritionPer100g: s.nutritionPer100g ?? null,
+    storage: s.storage ?? null,
+    shelfLifeMonths: s.shelfLifeMonths ?? null,
+    cookingTips: s.cookingTips ?? null,
+  };
+  beyanli += 1;
+}
+
 const cikti = {
   // Künye: bu dosyanın nereden geldiği ve neyin ELE ALINMADIĞI okunabilir dursun.
   _generated: {
     by: 'scripts/build-lezza-catalog.mjs (pnpm lezza:catalog)',
-    source: API,
-    sourceRecords: ham.length,
+    sources: {
+      api: `${API} — omurga (${ham.length} kayıt)`,
+      pdf: `data/sources/catalog-pdf.json — lojistik ${lojistikli} varyant, API'de olmayan ${pdfDenGelen} kalem`,
+      spec: `data/sources/specs-docx.json — ${beyanli} ürünün gerçek yasal beyanı`,
+    },
     note:
-      'ÜRETİLMİŞ DOSYA — elle düzenlenmez. Fiyat, stok, alerjen, içindekiler, besin değeri ve raf ömrü ' +
-      'KAYNAKTA YOKTUR ve burada UYDURULMAZ; onlar seed fikstürüdür. Yasal beyanlar bilerek boştur.',
+      'ÜRETİLMİŞ DOSYA — elle düzenlenmez. Fiyat ve stok hiçbir kaynakta yoktur ve burada UYDURULMAZ; ' +
+      'onlar seed fikstürüdür. Yasal beyan yalnız spek belgesi olan üründe doludur (`declarations`), ' +
+      'ötekilerde bilerek `null` — ürün "beyan eksik" hâlinde durur.',
   },
   // Görsel URL'i kaynaktan gelir, sabitte durmaz — kaynak kapağı değiştirirse sonraki üretim izler.
   categories: Object.values(AILELER).map((a) => ({ ...a, imageUrl: gorseller.get(a.key) ?? null })),
@@ -342,5 +514,11 @@ console.log(
     `  ${cikti.products.length} ürün · ${varyantSayisi} varyant (${cokBoylu} ürün çok boylu)\n` +
     `  kanal: ${cikti.products.filter((p) => p.channels.includes('b2b')).length} b2b · ` +
     `${cikti.products.filter((p) => p.channels.includes('b2c')).length} b2c\n` +
+    `  basılı katalog: ${lojistikli} varyanta lojistik · ${pdfDenGelen} kalem API'de yoktu\n` +
+    `  üretici speki: ${beyanli} ürüne gerçek yasal beyan\n` +
     `  ⚠ kategorisiz ${kategorisiz} ürün · SKU'suz ${skusuz} varyant`,
 );
+// Eşleşmeyen yama/spek SESSİZ GEÇMEZ: ikisi de elle kurulmuş bağlar ve kaynak değişince ilk kopan
+// yer burasıdır. Tutmayan bir bağ ürünü görünürde sağlam bırakır — yalnız kimliği ya da beyanı
+// eksik kalır, ki ikisi de ancak aranırsa fark edilir.
+if (uyarilar.length > 0) console.log(`\n⚠ ${uyarilar.length} uyarı:\n${uyarilar.map((u) => `  · ${u}`).join('\n')}`);

@@ -443,7 +443,19 @@ export const KAPSAM: KapsamAlani[] = [
     baslik: 'Bölge · transfer',
     kovalar: [
       { ad: 'bölge aktif', zorunlu: true, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', true)) },
-      { ad: 'bölge pasif', zorunlu: true, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', false)) },
+      /**
+       * **ZORUNLULUKTAN ÇIKARILDI (kullanıcı kararı 16.08: "rota sayısını bire indirelim").**
+       *
+       * Seed tek bölge kuruyor ve o aktif; pasif bölge artık doğmuyor. Kovanın kendisi DURUYOR —
+       * silinmedi, çünkü ölçmeye devam etmesi gerek: bir gün ikinci bir bölge eklenirse pasif hâlin
+       * yeniden doğduğu buradan görülür. Zorunluluğu kalkan tek şey, boşken koşuyu kırması.
+       *
+       * **Kapsam kaybı kayda geçsin ve küçümsenmesin:** "bölge kapalı, talep birikiyor" hâli artık
+       * seed'de doğmuyor. O hâli okuyan ekranlar (bölge listesinde pasif rozeti, `zone_notice`'ın
+       * "bölge açılınca haber ver" kuyruğu) yerelde elle bölge kapatılmadan görülemez. `zone_notice`
+       * kuyruğunun kendisi yaşıyor (77694 Kehl kaydı bekliyor) — kopan yalnız bölge tarafı.
+       */
+      { ad: 'bölge pasif', zorunlu: false, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', false)) },
       { ad: 'transfer', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer') },
     ],
   },

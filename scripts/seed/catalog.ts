@@ -1,5 +1,6 @@
 import {
   BundleService,
+  CategoryImageService,
   CategoryService,
   CollectionService,
   PriceService,
@@ -9,8 +10,8 @@ import {
 } from '@lezzet/database';
 import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
-import { euro, r2Keys, uploadImageFromUrl, type Db } from './shared';
-import { lezzaGorselBySlug, seedLezzaProducts } from './catalog-lezza';
+import { euro, fiksturGorselleri, r2Keys, uploadImageFromUrl, type Db } from './shared';
+import { lezzaGorselUrlByDosya, seedLezzaProducts } from './catalog-lezza';
 
 // Katalog (05): kategori · ürün · varyant · galeri · koleksiyon.
 //
@@ -34,7 +35,15 @@ export async function seedCatalog(db: Db): Promise<void> {
   console.log('▸ KATALOG seed');
   // Kategoriler catalog-lezza içinde kurulur (görsel + tagline + is_featured ile) — catId oradan dolar.
   const catId = new Map<string, string>();
-  const lezza = await seedLezzaProducts(new CategoryService(db), products, new ProductImageService(db), new ProductFamilyService(db), catId, 0);
+  const lezza = await seedLezzaProducts(
+    new CategoryService(db),
+    new CategoryImageService(db),
+    products,
+    new ProductImageService(db),
+    new ProductFamilyService(db),
+    catId,
+    0,
+  );
   console.log(`  ✓ ${lezza.made} Lezza ürünü · ${lezza.variants} varyant · ${lezza.photos} galeri fotoğrafı · ${lezza.families} ürün ailesi`);
   console.log(`✓ katalog: ${catId.size} kategori, ${lezza.made} ürün`);
 }
@@ -46,8 +55,17 @@ interface SeedCollection {
   name: LocalizedText;
   /** Paylaşım (OG) açıklaması. Taslakta `null` — operatör metni yayına alırken yazar. */
   description: LocalizedText | null;
-  /** Ürün slug'ları — DİZİNİN SIRASI vitrin kürasyon sırasıdır (position). İlki KAPAĞI da verir. */
+  /** Ürün slug'ları — DİZİNİN SIRASI vitrin kürasyon sırasıdır (position). */
   products: string[];
+  /**
+   * Kapak fotoğrafının DOSYA ADI — elle seçildi (kullanıcı, 16.08).
+   *
+   * Eskiden kapak "ilk üyenin fotoğrafı" kuralıyla türüyordu ve iki yerde birden bozuluyordu:
+   * `Yeni Gelenler` KAPAKSIZ kalmıştı (ilk üyesinin fotoğrafı yok) ve kürasyon sırası değişince
+   * kapak da habersiz değişiyordu. Kapak bir SEÇİMDİR — seçkinin ilk üyesi olmak zorunda değil.
+   * `null` = taslak koleksiyon, kapağı operatör yayına alırken yükler.
+   */
+  kapak: string | null;
   /**
    * **Kuralla tamamlanır** (08.08 · kullanıcı: *"koleksiyonların sağlıklı yapılmış olması"*).
    *
@@ -94,37 +112,51 @@ const COLLECTIONS: SeedCollection[] = [
   {
     slug: 'bayram-sofrasi',
     name: { tr: 'Bayram Sofrası', fr: 'Table de fête', de: 'Festtafel' },
-    description: {
-      tr: 'Bayramda ikram edilecek klasikler — fıstıklı baklavadan künefeye.',
-      fr: 'Les classiques à offrir pour les fêtes — du baklava à la pistache au künefe.',
-      de: 'Klassiker für die Festtage — von Pistazien-Baklava bis Künefe.',
-    },
+    description: { tr: 'Bayram klasikleri', fr: 'Les classiques des fêtes', de: 'Festtags-Klassiker' },
     products: ['assorted-baklava', 'kunefe-including-syrup', 'baklava-with-pistachio-12-pieces', 'cold-baklava-with-pistachio'],
+    kapak: 'Sobiyet-Baklava-2000g.webp',
     fillFrom: { categorySlugs: ['tatli'], upTo: 24 },
   },
   {
     slug: 'yeni-gelenler',
     name: { tr: 'Yeni Gelenler', fr: 'Nouveautés', de: 'Neuheiten' },
-    description: {
-      tr: 'Kataloğa yeni eklenenler.',
-      fr: 'Derniers ajouts au catalogue.',
-      de: 'Neu im Katalog.',
-    },
+    description: { tr: 'Kataloğa yeni eklenenler', fr: 'Nouveautés du catalogue', de: 'Neu im Katalog' },
     // İkinci seçki BAŞKA kategorilerden: iki koleksiyon aynı ürünleri gösterseydi "bir ürün birden
     // çok koleksiyonda" durumu denenirdi ama "farklı seçkiler" denenmezdi.
     products: ['baklava-with-pistachio-6-pieces', 'maras-ice-cream-plain'],
+    kapak: 'Black-Forest-Whole-Cake.webp',
     fillFrom: { categorySlugs: ['pasta', 'dondurma'], upTo: 18 },
   },
   {
     slug: 'cay-saati',
     name: { tr: 'Çay Saati', fr: "L'heure du thé", de: 'Teestunde' },
-    description: {
-      tr: 'Çayın yanına fırından çıtır börekler ve hamur işleri.',
-      fr: 'Böreks croustillants et pâtisseries salées pour accompagner le thé.',
-      de: 'Knusprige Börek und Gebäck zur Teestunde.',
-    },
+    description: { tr: 'Çayın yanına börekler', fr: 'Böreks pour le thé', de: 'Börek zum Tee' },
     products: ['cheese-pastry-su-borek', 'adana-borek-with-cheese'],
+    // **Kapak düzeltildi (kullanıcı bildirimi 16.08: "metniyle resmi arasında alaka yok").**
+    // Seçim turunda buraya çikolatalı bütün pasta düşmüştü; koleksiyonun adı, açıklaması ve
+    // üyelerinin tamamı fırın ürünü. Simit çayla en tanıdık eşleşme.
+    kapak: 'Turkish-Bagel-Simit-125g.webp',
     fillFrom: { categorySlugs: ['firin'], upTo: 12 },
+  },
+  {
+    // ── MARKA SERİSİ KOLEKSİYONDUR, KATEGORİ DEĞİL (kullanıcı kararı 15.08) ────────────────────
+    // `L'amour de Paris` üreticinin pasta/tart serisinin ADI. Kaynak onu kategori gibi listeliyor ve
+    // ölçüldüğünde `Pasta` kategorisiyle BİREBİR aynı kümeye denk düşüyor (39 ürünün 39'u).
+    //
+    // Kategori ürünün TİPİNİ söyler (kek mi, tatlı mı, börek mi) ve tip ürünün kendisinden gelir;
+    // koleksiyon ise BİZİM kurduğumuz seçkidir. Bir marka serisi ikincisidir: bugün Pasta
+    // kategorisiyle aynı kümeyi gösteriyor olması onu kategori yapmaz — kataloğa başka bir üreticinin
+    // pastası girdiği gün kategori büyür, seri büyümez. İki ekseni tek kolona bağlamak, o günü
+    // sessiz bir veri hatasına çevirirdi.
+    //
+    // Tavan SERİNİN TAMAMINI alacak kadar: bu bir seçki değil bir seri, eksik göstermek onu
+    // yanlış tanıtır. Kürasyonun ilk dördü bütün pastalar — seriyi en iyi onlar anlatıyor.
+    slug: 'l-amour-de-paris',
+    name: { tr: "L'amour de Paris", fr: "L'amour de Paris", de: "L'amour de Paris" },
+    description: { tr: 'Pastalar ve tartlar', fr: 'Gâteaux et tartes', de: 'Torten und Tartes' },
+    products: ['special-pistachio-garden-whole-cake', 'black-forest-whole-cake', 'san-sebastian-cheesecake', 'red-velvet-whole-cake'],
+    kapak: 'Dark-Chocolate-Profiterol-Whole-Cake.webp',
+    fillFrom: { categorySlugs: ['pasta'], upTo: 40 },
   },
   {
     // **TASLAK** — operatörün henüz yayına almadığı seçki: pasif · kapaksız · üyesiz.
@@ -133,6 +165,7 @@ const COLLECTIONS: SeedCollection[] = [
     name: { tr: 'Yılbaşı Sofrası', fr: 'Table du Nouvel An', de: 'Silvestertafel' },
     description: null,
     products: [],
+    kapak: null,
     fillFrom: { categorySlugs: [], upTo: 0 },
     taslak: true,
   },
@@ -150,8 +183,8 @@ export async function seedCollections(db: Db): Promise<void> {
   const idBySlug = new Map(urunler.map((p) => [p.slug, p.id]));
   // Kategori slug → id: kural tabanlı doldurma kategoriyle çalışıyor, ürün satırı ise id taşıyor.
   const catIdBySlug = new Map((await new CategoryService(db).list()).map((c) => [c.slug, c.id]));
-  // Kapak gerçek ürünün kaynak görselinden (künye `lezzaGorselBySlug`).
-  const gorselBySlug = lezzaGorselBySlug();
+  // Kapak elle seçilmiş DOSYA ADIYLA yazılı; adresi katalogdan çözülür (künye `SeedCollection.kapak`).
+  const gorselUrl = lezzaGorselUrlByDosya();
 
   console.log('▸ KOLEKSİYON seed');
   for (const c of COLLECTIONS) {
@@ -186,9 +219,10 @@ export async function seedCollections(db: Db): Promise<void> {
     // Vitrin havuzu işareti (05.18 kapısı) — ana sayfanın 2 slotu bu havuzdan günlük rotasyonla dolar (08.26).
     await collections.setFeatured(created.id, true);
     // Kapak create'ten SONRA: key kesinleşen slug'a bağlanır (gerçek admin akışının aynısı).
-    const kapakUrl = gorselBySlug.get(c.products[0] ?? '');
+    const kapakUrl = c.kapak ? gorselUrl.get(c.kapak) : null;
+    if (c.kapak && !kapakUrl) console.log(`  ⚠ ${c.slug} — kapak "${c.kapak}" katalogda yok; koleksiyon kapaksız kaldı`);
     if (kapakUrl) {
-      const key = await uploadImageFromUrl(kapakUrl, r2Keys.collectionImage(created.slug, kapakUrl.split('/').pop() || 'cover.webp'));
+      const key = await uploadImageFromUrl(kapakUrl, r2Keys.collectionImage(created.slug, c.kapak ?? 'cover.webp'));
       if (key) await collections.setImageKey(created.id, key);
     }
     console.log(`  ✓ ${resolveLocalizedText(created.name)} · ${productIds.length} ürün · vitrin havuzunda · /${created.slug}`);
@@ -209,8 +243,14 @@ interface SeedBundleItem {
 interface SeedBundle {
   name: LocalizedText;
   description?: LocalizedText;
-  /** Kapak: gerçek ürünün kaynak görseli (slug ile). Boşsa paket görselsiz kurulur. */
-  imageSlug?: string;
+  /**
+   * Kapak: `data/fixture-images.json` anahtarı (kullanıcı isteği 16.08). Boşsa paket görselsiz kurulur.
+   *
+   * **Eskiden bir ÜRÜN slug'ıydı** ve paketin kapağı içindeki ilk ürünün fotoğrafıydı. Paket ise
+   * tek ürün değil bir SOFRA fikri: üç kalemi bir arada anlatan bir kapak, içindekilerden birinin
+   * paket çekimini göstermekten daha doğru. Kaynak künyesi (lisans dâhil) o dosyada.
+   */
+  image?: string;
   serves?: number; // "kaç kişilik" künyesi — boşsa müşteride o satır HİÇ çizilmez
   isActive?: boolean;
   /** Ana sayfa vitrini (2 slot, 08.26) — yalnız işaretliler düşer. */
@@ -242,7 +282,7 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
       fr: 'Trois classiques pour une grande table : baklava assorti, künefe et baklava à la pistache.',
       de: 'Drei Klassiker für die große Tafel: gemischtes Baklava, Künefe und Pistazien-Baklava.',
     },
-    imageSlug: 'assorted-baklava',
+    image: 'paket-bayram-sofrasi',
     serves: 6,
     isFeatured: true,
     discountPercent: 12,
@@ -260,7 +300,7 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
       fr: 'Deux boîtes de baklava à la pistache ; une boîte de six offerte.',
       de: 'Zwei Schachteln Pistazien-Baklava; eine Sechserbox geschenkt.',
     },
-    imageSlug: 'baklava-with-pistachio-12-pieces',
+    image: 'paket-fistik-sevenler',
     isFeatured: true,
     discountPercent: 8,
     items: [
@@ -277,7 +317,7 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
       fr: 'Glace Maraş nature et cacao. Chaîne du froid préservée — livraison à domicile uniquement.',
       de: 'Maraş-Eis natur und Kakao. Kühlkette bleibt erhalten — nur Lieferung an die Tür.',
     },
-    imageSlug: 'maras-ice-cream-plain',
+    image: 'paket-maras-dondurma',
     serves: 4,
     discountPercent: 10,
     items: [
@@ -294,7 +334,7 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
       fr: 'Pistache et noix — les deux classiques des grandes tablées.',
       de: 'Pistazie und Walnuss — die zwei Klassiker für große Tafeln.',
     },
-    imageSlug: 'baklava-with-walnut',
+    image: 'paket-baklava-ikilisi',
     serves: 10,
     discountPercent: 15,
     items: [
@@ -337,7 +377,8 @@ export async function seedBundles(db: Db): Promise<void> {
   // Birim fiyatlar (b2c TTC) tek turda: paket fiyatı bunlardan türeyecek.
   const priceMap = await new PriceService(db).findApplicableMap([...idBySku.values()], 'b2c');
   const unitPriceOf = (variantId: string) => priceMap.get(variantId)?.channelPrice?.amountCents ?? null;
-  const gorselBySlug = lezzaGorselBySlug();
+  // Paket kapakları artık ürün fotoğrafından değil, fikstür künyesinden (16.08 — `SeedBundle.image`).
+  const fiksturler = fiksturGorselleri();
 
   console.log('▸ PAKET seed');
   for (const b of BUNDLES) {
@@ -376,9 +417,10 @@ export async function seedBundles(db: Db): Promise<void> {
       items,
     });
     // Kapak create'ten SONRA: anahtar kesinleşen slug'a bağlanır (gerçek admin akışının aynısı).
-    const kapakUrl = b.imageSlug ? gorselBySlug.get(b.imageSlug) : undefined;
-    if (kapakUrl) {
-      const key = await uploadImageFromUrl(kapakUrl, r2Keys.bundleImage(bundle.slug, kapakUrl.split('/').pop() || 'cover.webp'));
+    const kapakGorsel = b.image ? fiksturler[b.image] : undefined;
+    if (b.image && !kapakGorsel) console.warn(`  ⚠ "${b.image}" görsel künyesinde yok — paket kapaksız kaldı`);
+    if (kapakGorsel) {
+      const key = await uploadImageFromUrl(kapakGorsel.url, r2Keys.bundleImage(bundle.slug, kapakGorsel.dosya));
       if (key) await bundles.setImageKey(bundle.id, key);
     }
 

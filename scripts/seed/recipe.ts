@@ -1,14 +1,23 @@
 import { ProductService, RecipeService } from '@lezzet/database';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
-import { r2Keys, tabloDolu, uploadImage, type Db } from './shared';
+import { fiksturGorselleri, r2Keys, tabloDolu, uploadImageFromUrl, type Db } from './shared';
 
 /**
- * Tarif kapakları — `temp/`teki paylaşılan kareler, sırayla dağıtılır.
+ * ── TARİF KAPAKLARI: HER TARİFE KENDİ FOTOĞRAFI (16.08) ──────────────────────────────────────────
  *
- * Aynı kare birden çok tarifte görünebilir ve bu üründe kabul edilemez olurdu ("bu tam olarak
- * alacağınız şey" der), tarifte edilir: tarif fotoğrafı bir SUNUM önerisidir.
+ * Görsel künyesi `data/fixture-images.json`'da; tarif kaydı yalnız ANAHTARINI taşır (`image`).
+ *
+ * **Önceki hâl BOZUKTU ve sessizce bozuktu:** burada `['3.jpeg', '1.jpeg', …]` diye bir dosya listesi
+ * vardı, `uploadImage` onları `temp/` altında arıyordu ve **o dosyaların hiçbiri repoda yoktu**
+ * (`temp/` .gitignore'da). Yükleme her koşuda `null` dönüyor, tarifler görselsiz kuruluyordu — hata
+ * verilmediği için de kimse fark etmiyordu. Aynı sınıf hata `site-image.ts`'de yaşanmış ve oraya
+ * şu not düşülmüştü: *"seed'in ihtiyaç duyduğu fikstür seed'in klasöründe durur."*
+ *
+ * Yeni kaynak uzak adres (Wikimedia Commons, serbest lisans) ve şart sağlanıyor: künye REPODA,
+ * dosya `lezza-cache`'te önbellekleniyor, ikinci koşu ağa hiç çıkmıyor. Fotoğraflar bizim
+ * ürünümüzün değil — tarif fotoğrafı bir SUNUM önerisidir, ürün kapağı gibi "bu tam olarak
+ * alacağınız şey" demez. Gerçek çekimler yapılınca künye dosyasından değiştirilir.
  */
-const RECIPE_IMAGE_FILES = ['3.jpeg', '1.jpeg', '5.jpeg', '2.jpeg', '4.jpeg'];
 
 /**
  * **TARİF seed'i — "Sofradan Fikirler"** (05.16 · müşteri yüzeyi 08.24 · yönetim 09.21).
@@ -26,12 +35,11 @@ const RECIPE_IMAGE_FILES = ['3.jpeg', '1.jpeg', '5.jpeg', '2.jpeg', '4.jpeg'];
  * ancak böyle bir satır varsa görünür. Müşteri yüzeyinde ise görünmemesi gerekiyor ve bu da
  * denenebilir hâle geliyor.
  *
- * ── GÖRSEL BAĞLANDI (08.08) ─────────────────────────────────────────────────
+ * ── GÖRSEL BAĞLANDI (08.08) · KAYNAĞI DÜZELTİLDİ (16.08) ────────────────────
  * `r2Keys.recipeImage` geldi; yükleme create'ten SONRA yapılıyor (paket emsali: anahtar, servisin
  * benzersizleştirdiği KESİN slug'a bağlanmalı — önce yüklersek slug çakışmasında anahtar yetim
- * kalır). Kaynak `temp/`teki paylaşılan kareler: tarif fotoğrafı bir SUNUM önerisidir, ürün
- * fotoğrafı gibi "bu tam olarak alacağınız şey" demez — o yüzden paylaşılan bir kare burada
- * yanıltıcı değil (üründe olurdu, orada her kapak kendi ürününün).
+ * kalır). Kaynak artık `temp/`teki paylaşılan kareler DEĞİL, her tarifin kendi fotoğrafı: künyesi
+ * dosyanın başında.
  *
  * **Bir tarif bilerek görselsiz kalıyor:** taslak olan. Yayın kapısı zaten onu tutuyor, ama
  * operasyon listesinde "görselsiz tarif" satırının nasıl göründüğü de denenebilmeli.
@@ -54,6 +62,8 @@ interface SeedRecipe {
   /** Satır = madde. Bunlar bizim ürünümüz DEĞİL — sepete eklenmez. */
   pantry: LocalizedText;
   isActive: boolean;
+  /** `data/fixture-images.json` anahtarı. Taslak tarifte YOK — o bilerek görselsiz kalıyor. */
+  image?: string;
   items: SeedRecipeItem[];
 }
 
@@ -83,6 +93,7 @@ const RECIPES: SeedRecipe[] = [
       de: 'Schwarze und grüne Oliven\nTomaten, Gurke\nTee aus der Kanne\nButter',
     },
     isActive: true,
+    image: 'tarif-citir-pazar-kahvaltisi',
     items: [
       { sku: '700901', qty: 1 },
       { sku: '701221', qty: 1 },
@@ -110,6 +121,7 @@ const RECIPES: SeedRecipe[] = [
       de: 'Gehackte Pistazien\nKaymak\nTürkischer Kaffee',
     },
     isActive: true,
+    image: 'tarif-kunefe-sofrasi',
     items: [{ sku: '500103', qty: 2 }],
   },
   {
@@ -133,6 +145,7 @@ const RECIPES: SeedRecipe[] = [
       de: 'Türkischer Kaffee\nKaltes Wasser',
     },
     isActive: true,
+    image: 'tarif-bayram-tabagi',
     items: [
       { sku: '600102', qty: 1 },
       { sku: '600202', qty: 1 },
@@ -181,6 +194,7 @@ const RECIPES: SeedRecipe[] = [
       de: 'Olivenöl\nZitrone\nFrisches Brot',
     },
     isActive: true,
+    image: 'tarif-mezeli-aksam-sofrasi',
     items: [
       { sku: '200412', qty: 1 },
       { sku: '200411', qty: 1 },
@@ -204,6 +218,7 @@ const RECIPES: SeedRecipe[] = [
     },
     pantry: { tr: 'Toz fıstık', fr: 'Pistaches concassées', de: 'Gehackte Pistazien' },
     isActive: true,
+    image: 'tarif-dondurmali-baklava',
     items: [
       // Elle ürünler kalktı (08.08) — fıstıklı baklava artık gerçek katalogdan (6'lı kutu).
       { sku: '600106', qty: 1 },
@@ -227,6 +242,7 @@ const RECIPES: SeedRecipe[] = [
     },
     pantry: { tr: 'Ketçap\nSalatalık', fr: 'Ketchup\nConcombre', de: 'Ketchup\nGurke' },
     isActive: true,
+    image: 'tarif-cocuklara-citir',
     items: [
       { sku: '311201', qty: 1 },
       { sku: '701221', qty: 1 },
@@ -249,6 +265,7 @@ export async function seedRecipes(db: Db): Promise<void> {
 
   console.log('▸ TARİF seed');
   const recipes = new RecipeService(db);
+  const gorseller = fiksturGorselleri();
   let sira = 0;
   for (const r of RECIPES) {
     const items = r.items.map((i) => ({ variantId: idBySku.get(i.sku), qty: i.qty }));
@@ -274,10 +291,11 @@ export async function seedRecipes(db: Db): Promise<void> {
     });
 
     // Görsel create'ten SONRA: anahtar servisin benzersizleştirdiği KESİN slug'a bağlanır.
-    // Taslak tarif bilerek görselsiz kalıyor (künye).
-    if (r.isActive) {
-      const dosya = RECIPE_IMAGE_FILES[sira % RECIPE_IMAGE_FILES.length]!;
-      const key = await uploadImage(dosya, r2Keys.recipeImage(olusan.slug, dosya));
+    // Taslak tarif bilerek görselsiz kalıyor (künye) — `image` alanı da yok.
+    const gorsel = r.image ? gorseller[r.image] : undefined;
+    if (r.image && !gorsel) console.log(`  ⚠ "${r.image}" künyede yok — tarif görselsiz kaldı`);
+    if (gorsel) {
+      const key = await uploadImageFromUrl(gorsel.url, r2Keys.recipeImage(olusan.slug, gorsel.dosya));
       if (key) await recipes.update({ id: olusan.id, imageKey: key });
     }
     sira += 1;

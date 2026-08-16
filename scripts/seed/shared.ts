@@ -109,6 +109,33 @@ export async function uploadImageFromUrl(url: string, key: string): Promise<stri
 
 export { r2Keys };
 
+/**
+ * ── FİKSTÜR GÖRSEL KÜNYESİ (`data/fixture-images.json`) ──────────────────────────────────────────
+ *
+ * Tarif ve paket kapakları katalogda karşılığı olmayan görsellerdir: bizim ürünümüz değil, bir
+ * SOFRA fikri. Kaynakları Wikimedia Commons ve adresleri künye dosyasında duruyor — lisansıyla
+ * birlikte, çünkü CC BY-SA atıf ister ve o bilgi kaybolursa geri getirilemez.
+ *
+ * **Neden `temp/` DEĞİL:** tarif görselleri bugüne dek `temp/1.jpeg`…`5.jpeg` arıyordu ve o dosyalar
+ * repoda YOK (`temp/` .gitignore'da) — `uploadImage` sessizce `null` dönüyor, tarifler görselsiz
+ * kuruluyordu. Aynı hata `site-image.ts`'de yaşanmış ve orada da not düşülmüştü: **seed'in ihtiyaç
+ * duyduğu fikstür, seed'in erişebildiği bir yerde durmalı.** Uzak adres bu şartı sağlıyor: künye
+ * repoda, dosya `lezza-cache`'te önbellekleniyor, ikinci koşu ağa hiç çıkmıyor.
+ */
+interface FiksturGorsel {
+  url: string;
+  dosya: string;
+  kaynak: string;
+  lisans: string;
+}
+
+export function fiksturGorselleri(): Record<string, FiksturGorsel> {
+  const yol = join(process.cwd(), 'scripts/seed/data/fixture-images.json');
+  const ham = JSON.parse(readFileSync(yol, 'utf8')) as Record<string, FiksturGorsel | string>;
+  // `_not` / `_uyari` / `_lisans` künye alanları veri değil.
+  return Object.fromEntries(Object.entries(ham).filter(([k, v]) => !k.startsWith('_') && typeof v === 'object')) as Record<string, FiksturGorsel>;
+}
+
 /** `key → profil id` haritası; ticari zemin bölümleri kişilere bununla ulaşır. */
 export type Kisiler = Map<string, string>;
 

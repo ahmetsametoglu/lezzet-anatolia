@@ -1,0 +1,67 @@
+{
+  "_not": "ELLE yazılan görsel künyesi — tarif ve paket kapakları (kullanıcı isteği 16.08: 'internetten bulduğun resimleri besleme dosyasına tanımlayabilirsin'). Kaynak Wikimedia Commons; her adres 16.08'de İNDİRİLEREK doğrulandı (HTTP 200 + image/*). Seed bunları `uploadImageFromUrl` ile çeker, `temp/lezza-cache/` altında önbellekler ve R2'ye yükler — ürün görselleriyle aynı yol.",
+  "_uyari": "BUNLAR BİZİM ÜRÜNÜMÜZÜN FOTOĞRAFI DEĞİL. Başka fotoğrafçıların serbest lisanslı yemek çekimleri; seed sahnesini kurmak için duruyorlar. Gerçek çekimler yapılınca DEĞİŞTİRİLMELİ — ürün fotoğrafları (lezzafoods.eu) markanın kendi görselleridir, bu dosya değil.",
+  "_lisans": "Yalnız serbest lisanslı kayıtlar alındı. 'Public domain' hiçbir yükümlülük taşımaz; 'CC BY-SA' ATIF ister — yayına çıkacak bir ekranda kullanılacaksa `kaynak` ve `yazar` alanları görünür bir yerde gösterilmeli, yoksa lisans ihlalidir.",
+
+  "tarif-citir-pazar-kahvaltisi": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b5/Turkish_Breakfast_in_Alanya_%282003%29.jpg",
+    "dosya": "Turkish Breakfast in Alanya (2003).jpg",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 3.0"
+  },
+  "tarif-kunefe-sofrasi": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/K%C3%BCnefe_in_Ankara.jpg/1920px-K%C3%BCnefe_in_Ankara.jpg",
+    "dosya": "Künefe in Ankara.jpg",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 4.0"
+  },
+  "tarif-bayram-tabagi": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Baklava_-_Turkish_special%2C_80-ply.JPEG",
+    "dosya": "Baklava - Turkish special, 80-ply.JPEG",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "Public domain"
+  },
+  "tarif-mezeli-aksam-sofrasi": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Turkish_Meze_Plate.jpg/1920px-Turkish_Meze_Plate.jpg",
+    "dosya": "Turkish Meze Plate.jpg",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "Public domain"
+  },
+  "tarif-dondurmali-baklava": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Expo_2012_Turkish_Ice_cream.JPG/1920px-Expo_2012_Turkish_Ice_cream.JPG",
+    "dosya": "Expo 2012 Turkish Ice cream.JPG",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 3.0"
+  },
+  "tarif-cocuklara-citir": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d1/A_bowl_of_chicken_nuggets.jpg",
+    "dosya": "A bowl of chicken nuggets.jpg",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 4.0"
+  },
+
+  "paket-bayram-sofrasi": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Turkish_baklava_in_a_bakery_in_Taksim%2C_Istanbul.jpg/1920px-Turkish_baklava_in_a_bakery_in_Taksim%2C_Istanbul.jpg",
+    "dosya": "Turkish baklava in a bakery in Taksim, Istanbul.jpg",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 4.0"
+  },
+  "paket-fistik-sevenler": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/67/Pistachio_baklava.JPG",
+    "dosya": "Pistachio baklava.JPG",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 3.0"
+  },
+  "paket-maras-dondurma": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/90/Turkish_ice_cream_caramel.JPG",
+    "dosya": "Turkish ice cream caramel.JPG",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 3.0"
+  },
+  "paket-baklava-ikilisi": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Baklava_ve_havu%C3%A7_dilimi.jpg/1920px-Baklava_ve_havu%C3%A7_dilimi.jpg",
+    "dosya": "Baklava ve havuç dilimi.jpg",
+    "kaynak": "Wikimedia Commons",
+    "lisans": "CC BY-SA 4.0"
+  }
+}

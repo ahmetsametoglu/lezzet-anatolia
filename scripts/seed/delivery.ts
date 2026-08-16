@@ -16,19 +16,22 @@ const BOLGELER: Array<{
   weekdays: number[];
   isActive?: boolean;
 }> = [
+  // ── TEK BÖLGE (kullanıcı kararı 16.08: "rota sayısını bire indirelim") ──────────────────────────
+  //
+  // Önce dört bölge vardı (üç aktif + bir pasif Kehl). Kullanıcı test verisinin "olabildiğince az"
+  // olmasını istedi ve rotayı tek satıra indirdi. **Bedeli kayda geçsin:**
+  //   · Farklı teslim günü çeşitliliği kalktı (salı+cuma / perşembe / çarşamba+cumartesi → yalnız salı+cuma).
+  //   · KEHL deposu artık bölgesiz — yalnız kargo ve transfer üzerinden çalışıyor. Gerçekçi bir hâl
+  //     (yeni açılan depo henüz rota kurmamıştır) ama "iki depoya bağlı iki rota" kurgusu denenmiyor.
+  //   · `seed:coverage`'ın "bölge pasif" kovası ZORUNLULUKTAN ÇIKARILDI (gerekçesi orada yazılı).
+  //
+  // Kapsamı ayakta tutan şey değişmedi: **rota dışı adres hâli hâlâ doğuyor** — Lyon (69007) ve
+  // Offenburg (77652) adresleri hiçbir bölgeye düşmüyor, kargo yolu onlarla sınanıyor.
   { name: 'Strasbourg Merkez', depo: 'str', codes: [fr('67000'), fr('67100'), fr('67200')], weekdays: [2, 5] }, // salı + cuma
-  { name: 'Schiltigheim / Bischheim', depo: 'str', codes: [fr('67300'), fr('67800')], weekdays: [4] }, // perşembe
-  { name: 'Illkirch / Ostwald', depo: 'str', codes: [fr('67400'), fr('67540')], weekdays: [3, 6] },
-  // Sınır ötesi bölge (ADR-002) — Kehl deposuna bağlı, henüz pasif. Ülke BÖLGEDE değil kodda durur:
-  // bir bölge iki devletin kodlarını kapsayabilir, depo kapsayamaz.
-  { name: 'Kehl (DE) — hazırlanıyor', depo: 'kehl', codes: [de('77694')], weekdays: [5], isActive: false },
 ];
 
 function fr(postalCode: string) {
   return { country: 'FR' as const, postalCode };
-}
-function de(postalCode: string) {
-  return { country: 'DE' as const, postalCode };
 }
 
 export async function seedDeliveryZones(db: Db, depolar: Depolar): Promise<void> {
@@ -49,7 +52,7 @@ export async function seedDeliveryZones(db: Db, depolar: Depolar): Promise<void>
     const kodlar = b.codes.map((c) => `${c.country}-${c.postalCode}`).join(', ');
     console.log(`  ✓ ${b.name} · ${kodlar} · gün ${b.weekdays.join(',')}${b.isActive === false ? ' · PASİF' : ''}`);
   }
-  console.log(`✓ bölge: ${BOLGELER.length} kayıt (3 aktif + 1 pasif)`);
+  console.log(`✓ bölge: ${BOLGELER.length} kayıt (tek aktif rota — künyedeki gerekçe)`);
 }
 
 export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
@@ -77,13 +80,17 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
     // Rota içi (aktif bölge posta kodları)
     { kisi: 'b2bOnayli', label: 'Dükkân', recipient: 'Mehmet Aydın', line1: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', phone: '+33 3 88 12 34 56', isDefault: true },
     { kisi: 'b2bOnayli', label: 'Depo', recipient: 'Depo görevlisi', line1: '4 quai Kléber', line2: 'Dépôt arrière', postalCode: '67000', city: 'Strasbourg', phone: '+33 3 88 12 34 57' }, // ikinci adres
-    { kisi: 'b2cSadik', label: 'Ev', recipient: 'Ayşe Yılmaz', line1: '8 rue de Bischwiller', line2: '3. kat, zil: Yılmaz', postalCode: '67300', city: 'Schiltigheim', phone: '+33 6 12 34 56 78', isDefault: true },
-    { kisi: 'b2cKapaliKapida', label: 'Ev', recipient: 'Fatma Demir', line1: '31 route de Lyon', postalCode: '67400', city: 'Illkirch-Graffenstaden', phone: '+33 6 98 76 54 32', isDefault: true },
+    // **Kodlar 67300/67400'den 67100/67200'e TAŞINDI (16.08, rota tek bölgeye inince).** İkisi de
+    // artık rota dışında kalırdı ve bu iki müşteri seed'in en çok sipariş veren kişileri: siparişleri
+    // `route` olarak yazılıyor, adresleri kargoya düşseydi veri kendi içinde çelişirdi.
+    { kisi: 'b2cSadik', label: 'Ev', recipient: 'Ayşe Yılmaz', line1: '8 rue de Bischwiller', line2: '3. kat, zil: Yılmaz', postalCode: '67100', city: 'Strasbourg', phone: '+33 6 12 34 56 78', isDefault: true },
+    { kisi: 'b2cKapaliKapida', label: 'Ev', recipient: 'Fatma Demir', line1: '31 route de Lyon', postalCode: '67200', city: 'Strasbourg', phone: '+33 6 98 76 54 32', isDefault: true },
     // Rota DIŞI — hiçbir aktif bölgeye düşmez → kargo yolu
         // ALICI hesabın sahibi DEĞİL — hediye/iş adresi hâli (kurye kapıda bu adı sorar).
     { kisi: 'b2cSadik', label: 'İş', recipient: 'Zeynep Kaya', line1: '17 avenue Jean Jaurès', postalCode: '69007', city: 'Lyon', phone: '+33 7 45 22 11 09' },
     { kisi: 'b2cAlman', line1: 'Hauptstraße 45', postalCode: '77652', city: 'Offenburg', country: 'DE', isDefault: true }, // etiketsiz + alıcısız/telefonsuz: üç boş alanın da ekran hâli denenebilsin
-    // Pasif bölgeye düşen adres: bölge açılınca rota içi olacak, bugün değil
+    // Kehl (DE) — bölgesi YOK (rota tek satıra indi), yani bu adres de kargo yolundan gidiyor.
+    // Talep sinyali orada birikmeye devam ediyor: "bölge açma adayı" hâlini `POSTA_TALEBI` taşıyor.
     { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+49 7851 44 55 66', isDefault: true },
     { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', postalCode: '67000', city: 'Strasbourg', phone: '+33 6 55 44 33 22', isDefault: true },
   ];
@@ -112,7 +119,7 @@ const POSTA_TALEPLERI: Array<{ kod: string; adet: number; not: string }> = [
   { kod: '67200', adet: 31, not: 'Strasbourg batı — bölge İÇİ, rota sıklığı sinyali' },
   { kod: '68000', adet: 18, not: 'Mulhouse — uzak, tek başına bölge açtırmaz' },
   { kod: '67600', adet: 12, not: 'Sélestat' },
-  { kod: '77694', adet: 9, not: 'Kehl (DE) — bölge var ama PASİF; talep birikiyor' },
+  { kod: '77694', adet: 9, not: 'Kehl (DE) — deposu var ama rotası YOK; talep birikiyor' },
   { kod: '54000', adet: 4, not: 'Nancy — tek tük' },
   { kod: '75011', adet: 2, not: 'Paris — kargo müşterisi' },
 ];
@@ -173,12 +180,16 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
     { postal_code: '67500', country: 'FR', place_name: 'Haguenau', locale: 'tr', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
     // Yer adı ÇÖZÜLEMEMİŞ kayıt — kolonun null hâli de görünsün.
     { postal_code: '68000', country: 'FR', place_name: null, locale: 'fr', email: 'sophie.klein@example.fr', not: 'bekliyor · yer adı yok' },
-    // PASİF bölgedeki ALMAN kod: ülke ayrımının tek gerçek denek taşı — kod FR'de de geçerli olsa
-    // haber işi bunu Fransız bölge açılışında GÖNDERMEMELİ (21.16).
-    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt, pasif bölge (Kehl)' },
+    // ALMAN kod: ülke ayrımının tek gerçek denek taşı — kod FR'de de geçerli olsa haber işi bunu
+    // Fransız bölge açılışında GÖNDERMEMELİ (21.16).
+    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt, Kehl deposu var ama rota yok' },
     // HABER VERİLMİŞ kayıt: bölge açıldı, mektup gitti. Listenin "bitmiş" ucu da görünsün —
     // hepsi bekliyorsa gönderim akışının çalıştığı hiç görülmez.
-    { postal_code: '67400', country: 'FR', place_name: 'Illkirch-Graffenstaden', locale: 'fr', source: 'app-account', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-15), not: 'HABER VERİLDİ (bölge açıldı)' },
+    //
+    // **Kod 67400'den 67200'e taşındı (16.08):** rota tek bölgeye inince 67400 hiçbir bölgeye
+    // düşmez oldu ve "bölge açıldı, haber verildi" diyen bir kayıt kapalı bir kodda duruyordu —
+    // kendi cümlesini yalanlayan bir satır. 67200 gerçekten aktif bölgede.
+    { postal_code: '67200', country: 'FR', place_name: 'Strasbourg', locale: 'fr', source: 'app-account', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-15), not: 'HABER VERİLDİ (bölge açıldı)' },
   ];
 
   const { error } = await db.from('zone_notice').insert(

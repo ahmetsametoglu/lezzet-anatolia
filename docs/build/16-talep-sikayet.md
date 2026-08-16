@@ -103,6 +103,11 @@ Müşteri talebinin doğuşundan çözümüne: `Ticket` + `TicketMessage`, müş
 - [ ] (16.6) **Analitik bağı:** ürüne bağlı şikâyetler (bozuk/eksik) admin analitiğine kalite sinyali (13/geri bildirim ile yan yana)
   - *Bitti:* hangi üründe şikâyet yoğun raporu türetiliyor
 
+- [ ] (16.7) **Talep fotoğrafı fikstürü kayıp — ek hiç yüklenmiyor** *(katalog şeridinin bulgusu 16.08, 05.25 sırasında)* · `touches: scripts/seed/support.ts, scripts/seed/data/`
+  - `seedSupport` şikâyet ekini `uploadImage('2.jpeg', …)` ile yüklüyor; dosya `temp/2.jpeg`de aranıyor ve **repoda yok** (`temp/` .gitignore'da). Yükleme sessizce `null` dönüyor, talep eksiz kuruluyor — "müşteri fotoğraf göndermiş" hâli hiç doğmuyor ve ekranın o dalı yerelde görülemiyor.
+  - **Aynı sınıf hata iki kez daha yaşandı:** `site-image.ts` (09.16'da düzeltildi) ve tarif kapakları (05.25'te düzeltildi). Kural her ikisinde de aynı: **seed'in ihtiyaç duyduğu fikstür, seed'in erişebildiği bir yerde durmalı** — repoda bir dosya ya da künyesi repoda duran bir uzak adres. 05.25'in kurduğu `data/fixture-images.json` deseni buraya da uyar.
+  - *Bitti sayılır:* `db:refresh` sonrası şikâyet ekinin R2 anahtarı dolu.
+
 ## Netleşecekler
 
 - **AI devir eşiği:** AI'ın hangi güven düzeyinin altında insana devredeceği — pratikte ayarlanır; başlangıçta muhafazakâr (şüphede insana).

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
+import type { CategoryImageService, CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
 import { PRODUCT_GALLERY_MAX } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
@@ -42,8 +42,30 @@ interface LezzaVariant {
   /** Paket içi adet (`(12 Pieces)` · `4x80g`). `null` = bildirilmemiş — sıfır DEĞİL. */
   piecesCount: number | null;
   sku: string | null;
-  sourceId: number;
-  sourceSlug: string;
+  /**
+   * Basılı katalogdan koli/palet künyesi; `null` = o SKU katalogda yok.
+   *
+   * `piecesPerBox` üreteçte `piecesCount`a akıyor; öteki ikisinin DB'de kolonu YOK ve veri 164
+   * varyant için hazır bekliyor → `BEKLEYEN(05.22)`: koli/palet künyesinin veri modeline girmesi.
+   */
+  logistics: { piecesPerBox: number | null; boxesPerParcel: number | null; parcelsPerPallet: number | null } | null;
+  /** Kaynağı API OLMAYAN kalemlerde (basılı katalogdan gelen 7 SKU) `null`. */
+  sourceId: number | null;
+  sourceSlug: string | null;
+}
+/**
+ * Üretici spesifikasyonundan GERÇEK yasal beyan — yalnız 6 üründe dolu, ötekilerde `null`.
+ * Alanların künyesi ve belgelerin kendi çelişkileri `data/sources/README.md`'de.
+ */
+interface LezzaDeclarations {
+  specDoc: string;
+  ingredientsEU: string | null;
+  allergens: string[];
+  traces: string[];
+  nutritionPer100g: Nutrition | null;
+  storage: string | null;
+  shelfLifeMonths: number | null;
+  cookingTips: string | null;
 }
 interface LezzaProduct {
   slug: string;
@@ -51,9 +73,11 @@ interface LezzaProduct {
   sourceLanguage: string;
   category: string | null;
   brand: string | null;
-  description: string;
+  /** Basılı katalogdan gelen kalemlerde `null` — açıklamanın kaynağı API'ydi, uydurulmaz. */
+  description: string | null;
   imageUrls: string[];
   channels: string[];
+  declarations: LezzaDeclarations | null;
   variants: LezzaVariant[];
 }
 interface LezzaCatalog {
@@ -62,19 +86,37 @@ interface LezzaCatalog {
 }
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), 'data/lezza-catalog.json');
+const CEVIRI = join(dirname(fileURLToPath(import.meta.url)), 'data/translations.json');
 
 function readLezzaCatalog(): LezzaCatalog {
   return JSON.parse(readFileSync(DATA, 'utf8')) as LezzaCatalog;
 }
 
 /**
- * Koleksiyon/paket KAPAKLARI için: ürün slug'ı → kaynak kapak URL'i (JSON'dan, DB'siz).
- * Kapaklar da gerçek üründen gelir (kullanıcı kararı 08.08) — temp örnek dosyalar kalktı; ürünün
- * DB'deki `image_key`i kopyalanMAZ: iki kayıt aynı anahtara işaret etseydi, ürün kapağı değişince
- * koleksiyon kapağı da sessizce değişirdi (sürpriz bağ). Herkes kendi anahtarına yükler.
+ * ── ÜRÜN ADI VE AÇIKLAMASININ ÜÇ DİLLİ KARŞILIĞI (kullanıcı isteği 16.08) ────────────────────────
+ *
+ * Kaynak katalog yalnız İNGİLİZCE ve öyle kalıyor (`sourceLanguage: 'en'` — üreteç künyesi). Eskiden
+ * aynı İngilizce metin üç dile de yazılıyordu: Fransız müşteri "Spiral Rose Börek with Cheese"
+ * okuyordu ve **kayıt teknik olarak "tam" görünüyordu** (`is_incomplete` yalnız alanın DOLU olmasına
+ * bakar, dilinin doğru olmasına değil). Yani eksiklik hiçbir sayaçta görünmüyordu.
+ *
+ * `data/translations.json` bu boşluğu kapatıyor: 126 ürünün adı ve açıklaması üç dilde ELLE yazılı.
+ * Dosya üretilmiş değil — `lezza:catalog` ona dokunmaz.
+ *
+ * **Kaynak İngilizce ad yine de gerekli ve saklanıyor:** alerjen tahmini ve KDV ölçütü İngilizce
+ * anahtar kelimelere bakıyor (`ice cream`, `cup`, `slice`). Görünen ad çevrildiği hâlde bu desenler
+ * kaynağın adı üzerinde çalışmaya devam eder — yoksa "Maraş Dondurması" İngilizce desene takılmaz ve
+ * KDV sessizce %5,5'e düşerdi.
  */
-export function lezzaGorselBySlug(): Map<string, string> {
-  return new Map(readLezzaCatalog().products.flatMap((p) => (p.imageUrls[0] ? [[p.slug, p.imageUrls[0]] as const] : [])));
+interface LezzaCeviri {
+  name: LocalizedText;
+  description?: LocalizedText;
+}
+
+function readCeviriler(): Record<string, LezzaCeviri> {
+  const ham = JSON.parse(readFileSync(CEVIRI, 'utf8')) as Record<string, LezzaCeviri | string>;
+  // `_not` / `_kapsam` gibi künye alanları veri değil; ayıklanır ki "çevirisi yok" uyarısı onları saymasın.
+  return Object.fromEntries(Object.entries(ham).filter(([k, v]) => !k.startsWith('_') && typeof v === 'object')) as Record<string, LezzaCeviri>;
 }
 
 /**
@@ -98,6 +140,50 @@ function alerjenTuret(ad: string): ProductAllergen[] {
   for (const [desen, alerjenler] of ALERJEN_IPUCLARI) if (desen.test(ad)) alerjenler.forEach((a) => bulunan.add(a));
   return [...bulunan];
 }
+
+/**
+ * Spek belgesindeki alerjen adı → yasal enum. **Türetme değil ÇEVİRİ:** üstteki tablo addan tahmin
+ * yürütür, bu tablo belgenin yazdığını karşılığına koyar.
+ *
+ * İkisi eşleme istiyor ve ikisi de `sert_kabuklu` altında toplanıyor: `ceviz` ve `antep fistigi`.
+ * AB'nin on dörtlü listesinde ceviz ve fıstık ayrı kalem değildir — "sert kabuklu yemişler"
+ * (fruits à coque) tek başlıktır. **`yer_fistigi` ile karıştırmamak kritik:** yer fıstığı baklagildir,
+ * listede AYRI bir kalemdir ve alerjisi de ayrıdır; ikisini birleştirmek yanlış bir beyan olurdu.
+ */
+const SPEK_ALERJEN: Record<string, ProductAllergen> = {
+  gluten: 'gluten',
+  sut: 'sut',
+  yumurta: 'yumurta',
+  soya: 'soya',
+  susam: 'susam',
+  kereviz: 'kereviz',
+  ceviz: 'sert_kabuklu',
+  'antep fistigi': 'sert_kabuklu',
+};
+
+/**
+ * Tanınmayan ad SESSİZ DÜŞMEZ, seed'i durdurur. Bir beyan alanında sessiz kayıp, eksik bir alerjen
+ * satırı demektir — ve eksik alerjen beyanı, hiç beyan olmamasından tehlikelidir: ürün "beyanı tam"
+ * görünür, oysa bir kalemi düşmüştür.
+ */
+function spekAlerjen(liste: string[]): ProductAllergen[] {
+  return [
+    ...new Set(
+      liste.map((a) => {
+        const enumDegeri = SPEK_ALERJEN[a.toLowerCase()];
+        if (!enumDegeri) throw new Error(`spek alerjeni tanınmadı: "${a}" — SPEK_ALERJEN sözlüğüne ekle`);
+        return enumDegeri;
+      }),
+    ),
+  ];
+}
+
+/**
+ * Spek metnini üç dile de yazar. **Çeviri DEĞİL, kopya** — ve bu ad/açıklamadaki kararın aynısı
+ * (`sourceLanguage`): makine çevirisini buraya gömmek, çevrilmiş metni belgenin kendi cümlesi gibi
+ * gösterirdi. Çeviri ayrı bir adımdır (20.2); o gün bu üç kopyanın ikisi gerçek çeviriyle değişir.
+ */
+const ucDile = (metin: string): LocalizedText => ({ tr: metin, fr: metin, de: metin });
 
 /**
  * **İZ (çapraz bulaşma) — kapsamın ikinci ayağı, ve buradaki karar dosyanın en incelikli yeri.**
@@ -208,18 +294,96 @@ function icindekiler(alerjenler: ProductAllergen[]): LocalizedText {
 }
 
 /**
+ * ── KATEGORİ FOTOĞRAFLARI — BEŞİ DE ELLE SEÇİLDİ (kullanıcı kararı 16.08) ────────────────────────
+ *
+ * Kaynağın kendi kategori kapağı (`categories[].imageUrl`) ARTIK KULLANILMIYOR. Onlar illüstrasyon +
+ * ürün kolajıydı; kullanıcı 253 fotoğrafın tamamına bakıp her kategoriye **ambalajsız ürün
+ * fotoğrafı** seçti — müşteri kategoriye tıklamadan önce ürünün kendisini görsün, kutusunu değil.
+ *
+ * **Dizinin İLKİ kapaktır** (`category.image_key`), kalan dördü havuza gider (`category_image`,
+ * 05.23) ve kart kareyi GÜNE göre havuzdan seçer. Beş sayısı kullanıcının tavanı.
+ *
+ * Seçim SEED'DE duruyor, üreteçte değil, ve bu ayrım bilinçli: üreteç kaynağın aynasıdır ve bir
+ * sonraki `pnpm lezza:catalog` koşusu oraya yazılmış her elle kararı sessizce silerdi. Hangi
+ * fotoğrafın kapak olacağı editoryal bir karardır — sahnenin işi.
+ *
+ * ⚠ **Tavuk ürünlerinin beşi de AMBALAJLI** ve bu bir tercih değil, arşivin sınırı: kategorinin
+ * 11 fotoğrafının 11'i de poşet çekimi (ölçüldü 16.08). Ambalajsız fotoğraf çekilene kadar böyle.
+ */
+const KATEGORI_GORSELLERI: Record<string, string[]> = {
+  bakery: [
+    'Cheese-Pastry-Su-Borek-2500g.webp',
+    'Cheese-Rolls-Handmade-40g.webp',
+    'Kumru-Bagel-140g.webp',
+    'Lahmacun-3x180g-01.webp',
+    'Mini-Pide-with-Cheese-250g-01.webp',
+  ],
+  dessert: [
+    'Baklava-with-Pistachio-225g.webp',
+    'Carrot-Slice-Baklava-1350g.webp',
+    'Pistachio-Rolls-Baklava-2000g.webp',
+    'Tres-Leches-Raspberry-2000g.webp',
+    'Tulumba-Dessert-5000g.webp',
+  ],
+  cake: [
+    'Artisan-Lemon-Cake-90g.webp',
+    'Dark-Chocolate-Profiterol-Whole-Cake.webp',
+    'Rasperry-CheesCake-165g.webp',
+    'Special-Pistachio-Garden-Whole-Cake.webp',
+    'tiramisu-145g.webp',
+  ],
+  anatolian: [
+    'Turkish-Ravioli-with-Meat-Manti-1000g.webp',
+    'Stuffed-Vine-Leaves-1000g.webp',
+    'Vegan-Kibbeh-10-x-70-g.webp',
+    'Vegan-Raw-Meatballs-1000g.webp',
+    'Spicy-Turkish-Tomato-Dip-1000g.webp',
+  ],
+  chicken: [
+    'Chicken-Tender-Fillet-700g.webp',
+    'Crispy-Chicken-Burger-720g.webp',
+    'Crispy-Chicken-Nugget-720g.webp',
+    'Spicy-Chicken-Tender-Fillet-700g.webp',
+    'Spicy-Chicken-Wings-700g.webp',
+  ],
+  'ice-cream': [
+    'MARAS-ICE-CREAM-slice-plain-70g.webp',
+    'Maras-Ice-Cream-Cocoa.webp',
+    'Maras-Ice-Cream-Pistachio.webp',
+    'Maras-Ice-Cream-Plain.webp',
+    'Maras-Ice-Cream-Trio-Mix.webp',
+  ],
+};
+
+/**
+ * Dosya adı → uzak adres. Seçimler DOSYA ADIYLA yazılı (arşivde insanın gördüğü ad); indirme ise
+ * adresi ister. Harita katalogdan kurulur, sabit bir liste tutulmaz — adres kaynakta değişirse
+ * seçim yine tutar.
+ */
+export function lezzaGorselUrlByDosya(): Map<string, string> {
+  const harita = new Map<string, string>();
+  for (const p of readLezzaCatalog().products) {
+    for (const url of p.imageUrls) {
+      const ad = url.split('/').pop();
+      if (ad && !harita.has(ad)) harita.set(ad, url);
+    }
+  }
+  return harita;
+}
+
+/**
  * Kategori ALTYAZILARI (05.17 · kullanıcı kararı 08.08) — mobil vitrin bandının ikinci satırı,
  * web kullanımı tasarım kararına açık. Metinler EDİTORYAL fikstürdür: operatör Katalog ekranından
  * değiştirir (üç dilli form + AI çeviri önerisi); buradaki değer ilk kurulumun cümlesi, sözleşme
  * değil. Boş bırakılan kategori altyazısız çizilir — yedek metin uydurulmaz.
  */
 const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
-  bakery: { tr: 'Börekler ve el açması hamur işleri', fr: 'Böreks et pâtisseries salées', de: 'Börek und handgemachtes Gebäck' },
-  dessert: { tr: 'Baklavadan sütlü tatlıya', fr: 'Du baklava aux desserts lactés', de: 'Von Baklava bis Milchdessert' },
-  cake: { tr: 'Dilim ve bütün pastalar', fr: 'Gâteaux entiers et en parts', de: 'Torten im Ganzen und in Stücken' },
+  bakery: { tr: 'Börekler ve hamur işleri', fr: 'Böreks et pâtisseries', de: 'Börek und Gebäck' },
+  dessert: { tr: 'Baklava ve şerbetli tatlılar', fr: 'Baklava et desserts', de: 'Baklava und Süßspeisen' },
+  cake: { tr: 'Dilim ve bütün pastalar', fr: 'Gâteaux entiers et parts', de: 'Torten und Stücke' },
   chicken: { tr: 'Pişirmeye hazır tavuk', fr: 'Volaille prête à cuire', de: 'Küchenfertiges Geflügel' },
   'ice-cream': { tr: 'Maraş usulü dondurma', fr: 'Glace façon Maraş', de: 'Eis nach Maraş-Art' },
-  anatolian: { tr: 'Sofraya hazır Anadolu yemekleri', fr: 'Plats anatoliens prêts à servir', de: 'Anatolische Gerichte, servierfertig' },
+  anatolian: { tr: 'Sofraya hazır yemekler', fr: 'Plats prêts à servir', de: 'Servierfertige Gerichte' },
 };
 
 /**
@@ -309,6 +473,7 @@ function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
  */
 export async function seedLezzaProducts(
   categories: CategoryService,
+  categoryImages: CategoryImageService,
   products: ProductService,
   images: ProductImageService,
   families: ProductFamilyService,
@@ -338,24 +503,44 @@ export async function seedLezzaProducts(
   // Boşluk SON kategorilere konuyor: vitrin ızgarası altı slot ve sıra `sort_order`'dan geliyor,
   // yani vitrinden düşen kayıt listenin sonundaki olsun — ilk sıradakini düşürmek ana sayfayı
   // gerçek katalogda olmayacak bir hâlde gösterirdi.
+  // **"Kapaksız kategori" boşluğu buradan KALKTI** (16.08): kullanıcı altı kategorinin altısına da
+  // fotoğraf seçti ve seçilmiş bir kapağı "süzgeç denensin" diye atmak, kararı çöpe atmaktır. Kova
+  // boş kalmıyor — aşağıdaki SEZONLUK kategori kapaksız doğuyor ve baş-harf yedeğini o sınıyor.
+  // **"Altyazısız kategori" boşluğu da KALKTI (kullanıcı bildirimi 16.08: "dondurma kategorisinde
+  // hiçbir metin yok").** Boşluk sondan ikinciye düşüyordu ve o kategori Dondurma'ydı: metni
+  // sözlükte YAZILI olduğu hâlde seed onu siliyordu. Ekranda bunun bir kurgu olduğu anlaşılmıyor —
+  // eksik bir veri gibi görünüyor, ki kullanıcı da öyle okudu. Kova sezonluk kategoriden doluyor
+  // (aşağıda): o hem kapaksız hem altyazısız doğuyor, yani iki hâli birden sınıyor.
   const sonKategoriler = katalog.categories.length - 1;
+  const gorselUrl = lezzaGorselUrlByDosya();
   for (const [k, c] of katalog.categories.entries()) {
     if (catId.has(c.key)) continue;
-    const kapaksiz = k === sonKategoriler; // baş-harf yedeği bu kayıtta denenir
-    const altyazisiz = k === sonKategoriler - 1; // altyazısız kategori altyazısız çizilir (05.17)
     const vitrinDisi = k >= sonKategoriler - 1; // ızgara 6 slot; ikisi dışarıda kalsın
     // `create` girdisi bilinçli dar (ad + sıra); tagline ve vitrin işareti update ile — aile
     // bağının `products.update` emsali. Tek çağrıda: ikisi de aynı ilk-kurulum kararının parçası.
     const created = await categories.create({ name: c.name });
     await categories.update({
       id: created.id,
-      tagline: altyazisiz ? null : (KATEGORI_TAGLINE[c.key] ?? null),
+      tagline: KATEGORI_TAGLINE[c.key] ?? null,
       isFeatured: !vitrinDisi,
     });
     catId.set(c.key, created.id);
-    if (c.imageUrl && !kapaksiz) {
-      const key = await uploadImageFromUrl(c.imageUrl, r2Keys.categoryImage(created.slug, c.imageUrl.split('/').pop() || 'cover.webp'));
-      if (key) await categories.setImageKey(created.id, key);
+
+    // Beş fotoğraf: ilki kapak (`image_key`), kalan dördü havuz (`category_image` — kart kareyi
+    // güne göre oradan seçer). Yükleme başarısızsa (R2 ayarsız) o kare atlanır, seed durmaz.
+    for (const [n, dosya] of (KATEGORI_GORSELLERI[c.key] ?? []).entries()) {
+      const url = gorselUrl.get(dosya);
+      if (!url) {
+        console.log(`  ⚠ ${c.key} — "${dosya}" katalogda yok; kare atlandı`);
+        continue;
+      }
+      const key = await uploadImageFromUrl(
+        url,
+        n === 0 ? r2Keys.categoryImage(created.slug, dosya) : r2Keys.categoryGalleryImage(created.slug, `${n + 1}`, dosya),
+      );
+      if (!key) continue;
+      if (n === 0) await categories.setImageKey(created.id, key);
+      else await categoryImages.add(created.id, key);
     }
   }
 
@@ -371,22 +556,43 @@ export async function seedLezzaProducts(
   let photos = 0;
   let varyantSayisi = 0;
 
-  // **`… Mono Pack` ürünleri SEED'E ALINMIYOR** (kullanıcı kararı 04.08). Kaynak katalog tek
-  // porsiyonluk paketi AYRI BİR ÜRÜN olarak kurmuş; modelde doğrusu aynı ürünün bir paket BOYU
+  // **Tek porsiyonluk `mono` paketler SEED'E ALINMIYOR** (kullanıcı kararı 04.08). Kaynak katalog
+  // tek porsiyonluk paketi AYRI BİR ÜRÜN olarak kurmuş; modelde doğrusu aynı ürünün bir paket BOYU
   // (varyant) olmasıydı. Ayrı ürün kaldıkları sürece limonlu kekin sayfasında üstte dört çeşit,
   // altta "bunlarla da ilgilenebilirsiniz"de AYNI dört kek çıkıyordu. Bu bir test verisi; kaynağın
-  // kurgusunu düzeltmek yerine o dört satırı hiç almamak hem daha dürüst hem daha sade.
-  const urunler = katalog.products.filter((p) => !/\bmono\s*pack\b/i.test(p.name.tr ?? ''));
+  // kurgusunu düzeltmek yerine o satırları hiç almamak hem daha dürüst hem daha sade.
+  //
+  // Desen 15.08'de `mono pack`ten çıplak `mono`ya genişledi: basılı katalog aynı kurguyu bu adla da
+  // kuruyor ("Tiramisu mono", "Red Velvet Cake mono") ve gerekçe birebir aynı. Kataloğun kendisinde
+  // DURUYORLAR — üreteç kaynağa sadıktır, süzgeç sahnenin kararıdır.
+  const urunler = katalog.products.filter((p) => !/\bmono\b/i.test(p.name.tr ?? ''));
+
+  const ceviriler = readCeviriler();
+  const cevirisizler = urunler.filter((p) => !ceviriler[p.slug]).map((p) => p.slug);
+  // Çevirisi olmayan ürün SESSİZ GEÇMEZ: kataloğa yeni bir kalem girdiğinde ilk kopan yer burasıdır
+  // ve kopuş görünmez — ürün üç dile de İngilizce adıyla düşer, hiçbir sayaç bunu eksik saymaz.
+  if (cevirisizler.length > 0) console.log(`  ⚠ çevirisi olmayan ${cevirisizler.length} ürün (İngilizce adıyla kurulacak): ${cevirisizler.join(' · ')}`);
 
   for (const [i, p] of urunler.entries()) {
+    // Kaynağın İNGİLİZCE adı — desen eşleştirmeleri (alerjen, KDV) bunun üzerinde çalışır.
     const ad = p.name.tr ?? '';
-    const alerjenler = alerjenTuret(`${ad} ${p.description}`);
+    const ceviri = ceviriler[p.slug];
+    // **GERÇEK BEYAN VARSA TAHMİN HİÇ ÇALIŞMAZ** (15.08). Altı üründe üretici spesifikasyonu var ve
+    // belgenin yazdığı alerjen, addan çıkarılandan hem daha doğru hem daha eksiksiz: `alerjenTuret`
+    // "Vegan Çiğköfte"den kerevizi çıkaramaz (ada yazmıyor), belge çıkarıyor.
+    const beyan = p.declarations;
+    const alerjenler = beyan ? spekAlerjen(beyan.allergens) : alerjenTuret(`${ad} ${p.description ?? ''}`);
 
     // ── Serpiştirilen boşluklar (gerekçesi dosya künyesinde) ──────────────────
     // Oranlar eski toplu üreticiden SEYREK: orada veri zaten uydurmaydı, burada gerçek bir katalogu
     // bozmamak gerekiyor. Yine de her süzgecin en az birkaç sonucu olacak kadar sık.
-    const dilEksik = i % 17 === 0; // fr/de düşer → "eksik dil" süzgeci
-    const beyanEksik = i % 13 === 0; // beyan dörtlüsü boş → "beyan eksik" süzgeci
+    // **Oran 17'de birden 41'de bire SEYRELDİ (16.08):** çeviriler artık gerçek ve elle yazılı, o
+    // yüzden onları "süzgeç denensin" diye atmanın bedeli yükseldi. Üç ürün hâli sınamaya yeter.
+    const dilEksik = i % 41 === 0; // fr/de düşer → "çevirisi tamamlanmamış ürün" hâli
+    // **Beyanı GERÇEK olan ürün bu boşluğa hiç girmez.** Elimizde belgesi olan bir ürünün beyanını
+    // "süzgeç denensin" diye silmek, sahnelemek değil veri kaybetmektir — ve kapsam zaten kalan
+    // 128 üründen fazlasıyla doğuyor.
+    const beyanEksik = !beyan && i % 13 === 0; // beyan dörtlüsü boş → "beyan eksik" süzgeci
     const kapaksiz = i % 19 === 0; // görselsiz kayıt → boş kapak durumu
     const durum: ProductStatus = i % 23 === 0 ? 'passive' : i % 29 === 0 ? 'candidate' : 'active';
     // **Künyesi eksik ürün** (kapsam denetimi 09.08) — ikisi de ayrı bir EKRAN hâli, ayrı sebep:
@@ -402,12 +608,13 @@ export async function seedLezzaProducts(
     // "bilmiyoruz"dur ve donuk gıdada bilinmeyen, "evet" değil "hayır" sayılır.
     const rejim = SAKLAMA[saklamaRejimi(p.category ?? null, i)];
 
-    const name: LocalizedText = dilEksik ? { tr: ad } : p.name;
-    const aciklama: LocalizedText | null = p.description
-      ? dilEksik
-        ? { tr: p.description }
-        : { tr: p.description, fr: p.description, de: p.description }
-      : null;
+    // Görünen ad ve açıklama ÇEVİRİDEN; çeviri yoksa kaynağın İngilizcesine düşülür (yukarıda uyarı
+    // basıldı). `dilEksik` sahnesi yalnız TÜRKÇEyi bırakır — operatörün yeni eklediği, henüz
+    // çevrilmemiş ürünün gerçek hâli budur ve ürün formundaki "çeviri eksik" uyarısı ancak böyle koşar.
+    const tamAd: LocalizedText = ceviri?.name ?? { tr: ad, fr: ad, de: ad };
+    const tamAciklama: LocalizedText | null = ceviri?.description ?? (p.description ? { tr: p.description, fr: p.description, de: p.description } : null);
+    const name: LocalizedText = dilEksik ? { tr: tamAd.tr } : tamAd;
+    const aciklama: LocalizedText | null = tamAciklama ? (dilEksik ? { tr: tamAciklama.tr } : tamAciklama) : null;
 
     // Kapak GERÇEK görselden; R2 ayarsızsa null döner ve kayıt görselsiz oluşur (graceful).
     const kapakUrl = kapaksiz ? null : p.imageUrls[0];
@@ -422,15 +629,33 @@ export async function seedLezzaProducts(
       allergens: beyanEksik ? [] : alerjenler,
       // İz: nadir alerjenler buradan dolaşır (künyesi `NADIR_IZLER`'de). Ürünün ZATEN içerdiği bir
       // alerjen ize yazılmaz — "içerir" demişken "bulunabilir" demek, aynı şeyi iki kez ve daha
-      // zayıf söylemektir.
-      traces: beyanEksik ? [] : (NADIR_IZLER[i % NADIR_IZLER.length] ?? []).filter((a) => !alerjenler.includes(a)),
-      ingredients: beyanEksik ? null : icindekiler(alerjenler),
-      storageInstructions: beyanEksik ? null : rejim.metin,
-      nutrition: beyanEksik ? null : besinDegeri(p.category, i),
+      // zayıf söylemektir. **Belgesi olan üründe iz de belgeden**, dağıtımdan değil.
+      traces: beyan
+        ? spekAlerjen(beyan.traces).filter((a) => !alerjenler.includes(a))
+        : beyanEksik
+          ? []
+          : (NADIR_IZLER[i % NADIR_IZLER.length] ?? []).filter((a) => !alerjenler.includes(a)),
+      ingredients: beyan?.ingredientsEU ? ucDile(beyan.ingredientsEU) : beyanEksik ? null : icindekiler(alerjenler),
+      // Hazırlama önerisi varsa saklama metnine EKLENİR: kolon zaten ikisini birden taşıyor
+      // ("saklama/hazırlama metni") ve belgede ayrı duran iki cümlenin ekranda ayrı yeri yok.
+      storageInstructions: beyan?.storage
+        ? ucDile(beyan.cookingTips ? `${beyan.storage} ${beyan.cookingTips}` : beyan.storage)
+        : beyanEksik
+          ? null
+          : rejim.metin,
+      nutrition: beyan?.nutritionPer100g ?? (beyanEksik ? null : besinDegeri(p.category, i)),
       vatRate: HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA,
-      shelfLifeDays: rafOmruYok ? undefined : (RAF_OMRU[p.category ?? ''] ?? 180),
+      // Raf ömrü belgede AY cinsinden; kolon gün tutuyor. Boşluk (`rafOmruYok`) gerçek veriyi
+      // silmemek için burada da devre dışı — gerekçesi `beyanEksik` satırının aynısı.
+      shelfLifeDays: beyan?.shelfLifeMonths
+        ? beyan.shelfLifeMonths * 30
+        : rafOmruYok
+          ? undefined
+          : (RAF_OMRU[p.category ?? ''] ?? 180),
       // Kargo izni SAKLAMA REJİMİNDEN türer, ayrı yazılmaz — gerekçe `SAKLAMA` künyesinde.
-      shippable: beyanEksik ? false : rejim.shippable,
+      // **Belgesi olan üründe rejim metnin kendisinden okunur:** "-18°C" yazan bir ürün donuktur ve
+      // kategoriden türetilmiş tahminin ne dediği önemsizdir. Kaynağın cümlesi tahmini yener.
+      shippable: beyan?.storage ? !/-\s*18\s*°?\s*c/i.test(beyan.storage) : beyanEksik ? false : rejim.shippable,
       targetMarginPercent: marjYok ? undefined : 30 + (i % 6) * 3,
       autoPrice: i % 4 === 0,
       status: durum,
@@ -475,44 +700,20 @@ export async function seedLezzaProducts(
     urunIdBySlug.set(p.slug, product.id);
   }
 
-  // Süzülmüş liste geçilir: aile kurucusu `urunIdBySlug`'a bakıyor ve süzülen ürünlerin kimliği
-  // orada yok — ama listeyi de süzmek, "üyesi bulunamadı" diye sessizce eksilen bir aile yerine
-  // hiç kurulmayan bir aile üretir. İkisi arasındaki fark, bir gün birinin gözden kaçmasıdır.
-  const aileler = await aileleriKur(families, products, urunler, urunIdBySlug);
+  const aileler = await aileleriKur(families, products, urunIdBySlug);
 
   return { made, photos, variants: varyantSayisi, families: aileler };
 }
 
-// ── ÜRÜN AİLELERİ (05.15) ────────────────────────────────────────────────────
+// ── ÜRÜN AİLELERİ (05.15 · nihai kürasyon 16.08) ─────────────────────────────
 // Gerçek katalogda aileler ZATEN VAR ve uydurmaya gerek yok: *"E-Shaped Börek with Cheese / Meat /
 // Potato / Spinach & Cheese"* tam olarak bir ailedir — aynı ürünün dolgusu değişiyor. Aynı desen
-// Spiral Pie, Mini Roll ve daha birçok dalda tekrarlanıyor.
+// Gül Böreği, Mini Rulo ve daha birçok dalda tekrarlanıyor.
 //
-// **Aile addan TÜRETİLİYOR, elle listelenmiyor:** katalog 141 üründen ibaret değil, yarın büyüyecek;
-// elle yazılmış bir aile listesi ilk güncellemede bayatlardı.
-
-/**
- * `"E-Shaped Börek with Cheese"` → `{ taban: "E-Shaped Börek", dolgu: "Cheese" }`
- *
- * ── DOLGUDAN BOY EKİ SÖKÜLÜR ve bu düzeltme ölçümle geldi (04.08) ────────────
- * İlk hâl dolguyu ham alıyordu ve **boyu çeşit sanıyordu** — tam olarak tasarımın uyardığı
- * karışıklık ("iki seçici asla karışmaz"). Gerçek katalogda sonucu şuydu:
- *   Baklava → `Pistachio (12 Pieces)` · `Pistachio (36 Pieces)` · `Pistachio (6 Pieces)` …
- *   Spiral Rose Börek → `Cheese` · `Cheese 6x80g` (aynı çeşit, iki kart, ikisi de "Peynirli")
- * Parça sayısı ve paket ölçüsü BOYDUR; çeşit ekseninde yeri yoktur.
- */
-function aileParcala(ad: string): { taban: string; dolgu: string } | null {
-  const m = /^(.+?)\s+with\s+(.+)$/i.exec(ad.trim());
-  if (!m?.[1] || !m[2]) return null;
-  const dolgu = m[2]
-    .replace(/\(\s*\d+\s*pieces?\s*\)/gi, '') // "(12 Pieces)"
-    .replace(/\b\d+\s*x\s*\d+\s*g\b/gi, '') // "6x80g"
-    .replace(/\b\d+\s*(g|kg|gr)\b/gi, '') // "1250g"
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-  if (!dolgu) return null;
-  return { taban: m[1].trim(), dolgu };
-}
+// **Bir zamanlar addan TÜRETİLİYORDU; artık elle listeleniyor** (`ELLE_AILELER` künyesi). Gerekçe
+// orada: ürün adları çevrildiği anda `"X with Y"` deseni çöker ve aileler habersiz dağılırdı.
+// Türetici (`aileParcala`) bu yüzden silindi — arkasında kalan tek şey aşağıdaki dolgu sözlüğü,
+// çünkü etiketin çevirisi hâlâ gerekli.
 
 /**
  * Dolgu adının üç dilli karşılığı. Kaynak katalog YALNIZ İNGİLİZCE (`sourceLanguage: 'en'`), yani
@@ -531,14 +732,52 @@ const DOLGU_SOZLUK: Record<string, LocalizedText> = {
   walnut: { tr: 'Cevizli', fr: 'Noix', de: 'Walnuss' },
   pistachio: { tr: 'Fıstıklı', fr: 'Pistache', de: 'Pistazie' },
   chocolate: { tr: 'Çikolatalı', fr: 'Chocolat', de: 'Schokolade' },
+  olive: { tr: 'Zeytinli', fr: 'Olives', de: 'Oliven' },
+  vegetable: { tr: 'Sebzeli', fr: 'Légumes', de: 'Gemüse' },
   // Sıfat-önde ailelerin çeşitleri (kek · cheesecake · dondurma).
   lemon: { tr: 'Limonlu', fr: 'Citron', de: 'Zitrone' },
   mango: { tr: 'Mangolu', fr: 'Mangue', de: 'Mango' },
   strawberry: { tr: 'Çilekli', fr: 'Fraise', de: 'Erdbeere' },
   raspberry: { tr: 'Frambuazlı', fr: 'Framboise', de: 'Himbeere' },
   'toffee caramel': { tr: 'Karamelli', fr: 'Caramel', de: 'Karamell' },
+  caramel: { tr: 'Karamelli', fr: 'Caramel', de: 'Karamell' },
   cocoa: { tr: 'Kakaolu', fr: 'Cacao', de: 'Kakao' },
   plain: { tr: 'Sade', fr: 'Nature', de: 'Natur' },
+  // ── Baklava çeşitleri ──────────────────────────────────────────────────────
+  // Şekil adları ÇEVRİLİR (midye · kare), yer ve tarif adları çevrilMEZ: "Sobiyet" ile "Antep"
+  // Fransızcada da Sobiyet ve Antep'tir — çevirmek ürünü tanınmaz yapardı.
+  assorted: { tr: 'Karışık', fr: 'Assorti', de: 'Gemischt' },
+  mussel: { tr: 'Midye', fr: 'Moule', de: 'Muschel' },
+  square: { tr: 'Kare', fr: 'Carré', de: 'Quadrat' },
+  sobiyet: { tr: 'Sobiyet', fr: 'Sobiyet', de: 'Sobiyet' },
+  antep: { tr: 'Antep', fr: 'Antep', de: 'Antep' },
+  'pistachio rolls': { tr: 'Fıstık sarma', fr: 'Roulé pistache', de: 'Pistazienrolle' },
+  // ── Künefe · börek · fırın çeşitleri ───────────────────────────────────────
+  classic: { tr: 'Klasik', fr: 'Classique', de: 'Klassisch' },
+  plated: { tr: 'Tabaklı', fr: 'En assiette', de: 'Mit Teller' },
+  special: { tr: 'Özel', fr: 'Spécial', de: 'Spezial' },
+  wreathing: { tr: 'Burma', fr: 'Torsadé', de: 'Gedreht' },
+  acma: { tr: 'Açma', fr: 'Açma', de: 'Açma' },
+  sweet: { tr: 'Tatlı', fr: 'Sucré', de: 'Süß' },
+  fermented: { tr: 'Ekşi mayalı', fr: 'Au levain', de: 'Sauerteig' },
+  // ── Bütün pasta çeşitleri ──────────────────────────────────────────────────
+  'black forest': { tr: 'Kara orman', fr: 'Forêt-Noire', de: 'Schwarzwälder' },
+  'dark chocolate': { tr: 'Bitter çikolata', fr: 'Chocolat noir', de: 'Zartbitter' },
+  profiterol: { tr: 'Profiterollü', fr: 'Profiterole', de: 'Profiterole' },
+  latte: { tr: 'Latte', fr: 'Latte', de: 'Latte' },
+  'red velvet': { tr: 'Kırmızı kadife', fr: 'Velours rouge', de: 'Roter Samt' },
+  'pistachio garden': { tr: 'Fıstık bahçesi', fr: 'Jardin de pistaches', de: 'Pistaziengarten' },
+  tiramisu: { tr: 'Tiramisu', fr: 'Tiramisu', de: 'Tiramisu' },
+  // ── Meze ───────────────────────────────────────────────────────────────────
+  hummus: { tr: 'Humus', fr: 'Houmous', de: 'Hummus' },
+  saksuka: { tr: 'Şakşuka', fr: 'Şakşuka', de: 'Şakşuka' },
+  'carrot tarator': { tr: 'Havuç tarator', fr: 'Tarator de carotte', de: 'Karotten-Tarator' },
+  'tomato dip': { tr: 'Acılı domates', fr: 'Sauce tomate épicée', de: 'Scharfe Tomatensauce' },
+  'eggplant yogurt': { tr: 'Yoğurtlu patlıcan', fr: 'Aubergine au yaourt', de: 'Aubergine mit Joghurt' },
+  // ── Tavuk: baharat ve pişirme ekseni ───────────────────────────────────────
+  spicy: { tr: 'Acılı', fr: 'Épicé', de: 'Scharf' },
+  crispy: { tr: 'Çıtır', fr: 'Croustillant', de: 'Knusprig' },
+  'crispy spicy': { tr: 'Çıtır acılı', fr: 'Croustillant épicé', de: 'Knusprig scharf' },
 };
 
 function dolguEtiketi(dolgu: string): LocalizedText {
@@ -546,29 +785,182 @@ function dolguEtiketi(dolgu: string): LocalizedText {
 }
 
 /**
- * **SIFAT-ÖNDE aileler — elle doğrulanmış, türetilmiyor** (04.08, kullanıcı sorusu üzerine).
+ * ── AİLELERİN TAMAMI ELLE LİSTELENİR (kullanıcı kararı 16.08: "nihai şeklini veriyoruz") ─────────
  *
- * Kaynak katalog aileyi İKİ FARKLI biçimde adlandırıyor:
- *   1. `"E-Shaped Börek with Cheese"` — dolgu sonda, `aileParcala` bunu güvenle çözüyor.
- *   2. `"Artisan Lemon Cake"` — çeşit ORTADA. Tasarımın kendi örneği (limonlu/mangolu kek) tam
- *      olarak bu biçimde ve ilk turda TAMAMEN KAÇIRILMIŞTI.
+ * **Addan türetme KALDIRILDI ve sebebi tek cümle: ürün adları çevriliyor.** `aileParcala` İngilizce
+ * `"X with Y"` desenine bağlıydı; adlar Türkçeleşince ("Peynirli Su Böreği") o desen çöker ve
+ * aileler HABERSİZ dağılırdı — hata vermeden, yalnız çeşit blokları ekrandan kaybolarak.
  *
- * **İkincisi neden türetilmiyor:** "aynı uzunlukta, tek konumda ayrışan adlar aynı ailedendir"
- * kuralı denendi ve ÖLÇÜLDÜ — 26 aile üretti ama içinde `Hummus | Lahmacun | Şakşuka | Tiramisu`
- * (birbiriyle ilgisiz dört ürün) ve `10 | 5` (parça sayısı çeşit sanılmış) gibi uydurmalar vardı.
- * Seed'de **isabet kapsamdan önemlidir:** yanlış bir aile, ekranı çizen ajana ve kullanıcıya
- * kavramı yanlış öğretir. Az ve doğru, çok ve gürültülüden iyidir.
+ * Elle liste ayrıca kullanıcının istediği şeyi mümkün kılıyor: hangi ürünün hangi ürünle aile
+ * olduğu **tek yerde, okunarak onaylanabilir** durumda. Türetme bunu yapamazdı — kuralı okuyup
+ * sonucu zihinde canlandırmak gerekirdi.
  *
- * Liste kısa kalmalı — uzarsa bu, kaynağın adlandırmasının değiştiğinin işaretidir.
+ * ⚠ Eski künyenin uyarısı hâlâ geçerli ve listeyi bu yüzden kısa tutmuyoruz, DOĞRU tutuyoruz:
+ * bir kez "aynı uzunlukta, tek konumda ayrışan adlar aynı ailedendir" kuralı denenmişti ve
+ * `Hummus | Lahmacun | Şakşuka | Tiramisu`yu tek aile yapmıştı. **Yanlış bir aile, ekranı çizen
+ * ajana ve müşteriye kavramı yanlış öğretir.**
+ *
+ * **Ne aile OLMAZ:** paket biçimi (dökme/bulk, tepsi, kutu) ve porsiyon (dilim, bardak, mono) çeşit
+ * değildir — onlar boy eksenidir ve varyanta aittir. "Vegan" da aile değildir: bir özelliktir,
+ * çeşit değil; süzgeci ayrıca gelir.
  */
 const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: string }> }> = [
+  // ── FIRIN: dolgu ekseni ────────────────────────────────────────────────────
   {
-    ad: 'Artisan Cake',
+    ad: 'E Böreği',
+    uyeler: [
+      { slug: 'e-shaped-borek-with-cheese', dolgu: 'Cheese' },
+      { slug: 'e-shaped-borek-with-meat', dolgu: 'Meat' },
+      { slug: 'e-shaped-borek-with-potato', dolgu: 'Potato' },
+      { slug: 'e-shaped-borek-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+    ],
+  },
+  {
+    ad: 'Çubuk Börek',
+    uyeler: [
+      { slug: 'stick-borek-with-cheese', dolgu: 'Cheese' },
+      { slug: 'stick-borek-with-meat', dolgu: 'Meat' },
+      { slug: 'stick-borek-with-potato', dolgu: 'Potato' },
+      { slug: 'stick-borek-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+    ],
+  },
+  {
+    ad: 'Gül Böreği',
+    uyeler: [
+      { slug: 'spiral-rose-borek-with-cheese', dolgu: 'Cheese' },
+      { slug: 'spiral-rose-borek-with-meat', dolgu: 'Meat' },
+      { slug: 'spiral-rose-borek-with-potato', dolgu: 'Potato' },
+      { slug: 'spiral-rose-borek-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+    ],
+  },
+  {
+    ad: 'Kol Böreği',
+    uyeler: [
+      { slug: 'spiral-pie-borek-with-cheese', dolgu: 'Cheese' },
+      { slug: 'spiral-pie-borek-with-potato', dolgu: 'Potato' },
+      { slug: 'spiral-pie-borek-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+    ],
+  },
+  {
+    ad: 'Mini Rulo Börek',
+    uyeler: [
+      { slug: 'mini-roll-borek-with-cheese', dolgu: 'Cheese' },
+      { slug: 'mini-roll-borek-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+    ],
+  },
+  {
+    ad: 'Mini Pide',
+    uyeler: [
+      { slug: 'mini-pide-with-cheese', dolgu: 'Cheese' },
+      { slug: 'mini-pide-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+    ],
+  },
+  {
+    ad: 'Poğaça',
+    uyeler: [
+      { slug: 'plain-pastry', dolgu: 'Plain' },
+      { slug: 'cheese-filled-pastry', dolgu: 'Cheese' },
+      { slug: 'potato-filled-pastry', dolgu: 'Potato' },
+      { slug: 'olive-filled-pastry', dolgu: 'Olive' },
+    ],
+  },
+  {
+    // Açma bir dolgu değil bir hamur biçimi, ama müşterinin gözünde aynı raftaki üç kardeş:
+    // sade çörek, peynirli çörek, açma. Seçim ekseni tutarlı — "hangisini alayım" sorusu aynı.
+    ad: 'Çörek',
+    uyeler: [
+      { slug: 'savoury-bun', dolgu: 'Plain' },
+      { slug: 'savoury-bun-with-cheese', dolgu: 'Cheese' },
+      { slug: 'savoury-bun-acma', dolgu: 'Acma' },
+    ],
+  },
+  {
+    ad: 'Simit',
+    uyeler: [
+      { slug: 'turkish-bagel-simit', dolgu: 'Classic' },
+      { slug: 'sweet-turkish-bagel-simit', dolgu: 'Sweet' },
+      { slug: 'turkish-fermented-bagel', dolgu: 'Fermented' },
+    ],
+  },
+  {
+    ad: 'Kalzone',
+    uyeler: [
+      { slug: 'cheese-calzone', dolgu: 'Cheese' },
+      { slug: 'vegetable-calzone', dolgu: 'Vegetable' },
+    ],
+  },
+  // ── TATLI ──────────────────────────────────────────────────────────────────
+  {
+    // Kullanıcı kararı 16.08: baklava İKİYE ayrılıyor. Buradakiler günlük çeşitler — müşterinin
+    // "hangi baklava" sorusuna verdiği ilk cevap.
+    ad: 'Baklava',
+    uyeler: [
+      { slug: 'baklava-with-pistachio', dolgu: 'Pistachio' },
+      { slug: 'baklava-with-walnut', dolgu: 'Walnut' },
+      { slug: 'chocolate-baklava', dolgu: 'Chocolate' },
+      { slug: 'assorted-baklava', dolgu: 'Assorted' },
+    ],
+  },
+  {
+    // Özel baklavalar şekil ve tarifle ayrışıyor (sobiyet kaymaklı, midye kıvrımlı, kare dilimli).
+    // Klasiklerle aynı blokta gösterilseler seçim on bir kartlık bir listeye dönerdi.
+    ad: 'Özel Baklava',
+    uyeler: [
+      { slug: 'sobiyet-baklava', dolgu: 'Sobiyet' },
+      { slug: 'mussel-baklava', dolgu: 'Mussel' },
+      { slug: 'special-antep-baklava', dolgu: 'Antep' },
+      { slug: 'special-square-baklava', dolgu: 'Square' },
+      { slug: 'pistachio-rolls-baklava', dolgu: 'Pistachio Rolls' },
+    ],
+  },
+  {
+    ad: 'Soğuk Baklava',
+    uyeler: [
+      { slug: 'cold-baklava-with-pistachio', dolgu: 'Pistachio' },
+      { slug: 'cold-baklava-with-walnut', dolgu: 'Walnut' },
+    ],
+  },
+  {
+    // Dökme (bulk) kalemler BİLEREK YOK: onlar toptan paket biçimi, çeşit değil.
+    ad: 'Künefe',
+    uyeler: [
+      { slug: 'kunefe-including-syrup', dolgu: 'Classic' },
+      { slug: 'kunefe-with-plate-and-syrup', dolgu: 'Plated' },
+      { slug: 'special-kunefe', dolgu: 'Special' },
+      { slug: 'wreathing-kunefe-including-syrup', dolgu: 'Wreathing' },
+    ],
+  },
+  {
+    // `tres-leches-caramel-cup` YOK: bardak porsiyonu boy eksenidir, çeşit değil.
+    ad: 'Tres Leches',
+    uyeler: [
+      { slug: 'tres-leches-caramel', dolgu: 'Caramel' },
+      { slug: 'tres-leches-raspberry', dolgu: 'Raspberry' },
+    ],
+  },
+  // ── PASTA ──────────────────────────────────────────────────────────────────
+  {
+    ad: 'Artisan Kek',
     uyeler: [
       { slug: 'artisan-lemon-cake', dolgu: 'Lemon' },
       { slug: 'artisan-mango-cake', dolgu: 'Mango' },
       { slug: 'artisan-pistachio-cake', dolgu: 'Pistachio' },
       { slug: 'artisan-strawberry-cake', dolgu: 'Strawberry' },
+    ],
+  },
+  {
+    // Bütün pastalar tek ailede: müşteri "hangi bütün pastayı alayım" diye soruyor ve cevabın
+    // tamamı burada. Dilim/bardak hâlleri AYRI ürün olarak duruyor — onlar boy değil, farklı
+    // bir satış biçimi (kaynak öyle kurmuş) ve çeşit bloğunu kalabalıklaştırırlardı.
+    ad: 'Bütün Pasta',
+    uyeler: [
+      { slug: 'black-forest-whole-cake', dolgu: 'Black Forest' },
+      { slug: 'dark-chocolate-whole-cake', dolgu: 'Dark Chocolate' },
+      { slug: 'dark-chocolate-profiterol-whole-cake', dolgu: 'Profiterol' },
+      { slug: 'latte-whole-cake', dolgu: 'Latte' },
+      { slug: 'red-velvet-whole-cake', dolgu: 'Red Velvet' },
+      { slug: 'special-pistachio-garden-whole-cake', dolgu: 'Pistachio Garden' },
+      { slug: 'tiramisu-whole-cake', dolgu: 'Tiramisu' },
     ],
   },
   // **`… Mono Pack` ürünleri BİLEREK AİLE YAPILMADI** (kullanıcı kararı 04.08). Bir tur ayrı bir
@@ -577,7 +969,7 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   // Modelde doğrusu bunların ayrı ürün değil aynı ürünün bir PAKET BOYU olmasıydı; kaynak katalog
   // öyle kurmadı ve bu bir test verisi, kaynağın kurgusunu düzeltmek seed'in işi değil.
   {
-    ad: 'Cake Cup',
+    ad: 'Kek Bardağı',
     uyeler: [
       { slug: 'chocolate-cake-cup', dolgu: 'Chocolate' },
       { slug: 'pistachio-cake-cup', dolgu: 'Pistachio' },
@@ -594,8 +986,48 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
       { slug: 'raspberry-cheesecake', dolgu: 'Raspberry' },
     ],
   },
+  // ── ANADOLU MUTFAĞI ────────────────────────────────────────────────────────
   {
-    ad: 'Maraş Ice Cream',
+    // Kullanıcı kararı 16.08. Beşi de aynı masada, aynı kullanımda — "yanına ne alsam" sorusunun
+    // cevabı. **Vegan ürünler aile DEĞİL:** "vegan" bir çeşit değil bir özelliktir; çiğ köfte ile
+    // falafeli aynı seçicide göstermek, ikisini birbirinin alternatifi sanmak olurdu.
+    ad: 'Meze',
+    uyeler: [
+      { slug: 'hummus', dolgu: 'Hummus' },
+      { slug: 'saksuka', dolgu: 'Saksuka' },
+      { slug: 'carrot-tarator', dolgu: 'Carrot Tarator' },
+      { slug: 'spicy-turkish-tomato-dip', dolgu: 'Tomato Dip' },
+      { slug: 'eggplant-with-yogurt', dolgu: 'Eggplant Yogurt' },
+    ],
+  },
+  // ── TAVUK: baharat ve pişirme ekseni ───────────────────────────────────────
+  // Katalogda her kalemin sade ve acılı hâli ayrı ürün. Bu tam olarak bir çeşit eksenidir:
+  // müşteri "acılı mı alsam" diye soruyor ve iki kart yan yana durmalı.
+  {
+    ad: 'Tavuk Fileto',
+    uyeler: [
+      { slug: 'chicken-tender-fillet', dolgu: 'Plain' },
+      { slug: 'spicy-chicken-tender-fillet', dolgu: 'Spicy' },
+    ],
+  },
+  {
+    ad: 'Çıtır Tavuk Fileto',
+    uyeler: [
+      { slug: 'crispy-tender-fillet', dolgu: 'Crispy' },
+      { slug: 'crispy-spicy-tender-fillet', dolgu: 'Crispy Spicy' },
+    ],
+  },
+  {
+    ad: 'Tavuk Kanat',
+    uyeler: [
+      { slug: 'crispy-chicken-wings', dolgu: 'Crispy' },
+      { slug: 'crispy-spicy-chicken-wings', dolgu: 'Crispy Spicy' },
+      { slug: 'spicy-chicken-wings', dolgu: 'Spicy' },
+    ],
+  },
+  // ── DONDURMA ───────────────────────────────────────────────────────────────
+  {
+    ad: 'Maraş Dondurması',
     uyeler: [
       { slug: 'maras-ice-cream-plain', dolgu: 'Plain' },
       { slug: 'maras-ice-cream-cocoa', dolgu: 'Cocoa' },
@@ -603,7 +1035,7 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
     ],
   },
   {
-    ad: 'Maraş Ice Cream Slice',
+    ad: 'Maraş Dondurma Dilimi',
     uyeler: [
       { slug: 'maras-ice-cream-slice-plain', dolgu: 'Plain' },
       { slug: 'maras-ice-cream-slice-cocoa', dolgu: 'Cocoa' },
@@ -621,36 +1053,21 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
 async function aileleriKur(
   families: ProductFamilyService,
   products: ProductService,
-  kaynak: readonly { slug: string; name: LocalizedText }[],
   urunIdBySlug: Map<string, string>,
 ): Promise<number> {
-  const gruplar = new Map<string, Array<{ slug: string; dolgu: string }>>();
-  for (const p of kaynak) {
-    const parca = aileParcala(p.name.tr ?? '');
-    if (!parca) continue;
-    const grup = gruplar.get(parca.taban) ?? [];
-    // **AYNI ÇEŞİT İKİNCİ KEZ ALINMAZ.** Katalogda aynı dolgu birden çok pakette geçiyor
-    // (`Cheese` + `Cheese 6x80g`) ve ikisi de üye olsaydı yan yana AYNI ETİKETLİ iki kart
-    // çıkardı — müşteri iki "Peynirli" arasında seçim yapamaz. Modelde doğrusu bunların tek
-    // ürünün iki VARYANTI olmasıydı; kaynak katalog öyle kurmadığı için seed ilkini alıyor,
-    // ötekiler ailesiz normal ürün olarak kalıyor. Seed'in işi gerçekçi veri üretmek, kaynağın
-    // kurgusunu düzeltmek değil.
-    if (grup.some((u) => u.dolgu.toLowerCase() === parca.dolgu.toLowerCase())) continue;
-    grup.push({ slug: p.slug, dolgu: parca.dolgu });
-    gruplar.set(parca.taban, grup);
-  }
+  // **Liste ARTIK TEK KAYNAK** (16.08): addan türetme kaldırıldı, künyesi `ELLE_AILELER`'de.
+  // Tek üyeli aile yine kurulmaz — bir çeşidi olan ürün ailesizdir ve ekranda çeşit bloğu hiç
+  // çizilmez (brief §1b). Listede tek üyeli bir aile kalırsa bu bir yazım hatasıdır, süzülür.
+  const kurulacak = ELLE_AILELER.filter((a) => a.uyeler.length >= 2);
 
-  // Elle doğrulanmış aileler türetilenlerin YANINA gelir; slug'ları `… with …` desenine uymadığı
-  // için ikisi çakışmaz.
-  for (const aile of ELLE_AILELER) gruplar.set(aile.ad, [...aile.uyeler]);
-
-  // Kurulacak aileler ÖNCE süzülür: `gruplar` tek üyelileri de taşıyor ve onlar aile olmuyor.
-  // İlk yazımda "sonuncusu pasif" ölçütü `gruplar.size`e bakıyordu ve hiç tutmuyordu — ölçüldü
-  // (`seed:coverage`: "aile pasif" kovası boş kaldı). Süzülmüş liste üzerinden saymak tek doğru yol.
-  const kurulacak = [...gruplar].filter(([, uyeler]) => uyeler.length >= 2);
+  // **Üyesi katalogda BULUNAMAYAN satır sessiz geçmez.** Liste elle yazılıyor ve katalog
+  // değişebiliyor; tutmayan bir slug o çeşidi ekrandan sessizce düşürür — aile yine kurulur,
+  // yalnız bir kartı eksik olur, ki bu ancak sayılırsa fark edilir.
+  const eksikler = kurulacak.flatMap((a) => a.uyeler.filter((u) => !urunIdBySlug.has(u.slug)).map((u) => `${a.ad} → ${u.slug}`));
+  if (eksikler.length > 0) console.log(`  ⚠ aile üyesi katalogda yok (${eksikler.length}): ${eksikler.join(' · ')}`);
 
   let kurulan = 0;
-  for (const [taban, uyeler] of kurulacak) {
+  for (const { ad: taban, uyeler } of kurulacak) {
     // Aile adı TEK DİLLİ: yalnız operatör görüyor (kullanıcı kararı 04.08).
     // **Son aile PASİF** (kapsam denetimi 09.08): üyeleri satışta kalır ama "Çeşitler" bloğu
     // çizilmez (0004 künyesi). Silmek yerine pasifleştirme kuralının tek sınanma yeri burası.
