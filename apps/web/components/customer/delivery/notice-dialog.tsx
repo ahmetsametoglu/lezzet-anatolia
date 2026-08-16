@@ -69,6 +69,12 @@ export function NoticeDialog({ locale, title, body, doneText, onSubmit, onClose 
           <p className="font-sans text-note leading-relaxed text-body">{body}</p>
           <input
             type="email"
+            // Otomatik doldurma (16.08, kullanıcı tespiti): tarayıcı kayıtlı adresi ancak
+            // `name` + `autoComplete` ile önerir — müşteri yüzeyindeki öteki e-posta girişleriyle
+            // aynı donanım (giriş · misafir doğrulama · profesyonel başvurusu).
+            name="email"
+            inputMode="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
