@@ -7,65 +7,16 @@
 //
 // Para ekranda hep KURUŞ (cent) taşınır (STACK §8). Kanalın tabanı farklıdır ve bu bilgi satırda
 // yazılıdır: b2c KDV DAHİL, b2b hariç — ikisini aynı sayı sanmak marjı kaydırır.
-import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText, ProductStatus } from '@lezzet/types';
+import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { BatchView } from '@/lib/stock/batch-types';
+import type { PriceRow } from '@/lib/pricing/price-rows';
 import type { PriceScope, PriceTab } from './prices-url';
 
-/** Bir kanalın liste fiyatı — kendi tabanında. `null` = o kanalda fiyat YOK (satışa kapalı). */
-export interface ChannelPriceCell {
-  amountCents: number | null;
-  /** Fiyatın geçerlilik başlangıcı — "ne zamandan beri bu fiyat" sorusu ekranda yanıtlanabilsin. */
-  validFrom: string | null;
-}
-
-/**
- * Fiyat listesinin satırı — satır BOYDUR (satılabilir birim), ama kararın yarısı üründen gelir
- * (KDV oranı, hedef marj, otomatik fiyat anahtarı).
- */
-export interface PriceRow {
-  variantId: string;
-  productId: string;
-  productName: string;
-  variantLabel: string;
-  /** Listede görünen tam ad — "Fıstıklı Baklava · 1 kg". */
-  title: string;
-  /** Ürün görseli (public URL) — satır başındaki küçük görsel; yoksa placeholder ikon (`Thumbnail`). */
-  imageUrl: string | null;
-  categoryName: string;
-  status: ProductStatus;
-  /** Boy satışa kapalıysa fiyatı yine görünür; ekran sebebi söyler. */
-  variantActive: boolean;
-  b2c: ChannelPriceCell;
-  b2b: ChannelPriceCell;
-  /**
-   * Yenileme maliyeti: SON alış fiyatı (KDV hariç) — "bunu yeniden almak kaça". `null` = hiç alış yok —
-   * "bilmiyorum", sıfır değil: maliyeti sıfır saymak marjı sonsuz gösterirdi.
-   */
-  costCents: number | null;
-  /** Kanallar içindeki EN DAR marj — uyarının ölçütü (bkz. `tightestMargin`). */
-  marginPercent: number | null;
-  /** Dar marjın hangi kanaldan geldiği — tek sayının hangi fiyata ait olduğu görünsün. */
-  marginChannel: Channel | null;
-  targetMarginPercent: number | null;
-  /** B2B'ye özel hedef (15.08); `null` = ortak hedef B2B'de de geçerli (`targetMarginFor`). */
-  targetMarginB2bPercent: number | null;
-  /**
-   * HERHANGİ bir kanal KENDİ hedefinin altında mı; hiçbir kanal için karar verilemiyorsa `null`.
-   * Kanal başına hedefle (15.08) tek soruya indirgenemezdi: uyarının işi riski göstermek.
-   */
-  belowTarget: boolean | null;
-  autoPrice: boolean;
-  /**
-   * Son alış geçmişten belirgin saptıysa dolu — otomatik fiyat bu satırda BEKLER, karar admin'in.
-   * `null` = taban güvenilir (ya da hiç maliyet yok; onu `costCents` söyler).
-   */
-  costJump: { medianCents: number; deviationPercent: number } | null;
-  /** Ürünün KDV oranı (yüzde) — diyalog marjı bu tabana göre çevirir. */
-  vatRate: number;
-  /** En az bir kanalda fiyat yok — "o kanalda satışa kapalı" göstergesi. */
-  missingPrice: boolean;
-}
+// Fiyat satırı tipleri LIB'E TAŞINDI (16.08): ikinci tüketen doğdu (ürünler önizlemesinin fiyat
+// bakışı) ve kardeş sayfadan yalnız `*-url` import edilir (STACK §7). Buradaki re-export, sayfanın
+// kendi dosyalarının import yollarını korur — tanım tek yerde.
+export type { ChannelPriceCell, PriceRow } from '@/lib/pricing/price-rows';
 
 /** Müşteriye özel fiyat satırı — çözüm sırasının en üstündeki basamak. */
 export interface CustomerPriceRow {

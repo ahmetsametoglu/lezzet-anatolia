@@ -9,7 +9,7 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { repriceAllAuto, repriceProduct } from '@/lib/pricing/auto-price';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
-import { toPriceRows, type ChannelPriceMaps } from './prices-read';
+import { toPriceRows, type ChannelPriceMaps } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import { type PriceRow, type VariantOption } from './prices-types';

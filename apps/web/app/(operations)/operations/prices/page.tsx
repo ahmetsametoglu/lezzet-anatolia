@@ -12,12 +12,13 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { costOf, needsExpiryAttention } from '@lezzet/domain-core';
-import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
+import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { PricesClient } from './prices-client';
-import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
+import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows } from './prices-read';
+import { toChannelMaps, toPriceRows } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceRow } from './prices-types';
@@ -104,16 +105,6 @@ async function readChannelTab(
     rows: toPriceRows({ products: page.rows, prices: toChannelMaps(b2cMap, b2bMap), costs, categoryNames }),
     nextCursor: page.nextCursor,
   };
-}
-
-/** İki kanalın çözüm haritasını satır haritasına indirger — özel fiyat burada aranmaz (kanal listesi). */
-function toChannelMaps(
-  b2c: Map<string, { channelPrice: Price | null }>,
-  b2b: Map<string, { channelPrice: Price | null }>,
-): ChannelPriceMaps {
-  const pick = (map: Map<string, { channelPrice: Price | null }>): Map<string, Price> =>
-    new Map([...map].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice] as const] : [])));
-  return { b2c: pick(b2c), b2b: pick(b2b) };
 }
 
 /**

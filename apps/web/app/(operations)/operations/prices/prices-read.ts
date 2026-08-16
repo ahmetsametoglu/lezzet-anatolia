@@ -1,15 +1,7 @@
-import { costOf, isBelowTargetMargin, revenueHtOf, targetMarginFor, tightestMargin, type CostBasis } from '@lezzet/domain-core';
-import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText, type Channel, type Discount, type DiscountCode, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
+import { targetMarginFor } from '@lezzet/domain-core';
+import { type Discount, type DiscountCode, type Price, type UserProfile } from '@lezzet/types';
 import type { DiscountUsage } from '@lezzet/database';
-import { titleOf } from '@/lib/catalog/title';
-import {
-  type ChannelPriceCell,
-  type CustomerPriceRow,
-  type DiscountCustomerRow,
-  type DiscountRow,
-  type PriceRow,
-} from './prices-types';
+import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow } from './prices-types';
 
 // DB satırı → view-model indirgemesi. RSC ve server action'lar bunu PAYLAŞIR: ilk sayfa ile sonraki
 // sayfalar aynı şekli üretsin diye tek yerde durur.
@@ -19,100 +11,9 @@ import {
 // kritiktir: b2c fiyatı KDV DAHİL, b2b hariç, maliyet hariç. Tabanı karıştırmak marjı KDV oranı
 // kadar şişirir ve zararına satışı kârlı gösterir.
 
-/** İki kanalın "şu an geçerli" fiyat satırları, varyant kimliğine göre. */
-export interface ChannelPriceMaps {
-  b2c: Map<string, Price>;
-  b2b: Map<string, Price>;
-}
-
-const cellOf = (price: Price | undefined): ChannelPriceCell =>
-  price ? { amountCents: price.amountCents, validFrom: price.validFrom } : { amountCents: null, validFrom: null };
-
-interface PriceRowInput {
-  products: ProductPriceRow[];
-  prices: ChannelPriceMaps;
-  /**
-   * Varyant başına maliyet TABANI (kuruş) — yenileme maliyeti + aykırı freni (`readCostBasis`).
-   * Otomatik fiyatın kullandığı tabanın AYNISI: ayrılsalardı ekran, sistemin kendi yazdığı fiyatı
-   * "marj-altı" diye işaretleyebilirdi.
-   */
-  costs: Map<string, CostBasis>;
-  categoryNames: Map<string, string>;
-}
-
-/**
- * Ürün sayfasını fiyat SATIRLARINA açar: bir ürün, boyları kadar satır üretir.
- *
- * Pasif boy de listelenir ve bu bilinçli: fiyatı olan ama satışa kapalı bir boy, "neden satılmıyor"
- * sorusunun cevabıdır — gizlemek soruyu görünmez kılardı.
- */
-export function toPriceRows({ products, prices, costs, categoryNames }: PriceRowInput): PriceRow[] {
-  return products.flatMap((product) => {
-    const productName = resolveLocalizedText(product.name);
-    const categoryName = product.categoryId ? (categoryNames.get(product.categoryId) ?? '') : '';
-
-    // Boy sırası SABİT: gömülü seçim sırayı garanti etmez, aynı ürünün boyları iki yenilemede yer
-    // değiştirirse fiyat karşılaştırması yapılamaz.
-    const variants = [...product.variants].sort((a, b) => a.sortOrder - b.sortOrder);
-
-    return variants.map((variant): PriceRow => {
-      const b2c = cellOf(prices.b2c.get(variant.id));
-      const b2b = cellOf(prices.b2b.get(variant.id));
-      const basis = costs.get(variant.id);
-      const costCents = basis ? costOf(basis) : null;
-
-      // Marj her kanal için ayrı çıkar; ekran TEK sayı gösterir → en darı (bkz. `tightestMargin`).
-      const entries: Array<{ channel: Channel; revenueHtCents: number }> = [];
-      if (b2c.amountCents !== null) entries.push({ channel: 'b2c', revenueHtCents: revenueHtOf('b2c', b2c.amountCents, product.vatRate) });
-      if (b2b.amountCents !== null) entries.push({ channel: 'b2b', revenueHtCents: revenueHtOf('b2b', b2b.amountCents, product.vatRate) });
-
-      const tightest = tightestMargin(entries, costCents);
-
-      // Marj-altı kararı KANAL BAŞINA (15.08): her kanal KENDİ hedefine kıyaslanır (B2B'ye özel
-      // hedef varsa o). Uyarı herhangi bir kanal hedef altındaysa yanar — en dar marjı tek ortak
-      // hedefe kıyaslamak, B2B hedefi ayrışınca yanlış kanalı suçlardı.
-      const channelVerdicts = entries.map((e) =>
-        isBelowTargetMargin(
-          e.revenueHtCents,
-          costCents,
-          targetMarginFor(e.channel, product.targetMarginPercent, product.targetMarginB2bPercent),
-        ),
-      );
-      const decided = channelVerdicts.filter((v): v is boolean => v !== null);
-
-      return {
-        variantId: variant.id,
-        productId: product.id,
-        productName,
-        variantLabel: resolveLocalizedText(variant.label),
-        title: titleOf(productName, resolveLocalizedText(variant.label)),
-        // Görsel ÜRÜNÜN — aynı ürünün boyları aynı görseli taşır (products-read ile aynı türetme).
-        imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
-        categoryName,
-        status: product.status,
-        variantActive: variant.isActive,
-        b2c,
-        b2b,
-        costCents,
-        marginPercent: tightest?.percent ?? null,
-        marginChannel: (tightest?.channel as Channel | undefined) ?? null,
-        targetMarginPercent: product.targetMarginPercent,
-        targetMarginB2bPercent: product.targetMarginB2bPercent,
-        belowTarget: decided.length === 0 ? null : decided.some(Boolean),
-        autoPrice: product.autoPrice,
-        // Maliyet sıçraması satırla birlikte taşınır: otomatik fiyatın neden beklediğini ekran
-        // ancak bu bilgiyle söyleyebilir (sessiz duran otomatik, bozuk otomatiktir).
-        costJump:
-          basis?.status === 'outlier'
-            ? { medianCents: basis.medianCents, deviationPercent: Math.round(basis.deviationPercent) }
-            : null,
-        vatRate: product.vatRate,
-        missingPrice: b2c.amountCents === null || b2b.amountCents === null,
-      };
-    });
-  });
-}
-
+// `toPriceRows` + `ChannelPriceMaps` LIB'E TAŞINDI (16.08 — `lib/pricing/price-rows`): ürünler
+// önizlemesinin fiyat bakışı diyaloğu da aynı satırı kuruyor; kardeş sayfadan import edilemezdi
+// (STACK §7), kopyalamak marj tanımını iki yerde yaşatırdı.
 /** Profilin ekranda görünen adı — adı boşsa kimlik kaybolmasın diye telefon/e-posta yedeği. */
 function customerLabel(profile: UserProfile | undefined, fallbackId: string): string {
   if (!profile) return 'Silinmiş müşteri';

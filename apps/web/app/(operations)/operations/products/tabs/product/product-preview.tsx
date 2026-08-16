@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { useState, type ReactNode } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { AlertIcon, CheckIcon, InfoIcon } from '@/components/operation/ui/icons';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { StatusBadge } from './status-badge';
+import { PricePeekDialog } from './price-peek-dialog';
+import { StockPeekDialog } from './stock-peek-dialog';
 import { DECLARATION_GAP_LABELS, missingDeclarations, resolveLocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { filledContentLangs, type FamilyView, type ProductView } from '../../products-types';
@@ -158,6 +159,9 @@ function FamilySiblings({
 }
 
 export function ProductPreview({ product, onEdit, families, onSelectProduct }: ProductPreviewProps) {
+  // Bakış diyalogları panelin KENDİ durumu: seçim değişince (`product` değişir) açık diyalog o
+  // ürünle yeniden kurulur — `key` ürün kimliği, bayat veri sızmaz.
+  const [peek, setPeek] = useState<'prices' | 'stock' | null>(null);
   return (
     <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-subtle">
       {/* Sticky başlık */}
@@ -213,20 +217,24 @@ export function ProductPreview({ product, onEdit, families, onSelectProduct }: P
           {/* Durum notu */}
           <DeclarationNote product={product} />
 
-          {/* Köprüler + Düzenle */}
+          {/* Bakışlar + Düzenle — Fiyatlar/Stok artık SAYFAYA GÖNDERMEZ, diyalog açar (16.08,
+              kullanıcı kararı): operatör ürünün yanından ayrılmadan bakar; tam ekrana köprü
+              diyalogların başlığında durur. */}
           <div className="flex gap-2 border-t border-ops-line pt-3">
-            <Link
-              href={`/operations/prices?productId=${product.id}`}
-              className="flex-1 rounded-ops-btn border border-ops-olive-line py-[9px] text-center font-ops-display text-ops-sm font-semibold text-ops-olive hover:bg-ops-olive-bg"
+            <button
+              type="button"
+              onClick={() => setPeek('prices')}
+              className="flex-1 cursor-pointer rounded-ops-btn border border-ops-olive-line py-[9px] text-center font-ops-display text-ops-sm font-semibold text-ops-olive hover:bg-ops-olive-bg"
             >
-              Fiyatlar →
-            </Link>
-            <Link
-              href={`/operations/stock?productId=${product.id}`}
-              className="flex-1 rounded-ops-btn border border-ops-olive-line py-[9px] text-center font-ops-display text-ops-sm font-semibold text-ops-olive hover:bg-ops-olive-bg"
+              Fiyatlar
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeek('stock')}
+              className="flex-1 cursor-pointer rounded-ops-btn border border-ops-olive-line py-[9px] text-center font-ops-display text-ops-sm font-semibold text-ops-olive hover:bg-ops-olive-bg"
             >
-              Stok →
-            </Link>
+              Stok
+            </button>
             <button
               type="button"
               onClick={onEdit}
@@ -237,6 +245,23 @@ export function ProductPreview({ product, onEdit, families, onSelectProduct }: P
           </div>
 
           <FamilySiblings product={product} families={families} onSelectProduct={onSelectProduct} />
+
+          {peek === 'prices' ? (
+            <PricePeekDialog
+              key={product.id}
+              productId={product.id}
+              productName={resolveLocalizedText(product.name)}
+              onClose={() => setPeek(null)}
+            />
+          ) : null}
+          {peek === 'stock' ? (
+            <StockPeekDialog
+              key={product.id}
+              productId={product.id}
+              productName={resolveLocalizedText(product.name)}
+              onClose={() => setPeek(null)}
+            />
+          ) : null}
         </div>
       )}
     </div>
