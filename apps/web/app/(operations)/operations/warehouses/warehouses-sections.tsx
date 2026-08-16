@@ -5,6 +5,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
 import { AlertIcon, InfoIcon, WarehouseIcon } from '@/components/operation/ui/icons';
+import { SortableList } from '@/components/operation/ui/sortable-list';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { decimal, money, num, shortDateTime } from '@/components/operation/ui/format';
 import type { Country } from '@lezzet/types';
@@ -12,13 +13,7 @@ import type { ZoneDemandRow } from '@/lib/delivery/zone-demand';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
-import {
-  addressOneLine,
-  postalCodeLabel,
-  statusLabel,
-  statusTone,
-  weekdayList,
-} from './warehouses-labels';
+import { postalCodeLabel, weekdayList } from './warehouses-labels';
 import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
@@ -58,139 +53,93 @@ export function SetupGapNote({ text }: { text: string }) {
   );
 }
 
-/** Liste satırı — künye üstte, sayılar çip olarak altta; kurulum eksikse gerekçesiyle. */
-export function WarehouseListRow({
-  row,
-  index,
-  handle,
-  onOpen,
-}: {
-  row: WarehouseRowView;
-  index: number;
-  handle?: React.ReactNode;
-  onOpen: () => void;
-}) {
-  const address = addressOneLine(row.address, row.countryCode);
-  return (
-    <article
-      onClick={onOpen}
-      className={[
-        'flex cursor-pointer flex-col gap-2.5 rounded-ops-card border px-4 py-3 transition-colors',
-        row.isActive ? 'border-ops-line bg-ops-card hover:border-ops-olive-line' : 'border-ops-line bg-ops-subtle opacity-70',
-      ].join(' ')}
-    >
-      <div className="flex flex-wrap items-center gap-2.5">
-        {handle ?? <span className="font-ops-mono text-ops-xs text-ops-faint">{index + 1}</span>}
-        <span className="flex-none rounded-ops-btn border border-ops-line-strong bg-ops-line-soft px-2 py-0.5 font-ops-mono text-ops-sm font-semibold text-ops-ink">
-          {row.code}
-        </span>
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{row.name}</span>
-        <span className="font-ops-body text-ops-sm text-ops-muted">{COUNTRY_LABELS[row.countryCode]}</span>
-        <span className="flex-1" />
-        {row.shipsOnline ? (
-          <Badge tone="blue" outline>
-            Kargo çıkışı
-          </Badge>
-        ) : null}
-        <Badge tone={statusTone(row)}>{statusLabel(row)}</Badge>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {address ? <span className="mr-auto font-ops-body text-ops-sm text-ops-body">{address}</span> : null}
-        <RowStats row={row} />
-      </div>
-
-      {row.setupGap ? <SetupGapNote text={row.setupGap} /> : null}
-    </article>
-  );
-}
+// `WarehouseListRow` SİLİNDİ (16.08) — tek görünüme geçerken liste görünümü kalktı ve satırın
+// çizecek yeri kalmadı. Taşıdığı bilgiler kayıp değil: künye (kod · ad · ülke · rozetler) başlık
+// barına, sayılar Karne bölümüne, kurulum uyarısı detayın en üstündeki `SetupGapNote`a düştü.
+// `RowStats` de onunla gitti — tek tüketicisi oydu.
 
 /**
- * Satırın özet sayıları. Hepsi aynı soruya hizmet eder: **bu tesis işe yarıyor mu.** Sıfır olan
- * sayı gizlenmez, KIRMIZI yazılır — "bölge yok" bir eksiklik hâlidir, boşluk değil.
+ * **Tesis şeridi** — başlığın hemen altında, yatay (kullanıcı kararı 16.08).
+ *
+ * ── NEDEN SOL RAY DEĞİL ARTIK ────────────────────────────────────────────────
+ * Ekran 16.08'e kadar İKİ görünümdü: seçim yokken tesis listesi, seçim varken sol ray + kart. Yani
+ * aynı sayfanın iki hâli vardı ve aralarında gidip gelmek gerekiyordu — "tüm depolar"a dönmeden
+ * ikinci tesise bakılamıyordu. Kullanıcının tarifi tek cümleydi: *"başlığın hemen altına depo
+ * isimlerini koyalım, seçtiği deponun detayı aşağıda görünsün."* Şerit yatay olunca liste
+ * görünümüne gerek kalmıyor: tesisler her zaman görünür, detay hep altta.
+ *
+ * ── SIRA SÜRÜKLENEBİLİR VE BU BİR İŞLEV ──────────────────────────────────────
+ * Sıralama liste görünümünden BURAYA taşındı, kaybolmadı: operatörün dizdiği sıra sistemdeki
+ * **bütün** depo seçicilerinde geçerli (bağlam seçicisi, tablo süzgeci, transfer hedefi). Şerit onu
+ * taşımasaydı sıralama yapılabilecek tek yer yok olurdu.
+ *
+ * Sürüklemek ile seçmek çakışmıyor: sürükle-bırak 5 px hareket eşiği istiyor, hareketsiz basış
+ * normal tıklama olarak işliyor (galeri karesinin ölçülmüş deseni, `image-gallery.tsx`).
  */
-function RowStats({ row }: { row: WarehouseRowView }) {
-  const stats: Array<{ label: string; tone?: 'amber' | 'red' | 'blue' }> = [];
-
-  stats.push(
-    row.activeZoneCount === 0
-      ? { label: 'bölge yok', tone: 'red' }
-      : { label: `${row.activeZoneCount} bölge · ${row.postalCodeCount} posta kodu` },
-  );
-  stats.push(row.staffCount === 0 ? { label: 'personel yok', tone: 'red' } : { label: `${row.staffCount} personel` });
-  stats.push(
-    row.batchCount === 0
-      ? { label: 'stok yok' }
-      : { label: `${row.variantCount} varyant · ${row.batchCount} parti` },
-  );
-  if (row.attentionCount > 0) stats.push({ label: `${row.attentionCount} yaklaşan tarihli`, tone: 'amber' });
-  if (row.inTransitIn + row.inTransitOut > 0) {
-    stats.push({ label: `${row.inTransitIn + row.inTransitOut} sevkiyat yolda`, tone: 'blue' });
-  }
-
-  return (
-    <>
-      {stats.map((s) => (
-        <Badge key={s.label} tone={s.tone ?? 'neutral'} outline>
-          {s.label}
-        </Badge>
-      ))}
-    </>
-  );
-}
-
-/** Tesis rayı — kart görünümündeki sol şerit. Bağlam bu listeyi DARALTMAZ. */
-export function FacilityRail({
+export function FacilityStrip({
   rows,
   activeCode,
   onSelect,
+  onReorder,
 }: {
   rows: readonly WarehouseRowView[];
   activeCode: string;
   onSelect: (code: string) => void;
+  onReorder: (ids: string[]) => void;
 }) {
   return (
-    <div className="flex w-[186px] flex-none flex-col border-r border-ops-line bg-ops-subtle">
-      <div className="flex flex-col gap-px border-b border-ops-line px-3.5 py-3">
-        <span className="font-ops-display text-ops-base font-semibold text-ops-ink">Tesisler</span>
-        <span className="font-ops-body text-ops-xs text-ops-muted">operatör sırası</span>
+    <div className="flex flex-none flex-col gap-2 border-b border-ops-line bg-ops-subtle px-6 py-3">
+      <div className="flex items-baseline gap-2">
+        <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">Tesisler</span>
+        <span className="font-ops-body text-ops-micro text-ops-faint">
+          sürükleyerek sırala — sıra tüm depo seçicilerinde aynıdır
+        </span>
+        <span className="ml-auto font-ops-body text-ops-micro text-ops-faint">bağlam bu listeyi daraltmaz</span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-2">
-        {rows.map((row) => {
-          const on = row.code === activeCode;
-          return (
-            <button
-              key={row.id}
-              type="button"
-              onClick={() => onSelect(row.code)}
-              aria-current={on ? 'true' : undefined}
-              className={[
-                'flex cursor-pointer flex-col gap-0.5 rounded-ops-btn border px-2.5 py-2 text-left transition-colors',
-                on ? 'border-l-[3px] border-ops-olive bg-ops-card' : 'border-ops-line bg-ops-card hover:border-ops-olive-line',
-                row.isActive ? '' : 'opacity-70',
-              ].join(' ')}
-            >
-              <span className="flex items-baseline gap-1.5">
-                <span className="font-ops-mono text-ops-sm font-semibold text-ops-ink">{row.code}</span>
-                <span className="min-w-0 flex-1 truncate font-ops-display text-ops-sm font-semibold text-ops-ink">
-                  {row.name}
-                </span>
-              </span>
-              <span className={['font-ops-body text-ops-xs', row.setupGap || !row.isActive ? 'text-ops-amber' : 'text-ops-muted'].join(' ')}>
-                {railNote(row)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="border-t border-ops-line px-3.5 py-2.5 font-ops-body text-ops-micro leading-relaxed text-ops-muted">
-        Bağlam bu listeyi daraltmaz — depolar yönetim nesnesidir.
+
+      {/* `SortableList` DOM kabı çizmez (dnd sağlayıcıları eleman üretmez) — satırlar doğrudan bu
+          kaba düşer, o yüzden yatay akış ve aralık BURADA tanımlı. */}
+      <div className="flex flex-wrap gap-2">
+        <SortableList
+          items={[...rows]}
+          getId={(row) => row.id}
+          layout="grid"
+          grab="item"
+          onReorder={onReorder}
+          renderItem={(row) => <FacilityChip row={row} active={row.code === activeCode} onSelect={() => onSelect(row.code)} />}
+        />
       </div>
     </div>
   );
 }
 
-/** Raydaki alt satır: tesisin durumu tek cümlede. Sıralama ağırlığa göre — en kötü hâl kazanır. */
+/** Şeritteki tek tesis. Seçili olan sol kenarından işaretlenir — rozet değil, kenar: sessiz ama net. */
+function FacilityChip({ row, active, onSelect }: { row: WarehouseRowView; active: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={active ? 'true' : undefined}
+      className={[
+        'flex min-w-[168px] cursor-pointer flex-col gap-0.5 rounded-ops-btn border px-2.5 py-2 text-left transition-colors',
+        active
+          ? 'border-l-[3px] border-ops-olive bg-ops-card shadow-sm'
+          : 'border-ops-line bg-ops-card hover:border-ops-olive-line',
+        row.isActive ? '' : 'opacity-70',
+      ].join(' ')}
+    >
+      <span className="flex items-baseline gap-1.5">
+        <span className="font-ops-mono text-ops-sm font-semibold text-ops-ink">{row.code}</span>
+        <span className="min-w-0 flex-1 truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{row.name}</span>
+      </span>
+      <span className={['font-ops-body text-ops-xs', row.setupGap || !row.isActive ? 'text-ops-amber' : 'text-ops-muted'].join(' ')}>
+        {railNote(row)}
+      </span>
+    </button>
+  );
+}
+
+/** Şeritteki alt satır: tesisin durumu tek cümlede. Sıralama ağırlığa göre — en kötü hâl kazanır. */
 function railNote(row: WarehouseRowView): string {
   if (!row.isActive) return 'kapalı';
   if (row.setupGap) return 'kurulumu eksik';

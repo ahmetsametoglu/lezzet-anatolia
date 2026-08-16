@@ -5,36 +5,47 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { SortableList } from '@/components/operation/ui/sortable-list';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
 import {
-  FacilityRail,
+  FacilityStrip,
   FactCard,
   Scorecard,
   SectionHead,
   SetupGapNote,
   ShippingGapBanner,
   StaffChips,
-  WarehouseListRow,
   ZoneCard,
   ZoneDemandTable,
 } from './warehouses-sections';
 import type { WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
-import type { WarehousesUrlState } from './warehouses-url';
 
-// Depolar — web. İki görünüm, tek ekran:
-//  · seçim yokken  → tesis LİSTESİ (sıralanabilir; sıra tüm depo seçicilerinde aynıdır)
-//  · seçim varken  → tesis rayı + KART (künye · hizmet alanı · karne · personel)
+// Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin
+// detayı. Alt alta, hepsi aynı ekranda.
 //
+// ── ÖNCE İKİ GÖRÜNÜMDÜ VE SORUN ORADAYDI ────────────────────────────────────
+// 16.08'e kadar sayfa iki hâl arasında gidip geliyordu: seçim yokken tesis listesi, seçim varken
+// sol ray + kart. İkinci tesise bakmak için önce "tüm depolar"a dönmek gerekiyordu ve aynı nesnenin
+// iki ayrı sayfası varmış gibi duruyordu. Kullanıcının tarifi tek cümleydi: *"başlığın hemen altına
+// depo isimlerini koyalım, seçtiği deponun detayı aşağıdaki bölümde görünsün."*
+//
+// **Liste görünümünün taşıdığı hiçbir şey kaybolmadı:** sıralama şeride geçti (`FacilityStrip`),
+// kargo boşluğu uyarısı ve ağ geneli talep tablosu detayın ALTINDA ayrı bir bölüm oldu — ikisi de
+// tesise değil AĞA ait ve o ayrım metinle söyleniyor.
+//
+// ── BAŞLIK SEÇİLİ TESİSİN ────────────────────────────────────────────────────
 // Tasarım kartı kendi iç başlığıyla çiziyordu (kod + ad + adres + rozetler). O başlık ortak başlık
-// barına (09.19) TAŞINDI: iki bar üst üste dikey alanı ikinci kez öderdi ve barın var oluş sebebi
-// tam tersiydi. Rozetler ve "Künyeyi düzenle" barın ekran-işleri yuvasında duruyor.
+// barına (09.19) TAŞINDI: iki bar üst üste dikey alanı ikinci kez öderdi. Rozetler ve "Künyeyi
+// düzenle" barın ekran-işleri yuvasında duruyor; "+ Depo" da orada, çünkü artık liste görünümü yok.
+//
+// ── KABUĞUN DEPO SEÇİCİSİ BU SAYFADA GİZLİ ──────────────────────────────────
+// `hideWarehousePicker` — sayfanın kendi şeridi geldiğinde barda iki seçici yan yana düşüyordu:
+// biri ekranı değiştiriyor, öteki hiçbir şey yapmıyor (sayfa depo bağlamını daraltıcı olarak
+// okumuyor). Gerekçenin tamamı `PageHeader` künyesinde.
 
 interface WarehousesViewProps {
   data: WarehousesData;
-  urlState: WarehousesUrlState;
   navPending: boolean;
   onSelect: (code: string) => void;
   onNewWarehouse: () => void;
@@ -45,134 +56,91 @@ interface WarehousesViewProps {
 
 export function WarehousesDesktop(props: WarehousesViewProps) {
   const { data } = props;
-  return data.card ? <FacilityView {...props} card={data.card} /> : <ListView {...props} />;
+  return <FacilityView {...props} card={data.card} />;
 }
 
-// ── Liste görünümü ──────────────────────────────────────────────────────────
+/**
+ * Tesis şeridinin sırası — sürükleme anında listeyi yerinde tutar, sunucu cevabı gelince
+ * `router.refresh()` gerçeği geri yazar (hata hâlinde şerit sunucunun bildiğine döner).
+ *
+ * Sıra OPERATÖRÜNDÜR ve sistemdeki **bütün** depo seçicilerinde aynıdır (bağlam seçicisi, tablo
+ * süzgeci, transfer hedefi) — bu yüzden liste görünümü kalkarken sıralama da onunla gitmedi.
+ */
+function useFacilityOrder(rows: readonly WarehouseRowView[]) {
+  const router = useRouter();
+  const [order, setOrder] = useState(rows);
+  useEffect(() => setOrder(rows), [rows]);
 
-function ListView({ data, navPending, onSelect, onNewWarehouse }: WarehousesViewProps) {
-  const active = data.rows.filter((r) => r.isActive);
-  const parts = [
-    `${active.length} aktif`,
-    data.rows.length - active.length > 0 ? `${data.rows.length - active.length} kapalı` : null,
-    active.some((r) => r.setupGap) ? `${active.filter((r) => r.setupGap).length} kurulumu eksik` : null,
-    'sıra tüm depo seçicilerinde aynıdır',
-  ].filter(Boolean);
+  const reorder = (ids: string[]) => {
+    const byId = new Map(order.map((r) => [r.id, r]));
+    setOrder(ids.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : [])));
+    void reorderWarehousesAction(ids).then(() => router.refresh());
+  };
+
+  return { order, reorder };
+}
+
+// ── Tesis görünümü ──────────────────────────────────────────────────────────
+
+function FacilityView({
+  data,
+  navPending,
+  onSelect,
+  onNewWarehouse,
+  onEditWarehouse,
+  onNewZone,
+  onEditZone,
+  card,
+}: WarehousesViewProps & { card: WarehouseCardView | null }) {
+  const { order, reorder } = useFacilityOrder(data.rows);
+  const row = card?.row ?? null;
+  const address = row ? addressOneLine(row.address, row.countryCode) : null;
+  const codeCount = card ? card.zones.filter((z) => z.isActive).reduce((sum, z) => sum + z.postalCodes.length, 0) : 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Depolar" subtitle={parts.join(' · ')}>
+      <PageHeader
+        title={row?.name ?? 'Depolar'}
+        hideWarehousePicker
+        // Hâl BAŞLIĞIN yanında, aksiyonların arasında değil: rozet bir durumdur, kontrol değil.
+        status={
+          row ? (
+            <>
+              <Badge tone={statusTone(row)}>{statusLabel(row)}</Badge>
+              {row.shipsOnline ? (
+                <Badge tone="blue" outline>
+                  Kargo çıkışı · {COUNTRY_LABELS[row.countryCode]}
+                </Badge>
+              ) : null}
+            </>
+          ) : undefined
+        }
+        subtitle={
+          row ? (
+            <span className="flex items-center gap-1.5">
+              <span className="font-ops-mono font-semibold text-ops-body">{row.code}</span>
+              <span>· {address ?? 'adres girilmedi'}</span>
+            </span>
+          ) : (
+            'henüz tesis yok — ilkini ekleyin'
+          )
+        }
+      >
+        {row ? (
+          <Button variant="secondary" onClick={() => onEditWarehouse(row)}>
+            Künyeyi düzenle
+          </Button>
+        ) : null}
         <Button variant="primary" onClick={onNewWarehouse}>
           + Depo
         </Button>
       </PageHeader>
 
-      <ShippingGapBanner countries={data.countriesWithoutShipping} />
+      {order.length > 0 ? (
+        <FacilityStrip rows={order} activeCode={row?.code ?? ''} onSelect={onSelect} onReorder={reorder} />
+      ) : null}
 
-      <div
-        aria-busy={navPending || undefined}
-        className={['min-h-0 flex-1 overflow-y-auto px-6 py-4', navPending ? 'pointer-events-none opacity-60' : ''].join(' ')}
-      >
-        {/* Aralığı KAP verir: `SortableList` DOM kabı çizmiyor (dnd sağlayıcıları eleman üretmez),
-            satırlar doğrudan buraya düşüyor. Çerçeveli kartlar bitişik durursa kenarlıklar üst üste
-            biner ve liste kırık okunur — ayraçlı listelerde (katalog üyeleri, paket kalemleri)
-            bitişiklik doğru, burada değil. */}
-        <div className="flex flex-col gap-2.5">
-          <WarehouseList rows={data.rows} onSelect={onSelect} />
-        </div>
-        <p className="px-0.5 pb-1 pt-3 font-ops-body text-ops-sm leading-relaxed text-ops-muted">
-          Kapalı depo listeden silinmez — geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorundadır. Hiçbir
-          seçicide, süzgeçte ve transfer hedefinde görünmez.
-        </p>
-
-        {/* Talep tablosu TESİS panelinde değil LİSTE görünümünde: sorduğu şey "hangi tesis nasıl
-            duruyor" değil, "ağ olarak nereye açılmalıyız". Bir tesisin altına konsaydı aynı tablo
-            her tesiste tekrarlanır ve hiçbirine ait olmazdı. */}
-        <ZoneDemandTable rows={data.zoneDemand} />
-      </div>
-    </div>
-  );
-}
-
-/**
- * Sıralanabilir tesis listesi.
- *
- * Sıra OPERATÖRÜNDÜR ve sistemdeki **bütün** depo seçicilerinde aynıdır (bağlam seçicisi, tablo
- * süzgeci, transfer hedefi). Yerel durum sürükleme anında listeyi yerinde tutar; sunucu cevabı
- * gelince `router.refresh()` gerçeği geri yazar — hata hâlinde liste sunucunun bildiğine döner.
- */
-function WarehouseList({ rows, onSelect }: { rows: readonly WarehouseRowView[]; onSelect: (code: string) => void }) {
-  const router = useRouter();
-  const [order, setOrder] = useState(rows);
-  useEffect(() => setOrder(rows), [rows]);
-
-  return (
-    <SortableList
-      items={[...order]}
-      getId={(row) => row.id}
-      onReorder={(ids) => {
-        const byId = new Map(order.map((r) => [r.id, r]));
-        setOrder(ids.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : [])));
-        void reorderWarehousesAction(ids).then(() => router.refresh());
-      }}
-      renderItem={(row, handle) => (
-        <WarehouseListRow
-          row={row}
-          index={order.indexOf(row)}
-          handle={handle}
-          onOpen={() => onSelect(row.code)}
-        />
-      )}
-    />
-  );
-}
-
-// ── Tesis kartı ─────────────────────────────────────────────────────────────
-
-function FacilityView({
-  data,
-  urlState,
-  navPending,
-  onSelect,
-  onEditWarehouse,
-  onNewZone,
-  onEditZone,
-  card,
-}: WarehousesViewProps & { card: WarehouseCardView }) {
-  const { row } = card;
-  const address = addressOneLine(row.address, row.countryCode);
-  const codeCount = card.zones.filter((z) => z.isActive).reduce((sum, z) => sum + z.postalCodes.length, 0);
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader
-        title={row.name}
-        // Hâl BAŞLIĞIN yanında, aksiyonların arasında değil: rozet bir durumdur, kontrol değil.
-        status={
-          <>
-            <Badge tone={statusTone(row)}>{statusLabel(row)}</Badge>
-            {row.shipsOnline ? (
-              <Badge tone="blue" outline>
-                Kargo çıkışı · {COUNTRY_LABELS[row.countryCode]}
-              </Badge>
-            ) : null}
-          </>
-        }
-        subtitle={
-          <span className="flex items-center gap-1.5">
-            <span className="font-ops-mono font-semibold text-ops-body">{row.code}</span>
-            <span>· {address ?? 'adres girilmedi'}</span>
-          </span>
-        }
-      >
-        <Button variant="secondary" onClick={() => onEditWarehouse(row)}>
-          Künyeyi düzenle
-        </Button>
-      </PageHeader>
-
-      <div className="flex min-h-0 flex-1">
-        <FacilityRail rows={data.rows} activeCode={urlState.code} onSelect={onSelect} />
-
+      {card && row ? (
         <div
           aria-busy={navPending || undefined}
           className={['flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-6 py-[18px]', navPending ? 'pointer-events-none opacity-60' : ''].join(' ')}
@@ -252,8 +220,32 @@ function FacilityView({
             />
             <StaffChips staff={card.staff} />
           </section>
+
+          {/* ── AĞ GENELİ ── seçili tesise ait DEĞİL, ve bunu başlığı söylüyor.
+              Tek görünüme geçerken bu iki blok evsiz kalmıştı: ikisi de "ağ olarak nereye
+              açılmalıyız / nerede boşluk var" sorusunun cevabı, yani bir tesisin künyesine
+              konamaz. Ayrık bir bölüm olarak duruyorlar ve ayraç metni de bunu tekrarlıyor —
+              aksi hâlde okuyan onları seçili deponun verisi sanardı. */}
+          <section className="flex flex-col gap-2.5 border-t border-ops-line pt-4">
+            <SectionHead
+              title="Ağ geneli"
+              hint="seçili tesise ait değil — hepsini birlikte ilgilendiren iki soru: nerede kargo çıkışı eksik, nereye açılmalıyız"
+            />
+            <ShippingGapBanner countries={data.countriesWithoutShipping} />
+            <ZoneDemandTable rows={data.zoneDemand} />
+            <p className="px-0.5 font-ops-body text-ops-sm leading-relaxed text-ops-muted">
+              Kapalı depo listeden silinmez — geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorundadır. Hiçbir
+              seçicide, süzgeçte ve transfer hedefinde görünmez.
+            </p>
+          </section>
         </div>
-      </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-6 py-[18px]">
+          <p className="font-ops-body text-ops-sm leading-relaxed text-ops-muted">
+            Henüz tesis yok. İlk depoyu eklediğinizde künyesi, hizmet alanı ve karnesi burada açılır.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

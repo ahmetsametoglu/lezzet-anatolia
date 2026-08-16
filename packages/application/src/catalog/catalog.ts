@@ -1,4 +1,4 @@
-import { CategoryService, CollectionService, ProductListingService, ProductService } from '@lezzet/database';
+import { CategoryImageService, CategoryService, CollectionService, ProductListingService, ProductService } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import type { CatalogSort, KeysetCursor, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -116,7 +116,10 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
 
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
   const source = categoryRows.length ? categoryRows : (input.fallbackCategories ?? []);
-  const categories = source.map((c) => toCategory(c, locale));
+  // Fotoğraf havuzu TEK turda, kart başına sorgu yok (05.23). Yedek satırlarda (fikstür) kimlikler
+  // gerçek değil → havuz boş döner ve kart kapağa düşer; ikinci bir dal yazmaya gerek yok.
+  const pools = await new CategoryImageService(db).listByCategories(source.map((c) => c.id));
+  const categories = source.map((c) => toCategory(c, locale, pools.get(c.id)));
   const activeCategory = q.categorySlug ? (categories.find((c) => c.slug === q.categorySlug) ?? null) : null;
   // Koleksiyon SLUG'DAN çözülür (kategoriyle aynı sözleşme: dil-bağımsız, paylaşılabilir URL).
   // Slug verilmemişse sorgu HİÇ atılmaz — katalogun sıradan hâli koleksiyon tablosuna uğramaz.

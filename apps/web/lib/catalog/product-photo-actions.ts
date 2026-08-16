@@ -8,7 +8,7 @@ import { pickCropFields, PRODUCT_GALLERY_MAX, type ImageCropFields, type Product
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from './paths';
-import type { ProductPhotoView } from '@/components/operation/form/product-form/photos-types';
+import type { GalleryPhotoView } from '@/components/operation/form/image-gallery-types';
 
 // Ürün GÖRSEL yazma yolları — İKİ yüzeyin ortak eylemleri (ürün ekranı · asistan kuyruğu).
 //
@@ -25,7 +25,7 @@ import type { ProductPhotoView } from '@/components/operation/form/product-form/
 
 // Galeri satırını client'ın gördüğü şekle indirger — okuma URL'i public bucket'tan saf birleştirmeyle
 // kurulur (05.11), sürüm damgası satırın kendi `imageUpdatedAt`'inden gelir.
-const toPhotoView = (row: ProductImage): ProductPhotoView => ({
+const toPhotoView = (row: ProductImage): GalleryPhotoView => ({
   ...row,
   imageUrl: publicImageUrl(row.imageKey, row.imageUpdatedAt),
 });
@@ -58,7 +58,7 @@ export async function uploadProductImageAction(id: string, form: FormData): Prom
 }
 
 /** Ürünün galerisi (kapak hariç), müşteriye gösterilecek sırada + okuma URL'leri. */
-export async function listProductPhotosAction(productId: string): Promise<ActionResult<ProductPhotoView[]>> {
+export async function listProductPhotosAction(productId: string): Promise<ActionResult<GalleryPhotoView[]>> {
   try {
     await requireStaff();
     const rows = await new ProductImageService(serviceDb()).listByProduct(productId);
@@ -69,7 +69,7 @@ export async function listProductPhotosAction(productId: string): Promise<Action
 }
 
 /** Galeriye fotoğraf ekler (sona). Üst sınır aşılırsa reddedilir — sessizce yutulmaz. */
-export async function uploadGalleryPhotoAction(productId: string, form: FormData): Promise<ActionResult<ProductPhotoView>> {
+export async function uploadGalleryPhotoAction(productId: string, form: FormData): Promise<ActionResult<GalleryPhotoView>> {
   try {
     await requireStaff();
     const file = readUpload(form);

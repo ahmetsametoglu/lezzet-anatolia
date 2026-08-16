@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
+  CATEGORY_GALLERY_MAX,
   CategoryInsertSchema,
   CollectionInsertSchema,
   DEFAULT_CROP_FIELDS,
@@ -23,9 +24,19 @@ import { FormInput } from '@/components/operation/form/form-input';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormSwitch } from '@/components/operation/form/form-switch';
 import { ImageCropField } from '@/components/operation/form/image-crop-field';
+import { ImageGallery } from '@/components/operation/form/image-gallery';
+import type { GalleryActions } from '@/components/operation/form/image-gallery-types';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { MultiSelect } from '@/components/operation/form/multi-select';
+import {
+  deleteCategoryPhotoAction,
+  listCategoryPhotosAction,
+  makeCategoryCoverAction,
+  reorderCategoryPhotosAction,
+  setCategoryPhotoCropAction,
+  uploadCategoryPhotoAction,
+} from '@/lib/catalog/category-photo-actions';
 import {
   createCatalogAction,
   loadCollectionMembersAction,
@@ -96,6 +107,17 @@ const COPY: Record<CatalogKind, { createTitle: string; editTitle: string; sub: s
 };
 
 const FORM_ID = 'catalog-form';
+
+// Kategori havuzunun eylem seti — modül düzeyinde SABİT: bileşenin içinde kurulsaydı her render'da
+// yeni bir nesne olur ve bloğun okuma bağımlılığı üzerinden sonsuz döngü doğardı.
+const CATEGORY_PHOTO_ACTIONS: GalleryActions = {
+  list: listCategoryPhotosAction,
+  upload: uploadCategoryPhotoAction,
+  remove: deleteCategoryPhotoAction,
+  makeCover: makeCategoryCoverAction,
+  reorder: reorderCategoryPhotosAction,
+  setCrop: setCategoryPhotoCropAction,
+};
 
 interface CatalogFormDialogProps {
   kind: CatalogKind;
@@ -201,15 +223,42 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
   // çıktı (`design/KARARLAR.md`). Aynı kapak iki yerde iki kırpımla kullanılıyor; yeni bir görsel
   // alanı AÇILMADI. Etiket dar kalsaydı operatör kapağı "kimsenin görmediği bir paylaşım
   // detayı" sanır ve kadrajına özen göstermezdi — oysa artık vitrinin ilk ekranında duruyor.
-  const imageField = (
+  //
+  // **KATEGORİDE ALAN DEĞİL BLOK (05.23):** kategori artık birden çok fotoğraf taşıyor ve kart her
+  // gün havuzdan başka bir kare gösteriyor — "Börekler" bir ürün değil bir raftır, tek fotoğraf o
+  // rafın yıl boyu tek yüzü olmamalı. Blok ürün formundakinin AYNISI (`ImageGallery`); ayrışan
+  // yalnız metinler ve eylem seti. Koleksiyonda havuz YOK: onun kapağı bir vitrin karesi değil,
+  // paylaşım kartının kendisidir — dönen bir OG görseli, linki paylaşan kişinin gördüğüyle tıklayanın
+  // gördüğünü ayırırdı.
+  const imageField = isCollection ? (
     <ImageCropField
-      role={isCollection ? 'collection' : 'category'}
+      role="collection"
       src={isEdit ? edit.imageUrl : null}
       crop={crop}
       onCropChange={setCrop}
       upload={isEdit ? (fd) => uploadCatalogImageAction(kind, edit.id, fd) : undefined}
       uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
-      caption={isCollection ? 'ana sayfa bandı + paylaşım kartı' : 'müşteride görünüm'}
+      caption="ana sayfa bandı + paylaşım kartı"
+    />
+  ) : (
+    <ImageGallery
+      parentId={isEdit ? edit.id : null}
+      // Kapak da havuzun bir üyesi, kart onu da gösteriyor → iki rol de `category` (3:2 kaynak,
+      // türevleri kart ve mobil daire). Ürün formunda ikisi ayrışıyordu çünkü orada galeri
+      // fotoğrafı yalnız detay galerisinde çiziliyor.
+      coverRole="category"
+      photoRole="category"
+      coverUrl={isEdit ? edit.imageUrl : null}
+      coverCrop={crop}
+      onCoverCropChange={setCrop}
+      uploadCover={isEdit ? (fd) => uploadCatalogImageAction(kind, edit.id, fd) : undefined}
+      uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
+      coverCaption="müşteride görünüm · rotasyonun ilk karesi"
+      title="Fotoğraf havuzu"
+      hint="kart her gün birini gösterir"
+      reorderHint="Kareyi sürükleyerek sırala — kart havuzda bu sırayla ilerler. Tıkla: odak ve zoom."
+      max={CATEGORY_GALLERY_MAX}
+      actions={CATEGORY_PHOTO_ACTIONS}
     />
   );
 

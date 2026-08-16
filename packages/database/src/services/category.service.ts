@@ -3,6 +3,7 @@ import {
   CategorySchema,
   CategoryInsertSchema,
   CategoryUpdateSchema,
+  pickImageMeta,
   resolveLocalizedText,
   type Category,
   type CategoryInsert,
@@ -11,6 +12,7 @@ import {
   type LocalizedText,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { CategoryImageService } from './category-image.service';
 import { uniqueSlugForTable } from '../utils/slug';
 
 // Yeni kategori girişi — slug servis tarafından addan (TR→FR→DE) türetilir; çağıran vermez.
@@ -96,6 +98,34 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
   /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
   async setImageKey(id: string, imageKey: string): Promise<Category> {
     return this.writeImageKey(id, imageKey);
+  }
+
+  /**
+   * Havuzdaki fotoğrafı KAPAK yapar; eski kapak onun yerine havuza geçer (05.23).
+   *
+   * `ProductService.makeCover`ın birebir kardeşi ve iki tabloya birden dokunduğu için burada, tek
+   * yerde: künye bir BÜTÜN olarak el değiştirir (`pickImageMeta`) — alan alan kopyalamak hem tekrar
+   * hem de "birini unutma" hatasıdır, unutulan odak/zoom kadrajı sessizce kaydırırdı.
+   *
+   * Kapak yoksa takas edilecek bir şey de yok → satır SİLİNİR, yoksa havuzda anahtarsız bir satır
+   * kalırdı (şema `imageKey`i zorunlu tutuyor, yani o satır bir daha okunamazdı).
+   *
+   * ── KATEGORİDE NE İŞE YARIYOR ────────────────────────────────────────────────
+   * Kart görselini zaten günlük rotasyon seçiyor, yani "kapak" artık kartın tek yüzü değil. Ama
+   * kapağın hâlâ iki işi var: rotasyonun BAŞLADIĞI kare ve havuzu boş bırakılmış kategorinin tek
+   * görseli. Operatörün "asıl fotoğraf bu olsun" demesi bu yüzden anlamını koruyor.
+   */
+  async makeCover(categoryId: string, imageId: string): Promise<Category> {
+    const imageSvc = new CategoryImageService(this.supabase);
+    const [category, image] = await Promise.all([this.getById(categoryId), imageSvc.getById(imageId)]);
+    if (!category) throw new Error('Kategori bulunamadı.');
+    if (!image || image.categoryId !== categoryId) throw new Error('Fotoğraf bu kategoriye ait değil.');
+
+    const oldCover = pickImageMeta(category);
+    if (oldCover.imageKey) await imageSvc.update({ id: imageId, ...oldCover, imageKey: oldCover.imageKey });
+    else await imageSvc.delete(imageId);
+
+    return this.update({ id: categoryId, ...pickImageMeta(image) });
   }
 
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */

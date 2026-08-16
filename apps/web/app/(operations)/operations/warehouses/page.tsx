@@ -85,7 +85,21 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   const batches = toBatchViews(batchRows, { now: new Date(), thresholds, warehouseLabels });
 
   const rows = toWarehouseRows({ warehouses, zones, staff, batches, transfers });
-  const selected = urlState.code ? (rows.find((r) => r.code === urlState.code) ?? null) : null;
+  /**
+   * **Seçim boşsa İLK TESİS açılır** (16.08) — ekran artık tek görünüm, yani "hiçbiri seçili değil"
+   * diye bir hâli yok. Boş bırakılsaydı sayfa kendi şeridini gösterip altını boş bırakırdı: bir
+   * seçim davetiyle karşılamak, ilk tesisi göstermekten hiçbir şey kazandırmaz — operatör zaten
+   * şeritten istediğine geçiyor.
+   *
+   * **Aktif olan tercih edilir:** kapalı bir tesisin karnesi okunmuyor (`readCard` künyesi) ve
+   * sayfayı kapalı bir depoyla açmak, ekranı boş bir kartla karşılamak olurdu. Hepsi kapalıysa
+   * yine de ilki açılır — orada kapalılık gerçeğin kendisidir.
+   *
+   * URL'e YAZILMIYOR: adres boş kalır, bağlantı paylaşan kişi "ilk tesis" der. Yönlendirme
+   * yazsaydık her açılış bir gezinme turu daha eklerdi.
+   */
+  const fallback = rows.find((r) => r.isActive) ?? rows[0] ?? null;
+  const selected = urlState.code ? (rows.find((r) => r.code === urlState.code) ?? fallback) : fallback;
 
   const card = selected ? await readCard(db, stockSvc, { row: selected, zones, staff, batches }) : null;
 

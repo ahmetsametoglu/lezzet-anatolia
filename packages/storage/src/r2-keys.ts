@@ -37,9 +37,17 @@ export const r2Keys = {
   collectionImage: (slug: string, sourceFilename: string): string =>
     `catalog/collections/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
-  /** Kategori görseli — aynı deterministik desen (slug'a bağlı, timestamp yok). */
+  /** Kategori KAPAĞI — aynı deterministik desen (slug'a bağlı, timestamp yok). */
   categoryImage: (slug: string, sourceFilename: string): string =>
     `catalog/categories/${sanitize(slug)}.${extOf(sourceFilename)}`,
+
+  /**
+   * Kategori havuzundaki ek fotoğraf (05.23) — ürün galerisiyle AYNI gerekçe: kategori başına ÇOK
+   * dosya var, dolayısıyla anahtar yalnız slug'dan türeyemez. `photoToken` fotoğrafa özgü tek
+   * kullanımlık bir kimliktir; silinince nesnesi de silinir → yetim obje kalmaz.
+   */
+  categoryGalleryImage: (slug: string, photoToken: string, sourceFilename: string): string =>
+    `catalog/categories/${sanitize(slug)}-${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 
   /** Paket (bundle) görseli — 3:2 kaynak; aynı deterministik desen. */
   bundleImage: (slug: string, sourceFilename: string): string =>

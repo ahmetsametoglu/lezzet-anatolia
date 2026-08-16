@@ -1,5 +1,5 @@
 import 'server-only';
-import { CategoryService, OrderService, serviceDb } from '@lezzet/database';
+import { CategoryImageService, CategoryService, OrderService, serviceDb } from '@lezzet/database';
 import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@lezzet/application';
@@ -93,8 +93,11 @@ export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartCont
     readShowcase(db, locale, await readPlaceWarehouses(), await readPricingViewer()),
     readSiteImage('empty_cart', locale),
   ]);
-  // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın.
-  const categories = lastOrder ? [] : (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
+  // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın — havuz sorgusu da o dalda
+  // hiç atılmaz (05.23).
+  const shown = lastOrder ? [] : categoryRows.length ? categoryRows : FIXTURE_CATEGORIES;
+  const pools = await new CategoryImageService(db).listByCategories(shown.map((c) => c.id));
+  const categories = shown.map((c) => toCategory(c, locale, pools.get(c.id)));
   return { lastOrder, categories, showcase, illustration };
 }
 

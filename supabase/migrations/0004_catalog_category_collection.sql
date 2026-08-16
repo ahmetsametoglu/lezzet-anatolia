@@ -46,6 +46,43 @@ create unique index category_slug_key on public.category (slug);
 -- Vitrin okuması yalnız işaretlilere bakar ve küme küçüktür (tasarım 6 slot) — kısmi indeks.
 create index category_featured_idx on public.category (sort_order) where is_featured;
 
+-- ── category_image — kategorinin EK fotoğrafları (05.23) ─────────────────────────────────────────
+-- Kategori kartı bugüne kadar TEK fotoğrafla yaşıyordu: bir kere seçilen kare, kategorinin yıl boyu
+-- yüzü oluyordu. Oysa "Börekler" bir ürün değil bir RAF — su böreği de, kol böreği de, ıspanaklısı da
+-- aynı rafta durur ve hiçbiri tek başına o rafın doğru resmi değildir.
+--
+-- **Ürün galerisiyle AYNI tablo deseni** (`product_image`, 0005) ve bu bilinçli: aynı işi yapan iki
+-- tablonun alanları ayrışırsa editörü de, okuması da, kırpması da ikiye bölünür. Fark yalnız hangi
+-- varlığa asıldığı — ve nasıl OKUNDUĞU (aşağıda).
+--
+-- **Kapak burada TEKRARLANMAZ:** o `category.image_key`'de durur. Sebep ürünündekiyle aynı — kartı
+-- çizen okuma kategoriyi zaten satır olarak alıyor, kapak için ikinci bir sorgu doğmasın. Galeri boş
+-- olan kategori bugünkü davranışını aynen sürdürür (tek fotoğraf), yani bu tablo hiçbir mevcut
+-- ekranı değiştirmeden boş kalabilir.
+--
+-- **Ürün galerisinden AYRILAN tek yer okumadır.** Ürün galerisi müşteriye TOPLU gösterilir (detay
+-- sayfasında hepsi yan yana); kategori galerisi gösterilmez — kart tek kare çizer ve o kare
+-- havuzdan GÜNE göre seçilir (`application/catalog/rotation.ts`). Yani buradaki `sort_order` bir
+-- vitrin sırası değil, rotasyonun DÖNGÜ sırasıdır: operatör hangi fotoğrafın hangisini izleyeceğini
+-- belirler.
+create table public.category_image (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid not null references public.category (id) on delete cascade,
+  image_key text not null,                      -- depo anahtarı, tam URL değil (STACK §5)
+  image_focal_x smallint not null default 50,   -- odak %, 0-100 (object-position X)
+  image_focal_y smallint not null default 50,   -- odak %, 0-100 (object-position Y)
+  image_zoom smallint not null default 100,     -- zoom %, 100-400
+  image_alt jsonb,                              -- LocalizedText; boşsa kategori adına düşer
+  image_updated_at timestamptz,                 -- sürüm damgası (gerekçe: yukarıdaki kapak satırı)
+  sort_order int not null default 0,            -- rotasyonun döngü sırası (sürükle-bırak)
+  created_at timestamptz not null default now()
+);
+-- Havuz her zaman kategori başına ve SIRALI okunur.
+create index category_image_category_idx on public.category_image (category_id, sort_order);
+
+comment on table public.category_image is
+  'Kategori fotoğraf havuzu (05.23) — kart tek kare çizer, kare GÜNE göre buradan seçilir. Kapak category.image_key''de.';
+
 -- ── collection — esnek pazarlama grubu (Bayram/Yeni/İndirimde); ürün çok koleksiyona girer ──
 -- Koleksiyon aynı zamanda KENDİ bağlantısıyla paylaşılan bir vitrin sayfasıdır (DOMAIN §13) →
 -- sosyal paylaşım OG kartı için başlık yetmez: description + image_key de taşınır.
@@ -109,4 +146,5 @@ alter table public.product_family enable row level security;
 
 -- RLS — deny-by-default (0001 deseni). Erişim sunucudan service_role ile.
 alter table public.category enable row level security;
+alter table public.category_image enable row level security;
 alter table public.collection enable row level security;

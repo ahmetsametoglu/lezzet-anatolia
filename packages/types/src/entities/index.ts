@@ -11,6 +11,7 @@
 export * from './user-profile.schema';
 export * from './email-verification.schema';
 export * from './category.schema';
+export * from './category-image.schema';
 export * from './collection.schema';
 export * from './product.schema';
 export * from './discount.schema';

@@ -7,9 +7,12 @@
  * `@lezzet/application/catalog/packages`) vitrin şeridini süzerken bu kuralı çağırıyor ve pakette
  * yaşayan bir orkestrasyon `apps/web`ten import EDEMEZ (bağımlılık tek yönlü, STACK §4).
  *
- * Öteki iki seçici (`rotateDaily`, `pickRandom`) BİLEREK burada kaldı: ikisinin de tek tüketeni
- * web ana sayfasıdır (koleksiyon rotasyonu ve fırsat bandı) ve paketin ölçütü "en az iki yüzeyin
- * çağırdığı orkestrasyon" — tek yüzeyin işi kendi uygulamasında kalır.
+ * `rotateDaily` de 05.23'da AYNI kapıdan geçti: kategori kartı kendi fotoğraf havuzundan güne göre
+ * bir kare seçmeye başladı, seçim `toCategory` indirgemesinde yapılıyor ve o indirgemeyi mobil API
+ * de çağırıyor — "en az iki yüzey" ölçütü karşılandı. Burada yalnız köprüsü kaldı.
+ *
+ * `pickRandom` BİLEREK burada: tek tüketeni hâlâ web ana sayfasının fırsat bandı — tek yüzeyin işi
+ * kendi uygulamasında kalır.
  */
 /**
  * **DERİN YOL, barrel DEĞİL** (15.08 · `not-herkese-application-barreli-istemciye-girmesin`).
@@ -30,30 +33,7 @@
  * Ölçüt "istemci görebiliyor mu", "kural saf mı" değil (notun kendi cümlesi). `export … from` bir
  * import gibi görünmez ve `typecheck` göremez — kırılma yalnız webpack'in istemci grafiğinde.
  */
-export { pickFeatured } from '@lezzet/application/catalog/featured';
-
-/**
- * **Güne bağlı deterministik seçim** — koleksiyon slotlarının rotasyonu (kullanıcı kararı 08.08).
- *
- * İstenen "her gün başka koleksiyonlar" idi. `Math.random()` bunu KARŞILAMAZ, üç ayrı sebeple:
- * *(1)* sayfa önbelleğini kırar (her istek başka çıktı), *(2)* aynı müşteriye her yenilemede başka
- * vitrin gösterir — vitrin değil kumar olur, *(3)* "dün gördüğüm koleksiyon neydi" sorusunun cevabı
- * kalmaz. Gün numarasından türeyen bir kaydırma üçünü de çözer: aynı gün herkese aynı vitrin,
- * ertesi gün döner.
- *
- * Havuz sınırdan küçükse OLDUĞU KADARI döner ve tekrar ETMEZ: iki slota aynı koleksiyonu iki kez
- * koymak, seçki olduğunu iddia eden bir ekranda kopya göstermektir.
- *
- * `now` PARAMETRE ve bu bilinçli — test günü sabitleyebilsin. Varsayılanı çağıranın işi değil.
- */
-export function rotateDaily<T>(pool: readonly T[], count: number, now: Date = new Date()): T[] {
-  if (pool.length === 0) return [];
-  const take = Math.min(count, pool.length);
-  // Gün numarası UTC'den: yerel saat diliminde hesaplasaydık rotasyon sunucunun saatine bağlı olur
-  // ve gece yarısı çevresinde iki istek farklı vitrin görürdü.
-  const dayIndex = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 86_400_000);
-  return Array.from({ length: take }, (_, i) => pool[(dayIndex + i) % pool.length]!);
-}
+export { pickFeatured, rotateDaily } from '@lezzet/application/catalog/featured';
 
 /**
  * **HER İSTEKTE rastgele seçim** — fırsat bandı (kullanıcı kararı 09.08).

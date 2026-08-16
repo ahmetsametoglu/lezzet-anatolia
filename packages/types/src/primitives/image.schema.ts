@@ -129,6 +129,17 @@ export const IMAGE_ROLES: Record<ImageRole, ImageRoleSpec> = {
 /** Kapak + galeride tutulabilecek EN ÇOK fotoğraf sayısı (parametrik — tek yerden değişir). */
 export const PRODUCT_GALLERY_MAX = 5;
 
+/**
+ * Kategori fotoğraf havuzunun tavanı (05.23) — ürününkinden AYRI sabit ve sayısı da farklı.
+ *
+ * Ayrı olmasının sebebi iki listenin farklı soruya cevap vermesi: ürün galerisi müşteriye TOPLU
+ * gösterilir (detay sayfasında hepsi yan yana), yani sayı arttıkça ekran uzar. Kategori havuzu
+ * gösterilmez — kart tek kare çizer ve o kare GÜNE göre seçilir, yani havuz genişledikçe aynı
+ * fotoğrafın tekrarı gecikir. **7 = bir hafta**: haftanın her günü başka bir kare, tekrar ancak
+ * sekizinci günde. Tek sabitle yönetilseydi birinin gerekçesi ötekini kısıtlardı.
+ */
+export const CATEGORY_GALLERY_MAX = 7;
+
 // ── Yükleme (yalnız kullanılamaz dosyayı ele: biçim). Oran/yön KIRPMAYLA çözülür ────────────────
 /** Kabul edilen biçimler — animasyon/vektör dışı yaygın raster. Şeffaflık kırpma sonrası önemsiz. */
 export const IMAGE_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -267,3 +278,25 @@ export function pickImageMeta(e: ImageMeta): ImageMeta {
 export function cropOf(e: ImageCropFields): ImageCrop {
   return { x: e.imageFocalX, y: e.imageFocalY, zoom: e.imageZoom };
 }
+
+// ── Galeri satırı: bir varlığa asılı ÇOK fotoğraf ────────────────────────────────────────────
+/**
+ * Kendi satırında duran fotoğrafın ortak gövdesi — `product_image` ve `category_image` (05.23)
+ * bunu `.extend()` ile alır ve yalnız **hangi varlığa asıldığını** ekler.
+ *
+ * Ortaklaştırıldı çünkü ikisi aynı işi yapıyor: dosya + kırpma künyesi + sıra. Ayrı yazılsalardı
+ * bir gün birine eklenen alan ötekinde eksik kalırdı ve fark ancak müşteri ekranında görünürdü —
+ * kırpması olan ama alt metni olmayan bir galeri gibi.
+ *
+ * `imageKey` burada ZORUNLU: ortak `ImageMetaSchema`'da nullable, çünkü orada "henüz görseli olmayan
+ * ürün" meşru bir durum. Galeride değil — dosyası olmayan galeri satırı diye bir şey yok.
+ */
+export const GalleryImageSchema = z
+  .object({
+    id: z.string().uuid(),
+    sortOrder: z.number().int(),
+    createdAt: z.string(),
+  })
+  .merge(ImageMetaSchema)
+  .extend({ imageKey: z.string() });
+export type GalleryImage = z.infer<typeof GalleryImageSchema>;

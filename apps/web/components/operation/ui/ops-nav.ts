@@ -86,9 +86,17 @@ const NAV_SECTIONS: NavSection[] = [
        * üç yüzünü üç ayrı yer gibi gösteriyordu.
        */
       { key: 'stock', label: 'Stok', href: '/operations/stock', roles: STOCK_FLOOR },
-      // Sıcaklık AYRI kaldı ve bilinçli: hijyen defteri bir stok hareketi değil, tesisin günlük
-      // kaydıdır (`temperature/page.tsx` künyesi). Kalıcı evi tartışmalı — BEKLEYEN(22.29).
-      { key: 'sicaklik', label: 'Sıcaklık', href: '/operations/temperature', roles: STOCK_FLOOR },
+      /**
+       * **Sıcaklık menüden KALKTI** (kullanıcı kararı 16.08) — `22.29`'un uzun süredir bekleyen
+       * sorusu ("kalıcı evi Depolar mı, native uygulama mı") ilk yarısıyla cevaplandı: **kendi
+       * sayfası değil.** Gerekçe ekranın kendisiydi — tek form, tek "bugün" şeridi; günde bir-iki
+       * kayıtlık bir iş menüde bir depo ekranıyla aynı ağırlıkta duruyordu.
+       *
+       * **Rota SİLİNMEDİ, yalnız girişi kapandı** (`/operations/temperature` hâlâ çalışıyor):
+       * ölçüm noktalarının nereye tanımlanacağı henüz konuşulmadı ve ekranı silmek, kararı vermeden
+       * çalışan bir yolu yıkmak olurdu. Kalıcı evi belli olunca form oraya taşınır, bu klasör de
+       * o gün gider.
+       */
       // Tedarik muhasebeye de açık: tedarikçi borcu ve vadesi onun da sorusu.
       { key: 'satinalma', label: 'Tedarik', href: '/operations/procurement', roles: FINANCE },
       { key: 'depolar', label: 'Depolar', href: '/operations/warehouses', roles: ADMIN_ONLY },

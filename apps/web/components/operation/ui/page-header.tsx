@@ -64,9 +64,23 @@ interface PageHeaderProps {
   status?: ReactNode;
   /** Ekran aksiyonları (+Yeni, araç düğmeleri). En fazla bir BİRİNCİL düğme — fazlası araç çubuğudur. */
   children?: ReactNode;
+  /**
+   * Kabuğun DEPO SEÇİCİSİNİ gizler — ⌘K ve kullanıcı yerinde kalır.
+   *
+   * Yukarıdaki *"kabuk sayfanın değil oturumun; sayfa bunları hiç bilmez"* kuralının tek istisnası
+   * ve dar tutuldu: bayrak "bu sayfa depo bağlamını KULLANMIYOR" der, seçicinin görünümü hakkında
+   * bir tercih bildirmez.
+   *
+   * Bugünkü tek kullanıcısı Depolar (kullanıcı kararı 16.08). Orada seçici gerçekten ölü bir
+   * kontroldü: sayfa depo bağlamını zaten daraltıcı olarak okumuyor (`warehouses/page.tsx` künyesi
+   * — *"depolar bir yönetim nesnesidir, hepsi her zaman listelenir"*) ve sayfanın kendi depo şeridi
+   * geldiğinde iki seçici yan yana düşüyordu: biri ekranı değiştiriyor, öteki hiçbir şey yapmıyor.
+   * İkisi arasındaki farkı ekrandan okumanın yolu yoktu.
+   */
+  hideWarehousePicker?: boolean;
 }
 
-export function PageHeader({ title, subtitle, status, search, children }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, status, search, children, hideWarehousePicker }: PageHeaderProps) {
   const shell = useOpsShell();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const openPalette = useCallback(() => setPaletteOpen(true), []);
@@ -105,7 +119,7 @@ export function PageHeader({ title, subtitle, status, search, children }: PageHe
         {/* ── Kabuk blokları ── raydan devralındı; sayfa bunları bilmez. */}
         {shell ? (
           <div className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
-            <WarehouseContextPicker {...shell.warehouse} variant="bar" />
+            {hideWarehousePicker ? null : <WarehouseContextPicker {...shell.warehouse} variant="bar" />}
             <PaletteTrigger onOpen={openPalette} />
             <UserAvatar email={shell.user.email} roles={shell.user.roles} />
           </div>

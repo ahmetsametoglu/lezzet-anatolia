@@ -14,6 +14,7 @@ import type {
   StockStatus,
 } from '@lezzet/types';
 import type { StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
+import { rotateDaily } from './featured';
 import { VISITOR, type PricingViewer } from './pricing-viewer';
 
 /**
@@ -39,8 +40,40 @@ export function imageOf(row: ImageMeta): StorefrontImage {
  */
 export type CatalogCategoryRow = Pick<Category, 'id' | 'slug' | 'name'> & ImageMeta;
 
-export function toCategory(row: CatalogCategoryRow, locale: PreferredLanguage): StorefrontCategory {
-  return { id: row.id, slug: row.slug, name: resolveLocalizedText(row.name, locale), image: imageOf(row) };
+/**
+ * Kategori kartı — görseli HAVUZDAN, güne göre seçilir (05.23).
+ *
+ * "Börekler" bir ürün değil bir RAF: su böreği de, kol böreği de aynı raftadır ve hiçbiri tek
+ * başına o rafın doğru resmi değildir. Operatör havuza birkaç kare koyar, kart her gün başka
+ * birini gösterir.
+ *
+ * ── HAVUZ = KAPAK + EK FOTOĞRAFLAR ───────────────────────────────────────────
+ * Kapak havuzdan ÇIKARILMAZ: o da operatörün seçtiği bir karedir ve dışarıda bırakmak, havuza ilk
+ * fotoğraf eklendiği gün kapağı sessizce emekliye ayırmak olurdu. Anahtarı olmayan satır havuza
+ * girmez — kapağı henüz yüklenmemiş bir kategori boş kare göstermesin.
+ *
+ * ── SEÇİM `rotateDaily` İLE, YENİ BİR KURALLA DEĞİL ──────────────────────────
+ * Koleksiyon bandı aynı soruyu 08.08'den beri soruyor ve cevabı orada verilmişti: `Math.random()`
+ * önbelleği kırar, aynı müşteriye her yenilemede başka vitrin gösterir ve "dün gördüğüm neydi"
+ * sorusunu cevapsız bırakır. Kategori kartında üçü de aynen geçerli — ayrıca paylaşım kartı (OG)
+ * ile sayfanın kendisi ayrışırdı: linki açan, önizlemede gördüğünden başka bir fotoğrafla
+ * karşılaşırdı.
+ *
+ * Havuz BOŞSA kart bugünkü davranışını aynen sürdürür (kapak) — bu tablo hiçbir ekranı
+ * değiştirmeden boş kalabilir.
+ *
+ * `pool` ve `now` opsiyonel: havuzu okumayan çağıran (ürün detayının kategori rozeti gibi, kart
+ * çizmiyor) hiçbir şey değiştirmek zorunda değil; `now` ise testin günü sabitlemesi için.
+ */
+export function toCategory(
+  row: CatalogCategoryRow,
+  locale: PreferredLanguage,
+  pool?: readonly ImageMeta[],
+  now?: Date,
+): StorefrontCategory {
+  const faces = [row, ...(pool ?? [])].filter((face) => face.imageKey !== null);
+  const face = rotateDaily(faces, 1, now)[0] ?? row;
+  return { id: row.id, slug: row.slug, name: resolveLocalizedText(row.name, locale), image: imageOf(face) };
 }
 
 /** Ürünün karta indirgenmesi için gereken yan veriler — çağıran toplu okur, kart başına sorgu yok. */

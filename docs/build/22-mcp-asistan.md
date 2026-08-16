@@ -1386,11 +1386,27 @@ satırında.
   - `stock_intake` için sayfalı bir okuma yok (bugün yalnız tedarikçi bazlı `listBySupplier`). Boş bir
     bölüm çizilmedi: veri olmadan başlık koymak, olmayan bir listeyi vaat etmektir.
 
-- [ ] (22.29) **Sıcaklık kaydının kalıcı evi** — Depolar mı, native uygulama mı
+- [~] (22.29) **Sıcaklık kaydının kalıcı evi** — Depolar mı, native uygulama mı
   - *Bitti:* ölçüm kaydı ait olduğu yüzeyde yaşar; `/operations/temperature` ya taşınır ya gerekçesiyle kalır
   - Ölçüm dolabın önünde, ayakta, tek elle girilir (`docs/uygulama` D-serisi) — asıl adayı native.
     Web'deki adayı Depolar sayfasının tesis künyesi. Bugün kendi sayfasında duruyor ve işlevi tam;
     karar verilmeden taşımak, ikinci kez taşımak olurdu.
+  - **Durum (16.08) — İLK YARI CEVAPLANDI: kendi sayfası DEĞİL.** Kullanıcı ekranda gördü ve menüden
+    kaldırttı (`ops-nav.ts`, `19.26` ile aynı turda). Gerekçe ekranın kendisiydi: tek form, tek
+    "bugün" şeridi — günde bir-iki kayıtlık bir iş, menüde bir depo ekranıyla aynı ağırlıkta
+    duruyordu. **Rota silinmedi**, `/operations/temperature` çalışmaya devam ediyor (ölçüldü: 200).
+  - **Kalan yarısı: ölçüm NOKTALARININ nereye tanımlanacağı.** Bugün `temperature_log.location`
+    serbest metin ve çipler geçmiş kayıtlardan türüyor — yani "Dolap 1" ile "Dolap1" iki ayrı
+    noktadır ve hiçbir yer uyarmaz. Kullanıcı araç · soğutucu · buzdolabı tanımlarının **Depolar'ın
+    içinde** yer alacağını söyledi (16.08); yeri kesinleşince form da oraya taşınır.
+  - ⚠ **Ölçüldü 16.08 — `stock.location` ile `temperature_log.location` aynı kavram, ayrı tablo,
+    ilişkisiz.** İkisi de serbest metin ve künyeleri bile aynı şeyi söylüyor (*"depo İÇİ konum
+    (dolap/raf)"* ↔ *"depo İÇİ dolap adı / araç plakası"*). Veri örtüşmüyor: stok rafları
+    `Dolap 1-4 · Soğuk oda · Karantina`, sıcaklık noktaları `Derin dondurucu 1-2 · Soğuk oda ·
+    Frigo araç` — ortak tek isim "Soğuk oda". Yani **sıcaklığı ölçülen dondurucularda kayıtlı stok
+    yok, stok tutulan dolapların sıcaklığı hiç ölçülmüyor**; soğuk zincir kanıtı ise malın DURDUĞU
+    yerin ölçümüdür. Kullanıcı bu konuyu ayrıca ele alacağını söyledi (doküman ↔ şema ↔ pratik
+    karşılaştırması) — o tur bu görevi de kapatacak.
 - [x] (22.30) **Seviyeler sekmesi: ürün görseli + seçili ürünün STOK GEÇMİŞİ** *(kullanıcı tespiti
   14.08: "ürünlerin resmi ile beraber görmek daha kalıcı olur … bir ürüne tıkladığım zaman o ürünle
   alakalı geçmiş stok girişleri, tarihleri, fiyatları … bize teknik bir yük çıkartmadan")*

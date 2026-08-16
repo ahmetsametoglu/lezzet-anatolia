@@ -14,6 +14,7 @@ export { constraintOf } from './core/constraint';
 export { UserProfileService } from './services/user-profile.service';
 export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult } from './services/email-verification.service';
 export { CategoryService, type CreateCategoryInput } from './services/category.service';
+export { CategoryImageService } from './services/category-image.service';
 export { CollectionService, type CreateCollectionInput } from './services/collection.service';
 export {
   ProductService,

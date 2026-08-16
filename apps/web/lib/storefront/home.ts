@@ -1,5 +1,5 @@
 import 'server-only';
-import { AnalyticsProductDailyService, CategoryService, CollectionService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
+import { AnalyticsProductDailyService, CategoryImageService, CategoryService, CollectionService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
 // `ProductWithRelations` şema tipidir, servis tipi değil — kaynağı `@lezzet/types` (`CLAUDE §1`:
@@ -295,9 +295,11 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
   // **Üç bölümün üçü de VİTRİNE İŞARETLİ olanı gösterir** (08.26). Sınır tasarımın ızgarası:
   // kategori 6 · paket 2 · koleksiyon 2. Kural tek yerde (`pickFeatured`) — ayrı ayrı yazılsaydı
   // biri gün gelip ötekilerden ayrışır ve ayrışma sessiz olurdu.
-  const categories = (categoryRows.length ? pickFeatured(categoryRows, HOME_CATEGORY_LIMIT) : FIXTURE_CATEGORIES).map((c) =>
-    toCategory(c, locale),
-  );
+  const shown = categoryRows.length ? pickFeatured(categoryRows, HOME_CATEGORY_LIMIT) : FIXTURE_CATEGORIES;
+  // Fotoğraf havuzu (05.23) TEK turda ve YALNIZ vitrine çıkanlar için: seçki `pickFeatured`ten sonra
+  // okunuyor, yoksa on kategorinin havuzu çekilip altısı kullanılırdı. Kart başına sorgu yok.
+  const pools = await new CategoryImageService(db).listByCategories(shown.map((c) => c.id));
+  const categories = shown.map((c) => toCategory(c, locale, pools.get(c.id)));
 
   return { categories, featured, offers: offers.shown, offersTotal: offers.total, packages, collections, recipes };
 }

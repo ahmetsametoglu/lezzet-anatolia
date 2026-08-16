@@ -1,22 +1,13 @@
 import { z } from 'zod';
-import { ImageMetaSchema } from '../primitives/image.schema';
+import { GalleryImageSchema } from '../primitives/image.schema';
 
 // ProductImage — ürün detay galerisindeki EK fotoğraflar (0005 migration). Kapak burada TEKRARLANMAZ:
 // o `product.image_key`'de durur, çünkü liste/kart/paylaşım kartı kapağı ürünle aynı satırda okur.
 //
-// Görsel künyesi (anahtar + odak + zoom + alt + damga) ortak `ImageMetaSchema`'dan gelir — alanlar
-// burada yeniden yazılmaz (no-duplication). Tek fark: galeride dosya ZORUNLU (anahtarsız galeri satırı
-// diye bir şey yok), oysa ortak şemada `imageKey` nullable — çünkü orada "henüz görseli olmayan ürün"
-// meşru bir durum.
-export const ProductImageSchema = z
-  .object({
-    id: z.string().uuid(),
-    productId: z.string().uuid(),
-    sortOrder: z.number().int(),
-    createdAt: z.string(),
-  })
-  .merge(ImageMetaSchema)
-  .extend({ imageKey: z.string() });
+// Gövdenin tamamı (kimlik + görsel künyesi + sıra) ortak `GalleryImageSchema`'dan gelir; burada
+// eklenen tek şey fotoğrafın HANGİ varlığa asıldığı. Kardeşi `CategoryImageSchema` aynı gövdeden
+// türer — iki galeri tablosunun alanları böylece ayrışamaz (05.23).
+export const ProductImageSchema = GalleryImageSchema.extend({ productId: z.string().uuid() });
 export type ProductImage = z.infer<typeof ProductImageSchema>;
 
 // id/createdAt DB üretir; sort_order + kırpma alanları DB default'lu → opsiyonel. imageKey zorunlu.

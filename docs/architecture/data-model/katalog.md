@@ -16,7 +16,7 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | name | LocalizedText (jsonb) | çok dilli |
 | tagline | LocalizedText (jsonb) \| null | **kısa tanıtım — vitrin bandının ALTYAZISI** (05.17). Başlık değil: başlık kategori adıdır; ikinci bir başlık alanı açılsaydı aynı şeyin iki kaynağı olurdu. Boş bırakılabilir ve öyle kalmalı — altyazısız kategori altyazısız çizilir, **yedek metin uydurulmaz** (ada düşmek "Börekler / Börekler" tekrarı üretirdi). Doğuş sebebi ölçüldü: mobil vitrin bandının altyazısı tasarımın içinde SABİT bir sözlüktü (`CSUB`), yani yeni kategori altyazısız doğuyor ve cümle operatörün elinde değildi |
 | slug | string | dil-bağımsız URL parçası; benzersiz |
-| image_key | string \| null | kategori görseli; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **web 3:2 kart, mobil daire** (aynı kare kırpma + yuvarlak maske) |
+| image_key | string \| null | kategori KAPAĞI; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **web 3:2 kart, mobil daire** (aynı kare kırpma + yuvarlak maske). **Artık tek yüz değil** (05.23): kart görseli `category_image` havuzundan güne göre seçilir ve kapak o havuzun bir üyesidir — havuz boşsa kart eskisi gibi yalnız bunu gösterir |
 | image_focal_x | smallint | odak %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B) |
 | image_focal_y | smallint | odak %, 0-100 (object-position Y) |
 | image_zoom | smallint | zoom %, 100-400; dikey/kare kaynağı yatay çerçeveye kırpar (yeniden çektirmeden) |
@@ -26,6 +26,35 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | is_active | boolean | |
 | is_featured | boolean | **ana sayfada göster** (05.18). `is_active` ile KARIŞTIRILMAZ — aktiflik "yayında mı", bu "vitrinde mi"; ikisi ayrı sorudur. **İşaret SEÇİMDİR, sıra `sort_order`'dan gelir**: ikinci bir vitrin sırası tutulmaz, iki sıra bir gün çelişir ve hangisinin kazandığı ekrandan anlaşılmaz. Hiç işaret yoksa okuma sıradan ilk N'e düşer — vitrin boş kalmaz |
 | created_at | timestamptz | |
+
+## CategoryImage (kategori fotoğraf havuzu)
+
+Kategori kartı bir kare çizer, ama o kare **sabit değil**: operatör havuza birkaç fotoğraf koyar, kart her gün başka birini gösterir (05.23). Gerekçe kategorinin ne olduğunda: "Börekler" bir ürün değil bir **raf** — su böreği de, kol böreği de, ıspanaklısı da aynı raftadır ve hiçbiri tek başına o rafın doğru resmi değildir.
+
+Kapak `Category.image_key`'de kalır — kartı çizen okuma kategoriyi zaten satır olarak alıyor, kapak için ikinci sorgu doğmasın; **bu tablo yalnız ek fotoğrafları tutar.** Şema `ProductImage` ile birebir aynı gövdeden türer (`GalleryImageSchema`): aynı işi yapan iki tablonun alanları ayrışırsa editörü de, okuması da, kırpması da ikiye bölünür.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| category_id | uuid | kategoriye CASCADE bağlı |
+| image_key | string | depo anahtarı, tam URL değil (kapakla aynı desen). Kapaktan farklı olarak **zorunlu**: anahtarsız havuz satırı yoktur |
+| image_focal_x | smallint | odak %, 0-100 — her fotoğrafın KENDİ odağı vardır |
+| image_focal_y | smallint | odak %, 0-100 |
+| image_zoom | smallint | zoom %, 100-400 |
+| image_alt | LocalizedText (jsonb) \| null | erişilebilirlik/SEO; boşsa kategori adı kullanılır |
+| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
+| sort_order | int | **rotasyonun döngü sırası** — vitrin sırası değil (aşağıya bakınız) |
+| created_at | timestamptz | |
+
+**Havuz = kapak + bu satırlar.** Kapak dışarıda bırakılsaydı, havuza ilk fotoğraf eklendiği gün kapak sessizce emekliye ayrılırdı. Anahtarı olmayan satır havuza girmez (kapağı henüz yüklenmemiş kategori boş kare göstermesin).
+
+**Seçim `rotateDaily` ile — yeni bir kural yazılmadı.** Koleksiyon bandı aynı soruyu 08.08'den beri soruyor ve cevabı orada verilmişti: `Math.random()` sayfa önbelleğini kırar, aynı müşteriye her yenilemede başka vitrin gösterir ve "dün gördüğüm neydi" sorusunu cevapsız bırakır. Kategori kartında üçü de aynen geçerli, üstelik bir dördüncüsü var: paylaşım kartı (OG) ile sayfanın kendisi ayrışır — linki paylaşan, tıklayanın gördüğünden başka bir fotoğraf görürdü. Kural o gün webdeydi, 05.23'da `@lezzet/application`a terfi etti (ikinci yüzey: mobil API aynı indirgemeden geçiyor).
+
+**`sort_order` neden vitrin sırası değil:** ürün galerisi müşteriye TOPLU gösterilir (detay sayfasında hepsi yan yana), yani orada sıra "hangisi önce görünür" demektir. Kategori havuzu hiç toplu gösterilmez — kart tek kare çizer. Buradaki sıra kartın **hangi fotoğraftan hangisine geçeceğini** belirler.
+
+**Tavan `CATEGORY_GALLERY_MAX = 7`** ve ürününkinden (5) ayrı bir sabit: ürün galerisinde sayı arttıkça ekran uzar, burada arttıkça aynı fotoğrafın tekrarı gecikir. Yedi = bir hafta; tekrar ancak sekizinci günde.
+
+**Kapak takası** ürünündekiyle aynı orkestrasyon (`CategoryService.makeCover`) ve kategoride hâlâ anlamlı: rotasyon kartın tek yüzünü ortadan kaldırdı ama kapağın iki işi kaldı — rotasyonun başladığı kare ve havuzu boş bırakılmış kategorinin tek görseli.
 
 ## Collection (koleksiyon)
 

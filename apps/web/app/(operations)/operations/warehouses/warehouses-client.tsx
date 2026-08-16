@@ -47,7 +47,6 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
 
   const view = {
     data,
-    urlState,
     navPending,
     onSelect,
     onNewWarehouse: () => setFormState('new'),
