@@ -13,6 +13,8 @@ const TEDARIKCILER = [
   { key: 'eskiTedarik', name: 'Marmara Gıda (eski)', paymentTermDays: null, contact: { phone: '+902165550000' }, isActive: false, note: 'Çalışılmıyor — kalite sorunu.' },
 ];
 
+// **`base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): üç tedarikçi de uydurma firma, kod eşlemeleri
+// de öyle. Gerçek tedarikçiyi operatör kurar. Künye `seed/tier.ts`.
 export async function seedSupply(db: Db, varyantlar: VaryantRef[]): Promise<Map<string, string>> {
   const suppliers = new SupplierService(db);
   const harita = new Map<string, string>();

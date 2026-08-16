@@ -12,6 +12,10 @@ import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { euro, fiksturGorselleri, r2Keys, uploadImageFromUrl, type Db } from './shared';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './catalog-lezza';
+// Tarif malzemeleri de bir satış kurgusudur (künye `kurguReferanslari`). Çevrim yok: `recipe.ts`
+// yalnız `shared.ts`'i tanır.
+import { TARIF_SKULARI } from './recipe';
+import { enAz, type Katman } from './tier';
 
 // Katalog (05): kategori · ürün · varyant · galeri · koleksiyon.
 //
@@ -25,7 +29,7 @@ import { lezzaGorselUrlByDosya, seedLezzaProducts } from './catalog-lezza';
 
 // ── Katalog: kategori + ürün + varyant (05) ──────────────────────────────────────────────────────
 
-export async function seedCatalog(db: Db): Promise<void> {
+export async function seedCatalog(db: Db, katman: Katman): Promise<void> {
   const products = new ProductService(db);
   if ((await products.listAll()).length > 0) {
     console.log('▸ katalog zaten dolu — atlandı');
@@ -43,6 +47,8 @@ export async function seedCatalog(db: Db): Promise<void> {
     new ProductFamilyService(db),
     catId,
     0,
+    kurguReferanslari(),
+    katman,
   );
   console.log(`  ✓ ${lezza.made} Lezza ürünü · ${lezza.variants} varyant · ${lezza.photos} galeri fotoğrafı · ${lezza.families} ürün ailesi`);
   console.log(`✓ katalog: ${catId.size} kategori, ${lezza.made} ürün`);
@@ -113,7 +119,10 @@ const COLLECTIONS: SeedCollection[] = [
     slug: 'bayram-sofrasi',
     name: { tr: 'Bayram Sofrası', fr: 'Table de fête', de: 'Festtafel' },
     description: { tr: 'Bayram klasikleri', fr: 'Les classiques des fêtes', de: 'Festtags-Klassiker' },
-    products: ['assorted-baklava', 'kunefe-including-syrup', 'baklava-with-pistachio-12-pieces', 'cold-baklava-with-pistachio'],
+    // `baklava-with-pistachio-12-pieces` DÜZELTİLDİ (16.08): 09.08'de dört ayrı baklava kaydı tek
+    // ürüne (`baklava-with-pistachio`) birleşmişti, boylar varyant oldu — slug o gün öldü ve
+    // koleksiyon sessizce dört yerine üç üyeyle kuruluyordu (aşağıdaki uyarı artık bunu bağırıyor).
+    products: ['assorted-baklava', 'kunefe-including-syrup', 'baklava-with-pistachio', 'cold-baklava-with-pistachio'],
     kapak: 'Sobiyet-Baklava-2000g.webp',
     fillFrom: { categorySlugs: ['tatli'], upTo: 24 },
   },
@@ -123,7 +132,10 @@ const COLLECTIONS: SeedCollection[] = [
     description: { tr: 'Kataloğa yeni eklenenler', fr: 'Nouveautés du catalogue', de: 'Neu im Katalog' },
     // İkinci seçki BAŞKA kategorilerden: iki koleksiyon aynı ürünleri gösterseydi "bir ürün birden
     // çok koleksiyonda" durumu denenirdi ama "farklı seçkiler" denenmezdi.
-    products: ['baklava-with-pistachio-6-pieces', 'maras-ice-cream-plain'],
+    // Buradaki `baklava-with-pistachio-6-pieces` de aynı birleşmede ölmüştü (üstteki künye). Yerine
+    // baklava KONMADI: bu seçkinin kendi gerekçesi "başka kategorilerden" ve baklava zaten Bayram
+    // Sofrası'nın kürasyonunda. Lotus, kaynağın en yeni pasta kalemlerinden.
+    products: ['lotus-caramel-cake-with-nutella', 'maras-ice-cream-plain'],
     kapak: 'Black-Forest-Whole-Cake.webp',
     fillFrom: { categorySlugs: ['pasta', 'dondurma'], upTo: 18 },
   },
@@ -171,12 +183,16 @@ const COLLECTIONS: SeedCollection[] = [
   },
 ];
 
-export async function seedCollections(db: Db): Promise<void> {
+export async function seedCollections(db: Db, katman: Katman): Promise<void> {
   const collections = new CollectionService(db);
   if ((await collections.list()).length > 0) {
     console.log('▸ koleksiyonlar zaten dolu — atlandı');
     return;
   }
+  // **Taslak koleksiyon `base` katmanında YAZILMAZ:** o kayıt gerçek bir seçki değil, "pasif · kapaksız ·
+  // üyesiz" hâlini sınamak için uydurulmuş bir örnek (künyesi `SeedCollection.taslak`). Gerçek
+  // veriden başka bir şey yazmayan bir katmanda yeri yok. Künye `seed/tier.ts`.
+  const kurulacak = enAz(katman, 'extend') ? COLLECTIONS : COLLECTIONS.filter((c) => !c.taslak);
 
   // Üyelik ürün id'sine muhtaç: slug → id eşlemesi DB'den (kaynak doğru, seed sırasından bağımsız).
   const urunler = await new ProductService(db).listAll();
@@ -187,7 +203,12 @@ export async function seedCollections(db: Db): Promise<void> {
   const gorselUrl = lezzaGorselUrlByDosya();
 
   console.log('▸ KOLEKSİYON seed');
-  for (const c of COLLECTIONS) {
+  for (const c of kurulacak) {
+    // **Çözülemeyen slug SESSİZ GEÇMEZ** (16.08). `.filter(Boolean)` tek başına kaldığı sürece ölü
+    // bir slug koleksiyonu bir üye eksik kuruyor ve hiçbir sayaç bunu eksik saymıyordu: iki
+    // koleksiyon aylardır öyle duruyordu (künyeleri üye satırlarında). Kapak uyarısıyla aynı desen.
+    const cozulmeyen = c.products.filter((slug) => !idBySlug.has(slug));
+    if (cozulmeyen.length > 0) console.log(`  ⚠ ${c.slug} — katalogda olmayan üye slug'ı: ${cozulmeyen.join(' · ')} (koleksiyon o üye(ler) eksik kuruldu)`);
     const productIds = c.products.map((slug) => idBySlug.get(slug)).filter((id): id is string => Boolean(id));
     // Kuralla tamamlama: elle kürasyon başta kalır, arkasına kategori sırasına göre eklenir.
     // **Yalnız SATILABİLİR ürün** — pasif/aday bir ürünü vitrin seçkisine kural ile koymak, o
@@ -227,7 +248,7 @@ export async function seedCollections(db: Db): Promise<void> {
     }
     console.log(`  ✓ ${resolveLocalizedText(created.name)} · ${productIds.length} ürün · vitrin havuzunda · /${created.slug}`);
   }
-  console.log(`✓ koleksiyon: ${COLLECTIONS.length} kayıt`);
+  console.log(`✓ koleksiyon: ${kurulacak.length} kayıt`);
 }
 
 // ── Paket (bundle) + kalemleri (05.5) ────────────────────────────────────────────────────────────
@@ -357,6 +378,22 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
     ],
   },
 ];
+
+/**
+ * **Satış kurgusuna girmiş ürünler** — paket kalemi · tarif malzemesi · elle kürasyonlu koleksiyon
+ * üyesi. Katalog seed'i bu kümeyi ADAY YAPMAZ (gerekçe `catalog-lezza.ts`'teki `durum` künyesinde:
+ * aday ürün satılamaz ve fiyatsızdır; içinde aday kalem olan bir paket satılamaz, tutarı da yalan).
+ *
+ * Üç liste de KENDİ dosyasında kalıyor, buraya kopyalanmıyor — türetiliyor. Fonksiyon (sabit değil)
+ * olması TDZ içindir: `seedCatalog` bu dosyada `BUNDLES`/`COLLECTIONS`'tan ÖNCE tanımlı ve modül
+ * yüklenirken okunan bir sabit boş küme dönerdi.
+ */
+function kurguReferanslari(): { sku: ReadonlySet<string>; slug: ReadonlySet<string> } {
+  return {
+    sku: new Set([...BUNDLES.flatMap((b) => b.items.map((i) => i.sku)), ...TARIF_SKULARI]),
+    slug: new Set(COLLECTIONS.flatMap((c) => c.products)),
+  };
+}
 
 /** Kuruşa çevrim — `toCents` burada yok (`@lezzet/helper` kökün bağımlısı değil), aritmetik tek satır. */
 const cents = (v: number) => Math.round(v * 100);

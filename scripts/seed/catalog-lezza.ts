@@ -5,6 +5,7 @@ import type { CategoryImageService, CategoryService, ProductFamilyService, Produ
 import { PRODUCT_GALLERY_MAX } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
+import { enAz, type Katman } from './tier';
 
 /**
  * **GERÇEK katalog** (05 · kullanıcı kararı 04.08) — Lezza Foods'un 141 ürünü, uydurulmuş 69'un
@@ -479,7 +480,41 @@ export async function seedLezzaProducts(
   families: ProductFamilyService,
   catId: Map<string, string>,
   startOrder: number,
+  /**
+   * Satış kurgusuna GİRMİŞ ürünler — paket kalemi, tarif malzemesi, koleksiyon üyesi. Aday seçimi
+   * bunları ATLAR (künyesi `durum` satırında). Küme çağırandan geliyor çünkü listelerin sahibi
+   * `catalog.ts` ve `recipe.ts`; buraya kopyalansaydı iki liste bir gün ayrılır ve ayrıldığı gün
+   * kimse fark etmezdi. Import de tek yönlü (`catalog.ts → catalog-lezza.ts`), tersi çevrim olurdu.
+   */
+  kurgu: { sku: ReadonlySet<string>; slug: ReadonlySet<string> },
+  /** Besleme katmanı — `base` kusursuz katalog kurar (künye `tier.ts` ve `kusurlu` satırında). */
+  katman: Katman,
 ): Promise<{ made: number; photos: number; variants: number; families: number }> {
+  /** Bilinçli boşluklar (pasif · aday · beyansız · kapaksız · çevirisi yarım) `extend`ten itibaren. */
+  const kusurlu = enAz(katman, 'extend');
+  /**
+   * **`base` HİÇBİR ALANI TÜRETMEZ** (kullanıcı kararı 16.08: *"hiçbir içerik üretilmeyecek"*).
+   *
+   * Bugün dokuz alan hesaplanıyor ve hiçbirinin arkasında bir belge yok: alerjen ADDAN çıkarılıyor,
+   * besin künyesi KATEGORİ ORTALAMASINDAN, içindekiler alerjen listesinden kurulan bir cümleden,
+   * saklama metni kategori rejiminden, raf ömrü kategori sabitinden, KDV oranı ürün ADININ
+   * regex'inden, hedef marj ve otomatik fiyat indisten. Yerelde bunlar ekran doldurur; üretimde
+   * **yanlış yasal beyan ve yanlış vergi sınıflandırması** olurlar.
+   *
+   * Şema bu boşluğu zaten temsil edebiliyor (ölçüldü): `allergens`/`traces` varsayılanı `{}`,
+   * `ingredients`/`nutrition`/`storage_instructions`/`shelf_life_days`/`target_margin_percent`
+   * nullable, `shippable` varsayılanı `false` ("bilmiyoruz" = kargolanmaz), `auto_price` `false`.
+   * Tek istisna `vat_rate`: `NOT NULL` ve varsayılanı **5,5** — o bir tahmin değil, Fransa'da gıda
+   * KDV oranının kendisi. Sonuç: 128 ürün `is_incomplete=true` doğar ve operatör doldurur.
+   *
+   * **Belgesi olan altı ürün etkilenmez** — onların beyanı gerçek ve üretime de gider.
+   *
+   * Ölçüt `kusurlu`nun aynısı ve bu bir tesadüf değil: türetilmiş bir alan da bilinçli bir boşluk
+   * da aynı şeyi yapıyor — gerçekte olmayan bir hâli veriye yazmak. Uzak hedef ayrıca kontrol
+   * edilmiyor çünkü `seed.ts` kapısı uzağa YALNIZ `base`i geçiriyor.
+   */
+  const turetmeSerbest = kusurlu;
+  if (!turetmeSerbest) console.log('  · türetilmiş alan YAZILMAYACAK: alerjen · iz · içindekiler · saklama · besin künyesi · raf ömrü · KDV tahmini · hedef marj. Belgesi olan 6 ürün etkilenmez.');
   const katalog = readLezzaCatalog();
   /** Aile bağı ÜRÜNLER KURULDUKTAN SONRA yazılır: bağ iki ucun da var olmasını ister. */
   const urunIdBySlug = new Map<string, string>();
@@ -547,10 +582,15 @@ export async function seedLezzaProducts(
   // **PASİF kategori** — ayrı ve EK bir kayıt, gerçek altısından biri kapatılarak DEĞİL: pasif
   // kategori ürünlerini de katalogdan düşürür, yani gerçek bir kategoriyi kapatmak 20-30 ürünü
   // vitrinden silerdi. Sezonluk kategori gerçek bir operasyon hâlidir (yılın on ayı kapalı durur).
-  const sezonluk = await categories.create({
-    name: { tr: 'Ramazan Sofrası', fr: 'Table du Ramadan', de: 'Ramadan-Tafel' },
-  });
-  await categories.update({ id: sezonluk.id, isActive: false, isFeatured: false });
+  //
+  // **`base` katmanında YAZILMAZ:** kaynakta böyle bir kategori yok, bu kayıt yalnız kapsam denetimi için
+  // uydurulmuş. Gerçek veriden başka bir şey yazmayan bir katmanda yeri olamaz.
+  if (kusurlu) {
+    const sezonluk = await categories.create({
+      name: { tr: 'Ramazan Sofrası', fr: 'Table du Ramadan', de: 'Ramadan-Tafel' },
+    });
+    await categories.update({ id: sezonluk.id, isActive: false, isFeatured: false });
+  }
 
   let made = 0;
   let photos = 0;
@@ -581,26 +621,58 @@ export async function seedLezzaProducts(
     // belgenin yazdığı alerjen, addan çıkarılandan hem daha doğru hem daha eksiksiz: `alerjenTuret`
     // "Vegan Çiğköfte"den kerevizi çıkaramaz (ada yazmıyor), belge çıkarıyor.
     const beyan = p.declarations;
-    const alerjenler = beyan ? spekAlerjen(beyan.allergens) : alerjenTuret(`${ad} ${p.description ?? ''}`);
+    // **UZAK HEDEFTE TAHMİN YAZILMAZ** (katman künyesi `tier.ts`). Alerjen addan çıkarılıyor, besin
+    // künyesi kategori ortalamasından, içindekiler alerjen listesinden — üçü de INCO kapsamında
+    // YASAL BEYAN ve tahmin edilmiş bir beyan yanlış beyandır. Belgesi olan altı ürün etkilenmez:
+    // onların beyanı gerçek ve üretime de gidebilir. Kalanlar boş gider, `is_incomplete` true olur
+    // ve operatör doldurur — eksik bir künye, uydurulmuş bir künyeden dürüsttür.
+    const alerjenler = beyan ? spekAlerjen(beyan.allergens) : turetmeSerbest ? alerjenTuret(`${ad} ${p.description ?? ''}`) : [];
 
-    // ── Serpiştirilen boşluklar (gerekçesi dosya künyesinde) ──────────────────
+    // ── Serpiştirilen boşluklar — YALNIZ `extend`ten itibaren (katman künyesi `tier.ts`) ─────────
+    // `base` KUSURSUZDUR: açılış günü kataloğunda beyanı eksik, çevirisi yarım, kapaksız ya da
+    // pasif ürün YOKTUR — bunlar operatörün zamanla biriktirdiği hâllerdir, kurulumun değil.
+    //
     // Oranlar eski toplu üreticiden SEYREK: orada veri zaten uydurmaydı, burada gerçek bir katalogu
     // bozmamak gerekiyor. Yine de her süzgecin en az birkaç sonucu olacak kadar sık.
     // **Oran 17'de birden 41'de bire SEYRELDİ (16.08):** çeviriler artık gerçek ve elle yazılı, o
     // yüzden onları "süzgeç denensin" diye atmanın bedeli yükseldi. Üç ürün hâli sınamaya yeter.
-    const dilEksik = i % 41 === 0; // fr/de düşer → "çevirisi tamamlanmamış ürün" hâli
+    const dilEksik = kusurlu && i % 41 === 0; // fr/de düşer → "çevirisi tamamlanmamış ürün" hâli
     // **Beyanı GERÇEK olan ürün bu boşluğa hiç girmez.** Elimizde belgesi olan bir ürünün beyanını
     // "süzgeç denensin" diye silmek, sahnelemek değil veri kaybetmektir — ve kapsam zaten kalan
     // 128 üründen fazlasıyla doğuyor.
-    const beyanEksik = !beyan && i % 13 === 0; // beyan dörtlüsü boş → "beyan eksik" süzgeci
-    const kapaksiz = i % 19 === 0; // görselsiz kayıt → boş kapak durumu
-    const durum: ProductStatus = i % 23 === 0 ? 'passive' : i % 29 === 0 ? 'candidate' : 'active';
+    const beyanEksik = kusurlu && !beyan && i % 13 === 0; // beyan dörtlüsü boş → "beyan eksik" süzgeci
+    const kapaksiz = kusurlu && i % 19 === 0; // görselsiz kayıt → boş kapak durumu
+
+    // ── DURUM STOK GERÇEĞİNDEN AYRILAMAZ (kullanıcı kararı 16.08) ─────────────────────────────
+    // Önce durum burada (`i % 29`), stok ise `stock.ts`'te (`i < 45 || i % 3`) BİRBİRİNDEN HABERSİZ
+    // iki indis kuralıyla veriliyordu. Sonuç ölçüldü: **116 aktif ürünün 53'ünün hiç stok partisi
+    // yoktu** — yani kataloğun neredeyse yarısı müşteriye "tükendi" diye çıkıyordu, ve hepsi
+    // BİTTİĞİ için değil hiç GELMEDİĞİ için. Buna karşılık gerçekten tükenmiş (partisi olup miktarı
+    // sıfırlanmış) tek bir aktif ürün yoktu; tek örnek (`L-BITTI`) pasif bir ürüne düşmüştü, yani
+    // müşteri yüzeyi onu hiç çizmiyordu.
+    //
+    // Oysa DOMAIN §13 aday ürünü zaten böyle tanımlıyor: *"stokta olmayan ama tedarik edilebilecek
+    // ürün"*. Hiç stoklanmamış bir ürün "tükendi" değildir — daha satışa hiç çıkmamıştır, ve
+    // operatöre "ne zaman gelecek" diye sorulabilen bir cevabı da yoktur. Doğru yeri keşif akışıdır.
+    //
+    // Kural artık TEK YÖNLÜ ve tek kaynaklı: **aday = stoklanmayacak ürün**; `stock.ts` aday
+    // olmayan HER varyantı stoklar (orada ikinci bir "stoklu mu" kuralı kalmadı). "Tükendi" hâli
+    // kayb olmuyor, `stock.ts`'te bilinçli olarak BİTMİŞ partiyle doğuyor — geçmişi olan bir tükeniş.
+    //
+    // **Satış kurgusuna girmiş ürün aday olamaz:** paket kalemi, tarif malzemesi ya da koleksiyon
+    // üyesi bir ürünü aday yapmak o paketi/tarifi/seçkiyi sessizce satılamaz kılardı (aday ürünün
+    // fiyatı da yok — paket fiyatı kalemlerin fiyatından türüyor, biri eksikse tutar yalan söyler).
+    //
+    // **`base` katmanında üçü de yok:** açılış günü kataloğunun tamamı satıştadır. Aday ürün bir keşif
+    // kurgusu, pasif ürün bir geri çekme kararı — ikisi de zamanla doğar, kurulumla değil.
+    const kurguda = kurgu.slug.has(p.slug) || p.variants.some((v) => v.sku && kurgu.sku.has(String(v.sku)));
+    const durum: ProductStatus = !kusurlu ? 'active' : i % 23 === 0 ? 'passive' : i % 4 === 2 && !kurguda ? 'candidate' : 'active';
     // **Künyesi eksik ürün** (kapsam denetimi 09.08) — ikisi de ayrı bir EKRAN hâli, ayrı sebep:
     //   raf ömrü yok  → "kalan %" hesaplanamaz; parti kartı o çubuğu HİÇ basmamalı
     //   hedef marj yok → marj uyarısı hesaplanamaz; "uyarı yok" ile "veri yok" aynı şey değil
     // Operatörün gerçekte unuttuğu iki alan bunlar; ikisi de zorunlu değil ve boş kalabiliyor.
-    const rafOmruYok = i % 31 === 0;
-    const marjYok = i % 37 === 0;
+    const rafOmruYok = kusurlu && i % 31 === 0;
+    const marjYok = kusurlu && i % 37 === 0;
 
     // Saklama rejimi TEK KAYNAK: metin de kargo izni de buradan çıkar, ikisi ayrışamaz.
     // **Beyansız ürün kargolanmaz** ve bu, kolonun yeni varsayılanının (`false`) tam olarak
@@ -632,32 +704,36 @@ export async function seedLezzaProducts(
       // zayıf söylemektir. **Belgesi olan üründe iz de belgeden**, dağıtımdan değil.
       traces: beyan
         ? spekAlerjen(beyan.traces).filter((a) => !alerjenler.includes(a))
-        : beyanEksik
+        : beyanEksik || !turetmeSerbest
           ? []
           : (NADIR_IZLER[i % NADIR_IZLER.length] ?? []).filter((a) => !alerjenler.includes(a)),
-      ingredients: beyan?.ingredientsEU ? ucDile(beyan.ingredientsEU) : beyanEksik ? null : icindekiler(alerjenler),
+      ingredients: beyan?.ingredientsEU ? ucDile(beyan.ingredientsEU) : beyanEksik || !turetmeSerbest ? null : icindekiler(alerjenler),
       // Hazırlama önerisi varsa saklama metnine EKLENİR: kolon zaten ikisini birden taşıyor
       // ("saklama/hazırlama metni") ve belgede ayrı duran iki cümlenin ekranda ayrı yeri yok.
       storageInstructions: beyan?.storage
         ? ucDile(beyan.cookingTips ? `${beyan.storage} ${beyan.cookingTips}` : beyan.storage)
-        : beyanEksik
+        : beyanEksik || !turetmeSerbest
           ? null
           : rejim.metin,
-      nutrition: beyan?.nutritionPer100g ?? (beyanEksik ? null : besinDegeri(p.category, i)),
-      vatRate: HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA,
+      nutrition: beyan?.nutritionPer100g ?? (beyanEksik || !turetmeSerbest ? null : besinDegeri(p.category, i)),
+      // **KDV oranı ürün ADINDAN tahmin ediliyordu** (`HAZIR_TUKETIM` regex'i → %10). Vergi
+      // sınıflandırması bir tahmin işi değil: yanlışı yasal sonuç doğurur. Türetme kapalıyken alan
+      // hiç yazılmaz ve kolonun varsayılanı (%5,5 — Fransa gıda KDV'si) geçerli olur.
+      vatRate: turetmeSerbest ? (HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA) : undefined,
       // Raf ömrü belgede AY cinsinden; kolon gün tutuyor. Boşluk (`rafOmruYok`) gerçek veriyi
       // silmemek için burada da devre dışı — gerekçesi `beyanEksik` satırının aynısı.
       shelfLifeDays: beyan?.shelfLifeMonths
         ? beyan.shelfLifeMonths * 30
-        : rafOmruYok
+        : rafOmruYok || !turetmeSerbest
           ? undefined
           : (RAF_OMRU[p.category ?? ''] ?? 180),
       // Kargo izni SAKLAMA REJİMİNDEN türer, ayrı yazılmaz — gerekçe `SAKLAMA` künyesinde.
       // **Belgesi olan üründe rejim metnin kendisinden okunur:** "-18°C" yazan bir ürün donuktur ve
       // kategoriden türetilmiş tahminin ne dediği önemsizdir. Kaynağın cümlesi tahmini yener.
-      shippable: beyan?.storage ? !/-\s*18\s*°?\s*c/i.test(beyan.storage) : beyanEksik ? false : rejim.shippable,
-      targetMarginPercent: marjYok ? undefined : 30 + (i % 6) * 3,
-      autoPrice: i % 4 === 0,
+      // Türetme kapalıyken kolonun varsayılanı (`false`) kalır — "bilmiyoruz" donuk gıdada "hayır".
+      shippable: beyan?.storage ? !/-\s*18\s*°?\s*c/i.test(beyan.storage) : beyanEksik || !turetmeSerbest ? false : rejim.shippable,
+      targetMarginPercent: marjYok || !turetmeSerbest ? undefined : 30 + (i % 6) * 3,
+      autoPrice: turetmeSerbest && i % 4 === 0,
       status: durum,
       sortOrder: startOrder + i,
       variants: p.variants.map((v, n) => ({
@@ -674,7 +750,7 @@ export async function seedLezzaProducts(
         // **Yalnız ÇOK BOYLU üründe ve son boyda:** tek varyantlı ürünün tek boyunu kapatmak, ürünü
         // satılamaz hâlde bırakır — gerçekte o karar `status: 'passive'` ile verilir, boy
         // kapatmakla değil. İki farklı niyeti aynı veriyle anlatmak, ekranda ikisini de okunmaz kılar.
-        isActive: p.variants.length > 1 && n === p.variants.length - 1 && i % 11 === 0 ? false : undefined,
+        isActive: kusurlu && p.variants.length > 1 && n === p.variants.length - 1 && i % 11 === 0 ? false : undefined,
       })),
     });
     made += 1;

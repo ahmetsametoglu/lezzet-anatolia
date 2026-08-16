@@ -101,9 +101,24 @@ Canlı değerler `npx supabase status -o env` ile alınır (servis ayakta olmal�
 
 **Yıkıcı komutlar kullanıcının kararıdır — ajan kendiliğinden çalıştırmaz:**
 
-- ❌ `pnpm db:reset` · `pnpm db:refresh` · `supabase db reset` — veritabanını siler, migration'ları sıfırdan uygular, seed'i yeniden basar
+- ❌ `pnpm db:reset` · `pnpm db:refresh` (`:base` / `:extend` dâhil) · `supabase db reset` — veritabanını siler, migration'ları sıfırdan uygular, seed'i yeniden basar
 - ❌ `pnpm db:stop` / `db:start` — kullanıcının çalışan ortamını durdurur (dev sunucusu kuralıyla aynı gerekçe)
 - ✅ Okuma, `supabase migration up`, tek seferlik `alter/insert` denemesi — serbest
+
+**Besleme ÜÇ KATMANLIDIR** (kullanıcı kararı 16.08 · künye `scripts/seed/tier.ts`). Katman koşu anında
+seçilir ve değiştirmek reset ister — yani hangi katmanla çalışılacağı da kullanıcının kararıdır:
+
+| komut | katman | ne kurar |
+|---|---|---|
+| `pnpm db:refresh` | `full` | bugünkü tam fikstür; `seed:coverage`ın zorunlu kovaları yalnız burada dolar |
+| `pnpm db:refresh:extend` | `extend` | base + kusurlar (pasif/aday/beyansız ürün) + bir miktar geçmiş |
+| `pnpm db:refresh:base` | `base` | **yalnız gerçek veri** — kategori, ürün, varyant, görsel, aile, koleksiyon, tarif. Fiyat/stok/depo/personel/tedarikçi ve hesaplanmış hiçbir alan yok |
+
+`base` üretim kurulumunda da koşacak (`SEED_ALLOW_REMOTE=true`) ve **uzak hedefe yalnız o geçer** —
+`extend`/`full` uydurma personel ve onlara açılmış giriş hesapları, uydurma depo/tedarikçi/banka
+hesabı yazıyor; kapı bunları hata ile durduruyor. `base`in bedeli açık: 128 ürün `is_incomplete`
+olarak doğar ve fiyatsız olduğu için vitrinde satışa kapalı görünür — gezilebilir bir katalogdur,
+satış yapan bir dükkân değil. Eksikleri operatör doldurunca dükkân olur.
 
 Gerekçe: yereldeki veri "değersiz" değildir. Kullanıcı elle ürün girmiş, görsel yüklemiş, hesap açmış olabilir; ajanın bir `reset`'i saatlerce süren kurgu işini siler. Şema değişikliği reset gerektiriyorsa **söylenir, kullanıcı çalıştırır.**
 

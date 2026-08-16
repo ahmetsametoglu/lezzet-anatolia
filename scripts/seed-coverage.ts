@@ -9,6 +9,7 @@
  */
 import { createServiceRoleClient } from '@lezzet/database';
 import { kapsamOl } from './seed/coverage';
+import { katmanOku } from './seed/tier';
 
 /**
  * **`.env` ELLE yüklenir — `seed.ts` ile aynı gerekçe ve aynı satır.**
@@ -44,6 +45,23 @@ for (const s of satirlar) {
 }
 
 console.log(`\n── Ürün KDV oranları: ${JSON.stringify(kdvOranlari)}`);
+
+/**
+ * **ZORUNLULUK YALNIZ `full` KATMANINDA GEÇERLİ** (katman künyesi `seed/tier.ts`).
+ *
+ * `base` ve `extend` kovaların bir bölümünü BİLEREK boş bırakıyor — geçmişi olmayan bir veri
+ * setinde "iade edilmiş sipariş" ya da "banka eşleştirme kuyruğu" kovasının dolması zaten hata
+ * olurdu. Rapor yine basılıyor: hangi hâlin o katmanda doğmadığını görmek, katmanın ne olduğunu
+ * anlamanın en kısa yolu. Kırmızıya döndüren tek koşu `full`.
+ */
+const katman = katmanOku();
+if (katman !== 'full' && bosZorunlular.length > 0) {
+  console.log(`\n· KATMAN: ${katman} — ${bosZorunlular.length} zorunlu kova boş, bu BEKLENEN. Kapsam vaadi yalnız \`full\` içindir:\n`);
+  // Yukarıdaki satır katman adını KOŞUDAN alıyor, sabit yazmıyor: ad değişse (16.08'de `temel` →
+  // `base` oldu) rapor kendiliğinden doğru kalır.
+  for (const b of bosZorunlular) console.log(`   · ${b.alan} → ${b.kova}`);
+  process.exit(0);
+}
 
 if (bosZorunlular.length === 0) {
   console.log(`\n✔ kapsam tam — ${satirlar.length} kovanın hepsinde örnek var`);

@@ -1,10 +1,21 @@
 /**
- * Local seed — `supabase db reset` sonrası örnek/temel veriyi kurar (local stack'e karşı).
+ * Seed — `supabase db reset` sonrası veriyi kurar. **Üç katman** (kullanıcı kararı 16.08).
  *
- * Kullanım:  pnpm db:reset && pnpm db:seed   (ya da tek komut: pnpm db:refresh)
+ * Kullanım:  pnpm db:refresh          → `full`   (bugünkü tam fikstür; varsayılan)
+ *            pnpm db:refresh:base     → `base`   (YALNIZ gerçek veri — hiçbir şey üretilmez)
+ *            pnpm db:refresh:extend   → `extend` (base + kusurlar + bir miktar geçmiş)
+ *
+ * Katmanın ne olduğu ve neden üç tane olduğu `seed/tier.ts` künyesinde; **buradaki tablo listesi
+ * `full` katmanını anlatır.** Katman koşu anında seçilir (`--tier=`), değiştirmek için reset gerekir.
+ *
+ * `base` üretimde de koşacak (`SEED_ALLOW_REMOTE=true`) ve **uzak hedefe yalnız o geçer**. Yazdığı
+ * her satırın arkasında ya üreticinin kataloğu ya kullanıcının bir kararı var; hesaplanmış tek bir
+ * alan (fiyat · stok · besin künyesi · alerjen · KDV tahmini · marj) ve uydurulmuş tek bir kayıt
+ * (depo · rota · personel · banka hesabı · tedarikçi) yazmaz.
+ *
  * Görseller Cloudflare R2'ye yüklenir (R2 env yoksa atlanır). Giriş: OTP kodu Mailpit'e düşer (54324).
  *
- * TABLO KAPSAMI — hangi tabloya veri girer, girmeyenin sebebi:
+ * TABLO KAPSAMI (`full`) — hangi tabloya veri girer, girmeyenin sebebi:
  *   ✓ category            4 kategori — 3'ü görselli (anasayfa şeridi), 1'i görselsiz (boş durum)
  *   ✓ product             69 ürün — 5'i elle (yasal beyan/KDV/raf ömrü/marj dolu, farklı durumlar
  *                         örneklenir), 64'ü taban×niteleme çarpımından türetilir (16×4): sayfalama ve
@@ -122,6 +133,7 @@ import { seedSiteImages } from './seed/site-image';
 import { seedRecipes } from './seed/recipe';
 import { seedScopedSettings } from './seed/settings';
 import { katalogVaryantlari } from './seed/shared';
+import { enAz, katmanOku, uzakHedefMi } from './seed/tier';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
 import { seedTickets } from './seed/support';
@@ -177,17 +189,59 @@ function assertLocalDatabase(): void {
 
 async function main(): Promise<void> {
   assertLocalDatabase();
+  // Katman koşu ANINDA seçilir (`--tier=base|extend|full`, varsayılan `full`) — künye `seed/tier.ts`.
+  const katman = katmanOku();
+  /**
+   * **UZAK HEDEFE YALNIZ `base` GEÇER** (kullanıcı kararı 16.08).
+   *
+   * `base` tanımı gereği yalnız gerçek veri yazıyor (kaynak katalog + kullanıcının kararları), o
+   * yüzden üretime gidebilir. `extend` ve `full` ise yerel fikstürler: uydurma personel ve onlara
+   * açılmış GİRİŞ HESAPLARI, uydurma depo/rota/tedarikçi/banka hesabı, ağırlıktan hesaplanmış
+   * fiyat, indisten üretilmiş stok, ve bilinçli olarak bozulmuş kayıtlar. Bunların üretime gitmesi
+   * yanlış veri değil, GÜVENLİK AÇIĞI olurdu.
+   *
+   * Kapı burada, tek yerde: aşağıdaki bölümlerin hiçbiri ayrıca "uzak mıyım" diye sormuyor.
+   */
+  if (uzakHedefMi() && katman !== 'base') {
+    throw new Error(
+      `Uzak hedefe yalnız \`base\` katmanı yazılabilir (istenen: ${katman}).\n` +
+        '`extend` ve `full` uydurma personel + giriş hesabı, uydurma depo/tedarikçi/banka hesabı,\n' +
+        'hesaplanmış fiyat ve bilinçli bozuk kayıtlar yazar. Üretim için: SEED_ALLOW_REMOTE=true pnpm db:seed:base',
+    );
+  }
+  console.log(`▸ BESLEME KATMANI: ${katman}${uzakHedefMi() ? ' · UZAK HEDEF' : ''}`);
   const db = createServiceRoleClient();
   // `db:refresh` = reset + seed. Reset, VERİTABANI sağlıklı olur olmaz döner ama PostgREST o anda hâlâ
   // şema önbelleğini yüklüyor olabilir; ilk sorgu kapıdan 502 alıp seed'i ilk bölümde düşürüyordu.
   await waitForRest(db);
-  // Depolar EN BAŞTA: parti, sipariş, bölge ve personel kapsamı hepsi depoya bağlı — deposuz
-  // hiçbir satır yazılamaz (DOMAIN §17).
-  const depolar = await seedWarehouses(db);
-  await seedCatalog(db);
-  await seedCollections(db);
-  await seedDraftCustomers(db);
+  // ── `base` — YALNIZ GERÇEK VERİ ──────────────────────────────────────────────────────────────
+  // Buradaki dört bölümün yazdığı her satırın arkasında ya kaynak katalog ya kullanıcının bir
+  // kararı var: kategori ve ürün üreticinin kataloğundan, kapaklar kullanıcının seçiminden,
+  // koleksiyon üyeliği kullanıcının kürasyonundan, tarif bizim editoryal metnimiz.
+  //
+  // **Paket burada YOK ve bu bir tercih değil ŞEMA:** `bundle.total_price` `NOT NULL`, varsayılanı
+  // yok ve tutar kalem fiyatlarından türüyor. Fiyat yazılmayan bir katmanda paket kurulamaz.
+  // Tarif kalabiliyor çünkü kendi fiyatını SAKLAMIYOR (05.16) — malzeme satırları fiyatsız çizilir.
+  await seedCatalog(db, katman);
+  await seedCollections(db, katman);
+  await seedRecipes(db);
+  // Sayfa görselleri hiçbir şeye bağlı DEĞİL (bir varlığa değil bir sayfa yerine ait) — sırası
+  // serbest; katalogun yanında duruyor çünkü ikisi de aynı kovaya yazıyor.
+  await seedSiteImages(db);
 
+  // ── `base` BURADA BİTER ──────────────────────────────────────────────────────────────────────
+  // Buradan sonrasının TAMAMI uydurmadır (kullanıcı kararı 16.08: *"hiçbir içerik
+  // üretilmeyecek"*): depo · rota · personel ve giriş hesapları · banka hesapları ·
+  // tedarikçiler · ayar değerleri · hesaplanmış fiyat · üretilmiş stok, ve onların üstüne kurulan
+  // bütün geçmiş. Gerçek olanları üretimde operatör kurar. Künye `seed/tier.ts`.
+  if (!enAz(katman, 'extend')) {
+    console.log('✓ seed tamam · KATMAN: base — yalnız gerçek veri (fiyat · stok · depo · personel · tedarikçi YOK; 128 ürün beyansız → is_incomplete)');
+    return;
+  }
+
+  // Depolar geçmişin EN BAŞINDA: parti, sipariş, bölge ve personel kapsamı hepsi depoya bağlı —
+  // deposuz hiçbir satır yazılamaz (DOMAIN §17).
+  const depolar = await seedWarehouses(db);
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
   const kisiler = await seedKisiler(db, depolar);
   // Giriş hesapları profillerden SONRA: trigger yeni auth kullanıcısını e-postayla eşleşen profile
@@ -195,19 +249,13 @@ async function main(): Promise<void> {
   await seedStaffLogins(db);
   const varyantlar = await katalogVaryantlari(db);
   await seedPrices(db, varyantlar, kisiler);
-  // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle yazılan
-  // bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur ve seed anlamsız veri üretir.
+  // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle
+  // yazılan bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur.
   await seedBundles(db);
-  // Tarifler paketlerden SONRA ama aynı gerekçeyle değil: tarif kendi fiyatını SAKLAMIYOR (05.16),
-  // yani fiyat sırası burada bağlayıcı değil. Sıra okunabilirlik için — ikisi de varyantlar üzerine
-  // kurulan editoryal seçkiler ve yan yana durmaları hangi kümenin nereden doğduğunu anlatıyor.
-  await seedRecipes(db);
-  // Sayfa görselleri hiçbir şeye bağlı DEĞİL (bir varlığa değil bir sayfa yerine ait) — sırası
-  // serbest; katalogun yanında duruyor çünkü ikisi de aynı kovaya yazıyor.
-  await seedSiteImages(db);
   await seedDeliveryZones(db, depolar);
   // Kapsamlı ayarlar BÖLGELERDEN SONRA: bölge kapsamlı satır, bölgenin kimliğine yazılır.
   await seedScopedSettings(db);
+  await seedDraftCustomers(db);
   await seedAddresses(db, kisiler);
   await seedPostalDemand(db);
   await seedZoneNotices(db, kisiler);
@@ -220,25 +268,31 @@ async function main(): Promise<void> {
   await seedMoney(db);
   // Kuponlar SİPARİŞLERDEN ÖNCE: sipariş kuponu uygular ve kullanım kaydını yazar; tanım hazır olmalı.
   const kuponlar = await seedDiscounts(db, kisiler);
-  await seedOrders(db, kisiler, varyantlar, kuponlar, depolar);
+  await seedOrders(db, kisiler, varyantlar, kuponlar, depolar, katman);
+  // Eşikler: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar. `full`de transferden SONRA
+  // koşuyor (sevk edilen mal o sayıyı düşürür); `extend`te transfer yok, sıra da sorun değil.
+  await seedThresholds(db, depolar);
+  // Stok bildirimi: tükenmiş varyantlar ancak siparişler işledikten sonra bellidir.
+  await seedStockNotices(db, kisiler);
+  const davetler = await seedFeedbackRequests(db); // davet teslim edilmiş siparişe gider
+  const degerlendirmeler = await seedProductFeedback(db, kisiler, varyantlar, davetler);
+  await seedPoints(db, kisiler, degerlendirmeler); // puan, değerlendirmenin izine dayanır
+
+  if (!enAz(katman, 'full')) {
+    console.log('✓ seed tamam · KATMAN: extend — base + kusurlar + bir miktar geçmiş');
+    return;
+  }
+
+  // ── YALNIZ `full` ────────────────────────────────────────────────────────────────────────────
+  // Kapsam denetiminin (`pnpm seed:coverage`) zorunlu kovalarının tamamı ancak burada dolar.
   // Banka ekstresi SİPARİŞLERDEN SONRA: eşleştirme kuyruğunun satırları açık siparişlerin
   // tutarlarından türüyor (güçlü aday · çoklu aday · öneri yok). `seedMoney` içinde kalsaydı
   // sipariş tablosu henüz boş olur ve kuyruk tek hâlinde donardı.
   await seedBankQueue(db);
   // Transfer siparişlerden SONRA: sevk kullanılabilir stoğa bakar, rezervasyonlu malı yola çıkarmaz.
   await seedTransfer(db, depolar);
-  // Eşikler TRANSFERDEN SONRA: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar ve sevk edilen
-  // mal o sayıyı düşürür — önce yazılsaydı eşikler bir daha hiç tutmayan bir fotoğrafa göre kurulurdu.
-  await seedThresholds(db, depolar);
-  // Stok bildirimi: tükenmiş varyantlar ancak siparişler ve sevkiyat işledikten sonra bellidir.
-  await seedStockNotices(db, kisiler);
-
-  // Siparişten DOĞAN kayıtlar — hepsi sipariş kimliğine dayanır, sıra bağlayıcıdır.
   await seedCourierDayCloses(db, kisiler); // kapanış, günün tahsilat görünümünü okur
   await seedTickets(db, kisiler); // talep siparişe ve kalemine bağlanır
-  const davetler = await seedFeedbackRequests(db); // davet teslim edilmiş siparişe gider
-  const degerlendirmeler = await seedProductFeedback(db, kisiler, varyantlar, davetler);
-  await seedPoints(db, kisiler, degerlendirmeler); // puan, değerlendirmenin izine dayanır
   await seedJobRuns(db);
   // Gözlemleme EN SONDA: sağlık görüntüsünün "son bir saatte kaç hata" alanı ile hata kaydı aynı
   // hikâyeyi anlatıyor; hata satırları yazılmadan görüntü alınsaydı ekran kendiyle çelişirdi.
@@ -246,7 +300,7 @@ async function main(): Promise<void> {
   await seedErrorLog(db);
 
   // Seed bir admin açtığı için 0002'nin "ilk giren admin olur" bootstrap'ı artık tetiklenmez.
-  console.log('✓ seed tamam · operasyon yüzeyi dev bypass ile açık · gerçek hesabı yükseltmek: pnpm set-role <e-posta> admin');
+  console.log('✓ seed tamam · KATMAN: full · operasyon yüzeyi dev bypass ile açık · gerçek hesabı yükseltmek: pnpm set-role <e-posta> admin');
 }
 
 main().catch((err: unknown) => {

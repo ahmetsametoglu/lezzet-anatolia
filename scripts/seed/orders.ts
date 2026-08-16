@@ -7,6 +7,7 @@ import { distributeDiscount, toCents } from '@lezzet/helper';
 import type { OrderStatus } from '@lezzet/types';
 import type { Kuponlar } from './discount';
 import { an, euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
+import type { Katman } from './tier';
 import type { Depolar } from './warehouse';
 
 // ── Sepet (07) ───────────────────────────────────────────────────────────────────────────────────
@@ -80,12 +81,23 @@ export async function seedOrders(
   varyantlar: VaryantRef[],
   kuponlar: Kuponlar,
   depolar: Depolar,
+  katman: Katman,
 ): Promise<void> {
   if (await tabloDolu(db, 'order')) {
     console.log('▸ siparişler zaten dolu — atlandı');
     return;
   }
-  console.log('▸ SİPARİŞ seed');
+  /**
+   * `extend` katmanının sipariş tavanı — `full`de sınır yok (künye `siparis` içinde).
+   *
+   * On iki sayısı keyfî değil: tam yolun dokuz durağı (`draft` → `completed`, artı `cancelled` ve
+   * `returned`) bu aralıkta doğuyor, yani sipariş DURUM MAKİNESİ eksiksiz örnekleniyor. Kesilen
+   * şey durumlar değil, o durumların varyasyonları — kuponlu sipariş, kısmi iade, sınır ötesi
+   * teslimat, ikinci depodan çıkan sipariş. Onlar `full`ün işi.
+   */
+  const siparisTavani: number | null = katman === 'extend' ? 12 : null;
+  let acilanSiparis = 0;
+  console.log(siparisTavani === null ? '▸ SİPARİŞ seed' : `▸ SİPARİŞ seed (extend — ilk ${siparisTavani} senaryo)`);
   const orders = new OrderService(db);
   const reservations = new ReservationService(db);
   const stocks = new StockService(db);
@@ -240,6 +252,14 @@ export async function seedOrders(
     tasiyici?: { carrier: 'colissimo' | 'chronopost' | 'dhl' | 'ups' | 'other'; takipNo: string | null };
     etiket: string;
   }): Promise<string | null> {
+    // ── `extend` KATMANI: "bir miktar geçmiş" (kullanıcı kararı 16.08, künye `tier.ts`) ──────────
+    // Tavana varınca sipariş HİÇ AÇILMAZ ve `null` döner. Bu sessiz bir kayıp değil: dönüş tipi
+    // zaten `string | null` ve her çağıran onu bekliyor (`kalemDuzelt` ilk satırında kontrol
+    // ediyor) — çünkü bilinmeyen müşteri hâli için o sözleşme zaten vardı. Kesim SIRA ile yapılıyor,
+    // seçmeyle değil: aşağıdaki liste en temel senaryolardan (tam yolun durakları) başlıyor ve
+    // uzmanlaşarak gidiyor, yani baştan kesmek "tipik olanı tut, istisnaları bırak" demek.
+    if (siparisTavani !== null && acilanSiparis >= siparisTavani) return null;
+    acilanSiparis += 1;
     const customerId = kisiler.get(opts.musteri);
     // SESSİZ `return null` DEĞİL (yaşandı 07.08): bilinmeyen bir müşteri anahtarı yazıldığında —
     // benim `b2cYeni` yazım hatam — iki sipariş hiç doğmadı ve seed "tamam" dedi. Yerel veri

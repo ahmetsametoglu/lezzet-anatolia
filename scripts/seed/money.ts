@@ -36,6 +36,8 @@ const GIDERLER: Array<{ hesap: string; amount: number; category: string; descrip
   { hesap: 'revolut', amount: 180, category: 'advertising', description: 'Google — marka araması', gunOnce: 6, meta: { campaign: 'marka-arama' } },
 ];
 
+// **`base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): hesap adları da açılış bakiyeleri de uydurma
+// sayılar. Gerçek kasa/banka/Stripe hesabını operatör kurar. Künye `seed/tier.ts`.
 export async function seedMoney(db: Db): Promise<void> {
   if (await tabloDolu(db, 'account')) {
     console.log('▸ hesaplar zaten dolu — atlandı');

@@ -195,6 +195,9 @@ const KISILER: SeedKisi[] = [
 
 
 /** Kartları açar (varsa dokunmaz) ve `key → profil id` haritasını döner. */
+// **Bu bölüm `base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): buradaki altı kişi de uydurma
+// ve `seedStaffLogins` onlara giriş hesabı açıyor — üretime gitseydi bilinen e-postalarla sahte
+// hesaplar açılmış olurdu. Gerçek personeli üretimde operatör kurar. Künye `seed/tier.ts`.
 export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
   const profiles = new UserProfileService(db);
   const harita: Kisiler = new Map();
