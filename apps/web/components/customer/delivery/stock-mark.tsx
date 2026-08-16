@@ -44,24 +44,40 @@ import messages from './place-messages.json';
 interface StockMarkProps {
   status: StockStatus;
   locale: Locale;
+  /**
+   * `lg` = ÜRÜN DETAYININ başlık altı işareti (16.08, kullanıcı tespiti): sepete ekleme yolu
+   * bilinçli olarak açık kaldığı için müşterinin "buraya gönderemiyoruz" gerçeğini İLK okuyacağı
+   * yer burası — rozet puntosunda kaçıyordu ve müşteri alabileceğini sanıyordu. Kart/listede
+   * varsayılan rozet kalır: orada işaret bir tarama ipucudur, sayfanın uyarısı değil.
+   */
+  size?: 'sm' | 'lg';
 }
 
-export function StockMark({ status, locale }: StockMarkProps) {
+export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
   const t = messages[locale];
   const { place } = useDeliveryPlace();
-  if (status === 'shipping') {
-    return (
-      <Badge tone="closed" variant="outline">
-        {t.shipMark}
+
+  // Büyük hâl Badge'e ölçü eklemez, kendi bandını çizer: rozet ailesi kısa etiketler için
+  // (envanter K5), buradaki ise tek cümlelik bir uyarı bandı — tonlar aynı aileden (honey · kum).
+  const band = (tone: 'blocked' | 'ship', text: string) =>
+    size === 'lg' ? (
+      <span
+        className={[
+          'inline-flex w-fit items-center rounded-soft border px-3.5 py-2 font-sans text-body-sm font-bold leading-snug',
+          tone === 'blocked' ? 'border-honey-line bg-honey-bg text-honey' : 'border-sand-300 bg-closed-bg text-closed',
+        ].join(' ')}
+      >
+        {text}
+      </span>
+    ) : (
+      <Badge tone={tone === 'blocked' ? 'pending' : 'closed'} variant="outline">
+        {text}
       </Badge>
     );
-  }
+
+  if (status === 'shipping') return band('ship', t.shipMark);
   if (status === 'elsewhere') {
-    return (
-      <Badge tone="pending" variant="outline">
-        {elsewhereReasonOf(place) === 'out_of_route' ? t.lineBlocked : t.awayMark}
-      </Badge>
-    );
+    return band('blocked', elsewhereReasonOf(place) === 'out_of_route' ? t.lineBlocked : t.awayMark);
   }
   return null;
 }

@@ -48,7 +48,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
               (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
                 <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
               ) : (
-                <StockMark status={selected.stockStatus} locale={locale} />
+                <StockMark status={selected.stockStatus} locale={locale} size="lg" />
               ))}
           </div>
 
