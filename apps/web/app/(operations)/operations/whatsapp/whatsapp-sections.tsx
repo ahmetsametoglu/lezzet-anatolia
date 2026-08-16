@@ -151,9 +151,11 @@ interface ConversationPaneProps {
   onMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket — metni döndürür, ekran defter kutusuna taşır. */
   onConsumeDraft: () => Promise<string | null>;
+  /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
+  onSuggestDraft: () => void;
 }
 
-export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutbound, onMode, onConsumeDraft }: ConversationPaneProps) {
+export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutbound, onMode, onConsumeDraft, onSuggestDraft }: ConversationPaneProps) {
   // "Kutuya taşı"nın taşıdığı metin — nesne kimliği tetikleyicidir (talep ekranıyla aynı desen).
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
@@ -204,28 +206,41 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
           (15.7/15.11), taslağın tek dürüst çıkışı defter kutusuna taşınmak. Operatör metni
           telefonundan gönderir, kutu zaten "gönderdiğini işle" kutusudur. Pencere kapalıyken
           taşınacak kutu da yok — kart yine görünür ama eylem yerine sebep yazar. */}
-      {detail.handledBy === 'hybrid' && detail.aiDraft ? (
+      {detail.handledBy === 'hybrid' ? (
         <div className="flex flex-none flex-col border-t border-ops-line bg-ops-card px-5 pt-3">
-          <AiDraftCard draft={detail.aiDraft}>
-            {detail.window.state === 'open' ? (
-              <Button
-                size="sm"
-                variant="violet"
-                disabled={busy}
-                onClick={() => {
-                  void onConsumeDraft().then((draft) => {
-                    if (draft) setPrefill({ text: draft });
-                  });
-                }}
-              >
-                Cevap kutusuna taşı
+          {detail.aiDraft ? (
+            <AiDraftCard draft={detail.aiDraft}>
+              {detail.window.state === 'open' ? (
+                <Button
+                  size="sm"
+                  variant="violet"
+                  disabled={busy}
+                  onClick={() => {
+                    void onConsumeDraft().then((draft) => {
+                      if (draft) setPrefill({ text: draft });
+                    });
+                  }}
+                >
+                  Cevap kutusuna taşı
+                </Button>
+              ) : (
+                <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+                  Pencere kapalı — serbest mesaj gönderilemediği için taslak da gönderilemez.
+                </span>
+              )}
+            </AiDraftCard>
+          ) : (
+            // Talep ekranıyla aynı desen (20.4): cron 5 dk'da bir üretiyor, operatör beklemek
+            // zorunda değil.
+            <div className="flex items-center gap-2.5 pb-1">
+              <Button size="sm" variant="violet" onClick={onSuggestDraft} disabled={busy}>
+                ✦ Taslak öner
               </Button>
-            ) : (
               <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
-                Pencere kapalı — serbest mesaj gönderilemediği için taslak da gönderilemez.
+                Hibrit mod — AI taslağı yok; düğmeyle şimdi üretin ya da turu bekleyin (5 dk'da bir).
               </span>
-            )}
-          </AiDraftCard>
+            </div>
+          )}
         </div>
       ) : null}
 

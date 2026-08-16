@@ -36,6 +36,7 @@ export function WhatsappDesktop({
   onRecordOutbound,
   onMode,
   onConsumeDraft,
+  onSuggestDraft,
   onIncoming,
   onNewDm,
   onNewTicket,
@@ -44,9 +45,9 @@ export function WhatsappDesktop({
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="WhatsApp"
-        // Çizimin ikinci sayısı ("1 AI yürütüyor") YOK: ajan yazılmadı, bugün her sohbet insanda ve
-        // sayı daima 0 gösterirdi — "AI çalışmıyor" değil, "AI yok" diye okunurdu.
-        subtitle={`${data.awaitingCount} cevap bekliyor · kuyruk son mesaja göre sıralı`}
+        // İkinci sayı yalnız SIFIRDAN BÜYÜKKEN yazılır (Talepler başlığıyla aynı gerekçe): 0 iki
+        // şey söyleyebilir ("AI yok" / "AI'da iş yok") ve başlık hangisi olduğunu bilemez.
+        subtitle={`${data.awaitingCount} cevap bekliyor${data.aiCount > 0 ? ` · ${data.aiCount} AI'da` : ''} · kuyruk son mesaja göre sıralı`}
       >
         <Button variant="dark" size="sm" onClick={onNewDm}>
           + Gelen DM işle
@@ -91,6 +92,7 @@ export function WhatsappDesktop({
               onRecordOutbound={onRecordOutbound}
               onMode={onMode}
               onConsumeDraft={onConsumeDraft}
+              onSuggestDraft={onSuggestDraft}
             />
             <WhatsappContextPane
               context={data.detail.context}

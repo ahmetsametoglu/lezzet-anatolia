@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { generateTicketDraft } from '@lezzet/application';
 import { OrderService, serviceDb } from '@lezzet/database';
 import {
   DEFAULT_PAGE_SIZE,
@@ -130,6 +131,35 @@ export async function setTicketModeAction(ticketId: string, mode: TicketHandler)
     if (!result.ok) return { data: null, error: readable(result.reason) };
     refresh();
     return { data: { mode: result.data.handledBy }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** AI üretim sonucunun operatöre söylenecek hâli — başarı `null` döndürür (hata yok). */
+const DRAFT_FAILURE: Record<string, string> = {
+  not_configured: 'AI yapılandırılmamış — env dosyasına sağlayıcı anahtarı (AI_PROVIDER + API anahtarı) eklenmeli.',
+  provider_error: 'AI sağlayıcısına ulaşılamadı — birazdan yeniden deneyin.',
+  invalid_output: 'AI beklenen biçimde cevap üretemedi — yeniden deneyin; sürerse bildirin.',
+  wrong_mode: 'Taslak yalnız hibrit modda üretilir — önce modu Hibrit yapın.',
+  nothing_to_answer: 'Cevaplanacak yeni müşteri mesajı yok — son sözü zaten biz söylemişiz.',
+  empty_thread: 'Bu talepte hiç mesaj yok — taslak üretilecek bir soru yok.',
+  not_found: 'Talep bulunamadı — ekranı tazeleyin.',
+};
+
+/**
+ * **Taslak öner** (20.4): hibrit talepte AI taslağını İSTEK üzerine üretir — cron'u beklemeden.
+ * `force`: operatör düğmeye bastıysa sebep ondadır; önbellek kuralı ezilir, model çağrılır.
+ */
+export async function suggestTicketDraftAction(ticketId: string): Promise<ActionResult<{ generated: true }>> {
+  try {
+    await requireAdmin();
+    const outcome = await generateTicketDraft(serviceDb(), ticketId, { force: true });
+    if (outcome.status === 'skipped' || outcome.status === 'failed') {
+      return { data: null, error: DRAFT_FAILURE[outcome.reason] ?? outcome.reason };
+    }
+    refresh();
+    return { data: { generated: true }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

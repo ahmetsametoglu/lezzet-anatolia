@@ -25,8 +25,11 @@ import type { B2bCheckView, B2bDuplicateRow } from '@/app/(operations)/operation
  *  · ~~Sirene/Annuaire çağrısı yok~~ **KAPANDI (04.08):** künye kart açılırken tazeleniyor
  *    (`refreshedCompanyInfo`); servis düşerse profildeki künyeye dönülüyor, sessizce "kapandı"
  *    denmiyor.
- *  · `BEKLEYEN(09.11)`: `packages/ai` özeti yok — kart AI kutusunu boş ve NEDENİNİ yazarak gösterir;
- *    uydurma bir cümle "okuma yardımı" değil, yanlış yönlendirme olurdu.
+ *  · ~~`packages/ai` özeti yok~~ **KAPANDI (16.08):** `b2bSummaryAction` sinyalleri tek cümleye
+ *    indiriyor (`b2bSummaryTask`, sınıf 3). Cümle BURADAN üretilmiyor ve bilerek: kartın okuması
+ *    hızlı olmalı, model çağrısı ise saniye mertebesinde — ekran kartı çizip özeti sonra alıyor.
+ *    Üretilemezse eski dürüst hâl korunuyor; uydurma bir cümle "okuma yardımı" değil, yanlış
+ *    yönlendirme olurdu.
  */
 
 /** Google Haritalar araması — adresi metin olarak sorar (API anahtarı gerekmez). */

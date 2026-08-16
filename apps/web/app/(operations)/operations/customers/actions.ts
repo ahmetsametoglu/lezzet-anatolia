@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { b2bSummaryTask, runTask } from '@lezzet/ai';
 import {
   AddressService,
   DiscountCodeService,
@@ -183,6 +184,34 @@ export async function readB2bCheckAction(customerId: string): Promise<ActionResu
     const check = await readB2bCheck(serviceDb(), customerId);
     if (!check) throw new Error('Müşteri bulunamadı.');
     return { data: check, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Kontrol kartının AI özeti (09.11c · sınıf 3, 16.08) — kart okumasından AYRI action ve bilerek:
+ * model çağrısı saniye mertebesinde, kartın açılışı onu beklememeli. Diyalog kartı çizer, özet
+ * sonradan düşer; AI yoksa kart bugüne kadarki hâliyle kalır ("üretilmiyor" cümlesi).
+ *
+ * Girdi MOTORUN sinyalleridir (`b2bSignals`) — model kendi kanıtını toplamaz, verilen sinyalleri
+ * tek cümleye indirir (sınıf 3 çizgisi: ticari değer uydurulmaz, verilenden türetilir).
+ */
+export async function b2bSummaryAction(customerId: string): Promise<ActionResult<{ summary: string }>> {
+  try {
+    await requireAdmin();
+    const check = await readB2bCheck(serviceDb(), customerId);
+    if (!check) throw new Error('Müşteri bulunamadı.');
+    const result = await runTask(b2bSummaryTask, {
+      legalName: check.legalName,
+      country: check.country,
+      signals: check.signals.map((signal) => ({ label: signal.label, value: signal.value, tone: signal.tone })),
+      duplicateCount: check.duplicates.length,
+    });
+    // Sebep ekrana AYRINTISIYLA gitmez: kartın üretilmemiş-özet hâli zaten dürüst ("sinyalleri
+    // aşağıdan okuyun"); anahtar yoksa da sağlayıcı düştüyse de operatörün yapacağı şey aynı.
+    if (!result.ok) return { data: null, error: result.reason };
+    return { data: { summary: result.data.summary }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

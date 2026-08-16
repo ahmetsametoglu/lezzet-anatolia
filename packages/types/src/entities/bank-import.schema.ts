@@ -35,6 +35,29 @@ export const BankColumnMappingSchema = z.object({
 export type BankColumnMapping = z.infer<typeof BankColumnMappingSchema>;
 
 /**
+ * AI sütun tanıyıcısının çıktısı (12.4 · sınıf 3, 16.08) — `MappingSuggestion`ın (domain-core)
+ * modele dayatılabilir yarısı. `missing` BURADA YOK ve bilerek: hangi zorunlu alanın boş kaldığı
+ * eşlemeden TÜRETİLİR; modele türetilebilir bir alanı doldurtmak, iki cevabın ayrışabileceği
+ * ikinci bir kaynak açmak olurdu — uygulama katmanı hesaplar.
+ */
+export const BankColumnSuggestionSchema = z.object({
+  amountMode: BankAmountModeEnum,
+  mapping: BankColumnMappingSchema,
+  decimalSeparator: z.enum([',', '.']),
+  dateFormat: z.enum(['dmy', 'ymd', 'mdy']),
+  /** Alan başına 0–1 güven — düşük güven ekranda işaretlenir, operatör oraya bakar. */
+  confidence: z.object({
+    date: z.number().min(0).max(1),
+    label: z.number().min(0).max(1),
+    amount: z.number().min(0).max(1),
+    debit: z.number().min(0).max(1),
+    credit: z.number().min(0).max(1),
+    reference: z.number().min(0).max(1),
+  }),
+});
+export type BankColumnSuggestion = z.infer<typeof BankColumnSuggestionSchema>;
+
+/**
  * **Hesaba özel** import şablonu. Banka başına bir kez çıkarılır, sonraki dosyalarda otomatik
  * uygulanır — her ay aynı soruyu sormak memurluktur.
  */

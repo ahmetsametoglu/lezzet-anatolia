@@ -38,6 +38,7 @@ export function TicketsDesktop({
   onStatus,
   onMode,
   onConsumeDraft,
+  onSuggestDraft,
   onTakeOver,
   onTriggerReturn,
   onNewTicket,
@@ -49,9 +50,9 @@ export function TicketsDesktop({
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Talepler"
-        // Çizimin iki sayısı yerinde; üçüncüsü ("AI yürütüyor") 16.5 ile gelir — bugün daima 0
-        // gösterirdi ve "AI çalışmıyor" değil "AI yok" diye okunurdu (`TicketsData.counts` künyesi).
-        subtitle={`${data.counts.open} açık · ${data.counts.in_progress} işlemde · kuyruk son mesaja göre sıralı`}
+        // Üçüncü sayı yalnız SIFIRDAN BÜYÜKKEN yazılır: 0 iki şey söyleyebilir ("AI yok" / "AI'da
+        // iş yok") ve başlık hangisi olduğunu bilemez — sayı ancak varken bilgi taşır.
+        subtitle={`${data.counts.open} açık · ${data.counts.in_progress} işlemde${data.aiCount > 0 ? ` · ${data.aiCount} AI'da` : ''} · kuyruk son mesaja göre sıralı`}
       >
         <Button variant="dark" size="sm" onClick={onNewTicket}>
           + Elle talep
@@ -95,6 +96,7 @@ export function TicketsDesktop({
                 onReply={onReply}
                 onMode={onMode}
                 onConsumeDraft={onConsumeDraft}
+                onSuggestDraft={onSuggestDraft}
                 onTakeOver={onTakeOver}
                 onTriggerReturn={onTriggerReturn}
               />

@@ -24,12 +24,14 @@
 
 | # | Sınıf | Ne yapar | Kırmızı çizgi | Nerede |
 |---|---|---|---|---|
-| 1 | **Öneri** (insan onaylı) | Personele metin önerir | AI **kaydetmez**; kaydeden insandır | 05.8 çeviri önerisi ✅ · 16.x talep taslağı |
+| 1 | **Öneri** (insan onaylı) | Personele metin önerir | AI **kaydetmez**; kaydeden insandır | 05.8 çeviri önerisi ✅ · 20.4 talep taslağı ✅ |
 | 2 | **Çeviri** (otomatik) | Kullanıcı metnini öteki dillere çevirir | **Orijinal değişmez**; çeviri yanına yazılır | 20.2 ✅ |
-| 3 | **Çıkarım** (özet/eşleme) | Veriden anlatı ya da eşleme çıkarır | Ticari değeri **uydurmaz**, motordan okur | 09.11c · 12.4 · 13.7 |
-| 4 | **Özerk** (müşteriye konuşur) | Müşteriyle yazışır | Stok/fiyat/durum **domain-core'dan**; şüphede insana devreder | 15.8 · 16.5 |
+| 3 | **Çıkarım** (özet/eşleme) | Veriden anlatı ya da eşleme çıkarır | Ticari değeri **uydurmaz**, motordan okur | 09.11c ✅ · 12.4 ✅ · 13.7 ✅ |
+| 4 | **Özerk** (müşteriye konuşur) | Müşteriyle yazışır | Stok/fiyat/durum **domain-core'dan**; şüphede insana devreder | 16.5 ✅ (talep) · 15.8 (WhatsApp — kanal bekliyor) |
 
-Sınıf numarası büyüdükçe risk büyüyor; bu yüzden sıra da böyle: 1 ve 2 indi, 3 ve 4 kendi modüllerinde bekliyor.
+Sınıf numarası büyüdükçe risk büyüyor; sıra da böyle işledi. **Dördü de 16.08'de yazıldı** (kullanıcı kararı: "dokümanlardaki tüm AI kalemlerini tamamlayalım"); açık kalan tek yol WhatsApp'ta özerk sohbet — orada eksik olan AI değil, GÖNDERİM KANALI (360dialog, 15.6/15.7/15.11 dış hesaba bağlı).
+
+**Sınıf 4'ün kırmızı çizgisi araç çağırmayla değil GİRDİYLE korunuyor** (`ticket-support.ts` künyesi): talebin cevaplayabileceği her ticari gerçek (sipariş durumu, teslim günü, kalemler) uygulama katmanında deterministik okunup girdiye yazılıyor — modelin arayacağı bir şey kalmıyor ve girdide olmayan sayı cevapta olamaz. Araç kataloğu, modelin NE arayacağını önceden bilemediğimiz gün gerekir (15.8: serbest katalog/stok sorgusu) ve orada tanımlanır.
 
 ## Görevler
 
@@ -70,13 +72,19 @@ Sınıf numarası büyüdükçe risk büyüyor; bu yüzden sıra da böyle: 1 ve
 - [ ] (20.3) **Maliyet görünürlüğü:** tarife `settings`'ten okunur, çağrı başına yaklaşık maliyet `job_run`/`error_log` bağlamına yazılır; operasyonda basit bir "bu ay AI" satırı
   - *Bitti:* bir turun kaç token ve yaklaşık kaç € yaktığı ekrandan okunuyor
   - **Neden bugün inmedi:** `estimateCost` ve token ölçümü HAZIR (20.1), eksik olan tarifenin nereden geleceği. Tarifeyi koda gömmek referans projede çürüdü; `settings` satırı doğru yer ama gerçek fatura görülmeden konacak sayı da bir tahmindir. İlk faturadan sonra inecek.
-- [ ] (20.4) **Talep taslağı (sınıf 1):** yazışmadan + sipariş bağlamından cevap taslağı; **gönderim daima insanın**
+- [x] (20.4) **Talep taslağı (sınıf 1):** yazışmadan + sipariş bağlamından cevap taslağı; **gönderim daima insanın**
   - *Bitti:* operatör "taslak öner" diyor, kutu doluyor, gönderen o
-  - **Tasarım kararı verildi, motoru `16.5` ile gelir** (`CLAUDE §4`: talep girdiği modül sırası gelince o modülle birlikte iner). Referans projeden alınan üç desen: taslak satıra ÖNBELLEKLENİR (`ai_draft_reply` + `ai_draft_generated_at`; son mesajdan sonra üretildiyse model hiç çağrılmaz) · kaynaklar SINIRLI (SSS + politika + sipariş bağlamı; "bilmiyorsan söz verme") · üçüncü bir gönderici hâli AÇILMAZ (`ticket_sender='ai'` AI'ın KENDİ gönderdiği mesajdır; insanın onayladığı taslak `admin`'dir — ikisini karıştırmak "AI yanıtladı" süzgecini yalancı yapardı).
-  - **Depo ve arayüz 16.08'de kuruldu** (kullanıcı kararı, ayrıntı 16.5 durum notunda): `ai_draft_reply` kolonları ticket + conversation'da gerçek, hibrit mod (`ticket_handler='hybrid'`) ve taslak kartı ("Cevaba çevir / Düzenleyerek gönder") iki ekranda da çalışıyor — bugün taslağı seed dolduruyor, bu görev DOLDURANI yazacak.
+  - **Durum (16.08) — TAMAMLANDI.** Görev `ticketDraftTask` (`packages/ai/src/tasks/ticket-support.ts`), çekirdek `generateTicketDraft`/`generateConversationDraft` (`packages/application/src/ticket/ai.ts`), tur `support_ai` cron'u (5 dk), düğme her iki ekranda ("✦ Taslak öner").
+    - **Önbellek kuralı yerinde:** taslak son mesajdan tazeyse model HİÇ çağrılmaz; `force` yalnız operatörün düğmesinde (insan "yeniden üret" diyorsa sebep ondadır). Cron kuyruk satırından bakıp DB turu bile atmıyor.
+    - **Modele giden bağlam:** yazışmanın son 12 mesajı + siparişin İNSAN-OKUR künyesi (durum etiketi, teslim günü, kalemler, vadeli mi). **Tutar bilerek YOK** — para konuşulacaksa insan konuşur. Sipariş yoksa girdi `null` ve prompt "sipariş hakkında hiçbir cümle kurma" diyor.
+    - **Cevap TÜRKÇE üretiliyor:** taslak personel cevabıyla aynı yoldan gidiyor ve müşteri kendi dilinde OKUYOR — çeviri 20.2'nin işi. Modelden müşteri dilinde yazmasını istemek, çeviri kuralını ikinci bir yerde denetimsiz yaşatmak olurdu.
+    - **Prompt'un iki yarısı ayrı** (`DRAFT_SYSTEM` ≠ `AGENT_SYSTEM`): taslak "eksik bilgi varsa netleştirme sorusu sor" diyebilir, özerk ajan "emin değilsen SUS ve devret" demek zorunda. Aynı prompt ikisine birden hizmet edemezdi.
+    - Referans projeden alınan üç desen de yerinde: taslak satıra ÖNBELLEKLENİR · kaynaklar SINIRLI ("bilmiyorsan söz verme") · üçüncü bir gönderici hâli AÇILMAZ (`ticket_sender='ai'` AI'ın KENDİ gönderdiği mesajdır; insanın onayladığı taslak `admin`'dir — ikisini karıştırmak "AI yanıtladı" süzgecini yalancı yapardı ve `consumeTicketDraft` tam da bu yüzden `replyAsStaff`ten geçiyor).
+    - **Kalan tek şey ANAHTAR:** `AI_PROVIDER=google` + `GOOGLE_GENERATIVE_AI_API_KEY` (kullanıcı seçimi 16.08). Anahtarsız kurulumda tur kendini atlar, düğme "AI yapılandırılmamış" der, ekranların gerisi eskisi gibi çalışır.
 
 ## Netleşecekler
 
 - **Sağlayıcı anahtarı kullanıcıda.** `AI_PROVIDER` + katman modelleri + anahtar env'e eklenecek; kod tarafı hazır ve anahtarsız hâlde sessizce AI'sız çalışıyor.
 - **Görüntü girişi (çok-modluluk)** henüz gerekmedi. İlk ihtiyaç sahibi fatura→stok formu (sınıf 3); geldiğinde `runTask`'a görüntü parçası eklenecek — kütüphane zaten destekliyor, sözleşmemiz henüz istemiyor.
-- **Araç çağırma (function calling)** yalnız sınıf 4'ün ihtiyacı (15.8/16.5). Kütüphane hazır; araç kataloğu o modülde tanımlanacak — referans projedeki *"fiziksel engel ilkesi"* (hatayı prompt'la değil ARAÇ İMZASIYLA imkânsızlaştır) oraya taşınacak.
+- **Araç çağırma (function calling)** 16.5'te GEREKMEDİ ve gerekçesi yukarıda (sınıf tablosunun altı): talebin bağlamı deterministik okunup girdiye yazılıyor, modelin arayacağı bir şey kalmıyor. İhtiyaç 15.8'de doğar (WhatsApp satış ajanı serbest katalog/stok sorar) ve araç kataloğu orada tanımlanır — *"fiziksel engel ilkesi"* (hatayı prompt'la değil ARAÇ İMZASIYLA imkânsızlaştır) o gün araç imzalarına taşınır; bugün aynı ilke GİRDİ TİPİYLE uygulanıyor.
+- **Maliyet freni tur başına sayıyla** (`support_ai` `BATCH=10`, çeviri `BATCH=20`): tarife `settings`'e girene kadar (20.3) harcamayı sınırlayan şey çağrı sayısıdır. İlk fatura görülünce ikisi birden gözden geçirilir.

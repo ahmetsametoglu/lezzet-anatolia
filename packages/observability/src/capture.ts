@@ -98,6 +98,13 @@ export const SOURCES = {
    * cevap vermiyor" hiçbir ekranda görünmez.
    */
   applicationB2b: 'application-b2b',
+  /**
+   * Paylaşılan TALEP akışı (`packages/application/src/ticket`) — bildirim kurucusu ve AI destek
+   * çekirdeği (16.5/20.4, 16.08 terfisi). Aynı ayrım: web'in Talepler ekranı ile backend'in
+   * destek cron'u AYNI kapıları çağırıyor; arıza akışın kendisindeyse (mail kurulamadı, taslak
+   * yazılamadı) iki yüzeyde de aynı adla görünmeli.
+   */
+  applicationTicket: 'application-ticket',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

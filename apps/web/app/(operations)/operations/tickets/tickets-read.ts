@@ -21,7 +21,13 @@ import type { TicketFilterKey } from './tickets-url';
  * ikinci sayfadaki satırı "yok" gösterirdi.
  */
 export function toTicketFilter(f: TicketFilterKey): TicketQueueFilter {
-  return f === 'with_order' ? { hasOrder: true, openOnly: true } : { status: f };
+  if (f === 'with_order') return { hasOrder: true, openOnly: true };
+  // İki AI çipi (16.5): "AI'da" ŞU ANIN sorusu (ai + hibrit — cevabı insan yazmıyor) ve
+  // "siparişli" ile aynı gerekçeyle kapanmışları kapsamaz; "AI yanıtladı" ise HİÇ'in sorusu —
+  // kalite denetimi kapanmış talebe de bakar, o yüzden `openOnly` YOK.
+  if (f === 'ai') return { handledBy: ['ai', 'hybrid'], openOnly: true };
+  if (f === 'ai_answered') return { answeredByAi: true };
+  return { status: f };
 }
 
 /**

@@ -108,6 +108,19 @@ export type {
   TicketReturnOutcome,
 } from './ticket/ticket-types';
 
+// ── Talep bildirimleri + AI destek çekirdeği (16.4 · 16.5 · 20.4) — terfi 16.08 ─────────────
+// Bildirim kurucusu webden geldi (web köprü, `order/notify` yolu): özerk AI cevabı backend
+// cron'unda yazılıyor ve personel cevabıyla AYNI maili doğurmalı. AI çekirdeği de burada — web'in
+// "Taslak öner" düğmesi ile backend'in destek turu aynı kapıyı çağırır.
+export { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './ticket/notify';
+export {
+  generateConversationDraft,
+  generateTicketDraft,
+  runAutonomousTicketReply,
+  type SupportAiOpts,
+  type SupportAiOutcome,
+} from './ticket/ai';
+
 // ── Geri bildirim akışı (17.2 · 17.6) — terfi: web davet sayfası + mobil vFb ────────────────
 // Kaynak `apps/web/lib/feedback/{invite,product-feedback,points}.ts`in TOKEN akışı dilimi; web
 // köprü, benimsemesi web şeridinin işi. Kimlik TOKEN'dan çözülür; kapılar customerId almaz.

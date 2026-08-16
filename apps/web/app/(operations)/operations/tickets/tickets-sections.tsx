@@ -132,11 +132,13 @@ interface TicketDetailProps {
   onMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket: `send=true` olduğu gibi gönderir, `send=false` metni döndürür (kutuya taşınır). */
   onConsumeDraft: (send: boolean) => Promise<string | null>;
+  /** Taslağı İSTEK üzerine üret (20.4) — cron beklenmez, operatör "öner" der. */
+  onSuggestDraft: () => void;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
 }
 
-export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, onConsumeDraft, onTakeOver, onTriggerReturn }: TicketDetailProps) {
+export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, onConsumeDraft, onSuggestDraft, onTakeOver, onTriggerReturn }: TicketDetailProps) {
   const { ticket, customer, order, messages, returnOutcome, returnTrigger } = detail;
   // İlk mesaj MÜŞTERİNİN ANLATIMIDIR (`TicketMessage` künyesi: ayrı bir `description` alanı yok).
   // Çizim onu "Müşterinin anlatımı" başlığı altında, yazışmadan ayrı gösteriyor — aynı kayıt, iki
@@ -286,9 +288,16 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
               </Button>
             </AiDraftCard>
           ) : (
-            <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
-              Hibrit mod — AI taslağı henüz üretilmedi; müşteriden yeni mesaj geldiğinde hazırlanır.
-            </span>
+            // Taslak yoksa BEKLEMEK zorunda değil: cron 5 dakikada bir üretiyor ama operatör
+            // şimdi istiyorsa düğme oradadır (20.4'ün çıkış ölçütü: "taslak öner" der, kutu dolar).
+            <div className="flex items-center gap-2.5">
+              <Button size="sm" variant="violet" onClick={onSuggestDraft} disabled={busy}>
+                ✦ Taslak öner
+              </Button>
+              <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+                Hibrit mod — AI taslağı yok; düğmeyle şimdi üretin ya da turu bekleyin (5 dk'da bir).
+              </span>
+            </div>
           )
         ) : null}
 

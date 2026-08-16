@@ -175,6 +175,16 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
+   * Cevabı insanın yazmadığı KAPANMAMIŞ talep sayısı (16.5) — başlığın "N AI'da" sayacı.
+   *
+   * `ai` + `hybrid` birlikte: soru "kaç talep AI'ın elinde", modun alt türü değil. Kapanmışlar
+   * sayılmaz — sayaç bir İŞ YÜKÜ göstergesi, tarihsel istatistik değil.
+   */
+  countHandledByAi(): Promise<number> {
+    return this.count({ handledBy: ['ai', 'hybrid'] }, OPEN_TICKET_FILTER);
+  }
+
+  /**
    * Durum başına talep sayısı — Talepler ekranının (16.3) başlık satırı: *"3 açık · 2 işlemde"*.
    *
    * **Yüklenmiş sayfadan sayılamaz** ve talep bunu doğru tespit etmişti: kuyruk keyset sayfalı, yani
@@ -263,8 +273,10 @@ export interface TicketQueueFilter {
    * Talebi ŞU AN kim yürütüyor (16.5) — satır rozetinin süzgeci.
    *
    * `answeredByAi` ile karıştırılmamalı ve fark kalıcı: bu "şu an", öteki "hiç" sorusudur.
+   * Dizi = "şunlardan biri" (`in`): ekranın "AI'da" çipi `['ai','hybrid']` geçer — ikisi de
+   * "cevabı insan yazmıyor" kümesidir ve iki ayrı çip şeridi kalabalıklaştırırdı (16.08).
    */
-  handledBy?: TicketHandler;
+  handledBy?: TicketHandler | TicketHandler[];
   /**
    * AI bu talepte HİÇ konuştu mu (16.5 · operasyon talebi 03.08) — kalite denetiminin kümesi.
    *

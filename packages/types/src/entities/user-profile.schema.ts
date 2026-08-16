@@ -274,3 +274,14 @@ export const FindOrCreateInputSchema = z
     message: 'En az bir kimlik anahtarı gerekir: phone veya email',
   });
 export type FindOrCreateInput = z.infer<typeof FindOrCreateInputSchema>;
+
+/**
+ * B2B onay kartının AI özeti (09.11c · sınıf 3, 16.08) — TEK cümle, okuma yardımı; karar değil.
+ * Şema burada, `packages/ai`'da değil: üreten görev ile okuyan ekran ayrışmasın (emsal:
+ * `AnalyticsInsightSchema`).
+ */
+export const B2bAiSummarySchema = z.object({
+  /** Sinyallerden türetilmiş tek cümlelik Türkçe okuma — sinyallerde olmayan hiçbir şeyi söylemez. */
+  summary: z.string().min(1),
+});
+export type B2bAiSummary = z.infer<typeof B2bAiSummarySchema>;

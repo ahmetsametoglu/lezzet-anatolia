@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SignalTone } from '@lezzet/domain-core';
+import { b2bSummaryAction } from '../actions';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -42,6 +43,23 @@ type Step = { kind: 'card' } | { kind: 'confirm'; approve: boolean };
 
 export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B2bApprovalDialogProps) {
   const [step, setStep] = useState<Step>({ kind: 'card' });
+  /** AI özeti (09.11c): `undefined` = üretiliyor, `null` = üretilemedi. */
+  const [summary, setSummary] = useState<string | null | undefined>(undefined);
+
+  // Özet KART OKUMASINDAN AYRI düşer: kart hemen çizilsin, cümle sonra gelsin. Müşteri değişince
+  // sıfırlanır — bir başvurunun özeti bir başkasının kartında durursa yanlış işletme okunur.
+  const customerId = check?.customerId;
+  useEffect(() => {
+    if (!customerId) return;
+    setSummary(undefined);
+    let current = true;
+    void b2bSummaryAction(customerId).then(({ data }) => {
+      if (current) setSummary(data?.summary ?? null);
+    });
+    return () => {
+      current = false;
+    };
+  }, [customerId]);
 
   return (
     <Dialog
@@ -66,7 +84,7 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
           onConfirm={(reason) => onDecide(step.approve, reason)}
         />
       ) : (
-        <CheckPane check={check} saving={saving} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
+        <CheckPane check={check} saving={saving} summary={summary} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
       )}
     </Dialog>
   );
@@ -118,10 +136,13 @@ function CardSkeleton() {
 function CheckPane({
   check,
   saving,
+  summary,
   onDecide,
 }: {
   check: B2bCheckView;
   saving: boolean;
+  /** AI özeti: `undefined` = hâlâ üretiliyor, `null` = üretilemedi, dize = cümle. */
+  summary: string | null | undefined;
   onDecide: (approve: boolean) => void;
 }) {
   return (
@@ -145,17 +166,24 @@ function CheckPane({
         </div>
       </div>
 
-      {/* ── AI özeti ── BEKLEYEN(09.11): `packages/ai` bir KABUK — paket var (00'ın iskeletinden),
-          içinde yalnız kendi adı duruyor, tek bir kapı bile yok. Kutu ÇİZİLİYOR ama içi UYDURULMUYOR:
-          "okuma yardımı" diye sunulan bir cümle üretilmediği hâlde varmış gibi görünürse, operatör
-          okumadığı bir özete güvenir. Eksiğini kendi üstünde yazıyor (CLAUDE.md §3). */}
+      {/* ── AI özeti (09.11c indi, 16.08) ── Cümle SİNYALLERDEN türetiliyor (`b2bSummaryTask`),
+          kart okumasından AYRI düşüyor: model çağrısı saniye mertebesinde ve kartın açılışı onu
+          beklememeli. Üretilemediğinde eski dürüst hâl korunur — uydurulmuş bir "okuma yardımı",
+          operatörün okumadığı bir özete güvenmesi demekti (CLAUDE.md §3). */}
       <div className="flex flex-col gap-1 rounded-ops-card border border-ops-line border-dashed bg-ops-subtle px-3.5 py-3">
         <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
           AI özeti · okuma yardımı, karar değil
         </span>
-        <span className="font-ops-body text-ops-sm text-ops-faint">
-          Özet henüz üretilmiyor — sinyalleri aşağıdan okuyun.
-        </span>
+        {summary === undefined ? (
+          // Bekleyen hâl bir CÜMLE bekliyor → paragraf iskeleti (kart iskeletiyle aynı desen).
+          <SkeletonText lines={2} />
+        ) : summary ? (
+          <span className="font-ops-body text-ops-sm text-ops-body">{summary}</span>
+        ) : (
+          <span className="font-ops-body text-ops-sm text-ops-faint">
+            Özet üretilemedi — sinyalleri aşağıdan okuyun.
+          </span>
+        )}
       </div>
 
       {/* ── Sinyal ızgarası ── Altı sinyal, sırası motorda (en belirleyici üstte). */}

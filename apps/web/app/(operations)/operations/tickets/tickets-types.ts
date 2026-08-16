@@ -29,12 +29,14 @@ export interface TicketsData {
    * Durum başına talep sayısı — **tüm kuyruk üzerinden** (`countTicketsByStatus`), yüklenmiş
    * sayfadan değil. Sayfadan saymak, kuyruk sayfalı olduğu için tam da sayının anlam kazandığı
    * yerde (kalabalık kuyrukta) yalan söylerdi.
-   *
-   * Çizimin üçüncü sayısı ("1 AI yürütüyor") HÂLÂ YOK ve bilerek: `16.5` inene kadar her talep
-   * `human`, yani o sayaç daima 0 gösterirdi — ekranda "AI çalışmıyor" değil "AI yok" diye okunurdu
-   * ve ikisi ayrı şeydir. Kırılım 16.5 ile birlikte gelir.
    */
   counts: Record<TicketStatus, number>;
+  /**
+   * Çizimin üçüncü sayısı ("N AI'da") — 16.08'e kadar bilerek yoktu (16.5 inene dek daima 0
+   * gösterir, "AI çalışmıyor" değil "AI yok" diye okunurdu). Mod anahtarıyla veri gerçek oldu:
+   * cevabı insanın yazmadığı (ai + hibrit) kapanmamış talepler.
+   */
+  aiCount: number;
   /** Seçili talebin detayı; seçim yoksa ya da talep silinmişse null. */
   detail: TicketDetailView | null;
   /**
@@ -75,6 +77,8 @@ export interface TicketsViewProps {
   onMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket — `send=false` metni döndürür, ekran cevap kutusuna taşır. */
   onConsumeDraft: (send: boolean) => Promise<string | null>;
+  /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
+  onSuggestDraft: () => void;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
   onNewTicket: () => void;

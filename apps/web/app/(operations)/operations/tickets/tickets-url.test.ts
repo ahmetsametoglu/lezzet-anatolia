@@ -12,9 +12,12 @@ describe('parseTicketsUrl', () => {
     expect(parseTicketsUrl({ f: 'boyle-bir-cip-yok' }).f).toBe('open');
   });
 
-  it('çizilmemiş "AI" çipi bir süzgeç DEĞİL: adrese yazılsa bile tanınmaz', () => {
-    // 16.5 yazılmadı, her talep `human` — o çipin arkasında hiçbir kayıt olamaz.
-    expect(parseTicketsUrl({ f: 'ai' }).f).toBe('open');
+  it('iki AI çipi TANINIR (16.08) — arkalarındaki veri artık gerçek', () => {
+    // Bu test bir turdur tersini savunuyordu ("çip yok, adrese yazılsa da tanınmaz") ve o gün
+    // haklıydı: 16.5 yazılmamıştı, her talep `human`'dı. Mod anahtarı gelince kural düştü.
+    // İkisi AYRI soru: "AI'da" ŞU ANIN (ai + hibrit), "AI yanıtladı" HİÇ'in sorusudur.
+    expect(parseTicketsUrl({ f: 'ai' }).f).toBe('ai');
+    expect(parseTicketsUrl({ f: 'ai_answered' }).f).toBe('ai_answered');
   });
 
   it('seçili talep adresten okunur', () => {

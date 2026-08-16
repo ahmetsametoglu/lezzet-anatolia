@@ -174,3 +174,32 @@ export const ProductComplaintSignalSchema = z.object({
   lastComplaintAt: z.string(),
 });
 export type ProductComplaintSignal = z.infer<typeof ProductComplaintSignalSchema>;
+
+/**
+ * ── AI DESTEK ÇIKTILARI (16.5 · 20.4) ───────────────────────────────────────
+ * Şemalar BURADA, `packages/ai`'da değil: iki tarafları var (görev üretir, uygulama katmanı
+ * okuyup yazar) ve iki tanım bir gün ayrışırdı. Emsal: `AnalyticsInsightSchema`.
+ */
+
+/** Hibrit modun taslağı (sınıf 1) — tek alan: operatörün önüne konacak cevap metni (Türkçe). */
+export const TicketDraftReplySchema = z.object({
+  /** Taslak cevap — TÜRKÇE: operatör Türkçe okur/düzeltir, müşteri diline çeviri 20.2'nin işi. */
+  reply: z.string().min(1),
+});
+export type TicketDraftReply = z.infer<typeof TicketDraftReplySchema>;
+
+/**
+ * Özerk ajanın kararı (sınıf 4) — cevapla YA DA insana devret.
+ *
+ * **Düz nesne, ayrık birlik değil** ve bilerek: yapısal çıktı bazı sağlayıcılarda birlik
+ * şemalarıyla kırılgan. Tutarlılığı uygulama katmanı zorlar: `action='reply'` ama `reply` boşsa
+ * sonuç GÜVENLİ tarafa düşer — devir sayılır ("şüphede insana", sınıf 4'ün kırmızı çizgisi).
+ */
+export const TicketAgentDecisionSchema = z.object({
+  action: z.enum(['reply', 'handoff']),
+  /** `action='reply'` ise müşteriye gidecek metin (Türkçe); devirde `null`. */
+  reply: z.string().nullable(),
+  /** `action='handoff'` ise operatörün okuyacağı tek cümlelik sebep; cevapta `null`. */
+  handoffReason: z.string().nullable(),
+});
+export type TicketAgentDecision = z.infer<typeof TicketAgentDecisionSchema>;

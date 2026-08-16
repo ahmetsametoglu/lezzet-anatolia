@@ -1,3 +1,4 @@
+import { bankColumnsTask, runTask, type AiModel } from '@lezzet/ai';
 import {
   BankImportProfileService, BankImportService, MoneyMovementService, serviceDb,
 } from '@lezzet/database';
@@ -6,7 +7,7 @@ import {
   type ColumnSample, type MappingSuggestion, type RowParseFailure,
 } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { BankImport, BankImportProfile, MoneyMovementInsert, RawBankRow } from '@lezzet/types';
+import type { BankColumnSuggestion, BankImport, BankImportProfile, MoneyMovementInsert, RawBankRow } from '@lezzet/types';
 
 /**
  * Banka ekstresi import kapısı (12.4) — DOMAIN §9.
@@ -28,13 +29,53 @@ function sampleColumns(rows: readonly RawBankRow[], sampleSize = 5): ColumnSampl
   }));
 }
 
+/** AI önerisindeki her başlık ÖRNEKTE gerçekten var mı — uydurulmuş başlık eşlemeyi düşürür. */
+function headersExist(suggestion: BankColumnSuggestion, samples: readonly ColumnSample[]): boolean {
+  const known = new Set(samples.map((sample) => sample.header));
+  return Object.values(suggestion.mapping).every((header) => header === null || known.has(header));
+}
+
+/** Zorunlu alanlardan eşlenemeyenler — modele SORDURULMAZ, eşlemeden türetilir (şema künyesi). */
+function missingOf(suggestion: BankColumnSuggestion): MappingSuggestion['missing'] {
+  const missing: MappingSuggestion['missing'] = [];
+  if (!suggestion.mapping.date) missing.push('date');
+  if (!suggestion.mapping.label) missing.push('label');
+  const hasAmount = suggestion.amountMode === 'signed' ? !!suggestion.mapping.amount : !!(suggestion.mapping.debit && suggestion.mapping.credit);
+  if (!hasAmount) missing.push('amount');
+  return missing;
+}
+
 /**
  * Dosyayı çözümler: hangi sütun hangi alan. **Sonuç ONAYA düşer** — yanlış eşlenen bir sütun
  * (ör. bakiye ↔ tutar) bütün ekstreyi çöpe çevirir; ne sezgisel kural ne yapay zekâ bunu tek
  * başına üstlenebilir.
+ *
+ * ── PORT DOLDU (12.4'ün AI ayağı, sınıf 3 · 16.08) ──────────────────────────
+ * Önce MODEL denenir (`bankColumnsTask`), her başarısızlıkta sezgisel devralır — `not_configured`
+ * beklenen hâldir (anahtarsız kurulum AI'sız çalışır), ötekiler bir sonraki dosyada yeniden dener.
+ * Çağıran hangisinin cevapladığını görmez (port sözleşmesi); imza bu yüzden async oldu, başka
+ * hiçbir şey değişmedi.
+ *
+ * ── FİZİKSEL KAPI: UYDURULMUŞ BAŞLIK ELENİR ─────────────────────────────────
+ * Model örnekte olmayan bir başlık yazabilir ve bu, parse aşamasında sessizce boş kolon okumak
+ * demek olurdu. Dönen her başlık örneğe karşı doğrulanır; biri bile uydurmaysa cevabın TAMAMI
+ * atılır ve sezgisel devralır — yarısı doğru bir eşlemeyi ayıklamak, yanlış yarıyı onaya
+ * taşımaktı. `mapping` serbest başlık taşıdığı için Zod bunu zorlayamaz; kapı burada.
  */
-export function analyzeFile(rows: readonly RawBankRow[], mapper = heuristicColumnMapper): MappingSuggestion {
-  return mapper(sampleColumns(rows));
+export async function analyzeFile(
+  rows: readonly RawBankRow[],
+  // `model` test enjeksiyonu (`translate-user-text` deseni): anahtarlı bir ortamda koşan test
+  // gerçek modele çıkmamalı — `failingAiModel` verir, sezgisele düşer, sonuç deterministik kalır.
+  opts: { fallback?: typeof heuristicColumnMapper; model?: AiModel } = {},
+): Promise<MappingSuggestion> {
+  const samples = sampleColumns(rows);
+  const result = await runTask(
+    bankColumnsTask,
+    { columns: samples.map((s) => ({ header: s.header, values: s.values })) },
+    opts.model ? { model: opts.model } : {},
+  );
+  if (!result.ok || !headersExist(result.data, samples)) return (opts.fallback ?? heuristicColumnMapper)(samples);
+  return { ...result.data, missing: missingOf(result.data) };
 }
 
 interface ImportOutcome {

@@ -46,3 +46,14 @@ export function formatPrice(cents: number, locale: Locale): string {
 export function formatShortDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long' }).format(new Date(iso));
 }
+
+/**
+ * Gün İÇİNDEKİ saat — yazışma damgası ("18:02").
+ *
+ * TERFİ (16.08): ikinci tüketen doğdu — talep bildiriminin kurucusu `@lezzet/application`a taşındı
+ * (AI ajanının cevabı da mail doğuruyor, 16.5) ve o paket webden import edemez. `formatShortDate`
+ * ile aynı yol: web kopyası buradan yeniden dışa veriliyor, `INTL_LOCALE`'in ikinci yazımı yok.
+ */
+export function formatTime(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+}

@@ -22,13 +22,23 @@ export const TICKETS_PATH = '/operations/tickets';
  *
  * Şerit TEK SEÇİMLİ ve eksenleri karışık (üçü durum, biri sipariş bağı) — çizimin kendi kararı.
  */
-export const TICKET_FILTERS = ['open', 'in_progress', 'resolved', 'with_order'] as const;
+export const TICKET_FILTERS = ['open', 'in_progress', 'resolved', 'with_order', 'ai', 'ai_answered'] as const;
 export type TicketFilterKey = (typeof TICKET_FILTERS)[number];
 
-/** Çip adları — durum adları TEK KAYNAKTAN (`TICKET_STATUS_LABELS`), burada yeniden yazılmaz. */
+/**
+ * Çip adları — durum adları TEK KAYNAKTAN (`TICKET_STATUS_LABELS`), burada yeniden yazılmaz.
+ *
+ * İki AI çipi (16.5'in kalanı, 16.08'de indi) İKİ AYRI soruyu sorar ve karıştırılmaları bir
+ * hataydı (build 16 künyesi): "AI'da" ŞU AN kimin yürüttüğü (`handledBy` — ai VE hibrit; ekran
+ * ikisini ayrı rozetle zaten gösteriyor), "AI yanıtladı" ise AI'ın HİÇ konuşup konuşmadığı
+ * (`answeredByAi` — devralınmış talep de bu kümededir, kalite denetimi tam ona bakar).
+ * Metin "yanıtladı", "yanıtlıyor" değil: bir kez true olan bir daha false olmaz.
+ */
 export const TICKET_FILTER_LABELS: Record<TicketFilterKey, string> = {
   ...TICKET_STATUS_LABELS,
   with_order: 'Siparişli',
+  ai: "AI'da",
+  ai_answered: 'AI yanıtladı',
 };
 
 export interface TicketsUrlState {

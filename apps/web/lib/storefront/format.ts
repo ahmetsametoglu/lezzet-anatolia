@@ -1,4 +1,4 @@
-import { formatPrice, formatShortDate } from '@lezzet/helper';
+import { formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 
 /**
@@ -13,8 +13,11 @@ import type { Locale } from '@lezzet/i18n';
  * `formatShortDate` AYNI yolu 21.21'de izledi: sipariş bildiriminin verisi `@lezzet/application`a
  * terfi edince ikinci tüketen doğdu ve gövde `@lezzet/helper`a taşındı (o dosyanın künyesi bu adımı
  * zaten söz vermişti). Web çağıranları yine buradan alır.
+ *
+ * `formatTime` da 16.08'de aynı yoldan geçti: talep bildiriminin kurucusu `@lezzet/application`a
+ * taşındı (AI cevabı da mail doğuruyor, 16.5) ve saat damgası ikinci tüketenini buldu.
  */
-export { formatPrice, formatShortDate };
+export { formatPrice, formatShortDate, formatTime };
 
 /** Dil → ICU eşlemesi — bu modüldeki tarih/sayı biçimleri bundan türer. */
 const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
@@ -83,12 +86,4 @@ export function formatOrderDate(iso: string, locale: Locale, compact = false): s
   }).format(new Date(iso));
 }
 
-/**
- * Gün İÇİNDEKİ saat — yazışma damgası ("18:02", 08.6).
- *
- * Burada duruyor çünkü dil tablosu (`INTL_LOCALE`) bu modülün: saati çağıranın yanında
- * biçimlendirmek, o tabloyu ikinci kez yazmak demekti ve iki kopya bir gün ayrışır.
- */
-export function formatTime(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
-}
+// `formatTime` gövdesi @lezzet/helper'a terfi etti (16.08) — üstteki künye; buradan yeniden dışa veriliyor.

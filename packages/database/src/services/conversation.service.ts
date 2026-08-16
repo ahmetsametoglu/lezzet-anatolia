@@ -108,6 +108,15 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   clearDraft(id: string): Promise<Conversation> {
     return this.update({ id, aiDraftReply: null, aiDraftGeneratedAt: null });
   }
+
+  /**
+   * Cevabı insanın yazmadığı sohbet sayısı (16.5) — başlığın "N AI'da" sayacı.
+   * `TicketService.countHandledByAi` ile aynı soru; konuşmanın "kapanmış" hâli olmadığı için
+   * ek süzgeç yok.
+   */
+  countHandledByAi(): Promise<number> {
+    return this.count({ handledBy: ['ai', 'hybrid'] });
+  }
 }
 
 /**

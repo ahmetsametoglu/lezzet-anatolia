@@ -1,4 +1,4 @@
-import { ConversationInboxService, serviceDb } from '@lezzet/database';
+import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
@@ -50,9 +50,11 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
   const urlState = parseWhatsappUrl(await searchParams);
   const inbox = new ConversationInboxService(serviceDb());
 
-  const [page, awaitingCount] = await Promise.all([
+  const [page, awaitingCount, aiCount] = await Promise.all([
     inbox.list(urlState.f === 'awaiting' ? { awaitingReply: true } : {}, undefined, DEFAULT_PAGE_SIZE),
     inbox.countAwaitingReply(),
+    // Çizimin "1 AI yürütüyor" sayısı — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi).
+    new ConversationService(serviceDb()).countHandledByAi(),
   ]);
 
   /**
@@ -90,6 +92,7 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
     rows: toInboxRows(page.rows, now),
     nextCursor: page.nextCursor,
     awaitingCount,
+    aiCount,
     detail: detailView,
   };
 

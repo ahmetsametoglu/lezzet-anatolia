@@ -10,6 +10,7 @@ import {
   loadMoreTicketsAction,
   replyToTicketAction,
   setTicketModeAction,
+  suggestTicketDraftAction,
   takeOverTicketAction,
   triggerReturnAction,
 } from './actions';
@@ -121,6 +122,12 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     return result?.draft ?? null;
   };
 
+  /** Taslağı istek üzerine üret (20.4) — başarıda `refresh` taslak kartını getirir. */
+  const onSuggestDraft = () => {
+    if (!detail) return;
+    void run(() => suggestTicketDraftAction(detail.ticket.id));
+  };
+
   /**
    * İade tetikleme İKİ ADIMDIR ve ikincisi atlanamaz: damga talebi siparişe bağlar, iadeyi
    * yürütmez (DOMAIN §8). Operatör bu yüzden siparişe GÖTÜRÜLÜR — damgayla baş başa bırakmak,
@@ -150,6 +157,7 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     onStatus,
     onMode,
     onConsumeDraft,
+    onSuggestDraft,
     onTakeOver: () => setConfirm('takeover'),
     onTriggerReturn: () => setConfirm('return'),
     onNewTicket: () => setManualOpen(true),

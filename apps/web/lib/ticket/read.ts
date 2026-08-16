@@ -329,6 +329,11 @@ export function countTicketsByStatus(): Promise<Record<Ticket['status'], number>
   return new TicketService(serviceDb()).countByStatus();
 }
 
+/** Başlığın üçüncü sayısı (16.5): cevabı insanın yazmadığı (ai + hibrit) kapanmamış talepler. */
+export function countTicketsHandledByAi(): Promise<number> {
+  return new TicketService(serviceDb()).countHandledByAi();
+}
+
 /**
  * **Ürün başına şikâyet yoğunluğu** (16.6 · operasyon talebi 03.08) — Geri Bildirim ekranının skor
  * tablosunda, ürünün skorunun YANINDA okunur.

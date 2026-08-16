@@ -3,7 +3,7 @@ import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { readCustomerContext } from '@/lib/customer/context';
-import { countTicketsByStatus, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
+import { countTicketsByStatus, countTicketsHandledByAi, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
 import { TicketsClient } from './tickets-client';
 import { ageMinutesOf } from '@/components/operation/ui/format';
 import { toRowViews, toTicketFilter } from './tickets-read';
@@ -42,9 +42,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
   const urlState = parseTicketsUrl(await searchParams);
 
-  const [queue, counts] = await Promise.all([
+  const [queue, counts, aiCount] = await Promise.all([
     listTicketQueue(OPERATIONS_LOCALE, toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
     countTicketsByStatus(),
+    // Çizimin üçüncü sayısı ("1 AI yürütüyor") — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi
+    // ve "AI yok" diye okunurdu); mod anahtarı ve seed'le veri gerçek oldu.
+    countTicketsHandledByAi(),
   ]);
 
   /**
@@ -80,6 +83,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     rows: toRowViews(queue.rows, now),
     nextCursor: queue.nextCursor,
     counts,
+    aiCount,
     // Ölçülemeyen damga bu ekranın sözleşmesinde sayıdır; kararı `toRowViews` ile aynı yerde
     // duruyor (ortak `ageMinutesOf` `null` döner — bkz. `ui/format`).
     detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) ?? 0 },

@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { generateConversationDraft } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -135,6 +136,32 @@ export async function setConversationModeAction(
     const updated = await service.setMode(conversationId, target);
     refresh();
     return { data: { mode: updated.handledBy }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** AI üretim sonucunun operatöre söylenecek hâli — Talepler ekranıyla aynı sözlük mantığı. */
+const DRAFT_FAILURE: Record<string, string> = {
+  not_configured: 'AI yapılandırılmamış — env dosyasına sağlayıcı anahtarı (AI_PROVIDER + API anahtarı) eklenmeli.',
+  provider_error: 'AI sağlayıcısına ulaşılamadı — birazdan yeniden deneyin.',
+  invalid_output: 'AI beklenen biçimde cevap üretemedi — yeniden deneyin; sürerse bildirin.',
+  wrong_mode: 'Taslak yalnız hibrit modda üretilir — önce modu Hibrit yapın.',
+  nothing_to_answer: 'Cevaplanacak yeni müşteri mesajı yok — son sözü zaten biz söylemişiz.',
+  empty_thread: 'Bu konuşmada hiç mesaj yok — taslak üretilecek bir soru yok.',
+  not_found: 'Konuşma bulunamadı — ekranı tazeleyin.',
+};
+
+/** **Taslak öner** (20.4) — hibrit konuşmada AI taslağını istek üzerine üretir, cron beklenmez. */
+export async function suggestConversationDraftAction(conversationId: string): Promise<ActionResult<{ generated: true }>> {
+  try {
+    await requireAdmin();
+    const outcome = await generateConversationDraft(serviceDb(), conversationId, { force: true });
+    if (outcome.status === 'skipped' || outcome.status === 'failed') {
+      return { data: null, error: DRAFT_FAILURE[outcome.reason] ?? outcome.reason };
+    }
+    refresh();
+    return { data: { generated: true }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

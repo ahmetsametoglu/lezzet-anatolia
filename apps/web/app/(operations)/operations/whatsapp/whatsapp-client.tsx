@@ -8,6 +8,7 @@ import {
   loadMoreConversationsAction,
   recordOutboundAction,
   setConversationModeAction,
+  suggestConversationDraftAction,
 } from './actions';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
 import { ManualDmDialog } from './manual-dm-dialog';
@@ -121,6 +122,10 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
         return result;
       });
       return draft;
+    },
+    /** Taslağı istek üzerine üret (20.4) — başarıda `refresh` taslak kartını getirir. */
+    onSuggestDraft: () => {
+      if (detail) void run(() => suggestConversationDraftAction(detail.id));
     },
     onIncoming: () => setDmMode('follow'),
     onNewDm: () => setDmMode('new'),

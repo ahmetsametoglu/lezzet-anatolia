@@ -100,6 +100,8 @@ export interface WhatsappData {
   nextCursor: KeysetCursor | null;
   /** "N cevap bekliyor" — SAYIM, yüklenmiş sayfanın uzunluğu değil. */
   awaitingCount: number;
+  /** Çizimin ikinci sayısı ("N AI'da") — 16.08'de gerçek oldu; ai + hibrit sohbetler. */
+  aiCount: number;
   detail: ConversationDetailView | null;
 }
 
@@ -161,6 +163,8 @@ export interface WhatsappViewProps {
   onMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket — metni döndürür, ekran defter kutusuna taşır (gönderim kanalı yok, 15.7/15.11). */
   onConsumeDraft: () => Promise<string | null>;
+  /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
+  onSuggestDraft: () => void;
   /** Açık sohbete GELEN mesaj — numarası kilitli pencereyi açar. */
   onIncoming: () => void;
   onNewDm: () => void;

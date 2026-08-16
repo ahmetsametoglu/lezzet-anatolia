@@ -30,6 +30,7 @@ import { ANALYTICS_ROLLUP, analyticsRollupJob } from './jobs/analytics-rollup';
 import { ZONE_AVAILABLE, zoneAvailableJob } from './jobs/zone-available';
 import { runJob } from './jobs/runner';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
+import { SUPPORT_AI, supportAiJob } from './jobs/support-ai';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 
@@ -193,6 +194,14 @@ cron.schedule('20 4 * * 1', () => {
 // anahtar sonradan geldiğinde geçmişin tamamı çevrilebilir kalır.
 cron.schedule('*/5 * * * *', () => {
   void runJob(TRANSLATE_USER_TEXT, translateUserTextJob);
+});
+
+// AI destek turu (16.5 · 20.4) — beş dakikada bir: özerk cevaplar (mod `ai`) + hibrit taslaklar
+// (talep ve WhatsApp). Çeviriyle AYNI sıklık ve aynı gerekçe: müşteri cevabının gecikmesi bir
+// görünürlük kararı, beş dakika "hemen cevaplandı" hissinin içinde. Tur başına çağrı tavanı işte
+// (`BATCH`); önbellek kuralı çekirdekte — taze taslaklı satır modeli hiç çağırtmaz.
+cron.schedule('*/5 * * * *', () => {
+  void runJob(SUPPORT_AI, supportAiJob);
 });
 
 // `??` DEĞİL `||` — ve bu bir arıza düzeltmesidir (ölçüldü 09.08): `.env.local`'da değişken

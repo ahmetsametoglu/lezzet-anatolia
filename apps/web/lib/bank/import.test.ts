@@ -3,6 +3,7 @@ import {
   AccountService, CategoryService, MoneyMovementService, OrderService, ProductService,
   UserProfileService, serviceDb,
 } from '@lezzet/database';
+import { failingAiModel } from '@lezzet/ai/testing';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
 import { applyOrderMatch, classifyAsExpense, dismissRow, matchQueue } from './reconcile';
@@ -73,7 +74,9 @@ const STATEMENT = [
 ];
 
 async function importStatement(rows = STATEMENT, fileName = 'releve.csv') {
-  const suggestion = analyzeFile(rows);
+  // AI atlanır (`failingAiModel`): anahtarlı ortamda koşan test ağa çıkmamalı; sezgisel yol
+  // deterministiktir ve testin ölçtüğü şey zaten o.
+  const suggestion = await analyzeFile(rows, { model: failingAiModel('test: AI atlandı') });
   const profile =
     (await profileFor(bankAccount)) ??
     (await saveProfile({ accountId: bankAccount, name: `Crédit Mutuel ${stamp}`, suggestion }));
@@ -82,7 +85,7 @@ async function importStatement(rows = STATEMENT, fileName = 'releve.csv') {
 
 describe('dosya çözümlenir ve şablon kaydedilir', () => {
   it('sütun eşlemesi çıkarılır; ikinci dosyada şablon otomatik uygulanır', async () => {
-    const suggestion = analyzeFile(STATEMENT);
+    const suggestion = await analyzeFile(STATEMENT, { model: failingAiModel('test: AI atlandı') });
     expect(suggestion.mapping).toMatchObject({ date: 'Date', label: 'Libellé', amount: 'Montant' });
     expect(suggestion.missing).toEqual([]);
 
