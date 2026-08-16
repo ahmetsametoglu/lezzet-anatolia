@@ -1,0 +1,347 @@
+{
+  "_note": "Spek belgelerinden operasyonel veriler. Müşteri yüzeyine değil, kalite kontrol / tedarikçi yönetimi / depo operasyonlarına yönelik.",
+  "specs": {
+    "700405": {
+      "docNo": "KYS-003", "rev": "REV2", "publishDate": "2025-12-14",
+      "productCode": "700405",
+      "readiness": "Ready to Bake",
+      "state": "frozen",
+      "manufacturer": null,
+      "organoleptic": {
+        "appearance": "It must have specific appearance",
+        "color": "Uniform golden-brown color with evenly baked pastry layers.",
+        "taste": "Characteristic savory pastry taste with a well-balanced filling flavor.",
+        "texture": "Crispy, flaky outer layers with a soft and moist filling.",
+        "defects": "None acceptable (no foreign matter, off-odor, discoloration, or coating separation)"
+      },
+      "analytical": {
+        "humidity": { "target": 51.6, "min": 49, "max": 54 },
+        "pH": { "target": 5.2, "min": 5.0, "max": 5.5 },
+        "waterActivity": { "target": 0.92, "min": 0.90, "max": 0.94 },
+        "totalFat": { "target": 10, "min": 8, "max": 11 },
+        "protein": { "target": 7.7, "min": 6.5, "max": 8.9 },
+        "saltNaCl": { "target": 1.0, "min": 0.7, "max": 1.3 }
+      },
+      "functional": {
+        "freezeThaw": "Stable under frozen storage; no structural damage after thawing.",
+        "textureAfterThaw": "Juicy and soft interior; crispy coating after cooking.",
+        "structuralIntegrity": "Maintains shape; coating adheres well to the core.",
+        "cuttingStability": "Clean cut; no crumbling or separation.",
+        "bakeStability": "Shape and coating remain stable during baking.",
+        "volumeExpansion": "Controlled, minimal volume increase."
+      },
+      "microbiology": {
+        "totalPlateCount": { "n": 5, "c": 2, "m": "10^4 cfu/g", "M": "10^5 cfu/g", "method": "ISO 4833-1" },
+        "yeastMold": { "n": 5, "c": 2, "m": "10^2 cfu/g", "M": "10^3 cfu/g", "method": "ISO 21527-1/2" },
+        "enterobacteriaceae": { "n": 5, "c": 2, "m": "10 cfu/g", "M": "100 cfu/g", "method": "ISO 21528-2" },
+        "salmonella": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 6579-1" },
+        "listeria": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 11290-1" },
+        "ecoliO157": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 16649-2" },
+        "staphAureus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "100 cfu/g", "method": "ISO 6888-1" },
+        "bacillusCereus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "1000 cfu/g", "method": "ISO 7932" }
+      },
+      "packaging": {
+        "unitMaterial": "CCB",
+        "unitWeightG": 120,
+        "unitDimensions": "40.5x31x2.5 cm",
+        "cartonMaterial": "CCB",
+        "cartonDimensions": "42x32.5x15.5 cm",
+        "cartonWeightG": 485,
+        "boxesPerCarton": 4,
+        "palletType": "80x120 EUR",
+        "cartonsPerLayer": 10,
+        "layers": 7,
+        "cartonsPerPallet": 70,
+        "netWeightPerPalletKg": 700,
+        "grossWeightInclPalletKg": 789.55
+      },
+      "compliance": "EU 1935/2004 + FDA 21 CFR"
+    },
+    "700101": {
+      "docNo": "KYS-010", "rev": "REV1", "publishDate": "2025-12-14",
+      "productCode": "700101",
+      "readiness": "Ready to Eat (80% cooked)",
+      "state": "frozen",
+      "manufacturer": "BREADHOUSE",
+      "organoleptic": {
+        "appearance": "Ring-shaped, unique in appearance and color, not shredded, crushed or moldy.",
+        "color": "Characteristic golden-brown to deep reddish-brown (from the molasses dip).",
+        "taste": "Fresh-baked bread flavor combined with aromatic, nutty taste of roasted sesame.",
+        "texture": "Exterior crunchy and crisp; interior soft, elastic, and chewy.",
+        "defects": "Absence of foreign materials, burnt spots, missing sesame patches, structural breaks in the ring."
+      },
+      "analytical": {
+        "humidity": { "target": 26, "min": 25, "max": 27 },
+        "pH": { "target": 5.4, "min": 5.0, "max": 5.8 },
+        "totalFat": { "target": 8.58, "min": 7, "max": 9 },
+        "protein": { "target": 9.76, "min": 8, "max": 10 },
+        "saltNaCl": { "target": 1.84, "min": 1, "max": 2 }
+      },
+      "functional": {
+        "freezeThaw": "Stable under frozen storage; no structural damage after thawing.",
+        "textureAfterThaw": "Juicy and soft interior; crispy coating after cooking.",
+        "structuralIntegrity": "Maintains shape; coating adheres well to the core.",
+        "cuttingStability": "Clean cut; no crumbling or separation.",
+        "bakeStability": "Shape and coating remain stable during baking.",
+        "volumeExpansion": "Controlled, minimal volume increase."
+      },
+      "microbiology": {
+        "totalPlateCount": { "n": 5, "c": 2, "m": "10^4 cfu/g", "M": "10^5 cfu/g", "method": "ISO 4833-1" },
+        "yeastMold": { "n": 5, "c": 2, "m": "10^2 cfu/g", "M": "10^3 cfu/g", "method": "ISO 21527-1/2" },
+        "enterobacteriaceae": { "n": 5, "c": 2, "m": "10 cfu/g", "M": "100 cfu/g", "method": "ISO 21528-2" },
+        "salmonella": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 6579-1" },
+        "listeria": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 11290-1" },
+        "ecoliO157": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 16649-2" },
+        "staphAureus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "100 cfu/g", "method": "ISO 6888-1" },
+        "bacillusCereus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "1000 cfu/g", "method": "ISO 7932" }
+      },
+      "packaging": {
+        "unitMaterial": "PE Printed Flowpack",
+        "unitWeightG": 15,
+        "unitDimensions": "380x160x70 mm",
+        "cartonMaterial": "CCB",
+        "cartonDimensions": "590x390x170 mm",
+        "cartonWeightG": 700,
+        "boxesPerCarton": 12,
+        "palletType": "80x120 EUR",
+        "cartonsPerLayer": 8,
+        "layers": 6,
+        "cartonsPerPallet": 48,
+        "netWeightPerPalletKg": 230.4,
+        "grossWeightInclPalletKg": 294.64
+      },
+      "compliance": "EU 1935/2004 + FDA 21 CFR"
+    },
+    "200302": {
+      "docNo": "KYS-088", "rev": "REV1", "publishDate": "2025-12-14",
+      "productCode": "200302A",
+      "readiness": "Ready to Bake",
+      "state": "frozen",
+      "manufacturer": null,
+      "organoleptic": {
+        "appearance": "Uniform oval shape with a smooth bulgur crust, free from cracks.",
+        "color": "Natural light beige when frozen, turning golden-brown after cooking.",
+        "taste": "Savory spiced filling with traditional toasted bulgur flavor.",
+        "texture": "Crispy outer crust with moist and tender internal filling.",
+        "defects": "Foreign matter, off-odors, mold, sour/fermented taste, dry texture."
+      },
+      "analytical": {
+        "humidity": { "target": 42, "min": 38, "max": 45 },
+        "pH": { "target": 6.2, "min": 5.8, "max": 6.5 },
+        "totalFat": { "target": 7, "min": 5, "max": 9 },
+        "protein": { "target": 6.5, "min": 5, "max": 8 },
+        "saltNaCl": { "target": 1.2, "min": 0.9, "max": 1.5 }
+      },
+      "functional": {
+        "freezeThaw": "Stable under frozen storage; no structural damage after thawing.",
+        "textureAfterThaw": "Juicy and soft interior; crispy coating after cooking.",
+        "structuralIntegrity": "Maintains shape; coating adheres well to the core.",
+        "cuttingStability": "Clean cut; no crumbling or separation.",
+        "bakeStability": "Shape and coating remain stable during baking.",
+        "volumeExpansion": "Controlled, minimal volume increase."
+      },
+      "microbiology": {
+        "totalPlateCount": { "n": 5, "c": 2, "m": "10^4 cfu/g", "M": "10^5 cfu/g", "method": "ISO 4833-1" },
+        "yeastMold": { "n": 5, "c": 2, "m": "10^2 cfu/g", "M": "10^3 cfu/g", "method": "ISO 21527-1/2" },
+        "enterobacteriaceae": { "n": 5, "c": 2, "m": "10 cfu/g", "M": "100 cfu/g", "method": "ISO 21528-2" },
+        "salmonella": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 6579-1" },
+        "listeria": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 11290-1" },
+        "ecoliO157": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 16649-2" },
+        "staphAureus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "100 cfu/g", "method": "ISO 6888-1" },
+        "bacillusCereus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "1000 cfu/g", "method": "ISO 7932" }
+      },
+      "packaging": {
+        "unitMaterial": "Termoform PP/PA/PE",
+        "unitWeightG": 15,
+        "unitDimensions": "270x300 mm",
+        "cartonMaterial": "CCB",
+        "cartonDimensions": "395x295x160 mm",
+        "cartonWeightG": 466,
+        "boxesPerCarton": 90,
+        "palletType": "80x120 EUR",
+        "cartonsPerLayer": 8,
+        "layers": 11,
+        "cartonsPerPallet": 88,
+        "netWeightPerPalletKg": 594,
+        "grossWeightInclPalletKg": 658.33
+      },
+      "compliance": "EU 1935/2004 + FDA 21 CFR",
+      "conflicts": [
+        "Organoleptik bölümünde 'spiced meat filling' ifadesi var — ürün vegan. Şablon hatası.",
+        "Spek SKU 200302A (75g); katalog SKU 200302 (70g). Gramaj farkı tedarikçiye sorulmalı."
+      ]
+    },
+    "500103": {
+      "docNo": "KYS-080", "rev": "REV1", "publishDate": "2025-12-14",
+      "productCode": "500103K",
+      "readiness": "Ready to Bake",
+      "state": "frozen",
+      "manufacturer": null,
+      "organoleptic": {
+        "appearance": "Golden-brown, evenly baked surface with visible fine shredded pastry layers; cheese filling uniformly distributed.",
+        "color": "Golden to light amber on the exterior; creamy white cheese interior.",
+        "taste": "Sweet and buttery with balanced syrup sweetness; rich dairy flavor from melted cheese.",
+        "texture": "Crispy exterior with soft, elastic, and fully melted cheese interior; not soggy or overly dry.",
+        "defects": "Burnt or pale surface, uneven baking, excessive syrupiness or dryness, hardened or unmelted cheese."
+      },
+      "analytical": {
+        "humidity": { "target": 28.07, "min": 25.26, "max": 30.88 },
+        "pH": { "target": 5.2, "min": 4.9, "max": 5.8 },
+        "totalFat": { "target": 22.83, "min": 20.55, "max": 25.11 },
+        "protein": { "target": 13.21, "min": 11.89, "max": 14.53 },
+        "saltNaCl": { "target": 0.58, "min": 0.52, "max": 0.64 }
+      },
+      "functional": {
+        "freezeThaw": "Stable under frozen storage; no structural damage after thawing.",
+        "textureAfterThaw": "Juicy and soft interior; crispy coating after cooking.",
+        "structuralIntegrity": "Maintains shape; coating adheres well to the core.",
+        "cuttingStability": "Clean cut; no crumbling or separation.",
+        "bakeStability": "Shape and coating remain stable during baking.",
+        "volumeExpansion": "Controlled, minimal volume increase."
+      },
+      "microbiology": {
+        "totalPlateCount": { "n": 5, "c": 2, "m": "10^4 cfu/g", "M": "10^5 cfu/g", "method": "ISO 4833-1" },
+        "yeastMold": { "n": 5, "c": 2, "m": "10^2 cfu/g", "M": "10^3 cfu/g", "method": "ISO 21527-1/2" },
+        "enterobacteriaceae": { "n": 5, "c": 2, "m": "10 cfu/g", "M": "100 cfu/g", "method": "ISO 21528-2" },
+        "salmonella": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 6579-1" },
+        "listeria": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 11290-1" },
+        "ecoliO157": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 16649-2" },
+        "staphAureus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "100 cfu/g", "method": "ISO 6888-1" },
+        "bacillusCereus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "1000 cfu/g", "method": "ISO 7932" }
+      },
+      "packaging": {
+        "unitMaterial": "Aluminum bowl",
+        "unitWeightG": 6,
+        "unitDimensions": "133x26 mm (diameter x thickness)",
+        "secondaryMaterial": "Paper + Plastic",
+        "secondaryDimensions": "300x250x180 mm",
+        "secondaryWeightG": 29,
+        "boxesPerCarton": 12,
+        "palletType": "80x120 EUR",
+        "cartonsPerLayer": 12,
+        "layers": 10,
+        "cartonsPerPallet": 120,
+        "netWeightPerPalletKg": 604.8,
+        "grossWeightInclPalletKg": 725.8
+      },
+      "compliance": "EU 1935/2004 + FDA 21 CFR",
+      "conflicts": [
+        "Tuz çelişkisi: besin tablosu 0.23g/100g, analitik NaCl hedef 0.58g. Hangisi etikete gidecek belirsiz."
+      ]
+    },
+    "700604": {
+      "docNo": "KYS-089", "rev": "REV3", "publishDate": "2025-12-14",
+      "productCode": "700604",
+      "readiness": "Ready to Eat",
+      "state": "frozen",
+      "manufacturer": null,
+      "organoleptic": {
+        "appearance": "Thin, circular or semi-circular shape with a homogenous structure.",
+        "color": "Typical creamy-white or slightly yellowish flour color; no burnt spots.",
+        "taste": "Typical cooked dough taste; free from bitter, sour, or foreign flavors.",
+        "texture": "Flexible, non-sticky, not easily torn, and not dried out.",
+        "defects": "No mold, foreign matter, large holes, or excessive stickiness."
+      },
+      "analytical": {
+        "humidity": { "target": 35, "min": 31.5, "max": 38.5 },
+        "pH": { "target": 5.8, "min": 5.5, "max": 6.1 },
+        "totalFat": { "target": 0.86, "min": 0.77, "max": 0.95 },
+        "protein": { "target": 6.8, "min": 6.7, "max": 7.55 },
+        "saltNaCl": { "target": 1.39, "min": 1.35, "max": 1.53 }
+      },
+      "functional": {
+        "freezeThaw": "Stable under frozen storage; no structural damage after thawing.",
+        "textureAfterThaw": "Juicy and soft interior; crispy coating after cooking.",
+        "structuralIntegrity": "Maintains shape; coating adheres well to the core.",
+        "cuttingStability": "Clean cut; no crumbling or separation.",
+        "bakeStability": "Shape and coating remain stable during baking.",
+        "volumeExpansion": "Controlled, minimal volume increase."
+      },
+      "microbiology": {
+        "totalPlateCount": { "n": 5, "c": 2, "m": "10^4 cfu/g", "M": "10^5 cfu/g", "method": "ISO 4833-1" },
+        "yeastMold": { "n": 5, "c": 2, "m": "10^2 cfu/g", "M": "10^3 cfu/g", "method": "ISO 21527-1/2" },
+        "enterobacteriaceae": { "n": 5, "c": 2, "m": "10 cfu/g", "M": "100 cfu/g", "method": "ISO 21528-2" },
+        "salmonella": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 6579-1" },
+        "listeria": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 11290-1" },
+        "ecoliO157": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 16649-2" },
+        "staphAureus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "100 cfu/g", "method": "ISO 6888-1" },
+        "bacillusCereus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "1000 cfu/g", "method": "ISO 7932" }
+      },
+      "packaging": {
+        "unitMaterial": "CCB",
+        "unitWeightG": 10,
+        "unitDimensions": "260x320x50 mm",
+        "cartonMaterial": "Kraft paper",
+        "cartonDimensions": "320x380x230 mm",
+        "cartonWeightG": 500,
+        "boxesPerCarton": 10,
+        "palletType": "80x120 EUR",
+        "cartonsPerLayer": 9,
+        "layers": 7,
+        "cartonsPerPallet": 63,
+        "netWeightPerPalletKg": 214.2,
+        "grossWeightInclPalletKg": 274
+      },
+      "compliance": "EU 1935/2004 + FDA 21 CFR",
+      "conflicts": [
+        "Tuz çelişkisi: besin tablosu 0.548g/100g, analitik NaCl hedef 1.39g.",
+        "Ağırlık çelişkisi: başlık '8x125g' (=1000g, katalog uyumlu) ama ürün bilgisi '340g / adet 340g'."
+      ]
+    },
+    "201301": {
+      "docNo": "KYS-085", "rev": "REV1", "publishDate": "2025-12-14",
+      "productCode": "201301",
+      "readiness": "Ready to Eat",
+      "state": "frozen",
+      "manufacturer": null,
+      "organoleptic": {
+        "appearance": "Reddish-brown, cohesive patties or nuggets with visible bulgur grains.",
+        "color": "Dark reddish-brown / deep orange-red.",
+        "taste": "Spicy (isot pepper), savory, characteristic tomato and bulgur flavor.",
+        "texture": "Soft, slightly grainy but cohesive, moist mouthfeel.",
+        "defects": "Foreign matter, off-odors, mold, sour/fermented taste, dry texture."
+      },
+      "analytical": {
+        "humidity": { "target": 55.7, "min": 53, "max": 58 },
+        "pH": { "target": 4.0, "min": 3.5, "max": 5.5 },
+        "totalFat": { "target": 8, "min": 7, "max": 10 },
+        "protein": { "target": 5.1, "min": 4.1, "max": 6.1 },
+        "saltNaCl": { "target": 0.6, "min": 0.4, "max": 0.8 }
+      },
+      "functional": {
+        "freezeThaw": "Stable under frozen storage; no structural damage after thawing.",
+        "textureAfterThaw": "Juicy and soft interior; crispy coating after cooking.",
+        "structuralIntegrity": "Maintains shape; coating adheres well to the core.",
+        "cuttingStability": "Clean cut; no crumbling or separation.",
+        "bakeStability": "Shape and coating remain stable during baking.",
+        "volumeExpansion": "Controlled, minimal volume increase."
+      },
+      "microbiology": {
+        "totalPlateCount": { "n": 5, "c": 2, "m": "10^4 cfu/g", "M": "10^5 cfu/g", "method": "ISO 4833-1" },
+        "yeastMold": { "n": 5, "c": 2, "m": "10^2 cfu/g", "M": "10^3 cfu/g", "method": "ISO 21527-1/2" },
+        "enterobacteriaceae": { "n": 5, "c": 2, "m": "10 cfu/g", "M": "100 cfu/g", "method": "ISO 21528-2" },
+        "salmonella": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 6579-1" },
+        "listeria": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 11290-1" },
+        "ecoliO157": { "n": 5, "c": 0, "m": "Absent/25g", "M": "Absent/25g", "method": "ISO 16649-2" },
+        "staphAureus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "100 cfu/g", "method": "ISO 6888-1" },
+        "bacillusCereus": { "n": 5, "c": 2, "m": "100 cfu/g", "M": "1000 cfu/g", "method": "ISO 7932" }
+      },
+      "packaging": {
+        "unitMaterial": "PP",
+        "unitWeightG": 11.2,
+        "unitDimensions": "300x130x60 mm",
+        "cartonMaterial": "Kraft paper",
+        "cartonDimensions": "400x280x195 mm",
+        "cartonWeightG": 400,
+        "boxesPerCarton": 16,
+        "palletType": "80x120 EUR",
+        "cartonsPerLayer": 8,
+        "layers": 7,
+        "cartonsPerPallet": 56,
+        "netWeightPerPalletKg": 896,
+        "grossWeightInclPalletKg": 918.45
+      },
+      "compliance": "EU 1935/2004 + FDA 21 CFR"
+    }
+  }
+}

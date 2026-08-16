@@ -1,0 +1,100 @@
+{
+  "_source": "6 adet Lezza ürün spesifikasyonu (.docx, ~/Downloads) — 2026-08-15'te okundu. Yayın tarihi 14.12.2025.",
+  "_reliability": {
+    "guvenilir": ["ingredientsEU", "allergensText", "tracesText", "nutritionPer100g", "storage", "shelfLifeMonths", "cookingTips"],
+    "guvenilmez": [
+      "Alerjen TABLOLARI (2 belgede metinle çelişiyor: simit tablosunda susam NO, ceviz içeren ürünlerde nuts NO) — bu dosyaya tablolar alınmadı, yalnız EU metni alındı",
+      "Koli/ağırlık blokları (spekler kendi içinde çelişkili) — bu dosyaya alınmadı, lojistik için catalog-pdf.json kullanın",
+      "Künefe tuz: besin tablosu 0,23 / analitik 0,58; Yufka tuz: 0,548 / 1,39 — nutrition alanına besin tablosundaki yazıldı, çelişki not edildi"
+    ],
+    "tedarikciye_bildirilecek": [
+      "KYS-010 (Simit): alerjen tablosunda 'Sesame: NO' — içerik %10 susam, metin 'contains sesame'. Tablo hatalı.",
+      "KYS-088 (Vegan Kibbeh): organoleptik bölümde 'spiced meat filling' ifadeleri — ürün vegan. Ayrıca ceviz bileşenken tabloda 'Nuts: NO'.",
+      "KYS-085 (Vegan Çiğköfte): metin 'traces of walnut' derken tabloda 'Nuts: NO'.",
+      "KYS-010: ad '4x105g' ama ürün bilgisi 4x100g=400g (katalog 420g) — hangisi doğru?",
+      "KYS-089 (Yufka): '8x125g' (=1000g) ama ürün bilgisi 'koli 340g / adet 340g'."
+    ]
+  },
+  "specs": {
+    "700405": {
+      "docNo": "KYS-003", "rev": "REV2",
+      "specName": "Lezza Bakery Cheese Pastry (Su Böreği) Rectangle Tray 2500 gr",
+      "readiness": "Ready to Bake", "state": "frozen",
+      "ingredientsEU": "Wheat flour, water, semi-skimmed white cheese (18%) (milk), egg, sunflower oil, butter (milk), salt, corn starch, vegetable fat (palm oil, cottonseed oil, sunflower oil, canola oil), natural and/or artificial flavor, color added (beta-carotene).",
+      "allergens": ["gluten", "yumurta", "sut"],
+      "traces": ["soya"],
+      "nutritionPer100g": {"energyKj": 905, "energyKcal": 215, "fatG": 10.3, "saturatedFatG": 2.5, "carbohydrateG": 25, "sugarsG": 0.8, "proteinG": 7.7, "saltG": 1.0},
+      "shelfLifeMonths": 18,
+      "storage": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "cookingTips": null
+    },
+    "700101": {
+      "docNo": "KYS-010", "rev": "REV1",
+      "specName": "Lezza Bakery Turkish Bagel - Simit (%80 Cooked) 4x105 gr",
+      "readiness": "Ready to Eat (%80 pişmiş)", "state": "frozen",
+      "manufacturer": "BREADHOUSE",
+      "ingredientsEU": "Wheat flour (gluten), water, sesame (10%), grape molasses (2%), fresh yeast, salt.",
+      "allergens": ["gluten", "susam"],
+      "traces": ["sut", "yumurta", "soya"],
+      "nutritionPer100g": {"energyKj": 1310, "energyKcal": 313, "fatG": 7.3, "saturatedFatG": 1.2, "carbohydrateG": 50.1, "sugarsG": 3.9, "proteinG": 10.3, "saltG": 1.9},
+      "shelfLifeMonths": 18,
+      "storage": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "cookingTips": null,
+      "conflict": "Ad 4x105g; ürün bilgisi bloğu 4x100g=400g; katalog 420g."
+    },
+    "200302A": {
+      "docNo": "KYS-088", "rev": "REV1",
+      "specName": "Lezza Koli Etiketi Fresh Quibe Vegano 90x75",
+      "readiness": "Ready to Bake", "state": "frozen",
+      "pieceWeightG": 75,
+      "ingredientsEU": "Bulghur (wheat gluten) (8.9%), water, semolina (wheat gluten), pregelatinized wheat flour (wheat gluten), salt, chili pepper. Filling: vegetable oil (sunflower), dried vegetable mix (36%) (tomato, capia pepper, leek, carrot), soy, onion, dried potatoes, walnut, sesame, spice mix (salt, sweet red pepper, black pepper, cumin, coriander, allspice, ginger), chili pepper, isot, salt.",
+      "allergens": ["gluten", "soya", "ceviz", "susam"],
+      "traces": ["sut", "kereviz"],
+      "nutritionPer100g": {"energyKj": 1083, "energyKcal": 259, "fatG": 15.7, "saturatedFatG": 8.5, "carbohydrateG": 30.2, "sugarsG": 0.1, "proteinG": 8.8, "saltG": 1.6},
+      "shelfLifeMonths": 12,
+      "storage": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "cookingTips": null,
+      "conflict": "Vegan ürün; spek organoleptik bölümünde 'meat filling' ifadeleri şablon hatası. SKU katalogda 200302 (70g) — spek 200302A (75g): gramaj farkı tedarikçiye sorulmalı."
+    },
+    "500103": {
+      "docNo": "KYS-080", "rev": "REV1",
+      "specName": "Lezza Kunafeh (Incl Plate&Syrup) 2x145 gr",
+      "specCode": "500103K",
+      "readiness": "Ready to Bake", "state": "frozen",
+      "pieceWeightG": 145, "syrupG": 65,
+      "ingredientsEU": "Raw kadayif pastry [wheat flour (gluten), water, salt, preservatives (potassium sorbate E202, calcium propionate E282)], vegetable anhydrous fat [palm, shea, butter flavouring, colour (beta-carotene)], fresh low-fat processed cheese [pasteurised cow's milk (lactose), rennet, emulsifying salts (E339, E452)], glucose-fructose syrup.",
+      "allergens": ["gluten", "sut"],
+      "traces": ["antep fistigi"],
+      "nutritionPer100g": {"energyKj": 1623, "energyKcal": 388, "fatG": 22.83, "saturatedFatG": 10.75, "carbohydrateG": 34.8, "sugarsG": 5.87, "proteinG": 13.21, "saltG": 0.23},
+      "shelfLifeMonths": 18,
+      "storage": "-18°C dondurulmuş. Buzdolabında çözdürün, tekrar dondurmayın. Güneş ışığına maruz bırakmayın.",
+      "cookingTips": "Künefeyi çözülmesini beklemeden, 230°C'ye önceden ısıtılmış fırında uygun bir tepside 15 dakika veya üzeri kızarana kadar pişirin. Önceden hazırladığınız şurupla servis edin.",
+      "conflict": "Tuz: besin 0,23 / analitik NaCl 0,58."
+    },
+    "700604": {
+      "docNo": "KYS-089", "rev": "REV3",
+      "specName": "Lezza Pastry Leaves Bulk (Böreklik Yufka) 8x125gr",
+      "readiness": "Ready to Eat", "state": "frozen",
+      "ingredientsEU": "Wheat flour (gluten), water, salt.",
+      "allergens": ["gluten"],
+      "traces": [],
+      "nutritionPer100g": {"energyKj": 933, "energyKcal": 223, "fatG": 0.86, "saturatedFatG": 0, "carbohydrateG": 48, "sugarsG": 0, "proteinG": 6.86, "saltG": 0.548},
+      "shelfLifeMonths": 18,
+      "storage": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "cookingTips": null,
+      "conflict": "Tuz: besin 0,548 / analitik NaCl 1,39. Ürün bilgisi bloğu ağırlıkları tutarsız (340g)."
+    },
+    "201301": {
+      "docNo": "KYS-085", "rev": "REV1",
+      "specName": "Lezza Vegan Çiğköfte 1000 gr",
+      "readiness": "Ready to Eat", "state": "frozen",
+      "ingredientsEU": "Water, bulgur (wheat gluten), smoked chili pepper (isot), crushed red pepper, salt, spice mix [onion, garlic, carrot, red bell pepper, salt, sugar, leek, parsley, celery, black cumin, black pepper, acidity regulator (citric acid), yeast extract, natural flavouring, sunflower oil], spice blend (salt, onion, sweet red pepper, black pepper, cumin, coriander, allspice, ginger), tomato paste, sweet pepper paste, ketchup [water, invert sugar, tomato paste, vinegar, sugar, acidity regulator (citric acid), salt, modified corn starch, stabilizer (xanthan gum), clove powder, colour (carrot concentrate), preservatives (potassium sorbate, sodium benzoate)], invert sugar syrup, sunflower oil, parsley, garlic.",
+      "allergens": ["gluten", "kereviz"],
+      "traces": ["soya", "susam", "ceviz"],
+      "nutritionPer100g": {"energyKj": 1013, "energyKcal": 242, "fatG": 11, "saturatedFatG": 3.3, "carbohydrateG": 27.6, "sugarsG": 4.5, "proteinG": 5.1, "saltG": 0.6},
+      "shelfLifeMonths": 12,
+      "storage": "-18°C dondurulmuş. Güneş ışığına maruz bırakmayın. Çözüldükten sonra tekrar dondurmayın.",
+      "cookingTips": null
+    }
+  }
+}
