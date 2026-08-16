@@ -2,7 +2,7 @@ import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -59,6 +59,14 @@ import { useTicket } from './use-ticket.hook';
 
 type Messages = LocalizedCopy<typeof messages>;
 
+/**
+ * Yenilemeyi tetikleyen taşma (px) — kazara değil, İSTEYEREK çekilmiş olsun.
+ *
+ * Sayı parametrik ve tek yerde: küçültülürse liste sonunda duran her parmak yenileme başlatır,
+ * büyütülürse hareket zahmetli olur. 64 px, kitin dokunma hedefi ölçüsüyle aynı büyüklük sınıfında.
+ */
+const PULL_UP_THRESHOLD = 64;
+
 interface TicketDetailScreenProps {
   /** Talebin kimliği — rota parametresi (`/support/<uuid>`). */
   id: string;
@@ -74,6 +82,8 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   const router = useRouter();
   const ticket = useTicket(id, locale);
   const [draft, setDraft] = useState('');
+  /** Halkanın kendi hâli — hook'un `status`una bağlanmaz: sessiz tazeleme durumu değiştirmiyor. */
+  const [refreshing, setRefreshing] = useState(false);
   const threadRef = useRef<ScrollView>(null);
 
   /* Başlık her hâlde durur (şablonda da yüklenen sayfanın üstünde): geri yolu ekran boşken de açık. */
@@ -183,15 +193,71 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   };
 
   return (
+    /*
+      KLAVYE KAÇINMASI EKRANIN KÖKÜNDE (kullanıcı bulgusu 16.08, iki cihazda birden).
+
+      Yazma çubuğu klavyenin ALTINDA kalıyordu: müşteri yazdığını göremiyordu. Sebep `FormScroll`
+      künyesinde ölçülü ve burada da aynı: Android `Theme.EdgeToEdge` ile açıldığı için pencereyi
+      klavye için küçültmüyor, `adjustResize` işlemiyor; boşluğu uygulamanın kendisi tüketmeli.
+
+      `FormScroll` KULLANILMADI ve bu bilinçli: o kap, içeriğin TAMAMINI tek bir kaydırıcıya koyan
+      form ekranları için. Burası yazışma — kaydırılan yalnız mesaj listesi, yazma çubuğu ise sabit
+      kalmalı. `FormScroll`a sarsaydık çubuk da kaydırma alanına girer ve "yapışkan" olmaktan
+      çıkardı. O yüzden aynı KORUMA, farklı KAP: `KeyboardAvoidingView` kökü sarar, liste ile çubuk
+      içeride kendi yerlerinde kalır.
+
+      `behavior` platforma göre: iOS klavyeyi bir dolgu gibi iterken (`padding`), Android'de yükseklik
+      ayarı doğru sonucu veriyor — kitin `bottom-sheet`i de aynı ayrımı yapıyor.
+    */
     <View style={styles.screen}>
+      {/* BAŞLIK ÇUBUĞU KAPIN DIŞINDA — kitin çalışan emsalinin birebir yerleşimi (`FormScroll`
+          künyesi: *"üstündeki başlık çubuğu kendi yerini alır, kaydırıcı gerisini"*). İçeride
+          dururken iOS'ta hiçbir kaçınma olmuyordu (simülatörde kare ile ölçüldü 16.08: çubuk yok,
+          liste kısalmamış, dolgu eklenmemiş). Kullanıcının turu emsalin çalıştığını doğruladı —
+          adres formu ve çekmeceler iOS'ta sorunsuz — yani kusur kaçınmada değil, bu ekranın
+          kabında. Ofset de KALKTI: emsalde yok ve olmayan bir farkı düzeltmeye çalışıyordu. */}
       {appBar(title, <TicketStatusTag status={detail.status} label={t.status[detail.status]} testID="ticket-status" />)}
+      <KeyboardAvoidingView style={styles.keyboardLayer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Yazışma eskiden yeniye dizili: SON mesaj en altta. Kaydırma her içerik değişiminde sona
           çekilir — açılışta müşteri en yeni cevabı görür, kendi mesajını gönderince de baloncuğu
           ekranda belirir (onayın kendisi budur; toast yalnız onu süreler). */}
+      {/*
+        YUKARI ÇEKİP YENİLEME — ötekilerin tersi, ve bilerek (kullanıcı kararı 16.08).
+
+        Uygulamanın bütün listelerinde yenileme AŞAĞI çekmedir, ama orada listenin başı da en
+        üsttedir. Yazışma tam tersi: en yeni mesaj EN ALTTA ve ekran zaten sona kaydırılmış
+        duruyor. Yenilemek için müşteriyi upuzun bir yazışmanın başına kadar çıkarmak, hareketin
+        maliyetini metnin uzunluğuna bağlamak olurdu — kısa yazışmada bedava, uzununda imkânsız.
+        Beklenen yeni bilgi de aşağıda; parmağın gittiği yön oraya bakmalı.
+
+        Bu yüzden `RefreshControl` KULLANILMIYOR: RN'de o bileşen yalnız listenin BAŞINDA çalışır,
+        sonundan çekmeyi tanımıyor. Onun yerine sürüklemenin bittiği anda alt uçtan ne kadar
+        taşıldığı ölçülüyor.
+
+        Zil varken de gerekli: zil bir kolaylık, garanti değil (ağ düşer, uygulama arka plandan
+        döner) — müşterinin elinde her zaman kendi kapısı olmalı.
+      */}
       <ScrollView
         ref={threadRef}
+        /* LİSTE ESNER, ÇUBUK ESNEMEZ (iOS ölçümü 16.08, simülatörde kare ile).
+           Klavye açılınca `KeyboardAvoidingView` kabın altına klavye kadar dolgu koyuyor. Liste
+           `flex: 1` almadığı için İÇERİK BOYUNDA kalıyordu, yani kap küçülürken o küçülmüyor ve
+           yazma çubuğu ekranın dışına taşıyordu — ölçülen görüntü tam buydu: çubuk "klavyenin
+           altında" değil, HİÇ YOKTU; yazışmanın sonuyla klavye arasında dolgu kadar boşluk vardı.
+           Kısalması gereken listedir; çubuk sabit yükseklikte kalmalı. */
+        style={styles.thread}
         onContentSizeChange={() => threadRef.current?.scrollToEnd({ animated: true })}
         contentContainerStyle={styles.content}
+        onScrollEndDrag={(event) => {
+          if (refreshing) return;
+          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+          // Alt uçtan ne kadar TAŞINDI: sıfırdan büyükse parmak listeyi sonundan öteye çekmiştir.
+          const overscroll = contentOffset.y + layoutMeasurement.height - contentSize.height;
+          if (overscroll < PULL_UP_THRESHOLD) return;
+          setRefreshing(true);
+          void ticket.refresh().finally(() => setRefreshing(false));
+        }}
+        scrollEventThrottle={16}
         testID="ticket-thread"
       >
         <Text style={styles.meta} testID="ticket-meta">
@@ -212,7 +278,9 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         <Text style={styles.notice}>{t.detail.notice}</Text>
       </ScrollView>
 
-      {/* Yapışkan kutu kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kalıbı). */}
+      {/* Yapışkan kutu kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kalıbı) ama
+          AKIŞTA: kaydırıcı `flex: 1` ile kalanı doldurduğu için kutu zaten en altta oturuyor,
+          mutlak konuma gerek yok. Gereksiz de değil, ZARARLIYDI — gerekçesi `composer` künyesinde. */}
       <View style={styles.composer}>
         {/* Düşen gönderim SESSİZ DEĞİL: tek satırlık ret, taslak yerinde. */}
         {ticket.sendFailed ? (
@@ -246,6 +314,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
           </PressableSurface>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -254,11 +323,41 @@ const styles = StyleSheet.create((theme, rt) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
+    /*
+      ALT GÜVENLİ ALAN KAÇINMA KABININ DIŞINDA — TEK ANİMASYON KALSIN DİYE (kullanıcı bulgusu 17.08).
+
+      Bu dolgu yazma çubuğunun kendi üstündeydi ve klavye açılınca fazlalık yapıyordu: iOS'ta klavye
+      ekranın ta dibine kadar uzanır, yani ana ekran çubuğunun yerini zaten o kaplar. "Klavye açıksa
+      sıfırla" diye koşul yazmak kusuru İKİYE çıkardı: `KeyboardAvoidingView` kendi dolgusunu
+      klavyenin süresinde yumuşatarak kaldırırken koşul 34pt'yi bir anda geri koyuyordu — çubuk önce
+      aşağı kayıp sonra yukarı zıplıyordu.
+
+      Dolgu KÖKTE durunca koşula gerek kalmıyor: kabın alt kenarı zaten güvenli alan kadar yukarıda
+      başlar ve `KeyboardAvoidingView` klavyeyle ÖRTÜŞMEYİ ölçtüğü için o farkı kendiliğinden düşer.
+      Tek hareket, tek süre.
+
+      PAY GÜVENLİ ALANIN TAMAMI DEĞİL, ÇUBUĞUN KENDİSİ KADAR (kullanıcı kararı 17.08).
+
+      İşletim sisteminin bildirdiği 34pt, yukarı KAYDIRMA hareketi için ayrılmış cömert bir şerit.
+      Bu ekranda o hareket yok: çubuğun üstündeki tek etkileşim DOKUNMAKTIR ve dokunuş, kaydırma
+      hareketiyle yarışmaz — parmak basıp çekmediği sürece olay yazı alanına gider. Şeridin tamamını
+      boş tutmak, ekranın altında hiçbir şey anlatmayan geniş bir bant bırakıyordu.
+
+      Bu yüzden pay `insets.bottom` ile SINIRLI ama ondan küçük: ana ekran çubuğunun çizgisi açıkta
+      kalsın yeter — yazı alanının yuvarlak kenarı onun üstüne binmesin. Alt güvenli alanı olmayan
+      cihazda (`insets.bottom === 0`) sıfıra iner, kutunun kendi payı zaten var.
+    */
+    paddingBottom: Math.min(rt.insets.bottom, theme.space['3xl']),
   },
+  /** Başlığın ALTINDAKİ her şey — kaçınma kabı buradan başlar (`FormScroll`un `layer`ıyla aynı rol). */
+  keyboardLayer: { flex: 1 },
+  /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
+  thread: { flex: 1 },
   content: {
     padding: theme.space['4xl'],
-    // Yapışkan kutunun altında kalan alan: kutu yüksekliği + cihazın alt güvenli alanı.
-    paddingBottom: rt.insets.bottom + theme.space['9xl'],
+    /* Çubuğun altında AYRILMIŞ ALAN YOK ve olmamalı: çubuk artık akışta, kendi yerini kendi
+       kaplıyor. Mutlak konumluyken buraya bir kutu boyu dolgu konuyordu — o dolgu bugün
+       yazışmanın sonunda kocaman bir boşluk olurdu. */
     gap: theme.space.lg,
   },
   meta: {
@@ -318,15 +417,25 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space.md,
   },
 
+  /*
+    ÇUBUK AKIŞTA DURUR — `position: absolute` DEĞİL (iOS klavye arızasının kökü, ölçüldü 16.08).
+
+    Mutlak konumlu çocuk kabının ALT KENARINA asılıdır. iOS'ta `KeyboardAvoidingView` kabın altına
+    klavye kadar DOLGU koyuyor; kabın alt kenarı yerinde kaldığı için çubuk da yerinde kalıyor,
+    yani klavyenin altında. Android'de aynı kod ÇALIŞIYORDU çünkü oradaki `height` davranışı kabı
+    kısaltıyor — alt kenar yukarı geliyor, çubuk onunla geliyor. "Android düzeldi, iOS düzelmedi"
+    gözleminin tek sebebi buydu; kusur `behavior` seçiminde ya da ofsette değildi.
+
+    Akışta duran çubuk iki davranışta da doğru: kaydırıcı `flex: 1` ile kalanı doldurduğu için
+    kutu zaten en alta oturur, dolgu eklendiğinde de dolgunun ÜSTÜNDE kalır.
+  */
   composer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     gap: theme.space.sm,
     paddingTop: theme.space.lg,
     paddingHorizontal: theme.space['4xl'],
-    paddingBottom: rt.insets.bottom + theme.space['2xl'],
+    /* Kutunun KENDİ dolgusu simetrik: güvenli alan artık ekranın kökünde (künyesi orada), burada
+       yalnız çubuğun çerçevesiyle arasındaki nefes payı kalır. */
+    paddingBottom: theme.space.lg,
     borderTopWidth: theme.border.hairline,
     borderTopColor: theme.colors['sand-200'],
     backgroundColor: theme.colors['sand-50'],

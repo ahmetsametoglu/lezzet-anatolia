@@ -7,6 +7,7 @@ import {
   statusAfterCustomerReply,
   statusAfterStaffReply,
 } from '@lezzet/domain-core';
+import { ringTicketBell } from '@lezzet/application';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
 import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
@@ -178,6 +179,10 @@ export async function replyAsStaff(input: {
   // Haber SESSİZ gider (16.4): sağlayıcı düştü diye operatörün yazdığı cevabı geri almak yanlış
   // olurdu. Talep taze okunur — cevap durumu değiştirmiş olabilir.
   await notifyTicketReplied((await service.getById(ticket.id)) ?? ticket);
+  /* MÜŞTERİNİN KANALI — operasyon zilinden ayrı (künyesi `ringTicketBell`de). Müşteri yazışmayı
+     açık tutuyorsa operatörün cevabını elle tazelemeden görsün; mobil talep ekranı bu zili
+     dinliyor (21.68). Zil sessizdir: çalmazsa cevap yine yazılmıştır, ekran biraz geç görür. */
+  await ringTicketBell(ticket.id);
   return { ok: true, data: message };
 }
 

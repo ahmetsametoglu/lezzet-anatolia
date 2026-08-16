@@ -3272,6 +3272,67 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   kasadan daha KATI). Kanıt yolu: girişli hesapla rota+kargo karışık sepet kurup iki cevabı yan
   yana ölçmek; kanıt çıkarsa iş bu satırın altına yeni bir kalem olarak yazılır.
 
+- [~] (21.68) **TALEP YAZIŞMASI CANLI — zil · klavye · yukarı çekip yenileme (kullanıcı isteği 16.08)**
+  `touches:` `apps/mobile/src/screens/support/ticket-detail-screen.tsx` ·
+  `apps/mobile/src/screens/support/use-ticket.hook.ts` ·
+  `packages/types/src/contracts/realtime.contract.ts` · `packages/types/src/contracts/index.ts` ·
+  `apps/web/lib/ticket/write.ts`
+
+  Kullanıcı: *"Talep açılıp da mesajlaşırken Supabase'e subscription atıp mesajlaşma sırasında
+  güncellenmesini istiyorum."*
+
+  **CANLI YAZIŞMA — KAPI ZİLİ, VERİ BORUSU DEĞİL.** Var olan desen aynen kullanıldı (`bell.ts`
+  künyesi): kanal boş bir `changed` yayınlar, ekran duyunca yazışmayı SUNUCUDAN yeniden ister.
+  `postgres_changes` reddedildi ve gerekçesi eskidir — projede RLS yok, her okuma service-role ile
+  yapılıyor; istemciyi `ticket_message` tablosuna abone etmek o duvarda ilk delik olurdu. Talep
+  başına kanal (`ticket:<uuid>`), yük daima boş.
+  Kanal ve olay adı `@lezzet/types`a kondu (`realtime.contract`) çünkü zili ÇALAN taraf sunucu
+  paketinde ve native uygulama ona bağlı değil — adı iki yere yazmak, bir gün sessizce çalmayan
+  bir zil demekti. Tazeleme `load`dan AYRI (`refresh`): ekranı iskelete çekmez, okunan yazışma
+  yerinde kalır.
+
+  **KLAVYE — ÜÇ AYRI KUSUR, ÜÇ AYRI SEBEP (cihaz + simülatör ölçümü 16–17.08).** Teoriyle üç kez
+  yazıp üçünde de tutturamadıktan sonra ölçülerek çözüldü; dersi yazıya geçiyor.
+  1. **Yazma çubuğu iOS'ta klavyenin altında kalıyordu, Android'de kalmıyordu.** Sebep `behavior`
+     seçimi ya da ofset DEĞİLDİ: çubuk `position: absolute, bottom: 0` ile kabın ALT KENARINA
+     asılıydı. Android'in `height` davranışı kabı kısaltıyor (alt kenar yukarı gelir, çubuk gelir);
+     iOS'un `padding` davranışı kısaltmıyor, dolgu ekliyor — alt kenar yerinde kalıyor, çubuk da.
+     "Android düzeldi, iOS düzelmedi"nin tek cümlelik cevabı buydu. Çubuk akışa alındı.
+  2. **Yazışmanın sonunda gereksiz boşluk** — mutlak konumlu çubuk için ayrılmış rezerve dolgu;
+     çubuk akışa geçince anlamsız kaldı, kaldırıldı.
+  3. **Klavye kapanırken çubuk aşağı kayıp yukarı zıplıyordu** — iki animasyon: `KeyboardAvoidingView`
+     kendi dolgusunu klavyenin süresinde yumuşatırken, alt güvenli alanı geri koyan koşul
+     (`insets.ime > 0 ? 0 : insets.bottom`) 34pt'yi bir anda ekliyordu. Koşul silindi; güvenli alan
+     kabın DIŞINA, ekranın köküne alındı — kap zaten o kadar yukarıda başladığı için örtüşme
+     hesabından kendiliğinden düşüyor. Tek hareket, tek süre.
+  Alt pay `insets.bottom`un TAMAMI değil (**kullanıcı kararı 17.08**): sistem şeridi yukarı kaydırma
+  hareketi için ayrılmış, bu ekranda o hareket yok — tek etkileşim dokunmak. Pay ana ekran çubuğunun
+  çizgisini açıkta bırakacak kadar (`min(insets.bottom, 16)`); ölçülen boşluk 44pt → **26pt**.
+
+  **YENİLEME AŞAĞI DEĞİL YUKARI ÇEKMEDİR** (kullanıcı kararı 16.08) — uygulamanın geri kalanının
+  tersi ve bilerek: yazışmada en yeni mesaj EN ALTTA, ekran zaten sona kaydırılmış duruyor.
+  Yenilemek için müşteriyi upuzun bir yazışmanın başına çıkarmak, hareketin maliyetini metnin
+  uzunluğuna bağlamak olurdu. `RefreshControl` KULLANILAMAZ (yalnız listenin başında çalışır);
+  yerine sürükleme bitince alt uçtaki taşma ölçülüyor, eşik parametrik (`PULL_UP_THRESHOLD = 64`).
+
+  **HEAD'DE BIRAKILMIŞ BİR KUSUR DA KAPANDI:** `500770c1` `bell.ts`i `@lezzet/types`tan
+  `ticketChannelName` çağırır hâlde commit'lemiş ama sözleşme dosyası untracked kaldığı için
+  commit'e girmemişti — HEAD derlenmiyordu. Dosya bu commit'te kapanıyor.
+
+  **Doğrulama:** `tsc` · `eslint` temiz; klavye ve boşluk İKİ CİHAZDA ölçüldü (iPhone 16e simülatörü
+  + OPPO CPH1907, kare kare).
+
+  *Durum:* **ÜÇ PARÇA AÇIK.** (a) Klavye AÇIKKEN yeni yerleşimin karesini kendim alamadım —
+  simülatöre dokunuş sentezlenemiyor (`osascript` erişilebilirlik izni yok; Swift/`CGEvent` ile
+  gönderilen tıklamayı simülatör almıyor). Açık hâli kullanıcının gözlemiyle doğrulandı, kareyle
+  değil. (b) **Zil cihazda çalınmadı** — gerçek testi ekran açıkken operasyondan cevap yazmaktır.
+  (c) **Gönderim anında çeviri yazılMADI.** Kullanıcı bulgusu: operasyon Türkçe yazıyor, müşteri
+  mesajı önce Türkçe görüyor, ekrandan çıkıp girince Fransızca oluyor — *"biz bunun bu şekilde
+  olmasını istemiyoruz."* Karar verildi (**çeviri GÖNDERİRKEN yazılsın**) ama iş bu commit'te YOK:
+  ortak bir "şimdi çevir" kapısı `packages/application/src/ticket/` altına açılıp hem operatör hem
+  AI cevabı oradan geçecek, çeviri düşerse kaydedilmiş cevap ENGELLENMEYECEK (arka plan işi telafi
+  eder). Sıradaki kalem bu.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

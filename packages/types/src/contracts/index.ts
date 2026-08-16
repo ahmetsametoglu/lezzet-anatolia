@@ -65,3 +65,6 @@ export * from './notification.schema';
 // Davet karşılaması — paylaşılan davet bağlantısı uygulamada açıldığında sorulan tek soru. Dört
 // hâl ayrık; getirenin YALNIZ adı geçer, kimlik alanları sözleşmede hiç yok (gerekçe dosyada).
 export * from './invite-api.schema';
+// Canlı zilin istemciye bakan yüzü — kanal adı + olay adı. Şema değil, iki dizgelik sözleşme:
+// zili çalan sunucu ile onu duyan İKİ istemci (web · native) aynı adı bilsin diye (gerekçe dosyada).
+export * from './realtime.contract';

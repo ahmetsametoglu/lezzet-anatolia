@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { BELL_EVENT, ticketChannelName } from '@lezzet/types';
 
 import { fetchTicket, replyToTicket, type TicketDetail } from '@/lib/api/tickets';
+import { getSupabase } from '@/lib/auth/supabase';
 
 /*
   TALEP DETAY VERİSİ — sipariş detay hook'unun (`use-order.hook.ts`) deseni, üstüne YAZMA yarısı.
@@ -31,6 +33,8 @@ interface UseTicketResult {
   /** Son gönderim düştü mü — ekran tek satırlık bir ret gösterir, taslak yerinde kalır. */
   sendFailed: boolean;
   retry: () => void;
+  /** SESSİZ tazeleme — okunan yazışma yerinde kalır (zil ve aşağı çekme bunu kullanır). */
+  refresh: () => Promise<void>;
   /** `true` = mesaj yazışmaya eklendi (ekran kutuyu temizler ve toast basar). */
   send: (body: string) => Promise<boolean>;
 }
@@ -61,6 +65,50 @@ export function useTicket(id: string, locale: Locale): UseTicketResult {
     load();
   }, [load]);
 
+  /**
+   * Zil duyulunca yazışmayı SESSİZCE tazeler — `load`dan farkı burada.
+   *
+   * `load` durumu `loading`e çeker ve ekran iskelete döner; canlı tazelemede bu YANLIŞ olurdu:
+   * müşteri okuduğu mesajın ortasındayken ekran bir anlığına boşalır, geldiği yeri kaybederdi.
+   * Karşı taraf yazdı diye kimsenin ekranı sıfırlanmaz.
+   *
+   * Düşen tur da SESSİZ: elde duran yazışma korunur ve kırmızı bir uyarı yazılmaz. Zil bir kolaylık;
+   * çalışmadığı an müşterinin kaybı "biraz geç görmek"tir, aşağı çekip yenileme yerinde duruyor.
+   */
+  const refresh = useCallback(async (): Promise<void> => {
+    const run = (generation.current += 1);
+    const result = await fetchTicket(id, locale);
+    if (run !== generation.current || result.error !== null) return;
+    setDetail(result.data);
+    setStatus('ready');
+  }, [id, locale]);
+
+  /*
+    CANLI YAZIŞMA — **kapı zili, veri borusu değil** (kullanıcı isteği 16.08).
+
+    Kanal boş bir "changed" yayınlar, ekran duyunca yazışmayı SUNUCUDAN yeniden ister. Mesajın
+    kendisi asla kanaldan geçmez: projede RLS yok, her okuma sunucuda service-role ile yapılıyor ve
+    istemciyi `ticket_message` tablosuna abone etmek o duvarda ilk delik olurdu (`bell.ts` künyesi,
+    16.8 kararı). Aynı sebeple sipariş ekranı da yıllardır böyle çalışıyor (`order-watch`).
+
+    Kanal adı ve olay adı `@lezzet/types`tan geliyor (`realtime.contract`): zili ÇALAN taraf sunucu
+    paketinde ve mobil ona bağlı değil — adı burada yeniden yazmak, bir gün sessizce çalmayan bir
+    zil demekti.
+
+    Abonelik ekran ömrü boyunca AÇIK kalır ve sökülürken kapatılır; kanal talebe özel olduğu için
+    tek yazışma için tek soket açılıyor.
+  */
+  useEffect(() => {
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(ticketChannelName(id))
+      .on('broadcast', { event: BELL_EVENT }, () => refresh())
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [id, refresh]);
+
   const send = useCallback(
     async (body: string): Promise<boolean> => {
       // Boş mesaj uca hiç gitmez; düğme zaten kapalı ama kapı iki yerde durur (kapının kendisi de
@@ -83,5 +131,8 @@ export function useTicket(id: string, locale: Locale): UseTicketResult {
     [id, locale, sending],
   );
 
-  return { status, detail, sending, sendFailed, retry: load, send };
+  /* `retry` ile `refresh` AYNI ŞEY DEĞİL: ilki hatadan dönüşün kapısıdır ve ekranı iskelete
+     çeker; ikincisi sessiz tazelemedir (zil ve aşağı çekme onu kullanır) — okunan yazışma yerinde
+     kalır. İkisini tek kapıya indirmek, canlı her tazelemede ekranı boşaltırdı. */
+  return { status, detail, sending, sendFailed, retry: load, refresh, send };
 }
