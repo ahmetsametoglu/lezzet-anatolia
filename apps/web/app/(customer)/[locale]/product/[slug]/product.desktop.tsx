@@ -1,7 +1,7 @@
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
-import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
+import { ColdChainMark, StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import { Badge } from '@/components/customer/ui/badge';
 import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
@@ -44,12 +44,20 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
                 "Tükendi" gösteren aynı ekranda kendi kendini yalanlar.
                 Yere bağlı iki hâlde (kargoyla / bölgenizde yok) rozetin yerini YER İŞARETİ alır:
                 orada da yeşil "Stokta" yazmak, hemen altındaki kutuyla çelişirdi (19.7). */}
-            {selected &&
-              (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
-                <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
-              ) : (
-                <StockMark status={selected.stockStatus} locale={locale} size="lg" />
-              ))}
+            {/* Soğuk zincir işareti ROZETİN YANINDA (16.08, kullanıcı isteği): teslimat kutusunun
+                içindeyken bir teslimat ayrıntısı gibi okunuyordu, oysa ÜRÜNÜN künyesi.
+                Dayanağı ARTIK KENDİ ALANI (`product.storage_type` → `coldChain`), `!shippable`
+                proxy'si değil: o bir teslimat olgusuydu ve kargolanabilen ürüne de "soğuk zincirle
+                gelir" yazdırıyordu. */}
+            <div className="flex flex-wrap items-center gap-2">
+              {selected &&
+                (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
+                  <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
+                ) : (
+                  <StockMark status={selected.stockStatus} locale={locale} size="lg" />
+                ))}
+              {product.coldChain && <ColdChainMark label={t.assurance.coldChainShort} />}
+            </div>
           </div>
 
           {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}

@@ -30,6 +30,8 @@ export interface ProductFormFields {
   allergens: ReactNode;
   variants: ReactNode;
   shippable: ReactNode;
+  /** Saklama rejimi — soğuk zincirin kendisi (16.08); kargo izninin yanında ama ondan ayrı. */
+  storage: ReactNode;
   autoPrice: ReactNode;
   margin: ReactNode;
 }

@@ -8,6 +8,20 @@ import { ProductVariantSchema } from './product-variant.schema';
 export const ProductDateTypeEnum = z.enum(['DLC', 'DDM']);
 export type ProductDateType = z.infer<typeof ProductDateTypeEnum>;
 
+/**
+ * **Saklama rejimi — soğuk zincirin KENDİSİ** (kullanıcı kararı 16.08; migration `0005` künyesi).
+ *
+ * Bugüne kadar saklanmıyordu: `shippable = false` onun yerine geçiyordu. Teslimat kararı için
+ * yeterliydi ama bir kural SEBEBİ istiyor — `ReturnDispositionEnum`: *"teslim edilmiş ve sonra iade
+ * edilen DONUK ürün … varsayılan olarak imha edilir."* O kural yazılamıyordu.
+ *
+ * `shippable` yerine geçemez: o bir TESLİMAT olgusudur ("kargoya verilemez"), bu bir SAKLAMA
+ * olgusu. Üç değer, çünkü ikisi yetmiyor — vitrin işareti `chilled` ve `frozen`de birden çıkar,
+ * imha varsayılanı ise yalnız `frozen`de doğar.
+ */
+export const ProductStorageTypeEnum = z.enum(['ambient', 'chilled', 'frozen']);
+export type ProductStorageType = z.infer<typeof ProductStorageTypeEnum>;
+
 // AB 14 alerjeni (FR/DE yasal beyan). Enum anahtarı ASCII; görünen ad (TR/FR/DE) UI'da. DATA_MODEL §Enum.
 export const ProductAllergenEnum = z.enum([
   'gluten',
@@ -192,6 +206,8 @@ export const ProductSchema = z.object({
   dateType: ProductDateTypeEnum,
   shelfLifeDays: z.number().int().nullable(),
   shippable: z.boolean(),
+  /** Saklama rejimi — soğuk zincirin kendisi; `shippable` ile karıştırılmaz (bkz. ProductStorageTypeEnum). */
+  storageType: ProductStorageTypeEnum,
   /** Satış durumu — TEK alan (DB'de `product_status` enum'u). Bkz. ProductStatusEnum. */
   status: ProductStatusEnum,
   targetMarginPercent: dbNumericNullable,
@@ -238,6 +254,7 @@ export const ProductInsertSchema = z.object({
   dateType: ProductDateTypeEnum.optional(),
   shelfLifeDays: z.number().int().nullish(),
   shippable: z.boolean().optional(),
+  storageType: ProductStorageTypeEnum.optional(),
   status: ProductStatusEnum.optional(),
   targetMarginPercent: z.number().nullish(),
   targetMarginB2bPercent: z.number().nullish(),

@@ -237,6 +237,27 @@ export function useProductFormFields({
     // dokunmaz.** Ürün pasifse pasif, aktifse aktif kalır — form mevcut durumu okuyup aynısını geri
     // gönderir. Seçici ürün ekranının alt barında kalıyor; yayına almak oranın kararı.
     shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
+    /**
+     * **Saklama rejimi** (16.08) — soğuk zincirin kendisi, `shippable`in yanında ama ondan AYRI.
+     *
+     * Kargo izni "gönderilebilir mi", bu "nasıl saklanır" der. İkisi çoğu üründe birlikte hareket
+     * eder ama aynı şey değildir: rejim vitrinin soğuk zincir işaretini ve teslim sonrası iadenin
+     * varsayılan akıbetini (donukta imha, `DOMAIN §8`) belirler — ikisi de kargo iznine bağlı değil.
+     * Yan yana duruyorlar ki operatör ikisini bir arada kararlaştırsın.
+     */
+    storage: (
+      <FormSelect
+        control={control}
+        name="storageType"
+        label="Saklama"
+        required
+        options={[
+          { value: 'ambient', label: 'Oda sıcaklığı' },
+          { value: 'chilled', label: 'Soğutulmuş (0–4 °C)' },
+          { value: 'frozen', label: 'Donuk (−18 °C)' },
+        ]}
+      />
+    ),
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
   };

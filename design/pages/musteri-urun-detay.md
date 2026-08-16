@@ -57,6 +57,11 @@ müşteri bunu hissetmeli:
 - **Saklama/tazelik bilgisi** — sade dille ("asgari tazelik tarihi" gibi); teknik terim kullanılmaz
 - **Yorumlar + ürün puanı** — onaylı müşteri yorumları ve ürün skoru; sosyal kanıt. Yorum yoksa bölümün boş hali de tasarlanır
 - **Kargo kısıtı** — ürün kargoyla gönderilemiyorsa müşteri bunu sipariş vermeden önce öğrenmeli ("yalnız bölge içi teslimat")
+- **Soğuk zincir işareti STOK ROZETİNİN YANINDA** *(kullanıcı isteği 16.08)* — teslimat kutusunun içindeyken bir teslimat ayrıntısı gibi okunuyordu; oysa ürünün künyesidir ve kargoya verilememesinin sebebidir. Tonu sessiz: bir engel değil bir özellik, uyarı rengine sokmak sorunu olmayan ürünü sorunlu gösterirdi. Yalnız kargoya verilemeyen üründe — sistemin soğuk zincir tanımı zaten budur
+- **Teslimat kutusu YER ADI YAZMAZ, GÜN yazar** *(kullanıcı bildirimi 16.08)*. İki gerekçe:
+  - ⚠ **Yanlış adı yazıyordu.** Kutu bölgemizin adını (`zoneName`) basıyordu, header ise yerin adını (`placeName`): aynı ekranda üstte *"67380 Lingolsheim"*, altta *"67380 Strasbourg Merkez"*. Ayrım header'da zaten kararlaştırılmıştı (*"yazılan ad bölgemizin adı değil, yerin adı"*), kural buraya uygulanmamıştı
+  - **Zaten gereksizdi:** yer bilgisi ve değiştirme bağı ekranda duruyor; müşterinin bu kutudan öğreneceği şey **ne zaman** geleceği. Onarım adı düzeltmek değil KALDIRMAK oldu — aynı gerçeği iki yerde yazmak, bir gün ayrışmaları demek ve nitekim ayrışmıştı
+  - Kalan iki cümle: **nasıl geliyor** (kargoya verilemeyen üründe *"yalnız kapıya teslim"*, verilebilende *"bu adrese kapıya getiriyoruz"*) ve **en yakın teslimat günü** — vurgu günde
 - **Aile çeşit kartları** (§1b) — ailenin öbür üyeleri; resimli, üst bölgede, varyant seçiciden ayrı dilde
 - **Benzer/ilgili ürünler** — keşfi sürdürme (aynı kategori/koleksiyon); **aile üyeleri burada tekrar görünmez** (§1b)
 

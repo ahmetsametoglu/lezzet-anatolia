@@ -182,6 +182,28 @@ export const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    // ── SAKLAMA REJİMİ — `shippable`IN KOVASI DEĞİL (16.08, `product.storage_type`) ─────────────
+    // Ayrı bir alan olmasının sebebi migration `0005`te yazılı: `shippable` bir TESLİMAT olgusu
+    // ("kargoya verilemez"), bu bir SAKLAMA olgusu. İkisi çoğu üründe birlikte hareket eder ama
+    // aynı şey değildir — ve tam olarak bu yüzden ayrı ölçülmeleri gerekir: `shippable` kovaları
+    // dolu görünürken üç saklama değerinden ikisi hiç doğmamış olabilir.
+    //
+    // Üçü de ZORUNLU, çünkü üçünün de ayrı bir ekran sonucu var:
+    //   frozen  → iade varsayılanı İMHA (`ReturnDispositionEnum`) + vitrin soğuk zincir işareti
+    //   chilled → vitrin işareti çıkar ama iade imhaya düşmez — ikisini ayıran tek kayıt bu
+    //   ambient → işaret HİÇ çıkmaz; "işaret yok" hâli de ancak böyle bir ürünle sınanır
+    //
+    // `base` katmanında ikisi boş kalır ve bu beklenendir: kaynakta yalnız `frozen` kanıtı var
+    // (belgesi olan altı ürünün altısı da "-18°C"). Kapsam vaadi zaten yalnız `full` içindir.
+    baslik: 'Ürün — saklama rejimi (soğuk zincir)',
+    tablo: 'product',
+    kovalar: [
+      { ad: 'donuk (frozen)', zorunlu: true, filtre: (q) => q.eq('storage_type', 'frozen') },
+      { ad: 'soğutulmuş (chilled)', zorunlu: true, filtre: (q) => q.eq('storage_type', 'chilled') },
+      { ad: 'oda sıcaklığı (ambient)', zorunlu: true, filtre: (q) => q.eq('storage_type', 'ambient') },
+    ],
+  },
+  {
     baslik: 'Ürün — görsel',
     tablo: 'product',
     kovalar: [

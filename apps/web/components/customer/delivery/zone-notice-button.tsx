@@ -135,8 +135,15 @@ export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card', produc
 
   return (
     <>
+      {/* KARTTA KISA HÂL (16.08, kullanıcı bildirimi: *"düğme çok büyük ve kötü görünüyor"*).
+          Uzun etiket üç dilde de uzundu ("Bölgeye gelince haber ver" · "Me prévenir quand vous
+          livrez ici" · "Benachrichtigen, wenn ihr hierher liefert") ve `whitespace-nowrap` olduğu
+          için kartın fiyat satırını yiyordu — fiyat sıkışıyor, düğme kartın yarısını kaplıyordu.
+          Kartta bağlam ZATEN yukarıda yazılı ("❄ Soğuk zincir — bu adrese gönderemiyoruz"), yani
+          düğmenin tekrar etmesi gereken tek şey EYLEM. Panel ve sepette uzun hâl kalıyor: orada
+          satır genişliği var ve düğme kendi başına duruyor, cümlesi olmadan ne olduğu anlaşılmaz. */}
       <button type="button" onClick={() => setOpen(true)} className={noticeButtonClass(emphasis)}>
-        {t.noticeCta}
+        {emphasis === 'card' ? t.noticeCtaShort : t.noticeCta}
       </button>
 
       {open && (

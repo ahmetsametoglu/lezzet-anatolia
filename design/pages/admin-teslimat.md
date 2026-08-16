@@ -27,16 +27,44 @@ Sayfa **gün** üzerine kuruludur; gün seçilir, iki tür yan yana durur. En s�
 
 ### Ortak — günün özeti
 
-- **Kaç çıkış, kaçı hazır, kaçı atanmamış** — araç çıkmadan önceki son kontrol budur; tek bakışta okunmalı
-- **Kapıda tahsil edilecek toplam** ve kaç siparişte olduğu
-- **Kesim saati (cut-off) etkisi** — kesim saatinden sonra gelen sipariş bir sonraki teslim gününe yazılır; liste bu yüzden araç yüklenirken büyümez. Ekranda bu bir güven duygusu olarak yansır: **"bugünün listesi kesinleşti mi, hâlâ büyüyebilir mi"** görünür. Kesim saati ayarlardan gelir, burada değiştirilmez
+Özet **iki katlıdır: üstte künye, altta engel** (kullanıcı kararı 16.08). Ayrım şu — künye günün *ne olduğunu* söyler, engel şeridi sevkiyatçının araç çıkmadan *kapatması gerekenleri*.
+
+- **Künye:** kaç durak · toplam kaç adet yük · hangi depo(lar)dan yükleniyor · kaç kargo paketi · liste kesinleşti mi
+  - **Yük ADET olarak künyede** — sevkiyatçının ilk sorusu *"araca ne kadar yer lazım"*; satırlarda vardı, üstte yoktu
+  - **Hangi depodan** — tasarım §4 çok depolu günü *"iki ayrı araç, iki ayrı yükleme"* diye tanımlıyor; bu karar künyeden okunmalı, satırlar taranarak değil
+  - **Kesim saati (cut-off) etkisi** — kesim saatinden sonra gelen sipariş bir sonraki teslim gününe yazılır; liste bu yüzden araç yüklenirken büyümez. Künyede **kısa** durur (*"liste kesinleşti"* / *"liste 16:00'a kadar açık"*), gerekçesi üzerine gelince açılır. Kesim saati ayarlardan gelir, burada değiştirilmez
+- **Engel şeridi** — yalnız kapatılması gerekenler, sertlik sırasıyla: rotaya hiç düşmemiş sipariş → hazır olmayanlar (**adıyla**) → kuryesiz → takip numarası yazılmamış paket. Hiçbiri yoksa şerit sayı basmaz, tek cümle söyler: *"Araç çıkabilir."*
+  - **Kapıda tahsilat bir ENGEL DEĞİL** — künye bilgisidir; gün planını durdurmaz, kuryeye not düşer. Şeridin sağ ucunda ve nötr tonda
+  - **Kargonun EKSİĞİ özete girer, sayısı künyeye** — takip numarası yazılmamış paket §4'ün *"gün kapanmadan görünür bir eksiklik"*idir ve ekranın alt yarısında saklı kalmamalı. Ama paket bir DURAK değildir: durak sayacına karışmaz
+- ⚠ **AYNI SAYI İKİ KEZ YAZILMAZ.** Önceki hâl dört sayaçtı ve `ÇIKIŞ 4` · `HAZIR 2/4` · `4 durak` 250 piksel içinde üç kez aynı sayıyı basıyordu; `HAZIR 2/4` üstelik engelin TERSİYDİ, engelin kendisini (kaçı hazır değil) hiçbir yerde vermiyordu
+- ⚠ **BOŞ GÜN SEBEBİNİ SÖYLER.** Eski hâl boş güne üç sıfır basıyordu (`0` · `0/0` · `0`) ve "çıkış yok" metni hiç görünmüyordu: koşulu *rota **ve** kargo birlikte boş* idi, kargo kuyruğu ise hiç boşalmaz
 - **Hazırlık durumu** — siparişin hazır olup olmadığı; hazırlanmamış siparişi araca yüklememek için. Hazırlık işi depo ekranındadır, burada yalnız durumu okunur
+
+### Askıda kalanlar — geçmişten devreden
+
+> **Kullanıcı kararı 16.08: "görünür devir — sevkiyatçı karar verir."**
+
+Teslim günü geçtiği hâlde sonuçlanmamış rota siparişleri, bugünün planının **en üstünde** ayrı bir şeritte durur. Bakılan günden bağımsızdır (ölçüt *"teslim günü bugünden önce ve sonuçlanmamış"*) ve yalnız bugüne/ileriye bakarken çizilir.
+
+- ⚠ **VAR OLMA SEBEBİ: SİPARİŞ KAYBOLABİLİYORDU** (ölçüldü 16.08 — seed değil, akışın kendisi). `out_for_delivery`den çıkışın üç kapısı da bir kurye eylemi ister; `delivery_date`'i yazan yalnız iki yer var (sipariş verilirken, ve sevkiyatçının elle taşıması — ki o da `out_for_delivery`'yi reddediyordu). Arada hiçbir otomatik yol yok: on iki zamanlanmış işin hiçbiri siparişe dokunmuyor, `order` tablosundaki iki trigger da durum/gün yazmıyor, kuryenin ekranı yalnız BUGÜNÜ okuyor. **Kurye bir durağı işaretlemeden günü bitirirse sipariş hiçbir rolün ulaşamadığı bir kilitte kalıyordu** — mal rezerve, para tahsil edilmemiş, müşteri bekliyor
+- ⚠ **Daha yaygın ikinci hâl:** kurye *doğru davranıp* "ulaşılamadı" işaretlese bile durum `ready`'ye döner ama teslim günü DÜNDE kalır. Kodun kendi yorumu *"sipariş yarın yeniden denenir"* diyordu; yarını yazan yoktu
+- **Devir SESSİZ DEĞİL.** Tarih kendiliğinden ilerlemez: müşteriye verilen gün sözü haber verilmeden değişmemeli. Ekran satırı görünür kılar, günü sevkiyatçı yazar
+- **Hedef günler SERBEST DEĞİL** — taşımadakiyle aynı kural: bölgenin yaklaşan teslim günleri. "Bugüne al" diye kestirme bir düğme YOK; bakılan gün o bölgenin günü olmayabilir ve düğme, oraya araç gitmeyen bir güne sipariş yazardı
+- **Bayat `out_for_delivery` burada çözülür**, ve yalnız burada: gün geçmişse "yola çıkmışın günü değişmez" kuralı süresi dolmuş bir gerçeği koruyordu — araç döndü. Yazılan geçiş motorun *"ulaşılamadı"* kenarıdır (`→ ready`, mal ayrılmış kalır, stok değişmez) ve notu bunun bir **sevkiyat kaydı** olduğunu söyler. Kapıdaki gerçekler — teslim edildi, reddedildi, para alındı — buradan yazılamaz (§6)
+- **Bölgesi çözülemeyen satır sessiz bırakılmaz:** hedef gün üretilemez ve sebebi yazılır — yapılacak iş adresin kendisindedir
+- **Tavan var ve söylenir:** sağlıklı bir operasyonda bu liste boş olmalı; uzunsa asıl haber odur
 
 ### Rota teslimatları — araçla giden
 
-- **Günün listesi, bölge bazında gruplu** — her satırda müşteri, adres, sipariş özeti, ödeme biçimi (kapıda tahsilat var mı), varsa not. Kurye gününü buradan alır
+- **Günün listesi TABLO** — kolonlar: no · müşteri · kanal (B2B/B2C) · bölge+depo · yük (adet) · hazırlık durumu · kurye · tahsilat. Şerit ölçüleri Siparişler tablosuyla aynı: iki ekran aynı nesneyi listeliyor, operatörün gözü aynı yerde aynı şeyi bulmalı
+  - ⚠ **AÇIK ADRES YOK (kullanıcı kararı 16.08).** Önceki hâl her satırda tam adres yazıyordu ve gerekçesi *"kurye gününü buradan alır"* idi — **o cümle `11.1` ile eskidi**: kuryenin kendi ekranı var ve adres orada işleviyle birlikte duruyor (`kurye-teslimat.md §2` — navigasyon, arama, WhatsApp). Sevkiyatçının adresle yapabileceği tek iş durak sırası kurmaktı ve §6 onu zaten yasaklıyor. Tam adres sipariş detayında
+  - ⚠ **BÖLGE GRUPLAMA DEĞİL KOLON.** Gruplu düzende bölgesi çözülemeyen sipariş *"Bölgesi çözülemedi"* diye SON gruba düşüyordu — en acil satır en altta. Kolon olunca her satır kendi bölgesini söylüyor, bölgesiz olan amber görünüyor ve liste bölgeye göre sıralı geliyor (bölgesizler ÖNDE)
+  - ⚠ **"Kalem sayısı" değil ADET.** Alan `order_item` satırlarını sayıyordu: dört siparişin dördü de *"1 kalem"* yazarken gerçek adetler 1 · 2 · 3 · 4'tü — dört farklı yük eşit görünüyordu. Sevkiyatçının sorusu *"araca ne kadar yer lazım"*
 - **Hangi bölgeden, hangi depodan** — satır bölgesini, bölge de deposunu söyler. Çok depolu kurulumda künye bilgisidir: aracın hangi tesisten yükleneceğini belirler. **Tanım burada değiştirilmez**, okunur
 - **Kurye atama** — günün siparişlerine kurye atanır; atanmamışlar belli olur. Gün başında atanmamış olmak normaldir, araç çıkarken kalmamalıdır
+- **Hazırlık durumu BEŞ hâl** *(16.08)*: Hazır değil · Hazırlanıyor · Hazır · **Yolda** · Teslim. "Yolda" sonradan eklendi: yola çıkmış sipariş *"Hazır"* diye okunuyordu, yani *"depoda, yüklenmeye hazır"* — oysa mal araçtaydı
+- **Tahsilat ÜÇ hâl, iki değil** *(16.08)*: `X € kapıda` · **`X € borç kaldı`** (amber) · `Ödendi`. Ortadaki eksikti ve ekran onun yerine "Ödendi" yazıyordu — teslim edilmiş ama hiç tahsil edilmemiş sipariş "ödenmiş" görünüyordu. Kapıda toplanmayacak olması ödendiği anlamına gelmez; kalan borcun tahsilatı müşteri kartının işidir
+- ⚠ **Geçmiş gün listesi TAM olmalı.** Bir süre `completed` siparişler hiç okunmuyordu ve kapanan her durak listeden sessizce düşüyordu — dünün ekranı 5 duraktan 2'sini gösteriyordu. "Dün ne gönderdik" sorusunun cevabı eksik olamaz
 - **O gün servis edilen bölgeler** — hangi bölgelerin günü olduğu görünür; hiçbirinin günü değilse liste sakin biçimde boştur ve sebebini söyler
 - ⚠ **Duraklar arası SIRA gösterilmez** — sistem sırayı bilmiyor (rota optimizasyonu ileriki faz, §6). Olmayan bir yeteneği ima eden bir düzen kurulmaz
 
@@ -50,9 +78,11 @@ Sayfa **gün** üzerine kuruludur; gün seçilir, iki tür yan yana durur. En s�
 
 ## 3. Aksiyonlar
 
-- Gün seçme; günün listesine bakma (rota + kargo)
+- Gün seçme; günün listesine bakma (rota + kargo). **Hızlı üç gün (dün/bugün/yarın) çip, ötesi TAKVİM** (16.08): sabit bir "+2 gün" çipi vardı ve gerekçesi yoktu — bugünün üç gün ötesine bakmanın yolu bulunmuyordu. Geçmiş de serbest: *"geçen salı ne çıktı"* sevkiyatın gerçek sorusu
+- Siparişi başka güne taşırken hedef günler **adıyla** okunur ("18 Ağu Sal"), ham tarihle değil — aynı ekranın gün çipleriyle tek dil
 - Siparişe kurye atama; atamayı değiştirme
 - Siparişi **başka güne taşıma** (istisna: müşteri aradı, "yarın olsun")
+- **Askıda kalmış siparişi bir güne yazma** — geçmişten devreden satırın kapısı; bayat `out_for_delivery` durumunu da çözer (§2)
 - Kargo satırında etiket / irsaliye çıktısı alma (taşıyıcı ve takip numarası **girilmez**, okunur — §2)
 - Listeden sipariş detayına inme
 - Bölge tanımına geçiş (Depolar)
@@ -85,7 +115,7 @@ Gidilen: sipariş detayı, müşteri detayı (adres sorunu), **Depolar** (bölge
 
 ## 7. Web / mobil notları (yalnız işlevsel)
 
-- **Telefon önceliklidir** — gün planına en sık sabah, depoda ya da araç başında bakılır; liste ve kurye ataması telefonda hızlı yürümeli
+- ~~**Telefon önceliklidir** — gün planına en sık sabah, depoda ya da araç başında bakılır; liste ve kurye ataması telefonda hızlı yürümeli~~ **DÜŞTÜ (06.08 kararı, not 16.08'de güncellendi):** operasyon web'i **masaüstü-yalnız**; personelin mobil deneyimi native uygulamanın işi (`CLAUDE.md §2`). Bu cümle satır düzenini seçmenin gerekçelerinden biriydi (tablo telefonda yatay kaydırma ister) — dayanak düşünce düzen 16.08'de tabloya çevrildi. Öteki gerekçeler (bölge kolonu, hazırlık ekseni, tek süzgeç) masaüstünde de geçerli
 - "Bugün kaç çıkış, kaçı hazır, kaçı atanmamış" tek bakışta okunmalı
 - **Takip numarası okunur ve kopyalanabilir olmalı** — müşteri arayınca telefondan okunur. Girişi bu ekranda değil (hazırlık ekranı, `07.12`); barkod okuma ihtiyacı da oraya ait, paket kapatılırken
 - Bölge kurulumu bu ekranda olmadığı için sayfa hafifledi: telefonda uzun posta kodu listeleriyle uğraşılmaz

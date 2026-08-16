@@ -3,7 +3,7 @@
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { DeliveryTabs } from './delivery-tabs';
-import { AssignBar, DayPicker, DaySummary, ShippingSection, ZoneGroup } from './dispatch-sections';
+import { AssignBar, DayPicker, DaySummary, RouteTable, ShippingSection, StrandedSection } from './dispatch-sections';
 import { DISPATCH_NOTES } from './deliveries-labels';
 import { dayLabel } from './deliveries-url';
 import type { DispatchViewProps } from './dispatch-types';
@@ -16,7 +16,11 @@ import type { DispatchViewProps } from './dispatch-types';
 
 export function DispatchDesktop(props: DispatchViewProps) {
   const { day, busy, error } = props;
-  const empty = day.zones.length === 0 && day.shipping.length === 0;
+  // Askıda şeridi YALNIZ bugün ve ileriye bakarken çizilir (16.08): geçmiş bir güne bakarken
+  // "önceki günlerden askıda" demek, bakılan günün kendisiyle karışırdı — ve o satırlara yazılacak
+  // hedef gün de zaten geçmişte olamaz.
+  const showStranded = day.stranded.length > 0 && day.date >= day.today;
+  const empty = day.route.length === 0 && day.shipping.length === 0 && !showStranded;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -38,18 +42,21 @@ export function DispatchDesktop(props: DispatchViewProps) {
         <EmptyState title="Bu güne çıkış yok" description={DISPATCH_NOTES.emptyDay} />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {day.zones.map((zone) => (
-            <ZoneGroup
-              key={zone.id || 'orphan'}
-              zone={zone}
+          {/* Askıdakiler EN ÜSTTE: bugünün işi değil geçmişin borcu, ve büyümeye devam eder. */}
+          {showStranded ? (
+            <StrandedSection day={day} onBringForward={props.onBringForward} busy={busy} />
+          ) : null}
+          {/* Rota çıkışları TEK tablo (16.08) — bölge artık kolon, grup değil. */}
+          {day.route.length > 0 ? (
+            <RouteTable
+              day={day}
               selected={props.selected}
               onToggle={props.onToggle}
-              onSelectZone={props.onSelectZone}
-              moveDates={day.moveDatesByZone[zone.id] ?? []}
+              onToggleAll={props.onToggleAll}
               onMove={props.onMove}
               busy={busy}
             />
-          ))}
+          ) : null}
           {/* Bir tür hiç yoksa o bölüm sessizce yer kaplamaz (tasarım §4). */}
           {day.shipping.length > 0 ? (
             <ShippingSection stops={day.shipping} truncated={day.shippingTruncated} />

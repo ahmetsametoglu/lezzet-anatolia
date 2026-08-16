@@ -84,6 +84,9 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       dateType: 'DDM',
       shelfLifeDays: null,
       shippable: true,
+      // Yeni ürün DONUK doğar — migration `0005` künyesindeki gerekçe: unutulan alanın bedeli
+      // güvenli tarafta kalmalı. Yanlış `ambient` işaretlenmiş donuk ürünün iadesi rafa döner.
+      storageType: 'frozen',
       // ── YENİ ÜRÜN **ADAY** DOĞAR (kullanıcı kararı 11.08) ─────────────────
       // Varsayılan bir tur `active` idi ve iki yüzeyde birden yanlıştı. Ölçüm: asistan önerisinden
       // doğan iki ürün SATIŞTA doğdu, üstelik beyanları eksikti — oysa ekran "ADAY olarak doğar,
@@ -113,6 +116,7 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
     dateType: p.dateType,
     shelfLifeDays: p.shelfLifeDays,
     shippable: p.shippable,
+    storageType: p.storageType,
     status: p.status,
     targetMarginPercent: p.targetMarginPercent,
     autoPrice: p.autoPrice,
@@ -146,6 +150,7 @@ export function toActionPayload(values: ProductFormValues) {
     dateType: values.dateType ?? 'DDM',
     shelfLifeDays: values.shelfLifeDays ?? null,
     shippable: values.shippable ?? true,
+    storageType: values.storageType ?? 'frozen',
     status: values.status,
     targetMarginPercent: values.targetMarginPercent ?? null,
     autoPrice: values.autoPrice ?? false,

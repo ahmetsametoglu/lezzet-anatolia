@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { assignCourierAction, moveDeliveryDayAction } from './dispatch-actions';
+import { assignCourierAction, bringForwardAction, moveDeliveryDayAction } from './dispatch-actions';
 import { DispatchDesktop } from './dispatch.desktop';
 import type { DispatchDayView } from './dispatch-types';
 
@@ -55,11 +55,35 @@ export function DispatchClient({ day }: { day: DispatchDayView }) {
     });
   };
 
-  /** Bölge başlığı: hepsi seçiliyse bırakır, değilse tamamlar — tek düğme, iki yön. */
-  const toggleZone = (zoneId: string) => {
-    const zone = day.zones.find((candidate) => candidate.id === zoneId);
-    if (!zone) return;
-    const ids = zone.stops.map((stop) => stop.orderId);
+  /**
+   * Askıda kalanı bir güne yazma (16.08). Taşımadan ayrı bir eylem: sunucu tarafında bayat
+   * `out_for_delivery` durumunu da çözüyor (`bringForwardAction` künyesi).
+   *
+   * Satır bu günün listesine düşerse `router.refresh()` onu askıdan çıkarıp yerine koyar; başka bir
+   * güne yazıldıysa listeden tamamen kalkar. İki durumda da ekranın kendisi cevabı gösteriyor.
+   */
+  const bringForward = (orderId: string, date: string) => {
+    setError(null);
+    startTransition(async () => {
+      const { error: failed } = await bringForwardAction(orderId, date);
+      if (failed) {
+        setError(failed);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  /**
+   * Tablo başlığı: hepsi seçiliyse bırakır, değilse tamamlar — tek düğme, iki yön.
+   *
+   * **Bölge başlığının kutucuğunun yerini aldı** (16.08): gruplama kalkınca "bu bölgenin hepsi"
+   * diye bir küme kalmadı. Kaybolan yetenek değil, kapsamı: eskiden bölge bölge seçilebiliyordu,
+   * şimdi ya tümü ya tek tek. Bölgeye göre toplu atama gerekirse tabloya süzgeç eklenir —
+   * bugün günün tamamı zaten tek araca yükleniyor.
+   */
+  const toggleAll = () => {
+    const ids = day.route.map((stop) => stop.orderId);
     setSelected((current) =>
       ids.every((id) => current.includes(id))
         ? current.filter((id) => !ids.includes(id))
@@ -76,9 +100,10 @@ export function DispatchClient({ day }: { day: DispatchDayView }) {
           current.includes(orderId) ? current.filter((id) => id !== orderId) : [...current, orderId],
         )
       }
-      onSelectZone={toggleZone}
+      onToggleAll={toggleAll}
       onAssign={assign}
       onMove={move}
+      onBringForward={bringForward}
       onDate={goToDate}
       busy={busy}
       error={error}

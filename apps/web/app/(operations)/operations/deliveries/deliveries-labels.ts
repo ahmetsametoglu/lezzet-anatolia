@@ -87,13 +87,26 @@ export const DISPATCH_NOTES = {
   open: (time: string): string =>
     `Liste hâlâ büyüyebilir: ${time}'a kadar gelen sipariş bu güne düşer, sonrası bir sonraki teslim gününe.`,
   /**
-   * Hazır olmayanlar ADIYLA anılır: yalnız sayı vermek sevkiyatçıyı listede aramaya gönderirdi.
-   * Üçten fazlasında ad yığılır, o zaman sayıya dönülür — uyarı bir liste değil, bir işarettir.
+   * **Engel şeridinin cümleleri — KISA ve PARALEL** (16.08). Şerit bir kontrol listesidir, açıklama
+   * metni değil: yan yana dizilen dört cümle tek bakışta taranmalı. Eski hâlde hazırlık uyarısı tek
+   * başına bir bant kaplıyordu ve talimatını da taşıyordu (*"hazırlık depoda; araca yüklemeden önce
+   * bekleyin"*) — şeride girince o kuyruk satırı taşırıyordu ve gereksizdi: amber ton zaten
+   * "yükleme" demiyor.
    */
-  notReady: (names: readonly string[]): string =>
-    names.length <= 3
-      ? `${names.join(', ')} henüz hazır değil — hazırlık depoda; araca yüklemeden önce bekleyin.`
-      : `${names.length} sipariş henüz hazır değil — hazırlık depoda; araca yüklemeden önce bekleyin.`,
+  blockers: {
+    /**
+     * Hazır olmayanlar ADIYLA anılır: yalnız sayı vermek sevkiyatçıyı listede aramaya gönderirdi.
+     * Üçten fazlasında ad yığılır, o zaman sayıya dönülür — uyarı bir liste değil, bir işarettir.
+     */
+    notReady: (names: readonly string[]): string =>
+      names.length <= 3 ? `${names.join(', ')} hazır değil` : `${names.length} sipariş hazır değil`,
+    unassigned: (count: number): string => `${count} sipariş kuryesiz`,
+    /** Askıda kalan — engellerin EN SERTİ: bugünün değil, geçmişin borcudur. */
+    stranded: (count: number): string => `${count} sipariş önceki günlerden askıda`,
+    /** Hiçbir rotaya düşmemiş durak: araç oraya UĞRAMAZ. Engellerin en serti. */
+    zoneless: (count: number): string => `${count} sipariş hiçbir rotaya düşmedi`,
+    untracked: (count: number): string => `${count} pakette takip numarası yok`,
+  },
   /**
    * Kargonun günü rotanınkinden farklı çalışır ve ekran bu farkı GİZLEMEZ (tasarım §2). Bu bölüm bir
    * güne ait değil, bir kuyruktur: kargoda teslim günü şema gereği yoktur (`0012_order.sql`).
@@ -102,6 +115,49 @@ export const DISPATCH_NOTES = {
     'Gün süzgeci uygulanmaz: kargoda teslim günü bizim vaadimiz değil taşıyıcınındır. Bu bir kuyruktur — hazırlanmış, henüz taşıyıcıya verilmemiş paketler. Takip numarasını hazırlık ekranı yazar.',
   shippingTruncated: 'Kuyruk tavana dayandı — burada görünenden daha fazla paket bekliyor.',
   emptyDay: 'Bu güne düşen çıkış yok. Bölgelerin haftalık günleri Depolar sayfasında tanımlanır — bugün hiçbirinin günü olmayabilir.',
+
+  // ── Günün künyesi ve engelleri (16.08, "üstte karar altta sayaç") ─────────
+  /**
+   * Kesim saatinin KISA hâli — künye satırında yaşar. Uzun cümle (`settled`/`open`) kaybolmadı,
+   * fareyle üzerine gelince açılıyor: künye bir kimlik satırıdır, orada iki satırlık gerekçe
+   * sayıların yanında ağırlık yapıyordu (ekranda ölçüldü — sağ yarıyı kaplıyordu).
+   */
+  settledShort: 'liste kesinleşti',
+  /**
+   * Saat YALNIZ bugün için yazılır. Gelecek bir güne bakarken *"liste 16:00'a kadar açık"* okuyan
+   * sevkiyatçı bugünün 16:00'ını anlar — oysa o gün için kesim başka bir günün saatidir. Saatin
+   * yanlış güne yapışması, doğru bilgiyi yanlış bilgiye çevirir.
+   */
+  openShort: (time: string): string => `liste ${time}'a kadar açık`,
+  openShortAhead: 'liste henüz açık',
+  /**
+   * Engel kalmadığında ŞERİT SUSMAZ, "çıkabilir" der. Boş bırakmak *"kontrol edilmedi"* diye de
+   * okunurdu; sevkiyatçının aradığı şey tam olarak bu tek cümle.
+   */
+  readyToGo: 'Araç çıkabilir — durakların hepsi hazır ve atanmış.',
+  /**
+   * **Rota boş ama kargo dolu** hâli (16.08 düzeltmesi). Boş gün metni yalnız rota VE kargo birlikte
+   * boşken çiziliyordu; kargo kuyruğu hiç boşalmadığı için o metin ekranda pratikte hiç görünmüyordu
+   * ve boş bir güne bakan sevkiyatçı üç sıfır görüp sebebini bulamıyordu (ölçüldü: 22 Ağu).
+   */
+  emptyRoute: 'Bu güne rota çıkışı yok.',
+
+  // ── Askıda kalanlar (16.08 — "görünür devir") ─────────────────────────────
+  /**
+   * Şeridin tek cümlelik gerekçesi. **Devrin sessiz OLMADIĞINI söylüyor:** tarih kendiliğinden
+   * ilerlemiyor, çünkü müşteriye verilen gün sözü haber verilmeden değişmemeli.
+   */
+  strandedHint:
+    'Teslim günü geçtiği hâlde sonuçlanmamış siparişler. Mal hâlâ ayrılmış ve müşteri bekliyor — günü siz yazana kadar hiçbir listeye düşmezler.',
+  strandedTruncated: 'Askıda listesi tavana dayandı — burada görünenden fazlası var.',
+  /** Yolda takılı kalmış: kurye ne "teslim ettim" ne "ulaşılamadı" yazmış, araç dönmüş. */
+  strandedStuck: 'yolda kalmış',
+  strandedWaiting: 'yola çıkmamış',
+  /**
+   * Bölgesi çözülemeyen askıda sipariş için hedef gün ÜRETİLEMEZ (hangi bölgenin haftalık günü
+   * olacağı bilinmiyor). Satır sessiz bırakılmıyor: yapılacak iş adresin kendisindedir.
+   */
+  strandedNoZone: 'adres bir bölgeye düşmüyor — önce adresi düzeltin',
   noAccess: 'Günün planını kurmak ve kurye atamak yöneticinin işidir. Kuryeyseniz kendi gününüz burada açılır.',
 } as const;
 
@@ -114,6 +170,10 @@ export const PREP_VIEW: Record<PrepStage, { label: string; tone: OpsTone } | nul
   ready: null,
   not_started: { label: 'Hazır değil', tone: 'red' },
   preparing: { label: 'Hazırlanıyor', tone: 'amber' },
+  // **ROZET ÇİZER ve `ready`den ayrı durur** (16.08): bu bir sapma değil ama bir SAPMA DEĞİL de
+  // değil — "depoda hazır" ile "araçta, yolda" sevkiyatçı için iki ayrı gerçek. Tonu sakin (slate):
+  // uyarı değil, konum bildirimi.
+  on_the_way: { label: 'Yolda', tone: 'slate' },
   delivered: { label: 'Teslim', tone: 'olive' },
   returned: { label: 'İade döndü', tone: 'slate' },
 };

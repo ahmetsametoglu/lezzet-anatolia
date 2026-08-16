@@ -42,6 +42,19 @@ export interface OrderLineView {
   bundleId: string | null;
   /** İade edildiyse malın akıbeti — stok hareketini besleyen karar. */
   returnDisposition: ReturnDisposition | null;
+  /**
+   * **Teslim sonrası iadede varsayılan İMHA mı** (16.08) — `product.storage_type === 'frozen'`.
+   *
+   * `DOMAIN §8` bunu baştan yazıyordu (*"teslim edilmiş ve sonra iade edilen donuk ürün, soğuk
+   * zinciri belgelenemediği için varsayılan olarak imha edilir — restok yalnız admin istisnasıdır"*)
+   * ama kural UYGULANAMIYORDU: hangi ürünün donuk olduğunu söyleyen bir alan yoktu ve iade penceresi
+   * her kalemde `restock`tan başlıyordu — kuralın tam tersi. Saklama rejimi alanı (`0005`) o boşluğu
+   * kapattı.
+   *
+   * Karar motorun (`defaultsToDiscardOnReturn`), ekranın değil: eşiğin `frozen` olduğu tek yerde
+   * yazılı kalsın.
+   */
+  defaultsToDiscard: boolean;
   /** Hangi partilerden çıktı (geri çağırma izi); hazırlanmamış siparişte boş. */
   batchNos: string[];
 }

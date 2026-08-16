@@ -1,5 +1,5 @@
 import { CategoryService, ProductImageService, ProductService } from '@lezzet/database';
-import { pickSimilar } from '@lezzet/domain-core';
+import { pickSimilar, requiresColdChain } from '@lezzet/domain-core';
 import { parseEmphasis } from '@lezzet/helper';
 import { hasNutrition, resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText, PreferredLanguage, ProductWithRelations } from '@lezzet/types';
@@ -247,6 +247,7 @@ export async function getProductDetail(
     primaryVariantId: primaryVariantOf(variants, ctx)?.id ?? null,
     declaration: declarationOf(product, locale),
     shippable: product.shippable,
+    coldChain: requiresColdChain(product.storageType),
     family,
     similar,
   };

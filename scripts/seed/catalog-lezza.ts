@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CategoryImageService, CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
 import { PRODUCT_GALLERY_MAX } from '@lezzet/types';
-import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus } from '@lezzet/types';
+import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus, ProductStorageType } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
 import { enAz, type Katman } from './tier';
 
@@ -408,7 +408,32 @@ const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
  */
 type SaklamaRejimi = 'donuk' | 'soguk-zincir' | 'sogutulmus' | 'raf';
 
-const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean }> = {
+/**
+ * **Belgenin saklama cümlesi "−18 °C" diyor mu** — tek yerde, çünkü artık İKİ alan buna bakıyor
+ * (`shippable` ve `storageType`). Ayrı ayrı yazılsalardı aynı belgeden iki farklı sonuç çıkarabilir
+ * hâle gelirlerdi; bu dosyanın 08.08'de öğrendiği ders tam olarak buydu.
+ *
+ * Ölçüldü (16.08): belgesi olan altı ürünün **altısı da** "-18°C dondurulmuş" diyor, yani
+ * kaynaklarda `chilled` ya da `ambient` tek bir kanıt YOK. Desen bu yüzden tek yönlü: "−18 °C
+ * yazıyorsa donuk", yazmıyorsa **bilmiyoruz** (alan yazılmaz, kolonun varsayılanı kalır).
+ */
+const BEYAN_DONUK = /-\s*18\s*°?\s*c/i;
+
+/**
+ * **REJİM ARTIK ÜÇ ŞEYİN TEK KAYNAĞI** (16.08 · `product.storage_type` kolonu eklendi).
+ *
+ * Soğuk zincir bugüne kadar saklanMIYORDU: `shippable = false` onun yerine geçiyordu, yani sistem
+ * SEBEBİ değil SONUCU tutuyordu (migration `0005` künyesi). Kolon gelince seed'in seçeceği bir
+ * değer daha doğdu — ve onu ayrı bir sözlüğe yazmak, bu dosyanın 08.08'de çözdüğü hatayı geri
+ * getirirdi: **iki alan elle ayrı tutulduğunda bir gün çelişirler.** Şimdi metin de, kargo izni de,
+ * saklama rejimi de aynı satırdan çıkıyor; "−18 °C yazan ürün `ambient` işaretlenmiş" hâli
+ * temsil edilemez oldu.
+ *
+ * Eşleme dörtten üçe iniyor ve kayıp yok: `donuk` ile `soguk-zincir` **aynı rejimdir** (ikisi de
+ * `frozen`), ayrıldıkları yer kargo iznidir — dondurma yolu kaldırmaz, börek kaldırır. Kolonun üç
+ * değeri saklamayı anlatıyor, teslimatı `shippable` anlatıyor; ikisi ayrı sorular (0005 künyesi).
+ */
+const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean; storageType: ProductStorageType }> = {
   // Donuk ama kargolanabilir: yalıtımlı kutu 24-48 saatlik yolu kaldırır — kataloğun ana kütlesi.
   donuk: {
     metin: {
@@ -417,6 +442,7 @@ const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean 
       de: 'Bei −18 °C lagern. Nach dem Auftauen **nicht wieder einfrieren**; innerhalb von 24 Stunden verzehren.',
     },
     shippable: true,
+    storageType: 'frozen',
   },
   // Kesintisiz soğuk zincir: çözülmeyi hiç kaldırmaz, kendi aracımızla gider. Dondurmanın rejimi.
   'soguk-zincir': {
@@ -426,6 +452,9 @@ const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean 
       de: 'Bei −18 °C in **ununterbrochener Kühlkette** lagern. Teilweises Auftauen verdirbt das Produkt; kein Versand.',
     },
     shippable: false,
+    // `donuk` ile AYNI rejim, farklı teslimat: ikisi de −18 °C'de saklanır, biri yolu kaldırır öteki
+    // kaldırmaz. İade varsayılanının imha olması ikisinde de doğrudur — kolonun asıl işi bu.
+    storageType: 'frozen',
   },
   // Soğutulmuş (0-4 °C), kısa raf ömrü: yolda geçen saat doğrudan tazelikten düşer.
   sogutulmus: {
@@ -435,6 +464,7 @@ const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean 
       de: 'Im Kühlschrank bei **0-4 °C** lagern. Nicht einfrieren; nach dem Öffnen innerhalb von 48 Stunden verzehren.',
     },
     shippable: false,
+    storageType: 'chilled',
   },
   // Rafta duran kuru ürün (kuru baklava, simit, kuru pasta): oda sıcaklığı, kargonun en kolayı.
   raf: {
@@ -444,6 +474,7 @@ const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean 
       de: 'An einem **kühlen, trockenen** Ort bei Raumtemperatur lagern. Vor direkter Sonne schützen.',
     },
     shippable: true,
+    storageType: 'ambient',
   },
 };
 
@@ -731,7 +762,21 @@ export async function seedLezzaProducts(
       // **Belgesi olan üründe rejim metnin kendisinden okunur:** "-18°C" yazan bir ürün donuktur ve
       // kategoriden türetilmiş tahminin ne dediği önemsizdir. Kaynağın cümlesi tahmini yener.
       // Türetme kapalıyken kolonun varsayılanı (`false`) kalır — "bilmiyoruz" donuk gıdada "hayır".
-      shippable: beyan?.storage ? !/-\s*18\s*°?\s*c/i.test(beyan.storage) : beyanEksik || !turetmeSerbest ? false : rejim.shippable,
+      shippable: beyan?.storage ? !BEYAN_DONUK.test(beyan.storage) : beyanEksik || !turetmeSerbest ? false : rejim.shippable,
+      // ── SOĞUK ZİNCİR İŞARETİ (16.08 · `product.storage_type`) ──────────────────────────────
+      // Sıra `shippable`ınkiyle aynı ve bilinçli: **belge tahmini yener.** Belgesi olan altı ürün
+      // gerçek cümlesinden `frozen` alır — bu, `base` katmanına da giden GERÇEK veridir.
+      // Belgesi olmayanda alan `base`de HİÇ YAZILMAZ: kaynakta o ürünün nasıl saklandığına dair
+      // kanıt yok ve kolonun varsayılanı zaten güvenli tarafta (`frozen` — 0005 künyesi). Uydurmak
+      // yerine varsayılanı bırakmak, "biliyoruz" ile "varsayıyoruz"u ayırt edilebilir tutuyor.
+      // `extend`ten itibaren rejim sözlüğü konuşur ve üç değer de doğar (ekranların sınanması için).
+      storageType: beyan?.storage
+        ? BEYAN_DONUK.test(beyan.storage)
+          ? 'frozen'
+          : undefined
+        : turetmeSerbest
+          ? rejim.storageType
+          : undefined,
       targetMarginPercent: marjYok || !turetmeSerbest ? undefined : 30 + (i % 6) * 3,
       autoPrice: turetmeSerbest && i % 4 === 0,
       status: durum,

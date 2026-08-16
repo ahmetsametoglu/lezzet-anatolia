@@ -5,6 +5,32 @@
 
 create type product_date_type as enum ('DLC', 'DDM');
 
+-- ── SAKLAMA REJİMİ (kullanıcı kararı 16.08) ─────────────────────────────────
+-- Soğuk zincir bugüne kadar SAKLANMIYORDU: `shippable = false` onun yerine geçiyordu ve DOMAIN §250
+-- bunu açıkça yazıyordu ("bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez"). Yani sistem
+-- SEBEBİ değil SONUCU tutuyordu — teslimat kararı için yeterliydi, ama bir kural sebebi istiyor:
+--
+--   `DOMAIN §8` + `ReturnDispositionEnum`: *"teslim edilmiş ve sonra iade edilen DONUK ürün, soğuk
+--   zinciri belgelenemediği için varsayılan olarak imha edilir."*
+--
+-- O kural yazılamıyordu, çünkü hangi ürünün donuk olduğunu söyleyen bir alan yoktu; iade ekranı da
+-- her kalemde `restock`tan başlıyordu — kuralın tam tersi. `shippable` yerine geçemez: o bir
+-- TESLİMAT olgusudur ("kargoya verilemez"), bu bir SAKLAMA olgusu. Soğutulmuş bir ürün de kargoya
+-- verilemeyebilir; kural ise özellikle donuktan bahsediyor.
+--
+-- ÜÇ DEĞER, çünkü ikisi yetmiyor: "soğuk zincir" hem soğutulmuşu hem donuğu kapsıyor (vitrin işareti
+-- ikisinde de çıkar), ama imha varsayılanı YALNIZ donukta doğar. Boolean bir alan, doğduğu kuralı
+-- yine yazamaz hâlde bırakırdı.
+--   ambient → oda sıcaklığı; soğuk zincir gerekmez
+--   chilled → soğutulmuş (0–4 °C); soğuk zincir gerekir
+--   frozen  → donuk (−18 °C); soğuk zincir gerekir VE iade varsayılanı imhadır
+--
+-- **VARSAYILAN `frozen`** ve gerekçesi `shippable`ınkiyle aynı ailedendir (08.08 kararı): unutulan
+-- alanın bedeli güvenli tarafta kalmalı. Yanlış `ambient` işaretlenmiş bir donuk ürünün iadesi rafa
+-- döner ve yeniden satılır — bedeli gıda güvenliğidir. Yanlış `frozen` işaretlenmiş bir kuru ürünün
+-- bedeli ise fazladan imha ve vitrinde temkinli bir işaret. İkisi arasında seçim tartışmasızdır.
+create type product_storage_type as enum ('ambient', 'chilled', 'frozen');
+
 -- Ürün satış durumu TEK alanda. Önce iki bayrak (is_candidate + is_active) vardı; üç durum için dört
 -- kombinasyon doğuruyordu ve ikisi ("aday + aktif", "aday + pasif") davranışta AYNI şeydi — imkânsız
 -- durum temsil edilebilir kalıyordu. Enum bunu kapatır: her satır tam olarak bir durumdadır.
@@ -61,6 +87,11 @@ create table public.product (
   -- çözülmüş ulaşan bir pakettir. Unutulan alanın bedeli **"satılamadı"** olmalı, "bozuk gitti" değil.
   -- Not: bu bir güvenlik kısıtı değil bir varsayılan — `false` = yalnız rota/kapı (soğuk zincir).
   shippable boolean not null default false,
+  -- Saklama rejimi — soğuk zincirin KENDİSİ (enum künyesi yukarıda). `shippable` ile KARIŞTIRILMAZ:
+  -- o "kargoya verilir mi", bu "nasıl saklanır". İkisi çoğu üründe birlikte hareket eder ama aynı
+  -- şey değildir ve ayrı kararlardır — biri satış kanalını, öteki iade/imha ve vitrin işaretini
+  -- belirler.
+  storage_type product_storage_type not null default 'frozen',
   status product_status not null default 'active',   -- satışta / pasif / aday (tek alan, yukarıdaki enum)
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
   target_margin_b2b_percent numeric(5, 2),          -- B2B'ye ÖZEL hedef (15.08); boş = ortak hedef geçerli

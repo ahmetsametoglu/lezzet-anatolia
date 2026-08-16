@@ -40,6 +40,7 @@ export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
           operatör vurguladığı alerjeni çipe eklemeyi unutur. */}
       <div className="flex flex-col gap-4 border-l border-ops-line pl-7">
         {fields.shippable}
+        {fields.storage}
         {fields.autoPrice}
         {fields.vat}
         {fields.margin}

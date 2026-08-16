@@ -118,6 +118,8 @@ Rezervasyonun serbest bırakılması **yalnızca mal fiziksel olarak depoya geri
 
 **Teslim-sonrası iadede varsayılan imha:** kapıda reddedilip frigo araçtan hiç çıkmamış mal restoklanabilir; ama **teslim edilmiş ve sonra iade edilen** donuk ürün, soğuk zinciri belgelenemediği için varsayılan olarak **imha** edilir — restok yalnız admin istisnasıdır ve **sebep kaydıyla** yapılır. Her imha/fire `StockAdjustment`'a yazılır (kayıp görünür olur, bkz. §12).
 
+> **Bu kural 16.08'e kadar YAZILAMIYORDU** ve iade penceresi her kalemde `restock`tan başlıyordu — kuralın tam tersi. Sebep: hangi ürünün donuk olduğunu söyleyen bir alan yoktu; `shippable = false` onun yerine geçiyordu ama o bir TESLİMAT olgusudur ("kargoya verilemez"), bu bir SAKLAMA olgusu. `Product.storage_type` (`ambient`/`chilled`/`frozen`) o boşluğu kapattı; eşik motorda tek yerde yazılı (`defaultsToDiscardOnReturn` — yalnız `frozen`). Varsayılan bir yasak değildir: üç seçenek de açık kalır, yalnız başlangıç noktası doğru olur.
+
 ### Eşzamanlılık (concurrency)
 
 İki müşteri aynı anda son birimleri sipariş edebilir. Bu yüzden stok düşürme/ayırma işlemi **atomik** olmalıdır — uygulama katmanında "önce oku, sonra yaz" değil, veritabanı seviyesinde koşullu güncelleme (ör. `update ... where available >= qty` veya bir RPC içinde kilitli işlem). Kullanılabilir stok yetmezse işlem reddedilir ve müşteriye o an bildirilir.
@@ -247,7 +249,7 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 
 - **Rota içi:** müşteri beklemeyi kabul eder, teslimat ücretsiz, kapıda ödeme mümkün.
 - **Rota dışı:** kargo.
-- **Ürün teslimat izni:** bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez (`Product.shippable=false`) — yalnız rota-içi kapı teslimi. Böyle bir ürün rota-dışı (kargo) siparişte **görünmez/eklenemez**; sepette varsa müşteri kargo adresi seçemez, yalnız rota-içi teslim sunulur.
+- **Ürün teslimat izni:** bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez (`Product.shippable=false`; soğuk zincirin KENDİSİ ayrı alandır — `Product.storage_type`, 16.08) — yalnız rota-içi kapı teslimi. Böyle bir ürün rota-dışı (kargo) siparişte **görünmez/eklenemez**; sepette varsa müşteri kargo adresi seçemez, yalnız rota-içi teslim sunulur.
 - **Minimum sepet:** bir alt sınır olabilir, ama **parametrik** — kod sabiti değil, admin ayarı. Kanala/bölgeye göre farklı olabilmeli. (Blueprint STACK §10: işletme ayarı env'e/koda değil, ayar tablosuna girer.)
   - **YALNIZ KAPIYA TESLİMDE** (kullanıcı kararı 10.08). Alt sınır bir **lojistik tabandır**: aracın o tura çıkması anlamlı olsun diye konur. **Kargo siparişinde uygulanmaz** — araç çıkmaz, taşıyıcı gider ve ücretini müşteri zaten öder; küçük siparişin ekonomik freni de zaten oradadır (ücretsiz kargo eşiğinin altında ücret doğar). Aynı sepete iki fren koymak müşteriden iki kez istemektir.
   - **Kanal satırı bunun istisnası ve her yolda geçerli:** `channel: b2b` alt sınırı toptan fiyat vermenin karşılığıdır — **ticari şarttır, mesafeyle ilgisi yoktur.** Toptancı kargoyla alsa da doldurur.

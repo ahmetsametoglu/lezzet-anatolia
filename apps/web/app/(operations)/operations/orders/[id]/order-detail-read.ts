@@ -33,6 +33,7 @@ import {
   allowedTransitions,
   derivePaymentStatusForOrder,
   dueDateOf,
+  defaultsToDiscardOnReturn,
   isFulfillmentSettled,
   isOverdue,
   isTerminal,
@@ -136,6 +137,14 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
   const variantSubs = new Map(variants.map((v) => [v.id, resolveLocalizedText(v.label)]));
   // Kalemdeki LOT köprüsünün arama anahtarı: stok ekranı ÜRÜN ADIYLA arar (parti numarasıyla değil).
   const variantProducts = new Map(variants.map((v) => [v.id, productNames.get(v.productId) ?? '']));
+  // İade varsayılanı ÜRÜNÜN saklama rejiminden (16.08) — karar motorun, eşiği tek yerde yazılı.
+  // Ürün bulunamazsa `false`: bilinmeyeni imhaya yazmak, ölçülemeyeni bir değer sanmaktır.
+  const variantDiscardDefault = new Map(
+    variants.map((v) => {
+      const product = productsById.get(v.productId);
+      return [v.id, product ? defaultsToDiscardOnReturn(product.storageType) : false];
+    }),
+  );
 
   // Parti numaraları kalem başına: geri çağırma izi satırın kendi altında okunur.
   const lotByItem = new Map<string, string[]>();
@@ -166,6 +175,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     lineTotalCents: lineTotalOf(item),
     bundleId: item.bundleId,
     returnDisposition: item.returnDisposition,
+    defaultsToDiscard: variantDiscardDefault.get(item.variantId) ?? false,
     batchNos: lotByItem.get(item.id) ?? [],
   }));
 

@@ -254,6 +254,12 @@ export interface StorefrontProductDetail {
   /** false → "yalnız bölge içi kapıya teslim" uyarısı, sepete eklemeden ÖNCE görünür. */
   shippable: boolean;
   /**
+   * Soğuk zincir gerekiyor mu — künye işaretinin dayanağı (16.08). **`shippable`den TÜRETİLMEZ,
+   * ayrı alandan gelir** (`product.storage_type`): eskiden `!shippable` proxy olarak kullanılıyordu
+   * ve kargolanabilen bir ürüne de *"soğuk zincirle gelir"* yazdırıyordu.
+   */
+  coldChain: boolean;
+  /**
    * **Ailenin öteki çeşitleri** (05.15) — resimli kartlar, sayfanın üst bölgesinde.
    *
    * Boşsa bölüm HİÇ çizilmez: ailesiz üründe de, ailesi tek üyeye düşmüş üründe de.

@@ -52,8 +52,16 @@ interface DeliveryLineProps {
    * hâli yerel bir sorun gibi okuturdu.
    */
   status?: StockStatus;
-  /** Yer bilinmediğinde gösterilecek genel vaatler (sayfanın kendi metinleri). */
-  fallback: { coldChain: string; doorstep: string; shippable: string; notShippable: string };
+  /**
+   * Yer bilinmediğinde gösterilecek genel vaatler (sayfanın kendi metinleri).
+   *
+   * **`coldChain` ÇIKARILDI (16.08):** ifade ürünün künyesine taşındı (stok rozetinin yanı,
+   * `ColdChainMark`) ve burada kalması onu iki yerde yazmak olurdu. Üstelik burada YANLIŞ
+   * yazılıyordu: kargolanabilir ürün için de basılıyordu ve aynı satırda *"❄ Soğuk zincirle gelir"*
+   * ile *"📦 Kargoya uygun"* yan yana duruyordu — sitenin kendi üst şeridi ise tam tersini söylüyor
+   * (*"Fransa geneline kargo — soğuk zincir hariç"*).
+   */
+  fallback: { doorstep: string; shippable: string; notShippable: string };
   /** Kısıt hâlinde gösterilecek çıkışlar — ürün ve pakette farklı (benzer ürün / benzer paket). */
   blockedActions?: React.ReactNode;
   compact?: boolean;
@@ -91,7 +99,6 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
         <div className={[...box, 'bg-sand-100'].join(' ')}>
           {shippable ? (
             <>
-              <span>{fallback.coldChain}</span>
               <span>{fallback.doorstep}</span>
               <span>{fallback.shippable}</span>
             </>
@@ -159,12 +166,32 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
             <span className="font-normal">{change}</span>
           </>
         ) : place.inRoute ? (
+          /**
+           * ── YER ADI KALKTI, GÜN KALDI (16.08, kullanıcı bildirimi) ─────────────
+           * Kutu `📍 67380 Strasbourg Merkez` yazıyordu ve iki kusuru vardı:
+           *
+           *   1. **Yanlış adı yazıyordu.** `zoneName` BİZİM rota bölgemizin adı, `placeName` ise
+           *      yerin adı — 67380 Lingolsheim'dır, "Strasbourg Merkez" o kodu kapsayan bölgemizin
+           *      adı. Header bu ayrımı zaten doğru kurmuş (`place-chip`: *"yazılan ad bölgemizin
+           *      adı değil, yerin adı"*), kural buraya uygulanmamıştı: aynı ekranda üstte
+           *      "Lingolsheim", altta "Strasbourg Merkez" yazıyordu.
+           *   2. **Zaten gereksizdi.** Yer bilgisi header'da duruyor ve değiştirme bağı da burada;
+           *      müşterinin bu kutudan öğreneceği şey NE ZAMAN geleceği.
+           *
+           * Onarım adı düzeltmek değil, KALDIRMAK oldu: aynı gerçeği iki yerde yazmak, ikisinin bir
+           * gün ayrışması demek — nitekim ayrışmıştı.
+           *
+           * Kalan iki cümle: **nasıl geliyor** (kargoya verilemeyen ürün bunu burada söyler) ve
+           * **en yakın gün**. Soğuk zincir işareti stok rozetinin yanına taşındı — ürünün kısıtı
+           * teslimat kutusunun değil, ürünün künyesidir.
+           */
           <>
-            <span className="font-semibold text-olive-dark">
-              📍 {place.zoneName ? `${place.postalCode} ${place.zoneName}` : place.postalCode}
-              {place.nextDate && ` — ${t.nextDate.replace('{date}', formatDeliveryDate(place.nextDate, locale))}`}
-            </span>
-            <span>{fallback.coldChain}</span>
+            <span>{shippable ? t.lineInRoute : t.routeOnlyLine}</span>
+            {place.nextDate && (
+              <span className="font-semibold text-olive-dark">
+                {t.nextDate.replace('{date}', formatDeliveryDate(place.nextDate, locale))}
+              </span>
+            )}
             <span>{change}</span>
           </>
         ) : (

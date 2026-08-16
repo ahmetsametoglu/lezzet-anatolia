@@ -56,6 +56,19 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   /** Kalem başına DÜŞEN adet — iki kipte de aynı anlam, farklı ad ("eksik giden" / "iade edilen"). */
   const [move, setMove] = useState<Record<string, number>>({});
   const [fate, setFate] = useState<Record<string, ReturnDisposition>>({});
+
+  /**
+   * **Kalemin varsayılan akıbeti** — kural `DOMAIN §8`, eşiği motorda (`defaultsToDiscardOnReturn`).
+   *
+   * Pencere her kalemde `restock`tan başlıyordu ve bu kuralın TERSİYDİ: *"teslim edilmiş ve sonra
+   * iade edilen donuk ürün, soğuk zinciri belgelenemediği için varsayılan olarak imha edilir —
+   * restok yalnız admin istisnasıdır."* Kural yazılamıyordu çünkü hangi ürünün donuk olduğunu
+   * söyleyen bir alan yoktu; `product.storage_type` (16.08) onu getirdi.
+   *
+   * Varsayılan bir YASAK değil: üç seçenek de açık kalır, yalnız başlangıç noktası doğru olur.
+   */
+  const fateOf = (line: OrderLineView): ReturnDisposition =>
+    fate[line.id] ?? (line.defaultsToDiscard ? 'discard' : 'restock');
   const [note, setNote] = useState('');
   const [goodwillAmount, setGoodwillAmount] = useState<number | null>(null);
   // Seçim paranın GİRDİĞİ hesaptan başlar; hiç tahsilat olmamışsa ilk yol seçili gelir — o durumda
@@ -68,7 +81,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const touched = order.lines.filter((line) => (move[line.id] ?? 0) > 0);
-  const goodwillLines = touched.filter((line) => refund && fate[line.id] === 'goodwill');
+  const goodwillLines = touched.filter((line) => refund && fateOf(line) === 'goodwill');
   const needsAmount = goodwillLines.length > 0;
 
   /**
@@ -80,7 +93,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
       order.lines.map((line) => ({
         orderItemId: line.id,
         fulfilledQty:
-          refund && fate[line.id] === 'goodwill' ? line.fulfilledQty : line.fulfilledQty - (move[line.id] ?? 0),
+          refund && fateOf(line) === 'goodwill' ? line.fulfilledQty : line.fulfilledQty - (move[line.id] ?? 0),
       })),
     [order.lines, move, fate, refund],
   );
@@ -103,7 +116,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
 
   const submit = () => {
     const lines: FulfillmentAdjustment[] = touched.map((line) => {
-      const disposition = refund ? (fate[line.id] ?? 'restock') : null;
+      const disposition = refund ? fateOf(line) : null;
       return {
         orderItemId: line.id,
         fulfilledQty: disposition === 'goodwill' ? line.fulfilledQty : line.fulfilledQty - (move[line.id] ?? 0),
@@ -172,7 +185,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
             line={line}
             refund={refund}
             moved={move[line.id] ?? 0}
-            fate={fate[line.id] ?? 'restock'}
+            fate={fateOf(line)}
             onMove={(next) => setMove((prev) => ({ ...prev, [line.id]: next }))}
             onFate={(next) => setFate((prev) => ({ ...prev, [line.id]: next }))}
           />

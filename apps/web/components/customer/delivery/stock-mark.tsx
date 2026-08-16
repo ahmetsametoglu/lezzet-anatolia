@@ -83,6 +83,28 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
 }
 
 /**
+ * **Soğuk zincir işareti** — ürün detayında stok rozetinin YANINDA (kullanıcı isteği 16.08).
+ *
+ * Bu cümle teslimat kutusunun içindeydi ve orada bir teslimat ayrıntısı gibi okunuyordu; oysa
+ * ÜRÜNÜN künyesi: kargoya verilememesinin sebebi bu. Yeri künyenin yanı — adın ve stok rozetinin
+ * hemen altındaki satır.
+ *
+ * `StockMark`in kardeşi ama tonu bilerek SESSİZ: stok işaretleri bir engel ya da bir yol
+ * söylüyor (honey/kapalı), bu ise yalnız bir özellik. Uyarı tonuna sokmak, sorunu olmayan bir ürünü
+ * sorunlu gösterirdi.
+ *
+ * Metin çağırandan geliyor (`assurance.coldChainShort`), çünkü sayfanın kendi güvence sözlüğünün
+ * parçası — yer ailesinin değil.
+ */
+export function ColdChainMark({ label }: { label: string }) {
+  return (
+    <span className="w-max rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-0.5 font-sans text-micro font-semibold text-muted">
+      {label}
+    </span>
+  );
+}
+
+/**
  * "Gelince haber ver" — `elsewhere` hâlinin BİRİNCİL eylemi (tasarım: kartta çerçeveli, ürün
  * detayında dolu düğme).
  *

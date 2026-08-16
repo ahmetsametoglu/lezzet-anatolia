@@ -8,7 +8,7 @@ import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { Badge } from '@/components/customer/ui/badge';
-import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
+import { ColdChainMark, StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import type { ProductViewProps } from './product-types';
 
 /**
@@ -41,12 +41,17 @@ export function ProductMobile({ t, locale, product, selected, onSelect, familyLa
               sağına yaslıdır; puan satırı bugün yok (17), rozet o satırın yerinde tek başına durur.
               Rozet elle boyanıyordu ve tükendi hâlinde de YEŞİL çıkıyordu ("Tükendi" yazan yeşil bir
               rozet); K5 tonu anlamdan seçiyor. Yere bağlı iki hâlde yerini yer işareti alır (19.7). */}
-          {selected &&
-            (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
-              <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
-            ) : (
-              <StockMark status={selected.stockStatus} locale={locale} size="lg" />
-            ))}
+          {/* Soğuk zincir işareti rozetin YANINDA — masaüstüyle aynı karar (16.08): ürünün künyesi,
+              teslimat kutusunun ayrıntısı değil. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {selected &&
+              (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
+                <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
+              ) : (
+                <StockMark status={selected.stockStatus} locale={locale} size="lg" />
+              ))}
+            {product.coldChain && <ColdChainMark label={t.assurance.coldChainShort} />}
+          </div>
         </div>
 
         {product.description && <p className="font-sans text-body-sm leading-relaxed text-body">{product.description}</p>}
@@ -65,7 +70,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, familyLa
           locale={locale}
           shippable={product.shippable}
           status={selected?.stockStatus}
-          fallback={{ ...t.assurance, coldChain: t.assurance.coldChainShort, doorstep: t.assurance.doorstepShort }}
+          fallback={{ ...t.assurance, doorstep: t.assurance.doorstepShort }}
           blockedActions={
             selected?.stockStatus === 'elsewhere' ? (
               <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
