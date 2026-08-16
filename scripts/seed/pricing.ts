@@ -39,10 +39,22 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
   console.log('▸ FİYAT seed');
   const prices = new PriceService(db);
   let satir = 0;
+  /**
+   * SATILABİLİR sıra — aday atlandıkça artar, `i` ile aynı şey DEĞİLDİR.
+   *
+   * Aşağıdaki "ilk 45" penceresi sipariş bölümüne verilmiş bir SÖZ ve o bölüm kalemlerini
+   * `satilabilir` (adaysız) dizisinden seçiyor. Pencere `i` üzerinden sayılsaydı arada kalan her
+   * aday sözü bir adım kısaltırdı: 16.08'de aday sayısı 4'ten 25'e çıkınca pencere gerçekte ~34
+   * kaleme iniyordu ve **toptan siparişin son kalemleri b2b fiyatı olmayan varyantlara düşerdi.**
+   * İki indis uzayını aynı sanmak — bu dosyanın da, stok dosyasının da aynı gün düzeltilen hatası.
+   */
+  let satilabilirSira = 0;
 
   for (const [i, v] of varyantlar.entries()) {
     // Aday ürün satışta değildir; fiyatı da olmasın (fiyatsız aday = gerçekçi boş durum).
     if (v.status === 'candidate') continue;
+    const sira = satilabilirSira;
+    satilabilirSira += 1;
 
     const b2cTtc = listeFiyati(v.netWeightG, i);
     // Toptan: KDV'siz tabana in, üstüne toptan indirimi uygula.
@@ -60,11 +72,12 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
     // ve gerçek bir katalogda cevabı her üründe evet değildir. Seyreltme burada hem satır düşürüyor
     // hem "toptan fiyatı girilmemiş ürün" hâlini doğuruyor.
     //
-    // İlk 45 HER HÂLDE b2b fiyatı alır: sipariş bölümü toptan kalemlerini o aralıktan seçiyor
-    // (`kalem(0…38)`) ve fiyatsız bir varyant oraya düşerse sipariş tutarı sıfırlanırdı.
+    // İlk 45 SATILABİLİR varyant her hâlde b2b fiyatı alır: sipariş bölümü toptan kalemlerini o
+    // aralıktan seçiyor (`kalem(0…38)`) ve fiyatsız bir varyant oraya düşerse sipariş tutarı
+    // sıfırlanırdı. Ölçüt `sira` — gerekçesi künyede.
     await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2cTtc), validFrom: gun(-30) });
     satir += 1;
-    if (i < 45 || i % 3 === 0) {
+    if (sira < 45 || sira % 3 === 0) {
       await prices.setPrice({ variantId: v.id, channel: 'b2b', amountCents: toCents(b2bHt), validFrom: gun(-30) });
       satir += 1;
     }

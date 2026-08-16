@@ -129,6 +129,36 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'pasif', zorunlu: true, filtre: (q) => q.eq('status', 'passive') },
       // Aday ürün yalnız keşif akışında görünür (DOMAIN §13) — o akışın tek sınanma yolu bu.
       { ad: 'aday', zorunlu: true, filtre: (q) => q.eq('status', 'candidate') },
+      {
+        // ── "TÜKENDİ" HÂLİ GEÇMİŞİYLE BİRLİKTE VAR MI (16.08) ────────────────────────────────
+        // 16.08'e kadar aktif ürünlerin yarısı (53/116) "tükendi" görünüyordu ve hiçbirinin stok
+        // partisi YOKTU — yani hâl yoklukan doğuyordu. Artık tersi: stoklanmayacak ürün aday
+        // doğuyor, tükeniş ise bilinçli olarak BİTMİŞ partiyle kuruluyor.
+        //
+        // Bu kova o dengeyi kilitliyor. Çünkü düzeltmenin kendi riski var: aday sayısı artarken
+        // "tükendi" hâli sıfıra da inebilirdi ve o zaman rozet, pasif sepet düğmesi ve "gelince
+        // haber ver" akışı seed'de hiç sınanmazdı. Ölçüt SATIRIN VARLIĞI — partisi olmayan bir
+        // varyant bu kovaya giremez, çünkü aranan tam olarak "geçmişi olan tükeniş".
+        ad: 'TÜKENMİŞ aktif ürün (partisi VAR, miktarı 0)',
+        zorunlu: true,
+        sayac: async (db) => {
+          const { data: partiler, error: pHata } = await db.from('stock').select('variant_id,physical_qty');
+          if (pHata) throw new Error(`[kapsam] stock: ${pHata.message}`);
+          const toplam = new Map<string, number>();
+          for (const s of (partiler ?? []) as Array<{ variant_id: string; physical_qty: number }>) {
+            toplam.set(s.variant_id, (toplam.get(s.variant_id) ?? 0) + Number(s.physical_qty));
+          }
+          const bitmis = [...toplam].flatMap(([id, n]) => (n === 0 ? [id] : []));
+          if (bitmis.length === 0) return 0;
+          const { data: varyantlar, error: vHata } = await db.from('product_variant').select('product_id').in('id', bitmis);
+          if (vHata) throw new Error(`[kapsam] product_variant: ${vHata.message}`);
+          const urunIdler = [...new Set(((varyantlar ?? []) as Array<{ product_id: string }>).map((v) => v.product_id))];
+          if (urunIdler.length === 0) return 0;
+          const { count, error } = await db.from('product').select('*', { count: 'exact', head: true }).eq('status', 'active').in('id', urunIdler);
+          if (error) throw new Error(`[kapsam] product: ${error.message}`);
+          return count ?? 0;
+        },
+      },
     ],
   },
   {

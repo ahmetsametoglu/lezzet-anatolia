@@ -167,26 +167,45 @@ export async function seedStock(
   //    parti bulamaz ve seed'in kendisi tutarsız veri üretir. Ek partiler Kehl'e gider; sonuç yine
   //    gerçek bir işletme hâli: bazı ürünler iki depoda, bazıları yalnız birinde bol.
   //
-  // ── HACİM İNCELTİLDİ (kullanıcı kararı 16.08) ve azaltma KAPSAMI ARTIRDI ────────────────────────
-  // Önce HER satılabilir varyantın 1-3 partisi vardı (334 satır) — yani katalogda stoksuz tek bir
-  // ürün yoktu ve **"bu ürün şu an stokta yok" hâli seed'de hiç doğmuyordu.** Şimdi katalogun bir
-  // bölümü bilerek stoksuz: hem satır sayısı düştü hem eksik olan hâl geldi.
+  // ── "STOKLU MU" KURALI KALKTI: ADAY OLMAYAN HER VARYANT STOKLANIR (kullanıcı kararı 16.08) ─────
   //
-  // **İlk 45 varyant HER HÂLDE stoklu** ve bu bir eşik değil bir bağımlılık: sipariş bölümü
-  // kalemlerini o aralıktan seçiyor (`kalem(0…38)`). Oradaki bir varyant stoksuz kalırsa rezervasyon
-  // reddedilir, hazırlık parti bulamaz ve seed kendi içinde tutarsız veri üretir.
-  const stokluMu = (i: number) => i < 45 || i % 3 === 0;
+  // 16.08 sabahına kadar burada ikinci bir seçim vardı (`i < 45 || i % 3 === 0`) ve katalog
+  // tarafındaki durum kuralından (`i % 29`) HABERSİZDİ. Ölçüldü: **116 aktif ürünün 53'ünün hiç
+  // partisi yoktu** — müşteriye "tükendi" diyen kataloğun yarısı, malın bitmesinden değil hiç
+  // gelmemesinden öyleydi. Kullanıcının cümlesi bunu tam yerinden yakalıyor: *"bir ürün stoğa hiç
+  // girmediyse tükendi olamaz ki."*
+  //
+  // Kural artık tek yönlü: **stoklanmayacak ürün ADAY olarak doğar** (`catalog-lezza.ts`), buradaki
+  // liste zaten adayları elemiş durumda, dolayısıyla kalan HERKES stoklanır. İki ayrı indis kuralı
+  // yerine tek bir kaynak; ayrışacak bir şey kalmadı. `satilabilir`in ilk 45'ine dair eski
+  // bağımlılık notu da düştü — sipariş kalemleri (`kalem(0…38)`) artık kendiliğinden stoklu.
+  //
+  // ── GERÇEKTEN TÜKENMİŞ ÜRÜNLER: hâl kaybolmuyor, GEÇMİŞ kazanıyor ─────────────────────────────
+  // "Tükendi" meşru bir hâldir ve ekranı (rozet · pasif sepet düğmesi · "haber ver") ancak onunla
+  // çizilir. Dördü bilinçli olarak öyle: partisi VAR, lot numarası ve alış fiyatı var, miktarı
+  // sıfırlanmış. Fark ekranda değil ANLAMDA — geçmişi olan bir tükeniş operatöre "ne zaman gelecek"
+  // diye sorulabilir, hiç gelmemiş bir ürün sorulamaz.
+  //
+  // Seçim ÜRÜN bazında: bir ürünün tek boyu tükenirse ürün tükenmiş sayılmaz (öteki boy satılır) ve
+  // aranan müşteri hâli "bu ÜRÜN şu an yok"tur. Kataloğun dört ayrı yerinden, ilk 45'in dışından —
+  // sipariş bölümü kalemlerini oradan seçiyor ve tükenmiş bir kaleme rezervasyon yazılamaz.
+  const tukenmisUrun = new Set(
+    [0.45, 0.6, 0.75, 0.9].map((f) => satilabilir[Math.floor(satilabilir.length * f)]?.productId).filter((id): id is string => Boolean(id)),
+  );
   let ekParti = 0;
   for (const [i, v] of satilabilir.entries()) {
-    if (!stokluMu(i)) continue;
-    const partiSayisi = 1 + (i % 2);
+    const bitti = tukenmisUrun.has(v.productId);
+    // İkinci parti her üçüncü varyantta: FEFO iki farklı tarihli parti olmadan görünmez, ama bunu
+    // her varyantta tekrarlamak yalnız satır sayısını büyütür. Tükenmiş üründe tek parti — "bitmiş"
+    // olan şeyin iki partisi olması, anlatılmak istenen hâli bulandırırdı.
+    const partiSayisi = bitti ? 1 : i % 3 === 1 ? 2 : 1;
     for (let p = 0; p < partiSayisi; p += 1) {
       await stocks.insert({
-        // Kehl payı `% 3`ten `% 2`ye çıktı: toplam parti azalınca ikinci depoya düşen sayı da
-        // düşüyordu ve sipariş bölümü "Kehl'de 8+ adetli parti yok" diyip o senaryoları atlıyor.
+        // İLK parti daima ana depoda (künye yukarıda); ek parti Kehl'e ya da yine STR'ye düşer —
+        // ikisi de gerekli: Kehl olmadan depo süzgeci, STR'deki ikinci parti olmadan FEFO denenmez.
         warehouseId: p > 0 && (i + p) % 2 === 0 ? depolar.kehl : depolar.str,
         variantId: v.id,
-        physicalQty: 6 + ((i + p * 5) % 40),
+        physicalQty: bitti ? 0 : 6 + ((i + p * 5) % 40),
         expiryDate: gun(20 + ((i * 7 + p * 45) % 300)),
         lotNumber: `L${String(2600 + i)}-${p + 1}`,
         // Alış LİSTEDEN türer; parti parti biraz oynar (tedarikçi pazarlığı gerçekte de sabit değil).
@@ -269,15 +288,15 @@ export async function seedStock(
   // (varsayılan DDM). Katalog bölümü bu alanı vermiyor, karar burada veriliyor.
   await products.update({ id: ozel[3]!.productId, dateType: 'DLC' });
   await products.update({ id: ozel[0]!.productId, dateType: 'DLC' });
+  console.log(`  ✓ mal kabul: 2 giriş (biri PO'lu ve EKSİK gelmiş → fark raporu)`);
+  console.log(`  ✓ sınır durumlar: 2 indirimli teklif · 1 indirimsiz yaklaşan · DLC geçmiş · DDM geçmiş · tükenmiş · maliyetsiz`);
 
   // Asgari stok eşiği: bir kısmı bilinçli olarak ALTINDA kalsın ki yeniden-sipariş önerisi dolsun.
   for (const [i, v] of satilabilir.slice(0, 20).entries()) {
     await variants.update({ id: v.id, minStockQty: i % 4 === 0 ? 60 : 8 + (i % 5) * 3 });
   }
 
-  console.log(`  ✓ mal kabul: 2 giriş (biri PO'lu ve EKSİK gelmiş → fark raporu)`);
-  console.log(`  ✓ sınır durumlar: 2 indirimli teklif · 1 indirimsiz yaklaşan · DLC geçmiş · DDM geçmiş · tükenmiş · maliyetsiz`);
-  console.log(`✓ stok: ${ekParti + 18} parti · 20 varyantta asgari eşik`);
+  console.log(`✓ stok: ${ekParti + 18} parti · ${satilabilir.length} varyantın tamamı stoklu (aday olan hiç stoklanmaz) · ${tukenmisUrun.size} ürün bilinçli TÜKENMİŞ · 20 varyantta asgari eşik`);
 }
 
 // ── Stok düzeltmesi + sıcaklık kaydı (06) ────────────────────────────────────────────────────────
