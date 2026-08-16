@@ -262,7 +262,11 @@ describe('hızlı doğrulama', () => {
 
   /* KÜNYE SORUSUNUN İLK ANI (kullanıcı kararı 10.08) — kapı artık uygulama AÇILIŞINDA değil,
      kimliğin kurulduğu anda çalışıyor. Ölçüt ad + telefon; burada telefon boş. */
-  it('doğrulama bitti ama künye eksik: ekran kapanmaz, tamamlama akışına gidilir', async () => {
+  /* KÜNYE EKSİKKEN DE GİRİŞ NORMAL BİTER (kullanıcı kararı 15.08). Test tersini kilitliyordu:
+     telefonu olmayan müşteri `/profile-setup`e yollanıyordu. Karar değişti — ad ve telefon artık
+     ilk siparişte, gerekçesi ekranda yazılı olarak isteniyor; giriş kimliğin kurulduğu andır,
+     künyenin değil. İddia korunuyor ama TERSİNE çevrildi: yönlendirme OLMAMALI. */
+  it('doğrulama bitti, künye eksik olsa da hiçbir yere yönlendirilmez — ekran kapanır', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
     fetchMock.mockResolvedValueOnce(meReply({ phone: null }));
@@ -275,8 +279,8 @@ describe('hızlı doğrulama', () => {
 
     await fireEvent.changeText(screen.getByTestId('login-code-input'), '123456');
 
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/profile-setup' }));
-    expect(mockRouter.back).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
   it('biçimsiz kod (6 haneden az) UCA HİÇ gitmez', async () => {

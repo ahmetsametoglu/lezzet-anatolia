@@ -30,8 +30,18 @@ jest.mock('@/screens/customer-kit/cart-store', () => ({
 
 /* Kimlik dört hâllidir ve ayrımı ekranın kendi testinin konusu; burada müşteri GİRİŞLİ sabitlendi
    ki ölçülen şey sipariş kapsamı olsun. */
+/* Fikstür `phone` TAŞIMAK ZORUNDA: sözleşmede alan zorunlu ve `null` OLABİLİR ama yok olamaz
+   (`MeSchema.phone` = `.nullable()`, `.optional()` değil). Eksik bırakıldığında ekranın iletişim
+   ölçütü (`isPhoneMissing`) `undefined.trim()` ile patlıyordu — fikstürün sözleşmeden sapmasıydı,
+   ölçütün kusuru değil. Dolu veriliyor ki bu dosyanın konusu (gelemeyen kalemler) iletişim
+   bölümüyle karışmasın; bölümün kendi testi ayrı. */
 jest.mock('@/screens/customer-kit/use-me.hook', () => ({
-  useMe: () => ({ status: 'ready', me: { id: 'customer-1', name: 'Ayşe' }, refresh: () => undefined }),
+  publishMe: () => undefined,
+  useMe: () => ({
+    status: 'ready',
+    me: { id: 'customer-1', name: 'Ayşe', email: 'ayse@example.com', phone: '+33612345678' },
+    refresh: () => undefined,
+  }),
 }));
 
 /* ÖDEME KARTI: Stripe'ın kendi Jest mock'u `PaymentSheetError` numaralandırmasını TAŞIMIYOR ve

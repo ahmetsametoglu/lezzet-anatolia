@@ -15,8 +15,10 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
+import { TextField } from '@/components/ui/text-field';
 import type { MeAddress } from '@/lib/api/addresses';
 import { placeCheckoutOrder } from '@/lib/api/checkout';
+import { updateMe, type Me } from '@/lib/api/me';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine } from '@/screens/customer-kit/address-format';
@@ -28,8 +30,9 @@ import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { useAddressCartView } from '@/screens/customer-kit/use-address-cart.hook';
 import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { publishMe, useMe } from '@/screens/customer-kit/use-me.hook';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
+import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
 import { newOrderKey } from './order-key';
 import { deliveryLabelOf, paymentFailureMessage, rejectionMessage } from './order-result-copy';
 import { CheckoutSkeleton } from './checkout-skeleton';
@@ -130,6 +133,28 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const [submitting, setSubmitting] = useState(false);
   /** Sunucunun ya da ödeme kartının söylediği son şey. `warm` = hata değil (vazgeçilen ödeme). */
   const [notice, setNotice] = useState<{ tone: 'error' | 'warm'; text: string } | null>(null);
+
+  /* ── İLETİŞİM KÜNYESİ: AD + TELEFON, İLK SİPARİŞTE (kullanıcı kararı 15.08) ──────────────────
+     Bu alanlar eskiden GİRİŞTEN hemen sonra zorunlu bir akışta isteniyordu (`/profile-setup`;
+     üç kapı: OTP dönüşü, OAuth dönüşü, sepete giriş). Kullanıcının kararı ikisini de değiştirdi:
+     *"kullanıcı adresini ve adını vermek istemeyebilir giriş yaptığında, bu bizim için problem
+     olmamalı"* ve *"bunu ilk sipariş verdiği zaman talep edelim… sizinle iletişime geçebilmek için
+     telefon numaranıza ihtiyacımız var gibi bir şey diyerekten konuyu açalım."*
+
+     Gerekçe ürünün kendisinde: kimliğini yeni kuran kişiden, ona daha hiçbir şey vermeden künye
+     istemek bir bedeldir; siparişin içinde ise aynı bilgi ANLAMLIDIR ve karşılığı görünür — kurye
+     kapıya gelecek, bildirim gidecek. Metin bunu söylüyor, alanı gerekçesiz istemiyor.
+
+     ALANLAR SEPETTE DEĞİL BURADA: sepet gezinmenin parçası (bakıp vazgeçilebilir), ödeme ekranı
+     ise "siparişi tamamlıyorum" anı — adres, gün ve ödeme de burada seçiliyor.
+
+     Yazım AYRI bir adım (kendi düğmesi), sipariş gönderimine iliştirilmedi: `updateMe`nin adlı
+     retleri var (`phone_invalid`, `phone_taken`) ve bunlar siparişin değil künyenin sorunudur.
+     Tek çağrıda birleştirilseydi geçersiz bir telefon "siparişiniz açılamadı" diye görünürdü. */
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   /* TEKRAR ANAHTARI EKRAN AÇILIŞINDA BİR KEZ (`useState`in tembel başlatıcısı): seçimler değişse
      de KORUNUR — çift dokunuş ve ağın yeniden denemesi aynı niyettir. Başarıdan sonra ekran
@@ -358,9 +383,41 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     ...orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, photoUri: line.image.url })),
   ].slice(0, 4);
 
+  /* YALNIZ EKSİK OLAN ALAN ÇİZİLİR — dolu olanı yeniden sormak, müşteriye zaten verdiği bilgiyi
+     tekrar yazdırmaktır. Bu aynı zamanda "mevcut değeri forma doldurma" işini gereksiz kılıyor:
+     çizilen alan her zaman boştur. */
+  const nameMissing = customer !== null && isNameMissing(customer);
+  const phoneMissing = customer !== null && isPhoneMissing(customer);
+  const contactMissing = nameMissing || phoneMissing;
+
+  const saveContact = (): void => {
+    if (savingContact) return;
+    setContactError(null);
+    setSavingContact(true);
+    void updateMe({
+      // Gönderilmeyen alana DOKUNULMAZ (`MeUpdateSchema` künyesi) — dolu olan alanı boşuna yazmayız.
+      ...(nameMissing ? { name: contactName.trim() } : {}),
+      ...(phoneMissing ? { phone: contactPhone.trim() } : {}),
+    }).then((result) => {
+      setSavingContact(false);
+      if (result.error !== null) {
+        // Adlı retler sözleşmede anahtar, cümle burada (`MeUpdateErrorEnum`); tanınmayan anahtar
+        // genel cümleye düşer — ekran sunucunun sözlüğünü ezberlemek zorunda değil.
+        setContactError(t.contact.errors[result.error as keyof typeof t.contact.errors] ?? t.contact.errors.generic);
+        return;
+      }
+      // Yayınlanan profil `blocked`ı da açar: kapı `customer`ı okuyor, ikinci bir bayrak tutulmuyor.
+      publishMe(result.data);
+    });
+  };
+
   /** Onayı engelleyen İLK sebep; yoksa `null`. Sıra şablonun sırası, gerçekler sunucunun. */
   const blockReason = (): string | null => {
     if (customer === null) return t.block.login;
+    /* İLETİŞİM KÜNYESİ ZORUNLU (kullanıcı kararı 15.08): numara olmadan kurye kapıda ulaşamaz ve
+       teslimat bildirimi yalnız e-postadan gider. Engel adres kontrolünden ÖNCE çünkü bölüm de
+       ekranın en üstünde — söylenen sıra ile uygulanan sıra aynı olmalı. */
+    if (contactMissing) return t.block.contact;
     // Okuma düştüyse onay KAPALI ve sebep açıkça söylenir: "seçenekleriniz güncelleniyor" demek,
     // bitmeyecek bir bekleyiş vaat etmek olurdu (yukarıda ayrıca "yeniden dene" duruyor).
     if (checkout.status === 'error') return t.state.failed;
@@ -521,9 +578,17 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             şeyi bilmiyormuş gibi davranıp müşteriyi kendi hesabından şüpheye düşürüyordu.
             CLAUDE §1'in kuralı: ölçülemeyen değer SIFIR değildir. `guest` bir CEVAPTIR, `error`
             cevapsızlıktır, `loading` henüz sorulmamış sorudur; üçü aynı şeyi söyleyemez. */}
+        {/* ŞERİT ADSIZ HESABI DA KARŞILAR (ölçüldü cihazda 16.08). Eskiden `{name}` doğrudan
+            basılıyordu ve OTP ile açılan hesapta ad BOŞ DİZGEDİR (`profile-gaps` künyesi: tetik adı
+            sağlayıcı künyesinden okuyor, o yolda orası boş) — ekranda yalnız çıplak bir "✓ "
+            kalıyordu. Kusur eskiydi ama GÖRÜNMEZDİ: künye kapısı adsız müşteriyi ödeme ekranına hiç
+            bırakmıyordu; kapı 15.08'de kalkınca ortaya çıktı.
+            Sıra: ad → e-posta → adsız cümle. Şeridin işi "hangi hesapla buradasın" demek; adı
+            yoksa e-posta o soruyu yanıtlar, o da yoksa cümle kimliksiz kurulur — boş bir işaret
+            müşteriye hiçbir şey söylemez. */}
         {meStatus === 'ready' && customer !== null ? (
           <View style={styles.signedIn} testID="checkout-signed-in">
-            <Text style={styles.signedInLabel}>{t.signedIn.replace('{name}', customer.name)}</Text>
+            <Text style={styles.signedInLabel}>{signedInLabel(t, customer)}</Text>
           </View>
         ) : meStatus === 'error' ? (
           <View style={styles.signedIn} testID="checkout-me-error">
@@ -557,6 +622,54 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
         {checkout.status === 'ready' ? (
           <>
+            {/* İLETİŞİM — yalnız künyesi eksikken ve EN ÜSTTE (kullanıcı kararı 15.08). Bölüm
+                gerekçesiyle açılıyor: alanı sormadan önce NEDEN sorulduğu yazılı. Künye tamamsa
+                bölüm hiç çizilmez — ikinci siparişte müşteri bunu bir daha görmez. */}
+            {contactMissing ? (
+              <View style={styles.section} testID="checkout-contact">
+                <Text style={styles.eyebrow}>{t.contact.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+                <Text style={styles.contactReason}>{t.contact.reason}</Text>
+                {nameMissing ? (
+                  <TextField
+                    label={t.contact.name}
+                    accessibilityLabel={t.contact.name}
+                    value={contactName}
+                    onChangeText={setContactName}
+                    // `content` tek kavram, üç RN prop'una açılıyor (kitin künyesi): otomatik
+                    // doldurma, klavye ve büyük harf davranışı buradan geliyor.
+                    content="name"
+                    testID="checkout-contact-name"
+                  />
+                ) : null}
+                {phoneMissing ? (
+                  <TextField
+                    label={t.contact.phone}
+                    accessibilityLabel={t.contact.phone}
+                    value={contactPhone}
+                    onChangeText={setContactPhone}
+                    content="tel"
+                    testID="checkout-contact-phone"
+                  />
+                ) : null}
+                {contactError === null ? null : (
+                  <Note tone="terracotta" description={contactError} testID="checkout-contact-error" />
+                )}
+                <PrimaryButton
+                  label={savingContact ? t.contact.saving : t.contact.save}
+                  shape="pill"
+                  onPress={saveContact}
+                  /* Boş alanla yazım denemesi yapılmaz: sunucu zaten `name_required` derdi ama bir
+                     tur ağ gidip gelmesi, dokunduğu anda anlaşılabilecek bir şey için. */
+                  disabled={
+                    savingContact ||
+                    (nameMissing && contactName.trim() === '') ||
+                    (phoneMissing && contactPhone.trim() === '')
+                  }
+                  testID="checkout-contact-save"
+                />
+              </View>
+            ) : null}
+
             <View style={styles.section}>
               <Text style={styles.eyebrow}>{t.address.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
               {/* HİÇ ADRES YOKSA burası bir DAVETTİR, bir uyarı değil (10.08): eskiden kuru bir
@@ -757,6 +870,18 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   );
 }
 
+/**
+ * "Hangi hesapla buradasın" şeridinin metni — ad yoksa e-posta, o da yoksa adsız cümle.
+ *
+ * Ölçütü ekran kendi kurmuyor, `isNameMissing`i çağırıyor: "ad = e-posta" hâli de adsızlıktır ve o
+ * kural iki yerde tutulursa bir gün ayrışır (kitin künyesi).
+ */
+function signedInLabel(t: Messages, customer: Me): string {
+  if (!isNameMissing(customer)) return t.signedIn.replace('{name}', customer.name);
+  const email = customer.email?.trim() ?? '';
+  return email === '' ? t.signedInAnon : t.signedIn.replace('{name}', email);
+}
+
 /** Teslimat satırlarının dokunuşu — yol adresin cevabı olduğu için bir şey DEĞİŞTİRMEZ. */
 function keepDelivery(): void {
   return undefined;
@@ -805,6 +930,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.eyebrow,
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors.terracotta,
+  },
+  /** İletişim bölümünün GEREKÇE cümlesi — alanların üstünde, gövde tonunda; uyarı değil izah. */
+  contactReason: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
+    color: theme.colors.body,
   },
   defaultBadge: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],

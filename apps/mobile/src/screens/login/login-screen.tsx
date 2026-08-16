@@ -23,8 +23,6 @@ import { publishToast } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
-import { hasProfileGap } from '@/screens/profile-setup/profile-gaps';
-import { profileSetupRoute } from '@/screens/profile-setup/use-profile-setup-gate.hook';
 import { CodeField } from './code-field';
 import { operationsHomeRoute } from './post-login-route';
 import messages from './messages.json';
@@ -127,9 +125,11 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
       onVerified();
       return;
     }
-    /* KÜNYE SORUSUNUN İLK ANI (kullanıcı kararı 10.08) — kimlik ŞU AN kuruldu; ad ve telefon
-       eksikse müşteri geldiği ekrana değil, tamamlama akışına gider. Açılışta sormak yerine
-       burada sormanın gerekçesi kapının künyesinde.
+    /* GİRİŞTE KÜNYE SORULMAZ (kullanıcı kararı 15.08) — buradan `/profile-setup`e bir yönlendirme
+       vardı ve kaldırıldı. Kullanıcının cümlesi: *"kullanıcı adresini ve adını vermek istemeyebilir,
+       giriş yaptığında. Bu da bizim için problem olmamalı."* Ad ve telefon artık ilk SİPARİŞTE,
+       gerekçesi ekranda yazılı olarak isteniyor (ödeme ekranının iletişim bölümü). Kimliğini yeni
+       kuran kişiyi bir forma sokmak, ona daha hiçbir şey vermeden bilgi istemekti.
        Profil BURADA okunup yayınlanır (`auth-callback`in ölçülmüş yarışının aynısı): `useMe`
        oturum olayını gecikmeli işliyor, dönülen ekran o aralıkta "misafir" sanabiliyor. */
     void fetchMe()
@@ -137,11 +137,9 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
         if (result.error !== null) return closeLogin();
         publishMe(result.data);
         /* PERSONEL MÜŞTERİ SEKMESİNE DÖNMEZ (21.32): rolü olan kişi doğrudan operasyon kabuğuna
-           gider — webin tek `/connexion` modelinin karşılığı. Künye sorusundan ÖNCE: ad/telefon
-           sipariş yolunun ön şartıdır ve personel o yoldan geçmez (kapının künyesi). */
+           gider — webin tek `/connexion` modelinin karşılığı. */
         const operationsRoute = operationsHomeRoute(result.data);
         if (operationsRoute !== null) return router.replace(operationsRoute);
-        if (hasProfileGap(result.data)) return router.replace(profileSetupRoute());
         closeLogin();
       })
       /* SESSİZ CATCH DEĞİL, AÇIK ÇARE (CLAUDE §1): okuma beklenmedik biçimde patlarsa müşteri

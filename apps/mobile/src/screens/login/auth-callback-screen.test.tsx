@@ -64,14 +64,14 @@ describe('AuthCallbackScreen', () => {
     expect(mockToast).toHaveBeenCalledWith('Doğrulandı — hoş geldiniz ✓');
   });
 
-  it('künyesi eksik müşteri hesaba değil tamamlama akışına gider (dönüş yolu hesap)', async () => {
+  /* Kardeş dosyadaki OTP testiyle AYNI karar (kullanıcı kararı 15.08): künye eksikliği girişin
+     yolunu değiştirmez. İddia tersine çevrildi — müşteri hesap sekmesine gider, tamamlama akışına
+     değil; ad ve telefon ilk siparişte isteniyor. */
+  it('künyesi eksik müşteri de doğrudan hesaba gider — tamamlama akışına yollanmaz', async () => {
     fetchMock.mockResolvedValue(meReply({ phone: null }));
     await render(<AuthCallbackScreen code="pkce-kodu-1" />);
 
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith({ pathname: '/profile-setup', params: { next: '/account' } }),
-    );
-    expect(mockReplace).not.toHaveBeenCalledWith('/account');
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/account'));
   });
 
   /* İKİ KAPI AYNI KARARI VERİR (21.32). OTP girişinin testi kardeş dosyada; bu ikisi ayrışırsa

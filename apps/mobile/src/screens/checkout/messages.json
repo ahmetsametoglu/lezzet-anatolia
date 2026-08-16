@@ -4,6 +4,7 @@
     "back": "Geri",
     "hero": "Az kaldı — sofra kurulsun",
     "signedIn": "✓ {name}",
+    "signedInAnon": "✓ Hesabınızla devam ediyorsunuz",
     "meUnreadable": "Hesabınızı okuyamadık — bağlantınızı kontrol edip tekrar deneyin.",
     "meRetry": "Tekrar dene",
     "guest": {
@@ -72,8 +73,23 @@
       "undeliverableNote": "Üstü çizili ürünler bu posta koduna teslim edilemiyor; siparişe eklenmedi ve ödemeye girmiyor."
     },
     "marketing": "Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)",
+    "contact": {
+      "eyebrow": "İletişim",
+      "reason": "Siparişinizle ilgili sizinle iletişime geçebilmemiz ve teslimat bildirimlerini iletebilmemiz için adınıza ve telefon numaranıza ihtiyacımız var. Kuryemiz de kapıda size bu numaradan ulaşır.",
+      "name": "Ad soyad",
+      "phone": "Telefon numarası",
+      "save": "Kaydet ve devam et",
+      "saving": "Kaydediliyor…",
+      "errors": {
+        "name_required": "Ad soyad gerekli.",
+        "phone_invalid": "Telefon numarası geçerli görünmüyor — ülke koduyla birlikte yazabilirsiniz.",
+        "phone_taken": "Bu numara başka bir hesapta kayıtlı.",
+        "generic": "Kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin."
+      }
+    },
     "block": {
       "login": "Devam etmek için hızlı doğrulama gerekli.",
+      "contact": "Size ulaşabilmemiz için ad ve telefon bilgisi gerekli.",
       "address": "Teslimat adresi ekleyin.",
       "loading": "Seçenekleriniz güncelleniyor…",
       "shipping": "Sepetinizdeki bazı ürünler bu adrese gönderilemiyor.",
@@ -138,6 +154,7 @@
     "back": "Retour",
     "hero": "Presque fini — dressons la table",
     "signedIn": "✓ {name}",
+    "signedInAnon": "✓ Vous continuez avec votre compte",
     "meUnreadable": "Nous n'avons pas pu lire votre compte — vérifiez votre connexion et réessayez.",
     "meRetry": "Réessayer",
     "guest": {
@@ -206,8 +223,23 @@
       "undeliverableNote": "Les articles barrés ne sont pas livrables à ce code postal ; ils ne font pas partie de la commande ni du paiement."
     },
     "marketing": "Je souhaite être informé(e) des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
+    "contact": {
+      "eyebrow": "Contact",
+      "reason": "Nous avons besoin de votre nom et de votre numéro de téléphone pour vous contacter au sujet de votre commande et vous envoyer les notifications de livraison. Notre livreur vous joindra également à ce numéro.",
+      "name": "Nom et prénom",
+      "phone": "Numéro de téléphone",
+      "save": "Enregistrer et continuer",
+      "saving": "Enregistrement…",
+      "errors": {
+        "name_required": "Le nom et le prénom sont obligatoires.",
+        "phone_invalid": "Ce numéro ne semble pas valide — vous pouvez l'écrire avec l'indicatif du pays.",
+        "phone_taken": "Ce numéro est déjà enregistré sur un autre compte.",
+        "generic": "Enregistrement impossible. Vérifiez votre connexion et réessayez."
+      }
+    },
     "block": {
       "login": "Une vérification rapide est nécessaire pour continuer.",
+      "contact": "Votre nom et votre téléphone sont nécessaires pour vous joindre.",
       "address": "Ajoutez une adresse de livraison.",
       "loading": "Mise à jour de vos options…",
       "shipping": "Certains produits de votre panier ne peuvent pas être livrés à cette adresse.",
@@ -272,6 +304,7 @@
     "back": "Zurück",
     "hero": "Fast geschafft — decken wir den Tisch",
     "signedIn": "✓ {name}",
+    "signedInAnon": "✓ Sie fahren mit Ihrem Konto fort",
     "meUnreadable": "Wir konnten Ihr Konto nicht laden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "meRetry": "Erneut versuchen",
     "guest": {
@@ -340,8 +373,23 @@
       "undeliverableNote": "Durchgestrichene Artikel sind an diese Postleitzahl nicht lieferbar; sie gehören weder zur Bestellung noch zur Zahlung."
     },
     "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional — ohne Einfluss auf Ihre Bestellung.)",
+    "contact": {
+      "eyebrow": "Kontakt",
+      "reason": "Wir benötigen Ihren Namen und Ihre Telefonnummer, um Sie zu Ihrer Bestellung zu erreichen und Ihnen Lieferbenachrichtigungen zu senden. Auch unser Fahrer erreicht Sie an der Tür unter dieser Nummer.",
+      "name": "Vor- und Nachname",
+      "phone": "Telefonnummer",
+      "save": "Speichern und fortfahren",
+      "saving": "Wird gespeichert…",
+      "errors": {
+        "name_required": "Vor- und Nachname sind erforderlich.",
+        "phone_invalid": "Diese Nummer scheint ungültig zu sein — Sie können sie mit Ländervorwahl angeben.",
+        "phone_taken": "Diese Nummer ist bereits einem anderen Konto zugeordnet.",
+        "generic": "Speichern nicht möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+      }
+    },
     "block": {
       "login": "Zum Fortfahren ist eine schnelle Verifizierung nötig.",
+      "contact": "Für die Kontaktaufnahme benötigen wir Namen und Telefonnummer.",
       "address": "Fügen Sie eine Lieferadresse hinzu.",
       "loading": "Ihre Optionen werden aktualisiert…",
       "shipping": "Einige Produkte in Ihrem Warenkorb können nicht an diese Adresse geliefert werden.",

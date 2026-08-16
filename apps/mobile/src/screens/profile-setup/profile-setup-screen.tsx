@@ -19,7 +19,7 @@ import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { publishMe, useMe } from '@/screens/customer-kit/use-me.hook';
 import { StepDots } from '@/screens/onboarding/step-dots';
 import { emToDp } from '@/theme/parse';
-import { isNameMissing, isPhoneMissing } from './profile-gaps';
+import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
 import messages from './messages.json';
 
 /*

@@ -2949,6 +2949,104 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Ölçülemeyenler:** boş · misafir · B2B · hata dalları ve sonsuz kaydırmanın ikinci sayfası —
   yerelde tek B2C hesap ve tek sayfalık defter var. `BEKLEYEN(MB-18)`.
 
+- [x] (21.61) **GİRİŞTE KÜNYE SORULMUYOR — ad ve telefon İLK SİPARİŞTE, gerekçesiyle (kullanıcı kararı 15.08)**
+  `touches:` `apps/mobile/src/screens/login/**` · `apps/mobile/src/app/cart.tsx` ·
+  `apps/mobile/src/screens/checkout/**` · `apps/mobile/src/screens/customer-kit/profile-gaps.ts`
+
+  **İstek iki cümleydi:** *"kullanıcı adresini ve adını vermek istemeyebilir giriş yaptığında, bu
+  da bizim için problem olmamalı"* + *"bunu ilk sipariş verdiği zaman talep edelim… siparişlerinizi
+  size ulaştırabilmek, sizinle iletişime geçebilmek için telefon numaranıza ihtiyacımız var gibi
+  bir şey diyerekten konuyu açalım."*
+
+  **Kaldırılan:** `useProfileSetupGate` (dosya SİLİNDİ) ve `hasProfileGap` — üç kapı birden
+  (OTP dönüşü · OAuth dönüşü · sepete giriş). Gerekçe ürünün kendisinde: kimliğini yeni kuran
+  kişiden, ona daha hiçbir şey vermeden künye istemek bir bedeldir.
+
+  **Eklenen:** ödeme ekranının **İletişim** bölümü — en üstte, gerekçesiyle açılıyor, ve YALNIZ
+  eksik olan alanı çiziyor (adı varsa ad sorulmuyor; ikinci siparişte bölüm hiç görünmüyor).
+  Kullanıcı kararı: telefon **zorunlu** (numarasız kurye kapıda ulaşamaz), ad da aynı yoldan.
+  Yazım AYRI bir adım, sipariş gönderimine iliştirilmedi: `updateMe`nin adlı retleri (`phone_invalid`,
+  `phone_taken`) künyenin sorunudur — tek çağrıda birleşseydi geçersiz bir telefon *"siparişiniz
+  açılamadı"* diye görünürdü.
+
+  **`profile-gaps` KİTE taşındı:** kapının iç ölçütüydü, artık iki ekranın (ödeme + künye akışı)
+  ortak kuralı.
+
+  **CİHAZDA AÇIĞA ÇIKAN ESKİ KUSUR — ve düzeltildi.** Ödeme ekranının "hangi hesapla buradasın"
+  şeridi `✓ {name}` basıyordu; OTP ile açılan hesapta ad BOŞ DİZGEDİR, yani ekranda çıplak bir
+  `✓ ` kalıyordu (cihazda görüldü 16.08). Kusur eskiydi ama GÖRÜNMEZDİ — künye kapısı adsız
+  müşteriyi ödeme ekranına hiç bırakmıyordu. Sıra artık ad → e-posta → adsız cümle
+  (`signedInAnon`); boş bir işaret müşteriye hiçbir şey söylemez.
+
+  **CİHAZDA UÇTAN UCA ÖLÇÜLDÜ (16.08), gerçek akışla:** çıkış → künyesiz yeni hesapla OTP girişi →
+  **`/profile-setup` AÇILMADI**, doğrudan hesap ekranı · sepete ürün eklendi, **sepet de kapı
+  çıkarmadı** · ödeme ekranında bölüm gerekçesiyle çizildi, iki alan da boş, düğme KAPALI ·
+  dolduruldu, kaydedildi → veritabanında `Test Kullanici` / `+33612009988`, bölüm kapandı, şerit
+  `✓ Test Kullanici` oldu, engel sıradaki sebebe (adres) geçti. Test hesabı uygulamadan silindi
+  (DB'de 0 satır), cihaz kullanıcının hesabına geri döndürüldü.
+
+  **AÇIK:** `/profile-setup` ekranı artık hiçbir yerden erişilemiyor (kapıları söküldü, ekran
+  duruyor). Silinmedi — kullanıcının kararı bekleniyor. `BEKLEYEN(21.61)`.
+
+- [x] (21.62) **BOŞ HÂLLER ORTALANDI, İKON BÜYÜDÜ, HEADER KURALI YAZIYA GEÇTİ (kullanıcı turu 16.08)**
+  `touches:` `apps/mobile/src/components/ui/empty-state.tsx` · `apps/mobile/src/theme/metrics.ts` ·
+  `apps/mobile/src/screens/{orders,points-history,cart,invite,neighbor,catalog,packages-list,recipes-list,professionals,delivery-zones,home,support}/**` ·
+  `design/KARARLAR.md`
+
+  **Kullanıcı dört ekran görüntüsü aldırdı** (sepet · siparişler · talepler · yeni talep çekmecesi)
+  ve sordu: *"Bu kadar header farklılığı neden var? Hangi header hangi sayfada doğru seçim?"*
+
+  **ÖLÇÜM BEKLENENİN TERSİNİ SÖYLEDİ.** Üç header de `.dc` tasarımının kendi kararı — sapma YOK
+  (sepet 449, siparişler 686, talepler 1028). Boş hâlin ortalanmaması, 44'lük ikon ve geri okunun
+  hizasızlığı da tasarımın kendisi. Yani düzeltmek "implementi tasarıma uydurmak" değil, **tasarımı
+  değiştirmek**ti — ve kullanıcı onayladı. Eksik olan tek şey **yazılı kuraldı**: bedeli ölçüldü,
+  `(21.60)` puan geçmişi yazılırken bakacak kural olmadığı için DÖRDÜNCÜ bir varyant (başlık + alt
+  başlık) doğmuştu.
+
+  **Tasarım değişti (3):**
+  1. **Boş hâl dikeyde yerleşir** — `EmptyState.fill` varsayılanı `false`tan `true`ya döndü.
+     Varsayılanın yönü SAYILARAK belirlendi: **37 kullanımın 32'si tam ekran.** İlk hâlindeki
+     "hepsi tam ekran değil" gerekçesi bir tahmindi. Beş istisna (liste boş hâli · kesikli kutu ·
+     kaydırma kabı içi) `fill={false}` ile işaretlendi — unutulan bayrak artık doğru davranışa düşer.
+
+     **İKİNCİ TUR: "ortala" YETMEDİ, %40 oldu (kullanıcı bulgusu, aynı gün).** İlk hâl
+     `justifyContent: 'center'`ti ve hesabı doğruydu — blok, BAŞLIĞIN ALTINDA kalan alanın tam
+     ortasındaydı. Ama göz o alana değil SAYFAYA bakıyor: ölçüldü, blok merkezi **1170**, sayfa
+     merkezi **1000** (900×2000 ölçeğinde). Kullanıcı *"sayfanın ortasının aşağısına denk geliyor
+     ve kötü bir görüntü oluşturuyor"* dedi ve haklıydı — iki sapma aynı yöne biniyordu: başlığın
+     yüksekliği bloğu yarısı kadar aşağı itiyor, ve optik merkez zaten geometrik merkezin biraz
+     ÜSTÜNDEDİR (göz tam ortadaki öğeyi "aşağı kaymış" görür).
+     Çare SABİT bir kaydırma olamazdı: başlık boyu ekrandan ekrana değişiyor (sayfa başlığı ~200 dp,
+     sıkışık satır ~60 dp) ve sabit sayı birini düzeltip ötekini bozardı. Blok artık kalan boşluğu
+     **4:6** paylaştıran iki esnek payın arasında — üstte %40, altta %60; oran kendini ayarlıyor.
+     **Ölçülen sonuç:** sepette merkez 1095 → **987** (sayfa merkezi 1000, yani 13 px yukarıda).
+  2. **Boş hâl ikonu 44 → 80.** 120 kahraman ölçüsüdür (puan yıldızı) ve bilerek ayrı tutuldu.
+     Vitrinin dairesindeki dekoratif ikon `decorIcon: 44` diye AYRILDI — iki kavram bir sayıyı
+     paylaşıyordu, ayrım sayı değil ANLAM.
+  3. **Geri okunun payı −8 → −16.** Daire 40 dp, glif ortalı, yani glifin sol kenarı 16 içeride;
+     −8 ile başlığın 8 dp sağında kalıyordu. Yalnız DİKEY header'larda (ok başlığın üstünde);
+     tariflerde ok başlığın yanında, orada dokunulmadı.
+
+  **Bizim sapmamız düzeltildi (1):** boş hâl düğmeleri. Tasarımın iki biçimi var — boş hâl çağrısı
+  **hap** (`radius:22`), form/seçim eylemi **blok** (`radius:16` + sert gölge). 10 düğme blok
+  çiziyordu (siparişler 1 · davet 4 · komşu 5), hapa çevrildi. *(İlk kaba sayımım 17 demişti; blok
+  sınırını doğru kapatan bir ölçümle 10 çıktı — kaba grep'e güvenilmedi.)*
+
+  **KURAL YAZILDI** — `design/KARARLAR.md`, "üç header" kaydı. Ölçüt *"kaydırırken erişilebilir
+  kalması gereken bir eylem var mı"*: sayfa başlığı (eylemsiz bölüm girişi) · sıkışık satır (eylem
+  altta yapışkan barda) · yapışkan çubuk (eylem üstte). Puan geçmişi kurala uyduruldu: alt başlık
+  kalktı, yerine `HESABIM` eyebrow'u geldi — siparişlerle birebir.
+
+  **BİR ÖNERİM YANLIŞTI VE UYGULAMADAN ÖNCE FARK EDİLDİ.** "Yeni talep tam sayfaya dönsün" demiştim
+  (tasarım öyle çiziyor); dosyanın künyesi bunun **kullanıcının 09.08 kararı** olduğunu söylüyor —
+  *"talep yazmak, taleplerin listesinin İÇİNDEN yapılan bir eylemdir"*. Bilinçli sapma; geri
+  alınmadı. Çekmecedeki çift başlık ise gerçekti ve metin değişikliğiyle kapandı: anlatım adımının
+  başlığı *"Bize anlatın"* → *"Ne oldu?"* (çekmecenin başlığı zaten *"Bize yazın"*).
+
+  **Doğrulama:** `tsc` · `eslint` · `knip` temiz · **84 dosya / 599 test** · cihazda üç ekran da
+  görüldü (sepet · siparişler · puan geçmişi): ortalı, ikon 80, düğme hap, ok başlıkla hizalı.
+  **`.dc` dosyası bu turun sonucunu taşımıyor** — tasarım turunda güncellenmeli, kayıt `KARARLAR`da.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

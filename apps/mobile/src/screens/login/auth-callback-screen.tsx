@@ -9,8 +9,6 @@ import { exchangeOAuthCode } from '@/lib/auth/oauth';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { publishToast } from '@/lib/toast/toast-store';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
-import { hasProfileGap } from '@/screens/profile-setup/profile-gaps';
-import { profileSetupRoute } from '@/screens/profile-setup/use-profile-setup-gate.hook';
 import { operationsHomeRoute } from './post-login-route';
 import messages from './messages.json';
 
@@ -63,13 +61,10 @@ export function AuthCallbackScreen({ code }: AuthCallbackScreenProps) {
         router.replace(operationsRoute);
         return;
       }
-      /* KÜNYE EKSİKSE ÖNCE O SORULUR (kullanıcı kararı 10.08) — kimlik şu an kuruldu, soru da
-         şimdi anlamlı. Okuma düştüyse hesap sekmesine gidilir: okunamayan bir profil "künyesi
-         eksik" demek değildir (CLAUDE §1 — ölçülemeyen değer sıfır değildir). */
-      if (me !== null && me.error === null && hasProfileGap(me.data)) {
-        router.replace(profileSetupRoute('/account'));
-        return;
-      }
+      /* GİRİŞTE KÜNYE SORULMAZ (kullanıcı kararı 15.08) — burada `/profile-setup`e bir yönlendirme
+         vardı, OTP kapısındakiyle birlikte kaldırıldı. Ad ve telefon artık ilk siparişte, gerekçesi
+         yazılı olarak isteniyor. İki kapı yine AYNI davranışta: kural kopyalanmadığı gibi kaldırma
+         da tek elden yapıldı. */
       router.replace('/account');
     });
   }, [code, router, t.verifiedToast]);
