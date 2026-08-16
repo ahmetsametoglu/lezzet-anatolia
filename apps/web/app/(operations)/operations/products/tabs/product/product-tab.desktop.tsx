@@ -6,6 +6,7 @@ import { Chip } from '@/components/operation/ui/chip';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { withCells, Table, type Column } from '@/components/operation/ui/table';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { ProductPreview } from './product-preview';
@@ -23,10 +24,16 @@ function LangBadge({ langs }: { langs: Locale[] }) {
 }
 
 const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TRACKS, {
+  // Görsel SATIRDA (16.08, kullanıcı isteği — stok listesinin deseni, aynı 36px): operatör ürünü
+  // adından önce fotoğrafından tanır. Görselsiz üründe `Thumbnail` yer tutucu çizer — kayan bir
+  // sütun, tarama düzenini görselin varlığına bağlardı.
   name: (r) => (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
-      <span className="font-ops-body text-ops-xs text-ops-muted">{r.categoryName}</span>
+    <div className="flex min-w-0 items-center gap-2.5">
+      <Thumbnail src={r.imageUrl} alt="" size={36} />
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">{r.categoryName}</span>
+      </div>
     </div>
   ),
   variants: (r) => <span className="font-ops-mono text-ops-sm text-ops-strong">{r.variants.length}</span>,
