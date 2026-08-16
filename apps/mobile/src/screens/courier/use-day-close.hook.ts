@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DayCloseDraftContract } from '@lezzet/types';
 
 import { fetchDayCloseDraft, submitDayClose } from '@/lib/api/courier';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 import { centsToAmountText, money, parseAmountToCents, signedMoney } from './courier-format';
@@ -80,7 +81,7 @@ export function useDayClose(): UseDayCloseResult {
   const [note, setNote] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<UseDayCloseResult['notice']>(null);
+  const [notice, setNotice] = useNotice<NonNullable<UseDayCloseResult['notice']>>();
   const [closedLocally, setClosedLocally] = useState(false);
 
   const generation = useRef(0);

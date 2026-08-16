@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import type { InboundTransferContract } from '@lezzet/types';
 
 import { fetchInboundTransfers, receiveTransfer } from '@/lib/api/warehouse';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import { trackWarehouse } from './warehouse-status';
@@ -62,7 +63,7 @@ export function useTransfer(): UseTransferResult {
   const [counts, setCounts] = useState<Record<string, number | null>>({});
   const [missingLineIds, setMissingLineIds] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<TransferNotice | null>(null);
+  const [notice, setNotice] = useNotice<TransferNotice>();
 
   const generation = useRef(0);
 

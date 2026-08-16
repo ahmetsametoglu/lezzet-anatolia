@@ -17,6 +17,7 @@ import {
   submitUndelivered,
   uploadProofImage,
 } from '@/lib/api/courier';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { newRequestKey } from '@/lib/request-key';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
@@ -205,7 +206,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<DeliveryNotice | null>(null);
+  const [notice, setNotice] = useNotice<DeliveryNotice>();
   const [finished, setFinished] = useState(false);
 
   /* TAHSİLAT İSTEĞİNİN KİMLİĞİ — bir kez doğar, ekran yaşadığı sürece AYNI kalır: "tekrar dene"

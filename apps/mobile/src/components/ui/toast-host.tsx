@@ -7,7 +7,7 @@ import { useToastMessage } from '@/lib/toast/toast-store';
 /*
   TOAST HOST — v3'ün toast katmanı (v3:2035-2039): alt-orta, mürekkep zemin üstünde kum metin,
   tab çubuğunun üstünde (`size.toastBottom` + cihaz inset'i). KÖKTE TEK KOPYA çizilir
-  (`app/_layout`); ekranlar yalnız `publishToast` basar.
+  (`app/_layout`); ekranlar yalnız `toastSuccess`/`toastError`/`toastInfo` basar.
 
   `pointerEvents="none"`: mesaj dokunuşu YUTMAZ — şablonun kendi kuralı; toast'ın altındaki
   düğme, mesaj görünürken de basılabilir kalır.

@@ -14,7 +14,7 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, addProducts, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -154,7 +154,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
        birbirini eziyor ve üç malzemeden yalnız biri sepete giriyordu — üstelik toast "3 malzeme
        eklendi" diyordu. Gerekçenin tamamı deponun `addProducts` künyesinde. */
     addProducts(addable.map((row) => ({ ...cartLineOf(row), quantity: row.qty })));
-    publishToast(t.addAllToast.replace('{n}', String(addable.length)));
+    toastSuccess(t.addAllToast.replace('{n}', String(addable.length)));
   };
 
   return (
@@ -233,7 +233,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
                         onPress={() => {
                           if (!isAddable(row)) return;
                           addProduct(cartLineOf(row), row.qty);
-                          publishToast(t.addedToast);
+                          toastSuccess(t.addedToast);
                         }}
                         feedback="shadow"
                         compact

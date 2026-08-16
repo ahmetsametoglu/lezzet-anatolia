@@ -13,7 +13,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import messages from '@/lib/places/messages.json';
 import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { useMe } from './use-me.hook';
 
 /*
@@ -122,7 +122,7 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
        (onboarding'in yapıldığı andaki dil). Kullanıcı sonradan dilini değiştirdiyse onu geri
        yazmak, ayarı sessizce eski hâline döndürürdü. */
     void saveOnboarding({ done: true, locale, postalCode: draft });
-    publishToast(copy.saved);
+    toastSuccess(copy.saved);
   };
 
   /* Bağlantı önce ÇEKMECEYİ KAPATIR: açık bir katmanın altına yeni bir ekran itmek, geri

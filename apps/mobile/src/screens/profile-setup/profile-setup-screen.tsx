@@ -12,7 +12,7 @@ import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { updateMe } from '@/lib/api/me';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { AddressForm } from '@/screens/customer-kit/address-form';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
@@ -121,7 +121,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
 
   const advance = (): void => {
     if (isLast) {
-      publishToast(t.doneToast);
+      toastSuccess(t.doneToast);
       router.replace(exitTo);
       return;
     }

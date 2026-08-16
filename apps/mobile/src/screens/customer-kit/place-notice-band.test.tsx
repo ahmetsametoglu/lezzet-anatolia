@@ -29,7 +29,13 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => m
 
 // Toast deposu gerçek zamanlayıcı açıyor — mock, koşu sonunda asılı tanıtıcı bırakmasın.
 const mockToast = jest.fn();
-jest.mock('@/lib/toast/toast-store', () => ({ publishToast: (m: string) => mockToast(m) }));
+/* Üç fiil de AYNI casusa düşer: bu dosyanın testleri "hangi cümle basıldı"yı ölçüyor, tipini
+   değil — ayırmak assert'leri tipe bağımlı kılar, oysa sınanan şey metnin kendisi. */
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
 
 /* Oturum DURUMLUDUR: `null` misafir, dolu ise girişli. İki dal ("çekmece açılır" ⟷ "toast basılır")
    bu bayrakla ayrılıyor — `useMe` gerçek kancadır, taklit edilmedi. */

@@ -25,7 +25,8 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
+import { toastInfo } from '@/lib/toast/toast-store';
 import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
 import { HeartIcon } from '@/screens/feedback/feedback-icons';
 import { emToDp, withAlpha } from '@/theme/parse';
@@ -526,6 +527,12 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     (choice: FeedbackVote) => {
       const current = cards[index];
       if (current === undefined) return;
+      /* KARARIN FİZİKSEL KARŞILIĞI — jest de düğme de buradan geçtiği için titreşim TEK yerde
+         duruyor. Kaydırmada `runOnJS` yüzünden bir-iki kare gecikir; alternatifi worklet'ten
+         `runOnJS(hapticCommit)` çağırmaktı, o da AYNI thread sıçramasını yapar — yani kazanç yok,
+         ikinci bir çağrı yeri var. Tur bitişinin toast'ı bilerek SESSİZ (`toastInfo`): son kartın
+         kararı zaten titreştirdi, üstüne ikinci bir titreşim koymak tek harekete iki cevap olurdu. */
+      hapticCommit();
       setExiting({ card: current, choice });
       /* ÇIKIŞ SÜRESİ ARTIK DÜŞÜLMÜYOR — ve bu bir sadeleştirme değil, düzeltme (16.08). Kural
          aynı: `dwellMs` DÜŞÜNME süresidir, kartın uçtuğu 330 ms ona dahil değil. Değişen şey bu
@@ -541,7 +548,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
       if (choice === 'like') setLikes((count) => count + 1);
       /* Tur bitişi tek onay noktası — v3'te toast yok ama akışın sonu sessiz kalmamalı
          (kitin toast katmanı tam bu iş için var). */
-      if (index + 1 >= cards.length) publishToast(t.toast);
+      if (index + 1 >= cards.length) toastInfo(t.toast);
       /* ── PARMAK İZİ BURADA SİLİNMEZ (kullanıcı bulgusu 16.08, üçüncü tur) ──────
          Siliniyordu ve ölçülen sonuç şuydu (yavaşlatılmış uçuşla görüldü): kullanıcı kartı sağa
          çekip bırakıyor, kart ÖNCE MERKEZE ATLIYOR, uçuş oradan başlıyor. Kullanıcının cümlesi:
@@ -741,6 +748,9 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
   const undo = useCallback(() => {
     const undone = discover.undoLastVote();
     if (undone === null) return;
+    /* Geri alma HAFİF dokunur: karar değil, kararın iptali — ve pencere içinde ücretsiz. Kararla
+       aynı şiddette titreseydi, ikisi birbirinden ayırt edilemezdi. */
+    hapticSelect();
     setIndex((current) => Math.max(0, current - 1));
     if (undone.vote === 'like') setLikes((count) => Math.max(0, count - 1));
     dragX.value = 0;

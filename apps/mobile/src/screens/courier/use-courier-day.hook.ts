@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { ORDER_STATUS_LABELS, type CourierDayStopState, type CourierStopContract } from '@lezzet/types';
 
 import { fetchCourierDay, fetchDayCloseDraft, startCourierDay } from '@/lib/api/courier';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 
@@ -99,7 +100,7 @@ export function useCourierDay(): UseCourierDayResult {
   const [collectedCents, setCollectedCents] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [startNotice, setStartNotice] = useState<StartNotice | null>(null);
+  const [startNotice, setStartNotice] = useNotice<StartNotice>();
 
   /** Kaçıncı yükün geçerli olduğu — geç gelen eski cevaplar yazılmaz (katalog emsali). */
   const generation = useRef(0);

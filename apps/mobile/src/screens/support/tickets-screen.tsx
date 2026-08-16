@@ -15,7 +15,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import type { TicketSummary } from '@/lib/api/tickets';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { NewTicketSheet } from './new-ticket-sheet';
 import { ticketMeta, ticketScope, ticketTitle } from './ticket-format';
 import { TicketStatusTag } from './ticket-status-tag';
@@ -103,7 +103,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
       onCreated={() => {
         setSheetOpen(false);
         tickets.refresh();
-        publishToast(t.new.sentToast);
+        toastSuccess(t.new.sentToast);
       }}
     />
   ) : null;

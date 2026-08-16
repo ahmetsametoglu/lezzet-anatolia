@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { ReturnDisposition } from '@lezzet/types';
 
 import { submitWarehouseReturn } from '@/lib/api/warehouse';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import type { CourierReturnDrop } from './courier-return-fixture';
@@ -63,7 +64,7 @@ export function useCourierReturn(drop: CourierReturnDrop): UseCourierReturnResul
   const [dispositions, setDispositions] = useState<Record<string, ReturnDisposition>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<ReturnNotice | null>(null);
+  const [notice, setNotice] = useNotice<ReturnNotice>();
 
   const dispositionOf = useCallback(
     (orderItemId: string): ReturnDisposition | null => dispositions[orderItemId] ?? null,

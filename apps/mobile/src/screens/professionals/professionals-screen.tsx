@@ -22,7 +22,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { CLIENT_ERROR } from '@/lib/api/client';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastInfo } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { OtpSignInFields } from '@/screens/customer-kit/otp-sign-in-fields';
 import { useOtpSignIn } from '@/screens/customer-kit/use-otp-sign-in.hook';
@@ -396,7 +396,7 @@ export function ProfessionalsScreen() {
         />
 
         <PressableSurface
-          onPress={() => publishToast(t.whatsappSoon)}
+          onPress={() => toastInfo(t.whatsappSoon)}
           feedback="opacity"
           style={styles.whatsappRow}
           accessibilityLabel={t.whatsapp}

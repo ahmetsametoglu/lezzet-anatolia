@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { WarehouseAdjustmentReason } from '@lezzet/types';
 
 import { recordAdjustment } from '@/lib/api/warehouse';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import { trackWarehouse } from './warehouse-status';
@@ -76,7 +77,7 @@ export function useAdjustment(): UseAdjustmentResult {
   const [qty, setQtyState] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<AdjustmentNotice | null>(null);
+  const [notice, setNotice] = useNotice<AdjustmentNotice>();
   const [referenceNo, setReferenceNo] = useState<string | null>(null);
 
   const pickReason = useCallback((next: WarehouseAdjustmentReason) => {

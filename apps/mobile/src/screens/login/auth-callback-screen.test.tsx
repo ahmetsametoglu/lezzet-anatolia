@@ -28,7 +28,11 @@ const mockExchange = jest.fn(async (_code: string): Promise<{ error: string | nu
 jest.mock('@/lib/auth/oauth', () => ({ exchangeOAuthCode: (code: string) => mockExchange(code) }));
 
 const mockToast = jest.fn();
-jest.mock('@/lib/toast/toast-store', () => ({ publishToast: (m: string) => mockToast(m) }));
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 

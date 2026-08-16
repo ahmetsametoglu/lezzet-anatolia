@@ -22,7 +22,7 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -247,7 +247,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
       },
       quantity,
     );
-    publishToast(t.addedToast);
+    toastSuccess(t.addedToast);
   };
 
   return (

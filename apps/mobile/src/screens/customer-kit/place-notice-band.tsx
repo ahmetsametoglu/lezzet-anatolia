@@ -11,7 +11,7 @@ import { TextAction } from '@/components/ui/text-action';
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 // Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
 // çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
 import messages from '@/lib/places/messages.json';
@@ -188,16 +188,16 @@ export function PlaceNoticeBand({
       /* Dört hâlin dördü de SÖYLENİR; sessiz geçilen hâl, müşteriye "sayıldım mı?" diye
          sordururdu. Kaydın alındığı iki hâlde eylem de kalkar. */
       if (result.error !== null) {
-        publishToast(t.placeNotice.failed);
+        toastError(t.placeNotice.failed);
         return;
       }
       if (result.data.status === 'place_unknown') {
-        publishToast(t.placeNotice.placeUnknown);
+        toastError(t.placeNotice.placeUnknown);
         return;
       }
       if (result.data.status === 'email_required') {
         // Oturum varken gelmemeli; sözleşme hâli olduğu için yine de sessiz geçilmez.
-        publishToast(t.placeNotice.emailRequired);
+        toastError(t.placeNotice.emailRequired);
         return;
       }
       setRecorded(result.data.status);
@@ -208,7 +208,7 @@ export function PlaceNoticeBand({
             ? t.placeNotice.recorded
             : t.placeNotice.alreadyRecorded
           : (ok ? t.placeNotice.toastRecorded : t.placeNotice.toastAlready).replace('{email}', email);
-      publishToast(line);
+      toastSuccess(line);
     });
   };
 

@@ -15,7 +15,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
 import type { TicketMessage } from '@/lib/api/tickets';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { formatOrderDate } from '@/screens/orders/order-format';
 import { ticketScope, ticketTitle } from './ticket-format';
 import { TicketDetailSkeleton } from './ticket-detail-skeleton';
@@ -141,7 +141,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
     void ticket.send(draft).then((sent) => {
       if (!sent) return;
       setDraft('');
-      publishToast(t.detail.reply.sent);
+      toastSuccess(t.detail.reply.sent);
     });
   };
 

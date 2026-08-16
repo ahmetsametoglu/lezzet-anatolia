@@ -15,7 +15,7 @@ import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
@@ -225,7 +225,7 @@ export function OnboardingScreen() {
   const finish = (target: '/' | '/login') => {
     leave(target);
     // Karşılama toast'ı yalnız BİTİR dallarında (v3:649) — başlıktaki "Atla" sessiz çıkar.
-    publishToast(t.doneToast);
+    toastSuccess(t.doneToast);
   };
 
   const next = () => {

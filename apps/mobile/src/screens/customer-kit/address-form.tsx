@@ -13,7 +13,7 @@ import { TextField } from '@/components/ui/text-field';
 import { createAddress, deleteAddress, updateAddress, type AddressWrite, type MeAddress } from '@/lib/api/addresses';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import type { PlaceOption } from '@/lib/api/places';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { useAddressSearch } from './use-address-search.hook';
 import { usePostalSuggest } from './use-postal-suggest.hook';
 import messages from './address-sheet-messages.json';
@@ -202,7 +202,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
       setSaving(false);
       if (result.error !== null) return setError(t.unexpected);
       onSaved(result.data, null);
-      publishToast(t.deleted);
+      toastSuccess(t.deleted);
     });
   };
 

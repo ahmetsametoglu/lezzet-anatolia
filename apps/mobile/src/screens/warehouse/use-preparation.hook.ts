@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import type { PreparationLineContract, PreparationOrderContract, PreparationPick } from '@lezzet/types';
 
 import { confirmPreparation, fetchPreparationQueue } from '@/lib/api/warehouse';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import { productLabel } from './warehouse-format';
@@ -114,7 +115,7 @@ export function usePreparation(): UsePreparationResult {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lines, setLines] = useState<Record<string, LineState>>({});
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<PreparationNotice | null>(null);
+  const [notice, setNotice] = useNotice<PreparationNotice>();
 
   const generation = useRef(0);
 

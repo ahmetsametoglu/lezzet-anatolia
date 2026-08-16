@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntakeFormRowContract } from '@lezzet/types';
 
 import { fetchIntakeForm, receiveGoods } from '@/lib/api/warehouse';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import { parseDate, productLabel } from './warehouse-format';
@@ -82,7 +83,7 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
   const [rows, setRows] = useState<IntakeFormRowContract[]>([]);
   const [states, setStates] = useState<Record<string, IntakeRowState>>({});
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<IntakeNotice | null>(null);
+  const [notice, setNotice] = useNotice<IntakeNotice>();
   const [warnings, setWarnings] = useState<{ name: string; remainingPercent: number | null }[]>([]);
 
   const generation = useRef(0);

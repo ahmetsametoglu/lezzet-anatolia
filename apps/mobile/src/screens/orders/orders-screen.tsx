@@ -42,7 +42,7 @@ import { useOrders } from './use-orders.hook';
      terfi etmedi, uç da yok. Mobil sepet ise fiyat TAŞIYOR — sipariş detayındaki donmuş fiyatla
      doldurmak müşteriye sessizce eski fiyatı satmak (ya da tükenmiş malı sepete koymak) olurdu.
      Düğmeyi çizip bir şey yapmaması ise verilmiş bir sözü tutmamaktır. Uç geldiği gün düğme
-     şablondaki yerine, `publishToast` onayıyla birlikte döner (paket ekranının aynı deseni).
+     şablondaki yerine, `toastSuccess` onayıyla birlikte döner (paket ekranının aynı deseni).
   2. **Ağ hatası bloğu kesikli çerçeveli kutu DEĞİL** (v3:20-24), katalog/paket ekranlarının
      `EmptyState` + `connection-off` kalıbı: aynı arıza üç ekranda üç ayrı görünüme sahip olmasın.
   3. **Kart bütünüyle basılabilir.** Şablon `o.open`ı üç ayrı bloğa (üst satır, küçük resimler,

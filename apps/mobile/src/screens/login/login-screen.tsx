@@ -19,7 +19,7 @@ import { signInWithGoogle } from '@/lib/auth/oauth';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { fetchMe } from '@/lib/api/me';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
@@ -119,7 +119,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
     if (stage !== 'done') return;
     // v3'ün `finishLogin` toast'ı: kapanan ekranın ARKASINDA görünür (host kökte) — giriş
     // başarısının tek görsel onayı; sekme zaten girişli hâle dönmüş oluyor.
-    publishToast(t.verifiedToast);
+    toastSuccess(t.verifiedToast);
     if (onVerified !== undefined) {
       // Ekranı gömen host kendi akışını sürdürür; künye sorusu da onun yüzeyinin işidir.
       onVerified();

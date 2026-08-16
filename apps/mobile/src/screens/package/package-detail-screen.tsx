@@ -17,7 +17,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { StockMark } from '@/components/ui/stock-mark';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -205,7 +205,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
       },
       quantity,
     );
-    publishToast(t.addedToast);
+    toastSuccess(t.addedToast);
   };
 
   return (

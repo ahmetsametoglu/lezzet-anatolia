@@ -7,7 +7,7 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { fetchMe } from '@/lib/api/me';
 import { exchangeOAuthCode } from '@/lib/auth/oauth';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { operationsHomeRoute } from './post-login-route';
 import messages from './messages.json';
@@ -52,7 +52,7 @@ export function AuthCallbackScreen({ code }: AuthCallbackScreenProps) {
          giriş ise asıl iştir. Sessiz değil, ADLI bir "okunamadı" hâli (CLAUDE §1). */
       const me = await fetchMe().catch(() => null);
       if (me !== null && me.error === null) publishMe(me.data);
-      publishToast(t.verifiedToast);
+      toastSuccess(t.verifiedToast);
       /* PERSONEL OPERASYON KABUĞUNA GİDER (21.32) — OTP girişiyle AYNI karardan (`post-login-route`).
          İki kapı da aynı soruyu soruyor; kural kopyalansaydı "Google ile girince neden operasyona
          gitmiyor" diye aranan bir fark doğardı. */

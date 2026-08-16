@@ -45,7 +45,11 @@ jest.mock('@/lib/auth/dev-login', () => ({
 
 // Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı bırakmasın.
 const mockToast = jest.fn();
-jest.mock('@/lib/toast/toast-store', () => ({ publishToast: (m: string) => mockToast(m) }));
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
 
 /** Üç yollu seçim aşamasından e-posta yoluna iner — akış testlerinin ortak girişi. */
 async function toEmailStage() {

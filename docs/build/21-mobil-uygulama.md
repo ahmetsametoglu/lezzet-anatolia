@@ -3163,6 +3163,70 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   yazılı DEĞİL, `db:refresh` 4 adaya döndürür. Ölçümün kendisini etkilemez — kusurların hiçbiri
   aday sayısına bağlı değil.
 
+- [x] (21.66) **TİTREŞİM (haptik) — niyet sözlüğü, tek kapı, kritik anlar (kullanıcı isteği 16.08)**
+  `touches:` `apps/mobile/src/lib/haptics/**` · `apps/mobile/src/lib/toast/toast-store.ts` ·
+  `apps/mobile/src/screens/**` (toast çağrı yerleri + checkout · discover · account · otp kancası) ·
+  `apps/mobile/package.json`
+
+  Kullanıcı: *"Her yerde olsun istemiyorum ama kritik yerlerde olsun. Kullanıcının bir feedback
+  bekleyeceği senaryolarda kullanılmalı."* Üç karar kullanıcıya soruldu ve alındı (16.08):
+  kapsam **müşteri + operasyon**, toast **tiplensin**, uygulama içi kapatma anahtarı **şimdilik
+  yok** (iOS zaten sistem ayarına ve düşük güç moduna uyuyor; ikinci bir anahtar "neden titremiyor"
+  sorusunu ikiye bölerdi).
+
+  **Kütüphane:** `expo-haptics ~57.0.1` (`npx expo install`). Android'de `VIBRATE` izni otomatik.
+  **YEREL MODÜL** — dev client yeniden derlenmeden çalışmaz.
+
+  **TEK KAPI, ve sözlük NİYET (`lib/haptics/haptics.ts`).** Ekranlar `Haptics.*`ı doğrudan
+  çağırmaz: `hapticSuccess` · `hapticError` · `hapticWarning` · `hapticCommit` · `hapticSelect`.
+  Gerekçe dosyanın künyesinde: şiddet ekran ekran seçilirse uygulama altı ayda tutarsızlaşır ve
+  kullanıcı titreşimden anlam çıkaramaz olur. Kapatma anahtarı ya da Android'e özgü desen
+  gerekirse değişecek yer tek dosya.
+
+  **TOAST TİPLENDİ.** `publishToast` kalktı; yerine `toastSuccess` · `toastError` · `toastInfo`.
+  22 çağrı yeri tek tek sınıflandırıldı. Sebep ölçümden geldi: toast basılan an, tanımı gereği
+  kullanıcının SONUÇ BEKLEDİĞİ andır — uygulamanın en doğal geri bildirim kanalı orasıydı ve
+  tipsizdi. Titreşim yayın anında, host'ta DEĞİL: host yeniden çizilebilir, titreşim ise bir
+  olaydır ve iki kez olmamalıdır.
+
+  **OPERASYONDA ORTAK DESEN BULUNDU — sekiz kanca tek satırla bağlandı.** Depo ve kuryenin
+  sekiz kancasının hepsi zaten aynı `{ tone: 'ok' | 'warn' | 'error' | 'info' }` sözlüğünü
+  kuruyormuş; eksik olan yalnız o dilin dokunsal karşılığıydı. Sekize ayrı çağrı yazmak aynı
+  kararın sekiz kopyası olurdu (CLAUDE §1), o yüzden `useState`in yerine geçen `useNotice`
+  (`lib/haptics/use-notice.hook.ts`) yazıldı: kural kancanın KURULUŞUNDA duruyor, dokuzuncu
+  kancayı yazan unutamaz. Operasyonda değeri daha yüksek — depocunun eli kolide, kuryenin
+  direksiyonda; "kabul mü ret mi" cevabını görmeden almak burada konfor değil işin kendisi.
+
+  **Titreşen anlar:** ödeme sonucu (oldu · her ret ve arıza) · girişte sunucunun her reddi (yanlış
+  kod dahil) · sepete/tarife/pakete ekleme · keşifte kaydırma-düğme kararı ve geri alma (hafif) ·
+  hesap silme (oldu · olmadı) · depo ve kuryede kabul, sapma, ret.
+  **Sessiz bırakılanlar (gerekçeli):** sekme ve çip geçişleri, aşağı çekip yenileme, biçim
+  doğrulaması (geçersiz e-posta — henüz bitmemiş bir yazım, sunucunun reddi değil), ödeme kartını
+  müşterinin kendi kapatması (`warm` tonu), keşif turunun bitiş bildirimi (son kartın kararı zaten
+  titretti; üstüne ikincisi tek harekete iki cevap olurdu).
+
+  **BİR RİSK ÖLÇÜLDÜ VE KAPATILDI:** `expo-haptics` yerel modül, ve modülü içermeyen bir
+  istemcide çağrı `Promise` reddiyle değil DOĞRUDAN FIRLATARAK düşer — `catch` zinciri hiç
+  kurulmaz, hata çağırana geçer. Yani paket eklendikten sonra henüz yeniden derlenmemiş bir dev
+  client'ta titreşimin yokluğu, bir toast'ı ya da sipariş onayını düşürebilirdi. `fire()` artık
+  hem senkron hatayı hem reddi yutuyor; gerekçe dosyada yazılı.
+
+  **Doğrulama:** `tsc` · `eslint` · `knip` temiz · **84 dosya / 599 test** yeşil ·
+  **cihazda ölçüldü (Android, OPPO CPH1907):** kullanıcı turu — titreşim çalışıyor ve şiddet
+  yerinde (16.08). Yerel modülün gerçekten kurulu olduğunun kanıtı izinde: cihazda
+  `android.permission.VIBRATE: granted=true` (bu izni `expo-haptics` otomatik ekliyor).
+
+  **DERLEME NOTLARI — dördü de ÇIKIŞ KODU 0 ile düştü** (yani "başarılı" görünen başarısızlık;
+  doğrulama log'dan ve cihazdaki kurulum saatinden yapılmalı):
+  - `expo run:android --device` adb SERİ NUMARASINI değil MODEL adını istiyor (`CPH1907`).
+  - `expo prebuild --clean`, `android/local.properties`i de siliyor (izlenmeyen yerel dosya) ve
+    gradle Android SDK'yı bulamıyor: `sdk.dir=…/Library/Android/sdk` elle geri yazılmalı.
+  - `expo run:ios --device` girdiyi KÜÇÜK HARFE çeviriyor; cihaz adı (`AS`) da UDID de bu yüzden
+    eşleşmiyordu — asıl sebep cihazın o an bağlı OLMAMASIYDI. Teşhisin doğru aracı
+    `xcrun devicectl device info details`: `tunnelState` ve `lastConnectionDate` gerçeği söylüyor
+    (`system_profiler SPUSBDataType` bu ortamda hiç çıktı vermiyor — ölçüm aracı olarak kullanılamaz).
+  - Temiz prebuild sonrası ilk Android derlemesi **1 sa 11 dk**; iOS simülatör derlemesi 0 hata.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

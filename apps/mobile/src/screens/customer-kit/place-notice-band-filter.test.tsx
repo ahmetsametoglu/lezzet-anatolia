@@ -21,7 +21,11 @@ import { PlaceNoticeBand } from './place-notice-band';
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
 jest.mock('@/lib/onboarding/onboarding-store');
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: () => undefined }) }));
-jest.mock('@/lib/toast/toast-store', () => ({ publishToast: () => undefined }));
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: () => undefined,
+  toastError: () => undefined,
+  toastInfo: () => undefined,
+}));
 /** Kimlik SABİT: misafir. Bandın süzgeç yuvası oturumdan bağımsız (künye). */
 jest.mock('./use-me.hook', () => ({ useMe: () => ({ status: 'ready', me: null }) }));
 

@@ -22,7 +22,8 @@ import { deleteAccount, updateMe, updatePreferences } from '@/lib/api/me';
 import { resolvePostalCode } from '@/lib/api/places';
 import { signOut } from '@/lib/auth/sign-out';
 import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
-import { publishToast } from '@/lib/toast/toast-store';
+import { hapticCommit, hapticError } from '@/lib/haptics/haptics';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
@@ -244,7 +245,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
    */
   const sendZoneInterest = () => {
     setInterestSent(true);
-    publishToast(t.marketing.zone.sent);
+    toastSuccess(t.marketing.zone.sent);
     if (!marketingEmail) toggleConsent('email', true);
   };
 
@@ -261,7 +262,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
       setDefaultFailed(false);
       addressBook.publish(result.data);
       // Başlık kartla aynı kural: etiketsiz adreste şehir (v3'ün `a.n+' varsayılan yapıldı'`sı).
-      publishToast(t.addresses.defaultDone.replace('{label}', address.label ?? address.city));
+      toastSuccess(t.addresses.defaultDone.replace('{label}', address.label ?? address.city));
     });
   };
 
@@ -277,7 +278,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
       }
       publishMe(result.data);
       setProfileSheetOpen(false);
-      publishToast(t.edit.saved);
+      toastSuccess(t.edit.saved);
     });
   };
 
@@ -298,8 +299,15 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
     if (result.error !== null) {
       setDeleting(false);
       setDeleteFailed(true);
+      hapticError();
       return;
     }
+    /* TİTREŞİM BURADA ÖZELLİKLE DEĞERLİ: bu akışın bilinçli olarak toast'ı YOK (yukarıdaki
+       künye) ve ekran misafir hâline dönerek kapanıyor. Yani başarının tek işareti bir
+       KAYBOLMA — dokunsal bir "oldu" olmasa, müşteri silmenin gerçekten işlediğini ancak
+       tahmin ederdi. Kutlama tonu (`hapticSuccess`) DEĞİL: kendi hesabını silen birine
+       "tebrikler" dokunuşu yapmayız; bu kararlı bir eylemin karşılığıdır. */
+    hapticCommit();
     await signOut();
   };
 
@@ -329,7 +337,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
       setRedeeming(false);
       if (result.error !== null) return setRedeemFailed(true);
       pointsWallet.publish(result.data);
-      publishToast(t.points.converted);
+      toastSuccess(t.points.converted);
     });
   };
 

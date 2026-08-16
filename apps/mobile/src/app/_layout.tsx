@@ -113,7 +113,8 @@ export default function RootLayout() {
       <GestureHandlerRootView style={styles.root}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
         {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
-            basan taraf `publishToast` (lib/toast), gerekçeler host'un künyesinde. */}
+            basan taraf `toastSuccess`/`toastError`/`toastInfo` (lib/toast), gerekçeler host'un
+            künyesinde. */}
         <ToastHost />
         <StatusBar style="auto" />
       </GestureHandlerRootView>

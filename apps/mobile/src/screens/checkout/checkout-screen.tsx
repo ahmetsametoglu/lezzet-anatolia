@@ -20,6 +20,7 @@ import type { MeAddress } from '@/lib/api/addresses';
 import { placeCheckoutOrder } from '@/lib/api/checkout';
 import { updateMe, type Me } from '@/lib/api/me';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine } from '@/screens/customer-kit/address-format';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
@@ -466,6 +467,9 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
        Eksik olan tek şey deponun HABERİYDİ: sunucu turunu yalnız dil/yer/oturum değişimi
        tetikliyordu, sipariş bunların hiçbiri değil. Ölçüldü (kullanıcı bulgusu 10.08): sipariş
        verildikten sonra rozet eski sayıyı göstermeye devam ediyordu. Kapı artık var. */
+    /* SİPARİŞ OLDU — uygulamanın en çok beklenen anı; ekran değişmeden ÖNCE titrer ki onay,
+       geçiş animasyonunun altında kaybolmasın. */
+    hapticSuccess();
     refreshCart();
     router.replace({
       pathname: '/checkout/confirmed',
@@ -476,6 +480,19 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         payment: selectedPayment?.label ?? '',
       },
     });
+  };
+
+  /*
+    RET VE ARIZANIN FİZİKSEL KARŞILIĞI TEK YERDE — `setNotice` artık doğrudan çağrılmıyor.
+    Üç ayrı yerde ret kuruluyor (taşıma arızası · ödeme başarısızlığı · sunucu reddi) ve üçüne
+    tek tek titreşim yazmak, dördüncüsü eklendiğinde unutulacak bir desen olurdu.
+
+    `warm` SESSİZ: ödeme kartını müşteri KENDİSİ kapattığında bu bir başarısızlık değil, onun
+    kararıdır — kendi hareketini ona hata gibi geri bildirmeyiz.
+  */
+  const showNotice = (next: { tone: 'error' | 'warm'; text: string }): void => {
+    if (next.tone === 'error') hapticError();
+    setNotice(next);
   };
 
   const confirm = async (): Promise<void> => {
@@ -499,7 +516,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       // TAŞIMA arızası (ağ, bozuk gövde, kimliksizlik) — retlerden ayrı: sipariş açıldı mı
       // BİLİNMİYOR. Anahtar korunduğu için tekrar denemek ikinci sipariş açmaz.
       setSubmitting(false);
-      setNotice({ tone: 'error', text: result.status === 401 ? t.reject.session : t.reject.transport });
+      showNotice({ tone: 'error', text: result.status === 401 ? t.reject.session : t.reject.transport });
       return;
     }
 
@@ -518,7 +535,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         return;
       }
       setSubmitting(false);
-      setNotice(
+      showNotice(
         sheet.status === 'canceled'
           ? { tone: 'warm', text: t.paymentSheet.canceled }
           : { tone: 'error', text: paymentFailureMessage(sheet, t) },
@@ -527,7 +544,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     }
 
     setSubmitting(false);
-    setNotice({
+    showNotice({
       tone: 'error',
       // Ürün adı SEPET GÖRÜNÜMÜNDEN çözülür — sunucudan ikinci kez istemek, istemcinin bildiği
       // bir şeyi ona geri okutmak olurdu (sözleşme künyesi).

@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 
 import { fetchMe } from '@/lib/api/me';
 import { authErrorText } from '@/lib/auth/error-text';
+import { hapticError } from '@/lib/haptics/haptics';
 import { requestOtp, verifyOtp } from '@/lib/auth/otp';
 import { publishMe } from './use-me.hook';
 
@@ -82,6 +83,16 @@ export function useOtpSignIn({ locale, invalidEmailText, onSignedIn }: UseOtpSig
 
   const applyAuthError = useCallback(
     (result: { error: AuthErrorKey; retryAfterSec: number | null }, setError: (text: string | null) => void) => {
+      /* SUNUCUNUN HER REDDİ TİTREŞİR — ve tek yerden, çünkü üç yol da buradan geçiyor: kod
+         isteme, yeniden gönderme, kod doğrulama. Yanlış kod yazan kullanıcı alanın temizlendiğini
+         göremeyebilir (parmağı klavyede, gözü tuşlarda); titreşim "olmadı"yı ekrana bakmadan
+         söyler — kullanıcının geri bildirim BEKLEDİĞİ tam an budur.
+
+         Biçim doğrulaması (geçersiz e-posta) bilerek DIŞARIDA: o sunucunun reddi değil, henüz
+         bitmemiş bir yazım — yazarken titreyen bir alan, kullanıcıyı hata yaptığına inandırır.
+         Ceza hâllerinde (`cooldown`/`rate_limit`) metin yerine geri sayım çizilir ama titreşim
+         yine olur: reddedilmiş olmak, sebebinin sayaç olmasıyla değişmez. */
+      hapticError();
       setCooldownSec(result.retryAfterSec ?? 0);
       const penalized = result.retryAfterSec !== null && (result.error === 'cooldown' || result.error === 'rate_limit');
       setError(penalized ? null : authErrorText(locale, result.error));
