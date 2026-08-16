@@ -65,8 +65,10 @@ export function ProductsTab(props: ProductsViewProps) {
     openEdit,
   } = props;
   const { hasMore, loadingMore, onLoadMore } = props;
-  // Seçili kayıt GÖRÜNEN listeden çözülür (eklenen sayfalar dahil); sayaç sunucudan gelir.
-  const selected = products.find((p) => p.id === selectedId) ?? null;
+  // Seçili kayıt GÖRÜNEN listeden çözülür (eklenen sayfalar dahil); listede yoksa sunucunun
+  // HEDEFLİ okuması (`data.pinned`, `?p=` bağlantısı sayfa 2+'daki ürünü gösterdiğinde).
+  const selected =
+    products.find((p) => p.id === selectedId) ?? (data.pinned?.id === selectedId ? data.pinned : null) ?? null;
   const missingCount = data.counts.incomplete;
 
   return (

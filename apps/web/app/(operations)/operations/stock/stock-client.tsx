@@ -138,8 +138,19 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
   const scoped = levels.filter((row) => matchesScope(row, urlState.scope));
 
   // Seçili satır KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = scoped.find((r) => r.variantId === selectedId) ?? scoped[0] ?? null;
+  // İlk değer ADRESTEN (`?v=`, 16.08 — talepler ekranının deseni): yenilemede seçim korunur, panel
+  // bağlantısı paylaşılabilir. Tıklamada SIĞ yazılır: panel kendi verisini zaten action ile çekiyor.
+  // Satır süzülmüş ilk sayfada yoksa sunucunun HEDEFLİ okuması (`data.pinned`) devreye girer.
+  const [selectedId, setSelectedId] = useState<string | null>(urlState.selected || null);
+  const onSelect = (id: string) => {
+    setSelectedId(id);
+    writeUrl({ selected: id });
+  };
+  const selected =
+    scoped.find((r) => r.variantId === selectedId) ??
+    (selectedId && data.pinned?.variantId === selectedId ? data.pinned : null) ??
+    scoped[0] ??
+    null;
 
   // Teklif diyaloğu bir PARTİYE bağlı: hangi partinin teklifi düzenleniyorsa o. Kimlikle tutulur ki
   // sunucu tazelendiğinde diyalog eski satırın kopyasını göstermesin.
@@ -212,7 +223,7 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
     loadingLosses,
     onLoadMoreLosses,
     selectedId: selected?.variantId ?? null,
-    onSelect: setSelectedId,
+    onSelect,
     openVariantId,
     onToggleSplit: (variantId: string) => setOpenVariantId((cur) => (cur === variantId ? null : variantId)),
     onOpenOffer: setOfferStockId,

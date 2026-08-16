@@ -78,9 +78,15 @@ export interface StockUrlState {
    * bir BAKIŞTIR; depo bağlamı ise çerezdedir ve adrese yazılmaz.
    */
   depo: string;
+  /**
+   * SEÇİLİ boy (`v=<variantId>`, 16.08 — talepler ekranının `?t=` deseni): sağdaki geçmiş panelinin
+   * bağlantısı paylaşılabilmeli, yenilemede seçim kaybolmamalı. Süzgeç DEĞİL — liste daralmaz;
+   * yazımı SIĞDIR (`replaceState`): panel kendi verisini zaten action ile çekiyor.
+   */
+  selected: string;
 }
 
-const DEFAULTS: StockUrlState = { tab: 'levels', q: '', cat: 'all', scope: 'all', period: 'quarter', depo: '' };
+const DEFAULTS: StockUrlState = { tab: 'levels', q: '', cat: 'all', scope: 'all', period: 'quarter', depo: '', selected: '' };
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseStockUrl(params: RawParams): StockUrlState {
@@ -92,6 +98,7 @@ export function parseStockUrl(params: RawParams): StockUrlState {
     period: oneOf(params.period, LOSS_PERIODS, DEFAULTS.period),
     // Kod burada DOĞRULANMAZ, normalize edilir: "bu kod benim evrenimde var mı" bağlamın sorusudur.
     depo: one(params[WAREHOUSE_PARAM]).trim().toUpperCase(),
+    selected: one(params.v).trim(),
   };
 }
 
@@ -104,6 +111,7 @@ export function stockUrl(state: StockUrlState): string {
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
   if (state.period !== DEFAULTS.period) p.set('period', state.period);
   if (state.depo) p.set(WAREHOUSE_PARAM, state.depo);
+  if (state.selected) p.set('v', state.selected);
   const qs = p.toString();
   return qs ? `${STOCK_PATH}?${qs}` : STOCK_PATH;
 }

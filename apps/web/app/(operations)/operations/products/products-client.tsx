@@ -111,9 +111,23 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
   };
 
   // Seçim KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // İlk değer ADRESTEN (`?p=`, 16.08 — tarif ekranının deseni): yenilemede seçim korunur, önizleme
+  // bağlantısı paylaşılabilir. Tıklamada SIĞ yazılır (`writeUrl`): panel yüklenmiş listeden
+  // beslenir, seçim için sunucuya gitmenin getireceği veri yok.
+  const [selectedId, setSelectedId] = useState<string | null>(urlState.selected || null);
   const [editing, setEditing] = useState(false);
-  const selected = products.find((p) => p.id === selectedId) ?? products[0] ?? null;
+  const onSelect = (id: string) => {
+    setSelectedId(id);
+    writeUrl({ selected: id });
+  };
+  // Seçili ürün süzülmüş ilk sayfada olmayabilir (liste keyset sayfalı) — o zaman sunucunun
+  // HEDEFLİ okuması (`data.pinned`) devreye girer; URL'in söylediği ürün yerine sessizce ilk
+  // satırı göstermek, adresle ekranı ayrıştırırdı.
+  const selected =
+    products.find((p) => p.id === selectedId) ??
+    (selectedId && data.pinned?.id === selectedId ? data.pinned : null) ??
+    products[0] ??
+    null;
 
   // URL'DEN GELEN ÜRÜNLE DÜZENLEME AÇIK GELİR (16.08, fiyat ekranının deseni): `?productId=` ile
   // gelen köprüde liste sunucuda o ürüne süzülü (`toProductFilters.ids`), satır seçilir ve düzenleme
@@ -131,9 +145,11 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
 
   // Kapanışta URL hedefi de düşer: parametre kalsaydı liste tek ürüne süzülü kalır (gizli süzgeç)
   // ve yenilemede diyalog yeniden açılırdı. Gerçek gezinme şart — sığ yazım listeyi tazelemez.
+  // Seçim (`p=`) diyaloğun ürününe devrolur: köprüden gelinen ürün, diyalog kapanınca da seçili
+  // ve paylaşılabilir kalmalı.
   const closeEdit = () => {
     setEditing(false);
-    if (urlState.productId) applyFilters({ productId: '' });
+    if (urlState.productId) applyFilters({ productId: '', selected: urlState.productId });
   };
 
   const view = {
@@ -154,7 +170,7 @@ export function ProductsClient({ data, urlState }: ProductsClientProps) {
     loadingMore,
     onLoadMore,
     selectedId: selected?.id ?? null,
-    onSelect: setSelectedId,
+    onSelect,
     creating,
     openCreate: () => setCreatingIntent(true),
     closeCreate: () => setCreatingIntent(false),

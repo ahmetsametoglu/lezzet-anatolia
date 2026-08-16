@@ -143,6 +143,11 @@ export interface CategoryOption {
 export interface StockData {
   /** Seviyelerin İLK SAYFASI — süzgeçler sunucuda uygulanmıştır. */
   levels: StockLevelRow[];
+  /**
+   * `?v=` ile seçili boyun HEDEFLİ okuması — liste sayfalı olduğundan seçili boy ilk sayfada
+   * olmayabilir; sağ panel o zaman buradan beslenir. `null` = parametre yok ya da satır zaten listede.
+   */
+  pinned: StockLevelRow | null;
   nextCursor: KeysetCursor | null;
   /** Karar bekleyen TÜM partiler — sayfalanmaz; bir partiyi kaçırmak imhalık malı satmaktır. */
   attention: BatchView[];

@@ -37,10 +37,11 @@ import type { OrderRow, OrdersViewProps } from './orders-types';
 // değil. Kendi tablosunu yazan ekran, bir gün başlık hizasını da kaydırır.
 
 export function OrdersDesktop(props: OrdersViewProps) {
-  const { rows, counts, warehouse, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, selectedId, onSelect, navPending } =
+  const { rows, pinned, counts, warehouse, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, selectedId, onSelect, navPending } =
     props;
-  // Seçili kayıt GÖRÜNEN listeden çözülür (ürünler deseni): süzgeç değişip satır düşerse panel davete döner.
-  const selected = rows.find((r) => r.id === selectedId) ?? null;
+  // Seçili kayıt GÖRÜNEN listeden çözülür (ürünler deseni); listede yoksa sunucunun HEDEFLİ okuması
+  // (`pinned`, `?o=` bağlantısı sayfa 2+'daki siparişi gösterdiğinde) — o da yoksa panel davete döner.
+  const selected = rows.find((r) => r.id === selectedId) ?? (pinned && pinned.id === selectedId ? pinned : null) ?? null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">

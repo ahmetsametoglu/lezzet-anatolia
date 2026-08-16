@@ -184,7 +184,7 @@ async function productSubject(productId: string): Promise<ProposalSubject | null
     images: [],
     // Derin bağ (16.08): ad aramasıyla "en yakın karşılık" yerine ürünün kendisi — liste ürüne
     // süzülü, düzenleme diyaloğu açık gelir.
-    href: productsUrl({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: product.id }),
+    href: productsUrl({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: product.id, selected: '' }),
   };
 }
 
@@ -338,6 +338,6 @@ async function variantSubject(variantId: string): Promise<ProposalSubject | null
     images: [],
     // Derin bağ (16.08): ürün diyaloğu artık `?productId=` ile açılıyor — ad aramasıyla "en yakın
     // karşılık" dönemi bitti (rota sözleşmesi `products-url`, `STACK §4`).
-    href: productsUrl({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: product.id }),
+    href: productsUrl({ tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: product.id, selected: '' }),
   };
 }

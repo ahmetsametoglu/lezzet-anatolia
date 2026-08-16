@@ -2,6 +2,7 @@ import {
   CategoryService,
   PriceService,
   ProductService,
+  ProductVariantService,
   SettingsService,
   StockAdjustmentService,
   StockService,
@@ -86,14 +87,21 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const ctx = await readWarehouseContext();
   const warehouse = warehouseFilterOf(ctx, urlState.depo);
 
+  // SEÇİLİ boy (`?v=`) İLK sayfada olmayabilir (liste keyset sayfalı): kimlik önce ürüne çözülür,
+  // ürünün stok satırı HEDEFLİ okunur — yoksa sağ panel, adres bir boyu söylerken sessizce ilk
+  // satırı gösterirdi. Parametre yokken bu okuma hiç yapılmaz.
+  const selectedVariant =
+    onLevels && urlState.selected ? await new ProductVariantService(db).getById(urlState.selected) : null;
+
   // ── PARTİLER BAĞLAMLA OKUNUR, SÜZGEÇLE DEĞİL (sözleşme kural 5) ──────────────
   // Sekme sayıları ve karar kuyruğu bağlam evreninin gerçeğidir: tabloda KEHL'i süzmek, STR'de
   // bekleyen 20 kararı yok saymaz — o kararlar hâlâ operatörün önünde. Süzgeç yalnız SEVİYE
   // tablosunun satırlarını daraltır ve daraltmayı in-memory yaparız: partiler zaten tamamen
   // yüklü (sayfalanmıyor), ikinci bir sorgu atmanın karşılığı yok.
-  const [productPage, batchRows, categories, lossPage, lossTotals, thresholds, warehouseLabels, intakeProgress] =
+  const [productPage, pinnedProductPage, batchRows, categories, lossPage, lossTotals, thresholds, warehouseLabels, intakeProgress] =
     await Promise.all([
       onLevels ? productSvc.listStockRows({ filters, limit: DEFAULT_PAGE_SIZE }) : EMPTY_PRODUCT_PAGE,
+      selectedVariant ? productSvc.listStockRows({ filters: { ids: [selectedVariant.productId] }, limit: 1 }) : null,
       stockSvc.listInStockDetailed(undefined, ctx.warehouseIds),
       new CategoryService(db).list(),
       onOutgoing ? lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }) : EMPTY_LOSS_PAGE,
@@ -114,7 +122,11 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const attentionVariantIds = [
     ...new Set(undecided.filter((b) => needsExpiryAttention(b.decision)).map((b) => b.variantId)),
   ];
-  const pageVariantIds = productPage.rows.flatMap((p) => p.variants.map((v) => v.id));
+  // Hedefli okunan ürünün boyları da kullanılabilirlik okumasına girer — pinned satır kurulacaksa
+  // sayıları sayfa satırlarıyla aynı kaynaktan gelmeli.
+  const pageVariantIds = [...productPage.rows, ...(pinnedProductPage?.rows ?? [])].flatMap((p) =>
+    p.variants.map((v) => v.id),
+  );
 
   const [available, priceMap, actorNames, intake] = await Promise.all([
     // Depo TANELİ okuma (19.5): satırın toplamı da kırılımı da bu tek kaynaktan türer. Depo-üstü
@@ -144,6 +156,14 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const levels = toLevelRows({ products: productPage.rows, batches: rowBatches, available, categoryNames, warehouseLabels });
   const attention = batches.filter((b) => needsExpiryAttention(b.decision));
 
+  // Hedefli satır LİSTEYE KARIŞMAZ (sayfalama sırası bozulmasın); yalnız panelin yedeğidir.
+  // Ürün zaten ilk sayfadaysa `levels` satırı taşıyor, pinned boş kalır.
+  const pinnedProducts = (pinnedProductPage?.rows ?? []).filter((p) => !productPage.rows.some((r) => r.id === p.id));
+  const pinnedRow =
+    toLevelRows({ products: pinnedProducts, batches: rowBatches, available, categoryNames, warehouseLabels }).find(
+      (r) => r.variantId === urlState.selected,
+    ) ?? null;
+
   /**
    * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) teklif diyaloğu ÖN DOLU açılır (22.5).
    * Öneriden gelen fiyat bir başlangıç değeridir, karar değil — üç yüzü de diyalogda görünür.
@@ -155,6 +175,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       handoff={handoff}
       data={{
         levels,
+        pinned: pinnedRow,
         nextCursor: productPage.nextCursor,
         attention,
         losses: toLossRows(lossPage.rows, actorNames),

@@ -30,9 +30,16 @@ export interface ProductsUrlState {
    * bilinmez" diyordu; kimlik adreste taşınınca o itiraz düştü.)
    */
   productId: string;
+  /**
+   * SEÇİLİ satır (`p=<id>`, 16.08 — tarif ekranının `?r=` deseni): önizleme panelinin bağlantısı
+   * paylaşılabilmeli ve yenilemede seçim kaybolmamalı. `productId`den FARKI: bu bir süzgeç ve
+   * diyalog tetiği DEĞİL, salt seçim — liste süzülmez, diyalog açılmaz; yazımı da SIĞDIR
+   * (`replaceState`, sunucuya gitmez — panel zaten yüklenmiş listeden beslenir).
+   */
+  selected: string;
 }
 
-const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: '' };
+const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false, productId: '', selected: '' };
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseProductsUrl(params: RawParams): ProductsUrlState {
@@ -44,6 +51,7 @@ export function parseProductsUrl(params: RawParams): ProductsUrlState {
     incomplete: one(params.incomplete) === '1',
     creating: one(params.new) === '1',
     productId: one(params.productId).trim(),
+    selected: one(params.p).trim(),
   };
 }
 
@@ -60,6 +68,7 @@ export function productsUrl(state: ProductsUrlState): string {
   if (state.incomplete) p.set('incomplete', '1');
   if (state.creating) p.set('new', '1');
   if (state.productId) p.set('productId', state.productId);
+  if (state.selected) p.set('p', state.selected);
   const qs = p.toString();
   return qs ? `${PRODUCTS_PATH}?${qs}` : PRODUCTS_PATH;
 }

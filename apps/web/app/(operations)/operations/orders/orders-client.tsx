@@ -63,10 +63,18 @@ export function OrdersClient({ data, urlState }: OrdersClientProps) {
   // Seçili sipariş KİMLİKLE tutulur, kayıt taze listeden türetilir (masaüstü çözer): durum
   // ilerledikten sonra panel kopyaya değil yeni gerçeğe bakar; satır süzgeç dışına düşerse panel
   // kendiliğinden davete döner.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // İlk değer ADRESTEN (`?o=`, 16.08 — talepler ekranının deseni): yenilemede seçim korunur, panel
+  // bağlantısı paylaşılabilir. Tıklamada SIĞ yazılır: seçim için sunucuya gitmenin getireceği veri
+  // yok — panel satırdan + kendi bakış okumasından beslenir.
+  const [selectedId, setSelectedId] = useState<string | null>(urlState.selected || null);
+  const onSelect = (id: string | null) => {
+    setSelectedId(id);
+    window.history.replaceState(null, '', ordersUrl({ ...urlState, selected: id ?? '' }));
+  };
 
   const view = {
     rows,
+    pinned: data.pinned,
     counts: data.counts,
     warehouse: data.warehouse,
     urlState,
@@ -78,7 +86,7 @@ export function OrdersClient({ data, urlState }: OrdersClientProps) {
     loadingMore,
     onLoadMore,
     selectedId,
-    onSelect: setSelectedId,
+    onSelect,
   };
 
   return <OrdersDesktop {...view} />;

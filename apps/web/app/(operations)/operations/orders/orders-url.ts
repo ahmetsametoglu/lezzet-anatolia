@@ -38,9 +38,16 @@ export interface OrdersUrlState {
    * adrese yazılmaz — paylaşılan bir bağlantı alıcının evrenini ezmemeli.
    */
   depo: string;
+  /**
+   * SEÇİLİ satır (`o=<id>`, 16.08 — talepler ekranının `?t=` deseni): sağ panelin bağlantısı
+   * paylaşılabilmeli, yenilemede seçim kaybolmamalı. Süzgeç DEĞİL — liste daralmaz; yazımı SIĞDIR
+   * (`replaceState`): panel yüklenmiş satırdan + kendi bakış okumasından beslenir, seçim için
+   * sunucuya gitmenin getireceği veri yok.
+   */
+  selected: string;
 }
 
-const DEFAULTS: OrdersUrlState = { tab: 'all', q: '', chan: 'all', del: 'all', pay: 'all', day: '', depo: '' };
+const DEFAULTS: OrdersUrlState = { tab: 'all', q: '', chan: 'all', del: 'all', pay: 'all', day: '', depo: '', selected: '' };
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseOrdersUrl(params: RawParams): OrdersUrlState {
@@ -54,6 +61,7 @@ export function parseOrdersUrl(params: RawParams): OrdersUrlState {
     // Kod burada DOĞRULANMAZ, yalnız normalize edilir: "bu kod benim evrenimde var mı" sorusunun
     // cevabı bağlamdadır (`warehouseFilterOf`) ve URL çözümleyicisi bağlamı görmez.
     depo: one(params[WAREHOUSE_PARAM]).trim().toUpperCase(),
+    selected: one(params.o).trim(),
   };
 }
 
@@ -67,6 +75,7 @@ export function ordersUrl(state: OrdersUrlState): string {
   if (state.pay !== DEFAULTS.pay) p.set('pay', state.pay);
   if (state.day) p.set('day', state.day);
   if (state.depo) p.set(WAREHOUSE_PARAM, state.depo);
+  if (state.selected) p.set('o', state.selected);
   const qs = p.toString();
   return qs ? `${ORDERS_PATH}?${qs}` : ORDERS_PATH;
 }

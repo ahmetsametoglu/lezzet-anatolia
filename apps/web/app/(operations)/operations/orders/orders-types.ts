@@ -112,6 +112,12 @@ export type OrderPeek = Pick<
 export interface OrdersData {
   rows: OrderRow[];
   nextCursor: KeysetCursor | null;
+  /**
+   * `?o=` ile seçili siparişin HEDEFLİ okuması — liste sayfalı olduğundan seçili sipariş ilk sayfada
+   * olmayabilir; panel o zaman buradan beslenir. `null` = parametre yok, satır zaten listede ya da
+   * sipariş kapsam dışı/silinmiş.
+   */
+  pinned: OrderRow | null;
   counts: OrderCountsView;
   warehouse: OrdersWarehouseView;
 }
@@ -119,6 +125,8 @@ export interface OrdersData {
 /** orders-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir. */
 export interface OrdersViewProps {
   rows: OrderRow[];
+  /** Seçili satır listede yoksa panelin yedeği (bkz. `OrdersData.pinned`). */
+  pinned: OrderRow | null;
   counts: OrderCountsView;
   warehouse: OrdersWarehouseView;
   urlState: OrdersUrlState;

@@ -91,6 +91,11 @@ export interface ProductsData {
   products: ProductView[];
   /** Sonraki sayfanın imleci; null ise liste bitti. */
   nextCursor: KeysetCursor | null;
+  /**
+   * `?p=` ile seçili ürünün HEDEFLİ okuması — liste sayfalı olduğundan seçili ürün ilk sayfada
+   * olmayabilir; önizleme o zaman buradan beslenir. `null` = parametre yok ya da ürün silinmiş.
+   */
+  pinned: ProductView | null;
   /** Başlık sayaçları — liste sayfalandığı için client türetemez, sunucudan gelir. */
   counts: { total: number; candidate: number; incomplete: number };
   /** Kategori ve koleksiyon TAM gelir: tavanı onlarla sınırlı, açılır menüyü besliyor (STACK §6). */

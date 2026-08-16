@@ -44,7 +44,13 @@ export async function readOrdersPage(
   // baktığından bağımsızdır. Tablo süzgeci yalnız satırları daraltır ve tablo bunu görünür biçimde
   // söyler ("Süzülüyor: …"). İkisi tek nesneyi paylaşsaydı sayı da satırla düşer, ekran "STR'yi
   // süzdüm" derken toplam iş yükünü olduğundan az gösterirdi.
-  const [page, counts, termDays, labels] = await Promise.all([
+  // SEÇİLİ sipariş (`?o=`) HEDEFLİ okunur (16.08): liste keyset sayfalı — paylaşılan bağlantının
+  // siparişi ilk sayfada olmayabilir ve panel o zaman boş davete düşerdi (URL bir kimlik söylerken).
+  // Yalnız İLK sayfada bakılır: devam sayfaları (`cursor`) aynı adresi taşır, her turda yeniden
+  // okumanın karşılığı yok.
+  const selectedId = opts.cursor ? '' : urlState.selected;
+
+  const [page, counts, termDays, labels, selectedOrders] = await Promise.all([
     orderSvc.listPage(
       { ...filters, warehouseIds: warehouse.warehouseIds },
       { cursor: opts.cursor, limit: opts.limit ?? DEFAULT_PAGE_SIZE },
@@ -52,11 +58,22 @@ export async function readOrdersPage(
     orderSvc.counts({ ...filters, warehouseIds: ctx.warehouseIds }),
     new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
     readWarehouseLabels(),
+    selectedId ? orderSvc.listByIds([selectedId]) : Promise.resolve([]),
   ]);
 
-  const orderIds = page.rows.map((o) => o.id);
-  const customerIds = [...new Set(page.rows.map((o) => o.customerId))];
-  const courierIds = [...new Set(page.rows.flatMap((o) => (o.courierId ? [o.courierId] : [])))];
+  // Kapsam BURADA DA sorulur: `listByIds` depo süzgeci görmez — paylaşılan bir bağlantı, personelin
+  // göremeyeceği deponun siparişini panele düşüremez (DOMAIN §17, fail-closed).
+  const pinnedOrder = (() => {
+    const order = selectedOrders[0];
+    if (!order || page.rows.some((row) => row.id === order.id)) return null;
+    if (ctx.warehouseIds && !ctx.warehouseIds.includes(order.warehouseId)) return null;
+    return order;
+  })();
+  const orders = pinnedOrder ? [...page.rows, pinnedOrder] : page.rows;
+
+  const orderIds = orders.map((o) => o.id);
+  const customerIds = [...new Set(orders.map((o) => o.customerId))];
+  const courierIds = [...new Set(orders.flatMap((o) => (o.courierId ? [o.courierId] : [])))];
 
   const [items, customers, couriers] = await Promise.all([
     orderIds.length ? new OrderItemService(db).listByOrders(orderIds) : Promise.resolve([]),
@@ -71,17 +88,22 @@ export async function readOrdersPage(
     else itemsByOrder.set(item.orderId, [item]);
   }
 
+  const allRows = toOrderRows({
+    orders,
+    itemsByOrder,
+    customers: new Map(customers.map((c) => [c.id, c])),
+    courierNames: new Map(couriers.map((c) => [c.id, c.name])),
+    defaultTermDays: termDays,
+    // TEK "şimdi": istek ortasında gün dönerse listenin yarısı "gecikmiş" görünmesin.
+    now: new Date(),
+    warehouseLabels: labels,
+  });
+
   return {
-    rows: toOrderRows({
-      orders: page.rows,
-      itemsByOrder,
-      customers: new Map(customers.map((c) => [c.id, c])),
-      courierNames: new Map(couriers.map((c) => [c.id, c.name])),
-      defaultTermDays: termDays,
-      // TEK "şimdi": istek ortasında gün dönerse listenin yarısı "gecikmiş" görünmesin.
-      now: new Date(),
-      warehouseLabels: labels,
-    }),
+    // Hedefli okunan satır LİSTEYE KARIŞMAZ: sayfa 1'in sonuna iliştirmek sayfalama sırasını bozar;
+    // o yalnız panelin yedeğidir (`pinned`).
+    rows: pinnedOrder ? allRows.filter((row) => row.id !== pinnedOrder.id) : allRows,
+    pinned: pinnedOrder ? (allRows.find((row) => row.id === pinnedOrder.id) ?? null) : null,
     nextCursor: page.nextCursor,
     counts: toCountsView(counts),
     warehouse: {
