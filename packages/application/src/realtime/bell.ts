@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { ticketChannelName } from '@lezzet/types';
 import { BELL_EVENT } from './bell-event';
 
 /*
@@ -92,6 +93,38 @@ export function ticketsChannelName(): string {
 /** Talep tarafında bir şey değişti — kuyruğu izleyen operatör ekranı sunucudan yeniden istesin. */
 export async function ringTicketsBell(): Promise<void> {
   await ringBell(ticketsChannelName());
+}
+
+/**
+ * TEK BİR TALEBİN MÜŞTERİ KANALI (kullanıcı isteği 16.08) — operasyon zilinin ikizi değil, KARŞI
+ * TARAFI.
+ *
+ * `ticketsChannelName()` kuyruğu izleyen OPERATÖR içindir ve adı sunucudaki sırdan türer. Müşteri
+ * bunun tam tersi durumda: tek bir yazışmayı izliyor ve o yazışmanın doğal bir sırrı VAR — talebin
+ * UUID'si. Sipariş zilinin (`orderChannelName`) birebir aynı kalıbı, aynı gerekçeyle: tahmin
+ * edilemez ad, boş yük.
+ *
+ * **Talep başına ayrı kanal burada DOĞRU, operasyonda yanlıştı** — ve bu çelişki değil, iki farklı
+ * soru. Operatör hangi talebe mesaj geleceğini bilmez (hepsine abone olmak gerekirdi); müşteri ise
+ * tam olarak hangi yazışmayı açtığını bilir, yani tek kanal yeter.
+ *
+ * Yük yine BOŞ: kanal adını ele geçiren biri "bu talepte bir hareket oldu"dan fazlasını öğrenemez,
+ * mesajı okumak için yine guard'lı uçtan geçmek zorundadır.
+ */
+// Adın KENDİSİ `@lezzet/types`ta (`realtime.contract`): onu duyan taraflardan biri native uygulama
+// ve o paket bu dosyayı (service-role + `node:crypto`) hiç göremez. Burada yalnız yeniden yayılıyor
+// ki zili çalan taraf da tek kaynaktan okusun.
+export { ticketChannelName };
+
+/**
+ * Bir talepte müşteriyi ilgilendiren bir hareket oldu (personel ya da AI cevabı) — açık duran
+ * müşteri ekranı zili duyup yazışmayı SUNUCUDAN yeniden istesin.
+ *
+ * Operasyon zilinden AYRI çalınır, ikisi birbirinin yerine geçmez: `ringTicketsBell` kuyruğu
+ * izleyen operatörü, bu ise yazışmayı açık tutan müşteriyi uyandırır.
+ */
+export async function ringTicketBell(ticketId: string): Promise<void> {
+  await ringBell(ticketChannelName(ticketId));
 }
 
 /**

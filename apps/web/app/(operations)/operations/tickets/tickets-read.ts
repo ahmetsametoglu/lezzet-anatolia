@@ -21,6 +21,10 @@ import type { TicketFilterKey } from './tickets-url';
  * ikinci sayfadaki satırı "yok" gösterirdi.
  */
 export function toTicketFilter(f: TicketFilterKey): TicketQueueFilter {
+  // "Tümü" (kullanıcı isteği 17.08) — SÜZGEÇSİZ okuma: kapanmışlar dâhil her talep, yine son
+  // mesaja göre sıralı. Öteki çipler bir soruyu daraltıyor, bu çip hiçbirini sormuyor; boş süzgeç
+  // döndürmek de tam olarak bunun karşılığı.
+  if (f === 'all') return {};
   if (f === 'with_order') return { hasOrder: true, openOnly: true };
   // İki AI çipi (16.5): "AI'da" ŞU ANIN sorusu (ai + hibrit — cevabı insan yazmıyor) ve
   // "siparişli" ile aynı gerekçeyle kapanmışları kapsamaz; "AI yanıtladı" ise HİÇ'in sorusu —

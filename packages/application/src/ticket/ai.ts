@@ -14,18 +14,21 @@ import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ringConversationsBell, ringTicketsBell } from '../realtime/bell';
+import { ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
+import { customerSupportTools } from './support-tools';
 import { notifyTicketReplied } from './notify';
 
 /**
  * **AI DESTEK ÇEKİRDEĞİ** (16.5 · 20.4) — hibrit taslak üretimi ve özerk cevap; iki uygulama da
  * (web'in "Taslak öner" düğmesi · backend'in cron'u) BURADAN çağırır, iki kopya doğmaz.
  *
- * ── TİCARİ DEĞER DETERMİNİSTİK OKUNUR, MODELE VERİLİR ───────────────────────
- * Sınıf 4'ün kırmızı çizgisi ("stok/fiyat/durum domain-core'dan") burada araç çağrısıyla değil
- * GİRDİYLE sağlanıyor: talebin cevaplayabileceği her ticari gerçek (sipariş durumu, teslim günü,
- * kalemler) bu dosya tarafından DB'den okunup girdiye yazılır — modelin arayacağı bir şey kalmaz,
- * girdide olmayan sayı da cevapta olamaz (görev künyesi: `ticket-support.ts`).
+ * ── TİCARİ DEĞER İKİ YOLDAN: GİRDİ VE DAR ARAÇ SETİ ─────────────────────────
+ * Sınıf 4'ün kırmızı çizgisi ("stok/fiyat/durum domain-core'dan") iki mekanizmayla korunuyor.
+ * Talebin KENDİ bağlamı (sipariş durumu, teslim günü, kalemler) burada DB'den okunup girdiye
+ * yazılır. Talebin bağlamında olmayan ama müşterinin sorabileceği şeyler (adresine hangi günler
+ * geliniyor, son siparişleri) 16.9'dan beri ARAÇLA cevaplanıyor: `customerSupportTools` müşteri
+ * kimliğine kapatılmış, salt okur bir set döndürür ve `runOpts` onu koşuya geçirir. Araçların
+ * gövdesi yine motorlara dayanır — model hesaplamaz, okur (`support-tools.ts` künyesi).
  *
  * ── ÖNBELLEK KURALI (20.4) ──────────────────────────────────────────────────
  * Taslak satıra yazılır (`ai_draft_reply` + damga). Son mesajdan SONRA üretilmiş bir taslak varsa
@@ -35,6 +38,18 @@ import { notifyTicketReplied } from './notify';
 
 /** Modele giden yazışmanın tavanı — bağlam freni: kırk mesajlık talepte son 12 mesaj yeter. */
 const THREAD_LIMIT = 12;
+
+/**
+ * Koşunun araç ayarı (16.9) — **kimlik burada kapanır.**
+ *
+ * Araçlar müşteri kimliğine kapatılmış hâlde kuruluyor; model onları yalnız çağırabilir, kime ait
+ * olduklarını değiştiremez (`support-tools.ts` künyesi). Enjekte model verildiğinde (test) araç
+ * geçilmiyor: sahte model araç çağırmaz ve geçmek testi ağa açardı.
+ */
+function runOpts(db: SupabaseClient, customerId: string, opts: SupportAiOpts) {
+  if (opts.model) return { model: opts.model };
+  return { tools: customerSupportTools(db, customerId) };
+}
 
 export type SupportAiOutcome =
   | { status: 'generated' }
@@ -118,7 +133,7 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
     if (lastMessageAt && ticket.aiDraftGeneratedAt >= lastMessageAt) return { status: 'cached' };
   }
 
-  const result = await runTask(ticketDraftTask, context, opts.model ? { model: opts.model } : {});
+  const result = await runTask(ticketDraftTask, context, runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   await tickets.update({ id: ticket.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
@@ -161,7 +176,13 @@ export async function generateConversationDraft(
     if (conversation.aiDraftGeneratedAt >= conversation.lastMessageAt) return { status: 'cached' };
   }
 
-  const result = await runTask(ticketDraftTask, context, opts.model ? { model: opts.model } : {});
+  // Kimliği ÇÖZÜLMEMİŞ konuşmada araç verilmez (16.9): tanımadığımız bir numaranın "benim
+  // siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kapalı girdiyle koşar.
+  const result = await runTask(
+    ticketDraftTask,
+    context,
+    conversation.customerId ? runOpts(db, conversation.customerId, opts) : opts.model ? { model: opts.model } : {},
+  );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   await conversations.update({ id: conversation.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
@@ -194,7 +215,7 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   if (!context) return { status: 'skipped', reason: 'empty_thread' };
   if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
 
-  const result = await runTask(ticketAgentTask, context, opts.model ? { model: opts.model } : {});
+  const result = await runTask(ticketAgentTask, context, runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   const reply = result.data.action === 'reply' ? result.data.reply?.trim() : null;
@@ -220,5 +241,7 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   const fresh = (await tickets.getById(ticket.id)) ?? ticket;
   await notifyTicketReplied(db, fresh);
   await ringTicketsBell();
+  // Müşteri de yazışmayı açık tutuyor olabilir — onun kanalı AYRI (künyesi `ringTicketBell`de).
+  await ringTicketBell(ticket.id);
   return { status: 'replied' };
 }

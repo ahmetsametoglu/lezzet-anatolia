@@ -22,7 +22,9 @@ export const TICKETS_PATH = '/operations/tickets';
  *
  * Şerit TEK SEÇİMLİ ve eksenleri karışık (üçü durum, biri sipariş bağı) — çizimin kendi kararı.
  */
-export const TICKET_FILTERS = ['open', 'in_progress', 'resolved', 'with_order', 'ai', 'ai_answered'] as const;
+// "Tümü" BAŞTA ve varsayılan DEĞİL (kullanıcı isteği 17.08): şeridin okunuşu "önce her şey, sonra
+// daraltmalar" olmalı; ama ekran açılınca operatörün işi bekleyen taleplerdir, arşiv değil.
+export const TICKET_FILTERS = ['all', 'open', 'in_progress', 'resolved', 'with_order', 'ai', 'ai_answered'] as const;
 export type TicketFilterKey = (typeof TICKET_FILTERS)[number];
 
 /**
@@ -36,6 +38,7 @@ export type TicketFilterKey = (typeof TICKET_FILTERS)[number];
  */
 export const TICKET_FILTER_LABELS: Record<TicketFilterKey, string> = {
   ...TICKET_STATUS_LABELS,
+  all: 'Tümü',
   with_order: 'Siparişli',
   ai: "AI'da",
   ai_answered: 'AI yanıtladı',

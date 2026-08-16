@@ -120,6 +120,9 @@ export {
   type SupportAiOpts,
   type SupportAiOutcome,
 } from './ticket/ai';
+// Ajanın araç seti (16.9) — dışa veriliyor ki denetlenebilsin: "ajan neye bakabiliyor" sorusunun
+// cevabı tek bir çağrıyla okunur olmalı, prompt metninden çıkarılmamalı.
+export { customerSupportTools } from './ticket/support-tools';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
 // Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden
@@ -129,7 +132,9 @@ export {
   conversationsChannelName,
   ringBell,
   ringConversationsBell,
+  ringTicketBell,
   ringTicketsBell,
+  ticketChannelName,
   ticketsChannelName,
 } from './realtime/bell';
 

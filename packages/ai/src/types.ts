@@ -60,6 +60,14 @@ export interface AiSuccess<T> {
   usage: AiUsage;
   /** Çağrının GERÇEKTEN gittiği model — ölçüm ve maliyet bununla eşleşir. */
   modelId: string;
+  /**
+   * Modelin ÇAĞIRDIĞI araçların adları (16.9), çağrı sırasıyla; araçsız koşuda boş.
+   *
+   * İzlenebilirlik için var (16.5'in "kim/ne yanıtladı" gereği): "AI teslimat günü söyledi" ile
+   * "AI teslimat gününü UYDURDU" arasındaki farkı sonradan yalnız bu liste ayırt ettirir. Paket
+   * loglamaz, ölçümü döndürür — kaydı çağıran tutar.
+   */
+  toolCalls: string[];
 }
 
 export interface AiFailure {
@@ -92,4 +100,12 @@ export interface AiTask<TInput, TOutput> {
    * versin. Metin taslağı gibi işlerde yükselir.
    */
   temperature: number;
+  /**
+   * Araçlı koşuda adım tavanı (16.9) — yalnız `runTask`a araç verilirse anlamlı. Araç çağıran model
+   * kendi kendine döngüye girebilir; tavan bunun faturasını sınırlar. Varsayılan 4.
+   *
+   * Araç listesi BURADA değil çünkü araç göreve değil ÇAĞRIYA aittir: aynı görev bir müşteri için
+   * koşarken onun kimliğine kapatılmış araçlarla gelir (`run.ts` künyesi).
+   */
+  maxSteps?: number;
 }

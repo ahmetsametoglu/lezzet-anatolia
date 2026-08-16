@@ -4,14 +4,20 @@ import type { AiTask } from '../types';
 /**
  * **MÜŞTERİ DESTEĞİ GÖREVLERİ** (16.5 · 20.4) — hibrit taslak (sınıf 1) ve özerk ajan (sınıf 4).
  *
- * ── TİCARİ DEĞER MODELE SORULMAZ, MODELE VERİLİR ────────────────────────────
- * Sınıf 4'ün kırmızı çizgisi "stok/fiyat/durum domain-core'dan" (20 §sınıflar). Burada araç
- * çağırma (function calling) YOK ve bilinçli: talebin cevaplanabilir sorularının bağlamı (sipariş
- * durumu, teslim günü, kalemler, ödeme) uygulama katmanında ZATEN deterministik okunuyor ve girdiye
- * yazılıyor — modelin arayacağı bir şey kalmıyor. Araç kataloğu, modelin NE arayacağını önceden
- * bilemediğimiz gün (WhatsApp satış ajanı 15.8: katalog/stok sorgusu) gerekir ve orada tanımlanır.
- * "Fiziksel engel ilkesi" burada girdinin tipiyle sağlanıyor: girdide olmayan sayı cevapta olamaz —
- * olursa uydurmadır ve prompt bunu açıkça yasaklıyor.
+ * ── TİCARİ DEĞER İKİ YOLDAN GELİR: GİRDİ VE ARAÇ ────────────────────────────
+ * Sınıf 4'ün kırmızı çizgisi "stok/fiyat/durum domain-core'dan" (20 §sınıflar) ve iki mekanizmayla
+ * korunuyor:
+ *  1. **Kapalı girdi** — talebin kendi bağlamı (sipariş durumu, teslim günü, kalemler, ödeme)
+ *     uygulama katmanında deterministik okunup girdiye yazılır. Girdide olmayan sayı cevapta olamaz.
+ *  2. **Dar araç seti** (16.9) — girdiye önceden yazılamayacak sorular için: müşteri "hangi günler
+ *     geliyorsunuz" diye sorabilir ve bunun cevabı talebin bağlamında DEĞİL, adresinin bölgesinde
+ *     durur. Bu bir zayıflama değil kapsam genişlemesi: araçlar salt okur, kimlikleri çağıran
+ *     kapatır, gövdeleri yine domain-core motorlarına dayanır (`ticket/support-tools.ts` künyesi).
+ *
+ * **Fiziksel engel ilkesi araçla birlikte yer değiştirdi ve bunu bilerek yazıyorum:** eskiden
+ * "girdide yok, o hâlde soramaz" idi; artık "yalnız beyaz listedeki araçlar var, kimlik argüman
+ * değil kapanış, adım tavanı sonlu". Modelin uydurmasını ENGELLEYEN şey hâlâ prompt değil, yüzeyin
+ * kendisi.
  *
  * ── İKİ GÖREV NEDEN AYRI ────────────────────────────────────────────────────
  * Taslak operatöre yazar (onaysız hiçbir şey gitmez), ajan MÜŞTERİYE yazar (onay yok). Aynı prompt
@@ -64,7 +70,24 @@ const FACTS = `GERÇEKLİK KURALLARI:
 - Sana verilen bağlamın DIŞINA çıkma. Fiyat, stok, teslimat günü/saati, kampanya, iade tutarı UYDURMA — bağlamda yoksa bilmiyorsun demektir.
 - Sipariş bağlamı "null" ise sipariş hakkında hiçbir cümle kurma.
 - Para sözü verme: iade, indirim, telafi, tazminat KARARI insana aittir. En fazla "konuyu inceliyoruz" diyebilirsin.
-- Tarih/gün bağlamda yazıyorsa aynen kullan; yazmıyorsa "teslimat gününüzü kontrol edip döneceğiz" de.`;
+- Tarih/gün bağlamda yazıyorsa aynen kullan; yazmıyorsa ARAÇLARA bak; araç da bilmiyorsa "teslimat gününüzü kontrol edip döneceğiz" de.`;
+
+/**
+ * Araç kuralları (16.9) — **araç verilmediğinde de zararsız**, çünkü hepsi "araç varsa" diye
+ * kurulu. İki metni ayırmak (araçlı/araçsız iki prompt) aynı kuralların iki kopyası olurdu ve biri
+ * güncellenmeyi unuturdu (CLAUDE §1).
+ *
+ * Kuralların hepsi tek cümleye çıkıyor: **araç GERÇEĞİN kaynağıdır, ilhamın değil.** Model aracı
+ * çağırmadan gün söylerse uydurmuş olur; araç `bilinmiyor` derken gün söylerse aracı ezmiş olur.
+ * İkisi de yasak ve ikisi de ayrı ayrı yazılı — "dikkatli ol" demek bir kural değildir.
+ */
+const TOOLS = `ARAÇLAR:
+- Teslimat günü, rota günü, "ne zaman gelirsiniz" sorularında teslimat_gunleri aracını ÇAĞIR. Tahmin etme.
+- Sipariş durumu, "nerede kaldı", "ne zaman gelecek" sorularında siparislerim aracını ÇAĞIR.
+- Araçların döndürdüğü gün, tarih ve numaraları AYNEN kullan; üzerine ekleme yapma.
+- Araç "bilinmiyor" dönerse o bilgiyi BİLMİYORSUN: gün/tarih söyleme, "kontrol edip döneceğiz" de.
+- Araçlarda OLMAYAN hiçbir şeyi uydurma: saat aralığı, kurye adı, rota sırası, kapasite bilgimiz YOK.
+- Araçlar yalnız okur. Sipariş gününü değiştirmek, rotaya eklemek gibi bir işlem YAPAMAZSIN ve söz veremezsin.`;
 
 const DRAFT_SYSTEM = `${IDENTITY}
 
@@ -72,6 +95,8 @@ Görevin: operatörün önüne konacak bir CEVAP TASLAĞI yazmak. Taslak onaylan
 
 ${FACTS}
 - Cevaplamak için eksik bilgi varsa taslağı "bilgiyi kontrol edip döneceğiz" ekseninde kur ya da müşteriye netleştirme sorusu sor — boşluk uydurma.
+
+${TOOLS}
 
 ${STYLE}`;
 
@@ -91,6 +116,8 @@ handoffReason: operatörün okuyacağı TEK cümle, Türkçe ("Müşteri iade is
 CEVAP VERİRSEN (action="reply"):
 ${FACTS}
 
+${TOOLS}
+
 ${STYLE}`;
 
 /**
@@ -106,6 +133,9 @@ export const ticketDraftTask: AiTask<SupportContextInput, TicketDraftReply> = {
   // Taslak bir METİN işi: 0 her müşteriye aynı kalıbı yazar, yüksek değer her üretimde başka
   // konuşurdu. 0.4 "aynı bilgiyi farklı cümleyle" aralığı.
   temperature: 0.4,
+  // Araçlı koşuda tavan (16.9): iki araç var, ikisini de çağırıp cevabı yazması için 4 adım yeter.
+  // Tavan olmasaydı aynı aracı döngüyle çağıran bir model faturayı sessizce büyütürdü.
+  maxSteps: 4,
   buildPrompt: buildSupportPrompt,
 };
 
@@ -120,6 +150,7 @@ export const ticketAgentTask: AiTask<SupportContextInput, TicketAgentDecision> =
   system: AGENT_SYSTEM,
   // Taslaktan DÜŞÜK: onaysız giden metinde tutarlılık yaratıcılıktan değerli.
   temperature: 0.2,
+  maxSteps: 4,
   buildPrompt: buildSupportPrompt,
 };
 

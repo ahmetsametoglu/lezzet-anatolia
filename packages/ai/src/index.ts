@@ -26,3 +26,20 @@ export {
 } from './tasks/ticket-support';
 export { bankColumnsTask, type BankColumnsInput } from './tasks/bank-columns';
 export { b2bSummaryTask, type B2bSummaryInput } from './tasks/b2b-summary';
+
+/**
+ * Araç ilkelinin TEK kapısı (16.9) — `ai` SDK'sından geçiriliyor.
+ *
+ * Araçları tanımlayan taraf uygulama katmanıdır (gövde veritabanına bakar, bu paket bakamaz), ama
+ * SDK'ya doğrudan bağlanması gerekmesin diye ilkel buradan çıkıyor: sağlayıcı katmanı değişirse
+ * araç yazan hiçbir dosya elleşmez. `runTask(…, { tools })` bunları bekliyor.
+ */
+export { tool, type ToolSet } from 'ai';
+
+/**
+ * Şema ilkeli de buradan (16.9) — **teknik bir zorunluluk, kolaylık değil.**
+ *
+ * Aracın `inputSchema`'sını SDK doğruluyor; şema başka bir zod KOPYASINDAN gelirse örnek kontrolleri
+ * sessizce tutmaz ve araç hiç çağrılmaz. Tek örnek garantisi ancak tek kapıdan geçmekle sağlanır.
+ */
+export { z } from 'zod';
