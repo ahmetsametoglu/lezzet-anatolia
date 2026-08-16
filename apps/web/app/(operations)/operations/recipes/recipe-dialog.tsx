@@ -115,10 +115,12 @@ export function RecipeDialog({ recipe, onClose }: RecipeDialogProps) {
   return (
     // Genişlik İKİ SÜTUN için (16.08, kullanıcı kararı): içerik solda, malzemeler sağda — varsayılan
     // 640'ta iki göz yan yana sığmıyordu ve malzeme listesi metinlerin altında kayboluyordu.
+    // 980 → 1140 (ikinci tur, aynı gün): sütunlar dar kalmıştı, özellikle malzeme seçicisi uzun
+    // ürün adlarını kırpıyordu.
     <Dialog
       open
       onClose={onClose}
-      maxWidth={980}
+      maxWidth={1140}
       title={recipe ? 'Tarifi düzenle' : 'Yeni tarif'}
       subtitle={recipe ? recipe.title : RECIPE_NOTES.newSubtitle}
       footer={footer}
