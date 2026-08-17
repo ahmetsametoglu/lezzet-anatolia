@@ -20,6 +20,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastInfo, toastSuccess } from '@/lib/toast/toast-store';
@@ -357,7 +358,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
 
         {/* ── Künye: kategori · ad · birim satırı · çipler · aile · boylar · açıklama ── */}
         <View style={styles.head}>
-          {detail.category === null ? null : <Text style={styles.eyebrow}>{detail.category.name.toLocaleUpperCase('tr-TR')}</Text>}
+          {detail.category === null ? null : <Text style={styles.eyebrow}>{upperIn(detail.category.name, locale)}</Text>}
           <Text style={styles.title} accessibilityRole="header">
             {detail.name}
           </Text>
@@ -376,7 +377,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
 
           {detail.family.length === 0 || detail.category === null ? null : (
             <View style={styles.familyBlock}>
-              <Text style={styles.familyEyebrow}>{fill(t.family.browse, 'name', detail.category.name.toLocaleUpperCase('tr-TR'))}</Text>
+              <Text style={styles.familyEyebrow}>{fill(t.family.browse, 'name', upperIn(detail.category.name, locale))}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}

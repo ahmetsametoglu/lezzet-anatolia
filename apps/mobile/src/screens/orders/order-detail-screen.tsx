@@ -14,6 +14,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import type { OrderDetail } from '@/lib/api/orders';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { DeliveryMap } from './delivery-map';
@@ -240,7 +241,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
         )}
 
         <View style={styles.items}>
-          <Text style={styles.eyebrow}>{t.detail.itemsEyebrow.toLocaleUpperCase('tr-TR')}</Text>
+          <Text style={styles.eyebrow}>{upperIn(t.detail.itemsEyebrow, locale)}</Text>
           {detail.lines.map((line) => (
             <View key={line.id} style={styles.itemBlock} testID={`order-line-${line.id}`}>
               <View style={styles.itemRow}>

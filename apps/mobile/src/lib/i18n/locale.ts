@@ -51,3 +51,31 @@ export function deviceLocale(): Locale {
   resolved ??= resolveLocale(getLocales().map((locale) => locale.languageTag));
   return resolved;
 }
+
+/**
+ * **Metni DİLİN KENDİ kuralıyla büyütür** (MB-71 · 17.08).
+ *
+ * ── NEDEN BİR FONKSİYON, DOĞRUDAN ÇAĞRI DEĞİL ───────────────────────────────
+ * Büyük harfe çevirme dile bağlıdır ve iki yönde de yanlış olabilir:
+ *   · Yerel VERİLMEZSE Türkçe bozulur — `İstanbul` → `ISTANBUL` (noktasız I).
+ *   · Yerel SABİT `tr-TR` yazılırsa öteki diller bozulur — `Mein Konto` → `MEİN KONTO`,
+ *     `Collections` → `COLLECTİONS`.
+ *
+ * İkincisi cihazda ölçüldü (17.08, Almanca ve Fransızca turlar): kural iki dosyada doğru
+ * uygulanmıştı (`place-notice-band` künyesi onu açıkça anlatıyor) ama **17 çağrı yereli sabit
+ * yazmıştı**. Yani kuralın bilgi olarak var olması yetmedi; adı olmadığı için sessizce kaçırıldı.
+ * Fonksiyon o adı veriyor: çağıran artık "hangi yerel" sorusuyla karşılaşıyor ve cevabı elinde
+ * (`useAppLocale()`).
+ *
+ * Ekran metinleri kadar SUNUCUDAN gelen adlar için de geçerli (kategori, koleksiyon): onlar da
+ * müşterinin dilinde geliyor, dolayısıyla aynı dilin kuralıyla büyütülmeli.
+ *
+ * ── METİN İÇİN, KİMLİK İÇİN DEĞİL ───────────────────────────────────────────
+ * Yalnız OKUNAN metinlerde kullanılır. Kupon kodu, referans numarası gibi **kimlikler** dilin harf
+ * kuralına tabi DEĞİLDİR ve düz `toUpperCase()` ile büyütülür: Türkçe kuralıyla `i → İ` olsaydı
+ * sunucudaki kod bulunamazdı (`cart-screen`in kupon künyesi bu gerekçeyi taşıyor). Ayrım basit —
+ * insan okuyorsa dil kuralı, makine eşleştiriyorsa dilsiz.
+ */
+export function upperIn(text: string, locale: Locale): string {
+  return text.toLocaleUpperCase(locale);
+}

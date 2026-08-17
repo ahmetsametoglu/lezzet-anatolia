@@ -12,6 +12,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import messages from './messages.json';
 import { groupPointsHistory, type PointsHistoryGroup } from './points-history-group';
@@ -81,7 +82,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
       <View style={styles.backRow}>
         <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="points-history-back" />
       </View>
-      <Text style={styles.eyebrow}>{t.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+      <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
       </Text>

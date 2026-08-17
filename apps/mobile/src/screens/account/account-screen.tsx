@@ -25,6 +25,7 @@ import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib
 import { hapticCommit, hapticError } from '@/lib/haptics/haptics';
 import { toastSuccess } from '@/lib/toast/toast-store';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
@@ -396,7 +397,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
 
         {data.company === null ? null : (
           <View style={styles.companyCard} testID="account-company">
-            <Text style={styles.companyEyebrow}>{t.company.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+            <Text style={styles.companyEyebrow}>{upperIn(t.company.eyebrow, locale)}</Text>
             <Text style={styles.companyName}>{data.company.name}</Text>
             <Text style={styles.companyMeta}>
               {t.company.identifiers.replace('{siret}', data.company.siret).replace('{vat}', data.company.vatNumber)}

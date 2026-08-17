@@ -17,6 +17,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
@@ -298,7 +299,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
       {catalog.activeCollection === null ? null : (
         <View style={styles.collectionBand} testID="catalog-collection-band">
           <View style={styles.collectionText}>
-            <Text style={styles.collectionEyebrow}>{t.collection.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+            <Text style={styles.collectionEyebrow}>{upperIn(t.collection.eyebrow, locale)}</Text>
             <Text style={styles.collectionName} numberOfLines={1}>
               {catalog.activeCollection.name}
             </Text>

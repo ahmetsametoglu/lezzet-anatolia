@@ -10,6 +10,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 // Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
@@ -221,10 +222,12 @@ export function PlaceNoticeBand({
   };
 
   /* HAPIN ETİKETİ: kod + ŞEHİR, vitrin başlığındaki biçimin aynısı (`{postal} {ŞEHİR} ▾`). Şehir
-     BÜYÜK HARFE dilin kendi kuralıyla çevrilir (`toLocaleUpperCase(locale)`) — Türkçenin i/İ ayrımı
-     `toUpperCase()` ile bozulur ve vitrin başlığı da bunu böyle yapıyor. Ad yoksa yalnız kod kalır. */
+     BÜYÜK HARFE dilin kendi kuralıyla çevrilir (`upperIn`) — Türkçenin i/İ ayrımı `toUpperCase()`
+     ile bozulur ve vitrin başlığı da bunu böyle yapıyor. Ad yoksa yalnız kod kalır.
+     *(Kural 17.08'de `lib/i18n/locale`a taşındı: burada ve vitrinde doğru uygulanıyordu ama 17
+     çağrı yereli SABİT `tr-TR` yazmıştı ve öteki iki dilde `MEİN KONTO` üretiyordu — MB-71.)* */
   const postalLabel =
-    placeName === undefined || placeName === null ? postalCode : `${postalCode} ${placeName.toLocaleUpperCase(locale)}`;
+    placeName === undefined || placeName === null ? postalCode : `${postalCode} ${upperIn(placeName, locale)}`;
 
   /* SÜZGEÇ EN ALTTA (kullanıcı kararı 11.08): kutunun içindeki sıra bilginin sırasıdır — önce
      "aracımız gelmiyor" (başlık + cümle), sonra yerle ilgili iki eylem, EN SONDA listeyi daraltan

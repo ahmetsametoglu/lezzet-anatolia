@@ -3,6 +3,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 
 /*
@@ -44,6 +46,10 @@ const TONES = ['olive', 'sand', 'terracotta'] as const;
 
 export function CollectionBand({ name, subtitle, countLabel, index, photoUri, onPress, testID, photoInOverlay = false }: CollectionBandProps) {
   const { theme } = useUnistyles();
+  /* Koleksiyon adı SUNUCUDAN müşterinin dilinde geliyor; büyütmesi de o dilin kuralıyla yapılmalı
+     (MB-71). Bant `locale` prop'u almıyor ve almamalı — çağıranların hepsi aynı tek kaynağı
+     okuyor (`useAppLocale`), prop'a çevirmek o kaynağı ikinci bir yoldan taşımak olurdu. */
+  const locale = useAppLocale();
   const tone = TONES[index % TONES.length] as (typeof TONES)[number];
   const mirrored = index % 2 === 1;
 
@@ -60,7 +66,7 @@ export function CollectionBand({ name, subtitle, countLabel, index, photoUri, on
           style={[styles.eyebrow, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}
           numberOfLines={1}
         >
-          {name.toLocaleUpperCase('tr-TR')}
+          {upperIn(name, locale)}
         </Text>
         {/*
           SATIR SINIRI, YÜKSEKLİK SERBESTLİĞİ DEĞİL (MB-25, 14.08 — kullanıcı bulgusu 11.08).

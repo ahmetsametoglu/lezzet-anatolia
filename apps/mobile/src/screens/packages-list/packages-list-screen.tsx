@@ -13,6 +13,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
@@ -90,7 +91,7 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
      listede de kullanıcı hangi sayfada olduğunu görür. */
   const header = (
     <View style={styles.header}>
-      <Text style={styles.eyebrow}>{t.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+      <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
       </Text>

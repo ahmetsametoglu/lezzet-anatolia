@@ -13,6 +13,7 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
@@ -138,7 +139,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const savedPlace = usePlaceResolution(postalCode ?? '');
   const savedPlaceName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
   const postalLabel =
-    postalCode === null ? null : savedPlaceName === null ? postalCode : `${postalCode} ${savedPlaceName.toLocaleUpperCase(locale)}`;
+    postalCode === null ? null : savedPlaceName === null ? postalCode : `${postalCode} ${upperIn(savedPlaceName, locale)}`;
 
   /* Vitrin okuması YERE bağlı: posta kodu `useHome`a geçer, sunucu depoyu çözer ve fırsat şeridi
      ancak öyle dolar (ölçüldü 09.08 — kodsuz 0, 67000 ile 2). Çağrı bu yüzden posta kodunun
@@ -428,7 +429,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 
         {bands.length === 0 ? null : (
           <View style={styles.collections}>
-            <Text style={[styles.sectionEyebrow, styles.collectionsEyebrow]}>{t.collections.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+            <Text style={[styles.sectionEyebrow, styles.collectionsEyebrow]}>{upperIn(t.collections.eyebrow, locale)}</Text>
             {/* Daireler bantların İÇİNDE değil, yığının ÜSTÜNDE (aşağıdaki katman): v3'te daire
                 komşu bantlara taşar; RN'de kardeş sırası z-sırası olduğundan bunu ancak sonradan
                 çizilen bir üst katman verebilir (kullanıcı bulgusu 08.08). */}
@@ -564,7 +565,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                 testID="home-recipes-all"
               >
                 <View style={styles.recipesMoreTop}>
-                  <Text style={styles.recipesMoreEyebrow}>{t.recipes.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+                  <Text style={styles.recipesMoreEyebrow}>{upperIn(t.recipes.eyebrow, locale)}</Text>
                   <Text style={styles.recipesMoreTitle}>{t.recipes.moreTitle}</Text>
                 </View>
                 <View style={styles.recipesMoreAction}>
@@ -581,7 +582,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {packages.length === 0 ? null : (
           <>
         <View style={styles.sectionPad}>
-          <Text style={styles.sectionEyebrow}>{t.packages.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+          <Text style={styles.sectionEyebrow}>{upperIn(t.packages.eyebrow, locale)}</Text>
         </View>
         <View style={styles.packages}>
           {packages.map((pack) => {

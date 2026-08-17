@@ -20,6 +20,7 @@ import type { MeAddress } from '@/lib/api/addresses';
 import { placeCheckoutOrder } from '@/lib/api/checkout';
 import { updateMe, type Me } from '@/lib/api/me';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine } from '@/screens/customer-kit/address-format';
@@ -644,7 +645,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                 bölüm hiç çizilmez — ikinci siparişte müşteri bunu bir daha görmez. */}
             {contactMissing ? (
               <View style={styles.section} testID="checkout-contact">
-                <Text style={styles.eyebrow}>{t.contact.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+                <Text style={styles.eyebrow}>{upperIn(t.contact.eyebrow, locale)}</Text>
                 <Text style={styles.contactReason}>{t.contact.reason}</Text>
                 {nameMissing ? (
                   <TextField
@@ -688,7 +689,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             ) : null}
 
             <View style={styles.section}>
-              <Text style={styles.eyebrow}>{t.address.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+              <Text style={styles.eyebrow}>{upperIn(t.address.eyebrow, locale)}</Text>
               {/* HİÇ ADRES YOKSA burası bir DAVETTİR, bir uyarı değil (10.08): eskiden kuru bir
                   not ve profil sayfasına atan bir bağlantı vardı — müşteri siparişin ortasında
                   başka bir ekrana düşüyordu. Kutu misafir bloğunun kalıbı (`DashedInvite`),
@@ -739,7 +740,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
             {delivery === null ? null : (
               <View style={styles.section}>
-                <Text style={styles.eyebrow}>{t.delivery.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+                <Text style={styles.eyebrow}>{upperIn(t.delivery.eyebrow, locale)}</Text>
                 <OptionRow
                   label={t.delivery.door}
                   description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : t.delivery.doorUnavailable}
@@ -807,7 +808,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
             {payment === null ? null : (
               <View style={styles.section}>
-                <Text style={styles.eyebrow}>{t.payment.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+                <Text style={styles.eyebrow}>{upperIn(t.payment.eyebrow, locale)}</Text>
                 {paymentOptions.map((option) => (
                   <OptionRow
                     key={option.key}
@@ -840,7 +841,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         ) : null}
 
         <SummaryPanel
-          eyebrow={t.summary.eyebrow.toLocaleUpperCase('tr-TR')}
+          eyebrow={upperIn(t.summary.eyebrow, locale)}
           rows={summaryRows}
           totalLabel={t.summary.total}
           totalValue={formatPrice(grandTotalCents, locale)}

@@ -1173,8 +1173,16 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   düzeltilen *"durum İKİ kez yazılıyordu"* kusurunun aynısı — alt çubuk sabit olduğu için asıl
   aday karttaki kopyayı kaldırmak.
 
-- [ ] **MB-71 · Başlık üstü etiketler SABİT Türkçe yerelle büyütülüyor — Fransızca ve Almanca'da
-  noktalı `İ` çıkıyor.** Ölçüldü (17.08, cihazda üç dilde): `toLocaleUpperCase('tr-TR')` yereli
+- [x] **MB-71 · Başlık üstü etiketler SABİT Türkçe yerelle büyütülüyor — Fransızca ve Almanca'da
+  noktalı `İ` çıkıyor.** → **KAPANDI (17.08), görev `(21.74)`.** Kural `lib/i18n/locale`a taşındı
+  (`upperIn(text, locale)`) ve **19 çağrının hepsi** oradan geçiyor; depoda sabit yerel kalmadı.
+  **Cihazda iki yönde doğrulandı:** Almanca `KOLLEKTIONEN` · `MEIN KONTO` (noktasız `I`) ve Türkçe
+  `KOLEKSİYONLAR` (noktalı `İ`) · `FIRIN` (noktasız `I`). Yani öteki diller düzelirken Türkçenin
+  kendi kuralı bozulmadı — asıl risk buydu.
+  **Bir istisna bilerek dışarıda:** kupon kodu düz `toUpperCase()` ile büyütülüyor
+  (`cart-screen`), çünkü kod bir KİMLİKTİR — Türkçe kuralıyla `i → İ` olsaydı sunucudaki kod
+  bulunamazdı. Ayrım yardımcının künyesine yazıldı: *insan okuyorsa dil kuralı, makine
+  eşleştiriyorsa dilsiz.* Ölçüldü (17.08, cihazda üç dilde): `toLocaleUpperCase('tr-TR')` yereli
   koda gömülü ve **17 dosyada** aynı desen var (vitrin · katalog · ürün detayı · kasa · siparişler
   · paketler · hesap · puan geçmişi …). Türkçe'de doğru (`i → İ`), ama öteki iki dilde yanlış:
   ekranda görülenler **`MEİN KONTO`** (de — olması gereken `MEIN KONTO`) ve **`COLLECTİONS`**

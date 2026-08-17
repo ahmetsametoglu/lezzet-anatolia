@@ -15,6 +15,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import type { OrderSummary } from '@/lib/api/orders';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { formatOrderDate } from './order-format';
 import messages from './messages.json';
@@ -76,7 +77,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
       <View style={styles.backRow}>
         <BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="orders-back" />
       </View>
-      <Text style={styles.eyebrow}>{t.eyebrow.toLocaleUpperCase('tr-TR')}</Text>
+      <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
       </Text>

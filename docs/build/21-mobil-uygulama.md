@@ -3616,6 +3616,29 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   koşu bitip yığın sakinleşince aynı düğme çalıştı. `(21.71)`de kanıtlanan desen artık tekrar
   üretilebilir — **yığın test koşarken cihazda giriş yapılamıyor.**
 
+- [x] (21.74) **BÜYÜK HARF DİLİN KURALIYLA — 17 ekran sabit Türkçe yerelle büyütüyordu (17.08)**
+  → MB-71 kapandı. `touches: apps/mobile/src/lib/i18n/locale.ts,
+  apps/mobile/src/screens/{home,catalog,product,checkout,orders,packages-list,account,points-history,customer-kit}/*`
+
+  **Bulgu cihazdan geldi:** `(21.73)`ün Almanca doğrulama turunda başlıkta **`MEİN KONTO`** görüldü.
+  Desen aranınca tek ekranın kusuru olmadığı çıktı — `toLocaleUpperCase('tr-TR')` **17 çağrıda**
+  sabit yazılmıştı ve vitrinde de görünüyordu (`COLLECTİONS`).
+
+  **Türkçe yerelin oraya konması BİLİNÇLİYDİ ve gerekçesi geçerli:** varsayılan büyütme Türkçe `i`yi
+  noktasız `I` yapar, yani `İstanbul → ISTANBUL`. Eksik olan yerelin sabit yazılmasıydı; ekranların
+  hepsi zaten `useAppLocale()` ile dilini biliyor. **Kural ZATEN iki yerde doğru uygulanmıştı**
+  (`place-notice-band` künyesi onu açıkça anlatıyor) — yani kural bilgi olarak vardı ama **adı
+  olmadığı için** 17 kez kaçırılmıştı. Düzeltme o adı verdi: `upperIn(text, locale)`
+  (`lib/i18n/locale.ts`), 19 çağrının hepsi oradan geçiyor, depoda sabit yerel kalmadı.
+
+  **Bir istisna bilerek dışarıda:** kupon kodu düz `toUpperCase()` kullanıyor (`cart-screen`) —
+  kod bir KİMLİKTİR ve Türkçe kuralıyla `i → İ` olsaydı sunucudaki kod bulunamazdı. Ayrım
+  yardımcının künyesinde: *insan okuyorsa dil kuralı, makine eşleştiriyorsa dilsiz.*
+
+  **Doğrulama:** `tsc` · `lint` temiz · **1374 birim testi**. Cihazda İKİ YÖNDE ölçüldü — Almanca
+  `KOLLEKTIONEN` · `MEIN KONTO` (noktasız `I`), Türkçe `KOLEKSİYONLAR` (noktalı `İ`) · `FIRIN`
+  (noktasız `I`). Asıl risk öteki dilleri düzeltirken Türkçeyi bozmaktı; bozulmadı.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
