@@ -51,6 +51,18 @@ alter table public.settings enable row level security;
 insert into public.settings (key, value, description) values
   ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk). Stripe oturum asgarisi 30 dk — altına inilemez; ödeme penceresi buna eşitlenir.'),
   ('order_cutoff_time',            '"16:00"','Sipariş kesim saati. Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır.'),
+  -- ── GÜNÜN EŞİK SAATLERİ (09.3 paneli, kullanıcı onayı 17.08) ────────────────
+  -- Panelin "gün akışı" şeridi bu üç satırı okur; üstteki uyarı şeridi de günün EN YAKIN eşiğini
+  -- bunlardan seçer. Saatler koda gömülmedi çünkü depo bazlı olmaya en açık değerler bunlar
+  -- (yukarıdaki kapsam notu: *"depo bazlı olmaya aday: kesim saati"*) — Colmar'ın hazırlık kapanışı
+  -- ile Kehl'inki aynı olmak zorunda değil, ve gün akışı yanlış saati gösterirse şerit yanlış işe
+  -- yönlendirir. Global satır varsayılandır, özgül kapsam admin ekranından eklenir.
+  --
+  -- **Panelin beşinci eşiği YOK ve bilinçli:** tasarımda "gün sonu mutabakat 20:00" vardı, budandı
+  -- (`design/KARARLAR.md` › Panel 17.08) — o para ekranının işidir, panelde karar tetiklemiyordu.
+  ('prep_cutoff_time',             '"11:00"','Depo hazırlık kapanışı. Bu saate kadar hazırlanmayan sipariş rotaya yetişmez (panel gün akışı).'),
+  ('route_departure_time',         '"14:00"','Rota çıkış saati — kuryenin yola çıkması beklenen an (panel gün akışı).'),
+  ('courier_close_time',           '"18:00"','Kurye kapanışı — kasanın teslim alınması beklenen an (panel gün akışı).'),
   -- KAPIYA TESLİM tabanı (kullanıcı kararı 10.08). Kargo siparişinde OKUNMAZ — orada yalnız kanal
   -- satırı (toptan ticari şartı) geçerlidir; kuralın kendisi `application/cart/min-basket.ts`te.
   -- Küresel satıra yazılabilmesinin sebebi o kural: kargoya sızma yolu kapalı olduğu için taban

@@ -25,6 +25,8 @@ import {
 import { agoShort, money, num } from '@/components/operation/ui/format';
 import { placesLabel } from '@/components/operation/ui/labels';
 import { PostalCodePicker } from './postal-code-picker';
+import { RouteHours } from './route-hours';
+import type { DayHourKey } from '@/lib/settings/day-hours';
 import { distanceKm } from './routes-suggest';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RouteView, RoutesData } from './routes-read';
@@ -60,6 +62,8 @@ interface RoutesViewProps {
     weekdays: number[];
     isActive: boolean;
     codes: RouteView['postalCodes'];
+    /** Rotaya özel eşik saatleri; `null` = genele döndürülecek (`routes-client.Draft` künyesi). */
+    hours: Partial<Record<DayHourKey, string | null>>;
   } | null;
   onSelect: (routeId: string | null) => void;
   onDraft: (patch: Partial<NonNullable<RoutesViewProps['draft']>>) => void;
@@ -270,13 +274,21 @@ export function RoutesDesktop(props: RoutesViewProps) {
           />
         </div>
 
-        {/* `z-[500]` lejantla aynı kat: Leaflet'in kendi katmanları 400'de biter, işaretçiler 600'e
-            çıkar — 500 ikisinin arasıdır, yani ray çizime binmez ama nokta tıklamasını da yutmaz.
+        {/* **`z-[500]` KALDIRILDI → `z-10` (17.08, ölçülmüş arıza).** Eski gerekçe şuydu: *"Leaflet'in
+            kendi katmanları 400'de biter, işaretçiler 600'e çıkar — 500 ikisinin arasıdır."* O gerekçe
+            `ZoneMap`'e `isolation: isolate` gelene kadar doğruydu; artık haritanın bütün iç sayıları
+            kendi kutusunda hapis (`zone-map-leaflet` künyesi: *"yarışı kazanmak değil, yarışı
+            bitirmek"*). Ray, DOM'da haritadan SONRA gelen konumlanmış bir kardeş — üstünde durması
+            için yüksek bir sayıya ihtiyacı yok.
+            Sayı ÖNEMLİ çünkü ray artık kendi içinde açılır menü barındırıyor: `AnchoredMenu` body'ye
+            portal edilip `z-[60]` ile çiziliyor, yani 500 taşıyan bir rayın İÇİNDEN açılan menü rayın
+            ALTINDA kalıyordu. Rota saatleri çubuğu (`route-hours`) böyle görünmez çıktı — DOM'da
+            vardı, ölçüsü doğruydu, hiç boyanmıyordu. Aynı arıza rota seçicisinde de vardı.
             Açıkken boy tavana dayanır ve içerik kendi içinde kayar; kapalıyken o sınıf düşer, panel
             başlığı kadar kalır. Alt boşluk `bottom-8` — 3 değil: sağ altta OSM atıf yazısı duruyor
             ve lisans gereği görünür kalmak zorunda, panel oraya kadar inseydi üstünü örterdi. */}
         <aside
-          className={`absolute right-3 top-3 z-[500] flex w-[320px] flex-col rounded-ops-card border border-ops-line bg-ops-card/95 shadow-[0_8px_24px_rgba(20,22,18,0.12)] backdrop-blur-sm ${
+          className={`absolute right-3 top-3 z-10 flex w-[320px] flex-col rounded-ops-card border border-ops-line bg-ops-card/95 shadow-[0_8px_24px_rgba(20,22,18,0.12)] backdrop-blur-sm ${
             railOpen ? 'bottom-8 overflow-y-auto' : 'overflow-hidden'
           }`}
         >
@@ -376,6 +388,15 @@ export function RoutesDesktop(props: RoutesViewProps) {
                 })}
               </div>
             </FieldShell>
+
+            {/* **Saatler günlerin HEMEN ardında** ve kodlardan önce: ikisi de "bu rota ne zaman
+                çalışıyor" sorusunun parçası — hangi günler, o gün hangi saatlerde. Kod kümesi ise
+                "nereye" sorusu ve haritayla birlikte okunuyor. Araya girmek iki soruyu böler. */}
+            <RouteHours
+              exceptions={draft.hours}
+              global={data.globalHours}
+              onChange={(key, time) => props.onDraft({ hours: { ...draft.hours, [key]: time } })}
+            />
 
             <FieldShell label="Posta kodları" labelAside={`${draft.codes.length} kod`}>
               {/* Seçici ARAMAYLA ekler, harita TIKLAYARAK — ikisi aynı listeyi besliyor. Seçiciyi

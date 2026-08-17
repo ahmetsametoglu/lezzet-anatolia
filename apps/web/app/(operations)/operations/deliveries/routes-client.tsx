@@ -15,6 +15,7 @@ import { ROUTE_NOTES } from './deliveries-labels';
 import type { RoutesData, RouteView } from './routes-read';
 import type { ZoneHandoff } from './routes-handoff';
 import type { PostalCodePick } from './routes-types';
+import { DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import type { Country } from '@lezzet/types';
 
 /**
@@ -22,6 +23,35 @@ import type { Country } from '@lezzet/types';
  * okunabilecek kadar kısa olmalı; haritanın kendi ipucu tam listeyi zaten veriyor.
  */
 const HINT_MAX_PLACES = 2;
+
+/**
+ * Kaydedilecek saat farkı — **değişmeyen istisna yeniden yazılmaz.**
+ *
+ * Taslak açılışta var olan istisnalarla dolduğu için, hiçbir saate dokunmadan "Kaydet"e basmak
+ * dördünü de aynı değerle yeniden yazardı. Sonuç bir hata değil ama iz yanlışlaşır: `updated_at` ve
+ * `updated_by` oynar, yani "bu saati kim ne zaman değiştirdi" sorusu artık rotayı kaydeden son kişiyi
+ * gösterir — değiştiren kişiyi değil.
+ *
+ * `null` yalnız GERÇEKTEN bir istisna varsa gönderilir: olmayan bir satırı silmeye çalışmak boşa bir
+ * okuma turudur.
+ */
+function hoursPatch(
+  draft: Partial<Record<DayHourKey, string | null>>,
+  saved: Partial<Record<DayHourKey, string>>,
+): Record<string, string | null> {
+  const patch: Record<string, string | null> = {};
+  for (const key of DAY_HOUR_KEYS) {
+    const next = draft[key];
+    const before = saved[key];
+    if (next === undefined) continue;
+    if (next === null) {
+      if (before !== undefined) patch[key] = null;
+      continue;
+    }
+    if (next !== before) patch[key] = next;
+  }
+  return patch;
+}
 
 interface Draft {
   name: string;
@@ -42,6 +72,15 @@ interface Draft {
   weekdays: number[];
   isActive: boolean;
   codes: PostalCodePick[];
+  /**
+   * Rotaya özel eşik saatleri — **üç hâl taşıyor** (17.08).
+   *
+   * Anahtar YOK = bu eşiğe dokunulmadı (veride ne varsa kalır) · `string` = bu saat yazılacak ·
+   * `null` = istisna kaldırılacak, eşik genel değeri okuyacak. Üçüncü hâl olmasaydı "genele dön"
+   * anahtarı taslaktan silmek olurdu ve silinen anahtar kaydetmede hiç gitmediği için veritabanındaki
+   * satır sessizce yaşamaya devam ederdi — operatör geri aldığını sanır, sistem eski saati uygular.
+   */
+  hours: Partial<Record<DayHourKey, string | null>>;
 }
 
 /**
@@ -100,6 +139,9 @@ export function RoutesClient({
           weekdays: selected.weekdays,
           isActive: selected.isActive,
           codes: selected.postalCodes,
+          // Yalnız VAR OLAN istisnalar; genel değeri okuyan eşikler burada yok ve olmamalı
+          // (`routes-read.exceptionsOf` künyesi).
+          hours: { ...selected.hours },
         }
       : {
           name: handoff?.zoneName ?? '',
@@ -113,6 +155,9 @@ export function RoutesClient({
           weekdays: [],
           isActive: true,
           codes: [] as PostalCodePick[],
+          // Yeni rota genel saatlerle doğar: dördünü de istisna olarak yazmak, operatörün vermediği
+          // bir kararı veriye geçirmek olurdu.
+          hours: {} as Partial<Record<DayHourKey, string | null>>,
         };
     if (!handoff) return base;
     const have = new Set(base.codes.map((code) => `${code.country}:${code.postalCode}`));
@@ -203,6 +248,7 @@ export function RoutesClient({
         weekdays: draft.weekdays,
         isActive: draft.isActive,
         postalCodes: draft.codes,
+        hours: hoursPatch(draft.hours, selected?.hours ?? {}),
         // Öneriden gelindiyse kuyruk satırı bu kayıtla birlikte kapanır (`withProposal`). Elle
         // kurulumda alan hiç gitmez ve akış değişmez.
         proposalId: handoff?.proposalId,

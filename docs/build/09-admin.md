@@ -68,8 +68,50 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     **Kalan denetim maddeleri** (dalga 2-3, sıraya alındı): O8 biçimlendirme sızıntıları · O5 `Segmented`↔`MultiToggle` · O6 `StepButton`/`StatusBadge`/durum sözlüğü · O9 `customers-types` şemadan türetme tartışması · O10 `BEKLEYEN(18.5)` yeniden hedefleme.
   - **Durum (02.08 — sidebar gruplaması yeniden kuruldu, kullanıcı kararı):** Denetimin bulgusu: "Katalog" grubu iki ayrı doğayı karıştırıyordu — Ürünler/Fiyatlar depo-üstü TANIM işleri, Stok/Satın Alma depo GERÇEĞİ (`operasyon-depo-ekseni.md §5`'in eksen alan/almayan ayrımı grup sınırını kesiyordu); ayrıca 01.08 bilgi mimarisi kararlarıyla doğan **Depolar sayfasının nav'da evi yoktu** ve "Rotalar" etiketi `admin-teslimat.md`'nin ad değişikliğinden geride kalmıştı. Yeni kurgu: **Günlük** = Panel · Siparişler · **Teslimat & Rota** (`/operations/deliveries` — "Rota" ekte, kullanıcı kararı: sayfa ileride rota optimizasyonu/durak takibini de taşıyacak) · **Katalog** = Ürünler · Fiyatlar · **Depo** (yeni grup) = Stok · **Tedarik** (`/operations/procurement`; "Satın Alma" adı bırakıldı — sayfa dokümanının kendi adı zaten "Tedarik / Satın Alma") · **Depolar** (`/operations/warehouses`, yeni giriş + bina ikonu, `WarehouseIcon` ile aynı biçim) · Para & analiz / İlişki / Sistem değişmedi. `not-found.tsx` kısayolları da hizalandı. **Tasarımdan bilinçli sapma:** `AdminSidebar.dc.html` hâlâ eski kurguda (Rotalar · 4'lü Katalog · B2B Onay satırı dahil — o satır kodda 30.07'de kalkmıştı); `.dc` güncellemesi tasarım turuna bırakıldı, dosya şu an başka şeridin elinde olduğu için `design/BACKLOG` notu da o turda düşülecek.
     - **WhatsApp girişi RAYDAN KALDIRILDI (03.08, denetim O-Y3).** `/operations/whatsapp` rotası yok ve modül 15'in TAMAMI henüz `[ ]` — giriş ekranından önce inmişti, tıklayan yönetici not-found'a düşüyordu. Bu, yüzeyin kendi yazdığı ilkenin ihlaliydi (*"var olmayan bir yere giden düğme, olmayan bir yetenek vaat eder"* — aynı ilke `warehouses` ve `tickets` ekranlarında uygulanıyordu, yani kural değil uygulanmadığı yer sorundu). **Girişi `15.5` (admin konuşma izleme) ekranıyla BİRLİKTE geri koyun**; `whatsapp` ikonu ve `NavIconName` üyesi bilerek duruyor — silip yeniden çizmek boş bir gidiş-dönüş olurdu. Ray, modülün ne zaman biteceğinin ilanı değil, **bugün gidilebilecek yerlerin listesidir.**
-- [ ] (09.3) **Dashboard** — bugünün siparişleri, bekleyen işler (B2B başvuru, limit aşan vadeli, açık talep, yaklaşan tarihli parti), kritik göstergeler, gecikmiş vade, uyuşmayan kapanış; hepsi ilgili ekrana köprü
+- [~] (09.3) **Dashboard** — bugünün siparişleri, bekleyen işler (B2B başvuru, limit aşan vadeli, açık talep, yaklaşan tarihli parti), kritik göstergeler, gecikmiş vade, uyuşmayan kapanış; hepsi ilgili ekrana köprü · `touches: apps/web/app/(operations)/operations/{page.tsx,dashboard-types.ts,dashboard-read.ts,dashboard-page-read.ts,dashboard.desktop.tsx}, supabase/migrations/0013_settings.sql, design/pages/admin-dashboard.md`
   - *Bitti:* her bekleyen iş sayacı gerçek sorgudan geliyor; boş kuyruk "temiz" halini gösteriyor
+  - **Durum (17.08) — ilk dilim yazıldı ve derleniyor** (`typecheck` · `lint` · `knip` temiz). Tasarım
+    `Operasyon - Dashboard.dc.html` şemaya karşı ölçüldü, **yedi veri iddiası budandı** ve gerekçeleri
+    `design/KARARLAR.md` › *Panel (17.08)*'de; brief altı yeni bölümle güncellendi. İnen parçalar:
+    üst uyarı şeridi (günün tek en yakın eşiği, cümle saatten türüyor) · **gün akışı** (dört eşik;
+    saatler `settings`ten — `prep_cutoff_time` · `route_departure_time` · `courier_close_time`
+    eklendi, ayar yoksa makul varsayılana düşüyor, yani `db:refresh` beklemiyor) · dört gösterge
+    (sipariş · ciro · bekleyen tahsilat kapıda/vade ayrımıyla · **bugün teslim edilemeyen**) ·
+    kuyruktan iki kalem (gecikmiş vade · açık talep) + asistan öneri bloğu · **bugünün teslimatları**
+    (duruma göre gruplu, saat yalnız olmuş durakta — `order_status_log`'dan) · **depo nabzı**
+    (hazırlık ilerlemesi + kesim riski). Satır kurulumu siparişler ekranının kapısını yeniden
+    kullanıyor (`toOrderRows`) — kalem sayısı, kapıda kalan tutar ve vade gecikmesi tek yerde
+    hesaplanıyor. İstemci katmanı YOK (durum yok, tek etkileşim köprü) ve cihaz forku yok
+    (masaüstü-yalnız).
+  - **İLK CANLI KOŞU DÖRT HATA YAKALADI ve dördü de düzeltildi** (17.08, oturumlu istek + ekran
+    görüntüsü; `typecheck`/`lint` hiçbirini göremezdi): **(1) gün akışı dizi sırasıyla çiziliyordu,
+    saat sırasıyla değil** — eşikler dosyada anlam sırasıyla yazılı (kesim → hazırlık → rota →
+    kapanış) ama işletmenin saatleri o sırayı izlemiyor (kesim 16:00, hazırlık 11:00); şerit
+    13:06'da 16:00'yı "şimdi" işaretledi, oysa sıradaki 14:00'tü. **(2) Şeridin kesim cümlesi
+    SIRADAKİ eşiğin saatini söylüyordu** — "14:00 kesimine yetişmiyor" yazdı, kaçırılan kesim
+    11:00'daki hazırlık kesimiydi; ayrıca kesim GEÇTİYSE cümle artık risk değil olgu bildirmeli
+    ("kesimi kaçırdı"). **(3) Durak satırında para BİRİMSİZDİ** (`amount` yerine `money`): "kapıda
+    26,80" — kapıda tahsilat yapan kişiye söylenecek en son şey. **(4) "2'i acil"** — Türkçe iyelik
+    eki sayının okunuşuna bağlıdır (1'i · 2'si · 6'sı), tek kalıpla yazılamaz; "tanesi"ye çevrildi.
+  - **EŞİKLER ROTA EKSENİNE ALINDI (aynı gün, kullanıcı kararı)** — depo ekseni kaldırıldı çünkü
+    `SCOPE_PRIORITY`de `warehouse` `zone`dan daha özgül ve iki eksen birden açıkken depoya yazılan
+    saat bölgeye yazılanı **sessizce** yutuyordu. Dördü de `settings-catalog`ta `ZONE_ONLY`; gün akışı
+    tek şerit kaldı (**"en erken kısıt"** + rota adı); nabız satırı depo değil **rota** oldu
+    (`RoutePulseView`, sipariş `delivery_zone_id` taşıdığı için ek sorgu yok). 03.08 tarihli nöbet
+    testi kırmızıya döndü ve karara göre iki yönlü yazıldı (`zone` şart, `warehouse` yasak). Sorgu
+    maliyeti ölçüldü: `SettingsService.rowsFor` statik önbellekli, N rota × 4 anahtar = 4 sorgu.
+    Gerekçe ve canlı doğrulama: `design/KARARLAR.md` › *Panel eşikleri ROTA ekseninde (17.08)* ·
+    `touches: apps/web/app/(operations)/operations/settings/{settings-catalog.ts,settings-read.test.ts}`
+    - **DÜZENLEME YÜZEYİ AYNI GÜN GELDİ → `19.20`.** Eksen rotaya bağlanınca saatler yalnız Ayarlar'ın
+      "istisna ekle" diyaloğundan girilebiliyordu; kullanıcı bunu gördü (*"rota tanımladığımız yerde bu
+      bilgileri set etmeli değil miyiz?"*) ve rota rayına **sayı doğrusu üzerinde rozetler + çubuklu
+      pencere** yazıldı. Panelin varsayılanları (`TIME_DEFAULTS`) o turda `lib/settings/day-hours.ts`'e
+      taşındı — aynı dört saati üç yer okuyor, değer tek yerde durmalı (`CLAUDE §1`). Ayrıntı `19.20`.
+  - **İkinci dilimde kalanlar:** kuyruğun altı kalemi — yaklaşan tarihli parti (`toBatchViews` deseni) ·
+    uyuşmayan kurye kapanışı (**okuma kapısı yok**: `CourierDayCloseService`'te yalnız `close` var) ·
+    limit aşan vadeli sipariş · B2B başvurusu · yoldaki transfer — ve **marj-altı fiyatlı ürün**
+    göstergesi (bugün `null` geçiyor, kart hiç çizilmiyor: ölçülmeyen değer sıfır gösterilemez,
+    `CLAUDE §1`). Teslimat listesinin zaman ekseni bilinçle YOK → `design/BACKLOG.md §1`.
 - [~] (09.4) **Ürünler** · `touches: apps/web/app/(operations)/operations/products/**` · **beyan alanları 05.10'a bağlı** — ürün/varyant/kategori/koleksiyon/paket CRUD; çok dilli giriş + AI çeviri önerisi (öneri düzenlenebilir/reddedilebilir); **yasal beyanların tamamı** (içindekiler · alerjen sabit listesi · çapraz bulaşma · besin değerleri · saklama-hazırlama) + kapak ve galeri görselleri; aday ürün etkinleştirme; paket kalem fiyat doğrulaması
   - *Bitti:* atanmış fiyat toplamı ≠ paket fiyatı kaydı reddediliyor; AI önerisi onaysız yayına gitmiyor; müşteri ürün detay sayfasının **her** bölümünün girildiği bir yer var — "beyan eksik" göstergesi bu alanların hepsini sayar
   - **Durum (28.07 — sekme çubuğu eylem alanı + sekmeye bağlı arama):** Oluşturma düğmesi sayfa başlığından **sekme çubuğuna** taşındı ve etiketini sekmeden alıyor ("+ Ürün · + Kategori · + Koleksiyon · + Paket") — sebep ile sonuç yan yana durur, her liste kendi başında ayrı bir düğme taşımaz. Arama aynı çubukta ve **sekmeye bağlı** (yer tutucu dahil): eskiden başlıkta tek bir "Ürün ara…" kutusu duruyor ve hangi sekme açık olursa olsun ÜRÜNDE arıyordu — kutu yalan söylüyordu. Kategori/koleksiyon araması CLIENT'ta süzülür (bu listeler sayfalı değil, bütün geliyor); `matchesCatalogFilter` üç dilin adını + slug'ı `slugify` üzerinden tarar (aksan/Türkçe harf farkı yutulur, 8 birim test) — yeni bir normalleştirici yazılmadı. Ürün araması sunucuda kalır (keyset). Süzgeç açıkken **sürükleme kapalı**: görünen alt kümeyi taşımak sunucuya "listenin tamamı" sanılan yanlış bir sıra yazardı (gizli satırlar sıradan düşerdi); ipucu satırı da o hâlde bunu söyler. Oluşturma niyeti **adreste** (`new=1`; NE oluşturulacağını `tab` söyler, tür ayrıca tutulsa `tab=packages&new=category` gibi çelişen bir durum doğardı): yenileme formu kapatmaz, sekme değişince niyet ve arama TEK yerde düşer. Düzenleme bilinçli olarak adreste değil — seçili satıra bağlı, link açıldığında hangi kaydın düzenlendiği bilinemez.

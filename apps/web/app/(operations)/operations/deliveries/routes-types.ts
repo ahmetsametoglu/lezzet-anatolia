@@ -69,7 +69,20 @@ export interface SuggestionView extends ZoneMapPoint {
   lastAskedMinutes: number | null;
 }
 
+/**
+ * Rotaya özel eşik saatleri — **yalnız istisnalar** (17.08).
+ *
+ * Anahtarı burada olmayan eşik genel değeri okur; değeri `null` olan eşiğin istisnası KALDIRILIR.
+ * "Yok" ile "genele dön" ayrı iki niyet: birincisi dokunulmamış, ikincisi bilinçli geri alma —
+ * ikisini tek hâlde toplamak, hiç dokunulmamış bir formu kaydetmeyi silme işlemine çevirirdi.
+ *
+ * Anahtar kümesi burada YENİDEN yazılmıyor: sözleşme gevşek (`string`), doğrulamayı kapı
+ * `DAY_HOUR_KEYS`e karşı yapıyor (`routes-actions`). Dört anahtarı bir de burada listelemek,
+ * eşik seti büyüdüğünde sessizce ayrışacak ikinci bir liste demekti (`CLAUDE §1`).
+ */
+const ZoneHoursSchema = z.record(z.string(), z.string().nullable());
+
 /** Rota formunun şeması — yazma eyleminin (`saveZoneAction`) girdisi. */
 export const ZoneFormSchema = DeliveryZoneInsertSchema.pick({ name: true, weekdays: true, isActive: true })
   .partial({ isActive: true })
-  .extend({ postalCodes: z.array(PostalCodePickSchema) });
+  .extend({ postalCodes: z.array(PostalCodePickSchema), hours: ZoneHoursSchema.optional() });

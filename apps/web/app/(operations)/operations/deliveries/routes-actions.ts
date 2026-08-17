@@ -6,10 +6,12 @@ import {
   DeliveryZonePostalCodeService,
   DeliveryZoneService,
   PostalCodePlaceService,
+  SettingsService,
   WarehouseService,
   serviceDb,
   type PostalCodeSuggestion,
 } from '@lezzet/database';
+import { DAY_HOURS, toMinutes } from '@/lib/settings/day-hours';
 import { requireAdmin } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { readPostalCodesForMap } from '@/lib/delivery/map-codes';
@@ -62,13 +64,21 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
        */
       proposalId: z.string().uuid().optional(),
     }).parse(input);
-    const { id, warehouseId, postalCodes, proposalId, ...fields } = parsed;
+    const { id, warehouseId, postalCodes, proposalId, hours, ...fields } = parsed;
 
     const db = serviceDb();
     const zoneSvc = new DeliveryZoneService(db);
 
     const conflict = await findConflict(db, postalCodes, id ?? null);
     if (conflict) return { data: null, error: conflict };
+
+    /**
+     * **Saatler ÖNCE elenir, sonra yazılır.** Kayıttan sonra reddetmek, rotası kaydedilmiş ama
+     * saatleri yazılmamış yarım bir sonuç bırakırdı — operatör "kaydedildi" görmezdi ama rota
+     * değişmiş olurdu. Elemenin kendisi DB'ye dokunmuyor (biçim + anahtar), o yüzden ucuz.
+     */
+    const hoursError = checkZoneHours(hours ?? {});
+    if (hoursError) return { data: null, error: hoursError };
 
     /**
      * **Kayıt ile kuyruk satırı BİRLİKTE koşar** (`withProposal`): önce satır `pending`ten çıkar
@@ -93,7 +103,13 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
       (saved) => ({ zoneId: saved.id, postalCodeCount: String(postalCodes.length) }),
     );
 
+    // Saatler kayıttan SONRA: yeni rotanın kimliği ancak burada var ve ayar satırı o kimliğe bağlanır.
+    await writeZoneHours(db, zone.id, hours ?? {}, staff.profileId);
+
     revalidatePath('/operations/deliveries');
+    // Ayarlar ekranı aynı satırları "istisna" olarak listeliyor — rota rayından yazılan saat orada da
+    // görünmeli, yoksa iki ekran aynı veri için farklı şey söylerdi.
+    revalidatePath('/operations/settings');
     revalidatePath('/operations/assistant');
     return { data: { id: zone.id }, error: null };
   } catch (error) {
@@ -124,6 +140,63 @@ async function findConflict(
   const list = taken.map((r) => r.postalCode).join(', ');
   const holder = zone ? `“${zone.name}”${warehouse ? ` bölgesi (${warehouse.code})` : ' bölgesi'}` : 'başka bir bölge';
   return `${list} kodu ${holder} tarafından tutuluyor. Bir kod yalnız tek bölgede olabilir — taşımak için önce o bölgeden çıkarın.`;
+}
+
+/**
+ * Eşik saatlerinin **anahtarı ve biçimi** — DB'ye dokunmayan eleme. Sorun varsa okunur cümle, yoksa `null`.
+ *
+ * Anahtar kümesi tek yerden (`DAY_HOURS`) doğrulanıyor: ekran o listeden üretiyor, kapı yine o
+ * listeye bakıyor. Serbest anahtar kabul etmek, `settings` tablosunu hiçbir yerde okunmayan
+ * satırlarla dolduran bir çöp kapısı olurdu (`settings/actions.ts`'in kendi kuralı).
+ *
+ * Biçim `toMinutes` ile ölçülüyor, ikinci bir regex yazılmadı — aynı saatin ekrandaki gösterimi de
+ * o fonksiyondan geçiyor, yani kapı ile ekran aynı şeyi geçerli sayıyor.
+ */
+function checkZoneHours(hours: Record<string, string | null>): string | null {
+  for (const [key, time] of Object.entries(hours)) {
+    const hour = DAY_HOURS.find((candidate) => candidate.key === key);
+    if (!hour) return `Tanınmayan eşik saati: ${key}.`;
+    if (time !== null && toMinutes(time) === null) {
+      return `${hour.label} için geçersiz saat: “${time}”. Saat SS:DD biçiminde olmalı.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Rotaya özel eşik saatlerini yazar; `null` gelen eşiğin istisnasını KALDIRIR.
+ *
+ * **Silmede önbellek ELLE düşürülür.** `set()` kendi kopyasını düşürüyor ama `delete()` düşürmüyor
+ * (`settings/actions.ts`'te ölçülmüş ve künyelenmiş tuzak): atlanırsa kaldırılan istisna, süre
+ * dolana dek okunmaya devam eder — yani silinmiş bir kural yürürlükte kalır.
+ *
+ * Açıklama olarak eşiğin ETİKETİ yazılıyor: satırı doğrudan veritabanında gören biri de neyi
+ * okuduğunu anlamalı. Sözlükteki uzun yardım metni buraya ithal edilmedi — o Ayarlar ekranının
+ * yüzeyi ve iki sayfayı birbirine bağlamak kolokasyonu bozardı.
+ */
+async function writeZoneHours(
+  db: ReturnType<typeof serviceDb>,
+  zoneId: string,
+  hours: Record<string, string | null>,
+  actorId: string,
+): Promise<void> {
+  const svc = new SettingsService(db);
+
+  for (const [key, time] of Object.entries(hours)) {
+    const hour = DAY_HOURS.find((candidate) => candidate.key === key);
+    // `checkZoneHours` bunu zaten eledi; burada yalnız tipi daraltıyor.
+    if (!hour) continue;
+
+    if (time === null) {
+      const own = (await svc.listByKey(key)).find((row) => row.scopeType === 'zone' && row.scopeId === zoneId);
+      if (!own) continue;
+      await svc.delete(own.id);
+      SettingsService.invalidate(key);
+      continue;
+    }
+
+    await svc.set(key, time, { scopeType: 'zone', scopeId: zoneId, description: hour.label, actorId });
+  }
 }
 
 /**

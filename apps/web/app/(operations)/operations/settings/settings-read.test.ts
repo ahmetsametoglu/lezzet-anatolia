@@ -144,9 +144,29 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
   it('depo ekseni HER ayarda açık değil — sözlük `0016`nın adaylarını izler', () => {
     const rows = toSettingRows({ settings: [], zones: ZONES }).rows;
     const has = (key: string) => rows.find((r) => r.key === key)!.exceptionScopes.includes('warehouse');
-    expect(has('order_cutoff_time')).toBe(true); // adaylardan: kesim saati
     expect(has('route_delivery_unit_cost_cents')).toBe(true); // adaylardan: rota birim maliyeti
     expect(has('near_expiry_percent')).toBe(false); // "raf ömrü eşikleri global kalır"
+  });
+
+  /**
+   * **KESİM SAATLERİ DEPO EKSENİNDEN ÇIKTI (kullanıcı kararı 17.08).**
+   *
+   * Bu satır 03.08'de `order_cutoff_time` için `warehouse: true` bekliyordu ve gerekçesi `0016`'nın
+   * aday listesiydi ("depolar farklı şehirlerde, kesim saatleri ayrışır"). Karar değişti çünkü iki
+   * eksen birden açıkken `SCOPE_PRIORITY` `warehouse`u `zone`dan daha özgül sayıyor: depoya yazılan
+   * bir saat, bölgeye yazılanı **sessizce** yutuyordu. Kullanıcının cümlesi: *"depo saatini komple
+   * kaldıralım, her rota saatini barındırsın; böylelikle sessiz kapsam tuzağına düşmeyiz."*
+   *
+   * Nöbet iki yönlü: dördü de rota eksenini AÇMAK ve depo eksenini KAPATMAK zorunda. Biri geri
+   * eklenirse tuzak da geri gelir.
+   */
+  it('günün eşik saatleri YALNIZ rota ekseninde — depo ekseni kapalı (17.08)', () => {
+    const rows = toSettingRows({ settings: [], zones: ZONES }).rows;
+    const scopesOf = (key: string) => rows.find((r) => r.key === key)!.exceptionScopes;
+    for (const key of ['order_cutoff_time', 'prep_cutoff_time', 'route_departure_time', 'courier_close_time']) {
+      expect(scopesOf(key)).toContain('zone');
+      expect(scopesOf(key)).not.toContain('warehouse');
+    }
   });
 });
 

@@ -154,6 +154,15 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Kurye teslimat ekranı
 - Kurye gün kapanışı + kasa mutabakatı
 - `wa.me` deep-link "yola çıktık" mesajı
+- **Kuryenin telefonunda harita + akıllı rota** *(kullanıcı notu 17.08 — barkod/kutu konuşmasının yan
+  kararı)*: üç ayrı iş, birbirine bağlanmasın. **(a) Durak SIRASI — bugünün önceliği:** kurye
+  duraklarını doğru sırayla görmeli; sıralama ölçütü (coğrafi yakınlık · teslim penceresi · soğuk
+  zincir süresi) o gün konuşulacak, farklı optimizasyonlar gerekebilir. Bugün liste var, sıra
+  ölçütü yok. **(b) Harita gösterimi:** rotanın çizilmesi ve yol boyu takibi — mobilde harita
+  bağımlılığı HİÇ yok (ölçüldü 17.08: `apps/mobile/package.json`'da harita paketi yok), web'in
+  Leaflet kararı (19.20) mobile geçmez, ayrı seçim + STACK beyanı ister. **(c) Akıllı rota:**
+  sıra önerisini motorun üretmesi — (a) ve (b) olmadan anlamsız, en son. Kutu/barkod akışı bu üçünün
+  hiçbirini beklemez: harita gecikirse teslim garantisi gecikmez.
 - **Posta kodu talebi ÜLKESİZ** (ölçüldü 11.08): `postal_code_demand` anahtarı yalnız `postal_code`,
   oysa `delivery_zone_postal_code` anahtarı `(country, postal_code)` — posta kodu sınır ötesi
   benzersiz değil (67000 hem Fransa'da hem Almanya'da var). Yani "şu koda talep geldi" sinyali hangi

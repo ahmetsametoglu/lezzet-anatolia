@@ -3,11 +3,13 @@ import {
   DeliveryZoneService,
   PostalCodeDemandService,
   PostalCodePlaceService,
+  SettingsService,
   WarehouseService,
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
 import type { ZoneMapPoint } from '@/components/operation/ui/zone-map-model';
+import { readDayHours, type DayHourKey, type ZoneHours } from '@/lib/settings/day-hours';
 import { buildSuggestions, type LocatedPlace } from './routes-suggest';
 import type { CodeStatsView, PostalCodePick, SuggestionView } from './routes-types';
 
@@ -32,6 +34,13 @@ export interface RouteView {
   weekdays: number[];
   isActive: boolean;
   postalCodes: PostalCodePick[];
+  /**
+   * Bu rotaya YAZILI eşik saatleri — yalnız istisnalar (17.08).
+   *
+   * Yürürlükteki değerin tamamı DEĞİL: genel değeri de taşısaydı taslak, hiç dokunulmamış bir eşiği
+   * kaydetmede rotaya özel satır olarak yazardı. Genel değerler `RoutesData.globalHours`ta, tek kez.
+   */
+  hours: Partial<Record<DayHourKey, string>>;
 }
 
 export interface RoutesData {
@@ -56,6 +65,13 @@ export interface RoutesData {
   points: ZoneMapPoint[];
   /** Güçlüden zayıfa sıralı, tavanlı. Boş dizi "aday yok" demek — sinyal yoksa öneri de yok. */
   suggestions: SuggestionView[];
+  /**
+   * Eşiklerin GENEL (küresel) değerleri — istisnası olmayan şeridin gösterdiği saat.
+   *
+   * Rota başına tekrarlanmıyor: dördü de tüm rotalar için aynı ve rota sayısı kadar kopyalamak, aynı
+   * değeri N kez taşıyıp bir gün ayrışmasına izin vermek olurdu.
+   */
+  globalHours: Record<DayHourKey, string>;
 }
 
 /**
@@ -115,12 +131,17 @@ export async function readRoutes(): Promise<RoutesData> {
    * kod "ölçülmedi" derdi — oysa sayı elimizde. Kargo yoluyla o koda giden siparişler tam olarak
    * "burayı rotaya almalı mıyım" sorusunun kanıtıdır.
    */
-  const [places, orders, waiting] = await Promise.all([
+  const [places, orders, waiting, hours] = await Promise.all([
     uniqueCodes.length > 0 ? placeSvc.listByPostalCodes(uniqueCodes) : Promise.resolve([]),
     uniqueCodes.length > 0
       ? new AnalyticsReportService(db).postalCodeOrders(uniqueCodes)
       : Promise.resolve(new Map<string, { orderCount: number; revenueCents: number }>()),
     new ZoneNoticeService(db).pendingCountByPostalCode(),
+    // Eşik saatleri: anahtar başına tek sorgu, rota sayısıyla ÇARPMAZ (`readDayHours` künyesi).
+    readDayHours(
+      new SettingsService(db),
+      zones.map((zone) => zone.id),
+    ),
   ]);
 
   // Siparişi olmayan kod RPC'den HİÇ DÖNMEZ — o gerçekten sıfırdır (sorgu çalıştı, kayıt yok),
@@ -162,7 +183,9 @@ export async function readRoutes(): Promise<RoutesData> {
       weekdays: zone.weekdays,
       isActive: zone.isActive,
       postalCodes: zone.postalCodes,
+      hours: exceptionsOf(hours.byZone.get(zone.id)),
     })),
+    globalHours: hours.global,
     warehouses: warehouses.map((warehouse) => ({
       id: warehouse.id,
       name: warehouse.name,
@@ -200,4 +223,17 @@ export async function readRoutes(): Promise<RoutesData> {
         places: place.places,
       })),
   };
+}
+
+/**
+ * Yürürlükteki saatlerden **yalnız istisnaları** süzer.
+ *
+ * Rota ekranının taslağı operatörün KARARINI taşımalı, sistemin o an uyguladığı değeri değil: genel
+ * değer de taslağa girseydi, hiçbir saate dokunmadan "Kaydet"e basmak dört eşiği birden bu rotaya
+ * istisna olarak yazardı — sonra genel değer değiştiğinde bu rota sessizce eski saatte kalırdı.
+ */
+function exceptionsOf(zoneHours: ZoneHours | undefined): Partial<Record<DayHourKey, string>> {
+  if (!zoneHours) return {};
+  const pairs = Object.entries(zoneHours).filter(([, value]) => value.isException);
+  return Object.fromEntries(pairs.map(([key, value]) => [key, value.time])) as Partial<Record<DayHourKey, string>>;
 }

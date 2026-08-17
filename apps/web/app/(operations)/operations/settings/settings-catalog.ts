@@ -16,6 +16,7 @@ export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
 import { POINTS_DAILY_CAP_DEFAULT, POINTS_DAILY_CAP_KEY, POINTS_SETTING_KEYS } from '@lezzet/domain-core';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, SHIPPING_FEE_KEY } from '@/lib/settings-keys';
+import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
 
 /**
  * Ayar SÖZLÜĞÜ (09.16) — anahtarın insan dilindeki karşılığı.
@@ -117,6 +118,14 @@ export interface SettingDef {
 
 const CHANNEL_ONLY = ['channel'] as const;
 const NONE = [] as const;
+/**
+ * **YALNIZ rota ekseni** — günün eşik saatleri (kullanıcı kararı 17.08).
+ *
+ * Depo ekseni bilerek dışarıda: `SCOPE_PRIORITY`de `warehouse` `zone`dan daha özgül olduğu için iki
+ * eksen birden açık olsaydı depoya yazılan bir değer bölgenin saatini **sessizce** yutardı. Tek
+ * eksen = tuzak yok. Gerekçe `docs/feature/cok-gunluk-sefer.md §5`.
+ */
+const ZONE_ONLY = ['zone'] as const;
 
 /**
  * Depo istisnası HANGİ ayarlarda açık — ve bu liste uydurulmadı, `0016`'nın kendi künyesinden
@@ -171,10 +180,49 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     group: 'order',
     kind: 'time',
     impact: 'Geniş etkili: kesim saatini öne çekmek, bugüne yetişeceğini sanan siparişleri yarına atar.',
-    // `0016`'nın adayları arasında ADIYLA geçiyor: "depolar farklı şehirlerde, kurye anlaşmaları
-    // ve kesim saatleri ayrışır" — depo ekseninin en somut gerekçesi bu ayar.
-    exceptionScopes: WITH_WAREHOUSE('zone'),
-    fallback: '16:00',
+    // **DEPO EKSENİ KALDIRILDI (kullanıcı kararı 17.08).** `0016`'nın aday listesinde bu ayar adıyla
+    // geçiyordu ("depolar farklı şehirlerde, kesim saatleri ayrışır") ve iki eksen birden açıktı.
+    // Sorun ölçüldü: `SCOPE_PRIORITY`de `warehouse` `zone`dan DAHA ÖZGÜL — depoya 11:00, bölgeye
+    // 09:00 yazılırsa depo kazanır ve bölgenin saati hiçbir hata vermeden ölü kalır. Kullanıcının
+    // cümlesi: *"depo saatini komple kaldıralım, her rota saatini barındırsın; böylelikle sessiz
+    // kapsam tuzağına düşmeyiz."* Gerekçe zinciri: `docs/feature/cok-gunluk-sefer.md §5`.
+    exceptionScopes: ZONE_ONLY,
+    // Fabrika değeri `lib/settings/day-hours`ten geliyor — bu dört saati panelin gün akışı ve rota
+    // kurulumu da okuyor, değer üç yerde ayrı yazılıydı. Nöbet testi migration'a karşı doğrulamaya
+    // devam ediyor; zincir artık migration ↔ day-hours ↔ sözlük.
+    fallback: DAY_HOUR_FALLBACK.order_cutoff_time,
+  },
+  // ── GÜNÜN EŞİK SAATLERİ (09.3 paneli) ──────────────────────────────────────
+  // Üçü de YALNIZ rota ekseninde: kesim rotanın gerçeğidir, deponun değil. Çok günlü tur geldiğinde
+  // (`docs/feature/cok-gunluk-sefer.md`) kesimin turun ÇIKIŞ gününe bağlanması ancak bu eksenle
+  // ifade edilebilir — depo ekseninde imkânsızdı.
+  {
+    key: 'prep_cutoff_time',
+    label: 'Depo hazırlık kapanışı',
+    help: 'Bu saate kadar hazırlanmayan sipariş rotaya yetişmez. Panelin gün akışı ve depo nabzı bu saati okur.',
+    group: 'order',
+    kind: 'time',
+    impact: 'Panelin kesim uyarısı buna göre çalışır; öne çekmek "kesim kaçtı" uyarılarını erkene alır.',
+    exceptionScopes: ZONE_ONLY,
+    fallback: DAY_HOUR_FALLBACK.prep_cutoff_time,
+  },
+  {
+    key: 'route_departure_time',
+    label: 'Rota çıkış saati',
+    help: 'Kuryenin yola çıkması beklenen an. Panelin gün akışında eşik olarak görünür.',
+    group: 'order',
+    kind: 'time',
+    exceptionScopes: ZONE_ONLY,
+    fallback: DAY_HOUR_FALLBACK.route_departure_time,
+  },
+  {
+    key: 'courier_close_time',
+    label: 'Kurye kapanışı',
+    help: 'Kasanın teslim alınması beklenen an. Panelin gün akışında eşik olarak görünür.',
+    group: 'order',
+    kind: 'time',
+    exceptionScopes: ZONE_ONLY,
+    fallback: DAY_HOUR_FALLBACK.courier_close_time,
   },
   {
     key: 'delivery_proof_required',

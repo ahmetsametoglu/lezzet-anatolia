@@ -1204,3 +1204,150 @@ yöne biniyordu — başlığın yüksekliği bloğu yarısı kadar aşağı iti
 geometrik merkezin biraz üstündedir. Sabit kaydırma çare değil (başlık boyu ekrandan ekrana
 değişiyor); blok artık **4:6** oranlı iki esnek payın arasında (üstte %40, altta %60) ve oran
 kendini ayarlıyor. Sonuç: sepette 1095 → 987.
+
+### Panel (dashboard) — yedi veri iddiası budandı, beş KPI korundu (17.08, kullanıcı onayı)
+
+`Operasyon - Dashboard.dc.html` geldi ve otuz küsur veri kalemi şemaya karşı ölçüldü. Kullanıcının
+ölçütü baştan konuldu: **"sırf arayüzde var diye kapsamlı geliştirme yapılmaz; gerekirse budanır."**
+Budama ölçütü panelin kendi sözleşmesinden alındı — brief *"bugün ne var, ne bekliyor, nerede sorun
+var"*, `.dc.html` tezgâh sözleşmesi *"karar tetikler, analiz etmez"*. **Bir kalem karar
+tetiklemiyorsa, verisi olsa da panelde işi yok.**
+
+Sonuç şaşırtıcı biçimde tek yöne çıktı: **budanacakların çoğu panelin kendi kuralına da aykırı
+olanlardı.** Veri yokluğu ve tasarım disiplini aynı yeri işaret etti — bu, budamanın panelin
+sözleşmesini ZAYIFLATMADIĞININ değil GÜÇLENDİRDİĞİNİN kaydıdır.
+
+**Budandı ya da içeriği değişti:**
+
+- **"Zamanında teslim %94" → "bugün teslim edilemeyen: N".** Yüzde bir *analiz* göstergesiydi ve
+  karar tetiklemiyordu. Ölçülemez de: `order.delivery_date` bir **date**, teslim penceresi/taahhüt
+  saati diye bir kavram YOK, kodda `on_time`/geç-teslim ölçütü hiç geçmiyor. Yerine gelen sayaç hem
+  karar tetikliyor ("yeniden planla") hem **verisi hazır**: `out_for_delivery → ready` geçiş sayımı
+  `courier/day.ts:280`'de zaten yazılı. Teslim penceresi kavramı açmamız gerekmedi.
+- **Durak saatleri (14:20 · 14:45 …) → yarı budandı.** Teslim edilmiş durağın saati
+  `order_status_log`'dan bedava gelir ve GÖSTERİLİR; gelecek durak için saat YOKTUR ve olmayacak —
+  ETA reddi kurye brief'inde zaten yazılı (*"navigasyon ADRES METNİYLE gider, koordinat/ETA yok"*,
+  `app-kurye.md`). Sütun yerinde kalır, tasarımın düzeni bozulmaz.
+- **Durak numaraları (1…6) → durum grubuna çevrildi** (teslim edilenler → yolda → bekleyenler).
+  Numara "rota sırası" iddiası taşıyor, o sıra sistemde YOK (`stop_order`/`sequence` kolonu yok).
+  Sıra optimizasyonu ayrı iş (`architecture/BACKLOG §8`, kullanıcı kararı: "o gün konuşulur").
+- **"4 koli / 2 paket" → "N kalem."** Elimizdeki tek sayı `itemCount = lines.length`. Koli sayısı
+  admin kararı tetiklemiyor (kuryenin bilgisi) ve kutu kavramı modül `23` ile gelecek — panel onu
+  beklemez, geldiğinde kendiliğinden kazanır.
+- **"Tek kişi vardiyada · hazırlık yavaş" → tamamen budandı.** Vardiya/personel sayısı şemada yok,
+  **ve** tasarımın kendi sözleşmesi yasaklıyor: *"depo nabzı sadece hazırlık ilerlemesidir →
+  çalışan/verim ölçmez."* Yerine hâlihazırda ölçülen cümle kaldı: *"kesime 20 dk · 4 sipariş
+  hazırlanmadı."* Risk etiketi (`destek gerek`) ilerleme + kalan süreden türer, kalır.
+- **"Bekleyen transfer · sevk onayı bekliyor" → metin düzeltmesi:** *"yoldaki transfer · kabul
+  bekliyor."* `transfer_status` yalnız `in_transit · received · cancelled`; "sevk onayı" olmayan bir
+  adım ima ediyordu ve `app-depo.md` D5 gerekçesini yazmış: *"'taslak' BİLEREK yok — sevk anı ilk
+  kalıcı andır."*
+- **"Marj-altı satış (2 ürün · 4 satırda)" → "marj-altı fiyatlı ürün: N".** Satış düzeyi ölçüm kâr
+  snapshot'larından yazılabilir ama orta boy iş; ürün düzeyinde kapı HAZIR
+  (`product.schema.ts` "marj-altında mı" okuması) ve **aynı kararı tetikliyor**: fiyatı düzelt.
+
+**Budanmadı — ayar olarak eklenecek: gün akışının eşik saatleri.** Beş eşikten yalnız biri veride
+vardı (`order_cutoff_time` = `"16:00"`; panelin 09:00'ı demo değeri). Hazırlık kapanışı · rota
+çıkışı · kurye kapanışı ayar olarak YOK. Bu listenin **en ucuz ve en değerli kalemi**: üç `settings`
+satırı (`setting_scope + 'warehouse'` hazır; ayar dosyası *"depo bazlı olmaya aday: kesim saati"*
+diyor). Üstteki uyarı şeridi de buna dayandığı için budamak panelin omurgasını almak olurdu.
+**"Gün sonu mutabakat 20:00" ÇIKARILDI** — o para ekranının işi, panelde karar tetiklemiyor. Dört
+eşik kalır.
+
+**Panelin en değerli yarısı hiç budanmadı.** "Bekleyen işler" kuyruğundaki sekiz kalemin tamamı
+veri-gerçekli: gecikmiş vade (türetilir — `payment_term_days` + bugün; migration bunu bilinçle
+kolon yapmıyor) · yaklaşan tarihli parti (`near_expiry_percent` + `expiry_date`, risk =
+`purchase_price × qty`) · uyuşmayan kurye kapanışı (`expected_* ↔ counted_*`) · limit aşan vadeli
+sipariş (`credit_limit`) · açık talep (`ticket_status`) · B2B başvurusu (`b2b_approved is null`) ·
+yoldaki transfer · asistan önerileri (`assistant_proposal.status='pending'`). Aciliyet kümeleri
+(şimdi / bugün / bu hafta) da türetilebilir. Panelin ASIL işi eksiksiz çalışıyor.
+
+**KPI bandı yine BEŞ kart** — sipariş · ciro · bekleyen tahsilat (`0012:394` sorgusu kapıda/vade
+ayrımını zaten yapıyor) · *teslim edilemeyen* · *marj-altı fiyatlı ürün*. İkisi içerik değiştirdi,
+sayı ve düzen aynı: tasarımın görsel dengesi korunuyor.
+
+**Kabul edilen tek gerçek kayıp: teslimat listesinin ZAMAN EKSENİ.** Admin "bu rota programında mı"
+diye soramaz. Telafi kısmi (kurye kapanış eşiği + teslim edilemeyen sayacı + depo nabzı). Tek dürüst
+çözüm rotaya bir zaman kavramı sokmaktır ve o, sıralama işinin içindedir. **Bugün panelin bunu sahte
+bir kesinlikle göstermesi, hiç göstermemesinden kötüdür** — kayıt bu yüzden burada.
+
+**"Yoğun gün / Sakin gün" düğmesi veri DEĞİL:** `.dc.html`'de `props.gun` ile gelen tasarım önizleme
+anahtarı. Kodda UI durumu olarak taşınmaz; iki hâl aynı ekranın veriye göre doğal görünümüdür (sakin
+gün birinci sınıf — boş kuyruk "temiz masa" olarak olumlu gösterilir, şerit kutlar, uyarmaz).
+
+Ertelenen üç kalem `design/BACKLOG.md §1`'de; brief (`design/pages/admin-dashboard.md`) bu turda
+tasarımın altı yeni bölümünü kapsayacak şekilde güncellendi.
+
+### Panel eşikleri ROTA ekseninde — depo ekseni kaldırıldı, nabız rotaya döndü (17.08, kullanıcı kararı)
+
+Gün akışının dört eşiği (sipariş kesimi · hazırlık kapanışı · rota çıkışı · kurye kapanışı) ayar
+olarak eklendikten sonra sıra "hangi eksende ayrışırlar" sorusuna geldi. Ölçüm bir tuzak gösterdi:
+`SCOPE_PRIORITY = ['warehouse', 'zone', 'channel', 'country', 'global']` — yani **`warehouse`
+`zone`dan DAHA ÖZGÜL**. İki eksen birden açık olsaydı depoya yazılan bir saat, bölgeye yazılanı
+hiçbir hata vermeden yutardı. Kullanıcı kararı: *"depo saatini komple kaldıralım, her rota saatini
+barındırsın; böylelikle sessiz kapsam tuzağına düşmeyiz."*
+
+- **Dört eşik `exceptionScopes: ZONE_ONLY`.** `order_cutoff_time` da dahil — `0016`'nın 03.08'de
+  yazdığı "depo bazlı olmaya aday" gerekçesi bu kararla geçersiz. 03.08 tarihli nöbet testi bunu
+  doğru biçimde yakaladı (kırmızıya döndü) ve karara göre güncellendi; yeni nöbet iki yönlü —
+  dördü de `zone` içermek, `warehouse` içermemek zorunda.
+- **Gün akışı tek şerit kaldı: "en erken kısıt" kuralı.** Rotalar farklı saat taşıyabildiği için her
+  kutu **en erken** olanı gösterir ve `routeLabel` ile kimin olduğunu söyler. Alternatifleri (rota
+  seçici · rota başına şerit) ekrana yeni bir durum sokuyordu; en sıkı kısıt hem doğru bilgiyi verir
+  hem tekilliği korur — ona yetişen ötekilere de yetişir. **Tüm rotalar aynı saatteyse rota adı
+  YAZILMAZ** (tek rotalı kurulumda tekrar, bilgi değil gürültü olur).
+- **Nabız satırı DEPO değil ROTA oldu** (`RoutePulseView`). Kesim rotaya bağlandığı an ölçünün de
+  rota olması gerekiyordu: depo bazlı kalsaydı iki rotalı bir depoda 09:00 rotasına göre "riskli"
+  derken 11:00 rotasının malını haksız yere geç ilan ederdi. Maliyeti sıfır — sipariş
+  `delivery_zone_id` taşıyor, ek sorgu gerekmedi. Depo kodu çip olarak duruyor, "hangi tesisten
+  çıkıyor" bilgisi kaybolmadı. **Rotasız sipariş nabza girmez** (kargonun hazırlık kesimi yoktur);
+  gün akışının sayaçları onları yine sayar, yani sipariş kaybolmuyor.
+- **Sorgu sayısı rota sayısıyla çarpmıyor:** `SettingsService` bir anahtarın tüm kapsam satırlarını
+  tek turda çekip statik önbellekleğe koyuyor (`rowsFor`), yani N rota × 4 anahtar = 4 sorgu.
+  Ölçülmeden yazılsaydı buradaki döngü bir N+1 tuzağı olurdu.
+- **Canlı doğrulama (17.08):** tek aktif rota ("Strasbourg Merkez", `order_cutoff_time` = 10:00)
+  varken panel sipariş kesimini **10:00** gösterdi (global 16:00 yerine) ve şerit rota adıyla
+  konuştu (*"Strasbourg Merkez 11:00 hazırlık kesimini kaçırdı"*, önceki hâli depo adıydı).
+  `routeLabel` bu veriyle **görünmedi ve görünmemesi doğru** — tek rota var, ayrışma yok; iki rota
+  farklı saat taşıdığında görünecek, o hâl canlı veriyle henüz sınanmadı.
+
+**Bu karar çok günlü seferin de ön koşulu:** kesim teslim gününe değil turun ÇIKIŞ gününe bağlanmak
+zorunda ve bu ancak rota ekseninde ifade edilebiliyor. Ayrıntı `docs/feature/cok-gunluk-sefer.md §5`.
+
+### Rota saatleri SAYI DOĞRUSU üzerinde rozetler — dört şerit, tek eksen (17.08, kullanıcı isteği)
+
+Eşikler rota eksenine alındıktan sonra (üstteki karar) ortaya bir boşluk çıktı: saatler yalnız
+Ayarlar → *istisna ekle* → kapsam seç yolundan girilebiliyordu. Kullanıcı bunu ekranda gördü —
+*"operasyon sayfasında rota tanımladığımız yerde bu bilgileri set etmeli değil miyiz?"* — ve yüzeyi
+kendisi tanımladı: *"rozetlerin içinde saatler olsun, yatay görünsün, tıklayınca tooltip açılsın,
+çubuğu kaydırarak saatleri düzenleyebileyim"*, ardından *"bir sayı doğrusunda yerleşmiş saat
+rozetleri gibi düşün."*
+
+**Yerleşim: dört şerit, ortak eksen.** Tek doğru denenmedi çünkü ölçüm reddetti: sağ ray ~300px,
+etiket kolonu çıkınca eksene ~240px kalıyor; 06:00–22:00 = 16 saat → **15px/saat**, oysa bir rozet
+(`11:00`) ~52px yani **3,5 saat** genişliğinde. Kesim 10:00 ile hazırlık 11:00 tek doğruda üst üste
+binerdi ve çubuk kaydırılırken rozetler birbirini itip zıplardı. Dört şerit tek EKSENİ paylaşıyor:
+sayı doğrusu duruyor, binme imkânsız.
+
+**Bedava teşhis:** rozetler soldan sağa merdiven iniyor. Sıra bozulursa merdiven geri gidiyor ve
+bozukluk hesaplanmadan görünüyor — panelin gün akışında bulunan hatanın (kesim 16:00 iken hazırlık
+11:00) ekrandaki karşılığı. Bozukluk **engellenmiyor, uyarılıyor**: kesim mantıken önceki günün saati
+olabilir (16:00 kesim → yarının rotası), yani ters sıra her zaman hata değil.
+
+**Hâl ayrımı `Chip`in kendi sözleşmesinden:** dolu rozet = bu rotaya özel, çerçeveli = genel değerden
+miras, kırmızı = biçimi bozuk değer (eksende yer TUTMAZ — nereye konsa yalan olurdu). Yeni ton
+uydurulmadı. Çubuk penceresi de yeni bir kutu değil: `AnchoredMenu` + `image-crop-dialog`'un çubuk
+deseni + `StepButton`. Yeniden yazılan tek dosya `route-hours.tsx`.
+
+**Çubuğu oynatmak istisnayı KENDİLİĞİNDEN açıyor** — ayrı bir "bu rotaya özel" anahtarı yok, fazla
+tıklama olurdu. Geri dönüş açık bir eylem: *"↩ genele dön (14:00)"*, yalnız istisna varken çiziliyor.
+
+⚠ **Bu iş bir görünmez arıza açığa çıkardı:** rota rayının `z-[500]`'ü yüzünden rayın içinden açılan
+hiçbir `AnchoredMenu` boyanmıyordu (menü body'ye portal edilip `z-[60]` alıyor). Yani rota seçicisinin
+açılır listesi de bugüne dek görünmüyordu. Rayın yüksek sayısı `ZoneMap`'e `isolation: isolate`
+gelmeden önceki gerekçeye aitti; yalıtımdan sonra gereksizdi. Ray `z-10`'a indi. **Ders:** bir
+komponentin z değeri sözleşmesinin parçasıdır — portal eden bir menüyü yüksek katmanlı bir kabın
+içine koymak, menüyü sessizce yok eder.
+
+Görsel karar bu turda `.dc.html`'e işlenmedi (yüzey sözlü istekten doğdu, Claude Design'dan gelmedi) —
+tasarım dosyasına geri yazılması `19.20`'de işaretli.
