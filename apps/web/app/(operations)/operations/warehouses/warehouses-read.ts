@@ -2,10 +2,8 @@ import { needsExpiryAttention, upcomingDeliveryDates } from '@lezzet/domain-core
 import type {
   OrderStatus,
   DeliveryZoneWithCodes,
-  StorageArea,
   UserProfile,
   UserRole,
-  Vehicle,
   Warehouse,
   WarehouseTransfer,
 } from '@lezzet/types';
@@ -15,7 +13,6 @@ import type { BatchView } from '@/lib/stock/batch-types';
 import {
   WarehouseAddressSchema,
   type ClosureConsequence,
-  type MeasurePointView,
   type ScorecardView,
   type StaffChipView,
   type WarehouseAddressView,
@@ -122,42 +119,9 @@ function setupGapOf(input: { isActive: boolean; shipsOnline: boolean; activeZone
 // `@lezzet/database` importu konunca supabase-js de onunla gitti ve derleme `node:crypto` ile
 // kırıldı — iki sayfa birden 500 döndü. Bu dosya SAF kalır: DB okuması yapan her şey sayfada.
 
-/**
- * İki tablo → TEK liste. Sıra alanlar sonra araçlar, her biri kendi `sortOrder`ında — depocunun
- * turu mekânsaldır (önce depo, sonra araç), alfabetik değil.
- */
-export function toMeasurePoints(input: {
-  areas: readonly StorageArea[];
-  vehicles: readonly Vehicle[];
-  lastByPoint: ReadonlyMap<string, string>;
-}): MeasurePointView[] {
-  return [
-    ...input.areas.map((area) => ({
-      id: area.id,
-      kind: 'area' as const,
-      name: area.name,
-      label: null,
-      areaKind: area.kind,
-      targetMinC: area.targetMinC,
-      targetMaxC: area.targetMaxC,
-      isActive: area.isActive,
-      lastRecordedAt: input.lastByPoint.get(`area:${area.id}`) ?? null,
-    })),
-    ...input.vehicles.map((vehicle) => ({
-      id: vehicle.id,
-      kind: 'vehicle' as const,
-      name: vehicle.plate,
-      label: vehicle.label,
-      areaKind: null,
-      // Aracın beklenen aralığı bugün veride YOK ve uydurulmuyor: soğutuculu araçla sıradan araç
-      // aynı tabloda, ayrım tutulmuyor. Sapma araçta alışkanlıktan ölçülür.
-      targetMinC: null,
-      targetMaxC: null,
-      isActive: vehicle.isActive,
-      lastRecordedAt: input.lastByPoint.get(`vehicle:${vehicle.id}`) ?? null,
-    })),
-  ];
-}
+// `toMeasurePoints` de BURADAN GİTTİ (19.30) → `measure-read.ts`. Nokta görünümü artık takvimi de
+// taşıyor ve takvim DB okuması istiyor; bu dosyanın istemciye giriyor olması onu burada tutmayı
+// imkânsız kıldı. Kalan tek nokta kuralı yukarıdaki `server-only` künyesidir.
 
 export function toZoneCards(
   zones: readonly DeliveryZoneWithCodes[],

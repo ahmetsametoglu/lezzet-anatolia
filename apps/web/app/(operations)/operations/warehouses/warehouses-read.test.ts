@@ -114,6 +114,7 @@ describe('kapatmanın sonuçları', () => {
     zones: [],
     staff: [],
     points: [],
+    measureTruncated: false,
     scorecard: {
       variantCount: 0,
       batchCount: 0,

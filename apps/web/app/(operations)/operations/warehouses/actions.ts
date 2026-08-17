@@ -2,15 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { StorageAreaService, VehicleService, WarehouseService, serviceDb } from '@lezzet/database';
+import { StorageAreaService, TemperatureLogService, VehicleService, WarehouseService, serviceDb } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
+import { isUnusualReading } from './measure-read';
+import type { TemperatureDeviation } from './measure-rules';
 import { WAREHOUSES_PATH } from './warehouses-url';
 import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema } from './warehouses-types';
-
-/** Nokta değişince sıcaklık ekranının çip listesi de tazelenmeli — iki sayfa aynı kümeyi okuyor. */
-const TEMPERATURE_PATH = '/operations/temperature';
 
 // Depolar ekranının yazma kapıları (19.5).
 //
@@ -166,13 +165,18 @@ export async function saveStorageAreaAction(input: unknown): Promise<ActionResul
     }
 
     const svc = new StorageAreaService(serviceDb());
-    const fields = { name: parsed.name.trim(), kind: parsed.kind, targetMinC, targetMaxC };
+    const fields = {
+      name: parsed.name.trim(),
+      kind: parsed.kind,
+      targetMinC,
+      targetMaxC,
+      expectedDailyChecks: parsed.expectedDailyChecks,
+    };
     const row = parsed.id
       ? await svc.update({ id: parsed.id, ...fields })
       : await svc.insert({ warehouseId: parsed.warehouseId, ...fields });
 
     revalidatePath(WAREHOUSES_PATH);
-    revalidatePath(TEMPERATURE_PATH);
     return { data: { id: row.id }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
@@ -190,13 +194,16 @@ export async function saveVehicleAction(input: unknown): Promise<ActionResult<{ 
     const svc = new VehicleService(serviceDb());
     // Plaka BÜYÜK harfe çekiliyor: `67 abc` ile `67 ABC` aynı araçtır ve benzersizlik kısıtı
     // ikisini iki araç sayardı — soğuk zincir geçmişini ikiye bölen tam da bu.
-    const fields = { plate: parsed.plate.trim().toLocaleUpperCase('tr'), label: parsed.label.trim() || null };
+    const fields = {
+      plate: parsed.plate.trim().toLocaleUpperCase('tr'),
+      label: parsed.label.trim() || null,
+      expectedDailyChecks: parsed.expectedDailyChecks,
+    };
     const row = parsed.id
       ? await svc.update({ id: parsed.id, ...fields })
       : await svc.insert({ warehouseId: parsed.warehouseId, ...fields });
 
     revalidatePath(WAREHOUSES_PATH);
-    revalidatePath(TEMPERATURE_PATH);
     return { data: { id: row.id }, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
@@ -216,9 +223,93 @@ export async function setPointActiveAction(input: {
     else await new VehicleService(db).update({ id: input.id, isActive: input.isActive });
 
     revalidatePath(WAREHOUSES_PATH);
-    revalidatePath(TEMPERATURE_PATH);
     return { data: null, error: null };
   } catch (error) {
     return { data: null, error: readable(error) };
   }
 }
+
+// ── Sıcaklık ölçümü ─────────────────────────────────────────────────────────
+
+/**
+ * **Ölçüm kaydı** — `/operations/temperature`ten buraya taşındı (`22.29` kapanışı, kullanıcı kararı
+ * 17.08): *"web'de yazma olsun, burada admin girsin; depocu zaten mobil uygulama üzerinden girecek."*
+ *
+ * ── KAPI DEĞİŞTİ VE BU BİLİNÇLİ ─────────────────────────────────────────────
+ * Eski kapı `requireWarehouseScope` + `readWorkWarehouse` idi: yazan kişi DEPOCUydu ve hangi depoda
+ * çalıştığı bağlamdan geliyordu. Buradaki yazan YÖNETİCİ ve depoyu bağlamdan değil SEÇTİĞİ KARTTAN
+ * belirtiyor — Depolar sayfasının tamamı `requireAdmin`. Sahadaki kayıt native uygulamanın işi
+ * (`docs/talep/talep-mobil-sicaklik-ucu.md`); o uç gelene kadar web tek yazma yolu.
+ *
+ * ── GEÇMİŞE YAZILMIYOR (kullanıcı kararı 17.08) ─────────────────────────────
+ * `recordedAt` girdide YOK ve olmayacak: `now()` yazılıyor. Hijyen defterine sonradan kayıt
+ * düşmek defteri denetimde değersiz kılar — **boş bir gün dürüsttür, sonradan doldurulmuş bir gün
+ * değildir.** Takvimde geçmiş günler bu yüzden salt okunur.
+ *
+ * ── UYARIR, ENGELLEMEZ ──────────────────────────────────────────────────────
+ * Aralık dışı değer YAZILIR, sonra uyarılır (`DOMAIN §4` — karar sahadaki insanın). Reddetseydik
+ * dondurucu bozulduğunda kayıt hiç yazılmazdı.
+ */
+export async function recordTemperatureAction(input: {
+  warehouseId: string;
+  kind: 'area' | 'vehicle';
+  pointId: string;
+  temperatureC: number;
+}): Promise<ActionResult<{ name: string; deviation: TemperatureDeviation | null; usualC: number | null }>> {
+  try {
+    const user = await requireAdmin();
+
+    if (!input.pointId) throw new Error('Ölçüm noktası seçin.');
+    if (!Number.isFinite(input.temperatureC)) throw new Error('Derece girin.');
+    if (input.temperatureC < SANE_MIN_C || input.temperatureC > SANE_MAX_C) {
+      throw new Error(`${SANE_MIN_C}° ile ${SANE_MAX_C}° arasında bir derece girin — bu değer bir ölçüm değil, yazım hatası.`);
+    }
+
+    const db = serviceDb();
+    /**
+     * **Nokta bu tesise ait mi — SUNUCUDA doğrulanıyor.** İstemciden gelen bir uuid başka tesisin
+     * dolabını gösterebilir ve veritabanı bunu reddetmez (`temperature_log.warehouse_id` ile
+     * noktanın deposu arasında kısıt yok) — yani kontrol buradaysa vardır, yoksa hiç yoktur.
+     */
+    const point =
+      input.kind === 'area'
+        ? await new StorageAreaService(db).getById(input.pointId)
+        : await new VehicleService(db).getById(input.pointId);
+    if (!point || (point.warehouseId !== null && point.warehouseId !== input.warehouseId)) {
+      throw new Error('Bu ölçüm noktası bu tesise tanımlı değil — hiçbir kayıt yazılmadı.');
+    }
+    const name = 'plate' in point ? (point.label ? `${point.plate} · ${point.label}` : point.plate) : point.name;
+
+    await new TemperatureLogService(db).insert({
+      warehouseId: input.warehouseId,
+      ...(input.kind === 'area' ? { storageAreaId: input.pointId } : { vehicleId: input.pointId }),
+      temperatureC: input.temperatureC,
+      recordedBy: user.profileId,
+    });
+
+    // Sapma kararı okuma tarafıyla AYNI fonksiyondan (`measure-rules.deviationOf`): ikisi ayrı
+    // hesaplasaydı kayıtta "normal" denip takvimde kırmızı görünen bir gün çıkardı. Kayıttan SONRA
+    // soruluyor — yeni ölçüm de o noktanın geçmişinin parçası.
+    const verdict = await isUnusualReading({
+      db,
+      warehouseId: input.warehouseId,
+      kind: input.kind,
+      pointId: input.pointId,
+      temperatureC: input.temperatureC,
+    });
+
+    revalidatePath(WAREHOUSES_PATH);
+    // `null` (ölçüt yok) ile "normal" AYRI: ekran ikisini aynı cümleye katlamıyor.
+    return { data: { name, deviation: verdict?.deviation ?? null, usualC: verdict?.usualC ?? null }, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}
+
+/**
+ * Fiziksel akıl sınırı — sapma ölçütünden AYRI iş yapıyor: sapma uyarır, bu REDDEDER. Aralık dışı
+ * bir ölçüm gerçek olabilir (dondurucu bozulmuştur); −185° olamaz, o bir parmak kaymasıdır
+ * (`-18,5` yazılırken virgül düşmüş).
+ */
+const SANE_MIN_C = -60;
+const SANE_MAX_C = 60;

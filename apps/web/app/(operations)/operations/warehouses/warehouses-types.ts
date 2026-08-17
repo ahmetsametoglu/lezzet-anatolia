@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   AddressSchema,
   CountryEnum,
+  DAILY_CHECKS_MAX,
   type DeliveryZonePostalCode,
   StorageAreaInsertSchema,
   VehicleInsertSchema,
@@ -11,6 +12,7 @@ import {
   type StorageAreaKind,
   type Warehouse,
 } from '@lezzet/types';
+import type { MeasureDayState, TemperatureDeviation } from './measure-rules';
 
 // Depolar ekranının (19.5) tipleri. Varlık şemaları `packages/types`'ta; burada YALNIZ görünümün
 // eklediği türetmeler ve formun sözleşmesi var — hiçbir alan elle yeniden yazılmaz (CLAUDE.md §1).
@@ -65,14 +67,25 @@ export type PostalCodePick = Pick<DeliveryZonePostalCode, 'country' | 'postalCod
  * beklentisi yok") ve boş bir sayı alanı `0`a düşer — sıfır derece geçerli bir beklentidir, yani
  * boşluk sıfırdan ayırt edilemez hâle gelirdi (`CLAUDE §1`).
  */
+/**
+ * Günlük beklenen ölçüm — formda METİN, çünkü `<select>` metin döndürür ve sayıya zorlanan boş bir
+ * alan `0`a düşer; sıfır burada GEÇERLİ bir cevap ("bu noktadan ölçüm beklenmiyor"), yani boşlukla
+ * karışması ölçülmeyeni ölçülmüş gibi okuturdu (`CLAUDE §1`).
+ */
+const DailyChecksField = z.coerce.number().int().min(0).max(DAILY_CHECKS_MAX);
+
 export const StorageAreaFormSchema = StorageAreaInsertSchema.pick({ name: true, kind: true }).extend({
   targetMinC: z.string(),
   targetMaxC: z.string(),
+  expectedDailyChecks: DailyChecksField,
 });
 export type StorageAreaFormInput = z.infer<typeof StorageAreaFormSchema>;
 
 /** Araç. Plaka kimlik, etiket okunurluk — ikincisi boş bırakılabilir. */
-export const VehicleFormSchema = VehicleInsertSchema.pick({ plate: true }).extend({ label: z.string() });
+export const VehicleFormSchema = VehicleInsertSchema.pick({ plate: true }).extend({
+  label: z.string(),
+  expectedDailyChecks: DailyChecksField,
+});
 export type VehicleFormInput = z.infer<typeof VehicleFormSchema>;
 
 
@@ -169,6 +182,11 @@ export interface WarehouseCardView {
   scorecard: ScorecardView;
   /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */
   points: MeasurePointView[];
+  /**
+   * Takvim okuması tavana çarptı mı (`TemperatureLogService.listRange`). Kesilen bir okumanın boş
+   * günleri "ölçülmemiş" diye boyanırdı — yani altyapı sınırı bir hijyen ihlali gibi görünürdü.
+   */
+  measureTruncated: boolean;
 }
 
 /**
@@ -189,13 +207,39 @@ export interface MeasurePointView {
   areaKind: StorageAreaKind | null;
   targetMinC: number | null;
   targetMaxC: number | null;
+  /**
+   * Günde kaç ölçüm beklendiği — takvimin "eksik gün" ölçütü (19.30). **0 = beklenmiyor** ve o
+   * noktanın boş günleri eksik sayılmaz (oda sıcaklığı rafı, soğutucusuz araç).
+   */
+  expectedDailyChecks: number;
+  /** Noktanın doğum anı — öncesindeki günler "ölçülmedi" değil, nokta henüz yoktu. */
+  createdAt: string;
   isActive: boolean;
   /**
-   * Bu noktanın SON ölçümü — `null` = hiç ölçülmemiş. Tarih değil ANLIK durum sorusu: kart
-   * "tanımlı ama hiç kullanılmayan nokta" hâlini görünür kılıyor, çünkü o hâl bir kurulum
-   * eksikliğidir (nokta tanımlanmış, tura girmemiş).
+   * Bu noktanın son ölçümü **takvim penceresi içinde** (son 3 ay) — `null` = pencerede kayıt yok.
+   *
+   * "Hiç ölçülmemiş" DEĞİL ve ekran da öyle yazmıyor: dört ay önce ölçülmüş bir dolap için "hiç"
+   * yanlış olurdu — ölçemediğimiz bir şeyi yokluk diye göstermek (`CLAUDE §1`).
    */
   lastRecordedAt: string | null;
+  /** Hijyen takvimi — eskiden yeniye, pencerenin her günü için tam bir kayıt (19.30). */
+  days: MeasureDayView[];
+}
+
+/**
+ * **Takvimin bir günü** (19.30) — hijyen defterinin bir satırı.
+ *
+ * Ölçümlerin kendisi de taşınıyor, yalnız hâli değil: takvimde bir güne gelen kişinin sorusu "ne
+ * yazmıştık" — saat ve derece olmadan kırmızı bir kutu, cevabı olmayan bir uyarıdır.
+ */
+export interface MeasureDayView {
+  /** `2026-08-17` — UTC gün anahtarı (`measure-rules.dayKeyOf` künyesi). */
+  date: string;
+  state: MeasureDayState;
+  /** O günün ölçümleri, saat sırasında. */
+  readings: Array<{ at: string; temperatureC: number; deviation: TemperatureDeviation | null }>;
+  /** O gün kaç ölçüm bekleniyordu — tooltipte "2 bekleniyordu, 1 alınmış" cümlesinin kaynağı. */
+  expected: number;
 }
 
 /**

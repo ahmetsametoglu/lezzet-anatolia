@@ -484,6 +484,19 @@ export const KAPSAM: KapsamAlani[] = [
         sayac: (db) => say(db, 'storage_area', (q) => q.is('target_min_c', null)),
       },
       { ad: 'araç', zorunlu: true, sayac: (db) => say(db, 'vehicle', (q) => q) },
+      // Takvimin "eksik gün" ölçütü (19.30) İKİ YÖNLÜ sınanmalı: günlük ölçüm bekleyen nokta
+      // boş günlerini eksik gösterir, beklemeyen nokta göstermez. Yalnız biri seed'de olsaydı
+      // öteki yolun hiç koşmadığı fark edilmezdi.
+      {
+        ad: 'günlük ölçüm bekleyen nokta',
+        zorunlu: true,
+        sayac: (db) => say(db, 'storage_area', (q) => q.gt('expected_daily_checks', 0)),
+      },
+      {
+        ad: 'ölçüm beklenmeyen nokta',
+        zorunlu: true,
+        sayac: (db) => say(db, 'storage_area', (q) => q.eq('expected_daily_checks', 0)),
+      },
       // Partinin rafı BURADA DEĞİL, "Stok — parti" alanında sayılıyor: soru alanın değil PARTİNİN
       // hâli ("rafı biliniyor mu"). İki yerde sormak aynı sayıyı iki başlık altında raporlardı.
       {

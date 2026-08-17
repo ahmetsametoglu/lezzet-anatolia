@@ -56,7 +56,50 @@ export class TemperatureLogService extends BaseDbService<TemperatureLog, Tempera
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
     });
   }
+
+  /**
+   * **Bir pencerenin TAMAMI** — hijyen takviminin okuması (19.30).
+   *
+   * `list`ten farkı sayfalamaması ve bu bilinçli: takvim sonsuz büyüyen bir liste değil, TAVANI
+   * OLAN bir küme — gün sayısı × nokta sayısı × günlük ölçüm ile sınırlı (`CLAUDE §1` sayfalama
+   * ölçütü: doğal tavanı olan küme tek turda çekilir). İmleçli okuma burada takvimi parça parça
+   * boyardı ve "eksik gün" ölçütü yarım veriyle yanlış cevap verirdi.
+   *
+   * **`truncated` sessiz kesilmeye karşı:** tavan aşılırsa satır atılır ve okuyan ekran eksik bir
+   * takvimi tam sanardı — kesilen bir okumanın boş günleri "ölçülmemiş" diye boyanırdı, yani
+   * altyapı sınırı bir hijyen ihlali gibi görünürdü. Bayrak kalkınca ekran ölçemediğini söyler.
+   */
+  async listRange(opts: {
+    warehouseId: string;
+    from: Date;
+    to: Date;
+    limit?: number;
+  }): Promise<{ rows: TemperatureLog[]; truncated: boolean }> {
+    const cap = opts.limit ?? RANGE_CAP;
+    const rows = await this.getAll(
+      { warehouseId: opts.warehouseId },
+      {
+        rangeFilters: [
+          { field: 'recorded_at', operator: 'gte', value: opts.from.toISOString() },
+          { field: 'recorded_at', operator: 'lte', value: opts.to.toISOString() },
+        ],
+        orderBy: 'recorded_at',
+        orderDirection: 'desc',
+        // Tavanın BİR FAZLASI isteniyor: tam tavanda dönen sonuç "tam da bu kadar vardı" ile
+        // "kesildi"yi ayırt ettirmez.
+        limit: cap + 1,
+      },
+    );
+    return { rows: rows.slice(0, cap), truncated: rows.length > cap };
+  }
 }
+
+/**
+ * Pencere okumasının tavanı. 3 ay × 12 nokta × günde 12 ölçüm ≈ 13 000 teorik üst sınır; gerçek
+ * kullanım bunun onda biri (ölçüldü 17.08: 5 gün × 6 nokta = 56 satır). 5000 ikisinin arasında —
+ * gerçek veriyi asla kesmez ama bozuk bir sorgunun tabloyu belleğe çekmesini de engeller.
+ */
+const RANGE_CAP = 5000;
 
 // ── `listLocations` SİLİNDİ (19.28) ───────────────────────────────────────────────────────────
 // Kayıt girilmiş konumların BENZERSİZ kümesini döndürüyordu ve giriş formunun çip listesini

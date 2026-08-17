@@ -286,13 +286,22 @@ export interface Noktalar {
  * ekranı "tanımlı ama tura girmemiş nokta" uyarısını çiziyor ve o uyarı ancak böyle bir satırla
  * sınanır. Hepsi ölçülmüş bir kurulumda uyarı hiç görünmez, bir gün bozulsa kimse fark etmez.
  */
+/**
+ * `gunluk` = günde beklenen ölçüm (19.30) ve küme bilerek ÇEŞİTLİ: takvimin dört hâli de gerçek
+ * veriyle çizilsin.
+ * · Derin dondurucu 1 → **2**: seed günde 4 kayıt yazıyor, yani "tam" günler.
+ * · Öteki soğuk noktalar → **1**: günde 2 kayıtla yine tam.
+ * · Mal kabul/Karantina → **1**: geçiş alanı da ölçülür (mal orada bekliyor).
+ * · **Kuru depo rafı → 0**: oda sıcaklığı rafından günlük ölçüm beklenmez. Hiç ölçülmeyen tek
+ *   nokta bu ve takvimi bilerek `idle` — beklenmeyen bir yokluğun eksik SAYILMADIĞI görülsün.
+ */
 const STR_ALANLARI = [
-  { ad: 'Derin dondurucu 1', tur: 'frozen' as const, hedef: [-20, -18] as const },
-  { ad: 'Derin dondurucu 2', tur: 'frozen' as const, hedef: [-20, -18] as const },
-  { ad: 'Soğuk oda', tur: 'chilled' as const, hedef: [0, 4] as const },
-  { ad: 'Mal kabul', tur: 'staging' as const, hedef: null },
-  { ad: 'Karantina', tur: 'staging' as const, hedef: null },
-  { ad: 'Kuru depo rafı', tur: 'ambient' as const, hedef: null },
+  { ad: 'Derin dondurucu 1', tur: 'frozen' as const, hedef: [-20, -18] as const, gunluk: 2 },
+  { ad: 'Derin dondurucu 2', tur: 'frozen' as const, hedef: [-20, -18] as const, gunluk: 1 },
+  { ad: 'Soğuk oda', tur: 'chilled' as const, hedef: [0, 4] as const, gunluk: 1 },
+  { ad: 'Mal kabul', tur: 'staging' as const, hedef: null, gunluk: 1 },
+  { ad: 'Karantina', tur: 'staging' as const, hedef: null, gunluk: 1 },
+  { ad: 'Kuru depo rafı', tur: 'ambient' as const, hedef: null, gunluk: 0 },
 ];
 
 export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Noktalar> {
@@ -318,6 +327,7 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
           kind: alan.tur,
           targetMinC: alan.hedef?.[0] ?? null,
           targetMaxC: alan.hedef?.[1] ?? null,
+          expectedDailyChecks: alan.gunluk,
           sortOrder: i + 1,
         })
       ).id;
@@ -338,6 +348,7 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
         kind: 'frozen',
         targetMinC: -20,
         targetMaxC: -18,
+        expectedDailyChecks: 1,
         sortOrder: 1,
       })
     ).id;
@@ -346,7 +357,10 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
   const mevcutArac = (await vehicles.list()).find((v) => v.plate === plaka);
   const arac =
     mevcutArac?.id ??
-    (await vehicles.insert({ plate: plaka, label: 'Frigo kamyonet', warehouseId: depolar.str, sortOrder: 1 })).id;
+    // **Frigo kamyonet günde 1 ölçüm bekliyor** — araç varsayılanı 0 ama bu araç soğuk taşıyor.
+    // Ayrım veride tutulmadığı için (`vehicle` tablosunda soğutucu bayrağı yok) kararı operatör
+    // veriyor; seed de o kararı örnekliyor.
+    (await vehicles.insert({ plate: plaka, label: 'Frigo kamyonet', warehouseId: depolar.str, expectedDailyChecks: 1, sortOrder: 1 })).id;
 
   console.log(`✓ ölçüm noktası: ${strAlan.size} alan (STR) · 1 alan (KEHL) · 1 araç`);
   return { strAlan, kehlAlan, arac };

@@ -94,6 +94,23 @@ export const AREA_KIND_LABELS: Record<StorageAreaKind, string> = {
 
 export const AREA_KIND_OPTIONS = STORAGE_AREA_KINDS.map((kind) => ({ value: kind, label: AREA_KIND_LABELS[kind] }));
 
+/**
+ * Günde beklenen ölçüm sayısı (19.30) — küçük ve KAPALI bir küme, serbest sayı kutusu değil.
+ *
+ * Gerekçe operasyonel: elle yapılan bir tur günde bir, iki ya da üç kez yapılır; dördüncüsü artık
+ * bir tur değil bir sensör işidir. Açık bir sayı kutusu "günde 7" yazılmasına izin verir ve o
+ * noktanın takvimi kalıcı olarak eksik görünür — karşılanamayacak bir beklenti, ölçümü değil
+ * ekranı bozar.
+ *
+ * **`0` listenin başında değil, kendi cümlesiyle:** bir kaçış değil geçerli bir cevap.
+ */
+export const DAILY_CHECK_OPTIONS = [
+  { value: '0', label: 'Beklenmiyor' },
+  { value: '1', label: 'Günde 1' },
+  { value: '2', label: 'Günde 2' },
+  { value: '3', label: 'Günde 3' },
+];
+
 /** Kısa rozet — kartta yer dar, tam ad satırı taşırdı. */
 export const AREA_KIND_SHORT: Record<StorageAreaKind, string> = {
   frozen: 'donuk',

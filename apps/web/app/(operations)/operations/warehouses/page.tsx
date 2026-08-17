@@ -4,10 +4,7 @@ import {
   OrderService,
   SettingsService,
   StockService,
-  StorageAreaService,
-  TemperatureLogService,
   UserProfileService,
-  VehicleService,
   WarehouseService,
   WarehouseTransferService,
   ZoneNoticeService,
@@ -20,14 +17,8 @@ import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { WarehousesClient } from './warehouses-client';
-import {
-  openOrderCountOf,
-  toMeasurePoints,
-  toScorecard,
-  toStaffChips,
-  toWarehouseRows,
-  toZoneCards,
-} from './warehouses-read';
+import { readMeasurePoints } from './measure-read';
+import { openOrderCountOf, toScorecard, toStaffChips, toWarehouseRows, toZoneCards } from './warehouses-read';
 import { parseWarehousesUrl } from './warehouses-url';
 import type { WarehouseCardView, WarehousesData } from './warehouses-types';
 
@@ -126,33 +117,10 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
 }
 
 
-/** Son ölçüm taraması: birkaç nokta × birkaç hafta; kartın sorusu için fazlasıyla yeter. */
-const LAST_MEASURED_LIMIT = 200;
-
-/**
- * **Nokta başına son ölçüm anı** (19.28) — "tanımlı ama hiç kullanılmayan nokta" hâlini görünür
- * kılan tek veri.
- *
- * **Neden `warehouses-read`te DEĞİL:** o dosya saf görünüyor ama istemci paketine giriyor
- * (`closureConsequences`'ı kapatma penceresi çağırıyor). Oraya bir servis importu konunca
- * supabase-js de istemciye gitti ve derleme `node:crypto` ile kırıldı — iki sayfa birden 500
- * döndü (ölçüldü 17.08). DB okuyan her şey sayfada kalır.
- *
- * Tek sayfa okunuyor ve bu KASITLI bir sınır: kart "en son ne zaman" diye soruyor, geçmişin
- * tamamını değil. Tavanın altında kalan çok eski bir nokta `null` görünür — yani "hiç ölçülmemiş"
- * ile "çok uzun süredir ölçülmemiş" aynı işarete düşer. İkisi de aynı cevabı gerektirdiği için
- * (o noktaya bak) ayrım bugün bir karar değiştirmiyor.
- */
-async function readLastMeasured(db: ReturnType<typeof serviceDb>, warehouseId: string): Promise<Map<string, string>> {
-  const page = await new TemperatureLogService(db).list({ warehouseId, limit: LAST_MEASURED_LIMIT });
-  const latest = new Map<string, string>();
-  for (const row of page.rows) {
-    const key = row.storageAreaId ? `area:${row.storageAreaId}` : row.vehicleId ? `vehicle:${row.vehicleId}` : null;
-    if (key === null || latest.has(key)) continue;
-    latest.set(key, row.recordedAt);
-  }
-  return latest;
-}
+// `readLastMeasured` SİLİNDİ (19.30) → `measure-read.readMeasurePoints`. "Son ölçüm" artık takvimin
+// yan ürünü: aynı üç aylık pencere hem günleri hem son anı veriyor, yani ayrı bir tarama gereksizdi.
+// Sınırı da düzeldi — eskiden 200 satırlık tavanın dışında kalan nokta "hiç ölçülmemiş" görünüyordu;
+// bugün "son 3 ayda ölçüm yok" deniyor ve bu cümle ölçtüğümüz şeyin birebir karşılığı.
 
 /** Seçili tesisin tam kartı — ikinci dalga: yalnız bu deponun eşik altı ve açık işi okunur. */
 async function readCard(
@@ -174,18 +142,13 @@ async function readCard(
     : [[], null];
 
   /**
-   * Ölçüm noktaları (19.28) — **kapalı tesiste de okunur**, karnenin aksine.
+   * Ölçüm noktaları + hijyen takvimi (19.28 · 19.30) — **kapalı tesiste de okunur**, karnenin aksine.
    *
    * Karne "bugün ne durumda" sorusudur ve kapalı tesiste sorulmaz; nokta ise KÜNYEDİR — tesis
-   * kapalıyken de dolabı vardır ve yeniden açılınca aynı noktalarla açılır. Pasifi de geliyor
-   * (`activeOnly` verilmiyor): ekran onu işaretliyor, süzmüyor — kullanımdan kalkmış bir dolabı
-   * gizlemek, geçmiş kayıtlarının sahibini görünmez yapardı.
+   * kapalıyken de dolabı vardır ve yeniden açılınca aynı noktalarla açılır. Denetim defteri de
+   * kapalı tesiste okunur; asıl o zaman sorulur.
    */
-  const [areas, vehicles, lastByPoint] = await Promise.all([
-    new StorageAreaService(db).listByWarehouse(row.id),
-    new VehicleService(db).list({ warehouseId: row.id }),
-    readLastMeasured(db, row.id),
-  ]);
+  const measure = await readMeasurePoints(db, row.id, new Date());
 
   /**
    * **Bölgelerin ağırlığı** (19.28) — kart artık yalnız tanımı değil sonucu da gösteriyor.
@@ -206,7 +169,8 @@ async function readCard(
     row,
     zones: toZoneCards(zones, row.id, { orders: zoneOrders, waiting: zoneWaiting, now: new Date() }),
     staff: toStaffChips(staff, row.id),
-    points: toMeasurePoints({ areas, vehicles, lastByPoint }),
+    points: measure.points,
+    measureTruncated: measure.truncated,
     scorecard: toScorecard({
       batches: ownBatches,
       belowMinCount: belowMin.length,

@@ -37,12 +37,15 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | name | string | tesis içinde benzersiz (`lower(name)`) |
 | kind | `storage_area_kind` | `frozen` · `chilled` · `ambient` · `staging` |
 | target_min_c / target_max_c | numeric \| null | beklenen aralık; **ikisi birlikte** ya da ikisi de null |
+| expected_daily_checks | smallint | günde beklenen ölçüm; varsayılan **1**, tavan 12 — takvimin "eksik gün" ölçütü (`19.30`) |
 | is_active | boolean | susturma — silme yok |
 | sort_order | int | operatörün turu |
 
 **Beklenen aralık sapmanın BİRİNCİL ölçütüdür.** İkincil ölçüt noktanın kendi alışkanlığı (geçmiş ölçümlerin ortancası ± tolerans) ve sıra önemli: alışkanlık bir tahmindir — bozuk bir dolap her gün −8 okuyorsa alışkanlığı −8'dir ve o ölçüt onu "normal" ilan eder. Aralık bu tuzağa düşmez. Aralığı olmayan noktalarda (raf, geçiş alanı) tek ölçüt alışkanlıktır ve örneklem azken **susar**.
 
 **Tek uçlu aralık YOK** (`storage_area_target_pair`): "altı mı üstü mü serbest" sorusunu okuyana bırakırdı.
+
+**`expected_daily_checks = 0` geçerli ve anlamlı bir değerdir**, bir kaçış değil. Oda sıcaklığı rafından günlük ölçüm beklenmez; o noktanın boş günlerini "eksik" saymak, denetimi gerçek eksiklere kör eden bir gürültü üretirdi. Alan olmadan yalnız "sıfır kayıt" görülebiliyordu — *"sabah alındı, akşam alınmadı"* görülemiyordu, yani yarım kalmış bir tur hiç yapılmamış bir tur kadar sessizdi. Araçta varsayılan **0**: soğutuculu araç da var sıradan araç da ve ayrım veride tutulmuyor.
 
 ---
 
@@ -54,6 +57,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | plate | string | benzersiz (büyük harfe çekilerek yazılır) |
 | label | string \| null | "Küçük kamyonet" — ekranda okunan ad |
 | warehouse_id | uuid \| null | **künye, kısıt değil** — `set null` |
+| expected_daily_checks | smallint | günde beklenen ölçüm; varsayılan **0** (soğutuculu/sıradan ayrımı veride yok) |
 | is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |

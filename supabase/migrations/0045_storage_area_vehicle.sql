@@ -54,9 +54,27 @@ create table public.storage_area (
    */
   target_min_c numeric(4, 1),
   target_max_c numeric(4, 1),
+  /**
+   * Günde kaç ölçüm BEKLENDİĞİ — hijyen takviminin "eksik gün" sorusunun tek ölçütü (19.30).
+   *
+   * Bu alan gelmeden "eksik" diye bir şey söylenemiyordu: kayıt yoksa sıfır kayıt görülüyordu ama
+   * *"sabah alındı, akşam alınmadı"* görülemiyordu — yarım kalmış bir tur, hiç yapılmamış bir tur
+   * kadar sessizdi.
+   *
+   * **0 GEÇERLİ VE ANLAMLI bir değer:** oda sıcaklığı rafından günlük ölçüm beklenmez. Sıfır
+   * yazıldığında takvim o noktanın boş günlerini eksik saymaz — beklenmeyen bir ölçümün
+   * yokluğunu eksiklik diye göstermek, denetimi gerçek eksiklere kör eden bir gürültü üretirdi.
+   *
+   * Varsayılan 1: bir soğuk noktadan günde en az bir kayıt beklemek soğuk zincirin asgarisidir;
+   * daha sıkı izlenen dolap (giriş-çıkışı yoğun dondurucu) nokta bazında yükseltilir.
+   */
+  expected_daily_checks smallint not null default 1,
   is_active boolean not null default true,
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
+  -- Üst sınır bir iş kuralı değil, parmak kayması kalkanı: günde 12'den çok elle ölçüm bir tur
+  -- değil yazım hatasıdır (`24` yazılmış `2` gibi).
+  constraint storage_area_daily_checks check (expected_daily_checks between 0 and 12),
   -- Aralık ya TAM verilir ya hiç: tek uçlu bir aralık "üstü serbest" mi "altı serbest" mi belli
   -- değildir ve okuyan taraf bunu tahmin etmek zorunda kalırdı.
   constraint storage_area_target_pair check (num_nonnulls(target_min_c, target_max_c) <> 1),
@@ -79,9 +97,14 @@ create table public.vehicle (
   -- NULLABLE ve zorlanmıyor (yukarıdaki K8 künyesi): aidiyet değil künye. `set null` çünkü depo
   -- kapanınca araç yok olmaz, yalnız adresi bilinmez olur.
   warehouse_id uuid references public.warehouse (id) on delete set null,
+  -- Alandakiyle aynı ölçüt (yukarıdaki künye). Araçta varsayılan 0: soğutuculu araç da vardır
+  -- sıradan araç da, ve ayrım veride tutulmuyor — her araçtan günlük ölçüm beklemek, yarısı için
+  -- her gün yalancı bir eksik üretirdi. Soğuk taşıyan araç 1'e (ya da 2'ye) çekilir.
+  expected_daily_checks smallint not null default 0,
   is_active boolean not null default true,
   sort_order int not null default 0,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint vehicle_daily_checks check (expected_daily_checks between 0 and 12)
 );
 
 create index vehicle_active_idx on public.vehicle (is_active, sort_order, plate);

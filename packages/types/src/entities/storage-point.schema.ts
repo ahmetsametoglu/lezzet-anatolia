@@ -20,6 +20,12 @@ import { dbNumericNullable } from '../primitives/db-numeric';
  * kelimeler: "donuk ürün donuk alanda durur" cümlesi ancak iki taraf aynı dili konuşursa kurulur.
  * `staging` bir saklama rejimi değil GEÇİŞ yeri (mal kabul / sevk) — hedef aralığı olmaması normal.
  */
+/**
+ * Günlük ölçüm sayısının tavanı — bir iş kuralı değil, parmak kayması kalkanı: günde 12'den çok
+ * elle ölçüm bir tur değil yazım hatasıdır. Kısıt veritabanında da yazılı (`0045`).
+ */
+export const DAILY_CHECKS_MAX = 12;
+
 export const STORAGE_AREA_KINDS = ['frozen', 'chilled', 'ambient', 'staging'] as const;
 export const StorageAreaKindEnum = z.enum(STORAGE_AREA_KINDS);
 export type StorageAreaKind = z.infer<typeof StorageAreaKindEnum>;
@@ -39,6 +45,11 @@ export const StorageAreaSchema = z.object({
    */
   targetMinC: dbNumericNullable,
   targetMaxC: dbNumericNullable,
+  /**
+   * Günde kaç ölçüm beklendiği — takvimin "eksik gün" ölçütü (19.30). **0 geçerli:** oda sıcaklığı
+   * rafından günlük ölçüm beklenmez ve o noktanın boş günü eksik sayılmaz.
+   */
+  expectedDailyChecks: z.number().int().min(0).max(DAILY_CHECKS_MAX),
   isActive: z.boolean(),
   sortOrder: z.number().int(),
   createdAt: z.string(),
@@ -46,7 +57,7 @@ export const StorageAreaSchema = z.object({
 export type StorageArea = z.infer<typeof StorageAreaSchema>;
 
 export const StorageAreaInsertSchema = StorageAreaSchema.omit({ id: true, createdAt: true })
-  .partial({ kind: true, isActive: true, sortOrder: true, targetMinC: true, targetMaxC: true })
+  .partial({ kind: true, isActive: true, sortOrder: true, targetMinC: true, targetMaxC: true, expectedDailyChecks: true })
   .extend({ name: z.string().min(1) });
 export type StorageAreaInsert = z.infer<typeof StorageAreaInsertSchema>;
 
@@ -68,6 +79,11 @@ export const VehicleSchema = z.object({
   plate: z.string(),
   label: z.string().nullable(),
   warehouseId: z.string().uuid().nullable(),
+  /**
+   * Varsayılanı **0** (alandakinden farklı): soğutuculu araç da var sıradan araç da ve ayrım veride
+   * tutulmuyor — her araçtan günlük ölçüm beklemek yarısı için her gün yalancı eksik üretirdi.
+   */
+  expectedDailyChecks: z.number().int().min(0).max(DAILY_CHECKS_MAX),
   isActive: z.boolean(),
   sortOrder: z.number().int(),
   createdAt: z.string(),
@@ -75,7 +91,7 @@ export const VehicleSchema = z.object({
 export type Vehicle = z.infer<typeof VehicleSchema>;
 
 export const VehicleInsertSchema = VehicleSchema.omit({ id: true, createdAt: true })
-  .partial({ label: true, warehouseId: true, isActive: true, sortOrder: true })
+  .partial({ label: true, warehouseId: true, isActive: true, sortOrder: true, expectedDailyChecks: true })
   .extend({ plate: z.string().min(1) });
 export type VehicleInsert = z.infer<typeof VehicleInsertSchema>;
 

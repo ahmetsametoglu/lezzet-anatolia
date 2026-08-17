@@ -8,7 +8,8 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
-import { FacilityStrip, MeasurePoints, Scorecard, SectionHead, SetupGapNote, StaffChips, ZoneCard } from './warehouses-sections';
+import { MeasurePoints } from './measure-points';
+import { FacilityStrip, Scorecard, SectionHead, SetupGapNote, StaffChips, ZoneCard } from './warehouses-sections';
 import type { MeasurePointView, WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 
 // Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin
@@ -156,8 +157,17 @@ function FacilityView({
               üstünde zaten yazılı, burada bir karara girdi değiller. Bir bölümün tamamı, dört
               kutu yer kaplayıp tek yeni cümle söylemiyordu. */}
 
-          {/* ── Hizmet alanı ── Teslimat'tan buraya taşındı (01.08): kurulum kurulumla durur. */}
+          {/* ── Karne ── sayar, listelemez. **EN ÜSTTE** (kullanıcı kararı 17.08): sayfaya girenin
+              ilk sorusu "bu depo bugün nasıl?" — kurulum (hizmet alanı, noktalar, personel) ise
+              bir kez yapılıp aylarca dönülmeyen iştir. Kurulumu üste koymak, her gün sorulan
+              soruyu her gün kaydırtıyordu. */}
           <section className="flex flex-col gap-2.5">
+            <SectionHead title="Karne" hint="bugün nasıl durduğu — her sayı Stok'a bu depo bağlamıyla gider" />
+            <Scorecard card={card.scorecard} code={row.code} />
+          </section>
+
+          {/* ── Hizmet alanı ── Teslimat'tan buraya taşındı (01.08): kurulum kurulumla durur. */}
+          <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead
               title="Hizmet alanı"
               hint="nereye hizmet ettiği"
@@ -187,19 +197,20 @@ function FacilityView({
                 sonucunu da değişiklik anında yazıyor. Kural `DOMAIN §17` ve migration'da yaşıyor. */}
           </section>
 
-          {/* ── Karne ── sayar, listelemez. */}
-          <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
-            <SectionHead title="Karne" hint="bugün nasıl durduğu — her sayı Stok'a bu depo bağlamıyla gider" />
-            <Scorecard card={card.scorecard} code={row.code} />
-          </section>
-
           {/* ── Ölçüm noktaları ── hijyen defterinin zemini (19.28). */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead
               title="Ölçüm noktaları"
-              hint="soğuk zincirin iki yeri — depodaki dolap, yoldaki araç; sıcaklık kaydı bunlara yazılır"
+              hint="soğuk zincirin iki yeri — depodaki dolap, yoldaki araç; noktaya tıklayın, hijyen takvimi açılsın"
             />
-            <MeasurePoints points={card.points} onAdd={onAddPoint} onEdit={onEditPoint} onToggle={onTogglePoint} />
+            <MeasurePoints
+              points={card.points}
+              warehouseId={row.id}
+              truncated={card.measureTruncated}
+              onAdd={onAddPoint}
+              onEdit={onEditPoint}
+              onToggle={onTogglePoint}
+            />
           </section>
 
           {/* ── Bağlı personel ── okunur; kapsam ataması Ayarlar'da. */}

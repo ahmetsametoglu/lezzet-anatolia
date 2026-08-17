@@ -87,15 +87,20 @@ const NAV_SECTIONS: NavSection[] = [
        */
       { key: 'stock', label: 'Stok', href: '/operations/stock', roles: STOCK_FLOOR },
       /**
-       * **Sıcaklık menüden KALKTI** (kullanıcı kararı 16.08) — `22.29`'un uzun süredir bekleyen
-       * sorusu ("kalıcı evi Depolar mı, native uygulama mı") ilk yarısıyla cevaplandı: **kendi
-       * sayfası değil.** Gerekçe ekranın kendisiydi — tek form, tek "bugün" şeridi; günde bir-iki
-       * kayıtlık bir iş menüde bir depo ekranıyla aynı ağırlıkta duruyordu.
+       * **Sıcaklığın kendi sayfası YOK — `22.29` KAPANDI** (kullanıcı kararı 17.08).
        *
-       * **Rota SİLİNMEDİ, yalnız girişi kapandı** (`/operations/temperature` hâlâ çalışıyor):
-       * ölçüm noktalarının nereye tanımlanacağı henüz konuşulmadı ve ekranı silmek, kararı vermeden
-       * çalışan bir yolu yıkmak olurdu. Kalıcı evi belli olunca form oraya taşınır, bu klasör de
-       * o gün gider.
+       * 16.08'de menüden kaldırılmıştı ama rota (`/operations/temperature`) çalışmaya devam
+       * ediyordu; ölçüldüğünde ortaya şu çıktı: sayfa **komut paletinde de yoktu**, yani ona
+       * yalnız adresi elle yazan girebiliyordu — çalışan ama ulaşılamayan bir ekran.
+       *
+       * Klasör silindi, iki yarısı iki ayrı yere gitti ve ayrım YÜZEYE göre:
+       * · **Okuma/denetim** → Depolar sayfasının hijyen takvimi. Denetmenin sorusu ("şu dolabın
+       *   son üç ayı") bir yönetici sorusudur ve bu sayfa zaten `ADMIN_ONLY`.
+       * · **Sahadaki yazma** → native uygulama. Ölçüm dolabın önünde, ayakta, tek elle alınır;
+       *   operasyon web'i masaüstü-yalnız (`docs/uygulama`). Uç henüz yok →
+       *   `docs/talep/talep-mobil-sicaklik-ucu.md`.
+       *
+       * Web'de yazma da duruyor ama artık YÖNETİCİNİN: takvimin altındaki "bugüne ölçüm ekle".
        */
       // Tedarik muhasebeye de açık: tedarikçi borcu ve vadesi onun da sorusu.
       { key: 'satinalma', label: 'Tedarik', href: '/operations/procurement', roles: FINANCE },

@@ -44,10 +44,10 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 5/9 (+2 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 8/11 (+1 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/13 (+2 kısmi) |
-| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 21/29 (+6 kısmi) |
+| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 22/30 (+6 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 58/72 (+11 kısmi) |
-| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 20/39 (+12 kısmi) |
+| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 21/39 (+11 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

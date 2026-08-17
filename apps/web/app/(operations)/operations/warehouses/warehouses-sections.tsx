@@ -12,8 +12,8 @@ import type { Country } from '@lezzet/types';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
-import { AREA_KIND_SHORT, postalCodeLabel, weekdayList } from './warehouses-labels';
-import type { MeasurePointView, ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
+import { postalCodeLabel, weekdayList } from './warehouses-labels';
+import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
 // durur ki "karne başka yerde başka şey sayar" gibi bir ayrışma doğmasın.
@@ -395,149 +395,7 @@ function StaffChip({ name, role, note }: { name: string; role: string; note: str
 }
 
 
-/**
- * **Ölçüm noktaları** (19.28, kullanıcı isteği 17.08) — depo içi alanlar + bu tesise künyelenmiş
- * araçlar.
- *
- * Sayfanın kendi sorusuna cevap veren bir bölüm: *"bu tesis ne durumda"* sorusunun hijyen ayağı.
- * Nokta bir KÜNYEDİR — tesis kapalıyken de dolabı vardır — o yüzden karnenin aksine kapalı tesiste
- * de okunuyor.
- *
- * **Hiç ölçülmemiş nokta İŞARETLİ.** Tanımlanmış ama tura hiç girmemiş bir dolap, bir kurulum
- * eksikliğidir: nokta var, alışkanlığı yok, sapma ölçütü de yok. Bu bölüm o boşluğun görüldüğü tek
- * yer — sıcaklık ekranı yalnız BUGÜNÜ sorar.
- *
- * **Pasif nokta SÜZÜLMEZ, işaretlenir:** kullanımdan kalkmış bir dolabı gizlemek, geçmiş
- * kayıtlarının sahibini görünmez yapardı (kataloğun `isActive` ayrımı).
- */
-export function MeasurePoints({
-  points,
-  onAdd,
-  onEdit,
-  onToggle,
-}: {
-  points: readonly MeasurePointView[];
-  onAdd: (kind: 'area' | 'vehicle') => void;
-  onEdit: (point: MeasurePointView) => void;
-  onToggle: (point: MeasurePointView) => void;
-}) {
-  const areas = points.filter((point) => point.kind === 'area');
-  const vehicles = points.filter((point) => point.kind === 'vehicle');
-  const neverMeasured = points.filter((point) => point.isActive && point.lastRecordedAt === null).length;
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      {neverMeasured > 0 ? (
-        <SetupGapNote
-          text={`${num(neverMeasured)} nokta hiç ölçülmemiş — tanımlı ama tura girmemiş. Sapma uyarısı ancak geçmiş biriktikçe çalışır.`}
-        />
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-2.5">
-        <PointColumn
-          title="Depo içi alanlar"
-          empty="Henüz alan yok — dolap, soğuk oda ya da geçiş alanı ekleyin."
-          points={areas}
-          onAdd={() => onAdd('area')}
-          addLabel="+ Alan"
-          onEdit={onEdit}
-          onToggle={onToggle}
-        />
-        <PointColumn
-          title="Araçlar"
-          empty="Bu tesise künyelenmiş araç yok."
-          points={vehicles}
-          onAdd={() => onAdd('vehicle')}
-          addLabel="+ Araç"
-          onEdit={onEdit}
-          onToggle={onToggle}
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Tek sütun — başlık + ekle düğmesi + satırlar. İki sütun aynı bileşeni paylaşıyor (kopya yok). */
-function PointColumn({
-  title,
-  empty,
-  points,
-  addLabel,
-  onAdd,
-  onEdit,
-  onToggle,
-}: {
-  title: string;
-  empty: string;
-  points: readonly MeasurePointView[];
-  addLabel: string;
-  onAdd: () => void;
-  onEdit: (point: MeasurePointView) => void;
-  onToggle: (point: MeasurePointView) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-wide text-ops-muted">{title}</span>
-        <span className="font-ops-body text-ops-xs text-ops-faint">{num(points.length)}</span>
-        <Button size="sm" variant="secondary" className="ml-auto" onClick={onAdd}>
-          {addLabel}
-        </Button>
-      </div>
-
-      {points.length === 0 ? (
-        <p className={cardClass('px-3 py-2.5 font-ops-body text-ops-xs leading-relaxed text-ops-muted')}>{empty}</p>
-      ) : (
-        <ul className="flex flex-col rounded-ops-card border border-ops-line">
-          {points.map((point) => (
-            <li
-              key={`${point.kind}:${point.id}`}
-              className={`flex items-center gap-2 border-b border-ops-line-soft px-3 py-2 last:border-b-0 ${
-                point.isActive ? '' : 'bg-ops-subtle'
-              }`}
-            >
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate font-ops-body text-ops-sm text-ops-ink">{point.name}</span>
-                  {point.label ? <span className="truncate font-ops-body text-ops-xs text-ops-muted">{point.label}</span> : null}
-                  {point.areaKind ? <Badge tone="slate">{AREA_KIND_SHORT[point.areaKind]}</Badge> : null}
-                  {point.isActive ? null : <Badge tone="slate">Pasif</Badge>}
-                </span>
-                <span className="font-ops-body text-ops-micro text-ops-muted">
-                  {/* Beklenen aralık ve son ölçüm YAN YANA: "ne bekleniyor" ile "en son ne zaman
-                      bakıldı" birlikte okunmadan nokta hakkında karar verilemez. */}
-                  {point.targetMinC !== null && point.targetMaxC !== null
-                    ? `${degree(point.targetMinC)} … ${degree(point.targetMaxC)} · `
-                    : ''}
-                  {point.lastRecordedAt ? `son ölçüm ${shortDateTime(point.lastRecordedAt)}` : 'hiç ölçülmedi'}
-                </span>
-              </span>
-
-              <button
-                type="button"
-                onClick={() => onEdit(point)}
-                className="shrink-0 cursor-pointer rounded-ops-btn px-2 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:bg-ops-subtle hover:text-ops-ink"
-              >
-                Düzenle
-              </button>
-              {/* SİLME YOK: kayıtlı nokta veritabanında zaten silinemiyor (`restrict`) ve
-                  silinebilseydi denetim geçmişi sahipsiz kalırdı. Susturmak yeter. */}
-              <button
-                type="button"
-                onClick={() => onToggle(point)}
-                className="shrink-0 cursor-pointer rounded-ops-btn px-2 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:bg-ops-subtle hover:text-ops-ink"
-              >
-                {point.isActive ? 'Pasife al' : 'Geri aç'}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/** "−18°" — sıcaklık kartıyla aynı biçim; eksi işareti U+2212 (mono yazıtipinde tire ayraç gibi okunuyor). */
-function degree(celsius: number): string {
-  return `${celsius.toLocaleString('tr-TR', { maximumFractionDigits: 1 }).replace('-', '−')}°`;
-}
+// ── ÖLÇÜM NOKTALARI BU DOSYADAN GİTTİ (19.30) → `measure-points.tsx` ────────────────────────────
+// Bölüm iki sütundu (alanlar | araçlar) ve satırları statikti. Bugün kendi durumunu taşıyor
+// (tür süzgeci, açılan takvim, bugüne kayıt), yani artık bir "bölüm" değil bir EKRAN — ve bu
+// dosyanın sözleşmesi durumsuz bölümler. Nokta satırının gerekçeleri de onunla taşındı.

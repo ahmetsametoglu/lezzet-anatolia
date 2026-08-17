@@ -1386,8 +1386,17 @@ satırında.
   - `stock_intake` için sayfalı bir okuma yok (bugün yalnız tedarikçi bazlı `listBySupplier`). Boş bir
     bölüm çizilmedi: veri olmadan başlık koymak, olmayan bir listeyi vaat etmektir.
 
-- [~] (22.29) **Sıcaklık kaydının kalıcı evi** — Depolar mı, native uygulama mı
+- [x] (22.29) **Sıcaklık kaydının kalıcı evi** — Depolar mı, native uygulama mı
   - *Bitti:* ölçüm kaydı ait olduğu yüzeyde yaşar; `/operations/temperature` ya taşınır ya gerekçesiyle kalır
+  - **KAPANDI 17.08 — cevap "ikisi de", ama ayrım YÜZEYE göre** (kullanıcı kararı, `19.30` ile aynı
+    turda): *"web'de yazma olsun burada admin girsin, depocu zaten mobil uygulama üzerinden giriş
+    yapacak."* **Okuma/denetim** → Depolar sayfasının hijyen takvimi (yönetici sorusu, sayfa zaten
+    `ADMIN_ONLY`); **sahadaki yazma** → native uygulama. Klasör SİLİNDİ.
+  - **Silmeyi kesinleştiren ölçüm:** sayfa menüden kalkmıştı ama komut paletinde de yoktu — ona
+    yalnız adresi elle yazan girebiliyordu. Çalışan ama ulaşılamayan bir ekran, "gerekçesiyle
+    kalıyor" sayılamaz. Native uçta da hiçbir şey yok (ölçüldü: `apps/mobile*` içinde `temperature`
+    geçen tek dosya yok) → `docs/talep/talep-mobil-sicaklik-ucu.md`.
+  - Aşağıdaki iki not artık GEÇMİŞTİR; ne olduğunu değil neden öyle olduğunu okumak için duruyorlar.
   - Ölçüm dolabın önünde, ayakta, tek elle girilir (`docs/uygulama` D-serisi) — asıl adayı native.
     Web'deki adayı Depolar sayfasının tesis künyesi. Bugün kendi sayfasında duruyor ve işlevi tam;
     karar verilmeden taşımak, ikinci kez taşımak olurdu.
@@ -1399,14 +1408,14 @@ satırında.
     serbest metin ve çipler geçmiş kayıtlardan türüyor — yani "Dolap 1" ile "Dolap1" iki ayrı
     noktadır ve hiçbir yer uyarmaz. Kullanıcı araç · soğutucu · buzdolabı tanımlarının **Depolar'ın
     içinde** yer alacağını söyledi (16.08); yeri kesinleşince form da oraya taşınır.
-  - ⚠ **Ölçüldü 16.08 — `stock.location` ile `temperature_log.location` aynı kavram, ayrı tablo,
-    ilişkisiz.** İkisi de serbest metin ve künyeleri bile aynı şeyi söylüyor (*"depo İÇİ konum
-    (dolap/raf)"* ↔ *"depo İÇİ dolap adı / araç plakası"*). Veri örtüşmüyor: stok rafları
-    `Dolap 1-4 · Soğuk oda · Karantina`, sıcaklık noktaları `Derin dondurucu 1-2 · Soğuk oda ·
-    Frigo araç` — ortak tek isim "Soğuk oda". Yani **sıcaklığı ölçülen dondurucularda kayıtlı stok
-    yok, stok tutulan dolapların sıcaklığı hiç ölçülmüyor**; soğuk zincir kanıtı ise malın DURDUĞU
-    yerin ölçümüdür. Kullanıcı bu konuyu ayrıca ele alacağını söyledi (doküman ↔ şema ↔ pratik
-    karşılaştırması) — o tur bu görevi de kapatacak.
+  - ✔ **Ölçüldü 16.08, ÇÖZÜLDÜ 17.08 (`19.29`) — `stock.location` ile `temperature_log.location`
+    aynı kavramdı, ayrı tablo, ilişkisiz.** İkisi de serbest metindi ve künyeleri bile aynı şeyi
+    söylüyordu (*"depo İÇİ konum (dolap/raf)"* ↔ *"depo İÇİ dolap adı / araç plakası"*). Veri
+    örtüşmüyordu: stok rafları `Dolap 1-4 · Soğuk oda · Karantina`, sıcaklık noktaları
+    `Derin dondurucu 1-2 · Soğuk oda · Frigo araç` — ortak tek isim "Soğuk oda". Yani **sıcaklığı
+    ölçülen dondurucularda kayıtlı stok yoktu, stok tutulan dolapların sıcaklığı hiç
+    ölçülmüyordu**; soğuk zincir kanıtı ise malın DURDUĞU yerin ölçümüdür. Bugün ikisi de
+    `storage_area`ya bağlı — tek tanım, iki tüketici.
 - [x] (22.30) **Seviyeler sekmesi: ürün görseli + seçili ürünün STOK GEÇMİŞİ** *(kullanıcı tespiti
   14.08: "ürünlerin resmi ile beraber görmek daha kalıcı olur … bir ürüne tıkladığım zaman o ürünle
   alakalı geçmiş stok girişleri, tarihleri, fiyatları … bize teknik bir yük çıkartmadan")*
