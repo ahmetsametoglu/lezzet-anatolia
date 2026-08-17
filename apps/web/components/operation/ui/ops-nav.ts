@@ -97,8 +97,8 @@ const NAV_SECTIONS: NavSection[] = [
        * · **Okuma/denetim** → Depolar sayfasının hijyen takvimi. Denetmenin sorusu ("şu dolabın
        *   son üç ayı") bir yönetici sorusudur ve bu sayfa zaten `ADMIN_ONLY`.
        * · **Sahadaki yazma** → native uygulama. Ölçüm dolabın önünde, ayakta, tek elle alınır;
-       *   operasyon web'i masaüstü-yalnız (`docs/uygulama`). Uç henüz yok →
-       *   `docs/talep/talep-mobil-sicaklik-ucu.md`.
+       *   operasyon web'i masaüstü-yalnız (`docs/uygulama`). **Uç henüz yok ve zamanı gelince
+       *   yapılacak** (kullanıcı kararı 17.08) — `BEKLEYEN(19.30)`.
        *
        * Web'de yazma da duruyor ama artık YÖNETİCİNİN: takvimin altındaki "bugüne ölçüm ekle".
        */

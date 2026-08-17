@@ -304,6 +304,15 @@ const STR_ALANLARI = [
   { ad: 'Kuru depo rafı', tur: 'ambient' as const, hedef: null, gunluk: 0 },
 ];
 
+/**
+ * Bir alandan günde kaç ölçüm beklendiği — **tek kaynak burası** (`STR_ALANLARI`).
+ *
+ * Sıcaklık seed'i bu sayıyı bilmek zorunda: "eksik gün" ancak beklenenden az ölçüm yazıldığında
+ * doğar, yani seri beklentiyi tanımadan o hâli hiç üretemez. Sayıyı orada ikinci kez yazmak, bir
+ * gün ayrışan iki beklenti demekti (`CLAUDE §1`).
+ */
+export const gunlukOlcum = (ad: string): number => STR_ALANLARI.find((a) => a.ad === ad)?.gunluk ?? 0;
+
 export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Noktalar> {
   const areas = new StorageAreaService(db);
   const vehicles = new VehicleService(db);

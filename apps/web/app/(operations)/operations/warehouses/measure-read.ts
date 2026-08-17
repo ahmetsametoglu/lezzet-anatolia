@@ -151,9 +151,22 @@ function pointOf(
     readingsByDay.set(key, list);
   }
 
-  // Noktanın DOĞUM günü: öncesindeki günler "ölçülmedi" değil, nokta henüz yoktu. Bu ayrım
-  // olmasaydı her yeni dolap, tanımlandığı gün üç aylık kırmızı bir geçmişle doğardı.
-  const bornOn = dayKeyOf(base.createdAt);
+  /**
+   * Noktanın DOĞUM günü: öncesindeki günler "ölçülmedi" değil, nokta henüz yoktu. Bu ayrım
+   * olmasaydı her yeni dolap, tanımlandığı gün üç aylık kırmızı bir geçmişle doğardı.
+   *
+   * **Kayıt tarihi de doğum sayılıyor** ve bu `created_at`ten daha güçlü bir kanıt: bir noktanın
+   * ölçümü varsa o gün VARDI — tersi mantıken imkânsız. `created_at` yalnız SATIRIN doğuşudur ve
+   * ikisi ayrışabiliyor (aktarım, seed, sonradan tanımlanmış bir dolabın geçmişe girilmiş
+   * kayıtları). Yalnız `created_at`e baksaydık, ölçümü olan bir gün "nokta henüz yoktu" diye
+   * sessize alınır ve o günün eksikleri hiç sorulmazdı.
+   */
+  const earliestReading = rows.reduce<string | null>(
+    (first, row) => (first === null || row.recordedAt < first ? row.recordedAt : first),
+    null,
+  );
+  const createdOn = dayKeyOf(base.createdAt);
+  const bornOn = earliestReading === null ? createdOn : minOf(createdOn, dayKeyOf(earliestReading));
 
   const days: MeasureDayView[] = ctx.days.map((date) => {
     // Saat sırası: gün içindeki ölçümler tooltipte sabahtan akşama okunur.
@@ -182,6 +195,9 @@ function pointOf(
 
   return { ...base, days, lastRecordedAt };
 }
+
+/** İki gün anahtarının erkeni. Anahtarlar `YYYY-MM-DD` olduğu için metin karşılaştırması yeterli. */
+const minOf = (a: string, b: string): string => (a < b ? a : b);
 
 /**
  * Pencerenin gün anahtarları, eskiden yeniye. `count` gün + bugün.

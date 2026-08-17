@@ -238,8 +238,9 @@ export async function setPointActiveAction(input: {
  * ── KAPI DEĞİŞTİ VE BU BİLİNÇLİ ─────────────────────────────────────────────
  * Eski kapı `requireWarehouseScope` + `readWorkWarehouse` idi: yazan kişi DEPOCUydu ve hangi depoda
  * çalıştığı bağlamdan geliyordu. Buradaki yazan YÖNETİCİ ve depoyu bağlamdan değil SEÇTİĞİ KARTTAN
- * belirtiyor — Depolar sayfasının tamamı `requireAdmin`. Sahadaki kayıt native uygulamanın işi
- * (`docs/talep/talep-mobil-sicaklik-ucu.md`); o uç gelene kadar web tek yazma yolu.
+ * belirtiyor — Depolar sayfasının tamamı `requireAdmin`. Sahadaki kayıt native uygulamanın işi ve
+ * **zamanı gelince yapılacak** (kullanıcı kararı 17.08, `BEKLEYEN(19.30)`); o uç gelene kadar
+ * depocunun ölçüm yazacak yolu yok, web'deki bu kapı da yalnız yöneticinin.
  *
  * ── GEÇMİŞE YAZILMIYOR (kullanıcı kararı 17.08) ─────────────────────────────
  * `recordedAt` girdide YOK ve olmayacak: `now()` yazılıyor. Hijyen defterine sonradan kayıt

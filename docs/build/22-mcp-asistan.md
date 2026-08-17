@@ -1395,7 +1395,7 @@ satırında.
   - **Silmeyi kesinleştiren ölçüm:** sayfa menüden kalkmıştı ama komut paletinde de yoktu — ona
     yalnız adresi elle yazan girebiliyordu. Çalışan ama ulaşılamayan bir ekran, "gerekçesiyle
     kalıyor" sayılamaz. Native uçta da hiçbir şey yok (ölçüldü: `apps/mobile*` içinde `temperature`
-    geçen tek dosya yok) → `docs/talep/talep-mobil-sicaklik-ucu.md`.
+    geçen tek dosya yok) ve **zamanı gelince yapılacak** (kullanıcı kararı 17.08) → `BEKLEYEN(19.30)`.
   - Aşağıdaki iki not artık GEÇMİŞTİR; ne olduğunu değil neden öyle olduğunu okumak için duruyorlar.
   - Ölçüm dolabın önünde, ayakta, tek elle girilir (`docs/uygulama` D-serisi) — asıl adayı native.
     Web'deki adayı Depolar sayfasının tesis künyesi. Bugün kendi sayfasında duruyor ve işlevi tam;

@@ -4,7 +4,7 @@ import {
 } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
-import type { Depolar, Noktalar } from './warehouse';
+import { gunlukOlcum, type Depolar, type Noktalar } from './warehouse';
 
 // ── Stok partileri (06) ──────────────────────────────────────────────────────────────────────────
 // Parti çeşitliliği olmadan raf ömrü kuralları hiç görünmez: FEFO ancak farklı tarihli iki partide
@@ -359,12 +359,22 @@ export async function seedAdjustments(db: Db, kisiler: Kisiler): Promise<void> {
  * dosyanın bildiği tek şey ölçümün kendisi.
  *
  * Seri seyrek ve bazen ARALIK DIŞI: hep −18 °C olsaydı uyarı eşiği hiç denenmezdi.
+ *
+ * ── DALGA HEDEF ARALIĞIN İÇİNDE KALIR (17.08) ───────────────────────────────
+ * Profiller bir kez daraltıldı ve gerekçesi takvimden okundu. Eski değerler sınırı doğal olarak
+ * aşıyordu (dondurucu `−19,5 ± 0,8` → hedef `−20…−18`in altına taşıyor) ve beş günlük seride bu
+ * fark edilmiyordu; 75 güne çıkınca **günlerin yarısı kırmızı** oldu — yarısı sapma olan bir
+ * takvimde sapma bir işaret olmaktan çıkar, arka plan olur.
+ *
+ * Bugün dalga aralığın İÇİNDE duruyor ve dışarı yalnız `KAZA` çıkarıyor. Ayrım kasıtlı: hedefli
+ * noktalarda `target` ölçütü, hedefsiz noktalarda (`Mal kabul`, araç) `habit` ölçütü sınanıyor —
+ * ikisi de kazayla tetikleniyor, ikisi de gündelik gürültüyle DEĞİL.
  */
 const SICAKLIK_PROFILI: Record<string, { taban: number; sapma: number }> = {
-  'Derin dondurucu 1': { taban: -19.5, sapma: 0.8 },
-  'Derin dondurucu 2': { taban: -18.4, sapma: 1.2 },
-  'Soğuk oda': { taban: 3.2, sapma: 1.1 },
-  'Mal kabul': { taban: 8.5, sapma: 2.2 },
+  'Derin dondurucu 1': { taban: -19, sapma: 0.6 }, // hedef −20…−18 → dalga [−19,6 · −18,4]
+  'Derin dondurucu 2': { taban: -19, sapma: 0.7 }, // hedef −20…−18 → dalga [−19,7 · −18,3]
+  'Soğuk oda': { taban: 2.2, sapma: 1.0 }, //         hedef 0…4     → dalga [1,2 · 3,2]
+  'Mal kabul': { taban: 8.5, sapma: 2.2 }, //         hedefsiz → ölçüt alışkanlık (tolerans 4°)
 };
 
 /** Frigo aracın profili — soğuk zincirin YOLDAKİ yeri; ölçümü aynı defterde, ayrı tabloda. */
@@ -386,22 +396,43 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
   // ölçülmemiş bir satırla sınanır.
   const olculecek = [...noktalar.strAlan].filter(([ad]) => ad in SICAKLIK_PROFILI);
 
-  // **Seri 22 günden 5 güne indi (kullanıcı kararı 16.08: test verisi incelsin).** 176 ölçüm
-  // üretiyordu ve bu, listenin ne kadar uzayabileceğini göstermekten başka bir şey sınamıyordu —
-  // tarih süzgeci beş günlük bir seride de aynı yolu koşuyor. **Korunan üç şey:** dört ölçüm
-  // noktası (konum çeşitliliği), günde iki ölçüm (sabah/akşam ikilisi) ve aralık DIŞI kayıtlar —
-  // aşağıdaki `% 9` ölçütü beş günde de üç kaza üretiyor (ölçüldü), yani uyarı eşiği hâlâ deneniyor.
-  for (let g = 4; g >= 0; g -= 1) {
+  /**
+   * **Seri 5 günden 75 güne çıktı (kullanıcı kararı 17.08: "takvimi besleyebilirsin").**
+   *
+   * 16.08'de 22 günden 5 güne indirilmişti ve gerekçesi doğruydu: uzun seri "listenin ne kadar
+   * uzayabileceğini" göstermekten başka bir şey sınamıyordu. **Hijyen takvimi (19.30) o gerekçeyi
+   * değiştirdi** — takvim üç aylık bir pencere çiziyor ve beş günlük bir seride görülemeyen ÜÇ hâli
+   * var: eksik gün, yarım tur, ve zamana yayılmış sapma. Uzunluk artık bir gösteri değil, ekranın
+   * sınadığı şeyin kendisi.
+   *
+   * 75 gün, 92 günlük pencerenin İÇİNDE bilerek: pencerenin başında boş bir şerit kalıyor ve
+   * "veri buraya kadar" sınırı ekranda görünüyor — dolu bir takvim, sınırın nerede olduğunu saklar.
+   *
+   * Üç hâl DETERMİNİST kurallarla üretiliyor (rastgelelik yok — aynı seed hep aynı takvimi çizsin):
+   */
+  const SERI_GUN = 75;
+  /** Turun hiç yapılmadığı gün → `missing`. Sabit `5` ofseti BUGÜNÜ boşa düşürmemek için. */
+  const ATLANAN = (g: number, n: number) => (g + n) % 23 === 5;
+  /** Yalnız sabah bakılmış gün → `short` (yalnız günde 2 bekleyen noktada görünür). */
+  const YARIM = (g: number, n: number) => (g + n) % 11 === 0;
+  /** Bilinçli SAPMA: kapı açık kalmış / araç güneşte beklemiş. Seyrek — her gün sapma, sapma değildir. */
+  const KAZA = (g: number, n: number) => (g * 4 + n) % 37 === 0;
+
+  for (let g = SERI_GUN - 1; g >= 0; g -= 1) {
     // Araç da noktaların arasında: aynı seride, ayrı tabloda — ekran ikisini tek liste okuyor.
     const gununNoktalari = [
-      ...olculecek.map(([ad, id]) => ({ ...SICAKLIK_PROFILI[ad]!, ref: { storageAreaId: id } })),
-      { ...ARAC_PROFILI, ref: { vehicleId: noktalar.arac } },
+      ...olculecek.map(([ad, id]) => ({ ...SICAKLIK_PROFILI[ad]!, gunluk: gunlukOlcum(ad), ref: { storageAreaId: id } })),
+      // Frigo aracın beklentisi 1 (`seed/warehouse.ts`) — araç varsayılanı 0 ama bu araç soğuk taşıyor.
+      { ...ARAC_PROFILI, gunluk: 1, ref: { vehicleId: noktalar.arac } },
     ];
     for (const [n, nokta] of gununNoktalari.entries()) {
-      for (const saat of [7, 18]) {
+      if (ATLANAN(g, n)) continue;
+      // Beklenenden AZ yazmak `short` hâlini doğuruyor; günde 1 bekleyen noktada zaten oluşamaz
+      // (1 ölçüm hem yarım hem tam olamaz) ve bu doğru — o nokta yalnız tam ya da eksik olabilir.
+      const saatler = !YARIM(g, n) && nokta.gunluk >= 2 ? [7, 18] : [7];
+      for (const saat of saatler) {
         const dalga = Math.sin((g * 2 + n + saat) / 3) * nokta.sapma;
-        // Her 9'uncu ölçümde bilinçli SAPMA: kapı açık kalmış / araç güneşte beklemiş.
-        const kaza = (g * 4 + n) % 9 === 0 ? 5.5 : 0;
+        const kaza = KAZA(g, n) ? 5.5 : 0;
         const zaman = new Date(Date.now() - g * 86_400_000);
         zaman.setHours(saat, 0, 0, 0);
         await logs.insert({
@@ -418,26 +449,26 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
 
   // İKİNCİ DEPONUN ölçümleri: soğuk zincir kaydı depo başına tutulur ve ekran depo süzgeciyle
   // okunur. Yalnız ana depoda ölçüm olsaydı, süzgeci unutan bir sorgu Kehl'i seçince BOŞ liste
-  // döndürür — bu "ölçüm yok" mu, "süzgeç yanlış" mı, ayırt edilemezdi. Seri daha kısa (7 gün) ve
+  // döndürür — bu "ölçüm yok" mu, "süzgeç yanlış" mı, ayırt edilemezdi. Seri daha kısa (30 gün) ve
   // tek noktalı: ikinci depo küçük, kayıt hacmi de öyle olmalı — eşit hacim gerçeği yalanlar.
+  // **İki deponun takvimi de FARKLI uzunlukta** ve bu kasıtlı: pencere sabit (92 gün) ama veri
+  // değil; ekran "veri buraya kadar" sınırını iki ayrı yerde göstermek zorunda.
   const kehlProfil = SICAKLIK_PROFILI['Derin dondurucu 1']!;
-  for (let g = 2; g >= 0; g -= 1) {
-    for (const saat of [8, 17]) {
-      const zaman = new Date(Date.now() - g * 86_400_000);
-      zaman.setHours(saat, 0, 0, 0);
-      await logs.insert({
-        warehouseId: depolar.kehl,
-        storageAreaId: noktalar.kehlAlan,
-        // Kehl'de bir gün ARALIK DIŞI: uyarı ikinci depoda da tetiklenebilmeli.
-        // **Gün 3'ten 1'e taşındı (16.08):** seri üç güne indi, `g === 3` artık hiç oluşmuyordu ve
-        // ikinci deponun aralık-dışı hâli sessizce kaybolurdu.
-        temperatureC: euro(kehlProfil.taban + Math.sin(g + saat / 4) * kehlProfil.sapma + (g === 1 ? 6.2 : 0)),
-        recordedBy: depocu,
-        recordedAt: zaman.toISOString(),
-      });
-      sayi += 1;
-    }
+  for (let g = 29; g >= 0; g -= 1) {
+    // Kehl'de de tur atlanan günler var — tek noktalı bir takvimde eksik gün daha görünür.
+    if (g % 9 === 4) continue;
+    const zaman = new Date(Date.now() - g * 86_400_000);
+    zaman.setHours(8, 0, 0, 0);
+    await logs.insert({
+      warehouseId: depolar.kehl,
+      storageAreaId: noktalar.kehlAlan,
+      // Kehl'de iki gün ARALIK DIŞI: uyarı ikinci depoda da tetiklenebilmeli.
+      temperatureC: euro(kehlProfil.taban + Math.sin(g / 2) * kehlProfil.sapma + (g === 1 || g === 17 ? 6.2 : 0)),
+      recordedBy: depocu,
+      recordedAt: zaman.toISOString(),
+    });
+    sayi += 1;
   }
-  console.log(`✓ sıcaklık: ${sayi} ölçüm · ${olculecek.length} alan + 1 araç ölçüldü · biri hiç ölçülmedi · İKİ depo`);
+  console.log(`✓ sıcaklık: ${sayi} ölçüm · ${SERI_GUN} günlük seri · ${olculecek.length} alan + 1 araç · biri hiç ölçülmedi · İKİ depo`);
 }
 
