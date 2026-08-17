@@ -6,6 +6,7 @@ import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
 import { StockAdjustmentService } from './stock-adjustment.service';
 import { StockService } from './stock.service';
+import { StorageAreaService, VehicleService } from './storage-point.service';
 import { TemperatureLogService } from './temperature-log.service';
 
 /**
@@ -16,16 +17,23 @@ const db = serviceDb();
 const stocks = new StockService(db);
 const adjustments = new StockAdjustmentService(db);
 const temps = new TemperatureLogService(db);
+const areas = new StorageAreaService(db);
+const vehicles = new VehicleService(db);
 
 let variantId: string;
 let productId: string;
 let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
-const shelves: string[] = [];
+// Ölçüm noktaları (19.28): sıcaklık kaydı artık serbest metin konum değil TANIMLI nokta taşıyor.
+let storageAreaId: string;
+let vehicleId: string;
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'DUZ' })).id;
+  const stamp = Date.now();
+  storageAreaId = (await areas.insert({ warehouseId, name: `Dolap ${stamp}`, kind: 'frozen' })).id;
+  vehicleId = (await vehicles.insert({ plate: `T-${stamp}`, warehouseId })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Fire testi ${Date.now()}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Su böreği ${Date.now()}` },
@@ -42,7 +50,8 @@ afterAll(async () => {
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
-    temperatureLocations: shelves,
+    storageAreaIds: [storageAreaId],
+    vehicleIds: [vehicleId],
     warehouseIds: [warehouseId],
   });
 });
@@ -159,24 +168,27 @@ describe('imha/fire araması (09.18)', () => {
   });
 });
 
-describe('sıcaklık kaydı (06.7)', () => {
-  const shelf = `Dolap-${Date.now()}`;
-  shelves.push(shelf, `${shelf}-arac`);
+describe('sıcaklık kaydı (06.7 · noktalar 19.28)', () => {
+  it('kayıt girilir, NOKTA + tarih aralığıyla listelenir (en yeni önce)', async () => {
+    await temps.insert({ warehouseId, storageAreaId, temperatureC: -18.5 });
+    await temps.insert({ warehouseId, storageAreaId, temperatureC: -19.2 });
+    // Araç kaydı aynı depoya yazılır (kaydın alındığı tesis) ama AYRI noktadır — süzgeç ikisini
+    // karıştırmamalı, yoksa "bu dolabın geçmişi" sorusu aracın ölçümünü de sayardı.
+    await temps.insert({ warehouseId, vehicleId, temperatureC: -15 });
 
-  it('kayıt girilir, konum + tarih aralığıyla listelenir (en yeni önce)', async () => {
-    await temps.insert({ warehouseId, location: shelf, temperatureC: -18.5 });
-    await temps.insert({ warehouseId, location: shelf, temperatureC: -19.2 });
-    await temps.insert({ warehouseId, location: `${shelf}-arac`, temperatureC: -15 });
-
-    const page = await temps.list({ location: shelf, limit: 10 });
+    const page = await temps.list({ storageAreaId, limit: 10 });
     expect(page.rows).toHaveLength(2);
     expect(page.rows[0]!.temperatureC).toBe(-19.2); // en yeni önce
 
-    const future = await temps.list({ location: shelf, from: new Date(Date.now() + 60_000) });
+    const future = await temps.list({ storageAreaId, from: new Date(Date.now() + 60_000) });
     expect(future.rows).toHaveLength(0);
   });
 
-  it('girilmiş konumlar seçim listesi olarak döner', async () => {
-    expect(await temps.listLocations()).toContain(shelf);
+  it('NOKTASIZ kayıt reddedilir — ölçümün nerede alındığı bilinmeden kayıt bir kanıt değildir', async () => {
+    await expect(temps.insert({ warehouseId, temperatureC: -18 })).rejects.toThrow();
+  });
+
+  it('İKİ noktalı kayıt reddedilir — tek ölçüm tek yerde alınır', async () => {
+    await expect(temps.insert({ warehouseId, storageAreaId, vehicleId, temperatureC: -18 })).rejects.toThrow();
   });
 });

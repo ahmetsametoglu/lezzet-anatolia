@@ -4,42 +4,25 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
-import { AlertIcon, InfoIcon, WarehouseIcon } from '@/components/operation/ui/icons';
+import { InfoIcon, WarehouseIcon } from '@/components/operation/ui/icons';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
-import { decimal, money, num, shortDateTime } from '@/components/operation/ui/format';
+import { money, num, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import type { Country } from '@lezzet/types';
-import type { ZoneDemandRow } from '@/lib/delivery/zone-demand';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
-import { postalCodeLabel, weekdayList } from './warehouses-labels';
-import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
+import { AREA_KIND_SHORT, postalCodeLabel, weekdayList } from './warehouses-labels';
+import type { MeasurePointView, ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
 // durur ki "karne başka yerde başka şey sayar" gibi bir ayrışma doğmasın.
 
-/**
- * Kargo çıkışı olmayan ülke uyarısı — ekranın en üstünde, listeden ÖNCE.
- *
- * Sessiz bırakılamaz: o ülkede bölge dışı müşteriye satış yapılamaz ve sipariş **hiç açılmaz**
- * (deposu çözülemediği için). Operatör bunu ancak bir müşteri şikâyet edince fark ederdi.
- */
-export function ShippingGapBanner({ countries }: { countries: readonly Country[] }) {
-  if (countries.length === 0) return null;
-  const names = countries.map((c) => COUNTRY_LABELS[c]).join(' · ');
-  return (
-    <div role="alert" className="flex items-start gap-2.5 border-b border-ops-red-line bg-ops-red-bg px-6 py-2.5">
-      <span className="mt-px flex-none text-ops-red">
-        <AlertIcon size={15} />
-      </span>
-      <span className="font-ops-body text-ops-sm leading-relaxed text-ops-red">
-        <strong>{names} için kargo çıkış deposu yok</strong> — o ülkede bölge dışı müşteriye satış yapılamaz; sipariş
-        deposu çözülemediği için hiç açılmaz. Ülke başına en fazla bir kargo deposu olabilir.
-      </span>
-    </div>
-  );
-}
+// ── `ShippingGapBanner` KALKTI (17.08) ────────────────────────────────────────────────────────
+// "Şu ülkede kargo çıkış deposu yok" uyarısıydı ve tek ülkeli bir kurulumda hiç tetiklenmiyordu.
+// İkinci ülke açıldığı gün bu bir KURULUM kararıdır: künye penceresi kargo çıkışını zaten soruyor
+// ve ülke başına tekliği veritabanı kısıtı reddediyor (`warehouse_single_online`). Uyarı bir
+// eksikliği söylüyordu ama eksikliğin doğduğu yerde değil, ondan uzakta duruyordu.
 
 /** Kurulum eksikliği / bilgi şeridi — satırın ve kartın paylaştığı sarı kutu. */
 export function SetupGapNote({ text }: { text: string }) {
@@ -162,22 +145,19 @@ export function SectionHead({ title, hint, aside }: { title: string; hint: strin
   );
 }
 
-/** Künye kutusu — etiket + değer + alt not. */
-export function FactCard({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: 'amber' }) {
-  return (
-    <div className={cardClass('flex flex-col gap-0.5 px-3.5 py-2.5')}>
-      <span className="font-ops-display text-ops-micro font-medium uppercase tracking-wide text-ops-muted">{label}</span>
-      <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{value}</span>
-      {note ? (
-        <span className={['font-ops-body text-ops-micro', tone === 'amber' ? 'text-ops-amber' : 'text-ops-muted'].join(' ')}>
-          {note}
-        </span>
-      ) : null}
-    </div>
-  );
-}
+// ── `FactCard` KALKTI (17.08) ─────────────────────────────────────────────────────────────────
+// Künye bölümünün kutusuydu; bölüm kaldırılınca tek tüketicisi kalmadı. Dört karttan üçü başlığın
+// tekrarıydı (kod · ülke · kargo çıkışı), dördüncüsü hemen altındaki personel listesinin sayısı.
 
-/** Bölge kartı — ad + günler + kodlar. Kodlar bölgenin gerçeği, gün ise onu taşıyan katman. */
+/**
+ * Bölge kartı — ad + günler + kodlar + **ağırlık** (19.28). Kodlar bölgenin gerçeği, gün onu
+ * taşıyan katman, ağırlık ise sonucu.
+ *
+ * Kart 17.08'e kadar yalnız TANIMI gösteriyordu ("ne kurduk"). Tanım tek başına bir karar
+ * verdirmez: teslim günü eklemek mi, kod çıkarmak mı, hiç dokunmamak mı — hepsi bölgenin ne
+ * getirdiğine bağlı. Sayılar Rotalar ekranıyla AYNI kaynaktan (`analytics_postal_code_orders` +
+ * `zone_notice`); iki ekran aynı soruya iki farklı sayı vermesin.
+ */
 export function ZoneCard({
   zone,
   homeCountry,
@@ -217,6 +197,27 @@ export function ZoneCard({
         <span className="font-ops-body text-ops-xs text-ops-amber">Kod bağlanmadı — bu bölgeye hiçbir adres düşmez</span>
       )}
 
+      {/* ── Ağırlık ── ayraçla ayrı: üstü TANIM, altı SONUÇ. İkisi aralıksız yazılsaydı sipariş
+          sayısı bölgenin bir ayarı gibi okunurdu. */}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-ops-line-soft pt-2">
+        {/* Sipariş sıfırsa da YAZILIR: burada sıfır ölçülmüş bir sonuçtur (kod var, sipariş yok) ve
+            tam da o satır "bu bölge neden duruyor" sorusunu doğurur. */}
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          <strong className="font-ops-mono text-ops-sm font-medium text-ops-strong">{num(zone.orderCount)}</strong> sipariş
+        </span>
+        {zone.revenueCents > 0 ? (
+          <span className="font-ops-mono text-ops-xs text-ops-body">{money(zone.revenueCents)}</span>
+        ) : null}
+        {/* Bekleyen SIFIRSA çizilmez: her karta "0 bekliyor" yazmak, gerçekten bekleyeni olan bölgeyi
+            gürültünün içinde kaybederdi (Rotalar'daki ağırlık rayının aynı kuralı). */}
+        {zone.waitingCount > 0 ? <Badge tone="blue">{num(zone.waitingCount)} bekliyor</Badge> : null}
+        {zone.nextDeliveryDate ? (
+          <span className="ml-auto font-ops-body text-ops-xs text-ops-muted">
+            sıradaki çıkış <strong className="font-semibold text-ops-strong">{shortDate(zone.nextDeliveryDate)}</strong>
+          </span>
+        ) : null}
+      </div>
+
       <Button variant="secondary" size="sm" onClick={onEdit} className="self-start">
         Düzenle
       </Button>
@@ -227,13 +228,19 @@ export function ZoneCard({
 /**
  * Karne — **SAYAR, LİSTELEMEZ.** Her sayı Stok'a bu depo bağlamıyla giden bir kapıdır; parti listesi
  * orada yaşar, burada tekrarlanmaz (iki sahipli bir liste, bir gün ayrışan iki liste demektir).
+ *
+ * **Dört kutu, tek sıra — budandı (17.08).** Beşinci kutu "Yolda bekleyen"di ve depolar arası
+ * transferi sayıyordu; tek depolu kurulumda transfer diye bir olay yok, yani kutu kendi tanımı
+ * gereği daima `0 / 0`. Sıfırı sabit gösteren bir ölçü, ölçü değildir. Yanındaki üç cümlelik
+ * açıklama kutusu da kalktı: eşik altının iki yolu olduğunu ANLATMAK yerine ekran onu zaten
+ * yapıyor (sayı Stok'a, tedarik kutusu Tedarik'e gidiyor).
  */
 export function Scorecard({ card, code }: { card: ScorecardView; code: string }) {
   // Adresler hedef ekranın kendi sözleşmesinden kurulur (`stockLink` · `ordersLink`): parametre
   // adlarını burada elle yazmak, o ekranlar değiştiğinde sessizce yanlış yere giden bağlantı demekti.
   const stockHref = stockLink({ depo: code });
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       <div className="grid grid-cols-4 gap-2.5">
         <ScoreTile label="Elde ne var" value={num(card.variantCount)} note={`varyantta stok · ${num(card.batchCount)} parti`} href={stockHref} />
         <ScoreTile
@@ -246,33 +253,20 @@ export function Scorecard({ card, code }: { card: ScorecardView; code: string })
           note={`yaklaşan tarihli parti${card.expiredCount > 0 ? ` · ${card.expiredCount} süresi geçmiş (yalnız imha yolu)` : ''}`}
           href={stockLink({ depo: code, tab: 'attention', scope: 'expiry' })}
         />
+        {/* "eşik depo bazlıdır" notu düştü: karşılaştırılacak ikinci depo yokken bir ayrım değil,
+            yalnız kuralın tekrarı. Kural veride ve `DOMAIN §17`de yazılı. */}
+        <ScoreTile tone="red" label="Eşik altı" value={num(card.belowMinCount)} note="varyant" href="/operations/procurement" />
         <ScoreTile
-          tone="red"
-          label="Eşik altı"
-          value={num(card.belowMinCount)}
-          note="varyant — eşik depo bazlıdır"
-          href="/operations/procurement"
-        />
-        <ScoreTile
-          tone="blue"
-          label="Yolda bekleyen"
-          value={`${num(card.inTransitIn)} / ${num(card.inTransitOut)}`}
-          note="gelen / giden · yoldaki mal hiçbir depoda satılamaz"
+          label="Açık iş"
+          value={num(card.openOrderCount)}
+          note="buradan çıkacak, teslim edilmemiş sipariş"
+          href={ordersLink({ depo: code })}
         />
       </div>
-      <div className="grid grid-cols-4 gap-2.5">
-        <ScoreTile label="Açık iş" value={num(card.openOrderCount)} note="buradan çıkacak, teslim edilmemiş sipariş" href={ordersLink({ depo: code })} />
-        <div className="col-span-3 flex flex-wrap items-center gap-3 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-          <span className="min-w-[220px] flex-1 font-ops-body text-ops-sm leading-relaxed text-ops-body">
-            Eşik altının iki yolu vardır ve ekran ikisini de açar: <strong>tedarik siparişi</strong> ya da{' '}
-            <strong>başka depodan transfer</strong>. Sayıya dokunmak listeyi burada açmaz — Stok'a, bağlamı{' '}
-            {code}'ye alınmış hâlde gider.
-          </span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            Son mal girişi: {card.lastIntakeAt ? shortDateTime(card.lastIntakeAt) : 'hiç giriş yok'}
-          </span>
-        </div>
-      </div>
+      {/* Son mal girişi bir VERİDİR, açıklama değil — kutu kalkarken o kalıyor. */}
+      <span className="px-0.5 font-ops-body text-ops-xs text-ops-muted">
+        Son mal girişi: {card.lastIntakeAt ? shortDateTime(card.lastIntakeAt) : 'hiç giriş yok'}
+      </span>
     </div>
   );
 }
@@ -400,83 +394,150 @@ function StaffChip({ name, role, note }: { name: string; role: string; note: str
   );
 }
 
+
 /**
- * **Bölge dışı talep — hangi kodlar bizi arıyor** (kullanıcı kararı 04.08, `ANALYTICS §6`;
- * çizim `Operasyon - Analitik.dc.html` alt bölümü, karar onu bu ekrana taşıdı).
+ * **Ölçüm noktaları** (19.28, kullanıcı isteği 17.08) — depo içi alanlar + bu tesise künyelenmiş
+ * araçlar.
  *
- * Harita "nereyi açabilirim"i gösterir, bu tablo **"nereyi açmalıyım"ı**. Bölge kurulumunun eksik
- * girdisi buydu: hizmet vermediğimiz kodlardan gelen talep zaten sayılıyordu (`postal_code_demand`)
- * ve hiçbir ekranda görünmüyordu.
+ * Sayfanın kendi sorusuna cevap veren bir bölüm: *"bu tesis ne durumda"* sorusunun hijyen ayağı.
+ * Nokta bir KÜNYEDİR — tesis kapalıyken de dolabı vardır — o yüzden karnenin aksine kapalı tesiste
+ * de okunuyor.
  *
- * ── İKİ SAYI, İKİ SÜTUN, TOPLANMAZ ──────────────────────────────────────────
- * `Talep` anonim bir sayaçtır (aynı ziyaretçinin tekrarı ayrı sayılır), `Haber bekleyen` ise
- * izin vermiş, kimlikli kişidir. Aynı olgunun iki ayrı defteri (`ANALYTICS §2`'nin kendi emsali:
- * `postal_code_demand` ↔ `zone_notice`). Tek bir "ilgi" sayısına indirmek, anonim sayacı geriye
- * dönük kimliklendirmek olurdu — o yüzden ekran ikisini asla toplamıyor.
+ * **Hiç ölçülmemiş nokta İŞARETLİ.** Tanımlanmış ama tura hiç girmemiş bir dolap, bir kurulum
+ * eksikliğidir: nokta var, alışkanlığı yok, sapma ölçütü de yok. Bu bölüm o boşluğun görüldüğü tek
+ * yer — sıcaklık ekranı yalnız BUGÜNÜ sorar.
  *
- * **Kapsananlar listeden ATILMAZ, işaretlenir:** "buraya zaten gidiyoruz ama talep yoğun" da bir
- * bilgi (teslim günü sıklığı sorusunu doğurur). Sıralamayı kapı yapıyor, kapsanmayanlar önde.
+ * **Pasif nokta SÜZÜLMEZ, işaretlenir:** kullanımdan kalkmış bir dolabı gizlemek, geçmiş
+ * kayıtlarının sahibini görünmez yapardı (kataloğun `isActive` ayrımı).
  */
-export function ZoneDemandTable({ rows }: { rows: readonly ZoneDemandRow[] }) {
+export function MeasurePoints({
+  points,
+  onAdd,
+  onEdit,
+  onToggle,
+}: {
+  points: readonly MeasurePointView[];
+  onAdd: (kind: 'area' | 'vehicle') => void;
+  onEdit: (point: MeasurePointView) => void;
+  onToggle: (point: MeasurePointView) => void;
+}) {
+  const areas = points.filter((point) => point.kind === 'area');
+  const vehicles = points.filter((point) => point.kind === 'vehicle');
+  const neverMeasured = points.filter((point) => point.isActive && point.lastRecordedAt === null).length;
+
   return (
-    <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
-      <SectionHead
-        title="Posta kodu talebi"
-        hint="hangi kod ne sıklıkla soruluyor ve karşılığında ne sipariş çıkıyor — bölgeyi nereye genişleteceğimizin ve nerede sorun olduğunun verisi"
-      />
-      {rows.length === 0 ? (
-        // Boş hâl bir SONUÇTUR, gizlenmez: "kimse sormadı" da bölge açma kararının cevabı olabilir.
-        <p className={cardClass('px-3.5 py-3 font-ops-body text-ops-sm leading-relaxed text-ops-muted')}>
-          Henüz bölge dışından bir posta kodu girilmemiş. Bir ziyaretçi hizmet alanımız dışında bir kod girdiğinde burada
-          birikmeye başlar.
-        </p>
-      ) : (
-        <div className="overflow-hidden rounded-ops-card border border-ops-line">
-          <div className="grid grid-cols-[1fr_84px_104px_84px_92px] gap-x-3 border-b border-ops-line bg-ops-subtle px-4 py-2 font-ops-display text-ops-micro font-semibold uppercase tracking-wide text-ops-muted">
-            <span>Posta kodu</span>
-            <span className="text-right">Talep</span>
-            <span className="text-right">Haber bekleyen</span>
-            <span className="text-right">Sipariş</span>
-            <span className="text-right">Sip./talep</span>
-          </div>
-          {rows.map((row) => (
-            <div
-              key={row.postalCode}
-              className="grid grid-cols-[1fr_84px_104px_84px_92px] items-center gap-x-3 border-b border-ops-line-soft px-4 py-2 last:border-b-0"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-ops-mono text-ops-sm font-medium text-ops-ink">{row.postalCode}</span>
-                {/* Kapsanan satır NÖTR rozetle kalır: bir iş değil, bir bağlam. */}
-                {row.covered ? <Badge tone="neutral">rotada</Badge> : null}
-                <span className="font-ops-mono text-ops-micro text-ops-faint">{shortDateTime(row.lastSeenAt)}</span>
-              </span>
-              <span className="text-right font-ops-mono text-ops-sm text-ops-ink">{num(row.requestCount)}</span>
-              {/* Sıfır bekleyen `—` değil `0`: burada sıfır ölçülmüş bir sonuçtur, eksik ölçüm değil. */}
-              <span className={`text-right font-ops-mono text-ops-sm ${row.waitingCount > 0 ? 'text-ops-olive-dark' : 'text-ops-muted'}`}>
-                {num(row.waitingCount)}
-              </span>
-              {/* Kapsam DIŞI kodda sipariş zaten olamaz — sıfır bir eksiklik değil, tanımın kendisi;
-                  o yüzden soluk. Asıl okunacak satırlar "rotada" olup da siparişi düşük olanlar. */}
-              <span className={`text-right font-ops-mono text-ops-sm ${row.covered ? 'text-ops-ink' : 'text-ops-faint'}`}>
-                {num(row.orderCount)}
-              </span>
-              <span className="text-right font-ops-mono text-ops-micro text-ops-muted">
-                {row.orderRatio === null ? '—' : decimal(row.orderRatio, 2)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      <p className="px-0.5 font-ops-body text-ops-xs leading-relaxed text-ops-muted">
-        <strong>Talep</strong> ile <strong>Haber bekleyen</strong> toplanmaz: biri anonim bir sayaçtır (kim olduğu
-        tutulmaz), öteki izin vermiş kişidir. <strong>Sip./talep bir dönüşüm yüzdesi DEĞİL</strong>, bir sıralama
-        sinyalidir — payda aynı ziyaretçinin tekrar sormasını da sayıyor, yani gerçek dönüşümden küçüktür ve kodlar
-        arasında karşılaştırmak için anlamlıdır. Sipariş ve talep <strong>tüm zamana</strong> aittir; dönem süzgeci yok,
-        çünkü biri süzülüp öteki süzülmese oran pencere daraldıkça sessizce düşer ve düşüş bir sinyal sanılırdı.{' '}
-        Bir kodu bölgeye ekleyip kaydettiğinizde o koddaki bekleyenlere <strong>e-postayla haber gider</strong> —
-        gönderimi kaydetme akışı beklemez, arka plandaki iş her turda “kapsanmış ama haberi gitmemiş” bekleyişleri
-        arar ve bir kez gönderir. Kanal bugün yalnız e-posta.
-      </p>
-    </section>
+    <div className="flex flex-col gap-2.5">
+      {neverMeasured > 0 ? (
+        <SetupGapNote
+          text={`${num(neverMeasured)} nokta hiç ölçülmemiş — tanımlı ama tura girmemiş. Sapma uyarısı ancak geçmiş biriktikçe çalışır.`}
+        />
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <PointColumn
+          title="Depo içi alanlar"
+          empty="Henüz alan yok — dolap, soğuk oda ya da geçiş alanı ekleyin."
+          points={areas}
+          onAdd={() => onAdd('area')}
+          addLabel="+ Alan"
+          onEdit={onEdit}
+          onToggle={onToggle}
+        />
+        <PointColumn
+          title="Araçlar"
+          empty="Bu tesise künyelenmiş araç yok."
+          points={vehicles}
+          onAdd={() => onAdd('vehicle')}
+          addLabel="+ Araç"
+          onEdit={onEdit}
+          onToggle={onToggle}
+        />
+      </div>
+    </div>
   );
+}
+
+/** Tek sütun — başlık + ekle düğmesi + satırlar. İki sütun aynı bileşeni paylaşıyor (kopya yok). */
+function PointColumn({
+  title,
+  empty,
+  points,
+  addLabel,
+  onAdd,
+  onEdit,
+  onToggle,
+}: {
+  title: string;
+  empty: string;
+  points: readonly MeasurePointView[];
+  addLabel: string;
+  onAdd: () => void;
+  onEdit: (point: MeasurePointView) => void;
+  onToggle: (point: MeasurePointView) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-wide text-ops-muted">{title}</span>
+        <span className="font-ops-body text-ops-xs text-ops-faint">{num(points.length)}</span>
+        <Button size="sm" variant="secondary" className="ml-auto" onClick={onAdd}>
+          {addLabel}
+        </Button>
+      </div>
+
+      {points.length === 0 ? (
+        <p className={cardClass('px-3 py-2.5 font-ops-body text-ops-xs leading-relaxed text-ops-muted')}>{empty}</p>
+      ) : (
+        <ul className="flex flex-col rounded-ops-card border border-ops-line">
+          {points.map((point) => (
+            <li
+              key={`${point.kind}:${point.id}`}
+              className={`flex items-center gap-2 border-b border-ops-line-soft px-3 py-2 last:border-b-0 ${
+                point.isActive ? '' : 'bg-ops-subtle'
+              }`}
+            >
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate font-ops-body text-ops-sm text-ops-ink">{point.name}</span>
+                  {point.label ? <span className="truncate font-ops-body text-ops-xs text-ops-muted">{point.label}</span> : null}
+                  {point.areaKind ? <Badge tone="slate">{AREA_KIND_SHORT[point.areaKind]}</Badge> : null}
+                  {point.isActive ? null : <Badge tone="slate">Pasif</Badge>}
+                </span>
+                <span className="font-ops-body text-ops-micro text-ops-muted">
+                  {/* Beklenen aralık ve son ölçüm YAN YANA: "ne bekleniyor" ile "en son ne zaman
+                      bakıldı" birlikte okunmadan nokta hakkında karar verilemez. */}
+                  {point.targetMinC !== null && point.targetMaxC !== null
+                    ? `${degree(point.targetMinC)} … ${degree(point.targetMaxC)} · `
+                    : ''}
+                  {point.lastRecordedAt ? `son ölçüm ${shortDateTime(point.lastRecordedAt)}` : 'hiç ölçülmedi'}
+                </span>
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onEdit(point)}
+                className="shrink-0 cursor-pointer rounded-ops-btn px-2 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:bg-ops-subtle hover:text-ops-ink"
+              >
+                Düzenle
+              </button>
+              {/* SİLME YOK: kayıtlı nokta veritabanında zaten silinemiyor (`restrict`) ve
+                  silinebilseydi denetim geçmişi sahipsiz kalırdı. Susturmak yeter. */}
+              <button
+                type="button"
+                onClick={() => onToggle(point)}
+                className="shrink-0 cursor-pointer rounded-ops-btn px-2 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:bg-ops-subtle hover:text-ops-ink"
+              >
+                {point.isActive ? 'Pasife al' : 'Geri aç'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** "−18°" — sıcaklık kartıyla aynı biçim; eksi işareti U+2212 (mono yazıtipinde tire ayraç gibi okunuyor). */
+function degree(celsius: number): string {
+  return `${celsius.toLocaleString('tr-TR', { maximumFractionDigits: 1 }).replace('-', '−')}°`;
 }

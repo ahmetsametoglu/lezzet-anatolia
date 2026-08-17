@@ -32,6 +32,7 @@ export * from './postal-code-place.schema';
 export * from './variant-stock-notice.schema';
 export * from './zone-notice.schema';
 export * from './warehouse.schema';
+export * from './storage-point.schema';
 export * from './stock.schema';
 export * from './stock-adjustment.schema';
 export * from './supply.schema';

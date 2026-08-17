@@ -47,7 +47,23 @@ Bölge kararı coğrafi bir karardır: operatör kodu değil YOLU bilir — iki 
 - **Teknik karar (bağlayıcı, 02.08): MapLibre GL JS + OpenFreeMap vektör karoları.** Gerekçe: binlerce kod noktası GPU'da tek veri katmanı olarak akıcı çizilir (DOM tabanlı kütüphaneler bu sayıda tıkanır); vektör stil, taban haritayı sakinleştirip işaretlerimizi öne çıkaran ve operasyon paletiyle uyumlu bir görünüme izin verir (görsel ayar Claude Design'ın — stil JSON'u ona göre kurulur, koyu tema karşılığı stil varyantıyla gelir); anahtar/hesap/ücret gerektirmez ve aynı karolar ileride kendi sunucumuzda barındırılabilir — ekran kodu değişmeden dış bağımlılık sıfırlanır (kendi karo dosyası backlog)
 - ⚠ **Arka uç ön koşulu:** `postal_code_place` bugün koordinat taşımıyor; GeoNames dökümünde zaten olan enlem/boylam üretece ve tabloya eklenmeli (`scripts/build-postal-codes.mjs` + `0044` — kod başına merkez nokta yeter). Bu gelmeden harita kodları basamaz. Talep kullanıcı üzerinden arka uç şeridine iletildi (02.08)
 
-#### Bölge dışı talep — hangi kodlar bizi arıyor (kullanıcı kararı, 04.08)
+#### ~~Bölge dışı talep — hangi kodlar bizi arıyor~~ → **BU SAYFADAN KALKTI (kullanıcı kararı, 17.08)**
+
+> Aşağıdaki bölüm **artık Depolar'da değil** ve başka bir sayfaya da taşınmadı. Gerekçesi kendi ilk
+> cümlesindeydi: tablo buraya *"kararın verildiği yer burası"* diye konmuştu (04.08). O gerekçe
+> 07.08'de sona erdi — bölge kurulumu haritayla birlikte Teslimat & Rota'ya taşındı, karar da onunla
+> gitti. Bugün aynı veri (`postal_code_demand`) Rotalar haritasında mor noktalarda okunuyor ve orada
+> bir üstünlüğü var: kodun **nerede** olduğunu gösteriyor. Tablonun taşıdığı kanıtların tamamı
+> 17.08'de nokta ipucuna geçti (bekleyen · sipariş · sorulma · rotaya uzaklık · talebin yaşı); görüş
+> alanı dışında kalanlar için ayrı bir ray var.
+>
+> **Bilerek kaybedilen iki okuma:** `sip./talep` oranı ve zaten rotada olan kodların satırları. İkisi
+> de bir kurulum ekranının değil **Analitik**'in malzemesi. Kayıt: `build/19` → `(19.27)`.
+>
+> Metin **silinmedi**, çünkü karar kaydı olarak değerli: aşağısı tablonun ne olduğunu ve iki sayının
+> neden toplanmadığını anlatıyor; Analitik'te bir gün kurulursa şartname budur.
+
+#### Bölge dışı talep — hangi kodlar bizi arıyor (kullanıcı kararı, 04.08 · yeri değişti 17.08)
 
 Harita "nereyi açabilirim"i gösterir, bu tablo **"nereyi açmalıyım"ı** gösterir. Bölge kurulumunun tek eksik girdisi buydu: operatör bugün bölgeyi kendi sezgisiyle çiziyor, oysa hizmet vermediğimiz kodlardan gelen talep zaten sayılıyor (`postal_code_demand`) ve hiçbir ekranda görünmüyor. Tablo bu yüzden hizmet alanı bölümünün içindedir, ayrı bir "analitik" köşesinde değil — **kararın verildiği yerde durur** (analitik ekranında yalnız işareti ve buraya köprüsü olur).
 

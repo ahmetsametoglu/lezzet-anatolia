@@ -84,8 +84,16 @@ export interface PurgeTargets {
    * için hiçbir cascade onları toplamaz — bildirilmezse sessizce birikirler.
    */
   conversationIds?: string[];
-  /** Sıcaklık kaydı konumları (testler benzersiz konum adı üretir). */
-  temperatureLocations?: string[];
+  /**
+   * Ölçüm noktaları (19.28) — sıcaklık kaydı bunlara `restrict` ile bağlı, yani kayıtlar önce
+   * gider sonra nokta. Eskiden burada `temperatureLocations: string[]` vardı ve kayıtları serbest
+   * metin konumdan siliyordu; nokta tanımlı bir satır olunca anahtar da kimliğe döndü.
+   *
+   * **Alan deponun ÖNÜNDE silinir** (kendisi `restrict` ile depoyu tutar); bildirilmezse teardown
+   * depoda takılır ve artık depo operatörün seçicisinde görünür — 14.08'de ölçülen arızanın aynısı.
+   */
+  storageAreaIds?: string[];
+  vehicleIds?: string[];
   /**
    * "Bölgeye girince haber ver" kayıtları — anahtar POSTA KODU (`zone_notice.postal_code`).
    *
@@ -163,7 +171,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     profileIds,
     assistantProposalIds,
     conversationIds,
-    temperatureLocations,
+    storageAreaIds,
+    vehicleIds,
     zoneNoticePostalCodes,
     verificationEmails,
     authUserIds,
@@ -186,7 +195,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     profileIds: clean(targets.profileIds),
     assistantProposalIds: clean(targets.assistantProposalIds),
     conversationIds: clean(targets.conversationIds),
-    temperatureLocations: clean(targets.temperatureLocations),
+    storageAreaIds: clean(targets.storageAreaIds),
+    vehicleIds: clean(targets.vehicleIds),
     zoneNoticePostalCodes: clean(targets.zoneNoticePostalCodes),
     verificationEmails: clean(targets.verificationEmails),
     authUserIds: clean(targets.authUserIds),
@@ -380,9 +390,15 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   // 5) Bağımsız kayıtlar — hiçbirinin ötekiyle bağı yok, o yüzden hepsi tek grupta ve zincirden
   //    ayrı: yukarıda ne olursa olsun bunlar denenmeli.
   await step(async () => {
-    if (temperatureLocations.length > 0) {
-      await mustDelete(db, 'temperature_log', (q) => q.in('location', temperatureLocations));
+    // Sıcaklık kayıtları noktalardan ÖNCE: nokta `restrict` ile tutuluyor (denetim geçmişi bir
+    // noktanın adına değil kaydına bağlı, o yüzden kayıtlı nokta silinemez).
+    if (storageAreaIds.length > 0) {
+      await mustDelete(db, 'temperature_log', (q) => q.in('storage_area_id', storageAreaIds));
     }
+    if (vehicleIds.length > 0) {
+      await mustDelete(db, 'temperature_log', (q) => q.in('vehicle_id', vehicleIds));
+    }
+    if (vehicleIds.length > 0) await mustDelete(db, 'vehicle', (q) => q.in('id', vehicleIds));
     if (zoneNoticePostalCodes.length > 0) {
       await mustDelete(db, 'zone_notice', (q) => q.in('postal_code', zoneNoticePostalCodes));
     }
@@ -409,6 +425,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // Devirler burada DEĞİL §0c'de gidiyor — satırları partiyi tutuyor, o yüzden partilerden önce
       // gitmek zorundalar (yukarıdaki künye).
       await mustDelete(db, 'warehouse_variant_threshold', (q) => q.in('warehouse_id', warehouseIds));
+      // Ölçüm noktaları: alan depoyu `restrict` ile tutar, aracınki `set null` — yani alan gitmek
+      // ZORUNDA, araç depoyla birlikte adresini kaybeder ve yaşamaya devam eder. Testin kendi
+      // aracını bildirmesi gerekir (`vehicleIds`), deposunu bildirmesi yetmez.
+      await mustDelete(db, 'storage_area', (q) => q.in('warehouse_id', warehouseIds));
       await mustDelete(db, 'delivery_zone', (q) => q.in('warehouse_id', warehouseIds)); // posta kodları CASCADE
       // Belge numaratörü depo KODUNA çıpalı (`next_document_no('KBL-' || kod, yıl)`): test deposunun
       // sayacı depoyla birlikte gitmeli, yoksa her koşu tabloya iki ölü satır bırakır. FK yok, o

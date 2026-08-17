@@ -233,7 +233,8 @@ export const IntakeLineSchema = z.object({
    * euro bırakmak, uygulamanın tek birimini (cent) kapıya kadar taşıyıp orada bozmak olurdu.
    */
   unitCostCents: z.number().int().nonnegative().nullish(),
-  location: z.string().nullish(),
+  /** Partinin konacağı depo İÇİ alan — serbest metin değil kimlik (19.29, `storage_area`). */
+  storageAreaId: z.string().uuid().nullish(),
   /**
    * Hangi PO kalemini karşılıyor (T5). PO'lu kabulde ZORUNLU ama yazılması şart değil: boş
    * bırakılırsa RPC varyanttan çözer, belirsizse (aynı varyant iki kalemde) hata verir. Bağsız

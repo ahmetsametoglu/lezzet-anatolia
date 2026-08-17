@@ -8,6 +8,7 @@ import { PurchaseOrderService } from './purchase-order.service';
 import { ReorderService } from './reorder.service';
 import { StockIntakeService } from './stock-intake.service';
 import { StockService } from './stock.service';
+import { StorageAreaService } from './storage-point.service';
 import { SupplierProductService, SupplierService } from './supplier.service';
 
 /**
@@ -28,11 +29,14 @@ let productId: string;
 let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
+/** Partinin rafı artık tanımlı bir alan (19.29) — testin kendi dolabı. */
+let storageAreaId: string;
 const createdSuppliers: string[] = [];
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'TED' })).id;
   const stamp = Date.now();
+  storageAreaId = (await new StorageAreaService(db).insert({ warehouseId, name: `Dolap ${stamp}`, kind: 'frozen' })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Tedarik testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `İçli köfte ${stamp}` },
@@ -60,6 +64,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     supplierIds: createdSuppliers,
+    storageAreaIds: [storageAreaId],
     warehouseIds: [warehouseId],
   });
 });
@@ -169,7 +174,7 @@ describe('mal kabul (06.10)', () => {
       supplierId,
       purchaseOrderId: order.id,
       lines: [
-        { variantId, qty: 12, expiryDate: dayOffset(250), lotNumber: 'LOT-A', unitCostCents: 350, location: 'Dolap 1' },
+        { variantId, qty: 12, expiryDate: dayOffset(250), lotNumber: 'LOT-A', unitCostCents: 350, storageAreaId },
         { variantId, qty: 12, expiryDate: dayOffset(280), lotNumber: 'LOT-B', unitCostCents: 350 },
       ],
     });
@@ -180,7 +185,9 @@ describe('mal kabul (06.10)', () => {
 
     const batches = await stocks.listByVariant(warehouseId, variantId);
     expect(batches.every((p) => p.intakeId === outcome.intakeId)).toBe(true);
-    expect(batches.find((p) => p.lotNumber === 'LOT-A')?.location).toBe('Dolap 1');
+    // Alan KİMLİKLE yazılıyor (19.29): serbest metin olsaydı RPC her yazımda yeni bir "konum"
+    // uydurabilirdi; FK ile yazılan değer okunduğunda birebir aynı satırı gösterir.
+    expect(batches.find((p) => p.lotNumber === 'LOT-A')?.storageAreaId).toBe(storageAreaId);
 
     expect((await orders.getById(order.id))?.status).toBe('received');
     expect((await mappings.listByVariant(variantId)).find((m) => m.supplierId === supplierId)?.lastPurchasePriceCents).toBe(350);

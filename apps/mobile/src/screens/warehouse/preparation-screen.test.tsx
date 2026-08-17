@@ -164,8 +164,8 @@ describe('D1 · gönderim', () => {
           preparationLine({
             orderedQty: 3,
             suggestion: [
-              { stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', location: null },
-              { stockId: STOCK_B, qty: 1, expiryDate: '2026-08-18', location: null },
+              { stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', areaName: null },
+              { stockId: STOCK_B, qty: 1, expiryDate: '2026-08-18', areaName: null },
             ],
           }),
         ],

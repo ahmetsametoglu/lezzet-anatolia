@@ -17,10 +17,12 @@ import { TEMPERATURE_NOTES, type TemperaturePoint } from './temperature-types';
  * ama AYRI işler — biri stok düşürür, öteki hijyen defterine yazar; state'leri iç içe geçseydi
  * "kaydediliyor" bayrağı ikisini birden kilitlerdi ve sıcaklık girerken imha formu donardı.
  *
- * ── NOKTA SEÇİLİR, GEREKİRSE YAZILIR ────────────────────────────────────────
- * Bilinen noktalar çip olarak sunuluyor (giriş 10 saniyeden uzun sürmemeli — tasarımın ölçütü);
- * ama küme geçmiş kayıtlardan türediği için YENİ bir nokta (yeni dolap, yeni araç) hiç görünmez.
- * O yüzden serbest yazım da açık: ilk kayıt noktayı kümeye sokar ve ertesi gün çip olarak çıkar.
+ * ── NOKTA SEÇİLİR, YAZILMAZ (19.28) ─────────────────────────────────────────
+ * Serbest yazım kutusu KALKTI. Gerekçesi eski künyesinde yazılıydı: küme geçmiş kayıtlardan
+ * türüyordu, yeni bir dolap hiç görünmüyordu, o yüzden yazım açıktı. Ama açık yazım bedelini de
+ * getiriyordu — ilk yazım hatası ("Dolap-1") kalıcı bir çip hâline geliyor, ikinci kez tıklanıyor
+ * ve o noktanın geçmişi ikiye bölünüyordu. Noktalar artık tanımlı (`storage_area` · `vehicle`);
+ * yeni dolap Depolar ekranından eklenir ve buraya ilk günden çip olarak gelir.
  *
  * ── UYARI KAYITTAN SONRA ────────────────────────────────────────────────────
  * Aralık dışı değer YAZILIR, sonra uyarılır (`DOMAIN §4` — karar sahadaki insanın). Cümle
@@ -36,39 +38,49 @@ export function TemperatureCard({ points }: TemperatureCardProps) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null);
 
-  const [location, setLocation] = useState('');
+  const [pointKey, setPointKey] = useState('');
   const [degree, setDegree] = useState('');
 
-  // Çipler yalnız BİLİNEN noktalar; serbest yazım ayrı kutuda. İkisi tek alanda birleşseydi
-  // "Dolap 1" yazan operatör var olan noktaya mı yazıyor yoksa yenisini mi açıyor bilemezdi.
-  const known = points.map((point) => point.name);
+  const selected = points.find((point) => `${point.kind}:${point.id}` === pointKey) ?? null;
   const value = Number(degree.replace(',', '.'));
-  const engel = !location.trim() ? 'Nokta seçin.' : !Number.isFinite(value) || !degree.trim() ? 'Derece girin.' : null;
+  const engel = !selected ? 'Nokta seçin.' : !Number.isFinite(value) || !degree.trim() ? 'Derece girin.' : null;
 
   const submit = () => {
-    if (engel) return;
+    if (engel || !selected) return;
     setError(null);
     setNotice(null);
 
     startTransition(async () => {
-      const { data, error: failed } = await recordTemperatureAction({ location: location.trim(), temperatureC: value });
+      const { data, error: failed } = await recordTemperatureAction({
+        kind: selected.kind,
+        pointId: selected.id,
+        temperatureC: value,
+      });
       if (failed || !data) {
         setError(failed ?? 'Kayıt yazılamadı.');
         return;
       }
 
-      // Cümle DAİMA "kaydedildi" ile başlıyor: uyarıyı ret sanan depocu aynı ölçümü ikinci kez
-      // girerdi. Sıra dışıysa noktanın kendi alışkanlığı söyleniyor — "beklenmedik" demek yetmez,
-      // operatör neye göre beklenmedik olduğunu görmeli.
+      /**
+       * Cümle DAİMA "kaydedildi" ile başlıyor: uyarıyı ret sanan depocu aynı ölçümü ikinci kez
+       * girerdi. Sapmanın SEBEBİ de söyleniyor ve iki sebep iki ayrı cümle — "beklenen aralığın
+       * dışında" kesin bir ihlaldir, "genelde şu kadar okuyor" ise bir şüphe. Aynı kelimeyle
+       * söylenselerdi operatör ikisine aynı ağırlığı verirdi.
+       */
       setNotice(
-        data.unusual
+        data.deviation === 'target'
           ? {
-              text: `${data.location} kaydedildi — ${fmt(value)}. Bu nokta genelde ${fmt(data.unusual.usualC)} okuyor; yazım hatası mı, gerçek sorun mu?`,
+              text: `${data.name} kaydedildi — ${fmt(value)}. Beklenen aralık ${range(selected)}; bu ölçüm dışında.`,
               warn: true,
             }
-          : { text: `${data.location} kaydedildi — ${fmt(value)}`, warn: false },
+          : data.deviation === 'habit' && data.usualC !== null
+            ? {
+                text: `${data.name} kaydedildi — ${fmt(value)}. Bu nokta genelde ${fmt(data.usualC)} okuyor; yazım hatası mı, gerçek sorun mu?`,
+                warn: true,
+              }
+            : { text: `${data.name} kaydedildi — ${fmt(value)}`, warn: false },
       );
-      setLocation('');
+      setPointKey('');
       setDegree('');
       router.refresh();
     });
@@ -81,37 +93,41 @@ export function TemperatureCard({ points }: TemperatureCardProps) {
         <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{TEMPERATURE_NOTES.hint}</span>
       </div>
 
-      {known.length > 0 ? (
+      {points.length === 0 ? (
+        // Boş hâl bir SONUÇTUR ve yolu gösterir: nokta tanımlamadan ölçüm yazılamaz, ve tanımın
+        // yeri bu ekran değil (nokta bir tesisin künyesidir, günün kaydı değil).
+        <p className="rounded-ops-btn border border-ops-amber-line bg-ops-amber-bg px-3 py-2 font-ops-body text-ops-sm text-ops-amber-dark">
+          {TEMPERATURE_NOTES.empty}
+        </p>
+      ) : (
         <div className="flex flex-wrap gap-2">
-          {known.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setLocation(name)}
-              disabled={busy}
-              className={`cursor-pointer rounded-ops-btn border px-3 py-1.5 font-ops-body text-ops-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                location === name
-                  ? 'border-ops-olive bg-ops-olive-bg font-semibold text-ops-olive-dark'
-                  : 'border-ops-line-strong text-ops-strong hover:border-ops-olive'
-              }`}
-            >
-              {name}
-            </button>
-          ))}
+          {points.map((point) => {
+            const key = `${point.kind}:${point.id}`;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPointKey(key)}
+                disabled={busy}
+                className={`flex cursor-pointer items-center gap-1.5 rounded-ops-btn border px-3 py-1.5 font-ops-body text-ops-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  pointKey === key
+                    ? 'border-ops-olive bg-ops-olive-bg font-semibold text-ops-olive-dark'
+                    : 'border-ops-line-strong text-ops-strong hover:border-ops-olive'
+                }`}
+              >
+                {point.name}
+                {/* Bugün ölçülmemiş nokta çipte de İŞARETLİ: depocu listeyi yukarıdan aşağı
+                    okumadan hangisinin eksik olduğunu görsün — turun sırası çipte belli. */}
+                {point.temperatureC === null ? <span className="text-ops-amber">•</span> : null}
+              </button>
+            );
+          })}
         </div>
-      ) : null}
+      )}
 
       <div className="flex items-end gap-2.5">
-        <FieldShell label="Nokta" className="flex-1">
-          <Input
-            placeholder="Dolap 1 · Araç 67 ABC"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            disabled={busy}
-          />
-        </FieldShell>
         {/* `fullWidth={false}` ŞART: kabuğun `w-full`'ü açık kalırsa derece kutusu satırı kaplar ve
-            yanındaki nokta alanı ezilir (ölçüldü 08.08, tarif diyaloğunda birebir yaşandı). */}
+            yanındaki alan ezilir (ölçüldü 08.08, tarif diyaloğunda birebir yaşandı). */}
         <FieldShell label="Derece" className="flex-none">
           <Input
             type="number"
@@ -161,4 +177,64 @@ export function TemperatureCard({ points }: TemperatureCardProps) {
  */
 function fmt(celsius: number): string {
   return `${celsius.toLocaleString('tr-TR', { maximumFractionDigits: 1 }).replace('-', '−')}°`;
+}
+
+/** "−20° … −16°" — beklenen aralık. Yalnız ikisi de tanımlıyken çağrılır (kısıt bunu garantiliyor). */
+function range(point: TemperaturePoint): string {
+  return point.targetMinC === null || point.targetMaxC === null ? '' : `${fmt(point.targetMinC)} … ${fmt(point.targetMaxC)}`;
+}
+
+/**
+ * **Bugünün şeridi** — tasarımın *"ölçülmemiş nokta amber görünür kalır"* kuralının karşılığı
+ * (`Operasyon - Depo Imha Sayim.dc.html`, "Sıcaklık · bugün").
+ *
+ * Ekranda BUGÜNE KADAR HİÇ ÇİZİLMİYORDU ve çizilemezdi: nokta kümesi geçmiş kayıtlardan türediği
+ * için "ölçülmemiş nokta" diye bir şey görünmüyordu — ölçülmeyen nokta listede de yoktu. Noktalar
+ * tanımlı olunca eksik ölçüm ilk kez bir SAYI hâline geldi; denetimin ilk sorusu da bu.
+ */
+export function TemperatureToday({ points }: TemperatureCardProps) {
+  if (points.length === 0) return null;
+  const pending = points.filter((point) => point.temperatureC === null).length;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-2">
+        <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Bugün</span>
+        <span className={`font-ops-body text-ops-xs ${pending > 0 ? 'text-ops-amber-dark' : 'text-ops-muted'}`}>
+          {pending > 0 ? TEMPERATURE_NOTES.pending(pending) : TEMPERATURE_NOTES.allDone}
+        </span>
+      </div>
+
+      <ul className="flex flex-col rounded-ops-card border border-ops-line">
+        {points.map((point) => (
+          <li
+            key={`${point.kind}:${point.id}`}
+            className="flex items-baseline gap-2 border-b border-ops-line-soft px-3 py-2 last:border-b-0"
+          >
+            <span className="min-w-0 flex-1 truncate font-ops-body text-ops-sm text-ops-ink">{point.name}</span>
+            {/* Beklenen aralık satırda: sapma cümlesi ancak beklentiyle birlikte okunur. */}
+            {point.targetMinC !== null ? (
+              <span className="shrink-0 font-ops-mono text-ops-micro text-ops-faint">{range(point)}</span>
+            ) : null}
+            {point.temperatureC === null ? (
+              // Ölçülmedi ≠ sıfır (`CLAUDE §1`): rakam değil, eksikliğin kendisi yazılıyor.
+              <span className="shrink-0 font-ops-body text-ops-xs text-ops-amber-dark">ölçülmedi</span>
+            ) : (
+              <span
+                className={`shrink-0 font-ops-mono text-ops-sm ${
+                  point.deviation === 'target'
+                    ? 'text-ops-red'
+                    : point.deviation === 'habit'
+                      ? 'text-ops-amber-dark'
+                      : 'text-ops-strong'
+                }`}
+              >
+                {fmt(point.temperatureC)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

@@ -79,7 +79,7 @@ export function ProblemDialog({ order, line, busy, error, onClose, onConfirm }: 
                 <span className="font-ops-body text-ops-xs font-semibold text-ops-ink">
                   son tarih {new Date(batch.expiryDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
-                {batch.location ? <Badge tone="slate">{batch.location}</Badge> : null}
+                {batch.areaName ? <Badge tone="slate">{batch.areaName}</Badge> : null}
               </span>
               <Input
                 type="number"

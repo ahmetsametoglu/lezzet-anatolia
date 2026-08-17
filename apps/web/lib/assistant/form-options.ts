@@ -7,11 +7,12 @@ import {
   ProductService,
   ProductVariantService,
   SupplierService,
+  StorageAreaService,
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type StorageAreaKind } from '@lezzet/types';
 import type { ProductFormSource } from '@/components/operation/form/product-form/schema';
 import type { VariantOption } from '@/components/operation/form/bundle-form/types';
 import { variantOptionsForVariants } from '@/lib/catalog/variant-options';
@@ -107,6 +108,15 @@ export interface AssistantFormOptions {
    */
   warehouses: Array<{ id: string; name: string }>;
   suppliers: Array<{ id: string; name: string }>;
+  /**
+   * Stoklama alanları — kabul dilekçesinin raf seçeneği (19.29).
+   *
+   * **Depo-üstü okunuyor** ve bu kuyruğa özgü: dilekçe hangi depoya yazılacağını payload'da
+   * taşıyor ama patron onu değiştirebiliyor, yani seçenekler o an elde olmalı. Ekranın kabul
+   * formunda liste tek depoya daralır (orada depo zaten seçilidir); burada daraltmak, depoyu
+   * değiştiren patrona boş bir raf listesi göstermek olurdu.
+   */
+  storageAreas: Array<{ id: string; name: string; kind: StorageAreaKind }>;
 }
 
 /**
@@ -150,6 +160,13 @@ export async function readAssistantFormOptions(
     new WarehouseService(db).list({ activeOnly: true }),
     new SupplierService(db).list({ activeOnly: true }),
   ]);
+
+  // Alanlar depolardan SONRA: kapsam aktif depoların kimliğinden çıkıyor. Kapalı deponun rafı
+  // listeye girmemeli — depo listesinin kendi gerekçesinin devamı.
+  const storageAreas = await new StorageAreaService(db).listByWarehouses(
+    warehouses.map((w) => w.id),
+    { activeOnly: true },
+  );
 
   // Varyantlar AYRI okunur ve tek turda: form varyant satırlarını da düzenletiyor, ürün kaydı onları
   // taşımıyor. Ürün başına sorgu açmak listenin uzunluğu kadar tur demekti (`STACK §13`).
@@ -200,5 +217,6 @@ export async function readAssistantFormOptions(
     accounts: accounts.map((a) => ({ id: a.id, name: a.name, balanceCents: balances.get(a.id)?.balanceCents ?? 0 })),
     warehouses: warehouses.map((w) => ({ id: w.id, name: w.name })),
     suppliers: suppliers.map((s) => ({ id: s.id, name: s.name })),
+    storageAreas: storageAreas.map((a) => ({ id: a.id, name: a.name, kind: a.kind })),
   };
 }

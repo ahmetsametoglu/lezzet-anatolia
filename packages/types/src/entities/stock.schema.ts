@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { OrderStatusEnum } from '../primitives/enums.schema';
 import { ProductSchema } from './product.schema';
 import { ProductVariantSchema } from './product-variant.schema';
+import { StorageAreaSchema } from './storage-point.schema';
 
 // Stock — stok PARTİSİ (lot). Stok varyant seviyesinde tutulur; her partinin kendi son tarihi ve
 // alış maliyeti vardır (DOMAIN §4, data-model/stok-tedarik.md).
@@ -13,7 +14,7 @@ import { ProductVariantSchema } from './product-variant.schema';
 export const StockSchema = z.object({
   id: z.string().uuid(),
   variantId: z.string().uuid(),
-  /** PARTİ BİR DEPODA DURUR (DOMAIN §17). `location` bundan ayrıdır: o depo İÇİ raftır. */
+  /** PARTİ BİR DEPODA DURUR (DOMAIN §17). `storageAreaId` bundan ayrıdır: o depo İÇİ alandır. */
   warehouseId: z.string().uuid(),
   physicalQty: z.number().int(),
   /** Girişte yazılan miktar — tarihtir, değişmez. Fiili erirken bu durur (fark raporu, tüketim). */
@@ -26,7 +27,17 @@ export const StockSchema = z.object({
   /** Hangi tedarik kalemini karşıladı (T5) — parçalı kabulde fark raporunun bağı. */
   purchaseOrderItemId: z.string().uuid().nullable(),
   offerPriceCents: z.number().int().nullable(), // dolu → parti indirimli teklifte
-  location: z.string().nullable(), // depo İÇİ raf/dolap
+  /**
+   * Partinin durduğu depo İÇİ alan (`StorageArea`) — **serbest metin değil, tanımlı kayıt** (19.29).
+   *
+   * Önce `location: string` idi ve `temperature_log`un kapattığı üç zarar burada aynen geçerliydi:
+   * gruplama yazımla bölünüyordu, "hangi alan boş/dolu" sorusu sorulamıyordu, ve `storage_area.kind`
+   * ile `product.storageType` aynı kelimeleri konuşmasına rağmen "donuk ürün donuk alanda mı" sorusu
+   * cevapsızdı — cümlenin öteki yarısı bu alandı.
+   *
+   * `null` meşru: rafı bilinmeden de mal kabul edilir.
+   */
+  storageAreaId: z.string().uuid().nullable(),
   createdAt: z.string(),
 });
 export type Stock = z.infer<typeof StockSchema>;
@@ -41,7 +52,7 @@ export const StockInsertSchema = z.object({
   intakeId: z.string().uuid().nullish(),
   purchaseOrderItemId: z.string().uuid().nullish(),
   offerPriceCents: z.number().int().nonnegative().nullish(),
-  location: z.string().nullish(),
+  storageAreaId: z.string().uuid().nullish(),
 });
 export type StockInsert = z.infer<typeof StockInsertSchema>;
 
@@ -83,6 +94,17 @@ export type AvailableStockTotal = z.infer<typeof AvailableStockTotalSchema>;
  * ürün sorgusu (N+1) yerine gömülü `select` ile gelir (STACK §13). Karar yine motorundur
  * (`domain-core/stock/shelf-life`) — servis yalnız satırı getirir.
  */
+/**
+ * Partinin alanı, GÖMÜLÜ hâliyle (19.29) — üç ayrı okuma aynı üç alanı istiyor (FEFO önerisi,
+ * toplama, varyant geçmişi) ve hepsi ADI kullanıyor. Tek yerde tanımlı: üç şemada elle
+ * tekrarlansaydı biri bir gün `kind`ı unutur ve o ekran uyumsuzluk uyarısını kuramazdı.
+ */
+export const StockAreaEmbedSchema = StorageAreaSchema.pick({ id: true, name: true, kind: true }).nullable();
+
+/** Parti + yalnız alanı — varyant geçmişinin okuduğu şekil (ürün alanları gerekmiyor). */
+export const StockWithAreaSchema = StockSchema.extend({ storageArea: StockAreaEmbedSchema });
+export type StockWithArea = z.infer<typeof StockWithAreaSchema>;
+
 export const StockWithProductDatesSchema = StockSchema.extend({
   variant: z.object({
     id: z.string().uuid(),
@@ -91,6 +113,7 @@ export const StockWithProductDatesSchema = StockSchema.extend({
       shelfLifeDays: z.number().int().nullable(),
     }),
   }),
+  storageArea: StockAreaEmbedSchema,
 });
 export type StockWithProductDates = z.infer<typeof StockWithProductDatesSchema>;
 
@@ -120,6 +143,12 @@ export const StockBatchDetailSchema = StockSchema.extend({
       vatRate: true,
     }),
   }),
+  /**
+   * Partinin alanı — **ad gömülü geliyor** (19.29). Okuyan her yer (FEFO önerisi, toplama ekranı,
+   * varyant geçmişi) rafta aranacak TABELAYI istiyor; kimliği ayrıca çözmek her ekranda ikinci bir
+   * okuma demekti. `null` = rafı bilinmeyen parti (kabulde alan seçmek zorunlu değil).
+   */
+  storageArea: StockAreaEmbedSchema,
 });
 export type StockBatchDetail = z.infer<typeof StockBatchDetailSchema>;
 

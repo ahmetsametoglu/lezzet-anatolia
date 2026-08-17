@@ -1,12 +1,14 @@
 import { z } from 'zod';
-import type { ZoneDemandRow } from '@/lib/delivery/zone-demand';
 import {
   AddressSchema,
   CountryEnum,
   type DeliveryZonePostalCode,
+  StorageAreaInsertSchema,
+  VehicleInsertSchema,
   WarehouseInsertSchema,
   type Country,
   type DeliveryZone,
+  type StorageAreaKind,
   type Warehouse,
 } from '@lezzet/types';
 
@@ -53,6 +55,26 @@ export type WarehouseFormInput = z.infer<typeof WarehouseFormSchema>;
  */
 export type PostalCodePick = Pick<DeliveryZonePostalCode, 'country' | 'postalCode'>;
 
+// ── Ölçüm noktası formları (19.28) ──────────────────────────────────────────
+
+/**
+ * Depo içi alan. `warehouseId` formda YOK — hangi tesise eklendiği seçili karttan belli ve onu
+ * forma koymak, operatöre zaten verdiği cevabı ikinci kez sordurmaktı.
+ *
+ * Hedef aralık **metin** olarak alınıyor, sayı olarak değil: boş bırakılabilmesi gerek ("bu alanın
+ * beklentisi yok") ve boş bir sayı alanı `0`a düşer — sıfır derece geçerli bir beklentidir, yani
+ * boşluk sıfırdan ayırt edilemez hâle gelirdi (`CLAUDE §1`).
+ */
+export const StorageAreaFormSchema = StorageAreaInsertSchema.pick({ name: true, kind: true }).extend({
+  targetMinC: z.string(),
+  targetMaxC: z.string(),
+});
+export type StorageAreaFormInput = z.infer<typeof StorageAreaFormSchema>;
+
+/** Araç. Plaka kimlik, etiket okunurluk — ikincisi boş bırakılabilir. */
+export const VehicleFormSchema = VehicleInsertSchema.pick({ plate: true }).extend({ label: z.string() });
+export type VehicleFormInput = z.infer<typeof VehicleFormSchema>;
+
 
 // ── Görünüm satırları ───────────────────────────────────────────────────────
 
@@ -74,8 +96,8 @@ export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt'> & {
   batchCount: number;
   /** Karar bekleyen (yaklaşan tarihli / süresi geçmiş) parti sayısı. */
   attentionCount: number;
+  /** Bu depoya yolda olan sevkiyat — karnede çizilmiyor (17.08), KAPATMA uyarısının girdisi. */
   inTransitIn: number;
-  inTransitOut: number;
   /**
    * Kurulum eksikliği — **hiçbir siparişi alamayan** tesis. Ne bağlı aktif bölgesi ne kargo çıkışı
    * varsa posta kodu ona çözülmez, kargo yolu ondan geçmez: açık ama ulaşılamaz bir tesistir.
@@ -87,6 +109,25 @@ export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt'> & {
 /** Bölge kartı — deponun hizmet alanı bölümünde. Kodlar bölgenin kendi tablosundan gelir. */
 export type ZoneCardView = Pick<DeliveryZone, 'id' | 'name' | 'isActive' | 'weekdays'> & {
   postalCodes: PostalCodePick[];
+  /**
+   * Bölgenin AĞIRLIĞI (19.28, kullanıcı isteği 17.08) — kodlarının toplamı.
+   *
+   * Kart bugüne kadar yalnız TANIMI gösteriyordu (ad · gün · kod). Tanım "ne kurduk"u söyler,
+   * ağırlık "ne getirdi"yi — ve ikisi yan yana durmadan bir bölge hakkında karar verilemez: teslim
+   * günü eklemek mi, kod çıkarmak mı, hiç dokunmamak mı.
+   *
+   * Kaynak Rotalar'ın okuduğu RPC'nin aynısı (`analytics_postal_code_orders`): iki ekran aynı
+   * soruyu iki farklı sayıyla cevaplamasın.
+   */
+  orderCount: number;
+  revenueCents: number;
+  /** Bu bölgenin kodlarında haber bekleyen kişi (`zone_notice`) — talebin kimlikli ayağı. */
+  waitingCount: number;
+  /**
+   * Sıradaki teslim günü (ISO tarih); `null` = bölgenin günü yok ya da pasif, yani dağıtıma çıkmaz.
+   * Gün listesinden TÜRETİLİR, ayrı bir yerde tutulmaz.
+   */
+  nextDeliveryDate: string | null;
 };
 
 /** Bağlı personel çipi — okunur; kapsam ataması Ayarlar'ın işi. */
@@ -112,8 +153,8 @@ export interface ScorecardView {
   expiredCount: number;
   riskCents: number | null;
   belowMinCount: number;
+  /** Bu depoya yolda olan sevkiyat — karnede çizilmiyor (17.08), KAPATMA uyarısının girdisi. */
   inTransitIn: number;
-  inTransitOut: number;
   /** Bu depodan çıkacak, henüz teslim edilmemiş sipariş. */
   openOrderCount: number;
   /** En son mal girişi (parti doğuşu) — sessizleşmiş depo bir işarettir. `null` = hiç giriş yok. */
@@ -126,6 +167,35 @@ export interface WarehouseCardView {
   zones: ZoneCardView[];
   staff: StaffChipView[];
   scorecard: ScorecardView;
+  /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */
+  points: MeasurePointView[];
+}
+
+/**
+ * **Ölçüm noktası** — depo içi alan ya da araç, tek görünümde (19.28).
+ *
+ * Veride İKİ tablo (`storage_area` · `vehicle`, zorunlulukları farklı) ama ekranda tek liste:
+ * operatörün sorusu "hangi noktalarım var ve ölçülüyor mu", tablo ayrımı değil. Ayrımı `kind`
+ * taşıyor, çünkü düzenleme formu ona göre değişiyor (alanda hedef aralık, araçta plaka).
+ */
+export interface MeasurePointView {
+  id: string;
+  kind: 'area' | 'vehicle';
+  /** Alanın adı ya da aracın plakası. */
+  name: string;
+  /** Aracın okunur etiketi ("Küçük kamyonet"); alanda `null`. */
+  label: string | null;
+  /** Alanın saklama rejimi; araçta `null`. */
+  areaKind: StorageAreaKind | null;
+  targetMinC: number | null;
+  targetMaxC: number | null;
+  isActive: boolean;
+  /**
+   * Bu noktanın SON ölçümü — `null` = hiç ölçülmemiş. Tarih değil ANLIK durum sorusu: kart
+   * "tanımlı ama hiç kullanılmayan nokta" hâlini görünür kılıyor, çünkü o hâl bir kurulum
+   * eksikliğidir (nokta tanımlanmış, tura girmemiş).
+   */
+  lastRecordedAt: string | null;
 }
 
 /**
@@ -145,19 +215,13 @@ export interface WarehousesData {
   rows: WarehouseRowView[];
   /** Seçili tesis (`?depo=<kod>`); yoksa liste görünümü. */
   card: WarehouseCardView | null;
-  /**
-   * Kargo çıkışı olmayan ülkeler — o ülkede bölge dışı müşteriye satış YAPILAMAZ (sipariş deposu
-   * çözülemediği için hiç açılmaz). Listede görünür bir eksiklik hâlidir, sessiz bırakılmaz.
-   */
-  countriesWithoutShipping: Country[];
   /** Aktif deposu olan ülkeler — "yeni ülkede ilk depo" mali uyarısı bundan türer. */
   countriesWithWarehouse: Country[];
   /**
-   * **Bölge dışı talep — hangi posta kodu bizi arıyor** (kullanıcı kararı 04.08, `ANALYTICS §6`).
-   *
-   * Tablo ANALİTİKTE değil BURADA çünkü **kararın verildiği yer burası**: harita "nereyi
-   * açabilirim"i, bu liste "nereyi açmalıyım"ı söyler. Analitikte yalnız işaret + köprü var; iki
-   * ekranda iki tablo, aynı soruya iki cevap demekti.
+   * ── `countriesWithoutShipping` ve `zoneDemand` KALKTI (17.08) ─────────────────────────────
+   * İkisi de ekranın "Ağ geneli" bölümünü besliyordu ve o bölüm bu sayfanın sorusuna cevap
+   * vermiyordu. Talep tablosunun gerekçesi burada yazılıydı — *"kararın verildiği yer burası"* —
+   * ve 07.08'de geçerliliğini yitirdi: bölge kurulumu haritayla birlikte Teslimat & Rota'ya taşındı,
+   * karar da onunla gitti. Gerekçesi biten bir alan, alan olarak kalmaz. Ayrıntı `19.27`.
    */
-  zoneDemand: ZoneDemandRow[];
 }

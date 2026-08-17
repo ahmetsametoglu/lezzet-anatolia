@@ -123,7 +123,7 @@ alter table public.stock_intake enable row level security;
 -- `received` yapıyordu ve "20 koli STR'ye, 10 koli KEHL'e" senaryosunda ikinci depo malı beklerken
 -- sipariş kapanmış görünüyordu. Durum artık `purchase_order_progress`'ten TÜRETİLİR (0031).
 --
--- p_lines: [{"variant_id":…,"qty":…,"expiry_date":…,"lot_number":…,"unit_cost":…,"location":…,
+-- p_lines: [{"variant_id":…,"qty":…,"expiry_date":…,"lot_number":…,"unit_cost":…,"storage_area_id":…,
 --            "purchase_order_item_id":…}]
 create or replace function public.receive_intake(
   p_supplier_id uuid,
@@ -212,7 +212,7 @@ begin
 
     insert into public.stock (
       warehouse_id, variant_id, physical_qty, expiry_date, lot_number, purchase_price,
-      intake_id, purchase_order_item_id, location
+      intake_id, purchase_order_item_id, storage_area_id
     )
     values (
       p_warehouse_id,
@@ -223,7 +223,10 @@ begin
       v_cost,
       v_intake_id,
       v_po_item,
-      nullif(v_line ->> 'location', '')
+      -- Alan artık KİMLİK (19.29): serbest metin `location` yerine `storage_area` satırı. Yanlış
+      -- tesisin alanı gönderilirse FK reddetmez (alan↔depo kısıtı yok) — o doğrulama uygulama
+      -- katmanında, kabul kapısında yapılıyor.
+      nullif(v_line ->> 'storage_area_id', '')::uuid
     )
     returning id into v_stock_id;
     v_stock_ids := v_stock_ids || v_stock_id;

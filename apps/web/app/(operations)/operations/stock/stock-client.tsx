@@ -313,6 +313,17 @@ function IntakeOutcomeNotice({ outcome, onClose }: { outcome: ReceiveOutcome; on
           {outcome.warnings.length} partide kısa raf ömrü uyarısı var; kabul engellenmedi.
         </span>
       ) : null}
+      {/* Saklama uyumsuzluğu (19.29) — MLOR'un ikizi: kabul edildi, ama nereye konduğu söyleniyor.
+          ALAN ADI yazılıyor çünkü düzeltilecek şey o: "donuk ürün Kuru depo rafında" cümlesi
+          operatöre gidip malı taşıması gerektiğini söyler, soyut bir uyumsuzluk söylemez. */}
+      {outcome.storageMismatches.length > 0 ? (
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
+          {outcome.storageMismatches.length === 1
+            ? `Bir parti saklama rejimine uymayan alana kondu: ${outcome.storageMismatches[0]!.areaName}.`
+            : `${outcome.storageMismatches.length} parti saklama rejimine uymayan alana kondu.`}{' '}
+          Kabul engellenmedi — malı taşıyıp rafı düzeltebilirsiniz.
+        </span>
+      ) : null}
       {outcome.differences.length > 0 ? (
         <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
           {outcome.differences.length} kalemde fark kayda geçti.

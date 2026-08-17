@@ -635,7 +635,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
           qty: line.qty ?? 0,
           expiryDate: line.expiryDate,
           lotNumber: line.lotNumber.trim() || null,
-          location: line.location.trim() || null,
+          storageAreaId: line.storageAreaId || null,
           // EURO → CENT sınırda (`IntakeLineSchema` künyesi): kapı cent istiyor. `null` = fiyatı
           // bilmiyorum ve öyle gider — sıfır yazmak bedava alınmış gibi okunurdu.
           unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),

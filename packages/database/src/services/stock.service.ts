@@ -7,6 +7,7 @@ import {
   StockSchema,
   StockInsertSchema,
   StockUpdateSchema,
+  StockWithAreaSchema,
   StockWithProductDatesSchema,
   type AvailableStock,
   type AvailableStockTotal,
@@ -14,6 +15,7 @@ import {
   type StockBatchDetail,
   type StockInsert,
   type StockUpdate,
+  type StockWithArea,
   type StockWithProductDates,
 } from '@lezzet/types';
 import { toCents } from '@lezzet/helper';
@@ -32,8 +34,15 @@ import { dbToApp } from '../utils/case-transformers';
  */
 
 /** Parti + kimin partisi olduğu — iki okumanın paylaştığı gömülü seçim (tek yerde yazılır). */
+/**
+ * Alan ADI gömülü geliyor (19.29): rafta aranan şey tabeladır, kimlik değil — her okuyanın onu
+ * ayrıca çözmesi ekran başına ikinci bir sorgu demekti. Üç okuma paylaşıyor (parti detayı, tarihli
+ * parti, varyant geçmişi); metni üç kez yazmak, birinin bir gün `kind`ı unutması demekti.
+ */
+const AREA_EMBED = 'storage_area:storage_area(id,name,kind)';
+
 const BATCH_DETAIL_SELECT =
-  '*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days,vat_rate))';
+  `*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days,vat_rate)),${AREA_EMBED}`;
 
 /**
  * Lot aramasının tavanı. Geri çağırma bir NUMARAYLA yapılır; onlarca eşleşme çıkıyorsa terim fazla
@@ -87,13 +96,23 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * burası bir defter değil bir bakış — "son N giriş" sorusunun cevabı. Tavana dayanıldığını çağıran
    * satır sayısından anlar ve ekranda söyler; sessiz kırpma yok.
    */
-  async listVariantHistory(variantId: string, warehouseIds: readonly string[] | undefined, limit: number): Promise<Stock[]> {
+  async listVariantHistory(
+    variantId: string,
+    warehouseIds: readonly string[] | undefined,
+    limit: number,
+  ): Promise<StockWithArea[]> {
     // Boş dizi = "hiçbir depo": süzgeci hiç uygulamamak TÜM depoları getirirdi (`listInStockDetailed`
     // ile aynı sözleşme).
     if (warehouseIds?.length === 0) return [];
     const filters: Record<string, unknown> = { variantId };
     if (warehouseIds) filters.warehouseId = [...warehouseIds];
-    return this.getAll(filters, { orderBy: 'createdAt', orderDirection: 'desc', limit });
+    // Alan ADIYLA geliyor (19.29): geçmiş satırı "bu parti hangi dolapta duruyordu" diye soruyor.
+    return this.getAllAs(StockWithAreaSchema, filters, {
+      select: `*,${AREA_EMBED}`,
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      limit,
+    });
   }
 
   /**
@@ -102,7 +121,7 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    */
   async listByVariantWithDates(warehouseId: string, variantId: string): Promise<StockWithProductDates[]> {
     return this.getAllAs(StockWithProductDatesSchema, { warehouseId, variantId }, {
-      select: '*,variant:product_variant(id,product:product(date_type,shelf_life_days))',
+      select: `*,variant:product_variant(id,product:product(date_type,shelf_life_days)),${AREA_EMBED}`,
       orderBy: 'expiryDate',
     });
   }

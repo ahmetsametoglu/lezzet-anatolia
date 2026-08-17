@@ -39,7 +39,7 @@ export function preparationLine(overrides: Partial<PreparationLineContract> = {}
     orderedQty: 2,
     pickedQty: 0,
     pinnedStockId: null,
-    suggestion: [{ stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', location: 'A-1' }],
+    suggestion: [{ stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', areaName: 'A-1' }],
     shortfallQty: 0,
     ...overrides,
   };

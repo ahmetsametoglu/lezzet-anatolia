@@ -206,7 +206,7 @@ function LineRow({
                     bölünmüş öneride anlamlı: tek partide "önce bu" diyecek bir ikincisi yok. */}
                 {index === 0 && line.suggestion.length > 1 ? ` (${PREP_NOTES.firstBatch})` : ''}
               </span>
-              {batch.location ? <Badge tone="slate">{batch.location}</Badge> : null}
+              {batch.areaName ? <Badge tone="slate">{batch.areaName}</Badge> : null}
             </span>
           ))
         )}

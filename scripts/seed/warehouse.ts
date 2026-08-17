@@ -1,4 +1,4 @@
-import { WarehouseService, WarehouseTransferService } from '@lezzet/database';
+import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransferService } from '@lezzet/database';
 import { tabloDolu, type Db } from './shared';
 
 // ── Depo ağı (19) ────────────────────────────────────────────────────────────────────────────────
@@ -260,4 +260,94 @@ export async function seedThresholds(db: Db, depolar: Depolar): Promise<void> {
   console.log(
     `✓ depo eşiği: ${kayitlar.length} satır (STR ${strSayi} · KEHL ${kehlSayi}) · yarısı eşiğin ALTINDA → yeniden sipariş uyarısı`,
   );
+}
+
+// ── Ölçüm noktaları (19.28) + partinin rafı (19.29) ──────────────────────────────────────────────
+//
+// **Burada, `seed/stock.ts`te DEĞİL** ve sebebi sıra: parti artık alana bağlanıyor
+// (`stock.storage_area_id`), yani alanlar stoktan ÖNCE var olmak zorunda. Sıcaklık ölçümü de aynı
+// alanları kullanıyor — iki tüketici, tek kaynak.
+
+/** Seed'in kurduğu alanlar ve araç — hem stok hem sıcaklık bunlara bağlanıyor. */
+export interface Noktalar {
+  /** STR'nin alanları: ad → kimlik. Ad anahtar, çünkü iki tüketici de adı biliyor. */
+  strAlan: Map<string, string>;
+  /** KEHL'in tek alanı — ikinci deponun ölçümü ve partileri için. */
+  kehlAlan: string;
+  arac: string;
+}
+
+/**
+ * **Kapsam bilinçli:** dört alan türünün üçü (donuk · soğutulmuş · geçiş) + oda sıcaklığı + bir
+ * araç. `staging` ve `ambient` hedef aralıksız, çünkü geçiş alanının ve rafın beklentisi yoktur —
+ * "aralığı olmayan nokta" hâli ancak böyle sınanır (sapma ölçütü orada alışkanlığa düşer).
+ *
+ * **`Kuru depo rafı` bilerek ölçümsüz kalır** (`seedTemperatureLogs` ona kayıt yazmaz): Depolar
+ * ekranı "tanımlı ama tura girmemiş nokta" uyarısını çiziyor ve o uyarı ancak böyle bir satırla
+ * sınanır. Hepsi ölçülmüş bir kurulumda uyarı hiç görünmez, bir gün bozulsa kimse fark etmez.
+ */
+const STR_ALANLARI = [
+  { ad: 'Derin dondurucu 1', tur: 'frozen' as const, hedef: [-20, -18] as const },
+  { ad: 'Derin dondurucu 2', tur: 'frozen' as const, hedef: [-20, -18] as const },
+  { ad: 'Soğuk oda', tur: 'chilled' as const, hedef: [0, 4] as const },
+  { ad: 'Mal kabul', tur: 'staging' as const, hedef: null },
+  { ad: 'Karantina', tur: 'staging' as const, hedef: null },
+  { ad: 'Kuru depo rafı', tur: 'ambient' as const, hedef: null },
+];
+
+export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Noktalar> {
+  const areas = new StorageAreaService(db);
+  const vehicles = new VehicleService(db);
+
+  // Guard alan BAZINDA, "tablo dolu mu" ile değil: depo seed'inin kendi gerekçesi burada da geçerli
+  // — testler `storage_area` satırı bırakabiliyor ve tablo doluysa atlamak seed'i kendi alanları
+  // olmadan bırakırdı (partiler o an FK hatasıyla düşerdi).
+  const mevcut = await areas.listByWarehouses([depolar.str, depolar.kehl]);
+  const anahtar = (warehouseId: string, ad: string) => `${warehouseId}:${ad}`;
+  const koduyla = new Map(mevcut.map((a) => [anahtar(a.warehouseId, a.name), a.id]));
+
+  const strAlan = new Map<string, string>();
+  for (const [i, alan] of STR_ALANLARI.entries()) {
+    const varolan = koduyla.get(anahtar(depolar.str, alan.ad));
+    const id =
+      varolan ??
+      (
+        await areas.insert({
+          warehouseId: depolar.str,
+          name: alan.ad,
+          kind: alan.tur,
+          targetMinC: alan.hedef?.[0] ?? null,
+          targetMaxC: alan.hedef?.[1] ?? null,
+          sortOrder: i + 1,
+        })
+      ).id;
+    strAlan.set(alan.ad, id);
+  }
+
+  /**
+   * **Kehl'in kendi alanı, aynı ADLA.** "Derin dondurucu 1" iki depoda da var ve bu tam da ekranın
+   * sınadığı şey: süzgeci unutan bir okuma iki tesisin dolabını karıştırır. Ad depo İÇİNDE benzersiz
+   * (`storage_area_name_uq`), depo üstünde değil.
+   */
+  const kehlAlan =
+    koduyla.get(anahtar(depolar.kehl, 'Derin dondurucu 1')) ??
+    (
+      await areas.insert({
+        warehouseId: depolar.kehl,
+        name: 'Derin dondurucu 1',
+        kind: 'frozen',
+        targetMinC: -20,
+        targetMaxC: -18,
+        sortOrder: 1,
+      })
+    ).id;
+
+  const plaka = '67 LZT 01';
+  const mevcutArac = (await vehicles.list()).find((v) => v.plate === plaka);
+  const arac =
+    mevcutArac?.id ??
+    (await vehicles.insert({ plate: plaka, label: 'Frigo kamyonet', warehouseId: depolar.str, sortOrder: 1 })).id;
+
+  console.log(`✓ ölçüm noktası: ${strAlan.size} alan (STR) · 1 alan (KEHL) · 1 araç`);
+  return { strAlan, kehlAlan, arac };
 }

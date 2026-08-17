@@ -372,7 +372,8 @@ describe('D1 · GET /api/v1/warehouse/preparation', () => {
     expect(order.lines[0]!.productName).toContain('Fıstıklı Baklava');
     // Motor önerisi geliyor: depocunun rafta arayacağı parti ve son tarihi.
     expect(order.lines[0]!.suggestion).toEqual([
-      { stockId, qty: 3, expiryDate: dayOffset(60), location: null },
+      // Alan ADIYLA geliyor (19.29); bu partinin rafı seçilmemiş, yani `null` — meşru hâl.
+      { stockId, qty: 3, expiryDate: dayOffset(60), areaName: null },
     ]);
     expect(order.lines[0]!.shortfallQty).toBe(0);
   });

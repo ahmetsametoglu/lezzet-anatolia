@@ -365,7 +365,11 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'tekliflsiz', zorunlu: true, filtre: (q) => q.is('offer_price', null) },
       { ad: 'lot no var', zorunlu: true, filtre: (q) => q.not('lot_number', 'is', null) },
       { ad: 'SKT yok', filtre: (q) => q.is('expiry_date', null) },
-      { ad: 'raf yeri var', filtre: (q) => q.not('location', 'is', null) },
+      // Raf artık TANIMLI alan (19.29), serbest metin değil. İki hâl de zorunlu: rafı bilinen parti
+      // "bu alanda ne var" sorusunu, rafsız parti `null` yolunu sınıyor (kabulde alan seçmek
+      // zorunlu değil ve ekranlar o hâli de çiziyor).
+      { ad: 'alanı olan parti', zorunlu: true, filtre: (q) => q.not('storage_area_id', 'is', null) },
+      { ad: 'rafı bilinmeyen parti', zorunlu: true, filtre: (q) => q.is('storage_area_id', null) },
       { ad: 'alış fiyatı GİRİLMEMİŞ', zorunlu: true, filtre: (q) => q.is('purchase_price', null) },
       {
         ad: 'MARJ ALTI parti (bilinçli istisna)',
@@ -457,6 +461,45 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'pasif', zorunlu: true, filtre: (q) => q.eq('is_active', false) },
       { ad: 'kargo çıkışlı', zorunlu: true, filtre: (q) => q.eq('ships_online', true) },
       { ad: 'yalnız rota', zorunlu: true, filtre: (q) => q.eq('ships_online', false) },
+    ],
+  },
+  {
+    // ── ÖLÇÜM NOKTALARI (19.28) ───────────────────────────────────────────────────────────────
+    // Ölçüm noktası serbest metinden tanımlı kayda geçti; kapsam da onunla birlikte doğdu.
+    // Dördü de ZORUNLU çünkü dördü de AYRI bir ekran hâlini açıyor:
+    //   hedefli alan   → sapma "beklenen aralık dışı" (kesin ölçüt) diye yazılır
+    //   hedefsiz alan  → sapma alışkanlıktan tahmin edilir; ilk günlerde SUSAR
+    //   hiç ölçülmemiş → Depolar'daki "tanımlı ama tura girmemiş" uyarısı
+    //   araç           → soğuk zincirin yoldaki yeri; ayrı tablo, aynı liste
+    baslik: 'Ölçüm noktası (soğuk zincir)',
+    kovalar: [
+      {
+        ad: 'hedef aralığı olan alan',
+        zorunlu: true,
+        sayac: (db) => say(db, 'storage_area', (q) => q.not('target_min_c', 'is', null)),
+      },
+      {
+        ad: 'hedefsiz alan (geçiş/raf)',
+        zorunlu: true,
+        sayac: (db) => say(db, 'storage_area', (q) => q.is('target_min_c', null)),
+      },
+      { ad: 'araç', zorunlu: true, sayac: (db) => say(db, 'vehicle', (q) => q) },
+      // Partinin rafı BURADA DEĞİL, "Stok — parti" alanında sayılıyor: soru alanın değil PARTİNİN
+      // hâli ("rafı biliniyor mu"). İki yerde sormak aynı sayıyı iki başlık altında raporlardı.
+      {
+        ad: 'hiç ölçülmemiş nokta',
+        zorunlu: true,
+        // Ölçümü olan alanların kimliklerini çıkarıp farkı sayıyoruz: "kaydı olmayan" sorusu tek
+        // sorguyla sorulamıyor (PostgREST'te `not in (subquery)` yok).
+        sayac: async (db) => {
+          const [{ data: alanlar }, { data: kayitlar }] = await Promise.all([
+            db.from('storage_area').select('id'),
+            db.from('temperature_log').select('storage_area_id').not('storage_area_id', 'is', null),
+          ]);
+          const olculen = new Set((kayitlar ?? []).map((r) => (r as { storage_area_id: string }).storage_area_id));
+          return (alanlar ?? []).filter((r) => !olculen.has((r as { id: string }).id)).length;
+        },
+      },
     ],
   },
   {

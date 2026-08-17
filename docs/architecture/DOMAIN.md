@@ -747,8 +747,21 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
   değişmez).
 - **İmha/sayım belge numarası depo koduyla ayrışır** (`IMH-STR-26-0012`) — kâğıt klasör fiziksel
   olarak o depoda durur; ortak sıra denetmene delik gösterirdi.
-- **Araçlar depoya bağlanmaz**; kurye günü ve kapanışı kurye/gün ekseninde kalır (§7). Sıcaklık
-  kaydı depo + konum (dolap/araç) taşır — hijyen denetimi tesis bazındadır.
+- **Araçlar bir güne ya da kuryeye bağlanmaz**; kurye günü ve kapanışı kurye/gün ekseninde kalır
+  (§7). Sıcaklık kaydı depo + **tanımlı ölçüm noktası** taşır — hijyen denetimi tesis bazındadır.
+  - **Ölçüm noktaları veride tanımlıdır (17.08, `0045`):** depo içi alan (`storage_area` — dolap,
+    soğuk oda, geçiş alanı) ve araç (`vehicle`). Önce serbest metindi ve üç şeyi bozuyordu: yazım
+    farkı geçmişi bölüyordu, sapma uyarısı o bölünen geçmişe dayanıyordu, ve **ölçülmeyen tespit
+    edilemiyordu** — var olduğu bilinmeyen bir dolabın eksik ölçümü de bilinemez. Denetimin ilk
+    sorusu tam olarak budur.
+  - **Sapmanın iki ölçütü, bu sırayla:** alanın **beklenen aralığı** (tanımda yazılı, kesin) →
+    noktanın **kendi alışkanlığı** (geçmişin ortancası ± tolerans, tahmini). Aralık önce gelir
+    çünkü alışkanlık bir tuzak taşır: bozuk bir dolap her gün −8 okuyorsa alışkanlığı −8'dir ve o
+    ölçüt arızayı normal ilan eder. Örneklem azken alışkanlık **susar** — "normal" demez.
+  - **Aracın deposu bir künyedir, kısıt değil** (nullable): "genelde buradan yükler". Aidiyet
+    kurmuyor; araç yine hiçbir güne, kuryeye ya da stoğa bağlanmıyor.
+  - **Nokta silinmez, susturulur** (`is_active`): ölçümleri `restrict` ile tutuyor ve silinebilseydi
+    denetim geçmişi sahipsiz kalırdı.
 - **Fiyat depo boyutu almaz** — aynı katalog her yerde aynı fiyattır; depo bazlı tek fiyat farkı
   partiye bağlı near-expiry teklifidir (parti zaten bir depodadır). Ülke farkı gerekirse araç
   kanal/ülke eksenidir, depo değil (§5).

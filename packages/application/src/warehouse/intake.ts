@@ -4,11 +4,12 @@ import {
   PurchaseOrderItemService,
   PurchaseOrderService,
   StockIntakeService,
+  StorageAreaService,
   SupplierService,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { ReceiveIntakeResult } from '@lezzet/types';
+import type { ProductStorageType, ReceiveIntakeResult, StorageAreaKind } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
 
@@ -38,7 +39,8 @@ export interface IntakeFormLine {
   qty: number;
   expiryDate: string;
   lotNumber?: string | null;
-  location?: string | null;
+  /** Partinin konacağı depo İÇİ alan (`storage_area`) — serbest metin değil kimlik (19.29). */
+  storageAreaId?: string | null;
 }
 
 /**
@@ -182,6 +184,28 @@ export interface IntakeWarning {
   remainingPercent: number | null;
 }
 
+/**
+ * **Ürünün saklama rejimi ile konduğu alan uyuşmuyor** (19.29) — `0045`'in kendi gerekçesinin
+ * tamamlandığı yer.
+ *
+ * `storage_area.kind` bilerek `product.storage_type` ile aynı kelimeleri kullanıyordu ve migration
+ * künyesi sebebini yazmıştı: *"donuk ürün donuk alanda durur" cümlesi ancak iki taraf aynı dili
+ * konuşursa kurulabilir.* Cümlenin öteki yarısı `stock.storage_area_id` gelince doğdu; bu uyarı da
+ * onunla.
+ *
+ * **ENGELLEMEZ, söyler** (`DOMAIN §4` deseni — MLOR'un ikizi): dondurucu bozulduğu için malı geçici
+ * olarak başka alana koymak meşru bir karardır ve kabulü reddetmek depocuyu ya kaydı hiç yazmamaya
+ * ya da yanlış alan seçmeye iterdi. İkisi de defteri yalancı yapar.
+ */
+export interface StorageMismatch {
+  variantId: string;
+  /** Ürünün gerektirdiği rejim. */
+  expected: ProductStorageType;
+  /** Alanın türü ve adı — operatör hangi rafı seçtiğini görmeli. */
+  areaKind: StorageAreaKind;
+  areaName: string;
+}
+
 export interface IntakeDifference {
   variantId: string;
   expectedQty: number;
@@ -208,6 +232,8 @@ type IntakeOutcome =
       result: ReceiveIntakeResult;
       /** Raf ömrü kısa gelen partiler — kabul ENGELLENMEZ, yalnız bildirilir. */
       warnings: IntakeWarning[];
+      /** Saklama rejimine uymayan alana konan partiler (19.29) — MLOR'un ikizi: uyarır, engellemez. */
+      storageMismatches: StorageMismatch[];
       /** PO'ya göre eksik/fazla — fark olarak işaretlenir, iş durmaz. */
       differences: IntakeDifference[];
       /**
@@ -305,7 +331,7 @@ async function intake(
       qty: line.qty,
       expiryDate: line.expiryDate,
       lotNumber: line.lotNumber,
-      location: line.location,
+      storageAreaId: line.storageAreaId,
       unitCostCents: line.unitCostCents ?? costsInCents.get(line.variantId) ?? null,
     })),
   });
@@ -314,6 +340,7 @@ async function intake(
     status: 'ok',
     result,
     warnings: await mlorWarnings(db, input.lines),
+    storageMismatches: await storageMismatches(db, input.lines),
     differences: differencesOf(input.lines, expected),
     repricedCount: await reprice(input.reprice, input.lines.map((line) => line.variantId)),
   };
@@ -358,6 +385,36 @@ async function mlorWarnings(db: SupabaseClient, lines: readonly IntakeFormLine[]
     if (!verdict.ok) warnings.push({ variantId: line.variantId, remainingPercent: verdict.remainingPercent });
   }
   return warnings;
+}
+
+/**
+ * Saklama rejimi ↔ alan uyuşmazlığı (19.29). Rafı seçilmemiş satır sorulmaz: alan yoksa
+ * karşılaştırılacak bir şey de yok — "eksik" ile "yanlış" aynı uyarıya düşmemeli.
+ *
+ * `staging` HİÇ uyarmaz ve bu tanımın kendisi: geçiş alanı (mal kabul, sevk) bir saklama rejimi
+ * değil, malın oradan geçtiği yerdir. Uyarsaydı her kabul kendi kabul alanını şikâyet ederdi.
+ */
+async function storageMismatches(db: SupabaseClient, lines: readonly IntakeFormLine[]): Promise<StorageMismatch[]> {
+  const placed = lines.filter((line) => line.storageAreaId);
+  if (placed.length === 0) return [];
+
+  const [variants, areas] = await Promise.all([
+    new ProductVariantService(db).listByIds([...new Set(placed.map((line) => line.variantId))]),
+    new StorageAreaService(db).listByIds([...new Set(placed.map((line) => line.storageAreaId!))]),
+  ]);
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const storageOf = new Map(products.map((product) => [product.id, product.storageType]));
+  const variantStorage = new Map(variants.map((v) => [v.id, storageOf.get(v.productId)]));
+  const areaOf = new Map(areas.map((area) => [area.id, area]));
+
+  const mismatches: StorageMismatch[] = [];
+  for (const line of placed) {
+    const expected = variantStorage.get(line.variantId);
+    const area = areaOf.get(line.storageAreaId!);
+    if (!expected || !area || area.kind === 'staging' || area.kind === expected) continue;
+    mismatches.push({ variantId: line.variantId, expected, areaKind: area.kind, areaName: area.name });
+  }
+  return mismatches;
 }
 
 /**

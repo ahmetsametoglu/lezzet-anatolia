@@ -20,7 +20,12 @@ export const IntakeLineSchema = z.object({
   /** SKT — kayıt anında ZORUNLU: tarihsiz parti yazılamaz (gıda; `stock.expiry_date` not null). */
   expiryDate: z.string(),
   lotNumber: z.string(),
-  location: z.string(),
+  /**
+   * Partinin konacağı depo İÇİ alan — **kimlik, serbest metin değil** (19.29). Boş dize = seçilmedi
+   * ve meşru: rafı bilinmeden de mal kabul edilir. Metin kutusu olsaydı ilk yazım hatası yeni bir
+   * "alan" uydurur ve kapattığımız soruna geri dönerdik.
+   */
+  storageAreaId: z.string(),
   /**
    * Birim alış — **EURO** (form birimi), kapıya `toCents` ile gider. `null` = "bu satırın fiyatını
    * bilmiyorum" ve meşrudur: faturada okunamayan bir satır uydurulmaz (`CLAUDE §1`).
@@ -65,7 +70,7 @@ export type IntakeFormValues = z.infer<typeof IntakeFormSchema>;
 
 /** Boş satır — "+ satır", dilekçe ve sipariş kalemleri için tek yerden. */
 export function emptyIntakeLine(variantId: string, title: string, expectedQty: number | null = null): IntakeLine {
-  return { variantId, title, qty: null, expiryDate: '', lotNumber: '', location: '', unitCost: null, expectedQty, isMissing: false };
+  return { variantId, title, qty: null, expiryDate: '', lotNumber: '', storageAreaId: '', unitCost: null, expectedQty, isMissing: false };
 }
 
 /**

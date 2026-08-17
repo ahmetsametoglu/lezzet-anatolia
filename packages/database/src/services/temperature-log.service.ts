@@ -28,14 +28,25 @@ export class TemperatureLogService extends BaseDbService<TemperatureLog, Tempera
    * deponun kayıtlarını ister. Süzgeçsiz okuma iki tesisin ölçümlerini karıştırır ve "bu dolabın
    * kaydı" sorusuna yanlış cevap verir; `location` (dolap adı) iki depoda aynı olabilir.
    */
-  async list(opts: { warehouseId?: string; location?: string; from?: Date; to?: Date; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<TemperatureLog>> {
+  async list(
+    opts: {
+      warehouseId?: string;
+      storageAreaId?: string;
+      vehicleId?: string;
+      from?: Date;
+      to?: Date;
+      cursor?: KeysetCursor;
+      limit?: number;
+    } = {},
+  ): Promise<Page<TemperatureLog>> {
     const rangeFilters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
     if (opts.from) rangeFilters.push({ field: 'recorded_at', operator: 'gte', value: opts.from.toISOString() });
     if (opts.to) rangeFilters.push({ field: 'recorded_at', operator: 'lte', value: opts.to.toISOString() });
 
     const filters: Record<string, unknown> = {};
     if (opts.warehouseId) filters.warehouseId = opts.warehouseId;
-    if (opts.location) filters.location = opts.location;
+    if (opts.storageAreaId) filters.storageAreaId = opts.storageAreaId;
+    if (opts.vehicleId) filters.vehicleId = opts.vehicleId;
 
     return this.getPage(Object.keys(filters).length > 0 ? filters : undefined, {
       rangeFilters,
@@ -45,21 +56,11 @@ export class TemperatureLogService extends BaseDbService<TemperatureLog, Tempera
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
     });
   }
-
-  /**
-   * Kayıt girilen konumlar — giriş formunun seçim listesi (elle yazım yerine seçim).
-   *
-   * Depo süzgeci: "Dolap 1" iki depoda da vardır; depocuya öteki tesisin dolap adlarını sunmak
-   * yanlış kayıt davetidir.
-   *
-   * **Ham `this.supabase` sebebi** (`STACK §6`): istenen şey satır değil, tek kolonun BENZERSİZ
-   * kümesi. Tabanın okumaları entity döndürür (`parseRows`'tan geçer); burada dönen şey bir varlık
-   * değil bir sözlük. Tabana `distinct` yardımcısı eklenMEDİ — bugün tek tüketicisi var (YAGNI).
-   */
-  async listLocations(warehouseId?: string): Promise<string[]> {
-    const query = this.supabase.from('temperature_log').select('location');
-    const { data, error } = warehouseId ? await query.eq('warehouse_id', warehouseId) : await query;
-    if (error) throw error;
-    return [...new Set((data ?? []).map((row) => (row as { location: string }).location))].sort();
-  }
 }
+
+// ── `listLocations` SİLİNDİ (19.28) ───────────────────────────────────────────────────────────
+// Kayıt girilmiş konumların BENZERSİZ kümesini döndürüyordu ve giriş formunun çip listesini
+// besliyordu. Yani seçim listesi "daha önce birinin yazdığı metinler"di: ilk yazım hatası kalıcı
+// bir seçenek hâline geliyor, ikinci kez tıklanıyor ve yanlış nokta kendini çoğaltıyordu.
+// Noktalar artık tanımlı (`storage_area` · `vehicle`); liste tahminden değil kayıttan geliyor.
+

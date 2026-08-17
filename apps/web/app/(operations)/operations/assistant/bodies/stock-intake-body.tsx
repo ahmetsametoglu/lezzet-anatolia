@@ -77,6 +77,7 @@ export function StockIntakeBody({ payload, subject, options, meta, values, onCha
           onSearch={(term) => searchIntakeVariantsAction(term).then(({ data }) => data ?? [])}
           suppliers={options.suppliers}
           warehouses={options.warehouses}
+          storageAreas={options.storageAreas}
           // Kuyruk patronun ekranı: fiyat görünür ve düzeltilebilir (yukarıdaki künye).
           showCost
           documentTotalCents={payload.totalAmountCents}

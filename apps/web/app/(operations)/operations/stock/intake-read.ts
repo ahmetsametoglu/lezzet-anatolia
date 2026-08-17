@@ -1,5 +1,5 @@
 import 'server-only';
-import { PurchaseOrderService, SupplierService, serviceDb } from '@lezzet/database';
+import { PurchaseOrderService, StorageAreaService, SupplierService, serviceDb } from '@lezzet/database';
 import type { PurchaseOrderProgress, PurchaseOrderStatus } from '@lezzet/types';
 import { readWarehouseContext, readWorkWarehouse } from '@/lib/warehouse/context';
 import type { IntakeTabData, PendingPurchase } from './stock-types';
@@ -52,6 +52,22 @@ export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData>
     readWarehouseContext(),
   ]);
 
+  /**
+   * Kabul formunun raf seçeneği (19.29) — **çalışılan deponun** alanları.
+   *
+   * Bağlam seçili değilse boş: mal hangi tesise girdiği belli olmadan bir rafa konamaz ve form
+   * zaten depo seçilmeden kaydetmiyor. Yalnız AKTİF alanlar — kullanımdan kalkmış bir dolaba yeni
+   * mal koymak, susturma kararını geri almak olurdu.
+   */
+  const storageAreas =
+    workplace.status === 'ok'
+      ? (await new StorageAreaService(db).listByWarehouse(workplace.warehouseId, { activeOnly: true })).map((area) => ({
+          id: area.id,
+          name: area.name,
+          kind: area.kind,
+        }))
+      : [];
+
   const byOrder = new Map<string, ProgressRow[]>();
   for (const row of rows) {
     const list = byOrder.get(row.purchaseOrderId) ?? [];
@@ -89,6 +105,7 @@ export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData>
     pending,
     suppliers: suppliers.filter((supplier) => supplier.isActive).map((s) => ({ id: s.id, name: s.name })),
     warehouseOptions: ctx.warehouses.map((warehouse) => ({ id: warehouse.id, name: warehouse.name })),
+    storageAreas,
     warehouseId: workplace.status === 'ok' ? workplace.warehouseId : null,
   };
 }

@@ -19,7 +19,8 @@ interface FefoPick {
   qty: number;
   expiryDate: string;
   lotNumber: string | null;
-  location: string | null;
+  /** Partinin alanının ADI — rafta aranan tabela (19.29). */
+  areaName: string | null;
   /** Uyarı durumu — ekran "son 2 gün" partisini işaretlesin diye. */
   flag: ExpiryFlag;
   remainingPercent: number | null;
@@ -75,7 +76,7 @@ export async function suggestPicksForVariant(
         qty: pick.qty,
         expiryDate: batch.expiryDate,
         lotNumber: batch.lotNumber,
-        location: batch.location,
+        areaName: batch.storageArea?.name ?? null,
         flag: expiryFlagOf(dateType, batch.expiryDate, shelfLifeDays, now),
         remainingPercent: remainingShelfLifePercent(batch.expiryDate, shelfLifeDays, now),
       };

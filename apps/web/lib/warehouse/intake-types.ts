@@ -1,4 +1,4 @@
-import type { IntakeDifference, IntakeWarning } from '@lezzet/application';
+import type { IntakeDifference, IntakeWarning, StorageMismatch } from '@lezzet/application';
 
 /**
  * Mal kabulün YÜZEYDEN BAĞIMSIZ tipleri (22.26).
@@ -11,6 +11,8 @@ import type { IntakeDifference, IntakeWarning } from '@lezzet/application';
 /** Kabulün sonucu — uyarılar ve farklar ekrana taşınır, ikisi de İŞ DURDURMAZ (`DOMAIN §4`). */
 export interface ReceiveOutcome {
   warnings: IntakeWarning[];
+  /** Saklama rejimine uymayan alana konan partiler (19.29) — uyarır, engellemez. */
+  storageMismatches: StorageMismatch[];
   differences: IntakeDifference[];
   /** Kaç parti yazıldı. */
   batches: number;

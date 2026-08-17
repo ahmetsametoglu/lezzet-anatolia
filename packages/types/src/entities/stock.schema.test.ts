@@ -26,8 +26,10 @@ const batch = (variantLabel: Record<string, string>) => ({
   intake_id: null,
   purchase_order_item_id: null,
   offer_price: null,
-  location: 'Soğuk oda',
+  // Partinin rafı TANIMLI bir alan (19.29) — kimlik satırda, adı gömülü satırda.
+  storage_area_id: 'b7c8d9e0-2222-4000-8000-000000000007',
   created_at: '2026-07-28T15:31:30.445047+00:00',
+  storage_area: { id: 'b7c8d9e0-2222-4000-8000-000000000007', name: 'Soğuk oda', kind: 'chilled' },
   variant: {
     id: '6d70f537-83b0-49fd-aef9-e05084e0d5b2',
     label: variantLabel,

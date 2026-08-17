@@ -49,7 +49,14 @@ export const PreparationSuggestionSchema = z.object({
   stockId: z.string().uuid(),
   qty: z.number().int(),
   expiryDate: z.string(),
-  location: z.string().nullable(),
+  /**
+   * Partinin alanının ADI ("Derin dondurucu 2") — kimliği DEĞİL (19.29).
+   *
+   * Alan artık tanımlı bir kayıt (`storage_area`) ama sözleşme adı taşıyor: depocu rafta bir uuid
+   * aramıyor, tabelayı okuyor. Kimliği göndermek telefona ikinci bir okuma yaptırırdı; ad zaten
+   * sunucuda elimizde. Alan adı depo içinde benzersiz, yani ad burada da tekil bir işaret.
+   */
+  areaName: z.string().nullable(),
 });
 export type PreparationSuggestionContract = z.infer<typeof PreparationSuggestionSchema>;
 
@@ -234,7 +241,12 @@ export const IntakeFormLineSchema = z.object({
   expiryDate: z.string(),
   /** Geri çağırma anahtarı; boş bırakmak BİLİNÇLİ bir karar olmalı (v2 notu). */
   lotNumber: z.string().nullish(),
-  location: z.string().nullish(),
+  /**
+   * Partinin konacağı alan — **kimlik** (19.29). Öneride ad gider, yazmada KİMLİK gelir ve asimetri
+   * kasıtlı: okurken depocu tabelayı okur, yazarken listeden seçer. Ad kabul etseydik yazım hatası
+   * yeni bir "alan" uydurur ve serbest metne geri dönerdik.
+   */
+  storageAreaId: z.string().uuid().nullish(),
 });
 export type IntakeFormLineContract = z.infer<typeof IntakeFormLineSchema>;
 

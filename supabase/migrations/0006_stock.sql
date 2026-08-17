@@ -40,8 +40,21 @@ create table public.stock (
   -- ve rezervasyonu `stock_id` ile bu partiye bağlanır (DOMAIN §5).
   offer_price numeric(10, 2) check (offer_price >= 0),
   -- Depo İÇİ konum (dolap/raf) — `warehouse_id` ile aynı şey değil, iki ayrı çözünürlük:
-  -- hangi tesis (depo) ↔ o tesiste hangi raf. Duplication değil (CLAUDE.md §1).
-  location text,
+  -- hangi tesis (depo) ↔ o tesiste hangi alan. Duplication değil (CLAUDE.md §1).
+  --
+  -- **SERBEST METİNDEN TANIMLI ALANA (17.08, 19.29).** `location text` idi ve `temperature_log`un
+  -- 128. satırdaki üç zararı burada birebir geçerliydi: gruplama yazımla bölünüyordu (`Dolap 1` ≠
+  -- `Dolap-1` → "bu dolapta ne var" eksik cevap verir) ve **olmayan görülemiyordu** ("hangi alan
+  -- boş, hangisi aşırı dolu" sorusu sorulamıyordu).
+  --
+  -- Üçüncü ve asıl sebep `0045`in kendi gerekçesini tamamlıyor: `storage_area.kind` bilerek
+  -- `product_storage_type` ile aynı kelimeleri kullanıyor ve künyesi *"donuk ürün donuk alanda
+  -- durur" cümlesi ancak iki taraf aynı dili konuşursa kurulabilir* diyor. Cümlenin öteki yarısı
+  -- BU kolondur; o gelene kadar tip kümesi hazır ama tüketicisi yoktu.
+  --
+  -- NULLABLE kalıyor: rafı bilinmeden de mal kabul edilir (bugünkü davranış korunur).
+  -- FK YOK: `storage_area` 0045'te açılır — kolon burada doğar, bağ orada kurulur.
+  storage_area_id uuid,
   created_at timestamptz not null default now()
 );
 
@@ -123,21 +136,41 @@ alter table public.reservation enable row level security;
 --
 -- Hijyen denetiminin İLK istediği veri budur: dolabın/aracın sıcaklığı düzenli ölçülmüş mü.
 -- Sensör entegrasyonu YOK — günde bir-iki elle giriş yeter. Basit tutulur ki gerçekten girilsin.
+--
+-- ── NOKTA SERBEST METİNDEN TANIMLI KAYDA GEÇTİ (17.08, kullanıcı kararı) ─────
+-- `location text` vardı ve içine hem dolap adı hem araç plakası yazılıyordu. Üç zararı ÖLÇÜLDÜ:
+-- ekran noktaları birebir metinle grupluyor (`Dolap 1` ≠ `Dolap-1` ≠ `dolap 1` → geçmiş bölünür),
+-- "bu nokta genelde şu kadar okuyor" uyarısı o bölünen geçmişe dayanıyor, ve en ağırı: **ölçülmeyen
+-- tespit edilemiyor.** "Dondurucu 2 bugün ölçülmedi" demek için Dondurucu 2'nin var olduğunu bilmek
+-- gerek; sistem yalnız yazılanı biliyordu, yazılması gerekeni değil. Denetimin sorduğu tam da bu.
 
 create table public.temperature_log (
   id uuid primary key default gen_random_uuid(),
   -- HANGİ TESİS (DOMAIN §17): hijyen denetimi tesis bazındadır — denetmen bir depoya gelir ve o
   -- deponun kayıtlarını ister. FK YOK: `warehouse` 0031'de açılır.
-  -- Araç kaydı da bir depoya yazılır (aracın çıktığı depo): araçlar depoya BAĞLANMAZ (K8) ama
-  -- soğuk zincir kaydının bir tesis sahibi olmak zorundadır, yoksa denetimde sahipsiz kalır.
+  -- Araç kaydı da bir depoya yazılır (kaydın alındığı tesis): araç bir güne/kuryeye BAĞLANMAZ (K8)
+  -- ama soğuk zincir kaydının bir tesis sahibi olmak zorundadır, yoksa denetimde sahipsiz kalır.
   warehouse_id uuid not null,
-  location text not null,                            -- depo İÇİ dolap adı / araç plakası
+  -- ÖLÇÜM NOKTASI — ikisinden TAM BİRİ dolu. FK YOK: iki tablo da 0045'te açılır (emsal:
+  -- `stock.intake_id` 0006'da FK'siz doğdu, tablosu gelince bağlandı).
+  --
+  -- İki ayrı kolon, tek "tip + kimlik" çifti DEĞİL (kullanıcı kararı 17.08 — iki ayrı tablo):
+  -- polimorfik anahtar veritabanına FK yazdırmaz, yani silinen bir dolabın kayıtları sessizce
+  -- sahipsiz kalırdı. İki kolon + `num_nonnulls` kısıtı hem bağı hem tekilliği veriye yazıyor.
+  storage_area_id uuid,
+  vehicle_id uuid,
   temperature_c numeric(4, 1) not null,              -- −18.5 gibi; donukta negatif normaldir
   recorded_by uuid,                                  -- FK yok: personel kimliği auth şemasında
-  recorded_at timestamptz not null default now()
+  recorded_at timestamptz not null default now(),
+  -- Noktasız ölçüm bir ölçüm değildir; iki noktalı ölçüm de bir kayıt değil, iki kayıttır.
+  constraint temperature_log_one_point check (num_nonnulls(storage_area_id, vehicle_id) = 1)
 );
 
--- Denetim sorgusu: depo + konum + tarih aralığı ("şu depodaki şu dolabın geçen ayki kayıtları").
-create index temperature_log_location_date_idx on public.temperature_log (warehouse_id, location, recorded_at desc);
+-- Denetim sorgusu: depo + nokta + tarih aralığı ("şu depodaki şu dolabın geçen ayki kayıtları").
+-- İki ayrı indeks, çünkü iki ayrı kolonun her birinde satırların yarısı `null`.
+create index temperature_log_area_date_idx on public.temperature_log (warehouse_id, storage_area_id, recorded_at desc)
+  where storage_area_id is not null;
+create index temperature_log_vehicle_date_idx on public.temperature_log (warehouse_id, vehicle_id, recorded_at desc)
+  where vehicle_id is not null;
 
 alter table public.temperature_log enable row level security;

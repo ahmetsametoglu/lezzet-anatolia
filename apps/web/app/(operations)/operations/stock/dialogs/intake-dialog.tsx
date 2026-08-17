@@ -114,7 +114,7 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
           qty: line.qty as number,
           expiryDate: line.expiryDate,
           lotNumber: line.lotNumber,
-          location: line.location,
+          storageAreaId: line.storageAreaId,
           unitCost: line.unitCost,
         })),
       });
@@ -175,6 +175,7 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
           onSearch={(term) => searchIntakeVariantsAction(term).then(({ data }) => data ?? [])}
           suppliers={[...intake.suppliers, ...extraSuppliers]}
           warehouses={intake.warehouseOptions}
+          storageAreas={intake.storageAreas}
           showCost={showCost}
           onCreateSupplier={async (name, phone) => {
             const { data, error: failed } = await createSupplierAction(name, phone);

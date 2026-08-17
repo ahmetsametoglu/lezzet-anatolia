@@ -6,6 +6,7 @@ import {
   ProductService,
   ReservationService,
   StockService,
+  StorageAreaService,
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
@@ -38,6 +39,12 @@ let productId: string;
 let categoryId: string;
 let nearBatch: string;
 let farBatch: string;
+/**
+ * İki alan (19.29): öneri satırının hangi rafı gösterdiği ancak iki farklı alanla sınanır — tek
+ * alanla "adı taşıyor mu" sorusu cevaplanır ama "DOĞRU adı mı taşıyor" sorusu cevaplanmaz.
+ */
+let areaA: string;
+let areaB: string;
 const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -46,6 +53,9 @@ beforeAll(async () => {
   const { primary, secondary } = await createTestWarehousePair(db);
   warehouseId = primary.id;
   otherWarehouseId = secondary.id;
+  const areas = new StorageAreaService(db);
+  areaA = (await areas.insert({ warehouseId, name: 'Dolap A', kind: 'frozen' })).id;
+  areaB = (await areas.insert({ warehouseId, name: 'Dolap B', kind: 'frozen' })).id;
 
   const category = await new CategoryService(db).create({ name: { tr: `Hazırlık kapısı ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
@@ -73,10 +83,10 @@ beforeEach(async () => {
   await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
   // Yakın tarihli parti önce çıkmalı (FEFO) — konum da öneriyle birlikte gitmeli.
   nearBatch = (
-    await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePriceCents: 400, location: 'Dolap A' })
+    await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePriceCents: 400, storageAreaId: areaA })
   ).id;
   farBatch = (
-    await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePriceCents: 500, location: 'Dolap B' })
+    await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePriceCents: 500, storageAreaId: areaB })
   ).id;
 });
 
@@ -89,6 +99,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
+    storageAreaIds: [areaA, areaB],
     warehouseIds: [warehouseId, otherWarehouseId],
   });
 });
@@ -122,8 +133,9 @@ describe('hazırlık kuyruğu (D1 · 10.1)', () => {
 
     // 4 adet yakın partiden, kalan 2 uzak partiden — bir kalem birden çok partiye bölünebilir.
     expect(line.suggestion).toEqual([
-      { stockId: nearBatch, qty: 4, expiryDate: dayOffset(10), location: 'Dolap A' },
-      { stockId: farBatch, qty: 2, expiryDate: dayOffset(90), location: 'Dolap B' },
+      // Öneri ADI taşıyor, kimliği değil (19.29): depocu rafta tabelayı okuyor.
+      { stockId: nearBatch, qty: 4, expiryDate: dayOffset(10), areaName: 'Dolap A' },
+      { stockId: farBatch, qty: 2, expiryDate: dayOffset(90), areaName: 'Dolap B' },
     ]);
     expect(line.productName).toContain('Fıstıklı Baklava');
     expect(line.variantLabel).toBe('500 g');
@@ -241,7 +253,7 @@ describe('partiye kilitli kalem (10.2)', () => {
     const line = (await queueRowOf(orderId))!.lines[0]!;
 
     expect(line.pinnedStockId).toBe(farBatch);
-    expect(line.suggestion).toEqual([{ stockId: farBatch, qty: 2, expiryDate: dayOffset(90), location: 'Dolap B' }]);
+    expect(line.suggestion).toEqual([{ stockId: farBatch, qty: 2, expiryDate: dayOffset(90), areaName: 'Dolap B' }]);
   });
 
   it('kilitli kalem başka partiden verilemez — yazım HİÇ yapılmaz', async () => {

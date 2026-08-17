@@ -28,17 +28,41 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 ---
 
-## Vehicle (araç)
+## StorageArea (depo içi stoklama alanı) — `0045`, 19.28
 
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| plate | string | benzersiz |
+| warehouse_id | uuid | **zorunlu**, `restrict` — bir dolap fiziksel olarak tek tesistedir |
+| name | string | tesis içinde benzersiz (`lower(name)`) |
+| kind | `storage_area_kind` | `frozen` · `chilled` · `ambient` · `staging` |
+| target_min_c / target_max_c | numeric \| null | beklenen aralık; **ikisi birlikte** ya da ikisi de null |
+| is_active | boolean | susturma — silme yok |
+| sort_order | int | operatörün turu |
+
+**Beklenen aralık sapmanın BİRİNCİL ölçütüdür.** İkincil ölçüt noktanın kendi alışkanlığı (geçmiş ölçümlerin ortancası ± tolerans) ve sıra önemli: alışkanlık bir tahmindir — bozuk bir dolap her gün −8 okuyorsa alışkanlığı −8'dir ve o ölçüt onu "normal" ilan eder. Aralık bu tuzağa düşmez. Aralığı olmayan noktalarda (raf, geçiş alanı) tek ölçüt alışkanlıktır ve örneklem azken **susar**.
+
+**Tek uçlu aralık YOK** (`storage_area_target_pair`): "altı mı üstü mü serbest" sorusunu okuyana bırakırdı.
+
+---
+
+## Vehicle (araç) — düşürüldü (03.08), **geri geldi** (17.08, `0045`)
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| plate | string | benzersiz (büyük harfe çekilerek yazılır) |
 | label | string \| null | "Küçük kamyonet" — ekranda okunan ad |
+| warehouse_id | uuid \| null | **künye, kısıt değil** — `set null` |
 | is_active | boolean | |
+| sort_order | int | |
 | created_at | timestamptz | |
 
-**Depo FK'sı YOK** (K8): kurye günü ve gün kapanışı kurye/gün ekseninde kalır (`DOMAIN §7`); araç o gün hangi depodan yüklediyse oradan yükler. Depo bağı eklemek, bugün olmayan bir kısıtı ("araç bir depoya aittir") veriye yazmak olurdu.
+**Tablo bir kez düşürülmüştü ve o karar doğruydu:** tüketeni yoktu, `from('vehicle')` hiçbir yerde geçmiyordu, sıfır satır taşıyordu — bir ihtiyacın karşılığı değil ileri tarihli bir tahmindi. Künyesi şunu yazmıştı: *"gerçekten gerekince geri gelir ve o gün doğru soruyu sorarız: araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır."*
+
+**Cevap (17.08): araç bir ÖLÇÜM NOKTASIDIR.** Soğuk zincirin iki yeri var — depodaki dolap ve yoldaki araç — ve ikisi de aynı denetim sorusuna cevap veriyor. Tüketici `temperature_log`.
+
+**`warehouse_id` K8'den bilinçli sapma.** K8 *"depo FK'sı yok"* diyordu ve gerekçesi bağın bir KISIT olmasıydı ("araç bir depoya aittir"). Buradaki alan nullable ve hiçbir yerde zorlanmıyor — aidiyet değil adres: "genelde buradan yükler". Kurye günü ve gün kapanışı kurye/gün ekseninde aynen duruyor (`DOMAIN §7`); araç ne bir güne ne bir kuryeye bağlanıyor. Depo kapanınca araç yok olmaz, yalnız adresi bilinmez olur (`set null`).
 
 > ⚠ **KARAR (03.08): tablo DÜŞECEK — tüketeni yok** (`02.11` penceresinde, besleme şeridinin notu üzerine).
 > Bugün servisi yok, `from('vehicle')` çağrısı hiç geçmiyor, yerelde 0 satır ve **hiçbir tasarım
@@ -53,6 +77,9 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 > Şimdi düşürülmedi çünkü tek başına bir `db:refresh` gerektirir; `02.11` zaten o pencereyi açıyor —
 > iki reset yerine bir reset. Araç bir ekranda gerçekten gerekirse (11.x) o gün yeniden eklenir;
 > greenfield'da bunun bedeli bir tablo tanımıdır, tahminin bedeli ise kalıcı bir soru işaretidir.
+>
+> ✅ **O gün geldi (17.08):** tüketici doğdu (ölçüm noktası) ve tablo yukarıdaki hâliyle geri döndü.
+> Kaydın kendisi silinmedi — bir tabloyu ne zaman kurmamak gerektiğinin en iyi örneği bu.
 
 ---
 
@@ -158,7 +185,7 @@ Tekillik **tüm** bölgeleri kapsar, aktif/pasif ayırmaz: pasif bölge de kodu 
 | `stock_intake` | `warehouse_id` not null | mal kabul depoya yapılır (K6) — depo bağı PO'ya değil kabule takılır |
 | `purchase_order_item` | `target_warehouse_id` \| null | isteğe bağlı hedef (C7): niyet beyanı, kısıt değil |
 | `user_profiles` | `warehouse_ids uuid[]` | rolün ikinci ekseni (T2) — `roles` ile aynı karar, aynı gerekçe |
-| `temperature_log` | `warehouse_id` not null | hijyen denetimi tesis bazındadır; `location` = depo içi dolap / araç plakası |
+| `temperature_log` | `warehouse_id` not null + `storage_area_id`/`vehicle_id` (tam biri) | hijyen denetimi tesis bazındadır; nokta artık TANIMLI kayıt, serbest metin değil (`0045`) |
 | `delivery_zone` | `warehouse_id` not null | bölge tek depoya bağlanır; `postal_codes` dizisi kalktı |
 | `account` | — | kolon yok (C10): depo kasası yeni bir hesap satırıdır ("Kasa — STR") |
 | `cart` | — | kolon yok: depo her okumada yeniden çözülür (aylarca bekleyen sepete depo yazmak ertesi gün yalan olur) |

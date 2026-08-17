@@ -67,7 +67,8 @@ export async function receiveIntakeAction(input: {
     qty: number;
     expiryDate: string;
     lotNumber: string | null;
-    location: string | null;
+    /** Partinin konacağı alan — kimlik (19.29); boş = raf seçilmedi ve bu meşru. */
+    storageAreaId: string | null;
     unitCost: number | null;
   }>;
 }): Promise<ActionResult<ReceiveOutcome>> {
@@ -81,7 +82,7 @@ export async function receiveIntakeAction(input: {
       qty: line.qty,
       expiryDate: line.expiryDate,
       lotNumber: line.lotNumber?.trim() || null,
-      location: line.location?.trim() || null,
+      storageAreaId: line.storageAreaId || null,
       // Form EURO taşır, kapı CENT ister — çevrim tek noktada (`STACK §8`). Fiyatsız kapıya
       // giderken bu alan hiç okunmuyor; `receiveGoods`un satır tipinde karşılığı yok.
       unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),
@@ -111,7 +112,12 @@ export async function receiveIntakeAction(input: {
     // toplamını da taşıyor. Sonucu yayarak döndürmek, depocunun ekranına para taşımanın en sessiz
     // yolu olurdu. Ekrana giden tek sayı yazılan parti ADEDİ.
     return {
-      data: { warnings: result.warnings, differences: result.differences, batches: result.result.stockIds.length },
+      data: {
+        warnings: result.warnings,
+        storageMismatches: result.storageMismatches,
+        differences: result.differences,
+        batches: result.result.stockIds.length,
+      },
       error: null,
     };
   } catch (err) {
@@ -232,7 +238,12 @@ export async function receiveIntakeFromProposalAction(input: {
     revalidatePath('/operations/assistant');
 
     return {
-      data: { warnings: result.warnings, differences: result.differences, batches: result.result.stockIds.length },
+      data: {
+        warnings: result.warnings,
+        storageMismatches: result.storageMismatches,
+        differences: result.differences,
+        batches: result.result.stockIds.length,
+      },
       error: null,
     };
   } catch (err) {

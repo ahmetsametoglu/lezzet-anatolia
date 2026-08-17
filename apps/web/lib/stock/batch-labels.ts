@@ -76,12 +76,18 @@ export function riskCentsOf(batch: BatchView): number | null {
 }
 
 /**
- * Bir küme partinin toplam riski; hiçbirinin fiyatı yoksa `null` (toplam uydurulmaz).
+ * Bir küme partinin toplam riski; ölçülemiyorsa `null` (toplam uydurulmaz).
  *
  * Fiyatı bilinen partiler toplanır, bilinmeyenler ATLANIR — yani dönen sayı bir ALT sınırdır.
  * Sıfıra düşürmek bozuk ölçümü sağlıklı gibi okuturdu (`CLAUDE.md §1`).
+ *
+ * **Ama kuralın TERSİ de doğru: bilinen sıfır, "bilinmiyor" diye gösterilemez** (ekranda görüldü
+ * 17.08 — Depolar karnesi `0 · tutar bilinmiyor` yazıyordu). Boş küme ile "fiyatsız partiler" aynı
+ * şey değil: riskli parti YOKSA risk tutarı bilinmez değil, gerçekten sıfırdır. Eski hâl ikisini
+ * tek dala topluyordu ve sağlıklı bir depoyu ölçülemeyen bir depo gibi okutuyordu.
  */
 export function totalRiskCents(batches: readonly BatchView[]): number | null {
+  if (batches.length === 0) return 0;
   const known = batches.map(riskCentsOf).filter((c): c is number => c !== null);
   return known.length === 0 ? null : known.reduce((sum, c) => sum + c, 0);
 }

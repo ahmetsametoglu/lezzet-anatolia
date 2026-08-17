@@ -1,37 +1,31 @@
 import 'server-only';
-import { SettingsService, TemperatureLogService, serviceDb } from '@lezzet/database';
-import type { TemperaturePoint } from './temperature-types';
+import { SettingsService, StorageAreaService, TemperatureLogService, VehicleService, serviceDb } from '@lezzet/database';
+import type { TemperatureDeviation, TemperaturePoint, TemperaturePointKind } from './temperature-types';
 
 /**
- * **Sıcaklık kaydının okuması** (10.6) — `design/pages/depo-imha-sayim.md §2`,
+ * **Sıcaklık kaydının okuması** (10.6 · noktalar 19.28) — `design/pages/depo-imha-sayim.md §2`,
  * `design/project/Operasyon - Depo Imha Sayim.dc.html` ("Sıcaklık · bugün" şeridi).
  *
- * ── NOKTA KÜMESİ GEÇMİŞTEN GELİR, BİR VARLIKTAN DEĞİL ───────────────────────
+ * ── NOKTA KÜMESİ ARTIK BİR VARLIKTAN GELİYOR ────────────────────────────────
  * Tasarımın kuralı: *"ölçülmemiş nokta amber görünür kalır; gün sonunda hatırlatılır."* Bu cümle
- * noktaların ÖNCEDEN bilinmesini ister — ölçülmeyen nokta hiç yazılmamıştır ve yokluğundan
- * haberimiz olmaz.
+ * noktaların ÖNCEDEN bilinmesini ister ve eski okuma bunu yapamıyordu: küme `listLocations()` ile
+ * **daha önce kaydı geçmiş metinlerden** türüyordu, yani hiç ölçülmemiş bir dolap listede yoktu —
+ * tam da hatırlatılması gereken nokta görünmüyordu. Dosyanın eski künyesi bu sınırı dürüstçe
+ * yazmıştı ama sınır, vaadin kendisini yiyordu.
  *
- * Cevap `listLocations(warehouseId)`: o depoda **daha önce kaydı geçmiş** noktaların kümesi. Bugün
- * kaydı olmayan nokta amber kalır. Ayrı bir `warehouse_temperature_point` varlığı açılMADI ve bu
- * bilinçli: kümenin tek kaynağı zaten kayıtların kendisi, ikinci bir liste tutmak iki gerçek
- * demektir — biri güncellenir, öteki unutulur.
+ * İkinci bir liste tutmanın ("iki gerçek doğar") itirazı da düştü: nokta bugün bir VARLIK
+ * (`storage_area` · `vehicle`, `0045`), yani ikinci liste değil TEK liste — kayıtlar ona bağlanıyor.
  *
- * **Sınır açık ve ekranda yazılı:** hiç kaydı olmayan yepyeni bir dolap ilk ölçümüne kadar listede
- * görünmez. Form serbest metin kabul ettiği için ilk kayıt onu kümeye sokar.
+ * ── SAPMANIN İKİ ÖLÇÜTÜ VAR VE SIRASI ÖNEMLİ ────────────────────────────────
+ * **1) Beklenen aralık** (`target_min_c`/`target_max_c`) — noktanın tanımında yazılı, kesin.
+ * **2) Kendi alışkanlığı** — aralık tanımlı değilse geçmiş ölçümlerinin ortancası ± tolerans.
  *
- * ── "SIRA DIŞI" NOKTANIN KENDİ GEÇMİŞİNE GÖRE ÖLÇÜLÜR ───────────────────────
- * Tasarımın örneği: *"−8° girildi — donuk gıda için beklenmedik yüksek."* Bu soruyu TEK bir global
- * aralık cevaplayamaz: aynı depoda derin dondurucu (−18°) ile soğuk oda (+3,5°) yan yana çalışıyor.
- * Onları kapsayan bir aralık (−25…+8) donmuş gıdadaki −8°'yi *normal* sayardı — yani tam olarak
- * uyarılması gereken hâli susturur, uyarıyı süs hâline getirirdi.
+ * Aralık öncelikli, çünkü alışkanlık bir TAHMİNDİR: bozuk bir dolap her gün −8 okuyorsa alışkanlığı
+ * −8'dir ve alışkanlık ölçütü onu "normal" ilan eder. Beklenen aralık bu tuzağa düşmez. Alışkanlık
+ * yine de duruyor — aralığı olmayan noktalarda (raf, geçiş alanı) tek ölçüt odur.
  *
- * Ölçüt bu yüzden noktanın KENDİ alışkanlığı: geçmiş ölçümlerinin ortancası ± tolerans. Derin
- * dondurucu her gün −18 civarı okuyorsa −8 on derece sapmadır ve söylenir; soğuk oda +3,6 okuyunca
- * hiçbir şey söylenmez. Kendini ayarlar, nokta başına ayar dosyası istemez.
- *
- * **Örneklem azken SUSAR** (`MIN_SAMPLES`): iki ölçümün ortancası bir alışkanlık değildir ve ona
- * dayanan uyarı yanlış alarmdır. Ölçemediğimizde "normal" demiyoruz, hiçbir şey demiyoruz —
- * ölçülemeyen değer sıfır değildir (`CLAUDE §1`).
+ * **Örneklem azken alışkanlık SUSAR** (`MIN_SAMPLES`): iki ölçümün ortancası bir alışkanlık değildir
+ * ve ona dayanan uyarı yanlış alarmdır. Ölçemediğimizde "normal" demiyoruz, hiçbir şey demiyoruz.
  */
 
 /** Ayar anahtarı — TEK yerde okunduğu için burada (`lib/settings-keys.ts` künyesinin kuralı). */
@@ -53,6 +47,16 @@ const HISTORY_LIMIT = 300;
 /** Bir günün ölçüm tavanı — nokta başına 1-2 giriş, birkaç nokta; 50 fazlasıyla yeter. */
 const TODAY_LIMIT = 50;
 
+/**
+ * Nokta anahtarı — tür + kimlik. Yalnız kimlik yetmez: iki tablonun uuid'leri aynı uzayda değil ve
+ * bir gün çakışmasalar bile kod okuyan için "bu hangi nokta" sorusu cevapsız kalırdı.
+ */
+const keyOf = (kind: TemperaturePointKind, id: string): string => `${kind}:${id}`;
+
+/** Kaydın hangi noktaya yazıldığı — kısıt gereği ikisinden tam biri dolu (`0045`). */
+const keyOfLog = (row: { storageAreaId: string | null; vehicleId: string | null }): string | null =>
+  row.storageAreaId ? keyOf('area', row.storageAreaId) : row.vehicleId ? keyOf('vehicle', row.vehicleId) : null;
+
 export async function readTemperature(warehouseId: string): Promise<{ points: TemperaturePoint[] }> {
   const db = serviceDb();
   const service = new TemperatureLogService(db);
@@ -60,8 +64,11 @@ export async function readTemperature(warehouseId: string): Promise<{ points: Te
   const today = new Date();
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const [known, todayPage, history, toleranceC] = await Promise.all([
-    service.listLocations(warehouseId),
+  const [areas, vehicles, todayPage, history, toleranceC] = await Promise.all([
+    new StorageAreaService(db).listByWarehouse(warehouseId, { activeOnly: true }),
+    // Araçlar bu tesise KÜNYELENMİŞ olanlar: araç bir depoya ait değil ama ölçümü bir tesiste
+    // alınır ve depocuya öteki tesisin aracını ölçtürmek yanlış kayıt davetidir.
+    new VehicleService(db).list({ warehouseId, activeOnly: true }),
     service.list({ warehouseId, from: startOfDay, limit: TODAY_LIMIT }),
     // Alışkanlık taraması: bugün DAHİL (bugünkü ölçüm de o noktanın geçmişinin parçası) — ama
     // ortanca tek bir sapmadan etkilenmediği için bugünkü aykırı değer kendi ölçütünü kaydırmaz.
@@ -73,32 +80,64 @@ export async function readTemperature(warehouseId: string): Promise<{ points: Te
   // ikinci kez ölçülen dolabın eski değerini göstermek, düzeltilmiş bir arızayı sürüyor sanmaktır.
   const latest = new Map<string, { temperatureC: number; recordedAt: string }>();
   for (const row of todayPage.rows) {
-    if (latest.has(row.location)) continue;
-    latest.set(row.location, { temperatureC: row.temperatureC, recordedAt: row.recordedAt });
+    const key = keyOfLog(row);
+    if (key === null || latest.has(key)) continue;
+    latest.set(key, { temperatureC: row.temperatureC, recordedAt: row.recordedAt });
   }
 
   const samples = new Map<string, number[]>();
   for (const row of history.rows) {
-    const list = samples.get(row.location) ?? [];
+    const key = keyOfLog(row);
+    if (key === null) continue;
+    const list = samples.get(key) ?? [];
     list.push(row.temperatureC);
-    samples.set(row.location, list);
+    samples.set(key, list);
   }
 
-  // Küme = geçmişte kaydı olanlar ∪ bugün ölçülenler. Birleşim şart: bugün İLK kez ölçülen bir
-  // nokta iki listede de olmalı, sıra bir yarışa bağlı kalmasın.
-  const names = [...new Set([...known, ...latest.keys()])].sort((a, b) => a.localeCompare(b, 'tr-TR'));
+  /**
+   * Sıra ALANLAR sonra ARAÇLAR, her biri kendi `sortOrder`ında.
+   *
+   * Karışık alfabetik sıra iki farklı fiziksel yeri tek listeye katardı; depocunun turu ise
+   * mekânsaldır — önce depoyu dolaşır, sonra araca bakar. Sıra operatörün, çünkü tur da onun.
+   */
+  const points: TemperaturePoint[] = [
+    ...areas.map((area) => ({
+      id: area.id,
+      kind: 'area' as const,
+      name: area.name,
+      areaKind: area.kind,
+      targetMinC: area.targetMinC,
+      targetMaxC: area.targetMaxC,
+    })),
+    ...vehicles.map((vehicle) => ({
+      id: vehicle.id,
+      kind: 'vehicle' as const,
+      // Plaka kimliktir, etiket okunurluk: ikisi varsa ikisi de yazılır.
+      name: vehicle.label ? `${vehicle.plate} · ${vehicle.label}` : vehicle.plate,
+      areaKind: null,
+      // Aracın beklenen aralığı BUGÜN YOK ve uydurulmuyor: soğutuculu araçla sıradan araç aynı
+      // tabloda ve ayrımı veride tutulmuyor. Alışkanlık ölçütü araçta tek ölçüt olarak çalışır.
+      targetMinC: null,
+      targetMaxC: null,
+    })),
+  ].map((point) => {
+    const key = keyOf(point.kind, point.id);
+    const reading = latest.get(key);
+    const usualC = medianOf(samples.get(key) ?? []);
+    if (!reading) return { ...point, temperatureC: null, recordedAt: null, usualC, deviation: null };
 
-  const points: TemperaturePoint[] = names.map((name) => {
-    const reading = latest.get(name);
-    if (!reading) return { name, temperatureC: null, recordedAt: null, usualC: null, outOfRange: false };
-
-    const usualC = medianOf(samples.get(name) ?? []);
     return {
-      name,
+      ...point,
       temperatureC: reading.temperatureC,
       recordedAt: reading.recordedAt,
       usualC,
-      outOfRange: usualC !== null && Math.abs(reading.temperatureC - usualC) > toleranceC,
+      deviation: deviationOf({
+        temperatureC: reading.temperatureC,
+        targetMinC: point.targetMinC,
+        targetMaxC: point.targetMaxC,
+        usualC,
+        toleranceC,
+      }),
     };
   });
 
@@ -106,28 +145,57 @@ export async function readTemperature(warehouseId: string): Promise<{ points: Te
 }
 
 /**
+ * Sapma kararı — **tek yerde**, çünkü hem şerit hem kayıt anı aynı cevabı vermek zorunda. İkisi
+ * ayrı hesaplasaydı kayıtta "normal" denip şeritte amber görünen bir ekran çıkardı.
+ *
+ * Sıra: beklenen aralık (kesin) → alışkanlık (tahmini). İkisi de yoksa `null` — "normal" demiyoruz,
+ * ölçemediğimizi söylüyoruz.
+ */
+function deviationOf(input: {
+  temperatureC: number;
+  targetMinC: number | null;
+  targetMaxC: number | null;
+  usualC: number | null;
+  toleranceC: number;
+}): TemperatureDeviation | null {
+  if (input.targetMinC !== null && input.targetMaxC !== null) {
+    return input.temperatureC < input.targetMinC || input.temperatureC > input.targetMaxC ? 'target' : null;
+  }
+  if (input.usualC === null) return null;
+  return Math.abs(input.temperatureC - input.usualC) > input.toleranceC ? 'habit' : null;
+}
+
+/**
  * Tek bir ölçüm o nokta için sıra dışı mı — **yazma yolunun sorusu** (`temperature-actions`).
  *
- * Okuma tarafıyla aynı ölçütü paylaşması ŞART: ikisi ayrı hesaplasaydı kayıt anında "normal" denip
- * şeritte amber görünen (ya da tersi) bir ekran çıkardı ve hangisinin doğru olduğu belirsiz kalırdı.
- *
- * `null` = **karar verilemedi** (o noktanın yeterli geçmişi yok) — "normal" ile aynı şey değil,
- * çağıran ikisini ayrı cümleye çeviriyor.
+ * `null` = **karar verilemedi** (aralık tanımlı değil ve yeterli geçmiş yok) — "normal" ile aynı
+ * şey değil; çağıran ikisini ayrı cümleye çeviriyor.
  */
 export async function isUnusualReading(input: {
   warehouseId: string;
-  location: string;
+  kind: TemperaturePointKind;
+  pointId: string;
   temperatureC: number;
-}): Promise<{ unusual: boolean; usualC: number } | null> {
+}): Promise<{ deviation: TemperatureDeviation; usualC: number | null; targetMinC: number | null; targetMaxC: number | null } | null> {
   const db = serviceDb();
+  const point = input.kind === 'area' ? await new StorageAreaService(db).getById(input.pointId) : null;
+
   const [page, toleranceC] = await Promise.all([
-    new TemperatureLogService(db).list({ warehouseId: input.warehouseId, location: input.location, limit: HISTORY_LIMIT }),
+    new TemperatureLogService(db).list({
+      warehouseId: input.warehouseId,
+      ...(input.kind === 'area' ? { storageAreaId: input.pointId } : { vehicleId: input.pointId }),
+      limit: HISTORY_LIMIT,
+    }),
     new SettingsService(db).getNumber(TOLERANCE_KEY, FALLBACK_TOLERANCE_C),
   ]);
 
   const usualC = medianOf(page.rows.map((row) => row.temperatureC));
-  if (usualC === null) return null;
-  return { unusual: Math.abs(input.temperatureC - usualC) > toleranceC, usualC };
+  const targetMinC = point?.targetMinC ?? null;
+  const targetMaxC = point?.targetMaxC ?? null;
+  const deviation = deviationOf({ temperatureC: input.temperatureC, targetMinC, targetMaxC, usualC, toleranceC });
+  // Ölçüt HİÇ yoksa `null`: ne "sapma var" ne "yok" diyebiliriz.
+  if (deviation === null && targetMinC === null && usualC === null) return null;
+  return deviation === null ? null : { deviation, usualC, targetMinC, targetMaxC };
 }
 
 /**

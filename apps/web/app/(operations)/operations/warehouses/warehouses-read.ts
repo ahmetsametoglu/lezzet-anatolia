@@ -1,16 +1,28 @@
-import { needsExpiryAttention } from '@lezzet/domain-core';
+import { needsExpiryAttention, upcomingDeliveryDates } from '@lezzet/domain-core';
 import type {
   OrderStatus,
   DeliveryZoneWithCodes,
+  StorageArea,
   UserProfile,
   UserRole,
+  Vehicle,
   Warehouse,
   WarehouseTransfer,
 } from '@lezzet/types';
 import { roleText } from '@/components/operation/ui/ops-nav';
 import { totalRiskCents } from '@/lib/stock/batch-labels';
 import type { BatchView } from '@/lib/stock/batch-types';
-import { WarehouseAddressSchema, type ClosureConsequence, type ScorecardView, type StaffChipView, type WarehouseAddressView, type WarehouseCardView, type WarehouseRowView, type ZoneCardView } from './warehouses-types';
+import {
+  WarehouseAddressSchema,
+  type ClosureConsequence,
+  type MeasurePointView,
+  type ScorecardView,
+  type StaffChipView,
+  type WarehouseAddressView,
+  type WarehouseCardView,
+  type WarehouseRowView,
+  type ZoneCardView,
+} from './warehouses-types';
 
 // DB satırı → görünüm indirgemesi. Sayfa (RSC) okur, burası şekillendirir; **karar burada verilmez,
 // sorulur** (`STACK §4`): parti kararı `domain-core`'un (`needsExpiryAttention`), risk tutarı
@@ -74,7 +86,6 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       batchCount: ownBatches.length,
       attentionCount: ownBatches.filter((b) => needsExpiryAttention(b.decision)).length,
       inTransitIn: transfers.filter((t) => t.toWarehouseId === w.id).length,
-      inTransitOut: transfers.filter((t) => t.fromWarehouseId === w.id).length,
       setupGap: setupGapOf({ isActive: w.isActive, shipsOnline: w.shipsOnline, activeZoneCount: activeZones.length, staffCount: staffHere.length }),
     };
   });
@@ -104,17 +115,103 @@ function setupGapOf(input: { isActive: boolean; shipsOnline: boolean; activeZone
 }
 
 /** Deponun bölge kartları — ad sırasına göre; pasif olanlar da listede kalır (tanım silinmez). */
-export function toZoneCards(zones: readonly DeliveryZoneWithCodes[], warehouseId: string): ZoneCardView[] {
+// `readLastMeasured` BURADA DEĞİL, `page.tsx`te (19.28 · ölçüldü 17.08).
+//
+// Bu dosya bir SUNUCU dosyası gibi duruyor ama değil: `closureConsequences` istemci penceresinden
+// de çağrılıyor (`close-warehouse-dialog.tsx`), yani modül istemci paketine giriyor. İçine
+// `@lezzet/database` importu konunca supabase-js de onunla gitti ve derleme `node:crypto` ile
+// kırıldı — iki sayfa birden 500 döndü. Bu dosya SAF kalır: DB okuması yapan her şey sayfada.
+
+/**
+ * İki tablo → TEK liste. Sıra alanlar sonra araçlar, her biri kendi `sortOrder`ında — depocunun
+ * turu mekânsaldır (önce depo, sonra araç), alfabetik değil.
+ */
+export function toMeasurePoints(input: {
+  areas: readonly StorageArea[];
+  vehicles: readonly Vehicle[];
+  lastByPoint: ReadonlyMap<string, string>;
+}): MeasurePointView[] {
+  return [
+    ...input.areas.map((area) => ({
+      id: area.id,
+      kind: 'area' as const,
+      name: area.name,
+      label: null,
+      areaKind: area.kind,
+      targetMinC: area.targetMinC,
+      targetMaxC: area.targetMaxC,
+      isActive: area.isActive,
+      lastRecordedAt: input.lastByPoint.get(`area:${area.id}`) ?? null,
+    })),
+    ...input.vehicles.map((vehicle) => ({
+      id: vehicle.id,
+      kind: 'vehicle' as const,
+      name: vehicle.plate,
+      label: vehicle.label,
+      areaKind: null,
+      // Aracın beklenen aralığı bugün veride YOK ve uydurulmuyor: soğutuculu araçla sıradan araç
+      // aynı tabloda, ayrım tutulmuyor. Sapma araçta alışkanlıktan ölçülür.
+      targetMinC: null,
+      targetMaxC: null,
+      isActive: vehicle.isActive,
+      lastRecordedAt: input.lastByPoint.get(`vehicle:${vehicle.id}`) ?? null,
+    })),
+  ];
+}
+
+export function toZoneCards(
+  zones: readonly DeliveryZoneWithCodes[],
+  warehouseId: string,
+  stats: {
+    /** Kod → sipariş/ciro (`analytics_postal_code_orders`). Kodda kayıt yoksa gerçekten sıfırdır. */
+    orders: ReadonlyMap<string, { orderCount: number; revenueCents: number }>;
+    /** Kod → haber bekleyen kişi (`zone_notice`). */
+    waiting: ReadonlyMap<string, number>;
+    now: Date;
+  },
+): ZoneCardView[] {
   return zones
     .filter((z) => z.warehouseId === warehouseId)
-    .map((z) => ({
-      id: z.id,
-      name: z.name,
-      isActive: z.isActive,
-      weekdays: z.weekdays,
-      // Kod listesi kendi içinde sıralı: operatör "67100 var mı" diye tarayacak, sıralı liste taranır.
-      postalCodes: [...z.postalCodes].sort((a, b) => a.postalCode.localeCompare(b.postalCode)),
-    }))
+    .map((z) => {
+      /**
+       * Bölgenin ağırlığı = kodlarının TOPLAMI. Anahtar yalnız posta kodu (ülke yok), çünkü RPC de
+       * öyle eşliyor — `67000` hem FR hem DE'de geçerli olduğu için iki ülkenin siparişi birleşir.
+       * Bugün tek ülkeli rotalarda görünmez; sınır deposu büyürse ayrışması gerekir (Rotalar
+       * ekranının aynı künyesi, `routes-read`).
+       */
+      const totals = z.postalCodes.reduce(
+        (sum, code) => {
+          const row = stats.orders.get(code.postalCode);
+          return {
+            orderCount: sum.orderCount + (row?.orderCount ?? 0),
+            revenueCents: sum.revenueCents + (row?.revenueCents ?? 0),
+            waitingCount: sum.waitingCount + (stats.waiting.get(code.postalCode) ?? 0),
+          };
+        },
+        { orderCount: 0, revenueCents: 0, waitingCount: 0 },
+      );
+
+      return {
+        id: z.id,
+        name: z.name,
+        isActive: z.isActive,
+        weekdays: z.weekdays,
+        // Kod listesi kendi içinde sıralı: operatör "67100 var mı" diye tarayacak, sıralı liste taranır.
+        postalCodes: [...z.postalCodes].sort((a, b) => a.postalCode.localeCompare(b.postalCode)),
+        ...totals,
+        /**
+         * Sıradaki gün MOTORDAN türer (`upcomingDeliveryDates`), burada yeniden hesaplanmaz —
+         * müşteriye söylenen günle operatörün gördüğü gün aynı kuraldan çıkmalı.
+         *
+         * **Kesim saati verilmiyor ve bu bilinçli:** kesim müşterinin SİPARİŞ penceresidir ("bugüne
+         * yetişir mi"), buradaki soru ise "araç ne zaman çıkıyor". Kesim geçince aracın günü
+         * değişmez. Pasif bölge `null` — tanımı durur ama dağıtıma çıkmaz.
+         */
+        nextDeliveryDate: z.isActive
+          ? (upcomingDeliveryDates({ weekdays: z.weekdays, now: stats.now, count: 1 })[0] ?? null)
+          : null,
+      };
+    })
     // Aktif bölgeler önce: pasif bir tanım hâlâ görünmeli ama bugünün gerçeği değil.
     .sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.name.localeCompare(b.name, 'tr'));
 }
@@ -141,13 +238,18 @@ export function toStaffChips(staff: readonly UserProfile[], warehouseId: string)
 interface ScorecardInput {
   batches: readonly BatchView[];
   belowMinCount: number;
+  /**
+   * Bu depoya yolda olan sevkiyat. **Artık karnede ÇİZİLMİYOR** (17.08) — kutu tek depolu bir
+   * kurulumda tanımı gereği daima sıfırdı. Sayı yine de okunuyor, çünkü asıl tüketicisi ekran
+   * değil KAPATMA uyarısı: yoldaki mal hiçbir deponun stoğunda değil, hedefi kapanırsa kabul
+   * edilecek yer bulamaz (`closeBlockers`).
+   */
   inTransitIn: number;
-  inTransitOut: number;
   openOrderCount: number;
 }
 
 /** Karne — deponun bugünkü hâli. Her sayı Stok'a giden bir kapıdır; satırların kendisi orada yaşar. */
-export function toScorecard({ batches, belowMinCount, inTransitIn, inTransitOut, openOrderCount }: ScorecardInput): ScorecardView {
+export function toScorecard({ batches, belowMinCount, inTransitIn, openOrderCount }: ScorecardInput): ScorecardView {
   const attention = batches.filter((b) => needsExpiryAttention(b.decision));
   return {
     variantCount: new Set(batches.map((b) => b.variantId)).size,
@@ -161,7 +263,6 @@ export function toScorecard({ batches, belowMinCount, inTransitIn, inTransitOut,
     riskCents: totalRiskCents(attention),
     belowMinCount,
     inTransitIn,
-    inTransitOut,
     openOrderCount,
     // En son mal GİRİŞİ (partinin doğuşu). "Son hareket" demiyoruz: çıkışlar ayrı bir defterdedir
     // ve onu da okumadan "hareket" demek ölçmediğimiz bir şeyi iddia etmek olurdu.

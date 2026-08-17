@@ -137,7 +137,7 @@ import { enAz, katmanOku, uzakHedefMi } from './seed/tier';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
 import { seedTickets } from './seed/support';
-import { seedThresholds, seedTransfer, seedWarehouses } from './seed/warehouse';
+import { seedStoragePoints, seedThresholds, seedTransfer, seedWarehouses } from './seed/warehouse';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
 try {
@@ -242,6 +242,9 @@ async function main(): Promise<void> {
   // Depolar geçmişin EN BAŞINDA: parti, sipariş, bölge ve personel kapsamı hepsi depoya bağlı —
   // deposuz hiçbir satır yazılamaz (DOMAIN §17).
   const depolar = await seedWarehouses(db);
+  // Ölçüm noktaları depodan HEMEN sonra (19.28/19.29): hem sıcaklık kaydı hem stok partisi onlara
+  // `restrict` ile bağlı, yani ikisinden de önce var olmaları gerekiyor.
+  const noktalar = await seedStoragePoints(db, depolar);
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
   const kisiler = await seedKisiler(db, depolar);
   // Giriş hesapları profillerden SONRA: trigger yeni auth kullanıcısını e-postayla eşleşen profile
@@ -260,9 +263,9 @@ async function main(): Promise<void> {
   await seedPostalDemand(db);
   await seedZoneNotices(db, kisiler);
   const tedarik = await seedSupply(db, varyantlar);
-  await seedStock(db, varyantlar, tedarik, depolar);
+  await seedStock(db, varyantlar, tedarik, depolar, noktalar);
   await seedAdjustments(db, kisiler);
-  await seedTemperatureLogs(db, kisiler, depolar);
+  await seedTemperatureLogs(db, kisiler, depolar, noktalar);
   await seedCarts(db, kisiler, varyantlar);
   // Para SİPARİŞLERDEN ÖNCE: sipariş tahsilatları bir hesaba yazılıyor (12.2), hesap hazır olmalı.
   await seedMoney(db);

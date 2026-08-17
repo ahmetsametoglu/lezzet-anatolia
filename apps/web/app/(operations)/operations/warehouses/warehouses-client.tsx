@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { setPointActiveAction } from './actions';
 import { CloseWarehouseDialog } from './close-warehouse-dialog';
+import { MeasurePointDialog } from './measure-point-dialog';
 import { WarehouseDialog } from './warehouse-dialog';
 import { WarehousesDesktop } from './warehouses.desktop';
 import { warehousesUrl, type WarehousesUrlState } from './warehouses-url';
-import type { WarehousesData, WarehouseRowView, ZoneCardView } from './warehouses-types';
+import type { MeasurePointView, WarehousesData, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranı client kökü: durum burada. Operasyon web'i masaüstü-yalnız; mobil deneyim native
 // uygulamada (`docs/uygulama`).
@@ -37,6 +39,12 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
   // "kaydet"e basmanın yan etkisi hâline gelirdi.
   const [closing, setClosing] = useState<WarehouseRowView | null>(null);
   /**
+   * Ölçüm noktası penceresi (19.28). Tür pencerede DEĞİL burada sabitleniyor: operatörün bastığı
+   * düğme ("+ Alan" / "+ Araç") zaten cevabı verdi, pencerede tekrar sormak aynı soruyu iki kez
+   * sormaktı. Kayıtlı bir noktanın türü de değişmiyor — dolap araca dönüşmez.
+   */
+  const [point, setPoint] = useState<{ kind: 'area' | 'vehicle'; editing: MeasurePointView | null } | null>(null);
+  /**
    * **Rota KURULUMU burada değil (07.08, kullanıcı kararı).** Rota tanımlamak ile günü planlamak
    * aynı işin iki anıdır; tasarım ikisini tek sayfada topluyor ve kurulum Teslimat & Rota'ya taşındı.
    * Bu ekran rotaları OKUR — "bu depo şu güzergâhlara bakıyor" künyesi burada anlamlı — ama
@@ -53,6 +61,14 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
     onEditWarehouse: (row: WarehouseRowView) => setFormState(row.id),
     onNewZone: () => openRoute(),
     onEditZone: (zone: ZoneCardView) => openRoute(zone.id),
+    onAddPoint: (kind: 'area' | 'vehicle') => setPoint({ kind, editing: null }),
+    onEditPoint: (point: MeasurePointView) => setPoint({ kind: point.kind, editing: point }),
+    onTogglePoint: (point: MeasurePointView) => {
+      // Onay penceresi YOK ve bu bilinçli: susturmak yıkıcı değil, geri açılabilir ve hiçbir kayıt
+      // kaybolmuyor. Depo kapatmanın (dört sonuçlu, kod yazdıran) yanına konsaydı ikisi aynı
+      // ağırlıkta okunur, asıl ağır olan hafiflerdi.
+      void setPointActiveAction({ kind: point.kind, id: point.id, isActive: !point.isActive }).then(() => router.refresh());
+    },
   };
 
   return (
@@ -93,7 +109,19 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
         />
       ) : null}
 
-
+      {point && data.card ? (
+        <MeasurePointDialog
+          key={`${point.kind}:${point.editing?.id ?? 'new'}`}
+          warehouseId={data.card.row.id}
+          editing={point.editing}
+          kind={point.kind}
+          onClose={() => setPoint(null)}
+          onSaved={() => {
+            setPoint(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }

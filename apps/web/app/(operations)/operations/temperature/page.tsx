@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { WarehouseChoicePane } from '@/components/operation/ui/warehouse-choice-pane';
 import { AuthError } from '@/lib/guard';
 import { readWorkWarehouse } from '@/lib/warehouse/context';
-import { TemperatureCard } from './temperature-card';
+import { TemperatureCard, TemperatureToday } from './temperature-card';
 import { readTemperature } from './temperature-read';
 
 /**
@@ -61,9 +61,14 @@ export default async function TemperaturePage() {
         title="Sıcaklık kaydı"
         subtitle={`${workplace.name} · günde 1-2 kez elle girilir · sıra dışı değer uyarır, engellemez`}
       />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
         <div className="w-[420px] max-w-full">
           <TemperatureCard points={points} />
+        </div>
+        {/* Gün şeridi formun ALTINDA: önce iş yapılır, sonra sonuca bakılır. Üstte olsaydı her
+            girişten sonra göz yukarı kayardı — depocunun turu aşağı doğru ilerliyor. */}
+        <div className="w-[420px] max-w-full">
+          <TemperatureToday points={points} />
         </div>
       </div>
     </div>

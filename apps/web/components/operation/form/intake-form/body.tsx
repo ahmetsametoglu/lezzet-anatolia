@@ -9,6 +9,7 @@ import { MoneyInput } from '@/components/operation/form/money-input';
 import { Select } from '@/components/operation/form/select';
 import { Toggle } from '@/components/operation/form/toggle';
 import { money, num } from '@/components/operation/ui/format';
+import type { StorageAreaKind } from '@lezzet/types';
 import { emptyIntakeLine, intakeTotals, type IntakeFormValues, type IntakeLine } from './schema';
 
 /**
@@ -36,6 +37,14 @@ interface IntakeFormBodyProps {
   suppliers: Array<{ id: string; name: string }>;
   /** Seçilebilecek depolar. Tek depolu kapsamda tek seçenek gelir — seçim yine açık durur. */
   warehouses: Array<{ id: string; name: string }>;
+  /**
+   * Seçili deponun stoklama alanları (19.29) — parti rafı serbest metin değil, bu listeden seçim.
+   *
+   * `kind` taşınıyor çünkü form bir UYARI kuruyor: donuk ürün oda sıcaklığı alanına konuyorsa
+   * söylenir ama ENGELLENMEZ (`DOMAIN §4` deseni — karar mal kabul edenindir). Türü göndermeseydik
+   * uyarı ancak sunucuda, kayıttan sonra kurulabilirdi.
+   */
+  storageAreas: Array<{ id: string; name: string; kind: StorageAreaKind }>;
   /** Alış fiyatı kolonu çizilsin mi (yukarıdaki künye: rol sınırı). */
   showCost?: boolean;
   /**
@@ -149,6 +158,7 @@ export function IntakeFormBody({
   onSearch,
   suppliers,
   warehouses,
+  storageAreas,
   showCost = false,
   documentTotalCents = null,
   onCreateSupplier,
@@ -304,14 +314,15 @@ export function IntakeFormBody({
               onChange={(event) => setLine(index, { lotNumber: event.target.value })}
               disabled={disabled || line.isMissing}
             />
-            <Input
-              inputSize="sm"
-              fullWidth={false}
+            {/* Raf artık SEÇİLİYOR, yazılmıyor (19.29). Boş seçenek meşru: rafı bilinmeden de mal
+                kabul edilir — zorunlu kılmak depocuyu rastgele bir alan seçmeye iterdi. */}
+            <Select
               className="w-full"
+              value={line.storageAreaId}
+              onChange={(storageAreaId) => setLine(index, { storageAreaId })}
               placeholder="raf"
-              value={line.location}
-              onChange={(event) => setLine(index, { location: event.target.value })}
-              disabled={disabled || line.isMissing}
+              options={storageAreas.map((area) => ({ value: area.id, label: area.name }))}
+              disabled={disabled || line.isMissing || storageAreas.length === 0}
             />
             {showCost ? (
               <MoneyInput

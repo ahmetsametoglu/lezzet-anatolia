@@ -1,9 +1,10 @@
 import {
-  PriceService, ProductService, ProductVariantService, StockAdjustmentService, StockIntakeService, StockService, TemperatureLogService,
+  PriceService, ProductService, ProductVariantService, StockAdjustmentService, StockIntakeService, StockService,
+  TemperatureLogService,
 } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
-import type { Depolar } from './warehouse';
+import type { Depolar, Noktalar } from './warehouse';
 
 // ── Stok partileri (06) ──────────────────────────────────────────────────────────────────────────
 // Parti çeşitliliği olmadan raf ömrü kuralları hiç görünmez: FEFO ancak farklı tarihli iki partide
@@ -15,11 +16,23 @@ import type { Depolar } from './warehouse';
 
 // Partiler İKİ depoya dağıtılır: tek depolu bir veri setinde depo süzgeci hataları görünmez.
 // Çoğu STR'de (ana depo), bir bölümü KEHL'de — "başka depoda var ama burada yok" hâli denenebilsin.
+/**
+ * **Partinin rafı artık tanımlı bir alan** (19.29) — `Dolap 1..4` diye serbest metinler yazılıyordu
+ * ve hiçbiri gerçek bir kayda karşılık gelmiyordu. Şimdi `seedStoragePoints`in kurduğu alanlara
+ * bağlanıyor; dağılım da rastgele değil rejime uygun: donuk mal dondurucuda, süresi geçmiş mal
+ * karantinada. Böylece `storage_area.kind` ↔ `product.storage_type` uyumu gerçek veriyle sınanır.
+ */
+const DONUK_ALANLAR = ['Derin dondurucu 1', 'Derin dondurucu 2'] as const;
+
+/** Sırayla dağıt — iki dondurucu da dolsun; tek alana yığmak "hangi alanda ne var" sorusunu boşa çıkarırdı. */
+const donukAlan = (noktalar: Noktalar, i: number): string => noktalar.strAlan.get(DONUK_ALANLAR[i % DONUK_ALANLAR.length]!)!;
+
 export async function seedStock(
   db: Db,
   varyantlar: VaryantRef[],
   tedarik: Map<string, string>,
   depolar: Depolar,
+  noktalar: Noktalar,
 ): Promise<void> {
   if (await tabloDolu(db, 'stock')) {
     console.log('▸ stok zaten dolu — atlandı');
@@ -104,7 +117,7 @@ export async function seedStock(
       // Mal kabulün birim maliyeti de listeden türer — bu satır `stock.purchase_price`e yazılıyor
       // ve sabit kalsaydı aynı "zararına parti" gürültüsünü kabul yolundan üretirdi.
       unitCostCents: alisFiyati(v, i),
-      location: `Dolap ${1 + (i % 3)}`,
+      storageAreaId: donukAlan(noktalar, i),
     })),
   });
 
@@ -134,7 +147,7 @@ export async function seedStock(
           lotNumber: `ALS-${String(i + 1).padStart(2, '0')}`,
           // Ham kolon okunuyor (euro `numeric`) — servis sınırından geçmediği için çevrim burada.
           unitCostCents: toCents(Number(k.unit_price)),
-          location: 'Soğuk oda',
+          storageAreaId: noktalar.strAlan.get('Soğuk oda')!,
         })),
       });
     }
@@ -152,7 +165,7 @@ export async function seedStock(
       expiryDate: gun(25 + i * 15),
       lotNumber: `AF-${gun(-3).replaceAll('-', '')}-${i}`,
       unitCostCents: alisFiyati(v, i + 2),
-      location: 'Soğuk oda',
+      storageAreaId: noktalar.strAlan.get('Soğuk oda')!,
     })),
   });
 
@@ -210,7 +223,7 @@ export async function seedStock(
         lotNumber: `L${String(2600 + i)}-${p + 1}`,
         // Alış LİSTEDEN türer; parti parti biraz oynar (tedarikçi pazarlığı gerçekte de sabit değil).
         purchasePriceCents: alisFiyati(v, i + p),
-        location: `Dolap ${1 + ((i + p) % 4)}`,
+        storageAreaId: donukAlan(noktalar, i + p),
       });
       ekParti += 1;
     }
@@ -264,7 +277,7 @@ export async function seedStock(
       // Alış fiyatı teklifin ALTINDA kalmalı, yoksa parti zararına satılıyor görünür ve marj
       // raporu gerçekte olmayan bir alarm üretir.
       purchasePriceCents: Math.max(1, Math.round(teklif * 0.6)),
-      location: `Dolap ${1 + (firsatNo % 4)}`,
+      storageAreaId: donukAlan(noktalar, firsatNo),
     });
     await stocks.setOfferPrice(parti.id, teklif);
     firsatNo += 1;
@@ -275,14 +288,17 @@ export async function seedStock(
   // miktardır — fiyat onların konusu değil, o yüzden ortak kuraldan alınıyor.
   //
   // Yaklaşan ama HENÜZ indirime alınmamış — "sistem önerir, karar insanın" hâli
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePriceCents: alisFiyati(ozel[2]!, 1), location: 'Dolap 1' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePriceCents: alisFiyati(ozel[2]!, 1), storageAreaId: donukAlan(noktalar, 0) });
   // Tarihi GEÇMİŞ partiler: biri DLC (satılamaz — imha edilecek), biri DDM (satılabilir)
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[3]!.id, physicalQty: 5, expiryDate: gun(-2), lotNumber: 'EXP-DLC', purchasePriceCents: alisFiyati(ozel[3]!, 2), location: 'Karantina' });
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[4]!.id, physicalQty: 8, expiryDate: gun(-6), lotNumber: 'EXP-DDM', purchasePriceCents: alisFiyati(ozel[4]!, 3), location: 'Dolap 3' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[3]!.id, physicalQty: 5, expiryDate: gun(-2), lotNumber: 'EXP-DLC', purchasePriceCents: alisFiyati(ozel[3]!, 2), storageAreaId: noktalar.strAlan.get('Karantina')! });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[4]!.id, physicalQty: 8, expiryDate: gun(-6), lotNumber: 'EXP-DDM', purchasePriceCents: alisFiyati(ozel[4]!, 3), storageAreaId: donukAlan(noktalar, 1) });
   // Tükenmiş parti (fiili 0): satır durur, miktarı biter — "geçmiş parti" görünümü
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[5]!.id, physicalQty: 0, expiryDate: gun(90), lotNumber: 'L-BITTI', purchasePriceCents: alisFiyati(ozel[5]!, 4), location: 'Dolap 2' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[5]!.id, physicalQty: 0, expiryDate: gun(90), lotNumber: 'L-BITTI', purchasePriceCents: alisFiyati(ozel[5]!, 4), storageAreaId: donukAlan(noktalar, 1) });
   // Alış fiyatı GİRİLMEMİŞ parti: gerçek COGS bu partide hesaplanamaz (rapor bunu göstermeli)
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[6]!.id, physicalQty: 12, expiryDate: gun(120), lotNumber: 'L-MALIYETSIZ', location: 'Dolap 4' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[6]!.id, physicalQty: 12, expiryDate: gun(120), lotNumber: 'L-MALIYETSIZ' });
+  // ↑ **Rafı da BİLİNMİYOR ve bu bilinçli** (19.29): kabulde alan seçmek zorunlu değil, ekranların
+  // o hâli de çizmesi gerekiyor. Bu satır zaten "eksik veri" fikstürü (maliyeti de yok) — iki
+  // bilinmeyeni aynı satırda toplamak, `null` yollarını tek partiyle sınanır kılıyor.
 
   // İki ürün DLC'ye çekilir: "geçince satılamaz" kuralı ancak DLC'li bir üründe denenebilir
   // (varsayılan DDM). Katalog bölümü bu alanı vermiyor, karar burada veriliyor.
@@ -335,16 +351,26 @@ export async function seedAdjustments(db: Db, kisiler: Kisiler): Promise<void> {
   console.log(`✓ stok düzeltmesi: ${islemler.length} kayıt (imha · hasar · kayıp · sayım ±  · iade restoku)`);
 }
 
-// Hijyen denetiminin ilk istediği veri. Sensör yok, elle giriş: seri de o yüzden seyrek ve
-// bazen ARALIK DIŞI — hep -18 °C olsaydı uyarı eşiği hiç denenmezdi.
-const SICAKLIK_NOKTALARI = [
-  { location: 'Derin dondurucu 1', taban: -19.5, sapma: 0.8 },
-  { location: 'Derin dondurucu 2', taban: -18.4, sapma: 1.2 },
-  { location: 'Soğuk oda', taban: 3.2, sapma: 1.1 },
-  { location: 'Frigo araç', taban: -17.2, sapma: 2.4 },
-];
+/**
+ * Ölçüm noktalarının SICAKLIK profili — noktaların kendisi `seed/warehouse.ts`te doğuyor (19.29).
+ *
+ * Ayrılmalarının sebebi sıra: partiler de artık alana bağlanıyor (`stock.storage_area_id`), yani
+ * alanlar stoktan ÖNCE var olmak zorunda. Burada yalnız "o nokta kaç derece okur" kalıyor — bu
+ * dosyanın bildiği tek şey ölçümün kendisi.
+ *
+ * Seri seyrek ve bazen ARALIK DIŞI: hep −18 °C olsaydı uyarı eşiği hiç denenmezdi.
+ */
+const SICAKLIK_PROFILI: Record<string, { taban: number; sapma: number }> = {
+  'Derin dondurucu 1': { taban: -19.5, sapma: 0.8 },
+  'Derin dondurucu 2': { taban: -18.4, sapma: 1.2 },
+  'Soğuk oda': { taban: 3.2, sapma: 1.1 },
+  'Mal kabul': { taban: 8.5, sapma: 2.2 },
+};
 
-export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Depolar): Promise<void> {
+/** Frigo aracın profili — soğuk zincirin YOLDAKİ yeri; ölçümü aynı defterde, ayrı tabloda. */
+const ARAC_PROFILI = { taban: -17.2, sapma: 2.4 };
+
+export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Depolar, noktalar: Noktalar): Promise<void> {
   if (await tabloDolu(db, 'temperature_log')) {
     console.log('▸ sıcaklık kayıtları zaten dolu — atlandı');
     return;
@@ -354,13 +380,24 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
   const depocu = kisiler.get('depocu') ?? null;
   let sayi = 0;
 
+  // Noktalar `seedStoragePoints`te doğdu (19.29): partiler de onlara bağlandığı için stoktan ÖNCE
+  // var olmaları gerekiyordu. Burada yalnız ölçüm yazılıyor.
+  // **`Kuru depo rafı` bilerek ATLANIYOR** — "tanımlı ama tura girmemiş nokta" uyarısı ancak hiç
+  // ölçülmemiş bir satırla sınanır.
+  const olculecek = [...noktalar.strAlan].filter(([ad]) => ad in SICAKLIK_PROFILI);
+
   // **Seri 22 günden 5 güne indi (kullanıcı kararı 16.08: test verisi incelsin).** 176 ölçüm
   // üretiyordu ve bu, listenin ne kadar uzayabileceğini göstermekten başka bir şey sınamıyordu —
   // tarih süzgeci beş günlük bir seride de aynı yolu koşuyor. **Korunan üç şey:** dört ölçüm
   // noktası (konum çeşitliliği), günde iki ölçüm (sabah/akşam ikilisi) ve aralık DIŞI kayıtlar —
   // aşağıdaki `% 9` ölçütü beş günde de üç kaza üretiyor (ölçüldü), yani uyarı eşiği hâlâ deneniyor.
   for (let g = 4; g >= 0; g -= 1) {
-    for (const [n, nokta] of SICAKLIK_NOKTALARI.entries()) {
+    // Araç da noktaların arasında: aynı seride, ayrı tabloda — ekran ikisini tek liste okuyor.
+    const gununNoktalari = [
+      ...olculecek.map(([ad, id]) => ({ ...SICAKLIK_PROFILI[ad]!, ref: { storageAreaId: id } })),
+      { ...ARAC_PROFILI, ref: { vehicleId: noktalar.arac } },
+    ];
+    for (const [n, nokta] of gununNoktalari.entries()) {
       for (const saat of [7, 18]) {
         const dalga = Math.sin((g * 2 + n + saat) / 3) * nokta.sapma;
         // Her 9'uncu ölçümde bilinçli SAPMA: kapı açık kalmış / araç güneşte beklemiş.
@@ -369,7 +406,7 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
         zaman.setHours(saat, 0, 0, 0);
         await logs.insert({
           warehouseId: depolar.str,
-          location: nokta.location,
+          ...nokta.ref,
           temperatureC: euro(nokta.taban + dalga + kaza),
           recordedBy: depocu,
           recordedAt: zaman.toISOString(),
@@ -383,26 +420,24 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
   // okunur. Yalnız ana depoda ölçüm olsaydı, süzgeci unutan bir sorgu Kehl'i seçince BOŞ liste
   // döndürür — bu "ölçüm yok" mu, "süzgeç yanlış" mı, ayırt edilemezdi. Seri daha kısa (7 gün) ve
   // tek noktalı: ikinci depo küçük, kayıt hacmi de öyle olmalı — eşit hacim gerçeği yalanlar.
-  const kehlNokta = SICAKLIK_NOKTALARI[0];
-  if (kehlNokta) {
-    for (let g = 2; g >= 0; g -= 1) {
-      for (const saat of [8, 17]) {
-        const zaman = new Date(Date.now() - g * 86_400_000);
-        zaman.setHours(saat, 0, 0, 0);
-        await logs.insert({
-          warehouseId: depolar.kehl,
-          location: kehlNokta.location,
-          // Kehl'de bir gün ARALIK DIŞI: uyarı ikinci depoda da tetiklenebilmeli.
-          // **Gün 3'ten 1'e taşındı (16.08):** seri üç güne indi, `g === 3` artık hiç oluşmuyordu ve
-          // ikinci deponun aralık-dışı hâli sessizce kaybolurdu.
-          temperatureC: euro(kehlNokta.taban + Math.sin(g + saat / 4) * kehlNokta.sapma + (g === 1 ? 6.2 : 0)),
-          recordedBy: depocu,
-          recordedAt: zaman.toISOString(),
-        });
-        sayi += 1;
-      }
+  const kehlProfil = SICAKLIK_PROFILI['Derin dondurucu 1']!;
+  for (let g = 2; g >= 0; g -= 1) {
+    for (const saat of [8, 17]) {
+      const zaman = new Date(Date.now() - g * 86_400_000);
+      zaman.setHours(saat, 0, 0, 0);
+      await logs.insert({
+        warehouseId: depolar.kehl,
+        storageAreaId: noktalar.kehlAlan,
+        // Kehl'de bir gün ARALIK DIŞI: uyarı ikinci depoda da tetiklenebilmeli.
+        // **Gün 3'ten 1'e taşındı (16.08):** seri üç güne indi, `g === 3` artık hiç oluşmuyordu ve
+        // ikinci deponun aralık-dışı hâli sessizce kaybolurdu.
+        temperatureC: euro(kehlProfil.taban + Math.sin(g + saat / 4) * kehlProfil.sapma + (g === 1 ? 6.2 : 0)),
+        recordedBy: depocu,
+        recordedAt: zaman.toISOString(),
+      });
+      sayi += 1;
     }
   }
-  console.log(`✓ sıcaklık: ${sayi} ölçüm · ${SICAKLIK_NOKTALARI.length} nokta · İKİ depo (bir kısmı aralık DIŞI)`);
+  console.log(`✓ sıcaklık: ${sayi} ölçüm · ${olculecek.length} alan + 1 araç ölçüldü · biri hiç ölçülmedi · İKİ depo`);
 }
 

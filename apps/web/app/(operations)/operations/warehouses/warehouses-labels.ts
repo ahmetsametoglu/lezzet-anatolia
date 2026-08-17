@@ -1,3 +1,4 @@
+import { STORAGE_AREA_KINDS, type StorageAreaKind } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { WEEKDAYS } from '@/components/operation/form/calendar-math';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
@@ -76,3 +77,27 @@ export function postalCodeLabel(
 ): string {
   return pick.country === homeCountry ? pick.postalCode : `${pick.postalCode} (${pick.country})`;
 }
+
+// ── Ölçüm noktaları (19.28) ─────────────────────────────────────────────────
+
+/**
+ * Alan türünün ekrandaki adı — **sıcaklığı da yazıyor**, çünkü tür bir etiket değil bir BEKLENTİ:
+ * "donuk" kelimesi tek başına −18 demez, ama "Donuk (−18 °C)" der. Ürünün saklama rejimiyle aynı
+ * üç kelime bilerek kullanılıyor (`ProductStorageType`); dördüncüsü bir rejim değil geçiş yeri.
+ */
+export const AREA_KIND_LABELS: Record<StorageAreaKind, string> = {
+  frozen: 'Donuk (−18 °C)',
+  chilled: 'Soğutulmuş (0-4 °C)',
+  ambient: 'Oda sıcaklığı',
+  staging: 'Geçiş alanı (kabul / sevk)',
+};
+
+export const AREA_KIND_OPTIONS = STORAGE_AREA_KINDS.map((kind) => ({ value: kind, label: AREA_KIND_LABELS[kind] }));
+
+/** Kısa rozet — kartta yer dar, tam ad satırı taşırdı. */
+export const AREA_KIND_SHORT: Record<StorageAreaKind, string> = {
+  frozen: 'donuk',
+  chilled: 'soğuk',
+  ambient: 'oda',
+  staging: 'geçiş',
+};

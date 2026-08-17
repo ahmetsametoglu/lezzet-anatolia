@@ -264,6 +264,7 @@ export type {
   PendingIntake,
   PurchaseIntakeLine,
   RepricePort,
+  StorageMismatch,
 } from './warehouse/intake';
 export { recordAdjustment } from './warehouse/adjustment';
 export type { AdjustmentLine, AdjustmentOutcome, WarehouseReason } from './warehouse/adjustment';

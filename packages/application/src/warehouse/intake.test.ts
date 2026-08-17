@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, PurchaseOrderService, StockService, SupplierService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  ProductService,
+  PurchaseOrderService,
+  StockService,
+  StorageAreaService,
+  SupplierService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import {
   listPendingIntakes,
@@ -30,6 +38,8 @@ const stamp = Date.now();
 let variantId: string;
 /** Depo geçişi (DOMAIN §17): kabul deposuz yazılamaz — testin kendi deposu. */
 let warehouseId: string;
+/** Partinin rafı artık tanımlı bir alan (19.29) — testin kendi dolabı. */
+let storageAreaId: string;
 let productId: string;
 let categoryId: string;
 let supplierId: string;
@@ -38,6 +48,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
+  storageAreaId = (await new StorageAreaService(db).insert({ warehouseId, name: `Dolap ${stamp}`, kind: 'frozen' })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kabul kapısı ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Mantı ${stamp}` },
@@ -64,6 +75,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     supplierIds: [supplierId], // kabuller + tedarik siparişleri onunla gider
+    storageAreaIds: [storageAreaId],
     warehouseIds: [warehouseId],
   });
 });
@@ -98,14 +110,14 @@ describe('PO’lu mal kabul', () => {
     const purchaseOrderId = await draftPurchaseOrder(20, 600);
 
     // Ekranın göndereceği satır şekli — para alanı yok, tip de kabul etmez.
-    const lines: IntakeFormLine[] = [{ variantId, qty: 20, expiryDate: dayOffset(90), lotNumber: 'LOT-1', location: 'Dolap A' }];
+    const lines: IntakeFormLine[] = [{ variantId, qty: 20, expiryDate: dayOffset(90), lotNumber: 'LOT-1', storageAreaId }];
 
     const outcome = await receiveGoods(db, { warehouseId, purchaseOrderId, lines });
 
     expect(outcome.status).toBe('ok');
     const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
     expect(batch?.purchasePriceCents).toBe(600); // depocunun hiç görmediği sayı
-    expect(batch?.location).toBe('Dolap A');
+    expect(batch?.storageAreaId).toBe(storageAreaId);
     expect(batch?.lotNumber).toBe('LOT-1');
   });
 

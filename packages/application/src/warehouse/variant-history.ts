@@ -53,7 +53,8 @@ export interface VariantBatchHistory {
   createdAt: string;
   expiryDate: string;
   lotNumber: string | null;
-  location: string | null;
+  /** Partinin durduğu alanın ADI — geçmiş okuması bir tabela arıyor, kimlik değil (19.29). */
+  areaName: string | null;
   /** Girişte yazılan adet — değişmez (`stock.initial_qty`). */
   initialQty: number;
   /** Bugün elde kalan adet. 0 = tükendi (satıldı ya da düşüldü). */
@@ -216,7 +217,7 @@ export async function readVariantStockHistory(
     createdAt: batch.createdAt,
     expiryDate: batch.expiryDate,
     lotNumber: batch.lotNumber,
-    location: batch.location,
+    areaName: batch.storageArea?.name ?? null,
     initialQty: batch.initialQty,
     physicalQty: batch.physicalQty,
     unitCostCents: batch.purchasePriceCents,

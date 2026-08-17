@@ -12,7 +12,7 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | --- | --- | --- |
 | id | uuid | |
 | variant_id | uuid | stok varyant seviyesinde |
-| warehouse_id | uuid | **parti bir depoda durur** (`DOMAIN §17`); `location` ondan ayrıdır — biri tesis, öteki o tesisteki raf |
+| warehouse_id | uuid | **parti bir depoda durur** (`DOMAIN §17`); `storage_area_id` ondan ayrıdır — biri tesis, öteki o tesisteki alan |
 | physical_qty | number | fiili (satış/fire ile erir) |
 | initial_qty | number | **girişte** yazılan miktar — tarihtir, değişmez; trigger yazar. "Sipariş ettiğim kadar geldi mi" (§16 fark raporu) ve "bu partiden ne kadar tüketildi" buna dayanır |
 | expiry_date | date | partinin son tarihi; **tipi üründedir** (`Product.date_type`: DLC güvenlik / DDM kalite) — bu yüzden kolon adı tipten bağımsız |
@@ -21,7 +21,7 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | intake_id | uuid \| null | bağlı stok girişi/satın alma (bkz. `StockIntake`) |
 | purchase_order_item_id | uuid \| null | hangi tedarik KALEMİNİ karşıladı — parçalı kabulde fark raporunun bağı; transferle doğan partide null (`data-model/depo.md`) |
 | offer_price | numeric (€) \| null | partiye bağlı indirimli teklif fiyatı; doluysa bu parti indirimli satışta (bkz. `DOMAIN.md §5`). Uygulamadaki adı `offerPriceCents`, birimi **cent** |
-| location | string \| null | depo İÇİ konum (dolap/raf) — hangi depo olduğu `warehouse_id`'de |
+| storage_area_id | uuid \| null | depo İÇİ alan (`StorageArea`, `restrict`) — hangi depo olduğu `warehouse_id`'de. **Serbest metindi, `19.29`da tanımlı kayda bağlandı**: `Dolap 1` ≠ `Dolap-1` gruplamayı bölüyordu ve "hangi alan boş/dolu" sorusu sorulamıyordu. `null` meşru — rafı bilinmeden de mal kabul edilir |
 | created_at | timestamptz | |
 
 Ayrılmış miktar **saklanmaz** — aktif `Reservation` satırlarından türetilir. `available = Σ physical − Σ aktif rezervasyon` (bkz. `DOMAIN.md §4`).
@@ -89,11 +89,16 @@ Hijyen denetiminin ilk istediği veri; günde bir-iki **elle** giriş yeter (sen
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| warehouse_id | uuid | hangi TESİS — hijyen denetimi tesis bazındadır (denetmen bir depoya gelir). Araç kaydı da aracın çıktığı depoya yazılır: araçlar depoya bağlanmaz ama soğuk zincir kaydı sahipsiz kalamaz |
-| location | string | depo İÇİ dolap adı / araç plakası |
+| warehouse_id | uuid | hangi TESİS — hijyen denetimi tesis bazındadır (denetmen bir depoya gelir). Araç kaydı da kaydın alındığı depoya yazılır: araç bir güne/kuryeye bağlanmaz ama soğuk zincir kaydı sahipsiz kalamaz |
+| storage_area_id | uuid \| null | depo içi alan (`StorageArea`) |
+| vehicle_id | uuid \| null | araç (`Vehicle`) |
 | temperature_c | number | −18.5 gibi; donukta negatif normaldir |
 | recorded_by | uuid \| null | ölçümü giren personel |
 | recorded_at | timestamptz | |
+
+**Nokta İKİ KOLON, tam biri dolu** (`temperature_log_one_point`, `0045`). Önce tek bir `location` **serbest metniydi** ve hem dolap adını hem araç plakasını taşıyordu; üç zararı ölçüldü (17.08): yazım farkı geçmişi bölüyordu (`Dolap 1` ≠ `Dolap-1`), sapma uyarısı o bölünen geçmişe dayanıyordu, ve **ölçülmeyen tespit edilemiyordu** — var olduğu bilinmeyen bir dolabın eksik ölçümü de bilinemez. Denetimin ilk sorusu tam olarak budur.
+
+Tek bir "tip + kimlik" çifti (polimorfik anahtar) REDDEDİLDİ: veritabanına FK yazdırmaz, yani silinen bir noktanın kayıtları sessizce sahipsiz kalırdı. İki kolon + `num_nonnulls` kısıtı hem bağı hem tekilliği veriye yazıyor. Nokta silinemez (`restrict`), susturulur — denetim geçmişi noktanın adına değil kaydına bağlı.
 
 ## Supplier (tedarikçi)
 

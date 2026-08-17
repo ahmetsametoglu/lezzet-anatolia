@@ -44,6 +44,7 @@ export { ZoneNoticeService } from './services/zone-notice.service';
 export { PostalCodeDemandService } from './services/postal-code-demand.service';
 export { WarehouseService } from './services/warehouse.service';
 export { WarehouseTransferService, WarehouseTransferLineService } from './services/warehouse-transfer.service';
+export { StorageAreaService, VehicleService } from './services/storage-point.service';
 export { CartService } from './services/cart.service';
 export { OrderItemBatchService } from './services/order-item-batch.service';
 export {

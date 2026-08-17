@@ -10,6 +10,7 @@ import type {
   RecallHit,
   StockAdjustmentDetail,
   StockAdjustmentReason,
+  StorageAreaKind,
 } from '@lezzet/types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { StockLevelRow } from '@/lib/stock/level-rows';
@@ -129,6 +130,11 @@ export interface IntakeTabData {
   suppliers: Array<{ id: string; name: string }>;
   /** Kabulün yazılabileceği depolar — kapsamdan gelir; **varsayılan seçim YOK** (`CLAUDE §1`). */
   warehouseOptions: Array<{ id: string; name: string }>;
+  /**
+   * Çalışılan deponun AKTİF stoklama alanları (19.29) — partinin rafı buradan seçilir, yazılmaz.
+   * `kind` taşınıyor çünkü form "donuk ürün oda sıcaklığı alanına konuyor" uyarısını kuruyor.
+   */
+  storageAreas: Array<{ id: string; name: string; kind: StorageAreaKind }>;
   /** Bağlamda tek depo seçiliyse onun kimliği — diyalogda ÖN SEÇİLİ gelir, sorulmadan yazılmaz. */
   warehouseId: string | null;
 }

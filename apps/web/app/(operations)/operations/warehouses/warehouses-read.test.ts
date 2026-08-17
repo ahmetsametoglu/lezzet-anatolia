@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderStatus } from '@lezzet/types';
 import { closureConsequences, openOrderCountOf, toStaffChips, toWarehouseRows } from './warehouses-read';
-import type { WarehouseCardView } from './warehouses-types';
+import type { WarehouseCardView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranının SAF indirgemeleri. DB'siz: girdiler zaten okunmuş satırlar.
 //
@@ -91,10 +91,29 @@ describe('açık iş', () => {
 });
 
 describe('kapatmanın sonuçları', () => {
+  /**
+   * Bölge fikstürü — ağırlık alanları (19.28) varsayılan sıfır. Kapatma kararı onlara BAKMIYOR:
+   * bir bölgenin cirosu, kapanınca adreslerinin sahipsiz kalmasını değiştirmez. Fikstürde durmaları
+   * yalnız tipin gereği, testin konusu değil.
+   */
+  const zone = (over: Partial<ZoneCardView> = {}): ZoneCardView => ({
+    id: 'z1',
+    name: 'Merkez',
+    isActive: true,
+    weekdays: [],
+    postalCodes: [],
+    orderCount: 0,
+    revenueCents: 0,
+    waitingCount: 0,
+    nextDeliveryDate: null,
+    ...over,
+  });
+
   const card = (over: Partial<WarehouseCardView> = {}): WarehouseCardView => ({
     row: rowsOf()[0]!,
     zones: [],
     staff: [],
+    points: [],
     scorecard: {
       variantCount: 0,
       batchCount: 0,
@@ -103,7 +122,6 @@ describe('kapatmanın sonuçları', () => {
       riskCents: null,
       belowMinCount: 0,
       inTransitIn: 0,
-      inTransitOut: 0,
       openOrderCount: 0,
       lastIntakeAt: null,
     },
@@ -117,7 +135,7 @@ describe('kapatmanın sonuçları', () => {
   it('stok, aktif bölge, tek kapsamlı personel ve gelen sevkiyat ayrı ayrı sayılır', () => {
     const result = closureConsequences(
       card({
-        zones: [{ id: 'z1', name: 'Merkez', isActive: true, weekdays: [2], postalCodes: [{ country: 'FR', postalCode: '67000' }] }],
+        zones: [zone({ isActive: true, weekdays: [2], postalCodes: [{ country: 'FR', postalCode: '67000' }] })],
         staff: [{ id: 'p1', name: 'Yusuf D.', roleText: 'Depo', onlyHere: true }],
         scorecard: { ...card().scorecard, batchCount: 88, variantCount: 41, inTransitIn: 1 },
       }),
@@ -129,7 +147,7 @@ describe('kapatmanın sonuçları', () => {
 
   it('PASİF bölge sahipsiz adres bırakmaz — o dal düşer', () => {
     const result = closureConsequences(
-      card({ zones: [{ id: 'z1', name: 'Merkez', isActive: false, weekdays: [], postalCodes: [] }] }),
+      card({ zones: [zone({ isActive: false })] }),
     );
     expect(result).toEqual([]);
   });

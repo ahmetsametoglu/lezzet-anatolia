@@ -82,7 +82,8 @@ export interface PreparationSuggestion {
   stockId: string;
   qty: number;
   expiryDate: string;
-  location: string | null;
+  /** Alanın ADI ("Derin dondurucu 2") — depocu rafta uuid aramaz, tabelayı okur (19.29). */
+  areaName: string | null;
 }
 
 /** Kuyruk satırı — sipariş künyesi + kalemleri. Tutar, adres, iletişim YOK (tasarım §6). */
@@ -188,12 +189,14 @@ async function buildLine(
   };
 
   if (pinnedStockId) {
-    const batch = await new StockService(db).getById(pinnedStockId);
+    // `getBatchDetails` (tekil `getById` değil): alanın ADI gömülü satırdan geliyor ve depocunun
+    // ekranda göreceği şey o (19.29). Kimlikle dönseydik telefon ikinci bir okuma yapardı.
+    const batch = (await new StockService(db).getBatchDetails([pinnedStockId]))[0];
     return {
       ...base,
       pinnedStockId,
       suggestion: batch
-        ? [{ stockId: batch.id, qty: remaining, expiryDate: batch.expiryDate, location: batch.location ?? null }]
+        ? [{ stockId: batch.id, qty: remaining, expiryDate: batch.expiryDate, areaName: batch.storageArea?.name ?? null }]
         : [],
       shortfallQty: batch ? Math.max(0, remaining - batch.physicalQty) : remaining,
     };
@@ -207,7 +210,7 @@ async function buildLine(
       stockId: pick.stockId,
       qty: pick.qty,
       expiryDate: pick.expiryDate,
-      location: pick.location,
+      areaName: pick.areaName,
     })),
     shortfallQty: fefo.shortfall,
   };
@@ -415,7 +418,7 @@ async function suggestPicksForVariant(
     shortfall: decision.shortfall,
     picks: decision.picks.map((pick) => {
       const batch = byId.get(pick.stockId)!;
-      return { stockId: pick.stockId, qty: pick.qty, expiryDate: batch.expiryDate, location: batch.location };
+      return { stockId: pick.stockId, qty: pick.qty, expiryDate: batch.expiryDate, areaName: batch.storageArea?.name ?? null };
     }),
   };
 }

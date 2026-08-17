@@ -1,22 +1,33 @@
 import {
+  AnalyticsReportService,
   DeliveryZoneService,
   OrderService,
   SettingsService,
   StockService,
+  StorageAreaService,
+  TemperatureLogService,
   UserProfileService,
+  VehicleService,
   WarehouseService,
   WarehouseTransferService,
+  ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
-import { CountryEnum, type Country, type UserProfile } from '@lezzet/types';
+import type { Country, UserProfile } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { readZoneDemand } from '@/lib/delivery/zone-demand';
 import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { WarehousesClient } from './warehouses-client';
-import { openOrderCountOf, toScorecard, toStaffChips, toWarehouseRows, toZoneCards } from './warehouses-read';
+import {
+  openOrderCountOf,
+  toMeasurePoints,
+  toScorecard,
+  toStaffChips,
+  toWarehouseRows,
+  toZoneCards,
+} from './warehouses-read';
 import { parseWarehousesUrl } from './warehouses-url';
 import type { WarehouseCardView, WarehousesData } from './warehouses-types';
 
@@ -61,17 +72,17 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   const db = serviceDb();
   const stockSvc = new StockService(db);
 
-  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels, zoneDemand] = await Promise.all([
+  // **Bölge dışı talep okuması KALKTI (17.08).** Buradan bir liderlik tablosu okunuyordu ("hangi
+  // kod ne sıklıkla soruluyor") ve ekranın "Ağ geneli" bölümünü besliyordu; o bölüm bu sayfanın
+  // sorusuna cevap vermediği için kaldırıldı — gerekçe `warehouses.desktop`ta. Sayfa bir sorgu
+  // eksildi: veriyi okuyup çizmeyen bir sayfa, o okumanın bedelini boşuna ödüyordu.
+  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels] = await Promise.all([
     new WarehouseService(db).list(),
     new DeliveryZoneService(db).listWithCodes(),
     readStaff(new UserProfileService(db)),
     readExpiryThresholds(new SettingsService(db)),
     new WarehouseTransferService(db).listInTransit(),
     readWarehouseLabels(),
-    // Bölge dışı talep — TESİSE bağlı değil, AĞA bağlı bir soru ("nereye açılmalıyız"), o yüzden
-    // liste görünümünde ve ilk dalgada okunuyor. Tavan kapının kendi varsayılanı (50): bir liderlik
-    // tablosu, sayfalanan bir liste değil.
-    readZoneDemand(),
   ]);
 
   // Partiler YALNIZ aktif depolardan: kapalı tesisin stoğu kayıtta durur ama satış okumalarında
@@ -104,21 +115,44 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   const card = selected ? await readCard(db, stockSvc, { row: selected, zones, staff, batches }) : null;
 
   const activeCountries = new Set(warehouses.filter((w) => w.isActive).map((w) => w.countryCode));
-  const shippingCountries = new Set(warehouses.filter((w) => w.isActive && w.shipsOnline).map((w) => w.countryCode));
 
   const data: WarehousesData = {
     rows,
     card,
-    // Hizmet verilen her ülkenin bir kargo çıkış deposu OLMALI: yoksa o ülkede bölge dışı müşteriye
-    // satış yapılamaz ve sipariş hiç açılmaz. Görünür bir eksiklik hâlidir, sessiz bırakılmaz.
-    countriesWithoutShipping: CountryEnum.options.filter((c) => activeCountries.has(c) && !shippingCountries.has(c)),
     countriesWithWarehouse: [...activeCountries] as Country[],
-    zoneDemand,
   };
 
   return <WarehousesClient data={data} urlState={urlState} />;
 }
 
+
+/** Son ölçüm taraması: birkaç nokta × birkaç hafta; kartın sorusu için fazlasıyla yeter. */
+const LAST_MEASURED_LIMIT = 200;
+
+/**
+ * **Nokta başına son ölçüm anı** (19.28) — "tanımlı ama hiç kullanılmayan nokta" hâlini görünür
+ * kılan tek veri.
+ *
+ * **Neden `warehouses-read`te DEĞİL:** o dosya saf görünüyor ama istemci paketine giriyor
+ * (`closureConsequences`'ı kapatma penceresi çağırıyor). Oraya bir servis importu konunca
+ * supabase-js de istemciye gitti ve derleme `node:crypto` ile kırıldı — iki sayfa birden 500
+ * döndü (ölçüldü 17.08). DB okuyan her şey sayfada kalır.
+ *
+ * Tek sayfa okunuyor ve bu KASITLI bir sınır: kart "en son ne zaman" diye soruyor, geçmişin
+ * tamamını değil. Tavanın altında kalan çok eski bir nokta `null` görünür — yani "hiç ölçülmemiş"
+ * ile "çok uzun süredir ölçülmemiş" aynı işarete düşer. İkisi de aynı cevabı gerektirdiği için
+ * (o noktaya bak) ayrım bugün bir karar değiştirmiyor.
+ */
+async function readLastMeasured(db: ReturnType<typeof serviceDb>, warehouseId: string): Promise<Map<string, string>> {
+  const page = await new TemperatureLogService(db).list({ warehouseId, limit: LAST_MEASURED_LIMIT });
+  const latest = new Map<string, string>();
+  for (const row of page.rows) {
+    const key = row.storageAreaId ? `area:${row.storageAreaId}` : row.vehicleId ? `vehicle:${row.vehicleId}` : null;
+    if (key === null || latest.has(key)) continue;
+    latest.set(key, row.recordedAt);
+  }
+  return latest;
+}
 
 /** Seçili tesisin tam kartı — ikinci dalga: yalnız bu deponun eşik altı ve açık işi okunur. */
 async function readCard(
@@ -139,15 +173,44 @@ async function readCard(
     ? await Promise.all([stockSvc.listBelowMinStock(row.id), new OrderService(db).counts({ warehouseIds: [row.id] })])
     : [[], null];
 
+  /**
+   * Ölçüm noktaları (19.28) — **kapalı tesiste de okunur**, karnenin aksine.
+   *
+   * Karne "bugün ne durumda" sorusudur ve kapalı tesiste sorulmaz; nokta ise KÜNYEDİR — tesis
+   * kapalıyken de dolabı vardır ve yeniden açılınca aynı noktalarla açılır. Pasifi de geliyor
+   * (`activeOnly` verilmiyor): ekran onu işaretliyor, süzmüyor — kullanımdan kalkmış bir dolabı
+   * gizlemek, geçmiş kayıtlarının sahibini görünmez yapardı.
+   */
+  const [areas, vehicles, lastByPoint] = await Promise.all([
+    new StorageAreaService(db).listByWarehouse(row.id),
+    new VehicleService(db).list({ warehouseId: row.id }),
+    readLastMeasured(db, row.id),
+  ]);
+
+  /**
+   * **Bölgelerin ağırlığı** (19.28) — kart artık yalnız tanımı değil sonucu da gösteriyor.
+   *
+   * Kodlar TEK turda soruluyor: bölge başına sorgu atmak (N+1) beş bölgede beş tur demekti ve
+   * ikisi de aynı RPC'yi çağırırdı. Kod yoksa sorgu HİÇ atılmıyor — boş bir `in ()` sorgusu, sonucu
+   * baştan belli bir tur.
+   */
+  const zoneCodes = [...new Set(zones.filter((z) => z.warehouseId === row.id).flatMap((z) => z.postalCodes.map((c) => c.postalCode)))];
+  const [zoneOrders, zoneWaiting] = await Promise.all([
+    zoneCodes.length > 0
+      ? new AnalyticsReportService(db).postalCodeOrders(zoneCodes)
+      : Promise.resolve(new Map<string, { orderCount: number; revenueCents: number }>()),
+    zoneCodes.length > 0 ? new ZoneNoticeService(db).pendingCountByPostalCode() : Promise.resolve(new Map<string, number>()),
+  ]);
+
   return {
     row,
-    zones: toZoneCards(zones, row.id),
+    zones: toZoneCards(zones, row.id, { orders: zoneOrders, waiting: zoneWaiting, now: new Date() }),
     staff: toStaffChips(staff, row.id),
+    points: toMeasurePoints({ areas, vehicles, lastByPoint }),
     scorecard: toScorecard({
       batches: ownBatches,
       belowMinCount: belowMin.length,
       inTransitIn: row.inTransitIn,
-      inTransitOut: row.inTransitOut,
       openOrderCount: orderCounts ? openOrderCountOf(orderCounts.byStatus) : 0,
     }),
   };
