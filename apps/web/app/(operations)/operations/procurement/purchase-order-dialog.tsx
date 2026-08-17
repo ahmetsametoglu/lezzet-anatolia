@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { fromCents, toCents } from '@lezzet/helper';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
+import { CopyButton } from '@/components/operation/ui/copy-text';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Skeleton } from '@/components/operation/ui/skeleton';
 import { TrashIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
@@ -49,7 +50,6 @@ export function PurchaseOrderDialog({ orderId, today, canCancel, onClose }: Purc
   const [detail, setDetail] = useState<OrderDetailView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Kalemler pencere AÇILINCA okunur: elli satırlık listede her siparişin kalemlerini peşinen
   // çekmek, biri açılsın diye ellisinin bedelini ödemek olurdu.
@@ -81,13 +81,9 @@ export function PurchaseOrderDialog({ orderId, today, canCancel, onClose }: Purc
       .finally(() => setBusy(false));
   };
 
-  const onCopy = () => {
-    if (!detail?.message) return;
-    void navigator.clipboard.writeText(detail.message).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  // Kendi kopyalama fonksiyonu BURADAN GİTTİ (17.08) → `CopyButton`. Hatayı hiç yakalamıyordu:
+  // pano reddedilirse `then` çalışmıyor, düğme sessizce eski hâlinde kalıyor ve tedarikçiye
+  // gönderilecek liste kopyalanmamış oluyordu.
 
   // Numara biçimi normalize edilir (kuryenin "yoldayım" bağlantısıyla aynı dert): `wa.me` yalnız
   // rakam ister. Ayırt edilemeyecek kadar kısa numarada bağlantı üretilmez.
@@ -173,9 +169,9 @@ export function PurchaseOrderDialog({ orderId, today, canCancel, onClose }: Purc
                 </pre>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={onCopy} disabled={!detail.message}>
-                  {copied ? 'Kopyalandı' : 'Panoya kopyala'}
-                </Button>
+                {/* Boş mesajda düğme HİÇ çizilmiyor (eskiden `disabled` idi): kopyalanacak bir şey
+                    yokken kopyalama düğmesi göstermek, olmayan bir eylemi vaat etmektir. */}
+                {detail.message ? <CopyButton text={detail.message} label="Panoya kopyala" doneLabel="Kopyalandı" /> : null}
                 {waHref ? (
                   <a
                     href={waHref}

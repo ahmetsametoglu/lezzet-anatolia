@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button, buttonClass } from '@/components/operation/ui/button';
+import { CopyAction } from '@/components/operation/ui/copy-text';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { shortDateTime } from '@/components/operation/ui/format';
-import { AlertIcon, ChevronDownIcon, CopyIcon } from '@/components/operation/ui/icons';
+import { AlertIcon, ChevronDownIcon } from '@/components/operation/ui/icons';
 import { reportClientErrorAction } from '@/lib/observability/report-client-error';
 
 /**
@@ -22,7 +23,6 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
   // Zaman damgası hata anında bir kez sabitlenir (her render'da kaymaz).
   const [occurredAt] = useState(() => new Date());
   // Hangi kartın kopyalandığı — iki kopyala butonu ayrı geri bildirim verir.
-  const [copied, setCopied] = useState<'reference' | 'message' | null>(null);
   const refCode = error.digest ? `ERR-${error.digest.slice(0, 8)}` : 'ERR-yok';
   // Damga TEK kaynaktan (`format.ts`): serbest `toLocaleString` çağrıları ekranlar arasında farklı
   // biçim üretiyordu — burada saniye de yazılıyordu, öteki ekranlarda yazılmıyordu.
@@ -44,15 +44,9 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
     });
   }, [error]);
 
-  async function copy(key: 'reference' | 'message', text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(key);
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      // pano erişimi yoksa sessiz geç — metin ekranda zaten görünür
-    }
-  }
+  // Kendi kopyalama fonksiyonu BURADAN GİTTİ (17.08) → `CopyAction`. Sessizce yutuyordu ("metin
+  // ekranda zaten görünür") ve bu, panoyu dolu sanıp giden kişiye yalan söylemekti — ortak kapı
+  // "kopyalanamadı" diyor.
 
   return (
     <>
@@ -79,10 +73,7 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
           </div>
           <span className="h-[26px] w-px bg-ops-line-strong" />
           <span className="font-ops-mono text-ops-xs text-ops-body">{stamp}</span>
-          <Button variant="secondary" size="sm" onClick={() => copy('reference', `${refCode} · ${stamp}`)} className="gap-1.5">
-            <CopyIcon />
-            {copied === 'reference' ? 'Kopyalandı' : 'Kopyala'}
-          </Button>
+          <CopyAction text={`${refCode} · ${stamp}`} />
         </div>
 
         {/* Hata mesajı — referans kartıyla aynı dil: etiketli başlık + kendi kopyala butonu */}
@@ -90,15 +81,7 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
           <div className="flex items-center justify-between gap-3 border-b border-ops-line py-1.5 pl-3.5 pr-2">
             <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">Hata mesajı</span>
             {/* Yığın izi varsa o da kopyalanır — destek/geliştirici tek yapıştırmayla tam bağlamı alsın */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => copy('message', stack ? `${message}\n\n${stack}` : message)}
-              className="gap-1.5"
-            >
-              <CopyIcon />
-              {copied === 'message' ? 'Kopyalandı' : 'Kopyala'}
-            </Button>
+            <CopyAction text={stack ? `${message}\n\n${stack}` : message} />
           </div>
           <p className="max-h-28 overflow-auto whitespace-pre-wrap break-words px-3.5 py-2.5 font-ops-mono text-ops-sm leading-relaxed text-ops-ink">
             {message}

@@ -163,9 +163,15 @@ kurye-gün ekseninde kalır — araç depoya bağlı değildir.
    ve satır işareti yalnız o sekmede görünür — fiyat sekmelerine geçince kaybolur. Bu "kısmi eksen"
    hâli tasarımda karşılığı olmayan tek yeni durum.
 3. **TEK yeni sayfa: Depolar** (`admin-depolar.md`). `.dc` karşılığı yok, sıfırdan çizilecek;
-   sidebar'a **bir** yeni giriş gelir (yerleşim Claude Design'ın kararı). Üç bölümlü: tesis künyesi ·
-   hizmet alanı (bölge/posta kodu tanımı — Teslimat'tan taşındı) · **karne** (risk, eşik altı, yolda
-   bekleyen — sayar, listelemez; her sayı Stok'a o depo bağlamıyla gider).
+   sidebar'a **bir** yeni giriş gelir (yerleşim Claude Design'ın kararı). ~~Üç bölümlü: tesis künyesi ·
+   hizmet alanı · karne~~ → **bugün dört bölüm ve sıra değişti (17.08, kullanıcı ekran turu):**
+   **karne** (risk, eşik altı, açık iş — sayar, listelemez; her sayı Stok'a o depo bağlamıyla gider)
+   · hizmet alanı (bölge/posta kodu tanımı — Teslimat'tan taşındı) · **ölçüm noktaları** (soğuk
+   zincirin defteri + hijyen takvimi) · bağlı personel. Karne EN ÜSTE alındı çünkü sayfaya girenin
+   ilk sorusu "bu depo bugün nasıl?"; kurulum bölümleri bir kez yapılıp aylarca dönülmeyen iştir ve
+   üstte durmaları her gün sorulan soruyu her gün kaydırtıyordu. **Tesis künyesi ayrı bölüm olmaktan
+   çıktı** — dört kartından üçü sayfa başlığının kelimesi kelimesine tekrarıydı. Karneden "yolda
+   bekleyen" de kalktı (tek depolu kurulumda hep `0/0`).
 4. **Stok yeniden çizilecek — iki yeni sekme:** `Mal kabul` (girenler + bekleyen tedarik siparişi ve
    yoldaki transfer; kabul formu buradan) ve `Çıkışlar` (hazırlık, sevk, imha, sayım eksiği, kapı
    satışı — bugünkü "İmha geçmişi" burada erir). Adlar bilerek SOMUT: soyut "hareket" kelimesi

@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
+import { CopyInline } from '@/components/operation/ui/copy-text';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
-import { addressOneLine, statusLabel, statusTone } from './warehouses-labels';
+import { addressForClipboard, addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
 import { MeasurePoints } from './measure-points';
 import { FacilityStrip, Scorecard, SectionHead, SetupGapNote, StaffChips, ZoneCard } from './warehouses-sections';
@@ -93,6 +94,7 @@ function FacilityView({
   const { order, reorder } = useFacilityOrder(data.rows);
   const row = card?.row ?? null;
   const address = row ? addressOneLine(row.address, row.countryCode) : null;
+  const clipboardAddress = row ? addressForClipboard(row.address, row.countryCode) : null;
   const codeCount = card ? card.zones.filter((z) => z.isActive).reduce((sum, z) => sum + z.postalCodes.length, 0) : 0;
 
   return (
@@ -115,9 +117,21 @@ function FacilityView({
         }
         subtitle={
           row ? (
+            /**
+             * **Kod ve adres KOPYALANABİLİR** (`design/pages/admin-depolar.md §2/§7`) — ikisi de
+             * sistem dışına elle taşınıyor: kod belge önekidir (`IMH-STR-26-0012`) ve denetmen onu
+             * kâğıda yazar, adres irsaliyeye ve tedarikçi yazışmasına girer. Elle yeniden yazmak
+             * bu iki alanda bir yazım hatası sınıfı açar.
+             *
+             * İkon SESSİZ (`CopyInline`): asıl olan metin, düğme kendini onun önüne koymamalı.
+             */
             <span className="flex items-center gap-1.5">
               <span className="font-ops-mono font-semibold text-ops-body">{row.code}</span>
+              <CopyInline text={row.code} what="Kodu" />
               <span>· {address ?? 'adres girilmedi'}</span>
+              {/* Panoya giden metin EKRANDAKİ DEĞİL: irsaliyeye yapıştırılacak adres satır sonuyla
+                  yazılır, `·` ayracıyla değil (`addressForClipboard` künyesi). */}
+              {clipboardAddress ? <CopyInline text={clipboardAddress} what="Adresi" /> : null}
             </span>
           ) : (
             'henüz tesis yok — ilkini ekleyin'

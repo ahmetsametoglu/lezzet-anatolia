@@ -50,6 +50,24 @@ export function addressOneLine(address: WarehouseAddressView, countryCode: keyof
   return lines ? lines.join(' · ') : null;
 }
 
+/**
+ * **Panoya giden adres** — ekrandakiyle AYNI DEĞİL ve olmamalı.
+ *
+ * Ekranda `·` ayracı var çünkü tek satıra sığması ve sarılabilmesi gerekiyor. Ama bu metnin gittiği
+ * yer bir irsaliye, bir tedarikçi e-postası, bir kargo formu (`design/pages/admin-depolar.md §2`) —
+ * oraya yapıştırılan `12 rue du Marché · 67000 Strasbourg · Fransa` bir adres değil, bir ekran
+ * artığıdır. Panoya SATIR SONUYLA gidiyor; yapıştırıldığı yerde adres gibi duruyor.
+ *
+ * Kural genel: kopyalanan metin ekrandakinin kopyası değil, GİDECEĞİ YERİN biçimidir.
+ */
+export function addressForClipboard(
+  address: WarehouseAddressView,
+  countryCode: keyof typeof COUNTRY_LABELS,
+): string | null {
+  const lines = addressLines(address, countryCode);
+  return lines ? lines.join('\n').replace(' · ', '\n') : null;
+}
+
 /** Kapatma sonucunun ağırlığı — sıralamayı ve rengi belirler; etiket kullanıcıya bunu söyler. */
 export const CLOSURE_WEIGHT_LABEL: Record<ClosureWeight, string> = {
   hardest: 'EN SERT',

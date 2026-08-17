@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-
 /**
  * O24 · Stack / bağlam bloğu — uzun teknik metnin tek okuma kabı (18.5).
  *
@@ -42,56 +38,6 @@ export function StackBlock({ stack, size = 'dialog' }: StackBlockProps) {
   );
 }
 
-interface CopyButtonProps {
-  text: string;
-  label: string;
-  /** Kopyalandıktan sonraki etiket — "Kopyalandı ✓" varsayılan. */
-  doneLabel?: string;
-  fullWidth?: boolean;
-}
-
-/** Kopyala düğmesi — panoya yazar ve 1,6 sn "kopyalandı" der. */
-export function CopyButton({ text, label, doneLabel = 'Kopyalandı ✓', fullWidth = false }: CopyButtonProps) {
-  const [done, setDone] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  }, []);
-
-  const onCopy = () => {
-    // Pano izni reddedilebilir (güvenli olmayan bağlam, tarayıcı ayarı). SESSİZ değil: düğme
-    // "kopyalanamadı" der — başarı iddia eden bir düğme, boş bir yapıştırmadan daha kötüdür.
-    void navigator.clipboard
-      .writeText(text)
-      .then(() => setDone(true))
-      .catch(() => setFailed(true))
-      .finally(() => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-          setDone(false);
-          setFailed(false);
-        }, 1600);
-      });
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={onCopy}
-      className={[
-        'cursor-pointer rounded-[7px] border px-3 py-1.5 font-ops-display text-ops-xs font-semibold transition-colors',
-        failed
-          ? 'border-ops-red-line bg-ops-red-bg text-ops-red'
-          : done
-            ? 'border-ops-olive-line bg-ops-olive-bg text-ops-olive-dark'
-            : 'border-ops-line-strong bg-ops-white text-ops-strong hover:border-ops-olive',
-        fullWidth ? 'w-full py-3' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {failed ? 'Kopyalanamadı' : done ? doneLabel : label}
-    </button>
-  );
-}
+// `CopyButton` BURADAN GİTTİ (17.08) → `components/operation/ui/copy-text.tsx`. Burada doğmuştu ama
+// bu dosyanın konusu yığın izidir, panoya yazmak değil; üç ekran aynı düğmeyi ayrı ayrı yazdığı ve
+// üçü de farklı davrandığı ölçülünce ortak kapıya taşındı. Tüketicileri oradan import eder.

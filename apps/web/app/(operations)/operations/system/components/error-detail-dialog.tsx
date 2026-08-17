@@ -5,7 +5,8 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { num } from '@/components/operation/ui/format';
 import type { ErrorRowView } from '../system-types';
 import { ErrorMetaGrid, LevelBadge, RegressionChip, RegressionNote } from './error-meta';
-import { CopyButton, StackBlock } from './stack-block';
+import { CopyButton } from '@/components/operation/ui/copy-text';
+import { StackBlock } from './stack-block';
 
 /**
  * O9 · Hata detay diyaloğu — listeden HIZLI BAKIŞ (18.5).

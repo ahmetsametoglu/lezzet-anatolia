@@ -12,7 +12,8 @@ import { ERROR_PAGE_SIZE, type ErrorTab } from '../system-url';
 import type { ErrorRowView, SystemData } from '../system-types';
 import { ErrorMetaGrid, LevelBadge, LevelDot, RegressionChip, RegressionNote, ResolvedChip } from './error-meta';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
-import { CopyButton, StackBlock } from './stack-block';
+import { CopyButton } from '@/components/operation/ui/copy-text';
+import { StackBlock } from './stack-block';
 
 /**
  * O23 · Hata kaydı + O25 · geniş inceleme yüzeyi (18.5).

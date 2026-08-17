@@ -2,9 +2,27 @@
   "extends": "@lezzet/typescript-config/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": { "@/*": ["./*"] },
-    "plugins": [{ "name": "next" }]
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "next-env.d.ts",
+    ".next-prod/types/**/*.ts"
+  ],
+  "//exclude": "`.next-prod` DONMUŞ bir prod derlemesinin ürettiği tiplerdir ve silinen her rota typecheck'i kırar (yaşandı 17.08). include'dan çıkarmak KALICI DEĞİL — Next her derlemede kendi distDir'ini include'a geri yazıyor; exclude include'u ezdiği için kural burada durur. Aynı rotalar `.next/types` üzerinden zaten denetleniyor.",
+  "exclude": [
+    "node_modules",
+    ".next-prod"
+  ]
 }

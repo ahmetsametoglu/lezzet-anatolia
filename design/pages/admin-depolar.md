@@ -23,7 +23,7 @@ Sayfa üç soruya cevap verir ve üçü de aynı nesneye ait olduğu için ayrı
 - **Kod, ekran etiketi değil belge parçasıdır** — imha tutanağı `IMH-STR-26-0012`, transfer `TRF-STR-26-0007` bu kodu taşır; kâğıt klasör o depoda durur ve denetmen/tedarikçi kodu **elle yazar**. Kısa, okunur, karışmaz olmalı. Kodun sonradan değişmesi geçmiş belgeleri değiştirmez — eski kayıtlar eski önekle kalır; ekran bu sonucu söylemeden kodu değiştirtmez
 - **Ülke** — tesisin fiziksel yeri. Bölgenin ülkesiyle karıştırılmaz: bir bölge sınır ötesi olabilir, tesis olamaz. ⚠ **KDV bu alana bağlıdır** — yeni bir ÜLKEDE ilk depo açmak vergi modelini değiştirir; ekran o adımda mali uyarıyı verir (`DOMAIN §5/§17`)
 - **Kargo çıkış deposu işareti** — bölge dışı müşterilere ve rota müşterilerinin kargo dolgusuna hizmet eden depo. **Ülke başına en fazla bir tane**; kural veritabanındadır ve ikincisi reddedilir. Ekran reddi okunur bir cümleye çevirir ve **o rolü şu an hangi deponun taşıdığını söyler**
-- **Adres** — irsaliye, tedarikçi yazışması, denetim; okunur ve kopyalanabilir
+- **Adres** — irsaliye, tedarikçi yazışması, denetim; okunur ve kopyalanabilir. **Kopyalanan metin ekrandakinin kopyası DEĞİLDİR:** ekranda tek satıra sığsın diye `·` ayracıyla yazılır, panoya **satır sonuyla** gider — `12 rue du Marché · 67000 Strasbourg · Fransa` bir adres değil bir ekran artığıdır. Kural genel: kopyalanan metin gideceği yerin biçimindedir
 
 ### Hizmet alanı (bölgeler + posta kodları)
 
@@ -84,10 +84,25 @@ Karne **SAYAR, listelemez**: her sayı Stok ekranına o depo bağlamıyla giden 
 - **Elde ne var** — kaç varyantta stok, kaç parti
 - **Risk** — yaklaşan tarihli parti sayısı ve **risk tutarı**; DLC'si geçmiş (yalnız imha yolu kalan) parti sayısı ayrı. Bu deponun kendi gerçeğidir: aynı ürünün STR'de son günlerinde, KEHL'de yeni gelmiş partisi olması rutindir
 - **Eşik altı** — bu depoda asgari stok eşiğinin altına inmiş varyantlar. **Eşik depo bazlıdır** (`DOMAIN §17`): 20 adet Strasbourg'da bol, Kehl'de kritik olabilir. Çözümü iki yolludur ve ekran ikisini de gösterir: tedarik siparişi ya da başka depodan transfer
-- **Yolda bekleyen** — bu depoya gelen ve bu depodan giden, henüz kabul edilmemiş sevkiyat sayısı. Yoldaki mal hiçbir depoda satılamaz; uzun süredir bekleyen sevkiyat bir arıza işaretidir
+- ~~**Yolda bekleyen**~~ → **karneden KALKTI (17.08, kullanıcı ekran turu).** Tek depolu kurulumda tanımı gereği hep `0/0` okuyordu — sayı değil, boş bir kutu. Ölçü kaybolmadı: değer okunmaya devam ediyor ve **kapatma uyarısının** girdisi (yolda gelen sevkiyatı olan depo kapatılırsa kabul edecek yer kalmaz, §4). İkinci depo günlük iş hâline gelince karneye geri konur; o gün sayı bir şey söyleyecek
 - **Açık iş** — bu depodan çıkacak, henüz teslim edilmemiş sipariş sayısı
 - **Son hareket** — en son ne zaman mal girdi/çıktı; sessizleşmiş bir depo ya kapatılmayı bekliyordur ya unutulmuştur
 - **Kurulumu eksik depo işareti** — ne bağlı bölgesi ne kargo çıkışı olan depo **hiçbir siparişi alamaz**: posta kodu ona çözülmez, kargo yolu ondan geçmez. Açık ama ulaşılamaz bir tesistir. Kapsamlı personeli olmayan depoda da mal kabul ve hazırlık yapılamaz. İkisi de veriden ölçülebilir, sessiz bırakılmaz
+
+### Ölçüm noktaları — soğuk zincirin defteri (kullanıcı isteği 17.08)
+
+Bu bölüm §6'daki *"depo içi raf/konum yapısı burada tanımlanmaz"* kuralını **bilinçli olarak çevirdi** — gerekçesi aşağıda, kuralın kendi künyesinde.
+
+- **Nokta bir KÜNYEDİR, hareket değil** — tesis kapalıyken de dolabı vardır ve yeniden açılınca aynı noktalarla açılır. Bu yüzden karnenin aksine kapalı tesiste de okunur, ve bu yüzden §6'nın "mal giriş/çıkışı burada olmaz" kuralını çiğnemiyor: burada mal değil TESİSİN KENDİSİ tanımlanıyor
+- **İki fiziksel yer, tek liste:** depodaki alan (`storage_area` — dolap, soğuk oda, geçiş alanı) ve yoldaki araç (`vehicle`). Veride iki tablo (zorunlulukları farklı: dolabın deposu zorunlu, aracınki değil), ekranda tek liste + tür süzgeci — operatörün sorusu "hangi noktalarım var", tablo ayrımı değil
+- **Alanın türü bir etiket değil bir BEKLENTİDİR** ve ürünün saklama rejimiyle (`product_storage_type`) bilerek aynı kelimeleri kullanır: "donuk ürün donuk alanda durur" cümlesi ancak iki taraf aynı dili konuşursa kurulabilir. Mal kabul uyumsuzluğu **uyarır, engellemez** — dondurucu bozulunca malı geçici başka alana koymak meşru bir karardır
+- **Beklenen aralık** (ör. `−20 … −18`) sapmanın birincil ölçütüdür; yoksa noktanın kendi alışkanlığı kullanılır ve örneklem azken **susar**. Boş bırakmak geçerli bir karardır: beklentisi olmayan bir raf için uydurulmuş aralık, ölçülmeyen bir eşiği ölçülmüş gibi gösterir
+- **Günde beklenen ölçüm sayısı** takvimin "eksik gün" ölçütüdür. **`0` bir kaçış değil bir cevaptır** — oda sıcaklığı rafından günlük ölçüm beklenmez ve o noktanın boş günlerini eksik saymak, denetimi gerçek eksiklere kör eden bir gürültü üretirdi
+- **Hijyen takvimi** — noktaya tıklanınca son 1/2/3 **takvim ayı** açılır (kayan gün değil: yarısı kesilmiş bir ay kutusu okuyanı "gerisi nerede" diye düşündürür). Gün kutusu dört şey söyler: tur tam · sapma · yarım tur · ölçülmedi. Üstüne gelince o günün ölçümleri saat + dereceyle okunur
+- **Eksik gün KIRMIZI DEĞİL, boş.** Tesisin çalışma günü tanımı veride yok; pazarları kırmızıya boyamak her hafta yalancı alarm üretirdi. Renk suçlamaz, boşluk gösterir — sayacı bölümün üstünde yazılı
+- **Ölçüm YALNIZ BUGÜNE yazılır** (kullanıcı kararı 17.08). Hijyen defterine sonradan kayıt düşmek defteri denetimde değersiz kılar: **boş bir gün dürüsttür, sonradan doldurulmuş bir gün değildir.** Geçmiş gün salt okunur ve ekran bunu söyler — sessizce engellenen bir kural, arayüzü bozuk gösterir
+- **Web'deki yazma YÖNETİCİNİNDİR.** Sahadaki günlük ölçüm native uygulamanın işi (dolabın önünde, ayakta, tek elle); operasyon web'i masaüstü-yalnız. Bu bölüm bir denetim görünümüdür, günlük tur ekranı değil
+- **Silme yok, susturma var** — kayıtlı nokta veritabanında zaten silinemez (`restrict`) ve silinebilseydi denetim geçmişi sahipsiz kalırdı
 
 ### Bağlı personel (okunur)
 
@@ -99,7 +114,8 @@ Karne **SAYAR, listelemez**: her sayı Stok ekranına o depo bağlamıyla giden 
 - **Kapatma / yeniden açma** — kapatma öncesi sonuçlar açıkça gösterilir ve onay istenir
 - Kargo çıkış rolünü işaretleme/kaldırma (ret hâli §4'te)
 - **Bölge ekleme/düzenleme/pasifleştirme** — teslim günleri + posta kodları; kod ekleme/çıkarma **haritadan tıklayarak** (asıl yol) ya da listeden (§2 harita bloğu)
-- **Talep tablosundan bölgeye geçiş** — bir koda "bölgeye ekle" demek onu haritadaki/listedeki bölge kurulumuna taşır; kararın verildiği yerden uygulandığı yere tek adım
+- ~~**Talep tablosundan bölgeye geçiş**~~ → tablo bu sayfadan kalkınca (17.08) aksiyon da kalktı; aynı adım bugün Teslimat & Rota haritasında, mor noktaya tıklayarak
+- **Ölçüm noktası ekleme/düzenleme/pasife alma** ve **bugüne sıcaklık yazma** — nokta bölümünden
 - Karnedeki bir sayıdan Stok'a geçiş (bağlam o depoya alınmış hâlde)
 - Personele (Ayarlar), gün planına (Teslimat) geçiş
 
@@ -130,7 +146,7 @@ Gidilen: **Stok** (karneden — bağlam o depoya alınır: seviyeler, hareketler
 - Personel rolü/kapsamı burada atanmaz (Ayarlar'ın işi); gün planı ve kurye ataması burada yapılmaz (Teslimat'ın işi) — bölge TANIMI burada, bölgenin GÜNLÜK kullanımı orada
 - **Kasa hesabı burada açılmaz** — her depo bir kasadır ama hesap Para ekranının nesnesidir; bu sayfa para hareketi göstermez (risk TUTARI bir hareket değil, bir ölçüdür)
 - Vergi/KDV kuralı burada tanımlanmaz — ülke bir beyandır, kural ayarlardadır
-- Depo içi raf/konum yapısı burada tanımlanmaz — konum partinin alanıdır (depo İÇİ çözünürlük), tesisin değil
+- ~~Depo içi raf/konum yapısı burada tanımlanmaz — konum partinin alanıdır (depo İÇİ çözünürlük), tesisin değil~~ → **BU KURAL ÇEVRİLDİ (17.08, kullanıcı isteği).** Yanlış olan tarafı "konum partinin alanıdır" cümlesiydi: konum partide **serbest metin** olarak duruyordu ve üç şeyi birden bozuyordu — `Dolap 1` ≠ `Dolap-1` diye geçmiş bölünüyordu, sapma uyarısı o bölünen geçmişe dayanıyordu, ve en ağırı **ölçülmeyen tespit edilemiyordu** (var olduğu bilinmeyen bir dolabın eksik ölçümü de bilinemez). Alan bir TANIM olunca sahibi de belli oldu: dolap tesisin künyesidir, partinin değil — parti ona *bağlanır*. Kuralın koruduğu şey ("burada mal hareketi olmaz") aynen duruyor: bu sayfa alanı tanımlar, içindeki malı listelemez
 
 ## 7. Web / mobil notları (yalnız işlevsel)
 
