@@ -7,7 +7,7 @@ import {
   statusAfterCustomerReply,
   statusAfterStaffReply,
 } from '@lezzet/domain-core';
-import { ringTicketBell } from '@lezzet/application';
+import { ringTicketBell, translateTicketMessageNow } from '@lezzet/application';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
 import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
@@ -132,7 +132,8 @@ export async function replyAsCustomer(input: {
   attachments?: string[];
 }): Promise<TicketWriteResult<TicketMessage>> {
   if (input.body.trim().length === 0) return { ok: false, reason: 'empty_body' };
-  const service = new TicketService(serviceDb());
+  const db = serviceDb();
+  const service = new TicketService(db);
   const ticket = await service.getById(input.ticketId);
   // Başkasının talebine yazılamaz — ve "yok" ile "senin değil" ekrana aynı cümleyi kurar.
   if (!ticket || ticket.customerId !== input.customerId) return { ok: false, reason: 'not_found' };
@@ -147,6 +148,9 @@ export async function replyAsCustomer(input: {
     attachments: input.attachments,
     newStatus: statusAfterCustomerReply(ticket.status),
   });
+  /* Çeviri GÖNDERİM ANINDA (17.08) — operatör bu mesajı ilk görüşte Türkçe okusun; künyesi
+     `translateTicketMessageNow`da. Düşerse mesaj yine yazılmıştır, satır kuyrukta kalır. */
+  await translateTicketMessageNow(db, message);
   return { ok: true, data: message };
 }
 
@@ -163,7 +167,8 @@ export async function replyAsStaff(input: {
   attachments?: string[];
 }): Promise<TicketWriteResult<TicketMessage>> {
   if (input.body.trim().length === 0) return { ok: false, reason: 'empty_body' };
-  const service = new TicketService(serviceDb());
+  const db = serviceDb();
+  const service = new TicketService(db);
   const ticket = await service.getById(input.ticketId);
   if (!ticket) return { ok: false, reason: 'not_found' };
 
@@ -175,6 +180,11 @@ export async function replyAsStaff(input: {
     attachments: input.attachments,
     newStatus: statusAfterStaffReply(ticket.status),
   });
+
+  /* ÇEVİRİ HABERDEN VE ZİLDEN ÖNCE (kullanıcı bulgusu 17.08) — kullanıcının bildirdiği arıza tam
+     burada doğuyordu: operatör Türkçe yazıyor, müşteri mesajı önce Türkçe görüyor, ekrandan çıkıp
+     girince Fransızcaya dönüyordu. Künyesi `translateTicketMessageNow`da. */
+  await translateTicketMessageNow(db, message);
 
   // Haber SESSİZ gider (16.4): sağlayıcı düştü diye operatörün yazdığı cevabı geri almak yanlış
   // olurdu. Talep taze okunur — cevap durumu değiştirmiş olabilir.

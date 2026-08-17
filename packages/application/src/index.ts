@@ -113,6 +113,11 @@ export type {
 // cron'unda yazılıyor ve personel cevabıyla AYNI maili doğurmalı. AI çekirdeği de burada — web'in
 // "Taslak öner" düğmesi ile backend'in destek turu aynı kapıyı çağırır.
 export { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './ticket/notify';
+// Gönderim anında çeviri — kuyruğu beklemeden, zilden ÖNCE (gerekçe dosya başlığında).
+export { translateTicketMessageNow } from './ticket/translate';
+// Tek metnin çevirisi — kuyruğun ve gönderim anının ortak kapısı.
+export { translateUserText } from './translate/user-text';
+export type { TranslatedUserText, TranslateUserTextResult } from './translate/user-text';
 export {
   generateConversationDraft,
   generateTicketDraft,

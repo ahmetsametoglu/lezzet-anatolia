@@ -8,6 +8,7 @@ import type { CustomerOrderLookup } from '../order/customer-orders';
 import { ringTicketsBell } from '../realtime/bell';
 import { getCustomerTicket } from './read';
 import type { CustomerTicketView } from './ticket-types';
+import { translateTicketMessageNow } from './translate';
 
 /*
   MÜŞTERİ TALEP YAZIMI — terfi 21.14. Kaynağı `apps/web/lib/ticket/write.ts`in müşteri yarısıdır;
@@ -228,13 +229,18 @@ export async function replyToCustomerTicket(
     return { status: 'attachment_not_yours' };
   }
 
-  await service.reply({
+  const written = await service.reply({
     ticketId: ticket.id,
     sender: 'customer',
     body,
     attachments: input.attachments ? [...input.attachments] : undefined,
     newStatus: statusAfterCustomerReply(ticket.status),
   });
+
+  /* ÇEVİRİ ZİLDEN ÖNCE (17.08) — ve yön burada TERS: müşteri Fransızca yazıyor, operatör Türkçe
+     okuyor. Kırpışma iki yüzeyde de aynı arızadır (kapının künyesi); yalnız birini düzeltmek,
+     ötekini "bir gün de o yaşanır" diye bırakmak olurdu. */
+  await translateTicketMessageNow(db, written);
 
   // Müşterinin mesajı YAZILDI — kuyruğu izleyen operatör ekranı zili duyup sunucudan yeniden
   // istesin (16.8). Kullanıcının istediği asıl akış budur: mobilden yazılan mesaj, açık duran

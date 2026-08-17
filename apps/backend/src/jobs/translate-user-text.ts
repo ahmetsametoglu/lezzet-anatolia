@@ -1,8 +1,8 @@
-import { runTask, translateTask, type AiModel, type TranslateInput } from '@lezzet/ai';
+import { type AiModel, type TranslateInput } from '@lezzet/ai';
+import { translateUserText } from '@lezzet/application';
 import { ProductFeedbackService, TicketMessageService, UserProfileService, serviceDb } from '@lezzet/database';
-import { buildTranslationBag } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { PreferredLanguage, TranslationBag } from '@lezzet/types';
+import type { TranslationBag } from '@lezzet/types';
 
 export const TRANSLATE_USER_TEXT = 'translate_user_text';
 
@@ -97,7 +97,10 @@ export async function translateUserTextJob(
         continue;
       }
 
-      const res = await runTask(translateTask, { text: metin, kind: source.kind }, opts.model ? { model: opts.model } : {});
+      /* Çeviri kapısı `@lezzet/application`ta ve bu terfi bilinçli (17.08): aynı üç adımı
+         (modeli çağır → kaynak dili ayır → torbayı kur) gönderim anındaki çeviri de yapıyor.
+         İkinci nüsha, bir gün birinin torbayı başka kurması demekti (`CLAUDE §1`). */
+      const res = await translateUserText(metin, source.kind, opts.model ? { model: opts.model } : {});
 
       if (!res.ok) {
         // **Yapılandırma eksikse damga ATILMAZ ve bu kritik:** anahtarsız bir kurulumda her satırı
@@ -118,10 +121,9 @@ export async function translateUserTextJob(
         continue;
       }
 
-      const { sourceLanguage, ...ceviriler } = res.data;
       await source.save(row.id, {
-        language: sourceLanguage,
-        translations: buildTranslationBag(sourceLanguage, ceviriler as Record<PreferredLanguage, string>),
+        language: res.data.language,
+        translations: res.data.translations,
         translatedAt: new Date().toISOString(),
       });
       sonuc.translated! += 1;

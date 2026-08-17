@@ -3335,12 +3335,56 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   simülatöre dokunuş sentezlenemiyor (`osascript` erişilebilirlik izni yok; Swift/`CGEvent` ile
   gönderilen tıklamayı simülatör almıyor). Açık hâli kullanıcının gözlemiyle doğrulandı, kareyle
   değil. (b) **Zil cihazda çalınmadı** — gerçek testi ekran açıkken operasyondan cevap yazmaktır.
-  (c) **Gönderim anında çeviri yazılMADI.** Kullanıcı bulgusu: operasyon Türkçe yazıyor, müşteri
-  mesajı önce Türkçe görüyor, ekrandan çıkıp girince Fransızca oluyor — *"biz bunun bu şekilde
-  olmasını istemiyoruz."* Karar verildi (**çeviri GÖNDERİRKEN yazılsın**) ama iş bu commit'te YOK:
-  ortak bir "şimdi çevir" kapısı `packages/application/src/ticket/` altına açılıp hem operatör hem
-  AI cevabı oradan geçecek, çeviri düşerse kaydedilmiş cevap ENGELLENMEYECEK (arka plan işi telafi
-  eder). Sıradaki kalem bu.
+  ~~(c) **Gönderim anında çeviri yazılMADI.**~~ → **(21.69)'da yazıldı.**
+
+- [x] (21.69) **TALEP MESAJI GÖNDERİM ANINDA ÇEVRİLİYOR — kuyruk beklenmiyor (kullanıcı kararı 17.08)**
+  `touches:` `packages/application/src/translate/user-text.ts` ·
+  `packages/application/src/ticket/translate.ts` · `packages/application/src/ticket/{ai.ts,write.ts}` ·
+  `packages/application/src/index.ts` · `apps/web/lib/ticket/write.ts` ·
+  `apps/backend/src/jobs/translate-user-text.ts`
+
+  Kullanıcı bulgusu: *"Operasyon tarafından Türkçe mesaj atıyorum fakat kullanıcının dili Fransızca;
+  mesaj başta Türkçe geliyor, mesajlaşmadan çıkıp girdiğim zaman Fransızca olarak göstermeye
+  başlıyor — biz bunun bu şekilde olmasını istemiyoruz."*
+
+  **SEBEP HATA DEĞİL, ZAMANLAMAYDI.** Çeviri yalnız kuyrukta koşuyordu (`translate_user_text`, 20.2 —
+  tur başına en fazla 20 satır) ve okuma ondan önce yapılıyordu. Yani ekran "yanlış dil" göstermiyor,
+  ÇEVİRİSİ HENÜZ OLMAYAN satırı gösteriyordu; ikinci girişte kuyruk koşmuş oluyordu. Kırpışmanın
+  tarifi buydu.
+
+  **ÇÖZÜM: SIRA — yaz → çevir → haber ver.** Karşı tarafın ekranını uyandıran şey zil olduğu için,
+  çeviri zilden ÖNCE satıra yazılırsa okuyan taraf mesajı İLK GÖRÜŞTE kendi dilinde görür. Zili öne
+  almak aynı kırpışmayı bir kez daha üretirdi. Aynı sıra maili de düzeltiyor: `notifyTicketReplied`
+  artık çevrilmiş satırı okuyor.
+
+  **DÖRT YAZICININ DÖRDÜ DE geçiyor** (personel · AI · müşteri-web · müşteri-mobil) ve bu bilinçli:
+  kırpışma iki yönde de aynı arızadır — müşteri Fransızca yazıyor, operatör Türkçe okuyor. Yalnız
+  bildirilen yönü düzeltmek, ötekini "bir gün o da yaşanır" diye bırakmak olurdu. **Bedeli gönderenin
+  beklemesidir** (bir model turu): gönderen kendi cümlesini zaten kendi dilinde okuduğu için ona
+  faydası yok, fayda tamamen KARŞI tarafındır. Rahatsız ederse müşteri yönü arka plana alınabilir —
+  ama o zaman operatör kırpışmayı görmeye devam eder.
+
+  **ÇEVİRİ DÜŞERSE MESAJ DÜŞMEZ.** Kapı fırlatmaz, hiçbir şeyi geri almaz ve **damga da atmaz**
+  (`translatedAt` boş kalır) — satır çeviri kuyruğunda durmaya devam eder, arka plan işi telafi eder.
+  Yani en kötü hâlde davranış bugünküne geri döner, daha kötüsüne değil. Kaydedilmiş bir cevabı
+  çevirisi olmadı diye reddetmek en kötü sonuç olurdu: operatör gönderdim sanır, müşteri hiç görmez.
+
+  **NÜSHA AÇILMADI, TERFİ EDİLDİ.** "Modeli çağır → kaynak dili ayır → torbayı kur" üçlüsü cron'un
+  içinde gömülüydü; ikinci çağıran çıkınca `packages/application/src/translate/user-text.ts`e taşındı
+  ve **cron da oradan okuyor** (`CLAUDE §1`). Kuyruk ile gönderim anının kararı GERÇEKTEN farklı
+  olduğu için ayrık kaldı: kuyruk düşen satırı damgalayıp sırayı açar, gönderim anı damgalamaz.
+
+  **Doğrulama:** `tsc` · `lint` · `knip` temiz (knip'te yeni ölü kod yok).
+  **Tam paket 2707/2708 — bir test düştü ve BENİM DEĞİL, ölçüldü:**
+  `packages/database/src/services/analytics.test.ts` günlük özetten doğrulama yapıyor, özet ise bütün
+  oturumları topluyor. O gün `/catalog · b2c · search` için başkasına ait **11 olay** vardı
+  (`3270e2055b…` — testin `test-<damga>` anahtarı değil, hash'li gerçek bir gezinme oturumu); testin
+  kendi 3 olayı onlarla birleşip 14 oldu. `CLAUDE §4b`nin yasakladığı küresel sayı. Aynı paket bugün
+  daha önce iki kez 2708/2708 geçti. Alan arka-uçta, not bırakıldı
+  (`docs/talep/not-arka-uc-analytics-testi-kuresel-sayiya-bakiyor.md`).
+
+  *Durum:* **CİHAZDA ÖLÇÜLMEDİ** — gerçek testi operasyondan Türkçe cevap yazıp müşteri ekranında
+  ilk görüşte Fransızca belirmesini görmektir. `BEKLEYEN(21.68)`'in (b) maddesiyle aynı tur.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
