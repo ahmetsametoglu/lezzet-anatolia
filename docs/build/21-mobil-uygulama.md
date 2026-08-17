@@ -3604,8 +3604,17 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `typecheck` 18/18 · `lint` · `knip` temiz · **1374 birim testi** geçti. İndeks
   bölünmesi veritabanında rollback'li işlemle sınandı: ödül (+100) ve geri alma (−100) aynı üçlüyle
   yazıldı, **ikinci geri alma `23505` ile reddedildi** — yani çifte silme koruması uygulama katmanı
-  atlansa bile ayakta. Cihaz turu yapılmadı (cihaz bağlı değil, kullanıcı bildirimi 17.08);
-  ekranın görsel doğrulaması cihaz döndüğünde.
+  atlansa bile ayakta. ~~Cihaz turu yapılmadı~~ → **CİHAZDA DOĞRULANDI (17.08 akşamı, üç dilde).**
+  Bakiye satırı, "yolda" bloğu ve iptal etiketi kareyle görüldü; kazanç ile iptal **ayrı satır**
+  çıktı (gruplama düzeltmesinin kanıtı — eskiden tek satırda `+0` olacaktı) ve bakiye bekleyen
+  ödülü içermedi. Doğrulama için deftere ödül+geri alma çifti ve bir komşu daveti kuruldu, tur
+  sonunda temizlendi. **Yan bulgu:** Almanca turda `MEİN KONTO` görüldü — eyebrow'lar sabit Türkçe
+  yerelle büyütülüyor ve desen 17 dosyada; **MB-71** açıldı.
+
+  **Cihaz turunun kendi dersi ikinci kez üretildi:** giriş ilk denemede `403 One-time token not
+  found` ile düştü, auth kütüğünde aynı saniyede test fixture'ının `user_deleted` kaydı vardı;
+  koşu bitip yığın sakinleşince aynı düğme çalıştı. `(21.71)`de kanıtlanan desen artık tekrar
+  üretilebilir — **yığın test koşarken cihazda giriş yapılamıyor.**
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

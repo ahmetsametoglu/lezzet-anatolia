@@ -100,6 +100,7 @@ müdahale yok).
 | `/(tabs)/account` | 17.08 | geçti | puan kartı (10 puan · eşik 500 · `Encore 490`), davet kodu, menü, adres defteri, dil/yazı boyutu çipleri ve pazarlama anahtarları doğru. İki bulgu: kimlik kartında **e-posta iki kez** (**MB-66**), puan geçmişi ekranı toplamsız ve çağrısız (**MB-67**) |
 | `/checkout` · `/checkout/confirmed` | | | |
 | `/orders` · `/order/[reference]` | 17.08 | **geçti — 17.08 sabahki ŞÜPHE ÇÜRÜTÜLDÜ** | Ekran girişli açıldı, misafir duvarı YOK; boş hâl doğru (*"Aucune commande pour l'instant"* + katalog çağrısı). Sabahki "oturum misafire düşüyor" gözlemi ekranın kusuru değildi: o saatlerde başka bir şerit tam test paketini koşuyordu ve her `generateLink` cihazın tek kullanımlık jetonunu geçersiz kılıyordu (aynı kök: görev `(21.71)`). Yığın sakinken desen üretilemedi |
+| `/points-history` | 17.08 | geçti | **`(21.73)` cihazda doğrulandı, üç dilde:** bakiye satırı (`Votre solde · Bakiyeniz · Ihr Guthaben`), "yolda" bloğu (`Claire a commandé — 100 points…`) ve **kazanç ile iptalin AYRI satır** olması (`Komşu daveti +100` · `Komşu daveti — iptal edildi −100`; eskiden tek satırda `+0` görünecekti). Bakiye bekleyen ödülü içermiyor — doğru. Bulgu: eyebrow üç dilde de Türkçe yerelle büyütülüyor → `MEİN KONTO` (**MB-71**) |
 | `/feedback/[token]` | | | |
 | `/support` (üç rota) | 17.08 | talep listesi geçti | Girişli açıldı (burada da misafir duvarı yok), boş hâl doğru. Bulgu: boş hâlde **aynı işi yapan iki çağrı iki ayrı isimle** — üstte `+ Nouvelle`, ortada `Écrivez-nous` (**MB-68**) |
 | `/professionals` | | | |

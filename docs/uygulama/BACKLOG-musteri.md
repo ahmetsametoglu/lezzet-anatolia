@@ -1173,6 +1173,23 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   düzeltilen *"durum İKİ kez yazılıyordu"* kusurunun aynısı — alt çubuk sabit olduğu için asıl
   aday karttaki kopyayı kaldırmak.
 
+- [ ] **MB-71 · Başlık üstü etiketler SABİT Türkçe yerelle büyütülüyor — Fransızca ve Almanca'da
+  noktalı `İ` çıkıyor.** Ölçüldü (17.08, cihazda üç dilde): `toLocaleUpperCase('tr-TR')` yereli
+  koda gömülü ve **17 dosyada** aynı desen var (vitrin · katalog · ürün detayı · kasa · siparişler
+  · paketler · hesap · puan geçmişi …). Türkçe'de doğru (`i → İ`), ama öteki iki dilde yanlış:
+  ekranda görülenler **`MEİN KONTO`** (de — olması gereken `MEIN KONTO`) ve **`COLLECTİONS`**
+  (fr — olması gereken `COLLECTIONS`).
+
+  Türkçe yerelin oraya konması bilinçliydi ve gerekçesi geçerli: JavaScript'in varsayılan
+  büyütmesi Türkçe `i`yi noktasız `I` yapar, yani Türkçe yüzeyde `İSTANBUL` yerine `ISTANBUL`
+  çıkardı. Eksik olan şey yerelin SABİT yazılması — ekran zaten `useAppLocale()` ile hangi dilde
+  olduğunu biliyor. Doğru biçim büyütmeyi o yerelle yapmak; tek satırlık bir yardımcıya toplanırsa
+  (`helper`/`customer-kit`) 17 çağıran da tek yerden düzelir ve kural bir daha kopyalanmaz
+  (CLAUDE §1).
+
+  *Bulgunun çıkışı:* puan geçmişi ekranının Almanca turunda `MEİN KONTO` görüldü; desen aranınca
+  yüzeye yayılmış olduğu ortaya çıktı. Yani tek ekranın kusuru değil, ortak bir kalıbın kusuru.
+
 - [ ] **MB-70 · BAN öneri listesi 4+ sonuçta son satırı kırpıyor.** Ölçüldü: dört öneri dönünce
   sonuncusunun şehir satırı yarım kalıyor ve üstüne kaynak künyesi (*"Base Adresse Nationale…"*)
   biniyor; `Enregistrer` düğmesi de listenin altında eziliyor. İki öneride sorun yok. Liste ya
