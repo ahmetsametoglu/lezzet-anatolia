@@ -1059,11 +1059,34 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
 
 ## 7. İçerik ve dil
 
-- [ ] **MB-31 · Katalog Türkçe yüzeyde tamamen İngilizce ve toptancı dilinde.** Ölçülen örnekler:
-  *"Artisan Lemon Cake"*, *"Assorted Baklava"*, *"12-slice frozen profiterol cake … Dark chocolate
-  horeca dessert, wholesale supply and private label"*, *"Ideal for retail and small horeca use"*.
-  Bunlar tedarikçi/B2B metinleri; müşteri yüzeyinde görünüyor. **Kaynağı veri mi çeviri düşüşü mü
-  ölçülmedi** — önce o ölçülmeli, sonra karar (katalog çevirisi mi, yedek dil kuralı mı).
+- [ ] **MB-31 · ~~Katalog Türkçe yüzeyde tamamen İngilizce ve toptancı dilinde.~~ → ARTIK
+  ÜRETİLMİYOR; ölçüm TERS YÖNDE bir açık gösterdi (17.08).**
+
+  Eski kayıt İngilizce/B2B metinlere işaret ediyordu (*"Artisan Lemon Cake"*, *"…wholesale supply and
+  private label"*) ve *"kaynağı veri mi çeviri düşüşü mü ölçülmedi"* diyordu. **Ölçüldü, veriydi ve
+  düzelmiş** — katalog o tarihten sonra yeniden kuruldu: 127 ürünün **hepsinde** Türkçe ad var,
+  Türkçe açıklamalarda `wholesale|horeca|private label|retail|frozen|dessert|supply` kalıplarına
+  **0 eşleşme**. Örnek: *"Tereyağlı çıtır yufka ve uzayan peynir dolgusuyla, altı dilim hâlinde
+  dondurulmuş."* Eski gövde bu yüzden üstü çizili; bir daha "katalog İngilizce" diye açılmasın.
+
+  **AÇIK KALAN, TERS YÖNDEKİ AÇIK — MÜŞTERİ YÜZEYİ ASLEN FRANSIZCA ama Fransızcası olmayan satırlar
+  var.** Yerel katalogda ölçülen: 4 üründe Fransızca ad yok (`Humus` · `Peynirli Adana Böreği` ·
+  `San Sebastian Cheesecake` · `Sebzeli Kalzone`), 3 üründe Fransızca **açıklama** yok
+  (`Çikolatalı Sufle` · `Özel Künefe` · `Tabaklı Şerbetli Künefe`). *(Sayılar YEREL veriden ve yerel
+  veri sahtedir — burada iş çıkarımı değil, ALANIN BOŞ OLABİLDİĞİ gerçeği kanıtlanıyor.)*
+
+  **Asıl karar KODDA ve o veriden bağımsız:** `resolveLocalizedText` yedek zinciri
+  **seçili → TR → FR → DE** (`packages/types/src/primitives/localized-text.schema.ts:43`). Yani
+  Fransızca eksikse Fransız müşteri **sessizce Türkçe** görüyor — hiçbir işaret yok. Talep
+  mesajlarında bunun karşılığı var (*"Traduit automatiquement"*), katalogda yok.
+  **KARAR VERİLDİ (kullanıcı kararı 17.08): katalog metinleri de ÇEVİRİ KUYRUĞUNA girsin.** Motor
+  zaten var (`translateUserText`) ve talep mesajlarında çalışıyor; eksik dil kendiliğinden dolar.
+  Yedek zincir SÖKÜLMEZ — çeviri gelene kadar geçen sürede tek koruma odur, ve bir metin hiç
+  gelmezse boş ekran göstermek Türkçe göstermekten kötüdür. İşaretli yedek (b) seçilmedi: kalıcı
+  çözüm varken kusuru görünür kılmakla yetinmek olurdu.
+
+  **Yan bulgu (alan: arka-uç/denetim):** `product` tablosunda damgalı bir test fikstürü duruyor —
+  `İçli köfte 1786922725238`. Teardown'dan kaçmış; katalog okuyan her ekranda görünür.
 
 - [ ] **MB-32 · Süresi dolmuş davet ile bozuk bağlantı aynı cümleyi alıyor:** *"bağlantı eksik ya
   da eskimiş olabilir"*. Süresi dolmuş davete kendi cümlesi gerekiyor.

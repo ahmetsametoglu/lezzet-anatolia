@@ -3334,7 +3334,10 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   *Durum:* **ÜÇ PARÇA AÇIK.** (a) Klavye AÇIKKEN yeni yerleşimin karesini kendim alamadım —
   simülatöre dokunuş sentezlenemiyor (`osascript` erişilebilirlik izni yok; Swift/`CGEvent` ile
   gönderilen tıklamayı simülatör almıyor). Açık hâli kullanıcının gözlemiyle doğrulandı, kareyle
-  değil. (b) **Zil cihazda çalınmadı** — gerçek testi ekran açıkken operasyondan cevap yazmaktır.
+  değil. ~~(b) **Zil cihazda çalınmadı**~~ → **ÇALINDI VE ÖLÇÜLDÜ (17.08, OPPO CPH1907):** ekran
+  açıkken `replyAsStaff` gerçek kapısından personel cevabı yazıldı; yazışma **cihaza hiç dokunmadan**
+  kendiliğinden tazelendi ve yeni baloncuk belirdi. Yani abonelik · kanal adı · sunucudaki zil
+  çağrısı üçü de çalışıyor.
   ~~(c) **Gönderim anında çeviri yazılMADI.**~~ → **(21.69)'da yazıldı.**
 
 - [x] (21.69) **TALEP MESAJI GÖNDERİM ANINDA ÇEVRİLİYOR — kuyruk beklenmiyor (kullanıcı kararı 17.08)**
@@ -3383,8 +3386,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   daha önce iki kez 2708/2708 geçti. Alan arka-uçta, not bırakıldı
   (`docs/talep/not-arka-uc-analytics-testi-kuresel-sayiya-bakiyor.md`).
 
-  *Durum:* **CİHAZDA ÖLÇÜLMEDİ** — gerçek testi operasyondan Türkçe cevap yazıp müşteri ekranında
-  ilk görüşte Fransızca belirmesini görmektir. `BEKLEYEN(21.68)`'in (b) maddesiyle aynı tur.
+  **CİHAZDA ÖLÇÜLDÜ (17.08, OPPO CPH1907) — üç iddia tek karede.** Müşterinin dili `fr`; `replyAsStaff`
+  gerçek kapısından **Türkçe** cevap yazıldı (`Kargo numaranız hazır: paketiniz bu akşam yola
+  çıkıyor.`). Ekran açıkken, **cihaza hiç dokunmadan**: (1) baloncuk kendiliğinden belirdi — zil
+  çalışıyor; (2) **ilk görüşte Fransızca** geldi (`Votre numéro de suivi est prêt : votre colis part
+  ce soir.`) — kırpışma yok, Türkçe hiç görünmedi; (3) "Traduit automatiquement" işareti yerinde —
+  okuma yolu çeviriyi kullanıyor. Veritabanında da doğrulandı: `language='tr'`, `translated_at`
+  damgalı, `translations->>'fr'` dolu. **Personel cevabının tamamı 2382 ms** (çeviri turu dahil) —
+  gönderenin ödediği bedelin ölçüsü budur.
+
+  *Durum:* Ölçüm betiği `server-only`yi aşmak için Node'un `react-server` koşuluyla koştu; o koşulda
+  `react-dom/server` yüklenemediği için **cevap MAİLİ üretilemedi** ve hata yakalandı. Bu ölçüm
+  aracının yan etkisi, ürünün kusuru DEĞİL — mail yolu normal sunucuda çalışıyor; yine de mail
+  tarafı bu turda ölçülmemiş sayılır. Yerel talep yazışmasına iki gerçek cevap yazıldı (ölçümün
+  kendisi), silinmedi.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
