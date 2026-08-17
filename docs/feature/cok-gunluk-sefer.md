@@ -64,6 +64,107 @@ Bu, çok günlü turun en zor parçasıdır ve panelin ilk diliminde **zaten yap
 ertelenirken bedava bir hazırlık birikiyor. Kesim depo eksenine bağlanmış olsaydı çok günlü tur hiç
 ifade edilemezdi.
 
+### 5a. Rotaya yazılan kesim sipariş akışına ULAŞMIYORDU — KAPANDI (17.08)
+
+**Açık neydi.** Ayar ekranı ve panel kesimi rota kapsamıyla okuyordu, ama sipariş kararını veren iki
+yol küresel satırı okuyordu — kapsam bağlamı (`{ zoneId }`) hiç geçirilmiyordu:
+
+| Yer | Ne etkiliyordu |
+| --- | --- |
+| `packages/application/src/order/delivery.ts` | Müşterinin checkout'ta gördüğü teslim günleri (web **ve** mobil — ikisi de bu ortak kütüphaneden besleniyor) |
+| `apps/web/…/deliveries/dispatch-read.ts` | Gün planında "liste kesinleşti mi" + siparişin taşınabileceği günler |
+| `packages/application/src/customer/neighbor.ts` | Komşu davetinin *"bu sefere yetişirsin"* cümlesi |
+
+Sonucu: operatör rota rayından kesimi yazıyor, panel onu gösteriyor, **müşteri küresel saate göre gün
+seçiyordu.** Açık kullanıcı isteğiyle bu turda kapandı; kullanıcının gözlemi de doğrulandı — *"ikisi
+de sefer tarihlerini aynı yerden [alıyor], ortak kütüphaneyi düzelttiğin zaman bu konu düzelecektir."*
+Mobil `availableDates`i `resolveDelivery` üzerinden alıyor, yani tek düzeltme ikisini birden kapattı.
+
+**Nasıl kapandı:**
+- `delivery.ts`: kesim okuması `Promise.all`dan çıkarılıp **bölge çözümünden sonraya** taşındı ve
+  `{ zoneId }` ile okunuyor. Sıra şart çünkü kapsamı geçirmek için hangi rotaya düşüldüğünü bilmek
+  gerekiyor. **Kargo yolunda artık hiç okunmuyor** — orada kesim kavramı yok, yani bir sorgu da düştü.
+- `dispatch-read.ts`: `readDayHours` ile rota başına okuma; `moveDates` her rotaya kendi penceresini
+  veriyor. "Liste kesinleşti mi" artık **her rota kapandıysa** doğru (en erken kesime bakmak, hâlâ
+  büyüyen bir listeyi "kesin" diye okuturdu) ve kararı motor veriyor (`deliveryRunWindow`) — eskiden
+  burada elle bir saat karşılaştırması vardı ve künyesi *"motorun mantığının aynısı"* diyerek kopya
+  olduğunu kendisi söylüyordu.
+- `neighbor.ts`: `runWindowOf` artık `zoneId` alıyor; yerel `CUTOFF_KEY`/`CUTOFF_DEFAULT` kopyaları
+  silinip `domain-core` sabitlerine bağlandı.
+
+### 5b. Kullanıcının kesim kuralı (17.08) — GÜNÜ SAAT BELİRLER
+
+Kullanıcı 23:59 sabitlemesinden vazgeçip şu kuralı önerdi:
+
+> Kesim **hazırlık kapanışından önceyse** → **aynı günün** saati (bugün 10:00'a kadar sipariş →
+> bugün teslim). Kesim **hazırlık kapanışından sonraysa** → **önceki günün** saati (dün 16:00'a
+> kadar sipariş → bugün teslim).
+
+Yani "hangi gün" ayrı bir ayar değil, kesim saatinin hazırlık saatiyle karşılaştırmasından türüyor.
+
+**Kavram ayrımı — kullanıcının düzeltmesi (17.08).** Bir ara *"kesimi öne çekmek teslimat takvimini
+kaydırır"* diye yazılmıştı; kullanıcı bunu düzeltti ve düzeltme kuralın kendisini netleştiriyor:
+
+- **Teslim günleri rotanın `weekdays`inden gelir ve kesime HİÇ bakmaz.** Hazırlık · çıkış · kapanış
+  hep **teslim gününün** saatleridir — kullanıcının cümlesi: *"teslim günlerinin referansı hazırlık
+  ve çıkış."* Bu saatleri oynatmak teslim günlerini değiştirmez.
+- Kesimin değiştirdiği şey **müşterinin o an seçebileceği en yakın sefer** — takvim değil, takvimin
+  hangi satırının hâlâ açık olduğu.
+
+**KURAL YAZILDI (17.08) — motor artık bunu uyguluyor.** Değerlendirme ve sonucu:
+
+- **Kod olarak kolaydı ve öyle çıktı:** motorda tek dal (`cutoffBelongsToPreviousDay`), sonra
+  `startOffset = prevDay ? (geçti ? 2 : 1) : (geçti ? 1 : 0)`. `upcomingDeliveryDates` ve
+  `deliveryRunWindow` birer parametre daha aldı (`prepCutoffTime`). Kural fonksiyonu **dışa açık**
+  çünkü ekran da aynı soruyu soruyor (rozet damgası) — iki yerde ayrı hesaplanırsa ekran yanlış damga
+  basar.
+- **Çağıranlar:** `delivery.ts` · `dispatch-read.ts` · `neighbor.ts` üçü de geçiriyor.
+  `warehouses-read.ts` kesimi **bilinçle geçirmiyor** ve künyesi haklı: *"kesim müşterinin SİPARİŞ
+  penceresidir, buradaki soru araç ne zaman çıkıyor — kesim geçince aracın günü değişmez."* Bir tur
+  içinde bunu "tutarsızlık" diye işaretlemiştim, künyeyi okuyunca geri aldım.
+- **Canlı ölçüldü:** kesim 22:00 · hazırlık 11:00 · saat 19:40 → gün planı eskiden *"liste 22:00'a
+  kadar açık"* derdi, şimdi **"liste kesinleşti"** diyor. Aynı veriyle davranış değişti ve doğru
+  yönde. Açıklama cümlesi de düzeltildi: *"kesim saati geçti"* yanlış okunuyordu (22:00 geçmemişti),
+  yerine *"kesim bir gün önce 22:00'da kapandı"*.
+- ⚠ **Kuralın BİRİM NÖBETİ YOK.** Mevcut testler `prepCutoffTime` geçmediği için eski dalda kalıyor
+  ve hepsi yeşil (1374/1374) — yani yeni dal test edilmedi, sessizce bozulabilir. Test kullanıcı
+  istemedikçe yazılmıyor; bu satır o boşluğun kaydı. BEKLEYEN(19.20)
+- **Bugünkü kurulumu bozmuyor:** seed'in rota satırı 10:00, hazırlık 11:00 → aynı gün kalır. Geriye
+  uyum bedava. Bugünkü çelişki (kesim 16:00 > çıkış 14:00) da kendiliğinden "önceki gün 16:00" diye
+  çözülür — yani kural aynı zamanda bir onarım.
+- **Referans doğru seçilmiş:** `prep_cutoff_time` "hazırlık KAPANIŞI"dır; o saatten sonra gelen
+  sipariş o gün için zaten hazırlanamaz. Çıkışı referans almak daha gevşek olurdu.
+- ⚠ **TEK TUZAK: kural gizli, ve sıçraması bir günden büyük olabilir.** Kesimi 10:00'dan 12:00'a
+  çekmek (hazırlık 11:00) iki saatlik bir kaydırmadır ama **bugünün seferini kapatır**: en yakın
+  teslim bir SONRAKİ rota gününe atlar. Rota haftada iki gün çalışıyorsa (Salı/Cuma) bu iki-üç gün
+  demek — yani iki saatlik bir ayar değişikliğinin bedeli üç gün olabilir. Çözüm yeni yüzeyde
+  bedava: rozet sürüklenirken etiketi değişsin — `kesim` → `kesim (dün)`. Operatör 11:00'ı geçtiği
+  anda damgayı görür, kuralı sürükleyerek öğrenir.
+- **Sınır KAPANDI (kullanıcı onayı 17.08):** kesim = hazırlık (11:00 = 11:00) → **aynı gün.** "Sonra"
+  kesin eşitsizlik; kesim tam hazırlığın kapandığı anda kapanıyorsa o sipariş hâlâ o günün listesine
+  girer.
+
+**EKRAN TARAFI YAZILDI (17.08, kullanıcı isteği) — motor beklerken.** Kural henüz `delivery-days`te
+yok ama rota şeridi onu göstermeye başladı: kesim hazırlıktan sonraysa rozet **kırmızıya** dönüyor ve
+içinde **`dün`** yazıyor (*"başka bir güne sarkarsa kırmızıya boyayalım, görsel olarak da belli
+olsun… kesimin yanına içerisinde dün yazabilirsin"*). Üzerine gelince tam cümle, `aria-valuetext`te de
+"önceki gün".
+
+Damganın yanında **bir açık bildirimi** duruyor ve bu bilinçli: *"Kesim hazırlıktan sonra: önceki
+günün saati sayılmalı. Sistem bunu henüz uygulamıyor, bugünün saati sayıyor — kural yazılana dek
+kesimi hazırlıktan önceye çekin."* Damgayı basıp burada susmak, bu turda düzelttiğimiz hatayı
+(olmayan bir güvence vermek) tekrarlamak olurdu. **Kural motorda yazıldığında bu paragraf düşer,
+damga kalır** — ve kırmızı ton da o gün yeniden değerlendirilir (kural varken "başka gün" bir arıza
+değil, sakin bir bilgidir; bugün gerçekten çelişki olduğu için kırmızı doğru işaret).
+
+Ayrıca "akış geri gidiyor" uyarısı artık **kesimi hariç tutuyor**: kesim önceki güne sarkabildiği için
+onun geri gitmesi kuralın kendisi, arıza değil. Uyarı yalnız hazırlık · çıkış · kapanış üçlüsüne
+bakıyor — üçü de tanımı gereği teslim gününün saatleri.
+
+**Bu iş `5a`'daki açıkla BİRLİKTE yapılmalı:** ikisi de aynı dört çağırana dokunuyor ve `5a`
+kapanmadan kural rota bazlı çalışmaz (global kesimle "aynı gün mü önceki gün mü" sorusu rotadan
+bağımsız cevaplanır, yani kural yarım işler).
+
 ## 6. Etki analizi (ölçüldü 17.08 — sayılar tüketici tarafında)
 
 **Şema yükü hafif, tüketici yükü orta.** İlk değerlendirmede "iki kolon yeter" denmişti; tüketiciler

@@ -7,8 +7,16 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { findZoneForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
+import {
+  cutoffBelongsToPreviousDay,
+  deliveryRunWindow,
+  findZoneForPostalCode,
+  ORDER_CUTOFF_KEY,
+  PREP_CUTOFF_KEY,
+  upcomingDeliveryDates,
+} from '@lezzet/domain-core';
 import type { Country, DeliveryZoneWithCodes, Order, OrderStatus } from '@lezzet/types';
+import { readDayHours, type ZoneHours } from '@/lib/settings/day-hours';
 import { shiftDay, toIsoDate } from './deliveries-url';
 import type { DispatchDayView, DispatchStopView, PrepStage } from './dispatch-types';
 
@@ -119,7 +127,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
   const db = serviceDb();
   const now = new Date();
 
-  const [dayOrders, shippingQueue, strandedPage, zones, warehouses, couriers, cutoffTime] = await Promise.all([
+  const [dayOrders, shippingQueue, strandedPage, zones, warehouses, couriers] = await Promise.all([
     new OrderService(db).listByStatus(DAY_STATUSES, { deliveryDate: date }),
     // Kargo GÜN süzgeciyle okunmaz — kargoda `delivery_date` şema gereği null (bkz. `shipping` künyesi).
     new OrderService(db).listByStatus(['ready'], { limit: SHIPPING_QUEUE_LIMIT }),
@@ -132,8 +140,19 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
     new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
     new WarehouseService(db).list(),
     new UserProfileService(db).listByRole('courier'),
-    new SettingsService(db).get<string>('order_cutoff_time', '16:00'),
   ]);
+
+  /**
+   * Eşikler **rota başına** okunuyor (kullanıcı kararı 17.08) — küresel tek saat DEĞİL.
+   *
+   * Eskiden burada `get('order_cutoff_time', '16:00')` vardı: kapsam bağlamı geçmediği için rotaya
+   * yazılan kesim bu ekranda hiç uygulanmıyordu. Sorgu sayısı rota sayısıyla çarpmaz — anahtar başına
+   * tek sorgu (`readDayHours` künyesi).
+   */
+  const hours = await readDayHours(
+    new SettingsService(db),
+    zones.map((zone) => zone.id),
+  );
 
   // Rota günü + kargo kuyruğu + askıdakiler tek küme olarak çözülür (müşteri adı, adet, bölge aynı
   // yoldan geliyor); ayrı ayrı çözmek aynı üç sorguyu üç kez sormak olurdu.
@@ -234,25 +253,60 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
       parcelsUntracked: shippingStops.filter((stop) => !stop.trackingNumber).length,
       stranded: strandedStops.length,
     },
-    cutoff: { time: cutoffTime, settled: isSettledDay(date, cutoffTime, now) },
-    moveDatesByZone: moveDates(zones, cutoffTime, now),
+    cutoff: cutoffView(zones, hours, date, now),
+    moveDatesByZone: moveDates(zones, hours, now),
+  };
+}
+
+/** Bir rotanın iki eşiği — okumanın `ZoneHours`undan ya da rota yoksa küresel satırdan. */
+function thresholdsOf(
+  zoneId: string | null,
+  hours: Awaited<ReturnType<typeof readDayHours>>,
+): { cutoffTime: string; prepCutoffTime: string } {
+  const own: ZoneHours | undefined = zoneId ? hours.byZone.get(zoneId) : undefined;
+  return {
+    cutoffTime: own?.[ORDER_CUTOFF_KEY].time ?? hours.global[ORDER_CUTOFF_KEY],
+    prepCutoffTime: own?.[PREP_CUTOFF_KEY].time ?? hours.global[PREP_CUTOFF_KEY],
   };
 }
 
 /**
- * **Liste kesinleşti mi** (tasarım §2). Geçmiş gün kesindir; gelecek gün büyümeye açıktır; BUGÜN ise
- * kesim saatine bağlıdır — saatten sonra gelen sipariş bir sonraki güne yazılır, yani liste artık
- * araç yüklenirken büyümez. Bu, ekranın verdiği bir güven duygusudur ve uydurulmaz: kural motorun
- * (`upcomingDeliveryDates`) kesim mantığının aynısı, saat de ayardan gelir.
+ * **Liste kesinleşti mi** (tasarım §2) — ve hangi saatin yazılacağı.
+ *
+ * Geçmiş gün kesindir; gelecek gün büyümeye açıktır; bugün ise kesime bağlıdır. Bu, ekranın verdiği
+ * bir güven duygusudur ve uydurulmaz: **kararı motor veriyor** (`deliveryRunWindow`). Bir dönem
+ * burada elle bir saat karşılaştırması vardı ve künyesi *"motorun kesim mantığının aynısı"* diyordu —
+ * kopya olduğunu kendisi söylüyordu. Kesim önceki güne sarkabildiği gün (17.08 kuralı) o kopya
+ * sessizce yanlışlaşacaktı: aynı-gün varsayımıyla yazılmıştı.
+ *
+ * **Eşikler rota başına, cevap ise TEK** — ekranın bir tane kesim satırı var. Bu yüzden:
+ * · `settled` = HER rota kapandıysa (liste ancak son rota da sipariş almayı bırakınca büyümeyi keser;
+ *   en erken kesime bakmak, hâlâ büyüyen bir listeyi "kesin" diye okuturdu)
+ * · `time` = EN GEÇ kesim (operatörün beklemesi gereken an)
+ *
+ * Rota hiç yoksa küresel satır okunur — kargo-yalnız bir günde de ekran bir saat yazabilmeli.
  */
-function isSettledDay(date: string, cutoffTime: string, now: Date): boolean {
-  const today = toIsoDate(now);
-  if (date < today) return true;
-  if (date > today) return false;
+function cutoffView(
+  zones: readonly DeliveryZoneWithCodes[],
+  hours: Awaited<ReturnType<typeof readDayHours>>,
+  date: string,
+  now: Date,
+): DispatchDayView['cutoff'] {
+  const rows = zones.length > 0 ? zones.map((zone) => thresholdsOf(zone.id, hours)) : [thresholdsOf(null, hours)];
 
-  const [hour, minute] = cutoffTime.split(':').map(Number);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false;
-  return now.getHours() * 60 + now.getMinutes() >= hour! * 60 + minute!;
+  const settled = rows.every(
+    (row) => deliveryRunWindow({ deliveryDate: date, now, cutoffTime: row.cutoffTime, prepCutoffTime: row.prepCutoffTime }) !== 'open',
+  );
+  const time = rows.map((row) => row.cutoffTime).sort((a, b) => b.localeCompare(a))[0]!;
+  /**
+   * Gösterilen SAATİN hangi güne ait olduğu — cümle buna göre kuruluyor.
+   *
+   * Yazılan saat en geç kesim olduğu için, o saatin sahibi rotanın kuralı okunuyor. Rotalar
+   * ayrışıyorsa (biri sarkan, biri değil) cümle en geç olanı anlatır; ekranın tek satırı var ve
+   * operatörün beklemesi gereken an odur.
+   */
+  const owner = rows.find((row) => row.cutoffTime === time) ?? rows[0]!;
+  return { time, settled, isPrevDay: cutoffBelongsToPreviousDay(owner.cutoffTime, owner.prepCutoffTime) };
 }
 
 /**
@@ -280,10 +334,16 @@ function sortByZone(stops: readonly DispatchStopView[], zones: readonly Delivery
  * haftalık günü olmayan bir güne taşımak, o gün oraya araç gitmediği için teslim edilemeyecek bir
  * sipariş yaratırdı. Kesim saati de aynı motorda uygulanıyor.
  */
-function moveDates(zones: readonly DeliveryZoneWithCodes[], cutoffTime: string, now: Date): Record<string, string[]> {
+function moveDates(
+  zones: readonly DeliveryZoneWithCodes[],
+  hours: Awaited<ReturnType<typeof readDayHours>>,
+  now: Date,
+): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   for (const zone of zones) {
-    map[zone.id] = upcomingDeliveryDates({ weekdays: zone.weekdays, now, cutoffTime, count: 4 });
+    // Her rota KENDİ kesimini ve hazırlık kapanışını görüyor: taşınabilecek günler rotanın kendi
+    // penceresinden çıkar, komşusunun penceresinden değil.
+    map[zone.id] = upcomingDeliveryDates({ weekdays: zone.weekdays, now, count: 4, ...thresholdsOf(zone.id, hours) });
   }
   return map;
 }

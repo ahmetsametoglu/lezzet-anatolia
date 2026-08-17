@@ -1,5 +1,13 @@
 import { DeliveryZoneService, SettingsService, WarehouseService, type Db } from '@lezzet/database';
-import { findShippingWarehouse, resolveWarehouseForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
+import {
+  findShippingWarehouse,
+  ORDER_CUTOFF_DEFAULT,
+  ORDER_CUTOFF_KEY,
+  PREP_CUTOFF_DEFAULT,
+  PREP_CUTOFF_KEY,
+  resolveWarehouseForPostalCode,
+  upcomingDeliveryDates,
+} from '@lezzet/domain-core';
 import type { WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
 import type { DeliveryType } from '@lezzet/types';
 import type { Country } from '@lezzet/types';
@@ -115,10 +123,17 @@ export async function resolveDelivery(db: Db, input: ResolveDeliveryInput): Prom
   // depoyu görürdü. Ucuz olması da checkout'ta işe yarıyor: teslimat bir kez depoyu vermek, bir kez
   // de sepet bilindikten sonra kargo kararını vermek için iki kez çözülebiliyor — çağıran listeyi
   // bir kez okuyup `inputs` ile geçtiğinde ikinci tur gerçekten bedava.
-  const [{ zones, warehouses }, cutoffTime] = await Promise.all([
-    input.inputs ? Promise.resolve(input.inputs) : readDeliveryInputs(db),
-    new SettingsService(db).get<string>('order_cutoff_time', '16:00'),
-  ]);
+  //
+  // **EŞİK SAATLERİ BURADA OKUNMUYOR, ROTA ÇÖZÜLDÜKTEN SONRA OKUNUYOR** (17.08 — ölçülmüş açık).
+  // Eskiden kesim bu `Promise.all` içinde, bölge çözümünden ÖNCE ve kapsam bağlamı OLMADAN okunuyordu
+  // (`get('order_cutoff_time', '16:00')`). Sonucu şuydu: eşikler rota eksenine alınmış olmasına ve
+  // operatör rota rayından kesimi 10:00 yazmasına rağmen müşteri hâlâ küresel 16:00'ya göre gün
+  // seçiyordu — panel bir şey, checkout başka bir şey söylüyordu. Kapsamı geçirmek için hangi rotaya
+  // düşüldüğünü bilmek gerekiyor, o yüzden okuma aşağıya taşındı.
+  //
+  // Maliyet nötr: ayar okuması `SettingsService`in süreç içi önbelleğinden geçiyor (anahtar başına
+  // tek sorgu, 30 sn) ve KARGO yolunda artık hiç okunmuyor — orada kesim kavramı yok.
+  const { zones, warehouses } = input.inputs ?? (await readDeliveryInputs(db));
 
   const place = { country: input.country ?? 'FR', postalCode: input.postalCode };
   const resolution = resolveWarehouseForPostalCode(place, zones, warehouses);
@@ -154,10 +169,23 @@ export async function resolveDelivery(db: Db, input: ResolveDeliveryInput): Prom
     };
   }
 
+  /**
+   * Eşikler **bu rotanın** kapsamıyla okunuyor (`{ zoneId }`): her rota kendi kesimini ve hazırlık
+   * kapanışını taşıyor (kullanıcı kararı 17.08). Hazırlık da okunuyor çünkü kesimin hangi güne ait
+   * olduğunu o belirliyor — `cutoffBelongsToPreviousDay`.
+   */
+  const settings = new SettingsService(db);
+  const scope = { zoneId: resolution.zoneId };
+  const [cutoffTime, prepCutoffTime] = await Promise.all([
+    settings.get<string>(ORDER_CUTOFF_KEY, ORDER_CUTOFF_DEFAULT, scope),
+    settings.get<string>(PREP_CUTOFF_KEY, PREP_CUTOFF_DEFAULT, scope),
+  ]);
+
   const availableDates = upcomingDeliveryDates({
     weekdays: resolution.weekdays,
     now: input.now ?? new Date(),
     cutoffTime,
+    prepCutoffTime,
     count: input.dateCount ?? 3,
   });
 

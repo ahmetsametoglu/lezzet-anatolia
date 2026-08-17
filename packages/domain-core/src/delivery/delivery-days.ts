@@ -75,6 +75,45 @@ export function isInRoute(place: PostalCodeRef, zones: readonly DeliveryZoneCand
   return findZoneForPostalCode(place, zones) !== null;
 }
 
+/**
+ * **Kesim kuralının okuduğu iki ayar** — anahtar ve fabrika değeri BURADA, çünkü kuralı uygulayan
+ * dosya bu. Değerler bir dönem her çağıranın içinde ayrı yazılıydı (`'16:00'` üç yerde) ve
+ * ayrışsalardı müşteriye söylenen gün ile sistemin uyguladığı gün farklılaşırdı — hiçbir hata
+ * vermeden (`CLAUDE §1`).
+ *
+ * Öteki iki eşik (rota çıkışı · kurye kapanışı) burada YOK ve bu bilinçli: onları hiçbir motor
+ * okumuyor, yalnız ekran gösteriyor. Bir gün bir karar onlara bağlanırsa buraya gelirler.
+ */
+export const ORDER_CUTOFF_KEY = 'order_cutoff_time';
+export const PREP_CUTOFF_KEY = 'prep_cutoff_time';
+export const ORDER_CUTOFF_DEFAULT = '16:00';
+export const PREP_CUTOFF_DEFAULT = '11:00';
+
+/**
+ * **Kesim TESLİM gününün mü, bir ÖNCEKİ günün mü saati** (kullanıcı kuralı 17.08).
+ *
+ * Kural: kesim hazırlık kapanışından **sonraysa** önceki günün saatidir — o saatte gelen sipariş bu
+ * günün hazırlığına yetişemez, demek ki bu güne teslim için kapanış dünden olmalı. Öncesindeyse (ve
+ * **eşitse** — kullanıcı onayı: "sonra" kesin eşitsizlik) aynı günün saatidir.
+ *
+ * Yani "hangi gün" ayrı bir ayar DEĞİL, iki saatin karşılaştırmasından türüyor. Bunun iki faydası
+ * ölçüldü: (1) operatörün girdiği her değer tutarlı bir yorum buluyor, çelişki yapısal olarak
+ * imkânsızlaşıyor; (2) bugünkü kurulum hiç değişmiyor — seed'in rota kesimi 10:00, hazırlık 11:00,
+ * yani aynı gün kalır.
+ *
+ * **Biri eksikse `false`:** karşılaştırma yapılamıyorsa eski davranış (aynı gün) sürer. Kuralı
+ * yarım veriyle uygulamak, teslim gününü sessizce bir gün kaydırırdı.
+ *
+ * Dışa açık, çünkü aynı soruyu EKRAN da soruyor (rota şeridi kesim rozetini "önceki gün" diye
+ * damgalıyor). İki yerde ayrı hesaplanırsa biri bir gün ayrışır ve ekran yanlış damga basar.
+ */
+export function cutoffBelongsToPreviousDay(cutoffTime?: string, prepCutoffTime?: string): boolean {
+  const cutoff = cutoffTime ? minutesOfDay(cutoffTime) : null;
+  const prep = prepCutoffTime ? minutesOfDay(prepCutoffTime) : null;
+  if (cutoff === null || prep === null) return false;
+  return cutoff > prep;
+}
+
 /** "HH:MM" → gün içi dakika. Bozuk değer akışı kilitlemesin diye `null` döner. */
 function minutesOfDay(time: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
@@ -91,6 +130,11 @@ export interface UpcomingDatesInput {
   now: Date;
   /** Kesim saati, "HH:MM" (parametrik `Setting`). Geçersizse kesim uygulanmaz. */
   cutoffTime?: string;
+  /**
+   * Hazırlık kapanışı, "HH:MM" — kesimin hangi güne ait olduğunu bu belirliyor
+   * (`cutoffBelongsToPreviousDay`). Verilmezse kesim aynı günün saati sayılır (eski davranış).
+   */
+  prepCutoffTime?: string;
   /** Kaç somut tarih önerilecek (varsayılan 3). */
   count?: number;
   /** En fazla kaç gün ileriye bakılır — sonsuz döngü emniyeti (varsayılan 28). */
@@ -100,21 +144,33 @@ export interface UpcomingDatesInput {
 /**
  * Yaklaşan somut teslimat tarihleri (ISO `YYYY-MM-DD`), en yakından başlayarak.
  *
- * **Bugün, ancak kesim saatinden ÖNCEYSE** aday olur: 09:00'da verilen sipariş bugünün rotasına
- * yetişir, 17:00'de verilen yetişmez. Kesim saati geçtiyse bugün atlanır.
+ * **Kesim AYNI günün saatiyse** (hazırlık kapanışından önce) bugün, ancak kesimden önceyse aday
+ * olur: 09:00'da verilen sipariş bugünün rotasına yetişir, 17:00'de verilen yetişmez.
+ *
+ * **Kesim ÖNCEKİ günün saatiyse** (hazırlıktan sonra — `cutoffBelongsToPreviousDay`) bugün HİÇ aday
+ * olmaz: bu günün kesimi dün kapandı. Yarın ise ancak bugünün kesimi gelmediyse aday olur. Örnek —
+ * kesim 16:00, hazırlık 11:00: Pazartesi 15:00'te Salı hâlâ açık, 17:00'de kapanır ve en erken gün
+ * Çarşamba'ya (ya da rotanın bir sonraki gününe) kayar.
  *
  * Çağıran sonuca göre davranır (DOMAIN §6): **tek tarih varsa gösterilir (seçim yok), birden
  * fazlaysa müşteri seçer.**
  */
 export function upcomingDeliveryDates(input: UpcomingDatesInput): string[] {
-  const { weekdays, now, cutoffTime, count = 3, horizonDays = 28 } = input;
+  const { weekdays, now, cutoffTime, prepCutoffTime, count = 3, horizonDays = 28 } = input;
   if (weekdays.length === 0) return [];
 
   const allowed = new Set(weekdays);
   const cutoff = cutoffTime ? minutesOfDay(cutoffTime) : null;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  // Kesim saati geçtiyse bugün aday değildir; geçmediyse bugün de sayılır.
-  const startOffset = cutoff !== null && nowMinutes >= cutoff ? 1 : 0;
+  const passed = cutoff !== null && nowMinutes >= cutoff;
+  /**
+   * Kaçıncı günden başlanacağı — kesimin AİT OLDUĞU güne göre.
+   *
+   * Aynı gün kuralında taban bugündür (kesim geçtiyse yarın). Önceki gün kuralında taban yarındır
+   * (bugünün kesimi dün kapandı); bugünün kesimi de geçtiyse yarın kapanmış olur ve taban öbür güne
+   * çıkar. Kesim hiç yoksa kural uygulanmaz, bugün de aday.
+   */
+  const startOffset = cutoff === null ? 0 : cutoffBelongsToPreviousDay(cutoffTime, prepCutoffTime) ? (passed ? 2 : 1) : passed ? 1 : 0;
 
   const dates: string[] = [];
   for (let offset = startOffset; offset <= horizonDays && dates.length < count; offset += 1) {
@@ -140,16 +196,38 @@ export function upcomingDeliveryDates(input: UpcomingDatesInput): string[] {
  */
 export type DeliveryRunWindow = 'open' | 'cutoff_passed' | 'past';
 
-export function deliveryRunWindow(input: { deliveryDate: string; now: Date; cutoffTime?: string }): DeliveryRunWindow {
+export function deliveryRunWindow(input: {
+  deliveryDate: string;
+  now: Date;
+  cutoffTime?: string;
+  /** Hazırlık kapanışı — kesimin hangi güne ait olduğunu belirler (`upcomingDeliveryDates` ile aynı). */
+  prepCutoffTime?: string;
+}): DeliveryRunWindow {
   const today = toIsoDate(input.now);
   if (input.deliveryDate < today) return 'past';
-  if (input.deliveryDate > today) return 'open';
 
-  // Bugünün seferi: kesim saati geçtiyse kapalı. Kesim saati yoksa (ya da bozuksa) kural
-  // uygulanmaz — `upcomingDeliveryDates`in davranışıyla birebir; bozuk bir ayar akışı kilitlemez.
+  // Kesim saati yoksa (ya da bozuksa) kural uygulanmaz — `upcomingDeliveryDates`in davranışıyla
+  // birebir; bozuk bir ayar akışı kilitlemez.
   const cutoff = input.cutoffTime ? minutesOfDay(input.cutoffTime) : null;
   if (cutoff === null) return 'open';
-  return input.now.getHours() * 60 + input.now.getMinutes() < cutoff ? 'open' : 'cutoff_passed';
+  const nowMinutes = input.now.getHours() * 60 + input.now.getMinutes();
+
+  if (!cutoffBelongsToPreviousDay(input.cutoffTime, input.prepCutoffTime)) {
+    // AYNI gün kuralı: yalnız bugünün seferi kesime bakar.
+    if (input.deliveryDate > today) return 'open';
+    return nowMinutes < cutoff ? 'open' : 'cutoff_passed';
+  }
+
+  /**
+   * ÖNCEKİ gün kuralı: teslim günü D'nin kesimi D−1 günündedir.
+   * · D = bugün → kesim dün kapandı, sefer artık sipariş almaz
+   * · D = yarın → kesim BUGÜN; saat geçtiyse kapalı
+   * · D > yarın → kesim henüz gelmedi
+   */
+  const tomorrow = toIsoDate(new Date(input.now.getFullYear(), input.now.getMonth(), input.now.getDate() + 1));
+  if (input.deliveryDate === today) return 'cutoff_passed';
+  if (input.deliveryDate === tomorrow) return nowMinutes < cutoff ? 'open' : 'cutoff_passed';
+  return 'open';
 }
 
 /** Yerel takvim günü — `toISOString()` UTC'ye kaydırdığı için gün atlatabilir, elle biçimlenir. */

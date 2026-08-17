@@ -85,8 +85,21 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
 export const DISPATCH_NOTES = {
   /** Kesim saati geçti: liste artık araç yüklenirken büyümez — bu bir güven cümlesidir (tasarım §2). */
   settled: 'Bu günün listesi kesinleşti — sipariş kesim saati geçti, yeni sipariş bu güne düşmez.',
+  /**
+   * **Kesim ÖNCEKİ güne aitken ayrı cümle** (17.08 kuralı). Yukarıdaki cümle *"kesim saati geçti"*
+   * diyor ve o hâlde yanlış okunuyordu: kesim 22:00, saat 19:40 — operatör haklı olarak "22:00
+   * geçmedi ki" derdi. Geçen şey DÜNÜN 22:00'siydi.
+   */
+  settledPrevDay: (time: string): string =>
+    `Bu günün listesi kesinleşti — kesim bir gün önce ${time}'da kapandı, yeni sipariş bu güne düşmez.`,
   open: (time: string): string =>
     `Liste hâlâ büyüyebilir: ${time}'a kadar gelen sipariş bu güne düşer, sonrası bir sonraki teslim gününe.`,
+  /**
+   * Kesim önceki güne aitken "hâlâ açık" cümlesi de günü söylemeli: bugünün {time}'ı YARININ
+   * seferini kapatıyor, bu günün değil.
+   */
+  openPrevDay: (time: string): string =>
+    `Liste hâlâ büyüyebilir: bir gün önce ${time}'a kadar gelen sipariş bu güne düşer.`,
   /**
    * **Engel şeridinin cümleleri — KISA ve PARALEL** (16.08). Şerit bir kontrol listesidir, açıklama
    * metni değil: yan yana dizilen dört cümle tek bakışta taranmalı. Eski hâlde hazırlık uyarısı tek

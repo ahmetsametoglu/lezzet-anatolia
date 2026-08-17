@@ -193,7 +193,18 @@ export interface DispatchDayView {
    * Kesim saatinin o güne etkisi (tasarım §2): **liste kesinleşti mi, hâlâ büyüyebilir mi.**
    * Saat ayarlardan gelir ve burada DEĞİŞTİRİLMEZ; ekran yalnız etkisini gösterir.
    */
-  cutoff: { time: string; settled: boolean };
+  cutoff: {
+    time: string;
+    settled: boolean;
+    /**
+     * Kesim TESLİM gününün mü, bir ÖNCEKİ günün mü saati (17.08 kuralı, `cutoffBelongsToPreviousDay`).
+     *
+     * Ekranın cümlesi buna bağlı ve ölçülmüş bir kusuru kapatıyor: kesim 22:00, hazırlık 11:00 olan
+     * bir kurulumda ekran *"kesim saati geçti"* diyordu ama saat 19:40'tı — 22:00 geçmemişti, DÜNÜN
+     * 22:00'si kapanmıştı. Operatör haklı olarak "geçmedi ki" diye şaşırırdı.
+     */
+    isPrevDay: boolean;
+  };
   /** Siparişin taşınabileceği yaklaşan günler — motordan (`upcomingDeliveryDates`), bölge başına. */
   moveDatesByZone: Record<string, string[]>;
 }

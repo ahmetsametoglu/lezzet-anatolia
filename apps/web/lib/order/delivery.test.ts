@@ -54,18 +54,33 @@ describe('rota içi teslimat (07.2)', () => {
     expect(outcome.availableDates).toHaveLength(1);
   });
 
-  it('kesim saati AYARDAN okunur — değiştirince gün hesabı değişir', async () => {
+  /**
+   * Kesim ayardan okunur VE hangi güne ait olduğu da ayardan türer (kullanıcı kuralı 17.08):
+   * hazırlık kapanışından önceyse aynı günün, sonraysa bir ÖNCEKİ günün saatidir.
+   *
+   * **An 12:00'den 09:00'a çekildi** ve sebebi kuralın kendisi: hazırlık 11:00'da kapanıyor, yani
+   * 12:00'de gelen bir sipariş hiçbir kesim değeriyle o güne yetişmez — kesim 11:00'dan küçükse zaten
+   * geçmiştir, büyükse önceki güne aittir. Testin üç dalı ayırt edebilmesi için an hazırlıktan önce
+   * olmalı. Eski hâli varsayılan 16:00 ile "bugün hâlâ yetişir" bekliyordu; o beklenti kuralla
+   * geçersizleşti (16:00 > 11:00 → önceki gün).
+   */
+  it('kesim saati AYARDAN okunur — saat de, AİT OLDUĞU GÜN de gün hesabını değiştirir', async () => {
     // Ayar KÜRESEL tekil: geri koyma okunan değere yapılır, sabite değil (CLAUDE.md §4b).
     const settings = settingsSnapshot(db);
-    const saliOgle = new Date(2026, 6, 28, 12, 0); // Salı 12:00, teslimat günü
+    const saliSabah = new Date(2026, 6, 28, 9, 0); // Salı 09:00 — teslimat günü, hazırlıktan önce
 
-    // Varsayılan kesim 16:00 → bugün hâlâ yetişir.
-    expect((await resolveDelivery({ postalCode: rotaKodu, now: saliOgle })).availableDates[0]).toBe('2026-07-28');
-
-    // Kesim öne çekilirse aynı sipariş bugüne yetişmez.
-    await settings.override('order_cutoff_time', '10:00');
     try {
-      expect((await resolveDelivery({ postalCode: rotaKodu, now: saliOgle })).availableDates[0]).toBe('2026-07-31');
+      // Kesim 10:00: hazırlıktan (11:00) ÖNCE → aynı günün saati, ve henüz gelmedi → bugün yetişir.
+      await settings.override('order_cutoff_time', '10:00');
+      expect((await resolveDelivery({ postalCode: rotaKodu, now: saliSabah })).availableDates[0]).toBe('2026-07-28');
+
+      // Kesim 08:00: yine aynı günün saati ama GEÇTİ → bugüne yetişmez, sonraki rota günü.
+      await settings.override('order_cutoff_time', '08:00');
+      expect((await resolveDelivery({ postalCode: rotaKodu, now: saliSabah })).availableDates[0]).toBe('2026-07-31');
+
+      // Kesim 16:00: hazırlıktan SONRA → ÖNCEKİ günün saati; bu günün seferi dün kapandı.
+      await settings.override('order_cutoff_time', '16:00');
+      expect((await resolveDelivery({ postalCode: rotaKodu, now: saliSabah })).availableDates[0]).toBe('2026-07-31');
     } finally {
       await settings.restore();
     }

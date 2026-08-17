@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { cutoffBelongsToPreviousDay, ORDER_CUTOFF_KEY, PREP_CUTOFF_KEY } from '@lezzet/domain-core';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { DAY_HOURS, toMinutes, toTime, type DayHourKey } from '@/lib/settings/day-hours';
 
@@ -79,7 +80,7 @@ interface RouteHoursProps {
 }
 
 export function RouteHours({ exceptions, global, onChange }: RouteHoursProps) {
-  const rows = DAY_HOURS.map((hour) => {
+  const base = DAY_HOURS.map((hour) => {
     /**
      * `null` ile `undefined` burada AYNI şeyi gösteriyor: ikisi de "bu eşik genel değeri okuyor".
      * Fark yalnız kaydetmede anlamlı (`null` = var olan istisnayı sil, `undefined` = dokunulmadı).
@@ -89,15 +90,43 @@ export function RouteHours({ exceptions, global, onChange }: RouteHoursProps) {
     return { ...hour, time, minutes: toMinutes(time), isException: own !== null };
   });
 
+  /**
+   * **Kesim hangi güne ait** — kararı MOTOR veriyor (`cutoffBelongsToPreviousDay`), ekran kendi
+   * hesabını yapmıyor.
+   *
+   * Bir tur içinde burada `minutes > prepMinutes` diye yerel bir karşılaştırma vardı; motor aynı
+   * kuralı uygulamaya başlayınca ikinci bir kopya olurdu ve biri bir gün ayrışsa ekran yanlış damga
+   * basardı — rozet "önceki gün" derken sistem aynı günü sayardı (`CLAUDE §1`).
+   *
+   * Yalnız kesim bu ayrımı taşır: hazırlık · çıkış · kapanış tanımı gereği TESLİM gününün saatleri
+   * (kullanıcının cümlesi: *"teslim günlerinin referansı hazırlık ve çıkış"*).
+   */
+  const prepTime = base.find((row) => row.key === PREP_CUTOFF_KEY)?.time;
+  const rows = base.map((row) => ({
+    ...row,
+    isPrevDay: row.key === ORDER_CUTOFF_KEY && cutoffBelongsToPreviousDay(row.time, prepTime),
+  }));
+
   const known = rows.flatMap((row) => (row.minutes === null ? [] : [row.minutes]));
   const axisMin = Math.min(AXIS_FLOOR, ...known.map((m) => Math.floor(m / 60) * 60));
   const axisMax = Math.max(AXIS_CEIL, ...known.map((m) => Math.ceil(m / 60) * 60));
 
+  const cutoffRow = rows.find((row) => row.key === ORDER_CUTOFF_KEY);
+
   /**
-   * Gün akışı geri gidiyor mu — ölçülemeyen saat karşılaştırmaya KATILMAZ (bilinmeyeni "sıralı" ya
-   * da "bozuk" saymak, ikisi de uydurma olurdu).
+   * Akış geri gidiyor mu — **kesim HARİÇ.**
+   *
+   * Kesim önceki güne sarkabildiği için onun "geri gitmesi" bir arıza değil, kuralın kendisi. Bir
+   * dönem dördü birlikte karşılaştırılıyordu ve o hâlde her sarkan kesim yanlışlıkla bozuk sıra diye
+   * uyarılıyordu. Kalan üçü tanımı gereği aynı günün saatleri, sıraları bozulursa gerçekten bozuktur.
+   *
+   * Ölçülemeyen saat karşılaştırmaya KATILMAZ: bilinmeyeni "sıralı" ya da "bozuk" saymak, ikisi de
+   * uydurma olurdu.
    */
-  const outOfOrder = known.some((minutes, i) => i > 0 && minutes < (known[i - 1] ?? minutes));
+  const sameDayMinutes = rows
+    .filter((row) => row.key !== ORDER_CUTOFF_KEY)
+    .flatMap((row) => (row.minutes === null ? [] : [row.minutes]));
+  const outOfOrder = sameDayMinutes.some((minutes, i) => i > 0 && minutes < (sameDayMinutes[i - 1] ?? minutes));
   const inheritedCount = rows.filter((row) => !row.isException).length;
 
   return (
@@ -122,12 +151,26 @@ export function RouteHours({ exceptions, global, onChange }: RouteHoursProps) {
         <AxisScale min={axisMin} max={axisMax} />
       </div>
 
-      {/* Uyarıda kod adı GEÇMEZ: iç anahtar/fonksiyon adı arayüzde görünmez (`settings-catalog`
-          künyesindeki kural). Operatörün ihtiyacı olan cümle sonucu anlatan cümle. */}
+      {/* Uyarılarda kod adı GEÇMEZ: iç anahtar/fonksiyon adı arayüzde görünmez (`settings-catalog`
+          künyesindeki kural). Operatörün ihtiyacı olan cümle sonucu anlatan cümle.
+
+          **Bu paragraf bir AÇIK BİLDİRİMİ değil artık, kuralın kendisini anlatıyor.** Bir tur boyunca
+          *"sistem bunu henüz uygulamıyor"* diyordu çünkü kural yalnız ekranda vardı; motor aynı gün
+          içinde yazıldı (`upcomingDeliveryDates` + `deliveryRunWindow`), o yüzden cümle değişti.
+          Kalması gerekiyor çünkü kuralın SONUCU sezgisel değil: iki saatlik bir kaydırma en yakın
+          teslimi bir sonraki rota gününe atabilir. */}
+      {cutoffRow?.isPrevDay ? (
+        <p className="mt-1 font-ops-body text-ops-xs text-ops-red">
+          Kesim hazırlıktan sonra: <strong className="font-semibold">önceki günün</strong> saati
+          sayılıyor. Bu güne teslim için siparişin bir gün önce {cutoffRow.time}'a kadar gelmesi
+          gerekir — bugünün seferi artık sipariş almaz.
+        </p>
+      ) : null}
+
       {outOfOrder ? (
         <p className="mt-1 font-ops-body text-ops-xs text-ops-amber-dark">
-          Akış geri gidiyor. Sistem dördünü de <strong className="font-semibold">aynı günün</strong>{' '}
-          saati sayıyor — kesim çıkıştan sonraysa, araç gittikten sonra gelen sipariş yine o güne yazılır.
+          Hazırlık, çıkış ve kapanış sırası geri gidiyor — üçü de teslim gününün saatleri, bu sırada
+          olmaları gerekir.
         </p>
       ) : null}
     </FieldShell>
@@ -140,13 +183,37 @@ export function RouteHours({ exceptions, global, onChange }: RouteHoursProps) {
  * `bg-ops-card` OPAK ve gerekli: kesikli eksen çizgisi rozetin arkasından geçiyor, saydam bir rozette
  * çizgi sayının içinden geçip okumayı bozardı.
  */
+/**
+ * `whitespace-nowrap` ZORUNLU: rozet eksende `absolute` duruyor, yani genişliği içeriğinden geliyor
+ * ve sarma imkânı yok — sardığı an iki satıra bölünüp kapsülün dışına taşıyor (kullanıcı ekranında
+ * görüldü 17.08: "önceki gün 22:00" damgası kırpılmış çıktı).
+ */
 const THUMB_BASE =
-  'inline-flex h-6 items-center rounded-ops-chip border px-2 font-ops-display text-ops-xs font-semibold tabular-nums';
+  'inline-flex h-6 items-center whitespace-nowrap rounded-ops-chip border px-2 font-ops-display text-ops-xs font-semibold tabular-nums';
+
+/**
+ * İki eksen çarpılıyor: **kaynak** (rotaya özel → dolu · genelden miras → çerçeveli) × **gün**
+ * (teslim günü → zeytin · önceki gün → KIRMIZI, kullanıcı isteği 17.08: *"başka bir güne sarkarsa
+ * kırmızıya boyayalım, görsel olarak da belli olsun"*).
+ *
+ * Kırmızı burada "hata" değil **"başka gün"** demek ve kullanıcının açık isteği: *"başka bir güne
+ * sarkarsa kırmızıya boyayalım, görsel olarak da belli olsun."* Kural motora yazıldıktan sonra da
+ * korundu — sarkan kesim artık geçerli bir hâl ama SONUCU sezgisel değil (bir günlük kayma), yani
+ * en dikkat çeken işaret hâlâ doğru karşılığı.
+ */
 const THUMB_TONE = {
   own: 'border-ops-olive bg-ops-olive text-ops-card',
   inherited: 'border-ops-olive-line bg-ops-card text-ops-olive',
+  ownPrev: 'border-ops-red bg-ops-red text-ops-card',
+  inheritedPrev: 'border-ops-red-line bg-ops-red-bg text-ops-red',
   broken: 'border-ops-red-line bg-ops-red-bg text-ops-red',
 } as const;
+
+function thumbTone(row: HourRow): string {
+  if (row.minutes === null) return THUMB_TONE.broken;
+  if (row.isPrevDay) return row.isException ? THUMB_TONE.ownPrev : THUMB_TONE.inheritedPrev;
+  return row.isException ? THUMB_TONE.own : THUMB_TONE.inherited;
+}
 
 interface HourRow {
   key: DayHourKey;
@@ -155,6 +222,8 @@ interface HourRow {
   time: string;
   minutes: number | null;
   isException: boolean;
+  /** Bu saat TESLİM gününe değil, bir önceki güne ait — bugün yalnız kesimde olabilir. */
+  isPrevDay: boolean;
 }
 
 interface HourTrackProps {
@@ -243,7 +312,9 @@ function HourTrack({ row, axisMin, axisMax, globalTime, onChange }: HourTrackPro
         aria-valuemin={axisMin}
         aria-valuemax={axisMax}
         aria-valuenow={current}
-        aria-valuetext={`${row.time}${row.isException ? ' — bu rotaya özel' : ' — genel değer'}`}
+        aria-valuetext={`${row.time}${row.isPrevDay ? ' — önceki gün' : ''}${
+          row.isException ? ' — bu rotaya özel' : ' — genel değer'
+        }`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={stopDrag}
@@ -266,12 +337,23 @@ function HourTrack({ row, axisMin, axisMax, globalTime, onChange }: HourTrackPro
           }`}
           style={{ left: `calc(${EDGE_PX}px + ${ratio} * (100% - ${EDGE_PX * 2}px))` }}
         >
-          {/* Dolu rozet = bu rotaya özel · çerçeveli = genelden miras · kırmızı = biçimi bozuk
-              değer. Bozukta konum bir varsayım (`ratio` 0) ama rozet kendini ilan ediyor. */}
+          {/* Renk sözlüğü `thumbTone`da (kaynak × gün). Bozuk değerde konum bir varsayım (`ratio` 0)
+              ama rozet kendini ilan ediyor.
+
+              **"önceki gün" ROZETİN İÇİNDE DEĞİL, TOOLTIP'TE** (kullanıcı kararı 17.08). Bir tur
+              içinde yazılıydı ve kullanıcı ekranında kırıldı: rozet eksende `absolute` durduğu için
+              genişliği içeriğinden geliyor ve iki sözcük eklemek kapsülü taşırdı — 22:00'deki bir
+              kesim rozeti hem sarıp ikiye bölündü hem `↩` kolonuna girdi. Görsel işaret KIRMIZI
+              renk, sözcük ise `title`da. Bir de dil düzeltmesi var: "dün" DEĞİL "önceki gün" — "dün"
+              bugüne göreli, oysa bu saat TESLİM gününe göre bir gün öncedir (teslim yarınsa kesim
+              bugündür). */}
           <span
-            className={`${THUMB_BASE} ${
-              row.minutes === null ? THUMB_TONE.broken : row.isException ? THUMB_TONE.own : THUMB_TONE.inherited
-            }`}
+            title={
+              row.isPrevDay
+                ? `${row.label}: önceki günün ${row.time}'ı — hazırlık kapanışından sonra olduğu için bir gün geriye ait`
+                : `${row.label}: ${row.time}${row.isException ? ' (bu rotaya özel)' : ' (genel değer)'}`
+            }
+            className={`${THUMB_BASE} ${thumbTone(row)}`}
           >
             {row.time || '—'}
           </span>

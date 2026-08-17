@@ -48,7 +48,17 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
     : day.date === day.today
       ? DISPATCH_NOTES.openShort(day.cutoff.time)
       : DISPATCH_NOTES.openShortAhead;
-  const cutoffWhy = day.cutoff.settled ? DISPATCH_NOTES.settled : DISPATCH_NOTES.open(day.cutoff.time);
+  /**
+   * Açıklama cümlesi kesimin AİT OLDUĞU güne bakıyor (`isPrevDay`, 17.08 kuralı): sarkan bir kesimde
+   * "kesim saati geçti" demek yanlış okunuyordu — geçen şey bir önceki günün saatiydi.
+   */
+  const cutoffWhy = day.cutoff.settled
+    ? day.cutoff.isPrevDay
+      ? DISPATCH_NOTES.settledPrevDay(day.cutoff.time)
+      : DISPATCH_NOTES.settled
+    : day.cutoff.isPrevDay
+      ? DISPATCH_NOTES.openPrevDay(day.cutoff.time)
+      : DISPATCH_NOTES.open(day.cutoff.time);
 
   // Sıra SERTLİĞE göre: rotaya hiç düşmemiş sipariş (araç uğramaz) > depo yetişmedi > kurye
   // atanmadı > kargo künyesi eksik. Hazır olmayanlar ADIYLA anılıyor — tablodaki amber bant buraya

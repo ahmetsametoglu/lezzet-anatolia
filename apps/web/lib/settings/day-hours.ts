@@ -1,3 +1,9 @@
+import {
+  ORDER_CUTOFF_DEFAULT,
+  ORDER_CUTOFF_KEY,
+  PREP_CUTOFF_DEFAULT,
+  PREP_CUTOFF_KEY,
+} from '@lezzet/domain-core';
 import type { SettingsService } from '@lezzet/database';
 
 /**
@@ -23,14 +29,23 @@ import type { SettingsService } from '@lezzet/database';
  */
 export const DAY_HOURS = [
   {
-    key: 'order_cutoff_time',
+    /**
+     * **Anahtar ve fabrika değeri `domain-core`dan** — bu ikisini bir MOTOR okuyor (`delivery-days`:
+     * kesim kuralı ve teslim günü hesabı), yani kararın sahibi orası. Burada yeniden yazılsaydı
+     * ekran bir saati, sipariş akışı başkasını uygulardı (`CLAUDE §1`).
+     *
+     * Öteki ikisi (`route_departure_time` · `courier_close_time`) dize olarak duruyor ve bu bilinçli:
+     * onları hiçbir motor okumuyor, yalnız ekran gösteriyor. Bir karar onlara bağlandığı gün onlar da
+     * `domain-core`a taşınır.
+     */
+    key: ORDER_CUTOFF_KEY,
     /** Rota rayındaki zaman doğrusunun şerit etiketi — yer dar, tek kelime. */
     short: 'kesim',
-    /** Rozete tıklayınca açılan çubuğun başlığı; Ayarlar sözlüğündeki etiketle aynı işi yapar. */
+    /** Rozetin tooltip başlığı; Ayarlar sözlüğündeki etiketle aynı işi yapar. */
     label: 'Sipariş kesimi',
-    fallback: '16:00',
+    fallback: ORDER_CUTOFF_DEFAULT,
   },
-  { key: 'prep_cutoff_time', short: 'hazırlık', label: 'Depo hazırlık kapanışı', fallback: '11:00' },
+  { key: PREP_CUTOFF_KEY, short: 'hazırlık', label: 'Depo hazırlık kapanışı', fallback: PREP_CUTOFF_DEFAULT },
   { key: 'route_departure_time', short: 'çıkış', label: 'Rota çıkışı', fallback: '14:00' },
   { key: 'courier_close_time', short: 'kapanış', label: 'Kurye kapanışı', fallback: '18:00' },
 ] as const;
