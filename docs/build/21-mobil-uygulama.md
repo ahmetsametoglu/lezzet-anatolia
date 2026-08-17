@@ -2269,7 +2269,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   testlerimiz bugüne dek NOKTASAL yapıldı (her tur bir arıza şüphesiyle başladı), hangi ekranın
   cihazda hiç açılmadığını söyleyen kayıt YOKTU. Kapsam yalnız misafir + müşteri (kullanıcı:
   *"operasyon kısmına yetiştirme"*). Her ekranda İKİ soru: çalışıyor mu · anlaşılıyor mu.
-  **Durum:** A1–A2 ve A6–A7 ile B1–B2, B5–B6 geçildi (görev 21.47'nin turu); geri kalanı açık.
+
+  **Durum (17.08 · B bölümü koşuldu, A bölümü açık).** Kayıtlı: A1–A2, A6–A10, A12 ve B2, B4–B7,
+  B11, B14–B15. Açık kalanlar gerçek etkileşim istiyor: B1 (OTP), B8–B10 ve B12–B13, B16 (sipariş
+  · ödeme · paylaşım penceresi · puan eşiği) ve A bölümünün onboarding'i (`pm clear` gerektiriyor,
+  cihazdaki oturumu siler — kullanıcının kararı).
+
+  **Turun kazancı ölçüm oldu, kod değil:** üç şüphe cihazda ÇÜRÜTÜLDÜ — MB-20 (kart↔detay fiyatı
+  üç yerde de `1,84 €`), MB-50 (`visit · 10 puan` defterde), ve 17.08 sabahının *"oturum misafire
+  düşüyor"* deseni (siparişler ve talepler girişli açıldı; sabahki gözlem eşzamanlı test koşusunun
+  eseriydi — aynı kök `(21.71)`). **MB-03'ün gerçek sebebi de bulundu:** RN'in çift-`R` reload
+  kısayolu, `adb input text`in donanım tuş akışıyla tetikleniyor; 15.08'de yazılan *"Metro
+  tazelemesi"* gerekçesi ölçümle çürüdü (reload anında değişen dosya yok). Beş yeni kalem açıldı
+  (**MB-66…MB-70**), beşi de görsel/metin — hiçbiri veri ya da hesap arızası değil.
+  Ölçümler `docs/uygulama/BACKLOG-musteri.md` ve turun kapsam defterinde.
 
 - [x] (21.49) **HESABINI SİLME NATIVE'E GELDİ — ve dört backlog kalemi aynı turda kapandı**
   (14.08). `touches: apps/mobile-api/src/api/v1/router.ts, apps/mobile/src/lib/api/me.ts,

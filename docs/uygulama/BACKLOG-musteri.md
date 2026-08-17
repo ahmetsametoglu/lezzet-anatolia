@@ -39,6 +39,27 @@
   ölçülerek yakalandı: Metro'nun paket tazelemesi (paralel şerit `apps/mobile` altına yazınca).
   Yani geliştirme ortamının yan etkisi — üretim müşterisini ilgilendirmiyor. Görev `(21.30)`
   aynı kararla kapandı; ona asılı `BEKLEYEN` işaretleri kaldırıldı. Ölçüm zinciri orada duruyor.
+
+  **17.08 · GERÇEK SEBEP BULUNDU — kapanış doğru, gerekçesi eksikti.** Belirti cihaz turunda
+  (`05-cihaz-turu-musteri` B4) yeniden üretildi ve bu kez tetikleyici doğrudan yakalandı:
+  **arıza uygulamada değil, ÖLÇÜM ARACINDA.** Zincir:
+  1. Beyaz ekran gerçekti — `getOrCreateReloadTask() → Starting React Native reload → Running
+     "main"` (logcat). Uygulama ÇÖKMEDİ: ne `FATAL`, ne `AndroidRuntime`, ne JS hatası.
+  2. **Metro tazelemesi DEĞİLDİ:** reload anında repoda değişen tek bir dosya yok (`find -newermt`
+     ile ölçüldü, `apps/mobile` + `packages` boş döndü). Kodda `DevSettings.reload` çağrısı da yok.
+  3. Reload'dan **3 ms önce** son tuş: `KEYCODE_R`, `handled=true` — oysa öteki tüm tuşlar
+     `handled=false`. Ondan 100 ms önce **ikinci bir `KEYCODE_R`**. Bu, RN'in
+     `DoubleTapReloadRecognizer`'ıdır: donanım klavyeden 200 ms içinde iki `R` = reload kısayolu.
+  4. Tetikleyen `adb shell input text`: metni donanım klavye olayı olarak (`source=0x101`)
+     gönderiyor ve *"St**r**asbou**r**g"* içindeki iki `r` 100 ms arayla düşüyor. İlk denemede
+     (*"12 rue de la Paix"*, tek `r`) reload olmamıştı — fark buydu.
+  5. **Ayırt edici deney:** aynı metin, aynı ekran, harf harf 600 ms aralıkla → **reload sıfır**,
+     BAN önerileri geldi, adres kaydedildi. Hızlı yazımda 3/3 reload, yavaş yazımda 0/1.
+
+  Yani gerçek kullanıcıyı ilgilendirmiyor (dokunmatik klavyede iki harf arası 200 ms'den uzun) ve
+  **`__DEV__` dışında kısayolun kendisi yok.** Kayda geçme sebebi ölçüm disiplini: bu maddeyi
+  kapatan 15.08 gerekçesi (*"Metro tazelemesi"*) bugün ölçümle çürüdü — aynı belirtiyi bir daha
+  gören ajan dosya değişikliği aramasın, **kendi yazma aracına** baksın.
   *(Kapanışın dayanağı olan eski durum notu aşağıda bırakıldı.)*
   **11.08 · 14:1x — ÜRETİLEMEDİ:** kullanıcı cihazda sokak
   alanına üç harf yazdı, öneriler geldi, birini seçti, adres kaydedildi; hiçbir sıfırlanma olmadı.
@@ -1038,6 +1059,41 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   da kitin bir kabı olabilir) ve **çalışma anında yakalanmalı**: cihaz kütüğü okunacak. `adb
   logcat` bu turda zaman aşımına düştü, ölçüm yapılamadı. Cihaz işi (§13 ⚑) — bir sonraki
   cihaz turunda uygulama açıkken kütük süzülerek bulunur.
+
+### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)
+
+> Beşi de **görsel/metin** kalemi; hiçbiri veri ya da hesap arızası değil. Turun aynı gününde
+> ölçülen üç şey ise arıza DEĞİL çıktı ve ilgili künyelerine yazıldı: MB-03 (sebep ölçüm aracı),
+> MB-20 (kart↔detay fiyatı üç yerde de aynı), MB-50 (`visit` satırı defterde).
+
+- [ ] **MB-66 · Hesap kartında e-posta iki kez yazılı.** Ölçüldü (17.08): `user_profiles.name`
+  boş string, `phone` NULL. Ekran ad satırını e-postaya düşürüyor
+  (`app/(tabs)/account.tsx:65` — *"ad hiç girilmemişse kart adsız kalmaz"*), ama hemen altındaki
+  satır zaten `data.email`. Sonuç: aynı adres üst üste iki kez. **Karar doğru, uygulaması eksik:**
+  ad e-postaya düştüğünde alt satır ya gizlenmeli ya başka bir şey söylemeli (ör. *"Ad ekleyin"*
+  daveti — künye tamamlama zaten B3 adımı). Telefon satırı boşken çizilmiyor, o kısım doğru.
+
+- [ ] **MB-67 · Puan geçmişi ekranı toplamsız ve çağrısız.** Liste doğru çalışıyor
+  (`Visite du jour · 17 août 2026 · +10`, defterle birebir), ama ekranda **bakiye yok** ve tek
+  satırın altında ~1500 piksel boşluk kalıyor. Müşteri buraya *"puanlarım nerede"* diye gelir;
+  bakiyeyi görmek için hesap kartına dönmek zorunda. Bir sonraki adım da belli değil — *"Nasıl
+  puan kazanırım?"* çekmecesinin girişi burada yok, oysa tam bu ekranın sorusudur.
+
+- [ ] **MB-68 · Talepler boş hâlinde aynı işi yapan iki çağrı, iki ayrı isimle.** Üst çubukta
+  `+ Nouvelle`, ortadaki boş hâlde `Écrivez-nous`. İkisi aynı yere gidiyor ama isimleri farklı
+  olduğu için müşteri iki ayrı şey sanıyor. Boş hâlde tek çağrı yeter; adın da her iki yerde
+  aynı olması gerekir.
+
+- [ ] **MB-69 · Sepette asgari sepet uyarısı iki kez.** Aynı cümle hem kart içinde
+  (*"Panier minimum 40,00 € — il manque 36,32 €"*) hem alt çubukta (*"Il manque 36,32 € pour le
+  panier minimum"*). Sayı ikisinde de doğru; tekrar eden bilgi. Talep e-postasında 09.08'de
+  düzeltilen *"durum İKİ kez yazılıyordu"* kusurunun aynısı — alt çubuk sabit olduğu için asıl
+  aday karttaki kopyayı kaldırmak.
+
+- [ ] **MB-70 · BAN öneri listesi 4+ sonuçta son satırı kırpıyor.** Ölçüldü: dört öneri dönünce
+  sonuncusunun şehir satırı yarım kalıyor ve üstüne kaynak künyesi (*"Base Adresse Nationale…"*)
+  biniyor; `Enregistrer` düğmesi de listenin altında eziliyor. İki öneride sorun yok. Liste ya
+  kendi içinde kaydırılabilir olmalı ya da öneri sayısı sınırlanmalı.
 
 - [x] **MB-45 · Onboarding teslimat/ödeme adımlarının metinleri "Büyük"te bile küçük kalıyordu**
   → **KAPANDI (11.08, kullanıcı bulgusu).** Yazı boyutu özelliği çalışıyor; kusur o iki adımın

@@ -64,9 +64,9 @@ müdahale yok).
 | # | adım | çalışıyor mu — ölçüt | anlaşılıyor mu — ölçüt |
 | --- | --- | --- | --- |
 | B1 | Giriş (OTP) | Kod gelir, oturum açılır | Kodun nereye gittiği belli mi |
-| B2 | **Giriş puanı (YENİ)** | `points_entry` tablosunda `visit` satırı doğuyor mu — **MB-50'nin ölçümü** | Sessiz olması doğru mu, yoksa müşteri kazandığını hiç fark etmiyor mu |
+| B2 | **Giriş puanı (YENİ)** | ~~`points_entry` tablosunda `visit` satırı doğuyor mu~~ → **ÖLÇÜLDÜ 17.08, yazılıyor:** `visit · 10 puan · 12:20:18`, ekrandaki bakiye (10) ve puan geçmişindeki satır (`Visite du jour · +10`) defterle birebir. MB-50 kapanışı doğrulandı | **Sessiz.** Hiçbir bildirim yok; müşteri kazandığını yalnız hesap kartındaki sayıdan ya da çekmecedeki *"crédités sans rien avoir à faire"* satırından anlayabiliyor. Karar kullanıcının |
 | B3 | Künye tamamlama | Ad · adres · telefon | Neden sorulduğu belli mi |
-| B4 | Adres ekleme (BAN araması) | **MB-03**: sokak alanına yazınca uygulama yeniden yükleniyor mu (ölçüldü 11.08, sebep henüz kanıtlanmadı) | — |
+| B4 | Adres ekleme (BAN araması) | ~~**MB-03**: sokak alanına yazınca uygulama yeniden yükleniyor mu~~ → **SEBEP KANITLANDI 17.08 ve uygulamada değil:** RN'in çift-`R` reload kısayolu, `adb input text`in donanım tuş akışıyla tetikleniyor (ölçüm MB-03 künyesinde). Akışın kendisi geçti: BAN önerileri geldi, seçim posta kodu/şehri doldurdu, adres DB'ye yazıldı | Öneri listesi 4+ sonuçta son satırı kırpıyor ve kaynak künyesi üstüne biniyor (**MB-70**) |
 | B5 | Hesap · puan kartı | Bakiye, eşik, kupon listesi | Bakiye 0'ken ne diyor |
 | B6 | **Hesap · "Nasıl puan kazanırım?" (YENİ)** | Çekmece açılır, altı yol ve para karşılıkları | Kullanıcı isteği 12.08'in karşılığı: merak eden cevabını bu ekranda buluyor mu |
 | B7 | Sepet | Toplam, asgari sepet, indirim kaynağı | Asgari sepet uyarısı ekrandaki toplamla tutuyor mu |
@@ -88,20 +88,20 @@ müdahale yok).
 | rota | ilk cihaz turu | sonuç | bulgular |
 | --- | --- | --- | --- |
 | `/onboarding` | | | |
-| `/(tabs)` vitrin | | | |
+| `/(tabs)` vitrin | 17.08 | geçti | bölge bandı `67000 STRASBOURG`, indirim şeridi ve koleksiyon blokları doğru; ürün sayıları (`32 produits`) yazılı |
 | `/(tabs)/catalog` | 17.08 | geçti | adlar Fransızca ve doğru — **MB-31 üretilmedi**; tükenen kartta "ÉPUISÉ" rozeti soluk, fiyat çipi tam renkli: göz önce fiyata gidiyor, oysa haber "yok" |
-| `/product/[slug]` | | | |
+| `/product/[slug]` | 17.08 | geçti | **MB-20 kapanışı cihazda doğrulandı:** kart `1,84 €` → detay `1,84 €` → sepet düğmesi `1,84 €`, üçü aynı. Kilo fiyatı, KDV notu, eski fiyat, stok tavanı (`À ce prix, 14 maximum`) ve varyant şeridi (`Vous consultez` işaretli) yerinde |
 | `/(tabs)/packages` · `/package/[slug]` | | | |
 | `/recipes` | 17.08 | geçti | liste ve künyeler doğru; **görseller amatör** (plastik ambalaj, dağınık masa, mutfak fayansı) — ürün fotoğrafları stüdyo kalitesindeyken tarif kartları kullanıcı fotoğrafı gibi duruyor, aynı ekranda yan yana gelince fark göze batıyor. İçerik işi, kod değil |
 | `/discover` | | | |
-| `/cart` | | | |
+| `/cart` | 17.08 | geçti | teslimat adresi kartı üstte (*"panier évalué selon votre adresse"* — depo değişmezi görünür), satır aritmetiği doğru (`2 × 1,84 € = 3,68 €`), **asgari sepet uyarısı toplamla tutuyor** (`40,00 − 3,68 = 36,32 €`), düğme pasif. Tek kusur: aynı uyarı hem kartta hem alt çubukta — **MB-69** |
 | `/login` · `/auth/callback` | | | |
 | `/profile-setup` | | | |
-| `/(tabs)/account` | | | |
+| `/(tabs)/account` | 17.08 | geçti | puan kartı (10 puan · eşik 500 · `Encore 490`), davet kodu, menü, adres defteri, dil/yazı boyutu çipleri ve pazarlama anahtarları doğru. İki bulgu: kimlik kartında **e-posta iki kez** (**MB-66**), puan geçmişi ekranı toplamsız ve çağrısız (**MB-67**) |
 | `/checkout` · `/checkout/confirmed` | | | |
-| `/orders` · `/order/[reference]` | 17.08 | **ŞÜPHE — ölçüm yarım** | Oturum AÇIKKEN derin bağlantıyla açıldığında ekran MİSAFİR hâlinde kaldı. Aynı desen gün boyu üç ekranda görüldü (talep listesi · talepler · siparişler) ve her seferinde hesap sekmesi girişli görünüyordu. **Teori:** ekran, oturum SecureStore'dan geri yüklenmeden monte olunca misafir kararını bir kez veriyor ve bir daha sormuyor. Kanıtlanmadı — iki ekranı aynı anda karşılaştırma denemesi yanlış yere dokundu. Kanıt yolu: aynı saniyede hesap sekmesi + siparişler dökümü |
+| `/orders` · `/order/[reference]` | 17.08 | **geçti — 17.08 sabahki ŞÜPHE ÇÜRÜTÜLDÜ** | Ekran girişli açıldı, misafir duvarı YOK; boş hâl doğru (*"Aucune commande pour l'instant"* + katalog çağrısı). Sabahki "oturum misafire düşüyor" gözlemi ekranın kusuru değildi: o saatlerde başka bir şerit tam test paketini koşuyordu ve her `generateLink` cihazın tek kullanımlık jetonunu geçersiz kılıyordu (aynı kök: görev `(21.71)`). Yığın sakinken desen üretilemedi |
 | `/feedback/[token]` | | | |
-| `/support` (üç rota) | | | |
+| `/support` (üç rota) | 17.08 | talep listesi geçti | Girişli açıldı (burada da misafir duvarı yok), boş hâl doğru. Bulgu: boş hâlde **aynı işi yapan iki çağrı iki ayrı isimle** — üstte `+ Nouvelle`, ortada `Écrivez-nous` (**MB-68**) |
 | `/professionals` | | | |
 | `/delivery-zones` | | | |
 | `/legal/[page]` | | | |
