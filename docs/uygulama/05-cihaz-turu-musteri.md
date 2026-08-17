@@ -89,17 +89,17 @@ müdahale yok).
 | --- | --- | --- | --- |
 | `/onboarding` | | | |
 | `/(tabs)` vitrin | | | |
-| `/(tabs)/catalog` | | | |
+| `/(tabs)/catalog` | 17.08 | geçti | adlar Fransızca ve doğru — **MB-31 üretilmedi**; tükenen kartta "ÉPUISÉ" rozeti soluk, fiyat çipi tam renkli: göz önce fiyata gidiyor, oysa haber "yok" |
 | `/product/[slug]` | | | |
 | `/(tabs)/packages` · `/package/[slug]` | | | |
-| `/recipes` · `/recipe/[slug]` | | | |
+| `/recipes` | 17.08 | geçti | liste ve künyeler doğru; **görseller amatör** (plastik ambalaj, dağınık masa, mutfak fayansı) — ürün fotoğrafları stüdyo kalitesindeyken tarif kartları kullanıcı fotoğrafı gibi duruyor, aynı ekranda yan yana gelince fark göze batıyor. İçerik işi, kod değil |
 | `/discover` | | | |
 | `/cart` | | | |
 | `/login` · `/auth/callback` | | | |
 | `/profile-setup` | | | |
 | `/(tabs)/account` | | | |
 | `/checkout` · `/checkout/confirmed` | | | |
-| `/orders` · `/order/[reference]` | | | |
+| `/orders` · `/order/[reference]` | 17.08 | **ŞÜPHE — ölçüm yarım** | Oturum AÇIKKEN derin bağlantıyla açıldığında ekran MİSAFİR hâlinde kaldı. Aynı desen gün boyu üç ekranda görüldü (talep listesi · talepler · siparişler) ve her seferinde hesap sekmesi girişli görünüyordu. **Teori:** ekran, oturum SecureStore'dan geri yüklenmeden monte olunca misafir kararını bir kez veriyor ve bir daha sormuyor. Kanıtlanmadı — iki ekranı aynı anda karşılaştırma denemesi yanlış yere dokundu. Kanıt yolu: aynı saniyede hesap sekmesi + siparişler dökümü |
 | `/feedback/[token]` | | | |
 | `/support` (üç rota) | | | |
 | `/professionals` | | | |
