@@ -127,8 +127,41 @@ function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? '';
 }
 
-/** `linkReferrer`ın cevabı — dördü de gerçekten oluyor ve üçü sessiz REDDİR (aşağıdaki künye). */
-export type LinkReferrerOutcome = 'linked' | 'unknown_code' | 'self' | 'already_referred';
+/** `linkReferrer`ın cevabı — beşi de gerçekten oluyor ve dördü sessiz REDDİR (aşağıdaki künye). */
+export type LinkReferrerOutcome = 'linked' | 'unknown_code' | 'self' | 'already_referred' | 'already_customer';
+
+/**
+ * **Getiren bağını KİMLİKLE kurar** — kodla kuran `linkReferrer`ın kardeşi ve ikisinin de gövdesi.
+ *
+ * Ayrı bir kapı gerekti çünkü ikinci bir çağıran doğdu: **komşu daveti** (kullanıcı kararı 17.08).
+ * Orada elde kod yok, davet edenin kimliği var — `neighborInviteUrl` yalnız token taşıyor. Kuralları
+ * kopyalamak yerine gövde buraya alındı; `linkReferrer` artık kodu kimliğe çevirip buraya veriyor.
+ *
+ * Dört sessiz ret ve gerekçeleri:
+ *   · **Kendini getirmek** — kişi kendini getiremez.
+ *   · **Zaten bağlı** — ilk getiren kazanır; sonradan gelen bir bağ, kazanılmış olanı çalamaz.
+ *   · **Zaten müşteri** — davet YENİ müşteri kazandırmanın ödülüdür (★ karar 2f: *"yeni müşteri
+ *     500"*). Taslak ve iptal sayılmaz (`countPlacedForCustomer`): ödeme adımında vazgeçmiş bir
+ *     ziyaretçi "zaten müşterimiz" değildir ve bir daha hiç davet edilememesi sessiz bir kayıp olurdu.
+ *   · **Bilinmeyen kişi** — profil okunamadı.
+ *
+ * **Ödül burada DOĞMAZ**, bağ kurulur: ödül getirilen kişinin parası defterde göründüğünde doğar
+ * (`order/payment.ts` → `finalize`). Kullanıcının kuralı (17.08): *"benim davet ettiğim kişi bana
+ * davet ödülü kazandırabilmesi için öyle veya böyle bir tane başarılı sipariş gerçekleştirmesi
+ * lazım."* Seferle ilgisi yoktur — komşu ödülünden ayrıldığı yer tam burasıdır.
+ */
+export async function linkReferrerById(db: SupabaseClient, newCustomerId: string, referrerId: string): Promise<LinkReferrerOutcome> {
+  if (referrerId === newCustomerId) return 'self';
+
+  const profiles = new UserProfileService(db);
+  const yeni = await profiles.getById(newCustomerId);
+  if (!yeni) return 'unknown_code';
+  if (yeni.referredBy) return 'already_referred';
+  if ((await new OrderService(db).countPlacedForCustomer(newCustomerId)) > 0) return 'already_customer';
+
+  await profiles.update({ id: newCustomerId, referredBy: referrerId });
+  return 'linked';
+}
 
 /**
  * Yeni müşteriyi getirene BAĞLAR. Kayıt akışı çağırır (`auth/otp.ts`, yalnız YENİ müşteride).
@@ -145,14 +178,9 @@ export type LinkReferrerOutcome = 'linked' | 'unknown_code' | 'self' | 'already_
  * göründüğünde doğar (`order/payment.ts` → `finalize`).
  */
 export async function linkReferrer(db: SupabaseClient, newCustomerId: string, code: string): Promise<LinkReferrerOutcome> {
-  const profiles = new UserProfileService(db);
-  const [yeni, referrerId] = await Promise.all([profiles.getById(newCustomerId), resolveReferrer(db, code)]);
-  if (!yeni || !referrerId) return 'unknown_code';
-  if (referrerId === newCustomerId) return 'self';
-  if (yeni.referredBy) return 'already_referred';
-
-  await profiles.update({ id: newCustomerId, referredBy: referrerId });
-  return 'linked';
+  const referrerId = await resolveReferrer(db, code);
+  if (!referrerId) return 'unknown_code';
+  return linkReferrerById(db, newCustomerId, referrerId);
 }
 
 /**
@@ -186,14 +214,13 @@ export async function linkReferrer(db: SupabaseClient, newCustomerId: string, co
 export async function attachReferralOnLogin(
   db: SupabaseClient,
   input: { authUserId: string; referralCode: string },
-): Promise<LinkReferrerOutcome | 'no_profile' | 'already_customer'> {
+): Promise<LinkReferrerOutcome | 'no_profile'> {
   const profile = await new UserProfileService(db).findByAuthUserId(input.authUserId);
   // Profil yoksa trigger henüz yazmamıştır: davet yüzünden girişi bekletmeyiz, çerez duruyor ve
   // bir sonraki giriş aynı kapıdan geçer.
   if (!profile) return 'no_profile';
-  if (profile.referredBy) return 'already_referred';
-  // Taslak ve iptal SAYILMAZ (`countPlacedForCustomer`): ödeme adımında vazgeçmiş bir ziyaretçi
-  // "zaten müşterimiz" değildir ve bir daha hiç davet edilememesi sessiz bir kayıp olurdu.
-  if ((await new OrderService(db).countPlacedForCustomer(profile.id)) > 0) return 'already_customer';
+  // Üç ret ölçütü (`already_referred` · `already_customer` · `self`) artık `linkReferrerById`te,
+  // tek yerde: komşu daveti de aynı bağı kuruyor ve iki kapının bir gün ayrışması, davetin bir
+  // yoldan kabul edilip öbüründen sessizce reddedilmesi demekti.
   return linkReferrer(db, profile.id, input.referralCode);
 }

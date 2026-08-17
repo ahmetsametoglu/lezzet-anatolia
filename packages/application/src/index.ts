@@ -60,6 +60,7 @@ export {
   ensureCustomerReferralCode,
   inviteUrl,
   linkReferrer,
+  linkReferrerById,
   readInviteWelcome,
   resolveReferrer,
 } from './customer/referral';
@@ -420,7 +421,7 @@ export type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem 
 export { notifyOrderException, notifyOrderStatus } from './order/notify';
 export { buildOrderNotification } from './order/notification-data';
 export type { NotificationBundle } from './order/notification-data';
-export { awardReferralPoints, rewardReferralOnPaidOrder } from './feedback/points';
+export { awardReferralPoints, revokeReferralOnUnpaidOrder, rewardReferralOnPaidOrder } from './feedback/points';
 // ── "Buraya da gelin" kaydı — terfi 10.08 ───────────────────────────────────
 // Kaynağı `apps/web/lib/delivery/notice-actions.ts`in `recordZoneNoticeAction`ıydı; web köprü.
 // Mobil bant (21.20) aynı kaydı yazıyor ve kural TEK olmalı: yer adının KAYIT ANINDA dondurulması

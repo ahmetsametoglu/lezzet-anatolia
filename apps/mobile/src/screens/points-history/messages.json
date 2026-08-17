@@ -34,6 +34,15 @@
       "visit": "Günlük giriş",
       "redemption": "Kupona çevrildi",
       "manual": "Elle düzeltme"
+    },
+    "reasonReverted": {
+      "referral": "Getirdiğiniz müşteri — iptal edildi",
+      "neighbor": "Komşu daveti — iptal edildi"
+    },
+    "pending": {
+      "title": "Yolda olan puanlar",
+      "one": "{name} sipariş verdi — {points} puan, ödeme alınınca hesabınıza geçecek.",
+      "balance": "Bakiyeniz"
     }
   },
   "fr": {
@@ -71,6 +80,15 @@
       "visit": "Visite du jour",
       "redemption": "Converti en bon",
       "manual": "Ajustement manuel"
+    },
+    "reasonReverted": {
+      "referral": "Client parrainé — annulé",
+      "neighbor": "Invitation voisin — annulée"
+    },
+    "pending": {
+      "title": "Points en attente",
+      "one": "{name} a commandé — {points} points, crédités dès le paiement encaissé.",
+      "balance": "Votre solde"
     }
   },
   "de": {
@@ -108,6 +126,15 @@
       "visit": "Täglicher Besuch",
       "redemption": "In Gutschein umgewandelt",
       "manual": "Manuelle Korrektur"
+    },
+    "reasonReverted": {
+      "referral": "Geworbener Kunde — storniert",
+      "neighbor": "Nachbarschaftseinladung — storniert"
+    },
+    "pending": {
+      "title": "Punkte unterwegs",
+      "one": "{name} hat bestellt — {points} Punkte, sobald die Zahlung eingegangen ist.",
+      "balance": "Ihr Guthaben"
     }
   }
 }

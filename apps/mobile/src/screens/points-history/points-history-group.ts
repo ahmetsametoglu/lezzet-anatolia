@@ -23,6 +23,13 @@ import { formatOrderDate } from '@/screens/orders/order-format';
   AYIRT EDİLEBİLİRLİK. Ekranda özdeş görünen iki satır hangi sebepten olursa olsun tek satırdır;
   günde bir kez yazılan `visit` zaten hiç birleşmez (birleşecek ikinci satırı yok).
 
+  ── AMA İŞARET AYIRT EDİCİDİR (★ karar 7 · 17.08) ───────────────────────────
+  Ödülün geri alınması aynı sebeple ve ters işaretle yazılıyor (`points_entry_reversal_key`), yani
+  aynı gün yazılıp iptal edilen bir ödülün iki satırı sebep ve tarih olarak ÖZDEŞ. İşaret anahtara
+  girmeseydi ikisi tek satırda toplanır ve ekranda **"Komşu daveti · 2 hareket · +0"** yazardı —
+  hem anlamsız hem de olan biteni gizleyen bir satır. Kazanç ile iptali ayırmak bilgi kaybı değil,
+  yukarıdaki "ayırt edilebilirlik" ölçütünün ta kendisi: müşteri için bunlar iki ayrı olaydır.
+
   ── GRUP ANAHTARI, GÖRÜNEN TARİHTİR ─────────────────────────────────────────
   Ham damganın gün parçası değil, ekrana YAZILAN tarih (`formatOrderDate`) anahtar: cihazın saat
   dilimi ile sunucununki ayrıştığında "aynı gün yazıyor ama ayrı gruplar" gibi bir tuhaflık
@@ -59,7 +66,8 @@ export function groupPointsHistory(entries: readonly PointsHistoryEntry[], local
     const date = formatOrderDate(entry.at, locale);
     const last = groups[groups.length - 1];
 
-    if (last !== undefined && last.reason === entry.reason && last.date === date) {
+    // İşaret de anahtarın parçası: kazanç ile iptali aynı satırda toplamak toplamı sıfırlardı.
+    if (last !== undefined && last.reason === entry.reason && last.date === date && last.points < 0 === entry.points < 0) {
       last.points += entry.points;
       last.count += 1;
       continue;

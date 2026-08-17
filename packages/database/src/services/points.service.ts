@@ -93,6 +93,31 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
   }
 
   /**
+   * Bu kaynaktan yazılmış **ÖDÜL** satırı (pozitif) — geri almanın tutarı buradan okunur.
+   *
+   * İşaret süzgeci şart: aynı üçlüde artık iki satır bulunabiliyor (ödül + geri alma, ★ karar 7d)
+   * ve `getOneBy` sırasızdır, yani hangisini döndüreceği belirsizdir. Geri alınacak tutar **o gün
+   * yazılan** tutardır, bugünkü ayardaki değer değil: `points_referral` sonradan değişmiş olabilir
+   * ve ayardan okumak defteri kendi geçmişiyle çelişkiye düşürürdü.
+   */
+  async findAwardFor(customerId: string, reason: PointsReason, refId: string): Promise<PointsEntry | null> {
+    const rows = await this.getAll(
+      { customerId, reason, refId },
+      { rangeFilters: [{ field: 'points', operator: 'gt', value: 0 }], limit: 1 },
+    );
+    return rows[0] ?? null;
+  }
+
+  /** Bu kaynağın ödülü zaten geri alınmış mı — asıl güvence `points_entry_reversal_key`te. */
+  async hasReversalFor(customerId: string, reason: PointsReason, refId: string): Promise<boolean> {
+    const rows = await this.getAll(
+      { customerId, reason, refId },
+      { rangeFilters: [{ field: 'points', operator: 'lt', value: 0 }], limit: 1 },
+    );
+    return rows.length > 0;
+  }
+
+  /**
    * KAYNAKSIZ sebepler için günlük tekillik nezaketi (bugün ziyaret puanı yazıldı mı).
    *
    * **Gün İŞLETMENİN günüdür** (`startOfBusinessDay`) — `earnedToday` ve `points_entry_visit_day`

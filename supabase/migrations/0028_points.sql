@@ -76,9 +76,22 @@ alter table public.points_entry enable row level security;
 
 -- **Aynı kaynaktan iki kez puan yok.** `ref_id` boş olan satırlar (elle düzeltme) kapsam dışı:
 -- patron aynı müşteriye iki kez jest yapabilmeli.
+--
+-- **İŞARETE GÖRE İKİ İNDEKS, TEK KURAL DEĞİL (★ karar 7d).** Ödül ile onun geri alınması aynı
+-- üçlüyü (`müşteri, sebep, kaynak`) paylaşır — tek indeks olsaydı ters işaretli düzeltme satırı
+-- yazılamazdı ve iade edilen bir siparişin ödülü defterde kalırdı. Bölünce ikisi de kendi içinde
+-- tekil kalıyor: aynı kaynaktan iki kez ödül YOK, aynı kaynaktan iki kez geri alma da YOK.
+--
+-- Alternatif, sebep enum'una `*_reversal` türleri eklemekti; seçilmedi çünkü her yeni ödül türü
+-- ikinci bir enum elemanı doğururdu (CLAUDE §1 — duplication). Bu hâliyle `ref_id`nin sebebe göre
+-- değişen sözleşmesi korunuyor ve `sum(points) where reason='referral'` doğrudan NET etkiyi verir.
 create unique index points_entry_source_key
   on public.points_entry (customer_id, reason, ref_id)
-  where ref_id is not null;
+  where ref_id is not null and points > 0;
+
+create unique index points_entry_reversal_key
+  on public.points_entry (customer_id, reason, ref_id)
+  where ref_id is not null and points < 0;
 
 -- **Günde bir ziyaret puanı** — ve tekilliğin BURADA durması şart.
 --

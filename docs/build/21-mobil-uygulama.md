@@ -3551,6 +3551,62 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` · `lint` temiz; şablon gerçek `render` ile üretilip kareyle bakıldı — üç
   yeni cevap üç ayrı kartta, 08:13 → 08:14 → 08:15 sırasıyla, müşterinin iki mesajı alıntı izinde.
 
+- [x] (21.73) **HAK EDİLMEMİŞ PUAN GERİ ALINIYOR, VE KOMŞU DAVETİ ARTIK MÜŞTERİ DE GETİRİYOR
+  (kullanıcı kararları 17.08)** — MB-57 · MB-67 kapandı.
+  `touches: supabase/migrations/0028_points.sql, packages/database/src/services/{points,order}.service.ts,
+  packages/application/src/feedback/points.ts, packages/application/src/order/payment.ts,
+  packages/application/src/customer/{referral,neighbor,points}.ts,
+  packages/types/src/contracts/points-api.schema.ts,
+  apps/mobile/src/screens/points-history/{points-history-screen.tsx,points-history-group.ts,messages.json}`
+
+  **BAŞLANGIÇ NOKTASI BİR SATIRIN BAYAT OLDUĞUNU GÖRMEKTİ.** MB-57 dört iş kalemi sayıyordu;
+  ölçünce ikisinin ZATEN yapılmış olduğu çıktı (ödül anı `paid` geçişine bağlanmış, sipariş puanı
+  sökülmüş). Kullanıcının aynı gün koyduğu kural bunu adlandırdı: *"notları kodla teyit etmeden
+  oradaki ifadelere inanma; bazen yapay zeka ajanları konseptten kopabiliyor."*
+
+  **1 · GERİ ALMA — ve "kazanılmış ödül geri alınmaz" ile çelişmiyor.** Kullanıcının ayrımı düğümü
+  çözdü: *"hak edilmiş puan alınamaz evet, ama henüz hak edilmemiş puanlar vardır."* Ödülü hak
+  ettiren şey paranın alınmış olması (★ karar 3); para geri gittiyse hak ediş de geri gitmiştir.
+  Ölçülen boşluk: `finalize` yalnız `paid`e GİRİŞİ dinliyordu, ÇIKIŞ hiçbir şey tetiklemiyordu.
+  Kullanıcının verdiği örnekte (kapıda ödeme + iptal) boşluk YOKTU — orada `paid` hiç oluşmaz;
+  açık olan yol kartla ödemeydi. Geri alma defterden silmez, **ters satır** yazar ve tutarı ayardan
+  değil o gün yazılan satırdan okur.
+
+  **2 · TEKİLLİK İNDEKSİ İŞARETE GÖRE BÖLÜNDÜ (★ karar 7d — bilinçli sapma).** 11.08'in önerisi
+  *"enum'a geri alma türü eklenir"*di; seçilmedi çünkü her yeni ödül türü ikinci bir enum elemanı
+  doğururdu (CLAUDE §1). `points_entry_source_key` artık `points > 0`, yeni `points_entry_reversal_key`
+  `points < 0`. Kazanç: `ref_id`nin sebebe göre değişen sözleşmesi korundu ve
+  `sum(points) where reason='referral'` doğrudan NET etkiyi veriyor.
+
+  **3 · KULLANICININ İKİ SORUSU İKİ KUSUR BULDURDU.**
+  · *"İptal iki kere tetiklenip fazladan 100 puan silinebilir mi?"* → Komşu ödülünde hayır (üç
+    katman), **ama getiren ödülünde başka bir aileden gerçek kusur çıktı**: kaynağı sipariş değil
+    KİŞİ olduğu için, getirilen müşterinin İKİNCİ siparişinin iptali ilk siparişte hak edilmiş
+    ödülü siliyordu. Ölçüt ödülün anlamından türetildi (`countPaidForCustomer > 0` → ödül durur).
+  · *"Komşumu çağırdım, hesabı yoktu, geldi kaydoldu, başka sefere sipariş verdi — davet puanımı
+    alabiliyor muyum?"* → **Hayırdı ve bu bir boşluktu.** `referred_by`yi yazan tek yol getiren
+    daveti KODUNDAN geçiyordu; komşu daveti bağlantısı kod değil TOKEN taşıyor. Komşu davetiyle
+    gelen kişi *"kimsenin getirmediği müşteri"* olarak doğuyordu — `feedback/points.ts` künyesi
+    tersini vaat ettiği hâlde. Bağ artık `acceptNeighborInvite`ta, ortak kapıdan (`linkReferrerById`).
+    Kural kopyalanmadı: üç ret ölçütü (`self` · `already_referred` · `already_customer`) tek yerde
+    toplandı, iki davet türü de oradan geçiyor.
+
+  **İKİ ÖDÜLÜN AYRIMI KAYDA GEÇTİ:** komşu ödülü SEFERE bağlı, getiren ödülünün seferle ilgisi YOK
+  — *"o kişi başka sefere veya benimle çok alakasız posta kodunda dahi oturabilir… bir tane
+  başarılı sipariş gerçekleştirmesi lazım."*
+
+  **4 · "PUAN YOLDA" + PUAN GEÇMİŞİ EKRANI (MB-67).** Bekleyen ödül deftere YAZILMAZ (defter
+  *"ne oldu"*yu tutar), kart sözleşmesinde taşınır ve ekranda listenin ÜSTÜNDE ayrı blok olur.
+  Ekran artık bakiyeyi de gösteriyor. Aynı turda üçüncü kusur çıktı: gruplama anahtarı
+  `sebep + tarih`ti, aynı gün yazılıp iptal edilen ödül tek satırda toplanıp **"+0"** yazacaktı —
+  işaret anahtara eklendi, kazanç ile iptal ayrı satır ve ayrı etiket (üç dilde).
+
+  **Doğrulama:** `typecheck` 18/18 · `lint` · `knip` temiz · **1374 birim testi** geçti. İndeks
+  bölünmesi veritabanında rollback'li işlemle sınandı: ödül (+100) ve geri alma (−100) aynı üçlüyle
+  yazıldı, **ikinci geri alma `23505` ile reddedildi** — yani çifte silme koruması uygulama katmanı
+  atlansa bile ayakta. Cihaz turu yapılmadı (cihaz bağlı değil, kullanıcı bildirimi 17.08);
+  ekranın görsel doğrulaması cihaz döndüğünde.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

@@ -235,6 +235,103 @@ async function awardNeighborPoints(db: SupabaseClient, order: Order): Promise<Po
 }
 
 /**
+ * **Ödülün geri alınması** (★ karar 7 · kullanıcı kararı 17.08) — defterden SİLMEZ, ters satır yazar.
+ *
+ * ── NEDEN ÇELİŞMİYOR ────────────────────────────────────────────────────────
+ * `DOMAIN §14` *"kazanılmış ödül geri alınmaz"* der ve bu kural yerinde duruyor. Buradaki puan
+ * kazanılmış DEĞİLDİR: ödülü hak ettiren şey paranın alınmış olmasıdır (★ karar 3) ve para geri
+ * gittiyse hak ediş de geri gitmiştir. Kullanıcının cümlesi: *"hak edilmiş puan alınamaz evet, ama
+ * henüz hak edilmemiş puanlar vardır."*
+ *
+ * ── SİLMEK YOK, DÜZELTME SATIRI VAR ─────────────────────────────────────────
+ * Defter bir sayaç değil (`0028_points.sql`): bakiye satırların toplamıdır. Ödülü silmek geçmişi
+ * değiştirmek olurdu — *"neden 100 puanım eksildi"* sorusunun cevabı defterde durmalı. Ters satır
+ * aynı üçlüyü (`müşteri, sebep, kaynak`) taşır; iki satırın bir arada yaşayabilmesi için tekillik
+ * indeksi işarete göre ikiye ayrıldı (★ karar 7d).
+ *
+ * ── TUTAR AYARDAN DEĞİL, SATIRDAN OKUNUR ────────────────────────────────────
+ * `findAwardFor` o gün gerçekten yazılan tutarı verir. Bugünkü `points_neighbor` ayarını okusaydık,
+ * ayar aradan değiştiğinde geri alma ödülden farklı çıkar ve defter kendi geçmişiyle çelişirdi.
+ *
+ * ── BAKİYE NEGATİFE DÜŞEBİLİR, VE DÜŞMELİ ───────────────────────────────────
+ * Müşteri puanı çoktan kupona çevirmişse geri alma bakiyeyi eksiye indirir. Bu bilinçli: defterin
+ * işi olanı SÖYLEMEKTİR, gizlemek değil (CLAUDE §1 — *"ölçülemeyen değer sıfır değildir"*nin aynı
+ * ruhu). Sıfırda durdursaydık müşteri hak etmediği puanı elinde tutar, biz de bunu göremezdik.
+ * Eksideyken yeni çevirme zaten açılmaz (`canRedeem` bakiyeyi eşikle karşılaştırıyor).
+ *
+ * ── YENİDEN ÖDENİRSE ÖDÜL GERİ GELMEZ ───────────────────────────────────────
+ * Bilinçli sınır: pozitif satır defterde durduğu için `points_entry_source_key` ikinci bir ödülü
+ * engeller. *"Bir kaynaktan bir kez ödül"* kuralı, iade edilip yeniden ödenen kenar durumdan daha
+ * değerli — tersi, aynı siparişi iade/ödeme arasında gidip gelerek puan üretmeye kapı açardı.
+ */
+async function revokePoints(
+  db: SupabaseClient,
+  input: { customerId: string; reason: EarnablePointsReason; refId: string },
+): Promise<PointsEntry | null> {
+  const entries = new PointsEntryService(db);
+
+  const award = await entries.findAwardFor(input.customerId, input.reason, input.refId);
+  if (!award) return null; // Hiç ödül yazılmamış (tavan, B2B, kapıda ödeme) — geri alınacak şey yok.
+  if (await entries.hasReversalFor(input.customerId, input.reason, input.refId)) return null;
+
+  try {
+    return await entries.insert({ customerId: input.customerId, points: -award.points, reason: input.reason, refId: input.refId });
+  } catch (error) {
+    // `awardPoints`taki yarış nezaketinin aynısı: iki eşzamanlı iade senkronunda biri yazar, öteki
+    // tekillik ihlaliyle düşer. İade işleminin kendisi bundan etkilenmemeli.
+    if ((error as { code?: string })?.code === '23505') return null;
+    throw error;
+  }
+}
+
+/**
+ * **Para geri gitti: davet ödülleri geri alınır** (★ karar 7 · 17.08).
+ *
+ * `rewardReferralOnPaidOrder`ın tam simetriği ve aynı kapıdan çağrılır (`order/payment.ts` →
+ * `finalize`), yalnız yönü ters: orası `paid`e GİRİŞTE yazar, burası `paid`ten ÇIKIŞTA geri alır.
+ * İkisinin aynı yerde durması şart — ödeme durumunun türetildiği tek yer orasıdır ve ödülün ömrü
+ * o duruma bağlıdır.
+ *
+ * **Ölçülen boşluk buydu (17.08):** `finalize` yalnız `if (status === 'paid')` diye bakıyordu, yani
+ * kartla ödenmiş bir sipariş iptal edilip parası iade edildiğinde davet edenin 100/500 puanı
+ * defterde kalıyordu. Kapıda ödemede boşluk yoktu — orada `paid` hiç oluşmaz.
+ *
+ * **İşlemi durdurmaz** (`DOMAIN §14`): geri alınamazsa para yine iade edilmiştir.
+ */
+export async function revokeReferralOnUnpaidOrder(db: SupabaseClient, orderId: string): Promise<void> {
+  const orders = new OrderService(db);
+  const order = await orders.getById(orderId);
+  if (!order) return;
+
+  const inviterId = order.neighborInviteId
+    ? ((await new NeighborInviteService(db).getById(order.neighborInviteId))?.inviterId ?? null)
+    : null;
+  const referredBy = (await new UserProfileService(db).getById(order.customerId))?.referredBy ?? null;
+
+  /**
+   * ── İKİ ÖDÜLÜN GERİ ALMA ÖLÇÜTÜ AYNI DEĞİL (kullanıcı sorusu 17.08) ────────
+   * **Komşu ödülünün kaynağı SİPARİŞTİR** (`refId = order.id`): o sipariş ödenmediyse sefere
+   * eklenen ikinci sipariş yok demektir, ödül koşulsuz düşer.
+   *
+   * **Getiren ödülünün kaynağı KİŞİDİR** (`refId = order.customerId`) ve bir kişinin birden çok
+   * siparişi olur. Koşulsuz düşürseydik şu senaryo ödülü haksız yere silerdi: A'yı B getirir, A'nın
+   * ilk siparişi ödenir (B'ye 500 yazılır), A ikinci siparişini verir ve onu iptal eder — ikinci
+   * siparişin iptali B'nin ilk siparişte HAK ETTİĞİ ödülü götürürdü. Ölçüt ödülün kendi anlamından
+   * geliyor: *"bu kişi gerçekten müşterimiz oldu"*. Kişinin ödenmiş başka bir siparişi kaldıysa olgu
+   * sürüyordur, ödül de durur.
+   *
+   * Sayım bu siparişi kapsamaz: `finalize` yeni durumu ÖNCE yazıyor (`update`), sonra buraya
+   * geliyor — yani iptal edilen sipariş sayım anında zaten `paid` değil.
+   */
+  const referralStillEarned = referredBy !== null && (await orders.countPaidForCustomer(order.customerId)) > 0;
+
+  await Promise.all([
+    referredBy && !referralStillEarned ? revokePoints(db, { customerId: referredBy, reason: 'referral', refId: order.customerId }) : null,
+    inviterId ? revokePoints(db, { customerId: inviterId, reason: 'neighbor', refId: order.id }) : null,
+  ]);
+}
+
+/**
  * Defter sayfası boyu ve kaçak tavanı — `sumInvitePoints`in tek ayarı.
  *
  * 100 seçildi çünkü aranan pencere DAR: davetin doğduğu andan bugüne kadarki hareketler. Gerçek

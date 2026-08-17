@@ -15,6 +15,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import messages from './messages.json';
 import { groupPointsHistory, type PointsHistoryGroup } from './points-history-group';
+import { usePoints } from '@/screens/account/use-points.hook';
 import { usePointsHistory } from './use-points-history.hook';
 
 /*
@@ -59,6 +60,14 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   const { theme } = useUnistyles();
   const router = useRouter();
   const history = usePointsHistory();
+  /* Kart ile defter AYRI uçlar ve ayrı kalmaları bilinçli (sözleşme künyesi: kartın tavanı sabit,
+     defter sınırsız büyüyor). Bu ekran ikisini de okur çünkü müşterinin buraya getiren sorusu tek
+     değil: *"hangi puan nereden geldi"* defterin işi, *"kaç puanım var"* kartın. Bakiyeyi görmek
+     için hesap ekranına dönmek zorunda kalmak MB-67'nin ta kendisiydi. */
+  const points = usePoints(true);
+  const card = points.view?.points ?? null;
+  const pending = card?.pendingNeighborAwards ?? [];
+  const neighborPoints = card?.earnWays.find((way) => way.key === 'neighbor')?.points ?? null;
 
   /* HEADER: "sayfa başlığı" durağı — `‹` kendi satırında → eyebrow → 26px başlık
      (`design/KARARLAR.md` 16.08, "üç header" kuralı). Ölçüt: kaydırırken erişilebilir kalması
@@ -76,6 +85,31 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
       </Text>
+
+      {/* BAKİYE BAŞLIKTA (MB-67): ekran müşterinin *"puanlarım nerede"* diye geldiği yer ve tek
+          satırlık bir defterin altında koca bir boşluk bırakıyordu. Kart okunmadan çizilmez —
+          "0 puan" gösterip sonra gerçek sayıya atlamak, olmayan bir bakiyeyi bir an doğru gibi
+          okuturdu (CLAUDE §1: ölçülemeyen değer sıfır değildir). */}
+      {card === null ? null : (
+        <View style={styles.balanceRow} testID="points-history-balance">
+          <Text style={styles.balanceLabel}>{t.pending.balance}</Text>
+          <Text style={styles.balanceValue}>{card.balance}</Text>
+        </View>
+      )}
+
+      {/* YOLDA (★ karar 3): defterde KARŞILIĞI YOK ve olmamalı — bekleyen ödül henüz yazılmadı.
+          O yüzden listeye satır olarak karışmıyor, listenin ÜSTÜNDE ayrı bir blok olarak duruyor:
+          sanal bir satır hem tarih sırasını hem bakiyenin toplamını yalan söyletirdi. */}
+      {pending.length === 0 || neighborPoints === null ? null : (
+        <View style={styles.pendingCard} testID="points-history-pending">
+          <Text style={styles.pendingTitle}>{t.pending.title}</Text>
+          {pending.map((award, index) => (
+            <Text key={`${award.neighborName}-${award.deliveryDate}-${index}`} style={styles.pendingLine}>
+              {t.pending.one.replace('{name}', award.neighborName).replace('{points}', String(neighborPoints))}
+            </Text>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -195,7 +229,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
     return (
       <View style={styles.row} testID={`points-history-row-${group.id}`}>
         <View style={styles.rowText}>
-          <Text style={styles.reason}>{reasonLabel(t, group.reason)}</Text>
+          <Text style={styles.reason}>{reasonLabel(t, group.reason, group.points)}</Text>
           {/* Sayı YALNIZ birden çoksa yazılır: "1 hareket" demek, hiçbir şey söylemeden satırı
               kalabalıklaştırmaktır. */}
           <Text style={styles.date}>
@@ -243,9 +277,24 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
  * Sebebin müşteri cümlesi — küme TAM (`Record`), yani defter yeni bir sebep öğrenirse burası
  * derlemede kırılır ve eksik çizmez.
  */
-function reasonLabel(t: Messages, reason: PointsReason): string {
+/**
+ * Satırın adı — **işarete duyarlı** (★ karar 7 · 17.08).
+ *
+ * Geri alma aynı sebeple ve ters işaretle yazılıyor, yani ham etiket kullanılsaydı müşteri aynı adı
+ * biri artı biri eksi olmak üzere iki kez görür ve ne olduğunu anlamazdı: *"Komşu daveti +100"*
+ * altında *"Komşu daveti −100"*. Ayrım VERİDE değil SUNUMDA yapılıyor — sebep enum'u bilerek
+ * büyütülmedi (★ karar 7d).
+ *
+ * Sözlük yalnız geri ALINABİLEN sebepleri taşıyor; ötekiler kendi adında kalır. `redemption` zaten
+ * doğası gereği eksidir ("Kupona çevrildi") ve `manual` eksi de artı da olabilir — ikisine de ters
+ * etiket uydurmak, olmayan bir olayı adlandırmak olurdu.
+ */
+function reasonLabel(t: Messages, reason: PointsReason, points: number): string {
   const labels: Record<PointsReason, string> = t.reason;
-  return labels[reason];
+  if (points >= 0) return labels[reason];
+
+  const reverted: Partial<Record<PointsReason, string>> = t.reasonReverted;
+  return reverted[reason] ?? labels[reason];
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
@@ -283,6 +332,43 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
     color: theme.colors.ink,
+  },
+  /* BAKİYE SATIRI, KART DEĞİL: sayfanın kendi başlığının altında bir künye satırı gibi durur.
+     Kutu yapmak, altındaki "yolda" bloğuyla iki kart üst üste gelmesi demekti. */
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingTop: theme.space.sm,
+  },
+  balanceLabel: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    color: theme.colors.muted,
+  },
+  balanceValue: {
+    fontFamily: theme.font.display[theme.text['card-title--font-weight']],
+    fontSize: theme.text['card-title'],
+    color: theme.colors.olive,
+  },
+  /* "Yolda" bir VAAT, bir kayıt değil — o yüzden defterin satırlarından görsel olarak da ayrı:
+     yumuşak zemin, kendi başlığı. Zeytin değil kum tonunda çünkü henüz kazanılmış bir şey yok. */
+  pendingCard: {
+    marginTop: theme.space.lg,
+    padding: theme.space.lg,
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors['sand-100'],
+    gap: theme.space.xs,
+  },
+  pendingTitle: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.ink,
+  },
+  pendingLine: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors.muted,
   },
   /* SATIR KUTU DEĞİL: hareketler bir liste, kart yığını değil — her satıra zemin ve çerçeve
      vermek 200 satırlık bir arşivi okunamaz kılardı. Ayrım ince bir çizgiyle. */

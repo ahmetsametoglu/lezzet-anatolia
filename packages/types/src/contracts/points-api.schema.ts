@@ -162,6 +162,25 @@ export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).me
    * sessizce 404'e düşen bir bağlantı taşır. `null` yalnız kod da `null`ken.
    */
   inviteUrl: z.string().nullable(),
+  /**
+   * **"Puan yolda"** — davet edilen komşu sipariş verdi ama parası henüz alınmadı (★ karar 3 · MB-57).
+   *
+   * Ödül `paid` geçişinde doğuyor; o ana kadar müşterinin ekranında HİÇBİR ŞEY değişmiyordu —
+   * komşusunu çağırmış, komşu sipariş vermiş, ortada bir iz yok. Bekleme doğaldır (ödül başkasının
+   * parasına bağlı), görünmezliği kusurdu.
+   *
+   * **Puan değeri taşımaz, OLAY taşır:** kaç puan olduğunu ekran zaten biliyor (`earnWays`'teki
+   * `neighbor`) ve iki yerde tutmak, ayar değiştiğinde ikisinin ayrışması demekti. Boş dizi = bekleyen
+   * yok; ekran bloğu hiç çizmez. Defterde karşılığı YOKTUR ve olmamalı — `points_entry` *"ne oldu"*yu
+   * tutar, *"ne olabilir"*i değil; sanal bir satır bakiyeyi de yalan söyletirdi.
+   */
+  pendingNeighborAwards: z.array(
+    z.object({
+      /** Komşunun YALNIZ adı (ilk sözcük) — cümlenin öznesi; soyadı göstermenin bir işlevi yok. */
+      neighborName: z.string(),
+      deliveryDate: z.string(),
+    }),
+  ),
 });
 
 /**

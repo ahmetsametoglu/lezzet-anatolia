@@ -11,6 +11,7 @@ import { logger } from '@lezzet/observability';
 import type { CompanyInfo, CustomerType, KeysetCursor, MePointsEarnWayKey, PointsEntry } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getPointsBalance } from '../feedback/points';
+import { readPendingNeighborAwards, type PendingNeighborAward } from './neighbor';
 import { ensureCustomerReferralCode, inviteUrl } from './referral';
 
 /*
@@ -113,6 +114,13 @@ export interface CustomerPointsCard extends CustomerPointsRules {
    * `PATHNAMES` künyesinin kendi dersi. Dil PAYLAŞANIN dilidir (`inviteUrl` künyesi).
    */
   inviteUrl: string | null;
+  /**
+   * **"Puan yolda"** — komşu sipariş verdi, parası henüz alınmadı (★ karar 3 · `readPendingNeighborAwards`).
+   *
+   * Puan değeri TAŞIMAZ, olay taşır: kaç puan olduğu zaten `earnWays`te (`neighbor`) ve iki yerde
+   * tutmak, ayar değiştiğinde ikisinin ayrışması demekti. Boş dizi = bekleyen yok.
+   */
+  pendingNeighborAwards: PendingNeighborAward[];
 }
 
 export interface CustomerPointsView {
@@ -270,7 +278,7 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { points: null, coupons: [] };
 
-  const [balance, rules, coupons, referralCode] = await Promise.all([
+  const [balance, rules, coupons, referralCode, pendingNeighborAwards] = await Promise.all([
     getPointsBalance(db, customerId),
     // Kural kapısı KOPYALANMIYOR, çağrılıyor: kartın gösterdiği yollar ile misafirin onboarding'de
     // gördüğü yollar bir gün ayrışırsa ikisi de "doğru" görünür ve fark edilmez.
@@ -280,6 +288,9 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
     // tur her puan okumasında boşuna atılırdı — elimizdeki satır aynı cevabı taşıyor. Kapı yine de
     // kimliği alır (profili değil): üretim yolunda tek doğrulanmış kaynak vardır, o da DB satırı.
     profile.referralCode ?? ensureCustomerReferralCode(db, customerId),
+    // "Puan yolda" (★ karar 3): komşu sipariş verdi, parası henüz alınmadı. Kartın İÇİNDE çünkü
+    // program dışı profilde anlamı yok — yukarıdaki erken `return` ikisini birden düşürüyor.
+    readPendingNeighborAwards(db, customerId),
   ]);
 
   return {
@@ -290,6 +301,7 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
       // Adres kodun yanında doğuyor: kod `null`sa (üretim çakışması) paylaşılacak bağ da yoktur —
       // "bu bağlantıyı paylaş" deyip boş bir adres vermek, çalışmayan bir düğme göstermektir.
       inviteUrl: referralCode ? inviteUrl(referralCode, profile.preferredLanguage) : null,
+      pendingNeighborAwards,
     },
     coupons,
   };

@@ -80,6 +80,18 @@ beforeEach(async () => {
   // Tahsilatlar da sıfırlanır: her senaryo kendi ödeme anını kuruyor, önceki testin hareketi
   // bakiyeyi taşırsa "ödeme olmadan puan yok" sınaması yalancı yeşil dönerdi.
   await db.from('money_movement').delete().eq('account_id', kasaId);
+
+  /* SİPARİŞLER DE SIFIRLANIR (17.08) — eskiden yalnız `afterAll`da siliniyorlardı ve bu, senaryolar
+     arasında sessiz bir bağımlılık üretiyordu: davet bağı **zaten müşteri olmayana** kurulur
+     (`linkReferrerById` → `already_customer`, künyesi ★ karar 2f'ye dayanıyor) ve önceki testten
+     kalan sipariş, sonraki testin kurmaya çalıştığı bağı reddettiriyordu. Kural bu dosyada
+     görünmüyordu çünkü `linkReferrer` doğrudan çağrılıyor; gerçek akışta kapı hep
+     `attachReferralOnLogin` ve kontrol orada ilk günden beri var.
+     Para hareketi siparişten ÖNCE silinir (`money_movement.order_id` FK'si siparişi tutuyor) —
+     `afterAll`daki aynı sıra. */
+  for (const id of createdOrders) await db.from('order').delete().eq('id', id);
+  createdOrders.length = 0;
+
   await profiles.update({ id: getirilenId, referredBy: null });
 });
 

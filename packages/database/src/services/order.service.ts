@@ -518,6 +518,18 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
+   * Birden çok davete bağlı siparişler — **tek sorguda** (`in`).
+   *
+   * Davet başına `listByNeighborInvite` çağırmak N+1 olurdu ve bunu okuyan yer hesap ekranıdır:
+   * müşterinin açık davetleri kaç taneyse o kadar tur atardı. Boş dizide sorgu HİÇ atılmaz —
+   * PostgREST'te `in.()` sözdizimi hatasıdır ve boş küme zaten boş sonuç demektir.
+   */
+  listByNeighborInvites(inviteIds: readonly string[]): Promise<Order[]> {
+    if (inviteIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ neighborInviteId: [...inviteIds] });
+  }
+
+  /**
    * Müşterinin AÇIK VADELİ siparişleri — vade pozisyonunun (açık bakiye, gecikme) girdisi (09.9).
    *
    * Sayfalanmıyor ve bu bilinçli: küme "ödenmemiş borç"tur, yani doğal tavanı olan bir kümedir ve
@@ -607,6 +619,28 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   countPlacedForCustomer(customerId: string): Promise<number> {
     return this.count({
       customerId,
+      status: ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed', 'returned'],
+    });
+  }
+
+  /**
+   * **Parası ALINMIŞ ve ayakta duran sipariş sayısı** — getiren ödülünün geri alınıp alınmayacağı
+   * buradan sorulur (★ karar 7 · 17.08).
+   *
+   * Getiren ödülünün kaynağı sipariş DEĞİL, getirilen kişinin kimliğidir (`refId = newCustomerId`,
+   * *"aynı kişiyi iki kez getiremezsin"*). O yüzden "bir siparişi iptal oldu" ödülü düşürmeye
+   * yetmez: ödül *"bu kişi gerçekten müşterimiz oldu"* olgusudur ve kişinin ödenmiş başka bir
+   * siparişi kaldıysa olgu sürüyordur. Ölçülmeden yazılsaydı, getirilen müşterinin İKİNCİ
+   * siparişini iptal etmesi getirenin ilk siparişte hak ettiği ödülü silerdi.
+   *
+   * `status` süzgeci şart: iptal edilmiş ama parası henüz iade edilmemiş sipariş `payment_status`
+   * olarak hâlâ `paid` görünür (`statusOf` — iptalde karşılanan tutar 0 sayılır, net tahsilat
+   * ondan büyüktür). Onu saymak, iptal edilmiş bir siparişi "ayakta" kabul etmek olurdu.
+   */
+  countPaidForCustomer(customerId: string): Promise<number> {
+    return this.count({
+      customerId,
+      paymentStatus: 'paid',
       status: ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed', 'returned'],
     });
   }

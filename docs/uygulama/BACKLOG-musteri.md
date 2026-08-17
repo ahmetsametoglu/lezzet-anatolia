@@ -412,9 +412,71 @@ etmeden 10 kat puan dağıtan bir kapı açılırdı. Keşif kartı **her hâlü
 yazılmadığı için başka bir geri alma senaryosu yok. **Teknik engel ölçüldü (11.08):** defterde
 `(müşteri, sebep, kaynak)` üçlüsü UNIQUE (`points_entry_source_key`), yani aynı kayda ters işaretli
 ikinci bir satır yazılamaz; `manual` sebebi de veri kuralıyla PERSONEL ve NOT istiyor, otomatik
-geri almada ikisi de yok. **Çözüm:** sebep enum'una geri alma türü eklenir (greenfield → migration
-doğrudan düzenlenir). Ayrıca `points_entry_daily_idx` yalnız pozitifleri saydığı için tavan geri
-sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da küçüldü.
+geri almada ikisi de yok. ~~**Çözüm:** sebep enum'una geri alma türü eklenir.~~ Ayrıca
+`points_entry_daily_idx` yalnız pozitifleri saydığı için tavan geri sarmıyor — tavan artık davet
+ödüllerini kapsamadığından bu sorun da küçüldü.
+
+**7b · İLKE NETLEŞTİ (kullanıcı kararı 17.08): "kazanılmış ödül geri alınmaz" ile bu karar
+ÇELİŞMİYOR — çünkü geri alınan şey HENÜZ HAK EDİLMEMİŞTİR.** Kullanıcının cümlesi: *"hak edilmiş
+puan alınamaz evet, ama henüz hak edilmemiş puanlar vardır."* Verdiği örnek komşu daveti: komşu
+sipariş verdi, **kapıda ödemeyi** seçti, teslimat gerçekleşmedi, sipariş iptal oldu — davet edenin
+100 puanı hak edilmiş sayılmaz. Ölçüt tek cümlede duruyor ve karar 3'ün aynısıdır: **ödülü hak
+ettiren şey paranın alınmış OLMASI, alınmış olması ise kalıcı bir olgu değil** — iade edilirse
+geriye döner, ödül de onunla döner. `DOMAIN §14`'ün *"kazanılmış ödül geri alınmaz"* cümlesi
+kazanılmış olanı korur; burada kazanç zaten geri sarılmıştır.
+
+**7c · ÖLÇÜLDÜ (17.08) — kullanıcının verdiği örnekte boşluk YOK, ama endişesi başka yerde
+GERÇEK.** Kod okundu (`order/payment.ts:171`): ödül yalnız `paymentStatus` **`paid`e DÖNDÜĞÜ** anda
+yazılıyor. Yani *kapıda ödeme + iptal* akışında `paid` hiç olmaz → puan hiç yazılmaz → geri
+alınacak bir şey de yoktur. **Açık olan yol kartla ödeme:** para sipariş anında alınır, durum
+`paid` olur ve ödül yazılır; sipariş sonradan iptal edilip para iade edilince
+`statusOf` (`domain-core/payment/payment-status.ts:133`) durumu `refunded`e çevirir — ama
+`finalize` yalnız `if (derivation.status === 'paid')` diye baktığı için **`paid`ten ÇIKIŞ hiçbir
+şey tetiklemiyor.** Puan defterde kalıyor.
+
+**7e · İKİ ÖDÜLÜN GERİ ALMA ÖLÇÜTÜ AYNI DEĞİL (kullanıcı sorusu 17.08 — kusur buldurdu).**
+Kullanıcı *"iptal iki kere tetiklenip fazladan 100 puan silinir mi"* diye sordu; komşu ödülünde risk
+yoktu (üç katman: durum değişimi kapısı · `hasReversalFor` · `points_entry_reversal_key`, cihazda
+rollback'li işlemle kanıtlandı) **ama getiren ödülünde başka bir aileden gerçek bir kusur çıktı.**
+Komşu ödülünün kaynağı SİPARİŞTİR (`refId = order.id`), getiren ödülününki KİŞİDİR
+(`refId = newCustomerId`) — ve bir kişinin birden çok siparişi olur. Koşulsuz geri alma şunu
+yapardı: A'yı B getirir, A'nın ilk siparişi ödenir (B'ye 500 yazılır), A ikinci siparişini verip
+iptal eder → **ikinci siparişin iptali B'nin ilk siparişte hak ettiği ödülü silerdi.** Ölçüt ödülün
+kendi anlamından türetildi: kişinin ödenmiş başka bir siparişi kaldıysa *"bu kişi müşterimiz oldu"*
+olgusu sürüyordur (`countPaidForCustomer > 0` → ödül durur). Kullanıcının kuralı:
+*"benim davet ettiğim kişi bana davet ödülü kazandırabilmesi için öyle veya böyle bir tane başarılı
+sipariş gerçekleştirmesi lazım."*
+
+**7f · KOMŞU DAVETİ GETİREN ÖDÜLÜNÜ DE DOĞURUR — kod bunu YAPMIYORDU (ölçüldü 17.08).**
+Kullanıcının sorusu: *"komşumu bir sefere davet ettim, hesabı yok, geliyor kayıt oluyor, o sefere
+değil BAŞKA sefere sipariş veriyor — davet puanımı alabiliyor muyum?"* **Cevap hayırdı ve bu bir
+boşluktu.** Ölçüm: `referred_by`yi yazan tek yol `linkReferrer`dı ve onu yalnız
+`attachReferralOnLogin` çağırıyordu — o da **`referralCode`** ile çalışıyor; komşu daveti bağlantısı
+ise kod değil **token** taşıyor (`neighborInviteUrl`). `acceptNeighborInvite` yalnız
+`neighbor_invite_claim` yazıp `referred_by`ye hiç dokunmuyordu. Sonuç: komşu davetiyle gelip
+kaydolan kişi *"kimsenin getirmediği müşteri"* olarak doğuyor, 500 puanlık ödül hiç doğmuyordu.
+**`feedback/points.ts` künyesi bunun TERSİNİ vaat ediyordu** (*"hem `referral` hem `neighbor`
+kazanır"*) — yani niyet doğru yazılmış, kod eksik kalmıştı. Bu maddenin kendisi kullanıcının
+17.08 uyarısının kanıtı: *"notları kodla teyit etmeden oradaki ifadelere inanma."*
+
+**İKİ ÖDÜLÜN AYRIMI (kullanıcı, 17.08):** komşu ödülü SEFERE bağlıdır — *"o seferde benimle beraber
+komşum benim davetimle bir şey alırsa"*. Getiren ödülünün seferle **hiç** ilgisi yoktur — *"o kişi o
+sefer veya başka sefer veya benimle çok alakasız posta kodunda dahi oturabilir"*; tek koşul bir
+başarılı sipariş. Düzeltme ortak kapıya kondu (`linkReferrerById`), kural kopyalanmadı: bağın üç ret
+ölçütü (`self` · `already_referred` · `already_customer`) artık tek yerde ve iki davet türü de
+oradan geçiyor.
+
+**7d · SEBEP ENUM'U BÜYÜTÜLMEYECEK — indeks işarete göre bölünür (sapma, 17.08).** 11.08'de
+önerilen çözüm *"enum'a geri alma türü eklenir"*di; ölçüm sonrası daha sade bir yol seçildi ve
+gerekçesi CLAUDE §1'dir (*"hiçbir türde duplication yok — önce türetebilir miyim diye bak"*).
+Enum yolu her ödül türü için **ikinci bir tür** doğururdu (`referral` → `referral_reversal`,
+`neighbor` → `neighbor_reversal`, …) ve yarın eklenecek her ödül aynı vergiyi öderdi. Bunun yerine
+`points_entry_source_key` işarete göre ikiye ayrılır: ödüller `where points > 0`, düzeltmeler
+`where points < 0` — ikisi de kendi içinde tekil, birbirini engellemiyor. Kazanç: `ref_id`nin
+sebebe göre değişen sözleşmesi (getirende YENİ MÜŞTERİ, komşuda KOMŞUNUN SİPARİŞİ) olduğu gibi
+kalıyor ve `referral` toplamı doğrudan **net etkiyi** veriyor — geri alınmışları ayrıca düşmek
+gerekmiyor. Defter zaten hazır: `points int not null check (points <> 0)` negatifi kabul ediyor ve
+migration künyesi *"düzeltme de negatif olabilir"* diyor.
 
 ---
 
@@ -691,16 +753,29 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   **AÇIK İŞ (ölçülmedi):** komşuya verilecek indirimin mekanizması — genel davetteki "5 € indirim"
   sözünün kuponu gerçekten üretiliyor mu, kontrol edilecek.
 
-- [ ] **MB-57 · Puanın yazıldığı ANIN yeniden kurulması — kural ★ karar 2, 3 ve 7'de.**
+- [x] **MB-57 · Puanın yazıldığı ANIN yeniden kurulması — kural ★ karar 2, 3 ve 7'de.**
+  → **KAPANDI (17.08), görev `(21.73)`.**
   Kısaca: kendi eylemleri (giriş · yorum · beğeni · prim · keşif oyu) **anında**; başkasının
   hareketine bağlı olanlar (arkadaş getirme · sefer daveti) o kişinin **parası alındığında**.
-  *(Ara karar "sipariş anında yaz + teslim edilmezse geri al" idi; sipariş puanı kalkınca gereksiz
-  kaldı ve ödeme şartıyla değiştirildi — gerekçesi ★ karar 3'te.)*
 
-  **İŞ KALEMLERİ:** ödül çağrılarının teslimat etkisinden **ödeme** anına taşınması · davet edene
-  "puan yolda" durumunun gösterilmesi · iade yoluna geri alma çağrısı + sebep enum'una geri alma
-  türü (engel ve gerekçesi ★ karar 7'de) · sipariş puanı çağrısının ve onay ekranındaki satırın
-  kaldırılması. Mobil arka uç ile web ortak motoru kullandığı için **iki yüzeyi birden** ilgilendirir.
+  **DÖRT İŞ KALEMİNİN İKİSİ ZATEN YAPILMIŞTI, SATIR BAYATTI.** Ölçüm (17.08): ödül çağrısı
+  `order/payment.ts` → `finalize` içinde `paid` geçişine bağlıydı (künyesi *"ANI TESLİMAT DEĞİL,
+  ÖDEME"* diye yazılı) ve sipariş puanı çağrısı da sökülmüştü — üretim kodunda `reason: 'order'`
+  yazan tek çağrı yok, `POINTS_PER_EURO` sabiti de yok. Kapanmamış satırın yapılmış işi anlatması,
+  kullanıcının 17.08 uyarısının kanıtı: *"dokümana değil koda güven."*
+
+  **BUGÜN YAZILAN İKİ KALEM:**
+  · **İadede geri alma** — `revokeReferralOnUnpaidOrder`, `finalize`de `paid`ten ÇIKIŞTA. Defterden
+    SİLMEZ, ters satır yazar (`-award.points`, tutar ayardan değil o gün yazılan satırdan okunur).
+    Tekillik indeksi işarete göre bölündü (★ karar 7d); çifte silme üç katmanda engelli ve
+    veritabanı katmanı rollback'li işlemle kanıtlandı (ikinci negatif satır `23505` ile reddedildi).
+  · **"Puan yolda"** — `readPendingNeighborAwards` + kart sözleşmesinde `pendingNeighborAwards`.
+    Defterde karşılığı YOK ve olmamalı (bekleyen ödül henüz yazılmadı); ekranda listeye karışmıyor,
+    geçmişin ÜSTÜNDE ayrı blok. ★ karar 3 bunu yalnız komşu ödülü için tanımlıyor — getiren
+    tarafında bekleme belirsiz olduğu için orada söz verilmedi.
+
+  Mobil arka uç ile web ortak motoru kullandığı için ikisi de **iki yüzeyde birden** çalışıyor;
+  "yolda" bloğunun ÇİZİMİ web'de henüz yok (veri orada da var) — `docs/talep/` altına not bırakıldı.
 
 - [ ] **MB-58 · Vitrindeki KEŞİF bölümü: oturumsuzda hiç, kartsızken hiç, iskelette var
   (kullanıcı kararı 11.08).** Üç şart:
@@ -1073,11 +1148,19 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   ad e-postaya düştüğünde alt satır ya gizlenmeli ya başka bir şey söylemeli (ör. *"Ad ekleyin"*
   daveti — künye tamamlama zaten B3 adımı). Telefon satırı boşken çizilmiyor, o kısım doğru.
 
-- [ ] **MB-67 · Puan geçmişi ekranı toplamsız ve çağrısız.** Liste doğru çalışıyor
+- [x] **MB-67 · Puan geçmişi ekranı toplamsız ve çağrısız.** Liste doğru çalışıyor
   (`Visite du jour · 17 août 2026 · +10`, defterle birebir), ama ekranda **bakiye yok** ve tek
   satırın altında ~1500 piksel boşluk kalıyor. Müşteri buraya *"puanlarım nerede"* diye gelir;
-  bakiyeyi görmek için hesap kartına dönmek zorunda. Bir sonraki adım da belli değil — *"Nasıl
-  puan kazanırım?"* çekmecesinin girişi burada yok, oysa tam bu ekranın sorusudur.
+  bakiyeyi görmek için hesap kartına dönmek zorunda.
+  → **KAPANDI (17.08), görev `(21.73)`** — MB-57 ile aynı turda, çünkü ikisi aynı ekranda buluşuyor.
+  Başlığa **bakiye satırı** kondu (kart okunmadan çizilmez: "0 puan" gösterip gerçek sayıya atlamak,
+  olmayan bir bakiyeyi bir an doğru gibi okuturdu) ve altına **"yolda" bloğu** geldi. Ekran artık iki
+  ucu birden okuyor (`/points` + `/points/history`) ve bu bilinçli: kartın tavanı sabit, defter
+  sınırsız büyüyor — sözleşme künyesindeki ayrım korundu.
+  **Aynı turda üçüncü bir kusur çıktı ve düzeltildi:** gruplama anahtarı `sebep + tarih`ti, işaret
+  yoktu — aynı gün yazılıp iptal edilen ödülün iki satırı tek satırda toplanıp ekranda
+  **"Komşu daveti · 2 hareket · +0"** yazacaktı. İşaret anahtara eklendi; kazanç ile iptal ayrı
+  satırlar ve ayrı etiketler (*"— iptal edildi"* · *"— annulée"* · *"— storniert"*).
 
 - [ ] **MB-68 · Talepler boş hâlinde aynı işi yapan iki çağrı, iki ayrı isimle.** Üst çubukta
   `+ Nouvelle`, ortadaki boş hâlde `Écrivez-nous`. İkisi aynı yere gidiyor ama isimleri farklı

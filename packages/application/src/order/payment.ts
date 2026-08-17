@@ -1,6 +1,6 @@
 import { MoneyMovementService, OrderService } from '@lezzet/database';
 import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
-import { rewardReferralOnPaidOrder } from '../feedback/points';
+import { revokeReferralOnUnpaidOrder, rewardReferralOnPaidOrder } from '../feedback/points';
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -169,6 +169,21 @@ async function finalize(
      * çağıran akışı ilgilendirir.
      */
     if (derivation.status === 'paid') await rewardReferralOnPaidOrder(db, order.id);
+
+    /**
+     * ── PARA GERİ GİTTİ: ÖDÜL DE GERİ GİDER (★ karar 7 · kullanıcı kararı 17.08) ──
+     * Yukarıdaki satırın simetriği. Ölçülen boşluk (17.08): burada yalnız `paid`e GİRİŞ
+     * dinleniyordu, `paid`ten ÇIKIŞ hiçbir şey tetiklemiyordu — kartla ödenmiş bir sipariş iptal
+     * edilip parası iade edilince davet edenin 100/500 puanı defterde kalıyordu.
+     *
+     * **Koşul "eski durum `paid`di" değil, "yeni durum `paid` DEĞİL"** — çünkü buraya yalnız durum
+     * gerçekten değiştiğinde giriliyor (dıştaki `if`) ve `paid` dışındaki her hedef (`refunded` ·
+     * `partial` · `pending`) aynı şeyi söylüyor: elde tutulan para artık ödülü karşılamıyor. Kısmi
+     * iade de kapsanır ve kapsanması doğru: sipariş `partial`a düştüyse tam bedel alınmamıştır.
+     *
+     * Geri alınacak ödül yoksa (kapıda ödeme, tavan, B2B) çağrı sessizce geçer.
+     */
+    if (derivation.status !== 'paid') await revokeReferralOnUnpaidOrder(db, order.id);
   }
 
   return {

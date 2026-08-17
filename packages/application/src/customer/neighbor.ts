@@ -1,9 +1,19 @@
 import { NeighborInviteClaimService, NeighborInviteService, OrderService, SettingsService, UserProfileService } from '@lezzet/database';
-import { deliveryRunWindow, NEIGHBOR_INVITE_MAX_USES, readableCode, type DeliveryRunWindow } from '@lezzet/domain-core';
+import {
+  deliveryRunWindow,
+  NEIGHBOR_INVITE_MAX_USES,
+  ORDER_CUTOFF_DEFAULT,
+  ORDER_CUTOFF_KEY,
+  PREP_CUTOFF_DEFAULT,
+  PREP_CUTOFF_KEY,
+  readableCode,
+  type DeliveryRunWindow,
+} from '@lezzet/domain-core';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
 import type { NeighborInvite } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { linkReferrerById } from './referral';
 
 /*
   KOMŞU DAVETİ (17.10) — davetin İKİNCİ türü.
@@ -29,9 +39,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 /** Bağlantı belirteci — geri bildirim davetiyle aynı uzunluk ve alfabe (CSPRNG, O/0 ve I/1 yok). */
 const TOKEN_LENGTH = 16;
 
-/** Kesim saati ayarı — `resolveDelivery` ile AYNI anahtar ve aynı varsayılan (tek kural, tek kaynak). */
-const CUTOFF_KEY = 'order_cutoff_time';
-const CUTOFF_DEFAULT = '16:00';
+// Kesim anahtarı ve varsayılanı ARTIK BURADA DEĞİL: `domain-core/delivery-days` tutuyor (kuralı
+// uygulayan dosya). Yerel kopya `resolveDelivery` ile "aynı olduğunu" künyesinde söylüyordu — yani
+// kopya olduğunu kendisi kabul ediyordu; kesim kuralı hazırlık saatini de okumaya başlayınca ikinci
+// bir anahtar daha kopyalanacaktı.
 
 /** Davetin paylaşılabilir TAM adresi. Dil PAYLAŞANIN dilidir (`inviteUrl` künyesindeki aynı gerekçe). */
 export function neighborInviteUrl(token: string, locale: Locale): string {
@@ -74,7 +85,7 @@ export async function openNeighborInvite(
   // belirler (`readNeighborWelcome`), ama paylaşılmış bir bağlantı burada ikinci kez üretilmez.
   if (existing) return { status: 'ok', invite: existing };
 
-  const window = await runWindowOf(db, order.deliveryDate);
+  const window = await runWindowOf(db, order.deliveryDate, order.deliveryZoneId);
   if (window !== 'open') return { status: 'run_closed', window };
 
   const invite = await invites.insert({
@@ -126,7 +137,7 @@ export async function readNeighborWelcome(db: SupabaseClient, token: string, vie
   if (!invite) return { status: 'unknown' };
   if (viewerId && viewerId === invite.inviterId) return { status: 'self' };
 
-  const window = await runWindowOf(db, invite.deliveryDate);
+  const window = await runWindowOf(db, invite.deliveryDate, invite.deliveryZoneId);
   if (window !== 'open') return { status: 'run_closed', window, deliveryDate: invite.deliveryDate };
 
   const used = await countNeighborInviteUses(db, invite.id);
@@ -181,11 +192,84 @@ export async function acceptNeighborInvite(
   const existing = await claims.find(invite.id, input.customerId);
   if (existing) return { status: 'ok', inviteId: invite.id };
 
-  if ((await runWindowOf(db, invite.deliveryDate)) !== 'open') return { status: 'rejected', reason: 'run_closed' };
+  if ((await runWindowOf(db, invite.deliveryDate, invite.deliveryZoneId)) !== 'open') return { status: 'rejected', reason: 'run_closed' };
   if ((await countNeighborInviteUses(db, invite.id)) >= invite.maxUses) return { status: 'rejected', reason: 'full' };
 
   await claims.insert({ inviteId: invite.id, customerId: input.customerId });
+
+  /**
+   * ── KOMŞUSUNU ÇAĞIRAN, YENİ MÜŞTERİ DE GETİRMİŞ OLABİLİR (kullanıcı kararı 17.08) ──
+   * Ölçülen boşluk: `referred_by`yi yazan tek yol getiren daveti kodundan geçiyordu
+   * (`attachReferralOnLogin` → `referralCode`), oysa komşu daveti bağlantısı kod değil **token**
+   * taşıyor. Sonuç, komşu davetiyle gelip kaydolan kişinin *"kimsenin getirmediği müşteri"* olarak
+   * doğmasıydı: davet gerçek bir yeni müşteri kazandırdığı hâlde 500 puanlık getiren ödülü hiç
+   * doğmuyordu. `feedback/points.ts` künyesi bunun tersini vaat ediyordu — kod eksikti, künye değil.
+   *
+   * **İki ödül AYRI şeyi ölçer ve birlikte doğabilir** (★ karar 2f): komşu ödülü SEFERE bağlıdır
+   * (o güne ikinci sipariş = durak başına maliyet düşer), getiren ödülünün seferle ilgisi YOKTUR —
+   * kullanıcının cümlesi: *"o kişi o sefer veya başka sefer veya benimle çok alakasız posta kodunda
+   * dahi oturabilir… bir tane başarılı sipariş gerçekleştirmesi lazım."*
+   *
+   * Bağ ortak kapıdan kuruluyor, kural kopyalanmıyor: `linkReferrerById` zaten kendini getireni,
+   * zaten bağlı olanı ve **zaten müşteri olanı** eliyor. Yani bu satır ancak gerçekten yeni bir
+   * müşteride bağ kurar; ödül yine kendi anında (parası alındığında) doğar.
+   *
+   * **Kabulü DÜŞÜRMEZ:** bağ kurulamazsa komşu daveti yine kabul edilmiştir.
+   */
+  await linkReferrerById(db, input.customerId, invite.inviterId);
+
   return { status: 'ok', inviteId: invite.id };
+}
+
+/**
+ * **"Puan yolda"** — davet EDENİN henüz yazılmamış komşu ödülleri (★ karar 3 · MB-57).
+ *
+ * Kullanıcının kuralı: *"komşu siparişi verdiği anda davet edene «komşun sipariş verdi — 100 puan
+ * yolda, ödeme alınınca hesabına geçecek» gösterilir; puan yazılmaz ama görünür olur."* Beklemenin
+ * kendisi doğaldır (ödül başkasının parasına bağlı), **görünmez olması** kusurdu: müşteri komşusunu
+ * çağırıyor, komşu sipariş veriyor ve ekranda hiçbir şey değişmiyordu.
+ *
+ * ── DEFTERE YAZILMAZ, TÜRETİLİR ─────────────────────────────────────────────
+ * Bekleyen ödül `points_entry`ye girmez ve girmemeli: defter *"ne oldu"*yu tutar, *"ne olabilir"*i
+ * değil. Bakiye satırların toplamı olduğu için sanal bir satır bakiyeyi de yalan söyletirdi. Aynı
+ * sebeple ekranda da listeye karışmaz — geçmişin ÜSTÜNDE ayrı bir blok olarak durur.
+ *
+ * ── ÖLÇÜT ÖDÜLÜN KENDİ KOŞULUDUR ────────────────────────────────────────────
+ * Sipariş verilmiş (iptal değil) ama parası alınmamış (`payment_status <> 'paid'`). Ödül tam da o
+ * geçişte doğuyor (`order/payment.ts` → `finalize`), yani "yolda" olan küme, ödülün beklediği
+ * kümenin aynısı. Kendi davetini kullanan sipariş elenir — ödül de elenirdi.
+ *
+ * **Getiren ödülü için karşılığı YOK ve bilinçli:** ★ karar 3 "yolda" durumunu yalnız komşu ödülü
+ * için tanımlıyor. Getiren tarafında bekleme çok daha uzun ve belirsiz (davet edilen kişi hiç
+ * sipariş vermeyebilir); orada bir söz vermek, tutulmayabilecek bir söz olurdu.
+ */
+export interface PendingNeighborAward {
+  /** Davet edilen komşunun YALNIZ adı (ilk sözcük) — ekranın kuracağı cümlenin öznesi. */
+  neighborName: string;
+  deliveryDate: string;
+}
+
+export async function readPendingNeighborAwards(db: SupabaseClient, inviterId: string): Promise<PendingNeighborAward[]> {
+  const invites = await new NeighborInviteService(db).listByInviter(inviterId);
+  if (invites.length === 0) return [];
+
+  const byId = new Map(invites.map((invite) => [invite.id, invite]));
+  const orders = await new OrderService(db).listByNeighborInvites([...byId.keys()]);
+
+  const bekleyen = orders.filter(
+    (order) => order.status !== 'cancelled' && order.paymentStatus !== 'paid' && order.customerId !== inviterId,
+  );
+  if (bekleyen.length === 0) return [];
+
+  // Ad TEK sorguda: sipariş başına profil okumak, hesap ekranını komşu sayısı kadar tura sokardı.
+  const profiles = await new UserProfileService(db).listByIds([...new Set(bekleyen.map((order) => order.customerId))]);
+  const nameById = new Map(profiles.map((profile) => [profile.id, firstName(profile.name)]));
+
+  return bekleyen.flatMap((order) => {
+    const invite = byId.get(order.neighborInviteId ?? '');
+    const name = nameById.get(order.customerId);
+    return invite && name ? [{ neighborName: name, deliveryDate: invite.deliveryDate }] : [];
+  });
 }
 
 /** Müşterinin BEKLEYEN komşu daveti — sepetin, gün seçiminin ve ana ekranın okuduğu şey. */
@@ -219,7 +303,7 @@ export async function readPendingNeighborInvite(db: SupabaseClient, customerId: 
   const sorted = [...invites].sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
 
   for (const invite of sorted) {
-    if ((await runWindowOf(db, invite.deliveryDate)) !== 'open') continue;
+    if ((await runWindowOf(db, invite.deliveryDate, invite.deliveryZoneId)) !== 'open') continue;
     // Bu daveti zaten siparişe dönüştürmüşse bekleyen bir şey yok. Kendi siparişine bakılıyor:
     // başka komşunun aynı davetten verdiği sipariş bu kişinin davetini tüketmez.
     const orders = await new OrderService(db).listByNeighborInvite(invite.id);
@@ -265,7 +349,7 @@ export async function matchNeighborInviteForOrder(
   // Kontenjan sipariş ANINDA sorulur: kabul ile sipariş arasında başka komşular daveti doldurmuş
   // olabilir. Kabul kaydı bir hak değil, bir niyettir.
   if ((await countNeighborInviteUses(db, match.id)) >= match.maxUses) return null;
-  if ((await runWindowOf(db, match.deliveryDate)) !== 'open') return null;
+  if ((await runWindowOf(db, match.deliveryDate, match.deliveryZoneId)) !== 'open') return null;
   return match.id;
 }
 
@@ -282,10 +366,28 @@ export async function countNeighborInviteUses(db: SupabaseClient, inviteId: stri
   return orders.filter((order) => order.status !== 'cancelled').length;
 }
 
-/** Sefer hâlâ açık mı — kesim saati ayardan, kural motordan. */
-async function runWindowOf(db: SupabaseClient, deliveryDate: string): Promise<DeliveryRunWindow> {
-  const cutoffTime = await new SettingsService(db).get<string>(CUTOFF_KEY, CUTOFF_DEFAULT);
-  return deliveryRunWindow({ deliveryDate, now: new Date(), cutoffTime });
+/**
+ * Sefer hâlâ açık mı — eşikler ayardan, kural motordan.
+ *
+ * **Eşikler ROTA kapsamıyla okunuyor** (`zoneId`, kullanıcı kararı 17.08): davet bir seferin daveti,
+ * sefer de bir rotanın. Küresel satırı okumak, rotaya yazılmış kesimi yok sayıp müşteriye *"bu sefere
+ * yetişirsin"* demek olurdu — checkout ise aynı günü listesinde göstermezdi. `resolveDelivery` ile
+ * aynı iki anahtar ve aynı kapsam: iki yerde ayrılırsa fark yalnız kesim saati civarında görünür.
+ *
+ * Hazırlık kapanışı da okunuyor çünkü kesimin hangi güne ait olduğunu o belirliyor.
+ */
+async function runWindowOf(
+  db: SupabaseClient,
+  deliveryDate: string,
+  zoneId: string | null,
+): Promise<DeliveryRunWindow> {
+  const settings = new SettingsService(db);
+  const scope = zoneId ? { zoneId } : {};
+  const [cutoffTime, prepCutoffTime] = await Promise.all([
+    settings.get<string>(ORDER_CUTOFF_KEY, ORDER_CUTOFF_DEFAULT, scope),
+    settings.get<string>(PREP_CUTOFF_KEY, PREP_CUTOFF_DEFAULT, scope),
+  ]);
+  return deliveryRunWindow({ deliveryDate, now: new Date(), cutoffTime, prepCutoffTime });
 }
 
 /** Adın yalnız ilk sözcüğü — `customer/referral.ts`teki aynı kural; ekran isimsiz cümleyi kendi kurar. */
