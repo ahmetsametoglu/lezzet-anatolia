@@ -149,14 +149,13 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
 
   const renderMessage = (message: TicketMessage) => {
     const who = message.fromCustomer ? t.detail.fromCustomer : t.detail.fromTeam;
-    const translated = message.translated ? ` (${t.detail.translated})` : '';
 
     return (
       <View
         key={message.id}
         style={[styles.bubbleRow, message.fromCustomer ? styles.mineRow : styles.theirsRow]}
         accessible
-        accessibilityLabel={`${who}${translated}: ${message.body}`}
+        accessibilityLabel={`${who}: ${message.body}`}
         testID={`ticket-message-${message.id}`}
       >
         <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
@@ -176,7 +175,6 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
             </View>
           )}
 
-          {message.translated ? <Text style={styles.translated}>{t.detail.translated}</Text> : null}
         </View>
       </View>
     );
@@ -253,6 +251,24 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         )}
 
         {detail.messages.map(renderMessage)}
+
+        {/*
+          ÇEVİRİ İŞARETİ BALONCUKTA DEĞİL, EKRANDA — BİR KEZ (kullanıcı kararı 17.08).
+
+          İşaret baloncuk başına çiziliyordu ve gerekçesi sağlamdı: makine çevirisi bir şikâyeti
+          yumuşatabilir ya da bir sözü kaydırabilir; müşteri okuduğu cümlenin personelin YAZDIĞI
+          cümle olduğunu sanmamalı. **Ama ölçüm gerekçenin varsayımını çürüttü:** yazışmanın iki
+          yönü de çevriliyor (müşteri Fransızca yazar personel Türkçe okur, tersi de öyle), yani
+          çeviri istisna değil VARSAYILAN. Cihazda dokuz mesajın yedisinde çıkıyordu — her zaman
+          görünen bir işaret bilgi taşımaz, okuyucu ikinci mesajdan sonra bakmayı bırakır ve geriye
+          yalnız gürültü kalır.
+
+          Bu yüzden güvence atılmadı, YERİ DEĞİŞTİ. Koşullu: hiç çeviri yoksa satır da yok —
+          tek dilli bir yazışmaya "çevrildi" demek, olmayan bir şeyi haber vermek olurdu.
+        */}
+        {detail.messages.some((message) => message.translated) ? (
+          <Text style={styles.notice}>{t.detail.translatedNotice}</Text>
+        ) : null}
 
         <Text style={styles.notice}>{t.detail.notice}</Text>
       </ScrollView>
@@ -397,11 +413,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     height: theme.size.circleSm,
     borderRadius: theme.radius.control,
     backgroundColor: theme.colors['sand-250'],
-  },
-  translated: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    color: theme.colors['sand-600'],
   },
   notice: {
     fontFamily: theme.font.body[400],

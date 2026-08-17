@@ -47,7 +47,7 @@
       "notice": "Cevap geldiğinde e-posta ile haber veririz.",
       "fromCustomer": "Siz",
       "fromTeam": "Lezzet Anatolia",
-      "translated": "Otomatik çevrildi",
+      "translatedNotice": "Bu yazışmadaki mesajlar otomatik çevriliyor.",
       "photo": "Ekli fotoğraf",
       "reply": {
         "placeholder": "Mesaj yazın…",
@@ -153,7 +153,7 @@
       "notice": "Nous vous préviendrons par e-mail dès notre réponse.",
       "fromCustomer": "Vous",
       "fromTeam": "Lezzet Anatolia",
-      "translated": "Traduit automatiquement",
+      "translatedNotice": "Les messages de cette conversation sont traduits automatiquement.",
       "photo": "Photo jointe",
       "reply": {
         "placeholder": "Écrivez un message…",
@@ -259,7 +259,7 @@
       "notice": "Sobald wir antworten, benachrichtigen wir Sie per E-Mail.",
       "fromCustomer": "Sie",
       "fromTeam": "Lezzet Anatolia",
-      "translated": "Automatisch übersetzt",
+      "translatedNotice": "Die Nachrichten in dieser Unterhaltung werden automatisch übersetzt.",
       "photo": "Angehängtes Foto",
       "reply": {
         "placeholder": "Nachricht schreiben…",

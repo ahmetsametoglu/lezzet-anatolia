@@ -65,8 +65,15 @@ export async function queueTicketReplyMail(db: Db, ticket: Ticket): Promise<void
  * Müşteri yazışmayı OKUDU — bekleyen mail iptal.
  *
  * Çağıran yeri müşteri talep detayının okuma kapısıdır; zilin tetiklediği sessiz tazeleme de oradan
- * geçiyor, yani **ekranı açık duran müşteri her zilde okumuş sayılıyor** — istenen davranış tam
- * budur.
+ * geçiyor, yani **ekranı açık duran müşteri her zilde okumuş sayılıyor**.
+ *
+ * ── "EKRAN AÇIK" = "İNSAN OKUYOR" SAYILIR (kullanıcı kararı 17.08) ──────────
+ * Bu bir kaçak değil, kabul edilmiş bir eşitlik. Ölçüldü (cihazda): uygulama ARKA PLANDAYKEN bile
+ * ekran ayakta kaldığı için zil sessiz tazelemeyi koşturuyor ve damga boşalıyor — yani cebinde
+ * uygulaması açık duran müşteriye cevap maili gitmiyor, ekranına bakmasa bile. Kullanıcıya
+ * gerekçesiyle soruldu ve **kabul edildi**; ayırmak isteyen bir gün gelirse yol açık: uç, "gerçekten
+ * açtı" ile "zil tazeledi"yi ayıran bir parametre alır ve ekran ikisini ayrı çağırır. Bugün
+ * ayrılmıyor çünkü kazanılan kesinlik, eklenen sözleşme karmaşasını hak etmiyor.
  *
  * **Kimlikle çalışır, nesneyle değil:** okuma kapısı talebi kuyruk GÖRÜNÜMÜNDEN okuyor ve o görünüm
  * bu damgayı taşımıyor. Damgayı görünüme eklemek, operasyon kuyruğunun sözleşmesini müşteri

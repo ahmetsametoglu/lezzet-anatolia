@@ -3452,6 +3452,45 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Ayrıca gözlem: **"Traduit automatiquement" işareti dokuz mesajın yedisinde** çıkıyor; tek tek doğru
   ama üst üste gelince yazışmayı gürültülü kılıyor — `BEKLEYEN(21.70)`, kaydı `BACKLOG-musteri`de.
 
+- [x] (21.71) **ÇEVİRİ İŞARETİ BALONCUKTAN EKRANA — ve gecikmeli mail uçtan uca ölçüldü (kullanıcı kararları 17.08)**
+  `touches:` `apps/mobile/src/screens/support/{ticket-detail-screen.tsx,messages.json}` ·
+  `packages/application/src/ticket/reply-mail.ts` · `docs/uygulama/BACKLOG-musteri.md`
+
+  Kullanıcı: *"Otomatik çevrildi metninin sürekli görünmesi büyük. Bu metni hiç koymasak ne olur?
+  Çünkü kötü görünüyor."*
+
+  **İŞARET ATILMADI, YERİ DEĞİŞTİ — ve gerekçe ölçümden çıktı.** İşaret baloncuk başına
+  çiziliyordu; sebebi sağlamdı (makine çevirisi bir şikâyeti yumuşatabilir, müşteri okuduğu
+  cümlenin personelin YAZDIĞI cümle olduğunu sanmamalı — `21.14` künyesi). Ama o gerekçe çevirinin
+  İSTİSNA olduğunu varsayıyordu; ölçüm tersini söyledi: yazışmanın **iki yönü de** çevriliyor, yani
+  çeviri VARSAYILAN. Cihazda dokuz mesajın yedisinde çıkıyordu. **Her zaman görünen bir işaret bilgi
+  taşımaz** — okuyucu ikinci mesajdan sonra bakmayı bırakır, geriye gürültü kalır. Bu yüzden güvence
+  ekran başına tek satıra indi (üç dilde), ve **koşullu**: hiç çeviri yoksa satır da yok. Baloncuk
+  altındaki metin, ekran okuyucu etiketindeki ek ve artık kullanılmayan stil söküldü.
+  **Ölçüldü (OPPO CPH1907):** yedi mesajın tamamı artık TEK ekrana sığıyor; önce sığmıyordu.
+  ~~MB-64~~ bu kalemle kapandı, kaydı silindi.
+
+  **GECİKMELİ MAİL UÇTAN UCA ÖLÇÜLDÜ** — `(21.70)`'in açık bıraktığı parça. Uygulama KAPALIYKEN
+  personel cevabı yazıldı: damga `11:03:21`de kondu, 1.–5. dakikalarda değişmedi, **6. dakikada
+  boşaldı** — yani `ticket_reply_mail` süpürgesi maili gönderdi (5 dk gecikme + tur payı).
+
+  **"EKRAN AÇIK" = "İNSAN OKUYOR" SAYILIYOR (kullanıcı kararı 17.08).** Aynı ölçümün ilk turunda
+  damga hiç yazılmadı ve sebebi kusur gibi görünüyordu: uygulama ARKA PLANDAYKEN ekran ayakta
+  kaldığı için zil sessiz tazelemeyi koşturuyor, sistem bunu okuma sayıyor — cebinde uygulaması
+  açık duran müşteriye mail hiç gitmiyor, ekranına bakmasa bile. Kullanıcıya gerekçesiyle soruldu,
+  **eşitlik kabul edildi**; ayırmak gerekirse yol künyede yazılı (uç "gerçekten açtı" ile "zil
+  tazeledi"yi ayıran bir parametre alır). Bugün ayrılmıyor: kazanılan kesinlik, eklenen sözleşme
+  karmaşasını hak etmiyor.
+
+  **Doğrulama:** `tsc` · `eslint` temiz; cihazda kare kare ölçüldü.
+
+  *Durum:* Mailin kutuya DÜŞTÜĞÜ kullanıcı teyidine bırakıldı — süpürgenin gönderdiği damgadan
+  kesin, ama sağlayıcı tarafı buradan görülmüyor. Ayrıca bu turda **dev giriş kapısının arızası**
+  ölçüldü ve açık: `db:refresh` sonrası `Müşteri` düğmesi sunucuda profili açıyor
+  (`/api/v1/auth/dev-session` → 200, `verifyOtp` uygulamanın DIŞINDA oturum kuruyor — ikisi de
+  ölçüldü) ama uygulama oturumu tutmuyor, ekran misafir kalıyor. Sunucu ve Supabase sağlam; arıza
+  istemcide. `BEKLEYEN(21.71)`
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

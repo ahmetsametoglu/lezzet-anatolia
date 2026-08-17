@@ -1104,13 +1104,6 @@ sarmıyor — tavan artık davet ödüllerini kapsamadığından bu sorun da kü
   kazanılan tek şey 90 günü aşmış bir e-postayı tıklayan müşteriye sebebini söylemek.
   **Karar: sıraya konmuyor, ama kaydı ölçümüyle duruyor** — bir daha "ucuz metin işi" sanılmasın.
 
-- [ ] **MB-64 · Talep yazışmasında "Traduit automatiquement" işareti gürültü yapıyor** (ölçüldü
-  17.08, cihazda): dokuz mesajlık bir yazışmada **yedi** baloncuğun altında çıkıyor. Tek tek doğru
-  ve gerekli — makine çevirisi bir şikâyeti yumuşatabilir, personelin ağzına kurmadığı cümleyi
-  koymamak için işaret şart (`21.14` künyesi). Ama üst üste gelince yazışmanın kendisinden çok
-  işaret okunuyor. Seçenekler: (a) ardışık aynı-yön çevirilerde yalnız İLKİNDE göster, (b) baloncuk
-  içine küçük bir simge, (c) ekran başına tek satırlık bir bilgi. Karar verilmedi. `BEKLEYEN(21.70)`
-
 - [ ] **MB-33 · Ekran başlığı "Professionnels"** — üç dilde de aynı. Web'in kararıyla tutarlı
   (orada da program adı), ama native başlıkta tek başına duruyor ve Türkçe yüzeyde ne olduğu
   anlaşılmıyor; web meta başlığı açıklama ekliyor. *Karar maddesi, hata değil.*
