@@ -3491,6 +3491,38 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   ölçüldü) ama uygulama oturumu tutmuyor, ekran misafir kalıyor. Sunucu ve Supabase sağlam; arıza
   istemcide. `BEKLEYEN(21.71)`
 
+- [x] (21.72) **CEVAP MAİLİ BİRDEN ÇOK YENİ MESAJI TAŞIYOR — "biri cevap, gerisi geçmiş" varsayımı düştü (17.08)**
+  `touches:` `packages/types/src/contracts/notification.schema.ts` ·
+  `packages/application/src/ticket/notify.ts` ·
+  `packages/email/src/templates/ticket-notification.tsx` · `packages/email/src/components/email-layout.tsx`
+
+  **KUSURU ERTELEME DOĞURDU.** `(21.70)` cevap mailini geciktirince tek mail birden çok yeni cevap
+  taşımaya başladı; şablon ise `history[0]`ı tek başına "cevap" sayıp kalanını soluk alıntıya
+  düşürüyordu. Ölçülen karede son ÜÇ mesajın üçü de yeni ve bizdendi, ikisi "önceki mesajlar"
+  bloğundaydı — aynı konuşma sebepsiz ikiye bölünmüştü.
+
+  **AYIRAÇ ZAMAN DAMGASI DEĞİL, YÖN.** Okunmamış küme = müşterinin son mesajından sonraki
+  kesintisiz karşı-taraf dizisi. Müşteri yazdığı anda orada olduğu kesindir, yani kendi mesajı
+  doğal sınırdır; `reply_pending_since` ile karşılaştırmak aynı sonucu verirdi ama kurucuya ikinci
+  bir parametre ve bir saniyelik tolerans sokardı. Sözleşmeye tek alan eklendi (`unread`), tavan
+  `UNREAD_LIMIT = 6` — aşan yeni cevap kaybolmaz, alıntı tarafına düşer. Kırpma da yalnız BAĞLAM
+  alıntılarında: haber olan mesaj müşteriye aynen görünmeli (DOMAIN §15).
+
+  **SIRA BLOK İÇİNDE ESKİDEN YENİYE, BLOKLAR ARASI DEĞİŞMEDİ** — kullanıcının ayrımı:
+  *"chat'te sürekli aşağıda dururken mail'de yukarıdan aşağı bir okuma gerçekleşir."* Yani sohbetin
+  alta-sabit sırası maile kopyalanMAZ; blok içinde göz aşağı inerken zaman ileri akar, ama haber
+  yine üstte ve bağlam altta durur (e-posta alıntı geleneği). Başlık yalnız ilk kartta: art arda üç
+  kez "Cevabımız" yazmak bilgi değil gürültü (`MessageCard.title` bu yüzden `string | null` oldu).
+
+  **İKİ KUSUR GERİ ALINDI — ÖLÇÜNCE BENİM HATAM ÇIKTI.** (a) *"İki ayrı tarih biçimi"* diye
+  yazmıştım; `formatShortDate` ölçüldü, ikisi de aynı biçimi üretiyor — karedeki fark benim elle
+  yazdığım önizleme verisiydi. (b) *"Zamanın ters akması"* kusur değil: mail yukarıdan aşağı
+  okunur, yeni haber üstte doğrudur. (c) *"Autre iki kez geçiyor"* da bırakıldı: konu satırı +
+  gövdedeki künye satırı e-postanın olağan kalıbı.
+
+  **Doğrulama:** `tsc` · `lint` temiz; şablon gerçek `render` ile üretilip kareyle bakıldı — üç
+  yeni cevap üç ayrı kartta, 08:13 → 08:14 → 08:15 sırasıyla, müşterinin iki mesajı alıntı izinde.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

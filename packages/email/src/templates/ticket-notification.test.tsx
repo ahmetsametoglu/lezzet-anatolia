@@ -32,8 +32,9 @@ const base: TicketNotification = {
       body: 'Eksik gönderilen kalemi tespit ettik.\nBedeli iade edildi; 3-5 iş günü içinde hesabınızda görünür.',
       at: '24 Temmuz, 10:40',
       truncated: false,
+      unread: true,
     },
-    { sender: 'customer', body: 'Kutuda iki kavanoz eksikti.', at: '23 Temmuz, 18:05', truncated: false },
+    { sender: 'customer', body: 'Kutuda iki kavanoz eksikti.', at: '23 Temmuz, 18:05', truncated: false, unread: false },
   ],
   previousStatus: null,
   ticketUrl: 'https://example.test/tr/talepler/11111111',
@@ -104,7 +105,7 @@ describe('teyit maili', () => {
     const received: TicketNotification = {
       ...base,
       status: 'open',
-      history: [{ sender: 'customer', body: 'Kutuda iki kavanoz eksikti.', at: '23 Temmuz, 18:05', truncated: false }],
+      history: [{ sender: 'customer', body: 'Kutuda iki kavanoz eksikti.', at: '23 Temmuz, 18:05', truncated: false, unread: false }],
     };
     const output = await html(received, 'received');
 

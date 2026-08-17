@@ -141,8 +141,22 @@ export function ticketRepliedSubject(data: TicketNotification): string {
 /** Personel cevap yazdı. Cevabın TAM metni maildedir — müşteri okumak için tıklamak zorunda değil. */
 export function TicketRepliedEmail({ data, brandName, postalAddress }: TicketEmailProps) {
   const t = TICKET_COPY[data.locale];
-  // `history[0]` cevabın kendisi; öncesi alıntılanır — "neye cevap verdiler" tıklamayı gerektirmesin.
-  const [reply, ...rest] = data.history;
+  /*
+    OKUNMAMIŞ CEVAPLARIN HEPSİ TAM KARTTA, ESKİDEN YENİYE (17.08).
+
+    Eskiden `history[0]` tek başına "cevap" sayılır, kalanı alıntıya düşerdi. Cevap maili
+    ertelendiğinden (21.70) tek mail birden çok yeni cevap taşıyor ve o varsayım yanlışa döndü:
+    ölçülen bir karede son ÜÇ mesajın üçü de yeni ve bizdendi, ikisi soluk alıntıda duruyordu —
+    aynı konuşma sebepsiz ikiye bölünmüştü.
+
+    Sıra blok İÇİNDE eskiden yeniye, çünkü **mail yukarıdan aşağı okunur** (kullanıcı ayrımı
+    17.08): sohbette göz en altta sabittir, mailde akar. Bloklar arası sıra ise değişmedi —
+    haber üstte, bağlam altında; alıntı izi e-posta geleneğine uygun olarak yeniden eskiye.
+
+    Başlık yalnız İLK kartta: art arda üç kez "Cevabımız" yazmak bilgi değil gürültü.
+  */
+  const unread = data.history.filter((entry) => entry.unread).reverse();
+  const rest = data.history.filter((entry) => !entry.unread);
   return (
     <TicketShell
       data={data}
@@ -154,7 +168,9 @@ export function TicketRepliedEmail({ data, brandName, postalAddress }: TicketEma
       intro={t.repliedIntro}
       quoted={rest}
     >
-      {reply && <MessageCard title={t.replyCardTitle} meta={reply.at} body={reply.body} />}
+      {unread.map((entry, index) => (
+        <MessageCard key={`${entry.at}-${index}`} title={index === 0 ? t.replyCardTitle : null} meta={entry.at} body={entry.body} />
+      ))}
     </TicketShell>
   );
 }

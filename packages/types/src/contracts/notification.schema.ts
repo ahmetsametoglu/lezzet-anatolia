@@ -126,6 +126,16 @@ export const TicketHistoryEntrySchema = z.object({
   at: z.string(),
   /** Kırpıldıysa şablon "…" ve tam metnin bağlantısını gösterir — sessiz kırpma yalan söylerdi. */
   truncated: z.boolean(),
+  /**
+   * Müşterinin HENÜZ GÖRMEDİĞİ mesaj mı (17.08) — mailin "haber" kısmını "bağlam" kısmından ayırır.
+   *
+   * Alan, cevap maili ERTELENİR olduğu için gerekti (21.70): tek mail artık birden çok yeni cevap
+   * taşıyabiliyor, oysa şablon "biri cevap, gerisi geçmiş" varsayıyordu — üç yeni cevabın ikisi
+   * soluk alıntıya düşüyordu. Kural zaman damgası değil, YÖNdür: müşterinin son mesajından sonra
+   * gelen kesintisiz karşı-taraf dizisi. Müşteri yazdığı anda orada olduğu kesindir, o yüzden
+   * ayıraç onun kendi mesajıdır — ayrı bir okundu damgası taşımaya gerek yok.
+   */
+  unread: z.boolean(),
 });
 export type TicketHistoryEntry = z.infer<typeof TicketHistoryEntrySchema>;
 

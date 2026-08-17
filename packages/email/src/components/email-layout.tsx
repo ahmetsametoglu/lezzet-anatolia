@@ -560,7 +560,9 @@ export function SummaryCard({
  * için gidiyor. Satır sonları korunur (`whiteSpace: 'pre-line'`) — operatörün kurduğu paragraf
  * düzeni tek bir bloğa çökmesin.
  */
-export function MessageCard({ title, meta, body }: { title: string; meta: string | null; body: string }) {
+// `title` NULL OLABİLİR (17.08): art arda gelen kartlarda başlığı tekrarlamak ("Cevabımız ·
+// Cevabımız · Cevabımız") bilgi değil gürültüdür — ilki söyler, ötekiler sürdürür.
+export function MessageCard({ title, meta, body }: { title: string | null; meta: string | null; body: string }) {
   return (
     <Card title={title}>
       {meta && <div style={{ fontFamily: SANS, fontSize: 12, lineHeight: '17px', color: C.faint, paddingBottom: 8 }}>{meta}</div>}

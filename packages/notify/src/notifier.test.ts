@@ -105,7 +105,7 @@ describe('talep bildirimleri', () => {
     locale: 'fr',
     orderReferenceNo: 'LZA-1234',
     openedOn: '22 juillet 2026',
-    history: [{ sender: 'admin', body: 'Nous avons vérifié le lot.', at: '24 juillet, 10:40', truncated: false }],
+    history: [{ sender: 'admin', body: 'Nous avons vérifié le lot.', at: '24 juillet, 10:40', truncated: false, unread: true }],
     previousStatus: null,
     ticketUrl: 'https://example.test/fr/demandes/11111111',
     notificationPreferencesUrl: 'https://example.test/fr/preferences',

@@ -36,6 +36,15 @@ const HISTORY_LIMIT = 4;
 const QUOTE_CHARS = 600;
 
 /**
+ * Mailde TAM KART olarak gösterilecek okunmamış cevap tavanı (17.08).
+ *
+ * Cevap maili ertelendiği için (21.70) tek mailde birden çok yeni cevap olabiliyor. Tavan yine de
+ * gerekli: operatör on satır yazarsa mail bir yazışma dökümüne döner. Aşan kısım alıntıya düşmez,
+ * KIRPILMAZ — en yenileri gösterilir, gerisi zaten "önceki mesajlar" bloğundadır.
+ */
+const UNREAD_LIMIT = 6;
+
+/**
  * Yazışmanın son mesajları, **en yeniden eskiye** — mailin okunma yönü bu.
  *
  * **İlk sıra KIRPILMAZ:** o, mailin konusu olan mesajdır ve cevap müşteriye aynen görünmelidir
@@ -43,19 +52,39 @@ const QUOTE_CHARS = 600;
  * (`truncated`) — sessizce kesilen bir cümle, müşterinin okuduğunu sandığı şeyi değiştirir.
  */
 function buildHistory(messages: readonly TicketMessage[], locale: PreferredLanguage): TicketHistoryEntry[] {
-  return [...messages]
-    .reverse()
-    .slice(0, HISTORY_LIMIT)
-    .map((message, index) => {
-      const body = message.body.trim();
-      const truncated = index > 0 && body.length > QUOTE_CHARS;
-      return {
-        sender: message.sender,
-        body: truncated ? `${body.slice(0, QUOTE_CHARS).trimEnd()}…` : body,
-        at: `${formatShortDate(message.createdAt, locale)}, ${formatTime(message.createdAt, locale)}`,
-        truncated,
-      };
-    });
+  /*
+    OKUNMAMIŞ KÜME = MÜŞTERİNİN SON MESAJINDAN SONRAKİ KESİNTİSİZ KARŞI-TARAF DİZİSİ (17.08).
+
+    Cevap maili ertelendiği için (21.70) tek mail birden çok yeni cevap taşıyabiliyor; şablon ise
+    "biri cevap, gerisi geçmiş" varsayıyordu ve yeni cevapların çoğu soluk alıntıya düşüyordu.
+
+    Ayıraç için ayrı bir "okundu" damgası TAŞINMIYOR ve bu bilinçli: müşteri yazdığı anda orada
+    olduğu kesindir, yani onun kendi son mesajı doğal sınırdır. Zaman damgasıyla karşılaştırmak
+    (`reply_pending_since`) aynı sonucu verirdi ama kurucuya ikinci bir parametre ve bir saniye
+    toleransı sokardı — yön, damgadan daha sağlam bir ölçüt.
+
+    `ticket_received`ta müşterinin kendi anlatımı sondadır, yani okunmamış küme BOŞ çıkar; o
+    şablon zaten `history[0]`ı kullanıyor ve bu alandan etkilenmiyor.
+  */
+  const newest = [...messages].reverse();
+  let unreadCount = 0;
+  while (unreadCount < newest.length && newest[unreadCount]!.sender !== 'customer') unreadCount += 1;
+  // Tavanı aşan yeni cevaplar alıntı tarafına düşer — kaybolmaz, yalnız tam kart almaz.
+  const unreadShown = Math.min(unreadCount, UNREAD_LIMIT);
+
+  return newest.slice(0, Math.max(unreadShown, 1) + HISTORY_LIMIT - 1).map((message, index) => {
+    const body = message.body.trim();
+    const unread = index < unreadShown;
+    // Kırpma yalnız BAĞLAM alıntılarında: haber olan mesaj müşteriye aynen görünmeli (DOMAIN §15).
+    const truncated = !unread && body.length > QUOTE_CHARS;
+    return {
+      sender: message.sender,
+      body: truncated ? `${body.slice(0, QUOTE_CHARS).trimEnd()}…` : body,
+      at: `${formatShortDate(message.createdAt, locale)}, ${formatTime(message.createdAt, locale)}`,
+      truncated,
+      unread,
+    };
+  });
 }
 
 /** Mailin ortak verisi — talep + müşteri + yazışmanın son mesajları. */
