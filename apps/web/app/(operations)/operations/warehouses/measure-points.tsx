@@ -43,17 +43,27 @@ interface MeasurePointsProps {
 /** Süzgecin üç hâli. `all` varsayılan: operatörün ilk sorusu "noktalarım neler". */
 type PointFilter = 'all' | 'area' | 'vehicle';
 
-/** Pencere seçenekleri (gün). Sunucunun gönderdiği 92 günün son N'i alınır. */
+/**
+ * Pencere seçenekleri — **TAKVİM AYI, kayan gün DEĞİL** (kullanıcı kararı 17.08).
+ *
+ * Önce "son N gün" idi (31/62/92) ve pencerenin kenarındaki ay hep YARIM başlıyordu: 1 ay seçince
+ * Temmuz'un 18'inden Ağustos'un 17'sine kadar iki kırık ay görünüyordu. Ay kutusu bir takvimdir;
+ * yarısı kesilmiş bir takvim, okuyanı "gerisi nerede" diye düşündürür ve o soru veriyle ilgili
+ * değil, ekranla ilgilidir.
+ *
+ * Bugün `1 ay` = **bu ayın 1'inden bugüne**, `2 ay` = geçen ayın 1'inden, `3 ay` = iki ay öncenin
+ * 1'inden. Sunucunun gönderdiği 92 gün üç takvim ayının EN UZUNUNU (31+31+30) tam karşılıyor.
+ */
 const RANGES = [
-  { days: 31, label: '1 ay' },
-  { days: 62, label: '2 ay' },
-  { days: 92, label: '3 ay' },
+  { months: 1, label: '1 ay' },
+  { months: 2, label: '2 ay' },
+  { months: 3, label: '3 ay' },
 ] as const;
 
 export function MeasurePoints({ points, warehouseId, truncated, onAdd, onEdit, onToggle }: MeasurePointsProps) {
   const [filter, setFilter] = useState<PointFilter>('all');
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [rangeDays, setRangeDays] = useState<number>(RANGES[0].days);
+  const [rangeMonths, setRangeMonths] = useState<number>(RANGES[0].months);
 
   const areaCount = points.filter((p) => p.kind === 'area').length;
   const shown = points.filter((p) => filter === 'all' || p.kind === filter);
@@ -110,8 +120,8 @@ export function MeasurePoints({ points, warehouseId, truncated, onAdd, onEdit, o
                 point={point}
                 warehouseId={warehouseId}
                 open={openKey === key}
-                rangeDays={rangeDays}
-                onRangeChange={setRangeDays}
+                rangeMonths={rangeMonths}
+                onRangeChange={setRangeMonths}
                 // Tek nokta açık kalıyor: iki takvim aynı anda açıkken bölüm ekranı taşırıyor ve
                 // karşılaştırma da yapılamıyor (ikisi alt alta, aynı anda görünmüyorlar).
                 onToggleOpen={() => setOpenKey(openKey === key ? null : key)}
@@ -168,7 +178,7 @@ function PointRow({
   point,
   warehouseId,
   open,
-  rangeDays,
+  rangeMonths,
   onRangeChange,
   onToggleOpen,
   onEdit,
@@ -177,13 +187,22 @@ function PointRow({
   point: MeasurePointView;
   warehouseId: string;
   open: boolean;
-  rangeDays: number;
-  onRangeChange: (days: number) => void;
+  rangeMonths: number;
+  onRangeChange: (months: number) => void;
   onToggleOpen: () => void;
   onEdit: () => void;
   onToggleActive: () => void;
 }) {
-  const days = useMemo(() => point.days.slice(-rangeDays), [point.days, rangeDays]);
+  /**
+   * Kesme noktası **veriden** çıkıyor (`days`in son günü), istemcinin saatinden değil: `Date.now()`
+   * ile hesaplansaydı sunucunun boyadığı ilk hâl ile istemcininki gece yarısı ayrışır ve hidrasyon
+   * uyuşmazlığı doğardı — üstelik sunucunun günü doğru olan.
+   */
+  const days = useMemo(() => {
+    const last = point.days[point.days.length - 1]?.date;
+    if (!last) return [];
+    return point.days.filter((day) => day.date >= monthStartKey(last, rangeMonths - 1));
+  }, [point.days, rangeMonths]);
 
   return (
     <li className={`border-b border-ops-line-soft last:border-b-0 ${point.isActive ? '' : 'bg-ops-subtle'}`}>
@@ -234,7 +253,7 @@ function PointRow({
       {open ? (
         <div className="flex flex-col gap-3 border-t border-ops-line-soft bg-ops-subtle px-3 py-3">
           <div className="flex items-center gap-2">
-            <RangeTabs value={rangeDays} onChange={onRangeChange} />
+            <RangeTabs value={rangeMonths} onChange={onRangeChange} />
             <Tally days={days} />
           </div>
           <Calendar days={days} />
@@ -245,16 +264,16 @@ function PointRow({
   );
 }
 
-function RangeTabs({ value, onChange }: { value: number; onChange: (days: number) => void }) {
+function RangeTabs({ value, onChange }: { value: number; onChange: (months: number) => void }) {
   return (
     <div className="flex items-center gap-1">
       {RANGES.map((range) => (
         <button
-          key={range.days}
+          key={range.months}
           type="button"
-          onClick={() => onChange(range.days)}
+          onClick={() => onChange(range.months)}
           className={`cursor-pointer rounded-ops-btn border px-2 py-0.5 font-ops-body text-ops-xs transition-colors ${
-            value === range.days
+            value === range.months
               ? 'border-ops-olive bg-ops-olive-bg font-semibold text-ops-olive-dark'
               : 'border-ops-line text-ops-muted hover:border-ops-line-strong hover:text-ops-ink'
           }`}
@@ -517,6 +536,22 @@ function TodayEntry({ point, warehouseId }: { point: MeasurePointView; warehouse
 }
 
 // ── Biçimleyiciler ──────────────────────────────────────────────────────────
+
+/**
+ * `back` ay geriye giden ayın **1'i** (`2026-06-01`) — takvim penceresinin başlangıcı.
+ *
+ * Metin üzerinden yürüyor, `Date` üzerinden değil: gün anahtarları zaten `YYYY-MM-DD` ve bir `Date`
+ * kurmak burada yalnız saat dilimi sorusunu geri getirirdi (ayın 1'i yerel saatte bir önceki ayın
+ * 30'u olabilir). Ay taşması elle: 0'ın altına düşen ay, bir önceki yıla geçer.
+ */
+function monthStartKey(dayKey: string, back: number): string {
+  const year = Number(dayKey.slice(0, 4));
+  const monthIndex = Number(dayKey.slice(5, 7)) - 1 - back;
+  // `Math.floor` negatif ayda da doğru yılı verir (−1 → bir önceki yılın Aralık'ı).
+  const y = year + Math.floor(monthIndex / 12);
+  const m = ((monthIndex % 12) + 12) % 12;
+  return `${y}-${String(m + 1).padStart(2, '0')}-01`;
+}
 
 /** "−18°" — eksi işareti U+2212; mono yazıtipinde tire, rakamların yanında ayraç gibi okunuyor. */
 function degree(celsius: number): string {
