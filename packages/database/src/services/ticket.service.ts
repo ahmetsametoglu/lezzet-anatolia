@@ -101,6 +101,24 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
+   * **Cevap maili kuyruğu** (17.08) — okunmamış cevabı `cutoff`tan eskiye dayanmış talepler.
+   *
+   * Süpürge dakikada bir koşuyor ve kümenin normal hâli BOŞ; kısmi indeks (`ticket_reply_pending_idx`)
+   * birebir bu sorgunun şeklidir. En eski önce: gecikmesi en çok büyümüş müşteri ilk haberi alsın.
+   */
+  listReplyPendingBefore(cutoff: string, limit = 50): Promise<Ticket[]> {
+    return this.getAll(
+      {},
+      {
+        isNotNullFields: ['replyPendingSince'],
+        rangeFilters: [{ field: 'replyPendingSince', operator: 'lte', value: cutoff }],
+        orderBy: 'replyPendingSince',
+        limit,
+      },
+    );
+  }
+
+  /**
    * Müşterinin "Taleplerim" listesi — yeniden eskiye, keyset sayfalı.
    *
    * Sayfalı, çünkü talep sayısı veriyle büyür (CLAUDE.md: sınırsız büyüyen küme → keyset). Sıralama

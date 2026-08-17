@@ -71,6 +71,19 @@ create table public.ticket (
   -- siparişe birden çok talep açılabildiği için o bağ yazılmazsa bilinemez.
   return_triggered_at timestamptz,
 
+  -- OKUNMAMIŞ CEVAP DAMGASI (17.08) — mail gürültüsünü kesen tek veri.
+  --
+  -- Boşsa bekleyen yok; doluysa "şu andan beri müşterinin OKUMADIĞI bir karşı taraf cevabı var".
+  -- Karşı taraf (personel ya da AI) cevap yazınca YALNIZ BOŞSA doldurulur: gecikme ilk okunmamış
+  -- cevaptan sayılsın, her yeni satır saati sıfırlamasın — yoksa hızlı yazan operatör maili
+  -- sonsuza dek erteler. Müşteri yazışmayı okuyunca boşalır (zilin tetiklediği tazeleme de bir
+  -- okumadır), mail gidince de boşalır.
+  --
+  -- Ayrı bir "okundu" damgası AÇILMADI: bu kolon zaten "okunmamış cevap var mı" sorusunun cevabı,
+  -- ikincisi aynı gerçeği iki yerde tutmak olurdu. Okunmamış SAYISI ya da rozet gerektiği gün
+  -- ayrı bir alan tartışılır — bugün ihtiyaç yok.
+  reply_pending_since timestamptz,
+
   created_at timestamptz not null default now(),
   -- `resolved` damgası. Yeniden açılınca null'a döner: "ne zaman çözüldü" sorusunun cevabı, hâlâ
   -- açık bir talepte olamaz.
@@ -101,6 +114,10 @@ create index ticket_order_idx on public.ticket (order_id) where order_id is not 
 -- Kuyruğun varsayılan odağı: kapanmamış talepler.
 create index ticket_open_idx on public.ticket (status, created_at desc) where status <> 'resolved';
 create index ticket_conversation_idx on public.ticket (conversation_id) where conversation_id is not null;
+-- Cevap maili kuyruğu: dakikada bir koşan süpürge YALNIZ bekleyenlere bakar (17.08). Kısmi indeks,
+-- çünkü kümenin normal hâli BOŞ — talepleri baştan sona taramak, hiç bekleyen yokken bile her
+-- dakika tam tarama demekti.
+create index ticket_reply_pending_idx on public.ticket (reply_pending_since) where reply_pending_since is not null;
 
 -- ── Yazışma ──────────────────────────────────────────────────────────────────
 -- Basit bir mesaj dizisi (müşteri ↔ işletme). Talebin ilk açıklaması da BİR MESAJDIR: ayrı bir

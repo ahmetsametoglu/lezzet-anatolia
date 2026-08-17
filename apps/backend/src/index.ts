@@ -31,6 +31,7 @@ import { ZONE_AVAILABLE, zoneAvailableJob } from './jobs/zone-available';
 import { runJob } from './jobs/runner';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SUPPORT_AI, supportAiJob } from './jobs/support-ai';
+import { TICKET_REPLY_MAIL, ticketReplyMailJob } from './jobs/ticket-reply-mail';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 
@@ -202,6 +203,19 @@ cron.schedule('*/5 * * * *', () => {
 // (`BATCH`); önbellek kuralı çekirdekte — taze taslaklı satır modeli hiç çağırtmaz.
 cron.schedule('*/5 * * * *', () => {
   void runJob(SUPPORT_AI, supportAiJob);
+});
+
+/*
+  BEKLEYEN CEVAP MAİLLERİ (17.08) — DAKİKADA BİR, ve sıklık burada bilerek yüksek.
+
+  Cevap maili artık anında gitmiyor: müşteriye okuması için bir süre tanınıyor
+  (`REPLY_MAIL_DELAY_MIN`, varsayılan 5 dk) ve o süre dolduğunda HÂLÂ okunmamışsa gönderiliyor.
+  Süpürgenin turu, gecikmenin ÇÖZÜNÜRLÜĞÜDÜR: beş dakikada bir koşsaydı 5 dakikalık gecikme
+  fiilen 5–10 dakika arası değişirdi. Tur ucuz — kısmi indeks yalnız bekleyenlere bakıyor ve
+  kümenin normal hâli boş.
+*/
+cron.schedule('* * * * *', () => {
+  void runJob(TICKET_REPLY_MAIL, ticketReplyMailJob);
 });
 
 // `??` DEĞİL `||` — ve bu bir arıza düzeltmesidir (ölçüldü 09.08): `.env.local`'da değişken

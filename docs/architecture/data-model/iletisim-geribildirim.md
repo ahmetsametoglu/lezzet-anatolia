@@ -293,7 +293,10 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 | ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
 | subject | text \| null | kısa başlık |
 | return_triggered_at | timestamptz \| null | admin bu talepten iade akışını başlattı |
+| reply_pending_since | timestamptz \| null | müşterinin OKUMADIĞI bir karşı taraf cevabı ne zamandan beri bekliyor (17.08); cevap maili buradan gecikmeli gider |
 | created_at / resolved_at | timestamptz | |
+
+**`reply_pending_since` — cevap maili ANINDA değil, OKUNMAMIŞSA gider (kullanıcı isteği 16.08, karar 17.08).** Eski kural "her cevap bir mail"di; operatör üç dakikada beş satır yazınca beş mail gidiyordu ve canlı zil (16.8) o mailleri büsbütün gereksiz kıldı — ekranı açık müşteri cevabı zaten anında görüyor. Şimdi cevap yazılınca bu damga **yalnız boşsa** dolar (gecikme İLK okunmamış cevaptan sayılsın; her satırda tazelenseydi hızlı yazan operatör maili sonsuza dek ertelerdi), müşteri yazışmayı okuyunca boşalır, dakikalık süpürge gecikme dolduğunda hâlâ doluysa maili gönderip boşaltır. **Ayrı bir "okundu" damgası AÇILMADI:** bu kolon zaten "okunmamış cevap var mı" sorusunun cevabıdır. Mail susturulmuyor ERTELENİYOR — müşteri yazıp uygulamayı kapatmış olabilir ve cevabı hiç öğrenmemesi en kötü sonuçtur.
 
 **Geliş yolu `conversation_id`'den türetilemez:** konuşma bağı yalnız WhatsApp'ı ayırır; "sipariş detayından geldi" ile "genel formdan gelip sipariş seçti" ikisi de `order_id` dolu bırakır, ama admin için farklı şeylerdir — birincisinde müşteri neyden şikâyet ettiğini biliyordu, ikincisinde aradı buldu.
 

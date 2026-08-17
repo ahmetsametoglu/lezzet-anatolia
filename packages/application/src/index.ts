@@ -115,6 +115,9 @@ export type {
 export { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './ticket/notify';
 // Gönderim anında çeviri — kuyruğu beklemeden, zilden ÖNCE (gerekçe dosya başlığında).
 export { translateTicketMessageNow } from './ticket/translate';
+// Cevap maili: anında değil, okunmamışsa (gerekçe dosya başlığında). `clearTicketReplyMail`
+// dışa VERİLMEZ — tek çağıranı komşu okuma kapısı.
+export { queueTicketReplyMail, sweepTicketReplyMails } from './ticket/reply-mail';
 // Tek metnin çevirisi — kuyruğun ve gönderim anının ortak kapısı.
 export { translateUserText } from './translate/user-text';
 export type { TranslatedUserText, TranslateUserTextResult } from './translate/user-text';

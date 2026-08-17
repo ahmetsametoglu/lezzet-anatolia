@@ -333,7 +333,12 @@ const styles = StyleSheet.create((theme, rt) => ({
   /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
   thread: { flex: 1 },
   content: {
-    padding: theme.space['4xl'],
+    /* Yatay dolgu yazışmada DAHA DAR (kullanıcı bulgusu 17.08). Ekranın geri kalanında `4xl` (18)
+       doğru ölçü, ama orada kutunun içinde tek bir metin var; burada metin ikinci bir kabın
+       (baloncuk) içinde ve o kabın kendi dolgusu var — ikisi üst üste binince satır iki kez
+       daralıyor. Ölçüldü (OPPO CPH1907, 1080 px): metne kalan genişlik ekranın %64'üydü. */
+    paddingHorizontal: theme.space['3xl'],
+    paddingVertical: theme.space['4xl'],
     /* Çubuğun altında AYRILMIŞ ALAN YOK ve olmamalı: çubuk artık akışta, kendi yerini kendi
        kaplıyor. Mutlak konumluyken buraya bir kutu boyu dolgu konuyordu — o dolgu bugün
        yazışmanın sonunda kocaman bir boşluk olurdu. */
@@ -347,8 +352,18 @@ const styles = StyleSheet.create((theme, rt) => ({
   bubbleRow: { flexDirection: 'row' },
   mineRow: { justifyContent: 'flex-end' },
   theirsRow: { justifyContent: 'flex-start' },
-  // Şablonun kendi sınırı: baloncuk satırın %78'inden geniş olmaz.
-  bubbleColumn: { maxWidth: '78%', gap: theme.space.sm },
+  /*
+    BALONCUK TAVANI %78 → %88 (kullanıcı bulgusu 17.08, ölçümle).
+
+    Şablonun kendi sınırı %78'di ve tek başına makul bir sohbet ölçüsü. Ama cihazda ölçünce
+    yatayın **%36'sı** metin dışı çıktı: 48 px dış dolgu + 42 px baloncuk iç dolgusu (iki yan) +
+    tavandan doğan **262 px** kalıcı boşluk. Uzun bir cevap bu yüzden yedi satıra kırılıyordu.
+
+    Tavan tamamen kaldırılMADI ve kaldırılmamalı: karşılıklı hizalanan baloncuklarda kimin yazdığı
+    bilgisini taşıyan şey o boşluktur — kenardan kenara uzayan baloncuk hizasını kaybeder ve
+    yazışma tek sütuna döner. %88, "kim yazdı" görünürlüğünü koruyan en geniş değer.
+  */
+  bubbleColumn: { maxWidth: '88%', gap: theme.space.sm },
   mineColumn: { alignItems: 'flex-end' },
   theirsColumn: { alignItems: 'flex-start' },
   bubble: {

@@ -3,6 +3,7 @@ import { resolveUserText } from '@lezzet/domain-core';
 import { privateReadUrls } from '@lezzet/storage';
 import type { KeysetCursor, Page, PreferredLanguage, TicketMessage, TicketQueueRow } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { clearTicketReplyMail } from './reply-mail';
 import type {
   CustomerTicketSummary,
   CustomerTicketView,
@@ -125,6 +126,11 @@ export async function getCustomerTicket(
   const [messages, returnOutcome] = await Promise.all([
     new TicketMessageService(db).listByTicket(row.id),
     returnOutcomeOf(db, row),
+    /* OKUMA, BEKLEYEN CEVAP MAİLİNİ İPTAL EDER (17.08 — künyesi `reply-mail.ts`de). Yeri BURASI
+       çünkü iki yüzeyin de müşteri talep detayı bu kapıdan geçiyor (native uygulama + web), ve
+       zilin tetiklediği sessiz tazeleme de öyle: ekranı açık duran müşteri her zilde okumuş
+       sayılır, mail hiç gitmez. Sonucu beklenmiyor ve fırlatmıyor — okuma yazmaya bağlanamaz. */
+    clearTicketReplyMail(db, row.id),
   ]);
 
   return {

@@ -3401,6 +3401,57 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   tarafı bu turda ölçülmemiş sayılır. Yerel talep yazışmasına iki gerçek cevap yazıldı (ölçümün
   kendisi), silinmedi.
 
+- [x] (21.70) **CEVAP MAİLİ ANINDA DEĞİL, OKUNMAMIŞSA — ve yazışma yatayda nefes aldı (kullanıcı isteği 16.08 · kararlar 17.08)**
+  `touches:` `supabase/migrations/0026_ticket.sql` · `packages/types/src/entities/ticket.schema.ts` ·
+  `packages/database/src/services/ticket.service.ts` · `packages/application/src/ticket/{reply-mail.ts,read.ts,ai.ts}` ·
+  `packages/application/src/index.ts` · `apps/web/lib/ticket/write.ts` ·
+  `apps/backend/src/jobs/ticket-reply-mail.ts` · `apps/backend/src/index.ts` ·
+  `apps/mobile/src/screens/support/ticket-detail-screen.tsx` · `docs/architecture/data-model/iletisim-geribildirim.md`
+
+  Kullanıcı: *"Mail gidiyor, her cevapta. Eğer kullanıcı talep kısmından anlık yazışıyorsa bu
+  maillerin gidip gelmesi de çok hoş değil."*
+
+  **ÖLÇÜM ÖNCE: `notify.ts` sanılandan disiplinliydi.** Müşterinin kendi mesajı · personelin açtığı
+  talep · `in_progress` · müşterinin yeniden açması — dördü de zaten mail doğurmuyordu. Gürültünün
+  kaynağı **tek kural**dı: karşı taraf cevabı istisnasız mail üretiyordu. Canlı zil (16.8) bunu
+  büsbütün gereksiz kıldı — ekranı açık müşteri cevabı zaten anında görüyor.
+
+  **ÇÖZÜM: SUSTURMA DEĞİL ERTELEME.** Tek kolon (`ticket.reply_pending_since`) + kısmi indeks; üç
+  kapı: cevap yazılınca kuyruğa al (**yalnız damga boşsa** — her satırda tazelenseydi hızlı yazan
+  operatör maili sonsuza dek ertelerdi), müşteri okuyunca iptal, dakikalık süpürge gecikme dolunca
+  gönder. Gecikme 5 dk (`TICKET_REPLY_MAIL_DELAY_MIN`). Ayrı bir "okundu" damgası AÇILMADI: bu kolon
+  zaten o sorunun cevabı. Maili tamamen kesmek yanlış olurdu — müşteri yazıp uygulamayı kapatmış
+  olabilir ve cevabı hiç öğrenmemesi en kötü sonuçtur.
+
+  **İptal kapısının yeri kritik ve tek:** `getCustomerTicket`. İki yüzeyin müşteri talep detayı da
+  oradan geçiyor (native + web) ve **zilin tetiklediği sessiz tazeleme de** — yani ekranı açık duran
+  müşteri her zilde okumuş sayılıyor, mail hiç gitmiyor. Kimlikle çalışıyor, nesneyle değil: okuma
+  kapısı talebi kuyruk görünümünden okuyor ve o görünüm damgayı taşımıyor.
+
+  **Özet bedava geldi:** mail şablonu zaten son dört mesajı taşıyor, yani patlamadan sonra giden tek
+  mail beş ayrı mailden daha eksik değil — daha bütün. Ayrı bir digest makinesi yazılmadı.
+  **Ertelenmeyenler:** açılış teyidi ve durum değişimi aynen anında gider (talep ömründe bir-iki kez).
+
+  **YATAY SIKIŞMA (kullanıcı bulgusu 17.08, cihazda ölçüldü).** Kullanıcı yazışmanın yanlardan
+  sıkıştığını bildirdi; ölçüldü (OPPO CPH1907, 1080 px): 48 px dış dolgu + 42 px baloncuk iç dolgusu
+  (iki yan) + `%78` tavanından doğan **262 px** kalıcı boşluk = yatayın **%36'sı metin dışı**. Dış
+  dolgu `4xl`→`3xl`, tavan `%78`→`%88`. Ölçülen sonuç: baloncuk 770→**873 px**, metne kalan
+  686→**789 px** (%64 → **%73**). Tavan kaldırılMADI: karşılıklı hizada "kim yazdı" bilgisini taşıyan
+  şey o boşluktur.
+
+  **Doğrulama — CİHAZDA, kare kare:** damga cevap yazılınca doluyor (`reply_pending_since` set) ·
+  yazışma cihazda açılınca **boşalıyor** (okuma bekleyen maili iptal etti) · zil canlı çalışıyor
+  (mesajlar yazılırken ekran kendiliğinden güncellendi, cihaza dokunulmadı) · uzun URL baloncuk
+  içinde kırılıyor, taşma yok. `tsc` · `lint` · `knip` temiz.
+
+  *Durum:* **İKİ AÇIK.** (a) **Gecikmeli mailin kendisi ölçülmedi** — gerçek testi cevap yazıp
+  yazışmayı AÇMADAN 5 dakika beklemek ve `apps/backend` cron'unun maili göndermesini görmek; hesap
+  hazır (`yamansehzade@gmail.com`). (b) **Tam paket koşulamadı:** 382 test düştü ve **hepsinin sebebi
+  tek ve BAŞKA ŞERİDİN**: `stock.schema.ts` `storageAreaId`'yi zorunlu tutuyor, `stock_batch`ta o
+  kolon yok (şema migration'ın önünde, `0045` turu sürüyor). Talep tarafında düşen test YOK.
+  Ayrıca gözlem: **"Traduit automatiquement" işareti dokuz mesajın yedisinde** çıkıyor; tek tek doğru
+  ama üst üste gelince yazışmayı gürültülü kılıyor — `BEKLEYEN(21.70)`, kaydı `BACKLOG-musteri`de.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

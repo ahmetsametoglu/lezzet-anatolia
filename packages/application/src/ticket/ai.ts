@@ -17,7 +17,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
 import { customerSupportTools } from './support-tools';
-import { notifyTicketReplied } from './notify';
+import { queueTicketReplyMail } from './reply-mail';
 
 /**
  * **AI DESTEK ÇEKİRDEĞİ** (16.5 · 20.4) — hibrit taslak üretimi ve özerk cevap; iki uygulama da
@@ -240,10 +240,10 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   /* ÇEVİRİ HABERDEN VE ZİLDEN ÖNCE (17.08): müşteri bu cevabı ilk görüşte kendi dilinde okusun.
      Düşerse hiçbir şey olmaz, satır çeviri kuyruğunda kalır (kapının künyesi). */
   await translateTicketMessageNow(db, written, opts.model ? { model: opts.model } : {});
-  // Haber SESSİZ gider (16.4): sağlayıcı düştü diye yazılmış cevap geri alınmaz. Talep taze
-  // okunur — cevap durumu değiştirmiş olabilir. Aynı kurucu, aynı mail: personel cevabıyla bir.
-  const fresh = (await tickets.getById(ticket.id)) ?? ticket;
-  await notifyTicketReplied(db, fresh);
+  /* Mail ANINDA gitmez, kuyruğa girer — personel cevabıyla aynı kural (künyesi `reply-mail.ts`de).
+     AI cevabı da karşı taraftır ve aynı gürültüyü üretir; hatta özerk ajan arka arkaya cevap
+     verebildiği için burada erteleme daha da gerekli. */
+  await queueTicketReplyMail(db, ticket);
   await ringTicketsBell();
   // Müşteri de yazışmayı açık tutuyor olabilir — onun kanalı AYRI (künyesi `ringTicketBell`de).
   await ringTicketBell(ticket.id);

@@ -7,10 +7,10 @@ import {
   statusAfterCustomerReply,
   statusAfterStaffReply,
 } from '@lezzet/domain-core';
-import { ringTicketBell, translateTicketMessageNow } from '@lezzet/application';
+import { queueTicketReplyMail, ringTicketBell, translateTicketMessageNow } from '@lezzet/application';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
-import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
+import { notifyTicketReceived, notifyTicketStatusChanged } from './notify';
 
 /**
  * Talep yazımları (16.1) — **kapı**: motora sorar, servise yazdırır (STACK §4).
@@ -186,9 +186,11 @@ export async function replyAsStaff(input: {
      girince Fransızcaya dönüyordu. Künyesi `translateTicketMessageNow`da. */
   await translateTicketMessageNow(db, message);
 
-  // Haber SESSİZ gider (16.4): sağlayıcı düştü diye operatörün yazdığı cevabı geri almak yanlış
-  // olurdu. Talep taze okunur — cevap durumu değiştirmiş olabilir.
-  await notifyTicketReplied((await service.getById(ticket.id)) ?? ticket);
+  /* MAİL ANINDA GİTMEZ, KUYRUĞA GİRER (kullanıcı isteği 16.08 — künyesi `reply-mail.ts`de):
+     müşteri ekranı açıksa cevabı zil sayesinde zaten anında görüyor; o an giden mail gürültüdür.
+     Süpürge gecikme dolduğunda hâlâ okunmamışsa gönderir. `ticket` TAZE okunmaz ve okunmamalı:
+     kuyruk damgası "zaten bekliyor mu" diye bakıyor, bu satırdaki nesne o kararı vermeye yeter. */
+  await queueTicketReplyMail(db, ticket);
   /* MÜŞTERİNİN KANALI — operasyon zilinden ayrı (künyesi `ringTicketBell`de). Müşteri yazışmayı
      açık tutuyorsa operatörün cevabını elle tazelemeden görsün; mobil talep ekranı bu zili
      dinliyor (21.68). Zil sessizdir: çalmazsa cevap yine yazılmıştır, ekran biraz geç görür. */

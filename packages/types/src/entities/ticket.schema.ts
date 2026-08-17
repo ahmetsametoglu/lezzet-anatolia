@@ -36,6 +36,14 @@ export const TicketSchema = z.object({
   subject: z.string().nullable(),
   /** Admin bu talepten iade akışını başlattı; tutar BURADAN okunmaz, siparişten türetilir. */
   returnTriggeredAt: z.string().nullable(),
+  /**
+   * Müşterinin OKUMADIĞI bir karşı taraf cevabı ne zamandan beri bekliyor (17.08) — `null` = yok.
+   *
+   * Cevap maili artık anında değil, bu damganın üstünden gecikme geçince gider; müşteri yazışmayı
+   * o arada okursa damga boşalır ve mail HİÇ gitmez. Gürültünün kaynağı "her cevap bir mail"
+   * kuralıydı; ölçüsü budur.
+   */
+  replyPendingSince: z.string().nullable(),
   createdAt: z.string(),
   /** `resolved` damgası — yeniden açılınca null'a döner. */
   resolvedAt: z.string().nullable(),
