@@ -3485,11 +3485,26 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` · `eslint` temiz; cihazda kare kare ölçüldü.
 
   *Durum:* Mailin kutuya DÜŞTÜĞÜ kullanıcı teyidine bırakıldı — süpürgenin gönderdiği damgadan
-  kesin, ama sağlayıcı tarafı buradan görülmüyor. Ayrıca bu turda **dev giriş kapısının arızası**
-  ölçüldü ve açık: `db:refresh` sonrası `Müşteri` düğmesi sunucuda profili açıyor
-  (`/api/v1/auth/dev-session` → 200, `verifyOtp` uygulamanın DIŞINDA oturum kuruyor — ikisi de
-  ölçüldü) ama uygulama oturumu tutmuyor, ekran misafir kalıyor. Sunucu ve Supabase sağlam; arıza
-  istemcide. `BEKLEYEN(21.71)`
+  kesin, ama sağlayıcı tarafı buradan görülmüyor.
+
+  ~~Dev giriş kapısının arızası~~ → **ARIZA YOK, SEBEP EŞZAMANLI TEST KOŞUSUYDU (kanıtlandı 17.08).**
+  Gün boyu dev giriş düğmesi aralıklı olarak *"Email link is invalid or has expired"* verdi ve
+  ekranlar misafir kaldı. Sırayla üç hipotez kuruldu ve **üçü de ölçümle çürütüldü**: (a) ekranın
+  oturum yüklenmeden monte olması — hesap sekmesi de misafir gösteriyordu, yani ekranlar doğru
+  söylüyordu; (b) `flowType: 'pkce'` uyuşmazlığı — aynı akış sunucudan 4/4 geçti, iki kipte de;
+  (c) SecureStore'un 2048 bayt sınırı — oturum ölçüldü, **1970 bayt**.
+
+  **Gerçek sebep Supabase auth kaydında görüldü:** `POST /verify` → `403 · "One-time token not
+  found"`, üstelik jetonu üreten `generate_link` ile **aynı saniyede**. Kimse cihaza dokunmazken 30
+  saniye dinlendi: **941 `/user` · 134 `/admin/users` · 88 `/token` · 42 `/admin/generate_link` ·
+  39 `/verify`**. Kaynak `.test-results/latest.json`ta duruyordu — **başka bir şerit tam paketi
+  koşuyordu** (12:16:20 → 12:19:28, 2710/2710). Entegrasyon testleri kullanıcı açıp giriş yapıyor;
+  her `generateLink` o e-postanın tek kullanımlık jetonunu değiştirdiği için cihazdaki giriş yarışı
+  kaybediyordu. Yığın sakinken aynı düğme çalıştı ve oturum kalıcı oldu (ölçüldü).
+
+  **Ders, `CLAUDE §4b`nin zaten yazdığı ders:** paylaşılan yığında eşzamanlı koşu tekrarlanmayan
+  düşüş üretir — ve bu kez düşüşü ÜRETEN taraf testler, GÖREN taraf cihazdı. Cihaz turu, tam paket
+  koşarken yapılmaz. **Kod yazılmadı;** geçici ölçüm satırı ölçüm biter bitmez söküldü.
 
 - [x] (21.72) **CEVAP MAİLİ BİRDEN ÇOK YENİ MESAJI TAŞIYOR — "biri cevap, gerisi geçmiş" varsayımı düştü (17.08)**
   `touches:` `packages/types/src/contracts/notification.schema.ts` ·
