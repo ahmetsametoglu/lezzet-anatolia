@@ -59,14 +59,6 @@ import { useTicket } from './use-ticket.hook';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/**
- * Yenilemeyi tetikleyen taşma (px) — kazara değil, İSTEYEREK çekilmiş olsun.
- *
- * Sayı parametrik ve tek yerde: küçültülürse liste sonunda duran her parmak yenileme başlatır,
- * büyütülürse hareket zahmetli olur. 64 px, kitin dokunma hedefi ölçüsüyle aynı büyüklük sınıfında.
- */
-const PULL_UP_THRESHOLD = 64;
-
 interface TicketDetailScreenProps {
   /** Talebin kimliği — rota parametresi (`/support/<uuid>`). */
   id: string;
@@ -82,8 +74,6 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   const router = useRouter();
   const ticket = useTicket(id, locale);
   const [draft, setDraft] = useState('');
-  /** Halkanın kendi hâli — hook'un `status`una bağlanmaz: sessiz tazeleme durumu değiştirmiyor. */
-  const [refreshing, setRefreshing] = useState(false);
   const threadRef = useRef<ScrollView>(null);
 
   /* Başlık her hâlde durur (şablonda da yüklenen sayfanın üstünde): geri yolu ekran boşken de açık. */
@@ -222,20 +212,19 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
           çekilir — açılışta müşteri en yeni cevabı görür, kendi mesajını gönderince de baloncuğu
           ekranda belirir (onayın kendisi budur; toast yalnız onu süreler). */}
       {/*
-        YUKARI ÇEKİP YENİLEME — ötekilerin tersi, ve bilerek (kullanıcı kararı 16.08).
+        ELLE YENİLEME YOK — ne aşağı ne yukarı çekme (kullanıcı kararı 17.08).
 
-        Uygulamanın bütün listelerinde yenileme AŞAĞI çekmedir, ama orada listenin başı da en
-        üsttedir. Yazışma tam tersi: en yeni mesaj EN ALTTA ve ekran zaten sona kaydırılmış
-        duruyor. Yenilemek için müşteriyi upuzun bir yazışmanın başına kadar çıkarmak, hareketin
-        maliyetini metnin uzunluğuna bağlamak olurdu — kısa yazışmada bedava, uzununda imkânsız.
-        Beklenen yeni bilgi de aşağıda; parmağın gittiği yön oraya bakmalı.
+        Yukarı çekip yenileme yazılmıştı (yazışmada en yeni mesaj en altta olduğu için yön
+        doğruydu) ama **Android'de çalışamayacağı ölçüldü**: RN'in Android `ScrollView`'ü taşma
+        ofseti üretmiyor (`ReactScrollView.java` `overScrollBy`ı ezmiyor, Android'in
+        `overscrollDistance`ı fiilen 0), yani `contentOffset` liste sonunda kilitleniyor ve
+        ölçülecek bir taşma hiç doğmuyor. Cihazda kanıtlandı: çekişten sonraki altı karenin beşi
+        öncekiyle bit bit aynı.
 
-        Bu yüzden `RefreshControl` KULLANILMIYOR: RN'de o bileşen yalnız listenin BAŞINDA çalışır,
-        sonundan çekmeyi tanımıyor. Onun yerine sürüklemenin bittiği anda alt uçtan ne kadar
-        taşıldığı ölçülüyor.
-
-        Zil varken de gerekli: zil bir kolaylık, garanti değil (ağ düşer, uygulama arka plandan
-        döner) — müşterinin elinde her zaman kendi kapısı olmalı.
+        Yerine platformun izin verdiği bir numara aramak yerine özellik KALDIRILDI: canlı zil
+        zaten yazışmayı kendiliğinden tazeliyor, kullanıcı kararı bu yönde — *"sistem çalışıyor,
+        gerek yok, kullanıcı en kötü çıkıp yeniden girer."* Ekrandan çıkıp girmek zaten tam bir
+        okuma yapıyor.
       */}
       <ScrollView
         ref={threadRef}
@@ -248,16 +237,6 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         style={styles.thread}
         onContentSizeChange={() => threadRef.current?.scrollToEnd({ animated: true })}
         contentContainerStyle={styles.content}
-        onScrollEndDrag={(event) => {
-          if (refreshing) return;
-          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-          // Alt uçtan ne kadar TAŞINDI: sıfırdan büyükse parmak listeyi sonundan öteye çekmiştir.
-          const overscroll = contentOffset.y + layoutMeasurement.height - contentSize.height;
-          if (overscroll < PULL_UP_THRESHOLD) return;
-          setRefreshing(true);
-          void ticket.refresh().finally(() => setRefreshing(false));
-        }}
-        scrollEventThrottle={16}
         testID="ticket-thread"
       >
         <Text style={styles.meta} testID="ticket-meta">

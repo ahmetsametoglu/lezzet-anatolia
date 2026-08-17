@@ -33,7 +33,7 @@ interface UseTicketResult {
   /** Son gönderim düştü mü — ekran tek satırlık bir ret gösterir, taslak yerinde kalır. */
   sendFailed: boolean;
   retry: () => void;
-  /** SESSİZ tazeleme — okunan yazışma yerinde kalır (zil ve aşağı çekme bunu kullanır). */
+  /** SESSİZ tazeleme — okunan yazışma yerinde kalır; TEK çağıranı canlı zildir. */
   refresh: () => Promise<void>;
   /** `true` = mesaj yazışmaya eklendi (ekran kutuyu temizler ve toast basar). */
   send: (body: string) => Promise<boolean>;
@@ -73,7 +73,8 @@ export function useTicket(id: string, locale: Locale): UseTicketResult {
    * Karşı taraf yazdı diye kimsenin ekranı sıfırlanmaz.
    *
    * Düşen tur da SESSİZ: elde duran yazışma korunur ve kırmızı bir uyarı yazılmaz. Zil bir kolaylık;
-   * çalışmadığı an müşterinin kaybı "biraz geç görmek"tir, aşağı çekip yenileme yerinde duruyor.
+   * çalışmadığı an müşterinin kaybı "biraz geç görmek"tir — ekrandan çıkıp girmek tam bir okuma
+   * yapıyor ve elle yenileme kapısı bilerek YOK (ekran künyesinde gerekçesi).
    */
   const refresh = useCallback(async (): Promise<void> => {
     const run = (generation.current += 1);

@@ -3272,7 +3272,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   kasadan daha KATI). Kanıt yolu: girişli hesapla rota+kargo karışık sepet kurup iki cevabı yan
   yana ölçmek; kanıt çıkarsa iş bu satırın altına yeni bir kalem olarak yazılır.
 
-- [~] (21.68) **TALEP YAZIŞMASI CANLI — zil · klavye · yukarı çekip yenileme (kullanıcı isteği 16.08)**
+- [~] (21.68) **TALEP YAZIŞMASI CANLI — zil · klavye (kullanıcı isteği 16.08)**
   `touches:` `apps/mobile/src/screens/support/ticket-detail-screen.tsx` ·
   `apps/mobile/src/screens/support/use-ticket.hook.ts` ·
   `packages/types/src/contracts/realtime.contract.ts` · `packages/types/src/contracts/index.ts` ·
@@ -3309,11 +3309,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   hareketi için ayrılmış, bu ekranda o hareket yok — tek etkileşim dokunmak. Pay ana ekran çubuğunun
   çizgisini açıkta bırakacak kadar (`min(insets.bottom, 16)`); ölçülen boşluk 44pt → **26pt**.
 
-  **YENİLEME AŞAĞI DEĞİL YUKARI ÇEKMEDİR** (kullanıcı kararı 16.08) — uygulamanın geri kalanının
-  tersi ve bilerek: yazışmada en yeni mesaj EN ALTTA, ekran zaten sona kaydırılmış duruyor.
-  Yenilemek için müşteriyi upuzun bir yazışmanın başına çıkarmak, hareketin maliyetini metnin
-  uzunluğuna bağlamak olurdu. `RefreshControl` KULLANILAMAZ (yalnız listenin başında çalışır);
-  yerine sürükleme bitince alt uçtaki taşma ölçülüyor, eşik parametrik (`PULL_UP_THRESHOLD = 64`).
+  ~~**YENİLEME AŞAĞI DEĞİL YUKARI ÇEKMEDİR** (kullanıcı kararı 16.08) — sürükleme bitince alt
+  uçtaki taşma ölçülür, eşik parametrik (`PULL_UP_THRESHOLD = 64`).~~
+  **ELLE YENİLEME KALDIRILDI (kullanıcı kararı 17.08).** Yön doğruydu — yazışmada en yeni mesaj en
+  altta, ekran zaten sona kaydırılmış duruyor; müşteriyi upuzun bir yazışmanın başına çıkarmak
+  hareketin maliyetini metnin uzunluğuna bağlamak olurdu. **Ama Android'de ÇALIŞAMAYACAĞI ölçüldü:**
+  RN'in Android `ScrollView`'ü taşma ofseti üretmiyor (`ReactScrollView.java` `overScrollBy`ı
+  ezmiyor, Android'in `overscrollDistance`ı fiilen 0), yani `contentOffset` liste sonunda
+  kilitleniyor ve ölçülecek taşma hiç doğmuyor. Cihazda kanıtlandı (OPPO CPH1907): çekişten sonraki
+  altı karenin beşi öncekiyle **bit bit aynı**, biri yalnız kaydırma çubuğunun sönmesiyle farklı.
+  İki gerçek çözüm vardı (ters liste + sistemin halkası · kaydırılabilir alt pay + kendi
+  göstergemiz) ama kullanıcı özelliğin kendisini kaldırdı: *"sistem çalışıyor, gerek yok, kullanıcı
+  en kötü çıkıp yeniden girer."* Canlı zil zaten tazeliyor, ekrandan çıkıp girmek tam okuma yapıyor.
+  Sökülenler: `PULL_UP_THRESHOLD` · `onScrollEndDrag` · `refreshing` hâli ve göstergesi.
+  `useTicket.refresh` DURUYOR — tek çağıranı zil.
 
   **HEAD'DE BIRAKILMIŞ BİR KUSUR DA KAPANDI:** `500770c1` `bell.ts`i `@lezzet/types`tan
   `ticketChannelName` çağırır hâlde commit'lemiş ama sözleşme dosyası untracked kaldığı için
