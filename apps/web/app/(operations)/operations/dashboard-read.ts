@@ -11,7 +11,7 @@ import type {
   ProposalTeaserView,
   QueueGroupView,
   QueueItemView,
-  RoutePulseView,
+  RouteFlowView,
 } from './dashboard-types';
 
 // Panel (09.3) — SAF dönüştürücüler. **Burada DB okuması YOK ve olmayacak:** bu dosya istemci
@@ -43,162 +43,209 @@ function countdownLabel(minutes: number): string {
   return rest > 0 ? `${h} sa ${rest} dk kaldı` : `${h} sa kaldı`;
 }
 
-/**
- * Bir eşiğin **en sıkı** hâli: en erken saat + onu taşıyan rota.
- *
- * Eşikler rota ekseninde tanımlı (kullanıcı kararı 17.08) ve gün akışı tek şerit kalsın diye her
- * eşik türü için en erken saat gösterilir. Alternatifleri (rota seçici, rota başına şerit) ekrana
- * yeni bir durum sokuyordu; en sıkı kısıt hem doğru bilgiyi verir hem tekilliği korur.
- */
-export interface ThresholdFact {
-  time: string;
-  /** En erken saati taşıyan rota adı; tek rota varsa ya da hepsi aynı saatteyse `null`. */
-  routeLabel: string | null;
-}
-
-interface FlowFacts {
-  /** Gün içindeki dakika — sunucuda tek kez hesaplanır, tüm bölümler aynı "şimdi"ye bakar. */
-  nowMinutes: number;
-  times: {
-    orderCutoff: ThresholdFact;
-    prepCutoff: ThresholdFact;
-    routeDeparture: ThresholdFact;
-    courierClose: ThresholdFact;
-  };
-  /** Bugün girmiş sipariş sayısı + kaç depoda. */
-  orderCount: number;
-  warehouseCount: number;
-  /** Hazırlık: hazır olan ↔ toplam. */
+/** Bir rotanın bugünkü ham olguları: dört eşik saati + hazırlık sayacı + bugün koşup koşmadığı. */
+export interface RouteFlowFact {
+  zoneId: string;
+  zoneName: string;
+  warehouseCode: string | null;
+  times: { orderCutoff: string; prepCutoff: string; routeDeparture: string; courierClose: string };
   readyCount: number;
   totalCount: number;
-  /** Rota çıkışı: durak sayısı + kurye adları. */
-  stopCount: number;
-  courierNames: string[];
-  /** Kurye kapanışı: kapıda beklenen tahsilat. */
-  expectedCashCents: number;
-  /** Kesim riski taşıyan depo var mı — `now` adımının tonunu belirler. */
-  atRisk: boolean;
+  runsToday: boolean;
+  /** Koşmadığı günlerde günlerini söyleyen etiket ("Cum · Cts"); bugün koşuyorsa `null`. */
+  weekdayLabel: string | null;
+}
+
+/** Kart başlıkları — kartın kendi metni. */
+const FLOW_TITLES: Record<FlowStepView['key'], string> = {
+  orderCutoff: 'Sipariş kesimi',
+  prepCutoff: 'Depo hazırlık kapanışı',
+  routeDeparture: 'Rota çıkışı',
+  courierClose: 'Kurye kapanışı',
+  nextCutoff: 'Sonraki seferin kesimi',
+};
+
+/**
+ * Gün akışı — **her rota kendi kart şeridini alır** (kullanıcı kararı 18.08). Kartların tasarımı
+ * DEĞİŞMEDİ; değişen, rota sayısı kadar tekrarlanmaları ve hangi rotaya ait olduklarının yazılması.
+ *
+ * Eskiden akış eşik TÜRÜ ekseninde tekti ve her kart bütün rotaların EN ERKENİNİ yazıyordu: ikinci
+ * rotanın saati hiç görünmüyordu, tek rotalı kurulumda ise akışın kime ait olduğu okunamıyordu.
+ *
+ * ── GÜNÜN SAATLERİ, BİR SEFERİN DEĞİL ───────────────────────────────────────
+ * Kesim hazırlıktan sonraysa (`cutoffBelongsToPreviousDay`) BUGÜNÜN teslimini kapatan kesim DÜN akşam
+ * oldu — geçmiştir. Sıralama değeri bu yüzden `saat − 1440`: kart kendiliğinden en başa geçer ve
+ * `tamam` olur. Eskiden bugünün saatine göre sıralanıp en SONA düşüyordu ve ekran aynı anda hem
+ * "önceki gün" hem "sırada" diyordu (kullanıcı bildirdi 18.08).
+ *
+ * Aynı kural BUGÜN AKŞAMKİ kesimi de doğurur: o saat sonraki seferin listesini kapatır ve bugün
+ * gerçekleşir, yani günün akışına aittir — ayrı kart olarak sonda durur (`nextCutoff`). Kesim önceki
+ * güne ait DEĞİLSE bu kart hiç yoktur: o hâlde sonraki seferin kesimi yarındır.
+ *
+ * **Bugün koşmayan rota SÖNÜK gelir:** kartları çizilir ama hiçbiri `now` olmaz ve geri sayım
+ * taşımaz — o rotanın saatleri bugünle ilgili bir söz vermiyor. Gizlemek yerine sönük göstermek
+ * kullanıcı kararı: operatör hangi rotaların var olduğunu da bilmeli.
+ *
+ * Ayarı okunamayan eşik **atlanır**: uydurulmuş bir saat, yanlış işe yönlendiren bir karttır.
+ */
+export function buildRouteFlow(facts: readonly RouteFlowFact[], input: { nowMinutes: number }): RouteFlowView[] {
+  return facts.map((route) => {
+    const prevDay = cutoffBelongsToPreviousDay(route.times.orderCutoff, route.times.prepCutoff);
+
+    const raw: { key: FlowStepView['key']; time: string; prevDay: boolean }[] = [
+      { key: 'orderCutoff', time: route.times.orderCutoff, prevDay },
+      { key: 'prepCutoff', time: route.times.prepCutoff, prevDay: false },
+      { key: 'routeDeparture', time: route.times.routeDeparture, prevDay: false },
+      { key: 'courierClose', time: route.times.courierClose, prevDay: false },
+      ...(prevDay ? [{ key: 'nextCutoff' as const, time: route.times.orderCutoff, prevDay: false }] : []),
+    ];
+
+    // Sıra SAATTEN gelir, dizi sırasından değil (ölçüldü 17.08): kesim 16:00, hazırlık 11:00 olabilir.
+    // `prevDay` bir gün geriye, `nextCutoff` günün sonuna çekilir — aynı saat iki kez geçtiğinde
+    // ikincisi sondadır.
+    const ordered = raw
+      .map((s) => {
+        const at = toMinutes(s.time);
+        if (at === null) return null;
+        return { ...s, at: s.prevDay ? at - 1440 : s.key === 'nextCutoff' ? at + 1440 : at };
+      })
+      .filter((s): s is { key: FlowStepView['key']; time: string; prevDay: boolean; at: number } => s !== null)
+      .sort((a, b) => a.at - b.at);
+
+    const pending = route.totalCount - route.readyCount;
+    const prepAt = toMinutes(route.times.prepCutoff);
+    const prepLeft = prepAt === null ? null : prepAt - input.nowMinutes;
+    // Kalan süre kalan işe yetiyor mu — dakika başına bir sipariş kaba ama dürüst bir ölçü; eşiği
+    // parametrik tutmak yerine tek varsayımla açık yazıyoruz (`CLAUDE §4`: makul varsayılan).
+    const tight = route.runsToday && prepLeft !== null && prepLeft > 0 && prepLeft < pending * PREP_MINUTES_PER_ORDER;
+    const missed = route.runsToday && prepLeft !== null && prepLeft <= 0 && pending > 0;
+
+    /**
+     * Kartın not satırı — **o rotanın** olgusu. Geçmiş kart OLAN'ı söyler, gelecek kart BEKLENEN'i.
+     *
+     * Eskiden notlar gün geneline aitti ("24 sipariş girdi · 3 depo"); rota bazına geçince o sayılar
+     * yanlış olurdu — bir rotanın kartında bütün depoların toplamı yazardı.
+     */
+    const noteOf = (key: FlowStepView['key'], done: boolean): string => {
+      switch (key) {
+        case 'orderCutoff':
+          // Kesim önceki güne aitse bugünün 22:00'ı bugünü değil SONRAKİ seferi kapatır.
+          return prevDay
+            ? 'bu seferin siparişleri kapandı'
+            : done
+              ? 'bugün teslim edilecekler kapandı'
+              : 'bugün teslim edilecekler kapanır';
+        case 'prepCutoff':
+          if (route.totalCount === 0) return 'bugüne sipariş yazılmadı';
+          return done
+            ? `${num(route.readyCount)}/${num(route.totalCount)} hazırlandı`
+            : pending > 0
+              ? `${num(route.readyCount)} hazır · ${num(pending)} sipariş bekliyor`
+              : 'hepsi hazır · bekleyen yok';
+        case 'routeDeparture':
+          return route.totalCount > 0 ? `${num(route.totalCount)} sipariş` : 'bugüne sipariş yazılmadı';
+        case 'courierClose':
+          return done ? 'kasa teslim alındı' : 'gün kapanışı bekleniyor';
+        case 'nextCutoff':
+          return 'sonraki seferin siparişleri kapanır';
+      }
+    };
+
+    let markedNow = false;
+    const steps: FlowStepView[] = ordered.map((s) => {
+      const done = route.runsToday && s.at <= input.nowMinutes;
+      const base = { key: s.key, time: s.time, title: FLOW_TITLES[s.key], note: noteOf(s.key, done), prevDay: s.prevDay };
+      if (!route.runsToday) return { ...base, state: 'later' as const, countdown: null, tone: 'neutral' as OpsTone };
+      if (s.at <= input.nowMinutes) return { ...base, state: 'done' as const, countdown: null, tone: 'olive' as OpsTone };
+      if (!markedNow) {
+        markedNow = true;
+        return {
+          ...base,
+          state: 'now' as const,
+          countdown: countdownLabel(s.at - input.nowMinutes),
+          tone: tight || missed ? ('amber' as OpsTone) : ('olive' as OpsTone),
+        };
+      }
+      return { ...base, state: 'later' as const, countdown: null, tone: 'neutral' as OpsTone };
+    });
+
+    const tone: OpsTone = !route.runsToday
+      ? 'neutral'
+      : route.totalCount === 0
+        ? 'neutral'
+        : pending === 0
+          ? 'olive'
+          : missed
+            ? 'red'
+            : tight
+              ? 'amber'
+              : 'olive';
+
+    return {
+      zoneId: route.zoneId,
+      zoneName: route.zoneName,
+      warehouseCode: route.warehouseCode,
+      runsToday: route.runsToday,
+      weekdayLabel: route.weekdayLabel,
+      steps,
+      readyCount: route.readyCount,
+      totalCount: route.totalCount,
+      note: !route.runsToday
+        ? 'bugün koşmuyor'
+        : route.totalCount === 0
+          ? 'bugüne sipariş yazılmadı'
+          : pending === 0
+            ? 'tamamı hazırlandı'
+            : missed
+              ? `${route.times.prepCutoff} kesimi geçti · ${num(pending)} sipariş hazırlanmadı`
+              : `${route.times.prepCutoff} kesimine ${num(prepLeft ?? 0)} dk · ${num(pending)} sipariş hazırlanmadı`,
+      statusLabel: !route.runsToday
+        ? 'bugün koşmuyor'
+        : route.totalCount === 0
+          ? 'boş gün'
+          : pending === 0
+            ? 'hazır'
+            : missed
+              ? 'kesim kaçtı'
+              : tight
+                ? 'kesim riski'
+                : 'yetişiyor',
+      tone,
+    };
+  });
 }
 
 /**
- * Gün akışı — dört eşik (`design/pages/admin-dashboard.md §2.2`).
+ * Şeridin baktığı eşik: BUGÜN KOŞAN rotaların içinde sıradaki olanların en erkeni.
  *
- * Durum SAATTEN türer: geçmiş adım sonucuyla, ilk gelecek adım "şimdi", kalanlar sırada. Geçmiş
- * adımın notu OLAN'ı söyler ("24 sipariş girdi"), gelecek adımın notu BEKLENEN'i.
- *
- * Ayarı okunamayan eşik **atlanır** — uydurulmuş bir saat, yanlış işe yönlendiren bir şerit demektir.
+ * Satırı da döndürür çünkü şeridin cümlesi rotanın ADINI ve ölçülmüş notunu taşıyor — "Rota çıkışı"
+ * tek başına hangi aracı kastettiğini söylemiyordu (kullanıcı gözlemi 18.08).
  */
-export function buildFlow(facts: FlowFacts): FlowStepView[] {
-  /**
-   * **Kesim bugünün mü, bir ÖNCEKİ günün saati mi** (17.08 kuralı) — kararı motor veriyor.
-   *
-   * Panel bunu bilmek ZORUNDA ve bilmediği için yanlış konuşuyordu (ölçüldü 18.08, canlı ekran):
-   * kesim 21:00 · hazırlık 11:00 olan kurulumda gün akışının son adımı *"21:00 · Sipariş kesimi ·
-   * bugün teslim edilecekler kapanır"* diyordu. İkisi de yanlıştı — o saat bugüne ait değil, ve
-   * 21:00'da kapanan şey bugünün teslimi değil SONRAKİ seferin siparişiydi. Rota şeridi ile gün planı
-   * bu ayrımı yapıyordu, panel yapmıyordu: üç ekran aynı veriye üç ayrı şey diyordu.
-   */
-  const cutoffPrevDay = cutoffBelongsToPreviousDay(facts.times.orderCutoff.time, facts.times.prepCutoff.time);
+function currentStepOf(rows: readonly RouteFlowView[]): { step: FlowStepView; zoneName: string; row: RouteFlowView } | null {
+  const nows = rows
+    .filter((r) => r.runsToday)
+    .flatMap((r) => r.steps.filter((s) => s.state === 'now').map((s) => ({ step: s, zoneName: r.zoneName, row: r })));
+  if (nows.length === 0) return null;
+  return [...nows].sort((a, b) => a.step.time.localeCompare(b.step.time))[0] ?? null;
+}
 
-  const steps: {
-    key: FlowStepView['key'];
-    time: string;
-    routeLabel: string | null;
-    title: string;
-    done: string;
-    soon: string;
-    prevDay?: boolean;
-  }[] = [
-    {
-      key: 'orderCutoff',
-      ...facts.times.orderCutoff,
-      title: 'Sipariş kesimi',
-      prevDay: cutoffPrevDay,
-      /**
-       * Cümleler kesimin AİT OLDUĞU güne göre. Önceki güne aitken bugünün 21:00'ı bugünü değil
-       * sonraki seferi kapatır; "bugün teslim edilecekler" o saatte çoktan kapanmıştır (dün).
-       */
-      done: cutoffPrevDay
-        ? `sonraki seferin siparişi kapandı · bugün ${num(facts.orderCount)} teslim`
-        : `${num(facts.orderCount)} sipariş girdi · ${num(facts.warehouseCount)} depo`,
-      soon: cutoffPrevDay ? 'sonraki seferin siparişleri kapanır' : 'bugün teslim edilecekler kapanır',
-    },
-    {
-      key: 'prepCutoff',
-      ...facts.times.prepCutoff,
-      title: 'Depo hazırlık kapanışı',
-      done: `${num(facts.readyCount)}/${num(facts.totalCount)} hazırlandı`,
-      soon:
-        facts.totalCount - facts.readyCount > 0
-          ? `${num(facts.readyCount)} hazır · ${num(facts.totalCount - facts.readyCount)} sipariş bekliyor`
-          : 'hepsi hazır · bekleyen yok',
-    },
-    {
-      key: 'routeDeparture',
-      ...facts.times.routeDeparture,
-      title: 'Rota çıkışı',
-      done: facts.courierNames.length > 0 ? `${facts.courierNames.join(' · ')} yola çıktı` : 'çıkış kaydı yok',
-      soon:
-        facts.stopCount > 0
-          ? `${num(facts.stopCount)} durak${facts.courierNames.length > 0 ? ` · ${facts.courierNames.join(' · ')}` : ''}`
-          : 'bugün rota siparişi yok',
-    },
-    {
-      key: 'courierClose',
-      ...facts.times.courierClose,
-      title: 'Kurye kapanışı',
-      done: 'kasa teslim alındı',
-      soon: facts.expectedCashCents > 0 ? `kapıda tahsilat beklenen ${money(facts.expectedCashCents)}` : 'kapıda tahsilat beklenmiyor',
-    },
-  ];
-
-  // **SIRA SAATTEN GELİR, dizi sırasından DEĞİL** (ölçüldü 17.08, ilk canlı görüntü): eşikler burada
-  // anlam sırasıyla yazılı (kesim → hazırlık → rota → kapanış) ama işletmenin saatleri o sırayı takip
-  // etmek zorunda değil — sipariş kesimi 16:00'da, hazırlık kapanışı 11:00'da olabilir. Sıralanmadan
-  // çizilince şerit hem yanlış adımı "şimdi" işaretledi (13:06'da 16:00'yı, oysa sıradaki 14:00'tü)
-  // hem de akış kronolojik okunamadı (16:00 · 11:00 · 14:00 · 18:00).
-  const ordered = steps
-    .map((step) => ({ step, at: toMinutes(step.time) }))
-    .filter((s): s is { step: (typeof steps)[number]; at: number } => s.at !== null)
-    .sort((a, b) => a.at - b.at);
-
-  let markedNow = false;
-  const out: FlowStepView[] = [];
-  for (const { step, at } of ordered) {
-    if (at <= facts.nowMinutes) {
-      out.push({ ...step, prevDay: step.prevDay ?? false, note: step.done, state: 'done', countdown: null, tone: 'olive' });
-      continue;
-    }
-    if (!markedNow) {
-      markedNow = true;
-      out.push({
-        ...step,
-        prevDay: step.prevDay ?? false,
-        note: step.soon,
-        state: 'now',
-        countdown: countdownLabel(at - facts.nowMinutes),
-        tone: facts.atRisk ? 'amber' : 'olive',
-      });
-      continue;
-    }
-    out.push({ ...step, prevDay: step.prevDay ?? false, note: step.soon, state: 'later', countdown: null, tone: 'neutral' });
-  }
-  return out;
+/** Bir satırın hazırlık kesimi — şerit cümlelerinin saat kaynağı. */
+function prepCutoffOf(row: RouteFlowView): string {
+  return row.steps.find((s) => s.key === 'prepCutoff')?.time ?? '';
 }
 
 interface BandFacts {
-  flow: FlowStepView[];
-  queue: QueueGroupView[];
   /**
-   * Nabız satırları — şeridin kesim cümlesi saatini BURADAN alır (`prepCutoff`), sıradaki eşikten
-   * DEĞİL.
+   * Gün akışı satırları — hem sıradaki eşik hem kesim riski BURADAN okunur; **yalnız bugün koşan
+   * rotalar** hesaba girer.
    *
-   * İlk yazımda cümle `flow`daki "şimdi" adımının saatini kullanıyordu ve ilk canlı istekte yanlış
-   * çıktı (ölçüldü 17.08, saat 11:02): kesim 11:00'da geçmişti, sıradaki adım 14:00 rota çıkışıydı ve
-   * şerit *"14:00 kesimine yetişmiyor"* diyordu. Eşikler rota bazlı olduktan sonra kaynak kesinleşti:
-   * geride kalan ROTANIN kendi kesimi.
+   * Kesim cümlesinin saati geride kalan ROTANIN kendi hazırlık kesimidir, sıradaki eşik değil. İlk
+   * yazımda cümle "şimdi" adımının saatini kullanıyordu ve ilk canlı istekte yanlış çıktı (ölçüldü
+   * 17.08, saat 11:02): kesim 11:00'da geçmişti, sıradaki adım 14:00 rota çıkışıydı ve şerit
+   * *"14:00 kesimine yetişmiyor"* diyordu.
    */
-  pulse: RoutePulseView[];
+  flow: RouteFlowView[];
+  queue: QueueGroupView[];
 }
 
 /**
@@ -208,19 +255,15 @@ interface BandFacts {
  * İki hâl var ve ikisi de birinci sınıf: **kesim riski** varsa şerit onu öne çıkarır ve Hazırlık'a
  * götürür; **temiz masa** ise kutlar, uyarmaz (`design/pages/admin-dashboard.md §4`).
  */
-/** Sıradaki eşiğe kalan süre — kesim cümlesinin başlığında kullanılır; eşik yoksa boş kalır. */
-function countdownOf(flow: readonly FlowStepView[]): string {
-  const current = flow.find((f) => f.state === 'now');
-  return (current?.countdown ?? '').toLocaleUpperCase('tr-TR');
-}
-
 export function buildBand(facts: BandFacts): AlertBandView {
-  const current = facts.flow.find((f) => f.state === 'now') ?? null;
+  const currentRow = currentStepOf(facts.flow);
+  const current = currentRow?.step ?? null;
   const items = facts.queue.flatMap((g) => g.items);
   const totalCount = items.reduce((sum, i) => sum + i.count, 0);
   const urgent = facts.queue.find((g) => g.key === 'now')?.items ?? [];
   const urgentCount = urgent.reduce((sum, i) => sum + i.count, 0);
-  const behind = facts.pulse.filter((p) => p.tone !== 'olive');
+  // Boş gün ve koşmayan rota geride kalmış sayılmaz: hazırlanacak sipariş yoksa kesim de kaçmaz.
+  const behind = facts.flow.filter((p) => p.runsToday && p.totalCount > 0 && p.tone !== 'olive');
 
   // **Sayıya EK getirilmez.** İlk yazımda "2'i acil" çıktı (ölçüldü 17.08): Türkçe iyelik eki sayının
   // OKUNUŞUNA bağlıdır (1'i · 2'si · 3'ü · 6'sı) ve tek kalıpla doğru yazılamaz. "tanesi" her sayıda
@@ -229,20 +272,28 @@ export function buildBand(facts: BandFacts): AlertBandView {
     totalCount === 0
       ? null
       : `Bekleyen işler kuyruğunda ${num(totalCount)} kalem var${urgentCount > 0 ? `, ${num(urgentCount)} tanesi acil: ${urgent.map((i) => i.detail).join(' · ')}` : ''}.`;
-  const secondary = totalCount > 0 ? { label: `Bekleyen İşler (${num(totalCount)})`, href: '#bekleyen-isler' } : null;
+  /**
+   * **"Bekleyen İşler" düğmesi KALDIRILDI** (kullanıcı kararı 18.08).
+   *
+   * Sayfa içi bir çapaydı (`#bekleyen-isler`) ve götürdüğü blok zaten ekranda görünüyordu: ölçüldü,
+   * kuyruk `y=592`de başlayıp `y=844`te bitiyor, görüntü alanı 900 px — tıklayınca hiçbir şey
+   * olmuyordu. Kuyruğun kaç kalem olduğu şeridin GEREKÇE satırında zaten yazılı; bir de düğme
+   * koymak, iş yapmayan bir düğmeyi günde onlarca kez göstermek demekti.
+   */
+  const secondary = null;
 
   // Kesim riski en yüksek sesle konuşur: mal rafta kalırsa gün kurtarılamaz, ötekiler gün içinde döner.
   if (behind.length > 0) {
     const late = behind.reduce((sum, p) => sum + (p.totalCount - p.readyCount), 0);
     // Kesim GEÇTİYSE bu bir risk değil olgudur ve cümle geriye doğru konuşur. İkisini ayırmayan bir
     // metin, kaçmış bir kesimi hâlâ yetişilebilir gibi gösterir.
-    const missed = facts.pulse.some((p) => p.tone === 'red');
+    const missed = behind.some((p) => p.tone === 'red');
     // Saat GERİDE KALAN ROTANIN kendi kesimi. Birden çok rota geride kaldıysa en erken olan söylenir:
     // en sıkı kısıt hangisiyse şerit onu işaret eder (gün akışıyla aynı kural).
-    const cutoff = behind.map((p) => p.prepCutoff).sort()[0] ?? '';
+    const cutoff = behind.map(prepCutoffOf).sort()[0] ?? '';
     const names = behind.map((p) => p.zoneName).join(' ve ');
     return {
-      eyebrow: missed ? `KESİM KAÇTI · ${cutoff}` : `ŞİMDİ · KESİME ${countdownOf(facts.flow)}`,
+      eyebrow: missed ? `KESİM KAÇTI · ${cutoff}` : `ŞİMDİ · KESİME ${(current?.countdown ?? '').toLocaleUpperCase('tr-TR')}`,
       headline: missed
         ? `${names} ${cutoff} hazırlık kesimini kaçırdı — ${num(late)} sipariş hazırlanmadı.`
         : `${names} ${cutoff} kesimine yetişmiyor — ${num(late)} sipariş hâlâ hazırlanmadı.`,
@@ -257,31 +308,25 @@ export function buildBand(facts: BandFacts): AlertBandView {
     return {
       eyebrow: current ? `SIRADAKİ · ${current.time}` : 'GÜN AKIŞI',
       headline: 'Karar bekleyen iş yok — masa temiz.',
-      detail: current ? `${current.title}: ${current.note}.` : null,
+      // Kartın kendi notu kalktı; cümle SATIRIN ölçülmüş notundan ve rota adından kuruluyor.
+      detail: currentRow ? `${currentRow.step.title} · ${currentRow.zoneName}: ${currentRow.row.note}.` : null,
       tone: 'olive',
       primary: null,
       secondary: null,
     };
   }
 
-  /**
-   * **TEK düğme, çift değil** (18.08, ölçülmüş kusur).
-   *
-   * Bu dalda `primary` ve `secondary` ikisi de kuyruğa gidiyordu ve koşulları çakışıyordu
-   * (`urgentCount > 0` ⊂ `totalCount > 0`): canlı ekranda yan yana *"Bekleyen İşler →"* ve
-   * *"Bekleyen İşler (11)"* çizildi — aynı hedefe iki düğme. Sayı daha bilgilendirici olduğu için
-   * o korundu, ok ona eklendi. Üstteki kesim dalında ikisi FARKLI hedefe gidiyor (Hazırlık ↔
-   * kuyruk), orada iki düğme doğru.
-   */
-  const queueAction = totalCount > 0 ? { label: `Bekleyen İşler (${num(totalCount)}) →`, href: '#bekleyen-isler' } : null;
-
+  // Bu dalda hiç düğme yok: şeridin işaret edebileceği tek yer kuyruktu, o da kaldırıldı (yukarıdaki
+  // künye). Şerit burada bir cümle söylüyor ve karar kuyruk satırlarının kendi köprülerinde veriliyor.
   return {
     eyebrow: current ? `SIRADAKİ · ${current.time} · ${current.countdown ?? ''}`.trim() : 'BEKLEYEN İŞLER',
-    headline: current ? `${current.title} — ${current.note}.` : `${num(totalCount)} kalem karar bekliyor.`,
+    headline: currentRow
+      ? `${currentRow.step.title} · ${currentRow.zoneName} — ${currentRow.row.note}.`
+      : `${num(totalCount)} kalem karar bekliyor.`,
     detail: queueDetail,
     tone: urgentCount > 0 ? 'amber' : 'neutral',
-    primary: urgentCount > 0 ? queueAction : null,
-    secondary: urgentCount > 0 ? null : queueAction,
+    primary: null,
+    secondary: null,
   };
 }
 
@@ -345,60 +390,6 @@ export function buildProposals(count: number, kinds: string[]): ProposalTeaserVi
       ? `${kinds.slice(0, 3).join(', ')}${kinds.length > 3 ? ` ve ${num(kinds.length - 3)} öneri daha` : ''} — karar kuyrukta veriliyor.`
       : 'Onay bekleyen öneriler kuyrukta.';
   return { count, detail, href: '/operations/assistant' };
-}
-
-export interface PulseFact {
-  zoneId: string;
-  zoneName: string;
-  warehouseCode: string | null;
-  readyCount: number;
-  totalCount: number;
-  /** **O ROTANIN kendi** hazırlık kesimi — global saat değil (kullanıcı kararı 17.08). */
-  prepCutoff: string;
-}
-
-/**
- * Depo nabzı — YALNIZ hazırlık ilerlemesi (tezgâh sözleşmesi: *"çalışan/verim ölçmez"*).
- *
- * Alt cümle ÖLÇÜLEN olgudur: kalan süre + hazırlanmamış sipariş sayısı. Tasarımdaki *"tek kişi
- * vardiyada · hazırlık yavaş"* satırı budandı — vardiya verisi yok ve o cümle bu kuralı ihlal
- * ediyordu (`design/KARARLAR.md` › Panel 17.08).
- *
- * Eşik geçtikten sonra "kalan süre" diye bir şey yoktur: gecikme geriye doğru söylenir.
- */
-export function buildPulse(facts: PulseFact[], input: { nowMinutes: number }): RoutePulseView[] {
-  return facts.map((f) => {
-    // Kesim SATIR BAŞINA okunuyor: iki rotalı bir depoda tek kesime bakmak, 11:00 rotasının malını
-    // 09:00 rotasının ölçüsüyle "geç" ilan etmek olurdu (kullanıcı kararı 17.08).
-    const cutoff = toMinutes(f.prepCutoff);
-    const left = cutoff === null ? null : cutoff - input.nowMinutes;
-    const pending = f.totalCount - f.readyCount;
-    if (f.totalCount === 0) {
-      return { ...f, note: 'bugüne sipariş yazılmadı', statusLabel: 'boş gün', tone: 'neutral' as OpsTone };
-    }
-    if (pending === 0) {
-      return { ...f, note: 'tamamı hazırlandı', statusLabel: 'hazır', tone: 'olive' as OpsTone };
-    }
-    // Eşik geçtiyse durum artık bir risk değil, bir olgudur.
-    if (left !== null && left <= 0) {
-      return {
-        ...f,
-        note: `${f.prepCutoff} kesimi geçti · ${num(pending)} sipariş hazırlanmadı`,
-        statusLabel: 'kesim kaçtı',
-        tone: 'red' as OpsTone,
-      };
-    }
-    const window = left === null ? '' : `${f.prepCutoff} kesimine ${num(left)} dk · `;
-    // Kalan süre kalan işe yetiyor mu — dakika başına bir sipariş kaba ama dürüst bir ölçü; eşiği
-    // parametrik tutmak yerine tek varsayımla açık yazıyoruz (`CLAUDE §4`: makul varsayılan).
-    const tight = left !== null && left < pending * PREP_MINUTES_PER_ORDER;
-    return {
-      ...f,
-      note: `${window}${num(pending)} sipariş hazırlanmadı`,
-      statusLabel: tight ? 'kesim riski' : 'yetişiyor',
-      tone: tight ? ('amber' as OpsTone) : ('olive' as OpsTone),
-    };
-  });
 }
 
 interface KpiFacts {

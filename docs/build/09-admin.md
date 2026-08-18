@@ -184,7 +184,63 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
       eski hâliyle duruyor. BEKLEYEN(09.3)
     - ⚠ **Sakin şerit (ton `olive`) hâlâ canlı veriyle SINANMADI** — kuyrukta 11 kalem var, o dal
       bugünkü veriyle üretilmiyor. İlk boş kuyruklu günde gözle doğrulanmalı. BEKLEYEN(09.3)
-  - **SIRADAKİ İŞ — GÜN AKIŞI ROTA BAZINA GEÇECEK, NABIZLA BİRLEŞECEK (kullanıcı kararı 18.08).**
+  - **GÜN AKIŞI ROTA BAZINA GEÇTİ, NABIZ SATIRA İNDİ (kullanıcı kararı 18.08).** Aşağıdaki plan
+    uygulandı; ek olarak bu turda çıkanlar:
+    - **Kart tasarımı DEĞİŞMEDİ ve bu şartın kendisiydi** (kullanıcı: *"Mevcut aşamaları gösteren
+      kartlar dursun. Bunun yerine kendi yapını getirme."*). Tekrarlanan şey ŞERİDİN KENDİSİ: tek
+      çerçeve, kolonlar arası saç teli ayraç, üstte 3px durum şeridi, saat + damga + çip + başlık +
+      not. Ara bir turda bunu yanlışlıkla ayrı yüzen `Card`'lara + sol kenarlığa çevirmiştim
+      (kullanıcı bildirdi) — `git show HEAD` ile onaylı markup birebir geri alındı.
+      **Ders:** bir bloğu tekrar ederken markup'ı YENİDEN YAZMA, olduğu gibi taşı.
+    - **Kart notları rota başına** oldu. Eski notlar gün geneline aitti (*"24 sipariş girdi · 3
+      depo"*); rota bazında o sayı yanlış olurdu — bir rotanın kartında bütün depoların toplamı
+      yazardı.
+    - **Bugün koşmayan rota da görünüyor, SÖNÜK** (kullanıcı kararı: *"bugün olmadığı tasarımdan
+      belli olsun"*). `opacity-55` + günlerini söyleyen çip (`Cum · Cts`) + *"bugün koşmuyor"*.
+      Gizlemek hangi rotaların var olduğunu saklardı. Saatleri hiçbir hesaba girmez: `runsToday`
+      false ise hiçbir kartı `now` olmaz, şerit ve kesim riski onu görmez.
+    - **Önceki günün kesimi EN BAŞTA ve `tamam`** (kullanıcı tespiti: *"o 22:00 en başa gelmeli ve
+      tamamlandı gibi görünmeli"*). Sıralama değeri `saat − 1440`. Eskiden bugünün saatine göre
+      sıralanıp en SONA düşüyordu; ekran aynı anda hem "önceki gün" hem "sırada" diyordu.
+    - **`Sonraki seferin kesimi` ayrı kart olarak sonda** (kullanıcı seçimi). Yalnız kesim önceki
+      güne aitken var — aksi hâlde sonraki seferin kesimi YARINDIR ve bugünün akışında işi yok.
+    - **Depo bağlamı akışa uygulandı** — seçici siparişleri süzüyordu ama eşikler her deponun her
+      rotasından hesaplanıyordu.
+    - **Satırlar ROTADAN geliyor, siparişten değil** — eski nabız siparişleri bölgeye göre
+      grupluyordu, siparişi olmayan rota hiç görünmüyordu.
+    - ⚠ **SÖNÜK ROTA ÖLÇÜLMEDİ:** yerel veride tek rota var (`STR · Strasbourg Merkez · günler [2,5]`)
+      ve o da bugün koşuyor. Kod yolu yazıldı, tip denetiminden geçti; ikinci rota eklendiğinde gözle
+      doğrulanmalı. İkinci rotayı eklemek kullanıcının kararı. BEKLEYEN(09.3)
+  - **PANELE DEPO SEÇİCİ — ortak `PageHeader` (kullanıcı isteği 18.08).** Panel kendi başlığını ELLE
+    yazıyordu ve operasyonun tek böyle ekranıydı; seçicinin olmamasının sebebi buydu. Ayrı bir seçici
+    YAZILMADI: `PageHeader` depo seçicisini, ⌘K'yı ve kullanıcı bloğunu kabuktan devralıp çiziyor.
+    Yan fayda: ikinci bir başlık uygulaması ortadan kalktı (`CLAUDE §1`). Depo adı alt satırdan
+    çıkarıldı — seçici zaten söylüyor.
+    - ⚠ Kullanıcı *"bekleyen iş seçeneği yerine"* demişti, yani ŞERİDİN içine. Başlık barına konuldu
+      çünkü koyu şeride koymak var olan kontrolün ikinci bir sürümünü yazmayı gerektirirdi. Kullanıcı
+      itiraz etmedi ama tercih edilen konum teyit edilmedi. BEKLEYEN(09.3)
+  - **"BEKLEYEN İŞLER" DÜĞMESİ KALDIRILDI (kullanıcı kararı 18.08).** Sayfa içi çapaydı
+    (`#bekleyen-isler`) ve götürdüğü blok zaten ekranda görünüyordu — ölçüldü: kuyruk `y=592`de
+    başlayıp `y=844`te bitiyor, görüntü alanı 900 px. Tıklayınca hiçbir şey olmuyordu.
+  - **PANEL KENDİ ZEMİNİNİ ÇİZMİYORDU (kullanıcı isteği 18.08: *"renk farklarını da düzelt"*).**
+    Şikâyet gerçekti: operasyon yüzeyi mock'lardan bir kademe koyu duruyordu. **İlk teşhisim
+    yanlıştı** — tasarımın iki katmanına bakıp (`body` #dedbd3 = canvas chrome, `data-screen-label`
+    #fbfbf9 = uygulama) "pane katmanı hiç kurulmamış" dedim ve KABUĞUN rengini değiştirdim.
+    `docs:check §3g` çürüttü: kural zaten var ve YAZILI — kabuk `ops-bg` (bej) kalır, **her ekranın
+    kökü kendi `bg-ops-card`'ını çizer**; on ekranın dokuzu çiziyordu, panel çizmiyordu. Yani eksik
+    olan katman değil, bu ekranın onu çizmemesiydi.
+    Kabuk değişikliği geri alındı; panel kökü öteki ekranlarla aynı yapıya sokuldu
+    (`<div className="flex min-h-0 flex-1 flex-col bg-ops-card">` → `PageHeader` → içerik).
+    **Ders:** bir görsel şikâyette önce o ekranın ÖTEKİLERDEN farkına bak; ortak katmanı değiştirmek
+    en son çare. `typecheck` göremezdi — eksik olan bir tip değil bir SINIF.
+    `cardClass` `ops-card` → `ops-white` KALDI: tasarımın ilişkisi bu (pane #fbfbf9, kapsayıcı #fff)
+    ve pane çizilince kartlar aksi hâlde düzleşirdi. Panel ve Siparişler'de, açık ve karanlık temada
+    doğrulandı.
+  - **İki yerleşim kusuru ölçüldü ve düzeltildi:** (1) kaydırılan flex kolonunda çocuklar varsayılan
+    olarak SIKIŞIYOR — akış uzayınca gösterge şeridi eziliyor ve etiketleri kırpılıyordu
+    (`[&>*]:shrink-0`); (2) beşinci kart dört kolonluk ızgarada tek başına alt satıra düşüyordu —
+    kolon sayısı artık kart sayısından geliyor.
+  - **PLAN (uygulandı) — GÜN AKIŞI ROTA BAZINA GEÇECEK, NABIZLA BİRLEŞECEK (kullanıcı kararı 18.08).**
     Soru şuydu: *"gün akışı seçilen depodaki tüm rotaların yazılması şeklinde olsa daha fonksiyonel
     olmaz mı?"* — ve kodu okuyunca bunun kozmetik değil, **iki ölçülmüş arızayı** kapattığı çıktı.
     Bugün `dashboard-page-read` rotaları `listWithCodes()` ile SÜZGEÇSİZ okuyor:

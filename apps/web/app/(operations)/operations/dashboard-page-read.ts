@@ -18,17 +18,15 @@ import { toOrderRows } from './orders/orders-read';
 import type { OrderRow } from './orders/orders-types';
 import {
   buildBand,
-  buildFlow,
   buildKpis,
   buildProposals,
-  buildPulse,
   buildQueue,
+  buildRouteFlow,
   toRoute,
   toStops,
-  type PulseFact,
   type QueueFact,
+  type RouteFlowFact,
   type StopFact,
-  type ThresholdFact,
 } from './dashboard-read';
 import type { DashboardData, DeliveryRouteView } from './dashboard-types';
 
@@ -66,12 +64,7 @@ const PAYMENT_TERM_KEY = 'payment_term_days';
 const PAYMENT_TERM_DEFAULT = 30;
 
 /** Hazırlanmış sayılan durumlar — `ready` ve sonrası. `confirmed`/`preparing` henüz raftadır. */
-const PREPARED: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
-  'ready',
-  'out_for_delivery',
-  'delivered',
-  'completed',
-]);
+const PREPARED: ReadonlySet<OrderStatus> = new Set<OrderStatus>(['ready', 'out_for_delivery', 'delivered', 'completed']);
 
 /** Gün listesinden düşenler: iptal ve taslak bir iş değildir, sayılırsa gün olduğundan yoğun görünür. */
 const OUT_OF_DAY: ReadonlySet<OrderStatus> = new Set<OrderStatus>(['draft', 'cancelled']);
@@ -97,8 +90,24 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
 
   // Rotalar eşiklerin EKSENİ olduğu için ilk dalgada okunuyor: hem nabzın satırları hem gün akışının
   // saatleri buradan türüyor. Pasif bölge de geliyor — bugüne siparişi varsa nabızda görünmeli.
-  const zones = await new DeliveryZoneService(db).listWithCodes();
+  const allZones = await new DeliveryZoneService(db).listWithCodes();
+
+  /**
+   * **Depo bağlamı gün akışına da uygulanır** (kullanıcı isteği 18.08: *"o depoyu seçince o depo ile
+   * alakalı bilgileri panele yerleştirebilirsin"*).
+   *
+   * Ölçülmüş arızaydı: seçici siparişleri süzüyordu (`warehouseIds` her sorguya gidiyor) ama eşik
+   * saatleri HER deponun HER rotasından hesaplanıyordu — Strasbourg seçiliyken akışta Colmar'ın
+   * kesimi görünebiliyordu. Eksikliği "en erken saat" toplaması gizliyordu: tek sayı gösterildiği
+   * için hangi rotadan geldiği okunamıyordu.
+   *
+   * Kapsam `null` ise (tüm depolar) süzgeç uygulanmaz — bugünkü davranış aynen korunur.
+   */
+  const zones = warehouseIds ? allZones.filter((z) => warehouseIds.includes(z.warehouseId)) : allZones;
   const zoneRefs: ZoneRef[] = zones.map((z) => ({ id: z.id, name: z.name }));
+
+  // `getDay()` pazarı 0 verir, veri modeli ISO 1-7 kullanıyor (`delivery_zone.weekdays`).
+  const isoWeekday = now.getDay() === 0 ? 7 : now.getDay();
 
   const [times, todayCounts, yesterdayCounts, openCounts, dayPage, revenueRows, termDays, labels, ticketCounts, proposalCount] =
     await Promise.all([
@@ -135,32 +144,13 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
 
   // Durum kaydı TEK turda iki soruya cevap veriyor: kapıdan dönen sipariş (11.4) ve teslim edilmiş
   // durağın GERÇEK saati. İkisi de aynı satırlardan çıkıyor, iki okuma yapmanın karşılığı yok.
-  const dayLog = await readDayLog(db, dayOrders.map((o) => o.id));
+  const dayLog = await readDayLog(
+    db,
+    dayOrders.map((o) => o.id),
+  );
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const pulse = buildPulse(pulseFacts(dayOrders, { zones, labels, times }), { nowMinutes });
-  const readyCount = dayOrders.filter((o) => PREPARED.has(o.status)).length;
-
-  // Akışın saatleri: her eşik için EN ERKEN rota saati. Rota hiç yoksa global satır (`times.global`).
-  const earliest = (key: TimeKey): ThresholdFact => earliestOf(key, zoneRefs, times.byZone, times.global[key]);
-
-  const flow = buildFlow({
-    nowMinutes,
-    times: {
-      orderCutoff: earliest('order_cutoff_time'),
-      prepCutoff: earliest('prep_cutoff_time'),
-      routeDeparture: earliest('route_departure_time'),
-      courierClose: earliest('courier_close_time'),
-    },
-    orderCount: dayOrders.length,
-    warehouseCount: new Set(dayOrders.map((o) => o.warehouseId)).size,
-    readyCount,
-    totalCount: dayOrders.length,
-    stopCount: rows.filter((r) => r.deliveryType === 'route').length,
-    courierNames: [...new Set(rows.flatMap((r) => (r.courierName ? [r.courierName] : [])))],
-    expectedCashCents: todayCounts.cod.totalCents - todayCounts.cod.collectedCents,
-    atRisk: pulse.some((p) => p.tone === 'amber' || p.tone === 'red'),
-  });
+  const flow = buildRouteFlow(routeFlowFacts(dayOrders, { zones, labels, times, isoWeekday }), { nowMinutes });
 
   const queue = buildQueue(queueFacts({ overdue, openTickets: ticketCounts }));
 
@@ -171,7 +161,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
       time: now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
     },
     scopeLabel: scopeLabelOf(ctx),
-    band: buildBand({ flow, queue, pulse }),
+    band: buildBand({ flow, queue }),
     kpis: buildKpis({
       orders: {
         today: todayCounts.total,
@@ -189,9 +179,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
         codCents: openCounts.cod.totalCents - openCounts.cod.collectedCents,
         termCents: Math.max(
           0,
-          openCounts.sum.totalCents -
-            openCounts.sum.collectedCents -
-            (openCounts.cod.totalCents - openCounts.cod.collectedCents),
+          openCounts.sum.totalCents - openCounts.sum.collectedCents - (openCounts.cod.totalCents - openCounts.cod.collectedCents),
         ),
         overdueCount: overdue.length,
         overdueCents: overdue.reduce((sum, r) => sum + r.payment.openCents, 0),
@@ -210,7 +198,6 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     queue,
     proposals: buildProposals(proposalCount, []),
     routes: routesOf(rows, dayLog.deliveredAt),
-    pulse,
   };
 }
 
@@ -238,36 +225,12 @@ async function readThresholds(
   const keys = DAY_HOUR_KEYS;
 
   const read = async (zoneId: string | null): Promise<Record<TimeKey, string>> => {
-    const values = await Promise.all(
-      keys.map((key) => settings.get<string>(key, DAY_HOUR_FALLBACK[key], zoneId ? { zoneId } : {})),
-    );
-    return Object.fromEntries(keys.map((key, i) => [key, values[i] ?? DAY_HOUR_FALLBACK[key]])) as Record<
-      TimeKey,
-      string
-    >;
+    const values = await Promise.all(keys.map((key) => settings.get<string>(key, DAY_HOUR_FALLBACK[key], zoneId ? { zoneId } : {})));
+    return Object.fromEntries(keys.map((key, i) => [key, values[i] ?? DAY_HOUR_FALLBACK[key]])) as Record<TimeKey, string>;
   };
 
   const [global, perZone] = await Promise.all([read(null), Promise.all(zones.map((z) => read(z.id)))]);
   return { byZone: new Map(zones.map((z, i) => [z.id, perZone[i] ?? global])), global };
-}
-
-/**
- * Bir eşiğin **en sıkı** hâli: en erken saat + onu taşıyan rota.
- *
- * Gün akışı tek şerit kalsın diye her eşik türü için en erken saat gösterilir — ona yetişen ötekilere
- * de yetişir. Tüm rotalar aynı saatteyse rota adı yazılmaz: tekrar, bilgi değil gürültü olur.
- */
-function earliestOf(key: TimeKey, zones: readonly ZoneRef[], byZone: Map<string, Record<TimeKey, string>>, fallback: string): ThresholdFact {
-  const rows = zones.flatMap((z) => {
-    const time = byZone.get(z.id)?.[key];
-    return time ? [{ time, name: z.name }] : [];
-  });
-  if (rows.length === 0) return { time: fallback, routeLabel: null };
-
-  const sorted = [...rows].sort((a, b) => a.time.localeCompare(b.time));
-  const first = sorted[0]!;
-  const allSame = sorted.every((r) => r.time === first.time);
-  return { time: first.time, routeLabel: allSame ? null : first.name };
 }
 
 async function toRows(
@@ -318,10 +281,7 @@ async function toRows(
  * **`deliveredAt`:** teslim anı. Panelde saat YALNIZ olmuş durakta görünür ve bu onun tek kaynağıdır
  * (`order` tablosunda `delivered_at` kolonu yok, tarih durum kaydından türetilir — `0012:218`).
  */
-async function readDayLog(
-  db: Db,
-  orderIds: readonly string[],
-): Promise<{ bounced: Set<string>; deliveredAt: Map<string, string> }> {
+async function readDayLog(db: Db, orderIds: readonly string[]): Promise<{ bounced: Set<string>; deliveredAt: Map<string, string> }> {
   if (orderIds.length === 0) return { bounced: new Set(), deliveredAt: new Map() };
   const logs = await new OrderStatusLogService(db).listByOrders(orderIds);
   const bounced = new Set<string>();
@@ -391,22 +351,31 @@ function seriesOf(
   return out;
 }
 
+/** Kısa gün adları — rota `weekdays` alanı ISO 1-7 taşıyor (1 = pazartesi). */
+const WEEKDAY_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cts', 'Paz'] as const;
+
 /**
- * Nabız olguları — **ROTA başına** (kullanıcı kararı 17.08). Gün listesinden türer, ayrı sorgu yok:
- * sipariş `deliveryZoneId` taşıyor, yani rota bağı bedava.
+ * Gün akışı olguları — **satır = ROTA** (kullanıcı kararı 18.08).
  *
- * **Rotasız sipariş nabza girmez** — kargo siparişinin hazırlık kesimi yoktur ve onu bir rotanın
- * satırına yazmak, o rotayı olduğundan yüklü göstermek olurdu. Gün akışının sayaçları onları yine
- * sayıyor (`dayOrders`), yani sipariş kaybolmuyor.
+ * Satırlar ROTADAN gelir, siparişten değil: eski nabız siparişleri bölgeye göre grupluyordu ve
+ * siparişi olmayan rota hiç görünmüyordu — oysa boş bir rotanın da çıkış saati vardır ve operatör
+ * onu bilmek zorundadır. Sipariş sayaçları rotanın üstüne yazılır, rotayı DOĞURMAZ.
+ *
+ * **Bugün koşmayan rota da gelir** ve `runsToday: false` taşır: ekran onu sönük çizer. Gizlemek
+ * yerine sönük göstermek kullanıcı kararı — hangi rotaların var olduğu da bir bilgi.
+ *
+ * **Rotasız sipariş sayaca girmez** — kargo siparişinin hazırlık kesimi yoktur ve onu bir rotanın
+ * satırına yazmak, o rotayı olduğundan yüklü göstermek olurdu. Göstergeler onları yine sayıyor.
  */
-function pulseFacts(
+function routeFlowFacts(
   orders: readonly Order[],
   input: {
     zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>;
     labels: Awaited<ReturnType<typeof readWarehouseLabels>>;
     times: { byZone: Map<string, Record<TimeKey, string>>; global: Record<TimeKey, string> };
+    isoWeekday: number;
   },
-): PulseFact[] {
+): RouteFlowFact[] {
   const byZone = new Map<string, { ready: number; total: number }>();
   for (const order of orders) {
     if (!order.deliveryZoneId) continue;
@@ -416,15 +385,31 @@ function pulseFacts(
     byZone.set(order.deliveryZoneId, entry);
   }
 
-  return [...byZone.entries()].map(([zoneId, { ready, total }]) => {
-    const zone = input.zones.find((z) => z.id === zoneId);
+  return input.zones.map((zone) => {
+    const counted = byZone.get(zone.id) ?? { ready: 0, total: 0 };
+    const runsToday = zone.isActive && zone.weekdays.includes(input.isoWeekday);
+    // Rotanın kendi ayarı yoksa global satır: eşik bir KAPSAM zinciridir (`SettingsService`), rota
+    // yazmadıysa üst kademe geçerlidir. Uydurma saat yok, devralınan saat var.
+    const t = input.times.byZone.get(zone.id) ?? input.times.global;
     return {
-      zoneId,
-      zoneName: zone?.name ?? 'Rota',
-      warehouseCode: zone ? (input.labels.get(zone.warehouseId)?.code ?? null) : null,
-      readyCount: ready,
-      totalCount: total,
-      prepCutoff: input.times.byZone.get(zoneId)?.prep_cutoff_time ?? input.times.global.prep_cutoff_time,
+      zoneId: zone.id,
+      zoneName: zone.name,
+      warehouseCode: input.labels.get(zone.warehouseId)?.code ?? null,
+      runsToday,
+      weekdayLabel: runsToday
+        ? null
+        : [...zone.weekdays]
+            .sort((a, b) => a - b)
+            .map((d) => WEEKDAY_SHORT[d - 1] ?? '?')
+            .join(' · ') || 'gün tanımlı değil',
+      times: {
+        orderCutoff: t.order_cutoff_time,
+        prepCutoff: t.prep_cutoff_time,
+        routeDeparture: t.route_departure_time,
+        courierClose: t.courier_close_time,
+      },
+      readyCount: counted.ready,
+      totalCount: counted.total,
     };
   });
 }
@@ -474,9 +459,7 @@ function queueFacts(input: { overdue: readonly OrderRow[]; openTickets: Record<T
   const facts: QueueFact[] = [];
 
   if (input.overdue.length > 0) {
-    const worst = input.overdue.reduce((a, b) =>
-      (a.payment.dueDate ?? '9999-12-31') < (b.payment.dueDate ?? '9999-12-31') ? a : b,
-    );
+    const worst = input.overdue.reduce((a, b) => ((a.payment.dueDate ?? '9999-12-31') < (b.payment.dueDate ?? '9999-12-31') ? a : b));
     const total = input.overdue.reduce((sum, r) => sum + r.payment.openCents, 0);
     facts.push({
       key: 'overdue-payment',

@@ -1,16 +1,9 @@
 import Link from 'next/link';
 import { Card, cardClass } from '@/components/operation/ui/card';
+import { PageHeader } from '@/components/operation/ui/page-header';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { num } from '@/components/operation/ui/format';
-import type {
-  AlertBandView,
-  DashboardData,
-  DeliveryRouteView,
-  FlowStepView,
-  KpiCardView,
-  QueueGroupView,
-  RoutePulseView,
-} from './dashboard-types';
+import type { AlertBandView, DashboardData, DeliveryRouteView, KpiCardView, QueueGroupView, RouteFlowView } from './dashboard-types';
 
 // Panel (09.3) sunumu — operasyon web'i masaüstü-yalnız (`CLAUDE §2`); mobil deneyim native
 // uygulamada. Renk YOK, ton var: her blok `OpsTone`u kendi sınıflarına çeviriyor (`tone.ts` kuralı).
@@ -100,35 +93,43 @@ interface DashboardDesktopProps {
   data: DashboardData;
 }
 
+/**
+ * ── ZEMİN VE BAŞLIK BARI (18.08) ────────────────────────────────────────────
+ * Kök `bg-ops-card` taşımak ZORUNDA: kabuğun zemini `ops-bg` (#dedbd3, bej) ve ekran kendi zeminini
+ * çizmezse başlık barı ile paneller onu gösterir. Panel operasyonun bu sınıfı taşımayan TEK ekranıydı
+ * ve *"renkler tasarımdan koyu"* şikâyetinin sebebi buydu. **İlk teşhisim yanlıştı:** kabuğun rengini
+ * değiştirmeye kalkmıştım, oysa eksik olan pane katmanı değil bu ekranın onu ÇİZMEMESİYDİ.
+ * `docs:check §3g` kuralı makineyle zorluyor — `typecheck` göremez, eksik olan bir tip değil bir SINIF.
+ *
+ * Başlık barı ORTAK bileşen (kullanıcı isteği: panele depo seçici). Panel kendi başlığını ELLE
+ * yazıyordu ve seçicinin olmamasının sebebi buydu — `PageHeader` depo seçicisini, ⌘K'yı ve kullanıcı
+ * bloğunu kabuktan devralıp çiziyor. Ayrı bir seçici YAZILMADI: var olan kontrol, durduğu yerde.
+ * Depo adı alt satırdan çıkarıldı — seçici zaten onu söylüyor.
+ */
 export function DashboardDesktop({ data }: DashboardDesktopProps) {
   return (
-    <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-8">
-      <header className="flex flex-col gap-1">
-        <div className="flex items-baseline gap-3">
-          <h1 className="font-ops-display text-ops-title font-semibold text-ops-ink">Bugün · {data.now.label}</h1>
-          <span className="font-ops-body text-ops-base text-ops-muted">{data.now.time}</span>
-        </div>
-        <p className="font-ops-body text-ops-sm text-ops-muted">
-          {data.scopeLabel} · karar tetikler, analiz etmez · derin analiz Raporlar &amp; Analitik&apos;te
-        </p>
-      </header>
+    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
+      <PageHeader
+        title={`Bugün · ${data.now.label}`}
+        subtitle="karar tetikler, analiz etmez · derin analiz Raporlar & Analitik'te"
+        status={<span className="font-ops-mono text-ops-base font-medium text-ops-muted">{data.now.time}</span>}
+      />
 
-      <AlertBand band={data.band} />
+      {/* `[&>*]:shrink-0` — kaydırılan flex kolonunda çocuklar varsayılan olarak SIKIŞIR: akış bölümü
+          rota sayısıyla uzayınca gösterge şeridi eziliyor ve etiketleri kırpılıyordu (ölçüldü 18.08).
+          Taşan içerik kaydırılmalı, kısaltılmamalı. */}
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-8 [&>*]:shrink-0">
+        <AlertBand band={data.band} />
 
-      {data.kpis.length > 0 && <KpiStrip kpis={data.kpis} />}
+        {data.kpis.length > 0 && <KpiStrip kpis={data.kpis} />}
 
-      {data.flow.length > 0 && <FlowStrip steps={data.flow} />}
+        <FlowStrip rows={data.flow} />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <QueueColumn data={data} />
-        <div className="flex flex-col gap-5">
-          <DeliveriesPanel routes={data.routes} />
-          {/* **Nabız BOŞKEN çizilmiyor** (18.08): rotaya sipariş yazılmadığı gün üstteki Teslimatlar
-              paneli bunu zaten söylüyordu (*"Bugüne rota siparişi yazılmadı…"*) ve nabız altına aynı
-              gerçeği ikinci kez yazıyordu (*"Bugüne hiçbir rotaya sipariş yazılmadı"*). Aynı cümleyi
-              iki kutuda okumak, iki ayrı eksik varmış gibi okunuyor. Nabzın sorusu "hangi rota
-              geride" — cevabı yoksa soru da sorulmaz. */}
-          {data.pulse.length > 0 && <PulsePanel pulse={data.pulse} />}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <QueueColumn data={data} />
+          <div className="flex flex-col gap-5">
+            <DeliveriesPanel routes={data.routes} />
+          </div>
         </div>
       </div>
     </div>
@@ -249,18 +250,66 @@ function Sparkline({ series, tone }: { series: number[]; tone: OpsTone }) {
 }
 
 /**
- * Gün akışı — dört eşik. Geçmiş adım sonucuyla durur, "şimdi" vurgulanır, sıradakiler bekler.
- * Eşik saatleri ayardan gelir; okunamayan eşik hiç çizilmez (uydurma saat, yanlış yönlendirmedir).
+ * Gün akışı — **her rota kendi kart şeridini alır, altında tek satırlık nabzı** (kullanıcı kararı
+ * 18.08). Kartların tasarımı DEĞİŞMEDİ: aynı çerçeve, aynı üst şerit, aynı çip. Değişen tek şey
+ * kartların rota başına tekrarlanması ve şeridin kime ait olduğunun yazılması.
+ *
+ * **Bugün koşmayan rota da görünür ama SÖNÜKTÜR** — gizlemek, hangi rotaların var olduğunu
+ * saklardı; sönük göstermek "var ama bugün değil" der ve saatleri hiçbir hesaba girmez.
  */
-function FlowStrip({ steps }: { steps: FlowStepView[] }) {
+function FlowStrip({ rows }: { rows: RouteFlowView[] }) {
+  const active = rows.filter((r) => r.runsToday).length;
+
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
         <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Gün akışı</h2>
-        <span className="font-ops-body text-ops-xs text-ops-muted">eşik saatleri ayardan okunur</span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          {rows.length > 0 ? `${num(active)}/${num(rows.length)} rota bugün · eşikler ayardan` : 'tanımlı rota yok'}
+        </span>
       </div>
+
+      {rows.length === 0 ? (
+        <Card className="p-5">
+          <span className="font-ops-body text-ops-sm text-ops-muted">
+            Seçili depoda tanımlı rota yok — sefer takvimi Teslimat &amp; Rota&apos;dan kurulur.
+          </span>
+        </Card>
+      ) : (
+        rows.map((row) => <RouteFlowRow key={row.zoneId} row={row} />)
+      )}
+    </section>
+  );
+}
+
+/**
+ * Bir rotanın şeridi: künye satırı → **onaylı kart şeridi** → nabız satırı.
+ *
+ * Kart markup'ı 113d5d6a'daki hâliyle BİREBİR aynı: tek çerçeve, kolonlar arası saç teli ayraç,
+ * kolonun üstünde 3px durum şeridi, saat + "önceki gün" damgası + durum çipi, başlık, not. Rota
+ * bazına geçerken bir tur bunu yanlışlıkla ayrı yüzen kartlara çevirmiştim (kullanıcı bildirdi
+ * 18.08) — tekrarlanan şey ŞERİDİN KENDİSİ, kartın tasarımı değil.
+ */
+function RouteFlowRow({ row }: { row: RouteFlowView }) {
+  return (
+    // Sönük rota tüm bloğu soluklaştırır: her öğeyi ayrı boyamak yerine kapsayıcıya opaklık vermek,
+    // "bu blok bugün konuşmuyor" cümlesini tek yerde kurar.
+    <div className={`flex flex-col gap-2 ${row.runsToday ? '' : 'opacity-55'}`}>
+      <div className="flex items-center gap-2">
+        <WarehouseChip code={row.warehouseCode} />
+        <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{row.zoneName}</span>
+        {/* Koşmayan rotanın günleri — "bugün değil" demek yetmez, NE ZAMAN olduğu da söylenmeli. */}
+        {row.weekdayLabel && (
+          <span className="rounded-ops-chip bg-ops-gray-100 px-2 py-0.5 font-ops-mono text-ops-micro font-medium text-ops-muted">
+            {row.weekdayLabel}
+          </span>
+        )}
+        <span className="h-px flex-1 bg-ops-line" />
+        <span className={`font-ops-display text-ops-micro font-semibold ${TEXT_TONE[row.tone]}`}>{row.statusLabel}</span>
+      </div>
+
       <div className={cardClass('grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]')}>
-        {steps.map((step) => (
+        {row.steps.map((step) => (
           <div
             key={step.key}
             className={`flex flex-col border-r border-ops-line-soft last:border-r-0 ${
@@ -284,22 +333,20 @@ function FlowStrip({ steps }: { steps: FlowStepView[] }) {
                   <span className={`font-ops-mono text-ops-sm font-medium ${step.state === 'later' ? 'text-ops-muted' : 'text-ops-ink'}`}>
                     {step.time}
                   </span>
-                  {/* **"önceki gün" damgası** (18.08): bu saat teslim gününe değil bir öncekine ait.
-                    Damgasız hâlde `21:00` bugünün akışının son adımı gibi okunuyordu ve operatör o
-                    saatte bugünün kapandığını sanıyordu — kapanan sonraki seferdir. Rota şeridiyle
-                    aynı dil: sözcük tam yazılı ("dün" değil, o bugüne göreli bir sözcük). */}
+                  {/* **"önceki gün" damgası:** bu saat teslim gününe değil bir öncekine ait. Bugünün
+                      listesini kapatan olay dün akşam oldu — kolon bu yüzden BAŞTA ve `tamam`
+                      durumunda (kullanıcı bildirdi 18.08). */}
                   {step.prevDay && (
                     <span
                       title="Bu saat bir önceki güne ait — hazırlık kapanışından sonra olduğu için kesim bir gün geriye kayar"
-                      className="rounded-ops-chip bg-ops-red-bg px-1.5 font-ops-body text-ops-micro font-medium text-ops-red"
+                      className="rounded-ops-chip bg-ops-red-bg px-1.5 font-ops-body text-ops-micro font-medium whitespace-nowrap text-ops-red"
                     >
                       önceki gün
                     </span>
                   )}
                 </span>
-                {/* Durum ÇİPİ — düz metin değil. Üç kolon yan yana dururken çıplak "sırada"/"tamam"
-                  kelimeleri not satırıyla aynı ağırlıkta okunuyor ve göz hangi adımın canlı
-                  olduğunu ancak okuyarak buluyordu; çip bunu bakışta ayırıyor. */}
+                {/* Durum ÇİPİ — düz metin değil. Kolonlar yan yana dururken çıplak "sırada"/"tamam"
+                    kelimeleri not satırıyla aynı ağırlıkta okunuyordu. */}
                 <span
                   className={`shrink-0 rounded-ops-chip px-1.5 py-px font-ops-display text-ops-micro font-semibold tracking-[0.06em] ${
                     step.state === 'done'
@@ -316,14 +363,25 @@ function FlowStrip({ steps }: { steps: FlowStepView[] }) {
                 {step.title}
               </span>
               <span className="font-ops-body text-ops-xs text-ops-muted">{step.note}</span>
-              {/* Saat rotaya bağlı; rotalar ayrışıyorsa kutu EN ERKEN olanı gösterir ve kimin olduğunu
-                söyler — yoksa operatör hangi araca koşacağını bilemez (kullanıcı kararı 17.08). */}
-              {step.routeLabel && <span className="font-ops-body text-ops-micro text-ops-muted">en erken: {step.routeLabel}</span>}
             </div>
           </div>
         ))}
       </div>
-    </section>
+
+      {/* Nabız — ayrı blok değil, rotanın ALTINDA tek satır (kullanıcı kararı: "daha minimal"). */}
+      <div className="flex items-center gap-3 px-1">
+        <span className="font-ops-mono text-ops-xs text-ops-muted">
+          {num(row.readyCount)}/{num(row.totalCount)} hazır
+        </span>
+        <span className="h-1.5 w-[9rem] shrink-0 overflow-hidden rounded-full bg-ops-line-strong">
+          <span
+            className={`block h-full rounded-full ${DOT_TONE[row.tone]}`}
+            style={{ width: `${row.totalCount === 0 ? 0 : Math.round((row.readyCount / row.totalCount) * 100)}%` }}
+          />
+        </span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">{row.note}</span>
+      </div>
+    </div>
   );
 }
 
@@ -511,49 +569,6 @@ function DeliveriesPanel({ routes }: { routes: DeliveryRouteView[] }) {
           ))
         )}
       </div>
-    </section>
-  );
-}
-
-/**
- * Rota nabzı — YALNIZ hazırlık ilerlemesi; çalışan/verim ölçmez (tezgâh sözleşmesi).
- *
- * Satır **rota**, çünkü kesim rotaya bağlı (kullanıcı kararı 17.08). Depo kodu çip olarak durur:
- * "hangi tesisten çıkıyor" bilgisi kaybolmaz, ama ölçü rotanın kendi kesimidir.
- */
-function PulsePanel({ pulse }: { pulse: RoutePulseView[] }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Rota nabzı</h2>
-      {/* Teslimat paneliyle aynı idiom — iki bölüm sağ sütunda alt alta duruyor; biri başlığın
-          yanında, öteki ayraçta ölçü gösterseydi sütun kendi içinde iki dile düşerdi. */}
-      <RuleRow meta="her rota kendi kesimine göre" />
-
-      {/* Boş hâl dalı YOK ve olmamalı: çağıran panel boşken bu bölümü hiç çizmiyor (18.08), yani
-          buraya boş küme gelmiyor. Dalı bırakmak, ulaşılamayan bir cümleyi bakımda tutmak olurdu. */}
-      {pulse.map((row) => {
-        const ratio = row.totalCount === 0 ? 0 : Math.round((row.readyCount / row.totalCount) * 100);
-        return (
-          <Card key={row.zoneId} className={`flex flex-col gap-2 border-l-2 p-4 ${EDGE_TONE[row.tone]}`}>
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex items-baseline gap-2">
-                <WarehouseChip code={row.warehouseCode} />
-                <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{row.zoneName}</span>
-              </span>
-              <span className="font-ops-body text-ops-xs text-ops-muted">
-                {num(row.readyCount)}/{num(row.totalCount)} hazır
-              </span>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-ops-line-soft">
-              <span className={`block h-full rounded-full ${DOT_TONE[row.tone]}`} style={{ width: `${ratio}%` }} />
-            </div>
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="font-ops-body text-ops-xs text-ops-muted">{row.note}</span>
-              <span className={`font-ops-body text-ops-micro font-semibold ${TEXT_TONE[row.tone]}`}>{row.statusLabel}</span>
-            </div>
-          </Card>
-        );
-      })}
     </section>
   );
 }

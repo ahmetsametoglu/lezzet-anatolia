@@ -15,12 +15,12 @@ export interface DashboardData {
   scopeLabel: string;
   band: AlertBandView;
   kpis: KpiCardView[];
-  flow: FlowStepView[];
+  /** Gün akışı — satır başına bir ROTA; eski "Rota nabzı" bloğu rotanın altına indi (18.08). */
+  flow: RouteFlowView[];
   queue: QueueGroupView[];
   /** Asistan kuyruğu ayrı durur: bekleyen iş değil, ONAY bekleyen öneri (22.3). */
   proposals: ProposalTeaserView | null;
   routes: DeliveryRouteView[];
-  pulse: RoutePulseView[];
 }
 
 /**
@@ -60,32 +60,69 @@ export interface KpiCardView {
 }
 
 /**
- * Gün akışının bir eşiği. `state` saatten türer; geçmiş adım SONUCUYLA, gelecek adım beklentiyle durur.
+ * Gün akışının bir eşiği — **kart**. Görünüm değişmedi: aynı dört kart, aynı dizilim.
  *
- * **Saat ROTAYA bağlı** (kullanıcı kararı 17.08) ve rotalar farklı saat taşıyabildiği için kutu **en
- * erken** olanı gösterir: en sıkı kısıt odur, ona yetişen ötekilere de yetişir. `routeLabel` o saati
- * kimin taşıdığını söyler — yoksa operatör hangi araca koşacağını bilemez.
+ * `state` saatten türer; geçmiş adım SONUCUYLA, gelecek adım beklentiyle durur. Eşiğin hangi rotaya
+ * ait olduğu artık adımda değil, onu kapsayan `RouteFlowView` satırında yazılı — eskiden `routeLabel`
+ * diye küçük bir nottu ve yalnız saatler AYRIŞTIĞINDA görünüyordu, yani tek rotalı kurulumda akışın
+ * kime ait olduğu hiç okunamıyordu (kullanıcı gözlemi 18.08).
  */
 export interface FlowStepView {
-  key: 'orderCutoff' | 'prepCutoff' | 'routeDeparture' | 'courierClose';
+  key: 'orderCutoff' | 'prepCutoff' | 'routeDeparture' | 'courierClose' | 'nextCutoff';
   time: string;
   title: string;
   note: string;
-  /** En erken saati taşıyan rota; tüm rotalar aynı saatteyse ya da tek rota varsa `null`. */
-  routeLabel: string | null;
   state: 'done' | 'now' | 'later';
   /** "20 dk kaldı" — yalnız `now` adımında. */
   countdown: string | null;
-  /** Kesime yetişmeyen rota varsa `now` adımı amber döner. */
   tone: OpsTone;
   /**
-   * Bu saat TESLİM gününe değil bir ÖNCEKİ güne ait — bugün yalnız sipariş kesiminde olabilir
-   * (17.08 kuralı: kesim hazırlık kapanışından sonraysa önceki günün saatidir).
+   * Bu saat TESLİM gününe değil bir ÖNCEKİ güne ait — yalnız sipariş kesiminde olabilir (17.08
+   * kuralı: kesim hazırlık kapanışından sonraysa önceki günün saatidir).
    *
-   * Ekran bunu damgalamak zorunda: damgasız bir `21:00` satırı, bugünün akışının son adımı gibi
-   * okunuyor ve o saatte bugünün kapandığını sanıyorsunuz — oysa kapanan sonraki sefer.
+   * **Sıralamayı da bu belirliyor** (kullanıcı bildirdi 18.08): önceki güne ait eşik bugünün saatine
+   * göre sıralanınca en SONA düşüyor ve "sırada" görünüyordu — oysa bugünün listesini kapatan olay
+   * dün akşam OLDU. Sıralama değeri `saat − 1440` olunca kendiliğinden en başa geçiyor ve `tamam`
+   * oluyor.
    */
   prevDay: boolean;
+}
+
+/**
+ * Gün akışının bir SATIRI: bir rota + kendi kart şeridi + altında tek satırlık nabzı.
+ *
+ * ── NEDEN ROTA SATIRI (kullanıcı kararı 18.08) ──────────────────────────────
+ * Akış eskiden eşik TÜRÜ ekseninde tekti ve her kart bütün rotaların EN ERKENİNİ yazıyordu: ikinci
+ * rotanın saati hiç görünmüyordu. Artık her rota kendi kart şeridini alıyor — kartların tasarımı
+ * DEĞİŞMEDİ, yalnız rota sayısı kadar tekrarlanıyor.
+ *
+ * **Nabız ayrı blok olmaktan çıktı** ve rotanın altına indi (tek satır: hazır sayacı · çubuk · durum).
+ * Ayrı dururken aynı rota panelde iki yerde iki satır oluyordu.
+ *
+ * **Satırlar ROTADAN gelir, siparişten değil:** eski nabız siparişleri bölgeye göre gruplayarak satır
+ * üretiyordu, siparişi olmayan rota hiç görünmüyordu — oysa boş bir rotanın da çıkış saati vardır.
+ */
+export interface RouteFlowView {
+  zoneId: string;
+  zoneName: string;
+  warehouseCode: string | null;
+  /**
+   * Bugün koşuyor mu — rotanın `weekdays` alanından. `false` ise satır SÖNÜK çizilir ve saatleri
+   * hiçbir hesaba girmez (kullanıcı kararı 18.08: *"bugün olmadığı tasarımdan belli olsun"*).
+   * Gizlemek yerine sönük göstermek bilinçli: operatör hangi rotaların var olduğunu da bilmeli.
+   */
+  runsToday: boolean;
+  /** Koşmayan rotanın günleri — "Cum · Cts". Bugün koşuyorsa `null`. */
+  weekdayLabel: string | null;
+  /** Bugünün eşikleri, KRONOLOJİK sırada. Kesim önceki güne aitse beşinci kart da gelir. */
+  steps: FlowStepView[];
+  readyCount: number;
+  totalCount: number;
+  /** Ölçülen olgu — yorum değil ("11:00 kesimine 40 dk · 3 sipariş hazırlanmadı"). */
+  note: string;
+  /** "yetişiyor" · "kesim riski" · "kesim kaçtı" · "hazır" · "boş gün" · "bugün koşmuyor". */
+  statusLabel: string;
+  tone: OpsTone;
 }
 
 /** Aciliyet kümesi — üç küme sabit, boş küme çizilmez. */
@@ -150,28 +187,4 @@ export interface DeliveryStopView {
   tone: OpsTone;
   time: string | null;
   paymentMethod: PaymentMethod | null;
-}
-
-/**
- * Nabız — YALNIZ hazırlık ilerlemesi. Çalışan/verim ölçmez (tezgâh sözleşmesi); alt cümle ölçülen
- * olgudur, yorum değil.
- *
- * **Satır DEPO değil ROTA** (kullanıcı kararı 17.08): kesim rotaya bağlandığı an nabzın ölçüsü de
- * rota olmak zorunda. Depo bazlı kalsaydı iki rotalı bir depoda erken alarm verirdi — 09:00
- * rotasına göre "riskli" derken 11:00 rotasının malı henüz beklemede olurdu. Depo kodu çip olarak
- * durur, yani "hangi tesisten çıkıyor" bilgisi kaybolmaz.
- */
-export interface RoutePulseView {
-  zoneId: string;
-  zoneName: string;
-  /** Rotanın çıktığı deponun kodu — bağlam çipi; `null` = ad çözülemedi. */
-  warehouseCode: string | null;
-  readyCount: number;
-  totalCount: number;
-  /** O rotanın hazırlık kesimi — üst şeridin cümlesi de bunu söyler, global saati değil. */
-  prepCutoff: string;
-  note: string;
-  /** "yetişiyor" · "kesim riski" · "kesim kaçtı" — ilerleme + o rotanın kesimine kalan süreden türer. */
-  statusLabel: string;
-  tone: OpsTone;
 }

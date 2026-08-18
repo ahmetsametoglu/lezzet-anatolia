@@ -17,8 +17,16 @@ import type { HTMLAttributes } from 'react';
  * köşeden taşar. Menü/ipucu taşıması gereken bir kart bu kabuğu KULLANMAZ — `AnchoredMenu` zaten
  * portal ile çiziliyor, yani kabuk onu kesmiyor.
  */
+/**
+ * ── KART ZEMİNİ `ops-card` DEĞİL `ops-white` (18.08, ölçüldü) ────────────────────────────
+ * Kabuk pane'i `ops-card`a (#fbfbf9) çıkınca kart aynı renkte kalırdı, yani yüzey yok olurdu.
+ * Tasarım zaten böyle: mock'ların kapsayıcıları #ffffff, pane #fbfbf9. İlişki değişmedi —
+ * kart hâlâ pane'den bir kademe açık; değişen, ikisinin de bir kademe yukarı taşınması.
+ * (`ops-white`ın künyesi "dialog ve girdi zemini" diyor; kart da aynı kademede duruyor artık —
+ * ayrı bir token açmadım çünkü değer aynı ve ikisi karanlıkta da aynı yönde dönüyor.)
+ */
 export function cardClass(className?: string): string {
-  return ['overflow-hidden rounded-ops-card border border-ops-line bg-ops-card', className].filter(Boolean).join(' ');
+  return ['overflow-hidden rounded-ops-card border border-ops-line bg-ops-white', className].filter(Boolean).join(' ');
 }
 
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
