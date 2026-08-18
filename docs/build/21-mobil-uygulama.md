@@ -3883,6 +3883,35 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   işaretli olduğu için yeniden açılmıyor ve puan çekmecesi giriş istiyor — kullanıcı girdiğinde
   hesap kartından bakılacak.
 
+- [x] (21.80) **MİSAFİR KEŞİF TURUNA GİREBİLİYOR — kapanan kapı açıldı (kullanıcı hatırlatması 18.08)**
+  → MB-75 kapandı. `touches: apps/mobile/src/screens/home/{home-screen.tsx,messages.json}`
+
+  Kullanıcı `(21.79)`daki kaydı okuyunca hatırladı: *"misafir keşif yaptıktan sonra en son
+  seçenekte giriş yapmayı ve puanları toplamayı teklif edebiliriz. Bunu daha önce yapıyorduk
+  sanki. Emin değilim."*
+
+  **Ölçüm hatırlamayı doğruladı — karar iptal edilmemiş, HEPSİ ZATEN KURULU:** turun bitiş ekranı
+  misafire *"Giriş yaparsanız keşif turları puan kazandırır"* diyor ve "Hızlı doğrulama" düğmesi
+  veriyor (MB-14, 14.08); girişsiz oylar cihazda tutulup girişte hesaba bağlanıyor
+  (`lib/discover/pending-swipes-store` → `/me/discover/claim`). Yani misafirin emeği kaybolmuyor.
+  **Eksik olan tek şey KAPIYDI.**
+
+  **MB-58a'nın (14.08) teşhisi doğruydu, çaresi fazla genişti.** Vitrin kartının cümlesi
+  *"tamamlanan tur puan kazandırır"* diyordu ve motor kimliksiz oya puan yazmıyor — misafire
+  tutulamayacak bir söz. Çözüm olarak kart TÜMDEN gizlenmiş; oysa `/discover`a giden öteki iki
+  çağrı hesap ekranında ve o da misafiri `/login`e itiyor, sekme çubuğunda da keşif yok. Sonuç:
+  ödül vaadiyle birlikte turun kendisi de kapanmış, künyesi ise *"tur misafire açık kalmaya devam
+  ediyor"* diye yazmayı sürdürmüş.
+
+  **Doğru çare cümleyi düzeltmekti — ve o cümle zaten yazılmıştı.** Bitiş ekranı aynı sorunu AYNI
+  GÜN doğru çözmüş: koşullu, gelecek zamanlı, yalansız. Kart artık misafirde o registeri kullanıyor
+  (`discover.guestBody`, üç dilde), girişlide eski kesin cümle aynen kalıyor. Vitrin iskeleti de
+  kutuya her hâlde yer ayırıyor — eskiden misafirde ayırmıyordu ve kart gelince sayfa bir kutu boyu
+  kayardı.
+
+  **Doğrulama:** `tsc` temiz · `lint` temiz · vitrin ve kabuk testleri (**15 test**). **Cihazda
+  uçtan uca ölçüldü:** misafir kartı görüyor, basınca tur açılıyor (1/20, kaydırma çalışıyor).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

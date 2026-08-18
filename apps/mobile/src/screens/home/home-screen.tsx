@@ -219,11 +219,12 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      sırasını bozmaz. Hangi bölümlerin çizileceğini son açılışın izi söyler (yukarıdaki künye). */
   if (home.status === 'loading')
     return (
-      /* Keşif daveti misafirde çizilmiyor (MB-58a) — iskelet de o kutuya yer AYIRMAMALI, yoksa
-         sayfa oturduğu an yukarı zıplar. `knownGuest` ölçütü sipariş bandınınkiyle AYNI: "henüz
-         bilmiyorum" hâli misafir sayılmaz, çünkü bilinmeyeni yok saymak bilinen bir bilgiyi
-         çöpe atmaktır (yukarıdaki künye). */
-      <HomeSkeleton sections={skeletonSections} discoverInvite={!knownGuest} testID="home-skeleton" />
+      /* KEŞİF DAVETİ ARTIK HER HÂLDE ÇİZİLİYOR (MB-75, 18.08 — aşağıdaki künye), o yüzden iskelet
+         de kutuya HER ZAMAN yer ayırır. Eskiden `!knownGuest` idi çünkü kart misafirde hiç
+         çizilmiyordu; ölçüt orada kalsaydı misafirin sayfası oturduğu an bir kutu boyu AŞAĞI
+         kayardı — iskeletin işi tam bunu önlemek. Sipariş bandının `knownGuest` ölçütü yerinde
+         duruyor: o blok gerçekten girişliye özel. */
+      <HomeSkeleton sections={skeletonSections} discoverInvite testID="home-skeleton" />
     );
 
   const header = (
@@ -655,23 +656,36 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               Vaadin kendisi (tamamlanan tur puan kazandırır) doğru ve ölçülebilir; yanlış olan
               yalnız sayıydı.
 
-              ── MİSAFİRE ÇİZİLMEZ (MB-58a, 14.08) ─────────────────────────────
-              Davetin vaadi puandır, puan ise KİMLİĞE yazılıyor: motor kimliksiz oya puan
-              vermiyor ve `pointsAwarded: null` dönüyor (`application/feedback/discover.ts:158`).
-              Yani misafire gösterilen bu davet, karşılığı olmayan bir davetti — turu bitirir,
-              vaat edilen şeyi almaz. Turun KENDİSİ misafire açık kalmaya devam ediyor (tasarımın
-              kararı: *"misafirin oyu da talep sinyalidir"*), kapanan yalnız ödül vaat eden
-              çağrı. Keşfe girmek isteyen misafir sekmeden ya da bitiş ekranının giriş davetinden
-              geçer. */}
-          {!signedIn ? null : (
-            <DashedInvite
-              title={t.discover.title}
-              description={t.discover.body}
-              onPress={() => router.push('/discover')}
-              action={<Text style={styles.inviteChevron}>›</Text>}
-              testID="home-discover"
-            />
-          )}
+              ── MİSAFİRE DE ÇİZİLİR, AMA BAŞKA CÜMLEYLE (MB-75, 18.08) ────────
+              **Eski hâl (MB-58a, 14.08): kart misafire HİÇ çizilmiyordu.** Gerekçesi doğruydu —
+              kartın cümlesi *"tamamlanan tur puan kazandırır"* diyor, oysa motor kimliksiz oya
+              puan yazmıyor (`application/feedback/discover.ts`, `pointsAwarded: null`); misafire
+              tutulamayacak bir söz veriliyordu.
+
+              **Ama çare fazla genişti ve künyesi bunu görmüyordu.** Aynı künye *"turun KENDİSİ
+              misafire açık kalmaya devam ediyor … misafir sekmeden ya da bitiş ekranının giriş
+              davetinden geçer"* diye yazıyordu; ölçüldü (18.08, kullanıcı sorusu üzerine):
+              **sekme YOK** (`app/(tabs)`: index · catalog · packages · account) ve bitiş ekranı
+              turun İÇİNDE. `/discover`a giden öteki iki çağrı hesap ekranında, o da misafiri
+              `/login`e itiyor. Yani ödül vaadiyle birlikte TURUN KENDİSİ de kapanmıştı ve
+              tasarımın kararı (*"misafirin oyu da talep sinyalidir"*) fiilen uygulanmıyordu.
+
+              **Doğru çare cümleyi düzeltmek, kapıyı kapatmak değil** — ve o cümle zaten YAZILMIŞ:
+              turun bitiş ekranı aynı sorunu aynı gün doğru çözmüş (MB-14): *"Giriş YAPARSANIZ
+              keşif turları puan kazandırır."* Koşullu, gelecek zamanlı, yalansız. Kart artık
+              misafirde o registeri kullanıyor (`t.discover.guestBody`); girişlide vaat kesindir
+              ve `body` aynen kalır.
+
+              **Misafirin emeği de kaybolmuyor:** girişsiz oylar cihazda tutulup girişte hesaba
+              bağlanıyor (`lib/discover/pending-swipes-store` → `/me/discover/claim`). Yani
+              koşullu cümle bir teselli değil, gerçekten tutulan bir söz. */}
+          <DashedInvite
+            title={t.discover.title}
+            description={signedIn ? t.discover.body : t.discover.guestBody}
+            onPress={() => router.push('/discover')}
+            action={<Text style={styles.inviteChevron}>›</Text>}
+            testID="home-discover"
+          />
           {/* İKİ DAVET AYNI GÖRSEL DİLDE AMA AYNI RENKTE DEĞİL (MB-27).
               **Birinci adım (14.08):** kart `sand` tonundaydı ve canlı Keşif kartının yanında
               DEVRE DIŞI gibi duruyordu (kullanıcı bulgusu 11.08). Kusur tonun kendisinde değil,

@@ -1167,7 +1167,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   hangi yolla gidiyor, tek yerde ve aynı sözcüklerle. Metin kararı olduğu için ölçüm burada
   bırakıldı.
 
-- [ ] **MB-75 · MİSAFİRİN KEŞİF TURUNA HİÇBİR KAPISI YOK — künye açıkça tersini söz veriyor.**
+- [x] **MB-75 · MİSAFİRİN KEŞİF TURUNA HİÇBİR KAPISI YOK — künye açıkça tersini söz veriyor.**
   Kullanıcı sordu (18.08): *"vitrinde en altta keşif kartı görünmesi gerekirken herhangi bir şey
   yoktu."* Ölçüldü — kartın çizilmemesi **kasıtlı ve doğru**: MB-58a (14.08) misafirde daveti
   kaldırmış, çünkü davetin vaadi puandır ve motor kimliksiz oya puan vermiyor
@@ -1183,10 +1183,23 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   (`app/(tabs)`: index · catalog · packages · account). "Bitiş ekranının giriş daveti" de turun
   İÇİNDE — oraya girmeden ulaşılamıyor.
 
-  **Yani 14.08'in düzeltmesi, ödül vaadiyle birlikte TURUN KENDİSİNİ de misafire kapatmış** ve
-  künye kapanmadığını sanıyor. Tasarım kararı (*"misafirin oyu da talep sinyalidir"*) bugün
-  uygulanmıyor. **Karar gerekiyor:** ya misafire ödül vaat ETMEYEN bir giriş açılır (kart yerine
-  nötr bir satır), ya da tasarım kararı geri alınıp künye düzeltilir. İkisi de kullanıcının.
+  **Yani 14.08'in düzeltmesi, ödül vaadiyle birlikte TURUN KENDİSİNİ de misafire kapatmıştı** ve
+  künye kapanmadığını sanıyordu.
+  → **KAPANDI (18.08), görev `(21.80)` — kullanıcı kararı hatırlattı: iptal edilmemiş.**
+  Kullanıcı sordu: *"misafir keşif yaptıktan sonra en son seçenekte giriş yapmayı ve puanları
+  toplamayı teklif edebiliriz. Bunu daha önce yapıyorduk sanki."* Ölçüldü — **yapılıyor, hepsi
+  kurulu:** turun bitiş ekranı misafire *"Giriş yaparsanız keşif turları puan kazandırır"* diyor ve
+  "Hızlı doğrulama" düğmesi veriyor (MB-14, 14.08); girişsiz oylar da cihazda tutulup girişte
+  hesaba bağlanıyor (`lib/discover/pending-swipes-store` → `/me/discover/claim`). Eksik olan tek
+  şey KAPIYDI.
+
+  **Çare cümleyi düzeltmekti, kapıyı kapatmak değil — ve o cümle zaten yazılmıştı.** Kart artık
+  misafirde de çiziliyor, ama bitiş ekranının kullandığı koşullu registerle: *"…giriş yaparsanız
+  tamamlanan tur puan da kazandırır."* Girişlide vaat kesindir, eski cümle aynen kalır. Vitrin
+  iskeleti de kutuya artık her hâlde yer ayırıyor (eskiden misafirde ayırmıyordu — kart gelince
+  sayfa bir kutu boyu kayardı).
+  **Cihazda uçtan uca doğrulandı (18.08):** misafir kartı görüyor, basınca tur açılıyor (1/20,
+  kaydırma çalışıyor).
 
 ### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)
 
