@@ -1,4 +1,3 @@
-import { formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -12,6 +11,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
+import { formatPointsValue } from '@/screens/customer-kit/points-value';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
@@ -544,13 +544,13 @@ export function OnboardingScreen() {
                     <Text style={styles.pointsRate} testID="onboarding-points-rate">
                       {t.points.rate
                         .replace('{points}', String(pointsRules.rules.redeem.minimumPoints))
-                        .replace('{value}', formatPrice(pointsRules.rules.redeem.valueCents, locale))}
+                        .replace('{value}', formatPointsValue(pointsRules.rules.redeem.valueCents, locale))}
                     </Text>
                     {/* En güçlü sayı ayrıca söyleniyor ama UYDURULMUYOR: getiren ödülü listede
                         yoksa (ayar okunamadı) bu cümle de hiç çizilmez. */}
                     {referralValueCents === null ? null : (
                       <Text style={styles.pointsHighlight} testID="onboarding-points-highlight">
-                        {t.points.highlight.replace('{value}', formatPrice(referralValueCents, locale))}
+                        {t.points.highlight.replace('{value}', formatPointsValue(referralValueCents, locale))}
                       </Text>
                     )}
                   </View>

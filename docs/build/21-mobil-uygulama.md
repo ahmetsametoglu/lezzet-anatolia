@@ -3852,6 +3852,37 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Cihaz durumu:** dil Türkçe · yazı boyutu Büyük · posta kodu 67000 geri kuruldu; kullanıcının
   **oturumu silindi**, yeniden OTP ile girmesi gerekiyor. Turda eklenen sepet kalemi temizlendi.
 
+- [x] (21.79) **PUANIN PARA KARŞILIĞI OKUNUR HÂLE GELDİ — ve keşif kartının yokluğu araştırıldı
+  (kullanıcı bulguları 18.08)**
+  → MB-75 açıldı. `touches: apps/mobile/src/screens/customer-kit/{points-value.ts,points-earn-list.tsx},
+  apps/mobile/src/screens/{onboarding,account}/*`
+
+  **PUAN YAZIMI.** Kullanıcı cihazda gördü: *"puan ve bir nokta konmuş, sonra puanın para karşılığı
+  yazılmış. Bu hiç anlaşılır değil."* Eski hâl `+500 · 5,00 €` idi. İki kusuru vardı:
+  · **Orta nokta EŞİT şeyleri ayırır**, oysa bunlar eşit değil — biri kazanılan birim, öteki onun
+    karşılığı. Parantez o astlığı yazının kendisiyle söylüyor: **`+500 (5 €)`**.
+  · **`5,00` olmayan bir hassasiyet iddia ediyordu.** Kupon tam eurodur. Kural koşullu yazıldı:
+    tam euroda kuruş yok (`5 €`), kesirlide var (`2,50 €`) — sınır aritmetik (`cents % 100`),
+    zevk değil.
+
+  Yeni yardımcı `customer-kit/points-value.ts` (`formatPointsValue`); **ortak `formatPrice`a
+  DOKUNULMADI** çünkü fiyat için kuruş doğrudur (1,84 ≠ 1,80). Kuruş eki de elle kurulmuyor,
+  `formatPrice`in çıktısından siliniyor — binlik ayracı ve € yerleşimi dile göre değişiyor.
+  Beş çağıran birden geçti: puan kazanma listesi (rozet + iki cümle), onboarding puan adımı (oran
+  + getiren vurgusu), hesap kartı (iki cümle).
+
+  **KEŞİF KARTININ YOKLUĞU ARAŞTIRILDI → MB-75.** Kullanıcı haklı olarak *"tespit ettin ama
+  araştırmadın"* dedi. Ölçüm: kartın misafirde çizilmemesi **kasıtlı ve doğru** (MB-58a — davetin
+  vaadi puandır, motor kimliksiz oya puan vermiyor). **Ama aynı künye "turun KENDİSİ misafire açık
+  kalmaya devam ediyor, misafir sekmeden geçer" diye söz veriyor ve o söz TUTULMAMIŞ:** `/discover`a
+  giden üç çağrının üçü de girişli hâle bağlı ve sekme çubuğunda keşif yok. Yani 14.08'in
+  düzeltmesi ödül vaadiyle birlikte turu da kapatmış. Karar kullanıcının; kayıt `BACKLOG-musteri`de.
+
+  **Doğrulama:** `tsc` temiz · `lint` temiz (`src` tamamı) · **347 ekran testi**, ikisi yeni yazımı
+  iddia edecek biçimde güncellendi. **Cihaz doğrulaması BEKLİYOR:** onboarding tamamlanmış
+  işaretli olduğu için yeniden açılmıyor ve puan çekmecesi giriş istiyor — kullanıcı girdiğinde
+  hesap kartından bakılacak.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

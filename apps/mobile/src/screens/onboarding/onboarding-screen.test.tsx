@@ -176,7 +176,8 @@ describe('onboarding', () => {
     await pressNext(); // → puanın GİRİŞ kartı
     expect(screen.getByText('Kullandıkça kazanın')).toBeOnTheScreen();
     // SAYI SUNUCUDAN: eşik de para karşılığı da mock'un verdiği değerler — ekran sabit gömmüyor.
-    await waitFor(() => expect(screen.getByTestId('onboarding-points-rate')).toHaveTextContent('500 puan = 5,00 € kupon'));
+    // Kuruş YOK: puan karşılığı tam euroysa `5 €` yazılır (18.08 — `customer-kit/points-value`).
+    await waitFor(() => expect(screen.getByTestId('onboarding-points-rate')).toHaveTextContent('500 puan = 5 € kupon'));
     // Giriş kartı döküm YAPMAZ ve hesap TEKLİF ETMEZ — soruyu düğmenin kendisi sorar.
     expect(screen.queryByTestId('onboarding-points-ways-invite')).toBeNull();
     expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Nasıl puan kazanılır?');
@@ -205,7 +206,8 @@ describe('onboarding', () => {
     expect(screen.getByTestId('points-earn-referral')).toBeOnTheScreen();
     expect(screen.queryByTestId('points-earn-visit')).toBeNull();
     // Ödül rozeti puanı ve parasını BİRLİKTE taşır; para `points × centValue` ile türetilir.
-    expect(within(screen.getByTestId('points-earn-referral')).getByText('+500 · 5,00 €')).toBeOnTheScreen();
+    // Ayraç `·` değil PARANTEZ, kuruş da yok (18.08): puan asıl birim, para onun karşılığı.
+    expect(within(screen.getByTestId('points-earn-referral')).getByText('+500 (5 €)')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByTestId('onboarding-later'));
     expect(mockSave).toHaveBeenCalledWith({ done: true, locale: 'tr', postalCode: null });

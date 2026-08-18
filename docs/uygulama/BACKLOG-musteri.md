@@ -1167,6 +1167,27 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   hangi yolla gidiyor, tek yerde ve aynı sözcüklerle. Metin kararı olduğu için ölçüm burada
   bırakıldı.
 
+- [ ] **MB-75 · MİSAFİRİN KEŞİF TURUNA HİÇBİR KAPISI YOK — künye açıkça tersini söz veriyor.**
+  Kullanıcı sordu (18.08): *"vitrinde en altta keşif kartı görünmesi gerekirken herhangi bir şey
+  yoktu."* Ölçüldü — kartın çizilmemesi **kasıtlı ve doğru**: MB-58a (14.08) misafirde daveti
+  kaldırmış, çünkü davetin vaadi puandır ve motor kimliksiz oya puan vermiyor
+  (`application/feedback/discover.ts`, `pointsAwarded: null`). Karşılığı olmayan bir davet
+  gösterilmiyor; buraya kadar tutarlı.
+
+  **Ama aynı künye şunu yazıyor:** *"Turun KENDİSİ misafire açık kalmaya devam ediyor (tasarımın
+  kararı: 'misafirin oyu da talep sinyalidir'), kapanan yalnız ödül vaat eden çağrı. Keşfe girmek
+  isteyen misafir SEKMEDEN ya da bitiş ekranının giriş davetinden geçer."*
+  **İkisi de yok.** `/discover`a giden üç çağrının üçü de girişli hâle bağlı:
+  `home-screen.tsx:670` (`!signedIn ? null : …`), `account-screen.tsx:147` ve `:762` — hesap
+  sekmesi ise misafiri doğrudan `/login`e itiyor. Sekme çubuğunda keşif YOK
+  (`app/(tabs)`: index · catalog · packages · account). "Bitiş ekranının giriş daveti" de turun
+  İÇİNDE — oraya girmeden ulaşılamıyor.
+
+  **Yani 14.08'in düzeltmesi, ödül vaadiyle birlikte TURUN KENDİSİNİ de misafire kapatmış** ve
+  künye kapanmadığını sanıyor. Tasarım kararı (*"misafirin oyu da talep sinyalidir"*) bugün
+  uygulanmıyor. **Karar gerekiyor:** ya misafire ödül vaat ETMEYEN bir giriş açılır (kart yerine
+  nötr bir satır), ya da tasarım kararı geri alınıp künye düzeltilir. İkisi de kullanıcının.
+
 ### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)
 
 > Beşi de **görsel/metin** kalemi; hiçbiri veri ya da hesap arızası değil. Turun aynı gününde
