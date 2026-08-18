@@ -60,6 +60,7 @@ export {
   operationsAmber,
   operationsRed,
   operationsAlarm,
+  operationsBand,
   operationsBrand,
   operationsBlue,
   operationsSlate,

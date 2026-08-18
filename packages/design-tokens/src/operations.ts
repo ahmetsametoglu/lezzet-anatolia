@@ -119,6 +119,19 @@ export const operationsAlarm = {
   'ops-alarm-dot': '#f2c8c3', // nabız atan durum noktası
 } as const satisfies Record<string, string>;
 
+/* PANEL ŞERİDİ — günün TEK yönlendirmesi (09.3, tasarım `Operasyon - Dashboard.dc.html`).
+   Alarm bandıyla aynı gerekçeyle kendi ailesi ve aynı gerekçeyle TERS ÇEVRİLMEZ: sayfanın en
+   yüksek sesli öğesi, bir "kutu" değil. Ama alarm DEĞİL — şerit sakin günü de taşır, tonu
+   içeriğe göre değişen nötr bir zemindir; kırmızı bir bant "her gün bir şey yanlış" der.
+   `ops-ink` kullanılamazdı: o MÜREKKEP rengidir ve karanlıkta açılır (#e9ebe3) — şerit gece
+   beyaz bir levhaya dönerdi. */
+export const operationsBand = {
+  'ops-band': '#22251f', // şeridin kendisi
+  'ops-band-ink': '#f4f5f0', // şerit üzerindeki başlık
+  'ops-band-muted': '#a7ada0', // şerit üzerindeki etiket ve gerekçe
+  'ops-band-line': '#454a41', // şerit içindeki ikincil düğmenin çerçevesi
+} as const satisfies Record<string, string>;
+
 /* MARKA rengi — palete ait değil, WhatsApp'ın kendi yeşili. Token olarak duruyor ki ham hex
    ikonun içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsın: marka rengi temayla
    dönmez, döndüğü an marka olmaktan çıkar. (Öneki `ops-` DEĞİL: `--color-brand-whatsapp`.) */
@@ -178,6 +191,7 @@ export const operationsColors = {
   ...operationsAmber,
   ...operationsRed,
   ...operationsAlarm,
+  ...operationsBand,
   ...operationsBrand,
   ...operationsBlue,
   ...operationsSlate,
@@ -264,6 +278,12 @@ export const operationsDarkColors = {
   'ops-alarm-inset': 'rgba(255, 255, 255, 0.07)',
   'ops-alarm-inset-line': 'rgba(224, 141, 132, 0.3)',
   'ops-alarm-dot': '#f2c8c3',
+
+  /* Panel şeridi karanlıkta KABARIR (karttan bir kademe açık), koyulaşmaz — sayfa zemini zaten
+     #1b1e18, daha koyu bir şerit görünmez olurdu. Mürekkep/ikincil metin bilerek yok: ikisi de
+     açık temadaki değerini korur, çünkü zemin iki temada da koyu kalıyor. */
+  'ops-band': '#2f342b',
+  'ops-band-line': '#4a5044',
 
   'ops-blue': '#82b2d0',
   'ops-blue-dark': '#c3d6e4',

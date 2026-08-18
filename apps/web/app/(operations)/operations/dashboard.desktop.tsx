@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Card } from '@/components/operation/ui/card';
+import { Card, cardClass } from '@/components/operation/ui/card';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { num } from '@/components/operation/ui/format';
 import type {
@@ -38,6 +38,22 @@ const EDGE_TONE: Record<OpsTone, string> = {
   violet: 'border-l-ops-violet bg-ops-violet-bg',
 };
 
+/**
+ * Yalnız ZEMİN — kenarlıksız yüzeyler için (çip, sayı rozeti, akış kolonu).
+ *
+ * `EDGE_TONE` sol kenarlık rengini de taşıyor; kenarlıksız bir çipte onu `border-l-0` ile iptal
+ * etmek gerekiyordu ve aynı iki sınıf beş yerde yan yana yazılıyordu. Ayrı tablo, ayrı iş.
+ */
+const BG_TONE: Record<OpsTone, string> = {
+  neutral: 'bg-ops-gray-100',
+  olive: 'bg-ops-olive-bg',
+  amber: 'bg-ops-amber-bg',
+  red: 'bg-ops-red-bg',
+  blue: 'bg-ops-blue-bg',
+  slate: 'bg-ops-slate-bg',
+  violet: 'bg-ops-violet-bg',
+};
+
 const DOT_TONE: Record<OpsTone, string> = {
   neutral: 'bg-ops-line-strong',
   olive: 'bg-ops-olive',
@@ -47,6 +63,38 @@ const DOT_TONE: Record<OpsTone, string> = {
   slate: 'bg-ops-slate',
   violet: 'bg-ops-violet',
 };
+
+/**
+ * Şeridin KOYU zemininde yaşayan ton — ayrı tablo, çünkü öteki üçü açık zemin için kalibre.
+ * `DOT_TONE`un amberi (#9a6416) koyu şeritte okunmaz; burada her ailenin en parlak kademesi
+ * kullanılıyor (`-dot` varyantları zaten "koyu zeminde nabız" için tanımlıydı).
+ *
+ * Yedi ton da yazılı ama şerit bugün yalnız dördünü üretiyor (`dashboard-read`: red · amber ·
+ * olive · neutral); kalanlar `Record` bütünlüğü için ve yanlış varsayılana düşmemek için burada.
+ */
+const BAND_ACCENT: Record<OpsTone, { dot: string; text: string }> = {
+  neutral: { dot: 'bg-ops-band-muted', text: 'text-ops-band-muted' },
+  olive: { dot: 'bg-ops-olive-light', text: 'text-ops-olive-light' },
+  amber: { dot: 'bg-ops-amber-dot', text: 'text-ops-amber-dot' },
+  red: { dot: 'bg-ops-alarm-dot', text: 'text-ops-alarm-dot' },
+  blue: { dot: 'bg-ops-blue', text: 'text-ops-blue' },
+  slate: { dot: 'bg-ops-slate', text: 'text-ops-slate' },
+  violet: { dot: 'bg-ops-violet-dot', text: 'text-ops-violet-dot' },
+};
+
+/**
+ * Depo kodu çipi — "hangi tesisten" bağlamı. Panelde iki yerde geçiyor (rota başlığı, nabız satırı)
+ * ve mavi aile bilinçli: kod bir uyarı değil, bir BİLGİdir; kurşuni ölçüm/fark için ayrılmış.
+ * Kod `null` ise çip hiç çizilmez — ad çözülemediğinde boş bir kutu göstermenin bilgi değeri yok.
+ */
+function WarehouseChip({ code }: { code: string | null }) {
+  if (!code) return null;
+  return (
+    <span className="rounded-ops-chip border border-ops-blue-line bg-ops-blue-bg px-2 py-0.5 font-ops-mono text-ops-micro font-semibold text-ops-blue">
+      {code}
+    </span>
+  );
+}
 
 interface DashboardDesktopProps {
   data: DashboardData;
@@ -67,13 +115,7 @@ export function DashboardDesktop({ data }: DashboardDesktopProps) {
 
       <AlertBand band={data.band} />
 
-      {data.kpis.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          {data.kpis.map((kpi) => (
-            <KpiCard key={kpi.key} kpi={kpi} />
-          ))}
-        </div>
-      )}
+      {data.kpis.length > 0 && <KpiStrip kpis={data.kpis} />}
 
       {data.flow.length > 0 && <FlowStrip steps={data.flow} />}
 
@@ -81,33 +123,52 @@ export function DashboardDesktop({ data }: DashboardDesktopProps) {
         <QueueColumn data={data} />
         <div className="flex flex-col gap-5">
           <DeliveriesPanel routes={data.routes} />
-          <PulsePanel pulse={data.pulse} />
+          {/* **Nabız BOŞKEN çizilmiyor** (18.08): rotaya sipariş yazılmadığı gün üstteki Teslimatlar
+              paneli bunu zaten söylüyordu (*"Bugüne rota siparişi yazılmadı…"*) ve nabız altına aynı
+              gerçeği ikinci kez yazıyordu (*"Bugüne hiçbir rotaya sipariş yazılmadı"*). Aynı cümleyi
+              iki kutuda okumak, iki ayrı eksik varmış gibi okunuyor. Nabzın sorusu "hangi rota
+              geride" — cevabı yoksa soru da sorulmaz. */}
+          {data.pulse.length > 0 && <PulsePanel pulse={data.pulse} />}
         </div>
       </div>
     </div>
   );
 }
 
-/** Üst şerit — günün tek en yakın eşiği. Sakin günde kutlar, uyarmaz (ton `olive`). */
+/**
+ * Üst şerit — günün tek en yakın eşiği. **Sakin günde kutlar, uyarmaz.**
+ *
+ * ── ZEMİN SABİT KOYU, TON YALNIZ NOKTA VE ETİKETTE (18.08) ──────────────────
+ * Şerit bir dönem tonuna göre zemin değiştiriyordu (alarm bordosu ↔ sakin yeşili) ve ikisi de
+ * yanlıştı. Ölçülen kusur şu: şeridin BAŞLIĞI sıradaki eşiği anlatır, TONU ise kuyruk
+ * aciliyetinden gelir — yani *"hepsi hazır · bekleyen yok"* cümlesi bordo bir bantta okunuyordu.
+ * Zemini tona bağlamak bunu çözmedi, yalnız yer değiştirdi: bu kez iyi haber alarm renginde değil,
+ * kötü haber kutlama renginde çıkabilirdi.
+ *
+ * Tasarımın cevabı (`Operasyon - Dashboard.dc.html`): zemin HER ZAMAN koyu ink, ton yalnız
+ * **noktada ve eyebrow'da** yaşar. Şerit böylece bir uyarı kutusu değil, günün sabit yönlendirme
+ * çubuğu olur; renk orada bir hüküm değil, bir işarettir. Gerilim de kayboluyor çünkü zemin artık
+ * hiçbir şey iddia etmiyor.
+ */
 function AlertBand({ band }: { band: AlertBandView }) {
+  const accent = BAND_ACCENT[band.tone];
+
   return (
-    <section className="flex items-start justify-between gap-6 rounded-ops-card bg-ops-alarm p-6">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <span className={`size-2 rounded-full ${band.tone === 'olive' ? 'bg-ops-olive-light' : 'bg-ops-alarm-dot'}`} />
-          <span className="font-ops-body text-ops-micro font-semibold tracking-wide text-ops-alarm-muted">
-            {band.eyebrow}
-          </span>
+    <section className="flex items-center justify-between gap-6 rounded-ops-card bg-ops-band px-6 py-5">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2.5">
+          <span className={`size-[7px] shrink-0 rounded-full ${accent.dot}`} />
+          <span className={`font-ops-display text-ops-micro font-semibold tracking-[0.18em] ${accent.text}`}>{band.eyebrow}</span>
         </div>
-        <h2 className="max-w-2xl font-ops-display text-ops-lead font-semibold text-ops-alarm-ink">{band.headline}</h2>
-        {band.detail && <p className="max-w-2xl font-ops-body text-ops-sm text-ops-alarm-muted">{band.detail}</p>}
+        <h2 className="max-w-[40rem] font-ops-display text-ops-section font-semibold text-ops-band-ink">{band.headline}</h2>
+        {band.detail && <p className="max-w-[40rem] font-ops-body text-ops-sm text-ops-band-muted">{band.detail}</p>}
       </div>
       {(band.primary ?? band.secondary) && (
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2.5">
           {band.primary && (
             <Link
               href={band.primary.href}
-              className="cursor-pointer rounded-ops-btn bg-ops-olive px-4 py-2 font-ops-body text-ops-sm font-semibold text-ops-white transition-colors hover:bg-ops-olive-dark"
+              className="cursor-pointer rounded-ops-btn bg-ops-olive-light px-4 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-band transition-colors hover:bg-ops-olive"
             >
               {band.primary.label}
             </Link>
@@ -115,7 +176,7 @@ function AlertBand({ band }: { band: AlertBandView }) {
           {band.secondary && (
             <Link
               href={band.secondary.href}
-              className="cursor-pointer rounded-ops-btn border border-ops-alarm-inset-line bg-ops-alarm-inset px-4 py-2 font-ops-body text-ops-sm font-semibold text-ops-alarm-ink transition-colors hover:border-ops-alarm-muted"
+              className="cursor-pointer rounded-ops-btn border border-ops-band-line px-4 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-band-muted transition-colors hover:border-ops-band-muted hover:text-ops-band-ink"
             >
               {band.secondary.label}
             </Link>
@@ -126,43 +187,63 @@ function AlertBand({ band }: { band: AlertBandView }) {
   );
 }
 
-/** Gösterge kartı. Seri BOŞSA çubuklar hiç çizilmez — ölçülmeyen sıfır değildir (`CLAUDE §1`). */
-function KpiCard({ kpi }: { kpi: KpiCardView }) {
+/**
+ * Kritik göstergeler — **tek çerçeve, saç teli bölme çizgileri** (tasarım: `Operasyon -
+ * Dashboard.dc.html`). Kartlar bir dönem ayrı ayrı yüzüyordu; sakin günde üçü sıfır olunca ekran
+ * "boş kutular tarlası" gibi okunuyordu. Yoğun ızgara sıfırı da taşır: sayı küçükse hücre küçük
+ * kalır, kutu büyük kalmaz.
+ *
+ * Hücre sayısı `kpis` uzunluğundan gelir — gösterge eklendiğinde (marj-altı, 09.4) ızgara kendi
+ * kolonunu açar; sabit `grid-cols-4` yazılsaydı beşinci gösterge alt satıra düşer ve şerit
+ * bozulurdu.
+ */
+function KpiStrip({ kpis }: { kpis: KpiCardView[] }) {
   return (
-    <Card className="flex flex-col gap-3 p-5">
-      <span className="font-ops-body text-ops-micro font-semibold tracking-wide text-ops-muted uppercase">
-        {kpi.label}
-      </span>
-      <div className="flex items-end justify-between gap-3">
-        <span className="font-ops-display text-ops-display font-semibold text-ops-ink">{kpi.value}</span>
-        {kpi.series.length > 0 && <Sparkline series={kpi.series} tone={kpi.deltaTone} />}
-      </div>
-      <div className="flex flex-col gap-1">
-        {kpi.delta && <span className={`font-ops-body text-ops-xs ${TEXT_TONE[kpi.deltaTone]}`}>{kpi.delta}</span>}
-        {kpi.split && <span className="font-ops-body text-ops-xs text-ops-muted">{kpi.split}</span>}
-      </div>
-      <Link
-        href={kpi.link.href}
-        className="cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive-dark transition-colors hover:text-ops-ink"
-      >
-        {kpi.link.label}
-      </Link>
-    </Card>
+    <div
+      className="grid overflow-hidden rounded-ops-card border border-ops-line bg-ops-subtle"
+      style={{ gridTemplateColumns: `repeat(${kpis.length}, minmax(0, 1fr))` }}
+    >
+      {kpis.map((kpi) => (
+        <Link
+          key={kpi.key}
+          href={kpi.link.href}
+          className="flex cursor-pointer flex-col gap-1.5 border-r border-ops-line px-4 py-3.5 transition-colors last:border-r-0 hover:bg-ops-gray-100"
+        >
+          <span className="font-ops-display text-ops-micro font-medium tracking-[0.08em] text-ops-muted uppercase">{kpi.label}</span>
+          <span className="font-ops-mono text-ops-display leading-none font-medium tracking-tight text-ops-ink">{kpi.value}</span>
+          {/* Seri BOŞSA çubuklar hiç çizilmez — ölçülmeyen sıfır değildir (`CLAUDE §1`). */}
+          {kpi.series.length > 0 && <Sparkline series={kpi.series} tone={kpi.deltaTone} />}
+          {/* Delta ve kırılım MİKRO kademede: tasarımın 11,5/10,5 px'i merdivende `micro`ya düşüyor
+              (`xs` 13px'ti ve yanlış eşlemeydi). Ölçüldü — `xs`te "kapıda 320,80 € · vade 1.286,20 €"
+              sarıyor ve alt satırda yalnız "€" kalıyordu; kolon sayısı beşe çıkınca daha da sıkışır. */}
+          {kpi.delta && <span className={`font-ops-mono text-ops-micro ${TEXT_TONE[kpi.deltaTone]}`}>{kpi.delta}</span>}
+          {kpi.split && <span className="font-ops-mono text-ops-micro text-ops-muted">{kpi.split}</span>}
+          <span className="font-ops-display text-ops-xs font-semibold text-ops-olive">{kpi.link.label}</span>
+        </Link>
+      ))}
+    </div>
   );
 }
 
-/** Yedi günlük seyir — son çubuk bugündür ve tonu taşır; öncekiler soluk kalır. */
+/**
+ * Yedi günlük seyir — son çubuk bugündür ve tonu taşır; öncekiler soluk kalır.
+ *
+ * Çubuklar **değerin altında** durur ve yanında "7 gün" yazar. Eskiden sağ üst köşede etiketsiz
+ * duruyordu: ne olduğu okunmayan, sayıdan kopuk bir çizgi kümesiydi — grafik değil moloz.
+ */
 function Sparkline({ series, tone }: { series: number[]; tone: OpsTone }) {
   const max = Math.max(...series, 1);
   return (
-    <div className="flex h-6 items-end gap-0.5" aria-hidden>
+    <div className="flex h-5 items-end gap-[2px]">
       {series.map((value, i) => (
         <span
           key={i}
-          className={`w-1.5 rounded-sm ${i === series.length - 1 ? DOT_TONE[tone] : 'bg-ops-olive-light'}`}
-          style={{ height: `${Math.max(2, Math.round((value / max) * 24))}px` }}
+          aria-hidden
+          className={`w-[7px] rounded-t-sm ${i === series.length - 1 ? DOT_TONE[tone] : 'bg-ops-olive-line'}`}
+          style={{ height: `${Math.max(4, Math.round(4 + (value / max) * 16))}px` }}
         />
       ))}
+      <span className="ml-1.5 self-end font-ops-body text-ops-micro text-ops-faint">7 gün</span>
     </div>
   );
 }
@@ -178,29 +259,68 @@ function FlowStrip({ steps }: { steps: FlowStepView[] }) {
         <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Gün akışı</h2>
         <span className="font-ops-body text-ops-xs text-ops-muted">eşik saatleri ayardan okunur</span>
       </div>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className={cardClass('grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]')}>
         {steps.map((step) => (
-          <Card
+          <div
             key={step.key}
-            className={`flex flex-col gap-2 border-l-2 p-4 ${step.state === 'now' ? EDGE_TONE[step.tone] : 'border-l-ops-line-strong'}`}
+            className={`flex flex-col border-r border-ops-line-soft last:border-r-0 ${
+              step.state === 'now' ? (step.tone === 'olive' ? 'bg-ops-subtle' : BG_TONE[step.tone]) : ''
+            }`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <span className={`size-2 rounded-full ${step.state === 'later' ? 'bg-ops-line-strong' : DOT_TONE[step.tone]}`} />
-                <span className="font-ops-body text-ops-sm font-semibold text-ops-ink">{step.time}</span>
+            {/* Üstteki 3px şerit — kolonun durumunu kenarlıkla değil ÇİZGİYLE söyler (tasarım).
+                Sol kenarlık kart başına düşen bir işaretti; yan yana dizilen kolonlarda sol kenar
+                bir öncekinin sağ ayracına yapışıyor ve iki çizgi tek kalın çizgi gibi okunuyordu. */}
+            <div
+              className={`h-[3px] ${
+                step.state === 'done' ? 'bg-ops-olive' : step.state === 'now' ? DOT_TONE[step.tone] : 'bg-ops-line-strong'
+              }`}
+            />
+            <div className="flex flex-col gap-1 px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`size-[7px] shrink-0 rounded-full ${step.state === 'later' ? 'bg-ops-line-strong' : DOT_TONE[step.tone]}`}
+                  />
+                  <span className={`font-ops-mono text-ops-sm font-medium ${step.state === 'later' ? 'text-ops-muted' : 'text-ops-ink'}`}>
+                    {step.time}
+                  </span>
+                  {/* **"önceki gün" damgası** (18.08): bu saat teslim gününe değil bir öncekine ait.
+                    Damgasız hâlde `21:00` bugünün akışının son adımı gibi okunuyordu ve operatör o
+                    saatte bugünün kapandığını sanıyordu — kapanan sonraki seferdir. Rota şeridiyle
+                    aynı dil: sözcük tam yazılı ("dün" değil, o bugüne göreli bir sözcük). */}
+                  {step.prevDay && (
+                    <span
+                      title="Bu saat bir önceki güne ait — hazırlık kapanışından sonra olduğu için kesim bir gün geriye kayar"
+                      className="rounded-ops-chip bg-ops-red-bg px-1.5 font-ops-body text-ops-micro font-medium text-ops-red"
+                    >
+                      önceki gün
+                    </span>
+                  )}
+                </span>
+                {/* Durum ÇİPİ — düz metin değil. Üç kolon yan yana dururken çıplak "sırada"/"tamam"
+                  kelimeleri not satırıyla aynı ağırlıkta okunuyor ve göz hangi adımın canlı
+                  olduğunu ancak okuyarak buluyordu; çip bunu bakışta ayırıyor. */}
+                <span
+                  className={`shrink-0 rounded-ops-chip px-1.5 py-px font-ops-display text-ops-micro font-semibold tracking-[0.06em] ${
+                    step.state === 'done'
+                      ? 'bg-ops-olive-bg text-ops-olive-dark'
+                      : step.state === 'now'
+                        ? `${BG_TONE[step.tone]} ${TEXT_TONE[step.tone]}`
+                        : 'bg-ops-gray-100 text-ops-muted'
+                  }`}
+                >
+                  {step.state === 'done' ? 'tamam' : (step.countdown ?? 'sırada')}
+                </span>
+              </div>
+              <span className={`font-ops-display text-ops-base font-semibold ${step.state === 'now' ? 'text-ops-ink' : 'text-ops-body'}`}>
+                {step.title}
               </span>
-              <span className={`font-ops-body text-ops-micro ${step.state === 'now' ? TEXT_TONE[step.tone] : 'text-ops-muted'}`}>
-                {step.state === 'done' ? 'tamam' : (step.countdown ?? 'sırada')}
-              </span>
-            </div>
-            <span className="font-ops-body text-ops-sm text-ops-body">{step.title}</span>
-            <span className="font-ops-body text-ops-xs text-ops-muted">{step.note}</span>
-            {/* Saat rotaya bağlı; rotalar ayrışıyorsa kutu EN ERKEN olanı gösterir ve kimin olduğunu
+              <span className="font-ops-body text-ops-xs text-ops-muted">{step.note}</span>
+              {/* Saat rotaya bağlı; rotalar ayrışıyorsa kutu EN ERKEN olanı gösterir ve kimin olduğunu
                 söyler — yoksa operatör hangi araca koşacağını bilemez (kullanıcı kararı 17.08). */}
-            {step.routeLabel && (
-              <span className="font-ops-body text-ops-micro text-ops-muted">en erken: {step.routeLabel}</span>
-            )}
-          </Card>
+              {step.routeLabel && <span className="font-ops-body text-ops-micro text-ops-muted">en erken: {step.routeLabel}</span>}
+            </div>
+          </div>
         ))}
       </div>
     </section>
@@ -249,30 +369,65 @@ function QueueColumn({ data }: { data: DashboardData }) {
   );
 }
 
+/**
+ * `etiket — saç teli çizgi — ölçü` satırı. Çizgi süs değil: kümeler alt alta dizildiğinde nerede
+ * bittikleri ancak böyle okunuyor; onsuz üç küme tek uzun liste gibi görünüyordu.
+ *
+ * **Yan yana duran İKİ SÜTUNUN hizasını da bu satır kuruyor** (18.08, kullanıcı bildirdi, ölçüldü).
+ * Kuyruk sütununda kartlardan önce bir küme etiketi vardı, teslimat sütununda yoktu: soldaki ilk
+ * kart `y=661,5`te, sağdaki kutu `y=634`te başlıyordu — 27,5 px kayma (etiket 19,5 + boşluk 8).
+ * İki sütun aynı yükseklikte başlayıp içerikleri farklı yerde başlayınca göz kırık bir taban
+ * çizgisi okuyor. Çözüm ölçüyü BAŞLIK satırından buraya indirmek: yeni metin uydurulmadı, var olan
+ * ölçü bir kademe aşağı taşındı ve iki sütun yapıca eşitlendi.
+ *
+ * `label` isteğe bağlı — teslimat sütununun aciliyet kümesi yok, orada satır çıplak ayraç olarak
+ * durur. Etiketsiz hâlde de aynı yüksekliği verir; hiza zaten ondan doğuyor.
+ */
+function RuleRow({ label, tone, meta }: { label?: string; tone?: OpsTone; meta: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {label && (
+        <span
+          className={`font-ops-display text-ops-micro font-semibold tracking-[0.13em] uppercase ${tone ? TEXT_TONE[tone] : 'text-ops-muted'}`}
+        >
+          {label}
+        </span>
+      )}
+      <span className="h-px flex-1 bg-ops-line" />
+      <span className="font-ops-mono text-ops-xs text-ops-faint">{meta}</span>
+    </div>
+  );
+}
+
 function QueueGroup({ group }: { group: QueueGroupView }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <span className="font-ops-body text-ops-micro font-semibold tracking-wide text-ops-muted uppercase">
-          {group.title}
-        </span>
-        <span className="font-ops-body text-ops-micro text-ops-muted">{group.summary}</span>
-      </div>
+      <RuleRow label={group.title} tone={group.tone} meta={group.summary} />
       {group.items.map((item) => (
-        <Card key={item.key} className={`flex items-start gap-4 border-l-2 p-4 ${EDGE_TONE[item.tone]}`}>
-          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{num(item.count)}</span>
-          <div className="flex flex-1 flex-col gap-1">
-            <span className="flex items-baseline gap-2">
-              <span className="font-ops-body text-ops-sm font-semibold text-ops-ink">{item.title}</span>
+        <Card key={item.key} className={`flex items-center gap-3.5 border-l-[3px] px-4 py-3 ${EDGE_TONE[item.tone]}`}>
+          {/* Sayı ROZET içinde: satırın solundaki çıplak rakam başlıkla aynı hizada duruyor ve
+              "kaç tane" sorusunun cevabı metnin içinde kayboluyordu. */}
+          <span
+            className={`grid size-[34px] shrink-0 place-items-center rounded-ops-card font-ops-mono text-ops-lead font-semibold ${BG_TONE[item.tone]} ${TEXT_TONE[item.tone]}`}
+          >
+            {num(item.count)}
+          </span>
+          <div className="flex flex-1 flex-col gap-0.5">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{item.title}</span>
               {item.stamp && (
-                <span className={`font-ops-body text-ops-micro ${TEXT_TONE[item.tone]}`}>{item.stamp}</span>
+                <span
+                  className={`rounded-ops-chip px-1.5 py-px font-ops-mono text-ops-micro font-medium ${BG_TONE[item.tone]} ${TEXT_TONE[item.tone]}`}
+                >
+                  {item.stamp}
+                </span>
               )}
             </span>
-            <span className="font-ops-body text-ops-xs text-ops-muted">{item.detail}</span>
+            <span className="font-ops-body text-ops-sm text-ops-body">{item.detail}</span>
           </div>
           <Link
             href={item.link.href}
-            className="shrink-0 cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive-dark transition-colors hover:text-ops-ink"
+            className={`shrink-0 cursor-pointer font-ops-display text-ops-xs font-semibold transition-colors hover:text-ops-ink ${TEXT_TONE[item.tone]}`}
           >
             {item.link.label}
           </Link>
@@ -291,61 +446,71 @@ function DeliveriesPanel({ routes }: { routes: DeliveryRouteView[] }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Bugünün teslimatları</h2>
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          {routes.length > 0 ? `${num(stopCount)} durak · ${num(routes.length)} rota` : 'rota siparişi yok'}
-        </span>
-      </div>
+      <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Bugünün teslimatları</h2>
 
-      {routes.length === 0 ? (
-        <Card className="p-5">
-          <span className="font-ops-body text-ops-sm text-ops-muted">
-            Bugüne rota siparişi yazılmadı — yalnız kargo ve bekleyen işler var.
-          </span>
-        </Card>
-      ) : (
-        routes.map((route) => (
-          <Card key={route.key} className="flex flex-col">
-            <div className="flex items-center justify-between gap-3 border-b border-ops-line px-4 py-3">
-              <span className="flex items-baseline gap-2">
-                <span className="font-ops-body text-ops-sm font-semibold text-ops-ink">{route.courierName}</span>
-                {route.warehouseCode && (
-                  <span className="rounded-ops-chip bg-ops-slate-bg px-2 py-0.5 font-ops-body text-ops-micro font-semibold text-ops-slate-dark">
-                    {route.warehouseCode}
-                  </span>
-                )}
-              </span>
-              <span className="font-ops-body text-ops-xs text-ops-muted">
-                {num(route.deliveredCount)} / {num(route.totalCount)} teslim
-              </span>
-            </div>
-            <ul className="flex flex-col">
-              {route.stops.map((stop) => (
-                <li
-                  key={stop.orderId}
-                  className="flex items-center gap-3 border-b border-ops-line-soft px-4 py-2.5 last:border-b-0"
-                >
-                  <div className="flex flex-1 flex-col gap-0.5">
-                    <span className="font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>
-                    <span className="font-ops-body text-ops-micro text-ops-muted">
-                      {stop.itemsLabel} · {stop.channelLabel}
-                      {stop.dueLabel ? ` · ${stop.dueLabel}` : ''}
-                    </span>
-                  </div>
-                  {/* Saat YALNIZ olmuş durakta: gelecek durak için tahmin yok ve olmayacak. */}
-                  {stop.time && <span className="font-ops-body text-ops-xs text-ops-muted">{stop.time}</span>}
-                  <span
-                    className={`rounded-ops-chip px-2 py-0.5 font-ops-body text-ops-micro font-semibold ${EDGE_TONE[stop.tone]} ${TEXT_TONE[stop.tone]} border-l-0`}
-                  >
-                    {stop.statusLabel}
-                  </span>
-                </li>
-              ))}
-            </ul>
+      {/* Ölçü artık başlığın yanında değil ayraç satırında — soldaki kuyruk sütunuyla hizayı bu
+          kuruyor (`RuleRow` künyesi). İçerik `gap-2` ile sarılı, tıpkı bir kuyruk kümesi gibi. */}
+      <div className="flex flex-col gap-2">
+        <RuleRow meta={routes.length > 0 ? `${num(stopCount)} durak · ${num(routes.length)} rota` : 'rota siparişi yok'} />
+
+        {routes.length === 0 ? (
+          <Card className="p-5">
+            <span className="font-ops-body text-ops-sm text-ops-muted">
+              Bugüne rota siparişi yazılmadı — yalnız kargo ve bekleyen işler var.
+            </span>
           </Card>
-        ))
-      )}
+        ) : (
+          routes.map((route) => (
+            <Card key={route.key} className="flex flex-col">
+              {/* Başlık şeridi zeminli ve ALTINDA ilerleme çubuğu var (tasarım): "3 / 8 teslim"
+                sayısı tek başına okunuyor ama kıyaslanmıyordu — rotanın ne kadarının bittiği
+                bakışta görülmeli, iki sayıyı bölerek değil. */}
+              <div className="flex flex-col gap-2 border-b border-ops-line bg-ops-subtle px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-ops-body text-ops-sm text-ops-body">
+                      Kurye: <span className="font-semibold text-ops-ink">{route.courierName}</span>
+                      {route.zoneLabel ? ` · ${route.zoneLabel}` : ''}
+                    </span>
+                    <WarehouseChip code={route.warehouseCode} />
+                  </span>
+                  <span className="shrink-0 font-ops-mono text-ops-xs text-ops-olive-dark">
+                    {num(route.deliveredCount)} / {num(route.totalCount)} teslim
+                  </span>
+                </div>
+                <div className="h-[5px] w-full overflow-hidden rounded-full bg-ops-line-strong">
+                  <span
+                    className="block h-full rounded-full bg-ops-olive"
+                    style={{
+                      width: `${route.totalCount === 0 ? 0 : Math.round((route.deliveredCount / route.totalCount) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <ul className="flex flex-col">
+                {route.stops.map((stop) => (
+                  <li key={stop.orderId} className="flex items-center gap-3 border-b border-ops-line-soft px-4 py-2.5 last:border-b-0">
+                    <div className="flex flex-1 flex-col gap-0.5">
+                      <span className="font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>
+                      <span className="font-ops-body text-ops-micro text-ops-muted">
+                        {stop.itemsLabel} · {stop.channelLabel}
+                        {stop.dueLabel ? ` · ${stop.dueLabel}` : ''}
+                      </span>
+                    </div>
+                    {/* Saat YALNIZ olmuş durakta: gelecek durak için tahmin yok ve olmayacak. */}
+                    {stop.time && <span className="font-ops-body text-ops-xs text-ops-muted">{stop.time}</span>}
+                    <span
+                      className={`rounded-ops-chip px-2 py-0.5 font-ops-display text-ops-micro font-semibold ${BG_TONE[stop.tone]} ${TEXT_TONE[stop.tone]}`}
+                    >
+                      {stop.statusLabel}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ))
+        )}
+      </div>
     </section>
   );
 }
@@ -359,46 +524,36 @@ function DeliveriesPanel({ routes }: { routes: DeliveryRouteView[] }) {
 function PulsePanel({ pulse }: { pulse: RoutePulseView[] }) {
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Rota nabzı</h2>
-        <span className="font-ops-body text-ops-xs text-ops-muted">her rota kendi kesimine göre</span>
-      </div>
+      <h2 className="font-ops-display text-ops-section font-semibold text-ops-ink">Rota nabzı</h2>
+      {/* Teslimat paneliyle aynı idiom — iki bölüm sağ sütunda alt alta duruyor; biri başlığın
+          yanında, öteki ayraçta ölçü gösterseydi sütun kendi içinde iki dile düşerdi. */}
+      <RuleRow meta="her rota kendi kesimine göre" />
 
-      {pulse.length === 0 ? (
-        <Card className="p-5">
-          <span className="font-ops-body text-ops-sm text-ops-muted">Bugüne hiçbir rotaya sipariş yazılmadı.</span>
-        </Card>
-      ) : (
-        pulse.map((row) => {
-          const ratio = row.totalCount === 0 ? 0 : Math.round((row.readyCount / row.totalCount) * 100);
-          return (
-            <Card key={row.zoneId} className={`flex flex-col gap-2 border-l-2 p-4 ${EDGE_TONE[row.tone]}`}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="flex items-baseline gap-2">
-                  {row.warehouseCode && (
-                    <span className="rounded-ops-chip bg-ops-slate-bg px-2 py-0.5 font-ops-body text-ops-micro font-semibold text-ops-slate-dark">
-                      {row.warehouseCode}
-                    </span>
-                  )}
-                  <span className="font-ops-body text-ops-sm font-semibold text-ops-ink">{row.zoneName}</span>
-                </span>
-                <span className="font-ops-body text-ops-xs text-ops-muted">
-                  {num(row.readyCount)}/{num(row.totalCount)} hazır
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-ops-line-soft">
-                <span className={`block h-full rounded-full ${DOT_TONE[row.tone]}`} style={{ width: `${ratio}%` }} />
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-ops-body text-ops-xs text-ops-muted">{row.note}</span>
-                <span className={`font-ops-body text-ops-micro font-semibold ${TEXT_TONE[row.tone]}`}>
-                  {row.statusLabel}
-                </span>
-              </div>
-            </Card>
-          );
-        })
-      )}
+      {/* Boş hâl dalı YOK ve olmamalı: çağıran panel boşken bu bölümü hiç çizmiyor (18.08), yani
+          buraya boş küme gelmiyor. Dalı bırakmak, ulaşılamayan bir cümleyi bakımda tutmak olurdu. */}
+      {pulse.map((row) => {
+        const ratio = row.totalCount === 0 ? 0 : Math.round((row.readyCount / row.totalCount) * 100);
+        return (
+          <Card key={row.zoneId} className={`flex flex-col gap-2 border-l-2 p-4 ${EDGE_TONE[row.tone]}`}>
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-baseline gap-2">
+                <WarehouseChip code={row.warehouseCode} />
+                <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{row.zoneName}</span>
+              </span>
+              <span className="font-ops-body text-ops-xs text-ops-muted">
+                {num(row.readyCount)}/{num(row.totalCount)} hazır
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-ops-line-soft">
+              <span className={`block h-full rounded-full ${DOT_TONE[row.tone]}`} style={{ width: `${ratio}%` }} />
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-ops-body text-ops-xs text-ops-muted">{row.note}</span>
+              <span className={`font-ops-body text-ops-micro font-semibold ${TEXT_TONE[row.tone]}`}>{row.statusLabel}</span>
+            </div>
+          </Card>
+        );
+      })}
     </section>
   );
 }

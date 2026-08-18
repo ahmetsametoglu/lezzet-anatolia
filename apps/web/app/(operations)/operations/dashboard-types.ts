@@ -78,12 +78,22 @@ export interface FlowStepView {
   countdown: string | null;
   /** Kesime yetişmeyen rota varsa `now` adımı amber döner. */
   tone: OpsTone;
+  /**
+   * Bu saat TESLİM gününe değil bir ÖNCEKİ güne ait — bugün yalnız sipariş kesiminde olabilir
+   * (17.08 kuralı: kesim hazırlık kapanışından sonraysa önceki günün saatidir).
+   *
+   * Ekran bunu damgalamak zorunda: damgasız bir `21:00` satırı, bugünün akışının son adımı gibi
+   * okunuyor ve o saatte bugünün kapandığını sanıyorsunuz — oysa kapanan sonraki sefer.
+   */
+  prevDay: boolean;
 }
 
 /** Aciliyet kümesi — üç küme sabit, boş küme çizilmez. */
 export interface QueueGroupView {
   key: 'now' | 'today' | 'week';
   title: string;
+  /** Başlığın tonu — KÜMENİN aciliyeti, içindeki satırların değil (ikisi ayrışabilir). */
+  tone: OpsTone;
   /** "5 kalem · 2 satır" — kalem sayısı satır sayısından farklıdır, ikisi de söylenir. */
   summary: string;
   items: QueueItemView[];

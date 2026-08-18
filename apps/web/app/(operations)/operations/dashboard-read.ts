@@ -1,3 +1,4 @@
+import { cutoffBelongsToPreviousDay } from '@lezzet/domain-core';
 import { ORDER_STATUS_LABELS, type OrderStatus, type PaymentMethod } from '@lezzet/types';
 import { money, num } from '@/components/operation/ui/format';
 import type { OpsTone } from '@/components/operation/ui/tone';
@@ -88,6 +89,17 @@ interface FlowFacts {
  * Ayarı okunamayan eşik **atlanır** — uydurulmuş bir saat, yanlış işe yönlendiren bir şerit demektir.
  */
 export function buildFlow(facts: FlowFacts): FlowStepView[] {
+  /**
+   * **Kesim bugünün mü, bir ÖNCEKİ günün saati mi** (17.08 kuralı) — kararı motor veriyor.
+   *
+   * Panel bunu bilmek ZORUNDA ve bilmediği için yanlış konuşuyordu (ölçüldü 18.08, canlı ekran):
+   * kesim 21:00 · hazırlık 11:00 olan kurulumda gün akışının son adımı *"21:00 · Sipariş kesimi ·
+   * bugün teslim edilecekler kapanır"* diyordu. İkisi de yanlıştı — o saat bugüne ait değil, ve
+   * 21:00'da kapanan şey bugünün teslimi değil SONRAKİ seferin siparişiydi. Rota şeridi ile gün planı
+   * bu ayrımı yapıyordu, panel yapmıyordu: üç ekran aynı veriye üç ayrı şey diyordu.
+   */
+  const cutoffPrevDay = cutoffBelongsToPreviousDay(facts.times.orderCutoff.time, facts.times.prepCutoff.time);
+
   const steps: {
     key: FlowStepView['key'];
     time: string;
@@ -95,13 +107,21 @@ export function buildFlow(facts: FlowFacts): FlowStepView[] {
     title: string;
     done: string;
     soon: string;
+    prevDay?: boolean;
   }[] = [
     {
       key: 'orderCutoff',
       ...facts.times.orderCutoff,
       title: 'Sipariş kesimi',
-      done: `${num(facts.orderCount)} sipariş girdi · ${num(facts.warehouseCount)} depo`,
-      soon: 'bugün teslim edilecekler kapanır',
+      prevDay: cutoffPrevDay,
+      /**
+       * Cümleler kesimin AİT OLDUĞU güne göre. Önceki güne aitken bugünün 21:00'ı bugünü değil
+       * sonraki seferi kapatır; "bugün teslim edilecekler" o saatte çoktan kapanmıştır (dün).
+       */
+      done: cutoffPrevDay
+        ? `sonraki seferin siparişi kapandı · bugün ${num(facts.orderCount)} teslim`
+        : `${num(facts.orderCount)} sipariş girdi · ${num(facts.warehouseCount)} depo`,
+      soon: cutoffPrevDay ? 'sonraki seferin siparişleri kapanır' : 'bugün teslim edilecekler kapanır',
     },
     {
       key: 'prepCutoff',
@@ -128,10 +148,7 @@ export function buildFlow(facts: FlowFacts): FlowStepView[] {
       ...facts.times.courierClose,
       title: 'Kurye kapanışı',
       done: 'kasa teslim alındı',
-      soon:
-        facts.expectedCashCents > 0
-          ? `kapıda tahsilat beklenen ${money(facts.expectedCashCents)}`
-          : 'kapıda tahsilat beklenmiyor',
+      soon: facts.expectedCashCents > 0 ? `kapıda tahsilat beklenen ${money(facts.expectedCashCents)}` : 'kapıda tahsilat beklenmiyor',
     },
   ];
 
@@ -149,13 +166,14 @@ export function buildFlow(facts: FlowFacts): FlowStepView[] {
   const out: FlowStepView[] = [];
   for (const { step, at } of ordered) {
     if (at <= facts.nowMinutes) {
-      out.push({ ...step, note: step.done, state: 'done', countdown: null, tone: 'olive' });
+      out.push({ ...step, prevDay: step.prevDay ?? false, note: step.done, state: 'done', countdown: null, tone: 'olive' });
       continue;
     }
     if (!markedNow) {
       markedNow = true;
       out.push({
         ...step,
+        prevDay: step.prevDay ?? false,
         note: step.soon,
         state: 'now',
         countdown: countdownLabel(at - facts.nowMinutes),
@@ -163,7 +181,7 @@ export function buildFlow(facts: FlowFacts): FlowStepView[] {
       });
       continue;
     }
-    out.push({ ...step, note: step.soon, state: 'later', countdown: null, tone: 'neutral' });
+    out.push({ ...step, prevDay: step.prevDay ?? false, note: step.soon, state: 'later', countdown: null, tone: 'neutral' });
   }
   return out;
 }
@@ -246,13 +264,24 @@ export function buildBand(facts: BandFacts): AlertBandView {
     };
   }
 
+  /**
+   * **TEK düğme, çift değil** (18.08, ölçülmüş kusur).
+   *
+   * Bu dalda `primary` ve `secondary` ikisi de kuyruğa gidiyordu ve koşulları çakışıyordu
+   * (`urgentCount > 0` ⊂ `totalCount > 0`): canlı ekranda yan yana *"Bekleyen İşler →"* ve
+   * *"Bekleyen İşler (11)"* çizildi — aynı hedefe iki düğme. Sayı daha bilgilendirici olduğu için
+   * o korundu, ok ona eklendi. Üstteki kesim dalında ikisi FARKLI hedefe gidiyor (Hazırlık ↔
+   * kuyruk), orada iki düğme doğru.
+   */
+  const queueAction = totalCount > 0 ? { label: `Bekleyen İşler (${num(totalCount)}) →`, href: '#bekleyen-isler' } : null;
+
   return {
     eyebrow: current ? `SIRADAKİ · ${current.time} · ${current.countdown ?? ''}`.trim() : 'BEKLEYEN İŞLER',
     headline: current ? `${current.title} — ${current.note}.` : `${num(totalCount)} kalem karar bekliyor.`,
     detail: queueDetail,
     tone: urgentCount > 0 ? 'amber' : 'neutral',
-    primary: urgentCount > 0 ? { label: 'Bekleyen İşler →', href: '#bekleyen-isler' } : null,
-    secondary,
+    primary: urgentCount > 0 ? queueAction : null,
+    secondary: urgentCount > 0 ? null : queueAction,
   };
 }
 
@@ -275,6 +304,19 @@ const GROUP_TITLES: Record<QueueGroupView['key'], string> = {
 };
 
 /**
+ * Küme başlığının tonu — **aciliyetin kendisinden** gelir, içindeki satırlardan değil.
+ *
+ * Satır tonu ayrı bir şey (bir "bu hafta" işi kırmızı olabilir); küme başlığı ise kümenin ne
+ * demek olduğunu söyler. Ton burada duruyor çünkü karar okuma katmanının: bileşen kendi rengini
+ * seçerse aynı olgu iki ekranda iki renge düşer (`dashboard-types` künyesi).
+ */
+const GROUP_TONES: Record<QueueGroupView['key'], OpsTone> = {
+  now: 'red',
+  today: 'amber',
+  week: 'neutral',
+};
+
+/**
  * Bekleyen işler — üç aciliyet kümesi. **Sayısı sıfır olan satır hiç görünmez** ve boş küme çizilmez:
  * "0 açık talep" bir bilgi değil, bir gürültüdür.
  */
@@ -282,13 +324,12 @@ export function buildQueue(facts: QueueFact[]): QueueGroupView[] {
   const groups: QueueGroupView['key'][] = ['now', 'today', 'week'];
   return groups
     .map((key) => {
-      const items: QueueItemView[] = facts
-        .filter((f) => f.group === key && f.count > 0)
-        .map(({ group: _group, ...item }) => item);
+      const items: QueueItemView[] = facts.filter((f) => f.group === key && f.count > 0).map(({ group: _group, ...item }) => item);
       const total = items.reduce((sum, i) => sum + i.count, 0);
       return {
         key,
         title: GROUP_TITLES[key],
+        tone: GROUP_TONES[key],
         summary: `${num(total)} kalem · ${num(items.length)} satır`,
         items,
       };
@@ -388,7 +429,15 @@ export function buildKpis(facts: KpiFacts): KpiCardView[] {
       key: 'orders',
       label: 'Bugünkü sipariş',
       value: num(facts.orders.today),
-      delta: orderDelta === 0 ? 'dünle aynı' : `${orderDelta > 0 ? '↑' : '↓'} ${num(Math.abs(orderDelta))} dün`,
+      /**
+       * Cümle TAM yazılır: eski hâli `↓ 4 dün` idi ve iki türlü okunuyordu — "dün 4" mü, "4 azaldı"
+       * mı? (18.08 ekran incelemesi). Ok işareti yönü söylüyor ama neyin neye göre değiştiğini
+       * söylemiyor; karşılaştırmanın hedefi ("dünden") cümlede geçmeli.
+       */
+      delta:
+        orderDelta === 0
+          ? 'dünle aynı'
+          : `${orderDelta > 0 ? '↑' : '↓'} dünden ${num(Math.abs(orderDelta))} ${orderDelta > 0 ? 'fazla' : 'az'}`,
       deltaTone: orderDelta > 0 ? 'olive' : orderDelta < 0 ? 'neutral' : 'neutral',
       split: facts.orders.split,
       series: facts.orders.series,

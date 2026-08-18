@@ -107,6 +107,100 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
       bilgileri set etmeli değil miyiz?"*) ve rota rayına **sayı doğrusu üzerinde rozetler + çubuklu
       pencere** yazıldı. Panelin varsayılanları (`TIME_DEFAULTS`) o turda `lib/settings/day-hours.ts`'e
       taşındı — aynı dört saati üç yer okuyor, değer tek yerde durmalı (`CLAUDE §1`). Ayrıntı `19.20`.
+  - **EKRAN İNCELEMESİ BEŞ KUSUR ÇIKARDI, beşi de kapandı (18.08, kullanıcı isteğiyle görüntü + kod
+    karşılaştırması).** Hiçbiri `typecheck`/`lint`/`knip`'in görebileceği türden değildi; hepsi
+    "ekran gerçeği yanlış anlatıyor" sınıfı.
+    1. **Kesim panelde ÖNCEKİ GÜN ayrımı taşımıyordu.** Gün akışının son adımı *"21:00 · Sipariş
+       kesimi · bugün teslim edilecekler kapanır"* diyordu; kesim 21:00, hazırlık 11:00 → o saat
+       bugüne ait DEĞİL ve 21:00'da kapanan şey bugünün teslimi değil sonraki seferin siparişi.
+       Kuralı (17.08) motora, rota şeridine ve gün planına işlemiştim, panele işlememiştim — üç ekran
+       aynı veriye üç ayrı şey diyordu. Artık `cutoffBelongsToPreviousDay` panelde de çağrılıyor,
+       cümleler güne göre seçiliyor ve saatin yanında **"önceki gün"** damgası duruyor.
+    2. **Şerit tonu HİÇ uygulanmıyordu.** Bandın zemini sabit `bg-ops-alarm` (#8a3a33) idi ve
+       `band.tone` yalnız 8 piksellik noktayı değiştiriyordu — yani *"Karar bekleyen iş yok — masa
+       temiz"* cümlesi de bordo bantta çıkacaktı. Hem komponentin künyesi hem tasarım
+       (`admin-dashboard.md`: *"Sakin günde şerit kutlar, uyarmaz"*) bunu vaat ediyordu. ~~Zemin,
+       metin ve ikincil düğme artık tona bağlı; iki hâl var (sakin ↔ alarm), ara ton uydurulmadı.~~
+       **Bu düzeltme aynı gün geçersizleşti** (aşağıdaki tasarım hizalaması): zemini tona bağlamak
+       gerilimi çözmedi, yalnız yönünü çevirdi. Doğrusu zeminin hiç konuşmaması.
+    3. **Aynı hedefe iki düğme:** `primary` ve `secondary` ikisi de kuyruğa gidiyordu ve koşulları
+       çakışıyordu (`urgentCount > 0` ⊂ `totalCount > 0`) — ekranda yan yana *"Bekleyen İşler →"* ve
+       *"Bekleyen İşler (11)"* çizilmişti. Tek düğmede birleşti (sayı + ok). Kesim dalındaki iki düğme
+       FARKLI hedefe gittiği için (Hazırlık ↔ kuyruk) olduğu gibi kaldı.
+    4. **`↓ 4 dün` muğlaktı** ("dün 4" mü, "4 azaldı" mı) → **`↓ dünden 4 az`**.
+    5. **Aynı boşluk iki kutuda:** rota siparişi olmayan günde hem Teslimatlar hem Rota nabzı aynı
+       gerçeği yazıyordu. Nabız boşken artık hiç çizilmiyor — nabzın sorusu *"hangi rota geride"*,
+       cevabı yoksa soru da sorulmaz. Komponentin ulaşılamaz kalan boş-hâl dalı da silindi.
+  - **TASARIM KAYNAĞINA HİZALANDI (18.08, kullanıcı isteği: *"tasarım çok kötü değil mi?"*).**
+    Haklıydı ve sebebi zevk değildi: implement `design/project/Operasyon - Dashboard.dc.html`'den
+    sapmıştı — yani `CLAUDE §3`'ün *"implement ederken improvise ETME"* kuralı çiğnenmişti. Tasarım
+    **yoğun bir alet paneli** (tek çerçeve, saç teli bölme çizgileri, sıkı iç boşluk), ekrandaki ise
+    **gevşek bir kart ızgarasıydı**: on bir benzer yuvarlak dikdörtgen, hepsi aynı görsel ağırlıkta,
+    hiyerarşisiz. Sakin günde göstergelerin üçü sıfır olunca ekran "boş kutular tarlası" gibi
+    okunuyordu — yoğun ızgara sıfırı taşır, yüzen kartlar taşımaz.
+    - **Şerit:** zemin artık HER ZAMAN koyu ink, ton yalnız **noktada ve eyebrow'da** yaşıyor. Bu,
+      yukarıdaki "açık kalan gerilim"in de cevabı: başlık sıradaki eşiği, ton kuyruk aciliyetini
+      anlatıyordu ve ikisi çelişiyordu. Zemini tona bağlamak çözüm değildi (bu kez iyi haber alarm
+      renginde değil, kötü haber kutlama renginde çıkardı); zeminin **hiçbir şey iddia etmemesi**
+      çözüm. Renk orada bir hüküm değil, bir işaret.
+    - **Göstergeler:** dört ayrı kart → tek çerçeve, kolonlar arası saç teli çizgi, `13px 16px` iç
+      boşluk. Kolon sayısı veriden geliyor (`grid-template-columns` üretiliyor) — beşinci gösterge
+      (marj-altı, ikinci dilim) geldiğinde şerit kendi kolonunu açar, alt satıra düşmez.
+    - **Sparkline:** sağ üst köşeden değerin ALTINA taşındı, yanına "7 gün" etiketi geldi. Eskiden
+      etiketsiz ve sayıdan kopuktu: grafik değil moloz.
+    - **Gün akışı:** dört ayrı kart → tek çerçeve; durum artık sol kenarlıkla değil **üstteki 3px
+      şeritle** söyleniyor (yan yana dizilen kolonlarda sol kenarlık bir öncekinin sağ ayracına
+      yapışıp tek kalın çizgi gibi okunuyordu) ve "tamam/sırada/… kaldı" düz metin yerine çip.
+    - **Kuyruk:** küme başlığı `başlık — ayraç çizgisi — sayı` oldu (onsuz üç küme tek uzun liste
+      gibi okunuyordu); satırdaki çıplak rakam 34px'lik bir **sayı rozetine** girdi.
+    - **Teslimat başlığı:** zeminli şerit + `3 / 8 teslim`in altında ilerleme çubuğu. İki sayı
+      okunuyordu ama kıyaslanmıyordu.
+    - **Token:** şerit ham hex ile yazılamazdı ve `ops-ink` işe yaramıyordu (o MÜREKKEP rengi, koyu
+      temada AÇILIYOR — şerit gece beyaz bir levhaya dönerdi). Kendi ailesi eklendi: `ops-band`,
+      `-ink`, `-muted`, `-line`. Alarm bandıyla aynı gerekçeyle ters çevrilmiyor, ama alarm DEĞİL —
+      şerit sakin günü de taşıyor. Karanlıkta koyulaşmak yerine **kabarıyor** (karttan bir kademe
+      açık): koyu sayfada öne çıkmanın yolu daha da koyulaşmak değil. `packages/design-tokens`
+      ikizine de işlendi; parite testi zaten iki yönlü kilitliyor (ilk koşuda o yakaladı).
+    - **Ölçü hatası düzeltildi:** delta/kırılım satırları `ops-xs` (13px) yazılmıştı, tasarımın
+      11,5/10,5 px'i merdivende `ops-micro`ya düşüyor. `xs`te *"kapıda 320,80 € · vade 1.286,20 €"*
+      sarıyor ve alt satırda yalnız "€" kalıyordu (ölçüldü, ekran görüntüsü).
+    - **`BG_TONE` tablosu:** `EDGE_TONE` sol kenarlık rengi de taşıdığı için kenarlıksız çiplerde
+      `border-l-0` ile iptal ediliyordu — aynı iki sınıf beş yerde yan yana. Ayrı tablo, ayrı iş.
+    - **`WarehouseChip`:** depo kodu çipi iki yerde ayrı ayrı yazılıydı ve iki farklı renkteydi
+      (kurşuni ↔ mavi). Tek bileşen, mavi aile: kod bir uyarı değil bilgi.
+    - **İKİ SÜTUNUN KAYMASI ÇÖZÜLDÜ (kullanıcı bildirdi, ölçüldü).** Kuyruk sütununda kartlardan
+      önce bir küme etiketi satırı vardı, teslimat sütununda yoktu: başlıklar aynı yükseklikte
+      (`y=592`) başlıyor ama soldaki ilk kart `y=661,5`te, sağdaki kutu `y=634`te duruyordu —
+      **27,5 px** (etiket 19,5 + boşluk 8). Göz kırık bir taban çizgisi okuyor. Ölçü teslimat ve
+      nabız bölümlerinde BAŞLIK satırından ayraç satırına indirildi (`RuleRow`, etiketi isteğe
+      bağlı): yeni metin uydurulmadı, var olan ölçü bir kademe aşağı taşındı ve iki sütun yapıca
+      eşitlendi. Ölçümle doğrulandı — iki sütunun ilk kartı da `y=661,5`.
+      Kayma tasarımda da vardı ama görünmüyordu: mock'un sağ sütununda altı durak var, bizim
+      ekranımızda BOŞ HÂL — yani kusuru görünür kılan şey gerçek veri.
+    - **Ölçüldü:** `pnpm ui:shot /operations` — açık ve karanlık tema, 3000'de. ⚠ Görüntü **dev**
+      sunucusundan alındı: prod (3001) giriş duvarının arkasında, dev auth bypass'ı orada yok.
+    - ⚠ **`.dc.html`'e karşılık İŞLENMEDİ.** Tasarım dosyası kodun kaynağı; kodda alınan iki karar
+      (rota nabzının satırı DEPO değil ROTA · durak sırası ve tahmini varış saati YOK) tasarımda hâlâ
+      eski hâliyle duruyor. BEKLEYEN(09.3)
+    - ⚠ **Sakin şerit (ton `olive`) hâlâ canlı veriyle SINANMADI** — kuyrukta 11 kalem var, o dal
+      bugünkü veriyle üretilmiyor. İlk boş kuyruklu günde gözle doğrulanmalı. BEKLEYEN(09.3)
+  - **SIRADAKİ İŞ — GÜN AKIŞI ROTA BAZINA GEÇECEK, NABIZLA BİRLEŞECEK (kullanıcı kararı 18.08).**
+    Soru şuydu: *"gün akışı seçilen depodaki tüm rotaların yazılması şeklinde olsa daha fonksiyonel
+    olmaz mı?"* — ve kodu okuyunca bunun kozmetik değil, **iki ölçülmüş arızayı** kapattığı çıktı.
+    Bugün `dashboard-page-read` rotaları `listWithCodes()` ile SÜZGEÇSİZ okuyor:
+    1. **Depo bağlamı akışa uygulanmıyor.** Depo seçici siparişleri süzüyor (`warehouseIds` her
+       sorguya gidiyor) ama eşikler her deponun her rotasından hesaplanıyor — Strasbourg seçiliyken
+       akışta Colmar'ın kesimi görünebilir.
+    2. **Bugün koşmayan rota da sayılıyor.** Rota `weekdays` taşıyor, akış bunu hiç sormuyor; yalnız
+       cumartesi koşan bir rotanın kesimi salı günü "en erken" diye şeride yazılır.
+    İkisini de **"en erken" toplaması gizliyor** — tek sayı gösterildiği için hangi rotadan geldiği
+    görünmüyor (saatler eşitse `routeLabel` bile yazılmıyor). Rota bazına geçmek iki süzgeci
+    görünür kılarak zorlar; bu yüzden yapı değişikliği aynı zamanda düzeltmedir.
+    **Birleşme kullanıcının kararı:** rota nabzı zaten rota başına bir tablo (ad · depo çipi ·
+    hazırlık ilerlemesi · kendi hazırlık kesimi). Akış da rota başına olunca iki blok aynı şeyi
+    söylerdi. Tek tablo olacak: satır = bugün koşan rota, kolonlar = dört eşik + hazırlık ilerlemesi.
+    Şeridin *"SIRADAKİ · saat · geri sayım"* cümlesi değişmez — gösterilen rotaların en erken gelecek
+    eşiği, mantık aynı. `.dc.html`'e de bu hâliyle işlenmeli (yukarıdaki BEKLEYEN ile aynı tur).
   - **İkinci dilimde kalanlar:** kuyruğun altı kalemi — yaklaşan tarihli parti (`toBatchViews` deseni) ·
     uyuşmayan kurye kapanışı (**okuma kapısı yok**: `CourierDayCloseService`'te yalnız `close` var) ·
     limit aşan vadeli sipariş · B2B başvurusu · yoldaki transfer — ve **marj-altı fiyatlı ürün**
