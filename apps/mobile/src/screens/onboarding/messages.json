@@ -35,27 +35,20 @@
     "zip": {
       "kicker": "TESLİMAT BÖLGESİ",
       "title": "Siparişinizi size nasıl ulaştıralım?",
-      "body": "Posta kodunuzu girin; size nasıl ulaşacağımızı hemen söyleyelim.",
-      "field": "Posta kodu",
-      "placeholder": "Posta kodu — örn. 67000",
-      "insideNote": "Harika — kapınıza ücretsiz teslim ediyoruz! Kapıda ödeme de kullanabilirsiniz.",
-      "shippingNote": "Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız. Belirli bir tutarın üzerinde kargo ücretsiz — tutarı sepetinizde görürsünüz.",
-      "ambiguousNote": "Bu kod birden çok yerde geçerli — teslimat adresinizi girerken netleştireceğiz.",
-      "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
-      "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız."
+      "body": "Posta kodunuzu girin; size nasıl ulaşacağımızı hemen söyleyelim."
     },
     "back": "Geri",
     "delivery": {
       "kicker": "TESLİMAT NASIL ÇALIŞIR",
       "title": "İki teslimat yolumuz var",
-      "body": "Kataloğun tamamını herkese gösteriyoruz; posta kodunuz hangi ürünün size hangi yolla ulaşacağını söyler.",
+      "body": "Kataloğun tamamını herkese gösteriyoruz; ürünün kendisi hangi yolla geleceğini belirler.",
       "route": {
-        "title": "Kendi soğutuculu aracımızla",
-        "body": "Teslimat bölgemizdeyseniz katalogdaki her ürünü ısmarlayabilirsiniz — donuk ve soğuk zincir dâhil."
+        "title": "Soğuk zincir ürünleri: kendi aracımızla",
+        "body": "Donuk ve soğutulmuş ürünleri yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere kapınıza getiriyoruz."
       },
       "shipping": {
-        "title": "Kargoyla",
-        "body": "Bölge dışında yalnız kargolanabilir ürünler; soğuk zincir gerektirenler kargoyla gönderilemez."
+        "title": "Diğer bütün ürünler: kargoyla",
+        "body": "Soğuk zincir istemeyen ürünleri her adrese kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın."
       },
       "note": "Posta kodunuzu bu yüzden soruyoruz: her ürünün yanında size nasıl ulaşacağını yazabilelim diye."
     },
@@ -138,27 +131,20 @@
     "zip": {
       "kicker": "ZONE DE LIVRAISON",
       "title": "Comment vous livrer ?",
-      "body": "Saisissez votre code postal, nous vous dirons comment nous livrons.",
-      "field": "Code postal",
-      "placeholder": "Code postal — ex. 67000",
-      "insideNote": "Parfait — nous livrons gratuitement à votre porte ! Le paiement à la livraison est aussi possible.",
-      "shippingNote": "Expédition sous chaîne du froid en 2–4 jours ouvrés. Les frais de port sont offerts à partir d'un certain montant — vous le verrez dans votre panier.",
-      "ambiguousNote": "Ce code correspond à plusieurs lieux — nous préciserons lors de la saisie de l'adresse.",
-      "unknownNote": "Nous n'avons pas trouvé ce code — pouvez-vous vérifier la saisie ?",
-      "unresolvedNote": "Nous ne pouvons pas encore préciser la livraison pour ce code ; nous verrons cela à la commande."
+      "body": "Saisissez votre code postal, nous vous dirons comment nous livrons."
     },
     "back": "Retour",
     "delivery": {
       "kicker": "COMMENT NOUS LIVRONS",
       "title": "Deux modes de livraison",
-      "body": "Nous montrons le catalogue entier à tout le monde ; votre code postal indique par quel moyen chaque produit vous parvient.",
+      "body": "Nous montrons le catalogue entier à tout le monde ; c'est le produit lui-même qui détermine par quel moyen il vous parvient.",
       "route": {
-        "title": "Avec notre véhicule réfrigéré",
-        "body": "Dans notre zone, vous pouvez commander tout le catalogue — surgelés et chaîne du froid compris."
+        "title": "Produits sous chaîne du froid : notre camion",
+        "body": "Les surgelés et les produits frais ne voyagent qu'avec notre camion réfrigéré, aux adresses de notre zone de livraison."
       },
       "shipping": {
-        "title": "Par colis",
-        "body": "Hors zone, uniquement les produits expédiables ; ceux qui exigent la chaîne du froid ne partent pas en colis."
+        "title": "Tous les autres produits : par colis",
+        "body": "Les produits sans chaîne du froid partent par transporteur, à n'importe quelle adresse — que vous soyez dans notre zone ou non."
       },
       "note": "C'est pourquoi nous demandons votre code postal : pour indiquer à côté de chaque produit comment il vous parviendra."
     },
@@ -241,27 +227,20 @@
     "zip": {
       "kicker": "LIEFERGEBIET",
       "title": "Wie dürfen wir liefern?",
-      "body": "Geben Sie Ihre Postleitzahl ein — wir sagen Ihnen, wie wir liefern.",
-      "field": "Postleitzahl",
-      "placeholder": "Postleitzahl — z. B. 67000",
-      "insideNote": "Wunderbar — wir liefern kostenlos bis an Ihre Tür! Auch Zahlung bei Lieferung ist möglich.",
-      "shippingNote": "Versand mit geschützter Kühlkette in 2–4 Werktagen. Ab einem bestimmten Bestellwert ist der Versand kostenlos — den Betrag sehen Sie im Warenkorb.",
-      "ambiguousNote": "Dieser Code gilt für mehrere Orte — wir klären das bei der Adresseingabe.",
-      "unknownNote": "Diesen Code konnten wir nicht finden — bitte die Eingabe prüfen.",
-      "unresolvedNote": "Für diesen Code können wir die Lieferart noch nicht sagen; wir klären das bei der Bestellung."
+      "body": "Geben Sie Ihre Postleitzahl ein — wir sagen Ihnen, wie wir liefern."
     },
     "back": "Zurück",
     "delivery": {
       "kicker": "SO LIEFERN WIR",
       "title": "Zwei Lieferwege",
-      "body": "Wir zeigen allen den gesamten Katalog; Ihre Postleitzahl sagt, auf welchem Weg jedes Produkt zu Ihnen kommt.",
+      "body": "Wir zeigen allen den gesamten Katalog; das Produkt selbst bestimmt, auf welchem Weg es zu Ihnen kommt.",
       "route": {
-        "title": "Mit unserem Kühlfahrzeug",
-        "body": "In unserem Liefergebiet können Sie den gesamten Katalog bestellen — auch Tiefkühl- und Kühlkettenware."
+        "title": "Kühlkettenware: mit unserem Fahrzeug",
+        "body": "Tiefkühl- und Frischware bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug — an Adressen in unserem Liefergebiet."
       },
       "shipping": {
-        "title": "Per Paketversand",
-        "body": "Außerhalb nur versandfähige Produkte; Kühlkettenware kann nicht per Paket verschickt werden."
+        "title": "Alle übrigen Produkte: per Paket",
+        "body": "Produkte ohne Kühlkette versenden wir an jede Adresse — ob Sie in unserem Liefergebiet wohnen oder nicht."
       },
       "note": "Deshalb fragen wir nach der Postleitzahl: damit neben jedem Produkt steht, wie es zu Ihnen kommt."
     },

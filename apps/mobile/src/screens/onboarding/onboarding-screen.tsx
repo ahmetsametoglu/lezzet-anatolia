@@ -1,3 +1,4 @@
+import { formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -11,8 +12,12 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
-import { formatPointsValue } from '@/screens/customer-kit/points-value';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
+/* YER NOTLARI ORTAK SÖZLÜKTEN (18.08 · MB-74'ün KÖKÜ): dört hâl cümlesi burada da yazılıydı ve
+   `lib/places` ile birebir aynıydı — biri hariç. Bölge dışı cümlesi zamanla ayrışmış, onboarding
+   *"soğuk zincir korumalı kargoyla ulaştırırız"* diyerek kargoya veremediğimiz bir şeyi vaat eder
+   olmuştu. İki kopya varken hangisinin doğru olduğunu kimse göremez; kopya kaldırıldı. */
+import placeMessages from '@/lib/places/messages.json';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
 import { toastSuccess } from '@/lib/toast/toast-store';
@@ -195,18 +200,19 @@ export function OnboardingScreen() {
      değil uyarıdır, çözülemeyen hâl ise BİZİM eksiğimiz olabilir (sözleşme künyesi). */
   const zipInside = place?.kind === 'resolved' && place.place.inRoute;
   const placeName = place?.kind === 'resolved' ? place.place.placeName : null;
+  const zipCopy = placeMessages[locale].zip;
   const zipNote =
     place === null
       ? null
       : place.kind === 'resolved'
         ? place.place.inRoute
-          ? t.zip.insideNote
-          : t.zip.shippingNote
+          ? zipCopy.insideNote
+          : zipCopy.shippingNote
         : place.kind === 'ambiguous'
-          ? t.zip.ambiguousNote
+          ? zipCopy.ambiguousNote
           : place.kind === 'unknown'
-            ? t.zip.unknownNote
-            : t.zip.unresolvedNote;
+            ? zipCopy.unknownNote
+            : zipCopy.unresolvedNote;
 
   /**
    * Her çıkış (bitir/atla/hesap aç) o ana dek yapılan seçimleri saklar — yarım bilgi de bilgidir.
@@ -417,11 +423,11 @@ export function OnboardingScreen() {
             <TextInput
               value={zip}
               onChangeText={onZipChange}
-              placeholder={t.zip.placeholder}
+              placeholder={zipCopy.placeholder}
               placeholderTextColor={theme.colors.muted}
               keyboardType="number-pad"
               style={styles.zipInput}
-              accessibilityLabel={t.zip.field}
+              accessibilityLabel={zipCopy.field}
               testID="onboarding-zip"
             />
             {/* Cevap alanı HEP AYRILMIŞ (kullanıcı bulgusu 09.08): içerik gelince ekran zıplamaz.
@@ -549,13 +555,13 @@ export function OnboardingScreen() {
                     <Text style={styles.pointsRate} testID="onboarding-points-rate">
                       {t.points.rate
                         .replace('{points}', String(pointsRules.rules.redeem.minimumPoints))
-                        .replace('{value}', formatPointsValue(pointsRules.rules.redeem.valueCents, locale))}
+                        .replace('{value}', formatCompactEuro(pointsRules.rules.redeem.valueCents, locale))}
                     </Text>
                     {/* En güçlü sayı ayrıca söyleniyor ama UYDURULMUYOR: getiren ödülü listede
                         yoksa (ayar okunamadı) bu cümle de hiç çizilmez. */}
                     {referralValueCents === null ? null : (
                       <Text style={styles.pointsHighlight} testID="onboarding-points-highlight">
-                        {t.points.highlight.replace('{value}', formatPointsValue(referralValueCents, locale))}
+                        {t.points.highlight.replace('{value}', formatCompactEuro(referralValueCents, locale))}
                       </Text>
                     )}
                   </View>

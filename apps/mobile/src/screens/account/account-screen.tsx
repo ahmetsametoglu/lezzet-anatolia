@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { formatCompactEuro, formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -31,7 +31,6 @@ import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/ad
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import { PointsEarnList, type PointsEarnActions } from '@/screens/customer-kit/points-earn-list';
-import { formatPointsValue } from '@/screens/customer-kit/points-value';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
@@ -461,7 +460,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
                 <Text style={styles.cardBody}>
                   {t.points.body
                     .replace('{threshold}', String(wallet.redeem.minimumPoints))
-                    .replace('{value}', formatPointsValue(wallet.redeem.valueCents, locale))}
+                    .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))}
                 </Text>
                 {wallet.balance < wallet.redeem.minimumPoints ? (
                   <Text style={styles.pointsGap}>
@@ -474,7 +473,7 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
                       ? t.points.converting
                       : t.points.convert
                           .replace('{threshold}', String(wallet.redeem.minimumPoints))
-                          .replace('{value}', formatPointsValue(wallet.redeem.valueCents, locale))
+                          .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))
                   }
                   onPress={convertPoints}
                   disabled={redeeming || wallet.balance < wallet.redeem.minimumPoints}

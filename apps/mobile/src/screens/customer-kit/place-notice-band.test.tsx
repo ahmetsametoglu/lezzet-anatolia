@@ -54,6 +54,24 @@ jest.mock('@/lib/auth/supabase', () => ({
   }),
 }));
 
+/* İlan edilen tutarlar gerçek uçtan (18.08): posta kodu çekmecesi kargo ücretini oradan yazıyor.
+   Bandın konusu bu değil ama çekmece onun içinde kuruluyor — mock'lanmazsa çağrı ağa çıkardı. */
+jest.mock('@/lib/api/delivery-terms', () => ({
+  fetchDeliveryTerms: () =>
+    Promise.resolve({
+      data: {
+        minBasketRouteCents: 4000,
+        minBasketShippingCents: 0,
+        freeShippingCents: 6000,
+        shippingFeeCents: 790,
+        codMaxCents: 50_000,
+        shippingCountries: ['FR', 'DE'],
+      },
+      error: null,
+      status: 200,
+    }),
+}));
+
 const t = messages.tr.placeNotice;
 
 function reply(status: number, body: unknown): Response {

@@ -18,6 +18,7 @@ import { invite, inviteClaim } from './invite';
 import { orders } from './orders';
 import { packages } from './packages';
 import { payments } from './payments';
+import { deliveryTerms } from './delivery-terms';
 import { places } from './places';
 import { points, pointsRules } from './points';
 import { preferences } from './preferences';
@@ -60,6 +61,9 @@ v1.route('/', recipes);
 v1.route('/', feedback);
 // Yer çözümü onboarding'in GİRİŞ sorusudur — hesap açılmadan sorulur (`places.ts` künyesi).
 v1.route('/', places);
+// İlan edilen teslimat tutarları: posta kodu adımı ve yasal sayfa hesapsız açılıyor, sayıyı
+// sözlükte dondurmamak için uç de açık (`delivery-terms.ts` künyesi).
+v1.route('/', deliveryTerms);
 // Keşif turu da açık kümededir (21.19) ve gerekçesi ÖLÇÜLMÜŞ bir web kararıdır: tur ziyaretçiye
 // açıktır — `swipeAction` kimliği sunucuda çözer ve yoksa kaydırmayı KİMLİKSİZ yazar. Bearer varsa
 // yalnız iki şey değişir: oylanmış kartlar destede elenir ve oy sahibine yazılıp puan doğar.

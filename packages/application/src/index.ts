@@ -361,6 +361,10 @@ export {
   SHIPPING_FEE_DEFAULT,
   SHIPPING_FEE_KEY,
 } from './cart/settings-keys';
+// Bilgi sayfalarının ilan ettiği tutarlar (18.08): yasal "Teslimat ve iade", SSS ve posta kodu notu
+// sayıyı cümleye GÖMÜYORDU; artık aynı `settings` satırından okuyorlar.
+export { COD_MAX_DEFAULT, COD_MAX_KEY, readPublicDeliveryTerms } from './settings/public-terms';
+export type { PublicDeliveryTerms } from './settings/public-terms';
 
 // ── Sipariş oluşturma zinciri (07.2 · 07.3 · 07.4 · 08.13) — TERFİ aşama 2/3 ────────────────
 // Kaynak `apps/web/lib/{delivery/places,order/{delivery,checkout-options,reserve,checkout-draft}}.ts`

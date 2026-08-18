@@ -1151,7 +1151,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
 > hepsi açık) · A14 kısmen (sepet misafirde cihazda yaşıyor, adres yerine posta kodu gösteriliyor;
 > **giriş duvarının yeri ölçülemedi** çünkü "Siparişi tamamla" asgari sepet yüzünden kapalıydı).
 
-- [ ] **MB-74 · Onboarding'in iki adımı SOĞUK ZİNCİR konusunda birbiriyle çelişiyor.**
+- [x] **MB-74 · Onboarding'in iki adımı SOĞUK ZİNCİR konusunda birbiriyle çelişiyor.**
   Ölçüldü (18.08, cihazda, Türkçe):
   · **Teslimat adımı:** *"Kargoyla — Bölge dışında yalnız kargolanabilir ürünler; **soğuk zincir
     gerektirenler kargoyla gönderilemez**."*
@@ -1172,6 +1172,14 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   Bugün *"soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız"* diyerek gönderemeyeceğimiz
   bir şeyi vaat ediyor. Öteki iki yerin diliyle yazılmalı: kargo var, ama soğuk zincir isteyen
   ürünler kargoya girmiyor. Metin kararı olduğu için yazımı kullanıcıya bırakıldı.
+
+  **KAPANDI (18.08 · `(21.82)`) — ve kökü çelişki değil KOPYAYMIŞ.** Kullanıcı cümleyi eledi
+  (*"anlamsız geliyor kulağa"*) ve doğru kurgusunu verdi: önce ÜRÜN, sonra yol. Ölçünce görüldü ki
+  onboarding'in dört hâl cümlesi `lib/places/messages.json` ile **birebir aynıydı, biri hariç** —
+  yani iki kopyadan biri zamanla ayrışmıştı ve hangisinin doğru olduğunu kimse göremiyordu. Kopya
+  kaldırıldı: onboarding artık ortak sözlüğü okuyor, cümle bir daha ayrışamaz. Konunun tamamı
+  (11 temas noktası, üç dil) tek kalıba indi ve ilan edilen tutarlar `settings`ten okunur oldu.
+  Ayrıntı ve öteki üç çelişki `docs/build/21-mobil-uygulama.md (21.82)`de.
 
 - [x] **MB-75 · MİSAFİRİN KEŞİF TURUNA HİÇBİR KAPISI YOK — künye açıkça tersini söz veriyor.**
   Kullanıcı sordu (18.08): *"vitrinde en altta keşif kartı görünmesi gerekirken herhangi bir şey

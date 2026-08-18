@@ -32,6 +32,9 @@ export * from './b2b-api.schema';
 export * from './discover-api.schema';
 // Yer çözümü — onboarding posta kodu adımı; dört hâl ayrık, depo kimliği bilerek dışarıda (19.9).
 export * from './place-api.schema';
+// İlan edilen teslimat tutarları — bilgi metinlerinin okuduğu ayarlar; sepetin kapsamıyla
+// karıştırılmaz (gerekçe dosya başlığında).
+export * from './delivery-terms-api.schema';
 // Katalog — kategori/ürün/varyant/stok varlık şemalarından türer.
 export * from './catalog-api.schema';
 // Vitrin (ana ekran) — katalog kartını ve kategori/koleksiyon/tarif varlık şemalarını türetir;

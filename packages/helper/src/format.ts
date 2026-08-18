@@ -33,6 +33,30 @@ export function formatPrice(cents: number, locale: Locale): string {
 }
 
 /**
+ * **Eşik ve eşleştirme tutarı**: tam euroda kuruşsuz (`5 €`), kesirlide kuruşlu (`7,90 €`).
+ *
+ * `formatPrice` her tutarı iki haneli kuruşla yazar ve FİYAT için doğrusu budur: 1,84 € ile 1,80 €
+ * farklı şeylerdir. Ama her tutar bir fiyat değildir — *"500 puan = 5 € kupon"* bir EŞLEŞTİRME,
+ * *"60 € üzeri kargo ücretsiz"* bir EŞİKTİR; orada `5,00 €` yazmak olmayan bir hassasiyet iddia
+ * eder ve cümleyi ağırlaştırır. Sınır aritmetiktir, zevk değil: `cents % 100`.
+ *
+ * ÜRÜN ve SİPARİŞ tutarları bununla YAZILMAZ — onlar kuruşuyla, `formatPrice` ile yazılır.
+ *
+ * Terfi 18.08: gövde `apps/mobile/src/screens/customer-kit/points-value.ts`ten geldi. İkinci
+ * tüketen doğdu (ilan edilen teslimat tutarları) ve o tüketen web'de de var — kural mobil bir
+ * ekranın içinde kalsaydı web kendi kopyasını yazardı, `formatPrice`ın 29.07'de yaşadığı ayrışmanın
+ * aynısı.
+ */
+export function formatCompactEuro(cents: number, locale: Locale): string {
+  const full = formatPrice(cents, locale);
+  if (cents % 100 !== 0) return full;
+  /* Kuruş kısmını ATIYORUZ, yeniden kurmuyoruz: `formatPrice`in ürettiği dizgede ayraç ve €
+     yerleşimi zaten doğru; tek yapılacak "<ayraç>00" parçasını silmek. Ayraç dile göre `,` ya da
+     `.` olabildiği için desen ikisini de kabul eder. */
+  return full.replace(/[.,]00(?=\D*$)/, '');
+}
+
+/**
  * Kısa tarih ("22 Temmuz" · "22 juillet" · "22. Juli") — bir kaydı TANITMAK için, kayıt tutmak için
  * değil. Yıl yazılmaz: müşteri kendi siparişini gün+ay ile zaten tanır, yıl satırı uzatır. Ayın adı
  * kısaltılmaz — "22 Tem" resmî bir belge tonudur, vitrinin dili değil.

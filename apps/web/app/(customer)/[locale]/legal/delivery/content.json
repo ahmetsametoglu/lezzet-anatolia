@@ -11,26 +11,28 @@
         ]
       },
       {
-        "id": "asgari",
-        "heading": "Asgari sepet tutarı",
+        "id": "yollar",
+        "heading": "Hangi ürün hangi yolla gelir",
         "body": [
-          "Asgari sepet tutarı 40 €'dur ve her iki gönderim yolunda da geçerlidir. Sepetiniz bu tutarın altındaysa ne kadar kaldığı sepette yazar."
+          "Soğuk zincir isteyen ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz. Bu ürünler kargoya verilemez: soğuk zinciri kargo koşullarında güvenle koruyamayız, koruyamadığımız bir şeyi de taşımayız.",
+          "Soğuk zincir istemeyen bütün ürünleri kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın. Yani bölge dışında olmanız alışveriş yapamayacağınız anlamına gelmez; yalnız soğuk zincir isteyen ürünler size ulaşamaz.",
+          "Hangi ürünün hangi yolla geleceğini katalogda ve ürün sayfasında yazıyoruz. Bölge dışı bir adres seçtiğinizde soğuk zincir kalemleri siparişe eklenmez, sepetinizde bekler."
         ]
       },
       {
         "id": "kargo",
         "heading": "Kargo ile gönderim",
         "body": [
-          "Bölge dışındaki adreslere yalnız raf ömürlü ürünlerimizi gönderiyoruz — Fransa ve Almanya geneline. Dondurulmuş ürünler kargoya çıkmaz: soğuk zinciri kargo koşullarında güvenle koruyamayacağımız için bu ürünleri yalnız kendi aracımızla, bölge içinde teslim ediyoruz.",
-          "Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz. Ücret sepette, siparişi tamamlamadan önce görünür. Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında elinizde olur.",
-          "Hangi ürünün kargoya çıkabildiğini katalogda ve ürün sayfasında görürsünüz. Bölge dışı bir adres seçtiğinizde, yalnız bölge içinde teslim edilebilen kalemlerin sepetten çıkarılması gerekir."
+          "Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur.",
+          "Sepetinizde hem kargoya uygun hem yalnız araçla gidebilen kalemler varsa sepet iki gruba ayrılır: kapıya gidenler ve kargoya gidenler ayrı sipariş, ayrı ödeme olur. Kargolu siparişi vermek zorunlu değildir — vermezseniz o kalemler sepette bekler.",
+          "Kargo ücreti ve ücretsiz kargo eşiği aşağıda, \"Güncel tutarlar\" bölümündedir; aynı sayıları sepette de, siparişi tamamlamadan önce görürsünüz."
         ]
       },
       {
         "id": "soguk-zincir",
         "heading": "Soğuk zincir",
         "body": [
-          "Dondurulmuş ürünlerimiz üreticisinden şoklanmış olarak gelir; depomuzda da aracımızda da soğuk zincir bozulmaz. Teslim aldığınızda doğrudan dondurucunuza koymanız yeterlidir.",
+          "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir; depomuzda da aracımızda da soğuk zincir bozulmaz. Teslim aldığınızda doğrudan dondurucunuza koymanız yeterlidir. Soğutulmuş ürünler de aynı zincirin içindedir — onlar için de 0–4 °C aralığı yolculuk boyunca korunur, teslim alınca buzdolabına konur.",
           "Bu ürünleri kendimiz teslim ettiğimiz için yolda geçen süre kısadır. Yine de teslim anında ürünlerin kenarları hafif yumuşamış olabilir; bu normaldir ve kaliteyi etkilemez. Ürünler tamamen çözülmüş geldiyse dondurucuya koymayın ve aşağıdaki gibi bize bildirin."
         ]
       },
@@ -59,6 +61,23 @@
         ]
       }
     ],
+    "amounts": {
+      "heading": "Güncel tutarlar",
+      "fee": "Kargo ücreti {fee}; {threshold} ve üzeri siparişlerde alınmaz.",
+      "minBasketRoute": "Kapıya teslimde asgari sepet tutarı {amount}.",
+      "minBasketRouteNone": "Kapıya teslimde asgari sepet tutarı yoktur.",
+      "minBasketShipping": "Kargo siparişlerinde asgari sepet tutarı {amount}.",
+      "minBasketShippingNone": "Kargo siparişlerinde asgari sepet tutarı yoktur — kargo ücretini zaten siz ödüyorsunuz.",
+      "cod": "Kapıda ödeme, {amount} ve altındaki bölge içi siparişlerde seçilebilir; üzerinde ödeme sipariş sırasında alınır.",
+      "countries": "Kargoyla gönderim yaptığımız ülkeler: {countries}.",
+      "and": " ve ",
+      "countryNames": {
+        "FR": "Fransa",
+        "DE": "Almanya"
+      },
+      "unavailable": "Güncel kargo ücretini, ücretsiz kargo eşiğini ve asgari sepet tutarını sepetinizde ve ödeme adımında görürsünüz.",
+      "note": "Bu tutarlar perakende alışverişin genel kuralıdır ve sistemin bugün uyguladığı değerlerdir; değiştiklerinde bu sayfa da onlarla birlikte değişir. Bazı bölgelerde ve profesyonel hesaplarda farklı bir eşik geçerli olabilir — size uygulanan tutarı her zaman sepetinizde görürsünüz."
+    },
     "notice": {
       "text": "Aklınızdaki soruya burada cevap bulamadıysanız",
       "faq": "SSS'ye bakın",
@@ -77,26 +96,28 @@
         ]
       },
       {
-        "id": "asgari",
-        "heading": "Montant minimum de commande",
+        "id": "yollar",
+        "heading": "Quel produit arrive par quel moyen",
         "body": [
-          "Le montant minimum de commande est de 40 €. Il s'applique aux deux modes d'envoi. Si votre panier est en dessous, le montant restant est indiqué dans le panier."
+          "Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Ils ne peuvent pas partir en colis : nous ne pouvons pas garantir la chaîne du froid dans les conditions d'expédition, et nous ne transportons pas ce que nous ne pouvons pas garantir.",
+          "Tous les autres produits partent par transporteur — que vous soyez dans notre zone ou non. Être hors zone ne veut donc pas dire que vous ne pouvez pas commander : seuls les produits sous chaîne du froid ne peuvent pas vous parvenir.",
+          "Le catalogue et chaque fiche produit indiquent par quel moyen le produit vous parviendra. Si vous choisissez une adresse hors zone, les articles sous chaîne du froid ne sont pas ajoutés à la commande : ils restent dans votre panier."
         ]
       },
       {
         "id": "kargo",
         "heading": "Expédition",
         "body": [
-          "Hors de notre zone, nous n'expédions que nos produits de longue conservation, dans toute la France et en Allemagne. Les produits surgelés ne partent pas en colis : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les livrons qu'avec notre propre véhicule, à l'intérieur de la zone.",
-          "Les frais d'expédition sont de 7,90 € et ils sont offerts au-delà de 60 € de commande. Le montant est affiché dans le panier avant la validation. Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France, un jour de plus pour l'Allemagne.",
-          "Vous voyez dans le catalogue et sur chaque fiche produit ce qui peut être expédié. Si vous choisissez une adresse hors zone, les articles livrables uniquement dans la zone doivent être retirés du panier."
+          "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France, un jour de plus pour les adresses à l'étranger.",
+          "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée n'est pas obligatoire — sinon ces articles restent dans votre panier.",
+          "Les frais d'expédition et le seuil de franco de port figurent ci-dessous, dans « Montants en vigueur » ; vous retrouvez les mêmes chiffres dans le panier, avant la validation."
         ]
       },
       {
         "id": "soguk-zincir",
         "heading": "Chaîne du froid",
         "body": [
-          "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur.",
+          "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur. Les produits frais font partie de la même chaîne : la plage 0–4 °C est maintenue pendant tout le trajet, et à la réception ils vont au réfrigérateur.",
           "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le congelez pas et signalez-le nous comme indiqué ci-dessous."
         ]
       },
@@ -125,6 +146,23 @@
         ]
       }
     ],
+    "amounts": {
+      "heading": "Montants en vigueur",
+      "fee": "Les frais d'expédition sont de {fee} ; ils sont offerts à partir de {threshold} de commande.",
+      "minBasketRoute": "Pour la livraison à domicile, le montant minimum de commande est de {amount}.",
+      "minBasketRouteNone": "Pour la livraison à domicile, il n'y a pas de montant minimum de commande.",
+      "minBasketShipping": "Pour les commandes expédiées, le montant minimum est de {amount}.",
+      "minBasketShippingNone": "Pour les commandes expédiées, il n'y a pas de montant minimum — les frais de port sont déjà à votre charge.",
+      "cod": "Le paiement à la livraison est possible sur les commandes en zone jusqu'à {amount} ; au-delà, le paiement est encaissé lors de la commande.",
+      "countries": "Pays desservis par transporteur : {countries}.",
+      "and": " et ",
+      "countryNames": {
+        "FR": "France",
+        "DE": "Allemagne"
+      },
+      "unavailable": "Vous retrouvez les frais d'expédition, le seuil de franco de port et le montant minimum en vigueur dans votre panier et à l'étape du paiement.",
+      "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent à ce que le système applique aujourd'hui ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
+    },
     "notice": {
       "text": "Vous ne trouvez pas la réponse à votre question ici ?",
       "faq": "Consultez la FAQ",
@@ -143,26 +181,28 @@
         ]
       },
       {
-        "id": "asgari",
-        "heading": "Mindestbestellwert",
+        "id": "yollar",
+        "heading": "Welches Produkt kommt auf welchem Weg",
         "body": [
-          "Der Mindestbestellwert beträgt 40 € und gilt für beide Versandwege. Liegt Ihr Warenkorb darunter, wird der fehlende Betrag im Warenkorb angezeigt."
+          "Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Sie können nicht als Paket verschickt werden: Unter Versandbedingungen können wir die Kühlkette nicht sicher gewährleisten, und was wir nicht gewährleisten können, transportieren wir nicht.",
+          "Alle übrigen Produkte versenden wir per Paket — ob Sie in unserem Liefergebiet wohnen oder nicht. Außerhalb des Gebiets zu wohnen heißt also nicht, dass Sie nicht bestellen können: Nur Produkte mit Kühlkette können Sie nicht erreichen.",
+          "Im Katalog und auf jeder Produktseite steht, auf welchem Weg das Produkt zu Ihnen kommt. Wählen Sie eine Adresse außerhalb des Gebiets, werden Kühlkettenartikel nicht in die Bestellung aufgenommen — sie bleiben in Ihrem Warenkorb."
         ]
       },
       {
         "id": "kargo",
         "heading": "Versand",
         "body": [
-          "Außerhalb unseres Liefergebiets versenden wir nur unsere lagerfähigen Produkte — in ganz Frankreich und Deutschland. Tiefgekühlte Produkte gehen nicht als Paket auf die Reise: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, liefern wir sie ausschließlich mit unserem eigenen Fahrzeug innerhalb des Gebiets.",
-          "Die Versandkosten betragen 7,90 € und entfallen ab 60 € Bestellwert. Der Betrag wird im Warenkorb vor dem Abschluss der Bestellung angezeigt. Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich mit 2 bis 4 Werktagen, in Deutschland mit einem Tag mehr.",
-          "Was versandfähig ist, sehen Sie im Katalog und auf jeder Produktseite. Wenn Sie eine Adresse außerhalb des Gebiets wählen, müssen die nur im Gebiet lieferbaren Artikel aus dem Warenkorb entfernt werden."
+          "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich mit 2 bis 4 Werktagen, bei Adressen im Ausland mit einem Tag mehr.",
+          "Enthält Ihr Warenkorb sowohl versandfähige als auch nur per Fahrzeug lieferbare Artikel, wird er geteilt: Haustürlieferung und Versand werden zu zwei getrennten Bestellungen mit getrennter Zahlung. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
+          "Versandkosten und Freigrenze stehen unten unter „Aktuelle Beträge“; dieselben Zahlen sehen Sie auch im Warenkorb, vor dem Abschluss der Bestellung."
         ]
       },
       {
         "id": "soguk-zincir",
         "heading": "Kühlkette",
         "body": [
-          "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller; die Kühlkette wird weder in unserem Lager noch in unserem Fahrzeug unterbrochen. Nach dem Empfang legen Sie sie einfach direkt in Ihren Gefrierschrank.",
+          "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller; die Kühlkette wird weder in unserem Lager noch in unserem Fahrzeug unterbrochen. Nach dem Empfang legen Sie sie einfach direkt in Ihren Gefrierschrank. Frischware gehört zur selben Kette: Für sie halten wir den Bereich 0–4 °C über den gesamten Weg ein, und nach dem Empfang kommt sie in den Kühlschrank.",
           "Da wir diese Produkte selbst ausliefern, ist der Weg kurz. Dennoch können die Ränder der Produkte bei der Übergabe leicht angetaut sein; das ist normal und beeinträchtigt die Qualität nicht. Ist der Inhalt vollständig aufgetaut, frieren Sie ihn nicht ein und melden Sie es uns wie unten beschrieben."
         ]
       },
@@ -191,6 +231,23 @@
         ]
       }
     ],
+    "amounts": {
+      "heading": "Aktuelle Beträge",
+      "fee": "Die Versandkosten betragen {fee}; ab {threshold} Bestellwert entfallen sie.",
+      "minBasketRoute": "Für die Haustürlieferung beträgt der Mindestbestellwert {amount}.",
+      "minBasketRouteNone": "Für die Haustürlieferung gibt es keinen Mindestbestellwert.",
+      "minBasketShipping": "Für Versandbestellungen beträgt der Mindestbestellwert {amount}.",
+      "minBasketShippingNone": "Für Versandbestellungen gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin.",
+      "cod": "Zahlung bei Lieferung ist bei Bestellungen im Liefergebiet bis {amount} möglich; darüber wird die Zahlung bei der Bestellung eingezogen.",
+      "countries": "Länder, in die wir per Paket versenden: {countries}.",
+      "and": " und ",
+      "countryNames": {
+        "FR": "Frankreich",
+        "DE": "Deutschland"
+      },
+      "unavailable": "Die aktuellen Versandkosten, die Freigrenze und den Mindestbestellwert sehen Sie in Ihrem Warenkorb und im Zahlungsschritt.",
+      "note": "Diese Beträge sind die allgemeine Regel für Privatkunden und die aktuell im System gültigen Werte; ändern sie sich, ändert sich diese Seite mit. In einzelnen Gebieten und bei Geschäftskonten kann eine andere Grenze gelten — den für Sie geltenden Betrag sehen Sie immer in Ihrem Warenkorb."
+    },
     "notice": {
       "text": "Sie finden hier keine Antwort auf Ihre Frage?",
       "faq": "Sehen Sie in den FAQ nach",

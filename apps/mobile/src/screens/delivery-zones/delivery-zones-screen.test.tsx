@@ -32,7 +32,28 @@ jest.mock('@/lib/auth/supabase', () => ({
   }),
 }));
 
+/* İlan edilen tutarlar da gerçek uçtan (18.08): kapanış cümlesinin ülkeleri oradan geliyor.
+   Mock'lanmasaydı `apiFetch` env arar ve testte patlardı — puan kurallarının aynı deseni. */
+jest.mock('@/lib/api/delivery-terms', () => ({
+  fetchDeliveryTerms: () =>
+    Promise.resolve({
+      data: {
+        minBasketRouteCents: 4000,
+        minBasketShippingCents: 0,
+        freeShippingCents: 6000,
+        shippingFeeCents: 790,
+        codMaxCents: 50_000,
+        shippingCountries: ['FR', 'DE'],
+      },
+      error: null,
+      status: 200,
+    }),
+}));
+
 const t = messages.tr;
+
+/** Kapanış cümlesinin ülke yer tutucusu doldurulmuş hâli — cümleyi testte yeniden yazmamak için. */
+const closingWith = (countries: string) => t.closing.replace('{countries}', countries);
 
 function okResponse(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
@@ -91,7 +112,9 @@ describe('DeliveryZonesScreen', () => {
     // Satır başına TEK yer: ad + parantez içinde kodları (kullanıcı kararı 10.08).
     expect(screen.getByText('Strasbourg (67000 · 67100)')).toBeOnTheScreen();
     expect(screen.getByText('Kehl (77694)')).toBeOnTheScreen();
-    expect(screen.getByText(t.closing)).toBeOnTheScreen();
+    // Kapanış cümlesinin ÜLKELERİ veriden (18.08): metne "Fransa ve Almanya" yazılıydı, artık
+    // kargo depolarından türüyor — ekran yalnız yer tutucuyu dolduruyor.
+    expect(await screen.findByText(closingWith('Fransa ve Almanya'))).toBeOnTheScreen();
   });
 
   /* Yer kaydı OLMAYAN kod (sözleşmenin `name: null` hâli): kod yine listelenir, yalnız başlıksız —
@@ -116,7 +139,7 @@ describe('DeliveryZonesScreen', () => {
     expect(await screen.findByTestId('zones-empty')).toBeOnTheScreen();
     expect(screen.queryByTestId('zones-error')).toBeNull();
     // Kargo cümlesi boş listede de doğrudur ve gizlenmez.
-    expect(screen.getByText(t.closing)).toBeOnTheScreen();
+    expect(await screen.findByText(closingWith('Fransa ve Almanya'))).toBeOnTheScreen();
   });
 
   it('okuma düşerse hata kutusu çıkar; tekrar dene listeyi getirir', async () => {

@@ -4002,6 +4002,66 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   + katalog/onboarding jest paketi (**38 test**). **Cihazda ölçüldü:** koleksiyon kataloğu kenardan
   kenara bant, çip rayı yok, ızgara yerinde.
 
+- [x] (21.82) **SOĞUK ZİNCİR ANLATISI TEK KALIBA İNDİ; İLAN EDİLEN TUTARLAR AYARDAN OKUNUYOR
+  (kullanıcı kararı 18.08)**
+  → `touches: packages/{helper,application,types,database}/src/**, apps/mobile-api/src/api/v1/{router,delivery-terms}.ts,
+  apps/mobile/src/{lib/places,lib/api,screens/{customer-kit,delivery-zones,legal,onboarding}}/*,
+  apps/web/app/(customer)/[locale]/{messages.json,legal/{delivery,faq,sales}}/*, apps/web/components/customer/ui/site-frame-messages.json`
+
+  **NEDEN:** kullanıcı A15'te okuduğu cümleyi eledi — *"Her yere kargoyla gönderiyoruz. Yalnız soğuk
+  zincir isteyen ürünler gidemiyor. Bu ifade anlamsız geliyor kulağa."* ve doğru kurgusunu verdi:
+  **önce ÜRÜN, sonra yol.** Konuyla ilgili müşteriye görünen bütün metinler çıkarıldı (245 satır,
+  üç dil, 11 temas noktası) ve tek kalıba indirildi: *"Soğuk zincir isteyen ürünler (donuk ve
+  soğutulmuş) → yalnız kendi aracımızla, bölge içi adreslere. Diğer bütün ürünler → her adrese
+  kargoyla."*
+
+  **1 · KOD İKİ AYRI GERÇEK TUTUYOR, METİNLER İKİSİNİ EZMİŞ.** `storage_type` (soğuk zincir gerekir
+  mi) ile `shippable` (kargoya verilebilir mi) AYRI alanlar — `domain-core/catalog/storage.ts`
+  künyesi bunu açıkça yazıyor. Metinlerin çoğu ikisini tek cümlede birleştirip SEBEBİ kural gibi
+  yazmıştı; *"soğuk zincir isteyen ürünler gidemiyor"* cümlesi buradan doğuyordu. Aynı ürün kümesine
+  dört ayrı ad veriliyordu (*kargolanabilir · dayanıklı · raf ömürlü · gönderebildiğimiz*); tek terime
+  indi.
+
+  **2 · MB-74'ÜN KÖKÜ: AYNI SÖZLÜK İKİ KOPYA.** Onboarding'in posta kodu adımı dört hâl cümlesini
+  KENDİ `messages.json`ında taşıyordu ve `lib/places` ile birebir aynıydı — biri hariç. Bölge dışı
+  cümlesi ayrışmış, onboarding *"Soğuk zincir korumalı kargoyla ulaştırırız"* diyerek kargoya
+  veremediğimiz bir şeyi vaat eder olmuştu. Kopya kaldırıldı; onboarding artık ortak sözlüğü okuyor,
+  yani cümle bir daha ayrışamaz. Aynı sınıf ikinci kez de yakalandı: mobil SSS'in asgari sepet cevabı
+  webinkinden geride kalmıştı (*"hem bölge içi hem kargo gönderiminde geçerlidir"* — 10.08 kararının
+  tersi).
+
+  **3 · SAYILAR METİNDEN ÇIKTI, AYARA BAĞLANDI.** Yasal *"Teslimat ve iade"*, SSS ve satış koşulları
+  *"Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz"* diyordu; ikisi de `settings` satırı
+  (`shipping_fee_cents`, `free_shipping_threshold_cents`) ve operatör değiştirebiliyor. Kapı:
+  `readPublicDeliveryTerms` (`@lezzet/application`) + `deliveryTermsLines` (`@lezzet/helper`, iki
+  yüzeyin ortak cümle kurucusu) + `GET /api/v1/delivery-terms` (açık uç, `pointsRules` emsali).
+  Tutarlar **prozanın içine girmiyor, kendi bölümünde** duruyor: native tarafta okuma düşerse bölüm
+  tek cümleye iniyor ("sepetinizde görürsünüz") ve sayfanın kuralları anlatan kısmı hiç etkilenmiyor.
+  `cod_max_cents` de ham dize olmaktan çıkıp aynı eve taşındı.
+
+  **Posta kodu adımına tutar YAZILMADI ve bu bilinçli:** 13.08 kararı eşiği oradan çıkarmıştı çünkü
+  `free_shipping_threshold_cents` KAPSAMLI (global 60 €, ülke 90 €, b2b 250 €) ve adres bazlı bir
+  ekranda kanal kapsamlı bir sayı Alman müşteriye yanlış söz verirdi. Tutar yalnız GENEL kuralı
+  anlatan yasal sayfada ve adresi çözülmüş sepette yazılıyor; yasal sayfanın not satırı da bunu
+  söylüyor.
+
+  **4 · ÜÇ ÇELİŞKİ DAHA KAPANDI.** (a) *Almanya var mı yok mu* — yasal sayfa "Fransa ve Almanya",
+  site şeridi "Fransa geneline" diyordu; ikisi de varsayımdı. Küme artık veriden:
+  `WarehouseService.listShippingCountries()` (ülke başına bir kargo deposu). (b) *2–4 gün ↔ 2-3 gün*
+  ayrışması giderildi. (c) **`chilled` metinlerde hiç yoktu:** kod `requiresColdChain = chilled ||
+  frozen` diyor, yasal metin yalnız "dondurulmuş" diyordu — soğutulmuş ürün alan müşteri "benimki
+  dondurulmuş değil, kargoyla gelir" diye okurdu.
+
+  **`formatCompactEuro` helper'a terfi etti** (`points-value.ts` → `packages/helper/src/format.ts`):
+  ikinci tüketen doğdu ve o tüketen webde de var; kural mobil bir ekranın içinde kalsaydı web kendi
+  kopyasını yazardı — `formatPrice`ın 29.07'de yaşadığı ayrışmanın aynısı.
+
+  **Doğrulama:** `tsc` (18 paket) temiz · `lint` temiz · **1374 birim testi** + mobil jest paketi
+  (**599 test, 84 dosya**) yeşil. `knip` çıktısındaki 5 dosya/9 ihracat bu değişikliğin DIŞINDA
+  (`68cc1030` "sekiz ikiz söküldü" commit'inin web köprüsünde bıraktığı artıklar).
+  **BEKLEYEN(21.82):** yasal metnin iki nüshası (web `content.json` ↔ mobil `messages.json`) elle
+  senkron tutuluyor; üretici betik ya da paylaşılan içerik paketi hâlâ yok.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

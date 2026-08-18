@@ -2,12 +2,13 @@
   "tr": {
     "back": "Geri",
     "title": "Nerelere gidiyoruz",
-    "intro": "Soğuk zincir aracımız şu posta kodlarına kendi elimizle teslim ediyor.",
+    "intro": "Soğuk zincir isteyen ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla getiriyoruz. Aracımız şu posta kodlarına gidiyor.",
     "listEyebrow": "Posta kodları",
     "countries": {
       "FR": "Fransa",
       "DE": "Almanya"
     },
+    "and": " ve ",
     "loading": "Yükleniyor",
     "errorBody": "Posta kodu listesini alamadık. Bağlantınızı kontrol edip tekrar deneyin.",
     "retry": "Tekrar dene",
@@ -17,17 +18,19 @@
     },
     "tryCode": "Kendi posta kodumu deneyeyim",
     "tryCodeHint": "Posta kodunuzu girin, teslimat şeklini söyleyelim",
-    "closing": "Kalan her yere kargoyla gönderiyoruz; yalnız soğuk zincir isteyen ürünler gidemiyor."
+    "closing": "Soğuk zincir istemeyen ürünleri {countries} genelinde her adrese kargoyla gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz.",
+    "closingNoShipping": "Soğuk zincir istemeyen ürünleri kargoyla da gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz."
   },
   "fr": {
     "back": "Retour",
     "title": "Où nous livrons",
-    "intro": "Notre camion frigorifique livre en main propre dans ces codes postaux.",
+    "intro": "Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre camion réfrigéré. Voici les codes postaux qu'il dessert.",
     "listEyebrow": "Codes postaux",
     "countries": {
       "FR": "France",
       "DE": "Allemagne"
     },
+    "and": " et ",
     "loading": "Chargement",
     "errorBody": "Nous n'avons pas pu charger la liste des codes postaux. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer",
@@ -37,17 +40,19 @@
     },
     "tryCode": "Essayer mon code postal",
     "tryCodeHint": "Saisissez votre code postal, nous vous indiquons le mode de livraison",
-    "closing": "Partout ailleurs, nous expédions par transporteur ; seuls les produits sous chaîne du froid ne peuvent pas partir."
+    "closing": "Tous les autres produits partent par transporteur, à n'importe quelle adresse en {countries} — vous pouvez commander même si vous n'êtes pas sur la liste.",
+    "closingNoShipping": "Tous les autres produits partent aussi par transporteur — vous pouvez commander même si vous n'êtes pas sur la liste."
   },
   "de": {
     "back": "Zurück",
     "title": "Wohin wir liefern",
-    "intro": "Unser Kühlfahrzeug liefert in diesen Postleitzahlen persönlich aus.",
+    "intro": "Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug. Es fährt diese Postleitzahlen an.",
     "listEyebrow": "Postleitzahlen",
     "countries": {
       "FR": "Frankreich",
       "DE": "Deutschland"
     },
+    "and": " und ",
     "loading": "Wird geladen",
     "errorBody": "Wir konnten die Postleitzahlenliste nicht laden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "retry": "Erneut versuchen",
@@ -57,6 +62,7 @@
     },
     "tryCode": "Meine Postleitzahl ausprobieren",
     "tryCodeHint": "Geben Sie Ihre Postleitzahl ein, wir nennen Ihnen die Lieferart",
-    "closing": "Überall sonst versenden wir per Versand; nur Produkte mit Kühlkette können nicht mit."
+    "closing": "Alle übrigen Produkte versenden wir an jede Adresse in {countries} — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen.",
+    "closingNoShipping": "Alle übrigen Produkte versenden wir auch per Paket — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen."
   }
 }

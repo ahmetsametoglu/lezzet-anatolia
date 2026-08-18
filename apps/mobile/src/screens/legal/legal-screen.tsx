@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { deliveryTermsLines } from '@lezzet/helper';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
@@ -8,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook';
 import { LegalFaq } from './legal-faq';
 import {
   isLegalPageKey,
@@ -56,6 +58,9 @@ export function LegalScreen({ page }: LegalScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
+  /* KOŞULSUZ çağrı: aşağıda "bu sayfa yok" erken dönüşü var ve hook ondan sonra çağrılamaz.
+     Bedeli yok — yalnız teslimat sayfası okuyor, ötekiler cevabı hiç kullanmıyor. */
+  const terms = useDeliveryTerms();
 
   const bar = (
     <AppBar
@@ -90,13 +95,40 @@ export function LegalScreen({ page }: LegalScreenProps) {
 
   const copy = t.pages[page];
 
+  /**
+   * **TUTARLAR AYARDAN, METİNDEN DEĞİL** (18.08 · kullanıcı kararı) — webin teslimat sayfasıyla
+   * aynı hüküm, aynı kurucu (`deliveryTermsLines`). Sayfa bir dönem *"Kargo ücreti 7,90 €'dur"*
+   * diyordu; operatör ayarı değiştirdiği gün sepet yeni sayıyı keser, sayfa eskisini ilan ederdi.
+   *
+   * ── OKUNAMAZSA TEK CÜMLEYE İNER ─────────────────────────────────────────
+   * Web sunucu bileşeni ayarı doğrudan okuyor; burada cihaz ağa çıkıyor ve düşebilir. Tutarlar
+   * kendi bölümünde durduğu için üçüncü bir yol var: bölüm "sepetinizde görürsünüz"e iner ve
+   * sayfanın KURALLARI anlatan kısmı hiç etkilenmez. Yer tutucuyu ham basmak ya da hukuki metinden
+   * paragraf düşürmek gerekmiyor (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+   */
+  const sections =
+    page !== 'delivery'
+      ? copy.sections
+      : [
+          ...t.pages.delivery.sections.slice(0, -2),
+          {
+            heading: t.pages.delivery.amounts.heading,
+            paragraphs:
+              terms.status === 'ready'
+                ? [...deliveryTermsLines(terms.terms, t.pages.delivery.amounts, locale), t.pages.delivery.amounts.note]
+                : [t.pages.delivery.amounts.unavailable],
+            bullets: [],
+          },
+          ...t.pages.delivery.sections.slice(-2),
+        ];
+
   return (
     <View style={styles.screen}>
       {bar}
       <ScrollView contentContainerStyle={styles.content} testID="legal-content">
         <Text style={styles.updated}>{t.updatedAt}</Text>
 
-        {copy.sections.map((section) => (
+        {sections.map((section) => (
           <LegalSection key={section.heading} section={section} />
         ))}
 

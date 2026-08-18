@@ -20,6 +20,9 @@ import {
   SHIPPING_FEE_DEFAULT,
   SHIPPING_FEE_KEY,
 } from '../cart/settings-keys';
+// Kapıda ödeme tavanı: kasa kapıyı burada uyguluyor, SSS ve satış koşulları AYNI satırı ilan ediyor
+// (`../settings/public-terms`) — sayı iki yerde yazılıydı, biri değişince öteki yalan söylerdi.
+import { COD_MAX_DEFAULT, COD_MAX_KEY } from '../settings/public-terms';
 
 /**
  * Checkout ödeme seçenekleri (07.3) — **uygulama katmanı orkestrasyonu**. DOMAIN §6, §7.
@@ -103,8 +106,8 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
 
   const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, feeCents, minBasketCents] = await Promise.all([
     new UserProfileService(db).getById(input.customerId),
-    // Kapıda ödeme tavanı 500 € (kullanıcı kararı 04.08) — SSS ve satış koşulları bu sayıyı yazıyor.
-    settings.getNumber('cod_max_cents', 50_000, scope),
+    // Kapıda ödeme tavanı (kullanıcı kararı 04.08) — varsayılanı ve anahtarı `public-terms`te.
+    settings.getNumber(COD_MAX_KEY, COD_MAX_DEFAULT, scope),
     settings.getNumber('cash_legal_limit_cents', 100_000, scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
     settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),

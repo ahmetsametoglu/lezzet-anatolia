@@ -38,6 +38,24 @@ jest.mock('@/lib/auth/supabase', () => ({
   }),
 }));
 
+// İlan edilen tutarlar gerçek uçtan (18.08): vitrin başlığındaki posta kodu çekmecesi onu okuyor.
+// Kabuk testinin konusu sekmeler; çağrı mock'lanmazsa ağa çıkar ve bu ortamda env yok.
+jest.mock('@/lib/api/delivery-terms', () => ({
+  fetchDeliveryTerms: () =>
+    Promise.resolve({
+      data: {
+        minBasketRouteCents: 4000,
+        minBasketShippingCents: 0,
+        freeShippingCents: 6000,
+        shippingFeeCents: 790,
+        codMaxCents: 50_000,
+        shippingCountries: ['FR', 'DE'],
+      },
+      error: null,
+      status: 200,
+    }),
+}));
+
 // Sarmalayıcı + matcher tipi ORTAK iskelede (ikinci router testi doğunca oraya taşındı — CLAUDE §1).
 
 describe('uygulama kabuğu', () => {

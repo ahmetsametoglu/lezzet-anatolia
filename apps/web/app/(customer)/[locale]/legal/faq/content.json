@@ -5,22 +5,22 @@
       {
         "id": "donmus",
         "question": "Ürünler donmuş mu geliyor?",
-        "answer": "Dondurulmuş ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır — bu ürünleri yalnız kendi aracımızla, teslimat bölgemiz içinde getiriyoruz. Teslim aldığınızda dondurucunuza koymanız yeterli. Bölge dışına yalnız raf ömürlü ürünlerimizi kargoyla gönderiyoruz; dondurulmuş ürünler kargoya çıkmaz."
+        "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir isteyen ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Soğuk zincir istemeyen bütün ürünleri ise her adrese kargoyla gönderiyoruz."
       },
       {
         "id": "asgari-sepet",
         "question": "Minimum sipariş tutarı var mı?",
-        "answer": "Yalnız bölge içi teslimatta: kendi aracımızla kapınıza getirdiğimiz siparişlerde en az 40 €. Altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo gönderiminde minimum sipariş tutarı yoktur — orada kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz."
+        "answer": "Yalnız bölge içi teslimatta: kendi aracımızla kapınıza getirdiğimiz siparişlerin bir asgari tutarı vardır ve altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo gönderiminde asgari sipariş tutarı yoktur — orada kargo ücretini zaten siz ödüyorsunuz. Güncel tutarlar Teslimat ve iade sayfasındadır."
       },
       {
         "id": "teslimat-gunu",
         "question": "Siparişim ne zaman gelir?",
-        "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
+        "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
       },
       {
         "id": "kapida-odeme",
         "question": "Kapıda ödeyebilir miyim?",
-        "answer": "Bölge içi teslimatlarda, 500 €'ya kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
+        "answer": "Bölge içi teslimatlarda, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır Teslimat ve iade sayfasında yazar. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
       },
       {
         "id": "eksik-kalem",
@@ -55,22 +55,22 @@
       {
         "id": "donmus",
         "question": "Les produits arrivent-ils surgelés ?",
-        "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid — nous les livrons uniquement avec notre propre véhicule, à l'intérieur de notre zone de livraison. À la réception, il vous suffit de les placer au congélateur. Hors zone, nous n'expédions que nos produits de longue conservation : les surgelés ne partent pas en colis."
+        "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, partent par transporteur à n'importe quelle adresse."
       },
       {
         "id": "asgari-sepet",
         "question": "Y a-t-il un montant minimum de commande ?",
-        "answer": "Uniquement pour la livraison dans notre zone : 40 € minimum pour les commandes que nous apportons à votre porte avec notre propre véhicule. Si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum de commande — les frais d'expédition y sont de 7,90 € et sont offerts au-delà de 60 €."
+        "answer": "Uniquement pour la livraison dans notre zone : les commandes que nous apportons à votre porte avec notre propre véhicule ont un montant minimum, et si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum — les frais de port sont déjà à votre charge. Les montants en vigueur figurent sur la page livraison et retours."
       },
       {
         "id": "teslimat-gunu",
         "question": "Quand ma commande arrive-t-elle ?",
-        "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour l'Allemagne. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
+        "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour les adresses à l'étranger. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
       },
       {
         "id": "kapida-odeme",
         "question": "Puis-je payer à la livraison ?",
-        "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à 500 € de commande — en espèces ou par carte. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
+        "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
       },
       {
         "id": "eksik-kalem",
@@ -105,22 +105,22 @@
       {
         "id": "donmus",
         "question": "Kommen die Produkte gefroren an?",
-        "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an — wir liefern sie ausschließlich mit unserem eigenen Fahrzeug innerhalb unseres Liefergebiets. Nach dem Empfang legen Sie sie einfach in den Gefrierschrank. Außerhalb des Gebiets versenden wir nur unsere lagerfähigen Produkte; Tiefkühlware geht nicht als Paket auf die Reise."
+        "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen an jede Adresse."
       },
       {
         "id": "asgari-sepet",
         "question": "Gibt es einen Mindestbestellwert?",
-        "answer": "Nur für die Lieferung in unserem Gebiet: mindestens 40 € für Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen. Liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — dort betragen die Versandkosten 7,90 € und entfallen ab 60 €."
+        "answer": "Nur für die Lieferung in unserem Gebiet: Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen, haben einen Mindestbestellwert; liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin. Die aktuellen Beträge stehen auf der Seite Lieferung und Rückgabe."
       },
       {
         "id": "teslimat-gunu",
         "question": "Wann kommt meine Bestellung an?",
-        "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich, in Deutschland mit einem Tag mehr. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
+        "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich, bei Adressen im Ausland mit einem Tag mehr. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
       },
       {
         "id": "kapida-odeme",
         "question": "Kann ich bei Lieferung bezahlen?",
-        "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem Bestellwert von 500 € möglich — bar oder mit Karte. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+        "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rückgabe. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
       },
       {
         "id": "eksik-kalem",

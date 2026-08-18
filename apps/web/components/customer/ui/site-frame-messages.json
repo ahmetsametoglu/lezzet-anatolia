@@ -3,7 +3,7 @@
     "announcement": {
       "cold": "❄ Soğuk zincirle teslim",
       "local": "Strasbourg & çevresinde kapıya teslim",
-      "shipping": "Fransa geneline kargo — soğuk zincir hariç",
+      "shipping": "Kargoya uygun ürünler Fransa geneline",
       "mobile": "❄ Soğuk zincirle kapıya teslim"
     },
     "nav": {
@@ -44,7 +44,7 @@
     "announcement": {
       "cold": "❄ Livraison en chaîne du froid",
       "local": "Livraison à domicile à Strasbourg et alentours",
-      "shipping": "Expédition dans toute la France — hors chaîne du froid",
+      "shipping": "Produits expédiables dans toute la France",
       "mobile": "❄ Livraison à domicile en chaîne du froid"
     },
     "nav": {
@@ -85,7 +85,7 @@
     "announcement": {
       "cold": "❄ Lieferung in der Kühlkette",
       "local": "Hauslieferung in Straßburg und Umgebung",
-      "shipping": "Versand in ganz Frankreich — außer Kühlkette",
+      "shipping": "Versandfähige Produkte in ganz Frankreich",
       "mobile": "❄ Hauslieferung in der Kühlkette"
     },
     "nav": {

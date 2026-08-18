@@ -5,6 +5,9 @@ export * from './date';
 // Yerin saf kararları (`elsewhereReasonOf`) — web ve native uygulama aynı cümleyi kuruyor; ev
 // gerekçesi dosyanın kendi künyesinde (21.20).
 export * from './delivery';
+// İlan edilen teslimat tutarlarının cümleye dönüşmesi — yasal sayfaların iki yüzeydeki ortak
+// kuralı; tutar prozanın içine gömülmez (gerekçe dosyanın künyesinde, 18.08).
+export * from './delivery-terms';
 export * from './format';
 export * from './identity';
 export * from './money';

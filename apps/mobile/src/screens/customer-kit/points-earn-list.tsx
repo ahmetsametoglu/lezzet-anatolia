@@ -10,7 +10,7 @@ import type { PointsRules } from '@/lib/api/points';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { CustomerIcon } from './customer-icon';
 import messages from './points-earn-messages.json';
-import { formatPointsValue } from './points-value';
+import { formatCompactEuro } from '@lezzet/helper';
 
 /*
   PUAN KAZANMA YOLLARININ ANLATIMI — ÜÇ YÜZEYİN ORTAK BİLEŞENİ (kullanıcı kararı 12.08).
@@ -98,7 +98,7 @@ export function PointsEarnList({ rules, actions, showRules = false, testID }: Po
         <Text style={styles.rate}>
           {t.rate
             .replace('{points}', String(rules.redeem.minimumPoints))
-            .replace('{value}', formatPointsValue(rules.redeem.valueCents, locale))}
+            .replace('{value}', formatCompactEuro(rules.redeem.valueCents, locale))}
         </Text>
       ) : null}
 
@@ -127,13 +127,13 @@ export function PointsEarnList({ rules, actions, showRules = false, testID }: Po
                 ── AYRAÇ `·` DEĞİL PARANTEZ (kullanıcı kararı 18.08) ──────────
                 `+500 · 5,00 €` cihazda okunmuyordu: orta nokta iki EŞİT şeyi ayırır, oysa bunlar
                 eşit değil — biri kazanılan birim, öteki onun karşılığı. Parantez o astlığı yazının
-                kendisiyle söylüyor: `+500 (5 €)`. Kuruş da düştü, gerekçesi `points-value`
+                kendisiyle söylüyor: `+500 (5 €)`. Kuruş da düştü, gerekçesi `compact-euro`
                 künyesinde: kupon tam eurodur, `5,00` olmayan bir hassasiyet iddia ediyordu. */}
             <View style={styles.body}>
               <Text style={styles.title}>{copy.title}</Text>
               <View style={styles.rewardLine}>
                 <Text style={styles.rewardBadge}>
-                  +{way.points} ({formatPointsValue(way.points * rules.centValue, locale)})
+                  +{way.points} ({formatCompactEuro(way.points * rules.centValue, locale)})
                 </Text>
                 {/* `{max}` YALNIZ komşu satırında geçiyor ama değişim koşulsuz uygulanıyor: bir gün
                     başka bir satır da sınır taşırsa metin çalışır, taşımayanda `replace` hiçbir şey
@@ -155,7 +155,7 @@ export function PointsEarnList({ rules, actions, showRules = false, testID }: Po
           <Text style={styles.footnote}>
             {t.footnote
               .replace('{threshold}', String(rules.redeem.minimumPoints))
-              .replace('{value}', formatPointsValue(rules.redeem.valueCents, locale))}
+              .replace('{value}', formatCompactEuro(rules.redeem.valueCents, locale))}
           </Text>
           {/* Davet ödülünün BEKLEMESİ burada söylenir (karar seti 3): puan davet anında değil,
               davet edilenin PARASI alındığında yazılır. Söylenmezse müşteri "paylaştım, puan

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { joinCountries } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -15,6 +16,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
+import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
 import messages from './messages.json';
 import { useDeliveryZones } from './use-delivery-zones.hook';
@@ -74,6 +76,16 @@ export function DeliveryZonesScreen() {
   const zipSheet = useSheet();
   /* Çekmecenin başlangıç değeri cihazda SAKLI koddur — sayfa kendi başına bir kod tutmaz. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+
+  /* KAPANIŞ CÜMLESİNİN ÜLKELERİ: okuma bitmediyse ya da düştüyse ülkesiz hâl yazılır — boş bir
+     parantez ya da "undefined" basmaktansa cümleyi bir tık genel kurmak doğrusu. Küme BOŞ dönerse
+     (hiç kargo deposu yok) yine ülkesiz hâl: "hiçbir yere" diye yazmayız, susarız. */
+  const terms = useDeliveryTerms();
+  const shippingCountries = terms.status === 'ready' ? terms.terms.shippingCountries : [];
+  const closing =
+    shippingCountries.length === 0
+      ? t.closingNoShipping
+      : t.closing.replace('{countries}', joinCountries(shippingCountries, t.countries, t.and));
 
   const list =
     zones.status === 'loading' ? (
@@ -165,8 +177,11 @@ export function DeliveryZonesScreen() {
           testID="zones-try-code"
         />
         {/* KAPANIŞ CÜMLESİ: liste bir kapı değil bir haritadır — "burada yoksanız satmıyoruz"
-            diye okunmasın diye sayfanın sonunda kargo yolu açıkça söylenir. */}
-        <Note tone="warm" description={t.closing} testID="zones-closing" />
+            diye okunmasın diye sayfanın sonunda kargo yolu açıkça söylenir.
+            ÜLKELER VERİDEN (18.08): metne "Fransa ve Almanya" yazılıydı ve bu bir varsayımdı —
+            küme kargo depolarından türüyor. Okuma düşerse ülkesiz hâl yazılır; cümlenin kendisi
+            sayı/ülke istemeyen kısmıyla ayakta kalır (`use-delivery-terms` künyesi). */}
+        <Note tone="warm" description={closing} testID="zones-closing" />
       </ScrollView>
 
       {/* Çekmece İLK AÇILIŞTA kurulur (bandın aynı kararı) — gerekçe `use-sheet.hook`ta. */}

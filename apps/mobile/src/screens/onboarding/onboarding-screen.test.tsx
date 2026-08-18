@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 import { setAppLocale } from '@/lib/i18n/app-locale';
+import placeMessages from '@/lib/places/messages.json';
 import { OnboardingScreen } from './onboarding-screen';
 
 /*
@@ -46,6 +47,24 @@ jest.mock('@/lib/api/points', () => ({
           { key: 'referral', points: 500 },
           { key: 'visit', points: 10 },
         ],
+      },
+      error: null,
+      status: 200,
+    }),
+}));
+
+/* İLAN EDİLEN TUTARLAR da gerçek uçtan (18.08): posta kodu adımı kargo ücretini oradan yazıyor.
+   Mock'lanmasaydı çağrı `authorized-fetch`e düşer ve testte env olmadığı için patlardı. */
+jest.mock('@/lib/api/delivery-terms', () => ({
+  fetchDeliveryTerms: () =>
+    Promise.resolve({
+      data: {
+        minBasketRouteCents: 4000,
+        minBasketShippingCents: 0,
+        freeShippingCents: 6000,
+        shippingFeeCents: 790,
+        codMaxCents: 50_000,
+        shippingCountries: ['FR', 'DE'],
       },
       error: null,
       status: 200,
@@ -145,9 +164,14 @@ describe('onboarding', () => {
     await fireEvent.changeText(input, '75000');
     await waitFor(() =>
       expect(screen.getByTestId('onboarding-zip-note')).toHaveTextContent(
-        // Eşik SAYISI metinden çıkarıldı (13.08): `free_shipping_threshold_cents` kapsamlı —
-        // global 60 €, ülke 90 €, b2b 250 €. Sabit "60 €" Alman müşteriye yanlış söz veriyordu.
-        'Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız. Belirli bir tutarın üzerinde kargo ücretsiz — tutarı sepetinizde görürsünüz.',
+        /* Eşik SAYISI metinde YOK ve kalmayacak (13.08): `free_shipping_threshold_cents` kapsamlı —
+           global 60 €, ülke 90 €, b2b 250 €. Sabit bir sayı Alman müşteriye yanlış söz verirdi;
+           tutarlar yalnız GENEL kuralı anlatan yasal sayfada ve sepette yazılır (18.08).
+
+           Cümle ORTAK sözlükten okunuyor (`lib/places`): burada da bir kopyası vardı ve ayrışmıştı
+           — onboarding "soğuk zincir korumalı kargoyla ulaştırırız" diyerek kargoya veremediğimiz
+           bir şeyi vaat ediyordu (MB-74). Kopya kaldırıldı, beklenti kaynağın kendisi. */
+        placeMessages.tr.zip.shippingNote,
       ),
     );
   });
@@ -176,7 +200,7 @@ describe('onboarding', () => {
     await pressNext(); // → puanın GİRİŞ kartı
     expect(screen.getByText('Kullandıkça kazanın')).toBeOnTheScreen();
     // SAYI SUNUCUDAN: eşik de para karşılığı da mock'un verdiği değerler — ekran sabit gömmüyor.
-    // Kuruş YOK: puan karşılığı tam euroysa `5 €` yazılır (18.08 — `customer-kit/points-value`).
+    // Kuruş YOK: puan karşılığı tam euroysa `5 €` yazılır (18.08 — `customer-kit/compact-euro`).
     await waitFor(() => expect(screen.getByTestId('onboarding-points-rate')).toHaveTextContent('500 puan = 5 € kupon'));
     // Giriş kartı döküm YAPMAZ ve hesap TEKLİF ETMEZ — soruyu düğmenin kendisi sorar.
     expect(screen.queryByTestId('onboarding-points-ways-invite')).toBeNull();

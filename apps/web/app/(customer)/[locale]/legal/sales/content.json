@@ -16,7 +16,7 @@
         "body": [
           "Sattığımız ürünler dondurulmuş ve raf ömürlü gıdalardır. Ürünleri kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır; bu bilgiler ürünü üreten firmanın beyanına dayanır.",
           "Ürün fotoğrafları tanıtım amaçlıdır; sunum ve görünüm ürünler arasında farklılık gösterebilir. Bağlayıcı olan, ürün sayfasındaki yazılı bilgidir.",
-          "Dondurulmuş ürünler yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
+          "Soğuk zincir isteyen ürünler (donuk ve soğutulmuş) yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
         ]
       },
       {
@@ -42,7 +42,7 @@
         "heading": "Ödeme",
         "body": [
           "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
-          "Teslimat bölgemiz içinde, 500 €'ya kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır; eksik çıkan kalem baştan düşülür.",
+          "Teslimat bölgemiz içinde, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır güncel hâliyle Teslimat ve iade sayfasındadır. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır; eksik çıkan kalem baştan düşülür.",
           "Havale ve çekle ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
           "Peşin ödemeli siparişler, ödeme tamamlanmadan hazırlığa alınmaz. Kapıda ödemede tahsilat teslimat anında yapılır ve sipariş onaylandığı anda hazırlığa girer."
         ]
@@ -51,8 +51,8 @@
         "id": "teslimat",
         "heading": "Teslimat",
         "body": [
-          "Bölge içi adreslere kendi soğuk zincir aracımızla teslim ediyoruz; bölge dışına yalnız raf ömürlü ürünlerimizi normal kargoyla gönderiyoruz. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
-          "Asgari sepet tutarı 40 €'dur ve her iki gönderim yolunda da geçerlidir. Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz; paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında teslim edilir.",
+          "Soğuk zincir isteyen ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Soğuk zincir istemeyen bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+          "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo eşiği güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında teslim edilir.",
           "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
           "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
         ]
@@ -112,7 +112,7 @@
         "body": [
           "Les produits que nous vendons sont des denrées alimentaires surgelées ou de longue conservation. Nous ne les fabriquons pas nous-mêmes : nous les achetons auprès de producteurs que nous sélectionnons. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit ; ces informations proviennent de la déclaration du fabricant.",
           "Les photographies sont fournies à titre d'illustration ; la présentation et l'aspect peuvent varier d'un produit à l'autre. Seules les informations écrites sur la fiche produit sont contractuelles.",
-          "Les produits surgelés ne peuvent être vendus qu'à l'intérieur de notre zone de livraison : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les envoyons pas en colis. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
+          "Les produits sous chaîne du froid (surgelés et frais) ne peuvent être vendus qu'à l'intérieur de notre zone de livraison : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les envoyons pas en colis. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
         ]
       },
       {
@@ -138,7 +138,7 @@
         "heading": "Paiement",
         "body": [
           "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
-          "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à 500 € de commande — en espèces ou par carte. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
+          "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
           "Le virement et le chèque sont réservés aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
           "Les commandes payées d'avance ne sont pas mises en préparation avant la finalisation du paiement. En paiement à la livraison, l'encaissement a lieu au moment de la livraison et la commande entre en préparation dès sa validation."
         ]
@@ -147,8 +147,8 @@
         "id": "teslimat",
         "heading": "Livraison",
         "body": [
-          "Nous livrons les adresses de la zone avec notre propre véhicule frigorifique ; hors zone, nous n'expédions que nos produits de longue conservation, en colis standard. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
-          "Le montant minimum de commande est de 40 € et s'applique aux deux modes d'envoi. Les frais d'expédition sont de 7,90 € et sont offerts au-delà de 60 € ; une fois le colis préparé, comptez 2 à 4 jours ouvrés en France et un jour de plus pour l'Allemagne.",
+          "Les produits sous chaîne du froid (surgelés et frais) ne sont livrés qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Tous les autres produits partent par transporteur — dans la zone comme en dehors. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
+          "Le montant minimum de commande, les frais d'expédition et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; les mêmes montants sont affichés dans le panier au moment de commander. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France et un jour de plus pour les adresses à l'étranger.",
           "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
           "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, nous présentons la commande une seconde fois, sans frais. Si ce second passage échoue également, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé. Les détails figurent sur la page livraison et retours."
         ]
@@ -243,8 +243,8 @@
         "id": "teslimat",
         "heading": "Lieferung",
         "body": [
-          "Adressen im Liefergebiet beliefern wir mit unserem eigenen Kühlfahrzeug; außerhalb des Gebiets versenden wir nur unsere lagerfähigen Produkte als normales Paket. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
-          "Der Mindestbestellwert beträgt 40 € und gilt für beide Versandwege. Die Versandkosten betragen 7,90 € und entfallen ab 60 €; nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und einem Tag mehr in Deutschland.",
+          "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte gehen per Paket — im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+          "Mindestbestellwert, Versandkosten und Freigrenze werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rückgabe veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und einem Tag mehr bei Adressen im Ausland.",
           "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
           "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
         ]

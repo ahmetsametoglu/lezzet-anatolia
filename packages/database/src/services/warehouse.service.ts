@@ -60,6 +60,20 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 
   /**
+   * **Kargo çıkışı olan ülkeler** — bilgi metinlerinin *"nereye gönderiyoruz"* cümlesi (18.08).
+   *
+   * `listActiveCountries` ile karıştırılmaz: o "hizmet verdiğimiz ülkeler"dir ve araç bölgesini de
+   * sayar. Bu küme yalnız KARGONUN gidebildiği yerlerdir — cümlenin konusu o. Sayı elle yazılıydı
+   * ve iki yüzey iki farklı şey söylüyordu (web ana sayfa "Fransa geneline", yasal sayfa "Fransa ve
+   * Almanya geneline"); ikisi de bir varsayımdı. Cevap artık veriden: bir ülkeye kargo deposu
+   * açıldığı gün cümle kendiliğinden büyür, kapatıldığı gün küçülür.
+   */
+  async listShippingCountries(): Promise<Warehouse['countryCode'][]> {
+    const rows = await this.getAll({ isActive: true, shipsOnline: true });
+    return [...new Set(rows.map((w) => w.countryCode))].sort();
+  }
+
+  /**
    * Aktif depoların ülke kümesi — ülke seçicisinin görünüp görünmeyeceği BURADAN türer (C11):
    * küme 1'i aşmadıkça seçici gösterilmez. Ayar değil veri; yeni ülke depo açılınca kendiliğinden
    * belirir, kimsenin bir bayrağı açması gerekmez.
