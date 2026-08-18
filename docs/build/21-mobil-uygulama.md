@@ -3820,7 +3820,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   bir ekleme ve tema o değeri okuyor.
 
 - [~] (21.78) **CİHAZ TURUNUN A BÖLÜMÜ İLK KEZ KOŞULDU — misafir yüzeyi (kullanıcı onayı 18.08)**
-  → A1…A8 tamam, A14 kısmen; A9–A13 ve A15–A17 açık. `touches: docs/uygulama/*`
+  → A1…A13 ve A15–A16 tamam; **A17 ile A14'ün giriş duvarı açık kaldı.** `touches: docs/uygulama/*`
 
   Tur **hiç yapılmamıştı** çünkü ön koşulu uygulama verisini silmek ve bu, cihazdaki oturumu
   götürüyor. Kullanıcı onayıyla yapıldı.
@@ -3848,6 +3848,25 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **ÜÇÜNCÜ BULGU BELGENİN KENDİSİNDE:** uygulamada onboarding **dokuz** adımlı ve sıra
   dil → yazı boyutu → **teslimat** → **posta kodu** → …; belge A3/A4'te posta kodunu teslimattan
   ÖNCE yazıyor. Tablo artık "kod doğrulanmadan okunmasın" uyarısıyla duruyor.
+
+  **TURUN KALANI DA KOŞULDU (aynı gün, kullanıcı onayıyla).**
+  · **A9 ✓** Koleksiyon temizlenince kategori çipleri geri geldi — `(21.81)`in koşulu iki yönde de
+    çalışıyor. Süzgeç sayfası açılıyor (Önerilen · Fiyat ↑ · Fiyat ↓). Ürün adları Türkçe (MB-31
+    bir kez daha çürüdü).
+  · **A10 ✓** Kart *"5,00 €'dan"* → detay açılışta **5,00 €** seçili; MB-20 tekrar çürüdü. Aile
+    şeridi (Karışık/Fıstıklı/Cevizli) ve varyantlar (450g 5,42 € · 225g 5,00 €) yerinde.
+  · **A11 ✓** *"tek fiyata gelir, içeriği bellidir"* — paketin ne olduğu tek cümlede anlaşılıyor.
+  · **A12 ✓** Tarif şeridi: süre + malzeme sayısı + *"Tarifi gör"*.
+  · **A13 ✓ (asıl sorusu)** Misafire **puan vaat EDİLMİYOR**: turun başlığında yalnız *"beğenileriniz
+    ne getireceğimize yön verir"* var. Tur artık misafire erişilebilir de (`(21.80)`).
+  · **A15 ✓ — ve MB-74'Ü ÇÖZDÜ.** Bölge sayfası → *"Nerelere gidiyoruz"*: posta kodu listesi,
+    *"Kendi posta kodumu deneyeyim"* ve kargo notu; müşteri ne yapacağını biliyor. **Kritik olan
+    notun kendisi:** *"Kalan her yere kargoyla gönderiyoruz; yalnız soğuk zincir isteyen ürünler
+    gidemiyor."* Yani üç yerin İKİSİ aynı kuralı söylüyor ve **aykırı olan tek yer onboarding'in
+    posta kodu adımıdır** — MB-74 artık "çelişki var" değil, "şu cümle yanlış" diyor.
+  · **A16** `(21.51)`de zaten koşulmuştu (B2B misafir yolu, uçtan uca).
+  · **AÇIK KALAN İKİSİ:** A17 (yasal sayfalar + destek) koşulmadı; **A14'ün giriş duvarı** da
+    ölçülemedi — görmek için sepeti 40 €'ya doldurmak gerekiyor.
 
   **Cihaz durumu:** dil Türkçe · yazı boyutu Büyük · posta kodu 67000 geri kuruldu; kullanıcının
   **oturumu silindi**, yeniden OTP ile girmesi gerekiyor. Turda eklenen sepet kalemi temizlendi.

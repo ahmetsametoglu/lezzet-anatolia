@@ -1137,7 +1137,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
 
 ### 18.08 cihaz turunda açılanlar (A bölümü — MİSAFİR, ilk kez koşuldu)
 
-> A1…A8 koşuldu, A14 kısmen; A9–A13 ve A15–A17 açık kaldı. Turun kendi ön koşulları da düzeldi
+> A1…A13 ve A15–A16 koşuldu; **A17 ile A14'ün giriş duvarı açık kaldı.** Turun kendi ön koşulları da düzeldi
 > (`pm clear` bu cihazda çalışmıyor, veri silme dev client'ı da sıfırlıyor) — ayrıntısı
 > `05-cihaz-turu-musteri.md` başındaki durum kutusunda.
 >
@@ -1163,9 +1163,15 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   iki cümleden ÇIKARAMAZ**: kelimeler neredeyse aynı. Bölge dışındaki müşteri ilk cümleyi okuyup
   "demek bana donuk ürün gelmiyor" diye katalogdan çekilebilir ya da tersine ikinci cümleye
   güvenip donuk ürün bekleyebilir.
-  **Yapılacak:** iki cümle tek bir kuralın iki yüzü olacak biçimde yeniden yazılmalı — hangi ürün
-  hangi yolla gidiyor, tek yerde ve aynı sözcüklerle. Metin kararı olduğu için ölçüm burada
-  bırakıldı.
+  **A15 TURUNDA ÜÇÜNCÜ YER ÖLÇÜLDÜ VE ÇELİŞKİNİN HANGİ TARAFI OLDUĞU BELLİ OLDU (18.08).**
+  *"Nerelere gidiyoruz"* sayfası şöyle diyor: *"Kalan her yere kargoyla gönderiyoruz; **yalnız
+  soğuk zincir isteyen ürünler gidemiyor**."* Yani üç yerin **ikisi** (teslimat adımı + bu sayfa)
+  aynı kuralı söylüyor; **aykırı olan tek yer onboarding'in posta kodu adımıdır.**
+
+  **Yapılacak (daraldı):** düzeltilecek cümle belli — posta kodu adımının bölge dışı cevabı.
+  Bugün *"soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız"* diyerek gönderemeyeceğimiz
+  bir şeyi vaat ediyor. Öteki iki yerin diliyle yazılmalı: kargo var, ama soğuk zincir isteyen
+  ürünler kargoya girmiyor. Metin kararı olduğu için yazımı kullanıcıya bırakıldı.
 
 - [x] **MB-75 · MİSAFİRİN KEŞİF TURUNA HİÇBİR KAPISI YOK — künye açıkça tersini söz veriyor.**
   Kullanıcı sordu (18.08): *"vitrinde en altta keşif kartı görünmesi gerekirken herhangi bir şey
