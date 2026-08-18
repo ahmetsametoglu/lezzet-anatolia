@@ -76,17 +76,32 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
   const tickets = useTickets();
   const [sheetOpen, setSheetOpen] = useState(openNew || orderReference !== undefined);
 
-  const bar = (
+  /*
+    ÜST ÇUBUK — "Yeni talep" bağlantısı HER HÂLDE ÇİZİLMEZ (MB-68, 18.08).
+
+    İki ayrı kusuru birden kapatıyor, ikisi de aynı kökten: çubuk ekranın hâlinden habersizdi.
+    · BOŞ HÂLDE İKİ ÇAĞRI, İKİ AD: çubukta "＋ Yeni", ortadaki boş hâlde "Bize yazın" — ikisi aynı
+      çekmeceyi açıyor ama farklı adlandığı için iki ayrı şey sanılıyordu (cihazda ölçüldü 17.08).
+      Boş hâlde ortadaki kalır: ekranın o anki TEK işi odur ve gerekçesini de yazar.
+    · MİSAFİRDE ÖLÜ DÜĞME: misafir dalında çekmece hiç çizilmiyor (talep açmak oturum ister — aşağıdaki
+      künye), yani bağlantıya basınca GÖRÜNÜR hiçbir şey olmuyordu. Basılınca bir şey yapmayan
+      bağlantı, olmayan bir arıza gibi okunur.
+
+    Yükleme ve hata hâllerinde KALIR: ikisinde de ortada rakip bir çağrı yok ve çekmece çiziliyor.
+  */
+  const bar = (withNew = true) => (
     <AppBar
       title={t.list.title}
       left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="tickets-back" />}
       right={
-        <TextAction
-          label={t.list.new}
-          onPress={() => setSheetOpen(true)}
-          accessibilityHint={t.list.newLabel}
-          testID="tickets-new"
-        />
+        withNew ? (
+          <TextAction
+            label={t.list.new}
+            onPress={() => setSheetOpen(true)}
+            accessibilityHint={t.list.newLabel}
+            testID="tickets-new"
+          />
+        ) : undefined
       }
       testID="tickets-appbar"
     />
@@ -115,7 +130,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
        gönderim anında 401 alırdı. Doğru cevap kapının kendisi. */
     return (
       <View style={styles.screen}>
-        {bar}
+        {bar(false)}
         <EmptyState
           icon={<Icon name="whatsapp" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.guest.title}
@@ -135,7 +150,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
   if (tickets.status === 'loading') {
     return (
       <View style={styles.screen}>
-        {bar}
+        {bar()}
         <View style={styles.skeletonBody}>
           <TicketsSkeleton testID="tickets-loading" />
         </View>
@@ -147,7 +162,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
   if (tickets.status === 'error') {
     return (
       <View style={styles.screen}>
-        {bar}
+        {bar()}
         <EmptyState
           icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
           title={t.error.title}
@@ -163,7 +178,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
   if (tickets.tickets.length === 0) {
     return (
       <View style={styles.screen}>
-        {bar}
+        {bar(false)}
         <EmptyState
           icon={<Icon name="whatsapp" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.list.empty.title}
@@ -232,7 +247,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
 
   return (
     <View style={styles.screen}>
-      {bar}
+      {bar()}
       <FlatList
         data={tickets.tickets}
         keyExtractor={(ticket) => ticket.id}

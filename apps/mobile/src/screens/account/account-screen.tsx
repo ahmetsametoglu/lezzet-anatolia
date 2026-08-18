@@ -202,8 +202,16 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
+  /* KART ADSIZ KALMAZ — ama yedeğe düştüğünü BİLİR (MB-66). `name` artık rotadan olduğu gibi
+     geliyor (boşsa boş), yedek burada seçiliyor: kartın büyük satırı e-postaya düşer, alt satırı
+     da adresi tekrar etmek yerine eksiği söyler. Karar tek yerde durduğu için taslak da onu
+     okuyor — eskiden `data.name === data.email` karşılaştırmasıyla yedeğe düşüldüğü TAHMİN
+     ediliyordu; adı e-postasıyla aynı olan bir hesapta o tahmin yanlış cevap verirdi. */
+  const nameMissing = data.name.trim() === '';
+  const displayName = nameMissing ? data.email : data.name;
+
   const openProfileSheet = () => {
-    setDraftName(data.name === data.email ? '' : data.name);
+    setDraftName(data.name);
     setDraftPhone(data.phone);
     setProfileError(null);
     setProfileSheetOpen(true);
@@ -380,10 +388,21 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
         </Text>
 
         <View style={styles.profileCard} testID="account-profile">
-          <AvatarThumb initial={data.name.slice(0, 1)} accessibilityLabel={data.name} size="lg" tone="olive" />
+          <AvatarThumb initial={displayName.slice(0, 1)} accessibilityLabel={displayName} size="lg" tone="olive" />
           <View style={styles.profileText}>
-            <Text style={styles.profileName}>{data.name}</Text>
-            <Text style={styles.profileMeta}>{data.email}</Text>
+            <Text style={styles.profileName}>{displayName}</Text>
+            {/*
+              AD SATIRI E-POSTAYA DÜŞTÜYSE ALT SATIR ADRESİ TEKRAR ETMEZ (MB-66, 18.08).
+              Ölçülen hâl: adı girilmemiş hesapta kartta aynı adres alt alta iki kez yazılıydı —
+              üstte "ad" olarak, altta "e-posta" olarak. Tekrar bilgi vermez; kartın o satırı,
+              müşterinin kart hakkında yapabileceği TEK şeyi söylerse iş görür ("Modifier" düğmesi
+              hemen yanında). Sessiz bırakmak da seçenekti; boş satır bir eksiği anlatmıyor.
+            */}
+            {nameMissing ? (
+              <Text style={styles.profileMeta}>{t.profile.addName}</Text>
+            ) : (
+              <Text style={styles.profileMeta}>{data.email}</Text>
+            )}
             {/* Telefon girilmemişse satır çizilmez (gerçek hesapta alan boş olabilir — 21.14c). */}
             {data.phone === '' ? null : <Text style={styles.profileMeta}>{data.phone}</Text>}
           </View>

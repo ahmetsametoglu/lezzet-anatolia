@@ -28,7 +28,8 @@
     },
     "profile": {
       "edit": "Düzenle",
-      "editLabel": "Profil bilgilerini düzenle"
+      "editLabel": "Profil bilgilerini düzenle",
+      "addName": "Adınızı ekleyin"
     },
     "company": {
       "eyebrow": "Onaylı profesyonel hesap",
@@ -152,7 +153,8 @@
     },
     "profile": {
       "edit": "Modifier",
-      "editLabel": "Modifier les informations du profil"
+      "editLabel": "Modifier les informations du profil",
+      "addName": "Ajoutez votre nom"
     },
     "company": {
       "eyebrow": "Compte professionnel validé",
@@ -276,7 +278,8 @@
     },
     "profile": {
       "edit": "Bearbeiten",
-      "editLabel": "Profildaten bearbeiten"
+      "editLabel": "Profildaten bearbeiten",
+      "addName": "Fügen Sie Ihren Namen hinzu"
     },
     "company": {
       "eyebrow": "Bestätigtes Geschäftskonto",

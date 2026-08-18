@@ -16,6 +16,7 @@ export interface AccountCompanyView {
 }
 
 export interface AccountData {
+  /** Girilmemişse BOŞ gelir — kartın e-postaya düşmesi ekranın kararı (MB-66, `account-screen`). */
   name: string;
   email: string;
   phone: string;

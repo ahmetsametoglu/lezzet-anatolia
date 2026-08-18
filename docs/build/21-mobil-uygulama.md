@@ -3639,6 +3639,53 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `KOLLEKTIONEN` · `MEIN KONTO` (noktasız `I`), Türkçe `KOLEKSİYONLAR` (noktalı `İ`) · `FIRIN`
   (noktasız `I`). Asıl risk öteki dilleri düzeltirken Türkçeyi bozmaktı; bozulmadı.
 
+- [x] (21.75) **TURUN ÜÇ KÜÇÜK BULGUSU: AYNI BİLGİ İKİ KEZ (18.08)**
+  → MB-66 · MB-68 · MB-69 kapandı; MB-70 daraltıldı. `touches: apps/mobile/src/app/(tabs)/account.tsx,
+  apps/mobile/src/screens/account/*, apps/mobile/src/screens/support/tickets-screen.tsx,
+  apps/mobile/src/screens/cart/*`
+
+  Üçü de 17.08 cihaz turunda ölçüldü ve üçü de **aynı kusurun** ayrı yüzleri: ekranın iki ayrı yeri
+  aynı şeyi söylüyor, çünkü ikisi de ötekinin ne söylediğini bilmiyor.
+
+  **MB-66 · Hesap kartında e-posta iki kez.** Kök sebep kararın YERİYDİ: "adı girilmemişse kart adsız
+  kalmasın" kararı ROTADA uygulanıyordu (`name: me.name.trim() === '' ? me.email : me.name`), yani
+  ekran eline geçen satırın gerçek bir ad mı yoksa yedek mi olduğunu bilmiyor ve altına aynı adresi
+  ikinci kez yazıyordu. Karar ekrana taşındı: rota adı olduğu gibi geçiriyor (boşsa boş), yedeğe
+  düşme `account-screen`de (`nameMissing` · `displayName`) ve alt satır adresi tekrar etmek yerine
+  eksiği söylüyor (*"Adınızı ekleyin"* · *"Ajoutez votre nom"* · *"Fügen Sie Ihren Namen hinzu"*).
+  **Yan kazanç:** profil çekmecesi taslağı yedeğe düşülüp düşülmediğini `data.name === data.email`
+  karşılaştırmasıyla TAHMİN ediyordu — adı e-postasıyla aynı olan bir hesapta o tahmin yanlış cevap
+  verirdi; artık tek karardan okuyor.
+
+  **MB-68 · Talepler boş hâlinde iki çağrı, iki ad.** Üst çubuktaki *"＋ Yeni"* ile ortadaki *"Bize
+  yazın"* aynı çekmeceyi açıyordu. Çubuk artık ekranın hâlini biliyor (`bar(withNew)`): boş hâlde
+  çizilmiyor, ortadaki kalıyor — o anki tek iş odur ve gerekçesini de yazar.
+  **Aynı satırda ikinci bir kusur çıktı: MİSAFİRDE ÖLÜ DÜĞME.** Misafir dalında çekmece hiç
+  çizilmiyor (talep açmak oturum ister), ama çubuktaki bağlantı duruyordu — basınca görünür hiçbir
+  şey olmuyordu. O dalda da kaldırıldı. Yükleme ve hata hâllerinde kalıyor: ikisinde de rakip bir
+  çağrı yok ve çekmece çiziliyor.
+
+  **MB-69 · Sepette asgari sepet uyarısı iki kez.** Burada bir KARAR vardı ve korundu: 16.08'de
+  bara kısa gerekçe satırı kondu ve dipteki uzun açıklamanın kalmasına karar verildi, çünkü ikisi
+  ayrı soruyu cevaplıyor ("neden basamıyorum" ↔ "ne yapmalıyım"). Kusur metindeydi — ikisi de aynı
+  eksik tutarı yazıyordu. Tekrar eden sayı dipten silindi: bar EKSİĞİ, dipteki EŞİĞİ ve ne
+  yapılacağını söylüyor. Notu tamamen kaldırmak da adaydı; o zaman asgari sepetin KAÇ olduğu hiçbir
+  yerde yazmazdı — müşteri hedefi bilmeden mesafeyi okurdu.
+
+  **MB-70 · BAN öneri listesi — ÖLÇÜM BULGUYU DEĞİLLEDİ, kalem daraltıldı.** Turda "dördüncü öneri
+  yarım kalıyor, üstüne kaynak künyesi biniyor" diye yazılmıştı; kodda ölçülünce ikisi de tasarımın
+  KENDİSİ çıktı. `SuggestionList` 11.08'de bir kullanıcı bulgusuyla tavana bağlanmış: `VISIBLE_ROWS
+  = 3.5` ve künyesi yarım satırın niye yarım olduğunu yazıyor — *"tam 3 olsaydı dördüncü satır
+  tamamen gizlenirdi ve listede devamı olduğu hiçbir yerden anlaşılmazdı"*. Künye de kaydırma
+  alanının DIŞINDA, kendi saç teli ayıracıyla (Etalab 2.0 kaynak gösterimi listeyle birlikte
+  görünmek zorunda), yani binmesi yapısal olarak imkânsız. Hesaplanan boy: satır
+  `12×2 + 2 + 14×1,2×2 = 59,6` dp, tavan `×3,5 = 208,6` dp, künyeyle birlikte kutu ~246 dp. Geriye
+  tek soru kalıyor — klavye açıkken çekmeceye kalan ~500 dp'de bu kutu `Kaydet` düğmesini görünür
+  alanın dışına itiyor mu; o **cihazda** ölçülecek, kalem o parçaya indirildi.
+
+  **Doğrulama:** `tsc` temiz · `lint` temiz · **1374 birim testi** + dokunulan dördünün jest paketi
+  (**43 test**). Cihaz doğrulaması BEKLİYOR — dördü de görsel kalem ve cihaz şu an bağlı değil.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

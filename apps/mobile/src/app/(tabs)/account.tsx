@@ -61,8 +61,12 @@ export default function AccountRoute() {
          okuyor — tazeleme de burada. Puan ve adresleri ekran kendi tazeliyor. */
       onRefreshIdentity={meState.refresh}
       data={accountData({
-        // Ad hiç girilmemişse kart adsız kalmaz: e-posta kimliğin kendisidir (profil düzenlemede ad eklenir).
-        name: me.name.trim() === '' ? (me.email ?? '') : me.name,
+        /* Ad OLDUĞU GİBİ taşınır — girilmemişse BOŞ (MB-66, 18.08). Yedeğe düşme kararı EKRANINDIR.
+           Eskiden burada e-postaya düşülüyordu ("kart adsız kalmasın") ve karar doğruydu, yeri
+           yanlıştı: ada e-postayı yazınca ekran o satırın gerçek bir ad mı yoksa yedek mi olduğunu
+           bilemiyor ve hemen altına AYNI adresi ikinci kez yazıyordu (cihazda ölçüldü 17.08).
+           Bilgiyi kaybetmeden geçirmek, kaybını ekranda telafi etmekten ucuz. */
+        name: me.name.trim(),
         email: me.email ?? '',
         phone: me.phone ?? '',
         company: null,

@@ -1140,13 +1140,22 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
 > Beşi de **görsel/metin** kalemi; hiçbiri veri ya da hesap arızası değil. Turun aynı gününde
 > ölçülen üç şey ise arıza DEĞİL çıktı ve ilgili künyelerine yazıldı: MB-03 (sebep ölçüm aracı),
 > MB-20 (kart↔detay fiyatı üç yerde de aynı), MB-50 (`visit` satırı defterde).
+>
+> **DURUM 18.08 — dördü kapandı, biri daraltıldı** (görevler `(21.74)` · `(21.75)`): MB-67 · MB-71 ·
+> MB-66 · MB-68 · MB-69 tamam; MB-70'in bulgusu ölçülünce tasarımın kendisi çıktı ve kalem tek bir
+> cihaz ölçümüne indirildi. Beşinin dördü **aynı kusurun** ayrı yüzüydü: ekranın iki ayrı yeri aynı
+> şeyi söylüyor, çünkü ikisi de ötekinin ne söylediğini bilmiyor.
 
-- [ ] **MB-66 · Hesap kartında e-posta iki kez yazılı.** Ölçüldü (17.08): `user_profiles.name`
-  boş string, `phone` NULL. Ekran ad satırını e-postaya düşürüyor
-  (`app/(tabs)/account.tsx:65` — *"ad hiç girilmemişse kart adsız kalmaz"*), ama hemen altındaki
-  satır zaten `data.email`. Sonuç: aynı adres üst üste iki kez. **Karar doğru, uygulaması eksik:**
-  ad e-postaya düştüğünde alt satır ya gizlenmeli ya başka bir şey söylemeli (ör. *"Ad ekleyin"*
-  daveti — künye tamamlama zaten B3 adımı). Telefon satırı boşken çizilmiyor, o kısım doğru.
+- [x] **MB-66 · Hesap kartında e-posta iki kez yazılı.** Ölçüldü (17.08): `user_profiles.name`
+  boş string, `phone` NULL. Ekran ad satırını e-postaya düşürüyor, ama hemen altındaki satır zaten
+  `data.email`. Sonuç: aynı adres üst üste iki kez.
+  → **KAPANDI (18.08), görev `(21.75)`.** Karar doğruydu, YERİ yanlıştı: yedeğe düşme rotada
+  yapılınca ekran o satırın gerçek ad mı yedek mi olduğunu bilemiyordu. Rota adı olduğu gibi
+  geçiriyor (boşsa boş), yedek `account-screen`de seçiliyor ve alt satır adresi tekrar etmek yerine
+  eksiği söylüyor (*"Adınızı ekleyin"* · *"Ajoutez votre nom"* · *"Fügen Sie Ihren Namen hinzu"*).
+  **Yan kazanç:** profil çekmecesi taslağı yedeğe düşülüp düşülmediğini `data.name === data.email`
+  ile TAHMİN ediyordu — adı e-postasıyla aynı olan hesapta yanlış cevap verirdi; artık tek karardan
+  okuyor.
 
 - [x] **MB-67 · Puan geçmişi ekranı toplamsız ve çağrısız.** Liste doğru çalışıyor
   (`Visite du jour · 17 août 2026 · +10`, defterle birebir), ama ekranda **bakiye yok** ve tek
@@ -1162,16 +1171,23 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **"Komşu daveti · 2 hareket · +0"** yazacaktı. İşaret anahtara eklendi; kazanç ile iptal ayrı
   satırlar ve ayrı etiketler (*"— iptal edildi"* · *"— annulée"* · *"— storniert"*).
 
-- [ ] **MB-68 · Talepler boş hâlinde aynı işi yapan iki çağrı, iki ayrı isimle.** Üst çubukta
+- [x] **MB-68 · Talepler boş hâlinde aynı işi yapan iki çağrı, iki ayrı isimle.** Üst çubukta
   `+ Nouvelle`, ortadaki boş hâlde `Écrivez-nous`. İkisi aynı yere gidiyor ama isimleri farklı
-  olduğu için müşteri iki ayrı şey sanıyor. Boş hâlde tek çağrı yeter; adın da her iki yerde
-  aynı olması gerekir.
+  olduğu için müşteri iki ayrı şey sanıyor.
+  → **KAPANDI (18.08), görev `(21.75)`.** Çubuk artık ekranın hâlini biliyor (`bar(withNew)`): boş
+  hâlde çizilmiyor, ortadaki kalıyor — o anki tek iş odur ve gerekçesini de yazar.
+  **Aynı satırda ikinci bir kusur çıktı:** misafir dalında çekmece hiç çizilmiyor (talep açmak
+  oturum ister) ama çubuktaki bağlantı duruyordu — basınca görünür hiçbir şey olmuyordu. O dalda da
+  kaldırıldı. Yükleme ve hata hâllerinde kalıyor: rakip çağrı yok, çekmece çiziliyor.
 
-- [ ] **MB-69 · Sepette asgari sepet uyarısı iki kez.** Aynı cümle hem kart içinde
+- [x] **MB-69 · Sepette asgari sepet uyarısı iki kez.** Aynı cümle hem kart içinde
   (*"Panier minimum 40,00 € — il manque 36,32 €"*) hem alt çubukta (*"Il manque 36,32 € pour le
-  panier minimum"*). Sayı ikisinde de doğru; tekrar eden bilgi. Talep e-postasında 09.08'de
-  düzeltilen *"durum İKİ kez yazılıyordu"* kusurunun aynısı — alt çubuk sabit olduğu için asıl
-  aday karttaki kopyayı kaldırmak.
+  panier minimum"*). Sayı ikisinde de doğru; tekrar eden bilgi.
+  → **KAPANDI (18.08), görev `(21.75)` — ama not "kartaki kopyayı kaldır" değil.** 16.08'de bara
+  gerekçe satırı konurken dipteki uzun açıklamanın KALMASINA karar verilmişti; ikisi ayrı soruyu
+  cevaplıyor ("neden basamıyorum" ↔ "ne yapmalıyım"). Kusur metindeydi: ikisi de aynı eksik tutarı
+  yazıyordu. Tekrar eden sayı dipten silindi — bar EKSİĞİ, dipteki EŞİĞİ ve ne yapılacağını
+  söylüyor. Notu tümden kaldırmak asgari sepetin KAÇ olduğunu hiçbir yerde bırakmazdı.
 
 - [x] **MB-71 · Başlık üstü etiketler SABİT Türkçe yerelle büyütülüyor — Fransızca ve Almanca'da
   noktalı `İ` çıkıyor.** → **KAPANDI (17.08), görev `(21.74)`.** Kural `lib/i18n/locale`a taşındı
@@ -1198,10 +1214,18 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   *Bulgunun çıkışı:* puan geçmişi ekranının Almanca turunda `MEİN KONTO` görüldü; desen aranınca
   yüzeye yayılmış olduğu ortaya çıktı. Yani tek ekranın kusuru değil, ortak bir kalıbın kusuru.
 
-- [ ] **MB-70 · BAN öneri listesi 4+ sonuçta son satırı kırpıyor.** Ölçüldü: dört öneri dönünce
-  sonuncusunun şehir satırı yarım kalıyor ve üstüne kaynak künyesi (*"Base Adresse Nationale…"*)
-  biniyor; `Enregistrer` düğmesi de listenin altında eziliyor. İki öneride sorun yok. Liste ya
-  kendi içinde kaydırılabilir olmalı ya da öneri sayısı sınırlanmalı.
+- [ ] **MB-70 · Öneri listesi açıkken `Kaydet` düğmesi görünür alanın dışında mı?** *(18.08'de
+  daraltıldı — görev `(21.75)`.)*
+  **Turun asıl bulgusu ÖLÇÜLÜNCE DEĞİLLENDİ.** "Dördüncü öneri yarım kalıyor, üstüne kaynak künyesi
+  biniyor" diye yazılmıştı; ikisi de tasarımın kendisi çıktı. `SuggestionList` 11.08'de bir kullanıcı
+  bulgusuyla tavana bağlanmış (`VISIBLE_ROWS = 3.5`) ve künyesi yarım satırın niye yarım olduğunu
+  yazıyor: *"tam 3 olsaydı dördüncü satır tamamen gizlenirdi ve listede devamı olduğu hiçbir yerden
+  anlaşılmazdı"*. Kaynak künyesi de kaydırma alanının DIŞINDA, kendi ayıracıyla (Etalab 2.0 listeyle
+  birlikte görünmek zorunda) — binmesi yapısal olarak imkânsız.
+  **Geriye tek soru kaldı:** hesaplanan kutu boyu ~246 dp (satır `12×2 + 2 + 14×1,2×2 = 59,6` dp
+  × 3,5 + künye); klavye açıkken çekmeceye kalan ~500 dp'de bu kutu `Kaydet`i görünür alanın dışına
+  itiyor mu? İçerik kayıyor, yani düğme erişilebilir — soru "ulaşılıyor mu" değil, "ulaşıldığı
+  anlaşılıyor mu". **Cihazda ölçülecek.**
 
 - [x] **MB-45 · Onboarding teslimat/ödeme adımlarının metinleri "Büyük"te bile küçük kalıyordu**
   → **KAPANDI (11.08, kullanıcı bulgusu).** Yazı boyutu özelliği çalışıyor; kusur o iki adımın

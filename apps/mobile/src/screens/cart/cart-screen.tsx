@@ -600,12 +600,21 @@ export function CartScreen() {
 
         {view.hasBlocked ? <Note tone="error" description={t.blocked} testID="cart-blocked" /> : null}
 
+        {/*
+          DİPTEKİ UYARI EKSİK TUTARI TEKRAR ETMEZ (MB-69, 18.08).
+
+          16.08'de bara kısa bir gerekçe satırı kondu ("neden basamıyorum") ve dipteki bu uzun
+          açıklamanın kalmasına karar verildi — çünkü ikisi ayrı soruyu cevaplıyor. Ama metin o
+          işbölümüne uymuyordu: ikisi de AYNI eksik tutarı yazıyordu (*"36,32 € eksik"*) ve turda
+          aynı cümle ekranda iki kez okundu (17.08). Tekrar eden sayı silindi, iki uçtan biri
+          ötekinde olmayanı söylüyor: bar EKSİĞİ (`{missing}`), buradaki EŞİĞİ (`{minimum}`) ve ne
+          yapılacağını. Notu tamamen kaldırmak da adaydı; o zaman asgari sepetin KAÇ olduğu hiçbir
+          yerde yazmıyordu — müşteri hedefi bilmeden mesafeyi okuyordu.
+        */}
         {view.minBasketOk || unresolved ? null : (
           <Note
             tone="terracotta"
-            description={t.minimum
-              .replace('{minimum}', formatPrice(view.minBasketCents, locale))
-              .replace('{missing}', formatPrice(view.missingForMinBasketCents, locale))}
+            description={t.minimum.replace('{minimum}', formatPrice(view.minBasketCents, locale))}
             testID="cart-minimum"
           />
         )}
