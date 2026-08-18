@@ -3686,6 +3686,37 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` temiz · `lint` temiz · **1374 birim testi** + dokunulan dördünün jest paketi
   (**43 test**). Cihaz doğrulaması BEKLİYOR — dördü de görsel kalem ve cihaz şu an bağlı değil.
 
+- [x] (21.76) **KÜÇÜK DURAKLARDAKİ İÇERİK — ŞÜPHENİN DOKUZDA SEKİZİ ŞABLONA UYUYORMUŞ (18.08)**
+  → MB-46 kapandı. `touches: apps/mobile/src/screens/account/account-screen.tsx,
+  apps/mobile/src/screens/support/ticket-detail-screen.tsx`
+
+  MB-45'in genel hâliydi: *"`helper` (12) durağı asıl içerik taşıyan başka yerlerde de kullanılıyor
+  olabilir"*, ilk sayımda 124 çağrı. `(21.38)` süpürmesinden sonra bugün **`helper` 52 · `micro`
+  42**; müşteri yüzeyinde 28 + 24. Hepsi tek tek okundu.
+
+  **ÖLÇÜM ŞÜPHEYİ BÜYÜK ORANDA DEĞİLLEDİ.** Dokuz ciddi aday çıktı ve sekizi `Mobil - Musteri
+  v3.dc.html` ile **birebir** uyuştu: tarif satırında *Tükendi* `700 11px`, aynı satırın
+  etiket+fiyatı `400 11,5px`, varyant çipi fiyatı `600 12px`, aile üyesi fiyatı `600 11px`, puan
+  kartının eksik-puan satırı `600 12px`, kupon kodu `700 13px`, kupon değeri `400 12px`. Şablon
+  yoğun satırlarda ve çiplerde **bilerek** 10–13 px kullanıyor. Çıkarılan kural: *"içerik 14'ün
+  altına inmez"* ölçütü müşterinin KARAR için okuduğu **düz metne** aittir (MB-45'te olduğu gibi:
+  adım açıklaması, güvence cümlesi), çipin ya da liste satırının içindeki etikete DEĞİL — mekanik
+  uygulansaydı sekiz yerde şablondan sapılırdı (CLAUDE §3: implement ederken improvise etme).
+  Keşif ekranının iki ipucu başlığı da yanlış alarmdı: gövdeleri başlığın İÇİNE yuvalanmış `Text`,
+  boyutu ondan miras alıyor.
+
+  **İki gerçek bulgu kaldı, ikisi de "aynı seste konuşma" kusuru:**
+  · Hesap · *Verileriniz* kartının **başlığı gövdesinden küçüktü** (12 ↔ 14). Şablonda oran doğru
+    (`700 12,5` ↔ `400 11,5`); `(21.38)` gövdeyi 14'e çıkarıp başlığı bırakınca oran tersine dönmüş.
+    Kendi süpürmemizin arkada bıraktığı bir ters düşme — kalem olmasa görülmezdi.
+  · Talep detayında **gönderim hatası pasif künyelerle aynı boydaydı** (`micro`). *"Mesaj
+    gönderilemedi — tekrar deneyin"* ile *"Cevap geldiğinde e-posta ile haber veririz"* aynı sesle
+    okunuyordu. Hata `note`a (13) alındı; `body-sm` değil, çünkü yazma alanı 13,5 ve ondan büyük bir
+    hata satırı bağırırdı.
+
+  **Doğrulama:** `tsc` temiz · `lint` temiz · dokunulan iki ekranın jest paketi **10/10**. Cihaz
+  turu gerekmedi (kullanıcı kararı 11.08 — süpürmede kod tarafı doğrulama yeter).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

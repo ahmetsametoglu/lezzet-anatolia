@@ -451,9 +451,16 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.md,
   },
   composerField: { flex: 1 },
+  /* HATA, İPUCUYLA AYNI SESTE OLAMAZ (MB-46, 18.08). Bu satır `micro`daydı (11,5) — yani hemen
+     yukarıdaki iki pasif künyeyle (*"Cevap geldiğinde e-posta ile haber veririz"*, *"mesajlar
+     otomatik çevriliyor"*) BİREBİR aynı boyda. Oysa o ikisi bilgi, bu satır müşteriden bir şey
+     istiyor: mesaj gitmedi, tekrar denemeli. Şablonda karşılığı yok (hata hâlleri bizim), o yüzden
+     ölçüt `(21.38)`in kullanıcı kararından geliyor — `helper`/`micro` yalnız gerçek yardımcı role
+     kalır. `note` (13) seçildi, `body-sm` değil: satır yazma alanının ALTINDA duruyor ve alanın
+     kendisi 13,5 — ondan büyük bir hata satırı bağırırdı. */
   sendError: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
+    fontSize: theme.text.note,
     color: theme.colors.error,
   },
   sendButton: {

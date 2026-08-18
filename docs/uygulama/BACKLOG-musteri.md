@@ -1236,12 +1236,34 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   işi gören iki metin arasında kalıcı 4 px uçurum. Yeni merdiven: başlık 16 · açıklama
   **`body-sm` 14** · güvence **`note` 13**. Cihazda doğrulandı.
 
-- [ ] **MB-46 · `helper` durağı ASIL İÇERİK taşıyan başka yerlerde de kullanılıyor olabilir.**
-  MB-45'in genel hâli. Ölçüm: `theme.text.helper` uygulamada **124 yerde** geçiyor ve çoğu
-  meşru (form ipucu, alt yazı, resim künyesi). **Topluca değiştirilMEZ** — her kullanım "bu metin
-  ipucu mu, içerik mi" diye tek tek bakılmalı, yoksa ölçülmemiş bir toplu müdahale olur.
-  Yöntem önerisi: yazı boyutu "Büyük"ken ekran ekran gezip 13,8 pikselde kalan ama müşterinin
-  KARAR için okuduğu metinleri işaretlemek. Cihaz işi (§13 ⚑).
+- [x] **MB-46 · `helper` durağı ASIL İÇERİK taşıyan başka yerlerde de kullanılıyor olabilir.**
+  MB-45'in genel hâli; ilk ölçümde `theme.text.helper` **124 yerde** geçiyordu.
+  → **KAPANDI (18.08), görev `(21.76)` — ve şüphenin büyük kısmı ÖLÇÜNCE DAYANAKSIZ ÇIKTI.**
+
+  **Sayı önce düştü:** `(21.38)` süpürmesinden sonra `helper` 124 → **52**, `micro` **42**; müşteri
+  yüzeyinde `helper` 28, `micro` 24 çağrı. Bu 52'nin tamamı "bu metin ipucu mu, içerik mi" diye tek
+  tek okundu.
+
+  **Dokuz ciddi şüpheli çıktı, sekizi ŞABLONLA BİREBİR uyuştu** (`Mobil - Musteri v3.dc.html` satır
+  satır karşılaştırıldı): tarif satırındaki *Tükendi* `700 11px` · aynı satırın etiket+fiyatı
+  `400 11,5px` · varyant çipi fiyatı `600 12px` · aile üyesi fiyatı `600 11px` · puan kartının
+  eksik-puan satırı `600 12px` · kupon kodu `700 13px` · kupon değeri `400 12px`. Yani **şablon
+  yoğun satırlarda ve çiplerde bilerek 10–13 px kullanıyor**; "içerik 14'ün altına inmez" ölçütü
+  bunlara MEKANİK uygulanamaz — ölçüt müşterinin KARAR için okuduğu düz metin içindir (MB-45'te
+  olduğu gibi: adım açıklaması, güvence cümlesi), çipin içindeki etiket için değil.
+  *(Keşif ekranının iki ipucu başlığı da yanlış alarmdı: gövdeleri başlığın İÇİNE yuvalanmış
+  `Text`, yani boyutu ondan miras alıyor — ters düşme yok.)*
+
+  **İki gerçek bulgu kaldı ve ikisi de "aynı seste konuşma" kusuru:**
+  · **Hesap · *Verileriniz* kartının başlığı gövdesinden KÜÇÜKTÜ** (12 ↔ 14). Şablonda oran doğru
+    (`700 12,5` ↔ `400 11,5`); `(21.38)` gövdeyi 14'e çıkarıp başlığı 12'de bırakınca oran tersine
+    dönmüş. Başlık gövdeyle aynı durağa alındı, ayrım ağırlıkta (700 ↔ 400).
+  · **Talep detayında gönderim hatası ile pasif künyeler AYNI boydaydı** (`micro`, 11,5). *"Mesaj
+    gönderilemedi — tekrar deneyin"* ile *"Cevap geldiğinde e-posta ile haber veririz"* aynı sesle
+    okunuyordu; biri bilgi, öteki eylem istiyor. Hata `note`a (13) alındı — `body-sm` değil, çünkü
+    satır yazma alanının altında ve alan 13,5; ondan büyük olsaydı bağırırdı.
+
+  **Cihaz turu gerekmedi** (kullanıcı kararı 11.08 — süpürmede kod tarafı doğrulama yeter).
 
 ---
 

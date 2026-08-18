@@ -1146,9 +1146,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     padding: theme.space['2xl'],
     gap: theme.space.xs,
   },
+  /* BAŞLIK GÖVDESİNDEN KÜÇÜK KALAMAZ (MB-46, 18.08). Şablonda oran doğru: başlık `700 12,5`,
+     gövde `400 11,5` — başlık bir tık üstte. `(21.38)` süpürmesi gövdeyi 14'e çıkardı (kullanıcı
+     ölçütü: müşterinin karar için okuduğu metin 14'ün altına inmez) ama başlığı 12'de bıraktı ve
+     oran TERSİNE döndü. Başlık gövdeyle aynı durağa alındı; ayrım ağırlıkta duruyor (700 ↔ 400),
+     şablonun da asıl kullandığı ayrım o. */
   dataTitle: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.helper,
+    fontSize: theme.text['body-sm'],
     color: theme.colors.ink,
   },
   dataBody: {
