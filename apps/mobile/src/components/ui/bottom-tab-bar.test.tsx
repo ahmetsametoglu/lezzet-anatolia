@@ -10,9 +10,10 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { BottomTabBar, type BottomTabItem } from './bottom-tab-bar';
 import { appMetrics } from '../../theme/metrics';
-import { mapTokens } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 
-const appText = mapTokens({ ...customerText, ...customerAppText });
+// Çeviri temanın kullandığının aynısı: px→dp + müşteri yüzeyinin bir kademesi (18.08).
+const appText = customerStops({ ...customerText, ...customerAppText });
 
 const items: BottomTabItem[] = [
   { key: 'index', label: 'Vitrin', icon: 'home', selected: false, onPress: jest.fn() },

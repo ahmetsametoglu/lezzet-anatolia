@@ -8,10 +8,12 @@ import {
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Tag } from './tag';
-import { emToDp, mapTokens } from '../../theme/parse';
+import { emToDp } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 
-// Beklenenler PAKETTEN türetilir; `mapTokens` aynı çeviriyi uygular, böylece test ham değer taşımaz.
-const appText = mapTokens(customerAppText);
+// Beklenenler PAKETTEN türetilir; `customerStops` temanın uyguladığı çevirinin aynısıdır
+// (px→dp + bir kademe), böylece test ham değer taşımaz.
+const appText = customerStops(customerAppText);
 
 describe('Tag', () => {
   it('etiketi gösterir ve dokunulamayan rozette düğme rolü ÜRETMEZ', async () => {

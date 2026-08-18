@@ -1,6 +1,7 @@
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { z } from 'zod';
 
+import { mapTextStops } from '@/theme/parse';
 import { lightTheme, operationsTheme } from '@/theme/unistyles';
 
 import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
@@ -29,27 +30,21 @@ export type FontScale = z.infer<typeof FontScaleSchema>;
 /** Çarpanlar parametrik ve tek yerde — %90 · %100 · %115 (büyük adım, gözle seçilir fark). */
 const FACTOR: Record<FontScale, number> = { small: 0.9, normal: 1, large: 1.15 };
 
-function scaledText<T extends Record<string, number | string>>(base: T, factor: number): T {
-  const out = Object.fromEntries(
-    Object.entries(base).map(([key, value]) => [
-      key,
-      typeof value === 'number' && !key.includes('--') ? value * factor : value,
-    ]),
-  );
-  // Şekil bazla birebir aynı (yalnız sayısal boyutlar çarpıldı); Object.fromEntries genişletir,
-  // bağ yukarıdaki map'in kendisinde. Generic: iki temanın text kümesi farklı genişlikte.
-  return out as T;
-}
-
 /** Seçimi iki temaya birden uygular — operasyon yüzeyi de aynı gözle okusun. */
 export function applyFontScale(scale: FontScale): void {
   const factor = FACTOR[scale];
+  /* "Hangi anahtar boyut durağıdır" kuralı `theme/parse`ta, TEK yerde (18.08): müşteri teması
+     kuruluşta bir kademe eklerken de aynı kuralı kullanıyor. Burada ikinci bir kopya vardı;
+     yeni bir alt-özellik soneki doğduğu gün ikisinden biri onu tanımayacaktı (CLAUDE §1). */
   // Güncelleyici parametresi BİLEREK kullanılmıyor: dönen nesne her seferinde BAZ temadan kurulur
   // (birikme yok) ve tip, birleşim yerine ilgili temanın kendisiyle birebir oturur.
-  UnistylesRuntime.updateTheme('light', () => ({ ...lightTheme, text: scaledText(lightTheme.text, factor) }));
+  UnistylesRuntime.updateTheme('light', () => ({
+    ...lightTheme,
+    text: mapTextStops(lightTheme.text, (size) => size * factor),
+  }));
   UnistylesRuntime.updateTheme('operations', () => ({
     ...operationsTheme,
-    text: scaledText(operationsTheme.text, factor),
+    text: mapTextStops(operationsTheme.text, (size) => size * factor),
   }));
 }
 

@@ -1,11 +1,12 @@
 import { customerColors, customerText } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { mapTokens } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 import { TextAction } from './text-action';
 
-// Beklenenler PAKETTEN türetilir; `mapTokens` kodun kullandığı çevirinin aynısıdır.
-const baseText = mapTokens(customerText);
+// Beklenenler PAKETTEN türetilir; `customerStops` temanın kullandığı çevirinin aynısıdır
+// (px→dp + müşteri yüzeyinin bir kademesi — 18.08).
+const baseText = customerStops(customerText);
 
 describe('TextAction', () => {
   it('düğme rolüyle çıkar ve basılınca çağırır', async () => {

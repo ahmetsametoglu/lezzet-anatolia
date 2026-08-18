@@ -1000,9 +1000,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /* İM, BAŞLIK DEĞİL (18.08). Durak `h2-sm`di — yani BAŞLIK kademesi — oysa bu bir `−`/`+` imi.
+     `icon-sm` aynı boyu (20) taşıyor, dolayısıyla ekranda tek piksel oynamıyor; değişen şey ölçekte
+     hangi rolün kullanıldığı. Token künyesi rolü zaten yazıyor: *"İkon/emoji ölçüleri — metin
+     hiyerarşisinin parçası DEĞİL (başlık kurmazlar)"*. Başlık durağına bağlı kalsaydı, bir gün
+     başlık ölçeği ayarlandığında adet seçici de onunla birlikte oynardı. */
   stepGlyph: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text['h2-sm'],
+    fontSize: theme.text['icon-sm'],
     color: theme.colors.olive,
   },
   stepValue: {

@@ -29,6 +29,31 @@ export const parseToken = (value: string): number | string => {
 export const mapTokens = <T extends Record<string, string>>(tokens: T): ParsedTokens<T> =>
   Object.fromEntries(Object.entries(tokens).map(([key, value]) => [key, parseToken(value)])) as ParsedTokens<T>;
 
+/*
+  BOYUT DURAĞI MI, ALT-ÖZELLİK Mİ — kural TEK YERDE (18.08).
+
+  `theme.text` iki tür anahtar taşıyor: boyut durakları (`note`, `body-sm`, `h1-sm`…) ve
+  kademelerin alt-özellikleri (`--font-weight`, `--line-height`, `--letter-spacing`). Ölçeğe
+  dokunan her işlem YALNIZ ilkini değiştirmeli — ağırlık da sayı tutulduğu için (yukarıdaki
+  `Parsed` künyesi) gelişigüzel bir "tüm sayıları çarp" 700'ü 805 yapar ve düğme yazısı bozulur.
+
+  Kural iki yerde birden gerekiyor: yazı boyutu ayarı ölçeği ÇARPIYOR (`lib/settings/font-scale`),
+  müşteri teması ise kuruluşta bir kademe EKLİYOR (`unistyles.ts`). İkisi ayrı ayrı yazılsaydı
+  yeni bir alt-özellik soneki doğduğu gün biri onu tanır, öteki tanımazdı (CLAUDE §1).
+*/
+const SUB_PROPERTY = '--';
+
+/** Yalnız BOYUT duraklarına `transform` uygular; alt-özellikler (`--…`) olduğu gibi geçer. */
+export const mapTextStops = <T extends Record<string, number | string>>(
+  text: T,
+  transform: (size: number) => number,
+): T =>
+  Object.fromEntries(
+    Object.entries(text).map(([key, value]) =>
+      typeof value === 'number' && !key.includes(SUB_PROPERTY) ? [key, transform(value)] : [key, value],
+    ),
+  ) as T;
+
 const EM_PATTERN = /^(-?[\d.]+)em$/;
 
 /**

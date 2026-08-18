@@ -15,7 +15,10 @@ import {
 } from '@lezzet/design-tokens';
 
 import { appFontAssets } from './fonts';
-import { lightTheme, operationsTheme } from './unistyles';
+import { CUSTOMER_TEXT_STEP_UP, lightTheme, operationsTheme } from './unistyles';
+
+/** Müşteri yüzeyinin boyut durağı = token + bir kademe (18.08). Ham sayı yine yazılmıyor. */
+const stop = (token: string): number => Number.parseFloat(token) + CUSTOMER_TEXT_STEP_UP;
 
 // Bağlantı kanıtı: tema değerleri design-tokens paketinden GELİYOR — beklenenler de paketten
 // türetilir (ham değer teste de yazılmaz), böylece token değişince test tanım gereği ayak uydurur.
@@ -24,7 +27,7 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.colors.ink).toBe(customerColors.ink);
     expect(lightTheme.colors.olive).toBe(customerColors.olive);
     expect(lightTheme.radius.soft).toBe(Number.parseFloat(customerRadius.soft));
-    expect(lightTheme.text.body).toBe(Number.parseFloat(customerText.body));
+    expect(lightTheme.text.body).toBe(stop(customerText.body));
   });
 
   it('aynı addaki anahtarda UYGULAMA kazanır (fark token’ları)', () => {
@@ -52,17 +55,17 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
   });
 
   it('üstbaşlığın ÜÇ alt-anahtarı da uygulamadan gelir (yarım ezme yok)', () => {
-    expect(lightTheme.text.eyebrow).toBe(Number.parseFloat(customerAppText.eyebrow));
+    expect(lightTheme.text.eyebrow).toBe(stop(customerAppText.eyebrow));
     expect(lightTheme.text['eyebrow--font-weight']).toBe(Number(customerAppText['eyebrow--font-weight']));
     expect(lightTheme.text['eyebrow--letter-spacing']).toBe(customerAppText['eyebrow--letter-spacing']);
     // Web'in kendi mobil forku tabandan gelmeye devam eder; uygulama onu kullanmaz.
-    expect(lightTheme.text['eyebrow-sm']).toBe(Number.parseFloat(customerText['eyebrow-sm']));
+    expect(lightTheme.text['eyebrow-sm']).toBe(stop(customerText['eyebrow-sm']));
   });
 
   it('px kademeleri sayıya (dp) çevrilir, em harf aralığı olduğu gibi kalır', () => {
-    expect(lightTheme.text['screen-title']).toBe(Number.parseFloat(customerAppText['screen-title']));
+    expect(lightTheme.text['screen-title']).toBe(stop(customerAppText['screen-title']));
     expect(lightTheme.text['h1--line-height']).toBe(Number(customerText['h1--line-height']));
-    expect(lightTheme.text.button).toBe(Number.parseFloat(customerAppText.button));
+    expect(lightTheme.text.button).toBe(stop(customerAppText.button));
     expect(lightTheme.text['button--font-weight']).toBe(700);
   });
 
@@ -146,6 +149,8 @@ describe('Operasyon teması ↔ üç katman kompozisyonu', () => {
     expect(operationsTheme.colors['ink-inset']).toBe(operationsAppColors['ink-inset']);
     expect(operationsTheme.colors.warehouse).toBe(operationsAppColors.warehouse);
     expect(operationsTheme.colors['tab-inactive']).toBe(operationsAppColors['tab-inactive']);
+    /* `stop()` DEĞİL, ham token: bir kademe büyütme MÜŞTERİ yüzeyinin kararıdır (18.08) ve
+       operasyona sızmamalı. Bu iki satır o sınırın bekçisi — sızarsa burada kırmızıya döner. */
     expect(operationsTheme.text.meta).toBe(Number.parseFloat(operationsAppText.meta));
     expect(operationsTheme.text.tag).toBe(Number.parseFloat(operationsAppText.tag));
     expect(operationsTheme.radius.tight).toBe(Number.parseFloat(operationsAppRadius.tight));

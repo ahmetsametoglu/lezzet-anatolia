@@ -4,6 +4,10 @@ import { Text } from 'react-native';
 
 import { EmptyState } from './empty-state';
 import { PrimaryButton } from './primary-button';
+import { customerStops } from '../../theme/unistyles';
+
+// Çeviri temanın kullandığının aynısı: px→dp + müşteri yüzeyinin bir kademesi (18.08).
+const baseText = customerStops(customerText);
 
 describe('EmptyState', () => {
   it('başlığı header rolüyle duyurur, açıklama ve yuvalar isteğe bağlıdır', async () => {
@@ -46,11 +50,11 @@ describe('EmptyState', () => {
     await render(<EmptyState title="Aradığınızı bulamadık" description="Farklı bir yazım deneyin." />);
 
     expect(screen.getByRole('header')).toHaveStyle({
-      fontSize: Number.parseFloat(customerText['card-title-sm']),
+      fontSize: baseText['card-title-sm'],
       color: customerColors.ink,
     });
     expect(screen.getByText('Farklı bir yazım deneyin.')).toHaveStyle({
-      fontSize: Number.parseFloat(customerText.note),
+      fontSize: baseText.note,
       color: customerColors.muted,
     });
   });

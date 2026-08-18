@@ -3,9 +3,10 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
-import { mapTokens } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 
-const appText = mapTokens(customerAppText);
+// Çeviri temanın kullandığının aynısı: px→dp + müşteri yüzeyinin bir kademesi (18.08).
+const appText = customerStops(customerAppText);
 
 describe('BottomSheet', () => {
   it('kapalıyken içeriğini HİÇ çizmez', async () => {

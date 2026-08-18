@@ -13,6 +13,7 @@ import { ProductPhotoCard } from './product-photo-card';
 import { appMetrics } from '../../theme/metrics';
 import { parseLinearGradient } from '../../theme/gradient';
 import { emToDp, mapTokens } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 
 /*
   Testin işi iki şey: (1) kartın davranışı — durum rozetinin tek yuvası, tükendinin önceliği,
@@ -20,7 +21,8 @@ import { emToDp, mapTokens } from '../../theme/parse';
   birinin ham `#faf6ec` yazması hiçbir yerde patlamazdı (CLAUDE §3 — ham hex yasak).
 */
 
-const appText = mapTokens({ ...customerText, ...customerAppText });
+// Yazı kademeleri temanın çevirisinden geçer (px→dp + bir kademe, 18.08); yarıçap ölçeklenmez.
+const appText = customerStops({ ...customerText, ...customerAppText });
 const appRadius = mapTokens(customerAppRadius);
 
 describe('ProductPhotoCard', () => {

@@ -2,11 +2,12 @@ import { customerAppColors, customerAppText, customerColors } from '@lezzet/desi
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { mapTokens } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 import { AppBar } from './app-bar';
 
-// Beklenenler PAKETTEN türetilir; `mapTokens` aynı çeviriyi uygular, böylece test ham değer taşımaz.
-const appText = mapTokens(customerAppText);
+// Beklenenler PAKETTEN türetilir; `customerStops` temanın uyguladığı çevirinin aynısıdır
+// (px→dp + bir kademe), böylece test ham değer taşımaz.
+const appText = customerStops(customerAppText);
 
 describe('AppBar', () => {
   it('başlığı header rolüyle duyurur', async () => {

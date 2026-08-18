@@ -3717,6 +3717,54 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` temiz · `lint` temiz · dokunulan iki ekranın jest paketi **10/10**. Cihaz
   turu gerekmedi (kullanıcı kararı 11.08 — süpürmede kod tarafı doğrulama yeter).
 
+- [x] (21.77) **MÜŞTERİ YÜZEYİ BİR KADEME BÜYÜK OKUYOR — ve yazı ölçeği baştan sona denetlendi
+  (kullanıcı isteği 18.08)**
+  → `touches: apps/mobile/src/theme/{parse,unistyles,unistyles.test}.ts,
+  apps/mobile/src/lib/settings/font-scale.ts, apps/mobile/src/components/ui/*,
+  apps/mobile/src/screens/{product,package,recipe}/*`
+
+  İstek üç parçaydı: (1) tüm fontlar merkeze bağlı olsun, (2) rolüne uygun token kullanılsın,
+  (3) her boyut bir kademe büyüsün.
+
+  **(1) MERKEZ ZATEN TAMDI — ölçüm şüpheyi karşıladı.** `apps/mobile` genelinde ham sayıyla
+  yazılmış **tek bir `fontSize` yok** (0/372); hepsi `theme.text.*` okuyor. Ham renk yasağının
+  (CLAUDE §3) yazı tarafındaki karşılığı tutmuş.
+
+  **(3) BİR KADEME = SABİT +1 dp, TEK NOKTADA** (kullanıcı seçimi). `unistyles.ts`te müşteri
+  temasının `text`i kurulurken uygulanıyor (`customerStops`), yani 372 çağıranın hiçbiri
+  değişmedi. Neden sabit ekleme: şablonun yarım piksel farkları KARAR taşıyor (`control` 13,5 ↔
+  `body-sm` 14 hizası) ve sabit ekleme bütün aralıkları birebir korur; "merdivende bir üst durak"
+  başlığı +4, gövdeyi +0,5 büyütüp hiyerarşiyi oynatırdı. **Operasyon teması dokunulmadı** —
+  büyütme müşteri yüzeyinin kararı; `unistyles.test` bu sınırın bekçisi (operasyon durakları ham
+  token'la karşılaştırılıyor, sızarsa kırmızıya döner). **Token dosyalarına girilmedi**: `customerText`
+  web müşteri yüzeyiyle paylaşılıyor (kullanıcı kararı: yalnız mobil uygulama).
+  **Bir duplikasyon da kapandı:** "hangi anahtar boyut durağıdır, hangisi alt-özellik" kuralı hem
+  `font-scale`de hem burada gerekiyordu; `theme/parse`taki `mapTextStops`a alındı. İki kopya
+  kalsaydı yeni bir `--` soneki doğduğu gün biri onu tanımazdı (CLAUDE §1).
+
+  **(2) FONT TİPİ — 14 aday, 4 gerçek.** Envanter betiği (aile ↔ durak çifti) üç öbek çıkardı:
+  · **Ailesiz 3 → 1 gerçek.** İkisi yanlış alarmdı (`stock-mark`: aile ortak `label` stilinden
+    geliyor, RN stil dizisi birleştiriyor). Gerçek olan `package-detail`in `itemChevron`ıydı: tek
+    başına kullanılıyor ve ailesi yoktu — "›" işareti Karla'yla değil CİHAZIN SİSTEM FONTUYLA
+    çiziliyordu. Bağlandı.
+  · **Gövde durağında Lora 3 → 0 gerçek.** Üçü de ÜRÜN ADI; `fonts.ts` künyesi kuralı zaten
+    yazıyor: *"Lora yalnız başlık ve ürün adı"*. Doğru kullanım.
+  · **Başlık durağı ödünç alan 8 → 3 düzeltildi, 5 kayda geçti.** Adet seçicinin `−`/`+` imleri
+    (ürün · paket) ve tarif satırının `+`ı `h2-sm` okuyordu — yani BAŞLIK kademesi. `icon-sm`e
+    alındılar: **aynı boy (20), sıfır piksel değişim**, tek fark ölçekte doğru rol. Token künyesi
+    rolü zaten söylüyor: *"İkon/emoji ölçüleri — metin hiyerarşisinin parçası DEĞİL"*.
+
+  **KALAN BEŞİ KOD KUSURU DEĞİL, ÖLÇEK BOŞLUĞU → `BACKLOG-musteri` MB-72.** Puan sayısı, kaydırma
+  damgası, paket fiyatı, OTP alanı ve onay ✓'i büyük Karla rakam/im istiyor; şablon bunu 21–24'te
+  kullanıyor ama ölçekte 16'nın üstünde başlık olmayan durak yok. Ekranlar olmayan bir durağı arayıp
+  en yakın BAŞLIK durağına tutunmuş. Çözüm token EKLEMEK olduğu için ölçüm orada bırakıldı
+  (CLAUDE §3: *"Token yoksa kodlama, envantere ekletme"*).
+
+  **Doğrulama:** `tsc` temiz · `lint` temiz (`src` tamamı) · **599 jest testi, 84 paket, hepsi
+  geçti**. 13 test düşmüştü ve hepsi beklenen boyutu token'dan türetiyordu; kural yine tek yerden
+  verildi (`customerStops`), sekiz test dosyasında birer satır. Cihaz doğrulaması BEKLİYOR — ekranda
+  görülecek bir değişiklik ve cihaz şu an bağlı değil.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

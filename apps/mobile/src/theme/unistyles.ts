@@ -19,7 +19,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { appFont } from './fonts';
 import { parseLinearGradient } from './gradient';
 import { appMetrics } from './metrics';
-import { mapTokens } from './parse';
+import { mapTextStops, mapTokens } from './parse';
 
 /*
   Unistyles teması — HER değer @lezzet/design-tokens'tan gelir; ham renk/ölçü buraya YAZILMAZ
@@ -38,8 +38,35 @@ import { mapTokens } from './parse';
 /** 5 fark + 14 uygulamaya-yeni renk tabanın üstüne biner (`sand-300`, `star`, `error`, `scrim`…). */
 const colors = { ...customerColors, ...customerAppColors } as const;
 
+/*
+  MÜŞTERİ YÜZEYİ BİR KADEME BÜYÜK OKUR (kullanıcı kararı 18.08).
+
+  NE: ölçeğin her BOYUT durağına sabit +1 dp. Neden sabit ekleme, çarpan ya da "merdivende bir üst
+  durak" değil: şablonun yarım piksel farkları KARAR taşıyor — `control` 13,5 ile `body-sm` 14
+  arasındaki yarım piksel, çipin komşu öğeyle hizasını belirliyor (`customer.ts` künyesi: "kontrol
+  kademelerinde yuvarlama yok"). Sabit ekleme bütün aralıkları BİREBİR korur; üst durağa atlama
+  ise başlığı +4, gövdeyi +0,5 büyütüp hiyerarşiyi oynatırdı.
+
+  NEREDE: yalnız burada — yani yalnız `lightTheme`. Operasyon teması (aşağıda) token'ları kendi
+  kuruyor ve DOKUNULMUYOR; büyütme müşteri yüzeyinin kararı, personelin ekranının değil.
+  Token dosyalarına da girilmedi: `customerText` web müşteri yüzeyiyle PAYLAŞILIYOR ve orada
+  ölçebileceğimiz bir cihaz yok (kullanıcı kararı: yalnız mobil uygulama).
+
+  BİRİKMEZ: yazı boyutu ayarı (`lib/settings/font-scale`) çarpanını HER ZAMAN bu bazdan uygular,
+  temanın o anki değerinden değil — art arda seçimlerde kademe üst üste eklenmez.
+*/
+export const CUSTOMER_TEXT_STEP_UP = 1;
+
+/**
+ * Token kümesini MÜŞTERİ YÜZEYİNİN okuduğu hâle çevirir: `"14px"` → `15` (px→dp, sonra bir kademe).
+ * Temanın kendisi de, kademeyi token'dan türeten testler de buradan geçer — kural tek yerde
+ * durmazsa temanın gerçeği ile testin beklentisi bir gün sessizce ayrışır (CLAUDE §1).
+ */
+export const customerStops = <T extends Record<string, string>>(tokens: T) =>
+  mapTextStops(mapTokens(tokens), (size) => size + CUSTOMER_TEXT_STEP_UP);
+
 /** Uygulama kademeleri tabana eklenir; `eyebrow` üç alt-anahtarıyla birlikte uygulamadan gelir. */
-const text = mapTokens({ ...customerText, ...customerAppText });
+const text = customerStops({ ...customerText, ...customerAppText });
 
 /** Resmî 4'lü set (rozet 12 · kontrol 16 · kart 20 · hap 22) tabanın `card`/`pill`ini ezer. */
 const radius = mapTokens({ ...customerRadius, ...customerAppRadius });

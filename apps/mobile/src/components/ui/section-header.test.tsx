@@ -1,12 +1,13 @@
 import { customerAppText, customerColors, customerText } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { emToDp, mapTokens } from '../../theme/parse';
+import { emToDp } from '../../theme/parse';
+import { customerStops } from '../../theme/unistyles';
 import { SectionHeader } from './section-header';
 
-// Beklenenler PAKETTEN türetilir; çeviri de kodun kullandığı çevirinin aynısı.
-const appText = mapTokens(customerAppText);
-const baseText = mapTokens(customerText);
+// Beklenenler PAKETTEN türetilir; çeviri de temanın kullandığı çevirinin aynısı (px→dp + kademe).
+const appText = customerStops(customerAppText);
+const baseText = customerStops(customerText);
 
 describe('SectionHeader', () => {
   it('yalnız üstbaşlıkla kurulabilir (başlık ve bağlantı isteğe bağlı)', async () => {

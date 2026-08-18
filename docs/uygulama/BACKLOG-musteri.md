@@ -1265,6 +1265,30 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
 
   **Cihaz turu gerekmedi** (kullanıcı kararı 11.08 — süpürmede kod tarafı doğrulama yeter).
 
+- [ ] **MB-72 · Beş yer BAŞLIK durağını başlık olmayan içerik için ödünç alıyor — ölçekte o durak YOK.**
+  `(21.77)` taramasında ölçüldü (18.08): müşteri yüzeyindeki 372 stil bloğunun sekizi bir *başlık*
+  kademesini (`h2-sm` · `card-title` · `page-title-sm`) Karla ile kullanıyordu. Üçü im olduğu için
+  `icon-sm`e alındı (aynı boy, doğru rol); **beşi duruyor ve sebebi kod değil, ÖLÇEK:**
+
+  | yer | bugünkü durak | şablonun dediği | ne olduğu |
+  |---|---|---|---|
+  | `account-screen` `pointsValue` | `h2-sm` (20) | `700 22px Karla` | puan sayısı — `✦ 240` |
+  | `discover-screen` `stampLabel` | `h2-sm` (20) | `700 22px Karla` | kaydırma damgası |
+  | `package-detail` `price` | `card-title` (24) | — | paket fiyatı |
+  | `code-field` `field` | `page-title-sm` (26) | — | tek kullanımlık kod alanı |
+  | `order-confirmed` `markGlyph` | `page-title-sm` (26) | — | onay ✓ imi |
+
+  **Kök sebep:** şablon Karla'yı 21–24 px'te BÜYÜK RAKAM/İM olarak kullanıyor (`400 22px` adet
+  seçici, `700 22px` puan ve damga, `400 24px` yuvarlak düğmeler), ama ölçekte 16'nın (`step`)
+  üstünde başlık OLMAYAN tek durak `icon`/`icon-sm` (22/20) ve o da ikon rolünde. Yani ekranlar
+  elde olmayan bir durağı aramış, bulamayınca en yakın boydaki BAŞLIK durağına tutunmuş.
+  **Risk somut:** başlık ölçeği bir gün ayarlandığında puan sayısı ve OTP alanı da onunla oynar.
+
+  **Yapılacak:** `customerAppText`e rolüyle adlandırılmış bir "büyük değer/im" durağı eklemek
+  (şablonun 22'si) ve beş yeri oraya bağlamak. Token EKLEME kararı olduğu için ölçüm burada
+  bırakıldı — CLAUDE §3: *"Token yoksa kodlama, envantere ekletme."* İkisi de cihazda
+  doğrulanabilir olduğunda tek turda yapılmalı.
+
 ---
 
 ## 7. İçerik ve dil

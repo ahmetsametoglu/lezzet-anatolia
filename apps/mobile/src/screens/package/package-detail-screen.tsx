@@ -517,7 +517,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.helper,
     color: theme.colors.muted,
   },
+  /* Aile AÇIK yazılır (18.08): bu satır tek başına kullanılıyor (`styles.itemChevron`), yani
+     ailesini komşu bir stilden miras almıyor — verilmediğinde "›" işareti Karla'yla değil CİHAZIN
+     sistem fontuyla çizilirdi. Ok işareti de bir harftir; ailesiz kalan tek yerdi. */
   itemChevron: {
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.body,
     color: theme.colors['sand-600'],
   },
@@ -573,9 +577,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /* İM, BAŞLIK DEĞİL (18.08) — ürün detayındaki adet seçicinin aynı kararı, gerekçesi orada yazılı
+     (`product-detail-screen`, `stepGlyph`). Boy aynı (20), değişen ölçekte kullanılan rol. */
   stepGlyph: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text['h2-sm'],
+    fontSize: theme.text['icon-sm'],
     color: theme.colors.olive,
   },
   stepValue: {

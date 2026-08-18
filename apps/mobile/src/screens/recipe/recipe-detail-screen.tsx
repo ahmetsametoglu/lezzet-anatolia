@@ -473,9 +473,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors['sand-50'],
     boxShadow: `${theme.press.translate}px ${theme.press.translate}px 0 ${theme.colors.ink}`,
   },
+  /* İM, BAŞLIK DEĞİL (18.08) — tarif satırındaki "+" düğmesinin imi; gerekçe adet seçicininkiyle
+     aynı (`product-detail-screen`, `stepGlyph`). Boy aynı (20), değişen kullanılan rol. */
   addGlyph: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text['h2-sm'],
+    fontSize: theme.text['icon-sm'],
     color: theme.colors.ink,
   },
 
