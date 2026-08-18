@@ -3819,6 +3819,39 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   artıyor. Çarpanla yapılsaydı üçü de aynı yüzdeyi verirdi — yani ekrandaki şey gerçekten sabit
   bir ekleme ve tema o değeri okuyor.
 
+- [~] (21.78) **CİHAZ TURUNUN A BÖLÜMÜ İLK KEZ KOŞULDU — misafir yüzeyi (kullanıcı onayı 18.08)**
+  → A1…A8 tamam, A14 kısmen; A9–A13 ve A15–A17 açık. `touches: docs/uygulama/*`
+
+  Tur **hiç yapılmamıştı** çünkü ön koşulu uygulama verisini silmek ve bu, cihazdaki oturumu
+  götürüyor. Kullanıcı onayıyla yapıldı.
+
+  **ÖN KOŞULUN KENDİSİ İKİ SÜRPRİZ ÇIKARDI, ikisi de tur belgesine yazıldı:**
+  · `adb shell pm clear` **bu cihazda çalışmıyor** (Oppo CPH1907 — kabukta `CLEAR_APP_USER_DATA`
+    izni yok, `SecurityException`). Yol Ayarlar üzerinden: *Uygulama bilgileri → Saklama alanı →
+    Verileri temizle*. Sayfa `am start -a android.settings.APPLICATION_DETAILS_SETTINGS` ile açılıyor.
+  · **Veri silme GELİŞTİRME DERLEMESİNİ de sıfırlıyor:** dev client'ın hatırladığı Metro adresi
+    gidiyor ve uygulama "Development Servers" ekranına düşüyor. `adb reverse tcp:8081 tcp:8081` +
+    adres alanına `http://localhost:8081` ile toparlanıyor. Bu adım belgede hiç yoktu.
+
+  **GEÇEN ADIMLAR:** A1 (seçim aynı karede çeviriyor ve kendiliğinden ilerliyor) · A2 ("Büyük"te
+  sonraki adımların hiçbiri taşmadı) · A3/A4 (bölge içi/dışı AYRI cümle; bölge dışı cevabı **ret
+  gibi değil, alternatif gibi** okunuyor) · A5 (havale satırı *"Profesyonel müşterilerimize özel"*
+  diyor) · A6 (*"500 puan = 5,00 € kupon"* tek satır, liste kapalı; açılınca iki davet tipi ayrı
+  ayrı) · A7 · A8 (**misafire hiçbir "önce hesap aç" duvarı çıkmıyor**) · A14 kısmen.
+
+  **BİR GERÇEK BULGU: MB-74 — onboarding'in iki adımı soğuk zincir konusunda ÇELİŞİYOR.** Teslimat
+  adımı *"soğuk zincir gerektirenler kargoyla gönderilemez"* diyor, iki ekran sonraki posta kodu
+  adımı bölge dışına *"soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız"* diyor. Ayrım
+  muhtemelen gerçek (yalıtımlı ambalaj ≠ donuk) ama müşteri o ayrımı bu iki cümleden çıkaramaz.
+  Metin kararı olduğu için ölçüm bırakıldı; kayıt `BACKLOG-musteri`de.
+
+  **ÜÇÜNCÜ BULGU BELGENİN KENDİSİNDE:** uygulamada onboarding **dokuz** adımlı ve sıra
+  dil → yazı boyutu → **teslimat** → **posta kodu** → …; belge A3/A4'te posta kodunu teslimattan
+  ÖNCE yazıyor. Tablo artık "kod doğrulanmadan okunmasın" uyarısıyla duruyor.
+
+  **Cihaz durumu:** dil Türkçe · yazı boyutu Büyük · posta kodu 67000 geri kuruldu; kullanıcının
+  **oturumu silindi**, yeniden OTP ile girmesi gerekiyor. Turda eklenen sepet kalemi temizlendi.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

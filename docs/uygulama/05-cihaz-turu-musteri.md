@@ -34,8 +34,23 @@ müdahale yok).
 
 ## A · Misafir turu — hesabı olmayan kişi
 
-Ön koşul: uygulama verisi silinir (`adb shell pm clear`), böylece onboarding kapısı açılır ve
-"ilk açılış" gerçekten ilk açılış olur.
+Ön koşul: uygulama verisi silinir, böylece onboarding kapısı açılır ve "ilk açılış" gerçekten
+ilk açılış olur.
+
+> **DURUM 18.08 — A1…A8 koşuldu, A14 kısmen; kalanlar açık.** Üç şey ölçümden çıktı:
+>
+> · **`adb shell pm clear` BU CİHAZDA ÇALIŞMIYOR** (Oppo CPH1907): kabuk kullanıcısında
+>   `CLEAR_APP_USER_DATA` izni yok, komut `SecurityException` ile düşüyor. Yol şudur:
+>   `adb shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.lezzetanatolia.app`
+>   → *Saklama alanı kullanımı* → *Verileri temizle* → *Tamam*.
+> · **VERİ SİLME GELİŞTİRME DERLEMESİNİ DE SIFIRLIYOR.** Dev client'ın hatırladığı Metro adresi de
+>   siliniyor ve uygulama açılışta "Development Servers" ekranına düşüyor. Turdan önce
+>   `adb reverse tcp:8081 tcp:8081` kurulur, sonra adres alanına `http://localhost:8081` yazılır.
+>   Bu adım tur belgesinde yoktu; ilk kez burada yaşandı.
+> · **ADIM SIRASI VE SAYISI BELGEYLE UYUŞMUYOR.** Uygulamada onboarding **dokuz** noktalı ve sıra
+>   dil → yazı boyutu → **teslimat** → **posta kodu** → ödeme → puan → (puan detayı) …; belgedeki
+>   A3/A4 ise posta kodunu teslimattan ÖNCE yazıyor. Aşağıdaki tablo bu yüzden **kod tarafından
+>   doğrulanmadan okunmamalı** (CLAUDE: kod ile doküman çelişirse KOD haklı).
 
 | # | adım | çalışıyor mu — ölçüt | anlaşılıyor mu — ölçüt |
 | --- | --- | --- | --- |

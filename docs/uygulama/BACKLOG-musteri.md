@@ -1135,6 +1135,38 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   logcat` bu turda zaman aşımına düştü, ölçüm yapılamadı. Cihaz işi (§13 ⚑) — bir sonraki
   cihaz turunda uygulama açıkken kütük süzülerek bulunur.
 
+### 18.08 cihaz turunda açılanlar (A bölümü — MİSAFİR, ilk kez koşuldu)
+
+> A1…A8 koşuldu, A14 kısmen; A9–A13 ve A15–A17 açık kaldı. Turun kendi ön koşulları da düzeldi
+> (`pm clear` bu cihazda çalışmıyor, veri silme dev client'ı da sıfırlıyor) — ayrıntısı
+> `05-cihaz-turu-musteri.md` başındaki durum kutusunda.
+>
+> **Geçenler:** A1 (seçim aynı karede çeviriyor ve kendiliğinden ilerliyor; üç dil kendi adıyla) ·
+> A2 ("Büyük" seçiliyken sonraki adımların hiçbiri taşmadı) · A3/A4 (bölge içi ve dışı AYRI cümle;
+> **bölge dışı cevabı ret gibi değil, alternatif gibi okunuyor** — *"soğuk zincir korumalı kargoyla
+> 2–4 iş gününde"*) · A5 (havale satırı *"Profesyonel müşterilerimize özel"* diyor, B2C şaşırmıyor) ·
+> A6 (*"500 puan = 5,00 € kupon"* tek satır; altı satırlık liste kapalı, açılınca iki davet tipi
+> ayrı ayrı ve ödeme koşuluyla anlatılıyor) · A7 (vitrine düşüyor) · A8 (**misafire hiçbir "önce
+> hesap aç" duvarı çıkmıyor** — bölge seçici, fırsat şeridi, koleksiyonlar, tarifler, paketler
+> hepsi açık) · A14 kısmen (sepet misafirde cihazda yaşıyor, adres yerine posta kodu gösteriliyor;
+> **giriş duvarının yeri ölçülemedi** çünkü "Siparişi tamamla" asgari sepet yüzünden kapalıydı).
+
+- [ ] **MB-74 · Onboarding'in iki adımı SOĞUK ZİNCİR konusunda birbiriyle çelişiyor.**
+  Ölçüldü (18.08, cihazda, Türkçe):
+  · **Teslimat adımı:** *"Kargoyla — Bölge dışında yalnız kargolanabilir ürünler; **soğuk zincir
+    gerektirenler kargoyla gönderilemez**."*
+  · **Posta kodu adımı, bölge dışı cevabı:** *"**Soğuk zincir korumalı kargoyla** 2–4 iş gününde
+    ulaştırırız."*
+
+  İki ekran arayla biri "gönderemeyiz" diyor, öteki "gönderiyoruz" diyor. Aradaki ayrım muhtemelen
+  gerçek (yalıtımlı ambalajla kısa süre serin kalan ürün ≠ donuk ürün) ama **müşteri o ayrımı bu
+  iki cümleden ÇIKARAMAZ**: kelimeler neredeyse aynı. Bölge dışındaki müşteri ilk cümleyi okuyup
+  "demek bana donuk ürün gelmiyor" diye katalogdan çekilebilir ya da tersine ikinci cümleye
+  güvenip donuk ürün bekleyebilir.
+  **Yapılacak:** iki cümle tek bir kuralın iki yüzü olacak biçimde yeniden yazılmalı — hangi ürün
+  hangi yolla gidiyor, tek yerde ve aynı sözcüklerle. Metin kararı olduğu için ölçüm burada
+  bırakıldı.
+
 ### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)
 
 > Beşi de **görsel/metin** kalemi; hiçbiri veri ya da hesap arızası değil. Turun aynı gününde
