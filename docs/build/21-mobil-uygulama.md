@@ -3707,13 +3707,16 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   · **MB-69 doğrulandı.** 1,84 €'luk tek kalemle sepet açıldı: dipte *"Asgari sepet 40,00 €.
     Sipariş verebilmek için birkaç ürün daha ekleyin."*, barda *"Asgari sepete 38,16 € eksik"* —
     tekrar eden sayı yok, iki uç birbirinde olmayanı söylüyor. Tur kalemi sonra temizlendi.
-  · **MB-70'in daraltılmış sorusuna cevap EVET.** Adres çekmecesinde *"avenue"* yazıldı, BAN dört
-    öneri döndü: `Kaydet`ten geriye ~4 dp'lik yeşil bir ŞERİT kalıyor. Kırılma değil (kısa bir
-    kaydırma düğmeyi tam getiriyor) ama ilk karede birincil eylem kırpılmış bir çizgi ve bu "bozuk"
-    diye okunuyor. Turdaki *"künye biniyor"* izlenimi de açıklığa kavuştu: binme YOK, ama yarım
-    kesilmiş satır künyeye dayanınca çarpışma gibi görünüyor — "Büyük" yazı boyutunda kesim
-    harflerin tam ortasına düşüyor. **Kök sebep listenin formu AŞAĞI İTMESİ**; kalem ve aday
-    çözümü (üstüne bindirme + bu depoda yaşanmış RN kardeş-z tuzağı) `BACKLOG-musteri`de.
+  · **MB-70 KAPANDI — ARIZA YOK, ve bunu KULLANICI yakaladı.** İlk ölçümde adres çekmecesinde
+    *"avenue"* yazıldı, BAN dört öneri döndü ve `Kaydet`ten geriye ~4 dp'lik bir ŞERİT kaldı;
+    buradan "birincil eylem kırpılmış, bozuk gibi duruyor" diye kalem tutuldu. Kullanıcı doğru
+    soruyu sordu: *"kullanıcı zaten adres yazıyor ve buradan bir adres seçecek — seçimden sonra
+    ekran olması gerektiği gibi olmuyor mu?"* **Ölçüldü: oluyor.** Öneri seçilir seçilmez liste
+    kapanıyor, form eski boyuna dönüyor, posta kodu ve şehir kendiliğinden doluyor
+    (`33100` · `Bordeaux`), `Kaydet` klavye açıkken TAM görünür oluyor. Şerit hâli bir arıza değil,
+    **geçici bir ara kare**. Turdaki *"künye biniyor"* izlenimi de yanlış okumaydı.
+    **Ders:** ekranı TEK KAREDE değerlendirmek yanıltıyor — ölçüm akışın SONUNA kadar
+    götürülmeliydi. Bugünün dersinin dördüncü tekrarı, bu kez ölçmeyen bendim.
 
 - [x] (21.76) **KÜÇÜK DURAKLARDAKİ İÇERİK — ŞÜPHENİN DOKUZDA SEKİZİ ŞABLONA UYUYORMUŞ (18.08)**
   → MB-46 kapandı. `touches: apps/mobile/src/screens/account/account-screen.tsx,

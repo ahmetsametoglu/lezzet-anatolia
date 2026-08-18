@@ -1217,33 +1217,37 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   *Bulgunun çıkışı:* puan geçmişi ekranının Almanca turunda `MEİN KONTO` görüldü; desen aranınca
   yüzeye yayılmış olduğu ortaya çıktı. Yani tek ekranın kusuru değil, ortak bir kalıbın kusuru.
 
-- [ ] **MB-70 · Öneri listesi açıkken `Kaydet` düğmesi görünür alanın dışında mı?** *(18.08'de
-  daraltıldı — görev `(21.75)`.)*
+- [x] **MB-70 · Öneri listesi açıkken `Kaydet` düğmesi görünür alanın dışında mı?** *(18.08'de
+  daraltıldı, aynı gün KAPANDI — görev `(21.75)`.)*
   **Turun asıl bulgusu ÖLÇÜLÜNCE DEĞİLLENDİ.** "Dördüncü öneri yarım kalıyor, üstüne kaynak künyesi
   biniyor" diye yazılmıştı; ikisi de tasarımın kendisi çıktı. `SuggestionList` 11.08'de bir kullanıcı
   bulgusuyla tavana bağlanmış (`VISIBLE_ROWS = 3.5`) ve künyesi yarım satırın niye yarım olduğunu
   yazıyor: *"tam 3 olsaydı dördüncü satır tamamen gizlenirdi ve listede devamı olduğu hiçbir yerden
   anlaşılmazdı"*. Kaynak künyesi de kaydırma alanının DIŞINDA, kendi ayıracıyla (Etalab 2.0 listeyle
   birlikte görünmek zorunda) — binmesi yapısal olarak imkânsız.
-  **CİHAZDA ÖLÇÜLDÜ (18.08) — cevap EVET, ve kalem artık kesin.** Adres çekmecesi açıldı, sokak
-  alanına *"avenue"* yazıldı, BAN dört öneri döndü. Ölçülenler:
-  · **`Kaydet` düğmesinden geriye ~4 dp'lik yeşil bir ŞERİT kalıyor** — klavye + öneri kutusu
-    birlikte onu görünür alanın dışına itiyor. **Kırılma değil:** kısa bir kaydırma düğmeyi tam
-    hâliyle getiriyor. Ama ilk karede ekranın birincil eylemi kırpılmış bir çizgi olarak duruyor
-    ve bu "bozuk" diye okunuyor.
-  · **Yarım satır gerçekten yarım ÇİZİLİYOR** — dördüncü önerin ikinci satırı (*"75012 Paris"*)
-    yatayda ortadan kesiliyor. Tasarımın kendisi bu (`VISIBLE_ROWS = 3.5`, gerekçesi künyede) ama
-    cihazda **"Büyük" yazı boyutu** seçiliyken kesim harflerin tam ortasına düşüyor ve bir kaydırma
-    ipucundan çok bir çizim hatası gibi görünüyor. Turdaki *"künye biniyor"* izlenimi buradan
-    doğmuş — binme yok (künye kaydırma alanının dışında, kendi ayıracıyla), yarım kesilmiş satır
-    künyeye dayanınca çarpışma gibi okunuyor.
+  **CİHAZDA ÖLÇÜLDÜ (18.08) — ve kalem KAPANDI: ARIZA YOK (kullanıcı bulgusu).**
 
-  **Kök sebep:** öneri listesi formu AŞAĞI İTİYOR. Web'de bu sorun yok çünkü otomatik tamamlama
-  listesi içeriğin ÜSTÜNE biner, yerleşimi oynatmaz.
-  **Aday çözüm ve bilinen tuzağı:** listeyi `position: absolute` ile alanın üstüne bindirmek hem
-  düğmeyi yerinde tutar hem yarım satır sorusunu önemsizleştirir — ama bu depoda RN'in **kardeş
-  sırası = z-sırası** tuzağı ZATEN yaşandı (08.08, `CollectionPhotoOverlay` künyesi) ve çözüm o gün
-  üst katman gerektirdi. Yani cihazda iterasyon isteyen bir iş; ölçüm burada bırakıldı.
+  İlk tur yarım ölçümdü ve yanlış sonuca götürdü. Ölçülen: adres çekmecesinde *"avenue"* yazılınca
+  BAN dört öneri döndü, öneri kutusu formu aşağı itti ve `Kaydet` düğmesinden geriye ~4 dp'lik bir
+  ŞERİT kaldı. Buradan *"birincil eylem kırpılmış bir çizgi, bozuk gibi duruyor"* diye kalem
+  tutuldu.
+
+  **KULLANICI DOĞRU SORUYU SORDU (18.08):** *"kullanıcı zaten adres yazıyor ve buradan bir adres
+  seçecek — seçimden sonra ekran olması gerektiği gibi olmuyor mu?"* Ölçüldü: **oluyor.** Öneri
+  seçilir seçilmez liste kapanıyor, form eski boyuna dönüyor, posta kodu ve şehir KENDİLİĞİNDEN
+  doluyor (`33100` · `Bordeaux`) ve `Kaydet` klavye hâlâ açıkken TAM görünür oluyor.
+
+  Yani şerit hâli bir arıza değil, **geçici bir ara kare**: müşteri o kutuya zaten seçim yapmaya
+  bakıyor ve seçtiği anda ekran kendini toparlıyor. Kalan tek kenar durum, hiç öneri seçmeyip
+  adresi elle yazan müşteridir — onda da liste açık kalır ve düğmeye kaydırarak ulaşılır; sıradan
+  mobil form davranışı.
+
+  **Yarım satır da tasarımın kendisi:** `VISIBLE_ROWS = 3.5` 11.08'de bir kullanıcı bulgusuyla
+  konmuş ve künyesi gerekçesini yazıyor. Turdaki *"künye biniyor"* izlenimi de yanlış okumaydı —
+  binme yok, künye kaydırma alanının dışında kendi ayıracıyla duruyor.
+
+  **DERS:** ekranı TEK KAREDE değerlendirmek yanıltıyor. Bir ara hâlin çirkin görünmesi, akışın
+  bozuk olduğu anlamına gelmiyor; ölçüm akışın SONUNA kadar götürülmeliydi.
 
 - [x] **MB-45 · Onboarding teslimat/ödeme adımlarının metinleri "Büyük"te bile küçük kalıyordu**
   → **KAPANDI (11.08, kullanıcı bulgusu).** Yazı boyutu özelliği çalışıyor; kusur o iki adımın
