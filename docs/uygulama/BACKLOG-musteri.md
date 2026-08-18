@@ -1188,6 +1188,9 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   cevaplıyor ("neden basamıyorum" ↔ "ne yapmalıyım"). Kusur metindeydi: ikisi de aynı eksik tutarı
   yazıyordu. Tekrar eden sayı dipten silindi — bar EKSİĞİ, dipteki EŞİĞİ ve ne yapılacağını
   söylüyor. Notu tümden kaldırmak asgari sepetin KAÇ olduğunu hiçbir yerde bırakmazdı.
+  **Cihazda doğrulandı (18.08):** 1,84 €'luk tek kalemle sepet açıldı — dipte *"Asgari sepet
+  40,00 €. Sipariş verebilmek için birkaç ürün daha ekleyin."*, barda *"Asgari sepete 38,16 €
+  eksik"*. Tekrar eden sayı yok, iki uç birbirinde olmayanı söylüyor.
 
 - [x] **MB-71 · Başlık üstü etiketler SABİT Türkçe yerelle büyütülüyor — Fransızca ve Almanca'da
   noktalı `İ` çıkıyor.** → **KAPANDI (17.08), görev `(21.74)`.** Kural `lib/i18n/locale`a taşındı
@@ -1222,10 +1225,25 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   yazıyor: *"tam 3 olsaydı dördüncü satır tamamen gizlenirdi ve listede devamı olduğu hiçbir yerden
   anlaşılmazdı"*. Kaynak künyesi de kaydırma alanının DIŞINDA, kendi ayıracıyla (Etalab 2.0 listeyle
   birlikte görünmek zorunda) — binmesi yapısal olarak imkânsız.
-  **Geriye tek soru kaldı:** hesaplanan kutu boyu ~246 dp (satır `12×2 + 2 + 14×1,2×2 = 59,6` dp
-  × 3,5 + künye); klavye açıkken çekmeceye kalan ~500 dp'de bu kutu `Kaydet`i görünür alanın dışına
-  itiyor mu? İçerik kayıyor, yani düğme erişilebilir — soru "ulaşılıyor mu" değil, "ulaşıldığı
-  anlaşılıyor mu". **Cihazda ölçülecek.**
+  **CİHAZDA ÖLÇÜLDÜ (18.08) — cevap EVET, ve kalem artık kesin.** Adres çekmecesi açıldı, sokak
+  alanına *"avenue"* yazıldı, BAN dört öneri döndü. Ölçülenler:
+  · **`Kaydet` düğmesinden geriye ~4 dp'lik yeşil bir ŞERİT kalıyor** — klavye + öneri kutusu
+    birlikte onu görünür alanın dışına itiyor. **Kırılma değil:** kısa bir kaydırma düğmeyi tam
+    hâliyle getiriyor. Ama ilk karede ekranın birincil eylemi kırpılmış bir çizgi olarak duruyor
+    ve bu "bozuk" diye okunuyor.
+  · **Yarım satır gerçekten yarım ÇİZİLİYOR** — dördüncü önerin ikinci satırı (*"75012 Paris"*)
+    yatayda ortadan kesiliyor. Tasarımın kendisi bu (`VISIBLE_ROWS = 3.5`, gerekçesi künyede) ama
+    cihazda **"Büyük" yazı boyutu** seçiliyken kesim harflerin tam ortasına düşüyor ve bir kaydırma
+    ipucundan çok bir çizim hatası gibi görünüyor. Turdaki *"künye biniyor"* izlenimi buradan
+    doğmuş — binme yok (künye kaydırma alanının dışında, kendi ayıracıyla), yarım kesilmiş satır
+    künyeye dayanınca çarpışma gibi okunuyor.
+
+  **Kök sebep:** öneri listesi formu AŞAĞI İTİYOR. Web'de bu sorun yok çünkü otomatik tamamlama
+  listesi içeriğin ÜSTÜNE biner, yerleşimi oynatmaz.
+  **Aday çözüm ve bilinen tuzağı:** listeyi `position: absolute` ile alanın üstüne bindirmek hem
+  düğmeyi yerinde tutar hem yarım satır sorusunu önemsizleştirir — ama bu depoda RN'in **kardeş
+  sırası = z-sırası** tuzağı ZATEN yaşandı (08.08, `CollectionPhotoOverlay` künyesi) ve çözüm o gün
+  üst katman gerektirdi. Yani cihazda iterasyon isteyen bir iş; ölçüm burada bırakıldı.
 
 - [x] **MB-45 · Onboarding teslimat/ödeme adımlarının metinleri "Büyük"te bile küçük kalıyordu**
   → **KAPANDI (11.08, kullanıcı bulgusu).** Yazı boyutu özelliği çalışıyor; kusur o iki adımın
@@ -1265,29 +1283,33 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
 
   **Cihaz turu gerekmedi** (kullanıcı kararı 11.08 — süpürmede kod tarafı doğrulama yeter).
 
-- [ ] **MB-72 · Beş yer BAŞLIK durağını başlık olmayan içerik için ödünç alıyor — ölçekte o durak YOK.**
-  `(21.77)` taramasında ölçüldü (18.08): müşteri yüzeyindeki 372 stil bloğunun sekizi bir *başlık*
-  kademesini (`h2-sm` · `card-title` · `page-title-sm`) Karla ile kullanıyordu. Üçü im olduğu için
-  `icon-sm`e alındı (aynı boy, doğru rol); **beşi duruyor ve sebebi kod değil, ÖLÇEK:**
+- [x] **MB-72 · Beş yer BAŞLIK durağını başlık olmayan içerik için ödünç alıyor.**
+  `(21.77)` taramasında açılmıştı; ilk yazımı *"ölçekte o durak YOK, token eklenmeli"* diyordu.
+  → **KAPANDI (18.08) — ŞABLONA SORULUNCA PREMİS ÇÖKTÜ, token EKLENMEDİ.** MB-46'nın aynı dersi:
+  şüphe koddan değil, şablona bakılmadan kurulmuş bir varsayımdan geliyordu.
 
-  | yer | bugünkü durak | şablonun dediği | ne olduğu |
+  | yer | bugünkü durak | şablonun dediği | hüküm |
   |---|---|---|---|
-  | `account-screen` `pointsValue` | `h2-sm` (20) | `700 22px Karla` | puan sayısı — `✦ 240` |
-  | `discover-screen` `stampLabel` | `h2-sm` (20) | `700 22px Karla` | kaydırma damgası |
-  | `package-detail` `price` | `card-title` (24) | — | paket fiyatı |
-  | `code-field` `field` | `page-title-sm` (26) | — | tek kullanımlık kod alanı |
-  | `order-confirmed` `markGlyph` | `page-title-sm` (26) | — | onay ✓ imi |
+  | `package-detail` `price` | `card-title` (24) | `700 24px Karla` | **birebir** — doğru |
+  | `code-field` `field` | `page-title-sm` (26) | `700 26px Karla` | **birebir** — doğru |
+  | `account-screen` `pointsValue` | `h2-sm` (20→21) | `700 22px Karla` | 1 px fark |
+  | `discover-screen` `stampLabel` | `h2-sm` (20→21) | `700 22px Karla` | 1 px fark |
+  | `order-confirmed` `markGlyph` | `page-title-sm` (26) | şablonda YOK | tek açık nokta |
 
-  **Kök sebep:** şablon Karla'yı 21–24 px'te BÜYÜK RAKAM/İM olarak kullanıyor (`400 22px` adet
-  seçici, `700 22px` puan ve damga, `400 24px` yuvarlak düğmeler), ama ölçekte 16'nın (`step`)
-  üstünde başlık OLMAYAN tek durak `icon`/`icon-sm` (22/20) ve o da ikon rolünde. Yani ekranlar
-  elde olmayan bir durağı aramış, bulamayınca en yakın boydaki BAŞLIK durağına tutunmuş.
-  **Risk somut:** başlık ölçeği bir gün ayarlandığında puan sayısı ve OTP alanı da onunla oynar.
+  **Neden premis çöktü:** ölçekteki boyut durakları **aile-bağımsızdır** — bir kademenin Lora mı
+  Karla mı olduğu `theme.font.display` ↔ `theme.font.body` ekseninde ayrı seçiliyor. Yani "başlık
+  durağını gövde ailesiyle kullanmak" başlı başına kusur değil; şablon da tam bunu yapıyor (paket
+  fiyatı 24 = `card-title`, OTP alanı 26 = `page-title-sm`). Ayrı durak İKONLARA verilmiş, çünkü
+  onlar açıkça *"metin hiyerarşisinin parçası DEĞİL"* (`customer.ts` künyesi) — bu yüzden `(21.77)`de
+  adet seçicinin imleri `icon-sm`e alındı ve o düzeltme yerinde. Bir rakam ya da fiyat ise
+  hiyerarşinin parçasıdır. **Kalan 1 px fark için yeni token açmak, ölçeğe bir daha okunmayacak
+  bir durak eklemek olurdu.**
 
-  **Yapılacak:** `customerAppText`e rolüyle adlandırılmış bir "büyük değer/im" durağı eklemek
-  (şablonun 22'si) ve beş yeri oraya bağlamak. Token EKLEME kararı olduğu için ölçüm burada
-  bırakıldı — CLAUDE §3: *"Token yoksa kodlama, envantere ekletme."* İkisi de cihazda
-  doğrulanabilir olduğunda tek turda yapılmalı.
+  **Tek açık nokta kayda geçti:** `order-confirmed`ın ✓ imi bir İM ve `page-title-sm`de duruyor
+  (adet seçicileriyle aynı kategori), ama onun boyunda bir ikon durağı yok (`icon` 22) ve şablonda
+  ✓ hiç çizilmemiş. Bugünkü coupling gerçek — daire `confirmMark: 92` dp'de sabit, im ise başlık
+  merdivenine bağlı, yani başlık ölçeği ayarlanırsa im dairesinden taşabilir. Ama düzeltmesi
+  boyut UYDURMAK demek olduğu için yapılmadı; şablona ✓ eklendiğinde tek dokunuşla çözülür.
 
 - [x] **MB-73 · Hesap kartında ad satırı e-postaya düşünce uzun adres ORTADAN BÖLÜNÜYOR.**
   Cihazda görüldü (18.08): adı girilmemiş hesapta kart *"yamansehzade@gmail"* / *".com"* diye iki

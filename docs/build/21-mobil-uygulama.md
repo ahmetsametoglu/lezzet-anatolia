@@ -3703,6 +3703,18 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   satır *"Adınızı ekleyin"*, künye satırı adresin TAMAMI tek satırda, avatar harfi kimlikten ("y").
   Kart üç satırdan ikiye indi. Kod da sadeleşti: e-posta artık tek yerde yazılıyor.
 
+  **MB-69 ve MB-70 da AYNI GÜN cihazda ölçüldü** (turun kalanı):
+  · **MB-69 doğrulandı.** 1,84 €'luk tek kalemle sepet açıldı: dipte *"Asgari sepet 40,00 €.
+    Sipariş verebilmek için birkaç ürün daha ekleyin."*, barda *"Asgari sepete 38,16 € eksik"* —
+    tekrar eden sayı yok, iki uç birbirinde olmayanı söylüyor. Tur kalemi sonra temizlendi.
+  · **MB-70'in daraltılmış sorusuna cevap EVET.** Adres çekmecesinde *"avenue"* yazıldı, BAN dört
+    öneri döndü: `Kaydet`ten geriye ~4 dp'lik yeşil bir ŞERİT kalıyor. Kırılma değil (kısa bir
+    kaydırma düğmeyi tam getiriyor) ama ilk karede birincil eylem kırpılmış bir çizgi ve bu "bozuk"
+    diye okunuyor. Turdaki *"künye biniyor"* izlenimi de açıklığa kavuştu: binme YOK, ama yarım
+    kesilmiş satır künyeye dayanınca çarpışma gibi görünüyor — "Büyük" yazı boyutunda kesim
+    harflerin tam ortasına düşüyor. **Kök sebep listenin formu AŞAĞI İTMESİ**; kalem ve aday
+    çözümü (üstüne bindirme + bu depoda yaşanmış RN kardeş-z tuzağı) `BACKLOG-musteri`de.
+
 - [x] (21.76) **KÜÇÜK DURAKLARDAKİ İÇERİK — ŞÜPHENİN DOKUZDA SEKİZİ ŞABLONA UYUYORMUŞ (18.08)**
   → MB-46 kapandı. `touches: apps/mobile/src/screens/account/account-screen.tsx,
   apps/mobile/src/screens/support/ticket-detail-screen.tsx`
@@ -3771,11 +3783,21 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     alındılar: **aynı boy (20), sıfır piksel değişim**, tek fark ölçekte doğru rol. Token künyesi
     rolü zaten söylüyor: *"İkon/emoji ölçüleri — metin hiyerarşisinin parçası DEĞİL"*.
 
-  **KALAN BEŞİ KOD KUSURU DEĞİL, ÖLÇEK BOŞLUĞU → `BACKLOG-musteri` MB-72.** Puan sayısı, kaydırma
-  damgası, paket fiyatı, OTP alanı ve onay ✓'i büyük Karla rakam/im istiyor; şablon bunu 21–24'te
-  kullanıyor ama ölçekte 16'nın üstünde başlık olmayan durak yok. Ekranlar olmayan bir durağı arayıp
-  en yakın BAŞLIK durağına tutunmuş. Çözüm token EKLEMEK olduğu için ölçüm orada bırakıldı
-  (CLAUDE §3: *"Token yoksa kodlama, envantere ekletme"*).
+  **KALAN BEŞİ MB-72'YE YAZILDI — ve o kalem ŞABLONA SORULUNCA ÇÖKTÜ (aynı gün kapandı).**
+  İlk yazımı *"ölçekte durak yok, token eklenmeli"* diyordu; şablonla karşılaştırınca paket fiyatı
+  (24 = `card-title`) ve OTP alanı (26 = `page-title-sm`) **birebir** çıktı, puan sayısı ile damga
+  1 px farkla kaldı. **Premis yanlıştı:** ölçekteki boyut durakları AİLE-BAĞIMSIZDIR — kademenin
+  Lora mı Karla mı olduğu `theme.font.display` ↔ `body` ekseninde ayrı seçilir. Ayrı durak
+  İKONLARA verilmiş çünkü onlar açıkça *"metin hiyerarşisinin parçası DEĞİL"*; bir fiyat ya da
+  rakam ise hiyerarşinin parçasıdır. 1 px için token açmak, ölçeğe bir daha okunmayacak bir durak
+  eklemek olurdu. Tek açık nokta `order-confirmed`ın ✓ imi: İM olduğu için adet seçicileriyle aynı
+  kategori ama o boyda ikon durağı yok ve şablonda ✓ hiç çizilmemiş — boyut uydurmamak için
+  bırakıldı, gerekçesi ve somut riski (daire 92 dp'de sabit, im başlık merdivenine bağlı)
+  `BACKLOG-musteri`de.
+
+  **GÜNÜN TEKRAR EDEN DERSİ, ÜÇÜNCÜ KEZ:** `(21.74)`te künye doğruydu ama 17 çağrı kaçırmıştı,
+  `(21.76)`da dokuz şüphelinin sekizi şablona uyuyordu, burada beş şüphelinin ikisi birebir çıktı.
+  Şüphe ucuz, ölçüm pahalı — ama ölçmeden yazılan kod en pahalısı.
 
   **Doğrulama:** `tsc` temiz · `lint` temiz (`src` tamamı) · **599 jest testi, 84 paket, hepsi
   geçti**. 13 test düşmüştü ve hepsi beklenen boyutu token'dan türetiyordu; kural yine tek yerden
