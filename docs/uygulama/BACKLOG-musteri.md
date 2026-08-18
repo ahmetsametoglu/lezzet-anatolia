@@ -1289,6 +1289,21 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   bırakıldı — CLAUDE §3: *"Token yoksa kodlama, envantere ekletme."* İkisi de cihazda
   doğrulanabilir olduğunda tek turda yapılmalı.
 
+- [x] **MB-73 · Hesap kartında ad satırı e-postaya düşünce uzun adres ORTADAN BÖLÜNÜYOR.**
+  Cihazda görüldü (18.08): adı girilmemiş hesapta kart *"yamansehzade@gmail"* / *".com"* diye iki
+  satıra kırılıyordu — kırılma `@gmail` ile `.com` arasına düşüyor ve adres tek bir şey olarak
+  okunmuyordu. **Sebep MB-66 değildi** (yedek eskiden de aynı satırdaydı); `(21.77)`'nin bir kademe
+  büyütmesi kusuru görünür kıldı.
+  → **KAPANDI (18.08), görev `(21.75)`.** Boyutla oynanmadı — kırılma tesadüf değildi: o yuva KISA
+  BİR AD için ayrılmış (şablon oraya hep bir ad koyuyor) ve e-posta sığmadığı için ilk yasal
+  kırılma noktasından, alan adının ortasından bölünüyordu. Bir kademe küçültmek eşiği kaydırırdı,
+  kaldırmazdı; kısaltmak ise kimliğin bir parçasını gizlerdi.
+  **Roller yerine oturtuldu:** büyük satır ya adı söyler ya adın eksik olduğunu (*"Adınızı
+  ekleyin"*), e-postanın yeri zaten künye satırıdır ve orada TAM hâliyle tek satıra sığıyor.
+  Avatar harfi kimlikten alınıyor (e-postanın "y"si, davet cümlesinin "A"sı değil).
+  **Yan kazanç:** kod da sadeleşti — "hangi satır neyi gösterecek" dallanması kalktı, e-posta tek
+  yerde yazılıyor. **Cihazda doğrulandı:** kart üç satırdan ikiye indi, adres bölünmüyor.
+
 ---
 
 ## 7. İçerik ve dil

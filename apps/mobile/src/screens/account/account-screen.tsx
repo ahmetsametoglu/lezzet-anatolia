@@ -202,13 +202,25 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  /* KART ADSIZ KALMAZ — ama yedeğe düştüğünü BİLİR (MB-66). `name` artık rotadan olduğu gibi
-     geliyor (boşsa boş), yedek burada seçiliyor: kartın büyük satırı e-postaya düşer, alt satırı
-     da adresi tekrar etmek yerine eksiği söyler. Karar tek yerde durduğu için taslak da onu
-     okuyor — eskiden `data.name === data.email` karşılaştırmasıyla yedeğe düşüldüğü TAHMİN
-     ediliyordu; adı e-postasıyla aynı olan bir hesapta o tahmin yanlış cevap verirdi. */
+  /*
+    KART ADSIZ KALMAZ — ama yedeğe düştüğünü BİLİR (MB-66). `name` rotadan olduğu gibi geliyor
+    (boşsa boş), yedek burada seçiliyor. Karar tek yerde durduğu için taslak da onu okuyor —
+    eskiden `data.name === data.email` karşılaştırmasıyla yedeğe düşüldüğü TAHMİN ediliyordu;
+    adı e-postasıyla aynı olan bir hesapta o tahmin yanlış cevap verirdi.
+
+    YEDEK E-POSTAYI BÜYÜK YUVAYA YAZMAZ (MB-73, cihazda görüldü 18.08). İlk hâl e-postayı ad
+    satırına koyuyordu ve uzun adres başlık boyunda ortadan bölünüyordu:
+    *"yamansehzade@gmail"* / *".com"*. Kırılma tesadüf değil — o yuva KISA BİR AD için ayrılmış
+    (şablon oraya hep bir ad koyuyor), e-posta ise sığmadığı için ilk yasal kırılma noktasından,
+    alan adının ortasından bölünüyor.
+
+    Doğrusu rolleri yerine oturtmak: büyük satır ya adı söyler ya adın eksik olduğunu; e-postanın
+    yeri zaten künye satırıdır ve orada tam hâliyle okunur. Yan kazanç, kod da sadeleşti — artık
+    "hangi satır neyi gösterecek" diye ikinci bir dallanma yok, e-posta TEK yerde yazılıyor.
+  */
   const nameMissing = data.name.trim() === '';
-  const displayName = nameMissing ? data.email : data.name;
+  /* Avatar harfi KİMLİKTEN gelir: ad yoksa e-postanın ilk harfi — davet cümlesinin "A"sı değil. */
+  const avatarSource = nameMissing ? data.email : data.name;
 
   const openProfileSheet = () => {
     setDraftName(data.name);
@@ -388,21 +400,13 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
         </Text>
 
         <View style={styles.profileCard} testID="account-profile">
-          <AvatarThumb initial={displayName.slice(0, 1)} accessibilityLabel={displayName} size="lg" tone="olive" />
+          <AvatarThumb initial={avatarSource.slice(0, 1)} accessibilityLabel={avatarSource} size="lg" tone="olive" />
           <View style={styles.profileText}>
-            <Text style={styles.profileName}>{displayName}</Text>
-            {/*
-              AD SATIRI E-POSTAYA DÜŞTÜYSE ALT SATIR ADRESİ TEKRAR ETMEZ (MB-66, 18.08).
-              Ölçülen hâl: adı girilmemiş hesapta kartta aynı adres alt alta iki kez yazılıydı —
-              üstte "ad" olarak, altta "e-posta" olarak. Tekrar bilgi vermez; kartın o satırı,
-              müşterinin kart hakkında yapabileceği TEK şeyi söylerse iş görür ("Modifier" düğmesi
-              hemen yanında). Sessiz bırakmak da seçenekti; boş satır bir eksiği anlatmıyor.
-            */}
-            {nameMissing ? (
-              <Text style={styles.profileMeta}>{t.profile.addName}</Text>
-            ) : (
-              <Text style={styles.profileMeta}>{data.email}</Text>
-            )}
+            {/* Büyük satır: ad, yoksa adın eksik olduğu. E-posta AŞAĞIDA, künye satırında — ikisi
+                de aynı adresi yazsaydı kart aynı şeyi iki kez söylerdi (MB-66) ve adres bu yuvaya
+                sığmadığı için ortadan bölünürdü (MB-73). Yukarıdaki künye gerekçeyi taşıyor. */}
+            <Text style={styles.profileName}>{nameMissing ? t.profile.addName : data.name}</Text>
+            <Text style={styles.profileMeta}>{data.email}</Text>
             {/* Telefon girilmemişse satır çizilmez (gerçek hesapta alan boş olabilir — 21.14c). */}
             {data.phone === '' ? null : <Text style={styles.profileMeta}>{data.phone}</Text>}
           </View>

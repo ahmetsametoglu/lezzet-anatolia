@@ -3684,7 +3684,24 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   alanın dışına itiyor mu; o **cihazda** ölçülecek, kalem o parçaya indirildi.
 
   **Doğrulama:** `tsc` temiz · `lint` temiz · **1374 birim testi** + dokunulan dördünün jest paketi
-  (**43 test**). Cihaz doğrulaması BEKLİYOR — dördü de görsel kalem ve cihaz şu an bağlı değil.
+  (**43 test**).
+
+  **CİHAZDA DOĞRULANDI (18.08, Android):** hesap kartı e-postayı ad satırına yazıp altında
+  *"Adınızı ekleyin"* diyor — adres bir kez görünüyor (MB-66). Talepler boş hâlinde üst çubukta
+  *"＋ Yeni"* YOK, ortada tek çağrı *"Bize yazın"* duruyor (MB-68). MB-69 sepette dolu sepet
+  gerektiriyor, o tur yapılmadı.
+
+  **Turda YENİ bir kusur görüldü ve AYNI TURDA kapatıldı — MB-73.** Ad satırı e-postaya düştüğünde
+  uzun adres başlık boyunda *"yamansehzade@gmail"* / *".com"* diye ikiye bölünüyordu. Kusur
+  MB-66'nın getirdiği bir şey değildi (yedek eskiden de aynı satırdaydı), `(21.77)`'nin bir kademe
+  büyütmesi onu görünür kıldı.
+  **Boyutla oynanmadı, çünkü kırılma tesadüf değildi:** o yuva KISA BİR AD için ayrılmış (şablon
+  oraya hep bir ad koyuyor) ve e-posta sığmadığı için ilk yasal kırılma noktasından, alan adının
+  ortasından bölünüyordu. Bir kademe küçültmek eşiği kaydırır ama kaldırmazdı; kısaltmak kimliğin
+  bir parçasını gizlerdi. **Roller yerine oturtuldu:** büyük satır ya adı söyler ya adın eksik
+  olduğunu, e-postanın yeri zaten künye satırıdır. **İkinci turda cihazda doğrulandı** — büyük
+  satır *"Adınızı ekleyin"*, künye satırı adresin TAMAMI tek satırda, avatar harfi kimlikten ("y").
+  Kart üç satırdan ikiye indi. Kod da sadeleşti: e-posta artık tek yerde yazılıyor.
 
 - [x] (21.76) **KÜÇÜK DURAKLARDAKİ İÇERİK — ŞÜPHENİN DOKUZDA SEKİZİ ŞABLONA UYUYORMUŞ (18.08)**
   → MB-46 kapandı. `touches: apps/mobile/src/screens/account/account-screen.tsx,
@@ -3762,8 +3779,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **Doğrulama:** `tsc` temiz · `lint` temiz (`src` tamamı) · **599 jest testi, 84 paket, hepsi
   geçti**. 13 test düşmüştü ve hepsi beklenen boyutu token'dan türetiyordu; kural yine tek yerden
-  verildi (`customerStops`), sekiz test dosyasında birer satır. Cihaz doğrulaması BEKLİYOR — ekranda
-  görülecek bir değişiklik ve cihaz şu an bağlı değil.
+  verildi (`customerStops`), sekiz test dosyasında birer satır.
+
+  **CİHAZDA ÖLÇÜLDÜ (18.08, Android) — ve ölçüm "+1 sabit"i KANITLADI.** Vitrin ekranı yeniden
+  yüklemeden önce ve sonra çekildi, aynı üç metnin piksel genişliği karşılaştırıldı:
+
+  | metin | durak | beklenen | ölçülen |
+  |---|---|---|---|
+  | *"Hoş geldiniz"* | `h1-sm` 30→31 | +3,3% | **+4,5%** |
+  | *"67000 STRASBOURG"* | `note` 13→14 | +7,7% | **+7,0%** |
+  | *"KOLEKSİYONLAR"* | `eyebrow` 10→11 | +10,0% | **+11,2%** |
+
+  Kritik olan tek tek sayılar değil, ARALARINDAKİ İLİŞKİ: kademe küçüldükçe oransal büyüme
+  artıyor. Çarpanla yapılsaydı üçü de aynı yüzdeyi verirdi — yani ekrandaki şey gerçekten sabit
+  bir ekleme ve tema o değeri okuyor.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
