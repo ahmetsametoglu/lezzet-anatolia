@@ -293,9 +293,13 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
           `null` döner ve bant kendiliğinden söner (ayrı bir görünürlük bayrağı YOK — iki kaynak bir
           gün ayrışır ve bant boş bir kesitin adını yazardı).
 
-          WEB'DEN BİLİNÇLİ SAPMA: orada koleksiyon sayfanın BAŞLIĞI olur ve kategori şeridi tamamen
-          gizlenir. Mobilde sayfa başlığı alanı yok, çip rayı ise ana gezinme — kullanıcı kararı
-          bant lehine: kesit görünür kalıyor AMA içinde daraltılabiliyor (uç ikisini AND'liyor). */}
+          ── KATEGORİ RAYI ARTIK GİZLENİYOR (kullanıcı kararı 18.08 — 16.08'i DEĞİŞTİRİR) ──
+          16.08'de web'den bilinçli sapılmıştı: web'de koleksiyon sayfanın BAŞLIĞI olur ve kategori
+          şeridi tamamen gizlenir; mobilde ray kalsın, müşteri kesit İÇİNDE daraltabilsin denmişti.
+          **Cihazda ölçülünce gerekçe çürüdü (18.08):** koleksiyon süzgeci kategori havuzunu da
+          daraltıyor, yani "L'amour de Paris" açıkken rayda YALNIZ "Tümü" kalıyordu — daraltacak
+          bir şey sunmayan, tek düğmelik ölü bir şerit. Kullanıcının cümlesi: *"kategori filtre
+          butonları görünmesin."* Artık mobil de web'in kararını uyguluyor; iki yüzey aynı hizada. */}
       {catalog.activeCollection === null ? null : (
         <View style={styles.collectionBand} testID="catalog-collection-band">
           <View style={styles.collectionText}>
@@ -305,7 +309,16 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
             </Text>
           </View>
           {/* Dokunma hedefi ikondan büyük (`compact` → kitin tek dokunma payı) — arama temizle
-              düğmesiyle aynı karar, aynı gerekçe. */}
+              düğmesiyle aynı karar, aynı gerekçe.
+
+              ── BASILABİLDİĞİ GÖRÜNSÜN (kullanıcı bulgusu 18.08) ──────────────
+              Eski hâl `inlineIcon` (17) ve `olive-dark`tı: sayfanın geri kalanıyla aynı sessiz
+              tonda, satır içi bir işaret gibi duruyordu ve kullanıcı cihazda *"o butona
+              basılacağı çok anlaşılmayabiliyor"* dedi. İki şey değişti, ikisi de token'dan:
+              ölçü `headerIcon` (20) — künyesi zaten "başlık satırındaki yuvarlak düğmenin ikonu"
+              diyor, yani bu rolün kendi durağı; renk ise `terracotta`, uygulamanın EYLEM
+              vurgusu (fırsat rozeti, çağrı bağlantıları aynı aileden). Kırmızıya yakın olması
+              tesadüf değil: burada yapılan iş bir GERİ ALMA. */}
           <PressableSurface
             onPress={() => catalog.selectCollection(null)}
             feedback="scale-small"
@@ -313,12 +326,14 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
             accessibilityLabel={t.collection.clear}
             testID="catalog-collection-clear"
           >
-            <Icon name="close" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+            <Icon name="close" size={theme.size.headerIcon} color={theme.colors.terracotta} />
           </PressableSurface>
         </View>
       )}
       {/* Şerit arama alanının hemen altında: klavye açıkken kategori çipine dokunmak yalnız
-          klavyeyi kapatırdı, süzgeç değişmezdi (künye `feedback-screen`). */}
+          klavyeyi kapatırdı, süzgeç değişmezdi (künye `feedback-screen`).
+          Koleksiyon açıkken HİÇ çizilmez — gerekçe yukarıdaki bant künyesinde (18.08). */}
+      {catalog.activeCollection !== null ? null : (
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -337,6 +352,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
           />
         ))}
       </ScrollView>
+      )}
     </View>
   );
 
@@ -598,15 +614,31 @@ const styles = StyleSheet.create((theme, rt) => ({
   /* KOLEKSİYON BANDI — arama satırıyla aynı yatay dolguda (kenardan kenara kayan çip rayının
      aksine), yani ekranın kenar hizasını bozmuyor. Zemin `sand-150`: süzgeç düğmesinin ETKİN
      hâliyle aynı ton, çünkü ikisi de aynı şeyi söylüyor — "burada açık bir daraltma var". */
+  /* KAP YOK — YALNIZ METİN (kullanıcı kararı 18.08).
+
+     Eski hâl yuvarlak köşeli, iki yandan boşluklu, kum zeminli bir KUTUYDU; altındaki ızgara da
+     kartlardan oluşuyor ve kullanıcı cihazda görüp eledi: *"kart kart tasarıma dönüşmeye başlıyor
+     burası"*. Ara adım olarak kutu kenardan kenara açıldı, ama o da tutmadı — küçükken göze
+     batmayan kum zemini tam genişlikte büyük bir renk alanına dönüştü ve kullanıcı *"renk
+     seçimlerimiz… genel proje tasarımımızdan kopuk duruyor"* dedi. Haklıydı: bu ekranın koleksiyon
+     hâli ŞABLONDA HİÇ YOK (`Mobil - Musteri v3` katalog başlığında yalnız arama, süzgeç ve çipler
+     var), yani zemin de ad kademesi de bir tasarım kararına değil tahmine dayanıyordu.
+
+     Doğru cevap kabı tümden kaldırmak: sayfa zemininde üstbaşlık + ad + temizle. Renk sorusu
+     ortadan kalkar, ızgarayla yarışan bir yüzey kalmaz ve süzgecin ne olduğu yine tek bakışta
+     okunur. Bölümü kapatan çizgi ZATEN VAR ve yenisi eklenmedi: başlık bloğunun kendi alt kenarı
+     (`header.borderBottom`) — kutu değil, çizgi. */
+  /* DİKEY DOLGU YOK — ritim BAŞLIĞIN (kullanıcı bulgusu 18.08: *"arada çok fazla boşluklar var"*).
+     Ölçüldü: zemin varken bandın kendi dolgusu gerekliydi, kalkınca ÜST ÜSTE bindi — arama ile
+     üstbaşlık arasında `header.gap` 10 + bandın 10 = 20 dp, ad ile çizgi arasında bandın 12 +
+     `header.paddingBottom` 10 = 22 dp. Kapsız bir metin bloğunun kendi dolgusu olmaz; boşluğu
+     zaten kapsayıcı veriyor. Şimdi ikisi de 10 ve satırlar başlığın öteki çocuklarıyla aynı
+     ritimde. Yatay dolgu KALIYOR: başlığın yatay dolgusu çocuklarda (kendi künyesi). */
   collectionBand: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.lg,
-    marginHorizontal: theme.space['4xl'],
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space['2xl'],
-    borderRadius: theme.radius.control,
-    backgroundColor: theme.colors['sand-150'],
+    paddingHorizontal: theme.space['4xl'],
   },
   // Metin bloğu esner, çarpı sabit kalır: uzun koleksiyon adı düğmeyi ekran dışına itmesin.
   collectionText: {
@@ -620,9 +652,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors['olive-dark'],
   },
+  /* Ad, VİTRİNDEKİ koleksiyon bandının başlığıyla BİREBİR aynı kademede (18.08): Lora `h2-sm`.
+     Tahminle seçilmedi, ölçüldü — `home/collection-band.tsx` başlığı tam bu ikiliyi kullanıyor.
+     Müşteri az önce o banda basıp buraya geldi; adın aynı sesle karşılaması "bastığın şeyin
+     içindesin" demenin en kısa yolu. Zemin gitti ama TİPOGRAFİ bağı kaldı — bağlantıyı kuran
+     zaten renk değil, adın kademesiydi. */
   collectionName: {
-    fontFamily: theme.font.body[600],
-    fontSize: theme.text.note,
+    fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
+    fontSize: theme.text['h2-sm'],
     color: theme.colors.ink,
   },
   chipRail: {

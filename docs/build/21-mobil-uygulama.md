@@ -3912,6 +3912,62 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` temiz · `lint` temiz · vitrin ve kabuk testleri (**15 test**). **Cihazda
   uçtan uca ölçüldü:** misafir kartı görüyor, basınca tur açılıyor (1/20, kaydırma çalışıyor).
 
+- [x] (21.81) **VİTRİN ARTIK GÜN İÇİNDE SABİT; KOLEKSİYON KATALOĞU BANT OLDU (kullanıcı bulguları 18.08)**
+  → `touches: packages/application/src/catalog/featured.ts, packages/application/src/index.ts,
+  apps/mobile-api/src/lib/home.ts, apps/mobile/src/screens/{catalog,onboarding}/*`
+
+  **1 · VİTRİN RASTGELELİĞİ GÜNE SABİTLENDİ — iki yüzey aynı kararı ayrı ayrı yürütüyormuş.**
+  Kullanıcı anomali listesindeki "koleksiyon sırası değişiyor" maddesini okuyup yönlendirdi:
+  *"bilinçli bir karardı… fakat web tarafında bu konuyla alakalı random şeylerin sadece o gün
+  içerisinde random olmasını sağlayacak yaklaşımlar var."* Ölçüldü ve yaklaşım bulundu:
+  `rotateDaily` (`@lezzet/application`), yani **merkezî**. Web ana sayfası onu kullanıyor
+  (`storefront/home.ts:243`); **mobil API ise `Math.random` kullanıyordu**
+  (`mobile-api/src/lib/home.ts`). `rotateDaily`nin künyesi bu hâli zaten üç maddede reddetmişti —
+  *"sayfa önbelleğini kırar · aynı müşteriye her yenilemede başka vitrin gösterir, vitrin değil
+  kumar olur · 'dün gördüğüm koleksiyon neydi' sorusunun cevabı kalmaz"* — ama gerekçe mobilde
+  uygulanmamıştı (CLAUDE §1: aynı karar iki yerde, biri ayrışmış).
+
+  **KOMPOZİSYONA DOKUNULMADI** (kullanıcı uyarısı: *"bu dörde iki konusunu değiştirmemen lazım"*):
+  hâlâ 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından, altısı rastgele konumlarda
+  karışıyor, fotoğraflar kendi havuzundan geliyor. **Değişen tek şey TOHUM.** `rotateDaily`ye
+  çevrilmedi çünkü o "havuzu sırayla döndür" der ve bu kompozisyonu ifade edemez; onun yerine
+  kardeşi yazıldı: **`dailyRng(now)`** — gün numarasından tohumlanan deterministik üreteç
+  (mulberry32; kriptografik değil, çünkü istenen tahmin edilemezlik değil **tekrarlanabilirlik**).
+  Gün numarası hesabı `rotateDaily`den çıkarılıp `dayIndex()`e alındı, ikinci kez yazılmadı.
+  **Ölçüldü:** uçtan üç ardışık okuma birebir aynı bant dizisini ve aynı fotoğraf kümesini döndü
+  (`col:Yeni Gelenler | cat:Fırın | cat:Tatlı | cat:Pasta | cat:Tavuk Ürünleri | col:Çay Saati`).
+
+  **2 · KOLEKSİYON KATALOĞU: KAP TÜMDEN KALKTI, ÇİP RAYI GİZLİ.** Kullanıcı cihazda gördü:
+  *"koleksiyon çay saati kartı da çok kötü görünüyor. Böyle kart kart tasarıma dönüşmeye başlıyor
+  burası"* ve *"kategori filtre butonları görünmesin."*
+  · **İKİ ADIMDA GİDİLDİ VE BİRİNCİSİ YANLIŞTI — kayda geçsin.** Önce kutu kenardan kenara açıldı
+    (kum zeminli bant). Kullanıcı onu da eledi: *"renk seçimlerimiz… genel proje tasarımımızdan
+    kopuk duruyor."* Haklıydı ve sebebi ölçüldü: **bu ekranın koleksiyon hâli ŞABLONDA HİÇ YOK**
+    (`Mobil - Musteri v3` katalog başlığında yalnız arama, süzgeç düğmesi ve çipler var), yani
+    16.08'de eklenen zemin de benim seçtiğim ad kademesi de bir tasarım kararına değil TAHMİNE
+    dayanıyordu. Küçük bir kutuda göze batmayan kum zemini, tam genişlikte büyük bir renk alanına
+    dönüşünce ortaya çıktı. **Kullanıcı seçimi: metin-only.** Kap tümden kalktı; sayfa zemininde
+    üstbaşlık + ad + temizle. Ad ise artık tahmin değil ölçüm: vitrindeki koleksiyon bandının
+    başlığıyla BİREBİR aynı ikili (Lora `h2-sm`) — bağlantıyı kuran renk değil, kademeydi.
+  · **BOŞLUK:** zemin kalkınca bandın kendi dikey dolgusu `header.gap`in üstüne bindi (arama↔üstbaşlık
+    20 dp, ad↔çizgi 22 dp). Kapsız bir metin bloğunun kendi dolgusu olmaz; kaldırıldı, ikisi de 10.
+  · **TEMİZLE DÜĞMESİ:** `inlineIcon` (17) + `olive-dark`tı ve *"basılacağı çok anlaşılmayabiliyor"*
+    dendi. `headerIcon` (20) + `terracotta` oldu — ölçü zaten bu rolün kendi durağı ("başlık
+    satırındaki yuvarlak düğmenin ikonu"), renk ise uygulamanın eylem vurgusu.
+  · **Çip rayı koleksiyon açıkken çizilmiyor. Bu 16.08 kararını DEĞİŞTİRİR:** o gün "web'de şerit
+    gizlenir ama mobilde kalsın, kesit içinde daraltılabilsin" denmişti. Cihazda ölçülünce gerekçe
+    çürüdü — koleksiyon süzgeci kategori havuzunu da daraltıyor ve rayda **yalnız "Tümü"** kalıyordu,
+    yani daraltacak bir şey sunmayan ölü bir şerit. Artık iki yüzey aynı hizada.
+
+  **3 · HAVALE SATIRININ İKONU.** Onboarding'in ödeme adımında *"Kapıda ödeme"* `home`, *"Havale ve
+  vadeli hesap"* ise **`warehouse`** taşıyordu — ikisi de bina silüeti, bir bakışta ayrışmıyorlardı.
+  Depo anlamca da yanlıştı: havale bir paranın yer değiştirmesidir. `money`ye alındı; kitte zaten
+  vardı, yeni ikon açılmadı.
+
+  **Doğrulama:** `tsc` (mobil + application + mobil API) temiz · `lint` temiz · **1374 birim testi**
+  + katalog/onboarding jest paketi (**38 test**). **Cihazda ölçüldü:** koleksiyon kataloğu kenardan
+  kenara bant, çip rayı yok, ızgara yerinde.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

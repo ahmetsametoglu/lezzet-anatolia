@@ -406,7 +406,7 @@ export type { TransitionInput, TransitionOutcome } from './order/transition';
 // `toCategory` indirgemesinde, yani mobil API'nin de çağırdığı yerde yapılıyor. `pickRandom` webde
 // KALDI: tek tüketeni hâlâ web ana sayfasının fırsat bandı.
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
-export { pickFeatured, rotateDaily } from './catalog/featured';
+export { dailyRng, pickFeatured, rotateDaily } from './catalog/featured';
 export type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './catalog/storefront-types';
 // ── Sipariş BİLDİRİMİ + sipariş puanı — terfi 10.08 ─────────────────────────
 // Kaynağı `apps/web/lib/order/{notify,notification-data}.ts` ve `lib/feedback/points.ts`ti; web

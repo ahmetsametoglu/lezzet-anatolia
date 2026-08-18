@@ -67,8 +67,51 @@ export function pickFeatured<T extends { isFeatured: boolean }>(rows: readonly T
 export function rotateDaily<T>(pool: readonly T[], count: number, now: Date = new Date()): T[] {
   if (pool.length === 0) return [];
   const take = Math.min(count, pool.length);
-  // Gün numarası UTC'den: yerel saat diliminde hesaplasaydık rotasyon sunucunun saatine bağlı olur
-  // ve gece yarısı çevresinde iki istek farklı vitrin görürdü.
-  const dayIndex = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 86_400_000);
-  return Array.from({ length: take }, (_, i) => pool[(dayIndex + i) % pool.length]!);
+  const day = dayIndex(now);
+  return Array.from({ length: take }, (_, i) => pool[(day + i) % pool.length]!);
+}
+
+/**
+ * Gün numarası — UTC'den. Yerel saat diliminde hesaplasaydık rotasyon sunucunun saatine bağlı olur
+ * ve gece yarısı çevresinde iki istek farklı vitrin görürdü. Tek yerde durur çünkü iki tüketeni var
+ * (`rotateDaily` ve `dailyRng`) ve ikisi aynı günü görmezse aynı vitrinin iki yarısı ayrışırdı.
+ */
+function dayIndex(now: Date): number {
+  return Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 86_400_000);
+}
+
+/**
+ * **Güne bağlı deterministik RASTGELELİK** — `rotateDaily`nin kardeşi (kullanıcı kararı 18.08).
+ *
+ * ── NEDEN AYRI BİR ŞEY GEREKTİ ───────────────────────────────────────────────
+ * `rotateDaily` "havuzu sırayla döndür" der ve web ana sayfası bunu kullanıyor. Mobil vitrinin
+ * kuralı ise BAŞKA ve daha zengin: 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından
+ * seçilir, altısı birbirine rastgele konumlarda karışır ve her birinin fotoğrafı kendi havuzundan
+ * gelir (`apps/mobile-api/src/lib/home.ts`). Bu kompozisyon bir ROTASYONLA ifade edilemez.
+ *
+ * O yüzden değişen şey kuralın kendisi değil, **rastgeleliğin kaynağı** olmalı: aynı seçim kodu
+ * aynı gün içinde aynı sonucu versin, ertesi gün başkasını. Bu fonksiyon tam onu verir — çağıran
+ * `Math.random` yerine bunu geçer, tek satır.
+ *
+ * ── NEDEN GEREKLİ OLDUĞU ÖLÇÜLDÜ ─────────────────────────────────────────────
+ * Mobil vitrin `Math.random` kullanıyordu ve cihazda görüldü (18.08): her yenilemede koleksiyon
+ * sırası ve fotoğraflar değişiyor. `rotateDaily`nin künyesi bu hâli zaten üç maddede reddediyordu
+ * — *"aynı müşteriye her yenilemede başka vitrin gösterir, vitrin değil kumar olur"* — ama o
+ * gerekçe mobilde uygulanmamıştı. İki yüzey aynı ürün kararını iki farklı şekilde yürütüyordu.
+ *
+ * ── ÜRETEÇ: mulberry32 ───────────────────────────────────────────────────────
+ * Küçük, saf ve tohumdan tam belirlenir; kriptografik değil ve olmasına gerek yok — burada
+ * "tahmin edilemezlik" değil, **tekrarlanabilirlik** isteniyor. Tohum gün numarasından türer,
+ * yani üretecin tüm çıktısı o gün boyunca aynıdır.
+ */
+export function dailyRng(now: Date = new Date()): () => number {
+  // Tohum 0 olmasın diye kaydırma: gün numarası bir gün 0'a denk gelse üreteç dejenere olurdu.
+  let state = (dayIndex(now) + 0x6d2b79f5) >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+  };
 }

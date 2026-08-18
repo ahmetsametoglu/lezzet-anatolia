@@ -1,5 +1,6 @@
 import { CategoryService, CollectionService, ProductService } from '@lezzet/database';
 import {
+  dailyRng,
   getCatalogData,
   imageOf,
   type PlaceWarehouses,
@@ -58,8 +59,23 @@ const HOME_BAND_TOTAL = HOME_BAND_CATEGORY_COUNT + HOME_BAND_COLLECTION_COUNT;
 
 /**
  * Rastgelelik DIŞARIDAN gelir (emsal: web `rotateDaily`in `now` parametresi — "test günü
- * sabitleyebilsin"). Üretimde `Math.random`; testte tohumlu sayaç. Kuralın kendisi rastgele,
- * KANITI deterministik olmalı.
+ * sabitleyebilsin"). Testte tohumlu sayaç. Kuralın kendisi rastgele, KANITI deterministik olmalı.
+ *
+ * ── ÜRETİMDE ARTIK `Math.random` DEĞİL, `dailyRng()` (kullanıcı kararı 18.08) ─
+ * KOMPOZİSYON DEĞİŞMEDİ: hâlâ 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından,
+ * altısı birbirine rastgele konumlarda karışıyor, fotoğraflar kendi havuzundan geliyor. Değişen
+ * TEK ŞEY rastgeleliğin kaynağı — artık gün numarasından türeyen deterministik bir üreteç
+ * (`@lezzet/application`, `rotateDaily`nin kardeşi).
+ *
+ * **Gerekçe cihazda ölçüldü (18.08):** her yenilemede koleksiyon sırası ve fotoğraflar
+ * değişiyordu. `rotateDaily`nin künyesi bu hâli zaten üç maddede reddetmişti — *"sayfa
+ * önbelleğini kırar · aynı müşteriye her yenilemede başka vitrin gösterir, vitrin değil kumar
+ * olur · 'dün gördüğüm koleksiyon neydi' sorusunun cevabı kalmaz"* — ama o gerekçe web ana
+ * sayfasında uygulanmış, mobilde uygulanmamıştı. **Aynı ürün kararı iki yüzeyde iki ayrı şekilde
+ * yürüyordu** (CLAUDE §1); artık ikisi de günü tohum alıyor.
+ *
+ * Kural NEDEN `rotateDaily`ye çevrilmedi: o "havuzu sırayla döndür" der ve buradaki kompozisyonu
+ * (dörde-iki + karıştırma + fotoğraf havuzu) ifade edemez. Değişmesi gereken kural değil, tohumdu.
  */
 export type Rng = () => number;
 
@@ -186,7 +202,7 @@ export async function composeHomeBands(
   db: SupabaseClient,
   locale: PreferredLanguage,
   pools: HomeBandPools,
-  rng: Rng = Math.random,
+  rng: Rng = dailyRng(),
 ): Promise<HomeBand[]> {
   const chosen = selectHomeBandSources(pools.categories, pools.collections, rng);
 
@@ -212,7 +228,7 @@ export async function composeHomeBands(
 }
 
 /** Uçtan çağrılan hâli — havuzları küresel listeden kurar (2 okuma), kuralı kompozisyona bırakır. */
-export async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, rng: Rng = Math.random): Promise<HomeBand[]> {
+export async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, rng: Rng = dailyRng()): Promise<HomeBand[]> {
   const [categories, collections] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).listWithProductIds({ activeOnly: true }),

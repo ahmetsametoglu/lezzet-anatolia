@@ -264,9 +264,14 @@ export function OnboardingScreen() {
       icon: <Icon name="home" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
       copy: t.payment.door,
     },
+    /* İKON `warehouse` DEĞİL `money` (kullanıcı bulgusu 18.08). Havale satırı DEPO ikonu taşıyordu
+       ve bir üstteki "kapıda ödeme" de `home` — ikisi de BİNA silüeti, cihazda bir bakışta
+       ayrışmıyorlardı. Depo zaten anlamca da yanlıştı: havale bir paranın yer değiştirmesidir,
+       bir binanın değil. `money` hem ayrı bir siluet hem doğru kavram; kitte zaten var, yeni ikon
+       açılmadı (CLAUDE §3 — token yoksa kodlama, ama varsa da ikincisini yaratma). */
     {
       key: 'transfer',
-      icon: <Icon name="warehouse" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
+      icon: <Icon name="money" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
       copy: t.payment.transfer,
     },
   ] as const;
