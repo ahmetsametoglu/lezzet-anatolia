@@ -326,7 +326,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
             accessibilityLabel={t.collection.clear}
             testID="catalog-collection-clear"
           >
-            <Icon name="close" size={theme.size.headerIcon} color={theme.colors.terracotta} />
+            <Icon name="close" size={theme.size.headerIcon} color={theme.colors.terracotta} bold />
           </PressableSurface>
         </View>
       )}
@@ -650,7 +650,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.eyebrow,
     // Aralık token'da `em` (yazı boyuna göreli); RN mutlak dp ister — çeviri tek yerde (`emToDp`).
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
-    color: theme.colors['olive-dark'],
+    /* KIRMIZI TONU, ZEYTİN DEĞİL (kullanıcı kararı 18.08). `olive-dark`tı ve satırda iki ayrı
+       vurgu rengi vardı: üstbaşlık zeytin, temizleme çarpısı terracotta — biri "bilgi" biri
+       "eylem" gibi okunuyor, oysa ikisi aynı şeyin parçası (etkin süzgeç ve onu kaldırma).
+       `terracotta` uygulamanın kırmızı ucu ve üstbaşlıklarda ZATEN kullanılıyor (vitrinin kum
+       bandı, ürün detayının "PASTA" satırı) — yeni bir ton açılmadı. */
+    color: theme.colors.terracotta,
   },
   /* Ad, VİTRİNDEKİ koleksiyon bandının başlığıyla BİREBİR aynı kademede (18.08): Lora `h2-sm`.
      Tahminle seçilmedi, ölçüldü — `home/collection-band.tsx` başlığı tam bu ikiliyi kullanıyor.

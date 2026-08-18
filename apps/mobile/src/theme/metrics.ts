@@ -167,6 +167,14 @@ export const appMetrics = {
     iconStroke: 1.8,
     /** 34 dp ve üstü ikonun ince çizgisi (tasarım: 1,5–1,7). */
     iconStrokeLarge: 1.6,
+    /**
+     * VURGULU ikon çizgisi — şablonun ÜST ucu (2,2), yukarıdaki künyede "en yakın durağa çekildi"
+     * denilerek 1,8'e indirilmişti. Kullanıcı bulgusu 18.08 onu geri istedi: katalogun koleksiyon
+     * temizleme çarpısı 1,8'de bir işaret gibi duruyor, düğme gibi değil. Uydurulmuş bir değer
+     * DEĞİL — tasarımda zaten geçen üçüncü durak; boyla değil ROLLE seçilir (`Icon` `bold` prop'u),
+     * çünkü burada büyüten şey ikonun ölçüsü değil, taşıdığı eylemin ağırlığı.
+     */
+    iconStrokeBold: 2.2,
     /** Yüzen sayfa tutamağının kalınlığı (tasarım: 5). Yarıçapı bundan TÜREtilir. */
     sheetHandle: 5,
   },

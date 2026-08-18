@@ -3953,7 +3953,16 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     20 dp, ad↔çizgi 22 dp). Kapsız bir metin bloğunun kendi dolgusu olmaz; kaldırıldı, ikisi de 10.
   · **TEMİZLE DÜĞMESİ:** `inlineIcon` (17) + `olive-dark`tı ve *"basılacağı çok anlaşılmayabiliyor"*
     dendi. `headerIcon` (20) + `terracotta` oldu — ölçü zaten bu rolün kendi durağı ("başlık
-    satırındaki yuvarlak düğmenin ikonu"), renk ise uygulamanın eylem vurgusu.
+    satırındaki yuvarlak düğmenin ikonu"), renk ise uygulamanın eylem vurgusu. **Sonra çizgi de
+    kalınlaştı** (kullanıcı isteği): ölçeğe ÜÇÜNCÜ durak açıldı — `iconStrokeBold: 2.2`. Uydurulmuş
+    değil; `iconStroke` künyesi şablonun 1,5–2,2 arasında gezindiğini ve 2,2'nin "en yakın durağa
+    çekildiğini" zaten yazıyordu, o üst uç geri alındı. Seçimi BOY değil ROL yapıyor (`Icon` `bold`
+    prop'u): burada kalınlaştıran şey ikonun ölçüsü değil, taşıdığı eylemin ağırlığı. Ham kalınlık
+    prop'u bilerek açılmadı — sayı verilebilseydi ikonlar birbirinden habersiz kalınlaşırdı.
+  · **ÜSTBAŞLIK DA KIRMIZI TONUNA** (kullanıcı isteği): `olive-dark`tı ve satırda iki ayrı vurgu
+    rengi vardı — üstbaşlık zeytin, çarpı terracotta; biri "bilgi" biri "eylem" gibi okunuyordu,
+    oysa ikisi aynı şeyin parçası (etkin süzgeç ve onu kaldırma). Yeni ton açılmadı: `terracotta`
+    üstbaşlıklarda zaten kullanılıyor.
   · **Çip rayı koleksiyon açıkken çizilmiyor. Bu 16.08 kararını DEĞİŞTİRİR:** o gün "web'de şerit
     gizlenir ama mobilde kalsın, kesit içinde daraltılabilsin" denmişti. Cihazda ölçülünce gerekçe
     çürüdü — koleksiyon süzgeci kategori havuzunu da daraltıyor ve rayda **yalnız "Tümü"** kalıyordu,

@@ -31,6 +31,12 @@ interface IconProps {
   size: number;
   /** Tema renk token'ının değeri; verilmezse mürekkep. */
   color?: string;
+  /**
+   * Çizgiyi VURGULU durağa alır (`iconStrokeBold`). Ham kalınlık prop'u BİLEREK yok: sayı
+   * verilebilseydi çağıranlar ölçeğin dışına çıkardı ve ikonlar birbirinden habersiz kalınlaşırdı.
+   * Ölçü değil ROL seçiliyor — "bu ikon bir eylemin kendisi, satır içi bir işaret değil".
+   */
+  bold?: boolean;
   testID?: string;
 }
 
@@ -43,12 +49,18 @@ function viewBoxRatio(viewBox: string): number {
   return width === undefined || height === undefined || height === 0 ? 1 : width / height;
 }
 
-export function Icon({ name, size, color, testID }: IconProps) {
+export function Icon({ name, size, color, bold = false, testID }: IconProps) {
   const { theme } = useUnistyles();
   const geometry: (typeof ICON_PATHS)[IconName] = ICON_PATHS[name];
   const viewBox = 'viewBox' in geometry && geometry.viewBox !== undefined ? geometry.viewBox : DEFAULT_VIEW_BOX;
   const stroke = color ?? theme.colors.ink;
-  const strokeWidth = 'large' in geometry ? theme.border.iconStrokeLarge : theme.border.iconStroke;
+  /* Sıra anlamlı: VURGU boy kuralını ezer. `large` geometrisi "büyük ikon ince çizilir" der ve
+     optik ağırlığı sabit tutar; `bold` ise "bu ikon bir eylem" der ve ağırlığı BİLEREK artırır. */
+  const strokeWidth = bold
+    ? theme.border.iconStrokeBold
+    : 'large' in geometry
+      ? theme.border.iconStrokeLarge
+      : theme.border.iconStroke;
 
   return (
     <Svg
