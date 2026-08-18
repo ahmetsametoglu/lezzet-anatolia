@@ -3949,8 +3949,14 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     dönüşünce ortaya çıktı. **Kullanıcı seçimi: metin-only.** Kap tümden kalktı; sayfa zemininde
     üstbaşlık + ad + temizle. Ad ise artık tahmin değil ölçüm: vitrindeki koleksiyon bandının
     başlığıyla BİREBİR aynı ikili (Lora `h2-sm`) — bağlantıyı kuran renk değil, kademeydi.
-  · **BOŞLUK:** zemin kalkınca bandın kendi dikey dolgusu `header.gap`in üstüne bindi (arama↔üstbaşlık
-    20 dp, ad↔çizgi 22 dp). Kapsız bir metin bloğunun kendi dolgusu olmaz; kaldırıldı, ikisi de 10.
+  · **BOŞLUK, İKİ AYRI KAYNAK.** (a) Zemin kalkınca bandın kendi dikey dolgusu `header.gap`in
+    üstüne bindi (arama↔üstbaşlık 20 dp, ad↔çizgi 22 dp) — kapsız bir metin bloğunun kendi dolgusu
+    olmaz, kaldırıldı, ikisi de 10. (b) Üstbaşlık↔ad arası ise `gap` 4 dp yazmasına rağmen cihazda
+    **15 dp** ölçüldü: fark `gap`ten değil, ada AÇIK SATIR YÜKSEKLİĞİ verilmemesinden geliyordu —
+    yazı tipi kendi payını ekliyor ve o pay BOYLA BİRLİKTE BÜYÜYOR, yani `gap`i kısmak "Büyük" yazı
+    boyutunda sorunu geri getirirdi. Ada vitrin bandının formülü verildi
+    (`h2-sm × h1--line-height`, uydurma değil — o bant zaten onu kullanıyor) ve `gap` `2xs`e indi;
+    **ölçülen sonuç 15 → 8,7 dp.**
   · **TEMİZLE DÜĞMESİ:** `inlineIcon` (17) + `olive-dark`tı ve *"basılacağı çok anlaşılmayabiliyor"*
     dendi. `headerIcon` (20) + `terracotta` oldu — ölçü zaten bu rolün kendi durağı ("başlık
     satırındaki yuvarlak düğmenin ikonu"), renk ise uygulamanın eylem vurgusu. **Sonra çizgi de

@@ -641,9 +641,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['4xl'],
   },
   // Metin bloğu esner, çarpı sabit kalır: uzun koleksiyon adı düğmeyi ekran dışına itmesin.
+  /* Gap `xs` (4) değil `2xs` (2): ad artık açık satır yüksekliğiyle kendi payını bırakıyor
+     (`collectionName` künyesi), üstüne 4 dp daha eklemek boşluğu ikinci kez saymak olurdu. */
   collectionText: {
     flex: 1,
-    gap: theme.space.xs,
+    gap: theme.space['2xs'],
   },
   collectionEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
@@ -665,6 +667,13 @@ const styles = StyleSheet.create((theme, rt) => ({
   collectionName: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     fontSize: theme.text['h2-sm'],
+    /* AÇIK SATIR YÜKSEKLİĞİ — üstbaşlıkla arasındaki boşluğun ASIL kaynağı buydu (18.08).
+       Ölçüldü: `gap` 4 dp yazıyordu ama cihazda iki satır arası **15 dp** çıkıyordu; aradaki 11 dp
+       Lora'nın DOĞAL satır kutusundan geliyordu — yükseklik verilmeyince yazı tipi kendi payını
+       ekliyor ve o pay boyla birlikte büyüyor. `gap`i kısmak bu yüzden tek başına yetmezdi.
+       Değer uydurulmadı: vitrindeki koleksiyon bandının başlığı ZATEN bu formülü kullanıyor
+       (`h2-sm × h1--line-height`), yani iki ekranın adı artık aynı kutuda duruyor. */
+    lineHeight: theme.text['h2-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,
   },
   chipRail: {
