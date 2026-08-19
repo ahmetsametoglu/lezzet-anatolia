@@ -6,6 +6,7 @@ import { authErrorMessage } from '@/lib/auth/errors';
 import { detectDevice } from '@/lib/device';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
+import { DevLoginLinks } from './dev-login-links';
 import { LoginClient } from './login-client';
 import type { Messages } from './login-types';
 import messages from './messages.json';
@@ -28,17 +29,22 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
   const device = await detectDevice();
 
   return (
-    <LoginClient
-      next={next ?? null}
-      locale={locale as Locale}
-      subtitle={subtitle}
-      t={t}
-      errors={{
-        invalidEmail: authErrorMessage('invalid_email', locale as Locale),
-        googleUnavailable: authErrorMessage('google_unavailable', locale as Locale),
-      }}
-      initialError={initialError}
-      device={device}
-    />
+    <>
+      <LoginClient
+        next={next ?? null}
+        locale={locale as Locale}
+        subtitle={subtitle}
+        t={t}
+        errors={{
+          invalidEmail: authErrorMessage('invalid_email', locale as Locale),
+          googleUnavailable: authErrorMessage('google_unavailable', locale as Locale),
+        }}
+        initialError={initialError}
+        device={device}
+      />
+      {/* Hızlı giriş şeridi — kapı kapalıysa kendisi `null` döner (bileşenin künyesi). Cihaz
+          forkunun DIŞINDA: liste iki dosyada yaşamasın. */}
+      <DevLoginLinks />
+    </>
   );
 }
