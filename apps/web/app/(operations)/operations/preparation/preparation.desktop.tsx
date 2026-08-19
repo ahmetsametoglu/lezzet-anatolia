@@ -5,8 +5,14 @@ import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { num } from '@/components/operation/ui/format';
-import { PREP_NOTES, channelLabel, queueStatus } from './preparation-labels';
-import type { PreparationData, PreparationLineView, PreparationOrderView } from './preparation-types';
+import { LANE_HINTS, LANE_LABELS, PREP_NOTES, channelLabel, queueStatus } from './preparation-labels';
+import {
+  PREPARATION_LANES,
+  type PreparationData,
+  type PreparationLane,
+  type PreparationLineView,
+  type PreparationOrderView,
+} from './preparation-types';
 
 /**
  * **Hazırlık masası** — kuyruk + seçili siparişin kalemleri (10.1–10.3).
@@ -33,6 +39,7 @@ interface PreparationViewProps {
 
 export function PreparationDesktop({ data, selectedId, onSelect, busy, error, onConfirmLine, onProblem }: PreparationViewProps) {
   const selected = data.orders.find((order) => order.orderId === selectedId) ?? null;
+  const gecikenSayisi = data.orders.filter((order) => order.lane === 'overdue').length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -40,7 +47,15 @@ export function PreparationDesktop({ data, selectedId, onSelect, busy, error, on
         title="Hazırlık"
         // Depo adı DAİMA yazılı (10.7): kuyruk tek bir deponun kuyruğu, ve hangisi olduğu
         // başlıkta durmazsa çok depolu operatör yanlış rafın önünde doğru listeye bakar.
-        subtitle={`${data.warehouseName} · Bugün hazırlanacak ${num(data.orders.length)} · hazır ${num(data.readyCount)}`}
+        // Sayaç artık "bugün" DEMİYOR ve diyemez (10.9): liste üç kulvar taşıyor. Geciken varsa
+        // ayrıca yazılıyor — bir toplamın içinde erimesi, tam da görünür kılmak istediğimiz şeyi
+        // gizlerdi.
+        subtitle={[
+          data.warehouseName,
+          `bekleyen ${num(data.orders.length)}`,
+          `hazır ${num(data.readyCount)}`,
+          ...(gecikenSayisi > 0 ? [`geciken ${num(gecikenSayisi)}`] : []),
+        ].join(' · ')}
       />
 
       {error ? (
@@ -50,16 +65,30 @@ export function PreparationDesktop({ data, selectedId, onSelect, busy, error, on
       ) : null}
 
       {data.orders.length === 0 ? (
-        <EmptyState title="Bugün hazırlanacak sipariş yok" description={PREP_NOTES.empty} />
+        <EmptyState title="Bekleyen hazırlık yok" description={PREP_NOTES.empty} />
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(280px,1fr)_2.1fr] overflow-hidden">
           <div className="flex min-h-0 flex-col border-r border-ops-line">
+            {/* Kuyruk KULVARLARA bölünmüş (10.9): geciken → bugün → kargo. Başlık yalnız o
+                kulvarda sipariş varken çizilir — boş bir "Geciken 0" başlığı, olmayan bir sorunu
+                her gün göz önünde tutmanın yoludur. */}
             <ul className="min-h-0 flex-1 overflow-y-auto">
-              {data.orders.map((order) => (
-                <li key={order.orderId}>
-                  <QueueRow order={order} selected={order.orderId === selectedId} onSelect={() => onSelect(order.orderId)} />
-                </li>
-              ))}
+              {PREPARATION_LANES.map((lane) => {
+                const kulvar = data.orders.filter((order) => order.lane === lane);
+                if (kulvar.length === 0) return null;
+                return (
+                  <li key={lane}>
+                    <LaneHead lane={lane} count={kulvar.length} />
+                    <ul>
+                      {kulvar.map((order) => (
+                        <li key={order.orderId}>
+                          <QueueRow order={order} selected={order.orderId === selectedId} onSelect={() => onSelect(order.orderId)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                );
+              })}
             </ul>
             <p className="border-t border-ops-line-soft bg-ops-subtle px-5 py-2.5 font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
               {PREP_NOTES.queueHint}
@@ -75,6 +104,25 @@ export function PreparationDesktop({ data, selectedId, onSelect, busy, error, on
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Kulvar başlığı — kuyruk sütununda yapışkan. Geciken kulvarı AMBER: tek başına bir karardır
+ * (dünün işi bugünün önüne geçer), öteki ikisi nötr — onlar bir uyarı değil, bir sıra.
+ */
+function LaneHead({ lane, count }: { lane: PreparationLane; count: number }) {
+  const uyari = lane === 'overdue';
+  return (
+    <div
+      className={`sticky top-0 z-10 flex items-baseline gap-2 border-b px-5 py-1.5 ${
+        uyari ? 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark' : 'border-ops-line-soft bg-ops-subtle text-ops-muted'
+      }`}
+    >
+      <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-wide">{LANE_LABELS[lane]}</span>
+      <span className="font-ops-mono text-ops-xs">{num(count)}</span>
+      <span className="truncate font-ops-body text-ops-micro opacity-80">{LANE_HINTS[lane]}</span>
     </div>
   );
 }

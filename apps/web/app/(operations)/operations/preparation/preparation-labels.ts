@@ -1,6 +1,6 @@
 import type { ShortfallSuggestion } from '@lezzet/domain-core';
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { PreparationOrderView } from './preparation-types';
+import type { PreparationLane, PreparationOrderView } from './preparation-types';
 
 /**
  * Hazırlık masasının sözlüğü (10.1–10.3).
@@ -9,6 +9,27 @@ import type { PreparationOrderView } from './preparation-types';
  * "rezervasyon", "batch-pinned", "fulfilled_qty" arayüz dilinde geçmez. Karşılıkları sade:
  * *"önce şu tarihli partiden"*, *"ayrılmış"*, *"karşılanan adet"*. Depocu kuralı değil, işi okur.
  */
+
+/**
+ * Kulvar adları (10.9) — hem kuyruk başlıklarında hem seçim kartlarında. **Tek yerde**, çünkü
+ * ikisi aynı üç kulvarı sayıyor: ayrı yazılsalardı biri bir gün "kargo", öteki "günsüz" derdi ve
+ * operatör iki ekranda iki farklı küme sanırdı.
+ *
+ * "Geciken" bir SUÇLAMA değil bir hâl: sipariş dün hazırlanmadı ve bugün hâlâ duruyor. Sebebi
+ * ekranın işi değil — görünür olması işi.
+ */
+export const LANE_LABELS: Record<PreparationLane, string> = {
+  overdue: 'geciken',
+  today: 'bugün',
+  shipping: 'kargo',
+};
+
+/** Kulvar başlığının altındaki tek cümle — o kulvarın NE olduğunu söyler. */
+export const LANE_HINTS: Record<PreparationLane, string> = {
+  overdue: 'Günü geçti, hâlâ hazırlanmadı — bugünün işinin önüne geçer.',
+  today: 'Bugün teslim edilecek.',
+  shipping: 'Kargo — teslim günü yok, sıraya göre hazırlanır.',
+};
 
 /** Sipariş kuyruğundaki durum rozeti — üç hâl, üç renk. */
 export function queueStatus(order: PreparationOrderView): { label: string; tone: OpsTone } {
@@ -29,10 +50,15 @@ export function channelLabel(order: PreparationOrderView): string {
 }
 
 export const PREP_NOTES = {
-  empty: 'Bugün hazırlanacak sipariş yok. Onaylanan siparişler bu listeye kendiliğinden düşer.',
+  empty: 'Bekleyen hazırlık yok. Onaylanan siparişler bu listeye kendiliğinden düşer.',
   pick: 'Soldaki kuyruktan bir sipariş seçin; kalemleri ve hangi partiden alınacağı burada görünür.',
-  /** Liste yalnız bugünün işi — arşiv yığılmaz (tasarım §6). */
-  queueHint: 'Liste yalnız bugünün işi. Yarım kalan iş saklanır — dönünce kaldığı kalemden sürer.',
+  /**
+   * **Cümle 19.08'de değişti (10.9).** Eskiden *"liste yalnız bugünün işi"* diyordu ve o cümle
+   * kuyruğun süzgecini birebir anlatıyordu — ama süzgeç yanlıştı: teslim günü olmayan kargo
+   * siparişi ile dünden kalan hazırlanmamış sipariş de düşüyordu. Bugün liste **yapılması gereken
+   * işi** gösteriyor; dışarıda kalan tek şey İLERİ tarihli sipariş.
+   */
+  queueHint: 'Liste bekleyen işin tamamı — geciken, bugün ve kargo. İleri tarihli sipariş girmez; yarım kalan iş saklanır.',
   /** Onayın ne yaptığını söyler: depocu ayrıca kayıt girmez, günlük ek yük sıfırdır. */
   confirmHint:
     'Onayla birlikte çıkan partiler otomatik kaydedilir — ayrıca kayıt girmezsiniz. "Sorun" ile başka partiden aldığınızı, partide eksik olduğunu ya da kalemin eksik kalacağını söyleyebilirsiniz.',

@@ -1,9 +1,10 @@
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { WarehouseChoicePane } from '@/components/operation/ui/warehouse-choice-pane';
 import { AuthError } from '@/lib/guard';
-import { readWorkWarehouse } from '@/lib/warehouse/context';
+import { readWarehouseContext, readWorkWarehouse } from '@/lib/warehouse/context';
 import { PreparationClient } from './preparation-client';
-import { readPreparation } from './preparation-read';
+import { readPreparation, readWarehouseChoices } from './preparation-read';
+import { WarehouseChoice } from './warehouse-choice';
 
 /**
  * **Hazırlık masası** (`/operations/preparation`) — 10.1–10.3.
@@ -45,21 +46,34 @@ export default async function PreparationPage() {
     );
   }
 
-  if (workplace.status !== 'ok') {
+  const today = new Date().toISOString().slice(0, 10);
+
+  /**
+   * **Depo seçilmemişken artık boş bir kapı DEĞİL, kartlar** (10.8, kullanıcı isteği 19.08).
+   *
+   * Kural aynı — varsayılan depo yoktur, sistem operatörün yerine seçmez — ama uygulaması
+   * değişti: eskiden koca bir alan tek cümleyle ("Önce depo seçin") duruyor ve çıkış yolunu başka
+   * bir yere (üst bardaki seçici) gösteriyordu. Depo seçmek bir engel değil, bu sayfanın İLK
+   * ADIMI; kartlar o adımı ekranın içine alıyor ve seçimi bilgiyle besliyor.
+   *
+   * `none` hâli AYRI kalıyor: seçilecek depo yokken kart çizmek boş bir ızgara göstermek olurdu ve
+   * operatörün burada yapabileceği bir şey yok — çıkış yolu Depolar ekranı.
+   */
+  if (workplace.status === 'none') {
     return (
       <WarehouseChoicePane
         title="Hazırlık"
-        hasOptions={workplace.status === 'needs_choice'}
-        reason={
-          workplace.status === 'none'
-            ? 'Kapsamınızdaki depoların tamamı kapalı.'
-            : 'Hazırlık kuyruğu tek bir deponun işidir — onay o deponun partilerine yazılır.'
-        }
+        hasOptions={false}
+        reason="Kapsamınızdaki depoların tamamı kapalı."
       />
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  if (workplace.status === 'needs_choice') {
+    const { visibleWarehouseIds } = await readWarehouseContext();
+    return <WarehouseChoice choices={await readWarehouseChoices(visibleWarehouseIds, today)} />;
+  }
+
   return (
     <PreparationClient data={await readPreparation({ id: workplace.warehouseId, name: workplace.name }, today)} />
   );

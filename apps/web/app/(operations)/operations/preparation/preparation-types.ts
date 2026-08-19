@@ -26,8 +26,21 @@ export interface PreparationLineView extends PreparationLine {
   hasShortfall: boolean;
 }
 
+/**
+ * Kuyruğun üç kulvarı (10.9). Ayrım hazırlığın NE ZAMAN gerektiğine göre:
+ * · `overdue` — günü geçmiş, hâlâ hazırlanmamış. Dünün işi bugünün önüne geçer.
+ * · `today` — bugün teslim edilecek.
+ * · `shipping` — günü OLMAYAN kargo siparişi; takvimde yeri yok ama hazırlanması gerekiyor.
+ *
+ * İleri tarihli sipariş bir kulvara girmez — kuyruğa hiç alınmaz.
+ */
+export type PreparationLane = (typeof PREPARATION_LANES)[number];
+export const PREPARATION_LANES = ['overdue', 'today', 'shipping'] as const;
+
 export interface PreparationOrderView extends Omit<PreparationOrder, 'lines'> {
   lines: PreparationLineView[];
+  /** Hangi kulvarda — kuyruk sütunu satırları buna göre gruplar. */
+  lane: PreparationLane;
   /** "3 kalem · 84 paket" — paket sayısı kalemlerin adet toplamı. */
   totalQty: number;
   /** Tüm kalemler toplandı mı; sipariş "HAZIR"a ancak o zaman geçer. */
@@ -45,4 +58,24 @@ export interface PreparationData {
    * kuyruğudur, depo-üstü hâl kalmadı. Depo seçilmemişken sayfa bu veriyi hiç kurmaz.
    */
   warehouseName: string;
+}
+
+/**
+ * **Depo seçim kartı** (10.8) — boş kapı ekranının yerini alan özet.
+ *
+ * Kart bir SEÇİM aracıdır ve seçimi bilgiyle besler: operatör hangi depoda iş olduğunu görerek
+ * seçsin, adını hatırlayarak değil. Üç sayı da hazırlığın kendi sorularıdır — para, stok, ciro
+ * burada YOKTUR (rol duvarı bu ekranda da geçerli).
+ */
+export interface WarehouseChoiceView {
+  id: string;
+  /** Belge öneki (`STR`) — kart üstünde, kod okunarak da tanınır. */
+  code: string;
+  name: string;
+  /** Bugün teslim edilecek, henüz hazırlanmamış sipariş. */
+  today: number;
+  /** Günü OLMAYAN kargo siparişi — takvimde yeri yok, ama hazırlanması gerekiyor. */
+  shipping: number;
+  /** Günü GEÇMİŞ ve hâlâ hazırlanmamış sipariş — bir gecikme işareti. */
+  overdue: number;
 }
