@@ -45,6 +45,14 @@ const productId = `00000000-0000-4000-8000-${String(stamp).slice(-12).padStart(1
 const soldOutOnlyProductId = `00000000-0000-4000-8001-${String(stamp).slice(-12).padStart(12, '0')}`;
 const searchQuery = `lahmacun-${stamp}`;
 const campaign = `kampanya-${stamp}`;
+/**
+ * Yol da DAMGALI — oturum anahtarı damgalıyken süzgeç sabit `/catalog`taydı ve günlük özet
+ * o boyutta BÜTÜN oturumları topluyor: yerelde dolaşan gerçek bir gezinme (ya da başka şeridin
+ * fikstürü) aynı gün+yol+kanal satırına karışıp sayıyı 3'ten 14'e taşıdı (mobil şeridin ölçümü,
+ * 17.08). CLAUDE §4b: kendi kurduğun satırları say — teardown da kurtaramaz, kirleten satırlar
+ * testin değil.
+ */
+const searchPath = `/catalog-${stamp}`;
 
 /** Dünün tarihi: özet BUGÜNÜ üretmiyor (gün kapanmadan üretilen özet eksiktir) — iş de öyle davranıyor. */
 const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
@@ -106,17 +114,17 @@ describe('oturum künyesi BİR KEZ yazılır', () => {
 
 describe('günlük özet', () => {
   it('boyutlara göre gruplar, saat kırılımını doğru kovaya yazar', async () => {
-    await events.record({ type: 'search', sessionKey, path: '/catalog', channel: 'b2c', availability: null });
+    await events.record({ type: 'search', sessionKey, path: searchPath, channel: 'b2c', availability: null });
     // Aynı boyut, farklı saat → aynı satır, farklı kova.
     await db.from('analytics_event').insert([
-      { created_at: at(9), type: 'search', session_key: sessionKey, path: '/catalog', channel: 'b2c' },
-      { created_at: at(9), type: 'search', session_key: otherKey, path: '/catalog', channel: 'b2c' },
-      { created_at: at(14), type: 'search', session_key: sessionKey, path: '/catalog', channel: 'b2c' },
+      { created_at: at(9), type: 'search', session_key: sessionKey, path: searchPath, channel: 'b2c' },
+      { created_at: at(9), type: 'search', session_key: otherKey, path: searchPath, channel: 'b2c' },
+      { created_at: at(14), type: 'search', session_key: sessionKey, path: searchPath, channel: 'b2c' },
     ]);
 
     await daily.build(day);
     const rows = await daily.list({ from: day, to: day, types: ['search'] });
-    const satir = rows.find((r) => r.path === '/catalog' && r.channel === 'b2c');
+    const satir = rows.find((r) => r.path === searchPath && r.channel === 'b2c');
 
     expect(satir?.eventCount).toBe(3);
     // İKİ oturum: `count(distinct session_key)`.
