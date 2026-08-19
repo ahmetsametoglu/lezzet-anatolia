@@ -50,6 +50,12 @@
       "redemption": "Kupona çevrildi",
       "manual": "Elle düzeltme"
     },
+    "pointsReasonReversed": {
+      "referral": "Getirdiğiniz arkadaş — iptal edildi",
+      "neighbor": "Davet ettiğiniz komşu — iptal edildi"
+    },
+    "pointsPendingTitle": "Yolda olan puanlar",
+    "pointsPendingRow": "{name} sipariş verdi — {points} puan, ödeme alınınca hesabınıza geçecek.",
     "redeemTitle": "Puanı kupona çevir",
     "redeemBody": "{points} puanınız {amount} indirim kuponuna dönüşecek. Kupon Kuponlarım'da görünür ve sepette kullanılır.",
     "redeemNote": "Çevirme geri alınamaz.",
@@ -169,6 +175,12 @@
       "redemption": "Converti en bon",
       "manual": "Ajustement manuel"
     },
+    "pointsReasonReversed": {
+      "referral": "Ami parrainé — annulé",
+      "neighbor": "Voisin invité — annulé"
+    },
+    "pointsPendingTitle": "Points en attente",
+    "pointsPendingRow": "{name} a commandé — {points} points, crédités dès le paiement encaissé.",
     "redeemTitle": "Convertir en bon",
     "redeemBody": "Vos {points} points deviendront un bon de {amount}. Le bon apparaît dans « Mes bons » et s'utilise dans le panier.",
     "redeemNote": "La conversion est définitive.",
@@ -288,6 +300,12 @@
       "redemption": "In Gutschein umgewandelt",
       "manual": "Manuelle Korrektur"
     },
+    "pointsReasonReversed": {
+      "referral": "Geworbene Freundin oder Freund — storniert",
+      "neighbor": "Eingeladene Nachbarschaft — storniert"
+    },
+    "pointsPendingTitle": "Punkte unterwegs",
+    "pointsPendingRow": "{name} hat bestellt — {points} Punkte, sobald die Zahlung eingegangen ist.",
     "redeemTitle": "In Gutschein umwandeln",
     "redeemBody": "Ihre {points} Punkte werden zu einem Gutschein über {amount}. Der Gutschein erscheint unter „Meine Gutscheine“ und wird im Warenkorb eingelöst.",
     "redeemNote": "Die Umwandlung ist endgültig.",

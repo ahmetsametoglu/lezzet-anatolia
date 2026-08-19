@@ -83,6 +83,15 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + beğeni + ü
     - **Ağırlıklandırma motora taşındı (04.08):** `weighSwipesByProduct` — aday panosu ve ürün skoru güven kolonu artık AYNI fonksiyondan geçiyor. İki yerde ayrı hesaplansaydı fark hiçbir yerde hata vermez, yalnız aynı ürün için iki farklı güven gösterilirdi; bir test tam bunu sınıyor.
 - [x] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
   - *Bitti:* bakiye ledger'dan türeniyor; istismar tavanları çalışıyor
+  - **Durum (19.08 — mobil şeridin iki eksiği WEB'e de çizildi; `not-web-puan-yolda-ve-iptal-etiketi` karşılandı, not silindi):**
+    hesap kartına "Yolda olan puanlar" bloğu (geçmişin ÜSTÜNDE, deftere KARIŞMAZ — ★ karar 3: defter
+    "ne oldu"yu tutar, bu "ne olacak"tır) + eksi işaretli `neighbor`/`referral` satırlarına ters
+    etiket ("… — iptal edildi"; `redemption`/`manual` bilinçle kendi adında — onlara ters etiket
+    uydurmak olmayan olayı adlandırmak olurdu). Veri `readPendingNeighborAwards` +
+    `readPointsRules`tan (application — kural kapısı KOPYALANMADI, çağrıldı; K5-1 benimsemesinin bir
+    dilimi). Blok yalnız masaüstü kartta (compact'ın "tek satır" kararı yerinde duruyor);
+    `neighborPoints` bilinemezse blok hiç çizilmez — bilinmeyen sayıyla söz verilmez. Web listesi
+    gruplamadığı için mobildeki "+0 tek satır" tuzağı burada doğamaz.
   - **~~Eksik: `reason='order'` yazan üretim kodu yok~~ → BAĞLANDI (04.08).** Denetimin 29.07'de bulduğu boşluk kapandı: müşteri sipariş verdiği için hiç puan kazanmıyordu ve bunu hiçbir yer söylemiyordu (defter, ayar ve tavan hazırdı; eksik olan kabloydu).
     - **Tetik "sipariş verildi" DEĞİL "eline geçti":** iptal edilen ya da hiç ödenmeyen bir sipariş de puan öderdi. `delivered` ve `completed` aynı gerçeğin iki yüzü (kapıda satış doğrudan `completed`'a gider).
     - **Üç yazma yolunun üçünden de çağrılıyor** — `transitionOrder` (genel geçiş) · `deliverOrder` (teslim kendi RPC'sinden geçer) · `quickSale` (kapıda satış geçiş kapısını hiç kullanmaz). Üçü de çağırmak zorunda ve bu bir tekrar DEĞİL: her biri farklı bir yazma yolu. **İki kez çağrılması zararsız** — güvence defterin `(customer_id, reason, ref_id)` kısmi unique indeksinde, yani "daha önce yazıldı mı" sorusunu kod sormuyor.

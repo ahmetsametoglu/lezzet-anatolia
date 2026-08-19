@@ -116,6 +116,16 @@ export function ConsentSwitch({
  *
  * Eşik altındaysa düğme pasif ve KALAN puan yazılı — pasif bir düğmenin sebebi görünmelidir.
  */
+/**
+ * Eksi işaretli ödülün ters etiketi — sözlükte yalnız iki sebep var ve bu bilinçli (ötekilere
+ * ters etiket uydurmak olmayan bir olayı adlandırmak olurdu). Tip daraltması cast'siz: sebep
+ * sözlük anahtarı değilse `undefined` döner, çağıran normal etikete düşer.
+ */
+function reversedReasonLabel(t: Messages, reason: string, points: number): string | undefined {
+  if (points >= 0) return undefined;
+  return reason === 'neighbor' || reason === 'referral' ? t.pointsReasonReversed[reason] : undefined;
+}
+
 export function PointsCard({
   t,
   locale,
@@ -133,9 +143,9 @@ export function PointsCard({
 
   /**
    * MOBİL YAPICA FARKLI ve bu tasarımın kararı: tek satır — solda başlık + kural, sağda rakam ve
-   * küçük hap. İç panel ve "son kazanımlar" listesi mobilde YOK. Masaüstü kartını küçültüp
-   * kullanmak improvise etmek olurdu (CLAUDE.md §3); dar ekranda dört satırlık bir döküm, bakılan
-   * tek sayıyı (bakiye) aşağı itiyor.
+   * küçük hap. İç panel ve "son kazanımlar" listesi mobilde YOK (bekleyen komşu ödülü bloğu da
+   * aynı kararın kapsamında). Masaüstü kartını küçültüp kullanmak improvise etmek olurdu
+   * (CLAUDE.md §3); dar ekranda dört satırlık bir döküm, bakılan tek sayıyı (bakiye) aşağı itiyor.
    */
   if (compact) {
     return (
@@ -169,6 +179,21 @@ export function PointsCard({
         <RedeemPoints t={t} locale={locale} redeem={points.redeem} enough={enough} />
       </div>
 
+      {/* Bekleyen komşu ödülü — geçmişin ÜSTÜNDE ayrı blok, deftere KARIŞMAZ (★ karar 3; 21.73'ün
+          web yarısı): defter "ne oldu"yu tutar, bu "ne olacak"tır — sanal bir satır bakiyeyi de
+          yalan söyletirdi. Puan sayısı `neighborPoints` bilinmiyorsa blok hiç çizilmez: bilinmeyen
+          sayıyla söz verilmez. */}
+      {points.pendingNeighborAwards.length > 0 && points.neighborPoints !== null && (
+        <div className="flex flex-col gap-1.5 rounded-soft bg-cream/10 px-4 py-3">
+          <span className="font-sans text-note font-bold text-cream">{t.pointsPendingTitle}</span>
+          {points.pendingNeighborAwards.map((award, i) => (
+            <span key={`${award.neighborName}-${award.deliveryDate}-${i}`} className="font-sans text-note leading-relaxed text-neutral-400">
+              {t.pointsPendingRow.replace('{name}', award.neighborName).replace('{points}', String(points.neighborPoints))}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <span className="font-sans text-note font-bold text-cream">{t.pointsRecent}</span>
         {points.history.length === 0 && <span className="font-sans text-note text-neutral-400">{t.pointsEmpty}</span>}
@@ -181,8 +206,13 @@ export function PointsCard({
 
                 Bilinmeyen sebep ham dizeye DÜŞER, boş bırakılmaz: defter yeni bir sebep öğrendiğinde
                 satırın kendisi kaybolmamalı — eksik olan çeviridir, hareket değil. Müşterinin gördüğü
-                tuhaf bir kelime, kaybolmuş bir puan hareketinden iyidir. */}
-            <span className="min-w-0 truncate">{t.pointsReason[entry.reason] ?? entry.reason}</span>
+                tuhaf bir kelime, kaybolmuş bir puan hareketinden iyidir.
+
+                Eksi işaretli ÖDÜL ters etiket alır ("… — iptal edildi"): iptal aynı sebeple ve ters
+                işaretle yazılır (★ karar 7d), ham adıyla basılsa müşteri aynı satırı hem +100 hem
+                −100 görürdü. Yalnız neighbor/referral: redemption doğası gereği eksi ("Kupona
+                çevrildi"), manual iki yönlü — ikisine ters etiket uydurmak olmayan olayı adlandırmak. */}
+            <span className="min-w-0 truncate">{reversedReasonLabel(t, entry.reason, entry.points) ?? t.pointsReason[entry.reason] ?? entry.reason}</span>
             {/* İşaret RENKTEN de okunur: kazanım açık yeşil, harcama sıcak ton. */}
             <span className={['flex-none font-bold', entry.points >= 0 ? 'text-olive-light' : 'text-terracotta-line'].join(' ')}>
               {entry.points >= 0 ? '+' : '\u2212'}

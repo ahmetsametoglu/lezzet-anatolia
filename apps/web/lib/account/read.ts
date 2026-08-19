@@ -4,6 +4,7 @@ import type { Address, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezz
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
+import { readPendingNeighborAwards, readPointsRules, type PendingNeighborAward } from '@lezzet/application';
 import { getPointsBalance, listPointsHistory } from '@/lib/feedback/points';
 import { listCustomerCoupons, type CustomerCoupon } from './coupons';
 import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
@@ -38,6 +39,17 @@ export interface AccountView {
      * uyguladığı eşik ayrıştığında müşteri reddedilecek bir düğmeye basar (29.07 denetimi).
      */
     redeem: { minimumPoints: number; valueCents: number };
+    /**
+     * Komşu sipariş verdi ama parası henüz alınmadı — ödül `paid` geçişinde doğacak (★ karar 3,
+     * 21.73'ün web yarısı). Deftere KARIŞMAZ: defter "ne oldu"yu tutar, bu "ne olacak"tır;
+     * ekranda geçmişin ÜSTÜNDE ayrı blok olarak durur. Okuma application'dan (tek kaynak).
+     */
+    pendingNeighborAwards: PendingNeighborAward[];
+    /**
+     * Bir komşu ödülünün puan değeri — `earnWays`ten (kural kapısı KOPYALANMAZ, çağrılır).
+     * `null` = kural okunamadı; blok o hâlde hiç çizilmez — bilinmeyen sayıyla söz verilmez.
+     */
+    neighborPoints: number | null;
   } | null;
   /**
    * Kullanılabilir kişisel kuponlar (17.5). B2B'de her zaman boş — puanla aynı koşula bağlı.
@@ -120,17 +132,21 @@ async function readZoneNotices(db: ReturnType<typeof serviceDb>, customerId: str
  */
 async function readPoints(db: ReturnType<typeof serviceDb>, customerId: string): Promise<NonNullable<AccountView['points']>> {
   const settings = new SettingsService(db);
-  const [balance, history, minimumPoints, centValue] = await Promise.all([
+  const [balance, history, minimumPoints, centValue, pendingNeighborAwards, rules] = await Promise.all([
     getPointsBalance(customerId),
     // Dökümün ilk sayfası yeter: tasarım "son kazanımlar" diyor, tam geçmiş değil.
     listPointsHistory(customerId, undefined, POINTS_HISTORY_SIZE),
     settings.getNumber(POINTS_REDEEM_MIN_KEY, 500),
     settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
+    readPendingNeighborAwards(db, customerId),
+    readPointsRules(db),
   ]);
   return {
     balance: balance.balance,
     history: history.rows,
     redeem: { minimumPoints, valueCents: minimumPoints * centValue },
+    pendingNeighborAwards,
+    neighborPoints: rules.earnWays.find((way) => way.key === 'neighbor')?.points ?? null,
   };
 }
 
