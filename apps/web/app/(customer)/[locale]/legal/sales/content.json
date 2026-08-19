@@ -16,7 +16,7 @@
         "body": [
           "Sattığımız ürünler dondurulmuş ve raf ömürlü gıdalardır. Ürünleri kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır; bu bilgiler ürünü üreten firmanın beyanına dayanır.",
           "Ürün fotoğrafları tanıtım amaçlıdır; sunum ve görünüm ürünler arasında farklılık gösterebilir. Bağlayıcı olan, ürün sayfasındaki yazılı bilgidir.",
-          "Soğuk zincir isteyen ürünler (donuk ve soğutulmuş) yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
+          "Soğuk zincir gerektiren ürünler (donuk ve soğutulmuş) yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
         ]
       },
       {
@@ -51,7 +51,7 @@
         "id": "teslimat",
         "heading": "Teslimat",
         "body": [
-          "Soğuk zincir isteyen ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Soğuk zincir istemeyen bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+          "Soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Diğer bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
           "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo eşiği güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında teslim edilir.",
           "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
           "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
