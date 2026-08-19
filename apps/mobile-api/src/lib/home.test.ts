@@ -92,8 +92,12 @@ describe('interleaveAtRandom', () => {
   });
 });
 
-/** Yardımcı — işaret dışındaki alan kuralın umurunda değil, adla izlenir. */
-const src = (name: string, isFeatured: boolean) => ({ name, isFeatured });
+/**
+ * Yardımcı — işaret dışındaki alan kuralın umurunda değil, adla izlenir.
+ * `id` 08.44'te eklendi: kampanyalı bandın öne alınması kimliğe bakıyor; kimlik burada ADIN
+ * kendisidir, çünkü test zaten adla izliyor ve ikinci bir eşleme tablosu kurmanın karşılığı yok.
+ */
+const src = (name: string, isFeatured: boolean) => ({ id: name, name, isFeatured });
 const names = (rows: readonly { name: string }[]) => rows.map((r) => r.name);
 
 describe('selectHomeBandSources', () => {

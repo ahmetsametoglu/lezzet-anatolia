@@ -11,6 +11,7 @@ import {
   type PlaceWarehouses,
   type PricingViewer,
 } from '@lezzet/application';
+import { resolveLocalizedText } from '@lezzet/types';
 import {
   CatalogCategoryListSchema,
   CatalogPageSchema,
@@ -267,6 +268,17 @@ catalog.get('/products', async (c) => {
          o yüzden burada da indirgeniyor — fazlası `parse`ta düşerdi ama düşen alanı göndermek
          okuyanı yanıltır. */
       activeCollection: data.activeCollection ? { slug: data.activeCollection.slug, name: data.activeCollection.name } : null,
+      /* Kampanyanın ADI burada çözülür (sözleşme tek dize taşır); `id` gitmez — ekranın kampanyayı
+         ayırt etmesi gereken bir yer yok, kimlik yalnız sunucu tarafının işi. */
+      campaign:
+        data.campaign === null
+          ? null
+          : {
+              label: data.campaign.label === null ? null : resolveLocalizedText(data.campaign.label, locale),
+              percent: data.campaign.percent,
+              amountCents: data.campaign.amountCents,
+              minBasketCents: data.campaign.minBasketCents,
+            },
     } satisfies z.input<typeof CatalogPageSchema>),
   );
 });

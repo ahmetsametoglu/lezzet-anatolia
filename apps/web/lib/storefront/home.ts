@@ -12,6 +12,7 @@ import {
   imageOf,
   listOfferProductIds,
   loadProductContext,
+  readScopeCampaigns,
   EMPTY_PRODUCT_CONTEXT,
   toCategory,
   toProduct,
@@ -244,6 +245,13 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
   if (chosen.length === 0) return [];
 
   const products = new ProductService(db);
+  /* Kampanya okuması SEÇİLENLER için (08.44) — havuzun tamamı için değil: seçim `rotateDaily`nin
+     kararı ve bugün kampanyaya göre değişmiyor. **Mobil vitrinde kampanyalı bant ÖNE ALINIYOR,
+     web'de alınmıyor** ve bu bilinçli bir fark değil, ölçülmüş bir sıra: web'in seçimi zaten
+     GÜNE göre dönüyor (`rotateDaily`), yani mobildeki "rastgele seçim kampanyayı yutabilir"
+     arızası burada yok — her koleksiyon sırası gelince görünüyor. Öncelik gerekirse ayrı ölçülür.
+     BEKLEYEN(08.44). */
+  const campaigns = await readScopeCampaigns(db, { collectionIds: chosen.map((c) => c.id) });
   const cards = await Promise.all(
     chosen.map(async (c) => {
       return {
@@ -251,6 +259,8 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
         slug: c.slug,
         name: resolveLocalizedText(c.name, locale),
         image: imageOf(c),
+        // Kampanya kartın YANINDA duyurulur, fiyatta değil (künye `lib/storefront/campaign-note`).
+        campaign: campaigns.byCollection.get(c.id) ?? null,
         // Sayaç kataloğun ölçütüyle AYNI: üye VE aktif — kartın sayısı, karta tıklayınca açılan
         // listenin sayısıdır. Üyelik sayısını basmak kartı yalancı yapardı (pasif ürün de üyedir).
         // Süzgeç doğrudan `collectionId`: üyeliği önce kimliklere çözen köprü 08.08'de söküldü.

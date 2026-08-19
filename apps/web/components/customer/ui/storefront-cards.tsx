@@ -123,10 +123,16 @@ interface CollectionCardProps {
   collection: StorefrontCollection;
   /** Üst etiket ("Koleksiyon") ve gidiş cümlesi — komponent metin taşımaz, çağıran sayfadan gelir. */
   labels: { tag: string; go: string; items: string };
+  /**
+   * Kampanyanın kısa hâli ("%15" · "3,00 €") — `null`/verilmemiş = kampanya yok, rozet çizilmez.
+   * Cümlenin türetmesi çağıranda (`lib/storefront/campaign-note`): komponent metin taşımaz ve
+   * para biçimini de bilmez.
+   */
+  campaignValue?: string | null;
   compact?: boolean;
 }
 
-export function CollectionCard({ collection, labels, compact = false }: CollectionCardProps) {
+export function CollectionCard({ collection, labels, campaignValue = null, compact = false }: CollectionCardProps) {
   return (
     <Link
       // Koleksiyon AYRI BİR SAYFA DEĞİL, katalogun bir hâli (tasarım kararı 08.08): süzgeç URL'de
@@ -154,7 +160,11 @@ export function CollectionCard({ collection, labels, compact = false }: Collecti
           {collection.name}
         </span>
         <span className="font-sans text-note font-bold text-on-image">
-          {labels.items.replace('{n}', String(collection.productCount))} · {labels.go}
+          {/* KAMPANYA AYNI SATIRA (08.44) — kartın kendi ölçüsü fotoğraf oranına bağlı (16:7) ve
+              yeni bir satır bandı uzatırdı; sayaç satırı zaten tek satır ve kampanya oraya sığıyor.
+              Mobil vitrindeki bantla aynı karar, aynı gerekçe. */}
+          {labels.items.replace('{n}', String(collection.productCount))}
+          {campaignValue === null ? null : ` · ${campaignValue}`} · {labels.go}
         </span>
       </span>
     </Link>

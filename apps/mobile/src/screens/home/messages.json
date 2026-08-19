@@ -49,7 +49,13 @@
     },
     "collections": {
       "eyebrow": "Koleksiyonlar",
-      "count": "{n} çeşit ›"
+      "count": "{n} çeşit ›",
+      "countWithCampaign": "{n} çeşit · {campaign} ›"
+    },
+    "campaign": {
+      "percent": "−%{n}",
+      "amount": "−{amount}",
+      "withMinimum": "{minimum} üzeri {value}"
     },
     "featured": {
       "eyebrow": "Vitrindekiler",
@@ -133,7 +139,13 @@
     },
     "collections": {
       "eyebrow": "Collections",
-      "count": "{n} produits ›"
+      "count": "{n} produits ›",
+      "countWithCampaign": "{n} produits · {campaign} ›"
+    },
+    "campaign": {
+      "percent": "−{n} %",
+      "amount": "−{amount}",
+      "withMinimum": "dès {minimum} : {value}"
     },
     "featured": {
       "eyebrow": "En vitrine",
@@ -217,7 +229,13 @@
     },
     "collections": {
       "eyebrow": "Kollektionen",
-      "count": "{n} Sorten ›"
+      "count": "{n} Sorten ›",
+      "countWithCampaign": "{n} Sorten · {campaign} ›"
+    },
+    "campaign": {
+      "percent": "−{n} %",
+      "amount": "−{amount}",
+      "withMinimum": "ab {minimum}: {value}"
     },
     "featured": {
       "eyebrow": "Im Schaufenster",

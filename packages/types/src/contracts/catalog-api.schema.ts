@@ -203,6 +203,18 @@ export type CatalogProduct = z.infer<typeof CatalogProductSchema>;
  *
  * `null` = liste bitti; istemci "daha fazla"yı kapatır (`Page<T>` sözleşmesiyle aynı anlam).
  */
+/**
+ * Kesitin kampanyası — vitrin bandı (`HomeBandSchema.campaign`) ile AYNI şekil, çünkü aynı gerçeği
+ * taşıyorlar ve aynı türetmeden geçiyorlar (`customer-kit/campaign-label`). İki ayrı şekil olsaydı
+ * aynı kampanya iki ekranda farklı yazılabilirdi.
+ */
+const CatalogCampaignSchema = z.object({
+  label: z.string().nullable(),
+  percent: z.number().nullable(),
+  amountCents: z.number().int().nullable(),
+  minBasketCents: z.number().int().nullable(),
+});
+
 export const CatalogPageSchema = z.object({
   products: z.array(CatalogProductSchema),
   /**
@@ -226,6 +238,18 @@ export const CatalogPageSchema = z.object({
    * ve dil değişiminde adsız kalırdı.
    */
   activeCollection: CatalogCollectionSchema.nullable(),
+  /**
+   * **Etkin süzgecin kampanyası** (08.44) — `null` = yok ya da süzgeç yok.
+   *
+   * Kategori/koleksiyon diye AYRILMAZ: sayfada aynı anda yalnız biri etkin olabiliyor (koleksiyon
+   * görünümünde kategori çipleri gizleniyor), ekranın sorusu *"şu an baktığım kesitte kampanya var
+   * mı"*. Süzgeç yokken `null` — kampanya bir KESİTE aittir, kesit seçilmeden söylenemez.
+   *
+   * **Tutar değil kural taşınır.** Kampanya ürün fiyatına yazılamaz (motor kazananı tüm sepet
+   * üzerinden seçer); ekran bunu bir cümle olarak söyler, fiyatı değiştirmez. `label` `null` ise
+   * operatör müşteri adı yazmamıştır, ekran adsız konuşur.
+   */
+  campaign: CatalogCampaignSchema.nullable(),
 });
 export type CatalogPage = z.infer<typeof CatalogPageSchema>;
 

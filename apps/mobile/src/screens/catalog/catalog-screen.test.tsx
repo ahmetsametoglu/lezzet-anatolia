@@ -46,6 +46,8 @@ const page = (
   nextCursor,
   // Sözleşmede ZORUNLU ve nullable (21.64): koleksiyon süzgeci yokken uç `null` döner.
   activeCollection,
+  // Aynı kural kampanya için de (08.44): kesitte kampanya yoksa `null` — ekran cümleyi çizmez.
+  campaign: null,
 });
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();

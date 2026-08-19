@@ -1,6 +1,7 @@
 import type { TextSegment } from '@lezzet/helper';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
+import type { ScopeCampaign } from './campaign';
 
 /**
  * **Vitrin veri sözleşmesi** — katalog orkestrasyonunun DÖNÜŞ şekli (terfi 21.6).
@@ -155,6 +156,19 @@ export interface StorefrontVariant {
    * beyan 100 g üzerinden sabittir ama paketin ağırlığı boya göre değişir, sabit kalırsa yanlış olur.
    */
   netWeightG: number | null;
+  /**
+   * Paketteki ADET — boy seçicinin ne yazacağını bu belirler (kullanıcı kararı 19.08).
+   *
+   * *"Kullanıcı varyant isminde adet mantıklıysa adet görmeli, gramaj mantıklıysa gramaj."*
+   * Etiketin gramajı TEKRAR ETMESİ duplication'dı: toplam ağırlık `netWeightG`de, adet burada
+   * zaten duruyor. 4'lü simit paketine "4x105g" yazmak müşteriye kutunun üstündeki dizgiyi
+   * okutuyordu; sorulması gereken "4'lü mü 100'lük mü".
+   *
+   * `null` = tek parça → gösterim gramaja düşer.
+   */
+  piecesCount: number | null;
+  /** Porsiyon türü — `item` ayrı ürünler, `slice` dilimler; gösterimdeki KELİMEYİ bu belirler. */
+  portionKind: 'item' | 'slice' | null;
   /** null = bu kanalda fiyatı yok → varyant seçilebilir ama satın alınamaz (DOMAIN §5). */
   priceCents: number | null;
   /** Teklif kazandıysa üstü çizilecek referans; yoksa tanımsız. */
@@ -313,6 +327,18 @@ export interface StorefrontCatalog {
   total: number;
   /** null ise liste bitti; çağıran "daha fazla"yı kapatır. */
   nextCursor: KeysetCursor | null;
+  /**
+   * **Etkin süzgecin kampanyası** (08.44) — `null` = yok ya da süzgeç yok.
+   *
+   * Kategori mi koleksiyon mu diye ayrılmıyor ve bu bilinçli: sayfada aynı anda yalnız BİRİ etkin
+   * olabiliyor (koleksiyon görünümünde kategori çipleri zaten gizleniyor), yani ekranın sorduğu
+   * soru *"şu an baktığım kesitte kampanya var mı"*. İki alan açmak, ekranı hangisinin dolu
+   * olduğunu sormaya zorlardı.
+   *
+   * Süzgeç YOKKEN (tam katalog) `null`: "katalogun tamamında kampanya var" diye bir şey yok —
+   * kampanya bir kesite aittir ve o kesit seçilmeden söylenemez.
+   */
+  campaign: ScopeCampaign | null;
 }
 
 /** Paket (bundle) kartı — tek fiyatlı hazır seçim. */

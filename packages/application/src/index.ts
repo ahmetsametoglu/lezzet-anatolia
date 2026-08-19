@@ -453,3 +453,10 @@ export type { ZoneNoticeInput, ZoneNoticeOutcome } from './delivery/notice';
 // Kaydın kardeşi: bant müşteriye "buraya gelmiyoruz" derken, bu okuma "peki nereye gidiyoruz"un
 // cevabını veriyor. Ad `public_name`den gelir, `name`den ASLA — gerekçe varlık şemasının künyesinde.
 export { listPublicDeliveryAreas } from './delivery/zones';
+
+// ── Kapsam kampanyası (08.44) — "bu kategoride/koleksiyonda açık kampanya var mı" ────────────
+// Vitrin bandının rozeti ve filtrelenmiş katalogun cümlesi bu TEK kapıdan okur; web ile mobil-api
+// aynı kararı iki kez yazmasın. Tutar döndürmez — kampanya ürün fiyatına yazılamaz (künyede
+// gerekçesi ölçümüyle yazılı), yüzey onu rozet/cümle olarak söyler.
+export { readScopeCampaigns, EMPTY_SCOPE_CAMPAIGNS } from './catalog/campaign';
+export type { ScopeCampaign, ScopeCampaigns } from './catalog/campaign';

@@ -61,6 +61,26 @@ export const HomeBandSchema = z.object({
    */
   productCount: z.number().int().positive(),
   image: CatalogImageSchema,
+  /**
+   * Bu kesitte yürürlükte olan KAMPANYA (08.44) — `null` = yok, ekran rozet çizmez.
+   *
+   * **Tutar değil, kampanyanın kendisi taşınır.** Kampanya ürün fiyatına yazılamaz: motor kazananı
+   * tüm sepet üzerinden tek-en-büyük seçer ve kalemlere oransal dağıtır, yani sepetten bağımsız
+   * olmayan bir indirim birim fiyat olarak VAAT EDİLEMEZ (`08.44` görev satırında sayısal örneği
+   * var). Rozet bir bilgidir, bir fiyat sözü değil.
+   *
+   * `label` `null` ise operatör kampanyaya müşteri adı yazmamıştır (MB-22a) — ekran adsız konuşur.
+   * `minBasketCents` doluysa kampanyanın eşiği vardır ve cümle onu söylemek zorundadır; yoksa
+   * koşulsuzdur.
+   */
+  campaign: z
+    .object({
+      label: z.string().nullable(),
+      percent: z.number().nullable(),
+      amountCents: z.number().int().nullable(),
+      minBasketCents: z.number().int().nullable(),
+    })
+    .nullable(),
 });
 export type HomeBand = z.infer<typeof HomeBandSchema>;
 

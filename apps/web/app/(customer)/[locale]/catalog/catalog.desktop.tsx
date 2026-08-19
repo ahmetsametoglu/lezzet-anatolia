@@ -5,6 +5,7 @@ import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { ShippableChip } from '@/components/customer/delivery/shippable-chip';
+import { campaignNote } from '@/lib/storefront/campaign-note';
 import { Link } from '@/i18n/navigation';
 import type { CatalogViewProps } from './catalog-types';
 
@@ -22,6 +23,9 @@ import type { CatalogViewProps } from './catalog-types';
  * Ayrı bir rota değil, katalogun bir hâli (`?collection=<slug>`).
  */
 export function CatalogDesktop({ t, locale, placeMode, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor, search }: CatalogViewProps) {
+  /* Cümlenin türetmesi TEK YERDE (`lib/storefront/campaign-note`): mobil fork da aynı kapıyı
+     çağırıyor, iki cihaz forkunun aynı kampanyayı farklı yazması imkânsız. */
+  const note = campaignNote(data.campaign, t.campaign, locale);
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-5 px-12 pt-9 pb-5">
@@ -50,6 +54,16 @@ export function CatalogDesktop({ t, locale, placeMode, data, products, hasMore, 
 
         {data.activeCollection?.description && (
           <p className="max-w-[760px] font-sans text-body-sm leading-relaxed text-body">{data.activeCollection.description}</p>
+        )}
+
+        {/* KAMPANYA CÜMLESİ (08.44) — kesitin başlığının altında, listeden önce. Müşteri bu kesite
+            girdiğinde kampanyayı sepete gelmeden öğreniyor (MB-22b). Cümle bir FİYAT VAADİ DEĞİL
+            ve öyle yazıldı ("sepette uygulanır"): kampanya sepetten bağımsız olmadığı için kart
+            fiyatı değişmiyor. Zeytin zemin — kazanç bilgisi, uyarı değil. */}
+        {note && (
+          <p className="max-w-[760px] rounded-soft bg-olive-bg px-4 py-3 font-sans text-body-sm leading-relaxed text-olive-dark" data-testid="catalog-campaign">
+            {note}
+          </p>
         )}
 
         {/* Kategori çipleri koleksiyon görünümünde GİZLENİR (tasarımın açık kuralı): koleksiyon

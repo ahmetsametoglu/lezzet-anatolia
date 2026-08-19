@@ -36,6 +36,8 @@ const page = (products: number[], nextCursor: string | null, activeCollection: {
   nextCursor,
   // Sözleşmede ZORUNLU ve nullable (21.64): koleksiyon süzgeci yokken uç `null` döner.
   activeCollection,
+  // Aynı kural kampanya için de geçerli (08.44): süzgeç yokken ya da kesitte kampanya yokken `null`.
+  campaign: null,
 });
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();

@@ -13,6 +13,13 @@
       "eyebrow": "Koleksiyon",
       "clear": "Koleksiyondan çık"
     },
+    "campaign": {
+      "named": "{label} — bu seçkideki ürünlerde {value} indirim, sepette uygulanır.",
+      "anon": "Bu seçkideki ürünlerde {value} indirim, sepette uygulanır.",
+      "percent": "%{n}",
+      "amount": "{amount}",
+      "withMinimum": "{minimum} üzeri {value}"
+    },
     "filter": {
       "label": "Sırala ve filtrele",
       "title": "Sırala & filtrele"
@@ -55,6 +62,13 @@
       "eyebrow": "Collection",
       "clear": "Quitter la collection"
     },
+    "campaign": {
+      "named": "{label} — {value} de remise sur cette sélection, appliquée au panier.",
+      "anon": "{value} de remise sur cette sélection, appliquée au panier.",
+      "percent": "{n} %",
+      "amount": "{amount}",
+      "withMinimum": "dès {minimum} : {value}"
+    },
     "filter": {
       "label": "Trier et filtrer",
       "title": "Trier & filtrer"
@@ -96,6 +110,13 @@
     "collection": {
       "eyebrow": "Kollektion",
       "clear": "Kollektion verlassen"
+    },
+    "campaign": {
+      "named": "{label} — {value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
+      "anon": "{value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
+      "percent": "{n} %",
+      "amount": "{amount}",
+      "withMinimum": "ab {minimum}: {value}"
     },
     "filter": {
       "label": "Sortieren und filtern",

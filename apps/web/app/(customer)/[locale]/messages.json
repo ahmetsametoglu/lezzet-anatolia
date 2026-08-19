@@ -16,6 +16,11 @@
     "categories": {
       "title": "Ne arıyorsunuz?"
     },
+    "campaign": {
+      "percent": "%{n}",
+      "amount": "{amount}",
+      "withMinimum": "{minimum} üzeri {value}"
+    },
     "collections": {
       "title": "Koleksiyonlar",
       "note": "Döneme özel temalar — göz atın, dilediğinizi tek tek seçin",
@@ -82,6 +87,11 @@
     "categories": {
       "title": "Que cherchez-vous ?"
     },
+    "campaign": {
+      "percent": "{n} %",
+      "amount": "{amount}",
+      "withMinimum": "dès {minimum} : {value}"
+    },
     "collections": {
       "title": "Collections",
       "note": "Des thèmes de saison — parcourez, choisissez ce qui vous plaît",
@@ -147,6 +157,11 @@
     },
     "categories": {
       "title": "Wonach suchen Sie?"
+    },
+    "campaign": {
+      "percent": "{n} %",
+      "amount": "{amount}",
+      "withMinimum": "ab {minimum}: {value}"
     },
     "collections": {
       "title": "Kollektionen",

@@ -1,5 +1,6 @@
 import { formatPrice } from '@lezzet/helper';
-import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import type { HomeBand } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
@@ -27,6 +28,7 @@ import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { emToDp } from '@/theme/parse';
+import { campaignValueOf } from '@/screens/customer-kit/campaign-label';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import {
@@ -125,6 +127,25 @@ function offerLimitOf(limitLabel: string | null, t: Messages['offers']): string 
      "stokla sınırlı" ise her hâlde doğru. */
   if (!Number.isFinite(left)) return t.limited;
   return left <= LAST_FEW_THRESHOLD ? t.lastFew.replace('{n}', String(left)) : t.limited;
+}
+
+/**
+ * Bandın sayaç satırı — kampanya varsa aynı satıra girer (08.44).
+ *
+ * **Neden yeni bir satır değil:** bandın yüksekliği bir ölçü değil bir SÖZLEŞMEdir (MB-25) — üst
+ * katman dairesi bantları `index * collectionBand` ile konumlandırıyor, boy değişirse daireler
+ * kayar. 132 dp bütçesi zaten iki satırlık başlıkla dolu; üçüncü bir satır ilk taşan olurdu.
+ * Sayaç satırı ise TEK satır ve kampanya oraya sığıyor.
+ *
+ * **Ve bu bilinçli olarak MÜTEVAZI bir çözüm (CLAUDE §3):** rozetin görsel kararı `.dc.html`de
+ * yok; yeni bir çip icat etmek improvise etmek olurdu. Kampanya var olan satıra, var olan vurgu
+ * renginde giriyor. Tasarım bir rozet çizerse buradaki türetme aynen kullanılır, yalnız yeri değişir.
+ */
+function bandCountLabel(band: HomeBand, t: Messages, locale: Locale): string {
+  const count = String(band.productCount);
+  const campaign = band.campaign === null ? null : campaignValueOf(band.campaign, t.campaign, locale);
+  if (campaign === null) return t.collections.count.replace('{n}', count);
+  return t.collections.countWithCampaign.replace('{n}', count).replace('{campaign}', campaign);
 }
 
 /**
@@ -487,7 +508,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   key={band.slug}
                   name={band.name}
                   subtitle={band.subtitle}
-                  countLabel={t.collections.count.replace('{n}', String(band.productCount))}
+                  countLabel={bandCountLabel(band, t, locale)}
                   index={index}
                   photoUri={band.image.url}
                   onPress={() =>

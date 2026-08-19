@@ -3,8 +3,12 @@ import {
   dailyRng,
   getCatalogData,
   imageOf,
+  readScopeCampaigns,
+  EMPTY_SCOPE_CAMPAIGNS,
   type PlaceWarehouses,
   type PricingViewer,
+  type ScopeCampaign,
+  type ScopeCampaigns,
   type StorefrontProduct,
 } from '@lezzet/application';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -135,17 +139,37 @@ export function interleaveAtRandom<T>(primary: readonly T[], secondary: readonly
  * havuzda "ilk N gerçek satır"a düşer — o kural web'de yaşıyor ve KOPYALANMADI; buradaki kural
  * kullanıcının mobile verdiği kuraldır ve işaretsiz veride boş döner.)
  */
-export function selectHomeBandSources<C extends { isFeatured: boolean }, K extends { isFeatured: boolean }>(
+export function selectHomeBandSources<C extends { id: string; isFeatured: boolean }, K extends { id: string; isFeatured: boolean }>(
   categories: readonly C[],
   collections: readonly K[],
   rng: Rng,
+  campaigns: ScopeCampaigns = EMPTY_SCOPE_CAMPAIGNS,
 ): { categories: C[]; collections: K[] } {
-  const chosenCollections = pickRandomDistinct(
-    collections.filter((c) => c.isFeatured),
-    HOME_BAND_COLLECTION_COUNT,
-    rng,
-  );
-  const chosenCategories = categories.filter((c) => c.isFeatured).slice(0, HOME_BAND_TOTAL - chosenCollections.length);
+  /*
+    KAMPANYALI BANT ÖNE ALINIR (08.44) — ve bu bir süsleme değil, TUTARLILIK düzeltmesi.
+    Ölçüldü: koleksiyonlar işaretli havuzdan RASTGELE seçiliyor ve toplam slot sınırlı, yani
+    kampanyalı bir koleksiyon o gün hiç görünmeyebiliyordu. Kampanya açan operatör kampanyanın
+    görüneceğini varsayar; görünmeyen kampanya, açılmamış kampanyadır.
+
+    Öncelik seçimin İÇİNDE, sonrasında değil: rastgeleliği bozmadan havuzu ikiye ayırıyoruz —
+    kampanyalılar önce, kalanlar sonra ve kendi aralarında yine rastgele. Böylece kampanyasız
+    günlerde bugünkü davranış BİREBİR korunuyor (aynı `rng`, aynı sonuç).
+  */
+  const featuredCollections = collections.filter((c) => c.isFeatured);
+  const withCampaign = featuredCollections.filter((c) => campaigns.byCollection.has(c.id));
+  const withoutCampaign = featuredCollections.filter((c) => !campaigns.byCollection.has(c.id));
+  const chosenCollections = [
+    ...pickRandomDistinct(withCampaign, HOME_BAND_COLLECTION_COUNT, rng),
+    ...pickRandomDistinct(withoutCampaign, HOME_BAND_COLLECTION_COUNT, rng),
+  ].slice(0, HOME_BAND_COLLECTION_COUNT);
+
+  // Kategoride sıra OPERATÖRÜN (`sortOrder`) ve öyle kalıyor; kampanyalı olan yalnız öne çekiliyor,
+  // kendi içindeki sıra bozulmuyor — iki grup da kaynak sırasını koruyor.
+  const featuredCategories = categories.filter((c) => c.isFeatured);
+  const chosenCategories = [
+    ...featuredCategories.filter((c) => campaigns.byCategory.has(c.id)),
+    ...featuredCategories.filter((c) => !campaigns.byCategory.has(c.id)),
+  ].slice(0, HOME_BAND_TOTAL - chosenCollections.length);
   return { categories: chosenCategories, collections: chosenCollections };
 }
 
@@ -174,6 +198,7 @@ function toBand(
   subtitle: LocalizedText | null,
   productCount: number,
   locale: PreferredLanguage,
+  campaign: ScopeCampaign | undefined,
 ): HomeBand {
   return {
     kind,
@@ -183,6 +208,17 @@ function toBand(
     subtitle: resolvedOrNull(subtitle, locale),
     productCount,
     image: imageOf(row),
+    // Kampanyanın ADI burada çözülür (sözleşme tek dize taşır); tutar çözülmez, çünkü taşınan şey
+    // tutar değil kuralın kendisi — ekran onu kendi diliyle cümleye döker.
+    campaign:
+      campaign === undefined
+        ? null
+        : {
+            label: resolvedOrNull(campaign.label, locale),
+            percent: campaign.percent,
+            amountCents: campaign.amountCents,
+            minBasketCents: campaign.minBasketCents,
+          },
   };
 }
 
@@ -204,7 +240,13 @@ export async function composeHomeBands(
   pools: HomeBandPools,
   rng: Rng = dailyRng(),
 ): Promise<HomeBand[]> {
-  const chosen = selectHomeBandSources(pools.categories, pools.collections, rng);
+  /* Kampanya okuması SEÇİMDEN ÖNCE: seçimin kendisi kampanyalıyı öne alıyor (`selectHomeBandSources`
+     künyesi), yani sonradan sorulamaz. Tek okuma — havuzun tamamı için, kimlik başına sorgu yok. */
+  const campaigns = await readScopeCampaigns(db, {
+    categoryIds: pools.categories.map((c) => c.id),
+    collectionIds: pools.collections.map((c) => c.id),
+  });
+  const chosen = selectHomeBandSources(pools.categories, pools.collections, rng, campaigns);
 
   const products = new ProductService(db);
   const [categoryCounts, collectionCounts] = await Promise.all([
@@ -218,10 +260,10 @@ export async function composeHomeBands(
   ]);
 
   const categoryBands = chosen.categories
-    .map((c, i) => toBand('category', c, c.tagline, categoryCounts[i] ?? 0, locale))
+    .map((c, i) => toBand('category', c, c.tagline, categoryCounts[i] ?? 0, locale, campaigns.byCategory.get(c.id)))
     .filter((band) => band.productCount > 0);
   const collectionBands = chosen.collections
-    .map((c, i) => toBand('collection', c, c.description, collectionCounts[i] ?? 0, locale))
+    .map((c, i) => toBand('collection', c, c.description, collectionCounts[i] ?? 0, locale, campaigns.byCollection.get(c.id)))
     .filter((band) => band.productCount > 0);
 
   return interleaveAtRandom(categoryBands, collectionBands, rng);

@@ -2,6 +2,7 @@ import { CategoryImageService, CategoryService, CollectionService, ProductListin
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import type { CatalogSort, KeysetCursor, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { readScopeCampaigns } from './campaign';
 import { listOfferProductIds, loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, type CatalogCategoryRow } from './map';
@@ -95,6 +96,9 @@ const noProducts = (
   // Koleksiyon boş cevapta da TAŞINIR: başlık bandı ürün listesinden bağımsız — "Bayram · 0 ürün"
   // demek, müşteriyi kimliksiz bir boş sayfada bırakmaktan iyidir.
   activeCollection: StorefrontCatalog['activeCollection'],
+  // Kampanya boş cevapta da taşınır: "bu koleksiyonda %15 var ama şu an ürün yok" cümlesi,
+  // kampanyayı sessizce yok saymaktan dürüsttür (koleksiyon bandının aynı gerekçesi).
+  campaign: StorefrontCatalog['campaign'] = null,
 ): StorefrontCatalog => ({
   categories,
   activeCategory,
@@ -102,6 +106,7 @@ const noProducts = (
   products: [],
   total: 0,
   nextCursor: null,
+  campaign,
 });
 
 /**
@@ -129,7 +134,18 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
   // keyset sayfalamayı ve toplam sayıyı bozardı. Boş küme erken döner: `ids: []` PostgREST'e
   // "hiçbiri" diye gitmez, süzgeç düşer ve TÜM katalog gelirdi.
   const ids = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
-  if (ids && !ids.length) return noProducts(categories, activeCategory, activeCollection);
+  /* Etkin kesitin kampanyası (08.44) — süzgeç yokken hiç sorulmaz: kampanya bir KESİTE aittir,
+     kesit seçilmeden söylenemez (sözleşme künyesi). Tek okuma, en çok bir kimlik. */
+  const scopeCampaigns = await readScopeCampaigns(db, {
+    categoryIds: activeCategory ? [activeCategory.id] : [],
+    collectionIds: activeCollection ? [activeCollection.id] : [],
+  });
+  const campaign =
+    (activeCollection ? scopeCampaigns.byCollection.get(activeCollection.id) : undefined) ??
+    (activeCategory ? scopeCampaigns.byCategory.get(activeCategory.id) : undefined) ??
+    null;
+
+  if (ids && !ids.length) return noProducts(categories, activeCategory, activeCollection, campaign);
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
   const filters = {
@@ -179,6 +195,7 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     products: page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)),
     total,
     nextCursor: page.nextCursor,
+    campaign,
   };
 }
 

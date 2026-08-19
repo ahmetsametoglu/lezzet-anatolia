@@ -1,6 +1,13 @@
 {
   "tr": {
     "title": "Katalog",
+    "campaign": {
+      "named": "{label} — bu seçkideki ürünlerde {value} indirim, sepette uygulanır.",
+      "anon": "Bu seçkideki ürünlerde {value} indirim, sepette uygulanır.",
+      "percent": "%{n}",
+      "amount": "{amount}",
+      "withMinimum": "{minimum} üzeri {value}"
+    },
     "collectionTag": "Koleksiyon",
     "collectionExit": "Tüm kataloğa dön ✕",
     "shippableAsk": "Adresinize ne gelebilir?",
@@ -37,6 +44,13 @@
   },
   "fr": {
     "title": "Catalogue",
+    "campaign": {
+      "named": "{label} — {value} de remise sur cette sélection, appliquée au panier.",
+      "anon": "{value} de remise sur cette sélection, appliquée au panier.",
+      "percent": "{n} %",
+      "amount": "{amount}",
+      "withMinimum": "dès {minimum} : {value}"
+    },
     "collectionTag": "Collection",
     "collectionExit": "Retour au catalogue ✕",
     "shippableAsk": "Que peut-on livrer chez vous ?",
@@ -73,6 +87,13 @@
   },
   "de": {
     "title": "Katalog",
+    "campaign": {
+      "named": "{label} — {value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
+      "anon": "{value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
+      "percent": "{n} %",
+      "amount": "{amount}",
+      "withMinimum": "ab {minimum}: {value}"
+    },
     "collectionTag": "Kollektion",
     "collectionExit": "Zurück zum Katalog ✕",
     "shippableAsk": "Was können wir zu Ihnen liefern?",

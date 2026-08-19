@@ -6,6 +6,7 @@ import { LoadMore } from '@/components/customer/ui/load-more';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { SearchField } from '@/components/customer/ui/search-field';
 import { ShippableChip } from '@/components/customer/delivery/shippable-chip';
+import { campaignNote } from '@/lib/storefront/campaign-note';
 import { Link } from '@/i18n/navigation';
 import type { CatalogViewProps } from './catalog-types';
 import { CartBar } from '@/components/customer/cart/cart-bar';
@@ -17,6 +18,7 @@ import { CartBar } from '@/components/customer/cart/cart-bar';
  * sıralama sonuç satırının hemen altında kalır.
  */
 export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor, search }: CatalogViewProps) {
+  const note = campaignNote(data.campaign, t.campaign, locale);
   return (
     <div className="flex flex-col pb-24">
       <section className="flex flex-col gap-3 px-4 pt-5 pb-3">
@@ -38,6 +40,14 @@ export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, l
         ) : (
           /* Arama başlığın ALTINDA, tam genişlikte: dar ekranda başlıkla yan yana sığmaz. */
           <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} fullWidth />
+        )}
+
+        {/* Kampanya cümlesi — masaüstüyle AYNI türetmeden (`campaignNote`), yalnız ölçü kademesi
+            mobil forkun kendi durağı. Gerekçe masaüstü künyesinde. */}
+        {note && (
+          <p className="rounded-soft bg-olive-bg px-3.5 py-2.5 font-sans text-note leading-relaxed text-olive-dark" data-testid="catalog-campaign">
+            {note}
+          </p>
         )}
       </section>
 

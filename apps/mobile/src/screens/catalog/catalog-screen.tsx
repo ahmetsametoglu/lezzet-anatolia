@@ -17,6 +17,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { campaignValueOf } from '@/screens/customer-kit/campaign-label';
 import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
@@ -235,6 +236,17 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
     };
   };
 
+  /* Cümlenin DEĞER parçası kitten (`campaignValueOf`) — vitrin bandı da aynı türetmeyi kullanıyor,
+     yani aynı kampanya iki ekranda aynı sayıyla anılıyor. Buradaki tek fark kabuk cümle: bant tek
+     satırlık bir sayaça sığmak zorunda, katalog ise tam cümle kurabiliyor. */
+  const campaignValue = catalog.campaign === null ? null : campaignValueOf(catalog.campaign, t.campaign, locale);
+  const campaignNote =
+    campaignValue === null || catalog.campaign === null
+      ? null
+      : catalog.campaign.label === null
+        ? t.campaign.anon.replace('{value}', campaignValue)
+        : t.campaign.named.replace('{label}', catalog.campaign.label).replace('{value}', campaignValue);
+
   const header = (
     <View style={styles.header}>
       <View style={styles.searchRow}>
@@ -352,6 +364,18 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
           />
         ))}
       </ScrollView>
+      )}
+
+      {/* KAMPANYA CÜMLESİ (08.44) — süzgecin ALTINDA, listenin ÜSTÜNDE.
+          Müşteri bu kesite girdiğinde kampanyanın burada olduğunu, sepete gelmeden öğreniyor;
+          bugüne kadar öğrenemiyordu (MB-22b). Cümle bir FİYAT VAADİ DEĞİL ve öyle yazıldı —
+          *"sepette uygulanır"*: kampanya sepetten bağımsız değil (motor kazananı tüm sepet
+          üzerinden tek-en-büyük seçer), o yüzden ürün kartındaki fiyat değişmiyor ve cümle de
+          değişeceğini söylemiyor. Eşikli kampanyada eşik cümlenin İÇİNDE (`withMinimum`). */}
+      {campaignNote === null ? null : (
+        <View style={styles.campaignNote} testID="catalog-campaign">
+          <Text style={styles.campaignText}>{campaignNote}</Text>
+        </View>
       )}
     </View>
   );
@@ -634,6 +658,21 @@ const styles = StyleSheet.create((theme, rt) => ({
      `header.paddingBottom` 10 = 22 dp. Kapsız bir metin bloğunun kendi dolgusu olmaz; boşluğu
      zaten kapsayıcı veriyor. Şimdi ikisi de 10 ve satırlar başlığın öteki çocuklarıyla aynı
      ritimde. Yatay dolgu KALIYOR: başlığın yatay dolgusu çocuklarda (kendi künyesi). */
+  /* Kampanya cümlesi — süzgeç şeridinin altında, listenin üstünde. Zeytin zemin: bu bir KAZANÇ
+     bilgisi, bir uyarı değil (sepetteki "elinin altındaki indirim" kutusuyla aynı aile). */
+  campaignNote: {
+    marginHorizontal: theme.space['4xl'],
+    backgroundColor: theme.colors['olive-bg'],
+    borderRadius: theme.radius.control,
+    paddingHorizontal: theme.space['2xl'],
+    paddingVertical: theme.space.lg,
+  },
+  campaignText: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors['olive-dark'],
+  },
   collectionBand: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CatalogCategory, CatalogCollection, CatalogProduct, CatalogSort } from '@lezzet/types';
+import type { CatalogCategory, CatalogCollection, CatalogPage, CatalogProduct, CatalogSort } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchCategories, fetchProducts } from '@/lib/api/catalog';
@@ -83,6 +83,11 @@ interface UseCatalogResult {
    * bir gün "Bayram Sofrası" yazıp başka bir kesiti listelemenin yolu olurdu.
    */
   activeCollection: CatalogCollection | null;
+  /**
+   * **Etkin kesitin kampanyası** (08.44) — `null` = yok ya da süzgeç yok. Karar sunucunun
+   * (`getCatalogData` → `readScopeCampaigns`); ekran yalnız cümleye döker.
+   */
+  campaign: CatalogPage['campaign'];
   /** Arama kutusunun GÖSTERDİĞİ metin (uca gitmiş olması gerekmez). */
   searchText: string;
   sort: CatalogSort;
@@ -137,6 +142,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
   });
   /** Bandın adı — cevabın kendisinden; süzgeç `null`ken sunucu da `null` döner. */
   const [activeCollection, setActiveCollection] = useState<CatalogCollection | null>(null);
+  const [campaign, setCampaign] = useState<CatalogPage['campaign']>(null);
   const [searchText, setSearchText] = useState('');
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -194,6 +200,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
          bandın kendiliğinden sönmesi gerekir. Kuyruk cevabında okunmaz — orada değeri aynıdır ve
          yazmak bant metnini boşuna yeniden çizerdi. */
       setActiveCollection(pageResult.data.activeCollection);
+      setCampaign(pageResult.data.campaign);
       setProducts(pageResult.data.products);
       setCursor(pageResult.data.nextCursor);
       setStatus('ready');
@@ -325,6 +332,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
     categories,
     activeCategory: filters.category,
     activeCollection,
+    campaign,
     searchText,
     sort: filters.sort,
     onlyShippable: filters.onlyShippable,

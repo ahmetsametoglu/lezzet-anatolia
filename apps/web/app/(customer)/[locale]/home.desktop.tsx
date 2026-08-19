@@ -5,6 +5,7 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { RecipeTeaserCard } from '@/components/customer/ui/recipe-card';
+import { campaignValue } from '@/lib/storefront/campaign-note';
 import { Link } from '@/i18n/navigation';
 import { limitText, type HomeViewProps } from './home-types';
 
@@ -88,7 +89,7 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
           <SectionHeading title={t.collections.title} note={t.collections.note} />
           <div className="grid grid-cols-2 gap-[18px]">
             {data.collections.map((c) => (
-              <CollectionCard key={c.id} collection={c} labels={t.collections} />
+              <CollectionCard key={c.id} collection={c} labels={t.collections} campaignValue={c.campaign && campaignValue(c.campaign, t.campaign, locale)} />
             ))}
           </div>
         </section>

@@ -1,3 +1,4 @@
+import type { ScopeCampaign } from '@lezzet/application';
 import type {
   StorefrontCategory,
   StorefrontImage,
@@ -52,6 +53,12 @@ export interface StorefrontCollection {
    * olurdu ve yalan söylerdi: pasif üyeler karta girer, müşteri "14 ürün" okuyup 9 görürdü.
    */
   productCount: number;
+  /**
+   * Bu koleksiyonda yürürlükte olan KAMPANYA (08.44) — `null` = yok, kart rozet çizmez.
+   * Tutar değil kuralın kendisi taşınır: kampanya ürün fiyatına yazılamaz (gerekçe
+   * `lib/storefront/campaign-note` künyesinde), kart onu bir rozet olarak söyler.
+   */
+  campaign: ScopeCampaign | null;
 }
 
 /** Anasayfanın tek okuma sonucu — bölümler ayrı ayrı çağrılmaz (tek turda toplanır). */

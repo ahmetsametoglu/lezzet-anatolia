@@ -1072,7 +1072,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   **FR/DE cihazda koşulmadı:** üç dilin anahtar ağacı `messages.json`da aynı ve cümleler yer
   tutucularıyla birlikte yazıldı; cihaz turu TR yüzeyinde yapıldı.
 
-- [ ] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL**
+- [x] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL**
   *(kullanıcı kararı 19.08; ölçüm ve karşılaştırma aynı gün yapıldı)* ·
   `touches (planlanan): packages/application/src/catalog/**, apps/web/lib/storefront/home.ts, apps/web/app/(customer)/[locale]/catalog/**, apps/mobile-api/src/lib/home.ts, apps/mobile/src/screens/home/**`
 
@@ -1111,6 +1111,59 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   `readOffers` rastgele 3 + `total`; `apps/mobile-api/src/lib/home.ts` `readHomeOffers` ilk N) ve
   `isOffer`/`hasWonOffer` **birebir aynı fonksiyon, aynı yorum satırı, iki dosyada** — aynı hata
   ikinci kez yapılmayacak.
+
+  **DURUM (19.08) — YAZILDI VE CİHAZDA DOĞRULANDI.**
+
+  **Yazılanlar:**
+  · **Ortak kapı** `packages/application/src/catalog/campaign.ts` → `readScopeCampaigns`. Kimler
+    dışarıda ve neden, künyede: kupon (kodu olmayana duyurulamaz) · sepet kapsamı (ürüne
+    atfedilemez, yeri `08.43`'ün cümlesi) · kişiye özel (vitrin herkesin yüzeyi; hem yanlış vaat
+    hem ifşa) · ilk-siparişe bağlı (vitrinde kimin ilk siparişte olduğu bilinmiyor) · tarih dışı.
+    **Eşikli kampanya dışarıda DEĞİL:** `minBasketCents` taşınıyor ve cümle onu söylüyor
+    (*"60 € üzeri %15"*) — eşikli kampanyayı gizlemek, düzelttiğimiz sessizliği başka yerde açardı.
+  · **Sözleşme:** `HomeBandSchema.campaign` ve `CatalogPageSchema.campaign` — **aynı şekil**, çünkü
+    aynı gerçeği taşıyorlar. Tutar değil KURAL taşınıyor.
+  · **Türetme tek yerde:** mobilde `customer-kit/campaign-label`, webde `lib/storefront/campaign-note`
+    — her yüzeyin kendi para biçimleyicisi var ama kalıp ve sözlük anahtarları birebir aynı.
+  · **Mobil:** vitrin bandının sayaç satırına kampanya (*"16 çeşit · −%15 ›"*) + kampanyalı bandın
+    ÖNE ALINMASI; filtrelenmiş katalogda tam cümle (zeytin kutu, listenin üstünde).
+  · **Web:** koleksiyon kartının sayaç satırına kampanya; filtrelenmiş katalogda tam cümle (iki
+    cihaz forkunda da, aynı türetmeden).
+
+  **İKİ BİLİNÇLİ SAPMA — ve gerekçeleri.**
+  1. **Yeni bir ROZET ÇİZİLMEDİ, kampanya var olan sayaç satırına girdi.** Bandın yüksekliği bir
+     ölçü değil SÖZLEŞME (MB-25): üst katman dairesi bantları `index * collectionBand` ile
+     konumlandırıyor, boy değişirse daireler kayar; 132 dp bütçesi zaten iki satırlık başlıkla dolu.
+     Ayrıca rozetin görsel kararı `.dc.html`de YOK ve yeni bir çip icat etmek improvise etmek
+     olurdu (CLAUDE §3). Tasarım rozet çizerse türetme aynen kullanılır, yalnız yeri değişir.
+  2. **Web vitrininde ÖNCELİKLENDİRME YAPILMADI** ve bu bir eksik değil ölçüm sonucu: web'in
+     koleksiyon seçimi zaten GÜNE göre dönüyor (`rotateDaily`), yani mobildeki *"rastgele seçim
+     kampanyayı yutabilir"* arızası orada yok — her koleksiyon sırası gelince görünüyor. Gerekirse
+     ayrıca ölçülür. `BEKLEYEN(08.44)`.
+
+  **CİHAZ TURU — OPPO CPH1907, misafir, 67000 (19.08 · 18:55–18:58). Altı hâlin altısı da üretildi.**
+  1. **Vitrin bandı · YÜZDE** → *"Börekler ve hamur işleri · 33 çeşit · −%15 ›"* ✓
+  2. **Vitrin bandı · SABİT TUTAR** → *"Bayram klasikleri · 20 çeşit · −3,00 € ›"* ✓
+  3. **Öncelik** → iki kampanyalı bant listenin İLK İKİSİNDE; kampanyasızlar (Tatlı 20 · Pasta 22)
+     sade sayaçla ve arkada. ✓
+  4. **Katalog · kategori kampanyası** → *"Baklava haftası — bu seçkideki ürünlerde %15 indirim,
+     sepette uygulanır."* Ve **kart fiyatları DEĞİŞMEDİ** (6,98 € · 0,56 € · 1,39 €) — tasarımın
+     çekirdek iddiası: kampanya bir bilgi, fiyat vaadi değil. Yakın-SKT *"FIRSAT"* rozeti de aynı
+     ekranda duruyor, ikisi karışmıyor. ✓
+  5. **Katalog · koleksiyon (sabit tutar)** → *"Bayram Sofrası — … 3,00 € indirim, sepette
+     uygulanır."* **Ürün listesi BOŞKEN de duruyor** — `noProducts`a kampanyayı taşıma kararının
+     kanıtı: kampanyayı sessizce yok saymak, "ürün yok ama kampanya var" demekten kötüdür. ✓
+  6. **Süzgeç yok → cümle yok** → koleksiyon kapatılınca ("Tümü") kutu hiç çizilmiyor. ✓
+
+  **Turun yan gözlemi (kalem AÇILMADI, benim değişikliğim değil):** süzgeç değişirken iskelet
+  çizilirken ekran ÖNCEKİ kesitin başlığını ve kampanya cümlesini bir an için tutuyor. Bu
+  `activeCollection`ın da bugünkü davranışı (aynı yükleme deseni) — kampanya alanı ona uydu, yeni
+  bir hâl açmadı. Ayrı bir kalem gerekirse ölçülerek açılır.
+
+  **Doğrulama (kod tarafı):** `tsc` beş pakette temiz · `lint` temiz · mobil jest **597/599**,
+  düşen dördü (`app-shell` · `operations-shell` · `account-routes` · `feedback-routes`) MB-38'in
+  kayıtlı ailesi ve **dördü de tek başına yeşil**; yük ortalaması **19,99**. Mevcut fikstürlere
+  `campaign: null` eklendi (sözleşme zorunlu-nullable), yeni test YAZILMADI (kullanıcı kuralı 11.08).
 
   **AYRICA KAPATILACAK — ÖLÇÜLMÜŞ TUTARSIZLIK.** `getCatalogData` "yalnız fırsatlar" süzgecini
   `listOfferProductIds(db, place.warehouseId)` ile kuruyor (yalnız ROTA deposu), fiyatı çözen
