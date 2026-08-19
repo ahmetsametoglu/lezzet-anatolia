@@ -2,38 +2,49 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/operation/ui/badge';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { WarehouseIcon } from '@/components/operation/ui/icons';
+import { ScoreTile } from '@/components/operation/ui/score-tile';
+import { SectionHead, SetupGapNote } from '@/components/operation/ui/section-head';
 import { num } from '@/components/operation/ui/format';
 // **Takma yol, göreli değil** ve emsali `warehouse-context-picker`: `operations/actions.ts` bir
 // kardeş SAYFA değil, kabuğun kendi eylem dosyası (künyesi: *"tek bir sayfaya ait olmayan,
 // sidebar'dan çağrılanlar"*). Göreli yazım `docs:check`in sayfa-sınırı kuralına takılıyor — kural
 // haklı, hedef yanlış tanınıyordu; takma yol hem geçer hem ne olduğunu söyler.
 import { setWarehouseContextAction } from '@/app/(operations)/operations/actions';
-import { LANE_LABELS } from './preparation-labels';
-import type { WarehouseChoiceView } from './preparation-types';
+import { LANE_LABELS, laneTone, workSummary } from './preparation-labels';
+import type { WarehouseChoiceView, WarehouseWorkData } from './preparation-types';
 
 /**
- * **Depo seçim kartları** (10.8, kullanıcı isteği 19.08) — boş kapı ekranının yerine.
+ * **Depo seçim ekranı** (10.8, yeniden kurgulandı 19.08 — kullanıcı kararı).
  *
- * ── NE DEĞİŞTİ VE NEDEN ─────────────────────────────────────────────────────
- * Burası bir DUVARDI: koca bir alan, tek cümle ("Önce depo seçin") ve çıkış yolu başka bir yerde
- * (üst bardaki seçici). Kural doğruydu — **varsayılan depo yoktur** — ama ekran o kuralı bir engel
- * gibi uyguluyordu. Depo seçmek bir engel değil, bu sayfanın İLK ADIMIdır.
+ * ── ÖNCEKİ HÂL NEDEN BOZUKTU ────────────────────────────────────────────────
+ * İlk hâli küçük bir kart ızgarasıydı ve üç kusuru vardı (ölçüldü, ekran görüntüsüyle):
  *
- * Kartlar o adımı ekranın içine alıyor **ve seçimi bilgiyle besliyor**: operatör hangi depoda iş
- * olduğunu GÖREREK seçiyor, adını hatırlayarak değil. Kural bozulmuyor — hiçbir kart önceden
- * seçili değil, hiçbiri "önerilen" diye işaretli değil; sistem hâlâ onun yerine karar vermiyor.
+ * 1. **Yanlış yüzey.** Çıplak bir parça dönüyordu, yani kabuğun bej zemininde kalıyordu; oysa dolu
+ *    kuyruk ekranı kendi beyaz tuvalini çiziyor. Aynı sayfanın iki hâli iki ayrı uygulama gibi
+ *    görünüyordu. Karanlık modda daha da kötüydü: `bg-ops-card` ile `bg-ops-bg` orada neredeyse
+ *    aynı ton ve kartların sınırı kayboluyordu.
+ * 2. **Üçüncü bir desen.** "Hangi tesis ve her biri nasıl duruyor" sorusunu Depolar ekranı zaten
+ *    çözmüştü (kullanıcı kararı 16.08): tesis şeridi + karne kutuları. Izgara aynı soruya üçüncü
+ *    bir görsel dil uyduruyordu.
+ * 3. **Bilgi taşımıyordu.** Karne kutusunun sözleşmesi etiket + iri sayı + **açıklayıcı not** +
+ *    ton; ızgaranınki sayı + tek kelimeydi. Ekranın %80'i boştu.
  *
- * ── ÜÇ SAYI, ÜÇÜ DE HAZIRLIĞIN SORUSU ───────────────────────────────────────
- * Bugün · kargo · geciken. Para, ciro, stok değeri burada YOK — rol duvarı (`design/pages/
- * depo-hazirlik.md §6`) seçim ekranında da geçerli; okuma o alanları hiç getirmiyor.
+ * ── BUGÜNKÜ HÂL ─────────────────────────────────────────────────────────────
+ * Beyaz tuval + depo başına **tam genişlik satır**. Satırın içi Depolar sayfasının parçaları:
+ * künye (kod · ad · durum rozeti) → künye cümlesi (`DaySummary` deseni: nokta ayraçlı gerçekler)
+ * → **karne kutuları** (`ScoreTile`) → kurulum engeli (`SetupGapNote`). Yeni görsel dil YOK.
  *
- * **Geciken sayısı vurgulu**, çünkü tek başına bir karardır: dünün hazırlanmamış siparişi bugünün
- * işinin önüne geçer. Sıfırsa hiç çizilmiyor — sıfır bir uyarı değildir ve her kartta duran bir
- * "0 geciken", gerçek gecikmeyi görünmez yapardı.
+ * ── KURAL YERİNDE ───────────────────────────────────────────────────────────
+ * **Varsayılan depo yoktur:** hiçbir satır önceden seçili değil, hiçbiri "önerilen" diye işaretli
+ * değil, sıralama sabit (operatörün Depolar'da dizdiği sıra). Sistem onun yerine karar vermiyor —
+ * yalnız kararı besliyor.
+ *
+ * **Para bu ekrandan geçmez:** ciro, stok değeri, maliyet yok; okuma o alanları hiç getirmiyor
+ * (rol duvarı, `design/pages/depo-hazirlik.md §6`).
  */
-export function WarehouseChoice({ choices }: { choices: readonly WarehouseChoiceView[] }) {
+export function WarehouseChoice({ data }: { data: WarehouseWorkData<WarehouseChoiceView> }) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -56,32 +67,53 @@ export function WarehouseChoice({ choices }: { choices: readonly WarehouseChoice
   };
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader title="Hazırlık" subtitle="Çalıştığınız depoyu seçin — kuyruk o deponun işidir" />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-6 py-[18px]">
         {error ? (
           <p className="rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">
             {error}
           </p>
         ) : null}
 
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
-          {choices.map((choice) => (
-            <ChoiceCard key={choice.id} choice={choice} busy={busy} pending={pending === choice.id} onPick={() => pick(choice)} />
+        <SectionHead
+          title="Depolar"
+          hint="hangisinde iş olduğunu görerek seçin — satıra tıklayın, o deponun kuyruğu açılır"
+          aside={
+            data.truncated ? (
+              // Sessiz kırpma YOK (`CLAUDE §1`): tarama tavanına dayanıldıysa sayılar eksiktir ve
+              // ekran bunu söyler. Eksik bir sayıyı tam gibi göstermek, operatöre olmayan bir
+              // boşluğu doğrulatmaktı.
+              <Badge tone="amber">Sayılar eksik — bekleyen iş tarama tavanını aştı</Badge>
+            ) : undefined
+          }
+        />
+
+        <div className="flex flex-col gap-2.5">
+          {data.rows.map((choice) => (
+            <ChoiceRow key={choice.id} choice={choice} busy={busy} pending={pending === choice.id} onPick={() => pick(choice)} />
           ))}
         </div>
 
         <p className="font-ops-body text-ops-xs leading-relaxed text-ops-muted">
-          Seçim hatırlanır — sonraki girişlerde doğrudan o deponun kuyruğu açılır. Üst bardaki depo
-          seçicisinden her an değiştirebilirsiniz.
+          Seçim hatırlanır — sonraki girişlerde doğrudan o deponun kuyruğu açılır. Depoyu her an
+          değiştirebilirsiniz: kuyruk ekranında tesisler başlığın altındaki şeritte durur.
         </p>
       </div>
-    </>
+    </div>
   );
 }
 
-function ChoiceCard({
+/**
+ * Tek deponun satırı — **tuvalden bir kademe çukur** (`bg-ops-subtle`), içindeki karne kutuları
+ * beyaz. Katmanlama böyle kuruluyor: kutuların kendi zemini var, satır onları taşıyan yüzey.
+ * Kutuları doğrudan beyaz tuvale koysaydık satırın nerede bitip başladığı okunmazdı.
+ *
+ * Satırın TAMAMI düğme — köşesindeki küçük bir bağlantı değil. Bu ekranda yapılacak tek iş depo
+ * seçmek ve satırın her yeri o işi yapıyor.
+ */
+function ChoiceRow({
   choice,
   busy,
   pending,
@@ -92,50 +124,73 @@ function ChoiceCard({
   pending: boolean;
   onPick: () => void;
 }) {
-  const total = choice.today + choice.shipping + choice.overdue;
+  const total = choice.overdue + choice.today + choice.shipping;
 
   return (
     <button
       type="button"
       onClick={onPick}
       disabled={busy}
-      className={`flex cursor-pointer flex-col gap-3 rounded-ops-card border px-4 py-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-        choice.overdue > 0 ? 'border-ops-amber-line bg-ops-amber-bg/40' : 'border-ops-line bg-ops-card'
-      } hover:border-ops-olive`}
+      aria-busy={pending || undefined}
+      className={[
+        'flex cursor-pointer flex-col gap-3 rounded-ops-card border bg-ops-subtle px-4 py-3.5 text-left transition-colors',
+        'hover:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
+        // Geciken iş satırın KENDİSİNİ de işaretler: operatör listeyi tararken önce satırları
+        // görüyor. Ama satır AMBER, kutu KIRMIZI ve bu ayrım kasıtlı — satır *"buraya bak"* der
+        // (dikkat), kutu *"sebebi bu"* der (gecikme). Satırı da kırmızı yapmak, işi geciken bir
+        // depoyu bozuk bir depo gibi göstermek olurdu; tesiste bir arıza yok, bir işi sarkmış.
+        choice.overdue > 0 ? 'border-ops-amber-line' : 'border-ops-line',
+      ].join(' ')}
     >
-      <span className="flex items-center gap-2">
-        <span className="text-ops-faint">
-          <WarehouseIcon size={14} />
+      {/* ── Künye ── kod · ad · durum. Depolar şeridindeki `FacilityChip` ile aynı sıra. */}
+      <span className="flex flex-wrap items-baseline gap-2">
+        <span className="font-ops-mono text-ops-sm font-semibold text-ops-ink">{choice.code}</span>
+        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{choice.name}</span>
+        {choice.setupGap ? <Badge tone="amber">Kurulumu eksik</Badge> : null}
+        <span className="flex-1" />
+        <span className="font-ops-body text-ops-sm text-ops-olive-dark">
+          {pending ? 'Açılıyor…' : 'Bu depoda çalış →'}
         </span>
-        <span className="min-w-0 flex-1 truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{choice.name}</span>
-        <span className="shrink-0 font-ops-mono text-ops-xs text-ops-muted">{choice.code}</span>
       </span>
 
-      {total === 0 ? (
-        // Boş hâl bir SONUÇTUR, bir eksiklik değil: bekleyen iş yoksa bu iyi haberdir ve öyle
-        // yazılıyor. Üç sıfır çizmek, olmayan bir işi varmış gibi göstermenin sessiz yoluydu.
-        <span className="font-ops-body text-ops-sm text-ops-muted">Bekleyen hazırlık yok</span>
-      ) : (
-        <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
-          <Sayac value={choice.today} label={LANE_LABELS.today} tone="ink" />
-          {choice.shipping > 0 ? <Sayac value={choice.shipping} label={LANE_LABELS.shipping} tone="ink" /> : null}
-          {choice.overdue > 0 ? <Sayac value={choice.overdue} label={LANE_LABELS.overdue} tone="amber" /> : null}
-        </span>
-      )}
+      {/* ── Künye cümlesi ── Sevkiyat'ın `DaySummary` deseni: nokta ayraçlı gerçekler, tek satır.
+          Sayılar kutularda; buradaki cümle onların TOPLAMINI ve ağırlığını söylüyor. İş yoksa
+          `workSummary` bunu kendisi söylüyor — boş hâlin ayrı bir cümlesi YOK (vardı ve aynı
+          satırı iki kez yazdırıyordu, ekranda görüldü). */}
+      <span className="font-ops-body text-ops-sm text-ops-body">{workSummary(choice)}</span>
 
-      <span className="font-ops-body text-ops-xs text-ops-muted">{pending ? 'Açılıyor…' : 'Bu depoda çalış'}</span>
+      {/* Kutular yalnız iş VARKEN. Dört sıfır kutu çizmek, olmayan bir işi varmış gibi göstermenin
+          sessiz yoluydu; sıfırın SEBEBİNİ ise aşağıdaki kurulum notu söylüyor — kurulumu eksik bir
+          depoda sıfır, işin bitmiş olması değil hiç yapılamaması demek. */}
+      {total > 0 ? (
+        <span className="grid grid-cols-4 gap-2.5">
+          <ScoreTile
+            label={LANE_LABELS.overdue}
+            value={num(choice.overdue)}
+            // Gecikmenin YAŞI notta: "2 geciken" iki farklı günü tarif edebilir, "en eskisi 3
+            // gündür bekliyor" tek bir günü tarif eder — kararı veren o.
+            note={choice.overdueOldestDays === null ? 'gecikmiş iş yok' : `en eskisi ${choice.overdueOldestDays} gündür bekliyor`}
+            tone={laneTone('overdue', choice.overdue)}
+          />
+          <ScoreTile label={LANE_LABELS.today} value={num(choice.today)} note="bugün teslim edilecek" tone={laneTone('today', choice.today)} />
+          <ScoreTile
+            label={LANE_LABELS.shipping}
+            value={num(choice.shipping)}
+            note="teslim günü yok, sıraya göre"
+            tone={laneTone('shipping', choice.shipping)}
+          />
+          <ScoreTile
+            label="yarım kalan"
+            value={num(choice.inProgress)}
+            note={choice.inProgress > 0 ? 'biri başlamış, bırakmış' : 'yarım kalan iş yok'}
+            tone={laneTone('inProgress', choice.inProgress)}
+          />
+        </span>
+      ) : null}
+
+      {/* Kurulum engeli EN ALTTA ve satırın içinde: seçmeden önce okunması gereken son cümle.
+          Depolar sayfasının hesabı, birebir aynı kutu (`@/lib/warehouse/setup-gap`). */}
+      {choice.setupGap ? <SetupGapNote text={choice.setupGap} /> : null}
     </button>
-  );
-}
-
-/** Sayı ÖNDE, etiket altında: kart bir bakışta okunur ve göz sayıları yan yana tarayabilir. */
-function Sayac({ value, label, tone }: { value: number; label: string; tone: 'ink' | 'amber' }) {
-  return (
-    <span className="flex flex-col">
-      <span className={`font-ops-display text-ops-section font-semibold ${tone === 'amber' ? 'text-ops-amber-dark' : 'text-ops-ink'}`}>
-        {num(value)}
-      </span>
-      <span className="font-ops-body text-ops-micro text-ops-muted">{label}</span>
-    </span>
   );
 }

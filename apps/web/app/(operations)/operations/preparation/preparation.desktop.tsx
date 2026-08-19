@@ -6,12 +6,14 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { num } from '@/components/operation/ui/format';
 import { LANE_HINTS, LANE_LABELS, PREP_NOTES, channelLabel, queueStatus } from './preparation-labels';
+import { WarehouseStrip } from './warehouse-strip';
 import {
   PREPARATION_LANES,
   type PreparationData,
   type PreparationLane,
   type PreparationLineView,
   type PreparationOrderView,
+  type WarehouseWorkView,
 } from './preparation-types';
 
 /**
@@ -29,6 +31,8 @@ import {
  */
 interface PreparationViewProps {
   data: PreparationData;
+  /** Tesis şeridi — boşsa çizilmez (tek depolu kapsam). Gerekçesi `PreparationClient` künyesinde. */
+  strip: readonly WarehouseWorkView[];
   selectedId: string | null;
   onSelect: (orderId: string) => void;
   busy: boolean;
@@ -37,7 +41,7 @@ interface PreparationViewProps {
   onProblem: (order: PreparationOrderView, line: PreparationLineView) => void;
 }
 
-export function PreparationDesktop({ data, selectedId, onSelect, busy, error, onConfirmLine, onProblem }: PreparationViewProps) {
+export function PreparationDesktop({ data, strip, selectedId, onSelect, busy, error, onConfirmLine, onProblem }: PreparationViewProps) {
   const selected = data.orders.find((order) => order.orderId === selectedId) ?? null;
   const gecikenSayisi = data.orders.filter((order) => order.lane === 'overdue').length;
 
@@ -57,6 +61,10 @@ export function PreparationDesktop({ data, selectedId, onSelect, busy, error, on
           ...(gecikenSayisi > 0 ? [`geciken ${num(gecikenSayisi)}`] : []),
         ].join(' · ')}
       />
+
+      {/* Tesis şeridi — başlığın hemen ALTINDA, Depolar sayfasının yerleşimiyle aynı (kullanıcı
+          kararı 16.08 · 19.08). Tek depolu kapsamda boş gelir ve hiç çizilmez. */}
+      {strip.length > 1 ? <WarehouseStrip rows={strip} activeId={data.warehouseId} /> : null}
 
       {error ? (
         <p className="mx-6 mt-3 rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">

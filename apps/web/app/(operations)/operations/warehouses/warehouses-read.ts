@@ -10,6 +10,7 @@ import type {
 import { roleText } from '@/components/operation/ui/ops-nav';
 import { totalRiskCents } from '@/lib/stock/batch-labels';
 import type { BatchView } from '@/lib/stock/batch-types';
+import { setupGapOf } from '@/lib/warehouse/setup-gap';
 import {
   WarehouseAddressSchema,
   type ClosureConsequence,
@@ -88,28 +89,9 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
   });
 }
 
-/**
- * Kurulum eksikliği — tesisin **açık ama ulaşılamaz** olduğu hâl.
- *
- * İki ayrı yoksunluk var ve ikisi aynı şey değil:
- * - **Sipariş girmiyor:** ne aktif bölgesi ne kargo çıkışı var → posta kodu buraya çözülmez, kargo
- *   yolu buradan geçmez. Tesis açık görünür ama hiçbir sipariş ona düşmez.
- * - **Mal işlenemiyor:** kapsamında bu depo olan personel yok → mal kabul ve hazırlık yapılamaz.
- *
- * İkisi bir arada olabilir ve cümle ikisini de söyler; hiçbiri yoksa `null` (kurulum tam). Kapalı
- * depoda hiç sorulmaz: kapalı tesisin "eksik kurulumu" bir arıza değil, kapalılığın kendisidir.
- */
-function setupGapOf(input: { isActive: boolean; shipsOnline: boolean; activeZoneCount: number; staffCount: number }): string | null {
-  if (!input.isActive) return null;
-  const gaps: string[] = [];
-  if (input.activeZoneCount === 0 && !input.shipsOnline) {
-    gaps.push('ne bağlı bölgesi ne kargo çıkışı var — hiçbir sipariş buraya çözülmez');
-  }
-  if (input.staffCount === 0) {
-    gaps.push('kapsamlı personeli yok — mal kabul ve hazırlık yapılamaz');
-  }
-  return gaps.length === 0 ? null : `Açık ama ulaşılamaz tesis: ${gaps.join('; ')}.`;
-}
+// `setupGapOf` BURADAN GİTTİ (19.32) → `@/lib/warehouse/setup-gap`. İkinci tüketici Hazırlık'ın
+// karşılama ekranı oldu: orada da seçmeden ÖNCE bilinmesi gereken tek şey bu cümledir. Gerekçesinin
+// tamamı taşındığı dosyada.
 
 /** Deponun bölge kartları — ad sırasına göre; pasif olanlar da listede kalır (tanım silinmez). */
 // `readLastMeasured` BURADA DEĞİL, `page.tsx`te (19.28 · ölçüldü 17.08).

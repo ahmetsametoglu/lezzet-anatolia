@@ -3,7 +3,7 @@ import { WarehouseChoicePane } from '@/components/operation/ui/warehouse-choice-
 import { AuthError } from '@/lib/guard';
 import { readWarehouseContext, readWorkWarehouse } from '@/lib/warehouse/context';
 import { PreparationClient } from './preparation-client';
-import { readPreparation, readWarehouseChoices } from './preparation-read';
+import { readPreparation, readWarehouseChoices, readWarehouseWork } from './preparation-read';
 import { WarehouseChoice } from './warehouse-choice';
 
 /**
@@ -20,10 +20,14 @@ import { WarehouseChoice } from './warehouse-choice';
  * değişmiyordu, çünkü sayfa çerezi hiç okumuyordu; (2) birleşik kuyruk bir yazma ekranında
  * karşılıksızdır — onay tek bir depoya yazılır ve ekranın hangisi olduğunu söylemesi gerekirdi.
  *
- * ── BUGÜN, SADECE BUGÜN ─────────────────────────────────────────────────────
- * Kuyruk teslim gününe göre süzülüyor ve gün SUNUCUDA belirleniyor. Adresten gün almak
- * (`?date=`) bilerek yapılmadı: tasarımın kuralı *"liste yalnız bugünün işi"* ve geçmiş günün
+ * ── BUGÜN BİR SÜZGEÇ DEĞİL, BİR EKSEN ───────────────────────────────────────
+ * Gün SUNUCUDA belirleniyor ve adresten gün almak (`?date=`) bilerek yapılmadı: geçmiş günün
  * kuyruğunu açabilen bir adres, arşivi bu ekrana yığmanın ilk adımı olurdu.
+ *
+ * Ama gün artık bir EŞİTLİK SÜZGECİ değil (10.9, ölçüldü 19.08) — kuyruğun üç kulvara ayrıldığı
+ * eksen: günü geçmiş → geciken · günü bugün → bugün · günü yok → kargo. Eskisi eşitlikti ve iki
+ * şeyi birden düşürüyordu: teslim günü `NULL` olan kargo siparişini (eşitlik `NULL`u hiç tutmaz)
+ * ve dünden kalan hazırlanmamış siparişi. Dışarıda kalan tek şey İLERİ tarihli sipariş.
  *
  * ── YALNIZ MASAÜSTÜ ─────────────────────────────────────────────────────────
  * Operasyon web'i masaüstü-yalnız (kullanıcı kararı 06.08). Raf karşısındaki toplama akışı native
@@ -49,14 +53,14 @@ export default async function PreparationPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   /**
-   * **Depo seçilmemişken artık boş bir kapı DEĞİL, kartlar** (10.8, kullanıcı isteği 19.08).
+   * **Depo seçilmemişken artık boş bir kapı DEĞİL, depo satırları** (10.8, kullanıcı isteği 19.08).
    *
    * Kural aynı — varsayılan depo yoktur, sistem operatörün yerine seçmez — ama uygulaması
    * değişti: eskiden koca bir alan tek cümleyle ("Önce depo seçin") duruyor ve çıkış yolunu başka
    * bir yere (üst bardaki seçici) gösteriyordu. Depo seçmek bir engel değil, bu sayfanın İLK
-   * ADIMI; kartlar o adımı ekranın içine alıyor ve seçimi bilgiyle besliyor.
+   * ADIMI; satırlar o adımı ekranın içine alıyor ve seçimi bilgiyle besliyor.
    *
-   * `none` hâli AYRI kalıyor: seçilecek depo yokken kart çizmek boş bir ızgara göstermek olurdu ve
+   * `none` hâli AYRI kalıyor: seçilecek depo yokken satır çizmek boş bir liste göstermek olurdu ve
    * operatörün burada yapabileceği bir şey yok — çıkış yolu Depolar ekranı.
    */
   if (workplace.status === 'none') {
@@ -69,12 +73,34 @@ export default async function PreparationPage() {
     );
   }
 
+  /**
+   * **Kapsamın TAMAMI — `visibleWarehouseIds` DEĞİL** (ölçüldü 19.08).
+   *
+   * `visibleWarehouseIds` bir depo seçiliyken **tek depoya daralır** (`context.ts:92` — kırılım
+   * evreni: "tek depo seçiliyse yalnız o"). Süzgeç için doğru, şerit için yanlış: şeridin işi tam
+   * olarak seçili OLMAYAN depoları da göstermek. Onunla beslendiğinde şerit tek çipe iner ve
+   * `length > 1` koşuluna hiç takılmaz — yani sessizce hiç çizilmez.
+   *
+   * `warehouses` kapsamla süzülmüş depoların hepsidir; kapsam dışı depo zaten burada yoktur.
+   */
+  const { warehouses } = await readWarehouseContext();
+  const scopeIds = warehouses.map((w) => w.id);
+
   if (workplace.status === 'needs_choice') {
-    const { visibleWarehouseIds } = await readWarehouseContext();
-    return <WarehouseChoice choices={await readWarehouseChoices(visibleWarehouseIds, today)} />;
+    return <WarehouseChoice data={await readWarehouseChoices(scopeIds, today)} />;
   }
 
-  return (
-    <PreparationClient data={await readPreparation({ id: workplace.warehouseId, name: workplace.name }, today)} />
-  );
+  /**
+   * **Kuyruk + tesis şeridi** (kullanıcı kararı 19.08). İki okuma PARALEL: şerit kuyruğun bir
+   * parçası değil, depolar-arası bir bağlam — sırayla okunsalardı ekran ikinci turu beklerdi.
+   *
+   * Kapsam tek depoluysa şerit hiç OKUNMUYOR: tek seçenekli bir seçici seçim değil süstür ve
+   * uğruna iki sorgu atmak, hiç bakılmayacak bir veriyi her açılışta getirmek olurdu.
+   */
+  const [data, work] = await Promise.all([
+    readPreparation({ id: workplace.warehouseId, name: workplace.name }, today),
+    scopeIds.length > 1 ? readWarehouseWork(scopeIds, today) : null,
+  ]);
+
+  return <PreparationClient data={data} strip={work?.rows ?? []} />;
 }

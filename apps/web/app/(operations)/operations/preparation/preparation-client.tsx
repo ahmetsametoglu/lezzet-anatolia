@@ -7,7 +7,7 @@ import { confirmPreparationAction } from './preparation-actions';
 import { PreparationDesktop } from './preparation.desktop';
 import { ProblemDialog } from './problem-dialog';
 import { ShortfallDialog } from './shortfall-dialog';
-import type { PreparationData, PreparationLineView, PreparationOrderView } from './preparation-types';
+import type { PreparationData, PreparationLineView, PreparationOrderView, WarehouseWorkView } from './preparation-types';
 
 /**
  * Hazırlık masasının istemci kökü (10.1–10.3).
@@ -22,7 +22,19 @@ import type { PreparationData, PreparationLineView, PreparationOrderView } from 
  * tavsiye, fiilen kaydedilmiş eksiğe göre verilmeli — kaydedilmeden verilen tavsiye, henüz
  * olmamış bir duruma dair olurdu.
  */
-export function PreparationClient({ data }: { data: PreparationData }) {
+interface PreparationClientProps {
+  data: PreparationData;
+  /**
+   * Tesis şeridinin satırları — kapsam tek depoluysa **boş** ve şerit hiç çizilmez.
+   *
+   * `data` içinde DEĞİL, ayrı prop: kuyruk verisi tek bir deponun işidir, şerit ise depolar-arası
+   * bir bağlam. İkisini aynı nesnede toplamak, kuyruk okumasını kapsamın tamamına bakan bir
+   * okumaya çevirirdi (`10.7`'de tam bu ayrım için süzgeçsiz okuma kaldırılmıştı).
+   */
+  strip: readonly WarehouseWorkView[];
+}
+
+export function PreparationClient({ data, strip }: PreparationClientProps) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +77,7 @@ export function PreparationClient({ data }: { data: PreparationData }) {
     <>
       <PreparationDesktop
         data={data}
+        strip={strip}
         selectedId={selectedId}
         onSelect={setSelectedId}
         busy={busy}

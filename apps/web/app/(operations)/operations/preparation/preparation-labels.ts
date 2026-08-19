@@ -1,6 +1,8 @@
 import type { ShortfallSuggestion } from '@lezzet/domain-core';
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { PreparationLane, PreparationOrderView } from './preparation-types';
+import type { ScoreTone } from '@/components/operation/ui/score-tile';
+import { num } from '@/components/operation/ui/format';
+import type { PreparationLane, PreparationOrderView, WarehouseWorkView } from './preparation-types';
 
 /**
  * Hazırlık masasının sözlüğü (10.1–10.3).
@@ -31,6 +33,72 @@ export const LANE_HINTS: Record<PreparationLane, string> = {
   shipping: 'Kargo — teslim günü yok, sıraya göre hazırlanır.',
 };
 
+/**
+ * **Deponun künye cümlesi** — seçim satırında ve şeritte, nokta ayraçlı gerçekler (Sevkiyat'ın
+ * `DaySummary` deseni).
+ *
+ * Kutular kulvarları sayıyor; bu cümle TOPLAMI ve **ağırlığı** söylüyor. Sipariş sayısı tek başına
+ * günü tarif etmiyor: 12 sipariş 60 adet de olabilir 400 adet de, ve ikisi bambaşka iki gün
+ * (tasarım §2 — B2B 10-50 koli olabilir). B2B sayısı aynı beklentiyi kuruyor.
+ *
+ * **Sıfır olan parça yazılmaz.** "0 B2B" bir bilgi değil gürültüdür ve gerçek sayıları içinde
+ * kaybederdi — bölge kartındaki "bekleyen" rozetiyle aynı kural.
+ */
+export function workSummary(w: WarehouseWorkView): string {
+  const orders = w.overdue + w.today + w.shipping;
+  if (orders === 0) return PREP_NOTES.choiceEmpty;
+  return [
+    `${num(orders)} sipariş`,
+    `${num(w.unitCount)} adet`,
+    w.b2bCount > 0 ? `${num(w.b2bCount)} B2B` : null,
+  ]
+    .filter((part) => part !== null)
+    .join(' · ');
+}
+
+/**
+ * **Karne kutusunun tonu — İŞİN NE OLDUĞUNA göre** (kullanıcı isteği 19.08: *"kartlar renklense…
+ * işine göre, görevine göre, vazifesine göre"*).
+ *
+ * Renkler uydurulmuyor, `components/operation/ui/tone.ts` sözlüğünden okunuyor — o sözlük kapalı
+ * bir listedir ve her tonun anlamı orada yazılı:
+ *
+ * | kutu | ton | sözlükteki anlamı | neden bu iş için doğru |
+ * |---|---|---|---|
+ * | geciken | `red` | *hata/**gecikme*** | sözlük gecikmeyi zaten kırmızıya bağlamış; dünün yapılmamış işi bugünün önüne geçer |
+ * | bugün | `olive` | *yolunda* | planlandığı gibi akan iş — günün asıl vazifesi |
+ * | kargo | `blue` | *bilgi/aday* | bir gün'e ait değil; kuyrukta bekleyen, sırası gelince yapılacak iş |
+ * | yarım kalan | `amber` | *dikkat/**karar*** | biri başlamış bırakmış; sürecek birini bekliyor — bir karar gerekiyor |
+ *
+ * ── SIFIRIN TONU OLMAZ ──────────────────────────────────────────────────────
+ * Sayı sıfırsa ton VERİLMEZ ve kutu nötr kalır. Sabit renkli bir "0 geciken", gerçek gecikmeyi
+ * kendi gürültüsünde kaybederdi; renk ancak söyleyecek bir şeyi varken anlam taşır (`CLAUDE §3`).
+ * Bu yüzden ton bir sözlük değil FONKSİYON: değere bakmadan verilemez.
+ */
+export function laneTone(kind: 'overdue' | 'today' | 'shipping' | 'inProgress', value: number): ScoreTone | undefined {
+  if (value === 0) return undefined;
+  const TONE: Record<typeof kind, ScoreTone> = {
+    overdue: 'red',
+    today: 'olive',
+    shipping: 'blue',
+    inProgress: 'amber',
+  };
+  return TONE[kind];
+}
+
+/**
+ * **Şeritteki tek satırlık not** — hangi depoda ne var, en sert hâl kazanır.
+ *
+ * Şerit dar: dört sayıya yeri yok ve olsaydı da okunmazdı. Sıra karar ağırlığına göre — geciken iş
+ * bugünün işinin önüne geçer, o yüzden varsa tek başına yazılıyor. Depolar şeridindeki `railNote`
+ * ile aynı mantık, farklı soru: orası kurulumu, burası işi anlatıyor.
+ */
+export function stripNote(w: WarehouseWorkView): string {
+  if (w.overdue > 0) return `${num(w.overdue)} geciken · ${num(w.today + w.shipping)} bekleyen`;
+  const orders = w.today + w.shipping;
+  return orders === 0 ? 'bekleyen yok' : `${num(orders)} bekleyen · ${num(w.unitCount)} adet`;
+}
+
 /** Sipariş kuyruğundaki durum rozeti — üç hâl, üç renk. */
 export function queueStatus(order: PreparationOrderView): { label: string; tone: OpsTone } {
   if (order.isComplete) return { label: 'Hazır ✓', tone: 'olive' };
@@ -51,6 +119,12 @@ export function channelLabel(order: PreparationOrderView): string {
 
 export const PREP_NOTES = {
   empty: 'Bekleyen hazırlık yok. Onaylanan siparişler bu listeye kendiliğinden düşer.',
+  /**
+   * Seçim satırının boş hâli. `empty`den AYRI çünkü farklı bir soruya cevap veriyor: orada operatör
+   * çalıştığı deponun kuyruğuna bakıyor ("işim bitti"), burada henüz seçmedi ("burada iş yok, ötekine
+   * bak"). Aynı cümle iki yerde iki farklı şey söylerdi.
+   */
+  choiceEmpty: 'Bekleyen hazırlık yok',
   pick: 'Soldaki kuyruktan bir sipariş seçin; kalemleri ve hangi partiden alınacağı burada görünür.',
   /**
    * **Cümle 19.08'de değişti (10.9).** Eskiden *"liste yalnız bugünün işi"* diyordu ve o cümle

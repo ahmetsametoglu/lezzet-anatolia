@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
-import { InfoIcon, WarehouseIcon } from '@/components/operation/ui/icons';
+import { WarehouseIcon } from '@/components/operation/ui/icons';
+import { ScoreTile } from '@/components/operation/ui/score-tile';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { money, num, shortDate, shortDateTime } from '@/components/operation/ui/format';
@@ -24,17 +25,9 @@ import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } fro
 // ve ülke başına tekliği veritabanı kısıtı reddediyor (`warehouse_single_online`). Uyarı bir
 // eksikliği söylüyordu ama eksikliğin doğduğu yerde değil, ondan uzakta duruyordu.
 
-/** Kurulum eksikliği / bilgi şeridi — satırın ve kartın paylaştığı sarı kutu. */
-export function SetupGapNote({ text }: { text: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-ops-btn border border-ops-amber-line bg-ops-amber-bg px-2.5 py-2">
-      <span className="mt-px flex-none text-ops-amber">
-        <InfoIcon size={14} />
-      </span>
-      <span className="font-ops-body text-ops-sm leading-snug text-ops-amber">{text}</span>
-    </div>
-  );
-}
+// `SetupGapNote` ve `SectionHead` BURADAN GİTTİ (19.32) → `@/components/operation/ui/section-head`.
+// İkinci tüketici Hazırlık'ın karşılama ekranı: aynı sarı kutu, aynı bölüm başlığı. Bir sayfanın
+// altında duran komponent ikinci ekranda kopyalanırsa ikisi ayrışır (`CLAUDE.md §2` yerleşim kuralı).
 
 // `WarehouseListRow` SİLİNDİ (16.08) — tek görünüme geçerken liste görünümü kalktı ve satırın
 // çizecek yeri kalmadı. Taşıdığı bilgiler kayıp değil: künye (kod · ad · ülke · rozetler) başlık
@@ -127,22 +120,6 @@ function railNote(row: WarehouseRowView): string {
   if (!row.isActive) return 'kapalı';
   if (row.setupGap) return 'kurulumu eksik';
   return row.shipsOnline ? `${COUNTRY_LABELS[row.countryCode]} · kargo çıkışı` : COUNTRY_LABELS[row.countryCode];
-}
-
-/** Bölüm başlığı — başlık + neden orada olduğunu söyleyen tek satır. */
-export function SectionHead({ title, hint, aside }: { title: string; hint: string; aside?: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-baseline gap-2.5">
-      <span className="font-ops-display text-ops-section font-semibold text-ops-ink">{title}</span>
-      <span className="font-ops-body text-ops-sm text-ops-muted">{hint}</span>
-      {aside ? (
-        <>
-          <span className="flex-1" />
-          {aside}
-        </>
-      ) : null}
-    </div>
-  );
 }
 
 // ── `FactCard` KALKTI (17.08) ─────────────────────────────────────────────────────────────────
@@ -271,54 +248,10 @@ export function Scorecard({ card, code }: { card: ScorecardView; code: string })
   );
 }
 
-const TILE_TONE = {
-  amber: 'border-ops-amber-line bg-ops-amber-bg text-ops-amber',
-  red: 'border-ops-red-line bg-ops-red-bg text-ops-red',
-  blue: 'border-ops-blue-line bg-ops-card text-ops-blue',
-} as const;
-
-/**
- * Karne kutusu. `href` verilen kutu bir KAPIDIR ve tıklanır; verilmeyen yalnız bir ölçüdür.
- * "Yolda bekleyen" bilerek kapısız: yoldaki mal hiçbir deponun stoğunda değildir, yani Stok'ta
- * gösterilecek bir satırı da yoktur — tıklanabilir yapmak boş bir listeye götürürdü.
- */
-function ScoreTile({
-  label,
-  value,
-  note,
-  aside,
-  tone,
-  href,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  aside?: string;
-  tone?: keyof typeof TILE_TONE;
-  href?: string;
-}) {
-  const toneCls = tone ? TILE_TONE[tone] : 'border-ops-line bg-ops-card text-ops-ink';
-  const body = (
-    <>
-      <span className={['font-ops-display text-ops-micro font-medium uppercase tracking-wide', tone ? '' : 'text-ops-muted'].join(' ')}>
-        {label}
-      </span>
-      <span className="flex items-baseline gap-2">
-        <span className="font-ops-mono text-ops-title font-medium">{value}</span>
-        {aside ? <span className="font-ops-mono text-ops-sm">{aside}</span> : null}
-      </span>
-      <span className={['font-ops-body text-ops-xs', tone ? '' : 'text-ops-body'].join(' ')}>{note}</span>
-    </>
-  );
-  const cls = ['flex flex-col gap-0.5 rounded-ops-card border px-3.5 py-3', toneCls].join(' ');
-  return href ? (
-    <Link href={href} className={`${cls} cursor-pointer transition-colors hover:border-ops-olive`}>
-      {body}
-    </Link>
-  ) : (
-    <div className={cls}>{body}</div>
-  );
-}
+// `ScoreTile` de BURADAN GİTTİ (19.32) → `@/components/operation/ui/score-tile`. Hazırlık'ın
+// karşılama ekranı aynı kutuyu çiziyor; iki kopya, "amber"in bir ekranda uyarı ötekinde dekorasyon
+// olmasına giden yoldu. "Yolda bekleyen"in bilerek kapısız oluşu gibi kutuya özel gerekçeler
+// kutunun kendi künyesinde.
 
 /**
  * Bağlı personel — **okunur.** Amaç yönetim değil SONUÇ: tek kapsamı burası olan biri varsa kapatma

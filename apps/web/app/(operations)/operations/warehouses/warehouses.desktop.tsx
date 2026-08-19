@@ -7,10 +7,11 @@ import { Button } from '@/components/operation/ui/button';
 import { CopyInline } from '@/components/operation/ui/copy-text';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
+import { SectionHead, SetupGapNote } from '@/components/operation/ui/section-head';
 import { addressForClipboard, addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
 import { MeasurePoints } from './measure-points';
-import { FacilityStrip, Scorecard, SectionHead, SetupGapNote, StaffChips, ZoneCard } from './warehouses-sections';
+import { FacilityStrip, Scorecard, StaffChips, ZoneCard } from './warehouses-sections';
 import type { MeasurePointView, WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 
 // Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin

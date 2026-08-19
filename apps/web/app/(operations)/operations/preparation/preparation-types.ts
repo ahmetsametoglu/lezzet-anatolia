@@ -58,18 +58,21 @@ export interface PreparationData {
    * kuyruğudur, depo-üstü hâl kalmadı. Depo seçilmemişken sayfa bu veriyi hiç kurmaz.
    */
   warehouseName: string;
+  /** Kuyruğun sahibi — tesis şeridinde hangi çipin seçili çizileceğini bu belirler. */
+  warehouseId: string;
 }
 
 /**
- * **Depo seçim kartı** (10.8) — boş kapı ekranının yerini alan özet.
+ * **Bir deponun bekleyen hazırlık işi** (10.8) — karşılama ekranının satırı ve kuyruk ekranının
+ * kalıcı şeridi AYNI okumadan beslenir. İki ayrı okuma, bir gün ayrışan iki sayı demekti.
  *
- * Kart bir SEÇİM aracıdır ve seçimi bilgiyle besler: operatör hangi depoda iş olduğunu görerek
- * seçsin, adını hatırlayarak değil. Üç sayı da hazırlığın kendi sorularıdır — para, stok, ciro
- * burada YOKTUR (rol duvarı bu ekranda da geçerli).
+ * Sayıların hepsi hazırlığın kendi sorularıdır — para, ciro, stok değeri burada YOKTUR: rol duvarı
+ * (`design/pages/depo-hazirlik.md §6`) seçim ekranında da geçerli ve okuma o alanları hiç
+ * getirmiyor.
  */
-export interface WarehouseChoiceView {
+export interface WarehouseWorkView {
   id: string;
-  /** Belge öneki (`STR`) — kart üstünde, kod okunarak da tanınır. */
+  /** Belge öneki (`STR`) — satır başında, kod okunarak da tanınır. */
   code: string;
   name: string;
   /** Bugün teslim edilecek, henüz hazırlanmamış sipariş. */
@@ -78,4 +81,46 @@ export interface WarehouseChoiceView {
   shipping: number;
   /** Günü GEÇMİŞ ve hâlâ hazırlanmamış sipariş — bir gecikme işareti. */
   overdue: number;
+  /**
+   * Gecikmenin YAŞI: en eski geciken sipariş kaç gün geride (kullanıcı kararı 19.08). Geciken
+   * yoksa `null` — sıfır DEĞİL, çünkü "0 gün geciken" ölçülmüş bir yakınlık gibi okunurdu.
+   *
+   * Sayı değil süre karar verdirir: "2 geciken" iki farklı günü tarif edebilir, "en eskisi 3
+   * gündür bekliyor" tek bir günü tarif eder.
+   */
+  overdueOldestDays: number | null;
+  /**
+   * Durumu `preparing` — biri toplamaya başlamış ve **bırakmış**. Üç el değmemiş siparişle üç
+   * yarım sipariş bambaşka iki gündür: yarım kalan iş kaldığı yerden sürer (tasarım §4) ama
+   * sürecek birini bekler.
+   */
+  inProgress: number;
+  /** Bekleyen işin toplam adedi — günün ağırlığı. Sipariş sayısı tek başına onu tarif etmez. */
+  unitCount: number;
+  /** Bekleyen B2B siparişi — hacim beklentisini kurar (tasarım §2: B2B 10-50 koli olabilir). */
+  b2bCount: number;
+}
+
+/**
+ * Depo seçim satırı — işin üstüne **seçmeden önce bilinmesi gereken engel**.
+ *
+ * Kurulum eksiği yalnız burada var, şeritte yok ve bu bilinçli: şerit çalışılan depo BELLİYKEN
+ * çizilir, orada engel artık bir uyarı değil geçmiş bir karardır. Karşılama ekranında ise tam
+ * tersi — kapsamlı personeli olmayan bir depoyu seçmek, girip hiçbir şey yapamamaktır.
+ */
+export interface WarehouseChoiceView extends WarehouseWorkView {
+  /** `@/lib/warehouse/setup-gap` cümlesi; kurulum tamsa `null`. */
+  setupGap: string | null;
+}
+
+/**
+ * Depo işi okumasının kabı — **tavan bilgisi satırda değil kapta** durur, çünkü tarama tavanı
+ * kümenin tamamına ait: tavana dayanıldığında hangi deponun sayısının eksildiği bilinmez.
+ *
+ * Sessiz kırpma yok (`CLAUDE §1`): tavana dayanmışsa ekran bunu YAZAR. Eksik bir sayıyı tam gibi
+ * göstermek, operatöre olmayan bir boşluğu doğrulatmaktı.
+ */
+export interface WarehouseWorkData<T extends WarehouseWorkView = WarehouseWorkView> {
+  rows: T[];
+  truncated: boolean;
 }

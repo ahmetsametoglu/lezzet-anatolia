@@ -103,7 +103,7 @@ export function postalCodeLabel(
  * "donuk" kelimesi tek başına −18 demez, ama "Donuk (−18 °C)" der. Ürünün saklama rejimiyle aynı
  * üç kelime bilerek kullanılıyor (`ProductStorageType`); dördüncüsü bir rejim değil geçiş yeri.
  */
-export const AREA_KIND_LABELS: Record<StorageAreaKind, string> = {
+const AREA_KIND_LABELS: Record<StorageAreaKind, string> = {
   frozen: 'Donuk (−18 °C)',
   chilled: 'Soğutulmuş (0-4 °C)',
   ambient: 'Oda sıcaklığı',
