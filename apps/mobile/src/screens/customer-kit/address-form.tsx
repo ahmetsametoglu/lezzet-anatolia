@@ -1,4 +1,3 @@
-import { addressLineOf } from '@lezzet/address-fr';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
 import { useState } from 'react';
@@ -7,15 +6,12 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { SuggestionList } from '@/components/ui/suggestion-list';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { createAddress, deleteAddress, updateAddress, type AddressWrite, type MeAddress } from '@/lib/api/addresses';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import type { PlaceOption } from '@/lib/api/places';
 import { toastSuccess } from '@/lib/toast/toast-store';
-import { useAddressSearch } from './use-address-search.hook';
-import { usePostalSuggest } from './use-postal-suggest.hook';
+import { AddressFields } from './address-fields';
 import messages from './address-sheet-messages.json';
 
 /*
@@ -95,73 +91,15 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
      seçilmiş ülke kaybolmamalı. */
   const [country, setCountry] = useState<Country | null>(editing?.country ?? null);
 
-  /* Kod listesinden SEÇİLEN satır — yalnız ŞEHİR listesini çizmek için (çok yerleşimli kod).
-     Elle yazılan kodda `null` kalır. Teslimat durumu BİLEREK tutulmuyor: adres defterinin hizmet
-     alanımızla ilgisi yok, o soru sepetin ve sipariş ekranının (kullanıcı kararı 10.08). */
-  const [place, setPlace] = useState<PlaceOption | null>(null);
-  const [zipOpen, setZipOpen] = useState(false);
-  const [cityOpen, setCityOpen] = useState(false);
-  const zipSuggestions = usePostalSuggest(draft.postalCode, { enabled: active && zipOpen });
-
-  /* ADRES ARAMASI (BAN) — sokak alanına yazarken devletin adres servisinden öneri gelir ve
-     dokunulan öneri ÜÇ alanı birden doldurur (sokak + posta kodu + şehir). Elle yazma yolu
-     KAPANMAZ: servis düşerse ya da kota dolarsa liste hiç çizilmez, form bugünkü gibi çalışır —
-     doğrulama da aynı kalır (5 hane posta kodu). Kararların künyesi `use-address-search.hook.ts`.
-
-     LİSTE NE ZAMAN AÇIK: yalnız müşteri sokak alanına YAZARKEN. Form yeni açıldığında
-     (düzenlemede alan zaten dolu) ve öneri seçildikten sonra kapalıdır — aksi hâlde seçilen
-     adres kendi önerisini yeniden getirir ve liste seçimin üstünde asılı kalırdı. */
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const search = useAddressSearch(draft.line1, { enabled: active && suggestOpen });
+  /* ÖNERİ DURUMU ARTIK BURADA DEĞİL (MB-06): BAN araması, posta kodu önerisi, çok yerleşimli
+     kodun şehir listesi ve ülke türetimi `address-fields`e taşındı — aynı davranışı profesyonel
+     başvurusu da kullanabilsin diye. Bu form yalnız SONUCU alır (`onCountryChange`) ve kaydı yazar.
+     Teslimat durumu BİLEREK hiçbir yerde tutulmuyor: adres defterinin hizmet alanımızla ilgisi yok,
+     o soru sepetin ve sipariş ekranının (kullanıcı kararı 10.08). */
 
   const editDraft = (patch: Partial<typeof draft>): void => {
     setDraft((current) => ({ ...current, ...patch }));
     setError(null);
-  };
-
-  /**
-   * BAN önerisine dokunuldu: satır, posta kodu ve şehir BİRLİKTE yazılır, liste kapanır.
-   *
-   * **Ülke `FR` olur ve bu bir tahmin değil:** kaynak Fransız devletinin adres tabanıdır (BAN) ve
-   * yalnız Fransız adreslerini bilir. Kapı bu değeri yine de DOĞRULAR (kodun FR'de geçerli olduğunu
-   * referanstan sorar) — yani yanlış olsa bile sessizce geçmez.
-   */
-  const applySuggestion = (id: string): void => {
-    const picked = search.suggestions.find((suggestion) => suggestion.id === id);
-    if (picked === undefined) return;
-    setSuggestOpen(false);
-    setZipOpen(false);
-    setCityOpen(false);
-    // Şehir öneriden geldi; kodun yerleşim listesine ihtiyaç yok.
-    setPlace(null);
-    setCountry('FR');
-    editDraft({ line1: addressLineOf(picked), postalCode: picked.postalCode, city: picked.city });
-  };
-
-  /** Kod önerisinin satır kimliği: aynı kod iki ülkede geçerli olabiliyor, kod tek başına anahtar değil. */
-  const zipKey = (suggestion: PlaceOption): string => `${suggestion.country}:${suggestion.postalCode}`;
-
-  /**
-   * Posta kodu seçildi. Şehir de buradan gelir: kod tek yerleşimliyse doğrudan yazılır, çok
-   * yerleşimliyse alan BOŞALIR ve altında liste açılır — kodların ~%39'u çok yerleşimli ve birini
-   * seçmek "Bischheim'lı müşteriye Strasbourg yazmak" olurdu (19.17'nin kayıtlı dersi).
-   *
-   * Yerleşim adı HİÇ yoksa (kod yalnız kendi bölge tablomuzda var — 19.16a) alan elle yazmaya
-   * kalır: uydurulacak bir ad yok.
-   */
-  const applyZip = (id: string): void => {
-    const picked = zipSuggestions.find((suggestion) => zipKey(suggestion) === id);
-    if (picked === undefined) return;
-    setZipOpen(false);
-    setPlace(picked);
-    setCountry(picked.country);
-    setCityOpen(picked.places.length > 1);
-    editDraft({ postalCode: picked.postalCode, city: picked.places.length === 1 ? (picked.places[0] ?? '') : '' });
-  };
-
-  const applyCity = (name: string): void => {
-    setCityOpen(false);
-    editDraft({ city: name });
   };
 
   const save = (): void => {
@@ -215,92 +153,18 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
         placeholder={t.labelPlaceholder}
         testID="address-label"
       />
-      {/* İÇERİK TÜRLERİ (kullanıcı bulgusu 09.08): alanlar cihaza "burası adres" demeden hiçbir
-          öneri çıkmıyordu — Android Autofill / iOS AutoFill yalnız beyan edilmiş alanı tanır.
-          Sokak alanı `streetAddress`: kayıtlı adresi tek dokunuşla basar ve posta kodu/şehri de
-          doldurur (sistem alan kümesini birlikte tanıyor). */}
-      <TextField
-        value={draft.line1}
-        onChangeText={(value) => {
-          setSuggestOpen(true);
-          editDraft({ line1: value });
-        }}
-        accessibilityLabel={t.lineLabel}
-        placeholder={t.linePlaceholder}
-        content="streetAddress"
-        testID="address-line"
+      {/* ÜÇ ALAN + ÖNERİLERİ ORTAK BLOKTA (MB-06): davranış `address-fields`e taşındı, çünkü aynı
+          üç alanı profesyonel başvurusu da çiziyor ve orada hiçbir öneri yoktu. Buradan giden tek
+          şey ALANLAR; kaydı (ve silmeyi) bu form yapmaya devam ediyor — ayrımın gerekçesi
+          bileşenin künyesinde. Sözcükler yine bu formun sözlüğünden geçiyor. */}
+      <AddressFields
+        value={{ line1: draft.line1, postalCode: draft.postalCode, city: draft.city }}
+        onChange={editDraft}
+        onCountryChange={setCountry}
+        active={active}
+        copy={t}
+        testIDPrefix="address"
       />
-      {/* Adres servisinin önerileri — alanın hemen ALTINDA, seçilince üç alanı birden doldurur.
-          Künye satırı listeyle birlikte gelir: veri Etalab 2.0 altında ve kaynak gösterimi
-          gösteren yüzeyin sorumluluğu (STACK "Adres arama (FR)"). */}
-      <SuggestionList
-        items={search.suggestions.map((suggestion) => ({
-          id: suggestion.id,
-          title: addressLineOf(suggestion),
-          subtitle: `${suggestion.postalCode} ${suggestion.city}`,
-        }))}
-        onSelect={applySuggestion}
-        footnote={t.suggestCredit}
-        accessibilityLabel={t.suggestLabel}
-        testID="address-suggestions"
-      />
-      {/* Kota doldu (429): tek satır söylenir ve BİTER — alan yazmaya açık kalır, kaydetme
-          engellenmez. Öneri yardımcı bir özellik; yokluğu müşterinin işini durdurmaz. */}
-      {search.throttled ? <Note description={t.suggestBusy} tone="warm" testID="address-suggest-busy" /> : null}
-      <View style={styles.zipRow}>
-        <View style={styles.zipField}>
-          <TextField
-            value={draft.postalCode}
-            onChangeText={(value) => {
-              /* Kod ELLE değişti: önceki seçim artık bu kodun cevabı değil. Ülkeyi ve teslimat
-                 cümlesini düşürmek şart — kalsalardı müşteri kodu değiştirdikten sonra hâlâ eski
-                 yerin cevabını okur, üstelik o ülkeyle kaydederdi. */
-              setZipOpen(true);
-              setCityOpen(false);
-              setCountry(null);
-              setPlace(null);
-              editDraft({ postalCode: value.replace(/\D/g, '').slice(0, 5) });
-            }}
-            accessibilityLabel={t.zipLabel}
-            placeholder={t.zipPlaceholder}
-            content="postalCode"
-            testID="address-zip"
-          />
-        </View>
-        <View style={styles.cityField}>
-          <TextField
-            value={draft.city}
-            onChangeText={(value) => editDraft({ city: value })}
-            accessibilityLabel={t.cityLabel}
-            placeholder={t.cityPlaceholder}
-            content="city"
-            testID="address-city"
-          />
-        </View>
-      </View>
-      {/* Kod önerileri — alanın ALTINDA, seçilince kodu ve (tek yerleşimliyse) şehri doldurur.
-          Künye satırı YOK: veri kendi referansımız (GeoNames, migration ile geliyor) ve kaynak
-          gösterimi orada yapılmış; BAN'ın Etalab yükümlülüğü buraya taşınmaz. */}
-      <SuggestionList
-        items={zipSuggestions.map((suggestion) => ({
-          id: zipKey(suggestion),
-          title: `${suggestion.postalCode} · ${suggestion.country}`,
-          // Ad yoksa (kod yalnız kendi tablomuzda) alt satır hiç çizilmez — uydurulacak ad yok.
-          subtitle: suggestion.places.length === 0 ? undefined : suggestion.places.join(', '),
-        }))}
-        onSelect={applyZip}
-        accessibilityLabel={t.zipSuggestLabel}
-        testID="address-zip-suggestions"
-      />
-      {/* Kodun yerleşimleri — yalnız ÇOK yerleşimli kodda ve yalnız kod seçildikten sonra. */}
-      {cityOpen && place !== null ? (
-        <SuggestionList
-          items={place.places.map((name) => ({ id: name, title: name }))}
-          onSelect={applyCity}
-          accessibilityLabel={t.citySuggestLabel}
-          testID="address-city-suggestions"
-        />
-      ) : null}
       {/* BÖLGE CÜMLESİ KALDIRILDI (kullanıcı kararı 11.08). Burada *"67 ile başlayan posta kodları
           teslimat bölgemizdedir"* yazıyordu; **genellenmiş ve statik** olduğu için de yanlıştı —
           ölçüldü: aktif bölgeler yalnız 67000 · 67100 · 67200 · 67300 · 67400 · 67540 · 67800.

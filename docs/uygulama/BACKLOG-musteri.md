@@ -111,7 +111,7 @@
   (`packages/types/src/contracts/b2b-api.schema.ts:70`); ekran okuyor ama kullanmıyor
   (`emptyApplication()` ile başlıyor). Müşteri sistemin zaten bildiği üç şeyi yeniden yazıyor.
 
-- [ ] **MB-06 · Adres bloğu ORTAK bileşen değil — Fransa adres tamamlama burada yok.**
+- [x] **MB-06 · Adres bloğu ORTAK bileşen değil — Fransa adres tamamlama burada yok.**
   Uygulamada BAN (`api-adresse.data.gouv.fr`) bağlı, çalışan bir adres formu var:
   `screens/customer-kit/address-form.tsx` + `use-address-search.hook.ts`, üç ekran ortak kullanıyor
   (hesap · checkout · profil tamamlama) ve künyesi *"form KOPYALANMADI, taşındı"* diyor.
@@ -122,6 +122,17 @@
   İş: o bloğu kitten çıkarılabilir hâle getirmek ve iki tüketiciye de vermek.
   *Bağımlılık:* MB-03 kapanmadan BAN alanı başvuru formuna taşınmamalı — aynı yeniden yükleme
   buraya da bulaşır.
+
+  **KAPANDI (19.08 · `(21.84)`).** Kaydın kendi teşhisi doğruydu ve aynen uygulandı: paylaşılan şey
+  formun tamamı değil, **alan bloğu** — `screens/customer-kit/address-fields.tsx`. Blok BAN
+  aramasını, posta kodu önerisini, çok yerleşimli kodun şehir listesini ve ülke türetimini taşıyor;
+  **kaydı YAPMIYOR.** Adres çekmecesi (kaydeden) ve başvuru formu (kaydetmeyen) artık aynı bloğu
+  çiziyor. Sözcükler ve alan biçimi çağırandan geçiyor (`copy`/`shape`/`withLabels`) — paylaşılan
+  şey CÜMLE değil DAVRANIŞ; iki ekranın kelimeleri tek sözlüğe hapsedilmedi.
+  Yan kazanç: posta kodu + şehir ikilisinin genişliği de tekleşti (başvuru formu kendi 1:1,6
+  oranını bırakıp çekmecenin 120 px + flex ölçüsüne geçti).
+  *Bağımlılık düştü:* MB-03'ün gerçek sebebi 17.08'de bulundu ve uygulamada değil (`adb input
+  text`in tetiklediği RN reload kısayolu), yani taşımanın önünde bir engel kalmamıştı.
 
 - [x] **MB-07 · Ülke seçim rozetlerinin (Fransız/Alman şirketi) tasarımı bozuk.** Kullanıcı
   bulgusu 11.08 + ölçüm: çipin **yatay dolgusu yok**, metin kenarlığa yapışıyor/taşıyor. Doğrusu
@@ -153,10 +164,25 @@
 - [x] **MB-11 · "Başvurunuz inceleniyor" gövdesi başlığı birebir tekrarlıyor.** Başlık
   *"Başvurunuz inceleniyor"*, gövde *"Başvurunuz inceleniyor — sonuç e-posta ile."*
 
-- [ ] **MB-12 · İşletme adresi sessizce adres defterine ekleniyor.** Başvuru kabul edilince
+- [x] **MB-12 · İşletme adresi sessizce adres defterine ekleniyor.** Başvuru kabul edilince
   müşterinin adres listesine yeni bir kayıt (etiket = şirket unvanı) giriyor; ekran bunu söylemiyor.
   Müşteri bir sonraki checkout'ta tanımadığı bir adres görüyor. *Karar: ya söylenir, ya
   başvuru adresi ayrı tutulur.*
+
+  **KAPANDI (19.08 · `(21.84)`) — ve kaydın bir yeri yanlıştı.** Yazım **onayda değil, başvuru
+  GÖNDERİLİRKEN** oluyor (`packages/application/src/customer/b2b.ts`, `submitB2bApplication`), yani
+  müşteri kabul edilmese bile adres defterine giriyor. Davranışın kendisi DOĞRU ve gerekçesi kodda
+  yazılı: adres yoksa operatörün onay kartındaki rota sinyali *"ölçülemedi"* kalıyor ve bölge
+  uyumu görünmüyor. Kusur davranışta değil **sessizlikteydi**.
+  Karar: *söylenir.* Adres alanlarının altına tek satır kondu — *"Bu adresi teslimat adreslerinize
+  de ekliyoruz — sipariş verirken şirket unvanınızla listede görürsünüz."* (üç dilde). Adresi ayrı
+  tutmak seçilmedi: o zaman operatörün sinyali yeniden kör kalırdı ve müşteri aynı adresi ikinci
+  kez yazardı.
+
+  **Yan bulgu, ayrı kalem değil ama kayda geçsin:** aynı yazımda ülke `isEuVat ? 'DE' : 'FR'` diye
+  TAHMİN ediliyor — AB KDV numarası olan her işletme Almanya sayılıyor. Bugün B2B'nin iki yolu
+  (SIRET = FR · USt-IdNr = DE) olduğu için pratikte tutuyor, ama üçüncü bir ülke açıldığı gün
+  sessizce yanlış ülke yazacak.
 
 ---
 
@@ -1486,9 +1512,18 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   kazanılan tek şey 90 günü aşmış bir e-postayı tıklayan müşteriye sebebini söylemek.
   **Karar: sıraya konmuyor, ama kaydı ölçümüyle duruyor** — bir daha "ucuz metin işi" sanılmasın.
 
-- [ ] **MB-33 · Ekran başlığı "Professionnels"** — üç dilde de aynı. Web'in kararıyla tutarlı
+- [x] **MB-33 · Ekran başlığı "Professionnels"** — üç dilde de aynı. Web'in kararıyla tutarlı
   (orada da program adı), ama native başlıkta tek başına duruyor ve Türkçe yüzeyde ne olduğu
   anlaşılmıyor; web meta başlığı açıklama ekliyor. *Karar maddesi, hata değil.*
+
+  **KAPANDI (19.08 · `(21.84)`) — ölçüm kaydı ZAYIFLATTI, değişiklik yapılmadı.** Kalemin dayanağı
+  *"müşteri başlığı tek başına okuyor"* varsayımıydı; ölçünce öyle olmadığı görüldü. Ekrana giden
+  TEK kapı vitrindeki davet kartı ve o kart şunu yazıyor: *"Restoran ya da market misiniz? Toptan
+  fiyatlar için profesyonel hesap açın."* Yani müşteri ne olduğunu **başlığı okumadan önce**
+  öğreniyor; başlığın hemen altındaki üstbaşlık da yerel (*"Restoran · Market · Toplu Mutfak"*).
+  Web de "Professionnels"i program adı olarak koruyor (gezinme + meta) ve açıklamayı yalnız meta
+  başlığına tire sonrası ekliyor — native'de o tirenin karşılığı zaten üstbaşlık.
+  Başlığı çevirmek iki yüzeyi ayrıştırırdı ve kazancı yoktu; kalem **arıza değil** diye kapandı.
 
 ---
 
@@ -1705,6 +1740,39 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   arıza DEĞİL, ertelenmiş bir yetenek** — o güne dek kimse "fatura adresi nerede" diye aramasın
   diye buraya yazıldı. Geldiği gün dokunacağı yer: profil künyesi (ikinci bir adres alanı) +
   mail gönderen taraf; başvuru formu değil.
+
+  **ÖLÇÜLDÜ 19.08 (kullanıcı isteği: "fatura konusunu sistemden önce incele") — KALEM YANLIŞ
+  SIRADAYMIŞ.** Sistemde yönlendirilecek bir fatura maili YOK ve tasarım gereği olmayacak:
+  `DOMAIN §9` *"Sistem resmî muhasebe değildir, e-fatura kesmez; hiçbir resmî belge (fatura, avoir
+  vb.) sistemde üretilmez — müşteri faturasını muhasebe tarafından alır, sitede fatura indirme
+  yoktur."* Kod bunu birebir uyguluyor: `order.reference_no` künyesinde *"resmî fatura no DEĞİL"*
+  yazıyor, `order.invoice_no` dış muhasebeden SONRADAN eşleşiyor (`matchInvoiceNo`), teslim maili
+  belge veriyor ama üstünde *"resmî fatura değildir"* diyor.
+  Yani "ayrı fatura e-postası alanı" açmak, **olmayan bir postanın adresini sormak** olurdu.
+  Sıra tersine döndü: önce faturanın yolu müşteriye ANLATILMALI (**MB-78**), ayrı adres ihtiyacı
+  ancak muhasebe yazılımı ve süreç netleşince konuşulur. Kalem o güne kadar açık ama **bloke**.
+
+- [ ] **MB-78 · FATURANIN NEREDEN ALINACAĞI HİÇBİR YERDE YAZMIYOR — B2B'de yasal ağırlığı var.**
+  Ölçüldü 19.08 (kullanıcı isteğiyle sistem geneli tarandı). Sistemin kararı net ve tutarlı
+  (`DOMAIN §9`: resmî belge üretilmez, fatura muhasebeden gelir) — **eksik olan bu kararın müşteriye
+  söylenmesi.**
+  · **Satış koşullarında (CGV) fatura maddesi YOK** — "fatura" kelimesi hiç geçmiyor; tek ilgili
+    satır *"Fiyatlar KDV dâhildir"*.
+  · **SSS'te fatura sorusu YOK** (dokuz sorunun hiçbiri).
+  · Gizlilik sayfası *"faturanın üzerindeki ad ve adres"*ten bahsediyor → müşteri bir faturanın var
+    olduğunu **biliyor**.
+  · Teslim maili *"bu resmî fatura değildir"* diyor → müşteri gerçeğini **arıyor** ve gidecek adres
+    yok.
+  · **B2B'de kritik:** restoran/market KDV indirimi için faturayı almak zorunda ve Fransız ticaret
+    kanunu B2B satışta faturayı zorunlu kılıyor. Başvuru ekranı ve onay maili süreçten hiç
+    bahsetmiyor; onay maili yalnız *"faturada bu ibare yer alır"* (autoliquidation) diyor — hangi
+    faturada, kimden, ne zaman: yazmıyor.
+
+  **BLOKE — metin yazılmadı ve bu bilinçli (kullanıcı kararı 19.08).** *"Müşteri faturasını bugün
+  fiilen nasıl alıyor?"* sorusunun cevabı **henüz belirlenmedi**; süreç kurulmadan cümle yazmak
+  tutamayacağımız bir söz vermek olurdu. Süreç netleşince yazılacak yerler hazır: CGV'ye bir madde,
+  SSS'e bir soru, B2B onay mailine bir paragraf. Karar gelene kadar bu kalem **MB-44'ü de bloke
+  ediyor**.
 
 - [ ] **MB-42 · `packages/design-tokens` yerelden import edilemiyor — göreli ihraçlarında uzantı yok.**
   Ölçüldü (11.08, MB-41 turunda): `app.config.ts`ten `@lezzet/design-tokens` import etmek

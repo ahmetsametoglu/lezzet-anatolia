@@ -84,9 +84,11 @@ function wire(handlers: { applicant?: Response; company?: Response; vat?: Respon
  */
 async function fillForm() {
   await fireEvent.changeText(screen.getByTestId('pro-legal-name'), 'Boulangerie Test');
-  await fireEvent.changeText(screen.getByTestId('pro-line1'), '8 rue du Fossé');
-  await fireEvent.changeText(screen.getByTestId('pro-postal-code'), '67000');
-  await fireEvent.changeText(screen.getByTestId('pro-city'), 'Strasbourg');
+  /* Kimlikler `pro-address-*` çünkü üç alan artık ORTAK bloktan geliyor (MB-06 · `address-fields`):
+     adres çekmecesiyle aynı davranış, aynı öneriler. Eski `pro-line1` düz bir alandı. */
+  await fireEvent.changeText(screen.getByTestId('pro-address-line'), '8 rue du Fossé');
+  await fireEvent.changeText(screen.getByTestId('pro-address-zip'), '67000');
+  await fireEvent.changeText(screen.getByTestId('pro-address-city'), 'Strasbourg');
   await fireEvent.changeText(screen.getByTestId('pro-contact-name'), 'Elif Kaya');
   await fireEvent.changeText(screen.getByTestId('pro-phone'), '0612345678');
 }
@@ -123,8 +125,8 @@ describe('ProfessionalsScreen', () => {
     await fireEvent.press(screen.getByTestId('pro-fetch'));
 
     await waitFor(() => expect(screen.getByTestId('pro-legal-name')).toHaveDisplayValue('Boulangerie Test'));
-    expect(screen.getByTestId('pro-line1')).toHaveDisplayValue('8 rue du Fossé');
-    expect(screen.getByTestId('pro-city')).toHaveDisplayValue('Strasbourg');
+    expect(screen.getByTestId('pro-address-line')).toHaveDisplayValue('8 rue du Fossé');
+    expect(screen.getByTestId('pro-address-city')).toHaveDisplayValue('Strasbourg');
   });
 
   it('kayıt bulunamazsa blok YİNE açılır — aday elle devam edebilmeli', async () => {

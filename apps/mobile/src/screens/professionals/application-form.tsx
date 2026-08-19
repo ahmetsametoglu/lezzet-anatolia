@@ -11,6 +11,9 @@ import {
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
+import { useAppLocale } from '@/lib/i18n/app-locale';
+import { AddressFields } from '@/screens/customer-kit/address-fields';
+import addressMessages from '@/screens/customer-kit/address-sheet-messages.json';
 import type { Messages } from './professionals-types';
 
 /*
@@ -85,6 +88,10 @@ export function ApplicationForm({
   accountEmail,
   onSubmit,
 }: ApplicationFormProps) {
+  /* Dil, adres bloğunun KENDİ sözlüğü için (BAN künyesi, öneri etiketleri): o sözcükler bileşene
+     aittir ve üç ekranda aynıdır — başvuru sözlüğüne kopyalansaydı biri değişince ötekiler eskirdi.
+     Alanların etiketleri ise bu formun sözlüğünden geçiyor (`t.form.*`). */
+  const locale = useAppLocale();
   const isSiret = input.kind === 'siret';
   const showCompany = companyOpen || !isSiret;
 
@@ -169,41 +176,35 @@ export function ApplicationForm({
             shape="pill"
             testID="pro-legal-name"
           />
-          <TextField
-            value={input.line1}
-            onChangeText={(value) => onChange({ line1: value })}
-            accessibilityLabel={t.form.line1}
-            label={t.form.line1}
-            placeholder={t.form.line1}
+          {/* ADRES ALANLARI ARTIK ORTAK BLOKTAN (MB-06). Burada üç düz alan vardı: ne BAN önerisi,
+              ne posta kodu önerisi, ne çok yerleşimli kodun şehir listesi. Aynı ülkede aynı adresi
+              giren müşteri, hesap ekranından girerse yardım alıyor, buradan girerse almıyordu.
+              Blok kaydı YAPMAZ — burada adres bir kayıt değil, başvuru gövdesinin parçası
+              (`address-fields` künyesi); yazma yine ekranın gönderiminde.
+
+              Ülke geçilmiyor (`onCountryChange` yok): başvurunun ülkesini sunucu KDV numarasından
+              türetiyor (`customer/b2b.ts`), formun söylediğinden değil. */}
+          <AddressFields
+            value={{ line1: input.line1, postalCode: input.postalCode, city: input.city }}
+            onChange={onChange}
+            copy={{
+              ...addressMessages[locale],
+              lineLabel: t.form.line1,
+              linePlaceholder: t.form.line1,
+              zipLabel: t.form.postalCode,
+              zipPlaceholder: t.form.postalCode,
+              cityLabel: t.form.city,
+              cityPlaceholder: t.form.city,
+            }}
+            withLabels
             shape="pill"
-            testID="pro-line1"
+            testIDPrefix="pro-address"
           />
-          {/* Posta kodu dar, şehir geniş — webin 1 : 1,6 oranı (kod beş hane, şehir adı uzun). */}
-          <View style={styles.pairRow}>
-            <View style={styles.pairNarrow}>
-              <TextField
-                value={input.postalCode}
-                onChangeText={(value) => onChange({ postalCode: value })}
-                accessibilityLabel={t.form.postalCode}
-                label={t.form.postalCode}
-                placeholder={t.form.postalCode}
-                shape="pill"
-                numeric
-                testID="pro-postal-code"
-              />
-            </View>
-            <View style={styles.pairWide}>
-              <TextField
-                value={input.city}
-                onChangeText={(value) => onChange({ city: value })}
-                accessibilityLabel={t.form.city}
-                label={t.form.city}
-                placeholder={t.form.city}
-                shape="pill"
-                testID="pro-city"
-              />
-            </View>
-          </View>
+          {/* SESSİZ KAYIT ARTIK SÖYLENİYOR (MB-12). Başvuru gönderilince bu adres müşterinin adres
+              defterine de yazılıyor (`customer/b2b.ts`) — davranış DOĞRU ve gerekçesi orada yazılı
+              (adres olmadan operatör bölge uyumunu göremiyor). Kusur davranışta değil sessizlikteydi:
+              müşteri bir sonraki siparişinde listede tanımadığı bir adres görüyordu. */}
+          <Text style={styles.note}>{t.form.addressNote}</Text>
         </View>
       ) : null}
 
@@ -407,12 +408,9 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.ink,
   },
 
-  pairRow: {
-    flexDirection: 'row',
-    gap: theme.space.lg,
-  },
-  pairNarrow: { flex: 1 },
-  pairWide: { flex: 1.6 },
+  /* `pairRow`/`pairNarrow`/`pairWide` KALKTI (MB-06): posta kodu + şehir ikilisinin genişliği artık
+     ortak blokta (`address-fields`) ve adres çekmecesiyle AYNI — aynı alan ikilisinin iki ekranda
+     iki farklı oranda çizilmesi zaten ayrışmanın kendisiydi. */
 
   notice: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],

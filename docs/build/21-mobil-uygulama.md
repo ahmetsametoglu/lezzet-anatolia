@@ -4114,6 +4114,57 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   altında ve `git log docs/build/21-mobil-uygulama.md`'den bu iş bulunamıyor. Tarih yeniden
   yazılmadı: geri alma kullanıcının kararıdır.
 
+- [x] (21.84) **B2B ALANI BÜTÜN ALINDI — adres bloğu tekleşti, sessiz kayıt söylendi; FATURA ise
+  ölçüldü ve yazılmadı (kullanıcı kararı 19.08)**
+  → `touches: apps/mobile/src/screens/{customer-kit/{address-fields.tsx,address-form.tsx},professionals/*},
+  docs/uygulama/BACKLOG-musteri.md`
+
+  Kullanıcı listeyi görüp bloğu seçti (*"B2B alanı bütün"* — CLAUDE §4: iş birimi talep değil
+  ALANDIR). Dört kalem ölçüldü; **üçü kayıtta yazandan farklı çıktı.**
+
+  **1 · MB-06 KAPANDI — paylaşılacak şey formun tamamı değil, ALAN BLOĞUYMUŞ.** Ölçüm kaydın
+  teşhisini doğruladı: `address-form` kaydı KENDİSİ yazıyor (`createAddress`), oysa B2B'de adres
+  bir kayıt değil başvuru gövdesinin parçası — o yüzden form olduğu gibi kullanılamıyordu ve
+  başvuru ekranı üç düz `TextField` yazmıştı. Yeni `customer-kit/address-fields.tsx` BAN aramasını,
+  posta kodu önerisini, çok yerleşimli kodun şehir listesini ve ülke türetimini taşıyor; kalıcılık
+  çağıranda kaldı. Sözcükler ve alan biçimi prop'tan geçiyor (`copy`/`shape`/`withLabels`):
+  **paylaşılan şey CÜMLE değil DAVRANIŞ** — iki ekranın kelimelerini tek sözlüğe hapsetmek,
+  çözdüğümüz ayrışmanın başka türlüsü olurdu. Yan kazanç: posta kodu + şehir genişliği de tekleşti.
+
+  **2 · MB-12 KAPANDI — ve kaydın bir yeri yanlıştı.** Adres **onayda değil, başvuru GÖNDERİLİRKEN**
+  yazılıyor (`customer/b2b.ts`), yani kabul edilmeyen aday bile deftere giriyor. Davranış DOĞRU ve
+  gerekçesi kodda: adres yoksa operatörün onay kartındaki rota sinyali *"ölçülemedi"* kalıyor.
+  Kusur davranışta değil **sessizlikteydi** — alanların altına tek satır kondu (üç dilde).
+  Adresi ayrı tutma seçeneği elendi: sinyal yeniden körleşir, müşteri aynı adresi iki kez yazardı.
+
+  **3 · MB-33 KAPANDI — ÖLÇÜM KAYDI ÇÜRÜTTÜ, kod değişmedi.** Dayanak *"müşteri başlığı tek başına
+  okuyor"*du; ekrana giden tek kapı vitrindeki davet kartı ve o kart *"Restoran ya da market
+  misiniz? Toptan fiyatlar için profesyonel hesap açın."* diyor — müşteri ne olduğunu başlığı
+  okumadan önce biliyor, üstelik başlığın altındaki üstbaşlık da yerel. Başlığı çevirmek web'le
+  ayrışırdı, kazancı yoktu.
+
+  **4 · MB-44 SIRAYI ŞAŞIRMIŞ, ve YENİ BİR AÇIK ÇIKTI (MB-78).** Kullanıcı *"fatura konusunu
+  sistemden önce incele"* dedi; sistem geneli tarandı. `DOMAIN §9` net: **hiçbir resmî belge
+  sistemde üretilmez**, fatura muhasebeden gelir, sitede indirme yok — ve kod bunu birebir
+  uyguluyor (`reference_no` ≠ fatura no · `invoice_no` dıştan eşleşiyor · teslim maili *"resmî
+  fatura değildir"* diyor · muhasebe export'u 14 sütunla muhasebeciye veri veriyor). Yani
+  *"B2B'de ayrı fatura e-postası"* **olmayan bir postanın adresini sormak** olurdu.
+  Asıl açık başka: **faturanın nereden alınacağı hiçbir müşteri yüzeyinde yazmıyor** — CGV'de
+  fatura maddesi yok, SSS'te soru yok, ama gizlilik sayfası faturadan bahsediyor ve teslim maili
+  *"bu fatura değil"* diyor. B2B'de bunun yasal ağırlığı var. **Metin YAZILMADI:** kullanıcıya
+  *"müşteri faturasını bugün fiilen nasıl alıyor?"* diye soruldu, cevap **"henüz belirlenmedi"** —
+  süreç kurulmadan cümle yazmak tutamayacağımız bir söz vermek olurdu. Kayıt `MB-78`, MB-44'ü de
+  bloke ediyor.
+
+  **Doğrulama:** `tsc` (mobil) temiz · mobil jest **84/84 · 599/599** yeşil. İlk koşuda sekiz paket
+  düştü: biri GERÇEKTİ (başvuru testi eski `pro-line1` kimliğini arıyordu — bloğa geçince
+  `pro-address-line` oldu), kalanı MB-38'in kayıtlı yük kırılganlığıydı (`app-shell` ·
+  `operations-shell`) ve ikinci koşuda kendiliğinden temizlendi — defterdeki desenin birebir aynısı.
+
+  **Durum — cihazda doğrulanmadı:** mobil API (3002) bu oturumda düşmüş durumda (gözcü ayakta,
+  çocuk süreç yok; kod sağlam — soğuk sonda 200 verdi) ve dev sunucusu kullanıcının. Sunucu dönünce
+  başvuru formundaki BAN önerileri cihazda görülmeli.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
