@@ -105,7 +105,11 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     durakları da sefere bağlar (mobil şeridin bulgusu). **`courier_id` sökülmedi:** beş sahiplik
     kapısı ona yaslanıyor; yazan el sevkiyatçı menüsünden kuryenin sefer başlangıcına geçti.
   - **BEKLEYEN(11.7):** rota seçimi kuryenin DEPO KAPSAMINI süzmüyor — A deposunun kuryesi B'nin
-    rotasını başlatabilir (rol kapısı yalnız role bakıyor; kapsam ataması 19.5 ile bağlanacak).
+    rotasını başlatabilir (rol kapısı yalnız role bakıyor). ~~Kapsam ataması 19.5 ile bağlanacak~~
+    → **beklediği altyapı 19.08 itibarıyla HAZIR** (kayıt düzeltmesi): kapsam Ayarlar'dan yazılıyor
+    (03.08, `user_profiles.warehouse_ids`) ve `warehouseScope` motoru 19.3'ten beri var — bu artık
+    bekleyen değil, rota kapılarına (`listCourierRoutes` · `startCourierDay`) süzgeç ekleyen DAR bir
+    iş; sırada.
 
 ## Netleşecekler
 

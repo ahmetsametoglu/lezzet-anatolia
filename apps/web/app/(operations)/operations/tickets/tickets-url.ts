@@ -79,6 +79,11 @@ export function ticketsUrl(state: TicketsUrlState): string {
   return qs ? `${TICKETS_PATH}?${qs}` : TICKETS_PATH;
 }
 
-// BAŞKA ekranlardan buraya köprü (`admin-talepler.md §5`: sipariş detayı, müşteri detayı, WhatsApp
-// izleme) HENÜZ YOK — o ekranlar bağlantıyı kurduğunda `settingsLink` gibi bir `ticketsLink`
-// yardımcısı da burada doğar. Bugün yazılsaydı çağıranı olmayan bir dışa verim olurdu (`knip`).
+/**
+ * Başka ekrandan TEK talebe köprü (`admin-talepler.md §5`) — künyenin "bağlantı kurulduğu gün
+ * doğar" dediği yardımcı; ilk tüketicisi sipariş detayının "Bağlı talepler" kartı (19.08).
+ * Elle `?t=…` yazmak parametre adını ikinci kez yazmak olurdu (`stockLink`/`ordersLink` deseni).
+ */
+export function ticketsLink(ticketId: string): string {
+  return ticketsUrl({ f: DEFAULTS.f, t: ticketId });
+}

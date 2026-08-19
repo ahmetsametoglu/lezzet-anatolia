@@ -456,8 +456,10 @@ export function CustomerPreview({
                         <span className="flex items-center gap-1.5">
                           <span className="font-ops-mono text-ops-sm font-medium text-ops-ink">{detail.ticketCount}</span>
                           {detail.openTicketCount > 0 ? <Badge tone="amber">{detail.openTicketCount} açık</Badge> : null}
-                          {/* BEKLEYEN(09.12): talepler ekranı yok, köprü oraya açılacak. Sayı gösterilir ama
-                        tıklanabilir yapılmaz — 404'e giden bir bağ, olmayan bir bağdan kötüdür. */}
+                          {/* BEKLEYEN(09.9): talepler ekranı VAR (16.3) ama URL'i müşteri süzgeci
+                        taşımıyor (`tickets-url.ts`: yalnız f+t) — "bu müşterinin talepleri" görünümü
+                        kurulamıyor. Süzgeç doğunca sayı köprüye döner; o güne dek tıklanabilir
+                        yapılmaz — genel kuyruğa açılan bir bağ, yanlış vaat olurdu. */}
                         </span>
                       )}
                     </div>

@@ -446,8 +446,15 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
   - **Durum (04.08 — `BEKLEYEN(09.11)` (a) KAPANDI: künye kart açılırken TAZELENİYOR).** Müşteri şeridi resmî kayıt istemcisini indirdi (`lib/b2b/company-registry.ts`) ve karar bendeydi: her kart açılışında dış servise çıkmanın bedeli var. **Çıkıyoruz** — çünkü kartın tek işi TAZE bir karar vermek ve kart nadir açılıyor (operatör başvuruyu incelerken, liste okumasında değil). Künye başvuru anında donuyordu; bugün kapanmış bir şirket dünkü "Aktif" ile görünüyor ve operatör tam o satıra bakıp onaylıyordu.
     **Servis düşerse profildeki künyeye dönülüyor, "kapandı" DENMİYOR.** İstemci `not_found` ile `unavailable`'ı ayırıyor ama ekran ikisini de "doğrulanamadı" sayıyor — ve bu bilinçli: kaydın bugün bulunamaması onu yok saymaya yetmez (numara değişmiş, uç nokta indeksini güncellemiş olabilir) ve ikisini "şirket kapandı" diye okumak meşru bir başvuruyu yanlışlıkla reddettirirdi. Künye başlığı da tazeyi gösteriyor: sinyaller tazeye bakarken başlık eskiyi yazsaydı operatör "kapalı" sinyalinin yanında eski unvanı okurdu.
     **VIES tazelemesi kartın turunda DEĞİL:** başvuru anında doğrulanıyor (`checkEuVatNumber`), sonradan tazelenmiyor — `BEKLEYEN(09.11)` orada duruyor. Faaliyet kodunun okunur adı da yok (`design/BACKLOG §2`): NAF'ın 730 satırını kopyalamak bakılmayan ikinci bir sözlük olurdu.
-- [ ] (09.12) **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
+- [x] (09.12) **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
   - *Bitti:* durum döngüsü `open → in_progress → resolved` (yeniden açılabilir) çalışıyor; devralınan talepte AI susuyor
+  - **16. MODÜLDE TESLİM EDİLDİ (kayıt düzeltmesi 19.08 — satır `[ ]` görünüyordu, iş aylardır yayındaydı).**
+    Tarif edilen her parça talep modülünün kendi görevlerinde inmiş: kuyruk+detay+iade köprüsü `16.3`
+    (ekran `/operations/tickets`, 03.08) · AI ayırt etme ve devralma `16.5` · canlı yenileme `16.8` ·
+    elle talep açma `manual-ticket-dialog` · destek ajanının veri araçları `16.9`. Açık kalan tek
+    parça **cevap → e-posta bildirimi** ve o zaten `16.4`ün `[~]` satırında izleniyor — iki modülde
+    birden izlemek, birinin bayatlaması demekti (bu satırın başına gelen tam olarak bu). Talep
+    yönetiminin durumu bundan böyle `16-talep-sikayet.md`den okunur.
 - [x] (09.13) **Stok görünümü** · `touches: apps/web/app/(operations)/operations/stock/**` — varyant bazında fiili/ayrılmış/kullanılabilir; parti listesi (kalan raf ömrü %, lot, konum, alış fiyatı); yaklaşan tarihli uyarılar + teklif kararı (fiyatlar sayfasıyla aynı karara çıkar); **lot/geri çağırma sorgusu** ("bu parti kimlere gitti" — OrderItemBatch'ten); imha/fire geçmişi
   - *Bitti:* lot numarasından sipariş+müşteri listesine tek sorguda ulaşılıyor; DLC'si geçmiş partide yalnız imha yolu görünüyor
   - **Durum (28.07):** `/operations/stock` üç sekme — **Stok seviyeleri** (boy başına fiili/ayrılmış/kullanılabilir + en yakın tarih; satır seçilince partileri yan panelde), **Yaklaşan tarihli** (karar kuyruğu), **İmha geçmişi**. Cihaz forku var; mobil **Karar** sekmesiyle açılır (tasarım notu: telefonda günlük iş "yaklaşan tarihliye bakıp teklif açmak"). Geri çağırma her sekmeden tek dokunuş uzakta.
@@ -515,7 +522,11 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     - **Zeminin ikisi de HAZIR** (ölçüldü 04.08): `postal_code_demand` tablosu + `record_postal_code_demand` RPC talep sıklığını zaten sayıyor (`0023_notices.sql`); `zone_notice` tablosu + `ZoneNoticeService` + `recordZoneNoticeAction` haber bekleyenleri zaten kaydediyor. **Eksik olan veri değil, BAĞ:** okuma kapısı (ekran için) ve tetikleyici (bölge aktifleşince gönderim).
     - **Tetikleyici bir OLAY olmalı, bir düğme değil:** "haber ver" düğmesi konsaydı bölgeyi açan kişi unutabilirdi ve bekleyen müşteri asla haber alamazdı — üstelik bu, sistemin bildiği bir şeyi insana hatırlatmaya bırakmak olurdu. Gönderim bölgenin aktifleşmesine bağlanmalı; idempotent olmalı (aynı bekleyene iki kez gitmesin) ve gönderilenler `zone_notice` üzerinde işaretlenmeli, yoksa bölge iki kez kaydedilince aynı kişi iki mail alır.
     - Arka uç tarafı istendi: `docs/talep/arka-uc-bolge-talebi-ve-bekleyen-haberi.md`.
-  - **NAV TARAMASI (03.08) — rayda BEŞ ölü giriş var, biri de 404'ün kendisinde.** WhatsApp girişi
+  - **~~NAV TARAMASI (03.08) — rayda BEŞ ölü giriş var~~ → BEŞİ DE EKRANINA KAVUŞTU (kayıt
+    düzeltmesi 19.08):** `deliveries` (07.08, 09.15) · `finance` · `reports` · `analytics` ·
+    `feedback` (03.08, 17.x) bugün gerçek klasörler ve rota veriyorlar — alttaki tarama tarihe
+    karıştı, 404 döngüsü bulgusu dahil kendiliğinden kapandı. Paragraf tarihçe olarak duruyor;
+    "ray gidilebilecek yerlerin listesidir" ilkesi hâlâ bağlayıcı. *(Taramanın aslı:)* WhatsApp girişi
     kaldırılırken (denetim O-Y3) yalnız o giriş bakılmış, ray taranmamıştı. Tam liste: `deliveries`
     (09.15) · `finance` (12.x) · `reports` · `analytics` · `feedback` (17.x). Beşi de `[...rest]`
     catch-all'a düşüyor, yani personel `not-found`'u görüyor — çökme değil, ama **var olmayan bir

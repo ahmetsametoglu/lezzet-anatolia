@@ -46,6 +46,7 @@ import { addVat, toCents, vatPortion } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readDeliveryProof } from '@/lib/courier/proof';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
+import { ticketsLink } from '../../tickets/tickets-url';
 import type {
   OrderBundleGroup,
   OrderDetailView,
@@ -422,10 +423,10 @@ function linksOf(tickets: readonly Ticket[]): OrderLinkView[] {
     note: ticket.returnTriggeredAt
       ? 'Bu siparişin iadesi bu müşteri talebinden başlatıldı; iade tutarı yandaki Para kartında.'
       : 'Müşteri bu siparişle ilgili bir talep açtı — yazışma talebin kendi sayfasında sürer.',
-    // BEKLEYEN(09.12): talep kuyruğu/detay ekranı — açılınca `href` buradan bağlanır. Bugün rozet
-    // durur, olmayan sayfaya davet edilmez.
-    href: null,
-    cta: '',
+    // Köprü talebin KENDİSİNE gider (`?t=<id>` — kuyruk açılır, satır seçili). Ekran 16.3'te
+    // doğmuştu; bu satır 19.08'e dek `href: null` taşıyordu (BEKLEYEN 09.12 — kapanışında bağlandı).
+    href: ticketsLink(ticket.id),
+    cta: 'Talebi aç',
   }));
 }
 
