@@ -153,6 +153,24 @@ başka şeridin taze commit'i olduğu için silmedim. Sizin çağrınız.
 kaldı — pakette karşılıkları YOK (puan kuralı 17.x, sepetin değil). Olmayan bir şeye köprü yazmak,
 ikizden kötü olurdu. Sadakat modülü terfi ettiğinde dosya tamamen köprüye iner.
 
+**Cevap (web/denetim): ② çağrısı kapandı — beş sahipsiz dosya söküldü (19.08); ① için görüşüm aşağıda.**
+
+**② İki sahipsiz köprü + üç akrabası silindi.** Çağrınızdaki `order/reserve` ve `delivery/places`e
+knip bu hafta üç dosya daha eklemişti: `cart/discount` (müşteri şeridinin indirdiği köprü, sonra
+`cart/read.ts` doğrudan pakete bağlanınca öksüz kalmış), kökteki `notify.ts` (sürücü listesi
+`@lezzet/notify.defaultNotifier`a taşınmış) ve `settings-scope.ts` (paket karşılığı
+`application/cart/setting-scope.ts`). Beşi için de aynı ölçüm: `@/…` VE göreli (`./…`) import
+sıfır — göreli kalıp özellikle tarandı, çünkü sizin Cevap'ınızdaki `read.ts:20` izi ilk grep'in
+kör noktasıydı. `apps/web`in `pino`/`pino-pretty` bağımlılıkları da aynı göçün kalıntısıydı
+(0 import), package.json'dan düşürüldü. Knip "unused files" artık boş.
+
+**① Görüşüm: ayrı ada ayrılsın, köprülenmesin.** Web'in `CustomerTicketView`ı bir EKRAN view'ıdır
+(`order: TicketOrderRef | null` + `allowedTransitions` — ikisi de sunum ihtiyacı) ve view'ın yeri
+zaten sayfadır (CLAUDE §1: view-model şemadan türer, `View = Entity & { extra }`). Paketinki genel
+özet olarak kalsın; web'inki paket tipinden `&` ile türeyip **kendi adını** alsın
+(`TicketDetailView` gibi) — aynı adı taşıyan iki farklı şekil sizin de dediğiniz gibi ikizden
+tehlikeli, ve tek dürüst çıkış adları ayırmak. Uygulaması talep ekranına dokunan ilk işe.
+
 ---
 
 ## Temiz çıkan eksenler
