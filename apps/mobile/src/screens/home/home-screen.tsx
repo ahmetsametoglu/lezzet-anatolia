@@ -92,6 +92,49 @@ function greetingOf(t: Messages, hour: number, firstName: string | null): string
   return t.greeting.withName.replace('{greeting}', part).replace('{name}', firstName);
 }
 
+/**
+ * **KAÇ TANE KALDIYSA O KADAR ACELE** — fırsat kartının sınır satırı (kullanıcı kararı 19.08).
+ *
+ * ── ÖNCEKİ HÂL BİR YALANDI ──────────────────────────────────────────────────
+ * Satır sabitti ve her karta koşulsuz basılıyordu: *"STOKLA SINIRLI · YALNIZ BUGÜN"*. İkinci
+ * yarısının arkasında hiçbir veri YOKTU — fırsat bir kampanya değil, **SKT'si yaklaşan bir
+ * partiden doğuyor**; kimse seçmiyor ve `design/BACKLOG.md`nin kendi cümlesiyle *"süresi yoktur"*.
+ * Sözleşmede bitiş anı diye bir alan da yok, yani ekran bilse bile yazamazdı. Kullanıcı cihazda
+ * gördü ve sordu: *"Gerçekten sadece bugüne özel bir indirim mi yoksa bugün son günü mü?"* — ikisi
+ * de değildi. Bu, 09.08'de tam bu sebeple kaldırılan "GÜNÜN FIRSATI · {süre} KALDI" bandının
+ * hayatta kalan ikiziydi.
+ *
+ * ── GERÇEK SINIR GÜN DEĞİL, ADET ────────────────────────────────────────────
+ * Teklif fiyatı PARTİYE bağlı: o partide kalandan fazlası normal fiyata taşar (DOMAIN §5). Sayı
+ * zaten sözleşmede (`limitLabel`) ve ürün detayı onu doğru kullanıyordu; yalnız bu kart yok
+ * sayıyordu. Artık iki ekran aynı gerçeği söylüyor.
+ *
+ * ── İKİ KADEME (kullanıcı kararı) ───────────────────────────────────────────
+ * *"Belirli bir adetten fazla ise stoklarla sınırlı diyelim. Fakat belli bir adetin altındaysa
+ * son üç adet de sinirli bir ifade kullanabiliriz."* — çok kalanda aciliyet uydurmak yanlış
+ * olurdu, az kalanda ise sayıyı saklamak müşteriden bilgi gizlemek olur.
+ *
+ * **Sınır YOKSA satır HİÇ çizilmez:** `limitLabel === null` "adet sınırı yok" demektir ve o hâlde
+ * söylenecek doğru bir cümle yoktur — sıfır değil, YOK (CLAUDE §1).
+ */
+function offerLimitOf(limitLabel: string | null, t: Messages['offers']): string | null {
+  if (limitLabel === null) return null;
+  const left = Number(limitLabel);
+  /* Sayıya çevrilemeyen değer beklenmiyor (`map.ts` `String(quantityCap)` yazıyor) ama sessizce
+     `NaN` ile eşik karşılaştırmasına girmesin: bilinmeyen sayıda "son N adet" yazmak uydurma olur,
+     "stokla sınırlı" ise her hâlde doğru. */
+  if (!Number.isFinite(left)) return t.limited;
+  return left <= LAST_FEW_THRESHOLD ? t.lastFew.replace('{n}', String(left)) : t.limited;
+}
+
+/**
+ * "Son birkaç adet" eşiği — **parametrik**, iş kuralı değil bir SUNUM kararı (CLAUDE §4: eşik
+ * sorulmaz, makul varsayılan konur ve parametrik yapılır). 5'in altında sayıyı söylemek müşteriye
+ * gerçek bir bilgi verir; üstünde "3 kaldı" demek de olmadığı için ölçüt burada duruyor.
+ * Değiştirmek isteyen tek satırı değiştirir; iki kademe de aynı yerden okunur.
+ */
+const LAST_FEW_THRESHOLD = 5;
+
 export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
@@ -394,7 +437,11 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                 <Text style={styles.offerPrice}>{formatPrice(offer.priceCents ?? 0, locale)}</Text>
                 <Text style={styles.offerWas}>{formatPrice(offer.wasCents, locale)}</Text>
               </View>
-              <Text style={styles.offerLimit}>{t.offers.limited}</Text>
+              {/* SATIR ARTIK VERİDEN (kullanıcı bulgusu + kararı 19.08) — gerekçe `offerLimit`
+                  yardımcısının künyesinde. Sınır YOKSA hiçbir şey yazılmaz. */}
+              {offerLimitOf(offer.limitLabel, t.offers) === null ? null : (
+                <Text style={styles.offerLimit}>{offerLimitOf(offer.limitLabel, t.offers)}</Text>
+              )}
             </View>
           </PressableSurface>
         ))}

@@ -4165,6 +4165,45 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   çocuk süreç yok; kod sağlam — soğuk sonda 200 verdi) ve dev sunucusu kullanıcının. Sunucu dönünce
   başvuru formundaki BAN önerileri cihazda görülmeli.
 
+- [x] (21.85) **FIRSAT KARTI ARTIK GERÇEĞİ SÖYLÜYOR — "YALNIZ BUGÜN"ün arkasında hiçbir veri yokmuş
+  (kullanıcı bulgusu + kararı 19.08)**
+  → `touches: apps/mobile/src/screens/home/{home-screen.tsx,messages.json}, docs/uygulama/BACKLOG-musteri.md`
+
+  Kullanıcı cihazda gördü ve **soru olarak** getirdi: *"Gerçekten sadece bugüne özel bir indirim mi
+  yoksa bugün son günü mü? Ya da bu metin neden burada yazıyor?"* Ölçüldü: **ikisi de değil.** Satır
+  koşulsuz basılan sabit bir dizeydi (*"STOKLA SINIRLI · YALNIZ BUGÜN"*), sözleşmede bitiş anı diye
+  bir alan yoktu ve fırsat bir kampanya değil — **SKT'si yaklaşan bir partiden doğuyor**, kimse
+  seçmiyor. `design/BACKLOG.md` bunu zaten yazmıştı: *"kimse seçmez ve süresi yoktur."*
+
+  **Bu, 09.08'de KALDIRILAN özelliğin hayatta kalan ikiziydi.** O gün "GÜNÜN FIRSATI · {süre} KALDI"
+  bandı tam bu gerekçeyle sökülmüştü — *"ekranın en görünür yerinde tutulamayacak bir söz olurdu:
+  sayaç işleyip biter, arkasında kampanya olmaz"*. Bant gitti, aynı yalanı söyleyen tek satır kaldı.
+  Fransa'da bunun adı da var: ürünün sınırlı süreyle sunulduğuna dair yanlış beyan.
+
+  **Çare uydurmak değil, ELDEKİ SAYIYI kullanmaktı.** Gerçek sınır gün değil ADET: `limitLabel`
+  (teklif fiyatı partiye bağlı, kalandan fazlası normal fiyata taşar — DOMAIN §5). Alan mobil
+  sözleşmede zaten vardı ve **ürün detay ekranı doğru kullanıyordu**; yalnız vitrin kartı yok
+  sayıyordu. Web'in sözlüğü de dürüsttü (*"Stokla sınırlı"* + *"En fazla {n} adet"*) — ayrışan tek
+  yer bu karttı.
+
+  **İki kademe, kullanıcı kararı:** *"Belirli bir adetten fazla ise stoklarla sınırlı diyelim. Fakat
+  belli bir adetin altındaysa son üç adet de sinirli bir ifade kullanabiliriz."* → eşiğin üstünde
+  `STOKLA SINIRLI`, altında `SON {n} ADET`, sınır yoksa **satır hiç çizilmez** (CLAUDE §1: yok olan
+  şey sıfır değildir). Eşik parametrik: `LAST_FEW_THRESHOLD = 5` — bir SUNUM kararı, iş kuralı
+  değil (CLAUDE §4: eşik sorulmaz, makul varsayılan konur ve parametrik yapılır).
+
+  **Cihazda doğrulandı:** uç `limitLabel` 14/12/10 olan üç fırsat döndü, üçü de eşiğin üstünde ve
+  kartlar `STOCK LIMITÉ` yazdı — *"AUJOURD'HUI SEULEMENT"* gitti. **`SON {n} ADET` dalı cihazda
+  üretilemedi:** bir partide kalanı 5'in altına düşürmek gerekirdi, o yerel veriye müdahaledir ve
+  kullanıcının kararıdır.
+
+  **BEKLEYEN(MB-79):** sözlükteki `flash` blokları (`GÜNÜN FIRSATI · {time} KALDI` · `SÜRE DOLDU`)
+  üç dilde hâlâ duruyor ama hiçbir yerde kullanılmıyor — 09.08'de blok kalkarken sözlük
+  temizlenmemiş. Ayrı iş değil, bir dahaki dokunuşta silinsin.
+
+  **Doğrulama:** `tsc` temiz · mobil jest **84/84 · 599/599** (ilk koşuda iki paket düştü, ikinci
+  koşuda temizlendi — MB-38'in kayıtlı yük kırılganlığı).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

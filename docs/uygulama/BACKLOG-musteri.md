@@ -1752,6 +1752,34 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   Sıra tersine döndü: önce faturanın yolu müşteriye ANLATILMALI (**MB-78**), ayrı adres ihtiyacı
   ancak muhasebe yazılımı ve süreç netleşince konuşulur. Kalem o güne kadar açık ama **bloke**.
 
+- [x] **MB-79 · FIRSAT KARTI "YALNIZ BUGÜN" DİYORDU — arkasında hiçbir veri yoktu.**
+  Kullanıcı cihazda gördü ve sordu (19.08): *"Gerçekten sadece bugüne özel bir indirim mi yoksa
+  bugün son günü mü? Ya da bu metin neden burada yazıyor?"* — **ikisi de değildi.**
+  · `home-screen.tsx` satırı **koşulsuz** basıyordu; sözlükteki dize sabitti.
+  · `HomeOfferSchema`'da **bitiş anı diye bir alan yok** — ekran bilse bile yazamazdı.
+  · Fırsat bir kampanya değil: **SKT'si yaklaşan bir partiden doğuyor**, kimse seçmiyor.
+    `design/BACKLOG.md` bunu zaten yazmış: *"kimse seçmez ve **süresi yoktur**"*.
+  · **Bu, 09.08'de kaldırılan "GÜNÜN FIRSATI · {süre} KALDI" bandının hayatta kalan ikiziydi** —
+    o blok tam bu gerekçeyle sökülmüştü (*"ekranın en görünür yerinde tutulamayacak bir söz"*),
+    ama aynı yalanı söyleyen tek satır kalmış ve gözden kaçmıştı.
+  · Fransa'da bunun adı var: ürünün sınırlı süreyle sunulduğuna dair yanlış beyan.
+
+  **ÇARE — gerçek sınır gün değil ADET, ve o sayı zaten elimizdeydi.** `limitLabel`: teklif fiyatı
+  partiye bağlı, o partide kalandan fazlası normal fiyata taşıyor (DOMAIN §5). Alan mobil
+  sözleşmede vardı ve **ürün detay ekranı doğru kullanıyordu**; yalnız vitrin kartı yok sayıp
+  uydurma cümleyi basıyordu.
+  **İki kademe (kullanıcı kararı):** eşiğin üstünde *"STOKLA SINIRLI"*, altında *"SON {n} ADET"* —
+  çok kalanda aciliyet uydurmak yanlış, az kalanda sayıyı saklamak bilgi gizlemek olurdu. Sınır
+  YOKSA satır hiç çizilmiyor. Eşik parametrik (`LAST_FEW_THRESHOLD`, varsayılan 5).
+  **Cihazda doğrulandı (19.08):** uç 14/12/10 sınırlı üç fırsat döndü, üçü de eşiğin üstünde ve
+  kartlar *"STOCK LIMITÉ"* yazdı; *"AUJOURD'HUI SEULEMENT"* gitti. **"SON {n} ADET" dalı cihazda
+  ÜRETİLEMEDİ** — bunun için bir partide kalan adedi 5'in altına düşürmek gerekirdi, o da yerel
+  veriye müdahaledir ve kullanıcının kararıdır.
+
+  **Artık ölü:** sözlükteki `flash` blokları (`GÜNÜN FIRSATI · {time} KALDI`, `SÜRE DOLDU`) üç dilde
+  hâlâ duruyor ama hiçbir yerde kullanılmıyor — 09.08'de blok kalkarken sözlük temizlenmemiş.
+  Ayrı bir iş değil; bir dahaki dokunuşta silinsin.
+
 - [ ] **MB-78 · FATURANIN NEREDEN ALINACAĞI HİÇBİR YERDE YAZMIYOR — B2B'de yasal ağırlığı var.**
   Ölçüldü 19.08 (kullanıcı isteğiyle sistem geneli tarandı). Sistemin kararı net ve tutarlı
   (`DOMAIN §9`: resmî belge üretilmez, fatura muhasebeden gelir) — **eksik olan bu kararın müşteriye

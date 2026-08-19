@@ -44,7 +44,8 @@
     },
     "offers": {
       "discount": "−%{n}",
-      "limited": "STOKLA SINIRLI · YALNIZ BUGÜN"
+      "limited": "STOKLA SINIRLI",
+      "lastFew": "SON {n} ADET"
     },
     "collections": {
       "eyebrow": "Koleksiyonlar",
@@ -127,7 +128,8 @@
     },
     "offers": {
       "discount": "−{n} %",
-      "limited": "STOCK LIMITÉ · AUJOURD'HUI SEULEMENT"
+      "limited": "STOCK LIMITÉ",
+      "lastFew": "PLUS QUE {n}"
     },
     "collections": {
       "eyebrow": "Collections",
@@ -210,7 +212,8 @@
     },
     "offers": {
       "discount": "−{n} %",
-      "limited": "SOLANGE VORRAT REICHT · NUR HEUTE"
+      "limited": "SOLANGE VORRAT REICHT",
+      "lastFew": "NUR NOCH {n}"
     },
     "collections": {
       "eyebrow": "Kollektionen",
