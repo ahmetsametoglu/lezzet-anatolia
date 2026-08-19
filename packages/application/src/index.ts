@@ -75,10 +75,11 @@ export {
   neighborInviteUrl,
   openNeighborInvite,
   readNeighborWelcome,
+  readPendingNeighborAwards,
   readPendingNeighborInvite,
   tryOpenNeighborInvite,
 } from './customer/neighbor';
-export type { NeighborWelcome, OpenNeighborInviteOutcome, PendingNeighborInvite } from './customer/neighbor';
+export type { NeighborWelcome, OpenNeighborInviteOutcome, PendingNeighborAward, PendingNeighborInvite } from './customer/neighbor';
 // ── Müşteri sipariş okuması (08.5) — terfi 21.16 ────────────────────────────
 // Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı; web köprü olarak
 // duruyor. Detay kapısı İKİ anahtarı da kabul eder (kimlik ⟷ referans) — gerekçe künyede.
