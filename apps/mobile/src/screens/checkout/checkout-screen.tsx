@@ -873,6 +873,20 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           disabled={blocked !== null || submitting}
           testID="checkout-confirm"
         />
+
+        {/* SATIŞ KOŞULLARI — düğmenin ALTINDA, web'in birebir yeri ve birebir cümlesi
+            (`checkout-steps.tsx:596`). Native'de yoktu (ölçüldü 19.08, MB-76): müşteri "onaylayarak
+            kabul etmiş olursunuz" cümlesini görmeden sipariş veriyordu ve kabul ettiği metnin
+            okunacağı yer de uygulamada hiç açılmıyordu. Cümle ile bağ AYRI satır: yerelleştirilmiş
+            cümleyi parçalayıp içine bağ gömmek üç dilde de kırılgan olurdu (web künyesinin gerekçesi). */}
+        <View style={styles.termsBlock}>
+          <Text style={styles.termsLine}>{t.terms}</Text>
+          <TextAction
+            label={t.termsLink}
+            onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'sales' } })}
+            testID="checkout-terms"
+          />
+        </View>
       </ScrollView>
 
       {/* Adres çekmecesi — hesap ekranının kullandığı KİT bileşeni. Sipariş akışı kesilmez:
@@ -1013,6 +1027,21 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     lineHeight: theme.text.helper * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  termsBlock: {
+    alignItems: 'center',
+    gap: theme.space.xs,
+  },
+  /* `body-sm` (14), `helper` DEĞİL — MB-46'nın ölçütü: müşterinin KARAR için okuduğu metin 14'ün
+     altına inmez. Hemen üstteki kampanya onayı `helper`da kalıyor çünkü o isteğe bağlı; bu satır
+     siparişin hukuki çerçevesini söylüyor. Web'in `text-micro`su taşınmadı: orada altbilgi ve
+     imleçle büyütülebilen bir yüzey var, burada yok. */
+  termsLine: {
+    textAlign: 'center',
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
   blockLine: {

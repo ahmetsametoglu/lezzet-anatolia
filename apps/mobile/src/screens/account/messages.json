@@ -98,6 +98,7 @@
         "title": "Bölgemizin dışındasınız",
         "body": "{place} için şu an yalnız kargolanabilir ürünleri gösterebiliyoruz. Buraya kendi soğutuculu aracımızla teslimat açmamızı ister misiniz? Talebiniz, hattı nereye açacağımıza karar verirken sayılır — hat açıldığında da açık bıraktığınız kanaldan haber veririz.",
         "cta": "Buraya teslimat açılsın istiyorum",
+        "consentNote": "Haber verebilmemiz için e-posta kanalını açacağız — yukarıdaki anahtardan istediğiniz an kapatabilirsiniz.",
         "done": "Talebiniz alındı — hat açıldığında haber vereceğiz ✓",
         "sent": "Talebiniz alındı ✓"
       },
@@ -223,6 +224,7 @@
         "title": "Vous êtes hors de notre zone",
         "body": "Pour {place}, nous ne pouvons afficher que les produits expédiables. Souhaitez-vous que nous ouvrions la livraison par notre véhicule réfrigéré ici ? Votre demande compte dans le choix des prochaines zones — et nous vous préviendrons par le canal que vous laissez ouvert.",
         "cta": "Je veux la livraison ici",
+        "consentNote": "Pour pouvoir vous prévenir, nous activerons le canal e-mail — vous pouvez le désactiver à tout moment avec l'interrupteur ci-dessus.",
         "done": "Demande enregistrée — nous vous préviendrons à l’ouverture ✓",
         "sent": "Demande enregistrée ✓"
       },
@@ -348,6 +350,7 @@
         "title": "Sie liegen außerhalb unseres Gebiets",
         "body": "Für {place} können wir derzeit nur versandfähige Produkte zeigen. Sollen wir hier die Lieferung mit unserem Kühlfahrzeug öffnen? Ihre Anfrage zählt bei der Wahl der nächsten Gebiete — und wir melden uns über den Kanal, den Sie offen lassen.",
         "cta": "Ich möchte Lieferung hierher",
+        "consentNote": "Damit wir Sie benachrichtigen können, aktivieren wir den E-Mail-Kanal — Sie können ihn jederzeit über den Schalter oben ausschalten.",
         "done": "Anfrage aufgenommen — wir melden uns bei Eröffnung ✓",
         "sent": "Anfrage aufgenommen ✓"
       },

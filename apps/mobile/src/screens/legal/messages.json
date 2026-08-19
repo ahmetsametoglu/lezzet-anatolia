@@ -1,6 +1,7 @@
 {
   "tr": {
     "back": "Geri",
+    "directoryTitle": "Bilgi ve koşullar",
     "updatedAt": "Son güncelleme: 1 Temmuz 2026",
     "searchPlaceholder": "Soru arayın…",
     "noMatch": "Bu aramaya uyan soru yok.",
@@ -226,7 +227,6 @@
             "heading": "Cihazınızda saklananlar",
             "paragraphs": [
               "Uygulama çerez kullanmaz — ne reklam, ne takip, ne de başka türlüsü. Cihazınızda tutulanlar uygulamanın çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu. Oturum bilgisi işletim sisteminin güvenli kasasında saklanır (iOS'ta Anahtar Zinciri, Android'de Keystore).",
-              "Sayfaların ne sıklıkla görüntülendiğini ölçüyoruz, ama bu ölçüm çerezsizdir ve kimliğe bağlanamaz: ziyaretler her gün değişen, ertesi gün atılan bir anahtarla sayılır ve kişiye ait hiçbir kayıt tutulmaz.",
               "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda cihazdaki sepetiniz hesabınıza devredilir ve cihazdan silinir."
             ],
             "bullets": []
@@ -435,6 +435,7 @@
   },
   "fr": {
     "back": "Retour",
+    "directoryTitle": "Informations et conditions",
     "updatedAt": "Dernière mise à jour : 1 juillet 2026",
     "searchPlaceholder": "Rechercher une question…",
     "noMatch": "Aucune question ne correspond à cette recherche.",
@@ -660,7 +661,6 @@
             "heading": "Ce qui est conservé sur votre appareil",
             "paragraphs": [
               "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android).",
-              "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé.",
               "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil."
             ],
             "bullets": []
@@ -869,6 +869,7 @@
   },
   "de": {
     "back": "Zurück",
+    "directoryTitle": "Informationen und Bedingungen",
     "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
     "searchPlaceholder": "Frage suchen…",
     "noMatch": "Keine Frage passt zu dieser Suche.",
@@ -1094,7 +1095,6 @@
             "heading": "Was auf Ihrem Gerät gespeichert wird",
             "paragraphs": [
               "Die App verwendet keinerlei Cookies — weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android).",
-              "Wir messen, wie häufig Seiten aufgerufen werden, doch diese Messung kommt ohne Cookies aus und lässt sich keiner Person zuordnen: Besuche werden mit einem Schlüssel gezählt, der täglich wechselt und am Folgetag verworfen wird; ein personenbezogener Eintrag entsteht dabei nicht.",
               "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht."
             ],
             "bullets": []

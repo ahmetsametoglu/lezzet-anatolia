@@ -100,6 +100,8 @@
     "confirm": "Siparişi onayla · {total}",
     "confirmPay": "Ödemeye geç · {total}",
     "submitting": "Siparişiniz açılıyor…",
+    "terms": "Onaylayarak satış koşullarını kabul etmiş olursunuz.",
+    "termsLink": "Satış koşullarını okuyun",
     "reject": {
       "transport": "Sipariş gönderilemedi — bağlantınızı kontrol edip tekrar deneyin.",
       "session": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
@@ -250,6 +252,8 @@
     "confirm": "Confirmer la commande · {total}",
     "confirmPay": "Passer au paiement · {total}",
     "submitting": "Création de votre commande…",
+    "terms": "En confirmant, vous acceptez les conditions de vente.",
+    "termsLink": "Lire les conditions générales de vente",
     "reject": {
       "transport": "La commande n'a pas pu être envoyée — vérifiez votre connexion et réessayez.",
       "session": "Votre session semble expirée. Reconnectez-vous.",
@@ -400,6 +404,8 @@
     "confirm": "Bestellung bestätigen · {total}",
     "confirmPay": "Weiter zur Zahlung · {total}",
     "submitting": "Ihre Bestellung wird angelegt…",
+    "terms": "Mit der Bestätigung akzeptieren Sie die Verkaufsbedingungen.",
+    "termsLink": "Allgemeine Geschäftsbedingungen lesen",
     "reject": {
       "transport": "Die Bestellung konnte nicht gesendet werden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "session": "Ihre Sitzung scheint abgelaufen. Bitte erneut anmelden.",

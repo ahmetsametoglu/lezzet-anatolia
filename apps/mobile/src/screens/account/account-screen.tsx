@@ -32,6 +32,7 @@ import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import { PointsEarnList, type PointsEarnActions } from '@/screens/customer-kit/points-earn-list';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
+import { LegalLinks } from '@/screens/legal/legal-links';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
 import { AccountAddressesSkeleton, AccountPointsSkeleton } from './account-skeleton';
@@ -345,6 +346,16 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
           action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="account-login" />}
           testID="account-guest"
         />
+        {/* MİSAFİRİN BİLGİ KAPISI (MB-76, 19.08) — duvarın ALTINDA, giriş davetinin yerine değil.
+            Duvar hesabı korur; belgeler hesaba ait değil. `EmptyState` kalan yeri doldurduğu için
+            blok ekranın dibine oturuyor.
+            NOT: misafir buraya ancak GİRİŞTEN VAZGEÇEREK ulaşıyor (sekme onu doğrudan `/login`e
+            itiyor — 08.08 kararı, `account-routes.test`). Yine de duruyor: hesabı olmayan birinin
+            belgeleri okuyabildiği tek yer burası. Sözleşme öncesi bilginin yeri BURASI DEĞİL,
+            checkout — misafir zaten hesapsız sipariş veremiyor. */}
+        <View style={styles.guestLegal}>
+          <LegalLinks testID="account-legal-guest" />
+        </View>
       </View>
     );
   }
@@ -680,7 +691,19 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
               {interestSent ? (
                 <Text style={styles.zoneDone}>{t.marketing.zone.done}</Text>
               ) : (
-                <PrimaryButton label={t.marketing.zone.cta} onPress={sendZoneInterest} testID="account-zone-interest" />
+                <>
+                  {/* İZİN SESSİZCE ALINMAZ (kullanıcı kararı 19.08). Düğme, kapalıysa kampanya
+                      iletişiminin e-posta kanalını AÇIYOR — bu bugün tek gerçek etkisi, çünkü
+                      talebin kendisini yazacak tablo yok (`BEKLEYEN(21.15)`). Müşteri "teslimat
+                      açılsın" derken kampanya iznine evet demiş sayılamaz; niyeti bir haber
+                      almaktı. Çare izni kaldırmak DEĞİL — kaldırırsak düğme boş söz verir ve hat
+                      açıldığında kimseye ulaşamayız. Çare NE OLACAĞINI ÖNCEDEN SÖYLEMEK: satır
+                      yalnız kanal kapalıyken çıkıyor ve geri almanın yerini de gösteriyor
+                      (anahtar hemen yukarıda). Dar kapsamlı bir "yalnız bu haber" izni ayrı bir
+                      alan ister; o, talep tablosuyla birlikte gelir. */}
+                  {marketingEmail ? null : <Text style={styles.zoneConsent}>{t.marketing.zone.consentNote}</Text>}
+                  <PrimaryButton label={t.marketing.zone.cta} onPress={sendZoneInterest} testID="account-zone-interest" />
+                </>
               )}
             </View>
           ) : null}
@@ -707,6 +730,12 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
             testID="account-delete"
           />
         </View>
+
+        {/* GİRİŞLİ HÂLİN BİLGİ KAPISI (MB-76, 19.08) — çıkıştan hemen önce, web altbilgisinin yeri.
+            Menüdeki "Teslimat & soğuk zincir" satırı ve veri kartındaki gizlilik bağı KALDI: onlar
+            bağlamsal kısayol, bu ise listenin tamamı. Web'de de ikisi bir arada (hesap sayfasının
+            gizlilik bağı + altbilgi) — kaldırsaydık iki yüzey ayrışırdı. */}
+        <LegalLinks testID="account-legal" />
 
         <View style={styles.logoutRow}>
           {/* Gerçek çıkış (21.14c): oturum cihazdan silinir, `useMe` dinleyicisi vitrini misafire
@@ -915,6 +944,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space.sm,
     paddingHorizontal: theme.space['4xl'],
   },
+  /* Misafir duvarının altındaki bilgi bloğu — gövdenin (`content`) yatay dolgusuyla aynı hizada;
+     duvar hâli o kabı kullanmadığı için dolgu burada tekrar veriliyor. */
+  guestLegal: {
+    paddingHorizontal: theme.space['4xl'],
+    paddingBottom: theme.space['4xl'],
+  },
 
   profileCard: {
     flexDirection: 'row',
@@ -1099,6 +1134,15 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   zoneBody: {
     fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
+    color: theme.colors.body,
+  },
+  /* İzin satırı gövdeyle AYNI boyda (`note`), `helper`da değil: bu bir dipnot değil, düğmeye
+     basmadan önce okunması gereken karar bilgisi (MB-46 ölçütünün aynısı). Ağırlık 600 —
+     bilgilendirme değil, uyarı sesi. */
+  zoneConsent: {
+    fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
     lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors.body,

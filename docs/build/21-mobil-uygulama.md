@@ -4240,6 +4240,80 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   geçilmedi, ölçüldü: **yük ortalaması 22.96 · paket süresi 11 sn → 58 sn · `app-shell` tek başına
   3/3 yeşil.** Ölçüm MB-38'e sayısal kanıt olarak işlendi.
 
+- [x] (21.87) **YASAL BELGELERİN KAPISI AÇILDI — ve ikisi HİÇ KİMSEYE açık değilmiş (MB-76, 19.08)**
+  → `touches: apps/mobile/src/screens/legal/{legal-links.tsx,messages.json}, apps/mobile/src/screens/{home/home-screen.tsx,account/account-screen.tsx,checkout/{checkout-screen.tsx,messages.json}}, apps/mobile/src/app/legal/[page].tsx`
+
+  **ÖLÇÜM KAYDI GENİŞLETTİ.** MB-76 *"misafirin kapısı yok"* diye açılmıştı; sayılınca sorun daha
+  büyük çıktı. Beş belge var (`terms` yasal bilgiler · `sales` satış koşulları · `privacy` ·
+  `delivery` · `faq`), uygulamada `/legal/[page]`e giden **dört çağrı**: hesap menüsü (`delivery`),
+  veri kartı (`privacy`), giriş ekranı (`privacy`), sayfaların kendi çıkış bantları. Bantların
+  yönü de ölçüldü — `delivery → faq`, `privacy → account`, `sales → delivery`, `terms → sales`.
+  Yani **`sales` ile `terms`e giden hiçbir yol yok**: girişli müşteri de dahil, uygulamanın hiçbir
+  yerinden açılmıyorlar; yalnız deep-link ile geliyorlar. Fransız tüketici mevzuatında satış
+  koşulları ile künyenin erişilebilir olması zorunlu.
+
+  **MİSAFİR KAPISI SANILDIĞI YERDE DEĞİLDİ.** Kaydın önerdiği yer *"hesap duvarının altı"*ydı; ama
+  `account-routes.test` şunu kanıtlıyor: misafir hesap sekmesine dokununca **doğrudan `/login`e
+  itiliyor** (08.08 kararı), duvar ancak girişten VAZGEÇENE görünüyor. Oraya konan kapı bu yüzden
+  tek başına yetmezdi.
+
+  **YAPILAN — tek blok, İKİ yer.** `screens/legal/legal-links.tsx`: beş belgeyi web altbilgisinin
+  sırasıyla listeliyor (künye → satış koşulları → gizlilik → teslimat → SSS). Sıra dizide, sözlükte
+  değil — web künyesinin gerekçesi: hangi sayfaların olduğu dile göre değişmez, sözlüğe gömülen bir
+  liste bir dilde eksik kalabilir. Adlar da yeniden yazılmadı, `pages.<anahtar>.title` okunuyor.
+  Blok **hesap ekranında** duruyor (girişli gövde + misafir duvarı) — belgelerin kalıcı evi.
+  Menüdeki teslimat kısayolu ve veri kartındaki gizlilik bağı **KALDI**: onlar bağlamsal kısayol,
+  blok listenin tamamı — web'de de ikisi bir arada (hesap sayfasının gizlilik bağı + altbilgi),
+  sökseydik iki yüzey ayrışırdı.
+
+  **VİTRİNE DE KONDU, SONRA GERİ ALINDI (kullanıcı ölçütü 19.08) — ve gerekçesi kayda değer.**
+  İlk yazımda blok vitrinin dibine de konmuştu; gerekçe web altbilgisinin her sayfada durmasıydı.
+  Kullanıcının koyduğu ölçüt bunu çürüttü: *"doğru yerde, doğru bilgiyi, doğru miktarda; devlet
+  nerede neyi göstermemizi istiyorsa o kadar."* Kanunun istediği belgelerin **ERİŞİLEBİLİR** olması,
+  her ekranda **GÖSTERİLMESİ** değil. Web'de altbilgi sayfanın zaten parçası; native'de vitrin
+  alışverişin kendisi ve oraya konan beş satırlık hukuk listesi müşteriyi gereksiz yorar. Kaldırıldı.
+  Sözleşme öncesi bilginin yeri ayrı ve zaten karşılandı: **checkout** — kanunun *"satın almadan
+  önce"* dediği an odur ve misafir hesapsız sipariş zaten veremiyor.
+
+  **CHECKOUT'TAKİ AÇIK AYRIŞMAYDI, EKSİKLİK DEĞİL.** Web onay düğmesinin altında *"Onaylayarak
+  satış koşullarını kabul etmiş olursunuz"* + bağ yazıyor (`checkout-steps.tsx:596`); native'de
+  **hiç yoktu** — müşteri kabul ettiği metni ne görüyor ne açabiliyordu. Aynı cümle, aynı yer, aynı
+  ayrı-satır kalıbı üç dilde taşındı. Tek sapma boy: web `text-micro` kullanıyor, burada `body-sm`
+  (14) — MB-46'nın ölçütü (*karar için okunan metin 14'ün altına inmez*). Hemen üstteki kampanya
+  onayı `helper`da kaldı, çünkü o isteğe bağlı.
+
+  **Yan bulgu:** `app/legal/[page].tsx` künyesi çağıranları *"giriş ekranı, hesap menüsü, checkout
+  ve sipariş detayı"* diye sayıyordu — checkout o gün bağ vermiyordu, sipariş detayı ise çoktan
+  `/support`a geçmişti (kendi künyesi yazıyor). Künye ölçülen listeyle değiştirildi.
+
+  **AYNI ÖLÇÜTÜN İKİNCİ SONUCU — `(21.86)`'nın "bilerek dokunulmadı" kararı GERİ ALINDI.** Dün
+  gizlilik metnindeki *"Sayfaların ne sıklıkla görüntülendiğini ölçüyoruz…"* paragrafı, MB-63 ölçümü
+  native'de **sıfır analitik çağrısı** bulmuş olmasına rağmen *"fazladan beyan zararsızdır"* diye
+  bırakılmıştı. Kullanıcının ölçütü bunu bozuyor: **gereksiz bilgiyle kendimizi sorumluluk altına
+  sokmayız.** Paragraf yapmadığımız bir işlemi beyan etmekle kalmıyor, bir de yöntem sözü veriyordu
+  (*"çerezsiz, her gün değişen ve ertesi gün atılan anahtar"*) — yani tutmamız gereken bir taahhüt
+  üretiyordu, hem de karşılığı olmayan bir şey için. Üç dilde de **silindi**; ölçüm gerçekten
+  başladığında paragrafı MB-63'ü yazan kurduğu mekanizmayla birlikte yazar. Not MB-63'e düşüldü.
+
+  **ÜÇÜNCÜ SONUÇ — SESSİZ ALINAN BİR İZİN BULUNDU (yeni bulgu, kalem açılmadı çünkü aynı turda
+  kapandı).** Hesap ekranındaki *"Buraya teslimat açılsın istiyorum"* düğmesi, kampanya iletişiminin
+  **e-posta kanalını sessizce AÇIYORDU** (`sendZoneInterest` → `toggleConsent('email', true)`) ve
+  ekranda bunu söyleyen tek kelime yoktu; metin yalnız *"açık bıraktığınız kanaldan haber veririz"*
+  diyerek zaten açık bir kanal varmış gibi konuşuyordu. Müşterinin niyeti BİR HABER almaktı, kampanya
+  iznine evet demek değil. İzin **kaldırılmadı** — kaldırılsaydı düğme boş söz verirdi (talebin
+  kendisini yazacak tablo yok, `BEKLEYEN(21.15)`) ve hat açıldığında kimseye ulaşamazdık. Yapılan:
+  **ne olacağı önceden söylendi** — kanal kapalıyken düğmenin üstünde tek satır çıkıyor ve geri
+  almanın yerini de gösteriyor (*"…yukarıdaki anahtardan istediğiniz an kapatabilirsiniz"*, üç dilde).
+  Böylece izin bilinçli bir eylemle veriliyor. Dar kapsamlı *"yalnız bu haber"* izni ayrı bir alan
+  ister; o, talep tablosuyla birlikte gelecek.
+
+  **Doğrulama:** `tsc` temiz · `lint` temiz · `knip` yeni bulgu yok · mobil jest **84/84 · 599/599**
+  (yük 13,55). Üç dilin gizlilik §7'si silmeden sonra da eşit uzunlukta — paritenin makine kontrolü.
+  Ara koşularda `app-shell`/`operations-shell`/`account-routes` düştü ve **üçü de tek başına yeşildi**
+  (5–7 sn; tam koşuda 12–19 sn): MB-38'in kayıtlı ailesi, hiçbiri yasal bloğa bakmıyor.
+  **Cihaz turu YAPILMADI** — yeni kapı ve yeni izin satırı görsel olarak doğrulanmalı, sıradaki
+  cihaz turuna kaldı.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

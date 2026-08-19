@@ -751,6 +751,12 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             action={<Text style={styles.inviteChevronOlive}>›</Text>}
             testID="home-professional"
           />
+          {/* VİTRİNDE YASAL BLOK YOK — bir kez konup GERİ ALINDI (kullanıcı kararı 19.08).
+              Gerekçe web'in altbilgisiydi: orada beş belge her sayfanın dibinde durur. Ama web'de
+              altbilgi sayfanın ZATEN parçası, native'de vitrin alışverişin kendisi — kanunun
+              istediği şey belgelerin ERİŞİLEBİLİR olması, her ekranda GÖSTERİLMESİ değil. Ölçüt:
+              devlet nerede neyi istiyorsa o kadar. Kapılar hesap ekranında (kalıcı ev) ve
+              checkout'ta (sözleşme öncesi bilgi) — vitrin alışveriş yüzeyi olarak kaldı. */}
         </View>
       </ScrollView>
 

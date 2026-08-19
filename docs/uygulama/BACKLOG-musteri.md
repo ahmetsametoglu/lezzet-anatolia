@@ -1241,7 +1241,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **Cihazda uçtan uca doğrulandı (18.08):** misafir kartı görüyor, basınca tur açılıyor (1/20,
   kaydırma çalışıyor).
 
-- [ ] **MB-76 · YASAL SAYFALARIN MİSAFİRE AÇIK HİÇBİR KAPISI YOK.**
+- [x] **MB-76 · YASAL SAYFALARIN MİSAFİRE AÇIK HİÇBİR KAPISI YOK.**
   A17'de ölçüldü (18.08, cihazda): `/legal/*`e giden çağrıların tamamı üç yerde ve üçü de kapalı —
   `account-screen.tsx:575` (Teslimat ve iade), `:694` (Gizlilik), `login-screen.tsx:367` (Gizlilik).
   Hesap sekmesi misafirde *"Hesabınıza ulaşmak için birkaç saniyede doğrulanın"* duvarını çiziyor;
@@ -1255,6 +1255,33 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **satın almadan ÖNCE** erişilebilir olmak zorunda — web'de site altbilgisinden açık, uygulamada
   değil. **Yapılacak:** kapının yeri kullanıcı kararı — hesap duvarının altına bir bağ şeridi mi,
   onboarding'in sonuna mı, yoksa sepet/ödeme ekranına mı.
+
+  **KAPANDI (19.08 · `(21.87)`) — ve kaydın İKİ yeri ölçümle değişti.**
+
+  **1 · Sorun "misafire kapalı"dan büyüktü: iki belge HİÇ KİMSEYE açık değilmiş.** Beş belgeye
+  giden dört çağrı sayıldı (hesap menüsü → `delivery`, veri kartı → `privacy`, giriş ekranı →
+  `privacy`, sayfaların çıkış bantları) ve bantların yönü de çıkarıldı (`delivery → faq`,
+  `privacy → account`, `sales → delivery`, `terms → sales`). **`sales` (satış koşulları) ve `terms`
+  (yasal bilgiler) hiçbir yoldan açılmıyordu** — girişli müşteri de dahil; yalnız deep-link.
+
+  **2 · Önerilen kapı yeri yanlıştı.** Kayıt *"hesap duvarının altı"*nı ilk aday sayıyordu; ama
+  `account-routes.test` misafirin hesap sekmesinden **doğrudan `/login`e itildiğini** kanıtlıyor
+  (08.08 kararı) — duvar yalnız girişten VAZGEÇENE görünüyor. Tek başına oraya konan kapı,
+  misafirlerin çoğunun hiç görmeyeceği bir kapı olurdu.
+
+  **Yapılan:** tek blok (`screens/legal/legal-links.tsx`, beş belge, web altbilgisinin sırası),
+  **hesap ekranında** — girişli gövde + misafir duvarı. Ayrıca checkout'a web'in cümlesi taşındı:
+  *"Onaylayarak satış koşullarını kabul etmiş olursunuz"* + satış koşulları bağı — native'de yoktu,
+  yani müşteri kabul ettiği metni ne görüyor ne açabiliyordu. Satış koşulları sayfası cayma hakkını,
+  yasal garantileri, fiyatı, ödemeyi ve teslimatı zaten taşıyor (bölümleri sayıldı), o yüzden
+  checkout'a **tek bağ** kondu; ikincisi fazlalık olurdu.
+
+  **VİTRİNE DE KONMUŞTU, GERİ ALINDI (kullanıcı ölçütü 19.08):** *"doğru yerde, doğru bilgiyi, doğru
+  miktarda; devlet nerede neyi göstermemizi istiyorsa o kadar."* Kanun belgelerin **erişilebilir**
+  olmasını istiyor, her ekranda **gösterilmesini** değil — vitrin alışverişin kendisi, oraya konan
+  beş satırlık hukuk listesi gereksiz yük. Sözleşme öncesi bilginin anı zaten checkout ve misafir
+  hesapsız sipariş veremiyor. Ayrıntı `(21.87)`.
+  **Cihaz turu yapılmadı** — yeni kapı ve yeni izin satırı görsel olarak doğrulanmalı, sıradaki tura kaldı.
 
 - [x] **MB-77 · YASAL METİNDE WEB DİLİ KALMIŞ — uygulamada karşılığı olmayan yerler tarif ediliyor.**
   A17'de ölçüldü (18.08, cihazda). Mobil sözlük web'in `content.json`larından üretilmişti
@@ -1280,6 +1307,13 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   · Posta kodu değiştirme yeri, *"checkout"* jargonu ve SSS'in dil sorusu da uygulamanın gerçek
     yerlerine bağlandı (*"vitrinin üstündeki bölge hapı"*, *"Siparişi tamamla"*, *"Hesabım"*).
   · Fikri mülkiyet maddesindeki *"tarayıcınızda görüntüleme"* (yalnız TR'de vardı) sadeleşti.
+
+  **⚠ AŞAĞIDAKİ "BİLEREK DOKUNULMADI" KARARI ERTESİ GÜN GERİ ALINDI (19.08 · `(21.87)`).** Kullanıcı
+  ölçütü koydu: *"gereksiz bilgilerle kendimizi sorumluluk altına sokmayacağız."* Paragraf yapmadığımız
+  bir işlemi beyan etmekle kalmıyor, bir de yöntem sözü veriyordu (*"çerezsiz, her gün değişen ve
+  ertesi gün atılan anahtar"*) — karşılığı olmayan bir taahhüt. Üç dilde silindi; ölçüm gerçekten
+  başladığında paragrafı MB-63'ü yazan, kurduğu mekanizmayla birlikte yazacak. *(Eski gerekçe,
+  kararın nasıl döndüğü görünsün diye aynen duruyor.)*
 
   **BİLEREK DOKUNULMADI — ve gerekçesi kayda değer.** Gizlilik §6'nın ikinci paragrafı *"Sayfaların
   ne sıklıkla görüntülendiğini ölçüyoruz"* diyor; **MB-63 ölçtü, native'de sıfır analitik çağrısı
@@ -1884,6 +1918,16 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   hash'lenme yeri ve yeniden kurulum · sıra). Ön koşul kurulum kimliği; ondan önce kod yazmak,
   sonradan değişecek bir anahtarla veri toplamak olur.
 
+  **BU KALEM AÇILDIĞINDA GİZLİLİK METNİ DE YAZILACAK (19.08 · `(21.87)`).** Native gizlilik
+  metninde ölçümü anlatan paragraf vardı ve **silindi** — yapmadığımız bir işlemi beyan ediyor,
+  üstelik yöntem sözü veriyordu (*"çerezsiz, her gün değişen ve ertesi gün atılan anahtar"*).
+  Kullanıcı ölçütü: gereksiz beyan bizi karşılığı olmayan bir taahhüdün altına sokar. Ölçüm gerçekten
+  kurulduğunda paragrafı **bu kalemi yazan** ekler ve **kurduğu mekanizmayı** anlatır — bugünkü
+  metni geri yapıştırmaz; sözü verilen yöntem ile kurulacak yöntem aynı olmayabilir.
+  Yeri: `apps/mobile/src/screens/legal/messages.json` → `pages.privacy.sections[6]`
+  (*"Cihazınızda saklananlar"*), üç dilde. **Web nüshası ayrı** ve orada ölçüm gerçekten var —
+  web metnine dokunulmadı.
+
 - [x] **MB-62 · Hesabını silme native'de YOKTU — mağaza yayın engeliydi** (ölçüldü 13.08, kod)
   → **KAPANDI, görev `(21.49)` (14.08).** Web hesap sayfası 08.21'den beri siliyor
   (`deleteAccountAction` → `UserProfileService.anonymize` → `anonymize_customer` RPC); native'de
@@ -1986,6 +2030,7 @@ cihazla yapılacak testler senin tarafından yapılmasını istiyorum… fizikse
 | MB-48 (çekmece taşıyor · öneri listesi sınırsız) | cihaz | 11.08 · 14:2x — görev `(21.41)` | `apps/mobile/src/components/ui/{bottom-sheet.tsx,suggestion-list.tsx}` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` (yerel kaydırıcı kite taşındı) | **bitti** — Android'de ölçüldü ("Büyük" yazı boyutu), **iOS'ta kullanıcı doğruladı** (11.08) |
 | MB-09 (B2B misafir yolu cihazda hiç yürütülmedi) | cihaz | 11.08 · 14:2x | **yalnız ölçüm — kod değişikliği YOK.** Misafirle tur: e-posta → tek kullanımlık kod → başvurunun kendiliğinden gitmesi → "inceleniyor" | **bitti (15.08) — görev `(21.51)`.** Tur baştan sona koştu, DB'de doğrulandı (`b2b_pending`, `b2b_applied_at`, `company_info`). Telefonun boş kalması yanlış alarm çıktı (tekil kimlik anahtarı, kasıtlı atlanıyor). Yazılan veri uygulamanın kendi silme akışıyla geri alındı |
 | MB-03 · MB-13 (yeniden yükleme · oturum misafire düşüyor) | cihaz | 11.08 · 12:19 | **yalnız ölçüm — kod değişikliği YOK.** Okunacaklar: `screens/customer-kit/use-address-search.hook.ts` · `lib/hooks/use-debounced-lookup.hook.ts` · `lib/auth/authorized-fetch.ts` · `screens/customer-kit/use-me.hook.ts` | **bitti — İKİSİ DE KAPANDI (kullanıcı kararı 15.08), kod değişikliği YOK.** Ortak açıklama Metro'nun paket tazelemesi; MB-03 bir daha açılmaz, MB-13 gözlemde kalır. MB-52 de aynı kararla kapandı. Görev `(21.30)` kapandı, ona asılı `BEKLEYEN` işaretleri kaldırıldı |
+| MB-77 (yasal metinde web dili) · MB-76 (yasal belgelerin kapısı) | mobil/cihaz | 19.08 · 13:0x — görevler `(21.86)` · `(21.87)` | `apps/mobile/src/screens/legal/{messages.json,legal-links.tsx}` · `screens/{home/home-screen.tsx,account/account-screen.tsx,checkout/{checkout-screen.tsx,messages.json}}` · `app/legal/[page].tsx` | **bitti** — MB-77 commit `5a1e3d16`. **SATIR İŞE BAŞLADIKTAN SONRA YAZILDI**, kuralın istediği gibi öncesinde değil; kayda geçsin ki sıradaki ajan aynı gecikmeyi tekrarlamasın. Çakışma doğmadı (yollar başka şeridin ilan listelerinde yok) |
 
 **Kapananların görev satırı `(21.34)`:** MB-15 · MB-16 · MB-17 · MB-35 · MB-41. Ölçümler, seçilmeyen
 yollar ve kalan borç orada. **Web şeridine bir iş doğdu:**
