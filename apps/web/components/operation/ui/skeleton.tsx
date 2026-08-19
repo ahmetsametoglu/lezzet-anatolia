@@ -308,11 +308,17 @@ export function SkeletonTabs({
  */
 export function SkeletonSegmentedNav({ labels }: { labels: readonly string[] }) {
   return (
-    <div className="flex flex-none items-center gap-0.5 rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-0.5" aria-hidden="true">
+    // Ölçü GERÇEK kontrolle birebir ve artık ikisi de aynı sözlükten (`CONTROL_H.md`): yer
+    // tutucu bir piksel bile ayrışırsa veri gelince bar zıplar — yer tutucunun tek işi zaten
+    // o zıplamayı önlemek.
+    <div
+      className={`flex flex-none items-stretch gap-0.5 rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-0.5 ${CONTROL_H.md}`}
+      aria-hidden="true"
+    >
       {labels.map((label) => (
         <span
           key={label}
-          className="rounded-md border border-transparent px-3.5 py-[7px] font-ops-display text-ops-sm font-semibold text-ops-body"
+          className="flex items-center rounded-md border border-transparent px-3.5 font-ops-display text-ops-sm font-semibold text-ops-body"
         >
           {label}
         </span>

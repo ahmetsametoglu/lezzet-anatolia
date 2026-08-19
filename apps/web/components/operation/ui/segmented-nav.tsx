@@ -1,5 +1,7 @@
 'use client';
 
+import { CONTROL_H } from './control';
+
 /**
  * BAŞLIK BARININ İÇİNDEKİ görünüm hapı — `Tabs`'ın kardeşi; farkı işlevi değil YERİ.
  *
@@ -30,7 +32,20 @@ export function SegmentedNav<K extends string>({ items, active, onSelect, label 
     <div
       role="group"
       aria-label={label}
-      className="flex flex-none items-center gap-0.5 rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-0.5"
+      /**
+       * **Yükseklik SÖZLÜKTEN, dolgudan değil** (kullanıcı bildirimi 19.08 · ölçüldü: grup 43px,
+       * yanındaki depo seçici ve arama 36px — 7px fark).
+       *
+       * Bu komponent `control.ts` yazılırken ona bağlanmamıştı ve tam olarak o sözlüğün doğduğu
+       * arızayı tekrarlıyordu: yükseklik iki kat dikey dolgudan doğuyordu (dış kap `p-0.5`, hap
+       * `py-[7px]`) ve hiçbiri komşusunun ölçüsünü bilmiyordu. Bir barın içinde iki farklı
+       * yükseklik, hizalanmamış bir satır demektir.
+       *
+       * `items-stretch`: haplar kabın yüksekliğini DOLDURUR. `items-center` olsaydı kap 36px'e
+       * inerken haplar kendi dolgularıyla kalır ve bu kez rayın içinde ortalanmış küçük bir grup
+       * çıkardı — hizalanan kap, hizalanmayan içerik.
+       */
+      className={`flex flex-none items-stretch gap-0.5 rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-0.5 ${CONTROL_H.md}`}
     >
       {items.map((item) => {
         const on = item.key === active;
@@ -41,7 +56,9 @@ export function SegmentedNav<K extends string>({ items, active, onSelect, label 
             onClick={() => onSelect(item.key)}
             aria-current={on ? 'page' : undefined}
             className={[
-              'cursor-pointer rounded-md px-3.5 py-[7px] font-ops-display text-ops-sm font-semibold outline-none transition-colors',
+              // Dikey dolgu YOK: yükseklik kaptan geliyor (künyesi yukarıda), hap onu dolduruyor.
+              // `flex items-center` metni ortalıyor — dolgunun yaptığı işi artık hizalama yapıyor.
+              'flex cursor-pointer items-center rounded-md px-3.5 font-ops-display text-ops-sm font-semibold outline-none transition-colors',
               // Seçili hap RAYDAN ayrışmak için hem zemin hem METİN değiştirir. Zemin tek başına
               // yetmiyor: koyu temada palet ters çevrildiği için hapın zemini rayın ALTINA düşüyor
               // (`ops-card` #23261f ↔ ray #31352c) ve "yükselmiş" değil "gömülmüş" okunuyor. Metnin
