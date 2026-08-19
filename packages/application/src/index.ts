@@ -217,8 +217,10 @@ export type {
 // 21.10d: gün başlatma (`startCourierDay`) ve kapı kasası ayarı (`readDoorCashAccountId`) aynı
 // kapının yanına eklendi — paketin `exports` haritası yalnız `"."` açıyor, yani alt-yol import'u
 // paket sınırında kapalı ve dışa açılmayan bir kapı çağrılamaz.
-export { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay } from './courier/day';
-export type { CourierDayStart, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
+export { listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay } from './courier/day';
+export type { CourierDayStart, CourierRunBriefView, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
+export { listCourierRoutes } from './courier/routes';
+export type { CourierRouteView } from './courier/routes';
 export { confirmDoorDelivery } from './courier/delivery';
 export type { DeliveryProofInput, DoorCollectionInput, DoorDeliveryOutcome } from './courier/delivery';
 export { closeCourierDay, openDayClose } from './courier/day-close';

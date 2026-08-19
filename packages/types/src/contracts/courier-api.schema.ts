@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { CourierDayCloseSchema, DeliveryProofRecordSchema } from '../entities/courier.schema';
+import { DeliveryProofRecordSchema } from '../entities/courier.schema';
+import { DeliveryRunCloseSchema } from '../entities/delivery-run.schema';
 import { FulfillmentAdjustmentSchema } from '../entities/order.schema';
 import { ChannelEnum, OrderStatusEnum, PaymentMethodEnum, PaymentStatusEnum } from '../primitives/enums.schema';
 
@@ -80,9 +81,61 @@ export const CourierStopSchema = z.object({
 });
 export type CourierStopContract = z.infer<typeof CourierStopSchema>;
 
+/**
+ * Seferin istemciye görünen künyesi (18.08 · `docs/feature/sefer.md`). Gün ekranının "başladı"
+ * bayrağı artık YEREL bir tahmin değil bu kaydın kendisidir: uygulama yeniden başlasa da açık
+ * sefer sunucudan gelir. `closed` = kapanış kaydı var (mutabakat yapıldı), `returnedAt` = araç
+ * döndü — ikisi ayrı sorular.
+ */
+export const CourierRunBriefSchema = z.object({
+  runId: z.string().uuid(),
+  referenceNo: z.string(),
+  zoneId: z.string().uuid(),
+  /** Rota adı — ekran "Kuzey rotası · SF-26-…" diye sefer kimliğini kurar. */
+  zoneName: z.string().nullable(),
+  vehicleId: z.string().uuid().nullable(),
+  departedAt: z.string().nullable(),
+  returnedAt: z.string().nullable(),
+  closed: z.boolean(),
+});
+export type CourierRunBrief = z.infer<typeof CourierRunBriefSchema>;
+
+/**
+ * `GET /courier/routes` yanıtı (K1 rota seçimi · 18.08). O gün koşan aktif rotalar + varsa açık
+ * seferin künyesi. Kurye rotayı BURADAN seçer ("arayüzden atama saçma — kurye rotayı alır ve
+ * sürer"); rota bugün başka kuryedeyse `run.courierId` onu söyler, ekran "bu rota bugün X'te" der.
+ */
+export const CourierRouteSchema = z.object({
+  zoneId: z.string().uuid(),
+  zoneName: z.string(),
+  warehouseId: z.string().uuid(),
+  warehouseName: z.string().nullable(),
+  /** O güne yazılmış rota siparişi sayısı — kurye seçerken yükü görsün. */
+  stopCount: z.number().int(),
+  run: CourierRunBriefSchema.extend({
+    courierId: z.string().uuid(),
+    /** Seferi süren kuryenin adı — "bu rota bugün Musa'da" cümlesinin kaynağı. */
+    courierName: z.string().nullable(),
+    /** Aracın okunur adı ya da plakası — künye tamamlansın diye; `null` = araçsız sefer. */
+    vehicleLabel: z.string().nullable(),
+  }).nullable(),
+});
+export type CourierRoute = z.infer<typeof CourierRouteSchema>;
+
+export const CourierRoutesResponseSchema = z.object({
+  date: z.string(),
+  routes: z.array(CourierRouteSchema),
+});
+export type CourierRoutesResponse = z.infer<typeof CourierRoutesResponseSchema>;
+
 /** `GET /courier/day` yanıtı. Gün ZORUNLU döner: istemci "hangi günü gösteriyorum" sorusunu sormaz. */
 export const CourierDayResponseSchema = z.object({
   date: z.string(),
+  /**
+   * Kuryenin o günkü SEFERİ — `null` = henüz rota almadı (18.08). Eski `started` yerel bayrağının
+   * halefi: kilit artık kendini onaran bir tahmin değil, sunucudaki kaydın kendisi.
+   */
+  run: CourierRunBriefSchema.nullable(),
   stops: z.array(CourierStopSchema),
   /**
    * **Kapıda tahsil edilen paranın gireceği hesap** (`door_cash_account_id` ayarı) — 21.10d.
@@ -101,10 +154,19 @@ export const CourierDayResponseSchema = z.object({
 export type CourierDayResponse = z.infer<typeof CourierDayResponseSchema>;
 
 /**
- * **"Yola çıktım" isteği** (K1 · 21.10d). Gün verilmezse bugün — cevabın `date`i hangi günün
- * başlatıldığını SÖYLER, istemci ikinci bir hesap yapmaz.
+ * **"Seferi başlat" isteği** (K1 · 18.08 — eski "yola çıktım"ın sefer bilinçli hâli). Gün
+ * verilmezse bugün — cevabın `date`i hangi günün başlatıldığını SÖYLER, istemci hesap yapmaz.
+ *
+ * `zoneId` OPSİYONEL ve tek-rota otomatiği uçta: verilmezse ve o gün koşan TEK rota varsa o rota
+ * seçilir; birden çoksa `route_required` döner ve ekran `/courier/routes`tan seçtirir. Tek rotalı
+ * operasyon böylece hiç soru görmez ("tek adayda soru sorulmaz" — dispatch'in aynı ilkesi).
+ * `vehicleId` de opsiyonel: araç kaydı girilmemiş kurulumda kurye kilitlenmez (zorunluluk Setting).
  */
-export const StartCourierDayRequestSchema = z.object({ date: z.string().optional() });
+export const StartCourierDayRequestSchema = z.object({
+  date: z.string().optional(),
+  zoneId: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().optional(),
+});
 export type StartCourierDayRequest = z.infer<typeof StartCourierDayRequestSchema>;
 
 /** Yola çıkarılamayan durak — kimliği ve O ANDAKİ durumu. Durum, sebebin kendisidir. */
@@ -124,17 +186,37 @@ export type CourierDayStopState = z.infer<typeof CourierDayStopStateSchema>;
  * bulurdu — ve teslim yazamadığında sebebini bilmezdi (kapı sırası: teslim yalnız YOLDAKİ siparişten
  * olur).
  */
-export const StartCourierDayResponseSchema = z.object({
-  date: z.string(),
-  /** Bu çağrıda `ready → out_for_delivery` yazılan siparişler. */
-  started: z.array(z.string().uuid()),
-  /** Zaten yoldaydı — ikinci çağrı bir HATA değil, "yapılacak yeni bir şey yok" cevabıdır. */
-  alreadyOut: z.array(z.string().uuid()),
-  /** Araya biri girdi: `ready` okundu, yazarken durum değişmişti. Ekran bunu GÖSTERİR, yutmaz. */
-  stale: z.array(CourierDayStopStateSchema),
-  /** Yola çıkarılmadı — durumu `ready` değil (henüz hazırlanmadı ya da gün içinde kapandı). */
-  skipped: z.array(CourierDayStopStateSchema),
-});
+export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    date: z.string(),
+    /** Açılan seferin künyesi — kilit artık sunucu verisi, yerel bayrak değil (18.08). */
+    run: CourierRunBriefSchema,
+    /** Bu çağrıda `ready → out_for_delivery` yazılan siparişler. */
+    started: z.array(z.string().uuid()),
+    /** Zaten yoldaydı — bir HATA değil, "yapılacak yeni bir şey yok" cevabıdır. */
+    alreadyOut: z.array(z.string().uuid()),
+    /** Araya biri girdi: `ready` okundu, yazarken durum değişmişti. Ekran bunu GÖSTERİR, yutmaz. */
+    stale: z.array(CourierDayStopStateSchema),
+    /** Yola çıkarılmadı — durumu uygun değil (henüz hazırlanmadı ya da gün içinde kapandı). */
+    skipped: z.array(CourierDayStopStateSchema),
+  }),
+  /**
+   * Rota+gün başına TEK sefer (18.08): bu rota bugün zaten açılmış. `mine` = başlatan bu kurye —
+   * ikinci basış "yeni bir şey yok"tur; başkasıysa ekran "bu rota bugün X'te" der.
+   */
+  z.object({
+    status: z.literal('already_started'),
+    runId: z.string().uuid(),
+    referenceNo: z.string(),
+    courierId: z.string().uuid(),
+    mine: z.boolean(),
+  }),
+  /** `zoneId` verilmedi ve o gün birden çok rota koşuyor — ekran `/courier/routes`tan seçtirir. */
+  z.object({ status: z.literal('route_required') }),
+  /** O gün koşan rota yok (ya da verilen `zoneId` bugün koşmuyor/yok). */
+  z.object({ status: z.literal('no_route') }),
+]);
 export type StartCourierDayResponse = z.infer<typeof StartCourierDayResponseSchema>;
 
 /**
@@ -244,11 +326,17 @@ export const DeliveryProofUploadResponseSchema = z.discriminatedUnion('ok', [
 ]);
 export type DeliveryProofUploadResponse = z.infer<typeof DeliveryProofUploadResponseSchema>;
 
-/** Gün kapanışı taslağı (K7) — kapanış öncesi ekranın gördüğü: günün resmi + beklenen tahsilat. */
+/**
+ * SEFER kapanışı taslağı (K7 · 18.08 — eksen kurye×gün'den sefere indi). Kapanış öncesi ekranın
+ * gördüğü: seferin resmi + beklenen tahsilat. `run` null = o gün sürülmüş sefer yok, kapanacak bir
+ * şey de yok — ekran bunu bir hata değil sakin bir bilgi olarak gösterir.
+ */
 export const DayCloseDraftSchema = z.object({
   date: z.string(),
+  /** Kapanışın öznesi — hangi sefer sayılıyor. */
+  run: CourierRunBriefSchema.nullable(),
   /** Zaten kapatılmışsa kayıt döner ve ekran SALT-OKUNUR gösterir. */
-  closed: CourierDayCloseSchema.nullable(),
+  closed: DeliveryRunCloseSchema.nullable(),
   delivered: z.array(CourierStopSchema),
   /** Ulaşılamayanlar — yarının işine devrolur, kapanışta kaybolmaz. */
   pending: z.array(CourierStopSchema),
@@ -263,17 +351,20 @@ export const DayCloseDraftSchema = z.object({
 export type DayCloseDraftContract = z.infer<typeof DayCloseDraftSchema>;
 
 /**
- * Günü kapat isteği (K7). Sayılan tutarlar **cent**. Fark gizlenmez, açıklanır — not fark
- * çıktığında anlamlıdır ama zorunlu değildir (kurye açıklayamıyorsa da gün kapanmalı).
+ * Seferi kapat isteği (K7 · 18.08). Sayılan tutarlar **cent**. Fark gizlenmez, açıklanır — not fark
+ * çıktığında anlamlıdır ama zorunlu değildir (kurye açıklayamıyorsa da sefer kapanmalı).
  *
- * Yanıt şeması yeni DEĞİL: `CourierDayCloseResultSchema` (entities) zaten RPC dönüşünün aynasıdır
- * ve uç onu OLDUĞU GİBİ döndürür — ikinci bir sözleşme yazmak aynı sayıyı iki yerde tanımlamaktı.
+ * `runId` ZORUNLU: kapanışın öznesi artık gün değil sefer. İki sefer sürmüş kurye ikisini ayrı
+ * kapatır — akış sıralıdır (kapat → yeni sefer), ekran "hangi seferi kapatıyorum" diye sormaz.
+ *
+ * Yanıt şeması yeni DEĞİL: `CloseDeliveryRunResultSchema` (entities) RPC dönüşünün aynasıdır ve
+ * uç onu OLDUĞU GİBİ döndürür — ikinci bir sözleşme yazmak aynı sayıyı iki yerde tanımlamaktı.
  */
-export const CloseCourierDayRequestSchema = z.object({
-  date: z.string(),
+export const CloseDeliveryRunRequestSchema = z.object({
+  runId: z.string().uuid(),
   countedCashCents: z.number().int().nonnegative().optional(),
   countedCardCents: z.number().int().nonnegative().optional(),
   countedChequeCents: z.number().int().nonnegative().optional(),
   note: z.string().nullish(),
 });
-export type CloseCourierDayRequest = z.infer<typeof CloseCourierDayRequestSchema>;
+export type CloseDeliveryRunRequest = z.infer<typeof CloseDeliveryRunRequestSchema>;

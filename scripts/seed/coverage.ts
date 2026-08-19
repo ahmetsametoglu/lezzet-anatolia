@@ -713,7 +713,30 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'vadeli', zorunlu: true, filtre: (q) => q.eq('on_account', true) },
     ],
   },
+  {
+    // SEFER (0046 · 18.08): üç ekranın verisi — kurye rota seçimi, sevkiyat sefer şeridi, geçmiş
+    // seferler sekmesi. Kapanışın üç hâli (mutabık · farklı · sayılmamış) ekranda üç ayrı görünüm.
+    baslik: 'Sefer (delivery_run)',
+    tablo: 'delivery_run',
+    kovalar: [
+      { ad: 'sefer', zorunlu: true, sayac: (db) => say(db, 'delivery_run', (q) => q) },
+      { ad: 'sefere damgalı sipariş', zorunlu: true, sayac: (db) => say(db, 'order', (q) => q.not('delivery_run_id', 'is', null)) },
+      { ad: 'mutabık kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', true)) },
+      { ad: 'FARKLI kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', false)) },
+      { ad: 'sayılmamış (açık) sefer', zorunlu: true, sayac: sayilmamisSefer },
+    ],
+  },
 ];
+
+/** Kapanışı olmayan sefer — anti-join'i iki sorguyla kurar (PostgREST tek sorguda "not exists" bilmez). */
+async function sayilmamisSefer(db: Db): Promise<number> {
+  const { data, error } = await db.from('delivery_run_close').select('delivery_run_id');
+  if (error) throw error;
+  const closed = new Set((data ?? []).map((row) => row.delivery_run_id as string));
+  const { data: runs, error: runErr } = await db.from('delivery_run').select('id');
+  if (runErr) throw runErr;
+  return (runs ?? []).filter((row) => !closed.has(row.id as string)).length;
+}
 
 /** Sipariş DURUMLARI ayrı: kova listesi enum'dan gelmeli, elle yazılan liste enum büyüyünce eskir. */
 export const SIPARIS_DURUMLARI = [

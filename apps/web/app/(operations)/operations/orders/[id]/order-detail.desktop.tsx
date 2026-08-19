@@ -461,8 +461,11 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                   value={`${order.delivery.warehouse.name} (${order.delivery.warehouse.code})`}
                 />
               ) : null}
-              {/* Kurye YALNIZ GÖRÜNÜR: atama günün planıdır (Rotalar), tek siparişin özelliği değil. */}
-              <InfoRow label="Kurye" value={order.delivery.courierName ?? 'atanmadı · Rotalar'} />
+              {/* Kurye YALNIZ GÖRÜNÜR: kuryeyi sefer yazar (kurye rotayı alınca), tek siparişin
+                  özelliği değil. Sefer satırı da künyedir — "bu durak hangi araç turuyla gitti"
+                  sorusunun cevabı; geçmişi Teslimat & Rota → Seferler'de. */}
+              <InfoRow label="Kurye" value={order.delivery.courierName ?? 'sefer bekliyor'} />
+              <InfoRow label="Sefer" value={order.delivery.runReference ?? 'açılmadı'} />
               {/* Kanıt AÇILABİLİR olmalı (07.08): türünü yazmak yetmiyor, ihtilafta bakılan şey
                   görselin kendisi. `imageUrl` süreli imzalı adres — sayfa her açıldığında yeniden
                   doğuyor, saklanmıyor. Kova yoksa görsel yerine SEBEP yazılır; boş bir çerçeve

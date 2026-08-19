@@ -1,45 +1,44 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { OrderService, serviceDb } from '@lezzet/database';
+import { DeliveryRunService, OrderService, serviceDb } from '@lezzet/database';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireAdmin } from '@/lib/guard';
 
-// Sevkiyatçının iki yazma yolu (09.15) — 'use server' + guard ilk + `{ data, error }` döner.
+// Sevkiyatçının yazma yolları (09.15) — 'use server' + guard ilk + `{ data, error }` döner.
 //
 // Tasarım §1 kullanıcıyı yöneticide sabitliyor; guard da o yüzden `requireAdmin`. Kuryenin kendi
-// dalı aynı sayfada ama ayrı kapıdan geçiyor (`requireCourier`) — atama buradan yapılır, kurye
-// kendi listesini kendi yüzeyinde görür.
+// dalı aynı sayfada ama ayrı kapıdan geçiyor (`requireCourier`).
+//
+// **TOPLU KURYE ATAMASI SÖKÜLDÜ (K2, 18.08 — `docs/feature/sefer.md`).** `assignCourierAction`
+// sipariş seçip kurye dağıtıyordu; kullanıcının kararı: *"arayüzden atama saçma — kurye rotayı
+// alır ve sürer."* Kurye bilgisini artık seferin kendisi yazar (`start_delivery_run` claim'i).
+// Kalan tek istisna aşağıdaki DEVİR: sefer-seviyesinde, sipariş-seviyesinde değil.
 
 const PATH = '/operations/deliveries';
 
 /**
- * **Kurye ataması — TOPLU.** Sevkiyatçı sabah on beş teslimatı iki kuryeye böler; satır satır atama
- * on beş tur eder ve ekran ortasında yarım kalmış bir plan bırakır.
- *
- * `courierId: null` atamayı KALDIRIR — yanlış kuryeye düşen bir günü geri almanın yolu olmalı.
- *
- * Yazım tek tek yapılıyor (toplu bir servis metodu yok) ama **kısmi başarı yutulmuyor**: kaç satır
- * yazıldığı dönüyor ve biri düşerse hata cümlesi kaç tanesinin yazıldığını söylüyor. "Hepsi ya da
- * hiçbiri" bir transaction ister; sessizce yarısını yazmak ise en kötüsü olurdu.
+ * **Seferi devret** (K2 istisnası) — kurye hastalandı, telefon evde kaldı: sevkiyatçı AÇIK seferi
+ * başka kuryeye verir. Run + seferin sonuçlanmamış siparişleri tek transaction'da değişir
+ * (`reassign_delivery_run`); teslim edilmiş durakların kuryesi tarihî gerçek olarak yerinde kalır.
  */
-export async function assignCourierAction(
-  orderIds: string[],
-  courierId: string | null,
-): Promise<ActionResult<{ assigned: number }>> {
+export async function reassignRunAction(runId: string, courierId: string): Promise<ActionResult<{ movedStops: number }>> {
   try {
-    await requireAdmin();
-    if (orderIds.length === 0) throw new Error('Önce sipariş seçin.');
+    const admin = await requireAdmin();
 
-    const orders = new OrderService(serviceDb());
-    let assigned = 0;
-    for (const orderId of orderIds) {
-      await orders.update({ id: orderId, courierId });
-      assigned += 1;
+    const result = await new DeliveryRunService(serviceDb()).reassign({ runId, courierId, actorId: admin.profileId });
+    if (!result.ok) {
+      throw new Error(
+        result.reason === 'already_closed'
+          ? 'Bu sefer kapanmış — mutabakatı yapılmış sefer devredilemez.'
+          : result.reason === 'same_courier'
+            ? 'Sefer zaten bu kuryede.'
+            : 'Sefer bulunamadı.',
+      );
     }
 
     revalidatePath(PATH);
-    return { data: { assigned }, error: null };
+    return { data: { movedStops: result.movedStops ?? 0 }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -89,6 +88,11 @@ export async function moveDeliveryDayAction(orderId: string, date: string): Prom
  * yasak, süresi dolmuş bir gerçeği koruyor. Ölçüldü (16.08): bu hâlden çıkışın üç kapısı da kurye
  * eylemi ister, hiçbir zamanlanmış iş/trigger siparişe dokunmuyor, kuryenin web ekranı yalnız
  * BUGÜNÜ okuyor — yani sipariş hiçbir rolün ulaşamadığı bir kilitte kalıyordu.
+ *
+ * **18.08'den beri ANA YOL sefer kapanışı:** `close_delivery_run` takılı durakları kapanış anında
+ * kendisi çözüyor (K4) — bu dalın normal akışta işi kalmadı. Yine de SÖKÜLMEDİ: sefer hiç
+ * kapatılmadan unutulursa (kurye kapanışı atlar) kilit yeniden doğar ve sevkiyatçının son çaresi
+ * budur. Sefer disiplini oturunca bu dal ölçülüp sökülebilir.
  *
  * ── KURYENİN İŞİNİ YAPMIYOR ────────────────────────────────────────────────
  * Yazılan geçiş `out_for_delivery → ready`, yani motorun **"ulaşılamadı"** kenarı: *mal ayrılmış

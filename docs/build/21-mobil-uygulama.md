@@ -4062,6 +4062,43 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **BEKLEYEN(21.82):** yasal metnin iki nüshası (web `content.json` ↔ mobil `messages.json`) elle
   senkron tutuluyor; üretici betik ya da paylaşılan içerik paketi hâlâ yok.
 
+- [x] (21.83) **"SOĞUK ZİNCİR İSTEYEN" DİYE BİR ŞEY YOK — ve A TURU KAPANDI (kullanıcı düzeltmesi 18.08)**
+  → `touches: apps/mobile/src/{lib/places,screens/{checkout,delivery-zones,legal,onboarding}}/messages.json,
+  apps/web/app/(customer)/[locale]/legal/{delivery,faq,sales}/content.json, docs/uygulama/*`
+
+  **1 · DİL DÜZELTMESİ.** Kullanıcı `(21.82)`nin cihazdaki hâline bakıp eledi: *"Soğuk zincir
+  istememek diye bir ifade var mı? Doğru ifade nasıl?"* Haklı — ürün bir şey İSTEMEZ, o bir
+  gerekliliktir; kodun kendi terimi de bunu söylüyor (`requiresColdChain`). **23 yerde** düzeltildi
+  (yalnız TR; FR *"sous chaîne du froid"* ve DE *"mit Kühlkette"* zaten doğruydu):
+  · `soğuk zincir isteyen` → **`soğuk zincir gerektiren`**
+  · `soğuk zincir istemeyen` → **`diğer bütün ürünler`** — olumsuzu kurmak yerine kümeyi bir kez
+    tanımlayıp ötekine "diğer" demek hem daha hafif hem daha Türkçe. "Gerektirmeyen" ancak cümle
+    tek başına duruyorsa gerekir; burada durmuyor, hep ikinci cümle.
+  Düzeltme `(21.82)`nin yazdığı cümlelerle sınırlı kalmadı: aynı kalıp checkout'un bölge dışı
+  bloğunda 18.08'den ÖNCE de vardı, o da alındı.
+
+  **2 · A TURU KAPANDI — A17 ve A14 koşuldu (cihazda, misafir, TR).**
+  · **A17 ✓ ama bir açıkla:** beş yasal sayfa ve dokuz soruluk SSS açılıyor, arama ve akordeon
+    çalışıyor, `(21.82)`nin *"Güncel tutarlar"* bölümü uçtan gelen değerleri **birebir** basıyor —
+    ölçüldü: uç `{shippingFee 790, freeShipping 6000, minBasketRoute 4000, minBasketShipping 0,
+    codMax 30000, shippingCountries ["FR"]}` döndü, ekran *"Kargo ücreti 7,90 €; 60 € ve üzeri…"*,
+    *"Kapıya teslimde asgari sepet tutarı 40 €"*, *"Kargo siparişlerinde asgari sepet tutarı
+    yoktur"*, *"Kapıda ödeme, 300 € ve altındaki…"*, *"Kargoyla gönderim yaptığımız ülkeler:
+    Fransa"* yazdı. **İki eski sayı böylece kendiliğinden düzeldi:** metin 500 € ve "Fransa ve
+    Almanya" diyordu, ayar 300 € ve yalnız FR. Kuruşsuz biçim de doğru çalışıyor (60 € · 40 € ·
+    300 €, ama 7,90 €). **Açık:** sayfaların misafire açık kapısı yok → **MB-76**; ayrıca web dili
+    metinde kalmış → **MB-77**.
+  · **A14 ✓ — giriş duvarının yeri ölçüldü.** Sepette DEĞİL: misafir 4× ürünle sepeti 53,40 €'ya
+    doldurdu (asgari 40 € aşıldı), *"Siparişi tamamla"* açıldı ve ödeme ekranına girdi. Ekran
+    sipariş özetini GÖSTERİYOR (4× kalem · ara toplam · genel toplam · *"Teslimat: adres
+    seçilince"*); duvar en üstteki kesikli kutu (*"Siparişinizi tamamlamak için hızlı doğrulama"*)
+    ve *"Siparişi onayla"* pasif, hemen üstünde gerekçesi yazılı. Yani duvar müşteriyi geri
+    çevirmiyor, **ne alacağını gösterip sonra doğrulanmasını istiyor** — doğru sıra. Tur artığı
+    temizlendi (sepet 0 ürün).
+
+  **Doğrulama:** `tsc` (mobil) temiz · kalan `isteyen/istemeyen` sayımı **0** · cihazda üç ekranda
+  gözle doğrulandı (Nerelere gidiyoruz · SSS · Teslimat ve iade).
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

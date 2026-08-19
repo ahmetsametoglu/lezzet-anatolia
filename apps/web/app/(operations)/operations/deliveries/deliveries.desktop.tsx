@@ -26,7 +26,7 @@ export function CourierDayDesktop({ stops }: { stops: CourierStop[] }) {
           href="/operations/deliveries/close"
           className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-1.5 font-ops-display text-ops-sm font-semibold text-ops-strong transition-colors hover:border-ops-olive"
         >
-          Gün kapanışı
+          Sefer kapanışı
         </Link>
       </PageHeader>
 
@@ -39,7 +39,7 @@ export function CourierDayDesktop({ stops }: { stops: CourierStop[] }) {
             <p className="border-b border-ops-olive-line bg-ops-olive-bg px-4 py-2.5 font-ops-body text-ops-xs text-ops-olive-dark">
               {NOTES.allDone}{' '}
               <Link href="/operations/deliveries/close" className="cursor-pointer font-semibold underline underline-offset-2">
-                Gün kapanışına geç →
+                Sefer kapanışına geç →
               </Link>
             </p>
           ) : null}

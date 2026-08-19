@@ -4,6 +4,7 @@ import {
   AddressService,
   anonDb,
   CategoryService,
+  DeliveryZoneService,
   MoneyMovementService,
   OrderService,
   ProductService,
@@ -17,8 +18,8 @@ import { recordOrderPayment } from '@lezzet/application';
 // Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
 // kırılır (katalog testinin kararı). Kurye sözleşmelerinin ilk tüketicisi de budur.
 import type {
+  CloseDeliveryRunResult,
   ConfirmDoorDeliveryResponse,
-  CourierDayCloseResult,
   CourierDayResponse,
   DayCloseDraftContract,
   DeliveryProofUploadResponse,
@@ -63,6 +64,8 @@ let otherCourierId = '';
 
 let customerId = '';
 let warehouseId = '';
+/** Testin kendi ROTASI — sefer (`delivery_run`) rota+gün ikilisiyle doğar, rotasız başlatılamaz. */
+let zoneId = '';
 let addressId = '';
 let accountId = '';
 let categoryId = '';
@@ -164,6 +167,9 @@ async function dispatched(
       channel: opts.channel ?? 'b2c',
       deliveryType: 'route',
       deliveryDate: opts.date ?? today,
+      // Sipariş ROTAYA yazılıyor: `start_delivery_run` durakları `(rota, gün, route)` üçlüsüyle
+      // claim ediyor — rotası olmayan sipariş sefere hiç bağlanmaz ve kapanışta görünmez.
+      deliveryZoneId: zoneId,
       courierId: opts.courier ?? courierId,
       addressId,
       addressSnapshot: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg' },
@@ -188,6 +194,25 @@ async function dispatched(
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'KAPI' })).id;
+
+  /*
+    ROTA FİKSTÜRÜN ZEMİNİNE GİRDİ (18.08): sefer `(rota, gün)` ikilisiyle doğuyor ve seferin deposu
+    rotadan snapshot'lanıyor (`delivery_zone.warehouse_id` `not null` + FK) — yani rotasız bir
+    kurulumda "seferi başlat" hiç denenemez. Depo `createTestWarehouse`tan geliyor, elle uydurulmuş
+    bir kimlikten değil.
+
+    `weekdays` YEDİ GÜNÜ de içeriyor ve bu bilinçli: rota "o gün koşuyor mu" diye süzülüyor, yani
+    tek güne yazılmış bir fikstür koşuyu haftanın altı günü kırmızıya çevirirdi — sınanan şey
+    taşımadır, takvim değil.
+  */
+  zoneId = (
+    await new DeliveryZoneService(db).insert({
+      name: `Kurye API rotası ${stamp}`,
+      warehouseId,
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+    })
+  ).id;
+
   const category = await new CategoryService(db).create({ name: { tr: `Kurye API ${stamp}` } });
   categoryId = category.id;
 
@@ -232,6 +257,11 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
+  // SEFER de testler arasında YAŞAR ve rota+gün başına TEKtir (0046 `delivery_run_key`): önceki
+  // testin açtığı sefer silinmezse sonraki test `already_started` alır ve iddia yanlış sebeple
+  // kırılır. Sipariş silmesinden SONRA: `order.delivery_run_id` `set null` olduğu için sıra
+  // zorunlu değil, ama sefer satırı boşalmış olsun.
+  await resetRuns();
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePriceCents: 300 })).id;
 });
 
@@ -241,6 +271,9 @@ afterAll(async () => {
   // doğru bir tehlikeyi görmüştü — kurulum yarıda kalınca boş kimlikle silme "invalid input syntax
   // for uuid" fırlatır — ama kalkanı yanlış yere koyuyordu: doğru cevap silmeyi kimliğin BİLİNDİĞİ
   // yere, purge'e bırakmak (`cleanup.ts`).
+  //
+  // SEFER ve ROTA da purge'ün bildiği bağlar: seferler kurye profilinden VE depodan (`courier_id` /
+  // `warehouse_id` snapshot'ı) toplanıyor, rota da depodan — ayrı bir hedef bildirmek gerekmiyor.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -250,6 +283,41 @@ afterAll(async () => {
     warehouseIds: [warehouseId],
   });
 });
+
+/**
+ * Testin rotasında açılmış seferleri toplar — kapanış seferi `restrict` ile tuttuğu için sıra sabit
+ * (`cleanup.ts`in `purgeDeliveryRuns` sırasının aynısı).
+ *
+ * Süzgeç ROTA: `courier_id` de olabilirdi ama sefer kaydını doğuran anahtar rota+gündür ve testin
+ * sahibi olduğu şey o rotadır — başka bir ajanın aynı kuryeyle açtığı bir sefer bu dosyanın işi
+ * değil. `mustDelete` hatayı FIRLATIR: sessizce yarım kalan bir temizlik, bir sonraki testte
+ * "neden already_started" diye saatler yakardı (CLAUDE §4b).
+ */
+async function resetRuns(): Promise<void> {
+  const { data, error } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
+  if (error) throw new Error(`sefer satırları okunamadı: ${error.message}`);
+  const runIds = (data ?? []).map((row) => row.id as string);
+  if (runIds.length === 0) return;
+
+  await mustDelete(db, 'delivery_run_close', (q) => q.in('delivery_run_id', runIds));
+  await mustDelete(db, 'delivery_run', (q) => q.in('id', runIds));
+}
+
+/**
+ * **Seferi başlatır ve künyesini döndürür** — kapanışın öznesi (`runId`) buradan gelir.
+ *
+ * `zoneId` HER ÇAĞRIDA açıkça geçiyor: kapının tek-rota otomatiği o gün koşan TÜM aktif rotalara
+ * bakıyor ve yerel veritabanı paylaşımlı (tohumun ve başka ajanların rotaları da orada) — rotayı
+ * söylemeyen bir çağrı `route_required` alıp testi kendi verisiyle ilgisiz bir sebepten kırardı.
+ *
+ * Ret dalları burada HATAYA çevriliyor: mutlu dal beklenirken gelen `no_route`/`route_required`
+ * kurulumun bozulduğunu söyler ve iddia satırında `undefined` olarak değil, sebebiyle patlamalı.
+ */
+async function startRun(body: Record<string, unknown> = {}): Promise<Extract<StartCourierDayResponse, { status: 'ok' }>> {
+  const result = await dataOf<StartCourierDayResponse>(await post('/api/v1/courier/day/start', { zoneId, ...body }));
+  if (result.status !== 'ok') throw new Error(`sefer başlatılamadı: ${result.status}`);
+  return result;
+}
 
 describe('kapı: Bearer + rol süzgeci', () => {
   it('Bearer olmadan 401 — kurye uçları oturumsuz gezilmez (katalogun tersi)', async () => {
@@ -376,19 +444,26 @@ describe('GET /api/v1/courier/day', () => {
   });
 });
 
-describe('POST /api/v1/courier/day/start', () => {
-  it('mutlu yol: günün HAZIR durakları yola çıkar', async () => {
+describe('POST /api/v1/courier/day/start — seferi başlat', () => {
+  it('mutlu yol: seferin HAZIR durakları yola çıkar ve künye cevapta döner', async () => {
     const hazir = await dispatched({ upTo: 'ready' });
 
-    const res = await post('/api/v1/courier/day/start', {});
+    const res = await post('/api/v1/courier/day/start', { zoneId });
     expect(res.status).toBe(200);
 
     const result = await dataOf<StartCourierDayResponse>(res);
+    if (result.status !== 'ok') throw new Error(`sefer başlatılamadı: ${result.status}`);
     expect(result.date).toBe(today);
     expect(result.started).toContain(hazir);
+    // Sefer kaydı GERÇEKTEN doğdu: ekranın "başladı" bayrağı artık bu künye (18.08) — yerel bir
+    // tahmin değil, sunucunun kaydı.
+    expect(result.run.zoneId).toBe(zoneId);
+    expect(result.run.referenceNo).toMatch(/^SF-/);
     // Uç "başladı" demiyor, durum gerçekten değişti — kapı sırasının şartı bu (teslim yalnız
     // yoldaki siparişten yazılır).
     expect((await orders.getById(hazir))?.status).toBe('out_for_delivery');
+    // Sipariş sefere BAĞLANDI: kapanışın beklenen tahsilatı bu bağ üzerinden gruplanıyor.
+    expect((await orders.getById(hazir))?.deliveryRunId).toBe(result.run.runId);
   });
 
   it('kısmi başarı GÖVDEDE ve 200: geçen, zaten yolda olan, hazır olmayan ayrı listelerde', async () => {
@@ -396,10 +471,11 @@ describe('POST /api/v1/courier/day/start', () => {
     const yolda = await dispatched();
     const hazirlanmamis = await dispatched({ upTo: 'confirmed' });
 
-    const res = await post('/api/v1/courier/day/start', {});
+    const res = await post('/api/v1/courier/day/start', { zoneId });
     expect(res.status).toBe(200);
 
     const result = await dataOf<StartCourierDayResponse>(res);
+    if (result.status !== 'ok') throw new Error(`sefer başlatılamadı: ${result.status}`);
     expect(result.started).toEqual([hazir]);
     // İkinci basış bir hata DEĞİL: "yapılacak yeni bir şey yok" cevabı.
     expect(result.alreadyOut).toEqual([yolda]);
@@ -409,13 +485,14 @@ describe('POST /api/v1/courier/day/start', () => {
     expect((await orders.getById(hazirlanmamis))?.status).toBe('confirmed');
   });
 
-  it('`date` verilince o günün rotası başlatılır', async () => {
+  it('`date` verilince o günün seferi başlatılır', async () => {
     const yarin = await dispatched({ date: dayOffset(3), upTo: 'ready' });
 
-    const bugun = await dataOf<StartCourierDayResponse>(await post('/api/v1/courier/day/start', {}));
+    const bugun = await startRun();
     expect(bugun.started).not.toContain(yarin);
 
-    const result = await dataOf<StartCourierDayResponse>(await post('/api/v1/courier/day/start', { date: dayOffset(3) }));
+    // Aynı rota, BAŞKA gün: kısıt gün bazlı olduğu için ikinci sefer açılabilir.
+    const result = await startRun({ date: dayOffset(3) });
     expect(result.date).toBe(dayOffset(3));
     expect(result.started).toContain(yarin);
   });
@@ -426,7 +503,7 @@ describe('POST /api/v1/courier/day/start', () => {
     const res = await app.request('/api/v1/courier/day/start', {
       method: 'POST',
       headers: { authorization: `Bearer ${outsiderToken}`, 'content-type': 'application/json' },
-      body: '{}',
+      body: JSON.stringify({ zoneId }),
     });
 
     expect(res.status).toBe(403);
@@ -624,16 +701,22 @@ describe('POST /api/v1/courier/stops/:orderId/proof-upload', () => {
   });
 });
 
-describe('gün kapanışı (K7)', () => {
-  beforeEach(async () => {
-    // Kapanış kaydı gün başına TEKİLDİR ve testler arasında yaşar — her test kendi gününü açık bulmalı.
-    await mustDelete(db, 'courier_day_close', (q) => q.eq('courier_id', courierId));
-  });
-
+/**
+ * Kapanış artık SEFER kapatıyor (K7 · 18.08): öznesi gün değil `runId`. Testlerin kurulumu bu yüzden
+ * bir adım kazandı — duraklar önce sefere BAĞLANMALI (`/day/start` claim eder), yoksa kapanış
+ * bakacağı hiçbir durak bulamaz: beklenen tahsilat görünümü ve kapanış fotoğrafı ikisi de
+ * `order.delivery_run_id` üzerinden gruplanıyor.
+ *
+ * Kapanış kaydı testler arasında yaşamıyor: seferler `beforeEach`te toplanıyor (`resetRuns`) ve
+ * kapanış sefere `restrict` ile bağlı olduğu için onunla birlikte gidiyor.
+ */
+describe('sefer kapanışı (K7)', () => {
   it('taslak: teslim/bekleyen/dönen ayrı listeler + beklenen tahsilat', async () => {
     const teslim = await dispatched({ totalCents: 2000 });
     const bekleyen = await dispatched();
     const donen = await dispatched();
+    // Üç durak da zaten yolda: sefer onları `alreadyOut` diye claim eder — araçtaki mal o seferindir.
+    const run = await startRun();
 
     await post(`/api/v1/courier/stops/${teslim}/deliver`, { collection: { method: 'cash', amountCents: 2000, accountId } });
     await post(`/api/v1/courier/stops/${bekleyen}/undelivered`, { outcome: 'unreachable', note: 'kimse yok' });
@@ -642,6 +725,8 @@ describe('gün kapanışı (K7)', () => {
     const draft = await dataOf<DayCloseDraftContract>(await asCourier('/api/v1/courier/day-close'));
 
     expect(draft.date).toBe(today);
+    // Taslağın ÖZNESİ görünür: ekran "Kuzey rotası · SF-26-…" künyesini buradan kuruyor.
+    expect(draft.run?.runId).toBe(run.run.runId);
     expect(draft.closed).toBeNull();
     expect(draft.delivered.map((s) => s.orderId)).toEqual([teslim]);
     expect(draft.pending.map((s) => s.orderId)).toEqual([bekleyen]);
@@ -650,15 +735,21 @@ describe('gün kapanışı (K7)', () => {
     expect(draft.expected).toEqual({ cashCents: 2000, cardCents: 0, chequeCents: 0 });
   });
 
-  it('günü kapat: fark TÜRER ve işareti anlamlıdır', async () => {
+  it('seferi kapat: fark TÜRER ve işareti anlamlıdır', async () => {
     const teslim = await dispatched({ totalCents: 2000 });
+    const run = await startRun();
     await post(`/api/v1/courier/stops/${teslim}/deliver`, { collection: { method: 'cash', amountCents: 2000, accountId } });
 
-    const res = await post('/api/v1/courier/day-close', { date: today, countedCashCents: 1900, note: '1 € eksik çıktı' });
+    const res = await post('/api/v1/courier/day-close', {
+      runId: run.run.runId,
+      countedCashCents: 1900,
+      note: '1 € eksik çıktı',
+    });
     expect(res.status).toBe(200);
 
-    const result = await dataOf<CourierDayCloseResult>(res);
+    const result = await dataOf<CloseDeliveryRunResult>(res);
     expect(result.ok).toBe(true);
+    expect(result.runId).toBe(run.run.runId);
     expect(result.expectedCashCents).toBe(2000);
     expect(result.countedCashCents).toBe(1900);
     // Eksi = eksik teslim. Mutlak değere indirilmez; iki yön de açıklanmayı hak eder.
@@ -666,27 +757,32 @@ describe('gün kapanışı (K7)', () => {
     expect(result.reconciled).toBe(false);
     expect(result.deliveredCount).toBe(1);
 
-    // Kapanmış gün SALT-OKUNUR: taslak artık kaydı taşıyor ve ekran onu öyle çizer.
+    // Kapanmış sefer SALT-OKUNUR: taslak artık kaydı taşıyor ve ekran onu öyle çizer.
     const draft = await dataOf<DayCloseDraftContract>(await asCourier('/api/v1/courier/day-close'));
     expect(draft.closed?.countedCashCents).toBe(1900);
     expect(draft.closed?.note).toBe('1 € eksik çıktı');
   });
 
   it('ikinci kapanış EZMEZ: `already_closed` — hata değil, 200 ile alan cevabı', async () => {
-    await post('/api/v1/courier/day-close', { date: today, countedCashCents: 0 });
+    const run = await startRun();
+    await post('/api/v1/courier/day-close', { runId: run.run.runId, countedCashCents: 0 });
 
-    const res = await post('/api/v1/courier/day-close', { date: today, countedCashCents: 9999 });
+    const res = await post('/api/v1/courier/day-close', { runId: run.run.runId, countedCashCents: 9999 });
 
     expect(res.status).toBe(200);
-    const result = await dataOf<CourierDayCloseResult>(res);
+    const result = await dataOf<CloseDeliveryRunResult>(res);
     expect(result).toMatchObject({ ok: false, reason: 'already_closed' });
     // Ezilmediğinin kanıtı kaydın kendisi: ikinci çağrının sayımı yazılmadı.
     const draft = await dataOf<DayCloseDraftContract>(await asCourier('/api/v1/courier/day-close'));
     expect(draft.closed?.countedCashCents).toBe(0);
   });
 
-  it('bozuk gün anahtarıyla kapanış 400', async () => {
-    const res = await post('/api/v1/courier/day-close', { date: 'bugun' });
+  it('bozuk sefer kimliğiyle kapanış 400 — RPC\'ye inip 500 üretmez', async () => {
+    // Eski hâli "bozuk GÜN anahtarı"ydı; öznenin sefere inmesiyle kapının süzdüğü değer de değişti.
+    // Kimliksiz gövde de aynı kapıdan döner: `runId` artık zorunlu.
+    expect((await post('/api/v1/courier/day-close', { runId: 'sefer-1' })).status).toBe(400);
+
+    const res = await post('/api/v1/courier/day-close', { countedCashCents: 0 });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ data: null, error: 'invalid_body' });
   });

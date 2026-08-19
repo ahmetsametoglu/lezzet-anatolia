@@ -73,7 +73,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
 - [ ] (11.5) **Teslimat özeti PDF:** teslimde e-postalı müşteriye otomatik (parametrik); kurye isterse çıktı ("resmî fatura değildir")
   - *Bitti:* teslimde PDF üretiliyor + gönderiliyor; çıktı alınabiliyor
   - **Not:** `14.6` ile AYNI iştir; tek yerde yapılır (PDF üretimi + `delivered` mailine ek). Yeni bir PDF bağımlılığı gerektirdiği için ayrı ele alınıyor.
-- [x] (11.6) **Gün kapanışı (RPC):** `CourierDayClose` — teslim edilenler, yöntem bazında toplam, iadeler; beklenen vs sayılan farkı aynı gün; kapanmış gün salt-okunur
+- [x] (11.6) **Gün kapanışı (RPC):** ~~`CourierDayClose` — kurye×gün ekseni~~ → **18.08'de SEFER eksenine indi (11.7):** kapanışın sahibi artık `delivery_run_close`; buradaki mutabakat kuralları (beklenen dondurulur, fark açıklanır, salt-okunur kapanış) aynen 11.7'de yaşıyor
   - *Bitti:* fark hesabı doğru; kapanan gün değiştirilemiyor
   - **Durum (28.07) — TAMAM.** `0025_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`, kapı `apps/web/lib/courier/day-close.ts`. 9 test. Ekran yüzey ajanının.
   - **Kapanış bir MUTABAKATTIR, para hareketi değil:** para kapıda tahsil edilirken yazıldı (11.3). Burada beklenen ile sayılan yan yana konur, fark aynı gün görünür.
@@ -87,6 +87,25 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - **Beklenen hiç yoksa para adımı çizilmiyor** (tasarım §4 "tahsilatsız gün"): üç sıfır kutusu, olmayan bir işi varmış gibi okutur.
     - **Getirilen mal listesinde "teslim ettim" düğmesi YOK** ve olmayacak: malın akıbeti depocunun kararıdır (DOMAIN §8) ve depo iade girişinde sonuçlanır — buradaki bir onay hiçbir yere yazılmazdı.
     - Kapanış sonrası başka ekrana GÖTÜRMÜYOR, aynı ekran salt-okunur hâliyle tazeleniyor: kurye ne kaydettiğini görmeden çıkmamalı.
+
+- [x] (11.7) **SEFER — gerçekleşen teslimat rotası (`delivery_run`, 0046):** rota+gün başına tek sefer; kurye rotayı SEÇER, sefer kaydı doğar, kurye bilgisi seferden senkronlanır; kapanış sefer ekseninde
+  - *Bitti:* sefer başlatma claim + geçiş ayrımıyla çalışıyor; kapanış takılı durakları çözüyor; geçmiş seferler listeleniyor
+  - **Durum (18.08) — UÇTAN UCA YAZILDI (kullanıcı kararları K1–K4, etüt `docs/feature/sefer.md`).**
+    Şema `0046_delivery_run.sql` (0025 kaldırıldı — kapanışın halefi sefer eksenli `delivery_run_close`):
+    `delivery_run` + `order.delivery_run_id` + `delivery_run_collection` görünümü + üç RPC
+    (`start_delivery_run` · `close_delivery_run` · `reassign_delivery_run`). Kapılar
+    `@lezzet/application/courier/{day,routes,day-close}` — `startCourierDay` artık sefer açar
+    (tek-rota otomatiği: tek adayda soru sorulmaz), `listCourierRoutes` seçim ekranının verisi,
+    `openDayClose/closeCourierDay` run eksenli. Web: dispatch'e sefer şeridi + DEVİR (toplu atama
+    SÖKÜLDÜ — `assignCourierAction` silindi), kapanış ekranı sefer künyeli, `deliveries`e üçüncü
+    sekme **Seferler** (keyset), sipariş detayına SF köprüsü, panel kartları sefer kimlikli.
+    Mobil: K1 rota seçimi + "Seferi başlat", K7 sefer kapanışı, `GET /courier/routes` ucu.
+    Seed rota+gün başına sefer kurup kapanışın üç hâlini üretiyor (kapsam kovaları `seed:coverage`).
+    **Catch-up claim:** aynı kuryenin açık sefere ikinci basışı reddedilmez, sonradan hazırlanan
+    durakları da sefere bağlar (mobil şeridin bulgusu). **`courier_id` sökülmedi:** beş sahiplik
+    kapısı ona yaslanıyor; yazan el sevkiyatçı menüsünden kuryenin sefer başlangıcına geçti.
+  - **BEKLEYEN(11.7):** rota seçimi kuryenin DEPO KAPSAMINI süzmüyor — A deposunun kuryesi B'nin
+    rotasını başlatabilir (rol kapısı yalnız role bakıyor; kapsam ataması 19.5 ile bağlanacak).
 
 ## Netleşecekler
 

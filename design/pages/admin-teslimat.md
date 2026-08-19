@@ -119,3 +119,20 @@ Gidilen: sipariş detayı, müşteri detayı (adres sorunu), **Depolar** (bölge
 - "Bugün kaç çıkış, kaçı hazır, kaçı atanmamış" tek bakışta okunmalı
 - **Takip numarası okunur ve kopyalanabilir olmalı** — müşteri arayınca telefondan okunur. Girişi bu ekranda değil (hazırlık ekranı, `07.12`); barkod okuma ihtiyacı da oraya ait, paket kapatılırken
 - Bölge kurulumu bu ekranda olmadığı için sayfa hafifledi: telefonda uzun posta kodu listeleriyle uğraşılmaz
+
+
+## Sefer güncellemesi (18.08 — kullanıcı kararları, `docs/feature/sefer.md`)
+
+§1'in üç kavramına DÖRDÜNCÜSÜ eklendi: **sefer (gerçekleşen)** — planlanan gün siparişten türetilmeye
+devam eder, ama araç fiilen çıktığında artık saklanan bir kayıt vardır (kim sürdü, hangi araç, çıkış/
+dönüş, SF kodu). Bu kararla eskiyen cümleler:
+
+- §2 "kurye atama" ve §3 "Siparişe kurye atama" **kalktı**: kurye rotayı KENDİSİ alır, atama bir plan
+  eylemi olmaktan çıktı. Gün planına rota başına **sefer şeridi** geldi (açılmadı / yolda / döndü /
+  kapandı · kurye · araç); kalan tek elle müdahale **sefer devri** (hasta kurye — sefer üstünde, sipariş
+  seçimiyle değil). "Atanmamışlar belli olur" beklentisinin yeni karşılığı: "N rotanın seferi açılmadı".
+- "Askıda kalanlar" KÜÇÜLDÜ: `out_for_delivery`de takılma hâlini artık sefer kapanışı kendisi çözüyor
+  (durum otomatik `ready`ye döner, YENİ GÜNÜ yine sevkiyatçı yazar — "görünür devir" korunur). Bölümde
+  kalan tek hikâye: günü geçmiş ama hiç yola çıkmamış sipariş.
+- Üçüncü sekme **Seferler**: gerçekleşen kayıtların listesi (SF kodu · rota · kurye · araç · saatler ·
+  mutabakat özeti) — geçmişe kanıt; performans ölçümü DEĞİL (dashboard'un "verim ölçmez" çizgisi).

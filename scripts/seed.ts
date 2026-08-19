@@ -63,7 +63,7 @@
  *                         tek haklı · kişiye özel · pasif · kişi-başı sınırlı) + 3 otomatik kampanya
  *                         (kategori · koleksiyon · asgari sepetli). Kupon kutusunun HER cevabı denenir
  *   ✓ discount_use        kullanım kaydı siparişten doğar — "kaç hak kaldı" sayaçtan değil buradan
- *   ✓ courier_day_close   2 gün kapalı (1 mutabık · 1 FARKLI + kuryenin açıklaması) · kalan gün AÇIK
+ *   ✓ delivery_run(+close) rota+gün başına sefer; 2 sefer kapalı (1 mutabık · 1 FARKLI + açıklama) · kalan AÇIK
  *   ✓ ticket              8 talep: 3 durum · 4 kaynak · AI + insan devralma · iade tetikli ·
  *   ✓ ticket_message      fotoğraflı · yeniden açılmış · sonu müşteride biten (kuyrukta cevap bekler)
  *   ✓ product_feedback    yayında · moderasyon kuyruğunda · reddedilmiş · metinsiz yıldız · beğeni ·
@@ -97,8 +97,8 @@
  *                         uyarısı yansın). İki katmanlı ezme kuralı ancak depo satırı varsa görünür
  *   ✓ variant_stock_notice "stok gelince haber ver": aynı varyantı bekleyen üç kişi · ziyaretçi +
  *                         kayıtlı · başka ÜLKE (yer süzgeci) · haber verilmiş (damgalı) kayıt
- *   ✗ vehicle             tablo var, kodda KULLANAN YOK (0042) — ekranı olmayan tabloyu doldurmak
- *                         çalışan bir şey varmış izlenimi bırakır
+ *   ✓ vehicle             ölçüm noktası (0045) + seferin aracı (0046) — depo seed'i kuruyor;
+ *                         eski "kullanan yok (0042)" notu bayattı, 18.08'de düzeltildi
  *   ✗ document_counter    numara VERİLDİKÇE dolar (0033) — önceden doldurmak sayacı yalanlar
  *   ✗ auth.users          seed auth hesabı AÇMAZ; profiller auth'suz durur (giriş yapılınca 0002
  *                         trigger'ı e-postadan eşleştirip bağlar)
@@ -119,7 +119,7 @@
 
 import { createServiceRoleClient, waitForRest } from '@lezzet/database';
 import { seedBundles, seedCatalog, seedCollections } from './seed/catalog';
-import { seedCourierDayCloses } from './seed/courier';
+import { seedDeliveryRuns, seedRunCloses } from './seed/courier';
 import { seedAddresses, seedDeliveryZones, seedPostalDemand, seedStockNotices, seedZoneNotices } from './seed/delivery';
 import { seedDiscounts } from './seed/discount';
 import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/feedback';
@@ -294,7 +294,9 @@ async function main(): Promise<void> {
   await seedBankQueue(db);
   // Transfer siparişlerden SONRA: sevk kullanılabilir stoğa bakar, rezervasyonlu malı yola çıkarmaz.
   await seedTransfer(db, depolar);
-  await seedCourierDayCloses(db, kisiler); // kapanış, günün tahsilat görünümünü okur
+  // Seferler siparişlerden SONRA: hangi (rota, gün) sürülmüş, siparişlerin kendisi söylüyor.
+  await seedDeliveryRuns(db, kisiler);
+  await seedRunCloses(db, kisiler); // kapanış, seferin tahsilat görünümünü okur
   await seedTickets(db, kisiler); // talep siparişe ve kalemine bağlanır
   await seedJobRuns(db);
   // Gözlemleme EN SONDA: sağlık görüntüsünün "son bir saatte kaç hata" alanı ile hata kaydı aynı

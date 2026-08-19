@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, AddressService, CategoryService, OrderService, ProductService, ReservationService,
-  StockService, UserProfileService, serviceDb,
+  AccountService, AddressService, CategoryService, DeliveryZoneService, OrderService, ProductService,
+  ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, settingsSnapshot } from '@lezzet/database/testing';
-import { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay, type CourierStop } from './day';
+import { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
 import { recordOrderPayment } from '../order/payment';
 import { advanceOrder } from '../order/advance.testkit';
 
@@ -39,6 +39,8 @@ let productId: string;
 let categoryId: string;
 let stockId: string;
 let accountId: string;
+/** Sefer akışının rotası (18.08): start artık zone claim'i yapıyor — zonesuz sipariş görünmez. */
+let zoneId: string;
 const createdProfiles: string[] = [];
 
 const today = new Date().toISOString().slice(0, 10);
@@ -69,9 +71,21 @@ beforeAll(async () => {
     customerId, line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg',
   })).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
+  // Rota HER GÜN koşar (weekdays 1-7): testin hangi gün koştuğu davranışı değiştirmesin.
+  zoneId = (await new DeliveryZoneService(db).insert({
+    name: `Kurye testi rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
 });
 
 beforeEach(async () => {
+  // Sefer temizliği ÖNCE: rota+gün başına TEK sefer (0046) — önceki testin açtığı run kalırsa
+  // sonraki start `already_started` alır. Kapanış seferi `restrict` ile tutar, sıra sabit.
+  const { data: runRows } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
+  const runIds = (runRows ?? []).map((row) => row.id as string);
+  if (runIds.length > 0) {
+    await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
+    await db.from('delivery_run').delete().in('id', runIds);
+  }
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
@@ -108,6 +122,7 @@ async function dispatched(
       customerId,
       channel: 'b2c',
       deliveryType: 'route',
+      deliveryZoneId: zoneId,
       deliveryDate: opts.date ?? today,
       courierId: opts.courier ?? courierId,
       addressId,
@@ -250,14 +265,24 @@ describe('kapı kasası hesabı (21.10d)', () => {
   });
 });
 
-describe('günü başlat (K1 · 21.10d)', () => {
-  it('HAZIR durak yola çıkar — geçiş kaydı kuryenin adına düşer', async () => {
+/** Union daraltıcı — bu testin beklediği dal `ok`; başka dal gelirse sebep görünür düşsün. */
+function mustStart(result: CourierDayStart): Extract<CourierDayStart, { status: 'ok' }> {
+  if (result.status !== 'ok') throw new Error(`seferin başlaması bekleniyordu, gelen: ${result.status}`);
+  return result;
+}
+
+describe('seferi başlat (K1 · 18.08)', () => {
+  it('HAZIR durak yola çıkar — sefer kaydı doğar, geçiş kuryenin adına düşer', async () => {
     const { orderId } = await dispatched({ upTo: 'ready' });
 
-    const result = await startCourierDay(db, { courierId });
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
 
     expect(result.started).toContain(orderId);
+    expect(result.run.zoneId).toBe(zoneId);
+    expect(result.run.referenceNo).toMatch(/^SF-\d{2}-/);
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+    // Sipariş SEFERE damgalanır: kanıtlı "kim götürdü" artık run üzerinden okunur.
+    expect((await orders.getById(orderId))?.deliveryRunId).toBe(result.run.runId);
 
     const { data } = await db.from('order_status_log').select('from_status,to_status,actor_id').eq('order_id', orderId);
     expect(
@@ -270,7 +295,7 @@ describe('günü başlat (K1 · 21.10d)', () => {
   it('zaten yoldaki durak İKİNCİ kez yazılmaz — `alreadyOut`, ve bu bir hata değil', async () => {
     const { orderId } = await dispatched();
 
-    const result = await startCourierDay(db, { courierId });
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
 
     expect(result.alreadyOut).toContain(orderId);
     expect(result.started).not.toContain(orderId);
@@ -282,7 +307,7 @@ describe('günü başlat (K1 · 21.10d)', () => {
     // partiden düşecek sorusu cevapsız kalır. Kurye sebebi listede görüyor.
     const { orderId } = await dispatched({ upTo: 'confirmed' });
 
-    const result = await startCourierDay(db, { courierId });
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
 
     expect(result.skipped).toEqual([{ orderId, currentStatus: 'confirmed' }]);
     expect(result.started).toHaveLength(0);
@@ -294,7 +319,7 @@ describe('günü başlat (K1 · 21.10d)', () => {
     const { orderId: yolda } = await dispatched();
     const { orderId: hazirlanmamis } = await dispatched({ upTo: 'confirmed' });
 
-    const result = await startCourierDay(db, { courierId });
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
 
     expect(result.started).toEqual([hazir]);
     expect(result.alreadyOut).toEqual([yolda]);
@@ -302,40 +327,59 @@ describe('günü başlat (K1 · 21.10d)', () => {
     expect(result.stale).toHaveLength(0);
   });
 
-  it('BAŞKA kuryenin hazır siparişi bu çağrıyla yola çıkmaz', async () => {
+  it('sabah BAŞKASINA atanmış görünen sipariş de sefere geçer — kurye SEFERDEN gelir (18.08)', async () => {
+    // Eski değişmez tersiydi ("başka kuryenin siparişi yola çıkmaz") ve atama modeline aitti.
+    // 18.08 kararı: atama plandır, gerçek seferdir — rotayı fiilen süren claim eder ve
+    // `order.courier_id` seferin kuryesiyle SENKRONLANIR ("siparişin kuryesi seferin kuryesinden").
     const { orderId } = await dispatched({ courier: otherCourierId, upTo: 'ready' });
 
-    const result = await startCourierDay(db, { courierId });
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
 
-    expect(result.started).not.toContain(orderId);
-    expect((await orders.getById(orderId))?.status).toBe('ready');
+    expect(result.started).toContain(orderId);
+    const order = await orders.getById(orderId);
+    expect(order?.courierId).toBe(courierId);
+    expect(order?.status).toBe('out_for_delivery');
   });
 
-  it('BAŞKA günün hazır durağı başlatılmaz — gün imzada durur', async () => {
+  it('BAŞKA günün hazır durağı başlatılmaz — gün imzada durur, iki gün iki AYRI seferdir', async () => {
     const { orderId } = await dispatched({ date: dayOffset(3), upTo: 'ready' });
 
-    const bugun = await startCourierDay(db, { courierId });
+    const bugun = mustStart(await startCourierDay(db, { courierId, zoneId }));
     expect(bugun.started).not.toContain(orderId);
 
-    const oGun = await startCourierDay(db, { courierId, date: dayOffset(3) });
+    const oGun = mustStart(await startCourierDay(db, { courierId, zoneId, date: dayOffset(3) }));
     expect(oGun.date).toBe(dayOffset(3));
     expect(oGun.started).toContain(orderId);
+    expect(oGun.run.runId).not.toBe(bugun.run.runId);
   });
 
-  it('eşzamanlı iki çağrıda geçiş TAM BİR KEZ yazılır; yazmayan çağrı sessiz kalmaz', async () => {
-    // Hangi çağrının kazandığı SABİTLENMİYOR — yarış gerçek ve kilit veritabanındadır (koşullu
-    // ilerletme, `transition_order_status`). Sabitlenen iki değişmez var: geçiş bir kez yazılır ve
-    // yazamayan çağrı durağı ya `stale` ya `alreadyOut` diye BİLDİRİR. Bunu "stale döner" diye
-    // yazmak yalancı bir düşüş üretirdi: kaybeden çağrı listesini kazananın yazımından SONRA
-    // okuduysa durağı zaten yolda görür ve dürüst cevabı `alreadyOut`tur.
+  it('eşzamanlı iki çağrıda sefer TAM BİR KEZ açılır; başkasının açık seferi `already_started` alır', async () => {
+    // Hangi çağrının kazandığı SABİTLENMİYOR — yarış gerçek ve kilit VERİDEDİR (`delivery_run_key`
+    // mutlak unique, 0046). AYNI kuryenin ikinci basışı artık bir ret DEĞİL, catch-up claim'dir
+    // (18.08, mobil bulgu: gün ortasında hazırlanan durak da sefere bağlanabilmeli) — iki cevap da
+    // `ok` ve AYNI seferi gösterir. Sabit kalan değişmezler: sefer bir kez açılır, geçiş bir kez
+    // yazılır, durak `started` listelerinin TOPLAMINDA tam bir kez görünür.
     const { orderId } = await dispatched({ upTo: 'ready' });
 
-    const [a, b] = await Promise.all([startCourierDay(db, { courierId }), startCourierDay(db, { courierId })]);
+    const [a, b] = await Promise.all([
+      startCourierDay(db, { courierId, zoneId }),
+      startCourierDay(db, { courierId, zoneId }),
+    ]);
 
-    expect([...a.started, ...b.started].filter((id) => id === orderId)).toHaveLength(1);
+    const first = mustStart(a);
+    const second = mustStart(b);
+    expect(first.run.runId).toBe(second.run.runId);
+    expect([...first.started, ...second.started].filter((id) => id === orderId)).toHaveLength(1);
 
-    const loser = a.started.includes(orderId) ? b : a;
-    expect(loser.stale.some((stop) => stop.orderId === orderId) || loser.alreadyOut.includes(orderId)).toBe(true);
+    // `already_started` artık YALNIZ başkasının (ya da kapanmış) seferinin cevabı: rota bugün
+    // bu kuryede — öteki kurye başlatamaz, kimde olduğunu görür.
+    const other = await startCourierDay(db, { courierId: otherCourierId, zoneId });
+    expect(other.status).toBe('already_started');
+    if (other.status === 'already_started') {
+      expect(other.runId).toBe(first.run.runId);
+      expect(other.courierId).toBe(courierId);
+      expect(other.mine).toBe(false);
+    }
 
     const { data } = await db
       .from('order_status_log')

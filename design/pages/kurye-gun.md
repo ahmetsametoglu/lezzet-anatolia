@@ -49,3 +49,13 @@ Gidilen: durak → **kurye-teslimat** (tek teslimat ekranı); teslimat sonuçlan
 - **Telefon esastır; ekran araçta kullanılır** — güneş ışığında okunabilirlik, tek elle ve kısa bakışlarla kullanım (sürüş molalarında) işlevsel gerekliliktir
 - Navigasyon ve arama/WhatsApp geçişleri tek dokunuşla olmalı — kurye uygulamalar arasında gider gelir, dönüşte kaldığı yeri bulmalı
 - Bağlantı kesintisi sahada olağandır; liste son bilinen haliyle çalışmaya devam edebilmeli, işaretlemeler bağlantı gelince yansımalı
+
+
+## Sefer güncellemesi (18.08 — `docs/feature/sefer.md`)
+
+§5'in *"teslimatlar admin'in rota planı/atamasıyla düşer"* cümlesi ESKİDİ: kurye güne **rota seçerek**
+başlar (o gün koşan rotaların kartları — ad · depo · durak sayısı; başkasının açık seferi olan rota
+pasif ve sahibiyle yazılı). TEK aday rotada seçim atlanır, CTA doğrudan "Seferi başlat — <rota adı>".
+Başlatma bir SEFER kaydı doğurur (SF kodu ekranda küçük künye); gün ortasında hazırlanan siparişler
+aynı düğmeye ikinci basışla sefere katılır ("kalanları yola çıkar"). Sefer kapandıysa gövde yeniden
+rota seçimine döner — kurye ikinci bir ROTAYA çıkabilir; aynı rotaya ikinci tur veride yasak.

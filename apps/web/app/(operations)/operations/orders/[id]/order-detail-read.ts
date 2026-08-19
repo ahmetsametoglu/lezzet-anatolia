@@ -1,5 +1,6 @@
 import {
   BundleService,
+  DeliveryRunService,
   MoneyMovementService,
   AccountService,
   OrderService,
@@ -159,6 +160,9 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const customer = people.find((p) => p.id === order.customerId);
   const courier = order.courierId ? people.find((p) => p.id === order.courierId) : undefined;
+  // Sefer köprüsü (18.08): sipariş hangi GERÇEKLEŞEN seferle gitti — SF kodu detayda okunur,
+  // geçmişi Seferler sekmesinde durur. Tek satırlık okuma; sefersiz siparişte hiç sorgu yapılmaz.
+  const run = order.deliveryRunId ? await new DeliveryRunService(db).getById(order.deliveryRunId) : null;
 
   const lines = items.map<OrderLineView>((item) => ({
     id: item.id,
@@ -246,6 +250,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       date: order.deliveryDate,
       address: addressOf(order.addressSnapshot),
       courierName: courier?.name ?? null,
+      runReference: run?.referenceNo ?? null,
       proof: await proofOf(order.deliveryProof),
       warehouse: warehouseLabels.get(order.warehouseId) ?? null,
     },

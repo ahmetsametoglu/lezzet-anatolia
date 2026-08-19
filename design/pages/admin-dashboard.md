@@ -137,3 +137,11 @@ depo hazırlık, müşteriler (gecikmiş vade üzerinden).
 - Telefon önceliklidir: patron güne çoğunlukla telefondan bakar — sabah kahvesinde tek elle
   taranabilmeli, bekleyen işlerin sayıları ilk ekranda kavranmalı
 - Gün içinde sık sık kısa kısa açılır (araçta, depoda); her açılışta güncel durum hızla yüklenmeli
+
+
+## Sefer güncellemesi (18.08 — `docs/feature/sefer.md`)
+
+§2.5'in rota kartlarının KİMLİĞİ artık sefer: başlık "rota adı · SF kodu", kurye adı seferin
+kuryesi (eskiden kart kurye GRUBUydu ve rota adı hiç yazılamıyordu). Sefere bağlanmamış duraklar
+"Sefer açılmadı" kartında görünür kalır. §2.2'nin gün akışındaki "çıkış" saati hâlâ PLANI gösterir;
+gerçekleşen çıkış/dönüş artık kayıtta durur (`delivery_run`) ve ileride planın yanına yazılabilir.

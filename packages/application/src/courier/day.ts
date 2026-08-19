@@ -1,5 +1,8 @@
 import {
   AddressService,
+  DeliveryRunCloseService,
+  DeliveryRunService,
+  DeliveryZoneService,
   OrderItemService,
   OrderService,
   OrderStatusLogService,
@@ -8,7 +11,8 @@ import {
   SettingsService,
   UserProfileService,
 } from '@lezzet/database';
-import { canTransition, whatsAppLink, type MessageLocale } from '@lezzet/domain-core';
+import { canTransition, deliveryRunReferenceNo, whatsAppLink, type MessageLocale } from '@lezzet/domain-core';
+import { listCourierRoutes } from './routes';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Order, OrderItem, OrderStatusLog } from '@lezzet/types';
@@ -92,11 +96,21 @@ export async function listCourierDay(
   input: {
     courierId: string;
     date?: string;
+    /** Rota süzgeci (18.08): iki rotalı gün artık karışık tek liste değil. */
+    zoneId?: string;
+    /**
+     * SEFER süzgeci (18.08): kapanış SEFERİN duraklarını sayar. Verilirse gün süzgeci uygulanmaz —
+     * dünkü seferin kapanışı bugünden açılabilmeli, duraklar güne değil sefere bağlı.
+     */
+    runId?: string;
     locale?: MessageLocale;
   },
 ): Promise<CourierStop[]> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
-  const orders = await new OrderService(db).listByCourier(input.courierId, { deliveryDate: date });
+  const orders = await new OrderService(db).listByCourier(
+    input.courierId,
+    input.runId ? { deliveryRunId: input.runId } : { deliveryDate: date, deliveryZoneId: input.zoneId },
+  );
   if (orders.length === 0) return [];
 
   const orderIds = orders.map((order) => order.id);
@@ -178,76 +192,194 @@ export async function readDoorCashAccountId(db: SupabaseClient): Promise<string 
 }
 
 /**
- * **"Yola çıktım"ın sonucu** (K1 · 21.10d) — dört liste, tek `ok` değil.
+ * **"Seferi başlat"ın sonucu** (K1 · 18.08) — ayrımlı birleşim: dört liste + sefer künyesi, ya da
+ * başlatılamama SEBEBİ. `already_started` bir hata değil (rota+gün başına tek sefer — 0046 kısıtı);
+ * `route_required` ekranı `/courier/routes` seçimine gönderir; `no_route` o gün koşan rota yok.
  *
- * Toplu yazımın en tehlikeli hâli "kısmen oldu"dur: üç durak yola çıkıp dördüncüsü çıkmazsa ve cevap
- * yalnız "başladı" derse, kurye o durakta teslim yazamadığında sebebini bilemez (kapı sırası: teslim
- * yalnız YOLDAKİ siparişten olur). Bu yüzden kısmi başarı GÖRÜNÜR.
+ * Toplu yazımın en tehlikeli hâli "kısmen oldu"dur: üç durak yola çıkıp dördüncüsü çıkmazsa ve
+ * cevap yalnız "başladı" derse, kurye o durakta teslim yazamadığında sebebini bilemez (kapı sırası:
+ * teslim yalnız YOLDAKİ siparişten olur). Bu yüzden kısmi başarı GÖRÜNÜR.
  */
-export interface CourierDayStart {
-  date: string;
-  /** `ready → out_for_delivery` yazılanlar. */
-  started: string[];
-  /** Zaten yoldaydı — ikinci çağrı hata değil, "yeni bir şey yok" cevabı. */
-  alreadyOut: string[];
-  /** Araya biri girdi: `ready` okundu, yazarken durum değişmişti. */
-  stale: { orderId: string; currentStatus: Order['status'] }[];
-  /** Durumu `ready` değil — henüz hazırlanmadı ya da gün içinde kapandı. */
-  skipped: { orderId: string; currentStatus: Order['status'] }[];
+export type CourierDayStart =
+  | {
+      status: 'ok';
+      date: string;
+      run: CourierRunBriefView;
+      /** `ready → out_for_delivery` yazılanlar. */
+      started: string[];
+      /** Zaten yoldaydı — ikinci çağrı hata değil, "yeni bir şey yok" cevabı. */
+      alreadyOut: string[];
+      /** Araya biri girdi: `ready` okundu, yazarken durum değişmişti. */
+      stale: { orderId: string; currentStatus: Order['status'] }[];
+      /** Durumu uygun değil — henüz hazırlanmadı ya da gün içinde kapandı. */
+      skipped: { orderId: string; currentStatus: Order['status'] }[];
+    }
+  | { status: 'already_started'; runId: string; referenceNo: string; courierId: string; mine: boolean }
+  | { status: 'route_required' }
+  | { status: 'no_route' };
+
+/** Seferin ekranlara giden künyesi — sözleşmedeki `CourierRunBriefSchema`nın aynası. */
+export interface CourierRunBriefView {
+  runId: string;
+  referenceNo: string;
+  zoneId: string;
+  zoneName: string | null;
+  vehicleId: string | null;
+  departedAt: string | null;
+  returnedAt: string | null;
+  closed: boolean;
 }
 
 /**
- * **Günü başlat** (K1) — günün HAZIR siparişlerini yola çıkarır.
+ * **Seferi başlat** (K1 · 18.08) — rotayı KURYE seçer, sefer kaydı doğar, seferin hazır siparişleri
+ * yola çıkar. Eski "günü başlat"ın halefi: fiil aynı (araca günün kolileri yüklenir), öznesi
+ * netleşti — gün değil SEFER, ve kurye artık atamayla değil seçimiyle bağlanır.
  *
- * Web emsali sipariş BAŞINA çalışıyor (`deliveries/[orderId]/actions.ts` → `startDeliveryAction`):
- * kurye durağı açıp "Yola çıktım" diyor. Mobil v2 aynı işareti GÜN başına soruyor (K1'in birincil
- * düğmesi: *"Yola çıktım — günü başlat"*) çünkü sahadaki gerçek fiil budur — araca yüklenen tek bir
- * durak değil, günün kolileridir. İki yüzey aynı geçişi yazıyor, kapsamı farklı.
+ * ── ROTA ÇÖZÜMÜ: TEK ADAYDA SORU SORULMAZ ───────────────────────────────────
+ * `zoneId` verilmezse o gün koşan rotalara bakılır: sıfır → `no_route`; tek → otomatik seçilir
+ * (dispatch'in "tek adayda soru sorulmaz" ilkesi — tek rotalı operasyon hiç soru görmez); birden
+ * çok → `route_required`, ekran seçtirir.
  *
- * **Yalnız `ready` olanlar aday.** `confirmed`/`preparing` bir sipariş motorca yola çıkarılabilir
- * (`canTransition('confirmed','out_for_delivery')` izinli — küçük sipariş hazırlığı atlayabilir) ama
- * bunu KURYENİN toplu düğmesi yapmaz: hazırlığı atlanan siparişin parti kaydı yazılmamıştır ve
- * teslimde mal hangi partiden düşecek sorusu cevapsız kalır. Atlanan durak gizlenmiyor, `skipped`
- * listesinde durumuyla dönüyor — ekran "1 durak hazırlanmayı bekliyor" diyebilir.
+ * ── CLAIM RPC'DE, GEÇİŞ BURADA ──────────────────────────────────────────────
+ * `start_delivery_run` sefer satırını açar ve siparişleri damgalar (`delivery_run_id` +
+ * `courier_id` — "siparişin kuryesi seferin kuryesinden gelir") — TEK transaction, iki kuryenin
+ * yarışı veride çözülür. Durum geçişi RPC'ye GÖMÜLMEZ: `ready → out_for_delivery` kenarının izni
+ * motorundur (`canTransition`) ve bir gün o kenar kapanırsa bu kapı yazmayı bırakır, RPC'deki bir
+ * kopyaya göre yazmaya devam etmez.
  *
- * **Geçişin izni motora sorulur** (`canTransition`), burada hesaplanmaz: bir gün `ready` kenarı
- * kapanırsa bu kapı yazmayı bırakır, kendi kopyasına göre yazmaya devam etmez.
+ * **Yalnız `ready` olanlar yola çıkar.** `confirmed`/`preparing` motorca çıkarılabilir olsa da
+ * hazırlığı atlanan siparişin parti kaydı yazılmamıştır — teslimde mal hangi partiden düşecek
+ * sorusu cevapsız kalır. Atlanan durak gizlenmez, `skipped` listesinde durumuyla döner.
  *
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
  */
 export async function startCourierDay(
   db: SupabaseClient,
-  input: { courierId: string; date?: string },
+  input: { courierId: string; date?: string; zoneId?: string; vehicleId?: string | null },
 ): Promise<CourierDayStart> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
+
+  // Rota çözümü — verilmemişse o gün koşanlardan; seçim listesiyle AYNI kaynaktan gelir ki ekranın
+  // gösterdiği ile kapının seçtiği ayrışamasın.
+  let zoneId = input.zoneId ?? null;
+  if (!zoneId) {
+    const routes = await listCourierRoutes(db, { date });
+    if (routes.length === 0) return { status: 'no_route' };
+    if (routes.length > 1) return { status: 'route_required' };
+    zoneId = routes[0]!.zoneId;
+  }
+
+  const runs = new DeliveryRunService(db);
+  const year = Number(date.slice(0, 4));
+
+  // Referans çakışması (26^6 içinde nadir) yeni kodla denenir — sipariş referansının deseni.
+  let start = await runs.start({
+    zoneId,
+    date,
+    courierId: input.courierId,
+    referenceNo: deliveryRunReferenceNo(year),
+    vehicleId: input.vehicleId ?? null,
+    actorId: input.courierId,
+  });
+  for (let attempt = 0; !start.ok && start.reason === 'reference_collision' && attempt < 3; attempt += 1) {
+    start = await runs.start({
+      zoneId,
+      date,
+      courierId: input.courierId,
+      referenceNo: deliveryRunReferenceNo(year),
+      vehicleId: input.vehicleId ?? null,
+      actorId: input.courierId,
+    });
+  }
+
+  if (!start.ok) {
+    if (start.reason === 'already_started' && start.runId && start.referenceNo && start.courierId) {
+      return {
+        status: 'already_started',
+        runId: start.runId,
+        referenceNo: start.referenceNo,
+        courierId: start.courierId,
+        mine: start.courierId === input.courierId,
+      };
+    }
+    // `zone_not_found` (silinmiş/bozuk kimlik) ve tükenen referans denemesi aynı kapıya çıkar:
+    // başlatılacak rota yok. Ekran seçim listesine döner — o liste zaten yalnız var olanı gösterir.
+    return { status: 'no_route' };
+  }
+
+  const zoneName = (await new DeliveryZoneService(db).getById(zoneId))?.name ?? null;
+  const result: CourierDayStart = {
+    status: 'ok',
+    date,
+    run: {
+      runId: start.runId!,
+      referenceNo: start.referenceNo!,
+      zoneId,
+      zoneName,
+      vehicleId: input.vehicleId ?? null,
+      departedAt: start.departedAt ?? null,
+      returnedAt: null,
+      closed: false,
+    },
+    started: [],
+    alreadyOut: [],
+    stale: [],
+    skipped: [],
+  };
+
   const orders = new OrderService(db);
-  // Gün listesiyle AYNI okuma ("yalnız kendi teslimatları" imzada durur) — görünüm modeli
-  // gerekmediği için durak kurulmuyor, ham sipariş yeterli.
-  const rows = await orders.listByCourier(input.courierId, { deliveryDate: date });
-
-  const result: CourierDayStart = { date, started: [], alreadyOut: [], stale: [], skipped: [] };
-
-  for (const order of rows) {
-    if (order.status === 'out_for_delivery') {
-      result.alreadyOut.push(order.id);
+  for (const claim of start.claimed ?? []) {
+    if (claim.status === 'out_for_delivery') {
+      result.alreadyOut.push(claim.orderId);
       continue;
     }
-    if (order.status !== 'ready' || !canTransition(order.status, 'out_for_delivery').allowed) {
-      result.skipped.push({ orderId: order.id, currentStatus: order.status });
+    if (claim.status !== 'ready' || !canTransition(claim.status, 'out_for_delivery').allowed) {
+      result.skipped.push({ orderId: claim.orderId, currentStatus: claim.status });
       continue;
     }
 
     const transitioned = await orders.transition({
-      orderId: order.id,
-      from: order.status,
+      orderId: claim.orderId,
+      from: claim.status,
       to: 'out_for_delivery',
       actorId: input.courierId,
     });
-    if (transitioned.ok) result.started.push(order.id);
-    else result.stale.push({ orderId: order.id, currentStatus: transitioned.currentStatus });
+    if (transitioned.ok) result.started.push(claim.orderId);
+    else result.stale.push({ orderId: claim.orderId, currentStatus: transitioned.currentStatus });
   }
 
   return result;
+}
+
+/**
+ * **Kuryenin o günkü seferi** — `/courier/day` cevabının `run` alanı (18.08). Eski yerel "başladı"
+ * bayrağının halefi: uygulama yeniden başlasa da açık sefer sunucudan gelir. Birden çok sefer
+ * sürülmüş günde KAPANMAMIŞ olan önceliklidir (akış sıralı: kapat → yeni sefer); hepsi kapalıysa
+ * en yenisi döner (salt-okunur gösterim).
+ */
+export async function readCourierRun(
+  db: SupabaseClient,
+  input: { courierId: string; date?: string },
+): Promise<CourierRunBriefView | null> {
+  const date = input.date ?? new Date().toISOString().slice(0, 10);
+  const runs = await new DeliveryRunService(db).listByCourier(input.courierId, { date });
+  if (runs.length === 0) return null;
+
+  const closes = await new DeliveryRunCloseService(db).listByRuns(runs.map((run) => run.id));
+  const closedIds = new Set(closes.map((close) => close.deliveryRunId));
+  const run = runs.find((candidate) => !closedIds.has(candidate.id)) ?? runs[0]!;
+  const zoneName = (await new DeliveryZoneService(db).getById(run.deliveryZoneId))?.name ?? null;
+
+  return {
+    runId: run.id,
+    referenceNo: run.referenceNo,
+    zoneId: run.deliveryZoneId,
+    zoneName,
+    vehicleId: run.vehicleId,
+    departedAt: run.departedAt,
+    returnedAt: run.returnedAt,
+    closed: closedIds.has(run.id),
+  };
 }
 
 /**

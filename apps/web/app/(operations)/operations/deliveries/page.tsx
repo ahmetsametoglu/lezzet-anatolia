@@ -10,6 +10,8 @@ import { readDispatchDay } from './dispatch-read';
 import { RoutesClient } from './routes-client';
 import { readZoneHandoff } from './routes-handoff';
 import { readRoutes } from './routes-read';
+import { RunsClient } from './runs-client';
+import { readRunsPage } from './runs-read';
 
 // **Teslimat & Rota** (`/operations/deliveries`) — İKİ DAL, TEK ADRES.
 //
@@ -83,6 +85,11 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
           handoff={handoff}
         />
       );
+    }
+    // ÜÇÜNCÜ AN (18.08): gerçekleşen seferler — plan siparişten türetir, burası kaydın kendisini
+    // okur (kim sürdü, hangi araç, saatler, mutabakat). `docs/feature/sefer.md` Faz 5.
+    if (urlState.tab === 'runs') {
+      return <RunsClient initial={await readRunsPage()} />;
     }
     return <DispatchClient day={await readDispatchDay(urlState.date)} />;
   }

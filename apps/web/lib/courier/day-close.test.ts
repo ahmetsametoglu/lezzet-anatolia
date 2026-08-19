@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService,
-  UserProfileService, serviceDb,
+  AccountService, CategoryService, DeliveryZoneService, OrderService, ProductService, ReservationService,
+  StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
+import { startCourierDay } from '@lezzet/application';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
@@ -10,10 +11,13 @@ import { markUndelivered } from './day';
 import { transitionOrder } from '../order/transition';
 
 /**
- * Kurye gün kapanışı ve kasa mutabakatı (11.6).
+ * SEFER kapanışı ve kasa mutabakatı — WEB KÖPRÜSÜ (11.7 · 18.08). Davranışın tam kapsamı paket
+ * testinde (`packages/application/src/courier/day-close.test.ts`); burada sınanan şey köprünün
+ * (serviceDb enjeksiyonu) aynı sonuçları taşıdığıdır: **beklenen toplam yöntem bazında doğru mu**,
+ * **fark aynı gün görünüyor mu**, **kapanmış sefer salt-okunur mu**.
  *
- * Sınanan şey: **beklenen toplam yöntem bazında doğru mu**, **fark aynı gün görünüyor mu** ve
- * **kapanmış gün salt-okunur mu**.
+ * `startCourierDay` köprüde YOK ve bilinçli (web ekranı kullanmıyor — knip ölü kod sayar); testin
+ * fikstürü seferi doğrudan paketten başlatır.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -30,10 +34,12 @@ let productId: string;
 let categoryId: string;
 let stockId: string;
 let accountId: string;
+/** Sefer akışının rotası: claim zone süzgeçli, zonesuz sipariş sefere bağlanmaz. */
+let zoneId: string;
 const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-/** Her test kendi gününde çalışır: kapanış (kurye, gün) çiftinde TEKİLDİR. */
+/** Her test kendi gününde çalışır: sefer (rota, gün) çiftinde TEKİLDİR (0046). */
 let day: string;
 let dayCounter = 0;
 
@@ -50,17 +56,27 @@ beforeAll(async () => {
   variantId = variants[0]!.id;
 
   const profiles = new UserProfileService(db);
-  const customer = await profiles.insert({ name: 'Paul Roux', email: `kapanis-${stamp}@example.test` });
-  const courier = await profiles.insert({ name: 'Kurye Deniz', email: `deniz-${stamp}@example.test` });
+  const customer = await profiles.insert({ name: 'Paul Roux', email: `kapanis-web-${stamp}@example.test` });
+  const courier = await profiles.insert({ name: 'Kurye Deniz', email: `deniz-web-${stamp}@example.test` });
   customerId = customer.id;
   courierId = courier.id;
   createdProfiles.push(customer.id, courier.id);
 
   accountId = (await new AccountService(db).insert({ name: `Kapanış kasası ${stamp}`, type: 'cash' })).id;
+  // Rota HER GÜN koşar: testin hangi gün koştuğu davranışı değiştirmesin.
+  zoneId = (await new DeliveryZoneService(db).insert({
+    name: `Kapanış web rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
 });
 
 beforeEach(async () => {
-  await db.from('courier_day_close').delete().eq('courier_id', courierId);
+  // Sefer temizliği: kapanış seferi `restrict` ile tutar — sıra sabit (close → run).
+  const { data: runRows } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
+  const runIds = (runRows ?? []).map((row) => row.id as string);
+  if (runIds.length > 0) {
+    await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
+    await db.from('delivery_run').delete().in('id', runIds);
+  }
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
@@ -69,9 +85,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Gün kapanışı, sipariş ve rezervasyon AYRICA silinmez: üçü de `purgeTestData`'nın bildiği
-  // bağlar (ilk ikisi `profileIds`ten — kurye de listede —, rezervasyon `productIds`ten). Elle
-  // yazılan bu satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // Sefer, kapanışı, sipariş ve rezervasyon AYRICA silinmez: hepsi `purgeTestData`'nın bildiği
+  // bağlar. Elle yazılan satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -81,45 +96,61 @@ afterAll(async () => {
   });
 });
 
+/** HAZIR durak — sefere claim edilmeye hazır; yola çıkışı `depart()` yazar. */
 async function atTheDoor(qty: number) {
   const { order, items } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: day, courierId, totalCents: qty * 1000 },
+    {
+      warehouseId, customerId, channel: 'b2c', deliveryType: 'route',
+      deliveryZoneId: zoneId, deliveryDate: day, courierId, totalCents: qty * 1000,
+    },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });
-  return { orderId: order.id, itemId: items[0]!.id };
+  await transitionOrder({ orderId: order.id, to: 'ready' });
+  return { orderId: order.id, itemId: items[0]!.id, qty };
 }
 
-/** Teslim + kapıda tahsilat — kapanışın beklenen toplamını besleyen tek yol. */
-async function deliverAndCollect(qty: number, method: 'cash' | 'card' | 'cheque') {
-  const { orderId } = await atTheDoor(qty);
+/** Seferi başlat — günün hazır durakları claim edilir ve yola çıkar; seferin kimliği döner. */
+async function depart(): Promise<string> {
+  const result = await startCourierDay(db, { courierId, zoneId, date: day });
+  if (result.status !== 'ok') throw new Error(`sefer başlamalıydı, gelen: ${result.status}`);
+  return result.run.runId;
+}
+
+/** Kapıda tahsilat — kapanışın beklenen toplamını besleyen tek yol. */
+async function collect(orderId: string, qty: number, method: 'cash' | 'card' | 'cheque') {
   await confirmDoorDelivery({ orderId, courierId, collection: { method, amountCents: qty * 1000, accountId } });
-  return orderId;
 }
 
-describe('kapanış taslağı', () => {
-  it('beklenen tahsilat YÖNTEM BAZINDA toplanır', async () => {
-    await deliverAndCollect(3, 'cash'); // 30 €
-    await deliverAndCollect(2, 'cash'); // 20 €
-    await deliverAndCollect(4, 'card'); // 40 €
+describe('kapanış taslağı (köprü)', () => {
+  it('beklenen tahsilat YÖNTEM BAZINDA, SEFERİN duraklarından toplanır', async () => {
+    const a = await atTheDoor(3); // 30 €
+    const b = await atTheDoor(2); // 20 €
+    const c = await atTheDoor(4); // 40 €
+    const runId = await depart();
+    await collect(a.orderId, a.qty, 'cash');
+    await collect(b.orderId, b.qty, 'cash');
+    await collect(c.orderId, c.qty, 'card');
 
-    const draft: DayCloseDraft = await openDayClose({ courierId, date: day });
+    const draft: DayCloseDraft = await openDayClose({ courierId, runId });
 
-    // Yöntemler karışırsa mutabakat yapılamaz: nakit sayımla, kart cihaz raporuyla karşılaşır.
+    expect(draft.run?.runId).toBe(runId);
     expect(draft.expected).toEqual({ cashCents: 5000, cardCents: 4000, chequeCents: 0 });
     expect(draft.delivered).toHaveLength(3);
   });
 
-  it('günün üç akıbeti ayrı listelerde durur', async () => {
-    await deliverAndCollect(2, 'cash');
+  it('seferin üç akıbeti ayrı listelerde durur', async () => {
+    const teslim = await atTheDoor(2);
     const { orderId: ulasilamayan } = await atTheDoor(1);
     const { orderId: reddedilen } = await atTheDoor(1);
+    await depart();
+    await collect(teslim.orderId, teslim.qty, 'cash');
     await markUndelivered({ orderId: ulasilamayan, courierId, outcome: 'unreachable' });
     await markUndelivered({ orderId: reddedilen, courierId, outcome: 'refused' });
 
+    // runId verilmeden açılır: kuryenin o günkü seferi bulunur (ekranın varsayılan yolu).
     const draft = await openDayClose({ courierId, date: day });
 
     expect(draft.delivered).toHaveLength(1);
@@ -127,72 +158,51 @@ describe('kapanış taslağı', () => {
     expect(draft.returned.map((stop) => stop.orderId)).toEqual([reddedilen]);
   });
 
-  it('tahsilatsız gün sıfır gösterir — "veri yok" ile "para yok" aynıdır', async () => {
+  it('sefersiz gün sakin bir boşluktur — run yok, sıfır gösterilir', async () => {
     const draft = await openDayClose({ courierId, date: day });
 
+    expect(draft.run).toBeNull();
     expect(draft.expected).toEqual({ cashCents: 0, cardCents: 0, chequeCents: 0 });
     expect(draft.closed).toBeNull();
   });
 });
 
-describe('günü kapat', () => {
-  it('sayılan beklenene eşitse gün MUTABIK kapanır', async () => {
-    await deliverAndCollect(3, 'cash');
+describe('seferi kapat (köprü)', () => {
+  it('sayılan beklenene eşitse sefer MUTABIK kapanır', async () => {
+    const a = await atTheDoor(3);
+    const runId = await depart();
+    await collect(a.orderId, a.qty, 'cash');
 
-    const result = await closeCourierDay({ courierId, date: day, countedCashCents: 3000 });
+    const result = await closeCourierDay({ courierId, runId, countedCashCents: 3000 });
 
     expect(result).toMatchObject({ ok: true, reconciled: true, differenceCashCents: 0, deliveredCount: 1 });
   });
 
   it('fark AYNI GÜN görünür ve işareti anlamlıdır', async () => {
-    await deliverAndCollect(5, 'cash'); // beklenen 50 €
+    const a = await atTheDoor(5); // beklenen 50 €
+    const runId = await depart();
+    await collect(a.orderId, a.qty, 'cash');
 
-    const eksik = await closeCourierDay({ courierId, date: day, countedCashCents: 4500, note: 'müşteri bozuk para veremedi' });
+    const eksik = await closeCourierDay({ courierId, runId, countedCashCents: 4500, note: 'müşteri bozuk para veremedi' });
 
     expect(eksik).toMatchObject({ ok: true, reconciled: false, differenceCashCents: -500 });
-    // Eksi eksik teslim, artı fazla para: ikisi de açıklanmayı hak eder, mutlak değere indirilmez.
     expect(eksik.differenceCashCents).toBeLessThan(0);
   });
 
-  it('fazla para da fark sayılır', async () => {
-    await deliverAndCollect(2, 'cash'); // beklenen 20 €
+  it('takılı durak kapanışta çözülür, kapanmış sefer İKİNCİ kez kapatılamaz', async () => {
+    const teslim = await atTheDoor(2);
+    const { orderId: takili } = await atTheDoor(1);
+    const runId = await depart();
+    await collect(teslim.orderId, teslim.qty, 'cash');
 
-    const fazla = await closeCourierDay({ courierId, date: day, countedCashCents: 2500 });
+    const first = await closeCourierDay({ courierId, runId, countedCashCents: 2000 });
+    expect(first).toMatchObject({ ok: true, deliveredCount: 1, pendingCount: 1, releasedCount: 1 });
+    expect((await orders.getById(takili))?.status).toBe('ready');
 
-    expect(fazla).toMatchObject({ reconciled: false, differenceCashCents: 500 });
-  });
-
-  it('sonuçlanmamış durak kapanışı ENGELLEMEZ, sayılır', async () => {
-    await deliverAndCollect(2, 'cash');
-    const { orderId } = await atTheDoor(1);
-    await markUndelivered({ orderId, courierId, outcome: 'unreachable' });
-
-    const result = await closeCourierDay({ courierId, date: day, countedCashCents: 2000 });
-
-    // Kurye depoya döndüyse günü kapatabilmeli; ulaşılamayan sipariş yarına kalır.
-    expect(result).toMatchObject({ ok: true, deliveredCount: 1, pendingCount: 1 });
-  });
-
-  it('kapanmış gün İKİNCİ kez kapatılamaz — kayıt ezilmez', async () => {
-    await deliverAndCollect(2, 'cash');
-    const first = await closeCourierDay({ courierId, date: day, countedCashCents: 2000 });
-
-    const second = await closeCourierDay({ courierId, date: day, countedCashCents: 99900 });
-
+    const second = await closeCourierDay({ courierId, runId, countedCashCents: 99900 });
     expect(second).toMatchObject({ ok: false, reason: 'already_closed', id: first.id });
-    const draft = await openDayClose({ courierId, date: day });
+
+    const draft = await openDayClose({ courierId, runId });
     expect(draft.closed?.countedCashCents).toBe(2000); // ilk sayım yerinde
-  });
-
-  it('kapanış sonrası hareket düzeltilse bile BEKLENEN donmuş kalır', async () => {
-    const orderId = await deliverAndCollect(3, 'cash'); // beklenen 30 €
-    await closeCourierDay({ courierId, date: day, countedCashCents: 3000 });
-
-    // Ertesi gün biri hareketi düzeltiyor — o gün ne konuşulduğu değişmemeli.
-    await db.from('money_movement').delete().eq('order_id', orderId);
-
-    const draft = await openDayClose({ courierId, date: day });
-    expect(draft.closed?.expectedCashCents).toBe(3000);
-    expect(draft.expected.cashCents).toBe(0); // canlı türetim değişti, kapanış kaydı değişmedi
   });
 });

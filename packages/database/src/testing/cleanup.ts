@@ -24,6 +24,26 @@ export async function mustDelete(
 }
 
 /**
+ * Sefer + kapanışı (0046). Üç `restrict` FK'nin ÜÇÜ de buradan geçer: kurye profili, rota→depo
+ * zinciri (`warehouse_id` snapshot'ı) ve araç — hangisi silinecekse önce o kaynağın seferleri
+ * gitmek zorunda. Sıra sabit: kapanış seferi `restrict` ile tutar → önce `delivery_run_close`.
+ * `order.delivery_run_id` `set null` — sipariş sırası etkilenmez.
+ */
+async function purgeDeliveryRuns(
+  db: SupabaseClient,
+  column: 'courier_id' | 'warehouse_id' | 'vehicle_id',
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  const { data, error } = await db.from('delivery_run').select('id').in(column, ids);
+  if (error) throw new Error(`teardown: 'delivery_run' okunamadı — ${error.message}`);
+  const runIds = (data ?? []).map((row) => row.id as string);
+  if (runIds.length === 0) return;
+  await mustDelete(db, 'delivery_run_close', (q) => q.in('delivery_run_id', runIds));
+  await mustDelete(db, 'delivery_run', (q) => q.in('id', runIds));
+}
+
+/**
  * Entegrasyon testlerinin **zemin toplama** yardımcısı. Testler yerel veritabanını kirletmemeli:
  * kalan satırlar operasyon ekranlarında çöp olarak görünür, sonraki koşuşların sayımlarını bozar
  * ve "bu kayıt gerçek mi test mi" sorusunu doğurur.
@@ -352,9 +372,9 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     // gitmez ve bu sıra ikisini tek yoldan toplar. Mesajları `cascade` ile gider.
     if (conversationIds.length > 0) await mustDelete(db, 'conversation', (q) => q.in('id', conversationIds));
     if (profileIds.length > 0) {
-      // Kurye gün kapanışı profili `restrict` ile tutar (`courier_id`); `closed_by` `set null` olduğu
-      // için ikinci bir silme gerekmez ama kapatan kişi de test profiliyse satır yine buradan gider.
-      await mustDelete(db, 'courier_day_close', (q) => q.in('courier_id', profileIds));
+      // Sefer kaydı kuryeyi `restrict` ile tutar (0046); kapanış da seferi tutar — ikisi tek
+      // yardımcıdan, sabit sırayla gider. `closed_by` `set null`, ikinci silme gerektirmez.
+      await purgeDeliveryRuns(db, 'courier_id', profileIds);
       await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
     }
 
@@ -398,6 +418,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     if (vehicleIds.length > 0) {
       await mustDelete(db, 'temperature_log', (q) => q.in('vehicle_id', vehicleIds));
     }
+    // Sefer aracı `restrict` ile tutar (0046) — sefer görmüş araç ancak seferleriyle gider.
+    await purgeDeliveryRuns(db, 'vehicle_id', vehicleIds);
     if (vehicleIds.length > 0) await mustDelete(db, 'vehicle', (q) => q.in('id', vehicleIds));
     if (zoneNoticePostalCodes.length > 0) {
       await mustDelete(db, 'zone_notice', (q) => q.in('postal_code', zoneNoticePostalCodes));
@@ -429,6 +451,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // ZORUNDA, araç depoyla birlikte adresini kaybeder ve yaşamaya devam eder. Testin kendi
       // aracını bildirmesi gerekir (`vehicleIds`), deposunu bildirmesi yetmez.
       await mustDelete(db, 'storage_area', (q) => q.in('warehouse_id', warehouseIds));
+      // Sefer rotayı `restrict` ile tutar (0046): bölge silinmeden önce o deponun seferleri gitmeli.
+      // Süzgeç `warehouse_id` SNAPSHOT kolonundan — seferin deposu start anında donuyor, testin
+      // bildirdiği depoyla aynıdır.
+      await purgeDeliveryRuns(db, 'warehouse_id', warehouseIds);
       await mustDelete(db, 'delivery_zone', (q) => q.in('warehouse_id', warehouseIds)); // posta kodları CASCADE
       // Belge numaratörü depo KODUNA çıpalı (`next_document_no('KBL-' || kod, yıl)`): test deposunun
       // sayacı depoyla birlikte gitmeli, yoksa her koşu tabloya iki ölü satır bırakır. FK yok, o

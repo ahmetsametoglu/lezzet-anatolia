@@ -53,6 +53,7 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     deliveryArea: areaOf(order.addressSnapshot),
     courierId: order.courierId,
     courierName: order.courierId ? (input.courierNames.get(order.courierId) ?? null) : null,
+    deliveryRunId: order.deliveryRunId,
     payment: {
       status: order.paymentStatus,
       method: order.paymentMethod,

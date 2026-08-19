@@ -83,3 +83,12 @@
 - Canlı harita / koordinat / ETA (v2 — navigasyon adres metniyle köprü), rota sırasını değiştirme
   (plan operatörün), müşteri sipariş geçmişi/hesap detayı, teslim-edilemedi sebep LİSTESİ
   (bilinçli — serbest kısa not var).
+
+
+## Sefer güncellemesi (18.08 — `docs/feature/sefer.md`)
+
+K1'e güne girişte **rota seçimi** girdi (tek adayda atlanır) ve CTA "Seferi başlat" oldu; "başladı"
+bilgisi yerel bayrak değil sunucudaki sefer kaydı (`day.run`). K7'nin öznesi sefer: başlıkta rota adı +
+SF kodu, kapatma `runId` ile. "Rota SIRASINI değiştirme plan operatörünün" cümlesi geçerli kalır —
+ama rota SEÇİMİ kuryenindir: sıra ile seçim ayrı sorular. Araç seçimi parametrik (Setting): araç kaydı
+girilmemiş kurulumda sorulmaz, tek araçta otomatik.

@@ -27,10 +27,13 @@ export function DayCloseClient({ draft }: { draft: DayCloseDraft }) {
   const [note, setNote] = useState('');
 
   const close = () => {
+    // Sefer yoksa kapanacak bir şey de yok — ekran zaten boş hâli gösteriyor, düğme hiç çizilmiyor.
+    if (!draft.run) return;
     setError(null);
+    const runId = draft.run.runId;
     startTransition(async () => {
       const { error: failed } = await closeDayAction({
-        date: draft.date,
+        runId,
         countedCashCents: toCents(counted.cash ?? 0),
         countedCardCents: toCents(counted.card ?? 0),
         countedChequeCents: toCents(counted.cheque ?? 0),

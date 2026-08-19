@@ -48,3 +48,12 @@ Gidilen: kapanış sonrası günün özeti; getirilen iade mal depo tarafında (
 - **Telefon esastır** — kapanış çoğu zaman depoya dönüşte, araçta veya depo girişinde ayakta yapılır
 - Para sayarken telefonla tutar girme senaryosu gerçektir — tutar girişi hatasız ve hızlı olmalı
 - Gün dökümü uzun olabilir (20+ durak); özet ile detay arasında kaybolmadan gezinilebilmeli
+
+
+## Sefer güncellemesi (18.08 — `docs/feature/sefer.md`)
+
+Kapanışın ekseni **gün → SEFER**: başlıkta rota adı + SF kodu okunur; "gün sonunda" cümleleri "sefer
+dönüşünde" diye okunmalı. İki sefer sürmüş kurye ikisini AYRI kapatır — akış sıralı (kapat → yeni
+sefer), ekran "hangi seferi kapatıyorum" diye sormaz. Kapanış ayrıca kapıda hiç işaretlenmemiş
+durakları kendisi çözer (fotoğrafta `pending` görünürler — o an öyleydiler); mutabakat kuralları
+(beklenen dondurulur, fark açıklanır, salt-okunur kapanış) aynen sürer.

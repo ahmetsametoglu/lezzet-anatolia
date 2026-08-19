@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { CourierStopContract } from '@lezzet/types';
+import type { CourierRoute, CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
@@ -15,11 +15,11 @@ import { useOperationsUserName } from '@/screens/operations/sections-context';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
-import { dayLabel, money, shortName, turkishUpper } from './courier-format';
-import { useCourierDay } from './use-courier-day.hook';
+import { dayLabel, money, runLabel, shortName, turkishUpper } from './courier-format';
+import { isRouteFree, useCourierDay } from './use-courier-day.hook';
 
 /*
-  K1 · GÜNÜN ROTASI (v2:33-94) — kurye bölümünün kökü.
+  K1 · GÜNÜN SEFERİ (v2:33-94) — kurye bölümünün kökü.
 
   ── BÖLÜM KÖKÜ ARTIK KENDİ GÖVDESİNİ ÇİZİYOR ────────────────────────────────
   Kabuk dilimi (21.9) dört bölümü tek `OperationsSectionScreen`den çiziyordu ve künyesinde
@@ -32,6 +32,24 @@ import { useCourierDay } from './use-courier-day.hook';
   istemci kendi hesaplamaz), ad kapıdan (`/me`, oturum bağlamı). Gün henüz okunmadıysa parça
   YAZILMAZ: uydurma bir tarih, kuryenin hangi günü gördüğü sorusunu yanlış cevaplardı.
 
+  ── GÖVDENİN DÖRDÜNCÜ HÂLİ: ROTA SEÇİMİ (18.08 · sefer) ─────────────────────
+  Kurye artık rotasını KENDİ alıyor ("kurye giriş yapar, rotayı seçer, aracını doldurur, o rotayı
+  sürer" — kullanıcı kararı 17.08); arayüzden kurye ataması kalktı. Sefer yoksa (`run === null`)
+  gövde o günün rotalarını kart olarak gösterir ve CTA seçilen rotayla seferi açar. Ayrı bir ekran
+  DEĞİL, aynı gövdenin bir hâli: seçim tek dokunuş + tek düğme, araya bir yönlendirme koymak
+  kuryeyi sabahın en acele anında bir ekran daha gezdirmek olurdu.
+  · **Tek adayda soru sorulmaz:** tek seçilebilir rota kendiliğinden seçilidir, CTA doğrudan onun
+    adını taşır (dispatch'in aynı ilkesi).
+  · **Başlatılmış rota PASİF:** rota+gün başına tek sefer (K3) — kart kimin sürdüğünü söyler.
+  · Sıfır rota → eski "bugün rota yok" boş hâli; seçilecek bir şey olmadığında CTA da çizilmez.
+  Kart, durak satırının SADELEŞMİŞ hâlidir (aynı daire + iki satır + kesikli ayraç): yeni bir
+  görsel dil kurulmadı.
+
+  ── SEFER KÜNYESİ LİSTENİN BAŞINDA ──────────────────────────────────────────
+  "Hangi seferi sürüyorum" sorusu ilerleme satırının üstünde, tek satırda cevaplanıyor: rota adı +
+  SF kodu (kapanmışsa "KAPANDI" eki). Üstbaşlığa sıkıştırılmadı — orada gün ve kurye var, üçüncü
+  bir kimlik o satırı okunmaz yapardı.
+
   ── TASARIMDAN BİLİNÇLİ SAPMALAR ────────────────────────────────────────────
   1. **Yükleniyor hâli eklendi.** v2'nin demo sözlüğünde üç veri hâli var (dolu/boş/hata) ve
      "yükleniyor" yok — çünkü şablon veriyi yerel dizeden okuyor, ağ yok. Gerçek ekranda o hâl VAR
@@ -43,9 +61,9 @@ import { useCourierDay } from './use-courier-day.hook';
   3. **"±" (kısmi) durak dairesi hiç doğmaz** (v2:852). Sözleşmenin durak sonucu dörtlü:
      `pending · delivered · unreachable · refused` — "kısmi" ayrı bir sonuç DEĞİL, teslim edilmiş
      bir durağın kalan borcudur. O bilgi satırın alt metninde yazılıyor.
-  4. **"Yola çıktım"ın sonucu için bir bildirim satırı eklendi** (v2'de yok — şablonun düğmesi yalnız
-     yerel bir bayrak çeviriyor, ağa çıkmıyor). Gerçek kapı KISMİ başarı döndürebiliyor ("3 yola
-     çıktı, 1 hazırlanmayı bekliyor") ve o cümlenin yazılacak bir yeri olmadan cevap yutulurdu.
+  4. **"Seferi başlat"ın sonucu için bir bildirim satırı eklendi** (v2'de yok — şablonun düğmesi
+     yalnız yerel bir bayrak çeviriyor, ağa çıkmıyor). Gerçek kapı KISMİ başarı döndürebiliyor ("3
+     yola çıktı, 1 hazırlanmayı bekliyor") ve o cümlenin yazılacak bir yeri olmadan cevap yutulurdu.
      Yapışkan alana, CTA'nın ÜSTÜNE kondu: kurye listenin neresinde olursa olsun görür.
 */
 
@@ -70,8 +88,16 @@ export function CourierDayScreen() {
   /** Sıradaki durak — v2:848: ilk sonuçlanmamış durak, koyu daireyle işaretlenir. */
   const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
 
+  /** Seçili rota — CTA'nın adını taşıdığı rota; yoksa kurye henüz seçmemiş demektir. */
+  const selectedRoute = day.routes.find((route) => route.zoneId === day.selectedZoneId) ?? null;
+  /** Bugün açılabilecek rota var mı — hepsi başlatılmışsa seçilecek bir şey de yok (K3). */
+  const anyFreeRoute = day.routes.some(isRouteFree);
   /** Başlatma havadayken düğme kendi hâlini söyler — basılamaz olduğu ayrıca `disabled`la duyulur. */
-  const ctaStartLabel = day.starting ? t.day.starting : t.day.startCta;
+  const ctaStartLabel = day.starting
+    ? t.day.starting
+    : selectedRoute === null
+      ? t.day.startCtaPick
+      : fillCopy(t.day.startCta, { route: selectedRoute.zoneName });
 
   const eyebrow = [t.day.eyebrow, day.date === null ? null : dayLabel(day.date), turkishUpper(shortName(userName))]
     .filter((part): part is string => part !== null && part.length > 0)
@@ -123,107 +149,245 @@ export function CourierDayScreen() {
     );
   }
 
-  if (stops.length === 0) {
-    return (
-      <View style={styles.screen} testID="operations-section-courier">
-        {header}
-        <View style={styles.block}>
-          <OperationsNoticeBlock
-            variant="empty"
-            title={t.day.empty.title}
-            description={t.day.empty.body}
-            testID="courier-day-empty"
-          />
-        </View>
-      </View>
-    );
-  }
+  const run = day.run;
+  /* SEÇİM GÖVDESİ iki hâlde açılır: sefer hiç alınmadı ya da sürülen sefer KAPANDI (kullanıcı
+     akışı: kapat → yeni sefer; kurye günün ikinci ROTASINA çıkar, aynı rotaya ikinci tur veride
+     yasak). Kapanan seferin künyesi üstte bilgi şeridi olarak kalır — "neyi bitirdim" sorusu
+     ekrandan silinmez. */
+  const selecting = run === null || run.closed;
+
+  /* CTA'nın hâli GÖVDEYİ izler: açık sefer varsa "kapat", seçim gövdesinde "başlat". Seçilecek rota
+     kalmamışsa (hepsi başlatılmış) düğme hiç çizilmez — basılamayacak bir düğme, kuryeye olmayan
+     bir yol vaat etmektir. Rota VAR ama seçilmemişse düğme çizilir ve PASİF durur: "önce seç"
+     görünen bir adımdır, gizlenen bir düğmeden anlaşılmaz. */
+  const ctaMode: 'start' | 'close' | null = selecting ? (anyFreeRoute ? 'start' : null) : 'close';
+
+  /* Seçim gövdesinin TEK açıklama satırı — hangi cümlenin hak edildiği burada, tek yerde
+     kararlaşır. İki kutuyu üst üste koymak (hem "sefer kapandı" hem "rotanı seç") aynı anda iki
+     şey söylemek olurdu; kapanmış seferde ne olduğunu söylemek önceliklidir, ne yapılacağını
+     zaten "ROTANI SEÇ" başlığı ve kartlar söylüyor. Rota hiç yoksa cümle boş blokta yazılı. */
+  const selectionHint =
+    run !== null
+      ? t.day.runClosedHint
+      : day.routes.length === 0
+        ? null
+        : anyFreeRoute
+          ? t.day.routes.hint
+          : t.day.routes.allTaken;
 
   return (
     <View style={styles.screen} testID="operations-section-courier">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} testID="courier-day-list">
-        <View style={styles.progressRow}>
-          <Text style={styles.progressCount}>
-            {doneCount}
-            <Text style={styles.progressTotal}>{`/${stops.length}`}</Text>
-          </Text>
-          <View style={styles.progressTrack} testID="courier-day-progress">
-            <View style={[styles.progressFill, { width: `${Math.round((doneCount / stops.length) * 100)}%` }]} />
-          </View>
-          {/* Ölçülemeyen değer SIFIR DEĞİLDİR: taslak düştüyse "bilinmiyor" yazılır (CLAUDE §1). */}
-          <Text style={styles.pocket}>
-            {day.collectedCents === null
-              ? t.day.pocketUnknown
-              : fillCopy(t.day.pocket, { amount: money(day.collectedCents) })}
-          </Text>
-        </View>
-
-        {doorStops.length === 0 ? null : (
-          <Text style={styles.doorLeft} testID="courier-day-door-left">
-            {fillCopy(t.day.doorLeft, { n: String(doorStops.length), amount: money(doorTotal) })}
-          </Text>
-        )}
-
-        {day.started ? null : (
-          <View style={styles.startHint} testID="courier-day-start-hint">
-            <Text style={styles.startHintText}>{t.day.startHint}</Text>
-          </View>
-        )}
-
-        {stops.map((stop, index) => (
-          <StopRow
-            key={stop.orderId}
-            stop={stop}
-            order={index + 1}
-            tone={circleTone(stop, stop.orderId === nextOrderId, day.started)}
-            started={day.started}
-            onPress={() => router.navigate({ pathname: '/delivery/[orderId]', params: { orderId: stop.orderId } })}
-          />
-        ))}
-      </ScrollView>
-
-      {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89). */}
-      <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
-        {day.startNotice === null ? null : (
-          <View style={styles.startNoticeBlock}>
-            <Text
-              style={[styles.startNotice, styles[`startNotice_${day.startNotice.tone}`]]}
-              accessibilityRole="alert"
-              testID="courier-day-start-notice"
-            >
-              {day.startNotice.text}
+      {selecting ? (
+        <ScrollView contentContainerStyle={styles.list} testID="courier-day-routes">
+          {/* Kapanan seferin künyesi: "neyi bitirdim" sorusu ekrandan silinmez. */}
+          {run === null ? null : (
+            <Text style={styles.runStrip} testID="courier-day-run">
+              {fillCopy(t.day.runStripClosed, { label: runLabel(run) })}
             </Text>
-            {/* Gün başladıktan sonra birincil düğme "Günü kapat"a döner; hazırlığı geciken durak
-                için İKİNCİ bir başlatma yolu olmasaydı o durak uygulamadan yola çıkarılamazdı. */}
-            {day.startNotice.canRetry ? (
-              <TextAction
-                label={t.day.start.retry}
-                onPress={day.start}
-                disabled={day.starting}
-                testID="courier-day-start-retry"
+          )}
+          {selectionHint === null ? null : (
+            <View style={styles.hintBox} testID="courier-day-hint">
+              <Text style={styles.hintText}>{selectionHint}</Text>
+            </View>
+          )}
+
+          {day.routes.length === 0 ? (
+            // Kapanan seferden sonra açılacak rota kalmamış olabilir: gün bitti, bu bir arıza değil.
+            <View style={styles.emptyInline}>
+              <OperationsNoticeBlock
+                variant="empty"
+                title={t.day.empty.title}
+                description={t.day.empty.body}
+                testID="courier-day-empty"
               />
-            ) : null}
-          </View>
-        )}
-        <PressableSurface
-          onPress={day.started ? () => router.navigate('/day-close') : day.start}
-          disabled={day.starting}
-          feedback="shadow"
-          style={[styles.cta, day.started ? styles.ctaClose : styles.ctaStart]}
-          accessibilityLabel={day.started ? t.day.close : ctaStartLabel}
-          testID="courier-day-cta"
-        >
-          <Text style={[styles.ctaLabel, day.started ? styles.ctaLabelClose : styles.ctaLabelStart]}>
-            {day.started ? t.day.close : ctaStartLabel}
+            </View>
+          ) : (
+            <>
+              <Text style={styles.routesHeading}>{t.day.routes.heading}</Text>
+
+              {day.routes.map((route) => (
+                <RouteCard
+                  key={route.zoneId}
+                  route={route}
+                  selected={route.zoneId === day.selectedZoneId}
+                  onPress={() => day.selectRoute(route.zoneId)}
+                />
+              ))}
+            </>
+          )}
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.list} testID="courier-day-list">
+          {/* Buraya yalnız AÇIK seferle gelinir; künye sade hâliyle yazılır. */}
+          <Text style={styles.runStrip} testID="courier-day-run">
+            {runLabel(run)}
           </Text>
-          {day.started && openCount > 0 ? (
-            <Text style={styles.ctaBadge}>{fillCopy(t.day.openBadge, { n: String(openCount) })}</Text>
-          ) : null}
-        </PressableSurface>
-      </LinearGradient>
+
+          {stops.length === 0 ? (
+            <OperationsNoticeBlock
+              variant="empty"
+              title={t.day.runEmpty.title}
+              description={t.day.runEmpty.body}
+              testID="courier-day-empty"
+            />
+          ) : (
+            <>
+              <View style={styles.progressRow}>
+                <Text style={styles.progressCount}>
+                  {doneCount}
+                  <Text style={styles.progressTotal}>{`/${stops.length}`}</Text>
+                </Text>
+                <View style={styles.progressTrack} testID="courier-day-progress">
+                  <View style={[styles.progressFill, { width: `${Math.round((doneCount / stops.length) * 100)}%` }]} />
+                </View>
+                {/* Ölçülemeyen değer SIFIR DEĞİLDİR: taslak düştüyse "bilinmiyor" yazılır (CLAUDE §1). */}
+                <Text style={styles.pocket}>
+                  {day.collectedCents === null
+                    ? t.day.pocketUnknown
+                    : fillCopy(t.day.pocket, { amount: money(day.collectedCents) })}
+                </Text>
+              </View>
+
+              {doorStops.length === 0 ? null : (
+                <Text style={styles.doorLeft} testID="courier-day-door-left">
+                  {fillCopy(t.day.doorLeft, { n: String(doorStops.length), amount: money(doorTotal) })}
+                </Text>
+              )}
+
+              {stops.map((stop, index) => (
+                <StopRow
+                  key={stop.orderId}
+                  stop={stop}
+                  order={index + 1}
+                  tone={circleTone(stop, stop.orderId === nextOrderId, day.started)}
+                  started={day.started}
+                  onPress={() =>
+                    router.navigate({ pathname: '/delivery/[orderId]', params: { orderId: stop.orderId } })
+                  }
+                />
+              ))}
+            </>
+          )}
+        </ScrollView>
+      )}
+
+      {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89). Bildirim de
+          buradadır: başlatma sonucu, düğme çizilmese bile (rota kalmadı) görünmek zorunda. */}
+      {ctaMode === null && day.startNotice === null ? null : (
+        <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+          {day.startNotice === null ? null : (
+            <View style={styles.startNoticeBlock}>
+              <Text
+                style={[styles.startNotice, styles[`startNotice_${day.startNotice.tone}`]]}
+                accessibilityRole="alert"
+                testID="courier-day-start-notice"
+              >
+                {day.startNotice.text}
+              </Text>
+              {/* Sefer açıldıktan sonra birincil düğme "Seferi kapat"a döner; hazırlığı geciken
+                  durak için İKİNCİ bir başlatma yolu olmasaydı o durak uygulamadan yola
+                  çıkarılamazdı. Uç bu ikinci basışta catch-up claim yapıyor (18.08). */}
+              {day.startNotice.canRetry ? (
+                <TextAction
+                  label={t.day.start.retry}
+                  onPress={day.start}
+                  disabled={day.starting}
+                  testID="courier-day-start-retry"
+                />
+              ) : null}
+            </View>
+          )}
+          {ctaMode === null ? null : (
+            <PressableSurface
+              onPress={ctaMode === 'close' ? () => router.navigate('/day-close') : day.start}
+              // Rota seçilmeden başlatma isteği gönderilmez: hangi rotanın açıldığı belirsiz kalırdı.
+              disabled={day.starting || (ctaMode === 'start' && day.selectedZoneId === null)}
+              feedback="shadow"
+              style={[
+                styles.cta,
+                ctaMode === 'close' ? styles.ctaClose : day.selectedZoneId === null ? styles.ctaIdle : styles.ctaStart,
+              ]}
+              accessibilityLabel={ctaMode === 'close' ? t.day.close : ctaStartLabel}
+              testID="courier-day-cta"
+            >
+              <Text
+                style={[
+                  styles.ctaLabel,
+                  ctaMode === 'close'
+                    ? styles.ctaLabelClose
+                    : day.selectedZoneId === null
+                      ? styles.ctaLabelIdle
+                      : styles.ctaLabelStart,
+                ]}
+              >
+                {ctaMode === 'close' ? t.day.close : ctaStartLabel}
+              </Text>
+              {ctaMode === 'close' && openCount > 0 ? (
+                <Text style={styles.ctaBadge}>{fillCopy(t.day.openBadge, { n: String(openCount) })}</Text>
+              ) : null}
+            </PressableSurface>
+          )}
+        </LinearGradient>
+      )}
     </View>
+  );
+}
+
+interface RouteCardProps {
+  route: CourierRoute;
+  selected: boolean;
+  onPress: () => void;
+}
+
+/**
+ * ROTA KARTI — durak satırının sadeleşmiş hâli: aynı daire + iki satır + kesikli ayraç, yalnız
+ * kapıya ait alanlar (tahsilat rozeti, sonuç tonu) yok.
+ *
+ * Seferi açılmış rota PASİFTİR ve sebebini kendi satırında söyler ("bugün Musa sürüyor · SF-…") —
+ * dokunulabilir bırakıp reddi başlatma cevabında göstermek, kuryeyi bilerek boş bir yola sokardı.
+ */
+function RouteCard({ route, selected, onPress }: RouteCardProps) {
+  const free = isRouteFree(route);
+  const meta =
+    route.warehouseName === null
+      ? fillCopy(t.day.routes.metaNoWarehouse, { n: String(route.stopCount) })
+      : fillCopy(t.day.routes.meta, { warehouse: route.warehouseName, n: String(route.stopCount) });
+  const taken =
+    route.run === null
+      ? null
+      : route.run.courierName === null
+        ? fillCopy(t.day.routes.takenUnknown, { ref: route.run.referenceNo })
+        : fillCopy(t.day.routes.taken, { courier: route.run.courierName, ref: route.run.referenceNo });
+
+  return (
+    <PressableSurface
+      onPress={onPress}
+      disabled={!free}
+      feedback="scale"
+      style={[styles.stopRow, free ? undefined : styles.stopLocked]}
+      /* Pasif kartın adı "seç" DEMEZ: ekran okuyucu kullanan kurye, dokunamayacağı bir karta
+         davet edilmemeli — sebebi (kimin sürdüğü) adın kendisidir. */
+      accessibilityLabel={
+        free ? fillCopy(t.day.routes.pickLabel, { route: route.zoneName, meta }) : `${route.zoneName} — ${taken ?? meta}`
+      }
+      selected={selected}
+      testID={`courier-route-${route.zoneId}`}
+    >
+      <View style={[styles.circle, selected ? styles.circle_next : styles.circle_idle]}>
+        <Text style={[styles.circleText, selected ? styles.circleText_next : styles.circleText_idle]}>
+          {selected ? '✓' : '·'}
+        </Text>
+      </View>
+      <View style={styles.stopBody}>
+        <Text style={styles.stopAddress}>{route.zoneName}</Text>
+        <Text style={[styles.stopSub, taken === null ? styles.stopSub_muted : styles.stopSub_terracotta]}>
+          {taken ?? meta}
+        </Text>
+      </View>
+      {free ? <Text style={styles.chevron}>›</Text> : null}
+    </PressableSurface>
   );
 }
 
@@ -321,6 +485,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
   },
+  /** Kaydırma alanının İÇİNDEKİ boş blok — yatay dolgu kaptan gelir, yalnız üst nefes eklenir. */
+  emptyInline: {
+    paddingTop: operationsTheme.space['7xl'],
+  },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     // Yapışkan CTA listenin ÜSTÜNDE duruyor; son satır onun altında kalmasın (52 + nefes).
@@ -366,18 +534,33 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.terracotta,
     paddingTop: operationsTheme.space.sm,
   },
-  startHint: {
+  /** Gövdenin açıklama kutusu — rota seçiminde "nasıl seçilir", kapanmış seferde "neden kilitli". */
+  hintBox: {
     marginTop: operationsTheme.space.xl,
     paddingVertical: operationsTheme.space.xl,
     paddingHorizontal: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors['neutral-bg'],
   },
-  startHintText: {
+  hintText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.body,
+  },
+  /** Rota listesinin üstbaşlığı — kapanış ekranının bölüm başlıklarıyla aynı kesit. */
+  routesHeading: {
+    paddingTop: operationsTheme.space.md,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors.muted,
+  },
+  /** Seferin künyesi — "Kuzey rotası · SF-26-…"; ilerleme satırının üstünde, sessiz. */
+  runStrip: {
+    paddingTop: operationsTheme.space.md,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors.muted,
   },
   stopRow: {
     flexDirection: 'row',
@@ -514,8 +697,11 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
   },
+  /** Rota seçilmemişken düğme PASİF durur (kapanış ekranının "zaten kapalı" çiftiyle aynı token). */
+  ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },
   ctaLabelStart: { color: operationsTheme.colors.card },
   ctaLabelClose: { color: operationsTheme.colors['on-image'] },
+  ctaLabelIdle: { color: operationsTheme.colors['disabled-text'] },
   ctaBadge: {
     paddingVertical: operationsTheme.space['2xs'],
     paddingHorizontal: operationsTheme.space.md,

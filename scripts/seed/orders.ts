@@ -280,8 +280,8 @@ export async function seedOrders(
     const indirim = opts.kupon ? (kuponlar.get(opts.kupon) ?? null) : null;
     const indirimTutari = indirim ? (opts.kuponTutari ?? 0) : 0;
     // KAPI ÖNÜ satışında teslimat YOKTUR: müşteri malı elden aldı. Teslim günü ve kurye yazmak,
-    // o satışı kuryenin gün kapanışına sokar (`courier_day_collection` gün + kurye ile gruplar) ve
-    // kuryeden hiç taşımadığı bir paranın hesabı sorulur.
+    // o satışı bir SEFERE bağlar (`seedDeliveryRuns` kuryeli+günlü rota siparişlerini damgalar,
+    // kapanış da seferin tahsilatını sayar) ve kuryeden hiç taşımadığı bir paranın hesabı sorulur.
     const kapiOnu = opts.kaynak === 'door';
     const depoId = opts.depo === 'kehl' ? depolar.kehl : depolar.str;
     // TESLİMAT ÜLKESİ adresten gelir, varsayılandan değil: Almanya'ya giden bir siparişi `FR`

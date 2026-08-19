@@ -1,4 +1,10 @@
-import type { CourierDayResponse, CourierStopContract, DayCloseDraftContract } from '@lezzet/types';
+import type {
+  CourierDayResponse,
+  CourierRoute,
+  CourierRunBrief,
+  CourierStopContract,
+  DayCloseDraftContract,
+} from '@lezzet/types';
 
 /*
   KURYE TEST VERİSİ — üç ekran testinin ortak satırları.
@@ -56,6 +62,53 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
 }
 
 /**
+ * **Açık sefer künyesi** (18.08) — "kurye rotayı almış, yolda" hâli. Fixture'ın VARSAYILAN hâli bu
+ * çünkü kurye ekranlarının çoğu o hâli konuşuyor: sefer yoksa durak da yoktur (siparişin kuryesi
+ * seferin kuryesinden gelir), yani sefersiz bir gün cevabında liste zaten boş olurdu.
+ * Rota seçimi ölçen test `courierDay([], { run: null })` geçirir.
+ */
+export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): CourierRunBrief {
+  return {
+    runId: uuid(800),
+    referenceNo: 'SF-26-ABCDEF',
+    zoneId: uuid(801),
+    zoneName: 'Kuzey rotası',
+    vehicleId: null,
+    departedAt: '2026-08-08T07:30:00.000Z',
+    returnedAt: null,
+    closed: false,
+    ...overrides,
+  };
+}
+
+/**
+ * Seçim listesindeki rota. `run` doluysa rota o gün BAŞLATILMIŞTIR ve ikinci kez açılamaz (K3) —
+ * ekran onu pasif gösterip kimin sürdüğünü yazar.
+ */
+export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRoute {
+  return {
+    zoneId: uuid(801),
+    zoneName: 'Kuzey rotası',
+    warehouseId: uuid(810),
+    warehouseName: 'Strasbourg deposu',
+    stopCount: 3,
+    run: null,
+    ...overrides,
+  };
+}
+
+/** Başkasının sürdüğü rotanın künyesi — kartın "bugün X sürüyor" satırının kaynağı. */
+export function takenRouteRun(overrides: Partial<CourierRoute['run']> = {}): NonNullable<CourierRoute['run']> {
+  return {
+    ...courierRunBrief(),
+    courierId: uuid(820),
+    courierName: 'Musa Kaya',
+    vehicleLabel: null,
+    ...overrides,
+  };
+}
+
+/**
  * Günün cevabı. Kasa hesabı GÜN başına (21.10d) ve varsayılanı `null` — ayar boşken ekran tahsilat
  * kapısını kapalı gösteriyor ve o hâl de ölçülüyor; tahsilat senaryosu kuran test
  * `{ doorAccountId: DOOR_ACCOUNT_ID }` geçirir.
@@ -64,12 +117,13 @@ export function courierDay(
   stops: CourierStopContract[],
   overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {},
 ): CourierDayResponse {
-  return { date: '2026-08-08', doorAccountId: null, stops, ...overrides };
+  return { date: '2026-08-08', run: courierRunBrief(), doorAccountId: null, stops, ...overrides };
 }
 
 export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): DayCloseDraftContract {
   return {
     date: '2026-08-08',
+    run: courierRunBrief(),
     closed: null,
     delivered: [],
     pending: [],
@@ -79,14 +133,13 @@ export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): D
   };
 }
 
-/** Kapanmış gün kaydı — salt-okunur ekranın kaynağı. */
+/** Kapanmış SEFER kaydı — salt-okunur ekranın kaynağı (18.08: anahtar kurye×gün değil sefer). */
 export function closedDayRecord(
   overrides: Partial<NonNullable<DayCloseDraftContract['closed']>> = {},
 ): NonNullable<DayCloseDraftContract['closed']> {
   return {
     id: uuid(900),
-    courierId: uuid(901),
-    date: '2026-08-08',
+    deliveryRunId: uuid(800),
     expectedCashCents: 4200,
     expectedCardCents: 0,
     expectedChequeCents: 0,

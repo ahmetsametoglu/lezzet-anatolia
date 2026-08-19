@@ -1,14 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { CourierDayCloseScreen } from './day-close-screen';
-import { closedDayRecord, courierStop, dayCloseDraft } from './courier-fixture';
+import { closedDayRecord, courierRunBrief, courierStop, dayCloseDraft } from './courier-fixture';
 import messages from './messages.json';
 
 /*
-  K7 EKRAN TESTİ — sayaçlar, işaretli fark, iki adımlı onay, kapalı günün salt-okunurluğu ve
+  K7 EKRAN TESTİ — sayaçlar, işaretli fark, iki adımlı onay, kapanmış seferin salt-okunurluğu ve
   `already_closed`ın bir HATA değil bir GERÇEK olarak gösterilmesi.
 
   Hook taklit edilmez: gerçek hook + taklit `fetch` (K1 ve teslimat testleriyle aynı karar).
+
+  KAPANIŞIN ÖZNESİ SEFER (18.08): taslak seferin künyesini taşır, kapatma isteği `runId` ile gider.
 */
 
 const mockBack = jest.fn();
@@ -75,7 +77,7 @@ beforeEach(() => {
   mockBack.mockReset();
 });
 
-describe('K7 · gün kapanışı', () => {
+describe('K7 · sefer kapanışı', () => {
   it('taslak okunamazsa hata bloğu çıkar, boş bir kapanış formu AÇILMAZ', async () => {
     mockDraft(null);
 
@@ -96,6 +98,8 @@ describe('K7 · gün kapanışı', () => {
 
     await renderClose();
 
+    // Kapanışın öznesi başlıkta yazılı: kurye hangi seferi kapattığını okumadan onaylamamalı.
+    expect(screen.getByText('Kuzey rotası · SF-26-ABCDEF')).toBeOnTheScreen();
     expect(screen.getByTestId('courier-count-delivered')).toHaveTextContent(/2/);
     expect(screen.getByTestId('courier-count-pending')).toHaveTextContent(/1/);
     expect(screen.getByTestId('courier-count-returned')).toHaveTextContent(/1/);
@@ -149,12 +153,13 @@ describe('K7 · gün kapanışı', () => {
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
   });
 
-  it('onaylanınca sayılan tutarlar ve not uca CENT olarak gider; sonuç farkı yazılır', async () => {
+  it('onaylanınca SEFER kimliği + sayılan tutarlar ve not uca CENT olarak gider; sonuç farkı yazılır', async () => {
     mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0, chequeCents: 0 } }), {
       ok: true,
       differenceCashCents: -200,
       differenceCardCents: 0,
       differenceChequeCents: 0,
+      releasedCount: 1,
     });
 
     await renderClose();
@@ -166,18 +171,21 @@ describe('K7 · gün kapanışı', () => {
     await waitFor(() => expect(screen.getByTestId('courier-day-close-notice')).toBeOnTheScreen());
     const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
-      date: '2026-08-08',
+      runId: courierRunBrief().runId,
       countedCashCents: 4000,
       countedCardCents: 0,
       countedChequeCents: 0,
       note: 'Krutenau kolisi araçta kaldı',
     });
-    expect(screen.getByTestId('courier-day-close-notice')).toHaveTextContent(/nakit −2,00/);
+    const notice = screen.getByTestId('courier-day-close-notice');
+    expect(notice).toHaveTextContent(/nakit −2,00/);
+    // Kapanışın çözdüğü takılı durak sessiz geçmez (K4).
+    expect(notice).toHaveTextContent(/1 takılı durak çözüldü/);
     // Kapanış sonrası ekran kilitlenir: ikinci bir kapanış denemesi başlatılamaz.
     expect(screen.getByTestId('courier-day-close-readonly')).toBeOnTheScreen();
   });
 
-  it('KAPALI gün salt-okunur açılır: alanlar kilitli, CTA "zaten kapalı"', async () => {
+  it('KAPANMIŞ sefer salt-okunur açılır: alanlar kilitli, CTA "zaten kapalı"', async () => {
     mockDraft(dayCloseDraft({ closed: closedDayRecord() }));
 
     await renderClose();
@@ -191,7 +199,7 @@ describe('K7 · gün kapanışı', () => {
     expect(screen.queryByTestId('courier-day-close-confirm-box')).toBeNull();
   });
 
-  it('kapalı günün sayıları KAPANIŞ KAYDINDAN okunur (o günün fotoğrafı), taslaktan değil', async () => {
+  it('kapanmış seferin sayıları KAPANIŞ KAYDINDAN okunur (anın fotoğrafı), taslaktan değil', async () => {
     mockDraft(
       dayCloseDraft({
         closed: closedDayRecord({ expectedCashCents: 4200, countedCashCents: 4000 }),

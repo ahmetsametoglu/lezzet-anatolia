@@ -81,7 +81,18 @@ export const OrderSchema = z.object({
   addressId: z.string().uuid().nullable(),
   /** Adresin sipariş anındaki kopyası — adres sonradan düzeltilse sipariş bozulmaz. */
   addressSnapshot: z.record(z.unknown()).nullable(),
+  /**
+   * Kurye — sipariş yolculuğunda İKİ el yazar: sabah ataması (plan) ve sefer başlangıcı
+   * (`start_delivery_run` seferi süren kuryeyi buraya SENKRONLAR — 18.08, "siparişin kuryesi
+   * seferin kuryesinden gelir"). Sahiplik kapıları bu kolona bakmaya devam eder.
+   */
   courierId: z.string().uuid().nullable(),
+  /**
+   * Hangi GERÇEKLEŞEN seferle gitti (0046 · `docs/feature/sefer.md`). Yalnız `start_delivery_run`
+   * yazar, teslimle donar — `courierId` sonradan oynasa da "kim götürdü" sorusunun kanıtlı cevabı
+   * `delivery_run.courier_id`dir. `null` = henüz sefere bağlanmadı (ya da kargo/kapı önü).
+   */
+  deliveryRunId: z.string().uuid().nullable(),
   deliveryCountry: CountryEnum,
 
   vatNumberSnapshot: z.string().nullable(),
@@ -149,6 +160,7 @@ export const OrderInsertSchema = z.object({
   addressId: z.string().uuid().nullish(),
   addressSnapshot: z.record(z.unknown()).nullish(),
   courierId: z.string().uuid().nullish(),
+  deliveryRunId: z.string().uuid().nullish(),
   deliveryCountry: CountryEnum.optional(),
   vatNumberSnapshot: z.string().nullish(),
   vatTreatment: VatTreatmentEnum.optional(),

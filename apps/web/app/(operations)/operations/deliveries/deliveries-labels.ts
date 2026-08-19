@@ -114,7 +114,8 @@ export const DISPATCH_NOTES = {
      */
     notReady: (names: readonly string[]): string =>
       names.length <= 3 ? `${names.join(', ')} hazır değil` : `${names.length} sipariş hazır değil`,
-    unassigned: (count: number): string => `${count} sipariş kuryesiz`,
+    /** Seferi açılmamış rota (18.08 — 'kuryesiz sipariş' engelinin halefi): kurye henüz rotayı almadı. */
+    runless: (count: number): string => (count === 1 ? '1 rotanın seferi açılmadı' : `${count} rotanın seferi açılmadı`),
     /** Askıda kalan — engellerin EN SERTİ: bugünün değil, geçmişin borcudur. */
     stranded: (count: number): string => `${count} sipariş önceki günlerden askıda`,
     /** Hiçbir rotaya düşmemiş durak: araç oraya UĞRAMAZ. Engellerin en serti. */
@@ -202,18 +203,20 @@ export const CARRIER_LABEL: Record<Carrier, string> = {
 };
 
 /**
- * Gün kapanışının sözlüğü (11.6). Ayrı bir küme çünkü buranın dili MUTABAKAT dilidir: "beklenen",
+ * Sefer kapanışının sözlüğü (11.7). Ayrı bir küme çünkü buranın dili MUTABAKAT dilidir: "beklenen",
  * "sayılan", "fark". İç terim ("mutabakat kaydı", "reconciliation", "para hareketi") görünmez
  * (tasarım §6), ve fark **suçlayıcı olmayan** bir cümleyle yazılır — değerlendirme admin'in işidir.
  */
 export const CLOSE_NOTES = {
-  /** Sonuçlanmamış durak kapanışı ENGELLEMEZ (tasarım §4): kurye depoya döndüyse günü kapatabilmeli. */
+  /** Sonuçlanmamış durak kapanışı ENGELLEMEZ (tasarım §4): kurye depoya döndüyse seferi kapatabilmeli.
+      Vaat K4'ün gerçeğidir: kapanış durağı hazıra düşürür, yeni günü SEVKİYAT yazar — "yarına
+      devrolur" demek otomatik bir aktarım vaat etmek olurdu ve öyle bir mekanizma yok. */
   pending: (count: number): string =>
-    `${count} durak sonuçlanmadı. Gün yine de kapatılabilir — bu duraklar yarının işine devrolur.`,
+    `${count} durak sonuçlanmadı. Sefer yine de kapatılabilir — bu duraklar hazır listesine döner, yeni günlerini sevkiyat planlar.`,
   returned: 'Bu koliler depoya fiziksel teslim edilir; rafa dönüş ya da imha kararı depo tarafında verilir.',
   /** Durağı olmayan gün kapatılmaz — karşılığı olmayan bir mutabakat kaydı "sayıldı" der, oysa sayılan yok. */
-  emptyDay: 'Bugün size atanmış teslimat olmadı, dolayısıyla kasaya teslim edilecek bir şey de yok. Gün kapanışı ancak duraklı bir günde anlamlıdır.',
-  noCollection: 'Bugün kapıda tahsilat yok — teslimatların tamamı önceden ödenmiş. Sayılacak para yok.',
+  emptyDay: 'Bugün sürülmüş bir sefer yok, dolayısıyla kasaya teslim edilecek bir şey de yok. Kapanış ancak duraklı bir seferde anlamlıdır.',
+  noCollection: 'Bu seferde kapıda tahsilat yok — teslimatların tamamı önceden ödenmiş. Sayılacak para yok.',
   reconciled: 'Beklenen ile sayılan tutuyor.',
   /** İşaret ANLAMLI: eksi eksik, artı fazla. Mutlak değere indirmek iki farklı gerçeği aynı gösterirdi. */
   difference: (cents: number): string => (cents < 0 ? `${money(-cents)} eksik` : `${money(cents)} fazla`),
@@ -237,6 +240,27 @@ export const DOOR_METHODS: Array<{ key: DoorMethod; label: string }> = [
  * *"bir bölge tanımlamak = bir dağıtım güzergâhı tanımlamak."* Veri modeli adı `delivery_zone` kalır —
  * iç ad, arayüz dili değil; ekranda "bölge" demek operatörü çevirmeye zorluyordu.
  */
+
+/**
+ * SEFER metinleri (18.08, `docs/feature/sefer.md`) — sefer şeridi (gün planı) ve geçmiş seferler
+ * sekmesi aynı sözlüğü okur: "yolda"nın iki ekranda iki cümlesi olmaz.
+ */
+export const RUN_NOTES = {
+  /** Saat okunur biçimde: sevkiyatçının sorusu "ne zamandır yolda". */
+  onRoad: (departedAt: string | null): string =>
+    departedAt
+      ? `Yolda · ${new Date(departedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
+      : 'Yolda',
+  returned: (returnedAt: string): string =>
+    `Döndü · ${new Date(returnedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`,
+  /** Sefer açılmamış rota — kurye henüz almadı; engel sayacının satırdaki karşılığı. */
+  waiting: 'sefer açılmadı — kurye rotayı bekliyor',
+  /** Dönmüş ama SAYILMAMIŞ sefer: para araçta göründü, mutabakat yapılmadı — görünür eksik. */
+  unclosed: 'Kapanış bekliyor',
+  emptyList:
+    'Sefer, kurye rotayı alıp yola çıktığında doğar ve burada kalıcı kaydı tutulur: kim sürdü, hangi araç, ne zaman çıktı-döndü, sayım ne dedi. İlk sefer başlatıldığında bu liste dolmaya başlar.',
+} as const;
+
 export const ROUTE_NOTES = {
   pickRoute: 'Soldaki haritada tanımlı güzergâhlar görünüyor. Düzenlemek için listeden bir rota seçin, ya da "+ Rota" ile yenisini kurun.',
   noCodes: 'Henüz kod yok — bu rota hiçbir adrese hizmet etmiyor.',

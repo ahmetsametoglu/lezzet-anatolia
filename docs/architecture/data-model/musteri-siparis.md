@@ -117,7 +117,8 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | neighbor_invite_id | uuid \| null | bu sipariş bir **komşu davetinden** mi geldi (17.10) — künye; davetin ödülü buradan doğar ve davetin kullanımı bu kolondan **sayılır** (davet satırında sayaç yok) |
 | address_id | uuid \| null | teslimat adresi; hızlı satışta null |
 | address_snapshot | jsonb \| null | sipariş anında adresin kopyası — adres sonradan değişse de sipariş bozulmaz (zone editable olduğu için `delivery_zone_id` de snapshot'tır) |
-| courier_id | uuid \| null | atanan kurye (rota teslimatı; atamada dolar) |
+| courier_id | uuid \| null | seferi süren kurye — `start_delivery_run` senkronlar (18.08; sahiplik kapıları buradan okur) |
+| delivery_run_id | uuid \| null | hangi GERÇEKLEŞEN seferle gitti (0046) — yalnız start yazar, teslimle donar |
 | delivery_country | enum(`FR`,`DE`) | teslimat ülkesi — DE B2C 10.000€ OSS eşiği izlemi (bkz. `DOMAIN.md §5`) |
 | vat_number_snapshot | string \| null | reverse charge siparişinde o anki geçerli vergi no (denetim kanıtı) |
 | shipping_fee | numeric (€) | müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi (bkz. `DOMAIN.md §6`). Uygulamadaki adı `shippingFeeCents`, birimi **cent** (`STACK §8`) |
@@ -222,29 +223,55 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 
 **`saved_items` — sonraya kaydedilenler.** Teslimat yerine gönderilemeyen kalem sepetten SİLİNMEZ, buraya taşınır: alışveriş ölmez, sepet bölünür. Ayrı tablo açılmadı çünkü ikisi aynı şeyin iki hâli — ikisi de "bu ürünü istiyorum" kaydı, ayrımları yalnız BUGÜN alınıp alınamayacağı. Ayrı yapılarda tutmak, aralarında taşırken iki yazma yolu açardı. `addedAt` taşınırken korunur: "iki haftadır bekliyor" sinyali listeye geçerken sıfırlanmamalı.
 
-## CourierDayClose (kurye gün kapanışı)
+## DeliveryRun (sefer — gerçekleşen teslimat rotası, 0046 · 18.08)
 
-Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edilirken yazıldı (`money_movement`, 12.2). Bu tablo beklenen ile sayılanı yan yana koyar ve farkı **aynı gün** görünür kılar (DOMAIN §7).
+Rotanın **fiilen sürülmüş** hâli: kim sürdü, hangi araç, ne zaman çıktı/döndü. Planlanan sefer
+`(delivery_zone_id, delivery_date)` ikilisi olarak TÜRETİLMİŞ kalır (0044 kararı); bu tablo araç
+hazırlanırken doğar. Kararlar ve gerekçeler: `docs/feature/sefer.md`.
 
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| courier_id | uuid | `restrict` — kapanışı olan kişi silinemez |
-| date | date | `(courier_id, date)` **tekil**: bir gün bir kez kapanır |
+| reference_no | text | **tekil**, `SF-26-XXXXXX` — üretim domain-core (`deliveryRunReferenceNo`) |
+| delivery_zone_id | uuid | `restrict`; `(zone, date)` **mutlak tekil** — rota+gün başına TEK sefer (K3); eşzamanlılık kilidi indekste |
+| delivery_date | date | |
+| warehouse_id | uuid | SNAPSHOT — bölge sonradan taşınsa da seferin tesisi değişmez |
+| courier_id | uuid | `restrict` — kim sürdü; siparişin `courier_id`si start'ta BURADAN senkronlanır |
+| vehicle_id | uuid \| null | `restrict`; zorunluluk parametrik (Setting) — soğuk zincir izi araç üstünden |
+| created_at / departed_at / returned_at | timestamptz | üç damga; durum makinesi YOK, hâl türetilir |
+| note | text \| null | |
+
+**`order.delivery_run_id`** (`set null`): sipariş hangi gerçekleşen seferle gitti — yalnız
+`start_delivery_run` yazar, teslimle donar. `courier_id` sonradan oynasa da "kim götürdü"nün
+kanıtlı cevabı seferdir.
+
+**Üç RPC:** `start_delivery_run` (satır + siparişlerin claim'i tek transaction; aynı kuryenin açık
+sefere ikinci basışı catch-up claim — sonradan hazırlanan duraklar da bağlanır; durum geçişi RPC'de
+DEĞİL, motor izniyle uygulama katmanında) · `close_delivery_run` (aşağıda) · `reassign_delivery_run`
+(K2 devri: run + açık siparişlerin kuryesi birlikte; sonuçlanmış duraklara dokunulmaz).
+
+## DeliveryRunClose (sefer kapanışı — kurye×gün kapanışının halefi, 18.08)
+
+Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edilirken yazıldı (`money_movement`, 12.2). Bu tablo beklenen ile sayılanı yan yana koyar ve farkı **aynı gün, seferiyle birlikte** görünür kılar (DOMAIN §7). Eski `courier_day_close` (kurye×gün) kaldırıldı — "fark hangi seferde doğdu" cevaplanamıyordu ve teslimden sonra yeniden atanan sipariş yanlış kuryeye yazılabiliyordu; `delivery_run_id` teslimle donduğu için o kayma kökten kapandı.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| delivery_run_id | uuid | `restrict` + **tekil**: bir sefer bir kez kapanır |
 | expected_cash / expected_card / expected_cheque | numeric | sistemin hesabı — kapanış anında DONDURULUR |
 | counted_cash / counted_card / counted_cheque | numeric | kuryenin fiilen teslim ettiği (sayım / cihaz raporu / yapraklar) |
-| delivered_orders | uuid[] | günün teslim edilenleri (`delivered` + `completed`) |
+| delivered_orders | uuid[] | seferin teslim edilenleri (`delivered` + `completed`) — fotoğraf ÇÖZÜMDEN ÖNCE çekilir |
 | returned_orders | uuid[] | reddedilenler — getirilen mal |
-| pending_orders | uuid[] | sonuçlanmamışlar; yarına devrolur |
+| pending_orders | uuid[] | kapanış ANINDA sonuçlanmamışlar; kapanış bunları `ready`ye çözer (K4), yeni günü sevkiyatçı yazar |
 | note | text \| null | fark açıklaması — fark gizlenmez, açıklanır |
 | closed_by | uuid \| null | |
 | closed_at | timestamptz | |
 | reconciled | boolean | **generated** — beklenen = sayılan mı |
 
-**`expected_*` türetilebilir olduğu hâlde SAKLANIR.** Kaynağı `courier_day_collection` görünümüdür (kapıda toplanan üç yöntemin sipariş hareketleri); ama kapanış o anın fotoğrafıdır — sonradan bir hareket düzeltilirse geçmiş mutabakat değişmemeli, "o gün ne konuşuldu" sabit kalmalı. Türetim ile snapshot çelişmez: canlı hesap görünümde, donmuş hesap burada.
+**`expected_*` türetilebilir olduğu hâlde SAKLANIR.** Kaynağı `delivery_run_collection` görünümüdür (seferin kapıda toplanan üç yöntemi, `order.delivery_run_id` ile gruplanır); ama kapanış o anın fotoğrafıdır — sonradan bir hareket düzeltilirse geçmiş mutabakat değişmemeli, "o gün ne konuşuldu" sabit kalmalı. Türetim ile snapshot çelişmez: canlı hesap görünümde, donmuş hesap burada.
 
 **`reconciled` ise saklanmaz, generated kolondur.** Beklenen ve sayılan zaten yan yana duruyorken "fark var/yok" ayrıca yazılsaydı bir gün ikisi çelişirdi (DATA_MODEL kalıcı kararlar: türetilebilen sayaç tutulmaz). Generated kolon hem sorgulanabilir (mutabık olmayan günler listesi) hem kayamaz.
 
 **Fark ayrı kolon değildir:** `counted − expected`. İşaret anlamlıdır — eksi eksik teslim, artı fazla para; ikisi de açıklanmayı hak eder, mutlak değere indirilmez.
 
-**`close_courier_day` fonksiyonu (11.6):** beklenen toplamlar + günün üç listesi + kapanış satırı tek transaction'da. Kapanmış gün salt-okunurdur; ikinci çağrı ezmez, `already_closed` döner. Sonuçlanmamış durak kapanışı **engellemez** — kurye depoya döndüyse günü kapatabilmeli, ulaşılamayan sipariş yarına kalır.
+**`close_delivery_run` fonksiyonu (11.7):** dönüş damgası + beklenen toplamlar + seferin üç listesi + takılı durakların çözümü + kapanış satırı tek transaction'da. Kapanmış sefer salt-okunurdur; ikinci çağrı ezmez, `already_closed` döner. Sonuçlanmamış durak kapanışı **engellemez** — üstelik kapanış onları motorun "ulaşılamadı" kenarıyla çözer (`stale` yutulur: kurye o an teslim yazdıysa onun kaydı kazanır); hangi güne yeniden yazılacağı sevkiyatçının kararıdır.

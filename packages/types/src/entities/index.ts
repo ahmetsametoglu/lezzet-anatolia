@@ -26,6 +26,7 @@ export * from './address.schema';
 export * from './cart.schema';
 export * from './order.schema';
 export * from './courier.schema';
+export * from './delivery-run.schema';
 export * from './setting.schema';
 export * from './delivery-zone.schema';
 export * from './postal-code-place.schema';

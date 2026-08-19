@@ -82,7 +82,7 @@ export {
   type SegmentOptions,
 } from './services/analytics.service';
 export { AssistantProposalService } from './services/assistant-proposal.service';
-export { CourierDayCloseService, CourierDayCollectionService } from './services/courier-day-close.service';
+export { DeliveryRunService, DeliveryRunCloseService, DeliveryRunCollectionService } from './services/delivery-run.service';
 export { TicketService, TicketQueueService, TicketMessageService, type TicketQueueFilter } from './services/ticket.service';
 export { ConversationService, MessageService, ConversationInboxService } from './services/conversation.service';
 export { ProductFeedbackService, ProductRatingService } from './services/product-feedback.service';

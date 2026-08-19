@@ -95,10 +95,41 @@ export interface DispatchStopView {
   warehouseName: string | null;
 }
 
+/**
+ * **Günün bir SEFERİ / sefer adayı** (18.08, `docs/feature/sefer.md`) — o gün koşan her rota için
+ * bir satır: sefer açıldıysa künyesi (kim, hangi araç, çıkış/dönüş), açılmadıysa "bekliyor" hâli.
+ *
+ * Kaynak `listCourierRoutes` — kuryenin rota seçim ekranıyla AYNI kapı: sevkiyatçının gördüğü
+ * "açılmadı" ile kuryenin gördüğü seçim listesi ayrışamaz.
+ */
+export interface DispatchRunView {
+  zoneId: string;
+  zoneName: string;
+  warehouseName: string | null;
+  /** O güne yazılmış rota siparişi — rotanın yükü. */
+  stopCount: number;
+  run: {
+    runId: string;
+    referenceNo: string;
+    courierId: string;
+    courierName: string | null;
+    vehicleLabel: string | null;
+    departedAt: string | null;
+    returnedAt: string | null;
+    /** Kapanış (mutabakat) yapıldı mı — dönüşten ayrı soru. */
+    closed: boolean;
+  } | null;
+}
+
 export interface DispatchDayView {
   date: string;
   /** Sunucunun "bugün"ü — gün seçicinin etiketleri buna göre ("Bugün"/"Yarın"). */
   today: string;
+  /**
+   * Günün sefer şeridi (18.08): rota başına tek satır — araç çıktı mı, döndü mü, kim sürüyor.
+   * `prep: 'on_the_way'` rozetlerini satır satır okumadan cevaplanır.
+   */
+  runs: DispatchRunView[];
   /**
    * Araçla giden — **düz liste, bölgeye göre SIRALI** (16.08). Bölge artık satırın kolonu
    * (`DispatchStopView.zoneName` künyesi); gruplama kalktı çünkü bölgesizler adsız bir başlığın
@@ -176,8 +207,12 @@ export interface DispatchDayView {
      * okunuyordu.
      */
     notReadyNames: string[];
-    /** Kurye atanmamış durak. Gün başında normal, araç çıkarken kalmamalı. */
-    unassigned: number;
+    /**
+     * Seferi AÇILMAMIŞ rota (18.08 — `unassigned` sayacının halefi). Eski engel "kurye atanmamış
+     * SİPARİŞ" sayıyordu ve atama modeline aitti; yeni modelde kurye rotayı kendisi alır —
+     * sevkiyatçının izlediği şey ROTA başına "araç çıktı mı"dır. Gün başında normal.
+     */
+    runless: number;
     /** Hiçbir rotaya düşmemiş durak — araç oraya UĞRAMAZ, en sert engel bu. */
     zoneless: number;
     doorCents: number;
@@ -211,12 +246,12 @@ export interface DispatchDayView {
 
 export interface DispatchViewProps {
   day: DispatchDayView;
-  /** Toplu atama için seçili sipariş kimlikleri. */
-  selected: string[];
-  onToggle: (orderId: string) => void;
-  /** Başlıktaki "tümü" kutucuğu — bölge grubunun kutucuğunun yerini aldı (16.08, gruplama kalktı). */
-  onToggleAll: () => void;
-  onAssign: (courierId: string | null) => void;
+  /**
+   * Sefer DEVRİ (K2, 18.08) — elle atamanın kalan tek istisnası: kurye hastalandı, telefon evde.
+   * Toplu atama (`selected`/`onToggle`/`onAssign`) SÖKÜLDÜ: kurye rotayı kendisi alır, sevkiyatçı
+   * sipariş seçip kurye dağıtmaz. Devir sipariş-seviyesinde değil SEFER-seviyesindedir.
+   */
+  onReassign: (runId: string, courierId: string) => void;
   onMove: (orderId: string, date: string) => void;
   /**
    * Askıda kalan siparişi bir güne yazma. `onMove`'dan AYRI bir eylem çünkü fazladan bir iş yapıyor:

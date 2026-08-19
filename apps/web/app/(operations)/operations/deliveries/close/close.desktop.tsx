@@ -38,6 +38,9 @@ export function DayCloseDesktop(props: DayCloseViewProps) {
   const { draft, busy, error } = props;
   const closed = draft.closed;
   const stopCount = draft.delivered.length + draft.pending.length + draft.returned.length;
+  // Kapanışın öznesi SEFER (18.08): künye başlıkta okunur — rota adı + SF kodu. Sefer yoksa
+  // sayılacak bir şey de yok; boş hâl aşağıda.
+  const runLabel = draft.run ? `${draft.run.zoneName ?? 'Rota'} · ${draft.run.referenceNo}` : null;
 
   const rows = CLOSE_METHODS.map((method) => {
     const expected = expectedOf(props, method);
@@ -54,8 +57,8 @@ export function DayCloseDesktop(props: DayCloseViewProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
-        title="Gün kapanışı"
-        subtitle={`${draft.date} · kasa mutabakatı`}
+        title="Sefer kapanışı"
+        subtitle={runLabel ? `${runLabel} · ${draft.date} · kasa mutabakatı` : `${draft.date} · kasa mutabakatı`}
         status={closed ? <Badge tone="olive">Kapandı</Badge> : <Badge tone="neutral">Açık</Badge>}
       >
         <Link
@@ -66,11 +69,11 @@ export function DayCloseDesktop(props: DayCloseViewProps) {
         </Link>
       </PageHeader>
 
-      {/* Hiç durağı olmayan gün KAPATILMAZ (tasarım §4 boş durum): kapanış bir mutabakattır, karşılığı
-          olmayan bir mutabakat kaydı "bugün sayıldı" der ve sayılacak bir şey yoktur. Düğmeyi açık
-          bırakmak, olmayan bir işi yapılmış göstermenin en sessiz yoluydu. */}
-      {stopCount === 0 && !closed ? (
-        <EmptyState title="Kapatılacak gün yok" description={CLOSE_NOTES.emptyDay} />
+      {/* Sefersiz gün ve duraksız sefer KAPATILMAZ (tasarım §4 boş durum): kapanış bir mutabakattır,
+          karşılığı olmayan bir mutabakat kaydı "sayıldı" der ve sayılacak bir şey yoktur. Düğmeyi
+          açık bırakmak, olmayan bir işi yapılmış göstermenin en sessiz yoluydu. */}
+      {!draft.run || (stopCount === 0 && !closed) ? (
+        <EmptyState title="Kapatılacak sefer yok" description={CLOSE_NOTES.emptyDay} />
       ) : (
       <div className="mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col overflow-y-auto">
         {/* Günün dökümü — kapanış "bugün ne oldu"nun tek resmidir (tasarım §2). */}
@@ -173,7 +176,7 @@ export function DayCloseDesktop(props: DayCloseViewProps) {
 
             <div className="mt-auto border-t border-ops-line px-4 py-3">
               <Button variant="primary" fullWidth onClick={props.onClose} disabled={busy || needsNote}>
-                Günü kapat
+                Seferi kapat
               </Button>
             </div>
           </>

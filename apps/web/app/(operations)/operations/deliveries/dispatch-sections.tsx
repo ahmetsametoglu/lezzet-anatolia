@@ -12,7 +12,7 @@ import type { ColumnTrack } from '@/components/operation/ui/table-columns';
 // Kanal rozetinin tonu Siparişler tablosuyla AYNI kaynaktan (16.08): aynı kanal iki ekranda iki
 // renk olamaz. Sözlük orada tanımlı ve süzgeç çipleriyle paylaşılıyor — kopyası yazılmadı.
 import { CHANNEL_TONE } from '../orders/orders-url';
-import { CARRIER_LABEL, DISPATCH_NOTES, PREP_VIEW } from './deliveries-labels';
+import { CARRIER_LABEL, DISPATCH_NOTES, PREP_VIEW, RUN_NOTES } from './deliveries-labels';
 import { dayLabel, shiftDay } from './deliveries-url';
 import type { DispatchDayView, DispatchStopView } from './dispatch-types';
 
@@ -68,7 +68,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
     s.stranded > 0 ? DISPATCH_NOTES.blockers.stranded(s.stranded) : null,
     s.zoneless > 0 ? DISPATCH_NOTES.blockers.zoneless(s.zoneless) : null,
     s.notReadyNames.length > 0 ? DISPATCH_NOTES.blockers.notReady(s.notReadyNames) : null,
-    s.unassigned > 0 ? DISPATCH_NOTES.blockers.unassigned(s.unassigned) : null,
+    s.runless > 0 ? DISPATCH_NOTES.blockers.runless(s.runless) : null,
     s.parcelsUntracked > 0 ? DISPATCH_NOTES.blockers.untracked(s.parcelsUntracked) : null,
   ].filter((note) => note !== null);
 
@@ -215,57 +215,102 @@ export function DayPicker({ day, onDate }: { day: DispatchDayView; onDate: (date
 }
 
 /**
- * **Toplu atama çubuğu.** Seçim varken belirir; seçim yokken hiç çizilmez — boş bir eylem çubuğu
- * "bir şey yapabilirsin" der ve yapamazsın.
+ * **SEFER ŞERİDİ** (18.08, `docs/feature/sefer.md` — AssignBar'ın halefi). Toplu kurye ataması
+ * söküldü (K2: *"arayüzden atama saçma — kurye rotayı alır ve sürer"*); sevkiyatçının yeni sorusu
+ * sipariş başına "kime atandı" değil, ROTA başına **"araç çıktı mı, döndü mü, kim sürüyor"**.
+ *
+ * Rota başına tek satır: durum · kurye · araç · SF kodu. Kalan tek elle müdahale DEVİR — açık
+ * seferi başka kuryeye vermek (hasta kurye, evde kalan telefon); sipariş seçimi geri gelmez.
  */
-export function AssignBar({
+export function RunStrip({
   day,
-  selected,
-  onAssign,
+  onReassign,
   busy,
 }: {
   day: DispatchDayView;
-  selected: string[];
-  onAssign: (courierId: string | null) => void;
+  onReassign: (runId: string, courierId: string) => void;
+  busy: boolean;
+}) {
+  if (day.runs.length === 0) return null;
+
+  return (
+    <div className="flex flex-col border-b border-ops-line-soft px-6 py-2">
+      {day.runs.map((route) => (
+        <RunRow key={route.zoneId} route={route} couriers={day.couriers} onReassign={onReassign} busy={busy} />
+      ))}
+    </div>
+  );
+}
+
+/** Şeridin bir satırı — durum cümlesi + devir menüsü satırın kendi içinde. */
+function RunRow({
+  route,
+  couriers,
+  onReassign,
+  busy,
+}: {
+  route: DispatchDayView['runs'][number];
+  couriers: DispatchDayView['couriers'];
+  onReassign: (runId: string, courierId: string) => void;
   busy: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
-  if (selected.length === 0) return null;
+  const run = route.run;
 
   return (
-    <div className="flex items-center gap-3 border-b border-ops-olive-line bg-ops-olive-bg px-6 py-2.5">
-      <span className="font-ops-body text-ops-sm text-ops-olive-dark">{num(selected.length)} sipariş seçildi</span>
-      <div ref={anchorRef} className="ml-auto inline-flex">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setOpen((current) => !current)}
-          className="cursor-pointer rounded-ops-btn bg-ops-ink px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-card transition-colors hover:bg-ops-ink-hover disabled:opacity-50"
-        >
-          Kurye ata ▾
-        </button>
-      </div>
-      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={220}>
-        {day.couriers.map((courier) => (
-          <MenuRow
-            key={courier.id}
-            label={courier.name}
-            onClick={() => {
-              onAssign(courier.id);
-              setOpen(false);
-            }}
-          />
-        ))}
-        {/* Atamayı kaldırmak da bir karar: yanlış kuryeye düşen günü geri almanın yolu olmalı. */}
-        <MenuRow
-          label="Atamayı kaldır"
-          onClick={() => {
-            onAssign(null);
-            setOpen(false);
-          }}
-        />
-      </AnchoredMenu>
+    <div className="flex items-center gap-2.5 py-1.5">
+      <span className="min-w-0 truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{route.zoneName}</span>
+      {route.warehouseName ? <span className="font-ops-body text-ops-xs text-ops-faint">{route.warehouseName}</span> : null}
+      <span className="font-ops-mono text-ops-xs text-ops-muted">{num(route.stopCount)} durak</span>
+
+      {run ? (
+        <>
+          <span className="font-ops-mono text-ops-xs text-ops-faint">{run.referenceNo}</span>
+          {run.closed ? (
+            <Badge tone="olive">Kapandı</Badge>
+          ) : run.returnedAt ? (
+            <Badge tone="neutral">{RUN_NOTES.returned(run.returnedAt)}</Badge>
+          ) : (
+            <Badge tone="blue">{RUN_NOTES.onRoad(run.departedAt)}</Badge>
+          )}
+          <span className="truncate font-ops-body text-ops-sm text-ops-body">
+            {run.courierName ?? 'bilinmeyen kurye'}
+            {run.vehicleLabel ? <span className="text-ops-faint"> · {run.vehicleLabel}</span> : null}
+          </span>
+          {/* Devir yalnız AÇIK seferde: kapanmış seferin mutabakatı yapıldı, devredilecek yol yok. */}
+          {!run.closed ? (
+            <div ref={anchorRef} className="ml-auto inline-flex">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setOpen((current) => !current)}
+                className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-2.5 py-1 font-ops-display text-ops-xs font-semibold text-ops-strong transition-colors hover:border-ops-olive disabled:opacity-50"
+              >
+                Devret ▾
+              </button>
+            </div>
+          ) : null}
+          <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={220}>
+            {couriers
+              .filter((courier) => courier.id !== run.courierId)
+              .map((courier) => (
+                <MenuRow
+                  key={courier.id}
+                  label={courier.name}
+                  onClick={() => {
+                    onReassign(run.runId, courier.id);
+                    setOpen(false);
+                  }}
+                />
+              ))}
+          </AnchoredMenu>
+        </>
+      ) : (
+        // Sefer açılmamış rota SOLUK değil AMBER: kurye henüz rotayı almadı — gün başında normal,
+        // çıkış saati yaklaşırken bir engel (engel şeridi sayıyor).
+        <span className="ml-auto font-ops-body text-ops-xs text-ops-amber-dark">{RUN_NOTES.waiting}</span>
+      )}
     </div>
   );
 }
@@ -305,7 +350,8 @@ function MenuRow({ label, onClick }: { label: string; onClick: () => void }) {
  * olabiliyor, yani "kapıda ne olacak" sorusunun cevabı kanala göre değişiyor.
  */
 const ROUTE_TRACKS: ColumnTrack[] = [
-  { key: 'select', header: '', width: '28px', align: 'center' },
+  // `select` kolonu SÖKÜLDÜ (18.08): seçimin tek tüketicisi toplu atamaydı ve atama kalktı —
+  // kurye rotayı kendisi alıyor, elle müdahale sefer şeridindeki DEVİR.
   { key: 'no', header: 'No', width: '100px' },
   { key: 'customer', header: 'Müşteri', width: 'minmax(132px,1fr)' },
   { key: 'channel', header: 'Kanal', width: '48px' },
@@ -321,33 +367,16 @@ const ROUTE_TRACKS: ColumnTrack[] = [
 
 export function RouteTable({
   day,
-  selected,
-  onToggle,
-  onToggleAll,
   onMove,
   busy,
 }: {
   day: DispatchDayView;
-  selected: string[];
-  onToggle: (orderId: string) => void;
-  onToggleAll: () => void;
   onMove: (orderId: string, date: string) => void;
   busy: boolean;
 }) {
   const rows = day.route;
-  const allSelected = rows.length > 0 && rows.every((stop) => selected.includes(stop.orderId));
 
   const columns = withCells<DispatchStopView>(ROUTE_TRACKS, {
-    select: (stop) => (
-      <button
-        type="button"
-        onClick={() => onToggle(stop.orderId)}
-        aria-label={`${stop.customerName} seç`}
-        className="cursor-pointer font-ops-body text-ops-base text-ops-muted hover:text-ops-olive"
-      >
-        {selected.includes(stop.orderId) ? '☑' : '☐'}
-      </button>
-    ),
     no: (stop) => (
       <Link
         href={`/operations/orders/${stop.orderId}`}
@@ -388,11 +417,17 @@ export function RouteTable({
         <span className="font-ops-body text-ops-xs text-ops-faint">Hazır</span>
       );
     },
+    /**
+     * Kurye SEFERDEN gelir (18.08): `courier_id`yi artık `start_delivery_run` claim'i yazıyor —
+     * boş hücre "sevkiyatçı atamayı unuttu" değil "rotanın seferi henüz açılmadı" demek. Rozet bu
+     * yüzden amber DEĞİL soluk metin: uyarının evi sefer şeridi + engel sayacı (`runless`), satır
+     * satır tekrar etmek aynı uyarıyı iki yerde iki kez yazmak olurdu.
+     */
     courier: (stop) =>
       stop.courierName ? (
         <span className="truncate font-ops-body text-ops-sm text-ops-body">{stop.courierName}</span>
       ) : (
-        <Badge tone="amber">Atanmadı</Badge>
+        <span className="font-ops-body text-ops-xs text-ops-faint">Sefer bekliyor</span>
       ),
     /**
      * Tahsilat ÜÇ hâl, iki değil (düzeltme 16.08).
@@ -415,19 +450,10 @@ export function RouteTable({
 
   return (
     <section className="flex min-h-0 flex-col">
-      {/* Durak SAYISI burada YAZMIYOR (16.08): künye zaten "4 durak" diyor ve bu satır onu ikinci,
-          tablo başlığı da üçüncü kez tekrarlıyordu — aynı sayı 250 piksel içinde üç kez. Kalan tek
-          iş bu şeridin asıl işi: seçim kutucuğu ve bölümün adı.
-          Hazır olmayanların amber şeridi de ENGEL ŞERİDİNE taşındı (`DaySummary`) — uyarının yeri
-          "araç çıkmadan önceki son kontrol"dür, listenin içi değil. */}
+      {/* Durak SAYISI burada YAZMIYOR (16.08): künye zaten "4 durak" diyor. Seçim kutucuğu da
+          KALKTI (18.08) — tek tüketicisi toplu atamaydı; bölümün adı düz başlık oldu. */}
       <div className="flex items-center gap-3 border-b border-ops-line bg-ops-surface-sunken px-6 py-2">
-        <button
-          type="button"
-          onClick={onToggleAll}
-          className="cursor-pointer font-ops-display text-ops-sm font-semibold text-ops-ink hover:text-ops-olive"
-        >
-          {allSelected ? '☑' : '☐'} Araçla giden
-        </button>
+        <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Araçla giden</span>
       </div>
 
       <Table columns={columns} rows={rows} rowKey={(stop) => stop.orderId} />

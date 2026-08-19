@@ -3,7 +3,7 @@
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { DeliveryTabs } from './delivery-tabs';
-import { AssignBar, DayPicker, DaySummary, RouteTable, ShippingSection, StrandedSection } from './dispatch-sections';
+import { DayPicker, DaySummary, RouteTable, RunStrip, ShippingSection, StrandedSection } from './dispatch-sections';
 import { DISPATCH_NOTES } from './deliveries-labels';
 import { dayLabel } from './deliveries-url';
 import type { DispatchViewProps } from './dispatch-types';
@@ -30,7 +30,9 @@ export function DispatchDesktop(props: DispatchViewProps) {
 
       <DayPicker day={day} onDate={props.onDate} />
       <DaySummary day={day} />
-      <AssignBar day={day} selected={props.selected} onAssign={props.onAssign} busy={busy} />
+      {/* Sefer şeridi (18.08): rota başına "araç çıktı mı, döndü mü, kim sürüyor" + DEVİR istisnası.
+          Toplu atama çubuğunun halefi — kurye rotayı kendisi alıyor, sevkiyatçı izliyor. */}
+      <RunStrip day={day} onReassign={props.onReassign} busy={busy} />
 
       {error ? (
         <p className="mx-6 mt-3 rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">
@@ -47,16 +49,7 @@ export function DispatchDesktop(props: DispatchViewProps) {
             <StrandedSection day={day} onBringForward={props.onBringForward} busy={busy} />
           ) : null}
           {/* Rota çıkışları TEK tablo (16.08) — bölge artık kolon, grup değil. */}
-          {day.route.length > 0 ? (
-            <RouteTable
-              day={day}
-              selected={props.selected}
-              onToggle={props.onToggle}
-              onToggleAll={props.onToggleAll}
-              onMove={props.onMove}
-              busy={busy}
-            />
-          ) : null}
+          {day.route.length > 0 ? <RouteTable day={day} onMove={props.onMove} busy={busy} /> : null}
           {/* Bir tür hiç yoksa o bölüm sessizce yer kaplamaz (tasarım §4). */}
           {day.shipping.length > 0 ? (
             <ShippingSection stops={day.shipping} truncated={day.shippingTruncated} />

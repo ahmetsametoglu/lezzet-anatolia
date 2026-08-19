@@ -10,15 +10,19 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
+import { runLabel } from './courier-format';
 import { expectedLabel, useDayClose } from './use-day-close.hook';
 
 /*
-  KURYE · GÜN KAPANIŞI (v2:217-262) — sayaçlar · para sayımı · not · iki adımlı onay.
+  KURYE · SEFER KAPANIŞI (v2:217-262) — sayaçlar · para sayımı · not · iki adımlı onay.
 
-  Kararların tamamı `use-day-close.hook.ts` künyesinde. Ekranın kendi sapması TEK:
-  **fark sütunu bozuk girdide "—" yazar** (v2 her hâlde bir tutar yazıyor, çünkü şablonun girdisi
-  bozuk olamıyor). Ölçülemeyen fark sıfır değildir — "0,00 €" yazmak, sayılmamış bir kasayı
-  "tamı tamına tuttu" diye okuturdu (CLAUDE §1).
+  Kararların tamamı `use-day-close.hook.ts` künyesinde. Ekranın iki kendi kararı:
+  1. **Fark sütunu bozuk girdide "—" yazar** (v2 her hâlde bir tutar yazıyor, çünkü şablonun girdisi
+     bozuk olamıyor). Ölçülemeyen fark sıfır değildir — "0,00 €" yazmak, sayılmamış bir kasayı
+     "tamı tamına tuttu" diye okuturdu (CLAUDE §1).
+  2. **Kapanışın öznesi başlıkta yazılı** (18.08): başlık altına seferin künyesi (rota adı + SF
+     kodu) geliyor — kurye iki sefer sürdüyse hangisini kapattığını okumadan onaylamamalı. Sefer
+     yoksa form hiç çizilmez; boş bir sayım formu, olmayan bir mutabakatı davet ederdi.
 */
 
 const t = courierCopy;
@@ -43,10 +47,12 @@ function CounterCard({ value, label, tone, testID }: CounterCardProps) {
 export function CourierDayCloseScreen() {
   const router = useRouter();
   const dayClose = useDayClose();
+  const run = dayClose.draft?.run ?? null;
 
   const header = (
     <OperationsStackHeader
       title={t.dayClose.title}
+      subtitle={run === null ? undefined : runLabel(run)}
       onBack={() => router.back()}
       backLabel={t.dayClose.back}
       testID="courier-day-close-header"
@@ -75,6 +81,24 @@ export function CourierDayCloseScreen() {
             description={t.dayClose.error.body}
             retry={{ label: t.dayClose.error.retry, onPress: dayClose.reload }}
             testID="courier-day-close-error"
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // SEFER YOK: bu bir arıza değil, sakin bir gerçek — kapanış bir seferin mutabakatıdır ve
+  // sürülmemiş bir seferin sayımı da yoktur. Boş bir form çizmek, olmayan bir kaydı davet ederdi.
+  if (run === null) {
+    return (
+      <View style={styles.screen} testID="courier-day-close">
+        {header}
+        <View style={styles.block}>
+          <OperationsNoticeBlock
+            variant="empty"
+            title={t.dayClose.noRun.title}
+            description={t.dayClose.noRun.body}
+            testID="courier-day-close-no-run"
           />
         </View>
       </View>

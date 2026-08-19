@@ -25,6 +25,7 @@ const order = (patch: Partial<Order> = {}): Order =>
     addressId: null,
     addressSnapshot: { city: 'Strasbourg', postalCode: '67000' },
     courierId: null,
+    deliveryRunId: null,
     deliveryCountry: 'FR',
     vatNumberSnapshot: null,
     vatTreatment: 'domestic',

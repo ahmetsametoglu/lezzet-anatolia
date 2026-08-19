@@ -1,6 +1,7 @@
 import {
   AnalyticsReportService,
   AssistantProposalService,
+  DeliveryRunService,
   DeliveryZoneService,
   OrderItemService,
   OrderService,
@@ -197,8 +198,23 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     flow,
     queue,
     proposals: buildProposals(proposalCount, []),
-    routes: routesOf(rows, dayLog.deliveredAt),
+    routes: routesOf(rows, dayLog.deliveredAt, await runLabelsOf(db, today)),
   };
+}
+
+/**
+ * Günün sefer künyeleri — panel kartlarının kimliği (18.08). Kart artık kurye grubunun değil
+ * SEFERİN kartı: rota adı + SF kodu okunur, kurye adı seferin kuryesidir (satırlardan geliyor —
+ * `courier_id` start'ta senkronlandığı için ikisi ayrışamaz).
+ */
+async function runLabelsOf(db: ReturnType<typeof serviceDb>, date: string): Promise<Map<string, string>> {
+  const runs = await new DeliveryRunService(db).listByDate(date);
+  if (runs.length === 0) return new Map();
+  const zones = await new DeliveryZoneService(db).list();
+  const zoneName = new Map(zones.map((zone) => [zone.id, zone.name]));
+  return new Map(
+    runs.map((run) => [run.id, `${zoneName.get(run.deliveryZoneId) ?? 'Rota'} · ${run.referenceNo}`]),
+  );
 }
 
 type TimeKey = DayHourKey;
@@ -415,14 +431,22 @@ function routeFlowFacts(
 }
 
 /**
- * Rota kartları — kurye başına gruplanır. **Kuryesi atanmamış duraklar da gösterilir:** gizlenirse
- * "8 durak" eksik okunur ve atamanın unutulduğu fark edilmez.
+ * Rota kartları — SEFER başına gruplanır (18.08; kurye grubunun halefi). Panelin "rota" dediği şey
+ * eskiden kurye grubuydu ve `zoneLabel: null` geçiyordu — kartın kimliği yoktu. Sefer varlığı tam o
+ * boşluğu dolduruyor: kart başlığı rota adı + SF kodu, kurye adı seferin kuryesi.
+ *
+ * **Sefere bağlanmamış duraklar da gösterilir** ("Sefer açılmadı" kartı): gizlenirse "8 durak"
+ * eksik okunur ve rotanın hâlâ beklediği fark edilmez.
  */
-function routesOf(rows: readonly OrderRow[], deliveredAt: Map<string, string>): DeliveryRouteView[] {
+function routesOf(
+  rows: readonly OrderRow[],
+  deliveredAt: Map<string, string>,
+  runLabels: ReadonlyMap<string, string>,
+): DeliveryRouteView[] {
   const routeRows = rows.filter((r) => r.deliveryType === 'route');
   const groups = new Map<string, OrderRow[]>();
   for (const row of routeRows) {
-    const key = row.courierId ?? 'unassigned';
+    const key = row.deliveryRunId ?? 'no-run';
     const list = groups.get(key);
     if (list) list.push(row);
     else groups.set(key, [row]);
@@ -431,8 +455,8 @@ function routesOf(rows: readonly OrderRow[], deliveredAt: Map<string, string>): 
   return [...groups.entries()].map(([key, group]) =>
     toRoute({
       key,
-      courierName: group[0]?.courierName ?? 'Kurye atanmadı',
-      zoneLabel: null,
+      courierName: group[0]?.courierName ?? 'Kurye bekleniyor',
+      zoneLabel: key === 'no-run' ? 'Sefer açılmadı' : (runLabels.get(key) ?? null),
       warehouseCode: group[0]?.warehouse?.code ?? null,
       stops: toStops(group.map((row) => toStopFact(row, deliveredAt.get(row.id) ?? null))),
     }),

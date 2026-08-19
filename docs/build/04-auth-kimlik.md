@@ -87,6 +87,63 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   - **Ek sorgu getirmedi, bir sorgu KAZANDIRDI:** `isStaff`/`hasRole`/`getRoles` zaten `findByAuthUserId` ile profili getirip yalnız `boolean` dönüyordu — satır okunuyor, kimliği atılıyordu. Guard'lar artık o satırı bir kez okuyup hem rol kararını (motorda: `roles.isStaff`) hem kimliği alıyor. `requireWarehouseScope` eskiden aynı satırı iki kez okuyordu.
   - **NÖBET — asıl kazanç bu.** Denetim *"typecheck de test de göremez"* demişti; doğruydu ama üçüncü bir yol varmış: bypass profilinin `auth_user_id`'si **zaten `null`** (operasyon layout'u bunu biliyor, boş rol kümesinde yöneticiye düşüyor), yani bypass'ın auth kimliğini profil kimliğinden ayırmak hiçbir şeyi bozmuyor. Ayrıldı (`DEV_BYPASS_AUTH_ID`). Sonuç: dev artık üretime benziyor ve `user.id`'yi profil kolonuna yazan bir yol **ilk denemede FK ihlaliyle patlıyor** — sessiz üretim arızası, gürültülü dev arızasına döndü.
   - **Gerçek girişle doğrulama yapılamadı** ve bu açıkça yazılıyor: bypass'sız oturum açmak arka uç şeridinin erişiminde değil. Zincir kodda ve tipte doğru; son onay 21.10 benimseme turunda kurye hesabıyla verilecek.
+    - **ARTIK ERİŞİLEBİLİR (15.08, `04.12`):** `/auth/dev-login` gerçek oturum kuruyor, yani "bypass'sız oturum açmak erişimimizde değil" cümlesi tarihe karıştı. Bu görevin ölçemediği şey — profil-FK'li yazımların gerçek girişte tutup tutmadığı — artık tek adresle sınanabilir (`?email=kurye@lezzetanatolia.fr`).
+
+- [x] (04.12) **HIZLI GİRİŞ KAPISI — production derlemesinde de gerçek oturum** (kullanıcı isteği 15.08).
+  `touches: apps/web/app/auth/dev-login/route.ts, apps/web/lib/auth/dev-login-gate.ts,
+  apps/web/app/(customer)/[locale]/login/{dev-login-links.tsx,page.tsx}, apps/web/.env.example`
+
+  **İhtiyaç:** paralel production sunucusunda (`pnpm prod:web:start`, 3001 — `11.10`) operasyon
+  ekranlarına admin olarak bakabilmek. Orada iki yol da kapalıydı: dev bypass `NODE_ENV !==
+  'production'` şartına bağlı (`guard.ts:96`), sabit OTP kodu da `NODE_ENV === 'production'` iken
+  kendini kapatıyor (`otp.ts:47`) — yani gerçek rastgele kod maille gidiyor ve okunamıyor.
+
+  **BYPASS'I ÜRETİME AÇMAK SEÇİLMEDİ.** `guard.ts` künyesi *"production build'de env ne olursa
+  olsun ASLA aktif olmaz"* diyor ve bu bir güvenlik güvencesidir; gevşetilseydi gerçek dağıtımda
+  yanlış konmuş tek bir env değişkeni operasyon panelini herkese açardı. Onun yerine **mobilin
+  deseni web'e alındı** (`apps/mobile-api/src/api/v1/dev-login.ts`): magic-link jetonu üretilir (mail
+  GİTMEZ), SSR istemcisinde tüketilir, çerez normal giriş akışının yazdığının aynısı olur.
+  **Guard'a hiç dokunulmadı.** Fark tam olarak budur: bypass auth'u ATLAR, bu kapı auth'u İŞLETİR
+  — RLS, personel çözümü, denetim kaydındaki `actor_id`, hepsi gerçek. Test edilen şey de bu.
+
+  **ÜÇ KİLİT, hiçbiri `NODE_ENV` değil** (kapının varlık sebebi production derlemesinde çalışması):
+  (1) `DEV_LOGIN_ENABLED === 'true'` — varsayılan KAPALI, kapalıyken rota **404** döner (403
+  değil: "burada bir kapı var ama sana kapalı" demek, kapının yerini söylemektir);
+  (2) `NEXT_PUBLIC_SITE_URL` yerel bir adres olmalı — **asıl ikinci kilit budur**, çünkü SUNUCU
+  yapılandırmasıdır ve isteği gönderen onu değiştiremez; gerçek dağıtımda oraya gerçek alan adı
+  yazılıdır, bayrak açık unutulsa bile kapı kapalı kalır;
+  (3) istek yerel host'a gelmiş olmalı — **ucuz ilk eleme, tek başına yeterli DEĞİL** ve künyede
+  öyle yazıyor: `Host` başlığını isteği gönderen yazar, uydurulabilir.
+
+  Hedef ROLDEN çözülüyor (`resolvePostLoginRedirect`), elle yazılmıyor — kurye adresiyle girilince
+  kurye ekranına düşmesi kendiliğinden doğru olur. E-posta süzgeci bilerek YOK (mobil kapının aynı
+  kararı): test hesabı değiştikçe uca dokunmak gerekmesin, yüzeyi zaten kilitler daraltıyor.
+
+  **DÜĞME ŞERİDİ (kullanıcı isteği 15.08: *"tıpkı mobilde olduğu gibi butona basıp girebilecek
+  miyim, sonrasında rollere göre de"*).** Giriş ekranının altında beş bağlantı — mobil giriş
+  ekranının şeridinin aynısı, sırası da aynı. **Cihaz forkunun DIŞINDA** (`page.tsx`ten çiziliyor,
+  `login.desktop`/`login.mobile`e ayrı ayrı değil): aynı liste iki dosyada yaşasaydı biri
+  güncellenmeyi unuturdu. İstemci JS'i yok — düz `<a>`; `onClick` yazmak için bileşeni istemciye
+  taşımak gerekirdi ve karşılığında hiçbir şey kazanılmazdı. Renk yüzeyi söylüyor: müşteri zeytin,
+  operasyon terracotta (mobilin `operations` bayrağının aynısı).
+  **Kilit tek yerde** (`lib/auth/dev-login-gate.ts`): rota da şerit de aynı fonksiyonu soruyor —
+  ayrı yazılsaydı biri "kapalı" sanıp düğmeyi çizmezken öteki açık kalabilirdi, ya da tersi:
+  çizilen ama 404 veren düğme. Kapalıyken şerit HİÇ çizilmez.
+  **Bilinçli tekrar:** adresler `scripts/seed/people.ts`in malı ve burada kopyaları var. Tek
+  kaynağa indirmenin yolu bugün yok — `scripts/` bir paket değil, web ondan import edemez;
+  adresleri `packages/types`a taşımak geliştirme verisini sözleşme paketine sokardı. Dar ve
+  künyeli bırakıldı.
+
+  **ÖLÇÜLDÜ (15.08, dev sunucusunda — `curl`):**
+  · yerel host + bayrak açık → **307**, `location: /operations`, `set-cookie: sb-…-auth-token`
+  (yani gerçek Supabase oturumu yazılıyor)
+  · `Host: evil.example.com` → **404** (üçüncü kilit tuttu)
+  · rol ayrımı: `kurye@` ve `depo@` → `/operations`; `yamansehzade@` (müşteri) → `/` (vitrin)
+  **ÖLÇÜLMEYEN:** production sunucusunda (3001) aynı tur. O an web derlemesi PARALEL ŞERİDİN
+  düzeltmediği iki typecheck hatasıyla tutmuyordu (`assistant-body.tsx` → `PurchaseOrderPayload`,
+  `procurement/actions.ts` → `StaffUser.user`). Kapının kendi mantığı `NODE_ENV`e hiç bakmadığı
+  için davranışın değişmesini bekleyen bir sebep yok, ama **ölçülmedi** — derleme düzelince
+  tek adresle doğrulanır.
   - *Bitti:* doğrulanmamış numara kimlik anahtarı olmuyor; e-posta kodu WhatsApp'tan geri yazılınca hesap bağlanıyor; kod yalnız KENDİ numarasından geçerli (başka kanaldan reddediliyor); 3 ay sessizlik sonrası dönüşte geçmiş kod sorulmadan açılmıyor (dört dal testli)
   - **Kural metninin tamamı `DOMAIN §10`'da** ("Kimlik anahtarı, çapa ve süreklilik"). Kanal WhatsApp ama görev **kimlik** görevidir — bu yüzden 15'te değil burada. 15 yalnız mesajı taşır.
   - **Akış:** ilk sipariş tamamlanınca e-posta önerilir → kod **e-postaya** gider, müşteri **WhatsApp'tan** geri yazar (çapraz kanal kanıtı) → bağlanır. **İstemeyene** sistemin ürettiği 6 haneli güvenlik kodu verilir; e-posta sonradan doğrulanırsa kod silinir.

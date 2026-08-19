@@ -4,8 +4,8 @@
 // birine gönderebilmeli, tazelediğinde aynı günde kalmalı. Kuryenin dalında URL durumu YOKTU ve
 // hâlâ yok — onun tek bir görünümü var (bugünün durakları).
 
-/** Sayfanın iki yüzü — tasarım ikisini tek sayfada, iki sekmede topluyor. */
-export const DELIVERY_TABS = ['plan', 'routes'] as const;
+/** Sayfanın ÜÇ yüzü (18.08): günü planla · rotayı tanımla · GERÇEKLEŞENİ oku — aynı işin üç anı. */
+export const DELIVERY_TABS = ['plan', 'routes', 'runs'] as const;
 export type DeliveryTab = (typeof DELIVERY_TABS)[number];
 
 interface DeliveriesUrlState {
@@ -33,7 +33,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function parseDeliveriesUrl(params: Record<string, string | string[] | undefined>, today: string): DeliveriesUrlState {
   const raw = typeof params.d === 'string' ? params.d : undefined;
   const view = params.view === 'mine' ? 'mine' : params.view === 'dispatch' ? 'dispatch' : null;
-  const tab = params.tab === 'routes' ? 'routes' : 'plan';
+  const tab = params.tab === 'routes' ? 'routes' : params.tab === 'runs' ? 'runs' : 'plan';
   const routeId = typeof params.route === 'string' ? params.route : null;
   return { date: raw && ISO_DATE.test(raw) && isRealDate(raw) ? raw : today, view, tab, routeId };
 }

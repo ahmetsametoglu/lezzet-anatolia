@@ -8,7 +8,14 @@ import { courierCopy } from './copy';
 import { centsToAmountText, money, parseAmountToCents, signedMoney } from './courier-format';
 
 /*
-  GÜN KAPANIŞI (K7) — taslak okuması, sayım girdileri, iki adımlı onay.
+  SEFER KAPANIŞI (K7) — taslak okuması, sayım girdileri, iki adımlı onay.
+
+  ── EKSEN GÜN DEĞİL SEFER (18.08 · `docs/feature/sefer.md` K1) ──────────────
+  Kapanışın öznesi kurye×gün'den SEFERE indi: "fark hangi seferde doğdu" sorusu ancak böyle
+  cevaplanır. İki sefer sürmüş kurye ikisini AYRI kapatır ve akış sıralıdır (kapat → yeni sefer),
+  bu yüzden ekran "hangi seferi kapatıyorum" diye SORMAZ: taslak kuryenin o günkü seferini getirir
+  (kapanmamış olan öncelikli) ve kapatma isteği o seferin kimliğiyle gider. `run === null` = o gün
+  sürülmüş sefer yok; kapanacak bir şey de yok, ekran bunu sakin bir bilgi olarak gösterir.
 
   ── KAPANIŞ BİR MUTABAKATTIR, PARA HAREKETİ DEĞİL ───────────────────────────
   Para kapıda tahsil edilirken zaten yazıldı; burada beklenen (sistemin hesabı) ile sayılan
@@ -16,12 +23,17 @@ import { centsToAmountText, money, parseAmountToCents, signedMoney } from './cou
   fazla para (`design/pages/app-kurye.md` K7). Mutlak değere indirgemek işaretin taşıdığı tek
   bilgiyi silerdi.
 
+  ── KAPANIŞ TAKILI DURAKLARI ÇÖZER (K4) ─────────────────────────────────────
+  Sonuçlanmamış durak kapanışı ENGELLEMEZ; üstelik kapanış hâlâ yolda görünen durakları çözer
+  (motorun "ulaşılamadı" kenarı). Kaç durağın çözüldüğü cevapta geliyor (`releasedCount`) ve
+  bildirimde yazılıyor — hangi güne yeniden yazılacağı sevkiyatçının kararı.
+
   ── SAYIM ALANLARI BEKLENENLE AÇILIR ────────────────────────────────────────
   v2:951 aynısını yapıyor (`say = S.sayilan[k] ?? bek`). Gerekçe: normal gün fark SIFIRDIR ve
   kuryeye üç alanı elle doldurtmak, doğru olanı yazmak için emek isteyip yanlış olanı ise sessizce
   geçirir. Değiştirilen alan zaten farkı anında gösteriyor.
 
-  ── KAPANMIŞ GÜN SALT-OKUNUR ────────────────────────────────────────────────
+  ── KAPANMIŞ SEFER SALT-OKUNUR ──────────────────────────────────────────────
   `closed` doluysa alanlar KİLİTLİ ve değerler kapanış KAYDINDAN okunur — taslağın "beklenen"i
   değil, o gün ne konuşulduysa o (kaydın `expected_*` alanları anın fotoğrafıdır). İkinci kapanış
   isteği zaten uçta reddediliyor (`already_closed`); ekranın kilidi o reddi beklemeden gösteriyor.
@@ -163,7 +175,12 @@ export function useDayClose(): UseDayCloseResult {
     bir `onPress`e gidiyor, memo edilmiş bir alt ağaca değil.
   */
   const close = () => {
-    if (draft === null || closed || sending) return;
+    // Sefer yoksa kapatılacak bir şey de yok — istek gönderilmez (ekran zaten formu çizmiyor).
+    if (draft === null || draft.run === null || closed || sending) return;
+    /* Kapanışın öznesi SEFER: ekranın gösterdiği künye ile kapatılan kayıt aynı olsun diye kimlik
+       taslaktan İSTEK KURULMADAN ÖNCE alınır — cevap beklenirken taslak tazelenirse bile gönderilen
+       kimlik kuryenin onayladığı seferin kimliğidir. */
+    const runId = draft.run.runId;
     setSending(true);
     setNotice(null);
 
@@ -173,7 +190,7 @@ export function useDayClose(): UseDayCloseResult {
       // bilerek onaylamış olur, gizlenmiş bir sayı değil.
       const amounts = rows.map((row) => parseAmountToCents(row.countedText) ?? row.expectedCents);
       const result = await submitDayClose({
-        date: draft.date,
+        runId,
         countedCashCents: amounts[0],
         countedCardCents: amounts[1],
         countedChequeCents: amounts[2],
@@ -187,20 +204,25 @@ export function useDayClose(): UseDayCloseResult {
         return;
       }
       if (!result.data.ok) {
-        // `already_closed` bir hata DEĞİL: kapanmış gün salt-okunurdur, ikinci çağrı EZMEZ.
+        // `already_closed` bir hata DEĞİL: kapanmış sefer salt-okunurdur, ikinci çağrı EZMEZ.
         setClosedLocally(true);
         setNotice({ tone: 'info', text: t.dayClose.alreadyClosed });
         return;
       }
 
+      const released = result.data.releasedCount ?? 0;
       setClosedLocally(true);
       setNotice({
         tone: 'ok',
-        text: fillCopy(t.dayClose.done, {
-          cash: signedMoney(result.data.differenceCashCents ?? 0),
-          card: signedMoney(result.data.differenceCardCents ?? 0),
-          cheque: signedMoney(result.data.differenceChequeCents ?? 0),
-        }),
+        text:
+          fillCopy(t.dayClose.done, {
+            cash: signedMoney(result.data.differenceCashCents ?? 0),
+            card: signedMoney(result.data.differenceCardCents ?? 0),
+            cheque: signedMoney(result.data.differenceChequeCents ?? 0),
+          }) +
+          // Kapanışın çözdüğü takılı durak SESSİZ geçmez (K4): kurye onların yarına devrolduğunu
+          // burada okur. Sıfırsa cümle hiç kurulmaz — "0 durak çözüldü" bir bilgi değil gürültüdür.
+          (released > 0 ? fillCopy(t.dayClose.released, { n: String(released) }) : ''),
       });
     })();
   };
@@ -227,7 +249,7 @@ export function useDayClose(): UseDayCloseResult {
 
     confirming,
     askConfirm: () => {
-      if (!closed) setConfirming(true);
+      if (!closed && draft?.run != null) setConfirming(true);
     },
     cancelConfirm: () => setConfirming(false),
     sending,

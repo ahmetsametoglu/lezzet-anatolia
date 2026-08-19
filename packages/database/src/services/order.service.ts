@@ -755,9 +755,31 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   /**
    * **Kuryenin günü** (11.1) — `courierId` ZORUNLUDUR, seçenek değil: "yalnız kendi teslimatları"
    * kuralı böylece imzada durur, çağıranın süzmeyi hatırlamasına bağlı kalmaz.
+   *
+   * `deliveryRunId` süzgeci (18.08): sefer kapanışı SEFERİN duraklarını sayar, günün değil — iki
+   * rotalı günde ikinci rotanın durakları birinci seferin mutabakatına karışmamalı.
    */
-  listByCourier(courierId: string, opts: { deliveryDate?: string; limit?: number } = {}): Promise<Order[]> {
-    return this.getAll({ courierId, deliveryDate: opts.deliveryDate }, { orderBy: 'createdAt', limit: opts.limit });
+  listByCourier(
+    courierId: string,
+    opts: { deliveryDate?: string; deliveryZoneId?: string; deliveryRunId?: string; limit?: number } = {},
+  ): Promise<Order[]> {
+    return this.getAll(
+      { courierId, deliveryDate: opts.deliveryDate, deliveryZoneId: opts.deliveryZoneId, deliveryRunId: opts.deliveryRunId },
+      { orderBy: 'createdAt', limit: opts.limit },
+    );
+  }
+
+  /**
+   * Günün ROTA siparişleri — kurye rota seçim ekranının yük sayacı (18.08). Kuryeye süzülmez:
+   * seçilecek rotanın durakları henüz kimsenin değil, seferi başlatan claim eder.
+   */
+  listRouteOrdersByDate(date: string): Promise<Order[]> {
+    return this.getAll({ deliveryDate: date, deliveryType: 'route' }, { orderBy: 'createdAt', limit: 500 });
+  }
+
+  /** Bir küme seferin damgalı siparişleri — geçmiş sefer listesinin durak sayacı (18.08). */
+  listByRuns(runIds: readonly string[]): Promise<Order[]> {
+    return this.getAll({ deliveryRunId: [...runIds] });
   }
 
   /**

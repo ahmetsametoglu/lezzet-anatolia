@@ -19,7 +19,7 @@ import { closeCourierDay as closeCourierDayFor, openDayClose as openDayCloseFor 
 
 export type { DayCloseDraft } from '@lezzet/application';
 
-export function openDayClose(input: { courierId: string; date?: string }) {
+export function openDayClose(input: { courierId: string; runId?: string; date?: string }) {
   return openDayCloseFor(serviceDb(), input);
 }
 

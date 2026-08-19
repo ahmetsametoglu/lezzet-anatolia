@@ -31,26 +31,48 @@
       "retry": "Tekrar dene"
     },
     "empty": {
-      "title": "Bugün için rota yok",
-      "body": "Rota atandığında bildirim gelir — bu ekran kendiliğinden dolar."
+      "title": "Bugün koşan rota yok",
+      "body": "Sevkiyat günün rotalarını yazdığında bu ekran kendiliğinden dolar."
+    },
+    "runEmpty": {
+      "title": "Seferde durak yok",
+      "body": "Bu rotaya bugün sipariş yazılmamış — sefer açık, kapatabilirsin."
     },
     "pocket": "cepte {amount}",
     "pocketUnknown": "cepte bilinmiyor",
     "doorLeft": "{n} kapıda tahsilat kaldı · {amount}",
-    "startHint": "Önce \"Yola çıktım\" — durak sonuçları yola çıkmadan yazılamaz (kapı sırası).",
-    "startCta": "Yola çıktım — günü başlat",
+    "runStrip": "{route} · {ref}",
+    "runStripClosed": "{label} · KAPANDI",
+    "routes": {
+      "heading": "ROTANI SEÇ",
+      "hint": "Seferi hangi rotada süreceğini seç — sefer o rotayla açılır, siparişlerin kuryesi sen olursun.",
+      "allTaken": "Bugün koşan rotaların hepsi başlatılmış — açılacak sefer yok.",
+      "meta": "{warehouse} · {n} durak",
+      "metaNoWarehouse": "{n} durak",
+      "taken": "bugün {courier} sürüyor · {ref}",
+      "takenUnknown": "bugün başka bir kurye sürüyor · {ref}",
+      "pickLabel": "{route} rotasını seç — {meta}"
+    },
+    "runClosedHint": "Bu sefer kapandı — durakları kapanış özetinde durur; sayım ve fark yazıldı.",
+    "startCta": "Seferi başlat — {route}",
+    "startCtaPick": "Seferi başlat — rota seç",
     "starting": "Başlatılıyor…",
     "start": {
       "started": "{n} durak yola çıktı.",
       "alreadyOut": "{n} durak zaten yoldaydı.",
-      "skipped": "{n} durak hazırlanmayı bekliyor ({statuses}) — hazırlık bitince tekrar başlat.",
-      "stale": "{n} durağın durumu tam o sırada değişti — liste tazelendi, gerekirse tekrar başlat.",
-      "none": "Hiçbir durak yola çıkmadı — gün BAŞLAMADI, duraklar kilitli kalır.",
-      "failed": "Gün başlatılamadı ({error}) — hiçbir durak yola çıkmadı.",
-      "network": "Bağlantı yok — gün başlatılamadı. Bağlantı gelince tekrar deneyin.",
+      "skipped": "{n} durak hazırlanmayı bekliyor ({statuses}) — hazırlık bitince tekrar dene.",
+      "stale": "{n} durağın durumu tam o sırada değişti — liste tazelendi, gerekirse tekrar dene.",
+      "none": "Sefer açıldı ama hiçbir durak yola çıkmadı — hazırlanan durak yok.",
+      "opened": "Sefer açıldı: {route} · {ref}.",
+      "alreadyStartedMine": "Bu rotayı bugün zaten sürdün ({ref}) — aynı rota ikinci kez açılmaz, başka rota seç.",
+      "alreadyStartedOther": "Bu rota bugün başka bir kuryede ({ref}) — başka bir rota seç.",
+      "routeRequired": "Birden çok rota koşuyor — hangisini süreceğini seç.",
+      "noRoute": "Bugün koşan rota yok — sefer açılamadı.",
+      "failed": "Sefer başlatılamadı ({error}) — hiçbir durak yola çıkmadı.",
+      "network": "Bağlantı yok — sefer başlatılamadı. Bağlantı gelince tekrar deneyin.",
       "retry": "Kalanları yola çıkar"
     },
-    "close": "Günü kapat",
+    "close": "Seferi kapat",
     "openBadge": "{n} açık",
     "stop": {
       "items": "{n} kalem",
@@ -64,7 +86,7 @@
       "door": "KAPIDA · {amount}",
       "doorWithMethod": "KAPIDA · {amount} {method}",
       "openLabel": "{address} — {sub}",
-      "lockedHint": "Önce \"Yola çıktım\" işaretlenmeli."
+      "lockedHint": "Sefer kapandı — bu durakta artık işaret yazılamaz."
     }
   },
   "delivery": {
@@ -155,7 +177,7 @@
       "due": " Kalan borç {amount}.",
       "deduped": " Bu tahsilat zaten yazılmıştı — para İKİLENMEDİ.",
       "cashLimit": " Nakit yasal sınırın üstünde (bilgi, engel değil).",
-      "unreachable": "Ulaşılamadı olarak kaydedildi — durak yarına devrolur.",
+      "unreachable": "Ulaşılamadı olarak kaydedildi — durak sefer kapanışında yeniden planlamaya düşer.",
       "refused": "Kabul etmedi olarak kaydedildi — koliler iade akışına düştü."
     },
     "refusal": {
@@ -165,24 +187,28 @@
       "notFound": "Sipariş bulunamadı.",
       "sameStatus": "Sipariş zaten bu durumda.",
       "terminal": "Bu sipariş kapanmış; üzerinde değişiklik yapılamaz.",
-      "notAllowed": "Bu adım şu an yapılamaz — önce \"Yola çıktım\" işaretlenmeli.",
+      "notAllowed": "Bu adım şu an yapılamaz — durak yolda değil (sefer açılmamış ya da durak hazırlanmayı bekliyor).",
       "network": "Bağlantı yok — kayıt gönderilemedi. Bağlantı gelince tekrar deneyin (kuyruk YOK, işaret yalnız gönderilince yazılır).",
       "unknown": "Kayıt gönderilemedi ({error})."
     }
   },
   "dayClose": {
     "back": "Geri",
-    "title": "Günü Kapat",
-    "loading": "Gün özeti yükleniyor…",
+    "title": "Seferi Kapat",
+    "loading": "Sefer özeti yükleniyor…",
     "error": {
-      "title": "Gün özeti yüklenemedi",
+      "title": "Sefer özeti yüklenemedi",
       "body": "Bağlantı ya da sunucu sorunu — yazılmış hiçbir kayıt etkilenmedi.",
       "retry": "Tekrar dene"
     },
-    "closed": "Gün kapalı — salt okunur. İkinci kapanış kaydı ezmez.",
-    "openWarning": "{n} durak sonuçlanmadı — kapanış yine de mümkün",
+    "noRun": {
+      "title": "Bugün sürülmüş sefer yok",
+      "body": "Kapanış bir seferin mutabakatıdır — önce rota seçip seferi başlat."
+    },
+    "closed": "Sefer kapalı — salt okunur. İkinci kapanış kaydı ezmez.",
+    "openWarning": "{n} durak sonuçlanmadı — kapanış engellenmez, takılı durakları çözer",
     "counters": { "delivered": "TESLİM", "pending": "BEKLEYEN", "returned": "DÖNEN" },
-    "countersNote": "Bekleyenler yarına devrolur — yeniden planlama yönetimin. Dönen mallar depo kabulüne düşer.",
+    "countersNote": "Bekleyenler kapanışla hazıra döner — yeni günlerini yönetim planlar. Dönen mallar depo kabulüne düşer.",
     "moneyHeading": "PARA — SAYDIĞINI GİR",
     "expected": "beklenen {amount}",
     "countLabel": "{method} sayımı (€)",
@@ -192,12 +218,13 @@
     "noteLabel": "Kapanış notu",
     "confirmBox": "Kapanış geri alınamaz — sayımlar ve nakit teslimi deftere yazılır. Emin misin?",
     "cancel": "Vazgeç",
-    "confirm": "Evet, günü kapat",
-    "cta": "Günü kapat",
-    "ctaClosed": "Gün zaten kapalı",
+    "confirm": "Evet, seferi kapat",
+    "cta": "Seferi kapat",
+    "ctaClosed": "Sefer zaten kapalı",
     "sending": "Kapanıyor…",
-    "alreadyClosed": "Gün zaten kapalıydı — ikinci kapanış kaydı EZMEDİ.",
-    "done": "Gün kapandı — fark: nakit {cash} · kart {card} · çek {cheque}.",
+    "alreadyClosed": "Sefer zaten kapalıydı — ikinci kapanış kaydı EZMEDİ.",
+    "done": "Sefer kapandı — fark: nakit {cash} · kart {card} · çek {cheque}.",
+    "released": " {n} takılı durak çözüldü — yeniden planlama sevkiyatın.",
     "failed": "Kapanış gönderilemedi ({error})."
   }
 }

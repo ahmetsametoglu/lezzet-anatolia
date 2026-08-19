@@ -106,6 +106,10 @@ create table public.order (
   -- Adresin sipariş anındaki kopyası: adres sonradan düzeltilse bile sipariş neyi nereye gönderdiğini bilir.
   address_snapshot jsonb,
   courier_id uuid references public.user_profiles (id) on delete set null,
+  -- Hangi GERÇEKLEŞEN seferle gitti (18.08, `docs/feature/sefer.md`). Yalnız `start_delivery_run`
+  -- yazar, teslimle donar — `courier_id` sonradan oynasa da "kim götürdü"nün kanıtlı cevabı budur.
+  -- FK YOK: `delivery_run` 0046'da açılır (`delivery_zone_id` ile birebir aynı desen).
+  delivery_run_id uuid,
   delivery_country country_code not null default 'FR', -- DE B2C → OSS eşiği izlemi (DOMAIN §5)
 
   vat_number_snapshot text,                          -- reverse charge'da o anki geçerli no (denetim kanıtı)

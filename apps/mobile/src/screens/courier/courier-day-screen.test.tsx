@@ -1,19 +1,23 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { StartCourierDayResponse } from '@lezzet/types';
+import type { CourierDayResponse, CourierRoute, StartCourierDayResponse } from '@lezzet/types';
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { CourierDayScreen } from './courier-day-screen';
-import { courierDay, courierStop, dayCloseDraft } from './courier-fixture';
+import { courierDay, courierRoute, courierRunBrief, courierStop, dayCloseDraft, takenRouteRun } from './courier-fixture';
 import messages from './messages.json';
 
 /*
-  K1 EKRAN TESTİ — dört veri hâli (yükleniyor · dolu · boş · hata), durak kilidi, gün CTA'sının
-  dönüşümü, ilerleme satırı ve "Yola çıktım"ın DÖRT LİSTELİ cevabı (mutlu yol · atlanan · bayat ·
-  sıfır başlangıç).
+  K1 EKRAN TESTİ — beş veri hâli (yükleniyor · rota seçimi · dolu sefer · boş · hata), kapanmış
+  seferin durak kilidi, CTA'nın dönüşümü, ilerleme satırı ve "Seferi başlat"ın DÖRT DALLI cevabı
+  (mutlu yol · atlanan · bayat · rota zaten açılmış).
 
   HOOK TAKLİT EDİLMEZ: gerçek hook + taklit `fetch` ile koşuyor, yani ekranın gördüğü veri
   GERÇEKTEN sözleşmeden (`CourierDayResponseSchema`) geçiyor — alan adı ayrışırsa test kırılır
   (katalog ekranının aynı kararı).
+
+  TAKLİT SUNUCU SEFERİ HATIRLAR (18.08): başarılı bir başlatmadan SONRAKİ gün okuması `run` taşır —
+  gerçek uçta sefer kaydı doğduğu için başka türlü olamaz. Bu olmadan ekran, başlattığı seferi bir
+  sonraki tazelemede yok sayardı ve test yalancı bir davranışı ölçerdi.
 
   RNTL v14 tuzağı: aynı testte ikinci bir `render` öncekini söker — her test tek render kullanır.
 */
@@ -43,6 +47,15 @@ jest.mock('@/lib/auth/supabase', () => ({
 const t = messages;
 /** Fixture'ın birinci durağı — kilit ve başlatma testleri hep bu kimliği konuşuyor. */
 const STOP_1 = '00000000-0000-4000-8000-000000000001';
+/** Fixture rotasının bölgesi — başlatma isteğinin gövdesinde bu kimlik gider. */
+const ZONE_ID = courierRoute().zoneId;
+/** Seçili rotanın CTA'da okunan hâli. */
+const START_CTA = `Seferi başlat — ${courierRoute().zoneName}`;
+
+/** Sefer ALINMAMIŞ gün — rota seçim hâli; başlatma testlerinin başlangıç noktası. */
+function unstartedDay(stops: Parameters<typeof courierDay>[0]): CourierDayResponse {
+  return courierDay(stops, { run: null });
+}
 
 function okResponse(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
@@ -58,21 +71,46 @@ function failResponse(): Response {
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
-/** Uçtan dönen dört listenin varsayılanı: hiçbir şey olmamış gün — testler kendi dalını doldurur. */
-function startResult(overrides: Partial<StartCourierDayResponse> = {}): StartCourierDayResponse {
-  return { date: '2026-08-08', started: [], alreadyOut: [], stale: [], skipped: [], ...overrides };
+/** Açılan seferin dört listesi: varsayılanı hiçbir şey olmamış sefer — testler kendi dalını doldurur. */
+function startResult(
+  overrides: Partial<Extract<StartCourierDayResponse, { status: 'ok' }>> = {},
+): StartCourierDayResponse {
+  return {
+    status: 'ok',
+    date: '2026-08-08',
+    run: courierRunBrief(),
+    started: [],
+    alreadyOut: [],
+    stale: [],
+    skipped: [],
+    ...overrides,
+  };
 }
 
 /**
- * Gün listesi, kapanış taslağı ve başlatma cevabı ayrı ayrı kurulur — üçünün kaderi ekranda da ayrı.
- * `null` geçilen uç 500 döner.
+ * Gün, kapanış taslağı, başlatma cevabı ve rota listesi ayrı ayrı kurulur — dördünün kaderi ekranda
+ * da ayrı. `null` geçilen uç 500 döner.
  */
-function mockDay(day: unknown, draft: unknown = dayCloseDraft(), start: unknown = startResult()) {
+function mockDay(
+  day: CourierDayResponse | null,
+  draft: unknown = dayCloseDraft(),
+  start: StartCourierDayResponse | null = startResult(),
+  routes: CourierRoute[] | null = [courierRoute()],
+) {
+  let current = day;
   fetchMock.mockImplementation((url) => {
     const address = String(url);
-    if (address.includes('/day/start')) return Promise.resolve(start === null ? failResponse() : okResponse(start));
+    if (address.includes('/day/start')) {
+      if (start === null) return Promise.resolve(failResponse());
+      // Sunucunun kendisi gibi: sefer açıldıysa sonraki gün okuması artık o seferi taşır.
+      if (start.status === 'ok' && current !== null) current = { ...current, run: start.run };
+      return Promise.resolve(okResponse(start));
+    }
     if (address.includes('/day-close')) return Promise.resolve(draft === null ? failResponse() : okResponse(draft));
-    return Promise.resolve(day === null ? failResponse() : okResponse(day));
+    if (address.includes('/courier/routes')) {
+      return Promise.resolve(routes === null ? failResponse() : okResponse({ date: '2026-08-08', routes }));
+    }
+    return Promise.resolve(current === null ? failResponse() : okResponse(current));
   });
 }
 
@@ -94,7 +132,7 @@ beforeEach(() => {
   mockNavigate.mockReset();
 });
 
-describe('K1 · günün rotası', () => {
+describe('K1 · günün seferi', () => {
   it('yüklenirken halka gösterir, liste çizilmez', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
@@ -104,7 +142,7 @@ describe('K1 · günün rotası', () => {
     expect(screen.queryByTestId('courier-day-list')).toBeNull();
   });
 
-  it('dolu gün: üstbaşlığın kuyruğu UÇTAN gelen gün + personelin adıdır', async () => {
+  it('dolu sefer: üstbaşlığın kuyruğu UÇTAN gelen gün + personelin adı, şeritte seferin künyesi', async () => {
     mockDay(courierDay([courierStop(1)]));
 
     await renderDay();
@@ -112,10 +150,12 @@ describe('K1 · günün rotası', () => {
     await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
     expect(screen.getByText('KURYE · 8 AĞUSTOS · MUSA K.')).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: t.day.title })).toBeOnTheScreen();
+    // "Hangi seferi sürüyorum" listenin başında yazılı: rota adı + SF kodu.
+    expect(screen.getByTestId('courier-day-run')).toHaveTextContent('Kuzey rotası · SF-26-ABCDEF');
   });
 
-  it('boş gün: "rota yok" bloğu çıkar, CTA ve ilerleme çizilmez', async () => {
-    mockDay(courierDay([]));
+  it('koşan rota yoksa boş blok çıkar, CTA ve ilerleme çizilmez', async () => {
+    mockDay(unstartedDay([]), dayCloseDraft(), startResult(), []);
 
     await renderDay();
 
@@ -158,35 +198,56 @@ describe('K1 · günün rotası', () => {
     await waitFor(() => expect(screen.getByText('cepte 52,00 €')).toBeOnTheScreen());
   });
 
-  it('yola çıkmadan durak KİLİTLİ; ipucu ve kilit gerekçesi ekranda', async () => {
-    mockDay(courierDay([courierStop(1)]));
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
-
-    expect(screen.getByTestId('courier-day-start-hint')).toBeOnTheScreen();
-    const stop = screen.getByTestId(`courier-stop-${STOP_1}`);
-    await fireEvent.press(stop);
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it('CTA "Yola çıktım"dan "Günü kapat"a döner; kilit açılır ve durak açılabilir', async () => {
+  it('KAPANMIŞ sefer: gövde yeniden ROTA SEÇİMİ, künye şeritte kalır, duraklar çizilmez', async () => {
     mockDay(
-      courierDay([courierStop(1), courierStop(2)]),
+      courierDay([courierStop(1)], {
+        run: courierRunBrief({ returnedAt: '2026-08-08T18:00:00.000Z', closed: true }),
+      }),
       dayCloseDraft(),
-      startResult({ started: [STOP_1, '00000000-0000-4000-8000-000000000002'] }),
+      startResult(),
+      [
+        // Az önce kapatılan rota: ikinci tur veride yasak (K3), kart pasif.
+        courierRoute({ run: takenRouteRun({ closed: true }) }),
+        courierRoute({ zoneId: '00000000-0000-4000-8000-000000000802', zoneName: 'Güney rotası' }),
+      ],
     );
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
-    expect(screen.getByText(t.day.startCta)).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
+
+    // "Neyi bitirdim" ekrandan silinmez; ama kapanan seferin durakları artık burada değil (K7'de).
+    expect(screen.getByTestId('courier-day-run')).toHaveTextContent(/KAPANDI/);
+    expect(screen.getByTestId('courier-day-hint')).toHaveTextContent(/Bu sefer kapandı/);
+    expect(screen.queryByTestId(`courier-stop-${STOP_1}`)).toBeNull();
+    // Günün ikinci ROTASI serbest: tek aday olduğu için kendiliğinden seçili.
+    expect(screen.getByText('Seferi başlat — Güney rotası')).toBeOnTheScreen();
+  });
+
+  it('rota seçimi: tek aday kendiliğinden seçili, başlatılmış rota PASİF; sefer açılınca liste gelir', async () => {
+    mockDay(
+      unstartedDay([courierStop(1), courierStop(2)]),
+      dayCloseDraft(),
+      startResult({ started: [STOP_1, '00000000-0000-4000-8000-000000000002'] }),
+      [
+        courierRoute(),
+        // Başkasının açtığı rota: kart kimin sürdüğünü söyler ve seçilemez (K3 — rota+gün tek sefer).
+        courierRoute({ zoneId: '00000000-0000-4000-8000-000000000802', zoneName: 'Güney rotası', run: takenRouteRun() }),
+      ],
+    );
+
+    await renderDay();
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
+    expect(screen.getByText('Strasbourg deposu · 3 durak')).toBeOnTheScreen();
+    expect(screen.getByText('bugün Musa Kaya sürüyor · SF-26-ABCDEF')).toBeOnTheScreen();
+    // Tek SEÇİLEBİLİR rota var: soru sorulmadı, CTA adını taşıyor.
+    expect(screen.getByText(START_CTA)).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByTestId('courier-day-cta'));
 
     await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
     // Açık durak sayısı rozet olarak CTA'nın içinde.
     expect(screen.getByText('2 açık')).toBeOnTheScreen();
-    expect(screen.queryByTestId('courier-day-start-hint')).toBeNull();
+    expect(screen.queryByTestId('courier-day-routes')).toBeNull();
 
     await fireEvent.press(screen.getByTestId(`courier-stop-${STOP_1}`));
     expect(mockNavigate).toHaveBeenCalledWith({
@@ -195,16 +256,12 @@ describe('K1 · günün rotası', () => {
     });
   });
 
-  it('gün kapatma CTA\'sı kapanış ekranına gider', async () => {
+  it('sefer kapatma CTA\'sı kapanış ekranına gider', async () => {
     mockDay(
       courierDay([courierStop(1, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null } })]),
-      dayCloseDraft(),
-      startResult({ started: [STOP_1] }),
     );
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('courier-day-cta'));
     await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId('courier-day-cta'));
 
@@ -259,7 +316,7 @@ describe('K1 · günün rotası', () => {
   });
 });
 
-describe('K1 · "Yola çıktım" — gerçek yazım', () => {
+describe('K1 · "Seferi başlat" — gerçek yazım', () => {
   /** CTA'ya basıp cevabın işlenmesini bekler; başlatma isteğinin gövdesini geri verir. */
   async function pressStart(): Promise<Record<string, unknown>> {
     await fireEvent.press(screen.getByTestId('courier-day-cta'));
@@ -268,15 +325,16 @@ describe('K1 · "Yola çıktım" — gerçek yazım', () => {
     return JSON.parse(String(call?.[1]?.body)) as Record<string, unknown>;
   }
 
-  it('düğme uca GİDER ve ekranın gösterdiği günü gönderir; sonra liste tazelenir', async () => {
-    mockDay(courierDay([courierStop(1)]), dayCloseDraft(), startResult({ started: [STOP_1] }));
+  it('düğme uca GİDER: seçilen rota + ekranın gösterdiği gün gider, sonra liste tazelenir', async () => {
+    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), startResult({ started: [STOP_1] }));
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     const before = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/courier/day')).length;
 
-    // Gün, cevabın kendi `date`idir — ikinci bir hesap değil; gece yarısı geçişinde ekranla kapı ayrışmasın.
-    expect(await pressStart()).toEqual({ date: '2026-08-08' });
+    // Gün, cevabın kendi `date`idir — ikinci bir hesap değil; gece yarısı geçişinde ekranla kapı
+    // ayrışmasın. Rota da ekranda seçili olandır: ucun kendi çözümüne bırakılmaz.
+    expect(await pressStart()).toEqual({ zoneId: ZONE_ID, date: '2026-08-08' });
     expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 durak yola çıktı\./);
     // Cevap "durum değişti" dedi: liste yeniden okundu.
     await waitFor(() =>
@@ -286,7 +344,7 @@ describe('K1 · "Yola çıktım" — gerçek yazım', () => {
 
   it('ATLANAN duraklar gizlenmez: kaç tane ve HANGİ durumda bekledikleri yazılır', async () => {
     mockDay(
-      courierDay([courierStop(1), courierStop(2)]),
+      unstartedDay([courierStop(1), courierStop(2)]),
       dayCloseDraft(),
       startResult({
         started: [STOP_1],
@@ -295,29 +353,32 @@ describe('K1 · "Yola çıktım" — gerçek yazım', () => {
     );
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
     const notice = screen.getByTestId('courier-day-start-notice');
+    expect(notice).toHaveTextContent(/Sefer açıldı: Kuzey rotası · SF-26-ABCDEF\./);
     expect(notice).toHaveTextContent(/1 durak yola çıktı\./);
     expect(notice).toHaveTextContent(/1 durak hazırlanmayı bekliyor \(Hazırlanıyor\)/);
-    // Gün başladı: kilit açık, atlanan durak da listede duruyor (reddi kapıda görünür).
+    // Sefer açık: kilit açık, atlanan durak da listede duruyor (reddi kapıda görünür).
     await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
   });
 
-  it('ATLANAN kalınca İKİNCİ bir başlatma yolu açılır — yoksa o durak hiç yola çıkamazdı', async () => {
+  it('ATLANAN kalınca İKİNCİ bir başlatma yolu açılır; sefer açıkken uç "zaten açık" der', async () => {
     const STOP_2 = '00000000-0000-4000-8000-000000000002';
     mockDay(
-      courierDay([courierStop(1), courierStop(2)]),
+      unstartedDay([courierStop(1), courierStop(2)]),
       dayCloseDraft(),
       startResult({ started: [STOP_1], skipped: [{ orderId: STOP_2, currentStatus: 'preparing' }] }),
     );
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
-    // Birincil düğme artık "Günü kapat"; kalanları yola çıkarmanın tek yolu bu ikincil eylem.
+    // Birincil düğme artık "Seferi kapat"; hazırlığı geciken durağı yola çıkarmanın tek yolu bu
+    // ikincil eylem. Açık sefere ikinci basış uçta CATCH-UP CLAIM'e dönüşüyor (18.08): geç kalan
+    // durak aynı sefere bağlanır ve `started` listesinde döner.
     await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
     mockDay(courierDay([courierStop(1), courierStop(2)]), dayCloseDraft(), startResult({ started: [STOP_2] }));
     await fireEvent.press(screen.getByTestId('courier-day-start-retry'));
@@ -327,24 +388,20 @@ describe('K1 · "Yola çıktım" — gerçek yazım', () => {
     expect(screen.queryByTestId('courier-day-start-retry')).toBeNull();
   });
 
-  it('hiçbir durak yola çıkmamışsa İKİNCİL eylem çizilmez — birincil düğme zaten "Yola çıktım"', async () => {
-    mockDay(
-      courierDay([courierStop(1)]),
-      dayCloseDraft(),
-      startResult({ skipped: [{ orderId: STOP_1, currentStatus: 'preparing' }] }),
-    );
+  it('atlanan/bayat durak yoksa İKİNCİL eylem çizilmez — yapılacak bir şey kalmadı', async () => {
+    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), startResult({ started: [STOP_1] }));
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
     expect(screen.queryByTestId('courier-day-start-retry')).toBeNull();
-    expect(screen.getByText(t.day.startCta)).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
   });
 
   it('`stale` yutulmaz: araya girildiğini söyler ve tazelemeye çağırır', async () => {
     mockDay(
-      courierDay([courierStop(1), courierStop(2)]),
+      unstartedDay([courierStop(1), courierStop(2)]),
       dayCloseDraft(),
       startResult({
         started: [STOP_1],
@@ -353,52 +410,55 @@ describe('K1 · "Yola çıktım" — gerçek yazım', () => {
     );
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
     expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/durumu tam o sırada değişti/);
   });
 
-  it('HİÇBİRİ yola çıkmadıysa gün BAŞLAMAZ: kilit kapalı kalır, düğme "Yola çıktım" olarak durur', async () => {
+  it('HİÇBİRİ yola çıkmasa da SEFER açılır: kayıt var, ekran onu yok sayamaz', async () => {
     mockDay(
-      courierDay([courierStop(1)]),
+      unstartedDay([courierStop(1)]),
       dayCloseDraft(),
       startResult({ skipped: [{ orderId: STOP_1, currentStatus: 'confirmed' }] }),
     );
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
     const notice = screen.getByTestId('courier-day-start-notice');
-    expect(notice).toHaveTextContent(/gün BAŞLAMADI, duraklar kilitli kalır/);
+    expect(notice).toHaveTextContent(/hiçbir durak yola çıkmadı/);
     expect(notice).toHaveTextContent(/1 durak hazırlanmayı bekliyor \(Onaylandı\)/);
-    expect(screen.getByText(t.day.startCta)).toBeOnTheScreen();
-    expect(screen.getByTestId('courier-day-start-hint')).toBeOnTheScreen();
-    // Kilit gerçekten kapalı: durak açılmıyor.
+    // Sefer açıldı: birincil düğme kapanışa döndü ve durak açılabilir (reddi kapıda görünür).
+    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId(`courier-stop-${STOP_1}`));
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({
+      pathname: '/delivery/[orderId]',
+      params: { orderId: STOP_1 },
+    });
   });
 
-  it('İKİNCİ basış bir hata DEĞİL: "zaten yoldaydı" da günü başlamış sayar', async () => {
-    mockDay(courierDay([courierStop(1)]), dayCloseDraft(), startResult({ alreadyOut: [STOP_1] }));
+  it('İKİNCİ basış bir hata DEĞİL: "zaten yoldaydı" da seferi açık sayar', async () => {
+    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), startResult({ alreadyOut: [STOP_1] }));
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent('1 durak zaten yoldaydı.');
+    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 durak zaten yoldaydı\./);
     await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
   });
 
-  it('başlatma düşerse gün başlamış SAYILMAZ ve sebebi yazılır', async () => {
-    mockDay(courierDay([courierStop(1)]), dayCloseDraft(), null);
+  it('başlatma düşerse sefer açılmış SAYILMAZ ve sebebi yazılır', async () => {
+    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), null);
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
     await pressStart();
 
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/Gün başlatılamadı/);
-    expect(screen.getByText(t.day.startCta)).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/Sefer başlatılamadı/);
+    // Ekran seçim hâlinde kaldı: düğme hâlâ seçili rotanın adını taşıyor.
+    expect(screen.getByText(START_CTA)).toBeOnTheScreen();
   });
 });

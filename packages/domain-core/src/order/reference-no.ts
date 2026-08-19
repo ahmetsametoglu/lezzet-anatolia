@@ -94,3 +94,15 @@ export function isValidReferenceNo(value: string): boolean {
 export function purchaseOrderReferenceNo(year: number, random?: () => number): string {
   return generateReferenceNo({ prefix: 'TS', year, random });
 }
+
+/**
+ * SEFER kodu — `SF-26-4K2M9P` (11.7 · 18.08, `docs/feature/sefer.md`).
+ *
+ * Tedarik numarasıyla aynı gerekçe: önek DOMAIN'in kararıdır, çağıranın değil. Sefer telefonda
+ * anılır ("SF-26'lı seferde eksik çıktı") — müşteri siparişi (`LA`) ve tedarik (`TS`) ile
+ * karışmamalı. Benzersizlik DB'de (`delivery_run.reference_no unique`); çakışmada çağıran yeni
+ * kodla dener.
+ */
+export function deliveryRunReferenceNo(year: number, random?: () => number): string {
+  return generateReferenceNo({ prefix: 'SF', year, random });
+}

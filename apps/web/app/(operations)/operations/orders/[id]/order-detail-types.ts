@@ -277,6 +277,8 @@ export interface OrderDetailView {
     date: string | null;
     address: string;
     courierName: string | null;
+    /** Hangi GERÇEKLEŞEN seferle gitti (18.08) — SF kodu; `null` = henüz sefere bağlanmadı. */
+    runReference: string | null;
     proof: DeliveryProofView | null;
     /**
      * Siparişin çıktığı depo — KÜNYE bilgisidir, kontrol değil (19.5): sipariş tek depodan çıkar ve

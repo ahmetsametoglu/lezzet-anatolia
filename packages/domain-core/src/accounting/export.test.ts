@@ -33,6 +33,7 @@ const BASE_SALE: OrderSale = {
   addressId: null,
   addressSnapshot: null,
   courierId: null,
+  deliveryRunId: null,
   deliveryCountry: 'FR',
   vatNumberSnapshot: null,
   vatTreatment: 'domestic',

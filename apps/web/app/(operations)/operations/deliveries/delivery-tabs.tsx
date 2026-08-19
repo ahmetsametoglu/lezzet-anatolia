@@ -21,8 +21,10 @@ export function DeliveryTabs({ value }: { value: DeliveryTab }) {
       items={[
         { key: 'plan', label: 'Gün planı' },
         { key: 'routes', label: 'Rotalar' },
+        // Üçüncü an (18.08): GERÇEKLEŞEN seferler — plan siparişten türetir, burası kaydın kendisi.
+        { key: 'runs', label: 'Seferler' },
       ]}
-      onChange={(key) => router.push(`/operations/deliveries${key === 'routes' ? '?tab=routes' : ''}`)}
+      onChange={(key) => router.push(`/operations/deliveries${key === 'plan' ? '' : `?tab=${key}`}`)}
     />
   );
 }

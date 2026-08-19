@@ -1,3 +1,4 @@
+import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 
 /*
@@ -44,6 +45,19 @@ export function dayLabel(isoDate: string): string | null {
   const month = t.months[Number(match[2]) - 1];
   if (month === undefined) return null;
   return `${Number(match[3])} ${month}`;
+}
+
+/**
+ * SEFERİN KÜNYESİ — `"Kuzey rotası · SF-26-ABC123"` (18.08). Gün ekranının şeridi ve kapanış
+ * ekranının başlık altı AYNI cümleyi yazar; kural bu yüzden burada, iki ekranda değil.
+ *
+ * Rota adı okunamadıysa (bölge kaydı silinmiş ya da isimsiz) yalnız sefer kodu yazılır — uydurma
+ * ya da boş bir rota adı, kuryenin hangi rotada olduğunu YANLIŞ söylerdi (CLAUDE §1).
+ */
+export function runLabel(run: { zoneName: string | null; referenceNo: string }): string {
+  return run.zoneName === null || run.zoneName.length === 0
+    ? run.referenceNo
+    : fillCopy(t.day.runStrip, { route: run.zoneName, ref: run.referenceNo });
 }
 
 /**

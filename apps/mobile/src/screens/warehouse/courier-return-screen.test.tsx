@@ -155,7 +155,7 @@ describe('D6 · kurye dönüşü kabulü', () => {
 
     await render(<CourierReturnScreen />);
 
-    expect(screen.getByTestId('warehouse-return-unreached-LZA-26-7T4D')).toHaveTextContent(/yarına devrolur/);
+    expect(screen.getByTestId('warehouse-return-unreached-LZA-26-7T4D')).toHaveTextContent(/yeniden planlanacak/);
     expect(screen.queryByTestId('warehouse-return-restock-LZA-26-7T4D')).toBeNull();
   });
 

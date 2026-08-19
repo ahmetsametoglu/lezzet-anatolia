@@ -5,18 +5,18 @@ import { closeCourierDay } from '@/lib/courier/day-close';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireCourier } from '@/lib/guard';
 
-// Gün kapanışının tek yazma yolu (11.6) — guard ilk, kapıya devret, `{ data, error }` dön.
+// Sefer kapanışının tek yazma yolu (11.7 · 18.08) — guard ilk, kapıya devret, `{ data, error }` dön.
 
 /**
- * **Günü kapat.** Kurye kimliği guard'dan geliyor; tarih de adresten DEĞİL, kapının kendi "bugün"ünden
- * — geçmiş bir günü adrese yazıp yeniden kapatmak diye bir yol açılmadı (tasarım §6: kapanmış gün
- * salt-okunur).
+ * **Seferi kapat.** Kurye kimliği guard'dan geliyor; kapanışın öznesi taslağın getirdiği SEFER —
+ * adresten sefer kimliği yazıp başkasının seferini kapatmak diye bir yol yok: kapı sahipliği run
+ * kaydından doğrular ("yok" ile "senin değil" aynı cevap).
  *
  * `already_closed` bir hata değil bir GERÇEKTİR ama kullanıcıya yine de söylenir: ekran o an
  * tazelenir ve kapanmış hâli gösterir.
  */
 export async function closeDayAction(input: {
-  date: string;
+  runId: string;
   countedCashCents: number;
   countedCardCents: number;
   countedChequeCents: number;
@@ -29,8 +29,8 @@ export async function closeDayAction(input: {
     if (!result.ok) {
       throw new Error(
         result.reason === 'already_closed'
-          ? 'Bu gün zaten kapatılmış — kayıt ezilmedi. Ekranı tazeleyin.'
-          : 'Gün kapatılamadı.',
+          ? 'Bu sefer zaten kapatılmış — kayıt ezilmedi. Ekranı tazeleyin.'
+          : 'Sefer kapatılamadı.',
       );
     }
 

@@ -305,12 +305,12 @@ Kapıda ödeme tüm rota-içi müşterilere sunulur, ama peşin taahhüt olmadı
 
 - **Değer tavanı (parametrik `Setting`):** kapıda ödeme yalnız sipariş toplamı tavana kadar mümkün; üstü **online peşin** ister. "Tüm ürünleri sipariş edip kapıda öderim" senaryosunu otomatik keser; normal siparişler tavanın altında kalır, kimse takılmaz. Tavan değeri işletmeye göre admin ayarı.
 - **Müşteri bazlı kapı (`Customer.cod_allowed`, varsayılan true):** geçmişte ödememiş / tekrar tekrar reddetmiş müşteride kapıda ödeme kapatılır (admin veya no-pay olayında). Tekrar eden art niyeti engeller.
-- **Nakit yasal sınır uyarısı (yöntem bazında, parametrik):** Fransa'da mukim müşterinin işletmeye **nakit** ödemesi yasal olarak ~1.000€ ile sınırlıdır. Kapıda nakit tahsilat bu sınırı aşarsa sistem **uyarır ama engellemez** (karar sahada; kart/çek ayrı değerlendirilir). Kurye gün kapanışı zaten yöntem bazında toplar — model değişikliği yok.
+- **Nakit yasal sınır uyarısı (yöntem bazında, parametrik):** Fransa'da mukim müşterinin işletmeye **nakit** ödemesi yasal olarak ~1.000€ ile sınırlıdır. Kapıda nakit tahsilat bu sınırı aşarsa sistem **uyarır ama engellemez** (karar sahada; kart/çek ayrı değerlendirilir). Sefer kapanışı zaten yöntem bazında toplar — model değişikliği yok.
 - Amaç: normal kullanıcı hiçbirine takılmaz, art niyetli hem tavana hem bloğa takılır.
 
-### Kurye gün kapanışı
+### Sefer kapanışı (kullanıcı kararı 18.08 — eksen kurye/günden SEFERE indi)
 
-Kurye gün sonunda sistemde kapanış yapar: teslim ettiği siparişler, tahsil ettiği tutar (yöntem bazında), iadeler. Kasaya teslim eder. Sistem beklenen ile teslim edileni karşılaştırır; fark aynı gün görünür.
+Kurye sefer dönüşünde kapanış yapar: seferin teslim edilen siparişleri, tahsil ettiği tutar (yöntem bazında), iadeler. Kasaya teslim eder. Sistem beklenen ile teslim edileni karşılaştırır; fark aynı gün görünür ve **hangi seferde doğduğu bellidir** — iki sefer sürmüş kurye ikisini ayrı kapatır (akış sıralı: kapat → yeni sefer). Kapanış ayrıca sefer bitiminde hâlâ "yolda" görünen durakları motorun "ulaşılamadı" kenarıyla çözer; yeni teslim GÜNÜ yazmaz — tarih sevkiyatçının kararıdır ("görünür devir", 16.08). Sefer kavramı ve kararları: `docs/feature/sefer.md`, veri modeli `data-model/musteri-siparis.md › DeliveryRun`.
 
 ### Sipariş ödeme durumu
 
@@ -747,8 +747,11 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
   değişmez).
 - **İmha/sayım belge numarası depo koduyla ayrışır** (`IMH-STR-26-0012`) — kâğıt klasör fiziksel
   olarak o depoda durur; ortak sıra denetmene delik gösterirdi.
-- **Araçlar bir güne ya da kuryeye bağlanmaz**; kurye günü ve kapanışı kurye/gün ekseninde kalır
-  (§7). Sıcaklık kaydı depo + **tanımlı ölçüm noktası** taşır — hijyen denetimi tesis bazındadır.
+- **Araç ve kurye SEFERE bağlanır, güne değil** (18.08, `docs/feature/sefer.md`): `delivery_run`
+  rotanın gerçekleşen çıkışıdır (kim sürdü, hangi araç, çıkış/dönüş) ve kapanış sefer eksenindedir
+  (§7). "Bu sipariş hangi araçla gitti" sorusu `order.delivery_run_id → vehicle` zinciriyle,
+  sıcaklık izi zaman-aralığı join'iyle cevaplanır. Sıcaklık kaydı yine depo + **tanımlı ölçüm
+  noktası** taşır — hijyen denetimi tesis bazındadır.
   - **Ölçüm noktaları veride tanımlıdır (17.08, `0045`):** depo içi alan (`storage_area` — dolap,
     soğuk oda, geçiş alanı) ve araç (`vehicle`). Önce serbest metindi ve üç şeyi bozuyordu: yazım
     farkı geçmişi bölüyordu, sapma uyarısı o bölünen geçmişe dayanıyordu, ve **ölçülmeyen tespit

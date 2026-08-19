@@ -57,6 +57,8 @@ export interface OrderRow {
   /** Kurye atanmış mı — rota gününde "kim götürüyor" sorusu listede yanıtlanır. */
   courierId: string | null;
   courierName: string | null;
+  /** Hangi GERÇEKLEŞEN seferle gitti (18.08) — panel kartları sefer başına gruplar. */
+  deliveryRunId: string | null;
   payment: OrderPaymentView;
   /** Hediye sipariş (patron ikramı) — muhasebe export'una girmez, operasyonu normaldir. */
   isGift: boolean;

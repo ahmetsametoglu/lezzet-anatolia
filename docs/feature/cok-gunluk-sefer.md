@@ -234,4 +234,24 @@ yükleme okutmasında sıra kontrolü mü olmalı?
 *(Ajanlar buraya yazar — şerit adı, tarih, görüş. §1-§6'ya dokunmayın; yanlış ölçüm bulursanız
 burada düzeltin.)*
 
-—
+**Operasyon-web şeridi, 18.08** — `delivery_run` etüdünden (`sefer.md`; iki ajanlı analiz, tespitler
+kod üzerinde doğrulandı). Turu doğrudan incelemedik ama kesişimde üç şey netleşti:
+
+- **§7.1'e:** soruyu ikiye bölmek çözüyor. *Gerçekleşen* taraf artık varlık — `delivery_run`
+  (kullanıcı kararları 18.08, `sefer.md §3`) ve çok günlü tur onun genişlemesidir, üçüncü bir kavram
+  değil: `departed_at/returned_at` timestamptz, gün sınırı tanımıyor. *Plan* tarafı için iki kolon
+  (`trip_group/trip_day`) yeterli görünüyor; §4'ün "yeni tablo değil" içgüdüsü gerçekleşen taraf
+  varlık olunca daha da güçleniyor, çünkü "aynı araçta giden yük" sorusunun kanıtlı cevabı artık
+  koddan türetilen bir tahmin değil, run satırının kendisi. `trip_group` serbest metin riski için
+  ara yol: run'a bağlanmış günler zaten aynı `delivery_run_id`'yi taşıyacak — tur kimliğinin
+  GERÇEKLEŞEN yarısı bedava, sözlük tablosu yalnız plan yarısı için tartışılır.
+- **§7.4'e fiilen cevap verildi:** kullanıcı 18.08'de kapanışı SEFER başına aldı (`sefer.md K1`,
+  `0025` sefer eksenine iniyor). Tur = çok günlü sefer olduğu için turda da tur başına tek dönüş,
+  tek mutabakat doğallaşıyor — "üç form" işkencesi doğmuyor.
+- **§7.7'nin altyapısı kuruldu:** `delivery_run.vehicle_id` + zaman-aralığı join'i
+  (`temperature_log.recorded_at between departed_at and returned_at`) "bu sipariş hangi araçla,
+  hangi sıcaklıkta gitti" sorusunu tek sorguya indiriyor; üç günlük turda aralık uzar, sorgu değişmez.
+  MLOR/raf ömrü referans anı (teslim mi çıkış mı) hâlâ açık — mevzuat sorusu, bizim alanımız değil.
+
+§7.5 (kurye kasası) ve §7.6 (yoldaki mal) `sefer.md` kapsamına bilinçle alınmadı — tur kararıyla
+birlikte ele alınmalı; ikisi de tek günlük seferde küçük, çok günlü turda büyüyen pencereler.

@@ -241,7 +241,7 @@
     "noteField": "{name} için sebep notu",
     "notePlaceholder": "soğuk zincir kesintisiz — ambalaj sağlam",
     "unreachedHeading": "ULAŞILAMAYANLAR — ARAÇTA KALIR, KABUL EDİLMEZ",
-    "unreachedRow": "{ref} · {n} koli — yarına devrolur",
+    "unreachedRow": "{ref} · {n} koli — yeniden planlanacak",
     "footnote": "Miktar hedef değer olarak girilir; fark sistemde hesaplanır.",
     "cta": {
       "ready": "Dönüşü kaydet",

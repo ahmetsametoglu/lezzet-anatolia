@@ -7,6 +7,7 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
+import { listCourierRoutes } from '@lezzet/application';
 import {
   cutoffBelongsToPreviousDay,
   deliveryRunWindow,
@@ -18,7 +19,7 @@ import {
 import type { Country, DeliveryZoneWithCodes, Order, OrderStatus } from '@lezzet/types';
 import { readDayHours, type ZoneHours } from '@/lib/settings/day-hours';
 import { shiftDay, toIsoDate } from './deliveries-url';
-import type { DispatchDayView, DispatchStopView, PrepStage } from './dispatch-types';
+import type { DispatchDayView, DispatchRunView, DispatchStopView, PrepStage } from './dispatch-types';
 
 /**
  * Sevkiyatçının gün planının okuması (09.15) — `design/pages/admin-teslimat.md`.
@@ -127,7 +128,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
   const db = serviceDb();
   const now = new Date();
 
-  const [dayOrders, shippingQueue, strandedPage, zones, warehouses, couriers] = await Promise.all([
+  const [dayOrders, shippingQueue, strandedPage, zones, warehouses, couriers, dayRoutes] = await Promise.all([
     new OrderService(db).listByStatus(DAY_STATUSES, { deliveryDate: date }),
     // Kargo GÜN süzgeciyle okunmaz — kargoda `delivery_date` şema gereği null (bkz. `shipping` künyesi).
     new OrderService(db).listByStatus(['ready'], { limit: SHIPPING_QUEUE_LIMIT }),
@@ -140,6 +141,9 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
     new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
     new WarehouseService(db).list(),
     new UserProfileService(db).listByRole('courier'),
+    // Sefer şeridi (18.08): kuryenin rota seçim ekranıyla AYNI kapı — sevkiyatçının gördüğü
+    // "açılmadı" ile kuryenin gördüğü seçim listesi ayrışamaz.
+    listCourierRoutes(db, { date }),
   ]);
 
   /**
@@ -223,9 +227,31 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
     .filter((stop) => stranded.some((order) => order.id === stop.orderId))
     .sort((a, b) => (a.deliveryDate ?? '').localeCompare(b.deliveryDate ?? ''));
 
+  // Görünüm modeli sözleşmenin aynası: kapının döndürdüğü satır alan alan eşlenir — fazlası
+  // (zoneId'nin run içindeki kopyası gibi) taşınmaz.
+  const runs: DispatchRunView[] = dayRoutes.map((route) => ({
+    zoneId: route.zoneId,
+    zoneName: route.zoneName,
+    warehouseName: route.warehouseName,
+    stopCount: route.stopCount,
+    run: route.run
+      ? {
+          runId: route.run.runId,
+          referenceNo: route.run.referenceNo,
+          courierId: route.run.courierId,
+          courierName: route.run.courierName,
+          vehicleLabel: route.run.vehicleLabel,
+          departedAt: route.run.departedAt,
+          returnedAt: route.run.returnedAt,
+          closed: route.run.closed,
+        }
+      : null,
+  }));
+
   return {
     date,
     today: toIsoDate(now),
+    runs,
     route: sortByZone(route, zones),
     shipping: shippingStops,
     shippingTruncated: shippingQueue.length >= SHIPPING_QUEUE_LIMIT,
@@ -244,8 +270,9 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
             .map((stop) => stop.customerName),
         ),
       ],
-      // Atanmamışlık YALNIZ rotada anlamlı: kargonun kuryesi olmaz, taşıyıcısı olur.
-      unassigned: open.filter((stop) => !stop.courierId).length,
+      // Sefer YALNIZ rotada anlamlı: kargonun kuryesi olmaz, taşıyıcısı olur (18.08 — sipariş
+      // başına "atanmadı" sayacının halefi; kurye artık rotayı kendisi alıyor).
+      runless: runs.filter((route) => route.run === null).length,
       zoneless: open.filter((stop) => stop.zoneId === null).length,
       doorCents: dayStops.reduce((sum, stop) => sum + (stop.dueAmountCents ?? 0), 0),
       doorCount: dayStops.filter((stop) => stop.dueAmountCents !== null).length,
