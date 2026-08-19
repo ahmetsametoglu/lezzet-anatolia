@@ -307,7 +307,7 @@ export async function getCartView(
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasLocal = lines.some((l) => l.route === 'local');
   const hasShipping = lines.some((l) => l.route === 'shipping');
-  const discount = await resolveCartDiscount(db, {
+  const { discount, reachable: reachableDiscount } = await resolveCartDiscount(db, {
     lines: discountable,
     customerId: opts.customerId,
     couponCode: opts.couponCode,
@@ -317,6 +317,9 @@ export async function getCartView(
     lines,
     subtotalCents,
     discount,
+    /* Elinin altındaki indirim — inen indirimden AYRI alan: ikisi aynı anda var olabilir
+       (`cart-types` künyesi). Toplama girmez, yalnız söylenir. */
+    reachableDiscount,
     // Sepetin ödenecek hâli — kargo HARİÇ (o adreste belli olur).
     totalCents: Math.max(0, subtotalCents - discountAmountOf(discount)),
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),

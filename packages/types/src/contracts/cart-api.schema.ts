@@ -210,6 +210,33 @@ export const MeCartDiscountSchema = z.discriminatedUnion('status', [
 ]);
 
 /**
+ * **Elinin altındaki indirim** (19.08 kullanıcı kararı) — eşiğe az kalmış, müşterinin sepetini
+ * büyüterek kazanabileceği otomatik kampanya.
+ *
+ * Neden ayrı bir alan, `MeCartDiscountSchema`nın içinde değil: inen indirimle AYNI ANDA var olabilir.
+ * Müşteri 3 € indirim alıyor olabilir ve 8 € daha eklerse 4,80 € alacak olabilir; birleşik bir hâle
+ * sıkıştırılsaydı bu cümle indirimi olan müşteriye hiç söylenemezdi.
+ *
+ * **Yalnız EŞİK sebebiyle kaçırılan taşınır.** "Daha büyük bir aday kazandı" hâli motorda eleniyor
+ * (`findReachableDiscount` künyesi): müşteri orada bir şey kaybetmedi, daha fazlasını aldı.
+ * Söylenmesi kazanılmış indirimi küçültürdü. Alan yoksa söylenecek bir şey de yoktur — ekran susar.
+ */
+export const MeCartReachableDiscountSchema = z.object({
+  /** Eşiğe kalan tutar (ham cent) — cümlenin "{n} daha ekleyin" parçası. */
+  missingCents: z.number().int().positive(),
+  /** Eşiğin kendisi (ham cent). */
+  minBasketCents: z.number().int().positive(),
+  /**
+   * Eşiğe varıldığında inecek indirimin **alt sınırı** (ham cent). Kestirim değil TABANDIR: müşteri
+   * daha azını bulmaz. Sepet kapsamlı kampanyada matrah eşiğin kendisiyle hesaplanır, kapsamlı
+   * kampanyada bugünkü kapsam toplamıyla — ikisi de müşteri lehine yuvarlar.
+   */
+  projectedCents: z.number().int().positive(),
+  /** Kampanyanın müşteriye görünen adı, seçili dilde; `null` = ad verilmemiş, ekran adsız konuşur. */
+  label: z.string().nullable(),
+});
+
+/**
  * Kalemin düştüğü GRUP — "bu kalem bu adrese nasıl gelir" sorusunun üç cevabı (kullanıcı kararı 10.08).
  *
  * **`route`un yerini almaz, onun EKRANA bakan izdüşümüdür.** Yol dört değerlidir
@@ -316,6 +343,8 @@ export const MeCartViewSchema = z.object({
   /** Kalem toplamı — kargo ve indirim HARİÇ. */
   subtotalCents: z.number().int(),
   discount: MeCartDiscountSchema,
+  /** Eşiğe az kalmış kampanya; `null` = söylenecek bir şey yok. Toplama GİRMEZ, yalnız söylenir. */
+  reachableDiscount: MeCartReachableDiscountSchema.nullable(),
   /** Ara toplam − indirim. */
   totalCents: z.number().int(),
   /** Toplam adet — yüzen düğmenin ve başlığın sayacı. */

@@ -121,6 +121,12 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     lines: view.lines.map(toLineBody),
     subtotalCents: view.subtotalCents,
     discount: toDiscountBody(view.discount, locale),
+    /* Elinin altındaki indirim — ad burada çözülür (sözleşme tek dize taşır, istemci üç dilli
+       nesneyi hiç görmez; `labelOf` künyesi). Alan `null` ise ekran susar. */
+    reachableDiscount:
+      view.reachableDiscount === null
+        ? null
+        : { ...view.reachableDiscount, label: labelOf(view.reachableDiscount.label, locale) },
     totalCents: view.totalCents,
     itemCount: view.itemCount,
     hasBlocked: view.hasBlocked,

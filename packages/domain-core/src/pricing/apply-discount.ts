@@ -223,3 +223,103 @@ function matchesScope(line: DiscountableLine, rule: DiscountRule): boolean {
   if (rule.scope === 'collection') return (line.collectionIds ?? []).includes(rule.collectionId ?? '');
   return true;
 }
+
+/**
+ * **Elinin altındaki indirim** — eşiği tutmadığı için kaçırılan, ama sepeti büyüterek KAZANILABİLİR
+ * olan otomatik kampanya (19.08 kullanıcı kararı).
+ *
+ * Neden ayrı bir kapı: motor bugün bütün adayları hesaplayıp kazananı seçiyor ve **kaybedenleri
+ * sessizce atıyor** (`applyBestDiscount` → `candidates.reduce`). Müşteri yalnız sonucu görüyor;
+ * hangi kampanyaların yarıştığını, birleşmediklerini, birinin bir adım ötede olduğunu bilmiyor.
+ * Kupon için bunun karşılığı yazılmıştı (`outranked` cümlesi), otomatik kampanya için yoktu.
+ *
+ * ── NEYİ SÖYLER, NEYİ SÖYLEMEZ ──────────────────────────────────────────────
+ * **Yalnız EŞİK sebebiyle kaçırılanı** döner. "Daha büyük bir aday kazandı" hâli buraya GİRMEZ ve
+ * girmemeli: müşteri orada bir şey kaybetmedi, daha fazlasını aldı — kaybedeni saymak kazanılmış
+ * indirimi küçültürdü. Aynı sebeple ötekiler de dışarıda: süresi dolmuş, hakkı bitmiş, kişiye özel
+ * ya da ilk-siparişe bağlı bir kural müşterinin **değiştiremeyeceği** bir şeydir; söylemek yalnız
+ * "alamadın" demektir. Ölçüt tek: *müşteri sonucu hâlâ değiştirebiliyorsa söyle.*
+ *
+ * **Kupon adayları dışarıda.** Girilmemiş bir kuponun eşiğini duyurmak, elde olmayan bir kodu ima
+ * eder; girilmiş kuponun reddi zaten kendi cümlesine sahip (`CouponFailure`).
+ *
+ * **Kapsamı boş kural dışarıda.** Kategori/koleksiyon kampanyasının eşiği ancak müşterinin sepetinde
+ * o kapsamdan bir kalem VARSA anlamlıdır; yoksa "8 € daha ekleyin" cümlesi neyi ekleyeceğini
+ * söylemez ve müşteriyi yanlış yere koşturur.
+ *
+ * ── TUTAR NASIL KESTİRİLİR ──────────────────────────────────────────────────
+ * Eşiğe varıldığı andaki tutar hesaplanır, bugünkü sepetle değil:
+ * - **Sepet kapsamı:** matrah eşiğin kendisidir (`minBasketCents`) — müşteri ne eklerse eklesin o
+ *   noktada en az bu kadar olur. Yani dönen değer bir ALT SINIRDIR, müşteri daha azını bulmaz.
+ * - **Kategori/koleksiyon kapsamı:** matrah BÜYÜMEZ — müşteri eşiği başka ürünle doldurabilir ve
+ *   kapsam-içi toplam olduğu yerde kalır. Bugünkü kapsam toplamı kullanılır, bu da kesin sonuçtur.
+ *
+ * Ve kestirim **kazanana karşı sınanır**: eşiğe varıldığında bugünkünden daha fazlasını vermeyen
+ * bir kampanya duyurulmaz — "8 € daha ekleyin" deyip indirimi değiştirmemek, boş bir vaattir.
+ */
+export interface ReachableDiscount {
+  discountId: string;
+  /** Eşiğe kalan tutar (cent) — cümlenin "{n} daha ekleyin" parçası. */
+  missingCents: number;
+  /** Eşiğin kendisi (cent) — cümle "60 € üzeri sepette" diye de kurulabilsin. */
+  minBasketCents: number;
+  /** Eşiğe varıldığında inecek indirimin ALT SINIRI (cent). Kazanandan daima büyüktür. */
+  projectedCents: number;
+}
+
+export function findReachableDiscount(
+  lines: readonly DiscountableLine[],
+  rules: readonly DiscountRule[],
+  ctx: DiscountContext = {},
+): ReachableDiscount | null {
+  const now = ctx.now ?? new Date();
+  const lineTotals = lines.map((l) => l.unitPriceCents * l.qty);
+  const eligible = lines.map((l) => !l.bundleId && !l.offerStockId);
+  const basketCents = lineTotals.reduce((sum, total, i) => (eligible[i] ? sum + total : sum), 0);
+  if (basketCents <= 0) return null;
+
+  // Bugün gerçekten inen tutar — kestirim buna karşı sınanacak. Aday yoksa 0.
+  const wonCents = applyBestDiscount(lines, rules, ctx)?.amountCents ?? 0;
+
+  let best: ReachableDiscount | null = null;
+  for (const rule of rules) {
+    if (rule.trigger !== 'automatic') continue;
+    if (rule.minBasketCents == null || basketCents >= rule.minBasketCents) continue;
+    // Eşik DIŞINDAKİ her koşul zaten sağlanıyor olmalı: eşiği doldurmak süresi dolmuş bir kampanyayı
+    // geri getirmez. Kural eşikmiş gibi sınanır — eşik geçilmiş sayılıp geri kalanı sorulur.
+    if (!checkCouponEligibility(rule, ctx, rule.minBasketCents, now).ok) continue;
+
+    const inScope = lines.map((line, i) => (eligible[i] ?? false) && matchesScope(line, rule));
+    const scopeBase = lineTotals.reduce((sum, total, i) => (inScope[i] ? sum + total : sum), 0);
+    if (scopeBase <= 0) continue;
+
+    // Sepet kapsamında matrah eşiğe kadar büyür; kapsamlı kuralda olduğu yerde kalır.
+    const projectedBase = rule.scope === 'cart' ? rule.minBasketCents : scopeBase;
+    const projectedCents =
+      rule.type === 'percent'
+        ? rule.percent == null
+          ? 0
+          : percentOf(projectedBase, rule.percent)
+        : rule.amountCents == null
+          ? 0
+          : Math.min(rule.amountCents, projectedBase);
+    if (projectedCents <= wonCents) continue;
+
+    const candidate: ReachableDiscount = {
+      discountId: rule.id,
+      missingCents: rule.minBasketCents - basketCents,
+      minBasketCents: rule.minBasketCents,
+      projectedCents,
+    };
+    // EN YAKIN olan kazanır, en büyük olan değil: müşteriye söylenecek tek cümle, elinin gerçekten
+    // uzandığı olmalı. Eşitlikte daha çok indiren öne geçer.
+    if (
+      best === null ||
+      candidate.missingCents < best.missingCents ||
+      (candidate.missingCents === best.missingCents && candidate.projectedCents > best.projectedCents)
+    ) {
+      best = candidate;
+    }
+  }
+  return best;
+}

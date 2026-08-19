@@ -72,6 +72,9 @@
     "summary": {
       "subtotal": "Ara toplam",
       "discount": "İndirim",
+      "singleRule": "İndirimler birleşmez — sizin için en yüksek olanı uyguladık.",
+      "reachable": "{missing} daha eklerseniz {label} devreye giriyor: {amount} indirim.",
+      "reachableAnon": "{missing} daha eklerseniz {amount} indirim devreye giriyor.",
       "undeliverable": "Siparişe girmeyenler",
       "total": "Toplam",
       "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.",
@@ -172,6 +175,9 @@
     "summary": {
       "subtotal": "Sous-total",
       "discount": "Remise",
+      "singleRule": "Les remises ne se cumulent pas — nous avons appliqué la plus avantageuse pour vous.",
+      "reachable": "Ajoutez {missing} et {label} s'applique : {amount} de remise.",
+      "reachableAnon": "Ajoutez {missing} et vous obtenez {amount} de remise.",
       "undeliverable": "Hors commande",
       "total": "Total",
       "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
@@ -272,6 +278,9 @@
     "summary": {
       "subtotal": "Zwischensumme",
       "discount": "Rabatt",
+      "singleRule": "Rabatte sind nicht kombinierbar — wir haben den höchsten für Sie angewendet.",
+      "reachable": "Noch {missing} und {label} greift: {amount} Rabatt.",
+      "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
       "undeliverable": "Nicht in der Bestellung",
       "total": "Gesamt",
       "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt.",

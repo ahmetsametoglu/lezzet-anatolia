@@ -255,7 +255,27 @@ export function CartScreen() {
       ? []
       : [{ key: 'undeliverable', label: t.summary.undeliverable, value: formatPrice(undeliverableCents, locale) }]),
   ];
-  const summaryNote = undeliverableCents === 0 ? t.summary.note : `${t.summary.note} ${t.summary.undeliverableNote}`;
+  /* ÜÇ KATMANLI AÇIKLAMA (19.08 kullanıcı kararı) — kural · kazanan · elinin altındaki.
+     Kazananın adı zaten yukarıdaki özet satırında (`discountRow`). Buradaki iki cümle ötekini
+     tamamlıyor: motor bütün adayları hesaplayıp kazananı seçiyor ve kaybedenleri sessizce atıyor,
+     müşteri de yalnız sonucu görüyordu — hangi kampanyaların yarıştığını, birleşmediklerini ve
+     birinin bir adım ötede olduğunu bilmiyordu. Kupon için bu cümle vardı (`outranked`), otomatik
+     kampanya için yoktu. */
+  const singleRuleNote = discountSummary === null ? null : t.summary.singleRule;
+  const reachable = view.reachableDiscount;
+  const reachableNote =
+    reachable === null
+      ? null
+      : (reachable.label === null ? t.summary.reachableAnon : t.summary.reachable.replace('{label}', reachable.label))
+          .replace('{missing}', formatPrice(reachable.missingCents, locale))
+          .replace('{amount}', formatPrice(reachable.projectedCents, locale));
+
+  /* Kural cümlesi özetin DİP NOTUNA giriyor, ayrı bir kutuya değil: indirim satırının hemen
+     altında duruyor ve "neden tek indirim" sorusunu sorulduğu yerde cevaplıyor. Ayrı bir Note
+     olsaydı sepette dördüncü bir kutu açardı ve bir kuralı duyuru gibi okuturdu. */
+  const summaryNote = [t.summary.note, undeliverableCents === 0 ? null : t.summary.undeliverableNote, singleRuleNote]
+    .filter((line): line is string => line !== null)
+    .join(' ');
 
   const submitCoupon = () => {
     /* Kod bir KİMLİKTİR, dilin harf kuralına tabi değil: `toLocaleUpperCase('tr')` "i"yi "İ" yapar
@@ -575,6 +595,14 @@ export function CartScreen() {
 
         {rejectionText === null ? null : (
           <Note tone="terracotta" description={rejectionText} testID="cart-coupon-rejected" />
+        )}
+
+        {/* ELİNİN ALTINDAKİ İNDİRİM — `olive`, çünkü bu bir kazanç davetidir, bir uyarı değil;
+            ücretsiz kargo eşiğinin cümlesiyle aynı aile. Sunucu yalnız KAZANILABİLİR olanı
+            gönderiyor: eşiğe varmak bugünkü indirimi büyütmüyorsa alan `null` gelir ve burası
+            hiç çizilmez (boş vaat yerine sessizlik — sözleşme künyesi). */}
+        {reachableNote === null ? null : (
+          <Note tone="olive" description={reachableNote} testID="cart-discount-reachable" />
         )}
 
         <SummaryPanel

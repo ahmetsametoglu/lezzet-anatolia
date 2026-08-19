@@ -95,6 +95,38 @@ export type CartDiscount =
   | { status: 'none' };
 
 /**
+ * **Elinin altındaki indirim** — eşiğe az kalmış, müşterinin sepetini büyüterek kazanabileceği
+ * otomatik kampanya (19.08 kullanıcı kararı). Kazanan indirimden BAĞIMSIZ bir alandır: sepette
+ * halihazırda bir indirim varken de doğabilir ("3 € iniyor, 8 € daha eklerseniz 4,80 € iner").
+ *
+ * Ölçüt ve kestirim motorda (`findReachableDiscount`); burada yalnız müşterinin okuyacağı ad var.
+ * `null` = söylenecek bir şey yok — ya eşiği bekleyen kampanya yok, ya da eşiğe varmak bugünkü
+ * indirimi büyütmüyor. **Boş bir vaat yerine sessizlik**: "8 € daha ekleyin" deyip sayıyı
+ * değiştirmemek, müşteriyi boşuna alışverişe iter.
+ */
+export interface CartReachableDiscount {
+  /** Eşiğe kalan tutar (cent) — cümlenin "{n} daha ekleyin" parçası. */
+  missingCents: number;
+  /** Eşiğin kendisi (cent). */
+  minBasketCents: number;
+  /** Eşiğe varıldığında inecek indirimin ALT SINIRI (cent) — müşteri daha azını bulmaz. */
+  projectedCents: number;
+  /** Kampanyanın müşteriye görünen adı; `null` = operatör ad yazmamış, yüzey adsız konuşur. */
+  label: LocalizedText | null;
+}
+
+/**
+ * Sepetin indirim cevabının TAMAMI: inen indirim + elinin altındaki.
+ *
+ * İkisi ayrı alan, çünkü ayrı sorular: biri *"ne indi"*, öteki *"bir adım ötede ne var"*. Tek
+ * birleşik hâle sıkıştırılsaydı, indirimi olan müşteriye ikinci cümle hiç söylenemezdi.
+ */
+export interface CartDiscountResult {
+  discount: CartDiscount;
+  reachable: CartReachableDiscount | null;
+}
+
+/**
  * Sepet sözleşmesi (08.4) — müşteri yüzeyinin ikinci veri kapısı.
  *
  * İKİ KATMAN vardır ve karıştırılmamalıdır:
@@ -271,6 +303,11 @@ export interface CartView {
    * karar motorundur (`domain-core/pricing`), kapı yalnız taşır.
    */
   discount: CartDiscount;
+  /**
+   * Eşiğe az kalmış, kazanılabilir kampanya — inen indirimden AYRI. `null` = söylenecek bir şey yok.
+   * Toplama GİRMEZ: bu bir bilgi, bir tahsilat değil.
+   */
+  reachableDiscount: CartReachableDiscount | null;
   /** Ara toplam − indirim. Kargo YOK: ücret teslimat türüne, tür adrese bağlıdır. */
   totalCents: number;
   /** Toplam adet — başlıktaki sepet rozetinin sayısı. */
@@ -340,6 +377,7 @@ export const EMPTY_CART: CartView = {
   lines: [],
   subtotalCents: 0,
   discount: { status: 'none' },
+  reachableDiscount: null,
   totalCents: 0,
   itemCount: 0,
   hasBlocked: false,

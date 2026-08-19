@@ -4329,3 +4329,23 @@ E2E/Maestro `takeScreenshot` çıktıları ve web'deki `ui:shot`'un mobil muadil
 `.ui-shots-mobile/` altına düşer (kökte, git dışı; web'in `.ui-shots/`'u her çekimde silindiği
 için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın durumunu görmek istiyor;
 `ui:shot:mobile` aracı kuruldu (08.08 — 21.7 Durum bloğunda; simülatör + dev build ister).
+
+- [ ] (21.88) **NATIVE BİLDİRİM ALTYAPISI — kurulacak, kullanımı sonraya** *(kullanıcı kararı 19.08:
+  "biz bir kere native notifikasyon özelliğini ekleyeceğiz, bunun kaçarı yok. Diğer taraftan bunu
+  kullanmayı sonraya erteleyebiliriz")*
+
+  **BUGÜN HİÇ YOK — ölçüldü 19.08.** `packages/notify` sürücüleri yalnız **e-posta + WhatsApp**
+  (`drivers/{email,wa-link,whatsapp-api}`); `apps/mobile/package.json`da **`expo-notifications` yok**;
+  müşteri bildirim ekranı **yer tutucu** (`app/notifications.tsx` → `ScreenPlaceholder`) ve okunmamış
+  sayacı gerçek ekranda **sabit 0** (`home-screen.tsx:163`). Yani zil var, çalan bir şey yok.
+
+  **Bu bir GÖREV değil MODÜL boyu iş** ve kapsamı bilinerek yazılıyor: izin akışı (iOS soruyor) ·
+  cihaz jetonu kaydı + jeton tablosu · Expo push servisi · `notify`ye yeni sürücü · operatöre
+  gönderim ekranı · **pazarlama izni** (push pazarlaması da izin ister — `(21.87)`de açılan izin
+  hattının devamı) · sıklık sınırı. Ayrı bir modül dosyası açılması gerekebilir;
+  `docs/talep/bildirim-modulu-web-mobil.md` zaten bu konunun defteri.
+
+  **SIRA (kullanıcı 19.08):** önce ucuz %80 — kampanyanın vitrinde ve katalogda görünmesi
+  (`08.44`), sepetin açıklaması (`08.43`, tamam), paylaşımın gerçek adres taşıması (`08.45`),
+  sonra uygulama içi bildirim listesi; **push en sonda.** Gerekçe: push'un açacağı bir varış
+  noktası olmalı; bugün duyurulacak kampanyanın kendi yüzü bile yok.

@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
+import { resolveLocalizedText } from '@lezzet/types';
 import { buttonClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
@@ -124,6 +125,17 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
    */
   const fee = view.shippingOnly ? shippingGroupFee(view) : null;
   const totalCents = view.totalCents + (fee?.feeCents ?? 0);
+  /* Cümle SUNUCUNUN kararından kurulur, ekran eşik aritmetiği yapmaz: hangi kampanyanın
+     kazanılabilir olduğu ve eşiğe varıldığında ne ineceği motorda hesaplanıyor
+     (`findReachableDiscount`). Burada yalnız üç sayı yerine konuyor — iki yüzey de aynı kapıdan
+     okuduğu için native'le ayrışamaz. */
+  const reach = view.reachableDiscount;
+  const reachableNote =
+    reach === null
+      ? null
+      : (reach.label === null ? t.reachableAnon : t.reachable.replace('{label}', resolveLocalizedText(reach.label, locale)))
+          .replace('{missing}', formatPrice(reach.missingCents, locale))
+          .replace('{amount}', formatPrice(reach.projectedCents, locale));
   return (
     /* Ölçüler tasarımdan (`Musteri - Sepet.dc.html:104` web · `:399` mobil): web `22×24` + `gap 12`,
        mobil `14` + `gap 7`. Web pedi `p-6` (24×24) yazılıydı — dikeyde 2 px fazlaydı, `snug` ile
@@ -150,6 +162,17 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
             <span className="font-bold">−{formatPrice(discountCents, locale)}</span>
           </div>
         )}
+
+        {/* İNDİRİMLER BİRLEŞMEZ (19.08 kullanıcı kararı) — kural, indirim satırının HEMEN altında.
+            Motor bütün adayları hesaplayıp kazananı seçiyor ve kaybedenleri sessizce atıyor; müşteri
+            yalnız sonucu görüyor ve "neden tek indirim" sorusunun cevabını hiçbir yerde bulamıyordu.
+            Kupon için karşılığı yazılmıştı (`outranked`), otomatik kampanya için yoktu. */}
+        {discountCents > 0 && <span className="font-sans text-micro leading-relaxed text-muted">{t.singleRule}</span>}
+
+        {/* ELİNİN ALTINDAKİ İNDİRİM — zeytin, çünkü kazanç davetidir; ücretsiz kargo eşiğinin
+            cümlesiyle aynı aile. Sunucu yalnız KAZANILABİLİR olanı gönderir (eşiğe varmak bugünkü
+            indirimi büyütmüyorsa alan `null`), yani buradaki cümle her zaman tutulabilir bir sözdür. */}
+        {reachableNote !== null && <span className="font-sans text-note leading-relaxed text-olive">{reachableNote}</span>}
 
         {fee !== null && (
           <div className="flex items-center justify-between font-sans text-body-sm">

@@ -980,3 +980,224 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   - **Soğuk zincir işareti rozetin yanına** (`ColdChainMark`, `StockMark`in kardeşi): ürünün künyesidir, teslimat ayrıntısı değil — kargoya verilememesinin sebebi budur. Tonu bilerek sessiz (kum), çünkü bir engel değil bir özellik. Koşul `!shippable`: sistemin soğuk zincir tanımı zaten bu (`place-messages`: *"soğuk zincir gerektiren ürünleri yalnız kendi aracımızla götürebiliyoruz"*) — kutu bu ifadeyi kargolanabilir üründe de basıyordu, taşınırken o yanlış da düzeldi.
   - ⚠ **BİR ÖLÇÜM YANLIŞ ÇIKTI, DÜZELTİLDİ:** *"katalogdaki 126 ürünün 126'sı `shippable = false`"* diye bir bulgu bildirilmiş ve besleme şeridine not açılmıştı. Sorgu **`db:refresh`in ORTASINA denk gelmiş** — seed henüz bayrakları yazmamışken kolon varsayılanı okunmuş. Yeniden ölçüldü: **77 kargolanabilir · 49 değil.** Not silindi. *Ders: `db:refresh` penceresinde alınan sayım, sayım değildir.*
   - **AÇIK SORU — soğuk zincirin ayrı bir alanı YOK.** İşaretin koşulu `!shippable`, çünkü sistemin bugünkü modeli soğuk zincir ⇔ kargoya verilemez diyor (`place-messages`). Ama ölçümde ekrandaki pasta `shippable = true` çıktı; eski kutu ona da *"soğuk zincirle gelir"* yazıyordu, yeni işaret ise yazmayacak. İkisinden biri doğru: ya ürünün verisi yanlış (kremalı pasta kargoya verilmemeli), ya da soğuk zincir `shippable`den AYRI bir alan olmalı. Kullanıcıya soruldu — `BEKLEYEN(08.42)`.
+
+- [x] (08.43) **SEPET ARTIK HANGİ İNDİRİMİN NEDEN İNDİĞİNİ SÖYLÜYOR — ve bir adım ötedekini de**
+  *(kullanıcı kararı 19.08: "bazen tüm sepete bir indirim uyguluyoruz ve bunu herhangi bir yerde
+  göstermiyoruz … bu konuda kafa karışıklığının önüne geçmemiz lazım")* ·
+  `touches: packages/domain-core/src/pricing/apply-discount.ts, packages/application/src/cart/{discount.ts,cart-types.ts,read.ts,discount.test.ts}, packages/application/src/index.ts, packages/types/src/contracts/cart-api.schema.ts, apps/mobile-api/src/api/v1/cart-view.ts, apps/web/app/(customer)/[locale]/cart/{messages.json,components/cart-summary.tsx}, apps/mobile/src/screens/cart/{cart-screen.tsx,messages.json,cart-view-fixture.ts}, apps/mobile/src/screens/customer-kit/cart-store.ts`
+
+  **KUSURUN KAYNAĞI ÖLÇÜLDÜ.** `applyBestDiscount` bütün adayları hesaplıyor, **tek-en-büyüğü**
+  seçiyor ve **kaybedenleri sessizce atıyor** (`candidates.reduce`). Müşteri yalnız sonucu görüyordu.
+  Yerel veriyle üretilen somut hâl: 20 € baklava + 50 € başka ürün sepetinde *Baklava haftası %15*
+  (20 €'nun %15'i = 3,00 €) ile *Büyük sepet %8* (70 €'nun %8'i = 5,60 €) yarışıyor, ikincisi
+  kazanıyor — ve ekranda yalnız *"İndirim −5,60 €"* yazıyor. Hangi kampanyaların yarıştığı,
+  birleşmedikleri, birinin bir adım ötede olduğu hiçbir yerde yazmıyordu.
+  **Ayrım şuydu:** kaybedeni açıklayan cümle YALNIZ KUPONLAR için yazılmıştı (`outranked`
+  — *"zaten daha yüksek bir indirim uygulanıyor … sizin için avantajlı olanı geçerli tuttuk"*).
+  Yani müşteri kendi yazdığı kuponun neden geçmediğini öğreniyor, sistemin kendi kampanyasının
+  neden geçmediğini öğrenemiyordu.
+
+  **ÜÇ KATMAN — kural · kazanan · elinin altındaki.**
+  1. **Kural her zaman söylenir** (indirim varken): *"İndirimler birleşmez — sizin için en yüksek
+     olanı uyguladık."* Kafa karışıklığı sınıfının tamamını tek cümleyle kapatıyor. Özetin dip
+     notuna girdi, ayrı bir kutuya değil: bir kuralı duyuru gibi okutmamak için.
+  2. **Kazanan** zaten adıyla yazılıyordu (`discountLabel` / `discountSummaryOf`); dokunulmadı.
+     Adı olmayan kampanyanın sebebe düşmesi operasyon tarafının açığı (MB-22a), burada değil.
+  3. **Elinin altındaki** — YENİ: `findReachableDiscount` (`domain-core`). Eşiğe az kalmış ve
+     kazanılabilir kampanyayı döndürüyor: *"8 € daha eklerseniz Büyük sepet devreye giriyor:
+     4,80 € indirim."*
+
+  **KAYBEDENİ SÖYLEME ÖLÇÜTÜ: müşteri sonucu hâlâ DEĞİŞTİREBİLİYORSA.** Motor bu yüzden yalnız
+  *eşik* sebebiyle kaçırılanı döndürüyor. Dışarıda bırakılanlar ve gerekçeleri künyede yazılı:
+  · *"daha büyüğü kazandı"* → müşteri kaybetmedi, daha fazlasını aldı; söylemek kazanılmış indirimi
+  küçültürdü · süresi dolmuş / hakkı bitmiş / kişiye özel / ilk-siparişe bağlı → müşterinin
+  değiştiremeyeceği şeyler, söylemek yalnız *"alamadın"* demek · girilmemiş kupon → elde olmayan bir
+  kodu ima eder · kapsamında kalemi olmayan kampanya → *"8 € daha ekleyin"* neyi ekleyeceğini söylemez.
+
+  **VAAT TUTULABİLİR OLMAK ZORUNDA, o yüzden iki koruma var.** (a) Kestirim eşiğe VARILDIĞI andaki
+  matrahla yapılıyor: sepet kapsamında eşiğin kendisiyle (alt sınır — müşteri daha azını bulmaz),
+  kategori/koleksiyon kapsamında bugünkü kapsam toplamıyla (kesin — o toplam başka ürün eklenince
+  büyümez). (b) Kestirim **kazanana karşı sınanıyor**: eşiğe varmak bugünkü indirimi büyütmüyorsa
+  alan `null` döner ve ekran susar. *"8 € daha ekleyin"* deyip sayıyı değiştirmemek boş vaattir.
+
+  **İKİ YÜZEY TEK KAPIDAN OKUYOR.** Karar `domain-core`da, orkestrasyon `application`da
+  (`resolveCartDiscount` artık `{ discount, reachable }` döndürüyor), taşıma sözleşmede
+  (`MeCartReachableDiscountSchema`). Web ve native aynı üç sayıyı yerine koyuyor; ekran eşik
+  aritmetiği yapmıyor, yani ayrışamazlar.
+
+  **Doğrulama:** `tsc` beş pakette temiz · `lint` temiz · mobil jest **84/84 · 599/599** ·
+  `pnpm test` **2710/2710 TAM YEŞİL** (18:11, 199 sn). *İlk koşuda (15:29) üç test düşmüştü ve
+  hiçbiri bu işin yolunda değildi — başka şeridin commit edilmemiş kargo tarifesi migration'ı
+  eski beklenen sayılarla çelişiyordu; not açıldı
+  (`docs/talep/not-web-kargo-tarifesi-testleri-guncellenmedi.md`) ve o şerit düzeltti.*
+  Mevcut `discount.test.ts` çağrıları yeni dönüş şekline uyarlandı (`const { discount: result }`),
+  **yeni test yazılmadı** (kullanıcı kuralı 11.08) — motorun yeni kapısı test altında değil.
+
+  **CİHAZ TURU — OPPO CPH1907, misafir, 67000 (19.08 · 16:30–16:38 + 18:06–18:08).**
+  **Yedi senaryonun yedisi de cihazda üretildi.**
+  1. **Boş sepet** → özet paneli hiç çizilmiyor; ne kural cümlesi ne zeytin kutu. ✓
+  2. **Kampanya + elinin altındaki BİRLİKTE** → Su Böreği 2500g (22,47 €, *Fırın*):
+     *"İndirim · Baklava haftası −3,37 €"* (22,47 × %15 = 3,3705 ✓) · zeytin kutu
+     *"37,53 € daha eklerseniz 4,80 € indirim devreye giriyor"* (60,00 − 22,47 = 37,53 ✓ ·
+     60,00 × %8 = 4,80 ✓) · dip notta kural cümlesi. **Tasarımın çekirdek iddiası burada kanıtlandı:
+     inen indirim varken de elinin altındaki söylenebiliyor.** ✓
+  3. **BOŞ VAAT KORUMASI** → adet 2 (44,94 €): indirim −6,74 €'ya çıkıyor ve **zeytin kutu
+     KAYBOLUYOR** — eşiğe varmak 4,80 € verirdi, müşteri zaten 6,74 € alıyor. Eşiğe hâlâ 15,06 €
+     var ama söylenmiyor; kural tam da bu. ✓
+  4. **Kupon `outranked` ile birlikte** → `HOSGELDIN10` (%10 = 4,49 € < 6,74 €): eski ret cümlesi
+     aynen çalışıyor, kazanan adıyla duruyor, kural cümlesi yerinde. Üçü çakışmıyor. ✓
+  5. **Uygulanmış KUPON + elinin altındaki** → Fıstıklı Soğuk Baklava 33,75 €, kupon −3,37 €,
+     kutu *"26,25 € daha eklerseniz 4,80 €"* (60,00 − 33,75 = 26,25 ✓; 4,80 > 3,37 ✓). ✓
+  6. **İNDİRİMSİZ DOLU SEPET** → Çıtır Tavuk Kanat 1000g (9,55 €, *Tavuk Ürünleri* — ne kampanya
+     kategorisinde ne kampanya koleksiyonunda): indirim satırı YOK, **kural cümlesi de YOK** (dip
+     not *"Fiyatlar KDV dahildir…"* ile bitiyor), zeytin kutu VAR — *"50,45 € daha eklerseniz
+     4,80 €"* (60,00 − 9,55 = 50,45 ✓). ✓
+     *İlk turda (16:38) bu hâl ÜRETİLEMEMİŞTİ ve sebebi ölçülmüştü: o günkü 59 aktif ürünün hepsi
+     ya `firin` kategorisinde ya Bayram Sofrası koleksiyonundaydı, sorgu 0 aday döndürüyordu.
+     Veritabanı yenilenince katalog 97 aktif ürüne çıktı ve **44'ü kampanyasız** oldu; hâl aynı
+     gün 18:07'de üretildi. Kayda geçsin: "üretilemedi" bir sonuç değil, o günkü verinin hâliydi.*
+  7. **EŞİK AŞIMI** → adet 7 (66,85 €): kart *"İndirim · Kampanya · %8 −5,34 €"* (66,85 × %8 =
+     5,348 → 5,34 ✓, müşteri aleyhine yuvarlanmıyor), **zeytin kutu kayboluyor** (söylenecek bir
+     şey kalmadı), kural cümlesi duruyor. Kampanyanın adsız kalıp sebebe düşmesi (*"Kampanya · %8"*)
+     `public_label` boşluğunun beklenen sonucu. ✓
+
+  **Ölçümün yan bulgusu:** elinin altındaki cümle **adsız** çıkıyor (*"…4,80 € indirim devreye
+  giriyor"*), çünkü *Büyük sepet indirimi*nin `public_label`ı boş — sözleşmenin `reachableAnon`
+  dalı doğru çalışıyor ve kusur MB-22a'nın kaydettiği operasyon açığında. Ad yazılınca cümle
+  kendiliğinden *"…Büyük sepet devreye giriyor"* olacak.
+
+  **Cihazda yazılan veri geri alındı:** tur boyunca kurulan misafir sepeti boşaltıldı (son kare
+  *"Sepetiniz boş · 0 ürün"*). Ekran görüntüleri oturum scratchpad'inde.
+
+  **FR/DE cihazda koşulmadı:** üç dilin anahtar ağacı `messages.json`da aynı ve cümleler yer
+  tutucularıyla birlikte yazıldı; cihaz turu TR yüzeyinde yapıldı.
+
+- [ ] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL**
+  *(kullanıcı kararı 19.08; ölçüm ve karşılaştırma aynı gün yapıldı)* ·
+  `touches (planlanan): packages/application/src/catalog/**, apps/web/lib/storefront/home.ts, apps/web/app/(customer)/[locale]/catalog/**, apps/mobile-api/src/lib/home.ts, apps/mobile/src/screens/home/**`
+
+  **ÖNCE ELENEN YOL — "kampanyayı ürün fiyatına yaz" fikri KIRIK ve sebebi sayıyla gösterildi.**
+  `applyBestDiscount` kazananı TÜM SEPET üzerinden tek-en-büyük seçiyor ve kalemlere ORANSAL
+  dağıtıyor. 20 € baklava (*Baklava haftası %15* → 3,00 €) + 40 € başka ürün sepetinde *Büyük sepet
+  %8* (60 €'nun %8'i = 4,80 €) kazanır ve baklava kalemine düşen pay 20/60 × 4,80 = 1,60 € olur —
+  yani **%8, kartta vaat edilen %15 değil.** Kartta indirimli fiyat yazsaydık müşteri o ürünü daha
+  pahalıya alırdı ve arıza **sepet büyüdükçe daha sık** olurdu. Bir ürün fiyatı ancak sepetten
+  BAĞIMSIZSA vaat edilebilir; yakın-SKT teklifi tam da bu yüzden fiyat olabiliyor (indirim
+  havuzundan muaf, `offerStockId`). Kampanyayı fiyat yapmanın tek yolu **tek-en-büyük kuralını
+  terk etmek** olurdu — o 27.07'de verilmiş bir karar, bu iş için bozulmaz.
+  *Yan kazanç:* bu seçim, *"−3 € adet başına mı olsun"* sorusunu da düşürdü — rozet ve cümle sabit
+  tutarı da dürüstçe söylüyor.
+
+  **BÖLÜŞÜM — her cümle bilindiği yerde.**
+  · **kategori/koleksiyon kapsamı** → vitrin bandındaki karta ROZET (*"Bayram Sofrası · −3 €"*) +
+    filtrelenmiş katalog başlığına CÜMLE. Kanca hazır: `getCatalogData` süzgeci çözerken
+    `activeCategory`/`activeCollection` zaten hesaplanıyor.
+  · **sepet kapsamı** → yalnız sepette (`08.43` ile yazıldı).
+  · **kupon** → sepette, girildikten sonra (bugünkü hâli).
+  · **yakın-SKT fırsatı** → ürün kartında FİYAT olarak (bugünkü hâli; kampanya bu banda karışmaz).
+
+  **VİTRİN BANDINDA ÖNCELİK — bir süsleme değil, tutarlılık düzeltmesi.** Ölçüldü: bantlar
+  `isFeatured` havuzundan **rastgele** seçiliyor (`selectHomeBandSources` → `pickRandomDistinct`) ve
+  toplam sayı sınırlı; yani kampanyalı bir koleksiyon **o gün hiç görünmeyebiliyor.** Kampanya açan
+  operatör kampanyanın görüneceğini varsayıyor. Kampanyalı bantlar öne alınacak.
+
+  **AYRI BİR "KAMPANYALAR" SAYFASI YAPILMAYACAK** (kullanıcı ile 19.08): filtrelenmiş katalog zaten
+  kampanya sayfasıdır ve üstelik ürünleri de gösterir; ikinci bir sayfa aynı kampanyanın ikinci
+  gerçeğini üretir. Kampanya LİSTESİ (indeks) ayrı bir fikir — bildirim/paylaşım varış noktası
+  olarak sonraya bırakıldı, bugün üç otomatik kampanya var ve üç satırlık bir sayfa kendini taşımaz.
+
+  **TEK KAPI ŞARTI:** kapsam→kampanya okuması `packages/application`da açılacak; web ve mobil-api
+  aynı kapıdan okuyacak. Bugün fırsat bandının SEÇİMİ iki ayrı kod (`apps/web/lib/storefront/home.ts`
+  `readOffers` rastgele 3 + `total`; `apps/mobile-api/src/lib/home.ts` `readHomeOffers` ilk N) ve
+  `isOffer`/`hasWonOffer` **birebir aynı fonksiyon, aynı yorum satırı, iki dosyada** — aynı hata
+  ikinci kez yapılmayacak.
+
+  **AYRICA KAPATILACAK — ÖLÇÜLMÜŞ TUTARSIZLIK.** `getCatalogData` "yalnız fırsatlar" süzgecini
+  `listOfferProductIds(db, place.warehouseId)` ile kuruyor (yalnız ROTA deposu), fiyatı çözen
+  `loadProductContext` ise teklifleri `warehouseId ?? shippingWarehouseId` üzerinden okuyor. İkisi
+  aynı depoyu sormuyor: (a) posta kodu girmemiş ziyaretçide süzgeç ürünleri getiriyor ama bağlam
+  hiç teklif okumuyor → **listede tek bir indirimli ürün yok**; (b) rota dışı ama kargo alan
+  müşteride liste ile fiyat farklı depodan geliyor. Ekranda ÜRETİLMEDİ (yalnız kod ölçümü) —
+  kalem açılmadan önce cihazda/ekranda tekrar üretilecek.
+
+- [ ] (08.45) **PAYLAŞILAN HER ŞEY GERÇEK BİR WEB ADRESİ TAŞISIN** *(kullanıcı ile 19.08 —
+  kampanya paylaşımı ayrı bir iş olarak düşünülmedi; kök eksik bu)* ·
+  `touches (planlanan): apps/mobile/src/screens/{product,package}/**, apps/mobile-api/src/api/v1/**`
+
+  **Ölçüldü:** `product-detail-screen.tsx:267` → `Share.share({ message: detail.name })`. Yani
+  arkadaşınıza **çıplak bir ürün adı** gidiyor, bağlantı yok; alan kişi hiçbir şey açamıyor. Paket
+  paylaşımı da aynı hâlde (`package-detail-screen.tsx`). Künyesi dürüstçe yazmış: *"Web ürün URL'i
+  müşteri yüzeyine bağlanınca mesaja eklenir."* Buna karşılık **davet paylaşımı çalışıyor**
+  (`wallet.inviteUrl` — adresi SUNUCU veriyor, üç dilli rota adı sunucuda çözülüyor); desen kurulu,
+  ürün/paket tarafına bağlanmamış. Aynı düzeltme kampanyalı katalog adresini de paylaşılabilir yapar
+  (kampanyanın adresi zaten filtrelenmiş katalog URL'i ve üç dilde tanımlı).
+
+- [ ] (08.46) **KANALINDA FİYATI OLMAYAN ÜRÜN VİTRİNDE HİÇ LİSTELENMESİN** *(kullanıcı kararı
+  19.08: "giriş yapmamış kullanıcı son müşteri kabul edilmeli; bir firma giriş yaptıysa sadece
+  onunkiler gelmeli")* · `touches (planlanan): supabase/migrations/0032_product_listing.sql,
+  packages/database/src/services/product.service.ts, packages/application/src/catalog/catalog.ts,
+  apps/web/components/customer/ui/storefront-cards.tsx`
+
+  **Belirti (kullanıcının ekran turu 19.08):** katalogda fiyatı hiç yazmayan ürünlerde "Sepete
+  ekle" düğmesi açık duruyor.
+
+  **Ölçülen kök — veri değil, eksik bir soru.** Ürünler fiyatsız değil, **yanlış kanalda
+  fiyatlı**: `product.status='active'`, boy aktif, `price` satırı var ama yalnız `channel='b2b'`.
+  `DOMAIN §5` bunu zaten statü sayıyor (*"fiyat satırının yokluğu 'o kanalda satışa kapalı'
+  demektir"*). Zincirin dört katmanından üçü doğru davranıyor — motor `sellable:false` döndürüyor,
+  okuma `priceCents:null` veriyor, detay sayfası düğmeyi kapatıyor (`purchase-panel.tsx:178`),
+  sepet satırı `blocked` işaretliyor (`cart/read.ts:255`). **Yalnız liste kartı fiyata hiç
+  bakmıyor:** `storefront-cards.tsx:345,361` → `disabled={!product.variantId}`. `map.ts` künyesi
+  *"kart fiyat göstermez **ve aksiyonu pasifleşir**"* diye vaat ediyor; ikinci yarısı hiç yazılmamış.
+
+  **Para riski yok** (sepet ödemeyi durduruyor), **güven riski var**: müşteri engeli rafta değil
+  kasada öğreniyor.
+
+  **Yayılım (yerel fikstür, iş çıkarımı DEĞİL — yalnız arızanın şekli):** 55 aktif üründen 12'si
+  iki kanalda, 8'i yalnız b2c, **33'ü yalnız b2b**, 2'si hiçbirinde. Yani arıza **çift yönlü** —
+  onaylı B2B müşteri de 8 perakende-özel ürün için aynı bozuk kartı görür.
+
+  **Karar:** dar düzeltme (düğmeyi kapatmak) DEĞİL, ürün kanalında satılamıyorsa **hiç
+  listelenmesin**. Kullanıcı seçti; `DOMAIN §5`'in *"satışa kapalı görünür"* cümlesi buna engel
+  değil — o cümle "Fiyat çözüm sırası" başlığı altında **motorun** ne döndürdüğünü tarif ediyor,
+  katalogun listeleme zorunluluğunu değil.
+
+  **Neden dar bir iş DEĞİL — dört ölçülmüş engel:**
+  1. **Süzgeç SQL'de olmak zorunda.** Katalog keyset (imleç) sayfalıyor; sayfa çekildikten sonra
+     elemek kısa sayfa döndürür ve imleci kaydırır. Görünümün kendi künyesi bunu yazmış.
+  2. **Üç okuma yolu ayrı kaynaktan besleniyor** ve üçü de aynı süzgeci öğrenmeli: varsayılan liste
+     (`ProductService.listWithRelations` → `product` tablosu, fiyatla hiç teması yok), fiyat
+     sıralı liste (`ProductListingService.listByPrice` → `product_listing` görünümü), başlık
+     sayacı (`countMatching`). Ayrışırlarsa sonuç bu depoda **bir kez yaşandı**: *"çip açıkken
+     liste 1 satır basarken başlık 131 diyordu"* (08.10 künyesi).
+  3. **`product_listing` görünümü B2C'ye ÇAKILI** (`where p.channel='b2c'`; künyesi: *"motorun
+     ZİYARETÇİ dalını yeniden ifade eder"*). Bugün B2B müşteri fiyata göre sıraladığında **B2C
+     fiyatlarıyla sıralanmış** liste görüyor. Kanalın, deponun 01.08'de yaptığı gibi görünümün
+     grain'ine katılması gerekiyor: `(kanal × depo × ürün)`.
+  4. **Süzgeç ÜRÜN değil BOY düzeyinde olmalı.** Bir ürünün bazı boyları perakendeye, bazıları
+     yalnız toptana açık olabilir (5 kg ikram boyu). Ürün düzeyinde süzmek ya satılabilir boyu
+     olan ürünü gizler ya da detayın boy seçicisinde alınamayan bir boy bırakır. *(Fikstürde
+     bugün karışık boylu ürün 0 tane — yani ürün düzeyinde süzmek şu an tesadüfen aynı sonucu
+     verir ve ilk toptan boyunda sessizce yanlışa döner.)*
+
+  **Kolaylaştıran iki bulgu:** (a) `resolvePrice` müşteriye özel fiyatın kapalı kanalı AÇMADIĞINI
+  garanti ediyor (`listPrice===null` kontrolü özel fiyattan önce), yani ölçüt tek: *"bu kanalda
+  liste fiyatı var mı"*. (b) Native uygulama aynı kapıyı kullanıyor (`mobile-api` →
+  `getCatalogData`), yani düzeltme uygulama/SQL katmanında kalırsa mobil ekranlar kendiliğinden
+  doğru davranır — mobil şeridin koduna dokunmak gerekmez.
+
+  **Aklımdaki yol:** varsayılan listeyi de aynı görünümden okutmak (görünüm zaten `p.*` seçiyor,
+  yani `product` tablosunun üst kümesi) — üç yol tek kaynağa iner, süzgeç bir kez yazılır, sayaç
+  da oradan sayar.
+
+  **Birlikte gitmesi gereken:** operasyona *"kanalında fiyatı olmayan N ürün"* uyarısı. Gizleme
+  kuralında kazara fiyatı silinen ürün vitrinden **sessizce** düşer ve kimse fark etmez; uyarı
+  bunun karşılığıdır.
+
+- [x] (08.47) **Ürün detayında soldaki delik kapandı — iki ızgara, iki bağımsız sütun oldu** *(kullanıcı bildirimi 19.08, ekran görüntüsüyle: "solda ortada bir boşluk var… sütunların başladığı yerlerde bir sıkıntımız var gibi")* · `touches: apps/web/app/(customer)/[locale]/product/[slug]/product.desktop.tsx, design/KARARLAR.md`
+  - *Bitti:* galerinin bittiği yerde beyan başlıyor; sütun dikişi sayfa boyunca tek hizada.
+  - **Ölçüldü (1460px):** iki bağımsız `<section>` ızgarası vardı — `1fr 1fr`/gap 48 ve `1.2fr 1fr`/gap 40. (1) Üst ızgaranın satır yüksekliğini uzun olan sağ sütun belirliyordu: sol içerik 710'da bitiyor, hücre 838'e uzatılıyor, beyan 882'de başlıyordu → **172px ölü alan**. (2) Dikiş 706 → 766, yani **60px kayma**.
+  - **Uygulama sapması DEĞİLDİ:** aynı ölçüm `.dc.html` üzerinde de yapıldı — kayma **132px**, ölü alan **263px**. Tasarımın kendi hizasızlığı, ve sebebi "Çeşitler" bloğunun sonradan eklenip (§1b, 04.08) sağ sütunu uzatması. Gerekçenin tamamı `design/KARARLAR.md`.
+  - **Izgara yetmedi, flex gerekti — ölçülerek anlaşıldı.** İlk deneme tek `grid` + `items-start`'tı: dikiş düzeldi ama **delik kaldı** (galeri 710, beyan hâlâ 882), çünkü ızgarada **satırlar ortaktır** ve ikinci satır uzun hücreyi bekler. İki bağımsız flex sütununa geçildi. Son ölçüm: 710 → **754** (44px, tasarımın kendi ritmi), dikiş kayması **0**.
+  - **Ders (kayda değer):** *"sütunlar hizalansın"* ile *"sütunlar bağımsız aksın"* aynı şey değil — ızgara birincisini verir, ikincisini engeller.
+  - `BEKLEYEN(08.47)`: düzeltme `.dc.html`'e geri işlenmedi — kaynak tasarımın kendisi hizasız ve kopyayı yamamak onu gizlerdi. Claude Design turunda çözülmeli.

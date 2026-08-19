@@ -2,12 +2,13 @@ import { DiscountCodeService, DiscountService, OrderService, UserProfileService,
 import {
   applyBestDiscount,
   checkCouponEligibility,
+  findReachableDiscount,
   type AppliedDiscount,
   type DiscountRule,
   type DiscountableLine,
 } from '@lezzet/domain-core';
 import type { Discount, DiscountCode, LocalizedText } from '@lezzet/types';
-import type { CartDiscount, CouponFailure, DiscountReason } from './cart-types';
+import type { CartDiscount, CartReachableDiscount, CartDiscountResult, CouponFailure, DiscountReason } from './cart-types';
 
 /**
  * Sepette indirim çözümü (09.6 müşteri tarafı) — **uygulama katmanı orkestrasyonu**. DOMAIN §5.
@@ -41,7 +42,7 @@ export interface CartDiscountInput {
  * **Kupon geçerli olsa bile kazanmayabilir** — o zaman ret değil, `outranked` döner ve sepete
  * kazanan indirim uygulanır: müşteri hem sebebi görür hem parasını kaybetmez.
  */
-export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Promise<CartDiscount> {
+export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Promise<CartDiscountResult> {
   const discounts = new DiscountService(db);
   const code = input.couponCode?.trim() ?? '';
   const now = input.now ?? new Date();
@@ -69,7 +70,24 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   const rules = pool.map((row) => toRule(row, codesByDiscount.get(row.id) ?? [], usage.get(row.id), input.customerId));
   const winner = applyBestDiscount(input.lines, rules, ctx);
 
-  if (!code) return winner ? automatic(winner, pool, customerDiscountPercent) : { status: 'none' };
+  /*
+    ELİNİN ALTINDAKİ İNDİRİM (19.08 kullanıcı kararı) — kazanandan bağımsız hesaplanır ve KUPON
+    YOLUNDAN da geçer: kuponu reddedilen müşterinin eşiğe bir adım kalmış bir kampanyası olabilir.
+    Motor yalnız eşik sebebiyle kaçırılanı ve yalnız bugünkünden fazlasını vereni döndürüyor
+    (künyesi `findReachableDiscount`'ta); burada eklenen tek şey müşteriye görünen ad.
+  */
+  const reach = findReachableDiscount(input.lines, rules, ctx);
+  const reachable: CartReachableDiscount | null = reach
+    ? {
+        missingCents: reach.missingCents,
+        minBasketCents: reach.minBasketCents,
+        projectedCents: reach.projectedCents,
+        label: publicLabelOf(pool.find((row) => row.id === reach.discountId)),
+      }
+    : null;
+  const out = (discount: CartDiscount): CartDiscountResult => ({ discount, reachable });
+
+  if (!code) return out(winner ? automatic(winner, pool, customerDiscountPercent) : { status: 'none' });
 
   // Kod girildi: önce kuponun kendisi teşhis edilir.
   const rejected = (reason: CouponFailure): CartDiscount => ({
@@ -89,16 +107,16 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   });
 
   // Kupon olmayan bir kuralın kimliğiyle indirim alınamaz: kampanyanın kodu yoktur.
-  if (!coupon || !hit || coupon.trigger !== 'coupon') return rejected('unknown_code');
+  if (!coupon || !hit || coupon.trigger !== 'coupon') return out(rejected('unknown_code'));
 
   const rule = toRule(coupon, codesByDiscount.get(coupon.id) ?? [], usage.get(coupon.id), input.customerId);
   const eligibility = checkCouponEligibility(rule, ctx, basketOf(input.lines), now);
   // Kişisel kupon başkasının elinde: varlığını doğrulamak, kodu paylaşmaya davet olurdu.
-  if (!eligibility.ok) return rejected(eligibility.reason === 'not_yours' ? 'unknown_code' : eligibility.reason);
+  if (!eligibility.ok) return out(rejected(eligibility.reason === 'not_yours' ? 'unknown_code' : eligibility.reason));
 
-  if (winner?.discountId !== coupon.id) return rejected('outranked');
+  if (winner?.discountId !== coupon.id) return out(rejected('outranked'));
 
-  return {
+  return out({
     status: 'applied',
     source: 'coupon',
     // Kodun KURALDAKİ yazılışı taşınır, müşterinin yazdığı değil ("bienvenue" → "BIENVENUE").
@@ -110,7 +128,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     lineShares: winner.lineShares,
     discountId: winner.discountId,
     label: publicLabelOf(coupon),
-  };
+  });
 }
 
 function automatic(winner: AppliedDiscount, pool: readonly Discount[], customerPercent: number | null): CartDiscount {

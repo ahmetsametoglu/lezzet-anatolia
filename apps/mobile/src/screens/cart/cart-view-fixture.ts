@@ -71,6 +71,7 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
     lines,
     subtotalCents,
     discount: { status: 'none' },
+    reachableDiscount: null,
     totalCents: subtotalCents,
     itemCount: lines.reduce((sum, line) => sum + line.qty, 0),
     hasBlocked: lines.some((line) => line.blocked),
