@@ -117,13 +117,51 @@ async function readSimilar(
     filters: { categoryId: product.categoryId, status: 'active' },
     limit: SIMILAR_POOL,
   });
-  const rows = pickSimilar(
-    page.rows.filter((p) => p.id !== product.id),
-    SIMILAR_LIMIT,
-    product.familyId,
-  );
-  const context = await loadProductContext(db, rows, place, viewer);
-  return rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
+
+  /**
+   * ── SEÇKİ ARTIK ALINAMAYAN ÜRÜNÜ ÖNERMİYOR (kullanıcı kararı 19.08, ekran turuyla) ──────────
+   *
+   * Ekranda görüldü: 67400'e bakan müşteriye "Bunları da sevebilirsiniz" şeridinde **"Haber ver"**
+   * düğmeli kartlar çıkıyordu — yani sisteme göre o adrese gidemeyen ürünler. Sistem bunu ZATEN
+   * biliyordu (kartın üstüne yazıyordu), ama seçime hiç sokmuyordu: süzgeç yalnız kategori +
+   * `status`tü, `place` sadece kartı ETİKETLEMEK için kullanılıyordu.
+   *
+   * En keskin gerekçe sayfanın kendi içindeydi: teslimat kutusunun birincil düğmesi *"Kargolanabilir
+   * benzerleri gör"* diyor, iki blok aşağıdaki şerit alınamayanları sıralıyordu. Sayfa kendi
+   * kendisiyle çelişiyordu.
+   *
+   * **Düşen iki hâl:** `elsewhere` (bu adrese gidemez) ve `out_of_stock` (hiçbir yerde yok). Kalan
+   * `shipping` DÜŞMEZ — kargoyla da olsa müşteri onu alabiliyor.
+   *
+   * **Bu kural yalnız ÖNERİ şeridinindir.** Ailenin çeşit kartları (`readFamily`) süzülmez ve
+   * süzülmemeli: orası bir öneri değil, bakılan ürünün kendi seçicisidir — adrese göre süzmek,
+   * ürünü kendi çeşitlerinden gizlemek olurdu. Katalog listesi de ayrı: orada "Haber ver" bilinçli
+   * bir talep toplama aracı (tasarımda çizili).
+   *
+   * ── BAĞLAM ARTIK HAVUZUN TAMAMI İÇİN OKUNUYOR ─────────────────────────────────────────────
+   * Önce 4 aday seçilip bağlam onlar için okunuyordu; alınabilirlik seçimden ÖNCE bilinmek zorunda
+   * olduğu için sıra tersine döndü. Bedeli yok ve bu ölçüldü: `loadProductContext` satır sayısından
+   * BAĞIMSIZ olarak 5 paralel sorgu atıyor (kimlikler `in(...)` listesine giriyor) — 40 aday, 4
+   * adayla aynı tur sayısı demek.
+   *
+   * Aile kuralı (her aileden tek temsilci) süzgeçten SONRA uygulanıyor: önce uygulasaydık, elenen
+   * bir temsilcinin yerine ailenin alınabilir üyesi geçemezdi.
+   */
+  const candidates = page.rows.filter((p) => p.id !== product.id);
+  const context = await loadProductContext(db, candidates, place, viewer);
+  const views = new Map(candidates.map((p) => [p.id, toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)]));
+
+  const buyable = candidates.filter((p) => {
+    const status = views.get(p.id)?.stockStatus;
+    return status !== 'elsewhere' && status !== 'out_of_stock';
+  });
+
+  // Hiçbiri kalmazsa bölüm HİÇ ÇİZİLMEZ (`product.desktop`: `similar.length > 0`) — alakasız bir
+  // şerit göstermektense hiç göstermemek doğru.
+  return pickSimilar(buyable, SIMILAR_LIMIT, product.familyId).flatMap((p) => {
+    const view = views.get(p.id);
+    return view ? [view] : [];
+  });
 }
 
 /**

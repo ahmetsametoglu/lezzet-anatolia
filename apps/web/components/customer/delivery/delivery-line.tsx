@@ -129,7 +129,15 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
             away ? 'border border-honey-line bg-honey-bg text-honey' : 'border border-sand-300 bg-sand-100 text-body',
           ].join(' ')}
         >
-          <span className="font-bold">{away ? t.awayMark : t.shipMark}</span>
+          {/* ── BAŞLIK SATIRI KALKTI (kullanıcı bildirimi 19.08) ──────────────────────────────
+              `t.shipMark` bu kutunun başlığıydı ve **aynı metin** ürün detayında stok rozeti olarak
+              da basılıyordu (`StockMark` → `band('ship', t.shipMark)`): ekranda kelimesi kelimesine
+              iki kez "📦 Kargoyla gönderilir". Kural artık şu — **rozet ADI söyler, kutu bu ADRESE
+              dair SONUCU.** Kutu rozetin söylediğini tekrar etmez.
+
+              `compact` hâlde (liste/sepet satırı) rozet YOKTUR, o yüzden başlık orada duruyor:
+              tekrar eden şey başlığın kendisi değil, ikisinin yan yana gelmesiydi. */}
+          {compact && <span className="font-bold">{away ? t.awayMark : t.shipMark}</span>}
           <span className="leading-relaxed">{(away ? t.awayBody : t.shipBody).replace('{code}', place.postalCode)}</span>
           {blockedActions}
           {/* Yer değiştirme çıkışı YALNIZ engelli hâlde: kargoyla gelen üründe engellenmiş bir şey

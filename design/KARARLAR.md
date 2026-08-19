@@ -1351,3 +1351,48 @@ içine koymak, menüyü sessizce yok eder.
 
 Görsel karar bu turda `.dc.html`'e işlenmedi (yüzey sözlü istekten doğdu, Claude Design'dan gelmedi) —
 tasarım dosyasına geri yazılması `19.20`'de işaretli.
+### Rozet ölçüsü ORTAK, ve kutu rozetin söylediğini tekrar etmiyor (19.08, kullanıcı isteği)
+
+**Ölçüldü:** yer işareti `px-3.5 py-2 · text-body-sm · bold`, soğuk zincir işareti
+`px-2.5 py-0.5 · text-micro · semibold` — dikey dolgu dört kat, yazı bir kademe farklı. Yan yana
+duruyorlar ve biri rozet, öteki etiket gibi okunuyordu. Kullanıcının tarifi: *"kargoyla gönderilir
+rozeti birazcık büyük olmuş, küçültebiliriz; soğuk zincir çok az büyüyüp her iki rozet de aynı
+büyüklükte olabilir."* İkisi `px-2.5 py-1 · text-note · semibold` ile ortada buluştu — **ölçü
+ortaktır, biri değişirse öteki de değişir.**
+
+**Ve aynı metin iki yerde basılıyordu:** `t.shipMark` ("📦 Kargoyla gönderilir") hem ürün
+detayındaki stok rozetiydi hem teslimat kutusunun kalın başlığı. Kelimesi kelimesine iki kez.
+Kural artık şu — **rozet ADI söyler, kutu bu ADRESE dair SONUCU.** Kutunun başlığı kalktı (yalnız
+`compact` hâlde duruyor: liste/sepet satırında rozet yoktur, orada tekrar da yoktur), `blockedHere`
+ve `shipBody` metinlerinden rozeti tekrar eden açılış cümleleri çıkarıldı (üç dilde).
+
+### "Bunları da sevebilirsiniz" ALINAMAYAN ürünü önermiyor artık (19.08, kullanıcı kararı)
+
+Kullanıcı ekran görüntüsüyle bildirdi (67400): *"Mantıksız olan şey şu — 'Haber ver' yazan butonlu
+ürünlerin gelmemesi gerekir oraya."*
+
+**Ölçüldü.** `readSimilar` adayları yalnız iki ölçütle seçiyordu: aynı kategori + `status:'active'`.
+Müşterinin yeri (`place`) fonksiyona **geçiyordu** ama seçime hiç girmiyordu — sadece kartı
+ETİKETLEMEK için kullanılıyordu, yani "Haber ver" yazısını üreten şeydi. Sistem ürünün o adrese
+gidemeyeceğini biliyor, kartın üstüne yazıyor, ve yine de öneriyordu.
+
+**En sert gerekçe sayfanın kendi içindeydi:** aynı turda teslimat kutusunun birincil düğmesi
+*"Kargolanabilir benzerleri gör"* oldu. Sayfa "alabileceğin alternatiflere bak" derken iki blok
+aşağıdaki şerit alamayacaklarını sıralıyordu.
+
+**Düşen iki hâl:** `elsewhere` (bu adrese gidemez) ve `out_of_stock` (hiçbir yerde yok). `shipping`
+DÜŞMEZ — kargoyla da olsa müşteri onu alabiliyor. Süzgeçten sonra hiçbiri kalmazsa bölüm hiç
+çizilmez: alakasız bir şerit göstermektense hiç göstermemek doğru.
+
+**Kural yalnız ÖNERİ şeridinindir ve sınırı bilinçli:**
+- **Ailenin çeşit kartları süzülmez** — orası bir öneri değil, bakılan ürünün kendi seçicisi. Adrese
+  göre süzmek, ürünü kendi çeşitlerinden gizlemek olurdu (Latte'ye bakan müşteri "Kırmızı kadife
+  diye bir şey var mı" sorusunun cevabını hiç göremezdi).
+- **Katalog listesi süzülmez** — orada "Haber ver" bilinçli bir talep toplama aracı ve tasarımda
+  öyle çizili. *(Kanal fiyatı olmayan ürünün katalogdan çıkarılması ayrı bir iş: `08.46`.)*
+
+**Bedeli ölçüldü, yok.** Alınabilirlik seçimden ÖNCE bilinmek zorunda olduğu için bağlam artık 4
+aday yerine havuzun tamamı (40) için okunuyor. `loadProductContext` satır sayısından BAĞIMSIZ
+olarak 5 paralel sorgu atıyor (kimlikler `in(...)` listesine giriyor) — 40 aday, 4 adayla aynı tur
+sayısı. Aile kuralı (her aileden tek temsilci) süzgeçten SONRA uygulanıyor: önce uygulansaydı elenen
+bir temsilcinin yerine ailenin alınabilir üyesi geçemezdi.

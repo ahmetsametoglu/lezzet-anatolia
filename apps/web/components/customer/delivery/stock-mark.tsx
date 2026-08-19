@@ -63,7 +63,11 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
     size === 'lg' ? (
       <span
         className={[
-          'inline-flex w-fit items-center rounded-soft border px-3.5 py-2 font-sans text-body-sm font-bold leading-snug',
+          // Ölçü `ColdChainMark` ile ORTAK (kullanıcı isteği 19.08): ikisi yan yana duruyor ve
+          // farklı boyda oldukları için biri rozet, öteki etiket gibi okunuyordu (ölçüldü: dikey
+          // dolgu 8px'e 2px, yazı bir kademe büyük). Ortada buluştular — bu kutu küçüldü, öteki
+          // büyüdü. **Değiştirirken ikisi birlikte değişir**, yoksa fark geri gelir.
+          'inline-flex w-fit items-center rounded-soft border px-2.5 py-1 font-sans text-note font-semibold leading-snug',
           tone === 'blocked' ? 'border-honey-line bg-honey-bg text-honey' : 'border-sand-300 bg-closed-bg text-closed',
         ].join(' ')}
       >
@@ -98,7 +102,8 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
  */
 export function ColdChainMark({ label }: { label: string }) {
   return (
-    <span className="w-max rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-0.5 font-sans text-micro font-semibold text-muted">
+    // Ölçü yer işaretiyle ORTAK — gerekçesi orada (`band`), ikisi birlikte değişir.
+    <span className="w-max rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-1 font-sans text-note font-semibold text-muted">
       {label}
     </span>
   );
