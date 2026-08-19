@@ -26,8 +26,8 @@
           {
             "heading": "Hangi ürün hangi yolla gelir",
             "paragraphs": [
-              "Soğuk zincir isteyen ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz. Bu ürünler kargoya verilemez: soğuk zinciri kargo koşullarında güvenle koruyamayız, koruyamadığımız bir şeyi de taşımayız.",
-              "Soğuk zincir istemeyen bütün ürünleri kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın. Yani bölge dışında olmanız alışveriş yapamayacağınız anlamına gelmez; yalnız soğuk zincir isteyen ürünler size ulaşamaz.",
+              "Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz. Bu ürünler kargoya verilemez: soğuk zinciri kargo koşullarında güvenle koruyamayız, koruyamadığımız bir şeyi de taşımayız.",
+              "Diğer bütün ürünleri kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın. Yani bölge dışında olmanız alışveriş yapamayacağınız anlamına gelmez; yalnız soğuk zincir gerektiren ürünler size ulaşamaz.",
               "Hangi ürünün hangi yolla geleceğini katalogda ve ürün sayfasında yazıyoruz. Bölge dışı bir adres seçtiğinizde soğuk zincir kalemleri siparişe eklenmez, sepetinizde bekler."
             ],
             "bullets": []
@@ -111,7 +111,7 @@
         "questions": [
           {
             "question": "Ürünler donmuş mu geliyor?",
-            "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir isteyen ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Soğuk zincir istemeyen bütün ürünleri ise her adrese kargoyla gönderiyoruz."
+            "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Diğer bütün ürünleri ise her adrese kargoyla gönderiyoruz."
           },
           {
             "question": "Minimum sipariş tutarı var mı?",
@@ -263,7 +263,7 @@
             "paragraphs": [
               "Sattığımız ürünler dondurulmuş ve raf ömürlü gıdalardır. Ürünleri kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır; bu bilgiler ürünü üreten firmanın beyanına dayanır.",
               "Ürün fotoğrafları tanıtım amaçlıdır; sunum ve görünüm ürünler arasında farklılık gösterebilir. Bağlayıcı olan, ürün sayfasındaki yazılı bilgidir.",
-              "Soğuk zincir isteyen ürünler (donuk ve soğutulmuş) yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
+              "Soğuk zincir gerektiren ürünler (donuk ve soğutulmuş) yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
             ],
             "bullets": []
           },
@@ -298,7 +298,7 @@
           {
             "heading": "Teslimat",
             "paragraphs": [
-              "Soğuk zincir isteyen ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Soğuk zincir istemeyen bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+              "Soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Diğer bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
               "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo eşiği güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında teslim edilir.",
               "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
               "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."

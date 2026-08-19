@@ -1215,6 +1215,33 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **Cihazda uçtan uca doğrulandı (18.08):** misafir kartı görüyor, basınca tur açılıyor (1/20,
   kaydırma çalışıyor).
 
+- [ ] **MB-76 · YASAL SAYFALARIN MİSAFİRE AÇIK HİÇBİR KAPISI YOK.**
+  A17'de ölçüldü (18.08, cihazda): `/legal/*`e giden çağrıların tamamı üç yerde ve üçü de kapalı —
+  `account-screen.tsx:575` (Teslimat ve iade), `:694` (Gizlilik), `login-screen.tsx:367` (Gizlilik).
+  Hesap sekmesi misafirde *"Hesabınıza ulaşmak için birkaç saniyede doğrulanın"* duvarını çiziyor;
+  altında tek düğme var ve o da giriş. Yani **teslimat kuralları, kargo ücreti, asgari sepet,
+  iade koşulları ve SSS satın alma kararını verecek kişiye kapalı.** Sayfalar deep-link ile
+  açılınca sorunsuz çalışıyor (ölçüldü) — eksik olan yalnız kapı.
+
+  Bu MB-75'in **birebir aynı sınıfı**: içerik kurulu, kapı yok. Orada da çare kapıyı açmaktı.
+  Aciliyeti şu iki şey artırıyor: (a) yeni *"Güncel tutarlar"* bölümü `(21.82)` ile canlı ayardan
+  okunuyor ve müşteri onu göremiyor; (b) Fransız tüketici mevzuatında teslimat koşulları ve ücretler
+  **satın almadan ÖNCE** erişilebilir olmak zorunda — web'de site altbilgisinden açık, uygulamada
+  değil. **Yapılacak:** kapının yeri kullanıcı kararı — hesap duvarının altına bir bağ şeridi mi,
+  onboarding'in sonuna mı, yoksa sepet/ödeme ekranına mı.
+
+- [ ] **MB-77 · YASAL METİNDE WEB DİLİ KALMIŞ — uygulamada karşılığı olmayan yerler tarif ediliyor.**
+  A17'de ölçüldü (18.08, cihazda). Mobil sözlük web'in `content.json`larından üretilmişti
+  (`legal-types.ts` künyesi) ve üretim sırasında yüzey farkı gözetilmemiş:
+  · *"Posta kodunuzu **sitenin üst şeridinde** her an değiştirebilirsiniz"* — uygulamada üst şerit
+    yok; posta kodu vitrin başlığındaki hapta ve çekmeceyle değişiyor.
+  · *"sepete koyup **checkout'ta** sürprizle karşılaşmazsınız"* — "checkout" müşteri dili değil;
+    uygulamadaki adım "Siparişi tamamla".
+  · SSS: *"**Site** ve e-postaların dilini nasıl değiştiririm?"* — uygulamada dil Hesabım'dan.
+  Üç cümle de yanlış bilgi vermiyor ama **olmayan bir yeri tarif ediyor**; müşteri aradığını
+  bulamaz. Kalemi `BEKLEYEN(21.82)` ile birlikte okumak gerek: iki nüsha elle senkron tutulduğu
+  sürece bu sınıf yeniden doğar.
+
 ### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)
 
 > Beşi de **görsel/metin** kalemi; hiçbiri veri ya da hesap arızası değil. Turun aynı gününde

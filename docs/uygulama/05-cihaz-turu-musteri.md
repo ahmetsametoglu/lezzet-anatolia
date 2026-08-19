@@ -37,6 +37,15 @@ müdahale yok).
 Ön koşul: uygulama verisi silinir, böylece onboarding kapısı açılır ve "ilk açılış" gerçekten
 ilk açılış olur.
 
+> **DURUM 18.08 (akşam) — A TURU KAPANDI: A1…A17'nin tamamı koşuldu.** Son iki adım `(21.83)`te:
+> **A17 ✓ ama bir açıkla** — beş yasal sayfa ve SSS açılıyor, arama ve akordeon çalışıyor; ancak
+> **misafirin bu sayfalara hiçbir kapısı yok** (tek kapı hesap ekranı, o da giriş duvarının
+> arkasında). Deep-link ile ölçüldü. **A14 ✓** — giriş duvarının yeri sepette DEĞİL, ödeme
+> ekranında: misafir sepeti 53,40 €'ya doldurup "Siparişi tamamla"ya basabiliyor, sipariş özetini
+> (4× kalem, ara toplam, genel toplam) GÖRÜYOR; duvar en üstteki kesikli kutu ve "Siparişi onayla"
+> pasif, altında gerekçesi yazılı. Yani duvar müşteriyi geri çevirmiyor, ne alacağını gösterip
+> sonra doğrulanmasını istiyor.
+>
 > **DURUM 18.08 — A1…A8 koşuldu, A14 kısmen; kalanlar açık.** Üç şey ölçümden çıktı:
 >
 > · **`adb shell pm clear` BU CİHAZDA ÇALIŞMIYOR** (Oppo CPH1907): kabuk kullanıcısında

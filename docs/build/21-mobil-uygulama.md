@@ -4097,7 +4097,22 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     temizlendi (sepet 0 ürün).
 
   **Doğrulama:** `tsc` (mobil) temiz · kalan `isteyen/istemeyen` sayımı **0** · cihazda üç ekranda
-  gözle doğrulandı (Nerelere gidiyoruz · SSS · Teslimat ve iade).
+  gözle doğrulandı (Nerelere gidiyoruz · SSS · Teslimat ve iade) · `lint` temiz · **1374 birim** +
+  **599 mobil jest** yeşil · `pnpm test` 2691/2710 + 19 atlandı (düşen iki dosya `canceling statement
+  due to statement timeout`, tek iddia hatası yok — günün üçüncü FARKLI kümesi, altyapı).
+
+  **Durum — WEB YARISI COMMIT EDİLMEDİ (kullanıcı kararı 19.08).** Kullanıcı bu turda yalnız mobil
+  tarafın gönderilmesini istedi; yasal metnin web nüshası (`legal/{delivery,faq,sales}/content.json`)
+  çalışma ağacında **düzeltilmiş hâlde ama commit edilmemiş** duruyor ve web şeridine bırakıldı —
+  `docs/talep/not-web-sogut-zincir-metni-yarim-kaldi.md`. İki nüsha o commit atılana kadar ayrık:
+  mobil düzeltilmiş, web'in deposundaki hâli eski. `BEKLEYEN(21.82)`nin işaret ettiği risk tam olarak
+  bu — üretici betik olsaydı bu ayrım hiç doğmazdı.
+
+  **KÜNYE KAYMASI (CLAUDE §0, yaşandı 19.08).** Bu görev satırı ve `docs/build/README.md`'nin 21
+  sayacı, mobil şeridin commit'ine değil **`3d0d2d4b` (sefer/kurye)** commit'ine girdi — o commit
+  çalışma ağacında bekleyen dosyaları birlikte almış. Kod kayıp değil ama gerekçesi başka künyenin
+  altında ve `git log docs/build/21-mobil-uygulama.md`'den bu iş bulunamıyor. Tarih yeniden
+  yazılmadı: geri alma kullanıcının kararıdır.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

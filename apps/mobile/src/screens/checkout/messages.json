@@ -26,7 +26,7 @@
     },
     "undeliverable": {
       "title": "Bazı kalemler bu siparişe girmiyor",
-      "body": "Soğuk zincir isteyen ürünleri bu adrese götüremiyoruz; onlar sepetinizde bekliyor ve bu siparişe eklenmiyor. Bölge içi bir adres seçerseniz aynı siparişe dahil olurlar.",
+      "body": "Soğuk zincir gerektiren ürünleri bu adrese götüremiyoruz; onlar sepetinizde bekliyor ve bu siparişe eklenmiyor. Bölge içi bir adres seçerseniz aynı siparişe dahil olurlar.",
       "items": "Bekleyenler: {items}."
     },
     "delivery": {

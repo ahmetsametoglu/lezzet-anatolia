@@ -2,7 +2,7 @@
   "tr": {
     "back": "Geri",
     "title": "Nerelere gidiyoruz",
-    "intro": "Soğuk zincir isteyen ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla getiriyoruz. Aracımız şu posta kodlarına gidiyor.",
+    "intro": "Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla getiriyoruz. Aracımız şu posta kodlarına gidiyor.",
     "listEyebrow": "Posta kodları",
     "countries": {
       "FR": "Fransa",
@@ -18,8 +18,8 @@
     },
     "tryCode": "Kendi posta kodumu deneyeyim",
     "tryCodeHint": "Posta kodunuzu girin, teslimat şeklini söyleyelim",
-    "closing": "Soğuk zincir istemeyen ürünleri {countries} genelinde her adrese kargoyla gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz.",
-    "closingNoShipping": "Soğuk zincir istemeyen ürünleri kargoyla da gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz."
+    "closing": "Diğer bütün ürünleri {countries} genelinde her adrese kargoyla gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz.",
+    "closingNoShipping": "Diğer bütün ürünleri kargoyla da gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz."
   },
   "fr": {
     "back": "Retour",

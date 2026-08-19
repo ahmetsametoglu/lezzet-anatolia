@@ -6,7 +6,7 @@
     "onlyShippable": "📍 Adresime gönderilebilir",
     "placeNotice": {
       "title": "Bu bölgeye aracımız gitmiyor",
-      "body": "Soğuk zincir isteyen ürünleri buraya getiremiyoruz; diğer bütün ürünler kargoyla gelir.",
+      "body": "Soğuk zincir gerektiren ürünleri buraya getiremiyoruz; diğer bütün ürünler kargoyla gelir.",
       "code": "{postal} ▾",
       "changeCode": "Posta kodunu değiştir",
       "zones": "Nerelere gidiyorsunuz?",
@@ -44,7 +44,7 @@
       "save": "Kaydet",
       "saved": "Teslimat bölgeniz güncellendi ✓",
       "insideNote": "Harika — kapınıza ücretsiz teslim ediyoruz! Kapıda ödeme de kullanabilirsiniz.",
-      "shippingNote": "Buraya aracımız gitmiyor: soğuk zincir isteyen ürünleri (donuk ve soğutulmuş) getiremiyoruz. Diğer bütün ürünleri kargoyla 2–4 iş gününde ulaştırırız.",
+      "shippingNote": "Buraya aracımız gitmiyor: soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) getiremiyoruz. Diğer bütün ürünleri kargoyla 2–4 iş gününde ulaştırırız.",
       "ambiguousNote": "Bu kod birden çok yerde geçerli — teslimat adresinizi girerken netleştireceğiz.",
       "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
       "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız.",
