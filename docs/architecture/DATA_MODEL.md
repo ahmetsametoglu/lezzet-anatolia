@@ -82,6 +82,27 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 
 **Türetme ilkesi (genel):** Bir durum, bir veya birkaç değerden **tam ve tek-anlamlı** biçimde belirlenebiliyorsa **saklanmaz, türetilir** — WORKFLOW §9 "tek kaynak" ilkesinin genelleştirilmiş hâli. Örnekler: kullanılabilir stok (fiili − ayrılmış), ödeme durumu (tahsil − iade vs karşılanan tutar).
 
+**Biriktirme eşiği — türet / önbellekle / sabitle (kullanıcı kararı 19.08).** Türetme varsayılandır;
+ondan sapmanın iki meşru yolu ve tek bir sırası vardır. Yeni her tablo/ekran tasarımında üç soru
+SIRAYLA sorulur:
+
+1. **Donmuş bir an mı?** (sipariş anındaki fiyat, kapanışta beklenen tutar, seferin kuryesi) →
+   **sabitlenir**: kayıt tarihî gerçektir; türetim hep "bugünü" söyler, "o günü" ancak kayıt saklar.
+   Emsaller: `OrderItem.unit_price` kopyası, kâr snapshot'ı, `delivery_run`(+`_close`).
+2. **Canlı ama çok okunan mı?** → önce **görünüm** (view — driftsiz ve bedava; `0027`nin ürün skoru
+   emsali: cache kolonu *"tazelenmeyi unutan tek yol sessiz yalan üretir"* diye reddedildi, view
+   seçildi). Ancak **ölçülmüş** yavaşlıkta materialized view'a ya da cache kolonuna terfi eder —
+   `Order.amount_*` emsali: kolon performans cache'idir, kaynak daima `MoneyMovement`.
+3. **Sayaç/özet kolonu mu isteniyor?** → yalnız yazımı **tek kapıdan** geçiyorsa (RPC ya da tetik —
+   `start_delivery_run`ın `courier_id` senkronu emsali; "uygulama iki yeri de günceller" deseni
+   yasak) ve buraya gerekçesiyle karar yazılarak.
+
+İki bekçi kuralı: *(a)* "sorgu maliyeti düşer" gerekçesi **ölçüm ister** — yerel veri sahtedir ve
+ondan istatistik çıkarılmaz; bugünden geçerli olan gerekçe yapısal kazançtır (JOIN zorlaması → tek
+kolon, okunabilirlik, AI-asistan araçlarına ucuz özet). *(b)* **Erken agregasyon granülerliği
+öldürür:** ham kayıt dururken özet her zaman yeniden üretilebilir, tersi imkânsız — dönemsel özet
+tabloları (günlük KPI vb.) analitik modülüyle birlikte, soruları netleşince açılır.
+
 - **Kanal alanı siparişe yazılır ve değişmez** — sonradan raporlama ve audit için.
 - **Sipariş kaynağı (`order_source`) kanaldan bağımsız ayrı eksendir** — Faz 1'de bile var; WhatsApp siparişi elle girilse de kaynak=whatsapp. Yüzey otomasyona dönünce veri modeli değişmez (bkz. `CHANNELS.md §2`).
 - **Telefon müşteri kimliğidir** — WhatsApp telefonla tanır; "telefonla bul-veya-oluştur" domain kuralı (bkz. `CHANNELS.md §3`).
