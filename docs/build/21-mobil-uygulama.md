@@ -4204,6 +4204,42 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Doğrulama:** `tsc` temiz · mobil jest **84/84 · 599/599** (ilk koşuda iki paket düştü, ikinci
   koşuda temizlendi — MB-38'in kayıtlı yük kırılganlığı).
 
+- [x] (21.86) **YASAL METİN ARTIK UYGULAMAYI ANLATIYOR — ve gizlilik metni olmayan bir mekanizmayı
+  tarif ediyormuş (MB-77, 19.08)**
+  → `touches: apps/mobile/src/screens/legal/messages.json, docs/uygulama/BACKLOG-musteri.md`
+
+  A17 turunda üç cümle görülmüştü; sözlüğün tamamı taranınca **sekiz yer** çıktı ve ağırlık merkezi
+  başka yerdeymiş.
+
+  **1 · YERLER.** *"Posta kodunuzu **sitenin üst şeridinde** değiştirebilirsiniz"* → uygulamada üst
+  şerit yok, vitrinin başındaki bölge hapı var. *"**checkout**'ta sürprizle"* → müşteri dili değil,
+  adımın adı *"Siparişi tamamla"*. SSS'in *"**Site** ve e-postaların dilini"* sorusu → uygulamada
+  dil Hesabım'dan değişiyor (ölçüldü: `account-screen.tsx` `setAppLocale`). Üçü de yanlış bilgi
+  vermiyordu ama **olmayan bir yeri tarif ediyordu**; müşteri aradığını bulamazdı.
+
+  **2 · ASIL BULGU — GİZLİLİK METNİ ÇEREZ VE TARAYICI ANLATIYOR.** *"Çerezler ve tarayıcı kaydı"*
+  başlığı, *"Tarayıcınızda tutulanlar…"*, *"tarayıcıdaki sepetiniz … tarayıcıdan silinir"*, *"posta
+  kodu tarayıcınızda saklanır"* — **uygulamada ne tarayıcı var ne çerez.** Ölçüldü: oturum
+  `expo-secure-store` ile işletim sisteminin güvenli kasasında (iOS Anahtar Zinciri · Android
+  Keystore), ilk açılış işareti `Settings`te (`device-store.ts` künyesi). Başlık *"Cihazınızda
+  saklananlar"* oldu ve **saklama yeri adıyla yazıldı** — GDPR metninin işi zaten bu.
+
+  **3 · BİLEREK DOKUNULMADI.** §6'nın ikinci paragrafı *"Sayfaların ne sıklıkla görüntülendiğini
+  ölçüyoruz"* diyor; **MB-63 ölçtü, native'de sıfır analitik çağrısı var** — yani bugün doğru değil.
+  Silinmedi: fazladan beyan gizlilik metninde müşterinin aleyhine bir kusur değil (eksik beyan
+  öyledir), **ve MB-63 kapandığı gün cümle kendiliğinden doğru olacak.** Bugün silip yarın geri
+  yazmak, düzelttiğimiz hatanın ters yönlüsü olurdu.
+
+  **4 · KULLANICI KARARI BEKLİYOR.** Metinlerde *"site"* tüzel bağlamda da geçiyor (*"Site sahibi"*,
+  *"Bu site … barındırılmaktadır"*, *"bu site üzerinden yapılan tüm satışlar"*). Bunlar olmayan bir
+  yeri tarif etmiyor, hizmetin adı olarak duruyor — ama uygulamada okununca tuhaf. Değiştirmek bir
+  HUKUK METNİ kararı ve web nüshasını da ilgilendiriyor; tek başıma yazmadım.
+
+  **Doğrulama:** `tsc` temiz · mobil jest **595/599**, düşen dört testin dördü de MB-38'in kayıtlı
+  ailesi (rota durumu okuyanlar) ve **hiçbiri yasal metne bakmıyor**. Bu kez "kırılgan" deyip
+  geçilmedi, ölçüldü: **yük ortalaması 22.96 · paket süresi 11 sn → 58 sn · `app-shell` tek başına
+  3/3 yeşil.** Ölçüm MB-38'e sayısal kanıt olarak işlendi.
+
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden

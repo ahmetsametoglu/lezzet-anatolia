@@ -1256,7 +1256,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   değil. **Yapılacak:** kapının yeri kullanıcı kararı — hesap duvarının altına bir bağ şeridi mi,
   onboarding'in sonuna mı, yoksa sepet/ödeme ekranına mı.
 
-- [ ] **MB-77 · YASAL METİNDE WEB DİLİ KALMIŞ — uygulamada karşılığı olmayan yerler tarif ediliyor.**
+- [x] **MB-77 · YASAL METİNDE WEB DİLİ KALMIŞ — uygulamada karşılığı olmayan yerler tarif ediliyor.**
   A17'de ölçüldü (18.08, cihazda). Mobil sözlük web'in `content.json`larından üretilmişti
   (`legal-types.ts` künyesi) ve üretim sırasında yüzey farkı gözetilmemiş:
   · *"Posta kodunuzu **sitenin üst şeridinde** her an değiştirebilirsiniz"* — uygulamada üst şerit
@@ -1267,6 +1267,33 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   Üç cümle de yanlış bilgi vermiyor ama **olmayan bir yeri tarif ediyor**; müşteri aradığını
   bulamaz. Kalemi `BEKLEYEN(21.82)` ile birlikte okumak gerek: iki nüsha elle senkron tutulduğu
   sürece bu sınıf yeniden doğar.
+
+  **KAPANDI (19.08 · `(21.86)`) — ve tam tarama üç değil SEKİZ yer buldu.** Cihazda görülen üçü
+  başlangıçtı; sözlüğün tamamı taranınca aynı sınıfın daha ağır bir kolu çıktı: **gizlilik metni
+  uygulamada var olmayan bir mekanizmayı tarif ediyordu.**
+  · *"Çerezler ve tarayıcı kaydı"* başlığı, *"Tarayıcınızda tutulanlar…"*, *"tarayıcıdaki sepetiniz
+    … tarayıcıdan silinir"*, *"posta kodu tarayıcınızda saklanır"* — **uygulamada ne tarayıcı var
+    ne çerez.** Ölçüldü: oturum `expo-secure-store` ile işletim sisteminin güvenli kasasında
+    (iOS Anahtar Zinciri · Android Keystore), ilk açılış işareti `Settings`te (`device-store.ts`
+    künyesi). Başlık *"Cihazınızda saklananlar"* oldu ve saklama yeri ADIYLA yazıldı — GDPR
+    metninin işi zaten budur: nerede durduğunu söylemek.
+  · Posta kodu değiştirme yeri, *"checkout"* jargonu ve SSS'in dil sorusu da uygulamanın gerçek
+    yerlerine bağlandı (*"vitrinin üstündeki bölge hapı"*, *"Siparişi tamamla"*, *"Hesabım"*).
+  · Fikri mülkiyet maddesindeki *"tarayıcınızda görüntüleme"* (yalnız TR'de vardı) sadeleşti.
+
+  **BİLEREK DOKUNULMADI — ve gerekçesi kayda değer.** Gizlilik §6'nın ikinci paragrafı *"Sayfaların
+  ne sıklıkla görüntülendiğini ölçüyoruz"* diyor; **MB-63 ölçtü, native'de sıfır analitik çağrısı
+  var**, yani cümle bugün uygulamada doğru değil. Yine de silinmedi: (a) fazladan beyan etmek
+  (over-disclosure) gizlilik metninde müşterinin aleyhine bir kusur değildir, eksik beyan öyledir;
+  (b) **MB-63 kapandığı gün cümle kendiliğinden doğru olacak** — bugün silip yarın geri yazmak,
+  düzelttiğimiz hatanın aynısını ters yönde yapmak olurdu.
+
+  **AÇIK KALAN — kullanıcı kararı bekliyor:** yasal metinlerde *"site"* kelimesi tüzel bağlamda da
+  geçiyor (*"Site sahibi"*, *"Bu site … barındırılmaktadır"*, *"Bu sitedeki metinler … site
+  sahibine aittir"*, *"bu site üzerinden yapılan tüm satışlar"*). Bunlar **olmayan bir yeri tarif
+  etmiyor**, hizmetin adı olarak duruyor — ama uygulamada okununca yine de tuhaf. Değiştirmek
+  (*"site ve uygulama"* ya da *"Lezzet Anatolia hizmeti"*) bir HUKUK METNİ kararıdır ve web
+  nüshasını da ilgilendirir; tek başıma yazmadım.
 
 ### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)
 
@@ -1727,6 +1754,16 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   Ayrıca "Jest did not exit" uyarısı ve 21.20'nin birim test borcu (`StockMark`, `stockMarkOf`,
   `placeModeOf`). *Müşteri turunu bitirirken bu defter de kapanmalı, yoksa yeşil koşu bir şey
   kanıtlamıyor.*
+
+  **İLK SAYISAL KANIT (19.08 · `(21.86)` turunda ölçüldü).** Bugüne dek desen "tam koşuda düşüyor,
+  tekil koşuda geçiyor" diye kayıtlıydı ama SEBEBE dair ölçüm yoktu. Bugün üçü birden ölçüldü:
+  · **Makine yük ortalaması 22.96** (Metro + üç dev sunucu + Supabase + eşzamanlı koşular).
+  · **Paket süresi 11 sn → 58 sn** (beş kat), aynı 599 test.
+  · **Aynı dosya tek başına YEŞİL:** `app-shell` izole koşuda 3/3 geçti, tam koşuda düştü.
+  Düşen dördün dördü de **rota durumu okuyan** testler (`app-shell` · `operations-shell` ·
+  `account-routes` · geri bildirim rotası) — yani kayıttaki "ortak şüpheli expo-router'ın modül
+  düzeyi durumu" teorisiyle uyumlu, ve artık altında bir ölçüm var. **Defter kapanırken eşik
+  şudur: yükü düşürüp koşmak arızayı GİZLER; asıl iş bu dosyaların yükten bağımsız hâle gelmesi.**
 
 - [x] **MB-39 · `knip` mobil pakette dokuz kullanılmayan ihraç tip görüyor** (ölçüldü 11.08):
   `B2bApplicationResult` · `DiscoverSwipe` · `DiscoverClaimResult` · `MeCoupon` ·

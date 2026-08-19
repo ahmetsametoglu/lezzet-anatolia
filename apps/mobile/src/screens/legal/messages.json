@@ -19,7 +19,7 @@
             "heading": "Teslimat bölgemiz",
             "paragraphs": [
               "Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz; teslimat gününüz bölgenizin takvimine göre sunulur.",
-              "Posta kodunuzu sitenin üst şeridinde her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup checkout'ta sürprizle karşılaşmazsınız."
+              "Posta kodunuzu vitrinin üstündeki bölge hapından her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup \"Siparişi tamamla\" adımında sürprizle karşılaşmazsınız."
             ],
             "bullets": []
           },
@@ -142,8 +142,8 @@
             "answer": "Parola kurmanız gerekmez: sepetinizi doldurup e-posta adresinizle siparişi tamamlayabilirsiniz — size gönderdiğimiz kodu girdiğinizde hesabınız arka planda açılır ve siparişiniz ona bağlanır. Böylece siparişleriniz, adresleriniz ve puanınız saklanır; adresinizi bir daha yazmanız gerekmez ve geçmiş bir siparişinizi \"Siparişlerim\"den tek tuşla tekrarlayabilirsiniz."
           },
           {
-            "question": "Site ve e-postaların dilini nasıl değiştiririm?",
-            "answer": "Sitenin üst şeridinden ya da hesap sayfanızdaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — siteyi Türkçe gezen birinin maillerinin Fransızca gelmesi anlamsız olurdu."
+            "question": "Uygulamanın ve e-postaların dilini nasıl değiştiririm?",
+            "answer": "Hesabım sayfasındaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — uygulamayı Türkçe kullanan birinin maillerinin Fransızca gelmesi anlamsız olurdu."
           }
         ],
         "notice": {
@@ -169,7 +169,7 @@
             ],
             "bullets": [
               "Kimlik ve iletişim: adınız, e-posta adresiniz, telefon numaranız.",
-              "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da tarayıcınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
+              "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da cihazınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
               "Sipariş: verdiğiniz siparişler, kalemleri, tutarları ve durumları.",
               "İletişim tercihleri: kampanya izinleri ve tercih ettiğiniz dil.",
               "Talepleriniz: bize yazdığınız mesajlar ve eklediğiniz fotoğraflar.",
@@ -223,11 +223,11 @@
             ]
           },
           {
-            "heading": "Çerezler ve tarayıcı kaydı",
+            "heading": "Cihazınızda saklananlar",
             "paragraphs": [
-              "Reklam veya takip çerezi kullanmıyoruz. Tarayıcınızda tutulanlar sitenin çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu.",
+              "Uygulama çerez kullanmaz — ne reklam, ne takip, ne de başka türlüsü. Cihazınızda tutulanlar uygulamanın çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu. Oturum bilgisi işletim sisteminin güvenli kasasında saklanır (iOS'ta Anahtar Zinciri, Android'de Keystore).",
               "Sayfaların ne sıklıkla görüntülendiğini ölçüyoruz, ama bu ölçüm çerezsizdir ve kimliğe bağlanamaz: ziyaretler her gün değişen, ertesi gün atılan bir anahtarla sayılır ve kişiye ait hiçbir kayıt tutulmaz.",
-              "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda tarayıcıdaki sepetiniz hesabınıza devredilir ve tarayıcıdan silinir."
+              "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda cihazdaki sepetiniz hesabınıza devredilir ve cihazdan silinir."
             ],
             "bullets": []
           }
@@ -396,7 +396,7 @@
             "heading": "Fikri mülkiyet",
             "paragraphs": [
               "Bu sitedeki metinler, ürün fotoğrafları, logo ve tasarım öğeleri site sahibine aittir ve Fransız fikri mülkiyet mevzuatı ile korunmaktadır.",
-              "Bunların tamamının ya da bir kısmının izinsiz çoğaltılması, yayımlanması veya ticari amaçla kullanılması yasaktır. Kişisel ve ticari olmayan kullanım için tarayıcınızda görüntüleme ve yazdırma serbesttir."
+              "Bunların tamamının ya da bir kısmının izinsiz çoğaltılması, yayımlanması veya ticari amaçla kullanılması yasaktır. Kişisel ve ticari olmayan kullanım için görüntüleme ve yazdırma serbesttir."
             ],
             "bullets": []
           },
@@ -453,7 +453,7 @@
             "heading": "Notre zone de livraison",
             "paragraphs": [
               "Nous livrons les adresses de Strasbourg et de ses environs avec notre propre véhicule frigorifique, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
-              "Vous pouvez changer votre code postal à tout moment dans le bandeau en haut du site. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
+              "Vous pouvez changer votre code postal à tout moment depuis la pastille de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
             ],
             "bullets": []
           },
@@ -576,8 +576,8 @@
             "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
           },
           {
-            "question": "Comment changer la langue du site et des e-mails ?",
-            "answer": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui navigue en français reçoive ses messages en turc."
+            "question": "Comment changer la langue de l'application et des e-mails ?",
+            "answer": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui utilise l'application en français reçoive ses messages en turc."
           }
         ],
         "notice": {
@@ -603,7 +603,7 @@
             ],
             "bullets": [
               "Identité et contact : votre nom, votre adresse e-mail, votre numéro de téléphone.",
-              "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé dans votre navigateur même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
+              "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé sur votre appareil même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
               "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
               "Préférences de communication : vos consentements marketing et votre langue.",
               "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
@@ -657,11 +657,11 @@
             ]
           },
           {
-            "heading": "Cookies et stockage navigateur",
+            "heading": "Ce qui est conservé sur votre appareil",
             "paragraphs": [
-              "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi.",
+              "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android).",
               "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé.",
-              "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur."
+              "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil."
             ],
             "bullets": []
           }
@@ -887,7 +887,7 @@
             "heading": "Unser Liefergebiet",
             "paragraphs": [
               "Adressen in Straßburg und Umgebung beliefern wir mit unserem eigenen Kühlfahrzeug bis vor die Haustür. Ob Ihre Adresse im Liefergebiet liegt, sehen Sie bei der Bestellung automatisch anhand Ihrer Postleitzahl; Ihr Liefertag richtet sich nach dem Kalender Ihres Gebiets.",
-              "Sie können Ihre Postleitzahl jederzeit oben auf der Seite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — Sie erleben also an der Kasse keine Überraschung."
+              "Sie können Ihre Postleitzahl jederzeit über die Gebiets-Pille oben in der Vitrine ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
             ],
             "bullets": []
           },
@@ -1010,8 +1010,8 @@
             "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert: Sie geben Ihre Adresse nicht erneut ein und können eine frühere Bestellung unter „Meine Bestellungen“ mit einem Klick wiederholen."
           },
           {
-            "question": "Wie ändere ich die Sprache der Website und der E-Mails?",
-            "answer": "Oben auf der Seite oder über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die Seite auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
+            "question": "Wie ändere ich die Sprache der App und der E-Mails?",
+            "answer": "Über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die App auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
           }
         ],
         "notice": {
@@ -1037,7 +1037,7 @@
             ],
             "bullets": [
               "Identität und Kontakt: Ihr Name, Ihre E-Mail-Adresse, Ihre Telefonnummer.",
-              "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto in Ihrem Browser gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
+              "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto auf Ihrem Gerät gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
               "Bestellungen: Ihre Bestellungen, deren Artikel, Beträge und Status.",
               "Kommunikationseinstellungen: Ihre Marketing-Einwilligungen und Ihre Sprache.",
               "Ihre Anfragen: die Nachrichten, die Sie uns schreiben, und die Fotos, die Sie anhängen.",
@@ -1091,11 +1091,11 @@
             ]
           },
           {
-            "heading": "Cookies und Browser-Speicher",
+            "heading": "Was auf Ihrem Gerät gespeichert wird",
             "paragraphs": [
-              "Wir verwenden weder Werbe- noch Tracking-Cookies. Was in Ihrem Browser gespeichert wird, ist für den Betrieb der Website erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl.",
+              "Die App verwendet keinerlei Cookies — weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android).",
               "Wir messen, wie häufig Seiten aufgerufen werden, doch diese Messung kommt ohne Cookies aus und lässt sich keiner Person zuordnen: Besuche werden mit einem Schlüssel gezählt, der täglich wechselt und am Folgetag verworfen wird; ein personenbezogener Eintrag entsteht dabei nicht.",
-              "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb aus dem Browser in Ihr Konto übernommen und aus dem Browser gelöscht."
+              "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht."
             ],
             "bullets": []
           }
