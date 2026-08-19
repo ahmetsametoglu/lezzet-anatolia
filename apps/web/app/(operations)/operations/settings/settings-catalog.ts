@@ -161,7 +161,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     min: 0,
     impact: 'Sepette müşteriye söz olarak yazılır ("şu kadar daha ekleyin"). Düşürmek kargo ücretini üstlenmek demektir.',
     exceptionScopes: CHANNEL_ONLY,
-    fallback: 6_000,
+    fallback: 10_000,
   },
   {
     key: SHIPPING_FEE_KEY,
@@ -171,7 +171,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'money',
     min: 0,
     exceptionScopes: ['channel', 'country'],
-    fallback: 790,
+    fallback: 1_190,
   },
   {
     key: 'order_cutoff_time',
@@ -317,6 +317,17 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     max: 100,
     exceptionScopes: NONE,
     fallback: 25,
+  },
+  {
+    key: 'transfer_transit_days',
+    label: 'Transfer ulaşım süresi',
+    help: 'Depolar arası sevkiyatın gün cinsinden yol süresi. Sevk önerisi yolda ömrü yanacak partiyi uyarır; bu süreyi belirgin aşan sevkiyat "gecikmiş" görünür.',
+    group: 'stock',
+    kind: 'integer',
+    min: 0,
+    max: 30,
+    exceptionScopes: NONE,
+    fallback: 1,
   },
   {
     key: 'near_expiry_discount_percent',

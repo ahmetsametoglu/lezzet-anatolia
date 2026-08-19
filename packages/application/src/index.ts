@@ -272,13 +272,22 @@ export type {
 } from './warehouse/intake';
 export { recordAdjustment } from './warehouse/adjustment';
 export type { AdjustmentLine, AdjustmentOutcome, WarehouseReason } from './warehouse/adjustment';
-export { cancelTransfer, dispatchTransfer, listInboundTransfers, receiveTransfer } from './warehouse/transfer';
+export {
+  cancelTransfer,
+  dispatchTransfer,
+  listInboundTransfers,
+  readDispatchCandidate,
+  readTransferDetail,
+  receiveTransfer,
+} from './warehouse/transfer';
 export type {
   CancelTransferOutcome,
+  DispatchCandidate,
   DispatchTransferOutcome,
   InboundTransfer,
   InboundTransferLine,
   ReceiveTransferOutcome,
+  TransferDetail,
 } from './warehouse/transfer';
 // D6'nın OKUMA yarısı (21.11d). Yazma yarısı `order/refund.adjustFulfillment`ta ve orada KALIYOR:
 // sipariş düzeltmesi depo işi değil, üç ayrı çağıranı var (`refund.ts` künyesi). Burada yalnız

@@ -58,8 +58,64 @@ Sistemi tek-depo varsayımından depo ağına taşır: depo varlığı, posta ko
     - ⚠ **Tasarımdan bilinçli sapmalar — kayıt BURADA, `design/BACKLOG.md`'ye taşınacak** (o dosya şu an başka şeridin elinde, commit'lenmemiş bir maddesi var; başkasının yarım işini commit'lemek yerine kayıt görev satırında duruyor — `CLAUDE.md §5`, durumun sahibi zaten bu satır): kartın iç başlığı ortak başlık barına taşındı (iki bar üst üste 09.19'un tam tersi olurdu) · adres tek serbest kutu yerine üç alan (sokak/kod/şehir — kartın iki satırlı gösterimi ancak böyle DOĞRU çıkar; şekil `AddressSchema`'dan türetildi) · gün kısaltmaları iki harfli (`Sa` · `Pe` · `Ct`), çizim üç harfli yazıyor.
     - **Kalanlar:** bölge kurulumunun HARİTASI (`19.20`) · sıralamanın tek turda yazılması ve tek turluk personel ucu (arka uç talebi §5 — ikisi de bugün çalışıyor).
       - ✅ **Personel kapsam ataması KAPANDI (03.08, `09.16`):** Ayarlar ekranının kullanıcı penceresi depo kapsamını yazıyor (`setRoles(id, roles, warehouseIds)`), kapsam rollerle BİRLİKTE gidiyor. Yalnız depocu/kurye rollerinde soruluyor — yönetici ve muhasebe depo-üstüdür, kapsamı hiç okunmaz. Kapsamsız bırakılan depocu/kurye için ekran uyarı yazıyor: boş dizi "hepsi" değil HİÇBİRİ (fail-closed), yani kişi hiçbir şey göremez.
-- [ ] (19.6) **Operasyon — transfer**: sevk (parti önerisi + serbest sapma) / kabul (kısmi) / yoldakiler listesi; belge no `TRF-<depo>-yy-####` — touches: `apps/web/app/(operations)/`
+- [x] (19.6) **Operasyon — transfer**: sevk (parti önerisi + serbest sapma) / kabul (kısmi) / yoldakiler listesi; belge no `TRF-<depo>-yy-####` — touches: `apps/web/app/(operations)/`
   - *Bitti:* sevk→kabul akışında iki deponun stoğu doğru; yoldaki mal hiçbir depoda satılabilir görünmüyor
+  - **Durum (19.08/3 — DEPOCU İNCELEMESİ; kullanıcı ekran başında gezdi, pencereler elden geçti).**
+    Dört şikâyet, dört cevap: *"hangi ürün, kaç adet belli değil"* → "N kalem · M ad." hücresi her
+    iki listede İÇERİK PENCERESİNİN kapısı oldu (noktalı alt çizgi); *"ne geldiğini bilmeden,
+    değiştiremeden kabul"* → kabul artık o pencerenin bir YÜZÜ (`canReceive` form çizer, değilse
+    salt-okunur: kapsam dışı personel yoldakini, herkes kapanmış kaydın sevk→gelen farkını satır
+    satır okur — künye çözümü `@lezzet/application.readTransferDetail`, tek kapı, mobil de
+    kullanır); *"fazladan yazılmamış ürün?"* → pencere kuralı söylüyor (listede olmayan mal
+    buradan giremez — kaynağın stoğundan düşülmemiştir, kaynak ayrı sevk keser); *"form kötü/
+    kırık"* → kök `Input.fullWidth` sözleşmesiydi (varsayılan `w-full` flex satırında komşuları
+    sıfıra ezdi — kullanıcı görüntüsüyle kanıtlı), sayı kutuları `fullWidth={false}` + parti
+    satırları grid'e; süresi geçmiş parti KIRMIZI; alt barlar `DialogFooter` desenine (engel
+    sebebi düğmenin yanında; kabulde vazgeçme "Sonra" — "İptal" geri almayla karışırdı,
+    `cancelLabel` prop'u eklendi); Combobox'ta asılı kalan seçim bug'ı (hata dönünce) düzeldi.
+    `cancelTransferAction` SİLİNDİ (knip: kullanılmayan ihracat; application kapısı duruyor,
+    düğme v1'de bilinçli yok — design/pages/admin-transfer.md).
+  - **Durum (19.08/2 — EV DEĞİŞTİ, aynı gün: ayrı sayfa değil STOK SEKMESİ; kullanıcı sorusu
+    "ürün kabul ile transfer aynı mantık değil mi?").** Ölçüm kullanıcıyı doğruladı: mal kabul
+    zaten Stok'un sekmesiydi (22.26 — "mal girer, durur, çıkar: üçü tek stoğun üç anı"; kökü yine
+    kullanıcının 13.08 tespiti) ve ayrı nav girişi o deseni geri şişiriyordu. Transfer artık
+    `stock?tab=transfer` (sıra malın yolculuğu: kabul → transfer → çıkış); rozet = yoldaki sevkiyat
+    sayısı (kapsam süzülmüş, intake rozetinin emsali); `/operations/transfers` rotası ve nav girişi
+    kaldırıldı (hiç yayınlanmadı, yönlendirme borcu doğmadı). "İki deponun arasındaki gerçek"
+    gerekçesi tartıda hafif kaldı: tedarikçiden yolda olan mal da kimsenin stoğunda değil ve kabul
+    kuyruğu yine Stok'ta — ölçüt malın durduğu yer değil, giren/çıkan ANIN yönetildiği yer. İç
+    yapı: sekme içinde İKİ BÖLÜM (Yoldakiler + Geçmiş), iç-sekme yok. Aşağıdaki kayıt ekranın
+    kendisini anlatır ve aynen geçerli — yalnız evi değişti.
+  - **Durum (19.08 — EKRAN YAZILDI; kullanıcı kararı: dc referans, kurgu kendi form kitimizle).**
+    ~~`/operations/transfers` (nav DEPO grubunda, `STOCK_FLOOR`)~~ *(ev değişti — üstteki kayıt)*: tek ekran iki sekme — **Yoldakiler**
+    (fiziksel küme, sayfalanmaz, TAM liste; ulaşım süresini aşan sevkiyat amber şerit + `late`
+    rozeti) ve **Geçmiş** (olay kaydı, keyset; imleç URL'e yazılmaz — runs emsali; dört sonuç
+    rozeti: Tam kabul · Kısmi −N · Sıfır kabul · Sevk geri alındı). Kapsam SÜZGEÇ değil GÖRÜŞ
+    ALANI: depocu yalnız kendi depolarının dahil olduğu hareketi görür, kabul düğmesi yalnız HEDEF
+    kapsamındakine çizilir ("hedef kabul eder" — dört göz), üst bar seçicisi bu sayfayı daraltmaz.
+    - **Sevk penceresi:** kaynak SORULMAZ (çalışılan depo; depo-üstü bakışta pencereden seçilir ve
+      yine sunucu doğrular — kalemler kaynağa karşı), hedef aktif depolardan; varyant araması
+      `searchIntakeVariantsAction`ın AYNISI (ikinci arama kapısı açılmadı); **FEFO önerisi motora
+      bağlandı** — `readDispatchCandidate` (`@lezzet/application`, `transferDecision`ın İLK
+      tüketicisi; künyesindeki "ekran çizildiğinde hazır" sözü yerine geldi). Öneri kullanılabilir
+      üzerinden; kısa ömürlü parti "ömrü yolda yanabilir" uyarısıyla işaretli — FEFO zorlanmaz.
+    - **Kabul penceresi:** satır satır sayım; boş satır kabulü kilitler, "0" ayrı beyandır (geldi
+      ama boş/kayıp — 0042); satır künyesi ad+LOT+tarih (rampada eşleşme lottan — `InboundTransferLine`
+      bu iş için lot/tarih kazandı, mobil rampa da aynı kapıdan okuyor). Fark kalıcı, sessizce
+      eşitlenmez.
+    - **Ulaşım süresi ayara bağlandı:** `transfer_transit_days` (0013 + Ayarlar kataloğu, varsayılan
+      1 gün) — öneri uyarısı ve gecikme rozeti aynı eşiği okur; ton eşiği okuma katmanında, ekran
+      eşik bilmez.
+    - **Servise üç dar kapı:** `listRecent` (depo-üstü geçmiş) · `listForWarehouses` (çok depolu
+      kapsam — `listForWarehouse` genellendi, or-in tek sorgu: keyset bozulmaz) ·
+      `WarehouseTransferLineService.listByTransfers` (sayfa başına satır toplamı — transfer başına
+      sorgu, geçmiş listesinde en pahalı hata, 09.13 dersi).
+    - **Seed beş hâle çıktı:** yolda · yolda-GECİKMİŞ (4 gün; damga ham update — geçmiş an kurmak
+      seed'in derdi) · tam kabul · eksikli kabul · geri alınmış; kapsama dört zorunlu hâl kovası
+      eklendi. **Yeni hâller `db:refresh` ister** (tabloDolu guard'ı) — o kullanıcının kararı;
+      mevcut yerel DB'de gecikmiş kovası kırmızı kalır, sinyal bilinçli.
+    - Geri alma (cancel) yazma kapısı ve RPC hazır; ekranda v1'de düğmesi YOK — dc çizmiyor,
+      geçmiş rozeti hâli gösteriyor. İhtiyaç doğarsa yoldaki satıra menüyle bağlanır.
   - ✅ **Arka uç kapısı AÇIK (03.08): `cancel_transfer` yazıldı** — operasyon şeridi ekranı kurarken sordu, kapı yokken düğmeyi çizmemişti (doğru: ölü düğme yalan söyler). Artık `WarehouseTransferService.cancel({ transferId, actorId, reason })`. **Düğmenin metni "İptal" DEĞİL, "Sevk kaydını geri al"** — tek "iptal" iki ayrı gerçeği yutar ve stok yalan söyler: *(1)* sevk kaydı hatalıydı, mal hiç çıkmadı → bu yol, miktar kaynak PARTİYE geri yazılır (yeni parti doğmaz; `initial_qty` ve geri çağırma izi bölünmesin); *(2)* mal çıktı sonra döndü → bu yol DEĞİL, ters yönlü yeni transfer, çünkü mal fiilen iki kez yol gitti. Kabul edilmiş transfer geri alınamaz (RPC reddeder) ve ikinci geri alma da reddedilir — stoğu iki kez geri yazardı. Kayıt silinmez, damgalanır (`cancelled_by/at`, `cancel_reason`; kısıt durumla damgayı birbirine bağlar) çünkü `reference_no` kâğıt klasördeki numaradır. Testler: `warehouse.test` › *"sevk kaydı geri alınır…"* + *"geri alma İKİ KEZ çalışmaz…"*
 - [~] (19.7) **Müşteri yüzeyi**: yer bağlamı v2 (`lezzet.place.v2` çerezi: `{country, postalCode}` — v1 `localStorage` kaydı geçersiz sayılır, yeniden sorulur) + belirsizlik seçici (ülke ALANI değil; yalnız `ambiguous`/`unknown` hâllerinde) + katalog/ürün "kargoyla gönderilir" işareti + sepette kargo grubu + "kargolu ürünleri ayrıca sipariş ver" iki-checkout akışı + posta kodu daveti deseni (tasarım paketinden) — touches: `apps/web/app/(customer)/`, `components/customer/` (lib dokunuşları 19.4 ile koordineli — kesişirse sıraya, `WORKFLOW §7`)
   - *Bitti:* posta kodu değişiminde kalem kaybolmuyor (`saved_items`); keyset sayfalama ve fiyat sıralaması bozulmuyor; yer bilinmiyorken yere bağlı vaat yok

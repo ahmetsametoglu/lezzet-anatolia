@@ -16,6 +16,7 @@ import type { BatchView } from '@/lib/stock/batch-types';
 import type { StockLevelRow } from '@/lib/stock/level-rows';
 import type { OfferHandoff } from './stock-handoff';
 import type { LossPeriod, StockScope, StockTab } from './stock-url';
+import type { TransfersPageView } from './transfer-types';
 
 // Parti görünümü İKİ ekranın ortak tipi (stok · fiyatlar) — tanımı `lib/stock`'ta, burada yalnız
 // yeniden veriliyor: bu klasördeki 30+ kullanım yerinin yolu değişmesin.
@@ -166,6 +167,13 @@ export interface StockData {
   counts: StockCounts;
   /** Mal kabul sekmesinin verisi — yalnız o sekme açıkken dolu (yukarıdaki künye). */
   intake: IntakeTabData | null;
+  /** Transfer sekmesinin verisi — yalnız o sekme açıkken dolu (intake ile aynı künye). */
+  transfers: TransfersPageView | null;
+  /**
+   * Yoldaki sevkiyat sayısı — sekme ROZETİ, her sekmede okunur (intake rozetinin emsali:
+   * "bugün ne bekliyorum bir bakışta"). Kapsamla süzülmüş: depocu yalnız kendini ilgilendireni sayar.
+   */
+  transitCount: number;
   /**
    * **Alış fiyatı/maliyet görünür mü** — depo-üstü kapsamda (yönetici/muhasebe) evet, depoya bağlı
    * personelde hayır (`design/pages/admin-stok.md §6`).

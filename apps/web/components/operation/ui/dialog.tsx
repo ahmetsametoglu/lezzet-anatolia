@@ -116,6 +116,11 @@ interface DialogFooterProps {
   onCancel: () => void;
   submitLabel?: string;
   /**
+   * Vazgeçme düğmesinin sözü. Varsayılan "İptal" her formda doğru değil: transfer kabulünde
+   * "İptal", sevkiyatı geri almakla karışır (o ayrı bir fiil) — orada "Sonra" denir.
+   */
+  cancelLabel?: string;
+  /**
    * Kaydetmenin ENGELİ — dolu string engelin SEBEBİDİR ve düğmenin yanında yazılır.
    *
    * Şema geçersizken tarayıcı submit'i zaten yutuyor: düğme etkin görünür, basılır ve HİÇBİR ŞEY
@@ -132,6 +137,7 @@ export function DialogFooter({
   formId,
   onCancel,
   submitLabel = 'Kaydet',
+  cancelLabel = 'İptal',
   blockedReason = null,
 }: DialogFooterProps) {
   return (
@@ -146,7 +152,7 @@ export function DialogFooter({
         </span>
       ) : null}
       <Button variant="secondary" onClick={onCancel} disabled={submitting}>
-        İptal
+        {cancelLabel}
       </Button>
       <Button
         variant="primary"

@@ -565,6 +565,22 @@ export const KAPSAM: KapsamAlani[] = [
        */
       { ad: 'bölge pasif', zorunlu: false, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', false)) },
       { ad: 'transfer', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer') },
+      /**
+       * Transferin DÖRT hâli ayrı kovadır (19.6): ekran her hâli başka çizer — yoldaki liste,
+       * gecikmiş amber şerit, geçmişte "Tam/Kısmi kabul" ve "Sevk geri alındı" rozetleri. Toplam
+       * sayı dördü birden 0 olmadan da tutar; hâl kovası olmasa biri sessizce kaybolurdu.
+       */
+      { ad: 'transfer yolda', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer', (q) => q.eq('status', 'in_transit')) },
+      {
+        ad: 'transfer yolda GECİKMİŞ',
+        zorunlu: true,
+        sayac: (db) =>
+          say(db, 'warehouse_transfer', (q) =>
+            q.eq('status', 'in_transit').lt('dispatched_at', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()),
+          ),
+      },
+      { ad: 'transfer kabul edilmiş', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer', (q) => q.eq('status', 'received')) },
+      { ad: 'transfer geri alınmış', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer', (q) => q.eq('status', 'cancelled')) },
     ],
   },
   {

@@ -25,7 +25,9 @@ const STOCK_PATH = '/operations/stock';
  *
  * `losses` → `outgoing`: sekme artık yalnız imhayı değil çıkan malın tamamını adlandırıyor.
  */
-export const STOCK_TABS = ['levels', 'attention', 'intake', 'outgoing'] as const;
+// 'transfer' intake'ten sonra (kullanıcı kararı 19.08, 22.26 desenine taşındı): mal girer (kabul),
+// depolar arasında YER DEĞİŞTİRİR (transfer), çıkar (düşüm) — sekme sırası malın yolculuğu.
+export const STOCK_TABS = ['levels', 'attention', 'intake', 'transfer', 'outgoing'] as const;
 export type StockTab = (typeof STOCK_TABS)[number];
 
 // Sekme ADLARI kimliklerin yanında (15.08, emsal: ürünler): desktop `'use client'` olduğundan
@@ -36,6 +38,7 @@ export const STOCK_TAB_LABEL: Record<StockTab, string> = {
   levels: 'Stok seviyeleri',
   attention: 'Yaklaşan tarihli',
   intake: 'Mal kabul',
+  transfer: 'Transfer',
   outgoing: 'Çıkışlar',
 };
 

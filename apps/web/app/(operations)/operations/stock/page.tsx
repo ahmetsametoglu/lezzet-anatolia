@@ -24,6 +24,7 @@ import { StockClient } from './stock-client';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readOfferHandoff } from './stock-handoff';
 import { pendingOrderCount, readIntakeProgress, readIntakeTab } from './intake-read';
+import { readTransfersPage, readTransitCount } from './transfer-read';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
@@ -128,7 +129,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     p.variants.map((v) => v.id),
   );
 
-  const [available, priceMap, actorNames, intake] = await Promise.all([
+  const [available, priceMap, actorNames, intake, transfers, transitCount] = await Promise.all([
     // Depo TANELİ okuma (19.5): satırın toplamı da kırılımı da bu tek kaynaktan türer. Depo-üstü
     // görünüm (`getNetworkAvailabilityMap`) burada YANLIŞ olurdu — birleştirilmiş stok kimsenin
     // stoğu değildir ve operatör "5 var" görüp iki şehirdeki malı tek siparişe yazamaz.
@@ -138,6 +139,10 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c'),
     readActorNames(new UserProfileService(db), lossPage.rows),
     urlState.tab === 'intake' ? readIntakeTab(intakeProgress) : null,
+    // Transfer sekmesi (19.6 → buraya taşındı, 19.08): detay yalnız sekme açıkken; rozet için
+    // sayım her sekmede (intake rozetinin künyesi).
+    urlState.tab === 'transfer' ? readTransfersPage() : null,
+    readTransitCount(),
   ]);
 
   // Liste fiyatı = b2c kanal fiyatı (KDV dahil). Müşteriye özel fiyat burada aranmaz: teklif herkese
@@ -178,6 +183,8 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         pinned: pinnedRow,
         nextCursor: productPage.nextCursor,
         attention,
+        transfers,
+        transitCount,
         losses: toLossRows(lossPage.rows, actorNames),
         lossCursor: lossPage.nextCursor,
         // Düşüm formunun seçenekleri — zaten okunmuş partilerden türer, ek sorgu yok. Yalnız Çıkışlar

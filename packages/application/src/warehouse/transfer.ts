@@ -1,5 +1,6 @@
+import { transferDecision, type TransferSuggestion } from '@lezzet/domain-core';
 import { StockService, WarehouseTransferService } from '@lezzet/database';
-import type { DispatchLine, ReceiveLine, TransferStatus } from '@lezzet/types';
+import type { DispatchLine, ReceiveLine, TransferStatus, WarehouseTransferLine } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { displayName, variantNames } from './names';
 import { rpcRejectionMessage } from './rpc-error';
@@ -19,12 +20,10 @@ import { rpcRejectionMessage } from './rpc-error';
  * "personelin sabit deposu" uç katmanda çözülür (CLAUDE.md §1 — varsayılan depo YOKTUR). Yanlış
  * deponun transferini kapatmak, iki depoda birden görünmeyen mal demektir.
  *
- * ── ÖNERİ MOTORU (`transferDecision`) BAĞLANMADI ─────────────────────────────
- * `domain-core/stock/transfer.ts` bir sevk önerisi üretiyor (FEFO + yolda ömür yanması) ve bugün
- * SIFIR tüketicisi var. Mobil v2'nin transfer ekranı **rampada sayım** ekranıdır: "RAMPADA SAY —
- * GELEN ADEDİ GİR". Ne öneri gösteriyor ne de sevk kurgusu barındırıyor. Ölçüldü, bağlanmadı:
- * kullanılmayan bir motoru kapıya takmak, olmayan bir soruna makine kurmaktır (CLAUDE.md §0).
- * Sevk ÖNERİSİ olan bir ekran çizildiğinde motor hazır duruyor.
+ * ── ~~ÖNERİ MOTORU (`transferDecision`) BAĞLANMADI~~ → BAĞLANDI (19.08, web 19.6) ────────────
+ * Künye "sevk ÖNERİSİ olan bir ekran çizildiğinde motor hazır duruyor" diyordu — o ekran doğdu:
+ * web'in sevk penceresi (`/operations/transfers`). `readDispatchCandidate` aşağıda; mobil v2'nin
+ * rampa ekranı öneriye hâlâ dokunmaz (o SAYIM ekranıdır), kapı iki yüzeye de açık.
  */
 
 /** Rampadaki transferin tek satırı — depocunun sayacağı şey. */
@@ -33,6 +32,13 @@ export interface InboundTransferLine {
   sourceStockId: string;
   /** "Ürün (boy)" — operasyon dilinde (Türkçe). */
   name: string;
+  /**
+   * Kaynak partinin künyesi (19.6): rampada kutunun ÜSTÜNDE yazan şey lottur — satırı kutuyla
+   * eşleştiren depocu adı değil lotu okur. Tarih de aynı karşılaştırmanın parçası (T4: hedefte
+   * doğacak parti bu tarihi taşıyacak).
+   */
+  lotNumber: string | null;
+  expiryDate: string;
   /** Kaynak deponun yola çıkardığı adet; ekranda "sevk edilen" olarak görünür. */
   dispatchedQty: number;
   /**
@@ -71,13 +77,11 @@ export async function listInboundTransfers(
   if (rows.length === 0) return [];
 
   // Satırlar transfer başına okunur (servisin kapısı öyle); yoldaki sevkiyat sayısı fiziksel olarak
-  // küçük olduğu için bu bir N+1 değil, sınırlı bir tur. Ad çözümü ise TEK turda: bütün transferlerin
-  // partileri toplanıp bir kez sorulur.
+  // küçük olduğu için bu bir N+1 değil, sınırlı bir tur. Parti künyesi ise TEK turda: bütün
+  // transferlerin partileri toplanıp bir kez sorulur — `getBatchDetails` kimliğin yanına lot ve
+  // tarihi de getiriyor (19.6: rampadaki eşleşme lottan yapılır), ikinci bir okuma açılmadı.
   const lineSets = await Promise.all(rows.map((row) => transfers.listLines(row.id)));
-  const stockIds = [...new Set(lineSets.flat().map((line) => line.sourceStockId))];
-  const batches = await new StockService(db).listByIds(stockIds);
-  const variantOf = new Map(batches.map((batch) => [batch.id, batch.variantId]));
-  const names = await variantNames(db, [...variantOf.values()]);
+  const details = await lineDetails(db, lineSets.flat());
 
   return rows.map((row, index) => ({
     transferId: row.id,
@@ -85,17 +89,149 @@ export async function listInboundTransfers(
     fromWarehouseId: row.fromWarehouseId,
     dispatchedAt: row.dispatchedAt,
     note: row.note,
-    lines: (lineSets[index] ?? []).map((line) => {
-      const variantId = variantOf.get(line.sourceStockId);
-      return {
-        lineId: line.id,
-        sourceStockId: line.sourceStockId,
-        name: displayName(variantId ? names.get(variantId) : undefined),
-        dispatchedQty: line.qty,
-        receivedQty: line.receivedQty,
-      };
-    }),
+    lines: (lineSets[index] ?? []).map((line) => toInboundLine(line, details)),
   }));
+}
+
+/** Satır künyesinin tek okuması: partiler + adlar bir turda — `listInboundTransfers` ve `readTransferDetail` paylaşır. */
+async function lineDetails(db: SupabaseClient, lines: WarehouseTransferLine[]) {
+  const stockIds = [...new Set(lines.map((line) => line.sourceStockId))];
+  const batches = await new StockService(db).getBatchDetails(stockIds);
+  const batchOf = new Map(batches.map((batch) => [batch.id, batch]));
+  const names = await variantNames(db, [...new Set(batches.map((batch) => batch.variantId))]);
+  return { batchOf, names };
+}
+
+function toInboundLine(
+  line: WarehouseTransferLine,
+  details: Awaited<ReturnType<typeof lineDetails>>,
+): InboundTransferLine {
+  const batch = details.batchOf.get(line.sourceStockId);
+  return {
+    lineId: line.id,
+    sourceStockId: line.sourceStockId,
+    name: displayName(batch ? details.names.get(batch.variantId) : undefined),
+    lotNumber: batch?.lotNumber ?? null,
+    expiryDate: batch?.expiryDate ?? '',
+    dispatchedQty: line.qty,
+    receivedQty: line.receivedQty,
+  };
+}
+
+/** Tek transferin künyeli hâli — durum ne olursa olsun (yolda, kabul edilmiş, geri alınmış). */
+export interface TransferDetail {
+  transferId: string;
+  referenceNo: string;
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  status: TransferStatus;
+  dispatchedAt: string;
+  note: string | null;
+  lines: InboundTransferLine[];
+}
+
+/**
+ * **Bu sevkiyatta ne var** — satırlar parti künyesiyle (ad · lot · tarih), her durumda (19.6 kabul
+ * eleştirisi, 19.08): "2 kalem · 8 ad." satırının arkasını GÖRMENİN tek yolu kabul düğmesiydi;
+ * kapsam dışındaki personel ve kapanmış kayıt için hiç yol yoktu. `listInboundTransfers` yalnız
+ * yoldakileri okur (rampa listesi); bu kapı tek kaydı durum süzgeçsiz açar — geçmişte "hangi kalem
+ * eksik geldi" sorusunun cevabı `receivedQty`dedir. Künye çözümü burada yaşar: web de mobil de
+ * aynı kapıdan okur, ikinci bir ad/lot çözümü doğmaz.
+ */
+export async function readTransferDetail(
+  db: SupabaseClient,
+  input: { transferId: string },
+): Promise<TransferDetail | null> {
+  const transfers = new WarehouseTransferService(db);
+  const transfer = await transfers.getById(input.transferId);
+  if (!transfer) return null;
+
+  const rawLines = await transfers.listLines(input.transferId);
+  const details = await lineDetails(db, rawLines);
+  return {
+    transferId: transfer.id,
+    referenceNo: transfer.referenceNo,
+    fromWarehouseId: transfer.fromWarehouseId,
+    toWarehouseId: transfer.toWarehouseId,
+    status: transfer.status,
+    dispatchedAt: transfer.dispatchedAt,
+    note: transfer.note,
+    lines: rawLines.map((line) => toInboundLine(line, details)),
+  };
+}
+
+/** Sevk penceresinin varyant kartı — partiler + FEFO önerisi, tek turda. */
+export interface DispatchCandidate {
+  variantId: string;
+  /** "Ürün (boy)" — operasyon dilinde; ad çözülemezse `names.ts`in yer tutucusu. */
+  title: string;
+  /** Kaynak depoda kullanılabilir (fiili − TÜM aktif rezervasyon) — önerinin tavanı. */
+  availableQty: number;
+  reservedQty: number;
+  batches: Array<{
+    stockId: string;
+    lotNumber: string | null;
+    expiryDate: string;
+    physicalQty: number;
+    /** Ulaşım süresi düşülünce ömrü biter ya da bitmek üzere olur — uyarı, engel değil. */
+    arrivesNearExpiry: boolean;
+  }>;
+  suggestion: TransferSuggestion;
+}
+
+/**
+ * **Sevk önerisi** — motorun (`transferDecision`) ilk tüketicisi (19.6). Partiler FEFO sırasında
+ * gelir; öneri KULLANILABİLİR üzerinden yapılır (söz verilmiş mal başka şehre gitmez — tavanı
+ * `available_stock` koyar). Parti-düzeyi çıpalı rezervasyon (`pinnedReservedQty`) bu okumada
+ * TAŞINMAZ ve bu ölçülü bir eksiklik: çıpa yalnız near-expiry teklif satırında var, öneri o
+ * partiyi serbest sansa bile toplam tavan aşılamaz ve asıl emniyet sevk RPC'sindedir (parti
+ * başına fiili−rezerve−yoldaki kontrolü orada). Teklifli parti sevki yaygınlaşırsa çıpa okuması
+ * buraya eklenir — bugün eklemek, olmayan bir soruna makine kurmak olurdu.
+ *
+ * `today` ve `transitDays` DIŞARIDAN gelir: motor saat okumaz (test edilebilirlik), süre ayardır
+ * (`transfer_transit_days`) ve ayarı okumak çağıranın katmanının işidir.
+ */
+export async function readDispatchCandidate(
+  db: SupabaseClient,
+  input: { warehouseId: string; variantId: string; wantedQty: number; transitDays: number; today: string },
+): Promise<DispatchCandidate | { status: 'no_stock' }> {
+  const stocks = new StockService(db);
+  const [batches, availableMap, names] = await Promise.all([
+    stocks.listInStockDetailed([input.variantId], [input.warehouseId]),
+    stocks.getAvailableMap(input.warehouseId, [input.variantId]),
+    variantNames(db, [input.variantId]),
+  ]);
+  if (batches.length === 0) return { status: 'no_stock' };
+
+  const available = availableMap.get(input.variantId);
+  const suggestion = transferDecision({
+    batches: batches.map((b) => ({
+      stockId: b.id,
+      variantId: b.variantId,
+      expiryDate: b.expiryDate,
+      physicalQty: b.physicalQty,
+    })),
+    wantedQty: input.wantedQty,
+    availableQty: available?.availableQty ?? 0,
+    transitDays: input.transitDays,
+    today: input.today,
+  });
+
+  const nearExpiry = new Set(suggestion.lines.filter((l) => l.arrivesNearExpiry).map((l) => l.stockId));
+  return {
+    variantId: input.variantId,
+    title: displayName(names.get(input.variantId)),
+    availableQty: available?.availableQty ?? 0,
+    reservedQty: available?.reservedQty ?? 0,
+    batches: batches.map((b) => ({
+      stockId: b.id,
+      lotNumber: b.lotNumber,
+      expiryDate: b.expiryDate,
+      physicalQty: b.physicalQty,
+      arrivesNearExpiry: nearExpiry.has(b.id),
+    })),
+    suggestion,
+  };
 }
 
 export type ReceiveTransferOutcome =

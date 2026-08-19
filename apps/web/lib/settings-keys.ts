@@ -42,3 +42,6 @@ export {
  */
 export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
 export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
+
+/** Depolar arası ulaşım süresi (gün) — sevk önerisinin ömür uyarısı ve "gecikmiş" rozeti bunu okur (19.6). */
+export const TRANSFER_TRANSIT_DAYS_KEY = 'transfer_transit_days';

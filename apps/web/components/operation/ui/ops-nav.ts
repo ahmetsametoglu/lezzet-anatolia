@@ -85,6 +85,11 @@ const NAV_SECTIONS: NavSection[] = [
        * Stok'un sekmesi oldu — mal girer, durur, çıkar: üçü tek stoğun üç anı. Üç satır, aynı sayının
        * üç yüzünü üç ayrı yer gibi gösteriyordu.
        */
+      // Transfer AYRI GİRİŞ DEĞİL, Stok'un sekmesi (kullanıcı kararı 19.08) — 22.26'nın kendisi:
+      // mal girer, YER DEĞİŞTİRİR, çıkar; rampadaki iş mal kabulle aynı iş. Kısa süre ayrı giriş
+      // olarak yazılmıştı ("iki deponun arasındaki gerçek" gerekçesiyle) ve gerekçe tartıda hafif
+      // kaldı: tedarikçiden yolda olan mal da henüz kimsenin stoğunda değil, kabul kuyruğu yine
+      // Stok'ta — ölçüt malın durduğu yer değil, giren/çıkan ANIN yönetildiği yer.
       { key: 'stock', label: 'Stok', href: '/operations/stock', roles: STOCK_FLOOR },
       /**
        * **Sıcaklığın kendi sayfası YOK — `22.29` KAPANDI** (kullanıcı kararı 17.08).

@@ -11,6 +11,7 @@ import { SearchIcon } from '@/components/operation/ui/icons';
 import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { LevelsTab } from './tabs/levels-tab';
 import { IntakeTab } from './tabs/intake-tab';
+import { TransferTab } from './tabs/transfer-tab';
 import { OutgoingTab } from './tabs/outgoing-tab';
 import { AttentionTab } from './tabs/attention-tab';
 import { STOCK_SCOPES, STOCK_TABS, STOCK_TAB_LABEL, type StockScope, type StockTab } from './stock-url';
@@ -60,6 +61,8 @@ export function StockDesktop(props: StockViewProps) {
     levels: `${scopeLine}${inStock} boyda stok var · ${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} DLC geçti` : ''}`,
     attention: `${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} yalnız imha` : ''}`,
     intake: `${scopeLine}${pendingIntake} sipariş kabul bekliyor`,
+    // Omurga cümle altyazıda (19.6): sekmenin var oluş sebebi — sayı rozette zaten yazıyor.
+    transfer: `${scopeLine}yoldaki mal hiçbir deponun stoğunda değildir`,
     outgoing: 'Stoktan düşen ve stoğa dönen kayıtlar — en yeni önce',
   };
 
@@ -81,6 +84,7 @@ export function StockDesktop(props: StockViewProps) {
           if (t.key === 'attention') return { ...t, badge: attention };
           // Rozet SIFIRKEN yazılmaz: "0 sipariş bekliyor" bir iş yükü değil, gürültüdür.
           if (t.key === 'intake' && pendingIntake > 0) return { ...t, badge: pendingIntake };
+          if (t.key === 'transfer' && data.transitCount > 0) return { ...t, badge: data.transitCount };
           return t;
         })}
         active={tab}
@@ -160,6 +164,8 @@ export function StockDesktop(props: StockViewProps) {
       {tab === 'levels' && <LevelsTab {...props} />}
       {tab === 'attention' && <AttentionTab {...props} />}
       {tab === 'intake' && <IntakeTab {...props} />}
+      {/* Sekme kapalıyken veri de yok (`transfers: null` = "bakılmadı") — RSC sekmeyle okur. */}
+      {tab === 'transfer' && data.transfers && <TransferTab view={data.transfers} />}
       {tab === 'outgoing' && <OutgoingTab {...props} />}
     </div>
   );

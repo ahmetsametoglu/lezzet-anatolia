@@ -230,7 +230,7 @@ describe('transfer — iki fiziksel gerçek an', () => {
     expect(await stocks.listInStock(bosDepo, variantId)).toHaveLength(0); // hedefte hiçbir şey doğmadı
 
     // Kayıt SİLİNMEDİ, damgalandı: `reference_no` kâğıt klasördeki numaradır, karşılıksız kalamaz.
-    const kayit = (await transfers.listForWarehouse(doluDepo)).rows.find((t) => t.id === sevk.transferId);
+    const kayit = (await transfers.listForWarehouses([doluDepo])).rows.find((t) => t.id === sevk.transferId);
     expect(kayit).toMatchObject({ status: 'cancelled', cancelReason: 'Araca yüklenmedi, kayıt yanlış açıldı' });
     expect(kayit?.cancelledAt).not.toBeNull();
 

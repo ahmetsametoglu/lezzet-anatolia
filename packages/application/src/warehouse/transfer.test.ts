@@ -165,6 +165,10 @@ describe('"bana ne geliyor" listesi', () => {
         lineId,
         sourceStockId: sourceBatch,
         name: `Su Böreği ${stamp} (1 kg)`,
+        // Parti künyesi satırda (19.6): rampadaki eşleşme lottan yapılır, web kabul penceresi de
+        // aynı satırı okur — fikstürün kurduğu lot/tarih buraya birebir yansımalı.
+        lotNumber: 'LOT-TRF',
+        expiryDate: dayOffset(40),
         dispatchedQty: 4,
         // `null` = henüz sayılmadı; `0` olsaydı "geldi ama kayıp" derdi (0042).
         receivedQty: null,

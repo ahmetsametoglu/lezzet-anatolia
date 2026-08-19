@@ -165,7 +165,7 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   // gelen malın nasıl göründüğü ve iptal edilmiş bir sevkiyatın listede nasıl durduğu görülmez.
   const digerPartiler = ((data ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
     .filter((p) => !mesgulVaryantlar.has(p.variant_id) && !partiler.some((s) => s.id === p.id))
-    .slice(0, 3);
+    .slice(0, 5);
 
   // 1) KABUL EDİLMİŞ — ama biri EKSİK geldi. Sevk 5, gelen 3: aradaki fark bir kayıptır ve kabul
   //    ekranının asıl sınavı odur; tam gelen bir sevkiyat hiçbir soru sormaz.
@@ -202,7 +202,44 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     console.log(`  ✓ ${iptal.referenceNo} · GERİ ALINDI · mal kaynak partiye döndü`);
   }
 
-  console.log('✓ transfer: 3 kayıt (yolda · kabul edilmiş + EKSİK gelen · geri alınmış)');
+  // 3) TAM KABUL — hiçbir soru sormayan sevkiyat (19.6). Geçmişte yalnız eksikli kabul dursaydı
+  //    "Tam kabul" rozeti hiç görünmez, normal hâlin neye benzediği bilinmezdi.
+  const tamParti = digerPartiler[3];
+  if (tamParti) {
+    const tam = await transfers.dispatch({
+      toWarehouseId: depolar.kehl,
+      lines: [{ sourceStockId: tamParti.id, qty: Math.min(4, tamParti.physical_qty) }],
+      note: 'Hafta sonu takviyesi.',
+    });
+    const tamSatirlar = await transfers.listLines(tam.transferId);
+    await transfers.receive({
+      transferId: tam.transferId,
+      lines: tamSatirlar.map((l) => ({ lineId: l.id, receivedQty: l.qty })),
+    });
+    console.log(`  ✓ ${tam.referenceNo} · TAM KABUL`);
+  }
+
+  // 4) GECİKMİŞ yoldaki — ulaşım süresini (varsayılan 1 gün) belirgin aşmış sevkiyat. Ekranın
+  //    amber şeridi ve "N gün" kırmızı rozeti ancak böyle bir kayıtla görünür. Damga HAM update
+  //    ile geriye çekilir: geçmiş bir anı kurmak yalnız seed'in derdidir (sefer seed'inin
+  //    `created/departed` emsali) — RPC bugünü yazar, doğrusu da odur.
+  const gecParti = digerPartiler[4];
+  if (gecParti) {
+    const gec = await transfers.dispatch({
+      toWarehouseId: depolar.kehl,
+      lines: [{ sourceStockId: gecParti.id, qty: Math.min(2, gecParti.physical_qty) }],
+      note: 'Ek sipariş — araç dönüşte uğrayacak.',
+    });
+    const dortGunOnce = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+    const { error: damgaHatasi } = await db
+      .from('warehouse_transfer')
+      .update({ dispatched_at: dortGunOnce })
+      .eq('id', gec.transferId);
+    if (damgaHatasi) throw damgaHatasi;
+    console.log(`  ✓ ${gec.referenceNo} · YOLDA ve GECİKMİŞ (4 gün)`);
+  }
+
+  console.log('✓ transfer: 5 kayıt (yolda · GECİKMİŞ yolda · tam kabul · eksikli kabul · geri alınmış)');
 }
 
 // ── Depo bazlı asgari stok eşiği (19.x) ──────────────────────────────────────────────────────────

@@ -128,15 +128,34 @@ export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, n
   }
 
   /**
-   * Bir deponun transfer geçmişi — hem gönderdikleri hem aldıkları.
+   * Depoların transfer geçmişi — hem gönderdikleri hem aldıkları.
    *
    * **Keyset sayfalı**: transfer kaydı veriyle büyüyen bir kümedir (CLAUDE.md §1) ve her sevk bir
    * satır ekler. Sabit bir tavanla kesseydik ekran listenin kuyruğunu sessizce yutardı — "geçen
    * yılın sevkiyatı" diye bir soru sorulduğunda cevap eksik gelirdi ve kimse fark etmezdi.
+   *
+   * ÇOĞUL alır (19.6): personel kapsamı birden çok depo taşıyabilir ve depo başına ayrı sorgu
+   * atıp birleştirmek keyset'i bozardı — tek `or(in,in)` süzgeci sırayı tek sorguda korur.
    */
-  listForWarehouse(warehouseId: string, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<WarehouseTransfer>> {
+  listForWarehouses(warehouseIds: readonly string[], opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<WarehouseTransfer>> {
+    const ids = warehouseIds.join(',');
     return this.getPage(undefined, {
-      orFilters: [`from_warehouse_id.eq.${warehouseId},to_warehouse_id.eq.${warehouseId}`],
+      orFilters: [`from_warehouse_id.in.(${ids}),to_warehouse_id.in.(${ids})`],
+      orderBy: 'dispatchedAt',
+      orderDirection: 'desc',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+    });
+  }
+
+  /**
+   * Depo süzgeçsiz geçmiş — "Tüm depolar" bağlamının listesi (19.6). `listForWarehouse`un
+   * kuralları aynen: veriyle büyüyen küme, keyset; tavanla kesilseydi kuyruk sessizce yutulurdu.
+   * Kapsam SORUSU burada değil: depo-üstü bakış yalnız yöneticinindir ve o kapı çağıranda
+   * (`readWarehouseContext` bağlamı 'all' vermeyen kullanıcıya bu metot hiç çağrılmaz).
+   */
+  listRecent(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<WarehouseTransfer>> {
+    return this.getPage(undefined, {
       orderBy: 'dispatchedAt',
       orderDirection: 'desc',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
@@ -186,6 +205,17 @@ export class WarehouseTransferLineService extends BaseDbService<WarehouseTransfe
    */
   listByTransfer(transferId: string): Promise<WarehouseTransferLine[]> {
     return this.getAll({ transferId }, { orderBy: 'id' });
+  }
+
+  /**
+   * Bir SAYFA transferin satırları tek turda (19.6) — liste ekranı satır sayısı/adet toplamı
+   * yazar ve transfer başına ayrı sorgu, bir geçmiş listesinde en pahalı hatadır (09.13 dersi).
+   * Gruplamayı çağıran yapar: bu katman satır getirir, toplamak görünümün işi değildir ama
+   * SQL'e taşıyacak kadar da pahalı değildir (sayfa başına ≤30 transfer × birkaç kalem).
+   */
+  listByTransfers(transferIds: readonly string[]): Promise<WarehouseTransferLine[]> {
+    if (transferIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ transferId: [...transferIds] }, { orderBy: 'id' });
   }
 
   /**
