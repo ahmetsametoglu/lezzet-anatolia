@@ -3,9 +3,12 @@ import { useCallback, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { OfflineNotice } from '@/components/ui/offline-notice';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAppLocale } from '@/lib/i18n/app-locale';
 import { AccountScreen } from '@/screens/account/account-screen';
 import { accountData } from '@/screens/account/account-fixture';
+import messages from '@/screens/account/messages.json';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
 
 /*
@@ -22,6 +25,7 @@ import { useMe } from '@/screens/customer-kit/use-me.hook';
 */
 export default function AccountRoute() {
   const meState = useMe();
+  const locale = useAppLocale();
   const router = useRouter();
   const isGuest = meState.status === 'guest';
 
@@ -49,6 +53,28 @@ export default function AccountRoute() {
      karışıyordu — "hesabım açılmıyor" şikâyetinin hangisinden geldiği ayırt edilemiyordu. Nabız
      atan bir yer tutucu ikisini ayırır: bekleme görünür, boşluk arıza olur. */
   if (meState.status === 'loading') return <AccountLoading />;
+
+  /* OKUNAMADI ≠ MİSAFİR (kullanıcı kararı 20.08). Bu dal eskiden yoktu ve `error` hâli bir alttaki
+     satıra düşüyordu: sunucuya ulaşılamayan GİRİŞLİ müşteriye "Hoş geldiniz — hesabınıza ulaşmak
+     için doğrulanın" yazıyorduk. Cihazda ölçüldü (20.08, mobil API kapalı): oturum yerli yerinde
+     duruyorken ekran onu misafir gibi karşıladı. Bu yalnız çirkin değil, YANLIŞ BEYAN — müşteri
+     atıldığını sanıp yeniden giriş denemesine girişir.
+
+     `useMe` ayrımı zaten yapıyor (`guest` = 401, `error` = ötekiler); eksik olan ekranın o ayrımı
+     okumasıydı. Görünüm katalog/paketler kalıbının aynısı (`OfflineNotice`), metin hesabın kendi
+     sözlüğünden ve "çıkış yapmadınız" cümlesini açıkça taşıyor. */
+  if (meState.status === 'error') {
+    const t = messages[locale].error;
+    return (
+      <OfflineNotice
+        title={t.title}
+        description={t.body}
+        retryLabel={t.retry}
+        onRetry={meState.refresh}
+        testID="account-error"
+      />
+    );
+  }
 
   if (meState.status !== 'ready' || meState.me === null) {
     return <AccountScreen signedIn={false} />;

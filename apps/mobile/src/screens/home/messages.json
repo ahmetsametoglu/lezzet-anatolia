@@ -87,6 +87,11 @@
     },
     "cart": {
       "open": "Sepeti aç, {n} ürün"
+    },
+    "error": {
+      "title": "Şu an hizmet veremiyoruz",
+      "body": "Vitrini getiremedik. Bağlantınızı kontrol edin — bağlantı gelince kaldığınız yerden devam edersiniz.",
+      "retry": "Tekrar dene"
     }
   },
   "fr": {
@@ -177,6 +182,11 @@
     },
     "cart": {
       "open": "Ouvrir le panier, {n} articles"
+    },
+    "error": {
+      "title": "Service momentanément indisponible",
+      "body": "Impossible de charger la vitrine. Vérifiez votre connexion — dès qu'elle revient, vous reprenez où vous en étiez.",
+      "retry": "Réessayer"
     }
   },
   "de": {
@@ -267,6 +277,11 @@
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"
+    },
+    "error": {
+      "title": "Derzeit nicht verfügbar",
+      "body": "Die Auslage konnte nicht geladen werden. Prüfen Sie Ihre Verbindung — sobald sie wieder da ist, geht es weiter.",
+      "retry": "Erneut versuchen"
     }
   }
 }

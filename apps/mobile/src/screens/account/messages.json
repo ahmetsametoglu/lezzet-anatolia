@@ -26,6 +26,11 @@
       "body": "Hesabınıza ulaşmak için birkaç saniyede doğrulanın — şifre yok.",
       "cta": "Hızlı doğrulama"
     },
+    "error": {
+      "title": "Şu an hizmet veremiyoruz",
+      "body": "Hesabınızı getiremedik. Bağlantınızı kontrol edin — çıkış yapmadınız, oturumunuz duruyor.",
+      "retry": "Tekrar dene"
+    },
     "profile": {
       "edit": "Düzenle",
       "editLabel": "Profil bilgilerini düzenle",
@@ -152,6 +157,11 @@
       "body": "Vérifiez-vous en quelques secondes pour accéder à votre compte — sans mot de passe.",
       "cta": "Vérification rapide"
     },
+    "error": {
+      "title": "Service momentanément indisponible",
+      "body": "Impossible de charger votre compte. Vérifiez votre connexion — vous n'êtes pas déconnecté, votre session est intacte.",
+      "retry": "Réessayer"
+    },
     "profile": {
       "edit": "Modifier",
       "editLabel": "Modifier les informations du profil",
@@ -277,6 +287,11 @@
       "title": "Willkommen",
       "body": "Verifizieren Sie sich in Sekunden, um auf Ihr Konto zuzugreifen — ohne Passwort.",
       "cta": "Schnelle Verifizierung"
+    },
+    "error": {
+      "title": "Derzeit nicht verfügbar",
+      "body": "Ihr Konto konnte nicht geladen werden. Prüfen Sie Ihre Verbindung — Sie sind nicht abgemeldet, Ihre Sitzung besteht weiter.",
+      "retry": "Erneut versuchen"
     },
     "profile": {
       "edit": "Bearbeiten",

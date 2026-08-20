@@ -4421,15 +4421,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   doğrulama gerekli.") çıkıyor; bağlantı gelince tekrar düğmeleri kimlik/adres/teslimat/ödeme ve
   özeti tam getiriyor. Oturumsuz yanlış sipariş açmak mümkün değil.
 
-  **YENİ AÇIK MADDE — okunamayan sepet 0,00 € çiziliyor** (`BEKLEYEN(21.89)`): sepette 18 kalem
-  varken sunucuya ulaşamayan bir tazeleme checkout özetini `Ara toplam 0,00 € · Genel toplam
-  0,00 € · "Siparişi onayla · 0,00 €"` hâline düşürdü. 401 bunu YAPMIYOR (o hâlde özet doğru
-  duruyordu); yapan ağ arızası. CLAUDE.md §1 *"Ölçülemeyen değer SIFIR değildir"*in ihlali — doğru
-  davranış son bilinen tutarı korumak ya da "okunamadı" demektir. **Sunucu açıp kapadığım kirli
-  pencerede görüldü; temiz akışta TEKRAR ÜRETİLMEDEN düzeltilmeyecek** (kullanıcı kararı 20.08:
-  "kesinlikle hızlı bir müdahalede bulunma"). Aynı pencerede ikinci bir gözlem: *"son değişiklik
-  geri alındı"* uyarısı çıktı ama ekran geri almamıştı (14 duruyordu, sunucuda 13) — o da aynı
-  şartla bekliyor.
+  **~~AÇIK MADDE: okunamayan sepet 0,00 € çiziliyor~~ → KAPANDI (20.08, temiz akışta ÜRETİLEMEDİ.)**
+  Sepette 18 kalem varken checkout özeti bir kez `Ara toplam 0,00 € · Genel toplam 0,00 €` hâline
+  düşmüştü. Mobil API tamamen kapatılıp (bağlantı reddi — 401 değil) dört senaryo sırayla ölçüldü:
+  (1) checkout yüklüyken arka plan→dönüş, (2) teslimat günü seçme, (3) ödeme seçip **Siparişi
+  onayla**, (4) sipariş gerçekten açıldı mı. Hiçbirinde sıfırlanma yok — tutar `89,66 €`da kaldı,
+  onay *"Sipariş gönderilemedi — bağlantınızı kontrol edip tekrar deneyin."* dedi ve DB'de yeni
+  sipariş oluşmadı (tek kayıt 19.08'den). İlk gözlem sunucunun isteğin ortasında yeniden doğduğu
+  kirli pencerenin ürünüymüş. Aynı şey "son değişiklik geri alındı" gözlemi için de geçerli.
+  Kullanıcı kuralı: *"gerçekleştirilemediyse yoktur"*.
 
   **Web'de aynı zıplama duruyor**
   (kullanıcı orada da doğruladı) — alan web şeridinin, not bırakıldı
@@ -4468,3 +4468,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kendi Openscreen keşfi bu ağda çalışmıyor). Cihaz macOS'un Bonjour'uyla bulunuyor:
   `dns-sd -B _adb-tls-connect._tcp local` → örnek adı, `dns-sd -L <ad> _adb-tls-connect._tcp local`
   → `host:port`, sonra `adb connect`. Eşleşme kayıtlı olduğu için yeniden `adb pair` gerekmiyor.
+
+- [x] (21.91) **SUNUCUYA ULAŞILAMAYINCA EKRAN SUSUYORDU — vitrin ve hesap konuşmaya başladı (20.08).**
+  `touches: apps/mobile/src/components/ui/offline-notice.tsx, apps/mobile/src/screens/home/home-screen.tsx, apps/mobile/src/screens/home/messages.json, apps/mobile/src/app/(tabs)/account.tsx, apps/mobile/src/screens/account/messages.json`
+
+  **Ölçüm (cihaz, mobil API kapalı, soğuk açılış):** dört sekme gezildi.
+  · Katalog ✓ *"Bağlantı kurulamadı… Tekrar dene"* · Paketler ✓ aynı kalıp
+  · **Vitrin ✗ BOMBOŞ** — koleksiyon yok, kampanya yok, sepet rozeti yok, **tek uyarı yok**
+  · **Hesap ✗** — girişli müşteriye *"Hoş geldiniz — Hesabınıza ulaşmak için doğrulanın"*
+
+  İkisi de yanlış beyandı. Vitrinde müşteri "mağaza boş" ya da (rozet kaybolduğu için) "sepetim
+  gitmiş" sanıyor; hesapta oturumu YERLİ YERİNDEYKEN atıldığını sanıp yeniden giriş deniyor.
+  Kaybolan veri değil, okunamayan sunucuydu — CLAUDE.md §1 *"Ölçülemeyen değer SIFIR değildir"*.
+
+  **Görünüm İCAT EDİLMEDİ:** kalıp (ikon `connection-off` → başlık → açıklama → "Tekrar dene")
+  uygulamada zaten 13 ekranda vardı ve künyeleri onu sözleşme gibi anlatıyordu (`orders-screen`:
+  *"aynı arıza üç ekranda üç ayrı görünüme sahip olmasın"*). CLAUDE §1 gereği iki kopya daha
+  EKLENMEDİ; kanonik bileşen çıkarıldı (`components/ui/offline-notice.tsx`) ve yeni iki yer onu
+  kullanıyor. Metin ortak DEĞİL — her sayfa kendi `messages.json`unda (CLAUDE §2), üç dilde.
+  Hesabın metni *"çıkış yapmadınız, oturumunuz duruyor"* cümlesini açıkça taşıyor.
+
+  Vitrinin kancasında `status: 'error'` ve `retry` ZATEN vardı, ekran okumuyordu; dosya künyesi
+  boşluğu *"tasarımdan bir hata hâli gelirse bu durumdan okunur"* diye bırakmıştı — karar geldi
+  (kullanıcı 20.08: *"şu an hizmet veremiyoruz gibi bir şey çıkması gerekiyor"*).
+
+  **Cihazda doğrulandı:** sunucu kapalıyken vitrin ve hesap *"Şu an hizmet veremiyoruz"* + gerekçe
+  + **Tekrar dene** çiziyor; sunucu açılıp düğmeye basılınca ikisi de TAM dönüyor (hesapta ad,
+  e-posta, telefon, puan; vitrinde kampanya ve fırsat şeritleri). `typecheck` · `lint` temiz,
+  mobil paket 596/599 — düşen 3'ü kabuk düzeyi zaman aşımı ailesi, İZOLE koşuda ikisi de geçti
+  (`app-shell` + `account-routes`, 5/5).
+
+  **BEKLEYEN(21.91):** mevcut 13 çağrı `OfflineNotice`e göç etmedi — kalıbı hâlâ elle kuruyorlar
+  (`catalog` · `packages-list` · `orders` · `discover` · `recipes-list` · `recipe` · `product` ·
+  `package` · `points-history` · `feedback` · `support`×2 · `order-detail`). Göç tek turda
+  yapılmalı ki iki biçim bir arada az yaşasın.
+
+  **BEKLEYEN(21.91):** toparlanma sonrası vitrin selamlaması misafir kalıyor — hesap sekmesinde
+  "Tekrar dene" ile kimlik geri geldiği hâlde başlıkta *"Hoş geldiniz"* yazıyor, sekme değiştirmek
+  de düzeltmiyor; soğuk açılışta doğru (*"İyi akşamlar, Yaman"*). Posta kodu 67000 ARIZA DEĞİL:
+  o gezinme kodudur, satın alma tarafı adresten 67380'i çözer (`setPurchasePlace` künyesi).

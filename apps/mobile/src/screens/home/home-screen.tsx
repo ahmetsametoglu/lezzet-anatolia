@@ -9,6 +9,7 @@ import { pullRefreshColors } from '@/components/ui/pull-refresh';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { Icon } from '@/components/ui/icon';
+import { OfflineNotice } from '@/components/ui/offline-notice';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -289,6 +290,28 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
          kayardı — iskeletin işi tam bunu önlemek. Sipariş bandının `knownGuest` ölçütü yerinde
          duruyor: o blok gerçekten girişliye özel. */
       <HomeSkeleton sections={skeletonSections} discoverInvite testID="home-skeleton" />
+    );
+
+  /* SUNUCUYA ULAŞILAMADIYSA SAYFA BUNU SÖYLER (kullanıcı kararı 20.08).
+     Eskiden bu dal YOKTU ve `error` hâli olduğu gibi aşağıya düşüyordu: `home` `null` kaldığı için
+     her bölüm "boş dizi = bölüm yok" kuralına takılıp çizilmiyor, ekranda yalnız selamlama ile iki
+     statik davet kartı kalıyordu. Cihazda ölçüldü (20.08, mobil API kapalı, soğuk açılış): vitrin
+     BOMBOŞ ve tek bir uyarı yok — müşteri "mağaza boş" ya da daha kötüsü "sepetim gitmiş" sanıyor
+     (sepet rozeti de o hâlde çizilmiyor). Kaybolan veri değil, okunamayan sunucuydu.
+
+     Dosyanın üstündeki künye bu boşluğu "tasarımdan hata hâli gelirse bu durumdan okunur" diye
+     bırakmıştı; karar geldi. Görünüm İCAT EDİLMİYOR: katalog/paketler/siparişler ekranlarının
+     zaten kullandığı `connection-off` kalıbı (`OfflineNotice`), yalnız metni vitrinin kendi
+     sözlüğünden. `retry` kancada zaten vardı, kullanılmıyordu. */
+  if (home.status === 'error')
+    return (
+      <OfflineNotice
+        title={t.error.title}
+        description={t.error.body}
+        retryLabel={t.error.retry}
+        onRetry={home.retry}
+        testID="home-error"
+      />
     );
 
   const header = (
