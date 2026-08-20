@@ -117,7 +117,8 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
       </Text>
       <PressableSurface
         onPress={() => {
-          if (detail !== null) void Share.share({ message: detail.name });
+          // Ad + adres birlikte gider; gerekçe ürün detayının `share` künyesinde (08.45).
+          if (detail !== null) void Share.share({ message: `${detail.name}\n${detail.shareUrl}` });
         }}
         feedback="tint"
         compact

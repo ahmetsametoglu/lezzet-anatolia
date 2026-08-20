@@ -26,6 +26,8 @@ export function packageDetail(overrides: Partial<PackageDetail> = {}): PackageDe
     // değiştirirdi; fixture'ın işi tekrarlanabilir bir dünya kurmak.
     id: '9f1c4a20-6b1e-4d3a-9f2c-0a5b7c8d1e20',
     slug: 'bayram-sofrasi-paketi',
+    // Paylaşım adresi (08.45) — gerçek uçta `localizedUrl` üretir; fixture yalnız aynı ŞEKLİ taşır.
+    shareUrl: 'https://www.lezzetanatolia.fr/tr/paket/bayram-sofrasi-paketi',
     name: 'Bayram Sofrası Paketi',
     description: 'Bayram sofrasını tek kutuda kurar: baklava, su böreği, fıstık ve künefe.',
     priceCents: 4990,

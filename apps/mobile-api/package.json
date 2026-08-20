@@ -16,6 +16,7 @@
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/helper": "workspace:*",
+    "@lezzet/i18n": "workspace:*",
     "@lezzet/observability": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@supabase/supabase-js": "^2.48.1",

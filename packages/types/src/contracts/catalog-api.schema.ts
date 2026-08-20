@@ -347,5 +347,19 @@ export const CatalogProductDetailSchema = ProductSchema.pick({ id: true, slug: t
   family: z.array(CatalogFamilyMemberSchema),
   /** Aynı kategoriden başka ürünler (seçim kuralı `pickSimilar`); boşsa bölüm çizilmez. */
   similar: z.array(CatalogProductSchema),
+  /**
+   * **Paylaşılacak TAM web adresi** (08.45) — dil öneki ve dile göre çevrilmiş yol dâhil
+   * (`/tr/urun/…` · `/fr/produit/…` · `/de/produkt/…`).
+   *
+   * SUNUCUDAN GELİR, İSTEMCİDE KURULMAZ: adres üç parçadan oluşuyor — köken (`siteOrigin`), dil
+   * öneki ve **dile göre değişen** yol şablonu (`PATHNAMES`). Üçü de web rotasının kuralı; mobilde
+   * string birleştirmek o kuralın ikinci kopyası olurdu ve web yolu değiştiği gün uygulama sessizce
+   * KIRIK adres paylaşırdı (CLAUDE §1). Kaynak tek: `localizedUrl` (`@lezzet/i18n`), künyesi zaten
+   * *"dış dünyaya verilecek tam adres (mail, WhatsApp, paylaşılan bağlantı)"* diyor.
+   *
+   * Zorunlu ve nullable DEĞİL: her ürünün slug'ı var, yani adres her zaman kurulabilir. Boş
+   * bırakılabilir yapmak, çözülemeyen bir hâli varmış gibi göstermek olurdu.
+   */
+  shareUrl: z.string().url(),
 });
 export type CatalogProductDetail = z.infer<typeof CatalogProductDetailSchema>;

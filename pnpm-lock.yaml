@@ -280,6 +280,9 @@ importers:
       '@lezzet/helper':
         specifier: workspace:*
         version: link:../../packages/helper
+      '@lezzet/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@lezzet/observability':
         specifier: workspace:*
         version: link:../../packages/observability

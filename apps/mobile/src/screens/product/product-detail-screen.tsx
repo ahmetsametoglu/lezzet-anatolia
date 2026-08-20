@@ -263,8 +263,13 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
     .map((image) => image.url)
     .filter((url): url is string => url !== null);
 
+  /* PAYLAŞIM ADRESİ TAŞIR, YALNIZ AD DEĞİL (08.45). Eskiden gövde `detail.name`di: karşı tarafa
+     "Su Böreği" yazan, tıklanacak hiçbir şeyi olmayan bir mesaj gidiyordu — cihazda ölçüldü.
+     Adres SUNUCUDAN gelir (`shareUrl`), burada kurulmaz: dil öneki ve yolun çevirisi web rotasının
+     kuralıdır (sözleşme künyesi). Ad da düşmez — bağlantı önizlemesi çıkmayan uygulamalarda
+     (SMS, bazı mesajlaşma kutuları) neyin paylaşıldığını yalnız o söylüyor. */
   const share = () => {
-    void Share.share({ message: detail.name });
+    void Share.share({ message: `${detail.name}\n${detail.shareUrl}` });
   };
 
   const addToCart = () => {

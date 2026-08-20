@@ -86,6 +86,13 @@ export const PackageDetailSchema = BundleSchema.pick({ id: true, slug: true }).e
    * sızmasını derleme/parse anında keser.
    */
   items: z.array(PackageItemSchema).min(1),
+  /**
+   * **Paylaşılacak TAM web adresi** (08.45) — dil öneki ve dile göre çevrilmiş yol dâhil
+   * (`/tr/paket/…` · `/fr/coffret/…` · `/de/paket/…`). Gerekçesi ürün sözleşmesindeki ikiziyle
+   * aynı ve orada yazılı: adres web rotasının kuralıdır, mobilde kurmak o kuralın ikinci kopyası
+   * olurdu (`CatalogProductDetailSchema.shareUrl` künyesi).
+   */
+  shareUrl: z.string().url(),
 });
 export type PackageDetail = z.infer<typeof PackageDetailSchema>;
 

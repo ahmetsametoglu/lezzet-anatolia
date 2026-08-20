@@ -37,6 +37,8 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
   return {
     id: uuid(1),
     slug: 'el-acmasi-kol-boregi',
+    // Paylaşım adresi (08.45) — gerçek uçta `localizedUrl` üretir; fixture yalnız aynı ŞEKLİ taşır.
+    shareUrl: 'https://www.lezzetanatolia.fr/tr/urun/el-acmasi-kol-boregi',
     name: 'El Açması Kol Böreği',
     description: 'El açması yufka, taş fırında günlük pişer; peynirli iç harcı Anadolu tulumuyla yoğrulur.',
     shippable: true,

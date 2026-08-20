@@ -11,6 +11,7 @@ import {
   type PlaceWarehouses,
   type PricingViewer,
 } from '@lezzet/application';
+import { localizedUrl } from '@lezzet/i18n';
 import { resolveLocalizedText } from '@lezzet/types';
 import {
   CatalogCategoryListSchema,
@@ -313,6 +314,14 @@ catalog.get('/products/:slug', async (c) => {
   // Bu, `packages/types`ın `@lezzet/helper`a bağlanamaması yüzünden oraya konamayan
   // `satisfies z.ZodType<TextSegment>` kilidinin yerini de tutar — üstelik daha geniş: yalnız
   // metin parçasını değil, ürünün/boyun/ailenin tüm alanlarını çiviler.
-  const body: z.input<typeof CatalogProductDetailSchema> = detail;
+  /* PAYLAŞIM ADRESİ BURADA KURULUR (08.45), okuma kapısında değil: `getProductDetail` katalog
+     verisini çözüyor, adres ise WEB ROTASININ kuralı — köken + dil öneki + dile göre çevrilmiş yol.
+     `localizedUrl` o kuralın tek sahibi (`@lezzet/i18n`, künyesi zaten "paylaşılan bağlantı" diyor);
+     burada yalnız çağrılıyor, kopyalanmıyor. Uygulama önce sadece ürün ADINI paylaşıyordu — alan
+     tarafa "Su Böreği" yazan, tıklanacak hiçbir şeyi olmayan bir mesaj gidiyordu. */
+  const body: z.input<typeof CatalogProductDetailSchema> = {
+    ...detail,
+    shareUrl: localizedUrl('/product/[slug]', locale.data, { slug: detail.slug }),
+  };
   return ok(c, CatalogProductDetailSchema.parse(body));
 });

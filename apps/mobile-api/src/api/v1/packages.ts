@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
 import { getPackageDetail } from '@lezzet/application';
+import { localizedUrl } from '@lezzet/i18n';
 import { PackageDetailSchema, PackageListSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
@@ -117,6 +118,9 @@ packages.get('/packages/:slug', async (c) => {
       qty: item.qty,
       image: item.image,
     })),
+    // Paylaşım adresi web rotasının kuralından gelir, burada KURULMAZ — künyesi `catalog.ts`ın
+    // ürün detayında (aynı gerekçe, aynı tek kaynak: `localizedUrl`).
+    shareUrl: localizedUrl('/package/[slug]', locale.data, { slug: pack.slug }),
   };
   return ok(c, PackageDetailSchema.parse(body));
 });

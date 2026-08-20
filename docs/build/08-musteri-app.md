@@ -1173,9 +1173,40 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   müşteride liste ile fiyat farklı depodan geliyor. Ekranda ÜRETİLMEDİ (yalnız kod ölçümü) —
   kalem açılmadan önce cihazda/ekranda tekrar üretilecek.
 
-- [ ] (08.45) **PAYLAŞILAN HER ŞEY GERÇEK BİR WEB ADRESİ TAŞISIN** *(kullanıcı ile 19.08 —
+- [x] (08.45) **PAYLAŞILAN HER ŞEY GERÇEK BİR WEB ADRESİ TAŞISIN** *(kullanıcı ile 19.08 —
   kampanya paylaşımı ayrı bir iş olarak düşünülmedi; kök eksik bu)* ·
-  `touches (planlanan): apps/mobile/src/screens/{product,package}/**, apps/mobile-api/src/api/v1/**`
+  `touches: packages/types/src/contracts/{catalog,package}-api.schema.ts,
+  apps/mobile-api/src/api/v1/{catalog,packages}.ts, apps/mobile-api/package.json,
+  apps/mobile/src/screens/{product,package}/{*-detail-screen.tsx,*-fixture.ts}`
+
+  **YAPILDI (21.08).** Sözleşmelere `shareUrl` eklendi (ürün detayı · paket detayı) ve adresi
+  **sunucu** üretiyor: `localizedUrl` (`@lezzet/i18n`) — künyesi zaten *"dış dünyaya verilecek TAM
+  adres (mail, WhatsApp, paylaşılan bağlantı)"* diyordu, yani yeni kural yazılmadı, var olan tek
+  kaynak çağrıldı.
+
+  **İstemcide string birleştirilmedi** (kullanıcı seçimi, iki yol karşılaştırılarak soruldu): adres
+  üç parçadan oluşuyor — köken + dil öneki + **dile göre çevrilen yol şablonu** (`PATHNAMES`).
+  Üçü de web rotasının kuralı; mobilde kurmak o kuralın ikinci kopyası olurdu ve web yolu değiştiği
+  gün uygulama sessizce KIRIK adres paylaşırdı (CLAUDE §1).
+
+  **Ölçüm (uçtan, üç dil) — yalnız önek değil YOL da çevriliyor:**
+  · ürün: `/tr/urun/…` · `/fr/produit/…` · `/de/produkt/…`
+  · paket: `/tr/paket/…` · `/fr/coffret/…` · `/de/paket/…`
+
+  **Cihazda doğrulandı (21.08):** paylaşım penceresinde gövde tam olarak
+  `Peynirli Adana Böreği` + satır sonu + `https://www.lezzetanatolia.fr/tr/urun/peynirli-adana-boregi`;
+  pakette `Bayram Sofrası Paketi` + `…/tr/paket/bayram-sofrasi-paketi`. Ad da bırakıldı: bağlantı
+  önizlemesi çıkmayan kutularda (SMS vb.) neyin paylaşıldığını yalnız o söylüyor.
+
+  `typecheck` · `lint` · **`boundaries`** temiz — sonuncusu gerekliydi: `@lezzet/i18n` mobil-api'ye
+  bağımlılık olarak EKLENDİ (`package.json`) ve bağımlılık kuralını ihlal etmediği makineyle
+  doğrulandı. Ürün + paket ekran testleri 16/16.
+
+  **KAMPANYA PAYLAŞIMI BU İŞİN İÇİNDE DEĞİL — çünkü kampanya HİÇ paylaşılmıyor.** Uygulamada
+  `Share.share` yalnız DÖRT yerde çağrılıyor (`grep`le sayıldı): davet · komşu daveti · ürün ·
+  paket. İlk ikisi zaten adres taşıyordu, son ikisi bu görevle taşımaya başladı — yani "paylaşılan
+  her şey" şartı karşılandı. Kampanyada paylaş DÜĞMESİ yok; onu eklemek yeni bir yüzey işi ve ayrı
+  bir kalem olarak açılmalı (kullanıcının 19.08'de sorduğu asıl konu buydu).
 
   **Ölçüldü:** `product-detail-screen.tsx:267` → `Share.share({ message: detail.name })`. Yani
   arkadaşınıza **çıplak bir ürün adı** gidiyor, bağlantı yok; alan kişi hiçbir şey açamıyor. Paket
