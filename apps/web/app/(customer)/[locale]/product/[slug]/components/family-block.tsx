@@ -167,7 +167,17 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
   };
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-card border border-sand-200 bg-sand-50 px-4 py-3.5">
+    // Mobilde KAPSIZ (kullanıcı bildirimi 20.08, görüntüyle): kum kartın iç pedi şeridi kenardan
+    // kırpıyor ve iki yanda ölü boşluk bırakıyordu — sayfanın öbür bölümleri (boy seçimi) zaten
+    // kapsız akıyor, çeşitler de akar. Masaüstünde kart duruyor: orada blok bir sütunun içinde ve
+    // çerçeve onu komşularından ayırıyor.
+    <div
+      className={
+        compact
+          ? 'flex flex-col gap-2.5'
+          : 'flex flex-col gap-2.5 rounded-card border border-sand-200 bg-sand-50 px-4 py-3.5'
+      }
+    >
       <div className="flex items-baseline gap-2.5">
         <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body-sm'].join(' ')}>
           {currentUnavailable ? t.titleUnavailable : t.title}
@@ -188,8 +198,18 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
       </div>
 
       {/* Blok TEK SATIRDA kalır (tasarım): ızgaraya dönüşseydi kalabalık ailede satın alma panelini
-          ekranlarca aşağı iterdi. Üst ped aktif kartın taşan ✓ rozeti içindir. */}
-      <div className={`${SCROLL_STRIP} gap-2 pt-2.5`}>
+          ekranlarca aşağı iterdi. Üst ped aktif kartın taşan ✓ rozeti içindir.
+          Mobilde şerit KENARDAN KENARA (`-mx-4`, bölümün pedinden taşar) ve kaydırma çubuğu GİZLİ
+          (checkout çip şeridinin aynı kararı): dokunmatikte çubuk yönlendirme değil kirdir — kesik
+          duran son kart zaten "devamı var" diyor. Masaüstü `SCROLL_STRIP`te kalır (çubuk orada
+          bilinçli görünür — künyesindeki Windows gerekçesi). */}
+      <div
+        className={
+          compact
+            ? '-mx-4 flex gap-2 overflow-x-auto px-4 pt-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+            : `${SCROLL_STRIP} gap-2 pt-2.5`
+        }
+      >
         {cards.map((m) => (
           <FamilyCard key={m.slug} member={m} size={size} subLine={subLineOf(m, size === 'normal')} />
         ))}
