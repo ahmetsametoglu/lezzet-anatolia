@@ -123,6 +123,16 @@ checkout.get('/', async (c) => {
     addressId: c.req.query('addressId') ?? null,
     couponCode: c.req.query('coupon') ?? null,
     shippingOrder: c.req.query('group') === 'shipping',
+    /* PAKET KAPISI BURADA DA GEÇİLİR (20.08) — `placeOrder` geçiyordu, OKUMA geçmiyordu ve ikisinin
+       ayrışması ekranda ölçüldü: özet paketi listeliyor ve ara toplama katıyor, GENEL TOPLAM ise
+       saymıyordu (92,97 − 6,28 = 86,69 iken ekranda 49,31 €; fark tam olarak paketin 37,38 €'su).
+       Sebebi kapının yokluğu: paket satırı `orphanLine`a düşüyor — adı boş, fiyatı `null`, engelli —
+       ve fiyatsız satır toplama girmiyor. Ekran kendi kendini yalanlıyordu.
+
+       Sipariş AÇILIRKEN kapı zaten geçiliyordu, yani müşteri doğru tutarı ödeyecekti ama ekranda
+       yanlışını görüyordu. İki yerin aynı kapıyı görmesi şart: biri paketi tanıyıp öteki tanımazsa
+       "gördüğüm tutar ile tahsil edilen tutar" bir gün ayrışır. */
+    bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
   });
 
   // `z.input` KİLİTTİR: kapının şekli saparsa burası DERLENMEZ. `parse` de süzgeç — kapının

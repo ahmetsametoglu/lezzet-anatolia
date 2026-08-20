@@ -4407,3 +4407,25 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `@lezzet/application`da ve mobil onu çağıramıyor (`@lezzet/database` bağı RN bundle'ına giremez),
   bu yüzden `cart-store`daki `viewWithQty` onun İKİZİ — saf birleştirme `domain-core`'a terfi
   ettiğinde silinecek → `BEKLEYEN(21.89)`.
+
+- [x] (21.90) **CHECKOUT TOPLAMI PAKETİ SAYMIYORDU — okuma kapıyı geçmiyordu (20.08).**
+  `touches: apps/mobile-api/src/api/v1/checkout.ts, apps/mobile/src/screens/checkout/checkout-screen.tsx`
+
+  Cihaz turunda yakalandı: aynı karede özet paketi listeliyor ve ara toplama katıyor, **genel
+  toplam saymıyordu** — `92,97 − 6,28 = 86,69` iken ekranda **49,31 €**; fark tam olarak paketin
+  37,38 €'su. Ekran kendi kendini yalanlıyordu.
+
+  Sebep tek satırdı: `readCheckoutSnapshot` paket kapısını (`CartBundlePort`) kabul ediyor ve
+  `placeOrder` onu GEÇİYOR, ama `/me/checkout` OKUMASI geçmiyordu. Kapısız çözülen paket satırı
+  `orphanLine`a düşüyor (adı boş, fiyatı `null`, engelli) ve fiyatsız satır toplama girmiyor.
+  Sipariş açılırken kapı zaten geçildiği için müşteri DOĞRU tutarı ödeyecekti — yanlış olan yalnız
+  gördüğü tutardı; ikisinin ayrışması "gördüğüm ile tahsil edilen" arızasının ta kendisi.
+
+  Ekranda da 21.89'un ikizi duruyordu: paketi eleyen yerel süzgeç (`localBundleIds`) ve özete
+  yerelden yazılan paket satırı. İkisi de söküldü — paket artık `orderedLines`ın içinde, tutarı
+  sunucunun.
+
+  **Ölçüm (cihazsız, `readCheckoutSnapshot` doğrudan çağrıldı):** aynı sepette (3 kalem, 1'i paket)
+  kapı YOKken toplam **49,31 €**, kapı VARken **86,69 €** — ekrandaki yanlış ve sepetteki doğru
+  tutarla birebir. `typecheck` · `lint` temiz, mobil birim testleri 599/599.
+  **Cihaz doğrulaması BEKLİYOR** (cihaz bağlı değildi) → `BEKLEYEN(21.90)`.

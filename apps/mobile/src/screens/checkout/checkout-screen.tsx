@@ -266,10 +266,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const selectedPayment = paymentOptions.find((option) => option.key === paymentKey && option.available) ?? null;
 
   /* ── SEPET GÖRÜNÜMÜ (özet + küçük resimler) ───────────────────────────────
-     Kaynak SUNUCUNUN çözdüğü görünüm. Paket satırı bugün sunucuda çözülemiyor (adı boş, fiyatı
-     `null`) ve yerel kayıt onu taşıyor; sepet ekranının süzgeci burada da geçerli, yoksa aynı
-     paket biri adsız iki kez yazılırdı. */
-  const localBundleIds = new Set(cart.bundles.map((bundle) => bundle.id));
+     Kaynak SUNUCUNUN çözdüğü görünüm — PAKET DAHİL (20.08). Buradaki yerel süzgeç, sunucunun
+     paketi çözemediği döneme aitti: yerel kayıt çiziliyor, sunucunun adsız satırı eleniyordu.
+     Paket sunucuya bağlanınca gerekçe düştü ve süzgeç KALKTI — kalsaydı bu kez paket satırı
+     özetten hiç çizilmez, üstelik toplama giren satırla listelenen satır ayrışırdı. */
   /* SEPET ADRESLE ÇÖZÜLÜR (kullanıcı kararı 10.08) — ama yer artık DEPOYA bildiriliyor, ekrana
      ikinci bir okuma eklenerek değil (künye: `cart-store` → `purchasePostalCode`, 20.08). İkinci
      okuma yazma turlarını duymuyordu ve ekranı dondurmuştu. Adres henüz bilinmiyorsa depo gezinme
@@ -278,7 +278,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     setPurchasePlace(selectedAddress?.postalCode ?? null);
   }, [selectedAddress?.postalCode]);
   const view = cart.view;
-  const viewLines = view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
+  const viewLines = view.lines;
 
   /* ── BU SİPARİŞİN KAPSAMI (kullanıcı kararı 10.08) ────────────────────────
      Bu adrese hiç gelemeyen kalem siparişe GİRMEZ ama sepetten de silinmez; sunucu onu kapsam
@@ -329,12 +329,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /* Türetme SEPETLE ORTAK (`discountSummaryOf`) — künyesi kitte. */
   const discountSummary = discountSummaryOf(view.discount, locale);
 
+  /* Paket satırı artık `orderedLines`ın içinde (sunucu çözüyor) — ayrı bir yerel blok YOK.
+     Vardı ve 20.08'de söküldü: yerelden yazılan satır toplamı ekranın kendi çarpımıydı, oysa
+     tahsil edilecek tutarı sunucu hesaplıyor; ikisi bir gün ayrışırdı. */
   const summaryRows: SummaryRow[] = [
-    ...cart.bundles.map((bundle) => ({
-      key: `bundle-${bundle.id}`,
-      label: t.summary.line.replace('{quantity}', String(bundle.quantity)).replace('{name}', bundle.name),
-      value: formatPrice(bundle.unitCents * bundle.quantity, locale),
-    })),
     ...orderedLines.map((line) => ({
       key: cartLineId(line),
       label: t.summary.line.replace('{quantity}', String(line.qty)).replace('{name}', line.name),
