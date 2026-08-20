@@ -6,6 +6,7 @@ import { Reviews } from './components/reviews';
 import { SimilarStrip } from './components/similar-strip';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { ShareButton } from '@/components/customer/ui/share-button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { Badge } from '@/components/customer/ui/badge';
 import { ColdChainMark, StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
@@ -36,7 +37,13 @@ export function ProductMobile({ t, locale, product, selected, onSelect, familyLa
           {product.category && (
             <span className="font-sans text-eyebrow-sm text-olive uppercase">{product.category.name}</span>
           )}
-          <h1 className="font-serif text-page-title-sm text-ink">{product.name}</h1>
+          {/* id yapışkan barın gözlediği kimlik (`SiteFrame detail.watchId`): h1 ekrandan çıkınca
+              ad barda belirir. Paylaş adın YANINDA (kullanıcı kararı 20.08, yedinci tur) — düğme
+              neyin yanındaysa onu paylaşır; başlıkta bağlamsız duruyordu. */}
+          <div className="flex items-start justify-between gap-2">
+            <h1 id="product-title" className="font-serif text-page-title-sm text-ink">{product.name}</h1>
+            <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
+          </div>
           {/* Stok rozeti SEÇİLİ boyu anlatır — butonla çelişmemesi için. Tasarımda puan satırının
               sağına yaslıdır; puan satırı bugün yok (17), rozet o satırın yerinde tek başına durur.
               Rozet elle boyanıyordu ve tükendi hâlinde de YEŞİL çıkıyordu ("Tükendi" yazan yeşil bir

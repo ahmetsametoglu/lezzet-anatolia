@@ -1,0 +1,101 @@
+{
+  "tr": {
+    "title": "Puan geçmişi",
+    "back": "← Hesabım",
+    "empty": "Henüz puan hareketiniz yok — nasıl kazanacağınız aşağıda.",
+    "loadMore": "Daha eski hareketler",
+    "loading": "Yükleniyor…",
+    "earnTitle": "Nasıl puan kazanırım?",
+    "earnNote": "{points} puan biriktiğinde {amount} değerinde indirim kuponuna çevirebilirsiniz.",
+    "earnPoints": "+{points} puan",
+    "earnWay": {
+      "review": "Satın aldığınız ürüne yorum yazın",
+      "feedback_purchase": "Sipariş sonrası ürünlerinizi değerlendirin",
+      "feedback_candidate": "Keşif'te aday ürünleri oylayın",
+      "referral": "Arkadaşınızı davet edin — ilk siparişini verdiğinde",
+      "neighbor": "Komşunuzu seferinize davet edin — siparişi ödendiğinde",
+      "visit": "Her gün uğrayın"
+    },
+    "reason": {
+      "review": "Ürün yorumu",
+      "feedback_purchase": "Ürün beğenisi",
+      "feedback_candidate": "Yeni lezzet oyu",
+      "order": "Sipariş",
+      "referral": "Getirdiğiniz arkadaş",
+      "neighbor": "Davet ettiğiniz komşu",
+      "visit": "Günlük ziyaret",
+      "redemption": "Kupona çevrildi",
+      "manual": "Elle düzeltme"
+    },
+    "reasonReversed": {
+      "referral": "Getirdiğiniz arkadaş — iptal edildi",
+      "neighbor": "Davet ettiğiniz komşu — iptal edildi"
+    }
+  },
+  "fr": {
+    "title": "Historique des points",
+    "back": "← Mon compte",
+    "empty": "Aucun mouvement de points pour l'instant — voyez ci-dessous comment en gagner.",
+    "loadMore": "Mouvements plus anciens",
+    "loading": "Chargement…",
+    "earnTitle": "Comment gagner des points ?",
+    "earnNote": "Dès {points} points, convertissez-les en bon de réduction de {amount}.",
+    "earnPoints": "+{points} points",
+    "earnWay": {
+      "review": "Rédigez un avis sur un produit acheté",
+      "feedback_purchase": "Évaluez vos produits après la commande",
+      "feedback_candidate": "Votez pour les nouvelles saveurs dans Découverte",
+      "referral": "Parrainez un ami — dès sa première commande",
+      "neighbor": "Invitez un voisin sur votre tournée — dès que sa commande est payée",
+      "visit": "Passez nous voir chaque jour"
+    },
+    "reason": {
+      "review": "Avis sur un produit",
+      "feedback_purchase": "J’aime sur un produit",
+      "feedback_candidate": "Vote pour une nouvelle saveur",
+      "order": "Commande",
+      "referral": "Ami parrainé",
+      "neighbor": "Voisin invité",
+      "visit": "Visite du jour",
+      "redemption": "Converti en bon",
+      "manual": "Ajustement manuel"
+    },
+    "reasonReversed": {
+      "referral": "Ami parrainé — annulé",
+      "neighbor": "Voisin invité — annulé"
+    }
+  },
+  "de": {
+    "title": "Punkteverlauf",
+    "back": "← Mein Konto",
+    "empty": "Noch keine Punktebewegungen — unten steht, wie Sie Punkte sammeln.",
+    "loadMore": "Ältere Bewegungen",
+    "loading": "Wird geladen…",
+    "earnTitle": "Wie sammle ich Punkte?",
+    "earnNote": "Ab {points} Punkten tauschen Sie sie gegen einen Gutschein über {amount} ein.",
+    "earnPoints": "+{points} Punkte",
+    "earnWay": {
+      "review": "Bewerten Sie ein gekauftes Produkt",
+      "feedback_purchase": "Bewerten Sie Ihre Produkte nach der Bestellung",
+      "feedback_candidate": "Stimmen Sie unter Entdecken über neue Sorten ab",
+      "referral": "Werben Sie Freunde — ab der ersten Bestellung",
+      "neighbor": "Laden Sie Ihre Nachbarschaft zur selben Tour ein — sobald die Bestellung bezahlt ist",
+      "visit": "Schauen Sie täglich vorbei"
+    },
+    "reason": {
+      "review": "Produktbewertung",
+      "feedback_purchase": "Gefällt-mir für ein Produkt",
+      "feedback_candidate": "Stimme für eine neue Sorte",
+      "order": "Bestellung",
+      "referral": "Geworbene Freundin oder Freund",
+      "neighbor": "Eingeladene Nachbarschaft",
+      "visit": "Tagesbesuch",
+      "redemption": "In Gutschein umgewandelt",
+      "manual": "Manuelle Korrektur"
+    },
+    "reasonReversed": {
+      "referral": "Geworbene Freundin oder Freund — storniert",
+      "neighbor": "Eingeladene Nachbarschaft — storniert"
+    }
+  }
+}

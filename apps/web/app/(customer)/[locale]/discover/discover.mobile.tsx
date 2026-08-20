@@ -19,8 +19,16 @@ export function DiscoverMobile({ t, card, position, earned, signedIn, onVote, bu
             {t.counter.replace('{index}', String(position.index)).replace('{total}', String(position.total))}
           </span>
         </div>
-        <PointsChip t={t} earned={earned} signedIn={signedIn} />
+        {/* Ziyaretçi daveti başlık SATIRINA SIĞMAZ (ölçüldü 20.08: üç satırlık kutu "Découverte"
+            başlığının üstüne biniyordu — FR/DE metin dar ekranda uzun). Girişlide kısa çip satırda
+            kalır; ziyaretçide yer ayrılır, davet başlığın ALTINDA kendi satırını alır. */}
+        {signedIn ? <PointsChip t={t} earned={earned} signedIn={signedIn} /> : <span className="w-10 flex-none" aria-hidden="true" />}
       </header>
+      {!signedIn && (
+        <div className="flex justify-center px-4 pb-2">
+          <PointsChip t={t} earned={earned} signedIn={signedIn} />
+        </div>
+      )}
 
       {/* Çerçeve cümlesi kartın ÜSTÜNDE: "bunlar satılık değil" bilgisi karta bakılmadan önce
           verilmeli, sonra verilseydi müşteri fiyat aramış olurdu (tasarım §6). */}

@@ -39,8 +39,12 @@ export function OrdersMobile({
 }: OrdersViewProps) {
   if (orders.length === 0) {
     return (
-      <div className="px-4 py-8">
+      // Boş hâl KALAN ALANIN 4:6 noktasında (native kuralı, 16.08 — salt ortalama gözün üstünde
+      // durur; footer'sız kısa sayfada üstte asılı buton altında krem bir deniz bırakıyordu).
+      <div className="flex flex-1 flex-col px-4 py-8">
+        <span className="flex-[2]" aria-hidden="true" />
         <ListEmpty icon="📦" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
+        <span className="flex-[3]" aria-hidden="true" />
       </div>
     );
   }

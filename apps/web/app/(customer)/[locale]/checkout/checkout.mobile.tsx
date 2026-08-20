@@ -1,6 +1,6 @@
 'use client';
 
-import { Link } from '@/i18n/navigation';
+import { FunnelHeader } from '@/components/customer/ui/funnel-header';
 import { AccountLine, AddressStep, DeliveryStep, LockedStep, OrderSummary, PaymentStep } from './components/checkout-steps';
 import { CheckoutProgress } from './components/checkout-progress';
 import { GuestVerify } from './components/guest-verify';
@@ -19,20 +19,23 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const { t } = props;
 
   return (
-    <div className="flex w-full flex-col gap-3.5 px-4 py-5">
-      <div className="flex flex-col gap-1">
-        <Link href="/cart" className="w-max cursor-pointer font-sans text-note font-semibold text-olive hover:text-olive-dark">
-          {t.backToCart}
-        </Link>
-        {/* Kargo siparişinde üst satır kendini söyler — masaüstüyle aynı gerekçe. */}
-        <span className="font-sans text-micro font-semibold tracking-wide text-muted uppercase">
-          {props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
-        </span>
-        <h1 className="font-serif text-h1-sm text-ink">{t.title}</h1>
-      </div>
+    // Kökte YATAY PED YOK: yapışkan kimlik barı sayfa boyu yapışabilsin diye başlık kökün
+    // doğrudan çocuğu (`FunnelHeader` künyesi); içerik kendi pedli sarmalayıcısında.
+    <div className="flex w-full flex-col pt-2 pb-5">
+      {/* Huninin ORTAK başlığı — kargo siparişinde eyebrow kendini söyler. */}
+      <FunnelHeader
+        backLabel={t.backLabel}
+        fallback="/cart"
+        eyebrow={props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
+        title={t.title}
+      />
 
-      <ShippingOrderNote {...props} />
+      <div className="flex flex-col gap-3.5 px-4 pt-3.5">
+      {/* Şerit sarmalayıcının İLK çocuğu: başlığın hemen altında akar, kaydırınca kimlik barının
+          altına yapışır (altıncı tur). Sarmalayıcı sayfa sonuna kadar uzadığı için yapışma da
+          sayfa boyu sürer — künyedeki kapsama dersi burada kendiliğinden sağlanıyor. */}
       <CheckoutProgress {...props} />
+      <ShippingOrderNote {...props} />
 
       {props.authenticated ? (
         <>
@@ -64,6 +67,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       {/* Güven satırı en altta: mobilde başlık zaten dar, ve kart alanına gelen müşteri sayfanın
           sonuna inmiş oluyor — cümle tam orada işe yarıyor. */}
       <span className="text-center font-sans text-micro font-semibold text-muted">🔒 {t.secure}</span>
+      </div>
     </div>
   );
 }

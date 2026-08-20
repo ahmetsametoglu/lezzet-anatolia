@@ -8,8 +8,6 @@ import { listCustomerOrders } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
-import { Link } from '@/i18n/navigation';
-import frameMessages from '@/components/customer/ui/site-frame-messages.json';
 import { OrdersClient } from './orders-client';
 import type { Messages } from './orders-types';
 import messages from './messages.json';
@@ -46,7 +44,10 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
     <SiteFrame
       device={device}
       locale={locale}
-      accountChrome={{ nav: 'orders', title: t.title, right: <BackToCatalog locale={locale as Locale} /> }}
+      // Geri bağı HESABA (tasarım: "← Hesabım | Siparişlerim") — destek sayfasıyla aynı desen;
+      // sağdaki "← Kataloğa dön" 20.08'de düştü: satırda iki ok'lu bağ kafa karıştırıyordu ve
+      // kataloğun yolu zaten menüde + boş hâlin kendi CTA'sında.
+      accountChrome={{ nav: 'orders', back: { label: t.backToAccount, href: '/account' }, title: t.title }}
     >
       <OrdersClient t={t} locale={locale as Locale} first={first} device={device} />
     </SiteFrame>
@@ -55,15 +56,3 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
 
 /** Giriş sayfasının dile göre segmenti — hesap sayfasıyla aynı gerekçe, tablodan okunur. */
 const LOGIN_SEGMENT = routing.pathnames['/login'];
-
-/**
- * "← Kataloğa dön" — hesap başlığının sağ ucu (tasarım). Metni çerçevenin mesaj dosyasından alır,
- * çünkü aynı bağ üç hesap ekranında da aynı şeyi söylüyor; sayfa başına kopyalanmamalı.
- */
-function BackToCatalog({ locale }: { locale: Locale }) {
-  return (
-    <Link href="/catalog" className="cursor-pointer font-sans text-body-sm font-bold text-olive hover:text-olive-dark">
-      {frameMessages[locale].accountNav.backToCatalog}
-    </Link>
-  );
-}

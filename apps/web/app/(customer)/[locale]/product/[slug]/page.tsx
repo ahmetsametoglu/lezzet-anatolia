@@ -131,8 +131,10 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       locale={locale}
       activeNav="catalog"
       mobileChrome="detail"
-      back={{ label: t.back, href: '/catalog' }}
-      share={{ subjectType: 'product', subjectId: product.id, productId: product.id }}
+      footer="slim"
+      /* Kimlik içerikteki h1 (ürün adı görselin altında): bar onu `watchId` ile gözler — ad
+         ekranda her an tam bir kez durur. Paylaş artık başlıkta değil, o h1'in yanında. */
+      detail={{ title: product.name, watchId: 'product-title', fallback: '/catalog' }}
     >
       {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
           YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,

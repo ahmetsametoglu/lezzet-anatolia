@@ -2,7 +2,7 @@ import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
 import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
-import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
+import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
 import { CouponsCard } from './components/coupons-card';
 import { DeleteAccount } from './components/delete-account';
@@ -68,6 +68,7 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
 
         <div className="flex flex-col gap-5">
           {account.points && <PointsCard t={t} locale={locale} points={account.points} compact={compact} />}
+          {account.points && <InviteCard t={t} points={account.points} compact={compact} />}
 
           <Card compact={compact}>
             <CardHead title={t.savedTitle} compact={compact} action={<SavedAddAll label={t.savedAddAll} saved={account.saved} />} />

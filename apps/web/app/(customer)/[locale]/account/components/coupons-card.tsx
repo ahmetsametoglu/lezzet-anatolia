@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import type { CustomerCoupon } from '@/lib/account/coupons';
+import type { CustomerCoupon } from '@lezzet/application';
 import { formatPrice } from '@/lib/storefront/format';
 import type { Messages } from '../account-types';
 

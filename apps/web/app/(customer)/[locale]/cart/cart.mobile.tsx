@@ -1,6 +1,6 @@
 'use client';
 
-import { Link } from '@/i18n/navigation';
+import { FunnelHeader } from '@/components/customer/ui/funnel-header';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
 import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
@@ -46,14 +46,16 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
   const grouped = groups.route.length > 0 && groups.shipping.length > 0;
 
   return (
-    <div className={['flex flex-col', empty ? '' : 'pb-28'].join(' ')}>
-      <div className={['flex items-center justify-between gap-3 px-4 py-3', empty ? 'border-b border-sand-100' : ''].join(' ')}>
-        <Link href="/catalog" className="cursor-pointer font-sans text-body font-bold text-olive">
-          {empty ? t.backCatalog : t.backShort}
-        </Link>
-        <h1 className="font-serif text-card-title-sm text-ink">{t.title}</h1>
-        <span className="font-sans text-note text-muted">{t.count.replace('{n}', String(view.itemCount))}</span>
-      </div>
+    <div className={['flex flex-col pt-2', empty ? '' : 'pb-28'].join(' ')}>
+      {/* Huninin ORTAK başlığı (`FunnelHeader` künyesi): SARMALAYICISIZ — yapışkan bar ancak uzun
+          kök konteynerin doğrudan çocuğuyken sayfa boyunca yapışır (künyedeki ders). Eyebrow
+          yerinde sayaç; tekil ayrı anahtar (FR/DE'de "1 produits/Produkte" dil hatasıydı). */}
+      <FunnelHeader
+        backLabel={t.backLabel}
+        fallback="/catalog"
+        eyebrow={view.itemCount === 1 ? t.countOne : t.count.replace('{n}', String(view.itemCount))}
+        title={t.title}
+      />
 
       {empty ? (
         <EmptyCart t={t} locale={locale} context={emptyContext} compact />

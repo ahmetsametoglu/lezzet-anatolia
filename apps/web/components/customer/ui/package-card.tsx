@@ -148,7 +148,11 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
               {!stockStatus && (
                 <span
                   className={[
-                    'rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold whitespace-nowrap',
+                    // `whitespace-nowrap` YOK (kullanıcı bulgusu 20.08): FR metin ("Livraison en
+                    // zone uniquement") dar kartta çipten uzun ve nowrap ile kartın
+                    // `overflow-hidden` kenarında KIRPILIYORDU — yarım kelime, yanlış bilgi.
+                    // Sarmak çirkin değil, kesilmek yanlış.
+                    'rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold',
                     pack.inRouteOnly ? 'border border-honey-line bg-honey-bg text-honey' : 'bg-olive-bg text-olive-dark',
                   ].join(' ')}
                 >

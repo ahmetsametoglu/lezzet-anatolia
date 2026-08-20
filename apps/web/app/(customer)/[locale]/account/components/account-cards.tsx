@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
+import { buttonClass } from '@/components/customer/ui/button';
 import { useCart } from '@/components/customer/cart/cart-context';
 import type { AccountView } from '@/lib/account/read';
 import { cancelZoneNoticeAction, setConsentAction } from '../actions';
@@ -153,6 +155,10 @@ export function PointsCard({
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-serif text-card-title-sm leading-tight">{t.pointsTitle}</span>
           <span className="font-sans text-micro leading-relaxed text-neutral-400">{rule}</span>
+          {/* Tam döküm ayrı sayfada (20.08) — mobil kart döküm taşımaz (tasarım), yol buradan. */}
+          <Link href="/account/points" className="cursor-pointer font-sans text-micro font-semibold text-olive-light hover:text-cream">
+            {t.pointsHistoryLink}
+          </Link>
         </div>
         <div className="flex flex-none flex-col items-end gap-1.5">
           <span className="font-sans text-page-title-sm font-bold text-olive-light">{points.balance}</span>
@@ -220,6 +226,44 @@ export function PointsCard({
             </span>
           </div>
         ))}
+        {/* Tam d\u00f6k\u00fcm ayr\u0131 sayfada (20.08): kart yaln\u0131z son 4 hareketi ta\u015f\u0131r, gerisi sayfal\u0131d\u0131r. */}
+        <Link href="/account/points" className="cursor-pointer pt-0.5 font-sans text-note font-semibold text-olive-light hover:text-cream">
+          {t.pointsHistoryLink}
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Davet kart\u0131 (20.08) \u2014 native hesab\u0131n webde olmayan blo\u011fu (kullan\u0131c\u0131 bulgusu): `/parrainage/[code]`
+ * kar\u015f\u0131lamas\u0131 aylard\u0131r \u00e7al\u0131\u015f\u0131yordu ama m\u00fc\u015fteri kendi ba\u011flant\u0131s\u0131n\u0131 hi\u00e7bir yerden ALAMIYORDU, yani
+ * program webde tek y\u00f6nl\u00fcyd\u00fc. Adres application'dan gelir (`inviteUrl` \u2014 ekran adres kurmaz).
+ *
+ * \u0130ki alan da yoksa kart H\u0130\u00c7 do\u011fmaz: ba\u011flant\u0131s\u0131z davet \u00e7a\u011fr\u0131s\u0131 bas\u0131lamayan bir d\u00fc\u011fme, puan\u0131
+ * bilinmeyen davet ise tutulamayacak bir s\u00f6z olurdu (`neighborPoints` kural\u0131n\u0131n ayn\u0131s\u0131).
+ */
+export function InviteCard({ t, points, compact }: { t: Messages; points: NonNullable<AccountView['points']>; compact: boolean }) {
+  const [copied, setCopied] = useState(false);
+  if (!points.inviteUrl || points.referralPoints === null) return null;
+  const url = points.inviteUrl;
+
+  const copy = () => {
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <section className={['flex flex-col gap-2.5 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-7 py-6'].join(' ')}>
+      <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.inviteTitle}</span>
+      <p className="font-sans text-note leading-relaxed text-body">{t.inviteBody.replace('{points}', String(points.referralPoints))}</p>
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 truncate rounded-soft border border-sand-200 bg-cream px-3 py-2 font-sans text-note text-muted">{url}</span>
+        <button type="button" onClick={copy} className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none whitespace-nowrap' })}>
+          {copied ? t.inviteCopied : t.inviteCopy}
+        </button>
       </div>
     </section>
   );

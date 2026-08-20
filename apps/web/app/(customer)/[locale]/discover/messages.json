@@ -59,14 +59,14 @@
     "guestInvite": "Connectez-vous et vos avis vous rapportent des points",
     "guestInviteCta": "Se connecter",
     "done": {
-      "title": "Vous avez tout évalué !",
+      "title": "Vous avez tout évalué !",
       "earned": "+{points} points gagnés",
       "body": "Vos avis ont rejoint notre choix de produits. De nouveaux candidats arriveront ici.",
       "catalog": "Voir le catalogue",
       "balance": "Mon solde de points →"
     },
     "guestDone": {
-      "title": "Merci pour vos avis !",
+      "title": "Merci pour vos avis !",
       "body": "Vos avis ont rejoint notre choix de produits. Si vous le souhaitez, ouvrez un compte et nous y créditons les {points} points ({money}) accumulés.",
       "cta": "Ouvrir un compte et récupérer les points",
       "catalog": "Voir le catalogue"

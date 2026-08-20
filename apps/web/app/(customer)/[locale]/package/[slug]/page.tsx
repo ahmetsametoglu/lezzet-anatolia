@@ -76,10 +76,10 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
       locale={locale}
       activeNav="packages"
       mobileChrome="detail"
-      back={{ label: t.back, href: '/packages' }}
-      // Paket bir ürün DEĞİL: `productId` yok, çünkü paket birden çok ürünü tek fiyata sunuyor —
-      // birini seçip ona yazmak ölçümü o ürüne haksızca yüklerdi.
-      share={{ subjectType: 'bundle', subjectId: pack.id }}
+      footer="slim"
+      /* Kimlik içerikteki h1 (paket adı görselin altında) — ürün detayıyla aynı gözleme deseni.
+         Paylaş düğmesi de o h1'in yanında (`package.mobile`). */
+      detail={{ title: pack.name, watchId: 'package-title', fallback: '/packages' }}
     >
       <PackageClient t={t} locale={locale} pack={pack} device={device} />
     </SiteFrame>

@@ -85,7 +85,7 @@
       "imageAlt": "Böreks fumants et une table familiale généreuse"
     },
     "categories": {
-      "title": "Que cherchez-vous ?"
+      "title": "Que cherchez-vous ?"
     },
     "campaign": {
       "percent": "{n} %",
@@ -123,7 +123,7 @@
     },
     "recipes": {
       "eyebrow": "Idées de table",
-      "title": "Comment dresser cette table ?",
+      "title": "Comment dresser cette table ?",
       "all": "Toutes les recettes →",
       "items": "{n} produits",
       "pantry": "{n} de chez vous",
@@ -136,7 +136,7 @@
       "cta": "Commencer ✦"
     },
     "pro": {
-      "title": "Vous êtes restaurateur ou commerçant ?",
+      "title": "Vous êtes restaurateur ou commerçant ?",
       "body": "Ouvrez un compte professionnel pour des tarifs de gros et des livraisons régulières.",
       "cta": "Professionnels →"
     }

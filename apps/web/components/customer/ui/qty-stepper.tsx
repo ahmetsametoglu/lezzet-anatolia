@@ -61,25 +61,28 @@ const SIZE: Record<StepperSize, SizeStyle> = {
   // Sepet mobil satırı.
   sm: {
     frame: 'rounded-soft border-[1.5px] border-olive bg-card',
-    // 44px dokunma tabanı (envanter: "- ve + dokunma alanı en az 44px kare"). Sepet satırında yer
-    // var: seçici satırın tek kontrolü, genişlemesi komşusunu taşırmıyor.
-    pad: 'flex min-h-11 min-w-11 items-center justify-center px-2.5 text-step-sm leading-tight',
+    // GÖRSEL KÜÇÜK, DOKUNMA 44 (kullanıcı kararı 20.08): `min-h-11 min-w-11` görünür kutudaydı ve
+    // seçici satırın en iri öğesine dönmüştü ("çok büyük ve rahatsız edici"). Katalog kartının
+    // deseni buraya taşındı — kutu ~30px çizilir, dokunma alanı görünmez `after` katmanıyla dikeyde
+    // 44'e tamamlanır (envanter tabanı). Yatay uzatma ±4px'te tutuldu: daha genişi ortadaki elle
+    // giriş kutusunun dokunuşunu çalar (B2B oraya yazar) — xs'in "yalnız dikey garanti" emsali.
+    pad: "relative flex items-center justify-center rounded-r-soft px-2.5 py-1 text-step-sm leading-tight after:absolute after:-inset-x-1 after:-inset-y-2 after:content-['']",
     minus: 'text-olive',
     plus: 'bg-olive text-cream',
     value: 'w-6 py-1 text-note leading-tight text-ink',
   },
-  // Mobil katalog kartı — en dar kademe. Sepet satırındaki `sm`'den de küçüktür ve olmalıdır:
-  // orada seçici satırın tek kontrolü, burada fiyatla aynı satırı paylaşıyor (tasarım: kart 14/12,
-  // sepet satırı 15/13). Aynı ölçüyle bağlanınca kart dışına taşıyor.
+  // Mobil katalog kartı — en dar kademe. Kart artık eylemi TAM GENİŞLİK tek satırda taşıyor
+  // (kullanıcı kararı 20.08) ve seçici yerini aldığı `cardSm` düğmesiyle (26px) aynı kutuyu
+  // doldurmak zorunda — görsel o yüzden küçük, dokunma `after` katmanıyla dikeyde 44 (sm'in aynı
+  // deseni). `fullWidth` hâlinde uçlar %25, sayı %50 (lg'nin sabit oran kuralı).
   xs: {
     frame: 'rounded-soft border-[1.5px] border-olive bg-card',
-    // Kartta hedef YALNIZ DİKEYDE 44px'e çıkar, yatayda değil: iki sütunlu mobil ızgarada kart
-    // ~180px ve seçici fiyatla aynı satırı paylaşıyor; `min-w-11` iki düğmeyi 88px'e çıkarıp
-    // fiyatı taşırırdı. Dikey, listede en çok ıskalanan eksen. Yatay kalıntı design/BACKLOG §4'te.
-    pad: 'flex min-h-11 items-center justify-center px-2 text-body-sm leading-tight',
+    pad: "relative flex items-center justify-center rounded-r-soft px-2 py-0.5 text-body-sm leading-tight after:absolute after:-inset-x-1 after:-inset-y-2 after:content-['']",
     minus: 'text-olive',
     plus: 'bg-olive text-cream',
     value: 'w-6 py-0.5 text-micro leading-tight text-ink',
+    padWide: "relative flex w-1/4 flex-none items-center justify-center rounded-r-soft py-0.5 text-body-sm leading-tight after:absolute after:-inset-y-2 after:content-['']",
+    valueWide: 'w-1/2 flex-none border-x border-sand-100 py-0.5 text-micro leading-tight text-ink',
   },
   // Koyu sabit çubuk (ürün detay mobil): kontrast tersine döner.
   onDark: {
@@ -118,7 +121,10 @@ export function QtyStepper({ value, onChange, min = 1, max = null, size = 'md', 
   return (
     <span
       className={[
-        'items-center overflow-hidden',
+        'items-center',
+        // `overflow-hidden` köşe kırpması içindi; `sm`/`xs`te dokunma alanı çerçevenin DIŞINA
+        // taşar (after katmanı) ve kırpma onu tıklanamaz yapar — dolgu kendi köşesini taşır.
+        size === 'sm' || size === 'xs' ? '' : 'overflow-hidden',
         fullWidth ? 'flex w-full' : 'inline-flex w-max',
         s.frame,
         // Tavandayken çerçeve nötrleşir; koyu çubukta zaten kontrast düşük, orada dokunulmaz.

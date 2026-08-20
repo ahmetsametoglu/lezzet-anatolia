@@ -60,7 +60,7 @@
     },
     "fixedNote": "Le coffret est vendu tel quel ; son contenu ne peut pas être modifié. Pour acheter les produits séparément, parcourez le catalogue.",
     "contents": {
-      "title": "Que contient le coffret ?",
+      "title": "Que contient le coffret ?",
       "subtitle": "{n} produits · touchez un produit pour voir sa fiche",
       "qty": "{label} · {n} unité(s)",
       "qtyPlain": "{n} unité(s)",

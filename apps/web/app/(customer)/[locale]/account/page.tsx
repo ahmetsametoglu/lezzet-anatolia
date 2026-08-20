@@ -8,6 +8,7 @@ import { getAccountView } from '@/lib/account/read';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
+import { SignOutLink } from '@/components/customer/account/sign-out-link';
 import { AccountClient } from './account-client';
 import type { Messages } from './account-types';
 import messages from './messages.json';
@@ -41,7 +42,7 @@ export default async function AccountPage({ params }: AccountPageProps) {
   if (!account) notFound();
 
   return (
-    <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title }}>
+    <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title, right: <SignOutLink locale={locale as Locale} /> }}>
       <AccountClient t={t} locale={locale} account={account} device={device} />
     </SiteFrame>
   );

@@ -5,7 +5,8 @@ import { brand, whatsappHref } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { LocaleLinks } from './locale-switch';
 import { MobileMenu } from './mobile-menu';
-import { ShareButton, type ShareSubject } from './share-button';
+import type { NavKey as MobileMenuNavKey } from './mobile-menu';
+import { FunnelHeader } from './funnel-header';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
 import { AccountEntry } from '@/components/customer/account/account-entry';
@@ -32,7 +33,9 @@ import messages from './site-frame-messages.json';
 // `deals` 09.08'de düştü: menüden kaldırıldı (kullanıcı kararı) ve aktif işareti verilecek bir
 // menü öğesi kalmadı. Katalog `?offers=1` ile açıldığında aktif olan öğe `catalog` — doğrusu da bu,
 // çünkü gidilen yer katalogun kendisi.
-type NavKey = 'catalog' | 'packages' | 'recipes' | 'discover' | 'pro';
+// NavKey menü dosyasında durur: iki biçim (masaüstü şeridi · mobil panel) aynı anahtar kümesini
+// paylaşır ve site-frame zaten mobile-menu'yu import ediyor — tip-only import döngü açmaz.
+type NavKey = MobileMenuNavKey;
 /** Hesap alanının üç sekmesi (tasarım: `Hesabım · Siparişlerim · Taleplerim`). */
 type AccountTab = 'account' | 'orders' | 'support';
 
@@ -42,42 +45,66 @@ interface SiteFrameProps {
   /**
    * Gezinmede hangi öğe AKTİF — tasarımda aktif sayfa zeytin rengi + 2px alt çizgi taşır (Katalog
    * ve Ürün Detay ekranlarında "Katalog", Hesap ekranında "Hesabım"). Ziyaretçi nerede olduğunu
-   * başlıktan görmeli; verilmezse hiçbiri işaretlenmez (ana sayfa).
+   * başlıktan görmeli. Ana sayfa `home` geçirir: masaüstü şeridinde satırı yok (o işi logo görür),
+   * mobil panelde "Ana sayfa" satırını işaretler. Hata/404 gibi sayfasız hâller vermez.
    */
   activeNav?: NavKey;
   /**
-   * MOBİL çerçeve varyantı (K11/K12/K16). `detail` ürün ve paket detayları içindir: duyuru şeridi
-   * gösterilmez ("yerini üst bar alır"), başlık gezinme yerine GERİ + paylaş taşır ve footer tek
-   * satıra iner. Sebep davranışsal: detay sayfası sosyal/WhatsApp trafiğinin indiği yerdir —
-   * ziyaretçi siteye baştan girmemiştir, ekranın üstü onu geldiği yere döndürmeye ayrılır.
-   * Masaüstünde fark YOKTUR; tasarım orada normal başlığı gösterir.
+   * MOBİL çerçeve varyantı (K11/K12/K16). `detail` ürün/paket/tarif detayları içindir: duyuru
+   * şeridi gösterilmez, footer tek satıra iner ve başlığı `FunnelHeader` kurar (`detail` prop'u) —
+   * yedinci turda (20.08) logolu detay barı söküldü, hamburgersiz TÜM sayfalar tek başlık dilini
+   * konuşuyor: ‹ ikon + yapışkan kimlik + sağ uçta sepet. Sebep davranışsal: detay sayfası
+   * sosyal/WhatsApp trafiğinin indiği yerdir — ziyaretçi siteye baştan girmemiştir, ekranın üstü
+   * onu geldiği yere döndürmeye ayrılır. Masaüstünde fark YOKTUR.
+   *
+   * **İki katman kuralı (kullanıcı kararı 20.08):** vitrin katmanı (`default`) menü + logo +
+   * sepet; hamburgersiz katman `FunnelHeader`.
+   *
+   * `bare` hiç başlık çizmez: kendi kapalı kabuğunu kuran yüzeyler için — keşif (tam ekran örtü)
+   * ve HUNİ sayfaları (sepet, checkout; ikinci tur 20.08). Huninin başlığı da `FunnelHeader` ama
+   * onu SAYFA kurar: eyebrow'u istemci verisinden geliyor (sepette kalem sayacı), çerçeve bilemez.
    */
-  mobileChrome?: 'default' | 'detail';
-  /** `detail` başlığındaki geri bağlantısı ("← Katalog"). Metin sayfaya aittir, çerçeveye değil. */
-  back?: { label: string; href: ComponentProps<typeof Link>['href'] };
+  mobileChrome?: 'default' | 'detail' | 'bare';
+  /**
+   * `detail` başlığının içeriği (yedinci tur). `title` sayfanın kimliği (ürün/paket/tarif adı);
+   * `watchId` verilirse kimlik İÇERİKTEKİ o id'li h1'dir — hero bloğu çizilmez, bar onu gözler
+   * (ürün/paket: ad görselin altında durur, tasarım yukarı taşımaz). Verilmezse hero'yu
+   * `FunnelHeader` kurar (tarif: sayfanın mobil düzeninde başka h1 yok). `fallback` tarayıcı
+   * geçmişi boşken ‹'nin gideceği yer; "Geri" metni ve sepet rozeti çerçevenin sözlüğünden.
+   */
+  detail?: {
+    title: string;
+    watchId?: string;
+    eyebrow?: string;
+    fallback: ComponentProps<typeof FunnelHeader>['fallback'];
+  };
+  /**
+   * Footer katmanı (kullanıcı kararı 20.08 — sayfa TÜRÜNE bağlı, cihaza değil):
+   *   `full` → giriş kapıları: ana sayfa, Professionnels, yasal/statik sayfalar.
+   *   `slim` → marka + dil tek satırı: katalog/paket/tarif listeleri ve tüm detay sayfaları.
+   *   `none` → huni ve girişli yardımcı yüzeyler: sepet, checkout, keşif, hesap alanı.
+   * Verilmezse eski davranıştan türer: `fill` ve hesap alanı `none`, mobil detay `slim`, kalan `full`.
+   * Yasal erişim kopmaz: CGV bağı checkout onay metninde, gizlilik bağı hesabın GDPR notunda,
+   * dil değiştirici menü panelinde de var.
+   */
+  footer?: 'full' | 'slim' | 'none';
   /**
    * **HESAP ALANININ BAŞLIĞI** (08.14) — verilirse vitrin başlığının YERİNE geçer.
    *
-   * Tasarımda hesap/siparişler/sipariş detay ekranlarının başlığı vitrinden farklıdır: logo +
-   * (sekmeler | geri bağı) + sağ uçta ekrana özel bir öğe. Duyuru şeridi de yoktur — hesap alanı
+   * Masaüstünde tasarımın hesap başlığı: logo + (sekmeler | geri bağı) + sağ uçta ekrana özel öğe.
+   * MOBİLDE artık `FunnelHeader` (yedinci tur 20.08): hamburgersiz tek başlık dili — ‹ ikon +
+   * yapışkan kimlik + sağ uçta ekranın öğesi. Duyuru şeridi her iki cihazda da yok — hesap alanı
    * girişli bir yardımcı yüzey, kampanya duyurusunun yeri değil (üç `.dc.html`'de de çizili değil).
    *
    * Neden `SiteFrame` içinde ve ayrı bir bileşen değil: `main` ve footer aynı kalıyor. Ayrı bir
    * çerçeve yazmak footer'ı ikinci kez tanımlamak, yani dil listesini iki yerde tutmak olurdu.
    */
-  /**
-   * Mobil detay başlığındaki paylaş düğmesinin KONUSU (08.9).
-   *
-   * Çerçeve hangi sayfada olduğunu bilmez; düğme adresi paylaşır ama defter adresi tanımaz (yol
-   * rota kalıbı olarak yazılıyor). Verilmezse düğme HİÇ çizilmez — konusu bilinmeyen bir paylaşım
-   * ölçülemez ve ölçülemeyen bir düğmeyi çizmek, defterde karşılığı olmayan bir tıklama üretirdi.
-   */
-  share?: ShareSubject;
   accountChrome?: {
     /** Masaüstünde sekme gezinmesi — geri bağıyla birlikte kullanılmaz (tasarımda ikisi ayrı ekran). */
     nav?: AccountTab;
-    /** Sekme yerine geri bağı (sipariş detayı: "← Siparişlerim"). */
-    back?: { label: string; href: ComponentProps<typeof Link>['href'] };
+    /** Sekme yerine geri bağı (sipariş detayı: "← Siparişlerim"). Href tipi `FunnelHeader`ın
+        fallback'i: mobil ‹ bunu `router.push`a verir; `Link` bu dar tipi zaten kabul eder. */
+    back?: { label: string; href: ComponentProps<typeof FunnelHeader>['fallback'] };
     /** Mobil başlığın orta/sol metni — sayfanın adı ya da sipariş referansı. */
     title: string;
     /** Sağ uçtaki öğe: "Çıkış yap" · "← Kataloğa dön" · "↻ Tekrar sipariş". Sayfanın kararı. */
@@ -141,19 +168,25 @@ function tabClass(key: AccountTab, active: AccountTab | undefined, base = ''): s
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, share, accountChrome, fill, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', detail, accountChrome, fill, footer, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
   const isMobileDetail = isMobile && mobileChrome === 'detail';
+  const isMobileBare = isMobile && mobileChrome === 'bare';
   // Hesap alanında duyuru şeridi ÇİZİLMEZ (üç tasarımda da yok) ve başlık tamamen değişir.
   const account = accountChrome;
   const bandItems = isMobile ? [t.announcement.mobile] : [t.announcement.cold, t.announcement.local, t.announcement.shipping];
+  // Şerit MOBİLDE yalnız ana sayfada (kullanıcı kararı 20.08): her sayfada durunca katalog↔detay
+  // geçişinde bir görünüp bir kayboluyor ve üst bölgeyi zıplatıyordu. Mesaj vitrine girişte bir
+  // kez görülür. Masaüstünde eski kural sürüyor — şikâyet ve karar mobil web içindi.
+  const showBand = !account && !isMobileDetail && !isMobileBare && (!isMobile || activeNav === 'home');
+  const footerTier = footer ?? (fill || account ? 'none' : isMobileDetail ? 'slim' : 'full');
 
   return (
     <div className={`flex flex-col bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* K11 · Duyuru şeridi — mobil detayda gösterilmez, yerini üst bar alır. */}
-      {!isMobileDetail && !account && (
+      {showBand && (
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-cream">
         <div className={`${SHELL} flex justify-center gap-7 text-center`}>
           {bandItems.map((item) => (
@@ -166,18 +199,15 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       {/* K12 · Site başlığı — hesap alanında kendi başlığı (08.14) */}
       {account ? (
         isMobile ? (
-          /* Mobil: [geri] · başlık · [sağ öğe]. Geri yoksa başlık sola yerleşir (tasarım: hesap
-             ekranında "Hesabım" solda, sağda "Çıkış"; siparişlerde "← Hesabım" solda, başlık ortada). */
-          <header className="flex items-center justify-between gap-3 border-b border-sand-300 px-4 py-3">
-            {account.back && (
-              <Link href={account.back.href} className="flex-none cursor-pointer font-sans text-body-sm font-bold text-olive">
-                {account.back.label}
-              </Link>
-            )}
-            <span className="truncate font-serif text-lead font-semibold leading-tight text-ink">{account.title}</span>
-            {/* Sağ uç boşsa yer AYRILIR: başlığın ortada kalması buna bağlı (tasarımda 36–40px boşluk). */}
-            {account.right ?? <span className="w-10 flex-none" aria-hidden="true" />}
-          </header>
+          /* Mobil hesap başlığı = FunnelHeader (yedinci tur): ‹ ikon + büyük kimlik + sağ uçta
+             ekranın öğesi ("Çıkış" / "↻ Tekrar sipariş"). ‹'nin hedefi ekranın geri bağı; alan
+             kökünde (Hesabım) geri bağı yok, geçmişsiz girişte vitrine düşer. */
+          <FunnelHeader
+            backLabel={t.back}
+            fallback={account.back?.href ?? '/'}
+            title={account.title}
+            right={account.right}
+          />
         ) : (
           <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
             <Link href="/" className="cursor-pointer">
@@ -204,30 +234,24 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             {account.right && <div className="ml-auto flex flex-none items-center">{account.right}</div>}
           </header>
         )
-      ) : isMobileDetail ? (
-        <header className="flex items-center justify-between px-4 py-3">
-          {back ? (
-            <Link href={back.href} className="cursor-pointer font-sans text-body font-bold text-olive hover:text-olive-dark">
-              {back.label}
-            </Link>
-          ) : (
-            <span />
-          )}
-          <Link href="/" className="cursor-pointer">
-            <img src="/logo.jpg" alt={brand.name} className="h-9 mix-blend-multiply" />
-          </Link>
-          <div className="flex items-center gap-3.5">
-            {share && <ShareButton label={t.share} subject={share} />}
-            <CartBadge label={t.cart} compact />
-          </div>
-        </header>
-      ) : isMobile ? (
+      ) : isMobileDetail && detail ? (
+        /* Detay başlığı = FunnelHeader (yedinci tur): logolu bar söküldü, hamburgersiz tek dil.
+           Sepet rozeti sağ uçta — detay sayfası alışverişin içi, sepete giden yol kopmaz. */
+        <FunnelHeader
+          backLabel={t.back}
+          fallback={detail.fallback}
+          title={detail.title}
+          watchId={detail.watchId}
+          eyebrow={detail.eyebrow}
+          right={<CartBadge label={t.cart} compact />}
+        />
+      ) : isMobileBare ? null : isMobile ? (
         <>
           <header className="flex items-center justify-between border-b border-sand-300 px-4 py-3">
             {/* Menü GERÇEK (03.08): burası uzun süre handler'sız bir `<span>`ti ve mobil müşterinin
                 hesabına ulaşacağı, oturumunu kapatacağı hiçbir yol yoktu — `AccountEntry` yalnız
                 masaüstü dalında monte oluyordu. "Statik ≠ işlevsiz" (CLAUDE.md §3). */}
-            <MobileMenu locale={locale} />
+            <MobileMenu locale={locale} activeNav={activeNav} />
             <Link href="/" className="cursor-pointer">
               <img src="/logo.jpg" alt={brand.name} className="h-10 mix-blend-multiply" />
             </Link>
@@ -291,13 +315,13 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       <main className={`${SHELL} flex flex-1 flex-col ${fill ? 'min-h-0' : ''}`}>{children}</main>
 
       {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez).
-          Mobil detayda tek satıra iner: o ekranın altı sabit satın alma çubuğuna ayrılmıştır,
-          altına üç sütunluk bir footer yığmak çubuğu ekranın dışına iter.
-          `fill` yüzeylerinde HİÇ çizilmez — gerekçe prop'un künyesinde. */}
-      {!fill && (
+          Katman `footerTier`den gelir (prop künyesi): tam / tek satır / yok. Tek satırlı hâl
+          detayların eski davranışı; artık liste sayfaları da onu taşıyor (tasarımın katalog karesi
+          zaten böyle çiziyordu). `fill` ve hesap alanı varsayılanda `none`. */}
+      {footerTier !== 'none' && (
       <footer className="bg-ink text-neutral-400">
-        {isMobileDetail ? (
-          <div className="flex items-center justify-between px-4 py-4 font-sans text-micro">
+        {footerTier === 'slim' ? (
+          <div className={[SHELL, 'flex items-center justify-between py-4 font-sans text-micro', isMobile ? 'px-4' : 'px-12'].join(' ')}>
             <span className="font-serif text-body font-semibold text-cream">{brand.name}</span>
             <span className="uppercase">{LOCALES.join(' · ')}</span>
           </div>

@@ -1,13 +1,13 @@
 import 'server-only';
-import { AddressService, CartService, SettingsService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { AddressService, CartService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { Address, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
-import { readPendingNeighborAwards, readPointsRules, type PendingNeighborAward } from '@lezzet/application';
-import { getPointsBalance, listPointsHistory } from '@/lib/feedback/points';
-import { listCustomerCoupons, type CustomerCoupon } from './coupons';
-import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
+// Kupon köprüsü (`./coupons`) 20.08'de söküldü: kupon da puan kartıyla AYNI kapıdan geliyor
+// (`readCustomerPoints`), ayrı bir okuma kapısı çağrılmıyordu ve ölü koddu (knip).
+import { readCustomerPoints, type CustomerCoupon, type PendingNeighborAward } from '@lezzet/application';
+import { listPointsHistory } from '@/lib/feedback/points';
 
 /**
  * Hesap sayfasının TEK okuma kapısı (08.5).
@@ -50,6 +50,14 @@ export interface AccountView {
      * `null` = kural okunamadı; blok o hâlde hiç çizilmez — bilinmeyen sayıyla söz verilmez.
      */
     neighborPoints: number | null;
+    /**
+     * Davet bağlantısı (20.08 — native hesabın web'de olmayan bloğu). Adresi EKRAN KURMAZ,
+     * application verir (`inviteUrl` künyesi: üç yüzey kendi adresini kursaydı rota adı değişince
+     * ikisi sessizce 404'e düşerdi). `null` = kod üretilemedi; blok hiç çizilmez.
+     */
+    inviteUrl: string | null;
+    /** Davet ödülünün puan değeri — `neighborPoints` ile aynı kural: `null` ise söz verilmez. */
+    referralPoints: number | null;
   } | null;
   /**
    * Kullanılabilir kişisel kuponlar (17.5). B2B'de her zaman boş — puanla aynı koşula bağlı.
@@ -85,10 +93,10 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   const savedView = await getCartView(locale, cart.savedItems.map(entryOfItem), { customerId });
 
   // Puan ve kupon AYNI koşula bağlı: B2B'de ikisi de yok (tasarım — "B2B'de puan/kupon bölümü
-  // DOM'da hiç yoktur"). İkisini ayrı ayrı sormak, bir gün birinin B2B'de sızması demekti.
-  const [points, coupons] = company
-    ? [null, []]
-    : await Promise.all([readPoints(db, customerId), listCustomerCoupons(customerId)]);
+  // DOM'da hiç yoktur"). İkisi TEK kapıdan gelir (`readCustomerPoints` — 20.08'de buraya geçildi:
+  // eski `readPoints` aynı beş sorguyu parça parça atıyordu ve davet kodunu hiç getirmiyordu;
+  // native ile web'in kartı böylece aynı kaynaktan doğuyor).
+  const [points, coupons] = company ? [null, [] as CustomerCoupon[]] : await readPointsAndCoupons(db, customerId);
 
   return {
     profile: {
@@ -127,27 +135,33 @@ async function readZoneNotices(db: ReturnType<typeof serviceDb>, customerId: str
 }
 
 /**
- * Puan bölümü — bakiye, son hareketler ve çevirme kuralı. **Yalnız B2C'de çağrılır**: B2B'de
- * sonucu hiç çizilmeyecek üç sorgu atmanın anlamı yok.
+ * Puan bölümü + kuponlar — **yalnız B2C'de çağrılır**: B2B'de sonucu hiç çizilmeyecek sorgular
+ * atmanın anlamı yok. Kart application'dan gelir (bakiye, eşik, kupon, davet kodu/adresi, kazanma
+ * yolları TEK turda); web yalnız "son kazanımlar" dökümünü ekler.
  */
-async function readPoints(db: ReturnType<typeof serviceDb>, customerId: string): Promise<NonNullable<AccountView['points']>> {
-  const settings = new SettingsService(db);
-  const [balance, history, minimumPoints, centValue, pendingNeighborAwards, rules] = await Promise.all([
-    getPointsBalance(customerId),
-    // Dökümün ilk sayfası yeter: tasarım "son kazanımlar" diyor, tam geçmiş değil.
+async function readPointsAndCoupons(
+  db: ReturnType<typeof serviceDb>,
+  customerId: string,
+): Promise<[AccountView['points'], CustomerCoupon[]]> {
+  const [view, history] = await Promise.all([
+    readCustomerPoints(db, customerId),
+    // Dökümün ilk sayfası yeter: tasarım "son kazanımlar" diyor; tam geçmiş `/account/points`ta.
     listPointsHistory(customerId, undefined, POINTS_HISTORY_SIZE),
-    settings.getNumber(POINTS_REDEEM_MIN_KEY, 500),
-    settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
-    readPendingNeighborAwards(db, customerId),
-    readPointsRules(db),
   ]);
-  return {
-    balance: balance.balance,
-    history: history.rows,
-    redeem: { minimumPoints, valueCents: minimumPoints * centValue },
-    pendingNeighborAwards,
-    neighborPoints: rules.earnWays.find((way) => way.key === 'neighbor')?.points ?? null,
-  };
+  const card = view.points;
+  if (!card) return [null, view.coupons];
+  return [
+    {
+      balance: card.balance,
+      history: history.rows,
+      redeem: card.redeem,
+      pendingNeighborAwards: card.pendingNeighborAwards,
+      neighborPoints: card.earnWays.find((way) => way.key === 'neighbor')?.points ?? null,
+      inviteUrl: card.inviteUrl,
+      referralPoints: card.earnWays.find((way) => way.key === 'referral')?.points ?? null,
+    },
+    view.coupons,
+  ];
 }
 
 /** Tasarımın "Son kazanımlar" listesi dört satır gösteriyor; tam döküm ayrı bir ekranın işi. */

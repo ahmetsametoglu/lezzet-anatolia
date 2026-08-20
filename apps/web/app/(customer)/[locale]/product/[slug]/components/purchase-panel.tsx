@@ -1,7 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
-import { formatPrice } from '@/lib/storefront/format';
+import { formatPrice, formatWeight } from '@/lib/storefront/format';
 import type { StorefrontVariant } from '@lezzet/application';
 import { Badge } from '@/components/customer/ui/badge';
 import { Price } from '@/components/customer/ui/price';
@@ -73,6 +73,39 @@ interface VariantPickerProps {
 }
 
 /**
+ * Boyun MÜŞTERİYE GÖRÜNEN adı — yapısal alanlardan türer, saklı etiketten DEĞİL (kullanıcı kararı 19.08).
+ *
+ * *"Kullanıcı varyant isminde adet mantıklıysa adet görmeli, gramaj mantıklıysa gramaj. Zaten
+ * toplam gramajı da adedi de bir yere yazıyoruz; etiketin tekrar etmesine gerek yok."*
+ *
+ * Saklı `label` kaynağın kendi dizgisidir (`4x105g`) ve kutunun üstünde öyle yazar — mal kabulde,
+ * sayımda, tedarikçiyle konuşurken doğru olan o. Ama vitrinde müşterinin sorusu başka: **kaç tane
+ * alıyorum.** Türetim iki alandan yapılıyor, ikisi de zaten dolu:
+ *   · `piecesCount > 1` → "4 adet · 420 g"  (adet önde, ağırlık yanında)
+ *   · yoksa             → "135 g"           (tek parça; adet yazmak bilgi eklemez)
+ *
+ * Gramaj kaybolmuyor: çoklu pakette ikinci sıraya geçiyor, çünkü 420 g tek başına 4 simidi mi bir
+ * kocaman simidi mi anlattığını söylemiyordu.
+ */
+function boyAdi(
+  v: { piecesCount: number | null; portionKind: 'item' | 'slice' | null; netWeightG: number | null; label: string },
+  t: Messages,
+  locale: Locale,
+): string {
+  const agirlik = v.netWeightG !== null ? formatWeight(v.netWeightG, locale) : null;
+  if (v.piecesCount !== null && v.piecesCount > 1) {
+    const n = String(v.piecesCount);
+    // KELİME porsiyon TÜRÜNDEN gelir: 4'lü simit paketi "4 adet", 12 dilimlik cheesecake "12 dilim".
+    // İkisine de "adet" yazmak müşteriye 12 cheesecake aldığını söylerdi (künye `portion_kind`, 0005).
+    const dilim = v.portionKind === 'slice';
+    const tek = (dilim ? t.size.slices : t.size.pieces).replace('{n}', n);
+    const cift = (dilim ? t.size.slicesOf : t.size.piecesOf).replace('{n}', n);
+    return agirlik ? cift.replace('{weight}', agirlik) : tek;
+  }
+  return agirlik ?? v.label;
+}
+
+/**
  * K22 · Boy seçimi. Fiyatın nerede gösterildiği varyant SAYISINA bağlıdır ve bu tasarımın kararıdır:
  *   çok boylu → fiyat her boy kartının içinde (kıyas kartlar arasında yapılır)
  *   tek boylu → seçilecek bir şey yok, fiyat tek başına durur ("7,50 € / 500 g · 15,00 €/kg")
@@ -83,7 +116,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
   const multi = variants.length > 1;
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
-  const unitLine = [selected.label, selected.comparisonCents !== null ? `${formatPrice(selected.comparisonCents, locale)}/kg` : null]
+  const unitLine = [boyAdi(selected, t, locale), selected.comparisonCents !== null ? `${formatPrice(selected.comparisonCents, locale)}/kg` : null]
     .filter(Boolean)
     .join(' · ');
 
@@ -98,9 +131,11 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
               <span className="font-sans text-micro text-muted">{t.family.sizesOf.replace('{label}', familyLabel)}</span>
             )}
           </span>
-          {/* Mobilde kartlar YAN YANA ve eşit paylı (tasarım `flex:1`) — alt alta dizmek boy
-              karşılaştırmasını bozar, kıyas ancak yan yana yapılır. */}
-          <div className={['flex', compact ? 'gap-2.5' : 'flex-wrap gap-3'].join(' ')}>
+          {/* Mobilde kartlar İKİ SÜTUNLU IZGARADA — tasarım iki boyla çizmişti (`flex:1` yan yana),
+              katalog dört boyla geldi ve sarmasız satır 390px viewport'ta 410'a TAŞIYORDU (ölçüldü
+              20.08, cevizli-baklava). Izgara kıyası bozmaz: komşu kartlar yine yan yana, fazlası
+              alt satıra iner. */}
+          <div className={compact ? 'grid grid-cols-2 gap-2.5' : 'flex flex-wrap gap-3'}>
             {variants.map((v) => (
               <button
                 key={v.id}
@@ -111,12 +146,12 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   'flex cursor-pointer flex-col gap-0.5 bg-card text-left transition-colors',
                   // 194 = tasarımın 150px İÇERİK genişliği + 40 ped + 4 çerçeve. Tasarım `content-box`,
                   // Tailwind `border-box` — aynı sayıyı yazmak kartı 44 px dar bırakıyordu (yaşandı).
-                  compact ? 'flex-1 rounded-soft px-3.5 py-2.5' : 'min-w-[194px] rounded-card px-5 py-3.5',
+                  compact ? 'rounded-soft px-3.5 py-2.5' : 'min-w-[194px] rounded-card px-5 py-3.5',
                   v.id === selected.id ? 'border-2 border-olive' : 'border-2 border-sand-200 hover:border-sand-400',
                   v.soldOut ? 'opacity-55' : '',
                 ].join(' ')}
               >
-                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body'].join(' ')}>{v.label}</span>
+                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body'].join(' ')}>{boyAdi(v, t, locale)}</span>
                 {/* Fırsat rozeti FİYATIN YANINDA (tasarım): hangi boyun indirimli olduğu ancak o
                     boyun fiyatının yanında görünür — kartların altındaki ortak satır bunu söyleyemez. */}
                 <span className="flex flex-wrap items-center gap-2">
@@ -169,9 +204,21 @@ interface PurchaseBarProps {
   routeOnly?: boolean;
   /** Mobil: ekranın altına SABİT koyu çubuk. Masaüstü: sağ sütunda akan açık satır. */
   fixed?: boolean;
+  /**
+   * **Üçüncül hâl — "Yine de sepete ekle"** (tasarım `.dc.html`, kullanıcı kararı 19.08).
+   *
+   * Ürün bu adrese gönderilemiyorken satın alma yolu KAPANMAZ (*"müşteri bölge içindeki birine
+   * gönderiyor olabilir"*) ama BİRİNCİL de olamaz: o hâlde ekranın birincil eylemi "kargolanabilir
+   * benzerleri gör"dür. Düğme nötr çerçeveye iner ve adı değişir — çünkü artık farklı bir şey
+   * yapıyor: bir uyarıya rağmen devam etmek.
+   *
+   * İki dolu yeşil düğme yan yana durduğunda hiçbiri birincil olmuyordu (kullanıcı bildirimi,
+   * ekran görüntüsüyle); tasarım bu sırayı zaten çizmişti, uygulama sapmıştı.
+   */
+  deemphasized?: boolean;
 }
 
-export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = false }: PurchaseBarProps) {
+export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = false, deemphasized = false }: PurchaseBarProps) {
   const { add, setQty: setCartQty, lineOf } = useCart();
   const { place, ready } = useDeliveryPlace();
   const cap = capOf(selected);
@@ -201,7 +248,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
   // Düğme TOPLAM YAZMAZ. Tasarımda yazıyordu çünkü ekleme öncesi adet seçilebiliyordu ("2 × 16,90"
   // gerçek bir hesaptı). Adet artık hep 1 olduğu için toplam birim fiyata eşit — yani düğme, hemen
   // üstündeki fiyatı ikinci kez basıyordu. Aynı sayıyı iki kez yazmak hiyerarşiyi de bozuyordu.
-  const label = !sellable ? (selected.priceCents === null ? t.closed : t.soldOut) : t.addToCart;
+  const label = !sellable ? (selected.priceCents === null ? t.closed : t.soldOut) : deemphasized ? t.addToCartAnyway : t.addToCart;
 
   // Tek kontrol, tek kutu. İkisi de satırın tamamını kaplar ve aynı yüksekliktedir; çerçeve farkı
   // düğmeye ŞEFFAF kenarlık verilerek kapanır — yoksa geçişte kutu birkaç piksel zıplıyor.
@@ -226,7 +273,9 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
         fixed
           ? 'w-full cursor-pointer rounded-soft border-[1.5px] border-transparent bg-olive-light px-5 py-3 font-sans text-body leading-tight font-bold text-ink disabled:cursor-not-allowed disabled:opacity-50'
           : buttonClass({
-              variant: 'primary',
+              // Üçüncül hâlde NÖTR çerçeve (tasarım: gri kenar, koyu metin) — yeşilin hiçbir tonu
+              // değil, çünkü yeşil bu kutuda zaten iki kez konuşuyor (birincil + ikincil).
+              variant: deemphasized ? 'secondary' : 'primary',
               size: 'lg',
               fullWidth: true,
               // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek
@@ -242,7 +291,10 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
   // Masaüstünde kontrol sütunun YARISINI kaplar. Tam genişlik hem düğmeyi gereğinden iri yapıyor
   // hem de seçicinin üç bölgesini birbirinden koparıyordu — kutu daralınca oran kendiliğinden
   // düzeliyor. `min-w-56` dar sütunda kontrolün ezilmesini engeller.
-  if (!fixed) return <div className="w-1/2 min-w-56">{control}</div>;
+  //
+  // Üçüncül hâlde TAM GENİŞLİK: düğme artık sütunda değil karar kutusunun içinde ve üstündeki iki
+  // düğmeyle aynı genişlikte olmalı — yarım kalan bir üçüncü düğme, sıralı bir yığını bozar.
+  if (!fixed) return <div className={deemphasized ? 'w-full' : 'w-1/2 min-w-56'}>{control}</div>;
 
   // Sabit çubuk: sayfanın en altında DEĞİL, EKRANIN altında durur. Kaydırma boyunca yerinde kalır;
   // sayfanın alt boşluğu (`product.mobile`) çubuğun footer'ı örtmesini engeller.

@@ -39,7 +39,10 @@ export default async function SupportPage({ params }: SupportPageProps) {
         nav: 'support',
         back: { label: t.backToAccount, href: '/account' },
         title: t.title,
-        right: <NewTicketLink label={t.newTicket} />,
+        // Mobilde KISA etiket (20.08): "+ Écrivez-nous" / "+ Schreiben Sie uns" başlık satırında
+        // iki satıra sarıp başlığı "Mes deman…" diye kırpıyordu (ölçüldü). Tasarımın yapışkan
+        // çubuğu da eylemi kısa çiziyor ("＋ Yeni"). Masaüstünde yer var, davetkâr uzun hâl kalır.
+        right: <NewTicketLink label={device === 'mobile' ? t.newTicketShort : t.newTicket} />,
       }}
       // Masaüstünde bu rota da bir yazışma gösteriyor (iki bölme), mobilde bir gelen kutusu —
       // ikisi de ekranı doldurur, ikisi de kendi içinde kayar.

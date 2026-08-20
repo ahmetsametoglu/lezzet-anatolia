@@ -18,9 +18,18 @@
       "imageAlt": "Restoran mutfağı ve teslimat aracı"
     },
     "steps": [
-      { "title": "Kaydolun", "body": "SIRET'inizle bir dakikada — bilgiler resmî kayıttan kendiliğinden dolar." },
-      { "title": "Onay", "body": "Başvurunuzu inceleyip hızla dönüş yaparız; sonuç e-posta ile." },
-      { "title": "Toptan sipariş", "body": "Fiyat listeniz açılır; dilediğiniz kanaldan sipariş verirsiniz." }
+      {
+        "title": "Kaydolun",
+        "body": "SIRET'inizle bir dakikada — bilgiler resmî kayıttan kendiliğinden dolar."
+      },
+      {
+        "title": "Onay",
+        "body": "Başvurunuzu inceleyip hızla dönüş yaparız; sonuç e-posta ile."
+      },
+      {
+        "title": "Toptan sipariş",
+        "body": "Fiyat listeniz açılır; dilediğiniz kanaldan sipariş verirsiniz."
+      }
     ],
     "form": {
       "title": "Başvuru",
@@ -72,7 +81,9 @@
       "rejected": "Başvurunuz şu an onaylanamadı — hesabınızla alışverişe devam edebilirsiniz. Bilgilerinizi güncelleyip yeniden gönderebilirsiniz."
     },
     "rejectReasonTitle": "İnceleme notu",
-    "translation": { "badge": "otomatik çevrildi" },
+    "translation": {
+      "badge": "otomatik çevrildi"
+    },
     "errors": {
       "unexpected": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
       "session_expired": "Oturumunuz sona ermiş. Yeniden giriş yapın.",
@@ -102,9 +113,18 @@
       "imageAlt": "Cuisine de restaurant et véhicule de livraison"
     },
     "steps": [
-      { "title": "Inscrivez-vous", "body": "En une minute avec votre SIRET — les informations viennent du registre officiel." },
-      { "title": "Validation", "body": "Nous étudions votre demande et revenons vers vous rapidement ; réponse par e-mail." },
-      { "title": "Commande en gros", "body": "Vos tarifs s'ouvrent ; vous commandez par le canal de votre choix." }
+      {
+        "title": "Inscrivez-vous",
+        "body": "En une minute avec votre SIRET — les informations viennent du registre officiel."
+      },
+      {
+        "title": "Validation",
+        "body": "Nous étudions votre demande et revenons vers vous rapidement ; réponse par e-mail."
+      },
+      {
+        "title": "Commande en gros",
+        "body": "Vos tarifs s'ouvrent ; vous commandez par le canal de votre choix."
+      }
     ],
     "form": {
       "title": "Demande",
@@ -138,7 +158,7 @@
       "back": "Revenir au formulaire"
     },
     "aside": {
-      "title": "Une question ?",
+      "title": "Une question ?",
       "body": "La plupart des collaborations commencent par une conversation. Écrivez-nous :",
       "whatsapp": "WhatsApp : {phone}",
       "noticeLead": "En attendant la validation, vous pouvez parcourir le catalogue aux prix de détail.",
@@ -152,11 +172,13 @@
     },
     "status": {
       "pending": "Votre demande est à l'étude — réponse par e-mail.",
-      "approved": "Validée ! Vos tarifs de gros sont ouverts.",
+      "approved": "Validée ! Vos tarifs de gros sont ouverts.",
       "rejected": "Votre demande n'a pas pu être validée pour le moment — vous pouvez continuer vos achats avec votre compte. Vous pouvez aussi corriger vos informations et renvoyer la demande."
     },
     "rejectReasonTitle": "Note d'examen",
-    "translation": { "badge": "traduit automatiquement" },
+    "translation": {
+      "badge": "traduit automatiquement"
+    },
     "errors": {
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
       "session_expired": "Votre session a expiré. Reconnectez-vous.",
@@ -186,9 +208,18 @@
       "imageAlt": "Restaurantküche und Lieferfahrzeug"
     },
     "steps": [
-      { "title": "Anmelden", "body": "Mit Ihrer USt-IdNr. in einer Minute — die Angaben tragen Sie einmal ein." },
-      { "title": "Freigabe", "body": "Wir prüfen Ihre Anfrage und melden uns zügig; die Antwort kommt per E-Mail." },
-      { "title": "Großhandel bestellen", "body": "Ihre Preisliste öffnet sich; Sie bestellen über den Kanal Ihrer Wahl." }
+      {
+        "title": "Anmelden",
+        "body": "Mit Ihrer USt-IdNr. in einer Minute — die Angaben tragen Sie einmal ein."
+      },
+      {
+        "title": "Freigabe",
+        "body": "Wir prüfen Ihre Anfrage und melden uns zügig; die Antwort kommt per E-Mail."
+      },
+      {
+        "title": "Großhandel bestellen",
+        "body": "Ihre Preisliste öffnet sich; Sie bestellen über den Kanal Ihrer Wahl."
+      }
     ],
     "form": {
       "title": "Anfrage",
@@ -240,7 +271,9 @@
       "rejected": "Ihre Anfrage konnte derzeit nicht freigegeben werden — Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
     },
     "rejectReasonTitle": "Prüfhinweis",
-    "translation": { "badge": "automatisch übersetzt" },
+    "translation": {
+      "badge": "automatisch übersetzt"
+    },
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",

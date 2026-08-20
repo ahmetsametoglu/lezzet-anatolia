@@ -1,11 +1,12 @@
 {
   "tr": {
     "back": "← Katalog",
-    "share": "WhatsApp ile paylaş",
+    "share": "Paylaş",
     "inStock": "● Stokta",
     "soldOut": "Tükendi — yakında yeniden",
     "chooseSize": "Boy seçin",
     "addToCart": "Sepete ekle",
+    "addToCartAnyway": "Yine de sepete ekle",
     "offer": "Fırsat",
     "limit": "En fazla {n} adet",
     "closed": "Bu ürün şu an satışa kapalı",
@@ -59,8 +60,17 @@
       "loading": "Yükleniyor…",
       "retry": "Yorumlar yüklenemedi — yeniden dene",
       "panelEmpty": "Bu üründe henüz yazılı yorum yok.",
-      "filters": { "all": "Tümü ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ ve altı ({count})" },
-      "translation": { "badge": "otomatik çevrildi", "showOriginal": "Orijinali göster", "showTranslation": "Çeviriyi göster" }
+      "filters": {
+        "all": "Tümü ({count})",
+        "five": "5★ ({count})",
+        "four": "4★ ({count})",
+        "low": "3★ ve altı ({count})"
+      },
+      "translation": {
+        "badge": "otomatik çevrildi",
+        "showOriginal": "Orijinali göster",
+        "showTranslation": "Çeviriyi göster"
+      }
     },
     "family": {
       "title": "Çeşitler",
@@ -88,15 +98,23 @@
       "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
       "review_empty": "Puan verin ya da birkaç cümle yazın.",
       "purchase_required": "Yorum yazmak için bu ürünü satın almış olmanız gerekiyor."
+    },
+    "size": {
+      "pieces": "{n} adet",
+      "piecesOf": "{n} adet · {weight}",
+      "perPiece": "{price}/adet",
+      "slices": "{n} dilim",
+      "slicesOf": "{n} dilim · {weight}"
     }
   },
   "fr": {
     "back": "← Catalogue",
-    "share": "Partager sur WhatsApp",
+    "share": "Partager",
     "inStock": "● En stock",
     "soldOut": "Épuisé — bientôt de retour",
     "chooseSize": "Choisissez le format",
     "addToCart": "Ajouter au panier",
+    "addToCartAnyway": "Ajouter quand même",
     "offer": "Offre",
     "limit": "{n} maximum",
     "closed": "Ce produit n'est pas en vente actuellement",
@@ -150,8 +168,17 @@
       "loading": "Chargement…",
       "retry": "Impossible de charger les avis — réessayer",
       "panelEmpty": "Aucun avis écrit pour ce produit pour l'instant.",
-      "filters": { "all": "Tous ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ et moins ({count})" },
-      "translation": { "badge": "traduit automatiquement", "showOriginal": "Voir l'original", "showTranslation": "Voir la traduction" }
+      "filters": {
+        "all": "Tous ({count})",
+        "five": "5★ ({count})",
+        "four": "4★ ({count})",
+        "low": "3★ et moins ({count})"
+      },
+      "translation": {
+        "badge": "traduit automatiquement",
+        "showOriginal": "Voir l'original",
+        "showTranslation": "Voir la traduction"
+      }
     },
     "family": {
       "title": "Variétés",
@@ -179,15 +206,23 @@
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
       "review_empty": "Donnez une note ou écrivez quelques mots.",
       "purchase_required": "Vous devez avoir acheté ce produit pour laisser un avis."
+    },
+    "size": {
+      "pieces": "{n} pièces",
+      "piecesOf": "{n} pièces · {weight}",
+      "perPiece": "{price}/pièce",
+      "slices": "{n} parts",
+      "slicesOf": "{n} parts · {weight}"
     }
   },
   "de": {
     "back": "← Katalog",
-    "share": "Über WhatsApp teilen",
+    "share": "Teilen",
     "inStock": "● Auf Lager",
     "soldOut": "Ausverkauft — bald wieder da",
     "chooseSize": "Größe wählen",
     "addToCart": "In den Korb",
+    "addToCartAnyway": "Trotzdem hinzufügen",
     "offer": "Angebot",
     "limit": "Maximal {n} Stück",
     "closed": "Dieses Produkt ist derzeit nicht im Verkauf",
@@ -241,8 +276,17 @@
       "loading": "Wird geladen…",
       "retry": "Bewertungen konnten nicht geladen werden — erneut versuchen",
       "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
-      "filters": { "all": "Alle ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ und weniger ({count})" },
-      "translation": { "badge": "automatisch übersetzt", "showOriginal": "Original anzeigen", "showTranslation": "Übersetzung anzeigen" }
+      "filters": {
+        "all": "Alle ({count})",
+        "five": "5★ ({count})",
+        "four": "4★ ({count})",
+        "low": "3★ und weniger ({count})"
+      },
+      "translation": {
+        "badge": "automatisch übersetzt",
+        "showOriginal": "Original anzeigen",
+        "showTranslation": "Übersetzung anzeigen"
+      }
     },
     "family": {
       "title": "Sorten",
@@ -270,6 +314,13 @@
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
       "review_empty": "Vergeben Sie eine Note oder schreiben Sie ein paar Sätze.",
       "purchase_required": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten."
+    },
+    "size": {
+      "pieces": "{n} Stück",
+      "piecesOf": "{n} Stück · {weight}",
+      "perPiece": "{price}/Stück",
+      "slices": "{n} Scheiben",
+      "slicesOf": "{n} Scheiben · {weight}"
     }
   }
 }

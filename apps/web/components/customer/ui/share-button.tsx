@@ -3,9 +3,14 @@
 import { shareProductAction } from '@/lib/analytics/actions';
 
 /**
- * Paylaş düğmesi (↗) — mobil detay başlığında. Sistem paylaşım menüsünü açar; tasarımın etkileşim
- * sözleşmesi WhatsApp'ı öncelikli sayıyor, ama uygulama sırasını İŞLETİM SİSTEMİ belirler: kendi
- * menümüzü çizmek, kullanıcının gerçekten kullandığı uygulamayı listeden düşürür.
+ * Paylaş düğmesi — İÇERİĞİN İÇİNDE durur, başlıkta değil (kullanıcı kararı 20.08, yedinci tur):
+ * ürün/paket detayında ürün adının sağında. Header sadeleşti (‹ + sepet), paylaşmanın bağlamı da
+ * netleşti — düğme neyin yanındaysa onu paylaşır. İşaret KLASİK paylaş ikonu (yukarı ok + tepsi,
+ * inline SVG `currentColor`): eski "↗" glifi bağlantı açma okuyla karışıyordu.
+ *
+ * Sistem paylaşım menüsünü açar; tasarımın etkileşim sözleşmesi WhatsApp'ı öncelikli sayıyor, ama
+ * uygulama sırasını İŞLETİM SİSTEMİ belirler: kendi menümüzü çizmek, kullanıcının gerçekten
+ * kullandığı uygulamayı listeden düşürür.
  *
  * `navigator.share` yoksa (çoğu masaüstü tarayıcı) bağlantı panoya kopyalanır — düğme sessizce
  * ölmez. Paylaşılan adres o anki sayfadır, yani DİL ÖNEKİYLE birlikte gider: linki alan kişi
@@ -21,7 +26,7 @@ interface ShareButtonProps {
   subject: ShareSubject;
 }
 
-export interface ShareSubject {
+interface ShareSubject {
   subjectType: 'product' | 'bundle';
   subjectId: string;
   productId?: string | null;
@@ -49,8 +54,19 @@ export function ShareButton({ label, subject }: ShareButtonProps) {
   };
 
   return (
-    <button type="button" onClick={onShare} aria-label={label} title={label} className="cursor-pointer font-sans text-icon-sm text-ink">
-      ↗
+    // Görsel küçük, dokunma alanı 44px (steppers'la aynı desen: görünmez `after` katmanı).
+    <button
+      type="button"
+      onClick={onShare}
+      aria-label={label}
+      title={label}
+      className="relative flex size-9 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors after:absolute after:-inset-1 after:content-[''] hover:bg-sand-200"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden>
+        <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+        <path d="m8 6 4-4 4 4" />
+        <path d="M12 2v13" />
+      </svg>
     </button>
   );
 }

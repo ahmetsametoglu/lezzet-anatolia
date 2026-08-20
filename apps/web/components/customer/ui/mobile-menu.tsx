@@ -32,11 +32,20 @@ import messages from './site-frame-messages.json';
  * olduğu gibi: menüde tıklanabilir görünüp hiçbir yere gitmeyen bir satır, ölü bağdan beterdir —
  * müşteri kendi dokunuşunu suçlar.
  */
+/**
+ * Gezinme anahtarları — iki biçimin (masaüstü şeridi · bu panel) ortak kümesi. `home` yalnız
+ * panelde bir SATIR olarak çizilir: masaüstünde o işi logo görür, mobilde logo bağını kimse
+ * keşfetmiyordu (kullanıcı bulgusu 20.08 — "ana sayfaya menüden dönemiyoruz").
+ */
+export type NavKey = 'home' | 'catalog' | 'packages' | 'recipes' | 'discover' | 'pro';
+
 interface MobileMenuProps {
   locale: Locale;
+  /** Açık sayfanın anahtarı — K12 kuralı ("aktif bağlantı yeşil + altı çizili") panelde de geçerli. */
+  activeNav?: NavKey;
 }
 
-export function MobileMenu({ locale }: MobileMenuProps) {
+export function MobileMenu({ locale, activeNav }: MobileMenuProps) {
   const t = messages[locale];
   const ta = accountMessages[locale];
   const account = useAccount();
@@ -62,24 +71,27 @@ export function MobileMenu({ locale }: MobileMenuProps) {
       {open && (
         <Dialog title={t.menu} closeLabel={t.close} onClose={close}>
           <nav className="flex flex-col">
-            <Link href="/catalog" onClick={close} className={ITEM}>
-              {t.nav.catalog}
+            <Link href="/" onClick={close} className={itemClass('home', activeNav)} aria-current={activeNav === 'home' ? 'page' : undefined}>
+              <span className={labelClass('home', activeNav)}>{t.nav.home}</span>
             </Link>
-            <Link href="/packages" onClick={close} className={ITEM}>
-              {t.nav.packages}
+            <Link href="/catalog" onClick={close} className={itemClass('catalog', activeNav)} aria-current={activeNav === 'catalog' ? 'page' : undefined}>
+              <span className={labelClass('catalog', activeNav)}>{t.nav.catalog}</span>
+            </Link>
+            <Link href="/packages" onClick={close} className={itemClass('packages', activeNav)} aria-current={activeNav === 'packages' ? 'page' : undefined}>
+              <span className={labelClass('packages', activeNav)}>{t.nav.packages}</span>
             </Link>
             {/* Sıra masaüstüyle AYNI (08.24): aynı menünün iki biçimi aynı düzeni göstermeli. */}
-            <Link href="/recipes" onClick={close} className={ITEM}>
-              {t.nav.recipes}
+            <Link href="/recipes" onClick={close} className={itemClass('recipes', activeNav)} aria-current={activeNav === 'recipes' ? 'page' : undefined}>
+              <span className={labelClass('recipes', activeNav)}>{t.nav.recipes}</span>
             </Link>
             {/* "Fırsatlar" burada da YOK (kullanıcı kararı 09.08, masaüstü menüsüyle birlikte):
                 katalogun teklif süzgeçli hâliydi, yani menüde kataloğun kopyası duruyordu. Aynı
                 menünün iki biçimi ayrışmamalı — masaüstünden düşen öğe mobilde de düşer. */}
-            <Link href="/discover" onClick={close} className={ITEM}>
-              {t.nav.discover}
+            <Link href="/discover" onClick={close} className={itemClass('discover', activeNav)} aria-current={activeNav === 'discover' ? 'page' : undefined}>
+              <span className={labelClass('discover', activeNav)}>{t.nav.discover}</span>
             </Link>
-            <Link href="/professionals" onClick={close} className={ITEM}>
-              {t.nav.pro}
+            <Link href="/professionals" onClick={close} className={itemClass('pro', activeNav)} aria-current={activeNav === 'pro' ? 'page' : undefined}>
+              <span className={labelClass('pro', activeNav)}>{t.nav.pro}</span>
             </Link>
           </nav>
 
@@ -121,3 +133,12 @@ export function MobileMenu({ locale }: MobileMenuProps) {
 
 /** Menü satırı — dokunma hedefi `min-h-11` (44px), envanterin mobil kuralı. */
 const ITEM = 'flex min-h-11 items-center rounded-soft px-1 font-sans text-body font-semibold text-ink transition-colors hover:text-olive';
+
+/** Aktif satır zeytin metin (K12); satır ölçüsü değişmez, yalnız renk döner. */
+const itemClass = (key: NavKey, active: NavKey | undefined) => [ITEM, active === key ? 'text-olive' : ''].filter(Boolean).join(' ');
+
+/**
+ * K12'nin alt çizgisi masaüstüyle AYNI mekanikle: çizgi HER etikette var, aktif olmayanda şeffaf
+ * (`site-frame` `navClass` künyesi — yalnız aktife verilse satır 2px oynar).
+ */
+const labelClass = (key: NavKey, active: NavKey | undefined) => ['border-b-2 pb-0.5', active === key ? 'border-olive' : 'border-transparent'].join(' ');

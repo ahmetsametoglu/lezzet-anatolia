@@ -54,47 +54,47 @@
     "questions": [
       {
         "id": "donmus",
-        "question": "Les produits arrivent-ils surgelés ?",
+        "question": "Les produits arrivent-ils surgelés ?",
         "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, partent par transporteur à n'importe quelle adresse."
       },
       {
         "id": "asgari-sepet",
-        "question": "Y a-t-il un montant minimum de commande ?",
+        "question": "Y a-t-il un montant minimum de commande ?",
         "answer": "Uniquement pour la livraison dans notre zone : les commandes que nous apportons à votre porte avec notre propre véhicule ont un montant minimum, et si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum — les frais de port sont déjà à votre charge. Les montants en vigueur figurent sur la page livraison et retours."
       },
       {
         "id": "teslimat-gunu",
-        "question": "Quand ma commande arrive-t-elle ?",
+        "question": "Quand ma commande arrive-t-elle ?",
         "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour les adresses à l'étranger. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
       },
       {
         "id": "kapida-odeme",
-        "question": "Puis-je payer à la livraison ?",
+        "question": "Puis-je payer à la livraison ?",
         "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
       },
       {
         "id": "eksik-kalem",
-        "question": "Un produit manque dans ma commande, que faire ?",
+        "question": "Un produit manque dans ma commande, que faire ?",
         "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Mes demandes » en sélectionnant votre commande."
       },
       {
         "id": "toptan",
-        "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
+        "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
         "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au virement et au paiement par chèque ; vos conditions de règlement sont définies sur votre compte."
       },
       {
         "id": "alerjen",
-        "question": "Où puis-je voir les informations sur les allergènes ?",
+        "question": "Où puis-je voir les informations sur les allergènes ?",
         "answer": "Les ingrédients, les allergènes et, le cas échéant, l'avertissement de contamination croisée figurent sur la fiche de chaque produit. Ces informations proviennent de la déclaration du fabricant — nous ne fabriquons pas nos produits, nous les achetons auprès de producteurs que nous sélectionnons. En cas d'allergie sévère, écrivez-nous avant de commander : nous demandons confirmation au fabricant."
       },
       {
         "id": "hesap-gerekli",
-        "question": "Dois-je créer un compte pour commander ?",
+        "question": "Dois-je créer un compte pour commander ?",
         "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
       },
       {
         "id": "dil",
-        "question": "Comment changer la langue du site et des e-mails ?",
+        "question": "Comment changer la langue du site et des e-mails ?",
         "answer": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui navigue en français reçoive ses messages en turc."
       }
     ]

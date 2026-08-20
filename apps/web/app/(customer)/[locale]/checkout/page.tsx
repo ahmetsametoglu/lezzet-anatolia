@@ -54,7 +54,10 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   void recordEvent({ type: 'checkout_start' }, { path: '/checkout' });
 
   return (
-    <SiteFrame device={device} locale={locale}>
+    // Huni sayfası ÇIPLAK kabukta (kullanıcı kararı 20.08, ikinci tur — sepetle aynı gerekçe:
+    // logolu bar üst bölgeyi iki katlıyordu, tasarımın karesi logosuz). Geri bağını sayfa kurar
+    // (`checkout.mobile`). Footer yok — CGV bağı zaten onay metninde.
+    <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="none">
       <CheckoutClient
         t={t}
         locale={locale}

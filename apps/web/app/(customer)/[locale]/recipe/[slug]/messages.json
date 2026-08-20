@@ -1,6 +1,6 @@
 {
   "tr": {
-    "back": "Tarifler",
+    "back": "← Tarifler",
     "eyebrow": "Sofradan Fikirler",
     "steps": "Hazırlanışı",
     "ingredients": "Malzemeler — bizden",
@@ -16,7 +16,7 @@
     "note": "Tükenen malzeme listeden düşer; toplam, kalan ürünlerle hesaplanır. Fiyatlar hesabınıza göre gösterilir."
   },
   "fr": {
-    "back": "Recettes",
+    "back": "← Recettes",
     "eyebrow": "Idées de table",
     "steps": "Préparation",
     "ingredients": "Ingrédients — chez nous",
@@ -32,7 +32,7 @@
     "note": "Un ingrédient épuisé sort de la liste ; le total est calculé avec les produits restants. Les prix s'affichent selon votre compte."
   },
   "de": {
-    "back": "Rezepte",
+    "back": "← Rezepte",
     "eyebrow": "Ideen vom Tisch",
     "steps": "Zubereitung",
     "ingredients": "Zutaten — von uns",

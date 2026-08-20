@@ -286,7 +286,12 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             {labels.limit}
           </Badge>
         )}
-        <div className={['flex items-center justify-between gap-2', compact ? 'mt-0.5' : 'mt-1'].join(' ')}>
+        {/* DAR KARTTA İKİ SATIR (kullanıcı kararı 20.08): fiyat ile eylem aynı satırı paylaşınca
+            "0,95 €'dan" + üstü çizili fiyat + "Seçenekler →" kart kenarından taşıyordu (kullanıcı
+            görüntüsüyle ölçüldü; FR/DE metinlerde daha da uzun). Fiyat kendi satırında, eylem tam
+            genişlikte altta — BACKLOG §4'ün "yatay eksen kalıntısı" da böyle kapanıyor: tam
+            genişlik eylem 44px'i iki eksende de sağlar. Masaüstü kartı eski düzeninde. */}
+        <div className={compact ? 'mt-1.5 flex flex-col items-stretch gap-2' : 'mt-1 flex items-center justify-between gap-2'}>
           <Price
             cents={product.priceCents}
             wasCents={product.wasCents}
@@ -304,6 +309,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               aria-disabled
               className={buttonClass({
                 size: compact ? 'cardSm' : 'card',
+                fullWidth: compact,
                 className: '!bg-disabled-fill !text-white cursor-not-allowed',
               })}
             >
@@ -332,7 +338,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               className={buttonClass({
                 variant: 'secondary',
                 size: compact ? 'cardSm' : 'card',
-                className: '!border-olive !text-olive flex-none whitespace-nowrap',
+                fullWidth: compact,
+                className: `!border-olive !text-olive whitespace-nowrap ${compact ? '' : 'flex-none'}`,
               })}
             >
               {labels.options}
@@ -347,22 +354,20 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               min={0}
               max={inCart.limitCap}
               size={compact ? 'xs' : 'md'}
+              fullWidth={compact}
             />
           ) : compact ? (
+            /* 26px'lik "+" dairesi İKİ SATIR düzeniyle birlikte kalktı (kullanıcı kararı 20.08):
+               eylem artık satırın tamamı, adlı düğme daireden hem daha okunur hem 44px'i iki
+               eksende de sağlıyor. Eklemede yerini AYNI kutuyu dolduran seçiciye bırakır
+               (`fullWidth` — kart zıplamaz, tek-kontrol modeli ürün detayla aynı). */
             <button
               type="button"
               onClick={addToCart}
               disabled={!product.variantId}
-              aria-label={labels.addToCart}
-              // Görsel daire 26px KALIR (tasarım), dokunma alanı 44px'e çıkar: dış kutu şeffaf ve
-              // `size-11`, daire içeride. Bu düğme yerini adet seçicisine bırakıyor ve seçicinin
-              // yeni tabanı da `min-h-11` — ikisi aynı yüksekliği paylaştığı için kart eklemede
-              // zıplamıyor. Yatay eksen kartın genişliğine bağlı, kalıntı `design/BACKLOG §4`te.
-              className="group flex size-11 flex-none cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
+              className={buttonClass({ size: 'cardSm', fullWidth: true, className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
             >
-              <span className="grid size-6.5 place-items-center rounded-full bg-olive font-sans text-body-sm font-bold text-white transition-colors group-hover:bg-olive-dark">
-                +
-              </span>
+              {labels.addToCart}
             </button>
           ) : (
             <button

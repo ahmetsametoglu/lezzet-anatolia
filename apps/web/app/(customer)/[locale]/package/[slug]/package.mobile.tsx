@@ -1,6 +1,7 @@
 import { RATIO_SOURCE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/customer/ui/badge';
+import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
@@ -30,7 +31,13 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
           {t.eyebrow}
           {pack.serves !== null && ` · ${t.serves.replace('{n}', String(pack.serves))}`}
         </span>
-        <h1 className="font-serif text-page-title-sm text-ink">{pack.name}</h1>
+        {/* id yapışkan barın gözlediği kimlik; paylaş adın yanında — ürün detayıyla aynı desen.
+            Paket bir ürün DEĞİL: `productId` yok, çünkü paket birden çok ürünü tek fiyata
+            sunuyor — birini seçip ona yazmak ölçümü o ürüne haksızca yüklerdi. */}
+        <div className="flex items-start justify-between gap-2">
+          <h1 id="package-title" className="font-serif text-page-title-sm text-ink">{pack.name}</h1>
+          <ShareButton label={t.share} subject={{ subjectType: 'bundle', subjectId: pack.id }} />
+        </div>
 
         <div className="flex items-center gap-2.5">
           <span className={['font-sans text-card-title font-bold', pack.soldOut ? 'text-muted' : 'text-ink'].join(' ')}>

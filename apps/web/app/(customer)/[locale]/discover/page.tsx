@@ -64,7 +64,9 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale as Locale} activeNav="discover">
+    // Keşif kapalı bir kabuk (tasarım: tam ekran örtü, "X Kapat" sayfanın kendi satırında) —
+    // mobilde site başlığı hiç çizilmez, footer yok (kullanıcı kararı 20.08).
+    <SiteFrame device={device} locale={locale as Locale} activeNav="discover" mobileChrome="bare" footer="none">
       <DiscoverClient
         t={t}
         locale={locale as Locale}

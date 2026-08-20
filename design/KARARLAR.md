@@ -1396,3 +1396,178 @@ aday yerine havuzun tamamı (40) için okunuyor. `loadProductContext` satır say
 olarak 5 paralel sorgu atıyor (kimlikler `in(...)` listesine giriyor) — 40 aday, 4 adayla aynı tur
 sayısı. Aile kuralı (her aileden tek temsilci) süzgeçten SONRA uygulanıyor: önce uygulansaydı elenen
 bir temsilcinin yerine ailenin alınabilir üyesi geçemezdi.
+
+### Ürün detayı İKİ AYRI IZGARADAN İKİ BAĞIMSIZ SÜTUNA — `.dc.html`'in hizasızlığı bilerek terk edildi (19.08, kullanıcı kararı)
+
+Kullanıcı ekran görüntüsüyle bildirdi: *"solda ortada bir boşluk var… blokların içerisine yerleşme,
+sütunların başladığı yerlerde bir sıkıntımız var gibi."*
+
+**Ölçüldü (masaüstü, 1460px viewport).** Sayfa iki bağımsız `<section>` ızgarasıydı — üstte
+galeri | satın alma (`1fr 1fr`, gap 48), altta beyan | yorumlar (`1.2fr 1fr`, gap 40). İki kusur:
+
+1. **Solda 172px ölü alan.** Üst ızgaranın satır yüksekliğini UZUN olan sağ sütun belirliyordu:
+   sol sütunun içeriği 710px'de bitiyor, hücre 838'e uzatılıyor, bölüm dolgusuyla "İçindekiler"
+   ancak 882'de başlıyordu.
+2. **Dikiş 60px kayıyordu.** Sütunları ayıran dikey çizgi üstte 706, altta 766 — oranlar ve
+   aradaki boşluk farklı olduğu için.
+
+**Kusur TASARIMDA da vardı ve daha büyüktü.** `Musteri - Urun Detay.dc.html` tarayıcıda açılıp
+aynı yerler ölçüldü: kayma **132px**, ölü alan **263px**. (Tasarımda üst sütunlar 536/680 çıkıyor
+çünkü ham `1fr` içeriğin sütunu şişirmesine izin verir; Tailwind'in `grid-cols-2`'si
+`minmax(0,1fr)` ile bunu engellediği için uygulama zaten daha derli topluydu.) Yani bu bir
+**implement sapması değil**, tasarımın kendi hizasızlığıydı — ve sebebi görünüyor: **"Çeşitler"
+bloğu sonradan eklendi** (`musteri-urun-detay.md §1b`, 04.08 kararı) ve sağ sütunu uzattı; iki
+bağımsız ızgara o boy farkını deliğe çevirdi.
+
+**Karar:** iki bölüm birleşti; sol sütun galeri → beyan, sağ sütun satın alma → yorumlar.
+Sol sütun **ürünün kendisi**, sağ sütun **satın alma kararı**.
+
+**IZGARA DEĞİL FLEX — ve fark ölçülerek anlaşıldı.** İlk deneme iki bölümü tek `grid`e aldı
+(`items-start` + `gap-y`): dikiş kayması bitti ama **delik yerinde kaldı** (yeniden ölçüldü: galeri
+710, beyan hâlâ 882). Sebep ızgaranın doğası — **satırlar ortaktır**, ikinci satır uzun hücrenin
+bitmesini bekler. Dikey akışın her sütunda kendi başına ilerlemesi gerekiyordu; onu yapan şey flex
+sütunudur. Son ölçüm: galeri 710 → beyan **754** (yalnız 44px, tasarımın kendi ritmi), dikiş her
+iki sütunda 706/754 — **kayma sıfır**.
+
+**Ders:** "sütunlar hizalansın" ile "sütunlar bağımsız aksın" AYNI ŞEY DEĞİL. Izgara birincisini
+verir, ikincisini engeller. Bir sütunun ötekinden kısa olması bir hizalama sorunu değil, bir AKIŞ
+sorunudur.
+
+Görsel karar bu turda `.dc.html`'e işlenmedi (kaynak tasarımın kendisi düzeltilmeli, kopya değil).
+
+### Ürün detayında ÜÇ EYLEM ÜÇ AĞIRLIK — "iki yeşil düğme" tasarımın kendi sırasına döndürüldü (19.08, kullanıcı kararı)
+
+Kullanıcı ekran görüntüsüyle bildirdi: *"iki yeşil buton gerçekten kötü görünüyor… rozetlerin
+büyüklükleri de aynı değil."*
+
+**Ölçüldü — sapma bizdeydi, tasarım sorunu zaten çözmüştü.** `Musteri - Urun Detay.dc.html` "adres
+bölge dışı" kutusunda ÜÇ düğme ve üç ayrı ağırlık çiziyor:
+
+| sıra | düğme | tasarımdaki hâli |
+|---|---|---|
+| 1 | Kargolanabilir benzerleri gör | dolu olive (`background:#5f7a2c`) |
+| 2 | Bölgeye gelince haber ver | çerçeveli olive (`border:2px solid #5f7a2c`) |
+| 3 | **Yine de sepete ekle** | nötr gri çerçeve (`border:1.5px solid #d8cfb6`) |
+
+Uygulama bu sıradan iki yönde birden sapmıştı: "Sepete ekle" yukarıda **tam ağırlıkta birincil**
+kalmış, "haber ver" de `emphasis='panel'` ile **birinciye terfi** ettirilmişti. Sonuç ekranda iki
+dolu yeşil düğme — ve iki birincil, birincil olmaması demek. Tasarımın kendi notu da gerekçeyi
+yazmış: *"Buton pasifleştirilmez — müşteri bölge içindeki birine gönderiyor olabilir."* Yani satın
+alma yolu kapanmaz ama **birincil de olamaz**; adı bile değişir, çünkü artık farklı bir şey yapıyor:
+uyarıya rağmen devam etmek.
+
+**Uygulanan:** `noticeButtonClass('panel')` → `outlineOlive`; `PurchaseBar` yeni `deemphasized`
+hâlinde `secondary` (nötr çerçeve) + `addToCartAnyway` metni; `elsewhere` hâlinde satın alma düğmesi
+normal yerinden **iner** ve karar kutusunda üçüncül olarak çizilir.
+
+**Aynı turda bulunan ikinci çift-yeşil:** `shipping` hâlinde de "Sepete ekle" + "Kargolanabilir
+benzerleri gör" yan yana düşüyordu — üstelik o teklif **karşılıksızdı**: ürün zaten kargoyla
+gidiyor, müşteri bakmakta olduğu şeyi alabiliyor. O hâlde çıkış düğmesi hiç çizilmiyor artık.
+Düğme yalnız gerçek çıkmazda kalıyor (yer rota dışında VE ürün kargolanamıyor).
+
+
+### MOBİL WEB KABUĞU — İKİ KATMANLI HEADER + ÜÇ KATMANLI FOOTER (20.08, kullanıcı kararları)
+
+**Kullanıcı incelemesi ekran görüntüleriyle geldi** ("sepette hâlâ menü var, gereksiz… header
+zıplıyor… soğuk zincir yazısının sürekli görünmesi buna sebep oluyor") ve tasarım↔kod turunun
+bulgularıyla birleşince kural olarak kapandı. `.dc.html`'ler bu kararların bir kısmını zaten
+çiziyordu (Sepet Mobil kompakt satırla başlar, global başlık taşımaz — kaynağından ölçüldü);
+yazılı kural yoktu ve uygulama huni sayfalarını vitrin çerçevesinde bırakmıştı.
+
+- **İki header katmanı.** Vitrin (`default`): ☰ + logo + sepet — ana sayfa, katalog, paketler,
+  tarifler, professionnels. Detay (`detail`): ← geri + logo + (paylaş) + sepet — ürün/paket/tarif
+  detayı **ve artık sepet + checkout** (rozet ikisinde gizli: sepette kendine bağ, checkout'ta
+  geri bağının kopyası olurdu). Keşif `bare`: site başlığı hiç çizilmez, "X Kapat" sayfanın kendi
+  satırı (tasarımın tam ekran örtüsü). İki katmanın logo satırı aynı yükseklikte — zıplamazlık
+  sözü buradan geçer.
+- **Duyuru şeridi YALNIZ ana sayfada** (mobil). Her sayfada durunca vitrin↔detay geçişinde bir
+  görünüp bir kaybolarak üst bölgeyi zıplatıyordu; mesaj vitrine girişte bir kez görülür.
+  Masaüstü eski kuralında — şikâyet ve karar mobil web içindi.
+- **Üç footer katmanı** (sayfa TÜRÜNE bağlı, cihaza değil): tam → ana sayfa · Professionnels ·
+  yasal; ince (marka + TR·FR·DE) → liste + detay sayfaları; yok → sepet, checkout, keşif, hesap
+  alanı. Yasal erişim kopmaz: CGV bağı checkout onay metninde, gizlilik hesabın GDPR notunda,
+  dil menü panelinde.
+- **Checkout şeridi yalnız adım çipleri.** "6 ürün · 126,48 € · çipler" tek satıra sığmıyor,
+  üçüncü çip kesiliyordu (kullanıcı görüntüsü). Sayaç ve tutar özette + onay düğmesinde zaten var.
+- **Adet seçicileri: görsel küçük, dokunma 44.** 03.08'in 44px tabanı görünür kutudaydı ve sepette
+  "çok büyük ve rahatsız edici"ydi (kullanıcı). Katalog kartının deseni genelleşti: kutu ~28px
+  çizilir, dokunma `after` katmanıyla dikeyde 44'e tamamlanır. 44 kuralı BOZULMADI.
+- **Dar kartta fiyat + eylem AYRI satırlar.** "0,95 €'dan" + üstü çizili + "Seçenekler →" tek
+  satırda kart kenarından taşıyordu (kullanıcı görüntüsü; FR/DE daha uzun). Fiyat kendi satırında,
+  eylem tam genişlikte; 26px'lik "+" dairesi yerini adlı düğmeye bıraktı ve eklemede aynı kutuyu
+  dolduran tam-genişlik seçiciye dönüşüyor. Eski maddenin "yatay eksen kalıntısı" böylece kapandı.
+- **Menü:** "Ana sayfa" satırı (logo bağını kimse keşfetmiyordu) + K12 aktif kuralı panelde de
+  (yeşil + altı çizili; çizgi her satırda, aktif olmayanda şeffaf — satır oynamaz).
+- **Hesap native'le eşitlendi:** tek başlık ("Mon compte" çift basılıyordu) + başlıkta "Çıkış";
+  `/account/points` (keyset sayfalı tam döküm + ayardan "nasıl kazanılır" — `readPointsRules`);
+  davet kartı (`readCustomerPoints` tek kapı — kod + `inviteUrl` application'dan; web kartının
+  beş-parça okuması ve ölü kupon köprüsü söküldü). Keşif ziyaretçi daveti başlığın altına indi
+  (üstüne biniyordu); destek eylemi mobilde kısa ("+ Nouvelle").
+
+**`.dc.html`'ler bu turun sonucunu taşımıyor** — tasarım dosyası güncellenirken bu kayıt gerekçedir
+(iş kimliği `08.48`).
+
+**EK (aynı gün, ikinci tur — kullanıcı görüntüyle gösterdi): huni sayfaları `detail` DEĞİL, ÇIPLAK
+kabukta.** Sepet/checkout'a logolu detay barı verilince altında sayfanın kendi başlık satırıyla üst
+bölge iki katlanıyordu ("boşluklar dengesiz, yerleşim dengesiz — logonun olmasına gerek var mı?").
+Tasarımın karesi zaten logosuz TEK satır: "← Devam et · Sepetim · 6 ürün". Karar: sepet ve checkout
+`bare` kabuğa indi, tek satırı sayfanın kendisi kurar (geri · başlık · sayaç; checkout'ta geri +
+eyebrow + başlık). `detail` yalnız ürün/paket/tarif detayının katmanı olarak kaldı; `hideCart`
+prop'u doğmadan söküldü.
+
+**EK (aynı gün, üçüncü tur): sepetin geri kontrolü `‹` YUVARLAK İKON — native deseni webe geçti.**
+Kullanıcı sorusu üzerine ölçüldü: "← Devam et" metni checkout dilinde İLERİ okunuyor (FR
+"Continuer" daha da belirsiz — sepette "siparişe devam" sanılır) ve çıplak metnin dokunma alanı
+~20px'ti (envanter tabanı 44). Native zaten metinsiz çözmüştü: 40dp yuvarlak `‹` (`BackButton`,
+sepette de aynı bileşen). Web karşılığı yazıldı (`components/customer/ui/back-button.tsx`):
+44px kutu, tarayıcı geçmişine döner, geçmişsiz derin bağlantıda kataloğa düşer, ekran okuyucu adı
+i18n'den ("Geri/Retour/Zurück"). Sepetin sıkışık satır YAPISI native üç-durak kuralının 2.
+durağıyla zaten uyumluydu — değişen yalnız kontrolün biçimi. Aynı turda sayaç tekili düzeldi
+("1 produits" → "1 produit", `countOne`); checkout'un adlı geri bağı ("← Retour au panier")
+bilerek korundu — o nereye döndüğünü adıyla söylüyor ve tek katmanlı duruyor.
+
+**EK (aynı gün, dördüncü tur): huninin TEK başlığı `FunnelHeader` — ve şerit kapsız.** Kullanıcı
+kıyası net koydu: *"birden fazla çeşit header yapısı olmaz… sipariş tamamlama kendi içinde anlamlı
+ve iyi, belki geri butonu biraz kötü."* Sepet ile checkout'un iyi yanları birleşti: checkout'un
+kimlik bloğu (eyebrow + büyük serif başlık) + sepetin `‹` yuvarlak ikonu → ortak bileşen
+(`components/customer/ui/funnel-header.tsx`); sepette eyebrow'un yerini sayaç aldı ("10 ÜRÜN",
+tekili `countOne`). Checkout'un ilerleme şeridi mobilde KART DEĞİL: çerçeve/zemin kalktı, kenardan
+kenara akıyor (`-mx-4`), kaydırma çubuğu gizli (çiplerin altında gri çizgi olarak beliriyordu —
+kullanıcı görüntüsü). Masaüstü şeridi kart hâlinde kaldı (sütun düzeninin parçası).
+
+**EK (aynı gün, beşinci tur): yapışkan olan KİMLİKTİR — iOS büyük-başlık deseni `FunnelHeader`a
+girdi.** Kullanıcı ilkesi: *"sticky olan kısım sayfanın ne sayfası olduğunu anlatan kısım olmalı."*
+Büyük başlık içerikle akar; ekrandan çıktığı anda üstteki yapışkan barda (`‹` + kompakt ad) sayfa
+adı belirir (`IntersectionObserver`, kaydırma dinleyicisi değil). Checkout'un çip şeridi
+yapışkanlığı bıraktı — kimlik görevi bara geçti, iki yapışkan katman içerikten yer çalıyordu.
+Uygulama dersi kayda değer: `sticky` en yakın kaydırılan atası boyunca yaşar — başlık dar bir
+sarmalayıcıya konunca sarmalayıcı bitince bar da akıp gitti (sepette ölçüldü); `FunnelHeader` bu
+yüzden fragment döner ve pedsiz, sayfa boyu kök konteyner ister (künyesinde yazılı).
+
+**EK (aynı gün, altıncı tur): checkout'un adım şeridi kimlik barının ALTINA yapışır.** Kullanıcı:
+*"sipariş tamamlama adımları da başlığın altında yapışkan olarak yerini alsın."* Beşinci turda
+şeridin kendi yapışkanlığı kalkmıştı; şimdi geri geldi ama kendi başına bir katman olarak değil,
+barın uzantısı olarak — iOS'ta büyük başlığın altına pinlenen segment/arama çubuğu deseni. Çipler
+büyük başlığın hemen altında akar (sarmalayıcının ilk çocuğu), kaydırınca `top: 52px`te (bar boyu)
+sabitlenir; zemin barla aynı (krem/95 + blur), z-katmanı barın altında. `top` değeri
+`funnel-header.tsx BAR_HEIGHT` ile aynı sayıdır ve `checkout-progress.tsx`te yinelenir (Tailwind
+sınıfı çalışma anında kurulamaz) — bar boyu değişirse ikisi birlikte değişmeli. Ölçüldü (3001):
+kaydırılmış ekranda şerit viewport'un 52. pikselinde. Masaüstü şeridi kart hâlinde ve yapışkansız.
+
+**EK (aynı gün, yedinci tur): hamburgersiz TÜM sayfalar tek başlık dilinde — `FunnelHeader`
+genelleşti.** Kullanıcı sorusu: *"Hamburger menünün görünmediği sayfalardaki header kısmı ortak
+olmalı değil mi?"* Envanter üç ayrı dili gösterdi: detay katmanı (metin "←" bağı + logo + ↗ paylaş
++ sepet), huni (‹ ikon + yapışkan kimlik), hesap alanı (metin "←" bağı + ortalı başlık + sağ öğe).
+Karar: hepsi `FunnelHeader` (şıklı soru, "Hepsi FunnelHeader'a"). Bileşen iki yetenek kazandı:
+**sağ uç yuvası** (detayda sepet rozeti, hesapta "Çıkış"/ekran aksiyonu) ve **içerik başlığını
+gözleme** (`watchId`): ürün/paket adı tasarım gereği görselin ALTINDA durur, bar o h1'i gözler —
+ad ekranda her an tam bir kez. Tarifin mobil düzeninde h1 hiç yoktu (ad yalnız alt metindeydi);
+hero'yu FunnelHeader kurar — açık eksik de kapandı. Detay başlığındaki LOGO söküldü (sepet
+turundaki kararla tutarlı). Detay/hesap başlığını `SiteFrame` kurar ("Geri" ve sepet etiketi
+çerçevenin sözlüğünde kalır, sayfalara kopyalanmaz); huni sayfaları kendi kurar (eyebrow'ları
+istemci verisi). **Kurumsal renk dokunuşu:** eyebrow TERRACOTTA — native uygulamanın "sayfa
+başlığı" durağı birebir (yukarıdaki "üç header" kaydı 16.08); harf aralığı `text-eyebrow-sm`
+token'ında gömülü. **Paylaş başlıktan İÇERİĞE indi** (kullanıcı: *"ürünün detay sayfası içerisinde
+uygun bir yerde"*; şıklı soru: başlık satırının sağına): ürün/paket adının yanında, işaret klasik
+paylaş ikonu (yukarı ok + tepsi, inline SVG) — eski "↗" glifi bağlantı okuyla karışıyordu.
+`.dc.html` detay/hesap kareleri bu turu HENÜZ taşımıyor — tasarım turunda güncellenmeli.

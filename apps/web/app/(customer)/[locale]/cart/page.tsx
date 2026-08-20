@@ -34,7 +34,11 @@ export default async function CartPage({ params }: CartPageProps) {
   const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);
 
   return (
-    <SiteFrame device={device} locale={locale}>
+    // Huni sayfası ÇIPLAK kabukta (kullanıcı kararı 20.08, ikinci tur): önce detay katmanı
+    // denendi (geri + logo barı) ama üst bölge iki katlı ve dengesiz göründü — tasarımın kendi
+    // karesi zaten logosuz TEK satır çiziyor ("← Devam et · Sepetim · 6 ürün"). O satırı sayfa
+    // kurar (`cart.mobile`); çerçeve başlık da footer da çizmez.
+    <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="none">
       <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} />
     </SiteFrame>
   );

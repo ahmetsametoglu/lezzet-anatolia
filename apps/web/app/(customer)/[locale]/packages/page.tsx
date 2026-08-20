@@ -55,7 +55,7 @@ export default async function PackagesPage({ params, searchParams }: PackagesPag
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale} activeNav="packages">
+    <SiteFrame device={device} locale={locale} activeNav="packages" footer="slim">
       <PackagesClient t={t} locale={locale} packages={packages} hero={hero} device={device} />
     </SiteFrame>
   );

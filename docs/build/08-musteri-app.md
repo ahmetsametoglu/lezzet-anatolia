@@ -1254,3 +1254,34 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   - **Izgara yetmedi, flex gerekti — ölçülerek anlaşıldı.** İlk deneme tek `grid` + `items-start`'tı: dikiş düzeldi ama **delik kaldı** (galeri 710, beyan hâlâ 882), çünkü ızgarada **satırlar ortaktır** ve ikinci satır uzun hücreyi bekler. İki bağımsız flex sütununa geçildi. Son ölçüm: 710 → **754** (44px, tasarımın kendi ritmi), dikiş kayması **0**.
   - **Ders (kayda değer):** *"sütunlar hizalansın"* ile *"sütunlar bağımsız aksın"* aynı şey değil — ızgara birincisini verir, ikincisini engeller.
   - `BEKLEYEN(08.47)`: düzeltme `.dc.html`'e geri işlenmedi — kaynak tasarımın kendisi hizasız ve kopyayı yamamak onu gizlerdi. Claude Design turunda çözülmeli.
+
+- [x] (08.48) **MOBİL WEB KABUĞU İKİ KATMANA İNDİ + hesap alanı native'le eşitlendi** *(kullanıcı incelemesi 20.08, ekran görüntüleriyle: "menüde nerede olduğum belli değil… sepette hâlâ menü var… header zıplıyor… adet butonları çok büyük… kartlara sığmıyor"; kararlar AskUserQuestion turlarında verildi)* · `touches: apps/web/components/customer/ui/{site-frame.tsx,mobile-menu.tsx,site-frame-messages.json,qty-stepper.tsx,storefront-cards.tsx,package-card.tsx}, apps/web/components/customer/account/sign-out-link.tsx, apps/web/app/(customer)/[locale]/{page.tsx,catalog/page.tsx,packages/page.tsx,recipes/page.tsx,product/[slug]/page.tsx,package/[slug]/page.tsx,recipe/[slug]/page.tsx,cart/**,checkout/**,discover/**,account/**,support/**}, apps/web/lib/account/read.ts, packages/i18n/src/index.ts, design/{KARARLAR.md,BACKLOG.md}`
+  - *Bitti:* kabuk kuralı yazılı ve uygulanmış; hesap alanında puan geçmişi, "nasıl kazanılır" ve davet bloğu yayında.
+  - **Kabuk (kullanıcı kararları):** duyuru şeridi YALNIZ ana sayfada; sepet/checkout `detail` katmanına geçti (geri + logo, sepet rozeti gizli, sayfa içi geri bağları söküldü); keşif `bare` (tasarımın tam ekran örtüsü); footer üç katman — tam: ana sayfa/Professionnels/yasal · ince: liste + detay · yok: huni + hesap alanı.
+  - **Yoğunluk:** checkout şeridi yalnız adım çipleri (sayaç ve tutar özet/onayda zaten var; tek satırda kesiliyordu — kullanıcı görüntüsüyle ölçüldü); sepet/kart adet seçicileri görsel küçülüp dokunması 44'te kaldı (`after` katmanı — katalog kartının deseni); dar kartta fiyat kendi satırına, eylem tam genişliğe indi (BACKLOG'un "yatay eksen kalıntısı" bununla kapandı); paket çipi artık kırpılmıyor (nowrap kalktı).
+  - **Menü:** "Ana sayfa" satırı eklendi + aktif sayfa K12 kuralıyla işaretleniyor (yeşil + altı çizili, çizgi şeffaf mekaniği masaüstüyle aynı).
+  - **Hesap:** çift "Mon compte" başlığı tekile indi, başlığa "Çıkış" geldi (`SignOutLink`, menüyle aynı kapı); `/account/points` doğdu (keyset sayfalı tam döküm + ayardan gelen "nasıl kazanılır" listesi — `readPointsRules`, onboarding/mobille aynı kapı); davet kartı eklendi (`readCustomerPoints` — web kartı da artık native'le aynı kapıdan, eski beş-parça okuma ve ölü kupon köprüsü söküldü).
+  - **Doğrulama:** typecheck/lint/knip temiz, 1375 birim testi yeşil; 10 sayfa cihaz görünümünde çekilip gözle karşılaştırıldı (şerit yalnız ana sayfada, sepette tek başlık, çipler sarıyor, seçiciler küçük, hesap/puan ekranları tasarım diliyle).
+  - Not: keşif ziyaretçi daveti başlık satırından kendi satırına indi (başlığa biniyordu); destek başlığının eylemi mobilde kısa etikete döndü ("+ Nouvelle" — "+ Écrivez-nous" başlığı kırpıyordu).
+  - **EK — cilalama taraması (aynı gün, kullanıcı isteği):** 20 sayfa cihaz görünümünde çekildi +
+    her sayfada otomatik yatay-taşma ölçümü koşuldu. Dört bulgu, dördü düzeltildi ve yeniden
+    çekimle doğrulandı: (1) çok boylu üründe boy kartları sarmasız `flex` idi — 4 boy 390px
+    viewport'u 410'a taşırıyordu (ölçüldü, cevizli-baklava); kompakt kartlar 2 sütunlu ızgaraya
+    geçti. (2) Siparişler başlığı destek/tasarım deseninden sapıyordu ("← Hesabım" yoktu, sağda
+    ikinci bir ok'lu bağ vardı) — hesaba dönüş geldi, "← Kataloğa dön" düştü; boş hâl de native'in
+    4:6 optik kuralıyla ortalandı (footer'sız kısa sayfada üstte asılı kalıyordu). (3) Tarif
+    detayının geri bağında "←" yoktu (ürün/pakette var) — üç dile eklendi. (4) FR metinlerde
+    `?`/`!` öncesi kırılmaz boşluğa çevrildi (17 dosya, 43 yer — "Comment dresser cette table ?"
+    başlığında "?" tek başına alt satıra düşüyordu, ölçüldü; Fransız tipografi kuralı). Kapılar:
+    typecheck/lint/birim (1375) yeşil.
+  - **EK — huni başlığı turları 3–7 (aynı gün, kullanıcı görüntü/kararlarıyla):** sepet/checkout
+    `bare`'a indi ve başlığı sayfa kurar (logolu bar üst bölgeyi iki katlıyordu); geri düğmesi
+    yuvarlak `‹` ikon (native deseni, `BackButton`); iki sayfanın başlığı tek bileşende birleşti
+    (`FunnelHeader`) ve checkout şeridi kapsız/tam genişlik; yapışkan olan KİMLİK (iOS büyük-başlık
+    deseni, `IntersectionObserver`); adım çipleri kimlik barının altına yapışıyor (`top`=bar boyu).
+    **Yedinci tur: hamburgersiz TÜM sayfalar tek başlık dili** — detay (ürün/paket/tarif) ve hesap
+    alanı da `FunnelHeader`a geçti (sağ uç yuvası: sepet rozeti / ekran aksiyonu; `watchId` ile
+    içerikteki h1 gözlenir), detay logosu söküldü, eyebrow terracotta (native "üç header" kaydı),
+    paylaş başlıktan ürün/paket adının yanına indi (klasik paylaş ikonu, SVG). Tarif mobil düzeni
+    ilk kez gerçek h1 kazandı. Ayrıntı ve gerekçeler `design/KARARLAR.md` "MOBİL WEB KABUĞU" EK
+    zinciri. Kapılar: typecheck/lint/knip/birim (1375) yeşil; 3001 çekimleriyle doğrulandı.

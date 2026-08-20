@@ -69,6 +69,9 @@ export const PATHNAMES = {
   // eşlemesi BURADA durur çünkü URL'in tek kaynağı bu tablodur — mail kendi yolunu kurmaz.
   '/orders/[reference]': { fr: '/commandes/[reference]', de: '/bestellungen/[reference]', tr: '/siparislerim/[reference]' },
   '/account/notifications': { fr: '/compte/notifications', de: '/konto/benachrichtigungen', tr: '/hesap/bildirim-tercihleri' },
+  // Puan geçmişi (20.08) — hesabın "Son kazanımlar" listesinin tam dökümü; sayfalıdır (defter
+  // sınırsız büyür → keyset). Segment üç dilde de programın kendi sözcüğü.
+  '/account/points': { fr: '/compte/points', de: '/konto/punkte', tr: '/hesap/puan-gecmisi' },
   '/support': { fr: '/assistance', de: '/anfrage', tr: '/talep' },
   // Talep açma (08.6). Statik segment `[ticket]`ten önce çözülür — "new" adında bir talep kimliği
   // olamaz (kimlikler uuid), yani çakışma yapısal olarak imkânsız.

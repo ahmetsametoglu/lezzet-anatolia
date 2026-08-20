@@ -85,7 +85,7 @@ export default async function Home({ params, searchParams }: HomeProps) {
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale}>
+    <SiteFrame device={device} locale={locale} activeNav="home">
       {/* İşletme künyesi YALNIZ ana sayfada (08.1): `LocalBusiness` sitenin tamamını tanıtır, her
           sayfada tekrarlamak aynı beyanı çoğaltmak olurdu. */}
       <LocalBusinessJsonLd url={localizedUrl('/', locale as Locale)} />

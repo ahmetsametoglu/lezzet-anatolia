@@ -4,6 +4,7 @@
     "backToAccount": "← Hesabım",
     "backToList": "← Taleplerim",
     "newTicket": "+ Bize yazın",
+    "newTicketShort": "+ Yeni",
     "empty": {
       "title": "Talebiniz yok",
       "body": "Bir sorunuz ya da sorununuz olursa buradayız.",
@@ -36,7 +37,11 @@
     "loadMore": "Daha eski talepler ↓",
     "loading": "Yükleniyor…",
     "photoAlt": "Talep fotoğrafı",
-    "translation": { "badge": "otomatik çevrildi", "showOriginal": "Orijinali göster", "showTranslation": "Çeviriyi göster" },
+    "translation": {
+      "badge": "otomatik çevrildi",
+      "showOriginal": "Orijinali göster",
+      "showTranslation": "Çeviriyi göster"
+    },
     "new": {
       "title": "Sorun bildir",
       "generalTitle": "Bize yazın",
@@ -75,6 +80,7 @@
     "backToAccount": "← Mon compte",
     "backToList": "← Mes demandes",
     "newTicket": "+ Écrivez-nous",
+    "newTicketShort": "+ Nouvelle",
     "empty": {
       "title": "Aucune demande",
       "body": "Si vous avez une question ou un souci, nous sommes là.",
@@ -107,18 +113,22 @@
     "loadMore": "Demandes plus anciennes ↓",
     "loading": "Chargement…",
     "photoAlt": "Photo de la demande",
-    "translation": { "badge": "traduit automatiquement", "showOriginal": "Voir l'original", "showTranslation": "Voir la traduction" },
+    "translation": {
+      "badge": "traduit automatiquement",
+      "showOriginal": "Voir l'original",
+      "showTranslation": "Voir la traduction"
+    },
     "new": {
       "title": "Signaler un problème",
       "generalTitle": "Écrivez-nous",
-      "orderQuestion": "Est-ce lié à une commande ?",
+      "orderQuestion": "Est-ce lié à une commande ?",
       "yes": "Oui, à ma commande",
       "no": "Non, autre sujet",
-      "pickOrder": "Quelle commande ?",
+      "pickOrder": "Quelle commande ?",
       "noOrders": "Vous n'avez pas encore de commande — écrivez-nous directement.",
-      "items": "Quels articles sont concernés ?",
+      "items": "Quels articles sont concernés ?",
       "bundleLabel": "coffret",
-      "problem": "Quel est le problème ?",
+      "problem": "Quel est le problème ?",
       "describe": "Expliquez-nous",
       "describePlaceholder": "Racontez en quelques phrases ce qui s'est passé.",
       "photo": "Photo",
@@ -146,6 +156,7 @@
     "backToAccount": "← Mein Konto",
     "backToList": "← Meine Anfragen",
     "newTicket": "+ Schreiben Sie uns",
+    "newTicketShort": "+ Neu",
     "empty": {
       "title": "Keine Anfragen",
       "body": "Wenn Sie eine Frage oder ein Problem haben, sind wir für Sie da.",
@@ -178,7 +189,11 @@
     "loadMore": "Ältere Anfragen ↓",
     "loading": "Wird geladen…",
     "photoAlt": "Foto zur Anfrage",
-    "translation": { "badge": "automatisch übersetzt", "showOriginal": "Original anzeigen", "showTranslation": "Übersetzung anzeigen" },
+    "translation": {
+      "badge": "automatisch übersetzt",
+      "showOriginal": "Original anzeigen",
+      "showTranslation": "Übersetzung anzeigen"
+    },
     "new": {
       "title": "Problem melden",
       "generalTitle": "Schreiben Sie uns",

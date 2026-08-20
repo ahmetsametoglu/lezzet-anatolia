@@ -2,6 +2,7 @@
   "tr": {
     "title": "Siparişi tamamla",
     "backToCart": "← Sepete dön",
+    "backLabel": "Geri",
     "verify": {
       "title": "Siparişi size bağlayalım",
       "email": "E-posta adresiniz",
@@ -144,6 +145,7 @@
   "fr": {
     "title": "Finaliser la commande",
     "backToCart": "← Retour au panier",
+    "backLabel": "Retour",
     "verify": {
       "title": "Rattachons la commande à vous",
       "email": "Votre adresse e-mail",
@@ -158,8 +160,8 @@
       "otherMethod": "← Utiliser une autre méthode",
       "or": "ou par e-mail",
       "accountAs": "Vous continuez en tant que {email}",
-      "notYou": "Pas vous ?",
-      "notYouConfirm": "Se déconnecter ?",
+      "notYou": "Pas vous ?",
+      "notYouConfirm": "Se déconnecter ?",
       "notYouYes": "Oui, me déconnecter",
       "notYouCancel": "Annuler"
     },
@@ -169,7 +171,7 @@
       "default": "par défaut",
       "add": "+ Nouvelle adresse",
       "edit": "Modifier cette adresse",
-      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
+      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
       "form": {
         "label": "Titre de l'adresse",
         "recipient": "Nom du destinataire",
@@ -286,6 +288,7 @@
   "de": {
     "title": "Bestellung abschließen",
     "backToCart": "← Zurück zum Warenkorb",
+    "backLabel": "Zurück",
     "verify": {
       "title": "Ordnen wir die Bestellung Ihnen zu",
       "email": "Ihre E-Mail-Adresse",

@@ -2,7 +2,7 @@ import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
 import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
-import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
+import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
 import { CouponsCard } from './components/coupons-card';
 import { DeleteAccount } from './components/delete-account';
@@ -22,9 +22,11 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
   const compact = true;
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
-      <h1 className="font-serif text-page-title-sm leading-tight text-ink">{t.title}</h1>
-
+      {/* Sayfa başlığı YOK: mobilde `accountChrome` zaten "Hesabım"ı başlık satırında taşıyor —
+          h1 buradayken ekranda iki kez alt alta yazılıyordu (kullanıcı bulgusu 20.08). Tasarım tek
+          satır çiziyor: "Hesabım … Çıkış". Masaüstünde başlık sekmelerde, orada h1 sorunu yok. */}
       {account.points && <PointsCard t={t} locale={locale} points={account.points} compact={compact} />}
+      {account.points && <InviteCard t={t} points={account.points} compact={compact} />}
 
       {/* KUPONLARIM MOBİLDE TASARIMDA YOK ama "Kupona çevir" düğmesi VAR (17.5, sapma
           `design/BACKLOG`ta). Çizim eylemi mobilde veriyor, sonucunu göstermiyor: çeviren müşteri
