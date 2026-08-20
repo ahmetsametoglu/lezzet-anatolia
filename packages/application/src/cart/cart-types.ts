@@ -606,6 +606,33 @@ export function shippingGroupFee(
 }
 
 /**
+ * **SEPETİN ÖDENECEK TUTARI — tek kaynak** (kullanıcı bulgusu 19.08).
+ *
+ * `totalCents` sözleşmede *"ara toplam − indirim"*; kargo grubu varsa ücreti de eklenir. Yani
+ * müşterinin göreceği ve ödeyeceği sayı bu ikisinin toplamıdır.
+ *
+ * ── NEDEN FONKSİYON OLDU ────────────────────────────────────────────────────
+ * Bu toplam bir tek yerde (`CartSummary`) hesaplanıyordu; sepetin yapışkan alt çubuğu ise kendi
+ * hesabını yapıyordu — satır toplamlarını topluyordu, yani **indirimi hiç görmüyordu**. Ölçüldü
+ * (kullanıcının ekran görüntüsü): kart *"Genel toplam 352,58 €"* derken hemen altındaki çubuk
+ * *"379,58 €"* diyordu. Tek ekranda iki toplam ve **kararı taşıyan** olan yanlıştı — o çubuk
+ * "Ödemeye geç" düğmesini taşıyor, yani bir fiyat VAAT ediyor.
+ *
+ * Para hiçbir yerde yanlış hesaplanmıyordu: Stripe niyetine giden tutar siparişin kendi satırından
+ * okunuyor (`order/checkout-session.ts` — istemci tutarı hiç söylemiyor) ve kapıda ödemede kuryenin
+ * tahsil ettiği de aynı alan. Arıza yalnız ekrandaydı; ama müşteriye 379,58 € gösterip 352,58 €
+ * çekmek — lehine bile olsa — verilen sözü tutmamaktır.
+ *
+ * Paket katmanında duruyor, ekranda değil: native yüzey de aynı sepeti çiziyor ve iki yüzeyin
+ * "ödenecek tutar" tanımı ayrışamamalı.
+ */
+export function cartPayableCents(
+  view: Pick<CartView, 'totalCents' | 'shippingOnly' | 'shippingSubtotalCents' | 'freeShippingCents' | 'shippingTariffCents'>,
+): number {
+  return view.totalCents + (view.shippingOnly ? shippingGroupFee(view).feeCents : 0);
+}
+
+/**
  * Satırın kimliği — aynı varyantın farklı partisi AYRI satır (React anahtarı da budur).
  * Paket kendi kimliğiyle anılır ve `b:` ile önlenir: bir paketin kimliği ile bir varyantınki
  * teorik olarak çakışmaz ama iki farklı KÜMEDEN gelirler; önek bunu okuyana da söyler.

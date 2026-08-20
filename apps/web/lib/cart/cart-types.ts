@@ -40,6 +40,7 @@ export {
   cartBlockReason,
   cartBlockedAnalyticsReason,
   cartKey,
+  cartPayableCents,
   entryOf,
   entryOfItem,
   isSplitCart,

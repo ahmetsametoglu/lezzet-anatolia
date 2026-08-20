@@ -3,6 +3,7 @@
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
+import { cartPayableCents } from '@/lib/cart/cart-types';
 import { useCart } from './cart-context';
 import messages from './cart-messages.json';
 
@@ -21,6 +22,16 @@ import messages from './cart-messages.json';
  *
  * Alt satır teslimat seçeneklerini VAAT ETMEZ, nerede sorulacağını söyler ("seçenekler sepette") —
  * ücret teslimat türüne, tür adrese bağlı ve ikisi de burada bilinmiyor.
+ *
+ * ── TUTAR ÖDENECEK OLANDIR, ARA TOPLAM DEĞİL (kullanıcı kararı 19.08) ───────
+ * Burada `view.subtotalCents` yazıyordu, yani indirim inmiş sepette bile indirimsiz sayı. Sepetin
+ * kendi çubuğunda aynı hata ölçülmüştü (`cart-checkout-bar` künyesi) ve orada düzeltildi; kullanıcı
+ * bu çubuğun da aynı kuralı izlemesine karar verdi — *"nereye bakarsanız bakın ödenecek tutarı
+ * görürsünüz"*. İkisi de `cartPayableCents`ten okuyor.
+ *
+ * Bedeli bilinerek kabul edildi: gezinirken görülen sayı, yer/adres seçilince kargo ücreti girip
+ * çıktıkça DEĞİŞEBİLİR. Ara toplam bu yönden daha durağandı — ama durağan olan yanlış sayıyı
+ * göstermenin bedeli daha ağır.
  */
 interface CartBarProps {
   locale: Locale;
@@ -40,7 +51,7 @@ export function CartBar({ locale }: CartBarProps) {
       >
         <span className="flex flex-col">
           <span className="font-sans text-body-sm font-bold text-cream">
-            {t.summary.replace('{n}', String(view.itemCount)).replace('{total}', formatPrice(view.subtotalCents, locale))}
+            {t.summary.replace('{n}', String(view.itemCount)).replace('{total}', formatPrice(cartPayableCents(view), locale))}
           </span>
           <span className="font-sans text-micro text-closed-line">{t.deliveryNote}</span>
         </span>

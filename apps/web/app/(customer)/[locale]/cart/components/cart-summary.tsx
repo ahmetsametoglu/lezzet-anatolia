@@ -7,7 +7,7 @@ import { cardClass } from '@/components/customer/ui/card';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
-import { cartBlockReason, shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
+import { cartBlockReason, cartPayableCents, shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import type { Messages } from '../cart-types';
 
@@ -124,7 +124,10 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
    * burada geçerli değil — sayıyı saklamak müşteriyi kasada sürprizle karşılamak olurdu.
    */
   const fee = view.shippingOnly ? shippingGroupFee(view) : null;
-  const totalCents = view.totalCents + (fee?.feeCents ?? 0);
+  // Toplam ORTAK fonksiyondan (19.08): aynı sayıyı alt çubuk da basıyor ve ikisi bir dönem
+  // ayrışmıştı — kart indirimli, çubuk indirimsiz. `fee` burada ayrıca duruyor çünkü kart ücreti
+  // KENDİ SATIRINDA da yazıyor; çubuk yalnız toplamı taşıyor.
+  const totalCents = cartPayableCents(view);
   /* Cümle SUNUCUNUN kararından kurulur, ekran eşik aritmetiği yapmaz: hangi kampanyanın
      kazanılabilir olduğu ve eşiğe varıldığında ne ineceği motorda hesaplanıyor
      (`findReachableDiscount`). Burada yalnız üç sayı yerine konuyor — iki yüzey de aynı kapıdan

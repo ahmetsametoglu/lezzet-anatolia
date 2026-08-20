@@ -3,7 +3,7 @@
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
-import type { CartView } from '@/lib/cart/cart-types';
+import { cartPayableCents, type CartView } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
 import { checkoutBlockReason } from './cart-summary';
 
@@ -18,6 +18,16 @@ import { checkoutBlockReason } from './cart-summary';
  *
  * Düğme bugün pasif — ödeme adımı 07.4/07.5 bekliyor. Yine de çizilir: aksiyonun NEREDE olduğunu
  * ve tutarın ne olduğunu göstermek, boş bir alt bant bırakmaktan dürüsttür.
+ *
+ * ── ÇUBUK ÖDENECEK TUTARI YAZAR, ARA TOPLAMI DEĞİL (kullanıcı bulgusu 19.08) ──
+ * Buradaki sayı bir dönem satır toplamlarının kendi toplamıydı (`lines.reduce`) ve **indirimi hiç
+ * görmüyordu**. Ölçüldü: özet kartı *"Genel toplam 352,58 €"* derken hemen altındaki çubuk
+ * *"379,58 €"* diyordu — tek ekranda iki toplam, ve yanlış olan KARARI taşıyandı. Ters yönde ikinci
+ * bir ayrışma daha vardı: sepetin tamamı kargodayken kart ücreti ekliyor, çubuk eklemiyordu.
+ *
+ * Artık ikisi de `cartPayableCents`ten okuyor (künyesi orada) — aynı gerçeğin iki hesabı yok.
+ * Para zaten doğruydu: tahsil edilen tutar siparişin satırından geliyor, ekrandan değil. Arıza
+ * yalnız görüntüdeydi; ama ödemeye götüren düğmenin yanındaki sayı bir SÖZDÜR.
  */
 interface CartCheckoutBarProps {
   view: CartView;
@@ -34,7 +44,19 @@ interface CartCheckoutBarProps {
 export function CartCheckoutBar({ view, t, locale, lines }: CartCheckoutBarProps) {
   const reason = checkoutBlockReason(view, t, locale);
   const blocked = reason !== null;
-  const totalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  const totalCents = cartPayableCents(view);
+  /**
+   * Çubuk SEPETİN TAMAMINI yazdığını söyler — ama yalnız sepet ikiye bölündüğünde.
+   *
+   * Çağıran bölünmüş sepette yalnız kapıya giden grubu geçiyor (aşağıdaki `lines` künyesi) ve o
+   * ayrım kalem LİSTESİ için doğru: kargo grubu kendi kartında kendi eylemiyle duruyor. Tutar ise
+   * bölünemiyor — indirim sepetin tamamına yazılıyor ve motorda grup başına pay YOK. Uydurulmuş
+   * bir pay, tam da bu düzeltmenin kapattığı hatanın ikinci bir sürümü olurdu.
+   *
+   * O yüzden tutar sepetin tamamının (kartla aynı sayı, kart da bölünmüş sepette tamamını yazıyor)
+   * ve kapsamı SÖYLENİYOR. Bölünme kalem sayısından okunuyor: çağıran alt küme geçtiyse bölünmüştür.
+   */
+  const scoped = lines.length !== view.lines.length;
   // Koyu çubuğun içindeki aksiyon: dolgu açık yeşile, metin antrasite döner (envanter §2 —
   // koyu zemin varyantı). Pasifken kum dolgu; ikisi de aynı kutuyu verir, zıplama olmaz.
   const actionClass = 'rounded-soft px-5 py-3 font-sans text-body-sm font-bold transition-colors';
@@ -45,7 +67,9 @@ export function CartCheckoutBar({ view, t, locale, lines }: CartCheckoutBarProps
         <div className="flex items-center justify-between gap-3 rounded-card bg-ink px-3.5 py-3">
           <span className="flex flex-col">
             <span className="font-sans text-body font-bold text-cream">{formatPrice(totalCents, locale)}</span>
-            <span className="font-sans text-micro text-closed-line">{t.vatShort}</span>
+            <span className="font-sans text-micro text-closed-line">
+              {scoped ? `${t.group.summaryScope} · ${t.vatShort}` : t.vatShort}
+            </span>
           </span>
           {blocked ? (
             <button type="button" disabled title={reason ?? undefined} className={`${actionClass} cursor-not-allowed bg-disabled-fill text-white`}>
