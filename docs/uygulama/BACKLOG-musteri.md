@@ -803,8 +803,8 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   Mobil arka uç ile web ortak motoru kullandığı için ikisi de **iki yüzeyde birden** çalışıyor;
   "yolda" bloğunun ÇİZİMİ web'de henüz yok (veri orada da var) — `docs/talep/` altına not bırakıldı.
 
-- [ ] **MB-58 · Vitrindeki KEŞİF bölümü: oturumsuzda hiç, kartsızken hiç, iskelette var
-  (kullanıcı kararı 11.08).** Üç şart:
+- [x] **MB-58 · Vitrindeki KEŞİF bölümü: oturumsuzda hiç, kartsızken hiç, iskelette var
+  (kullanıcı kararı 11.08).** ÜÇÜ DE KAPANDI — (b) 20.08'de, cihazda iki yönlü ölçümle. Üç şart:
   (a) **Oturum açılmadan görünmez** — keşif oyu puanı kimliğe yazılıyor (`awardFeedbackPoints`
   kimliksiz kayda puan vermiyor), yani misafire gösterilen davet karşılığı olmayan bir davettir.
   (b) **Oylanacak kart kalmadıysa bölüm KALKAR** — bugün aday ürün sayısı 4 ve müşteri hepsini
@@ -828,12 +828,33 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   davet kutuları ekranın ALTINDA kaldığı için sayılamadı; iskelet penceresi de saniyenin altında.
   Bugün yalnız kod düzeyinde doğru.
 
-  **(b) AÇIK — ve ölçüldü: ucuz değil.** *"Kaç kart kaldı"* bilgisi sunucuda var ama vitrin
-  sözleşmesi taşımıyor (`home-api.schema`). Taşıtmanın bedeli ölçüldü: `openDiscoverDeck` iki
-  sorgu koşuyor (aday ürünler + müşterinin oyladıkları, `feedback/discover.ts:65,68`) ve bu ikisi
-  **uygulamanın en çok vurulan ucuna** eklenirdi. Kuyruk hâli de zaten nazikçe karşılanıyor
-  (keşif ekranı *"tur bitmedi, hiç başlamadı"* boş hâlini çiziyor). Yani kalan iş bir cila ve
-  bedeli sıcak yolda — sessizce alınmadı, karar olarak burada duruyor.
+  **(b) KAPANDI (20.08) — ve askının dayanağı ölçümle çürüdü.** Askı gerekçesi *"iki sorgu, hem de
+  en çok vurulan uca"*ydı; o gerekçe sorguların **sıraya ekleneceğini** varsayıyordu. Ölçüldü: vitrin
+  ucu zaten **yedi okumayı paralel** koşuyor (`home.ts` `Promise.all`) ve yeni okuma demetin İÇİNE
+  girdi — ucun süresi en yavaş bölümün süresidir, yenisi onlardan hızlı. Ziyaretçide tek sorgu
+  (eleyecek geçmiş yok), girişlide iki.
+
+  Yapılan: `discoverCards` vitrin sözleşmesine eklendi (`home-api.schema`) ve **desteyi kuran
+  kuralın aynısından** besleniyor — `remainingCandidates` ayrıştırıldı, `openDiscoverDeck` ile
+  `countDiscoverDeck` ikisi de onu çağırıyor. İki ayrı sayım yazılsaydı biri bir gün ötekinden ayrı
+  düşer ve vitrin, açtığında boş çıkan bir tura davet ederdi. Ekranın şartı `discoverCards > 0`.
+
+  **ASIL ENGEL BAŞKA ÇIKTI — ve tek satırdı.** Sayı sözleşmeye taşındıktan SONRA bile davet
+  kaybolmadı; ölçüm sebebi gösterdi: `fetchHome` çıplak `apiFetch` kullanıyordu, yani vitrin çağrısı
+  **Bearer taşımıyordu** ve sunucu müşteriyi hiç tanımıyordu — "bu kişi kaç kart oyladı" sorusunun
+  cevabı yapısal olarak yoktu. `maybeAuthorizedFetch`e geçildi (uygulamada zaten var, künyesi tam bu
+  hâl için: *"ziyaretçiye açık ama kimlikten yararlanan çağrı"*); kimliksizde davranış aynen korunur.
+
+  **YAN BULGU — B2B FİYATI VİTRİNDE HİÇ KİŞİSELLEŞMİYORMUŞ.** Aynı satır ikinci bir şeyi de sessizce
+  bozuyordu: ucun kendi künyesi *"Bearer varsa yalnız fırsat FİYATINI kişiselleştirir (B2B/özel
+  fiyat)"* diyor, ama Bearer hiç gitmediği için o dal HİÇ koşmuyordu — onaylı B2B müşteri vitrinde
+  B2C fiyatı görüyordu. Uç doğruydu, çağıran eksikti; aynı düzeltme ikisini birden kapattı.
+  **B2B hesapla cihazda DOĞRULANMADI** (elde onaylı B2B hesap yok) → `BEKLEYEN(21.92)`.
+
+  **CİHAZDA İKİ YÖNLÜ ÖLÇÜLDÜ (20.08).** Hesabın kalan 20 adayına oy yazıldı → **davet kayboldu**;
+  yazılan satırlar kimlikleriyle kaydedilip **tam olarak** silindi (hesap 6 oyluk ilk hâline döndü)
+  → **davet geri geldi**. Ziyaretçi sayısı ikisinde de 20 kaldı, yani eleme kimliğe bağlı çalışıyor.
+  `typecheck` (çalışma alanı) · `lint` temiz, mobil paket **599/599**.
 
 - [ ] **MB-18 · Tüm puan senaryolarının uçtan uca denetimi.** Kapsam: sipariş · ürün yorumu ·
   keşif turu · davet (referans) · ziyaret · günlük tavan (`points_daily_cap`) · B2B'de puan

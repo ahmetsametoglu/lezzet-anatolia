@@ -188,5 +188,21 @@ export const HomeSchema = z.object({
   featured: z.array(CatalogProductSchema),
   recipes: z.array(HomeRecipeSchema),
   packages: z.array(HomePackageSchema),
+  /**
+   * **Keşif turunda bu kişiye kalan kart sayısı** (MB-58b) — `0` ise vitrin daveti HİÇ çizmez.
+   * Aday kümesi operatörün eliyle büyür ve bugün küçüktür; hepsini oylamış müşteriye davet
+   * göstermek, açtığında boş çıkan bir tura çağırmaktır.
+   *
+   * SAYI, BAYRAK DEĞİL: "çizeyim mi" kararı sayıdan türer (`> 0`), tersi türemez — ve destenin
+   * boyu okumanın zaten elindeki veridir (`countDiscoverDeck`, deste kuran kuralın aynısı).
+   *
+   * DAVETİN CÜMLESİNE GİRMEZ: kart "N kart kaldı" ya da "N puan kazanırsınız" DEMEZ. Kazanç
+   * `points_feedback_candidate` ayarıdır, bu sayı değil; ikisini çarpıp ekrana yazmak MB-15'te
+   * kapatılan arıza sınıfını geri getirir (ayar değişince ekran vermediğimiz ödülü vaat eder).
+   *
+   * Ziyaretçide de doludur ve dolu olması gerekir: tur misafire açık (MB-75) ve aday hiç yoksa
+   * davet ona da gösterilmemeli. Ziyaretçide eleme YOK, yani sayı aday sayısının kendisidir.
+   */
+  discoverCards: z.number().int().min(0),
 });
 export type Home = z.infer<typeof HomeSchema>;

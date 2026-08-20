@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
+import { countDiscoverDeck } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { HomeSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
@@ -42,7 +43,7 @@ home.get('/home', async (c) => {
   ]);
   // Bölümler birbirinden bağımsız okunur; biri ötekini bekletmez. `limit` sorgusu yok: raylar
   // editoryal seçkidir, sınırlar okuma kapısında sabittir (CLAUDE §1).
-  const [bands, offers, featured, recipes, packages] = await Promise.all([
+  const [bands, offers, featured, recipes, packages, discoverCards] = await Promise.all([
     readHomeBands(db, locale.data),
     readHomeOffers(db, locale.data, place, viewer),
     readHomeFeatured(db, locale.data, place, viewer),
@@ -51,11 +52,21 @@ home.get('/home', async (c) => {
     // Yer BURAYA DA geçer (10.08): vitrindeki paket kartı ile Fikirler sekmesindeki kart AYNI
     // karttır; birinin yeri bilip ötekinin bilmemesi aynı paketi iki ekranda farklı gösterirdi.
     readPackageCards(db, locale.data, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT, place }),
+    /* KEŞİF DAVETİNİN ŞARTI (MB-58b): kalan kart sayısı. Destenin KENDİSİ değil sayısı okunur ve
+       kural desteyi kuran fonksiyonun aynısından gelir (`countDiscoverDeck` künyesi) — iki ayrı
+       sayım bir gün ayrı düşer ve vitrin, açtığında boş çıkan bir tura davet ederdi.
+
+       BEDELİ ÖLÇÜLDÜ, GECİKMEYE EKLENMİYOR: bu okuma yukarıdaki demetin İÇİNDE koşuyor, yani
+       ucun süresi en yavaş bölümün süresidir — yenisi onlardan hızlı. Ziyaretçide tek sorgu
+       (eleyecek geçmiş yok), girişlide iki. Backlog'da "sıcak yola iki sorgu" diye askıya
+       alınmıştı; askının dayanağı SIRAYLA koşacağı varsayımıydı, oysa vitrin zaten yedi okumayı
+       paralel yapıyor. */
+    countDiscoverDeck(db, viewer.customerId),
   ]);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: okuma kapısının döndürdüğü şekiller sözleşmeye alan alan
   // uymak zorunda ve uymadığı gün burası DERLENMEZ; `parse` da süzgeçtir — fazla alan zarfa sızamaz.
-  const body: z.input<typeof HomeSchema> = { bands, offers, featured, recipes, packages };
+  const body: z.input<typeof HomeSchema> = { bands, offers, featured, recipes, packages, discoverCards };
   return ok(c, HomeSchema.parse(body));
 });

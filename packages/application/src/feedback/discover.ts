@@ -62,21 +62,38 @@ export async function openDiscoverDeck(
   locale: PreferredLanguage,
   customerId: string | null,
 ): Promise<DiscoverCard[]> {
-  const candidates = await new ProductService(db).listCandidates();
-  if (candidates.length === 0) return [];
-
-  const seen = customerId ? await votedProductIds(db, customerId) : new Set<string>();
-
-  return candidates
-    .filter((p) => !seen.has(p.id))
-    .slice(0, DECK_SIZE)
-    .map((p) => ({
+  return (await remainingCandidates(db, customerId)).map((p) => ({
       productId: p.id,
       name: resolveLocalizedText(p.name, locale),
       // Boş/boşluk metin YOK sayılır — boş bir paragraf kartın altında açıklanmamış bir boşluk bırakır.
       description: p.description ? textOrNull(resolveLocalizedText(p.description, locale)) : null,
       image: imageOf(p),
     }));
+}
+
+/**
+ * **Turun kalan kartları — DESTEYİ KURAN TEK KURAL.** Hem destenin kendisi hem "kaç kart kaldı"
+ * sorusu buradan çıkar; ikisi ayrı yazılsaydı biri bir gün ötekinden ayrı düşer ve vitrin, açtığında
+ * boş çıkan bir tura davet ederdi — MB-58(b)'nin tam da önlemek istediği şey.
+ */
+async function remainingCandidates(db: SupabaseClient, customerId: string | null) {
+  const candidates = await new ProductService(db).listCandidates();
+  if (candidates.length === 0) return [];
+
+  const seen = customerId ? await votedProductIds(db, customerId) : new Set<string>();
+  return candidates.filter((p) => !seen.has(p.id)).slice(0, DECK_SIZE);
+}
+
+/**
+ * **Vitrinin sorusu: tur açılırsa kart çıkar mı?** (MB-58b) Kartı DEĞİL sayıyı döndürür — vitrin
+ * yalnız "bölümü çizeyim mi" diye soruyor ve kartların adı/görseli o karar için gereksiz.
+ *
+ * ZİYARETÇİDE TEK SORGU: oylanmışları elemek için geçmiş gerekir, ziyaretçide geçmiş yoktur ve
+ * `remainingCandidates` o okumayı zaten atlıyor. Yani asıl sıcak yol (oturumsuz vitrin) aday
+ * listesinden ibaret; ikinci sorgu yalnız girişlide koşar.
+ */
+export async function countDiscoverDeck(db: SupabaseClient, customerId: string | null): Promise<number> {
+  return (await remainingCandidates(db, customerId)).length;
 }
 
 /** Müşterinin daha önce kaydırdığı aday ürünler. */

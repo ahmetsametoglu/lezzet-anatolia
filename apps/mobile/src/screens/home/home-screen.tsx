@@ -770,13 +770,26 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               **Misafirin emeği de kaybolmuyor:** girişsiz oylar cihazda tutulup girişte hesaba
               bağlanıyor (`lib/discover/pending-swipes-store` → `/me/discover/claim`). Yani
               koşullu cümle bir teselli değil, gerçekten tutulan bir söz. */}
-          <DashedInvite
-            title={t.discover.title}
-            description={signedIn ? t.discover.body : t.discover.guestBody}
-            onPress={() => router.push('/discover')}
-            action={<Text style={styles.inviteChevron}>›</Text>}
-            testID="home-discover"
-          />
+          {/* OYLANACAK KART KALMADIYSA DAVET HİÇ ÇİZİLMEZ (MB-58b, 20.08). Aday kümesi operatörün
+              eliyle büyür ve bugün küçük; hepsini oylamış müşteriye davet göstermek, açtığında
+              BOŞ çıkan bir tura çağırmaktı. Sayı artık vitrin sözleşmesinde (`discoverCards`) ve
+              destenin kendisini kuran kuraldan geliyor, yani iki taraf ayrı düşemez.
+
+              Backlog bunu "sıcak yola iki sorgu" diye askıya almıştı; askının dayanağı sorguların
+              SIRAYLA koşacağı varsayımıydı — ölçüldü, uç zaten yedi okumayı paralel yapıyor ve
+              yenisi demetin içine girdi (uç künyesi).
+
+              KOŞUL `> 0`, `!== 0` DEĞİL: sözleşme negatif sayı taşımıyor ama ölçüt niyeti söylesin
+              — çizmenin şartı kart OLMASI. */}
+          {home.home !== null && home.home.discoverCards > 0 ? (
+            <DashedInvite
+              title={t.discover.title}
+              description={signedIn ? t.discover.body : t.discover.guestBody}
+              onPress={() => router.push('/discover')}
+              action={<Text style={styles.inviteChevron}>›</Text>}
+              testID="home-discover"
+            />
+          ) : null}
           {/* İKİ DAVET AYNI GÖRSEL DİLDE AMA AYNI RENKTE DEĞİL (MB-27).
               **Birinci adım (14.08):** kart `sand` tonundaydı ve canlı Keşif kartının yanında
               DEVRE DIŞI gibi duruyordu (kullanıcı bulgusu 11.08). Kusur tonun kendisinde değil,
@@ -787,14 +800,29 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               yere götürüyor** diye kuruldu; zeytin uygulamanın olumlu/birincil rengi olduğu için
               kart canlı kalıyor. İşaret ikisinde de aynı (`›`): renk NEREYE gittiğini söyler,
               jest ise ne yapıldığını — ikisi farklı sorular. */}
-          <DashedInvite
-            title={t.professional.title}
-            description={t.professional.body}
-            tone="olive"
-            onPress={() => router.push('/professionals')}
-            action={<Text style={styles.inviteChevronOlive}>›</Text>}
-            testID="home-professional"
-          />
+          {/* CEVABI BELLİ SORU SORULMAZ (kullanıcı kararı 20.08). Kart *"Restoran ya da market
+              misiniz? Toptan fiyatlar için profesyonel hesap açın"* diyor; onaylı toptancıya bunu
+              göstermek, yaptığı şeyi yapmaya davet etmektir — cihazda görüldü (20.08, Bosphore
+              hesabı: başlıkta TOPTAN rozeti VE altında bu davet, aynı ekranda). Başvurusu
+              incelemede olan da aynı: cevabını vermiş, sırasını bekliyor.
+
+              MB-58(a) ile AYNI SINIF: karşılığı olmayan davet. Ölçüt yeni yazılmadı, `useWholesale`
+              zaten burada (TOPTAN rozetini o çiziyor) — künyesi *"iki kopya bir gün ayrışır"* diyor
+              ve bu üçüncü çağıran.
+
+              KİŞİSEL HESAPTA DURUR (kullanıcı kararı, seçenekli soruldu): `/professionals`a giden
+              TEK kapı bu kart; girişli herkesten gizleseydik kişisel hesapla kaydolmuş bir
+              restoranın başvuru yolu tamamen kapanırdı. Soru orada hâlâ anlamlı. */}
+          {wholesale || (meState.status === 'ready' && meState.me?.b2bPending === true) ? null : (
+            <DashedInvite
+              title={t.professional.title}
+              description={t.professional.body}
+              tone="olive"
+              onPress={() => router.push('/professionals')}
+              action={<Text style={styles.inviteChevronOlive}>›</Text>}
+              testID="home-professional"
+            />
+          )}
           {/* VİTRİNDE YASAL BLOK YOK — bir kez konup GERİ ALINDI (kullanıcı kararı 19.08).
               Gerekçe web'in altbilgisiydi: orada beş belge her sayfanın dibinde durur. Ama web'de
               altbilgi sayfanın ZATEN parçası, native'de vitrin alışverişin kendisi — kanunun

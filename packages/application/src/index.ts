@@ -164,7 +164,7 @@ export { POINTS_DEFAULTS, awardFeedbackPoints, awardPoints, feedbackCompletionPo
 // Kaynak `apps/web/lib/feedback/{discover,discover-claim}.ts` ve `product-feedback.ts`in
 // `candidate` DALI; web köprü, benimsemesi web şeridinin işi. Kimlik ÇAĞIRANDAN gelir
 // (oturum ya da Bearer), istemcinin iddiasından değil.
-export { claimDiscoverSwipes, openDiscoverDeck, recordDiscoverSwipe } from './feedback/discover';
+export { claimDiscoverSwipes, countDiscoverDeck, openDiscoverDeck, recordDiscoverSwipe } from './feedback/discover';
 export type {
   DiscoverCard,
   DiscoverClaimResult,

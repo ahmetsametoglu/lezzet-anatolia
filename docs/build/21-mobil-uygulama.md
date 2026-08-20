@@ -4507,3 +4507,62 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   "Tekrar dene" ile kimlik geri geldiği hâlde başlıkta *"Hoş geldiniz"* yazıyor, sekme değiştirmek
   de düzeltmiyor; soğuk açılışta doğru (*"İyi akşamlar, Yaman"*). Posta kodu 67000 ARIZA DEĞİL:
   o gezinme kodudur, satın alma tarafı adresten 67380'i çözer (`setPurchasePlace` künyesi).
+
+- [x] (21.92) **KEŞİF DAVETİ ARTIK KART KALMADIYSA ÇİZİLMİYOR — ve vitrin çağrısı kimliği taşımıyormuş (MB-58b, 20.08).**
+  `touches: packages/types/src/contracts/home-api.schema.ts, packages/application/src/feedback/discover.ts, packages/application/src/index.ts, apps/mobile-api/src/api/v1/home.ts, apps/mobile/src/lib/api/home.ts, apps/mobile/src/screens/home/home-screen.tsx`
+
+  Aday kümesi operatörün eliyle büyür ve bugün küçük; hepsini oylamış müşteriye davet göstermek,
+  **açtığında boş çıkan bir tura çağırmaktı**. Backlog bunu *"iki sorgu, hem de en çok vurulan uca"*
+  diye askıya almıştı — **askının dayanağı ölçümle çürüdü:** o gerekçe sorguların SIRAYA ekleneceğini
+  varsayıyordu, oysa vitrin ucu zaten yedi okumayı `Promise.all` ile paralel koşuyor ve yeni okuma
+  demetin İÇİNE girdi. Ucun süresi en yavaş bölümün süresidir.
+
+  `discoverCards` sözleşmeye eklendi ve **desteyi kuran kuralın aynısından** besleniyor:
+  `remainingCandidates` ayrıştırıldı, `openDiscoverDeck` ile `countDiscoverDeck` ikisi de onu
+  çağırıyor (CLAUDE §1 — iki ayrı sayım bir gün ayrı düşerdi). Ekranın şartı `discoverCards > 0`.
+  Sayı davetin CÜMLESİNE girmez: kazanç `points_feedback_candidate` ayarıdır, bu sayı değil —
+  ikisini çarpıp yazmak MB-15'te kapatılan arıza sınıfını geri getirirdi (sözleşme künyesi).
+
+  **ASIL ENGEL TEK SATIRDI.** Sayı taşındıktan SONRA bile davet kaybolmadı; ölçüm sebebi gösterdi:
+  `fetchHome` çıplak `apiFetch` kullanıyordu, yani vitrin çağrısı **Bearer taşımıyor** ve sunucu
+  müşteriyi hiç tanımıyordu. `maybeAuthorizedFetch`e geçildi — uygulamada ZATEN var, künyesi tam bu
+  hâl için yazılmış (*"ziyaretçiye açık ama kimlikten yararlanan çağrı"*); kimliksizde davranış
+  aynen korunur (oturum yoksa çıplak `apiFetch`e düşer).
+
+  **YAN BULGU — B2B fiyatı vitrinde hiç kişiselleşmiyormuş.** Aynı satır ikinci bir şeyi de sessizce
+  bozuyordu: ucun künyesi *"Bearer varsa yalnız fırsat FİYATINI kişiselleştirir (B2B/özel fiyat)"*
+  diyor, ama Bearer hiç gitmediği için o dal HİÇ koşmuyordu — onaylı B2B müşteri vitrinde B2C fiyatı
+  görüyordu. Uç doğruydu, çağıran eksikti; aynı düzeltme ikisini birden kapattı.
+
+  **Ölçüm (cihaz, iki yönlü):** hesabın kalan 20 adayına oy yazıldı → **davet kayboldu**; yazılan
+  satırlar kimlikleriyle kaydedilip TAM OLARAK silindi (hesap 6 oyluk ilk hâline döndü) → **davet
+  geri geldi**. Ziyaretçi sayısı ikisinde de 20 (deste tavanı `DECK_SIZE`), yani eleme kimliğe bağlı
+  çalışıyor. Çalışma alanı `typecheck` · `lint` temiz, mobil paket **599/599**.
+
+  **~~BEKLEYEN(21.92): B2B fiyat kişiselleşmesi cihazda doğrulanmadı~~ → DOĞRULANDI (20.08).**
+  Onaylı B2B hesap ZATEN VARMIŞ (`Restaurant Bosphore`, `b2b_approved`, `discount_percent: 5`) ve
+  hazırlamak için veri ameliyatı gerekmedi: giriş akışı *"e-postası eşleşen sahipsiz profili
+  bağlar"* (0002 trigger'ı), yani cihazda e-posta + `OTP_TEST_CODE` ile girmek profili bağladı.
+
+  **Cihazda görülen, doğrudan ölçümle birebir aynı:** başlıkta **TOPTAN** rozeti · fırsat şeridinde
+  **3 yerine 1 ürün** · Mangolu Artisan Kek `0,83 €` ve üstü çizili tutar `1,27 €` DEĞİL **`0,89 €`**
+  (−%7). Kaybolan iki fırsatın sebebi doğru: o ürünlerin `b2b` fiyat satırı yok, yani o kanalda
+  satılmıyor. Düzeltmeden önce bu hesap, kendisine SATILMAYAN iki ürünü YANLIŞ referans fiyatla
+  görüyordu. (Ölçüm öncesi kontrol: `price` tablosunda 231 `b2c` + 217 `b2b` satır — fark
+  gösterilebilir durumdaydı.)
+
+  **AYNI TURDA KAPANAN İKİNCİ KALEM — cevabı belli soru sorulmuyor artık.** Onaylı B2B müşteriye
+  vitrinde hâlâ *"Restoran ya da market misiniz? Toptan fiyatlar için profesyonel hesap açın"*
+  daveti çiziliyordu; cihazda aynı ekranda **TOPTAN rozeti VE bu davet** birlikte görüldü. MB-58(a)
+  ile aynı sınıf: karşılığı olmayan davet. Kart artık onaylı toptancıda ve **başvurusu incelemede
+  olanda** (`b2bPending`) çizilmiyor. Ölçüt yeni yazılmadı — `useWholesale` zaten vitrinde (TOPTAN
+  rozetini o çiziyor), künyesi *"iki kopya bir gün ayrışır"* diyor ve bu üçüncü çağıran.
+
+  **KİŞİSEL HESAPTA DURUYOR — bilinçli (kullanıcı kararı, seçenekli soruldu).** `/professionals`a
+  giden TEK kapı bu kart (`grep`le doğrulandı: başka çağıran yok); girişli herkesten gizleseydik
+  kişisel hesapla kaydolmuş bir restoranın başvuru yolu tamamen kapanırdı.
+
+  **İki dal da cihazda ölçüldü:** Bosphore → davet GİZLİ (üçüncü sekme de "Paketler"den
+  "Siparişler"e döndü, toptan çatalı) · Yaman (kişisel) → davet GÖRÜNÜR. Test hesabı ölçüm sonrası
+  eski oturumuna geri alındı. `typecheck` · `lint` temiz; mobil paket 595/599 — düşen dördü kabuk
+  düzeyi zaman aşımı ailesi, İZOLE koşuda dördü birden geçti (18/18).
