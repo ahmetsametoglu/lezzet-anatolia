@@ -131,6 +131,8 @@ create unique index product_slug_key on public.product (slug);
 create index product_incomplete_idx on public.product (is_incomplete) where is_incomplete;
 create index product_category_idx on public.product (category_id);
 
+create type portion_kind as enum ('item', 'slice');
+
 create table public.product_variant (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product (id) on delete cascade,
@@ -149,6 +151,16 @@ create table public.product_variant (
   -- soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). null = adet bilgisi yok (dökme
   -- ürün) — sıfır DEĞİL: sıfır "içinde hiç parça yok" demek olurdu (CLAUDE §1).
   pieces_count int,
+  -- ── PORSİYON TÜRÜ: "4 adet" ile "12 dilim" AYNI ŞEY DEĞİLDİR (kullanıcı kararı 19.08) ────────
+  -- `pieces_count` tek başına "kaç kişilik"i söylüyor ama vitrinin yazacağı KELİMEYİ söylemiyordu:
+  -- 4'lü simit paketi 4 AYRI simittir, 12 dilimlik cheesecake ise TEK pastadır. Ekran ikisine de
+  -- "12 adet" yazınca müşteri 12 cheesecake aldığını sanıyor (ölçüldü: 10 üründe böyle okunuyordu).
+  --
+  -- Ayrım kaynakta duruyor ve TAHMİN EDİLMİYOR: basılı katalog adında `(12 slice)` diyor, üreteç
+  -- onu `catalog-pdf.json` → `unit.portionKind` alanına küratelenmiş olarak taşıyor.
+  --
+  -- `null` = tek parça ürün; porsiyon sorusu hiç doğmuyor (`pieces_count` de null olur).
+  portion_kind portion_kind,
   min_stock_qty int,                                 -- asgari eşik (DOMAIN §16); null = öneri yok
   sku text,
   is_active boolean not null default true,

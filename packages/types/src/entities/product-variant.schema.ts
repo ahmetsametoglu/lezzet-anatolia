@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { LocalizedTextDraftSchema } from '../primitives/localized-text.schema';
 
+/**
+ * Porsiyon türü — `item` ayrı ayrı ürünler, `slice` tek ürünün dilimleri. Künyesi
+ * `ProductVariantSchema.portionKind`de; kaynağı basılı katalogun kendi beyanı (`(12 slice)`).
+ */
+export const PortionKindEnum = z.enum(['item', 'slice']);
+export type PortionKind = z.infer<typeof PortionKindEnum>;
+
 // ProductVariant — satılabilir birim (fiyat/stok varyant seviyesinde). 0005 migration, DATA_MODEL.
 // Varyantsız görünen ürün de tek (varsayılan) varyant taşır → fiyat/stok mantığı her yerde aynı.
 //
@@ -18,6 +25,14 @@ export const ProductVariantSchema = z.object({
    * sıfır DEĞİL, çünkü sıfır "içinde hiç parça yok" demek olurdu.
    */
   piecesCount: z.number().int().nullable(),
+  /**
+   * Porsiyonun TÜRÜ — `pieces_count` "kaç" der, bu "neyin kaçı" der (19.08).
+   *
+   * `item` = ayrı ayrı ürünler (4'lü simit paketi) · `slice` = tek ürünün dilimleri (12 dilimlik
+   * cheesecake) · `null` = tek parça, porsiyon sorusu yok. Vitrin ikisine aynı kelimeyi yazamaz:
+   * "12 adet cheesecake" 12 pasta demek olurdu.
+   */
+  portionKind: PortionKindEnum.nullable(),
   minStockQty: z.number().int().nullable(),
   sku: z.string().nullable(),
   isActive: z.boolean(),
@@ -31,6 +46,7 @@ export const ProductVariantInsertSchema = z.object({
   label: LocalizedTextDraftSchema.optional(),
   netWeightG: z.number().int().nullish(),
   piecesCount: z.number().int().nullish(),
+  portionKind: PortionKindEnum.nullish(),
   minStockQty: z.number().int().nullish(),
   sku: z.string().nullish(),
   isActive: z.boolean().optional(),

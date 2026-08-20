@@ -5,6 +5,7 @@ import type { CategoryImageService, CategoryService, ProductFamilyService, Produ
 import { PRODUCT_GALLERY_MAX } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus, ProductStorageType } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
+import { teklifSkulari } from './supplier-prices';
 import { enAz, type Katman } from './tier';
 
 /**
@@ -40,6 +41,7 @@ import { enAz, type Katman } from './tier';
 interface LezzaVariant {
   label: LocalizedText | null;
   netWeightG: number | null;
+  portionKind?: 'item' | 'slice' | null;
   /** Paket içi adet (`(12 Pieces)` · `4x80g`). `null` = bildirilmemiş — sıfır DEĞİL. */
   piecesCount: number | null;
   sku: string | null;
@@ -92,6 +94,7 @@ const CEVIRI = join(dirname(fileURLToPath(import.meta.url)), 'data/translations.
 function readLezzaCatalog(): LezzaCatalog {
   return JSON.parse(readFileSync(DATA, 'utf8')) as LezzaCatalog;
 }
+
 
 /**
  * ── ÜRÜN ADI VE AÇIKLAMASININ ÜÇ DİLLİ KARŞILIĞI (kullanıcı isteği 16.08) ────────────────────────
@@ -500,6 +503,68 @@ function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
 }
 
 /**
+ * Ürünün SATIŞ DURUMU — tek karar noktası (kullanıcı kararı 19.08).
+ *
+ * Sıralama bilinçli: önce satılabilir olmayı GEREKTİREN sebepler, sonra katman, sonra kusurlar.
+ * Ters sırada yazılsaydı bir indis, paket kalemini pasife düşürebilir ve paketi bozardı.
+ *
+ * ── AİLE BÖLÜNMEZ (kullanıcı kararı 19.08) ───────────────────────────────────────────────────
+ * *"Simitler bir aile olarak görünmüyor… ailelerin net görülebilmesi için bunların hepsinin
+ * bilgisinin olması gerekiyor."* Ölçüldü: 25 ailenin **8'i tamamen adaydı** (Meze · Poğaça · Tavuk
+ * Kanat · Kol Böreği · Kek Bardağı · Çıtır Tavuk Fileto · Mini Pide · Kalzone) — yani vitrinde HİÇ
+ * yoklardı. Simit ailesinde 3 üründen yalnız Tatlı Simit satıştaydı; müşteri "simit" arayınca tek
+ * sonuç görüyordu ve çeşit bloğu hiç çizilmiyordu.
+ *
+ * Sebebi ölçütün ürün başına bakmasıydı: *teklifte SKU'su yoksa aday*. Tesadüfen bir ailenin hiçbir
+ * üyesi 22.12.2025 teklifinde yoksa aile toptan kayboluyordu.
+ *
+ * Kural artık şu: **aile üyesi ürün aday OLAMAZ.** Ticari gerekçesi de bu — aile aynı ürünün çeşit
+ * eksenidir (E böreği: peynirli/kıymalı/patatesli/ıspanaklı) ve müşteri o eksende SEÇİM yapar. Yarım
+ * bir çeşit bloğu bozuk raftır: dört çeşidin ikisini listeleyen dükkân, satmadığı iki çeşidi de
+ * hatırlatmış olur. Bir ürün hattı ya bütün alınır ya hiç alınmaz.
+ *
+ * Aday bu yüzden **ailesiz ürünlerden** seçiliyor: tek başına duran bir kalemi stoklamamak hiçbir
+ * ekranı yarım bırakmaz. Ölçülen sonuç: 64 aday → 26, sekiz boş ailenin hepsi doldu.
+ *
+ * Kural ayrıca bir fikstürü GEREKSİZ kıldı: `VITRIN_FIKSTURU` (901016B · 901023B · 901015B ·
+ * 901024B) elle satışa açılmış dört Artisan kek idi ve dördü de aynı ailenin üyesi — aile kuralı
+ * onları zaten aktif doğuruyor. Elle liste silindi; iki ölçüt aynı şeyi söylerse biri bir gün
+ * ötekinden ayrılır ve hangisinin karar verdiği görünmez olur.
+ */
+function satilabilirDurum(o: {
+  teklifli: boolean;
+  kurguda: boolean;
+  zayifVeri: boolean;
+  aileli: boolean;
+  kusurlu: boolean;
+  i: number;
+}): ProductStatus {
+  // Gerçek alış fiyatı var → satıştadır. Stoğu da `stock.ts`te dolu doğar.
+  if (o.teklifli) return 'active';
+  // Paket/koleksiyon kalemi → aday yapılamaz, yoksa o kurgu sessizce satılamaz olur.
+  if (o.kurguda) return 'active';
+  // ── PASİF ARTIK İNDİSTEN DEĞİL, VERİNİN KENDİSİNDEN (kullanıcı kararı 19.08) ────────────────
+  // *"85 aday çok, bazılarını pasife çekelim — özenle seçelim: bilgilerinin düzgün olmayışı,
+  // resimlerinin olmayışı."* Ölçüt artık o ve indis (`i % 23`) yerine geçti: görseli, açıklaması
+  // ya da çevirisi olmayan ürün SATIŞA SUNULAMAZ, dolayısıyla "aday" da değildir — aday tedarik
+  // edilebilecek üründür, listelenebilecek olan. Ölçüldü: 11 ürün, hepsi tek-porsiyon "mono"
+  // kalemler (`… mono`, `Mono Pack`) — üreticinin kendi kaynağında da yarım duruyorlar.
+  //
+  // Sıra ÖNEMLİ: teklifli ve kurgudaki ürünler bu ölçütten ÖNCE ayrılıyor. Aksi hâlde alış fiyatı
+  // olan `Kunefe with plate and syrup` (görselsiz) pasife düşer ve satın aldığımız mal satılamaz olurdu.
+  if (o.zayifVeri) return 'passive';
+  // `base`: alış fiyatı olmayan her ürün ADAY. Bitmiş parti ve geri çekme kararı zamanla doğar —
+  // ama eksik künye kurulum gününde de eksiktir, o yüzden `passive` yukarıda katmandan bağımsız.
+  if (!o.kusurlu) return 'candidate';
+  // Aile üyesi satıştadır — künyesi yukarıda. `base`te buraya hiç gelinmiyor (üstteki satır döndü).
+  if (o.aileli) return 'active';
+  // Ailesiz ürünlerin 7'de biri yine satışta: aday olmak ailesizliğin ZORUNLU sonucu değil, bir
+  // assortiman kararı. Hepsi aday olsaydı "ailesiz = satılmıyor" gibi okunan sahte bir kural doğardı.
+  if (o.i % 7 === 0) return 'active';
+  return 'candidate';
+}
+
+/**
  * Kataloğu kurar. İmza eski toplu üreticiyle aynı şekilde: çağıran servisleri ve başlangıç sırasını
  * verir, sonuç sayıları döner.
  */
@@ -627,22 +692,27 @@ export async function seedLezzaProducts(
   let photos = 0;
   let varyantSayisi = 0;
 
-  // **Tek porsiyonluk `mono` paketler SEED'E ALINMIYOR** (kullanıcı kararı 04.08). Kaynak katalog
-  // tek porsiyonluk paketi AYRI BİR ÜRÜN olarak kurmuş; modelde doğrusu aynı ürünün bir paket BOYU
-  // (varyant) olmasıydı. Ayrı ürün kaldıkları sürece limonlu kekin sayfasında üstte dört çeşit,
-  // altta "bunlarla da ilgilenebilirsiniz"de AYNI dört kek çıkıyordu. Bu bir test verisi; kaynağın
-  // kurgusunu düzeltmek yerine o satırları hiç almamak hem daha dürüst hem daha sade.
+  // ── `mono` SÜZGECİ KALDIRILDI — SORUN SEED'DE DEĞİL KAYNAKTAYMIŞ (kullanıcı kararı 19.08) ────
+  // 04.08'de tek porsiyonluk `mono` kayıtlar seed'e hiç alınmıyordu: kaynak onları AYRI ÜRÜN olarak
+  // kurmuştu ve ayrı ürün kaldıkları sürece limonlu kekin sayfasında üstte dört çeşit, altta
+  // "bunlarla da ilgilenebilirsiniz"de AYNI dört kek çıkıyordu. Süzgeç o belirtiyi susturuyordu.
   //
-  // Desen 15.08'de `mono pack`ten çıplak `mono`ya genişledi: basılı katalog aynı kurguyu bu adla da
-  // kuruyor ("Tiramisu mono", "Red Velvet Cake mono") ve gerekçe birebir aynı. Kataloğun kendisinde
-  // DURUYORLAR — üreteç kaynağa sadıktır, süzgeç sahnenin kararıdır.
-  const urunler = katalog.products.filter((p) => !/\bmono\b/i.test(p.name.tr ?? ''));
+  // Doğrusu kullanıcının kuralıydı: *"Tatlı simidin dört paketi de olabilir, yüzlü paketi de
+  // olabilir. Biz bunları varyant olarak sunarız."* Ambalaj boyu ürün değil VARYANTTIR — ve artık
+  // öyle kuruluyor: eşleme `data/sources/variant-packs.json`da, birleştirme üreteçte
+  // (`build-lezza-catalog.mjs` §3b). Ölçüldü: 8 mono kayıt bağlandı, katalog 134 → 126 ürün /
+  // 175 varyant, çok boylu ürün 35 → 43. Süzgecin susturduğu şey artık doğru yerde duruyor,
+  // dolayısıyla süzgecin kendisi de gereksiz.
+  const urunler = katalog.products;
 
   const ceviriler = readCeviriler();
   const cevirisizler = urunler.filter((p) => !ceviriler[p.slug]).map((p) => p.slug);
   // Çevirisi olmayan ürün SESSİZ GEÇMEZ: kataloğa yeni bir kalem girdiğinde ilk kopan yer burasıdır
   // ve kopuş görünmez — ürün üç dile de İngilizce adıyla düşer, hiçbir sayaç bunu eksik saymaz.
   if (cevirisizler.length > 0) console.log(`  ⚠ çevirisi olmayan ${cevirisizler.length} ürün (İngilizce adıyla kurulacak): ${cevirisizler.join(' · ')}`);
+
+  /** Gerçek alış fiyatı olan SKU'lar — ürünün AKTİF mi ADAY mı doğacağını bu belirliyor (`durum` künyesi). */
+  const TEKLIF_SKULARI = teklifSkulari();
 
   for (const [i, p] of urunler.entries()) {
     // Kaynağın İNGİLİZCE adı — desen eşleştirmeleri (alerjen, KDV) bunun üzerinde çalışır.
@@ -694,10 +764,40 @@ export async function seedLezzaProducts(
     // üyesi bir ürünü aday yapmak o paketi/tarifi/seçkiyi sessizce satılamaz kılardı (aday ürünün
     // fiyatı da yok — paket fiyatı kalemlerin fiyatından türüyor, biri eksikse tutar yalan söyler).
     //
-    // **`base` katmanında üçü de yok:** açılış günü kataloğunun tamamı satıştadır. Aday ürün bir keşif
-    // kurgusu, pasif ürün bir geri çekme kararı — ikisi de zamanla doğar, kurulumla değil.
+    // ── ÖLÇÜT ARTIK İNDİS DEĞİL, GERÇEK ALIŞ FİYATI (kullanıcı kararı 19.08) ──────────────────
+    // Kural yukarıda doğru kurulmuştu ("aday = stoklanmayacak ürün") ama ÖLÇÜTÜ hâlâ indisti
+    // (`i % 4 === 2`) ve o indisin gerçekle hiçbir bağı yoktu: 134 üründen 95'i aktif doğuyordu,
+    // oysa gerçek alış fiyatımız **33 üründe** var. Kalan 62 aktif ürün fiyatını uydurma bir kilo
+    // tabanından alıyor, stok partisi de uydurma — yani "satıştaki dükkân" büyük ölçüde kurgu.
+    //
+    // Kullanıcının istediği ölçüt açıktı: *"alış fiyatı ve satış fiyatı belirlenebilir olanlara
+    // satın alma bilgisi gireceğiz; diğerlerinin az bir kısmı stokta bitti gösterirken büyük bir
+    // kısmını aday yapacağız."* Ölçüt artık o: **teklifte SKU'su olan ürün aktif, olmayan aday.**
+    //
+    // "Tükendi" hâli TEKLİFSİZ ürünlerden seçiliyor (`i % 7`), teklifli olanlardan değil: teklifli
+    // 33 ürün "aktif satın alınmış gibi" görünmeli, tükenmiş değil. Onların stoğu `stock.ts`te dolu
+    // doğuyor, tükenenlerin partisi ise BİTMİŞ — geçmişi olan bir tükeniş (o dosyanın künyesi).
+    //
+    // **`base`te tükendi ve pasif YOK, ama aday VAR.** Açılış gününde bitmiş bir parti ya da geri
+    // çekilmiş bir ürün olamaz — ikisi de zamanla doğar. Aday ise tam tersi: alış fiyatı olmayan,
+    // stoğa hiç girmemiş ürün açılış günü de adaydır. Eskiden `base`te hepsi aktif doğuyordu ve
+    // sonuç fiyatsız-stoksuz "aktif" ürünlerdi — vitrinde alınamaz kart, sebebi görünmeyen bir hâl.
+    //
+    // ⚠ **Satış kurgusundaki 16 ürün ADAY OLAMIYOR ve bu bir ödünç:** paket kalemi, tarif malzemesi
+    // ve koleksiyon üyelerinin çoğu teklifte yok, ama aday yapılırlarsa o paket/tarif/seçki sessizce
+    // satılamaz olur (aday ürünün fiyatı da yok; paket fiyatı kalemlerden türüyor). Doğru çözüm
+    // kurguları teklifteki 34 kalemden yeniden kurmak. → BEKLEYEN(BACKLOG §2): satış kurguları
     const kurguda = kurgu.slug.has(p.slug) || p.variants.some((v) => v.sku && kurgu.sku.has(String(v.sku)));
-    const durum: ProductStatus = !kusurlu ? 'active' : i % 23 === 0 ? 'passive' : i % 4 === 2 && !kurguda ? 'candidate' : 'active';
+    const teklifli = p.variants.some((v) => v.sku && TEKLIF_SKULARI.has(String(v.sku)));
+    // KÜNYESİ YARIM ÜRÜN — üç sinyal de KAYNAĞIN kendi eksiği, bizim ürettiğimiz bir kusur değil:
+    // galeri boş · açıklama yok · çeviri sözlüğünde karşılığı yok. Üçünden biri bile satışa
+    // sunmayı engeller (vitrin kartı görselsiz ve dilsiz çizilemez).
+    const zayifVeri = p.imageUrls.length === 0 || !p.description || !ceviri;
+    // Aile üyeliği aday kararını ezer (künyesi `satilabilirDurum`). Küme `ELLE_AILELER`'den TÜRÜYOR,
+    // ikinci bir listeye kopyalanmıyor: aileye bir çeşit eklenince satış durumu da kendiliğinden
+    // doğru olsun — iki liste bir gün ayrılsaydı, ayrıldığı gün aile yine yarım kalırdı.
+    const aileli = AILE_UYESI_SLUG.has(p.slug);
+    const durum: ProductStatus = satilabilirDurum({ teklifli, kurguda, zayifVeri, aileli, kusurlu, i });
     // **Künyesi eksik ürün** (kapsam denetimi 09.08) — ikisi de ayrı bir EKRAN hâli, ayrı sebep:
     //   raf ömrü yok  → "kalan %" hesaplanamaz; parti kartı o çubuğu HİÇ basmamalı
     //   hedef marj yok → marj uyarısı hesaplanamaz; "uyarı yok" ile "veri yok" aynı şey değil
@@ -782,10 +882,26 @@ export async function seedLezzaProducts(
       status: durum,
       sortOrder: startOrder + i,
       variants: p.variants.map((v, n) => ({
-        // Boysuz ürün (bütün pastalar) tek varsayılan varyant taşır — modelin kendi kuralı.
+        // Boysuz ürün tek varsayılan varyant taşır — modelin kendi kuralı.
         label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
-        netWeightG: v.netWeightG ?? undefined,
+        // ── AĞIRLIKSIZ VARYANT ARTIK BİLİNÇLİ BİR BOŞLUK (19.08) ────────────────────────────
+        // Eskiden kendiliğinden doğuyordu: 12 varyantın gramajı boştu. Basılı katalogdaki sayılar
+        // üretece bağlanınca (05.31) **175 varyantın hepsi boyunu aldı** ve kapsam denetimi haklı
+        // olarak kırmızıya döndü — "ağırlıksız varyant" hâli hiç doğmuyordu.
+        //
+        // Hâl GERÇEK ve korunmalı: `net_weight_g` nullable ve operatör ürün formundan elle ürün
+        // açarken boş bırakabiliyor. Ekranlar bunu karşılamak zorunda (boy etiketi, kilo fiyatı,
+        // kargo hesabı) ve karşılayıp karşılamadıkları ancak böyle bir satırla sınanır.
+        //
+        // **Yalnız `extend`+ ve yalnız ADAY üründe:** `base` gerçek veridir, orada boş gramaj
+        // uydurma bir eksiklik olurdu. Ölçüt eskiden "teklifsiz" idi ve VİTRİNE bozuk kart
+        // düşürüyordu (ölçüldü 19.08): gramajı olmayan varyantın fiyatı da hesaplanamıyor
+        // (`pricing.ts` nöbeti), yani `Peynirli Adana Böreği` satıştaki bir ürün olarak doğup
+        // alınamaz kart oluyordu. Aday üründe aynı hâl vitrini hiç kirletmiyor — aday zaten
+        // satılabilir katalogda değil, keşif bölümünde.
+        netWeightG: kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? undefined : (v.netWeightG ?? undefined),
         piecesCount: v.piecesCount ?? undefined,
+        portionKind: v.portionKind ?? undefined,
         sku: v.sku ?? undefined,
         // **"Bu boy satıştan kalktı"** (kapsam denetimi 09.08) — kendi başına küçük bir alan ama
         // BÜYÜK bir kuralın tek tetikleyicisi: pasif varyant, o varyantı taşıyan PAKETİ
@@ -1164,6 +1280,17 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
     ],
   },
 ];
+
+/**
+ * Bir aileye BAĞLANACAK ürünlerin slug'ları — satış durumu kararının okuduğu küme.
+ *
+ * Süzgeç `aileleriKur`unkinin aynısı ve öyle kalmalı: tek üyeli satır aile KURMUYOR, dolayısıyla o
+ * ürün ailesizdir ve aday olabilir. İki yerde iki farklı süzgeç olsaydı, tek üyeli bir satır burada
+ * "aileli" sayılıp satışa açılır ama ekranda çeşit bloğu yine çizilmezdi — sebebi görünmeyen bir hâl.
+ */
+const AILE_UYESI_SLUG: ReadonlySet<string> = new Set(
+  ELLE_AILELER.filter((a) => a.uyeler.length >= 2).flatMap((a) => a.uyeler.map((u) => u.slug)),
+);
 
 /**
  * Aynı tabanı paylaşan **iki ya da daha çok** ürünü bir aileye bağlar.

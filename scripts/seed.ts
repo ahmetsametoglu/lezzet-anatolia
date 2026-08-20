@@ -128,7 +128,7 @@ import { seedBankQueue, seedMoney } from './seed/money';
 import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
-import { seedPrices } from './seed/pricing';
+import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
 import { seedSiteImages } from './seed/site-image';
 import { seedRecipes } from './seed/recipe';
 import { seedScopedSettings } from './seed/settings';
@@ -229,13 +229,22 @@ async function main(): Promise<void> {
   // serbest; katalogun yanında duruyor çünkü ikisi de aynı kovaya yazıyor.
   await seedSiteImages(db);
 
+  // FİYAT ARTIK `base`TE (kullanıcı kararı 19.08) — çünkü artık uydurma değil.
+  //
+  // Eskiden fiyat bu çizginin altındaydı ve haklı olarak: uydurma bir kilo tabanından üretiliyordu.
+  // Bugün 34 varyantın fiyatı tedarikçinin 22.12.2025 tarihli teklifinden ve kendi toptan satış
+  // listemizden türüyor — ikisi de gerçek belge. Maliyeti OLMAYAN varyant `base`te fiyatsız kalır;
+  // uydurma sayı yalnız `extend`+ katmanında doğar (künye `seed/pricing.ts`).
+  const varyantlar = await katalogVaryantlari(db);
+  await seedPrices(db, varyantlar, katman);
+
   // ── `base` BURADA BİTER ──────────────────────────────────────────────────────────────────────
   // Buradan sonrasının TAMAMI uydurmadır (kullanıcı kararı 16.08: *"hiçbir içerik
   // üretilmeyecek"*): depo · rota · personel ve giriş hesapları · banka hesapları ·
-  // tedarikçiler · ayar değerleri · hesaplanmış fiyat · üretilmiş stok, ve onların üstüne kurulan
-  // bütün geçmiş. Gerçek olanları üretimde operatör kurar. Künye `seed/tier.ts`.
+  // tedarikçiler · ayar değerleri · üretilmiş stok, ve onların üstüne kurulan bütün geçmiş.
+  // Gerçek olanları üretimde operatör kurar. Künye `seed/tier.ts`.
   if (!enAz(katman, 'extend')) {
-    console.log('✓ seed tamam · KATMAN: base — yalnız gerçek veri (fiyat · stok · depo · personel · tedarikçi YOK; 128 ürün beyansız → is_incomplete)');
+    console.log('✓ seed tamam · KATMAN: base — yalnız gerçek veri (stok · depo · personel · tedarikçi YOK; fiyat YALNIZ teklifteki 34 varyantta; 128 ürün beyansız → is_incomplete)');
     return;
   }
 
@@ -250,8 +259,8 @@ async function main(): Promise<void> {
   // Giriş hesapları profillerden SONRA: trigger yeni auth kullanıcısını e-postayla eşleşen profile
   // bağlıyor, yani profil önce var olmak zorunda (gerekçe `seedStaffLogins` künyesinde).
   await seedStaffLogins(db);
-  const varyantlar = await katalogVaryantlari(db);
-  await seedPrices(db, varyantlar, kisiler);
+  // Pazarlıklı fiyat müşteriden SONRA: kanal listesini ezen satır bir müşteri kimliğine yazılıyor.
+  await seedNegotiatedPrices(db, varyantlar, kisiler);
   // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle
   // yazılan bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur.
   await seedBundles(db);

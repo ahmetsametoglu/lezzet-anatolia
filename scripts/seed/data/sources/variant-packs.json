@@ -1,0 +1,56 @@
+{
+  "_source": {
+    "belge": "lezzafoods.eu ürün listesi (üreticinin kendi sitesi) + ölçüm",
+    "tarih": "2026-08-19",
+    "kim": "elle kürasyon"
+  },
+  "_note": [
+    "AMBALAJ BOYU AYRI ÜRÜN DEĞİL, VARYANTTIR (kullanıcı kararı 19.08).",
+    "",
+    "Üreticinin kataloğu aynı keki iki ayrı kayıt olarak yayınlıyor: '9x90 g kutu' ve 'Mono Pack'.",
+    "İkisi aynı ürün, farklı ambalaj — kullanıcının simit için söylediğinin aynısı: 'Tatlı simidin",
+    "dört paketi de olabilir, yüzlü paketi de olabilir. Biz bunları varyant olarak sunarız.'",
+    "",
+    "04.08'de bu kayıtlar seed'e hiç alınmıyordu (`catalog-lezza.ts`, `mono` süzgeci) çünkü ana",
+    "ürünün kopyası sanılmışlardı. Kopya değiller: KÜÇÜK BOY. Süzgeç kaldırıldı, eşleme buraya",
+    "yazıldı — üreteç artık addan tahmin etmiyor, listeden okuyor.",
+    "",
+    "Neden addan türetilmiyor: '… Mono Pack' deseni ürün adları ÇEVRİLDİĞİ anda çöker ve boy",
+    "sessizce ayrı ürüne döner (`ELLE_AILELER` künyesindeki aynı gerekçe). Elle liste ayrıca",
+    "'hangi boy hangi ürünün' sorusunu bir insanın cevaplamasını sağlıyor."
+  ],
+  "_reliability": {
+    "olcum": [
+      "SEKİZİNDE DE mono ağırlığı ana ürünün TAM BİR PORSİYONU — hesapla doğrulandı, tahmin değil:",
+      "  artisan-lemon-cake        810 g / 9 = 90 g   ↔ 901026B  90 g  ✓",
+      "  artisan-mango-cake        810 g / 9 = 90 g   ↔ 901025B  90 g  ✓",
+      "  artisan-pistachio-cake    810 g / 9 = 90 g   ↔ 901028B  90 g  ✓",
+      "  artisan-strawberry-cake   810 g / 9 = 90 g   ↔ 901027B  90 g  ✓",
+      "  red-velvet-cake          1485 g / 9 = 165 g  ↔ 900903  165 g  ✓",
+      "  dark-choc-profiterol     1575 g / 9 = 175 g  ↔ 901812  175 g  ✓",
+      "  rainbow-velvet-cake      1350 g / 9 = 150 g  ↔ 903108  150 g  ✓",
+      "  tiramisu                 1305 g / 9 = 145 g  ↔ 901813  145 g  ✓",
+      "Yani eşleme bir isim benzerliğine değil, ölçülen bir orana dayanıyor."
+    ],
+    "eksik": [
+      "Dördünde (901812 · 903108 · 900903 · 901813) kaynakta GÖRSEL ve AÇIKLAMA yok — bunlar",
+      "ana ürüne bağlanınca sorun kalmıyor, çünkü görsel ve açıklama ÜRÜNÜN, boyun değil.",
+      "Ayrı ürün olarak dursalardı 'künyesi yarım' sayılıp pasife düşeceklerdi."
+    ],
+    "kapsam_disi": [
+      "'cup' (bardak) kayıtları BİRLEŞTİRİLMEDİ — `red-velvet-cup` 165 g ve `italian-tiramisu-cup`",
+      "165 g. Ağırlıkları tutuyor ama bardak AYRI BİR ÜRÜNDÜR: kaşıkla yenir, kendi kabında satılır,",
+      "kendi görseli var. Boy ekseni ambalajın büyüklüğüdür, servis biçimi değil."
+    ]
+  },
+  "merge": {
+    "901026B": "artisan-lemon-cake",
+    "901025B": "artisan-mango-cake",
+    "901028B": "artisan-pistachio-cake",
+    "901027B": "artisan-strawberry-cake",
+    "900903": "red-velvet-cake",
+    "901812": "dark-chocolate-profiterol-cake",
+    "903108": "rainbow-velvet-cake",
+    "901813": "tiramisu"
+  }
+}

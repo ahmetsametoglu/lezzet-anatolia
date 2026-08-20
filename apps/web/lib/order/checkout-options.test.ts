@@ -69,14 +69,16 @@ describe('kargo ücreti ve KDV (07.3)', () => {
 
   it('kargoda eşik altı sipariş ücret öder ve ücret toplama eklenir', async () => {
     const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
-    expect(r.shippingFeeCents).toBe(790); // ayar varsayılanı
-    expect(r.orderTotalCents).toBe(4790);
-    expect(r.remainingForFreeShippingCents).toBe(2000);
-    expect(r.shippingVat).toEqual([{ vatRate: 5.5, amountCents: 790, vatCents: 41 }]);
+    // Ayar varsayılanı 19.08'de piyasadan ölçüldü (05.30): ücret 7,90 → **11,90 €**, eşik 60 → **100 €**.
+    expect(r.shippingFeeCents).toBe(1190);
+    expect(r.orderTotalCents).toBe(5190);
+    expect(r.remainingForFreeShippingCents).toBe(6000);
+    expect(r.shippingVat).toEqual([{ vatRate: 5.5, amountCents: 1190, vatCents: 62 }]);
   });
 
   it('eşik üstü kargo bedava', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 8000, lines: [{ totalCents: 8000, vatRate: 5.5 }] });
+    // Sepet eşiğin (100 €) ÜSTÜNDE olmalı — eski 80 € artık eşiğin altında kalıyordu.
+    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 12000, lines: [{ totalCents: 12000, vatRate: 5.5 }] });
     expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'threshold' });
   });
 

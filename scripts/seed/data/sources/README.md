@@ -1,10 +1,11 @@
 # Katalog kaynakları — ağdan yeniden üretilemeyen veri
 
-Bu klasördeki üç dosya **elle çıkarılmış kaynaklardır**: biri basılı katalogdan, ikisi üreticinin
-`.docx` spesifikasyon belgelerinden. `pnpm lezza:catalog` bunları okur, WooCommerce API'sinden gelen
-omurgayla birleştirir ve `../lezza-catalog.json`'u üretir.
+Bu klasördeki dört dosya **elle çıkarılmış kaynaklardır**: biri basılı katalogdan, ikisi üreticinin
+`.docx` spesifikasyon belgelerinden, biri iki fiyat belgesinden. `pnpm lezza:catalog` ilk üçünü okur,
+WooCommerce API'sinden gelen omurgayla birleştirir ve `../lezza-catalog.json`'u üretir; dördüncüsünü
+(`prices-supplier-2025-12.json`) besleme doğrudan okur (`scripts/seed/pricing.ts`).
 
-**Neden repoda dururlar:** kaynakları bir PDF ve altı Word belgesi. Ağdan çekilemezler, silinirlerse
+**Neden repoda dururlar:** kaynakları üç PDF ve altı Word belgesi. Ağdan çekilemezler, silinirlerse
 geri getirilemezler — üretecin `db:refresh` sırasında internetsiz de çalışabilmesi buna bağlı.
 **Elle düzenlenebilirler** (üretilmiş dosya değiller), ama düzenleyen `_reliability` künyesini de
 güncellemek zorundadır: aşağıdaki çelişki listesi verinin hangi kısmına güvenildiğinin tek kaydı.
@@ -43,6 +44,26 @@ künyesi, mevzuat uyumu.
 kontrol ve tedarikçi yönetimi bu veriyi isteyecek; o gün gelene kadar kaynak burada bekliyor, çünkü
 tek kopyası buydu.
 
+## prices-supplier-2025-12.json — alış teklifi + kendi toptan listemiz
+
+**İki belge, iki yön.** `purchase` = LEZZA FOODS BV'nin QUALITE SAS'a verdiği 22.12.2025 tarihli
+fiyat teklifi (34 SKU). `salesB2bHt` = bizim kendi toptan satış listemiz (`CATALOGUE QUALITE.pdf`).
+İkisi de **KDV hariç (HT)**: teklif AB içi mal teslimi, satış listesi de toptan listesidir.
+
+Beslemede fiyat **bu dosyadan türüyor** (`scripts/seed/pricing.ts`) — daha önce uydurma bir kilo
+tabanından (`14,50 €/kg + 1,20 €`) hesaplanıyordu.
+
+**Satış listesinden yalnız 6 satır alındı.** GTIN sütunu kullanılamaz: SKU'larımızla hiç örtüşmüyor
+ve kendi içinde de bozuk (beş `S-011xx` kodu dört sayfada farklı ürünlerde tekrar ediyor).
+Eşleştirme ad+gramajla ELLE yapıldı; otomatik ad eşleştirmesi denendi ve güvenilmez çıktı (ürün
+adlarımız İngilizce, listedeki adlar Türkçe/Fransızca, gramajlar tutmuyor). Emin olunmayan 29 satır
+**bilerek dışarıda** — yanlış eşleşmiş bir fiyat, fiyatsızlıktan pahalıdır.
+
+⚠ **Teklifin lojistik sütunları bizim alan adlarımızla bir sütun kaymış durumda:** PCS/BOX bizim
+`logistics.boxesPerParcel`, BOX/PLT ise `parcelsPerPallet` alanımıza denk geliyor (33/34 ve 28/34
+tutuyor). Bu dosyadaki adlar teklifin kendi anlamını taşır; `lezza-catalog.json`'daki `logistics`
+ile karıştırılmamalı. → `BEKLEYEN(05.22)`
+
 ## Tedarikçiye sorulacaklar
 
 Belgeleri okurken çıkan ve **bizim çözemeyeceğimiz** tutarsızlıklar. Hepsi ilgili dosyanın
@@ -57,3 +78,8 @@ Belgeleri okurken çıkan ve **bizim çözemeyeceğimiz** tutarsızlıklar. Heps
 | KYS-085 (Vegan Çiğköfte) | Metin "traces of walnut" derken tabloda "sert kabuklu: yok". |
 | KYS-089 (Yufka) | `8x125g` (=1000 g) ama ürün bilgisi "koli 340 g / adet 340 g". |
 | Künefe / Yufka | Tuz değeri besin tablosu ile analitik bölümde çelişiyor (0,23 ↔ 0,58 · 0,548 ↔ 1,39). Besin tablosundaki alındı. |
+| CATALOGUE QUALITE | GTIN sütunu bozuk: beş `S-011xx` kodu dört ayrı sayfada farklı ürünlerde tekrar ediyor. |
+| CATALOGUE QUALITE | Listede bizde olmayan dört tedarikçi var (Edelweiss, Bread House, Turquaz, Sweet Things) — kataloğa girecekler mi? |
+| CATALOGUE QUALITE | Aynı listede Lezza simiti 5,14 €/kg, Bread House simiti 3,75 €/kg. Biri yanlış fiyatlanmış görünüyor. |
+| Katalog (genel) | Beş bütün pasta/cheesecake (`901804 901809 900105 900901 900201`) hiçbir belgede GRAMAJSIZ — yalnız "12 dilim" yazıyor. |
+| Fiyat teklifi | `200302` Vegan Kibbeh: teklif 70 g, spek (KYS-088) 75 g. |

@@ -33,7 +33,6 @@ değişecek yer parantezde.
 | **Paketler kahraman görseli** (3:2, "kurulmuş sofra, birkaç paket bir arada") | çizili; çerçeve tam ölçüsüyle duruyor | görsel künyesi yok — paket sayfasının kendi kahramanı için ayrı bir varlık gerekiyor |
 | **Paketler listesi: etiket çipleri + `?etiket=` süzgeci** | çizili; sayfanın kendisi indi (kartlar, "Daha fazla", boş durum) | paketin etiket alanı yok — süzgeç uydurma bir sınıflandırma olurdu |
 | **Bölge haberi tetikleyicisi** — bölge genişleyince bekleyenlere TEK e-posta | `zone_notice` kaydı alınıyor, ekran "not aldık" diyor (söz vermiyor) | bölge kaydedilince kontrol eden iş + gönderim (`14-bildirim`) |
-| **Hesap sayfasında "sonraya kaydedilenler" + bölge haberi kartı** | çizili (`Musteri - Hesap.dc.html`) | hesap sayfası (`04-auth`); veri hazır (`cart.saved_items`, `zone_notice`) |
 | **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
 | **Ayarlar → "Vitrin görselleri" sekmesi** (ürüne ait OLMAYAN sayfa görselleri: ana sayfa hero, fırsat bandı, Professionnels hero, Hakkımızda; ayrıca "statik" işaretli iki kalem) | `Operasyon - Ayarlar.dc.html` → 7. sekme, tam çizili | **İKİ ŞERİT birden:** (1) ~~*arka uç* — `site_image` tablosu + depolama kovası yok~~ **→ YAZILDI (09.08):** `site_image` (0043) + `site_image_slot` enum + `SiteImageService` (`bySlot`/`getSlot`/`put`/`setCrop`/`clear`) + `r2Keys.siteImage` (`site/{slot}.{ext}`) + seed (`home_hero` dolu — müşteri şeridinin geçici dosyası kalıcı yola taşındı; üç slot **bilerek boş**, yer tutucu yolu koşsun). Anahtar enum: slot kümesi kapalı, yeni slot ancak onu çizen ekran doğunca doğar. `image_key` not null → **boş slot = satır YOK**, ekran yer tutucusunu çizmeye devam eder. Ürün görselinin yolu burada kullanılamazdı, çünkü bunlar bir varlığa değil bir SAYFA YERİNE bağlı. (2) ~~*müşteri şeridi* — hangi slot'un gerçekten var olduğu ve hangisinin koda gömülü kaldığı (marka sahnesi, hata çizimi) o yüzeyin bilgisi; liste onlardan mutabakatla gelir~~ **→ LİSTE VERİLDİ (09.08), ölçülerek:** müşteri yüzeyindeki her `src={null}` çerçevesi tarandı, **dördü** gerçek sayfa görselidir — `home_hero` (16:9) · `packages_hero` (3:2) · `professionals_hero` (16:9) · `empty_cart` (`ILLUSTRATION_RATIO`). Üç aday listeden DÜŞTÜ: ürün galerisi yer tutucusu bir VARLIK görselidir (`product-image.service` sahibi), "fırsat bandı görseli"nin kodda karşılığı yok (bandda kart var görsel yok), "Hakkımızda" sayfası hiç yok. Ana sayfa slot'u bugün **geçici statik dosyayla** dolu (`public/hero-sofra.jpg`, 08.31) — kapı gelince silinir. Talepler açıldı: `arka-uc-site-gorseli-tablosu-ve-kovasi.md` · `operasyon-vitrin-gorselleri-sekmesi.md`. Operasyon şeridi sekmeyi ancak arka uç netleşince çizer — bugün çizmek, arkasında hiçbir şey olmayan bir yükleme alanı göstermek olurdu (`09.16` AÇIK 2) |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
@@ -47,6 +46,65 @@ değişecek yer parantezde.
 ---
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
+
+- **DÖKME KOLİ BİR VARYANT OLARAK SUNULMALI (kullanıcı kararı 19.08).**
+  **İlke önce:** *"Tedarikçimiz bize neyi kime satacağımızı söyleyemez."* Kaynak katalogdaki
+  `horeca`/`retail` işareti bir ara fiyat yazmanın kapısı yapılmıştı; kaldırıldı. O işaret
+  ÜRETİCİNİN dağıtım kararıdır — kanıtı verinin kendisinde: Artisan kek 9×90 g kutu onlarda `b2b`,
+  tek 90 g mono paket `b2c`. Dükkâna satan için doğru, eve teslim eden için ters. Alan kaynakta
+  duruyor ve **ambalaj** hakkında fikir verebilir (hangi boy tek tek paketlenmiş, hangisi dökme) —
+  satış kanalı kararı olarak okunmaz.
+  **Açık olan:** dökme paket bir kusur değil, bir SEÇENEK. Kimi müşterinin dondurucusu geniştir;
+  50'lik ya da 100'lük paketi alır — `gurmeavrupa.de` tam bunu yapıyor (Simit 50 adet 25,00 € ·
+  Açma 50 adet 35,00 €) ve dökme fiyatı perakende paketinin yarısı (ölçüldü: simit dökme 3,85 €/kg,
+  4'lü paket 8,75 €/kg). Bugün seed her SKU için TEK satılabilir birim taşıyor: 200 g'lık E-böreğin
+  tek parçası var, 40'lık kolisi yok.
+  **Karar gereken:** koli boyu nasıl temsil edilecek — (a) aynı ürünün ikinci varyantı olarak
+  ("1 adet" · "40'lık koli"), ki `product_variant.sku` benzersizse tedarikçi SKU'su ikisinde de aynı
+  olacağı için şema sorusu doğar; (b) varyanta bir "satış birimi çarpanı" alanı (koli = birim × N),
+  fiyat ve stok ondan türer; (c) tedarikçiden koli için ayrı SKU istenir. (b) en az veri tekrarı
+  üretir ama stok/rezervasyon tarafını da ilgilendirir — o yüzden karar tek başına katalogun değil.
+
+- **TEDARİKÇİDEN FİYAT İSTENECEKLER — katalogun büyük kısmının fiyatı belgesiz (19.08).**
+  Elimizde üç belge var ve üçü de aynı kalemleri kapsamıyor: 22.12.2025 teklifi **34 SKU** (alış),
+  QUALITE satış kataloğu **139 kalem** (kendi satış fiyatımız), Lezza 2026 basılı katalog (gramaj ve
+  lojistik, fiyat yok). Kesişimleri dar — kalan ürünlerin fiyatı kategori medyanından **tahmin**.
+  **Ölçülmüş üç boşluk:** (1) **Artisan kek ailesi** (4 ürün) üç belgenin hiçbirinde yok ve
+  rakiplerde de karşılığı yok — dört dükkânın 1010 satırında artisan/mini kek geçmiyor, yani ne
+  belge ne piyasa çıpası var. (2) Basılı katalogun **"01 | RETAIL PRODUCTS"** bölümü 41 SKU ve
+  teklifimiz bunlardan yalnız **1'ini** kapsıyor. (3) Lezza'nın sitesinde olup 2026 kataloğunda
+  olmayan **11 SKU** (160 g'lık tatlı simit dahil) — bunların hâlâ üretimde olup olmadığı bilinmiyor.
+  **Karar gereken:** hangi liste tedarikçiye gönderilecek ve fiyatı gelmeyen kalem ne olacak —
+  aday mı kalacak, pasife mi çekilecek, yoksa katalogdan mı düşecek.
+
+- **SATIŞ KURGULARI TEKLİF DIŞINDAN BESLENİYOR — 16 ürün aday olamıyor (19.08).**
+  Aday/aktif ölçütü artık gerçek alış fiyatı (`catalog-lezza.ts` → `satilabilirDurum`): teklifte
+  SKU'su olan aktif, olmayan aday. Ama paket kalemleri, tarif malzemeleri ve koleksiyon üyelerinin
+  çoğu teklifte YOK ve aday yapılırlarsa o kurgu sessizce satılamaz olur — aday ürünün fiyatı da
+  yoktur, paket tutarı ise kalemlerin fiyatından türüyor (`bundle.total_price` `NOT NULL`).
+  Bugünkü çözüm bir ÖDÜNÇ: kurguya girmiş 16 ürün ölçüte bakılmadan aktif tutuluyor. Ölçüldü —
+  paketlerin 8 SKU'sundan yalnız 1'i, tarifin 14 malzemesinden yalnız 1'i, koleksiyonun 12
+  üyesinden 5'i teklifte var.
+  **Karar gereken:** kurgular teklifteki 34 kalemden yeniden mi kurulsun (paket içerikleri ve tarif
+  malzemeleri değişir, dolayısıyla **metinleri de yeniden yazılmalı** — tarif adımları malzemeye
+  atıf yapıyor), yoksa bu 16 ürün kalıcı bir istisna olarak mı kalsın? İkincisi seçilirse istisna
+  bir listede adıyla durmalı; bugünkü hâli "kurguda geçiyorsa aktif" diye örtük bir kural ve
+  kataloğa yeni bir paket eklendiğinde sessizce büyür.
+
+- **DONUK KARGO BİRİM MALİYETİ ÖLÇÜLMEDİ — ücretsiz kargo eşiği ona bağlı (19.08).**
+  Kargo tarifemiz artık piyasaya göre konuldu (`0013_settings.sql`: ücret 11,90 €, ücretsiz eşik
+  100 €, Almanya ayrı satır). Ölçüm gerçek: `degrandbazaar.be` yayımlanmış tarifesinde Fransa'ya
+  12,50 € alıyor, ücretsiz eşiği 125 € — ve donuk/yarı pişmiş ürün taşıyor, yani bizim malımız.
+  **Ama ölçülen şey rakibin FİYATI, bizim MALİYETİMİZ değil.** Soğuk zincir kolisinin taşıyıcıya
+  kaça mal olduğu hiçbir yerde yazılı değil; `packaging_unit_cost_cents` (1,20 €) yalnız kutunun
+  kendisi, taşıma değil. Sektör bandı 15–25 €; doğruysa eşiğin ÜSTÜNDEKİ her sipariş o farkı yutar
+  ve bugünkü 100 €'luk eşik bile zararına çalışır.
+  **Karar gereken:** taşıyıcı sözleşmesi (Chronofresh / DHL Frost / yerel) imzalanınca gerçek birim
+  maliyet bir ayara yazılacak mı — (a) yeni `shipping_unit_cost_cents` ayarı, ülke kapsamlı, kâr
+  hesabına girer (`route_delivery_unit_cost_cents` deseninin aynısı), (b) yalnız eşik/ücret elle
+  güncellenir, maliyet hiç kaydedilmez. (a) seçilirse kâr ekranı kargo siparişinde de doğru sayı
+  gösterir; bugün göstermiyor ve göstermediği görünmüyor.
+
 
 - **"GÜNÜN FIRSATI" DİYE BİR ÖZELLİK YOK — mobil vitrinden KALDIRILDI (kullanıcı kararı 09.08).**
   `Mobil - Musteri v3` vitrininde geri sayımlı bir "günün fırsatı" bandı var (`vHome` → `flashBand`)
@@ -566,29 +624,12 @@ sunucuda kalem yok). Doğru çare iyimser güncellemeyi geri almak ve sonucu sep
 desenine** söyletmek (`CartUndo` ile aynı aile), yeni bir metin bloğu açmak değil. Kendi işi;
 sözlük o iş yapılırken gerekirse doğar. Kapı bugün de `errorKey` döndürüyor, ekran isteyince tüketir.
 
-**Mobil katalog kartında dokunma hedefi 44px'in ALTINDA — bilinçli, kullanıcı kararı (03.08).**
-Envanter iki yerde taban veriyor: *"− ve + dokunma alanı en az 44px kare"* (`:162`) ve *"Mobil
-dokunma hedefleri en az 44px"* (`:630`). Ama aynı tasarım katalog kartını 26px'lik bir daireyle
-çiziyor ve kodun künyesi sebebini yazıyor: ekleme düğmesi **yerini adet seçicisine bırakıyor**
-(`storefront-cards.tsx:232` · `qty-stepper.tsx` `xs`), ikisi aynı kutuyu paylaşmazsa kart eklemede
-zıplıyor. Tasarımın iki ifadesi çakışıyor ve ikisi de tasarımın.
-
-Üç yol tartışıldı: *(a)* kartı büyütmek, *(b)* görseli korumak ama hedefi görünmez büyütmek,
-*(c)* kartı olduğu gibi bırakıp ihlali kaydetmek. Önce (c) seçildi; **kullanıcı kararı 03.08 ile
-(a)'ya dönüldü — kural uygulanacak.**
-
-**Uygulanan (03.08):** görsel 26px'lik daire KORUNDU, dokunma alanı 44px'e çıktı — dış kutu şeffaf
-`size-11`, daire içeride (`storefront-cards.tsx`). Adet seçicinin küçük kademeleri de tabana çekildi:
-sepet satırı (`sm`) iki eksende `min-h-11 min-w-11`, katalog kartı (`xs`) **yalnız dikeyde** `min-h-11`.
-Düğme ile seçici aynı yüksekliği paylaştığı için kart eklemede zıplamıyor.
-
-**Kalan açık — yatay eksen, kartta.** `xs`'te `min-w-11` verilmedi: iki sütunlu mobil ızgarada kart
-~180px ve seçici fiyatla aynı satırı paylaşıyor; iki düğmeyi 88px'e çıkarmak fiyatı taşırırdı. Dikey
-eksen listede en çok ıskalanan olduğu için önce o kapatıldı. Tam uyum kart yerleşiminin değişmesini
-gerektiriyor (fiyat alt satıra) — **tasarım kararı, çizim bekliyor.**
-
-⚠ **Tarayıcıda doğrulanmadı:** bu değişiklik kart ve sepet satırının yüksekliğini artırıyor; ölçüler
-sınıf dizgilerinden hesaplandı, gerçek cihazda görülmedi.
+**~~Mobil katalog kartında dokunma hedefi 44px'in ALTINDA~~ — KAPANDI (20.08).** 03.08'de dikey
+eksen 44'e çekilmiş, yatay eksen "kart yerleşimi değişmeli (fiyat alt satıra) — çizim bekliyor"
+diye açık kalmıştı. Kullanıcı kararı 20.08 ile yerleşim değişti: dar kartta fiyat kendi satırında,
+eylem tam genişlikte — 44 iki eksende de sağlanıyor, görseller küçüldü, dokunma `after` katmanında.
+Kararın tamamı `design/KARARLAR.md` › "Mobil web kabuğu" (iş kimliği `08.48`); cihaz görünümünde
+doğrulandı.
 
 **İstisna — operasyonun diyalog formları.** `.dc.html` dosyaları sayfaları çiziyor; form
 diyaloglarının (ürün · katalog · paket) görsel kararı çizilmedi ve bilinçli olarak **bize** bırakıldı

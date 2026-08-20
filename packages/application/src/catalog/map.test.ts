@@ -92,6 +92,8 @@ const BOS_VARYANT: ProductVariant = {
   label: {},
   netWeightG: null,
   piecesCount: null,
+  // Tek parça ürün: porsiyon sorusu hiç doğmuyor (`pieces_count` de null).
+  portionKind: null,
   minStockQty: null,
   sku: null,
   isActive: true,

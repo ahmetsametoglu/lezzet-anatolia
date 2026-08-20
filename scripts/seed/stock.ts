@@ -4,6 +4,7 @@ import {
 } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
+import { teklifSkulari } from './supplier-prices';
 import { gunlukOlcum, type Depolar, type Noktalar } from './warehouse';
 
 // ── Stok partileri (06) ──────────────────────────────────────────────────────────────────────────
@@ -200,11 +201,37 @@ export async function seedStock(
   // diye sorulabilir, hiç gelmemiş bir ürün sorulamaz.
   //
   // Seçim ÜRÜN bazında: bir ürünün tek boyu tükenirse ürün tükenmiş sayılmaz (öteki boy satılır) ve
-  // aranan müşteri hâli "bu ÜRÜN şu an yok"tur. Kataloğun dört ayrı yerinden, ilk 45'in dışından —
-  // sipariş bölümü kalemlerini oradan seçiyor ve tükenmiş bir kaleme rezervasyon yazılamaz.
-  const tukenmisUrun = new Set(
-    [0.45, 0.6, 0.75, 0.9].map((f) => satilabilir[Math.floor(satilabilir.length * f)]?.productId).filter((id): id is string => Boolean(id)),
+  // aranan müşteri hâli "bu ÜRÜN şu an yok"tur.
+  //
+  // ── TÜKENEN, GERÇEK ALIŞ FİYATI OLMAYAN ÜRÜNDÜR (kullanıcı kararı 19.08) ──────────────────────
+  // Seçim eskiden katalogda dört sabit orandaydı (`0,45 · 0,6 · 0,75 · 0,9`) ve nereye düştüğü
+  // tesadüftü — teklifteki bir ürüne de düşebiliyordu. Oysa kullanıcının istediği ayrım net:
+  // *"bu listedeki ürünler sadece aktif satın alınmış gibi görünsün; diğerlerinin az bir kısmı
+  // tükenmiş görünebilir."* Teklifli 33 ürün bu yüzden HİÇ tükenmez — onların stoğu dolu doğar.
+  //
+  // İlk 45 dışarıda: sipariş bölümü kalemlerini oradan seçiyor ve tükenmiş bir kaleme rezervasyon
+  // yazılamaz. Kalandan da yalnız bir kısmı tükeniyor — hepsi değil, çünkü teklifsiz ürünlerin bir
+  // kısmı paket kalemi ve tarif malzemesi; hepsini birden tüketmek o kurguların tamamını satılamaz
+  // kılardı.
+  //
+  // ── ORAN HAVUZLA BİRLİKTE DEĞİŞMEK ZORUNDAYDI (ölçüldü 19.08) ────────────────────────────────
+  // Ölçüt `n % 2` idi ve havuz küçükken doğruydu. Aile kuralı aday sayısını 64'ten 26'ya indirince
+  // (`catalog-lezza.ts` künyesi) satılabilir ürün 59'dan 97'ye çıktı, tükenme havuzu da onunla
+  // büyüdü: **97 aktif üründen 21'i tamamen tükenmiş** doğdu. Kullanıcının cümlesi "diğerlerinin
+  // **az bir kısmı** tükenmiş görünebilir" idi; %22 az değil, boş raf. `n % 5` oranı ~%9'a çekiyor.
+  //
+  // Sabit sayı yerine oran bilinçli: havuz yine değişebilir ve sabit bir "10 ürün" bir gün havuzun
+  // tamamı olurdu.
+  const teklif = teklifSkulari();
+  const teklifliUrun = new Set(satilabilir.filter((v) => v.sku && teklif.has(v.sku)).map((v) => v.productId));
+  const ilk45Urun = new Set(satilabilir.slice(0, 45).map((v) => v.productId));
+  const tukenmeAdaylari = [...new Set(satilabilir.map((v) => v.productId))].filter(
+    (id) => !teklifliUrun.has(id) && !ilk45Urun.has(id),
   );
+  const tukenmisUrun = new Set(tukenmeAdaylari.filter((_, n) => n % 5 === 0));
+  // Küme boşalırsa hâl sessizce kaybolur: "tükendi" rozeti, pasif sepet düğmesi ve "haber ver"
+  // akışının tamamı bu satırlara bağlı ve hiçbir test bunu eksik saymaz.
+  if (tukenmisUrun.size === 0) console.log('  ⚠ TÜKENMİŞ ürün seçilemedi — "tükendi" ekran hâli bu koşuda hiç doğmayacak');
   let ekParti = 0;
   for (const [i, v] of satilabilir.entries()) {
     const bitti = tukenmisUrun.has(v.productId);

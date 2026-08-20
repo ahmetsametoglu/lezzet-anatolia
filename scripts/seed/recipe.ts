@@ -250,15 +250,6 @@ const RECIPES: SeedRecipe[] = [
   },
 ];
 
-/**
- * Tariflerin malzeme SKU'ları — **aday ürün seçimi bu kümeye dokunamaz** (16.08).
- *
- * Aday ürün satılamaz (DOMAIN §13), tarif malzemesi ise sepete eklenebilen bir satırdır: ikisi
- * aynı üründe buluşursa yayındaki tarif, alınamayan bir malzemeyle çizilir ve sebebi ekrandan
- * görünmez. Küme BURADAN türetiliyor, katalog tarafına kopyalanmıyor — iki liste bir gün
- * kaçınılmaz olarak ayrılır ve ayrıldığı gün kimse fark etmez.
- */
-export const TARIF_SKULARI: ReadonlySet<string> = new Set(RECIPES.flatMap((r) => r.items.map((i) => i.sku)));
 
 export async function seedRecipes(db: Db): Promise<void> {
   if (await tabloDolu(db, 'recipe')) {

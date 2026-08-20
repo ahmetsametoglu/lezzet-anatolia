@@ -160,6 +160,15 @@ export interface VaryantRef {
    * `null` = hedef belirlenmemiş; çağıran kendi varsayılanını kullanır.
    */
   targetMarginPercent: number | null;
+  /**
+   * Tedarikçi SKU'su — GERÇEK alış fiyatına açılan tek anahtar (19.08).
+   *
+   * Fiyat artık uydurma bir kilo tabanından değil, tedarikçinin verdiği fiyat teklifinden türüyor
+   * (`data/sources/prices-supplier-2025-12.json`) ve o dosyanın kimliği SKU. Alan olmadan eşleşme
+   * ada göre yapılırdı; ad eşleştirmesi denendi ve güvenilmez çıktı (ürün adlarımız İngilizce,
+   * belgelerdeki adlar Türkçe/Fransızca). `null` = teklifte olmayan varyant.
+   */
+  sku: string | null;
 }
 
 /** Fiyat/stok/sipariş bölümlerinin ortak girdisi: satılabilir birimler TEK sorguda (N+1 yok). */
@@ -175,6 +184,7 @@ export async function katalogVaryantlari(db: Db): Promise<VaryantRef[]> {
       shelfLifeDays: p.shelfLifeDays,
       netWeightG: v.netWeightG ?? null,
       targetMarginPercent: p.targetMarginPercent ?? null,
+      sku: v.sku ?? null,
     })),
   );
 }

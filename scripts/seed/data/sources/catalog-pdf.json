@@ -1,170 +1,2151 @@
 {
   "_source": "Lezza EU 2026 Katalog.pdf (56 sayfa, ~/Downloads) — 2026-08-15'te okundu",
-  "_note": "Fiyat yok. Alanlar: name, netWtG (adet başı net ağırlık, katalogdaki gibi), piecesPerBox, boxesPerParcel, parcelsPerPallet, section. Katalogdaki yazım hataları düzeltilerek yazıldı (Chocalate→Chocolate vb.), orijinal ad gerekiyorsa PDF'e bakın.",
+  "_note": "Fiyat yok. Alanlar: name, netWtG (adet başı net ağırlık, katalogdaki gibi), piecesPerBox, boxesPerParcel, parcelsPerPallet, section. Katalogdaki yazım hataları düzeltilerek yazıldı (Chocalate→Chocolate vb.), orijinal ad gerekiyorsa PDF'e bakın. · `unit` (19.08): SATILAN BİRİMİN künyesi — netG (toplam net ağırlık), portions (kaç porsiyon), portionKind ('item' = ayrı ayrı ürünler · 'slice' = tek ürünün dilimleri). Basılı katalogun NET WT / PIECES/BOX sütunları ürüne göre farklı şeyi anlattığı için ELLE KÜRATE edildi; üreteç artık yorum yapmaz, bu alanı okur.",
   "products": {
-    "700101": {"name": "Turkish Bagel (Simit) street", "netWtG": 420, "piecesPerBox": 4, "boxesPerParcel": 12, "parcelsPerPallet": 44, "section": "retail"},
-    "700201": {"name": "Plain Pastry", "netWtG": 320, "piecesPerBox": 4, "boxesPerParcel": 24, "parcelsPerPallet": 44, "section": "retail"},
-    "700202": {"name": "Cheese Filled Pastry", "netWtG": 320, "piecesPerBox": 4, "boxesPerParcel": 24, "parcelsPerPallet": 48, "section": "retail"},
-    "700301": {"name": "Savoury Bun plain", "netWtG": 320, "piecesPerBox": 4, "boxesPerParcel": 12, "parcelsPerPallet": 44, "section": "retail"},
-    "700701": {"name": "Spiral Gul Borek with cheese", "netWtG": 480, "piecesPerBox": 6, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "700703": {"name": "Spiral Gul Borek with spinach & cheese", "netWtG": 480, "piecesPerBox": 6, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "700501": {"name": "Spiral Pie cheese", "netWtG": 800, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 108, "section": "retail"},
-    "700503": {"name": "Spiral Pie spinach & cheese", "netWtG": 800, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 108, "section": "retail"},
-    "700504": {"name": "Spiral Pie potato", "netWtG": 800, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 108, "section": "retail"},
-    "700901": {"name": "Cheese Rolls Handmade", "netWtG": 480, "piecesPerBox": 12, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "700801": {"name": "Mini Roll with cheese", "netWtG": 500, "piecesPerBox": 10, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "700802": {"name": "Mini Roll spinach & cheese", "netWtG": 500, "piecesPerBox": 10, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "701221": {"name": "Mini Pide with cheese", "netWtG": 50, "piecesPerBox": 5, "boxesPerParcel": 12, "parcelsPerPallet": 96, "section": "retail"},
-    "701222": {"name": "Mini Pide with spinach & cheese", "netWtG": 50, "piecesPerBox": 5, "boxesPerParcel": 12, "parcelsPerPallet": 96, "section": "retail"},
-    "700402": {"name": "Su Borek Round Tray", "netWtG": 800, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 54, "section": "retail"},
-    "600106": {"name": "Pistachio Baklava", "netWtG": 225, "piecesPerBox": 6, "boxesPerParcel": 12, "parcelsPerPallet": 144, "section": "retail"},
-    "600102": {"name": "Pistachio Baklava", "netWtG": 450, "piecesPerBox": 12, "boxesPerParcel": 12, "parcelsPerPallet": 60, "section": "retail"},
-    "600208": {"name": "Walnut Baklava", "netWtG": 225, "piecesPerBox": 6, "boxesPerParcel": 12, "parcelsPerPallet": 144, "section": "retail"},
-    "600202": {"name": "Walnut Baklava", "netWtG": 450, "piecesPerBox": 12, "boxesPerParcel": 12, "parcelsPerPallet": 60, "section": "retail"},
-    "601202": {"name": "Assorted Baklava", "netWtG": 225, "piecesPerBox": 6, "boxesPerParcel": 12, "parcelsPerPallet": 144, "section": "retail"},
-    "601201": {"name": "Assorted Baklava", "netWtG": 450, "piecesPerBox": 12, "boxesPerParcel": 12, "parcelsPerPallet": 60, "section": "retail"},
-    "600402": {"name": "Carrot Slice Pistachio Baklava", "netWtG": 420, "piecesPerBox": 4, "boxesPerParcel": 12, "parcelsPerPallet": 60, "section": "retail"},
-    "600810": {"name": "Cold Baklava with Walnuts Tray", "netWtG": 400, "piecesPerBox": 10, "boxesPerParcel": 8, "parcelsPerPallet": 104, "section": "retail"},
-    "500104": {"name": "Kunefe with plate and syrup", "netWtG": 135, "piecesPerBox": 2, "boxesPerParcel": 12, "parcelsPerPallet": 120, "section": "retail"},
-    "500103": {"name": "Kunefe with plate and syrup", "netWtG": 145, "piecesPerBox": 2, "boxesPerParcel": 12, "parcelsPerPallet": 120, "section": "retail"},
-    "500109": {"name": "Kunefe with plate and syrup", "netWtG": 145, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 192, "section": "retail"},
-    "500105": {"name": "Special Kunefe", "netWtG": 145, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 192, "section": "retail"},
-    "500107": {"name": "Pista Leaves", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 156, "section": "retail"},
-    "500111": {"name": "Chocolate Souffle", "netWtG": 200, "piecesPerBox": 2, "boxesPerParcel": 12, "parcelsPerPallet": 110, "section": "retail+dessert"},
-    "601002": {"name": "Tulumba Dessert", "netWtG": 400, "piecesPerBox": 25, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "601004": {"name": "Turkish Ring Churros", "netWtG": 300, "piecesPerBox": 4, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "111106": {"name": "Maras Ice Cream Plain", "netWtG": 250, "piecesPerBox": 1, "boxesPerParcel": 15, "parcelsPerPallet": 99, "section": "retail"},
-    "111101": {"name": "Maras Ice Cream Plain", "netWtG": 500, "piecesPerBox": 1, "boxesPerParcel": 9, "parcelsPerPallet": 99, "section": "retail"},
-    "111107": {"name": "Maras Ice Cream Cocoa", "netWtG": 250, "piecesPerBox": 1, "boxesPerParcel": 15, "parcelsPerPallet": 99, "section": "retail"},
-    "111112": {"name": "Maras Ice Cream Pistachio", "netWtG": 250, "piecesPerBox": 1, "boxesPerParcel": 15, "parcelsPerPallet": 99, "section": "retail"},
-    "111113": {"name": "Maras Ice Cream Trio Mix", "netWtG": 500, "piecesPerBox": 1, "boxesPerParcel": 9, "parcelsPerPallet": 99, "section": "retail"},
-    "200103": {"name": "Lahmacun", "netWtG": 180, "piecesPerBox": 3, "boxesPerParcel": 12, "parcelsPerPallet": 60, "section": "retail"},
-    "200201": {"name": "Stuffed Vine Leaves", "netWtG": 500, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "200702": {"name": "Falafel", "netWtG": 500, "piecesPerBox": 20, "boxesPerParcel": 20, "parcelsPerPallet": 54, "section": "retail"},
-    "201401": {"name": "Falafel Humus Filled", "netWtG": 300, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "201302": {"name": "Vegan Cig Kofte", "netWtG": 400, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "200301": {"name": "Vegan Kibbeh (Icli Kofte)", "netWtG": 350, "piecesPerBox": 5, "boxesPerParcel": 12, "parcelsPerPallet": 88, "section": "retail"},
-    "312241": {"name": "Tender Fillet", "netWtG": 700, "piecesPerBox": 10, "boxesPerParcel": 12, "parcelsPerPallet": 80, "section": "chicken"},
-    "312341": {"name": "Spicy Tender Fillet", "netWtG": 700, "piecesPerBox": 10, "boxesPerParcel": 12, "parcelsPerPallet": 80, "section": "chicken"},
-    "312682": {"name": "Crispy Chicken Burger", "netWtG": 720, "piecesPerBox": 8, "boxesPerParcel": 14, "parcelsPerPallet": 70, "section": "chicken"},
-    "312442": {"name": "Spicy Chicken Wings", "netWtG": 700, "piecesPerBox": 12, "boxesPerParcel": 14, "parcelsPerPallet": 70, "section": "chicken"},
-    "312141": {"name": "Crispy Nugget", "netWtG": 720, "piecesPerBox": 30, "boxesPerParcel": 14, "parcelsPerPallet": 80, "section": "chicken"},
-    "311501": {"name": "Crispy Chicken Wings", "netWtG": 1000, "piecesPerBox": 18, "boxesPerParcel": 12, "parcelsPerPallet": 70, "section": "chicken"},
-    "311401": {"name": "Spicy Chicken Wings", "netWtG": 1000, "piecesPerBox": 18, "boxesPerParcel": 12, "parcelsPerPallet": 70, "section": "chicken"},
-    "311101": {"name": "Nugget", "netWtG": 1000, "piecesPerBox": 43, "boxesPerParcel": 12, "parcelsPerPallet": 70, "section": "chicken"},
-    "312681": {"name": "Crispy Chicken Burger", "netWtG": 1080, "piecesPerBox": 12, "boxesPerParcel": 10, "parcelsPerPallet": 70, "section": "chicken"},
-    "311301": {"name": "Spicy Tender Fillet", "netWtG": 1000, "piecesPerBox": 14, "boxesPerParcel": 10, "parcelsPerPallet": 70, "section": "chicken"},
-    "311201": {"name": "Tender Fillet", "netWtG": 1000, "piecesPerBox": 14, "boxesPerParcel": 10, "parcelsPerPallet": 70, "section": "chicken"},
-    "600214": {"name": "Baklava with Pistachio (tray)", "netWtG": 1250, "piecesPerBox": 36, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600101": {"name": "Baklava with Pistachio (tray)", "netWtG": 2500, "piecesPerBox": 72, "boxesPerParcel": 4, "parcelsPerPallet": 48, "section": "dessert"},
-    "600207": {"name": "Baklava with Walnut (tray)", "netWtG": 1250, "piecesPerBox": 36, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600201": {"name": "Baklava with Walnut (tray)", "netWtG": 2500, "piecesPerBox": 72, "boxesPerParcel": 4, "parcelsPerPallet": 48, "section": "dessert"},
-    "600404": {"name": "Carrot Slice Baklava with Pistachio", "netWtG": 1350, "piecesPerBox": 16, "boxesPerParcel": 8, "parcelsPerPallet": 30, "section": "dessert"},
-    "600403": {"name": "Carrot Slice Baklava with Pistachio", "netWtG": 2000, "piecesPerBox": 20, "boxesPerParcel": 5, "parcelsPerPallet": 36, "section": "dessert"},
-    "600808": {"name": "Mussel Baklava with Pistachio", "netWtG": 1250, "piecesPerBox": 40, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600802": {"name": "Mussel Baklava with Pistachio", "netWtG": 2000, "piecesPerBox": 48, "boxesPerParcel": 5, "parcelsPerPallet": 56, "section": "dessert"},
-    "601402": {"name": "Cream-Filled Sobiyet Baklava with Pistachio", "netWtG": 1250, "piecesPerBox": 28, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600702": {"name": "Cream-Filled Sobiyet Baklava with Pistachio", "netWtG": 2000, "piecesPerBox": 40, "boxesPerParcel": 5, "parcelsPerPallet": 56, "section": "dessert"},
-    "600904": {"name": "Chocolate Baklava", "netWtG": 1250, "piecesPerBox": 36, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600903": {"name": "Chocolate Baklava", "netWtG": 2000, "piecesPerBox": 54, "boxesPerParcel": 5, "parcelsPerPallet": 56, "section": "dessert"},
-    "600505": {"name": "Pistachio Rolls Baklava", "netWtG": 1250, "piecesPerBox": 48, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600503": {"name": "Pistachio Rolls Baklava", "netWtG": 2000, "piecesPerBox": 56, "boxesPerParcel": 5, "parcelsPerPallet": 56, "section": "dessert"},
-    "600601": {"name": "Special Square Baklava", "netWtG": 1250, "piecesPerBox": 15, "boxesPerParcel": 8, "parcelsPerPallet": 36, "section": "dessert"},
-    "600602": {"name": "Special Square Baklava", "netWtG": 2000, "piecesPerBox": 28, "boxesPerParcel": 5, "parcelsPerPallet": 56, "section": "dessert"},
-    "601103": {"name": "Special Antep Baklava", "netWtG": 1250, "piecesPerBox": 48, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "601102": {"name": "Special Antep Baklava", "netWtG": 2000, "piecesPerBox": 76, "boxesPerParcel": 5, "parcelsPerPallet": 56, "section": "dessert"},
-    "600211": {"name": "Homemade Style Walnut Baklava", "netWtG": 1250, "piecesPerBox": 28, "boxesPerParcel": 10, "parcelsPerPallet": 56, "section": "dessert"},
-    "600807": {"name": "Cold Baklava with Pistachio (tray)", "netWtG": 1500, "piecesPerBox": 36, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "600809": {"name": "Cold Baklava with Walnut (tray)", "netWtG": 1500, "piecesPerBox": 36, "boxesPerParcel": 8, "parcelsPerPallet": 48, "section": "dessert"},
-    "601001": {"name": "Tulumba Dessert (bucket)", "netWtG": 5000, "piecesPerBox": 250, "boxesPerParcel": 1, "parcelsPerPallet": 84, "section": "dessert"},
-    "601003": {"name": "Turkish Ring Churros (bucket)", "netWtG": 4200, "piecesPerBox": 60, "boxesPerParcel": 1, "parcelsPerPallet": 84, "section": "dessert"},
-    "500115": {"name": "Tres Leches Caramel (tray)", "netWtG": 2000, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 84, "section": "dessert"},
-    "500125": {"name": "Tres Leches Raspberry (tray)", "netWtG": 2000, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 84, "section": "dessert"},
-    "500102": {"name": "Kunefe with plate and syrup", "netWtG": 145, "netWtNote": "+65g syrup", "piecesPerBox": 1, "boxesPerParcel": 24, "parcelsPerPallet": 120, "section": "dessert"},
-    "500106": {"name": "Pista Leaves", "netWtG": 300, "piecesPerBox": 2, "boxesPerParcel": 20, "parcelsPerPallet": 84, "section": "dessert"},
-    "700108": {"name": "Turkish Fermente Bagel", "netWtG": 135, "piecesPerBox": 50, "boxesPerParcel": 1, "parcelsPerPallet": 52, "section": "bakery"},
-    "700109": {"name": "Turkish Fermente Bagel", "netWtG": 125, "piecesPerBox": 40, "boxesPerParcel": 1, "parcelsPerPallet": 64, "section": "bakery"},
-    "700102": {"name": "Turkish Bagel street type (bulk)", "netWtG": 125, "piecesPerBox": 1, "boxesPerParcel": 100, "parcelsPerPallet": 52, "section": "bakery"},
-    "700107": {"name": "Sweet Turkish Bagel (bulk)", "netWtG": 135, "piecesPerBox": 1, "boxesPerParcel": 80, "parcelsPerPallet": 52, "section": "bakery"},
-    "700110": {"name": "Kumru Bagel", "netWtG": 140, "piecesPerBox": 1, "boxesPerParcel": 45, "parcelsPerPallet": 40, "section": "bakery"},
-    "700305": {"name": "Savoury Bun with cheese", "netWtG": 130, "piecesPerBox": 1, "boxesPerParcel": 80, "parcelsPerPallet": 56, "section": "bakery"},
-    "700302": {"name": "Savoury Bun plain", "netWtG": 130, "piecesPerBox": 1, "boxesPerParcel": 80, "parcelsPerPallet": 56, "section": "bakery"},
-    "700209": {"name": "Plain Pastry", "netWtG": 130, "piecesPerBox": 1, "boxesPerParcel": 90, "parcelsPerPallet": 64, "section": "bakery"},
-    "700210": {"name": "Cheese Filled Pastry", "netWtG": 130, "piecesPerBox": 1, "boxesPerParcel": 90, "parcelsPerPallet": 64, "section": "bakery"},
-    "700211": {"name": "Potato Filled Pastry", "netWtG": 130, "piecesPerBox": 1, "boxesPerParcel": 90, "parcelsPerPallet": 64, "section": "bakery"},
-    "700212": {"name": "Olive Filled Pastry", "netWtG": 130, "piecesPerBox": 1, "boxesPerParcel": 90, "parcelsPerPallet": 64, "section": "bakery"},
-    "700604": {"name": "Dough Leaves (Boreklik Yufka)", "netWtG": 1000, "piecesPerBox": 8, "boxesPerParcel": 10, "parcelsPerPallet": 63, "section": "bakery"},
-    "700310": {"name": "Plain Boyoz", "netWtG": 75, "piecesPerBox": 60, "boxesPerParcel": 1, "parcelsPerPallet": 96, "section": "bakery"},
-    "700405": {"name": "Su Borek with cheese (tray)", "netWtG": 2500, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 70, "section": "bakery"},
-    "700404": {"name": "Adana Borek with cheese", "netWtG": 1250, "piecesPerBox": 6, "boxesPerParcel": 8, "parcelsPerPallet": 70, "section": "bakery"},
-    "700904": {"name": "E-Shaped Borek cheese", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700905": {"name": "E-Shaped Borek spinach & cheese", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700911": {"name": "E-Shaped Borek potato", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700914": {"name": "E-Shaped Borek meat", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700908": {"name": "Roll Stick Borek cheese", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 50, "parcelsPerPallet": 72, "section": "bakery"},
-    "700909": {"name": "Roll Stick Borek spinach & cheese", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 50, "parcelsPerPallet": 72, "section": "bakery"},
-    "700910": {"name": "Roll Stick Borek potato", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 50, "parcelsPerPallet": 72, "section": "bakery"},
-    "700917": {"name": "Roll Stick Borek minced meat", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 50, "parcelsPerPallet": 72, "section": "bakery"},
-    "700906": {"name": "Spiral Rose Borek cheese", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700907": {"name": "Spiral Rose Borek spinach & cheese", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700912": {"name": "Spiral Rose Borek potato", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "700913": {"name": "Spiral Rose Borek minced meat", "netWtG": 200, "piecesPerBox": 1, "boxesPerParcel": 40, "parcelsPerPallet": 72, "section": "bakery"},
-    "701223": {"name": "Mini Pita with cheese (bulk)", "netWtG": 50, "piecesPerBox": 1, "boxesPerParcel": 80, "parcelsPerPallet": 88, "section": "bakery"},
-    "701224": {"name": "Mini Pita with spinach & cheese (bulk)", "netWtG": 50, "piecesPerBox": 1, "boxesPerParcel": 80, "parcelsPerPallet": 88, "section": "bakery"},
-    "701423": {"name": "Vegetable Calzone", "netWtG": 80, "piecesPerBox": 1, "boxesPerParcel": 50, "parcelsPerPallet": 88, "section": "bakery"},
-    "701424": {"name": "Cheese Calzone", "netWtG": 80, "piecesPerBox": 1, "boxesPerParcel": 50, "parcelsPerPallet": 88, "section": "bakery"},
-    "200105": {"name": "Lahmacun with meat", "netWtG": 170, "piecesPerBox": 5, "boxesPerParcel": 8, "parcelsPerPallet": 66, "section": "anatolian"},
-    "200202": {"name": "Stuffed Vine Leaves", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 48, "section": "anatolian"},
-    "201503": {"name": "Turkish Ravioli with meat (Manti)", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 10, "parcelsPerPallet": 64, "section": "anatolian"},
-    "201301": {"name": "Vegan Cig Kofte", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 16, "parcelsPerPallet": 64, "section": "anatolian"},
-    "200302": {"name": "Vegan Kibbeh", "netWtG": 70, "piecesPerBox": 10, "boxesPerParcel": 9, "parcelsPerPallet": 88, "section": "anatolian"},
-    "200701": {"name": "Falafel", "netWtG": 1000, "piecesPerBox": 40, "boxesPerParcel": 10, "parcelsPerPallet": 54, "section": "anatolian"},
-    "200410": {"name": "Eggplant with Yogurt", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 8, "parcelsPerPallet": 72, "section": "anatolian"},
-    "200411": {"name": "Saksuka", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 8, "parcelsPerPallet": 72, "section": "anatolian"},
-    "200412": {"name": "Hummus", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 8, "parcelsPerPallet": 72, "section": "anatolian"},
-    "200413": {"name": "Carrot Tarator", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 8, "parcelsPerPallet": 72, "section": "anatolian"},
-    "200414": {"name": "Spicy Turkish Tomato Dip (Acili Ezme)", "netWtG": 1000, "piecesPerBox": 1, "boxesPerParcel": 8, "parcelsPerPallet": 72, "section": "anatolian"},
-    "111121": {"name": "Maras Ice Cream Slice Plain", "netWtG": 70, "piecesPerBox": 1, "boxesPerParcel": 72, "parcelsPerPallet": 101, "section": "icecream"},
-    "111141": {"name": "Maras Ice Cream Slice Chocolate", "netWtG": 70, "piecesPerBox": 1, "boxesPerParcel": 72, "parcelsPerPallet": 101, "section": "icecream"},
-    "111131": {"name": "Maras Ice Cream Slice Lemon", "netWtG": 70, "piecesPerBox": 1, "boxesPerParcel": 72, "parcelsPerPallet": 101, "section": "icecream"},
-    "901025B": {"name": "Artisan Mango Cake mono pack", "netWtG": 90, "piecesPerBox": 1, "boxesPerParcel": 24, "parcelsPerPallet": 77, "section": "lamour"},
-    "901026B": {"name": "Artisan Lemon Cake mono pack", "netWtG": 90, "piecesPerBox": 1, "boxesPerParcel": 24, "parcelsPerPallet": 77, "section": "lamour"},
-    "901027B": {"name": "Artisan Strawberry Cake mono pack", "netWtG": 90, "piecesPerBox": 1, "boxesPerParcel": 24, "parcelsPerPallet": 77, "section": "lamour"},
-    "901028B": {"name": "Artisan Pistachio Cake mono pack", "netWtG": 90, "piecesPerBox": 1, "boxesPerParcel": 24, "parcelsPerPallet": 77, "section": "lamour"},
-    "901023B": {"name": "Artisan Mango Cake 9x90g", "netWtG": 90, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 77, "section": "lamour"},
-    "901016B": {"name": "Artisan Lemon Cake 9x90g", "netWtG": 90, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 77, "section": "lamour"},
-    "901024B": {"name": "Artisan Strawberry Cake 9x90g", "netWtG": 90, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 77, "section": "lamour"},
-    "901015B": {"name": "Artisan Pistachio Cake 9x90g", "netWtG": 90, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 77, "section": "lamour"},
-    "900411": {"name": "Italian Tiramisu cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900412": {"name": "Red Velvet cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900413": {"name": "Toffee Caramel Cake cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900414": {"name": "Pistachio Cake cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900415": {"name": "Chocolate Cake cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900416": {"name": "Raspberry Cheesecake cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900417": {"name": "Tres Leches Caramel cup", "netWtG": 165, "piecesPerBox": 12, "boxesPerParcel": 3, "parcelsPerPallet": 56, "section": "lamour"},
-    "900105": {"name": "Special Pistachio Garden Whole Cake (12 slice)", "netWtG": 1600, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "900201": {"name": "Dark Chocolate Whole Cake (12 slice)", "netWtG": 1600, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "900901": {"name": "Red Velvet Whole (12 slice)", "netWtG": 1600, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "900401": {"name": "Black Forest Whole Cake (12 slice)", "netWtG": 1600, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "900301": {"name": "Tiramisu Whole Cake (12 slice)", "netWtG": 1450, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "900801": {"name": "Latte Whole Cake (12 slice)", "netWtG": 1600, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "902301": {"name": "Dark Chocolate Profiterol Whole Cake (12 slice)", "netWtG": 1700, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "901804": {"name": "Raspberry Cheesecake (12 slice)", "netWtG": 1800, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "901809": {"name": "Lemon Cheesecake (12 slice)", "netWtG": 1800, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "901807": {"name": "San Sebastian Cheesecake (12 slice)", "netWtG": 1400, "piecesPerBox": 12, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "900104": {"name": "Pistachio Cream Cake (7 slice)", "netWtG": 550, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 70, "section": "lamour"},
-    "900808": {"name": "Lotus Caramel Cake with Nutella", "netWtG": 800, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 70, "section": "lamour"},
-    "900304": {"name": "Tiramisu Cake (7 slice)", "netWtG": 600, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 70, "section": "lamour"},
-    "900308": {"name": "Blueberry & Peach Cake (7 slice)", "netWtG": 580, "piecesPerBox": 1, "boxesPerParcel": 6, "parcelsPerPallet": 49, "section": "lamour"},
-    "900903": {"name": "Red Velvet Cake mono", "netWtG": 165, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 120, "section": "lamour"},
-    "900906": {"name": "Red Velvet Cake 9x165g", "netWtG": 165, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "903108": {"name": "Rainbow Velvet Cake mono", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 120, "section": "lamour"},
-    "903109": {"name": "Rainbow Velvet Cake 9x150g", "netWtG": 150, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 66, "section": "lamour"},
-    "901813": {"name": "Tiramisu mono", "netWtG": 145, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 120, "section": "lamour"},
-    "900306": {"name": "Tiramisu 9x145g", "netWtG": 145, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "901812": {"name": "Dark Chocolate Profiterol Cake mono", "netWtG": 175, "piecesPerBox": 1, "boxesPerParcel": 12, "parcelsPerPallet": 120, "section": "lamour"},
-    "901817": {"name": "Dark Chocolate Profiterol Cake 9x175g", "netWtG": 175, "piecesPerBox": 9, "boxesPerParcel": 4, "parcelsPerPallet": 60, "section": "lamour"},
-    "902803": {"name": "Raspberry Cheesecake slice with pack", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 10, "parcelsPerPallet": 150, "section": "lamour"},
-    "902804": {"name": "Lemon Cheesecake slice with pack", "netWtG": 150, "piecesPerBox": 1, "boxesPerParcel": 10, "parcelsPerPallet": 150, "section": "lamour"}
+    "700101": {
+      "name": "Turkish Bagel (Simit) street",
+      "netWtG": 420,
+      "piecesPerBox": 4,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 44,
+      "section": "retail",
+      "unit": {
+        "netG": 420,
+        "portions": 4,
+        "portionKind": "item"
+      }
+    },
+    "700201": {
+      "name": "Plain Pastry",
+      "netWtG": 320,
+      "piecesPerBox": 4,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 44,
+      "section": "retail",
+      "unit": {
+        "netG": 320,
+        "portions": 4,
+        "portionKind": "item"
+      }
+    },
+    "700202": {
+      "name": "Cheese Filled Pastry",
+      "netWtG": 320,
+      "piecesPerBox": 4,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 48,
+      "section": "retail",
+      "unit": {
+        "netG": 320,
+        "portions": 4,
+        "portionKind": "item"
+      }
+    },
+    "700301": {
+      "name": "Savoury Bun plain",
+      "netWtG": 320,
+      "piecesPerBox": 4,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 44,
+      "section": "retail",
+      "unit": {
+        "netG": 320,
+        "portions": 4,
+        "portionKind": "item"
+      }
+    },
+    "700701": {
+      "name": "Spiral Gul Borek with cheese",
+      "netWtG": 480,
+      "piecesPerBox": 6,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 480,
+        "portions": 6,
+        "portionKind": "item"
+      }
+    },
+    "700703": {
+      "name": "Spiral Gul Borek with spinach & cheese",
+      "netWtG": 480,
+      "piecesPerBox": 6,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 480,
+        "portions": 6,
+        "portionKind": "item"
+      }
+    },
+    "700501": {
+      "name": "Spiral Pie cheese",
+      "netWtG": 800,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 108,
+      "section": "retail",
+      "unit": {
+        "netG": 800,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700503": {
+      "name": "Spiral Pie spinach & cheese",
+      "netWtG": 800,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 108,
+      "section": "retail",
+      "unit": {
+        "netG": 800,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700504": {
+      "name": "Spiral Pie potato",
+      "netWtG": 800,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 108,
+      "section": "retail",
+      "unit": {
+        "netG": 800,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700901": {
+      "name": "Cheese Rolls Handmade",
+      "netWtG": 480,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 480,
+        "portions": 12,
+        "portionKind": "item"
+      }
+    },
+    "700801": {
+      "name": "Mini Roll with cheese",
+      "netWtG": 500,
+      "piecesPerBox": 10,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 500,
+        "portions": 10,
+        "portionKind": "item"
+      }
+    },
+    "700802": {
+      "name": "Mini Roll spinach & cheese",
+      "netWtG": 500,
+      "piecesPerBox": 10,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 500,
+        "portions": 10,
+        "portionKind": "item"
+      }
+    },
+    "701221": {
+      "name": "Mini Pide with cheese",
+      "netWtG": 50,
+      "piecesPerBox": 5,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 96,
+      "section": "retail",
+      "unit": {
+        "netG": 250,
+        "portions": 5,
+        "portionKind": "item"
+      }
+    },
+    "701222": {
+      "name": "Mini Pide with spinach & cheese",
+      "netWtG": 50,
+      "piecesPerBox": 5,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 96,
+      "section": "retail",
+      "unit": {
+        "netG": 250,
+        "portions": 5,
+        "portionKind": "item"
+      }
+    },
+    "700402": {
+      "name": "Su Borek Round Tray",
+      "netWtG": 800,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 54,
+      "section": "retail",
+      "unit": {
+        "netG": 800,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "600106": {
+      "name": "Pistachio Baklava",
+      "netWtG": 225,
+      "piecesPerBox": 6,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 144,
+      "section": "retail",
+      "unit": {
+        "netG": 225,
+        "portions": 6,
+        "portionKind": "item"
+      }
+    },
+    "600102": {
+      "name": "Pistachio Baklava",
+      "netWtG": 450,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 60,
+      "section": "retail",
+      "unit": {
+        "netG": 450,
+        "portions": 12,
+        "portionKind": "item"
+      }
+    },
+    "600208": {
+      "name": "Walnut Baklava",
+      "netWtG": 225,
+      "piecesPerBox": 6,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 144,
+      "section": "retail",
+      "unit": {
+        "netG": 225,
+        "portions": 6,
+        "portionKind": "item"
+      }
+    },
+    "600202": {
+      "name": "Walnut Baklava",
+      "netWtG": 450,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 60,
+      "section": "retail",
+      "unit": {
+        "netG": 450,
+        "portions": 12,
+        "portionKind": "item"
+      }
+    },
+    "601202": {
+      "name": "Assorted Baklava",
+      "netWtG": 225,
+      "piecesPerBox": 6,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 144,
+      "section": "retail",
+      "unit": {
+        "netG": 225,
+        "portions": 6,
+        "portionKind": "item"
+      }
+    },
+    "601201": {
+      "name": "Assorted Baklava",
+      "netWtG": 450,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 60,
+      "section": "retail",
+      "unit": {
+        "netG": 450,
+        "portions": 12,
+        "portionKind": "item"
+      }
+    },
+    "600402": {
+      "name": "Carrot Slice Pistachio Baklava",
+      "netWtG": 420,
+      "piecesPerBox": 4,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 60,
+      "section": "retail",
+      "unit": {
+        "netG": 420,
+        "portions": 4,
+        "portionKind": "item"
+      }
+    },
+    "600810": {
+      "name": "Cold Baklava with Walnuts Tray",
+      "netWtG": 400,
+      "piecesPerBox": 10,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 104,
+      "section": "retail",
+      "unit": {
+        "netG": 400,
+        "portions": 10,
+        "portionKind": "item"
+      }
+    },
+    "500104": {
+      "name": "Kunefe with plate and syrup",
+      "netWtG": 135,
+      "piecesPerBox": 2,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 120,
+      "section": "retail",
+      "unit": {
+        "netG": 135,
+        "portions": 2,
+        "portionKind": "item"
+      }
+    },
+    "500103": {
+      "name": "Kunefe with plate and syrup",
+      "netWtG": 145,
+      "piecesPerBox": 2,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 120,
+      "section": "retail",
+      "unit": {
+        "netG": 145,
+        "portions": 2,
+        "portionKind": "item"
+      }
+    },
+    "500109": {
+      "name": "Kunefe with plate and syrup",
+      "netWtG": 145,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 192,
+      "section": "retail",
+      "unit": {
+        "netG": 145,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "500105": {
+      "name": "Special Kunefe",
+      "netWtG": 145,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 192,
+      "section": "retail",
+      "unit": {
+        "netG": 145,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "500107": {
+      "name": "Pista Leaves",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 156,
+      "section": "retail",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "500111": {
+      "name": "Chocolate Souffle",
+      "netWtG": 200,
+      "piecesPerBox": 2,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 110,
+      "section": "retail+dessert",
+      "unit": {
+        "netG": 200,
+        "portions": 2,
+        "portionKind": "item"
+      }
+    },
+    "601002": {
+      "name": "Tulumba Dessert",
+      "netWtG": 400,
+      "piecesPerBox": 25,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 400,
+        "portions": 25,
+        "portionKind": "item"
+      }
+    },
+    "601004": {
+      "name": "Turkish Ring Churros",
+      "netWtG": 300,
+      "piecesPerBox": 4,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 300,
+        "portions": 4,
+        "portionKind": "item"
+      }
+    },
+    "111106": {
+      "name": "Maras Ice Cream Plain",
+      "netWtG": 250,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 15,
+      "parcelsPerPallet": 99,
+      "section": "retail",
+      "unit": {
+        "netG": 250,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111101": {
+      "name": "Maras Ice Cream Plain",
+      "netWtG": 500,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 9,
+      "parcelsPerPallet": 99,
+      "section": "retail",
+      "unit": {
+        "netG": 500,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111107": {
+      "name": "Maras Ice Cream Cocoa",
+      "netWtG": 250,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 15,
+      "parcelsPerPallet": 99,
+      "section": "retail",
+      "unit": {
+        "netG": 250,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111112": {
+      "name": "Maras Ice Cream Pistachio",
+      "netWtG": 250,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 15,
+      "parcelsPerPallet": 99,
+      "section": "retail",
+      "unit": {
+        "netG": 250,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111113": {
+      "name": "Maras Ice Cream Trio Mix",
+      "netWtG": 500,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 9,
+      "parcelsPerPallet": 99,
+      "section": "retail",
+      "unit": {
+        "netG": 500,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200103": {
+      "name": "Lahmacun",
+      "netWtG": 180,
+      "piecesPerBox": 3,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 60,
+      "section": "retail",
+      "unit": {
+        "netG": 180,
+        "portions": 3,
+        "portionKind": "item"
+      }
+    },
+    "200201": {
+      "name": "Stuffed Vine Leaves",
+      "netWtG": 500,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 500,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200702": {
+      "name": "Falafel",
+      "netWtG": 500,
+      "piecesPerBox": 20,
+      "boxesPerParcel": 20,
+      "parcelsPerPallet": 54,
+      "section": "retail",
+      "unit": {
+        "netG": 500,
+        "portions": 20,
+        "portionKind": "item"
+      }
+    },
+    "201401": {
+      "name": "Falafel Humus Filled",
+      "netWtG": 300,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 300,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "201302": {
+      "name": "Vegan Cig Kofte",
+      "netWtG": 400,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 400,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200301": {
+      "name": "Vegan Kibbeh (Icli Kofte)",
+      "netWtG": 350,
+      "piecesPerBox": 5,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 88,
+      "section": "retail",
+      "unit": {
+        "netG": 350,
+        "portions": 5,
+        "portionKind": "item"
+      }
+    },
+    "312241": {
+      "name": "Tender Fillet",
+      "netWtG": 700,
+      "piecesPerBox": 10,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 80,
+      "section": "chicken",
+      "unit": {
+        "netG": 700,
+        "portions": 10,
+        "portionKind": "item"
+      }
+    },
+    "312341": {
+      "name": "Spicy Tender Fillet",
+      "netWtG": 700,
+      "piecesPerBox": 10,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 80,
+      "section": "chicken",
+      "unit": {
+        "netG": 700,
+        "portions": 10,
+        "portionKind": "item"
+      }
+    },
+    "312682": {
+      "name": "Crispy Chicken Burger",
+      "netWtG": 720,
+      "piecesPerBox": 8,
+      "boxesPerParcel": 14,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 720,
+        "portions": 8,
+        "portionKind": "item"
+      }
+    },
+    "312442": {
+      "name": "Spicy Chicken Wings",
+      "netWtG": 700,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 14,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 700,
+        "portions": 12,
+        "portionKind": "item"
+      }
+    },
+    "312141": {
+      "name": "Crispy Nugget",
+      "netWtG": 720,
+      "piecesPerBox": 30,
+      "boxesPerParcel": 14,
+      "parcelsPerPallet": 80,
+      "section": "chicken",
+      "unit": {
+        "netG": 720,
+        "portions": 30,
+        "portionKind": "item"
+      }
+    },
+    "311501": {
+      "name": "Crispy Chicken Wings",
+      "netWtG": 1000,
+      "piecesPerBox": 18,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 1000,
+        "portions": 18,
+        "portionKind": "item"
+      }
+    },
+    "311401": {
+      "name": "Spicy Chicken Wings",
+      "netWtG": 1000,
+      "piecesPerBox": 18,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 1000,
+        "portions": 18,
+        "portionKind": "item"
+      }
+    },
+    "311101": {
+      "name": "Nugget",
+      "netWtG": 1000,
+      "piecesPerBox": 43,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 1000,
+        "portions": 43,
+        "portionKind": "item"
+      }
+    },
+    "312681": {
+      "name": "Crispy Chicken Burger",
+      "netWtG": 1080,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 1080,
+        "portions": 12,
+        "portionKind": "item"
+      }
+    },
+    "311301": {
+      "name": "Spicy Tender Fillet",
+      "netWtG": 1000,
+      "piecesPerBox": 14,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 1000,
+        "portions": 14,
+        "portionKind": "item"
+      }
+    },
+    "311201": {
+      "name": "Tender Fillet",
+      "netWtG": 1000,
+      "piecesPerBox": 14,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 70,
+      "section": "chicken",
+      "unit": {
+        "netG": 1000,
+        "portions": 14,
+        "portionKind": "item"
+      }
+    },
+    "600214": {
+      "name": "Baklava with Pistachio (tray)",
+      "netWtG": 1250,
+      "piecesPerBox": 36,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 36,
+        "portionKind": "item"
+      }
+    },
+    "600101": {
+      "name": "Baklava with Pistachio (tray)",
+      "netWtG": 2500,
+      "piecesPerBox": 72,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 2500,
+        "portions": 72,
+        "portionKind": "item"
+      }
+    },
+    "600207": {
+      "name": "Baklava with Walnut (tray)",
+      "netWtG": 1250,
+      "piecesPerBox": 36,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 36,
+        "portionKind": "item"
+      }
+    },
+    "600201": {
+      "name": "Baklava with Walnut (tray)",
+      "netWtG": 2500,
+      "piecesPerBox": 72,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 2500,
+        "portions": 72,
+        "portionKind": "item"
+      }
+    },
+    "600404": {
+      "name": "Carrot Slice Baklava with Pistachio",
+      "netWtG": 1350,
+      "piecesPerBox": 16,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 30,
+      "section": "dessert",
+      "unit": {
+        "netG": 1350,
+        "portions": 16,
+        "portionKind": "item"
+      }
+    },
+    "600403": {
+      "name": "Carrot Slice Baklava with Pistachio",
+      "netWtG": 2000,
+      "piecesPerBox": 20,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 36,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 20,
+        "portionKind": "item"
+      }
+    },
+    "600808": {
+      "name": "Mussel Baklava with Pistachio",
+      "netWtG": 1250,
+      "piecesPerBox": 40,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 40,
+        "portionKind": "item"
+      }
+    },
+    "600802": {
+      "name": "Mussel Baklava with Pistachio",
+      "netWtG": 2000,
+      "piecesPerBox": 48,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 48,
+        "portionKind": "item"
+      }
+    },
+    "601402": {
+      "name": "Cream-Filled Sobiyet Baklava with Pistachio",
+      "netWtG": 1250,
+      "piecesPerBox": 28,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 28,
+        "portionKind": "item"
+      }
+    },
+    "600702": {
+      "name": "Cream-Filled Sobiyet Baklava with Pistachio",
+      "netWtG": 2000,
+      "piecesPerBox": 40,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 40,
+        "portionKind": "item"
+      }
+    },
+    "600904": {
+      "name": "Chocolate Baklava",
+      "netWtG": 1250,
+      "piecesPerBox": 36,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 36,
+        "portionKind": "item"
+      }
+    },
+    "600903": {
+      "name": "Chocolate Baklava",
+      "netWtG": 2000,
+      "piecesPerBox": 54,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 54,
+        "portionKind": "item"
+      }
+    },
+    "600505": {
+      "name": "Pistachio Rolls Baklava",
+      "netWtG": 1250,
+      "piecesPerBox": 48,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 48,
+        "portionKind": "item"
+      }
+    },
+    "600503": {
+      "name": "Pistachio Rolls Baklava",
+      "netWtG": 2000,
+      "piecesPerBox": 56,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 56,
+        "portionKind": "item"
+      }
+    },
+    "600601": {
+      "name": "Special Square Baklava",
+      "netWtG": 1250,
+      "piecesPerBox": 15,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 36,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 15,
+        "portionKind": "item"
+      }
+    },
+    "600602": {
+      "name": "Special Square Baklava",
+      "netWtG": 2000,
+      "piecesPerBox": 28,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 28,
+        "portionKind": "item"
+      }
+    },
+    "601103": {
+      "name": "Special Antep Baklava",
+      "netWtG": 1250,
+      "piecesPerBox": 48,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 48,
+        "portionKind": "item"
+      }
+    },
+    "601102": {
+      "name": "Special Antep Baklava",
+      "netWtG": 2000,
+      "piecesPerBox": 76,
+      "boxesPerParcel": 5,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 76,
+        "portionKind": "item"
+      }
+    },
+    "600211": {
+      "name": "Homemade Style Walnut Baklava",
+      "netWtG": 1250,
+      "piecesPerBox": 28,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 56,
+      "section": "dessert",
+      "unit": {
+        "netG": 1250,
+        "portions": 28,
+        "portionKind": "item"
+      }
+    },
+    "600807": {
+      "name": "Cold Baklava with Pistachio (tray)",
+      "netWtG": 1500,
+      "piecesPerBox": 36,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1500,
+        "portions": 36,
+        "portionKind": "item"
+      }
+    },
+    "600809": {
+      "name": "Cold Baklava with Walnut (tray)",
+      "netWtG": 1500,
+      "piecesPerBox": 36,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 48,
+      "section": "dessert",
+      "unit": {
+        "netG": 1500,
+        "portions": 36,
+        "portionKind": "item"
+      }
+    },
+    "601001": {
+      "name": "Tulumba Dessert (bucket)",
+      "netWtG": 5000,
+      "piecesPerBox": 250,
+      "boxesPerParcel": 1,
+      "parcelsPerPallet": 84,
+      "section": "dessert",
+      "unit": {
+        "netG": 5000,
+        "portions": 250,
+        "portionKind": "item"
+      }
+    },
+    "601003": {
+      "name": "Turkish Ring Churros (bucket)",
+      "netWtG": 4200,
+      "piecesPerBox": 60,
+      "boxesPerParcel": 1,
+      "parcelsPerPallet": 84,
+      "section": "dessert",
+      "unit": {
+        "netG": 4200,
+        "portions": 60,
+        "portionKind": "item"
+      }
+    },
+    "500115": {
+      "name": "Tres Leches Caramel (tray)",
+      "netWtG": 2000,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 84,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 9,
+        "portionKind": "slice"
+      }
+    },
+    "500125": {
+      "name": "Tres Leches Raspberry (tray)",
+      "netWtG": 2000,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 84,
+      "section": "dessert",
+      "unit": {
+        "netG": 2000,
+        "portions": 9,
+        "portionKind": "slice"
+      }
+    },
+    "500102": {
+      "name": "Kunefe with plate and syrup",
+      "netWtG": 145,
+      "netWtNote": "+65g syrup",
+      "piecesPerBox": 1,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 120,
+      "section": "dessert",
+      "unit": {
+        "netG": 145,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "500106": {
+      "name": "Pista Leaves",
+      "netWtG": 300,
+      "piecesPerBox": 2,
+      "boxesPerParcel": 20,
+      "parcelsPerPallet": 84,
+      "section": "dessert",
+      "unit": {
+        "netG": 300,
+        "portions": 2,
+        "portionKind": "item"
+      }
+    },
+    "700108": {
+      "name": "Turkish Fermente Bagel",
+      "netWtG": 135,
+      "piecesPerBox": 50,
+      "boxesPerParcel": 1,
+      "parcelsPerPallet": 52,
+      "section": "bakery",
+      "unit": {
+        "netG": 135,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700109": {
+      "name": "Turkish Fermente Bagel",
+      "netWtG": 125,
+      "piecesPerBox": 40,
+      "boxesPerParcel": 1,
+      "parcelsPerPallet": 64,
+      "section": "bakery",
+      "unit": {
+        "netG": 125,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700102": {
+      "name": "Turkish Bagel street type (bulk)",
+      "netWtG": 125,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 100,
+      "parcelsPerPallet": 52,
+      "section": "bakery",
+      "unit": {
+        "netG": 125,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700107": {
+      "name": "Sweet Turkish Bagel (bulk)",
+      "netWtG": 135,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 80,
+      "parcelsPerPallet": 52,
+      "section": "bakery",
+      "unit": {
+        "netG": 135,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700110": {
+      "name": "Kumru Bagel",
+      "netWtG": 140,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 45,
+      "parcelsPerPallet": 40,
+      "section": "bakery",
+      "unit": {
+        "netG": 140,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700305": {
+      "name": "Savoury Bun with cheese",
+      "netWtG": 130,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 80,
+      "parcelsPerPallet": 56,
+      "section": "bakery",
+      "unit": {
+        "netG": 130,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700302": {
+      "name": "Savoury Bun plain",
+      "netWtG": 130,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 80,
+      "parcelsPerPallet": 56,
+      "section": "bakery",
+      "unit": {
+        "netG": 130,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700209": {
+      "name": "Plain Pastry",
+      "netWtG": 130,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 90,
+      "parcelsPerPallet": 64,
+      "section": "bakery",
+      "unit": {
+        "netG": 130,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700210": {
+      "name": "Cheese Filled Pastry",
+      "netWtG": 130,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 90,
+      "parcelsPerPallet": 64,
+      "section": "bakery",
+      "unit": {
+        "netG": 130,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700211": {
+      "name": "Potato Filled Pastry",
+      "netWtG": 130,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 90,
+      "parcelsPerPallet": 64,
+      "section": "bakery",
+      "unit": {
+        "netG": 130,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700212": {
+      "name": "Olive Filled Pastry",
+      "netWtG": 130,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 90,
+      "parcelsPerPallet": 64,
+      "section": "bakery",
+      "unit": {
+        "netG": 130,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700604": {
+      "name": "Dough Leaves (Boreklik Yufka)",
+      "netWtG": 1000,
+      "piecesPerBox": 8,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 63,
+      "section": "bakery",
+      "unit": {
+        "netG": 1000,
+        "portions": 8,
+        "portionKind": "item"
+      }
+    },
+    "700310": {
+      "name": "Plain Boyoz",
+      "netWtG": 75,
+      "piecesPerBox": 60,
+      "boxesPerParcel": 1,
+      "parcelsPerPallet": 96,
+      "section": "bakery",
+      "unit": {
+        "netG": 75,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700405": {
+      "name": "Su Borek with cheese (tray)",
+      "netWtG": 2500,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 70,
+      "section": "bakery",
+      "unit": {
+        "netG": 2500,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "700404": {
+      "name": "Adana Borek with cheese",
+      "netWtG": 1250,
+      "piecesPerBox": 6,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 70,
+      "section": "bakery",
+      "unit": {
+        "netG": 1250,
+        "portions": 6,
+        "portionKind": "item"
+      }
+    },
+    "700904": {
+      "name": "E-Shaped Borek cheese",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700905": {
+      "name": "E-Shaped Borek spinach & cheese",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700911": {
+      "name": "E-Shaped Borek potato",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700914": {
+      "name": "E-Shaped Borek meat",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700908": {
+      "name": "Roll Stick Borek cheese",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 50,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700909": {
+      "name": "Roll Stick Borek spinach & cheese",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 50,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700910": {
+      "name": "Roll Stick Borek potato",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 50,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700917": {
+      "name": "Roll Stick Borek minced meat",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 50,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700906": {
+      "name": "Spiral Rose Borek cheese",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700907": {
+      "name": "Spiral Rose Borek spinach & cheese",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700912": {
+      "name": "Spiral Rose Borek potato",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "700913": {
+      "name": "Spiral Rose Borek minced meat",
+      "netWtG": 200,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 40,
+      "parcelsPerPallet": 72,
+      "section": "bakery",
+      "unit": {
+        "netG": 200,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "701223": {
+      "name": "Mini Pita with cheese (bulk)",
+      "netWtG": 50,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 80,
+      "parcelsPerPallet": 88,
+      "section": "bakery",
+      "unit": {
+        "netG": 50,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "701224": {
+      "name": "Mini Pita with spinach & cheese (bulk)",
+      "netWtG": 50,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 80,
+      "parcelsPerPallet": 88,
+      "section": "bakery",
+      "unit": {
+        "netG": 50,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "701423": {
+      "name": "Vegetable Calzone",
+      "netWtG": 80,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 50,
+      "parcelsPerPallet": 88,
+      "section": "bakery",
+      "unit": {
+        "netG": 80,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "701424": {
+      "name": "Cheese Calzone",
+      "netWtG": 80,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 50,
+      "parcelsPerPallet": 88,
+      "section": "bakery",
+      "unit": {
+        "netG": 80,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200105": {
+      "name": "Lahmacun with meat",
+      "netWtG": 170,
+      "piecesPerBox": 5,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 66,
+      "section": "anatolian",
+      "unit": {
+        "netG": 170,
+        "portions": 5,
+        "portionKind": "item"
+      }
+    },
+    "200202": {
+      "name": "Stuffed Vine Leaves",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 48,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "201503": {
+      "name": "Turkish Ravioli with meat (Manti)",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 64,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "201301": {
+      "name": "Vegan Cig Kofte",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 16,
+      "parcelsPerPallet": 64,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200302": {
+      "name": "Vegan Kibbeh",
+      "netWtG": 70,
+      "piecesPerBox": 10,
+      "boxesPerParcel": 9,
+      "parcelsPerPallet": 88,
+      "section": "anatolian",
+      "unit": {
+        "netG": 750,
+        "portions": 10,
+        "portionKind": "item"
+      }
+    },
+    "200701": {
+      "name": "Falafel",
+      "netWtG": 1000,
+      "piecesPerBox": 40,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 54,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": 40,
+        "portionKind": "item"
+      }
+    },
+    "200410": {
+      "name": "Eggplant with Yogurt",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 72,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200411": {
+      "name": "Saksuka",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 72,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200412": {
+      "name": "Hummus",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 72,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200413": {
+      "name": "Carrot Tarator",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 72,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "200414": {
+      "name": "Spicy Turkish Tomato Dip (Acili Ezme)",
+      "netWtG": 1000,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 8,
+      "parcelsPerPallet": 72,
+      "section": "anatolian",
+      "unit": {
+        "netG": 1000,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111121": {
+      "name": "Maras Ice Cream Slice Plain",
+      "netWtG": 70,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 72,
+      "parcelsPerPallet": 101,
+      "section": "icecream",
+      "unit": {
+        "netG": 70,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111141": {
+      "name": "Maras Ice Cream Slice Chocolate",
+      "netWtG": 70,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 72,
+      "parcelsPerPallet": 101,
+      "section": "icecream",
+      "unit": {
+        "netG": 70,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "111131": {
+      "name": "Maras Ice Cream Slice Lemon",
+      "netWtG": 70,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 72,
+      "parcelsPerPallet": 101,
+      "section": "icecream",
+      "unit": {
+        "netG": 70,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "901025B": {
+      "name": "Artisan Mango Cake mono pack",
+      "netWtG": 90,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 90,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "901026B": {
+      "name": "Artisan Lemon Cake mono pack",
+      "netWtG": 90,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 90,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "901027B": {
+      "name": "Artisan Strawberry Cake mono pack",
+      "netWtG": 90,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 90,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "901028B": {
+      "name": "Artisan Pistachio Cake mono pack",
+      "netWtG": 90,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 24,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 90,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "901023B": {
+      "name": "Artisan Mango Cake 9x90g",
+      "netWtG": 90,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 810,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "901016B": {
+      "name": "Artisan Lemon Cake 9x90g",
+      "netWtG": 90,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 810,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "901024B": {
+      "name": "Artisan Strawberry Cake 9x90g",
+      "netWtG": 90,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 810,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "901015B": {
+      "name": "Artisan Pistachio Cake 9x90g",
+      "netWtG": 90,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 77,
+      "section": "lamour",
+      "unit": {
+        "netG": 810,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "900411": {
+      "name": "Italian Tiramisu cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900412": {
+      "name": "Red Velvet cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900413": {
+      "name": "Toffee Caramel Cake cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900414": {
+      "name": "Pistachio Cake cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900415": {
+      "name": "Chocolate Cake cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900416": {
+      "name": "Raspberry Cheesecake cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900417": {
+      "name": "Tres Leches Caramel cup",
+      "netWtG": 165,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 3,
+      "parcelsPerPallet": 56,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900105": {
+      "name": "Special Pistachio Garden Whole Cake (12 slice)",
+      "netWtG": 1600,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1600,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "900201": {
+      "name": "Dark Chocolate Whole Cake (12 slice)",
+      "netWtG": 1600,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1600,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "900901": {
+      "name": "Red Velvet Whole (12 slice)",
+      "netWtG": 1600,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1600,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "900401": {
+      "name": "Black Forest Whole Cake (12 slice)",
+      "netWtG": 1600,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1600,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "900301": {
+      "name": "Tiramisu Whole Cake (12 slice)",
+      "netWtG": 1450,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1450,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "900801": {
+      "name": "Latte Whole Cake (12 slice)",
+      "netWtG": 1600,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1600,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "902301": {
+      "name": "Dark Chocolate Profiterol Whole Cake (12 slice)",
+      "netWtG": 1700,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1700,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "901804": {
+      "name": "Raspberry Cheesecake (12 slice)",
+      "netWtG": 1800,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1800,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "901809": {
+      "name": "Lemon Cheesecake (12 slice)",
+      "netWtG": 1800,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1800,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "901807": {
+      "name": "San Sebastian Cheesecake (12 slice)",
+      "netWtG": 1400,
+      "piecesPerBox": 12,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1400,
+        "portions": 12,
+        "portionKind": "slice"
+      }
+    },
+    "900104": {
+      "name": "Pistachio Cream Cake (7 slice)",
+      "netWtG": 550,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 70,
+      "section": "lamour",
+      "unit": {
+        "netG": 550,
+        "portions": 7,
+        "portionKind": "slice"
+      }
+    },
+    "900808": {
+      "name": "Lotus Caramel Cake with Nutella",
+      "netWtG": 800,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 70,
+      "section": "lamour",
+      "unit": {
+        "netG": 800,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900304": {
+      "name": "Tiramisu Cake (7 slice)",
+      "netWtG": 600,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 70,
+      "section": "lamour",
+      "unit": {
+        "netG": 600,
+        "portions": 7,
+        "portionKind": "slice"
+      }
+    },
+    "900308": {
+      "name": "Blueberry & Peach Cake (7 slice)",
+      "netWtG": 580,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 6,
+      "parcelsPerPallet": 49,
+      "section": "lamour",
+      "unit": {
+        "netG": 580,
+        "portions": 7,
+        "portionKind": "slice"
+      }
+    },
+    "900903": {
+      "name": "Red Velvet Cake mono",
+      "netWtG": 165,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 120,
+      "section": "lamour",
+      "unit": {
+        "netG": 165,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900906": {
+      "name": "Red Velvet Cake 9x165g",
+      "netWtG": 165,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1485,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "903108": {
+      "name": "Rainbow Velvet Cake mono",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 120,
+      "section": "lamour",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "903109": {
+      "name": "Rainbow Velvet Cake 9x150g",
+      "netWtG": 150,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 66,
+      "section": "lamour",
+      "unit": {
+        "netG": 1350,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "901813": {
+      "name": "Tiramisu mono",
+      "netWtG": 145,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 120,
+      "section": "lamour",
+      "unit": {
+        "netG": 145,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "900306": {
+      "name": "Tiramisu 9x145g",
+      "netWtG": 145,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1305,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "901812": {
+      "name": "Dark Chocolate Profiterol Cake mono",
+      "netWtG": 175,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 12,
+      "parcelsPerPallet": 120,
+      "section": "lamour",
+      "unit": {
+        "netG": 175,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "901817": {
+      "name": "Dark Chocolate Profiterol Cake 9x175g",
+      "netWtG": 175,
+      "piecesPerBox": 9,
+      "boxesPerParcel": 4,
+      "parcelsPerPallet": 60,
+      "section": "lamour",
+      "unit": {
+        "netG": 1575,
+        "portions": 9,
+        "portionKind": "item"
+      }
+    },
+    "902803": {
+      "name": "Raspberry Cheesecake slice with pack",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 150,
+      "section": "lamour",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    },
+    "902804": {
+      "name": "Lemon Cheesecake slice with pack",
+      "netWtG": 150,
+      "piecesPerBox": 1,
+      "boxesPerParcel": 10,
+      "parcelsPerPallet": 150,
+      "section": "lamour",
+      "unit": {
+        "netG": 150,
+        "portions": null,
+        "portionKind": null
+      }
+    }
+  },
+  "_reliability": {
+    "unit_elle_duzeltilen": [
+      "701221: 50g/None → 250g/5 — Basılı katalog s.10 kutu görseli: \"MINI PITA … 5x50 g\" — perakende kutusu, 250 g.",
+      "701222: 50g/None → 250g/5 — Basılı katalog s.10 kutu görseli: \"MINI PITA … 5x50 g\" — perakende kutusu, 250 g.",
+      "601002: 400g/None → 400g/25 — Basılı katalog s.13: 400 g perakende kutusu, içinde 25 tulumba (16 g/adet).",
+      "200302: 70g/None → 750g/10 — Teklif \"Bulk 10x75gr\" + spek KYS-088 (75 g) — basılı katalog 70 g yazıyor, iki kaynak 75 g diyor. Birim fiyat 5,50 € tek köfteye değil 750 g pakete ait.",
+      "700405: portionKind item → slice — Su böreği tepsisi TEK bir börek, 12 porsiyona kesiliyor (208 g/porsiyon) — 12 ayrı börek değil.",
+      "500115: portionKind item → slice — Trileçe tepsisi TEK bir tatlı, 9 porsiyona kesiliyor (222 g/porsiyon).",
+      "500125: portionKind item → slice — Trileçe tepsisi TEK bir tatlı, 9 porsiyona kesiliyor (222 g/porsiyon).",
+      "Baklava tepsileri (600101/600201/600214/600207/600807/600809/600810) 'item' KALDI: porsiyon 35-42 g, yani tepsinin içinde ayrı ayrı duran baklavalar."
+    ]
   }
 }

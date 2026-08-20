@@ -1,0 +1,249 @@
+{
+  "_source": "LEZZA FOODS BV → QUALITE SAS fiyat teklifi, 22.12.2025 (\"Price List_QUALITE SAS_2026.pdf\") — 2026-08-19'da okundu. Satış listesi: \"CATALOGUE QUALITE.pdf\" (bizim kendi B2B listemiz, tarihsiz).",
+  "_note": "İki ayrı belge, iki ayrı yön. `purchase` = TEDARİKÇİNİN bize verdiği alış fiyatı; `salesB2bHt` = BİZİM müşterilerimize verdiğimiz toptan satış fiyatı. İkisi de KDV HARİÇ (HT): teklif AB içi mal teslimi (KDV tersine kayıt), satış listesi de toptan listesidir. Alanlar: unitHt = satılabilir tek adedin fiyatı, boxHt = koli fiyatı, unitsPerBox / boxesPerPallet = teklifteki PCS/BOX ve BOX/PLT sütunları.",
+  "_reliability": {
+    "teklif_ic_tutarlilik": "34/34 satırda unitHt × unitsPerBox = boxHt. Belge kendi içinde tutarlı.",
+    "sku_eslesmesi": "34/34 SKU kataloğumuzda BENZERSİZ bir varyanta düşüyor. Uydurma eşleşme yok.",
+    "lojistik_sutun_kaymasi": "Teklifin PCS/BOX sütunu bizim `logistics.boxesPerParcel` alanımıza, BOX/PLT ise `parcelsPerPallet` alanına denk geliyor — yani alan ADLARIMIZ bir sütun kaymış. Sayılar 33/34 ve 28/34 tutuyor. Buradaki adlar teklifin kendi anlamını taşır; kolon adları düzeltilene kadar `lezza-catalog.json`'daki `logistics` ile KARIŞTIRILMAMALI. → BEKLEYEN(05.22): koli/palet alan adları",
+    "satis_listesi_eslesmesi": "Satış listesindeki GTIN sütunu KULLANILAMAZ: bizim SKU'larımızla hiç örtüşmüyor ve kendi içinde de bozuk (beş `S-011xx` kodu dört ayrı sayfada farklı ürünlerde tekrar ediyor). Eşleştirme ad+gramajla ELLE yapıldı ve yalnız EMİN OLUNAN 6 satır alındı; kalan 29 satır bilerek dışarıda. Otomatik ad eşleştirmesi denendi ve güvenilmez çıktı (ürün adlarımız İngilizce, listedeki adlar Türkçe/Fransızca, gramajlar tutmuyor).",
+    "iki_ayri_simit": "Satış listesindeki `TP-013 Simit 48×105g` bizim `700101` (Turkish Bagel, 4×105 g perakende paketi) ürünümüzdür — teklifteki `700107` (Sweet Turkish Bagel, 135 g dökme) DEĞİL. İkisi ayrı ürün; `700101`in alış fiyatı teklifte yok, `700107`in satış fiyatı listede yok.",
+    "gramaj_farki": "`200302` Vegan Kibbeh: teklif 70 g, üretici speki (KYS-088) 75 g. Teklifteki alındı. Beş bütün pasta/cheesecake (`901804 901809 900105 900901 900201`) kataloğumuzda GRAMAJSIZ — \"12 dilim\" olarak duruyorlar; €/kg hesabına giremiyorlar.",
+    "tedarikciye_bildirilecek": [
+      "Satış listesindeki GTIN sütunu bozuk — beş kod dört ayrı üründe tekrar ediyor.",
+      "Bütün pastaların ve cheesecake'lerin net ağırlığı hiçbir belgede yok.",
+      "Satış listesinde bizde olmayan dört tedarikçi var (Edelweiss, Bread House, Turquaz, Sweet Things) — kataloğa girecekler mi?"
+    ]
+  },
+  "purchase": {
+    "601003": {
+      "unitHt": 25.0,
+      "boxHt": 25.0,
+      "unitsPerBox": 1,
+      "boxesPerPallet": 84
+    },
+    "600214": {
+      "unitHt": 17.5,
+      "boxHt": 140.0,
+      "unitsPerBox": 8,
+      "boxesPerPallet": 36
+    },
+    "600403": {
+      "unitHt": 27.5,
+      "boxHt": 137.5,
+      "unitsPerBox": 5,
+      "boxesPerPallet": 36
+    },
+    "601402": {
+      "unitHt": 22.0,
+      "boxHt": 176.0,
+      "unitsPerBox": 8,
+      "boxesPerPallet": 36
+    },
+    "600505": {
+      "unitHt": 45.0,
+      "boxHt": 360.0,
+      "unitsPerBox": 8,
+      "boxesPerPallet": 36
+    },
+    "601103": {
+      "unitHt": 21.0,
+      "boxHt": 168.0,
+      "unitsPerBox": 8,
+      "boxesPerPallet": 36
+    },
+    "600211": {
+      "unitHt": 13.5,
+      "boxHt": 135.0,
+      "unitsPerBox": 10,
+      "boxesPerPallet": 56
+    },
+    "500102": {
+      "unitHt": 1.4,
+      "boxHt": 33.6,
+      "unitsPerBox": 24,
+      "boxesPerPallet": 120
+    },
+    "111121": {
+      "unitHt": 0.62,
+      "boxHt": 44.64,
+      "unitsPerBox": 72,
+      "boxesPerPallet": 101
+    },
+    "111101": {
+      "unitHt": 3.35,
+      "boxHt": 30.15,
+      "unitsPerBox": 9,
+      "boxesPerPallet": 99
+    },
+    "500115": {
+      "unitHt": 12.0,
+      "boxHt": 48.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 84
+    },
+    "201301": {
+      "unitHt": 3.5,
+      "boxHt": 56.0,
+      "unitsPerBox": 16,
+      "boxesPerPallet": 56
+    },
+    "200302": {
+      "unitHt": 5.5,
+      "boxHt": 49.5,
+      "unitsPerBox": 9,
+      "boxesPerPallet": 88
+    },
+    "700405": {
+      "unitHt": 10.5,
+      "boxHt": 42.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 70
+    },
+    "901804": {
+      "unitHt": 15.5,
+      "boxHt": 62.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 60
+    },
+    "901809": {
+      "unitHt": 15.5,
+      "boxHt": 62.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 60
+    },
+    "700107": {
+      "unitHt": 0.33,
+      "boxHt": 33.0,
+      "unitsPerBox": 100,
+      "boxesPerPallet": 52
+    },
+    "700904": {
+      "unitHt": 0.55,
+      "boxHt": 22.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700905": {
+      "unitHt": 0.55,
+      "boxHt": 22.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700906": {
+      "unitHt": 0.55,
+      "boxHt": 22.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700907": {
+      "unitHt": 0.55,
+      "boxHt": 22.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700911": {
+      "unitHt": 0.55,
+      "boxHt": 22.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700912": {
+      "unitHt": 0.55,
+      "boxHt": 22.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700913": {
+      "unitHt": 0.65,
+      "boxHt": 26.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700914": {
+      "unitHt": 0.65,
+      "boxHt": 26.0,
+      "unitsPerBox": 40,
+      "boxesPerPallet": 72
+    },
+    "700908": {
+      "unitHt": 0.38,
+      "boxHt": 19.0,
+      "unitsPerBox": 50,
+      "boxesPerPallet": 72
+    },
+    "700909": {
+      "unitHt": 0.38,
+      "boxHt": 19.0,
+      "unitsPerBox": 50,
+      "boxesPerPallet": 72
+    },
+    "700910": {
+      "unitHt": 0.38,
+      "boxHt": 19.0,
+      "unitsPerBox": 50,
+      "boxesPerPallet": 72
+    },
+    "700917": {
+      "unitHt": 0.54,
+      "boxHt": 27.0,
+      "unitsPerBox": 50,
+      "boxesPerPallet": 72
+    },
+    "600404": {
+      "unitHt": 23.0,
+      "boxHt": 184.0,
+      "unitsPerBox": 8,
+      "boxesPerPallet": 24
+    },
+    "500125": {
+      "unitHt": 12.0,
+      "boxHt": 48.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 84
+    },
+    "900105": {
+      "unitHt": 19.0,
+      "boxHt": 76.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 60
+    },
+    "900901": {
+      "unitHt": 15.0,
+      "boxHt": 60.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 60
+    },
+    "900201": {
+      "unitHt": 14.25,
+      "boxHt": 57.0,
+      "unitsPerBox": 4,
+      "boxesPerPallet": 60
+    }
+  },
+  "salesB2bHt": {
+    "700405": {
+      "unitHt": 14.0,
+      "from": "TP-001 Peynirli Su Boregi · 2500 g · 14,00 €/adet"
+    },
+    "500115": {
+      "unitHt": 18.75,
+      "from": "TP-014 Trilice Karamel · 2000 g · 18,75 €/adet"
+    },
+    "111121": {
+      "unitHt": 0.65,
+      "from": "TP-015 Maras Dondurma · 70 g · 0,65 €/adet"
+    },
+    "901809": {
+      "unitHt": 20.25,
+      "from": "Cheesecake Citron · 12 dilim × 1,69 € = 20,25 €/bütün"
+    },
+    "901804": {
+      "unitHt": 20.25,
+      "from": "Cheesecake Framboise · 12 dilim × 1,69 € = 20,25 €/bütün"
+    },
+    "900201": {
+      "unitHt": 18.12,
+      "from": "Choco Cake · 12 dilim × 1,51 € = 18,12 €/bütün"
+    }
+  }
+}

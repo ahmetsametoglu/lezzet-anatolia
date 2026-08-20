@@ -12,9 +12,6 @@ import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { euro, fiksturGorselleri, r2Keys, uploadImageFromUrl, type Db } from './shared';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './catalog-lezza';
-// Tarif malzemeleri de bir satış kurgusudur (künye `kurguReferanslari`). Çevrim yok: `recipe.ts`
-// yalnız `shared.ts`'i tanır.
-import { TARIF_SKULARI } from './recipe';
 import { enAz, type Katman } from './tier';
 
 // Katalog (05): kategori · ürün · varyant · galeri · koleksiyon.
@@ -388,9 +385,23 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
  * olması TDZ içindir: `seedCatalog` bu dosyada `BUNDLES`/`COLLECTIONS`'tan ÖNCE tanımlı ve modül
  * yüklenirken okunan bir sabit boş küme dönerdi.
  */
+/**
+ * Aday seçiminin ATLAYACAĞI ürünler — yani "aday olamayacak kadar bağlı" olanlar.
+ *
+ * ── TARİF MALZEMELERİ ARTIK BURADA DEĞİL (kullanıcı kararı 19.08) ────────────────────────────
+ * Üçü de "satış kurgusu" diye tek küme sayılıyordu ama BAĞLAYICILIKLARI aynı değil:
+ *   · **Paket** → ŞEMA zorluyor. `bundle.total_price` `NOT NULL` ve tutar kalemlerin fiyatından
+ *     türüyor; kalemi aday (fiyatsız) yapmak paketi kurulamaz hâle getirir. Kalmak zorunda.
+ *   · **Koleksiyon** → görsel bir söz. Üyeleri aday olursa seçki boşalır; ucuz bir ödünç, kalıyor.
+ *   · **Tarif** → hiçbirini yapmıyor. `05.16`da tarif kendi fiyatını SAKLAMIYOR, malzeme satırları
+ *     fiyatsız çizilebiliyor. Yani tarif malzemesini aday yapmak hiçbir şeyi kırmıyor — yalnız
+ *     tarifte "bu malzeme henüz satışta değil" hâli doğuyor, ki o da gerçek bir hâl.
+ * Kullanıcı bunu açıkça serbest bıraktı: *"şu an tarif konusu bizim için orada her şeyin çok
+ * tutarlı olmasına gerek yok."* Ölçüldü: 7 ürün yalnız tarif yüzünden aktif tutuluyordu, artık aday.
+ */
 function kurguReferanslari(): { sku: ReadonlySet<string>; slug: ReadonlySet<string> } {
   return {
-    sku: new Set([...BUNDLES.flatMap((b) => b.items.map((i) => i.sku)), ...TARIF_SKULARI]),
+    sku: new Set(BUNDLES.flatMap((b) => b.items.map((i) => i.sku))),
     slug: new Set(COLLECTIONS.flatMap((c) => c.products)),
   };
 }

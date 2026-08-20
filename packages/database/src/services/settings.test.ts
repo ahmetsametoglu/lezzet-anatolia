@@ -198,8 +198,11 @@ describe('en katısı kazanan koşul ayarları (09.08)', () => {
 
   it('FİYAT ayarı bu kuralın DIŞINDA — Alman müşteri Almanya tarifesini öder, en pahalısını değil', async () => {
     // `shipping_fee_cents` bilerek listede yok: kapsam orada "hangi tarife" sorusunun cevabı.
-    // Seedli satırlar: global 790 · country DE 1290. En dar (ülke) kazanmalı.
-    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'DE' })).toBe(1290);
-    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'FR' })).toBe(790);
+    // Seedli satırlar: global **1190** · country DE **990**. En dar (ülke) kazanmalı.
+    // Sayılar 19.08'de piyasadan ölçüldü (05.30) ve YÖN de değişti: Almanya artık Fransa'dan UCUZ
+    // (Strasbourg deposuna sınır komşusu). Test tam bu yüzden değerli — kural "en pahalısı" değil
+    // "en dar kapsam" olduğu için, ucuz bir ülke tarifesi de globali ezmeli.
+    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'DE' })).toBe(990);
+    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'FR' })).toBe(1190);
   });
 });

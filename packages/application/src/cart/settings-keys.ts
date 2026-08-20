@@ -43,15 +43,26 @@ export const MIN_BASKET_DEFAULT = 4_000;
  */
 export const SHIPPING_FEE_KEY = 'shipping_fee_cents';
 
-/** Kargo ücretinin varsayılanı (cent) — ayar satırı yoksa geçerli. */
-export const SHIPPING_FEE_DEFAULT = 790;
+/**
+ * Kargo ücretinin varsayılanı (cent) — ayar satırı yoksa geçerli.
+ *
+ * 11,90 € · kullanıcı kararı 19.08 (eski değer 7,90 €). **`0013_settings.sql` ile aynı sayı olmak
+ * ZORUNDA** — biri güncellenip öteki unutulursa ayar satırını silen bir el sistemi sessizce eski
+ * tarifeye düşürür. Sayının nereden geldiği migration künyesinde: rakip tarifesi ölçüldü.
+ */
+export const SHIPPING_FEE_DEFAULT = 1_190;
 
 /**
  * Ücretsiz kargo eşiğinin varsayılanı (cent) — ayar satırı yoksa geçerli.
  *
- * 60,00 € · kullanıcı kararı 04.08. Eşik, kargo ücretinin (7,90 €) belirgin üstünde olmalı; yoksa
- * her sepet ücretsiz olur ve ücret satırı anlamını yitirir. **Kargo soğuk zincir taşımaz** — bölge
- * dışına yalnız raf ömürlü ürünler çıkar (`Product.shippable`), dondurulmuş ürünler yalnız kendi
- * aracımızla teslim edilir. Admin ayarı girildiğinde bu değer hiç okunmaz.
+ * 100,00 € · kullanıcı kararı 19.08 (eski değer 60,00 € · kullanıcı kararı 04.08). Eşik, kargo
+ * ücretinin (11,90 €) belirgin üstünde olmalı; yoksa her sepet ücretsiz olur ve ücret satırı
+ * anlamını yitirir. **Kargo soğuk zincir taşımaz** — bölge dışına yalnız raf ömürlü ürünler çıkar
+ * (`Product.shippable`), dondurulmuş ürünler yalnız kendi aracımızla teslim edilir.
+ *
+ * **Yükseltmenin gerekçesi ölçüm:** rakip (`degrandbazaar.be`, Belçika) Fransa'ya 12,50 € alıyor ve
+ * ücretsiz eşiği 125 € — 60 €'luk eşiğimiz piyasanın yarısındaydı. Gerekçenin tamamı ve hâlâ
+ * ölçülmemiş olan (donuk koli taşıma maliyeti) `0013_settings.sql` künyesinde.
+ * Admin ayarı girildiğinde bu değer hiç okunmaz.
  */
-export const FREE_SHIPPING_THRESHOLD_DEFAULT = 6_000;
+export const FREE_SHIPPING_THRESHOLD_DEFAULT = 10_000;

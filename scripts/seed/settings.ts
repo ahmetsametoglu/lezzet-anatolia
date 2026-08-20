@@ -18,11 +18,16 @@ export async function seedScopedSettings(db: Db): Promise<void> {
   const settings = new SettingsService(db);
 
   // Kapsamlı satır zaten varsa dokunma — bölüm guard'ı `settings` tablosuna bakamaz, çünkü tablo
-  // migration'dan dolu geliyor (global satırlar). Ölçüt "global OLMAYAN satır var mı"dır.
+  // migration'dan dolu geliyor.
+  //
+  // Ölçüt "global OLMAYAN satır var mı" DEĞİL, "kanal/bölge satırı var mı" (19.08). Migration artık
+  // **ülke** kapsamlı gerçek tarife satırları da kuruyor (`0013_settings.sql` → FR/DE kargo); eski
+  // ölçüt onları görüp seed'i her koşuda atlardı ve kanal/bölge örnekleri **hiç yazılmazdı**. Guard
+  // ancak seed'in kendi yazdığı kapsamlara bakarsa dürüst olur.
   const { count, error } = await db
     .from('settings')
     .select('*', { count: 'exact', head: true })
-    .neq('scope_type', 'global');
+    .in('scope_type', ['channel', 'zone']);
   if (error) throw error;
   if ((count ?? 0) > 0) {
     console.log('▸ kapsamlı ayarlar zaten dolu — atlandı');
@@ -63,17 +68,12 @@ export async function seedScopedSettings(db: Db): Promise<void> {
     console.log(`  ✓ ${key} · ${opts.scopeType} · ${JSON.stringify(value)} — ${opts.description}`);
   };
 
-  // ÜLKE: Almanya'ya kargo pahalıdır — sınır ötesi taşıma yurt içiyle aynı fiyata olmaz.
-  await yaz('shipping_fee_cents', 1290, {
-    scopeType: 'country',
-    scopeId: 'DE',
-    description: 'DE kargo ücreti (yurt içinden yüksek)',
-  });
-  await yaz('free_shipping_threshold_cents', 9000, {
-    scopeType: 'country',
-    scopeId: 'DE',
-    description: 'DE ücretsiz kargo eşiği — yurt içinden yüksek',
-  });
+  // ÜLKE KAPSAMI ARTIK BURADA DEĞİL (19.08) — gerçek kargo tarifesi `0013_settings.sql`'e taşındı.
+  //
+  // Buradaki iki satır (DE 12,90 € / eşik 90 €) uydurmaydı ve daha kötüsü **yalnız `extend`+
+  // katmanında** yazılıyordu: üretime çıkacak `base` katmanında Almanya satırı hiç doğmuyor, Alman
+  // müşteri sessizce Fransa tarifesini ödüyordu. Gerçek bir ticari şart seed'in insafına bırakılamaz.
+  // Kanal ve bölge kapsamları burada kalıyor çünkü onlar mekanizmayı GÖSTEREN örnekler.
 
   // KANAL: toptan müşteri zaten büyük alır; ücretsiz kargo eşiği ve asgari sepet ona göre kurulur.
   await yaz('min_basket_cents', 12000, {

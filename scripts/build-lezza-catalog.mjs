@@ -445,6 +445,8 @@ dizin = skuDizini();
 // büyükse**: "kolide 1 adet" bir paketleme bilgisi değil, adet bilgisinin yokluğudur — `null`
 // kalması gerekir (`CLAUDE §1`: ölçülemeyen değer sıfır/bir değildir).
 let lojistikli = 0;
+/** Kaynağın `unit` künyesine göre düzeltilen gramajlar — koşu sonunda raporlanır. */
+const boyDuzeltilen = [];
 for (const [sku, p] of Object.entries(pdfKatalog)) {
   const hedef = dizin.get(sku);
   if (!hedef) continue;
@@ -453,8 +455,91 @@ for (const [sku, p] of Object.entries(pdfKatalog)) {
     boxesPerParcel: p.boxesPerParcel ?? null,
     parcelsPerPallet: p.parcelsPerPallet ?? null,
   };
-  if (hedef.varyant.piecesCount == null && (p.piecesPerBox ?? 0) > 1) hedef.varyant.piecesCount = p.piecesPerBox;
+  // ── PAKET FORMATINI BASILI KATALOG SÖYLER, API DEĞİL (ölçüldü 19.08) ─────────────────────────
+  // API bu ürünleri TEK DİLİM olarak tanıyor (`artisan-lemon-cake-90g`), basılı katalog ise satılan
+  // kutuyu: `Artisan Lemon Cake 9x90g`. İkisi aynı SKU. Sonuç sekiz üründe ölçüldü: `netWeightG`
+  // 90 g yazıyordu ama kutuda **9 adet** var — yani 810 g. Kilo başına fiyat hesabı bu sayıya
+  // dayandığı için limonlu kek 9'lu paketi **1,79 €**'ya düşüyordu; kullanıcı bunu ekranda gördü.
+  //
+  // Ölçüt kaynağın kendi beyanı: PDF adı `N x M g` diyorsa ve elimizdeki ağırlık tam olarak `M` ise,
+  // sahip olduğumuz sayı DİLİMİN ağırlığıdır, kutunun değil. `boyAyir` bu ayrıştırmayı API adları
+  // için zaten yapıyordu (`4x80g` → 320 g); eksik olan, aynı kuralın PDF adına da uygulanmasıydı.
+  //
+  // Su böreği tepsisi (2500 g, 12 dilim) bu koşula GİRMEZ ve girmemeli: adında `12x…` yok, 2500 g
+  // zaten kutunun kendisi. Çarpmayı `piecesCount > 1` üzerinden yapmak onu 30 kg'a çıkarırdı.
+  // ── SATILAN BİRİM KAYNAKTAN OKUNUR, TÜRETİLMEZ (kullanıcı kararı 19.08) ─────────────────────
+  // Burada üç ayrı sezgisel kural vardı ve üçü de aynı şeyi yapmaya çalışıyordu: basılı katalogun
+  // NET WT / PIECES/BOX sütunlarının hangi birimi anlattığını TAHMİN etmek. Sütunlar ürüne göre
+  // farklı şeyi anlattığı için her kural yeni bir istisna doğurdu (9x90 g kutu · 60'lık boyoz kolisi
+  // · 12 dilimlik pasta), her istisna bir tur sürdü ve biri hâlâ yanlıştı (5x50 g mini pide).
+  //
+  // Kurallar bir kez koşturulup sonucu KAYNAĞA yazıldı (`catalog-pdf.json` → `unit`), gözden
+  // geçirildi ve dört satır elle düzeltildi (gerekçeleri `_reliability.unit_elle_duzeltilen`).
+  // Üreteç artık yorum yapmıyor: satılan birimin ağırlığı ve porsiyon künyesi hazır geliyor.
+  //
+  // **`portionKind` iki ayrı şeyi ayırır:** `item` = ayrı ayrı ürünler (4'lü simit paketi),
+  // `slice` = tek ürünün dilimleri (12 dilimlik cheesecake). Vitrin ikisine aynı kelimeyi yazamaz.
+  const birim = p.unit ?? {};
+  if (birim.netG != null) {
+    if (hedef.varyant.netWeightG !== birim.netG) boyDuzeltilen.push(`${sku}: ${hedef.varyant.netWeightG ?? '—'} → ${birim.netG} g`);
+    hedef.varyant.netWeightG = birim.netG;
+  }
+  // Adet API'den geldiyse KORUNUR: o ürün ADININ beyanıdır (`(12 Pieces)`) ve daha özgüldür.
+  if (hedef.varyant.piecesCount == null && birim.portions != null) hedef.varyant.piecesCount = birim.portions;
+  hedef.varyant.portionKind = birim.portionKind ?? null;
+  // Etiket AŞAĞIDA tek kuralla yazılıyor (3b): kaynağın dizgisi parça gramajını tek başına
+  // gösterip yanıltıyordu ("90g" ama kutu 810 g).
   lojistikli += 1;
+}
+
+// ── 3b) AMBALAJ BOYU AYRI ÜRÜN DEĞİL, VARYANT (kullanıcı kararı 19.08) ────────────────────────
+// Üreticinin kataloğu aynı keki iki kayıt olarak yayınlıyor — "9x90 g kutu" ve "Mono Pack" — ve
+// biz onları iki ayrı ÜRÜN kuruyorduk. Kullanıcının kuralı net: *"Tatlı simidin dört paketi de
+// olabilir, yüzlü paketi de olabilir. Biz bunları varyant olarak sunarız."*
+//
+// Eşleme `variant-packs.json`'da elle duruyor ve künyesinde ölçümü var: sekiz monodan sekizi ana
+// ürünün TAM BİR PORSİYONU (810/9 = 90 ✓ …). Addan türetilmiyor çünkü "… Mono Pack" deseni ürün
+// adları çevrildiği anda çöker ve boy sessizce ayrı ürüne döner.
+const paketler = oku('variant-packs.json');
+let birlestirilen = 0;
+for (const [sku, anaSlug] of Object.entries(paketler.merge)) {
+  const kaynak = dizin.get(sku);
+  const ana = urunler.get(anaSlug);
+  if (!kaynak || !ana) {
+    uyarilar.push(`boy birleştirilemedi: ${sku} → ${anaSlug} (${!kaynak ? 'SKU katalogda yok' : 'ana ürün katalogda yok'})`);
+    continue;
+  }
+  if (kaynak.urun === ana) continue; // zaten aynı üründe
+  ana.variants.push(kaynak.varyant);
+  kaynak.urun.variants = kaynak.urun.variants.filter((v) => v !== kaynak.varyant);
+  kaynak.urun = ana;
+  birlestirilen += 1;
+}
+// Boyu alınmış kabuk ürün kalmasın: varyantsız kayıt vitrinde satılamaz bir karttır.
+for (const [slug, u] of [...urunler]) if (u.variants.length === 0) urunler.delete(slug);
+// **Sıra KÜÇÜKTEN BÜYÜĞE** — operasyon formu bu sırayı "müşterinin gördüğü boy sırası" diye
+// gösteriyor ve müşteri de küçük boydan büyüğe bakar. Gramajsız boy sona düşer (bilinmeyen büyüklük).
+for (const u of urunler.values()) u.variants.sort((a, b) => (a.netWeightG ?? Infinity) - (b.netWeightG ?? Infinity));
+
+// ── ETİKET: PORSİYON GÖRÜNSÜN, TOPLAM GRAMAJ ETİKETTE TEKRARLANMASIN ─────────────────────────
+// Kullanıcı ekranda gördü: 810 g'lık 9'lu kutunun etiketi "90g" yazıyordu — *"normalde kullanıcı
+// buna baktığı zaman doksan gramlık bir pasta aldığını zannediyor."* Kaynağın etiketi parça
+// gramajıydı ve tek başına yanıltıyordu.
+//
+// Kural: çok parçalı boyda **"9 × 90 g"**, tek parçada **"90 g"**. Biçim bir HESAP değil, elde
+// duran iki alanın (toplam gramaj · adet) yazımı — parça gramajı hiçbir kolonda saklanmıyor ve
+// etiket onu görünür kılan tek yer. Müşteri panelinde gösterim yine türetiliyor (`boyAdi`).
+let etiketDuzeltilen = 0;
+for (const u of urunler.values()) {
+  for (const v of u.variants) {
+    const net = v.netWeightG;
+    if (net == null) continue;
+    const adet = v.piecesCount;
+    const yeni =
+      adet != null && adet > 1 && net % adet === 0 ? `${adet} × ${net / adet} g` : `${net} g`;
+    if (v.label?.tr !== yeni) etiketDuzeltilen += 1;
+    v.label = { tr: yeni, fr: yeni, de: yeni };
+  }
 }
 
 // 4) ÜRETİCİ SPEKLERİ — 6 ürünün GERÇEK yasal beyanı, belgeden birebir.
@@ -503,6 +588,7 @@ const cikti = {
 };
 
 mkdirSync(dirname(OUT), { recursive: true });
+if (boyDuzeltilen.length > 0) console.log(`  ✓ ${boyDuzeltilen.length} varyantın gramajı kaynağın \`unit\` künyesinden düzeltildi`);
 writeFileSync(OUT, `${JSON.stringify(cikti, null, 2)}\n`, 'utf8');
 
 const varyantSayisi = cikti.products.reduce((n, p) => n + p.variants.length, 0);
@@ -515,6 +601,7 @@ console.log(
     `  kanal: ${cikti.products.filter((p) => p.channels.includes('b2b')).length} b2b · ` +
     `${cikti.products.filter((p) => p.channels.includes('b2c')).length} b2c\n` +
     `  basılı katalog: ${lojistikli} varyanta lojistik · ${pdfDenGelen} kalem API'de yoktu\n` +
+    `  ambalaj boyu: ${birlestirilen} mono kayıt ana ürüne varyant olarak bağlandı · ${etiketDuzeltilen} etiket yeniden yazıldı\n` +
     `  üretici speki: ${beyanli} ürüne gerçek yasal beyan\n` +
     `  ⚠ kategorisiz ${kategorisiz} ürün · SKU'suz ${skusuz} varyant`,
 );

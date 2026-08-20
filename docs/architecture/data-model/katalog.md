@@ -187,6 +187,7 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | label | LocalizedText (jsonb) | varyant etiketi — **müşteriye görünür** (boy kartı: "700 g tepsi" / "plateau 700 g"), bu yüzden çok dilli; tek varyantlıda varsayılan |
 | net_weight_g | int \| null | net ağırlık (gram) — etiket beyanı ve €/kg birim fiyat gösterimi |
 | pieces_count | int \| null | paket içi adet ("12'li baklava"). Gramajın YERİNE değil yanına: 72'lik kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). `null` = bildirilmemiş (dökme ürün), **sıfır değil**. Alan yokken adet adın içinde kalıyor ve slug ayrıştığı için tek ürün ayrı ürünlere bölünüyordu (05.14) |
+| portion_kind | `item` \| `slice` \| null | `pieces_count`ın BİRİMİ — sayılan şey ne? `item` = ayrı ayrı paketlenmiş parça ("4 adet simit"), `slice` = tek gövdenin dilimi ("12 dilim cheesecake"). Adet varken birim yoksa vitrin "12 adet cheesecake" yazar ve müşteri 12 pasta bekler. `null` = dökme ürün (`pieces_count` da null) ya da tek parça. Ambalaj gerçeği: 2,5 kg'lık su böreği tepsisi 12 DİLİM'dir, 12 börek değil |
 | min_stock_qty | int \| null | asgari stok eşiği — kullanılabilir stok altına düşünce "sipariş zamanı" önerisine düşer (bkz. `DOMAIN.md §16`); null = öneri yok |
 | sku | string \| null | stok kodu |
 | is_active | boolean | |

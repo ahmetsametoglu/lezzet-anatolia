@@ -87,9 +87,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 6,
@@ -100,7 +100,8 @@
             "piecesPerBox": 6,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -126,48 +127,9 @@
       "variants": [
         {
           "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
-          },
-          "netWeightG": 90,
-          "piecesCount": 9,
-          "sku": "901016B",
-          "sourceId": 10199,
-          "sourceSlug": "artisan-lemon-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          }
-        }
-      ]
-    },
-    {
-      "slug": "artisan-lemon-cake-mono-pack",
-      "name": {
-        "tr": "Artisan Lemon Cake Mono Pack",
-        "fr": "Artisan Lemon Cake Mono Pack",
-        "de": "Artisan Lemon Cake Mono Pack"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": null,
-      "description": "frozen individually wrapped lemon artisan cake. Premium retail format with wholesale supply and private label from Lezza Foods.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Lemon-Cake-Mono-Pack-90g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Lemon-Cake-90g.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
+            "tr": "90 g",
+            "fr": "90 g",
+            "de": "90 g"
           },
           "netWeightG": 90,
           "piecesCount": null,
@@ -178,7 +140,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 24,
             "parcelsPerPallet": 77
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 90 g",
+            "fr": "9 × 90 g",
+            "de": "9 × 90 g"
+          },
+          "netWeightG": 810,
+          "piecesCount": 9,
+          "sku": "901016B",
+          "sourceId": 10199,
+          "sourceSlug": "artisan-lemon-cake-90g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 77
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -204,48 +185,9 @@
       "variants": [
         {
           "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
-          },
-          "netWeightG": 90,
-          "piecesCount": 9,
-          "sku": "901023B",
-          "sourceId": 10195,
-          "sourceSlug": "artisan-mango-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          }
-        }
-      ]
-    },
-    {
-      "slug": "artisan-mango-cake-mono-pack",
-      "name": {
-        "tr": "Artisan Mango Cake Mono Pack",
-        "fr": "Artisan Mango Cake Mono Pack",
-        "de": "Artisan Mango Cake Mono Pack"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": "frozen individually wrapped mango artisan cake. Premium retail pack, wholesale supply and private label from Lezza Foods.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Mango-Cake-Mono-Pack-90g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Mango-Cake-90g.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
+            "tr": "90 g",
+            "fr": "90 g",
+            "de": "90 g"
           },
           "netWeightG": 90,
           "piecesCount": null,
@@ -256,7 +198,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 24,
             "parcelsPerPallet": 77
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 90 g",
+            "fr": "9 × 90 g",
+            "de": "9 × 90 g"
+          },
+          "netWeightG": 810,
+          "piecesCount": 9,
+          "sku": "901023B",
+          "sourceId": 10195,
+          "sourceSlug": "artisan-mango-cake-90g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 77
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -282,48 +243,9 @@
       "variants": [
         {
           "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
-          },
-          "netWeightG": 90,
-          "piecesCount": 9,
-          "sku": "901015B",
-          "sourceId": 10201,
-          "sourceSlug": "artisan-pistachio-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          }
-        }
-      ]
-    },
-    {
-      "slug": "artisan-pistachio-cake-mono-pack",
-      "name": {
-        "tr": "Artisan Pistachio Cake Mono Pack",
-        "fr": "Artisan Pistachio Cake Mono Pack",
-        "de": "Artisan Pistachio Cake Mono Pack"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": "frozen individually wrapped pistachio artisan cake. Retail pack with wholesale supply and private label from Lezza Foods.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Pistachio-Cake-Mono-Pack-90g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Pistachio-Cake-90g.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
+            "tr": "90 g",
+            "fr": "90 g",
+            "de": "90 g"
           },
           "netWeightG": 90,
           "piecesCount": null,
@@ -334,7 +256,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 24,
             "parcelsPerPallet": 77
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 90 g",
+            "fr": "9 × 90 g",
+            "de": "9 × 90 g"
+          },
+          "netWeightG": 810,
+          "piecesCount": 9,
+          "sku": "901015B",
+          "sourceId": 10201,
+          "sourceSlug": "artisan-pistachio-cake-90g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 77
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -360,48 +301,9 @@
       "variants": [
         {
           "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
-          },
-          "netWeightG": 90,
-          "piecesCount": 9,
-          "sku": "901024B",
-          "sourceId": 10200,
-          "sourceSlug": "artisan-strawberry-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          }
-        }
-      ]
-    },
-    {
-      "slug": "artisan-strawberry-cake-mono-pack",
-      "name": {
-        "tr": "Artisan Strawberry Cake Mono Pack",
-        "fr": "Artisan Strawberry Cake Mono Pack",
-        "de": "Artisan Strawberry Cake Mono Pack"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": "frozen individually wrapped strawberry artisan cake. Retail pack with wholesale supply and private label from Lezza Foods.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Strawberry-Cake-Mono-Pack-90g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Strawberry-Cake-90g.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "90g",
-            "fr": "90g",
-            "de": "90g"
+            "tr": "90 g",
+            "fr": "90 g",
+            "de": "90 g"
           },
           "netWeightG": 90,
           "piecesCount": null,
@@ -412,7 +314,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 24,
             "parcelsPerPallet": 77
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 90 g",
+            "fr": "9 × 90 g",
+            "de": "9 × 90 g"
+          },
+          "netWeightG": 810,
+          "piecesCount": 9,
+          "sku": "901024B",
+          "sourceId": 10200,
+          "sourceSlug": "artisan-strawberry-cake-90g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 77
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -439,26 +360,9 @@
       "variants": [
         {
           "label": {
-            "tr": "450g",
-            "fr": "450g",
-            "de": "450g"
-          },
-          "netWeightG": 450,
-          "piecesCount": 12,
-          "sku": "601201",
-          "sourceId": 10243,
-          "sourceSlug": "assorted-baklava-450g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          }
-        },
-        {
-          "label": {
-            "tr": "225g",
-            "fr": "225g",
-            "de": "225g"
+            "tr": "225 g",
+            "fr": "225 g",
+            "de": "225 g"
           },
           "netWeightG": 225,
           "piecesCount": 6,
@@ -469,7 +373,26 @@
             "piecesPerBox": 6,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 144
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "450 g",
+            "fr": "450 g",
+            "de": "450 g"
+          },
+          "netWeightG": 450,
+          "piecesCount": 12,
+          "sku": "601201",
+          "sourceId": 10243,
+          "sourceSlug": "assorted-baklava-450g",
+          "logistics": {
+            "piecesPerBox": 12,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 60
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -501,26 +424,9 @@
       "variants": [
         {
           "label": {
-            "tr": "450g",
-            "fr": "450g",
-            "de": "450g"
-          },
-          "netWeightG": 450,
-          "piecesCount": 12,
-          "sku": "600102",
-          "sourceId": 9245,
-          "sourceSlug": "baklava-with-pistachio-450g-12-pieces",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          }
-        },
-        {
-          "label": {
-            "tr": "225g",
-            "fr": "225g",
-            "de": "225g"
+            "tr": "225 g",
+            "fr": "225 g",
+            "de": "225 g"
           },
           "netWeightG": 225,
           "piecesCount": 6,
@@ -531,30 +437,32 @@
             "piecesPerBox": 6,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 144
-          }
-        },
-        {
-          "label": {
-            "tr": "2500g",
-            "fr": "2500g",
-            "de": "2500g"
           },
-          "netWeightG": 2500,
-          "piecesCount": 72,
-          "sku": "600101",
-          "sourceId": 9218,
-          "sourceSlug": "baklava-with-pistachio-2500g-72-pieces",
-          "logistics": {
-            "piecesPerBox": 72,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 48
-          }
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "450 g",
+            "fr": "450 g",
+            "de": "450 g"
+          },
+          "netWeightG": 450,
+          "piecesCount": 12,
+          "sku": "600102",
+          "sourceId": 9245,
+          "sourceSlug": "baklava-with-pistachio-450g-12-pieces",
+          "logistics": {
+            "piecesPerBox": 12,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 60
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 36,
@@ -565,7 +473,26 @@
             "piecesPerBox": 36,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2500 g",
+            "fr": "2500 g",
+            "de": "2500 g"
+          },
+          "netWeightG": 2500,
+          "piecesCount": 72,
+          "sku": "600101",
+          "sourceId": 9218,
+          "sourceSlug": "baklava-with-pistachio-2500g-72-pieces",
+          "logistics": {
+            "piecesPerBox": 72,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 48
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -595,26 +522,9 @@
       "variants": [
         {
           "label": {
-            "tr": "450g",
-            "fr": "450g",
-            "de": "450g"
-          },
-          "netWeightG": 450,
-          "piecesCount": 12,
-          "sku": "600202",
-          "sourceId": 9420,
-          "sourceSlug": "baklava-with-walnut-450g-12-pieces",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          }
-        },
-        {
-          "label": {
-            "tr": "225g",
-            "fr": "225g",
-            "de": "225g"
+            "tr": "225 g",
+            "fr": "225 g",
+            "de": "225 g"
           },
           "netWeightG": 225,
           "piecesCount": 6,
@@ -625,30 +535,32 @@
             "piecesPerBox": 6,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 144
-          }
-        },
-        {
-          "label": {
-            "tr": "2500g",
-            "fr": "2500g",
-            "de": "2500g"
           },
-          "netWeightG": 2500,
-          "piecesCount": 72,
-          "sku": "600201",
-          "sourceId": 9416,
-          "sourceSlug": "baklava-with-walnut-2500g",
-          "logistics": {
-            "piecesPerBox": 72,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 48
-          }
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "450 g",
+            "fr": "450 g",
+            "de": "450 g"
+          },
+          "netWeightG": 450,
+          "piecesCount": 12,
+          "sku": "600202",
+          "sourceId": 9420,
+          "sourceSlug": "baklava-with-walnut-450g-12-pieces",
+          "logistics": {
+            "piecesPerBox": 12,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 60
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 36,
@@ -659,7 +571,26 @@
             "piecesPerBox": 36,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2500 g",
+            "fr": "2500 g",
+            "de": "2500 g"
+          },
+          "netWeightG": 2500,
+          "piecesCount": 72,
+          "sku": "600201",
+          "sourceId": 9416,
+          "sourceSlug": "baklava-with-walnut-2500g",
+          "logistics": {
+            "piecesPerBox": 72,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 48
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -684,8 +615,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1600 g",
+            "fr": "1600 g",
+            "de": "1600 g"
+          },
+          "netWeightG": 1600,
           "piecesCount": 12,
           "sku": "900401",
           "sourceId": 10015,
@@ -694,7 +629,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -720,12 +656,12 @@
       "variants": [
         {
           "label": {
-            "tr": "580g",
-            "fr": "580g",
-            "de": "580g"
+            "tr": "580 g",
+            "fr": "580 g",
+            "de": "580 g"
           },
           "netWeightG": 580,
-          "piecesCount": null,
+          "piecesCount": 7,
           "sku": "900308",
           "sourceId": 10174,
           "sourceSlug": "blueberry-peach-cake-580g",
@@ -733,7 +669,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 49
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -763,9 +700,9 @@
       "variants": [
         {
           "label": {
-            "tr": "420g",
-            "fr": "420g",
-            "de": "420g"
+            "tr": "4 × 105 g",
+            "fr": "4 × 105 g",
+            "de": "4 × 105 g"
           },
           "netWeightG": 420,
           "piecesCount": 4,
@@ -776,30 +713,14 @@
             "piecesPerBox": 4,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 60
-          }
-        },
-        {
-          "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
           },
-          "netWeightG": 2000,
-          "piecesCount": 20,
-          "sku": "600403",
-          "sourceId": 9431,
-          "sourceSlug": "carrot-slice-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 20,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 36
-          }
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "1350g",
-            "fr": "1350g",
-            "de": "1350g"
+            "tr": "1350 g",
+            "fr": "1350 g",
+            "de": "1350 g"
           },
           "netWeightG": 1350,
           "piecesCount": 16,
@@ -810,7 +731,26 @@
             "piecesPerBox": 16,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 30
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "20 × 100 g",
+            "fr": "20 × 100 g",
+            "de": "20 × 100 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 20,
+          "sku": "600403",
+          "sourceId": 9431,
+          "sourceSlug": "carrot-slice-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 20,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 36
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -835,9 +775,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -848,7 +788,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -873,9 +814,9 @@
       "variants": [
         {
           "label": {
-            "tr": "80g",
-            "fr": "80g",
-            "de": "80g"
+            "tr": "80 g",
+            "fr": "80 g",
+            "de": "80 g"
           },
           "netWeightG": 80,
           "piecesCount": null,
@@ -886,7 +827,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 50,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -914,26 +856,9 @@
       "variants": [
         {
           "label": {
-            "tr": "4x80g",
-            "fr": "4x80g",
-            "de": "4x80g"
-          },
-          "netWeightG": 320,
-          "piecesCount": 4,
-          "sku": "700202",
-          "sourceId": 9770,
-          "sourceSlug": "cheese-filled-pastry-4x80g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 48
-          }
-        },
-        {
-          "label": {
-            "tr": "130g",
-            "fr": "130g",
-            "de": "130g"
+            "tr": "130 g",
+            "fr": "130 g",
+            "de": "130 g"
           },
           "netWeightG": 130,
           "piecesCount": null,
@@ -944,7 +869,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 90,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "4 × 80 g",
+            "fr": "4 × 80 g",
+            "de": "4 × 80 g"
+          },
+          "netWeightG": 320,
+          "piecesCount": 4,
+          "sku": "700202",
+          "sourceId": 9770,
+          "sourceSlug": "cheese-filled-pastry-4x80g",
+          "logistics": {
+            "piecesPerBox": 4,
+            "boxesPerParcel": 24,
+            "parcelsPerPallet": 48
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -999,9 +943,21 @@
       "variants": [
         {
           "label": {
-            "tr": "800g",
-            "fr": "800g",
-            "de": "800g"
+            "tr": "500 g",
+            "fr": "500 g",
+            "de": "500 g"
+          },
+          "netWeightG": 500,
+          "piecesCount": null,
+          "sku": "700401",
+          "sourceId": 9756,
+          "sourceSlug": "cheese-pastry-su-borek-500g"
+        },
+        {
+          "label": {
+            "tr": "800 g",
+            "fr": "800 g",
+            "de": "800 g"
           },
           "netWeightG": 800,
           "piecesCount": null,
@@ -1012,25 +968,14 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 54
-          }
-        },
-        {
-          "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
           },
-          "netWeightG": 500,
-          "piecesCount": null,
-          "sku": "700401",
-          "sourceId": 9756,
-          "sourceSlug": "cheese-pastry-su-borek-500g"
+          "portionKind": null
         },
         {
           "label": {
-            "tr": "2500g",
-            "fr": "2500g",
-            "de": "2500g"
+            "tr": "2500 g",
+            "fr": "2500 g",
+            "de": "2500 g"
           },
           "netWeightG": 2500,
           "piecesCount": 12,
@@ -1041,7 +986,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -1068,9 +1014,21 @@
       "variants": [
         {
           "label": {
-            "tr": "480g",
-            "fr": "480g",
-            "de": "480g"
+            "tr": "40 g",
+            "fr": "40 g",
+            "de": "40 g"
+          },
+          "netWeightG": 40,
+          "piecesCount": null,
+          "sku": "700708",
+          "sourceId": 9846,
+          "sourceSlug": "cheese-rolls-handmade-40g"
+        },
+        {
+          "label": {
+            "tr": "12 × 40 g",
+            "fr": "12 × 40 g",
+            "de": "12 × 40 g"
           },
           "netWeightG": 480,
           "piecesCount": 12,
@@ -1081,19 +1039,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
-        },
-        {
-          "label": {
-            "tr": "40g",
-            "fr": "40g",
-            "de": "40g"
           },
-          "netWeightG": 40,
-          "piecesCount": null,
-          "sku": "700708",
-          "sourceId": 9846,
-          "sourceSlug": "cheese-rolls-handmade-40g"
+          "portionKind": "item"
         }
       ]
     },
@@ -1118,9 +1065,9 @@
       "variants": [
         {
           "label": {
-            "tr": "700g",
-            "fr": "700g",
-            "de": "700g"
+            "tr": "10 × 70 g",
+            "fr": "10 × 70 g",
+            "de": "10 × 70 g"
           },
           "netWeightG": 700,
           "piecesCount": 10,
@@ -1131,7 +1078,8 @@
             "piecesPerBox": 10,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 80
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1159,26 +1107,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": 54,
-          "sku": "600903",
-          "sourceId": 9566,
-          "sourceSlug": "chocolate-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 54,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          }
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 36,
@@ -1189,7 +1120,26 @@
             "piecesPerBox": 36,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 54,
+          "sku": "600903",
+          "sourceId": 9566,
+          "sourceSlug": "chocolate-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 54,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 56
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1214,12 +1164,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900415",
           "sourceId": 10210,
           "sourceSlug": "chocolate-cake-cup-165g",
@@ -1227,7 +1177,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -1253,9 +1204,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "2 × 100 g",
+            "fr": "2 × 100 g",
+            "de": "2 × 100 g"
           },
           "netWeightG": 200,
           "piecesCount": 2,
@@ -1266,7 +1217,8 @@
             "piecesPerBox": 2,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 110
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1292,11 +1244,11 @@
       "variants": [
         {
           "label": {
-            "tr": "1850g",
-            "fr": "1850g",
-            "de": "1850g"
+            "tr": "1500 g",
+            "fr": "1500 g",
+            "de": "1500 g"
           },
-          "netWeightG": 1850,
+          "netWeightG": 1500,
           "piecesCount": 36,
           "sku": "600807",
           "sourceId": 9622,
@@ -1305,7 +1257,8 @@
             "piecesPerBox": 36,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1333,9 +1286,9 @@
       "variants": [
         {
           "label": {
-            "tr": "400g",
-            "fr": "400g",
-            "de": "400g"
+            "tr": "10 × 40 g",
+            "fr": "10 × 40 g",
+            "de": "10 × 40 g"
           },
           "netWeightG": 400,
           "piecesCount": 10,
@@ -1346,15 +1299,16 @@
             "piecesPerBox": 10,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 104
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "1850g",
-            "fr": "1850g",
-            "de": "1850g"
+            "tr": "1500 g",
+            "fr": "1500 g",
+            "de": "1500 g"
           },
-          "netWeightG": 1850,
+          "netWeightG": 1500,
           "piecesCount": 36,
           "sku": "600809",
           "sourceId": 9625,
@@ -1363,7 +1317,8 @@
             "piecesPerBox": 36,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1390,26 +1345,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1080g",
-            "fr": "1080g",
-            "de": "1080g"
-          },
-          "netWeightG": 1080,
-          "piecesCount": 12,
-          "sku": "312681",
-          "sourceId": 10390,
-          "sourceSlug": "crispy-chicken-burger-1080g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 70
-          }
-        },
-        {
-          "label": {
-            "tr": "720g",
-            "fr": "720g",
-            "de": "720g"
+            "tr": "8 × 90 g",
+            "fr": "8 × 90 g",
+            "de": "8 × 90 g"
           },
           "netWeightG": 720,
           "piecesCount": 8,
@@ -1420,7 +1358,26 @@
             "piecesPerBox": 8,
             "boxesPerParcel": 14,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "12 × 90 g",
+            "fr": "12 × 90 g",
+            "de": "12 × 90 g"
+          },
+          "netWeightG": 1080,
+          "piecesCount": 12,
+          "sku": "312681",
+          "sourceId": 10390,
+          "sourceSlug": "crispy-chicken-burger-1080g",
+          "logistics": {
+            "piecesPerBox": 12,
+            "boxesPerParcel": 10,
+            "parcelsPerPallet": 70
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1447,26 +1404,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
-          },
-          "netWeightG": 1000,
-          "piecesCount": 43,
-          "sku": "311101",
-          "sourceId": 10392,
-          "sourceSlug": "crispy-chicken-nugget-1000g",
-          "logistics": {
-            "piecesPerBox": 43,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 70
-          }
-        },
-        {
-          "label": {
-            "tr": "720g",
-            "fr": "720g",
-            "de": "720g"
+            "tr": "30 × 24 g",
+            "fr": "30 × 24 g",
+            "de": "30 × 24 g"
           },
           "netWeightG": 720,
           "piecesCount": 30,
@@ -1477,7 +1417,26 @@
             "piecesPerBox": 30,
             "boxesPerParcel": 14,
             "parcelsPerPallet": 80
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
+          },
+          "netWeightG": 1000,
+          "piecesCount": 43,
+          "sku": "311101",
+          "sourceId": 10392,
+          "sourceSlug": "crispy-chicken-nugget-1000g",
+          "logistics": {
+            "piecesPerBox": 43,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 70
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1502,9 +1461,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": 18,
@@ -1515,7 +1474,8 @@
             "piecesPerBox": 18,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1540,9 +1500,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": 18,
@@ -1553,7 +1513,8 @@
             "piecesPerBox": 18,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1578,9 +1539,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": 14,
@@ -1591,7 +1552,8 @@
             "piecesPerBox": 14,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1616,9 +1578,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": 14,
@@ -1629,7 +1591,8 @@
             "piecesPerBox": 14,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1655,45 +1618,9 @@
       "variants": [
         {
           "label": {
-            "tr": "175g",
-            "fr": "175g",
-            "de": "175g"
-          },
-          "netWeightG": 175,
-          "piecesCount": 9,
-          "sku": "901817",
-          "sourceId": 10186,
-          "sourceSlug": "dark-chocolate-profiterol-cake-175g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          }
-        }
-      ]
-    },
-    {
-      "slug": "dark-chocolate-profiterol-cake-mono",
-      "name": {
-        "tr": "Dark Chocolate Profiterol Cake mono",
-        "fr": "Dark Chocolate Profiterol Cake mono",
-        "de": "Dark Chocolate Profiterol Cake mono"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": null,
-      "imageUrls": [],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "175g",
-            "fr": "175g",
-            "de": "175g"
+            "tr": "175 g",
+            "fr": "175 g",
+            "de": "175 g"
           },
           "netWeightG": 175,
           "piecesCount": null,
@@ -1704,7 +1631,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 120
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 175 g",
+            "fr": "9 × 175 g",
+            "de": "9 × 175 g"
+          },
+          "netWeightG": 1575,
+          "piecesCount": 9,
+          "sku": "901817",
+          "sourceId": 10186,
+          "sourceSlug": "dark-chocolate-profiterol-cake-175g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 60
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1729,8 +1675,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1700 g",
+            "fr": "1700 g",
+            "de": "1700 g"
+          },
+          "netWeightG": 1700,
           "piecesCount": 12,
           "sku": "902301",
           "sourceId": 10024,
@@ -1739,7 +1689,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -1764,8 +1715,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1600 g",
+            "fr": "1600 g",
+            "de": "1600 g"
+          },
+          "netWeightG": 1600,
           "piecesCount": 12,
           "sku": "900201",
           "sourceId": 10009,
@@ -1774,7 +1729,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -1799,9 +1755,9 @@
       "variants": [
         {
           "label": {
-            "tr": "120g",
-            "fr": "120g",
-            "de": "120g"
+            "tr": "120 g",
+            "fr": "120 g",
+            "de": "120 g"
           },
           "netWeightG": 120,
           "piecesCount": null,
@@ -1854,9 +1810,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "8 × 125 g",
+            "fr": "8 × 125 g",
+            "de": "8 × 125 g"
           },
           "netWeightG": 1000,
           "piecesCount": 8,
@@ -1867,7 +1823,8 @@
             "piecesPerBox": 8,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 63
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -1892,9 +1849,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -1905,7 +1862,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -1930,9 +1888,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -1943,7 +1901,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -1968,9 +1927,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -1981,7 +1940,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2006,9 +1966,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -2019,7 +1979,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2044,9 +2005,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -2057,7 +2018,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2082,9 +2044,9 @@
       "variants": [
         {
           "label": {
-            "tr": "300g",
-            "fr": "300g",
-            "de": "300g"
+            "tr": "300 g",
+            "fr": "300 g",
+            "de": "300 g"
           },
           "netWeightG": 300,
           "piecesCount": null,
@@ -2095,7 +2057,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2122,27 +2085,27 @@
       "variants": [
         {
           "label": {
-            "tr": "4x150g",
-            "fr": "4x150g",
-            "de": "4x150g"
-          },
-          "netWeightG": 600,
-          "piecesCount": 4,
-          "sku": "701304",
-          "sourceId": 9923,
-          "sourceSlug": "gobit-bread-4x150g"
-        },
-        {
-          "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
           "sku": "701306",
           "sourceId": 9921,
           "sourceSlug": "gobit-bread-150g"
+        },
+        {
+          "label": {
+            "tr": "4 × 150 g",
+            "fr": "4 × 150 g",
+            "de": "4 × 150 g"
+          },
+          "netWeightG": 600,
+          "piecesCount": 4,
+          "sku": "701304",
+          "sourceId": 9923,
+          "sourceSlug": "gobit-bread-4x150g"
         }
       ]
     },
@@ -2168,9 +2131,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 28,
@@ -2181,7 +2144,8 @@
             "piecesPerBox": 28,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -2206,9 +2170,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -2219,7 +2183,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2244,12 +2209,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900411",
           "sourceId": 10202,
           "sourceSlug": "italian-tiramisu-cup-165g",
@@ -2257,7 +2222,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2282,12 +2248,12 @@
       "variants": [
         {
           "label": {
-            "tr": "75g",
-            "fr": "75g",
-            "de": "75g"
+            "tr": "75 g",
+            "fr": "75 g",
+            "de": "75 g"
           },
           "netWeightG": 75,
-          "piecesCount": 60,
+          "piecesCount": null,
           "sku": "700310",
           "sourceId": 10227,
           "sourceSlug": "izmir-boyoz-75g",
@@ -2295,7 +2261,8 @@
             "piecesPerBox": 60,
             "boxesPerParcel": 1,
             "parcelsPerPallet": 96
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2320,9 +2287,9 @@
       "variants": [
         {
           "label": {
-            "tr": "140g",
-            "fr": "140g",
-            "de": "140g"
+            "tr": "140 g",
+            "fr": "140 g",
+            "de": "140 g"
           },
           "netWeightG": 140,
           "piecesCount": null,
@@ -2333,7 +2300,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 45,
             "parcelsPerPallet": 40
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2358,9 +2326,9 @@
       "variants": [
         {
           "label": {
-            "tr": "145g",
-            "fr": "145g",
-            "de": "145g"
+            "tr": "145 g",
+            "fr": "145 g",
+            "de": "145 g"
           },
           "netWeightG": 145,
           "piecesCount": null,
@@ -2371,7 +2339,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 24,
             "parcelsPerPallet": 120
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2420,11 +2389,11 @@
       "variants": [
         {
           "label": {
-            "tr": "420g",
-            "fr": "420g",
-            "de": "420g"
+            "tr": "145 g",
+            "fr": "145 g",
+            "de": "145 g"
           },
-          "netWeightG": 420,
+          "netWeightG": 145,
           "piecesCount": 2,
           "sku": "500103",
           "sourceId": 9663,
@@ -2433,7 +2402,8 @@
             "piecesPerBox": 2,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 120
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -2456,9 +2426,9 @@
       "variants": [
         {
           "label": {
-            "tr": "135g",
-            "fr": "135g",
-            "de": "135g"
+            "tr": "135 g",
+            "fr": "135 g",
+            "de": "135 g"
           },
           "netWeightG": 135,
           "piecesCount": 2,
@@ -2469,13 +2439,14 @@
             "piecesPerBox": 2,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 120
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "145g",
-            "fr": "145g",
-            "de": "145g"
+            "tr": "145 g",
+            "fr": "145 g",
+            "de": "145 g"
           },
           "netWeightG": 145,
           "piecesCount": null,
@@ -2486,7 +2457,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 192
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2513,11 +2485,11 @@
       "variants": [
         {
           "label": {
-            "tr": "5x170g",
-            "fr": "5x170g",
-            "de": "5x170g"
+            "tr": "5 × 34 g",
+            "fr": "5 × 34 g",
+            "de": "5 × 34 g"
           },
-          "netWeightG": 850,
+          "netWeightG": 170,
           "piecesCount": 5,
           "sku": "200105",
           "sourceId": 9976,
@@ -2526,15 +2498,16 @@
             "piecesPerBox": 5,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 66
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "3x180g",
-            "fr": "3x180g",
-            "de": "3x180g"
+            "tr": "3 × 60 g",
+            "fr": "3 × 60 g",
+            "de": "3 × 60 g"
           },
-          "netWeightG": 540,
+          "netWeightG": 180,
           "piecesCount": 3,
           "sku": "200103",
           "sourceId": 9973,
@@ -2543,7 +2516,8 @@
             "piecesPerBox": 3,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -2568,8 +2542,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1600 g",
+            "fr": "1600 g",
+            "de": "1600 g"
+          },
+          "netWeightG": 1600,
           "piecesCount": 12,
           "sku": "900801",
           "sourceId": 10021,
@@ -2578,7 +2556,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -2603,8 +2582,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "12 × 150 g",
+            "fr": "12 × 150 g",
+            "de": "12 × 150 g"
+          },
+          "netWeightG": 1800,
           "piecesCount": 12,
           "sku": "901809",
           "sourceId": 10031,
@@ -2613,7 +2596,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -2639,9 +2623,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -2652,7 +2636,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 150
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2678,8 +2663,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "800 g",
+            "fr": "800 g",
+            "de": "800 g"
+          },
+          "netWeightG": 800,
           "piecesCount": null,
           "sku": "900808",
           "sourceId": 10169,
@@ -2688,7 +2677,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2714,9 +2704,9 @@
       "variants": [
         {
           "label": {
-            "tr": "250g",
-            "fr": "250g",
-            "de": "250g"
+            "tr": "250 g",
+            "fr": "250 g",
+            "de": "250 g"
           },
           "netWeightG": 250,
           "piecesCount": null,
@@ -2727,7 +2717,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 15,
             "parcelsPerPallet": 99
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2753,9 +2744,9 @@
       "variants": [
         {
           "label": {
-            "tr": "250g",
-            "fr": "250g",
-            "de": "250g"
+            "tr": "250 g",
+            "fr": "250 g",
+            "de": "250 g"
           },
           "netWeightG": 250,
           "piecesCount": null,
@@ -2766,7 +2757,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 15,
             "parcelsPerPallet": 99
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2793,26 +2785,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
-          },
-          "netWeightG": 500,
-          "piecesCount": null,
-          "sku": "111101",
-          "sourceId": 9962,
-          "sourceSlug": "maras-ice-cream-plain-500g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 9,
-            "parcelsPerPallet": 99
-          }
-        },
-        {
-          "label": {
-            "tr": "250g",
-            "fr": "250g",
-            "de": "250g"
+            "tr": "250 g",
+            "fr": "250 g",
+            "de": "250 g"
           },
           "netWeightG": 250,
           "piecesCount": null,
@@ -2823,7 +2798,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 15,
             "parcelsPerPallet": 99
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "500 g",
+            "fr": "500 g",
+            "de": "500 g"
+          },
+          "netWeightG": 500,
+          "piecesCount": null,
+          "sku": "111101",
+          "sourceId": 9962,
+          "sourceSlug": "maras-ice-cream-plain-500g",
+          "logistics": {
+            "piecesPerBox": 1,
+            "boxesPerParcel": 9,
+            "parcelsPerPallet": 99
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2849,9 +2843,9 @@
       "variants": [
         {
           "label": {
-            "tr": "70g",
-            "fr": "70g",
-            "de": "70g"
+            "tr": "70 g",
+            "fr": "70 g",
+            "de": "70 g"
           },
           "netWeightG": 70,
           "piecesCount": null,
@@ -2862,7 +2856,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 72,
             "parcelsPerPallet": 101
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2888,9 +2883,9 @@
       "variants": [
         {
           "label": {
-            "tr": "70g",
-            "fr": "70g",
-            "de": "70g"
+            "tr": "70 g",
+            "fr": "70 g",
+            "de": "70 g"
           },
           "netWeightG": 70,
           "piecesCount": null,
@@ -2901,7 +2896,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 72,
             "parcelsPerPallet": 101
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2927,9 +2923,9 @@
       "variants": [
         {
           "label": {
-            "tr": "70g",
-            "fr": "70g",
-            "de": "70g"
+            "tr": "70 g",
+            "fr": "70 g",
+            "de": "70 g"
           },
           "netWeightG": 70,
           "piecesCount": null,
@@ -2940,7 +2936,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 72,
             "parcelsPerPallet": 101
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -2966,9 +2963,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
+            "tr": "500 g",
+            "fr": "500 g",
+            "de": "500 g"
           },
           "netWeightG": 500,
           "piecesCount": null,
@@ -2979,7 +2976,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 9,
             "parcelsPerPallet": 99
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3007,26 +3005,9 @@
       "variants": [
         {
           "label": {
-            "tr": "250g",
-            "fr": "250g",
-            "de": "250g"
-          },
-          "netWeightG": 250,
-          "piecesCount": 5,
-          "sku": "701221",
-          "sourceId": 9740,
-          "sourceSlug": "mini-pide-with-cheese-250g",
-          "logistics": {
-            "piecesPerBox": 5,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 96
-          }
-        },
-        {
-          "label": {
-            "tr": "50g",
-            "fr": "50g",
-            "de": "50g"
+            "tr": "50 g",
+            "fr": "50 g",
+            "de": "50 g"
           },
           "netWeightG": 50,
           "piecesCount": null,
@@ -3037,7 +3018,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 80,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "5 × 50 g",
+            "fr": "5 × 50 g",
+            "de": "5 × 50 g"
+          },
+          "netWeightG": 250,
+          "piecesCount": 5,
+          "sku": "701221",
+          "sourceId": 9740,
+          "sourceSlug": "mini-pide-with-cheese-250g",
+          "logistics": {
+            "piecesPerBox": 5,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 96
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3065,26 +3065,9 @@
       "variants": [
         {
           "label": {
-            "tr": "250g",
-            "fr": "250g",
-            "de": "250g"
-          },
-          "netWeightG": 250,
-          "piecesCount": 5,
-          "sku": "701222",
-          "sourceId": 9743,
-          "sourceSlug": "mini-pide-with-spinach-cheese-250g",
-          "logistics": {
-            "piecesPerBox": 5,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 96
-          }
-        },
-        {
-          "label": {
-            "tr": "50g",
-            "fr": "50g",
-            "de": "50g"
+            "tr": "50 g",
+            "fr": "50 g",
+            "de": "50 g"
           },
           "netWeightG": 50,
           "piecesCount": null,
@@ -3095,7 +3078,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 80,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "5 × 50 g",
+            "fr": "5 × 50 g",
+            "de": "5 × 50 g"
+          },
+          "netWeightG": 250,
+          "piecesCount": 5,
+          "sku": "701222",
+          "sourceId": 9743,
+          "sourceSlug": "mini-pide-with-spinach-cheese-250g",
+          "logistics": {
+            "piecesPerBox": 5,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 96
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3121,9 +3123,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
+            "tr": "10 × 50 g",
+            "fr": "10 × 50 g",
+            "de": "10 × 50 g"
           },
           "netWeightG": 500,
           "piecesCount": 10,
@@ -3134,7 +3136,8 @@
             "piecesPerBox": 10,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3160,9 +3163,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
+            "tr": "10 × 50 g",
+            "fr": "10 × 50 g",
+            "de": "10 × 50 g"
           },
           "netWeightG": 500,
           "piecesCount": 10,
@@ -3173,7 +3176,8 @@
             "piecesPerBox": 10,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3201,26 +3205,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": 48,
-          "sku": "600802",
-          "sourceId": 9553,
-          "sourceSlug": "mussel-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 48,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          }
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 40,
@@ -3231,7 +3218,26 @@
             "piecesPerBox": 40,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 48,
+          "sku": "600802",
+          "sourceId": 9553,
+          "sourceSlug": "mussel-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 48,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 56
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3256,9 +3262,9 @@
       "variants": [
         {
           "label": {
-            "tr": "130g",
-            "fr": "130g",
-            "de": "130g"
+            "tr": "130 g",
+            "fr": "130 g",
+            "de": "130 g"
           },
           "netWeightG": 130,
           "piecesCount": null,
@@ -3269,7 +3275,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 90,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3295,9 +3302,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -3308,7 +3315,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 156
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3333,9 +3341,9 @@
       "variants": [
         {
           "label": {
-            "tr": "300g",
-            "fr": "300g",
-            "de": "300g"
+            "tr": "2 × 150 g",
+            "fr": "2 × 150 g",
+            "de": "2 × 150 g"
           },
           "netWeightG": 300,
           "piecesCount": 2,
@@ -3346,7 +3354,8 @@
             "piecesPerBox": 2,
             "boxesPerParcel": 20,
             "parcelsPerPallet": 84
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3371,12 +3380,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900414",
           "sourceId": 10208,
           "sourceSlug": "pistachio-cake-cup-165g",
@@ -3384,7 +3393,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3409,9 +3419,13 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
-          "piecesCount": null,
+          "label": {
+            "tr": "550 g",
+            "fr": "550 g",
+            "de": "550 g"
+          },
+          "netWeightG": 550,
+          "piecesCount": 7,
           "sku": "900104",
           "sourceId": 10167,
           "sourceSlug": "pistachio-cream-cake",
@@ -3419,7 +3433,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -3447,27 +3462,27 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": null,
-          "sku": "600301",
-          "sourceId": 9631,
-          "sourceSlug": "pistachio-kadaifi-2000g"
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": null,
           "sku": "600608",
           "sourceId": 9628,
           "sourceSlug": "pistachio-kadaifi-1250g"
+        },
+        {
+          "label": {
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": null,
+          "sku": "600301",
+          "sourceId": 9631,
+          "sourceSlug": "pistachio-kadaifi-2000g"
         }
       ]
     },
@@ -3495,26 +3510,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": 56,
-          "sku": "600503",
-          "sourceId": 9593,
-          "sourceSlug": "pistachio-rolls-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 56,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          }
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 48,
@@ -3525,7 +3523,26 @@
             "piecesPerBox": 48,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 56,
+          "sku": "600503",
+          "sourceId": 9593,
+          "sourceSlug": "pistachio-rolls-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 56,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 56
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3553,26 +3570,9 @@
       "variants": [
         {
           "label": {
-            "tr": "4x80g",
-            "fr": "4x80g",
-            "de": "4x80g"
-          },
-          "netWeightG": 320,
-          "piecesCount": 4,
-          "sku": "700201",
-          "sourceId": 9765,
-          "sourceSlug": "plain-pastry-4x80g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 44
-          }
-        },
-        {
-          "label": {
-            "tr": "130g",
-            "fr": "130g",
-            "de": "130g"
+            "tr": "130 g",
+            "fr": "130 g",
+            "de": "130 g"
           },
           "netWeightG": 130,
           "piecesCount": null,
@@ -3583,7 +3583,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 90,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "4 × 80 g",
+            "fr": "4 × 80 g",
+            "de": "4 × 80 g"
+          },
+          "netWeightG": 320,
+          "piecesCount": 4,
+          "sku": "700201",
+          "sourceId": 9765,
+          "sourceSlug": "plain-pastry-4x80g",
+          "logistics": {
+            "piecesPerBox": 4,
+            "boxesPerParcel": 24,
+            "parcelsPerPallet": 44
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3608,9 +3627,9 @@
       "variants": [
         {
           "label": {
-            "tr": "130g",
-            "fr": "130g",
-            "de": "130g"
+            "tr": "130 g",
+            "fr": "130 g",
+            "de": "130 g"
           },
           "netWeightG": 130,
           "piecesCount": null,
@@ -3621,7 +3640,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 90,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3647,45 +3667,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
-          },
-          "netWeightG": 150,
-          "piecesCount": 9,
-          "sku": "903109",
-          "sourceId": 10180,
-          "sourceSlug": "rainbow-velvet-cake-150g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 66
-          }
-        }
-      ]
-    },
-    {
-      "slug": "rainbow-velvet-cake-mono",
-      "name": {
-        "tr": "Rainbow Velvet Cake mono",
-        "fr": "Rainbow Velvet Cake mono",
-        "de": "Rainbow Velvet Cake mono"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": null,
-      "imageUrls": [],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -3696,7 +3680,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 120
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 150 g",
+            "fr": "9 × 150 g",
+            "de": "9 × 150 g"
+          },
+          "netWeightG": 1350,
+          "piecesCount": 9,
+          "sku": "903109",
+          "sourceId": 10180,
+          "sourceSlug": "rainbow-velvet-cake-150g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 66
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3721,8 +3724,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "12 × 150 g",
+            "fr": "12 × 150 g",
+            "de": "12 × 150 g"
+          },
+          "netWeightG": 1800,
           "piecesCount": 12,
           "sku": "901804",
           "sourceId": 10027,
@@ -3731,7 +3738,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -3756,12 +3764,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900416",
           "sourceId": 10212,
           "sourceSlug": "raspberry-cheesecake-cup-165g",
@@ -3769,7 +3777,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3795,9 +3804,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -3808,7 +3817,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 150
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3834,45 +3844,9 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
-          },
-          "netWeightG": 165,
-          "piecesCount": 9,
-          "sku": "900906",
-          "sourceId": 10177,
-          "sourceSlug": "red-velvet-cake-165g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          }
-        }
-      ]
-    },
-    {
-      "slug": "red-velvet-cake-mono",
-      "name": {
-        "tr": "Red Velvet Cake mono",
-        "fr": "Red Velvet Cake mono",
-        "de": "Red Velvet Cake mono"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": null,
-      "imageUrls": [],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
           "piecesCount": null,
@@ -3883,7 +3857,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 120
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 165 g",
+            "fr": "9 × 165 g",
+            "de": "9 × 165 g"
+          },
+          "netWeightG": 1485,
+          "piecesCount": 9,
+          "sku": "900906",
+          "sourceId": 10177,
+          "sourceSlug": "red-velvet-cake-165g",
+          "logistics": {
+            "piecesPerBox": 9,
+            "boxesPerParcel": 4,
+            "parcelsPerPallet": 60
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -3908,12 +3901,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900412",
           "sourceId": 10204,
           "sourceSlug": "red-velvet-cup-165g",
@@ -3921,7 +3914,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -3946,8 +3940,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1600 g",
+            "fr": "1600 g",
+            "de": "1600 g"
+          },
+          "netWeightG": 1600,
           "piecesCount": 12,
           "sku": "900901",
           "sourceId": 10012,
@@ -3956,7 +3954,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -3981,9 +3980,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -3994,7 +3993,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4019,8 +4019,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1400 g",
+            "fr": "1400 g",
+            "de": "1400 g"
+          },
+          "netWeightG": 1400,
           "piecesCount": 12,
           "sku": "901807",
           "sourceId": 10034,
@@ -4029,7 +4033,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -4054,9 +4059,9 @@
       "variants": [
         {
           "label": {
-            "tr": "130g",
-            "fr": "130g",
-            "de": "130g"
+            "tr": "130 g",
+            "fr": "130 g",
+            "de": "130 g"
           },
           "netWeightG": 130,
           "piecesCount": null,
@@ -4067,7 +4072,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 80,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4093,9 +4099,9 @@
       "variants": [
         {
           "label": {
-            "tr": "320g",
-            "fr": "320g",
-            "de": "320g"
+            "tr": "4 × 80 g",
+            "fr": "4 × 80 g",
+            "de": "4 × 80 g"
           },
           "netWeightG": 320,
           "piecesCount": 4,
@@ -4106,7 +4112,8 @@
             "piecesPerBox": 4,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 44
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4131,9 +4138,9 @@
       "variants": [
         {
           "label": {
-            "tr": "130g",
-            "fr": "130g",
-            "de": "130g"
+            "tr": "130 g",
+            "fr": "130 g",
+            "de": "130 g"
           },
           "netWeightG": 130,
           "piecesCount": null,
@@ -4144,7 +4151,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 80,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4172,26 +4180,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": 40,
-          "sku": "600702",
-          "sourceId": 9559,
-          "sourceSlug": "sobiyet-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 40,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          }
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 28,
@@ -4202,7 +4193,26 @@
             "piecesPerBox": 28,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "40 × 50 g",
+            "fr": "40 × 50 g",
+            "de": "40 × 50 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 40,
+          "sku": "600702",
+          "sourceId": 9559,
+          "sourceSlug": "sobiyet-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 40,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 56
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4230,26 +4240,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": 76,
-          "sku": "601102",
-          "sourceId": 9615,
-          "sourceSlug": "special-antep-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 76,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          }
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 48,
@@ -4260,7 +4253,26 @@
             "piecesPerBox": 48,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 76,
+          "sku": "601102",
+          "sourceId": 9615,
+          "sourceSlug": "special-antep-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 76,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 56
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4283,9 +4295,9 @@
       "variants": [
         {
           "label": {
-            "tr": "145g",
-            "fr": "145g",
-            "de": "145g"
+            "tr": "145 g",
+            "fr": "145 g",
+            "de": "145 g"
           },
           "netWeightG": 145,
           "piecesCount": null,
@@ -4296,7 +4308,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 192
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4321,8 +4334,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1600 g",
+            "fr": "1600 g",
+            "de": "1600 g"
+          },
+          "netWeightG": 1600,
           "piecesCount": 12,
           "sku": "900105",
           "sourceId": 10005,
@@ -4331,7 +4348,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -4359,26 +4377,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
-          },
-          "netWeightG": 2000,
-          "piecesCount": 28,
-          "sku": "600602",
-          "sourceId": 9599,
-          "sourceSlug": "special-square-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 28,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          }
-        },
-        {
-          "label": {
-            "tr": "1250g",
-            "fr": "1250g",
-            "de": "1250g"
+            "tr": "1250 g",
+            "fr": "1250 g",
+            "de": "1250 g"
           },
           "netWeightG": 1250,
           "piecesCount": 15,
@@ -4389,7 +4390,26 @@
             "piecesPerBox": 15,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 36
-          }
+          },
+          "portionKind": "item"
+        },
+        {
+          "label": {
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
+          },
+          "netWeightG": 2000,
+          "piecesCount": 28,
+          "sku": "600602",
+          "sourceId": 9599,
+          "sourceSlug": "special-square-baklava-2000g",
+          "logistics": {
+            "piecesPerBox": 28,
+            "boxesPerParcel": 5,
+            "parcelsPerPallet": 56
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4414,9 +4434,9 @@
       "variants": [
         {
           "label": {
-            "tr": "700g",
-            "fr": "700g",
-            "de": "700g"
+            "tr": "10 × 70 g",
+            "fr": "10 × 70 g",
+            "de": "10 × 70 g"
           },
           "netWeightG": 700,
           "piecesCount": 10,
@@ -4427,7 +4447,8 @@
             "piecesPerBox": 10,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 80
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4452,9 +4473,9 @@
       "variants": [
         {
           "label": {
-            "tr": "700g",
-            "fr": "700g",
-            "de": "700g"
+            "tr": "700 g",
+            "fr": "700 g",
+            "de": "700 g"
           },
           "netWeightG": 700,
           "piecesCount": 12,
@@ -4465,7 +4486,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 14,
             "parcelsPerPallet": 70
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4490,9 +4512,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -4503,7 +4525,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 8,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4529,9 +4552,9 @@
       "variants": [
         {
           "label": {
-            "tr": "800g",
-            "fr": "800g",
-            "de": "800g"
+            "tr": "800 g",
+            "fr": "800 g",
+            "de": "800 g"
           },
           "netWeightG": 800,
           "piecesCount": null,
@@ -4542,7 +4565,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 108
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4568,9 +4592,9 @@
       "variants": [
         {
           "label": {
-            "tr": "800g",
-            "fr": "800g",
-            "de": "800g"
+            "tr": "800 g",
+            "fr": "800 g",
+            "de": "800 g"
           },
           "netWeightG": 800,
           "piecesCount": null,
@@ -4581,7 +4605,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 108
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4607,9 +4632,9 @@
       "variants": [
         {
           "label": {
-            "tr": "800g",
-            "fr": "800g",
-            "de": "800g"
+            "tr": "800 g",
+            "fr": "800 g",
+            "de": "800 g"
           },
           "netWeightG": 800,
           "piecesCount": null,
@@ -4620,7 +4645,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 108
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4648,26 +4674,9 @@
       "variants": [
         {
           "label": {
-            "tr": "6x80g",
-            "fr": "6x80g",
-            "de": "6x80g"
-          },
-          "netWeightG": 480,
-          "piecesCount": 6,
-          "sku": "700701",
-          "sourceId": 10219,
-          "sourceSlug": "spiral-rose-borek-with-cheese-6x80g",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          }
-        },
-        {
-          "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -4678,7 +4687,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "6 × 80 g",
+            "fr": "6 × 80 g",
+            "de": "6 × 80 g"
+          },
+          "netWeightG": 480,
+          "piecesCount": 6,
+          "sku": "700701",
+          "sourceId": 10219,
+          "sourceSlug": "spiral-rose-borek-with-cheese-6x80g",
+          "logistics": {
+            "piecesPerBox": 6,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 88
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4703,9 +4731,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -4716,7 +4744,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4741,9 +4770,9 @@
       "variants": [
         {
           "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -4754,7 +4783,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4782,26 +4812,9 @@
       "variants": [
         {
           "label": {
-            "tr": "6x80g",
-            "fr": "6x80g",
-            "de": "6x80g"
-          },
-          "netWeightG": 480,
-          "piecesCount": 6,
-          "sku": "700703",
-          "sourceId": 10224,
-          "sourceSlug": "spiral-rose-borek-with-spinach-cheese-6x80g",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          }
-        },
-        {
-          "label": {
-            "tr": "200g",
-            "fr": "200g",
-            "de": "200g"
+            "tr": "200 g",
+            "fr": "200 g",
+            "de": "200 g"
           },
           "netWeightG": 200,
           "piecesCount": null,
@@ -4812,7 +4825,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 40,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "6 × 80 g",
+            "fr": "6 × 80 g",
+            "de": "6 × 80 g"
+          },
+          "netWeightG": 480,
+          "piecesCount": 6,
+          "sku": "700703",
+          "sourceId": 10224,
+          "sourceSlug": "spiral-rose-borek-with-spinach-cheese-6x80g",
+          "logistics": {
+            "piecesPerBox": 6,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 88
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -4837,9 +4869,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -4850,7 +4882,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 50,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4875,9 +4908,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -4888,7 +4921,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 50,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4913,9 +4947,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -4926,7 +4960,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 50,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4951,9 +4986,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -4964,7 +4999,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 50,
             "parcelsPerPallet": 72
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -4991,9 +5027,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
+            "tr": "500 g",
+            "fr": "500 g",
+            "de": "500 g"
           },
           "netWeightG": 500,
           "piecesCount": null,
@@ -5004,13 +5040,14 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
         },
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -5021,7 +5058,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 48
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5047,21 +5085,9 @@
       "variants": [
         {
           "label": {
-            "tr": "160g",
-            "fr": "160g",
-            "de": "160g"
-          },
-          "netWeightG": 160,
-          "piecesCount": null,
-          "sku": "700103",
-          "sourceId": 9308,
-          "sourceSlug": "sweet-turkish-bagel-simit-160g"
-        },
-        {
-          "label": {
-            "tr": "135g",
-            "fr": "135g",
-            "de": "135g"
+            "tr": "135 g",
+            "fr": "135 g",
+            "de": "135 g"
           },
           "netWeightG": 135,
           "piecesCount": null,
@@ -5072,7 +5098,20 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 80,
             "parcelsPerPallet": 52
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "160 g",
+            "fr": "160 g",
+            "de": "160 g"
+          },
+          "netWeightG": 160,
+          "piecesCount": null,
+          "sku": "700103",
+          "sourceId": 9308,
+          "sourceSlug": "sweet-turkish-bagel-simit-160g"
         }
       ]
     },
@@ -5098,11 +5137,29 @@
       "variants": [
         {
           "label": {
-            "tr": "145g",
-            "fr": "145g",
-            "de": "145g"
+            "tr": "145 g",
+            "fr": "145 g",
+            "de": "145 g"
           },
           "netWeightG": 145,
+          "piecesCount": null,
+          "sku": "901813",
+          "sourceId": null,
+          "sourceSlug": null,
+          "logistics": {
+            "piecesPerBox": 1,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 120
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "9 × 145 g",
+            "fr": "9 × 145 g",
+            "de": "9 × 145 g"
+          },
+          "netWeightG": 1305,
           "piecesCount": 9,
           "sku": "900306",
           "sourceId": 10183,
@@ -5111,7 +5168,8 @@
             "piecesPerBox": 9,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -5137,12 +5195,12 @@
       "variants": [
         {
           "label": {
-            "tr": "600g",
-            "fr": "600g",
-            "de": "600g"
+            "tr": "600 g",
+            "fr": "600 g",
+            "de": "600 g"
           },
           "netWeightG": 600,
-          "piecesCount": null,
+          "piecesCount": 7,
           "sku": "900304",
           "sourceId": 10172,
           "sourceSlug": "tiramisu-cake-600g",
@@ -5150,43 +5208,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 6,
             "parcelsPerPallet": 70
-          }
-        }
-      ]
-    },
-    {
-      "slug": "tiramisu-mono",
-      "name": {
-        "tr": "Tiramisu mono",
-        "fr": "Tiramisu mono",
-        "de": "Tiramisu mono"
-      },
-      "sourceLanguage": "en",
-      "category": "cake",
-      "brand": "Lezza",
-      "description": null,
-      "imageUrls": [],
-      "channels": [
-        "b2c"
-      ],
-      "declarations": null,
-      "variants": [
-        {
-          "label": {
-            "tr": "145g",
-            "fr": "145g",
-            "de": "145g"
           },
-          "netWeightG": 145,
-          "piecesCount": null,
-          "sku": "901813",
-          "sourceId": null,
-          "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          }
+          "portionKind": "slice"
         }
       ]
     },
@@ -5211,8 +5234,12 @@
       "declarations": null,
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "1450 g",
+            "fr": "1450 g",
+            "de": "1450 g"
+          },
+          "netWeightG": 1450,
           "piecesCount": 12,
           "sku": "900301",
           "sourceId": 10018,
@@ -5221,7 +5248,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 60
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -5246,12 +5274,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900413",
           "sourceId": 10206,
           "sourceSlug": "toffee-caramel-cake-cup-165g",
@@ -5259,7 +5287,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5285,9 +5314,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
           },
           "netWeightG": 2000,
           "piecesCount": 9,
@@ -5298,7 +5327,8 @@
             "piecesPerBox": 9,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 84
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -5323,12 +5353,12 @@
       "variants": [
         {
           "label": {
-            "tr": "165g",
-            "fr": "165g",
-            "de": "165g"
+            "tr": "165 g",
+            "fr": "165 g",
+            "de": "165 g"
           },
           "netWeightG": 165,
-          "piecesCount": 12,
+          "piecesCount": null,
           "sku": "900417",
           "sourceId": 10214,
           "sourceSlug": "tres-leches-caramel-cup-165g",
@@ -5336,7 +5366,8 @@
             "piecesPerBox": 12,
             "boxesPerParcel": 3,
             "parcelsPerPallet": 56
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5362,9 +5393,9 @@
       "variants": [
         {
           "label": {
-            "tr": "2000g",
-            "fr": "2000g",
-            "de": "2000g"
+            "tr": "2000 g",
+            "fr": "2000 g",
+            "de": "2000 g"
           },
           "netWeightG": 2000,
           "piecesCount": 9,
@@ -5375,7 +5406,8 @@
             "piecesPerBox": 9,
             "boxesPerParcel": 4,
             "parcelsPerPallet": 84
-          }
+          },
+          "portionKind": "slice"
         }
       ]
     },
@@ -5404,9 +5436,9 @@
       "variants": [
         {
           "label": {
-            "tr": "400g",
-            "fr": "400g",
-            "de": "400g"
+            "tr": "25 × 16 g",
+            "fr": "25 × 16 g",
+            "de": "25 × 16 g"
           },
           "netWeightG": 400,
           "piecesCount": 25,
@@ -5417,13 +5449,14 @@
             "piecesPerBox": 25,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "5000g",
-            "fr": "5000g",
-            "de": "5000g"
+            "tr": "250 × 20 g",
+            "fr": "250 × 20 g",
+            "de": "250 × 20 g"
           },
           "netWeightG": 5000,
           "piecesCount": 250,
@@ -5434,7 +5467,8 @@
             "piecesPerBox": 250,
             "boxesPerParcel": 1,
             "parcelsPerPallet": 84
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -5486,26 +5520,9 @@
       "variants": [
         {
           "label": {
-            "tr": "4x105g",
-            "fr": "4x105g",
-            "de": "4x105g"
-          },
-          "netWeightG": 420,
-          "piecesCount": 4,
-          "sku": "700101",
-          "sourceId": 9310,
-          "sourceSlug": "turkish-bagel-simit-4-x-105g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 44
-          }
-        },
-        {
-          "label": {
-            "tr": "125g",
-            "fr": "125g",
-            "de": "125g"
+            "tr": "125 g",
+            "fr": "125 g",
+            "de": "125 g"
           },
           "netWeightG": 125,
           "piecesCount": null,
@@ -5516,7 +5533,26 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 100,
             "parcelsPerPallet": 52
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "4 × 105 g",
+            "fr": "4 × 105 g",
+            "de": "4 × 105 g"
+          },
+          "netWeightG": 420,
+          "piecesCount": 4,
+          "sku": "700101",
+          "sourceId": 9310,
+          "sourceSlug": "turkish-bagel-simit-4-x-105g",
+          "logistics": {
+            "piecesPerBox": 4,
+            "boxesPerParcel": 12,
+            "parcelsPerPallet": 44
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -5542,29 +5578,12 @@
       "variants": [
         {
           "label": {
-            "tr": "135g",
-            "fr": "135g",
-            "de": "135g"
-          },
-          "netWeightG": 135,
-          "piecesCount": 50,
-          "sku": "700108",
-          "sourceId": 10334,
-          "sourceSlug": "turkish-fermented-bagel-135g",
-          "logistics": {
-            "piecesPerBox": 50,
-            "boxesPerParcel": 1,
-            "parcelsPerPallet": 52
-          }
-        },
-        {
-          "label": {
-            "tr": "125g",
-            "fr": "125g",
-            "de": "125g"
+            "tr": "125 g",
+            "fr": "125 g",
+            "de": "125 g"
           },
           "netWeightG": 125,
-          "piecesCount": 40,
+          "piecesCount": null,
           "sku": "700109",
           "sourceId": 10332,
           "sourceSlug": "turkish-fermented-bagel-125g",
@@ -5572,7 +5591,26 @@
             "piecesPerBox": 40,
             "boxesPerParcel": 1,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
+        },
+        {
+          "label": {
+            "tr": "135 g",
+            "fr": "135 g",
+            "de": "135 g"
+          },
+          "netWeightG": 135,
+          "piecesCount": null,
+          "sku": "700108",
+          "sourceId": 10334,
+          "sourceSlug": "turkish-fermented-bagel-135g",
+          "logistics": {
+            "piecesPerBox": 50,
+            "boxesPerParcel": 1,
+            "parcelsPerPallet": 52
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5598,9 +5636,9 @@
       "variants": [
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -5611,7 +5649,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5640,9 +5679,9 @@
       "variants": [
         {
           "label": {
-            "tr": "300g",
-            "fr": "300g",
-            "de": "300g"
+            "tr": "4 × 75 g",
+            "fr": "4 × 75 g",
+            "de": "4 × 75 g"
           },
           "netWeightG": 300,
           "piecesCount": 4,
@@ -5653,13 +5692,14 @@
             "piecesPerBox": 4,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "4200g",
-            "fr": "4200g",
-            "de": "4200g"
+            "tr": "60 × 70 g",
+            "fr": "60 × 70 g",
+            "de": "60 × 70 g"
           },
           "netWeightG": 4200,
           "piecesCount": 60,
@@ -5670,7 +5710,8 @@
             "piecesPerBox": 60,
             "boxesPerParcel": 1,
             "parcelsPerPallet": 84
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -5695,9 +5736,9 @@
       "variants": [
         {
           "label": {
-            "tr": "400g",
-            "fr": "400g",
-            "de": "400g"
+            "tr": "400 g",
+            "fr": "400 g",
+            "de": "400 g"
           },
           "netWeightG": 400,
           "piecesCount": null,
@@ -5708,7 +5749,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5735,9 +5777,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
+            "tr": "20 × 25 g",
+            "fr": "20 × 25 g",
+            "de": "20 × 25 g"
           },
           "netWeightG": 500,
           "piecesCount": 20,
@@ -5748,13 +5790,14 @@
             "piecesPerBox": 20,
             "boxesPerParcel": 20,
             "parcelsPerPallet": 54
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "40 × 25 g",
+            "fr": "40 × 25 g",
+            "de": "40 × 25 g"
           },
           "netWeightG": 1000,
           "piecesCount": 40,
@@ -5765,7 +5808,8 @@
             "piecesPerBox": 40,
             "boxesPerParcel": 10,
             "parcelsPerPallet": 54
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -5818,9 +5862,9 @@
       "variants": [
         {
           "label": {
-            "tr": "5x70g",
-            "fr": "5x70g",
-            "de": "5x70g"
+            "tr": "5 × 70 g",
+            "fr": "5 × 70 g",
+            "de": "5 × 70 g"
           },
           "netWeightG": 350,
           "piecesCount": 5,
@@ -5831,15 +5875,16 @@
             "piecesPerBox": 5,
             "boxesPerParcel": 12,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": "item"
         },
         {
           "label": {
-            "tr": "10x70g",
-            "fr": "10x70g",
-            "de": "10x70g"
+            "tr": "10 × 75 g",
+            "fr": "10 × 75 g",
+            "de": "10 × 75 g"
           },
-          "netWeightG": 700,
+          "netWeightG": 750,
           "piecesCount": 10,
           "sku": "200302",
           "sourceId": 9321,
@@ -5848,7 +5893,8 @@
             "piecesPerBox": 10,
             "boxesPerParcel": 9,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": "item"
         }
       ]
     },
@@ -5901,9 +5947,9 @@
       "variants": [
         {
           "label": {
-            "tr": "500g",
-            "fr": "500g",
-            "de": "500g"
+            "tr": "500 g",
+            "fr": "500 g",
+            "de": "500 g"
           },
           "netWeightG": 500,
           "piecesCount": null,
@@ -5913,9 +5959,9 @@
         },
         {
           "label": {
-            "tr": "1000g",
-            "fr": "1000g",
-            "de": "1000g"
+            "tr": "1000 g",
+            "fr": "1000 g",
+            "de": "1000 g"
           },
           "netWeightG": 1000,
           "piecesCount": null,
@@ -5926,7 +5972,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 16,
             "parcelsPerPallet": 64
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5951,9 +5998,9 @@
       "variants": [
         {
           "label": {
-            "tr": "80g",
-            "fr": "80g",
-            "de": "80g"
+            "tr": "80 g",
+            "fr": "80 g",
+            "de": "80 g"
           },
           "netWeightG": 80,
           "piecesCount": null,
@@ -5964,7 +6011,8 @@
             "piecesPerBox": 1,
             "boxesPerParcel": 50,
             "parcelsPerPallet": 88
-          }
+          },
+          "portionKind": null
         }
       ]
     },
@@ -5989,9 +6037,9 @@
       "variants": [
         {
           "label": {
-            "tr": "150g",
-            "fr": "150g",
-            "de": "150g"
+            "tr": "150 g",
+            "fr": "150 g",
+            "de": "150 g"
           },
           "netWeightG": 150,
           "piecesCount": null,
@@ -6023,9 +6071,9 @@
       "variants": [
         {
           "label": {
-            "tr": "210g",
-            "fr": "210g",
-            "de": "210g"
+            "tr": "210 g",
+            "fr": "210 g",
+            "de": "210 g"
           },
           "netWeightG": 210,
           "piecesCount": null,

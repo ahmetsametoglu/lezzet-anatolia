@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import { repriceAllAuto, repriceProduct, repriceVariants } from './auto-price';
 
 /**
@@ -142,11 +142,31 @@ describe('hedefe çekme', () => {
     expect(await currentCents(autoVariantId, 'b2b')).toBe(1400);
   });
 
+  /**
+   * ⚠ **Bu test KATALOĞUN TAMAMINA yazıyor ve yazdığını geri almak zorunda** (ölçüldü 19.08).
+   *
+   * `repriceAllAuto` üretimde doğru olanı yapıyor: `auto_price` işaretli HER ürünü hedefe çekiyor.
+   * Ama paylaşılan veritabanında bu, testin kendi fikstürünün dışına taşan bir yazma demek —
+   * ölçüldü: seed 358 fiyat satırı yazarken tabloda 415 satır vardı ve fazladan 57'si bu testten
+   * kalmıştı, **29 seedli varyantta**. Kullanıcı bunu ekranda gördü: Çilekli Artisan Kek'in fiyatı
+   * seed'in yazdığı 11,43 € değil, bu testin bıraktığı 9,70 € görünüyordu.
+   *
+   * Sayı yanlış değildi — testin bıraktığı bir sayının seed'in sayısı gibi okunması yanlıştı.
+   * Fonksiyon `changes` içinde neye dokunduğunu zaten söylüyor; geri alma o listeden yürüyor.
+   */
   it('katalog geneli hizalama otomatik ürünü bulur', async () => {
     await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
 
+    const startedAt = new Date().toISOString();
     const { changes, truncated } = await repriceAllAuto(db);
+
+    // Fikstür DIŞINDA kalan her satır geri alınır. Ölçüt `created_at`: hizalama yeni bir satır
+    // yazıyor (geçmiş korunuyor), o yüzden silinecek olan da yalnız bu koşuda doğan satır.
+    const foreign = [...new Set(changes.map((c) => c.variantId))].filter((id) => id !== autoVariantId);
+    if (foreign.length > 0) {
+      await mustDelete(db, 'price', (q) => q.in('variant_id', foreign).gte('created_at', startedAt));
+    }
 
     expect(truncated).toBe(false);
     expect(changes.some((c) => c.variantId === autoVariantId)).toBe(true);
