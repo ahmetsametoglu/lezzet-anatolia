@@ -170,7 +170,10 @@ export async function seedProductFeedback(
     return harita;
   }
 
-  const moderator = kisiler.get('devAdmin') ?? null;
+  // Moderatör = seed yöneticisi (`yonetici`). Eskiden `devAdmin` aranıyordu; o kayıt dev auth
+  // bypass'ıyla birlikte söküldü (19.08) ve arama sessizce `null`a düştü — moderasyon atlandı ama
+  // aşağıdaki yaşlandırma damgayı yine de yazdı, `feedback_moderation_stamp` seed'i kesti.
+  const moderator = kisiler.get('yonetici') ?? null;
   // Taslak müşteriler de yazar: yorum kalabalığı yalnız kayıtlı altı kişiden gelemez — "ilk üç yorum
   // + devamı" ancak bir ürüne yeterince farklı kişi yazınca denenir.
   const { data: taslakData } = await db.from('user_profiles').select('id').eq('is_draft', true).order('created_at');
@@ -246,13 +249,17 @@ export async function seedProductFeedback(
       comment: y.comment ?? null,
       ...(metinli ? {} : { status: 'approved' as const }),
     });
-    if (metinli && status !== 'pending' && moderator) {
+    const modereEdildi = metinli && status !== 'pending' && moderator !== null;
+    if (modereEdildi && moderator) {
       await feedbacks.moderate(created.id, status, moderator);
     }
     // Yaşlandırma: "3 gün önce" etiketi ve yorum sıralaması ancak geçmiş tarihli kayıtla görünür.
     // Moderasyon damgası kararın anıdır — yorumdan SONRA olmalı, bir gün sonrasına çekilir.
     const guncelleme: Record<string, unknown> = { created_at: an(-y.yas) };
-    if (metinli && status !== 'pending') guncelleme.moderated_at = an(-Math.max(0, y.yas - 1));
+    // Damga KARARIN izidir: moderasyon gerçekten koşmadıysa yazılmaz. Ayrı koşula bağlamak
+    // (`status !== 'pending'`) satırı `pending` bırakıp damgayı yazıyordu — DB kısıtı haklı olarak
+    // reddetti; seed'i kesen mekanizma buydu.
+    if (modereEdildi) guncelleme.moderated_at = an(-Math.max(0, y.yas - 1));
     // Dil ve çeviri KAPIDAN yazılmaz (20.2 — onları metne bakan çeviri işi yazar); seed işin
     // sonucunu taklit ediyor. Damga çeviri VARSA atılır: torbasız+damgasız satır "kuyrukta
     // bekliyor" hâlidir ve o hâl de ekranda denenmeli.
@@ -379,7 +386,7 @@ export async function seedPoints(db: Db, kisiler: Kisiler, degerlendirmeler: Map
   }
   console.log('▸ PUAN DEFTERİ seed');
   const points = new PointsEntryService(db);
-  const admin = kisiler.get('devAdmin') ?? null;
+  const admin = kisiler.get('yonetici') ?? null;
 
   // Kapanmış siparişler — "sipariş verdin" puanının izi (refId = order.id).
   const { data: siparisData } = await db

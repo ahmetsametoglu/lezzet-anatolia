@@ -99,7 +99,7 @@ export async function seedRunCloses(db: Db, kisiler: Kisiler): Promise<void> {
   }
   console.log('▸ SEFER KAPANIŞI seed');
   const kurye = kisiler.get('kurye');
-  const admin = kisiler.get('devAdmin') ?? null;
+  const admin = kisiler.get('yonetici') ?? null;
   if (!kurye) {
     console.log('  · kurye profili yok — atlandı');
     return;

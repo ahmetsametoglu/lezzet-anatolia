@@ -163,7 +163,8 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
 - [x] (04.13) **DEV AUTH BYPASS SÖKÜLDÜ — guard yerelde de doğruyu söylüyor** (kullanıcı kararı 19.08).
   `touches: apps/web/lib/guard.ts, apps/web/app/(operations)/operations/layout.tsx,
   apps/web/lib/auth/dev-login-gate.ts, apps/web/app/auth/dev-login/route.ts,
-  packages/types/src/entities/user-profile.schema.ts, scripts/seed/{people,observability}.ts,
+  packages/types/src/entities/user-profile.schema.ts,
+  scripts/seed/{people,observability,feedback,courier,support}.ts,
   playwright.config.ts, e2e/setup/**, e2e/README.md, knip.json`
   - *Bitti:* oturumsuz `/operations` yerelde de girişe atıyor; müşteri oturumu "bu alan personel içindir" ekranını görüyor; operasyon e2e'si gerçek oturumla koşuyor
 
@@ -216,6 +217,18 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   · "Müşteri" düğmesi → **`/`** (önce `/operations`); Yönetim/Kurye → `/operations`
   · müşteri oturumuyla `/operations` → başlık *"Bu alan personel içindir"*, gezinme bağlantısı **0**
   · operasyon e2e **9/9 yeşil** (25,9 sn) · `typecheck` 18/18 · `lint`/`knip`/`boundaries` temiz
+
+  **ARTÇI — SÖKÜM SEED'İ KIRMIŞTI, `db:refresh`te ortaya çıktı (20.08).** `dev-admin` profili
+  kaldırıldı ama onu ARAYAN dört yer kaldı: `seed/{feedback×2,courier,support}.ts`, hepsi
+  `kisiler.get('devAdmin') ?? null` deseniyle. Üçü sessizce boşa düştü (admin künyeli satırlar hiç
+  yazılmadı); dördüncüsü seed'i KESTİ: metinli yorum `moderator` yokken `pending` kaldı, ama
+  yaşlandırma adımı damgayı ayrı bir koşuldan (`status !== 'pending'`) okuyup yine de yazdı →
+  `feedback_moderation_stamp` reddetti (`23514`), seed DEĞERLENDİRME adımında durdu. **Arıza sökümde
+  görünmemişti çünkü o gün `db:refresh` koşulmadı** — kalıntı ancak veritabanı sıfırdan kurulunca
+  konuşur. Düzeltme iki parçalı: dört çağrı gerçek seed yöneticisine (`yonetici`) bağlandı **ve**
+  damga artık moderasyonun GERÇEKTEN koştuğu tek koşula bağlı (`modereEdildi`) — `?? null` deseni
+  yerinde duruyor, ama artık boşa düşse bile tutarsız satır üretemez. Ölçüm: `db:refresh` yeşil,
+  kapsam **129 kovanın hepsinde** örnek var.
 
 ## Netleşecekler
 

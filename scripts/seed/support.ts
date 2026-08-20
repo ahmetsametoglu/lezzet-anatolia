@@ -372,7 +372,7 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
   }
   console.log('▸ TALEP / ŞİKÂYET seed');
   const tickets = new TicketService(db);
-  const admin = kisiler.get('devAdmin') ?? null;
+  const admin = kisiler.get('yonetici') ?? null;
 
   // Siparişe bağlanacak talepler için: müşterinin en yeni siparişi + kalemleri.
   const { data: siparisData, error } = await db
