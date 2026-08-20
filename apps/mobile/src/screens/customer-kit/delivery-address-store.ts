@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 /*
   SİPARİŞİN GİDECEĞİ ADRES — SEPET İLE CHECKOUT'UN ORTAK SEÇİMİ.
 
-  Sepet 10.08'de adrese bağlandı (`use-address-cart.hook` künyesi): satın alma tarafının tamamı
+  Sepet 10.08'de adrese bağlandı (künyesi `cart-store` → `purchasePostalCode`): satın alma tarafının tamamı
   ADRESLE çözülür, gezinme kodu vitrinde kalır. Bunun bir sonucu var — sepette "Değiştir" diyen
   müşterinin seçimi checkout'a TAŞINMALI. Taşınmasaydı iki ekran yine iki ayrı adrese bakardı ve az
   kapatılan ayrışma (sepette bir gerçek, checkout'ta başka) geri açılırdı.

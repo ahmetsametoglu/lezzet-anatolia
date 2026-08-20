@@ -4349,3 +4349,61 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (`08.44`), sepetin açıklaması (`08.43`, tamam), paylaşımın gerçek adres taşıması (`08.45`),
   sonra uygulama içi bildirim listesi; **push en sonda.** Gerekçe: push'un açacağı bir varış
   noktası olmalı; bugün duyurulacak kampanyanın kendi yüzü bile yok.
+
+- [x] (21.89) **SEPET ONARIMI — donmuş görünüm · dokunma çakışması · paket toplama girmiyordu (20.08).**
+  `touches: packages/database/src/services/cart.service.ts, packages/database/src/index.ts, apps/mobile-api/src/api/v1/cart.ts, apps/mobile/src/{lib/api/cart.ts,components/ui/{pressable-surface,text-action}.tsx,screens/{customer-kit/{cart-store.ts,quantity-stepper.tsx},cart/**,checkout/checkout-screen.tsx}}`
+
+  Kullanıcı "sepette artı çalışmıyor" dedi; ölçüm dört ayrı arıza çıkardı ve üçü aynı aileden.
+
+  **1. Ekran sunucunun cevabını uygulamıyordu.** `(21.22)` sonrası 10.08'de sepet adrese bağlanırken
+  ekrana İKİNCİ bir okuma eklenmişti (`useAddressCartView`) ve yalnız dil/adres/kupon değişince
+  yenileniyordu — adet bunlardan biri değil. Ölçüm (cihaz, aracı ile gövde kaydı): `PATCH` **200**,
+  cevap `qty:4 · itemCount:4`, veritabanı **4**, ekrandaki satır **2**, başlık **"4 ürün"**. Ekran
+  kendi kendini yalanlıyordu. Çare ikinci okuma DEĞİL, tek okumanın doğru yere sorulması: yer artık
+  depoya bildiriliyor (`setPurchasePlace`), `useAddressCartView` **silindi**. 10.08'in kararı duruyor.
+
+  **2. "+" düğmesine basmak ürünü SİLİYORDU.** Sayaç ile "kaldır" arasında 6 dp var, ikisi de 12 dp
+  görünmez dokunma payı alıyor; "kaldır"ın eteği çizili "+" düğmesinin içine **16 px** giriyordu ve
+  çakışan bölgeyi ağaçta sonra gelen kazanıyordu. Ölçüm: "+"ın görünen kutusuna dokunmak satırı
+  sildi (**5 adet → 0 kalem**). Çare payı komşuya bakan yönden çekmek (`compactEdges`); aralık
+  6 → 10 dp. Ölçüm sonrası dokunma alanları **705 ↔ 732**, 27 px pay.
+
+  **3. Paket sepetin toplamına girmiyordu** — `BEKLEYEN(21.14)`ün kapanışı. Mobil paketi sunucuya
+  hiç yazmıyordu çünkü `setQty`/`removeItem` satırı yalnız varyantla adresliyordu. Ölçülen zarar:
+  ekranda **96,92 €**'luk sepet, alttaki bar **14,85 €**, "asgari sepete 22,54 € eksik" ve sipariş
+  düğmesi kilitli. Web ise paketi yazıyordu (`cart.replace` → `itemOfEntry`), yani 09.08'in "sepet
+  iki yüzeyde paylaşılır" sözü paketlerde tutmuyordu. Servis imzası satır anahtarına geçti
+  (`CartRef`), uçlar `/items/:lineId` + `?kind=bundle` ile adresliyor, istemcinin üç paket kapısı
+  ürün kapılarıyla aynı yoldan geçiyor. Ölçüm sonrası: paket sunucuda (`PAKET 3c218158 × 1`), ara
+  toplam **39,64 €** = 3,50 + 17,45 + 18,69, başlık 8 ürün (çift sayım yok), paketin "+/−/kaldır"ı
+  çalışıyor.
+
+  **4. İyimser yazım ekrana ulaşmıyordu** *(kullanıcı kararı 20.08: "kullanıcı arayüzü güncellemesi
+  1st olmalı")*. `commit` iyimserdi ama yamayı yerel niyet listesine yazıyordu, ekran ise görünümü
+  çiziyor. Yama ekranın okuduğu yere taşındı: adet · satır toplamı · `itemCount` · **ara toplam** ·
+  **genel toplam** · asgari sepet — hepsi sözleşmenin kendi alanları üzerinde düz aritmetik.
+  İndirim HESAPLANMAZ, sunucunun son cevabından taşınır. Sunucu aynı şeyi söylüyorsa yeni yayın
+  YAPILMAZ (`sameView`) — kullanıcının isteği: "değişiklik varsa değiştiririz, yoksa gereksiz bir
+  state değişikliği oluşturmayız". Ölçüm: dokunuşun anındaki karede ara toplam **32,65 → 36,14 €**,
+  bar **30,56 → 34,05 €**; sunucu cevabı toplamı 33,53 €'ya çekti (kampanya büyüdü).
+
+  **5. Fiyat her dokunuşta ZIPLIYORDU** *(kullanıcı 20.08: "bu hâliyle kabul edilemez")*. İyimser
+  toplam, sunucunun bir önceki İNDİRİM TUTARINI taşıyordu; oran tabanlı kampanyada sepet büyüdükçe
+  o tutar eskiyor ve cevap gelince toplam ikinci kez oynuyordu (ölçüm: bar 34,05 € → 33,53 €).
+  Çare ikinci bir hesap DEĞİL, **motorun kendisini istemcide çağırmak**: `applyBestDiscount`
+  (`@lezzet/domain-core`) — sunucunun `resolveCartDiscount`u da onu çağırıyor. Sözleşme üç şey daha
+  taşıyor: satırda `categoryId`+`collectionIds`, görünümde `discountRules` (**yalnız otomatik,
+  `codes` SÜZÜLMÜŞ** — kupon kodlarını istemciye göndermek herkese geçerli kod listesi vermektir),
+  `customerDiscountPercent`+`isFirstOrder`. Kupon yolunda ve adı bilinmeyen YENİ kampanyada motor
+  çalıştırılmaz, sunucu beklenir. Ölçüm sonrası: bar 70,02 € → dokunuşun anında **72,98 €** →
+  sunucu cevabından sonra **72,98 €**; özet de kendi içinde tutarlı (72,28 − 5,23 = 67,05).
+
+  **Durum:** beşi de cihazda doğrulandı (Android, CPH1907). `typecheck` · `lint` temiz, mobil
+  birim testleri 599/599, çalışma alanı birim testleri 1375/1375. **Açık kalan:** oturum tazelenirken 401 dönen okuma sepeti bir an BOŞ
+  gösteriyor (`refreshView`in boş dalı, sunucuda kurulmuş sepette yerel niyet listesi boştur) —
+  kod yolu okundu, üretilemedi, dokunulmadı → `BEKLEYEN(21.89)`. **Web'de aynı zıplama duruyor**
+  (kullanıcı orada da doğruladı) — alan web şeridinin, not bırakıldı
+  (`docs/talep/not-web-sepet-indirim-ziplamasi.md`). Aynı notta kayıtlı ikinci borç: `viewWithEntries`
+  `@lezzet/application`da ve mobil onu çağıramıyor (`@lezzet/database` bağı RN bundle'ına giremez),
+  bu yüzden `cart-store`daki `viewWithQty` onun İKİZİ — saf birleştirme `domain-core`'a terfi
+  ettiğinde silinecek → `BEKLEYEN(21.89)`.

@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { applyBestDiscount, meetsMinBasket } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import type { MeCartView, MeCartViewLine } from '@lezzet/types';
 
@@ -10,6 +11,7 @@ import {
   setCartItemQty,
   takeOverCart,
   type CartItemWrite,
+  type CartLineRef,
   type CartViewQuery,
 } from '@/lib/api/cart';
 import type { ApiResult } from '@/lib/api/client';
@@ -151,6 +153,10 @@ const EMPTY_VIEW: MeCartView = {
   reachableDiscount: null,
   totalCents: 0,
   itemCount: 0,
+  /* Boş sepette kural TAŞINMAZ — kalem yokken indirim de yoktur; ilk gerçek okumada dolar. */
+  discountRules: [],
+  customerDiscountPercent: null,
+  isFirstOrder: false,
   hasBlocked: false,
   /* Teslim edilemeyen kalemlerin tutarı — boş sepette sıfır, çünkü kalem yok. Asgari sepet bu
      tutarı MATRAHTAN düşüyor (kullanıcı kararı 10.08): sipariş edilemeyecek bir kalemle eşiği
@@ -188,6 +194,19 @@ const listeners = new Set<() => void>();
 function publish(next: CartState): void {
   state = next;
   for (const listener of listeners) listener();
+}
+
+/**
+ * SUNUCU CEVABI AYNIYSA YAYIN YAPILMAZ (kullanıcı kararı 20.08: *"değişiklik varsa değiştiririz,
+ * yoksa gereksiz bir state değişikliği oluşturmayız"*).
+ *
+ * İyimser yama ekranı zaten doğru değere getirdi; sunucu aynı şeyi söylüyorsa yeni bir nesne
+ * yayınlamak bütün aboneleri boşuna yeniden çizdirir ve müşterinin gördüğü sayı iki kez "değişir"
+ * (aynı değere). Karşılaştırma GÖRÜNÜMÜN TAMAMI üzerinde: bir alan bile farklıysa sunucunun sözü
+ * geçerlidir ve olduğu gibi uygulanır — yani bu bir süzgeç değil, gereksiz turun elenmesi.
+ */
+function sameView(a: MeCartView, b: MeCartView): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function subscribe(listener: () => void): () => void {
@@ -255,9 +274,42 @@ interface ViewContext {
  */
 let context: ViewContext | null = null;
 
+/**
+ * SATIN ALMA YERİ — kayıtlı teslimat adresinin posta kodu; `null` = bilinmiyor, gezinme kodu geçerli.
+ *
+ * 10.08'deki karar şuydu: *"satın alma tarafının tamamı ADRESLE çözülür, gezinme kodu vitrinde
+ * kalır."* O gün bu, sepet ekranına İKİNCİ bir okuma eklenerek uygulandı (`useAddressCartView`) ve
+ * arıza oradan doğdu: yazma turları deponun görünümünü tazeliyor, ekran ise o ikinci okumayı
+ * çiziyordu ve o okuma yalnız dil/adres/kupon değişince yenileniyordu. Adet bunlardan hiçbiri —
+ * ekran donuyordu (ölçüldü cihazda 20.08: veritabanı 3, ekran 2, başlık "3 ürün"; aynı ekran kendi
+ * kendini yalanlıyordu).
+ *
+ * Doğrusu ikinci bir okuma değil, TEK okumanın doğru yere sorulmasıydı. Yer buraya yazılır, görünüm
+ * yine tek yerde çözülür; ekranların seçeceği iki görünüm kalmaz.
+ */
+let purchasePostalCode: string | null = null;
+
+/** Görünümün çözüleceği yer — adres biliniyorsa o, yoksa gezinme kodu (künye: `purchasePostalCode`). */
+function placeNow(): string | null {
+  return purchasePostalCode ?? context?.postalCode ?? null;
+}
+
 function queryNow(): CartViewQuery | null {
   if (context === null) return null;
-  return { locale: context.locale, postalCode: context.postalCode, coupon: state.couponCode };
+  return { locale: context.locale, postalCode: placeNow(), coupon: state.couponCode };
+}
+
+/**
+ * Satın alma yerini bildirir — sepet ve checkout, kayıtlı adresi çözer çözmez çağırır.
+ *
+ * Değişince görünüm yeniden çözülür; aynıysa hiçbir şey olmaz (her render'da tur açmamak için).
+ * `null` yazmak "adres bilinmiyor"dur ve gezinme koduna döner — müşteri çıkış yaptığında ya da
+ * kayıtlı adresi kalmadığında olan budur.
+ */
+export function setPurchasePlace(postalCode: string | null): void {
+  if (purchasePostalCode === postalCode) return;
+  purchasePostalCode = postalCode;
+  refreshView();
 }
 
 // ── SUNUCU TURU ─────────────────────────────────────────────────────────────
@@ -292,6 +344,20 @@ function addressOf(line: CartProductLine): CartItemWrite | null {
 
 function addressesOf(lines: readonly CartProductLine[]): CartItemWrite[] {
   return lines.map(addressOf).filter((item) => item !== null);
+}
+
+/**
+ * NİYETİN TAMAMI — ürünler VE paketler. Misafirin görünümü ile devrin gövdesi bunu gönderir.
+ *
+ * Paketler 20.08'e kadar buraya girmiyordu ve bedeli ölçülmüştü: misafirin görünümünde paket hiç
+ * çözülmüyor, girişte devrolan sepette paket kayboluyordu. Aynı kök, sepet toplamının paketi
+ * saymamasıyla aynı (künye: `setQty` → `CartRef`).
+ */
+function intentOf(cart: CartState): CartItemWrite[] {
+  return [
+    ...addressesOf(cart.products),
+    ...cart.bundles.map((bundle): CartItemWrite => ({ kind: 'bundle', bundleId: bundle.id, qty: bundle.quantity })),
+  ];
 }
 
 /**
@@ -348,6 +414,137 @@ function couponOf(view: MeCartView): CartCoupon | null {
     return { code: discount.appliedInstead?.label ?? '', amountCents: discount.appliedInsteadCents };
   }
   return null;
+}
+
+/**
+ * İYİMSER GÖRÜNÜM YAMASI — parmak kalkar kalkmaz ekranda değişen şey (kullanıcı kararı 20.08:
+ * *"view-first; önce arayüzü günceller, beklenmedik bir durum olursa eski hâline alırsın"*).
+ *
+ * Yazma turu zaten iyimserdi (`commit`) ama yamayı YANLIŞ YERE koyuyordu: yalnız yerel niyet
+ * listesini (`products`) güncelliyordu, oysa ekran görünümün satırlarını çiziyor. Yani desen
+ * "iyimser" adını taşıyıp davranışı bekleyendi; sunucu cevabı ~300 ms sonra gelip düzelttiği için
+ * fark edilmiyordu. Yama artık ekranın gerçekten okuduğu yere yazılıyor.
+ *
+ * ── NE YAMANIR, NE YAMANMAZ ────────────────────────────────────────────────
+ * YAMANIR — hepsi sözleşmenin KENDİ alanları üzerinde düz aritmetik, hiçbiri iş kuralı değil:
+ * · adet — kullanıcının kendi girdisi
+ * · satır toplamı — birim fiyat × adet; birim fiyatı zaten sunucu çözdü
+ * · `itemCount` — satır adetlerinin toplamı
+ * · ara toplam — satır toplamlarının toplamı
+ * · genel toplam — ara toplam eksi İNDİRİM; indirim HESAPLANMAZ, sunucunun son cevabından olduğu
+ *   gibi taşınır (`subtotal − total` farkı). Yani istemci kampanya seçmez, oran uygulamaz; yalnız
+ *   bir kez öğrendiği tutarı bir sonraki cevaba kadar taşır.
+ * · asgari sepet — eşik ve matrah sözleşmeden gelir (`minBasketCents`, `undeliverableSubtotalCents`),
+ *   burada yalnız çıkarma yapılır
+ *
+ * YAMANMAZ: indirimin KENDİSİ (hangi kampanya kazandı, ne kadar), ulaşılabilir kampanya cümlesi ve
+ * kargo. Kampanyayı motor tüm sepet üzerinden tek-en-büyük seçip kalemlere oransal dağıtıyor;
+ * istemcide tahmin etmek −%15 vaat edip %8 uygulamak olurdu (CLAUDE §1). Onlar sunucunun sözünü
+ * bekler — ölçülen tur 207–336 ms — ve cevap geldiğinde tamamı onunla değişir.
+ *
+ * Fiyatı bilinmeyen satırda (`unitPriceCents === null`, satışa kapalı) toplam `null` KALIR:
+ * ölçülemeyen değer sıfır değildir; ara toplama da 0 olarak girer, çünkü tahsil edilecek bir tutarı
+ * yoktur.
+ */
+function viewWithQty(view: MeCartView, ref: CartLineRef | null, quantity: number): MeCartView {
+  if (ref === null) return view;
+  const hit = (line: MeCartViewLine): boolean =>
+    ref.bundleId === undefined
+      ? line.kind === 'variant' && line.variantId === ref.variantId && line.stockId === (ref.stockId ?? null)
+      : line.kind === 'bundle' && line.bundleId === ref.bundleId;
+  if (!view.lines.some(hit)) return view;
+
+  const lines = view.lines
+    .filter((line) => quantity > 0 || !hit(line))
+    .map((line) =>
+      hit(line)
+        ? { ...line, qty: quantity, lineTotalCents: line.unitPriceCents === null ? null : line.unitPriceCents * quantity }
+        : line,
+    );
+
+  const subtotalCents = lines.reduce((total, line) => total + (line.lineTotalCents ?? 0), 0);
+  /* Eşik kuralı MOTORDAN sorulur, burada yeniden yazılmaz — web'in aynı satırı (`viewWithEntries`)
+     de öyle yapıyor. Elle bir karşılaştırma yazmak, iki yüzeyin eşiği bir gün farklı okuması
+     demekti. Eşik tanımsızsa (`0` = "bilinmiyor") sunucunun kararı korunur. */
+  const basket = meetsMinBasket(subtotalCents - view.undeliverableSubtotalCents, view.minBasketCents);
+  const settled = settleDiscount(view, lines, subtotalCents);
+
+  return {
+    ...view,
+    lines,
+    itemCount: lines.reduce((total, line) => total + line.qty, 0),
+    subtotalCents,
+    ...settled,
+    minBasketOk: view.minBasketCents > 0 ? basket.ok : view.minBasketOk,
+    missingForMinBasketCents: view.minBasketCents > 0 ? basket.missingCents : view.missingForMinBasketCents,
+  };
+}
+
+/**
+ * İNDİRİM YENİDEN ÇÖZÜLÜR — SUNUCUNUNKİYLE AYNI MOTORLA (kullanıcı kararı 20.08: *"her basışta
+ * fiyatlarda zıplama oluyor, bu hâliyle kabul edilemez"*).
+ *
+ * Önceki hâl sunucunun TUTARINI taşıyordu ve oran tabanlı bir kampanyada sepet büyüdükçe o tutar
+ * eskiyordu: ölçüldü, bar 34,05 € gösterip cevap gelince 33,53 €'ya düşüyordu. İkinci bir hesap
+ * yazmak çare değil (iki yüzey ayrışır); çare **motorun kendisini çağırmak** —
+ * `applyBestDiscount`, `@lezzet/domain-core`, sunucunun `resolveCartDiscount`u da onu çağırıyor.
+ * Kurallar sözleşmeyle taşınıyor (`view.discountRules`; künyesi `MeCartDiscountRuleSchema`).
+ *
+ * ── KUPON YOLUNDA MOTOR ÇALIŞTIRILMAZ ───────────────────────────────────────
+ * Kupon kuralları kodlarını taşır ve o kodlar istemciye GÖNDERİLMEZ; havuz yalnız kendiliğinden
+ * inen kampanyaları içeriyor. Kupon uygulanmış (ya da kupon yüzünden bir karar doğmuş) bir sepette
+ * motorun eksik havuzla vereceği cevap YANLIŞ olurdu — o hâlde sunucunun son tutarı taşınır ve
+ * ~300 ms sonra tazelenir. Kupon nadir, kampanya her sepette.
+ *
+ * Matrah muafiyetleri (paket kalemi, teklif satırı) motorun kendi kuralı; burada tekrarlanmaz —
+ * satırlar olduğu gibi verilir, ayıklamayı `applyBestDiscount` yapar.
+ */
+function settleDiscount(
+  view: MeCartView,
+  lines: readonly MeCartViewLine[],
+  subtotalCents: number,
+): Pick<MeCartView, 'discount' | 'totalCents'> {
+  const carried = Math.max(0, view.subtotalCents - view.totalCents);
+  const asIs = (cents: number): Pick<MeCartView, 'discount' | 'totalCents'> => ({
+    discount: view.discount,
+    totalCents: Math.max(0, subtotalCents - cents),
+  });
+
+  const couponInPlay = view.discount.status === 'applied' || view.discount.status === 'rejected';
+  if (couponInPlay || view.discountRules.length === 0) return asIs(Math.min(carried, subtotalCents));
+
+  const winner = applyBestDiscount(
+    lines.map((line) => ({
+      variantId: line.kind === 'variant' ? line.variantId : '',
+      qty: line.qty,
+      unitPriceCents: line.unitPriceCents ?? 0,
+      categoryId: line.kind === 'variant' ? line.categoryId : null,
+      collectionIds: line.kind === 'variant' ? line.collectionIds : [],
+      bundleId: line.kind === 'bundle' ? line.bundleId : null,
+      /* Teklif satırı kendi özel fiyatındadır ve matraha girmez (DOMAIN §5). Sözleşme ayrı bir
+         `offerStockId` taşımıyor; teklifin işareti `wasCents`in dolu olmasıdır (üstü çizilen
+         referans fiyat) ve o an satırın partisi çıpadır. */
+      offerStockId: line.kind === 'variant' && line.wasCents !== undefined ? line.stockId : null,
+    })),
+    view.discountRules.map((rule) => ({ ...rule, trigger: 'automatic' as const })),
+    { customerDiscountPercent: view.customerDiscountPercent, isFirstOrder: view.isFirstOrder },
+  );
+  const cents = winner?.amountCents ?? 0;
+
+  /* İNDİRİM SATIRI DA TAZELENİR — yoksa aynı karede "ara toplam − indirim ≠ toplam" olurdu
+     (ölçüldü cihazda 20.08: toplam anında 64,08 € doğru, indirim satırı hâlâ −4,18 € yazıyordu).
+     Toplamı düzeltip satırı bırakmak, çelişkiyi gizlemek değil GÖRÜNÜR kılmak olurdu. */
+  if (view.discount.status === 'automatic') {
+    return cents === 0
+      ? { discount: { status: 'none' }, totalCents: subtotalCents }
+      : { discount: { ...view.discount, amountCents: cents }, totalCents: Math.max(0, subtotalCents - cents) };
+  }
+
+  /* HENÜZ İNDİRİMİ OLMAYAN sepette kampanya doğuyorsa BEKLENİR: kazananın ADI kurallarla gelmiyor
+     (havuz yalnız motorun ihtiyacını taşıyor, künye orada) ve adsız bir "İndirim" satırı yazmak,
+     müşteriye hangi kampanyayı kazandığını söylememek olurdu. Eşiği yeni geçen sepette ~300 ms
+     sonra hem tutar hem AD birlikte gelir — orada zıplama değil, kazanılmış bir haber var. */
+  return asIs(0);
 }
 
 /**
@@ -463,6 +660,9 @@ function commit(next: CartState, call: (query: CartViewQuery) => Promise<ApiResu
       publish({ ...previous, error: result.error });
       return;
     }
+    /* İyimser yama tuttuysa yeni bir yayın YOK — künye: `sameView`. Hata bayrağı da zaten temizdi;
+       tutmadıysa sunucunun cevabı olduğu gibi geçer. */
+    if (sameView(state.view, result.data) && state.error === null) return;
     publish(adopted(state, result.data));
   });
 }
@@ -481,7 +681,7 @@ function commit(next: CartState, call: (query: CartViewQuery) => Promise<ApiResu
  * bilgiyi bilgi saymak olurdu.
  */
 async function hydrateCart(query: CartViewQuery): Promise<void> {
-  const handover = state.source === 'device' ? addressesOf(state.products) : [];
+  const handover = state.source === 'device' ? intentOf(state) : [];
   const mine = ++revision;
   publish({ ...state, resolving: true });
 
@@ -502,7 +702,7 @@ async function hydrateCart(query: CartViewQuery): Promise<void> {
 
 /** Misafirin görünümü — niyet gövdeden gider, tutarı SUNUCU çözer. */
 async function resolveGuestView(query: CartViewQuery): Promise<void> {
-  const items = addressesOf(state.products);
+  const items = intentOf(state);
   const mine = ++revision;
   publish({ ...state, resolving: true });
 
@@ -527,7 +727,7 @@ async function resolveGuestView(query: CartViewQuery): Promise<void> {
  * ağa bağlamamalı.
  */
 function refreshView(): void {
-  if (state.source !== 'server' && addressesOf(state.products).length === 0) {
+  if (state.source !== 'server' && intentOf(state).length === 0) {
     if (state.view.lines.length === 0 && !state.resolving) return;
     // Havadaki tur GEÇERSİZ: boşalan sepete geç gelen bir cevap satırları geri getirirdi.
     revision += 1;
@@ -677,6 +877,7 @@ export function setProductQuantity(id: string, quantity: number): void {
       quantity <= 0
         ? state.products.filter((product) => !mine(product))
         : state.products.map((product) => (mine(product) ? { ...product, quantity } : product)),
+    view: viewWithQty(state.view, variantId === null ? null : { variantId, stockId }, quantity),
   };
 
   if (variantId === null) {
@@ -684,21 +885,25 @@ export function setProductQuantity(id: string, quantity: number): void {
     refreshView();
     return;
   }
-  commit(next, (query) => setCartItemQty(variantId, Math.max(0, quantity), stockId, query));
+  commit(next, (query) => setCartItemQty({ variantId, stockId }, Math.max(0, quantity), query));
 }
 
 export function removeProduct(id: string): void {
   const found = locate(id);
   const mine = matcher(found);
   const { variantId, stockId } = found;
-  const next: CartState = { ...state, products: state.products.filter((product) => !mine(product)) };
+  const next: CartState = {
+    ...state,
+    products: state.products.filter((product) => !mine(product)),
+    view: viewWithQty(state.view, variantId === null ? null : { variantId, stockId }, 0),
+  };
 
   if (variantId === null) {
     publish(next);
     refreshView();
     return;
   }
-  commit(next, (query) => removeCartItem(variantId, stockId, query));
+  commit(next, (query) => removeCartItem({ variantId, stockId }, query));
 }
 
 /*
@@ -735,28 +940,36 @@ export function removeProduct(id: string): void {
  */
 export function addBundle(line: Omit<CartBundleLine, 'quantity'>, quantity = 1): void {
   const existing = state.bundles.find((bundle) => bundle.id === line.id);
-  publish({
+  const next: CartState = {
     ...state,
     bundles: existing
       ? state.bundles.map((bundle) =>
           bundle.id === line.id ? { ...bundle, quantity: bundle.quantity + quantity } : bundle,
         )
       : [...state.bundles, { ...line, quantity }],
-  });
+  };
+  commit(next, (query) => addCartItems([{ kind: 'bundle', bundleId: line.id, qty: quantity }], query));
 }
 
 export function setBundleQuantity(id: string, quantity: number): void {
-  publish({
+  const next: CartState = {
     ...state,
     bundles:
       quantity <= 0
         ? state.bundles.filter((bundle) => bundle.id !== id)
         : state.bundles.map((bundle) => (bundle.id === id ? { ...bundle, quantity } : bundle)),
-  });
+    view: viewWithQty(state.view, { bundleId: id }, quantity),
+  };
+  commit(next, (query) => setCartItemQty({ bundleId: id }, Math.max(0, quantity), query));
 }
 
 export function removeBundle(id: string): void {
-  publish({ ...state, bundles: state.bundles.filter((bundle) => bundle.id !== id) });
+  const next: CartState = {
+    ...state,
+    bundles: state.bundles.filter((bundle) => bundle.id !== id),
+    view: viewWithQty(state.view, { bundleId: id }, 0),
+  };
+  commit(next, (query) => removeCartItem({ bundleId: id }, query));
 }
 
 /**
@@ -792,8 +1005,12 @@ export function removeCoupon(): void {
  * görünümde hiç görünmüyorlar; saymamak, müşteriye eksik bir sepet göstermek olurdu.
  */
 export function cartCount(cart: CartState): number {
+  /* Görünüm varsa SAYAN ODUR — paketler dahil. Eskiden görünümün sayısına yerel paket adetleri
+     EKLENİYORDU çünkü sunucu paketi hiç görmüyordu; 20.08'de paket sunucuya bağlanınca o toplama
+     çift sayım oldu (künye: `setQty` → `CartRef`). Görünüm yokken (misafirin ilk karesi, ağ turu
+     henüz dönmemiş) niyet sayılır. */
+  if (cart.view.lines.length > 0) return cart.view.itemCount;
   const bundles = cart.bundles.reduce((total, line) => total + line.quantity, 0);
-  if (cart.view.lines.length > 0) return cart.view.itemCount + bundles;
   return cart.products.reduce((total, line) => total + line.quantity, bundles);
 }
 

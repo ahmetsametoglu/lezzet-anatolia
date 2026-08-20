@@ -2,11 +2,12 @@ import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import { z } from 'zod';
 import { entryOfItem, itemOfEntry, storedPrices } from '@lezzet/application';
-import { CartService, serviceDb, UserProfileService, type Db } from '@lezzet/database';
+import { CartService, serviceDb, UserProfileService, type CartRef, type Db } from '@lezzet/database';
 import {
   MeCartAddBodySchema,
   MeCartQtyBodySchema,
   MeCartTakeOverBodySchema,
+  BundleSchema,
   ProductVariantSchema,
   StockSchema,
 } from '@lezzet/types';
@@ -62,23 +63,26 @@ import { entryOfWrite, localeOf, readCartView } from './cart-view';
  * (DOMAIN §5), o yüzden `stockId` bir ayrıntı değil adresin parçasıdır — yol parçası + sorgu olarak
  * taşınır (`/items/:variantId?stock=…`). Gövdeye koymak, `DELETE`in gövdeli olmasını gerektirirdi.
  *
- * ── PAKET SATIRI BU ADRESLE ANILAMAZ (açık borç, 21.21) ─────────────────────
- * Paketin varyantı YOKTUR; adresi `bundleId`dir. `POST /items` paket satırını EKLEYEBİLİYOR (adet
- * birleşir — `CartService.addItems` → `sameLine` paket dalını zaten tanıyor) ama AZALTMA ve SİLME
- * yolu yok: `CartService.setQty`/`removeItem` imzası varyant+parti ile adresliyor ve `sameLine`
- * paket satırını hiçbir varyant anahtarıyla eşleştirmiyor. Ekleme yeterli değil çünkü "−" ve
- * "Kaldır" bir adet artışıyla ifade edilemez.
+ * ── PAKET SATIRI DA BU ADRESLE ANILIR (borç KAPANDI, 20.08) ─────────────────
+ * Paketin varyantı YOKTUR; adresi `bundleId`dir ve yol parçası artık ikisini de taşıyor
+ * (`/items/:lineId`, paket için `?kind=bundle`). Servis imzası satır anahtarına geçtiği için
+ * (`CartRef`) azaltma ve silme paket satırında da çalışıyor.
+ *
+ * KAPATILMASININ SEBEBİ BİR NOT DEĞİL, ÖLÇÜLMÜŞ ZARARDI (cihazda 20.08): mobil paketi sunucuya
+ * yazamadığı için cihazda tutuyordu; sunucu görmediğini toplayamıyor ve müşterinin sepetinde
+ * 96,92 € dururken alttaki bar 14,85 €, asgari sepet uyarısı "22,54 € eksik" diyor, sipariş düğmesi
+ * kilitli kalıyordu. Web ise paketi sunucuya yazıyor (`cart.replace` → `itemOfEntry`), yani
+ * 09.08'in "telefonda doldurulan sepet webde açılır" sözü de yalnız paketlerde tutmuyordu.
  *
  * Buraya bir okuma+yeniden yazma (`CartService.replace` ile) YAZILMADI ve bu bilinçli: "sıfır adet
  * satırı siler" ile "aynı satır ikinci kez eklenince adet birleşir" kuralları servisin kendisinde
  * duruyor (`cart.service.ts` künyesi, web sepetiyle TEK kural) — taşıma katmanında ikinci bir kopya,
- * iki yüzeyin bir gün farklı davranması demekti. Çözüm servis imzasının satır anahtarına (`CartRef`)
- * geçmesidir ve o karar bu şeridin dışında (`packages/database`). BEKLEYEN(21.14).
+ * iki yüzeyin bir gün farklı davranması demekti.
  */
-const LineKeySchema = z.object({
-  variantId: ProductVariantSchema.shape.id,
-  stockId: StockSchema.shape.id.nullable(),
-});
+const LineKeySchema = z.union([
+  z.object({ kind: z.literal('variant'), variantId: ProductVariantSchema.shape.id, stockId: StockSchema.shape.id.nullable() }),
+  z.object({ kind: z.literal('bundle'), bundleId: BundleSchema.shape.id }),
+]);
 
 /** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — sepetin sahibi ikincisidir. */
 interface CustomerEnv {
@@ -131,13 +135,23 @@ function incomingOf(items: readonly z.infer<typeof MeCartItemWriteSchema>[]) {
   return items.map((item) => itemOfEntry(entryOfWrite(item)));
 }
 
-/** Satırın adresi yol + sorgudan; geçersizse `invalid_line` (uydurulmuş kimlikle yazma yapılmaz). */
-function readLineKey(c: Context<CustomerEnv>): z.infer<typeof LineKeySchema> | null {
-  const parsed = LineKeySchema.safeParse({
-    variantId: c.req.param('variantId'),
-    stockId: c.req.query('stock') ?? null,
-  });
-  return parsed.success ? parsed.data : null;
+/**
+ * Satırın adresi yol + sorgudan; geçersizse `invalid_line` (uydurulmuş kimlikle yazma yapılmaz).
+ *
+ * `?kind=bundle` paket satırını seçer; yokluğu varyanttır — eski istemciler sorguyu hiç göndermeden
+ * aynı yoldan geçmeye devam eder.
+ */
+function readLineKey(c: Context<CustomerEnv>): CartRef | null {
+  const lineId = c.req.param('lineId');
+  const parsed = LineKeySchema.safeParse(
+    c.req.query('kind') === 'bundle'
+      ? { kind: 'bundle', bundleId: lineId }
+      : { kind: 'variant', variantId: lineId, stockId: c.req.query('stock') ?? null },
+  );
+  if (!parsed.success) return null;
+  return parsed.data.kind === 'bundle'
+    ? { bundleId: parsed.data.bundleId }
+    : { variantId: parsed.data.variantId, stockId: parsed.data.stockId };
 }
 
 export const cart = new Hono<CustomerEnv>();
@@ -189,7 +203,7 @@ cart.post('/items', async (c) => {
 });
 
 /** Adet belirleme — sıfır satırı siler (`setQty`in kendi kuralı; `DELETE` ile aynı kapıya çıkar). */
-cart.patch('/items/:variantId', async (c) => {
+cart.patch('/items/:lineId', async (c) => {
   const key = readLineKey(c);
   if (key === null) return fail(c, 'invalid_line', 400);
 
@@ -197,7 +211,7 @@ cart.patch('/items/:variantId', async (c) => {
   if (!body.success) return fail(c, 'invalid_body', 400);
 
   const db = serviceDb();
-  const updated = await new CartService(db).setQty(c.get('customerId'), key.variantId, body.data.qty, key.stockId);
+  const updated = await new CartService(db).setQty(c.get('customerId'), key, body.data.qty);
   return ok(c, await viewOf(c, db, updated));
 });
 
@@ -206,12 +220,12 @@ cart.patch('/items/:variantId', async (c) => {
  * duruyor çünkü "Kaldır" düğmesinin niyeti adet değiştirmek değil, satırı çıkarmaktır — niyeti
  * fiile çeviren uç, istemciyi sıfır yazmak gibi bir kurnazlığa mecbur bırakmaz.
  */
-cart.delete('/items/:variantId', async (c) => {
+cart.delete('/items/:lineId', async (c) => {
   const key = readLineKey(c);
   if (key === null) return fail(c, 'invalid_line', 400);
 
   const db = serviceDb();
-  const updated = await new CartService(db).removeItem(c.get('customerId'), key.variantId, key.stockId);
+  const updated = await new CartService(db).removeItem(c.get('customerId'), key);
   return ok(c, await viewOf(c, db, updated));
 });
 

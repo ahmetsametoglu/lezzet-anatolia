@@ -74,18 +74,25 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
     return this.write(customerId, merged);
   }
 
-  /** Adet belirler; **0 veya altı satırı siler** (arayüzde "−" ile sıfıra inmek çıkarmak demektir). */
-  async setQty(customerId: string, variantId: string, qty: number, stockId: string | null = null): Promise<Cart> {
+  /**
+   * Adet belirler; **0 veya altı satırı siler** (arayüzde "−" ile sıfıra inmek çıkarmak demektir).
+   *
+   * SATIR ANAHTARLA ANILIR, varyantla değil (20.08). İmza eskiden `variantId` alıyordu ve bunun
+   * ölçülmüş bir bedeli vardı: **paket satırı adreslenemiyordu.** Mobil yüzey paketi bu yüzden
+   * sunucuya hiç yazmıyor, cihazda tutuyordu — ve sunucu görmediğini toplayamadığı için müşterinin
+   * sepetinde 96,92 € dururken alttaki bar 14,85 € yazıyor, asgari sepet "22,54 € eksik" diyor ve
+   * sipariş düğmesi kilitli kalıyordu (ölçüldü cihazda 20.08). `sameLine` paket dalını zaten
+   * biliyordu; eksik olan tek şey anahtarın buraya kadar gelmesiydi.
+   */
+  async setQty(customerId: string, ref: CartRef, qty: number): Promise<Cart> {
     const { items } = await this.get(customerId);
     const next =
-      qty > 0
-        ? items.map((row) => (sameLine(row, { variantId, stockId }) ? { ...row, qty } : row))
-        : items.filter((row) => !sameLine(row, { variantId, stockId }));
+      qty > 0 ? items.map((row) => (sameLine(row, ref) ? { ...row, qty } : row)) : items.filter((row) => !sameLine(row, ref));
     return this.write(customerId, next);
   }
 
-  async removeItem(customerId: string, variantId: string, stockId: string | null = null): Promise<Cart> {
-    return this.setQty(customerId, variantId, 0, stockId);
+  async removeItem(customerId: string, ref: CartRef): Promise<Cart> {
+    return this.setQty(customerId, ref, 0);
   }
 
   /**
@@ -166,6 +173,15 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
  * İki tür asla eşleşmez: biri paket, öbürü varyantsa aynı satır değildir.
  */
 type LineKey = { variantId?: string | null; bundleId?: string | null; stockId?: string | null };
+
+/**
+ * SATIRIN ADRESİ — varyant (+ parti) ya da paket. `setQty`/`removeItem`in tek anahtarı.
+ *
+ * Dışa veriliyor çünkü uçlar bu şekli kurup geçiyor; kendi nesnelerini uydursalardı paket dalını
+ * biri bir gün unutur ve satır sessizce bulunamazdı (`setQty` eşleşmeyen anahtarda sepeti
+ * DEĞİŞTİRMEDEN yazar — hata fırlatmaz, yalnız hiçbir şey olmaz).
+ */
+export type CartRef = LineKey;
 
 function sameLine(a: LineKey, b: LineKey): boolean {
   if (a.bundleId || b.bundleId) return (a.bundleId ?? null) === (b.bundleId ?? null);

@@ -49,6 +49,9 @@ export function QuantityStepper({
         onPress={onDecrease}
         feedback="scale-small"
         compact
+        // Pay ALTA verilmez: sepet satırında hemen altta "kaldır" duruyor ve iki görünmez etek
+        // çakışınca dokunuş silmeyle sonuçlanıyordu (künye: `PressableSurface.compactEdges`).
+        compactEdges="up"
         style={styles.button}
         accessibilityLabel={decreaseLabel}
         testID={testID === undefined ? undefined : `${testID}-decrease`}
@@ -60,6 +63,9 @@ export function QuantityStepper({
         onPress={onIncrease}
         feedback="scale-small"
         compact
+        // Pay ALTA verilmez: sepet satırında hemen altta "kaldır" duruyor ve iki görünmez etek
+        // çakışınca dokunuş silmeyle sonuçlanıyordu (künye: `PressableSurface.compactEdges`).
+        compactEdges="up"
         style={styles.button}
         accessibilityLabel={increaseLabel}
         testID={testID === undefined ? undefined : `${testID}-increase`}

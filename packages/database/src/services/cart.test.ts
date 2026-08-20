@@ -88,13 +88,13 @@ describe('sepet durumu (07.1)', () => {
 describe('adet ve çıkarma', () => {
   it('adet belirlenir', async () => {
     await carts.addItem(customerId, { variantId: variantA, qty: 2, unitPrice: 12.5 });
-    const cart = await carts.setQty(customerId, variantA, 7);
+    const cart = await carts.setQty(customerId, { variantId: variantA }, 7);
     expect(cart.items[0]!.qty).toBe(7);
   });
 
   it('adedi sıfıra indirmek satırı SİLER (arayüzde "−" ile çıkarma)', async () => {
     await carts.addItem(customerId, { variantId: variantA, qty: 1, unitPrice: 12.5 });
-    expect((await carts.setQty(customerId, variantA, 0)).items).toHaveLength(0);
+    expect((await carts.setQty(customerId, { variantId: variantA }, 0)).items).toHaveLength(0);
   });
 
   it('çıkarma yalnız o satırı düşürür — teklif satırı ayrı kalır', async () => {
@@ -102,7 +102,7 @@ describe('adet ve çıkarma', () => {
     await carts.addItem(customerId, { variantId: variantA, qty: 1, unitPrice: 12.5 });
     await carts.addItem(customerId, { variantId: variantA, qty: 1, unitPrice: 8, stockId });
 
-    const cart = await carts.removeItem(customerId, variantA);
+    const cart = await carts.removeItem(customerId, { variantId: variantA });
     expect(cart.items).toHaveLength(1);
     expect(cart.items[0]!.stockId).toBe(stockId);
   });

@@ -319,6 +319,16 @@ export const MeCartViewLineSchema = z.discriminatedUnion('kind', [
     variantId: ProductVariantSchema.shape.id,
     stockId: StockSchema.shape.id.nullable(),
     qty: CartItemSchema.shape.qty,
+    /**
+     * KAMPANYA KAPSAMININ ÜYELİĞİ — satır hangi kategoride, hangi koleksiyonlarda (20.08).
+     *
+     * İstemci indirimi HESAPLAMAZ ama motoru ÇALIŞTIRIR (`applyBestDiscount`, `@lezzet/domain-core`)
+     * ve motorun kapsam süzgeci bu iki alanı istiyor. Taşınmasaydı istemci adet değiştirdiğinde
+     * indirimi tazeleyemez, sunucunun ESKİ tutarını taşımak zorunda kalırdı — ekranda "her basışta
+     * fiyat zıplaması" (kullanıcı 20.08). Alanlar zaten herkese açık katalog bilgisi.
+     */
+    categoryId: z.string().uuid().nullable(),
+    collectionIds: z.array(z.string().uuid()),
     ...CartLineViewShape,
   }),
   z.object({
@@ -338,6 +348,37 @@ export type MeCartViewLine = z.infer<typeof MeCartViewLineSchema>;
  * tutulmayan bir söz vermektir. Taşınan şey motorun GİRDİSİ (eşik + tarife + kargo grubunun
  * toplamı); ücreti hesaplayan `shippingGroupFee` iki yüzeyde de aynı motordur.
  */
+/**
+ * İSTEMCİNİN MOTORU ÇALIŞTIRABİLMESİ İÇİN KAMPANYA KURALI (20.08) — `DiscountRule`in taşınabilir
+ * kesiti.
+ *
+ * ── NEDEN GÖNDERİLİYOR ──────────────────────────────────────────────────────
+ * Adet değiştiğinde toplam ANINDA doğru olmalı (kullanıcı kararı 20.08: *"her basışta fiyatlarda
+ * zıplama oluyor, bu hâliyle kabul edilemez"*). İstemci indirimi kendi hesaplarsa iki yüzey
+ * ayrışır — o yüzden hesaplamıyor, **aynı motoru** çağırıyor (`applyBestDiscount`,
+ * `@lezzet/domain-core`). Motorun ihtiyacı kurallardır; kural gitmezse istemci sunucunun bir
+ * önceki tutarını taşımak zorunda kalır ve ekran zıplar.
+ *
+ * ── KOD TAŞINMAZ ────────────────────────────────────────────────────────────
+ * `DiscountRule.codes` BİLEREK dışarıda: kupon kodlarını istemciye göndermek, herkese geçerli kod
+ * listesi vermektir. Bu yüzden havuz YALNIZ kendiliğinden inen kampanyaları taşır; kupon
+ * uygulanmışsa indirimi yine sunucu söyler ve istemci onu olduğu gibi taşır.
+ *
+ * Kalan alanların hepsi zaten müşteriye açık: kampanyanın oranı ve eşiği vitrinde ve katalogda
+ * yazılı (08.44). Burada gizli bir şey yok, motorun girdisi var.
+ */
+export const MeCartDiscountRuleSchema = z.object({
+  id: z.string().uuid(),
+  type: z.enum(['percent', 'fixed']),
+  percent: z.number().nullable(),
+  amountCents: z.number().int().nullable(),
+  scope: z.enum(['cart', 'category', 'collection']),
+  categoryId: z.string().uuid().nullable(),
+  collectionId: z.string().uuid().nullable(),
+  minBasketCents: z.number().int().nullable(),
+});
+export type MeCartDiscountRule = z.infer<typeof MeCartDiscountRuleSchema>;
+
 export const MeCartViewSchema = z.object({
   lines: z.array(MeCartViewLineSchema),
   /** Kalem toplamı — kargo ve indirim HARİÇ. */
@@ -349,6 +390,15 @@ export const MeCartViewSchema = z.object({
   totalCents: z.number().int(),
   /** Toplam adet — yüzen düğmenin ve başlığın sayacı. */
   itemCount: z.number().int(),
+  /**
+   * KENDİLİĞİNDEN İNEN kampanya havuzu — istemci adet değiştirdiğinde indirimi TAZELEYEBİLSİN diye
+   * (künye: `MeCartDiscountRuleSchema`). Kupon kuralları bu havuzda YOKTUR.
+   */
+  discountRules: z.array(MeCartDiscountRuleSchema),
+  /** Müşterinin genel indirim oranı (%) — motorun havuzdaki üçüncü adayı; `null` = yok. */
+  customerDiscountPercent: z.number().nullable(),
+  /** İlk sipariş mi — `firstOrderOnly` kampanyaların yüklemi. */
+  isFirstOrder: z.boolean(),
   /**
    * **SATILAMAZ** satır var mı — tükenmiş ya da satışa kapanmış. "Siparişi tamamla" bunda pasifleşir.
    *

@@ -142,6 +142,9 @@ export function CartLineRow({
             <TextAction
               label={removeLabel}
               onPress={onRemove}
+              // Pay ÜSTE verilmez: hemen üstteki sayaç düğmelerinin çizili kutusuna girip
+              // dokunuşu çalıyordu (künye: `PressableSurface.compactEdges`).
+              compactEdges="down"
               // Koyu kartta zeytin metin okunmuyor; orada terracotta da kirli duruyor — kaldır
               // eylemi ikinci sesli bir eylemdir ve şablonda ikisinde de sönük yazılı.
               tone={isBundle ? 'terracotta' : 'olive'}
@@ -219,8 +222,13 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors['error-bg'],
   },
   controls: {
+    /* Aralık tasarımın 6'sı değil 10 — ve fark GÖRSEL DEĞİL, dokunma payının artığı (20.08).
+       Sayaç ile "kaldır"ın görünmez etekleri çakışıyor ve "+"ın içine dokunmak ürünü siliyordu;
+       çare payı komşuya bakan yönden çekmek oldu (`compactEdges`), aralığı büyütmek değil —
+       26 dp'lik ilk deneme çakışmayı bitirdi ama kompozisyonu bozdu. 10, iki hedefin çizili
+       kutuları arasında gözle görülür bir nefes bırakır ve payların hiçbiri komşuya taşmaz. */
     alignItems: 'center',
-    gap: theme.space.sm,
+    gap: theme.space.lg,
   },
   readOnlyQuantity: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],

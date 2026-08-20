@@ -85,7 +85,14 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
         label: publicLabelOf(pool.find((row) => row.id === reach.discountId)),
       }
     : null;
-  const out = (discount: CartDiscount): CartDiscountResult => ({ discount, reachable });
+    /* Kurallar ve bağlam kararla BİRLİKTE döner — istemci aynı motoru çalıştırabilsin diye (künye:
+     `CartDiscountResult.rules`). Burada süzülmez: neyin dışarı çıkacağına sözleşme karar verir. */
+  const out = (discount: CartDiscount): CartDiscountResult => ({
+    discount,
+    reachable,
+    rules,
+    context: { customerDiscountPercent: ctx.customerDiscountPercent ?? null, isFirstOrder: ctx.isFirstOrder },
+  });
 
   if (!code) return out(winner ? automatic(winner, pool, customerDiscountPercent) : { status: 'none' });
 

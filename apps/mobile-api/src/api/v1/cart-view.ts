@@ -129,6 +129,24 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
         : { ...view.reachableDiscount, label: labelOf(view.reachableDiscount.label, locale) },
     totalCents: view.totalCents,
     itemCount: view.itemCount,
+    /* MOTORUN GİRDİSİ İSTEMCİYE — ama YALNIZ kendiliğinden inen kampanyalar ve KODSUZ.
+       Kupon kuralları `codes` taşıyor; onu göndermek herkese geçerli kupon listesi vermektir
+       (künye: `MeCartDiscountRuleSchema`). Süzgeç BURADA, taşıma katmanında: neyin dışarı
+       çıkacağına sözleşme karar verir, motor değil. */
+    discountRules: view.discountRules
+      .filter((rule) => rule.trigger === 'automatic')
+      .map((rule) => ({
+        id: rule.id,
+        type: rule.type,
+        percent: rule.percent ?? null,
+        amountCents: rule.amountCents ?? null,
+        scope: rule.scope,
+        categoryId: rule.categoryId ?? null,
+        collectionId: rule.collectionId ?? null,
+        minBasketCents: rule.minBasketCents ?? null,
+      })),
+    customerDiscountPercent: view.discountContext.customerDiscountPercent,
+    isFirstOrder: view.discountContext.isFirstOrder,
     hasBlocked: view.hasBlocked,
     // Asgari sepete SAYILMAYAN tutar (10.08) — kapı zaten düşerek hesapladı, burada yalnız taşınıyor
     // ki ekran "X € şu an gönderilemeyen kalemlerde" diyebilsin. İkinci bir çıkarma YAPILMAZ.
@@ -175,7 +193,16 @@ function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][n
   };
   return line.kind === 'bundle'
     ? { kind: 'bundle', bundleId: line.bundleId, qty: line.qty, ...view }
-    : { kind: 'variant', variantId: line.variantId, stockId: line.stockId, qty: line.qty, ...view };
+    : {
+        kind: 'variant',
+        variantId: line.variantId,
+        stockId: line.stockId,
+        qty: line.qty,
+        // Kapsam üyeliği YALNIZ varyant satırında: paket kalemleri matraha girmiyor (DOMAIN §13).
+        categoryId: line.categoryId,
+        collectionIds: [...line.collectionIds],
+        ...view,
+      };
 }
 
 /**

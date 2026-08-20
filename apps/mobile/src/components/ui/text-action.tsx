@@ -25,6 +25,8 @@ interface TextActionProps {
   align?: 'start' | 'center';
   disabled?: boolean;
   accessibilityHint?: string;
+  /** Dikey komşusu olan kullanımlarda payın yönü — künyesi `PressableSurface.compactEdges`. */
+  compactEdges?: 'all' | 'up' | 'down';
   testID?: string;
 }
 
@@ -35,6 +37,7 @@ export function TextAction({
   align = 'start',
   disabled = false,
   accessibilityHint,
+  compactEdges,
   testID,
 }: TextActionProps) {
   return (
@@ -43,6 +46,7 @@ export function TextAction({
       disabled={disabled}
       feedback="opacity"
       compact
+      compactEdges={compactEdges}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       testID={testID}

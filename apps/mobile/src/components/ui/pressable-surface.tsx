@@ -39,6 +39,23 @@ interface PressableSurfaceProps {
   selected?: boolean;
   /** Görsel yüksekliği 44 dp'nin altındaki öğe: dokunma payı eklenir. */
   compact?: boolean;
+  /**
+   * DOKUNMA PAYININ YÖNÜ — varsayılan `all` (dört yön). Dikey komşusu OLAN öğeler için.
+   *
+   * Pay görünmezdir ve iki `compact` öğe alt alta durduğunda payları çakışır; çakışan bölgeyi
+   * ağaçta sonra gelen kazanır, yani **üstteki öğenin çizili kutusu alttakine geçer.** Sepette
+   * ölçüldü (20.08, cihazda): "kaldır"ın 12 dp'lik eteği çizili "+" düğmesinin içine 16 px giriyor
+   * ve o noktaya dokunmak ürünü SİLİYORDU (5 adet → 0 kalem).
+   *
+   * İlk çare aralığı 6 dp'den 26 dp'ye açmaktı; çakışmayı bitirdi ama tasarımın kompozisyonunu
+   * bozdu (kullanıcı: "rahatsız edecek kadar olmuş"). Doğrusu aralığı büyütmek değil, payı
+   * KOMŞUYA BAKAN YÖNDEN ÇEKMEK:
+   * · `up`   — pay yukarı/yanlara; alta hiç verilmez (altında bir komşu var)
+   * · `down` — pay aşağı/yanlara; üste hiç verilmez. Aşağıya ÇİFT pay gider, çünkü bu yönü seçen
+   *   öğe kısa bir metindir (~20 dp) ve 44 dp eşiğine tek yönden ulaşması gerekir; komşusundan
+   *   çalmamanın bedeli budur.
+   */
+  compactEdges?: 'all' | 'up' | 'down';
   testID?: string;
 }
 
@@ -53,9 +70,18 @@ export function PressableSurface({
   accessibilityRole = 'button',
   selected,
   compact = false,
+  compactEdges = 'all',
   testID,
 }: PressableSurfaceProps) {
   const { theme } = useUnistyles();
+  const slop = theme.touchSlop;
+  const hitSlop = !compact
+    ? undefined
+    : compactEdges === 'up'
+      ? { top: slop, bottom: 0, left: slop, right: slop }
+      : compactEdges === 'down'
+        ? { top: 0, bottom: slop * 2, left: slop, right: slop }
+        : slop;
 
   return (
     <Pressable
@@ -67,7 +93,7 @@ export function PressableSurface({
          durduğu önemsiz olsun ve ekran başına dolgu yaması gerekmesin. Gerekçe `metrics.ts`
          `shadowRoom` künyesinde. */
       style={feedback === 'shadow' ? shadowRoomStyle.room : undefined}
-      hitSlop={compact ? theme.touchSlop : undefined}
+      hitSlop={hitSlop}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}

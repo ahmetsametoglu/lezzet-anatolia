@@ -259,6 +259,10 @@ export async function getCartView(
       group: 'local',
       availableHere: null,
       contents: [],
+      // Kapsam üyeliği satırla birlikte taşınır (künye: `CartLineView.categoryId`) — `discountable`
+      // zaten aynı iki değeri okuyor, ikinci bir sorgu yok.
+      categoryId: product.categoryId,
+      collectionIds: product.collections?.map((row) => row.collectionId) ?? [],
       shippable: product.shippable,
       vatRate: product.vatRate,
       ...priceChangeOf(entry, unitPriceCents, opts.previousPrices),
@@ -307,7 +311,12 @@ export async function getCartView(
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasLocal = lines.some((l) => l.route === 'local');
   const hasShipping = lines.some((l) => l.route === 'shipping');
-  const { discount, reachable: reachableDiscount } = await resolveCartDiscount(db, {
+  const {
+    discount,
+    reachable: reachableDiscount,
+    rules: discountRules,
+    context: discountContext,
+  } = await resolveCartDiscount(db, {
     lines: discountable,
     customerId: opts.customerId,
     couponCode: opts.couponCode,
@@ -323,6 +332,11 @@ export async function getCartView(
     // Sepetin ödenecek hâli — kargo HARİÇ (o adreste belli olur).
     totalCents: Math.max(0, subtotalCents - discountAmountOf(discount)),
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),
+    /* MOTORUN GİRDİSİ görünümle birlikte taşınır (20.08) — istemci adet değiştirdiğinde indirimi
+       aynı motorla tazelesin, sunucunun eski tutarını taşıyıp ekranda zıplama üretmesin. Künyesi
+       `CartDiscountResult.rules`. */
+    discountRules,
+    discountContext,
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
     shippingSubtotalCents,
@@ -451,6 +465,9 @@ function meets(subtotalCents: number, minBasketCents: number) {
 function orphanLine(entry: CartEntry): CartLine {
   return {
     ...entry,
+    // Kaynağı kaybolmuş satırın kapsamı da bilinmiyor — ve zaten fiyatı `null`, indirime girmiyor.
+    categoryId: null,
+    collectionIds: [],
     slug: '',
     name: '',
     image: { url: null, crop: CROP_CENTER },
@@ -487,6 +504,9 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
     kind: 'bundle',
     bundleId,
     qty,
+    // Paket kalemleri indirim matrahına GİRMEZ (DOMAIN §13) — kapsam üyeliği sorulmaz bile.
+    categoryId: null,
+    collectionIds: [],
     slug: pack.slug,
     name: pack.name,
     image: pack.image,

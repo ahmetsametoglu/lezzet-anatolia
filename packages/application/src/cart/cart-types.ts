@@ -1,5 +1,5 @@
 import { meetsMinBasket, resolveShippingFee } from '@lezzet/domain-core';
-import type { CouponRejection, ShippingFeeResult } from '@lezzet/domain-core';
+import type { CouponRejection, DiscountRule, ShippingFeeResult } from '@lezzet/domain-core';
 import type { AnalyticsBlockedReason, CartItem, CartLineGroup } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
@@ -124,6 +124,17 @@ export interface CartReachableDiscount {
 export interface CartDiscountResult {
   discount: CartDiscount;
   reachable: CartReachableDiscount | null;
+  /**
+   * MOTORUN GİRDİSİ — kararın kendisi değil, kararı ÜRETEN kurallar ve bağlam (20.08).
+   *
+   * Sepet görünümü bunu taşıyor ki istemci adet değiştirdiğinde indirimi AYNI MOTORLA tazeleyebilsin
+   * (`applyBestDiscount`); taşımasaydı sunucunun bir önceki tutarını taşımak zorunda kalır ve ekran
+   * her dokunuşta zıplardı (kullanıcı kararı 20.08). Havuz burada TAM hâliyle durur — kupon
+   * kodlarının süzülmesi TAŞIMA katmanının işi (`mobile-api` → `toViewBody`), çünkü neyin dışarı
+   * çıkacağı sözleşmenin kararıdır, motorun değil.
+   */
+  rules: readonly DiscountRule[];
+  context: { customerDiscountPercent: number | null; isFirstOrder: boolean };
 }
 
 /**
@@ -192,6 +203,15 @@ export type CartRef = { kind: 'variant'; variantId: string; stockId: string | nu
 export type CartLine = (CartVariantEntry & CartLineView) | (CartBundleEntry & CartLineView);
 
 interface CartLineView {
+  /**
+   * KAMPANYA KAPSAMININ ÜYELİĞİ (20.08) — satırın kategorisi ve koleksiyonları. Paket satırında
+   * `null`/boş: paket kalemleri indirim matrahına zaten girmez (DOMAIN §13).
+   *
+   * Sepet bunu KENDİ kullanmaz; taşıması istemcinin motoru çalıştırabilmesi içindir (künye:
+   * `CartDiscountResult.rules`). Bilgi zaten katalogda herkese açık.
+   */
+  categoryId: string | null;
+  collectionIds: readonly string[];
   /** Ürüne dönüş bağlantısı için; paket satırında paketin slug'ı. */
   slug: string;
   name: string;
@@ -298,6 +318,9 @@ export interface CartView {
   lines: CartLine[];
   /** Kalem toplamı (cent) — kargo ve indirim HARİÇ. */
   subtotalCents: number;
+  /** Kararı üreten kurallar ve bağlam — künyesi `CartDiscountResult.rules` (20.08). */
+  discountRules: readonly DiscountRule[];
+  discountContext: { customerDiscountPercent: number | null; isFirstOrder: boolean };
   /**
    * Sepete inen indirim ya da kuponun neden inmediği (09.6). Ekranın dört ret hâli buradan çıkar;
    * karar motorundur (`domain-core/pricing`), kapı yalnız taşır.
@@ -376,6 +399,10 @@ export interface CartView {
 export const EMPTY_CART: CartView = {
   lines: [],
   subtotalCents: 0,
+  /* Boş sepette kural TAŞINMAZ: kalem yokken indirim de yoktur ve okunamamış bir sepette kuralı
+     "yok" diye sunmak, ölçülmemişi ölçülmüş göstermek olurdu. İlk gerçek okumada dolar. */
+  discountRules: [],
+  discountContext: { customerDiscountPercent: null, isFirstOrder: false },
   discount: { status: 'none' },
   reachableDiscount: null,
   totalCents: 0,

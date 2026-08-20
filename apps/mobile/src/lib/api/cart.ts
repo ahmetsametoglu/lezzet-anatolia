@@ -79,11 +79,24 @@ function viewQuery(query: CartViewQuery, extra: Record<string, string | undefine
 }
 
 /**
- * VARYANT satırının adresi yol + sorguda: `/items/:variantId?stock=…` (çift kimlik, tek adres).
- * Paket satırı bu yoldan anılamaz — gerekçe ve ölçüm dosya künyesinde.
+ * SATIRIN ADRESİ — varyant satırında `/items/:variantId?stock=…` (çift kimlik, tek adres), paket
+ * satırında `/items/:bundleId?kind=bundle`. Paketin varyantı yoktur; satılan paketin kendisidir
+ * (DOMAIN §13).
+ *
+ * Paket dalı 20.08'de açıldı ve sebebi ölçülmüş bir zarardı: paket sunucuya hiç yazılmadığı için
+ * sepetin toplamına girmiyordu (cihazda 96,92 €'luk sepette bar 14,85 € yazıyordu).
  */
-function linePath(variantId: string, stockId: string | null, query: CartViewQuery): string {
-  return `/api/v1/me/cart/items/${encodeURIComponent(variantId)}${viewQuery(query, { stock: present(stockId) })}`;
+export interface CartLineRef {
+  variantId?: string;
+  stockId?: string | null;
+  bundleId?: string;
+}
+
+function linePath(ref: CartLineRef, query: CartViewQuery): string {
+  const bundle = ref.bundleId !== undefined;
+  const id = bundle ? ref.bundleId! : ref.variantId!;
+  const extra = bundle ? { kind: 'bundle' } : { stock: present(ref.stockId ?? null) };
+  return `/api/v1/me/cart/items/${encodeURIComponent(id)}${viewQuery(query, extra)}`;
 }
 
 export function fetchCart(query: CartViewQuery): Promise<ApiResult<MeCartView>> {
@@ -107,21 +120,12 @@ export function addCartItems(items: readonly CartItemWrite[], query: CartViewQue
 }
 
 /** Adet belirler; SIFIR satırı siler (sunucunun aynı kuralı — "−" ile sıfıra inmek çıkarmaktır). */
-export function setCartItemQty(
-  variantId: string,
-  qty: number,
-  stockId: string | null,
-  query: CartViewQuery,
-): Promise<ApiResult<MeCartView>> {
-  return authorizedFetch(linePath(variantId, stockId, query), MeCartViewSchema, { method: 'PATCH', body: { qty } });
+export function setCartItemQty(ref: CartLineRef, qty: number, query: CartViewQuery): Promise<ApiResult<MeCartView>> {
+  return authorizedFetch(linePath(ref, query), MeCartViewSchema, { method: 'PATCH', body: { qty } });
 }
 
-export function removeCartItem(
-  variantId: string,
-  stockId: string | null,
-  query: CartViewQuery,
-): Promise<ApiResult<MeCartView>> {
-  return authorizedFetch(linePath(variantId, stockId, query), MeCartViewSchema, { method: 'DELETE' });
+export function removeCartItem(ref: CartLineRef, query: CartViewQuery): Promise<ApiResult<MeCartView>> {
+  return authorizedFetch(linePath(ref, query), MeCartViewSchema, { method: 'DELETE' });
 }
 
 /**

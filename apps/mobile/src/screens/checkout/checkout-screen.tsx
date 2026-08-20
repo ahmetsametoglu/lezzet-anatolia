@@ -2,7 +2,7 @@ import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -25,11 +25,10 @@ import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine } from '@/screens/customer-kit/address-format';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
-import { cartLineId, refreshCart, useCart } from '@/screens/customer-kit/cart-store';
+import { cartLineId, refreshCart, setPurchasePlace, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
-import { useAddressCartView } from '@/screens/customer-kit/use-address-cart.hook';
 import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { publishMe, useMe } from '@/screens/customer-kit/use-me.hook';
@@ -271,10 +270,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      `null`) ve yerel kayıt onu taşıyor; sepet ekranının süzgeci burada da geçerli, yoksa aynı
      paket biri adsız iki kez yazılırdı. */
   const localBundleIds = new Set(cart.bundles.map((bundle) => bundle.id));
-  /* SEPET ADRESLE ÇÖZÜLÜR (kullanıcı kararı 10.08) — künyesi `use-address-cart.hook`ta. Adres henüz
-     bilinmiyorsa gezinme görünümüne düşülür; ekranı boş bırakmaktansa bir adım eski bir doğru. */
-  const addressView = useAddressCartView(locale, selectedAddress?.postalCode ?? null, cart.couponCode);
-  const view = addressView ?? cart.view;
+  /* SEPET ADRESLE ÇÖZÜLÜR (kullanıcı kararı 10.08) — ama yer artık DEPOYA bildiriliyor, ekrana
+     ikinci bir okuma eklenerek değil (künye: `cart-store` → `purchasePostalCode`, 20.08). İkinci
+     okuma yazma turlarını duymuyordu ve ekranı dondurmuştu. Adres henüz bilinmiyorsa depo gezinme
+     koduna düşer; ekranı boş bırakmaktansa bir adım eski bir doğru. */
+  useEffect(() => {
+    setPurchasePlace(selectedAddress?.postalCode ?? null);
+  }, [selectedAddress?.postalCode]);
+  const view = cart.view;
   const viewLines = view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
 
   /* ── BU SİPARİŞİN KAPSAMI (kullanıcı kararı 10.08) ────────────────────────

@@ -2,7 +2,7 @@ import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { Fragment, useState, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -27,6 +27,7 @@ import {
   removeProduct,
   setBundleQuantity,
   setProductQuantity,
+  setPurchasePlace,
   useCart,
 } from '@/screens/customer-kit/cart-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
@@ -36,7 +37,6 @@ import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet'
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
-import { useAddressCartView } from '@/screens/customer-kit/use-address-cart.hook';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
@@ -98,17 +98,16 @@ import messages from './messages.json';
 type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * SUNUCUDAN GELEN PAKET SATIRI UYGULAMADAN DÜZENLENEMEZ. Sebep 21.21'de DEĞİŞTİ ve ölçüldü: yazma
- * gövdesi paket dalını artık kabul ediyor (ekleme çalışıyor, adet birleşiyor) ama satırın ADRESİ
- * yok — `PATCH`/`DELETE` yolu varyant + parti ile adresliyor ve paket kimliğiyle atılan `DELETE`
- * satırı bulamıyor (canlı ölçüm: sepet aynen döndü). Basılınca hiçbir şey yapmayan bir sayaç,
- * müşteriye arızalı bir uygulama gösterirdi.
+ * PAKET SATIRI DA DÜZENLENEBİLİR (20.08). Buradaki süzgeç, satırın adresi olmadığı döneme aitti:
+ * `PATCH`/`DELETE` yalnız varyant + parti ile adresliyor, paket kimliğiyle atılan istek satırı
+ * bulamıyordu — basılınca hiçbir şey yapmayan bir sayaç göstermektense sayaç hiç çizilmiyordu.
+ * Servis imzası satır anahtarına geçince (`CartRef`) gerekçe düştü ve süzgeç kalktı.
  *
- * Satır GİZLENMEZ — sepettedir ve müşteri neyi taşıdığını görmeli. BEKLEYEN(21.14):
- * `CartService.setQty`/`removeItem` satır anahtarına (`CartRef`) geçince bu süzgeç kalkar.
+ * Fonksiyon DURUYOR çünkü salt-okunur hâl kavramı duruyor: yarın uygulamadan yazılamayan başka bir
+ * satır türü doğarsa yeri burasıdır. Bugün hiçbir satır salt okunur değil.
  */
-function isReadOnly(line: MeCartViewLine): boolean {
-  return line.kind === 'bundle';
+function isReadOnly(_line: MeCartViewLine): boolean {
+  return false;
 }
 
 export function CartScreen() {
@@ -147,8 +146,18 @@ export function CartScreen() {
     addresses.find((a) => a.id === selectedAddressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
-  const addressView = useAddressCartView(locale, deliveryAddress?.postalCode ?? null, cart.couponCode);
-  const view = addressView ?? cart.view;
+  /* ── GÖRÜNÜM TEK, YERİ ADRESTEN GELİR (20.08) ──────────────────────────────
+     10.08'de sepet doğru bir sebeple adrese bağlandı (gezinme kodu vitrinde kalır) ama bu, ekrana
+     İKİNCİ bir okuma eklenerek yapılmıştı: yazma turları deponun görünümünü tazeliyor, ekran ise
+     o ikinci okumayı çiziyordu ve o yalnız dil/adres/kupon değişince yenileniyordu. Adet bunlardan
+     biri değil — ekran donuyordu (ölçüldü cihazda: DB 3, satır 2, başlık "3 ürün").
+
+     Karar korunuyor, uygulaması değişti: yer DEPOYA bildiriliyor, görünüm yine tek yerde çözülüyor.
+     Ekranın seçeceği iki görünüm kalmadı; bayatlayacak ikinci kaynak da yok. */
+  useEffect(() => {
+    setPurchasePlace(deliveryAddress?.postalCode ?? null);
+  }, [deliveryAddress?.postalCode]);
+  const view = cart.view;
   /** Bandın ve künyenin andığı yer — adres varsa onun kodu, yoksa gezinme kodu. */
   const placeLabel = deliveryAddress?.postalCode ?? browsingCode;
 
@@ -164,13 +173,10 @@ export function CartScreen() {
      olurdu (CLAUDE §1). */
   const unresolved = cart.products.length > 0 && view.lines.length === 0;
 
-  /* AYNI PAKET İKİ KEZ ÇİZİLMEZ. Cihazdaki paket kaydı ile sunucunun görünüm satırı aynı satırın
-     iki yüzüdür ve 21.21'den beri aynı kimliği taşıyorlar (paketin uuid'si). Çizilen YEREL kayıttır:
-     sunucu paketi bugün çözemiyor (`CartBundlePort` mobil uçlarda geçilmiyor — adı boş, fiyatı
-     `null` döner), yereldeki ise adını ve fiyatını taşıyor. Süzgeç olmasaydı müşteri aynı paketi
-     biri adsız iki satır hâlinde görürdü. */
-  const localBundleIds = new Set(cart.bundles.map((bundle) => bundle.id));
-  const lines = view.lines.filter((line) => line.kind !== 'bundle' || !localBundleIds.has(line.bundleId));
+  /* PAKET DE SUNUCUNUN SATIRIDIR (20.08). Buradaki süzgeç, sunucunun paketi çözemediği döneme
+     aitti: yerel kayıt çiziliyor, sunucunun adsız/fiyatsız satırı eleniyordu. Paket sunucuya
+     bağlanınca gerekçe düştü ve süzgeç KALKTI — kalsaydı paket satırı bu kez hiç çizilmezdi. */
+  const lines = view.lines;
 
   /* GRUP SÖZLEŞMEDEN OKUNUR, yoldan TÜRETİLMEZ (künye: elle süzgecin ölçülmüş arızası). Sıra
      tasarımın sırası: önce gelenler, sonra kargoyla gelenler, en sonda bu adrese gelemeyenler. */
@@ -337,9 +343,12 @@ export function CartScreen() {
         removeAccessibilityLabel={t.line.removeLabel.replace('{name}', line.name)}
         decreaseLabel={t.line.decrease.replace('{name}', line.name)}
         increaseLabel={t.line.increase.replace('{name}', line.name)}
-        onDecrease={() => setProductQuantity(id, line.qty - 1)}
-        onIncrease={() => setProductQuantity(id, line.qty + 1)}
-        onRemove={() => removeProduct(id)}
+        /* PAKET KENDİ KAPISINDAN geçer: `id` paket satırında `bundleId`dir ve ürün kapısına
+           verilseydi `locate` onu bir VARYANT kimliği sanardı (ikisi de çıplak uuid) — sunucu
+           eşleşme bulamaz, istek 200 döner, hiçbir şey olmazdı. */
+        onDecrease={() => (bundle ? setBundleQuantity(id, line.qty - 1) : setProductQuantity(id, line.qty - 1))}
+        onIncrease={() => (bundle ? setBundleQuantity(id, line.qty + 1) : setProductQuantity(id, line.qty + 1))}
+        onRemove={() => (bundle ? removeBundle(id) : removeProduct(id))}
         testID={`cart-line-${id}`}
       />
     );
@@ -511,29 +520,9 @@ export function CartScreen() {
         )}
 
         <View style={styles.lines}>
-          {/* Cihazda duran hazır paket satırları — depo onları henüz sunucuya bağlamıyor (iki ölçülmüş
-              engel: satır çözülemiyor, satır silinemiyor — `cart-store` künyesi). */}
-          {cart.bundles.map((bundle) => (
-            <CartLineRow
-              key={bundle.id}
-              name={bundle.name}
-              subtitle={bundle.contentLabel}
-              totalLabel={formatPrice(bundle.unitCents * bundle.quantity, locale)}
-              quantity={bundle.quantity}
-              photoUri={bundle.photoUri}
-              tone="bundle"
-              eyebrow={t.line.bundle}
-              removeLabel={t.line.remove}
-              removeAccessibilityLabel={t.line.removeLabel.replace('{name}', bundle.name)}
-              decreaseLabel={t.line.decrease.replace('{name}', bundle.name)}
-              increaseLabel={t.line.increase.replace('{name}', bundle.name)}
-              onDecrease={() => setBundleQuantity(bundle.id, bundle.quantity - 1)}
-              onIncrease={() => setBundleQuantity(bundle.id, bundle.quantity + 1)}
-              onRemove={() => removeBundle(bundle.id)}
-              testID={`cart-bundle-${bundle.id}`}
-            />
-          ))}
-
+          {/* Paket satırı artık gruplarla birlikte çiziliyor (`renderLine` paket dalını zaten
+              tanıyor): sunucu onu ad, fiyat ve yol ile çözüyor, yani grubu da doğru. Buradaki
+              ayrı yerel blok 20.08'de SÖKÜLDÜ — paketin sepetin toplamına girmemesiyle aynı kök. */}
           {/* Grubun EYLEMİ kendi kalemlerinin hemen ardında: web'in yerleşimi ve gerekçesi aynı —
               "kargolu ürünleri ayrıca sipariş ver" düğmesi, hangi ürünlerden bahsettiği görünürken
               anlam taşır. Rota grubunun düğmesi yapışkan bardadır, burada yalnız künyesi durur. */}
