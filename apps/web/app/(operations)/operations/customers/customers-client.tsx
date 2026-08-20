@@ -347,6 +347,8 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
           preferredLanguage={selected.preferredLanguage}
           codAllowed={detail.codAllowed}
           discountPercent={detail.discountPercent}
+          priceGroupId={detail.priceGroupId}
+          priceGroupOptions={detail.priceGroupOptions}
           saving={saving}
           error={saveError}
           onSave={(input: CustomerEditInput) =>

@@ -32,6 +32,7 @@ export { BundleItemService } from './services/bundle-item.service';
 export { RecipeService, type CreateRecipeInput } from './services/recipe.service';
 export { RecipeItemService } from './services/recipe-item.service';
 export { PriceService } from './services/price.service';
+export { PriceGroupService } from './services/price-group.service';
 export { DiscountService, type DiscountUsage } from './services/discount.service';
 export { DiscountCodeService } from './services/discount-code.service';
 export { DiscountUseService } from './services/discount-use.service';

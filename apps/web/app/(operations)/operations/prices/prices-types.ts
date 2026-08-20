@@ -50,6 +50,18 @@ export interface DiscountCustomerRow {
   discountPercent: number;
 }
 
+/**
+ * Fiyat grubu satırı (20.08) — B2B alt kademesi. Üye sayısı profillerden türetilir: "bu grubu
+ * silebilir miyim" ve "yüzdeyi değiştirirsem kaç müşteri etkilenir" sorularının cevabı.
+ */
+export interface PriceGroupRow {
+  id: string;
+  name: string;
+  /** B2B listeden düşülen yüzde. */
+  percentOff: number;
+  memberCount: number;
+}
+
 /** Kuponun bir kapısı: kod, hangi dil için yazıldığı ve kaç kez tuttuğu. */
 export interface DiscountCodeRow {
   id: string;
@@ -169,6 +181,8 @@ export interface PricesData {
   /** Şu an geçerli TÜM özel fiyatlar — sayfalanmaz (admin'in eliyle büyüyen küme). */
   customerPrices: CustomerPriceRow[];
   discountCustomers: DiscountCustomerRow[];
+  /** Fiyat grupları (B2B kademeleri, 20.08) — sayfalanmaz, operatörün eliyle büyür. */
+  priceGroups: PriceGroupRow[];
   /**
    * Karar bekleyen TÜM partiler — sayfalanmaz. Stok ekranıyla AYNI kaynaktan (`toBatchViews`) gelir;
    * bir partiyi kaçırmak imhalık malı satmaktır.
@@ -207,6 +221,8 @@ export interface PricesViewProps {
   onEdit: (variantId: string) => void;
   /** Özel fiyat diyaloğu: satır verilirse düzenleme, `null` ise yeni kayıt. */
   onEditCustomerPrice: (row: CustomerPriceRow | null) => void;
+  /** Fiyat grubu diyaloğu: satır verilirse düzenleme, `null` ise yeni grup. */
+  onEditPriceGroup: (row: PriceGroupRow | null) => void;
   /** Teklif diyaloğunu bu parti için aç — stok ekranıyla aynı diyalog, aynı karar. */
   onOpenOffer: (stockId: string) => void;
   /** İndirim formu: satır verilirse düzenleme, `null` ise yeni kural. */

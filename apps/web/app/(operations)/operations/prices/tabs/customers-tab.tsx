@@ -14,7 +14,7 @@ import type { CustomerPriceRow, PricesViewProps } from '../prices-types';
 //
 // Liste SAYFALANMAZ: küme veriyle değil admin'in eliyle büyür (her satır ayrı bir pazarlık).
 
-export function CustomersTab({ data, onEditCustomerPrice, navPending }: PricesViewProps) {
+export function CustomersTab({ data, onEditCustomerPrice, onEditPriceGroup, navPending }: PricesViewProps) {
   const columns: Column<CustomerPriceRow>[] = [
     {
       key: 'customer',
@@ -76,8 +76,10 @@ export function CustomersTab({ data, onEditCustomerPrice, navPending }: PricesVi
         <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
           Fiyat çözüm sırası
         </span>
+        {/* Sıra motorun gerçeğidir (`resolve-price`): özel → grup → liste. Genel indirim oranı bu
+            sırada DEĞİL — o kampanya havuzunda yarışır; alttaki şeritte ayrıca izlenir (20.08). */}
         <Step order={1} label="Müşteriye özel fiyat" note={`${data.customerPrices.length} tanımlı`} active />
-        <Step order={2} label="Müşteri indirim oranı" note={`${data.discountCustomers.length} müşteride`} />
+        <Step order={2} label="Fiyat grubu" note={`${data.priceGroups.length} grup`} />
         <Step order={3} label="Kanal liste fiyatı" note="taban" />
         {/* Ekleme şeridin SAĞINDA (tasarım): kural okunduktan sonra gelen eylem — önce "sıra nasıl
             işliyor", sonra "yeni bir anlaşma yaz". */}
@@ -104,7 +106,12 @@ export function CustomersTab({ data, onEditCustomerPrice, navPending }: PricesVi
             </Button>
           </div>
         }
-        footer={<DiscountStrip rows={data.discountCustomers} />}
+        footer={
+          <>
+            <GroupStrip rows={data.priceGroups} onEdit={onEditPriceGroup} />
+            <DiscountStrip rows={data.discountCustomers} />
+          </>
+        }
       />
     </div>
   );
@@ -130,6 +137,41 @@ function Step({ order, label, note, active = false }: StepProps) {
       <span className="font-ops-body text-ops-xs font-medium text-ops-ink">{label}</span>
       <span className="font-ops-body text-ops-micro text-ops-muted">{note}</span>
     </span>
+  );
+}
+
+/**
+ * Fiyat grupları (20.08) — B2B alt kademeleri, tablonun altında bir şerit. Grup BURADAN yönetilir
+ * (ad + yüzde + silme); ÜYELİK ise müşteri kartından atanır — üyelik profil kaydında yaşar, iki
+ * yazma yeri olsaydı hangisinin kazandığı belirsizleşirdi (DiscountStrip'in aynı kuralı).
+ */
+function GroupStrip({ rows, onEdit }: { rows: PricesViewProps['data']['priceGroups']; onEdit: PricesViewProps['onEditPriceGroup'] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-ops-line bg-ops-subtle px-6 py-3">
+      <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
+        Fiyat grupları
+      </span>
+      {rows.map((g) => (
+        <button
+          key={g.id}
+          type="button"
+          onClick={() => onEdit(g)}
+          className="cursor-pointer rounded-ops-btn border border-ops-line bg-ops-white px-[11px] py-[5px] font-ops-body text-ops-xs font-medium text-ops-ink transition-colors hover:border-ops-olive-line hover:bg-ops-olive-bg"
+          title="Grubu düzenle — üyelik müşteri kartından atanır"
+        >
+          {g.name} · <strong className="font-ops-mono text-ops-olive-dark">−%{g.percentOff}</strong> ·{' '}
+          {g.memberCount} üye
+        </button>
+      ))}
+      {rows.length === 0 && (
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          Grup yok — B2B kademesi (market · restoran) açmak için:
+        </span>
+      )}
+      <Button variant="secondary" size="sm" onClick={() => onEdit(null)}>
+        + Grup
+      </Button>
+    </div>
   );
 }
 

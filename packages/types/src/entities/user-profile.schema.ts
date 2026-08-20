@@ -150,6 +150,12 @@ export const UserProfileSchema = z.object({
   paymentTermDays: z.number().int().nullable(),
   /** YÜZDE, para değil — 02.9'un kapsamı dışında (`dbNumeric` burada oran taşır). */
   discountPercent: dbNumeric.nullable(),
+  /**
+   * Fiyat grubu üyeliği (`price_group`, 20.08) — B2B alt kademesi (market · restoran/pastane…).
+   * `discountPercent`ten AYRI eksen: o kampanya havuzunda yarışan bir indirimdir, bu fiyatın
+   * kendisidir (çözüm sırası: müşteriye özel → grup → liste). `null` = grupsuz, düz liste.
+   */
+  priceGroupId: z.string().uuid().nullable(),
   codAllowed: z.boolean(),
   marketingConsent: MarketingConsentSchema,
   acquisitionSource: z.record(z.unknown()).nullable(),

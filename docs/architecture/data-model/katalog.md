@@ -211,6 +211,23 @@ Paylaşılan alanlar (ad, açıklama, kategori, görsel, `date_type`, `shelf_lif
 
 `customer_id` tek kimlik tablosunu (`user_profiles`) işaret eder — "müşteri rolüyle davranan profil".
 
+## PriceGroup (müşteri fiyat grubu)
+
+B2B'nin alt kademeleri (kullanıcı kararı 20.08): market aylık yüksek hacim alır, restoran/pastane
+düşük — fark bir İNDİRİM değil FİYATTIR (kampanya havuzuyla yarışmaz, müşteri kendi fiyatını görür).
+Grup, B2B liste fiyatı üstünden yüzde taşır; **çözüm sırası motorda: müşteriye özel → grup → liste**
+(`domain-core/resolve-price`). Satır bazlı grup listesi BİLEREK yok — katalog bakımı grup sayısıyla
+çarpılırdı; varyant istisnası müşteriye özel fiyatla verilir. Üyelik `user_profiles.price_group_id`te
+durur (`restrict` — üyeli grup silinemez); yalnız etkin kanal `b2b` iken uygulanır, onaysız şirket
+B2C'ye düşerken kademe de kapanır.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| name | text | operatörün iç etiketi ("Market") — müşteriye görünmez |
+| percent_off | numeric | B2B listeden düşülen yüzde; DB kısıtı 0 < x < 100 |
+| created_at | timestamptz | |
+
 ## Discount (indirim / kupon)
 
 Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (bkz. `DOMAIN.md §5`).

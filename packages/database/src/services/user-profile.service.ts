@@ -146,6 +146,15 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
+   * Fiyat grubu ÜYESİ müşteriler (20.08) — grup yönetiminin "kaç üye var" sayısı ve müşteri
+   * kartındaki üyelik görünümü. `listWithDiscount`un aynı deseni: üyelik profil kaydında yaşar,
+   * fiyat ekranı yazmaz, kimlerde olduğunu izler. Sayfalanmaz — üyelik elle verilir (CLAUDE §1).
+   */
+  async listWithPriceGroup(): Promise<UserProfile[]> {
+    return this.getAll({}, { isNotNullFields: ['price_group_id'], orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
+  /**
    * Profil listesi (admin) — en yeni önce, sonsuz kaydırma.
    *
    * **Süzme ve arama SUNUCUDA** (09.9). Müşteri kümesi veriyle büyür, yani client'ta süzülemez:

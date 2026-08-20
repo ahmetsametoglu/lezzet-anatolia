@@ -42,6 +42,10 @@ interface CustomerEditDialogProps {
   codAllowed: boolean;
   /** Genel indirim oranı (%); `null` = oran yok. */
   discountPercent: number | null;
+  /** Fiyat grubu üyeliği; `null` = grupsuz. */
+  priceGroupId: string | null;
+  /** Grup seçenekleri — gruplar Fiyatlar ekranında yönetilir, burada yalnız ATANIR. */
+  priceGroupOptions: { id: string; name: string; percentOff: number }[];
   saving: boolean;
   error: string | null;
   onSave: (input: CustomerEditInput) => void;
@@ -54,6 +58,8 @@ export function CustomerEditDialog({
   preferredLanguage,
   codAllowed,
   discountPercent,
+  priceGroupId,
+  priceGroupOptions,
   saving,
   error,
   onSave,
@@ -70,6 +76,8 @@ export function CustomerEditDialog({
   // Oran METİN tutulur: boş kutu ile sıfır AYRI hâller ve `number` state boşluğu temsil edemez
   // (vade süresi alanıyla aynı gerekçe).
   const [discount, setDiscount] = useState(discountPercent === null ? '' : String(discountPercent));
+  // Grup boşluğu '' ile temsil edilir (Select string ister); kaydederken null'a döner.
+  const [group, setGroup] = useState(priceGroupId ?? '');
 
   const adBos = name.trim() === '';
   // Her iki kimlik anahtarı da boşsa kayıt bir daha BULUNAMAZ: ne telefonla ne e-postayla. Ad tek
@@ -117,6 +125,7 @@ export function CustomerEditDialog({
             vatNumber: vat.trim() || null,
             codAllowed: cod,
             discountPercent: oran,
+            priceGroupId: group || null,
           });
         }}
         className="flex flex-col gap-3.5"
@@ -184,6 +193,26 @@ export function CustomerEditDialog({
               ? 'Varsayılan açık. Ödememe ya da ret geçmişi varsa kapatın.'
               : 'Kapalı — müşteri checkout’ta kapıda ödeme seçeneğini göremiyor.'}
           </span>
+
+          {/* Fiyat grubu YALNIZ şirkette: kademe B2B listesinden düşer, bireysel müşteride motor
+              yüzdeyi zaten uygulamaz — kutuyu göstermek "doldurulmalı mı" sorusu doğururdu (vergi
+              numarasının aynı kuralı). Gruplar Fiyatlar ekranında yönetilir, burada yalnız atanır. */}
+          {type === 'company' ? (
+            <FieldShell
+              label="Fiyat grubu"
+              className="max-w-[260px]"
+              labelAside={<span className="font-ops-body text-ops-xs text-ops-muted">B2B listeden düşer</span>}
+            >
+              <Select
+                value={group}
+                onChange={setGroup}
+                options={[
+                  { value: '', label: 'Grupsuz — düz liste' },
+                  ...priceGroupOptions.map((g) => ({ value: g.id, label: `${g.name} · −%${g.percentOff}` })),
+                ]}
+              />
+            </FieldShell>
+          ) : null}
 
           <FieldShell
             label="İndirim oranı (%)"

@@ -46,6 +46,9 @@ alter table public.user_profiles
   add column payment_term_days int,                  -- boşsa Setting varsayılanı (30)
 
   add column discount_percent numeric(5, 2),         -- müşteriye genel indirim oranı (DOMAIN §5)
+  -- Fiyat grubu üyeliği (0005 price_group künyesi): B2B alt kademesi. `restrict` — üyesi olan
+  -- grup sessizce silinmesin; operatör önce müşterileri taşır.
+  add column price_group_id uuid references public.price_group (id) on delete restrict,
   add column cod_allowed boolean not null default true, -- kapıda ödeme izni; kötüye kullanımda kapanır
 
   -- Kanal bazlı pazarlama izni + GDPR kanıtı (ne zaman, nereden). Faz 1'de yalnız toplanır.

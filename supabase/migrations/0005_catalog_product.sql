@@ -286,6 +286,24 @@ create type channel as enum ('b2b', 'b2c');
 -- Tek pazar → tek para birimi; çoklu döviz Faz 1'de yok (tip yine de açık, ileride genişler).
 create type currency as enum ('EUR');
 
+-- MÜŞTERİ FİYAT GRUBU (kullanıcı kararı 20.08) — B2B'nin alt kademeleri: market aylık yüksek
+-- hacim alır, restoran/pastane düşük; aradaki fark bir İNDİRİM değil FİYATTIR (kampanya havuzuyla
+-- yarışmaz, müşteri "kendi fiyatını" görür). Grup, B2B liste fiyatı üstünden yüzde taşır; çözüm
+-- sırası motorda: müşteriye özel → grup → liste (`domain-core/resolve-price`). Satır bazlı grup
+-- listesi BİLEREK yok — katalog bakımı grup sayısıyla çarpılırdı; varyant istisnası zaten
+-- müşteriye özel fiyatla veriliyor.
+create table public.price_group (
+  id uuid primary key default gen_random_uuid(),
+  -- Operatörün tanıyacağı ad ("Market", "Restoran / Pastane") — iç etiket, müşteriye görünmez.
+  name text not null,
+  -- B2B listeden düşülen yüzde. 0 meşru DEĞİL (grubu listeyle eş yapar — o zaman grup gereksiz);
+  -- 100 bedava demek, o da meşru değil.
+  percent_off numeric(5, 2) not null check (percent_off > 0 and percent_off < 100),
+  created_at timestamptz not null default now()
+);
+
+alter table public.price_group enable row level security;
+
 create table public.price (
   id uuid primary key default gen_random_uuid(),
   variant_id uuid not null references public.product_variant (id) on delete cascade,

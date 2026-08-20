@@ -3,6 +3,7 @@ import {
   CollectionService,
   DiscountCodeService,
   DiscountService,
+  PriceGroupService,
   PriceService,
   ProductService,
   ProductVariantService,
@@ -21,7 +22,7 @@ import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows } from './p
 import { toChannelMaps, toPriceRows } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
-import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceRow } from './prices-types';
+import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceGroupRow, type PriceRow } from './prices-types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
@@ -63,6 +64,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         nextCursor: channels?.nextCursor ?? null,
         customerPrices: customers?.prices ?? [],
         discountCustomers: customers?.discounts ?? [],
+        priceGroups: customers?.groups ?? [],
         offers: offers ?? [],
         discounts: coupons?.rows ?? [],
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
@@ -180,11 +182,29 @@ async function readOffersTab(db: Db): Promise<BatchView[]> {
  * bu yüzden boy adları ve liste fiyatları, özel fiyat satırlarının işaret ettiği kimliklerden
  * türetilir (katalog sayfasından değil).
  */
-async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; discounts: DiscountCustomerRow[] }> {
+async function readCustomerTab(
+  db: Db,
+): Promise<{ prices: CustomerPriceRow[]; discounts: DiscountCustomerRow[]; groups: PriceGroupRow[] }> {
   const priceSvc = new PriceService(db);
   const profileSvc = new UserProfileService(db);
 
-  const [rows, discountProfiles] = await Promise.all([priceSvc.listCustomerPricesNow(), profileSvc.listWithDiscount()]);
+  const [rows, discountProfiles, groupRows, groupedProfiles] = await Promise.all([
+    priceSvc.listCustomerPricesNow(),
+    profileSvc.listWithDiscount(),
+    new PriceGroupService(db).listAll(),
+    profileSvc.listWithPriceGroup(),
+  ]);
+  // Üye sayısı profillerden türetilir — grup satırında sayaç tutulmaz (tek gerçek: üyelik profildedir).
+  const memberCounts = new Map<string, number>();
+  for (const p of groupedProfiles) {
+    if (p.priceGroupId) memberCounts.set(p.priceGroupId, (memberCounts.get(p.priceGroupId) ?? 0) + 1);
+  }
+  const groups: PriceGroupRow[] = groupRows.map((g) => ({
+    id: g.id,
+    name: g.name,
+    percentOff: g.percentOff,
+    memberCount: memberCounts.get(g.id) ?? 0,
+  }));
 
   const variantIds = [...new Set(rows.map((r) => r.variantId))];
   const customerIds = [...new Set(rows.flatMap((r) => (r.customerId ? [r.customerId] : [])))];
@@ -229,5 +249,6 @@ async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; di
       products: variantContext,
     }),
     discounts: toDiscountCustomerRows(discountProfiles),
+    groups,
   };
 }

@@ -8,6 +8,7 @@ import {
   DiscountService,
   OrderService,
   PointsBalanceService,
+  PriceGroupService,
   TicketService,
   UserProfileService,
   serviceDb,
@@ -88,7 +89,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
     const orders = new OrderService(db);
     const discounts = new DiscountService(db);
 
-    const [totals, recent, scorecard, addresses, coupons, points, ticketCount, openTicketCount, referrer] = await Promise.all([
+    const [totals, recent, scorecard, addresses, coupons, points, ticketCount, openTicketCount, referrer, priceGroups] = await Promise.all([
       // `counts({ customerIds })` DEĞİL: orada müşteri süzgeci arama grubunun içinde durur ve terim
       // olmadan hiç uygulanmaz — her müşteri kartı işletmenin TAMAMININ cirosunu gösteriyordu
       // (ölçüldü 30.07: 28 sipariş / 1777 €, gerçek 10 / 990 €). Bu RPC dar ve doğru soruyu sorar,
@@ -106,6 +107,8 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
       // kazandığı yerde (çok talep açmış müşteride) tavana takılıp yalan söylerdi.
       new TicketService(db).countOpenByCustomer(customerId),
       profile.referredBy ? profiles.getById(profile.referredBy) : Promise.resolve(null),
+      // Fiyat grubu seçenekleri (20.08) — kart, üyeliği buradan atar; küme doğal tavanlı, tek tur.
+      new PriceGroupService(db).listAll(),
     ]);
 
     // Kupon kodları ve kullanım sayıları kupon VARSA okunur — kuponsuz müşteride iki boş tur atmanın
@@ -133,6 +136,8 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
         creditLimitCents: profile.creditLimitCents,
         codAllowed: profile.codAllowed,
         discountPercent: profile.discountPercent,
+        priceGroupId: profile.priceGroupId,
+        priceGroupOptions: priceGroups.map((g) => ({ id: g.id, name: g.name, percentOff: g.percentOff })),
         addresses: toCustomerAddressRows(addresses),
         consent: {
           email: toConsentView(profile.marketingConsent.email),
@@ -329,6 +334,7 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
       vatNumber: input.vatNumber?.trim() || null,
       codAllowed: input.codAllowed,
       discountPercent: oran === null || oran === 0 ? null : oran,
+      priceGroupId: input.priceGroupId,
     });
     revalidatePath(CUSTOMERS_PATH);
     return { data: null, error: null };

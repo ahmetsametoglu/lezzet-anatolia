@@ -1,4 +1,4 @@
-import { resolvePrice } from '@lezzet/domain-core';
+import { percentOffCents, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import { pricePerKg } from '@lezzet/helper';
 import { publicImageUrl } from '@lezzet/storage';
@@ -183,14 +183,22 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
     // B2C'dir), yani motorun kendi daraltması bu listeyle çelişmez.
     channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents }] : [],
     customerPriceCents: customerCents,
+    // Grup kademesi (20.08): yüzde viewer'da çözülmüş gelir, fiyata motor uygular (özel→grup→liste).
+    groupPercentOff: ctx.viewer.groupPercentOff,
     offer: ctx.offers.get(variant.id) ?? null,
   });
 
   const priceCents = resolved.sellable ? resolved.unitPriceCents : null;
+  // Teklifin yerine geçtiği fiyat, motorun teklifsiz vereceği fiyattır: özel → grup → liste.
+  const withoutOffer =
+    customerCents ??
+    (ctx.viewer.channel === 'b2b' && ctx.viewer.groupPercentOff != null && listCents != null
+      ? percentOffCents(listCents, ctx.viewer.groupPercentOff)
+      : listCents);
   return {
     priceCents,
-    // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır: özel fiyat varsa o, yoksa liste.
-    wasCents: resolved.sellable && resolved.source === 'offer' ? (customerCents ?? listCents ?? undefined) : undefined,
+    // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır.
+    wasCents: resolved.sellable && resolved.source === 'offer' ? (withoutOffer ?? undefined) : undefined,
     // Kıyas fiyatı ÖDENEN fiyattan hesaplanır (teklif kazandıysa indirimli olandan) — müşteri
     // karşılaştırırken bugün ödeyeceği tutarı kıyaslar. Net ağırlık girilmemişse satır düşer.
     comparisonCents: priceCents != null ? pricePerKg(priceCents, variant.netWeightG) : null,

@@ -51,6 +51,33 @@ describe('resolvePrice — müşteriye özel fiyat', () => {
   });
 });
 
+describe('resolvePrice — fiyat grubu (B2B alt kademesi, 20.08)', () => {
+  it('gruplu B2B müşteri listeden yüzde düşülmüş fiyatı alır', () => {
+    const r = resolvePrice(input({ channel: 'b2b', groupPercentOff: 5 }));
+    expect(r).toMatchObject({ unitPriceCents: 1140, source: 'group', effectiveChannel: 'b2b' }); // 12,00 − %5
+  });
+
+  it('müşteriye özel fiyat grubu ezer — istisna kademeden üstündür', () => {
+    const r = resolvePrice(input({ channel: 'b2b', groupPercentOff: 5, customerPriceCents: 1100 }));
+    expect(r).toMatchObject({ unitPriceCents: 1100, source: 'customer' });
+  });
+
+  it('ONAYSIZ şirkette grup uygulanmaz — B2C ile birlikte toptan kademe de kapanır', () => {
+    const r = resolvePrice(input({ channel: 'b2b', b2bApproved: false, groupPercentOff: 5 }));
+    expect(r).toMatchObject({ unitPriceCents: 1690, source: 'channel', effectiveChannel: 'b2c' });
+  });
+
+  it('B2C kanalında grup yüzdesi sessizce yok sayılır', () => {
+    const r = resolvePrice(input({ groupPercentOff: 5 }));
+    expect(r).toMatchObject({ unitPriceCents: 1690, source: 'channel' });
+  });
+
+  it('teklif grup fiyatından da düşükse kazanır — kıyas ödenen fiyattan', () => {
+    const r = resolvePrice(input({ channel: 'b2b', groupPercentOff: 5, offer: { unitPriceCents: 990, remainingQty: 3, stockId: 's1' } }));
+    expect(r).toMatchObject({ unitPriceCents: 990, source: 'offer', quantityCap: 3 });
+  });
+});
+
 describe('resolvePrice — near-expiry teklif çakışması (düşük olan kazanır)', () => {
   const offer = { unitPriceCents: 1190, remainingQty: 4, stockId: 'batch-1' };
 

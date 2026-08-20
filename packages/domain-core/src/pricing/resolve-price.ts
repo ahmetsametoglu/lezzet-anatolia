@@ -5,7 +5,9 @@ import { addVat, removeVat } from '@lezzet/helper';
  * Fiyat çözümü — "bu müşteri bu varyantı kaça alır" sorusunun TEK cevap yeri (DOMAIN §5).
  * Saf: DB bilmez, yüzey bilmez. Web, WhatsApp ve kapı önü aynı fonksiyonu çağırır.
  *
- * Sıra (ilk bulunan kazanır): müşteriye özel fiyat → kanal fiyatı.
+ * Sıra (ilk bulunan kazanır): müşteriye özel fiyat → fiyat grubu (B2B, listeden yüzde) → kanal
+ * fiyatı. Grup basamağı 20.08'de eklendi (kullanıcı kararı): B2B'nin alt kademeleri (market ·
+ * restoran/pastane) arasındaki fark bir İNDİRİM değil FİYATTIR — kampanya havuzuyla yarışmaz.
  *
  * Kapsam: **varyant** fiyatıdır. Paketin (`Bundle`) fiyatı buradan geçmez — paket yalnız B2C'de
  * satılır, tek sayıdır ve TTC tabanındadır (DOMAIN §13); kanal/özel fiyat/teklif boyutu yoktur.
@@ -51,11 +53,22 @@ export interface ResolvePriceInput {
   channelPrices: ChannelPrice[];
   /** Müşteriye özel fiyat satırı — geçerli kanalda tanımlıysa (cent, kanal tabanında). */
   customerPriceCents?: number | null;
+  /**
+   * Müşterinin fiyat grubunun yüzdesi (`price_group.percent_off`) — B2B listeden düşülür.
+   * YALNIZ etkin kanal `b2b` iken uygulanır: onaysız şirket B2C'ye düştüğünde toptan kademe de
+   * onunla birlikte kapanır (toptan liste doğrulanmamış kayda açılmaz — aynı gerekçe).
+   */
+  groupPercentOff?: number | null;
   /** Varyantta açık teklif varsa (fiyat, geçerli kanalın tabanında). */
   offer?: ActiveOffer | null;
 }
 
-export type PriceSource = 'customer' | 'channel' | 'offer';
+export type PriceSource = 'customer' | 'group' | 'channel' | 'offer';
+
+/** Yüzde düşülmüş tutar (cent, en yakına yuvarlanır) — grup fiyatının tek hesap yeri. */
+export function percentOffCents(amountCents: number, percentOff: number): number {
+  return Math.round(amountCents * (1 - percentOff / 100));
+}
 
 export type ResolvedPrice =
   | {
@@ -77,7 +90,7 @@ export type ResolvedPrice =
     };
 
 export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
-  const { channel, b2bApproved, channelPrices, customerPriceCents, offer } = input;
+  const { channel, b2bApproved, channelPrices, customerPriceCents, groupPercentOff, offer } = input;
 
   // Onaysız şirket perakendeye düşer — özel fiyat da bu kanalda aranır (aynı gerekçe).
   const effectiveChannel: Channel = channel === 'b2b' && !b2bApproved ? 'b2c' : channel;
@@ -85,13 +98,19 @@ export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
   const listPrice = channelPrices.find((p) => p.channel === effectiveChannel)?.amountCents ?? null;
 
   // Kanal fiyatı yoksa ürün satışa kapalıdır — teklif tek başına satış açmaz (teklif normal
-  // fiyatın yerine geçer, yerine kaim olmaz).
+  // fiyatın yerine geçer, yerine kaim olmaz). Grup da açmaz: yüzdenin düşüleceği liste yok.
   if (listPrice === null) return { sellable: false, reason: 'no_price_in_channel' };
+
+  // Grup kademesi yalnız B2B'de yaşar (girdi künyesi) — listeden türetilir, ayrı satır değildir.
+  const groupPrice =
+    effectiveChannel === 'b2b' && groupPercentOff != null ? percentOffCents(listPrice, groupPercentOff) : null;
 
   const base =
     customerPriceCents != null
       ? { price: customerPriceCents, source: 'customer' as const }
-      : { price: listPrice, source: 'channel' as const };
+      : groupPrice != null
+        ? { price: groupPrice, source: 'group' as const }
+        : { price: listPrice, source: 'channel' as const };
 
   // Teklif çakışması: düşük olan kazanır. Eşitlikte teklif kazanmaz — tavan ve batch-pinned
   // rezervasyon gereksiz yere devreye girmesin (aynı parayı ödeyen müşteriyi kısıtlamayız).

@@ -176,6 +176,10 @@ export interface CustomerDetail {
   creditLimitCents: number | null;
   codAllowed: boolean;
   discountPercent: number | null;
+  /** Fiyat grubu üyeliği (20.08) — `null` = grupsuz, düz B2B liste. */
+  priceGroupId: string | null;
+  /** Seçenek listesi karta detayla gelir: gruplar Fiyatlar ekranında yönetilir, burada atanır. */
+  priceGroupOptions: { id: string; name: string; percentOff: number }[];
   addresses: CustomerAddressRow[];
   consent: { email: ConsentView | null; whatsapp: ConsentView | null };
   /** Puan bakiyesi — TÜRETİLMİŞ (defterden). Puan yalnız B2C'de anlamlı (DOMAIN §14). */
@@ -208,6 +212,8 @@ export type CustomerEditInput = Pick<
   | 'codAllowed'
   /** Genel indirim oranı (%); `null` = oran kaldırılır (liste fiyatına döner). */
   | 'discountPercent'
+  /** Fiyat grubu üyeliği; `null` = grupsuz (düz B2B liste). */
+  | 'priceGroupId'
 >;
 
 /** Mükerrer ADAYI — kesinlik iddiası yok; operatör kaydı açıp kendisi karar verir. */

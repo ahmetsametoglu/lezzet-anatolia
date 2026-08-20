@@ -21,6 +21,7 @@ export * from './site-image.schema';
 export * from './bundle.schema';
 export * from './recipe.schema';
 export * from './price.schema';
+export * from './price-group.schema';
 export * from './product-collection.schema';
 export * from './address.schema';
 export * from './cart.schema';

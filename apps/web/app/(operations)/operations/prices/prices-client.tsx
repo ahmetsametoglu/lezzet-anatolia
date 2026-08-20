@@ -6,11 +6,12 @@ import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMorePricesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { CustomerPriceDialog } from './customer-price-dialog';
+import { PriceGroupDialog } from './price-group-dialog';
 import { DiscountDialog } from './discount-dialog';
 import { PriceDialog } from '@/components/operation/prices/price-dialog';
 import { PricesDesktop } from './prices.desktop';
 import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
-import type { CustomerPriceRow, DiscountRow, PriceRow, PricesData } from './prices-types';
+import type { CustomerPriceRow, DiscountRow, PriceGroupRow, PriceRow, PricesData } from './prices-types';
 
 // Fiyat ekranı client kökü: tek durum ağacı burada, diyaloglar görünümün üstünde. Operasyon web'i
 // masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
@@ -138,6 +139,16 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     if (offerStockId && !offerBatch) setOfferStockId(null);
   }, [offerStockId, offerBatch]);
 
+  // Fiyat grubu diyaloğu (20.08): kapalı · yeni · düzenleme — özel fiyatla aynı desen.
+  const [groupState, setGroupState] = useState<'closed' | 'new' | string>('closed');
+  const editingGroup =
+    groupState === 'closed' || groupState === 'new'
+      ? null
+      : (data.priceGroups.find((g) => g.id === groupState) ?? null);
+  useEffect(() => {
+    if (groupState !== 'closed' && groupState !== 'new' && !editingGroup) setGroupState('closed');
+  }, [groupState, editingGroup]);
+
   // İndirim formu: kapalı · yeni (`'new'`) · düzenleme (kural kimliği) — özel fiyat diyaloğuyla
   // aynı desen, aynı gerekçe.
   const [discountState, setDiscountState] = useState<'closed' | 'new' | string>('closed');
@@ -167,6 +178,7 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
     onLoadMore,
     onEdit: setEditingId,
     onEditCustomerPrice: (row: CustomerPriceRow | null) => setCustomerPriceState(row ? row.priceId : 'new'),
+    onEditPriceGroup: (row: PriceGroupRow | null) => setGroupState(row ? row.id : 'new'),
     onOpenOffer: setOfferStockId,
     onEditDiscount: (row: DiscountRow | null) => setDiscountState(row ? row.id : 'new'),
   };
@@ -193,6 +205,9 @@ export function PricesClient({ data, urlState }: PricesClientProps) {
           editing={editingCustomerPrice}
           onClose={() => setCustomerPriceState('closed')}
         />
+      ) : null}
+      {groupState !== 'closed' ? (
+        <PriceGroupDialog key={groupState} editing={editingGroup} onClose={() => setGroupState('closed')} />
       ) : null}
     </>
   );

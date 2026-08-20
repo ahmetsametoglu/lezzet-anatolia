@@ -33,6 +33,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | credit_limit | number \| null | vade limiti (€) — vade açılırken admin girer; açık bakiye **türetilir** (ödenmemiş `on_account` siparişler), saklanmaz |
 | payment_term_days | number \| null | vade süresi (gün) — boşsa `Setting` varsayılanı (30); gecikme bundan türetilir |
 | discount_percent | number \| null | müşteriye genel özel indirim oranı; kanal fiyatına uygulanır (bkz. `DOMAIN.md §5`) |
+| price_group_id | uuid \| null | fiyat grubu üyeliği (B2B alt kademesi — `katalog.md › PriceGroup`, 20.08); `restrict` FK, `null` = düz liste |
 | cod_allowed | boolean | kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`) |
 | roles | enum[] (`customer`,`admin`,`warehouse`,`courier`,`accounting`) | **dizi**: personel içinde çoklu rol olağandır (depo + muhasebe). `customer` yalnız BAŞINA durabilir — müşteri ↔ personel keskin ayrım, DB kısıtıyla zorlanır (`DOMAIN.md §2`) |
 | auth_user_id | uuid \| null | Supabase Auth kullanıcısı; doğrulanınca bağlanır (bkz. `DOMAIN.md §10`). **Üçüncü kimlik anahtarıdır** — `0002` trigger'ı girişte profili e-postayla bulup bağlar |

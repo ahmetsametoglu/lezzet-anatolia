@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { CategoryService, DiscountService, PriceService, ProductService, serviceDb } from '@lezzet/database';
+import { CategoryService, DiscountService, PriceGroupService, PriceService, ProductService, serviceDb } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -209,6 +209,43 @@ export async function loadMorePricesAction(
  * Aktiflik anahtarı. Kural SİLİNMEZ, kapatılır: süresi dolmuş kuponun geçmişi (kimin kullandığı,
  * ne kadar indirim dağıtıldığı) raporun malıdır.
  */
+/**
+ * Fiyat grubu yazar/günceller (20.08 — B2B alt kademesi). Yüzde değişimi ANINDA tüm üyelere
+ * yansır: grup fiyatı satır değil türetimdir (motor listeden düşer), güncellenecek ikinci bir
+ * yer yoktur.
+ */
+export async function savePriceGroupAction(
+  id: string | null,
+  name: string,
+  percentOff: number,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const svc = new PriceGroupService(serviceDb());
+    if (id) await svc.update({ id, name, percentOff });
+    else await svc.insert({ name, percentOff });
+    revalidatePath(PRICES_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Fiyat grubunu siler. Üyesi olan grubu DB `restrict` FK'si korur — hata yutulmaz, operatöre
+ * "önce müşterileri taşı" cümlesi olarak döner (`getErrorMessage` funnel'ı kısıt mesajını çevirir).
+ */
+export async function deletePriceGroupAction(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await new PriceGroupService(serviceDb()).delete(id);
+    revalidatePath(PRICES_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 export async function setDiscountActiveAction(id: string, isActive: boolean): Promise<ActionResult> {
   try {
     await requireAdmin();

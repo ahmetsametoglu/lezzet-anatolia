@@ -1,4 +1,4 @@
-import { UserProfileService } from '@lezzet/database';
+import { PriceGroupService, UserProfileService } from '@lezzet/database';
 import { deriveChannel } from '@lezzet/domain-core';
 import type { Channel } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -44,10 +44,16 @@ export interface PricingViewer {
   b2bApproved: boolean;
   /** Müşteriye özel fiyat satırlarının okunacağı kimlik; ziyaretçide `null`. */
   customerId: string | null;
+  /**
+   * Fiyat grubunun yüzdesi (20.08) — B2B alt kademesi; motor listeden düşer (özel → grup → liste).
+   * Ziyaretçide ve grupsuz müşteride `null`. Yüzde BURADA çözülür (grup kimliği değil): fiyat
+   * okuyan her yer bir de grup tablosuna gitmesin.
+   */
+  groupPercentOff: number | null;
 }
 
 /** Ziyaretçi — kimliksiz, perakende. Bağlamı olmayan okumaların (boş bağlam) hâli. */
-export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, customerId: null };
+export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null };
 
 /**
  * Bir MÜŞTERİ KİMLİĞİNDEN görüntüleyen künyesi.
@@ -66,9 +72,17 @@ export async function pricingViewerOf(db: SupabaseClient, customerId: string | n
 
   const b2bApproved = profile.b2bApproved === true;
   const channel = deriveChannel({ isCompany: profile.type === 'company' });
+  const effective = channel === 'b2b' && b2bApproved ? 'b2b' : 'b2c';
+  // Grup yüzdesi yalnız toptan kanalda okunur: onaysız şirket B2C'ye düşerken kademe de kapanır
+  // (motor da aynı kuralı uygular — çift kat, `channel` daraltmasının aynı gerekçesi).
+  const groupPercentOff =
+    effective === 'b2b' && profile.priceGroupId
+      ? ((await new PriceGroupService(db).getById(profile.priceGroupId))?.percentOff ?? null)
+      : null;
   return {
-    channel: channel === 'b2b' && b2bApproved ? 'b2b' : 'b2c',
+    channel: effective,
     b2bApproved,
     customerId: profile.id,
+    groupPercentOff,
   };
 }
