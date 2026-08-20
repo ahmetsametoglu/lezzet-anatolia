@@ -1,8 +1,55 @@
 # e2e — duman katmanı (00.9)
 
-Playwright testleri **çalışan dev server'a karşı** koşar (build yok; server'ı KULLANICI yönetir).
 Koşu: `pnpm test:e2e` — test kilidine girer; çıplak `playwright test` kilidi atlar, KOŞMA.
 Anlık ekran bakışı için test yazmaya gerek yok: `pnpm ui:shot <yol>`.
+
+## NEREYE KARŞI KOŞULUR — 3001 (kullanıcı kararı 20.08)
+
+> *"Aktif geliştirilen ortamda bir test koşusu yapamazsın."*
+
+**Varsayılan hedef artık paralel production sunucusudur** (`localhost:3001`), dev server değil:
+
+```bash
+pnpm prod:web          # derler → apps/web/.next-prod (dev'in .next'ine DOKUNMAZ)
+pnpm prod:web:start    # 3001'de sunar
+E2E_BASE=http://localhost:3001 pnpm test:e2e
+```
+
+**ÖLÇÜLDÜ (20.08), aynı paket, aynı dakikalar:**
+
+| hedef | sonuç | süre |
+|---|---|---|
+| dev (3000) | 25 geçti / 10 düştü | 24,6 dk |
+| prod kopyası (3001) | **31 geçti / 4 düştü** | **2,6 dk** |
+
+Dev'deki on düşüşün hiçbiri senaryo hatası değildi: `ERR_ABORTED` · `ERR_EMPTY_RESPONSE` ·
+`page.goto` zaman aşımı — koşu ortasında dev server yeniden başlamış, bütün rotalar soğumuştu.
+Rota başına ölçüm de farkı söylüyor: 3001'de `/fr` **63 ms**, dev'de aynı rota soğukken **50–60 sn**;
+katalog→ürün istemci gezinmesi dev'de **9 sn**. Donmuş kopya bu yüzden ölçülebilir — kod değişince
+güncellenmez, yeniden derlenir. **Veritabanı ORTAKTIR** (`db:refresh` ikisini de etkiler).
+
+### İKİ SENARYO 3001'DE KOŞAMAZ — ve bu bir arıza değil
+
+`checkout-otp` ve `checkout-steps` misafir OTP'sinden geçiyor; sabit doğrulama kodu
+(`OTP_TEST_CODE`) ise `NODE_ENV === 'production'` iken **bilerek kapalı** (`application/auth/otp.ts`
+— iki kilidin biri, `DEV_AUTH_BYPASS` emsali). 3001 bir production derlemesi olduğu için kod
+rastgele doğar ve maille gider; test onu okuyamaz.
+
+O ikisi **dev'e karşı koşulur** ve orada yeşildir (ölçüldü 20.08: 59,8 sn · 17,6 sn):
+
+```bash
+E2E_PREFLIGHT_TIMEOUT_MS=180000 pnpm test:e2e --project=desktop \
+  e2e/customer/checkout-otp.smoke.ts e2e/customer/checkout-steps.smoke.ts
+```
+
+Kilidi gevşetmek seçenek DEĞİL: o cümle bir güvenlik güvencesidir ve gerçek dağıtımda yanlış konmuş
+tek bir env değişkeni kimlik doğrulamasını sabit bir koda düşürürdü. Kalıcı çözüm kod-yakalama
+kapısıdır (`08.22` Katman 2) — o gelene dek bu ayrım BİLİNÇLİDİR.
+
+### Ön-uçuş payı
+
+`pnpm test:e2e` yoklamayla başlar (`scripts/e2e-preflight.mjs`, eşik 15 sn). 3001'de fazlasıyla
+yeter; dev'e karşı koşarken soğuk rota eşiği aşabilir — `E2E_PREFLIGHT_TIMEOUT_MS` ile açılır.
 
 ## Şeritler için beş kural (kafa karışmasın diye — hepsi mevcut disiplinin aynısı)
 

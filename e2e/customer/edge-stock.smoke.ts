@@ -165,7 +165,14 @@ test.describe('kademe 2 · 5b — KISMÎ stok azalması: sepet sessizce eksiltme
 
     // SESSİZ EKSİLTME YOK: adet hâlâ müşterinin beyanı (2). Tasarım felsefesinin kanıtı —
     // sistem sepeti kullanıcının haberi olmadan değiştirmez; cümle söyler, kararı müşteri verir.
-    await expect(page.getByText('2', { exact: true }).first()).toBeVisible();
+    //
+    // Adet ROLDEN okunuyor, metinden DEĞİL (19.08, ölçülmüş düşüş): `getByText('2', {exact:true})`
+    // yazıyordu ve 08.48'de adet seçicisi `<span>`den `<input inputMode="numeric">`e geçti
+    // (`components/customer/ui/qty-stepper.tsx`) — girdi değeri metin düğümü değildir, iddia
+    // mobil webde bulamıyordu. Masaüstünde tesadüfen geçiyordu: sayfada başka bir yerde tek başına
+    // "2" duruyordu, yani yeşil olan da yanlış şeyi ölçüyordu. `spinbutton` rolü seçicinin
+    // SÖZLEŞMESİ — biçimi değişse de erişilebilirlik adı kalır.
+    await expect(page.getByRole('spinbutton').first()).toHaveValue('2');
 
     // Düzeltme MÜŞTERİNİN tıklaması: "Réduire à 1" düğmesi adedi tavana indirir. Sonrasında
     // DÜĞME kaybolur; tavan cümlesi ise bilgi olarak (düğmesiz) KALIR — adet artık tavana eşit,

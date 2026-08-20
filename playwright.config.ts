@@ -2,8 +2,14 @@ import { defineConfig, devices } from '@playwright/test';
 import { OPERATIONS_STORAGE_STATE } from './e2e/setup/paths';
 
 /**
- * Playwright — duman katmanı (00.9 Kademe 2). ÇALIŞAN dev server'a karşı koşar; build YOK,
- * `webServer` bloğu BİLEREK yok: dev server'ı KULLANICI yönetir (CLAUDE §4), test başlatmaz.
+ * Playwright — duman katmanı (00.9 Kademe 2). ÇALIŞAN bir sunucuya karşı koşar; `webServer` bloğu
+ * BİLEREK yok — sunucuyu test başlatmaz (dev'i KULLANICI yönetir, CLAUDE §4).
+ *
+ * ── HEDEF: PARALEL PRODUCTION SUNUCUSU (kullanıcı kararı 20.08) ─────────────────────────────────
+ * `E2E_BASE=http://localhost:3001` ile prod kopyasına karşı koşulur; `baseURL` varsayılanı dev'de
+ * kalıyor çünkü iki senaryo (misafir OTP'si) orada koşmak ZORUNDA — gerekçe ve ölçümler
+ * `e2e/README`de. Özet: aynı paket dev'de 25/10 · 24,6 dk, 3001'de **31/4 · 2,6 dk**; dev'deki
+ * düşüşler senaryo değil ortam imzasıydı (sunucu koşu ortasında yeniden başlamıştı).
  *
  * Dört proje: `ops-setup` personel oturumunu açıp saklar; `operations` o oturumla koşar; `desktop`
  * geri kalan her şeyi OTURUMSUZ koşar (ziyaretçi — müşteri yüzeyinin gerçek hâli); `mobile-web`
