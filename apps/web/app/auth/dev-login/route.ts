@@ -13,15 +13,24 @@ import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
 
   ── NEDEN BYPASS'I ÜRETİME AÇMAK DEĞİL ──────────────────────────────────────
   İhtiyaç şuydu: paralel production sunucusunda (`pnpm prod:web:start`, 3001) operasyon
-  ekranlarına admin olarak bakabilmek. `guard.ts`in dev bypass'ı orada ÖLÜ ve öyle kalmalı —
-  künyesi *"production build'de env ne olursa olsun ASLA aktif olmaz"* diyor ve o cümle bir
-  güvenlik güvencesidir; gevşetilseydi gerçek dağıtımda yanlış konmuş tek bir env değişkeni
+  ekranlarına admin olarak bakabilmek. `guard.ts`in dev bypass'ı orada ÖLÜYDÜ ve öyle kalmalıydı —
+  künyesi *"production build'de env ne olursa olsun ASLA aktif olmaz"* diyordu ve o cümle bir
+  güvenlik güvencesiydi; gevşetilseydi gerçek dağıtımda yanlış konmuş tek bir env değişkeni
   operasyon panelini herkese açardı.
 
-  Bu kapı guard'a HİÇ DOKUNMAZ. Farkı da tam olarak budur: bypass auth'u ATLAR (guard sahte bir
-  kullanıcı görür), bu kapı auth'u İŞLETİR. Yani ekranlar production'da nasıl davranacaksa öyle
+  Bu kapı guard'a HİÇ DOKUNMAZ. Farkı da tam olarak buydu: bypass auth'u ATLIYORDU (guard sahte bir
+  kullanıcı görüyordu), bu kapı auth'u İŞLETİR. Yani ekranlar production'da nasıl davranacaksa öyle
   davranır — RLS, personel çözümü, denetim kaydındaki `actor_id`, oturum süresi, hepsi gerçek.
   Test edilen şey de zaten bu.
+
+  ── VE BYPASS ARTIK YOK (19.08) ─────────────────────────────────────────────
+  Yukarıdaki karşılaştırma bu kapının 15.08'deki gerekçesiydi; dört gün sonra aynı gerekçe
+  bypass'ın kendisini götürdü. Ölçüldü: oturumsuz `localhost:3000/operations` → **200**, aynı istek
+  3001'de → **307 → /tr/giris**. Yani iki sunucu iki farklı yetki gerçekliği gösteriyordu ve
+  guard'ın koruduğu şey yerelde hiç denenmiyordu. Anlatı `apps/web/lib/guard.ts` künyesinde.
+
+  Sonuç: bu kapı artık bir SEÇENEK değil, operasyona yerelde girmenin TEK yolu — e2e dahil
+  (`e2e/setup/operations-auth.setup.ts`).
 
   ── ÜÇ KİLİT, VE HİÇBİRİ `NODE_ENV` DEĞİL ───────────────────────────────────
   `NODE_ENV` ölçüt olamaz: bu kapının VAROLUŞ SEBEBİ production derlemesinde çalışması. Yerine

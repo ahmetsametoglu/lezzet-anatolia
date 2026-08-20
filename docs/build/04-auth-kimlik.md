@@ -65,7 +65,7 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
 - [x] (04.8) **Rol atama zemini:** admin'in bir kullanıcıya rol verdiği/aldığı servis + action (ekranı 09'da); ilk admin'in seed/script ile atanması
   - *Bitti:* script ile atanan ilk admin `requireAdmin`'den geçiyor; rol alınan kullanıcı geçemiyor
   - **Durum:** servis (`StaffRoleService.assign/remove/getRoles/hasRole`) + seed script (`scripts/set-role.ts` → `pnpm set-role <email> <rol>`) yazıldı ve canlı doğrulandı (atanan admin guard'dan geçer, rol alınınca geçemez). **Admin assign/remove Server Action'ı, çağıranı olan ayar ekranıyla birlikte 09'da yazılır** (şimdi çağıransız yazılırsa ölü kod).
-  - **Yerelde artık `set-role` ZORUNLU (27.07):** seed dev bypass kimliğiyle bir admin profili açtığı için 0002'nin "ilk giriş yapan admin olur" bootstrap'ı tetiklenmez — kendi hesabınız `customer` açılır, `pnpm set-role <e-posta> admin` ile yükseltilir. Üretimde bootstrap olduğu gibi (seed atılmıyor). Ayrıntı: `build/02-database.md` (02.7).
+  - **Yerelde artık `set-role` ZORUNLU (27.07):** seed bir admin profili açtığı için 0002'nin "ilk giriş yapan admin olur" bootstrap'ı tetiklenmez — kendi hesabınız `customer` açılır, `pnpm set-role <e-posta> admin` ile yükseltilir. Üretimde bootstrap olduğu gibi (seed atılmıyor). Ayrıntı: `build/02-database.md` (02.7). *(27.07'de o admin bypass'ın `dev-admin@lezzet.local` profiliydi; 19.08'de bypass sökülünce yerini seed'in gerçek yöneticisi aldı — kural aynı, dayanağı değişti.)*
 - [x] (04.9) **Mailin dili: kayıt anında profile, sipariş anında siparişe** · `touches: apps/web/lib/identity/preferred-language.ts, apps/web/lib/identity/verify-guest.ts, apps/web/app/(customer)/[locale]/login/actions.ts, supabase/migrations/0012_order.sql, packages/types/src/entities/order.schema.ts, apps/web/lib/order/{checkout-draft,notification-data}.ts`
   - *Bitti:* Türkçe siteden kaydolan müşterinin profilinde `tr` yazılı; ona giden mail Türkçe çıkıyor
   - **Neden açık (29.07, gerçek olayla bulundu):** müşteriye giden mailin dili `customer.preferred_language`'dan okunuyor (`lib/order/notification-data.ts`) ve o kolonun **DB varsayılanı `'fr'`**. Kayıt/OTP/OAuth akışlarının hiçbiri onu yazmıyor — arandı, yalnız hesap sayfası OKUYOR. Sonuç: `/tr` ya da `/de` yüzeyinden sipariş veren müşteri de **Fransızca** mail alıyor.
@@ -159,6 +159,63 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
     **(a) Teslim durumu erken tetiktir.** Taşıyıcının döndüğü `failed` (numara kapanmış / engellenmiş) bir tahmin değil beyandır; 3 aylık sessizliği beklemeye gerek yok. `delivered` ama okunmadı hâlâ belirsiz — `failed` erken tetik, sessizlik geç tetik, ikisi birbirinin yerine geçmez. Uygulaması 15.7 webhook'unun statü olaylarını numara kaydına yazmasını gerektiriyor.
     **(b) Dönüşte çapa ezberden değil kanaldan sorulur.** Bağlı e-postası olan müşteriden 6 haneyi hatırlaması beklenmez: kod yine e-postasına gider, WhatsApp'tan geri yazılır — bağlama anındaki çapraz kanal kanıtının dönüş anındaki tekrarı. Aylar sonra kimse kodu saklamış olmaz ama posta kutusu elindedir; güvenlik özelliği aynen korunur (devredilmiş hattın yeni sahibi o kutuyu okuyamaz). **6 hane bir yedek DEĞİL:** e-posta bağlanınca kod siliniyor, yani ikisi aynı müşteride hiç bir arada bulunmuyor. Kod, e-postasını hiç bağlamamış müşterinin dönüşünde sorulacak TEK çapadır — iki ayrı kitle, iki ayrı yol.
   - **Sorulmadan verilen karar (türetme):** puanı harcamak bir çapa ister — **e-posta ya da güvenlik kodu**, ikisi de sayılır. Gerekçe: devredilmiş hattın yeni sahibi ikisini de bilemez, koruma aynıdır. Başka türlü okunuyorsa düzeltilsin.
+
+- [x] (04.13) **DEV AUTH BYPASS SÖKÜLDÜ — guard yerelde de doğruyu söylüyor** (kullanıcı kararı 19.08).
+  `touches: apps/web/lib/guard.ts, apps/web/app/(operations)/operations/layout.tsx,
+  apps/web/lib/auth/dev-login-gate.ts, apps/web/app/auth/dev-login/route.ts,
+  packages/types/src/entities/user-profile.schema.ts, scripts/seed/{people,observability}.ts,
+  playwright.config.ts, e2e/setup/**, e2e/README.md, knip.json`
+  - *Bitti:* oturumsuz `/operations` yerelde de girişe atıyor; müşteri oturumu "bu alan personel içindir" ekranını görüyor; operasyon e2e'si gerçek oturumla koşuyor
+
+  **BULGU (kullanıcı, 19.08):** *"giriş sayfasındaki müşteri butonuna bastığım zaman müşteri olarak
+  giriş yapınca hata sayfasına giriyorum."* İki ayrı arıza çıktı, ikisi de aynı kökten.
+
+  **ÖLÇÜLDÜ — guard yerelde yalan söylüyordu:** oturum HİÇ olmadan `localhost:3000/operations` →
+  **200**; aynı istek production sunucusunda (3001) → **307 → /tr/giris**. Yani iki sunucu iki
+  farklı yetki gerçekliği gösteriyordu. Sebep `DEV_AUTH_BYPASS`: `NODE_ENV !== 'production'` iken
+  personel guard'larını kısa devre yapıp sahte bir admin döndürüyordu ve yerelde **varsayılan
+  açıktı**. Bedeli:
+  · Müşteri oturumuyla operasyona girilebiliyordu — layout'un dürüst cevabı (`NotStaffScreen`)
+    yerelde HİÇ görülemiyordu, yani denenmemiş koddu.
+  · Sahte kimliğin profili okunamadığı için layout rolleri `['admin']`'e düşürüyordu; yetki hatası
+    ekranda yetki GİBİ görünüyordu.
+  · `e2e/README` rol yönlendirmesi senaryosunu bu yüzden kapsam dışı bırakmıştı.
+  · Kendi ürettiği iki arıza (04.11 · 07.08 boş kurye ekranları) yine bypass'a eklenen makineyle
+    yamanmıştı — `DEV_AUTH_BYPASS_USER_ID` ve layout'un rol düşüşü.
+
+  **MOBİL AYNI BYPASS'I BİLEREK REDDETMİŞTİ** ve gerekçesini ölçmüştü (`apps/mobile/src/lib/auth/
+  dev-login.ts`, 11.08: müşteri jetonuyla `/courier/day` → 403, kurye jetonuyla → 200) —
+  *"bypass'ı mobile taşımak, dev'de yakalanabilen yetki hatalarını görünmez kılardı."* Yani kural
+  zaten yazılıydı, web onu uygulamamıştı.
+
+  **YERİNE 04.12'nin KAPISI GEÇTİ.** `/auth/dev-login` mail turunu atlar ama oturumu GERÇEK kurar
+  ve guard'a hiç dokunmaz. Bypass'ın karşıladığı ihtiyaç 15.08'den beri zaten bu kapıyla
+  karşılanıyordu; ikisini birden tutmak yalnız guard'ı yalancı kılıyordu.
+
+  **İKİNCİ ARIZA — "Müşteri" düğmesi baştan beri operasyona giriyordu.** Düğme kullanıcının kendi
+  adresine (`yamansehzade@gmail.com`) basıyordu ve o adres bir müşteri değil: `auth.users`ın en
+  eski satırı olduğu için `0002`nin *"hiç admin yoksa ilk hesap admin olur"* açılışı onu **admin**
+  yapmıştı. 21.32 aynı arızayı personel düğmelerinde ölçüp çözmüştü (adresi seed'e taşımak); bu, o
+  kuralın uygulanmadığı son düğmeydi. Seed artık `claire.weber@example.fr`e giriş hesabı açıyor.
+  **OTP akışı kapanmadı:** öteki sekiz müşteri auth'suz kalıyor ve `0002` admin varken `{customer}`
+  doğuruyor — o yol her yeni e-postayla açık.
+
+  **SÖKÜLENLER:** `DEV_BYPASS_AUTH_ID` · `DEV_ADMIN_PROFILE_ID` (`@lezzet/types`) · seed'in
+  `dev-admin@lezzet.local` profili · layout'un `['admin']` düşüşü · `.env.local`daki
+  `DEV_AUTH_BYPASS`. Hata kaydının `resolved_by` aktörü artık sabit değil, seed'in gerçek
+  yöneticisinden okunuyor.
+
+  **E2E GERÇEK OTURUMA BAĞLANDI.** Dört operasyon dumanı 04.08'den beri girişsiz koşuyordu.
+  `ops-setup` projesi `/auth/dev-login`den oturumu alıp saklıyor (`e2e/setup/operations-auth.setup.ts`
+  → `storageState`), `operations` projesi onu yüklüyor. `desktop`/`mobile-web` operasyonu koşmaz ve
+  oturum taşımaz: müşteri yüzeyi ziyaretçi olarak sınanır (fiyat görüntüsü ve sepet oturuma göre
+  değişiyor).
+
+  **ÖLÇÜLDÜ (19.08, dev sunucusunda):**
+  · oturumsuz `/operations` → **307 → /tr/giris** (önce 200'dü)
+  · "Müşteri" düğmesi → **`/`** (önce `/operations`); Yönetim/Kurye → `/operations`
+  · müşteri oturumuyla `/operations` → başlık *"Bu alan personel içindir"*, gezinme bağlantısı **0**
+  · operasyon e2e **9/9 yeşil** (25,9 sn) · `typecheck` 18/18 · `lint`/`knip`/`boundaries` temiz
 
 ## Netleşecekler
 

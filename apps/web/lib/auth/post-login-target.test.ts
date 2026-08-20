@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { postLoginTarget } from './post-login-target';
 
 /**
- * Giriş sonrası yönlendirme (09.1). Dev'de auth bypass açık olduğu için bu iki dal tarayıcıdan
- * görülemiyor — davranışın tek kanıtı burası.
+ * Giriş sonrası yönlendirme (09.1) — kararın saf, DB'siz kanıtı.
+ *
+ * 19.08'e dek burada *"dev'de auth bypass açık olduğu için bu iki dal tarayıcıdan görülemiyor"*
+ * yazıyordu ve bu doğruydu: bypass herkesi personel sayıyordu, yani müşteri dalı yerelde hiç
+ * çizilmiyordu. Bypass söküldü (`lib/guard.ts` künyesi), dal artık tarayıcıdan da denenebilir —
+ * ama kanıt yine burada durur: yönlendirme bir KARAR ve kararın yeri saf testtir.
  */
 
 describe('personel', () => {

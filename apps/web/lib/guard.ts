@@ -1,9 +1,8 @@
 import 'server-only';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { canAccessWarehouse, isStaff, warehouseScope, type WarehouseScope } from '@lezzet/domain-core';
-import { DEV_ADMIN_PROFILE_ID, DEV_BYPASS_AUTH_ID, type UserProfile, type UserRole } from '@lezzet/types';
+import type { UserProfile, UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
-import { logger } from '@lezzet/observability';
 
 // Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; rol RLS deny-by-default olduğu için
 // service-role ile `user_profiles.roles`'dan okunur. Guard'lar hata FIRLATIR; API/action için {ok}
@@ -33,11 +32,15 @@ export interface AuthUser {
  * kimliği ise `auth.users`'ındır ve profilde `auth_user_id` sütununda AYRI durur. İkisi farklı
  * uzaylardır ve biri ötekinin yerine yazılırsa **hiçbir yerde hata olmaz** — yalnız sorgu boş döner.
  *
- * ── NEDEN BUGÜNE KADAR GÖRÜNMEDİ ─────────────────────────────────────────────
- * Dev bypass'ta `DEV_BYPASS_USER.id` zaten bir PROFİL kimliğidir (seed aynı id ile profil açıyor),
- * yani geliştirmede iki kimlik tesadüfen çakışık. Gerçek girişte ayrışırlar. Ölçülen sonuç: kurye
- * günü listesi **sessizce boş** dönüyordu — hata yok, yanlış veri yok, yalnız hiçlik. Ne `typecheck`
- * ne `lint` görebilirdi: iki alan da `string`.
+ * ── NEDEN UZUN SÜRE GÖRÜNMEDİ (04.11) ────────────────────────────────────────
+ * O gün yerelde bir auth bypass'ı vardı ve verdiği tek kimlik bir PROFİL kimliğiydi — yani
+ * geliştirmede `user.id` ile `user.profileId` tesadüfen çakışıktı. Gerçek girişte ayrışırlar.
+ * Ölçülen sonuç: kurye günü listesi **sessizce boş** dönüyordu — hata yok, yanlış veri yok, yalnız
+ * hiçlik. Ne `typecheck` ne `lint` görebilirdi: iki alan da `string`.
+ *
+ * Bypass 19.08'de tamamen söküldü (aşağıdaki künye) — bugün yerelde de gerçek oturum var, yani bu
+ * sınıf hata artık ilk denemede FK ihlaliyle patlar. Ayrım yine de ADLI kalıyor: nöbeti tutan şey
+ * ismin kendisi.
  *
  * Bu yüzden alan ADLI: çağıran hangisini geçtiğini okurken görür (`user.id` mi `user.profileId` mi),
  * ayrı bir çözümleyici fonksiyona güvenmek zorunda kalmaz.
@@ -47,59 +50,40 @@ export interface StaffUser extends AuthUser {
   profileId: string;
 }
 
-// ─── Dev-only auth bypass ──────────────────────────────────────────────────────
-// Operasyon guard'larını (requireStaff/requireRole) atlayıp sahte admin enjekte eder — böylece
-// geliştirmede admin girişi olmadan operasyon ekranları test edilebilir. GÜVENLİK: yalnız
-// NODE_ENV !== 'production' iken çalışır; production build'de env ne olursa olsun ASLA aktif olmaz.
-// Dev'de VARSAYILAN AÇIK; gerçek auth akışını dev'de test etmek için DEV_AUTH_BYPASS=false.
-// Kapsam dar: yalnız personel kapıları — müşteri oturum/login akışına (getSessionUser) dokunmaz.
-//
-// Kimlik UYDURMA DEĞİL: seed aynı id ile gerçek bir admin profili açar (`DEV_ADMIN_PROFILE_ID`).
-// Gerekli, çünkü `actor_id` gibi alanlar `user_profiles`'a FK'lidir — profilsiz sahte bir kullanıcı
-// ilk durum geçişinde FK ihlali verirdi. Seed atılmamışsa aktör yazan ekranlar bu yüzden düşer.
-//
-// ── KİMLİK SEÇİLEBİLİR: `DEV_AUTH_BYPASS_USER_ID` (07.08, operasyon şeridinin talebi) ──────────
-// Bypass her zaman ADMİN kimliği veriyordu ve bunun görünmeyen bir bedeli vardı: kurye ekranları
-// hiçbir ajan tarafından DOLU hâliyle görülemiyordu. `listCourierDay(courierId)` kimliği zorunlu
-// tutuyor (ve tutmalı — o imza bir güvenlik sınırı), dolayısıyla admin kimliğiyle bakan her koşu
-// boş bir gün görüyordu. Ekranlar boş değildi, GÖREN yoktu — dört ekran (11.1 · 11.2 · 11.6) yalnız
-// erişimsiz hâliyle doğrulanabiliyordu.
-//
-// **Güvenlik sınırı DEĞİŞMEDİ:** bypass zaten yalnız `NODE_ENV !== 'production'` iken çalışıyor,
-// yani üretimde bu env okunsa da hiçbir şey yapmaz. Değişen tek şey, dev'de hangi profille
-// bakılacağı.
-//
-// Verilen kimliğin GERÇEK bir profil olması gerekir (aynı gerekçe: `actor_id` FK'li). Doğrulamayı
-// burada yapmıyoruz — guard'ın sıcak yoluna her istekte bir sorgu koymak, yalnız dev'de işe yarayan
-// bir kolaylık için ödenecek yanlış bedel. Yanlış kimlik verilirse ekran ilk aktör yazımında düşer
-// ve sebebi bellidir.
-// ── İKİ KİMLİK BYPASS'TA DA AYRI (04.11) ───────────────────────────────────────────────────────
-// Eskiden bypass tek bir id veriyordu ve o id bir PROFİL kimliğiydi — yani dev'de `user.id` ile
-// `user.profileId` tesadüfen aynıydı. Profil-FK'li bir kolona auth kimliği yazan her kod dev'de
-// çalışıyor, gerçek girişte **sessizce boş dönüyordu**: hata yok, yanlış veri yok, yalnız hiçlik.
-//
-// Artık ayrılar ve bu bir NÖBETTİR: `user.id`'yi profil kolonuna yazan bir yol dev'de ilk denemede
-// FK ihlaliyle patlar. Ne `typecheck` ne `lint` bunu görebilir (iki alan da `string`, kural dil
-// değil proje disiplini) — nöbeti veri tutuyor.
-//
-// `DEV_AUTH_BYPASS_USER_ID` bir PROFİL kimliğidir (07.08: kurye ekranlarını dolu görebilmek için),
-// o yüzden `profileId`ye gider. Auth tarafı sabit ve karşılığı olan bir `auth.users` satırı yok —
-// bypass zaten auth'u atlıyor.
-const DEV_BYPASS_USER: StaffUser = {
-  id: DEV_BYPASS_AUTH_ID,
-  profileId: process.env.DEV_AUTH_BYPASS_USER_ID || DEV_ADMIN_PROFILE_ID,
-  email: 'dev-admin@lezzet.local',
-};
+/*
+  ── DEV AUTH BYPASS SÖKÜLDÜ (kullanıcı kararı 19.08) ────────────────────────────────────────────
+  Burada bir bypass vardı: `NODE_ENV !== 'production'` iken personel guard'larını kısa devre yapıp
+  sahte bir admin döndürüyordu (`DEV_AUTH_BYPASS`, yerelde varsayılan AÇIK). Amacı meşruydu — admin
+  girişi olmadan operasyon ekranlarına bakabilmek.
 
-let bypassWarned = false;
-function devBypassActive(): boolean {
-  const active = process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS !== 'false';
-  if (active && !bypassWarned) {
-    bypassWarned = true;
-    logger.warn({ context: 'guard' }, 'DEV auth bypass AKTİF — operasyon guard atlanıyor (kapatmak için DEV_AUTH_BYPASS=false)');
-  }
-  return active;
-}
+  ── NEDEN GİTTİ ────────────────────────────────────────────────────────────────
+  Guard yalan söylüyordu ve yalanın bedeli tam da guard'ın koruduğu şeydi. ÖLÇÜLDÜ (19.08):
+  oturum HİÇ olmadan `localhost:3000/operations` → **200**; aynı istek production sunucusunda
+  (`prod:web:start`, 3001) → **307 → /tr/giris**. Yani yerelde herkes personeldi ve iki sunucu iki
+  farklı yetki gerçekliği gösteriyordu.
+
+  Somut kayıplar:
+    · Müşteri oturumuyla operasyona girilebiliyordu — layout'un dürüst cevabı `NotStaffScreen`
+      ("bu alan personel içindir") yerelde HİÇ görülemiyordu, yani o dal denenmemiş koddu.
+    · Sahte kimliğin profili okunamadığı için layout rolleri `['admin']`'e düşürüyordu; yetki
+      hatası ekranda yetki GİBİ görünüyordu.
+    · `e2e/README` rol yönlendirmesi senaryosunu bu yüzden kapsam dışı bırakmıştı ("dev bypass TEK
+      kimlik verir").
+    · Kendi ürettiği iki arıza (04.11 iki-kimlik karışması, 07.08 boş kurye ekranları) yine
+      bypass'a eklenen makineyle yamanmıştı — `DEV_AUTH_BYPASS_USER_ID` ve layout'un rol düşüşü.
+
+  Mobil şerit aynı bypass'ı bilerek REDDETMİŞTİ ve gerekçesini ölçmüştü (`apps/mobile/src/lib/auth/
+  dev-login.ts`, 11.08: müşteri jetonuyla `/courier/day` → 403, kurye jetonuyla → 200) —
+  *"bypass'ı mobile taşımak, dev'de yakalanabilen yetki hatalarını görünmez kılardı."*
+
+  ── YERİNE NE VAR ──────────────────────────────────────────────────────────────
+  `/auth/dev-login` (15.08). Mail turunu atlar ama oturum GERÇEKTİR: magic-link jetonu üretilir ve
+  SSR istemcisinde tüketilir, çerez normal girişin yazdığının aynısıdır. Guard'a hiç dokunmaz —
+  ekranlar production'da nasıl davranacaksa öyle davranır. Bypass'ın karşıladığı ihtiyaç bu kapıyla
+  ZATEN karşılanıyordu; ikisini birden tutmak yalnız guard'ı yalancı kılıyordu.
+
+  E2E de artık oradan giriyor (`e2e/setup/operations-auth.setup.ts` → `storageState`).
+*/
 
 /** Oturumdaki kullanıcı (yoksa null). */
 export async function getSessionUser(): Promise<AuthUser | null> {
@@ -174,7 +158,6 @@ async function staffProfile(allowed: (roles: readonly UserRole[]) => boolean): P
 }
 
 async function requireRole(role: UserRole): Promise<StaffUser> {
-  if (devBypassActive()) return DEV_BYPASS_USER;
   return (await staffProfile((roles) => roles.includes(role))).user;
 }
 
@@ -183,7 +166,6 @@ async function requireRole(role: UserRole): Promise<StaffUser> {
  * ayrımdır: müşteri rolü olan kişi buradan geçemez (DOMAIN §2).
  */
 export async function requireStaff(): Promise<StaffUser> {
-  if (devBypassActive()) return DEV_BYPASS_USER;
   return (await staffProfile(isStaff)).user;
 }
 
@@ -197,8 +179,6 @@ export async function requireStaff(): Promise<StaffUser> {
  * Karar motorda (`warehouseScope`), guard yalnız kimliği getirip motora sorar (STACK §4).
  */
 export async function requireWarehouseScope(warehouseId?: string): Promise<{ user: StaffUser; scope: WarehouseScope }> {
-  if (devBypassActive()) return { user: DEV_BYPASS_USER, scope: { kind: 'all' } };
-
   // Profil TEK kez okunuyor: eskiden `requireStaff` bir kez, burası ikinci kez okuyordu ve ikisi de
   // aynı satırdı. Kapsam kararı için zaten `roles`/`warehouseIds` gerekiyor — aynı satır ikisini de
   // taşıyor.
@@ -218,7 +198,6 @@ export async function requireWarehouseScope(warehouseId?: string): Promise<{ use
  * kısayolları durmaya devam eder.
  */
 export async function requireAnyRole(roles: readonly UserRole[]): Promise<StaffUser> {
-  if (devBypassActive()) return DEV_BYPASS_USER;
   return (await staffProfile((owned) => roles.some((r) => owned.includes(r)))).user;
 }
 

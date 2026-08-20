@@ -37,9 +37,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const now = new Date();
   const urlState = parseReportsUrl(await searchParams, now);
   // Kâr kapısı AYRI bir guard çağrısı, `access.user`dan okunan bir alan değil: `AuthUser` rol
-  // taşımıyor (kimlik taşıyor) ve rolleri elle okumak dev bypass'ı da atlardı — bypass yöneticiyi
-  // taklit ediyor ama sahte kimliğin veritabanında rolü yok, yani yerelde kâr blokları hiç
-  // görünmezdi. `requireAdmin` bypass'ı zaten biliyor.
+  // taşımıyor, kimlik taşıyor. Rol kararı tek kapıdan (`requireAdmin`) geçsin diye — rolleri elle
+  // okuyan her yer, yetki kuralının ikinci bir kopyası olurdu.
   const canSeeProfit = (await guarded(requireAdmin)).ok;
   const period = monthRange(urlState.ym);
 

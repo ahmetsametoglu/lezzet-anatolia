@@ -20,9 +20,17 @@ import 'server-only';
  * değişirse burası da değişmeli. Tek kaynağa indirmenin yolu bugün yok — `scripts/` bir paket
  * değil, web ondan import edemez; adresleri `packages/types`a taşımak ise geliştirme verisini
  * sözleşme paketine sokmak olurdu. Bilinçli, dar ve künyeli bir tekrar.
+ *
+ * ── MÜŞTERİ DÜĞMESİ DE SEED'İN OLDU (kullanıcı kararı 19.08) ─────────────────
+ * Bu düğme kullanıcının KENDİ adresine (`yamansehzade@gmail.com`) basıyordu ve o adres bir müşteri
+ * değil: `auth.users`ın en eski satırı olduğu için `0002`nin *"hiç admin yoksa ilk hesap admin
+ * olur"* açılışı onu ADMİN yapmıştı. Yani "Müşteri" yazan düğme operasyona giriyordu (kullanıcı
+ * bulgusu 19.08). 21.32 aynı arızayı personel düğmelerinde ölçüp çözmüştü — adresi seed'e taşımak;
+ * bu, o kuralın uygulanmadığı son düğmeydi. Seed artık `claire.weber@example.fr`e giriş hesabı
+ * açıyor (`seedStaffLogins` künyesi) — siparişli, adresli, puanlı bir müşteri.
  */
 export const DEV_LOGIN_ACCOUNTS = [
-  { label: 'Müşteri', email: 'yamansehzade@gmail.com', operations: false },
+  { label: 'Müşteri', email: 'claire.weber@example.fr', operations: false },
   { label: 'Yönetim', email: 'yonetim@lezzetanatolia.fr', operations: true },
   { label: 'Depo', email: 'depo@lezzetanatolia.fr', operations: true },
   { label: 'Kurye', email: 'kurye@lezzetanatolia.fr', operations: true },

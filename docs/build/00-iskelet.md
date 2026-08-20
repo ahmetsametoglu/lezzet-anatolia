@@ -51,6 +51,8 @@ Yok — ilk modül.
     listeleri `<a>/<table>` değil, ölçüldü). "Rol yönlendirmesi" BİLİNÇLİ dışarıda: dev bypass tek
     kimlik verir (DEV_ADMIN), gerçek giriş akışı ister → OTP kapısıyla birlikte. **Tam paket
     20/20 yeşil (1,3 dk, sakin pencere)** — pencere kuralı doğrulandı.
+    *(19.08 — bu engel KALKTI: bypass söküldü, operasyon senaryoları `e2e/setup/` altındaki gerçek
+    oturumla koşuyor ve rol yönlendirmesi artık yazılabilir. Senaryo henüz yazılmadı.)*
   - **Kademe 2 · Parti 3 İNDİ (04.08):** `e2e/customer/place-checkout.smoke.ts` — kapsam-içi
     yer seçimi (67000; öneri→onay niyet kapısından, çip kalıcılığı çerezle) + yerli ziyaretçinin
     sepetle checkout'a ulaşıp KİMLİK SINIRINDA durduğu yolculuk ("Envoyer le code" görünür —

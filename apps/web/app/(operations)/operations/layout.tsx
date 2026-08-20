@@ -65,9 +65,11 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
   // Müşteri rolü ayıklanır: aynı kişi hem müşteri hem personel olabilir, ama operasyon gezinmesi
   // personel rollerinden doğar.
   const allRoles = await new UserProfileService(serviceDb()).getRoles(user.id);
-  const staffRoles = STAFF_ROLES.filter((r) => allRoles.includes(r));
-  // Dev bypass'ta profil okunamayabilir (sahte kimlik) — yüzey açık kalsın diye yönetici sayılır.
-  const roles = staffRoles.length > 0 ? staffRoles : (['admin'] as const);
+  // Düşüş yok: `requireStaff` geçtiyse profil GERÇEKTİR ve en az bir personel rolü taşır. Eskiden
+  // burada `staffRoles` boşsa yönetici sayan bir dal vardı — dev bypass'ın sahte kimliğinin profili
+  // okunamadığı içindi. Bypass 19.08'de söküldü (`lib/guard.ts` künyesi); o düşüş bugün yalnız
+  // gerçek bir yetki hatasını yönetici gibi gösterirdi.
+  const roles = STAFF_ROLES.filter((r) => allRoles.includes(r));
 
   // Depo bağlamı BURADA okunur: sidebar'da durur ve sayfadan sayfaya taşınır — kimlik düzeyinde bir
   // tercih (19.5). Sayfalar aynı isteğin içinde tekrar sorduğunda `cache()` sayesinde bedava, ve

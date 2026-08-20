@@ -50,15 +50,29 @@ Planlanan ~10 yolculuk (tasarım+DOMAIN'den; liste taslak, yazım sırasında da
   rota değişimi · sipariş onay ekranı (`/checkout/[reference]`) · sepette fiyat-artışı onayı.
 - **Operasyon:** rol yönlendirmesi · sipariş kuyruğu → hazırlık onayı · mal kabul · Kasa/para
   ekranı ilk bakış.
-- **Dışarıda kalanlar (bilinçli):** OTP akışı (kod-yakalama kapısı inene dek) · **rol
-  yönlendirmesi** (dev bypass TEK kimlik verir — DEV_ADMIN; gerçek giriş akışı OTP kapısıyla
-  birlikte gelir) · Stripe ödeme tamamlama · piksel karşılaştırma · WebKit — Kademe 3 konusu.
+- **Dışarıda kalanlar (bilinçli):** OTP akışı (kod-yakalama kapısı inene dek) · Stripe ödeme
+  tamamlama · piksel karşılaştırma · WebKit — Kademe 3 konusu.
+  *(**Rol yönlendirmesi** bu listeden 19.08'de ÇIKTI: gerekçesi "dev bypass TEK kimlik verir"di,
+  bypass söküldü. Artık `e2e/setup/` altına ikinci bir oturum dosyası koyup kurye/depo rolüyle de
+  koşulabilir — senaryo henüz yazılmadı.)*
 
 Denetmenin sınırı: senaryo YAZAR, ekran koduna DOKUNMAZ — duman kırmızıysa bulgu/not açar,
 düzeltme ekran sahibinin. Deneme dumanlarındaki kaba iddialar Kademe 2'de gerçek yolculuklara
 evrilir.
 
 Yerleşim: `e2e/customer/**` · `e2e/operations/**` — dosya adı `<akış>.smoke.ts`.
-Operasyon sayfaları dev auth bypass'ıyla açılır (guard.ts, seed'li DEV_ADMIN); giriş adımı yazmaya
-gerek yok. Müşteri OTP akışı için kod-yakalama kapısı henüz YOK (00.9 notu) — OTP isteyen senaryo
-o kapı inene dek yazılmaz.
+Oturum: `e2e/setup/**.setup.ts` (proje adı `ops-setup`).
+
+**Operasyon senaryoları GERÇEK oturumla koşar (19.08).** Eskiden `guard.ts`in dev auth bypass'ı
+açıyordu ve giriş adımı yazmak gerekmiyordu; o bypass söküldü (gerekçe guard'ın künyesinde:
+ölçüldü, oturumsuz `/operations` yerelde 200 dönüyordu). Şimdi `ops-setup` projesi
+`/auth/dev-login`den seed yöneticisinin oturumunu alıp saklıyor, `operations` projesi onu
+`storageState` olarak yüklüyor. Senaryo yazarken yine giriş adımı yazmıyorsunuz — **ama artık
+oturum gerçek**, yani yetki hatası duman koşusunda görünür. Kapı kapalıysa (`DEV_LOGIN_ENABLED`)
+kurulum adlı hatayla düşer.
+
+`desktop` ve `mobile-web` projeleri operasyonu KOŞMAZ ve oturum taşımaz: müşteri yüzeyi ziyaretçi
+olarak sınanır — fiyat görüntüsü ve sepet davranışı oturuma göre değişiyor.
+
+Müşteri OTP akışı için kod-yakalama kapısı henüz YOK (00.9 notu) — OTP isteyen senaryo o kapı
+inene dek yazılmaz.

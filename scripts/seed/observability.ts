@@ -1,6 +1,6 @@
 import { errorFingerprint, SystemHealthService } from '@lezzet/database';
 import { healthStatusOf } from '@lezzet/domain-core';
-import { DEV_ADMIN_PROFILE_ID, type SystemHealthMetrics } from '@lezzet/types';
+import type { SystemHealthMetrics } from '@lezzet/types';
 import { tabloDolu, type Db } from './shared';
 
 // ── Gözlemleme: sağlık görüntüsü + hata kaydı (18.5) ─────────────────────────────────────────────
@@ -26,6 +26,22 @@ const MEM_TOPLAM_MB = 7936;
 
 /** `n` dakika öncesinin ISO damgası — bu tabloların çözünürlüğü gün değil dakika. */
 const dakikaOnce = (n: number): string => new Date(Date.now() - n * DK).toISOString();
+
+/**
+ * Kapatılan hatanın AKTÖRÜ — `error_log.resolved_by`, `user_profiles`a FK'li.
+ *
+ * Eskiden burada `DEV_ADMIN_PROFILE_ID` sabiti vardı; o kimlik web'in dev auth bypass'ının profil
+ * satırıydı ve bypass 19.08'de söküldü (`apps/web/lib/guard.ts` künyesi). Aktör artık gerçek
+ * yöneticinin kendisi — sabit değil, seed'in az önce açtığı satırdan OKUNUYOR.
+ *
+ * Bulunamazsa `null` dönülür ve satır aktörsüz yazılır: kolon zaten nullable, ve **ölçülemeyen
+ * değer uydurulmaz** (CLAUDE §1). Yanlış bir kimlik yazmak, FK'yi ihlal etmese bile seed'i
+ * "kim kapattı" sorusuna yalan söyler hâle getirirdi.
+ */
+async function yoneticiId(db: Db): Promise<string | null> {
+  const { data } = await db.from('user_profiles').select('id').contains('roles', ['admin']).limit(1).maybeSingle();
+  return data?.id ?? null;
+}
 
 /**
  * Bir anın metrikleri. `yasDk` = kaç dakika önce ölçüldü; geçmişe gidildikçe disk boşalır, yük ve
@@ -308,6 +324,8 @@ export async function seedErrorLog(db: Db): Promise<void> {
   }
   console.log('▸ HATA KAYDI seed');
 
+  const aktor = await yoneticiId(db);
+
   const satirlar = HATALAR.map((h) => {
     // İşaret parmak izinin GİRDİSİNE de giriyor: önce mesaj işaretlenir, sonra izi hesaplanır.
     const message = `${ORNEK_ONEKI} ${h.message}`;
@@ -324,7 +342,7 @@ export async function seedErrorLog(db: Db): Promise<void> {
       first_seen_at: new Date(Date.now() - h.ilkGunOnce * 86_400_000).toISOString(),
       last_seen_at: dakikaOnce(h.sonDkOnce),
       resolved_at: h.cozuldu ? new Date(Date.now() - h.cozuldu * 86_400_000).toISOString() : null,
-      resolved_by: h.cozuldu ? DEV_ADMIN_PROFILE_ID : null,
+      resolved_by: h.cozuldu ? aktor : null,
       created_at: new Date(Date.now() - h.ilkGunOnce * 86_400_000).toISOString(),
     };
   });
@@ -343,7 +361,7 @@ export async function seedErrorLog(db: Db): Promise<void> {
       first_seen_at: new Date(Date.now() - 6 * 86_400_000).toISOString(),
       last_seen_at: new Date(Date.now() - 5 * 86_400_000).toISOString(),
       resolved_at: new Date(Date.now() - 5 * 86_400_000).toISOString(),
-      resolved_by: DEV_ADMIN_PROFILE_ID,
+      resolved_by: aktor,
       created_at: new Date(Date.now() - 6 * 86_400_000).toISOString(),
     });
   }

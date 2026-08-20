@@ -56,32 +56,16 @@ export type UserRole = z.infer<typeof UserRoleEnum>;
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
 export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
 
-/**
- * Dev auth bypass'ının kimliği (`apps/web/lib/guard.ts`) — **seed bu id ile gerçek bir admin
- * profili açar.** İkisi aynı olmak ZORUNDA: `order_status_log.actor_id` gibi alanlar
- * `user_profiles`'a FK'lidir; profili olmayan sahte bir kullanıcı ilk geçişte FK ihlali verirdi.
- *
- * Burada durmasının sebebi sınır: `guard.ts` `server-only`dir, seed script'i onu import edemez —
- * sabitin iki yere kopyalanmaması için ortak pakette yaşar.
- */
-export const DEV_ADMIN_PROFILE_ID = '00000000-0000-0000-0000-0000000000ad';
+/*
+  ── `DEV_ADMIN_PROFILE_ID` ve `DEV_BYPASS_AUTH_ID` KALDIRILDI (19.08) ────────────────────────────
+  İkisi de `apps/web/lib/guard.ts`in dev auth bypass'ının kimlikleriydi: biri bypass'ın sahte
+  kullanıcısına, öteki seed'in onun için açtığı gerçek profile aitti. Bypass söküldü (gerekçe
+  guard'ın künyesinde: ölçüldü, oturumsuz `/operations` yerelde 200 dönüyordu), dolayısıyla iki
+  kimlik de sahipsiz kaldı. Yerelde artık gerçek oturum var — aktör kimliği de gerçek personelin.
 
-/**
- * Dev bypass'ının **AUTH** kimliği — profil kimliğinden BİLEREK farklı (04.11).
- *
- * Eskiden bypass tek bir id veriyordu ve o id bir profil kimliğiydi; yani geliştirmede
- * `user.id` ile `user.profileId` tesadüfen aynıydı. Sonucu şuydu: profil-FK'li bir kolona auth
- * kimliği yazan her kod dev'de ÇALIŞIYOR, gerçek girişte **sessizce boş dönüyordu** — hata yok,
- * yanlış veri yok, yalnız hiçlik (ölçüldü: kurye günü listesi, `04.11`).
- *
- * İkisini ayırmak dev'i üretime BENZETİR ve arızayı gürültüye çevirir: artık `user.id`'yi profil
- * kolonuna yazan bir yol, ilk denemede FK ihlaliyle patlar. `typecheck` göremez (iki alan da
- * `string`), `lint` göremez (dil kuralı değil) — nöbeti veri tutuyor.
- *
- * Bu id'ye karşılık gelen bir `auth.users` satırı YOKTUR ve olmamalı: bypass zaten auth'u atlıyor.
- * Rol okuyan yollar bunu zaten biliyordu (operasyon layout'u boş rol kümesinde yöneticiye düşüyor).
- */
-export const DEV_BYPASS_AUTH_ID = '00000000-0000-0000-0000-0000000000a0';
+  04.11'in dersi kaybolmadı, taşındı: auth kimliği ≠ profil kimliği ayrımı `guard.ts`teki
+  `StaffUser` künyesinde yaşıyor ve nöbeti bugün sabit değil, gerçek girişin kendisi tutuyor.
+*/
 
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),

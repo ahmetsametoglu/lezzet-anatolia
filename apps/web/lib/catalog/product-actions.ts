@@ -93,9 +93,9 @@ export async function updateProductAction(
     await withProposal(
       proposalId,
       // PROFİL kimliği — `assistant_proposal.decided_by` `user_profiles`'a FK'li. Bir tur `staff.id`
-      // (auth kimliği) geçiliyordu ve dev bypass'ta ikisi ayrı olduğu için ilk gerçek denemede FK
-      // ihlaliyle patladı (`23503`, kullanıcı 11.08) — `lib/guard` künyesindeki nöbet tam bunun için
-      // konmuştu. Öteki beş `withProposal` çağrısı zaten `profileId` geçiyordu.
+      // (auth kimliği) geçiliyordu ve iki kimlik ayrı tutulduğu için ilk gerçek denemede FK ihlaliyle
+      // patladı (`23503`, kullanıcı 11.08) — `lib/guard` künyesindeki nöbet tam bunun için konmuştu.
+      // Öteki beş `withProposal` çağrısı zaten `profileId` geçiyordu.
       staff.profileId,
       async () => {
         await new ProductService(db).updateDetails(id, fields);

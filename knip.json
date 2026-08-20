@@ -4,7 +4,7 @@
   "ignore": ["design/**"],
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts"]
+      "entry": ["scripts/*.ts", "e2e/setup/*.setup.ts"]
     },
     "apps/web": {
       "entry": ["lib/guard.ts"]

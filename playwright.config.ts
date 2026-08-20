@@ -1,13 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
+import { OPERATIONS_STORAGE_STATE } from './e2e/setup/paths';
 
 /**
  * Playwright — duman katmanı (00.9 Kademe 2). ÇALIŞAN dev server'a karşı koşar; build YOK,
  * `webServer` bloğu BİLEREK yok: dev server'ı KULLANICI yönetir (CLAUDE §4), test başlatmaz.
  *
- * İki proje: desktop her şeyi koşar; mobile-web YALNIZ müşteri testlerini — operasyon web'i
- * masaüstü-yalnız (kullanıcı kararı 06.08), personelin mobil deneyimi native uygulamada
- * (`docs/uygulama`). Proje adı BİLEREK `mobile-web`: native uygulamayla karışmasın (CLAUDE §2). Görüntü/iz YALNIZ düşüşte toplanır ve `.test-results/e2e/` altına düşer — ajanların inceleme
- * kaynağı (anlık bakış için ayrı araç: `pnpm ui:shot`).
+ * Dört proje: `ops-setup` personel oturumunu açıp saklar; `operations` o oturumla koşar; `desktop`
+ * geri kalan her şeyi OTURUMSUZ koşar (ziyaretçi — müşteri yüzeyinin gerçek hâli); `mobile-web`
+ * YALNIZ müşteri testlerini — operasyon web'i masaüstü-yalnız (kullanıcı kararı 06.08), personelin
+ * mobil deneyimi native uygulamada (`docs/uygulama`). Proje adı BİLEREK `mobile-web`: native
+ * uygulamayla karışmasın (CLAUDE §2). Görüntü/iz YALNIZ düşüşte toplanır ve `.test-results/e2e/`
+ * altına düşer — ajanların inceleme kaynağı (anlık bakış için ayrı araç: `pnpm ui:shot`).
  *
  * Veri disiplini CLAUDE §4b'nin AYNISI: okuyan test seed'in deterministik satırlarını kullanır,
  * yazan test damgalı veri kurar + `purgeTestData` ile toplar; `db:refresh` hiçbir koşuda ön şart
@@ -43,7 +46,28 @@ export default defineConfig({
     extraHTTPHeaders: { 'x-e2e': '1' },
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    /**
+     * ── PERSONEL OTURUMU ARTIK GERÇEK (19.08) ─────────────────────────────────────────────────
+     * Operasyon dumanları eskiden `guard.ts`in dev auth bypass'ıyla açılıyordu; o bypass söküldü
+     * (gerekçe guard'ın künyesinde). Yerine `/auth/dev-login`den GERÇEK bir oturum alınıp
+     * saklanıyor — duman koşusu artık production'daki yetki gerçekliğinin aynısını görüyor.
+     */
+    // `knip` bu dosyayı KENDİLİĞİNDEN göremiyor (Playwright eklentisi yalnız üstteki `testMatch`i
+    // okuyor, proje bazlı olanı değil) — giriş noktası `knip.json`da ayrıca yazılı.
+    { name: 'ops-setup', testMatch: 'e2e/setup/**/*.setup.ts', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'operations',
+      testMatch: 'e2e/operations/**/*.smoke.ts',
+      dependencies: ['ops-setup'],
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, storageState: OPERATIONS_STORAGE_STATE },
+    },
+    // Operasyon DIŞARIDA: müşteri yüzeyi ziyaretçi olarak sınanır ve personel çerezi taşımamalı —
+    // fiyat görüntüsü (`pricingViewerOf`) ve sepet davranışı oturuma göre değişir.
+    {
+      name: 'desktop',
+      testIgnore: 'e2e/operations/**',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
     // iPhone profili varsayılanda WebKit ister; deneme katmanı TEK motorda (chromium) koşar —
     // UA/viewport/touch emülasyonu fork kararı için yeter. Gerçek WebKit Kademe 3'ün konusu.
     // YALNIZ müşteri: operasyon web'i masaüstü-yalnız (06.08), personelin mobil deneyimi native uygulamada.

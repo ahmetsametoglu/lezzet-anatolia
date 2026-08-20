@@ -27,6 +27,17 @@ test.afterAll(async () => {
   await fixture?.cleanup();
 });
 
+/**
+ * Seviye SATIRININ "parti yok"u — düz metin değil desen, ve sebebi ölçülmüş bir düşüş (19.08).
+ *
+ * `getByText('parti yok')` bir ALT DİZE eşleşmesidir ve stok ekranına 11.14'te eklenen geçmiş
+ * paneli (`components/operation/stock/product-history-panel.tsx`) *"henüz tükenmiş parti yok"*
+ * yazıyor. Yani parti girildikten sonra satır doğru biçimde "1 parti" derken, sayım paneldeki bu
+ * cümleyi de görüp 1 dönüyordu — ekran doğru, iddia geniş. Satırın kendi biçimi `"{kategori} ·
+ * parti yok"` olduğu için ayırt edici işaret önündeki ayraç: panelin cümlesinde o ayraç yok.
+ */
+const PARTI_YOK = /· parti yok/;
+
 test.describe('kademe 2 · mal kabul → stok seviyeleri (damgalı fikstür)', () => {
   test('stok girişi yapılan boy, seviyelerde yeni parti ve miktarıyla görünür', async ({ page }) => {
     test.slow();
@@ -38,7 +49,7 @@ test.describe('kademe 2 · mal kabul → stok seviyeleri (damgalı fikstür)', (
     // Giriş ÖNCESİ: boy listede ama partisi yok — geçişin sıfır noktası buradan kanıtlanır.
     await page.goto(url, NAV);
     await expect(page.getByText(fixture.productName).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('parti yok').first()).toBeVisible();
+    await expect(page.getByText(PARTI_YOK).first()).toBeVisible();
 
     // Giriş: tek parti, damgalı lot (RPC — gerekçe yukarıda ve fikstürde).
     await receiveStampedBatch(fixture, { qty: INTAKE_QTY });
@@ -49,7 +60,7 @@ test.describe('kademe 2 · mal kabul → stok seviyeleri (damgalı fikstür)', (
     await page.goto(url, NAV);
     await expect(page.getByText(fixture.productName).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('1 parti').first()).toBeVisible();
-    await expect(page.getByText('parti yok')).toHaveCount(0);
+    await expect(page.getByText(PARTI_YOK)).toHaveCount(0);
     await expect(page.getByText(String(INTAKE_QTY), { exact: true }).first()).toBeVisible();
   });
 });

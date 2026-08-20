@@ -1,5 +1,4 @@
 import { UserProfileService } from '@lezzet/database';
-import { DEV_ADMIN_PROFILE_ID } from '@lezzet/types';
 import { an, type Db, type Kisiler } from './shared';
 import type { Depolar } from './warehouse';
 
@@ -45,8 +44,6 @@ export async function seedDraftCustomers(db: Db): Promise<void> {
 
 interface SeedKisi {
   key: string;
-  /** Yalnız dev admin'de sabit: bypass kimliğiyle AYNI olmak zorunda (bkz. `DEV_ADMIN_PROFILE_ID`). */
-  id?: string;
   name: string;
   email: string;
   phone: string;
@@ -166,15 +163,13 @@ const KISILER: SeedKisi[] = [
     preferredLanguage: 'de',
     codAllowed: true,
   },
-  // — Dev admin: auth bypass'ının GERÇEK profil satırı (`apps/web/lib/guard.ts`). Id sabittir ve
-  //   bypass kimliğiyle aynıdır; aksi halde operasyon ekranı ilk durum geçişini yazarken
-  //   `actor_id` FK'sinden düşerdi. E-posta kimsenin giriş yapmayacağı bir yerel adres.
-  { key: 'devAdmin', id: DEV_ADMIN_PROFILE_ID, name: 'Dev Admin (bypass)', email: 'dev-admin@lezzet.local', phone: '+33600000100', roles: ['admin'], preferredLanguage: 'tr' },
-  // — YÖNETİCİ: web bypass'ının dev admin'inden AYRI ve bilerek (21.32). Bypass hiç giriş yapmaz,
-  //   bu hesap yapar: mobilde bypass yoktur, personel gerçek oturumla girer. Ayrılığın ÖLÇÜLMÜŞ
-  //   sebebi adres: `dev-admin@lezzet.local` ile `generateLink` ilk denemede reddedildi (`.local`
-  //   uzantısı), gerçek alan adlı personel adreslerinin altısı da ilk denemede geçti. Bypass'ın
-  //   e-postasını değiştirmek ise seçenek değil — kimliği webin guard'ına sabit bağlı.
+  // — YÖNETİCİ: operasyonun tek admin'i ve seed'in AKTÖRÜ (sipariş geçişleri, kapatılan hata
+  //   kaydı). 21.32'de bunun yanında bir `dev-admin@lezzet.local` satırı daha vardı — webin auth
+  //   bypass'ının gerçek profiliydi ve ondan AYRI durmak zorundaydı, çünkü `.local` uzantılı adres
+  //   `generateLink`ten geçmiyordu (yani o hesap hiç giriş yapamıyordu, zaten yapmasına da gerek
+  //   yoktu: bypass auth'u atlıyordu). Bypass 19.08'de söküldü (`apps/web/lib/guard.ts` künyesi),
+  //   o satır da onunla birlikte gitti. Geriye giriş YAPABİLEN tek admin kaldı — hem web hem mobil
+  //   hızlı-giriş kapılarının yöneticisi bu.
   { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolia.fr', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
   // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
@@ -221,7 +216,7 @@ export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
     harita.set(key, created.id);
     console.log(`  ✓ ${k.name} · ${k.roles.join('+')}${note ? ` · ${note}` : ''}`);
   }
-  console.log(`✓ kişi: ${harita.size} kart (dev admin dâhil — gerçek hesabı admin yapmak: pnpm set-role <e-posta> admin)`);
+  console.log(`✓ kişi: ${harita.size} kart (gerçek hesabı admin yapmak: pnpm set-role <e-posta> admin)`);
   return harita;
 }
 
@@ -243,25 +238,45 @@ export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
  * 200, `/warehouse/preparation` 403. Trigger'ın "ilk hesap admin olur" bootstrap'ı da tetiklenmez:
  * bu fonksiyon `seedKisiler`den SONRA koşar ve o an admin rollü profil zaten vardır.
  *
- * ── MÜŞTERİ HESABI AÇILMAZ ──────────────────────────────────────────────────
- * Yalnız personel: müşterinin girişi OTP akışının kendisidir ve o akış test edilirken hazır bir
- * auth satırı, sınanan şeyin yarısını atlatırdı. Dev girişinin müşteri düğmesi de gerçek bir
- * hesaba (kullanıcının kendi adresine) basar, seed'in ürettiği bir hesaba değil.
+ * ── BİR MÜŞTERİYE DE AÇILIR (kullanıcı kararı 19.08) ────────────────────────
+ * Burada eskiden *"müşteri hesabı AÇILMAZ"* yazıyordu; gerekçesi şuydu: müşterinin girişi OTP
+ * akışının kendisidir ve hazır bir auth satırı o akışın yarısını atlatır. Gerekçe hâlâ doğru ama
+ * SONUCU yanlıştı — dayandığı sessiz varsayım, dev girişinin müşteri düğmesinin bastığı adresin
+ * (kullanıcının kendi adresi) bir müşteri olduğuydu. Değildi: o adres `auth.users`ın en eski
+ * satırı, yani `0002`nin *"hiç admin yoksa ilk hesap admin olur"* açılışı onu ADMİN yapmıştı.
+ * Yani "Müşteri" düğmesi ta baştan beri operasyona giriyordu (kullanıcı bulgusu 19.08) — 21.32'de
+ * personel düğmeleri için ölçülen arızanın aynısı, aynanın öteki yüzü.
+ *
+ * Bir hesabı seed'lemek OTP yolunu KAPATMIYOR: o yol her yeni e-postayla açık kalıyor ve `0002`
+ * artık admin varken `{customer}` doğuruyor. Kazanılan şey, tek tıkla GERÇEK bir müşteri oturumu.
+ * Aynı gerekçeyle 21.32 personel düğmelerini seed'e taşımıştı.
  *
  * İdempotent: bağlı profil atlanır, yani seed tekrar tekrar koşabilir.
+ *
+ * **Ad artık davranıştan dar** — bu fonksiyon personelin yanında bir müşteri hesabı da açıyor.
+ * `seedDevLogins`e çevrilmesi `scripts/seed.ts`in import+çağrı satırlarına dokunmayı gerektiriyor
+ * ve o dosyada şu an başka şeridin commit'lenmemiş işi duruyor; yol adıyla commit kuralı gereği
+ * (CLAUDE §0) oraya dokunulmadı. Dosya boşalınca ad düzeltilecek.
  */
+/**
+ * Giriş hesabı açılacak MÜŞTERİ — dev girişinin "Müşteri" düğmesinin bastığı hesap.
+ *
+ * `b2cSadik` seçildi çünkü müşteri yüzeyinin en DOLU hâlini o gösteriyor: siparişleri, adresi,
+ * pazarlama izni ve puan geçmişi var. Boş bir müşteriyle girmek, ekranların yalnız boş hâlini
+ * denemek olurdu — `seedObservability` künyesindeki aynı gerekçe.
+ */
+const GIRIS_ACILAN_MUSTERI = 'claire.weber@example.fr';
 export async function seedStaffLogins(db: Db): Promise<void> {
   const profiles = new UserProfileService(db);
-  console.log('▸ PERSONEL GİRİŞ HESABI seed');
+  console.log('▸ GİRİŞ HESABI seed (personel + bir müşteri)');
   let created = 0;
   let skipped = 0;
 
   for (const k of KISILER) {
-    if (k.roles.every((role) => role === 'customer')) continue;
-    /* `.local` uzantısı ELENİR: `generateLink`/`createUser` onu reddedebiliyor (ölçüldü 11.08 —
-       `dev-admin@lezzet.local` ilk denemede düştü). O hesap zaten webin auth'suz bypass'ının
-       profil satırı; giriş yapması hiç beklenmiyor (mobilin yöneticisi `yonetici` anahtarı). */
-    if (k.email.endsWith('.local')) continue;
+    // Personelin tamamı + adı geçen TEK müşteri. Öteki müşteriler auth'suz kalır ve bilerek: OTP
+    // akışı ancak hazır hesabı OLMAYAN biriyle sınanabilir.
+    const girisAcilir = k.roles.some((role) => role !== 'customer') || k.email === GIRIS_ACILAN_MUSTERI;
+    if (!girisAcilir) continue;
 
     const mevcut = await profiles.findByEmail(k.email);
     if (mevcut?.authUserId) {
@@ -281,6 +296,6 @@ export async function seedStaffLogins(db: Db): Promise<void> {
     console.log(`  ✓ ${k.email} · ${k.roles.join('+')} — giriş açıldı`);
   }
 
-  console.log(`✓ personel girişi: ${created} yeni / ${skipped} zaten bağlı`);
+  console.log(`✓ giriş hesabı: ${created} yeni / ${skipped} zaten bağlı`);
 }
 
