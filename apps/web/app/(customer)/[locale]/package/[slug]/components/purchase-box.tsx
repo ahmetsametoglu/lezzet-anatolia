@@ -43,22 +43,23 @@ interface PurchaseBoxProps {
    */
   routeOnly?: boolean;
   /**
-   * Koyu zeminli mobil çubuk: kontrast tersine döner VE kontrol satırın tamamını kaplar — orada
-   * çubuğun kendisi zaten dar, yarıya indirmek düğmeyi kullanılamayacak kadar küçültürdü.
+   * Mobil AKIŞ yerleşimi: kontrol tam genişlik — dar ekranda yarım düğme küçük bir yetim olurdu.
+   * Eskiden koyu zeminli sabit çubuk (`onDark`) vardı; SÖKÜLDÜ (kullanıcı kararı 20.08, sekizinci
+   * tur) — yerini bu satır + çerçevenin yüzen sepet düğmesi (`CartFab`) aldı.
    */
-  onDark?: boolean;
+  flow?: boolean;
 }
 
-export function PurchaseBox({ t, locale, bundleId, soldOut, routeOnly = false, onDark = false }: PurchaseBoxProps) {
+export function PurchaseBox({ t, locale, bundleId, soldOut, routeOnly = false, flow = false }: PurchaseBoxProps) {
   const { add, setQty, lineOf } = useCart();
   const { place, ready } = useDeliveryPlace();
   const inCart = soldOut ? null : lineOf({ bundleId });
 
   // Tükendi hâlinde adet seçici GİZLENİR (tasarım): seçilecek bir adet yok, kutu boşuna yer kaplar.
   const control = routeOnly && ready && !place ? (
-    <PlaceGate locale={locale} onDark={onDark} />
+    <PlaceGate locale={locale} />
   ) : soldOut ? (
-    <Button variant={onDark ? 'primaryOnDark' : 'primary'} size="md" fullWidth disabled>
+    <Button variant="primary" size="md" fullWidth disabled>
       {t.addToCart}
     </Button>
   ) : inCart ? (
@@ -66,29 +67,25 @@ export function PurchaseBox({ t, locale, bundleId, soldOut, routeOnly = false, o
       value={inCart.qty}
       onChange={(next) => setQty({ kind: 'bundle', bundleId }, next)}
       min={0}
-      size={onDark ? 'onDark' : 'lg'}
+      size="lg"
       fullWidth
     />
   ) : (
     <button
       type="button"
       onClick={() => add({ kind: 'bundle', bundleId, qty: 1 })}
-      className={
-        onDark
-          ? 'w-full cursor-pointer rounded-soft border-[1.5px] border-transparent bg-olive-light px-5 py-3 font-sans text-body leading-tight font-bold text-ink'
-          : buttonClass({
-              variant: 'primary',
-              size: 'lg',
-              fullWidth: true,
-              // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek.
-              // Seçici de aynı ölçüyü kullanır, iki kutu aynı kalır.
-              className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap',
-            })
-      }
+      className={buttonClass({
+        variant: 'primary',
+        size: 'lg',
+        fullWidth: true,
+        // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek.
+        // Seçici de aynı ölçüyü kullanır, iki kutu aynı kalır.
+        className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap',
+      })}
     >
       {t.addToCart}
     </button>
   );
 
-  return onDark ? control : <div className="w-1/2 min-w-56">{control}</div>;
+  return <div className={flow ? 'w-full' : 'w-1/2 min-w-56'}>{control}</div>;
 }

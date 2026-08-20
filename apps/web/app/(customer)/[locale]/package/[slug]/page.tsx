@@ -77,9 +77,8 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
       activeNav="packages"
       mobileChrome="detail"
       footer="slim"
-      /* Kimlik içerikteki h1 (paket adı görselin altında) — ürün detayıyla aynı gözleme deseni.
-         Paylaş düğmesi de o h1'in yanında (`package.mobile`). */
-      detail={{ title: pack.name, watchId: 'package-title', fallback: '/packages' }}
+      /* `detail` prop'u YOK (sekizinci tur): başlık çizilmez — görsel tepeye yaslı, geri düğmesi
+         fotoğrafın üstünde (`package.mobile`), sepet çerçevenin `CartFab`ında. */
     >
       <PackageClient t={t} locale={locale} pack={pack} device={device} />
     </SiteFrame>

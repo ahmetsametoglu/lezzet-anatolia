@@ -105,7 +105,8 @@
       "perPiece": "{price}/adet",
       "slices": "{n} dilim",
       "slicesOf": "{n} dilim · {weight}"
-    }
+    },
+    "backLabel": "Geri"
   },
   "fr": {
     "back": "← Catalogue",
@@ -213,7 +214,8 @@
       "perPiece": "{price}/pièce",
       "slices": "{n} parts",
       "slicesOf": "{n} parts · {weight}"
-    }
+    },
+    "backLabel": "Retour"
   },
   "de": {
     "back": "← Katalog",
@@ -321,6 +323,7 @@
       "perPiece": "{price}/Stück",
       "slices": "{n} Scheiben",
       "slicesOf": "{n} Scheiben · {weight}"
-    }
+    },
+    "backLabel": "Zurück"
   }
 }

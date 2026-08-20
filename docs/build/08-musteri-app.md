@@ -1283,5 +1283,12 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     alanı da `FunnelHeader`a geçti (sağ uç yuvası: sepet rozeti / ekran aksiyonu; `watchId` ile
     içerikteki h1 gözlenir), detay logosu söküldü, eyebrow terracotta (native "üç header" kaydı),
     paylaş başlıktan ürün/paket adının yanına indi (klasik paylaş ikonu, SVG). Tarif mobil düzeni
-    ilk kez gerçek h1 kazandı. Ayrıntı ve gerekçeler `design/KARARLAR.md` "MOBİL WEB KABUĞU" EK
-    zinciri. Kapılar: typecheck/lint/knip/birim (1375) yeşil; 3001 çekimleriyle doğrulandı.
+    ilk kez gerçek h1 kazandı. **Sekizinci tur:** ürün/paket detayında başlık tamamen kalktı —
+    kahraman görsel tepeye yaslı ve kenardan kenara, geri düğmesi fotoğraf üstünde krem daire
+    (`BackButton photo`), sabit satın alma çubuğu akışa indi (`flow`), sepete giden yol yüzen
+    `CartFab` (native ürün ekranı birebir); ölü kalan `onDark`/`fixed`/`watchId` dalları söküldü.
+    **Dokuzuncu tur:** mobil detay kahramanı 1:1'e alındı (native 400 dp kahramanının oranı;
+    envanterdeki mevcut çerçeve — yeni oran eklenmedi), operatörün kırpma önizleme listeleri
+    (`IMAGE_ROLES`) güncellendi, galerideki gömülü `3/2` sabiti `RATIO_SOURCE`'a bağlandı.
+    Ayrıntı ve gerekçeler `design/KARARLAR.md` "MOBİL WEB KABUĞU" EK zinciri. Kapılar:
+    typecheck/lint/knip/birim (1375) yeşil; 3001 çekimleriyle doğrulandı.

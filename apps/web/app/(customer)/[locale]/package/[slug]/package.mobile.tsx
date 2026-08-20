@@ -1,6 +1,7 @@
-import { RATIO_SOURCE } from '@lezzet/types';
+import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/customer/ui/badge';
+import { BackButton } from '@/components/customer/ui/back-button';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
@@ -14,16 +15,21 @@ import type { PackageViewProps } from './package-types';
 /**
  * Paket detay — mobil düzen (tasarım: `Musteri - Paket Detay.dc.html`, "Paket Detay Mobil").
  *
- * Tek sütun, satın alma EKRANIN ALTINDA sabit koyu çubukta: sosyal medyadan gelen ziyaretçi sayfayı
- * uzun uzun kaydırır, aksiyon her an elinin altında olmalı (`§7`: mobil trafik birincil).
- *
- * Alt boşluk (`pb-28`) çubuğun içeriği örtmesini engeller — sabit çubuk akışta yer kaplamaz.
+ * BAŞLIK YOK, görsel tepeye yaslı ve kenardan kenara (kullanıcı kararı 20.08, sekizinci tur —
+ * ürün detayıyla AYNI desen): geri düğmesi fotoğrafın sol üstünde krem daire, sepete giden yol
+ * çerçevenin sağ alttaki yüzen düğmesi (`CartFab`). Satın alma sabit çubukta DEĞİL, akışın karar
+ * bölgesinde — iki detay sayfası aynı jesti aynı yerde konuşur.
  */
 export function PackageMobile({ t, locale, pack }: PackageViewProps) {
   return (
-    <div className="flex flex-col gap-3 pb-28">
-      <div className="px-3 pt-3">
-        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} />
+    <div className="flex flex-col gap-3 pb-16">
+      <div className="relative">
+        {/* Kahraman KARE (dokuzuncu tur, ürün galerisinin aynı kararı): native kahramanı telefon
+            eninde ≈1:1; 3:2 dar ekranda kısa bant kalıyordu. Odak/zoom operatörün künyesinden. */}
+        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SQUARE} crop={pack.image.crop} className="!rounded-none" />
+        <div className="absolute top-3 left-3 z-10">
+          <BackButton label={t.backLabel} fallback="/packages" variant="photo" />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2.5 px-4">
@@ -31,11 +37,11 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
           {t.eyebrow}
           {pack.serves !== null && ` · ${t.serves.replace('{n}', String(pack.serves))}`}
         </span>
-        {/* id yapışkan barın gözlediği kimlik; paylaş adın yanında — ürün detayıyla aynı desen.
-            Paket bir ürün DEĞİL: `productId` yok, çünkü paket birden çok ürünü tek fiyata
-            sunuyor — birini seçip ona yazmak ölçümü o ürüne haksızca yüklerdi. */}
+        {/* Paylaş adın yanında — ürün detayıyla aynı desen. Paket bir ürün DEĞİL: `productId`
+            yok, çünkü paket birden çok ürünü tek fiyata sunuyor — birini seçip ona yazmak
+            ölçümü o ürüne haksızca yüklerdi. */}
         <div className="flex items-start justify-between gap-2">
-          <h1 id="package-title" className="font-serif text-page-title-sm text-ink">{pack.name}</h1>
+          <h1 className="font-serif text-page-title-sm text-ink">{pack.name}</h1>
           <ShareButton label={t.share} subject={{ subjectType: 'bundle', subjectId: pack.id }} />
         </div>
 
@@ -65,6 +71,10 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
         />
 
         <PackageFacts t={t} locale={locale} pack={pack} compact />
+
+        {/* Satın alma AKIŞTA (sekizinci tur): karar bölgesinin sonu — fiyat, teslimat ve künyenin
+            hemen altı. Sabit koyu çubuk söküldü, alt köşe yüzen sepet düğmesinin. */}
+        <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} flow />
       </div>
 
       <div className="flex flex-col gap-2.5 px-4">
@@ -77,13 +87,6 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
         </p>
       </div>
 
-      {/* Sabit çubuk: sayfanın en altında DEĞİL, EKRANIN altında. Ürün detayla aynı kalıp — iki
-          sayfada farklı davranan bir satın alma çubuğu, aynı jesti iki şey yapar hale getirirdi. */}
-      <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-3">
-        <div className="mx-auto max-w-[430px] rounded-card bg-ink px-3.5 py-3">
-          <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} onDark />
-        </div>
-      </div>
     </div>
   );
 }

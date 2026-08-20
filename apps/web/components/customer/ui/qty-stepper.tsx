@@ -15,7 +15,9 @@
  * kademeye göre 3-5 px fazladan yükseklik demek ve seçici tasarımdakinden belirgin şişiyor.
  * Ölçüldü (28.07): sepet masaüstü 36 px iken tasarım 32, mobil 33,5 iken tasarım 28.
  */
-type StepperSize = 'lg' | 'md' | 'sm' | 'xs' | 'onDark';
+// `onDark` kademesi SÖKÜLDÜ (sekizinci tur 20.08): tek kullanıcısı detayların sabit koyu satın
+// alma çubuğuydu ve çubuk akışa indi — seçici artık her yerde açık zeminde.
+type StepperSize = 'lg' | 'md' | 'sm' | 'xs';
 
 interface SizeStyle {
   frame: string;
@@ -84,17 +86,6 @@ const SIZE: Record<StepperSize, SizeStyle> = {
     padWide: "relative flex w-1/4 flex-none items-center justify-center rounded-r-soft py-0.5 text-body-sm leading-tight after:absolute after:-inset-y-2 after:content-['']",
     valueWide: 'w-1/2 flex-none border-x border-sand-100 py-0.5 text-micro leading-tight text-ink',
   },
-  // Koyu sabit çubuk (ürün detay mobil): kontrast tersine döner.
-  onDark: {
-    frame: 'rounded-soft border-[1.5px] border-olive-light',
-    pad: 'px-3 py-1.5 text-card-title-sm',
-    minus: 'text-olive-light',
-    plus: 'bg-olive-light text-ink',
-    value: 'w-10 bg-transparent py-1.5 text-body text-cream',
-    // Koyu çubuktaki düğme `text-body leading-tight py-3` + 1.5px şeffaf çerçeve taşır.
-    padWide: 'w-1/4 flex-none py-3 text-body leading-tight',
-    valueWide: 'w-1/2 flex-none border-x border-olive-light/40 bg-transparent py-3 text-body leading-tight text-cream',
-  },
 };
 
 const BUTTON = 'cursor-pointer font-sans font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40';
@@ -127,8 +118,8 @@ export function QtyStepper({ value, onChange, min = 1, max = null, size = 'md', 
         size === 'sm' || size === 'xs' ? '' : 'overflow-hidden',
         fullWidth ? 'flex w-full' : 'inline-flex w-max',
         s.frame,
-        // Tavandayken çerçeve nötrleşir; koyu çubukta zaten kontrast düşük, orada dokunulmaz.
-        atCap && size !== 'onDark' ? '!border-sand-400' : '',
+        // Tavandayken çerçeve nötrleşir — sebep komşu uyarı satırında.
+        atCap ? '!border-sand-400' : '',
       ]
         .filter(Boolean)
         .join(' ')}

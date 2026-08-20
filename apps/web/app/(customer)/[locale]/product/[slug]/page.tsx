@@ -132,9 +132,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       activeNav="catalog"
       mobileChrome="detail"
       footer="slim"
-      /* Kimlik içerikteki h1 (ürün adı görselin altında): bar onu `watchId` ile gözler — ad
-         ekranda her an tam bir kez durur. Paylaş artık başlıkta değil, o h1'in yanında. */
-      detail={{ title: product.name, watchId: 'product-title', fallback: '/catalog' }}
+      /* `detail` prop'u YOK (sekizinci tur): bu sayfada başlık çizilmez — görsel tepeye yaslı,
+         geri düğmesi fotoğrafın üstünde (`product.mobile`), sepet çerçevenin `CartFab`ında. */
     >
       {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
           YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,

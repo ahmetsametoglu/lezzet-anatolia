@@ -6,6 +6,7 @@ import { Reviews } from './components/reviews';
 import { SimilarStrip } from './components/similar-strip';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { BackButton } from '@/components/customer/ui/back-button';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { Badge } from '@/components/customer/ui/badge';
@@ -16,20 +17,27 @@ import type { ProductViewProps } from './product-types';
  * Ürün detay — mobil düzeni (tasarım: `Musteri - Urun Detay.dc.html`, "Urun Detay Mobil").
  *
  * Mobil bu sayfanın ASIL biçimi: sosyal medya ve WhatsApp trafiği doğrudan buraya düşer, sayfa tek
- * başına ilk izlenim olabilir (`musteri-urun-detay.md §7`). Bu yüzden çerçevesi de farklıdır —
- * duyuru şeridi ve gezinme yerine geri + paylaş taşıyan bir üst bar (`SiteFrame mobileChrome`);
- * geri bağlantısı sayfanın içinde ayrı bir satır DEĞİL, başlığın kendisidir.
+ * başına ilk izlenim olabilir (`musteri-urun-detay.md §7`).
  *
- * Akış: galeri (kaydırmalı) → künye → boy seçimi → teslimat güvencesi → beyan akordeonları →
- * yorumlar → benzer ürün şeridi. Adet + sepete ekle bu akışta DEĞİL: ekranın altına sabitlenir,
- * kaydırma boyunca yerinde kalır.
+ * BAŞLIK YOK (kullanıcı kararı 20.08, sekizinci tur): görsel ekranın tepesine yaslı ve kenardan
+ * kenara — kart değil, sayfanın kendisi (native ürün ekranının kahraman deseni). Geri düğmesi
+ * fotoğrafın sol üstünde krem daire (`BackButton photo`); sepete giden yol çerçevenin sağ alttaki
+ * yüzen düğmesi (`CartFab`). Üst bar + boş krem şerit "kötü bir boşluk" bırakıyordu (kullanıcı
+ * görüntüyle gösterdi).
+ *
+ * Akış: galeri (kaydırmalı) → künye → boy seçimi → teslimat güvencesi → SATIN ALMA → beyan
+ * akordeonları → yorumlar → benzer ürün şeridi. Sepete ekle artık sabit çubukta DEĞİL, akışın
+ * karar bölgesinde: kararın malzemesi (boy, fiyat, teslimat) hemen üstünde duruyor.
  */
 export function ProductMobile({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
   return (
-    // Alt boşluk sabit çubuğun yüksekliği kadar: çubuk son bölümü ve footer'ı örtmesin.
-    <div className="flex flex-col pb-24">
-      <div className="px-3">
-        <Gallery images={product.gallery} alt={product.name} compact />
+    // Alt boşluk yüzen sepet düğmesi için: daire son bölümün metnini örtmesin.
+    <div className="flex flex-col pb-16">
+      <div className="relative">
+        <Gallery images={product.gallery} alt={product.name} compact flush />
+        <div className="absolute top-3 left-3 z-10">
+          <BackButton label={t.backLabel} fallback="/catalog" variant="photo" />
+        </div>
       </div>
 
       <section className="flex flex-col gap-3 px-4 pt-4">
@@ -37,11 +45,10 @@ export function ProductMobile({ t, locale, product, selected, onSelect, familyLa
           {product.category && (
             <span className="font-sans text-eyebrow-sm text-olive uppercase">{product.category.name}</span>
           )}
-          {/* id yapışkan barın gözlediği kimlik (`SiteFrame detail.watchId`): h1 ekrandan çıkınca
-              ad barda belirir. Paylaş adın YANINDA (kullanıcı kararı 20.08, yedinci tur) — düğme
-              neyin yanındaysa onu paylaşır; başlıkta bağlamsız duruyordu. */}
+          {/* Paylaş adın YANINDA (kullanıcı kararı 20.08, yedinci tur) — düğme neyin yanındaysa
+              onu paylaşır; başlıkta bağlamsız duruyordu. */}
           <div className="flex items-start justify-between gap-2">
-            <h1 id="product-title" className="font-serif text-page-title-sm text-ink">{product.name}</h1>
+            <h1 className="font-serif text-page-title-sm text-ink">{product.name}</h1>
             <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
           </div>
           {/* Stok rozeti SEÇİLİ boyu anlatır — butonla çelişmemesi için. Tasarımda puan satırının
@@ -92,6 +99,10 @@ export function ProductMobile({ t, locale, product, selected, onSelect, familyLa
           }
           compact
         />
+
+        {/* Satın alma AKIŞTA, karar bölgesinin sonunda (sekizinci tur): boy seçimi ve teslimat
+            güvencesinin hemen altı — sabit çubuk söküldü, alt köşe yüzen sepet düğmesinin. */}
+        {selected && <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} flow />}
       </section>
 
       <div className="px-4 pt-4">
@@ -109,7 +120,6 @@ export function ProductMobile({ t, locale, product, selected, onSelect, familyLa
         </section>
       )}
 
-      {selected && <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} fixed />}
     </div>
   );
 }

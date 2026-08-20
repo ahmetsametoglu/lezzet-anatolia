@@ -33,7 +33,8 @@
       "legal": "⚠ Yasal beyan ürün başına yapılır: her kalemin içindekiler, alerjen ve besin değeri bilgisi kendi ürün sayfasındadır — yukarıdaki kartlardan ulaşabilirsiniz. Paketin toplu alerjen listesi ve tüketim süresi satın alma alanında özetlenmiştir.",
       "legalShort": "⚠ Tam içindekiler ve yasal beyan her ürünün kendi sayfasında. Paketin toplu alerjen listesi yukarıda."
     },
-    "seeShippablePackages": "Kargolanabilir paketleri gör"
+    "seeShippablePackages": "Kargolanabilir paketleri gör",
+    "backLabel": "Geri"
   },
   "fr": {
     "back": "← Coffrets",
@@ -69,7 +70,8 @@
       "legal": "⚠ La déclaration légale se fait par produit : ingrédients, allergènes et valeurs nutritionnelles figurent sur chaque fiche produit — accessibles depuis les cartes ci-dessus. La liste groupée des allergènes et la durée de consommation sont résumées dans la zone d'achat.",
       "legalShort": "⚠ Ingrédients complets et déclaration légale sur la fiche de chaque produit. La liste groupée des allergènes est ci-dessus."
     },
-    "seeShippablePackages": "Voir les coffrets expédiables"
+    "seeShippablePackages": "Voir les coffrets expédiables",
+    "backLabel": "Retour"
   },
   "de": {
     "back": "← Pakete",
@@ -105,6 +107,7 @@
       "legal": "⚠ Die gesetzliche Kennzeichnung erfolgt je Produkt: Zutaten, Allergene und Nährwerte stehen auf der jeweiligen Produktseite — erreichbar über die Karten oben. Die gebündelte Allergenliste und die Verzehrdauer sind im Kaufbereich zusammengefasst.",
       "legalShort": "⚠ Vollständige Zutaten und gesetzliche Kennzeichnung auf der Seite jedes Produkts. Die gebündelte Allergenliste steht oben."
     },
-    "seeShippablePackages": "Versandfähige Pakete ansehen"
+    "seeShippablePackages": "Versandfähige Pakete ansehen",
+    "backLabel": "Zurück"
   }
 }

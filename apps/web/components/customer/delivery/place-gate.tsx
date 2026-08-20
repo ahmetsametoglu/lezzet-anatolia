@@ -32,13 +32,13 @@ import messages from './place-messages.json';
  * tasarım satır içi bir posta kodu alanı çiziyor; burada sitenin kanonik panelini (`PlaceDialog`)
  * açıyoruz — üçüncü bir posta kodu girdisi yazmak aynı doğrulamayı üç yerde bakıma bırakırdı.
  */
+// `onDark` prop'u SÖKÜLDÜ (sekizinci tur 20.08): tek kullanıcısı mobilin sabit koyu satın alma
+// çubuğuydu ve çubuk akışa indi — kapı artık her yerde açık zeminde duruyor.
 interface PlaceGateProps {
   locale: Locale;
-  /** Mobil sabit çubuk koyu zeminde: düğme açık yeşil/ink olur, açıklama satırı çizilmez. */
-  onDark?: boolean;
 }
 
-export function PlaceGate({ locale, onDark = false }: PlaceGateProps) {
+export function PlaceGate({ locale }: PlaceGateProps) {
   const t = messages[locale];
   const [open, setOpen] = useState(false);
 
@@ -48,23 +48,16 @@ export function PlaceGate({ locale, onDark = false }: PlaceGateProps) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={
-            onDark
-              ? 'w-full cursor-pointer rounded-soft border-[1.5px] border-transparent bg-olive-light px-5 py-3 font-sans text-body leading-tight font-bold text-ink'
-              : buttonClass({
-                  variant: 'primary',
-                  size: 'lg',
-                  fullWidth: true,
-                  className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap',
-                })
-          }
+          className={buttonClass({
+            variant: 'primary',
+            size: 'lg',
+            fullWidth: true,
+            className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap',
+          })}
         >
           {t.gateCta}
         </button>
-        {/* Gerekçe koyu çubukta YAZILMAZ: mobilde sabit çubuk tek satırlık bir eylem alanıdır,
-            iki cümlelik açıklama orada içeriği örter. Aynı cümle akıştaki teslimat satırında
-            (`DeliveryLine`) zaten duruyor. */}
-        {!onDark && <span className="font-sans text-micro leading-relaxed text-muted">{t.gateHint}</span>}
+        <span className="font-sans text-micro leading-relaxed text-muted">{t.gateHint}</span>
       </div>
 
       {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}

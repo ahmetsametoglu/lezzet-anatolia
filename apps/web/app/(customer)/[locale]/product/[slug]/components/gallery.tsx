@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { FramedImage } from '@/components/media/framed-image';
+import { RATIO_SOURCE, RATIO_SQUARE } from '@lezzet/types';
 import type { StorefrontImage } from '@lezzet/application';
 
 /**
@@ -25,17 +26,27 @@ import type { StorefrontImage } from '@lezzet/application';
 interface GalleryProps {
   images: StorefrontImage[];
   alt: string;
-  /** Mobilde şerit daha dar; ana görselin oranı iki biçimde de aynı kalır (tasarım 3/2). */
+  /** Mobil kahraman düzeni: kaydırmalı şerit + nokta göstergesi; oran karedir (aşağıdaki künye). */
   compact?: boolean;
+  /**
+   * Görsel SAYFAYLA BÜTÜNLEŞİK: köşe yuvarlatması yok, kenardan kenara (kullanıcı kararı 20.08 —
+   * "resim orada bir kart gibi değil"). Başlıksız detay düzeninin parçası; yalnız kompakt dalda
+   * anlamlı çünkü masaüstünde görsel sütunun içinde kart olarak durmaya devam ediyor.
+   */
+  flush?: boolean;
 }
 
-const RATIO = 3 / 2;
-
-export function Gallery({ images, alt, compact = false }: GalleryProps) {
+export function Gallery({ images, alt, compact = false, flush = false }: GalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const track = useRef<HTMLDivElement>(null);
-  if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={RATIO} className="!rounded-card" />;
+  const frame = flush ? '!rounded-none' : '!rounded-card';
+  // Mobil kahraman KARE (kullanıcı kararı 20.08, dokuzuncu tur): native ürün ekranının kahramanı
+  // tam genişlik × 400 dp — telefon eninde ≈1:1. 3:2 dar ekranda kısa bir bant kalıyordu. 1:1 zaten
+  // tanımlı bir çerçeve (`IMAGE_ROLES` sepet karesi) ve operatörün kırpma editörü onu canlı
+  // önizliyor — odak/zoom aynı künyeden uygulanır. Masaüstü sütun içinde 3:2 kartta kalır.
+  const ratio = compact ? RATIO_SQUARE : RATIO_SOURCE;
+  if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={ratio} className={frame} />;
 
   if (compact) {
     /**
@@ -74,7 +85,7 @@ export function Gallery({ images, alt, compact = false }: GalleryProps) {
         >
           {images.map((img, i) => (
             <div key={i} className="w-full flex-none snap-center">
-              <FramedImage src={img.url} alt={i === 0 ? alt : ''} ratio={RATIO} crop={img.crop} className="!rounded-card" />
+              <FramedImage src={img.url} alt={i === 0 ? alt : ''} ratio={ratio} crop={img.crop} className={frame} />
             </div>
           ))}
         </div>
@@ -99,7 +110,7 @@ export function Gallery({ images, alt, compact = false }: GalleryProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <FramedImage src={active.url} alt={alt} ratio={RATIO} crop={active.crop} className="!rounded-card" />
+      <FramedImage src={active.url} alt={alt} ratio={RATIO_SOURCE} crop={active.crop} className="!rounded-card" />
       {images.length > 1 && (
         <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {thumbs.map((img, i) => (
@@ -114,7 +125,7 @@ export function Gallery({ images, alt, compact = false }: GalleryProps) {
                 i === activeIndex ? 'border-2 border-olive' : 'border-2 border-transparent hover:border-sand-400',
               ].join(' ')}
             >
-              <FramedImage src={img.url} alt="" ratio={RATIO} crop={img.crop} />
+              <FramedImage src={img.url} alt="" ratio={RATIO_SOURCE} crop={img.crop} />
             </button>
           ))}
           {hidden > 0 && (
@@ -123,7 +134,7 @@ export function Gallery({ images, alt, compact = false }: GalleryProps) {
               onClick={() => setExpanded(true)}
               aria-label={`${alt} +${hidden}`}
               className="cursor-pointer rounded-soft border-2 border-transparent bg-sand-100 font-sans text-body-sm font-bold text-muted transition-colors hover:border-sand-400 hover:text-ink"
-              style={{ aspectRatio: RATIO }}
+              style={{ aspectRatio: RATIO_SOURCE }}
             >
               +{hidden}
             </button>

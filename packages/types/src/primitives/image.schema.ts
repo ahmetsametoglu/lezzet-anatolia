@@ -55,20 +55,25 @@ export interface ImageFrame {
 }
 
 const OBJECT_FRAMES: ImageFrame[] = [
-  { ratio: RATIO_SOURCE, label: '3:2', where: 'katalog kartı · detay' },
-  { ratio: RATIO_SQUARE, label: '1:1', where: 'sepet · paket satırı' },
+  { ratio: RATIO_SOURCE, label: '3:2', where: 'katalog kartı · detay (masaüstü)' },
+  // Mobil detayın kahramanı da 1:1 (kullanıcı kararı 20.08): native ürün ekranının kahramanı
+  // telefon eninde kare — çerçeve zaten burada tanımlıydı, yalnız görünürlük listesi genişledi.
+  { ratio: RATIO_SQUARE, label: '1:1', where: 'sepet · paket satırı · detay kahramanı (mobil)' },
   { ratio: RATIO_SQUARE, label: '1:1', where: 'kategori dairesi', circle: true },
 ];
 
 const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'vitrin bandı · paylaşım kartı' }];
 
 /**
- * Galeri fotoğrafı TEK çerçevede görünür: ürün detay galerisi, 3:2. Kapaktan farkı burada — kapak
- * dört ayrı çerçeveye (kart, sepet karesi, kategori dairesi, paylaşım kartı) türediği için odak
- * ayarı orada kritiktir; galeri fotoğrafında soru yalnız "bu karede neresi ortada kalsın".
- * Editör bu yüzden galeri için üç türev önizleme göstermez.
+ * Galeri fotoğrafı İKİ çerçevede görünür: masaüstü detay galerisi 3:2, mobil detay kahramanı 1:1
+ * (kullanıcı kararı 20.08 — mobil kahraman kare). Kapaktan farkı yine duruyor: kapak dört ayrı
+ * çerçeveye türediği için odak ayarı orada kritiktir; galeri fotoğrafında soru "bu iki karede
+ * neresi ortada kalsın".
  */
-const GALLERY_FRAMES: ImageFrame[] = [{ ratio: RATIO_SOURCE, label: '3:2', where: 'ürün detay galerisi' }];
+const GALLERY_FRAMES: ImageFrame[] = [
+  { ratio: RATIO_SOURCE, label: '3:2', where: 'ürün detay galerisi (masaüstü)' },
+  { ratio: RATIO_SQUARE, label: '1:1', where: 'detay kahramanı (mobil)' },
+];
 
 /**
  * SAYFA GÖRSELLERİ tek çerçevede görünür (`site_image`, 09.16) — çünkü bir VARLIĞA değil bir sayfa

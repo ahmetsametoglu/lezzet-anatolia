@@ -9,6 +9,7 @@ import type { NavKey as MobileMenuNavKey } from './mobile-menu';
 import { FunnelHeader } from './funnel-header';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
+import { CartFab } from '@/components/customer/cart/cart-fab';
 import { AccountEntry } from '@/components/customer/account/account-entry';
 import messages from './site-frame-messages.json';
 
@@ -66,15 +67,16 @@ interface SiteFrameProps {
    */
   mobileChrome?: 'default' | 'detail' | 'bare';
   /**
-   * `detail` başlığının içeriği (yedinci tur). `title` sayfanın kimliği (ürün/paket/tarif adı);
-   * `watchId` verilirse kimlik İÇERİKTEKİ o id'li h1'dir — hero bloğu çizilmez, bar onu gözler
-   * (ürün/paket: ad görselin altında durur, tasarım yukarı taşımaz). Verilmezse hero'yu
-   * `FunnelHeader` kurar (tarif: sayfanın mobil düzeninde başka h1 yok). `fallback` tarayıcı
-   * geçmişi boşken ‹'nin gideceği yer; "Geri" metni ve sepet rozeti çerçevenin sözlüğünden.
+   * `detail` başlığının içeriği (yedinci tur; sekizinci turda daraldı). VERİLİRSE başlığı
+   * `FunnelHeader` kurar: hero (eyebrow + ad) + yapışkan bar — bugün yalnız TARİF (mobil düzeninde
+   * başka h1 yok). VERİLMEZSE hiç başlık çizilmez ve sayfa görselini en tepeye yaslar (ürün/paket,
+   * kullanıcı kararı 20.08): geri düğmesi fotoğrafın üstünde (`BackButton photo`), sepete giden
+   * yol sağ alttaki yüzen düğme (`CartFab` — çerçeve çizer, sepet boşken kendini gizler).
+   * `fallback` tarayıcı geçmişi boşken ‹'nin gideceği yer; "Geri" metni ve sepet etiketi
+   * çerçevenin sözlüğünden.
    */
   detail?: {
     title: string;
-    watchId?: string;
     eyebrow?: string;
     fallback: ComponentProps<typeof FunnelHeader>['fallback'];
   };
@@ -234,17 +236,20 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             {account.right && <div className="ml-auto flex flex-none items-center">{account.right}</div>}
           </header>
         )
-      ) : isMobileDetail && detail ? (
+      ) : isMobileDetail ? (
         /* Detay başlığı = FunnelHeader (yedinci tur): logolu bar söküldü, hamburgersiz tek dil.
-           Sepet rozeti sağ uçta — detay sayfası alışverişin içi, sepete giden yol kopmaz. */
-        <FunnelHeader
-          backLabel={t.back}
-          fallback={detail.fallback}
-          title={detail.title}
-          watchId={detail.watchId}
-          eyebrow={detail.eyebrow}
-          right={<CartBadge label={t.cart} compact />}
-        />
+           Sepet rozeti sağ uçta — detay sayfası alışverişin içi, sepete giden yol kopmaz.
+           `detail` VERİLMEZSE hiç başlık yok (sekizinci tur, ürün/paket): görsel tepeye yaslanır —
+           dal vitrine DÜŞMEMELİ, null dönmeli (yaşandı: prop'suz detay ☰+logo ile açıldı). */
+        detail ? (
+          <FunnelHeader
+            backLabel={t.back}
+            fallback={detail.fallback}
+            title={detail.title}
+            eyebrow={detail.eyebrow}
+            right={<CartBadge label={t.cart} compact />}
+          />
+        ) : null
       ) : isMobileBare ? null : isMobile ? (
         <>
           <header className="flex items-center justify-between border-b border-sand-300 px-4 py-3">
@@ -313,6 +318,11 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       {/* `min-h-0`: flex çocuğu varsayılan olarak içeriğinden küçülmez — o olmadan içerideki
           kaydırılabilir alan taşar ve sayfanın kendisi kaydırılır (yani kutu yine dipte durmaz). */}
       <main className={`${SHELL} flex flex-1 flex-col ${fill ? 'min-h-0' : ''}`}>{children}</main>
+
+      {/* Başlıksız detayda (ürün/paket) sepete giden TEK yol: yüzen düğme (native `CartFab`,
+          sekizinci tur). Rozetli bar yok, satın alma çubuğu akışta — daire sepet doluyken sağ
+          altta durur, boşken kendini çizmez. */}
+      {isMobileDetail && !detail && <CartFab label={t.cart} />}
 
       {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez).
           Katman `footerTier`den gelir (prop künyesi): tam / tek satır / yok. Tek satırlı hâl

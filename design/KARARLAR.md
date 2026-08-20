@@ -1571,3 +1571,31 @@ token'ında gömülü. **Paylaş başlıktan İÇERİĞE indi** (kullanıcı: *"
 uygun bir yerde"*; şıklı soru: başlık satırının sağına): ürün/paket adının yanında, işaret klasik
 paylaş ikonu (yukarı ok + tepsi, inline SVG) — eski "↗" glifi bağlantı okuyla karışıyordu.
 `.dc.html` detay/hesap kareleri bu turu HENÜZ taşımıyor — tasarım turunda güncellenmeli.
+
+**EK (aynı gün, sekizinci tur): ürün/paket detayında BAŞLIK YOK — kahraman görsel + yüzen
+düğmeler, native ürün ekranı birebir.** Kullanıcı görüntüyle gösterdi: yedinci turun barı bu iki
+sayfada metinsiz kalıyordu ("yukarıda kötü bir boşluk") — kimlik içerik h1'inde olunca bar çoğu
+zaman boş bir krem şeritti. Karar: *"header'ı kaldırıp resmi yaslayalım; geri butonu resmin üstünde
+sol üstte; resim kart gibi değil sayfayla bütünleşik; sabit sepete-ekle çubuğu yerine mobildeki
+gibi yüzen sepet düğmesi."* Uygulama (hepsi native ürün ekranının deseni): görsel tepeye yaslı ve
+kenardan kenara (`Gallery flush` / `!rounded-none`); `BackButton photo` varyantı — krem dolgulu
+daire, fotoğraf üstünde zeminsiz glif okunmazdı (native `sand-50` gerekçesi); sabit koyu satın
+alma çubuğu SÖKÜLDÜ — kontrol akışın karar bölgesine indi (boy/fiyat/teslimatın hemen altı, tam
+genişlik `flow`); sepete giden yol `CartFab` (zeytin daire + terracotta rozet + krem halka, sağ
+alt; sepet boşken ve ilk okuma bitmeden çizilmez — native kural). Ölü kod da gitti: `PurchaseBar
+fixed`, `PurchaseBox/PlaceGate onDark`, `QtyStepper onDark` kademesi, `FunnelHeader watchId`.
+`FunnelHeader` artık yalnız hero'lu sayfaların (huni, tarif, hesap) başlığı. Tarif detayı yedinci
+turdaki hâlinde: orada kimlik metni gerçek ve bar boş kalmıyor.
+
+**EK (aynı gün, dokuzuncu tur): mobil detay kahramanı KARE (1:1) — oran envanterden, kırpma
+operatörün künyesinden.** Kullanıcı isteği: resim sisteminin incelenmesi + kahraman ölçüsünün
+yeniden seçilmesi; ölçü ürün formunun belgelediği çerçevelerden seçilecekti. İnceleme sonucu:
+sistem tek kaynak dosya + operatör odağı/zoom'u (`ImageCrop`, operasyondan ayarlanır) üstüne
+kurulu ve müşteri yüzeyi kırpmayı ZATEN uyguluyor (`cropOf` → `FramedImage`) — eksik yalnız
+orandı: 3:2 dar ekranda kısa bir bant kalıyor, native'in kahramanı ise tam genişlik × 400 dp ≈
+**1:1**. 1:1 envanterde zaten var (sepet karesi) → yeni oran EKLENMEDİ. Mobil kahraman (ürün
+galerisi kompakt dalı + paket görseli) `RATIO_SQUARE`; masaüstü 3:2 kartta kaldı. Operatörün
+kırpma editörü gerçeği göstersin diye `IMAGE_ROLES` çerçeve listeleri güncellendi: nesne karesinin
+görünürlük listesine "detay kahramanı (mobil)" eklendi, galeri fotoğrafı artık İKİ çerçevede
+önizlenir (3:2 masaüstü · 1:1 mobil). Galerideki gömülü `3/2` sabiti de söküldü — oran artık
+yalnız `packages/types`ten okunur (duplikasyon kuralı).

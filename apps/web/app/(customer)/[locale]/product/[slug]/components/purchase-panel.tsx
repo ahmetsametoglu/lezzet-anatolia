@@ -202,8 +202,12 @@ interface PurchaseBarProps {
    * bırakır (`PlaceGate`).
    */
   routeOnly?: boolean;
-  /** Mobil: ekranın altına SABİT koyu çubuk. Masaüstü: sağ sütunda akan açık satır. */
-  fixed?: boolean;
+  /**
+   * Mobil AKIŞ yerleşimi: kontrol tam genişlik — karar bölgesinin son satırı. Eskiden mobilde
+   * ekranın altına sabit koyu çubuk vardı; SÖKÜLDÜ (kullanıcı kararı 20.08, sekizinci tur) —
+   * yerini bu satır + çerçevenin yüzen sepet düğmesi (`CartFab`, native deseni) aldı.
+   */
+  flow?: boolean;
   /**
    * **Üçüncül hâl — "Yine de sepete ekle"** (tasarım `.dc.html`, kullanıcı kararı 19.08).
    *
@@ -218,7 +222,7 @@ interface PurchaseBarProps {
   deemphasized?: boolean;
 }
 
-export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = false, deemphasized = false }: PurchaseBarProps) {
+export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = false, deemphasized = false }: PurchaseBarProps) {
   const { add, setQty: setCartQty, lineOf } = useCart();
   const { place, ready } = useDeliveryPlace();
   const cap = capOf(selected);
@@ -253,7 +257,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
   // Tek kontrol, tek kutu. İkisi de satırın tamamını kaplar ve aynı yüksekliktedir; çerçeve farkı
   // düğmeye ŞEFFAF kenarlık verilerek kapanır — yoksa geçişte kutu birkaç piksel zıplıyor.
   const control = gated ? (
-    <PlaceGate locale={locale} onDark={fixed} />
+    <PlaceGate locale={locale} />
   ) : inCart ? (
     <QtyStepper
       value={qty}
@@ -261,7 +265,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
       // 0'a inmek satırı sepetten ÇIKARIR ve ekran ekleme moduna döner — "vazgeçtim" yolu bu.
       min={0}
       max={cap}
-      size={fixed ? 'onDark' : 'lg'}
+      size="lg"
       fullWidth
     />
   ) : (
@@ -269,20 +273,16 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
       type="button"
       onClick={() => add({ kind: 'variant', variantId: selected.id, qty: 1, stockId: selected.stockId })}
       disabled={!sellable}
-      className={
-        fixed
-          ? 'w-full cursor-pointer rounded-soft border-[1.5px] border-transparent bg-olive-light px-5 py-3 font-sans text-body leading-tight font-bold text-ink disabled:cursor-not-allowed disabled:opacity-50'
-          : buttonClass({
-              // Üçüncül hâlde NÖTR çerçeve (tasarım: gri kenar, koyu metin) — yeşilin hiçbir tonu
-              // değil, çünkü yeşil bu kutuda zaten iki kez konuşuyor (birincil + ikincil).
-              variant: deemphasized ? 'secondary' : 'primary',
-              size: 'lg',
-              fullWidth: true,
-              // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek
-              // (tasarım: 17/1.2). Seçici de aynı ölçüyü kullanır, iki kutu aynı kalır.
-              className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50',
-            })
-      }
+      className={buttonClass({
+        // Üçüncül hâlde NÖTR çerçeve (tasarım: gri kenar, koyu metin) — yeşilin hiçbir tonu
+        // değil, çünkü yeşil bu kutuda zaten iki kez konuşuyor (birincil + ikincil).
+        variant: deemphasized ? 'secondary' : 'primary',
+        size: 'lg',
+        fullWidth: true,
+        // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek
+        // (tasarım: 17/1.2). Seçici de aynı ölçüyü kullanır, iki kutu aynı kalır.
+        className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50',
+      })}
     >
       {label}
     </button>
@@ -294,13 +294,6 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = fa
   //
   // Üçüncül hâlde TAM GENİŞLİK: düğme artık sütunda değil karar kutusunun içinde ve üstündeki iki
   // düğmeyle aynı genişlikte olmalı — yarım kalan bir üçüncü düğme, sıralı bir yığını bozar.
-  if (!fixed) return <div className={deemphasized ? 'w-full' : 'w-1/2 min-w-56'}>{control}</div>;
-
-  // Sabit çubuk: sayfanın en altında DEĞİL, EKRANIN altında durur. Kaydırma boyunca yerinde kalır;
-  // sayfanın alt boşluğu (`product.mobile`) çubuğun footer'ı örtmesini engeller.
-  return (
-    <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-3">
-      <div className="mx-auto max-w-[430px] rounded-card bg-ink px-3.5 py-3">{control}</div>
-    </div>
-  );
+  // Akış yerleşimi de tam genişlik: dar ekranda yarım düğme, dokunması küçük bir yetimdir.
+  return <div className={flow || deemphasized ? 'w-full' : 'w-1/2 min-w-56'}>{control}</div>;
 }
