@@ -94,6 +94,36 @@ export async function submitB2bApplication(
 
   const updated = await profiles.update({
     id: profile.id,
+    /**
+     * ── KAYIT ŞİRKET OLUR (kullanıcı bulgusu 20.08) ──────────────────────────────────────────
+     * Bu alan bir tur HİÇ YAZILMIYORDU ve `type: 'company'` kodun hiçbir yerinde geçmiyordu —
+     * yalnız `scripts/seed/people.ts`te. Sonucu şuydu: **formdan başvurup ONAYLANAN müşteri toptan
+     * fiyatı hiçbir zaman görmüyordu.** Zincirin her halkası doğru çalışıyordu (künye yazılıyor,
+     * kayıt onay kuyruğuna düşüyor, operatör onaylıyor, `b2bApproved` true oluyor) ve son adım
+     * karşılıksız kalıyordu, çünkü `pricingViewerOf` kanalı `type === 'company'`ten türetiyor.
+     *
+     * ÖLÇÜLDÜ (20.08, 3001'e karşı, `acili-ezme` · b2c 10,47 € ↔ b2b 6,84 €): gerçek SIRET'le
+     * başvuru yapıldı, künye yazıldı, onaylandı → **10,47 €**. Tek fark olarak `type` elle
+     * `company` yapılınca → **6,84 €**. Seed'in B2B müşterileri çalışıyordu çünkü seed alanı elle
+     * kuruyor; gerçek başvuru sahibi hiçbir zaman şirket olmuyordu.
+     *
+     * **Arıza HAZIR HESAPLA yapılan hiçbir testte görünmez** — ne webde ne mobilde. Kanıtı mobil
+     * tarafın kendi testi: `apps/mobile-api/src/api/v1/catalog.test.ts` B2B görünümünü kurmak için
+     * `type: 'company'`i ELLE yazıyor, yani akıştan geçmiyor. Ortaya çıkması için birinin gerçekten
+     * başvurması gerekiyordu.
+     *
+     * ── NEDEN ONAYDA DEĞİL, BAŞVURUDA ────────────────────────────────────────────────────────
+     * `type` HUKUKİ KİMLİKTİR, ticari güven değil — ayrımı `checkout-options.ts` künyesi koymuş:
+     * *"`checkout-draft.ts` kanalı `type === 'company'` ile türetiyor ve orada doğru, çünkü o kanal
+     * KDV'nin ve muhasebenin kanalı — şirket, başvurusu onaylanmasa da şirkettir."* Güven kararı
+     * ayrı alanda (`b2bApproved`) ve üç tüketici de onu ayrıca soruyor: toptan fiyat (`pricingViewerOf`)
+     * ve vadeli ödeme (`checkout-options`) onay ister, KDV kanalı istemez. Yani bu satır onaysız
+     * başvurana toptan fiyat AÇMAZ — açan şey onay, ve o hâlâ operatörün kararı.
+     *
+     * Künye bu noktada zaten doğrulanmış: SIRET resmî kayıttan okundu ya da AB vergi numarası
+     * soruldu (`vatNumberValid` üç değerli, uydurulmuyor).
+     */
+    type: 'company',
     companyInfo,
     vatNumber,
     vatNumberValid,
