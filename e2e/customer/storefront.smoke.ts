@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
  * Gezinme sözleşmesi (04.08 ölçümü): dev server'da `load` olayı ara sıra asılı kalıyor — sayfa
@@ -46,6 +47,19 @@ test.describe('vitrin — müşteri ilk bakış', () => {
  * Seçiciler kasten kaba: rota sözlüğü (`@lezzet/i18n` PATHNAMES) + erişilebilir rol — ekran
  * yeniden tasarlandığında kırılmasınlar diye metin/DOM ayrıntısına bağlanılmadı.
  */
+/**
+ * Bu senaryo kataloğun İLK kartına değil, **ziyaretçinin gerçekten satın alabildiği ilk ürüne**
+ * gidiyor (19.08). Sebep `fixtures/selectors.ts` künyesinde: soğuk zincirli ve yalnız kapıya
+ * teslim edilen ürün, yeri bilinmeyen ziyaretçiye satılamaz — panel onun yerine posta kodu ister.
+ * Katalog içeriği değişip ilk kart soğuk zincirli olunca senaryonun sessiz varsayımı ortaya çıktı.
+ *
+ * **Yer seçen yolculuk bu dosyanın işi değil** — `place-checkout.smoke.ts` onu ayrıca koşuyor.
+ * Buradaki ziyaretçi bilerek YERSİZ: kargoya verilebilen ürünün posta kodu sorulmadan sepete
+ * girebildiği, ayrı bir güvence.
+ */
+/** Kaç kart denenecek — ilki ziyaretçiye satılamıyorsa sıradakine geçilir. Katalog sırası bize ait değil. */
+const KART_DENEME = 6;
+
 test.describe('kademe 2 · katalog → ürün → sepet (ziyaretçi)', () => {
   test('katalogdan seçilen ürün kendi sayfasını açar, sepete eklenir ve sepette görünür', async ({ page }) => {
     // Çok adımlı tek yolculuk + paylaşılan dev server: şeritler derleme tetiklerken istemci
@@ -55,21 +69,43 @@ test.describe('kademe 2 · katalog → ürün → sepet (ziyaretçi)', () => {
     await page.goto('/fr/catalogue', NAV);
 
     // Katalog gerçek katalogdan okur: en az bir ürün kartı bağlantısı (rota sözlüğü: /produit/).
-    const productLink = page.locator('a[href*="/produit/"]').first();
-    await expect(productLink).toBeVisible();
-    await productLink.click();
-    await page.waitForURL('**/produit/**', NAV);
+    await expect(page.locator('a[href*="/produit/"]').first()).toBeVisible();
+    const slugs = (await page.locator('a[href*="/produit/"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? '')))
+      .filter((href, i, all) => href && all.indexOf(href) === i)
+      .slice(0, KART_DENEME);
+    expect(slugs.length).toBeGreaterThan(0);
 
-    // Ürün sayfası ürünün kimliğini taşır (başlık) — adı sepet doğrulamasında kullanacağız.
-    const title = page.getByRole('heading').first();
-    await expect(title).toBeVisible();
-    const name = ((await title.textContent()) ?? '').trim();
+    // Ziyaretçinin SATIN ALABİLDİĞİ ilk ürüne git. Soğuk zincirli/kapıya-teslim ürünler yer
+    // bilinmeden satılamaz (yukarıdaki künye) — o kartlar atlanır, atlandıkları RAPORLANIR:
+    // sessiz atlama, bir gün hiçbir ürünün satılamaz hâle geldiğini gizlerdi.
+    let name = '';
+    const atlanan: string[] = [];
+    for (const href of slugs) {
+      await page.goto(href, NAV);
+      // Ürün adı `h1`DEN okunur, "ilk başlık"tan DEĞİL (19.08, ölçülmüş düşüş): sayfada beyan
+      // bloğunun kendi başlığı da var (*"Ingrédients et allergènes"*) ve yerleşime göre `h1`in
+      // önüne düşebiliyor — o zaman test ürünün adı diye bir bölüm adını sepette arıyordu.
+      // `h1` bir yerleşim tesadüfü değil sözleşme: sayfanın konusu odur (SEO_I18N de ona dayanıyor).
+      const title = page.locator('h1').first();
+      await expect(title).toBeVisible();
+      const baslik = ((await title.textContent()) ?? '').trim();
+
+      // Ana aksiyon: sepete ekle (tasarım §3 — sayfanın ana aksiyonu). Desen ana panele sabit.
+      const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
+      if ((await addToCart.count()) === 0 || !(await addToCart.isEnabled().catch(() => false))) {
+        atlanan.push(`${baslik} (${href})`);
+        continue;
+      }
+      await addToCart.click();
+      name = baslik;
+      break;
+    }
+
+    expect(
+      name,
+      `ilk ${slugs.length} kartın hiçbiri ziyaretçiye satılamıyor — atlananlar: ${atlanan.join(' · ')}`,
+    ).not.toBe('');
     expect(name.length).toBeGreaterThan(2);
-
-    // Ana aksiyon: sepete ekle (tasarım §3 — sayfanın ana aksiyonu). FR sözlük: "ajouter/panier".
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
-    await expect(addToCart).toBeEnabled();
-    await addToCart.click();
 
     // Sepet sayfası eklenen ürünü adıyla listeler (ziyaretçi sepeti tarayıcıda kalıcı).
     await page.goto('/fr/panier', NAV);

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createStampedProduct, type StampedProduct } from '../fixtures/product-fixture';
 import { createGuestOtp, OTP_TEST_CODE, type GuestOtpFixture } from '../fixtures/otp-fixture';
+import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
  * KADEME 2 · CHECKOUT ADIM DUMANLARI — adres → gün → ödeme → sipariş (denetim, 08.08).
@@ -22,9 +23,29 @@ const NAV = { waitUntil: 'domcontentloaded' as const };
 let product: StampedProduct;
 let guest: GuestOtpFixture;
 
+/**
+ * Fiyat KÜRESEL ASGARİ SEPETİN ÜSTÜNDE (19.08, ölçülmüş düşüş).
+ *
+ * Kapıya teslimin lojistik tabanı 10.08'de **40,00 €** oldu ve küresel satıra yazıldı; fikstürün
+ * varsayılan fiyatı ise 12,90 €. Tek kalemlik sepet tabanın altında kalınca *"Confirmer la
+ * commande"* HAKLI OLARAK kilitleniyordu — ekran sebebini de yazıyordu: *"Minimum de commande
+ * pour … : 40,00 € — ajoutez encore 27,10 € au sous-total."* Yani arıza üründe ya da akışta
+ * değil, senaryonun eskimiş varsayımındaydı.
+ *
+ * Eşiği bölgeye YAZIP DÜŞÜREMEYİZ: `min_basket_cents` **STRICTEST_WINS** üyesi, dar kapsam tabanı
+ * yükseltebilir ama düşüremez (`SettingsService` künyesi). Fikstür bu yüzden `priceCents`
+ * parametresini taşıyor ve künyesinde tek yolu yazıyor — tutarı tabanın üstüne taşımak.
+ * Kardeş senaryo `edge-min-basket` aynı çözümü kullanıyor.
+ *
+ * 45,00 € seçildi: tabanı tek kalemle rahatça aşar, taban bir gün 40'ın biraz üstüne çıkarsa da
+ * pay bırakır. Bu duman TUTAR sınamıyor (hiçbir iddiası € içermiyor) — sayı yalnız kapıyı açmak
+ * için var, akışın kendisi değişmiyor.
+ */
+const PRICE_CENTS = 4500;
+
 test.beforeAll(async () => {
   // Stok bolluğu bilinçli: bu duman tükenme hâlini SINAMAZ (o edge-stock'un işi), akışı sınar.
-  product = await createStampedProduct({ stockQty: 5, withZone: true });
+  product = await createStampedProduct({ stockQty: 5, withZone: true, priceCents: PRICE_CENTS });
   guest = createGuestOtp();
 });
 
@@ -64,7 +85,7 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
 
     // ── Ürün sepete (tekrarlı tıklama — hidrasyon yarışı, edge-stock deseni).
     await page.goto(product.urlFr, NAV);
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
     await expect(addToCart).toBeEnabled({ timeout: 15_000 });
     const stepper = page.getByRole('button', { name: '+' }).first();
     await expect(async () => {

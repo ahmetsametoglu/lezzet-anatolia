@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createStampedProduct, type StampedProduct } from '../fixtures/product-fixture';
+import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
  * UÇ SENARYO HATTI · İLK PARTİ (kullanıcı onayı 08.08 — arka-uc tavsiyesi 4):
@@ -70,7 +71,7 @@ test.describe('uç senaryo · asgari sepetin sözü ile kuralı aynı sayı', ()
     // Ürün sepete: 1 adet = eşikten 10 cent aşağı. Tıklama TEKRARLI (hidrasyon yarışı —
     // edge-stock gerekçesi); ekleme kanıtı düğmenin yerini alan adet seçicisi.
     await page.goto(fixture.urlFr, NAV);
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
     await expect(addToCart).toBeEnabled({ timeout: 15_000 });
     const stepper = page.getByRole('button', { name: '+' }).first();
     await expect(async () => {

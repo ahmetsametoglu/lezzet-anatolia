@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
  * KADEME 2 · PARTİ 3 — müşteri YAZAN akışlar, sınırlarına dek (denetim, 04.08).
@@ -51,7 +52,7 @@ test.describe('kademe 2 · yer seçimi → sepet → checkout sınırı (ziyaret
     await page.goto('/fr/catalogue', NAV);
     await page.locator('a[href*="/produit/"]').first().click();
     await page.waitForURL('**/produit/**', NAV);
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
     await expect(addToCart).toBeEnabled();
     await addToCart.click();
 

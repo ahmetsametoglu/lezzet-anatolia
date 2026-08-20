@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createGuestOtp, OTP_TEST_CODE, type GuestOtpFixture } from '../fixtures/otp-fixture';
+import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
  * KADEME 2 · PARTİ 3b — misafir OTP doğrulaması, kimlik SINIRININ ötesi (denetim, 07.08).
@@ -41,7 +42,7 @@ test.describe('kademe 2 · misafir OTP doğrulaması (checkout kimlik adımı)',
     await page.goto('/fr/catalogue', NAV);
     await page.locator('a[href*="/produit/"]').first().click();
     await page.waitForURL('**/produit/**', NAV);
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
     await expect(addToCart).toBeEnabled({ timeout: 15_000 });
     // Tıklama TEKRARLI (edge-stock deseni): hidrasyon bitmeden inen tıklama sessizce kaybolur —
     // kanıt, düğmenin yerini alan adet seçicisi. (Bu koşuda bir kez yaşandı: sepet boş kaldı.)

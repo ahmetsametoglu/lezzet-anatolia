@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createStampedProduct, type StampedProduct } from '../fixtures/product-fixture';
+import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
  * KADEME 2 · PARTİ 5 — müşteri yüzeyinde UÇ DURUMLAR: stok tükenmesi (kullanıcı isteği, 04.08).
@@ -88,7 +89,7 @@ test.describe('kademe 2 · sepetteyken stok düşen kalem sepeti engeller (ziyar
 
     // Ürün sepete: stok damgalı depoda ve yer o depoya çözüldüğü için aksiyon AKTİF.
     await page.goto(fixture.urlFr, NAV);
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
     await expect(addToCart).toBeEnabled({ timeout: 15_000 });
     // Tıklama TEKRARLI: düğme sunucu çiziminde de enabled durur, hidrasyon bitmeden inen tıklama
     // sessizce kaybolur (ölçüldü 04.08 — iki proje paralelken dev server ısınıyor ve pencere
@@ -144,7 +145,7 @@ test.describe('kademe 2 · 5b — KISMÎ stok azalması: sepet sessizce eksiltme
     await expect(dialog.getByText(/la livraison est offerte/i)).toBeVisible({ timeout: 15_000 });
 
     await page.goto(fixture.urlFr, NAV);
-    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    const addToCart = page.getByRole('button', { name: ANA_SEPETE_EKLE }).first();
     await expect(addToCart).toBeEnabled({ timeout: 15_000 });
     const plus = page.getByRole('button', { name: '+' }).first();
     await expect(async () => {
