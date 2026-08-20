@@ -4399,9 +4399,39 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   sunucu cevabından sonra **72,98 €**; özet de kendi içinde tutarlı (72,28 − 5,23 = 67,05).
 
   **Durum:** beşi de cihazda doğrulandı (Android, CPH1907). `typecheck` · `lint` temiz, mobil
-  birim testleri 599/599, çalışma alanı birim testleri 1375/1375. **Açık kalan:** oturum tazelenirken 401 dönen okuma sepeti bir an BOŞ
-  gösteriyor (`refreshView`in boş dalı, sunucuda kurulmuş sepette yerel niyet listesi boştur) —
-  kod yolu okundu, üretilemedi, dokunulmadı → `BEKLEYEN(21.89)`. **Web'de aynı zıplama duruyor**
+  birim testleri 599/599, çalışma alanı birim testleri 1375/1375.
+
+  **~~Açık kalan: oturum tazelenirken 401 dönen okuma sepeti bir an BOŞ gösteriyor~~ → KAPANDI
+  (20.08, cihazda ölçüldü, arıza YOK.)** Şüphe `refreshView`in boş dalıydı: sunucuda kurulmuş
+  sepette yerel niyet listesi boş olduğu için 401 gelince `EMPTY_VIEW` yayınlanır sanılıyordu.
+  Kablosuz `adb` ile ölçüldü — mobil API (**3002**, 8787 DEĞİL: orası `@lezzet/backend`) kısa süre
+  yerine `GET /api/v1/me/cart`e 401 dönen bir vekil konarak. Tehlikeli koşul birebir kuruldu:
+  soğuk açılış → sunucu sepeti benimsendi (`adopted` yalnız bu cihazın eklediği satırları yazar,
+  yani niyet listesi GERÇEKTEN boştu) → sonra 401. **Sepet boşalmadı:** 18 kalem, satırlar ve
+  `96,46 − 6,80 = 89,66 €` yerinde. Kullanıcı kararı: *"gerçekleştirilemediyse yoktur"* — kapandı,
+  koda dokunulmadı.
+
+  Kullanıcının bildirdiği "sepet bir anda boşalıyor" belirtisinin gerçek sebebi **Fast Refresh**:
+  dosya değişince paket yeniden yükleniyor ve modül düzeyindeki `let state` sıfırlanıyor (sepet
+  bellekte, kalıcı kaydı yok). Geliştirme ortamına özgü; üründe karşılığı yok.
+
+  **Aynı turda ölçülen, ASIL soru (kullanıcının işaret ettiği):** oturum düşmüşken "Siparişi
+  tamamla" ne yapıyor? Cevap doğru — onay düğmesi DEVRE DIŞI, iki ayrı uyarı ("Hesabınızı
+  okuyamadık…" · "Sipariş seçenekleriniz şu an okunamadı.") ve kapı metni ("Devam etmek için hızlı
+  doğrulama gerekli.") çıkıyor; bağlantı gelince tekrar düğmeleri kimlik/adres/teslimat/ödeme ve
+  özeti tam getiriyor. Oturumsuz yanlış sipariş açmak mümkün değil.
+
+  **YENİ AÇIK MADDE — okunamayan sepet 0,00 € çiziliyor** (`BEKLEYEN(21.89)`): sepette 18 kalem
+  varken sunucuya ulaşamayan bir tazeleme checkout özetini `Ara toplam 0,00 € · Genel toplam
+  0,00 € · "Siparişi onayla · 0,00 €"` hâline düşürdü. 401 bunu YAPMIYOR (o hâlde özet doğru
+  duruyordu); yapan ağ arızası. CLAUDE.md §1 *"Ölçülemeyen değer SIFIR değildir"*in ihlali — doğru
+  davranış son bilinen tutarı korumak ya da "okunamadı" demektir. **Sunucu açıp kapadığım kirli
+  pencerede görüldü; temiz akışta TEKRAR ÜRETİLMEDEN düzeltilmeyecek** (kullanıcı kararı 20.08:
+  "kesinlikle hızlı bir müdahalede bulunma"). Aynı pencerede ikinci bir gözlem: *"son değişiklik
+  geri alındı"* uyarısı çıktı ama ekran geri almamıştı (14 duruyordu, sunucuda 13) — o da aynı
+  şartla bekliyor.
+
+  **Web'de aynı zıplama duruyor**
   (kullanıcı orada da doğruladı) — alan web şeridinin, not bırakıldı
   (`docs/talep/not-web-sepet-indirim-ziplamasi.md`). Aynı notta kayıtlı ikinci borç: `viewWithEntries`
   `@lezzet/application`da ve mobil onu çağıramıyor (`@lezzet/database` bağı RN bundle'ına giremez),
@@ -4428,4 +4458,13 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Ölçüm (cihazsız, `readCheckoutSnapshot` doğrudan çağrıldı):** aynı sepette (3 kalem, 1'i paket)
   kapı YOKken toplam **49,31 €**, kapı VARken **86,69 €** — ekrandaki yanlış ve sepetteki doğru
   tutarla birebir. `typecheck` · `lint` temiz, mobil birim testleri 599/599.
-  **Cihaz doğrulaması BEKLİYOR** (cihaz bağlı değildi) → `BEKLEYEN(21.90)`.
+
+  **Cihazda doğrulandı (20.08, kablosuz `adb`)** — `BEKLEYEN(21.90)` işareti kapandı. Aynı sepetle
+  (Su Böreği ×12 · Bayram Sofrası Paketi ×2 · Karışık Baklava ×3) sipariş özeti: paket satırı artık
+  **37,38 €** ile fiyatlı, `ara toplam 92,97 − indirim 6,28 = genel toplam 86,69 €` ve bu sayı sepet
+  ekranındakiyle birebir aynı. Onay düğmesi de 86,69 € yazıyor — üç yer tek sayıda buluştu.
+
+  **Not — cihaza kablosuz erişim:** `adb devices` boş, `adb mdns services` de boş dönüyor (adb'nin
+  kendi Openscreen keşfi bu ağda çalışmıyor). Cihaz macOS'un Bonjour'uyla bulunuyor:
+  `dns-sd -B _adb-tls-connect._tcp local` → örnek adı, `dns-sd -L <ad> _adb-tls-connect._tcp local`
+  → `host:port`, sonra `adb connect`. Eşleşme kayıtlı olduğu için yeniden `adb pair` gerekmiyor.
