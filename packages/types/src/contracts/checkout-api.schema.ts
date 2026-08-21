@@ -39,19 +39,31 @@ export const CheckoutDeliverySchema = z.object({
   /** Tek tarih varsa ekran seçim sunmaz, onu gösterir (DOMAIN §6). */
   requiresDateChoice: z.boolean(),
   /**
-   * **Bekleyen komşu daveti** (17.10 · 21.45) — davet edenin adı + çağrıldığı gün; yoksa `null`.
+   * **Bekleyen komşu davetleri** (17.10 · 21.45 · MB-61) — her biri davet edenin adı + çağrıldığı
+   * gün. Boş dizi = bekleyen yok.
+   *
+   * **TEK DEĞİL LİSTE (kullanıcı kararı 21.08).** Bir müşteriyi birden çok komşusu, birden çok
+   * güne çağırmış olabilir; alan bir süre tek nesne taşıyordu ve sunucu yalnız EN YAKIN günü
+   * dönüyordu — ikinci davet ekranda hiç görünmüyordu. Gün seçici zaten günleri yan yana
+   * diziyor, dolayısıyla her günün kendi davetini söyleyebilmesi için liste gerekiyor:
+   * *"şu komşunuz sizi bu güne davet etti."*
+   *
+   * **Gün başına EN FAZLA BİR kayıt** ve hangisi olduğu bir kural: aynı gün + aynı bölgeye iki
+   * komşu çağırdıysa kazanan **son kabul edilendir** (`chosenAt` en büyük). Ölçüt dizinin sırası
+   * DEĞİL — o belirsizlik MB-61'in ölçülmüş arızasıydı ve ödülün kime yazıldığını da o belirliyordu.
+   * Reddedilen davet listeye hiç girmez.
    *
    * Kabul edilmiş bir davet KİŞİYE yazılı (`neighbor_invite_claim`), yani bu alan cihazda saklanan
    * bir şeyden değil, sunucudan geliyor. Kullanıcının 12.08'deki sorusunun cevabı bu: davetli
    * web'de hesap açıp uygulamayı sonra yüklese bile davet burada duruyor — çerezde değil, kişide.
    *
-   * **Süzgeç SUNUCUDA:** gün `availableDates` içinde değilse alan `null` gelir. Seçilemeyen bir
-   * günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
+   * **Süzgeç SUNUCUDA:** günü `availableDates` içinde olmayan davet listeye girmez. Seçilemeyen
+   * bir günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
    *
    * Ekranın işi iki cümle: daveti YAZMAK ve o günü ÖNSEÇİLİ getirmek. Seçimin kendisi yine
-   * müşterinin — davet bir çağrıdır, kilit değil.
+   * müşterinin — davet bir çağrıdır, kilit değil; `inviteId` de reddetme kapısının anahtarıdır.
    */
-  neighborInvite: z.object({ inviterName: z.string(), deliveryDate: z.string() }).nullable(),
+  neighborInvites: z.array(z.object({ inviteId: z.string().uuid(), inviterName: z.string(), deliveryDate: z.string() })),
   /**
    * Bu adrese HİÇBİR yoldan gidilemiyor: rota dışı adres + sepette soğuk zincir kalemi. Kargo
    * dolgusu ona açılmaz (DOMAIN §6) — sipariş verilemez, sepet bölünmeli (K32).

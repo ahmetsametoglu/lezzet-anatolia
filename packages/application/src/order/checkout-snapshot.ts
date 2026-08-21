@@ -1,6 +1,6 @@
 import { AddressService, type Db } from '@lezzet/database';
 import type { Address, PaymentMethod, PreferredLanguage } from '@lezzet/types';
-import { readPendingNeighborInvite } from '../customer/neighbor';
+import { readPendingNeighborInvites } from '../customer/neighbor';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { orderScopeOf } from '../cart/cart-types';
 import type { CartEntry } from '../cart/cart-types';
@@ -49,10 +49,15 @@ export interface CheckoutSnapshot {
      * **önseçili** getirir. Önseçim şart, çünkü davetin tek işlevi o güne denk gelmek: davetli günü
      * kendi bulmak zorunda kalırsa ve bulamazsa davet hiçbir işe yaramaz — üstelik kimse fark etmez.
      *
-     * Süzgeç burada: gün `availableDates` içinde DEĞİLSE alan `null` döner. Ekranda seçilemeyen bir
-     * günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
+     * Süzgeç burada: günü `availableDates` içinde OLMAYAN davet listeye girmez. Ekranda
+     * seçilemeyen bir günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
+     *
+     * **LİSTE, TEK DEĞİL (kullanıcı kararı 21.08 · MB-61):** müşteriyi birden çok komşusu birden
+     * çok güne çağırmış olabilir ve gün seçici her günün kendi davetini söylemeli. Gün başına en
+     * fazla bir kayıt döner; aynı güne iki davet varsa kazanan SON KABUL EDİLENdir. Sözleşme
+     * künyesi ayrıntıyı taşıyor (`checkout-api.schema` → `neighborInvites`).
      */
-    neighborInvite: { inviterName: string; deliveryDate: string } | null;
+    neighborInvites: { inviteId: string; inviterName: string; deliveryDate: string }[];
     /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli (K32). */
     blocked: boolean;
   } | null;
@@ -207,9 +212,13 @@ export async function readCheckoutSnapshot(
 
   // Komşu daveti: kişiye yazılı kabuttan okunur (çerezden değil — 12.08 kararı). Kargo siparişinde
   // hiç sorulmaz: orada sefer diye bir şey yok.
-  const pendingInvite = input.shippingOrder ? null : await readPendingNeighborInvite(db, input.customerId);
-  const inviteMatches =
-    pendingInvite && pendingInvite.deliveryZoneId === place.zoneId && delivery.availableDates.includes(pendingInvite.deliveryDate);
+  /* HEPSİ DÖNER, TEKİ DEĞİL (kullanıcı kararı 21.08): müşteriyi birden çok komşusu farklı günlere
+     çağırmış olabilir ve ekran GÜN SEÇİCİDE her günün kendi davetini söylemeli — *"şu komşunuz
+     sizi bu güne davet etti"*. Eskiden yalnız en yakın gün dönüyordu, ötekiler hiç görünmüyordu. */
+  const pendingInvites = input.shippingOrder ? [] : await readPendingNeighborInvites(db, input.customerId);
+  const matchingInvites = pendingInvites.filter(
+    (invite) => invite.deliveryZoneId === place.zoneId && delivery.availableDates.includes(invite.deliveryDate),
+  );
 
   return {
     addresses,
@@ -217,8 +226,11 @@ export async function readCheckoutSnapshot(
       deliveryType,
       availableDates: input.shippingOrder ? [] : delivery.availableDates,
       requiresDateChoice: input.shippingOrder ? false : delivery.requiresDateChoice,
-      neighborInvite:
-        inviteMatches && pendingInvite ? { inviterName: pendingInvite.inviterName, deliveryDate: pendingInvite.deliveryDate } : null,
+      neighborInvites: matchingInvites.map((invite) => ({
+        inviteId: invite.inviteId,
+        inviterName: invite.inviterName,
+        deliveryDate: invite.deliveryDate,
+      })),
       // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ — adres rota içinde olsa bile. Taslak
       // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
       blocked: input.shippingOrder ? cart.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',

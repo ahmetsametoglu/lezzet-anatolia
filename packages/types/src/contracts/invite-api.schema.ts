@@ -78,4 +78,29 @@ export type NeighborWelcomeView = z.infer<typeof NeighborWelcomeSchema>;
  * "aynı sefer" diye bir şey yok, kesim saati dolmuş seferde de çağrılacak kimse kalmamıştır.
  * Ekran o hâlde şeridi hiç çizmez — boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
  */
-export const OrderNeighborInviteSchema = z.object({ inviteUrl: z.string().nullable() });
+export const OrderNeighborInviteSchema = z.object({
+  inviteUrl: z.string().nullable(),
+  /**
+   * **Bu davete daha kaç komşu katılabilir** (kullanıcı kararı 21.08) — `0` = doldu.
+   *
+   * NEDEN TAŞINIYOR: ekran sınırı MÜŞTERİYE SÖYLEMİYORDU. Ölçüldü — davet metni *"komşunuz da
+   * aynı güne sipariş verirse…"* diyor, kaç komşu olduğu hiçbir yerde yazmıyordu ve `maxUses`
+   * müşteri yüzeyine hiçbir yoldan ulaşmıyordu. Sonuç: dolmuş bir daveti paylaşmaya devam eden
+   * müşteri ve tıkladıktan SONRA "bu davet dolu" cümlesiyle karşılaşan komşu — iki tarafın da
+   * emeği boşa.
+   *
+   * SAYI SUNUCUDAN, ekranda hesaplanmaz: tüketim siparişlerden sayılıyor (`countNeighborInviteUses`
+   * — iptal olan sayılmaz) ve tavan davet satırında DONDURULMUŞ (ayar sonradan değişse de o gün
+   * paylaşılmış davetin sözü değişmez). İkisini de istemciye taşıyıp orada çıkarmak, o iki kuralın
+   * ikinci kopyası olurdu.
+   *
+   * **Paylaşım SAYILMAZ, tüketim sayılır.** Ölçüldü: `Share.share` ateşle-unut bir çağrıdır —
+   * kullanıcının gönderip göndermediği, kime gönderdiği geri dönmez, üstelik tek bağlantı
+   * iletilebilir. "Üçüncü paylaşımdan sonra uyar" düğmeye basma sayısını sayardı, paylaşımı değil
+   * (kullanıcı kararı 21.08: şeffaflık, onay diyaloğu değil).
+   */
+  remainingUses: z.number().int().min(0),
+  /** Tavanın kendisi — ekran *"en fazla N komşu"* cümlesini sabit yazmasın diye (ayar değişebilir). */
+  maxUses: z.number().int().min(1),
+});
+export type OrderNeighborInvite = z.infer<typeof OrderNeighborInviteSchema>;

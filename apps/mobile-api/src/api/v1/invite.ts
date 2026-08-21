@@ -3,6 +3,8 @@ import type { Context, Next } from 'hono';
 import { z } from 'zod';
 import {
   acceptNeighborInvite,
+  countNeighborInviteUses,
+  declineNeighborInvite,
   neighborInviteUrl,
   readInviteWelcome,
   readNeighborWelcome,
@@ -10,6 +12,7 @@ import {
   tryOpenNeighborInvite,
 } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
+import { NEIGHBOR_INVITE_MAX_USES } from '@lezzet/domain-core';
 import { InviteWelcomeSchema, NeighborWelcomeSchema, OrderNeighborInviteSchema } from '@lezzet/types';
 import { logger } from '@lezzet/observability';
 import type { AppEnv } from '../../context';
@@ -191,6 +194,49 @@ inviteClaim.post('/neighbor', async (c) => {
   const locale = localeOf(c);
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
-  const invite = await tryOpenNeighborInvite(serviceDb(), { orderId: body.data.orderId, customerId: c.get('customerId') });
-  return ok(c, OrderNeighborInviteSchema.parse({ inviteUrl: invite === null ? null : neighborInviteUrl(invite.token, locale.data) }));
+  const db = serviceDb();
+  const invite = await tryOpenNeighborInvite(db, { orderId: body.data.orderId, customerId: c.get('customerId') });
+  /* KALAN HAK SUNUCUDA SAYILIR (kullanıcı kararı 21.08 — şeffaflık). Tüketim siparişlerden gelir
+     (iptal olan sayılmaz) ve tavan davet satırında dondurulmuştur; ikisini istemciye taşıyıp orada
+     çıkarmak o iki kuralın ikinci kopyası olurdu (sözleşme künyesi).
+
+     Davet yoksa sayı da yok: `remainingUses: 0` ile `maxUses` tavanı — ekran zaten şeridi hiç
+     çizmiyor, ama sözleşme "bilinmiyor" diye bir hâl taşımıyor ve taşımamalı. */
+  const remainingUses = invite === null ? 0 : Math.max(0, invite.maxUses - (await countNeighborInviteUses(db, invite.id)));
+  return ok(
+    c,
+    OrderNeighborInviteSchema.parse({
+      inviteUrl: invite === null ? null : neighborInviteUrl(invite.token, locale.data),
+      remainingUses,
+      maxUses: invite?.maxUses ?? NEIGHBOR_INVITE_MAX_USES,
+    }),
+  );
+});
+
+/**
+ * **Komşu davetinin REDDİ** — `POST /api/v1/me/invite/neighbor/decline` (kullanıcı kararı 21.08).
+ *
+ * Davetli, kabul ettiği bir daveti geri çevirebilir: artık gün seçicide görünmez ve sipariş ona
+ * bağlanmaz. Kabul satırı SİLİNMEZ — ret de olmuş bir olaydır ve **geri alınabilir**: müşteri aynı
+ * bağlantıya yeniden tıklarsa kabul öne alınır, ret damgası temizlenir (`acceptNeighborInvite`).
+ *
+ * **BU ROUTER'DA, `invite`ta DEĞİL:** reddin anahtarı yalnız `inviteId` ve "kim reddediyor"
+ * sorusunun cevabı Bearer'dan çözülen müşteridir (`resolveCustomer`). Açık uçta dursaydı kimlik
+ * gövdeden gelmek zorunda kalırdı — yani başkasının davetini reddettirmek mümkün olurdu.
+ *
+ * Kabul etmediği daveti reddetmek 404 döner: ortada reddedilecek kayıt yok. Ekran o hâlde sessiz
+ * kalır — kullanıcı zaten görmediği bir şeyi reddetmeye çalışmıyordu.
+ */
+const DeclineNeighborBodySchema = z.object({ inviteId: z.string().uuid() });
+
+inviteClaim.post('/neighbor/decline', async (c) => {
+  const body = DeclineNeighborBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await declineNeighborInvite(serviceDb(), {
+    inviteId: body.data.inviteId,
+    customerId: c.get('customerId'),
+  });
+  if (outcome.status === 'rejected') return fail(c, 'invite_not_found', 404);
+  return ok(c, true);
 });
