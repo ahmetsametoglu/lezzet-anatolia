@@ -1,4 +1,4 @@
-import type { Carrier, PaymentMethod } from '@lezzet/types';
+import type { PaymentMethod } from '@lezzet/types';
 import type { StopOutcome } from '@/lib/courier/day';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { money } from '@/components/operation/ui/format';
@@ -191,15 +191,6 @@ export const PREP_VIEW: Record<PrepStage, { label: string; tone: OpsTone } | nul
   on_the_way: { label: 'Yolda', tone: 'slate' },
   delivered: { label: 'Teslim', tone: 'olive' },
   returned: { label: 'İade döndü', tone: 'slate' },
-};
-
-/** Taşıyıcı adları — ham enum değeri ekrana yazılmaz. */
-export const CARRIER_LABEL: Record<Carrier, string> = {
-  colissimo: 'Colissimo',
-  chronopost: 'Chronopost',
-  dhl: 'DHL',
-  ups: 'UPS',
-  other: 'diğer',
 };
 
 /**

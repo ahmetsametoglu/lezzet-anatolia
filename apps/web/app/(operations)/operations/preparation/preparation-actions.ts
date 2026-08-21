@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { confirmPreparation } from '@lezzet/application';
+import { confirmPreparation, recordShipment } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
-import type { PreparationPick } from '@lezzet/types';
+import { CarrierEnum, type PreparationPick } from '@lezzet/types';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
 import { readWorkWarehouse } from '@/lib/warehouse/context';
@@ -73,6 +73,48 @@ export async function confirmPreparationAction(
       data: { items: result.items, ready: result.ready, shortfalls: result.shortfalls },
       error: null,
     };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **Kargo künyesi** (10.9) — taşıyıcı + takip numarası. Depo kimliği burada da istemciden gelmez;
+ * `confirmPreparationAction` ile aynı iki kapıdan geçer. Taşıyıcı değeri `CarrierEnum.parse` ile
+ * doğrulanır: server action'a gelen her şey istemci girdisidir, tip imzası onu doğrulamaz.
+ */
+export async function setShipmentAction(
+  orderId: string,
+  carrier: string,
+  trackingNumber: string,
+): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireWarehouseScope();
+    const workplace = await readWorkWarehouse();
+    if (workplace.status !== 'ok') {
+      throw new Error('Hangi depoda çalıştığınız belli değil — üst bardan depo seçip tekrar deneyin. Hiçbir kayıt yazılmadı.');
+    }
+
+    const result = await recordShipment(serviceDb(), {
+      orderId,
+      warehouseId: workplace.warehouseId,
+      carrier: CarrierEnum.parse(carrier),
+      // Boş kutu = "numara henüz elde değil" — geçerli bir hâl, boş dizgi olarak SAKLANMAZ.
+      trackingNumber: trackingNumber.trim() || null,
+    });
+
+    if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
+    if (result.status === 'forbidden') {
+      throw new Error(
+        `Bu sipariş ${workplace.name} deposunun değil — başka bir deponun kuyruğundan geliyor. Hiçbir kayıt yazılmadı; sayfayı tazeleyin.`,
+      );
+    }
+    if (result.status === 'not_shipping') {
+      throw new Error('Bu bir rota siparişi — taşıyıcı yalnız kargo siparişine yazılır. Hiçbir kayıt yazılmadı.');
+    }
+
+    revalidatePath(PREP_PATH);
+    return { data: { ok: true }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

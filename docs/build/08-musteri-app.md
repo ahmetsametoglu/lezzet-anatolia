@@ -1321,6 +1321,9 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     **Dokuzuncu tur:** mobil detay kahramanı 1:1'e alındı (native 400 dp kahramanının oranı;
     envanterdeki mevcut çerçeve — yeni oran eklenmedi), operatörün kırpma önizleme listeleri
     (`IMAGE_ROLES`) güncellendi, galerideki gömülü `3/2` sabiti `RATIO_SOURCE`'a bağlandı.
+    **Onuncu tur (aynı zincir, ayrı commit):** ürün detayındaki "Çeşitler" şeridi kart
+    kabuğundan çıkıp kenardan kenara kaydırmalı şerit oldu (mobilde kaydırma çubuğu gizli) —
+    kullanıcı görüntüsüyle: dar karta sığmayan strip iki yandan ölü boşluk bırakıyordu.
     Ayrıntı ve gerekçeler `design/KARARLAR.md` "MOBİL WEB KABUĞU" EK zinciri. Kapılar:
     typecheck/lint/knip/birim (1375) yeşil; 3001 çekimleriyle doğrulandı.
 

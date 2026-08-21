@@ -95,6 +95,19 @@ export interface PreparationOrder {
   channel: Order['channel'];
   status: Order['status'];
   deliveryDate: string | null;
+  /**
+   * Kargo künyesinin ÖN KOŞULU (10.9): taşıyıcı yalnız `shipping` siparişine yazılabilir
+   * (`order_carrier_only_shipping` kısıtı). Kulvar bu alana bakmaz — kulvarı teslim GÜNÜ belirler;
+   * bu alan yalnız künye formunun çizilip çizilmeyeceğini söyler.
+   */
+  deliveryType: Order['deliveryType'];
+  /**
+   * Kargo künyesi (10.9) — paketi kapatan kişi etiketi elinde tutar, yazma yeri bu ekrandır
+   * (`OrderService.setShipment` künyesi). `carrier: null` bir eksik değil bir HÂLDİR: "henüz
+   * kargoya verilmedi" — ekran onu boş kutu olarak değil o cümleyle gösterir.
+   */
+  carrier: Order['carrier'];
+  trackingNumber: string | null;
   lineCount: number;
   /** Toplanan kalem sayısı — hazırlık ilerlemesi. */
   pickedLineCount: number;
@@ -157,6 +170,9 @@ export async function listPreparationQueue(
       channel: order.channel,
       status: order.status,
       deliveryDate: order.deliveryDate,
+      deliveryType: order.deliveryType,
+      carrier: order.carrier,
+      trackingNumber: order.trackingNumber,
       lineCount: lines.length,
       pickedLineCount: lines.filter((line) => line.pickedQty >= line.orderedQty).length,
       lines,
@@ -306,6 +322,47 @@ export async function confirmPreparation(
   }
 
   return { status: 'ok', items: result.items, ready, shortfalls };
+}
+
+type ShipmentOutcome =
+  | { status: 'ok' }
+  /** Sipariş çağıranın deposunda değil — `confirmPreparation`'ın aynı kapsam kararı. */
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  /**
+   * Rota siparişine taşıyıcı yazılmaz. Kısıt VERİDE de duruyor (`order_carrier_only_shipping`);
+   * buradaki kontrol kuralı yeniden uygulamak için değil, depocuya kısıt ihlali yerine okunur bir
+   * cümle verebilmek için (Depolar'ın `constraintOf` gerekçesinin aynısı).
+   */
+  | { status: 'not_shipping' }
+  | { status: 'not_found' };
+
+/**
+ * **Kargo künyesini yazar** (10.9) — taşıyıcı + takip numarası, hazırlık ekranının işi:
+ * *"numarayı hazırlık ekranı girer — paketi kapatan kişi etiketi elinde tutuyor"*
+ * (`yer-ekseni-arka-uc-talebi.md §5`). `setShipment` 07.12'den beri hazırdı ve arayüz çağıranı
+ * yoktu; bu kapı o sahipsizliği kapatır. Ayrı bir "sevk" adımı yine açılmıyor.
+ *
+ * `trackingNumber: null` geçerli bir yazımdır: taşıyıcı belli, numara henüz elde değil —
+ * müşteri ekranı o hâlde bağlantısız düz metin gösteriyor (`customer-orders` künyesi).
+ */
+export async function recordShipment(
+  db: SupabaseClient,
+  input: {
+    orderId: string;
+    /** Depocunun çalıştığı depo — siparişinki değilse yazım HİÇ yapılmaz (CLAUDE.md §1). */
+    warehouseId: string;
+    carrier: NonNullable<Order['carrier']>;
+    trackingNumber: string | null;
+  },
+): Promise<ShipmentOutcome> {
+  const orders = new OrderService(db);
+  const order = await orders.getById(input.orderId);
+  if (!order) return { status: 'not_found' };
+  if (order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+  if (order.deliveryType !== 'shipping') return { status: 'not_shipping' };
+
+  await orders.setShipment(input.orderId, input.carrier, input.trackingNumber);
+  return { status: 'ok' };
 }
 
 /** Eşikler ayardan — kodda sabit yok (CLAUDE.md §4). */

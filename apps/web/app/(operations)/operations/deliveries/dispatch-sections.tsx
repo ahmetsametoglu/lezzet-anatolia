@@ -12,7 +12,8 @@ import type { ColumnTrack } from '@/components/operation/ui/table-columns';
 // Kanal rozetinin tonu Siparişler tablosuyla AYNI kaynaktan (16.08): aynı kanal iki ekranda iki
 // renk olamaz. Sözlük orada tanımlı ve süzgeç çipleriyle paylaşılıyor — kopyası yazılmadı.
 import { CHANNEL_TONE } from '../orders/orders-url';
-import { CARRIER_LABEL, DISPATCH_NOTES, PREP_VIEW, RUN_NOTES } from './deliveries-labels';
+import { CARRIER_LABEL } from '@/components/operation/ui/labels';
+import { DISPATCH_NOTES, PREP_VIEW, RUN_NOTES } from './deliveries-labels';
 import { dayLabel, shiftDay } from './deliveries-url';
 import type { DispatchDayView, DispatchStopView } from './dispatch-types';
 

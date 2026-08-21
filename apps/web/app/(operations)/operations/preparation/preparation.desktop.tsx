@@ -1,10 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { num } from '@/components/operation/ui/format';
+import { CARRIER_LABEL, CARRIER_OPTIONS } from '@/components/operation/ui/labels';
+import { Input } from '@/components/operation/form/input';
+import { Select } from '@/components/operation/form/select';
 import { LANE_HINTS, LANE_LABELS, PREP_NOTES, channelLabel, queueStatus } from './preparation-labels';
 import { WarehouseStrip } from './warehouse-strip';
 import {
@@ -39,9 +43,11 @@ interface PreparationViewProps {
   error: string | null;
   onConfirmLine: (order: PreparationOrderView, line: PreparationLineView) => void;
   onProblem: (order: PreparationOrderView, line: PreparationLineView) => void;
+  /** Kargo künyesini yazar (10.9) — yalnız `shipping` siparişin panelinde form çizilir. */
+  onShipment: (order: PreparationOrderView, carrier: string, trackingNumber: string) => void;
 }
 
-export function PreparationDesktop({ data, strip, selectedId, onSelect, busy, error, onConfirmLine, onProblem }: PreparationViewProps) {
+export function PreparationDesktop({ data, strip, selectedId, onSelect, busy, error, onConfirmLine, onProblem, onShipment }: PreparationViewProps) {
   const selected = data.orders.find((order) => order.orderId === selectedId) ?? null;
   const gecikenSayisi = data.orders.filter((order) => order.lane === 'overdue').length;
 
@@ -105,7 +111,7 @@ export function PreparationDesktop({ data, strip, selectedId, onSelect, busy, er
 
           <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-panel">
             {selected ? (
-              <OrderPanel order={selected} busy={busy} onConfirmLine={onConfirmLine} onProblem={onProblem} />
+              <OrderPanel order={selected} busy={busy} onConfirmLine={onConfirmLine} onProblem={onProblem} onShipment={onShipment} />
             ) : (
               <EmptyState title="Sipariş seçin" description={PREP_NOTES.pick} />
             )}
@@ -164,11 +170,13 @@ function OrderPanel({
   busy,
   onConfirmLine,
   onProblem,
+  onShipment,
 }: {
   order: PreparationOrderView;
   busy: boolean;
   onConfirmLine: (order: PreparationOrderView, line: PreparationLineView) => void;
   onProblem: (order: PreparationOrderView, line: PreparationLineView) => void;
+  onShipment: (order: PreparationOrderView, carrier: string, trackingNumber: string) => void;
 }) {
   const kalan = order.lineCount - order.pickedLineCount;
 
@@ -185,6 +193,13 @@ function OrderPanel({
           {num(order.pickedLineCount)} / {num(order.lineCount)} kalem toplandı
         </span>
       </div>
+
+      {/* Kargo künyesi (10.9) — PANELDE, kuyruk satırında değil: satır bir <button> ve içine form
+          gömülemez; künye de zaten satırın değil SİPARİŞİN bilgisi. Ölçüt kulvar değil
+          `deliveryType`: günü silinmiş bir rota siparişi (veri hatası) kargo kulvarında görünür
+          ama taşıyıcı alamaz (`order_carrier_only_shipping`) — ona form çizmek, kaydedilemeyecek
+          bir kutu göstermek olurdu. */}
+      {order.deliveryType === 'shipping' ? <ShipmentBox key={order.orderId} order={order} busy={busy} onShipment={onShipment} /> : null}
 
       <div className="grid grid-cols-[1.5fr_72px_2.2fr_112px] gap-x-3 border-b border-ops-line bg-ops-subtle px-5 py-2.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
         <span>Kalem</span>
@@ -288,6 +303,59 @@ function LineRow({
           </>
         )}
       </span>
+    </div>
+  );
+}
+
+/**
+ * **Kargo künyesi** (10.9) — taşıyıcı + takip numarası. Paketi kapatan kişi etiketi elinde tutar;
+ * numarayı bu ekran girer, Sevkiyat ve müşteri sipariş detayı okur (üç okuyana karşı ilk yazan).
+ *
+ * `carrier: null` bir eksik değil bir HÂL: *"henüz kargoya verilmedi"* — durum satırı onu boş kutu
+ * olarak değil o cümleyle söylüyor. Takip numarası taşıyıcıdan sonra da gelebilir (etiket sonra
+ * basılır); bu yüzden taşıyıcılı-numarasız kayıt geçerli ve Kaydet yalnız taşıyıcı ister.
+ */
+function ShipmentBox({
+  order,
+  busy,
+  onShipment,
+}: {
+  order: PreparationOrderView;
+  busy: boolean;
+  onShipment: (order: PreparationOrderView, carrier: string, trackingNumber: string) => void;
+}) {
+  const [carrier, setCarrier] = useState(order.carrier ?? '');
+  const [tracking, setTracking] = useState(order.trackingNumber ?? '');
+  // Değişmemiş formu yeniden kaydetmek anlamsız bir yazım olurdu; düğme onu hiç teklif etmiyor.
+  const degisti = carrier !== (order.carrier ?? '') || tracking.trim() !== (order.trackingNumber ?? '');
+
+  return (
+    <div className="flex flex-col gap-2 border-b border-ops-line bg-ops-subtle px-5 py-3">
+      <span className="font-ops-body text-ops-xs font-semibold text-ops-body">
+        {order.carrier
+          ? `Kargo: ${CARRIER_LABEL[order.carrier]} · ${order.trackingNumber ?? 'takip numarası yok'}`
+          : 'Henüz kargoya verilmedi — taşıyıcıyı paketi kapatırken yazın.'}
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={carrier}
+          onChange={setCarrier}
+          options={CARRIER_OPTIONS}
+          placeholder="Taşıyıcı seçin"
+          className="w-44"
+        />
+        <Input
+          value={tracking}
+          onChange={(event) => setTracking(event.target.value)}
+          placeholder="Takip numarası (varsa)"
+          mono
+          fullWidth={false}
+          className="w-56"
+        />
+        <Button variant="secondary" size="sm" disabled={busy || carrier === '' || !degisti} onClick={() => onShipment(order, carrier, tracking)}>
+          Kaydet
+        </Button>
+      </div>
     </div>
   );
 }

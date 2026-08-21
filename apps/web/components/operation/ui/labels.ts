@@ -1,5 +1,5 @@
 import type { Locale } from '@lezzet/i18n';
-import { COUNTRY_LABELS, CountryEnum } from '@lezzet/types';
+import { COUNTRY_LABELS, CarrierEnum, CountryEnum, type Carrier } from '@lezzet/types';
 
 /**
  * OPERASYON YÜZEYİNİN DİLİ — çok dilli katalog metni personele bu dilde çözülür.
@@ -32,6 +32,22 @@ export { COUNTRY_LABELS };
 
 /** Ülke seçicisinin seçenekleri — sıra enum'un sırasıdır (tek kaynak). */
 export const COUNTRY_OPTIONS = CountryEnum.options.map((c) => ({ value: c, label: COUNTRY_LABELS[c] }));
+
+/**
+ * Taşıyıcı adları — ham enum değeri ekrana yazılmaz. Sevkiyat'tan buraya taşındı (10.9): ikinci
+ * tüketici hazırlık ekranı oldu (kargo künyesini o yazar, Sevkiyat okur). `Record<Carrier, …>`
+ * eksik anahtarda derlemeyi durdurur — yeni taşıyıcı eklendiği gün karşılığı unutulamaz.
+ */
+export const CARRIER_LABEL: Record<Carrier, string> = {
+  colissimo: 'Colissimo',
+  chronopost: 'Chronopost',
+  dhl: 'DHL',
+  ups: 'UPS',
+  other: 'diğer',
+};
+
+/** Taşıyıcı seçicisinin seçenekleri — sıra enum'un sırasıdır (tek kaynak). */
+export const CARRIER_OPTIONS = CarrierEnum.options.map((c) => ({ value: c, label: CARRIER_LABEL[c] }));
 
 /**
  * **Bir posta kodunun yerleşim adları, okunur hâlde** (`OB-04`, kullanıcının arayüz testi 14.08).

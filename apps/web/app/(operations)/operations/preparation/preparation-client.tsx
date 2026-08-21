@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ShortfallSuggestion } from '@lezzet/domain-core';
-import { confirmPreparationAction } from './preparation-actions';
+import { confirmPreparationAction, setShipmentAction } from './preparation-actions';
 import { PreparationDesktop } from './preparation.desktop';
 import { ProblemDialog } from './problem-dialog';
 import { ShortfallDialog } from './shortfall-dialog';
@@ -73,6 +73,19 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
     });
   };
 
+  /** Kargo künyesini yazar (10.9) — kalem yazımından bağımsız, kendi tek turu. */
+  const saveShipment = (order: PreparationOrderView, carrier: string, trackingNumber: string) => {
+    setError(null);
+    startTransition(async () => {
+      const { error: failed } = await setShipmentAction(order.orderId, carrier, trackingNumber);
+      if (failed) {
+        setError(failed);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
   return (
     <>
       <PreparationDesktop
@@ -87,6 +100,7 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
           setError(null);
           setProblem({ order, line });
         }}
+        onShipment={saveShipment}
       />
 
       {problem ? (
