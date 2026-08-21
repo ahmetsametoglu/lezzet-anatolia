@@ -115,12 +115,25 @@ create table public.neighbor_invite_claim (
   -- Kabul eden müşteri. `cascade`: hesap silinirse kabul kaydı da düşer (kişisel veri, 0037).
   customer_id uuid not null references public.user_profiles (id) on delete cascade,
   created_at timestamptz not null default now(),
-  -- Aynı kişi aynı daveti bir kez kabul eder; ikinci tıklama yeni satır açmaz.
+  -- SON KABUL ZAMANI — `created_at`ten AYRI ve ayrı olması şart (kullanıcı kararı 21.08).
+  -- `created_at` satırın DOĞDUĞU an ve değişmez ("bu daveti ilk ne zaman gördüm"); seçim ise
+  -- "en son hangisini seçtim" sorusudur ve tekrar tıklamayla TAZELENİR. Tek damgaya iki soru
+  -- sorsaydık, geri dönüşü kaydetmek dönüşümün tarihini bozardı.
+  --
+  -- Aynı gün + aynı bölgeye iki komşu davet ettiyse kazanan bu damganın EN BÜYÜĞÜdür. Ölçüt
+  -- dizinin sırası DEĞİL — arızanın kökü tam olarak oydu: aynı girdi farklı sonuç veriyordu.
+  chosen_at timestamptz not null default now(),
+  -- REDDEDİLDİ — davetli daveti geri çevirebilir (kullanıcı kararı 21.08). `null` = reddedilmedi.
+  -- Satır SİLİNMEZ (tablonun kendi kuralı: kabul olmuş bir olaydır); ret de bir olaydır ve geri
+  -- alınabilir — önceki bağlantıya yeniden tıklamak bu damgayı temizler ve `chosen_at`i tazeler.
+  declined_at timestamptz,
+  -- Aynı kişi aynı daveti bir kez kabul eder; ikinci tıklama yeni satır açmaz, VARSA TAZELER.
   constraint neighbor_invite_claim_key unique (invite_id, customer_id)
 );
 
 alter table public.neighbor_invite_claim enable row level security;
 
 -- "Bu müşterinin bekleyen davetleri" — sepet, teslimat günü seçimi ve ana ekran bunu okur.
-create index neighbor_invite_claim_customer_idx on public.neighbor_invite_claim (customer_id, created_at desc);
+-- Sıra `chosen_at`e göre: okuma "en son seçilen" soruyor, "en önce görülen" değil (kolon künyesi).
+create index neighbor_invite_claim_customer_idx on public.neighbor_invite_claim (customer_id, chosen_at desc);
 

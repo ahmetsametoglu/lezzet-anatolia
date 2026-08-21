@@ -71,12 +71,13 @@ export type { InviteWelcome, LinkReferrerOutcome } from './customer/referral';
 export {
   acceptNeighborInvite,
   countNeighborInviteUses,
+  declineNeighborInvite,
   matchNeighborInviteForOrder,
   neighborInviteUrl,
   openNeighborInvite,
   readNeighborWelcome,
   readPendingNeighborAwards,
-  readPendingNeighborInvite,
+  readPendingNeighborInvites,
   tryOpenNeighborInvite,
 } from './customer/neighbor';
 export type { NeighborWelcome, OpenNeighborInviteOutcome, PendingNeighborAward, PendingNeighborInvite } from './customer/neighbor';
@@ -256,7 +257,7 @@ export type {
 //
 // **Her kapı DEPO KİMLİĞİ ister** (CLAUDE.md §1: varsayılan depo YOKTUR) ve kapsam dışı yazım
 // görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
-export { confirmPreparation, listPreparationQueue } from './warehouse/preparation';
+export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';
 export type { PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 export type {

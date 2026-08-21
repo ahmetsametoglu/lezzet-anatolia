@@ -44,9 +44,30 @@ export const NeighborInviteClaimSchema = z.object({
   id: z.string().uuid(),
   inviteId: z.string().uuid(),
   customerId: z.string().uuid(),
+  /** Satırın DOĞDUĞU an — değişmez ("bu daveti ilk ne zaman gördüm"); dönüşüm ölçümünün tarihi. */
   createdAt: z.string(),
+  /**
+   * **SON kabul anı** — aynı gün + aynı bölgeye iki komşu davet ettiyse kazanan bunun EN BÜYÜĞÜ
+   * (kullanıcı kararı 21.08). Tekrar tıklamayla tazelenir, yani müşteri önceki davete dönebilir.
+   * `createdAt`ten ayrı durmasının gerekçesi migration künyesinde: tek damgaya iki soru sorulsaydı
+   * geri dönüş, dönüşümün tarihini bozardı.
+   */
+  chosenAt: z.string(),
+  /** Reddedildiyse anı; `null` = reddedilmedi. Ret geri alınabilir — yeniden kabul temizler. */
+  declinedAt: z.string().nullable(),
 });
 export type NeighborInviteClaim = z.infer<typeof NeighborInviteClaimSchema>;
+
+/**
+ * Kabul satırında GÜNCELLENEBİLİR olan iki alan — ve yalnız ikisi (kullanıcı kararı 21.08).
+ *
+ * `inviteId`/`customerId` kimliğin kendisidir, `createdAt` satırın doğduğu andır: üçü de
+ * değişmez. Şemayı `.partial()` ile tam varlıktan türetmek bunları da yazılabilir kılardı —
+ * kabul kaydının kime ait olduğunu bir gün bir güncelleme değiştirebilirdi.
+ */
+export const NeighborInviteClaimUpdateSchema = NeighborInviteClaimSchema.pick({ id: true })
+  .extend(NeighborInviteClaimSchema.pick({ chosenAt: true, declinedAt: true }).partial().shape);
+export type NeighborInviteClaimUpdate = z.infer<typeof NeighborInviteClaimUpdateSchema>;
 
 export const NeighborInviteClaimInsertSchema = NeighborInviteClaimSchema.pick({ inviteId: true, customerId: true });
 export type NeighborInviteClaimInsert = z.infer<typeof NeighborInviteClaimInsertSchema>;

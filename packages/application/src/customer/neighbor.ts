@@ -190,7 +190,17 @@ export async function acceptNeighborInvite(
   // Zaten kabul edilmişse pencere/doluluk yeniden sorulmaz: kabul geçmişte olmuş bir olaydır ve
   // ikinci kez "hâlâ geçerli mi" diye sormak, aynı tıklamayı iki farklı cevaba götürürdü.
   const existing = await claims.find(invite.id, input.customerId);
-  if (existing) return { status: 'ok', inviteId: invite.id };
+  if (existing) {
+    /* TEKRAR TIKLAMA SEÇİMİ DEĞİŞTİRİR (kullanıcı kararı 21.08). Bu dal bir süre olduğu gibi
+       `ok` dönüyordu ve HİÇBİR ŞEY yapmıyordu; ölçüldü ve kullanıcının tarif ettiği geri dönüş
+       (*"isterse bir önceki davet linkine yine tıklayabilir"*) fiilen çalışmıyordu — müşteri
+       tıklıyor, ekranda hiçbir şey değişmiyordu.
+
+       Kabulün KENDİSİ yine tekrarlanmıyor (satır tek, veride `unique`); tazelenen yalnız SEÇİM
+       damgası ve varsa ret. Kabul bir olay, seçim bir tercihtir — biri değişmez, öteki değişir. */
+    await claims.reselect(existing.id);
+    return { status: 'ok', inviteId: invite.id };
+  }
 
   if ((await runWindowOf(db, invite.deliveryDate, invite.deliveryZoneId)) !== 'open') return { status: 'rejected', reason: 'run_closed' };
   if ((await countNeighborInviteUses(db, invite.id)) >= invite.maxUses) return { status: 'rejected', reason: 'full' };
@@ -294,30 +304,67 @@ export interface PendingNeighborInvite {
  *
  * `null` = bekleyen yok; ekran hiçbir şey çizmez.
  */
-export async function readPendingNeighborInvite(db: SupabaseClient, customerId: string): Promise<PendingNeighborInvite | null> {
+export async function readPendingNeighborInvites(db: SupabaseClient, customerId: string): Promise<PendingNeighborInvite[]> {
   const claims = await new NeighborInviteClaimService(db).listByCustomer(customerId);
-  if (claims.length === 0) return null;
+  /* REDDEDİLEN SEÇİME GİRMEZ (kullanıcı kararı 21.08). Satır duruyor — ret de bir olaydır ve geri
+     alınabilir (yeniden kabul damgayı temizler); yalnız bu okumanın dışında kalıyor. */
+  const live = claims.filter((claim) => claim.declinedAt === null);
+  if (live.length === 0) return [];
 
-  const invites = await new NeighborInviteService(db).listByIds(claims.map((c) => c.inviteId));
-  // Sefer günü yakından uzağa: ekranın söyleyeceği gün, müşterinin ilk karşılaşacağı gün.
-  const sorted = [...invites].sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
+  /* SIRA KARARIN KENDİSİ: `listByCustomer` kabulleri `chosenAt` azalan getiriyor, yani dizinin
+     BAŞI "son seçilen"dir. Aşağıdaki `seen` süzgeci aynı `(gün, bölge)` için ilk gördüğünü tutup
+     ötekileri eler — böylece "son kabul edilen kazanır" tek satırda uygulanmış olur.
 
-  for (const invite of sorted) {
+     ESKİ HÂL BURADA KIRIKTI: okuma davetleri `deliveryDate`e göre sıralayıp İLK açık olanı
+     dönüyordu ve aynı gündeki iki davette kazananı dizinin geldiği sıra belirliyordu — aynı girdi
+     farklı sonuç veriyordu (MB-61'in ölçülmüş arızası). Artık ölçüt zaman damgası. */
+  const inviteById = new Map(
+    (await new NeighborInviteService(db).listByIds(live.map((c) => c.inviteId))).map((invite) => [invite.id, invite]),
+  );
+
+  const pending: PendingNeighborInvite[] = [];
+  const seen = new Set<string>();
+  for (const claim of live) {
+    const invite = inviteById.get(claim.inviteId);
+    if (!invite) continue;
+    const key = `${invite.deliveryDate}|${invite.deliveryZoneId}`;
+    if (seen.has(key)) continue;
+
     if ((await runWindowOf(db, invite.deliveryDate, invite.deliveryZoneId)) !== 'open') continue;
     // Bu daveti zaten siparişe dönüştürmüşse bekleyen bir şey yok. Kendi siparişine bakılıyor:
     // başka komşunun aynı davetten verdiği sipariş bu kişinin davetini tüketmez.
     const orders = await new OrderService(db).listByNeighborInvite(invite.id);
     if (orders.some((order) => order.customerId === customerId && order.status !== 'cancelled')) continue;
 
+    seen.add(key);
     const inviter = await new UserProfileService(db).getById(invite.inviterId);
-    return {
+    pending.push({
       inviteId: invite.id,
       inviterName: firstName(inviter?.name ?? ''),
       deliveryDate: invite.deliveryDate,
       deliveryZoneId: invite.deliveryZoneId,
-    };
+    });
   }
-  return null;
+
+  // Ekrana giderken gün yakından uzağa: gün seçici zaten böyle sıralı, bant da onun yanında konuşuyor.
+  return pending.sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
+}
+
+/**
+ * **Davetin reddi** (kullanıcı kararı 21.08) — davetli daveti geri çevirir; artık seçime girmez ve
+ * ekranda gösterilmez. Satır SİLİNMEZ: ret de olmuş bir olaydır ve geri alınabilir — müşteri aynı
+ * bağlantıya yeniden tıklarsa `acceptNeighborInvite` damgayı temizleyip kaydı öne alır.
+ */
+export async function declineNeighborInvite(
+  db: SupabaseClient,
+  input: { inviteId: string; customerId: string },
+): Promise<{ status: 'ok' } | { status: 'rejected'; reason: 'unknown' }> {
+  const claims = new NeighborInviteClaimService(db);
+  const claim = await claims.find(input.inviteId, input.customerId);
+  // Kabul etmediği bir daveti reddedemez — reddedilecek bir şey yok.
+  if (!claim) return { status: 'rejected', reason: 'unknown' };
+  await claims.decline(claim.id);
+  return { status: 'ok' };
 }
 
 /**
@@ -337,13 +384,31 @@ export async function matchNeighborInviteForOrder(
   if (!input.deliveryZoneId || !input.deliveryDate) return null;
 
   const claims = await new NeighborInviteClaimService(db).listByCustomer(input.customerId);
-  if (claims.length === 0) return null;
+  // Reddedilen davet siparişe de bağlanmaz — ekranda göstermeyip ödülü yine yazmak çelişki olurdu.
+  const live = claims.filter((claim) => claim.declinedAt === null);
+  if (live.length === 0) return null;
 
-  const invites = await new NeighborInviteService(db).listByIds(claims.map((c) => c.inviteId));
-  const match = invites.find(
-    (invite) =>
-      invite.deliveryZoneId === input.deliveryZoneId && invite.deliveryDate === input.deliveryDate && invite.inviterId !== input.customerId,
+  const inviteById = new Map(
+    (await new NeighborInviteService(db).listByIds(live.map((c) => c.inviteId))).map((invite) => [invite.id, invite]),
   );
+
+  /* KAZANAN "SON KABUL EDİLEN" (kullanıcı kararı 21.08) — ve arama artık KABULLER üzerinde
+     dönüyor, davetler üzerinde değil. Fark kararın kendisi: `listByCustomer` kabulleri `chosenAt`
+     azalan getirdiği için ilk uyan kabul, müşterinin EN SON seçtiğidir.
+
+     Eskiden `invites.find(...)` çağrılıyordu ve `invites` dizisinin sırası `listByIds`ten, yani
+     veritabanından geldiği gibiydi: aynı gün + aynı bölgeye iki komşu davet ettiyse ÖDÜLÜN KİME
+     YAZILDIĞI o sıraya bağlıydı — aynı girdi farklı sonuç. MB-61'in para tarafındaki yüzü buydu. */
+  const winner = live.find((claim) => {
+    const invite = inviteById.get(claim.inviteId);
+    return (
+      invite !== undefined &&
+      invite.deliveryZoneId === input.deliveryZoneId &&
+      invite.deliveryDate === input.deliveryDate &&
+      invite.inviterId !== input.customerId
+    );
+  });
+  const match = winner ? inviteById.get(winner.inviteId) : undefined;
   if (!match) return null;
 
   // Kontenjan sipariş ANINDA sorulur: kabul ile sipariş arasında başka komşular daveti doldurmuş
