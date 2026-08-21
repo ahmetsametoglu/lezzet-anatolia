@@ -204,6 +204,8 @@ export function AddressStep({ t, locale, snapshot, state, compact, selectedAddre
         <AddressForm
           copy={t.address.form}
           locale={locale}
+          // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
+          compact={compact}
           initial={toFormInput(editTarget)}
           onCancel={() => setEditing(null)}
           onSave={async (input) => {
@@ -229,7 +231,7 @@ export function AddressStep({ t, locale, snapshot, state, compact, selectedAddre
           </div>
 
           {adding ? (
-            <AddressForm copy={t.address.form} locale={locale} onCancel={() => setEditing(null)} onSave={async (input) => { await onAddAddress(input); setEditing(null); }} />
+            <AddressForm copy={t.address.form} locale={locale} compact={compact} onCancel={() => setEditing(null)} onSave={async (input) => { await onAddAddress(input); setEditing(null); }} />
           ) : (
             <>
               {selectedAddress && (

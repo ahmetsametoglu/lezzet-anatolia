@@ -79,6 +79,8 @@ export function AddressesCard({ t, locale, addresses, compact }: AddressesCardPr
             key={address.id}
             copy={t.addressForm}
             locale={locale}
+            // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
+            compact={compact}
             initial={toFormInput(address)}
             onCancel={() => setEditing(null)}
             onSave={async (input) => {
@@ -151,6 +153,7 @@ export function AddressesCard({ t, locale, addresses, compact }: AddressesCardPr
         <AddressForm
           copy={t.addressForm}
           locale={locale}
+          compact={compact}
           onCancel={() => setEditing(null)}
           onSave={async (input) => {
             await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault }));

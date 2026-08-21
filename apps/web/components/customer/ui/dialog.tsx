@@ -36,12 +36,26 @@ interface DialogProps {
   /** Kapatma düğmesinin erişilebilir adı; komponent metin taşımaz, çerçeveden gelir (i18n). */
   closeLabel: string;
   onClose: () => void;
-  /** Panel genişliği (px). İçeriğe göre değişir: kısa form 420, listeli panel 460. */
+  /** Panel genişliği (px). İçeriğe göre değişir: kısa form 420, listeli panel 460. `sheet`te yok sayılır. */
   maxWidth?: number;
+  /**
+   * Nerede duracağı — ortalanmış kutu (varsayılan) ya da alttan açılan ÇEKMECE (kullanıcı kararı 21.08).
+   *
+   * **Ayrı bir çekmece bileşeni YAZILMADI ve bu bilinçli.** Bu kabuğun asıl taşıdığı şey görüntü
+   * değil SÖZLEŞME: odak tuzağı, Escape yığını, gövde kaydırma kilidi, kapanışta odağın çağırana
+   * dönmesi, `85vh` tavanı. Künyenin kendi dersi bunu söylüyor — iki panel kabuğu ayrı kurulduğunda
+   * *"asıl sorun görsel kopya değildi: kapanma sözleşmeleri farklıydı"*. Çekmeceyi ayrı yazmak o
+   * hatanın üçüncü sürümü olurdu.
+   *
+   * **Kararı ÇAĞIRAN verir, kabuk cihazı sormaz** (`CLAUDE §2` cihaz forku): mobil web forku
+   * `sheet` geçer, masaüstü hiç geçmez. `md:` ile akışkan bir dönüşüm YOK.
+   */
+  placement?: 'center' | 'sheet';
   children: ReactNode;
 }
 
-export function Dialog({ title, closeLabel, onClose, maxWidth = 420, children }: DialogProps) {
+export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement = 'center', children }: DialogProps) {
+  const sheet = placement === 'sheet';
   const panelRef = useRef<HTMLDivElement>(null);
   const tokenRef = useRef<object>({});
 
@@ -83,7 +97,10 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, children }:
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <div
+      className={`fixed inset-0 z-40 flex bg-ink/40 ${sheet ? 'items-end justify-center' : 'items-center justify-center px-4'}`}
+      onClick={onClose}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -91,10 +108,24 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, children }:
         aria-label={title}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth }}
-        className="flex max-h-[85vh] w-full flex-col gap-3.5 overflow-y-auto rounded-card bg-card px-6 py-5.5 outline-none"
+        /* Çekmecede genişlik ekranın kendisi; `maxWidth` ortalanmış kutunun ölçüsü ve burada
+           uygulanırsa çekmece dar kalır — mobilde tam da kaçındığımız sıkışma. */
+        style={sheet ? undefined : { maxWidth }}
+        className={[
+          'flex w-full flex-col bg-card outline-none',
+          /* ── İKİ ANATOMİ, TEK SÖZLEŞME ───────────────────────────────────────────────────────
+             Ortalanmış kutuda PANELİN KENDİSİ kayar (bugünkü davranış, dokunulmadı).
+             Çekmecede başlık SABİT, yalnız gövde kayar — ölçüldü (21.08): tek gövde kaydırmasıyla
+             başlık içerikle birlikte yukarı kayıp üstten kırpılıyordu. Çekmecenin başlığı onun
+             "neredeyim" işaretidir; kaybolursa müşteri uzun bir formun ortasında bağlamsız kalır. */
+          sheet ? 'max-h-[92vh] overflow-hidden rounded-t-card pt-3' : 'max-h-[85vh] gap-3.5 overflow-y-auto rounded-card px-6 py-5.5',
+        ].join(' ')}
       >
-        <div className="flex items-start justify-between gap-3">
+        {/* Tutamak: çekmecenin "aşağı doğru kapanır" olduğunu söyleyen görsel işaret. Sürükleme
+            YOK — vaat edilmeyen bir jest, çalışmadığında kırık hissettirir; kapatma ✕ ile ve
+            örtüye dokunarak (kabuğun sözleşmesi). */}
+        {sheet && <span aria-hidden className="mx-auto mb-2.5 h-1 w-10 flex-none rounded-full bg-sand-200" />}
+        <div className={`flex items-start justify-between gap-3 ${sheet ? 'flex-none px-5 pb-3' : ''}`}>
           <span className="font-serif text-card-title-sm text-ink">{title}</span>
           <button
             type="button"
@@ -105,7 +136,7 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, children }:
             ✕
           </button>
         </div>
-        {children}
+        {sheet ? <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 pb-5">{children}</div> : children}
       </div>
     </div>
   );

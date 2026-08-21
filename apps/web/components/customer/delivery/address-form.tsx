@@ -4,10 +4,13 @@ import { useState } from 'react';
 import type { Address, Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
+import { Dialog } from '@/components/customer/ui/dialog';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { AddressFields, type AddressFieldsCopy } from './address-fields';
 import { useDeliveryPlace } from './place-context';
+// Ülke adları: yer hapıyla ORTAK kaynak — gerekçe ülke alanının künyesinde.
+import placeCopy from './place-messages.json';
 
 /**
  * K35 · Adres formu — **checkout ile hesap sayfasının ORTAK parçası**.
@@ -95,6 +98,8 @@ export function toFormInput(address: Address): NewAddressInput {
  * kullanılmayan bir dışa açık tip olurdu (`knip`).
  */
 interface AddressFormCopy extends AddressFieldsCopy {
+  /** Çekmece başlığı (yalnız mobil web) — masaüstünde form satır içi açıldığı için çizilmez. */
+  sheetTitle: string;
   optional: string;
   label: string;
   recipient: string;
@@ -118,16 +123,47 @@ interface AddressFormProps {
   initial?: NewAddressInput;
   onSave: (input: NewAddressInput) => Promise<void>;
   onCancel: () => void;
+  /**
+   * Mobil web forku — form bir ÇEKMECENİN içinde çiziliyor (kullanıcı kararı 21.08).
+   *
+   * İki şeyi birden değiştirir ve ikisi de aynı sebepten: **ikili satırlar tek sütuna iner** ve
+   * **kart çerçevesi düşer** (çekmece zaten bir kap; kabın içine ikinci bir kap çizmek ekranın
+   * dar genişliğini bir kez daha yer).
+   *
+   * ÖLÇÜLDÜ (21.08, iPhone 13 · 390 px): kart içi genişlik **278 px**ti ve üç ikili satır onu
+   * şöyle bölüyordu — alıcı adı 133 px (*"Ahmet SAMET"* kırpılıyordu), şehir 116 px
+   * (*"Illkirch-Gra…"*), telefon **96 px** (*"+337680…"*). En tersi: SALT OKUNUR ülke alanı
+   * satırın **%61**'ini alıyordu. Posta kodu (beş hane, 150 px sabit) şehir adından genişti.
+   *
+   * `md:` ile akışkan responsive DEĞİL (`CLAUDE §2`): karar cihaz forkundan geliyor, çağıran
+   * `useDevice` sonucunu geçiyor.
+   */
+  compact?: boolean;
 }
 
-export function AddressForm({ copy, locale, initial, onSave, onCancel }: AddressFormProps) {
+export function AddressForm({ copy, locale, initial, onSave, onCancel, compact = false }: AddressFormProps) {
   const [form, setForm] = useState<NewAddressInput>(initial ?? { line1: '', postalCode: '', city: '' });
   const [busy, setBusy] = useState(false);
   const [postalError, setPostalError] = useState<string | null>(null);
   const { place, setPostalCode } = useDeliveryPlace();
 
   const filled = (key: keyof NewAddressInput) => Boolean((form[key] as string | undefined)?.trim());
-  const complete = filled('label') && filled('recipient') && filled('line1') && filled('postalCode') && filled('city') && filled('phone');
+  /**
+   * ── BAŞLIK ARTIK KAPIYI KİLİTLEMİYOR (kullanıcı bulgusu 21.08) ──────────────────────────────
+   * `label` bu listedeydi ve kaydetmeyi engelliyordu — oysa alanın kendi sözleşmesi *"boş
+   * bırakılabilir, o zaman şehir başlık olur"* diyor, kolon `null` kabul ediyor ve kartı çizen
+   * yer o geri düşüşü ZATEN uyguluyor (`address.label ?? address.city`). Yani form, sisteminin
+   * her katmanında isteğe bağlı olan tek bir alanı zorunlu tutuyordu.
+   *
+   * Görünmez bir kilitti: alanın yanında "(isteğe bağlı)" yazmadığı için müşteri düğmenin neden
+   * kapalı olduğunu ancak alanları tek tek deneyerek bulabiliyordu. Kullanıcı ekran görüntüsüyle
+   * bildirdi — her şey doluydu, düğme kapalıydı, eksik olan tek şey başlıktı.
+   *
+   * Kalan dördü GERÇEKTEN zorunlu: alıcı ve telefon olmadan kurye kapıya gidemez, sokak ve kod
+   * olmadan adres adres değildir. Onlar `optional` işareti de taşımıyor — kapı ile ekran aynı
+   * şeyi söylüyor.
+   */
+  const complete = filled('recipient') && filled('line1') && filled('postalCode') && filled('city') && filled('phone');
 
   /**
    * `autoComplete` ŞART ve alanın kendi jetonuyla: tarayıcı kayıtlı adresi ancak alanın ne olduğunu
@@ -212,12 +248,33 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
 
   const answer = !postalError && place && place.postalCode === form.postalCode.trim() ? place : null;
 
-  return (
+  /**
+   * ── ÇEKMECE KARARI FORMUN KENDİSİNDE, ÇAĞIRANLARDA DEĞİL (kullanıcı kararı 21.08) ────────────
+   * Form BUGÜN dört yerden satır içi açılıyor (hesap: ekle + düzenle · checkout: ekle + düzenle).
+   * Sarmalamayı çağıranlara bıraksaydık aynı `Dialog` kurulumu dört kez yazılırdı ve dördünün bir
+   * gün ayrışması kaçınılmazdı — `Dialog` künyesinin kendi dersi bu (*"iki panel kabuğu ayrı
+   * kurulmuştu ve kapanma sözleşmeleri farklıydı"*). Çağıran tek bir şey söyler: `compact`.
+   *
+   * **`onCancel` çekmecenin de kapanışıdır** — ✕, örtüye dokunma ve Escape hepsi oraya bağlanır;
+   * müşteri için "vazgeç" tek bir şeydir, üç ayrı kapanış yolu üç ayrı sonuç doğurmamalı.
+   */
+  /* Gövde kaptan BAĞIMSIZ tutuluyor: masaüstünde doğrudan, mobil webde çekmecenin içinde çizilir.
+     İkinci bir kopya yok, yani iki yol da aynı alanları aynı sırada göstermek zorunda. */
+  const body = (
     /* Tasarım künyesi: beyaz kart · 1px kum-200 kenar · radius 18 · ped 20/22 · gap 14.
-       Satır içi açılır, ayrı sayfa yoktur (envanter). */
-    <div className="flex w-full flex-col gap-3.5 rounded-card border border-sand-200 bg-card px-5.5 py-5">
-      <div className="flex gap-3">
-        <div className="flex-1">{field('label', copy.label)}</div>
+       Satır içi açılır, ayrı sayfa yoktur (envanter).
+       ÇEKMECEDE kap DÜŞER: çekmecenin kendisi zaten kart (kum zemin, üstten yuvarlak, kendi pedi);
+       içine ikinci bir kart çizmek dar ekranda iki kat kenarlık ve iki kat ped demekti. */
+    <div
+      className={
+        compact
+          ? 'flex w-full flex-col gap-3.5'
+          : 'flex w-full flex-col gap-3.5 rounded-card border border-sand-200 bg-card px-5.5 py-5'
+      }
+    >
+      {/* Başlık + alıcı: masaüstünde yan yana (geniş sütun taşır), çekmecede alt alta. */}
+      <div className={compact ? 'flex flex-col gap-3.5' : 'flex gap-3'}>
+        <div className="flex-1">{field('label', copy.label, true)}</div>
         <div className="flex-1">{field('recipient', copy.recipient)}</div>
       </div>
       {/* Sokak · posta kodu · şehir ARTIK ÖNERİLİ ve davranış ortak bileşende (`AddressFields`):
@@ -231,6 +288,7 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
         onCountryChange={(country) => setForm((prev) => ({ ...prev, country: country ?? undefined }))}
         postalError={postalError ?? undefined}
         afterLine1={field('line2', copy.line2, true)}
+        compact={compact}
       />
       {/**
        * ── ÜLKENİN İKİ KAYNAĞI VAR VE İKİSİ DE GEREKLİ (ölçüldü 21.08) ──────────────────────────
@@ -267,12 +325,30 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className={compact ? 'flex flex-col gap-3.5' : 'flex gap-3'}>
         <div className="flex-1">{field('phone', copy.phone)}</div>
-        {/* Ülke SALT OKUNUR (K34'ün beşinci hâli): bugün yalnız Fransa'ya teslim ediyoruz,
-            seçim sunmak müşteriye olmayan bir olasılık göstermek olurdu. */}
-        <div className="w-[170px] flex-none">
-          <FormInputField label={copy.country} value={copy.countryValue} readOnly name="country" autoComplete="country-name" />
+        {/**
+         * Ülke SALT OKUNUR (K34'ün beşinci hâli): seçim sunmak müşteriye bir karar veriyormuş gibi
+         * yapmak olurdu — ülke bir alan değil, posta kodundan türeyen bir SONUÇ (19.8).
+         *
+         * ── AMA SABİT "Fransa" YAZIYORDU VE ARTIK YALAN SÖYLÜYORDU (21.08) ────────────────────
+         * `copy.countryValue` sabit bir metindi ve ülke her zaman `FR` yazıldığı sürece dürüsttü.
+         * Ülke 20.08'de posta kodundan türetilir olunca ikisi ayrıştı; ölçüldü: `77694 Kehl`
+         * seçilince ekran **"Fransa"** diyor, kayda **`DE`** yazılıyordu. Müşteriye gösterilen ile
+         * saklanan aynı olmalı — özellikle KDV'yi ve teslimat yolunu belirleyen bir alanda.
+         *
+         * Ad `place-messages`ten okunuyor, sözlüklere yeni anahtar eklenmedi: aynı iki ülkenin adı
+         * zaten orada ve üç dilde (yer hapı onları çiziyor). Dört ayrı sözlüğe kopyalamak, bir gün
+         * yer hapının "Almanya" derken formun başka bir şey demesi demekti (CLAUDE §1).
+         */}
+        <div className={compact ? '' : 'w-[170px] flex-none'}>
+          <FormInputField
+            label={copy.country}
+            value={(form.country ?? 'FR') === 'DE' ? placeCopy[locale].countryDE : placeCopy[locale].countryFR}
+            readOnly
+            name="country"
+            autoComplete="country-name"
+          />
         </div>
       </div>
 
@@ -286,8 +362,16 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
         <span className="font-sans text-body-sm text-ink">{copy.makeDefault}</span>
       </label>
 
-      {/* Tasarımda eylem satırı İNCE BİR AYRAÇLA ayrılır: formun sonu ile kararın başladığı yer. */}
-      <div className="flex items-center gap-2.5 border-t border-sand-100 pt-3.5">
+      {/* Tasarımda eylem satırı İNCE BİR AYRAÇLA ayrılır: formun sonu ile kararın başladığı yer.
+          ÇEKMECEDE ayrıca YAPIŞKAN: form uzun (sekiz alan + öneri listeleri) ve dar ekranda kaydet
+          düğmesi görünmeyen bir dibe düşüyordu — ölçüldü, çekmece 611 px yüksekken içerik onu
+          aşıyor. Zemin opak olmalı, yoksa altından kayan alanlar düğmenin içinden geçiyor. */}
+      <div
+        className={[
+          'flex items-center gap-2.5 border-t border-sand-100 pt-3.5',
+          compact ? 'sticky bottom-0 -mx-5 -mb-5 bg-card px-5 pb-5' : '',
+        ].join(' ')}
+      >
         <Button
           disabled={!complete || busy}
           onClick={async () => {
@@ -311,5 +395,23 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
         </Button>
       </div>
     </div>
+  );
+
+  /**
+   * ── ÇEKMECE KARARI FORMUN KENDİSİNDE, ÇAĞIRANLARDA DEĞİL (kullanıcı kararı 21.08) ────────────
+   * Form bugün DÖRT yerden satır içi açılıyor (hesap: ekle + düzenle · checkout: ekle + düzenle).
+   * Sarmalamayı çağıranlara bıraksaydık aynı `Dialog` kurulumu dört kez yazılırdı ve dördünün bir
+   * gün ayrışması kaçınılmazdı — `Dialog` künyesinin kendi dersi tam olarak bu (*"iki panel kabuğu
+   * ayrı kurulmuştu ve asıl sorun kapanma sözleşmelerinin farklı olmasıydı"*). Çağıran tek bir şey
+   * söyler: `compact`.
+   *
+   * **`onCancel` çekmecenin de kapanışıdır** — ✕, örtüye dokunma ve Escape hepsi oraya bağlanır;
+   * müşteri için "vazgeç" tek bir şeydir, üç ayrı kapanış yolu üç ayrı sonuç doğurmamalı.
+   */
+  if (!compact) return body;
+  return (
+    <Dialog title={copy.sheetTitle} closeLabel={placeCopy[locale].close} onClose={onCancel} placement="sheet">
+      {body}
+    </Dialog>
   );
 }

@@ -113,6 +113,15 @@ interface AddressFieldsProps {
    * değil zaten: BAN önerisi sokak satırını yazar, kapı/kat müşterinin kendi eklediği bilgidir.
    */
   afterLine1?: React.ReactNode;
+  /**
+   * Mobil web forku — posta kodu ve şehir ALT ALTA gelir.
+   *
+   * Yan yana duruşları masaüstünün ölçüsüydü: kod dar sabit sütun (150 px), şehir kalan genişlik.
+   * Dar ekranda bu tersine dönüyordu — ölçüldü (390 px): kod **150 px**, şehir **116 px**. Beş
+   * haneli bir sayı, şehir adından geniş. Sabit sütunun mantığı geniş kapta doğru, dar kapta
+   * yanlış; oran değil, düzen değişmeli.
+   */
+  compact?: boolean;
 }
 
 export function AddressFields({
@@ -128,6 +137,7 @@ export function AddressFields({
   cityInvalid,
   afterLine1,
   streetSuggest = true,
+  compact = false,
 }: AddressFieldsProps) {
   /* Kod listesinden SEÇİLEN satır — yalnız ŞEHİR listesini çizmek için (çok yerleşimli kod).
      Elle yazılan kodda `null` kalır. */
@@ -222,9 +232,10 @@ export function AddressFields({
 
       {afterLine1}
 
-      <div className="flex gap-3">
-        {/* Posta kodu DAR (150px): beş hane, tam genişlikte kutu değerinden büyük görünüyor. */}
-        <div className="w-[150px] flex-none">
+      <div className={compact ? 'flex flex-col gap-3.5' : 'flex gap-3'}>
+        {/* Posta kodu DAR (150px): beş hane, tam genişlikte kutu değerinden büyük görünüyor.
+            Çekmecede sabit sütun DÜŞER — dar kapta 150 px "dar" değil, satırın yarısıdır. */}
+        <div className={compact ? '' : 'w-[150px] flex-none'}>
           <FormInputField
             label={copy.postalCode}
             value={value.postalCode}
