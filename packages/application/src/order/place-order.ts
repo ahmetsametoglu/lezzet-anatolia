@@ -103,6 +103,15 @@ export interface PlaceOrderInput {
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
   couponCode?: string | null;
   /**
+   * **Müşteriye gösterilen sepetin imzası** (21.08) — taslağa OLDUĞU GİBİ geçer ve orada
+   * karşılaştırılır (`cart_changed`). Burada bir kural YOK, yalnız taşıma.
+   *
+   * Alanların tek tek kopyalandığı bir kapıdır bu (aşağıdaki `createCheckoutDraft` çağrısı):
+   * eklenip de geçirilmeyen bir alan, kapıyı sessizce etkisiz bırakır — yazıldığı gün ölçüldü,
+   * web'in tip denetimi yakaladı ve mobil taraf `spread` yüzünden hiç şikâyet etmemişti.
+   */
+  expectedCartFingerprint?: string | null;
+  /**
    * Çift sipariş kalkanı — istemcinin bu checkout denemesi için ürettiği anahtar.
    *
    * Kapsam BİLEREK dar: yalnız kart DIŞI yollarda işler. Orada sipariş bu çağrıda kesinleşiyor,
@@ -165,6 +174,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     paymentMethod: input.paymentMethod,
     onAccount: input.onAccount,
     couponCode: input.couponCode,
+    expectedCartFingerprint: input.expectedCartFingerprint,
     idempotencyKey: input.idempotencyKey,
     shippingOrder: input.shippingOrder,
     bundles: input.bundles,

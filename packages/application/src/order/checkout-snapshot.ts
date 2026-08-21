@@ -1,9 +1,9 @@
 import { AddressService, type Db } from '@lezzet/database';
-import type { Address, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import { resolveLocalizedText, type Address, type LocalizedText, type PaymentMethod, type PreferredLanguage } from '@lezzet/types';
 import { readPendingNeighborInvites } from '../customer/neighbor';
 import { getCartView, type CartBundlePort } from '../cart/read';
-import { orderScopeOf } from '../cart/cart-types';
-import type { CartEntry } from '../cart/cart-types';
+import { cartFingerprint, orderScopeOf } from '../cart/cart-types';
+import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 
@@ -31,6 +31,14 @@ import { readDeliveryInputs, resolveDelivery } from './delivery';
  *     listeleri bir kez okunup iki teslimat çözümüne birden veriliyor (web'de bunu `react.cache()`
  *     yapıyordu, istek kapsamı pakette yok).
  */
+
+/** Özetin tek satırı — dökümde ve kapsam dışı listede aynı şekil (`kind`: paket satırı ayrı yazılır). */
+export interface CheckoutSummaryLine {
+  kind: 'variant' | 'bundle';
+  name: string;
+  qty: number;
+  lineTotalCents: number | null;
+}
 
 /** Ekranın bir adımda ihtiyacı olan her şey — tek turda, çünkü üçü birbirine bağlı. */
 export interface CheckoutSnapshot {
@@ -90,6 +98,56 @@ export interface CheckoutSnapshot {
      */
     placeLabel: string;
   } | null;
+  /**
+   * **SİPARİŞİN ÖZETİ — ekranın çizeceği döküm** (kullanıcı kararı 21.08); adres seçilmemişse null.
+   *
+   * ── NEDEN SÖZLEŞMEYE GİRDİ ──────────────────────────────────────────────────
+   * Anlık görüntü toplamı ZATEN buradaki kalemlerden hesaplıyordu (`orderScopeOf` → `scope`), ama
+   * yalnız TOPLAMI döndürüyordu. İki ekran da dökümü kendi YEREL sepet kopyasından çiziyordu ve
+   * ifade iki yere birebir kopyalanmıştı (`payment?.orderTotalCents ?? view.totalCents`). İkisi
+   * ayrıştığı anda tek ekran iki sepet anlatıyor — cihazda ölçüldü (21.08): döküm 63,47 €
+   * toplarken genel toplam 16,00 € yazıyordu, üstelik hangisinin doğru olduğunu söyleyen hiçbir
+   * şey yoktu. (Doğru olan toplamdı; bayat olan listeydi.)
+   *
+   * Artık döküm ve toplam AYNI OKUMADAN geliyor. Ayrışma bir daha "olmasın diye dikkat edilen"
+   * bir şey değil, YAPISAL OLARAK imkânsız: tek `getCartView` çağrısı, tek `scope`.
+   *
+   * ── KAPSAM: TAHSİL EDİLECEK KÜME ────────────────────────────────────────────
+   * `lines`, taslağın gerçekten tahsil edeceği kümedir (`scope.lines`) — bu adrese hiç gelemeyen
+   * kalemler DIŞARIDA kalır ve sepette bekler — onlar da `excludedLines`ta, ekran üstünü çizerek
+   * gösterebilsin diye (dosyanın 10.08 kararı: ekran ile kasa aynı kümeyi göstermek zorunda).
+   */
+  summary: {
+    lines: CheckoutSummaryLine[];
+    /** İndirim ÖNCESİ ara toplam — asgari sepet eşiğinin ölçtüğü tutar (`orderScopeOf` künyesi). */
+    subtotalCents: number;
+    /**
+     * Bu SİPARİŞE inen indirim; `null` = yok.
+     *
+     * Tutar sepetin toplam indirimi DEĞİL, kapsamdaki satırların payları kadardır
+     * (`subtotalCents − basketCents`): siparişe girmeyen bir kalemin indirimi, tahsil edilecek
+     * tutardan düşülemez.
+     *
+     * `label` seçili dilde çözülmüş kampanya adıdır; `null` ise ekran SEBEBİ yazar ("Kampanya ·
+     * %8") — kural iki yüzeyde ortak ve istemcide duruyor (`discount-label` künyesi), burada
+     * tekrarlanmaz.
+     */
+    discount: { amountCents: number; label: string | null; reason: DiscountReason | null } | null;
+    /**
+     * Siparişe GİRMEYEN, sepette kalan satırlar (soğuk zincir + rota dışı) — ekran onları üstü
+     * çizili gösterir. Sayı değil satırların kendisi: ekranın adları yerel kopyasından okuması,
+     * düzeltilen ayrışmayı özetin yarısında sürdürmek olurdu.
+     */
+    excludedLines: CheckoutSummaryLine[];
+    /**
+     * Bu özetin dayandığı sepetin içerik imzası (`cartFingerprint`).
+     *
+     * Onay çağrısı bunu geri gönderir; taslak sunucudaki sepeti yeniden okuyup karşılaştırır ve
+     * farklıysa `cart_changed` ile reddeder. Ekranın son okuması ile onay dokunuşu arasındaki
+     * boşluk ancak böyle kapanır — özet ne kadar taze olursa olsun o aralık her zaman vardır.
+     */
+    fingerprint: string;
+  } | null;
 }
 
 export interface CheckoutSnapshotInput {
@@ -136,7 +194,7 @@ export async function readCheckoutSnapshot(
 ): Promise<CheckoutSnapshot> {
   const addresses = await new AddressService(db).listByCustomer(input.customerId);
   const selected = addresses.find((a) => a.id === input.addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
-  if (!selected) return { addresses, delivery: null, payment: null };
+  if (!selected) return { addresses, delivery: null, payment: null, summary: null };
 
   // ── YER ÖNCE, SEPET SONRA (07.15'in kalanı, arka-uç talebi 09.08) ────────
   // Sepet yeri ÇEREZTEN alıyordu (`readPlaceWarehouses`) ve ayar kapsamının ülke/bölge eksenleri
@@ -251,5 +309,58 @@ export async function readCheckoutSnapshot(
       // gerek yok.
       placeLabel: `${selected.postalCode} ${selected.city}`,
     },
+    /* DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) — arayüzdeki `summary` künyesi
+       gerekçenin tamamını taşıyor. Burada yeni bir hesap YOK: `scope` yukarıda zaten çözüldü ve
+       `orderTotalCents` de ondan çıktı. Tek yaptığımız, ekranın kendi kopyasından çizmek zorunda
+       kalmaması için o kümeyi de döndürmek. */
+    summary: {
+      lines: scope.lines.map(summaryLineOf),
+      subtotalCents: scope.subtotalCents,
+      // Kapsamın payı kadar — sepetin toplam indirimi değil (alan künyesi).
+      discount: discountOf(cart.discount, scope.subtotalCents - scope.basketCents, locale),
+      /* Kapsam dışında kalanlar: sepette olup siparişe girmeyenler. Karşılaştırma NESNE KİMLİĞİYLE
+         (`includes`) — `orderScopeOf` süzgeci aynı dizinin elemanlarını döndürüyor, yani kimlik
+         güvenilir ve ada/indekse dayanan bir eşleştirmeye gerek yok. */
+      excludedLines: cart.lines.filter((l) => !scope.lines.includes(l)).map(summaryLineOf),
+      fingerprint: cartFingerprint(input.entries),
+    },
   };
+}
+
+/** Sepet satırı → özet satırı. Tek yerde, çünkü döküm ve kapsam dışı liste aynı şekli taşıyor. */
+function summaryLineOf(line: CartLine): CheckoutSummaryLine {
+  return { kind: line.kind, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents };
+}
+
+/**
+ * Sepet indiriminin ÖZET karşılığı — tutar kapsamdan, ad çok dilli alandan.
+ *
+ * `rejected` hâli de indirim TAŞIR (`appliedInsteadCents`): kupon tutmasa da sepete inen kampanya
+ * yerinde durur ve künyesi `CartDiscount`ta yazılı — onu burada düşürmek, müşterinin hak ettiği
+ * indirimi özetten silmek olurdu. Tutar yine de KAPSAMDAN okunur; `appliedInsteadCents` sepetin
+ * tamamına aittir ve siparişe girmeyen kalemin payını da içerir.
+ */
+function discountOf(
+  discount: CartDiscount,
+  scopedCents: number,
+  locale: PreferredLanguage,
+): { amountCents: number; label: string | null; reason: DiscountReason | null } | null {
+  if (scopedCents <= 0) return null;
+  const label = (text: LocalizedText | null): string | null => (text === null ? null : resolveLocalizedText(text, locale));
+  switch (discount.status) {
+    /* Adı yoksa KOD yazılır — sepetin aynı kuralı (`discount-label` künyesi: "kupon tuttu:
+       kampanyanın adı varsa o, yoksa müşterinin yazdığı KOD"). Kodu ayrı bir alan olarak taşımak
+       yerine `label`a koyuyoruz çünkü alanın anlamı "müşterinin okuduğu künye"dir; o hâlde okuduğu
+       şey gerçekten kodun kendisidir. */
+    case 'applied':
+      return { amountCents: scopedCents, label: label(discount.label) ?? discount.code, reason: null };
+    case 'automatic':
+      return { amountCents: scopedCents, label: label(discount.label), reason: discount.reason };
+    case 'rejected':
+      return discount.appliedInstead === null
+        ? { amountCents: scopedCents, label: null, reason: null }
+        : { amountCents: scopedCents, label: label(discount.appliedInstead.label), reason: discount.appliedInstead.reason };
+    default:
+      return null;
+  }
 }

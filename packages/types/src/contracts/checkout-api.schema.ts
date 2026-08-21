@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { OrderSchema } from '../entities/order.schema';
 import { DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 import { MeAddressSchema } from './address-api.schema';
+import { CartDiscountReasonSchema } from './cart-api.schema';
 
 /**
  * `/api/v1/checkout` SÖZLEŞMESİ — "Siparişi tamamla" ekranının ve sipariş açan ucun ortak dili.
@@ -103,13 +104,72 @@ export const CheckoutPaymentSchema = z.object({
 });
 
 /**
- * Ekranın tek okuma sonucu. Üç dilim de `null` olabilir ve `null`lar ANLAMLIDIR:
- * adres listesi boşsa teslimat da ödeme de sorulamaz — ekran önce adres ister.
+ * SİPARİŞİN DÖKÜMÜ — ekranın özet panelinde çizeceği satırlar (kullanıcı kararı 21.08).
+ *
+ * ── NEDEN SÖZLEŞMEYE GİRDİ ──────────────────────────────────────────────────
+ * Toplam buradan (`payment.orderTotalCents`) geliyordu ama DÖKÜM her iki ekranda da YEREL sepet
+ * kopyasından çiziliyordu — ve aynı geri-düşme ifadesi iki yüzeye birebir kopyalanmıştı
+ * (`payment?.orderTotalCents ?? view.totalCents`). Sepet SUNUCUDA yaşayıp iki yüzeyde paylaşıldığı
+ * için ikisi ayrışabiliyor: cihazda ölçüldü (21.08) — döküm 63,47 € toplarken genel toplam
+ * 16,00 € yazıyordu ve ekranda hangisinin doğru olduğunu söyleyen hiçbir şey yoktu.
+ *
+ * Döküm ve toplam artık AYNI OKUMADAN geliyor; ayrışma dikkatle önlenen bir şey değil, yapısal
+ * olarak imkânsız.
+ *
+ * ── KÜME: TAHSİL EDİLECEK OLAN ──────────────────────────────────────────────
+ * `lines`, siparişin gerçekten kapsayacağı kalemlerdir; bu adrese hiç gelemeyenler dışarıda kalır
+ * ve sepette bekler (sayıları `excludedCount`). Ekranın kasadan farklı bir küme göstermesi, asgari
+ * sepet eşiğini de yanlış okuturdu.
+ */
+/**
+ * Özetin tek satırı — dökümde ve kapsam dışı listede AYNI şekil.
+ *
+ * `kind` taşınıyor çünkü web paketi adetle değil künyesiyle anıyor ("Bayram Sofrası (paket)"):
+ * paketin adedi tek, satılan şey bütünün kendisidir (DOMAIN §13). Ekranın bunu satırın
+ * kimliğinden çıkarmaya çalışması, sözleşmede duran bir gerçeği tahmin etmek olurdu.
+ */
+export const CheckoutSummaryLineSchema = z.object({
+  kind: z.enum(['variant', 'bundle']),
+  name: z.string(),
+  qty: z.number().int().positive(),
+  /** Fiyatı çözülemeyen satır `null` — SIFIR yazılmaz; satışa kapanmış kalem "bedava" değildir. */
+  lineTotalCents: z.number().int().nullable(),
+});
+
+export const CheckoutSummarySchema = z.object({
+  lines: z.array(CheckoutSummaryLineSchema),
+  /** İndirim ÖNCESİ ara toplam — asgari sepet eşiğinin ölçtüğü tutar. */
+  subtotalCents: z.number().int(),
+  /** Bu siparişe inen indirim; tutar KAPSAMIN payı kadardır, sepetin tamamının değil. */
+  discount: z
+    .object({ amountCents: z.number().int(), label: z.string().nullable(), reason: CartDiscountReasonSchema.nullable() })
+    .nullable(),
+  /**
+   * Siparişe GİRMEYEN, sepette kalan satırlar (soğuk zincir + rota dışı).
+   *
+   * Sayı değil satırların KENDİSİ: ekran onları üstü çizili gösteriyor (10.08 kararı — "kalem
+   * gizlenmez, üstü çizilir") ve adları yerelden okusaydı özetin yarısı bir kaynaktan, yarısı
+   * ötekinden gelirdi. Düzeltilen arıza tam olarak buydu; yarısını bırakmak çözmemek olurdu.
+   */
+  excludedLines: z.array(CheckoutSummaryLineSchema),
+  /**
+   * Bu özetin dayandığı sepetin içerik imzası. Onay gövdesi bunu OLDUĞU GİBİ geri gönderir;
+   * sunucu sepeti yeniden okuyup karşılaştırır ve farklıysa `cart_changed` ile reddeder.
+   * İstemci ÜRETMEZ — ürettiği an "ne gösterdiğine" kendisi karar vermiş olurdu.
+   */
+  fingerprint: z.string(),
+});
+export type CheckoutSummary = z.infer<typeof CheckoutSummarySchema>;
+
+/**
+ * Ekranın tek okuma sonucu. Dört dilim de `null` olabilir ve `null`lar ANLAMLIDIR:
+ * adres listesi boşsa teslimat da ödeme de özet de sorulamaz — ekran önce adres ister.
  */
 export const CheckoutSnapshotSchema = z.object({
   addresses: z.array(MeAddressSchema),
   delivery: CheckoutDeliverySchema.nullable(),
   payment: CheckoutPaymentSchema.nullable(),
+  summary: CheckoutSummarySchema.nullable(),
 });
 export type CheckoutSnapshot = z.infer<typeof CheckoutSnapshotSchema>;
 
@@ -131,6 +191,15 @@ export const CheckoutOrderBodySchema = z.object({
   /** Vadeli satın alma niyeti; yetkisi sunucuda sorulur (`creditAvailable` bir GÖSTERİM değil kapı). */
   onAccount: z.boolean().default(false),
   couponCode: z.string().trim().min(1).max(64).nullable().default(null),
+  /**
+   * **Müşteriye gösterilen sepetin imzası** — anlık görüntünün `summary.fingerprint`ı, olduğu gibi
+   * geri gönderilir. Sunucu sepeti yeniden okuyup karşılaştırır; farklıysa `cart_changed`.
+   *
+   * Bu bir TUTAR ya da kalem listesi DEĞİLDİR — gövdenin künyesindeki kural bozulmuyor: siparişin
+   * neyi içereceğine hâlâ sunucudaki sepet karar veriyor, bu alan yalnız "ekran neyi göstermişti"
+   * sorusunu cevaplıyor. Boş bırakılabilir; o hâlde kontrol atlanır ve eski istemciler kırılmaz.
+   */
+  expectedCartFingerprint: z.string().min(1).max(64).nullable().default(null),
   /**
    * **AYNI SİPARİŞİ İKİ KEZ AÇMANIN TEK PANZEHİRİ.** Mobilde bu bir titizlik değil, gerçek bir hâl:
    * ağ kesintisinde istemci isteği yeniden dener ve cevabın kaybolması siparişin açılmadığı anlamına
@@ -226,6 +295,18 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     status: z.literal('price_changed'),
     lines: z.array(z.object({ name: z.string(), fromCents: z.number().int(), toCents: z.number().int() })),
   }),
+  /**
+   * **Sepet, müşteriye gösterildiğinden beri değişti** (kullanıcı kararı 21.08) — `price_changed`ın
+   * kardeşi. Orada değişen TUTAR, burada MALIN KENDİSİ.
+   *
+   * Sepet sunucuda yaşıyor ve iki yüzeyde paylaşılıyor: müşteri webde bir kalem çıkarırken telefonu
+   * ödeme adımında açık durabilir. Sipariş her zaman sunucudaki sepetten açıldığı için, bu kapı
+   * olmadan müşteri gördüğü listeyi onaylayıp BAŞKA bir sipariş alabilirdi — sessizce.
+   *
+   * Payload YOK ve bu bilinçli: söylenecek şey ekranın kendisidir. Özet yeniden okununca yeni liste
+   * zaten görünür; ayrıca bir fark listesi üretmek aynı gerçeği ikinci kez, daha kötü anlatmaktır.
+   */
+  z.object({ status: z.literal('cart_changed') }),
   z.object({ status: z.literal('customer_not_found') }),
   /**
    * Sipariş açıldı ama STOK AYRILAMADI — son anda başkası aldı (yarış hâli). Sipariş taslak kalır

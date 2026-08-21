@@ -15,6 +15,7 @@ import { getCartView, type CartBundlePort } from '../cart/read';
 import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
 import {
+  cartFingerprint,
   discountAmountOf,
   entryOf,
   itemOfEntry,
@@ -120,6 +121,14 @@ export type CheckoutDraftOutcome =
    * sınıf: hiçbir şey patlamaz, müşteri yalnız beklemediği bir tutar öder.
    */
   | { status: 'price_changed'; lines: { name: string; fromCents: number; toCents: number }[] }
+  /**
+   * **Sepet, müşteriye gösterildiğinden beri değişti** (kullanıcı kararı 21.08).
+   *
+   * Payload TAŞIMAZ ve bu bilinçli: `price_changed` neyin ne olduğunu söylemek zorunda (eski/yeni
+   * fiyat ekranda yok), ama burada söylenecek şey EKRANIN KENDİSİDİR — özet yeniden okununca yeni
+   * liste zaten görünür. Fark listesi üretmek, aynı gerçeği ikinci kez ve daha kötü anlatmak olurdu.
+   */
+  | { status: 'cart_changed' }
   | { status: 'customer_not_found' };
 
 export interface CheckoutDraftInput {
@@ -143,6 +152,15 @@ export interface CheckoutDraftInput {
   couponCode?: string | null;
   /** Çift sipariş kalkanı (0015) — istemcinin o checkout denemesi için ürettiği anahtar. */
   idempotencyKey?: string | null;
+  /**
+   * **Müşteriye gösterilen sepetin imzası** — anlık görüntünün `summary.fingerprint`ı, ekrandan
+   * olduğu gibi geri gelir (kullanıcı kararı 21.08).
+   *
+   * İstemcinin ÜRETTİĞİ bir değer değil, sunucunun verdiğinin yankısıdır: içeriği istemci
+   * hesaplasaydı "ne gösterdiğini" istemciye yazdırmış olurduk. Boş bırakılabilir — o hâlde
+   * kontrol atlanır (`cart_changed` künyesi).
+   */
+  expectedCartFingerprint?: string | null;
   // Komşu davetinin BELİRTECİ artık girdi DEĞİL (12.08 kararı): davet kimlik doğduğu an kişiye
   // yazılıyor (`neighbor_invite_claim`) ve sipariş anında müşterinin kendi kaydından okunuyor.
   // Belirteci buraya kadar taşımak, aynı gerçeği iki yerde tutmaktı — ve çerezi olmayan yüzey
@@ -273,6 +291,23 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     bundles: input.bundles,
   });
   if (cart.lines.length === 0) return { status: 'empty_cart' };
+
+  /* SEPET MÜŞTERİYE GÖSTERİLDİĞİNDEN BERİ DEĞİŞTİYSE — onay yenilenmeden sipariş açılmaz
+     (kullanıcı kararı 21.08). `price_changed`ın kardeşi ve aynı gerekçeden doğdu; sırası da onun
+     ÖNÜNDE, çünkü içerik değiştiyse fiyat karşılaştırması zaten başka bir sepeti anlatır.
+
+     BOŞLUK NEREDEN: sepet SUNUCUDA yaşıyor ve iki yüzeyde paylaşılıyor — müşteri webde bir kalem
+     çıkarırken telefonu ödeme adımında açık durabilir. Sipariş HER ZAMAN sunucudaki sepetten
+     açıldığı için (`entries` yukarıda oradan geldi), müşteri gördüğü listeyi onaylayıp başka bir
+     sipariş alabilirdi — sessizce. Ölçüldü (21.08, cihazda): ekran iki kalem listelerken sunucuda
+     tek kalem vardı.
+
+     İMZASIZ İSTEK REDDEDİLMEZ: alan isteğe bağlı ve boş gelirse kontrol atlanır. Zorunlu kılmak,
+     sözleşmeyi bilmeyen her çağıranı (bugün web'in eski akışı, yarın bir başkası) sipariş
+     veremez hâle getirirdi; kontrol imzayı GÖNDERENİ korur. */
+  if (input.expectedCartFingerprint != null && input.expectedCartFingerprint !== cartFingerprint(input.entries)) {
+    return { status: 'cart_changed' };
+  }
 
   /* ── BU SİPARİŞİN KAPSAMI (kullanıcı kararı 10.08) ─────────────────────────
      Rota DIŞI adreste soğuk zincir kalemi hiçbir yoldan gidemez. Eskiden bu SİPARİŞİN TAMAMINI
