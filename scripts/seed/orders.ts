@@ -52,8 +52,40 @@ export async function seedCarts(db: Db, kisiler: Kisiler, varyantlar: VaryantRef
     // doğrudan. Sepetin anahtarı `customer_id`'dir (id yok), miras `update` bu tabloda çalışmaz.
     const { error } = await db.from('cart').update({ updated_at: an(-380) }).eq('customer_id', bayat);
     if (error) throw error;
+
+    /**
+     * ── KARMA SEPET: aynı sepette YEREL + KARGO (19.25) ───────────────────────────────────────
+     *
+     * Bu müşterinin öteki satırları yalnız STR'de duruyor, yani Colmar'lı bir yer için hepsi kargo
+     * grubuna düşüyor — tek gruplu bir sepet, bölünmenin hiçbir şeyini göstermez. Burada eklenen
+     * satır COLMAR deposunda BULUNAN bir varyant: sepet ikiye ayrılıyor ve o ana kadar hiç
+     * koşmamış davranışlar birden görünür oluyor — iki grup başlığı, "kargolu ürünleri ayrıca
+     * sipariş ver" ikinci siparişi, kargo eşiğinin KENDİ matrahından hesabı, "iki grup toplanmaz"
+     * cümlesi.
+     *
+     * **Varyant SORGUYLA seçiliyor, indisle değil:** stok bölümü Colmar'a hangi varyantları
+     * koyduğunu kendi kuralıyla belirliyor (`stock.ts`, her dördüncü + iki soğuk zincir) ve buraya
+     * sabit bir indis yazmak, o kural değiştiği gün sessizce kargo grubuna düşen bir satır bırakırdı
+     * — sepet yine tek gruplu olur, kimse fark etmezdi.
+     *
+     * **Bölünmeyi görmek için yerin 68000 olması gerekir** (çerez ya da Colmar adresi): grup kararı
+     * müşterinin YERİNE bağlı, sepetin kendisine değil. Adres seed'de hazır (`delivery.ts`).
+     */
+    const { data: colmarDepo } = await db.from('warehouse').select('id').eq('code', 'COLMAR').limit(1);
+    const colmarId = ((colmarDepo ?? [])[0] as { id: string } | undefined)?.id;
+    if (colmarId) {
+      const { data: colmarStok } = await db
+        .from('stock')
+        .select('variant_id')
+        .eq('warehouse_id', colmarId)
+        .gt('physical_qty', 0)
+        .limit(1);
+      const yerelVaryant = ((colmarStok ?? [])[0] as { variant_id: string } | undefined)?.variant_id;
+      if (yerelVaryant) await carts.addItem(bayat, { variantId: yerelVaryant, qty: 1, unitPrice: euro(6.5) });
+      else console.log('  ⚠ COLMAR stoğu yok — karma sepet hâli bu koşuda doğmayacak (19.25)');
+    }
   }
-  console.log('✓ sepet: 3 sepet (normal · toptan · BAYAT) + partiye çıpalı teklif satırı');
+  console.log('✓ sepet: 3 sepet (normal · toptan · BAYAT+KARMA) + partiye çıpalı teklif satırı');
 }
 
 // ── Siparişler (07) ──────────────────────────────────────────────────────────────────────────────
@@ -325,7 +357,28 @@ export async function seedOrders(
         discountLabel: indirim ? (kuralEtiketi.get(indirim) ?? null) : null,
         locale: profiller.get(customerId)?.preferredLanguage ?? null,
         addressId: adres?.id ?? null,
-        addressSnapshot: adres ? { line1: adres.line1, postalCode: adres.postalCode, city: adres.city, country: adres.country } : null,
+        /* KOPYA, GERÇEK CHECKOUT'UN YAZDIĞI KADAR OLMALI (21.08). Burada dört alan yazılıyordu —
+           `line1/postalCode/city/country` — oysa `checkout-draft` adresin TAMAMINI kopyalıyor
+           (`addressSnapshot: { ...address }`). Fark sessizdi ve bir ekranı yerelde ölçülemez
+           bırakıyordu: alıcı adı ile adres telefonu kopyaya hiç girmediği için sipariş detayı her
+           siparişte "hesap sahibine düşüldü" yazıyordu. Seed'in kendi kuralı da bunu söylüyor
+           (`seedAddresses`: *"Kalanlar TAM DOLU — kurye ekranı ve fatura, eksik alanla test
+           edilirse yalancı bir sonuç verir"*).
+
+           `label` de kopyaya girer: kargo künyesinde işletme adı ("Dükkân") alıcı adının üstünde
+           yazar ve o satır adresin kendisine aittir, hesabın adına değil. */
+        addressSnapshot: adres
+          ? {
+              label: adres.label,
+              recipient: adres.recipient,
+              line1: adres.line1,
+              line2: adres.line2,
+              postalCode: adres.postalCode,
+              city: adres.city,
+              phone: adres.phone,
+              country: adres.country,
+            }
+          : null,
         // Kurye YOLA ÇIKMIŞ siparişte kendiliğinden yazılır; `atanmis` ise sevkiyatçının SABAH yaptığı
         // atamayı kurar. Bu ikisi ayrı hâllerdir ve gün planı ekranı (09.15) tam aralarında çalışır:
         // "atandı ama henüz çıkmadı" seed'de hiç doğmuyordu, ekranın en kalabalık hâli görülemiyordu.

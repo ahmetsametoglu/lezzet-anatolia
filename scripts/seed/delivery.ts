@@ -28,6 +28,21 @@ const BOLGELER: Array<{
   // Kapsamı ayakta tutan şey değişmedi: **rota dışı adres hâli hâlâ doğuyor** — Lyon (69007) ve
   // Offenburg (77652) adresleri hiçbir bölgeye düşmüyor, kargo yolu onlarla sınanıyor.
   { name: 'Strasbourg Merkez', depo: 'str', codes: [fr('67000'), fr('67100'), fr('67200')], weekdays: [2, 5] }, // salı + cuma
+  // ── İKİNCİ ROTA: KARMA SEPETİN ÖN KOŞULU (19.25) ────────────────────────────────────────────
+  //
+  // Yukarıdaki "tek rota" kararına bilinçli bir istisna ve gerekçesi tek cümle: **rota deposu ile
+  // kargo çıkışı aynı depo olduğu sürece sepet ikiye bölünemiyor.** Colmar'lı müşterinin rota
+  // deposu COLMAR (`shipsOnline=false`), kargo çıkışı STR — iki havuz ilk kez gerçekten ayrı ve
+  // `decideCartAgainstWarehouse`ın `shipping` dalı rota İÇİ bir adres için doğabiliyor
+  // (`seed/warehouse.ts` künyesindeki ölçüm).
+  //
+  // **Kod 68000 seçildi çünkü talep zaten oradaydı:** `POSTA_TALEPLERI` 18 istekle Colmar'ı
+  // listeliyordu; bölge açılınca o satır "talep birikti → rota açıldı" hâline geçiyor ve Depolar
+  // ekranının "kapsanıyorsa hangi bölge tutuyor" sütunu gerçek bir örnek kazanıyor.
+  //
+  // Gün seti STR'den FARKLI (çarşamba + cumartesi): iki rotanın aynı gün koşması, "bugün hangi
+  // rotalar var" sorusunu tek cevaplı bırakır ve kurye rota seçimi (K1) hiç sınanmazdı.
+  { name: 'Colmar Hattı', depo: 'colmar', codes: [fr('68000')], weekdays: [3, 6] }, // çarşamba + cumartesi
 ];
 
 function fr(postalCode: string) {
@@ -93,6 +108,10 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
     // Talep sinyali orada birikmeye devam ediyor: "bölge açma adayı" hâlini `POSTA_TALEBI` taşıyor.
     { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+49 7851 44 55 66', isDefault: true },
     { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', postalCode: '67000', city: 'Strasbourg', phone: '+33 6 55 44 33 22', isDefault: true },
+    // COLMAR rotası (19.25) — karma sepetin YAŞADIĞI adres. Buraya bir adres düşmezse ikinci rota
+    // yalnız kâğıt üstünde kalır: sepet ekranı yeri çerezden çözebilir ama CHECKOUT teslimatı
+    // ADRESTEN çözüyor, yani iki gruplu bir siparişin gerçekten açılabilmesi bu satıra bağlı.
+    { kisi: 'b2cKapaliKapida', label: 'Colmar evi', recipient: 'Julien Fischer', line1: '5 rue des Marchands', postalCode: '68000', city: 'Colmar', phone: '+33 6 98 76 54 32' },
   ];
 
   let sayi = 0;
@@ -117,7 +136,9 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
 const POSTA_TALEPLERI: Array<{ kod: string; adet: number; not: string }> = [
   { kod: '67500', adet: 47, not: 'Haguenau — açık ara önde, bölge açma adayı' },
   { kod: '67200', adet: 31, not: 'Strasbourg batı — bölge İÇİ, rota sıklığı sinyali' },
-  { kod: '68000', adet: 18, not: 'Mulhouse — uzak, tek başına bölge açtırmaz' },
+  // 68000 COLMAR'dır (eski not "Mulhouse" diyordu — 68100'ün koduydu, düzeltildi 21.08). Bu satır
+  // artık "talep birikti, bölge AÇILDI" hâlini örnekliyor: 19.25'in rotası tam bu koda kuruldu.
+  { kod: '68000', adet: 18, not: 'Colmar — talep birikti, rota açıldı (19.25)' },
   { kod: '67600', adet: 12, not: 'Sélestat' },
   { kod: '77694', adet: 9, not: 'Kehl (DE) — deposu var ama rotası YOK; talep birikiyor' },
   { kod: '54000', adet: 4, not: 'Nancy — tek tük' },

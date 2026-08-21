@@ -14,6 +14,16 @@ export interface Depolar {
   str: string;
   /** Kehl (DE) — ikinci depo. Sınır ötesi rota ve transfer buradan denenir. */
   kehl: string;
+  /**
+   * Colmar — **rota deposu, kargo çıkışı DEĞİL** (19.25).
+   *
+   * Varlık sebebi tek bir senaryodur ve o senaryo başka türlü doğmuyordu: **karma sepet**. Sepetin
+   * ikiye bölünmesi için müşterinin ROTA deposu ile ülkenin KARGO çıkışının farklı olması gerekir —
+   * STR ikisini birden yaptığı sürece `decideCartAgainstWarehouse` iki havuzu aynı yerden okur ve
+   * kalem ya ikisinde birden vardır (`local`) ya ikisinde de yoktur (`unavailable`). `shipping`
+   * yolu rota içi bir adres için matematiksel olarak doğamıyordu (ölçüldü 10.08, 15.08'de yeniden).
+   */
+  colmar: string;
 }
 
 /**
@@ -35,7 +45,7 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   const koduyla = new Map(mevcut.map((w) => [w.code, w.id]));
   // Seed'in YÖNETTİĞİ kodlar tek yerde: listeye bir depo eklenip bu kümeye yazılmazsa, kendi
   // kurduğumuz kayıt bir sonraki koşuda "yabancı" diye raporlanır ve uyarı anlamsızlaşır.
-  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'COLMAR']);
+  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'COLMAR', 'MULHOUSE']);
   const yabanci = mevcut.filter((w) => !SEED_DEPOLARI.has(w.code));
   if (yabanci.length > 0) {
     // Yabancı satır SESSİZ geçilmez: operasyon ekranında görünen her depo veriyi etkiler.
@@ -44,9 +54,10 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
 
   let strId = koduyla.get('STR');
   let kehlId = koduyla.get('KEHL');
-  if (strId && kehlId && koduyla.has('COLMAR')) {
-    console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR) — atlandı');
-    return { str: strId, kehl: kehlId };
+  let colmarId = koduyla.get('COLMAR');
+  if (strId && kehlId && colmarId && koduyla.has('MULHOUSE')) {
+    console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR + MULHOUSE) — atlandı');
+    return { str: strId, kehl: kehlId, colmar: colmarId };
   }
   console.log('▸ DEPO seed');
 
@@ -77,6 +88,37 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
     console.log(`  ✓ ${kehl.code} · ${kehl.name}`);
   }
 
+  // ── ÜÇÜNCÜ DEPO: ROTASI VAR, KARGO ÇIKIŞI YOK (19.25) ───────────────────────────────────────
+  //
+  // **Bu deponun tek işi bir SENARYOYU var etmek** ve o senaryo başka hiçbir kurulumda doğmuyor:
+  // karma sepet (aynı sepette hem "kapıya geliyor" hem "kargoyla gelecek" kalem). Ölçüm 10.08 ve
+  // 15.08'de iki kez yapıldı — üç aktif bölgenin üçü de STR'ye bağlıydı ve STR aynı zamanda FR
+  // kargo çıkışıydı; yani rota içi bir adres için `warehouseId` ile `shippingWarehouseId` AYNI
+  // depoyu gösteriyordu. `decideCartAgainstWarehouse` iki havuzu tek yerden okuyunca kalem ya
+  // ikisinde birden var (`local`) ya ikisinde de yok (`unavailable`) — **`shipping` yolu rota içi
+  // adres için doğamıyordu.** Sınanmayan davranışlar: iki grup başlığı, "kargolu ürünleri ayrıca
+  // sipariş ver" ikinci siparişi, kargo eşiğinin kendi matrahından hesabı (`shippingSubtotalCents`),
+  // `shippingOnly` bayrağı, kargo KDV'sinin oransal bölünmesi.
+  //
+  // Colmar bunu tek satırla çözüyor: **rota deposu ama `shipsOnline = false`.** Colmar'lı müşterinin
+  // rota deposu COLMAR, kargo çıkışı STR olur ve iki havuz artık gerçekten ayrı yerlerdir.
+  //
+  // Gerçekçi de: yeni açılan bir pilot depo önce yakın çevresine araçla dağıtır, kargo anlaşması
+  // sonra gelir. Ülke başına tek aktif kargo deposu kuralına da dokunmuyor (kısmi unique indeks
+  // yalnız `ships_online` satırına bakar — FR'de o hâlâ yalnız STR).
+  if (!colmarId) {
+    const colmar = await warehouses.insert({
+      code: 'COLMAR',
+      name: 'Colmar — rota deposu',
+      countryCode: 'FR',
+      address: { line1: 'Rue des Clefs 4', postalCode: '68000', city: 'Colmar', country: 'FR' },
+      shipsOnline: false,
+      sortOrder: 3,
+    });
+    colmarId = colmar.id;
+    console.log(`  ✓ ${colmar.code} · ${colmar.name} · rotası var, kargo çıkışı YOK`);
+  }
+
   // **KAPALI depo** (kapsam denetimi 09.08) — pasif deponun kendi ekran hâli var: kapsam
   // seçicisinde görünmez, bölge ataması yapılamaz, stok okuması onu atlar. Bu hâl seed'de hiç
   // doğmadığı için o yollar bugüne dek hiç koşmadı.
@@ -85,23 +127,28 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   // kapandığında SİLİNMEZ — geçmiş siparişler, partiler ve hareketler ona bağlı kalır (`restrict`
   // FK'ler zaten silmeyi engelliyor). "Kapalı ama duruyor" bu modelin normal hâlidir.
   //
-  // Seed yalnız STR/KEHL'i yönettiği için (yukarıdaki künye) bu satır da koda göre koşullu:
+  // **Bu rolü 19.25'e kadar COLMAR taşıyordu ve devri ZORUNLUYDU:** Colmar aktifleşince pasif depo
+  // hiç kalmıyordu ve `seed:coverage`ın **zorunlu** "pasif depo" kovası boşalırdı — yani bir
+  // senaryoyu kazanırken ötekini sessizce kaybederdik. Mulhouse aynı hikâyeyi devralıyor: Colmar
+  // pilotu tuttu, Mulhouse denendi ve kapatıldı.
+  //
+  // Seed yalnız kendi kodlarını yönettiği için (yukarıdaki künye) bu satır da koda göre koşullu:
   // varlığı koddan sorulur, tablo doluluğundan değil.
-  if (!koduyla.has('COLMAR')) {
+  if (!koduyla.has('MULHOUSE')) {
     const kapali = await warehouses.insert({
-      code: 'COLMAR',
-      name: 'Colmar — pilot depo (kapalı)',
+      code: 'MULHOUSE',
+      name: 'Mulhouse — pilot depo (kapalı)',
       countryCode: 'FR',
-      address: { line1: 'Rue des Clefs 4', postalCode: '68000', city: 'Colmar', country: 'FR' },
+      address: { line1: 'Rue du Sauvage 12', postalCode: '68100', city: 'Mulhouse', country: 'FR' },
       shipsOnline: false,
       isActive: false,
-      sortOrder: 3,
+      sortOrder: 4,
     });
     console.log(`  ✓ ${kapali.code} · ${kapali.name} · PASİF`);
   }
 
-  console.log('✓ depo: STR + KEHL hazır (biri kargo çıkışı) + COLMAR pasif');
-  return { str: strId, kehl: kehlId };
+  console.log('✓ depo: STR (kargo çıkışı) + KEHL + COLMAR (rota, kargosuz) + MULHOUSE pasif');
+  return { str: strId, kehl: kehlId, colmar: colmarId };
 }
 
 /**

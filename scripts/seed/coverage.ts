@@ -545,6 +545,60 @@ export const KAPSAM: KapsamAlani[] = [
           return [...depolar.values()].filter((s) => s.size > 1).length;
         },
       },
+      {
+        ad: 'karma sepet üretebilen varyant (kargo deposunda VAR, rota deposunda YOK)',
+        zorunlu: true,
+        /**
+         * **19.25'in ölçülebilir karşılığı.** Senaryo iki kez (10.08 · 15.08) "üretilemiyor" diye
+         * raporlandı ve sebebi kod değil VERİYDİ: her rota STR'ye bağlıydı, STR aynı zamanda kargo
+         * çıkışıydı, dolayısıyla `decideCartAgainstWarehouse` iki havuzu tek yerden okuyordu ve
+         * `shipping` yolu rota içi bir adres için doğamıyordu.
+         *
+         * Kova o boşluğun geri gelmesini engelliyor: sayı sıfıra düşerse **iki gruplu sepet artık
+         * üretilemiyor** demektir — ve o zaman iki grup başlığı, "kargolu ürünleri ayrıca sipariş
+         * ver" akışı, `shippingSubtotalCents` matrahı ve kargo KDV'sinin oransal bölünmesi yine
+         * hiçbir koşuda koşmaz. Sessizce kaybolmasın diye ZORUNLU.
+         *
+         * Ölçüt kalemin kendisi: kargolanabilir, kargo deposunda var, müşterinin rota deposunda yok.
+         */
+        sayac: async (db) => {
+          const [{ data: depoSatirlari }, { data: bolgeSatirlari }, { data: stokSatirlari }, { data: varyantSatirlari }, { data: urunSatirlari }] =
+            await Promise.all([
+              db.from('warehouse').select('id,ships_online').eq('is_active', true),
+              db.from('delivery_zone').select('warehouse_id').eq('is_active', true),
+              db.from('stock').select('variant_id,warehouse_id').gt('physical_qty', 0),
+              db.from('product_variant').select('id,product_id'),
+              db.from('product').select('id').eq('shippable', true),
+            ]);
+
+          const kargoDepolari = new Set(
+            ((depoSatirlari ?? []) as { id: string; ships_online: boolean }[]).filter((d) => d.ships_online).map((d) => d.id),
+          );
+          // Rota deposu ama kargo çıkışı DEĞİL: senaryonun tek ön koşulu bu depoların varlığı.
+          const yalnizRotaDepolari = [
+            ...new Set(((bolgeSatirlari ?? []) as { warehouse_id: string }[]).map((z) => z.warehouse_id)),
+          ].filter((id) => !kargoDepolari.has(id));
+          if (yalnizRotaDepolari.length === 0 || kargoDepolari.size === 0) return 0;
+
+          const kargolanabilir = new Set(((urunSatirlari ?? []) as { id: string }[]).map((p) => p.id));
+          const urunuyle = new Map(((varyantSatirlari ?? []) as { id: string; product_id: string }[]).map((v) => [v.id, v.product_id]));
+          const depoyaGore = new Map<string, Set<string>>();
+          for (const r of (stokSatirlari ?? []) as { variant_id: string; warehouse_id: string }[]) {
+            if (!depoyaGore.has(r.variant_id)) depoyaGore.set(r.variant_id, new Set());
+            depoyaGore.get(r.variant_id)!.add(r.warehouse_id);
+          }
+
+          let sayi = 0;
+          for (const [variantId, depolari] of depoyaGore) {
+            const urunId = urunuyle.get(variantId);
+            if (!urunId || !kargolanabilir.has(urunId)) continue;
+            const kargodaVar = [...kargoDepolari].some((id) => depolari.has(id));
+            const rotadaYok = yalnizRotaDepolari.some((id) => !depolari.has(id));
+            if (kargodaVar && rotadaYok) sayi += 1;
+          }
+          return sayi;
+        },
+      },
     ],
   },
   {

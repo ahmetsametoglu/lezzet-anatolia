@@ -173,8 +173,14 @@ const KISILER: SeedKisi[] = [
   { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolia.fr', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
   // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
-  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
-  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
+  // **STR + COLMAR birlikte** (19.25): pilot depo kendi ekibini kurmadan önce ana deponun ekibiyle
+  // çalışır — gerçekçi, ve iki şeyi birden var ediyor. (1) Colmar rotası KOŞABİLİR: 11.7'den beri
+  // kurye yalnız kapsamındaki deponun rotasını görüyor, kapsamsız bırakılan bir rota hiç
+  // başlatılamazdı. (2) Çok kapsamlı personelin ekran hâli (üst bardaki depo seçicisi) burada da
+  // doğuyor. Negatif taraf `depocuKehl`/`kuryeKehl` ile duruyor: tek kapsamlı personel ötekinin
+  // işini görmez.
+  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str', 'colmar'], preferredLanguage: 'tr' },
+  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'colmar'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
   // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
   // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.
