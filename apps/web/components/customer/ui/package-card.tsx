@@ -59,12 +59,16 @@ interface PackageListCardProps {
  * `null` = **yer bilinmiyor**, işaret çizilmez. `local` de işaretsiz: "adresine geliyor" varsayılan
  * hâldir, her karta yazmak gürültü olurdu (ürün kartının `available` kararının aynısı).
  *
- * `unavailable` BİLEREK eşlenmiyor: o hâlde `soldOut` zaten devrede ve kart tek çipe iniyor —
- * "tükendi" ile "buraya gelmiyor" aynı anda yazılırsa hangisinin geçerli olduğu belirsizleşir.
+ * `unavailable` da `elsewhere`dir (düzeltme 21.08 — eski not "o hâlde `soldOut` zaten devrede"
+ * diyordu ve HER ZAMAN doğru değildi): takımın kalemleri iki depoya dağılmışsa her kalem ağda
+ * VARDIR (`soldOut` false) ama hiçbir havuz tam takım veremez — kart yeşil "Stokta" basıp
+ * alınamayan bir paketi alınabilir gösteriyordu. Bu, ürünün "bölgenizde şu an yok" hâlinin
+ * paketteki karşılığıdır; `soldOut` gerçek tükenmişlikte yine önce gelir (çizim sırası öyle),
+ * iki çip aynı anda basılmaz. Detay sayfaları da AYNI eşlemeyi kullanır (tek kaynak).
  */
-function stockStatusOfRoute(route: StorefrontPackage['route']): StockStatus | null {
+export function stockStatusOfRoute(route: StorefrontPackage['route']): StockStatus | null {
   if (route === 'shipping') return 'shipping';
-  if (route === 'not_shippable_here') return 'elsewhere';
+  if (route === 'not_shippable_here' || route === 'unavailable') return 'elsewhere';
   return null;
 }
 

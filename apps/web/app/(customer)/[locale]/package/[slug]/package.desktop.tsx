@@ -5,6 +5,8 @@ import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
+import { StockMark } from '@/components/customer/delivery/stock-mark';
+import { stockStatusOfRoute } from '@/components/customer/ui/package-card';
 import { formatPrice } from '@/lib/storefront/format';
 import { ContentCard } from './components/content-card';
 import { PackageFacts } from './components/package-facts';
@@ -20,6 +22,9 @@ import type { PackageViewProps } from './package-types';
  * eklemeden ÖNCE görünür (`musteri-paket-detay.md §2`).
  */
 export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
+  // Yol → stok dili eşlemesi KARTLA AYNI kaynaktan (19.22 ekran ucu): kart ile detay aynı pakete
+  // iki farklı hâl söyleyemez.
+  const stockStatus = stockStatusOfRoute(pack.route);
   return (
     <div className="flex flex-col">
       <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
@@ -49,11 +54,19 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <span className={['font-sans text-h1-sm font-bold', pack.soldOut ? 'text-muted' : 'text-ink'].join(' ')}>
               {formatPrice(pack.priceCents, locale)}
             </span>
-            <Badge tone={pack.soldOut ? 'closed' : 'positive'}>{pack.soldOut ? t.soldOut : t.inStock}</Badge>
+            {/* Rozet yalan söylemez (ürün detayının 19.7 kuralı): yol yere bağlı bir şey söylüyorsa
+                yeşil "Stokta" yerine yer işareti basılır. Tükendi (C3, evrensel) yine önce gelir. */}
+            {pack.soldOut ? (
+              <Badge tone="closed">{t.soldOut}</Badge>
+            ) : stockStatus ? (
+              <StockMark status={stockStatus} locale={locale} size="lg" />
+            ) : (
+              <Badge tone="positive">{t.inStock}</Badge>
+            )}
           </div>
 
           {pack.description && <p className="font-sans text-lead text-body">{pack.description}</p>}
@@ -63,17 +76,18 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
           {/* Kargolanamayan pakette şerit UYARIYA döner: üç ferah vaat yerine tek kısıt cümlesi —
               "kargoya uygun" ile "kargoya verilemez" aynı kutuda yan yana duramaz. */}
           {/* Paket kargoya çıkamıyorsa kısıt YERE göre konuşur: bölge içindeki müşteriye
-              "gönderemiyoruz" demek yanlış olurdu — onun için bu bir kısıt değil. */}
+              "gönderemiyoruz" demek yanlış olurdu — onun için bu bir kısıt değil. Yol biliniyorsa
+              (`status`) kutu rota tahmini yerine yere bağlı gerçeği söyler (ürün detayı deseni). */}
           <DeliveryLine
             locale={locale}
             shippable={!pack.inRouteOnly}
+            status={stockStatus ?? undefined}
             fallback={{ ...t.assurance, notShippable: t.assurance.inRouteOnly }}
             blockedActions={
               <Link href="/packages" className={buttonClass({ size: "sm", className: '!text-note' })}>
                 {t.seeShippablePackages}
               </Link>
             }
-            
           />
 
           <PackageFacts t={t} locale={locale} pack={pack} />
