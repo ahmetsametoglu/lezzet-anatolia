@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Address, Country } from '@lezzet/types';
+import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
@@ -68,7 +69,22 @@ export function toAddressFields(input: NewAddressInput) {
     line2: input.line2 ?? null,
     postalCode: input.postalCode,
     city: input.city,
-    phone: input.phone ?? null,
+    /**
+     * ── TELEFON ARTIK TEK BİÇİME İNDİRİLİYOR (kullanıcı kararı 21.08) ────────────────────────
+     * Adres telefonu bir tur boyunca **HAM saklanıyordu** — boşluklarıyla, gövde sıfırıyla ya da
+     * müşterinin elle yazdığı `+33`le, ne geldiyse öyle. Oysa profil telefonu ve B2B başvurusu
+     * `normalizePhone`dan geçiyordu; yani aynı müşterinin iki numarası iki biçimde duruyordu.
+     * Telefon KİMLİK ANAHTARIDIR (`CHANNELS §3`) ve biçimi tutmayan anahtar eşleşmez: WhatsApp
+     * konuşması, kurye araması ve bul-veya-oluştur hep bu numaradan gidiyor.
+     *
+     * Form artık ülke kodunu SORMUYOR (kod ülke alanında yazılı), bu yüzden birleştirme burada
+     * yapılmalı — ülke posta kodundan türediği için kod uydurulmuş değil, çözülmüş bir değer.
+     *
+     * **Çözemezse HAM değeri korur, `null`a düşürmez:** anlaşılmayan bir numarayı silmek,
+     * "yazamadım"ı "numara yok"a çevirmek olurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir).
+     * Kurye hiç numara bulamamaktansa tuhaf yazılmış bir numara bulsun.
+     */
+    phone: normalizePhone(input.phone ?? '', input.country ?? 'FR') ?? input.phone?.trim() ?? null,
     /* Çözülemediyse bugünkü davranış korunur (`FR`) — geri düşüş, formun kodu hiç doğrulatmadan
        kaydedilebildiği hâl için. Doğru olan çözümden geleni yazmak; hiç yoksa da bir değer
        yazmak zorundayız, kolon `not null`. */
@@ -85,7 +101,15 @@ export function toFormInput(address: Address): NewAddressInput {
     line2: address.line2 ?? undefined,
     postalCode: address.postalCode,
     city: address.city,
-    phone: address.phone ?? undefined,
+    /**
+     * Kayıtlı numara E.164 saklanıyor (`+33768012345`) ama form ülke içi yazımı gösteriyor —
+     * kod ülke alanında duruyor. Ayırmasaydık düzenlemeye giren müşteri `+33768012345` görür,
+     * üstüne bir daha kod eklenmiş gibi okur ve düzeltmeye kalkardı.
+     *
+     * Gidiş-dönüş kayıpsız: `nationalPhone` gövde sıfırını geri koyar, `normalizePhone` kaydederken
+     * yine düşürür. Kod eşleşmiyorsa (eski ham kayıtlar, yabancı numara) değer OLDUĞU GİBİ gelir.
+     */
+    phone: nationalPhone(address.phone, address.country) || undefined,
     country: address.country,
     makeDefault: address.isDefault,
   };
@@ -177,7 +201,9 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
     line2: { autoComplete: 'address-line2', name: 'address-line2' },
     postalCode: { autoComplete: 'postal-code', name: 'postal-code' },
     city: { autoComplete: 'address-level2', name: 'city' },
-    phone: { autoComplete: 'tel', name: 'phone' },
+    /* `tel-national`, düz `tel` DEĞİL: alan artık ülke kodunu istemiyor (kod ülke alanında).
+       Tarayıcıya yanlış jetonu vermek, kayıtlı numarasını `+33`lü hâliyle önerdirirdi. */
+    phone: { autoComplete: 'tel-national', name: 'phone' },
   };
 
   const field = (key: keyof NewAddressInput, label: string, optional = false) => (
@@ -247,6 +273,10 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
    */
 
   const answer = !postalError && place && place.postalCode === form.postalCode.trim() ? place : null;
+
+  /* Ülke çözülene dek `FR`: alan bir şey YAZMAK zorunda ve arama kodu ona bağlı. Çözüm gelince
+     (`checkPostal` ya da öneri seçimi) kendiliğinden güncellenir. */
+  const ulke: Country = form.country ?? 'FR';
 
   const kaydet = (
     <Button
@@ -357,16 +387,22 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
         </div>
       )}
 
-      {/* Telefon + ülke aynı satırda; çekmecede pay çevrilir (kullanıcı kararı 21.08). Masaüstünde
-          ülke 170 px sabit — geniş kapta oturuyor. Dar kapta o sabit, SALT OKUNUR bir alanın
-          satırın %61'ini yemesi demekti (ölçüldü: telefon 96 px). Telefon uzun, ülke tek kelime. */}
+      {/**
+       * ── ÜLKE SOLDA, TELEFON SAĞDA — VE ÜLKE ARAMA KODUNU TAŞIYOR (kullanıcı kararı 21.08) ─────
+       * Sıra bilerek çevrildi: ülke okunduğunda numaranın hangi kodla tamamlanacağı BELLİ olur,
+       * telefon onu tamamlar. Ters sırada müşteri numarayı yazarken kodun ne olduğunu bilmiyordu
+       * ve `+33`ü kendisi yazıyordu.
+       *
+       * **Müşteri artık ülke kodu yazmıyor** — alan ülke içi numarayı alır (`07 68 …`), kod ülke
+       * alanında parantez içinde YAZILI durur ve kayıt sırasında `normalizePhone` birleştirir.
+       * Kod uydurulmuyor: türeyen ülkeden geliyor (posta kodu → ülke), tablosu `DIAL_CODE`.
+       */}
       <div className="flex gap-3">
-        <div className={compact ? 'basis-[65%]' : 'flex-1'}>{field('phone', copy.phone)}</div>
         {/**
          * Ülke SALT OKUNUR (K34'ün beşinci hâli): seçim sunmak müşteriye bir karar veriyormuş gibi
          * yapmak olurdu — ülke bir alan değil, posta kodundan türeyen bir SONUÇ (19.8).
          *
-         * ── AMA SABİT "Fransa" YAZIYORDU VE ARTIK YALAN SÖYLÜYORDU (21.08) ────────────────────
+         * ── SABİT "Fransa" YAZIYORDU VE YALAN SÖYLÜYORDU (21.08) ──────────────────────────────
          * `copy.countryValue` sabit bir metindi ve ülke her zaman `FR` yazıldığı sürece dürüsttü.
          * Ülke 20.08'de posta kodundan türetilir olunca ikisi ayrıştı; ölçüldü: `77694 Kehl`
          * seçilince ekran **"Fransa"** diyor, kayda **`DE`** yazılıyordu. Müşteriye gösterilen ile
@@ -376,15 +412,16 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
          * zaten orada ve üç dilde (yer hapı onları çiziyor). Dört ayrı sözlüğe kopyalamak, bir gün
          * yer hapının "Almanya" derken formun başka bir şey demesi demekti (CLAUDE §1).
          */}
-        <div className={compact ? 'basis-[35%]' : 'w-[170px] flex-none'}>
+        <div className={compact ? 'basis-[42%]' : 'w-[170px] flex-none'}>
           <FormInputField
             label={copy.country}
-            value={(form.country ?? 'FR') === 'DE' ? placeCopy[locale].countryDE : placeCopy[locale].countryFR}
+            value={`${ulke === 'DE' ? placeCopy[locale].countryDE : placeCopy[locale].countryFR} (${DIAL_CODE[ulke]})`}
             readOnly
             name="country"
             autoComplete="country-name"
           />
         </div>
+        <div className={compact ? 'basis-[58%]' : 'flex-1'}>{field('phone', copy.phone)}</div>
       </div>
 
       <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
