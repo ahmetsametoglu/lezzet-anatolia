@@ -32,26 +32,66 @@ const THRESHOLD_MB = Number(process.env.DEV_RSS_LIMIT_MB ?? 2048);
 const ROOT = resolve(import.meta.dirname, '..');
 const LOG = resolve(ROOT, '.test-results/dev-server.log');
 
-/** `next-server` sürecini ve onu doğuran `next dev` sarmalayıcısını bulur. */
+/** Dev server'ın portu — paralel production kopyası 3001'de (`prod:web:start`). */
+const DEV_PORT = Number(process.env.DEV_PORT ?? 3000);
+
+/**
+ * Dev server sürecini **PORTUNDAN** bulur, adından değil.
+ *
+ * ── NEDEN PORT (düzeltme 21.08, ölçüldü) ─────────────────────────────────────
+ * Eskiden `ps` çıktısındaki İLK `next-server` satırı alınıyordu. O gün doğruydu: ortada tek bir
+ * Next süreci vardı. **14.08'de paralel production sunucusu gelince yanlışa döndü** ve kimse fark
+ * etmedi, çünkü script yine bir sayı basıyordu — yanlış sürecin sayısını.
+ *
+ * ÖLÇÜLDÜ (21.08): iki `next-server` ayaktayken script 3001'deki PRODUCTION sunucusunu seçip
+ * **108 MB** yazdı; gerçek dev server (3000) o sırada **548 MB**'daydı. İki sonucu vardı ve
+ * ikincisi daha ağır: *(1)* eşik pratikte hiç tetiklenemezdi — production kopyası donmuş bir
+ * derlemedir, dokunulan rotayı derleyip biriktirmez, yani 2 GB'a hiç çıkmaz; script "temiz" diyerek
+ * susardı. *(2)* `--apply` tetikleseydi **yanlış sunucuyu** durdururdu: production kopyası ölür,
+ * yerine bir dev server açılır ve 3001 sessizce kapanırdı.
+ *
+ * Belirti yoktu, çünkü ölçüm aracının kendisi bozulmuştu — ölçtüğünü sandığı şeyi ölçmüyordu.
+ *
+ * **Port ADDAN daha sağlam bir kimlik:** iki süreç de `next-server` diye görünür ve komut satırları
+ * ayırt etmeye yetmez, ama biri 3000'i öteki 3001'i dinler. Kaç Next süreci olursa olsun kural
+ * değişmez. `-sTCP:LISTEN` şart: filtresiz `lsof` porta BAĞLANMIŞ olanları da döndürür (ölçüldü —
+ * açık bir tarayıcı sekmesi Chrome sürecini listeye sokuyordu).
+ */
 function findDev() {
-  const out = execSync('ps -eo pid,ppid,rss,etime,command', { encoding: 'utf8' });
-  const rows = out.split('\n').slice(1);
-  const server = rows.find((r) => r.includes('next-server') && !r.includes('grep'));
-  if (!server) return null;
-  const [pid, ppid, rss, etime] = server.trim().split(/\s+/);
-  return { pid: Number(pid), ppid: Number(ppid), rssMb: Math.round(Number(rss) / 1024), etime };
+  let pid;
+  try {
+    // `-t` yalnız pid basar; `-sTCP:LISTEN` dinleyeni bağlananlardan ayırır.
+    pid = execSync(`lsof -nP -iTCP:${DEV_PORT} -sTCP:LISTEN -t`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .trim()
+      .split('\n')[0];
+  } catch {
+    // `lsof` hiçbir şey bulamayınca 1 ile çıkar — port boş demektir, arıza değil.
+    return null;
+  }
+  if (!pid) return null;
+  const row = execSync(`ps -o pid,ppid,rss,etime,command -p ${pid}`, { encoding: 'utf8' }).split('\n')[1];
+  if (!row) return null;
+  const [foundPid, ppid, rss, etime, ...cmd] = row.trim().split(/\s+/);
+  /* Portu dinleyen şey bir Next süreci mi — değilse dokunmayız. Başka bir uygulama 3000'i tutmuş
+     olabilir ve onu "dev server sandık" diye öldürmek, aracın düzeltmeye çalıştığı hatanın daha
+     kötü bir sürümü olurdu. */
+  if (!cmd.join(' ').includes('next')) {
+    console.log(`· ${DEV_PORT} portunu Next olmayan bir süreç tutuyor (pid ${foundPid}) — dokunulmadı.`);
+    return null;
+  }
+  return { pid: Number(foundPid), ppid: Number(ppid), rssMb: Math.round(Number(rss) / 1024), etime };
 }
 
 const apply = process.argv.includes('--apply');
 const dev = findDev();
 
 if (!dev) {
-  console.log('· dev server çalışmıyor — yapacak bir şey yok.');
+  console.log(`· dev server ${DEV_PORT} portunda çalışmıyor — yapacak bir şey yok.`);
   process.exit(0);
 }
 
 const over = dev.rssMb > THRESHOLD_MB;
-console.log(`· next-server pid ${dev.pid} · ${dev.rssMb} MB · ${dev.etime} ayakta (eşik ${THRESHOLD_MB} MB)`);
+console.log(`· dev server (:${DEV_PORT}) pid ${dev.pid} · ${dev.rssMb} MB · ${dev.etime} ayakta (eşik ${THRESHOLD_MB} MB)`);
 
 if (!over) {
   console.log('✓ eşiğin altında — yeniden başlatma gerekmiyor.');

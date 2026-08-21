@@ -119,7 +119,11 @@
     ile ölçer, eşik aşılmışsa `--apply` ile yeniden başlatır (`nohup`lu, oturumdan bağımsız; çıktı
     `.test-results/dev-server.log`). **Öteki şeritler dev server'a DOKUNMAZ** — iki ajan aynı anda
     yeniden başlatırsa kimsenin beklemediği bir kesinti doğar. Eşik parametrik (`DEV_RSS_LIMIT_MB`,
-    varsayılan 2048).
+    varsayılan 2048). **Sunucu PORTUNDAN tanınır** (`DEV_PORT`, varsayılan 3000), adından değil:
+    paralel production kopyası da `next-server` diye görünüyor ve araç bir tur onu ölçtü (ölçüldü
+    21.08: prod için **108 MB** yazdı, gerçek dev **548 MB**'daydı). Belirtisi yoktu çünkü araç yine
+    bir sayı basıyordu — yanlış sürecin sayısını; eşik pratikte hiç tetiklenemezdi (donmuş kopya
+    derleme biriktirmez) ve `--apply` tetikleseydi 3001'i kapatırdı.
 
 ## 4b. Test disiplini (paylaşılan veritabanı — her ajan için bağlayıcı)
 > Üç ajan **tek çalışma ağacını ve tek yerel Supabase'i** paylaşıyor. Kural bundan doğdu: eşzamanlı iki
