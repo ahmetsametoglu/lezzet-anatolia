@@ -4,17 +4,17 @@ import { CONTROL_H } from '@/components/operation/ui/control';
 import { Skeleton, SkeletonFilterBar, SkeletonLine, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
- * WhatsApp ekranının ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
- * tarayıcıda ESKİ sayfayı bırakır ve operatör tıklamanın işlediğini anlamaz.
+ * Sosyal gelen kutusunun ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana
+ * geçmek tarayıcıda ESKİ sayfayı bırakır ve operatör tıklamanın işlediğini anlamaz.
  *
  * İskelet ekranın gerçek iskeletini çiziyor — ÜÇ SÜTUN: kuyruk, sohbet, müşteri bağlamı. Daha az
  * sütunlu bir iskelet, yüklenme bitince yerleşimin sıçramasına yol açardı.
  */
 export default function Loading() {
   return (
-    <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="WhatsApp konuşmaları yükleniyor">
+    <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Sosyal mesajlar yükleniyor">
       {/* Başlık GERÇEK (15.08, emsal: fiyatlar); alt satır sayaçtır — veridir, çubuk kalır. */}
-      <PageHeader title="WhatsApp" subtitle={<SkeletonLine className="w-64" />}>
+      <PageHeader title="Sosyal Mesajlar" subtitle={<SkeletonLine className="w-64" />}>
         {/* "+ Elle DM" gerçekte `sm` (32px). */}
         <Skeleton className={`${CONTROL_H.sm} w-[120px] rounded-ops-btn`} />
       </PageHeader>

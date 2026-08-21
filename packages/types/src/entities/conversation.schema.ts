@@ -8,12 +8,15 @@ import {
   TicketSenderEnum,
 } from '../primitives/enums.schema';
 
-// Conversation / Message — WhatsApp konuşma zemini (15.1, migration 0039). CHANNELS §7.
+// Conversation / Message — mesajlaşma konuşma zemini (15.1, migration 0039; üç kanal 21.08,
+// ADR-006). CHANNELS §7.
 //
 // Konuşma durumu BİZİM veritabanımızda yaşar: AI ajanının bağlamı, servis penceresi ve opt-in
-// kararı bizde olmalı; sağlayıcı (360dialog) değişse de geçmiş bizde kalır.
+// kararı bizde olmalı; sağlayıcı değişse de geçmiş bizde kalır. Üç Meta kanalı (WhatsApp ·
+// Messenger · Instagram DM) aynı modele düşer — kanal `source` ekseninde ayrışır, tablo bölünmez.
 //
-// Adım 1'de satırları admin ELLE doğurur, adım 2'de aynı satırları webhook yazar. Veri modeli
+// Adım 1'de satırları admin ELLE doğurur (yalnız WhatsApp — Messenger/IG kimliği operatörce
+// bilinemez, o satırları webhook yazacak), adım 2'de aynı satırları webhook yazar. Veri modeli
 // değişmez — değişen tek şey satırı yazan yüzeydir.
 
 export const ConversationSchema = z.object({
@@ -25,11 +28,27 @@ export const ConversationSchema = z.object({
   customerId: z.string().uuid().nullable(),
   source: ConversationSourceEnum,
   /**
-   * Sağlayıcıdaki kişi/thread anahtarı. WhatsApp'ta **E.164 normalize telefon** — `wa_id` numarayı
-   * `+` olmadan verir, biz `+33…` tutarız. Normalize etmeyen bir yazım aynı kişiye ikinci bir
-   * konuşma açar ve geçmiş ikiye bölünür.
+   * Sağlayıcıdaki kişi/thread anahtarı — kaynağa göre uzayı değişir: WhatsApp'ta **E.164 normalize
+   * telefon** (`wa_id` numarayı `+` olmadan verir, biz `+33…` tutarız), Messenger'da **PSID**,
+   * Instagram'da **IGSID**. Normalize etmeyen bir telefon yazımı aynı kişiye ikinci bir konuşma
+   * açar ve geçmiş ikiye bölünür; PSID/IGSID opak dizedir, normalize edilmez.
    */
   externalRef: z.string(),
+  /**
+   * Konuşmanın aktığı İŞLETME hesabı (21.08): WhatsApp'ta `phone_number_id`, Messenger'da sayfa
+   * kimliği, Instagram'da IG hesap kimliği. Zeminde (elle işleme) boş — webhook yazmaya başladığında
+   * dolar; cevabın hangi hesaptan gönderileceği buradan okunur. Tekillik bugün `(source,
+   * external_ref)` — ikinci bir işletme hesabı açıldığı gün üçlüye genişletilir (PSID sayfa-kapsamlı;
+   * bugün genişletmek, elle işlenen geçmişi webhook geçmişinden bölerdi).
+   */
+  providerAccountRef: z.string().nullable(),
+  /**
+   * Sağlayıcı profil adı (21.08): WhatsApp push name, Messenger ad-soyad, Instagram kullanıcı adı.
+   * GÖRÜNEN addır, kimlik değil — kullanıcı istediği an değiştirir. Messenger/IG'de kimlik otomatik
+   * çözülemediği için (PSID/IGSID telefon taşımaz) kimliksiz sohbetin başlığı buradan okunur;
+   * WhatsApp'ta okunaklı telefon zaten vardı.
+   */
+  profileName: z.string().nullable(),
   /**
    * Sohbeti kim yürütüyor (15.13/16.5 · kullanıcı kararı 16.08) — `ticket.handledBy` ile aynı
    * enum ve aynı sözleşme: `hybrid` = AI taslak yazar, operatör onaylamadan gitmez; `ai` = özerk.
@@ -55,14 +74,18 @@ export const ConversationSchema = z.object({
 export type Conversation = z.infer<typeof ConversationSchema>;
 
 /**
- * Konuşma açılışı. `source` varsayılanlı, `optIn`/pencere/damgalar YOK: hepsi ya varsayılandır ya
- * da bir olayın sonucudur — açan tarafın onları seçebilmesi, izni ve pencereyi kapının dışından
- * uydurmak olurdu.
+ * Konuşma açılışı. `source` ZORUNLU ve varsayılansız (21.08): üç kanal dünyasında sessiz bir
+ * 'whatsapp' varsayılanı, kaynağı geçmeyi unutan tek çağıranın Messenger mesajını WhatsApp
+ * konuşmasına dikmesi demekti — derleyicinin yakalayabildiği bir hata çalışma zamanına bırakılmaz.
+ * `optIn`/pencere/damgalar YOK: hepsi bir olayın sonucudur — açan tarafın onları seçebilmesi,
+ * izni ve pencereyi kapının dışından uydurmak olurdu.
  */
 export const ConversationInsertSchema = z.object({
-  source: ConversationSourceEnum.default('whatsapp'),
+  source: ConversationSourceEnum,
   externalRef: z.string().min(1),
   customerId: z.string().uuid().nullish(),
+  providerAccountRef: z.string().nullish(),
+  profileName: z.string().nullish(),
 });
 export type ConversationInsert = z.infer<typeof ConversationInsertSchema>;
 

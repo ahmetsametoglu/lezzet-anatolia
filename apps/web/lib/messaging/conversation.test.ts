@@ -125,7 +125,7 @@ describe('numaradan konuşmaya (15.2)', () => {
     if (sonuc.status !== 'conflict') return;
     expect(sonuc.profileIds).toHaveLength(2);
     // Yanlış hesaba bağlanmış bir sohbet, bağlanmamış bir sohbetten pahalıdır.
-    expect(await conversations.findByExternalRef(telefon)).toBeNull();
+    expect(await conversations.findByExternalRef('whatsapp', telefon)).toBeNull();
   });
 });
 

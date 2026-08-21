@@ -132,11 +132,14 @@ export const operationsBand = {
   'ops-band-line': '#454a41', // şerit içindeki ikincil düğmenin çerçevesi
 } as const satisfies Record<string, string>;
 
-/* MARKA rengi — palete ait değil, WhatsApp'ın kendi yeşili. Token olarak duruyor ki ham hex
-   ikonun içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsın: marka rengi temayla
-   dönmez, döndüğü an marka olmaktan çıkar. (Öneki `ops-` DEĞİL: `--color-brand-whatsapp`.) */
+/* MARKA renkleri — palete ait değil, kanalların kendi renkleri. Token olarak duruyorlar ki ham
+   hex ikonun/kenarın içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsınlar: marka
+   rengi temayla dönmez, döndüğü an marka olmaktan çıkar. (Önek `ops-` DEĞİL: `--color-brand-…`.)
+   Messenger + Instagram 21.08'de geldi (15.15 — sosyal gelen kutusunun kanal kenarı). */
 export const operationsBrand = {
   'brand-whatsapp': '#128c4b',
+  'brand-messenger': '#0084ff',
+  'brand-instagram': '#e1306c',
 } as const satisfies Record<string, string>;
 
 /* Mavi — YENİ aile (bilgi, nötr bildirim, aday kayıt) */

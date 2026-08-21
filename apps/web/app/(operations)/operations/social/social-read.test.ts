@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationInboxRow, Message } from '@lezzet/types';
-import { previewOf, remainingLabel, toInboxRows, toMessageViews, toWindowView, WINDOW_SOON_MS } from './whatsapp-read';
+import { previewOf, remainingLabel, toInboxRows, toMessageViews, toWindowView, WINDOW_SOON_MS } from './social-read';
 
-// 15.5 — okuma dönüşümlerinin ölçütleri. Üçü de birer KARAR ve karar sınanabilir olmalı:
+// 15.5/15.15 — okuma dönüşümlerinin ölçütleri. Üçü de birer KARAR ve karar sınanabilir olmalı:
 // pencerenin ne zaman "az kaldı"ya döndüğü, gövdesiz bir mesajın nasıl okunacağı, adsız bir
 // konuşmanın satırda ne göstereceği.
 
@@ -14,6 +14,8 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     customerId: '22222222-2222-4222-8222-222222222222',
     source: 'whatsapp',
     externalRef: '+33612345678',
+    providerAccountRef: null,
+    profileName: null,
     handledBy: 'human',
     aiDraftReply: null,
     aiDraftGeneratedAt: null,

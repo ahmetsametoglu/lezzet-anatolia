@@ -33,7 +33,7 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 // 15.08 (2): +1 `ops-surface-sunken` — 10+ kullanımı olan token tanımsızdı, envantere alındı.
 // 18.08: +4 açık / +2 karanlık (`ops-band*`) — panel şeridi kendi ailesini aldı; koyu blokta
 //        yalnız zemin ve çizgi var, mürekkep/ikincil metin açık temadaki değerini koruyor.
-const EXPECTED_LIGHT_COUNT = 165; // @theme bloğu, fontlar hariç (107 renk + 51 yazı + 7 yarıçap)
+const EXPECTED_LIGHT_COUNT = 167; // @theme bloğu, fontlar hariç (109 renk + 51 yazı + 7 yarıçap) — +2: messenger/instagram marka (15.15)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));

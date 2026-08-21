@@ -684,6 +684,15 @@ yok"). O ekran bugün yazılsa kurye siparişleri **oluşturulma sırasıyla** g
 Navigasyon linki (`kurye-gun.md:21` — adresi telefonun harita uygulamasında açmak) bu tartışmanın
 dışında ve zaten çizili: bir rota hesabı değil, bir kısayol.
 
+### Sosyal kanal marka renkleri — envantere işlenmeli (21.08, 15.15)
+
+Sosyal gelen kutusu (`/operations/social`) kanal kenarı için iki marka token'ı kodlandı:
+`--color-brand-messenger: #0084ff` ve `--color-brand-instagram: #e1306c` (`--color-brand-whatsapp`
+emsali — marka rengi temayla dönmez). Değerler kanalların kanonik renkleri; envanter (§0) bu iki
+kaydı henüz taşımıyor — Claude Design envanterine işlenmeli, işlenirken değer değişirse kod tek
+noktadan döner (token). Ekranın kendisi mevcut WhatsApp çiziminin kanal-eksenli genişlemesi;
+kanal rozeti/çipi kit desenleriyle kuruldu, yeni çizim gerekirse tasarım turu ayrıca açılır.
+
 ### Açık kademeler (envanter kararı bekliyor)
 
 Operasyon envanteri (§0) yalnız renk, yarıçap ve font ailesi veriyor; **ölçü kademesi yok.** Bunlar

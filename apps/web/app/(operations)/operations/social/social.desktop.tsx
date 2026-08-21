@@ -4,12 +4,14 @@ import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
-import { ConversationPane, DetailPlaceholder, InboxEmpty, InboxRow, WhatsappContextPane } from './whatsapp-sections';
-import { WHATSAPP_FILTERS, WHATSAPP_FILTER_LABELS } from './whatsapp-url';
-import type { WhatsappViewProps } from './whatsapp-types';
+import { ConversationPane, DetailPlaceholder, InboxEmpty, InboxRow, SocialContextPane } from './social-sections';
+import { SOCIAL_CHANNELS, SOCIAL_FILTERS, SOCIAL_FILTER_LABELS } from './social-url';
+import { SOURCE_LABELS } from './social-labels';
+import type { SocialViewProps } from './social-types';
 
 /**
- * WhatsApp konuşma izleme — web (15.5).
+ * Sosyal gelen kutusu — web (15.5 · üç kanal 15.15): WhatsApp + Messenger + Instagram DM tek
+ * kuyrukta.
  *
  * ÜÇ SÜTUN, TEK EKRAN (çizim): kuyruk · sohbet · müşteri bağlamı. Bağlamı ayrı bir sayfaya koymak
  * operatörü her mesajda müşteri kartına gidip geri döndürürdü; sohbet gün içinde arka arkaya işlenen
@@ -22,7 +24,7 @@ import type { WhatsappViewProps } from './whatsapp-types';
  * Bu ekranda ARAMA KUTUSU YOK ve olmamalı — aranacak şey (müşteri, numara, sipariş) kendi
  * ekranlarında aranır ve oradan buraya bağlantı verilir.
  */
-export function WhatsappDesktop({
+export function SocialDesktop({
   data,
   urlState,
   navPending,
@@ -32,6 +34,7 @@ export function WhatsappDesktop({
   loadingMore,
   onLoadMore,
   onFilter,
+  onChannel,
   onSelect,
   onRecordOutbound,
   onMode,
@@ -40,11 +43,11 @@ export function WhatsappDesktop({
   onIncoming,
   onNewDm,
   onNewTicket,
-}: WhatsappViewProps) {
+}: SocialViewProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
-        title="WhatsApp"
+        title="Sosyal Mesajlar"
         // İkinci sayı yalnız SIFIRDAN BÜYÜKKEN yazılır (Talepler başlığıyla aynı gerekçe): 0 iki
         // şey söyleyebilir ("AI yok" / "AI'da iş yok") ve başlık hangisi olduğunu bilemez.
         subtitle={`${data.awaitingCount} cevap bekliyor${data.aiCount > 0 ? ` · ${data.aiCount} AI'da` : ''} · kuyruk son mesaja göre sıralı`}
@@ -54,10 +57,18 @@ export function WhatsappDesktop({
         </Button>
       </PageHeader>
 
+      {/* İki çip ekseni tek şeritte, ayraçla: durum (Tümü/Cevap bekliyor) ve kanal. Eksenler
+          bağımsızdır — "cevap bekleyen Messenger sohbetleri" meşru bir sorudur. */}
       <FilterBar>
-        {WHATSAPP_FILTERS.map((key) => (
+        {SOCIAL_FILTERS.map((key) => (
           <Chip key={key} active={urlState.f === key} onClick={() => onFilter(key)}>
-            {WHATSAPP_FILTER_LABELS[key]}
+            {SOCIAL_FILTER_LABELS[key]}
+          </Chip>
+        ))}
+        <span aria-hidden className="mx-1 h-4 w-px flex-none self-center bg-ops-line" />
+        {SOCIAL_CHANNELS.map((key) => (
+          <Chip key={key} active={urlState.ch === key} onClick={() => onChannel(key)}>
+            {key === 'all' ? 'Tüm kanallar' : SOURCE_LABELS[key]}
           </Chip>
         ))}
       </FilterBar>
@@ -68,11 +79,11 @@ export function WhatsappDesktop({
           // paylaşıyor ve operatör aralarında gezinirken gözü aynı yerde aynı şeyi arıyor; farklı
           // genişlik, ortaklaştırılmış bir satırı yine iki ayrı ekran gibi gösteriyordu.
           // Çizim 208 px veriyor (`.dc.html`) ama o ölçü kendi tuvalinin ölçeğinde: burada başlık
-          // + önizleme + üç rozet o genişlikte satırı ikiye bölüyordu.
+          // + önizleme + rozetler o genişlikte satırı ikiye bölüyordu.
           width={330}
           busy={navPending}
           isEmpty={data.rows.length === 0}
-          empty={<InboxEmpty filtered={urlState.f === 'awaiting'} />}
+          empty={<InboxEmpty filtered={urlState.f !== 'all' || urlState.ch !== 'all'} />}
           hasMore={hasMore}
           loadingMore={loadingMore}
           onLoadMore={onLoadMore}
@@ -94,9 +105,11 @@ export function WhatsappDesktop({
               onConsumeDraft={onConsumeDraft}
               onSuggestDraft={onSuggestDraft}
             />
-            <WhatsappContextPane
+            <SocialContextPane
               context={data.detail.context}
-              phone={data.detail.phone}
+              externalRef={data.detail.externalRef}
+              source={data.detail.source}
+              profileName={data.detail.profileName}
               tickets={data.detail.tickets}
               onNewTicket={onNewTicket}
             />

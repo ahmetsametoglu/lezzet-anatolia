@@ -6,10 +6,17 @@ import type { Conversation, Message, MessageBody, MessageKind, TemplateCategory,
 import { findOrCreateCustomer } from '../identity/find-or-create';
 
 /**
- * WhatsApp konuşma kapısı (15.1/15.2) — **motor ile servisi birleştiren yer** (STACK §4).
+ * Mesajlaşma konuşma kapısı (15.1/15.2; üç kanal 21.08, ADR-006) — **motor ile servisi birleştiren
+ * yer** (STACK §4).
  *
  * Karar motorun (`resolveIdentity` kimliği, `serviceWindowExpiry` pencereyi), satır servisin
  * (`ConversationService`/`MessageService`). İkisi birbirini bilmez; burada buluşurlar.
+ *
+ * `openWhatsappConversation` adı KANALINI söylüyor ve tek açılış kapısı bilerek bu: telefon
+ * kimlik çözümü yalnız WhatsApp'ta mümkün (Messenger PSID'si ve Instagram IGSID'si telefon
+ * taşımaz). Messenger/IG konuşmalarını webhook açacak (15.7) — o kapı, tüketicisiyle birlikte
+ * doğar; bugün yazılsaydı çağıranı olmayan ölü kod olurdu. `recordInbound/OutboundMessage` ise
+ * kanal-nötr: konuşma kimliği üzerinden çalışırlar.
  *
  * Adım 1'de bu kapıdan admin geçer: gelen DM'i elle işler. Adım 2'de aynı kapıdan webhook geçecek —
  * yani buradaki akış, canlı kanalın da akışıdır. Kapı iki tüketici için de aynı olmalı, yoksa
@@ -79,8 +86,11 @@ export async function openWhatsappConversation(input: OpenConversationInput): Pr
   if (identity.status === 'insufficient') return { status: 'invalid_phone' };
 
   const conversation = await new ConversationService(serviceDb()).open({
+    source: 'whatsapp',
     externalRef: phone,
     customerId: identity.profile.id,
+    // Profil adı konuşmaya da yazılır: müşteri kaydı silinse/bağlanmasa da sohbetin bir başlığı olur.
+    profileName: input.name?.trim() || null,
   });
 
   return {
@@ -93,10 +103,19 @@ export async function openWhatsappConversation(input: OpenConversationInput): Pr
 
 interface RecordMessageInput {
   conversationId: string;
-  /** Metin — `text` mesajının gövdesi; kart/medyada başlık ya da alt yazı olarak okunur. */
-  text: string;
+  /**
+   * Metin — `text` mesajının gövdesi; kart/medyada başlık ya da alt yazı olarak okunur.
+   * `null` yalnız metin-dışı türlerde meşru (webhook'tan başlıksız medya gelir); `text` türünde
+   * boş gövdeyi DB kısıtı zaten keser (`message_text_body`).
+   */
+  text: string | null;
   kind?: MessageKind;
-  /** Sağlayıcı mesaj kimliği; adım 1'de yok (elle kayıt), adım 2'de webhook'tan gelir. */
+  /**
+   * Türe özgü ham yapı (15.9'un açık bıraktığı sözlük): kart/medya/konum webhook'tan geldiği
+   * gibi saklanır — bugün uydurulmuş bir kolon kümesi, yarın bırakılacak bir kolon kümesi olurdu.
+   */
+  payload?: Record<string, unknown> | null;
+  /** Sağlayıcı mesaj kimliği; elle kayıtta yok, webhook'tan gelir (idempotency'nin son savunma hattı). */
   providerMessageId?: string | null;
 }
 
@@ -114,7 +133,7 @@ export async function recordInboundMessage(input: RecordMessageInput & { receive
     conversationId: input.conversationId,
     direction: 'inbound',
     kind: input.kind ?? 'text',
-    body: bodyOf(input.text),
+    body: bodyOf(input.text, input.payload),
     providerMessageId: input.providerMessageId,
     windowExpiresAt: serviceWindowExpiry(input.receivedAt),
   });
@@ -147,10 +166,18 @@ export async function recordOutboundMessage(
   const conversation = await new ConversationService(db).getById(input.conversationId);
   const pencere = serviceWindowState(conversation?.windowExpiresAt);
 
-  if (isAvoidableTemplate(input.templateCategory, pencere)) {
+  // Kalıp mesaj (template) bir WhatsApp kavramı: Meta-onaylı şablon + ücret sınıfı. Messenger/IG
+  // ücretsiz kanallardır, şablonları yoktur — yanlış kanala yazılan şablon maliyet raporunu sessizce
+  // kirletirdi. RPC de aynı kuralı zorlar (kural veride durur); burası hatayı erken ve okunur kılar.
+  if (input.templateName && conversation && conversation.source !== 'whatsapp') {
+    throw new Error(`kalıp mesaj yalnız WhatsApp konuşmasına yazılabilir (kanal: ${conversation.source})`);
+  }
+
+  // İsraf nöbeti de yalnız WhatsApp'ındır: pencere/şablon ekonomisi orada yaşar.
+  if (conversation?.source === 'whatsapp' && isAvoidableTemplate(input.templateCategory, pencere)) {
     logger.warn(
       {
-        context: 'whatsapp/outbound',
+        context: 'messaging/outbound',
         conversationId: input.conversationId,
         templateName: input.templateName,
         msRemaining: pencere.msRemaining,
@@ -163,7 +190,7 @@ export async function recordOutboundMessage(
     conversationId: input.conversationId,
     direction: 'outbound',
     kind: input.kind ?? (input.templateName ? 'template' : 'text'),
-    body: bodyOf(input.text),
+    body: bodyOf(input.text, input.payload),
     templateName: input.templateName,
     templateCategory: input.templateCategory,
     providerMessageId: input.providerMessageId,
@@ -171,6 +198,6 @@ export async function recordOutboundMessage(
 }
 
 /** Gövde tek yerde kurulur: iki yön aynı şekli yazmak zorunda, yoksa okuyan taraf ikisini ayırt eder. */
-function bodyOf(text: string): MessageBody {
-  return { text };
+function bodyOf(text: string | null, payload?: Record<string, unknown> | null): MessageBody {
+  return payload ? { text, payload } : { text };
 }

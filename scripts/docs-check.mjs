@@ -54,7 +54,7 @@ const ENTITIES = [
   { doc: 'OrderStatusLog (durum geçiş kaydı)', part: 'musteri-siparis', table: 'order_status_log', schema: 'order.schema.ts', zod: 'OrderStatusLogSchema' },
   { doc: 'Cart (sunucu sepeti)', part: 'musteri-siparis', table: 'cart', schema: 'cart.schema.ts', zod: 'CartSchema' },
   // İletişim (modül 15) — konuşma zemini
-  { doc: 'Conversation (konuşma) — WhatsApp/mesajlaşma', part: 'iletisim-geribildirim', table: 'conversation', schema: 'conversation.schema.ts', zod: 'ConversationSchema' },
+  { doc: 'Conversation (konuşma) — sosyal mesajlaşma (WhatsApp · Messenger · Instagram)', part: 'iletisim-geribildirim', table: 'conversation', schema: 'conversation.schema.ts', zod: 'ConversationSchema' },
   { doc: 'Message (mesaj)', part: 'iletisim-geribildirim', table: 'message', schema: 'conversation.schema.ts', zod: 'MessageSchema' },
   // İşletme ayarı (modül 02)
   { doc: 'Setting (işletme ayarı)', part: 'iletisim-geribildirim', table: 'settings', schema: 'setting.schema.ts', zod: 'SettingSchema' },

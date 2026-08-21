@@ -100,7 +100,7 @@ export function ConversationTicketDialog({
         labelAside="isteğe bağlı"
         value={subject}
         onChange={(e) => setSubject(e.target.value)}
-        placeholder="ör. Eksik ürün — WhatsApp görüşmesi"
+        placeholder="ör. Eksik ürün — sohbet görüşmesi"
         maxLength={200}
       />
 

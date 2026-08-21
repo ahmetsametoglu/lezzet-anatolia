@@ -69,6 +69,11 @@ Sadece yerel — diaspora ölçeğini kaçırır. İkisi de reddedildi.
 
 ## ADR-003 — Entegrasyon yolu: 360dialog ile başla, kendi Cloud API'yi opsiyon tut
 
+> **DEĞİŞTİRİLDİ (21.08.2026) → ADR-006.** Messenger'ın kanala eklenmesi tabloyu değiştirdi:
+> Messenger BSP üzerinden alınamaz, Meta app'i zorunlu kılar — o app kurulunca WhatsApp'ı
+> aracıda tutmak, aynı işi iki taşıma katmanına ve iki sözleşmeye bölmek olurdu. Gövde,
+> karar anındaki gerekçenin kaydı olarak aynen duruyor.
+
 **Bağlam.** Entegrasyonu bir AI ajanı yazacak; bu, "mühendislik yükü"
 argümanını büyük ölçüde ortadan kaldırıyor. Geriye kalan gerçek fark
 çalışma-zamanı operasyonel yük (token yaşam döngüsü, numara kalite derecesi,
@@ -134,3 +139,45 @@ aynı yöne işaret ediyor.
 
 **Alternatifler.** Agresif outbound pazarlama — maliyet + GDPR + numara kalite
 riski, reddedildi.
+
+---
+
+## ADR-006 — Taşıma katmanı: doğrudan Meta Graph API — tek Business app'te WhatsApp + Messenger
+
+**Statü.** Kabul (21.08.2026, proje sahibi — şıklı karar turuyla onaylandı).
+
+**Bağlam.** Facebook Messenger satış kanalı kapsamına alındı (aynı karar turunda).
+Messenger Platform'un BSP (aracı sağlayıcı) modeli yok; Meta developer app'i ve
+Facebook Sayfası zorunlu. WhatsApp Cloud API ile Messenger Platform aynı çatının
+(Graph API) ürünleridir: tek app'te, tek webhook altyapısında birleşirler.
+ADR-003'ün 360dialog gerekçesi "operasyonel güvenlik ağı" satın almaktı; Messenger
+app'i kurulduğu anda o ağın yanına kaçınılmaz olarak ikinci (doğrudan) bir katman
+gelecekti — ağın fiyatı aynı kalırken kapsamı yarıya düşüyordu.
+
+**Karar.** 360dialog kurulmaz. Tek **Business tipi Meta app** açılır; **WhatsApp
+Cloud API** ve **Messenger Platform** bu app'in iki ürünü olarak bağlanır, ikisini
+tek webhook alıcımız dinler. ~~Instagram DM bu turda implement edilmez~~ —
+**GENİŞLETİLDİ (21.08, aynı gün · kullanıcı kararı):** Instagram DM de kapsama
+alındı; veri modeli (`conversation.source='instagram'`), sosyal gelen kutusu ekranı
+ve seed onu bugünden taşıyor. Araştırma turu engel bırakmadı: IG mesajlaşması aynı
+Business app'ten çıkar, webhook gövdesi Messenger'la aynı ailedendir, Human Agent
+etiketi (7 gün) desteklidir. Üç kanalın CANLI bağlantısı birlikte, webhook turuyla
+gelir (15.7).
+
+**Gerekçe.** (a) Tek altyapı: iki kanal tek app, tek webhook, tek token yönetimi.
+(b) Aracı aboneliği yok (~€49/ay) ve mesaj ücretine markup yok. (c) Tam kontrol +
+yeni Meta özelliklerine anında erişim. (d) ADR-003'ün kendi öngörüsü: entegrasyonu
+AI ajanı yazınca "mühendislik yükü" argümanı düşer. Karşılığı bilinçli kabul edildi:
+token yaşam döngüsü, şablon onayı ve numara kalite derecesi işletimi bize geçer.
+
+**Sonuç.** ADR-003 "değiştirildi" işaretlendi. `CHANNELS.md`, `INTEGRATIONS.md` ve
+`build/15`'teki 360dialog referansları, modül planı Messenger'la genişletilirken
+güncellenir (o güne kadar 360dialog okunan her satır "Meta Cloud API" diye okunur —
+`build/15` kapsam notu). `build/15 Netleşecekler`deki onboarding soruları artık Meta
+kurulumunda cevaplanır. ADR-004 (beyin/gerçek ayrımı) ve ADR-005 (inbound-öncelik)
+her iki kanal için aynen geçerlidir; Messenger tarafında işletme-başlatan mesaj
+ücretsiz olsa da ilke (önce müşteri yazsın + opt-in) değişmez.
+
+**Alternatifler.** (a) 360dialog + Messenger doğrudan — iki taşıma katmanı, iki
+sözleşme, aynı işin bölünmesi; reddedildi. (b) All-in-one BSP — ADR-003'te zaten
+reddedilmişti, geçerliliğini koruyor.

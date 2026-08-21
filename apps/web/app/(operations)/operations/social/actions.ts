@@ -7,39 +7,47 @@ import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, typ
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { openTicket } from '@/lib/ticket/write';
-import { openWhatsappConversation, recordInboundMessage, recordOutboundMessage } from '@/lib/whatsapp/conversation';
-import { toInboxRows } from './whatsapp-read';
-import { ConversationTicketSchema, ManualInboundSchema, RecordOutboundSchema, type InboxRowView } from './whatsapp-types';
-import { parseWhatsappUrl, WHATSAPP_PATH } from './whatsapp-url';
+import { openWhatsappConversation, recordInboundMessage, recordOutboundMessage } from '@/lib/messaging/conversation';
+import { toInboxRows } from './social-read';
+import {
+  ConversationTicketSchema,
+  FollowUpInboundSchema,
+  ManualInboundSchema,
+  RecordOutboundSchema,
+  type InboxRowView,
+} from './social-types';
+import { channelSource, parseSocialUrl, SOCIAL_PATH } from './social-url';
 
-// WhatsApp izleme ekranının YAZMA KAPILARI (15.5 + 15.1'in yüzey yarısı) — guard ilk, kapıya
-// devret, `{ data, error }` DÖNER.
+// Sosyal gelen kutusunun YAZMA KAPILARI (15.5 · üç kanal 15.15 + 15.1'in yüzey yarısı) — guard ilk,
+// kapıya devret, `{ data, error }` DÖNER.
 //
 // **Hepsi `requireAdmin`.** Ekran yalnız yöneticiye açık ve kapı burada durur: düğmeyi çizmemek bir
 // güvence değildir, action doğrudan da çağrılabilir.
 //
 // **İş kuralı burada YOK.** Kimlik çözümü, pencere hesabı ve israf nöbeti uygulama kapısında
-// (`lib/whatsapp/conversation`) motora sorularak yapılıyor (STACK §4). Buradaki tek çeviri, kapının
+// (`lib/messaging/conversation`) motora sorularak yapılıyor (STACK §4). Buradaki tek çeviri, kapının
 // sonucunu ekranın sözleşmesine döndürmek.
 //
 // ── BURADAN MESAJ GÖNDERİLMEZ ────────────────────────────────────────────────
-// Adım 1'de gönderim kanalı yok (360dialog 15.7/15.11). Bu kapılar DEFTER tutar: yazışma admin'in
-// telefonundan yürür, olan biten buraya işlenir. Adları da bunu söylüyor — `record…`, `send…` değil.
+// Adım 1'de gönderim kanalı yok (webhook/sürücü 15.7/15.11). Bu kapılar DEFTER tutar: yazışma
+// admin'in telefonundan/Business Suite'ten yürür, olan biten buraya işlenir. Adları da bunu
+// söylüyor — `record…`, `send…` değil.
 
 function refresh(): void {
-  revalidatePath(WHATSAPP_PATH);
+  revalidatePath(SOCIAL_PATH);
 }
 
 /**
  * Kuyruğun SONRAKİ sayfası. Süzgeç ADRESTEN okunur, istemciden gelen bir nesneden değil: devam eden
- * sayfa ilk sayfayla aynı ölçüte uymalı ve o ölçüt tek yerde (`whatsapp-url`) tanımlı.
+ * sayfa ilk sayfayla aynı ölçüte uymalı ve o ölçüt tek yerde (`social-url`) tanımlı — kanal çipi de
+ * dahil.
  */
 export async function loadMoreConversationsAction(search: string, cursor: KeysetCursor): Promise<ActionResult<Page<InboxRowView>>> {
   try {
     await requireAdmin();
-    const urlState = parseWhatsappUrl(Object.fromEntries(new URLSearchParams(search)));
+    const urlState = parseSocialUrl(Object.fromEntries(new URLSearchParams(search)));
     const page = await new ConversationInboxService(serviceDb()).list(
-      urlState.f === 'awaiting' ? { awaitingReply: true } : {},
+      { awaitingReply: urlState.f === 'awaiting' ? true : undefined, source: channelSource(urlState.ch) },
       cursor,
       DEFAULT_PAGE_SIZE,
     );
@@ -51,6 +59,8 @@ export async function loadMoreConversationsAction(search: string, cursor: Keyset
 
 /**
  * **Gelen DM'i işle** — numaradan konuşmayı açar ve ilk mesajı deftere yazar (15.1'in beyanı).
+ * **Yalnız WhatsApp:** kimlik anahtarı telefondur ve operatör onu telefonundan okur; Messenger/IG
+ * kişi kimliği (PSID/IGSID) operatörce bilinemez — o konuşmaları webhook doğuracak (15.7).
  *
  * İkisi TEK adımda, çünkü mesajsız açılan bir konuşma gelen kutusunda `last_message_at` boş bir
  * satır olarak durur: sıralaması belirsiz, önizlemesi boş, `awaiting_reply` yanlış. Operatör de
@@ -90,6 +100,29 @@ export async function openManualDmAction(input: unknown): Promise<ActionResult<{
 
     refresh();
     return { data: { conversationId: opened.conversation.id }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Var olan sohbete GELEN mesaj (devam) — KANAL-NÖTR: konuşma zaten var, kimlik anahtarı gerekmez.
+ *
+ * Eski yol devam mesajını da telefon üzerinden işliyordu (`openManualDmAction`) ve her seferinde
+ * kimlik çözümünü yeniden koşuyordu; Messenger/IG'de telefon hiç olmadığı için o yol kapanır —
+ * devam kapısı konuşma kimliğiyle çalışır (15.15). Pencereyi yine gelen mesaj açar, damga şart.
+ */
+export async function recordFollowUpInboundAction(input: unknown): Promise<ActionResult<{ id: string }>> {
+  try {
+    await requireAdmin();
+    const parsed = FollowUpInboundSchema.parse(input);
+    const message = await recordInboundMessage({
+      conversationId: parsed.conversationId,
+      text: parsed.text,
+      receivedAt: parsed.receivedAt,
+    });
+    refresh();
+    return { data: { id: message.id }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -194,6 +227,9 @@ export async function consumeConversationDraftAction(conversationId: string): Pr
  * Bağ 15.1'de kuruldu ama hiçbir yazma yolu onu doldurmuyordu; Talepler ekranı "bağlı konuşma var"
  * satırını çizip hiç gösteremiyordu. `source: 'admin'` + `authorId`: ilk sözü operatör söylüyor ve
  * müşteriye teyit maili GİTMİYOR (16.4 kararı) — müşteri kendi yazmadığı bir metni okumamalı.
+ * (Kanal ne olursa olsun kaynak 'admin' DOĞRU: talebi konuşmanın kendisi değil, onu okuyan operatör
+ * açıyor; kanal bağı `conversation_id` üzerinden zaten duruyor. `ticket_source`'a messenger/
+ * instagram değerleri, talebi KANALIN açtığı gün — ajan 15.14 — eklenir.)
  */
 export async function openConversationTicketAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {

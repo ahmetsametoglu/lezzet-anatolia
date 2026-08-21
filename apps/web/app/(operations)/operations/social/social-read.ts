@@ -1,10 +1,10 @@
 import { serviceWindowState } from '@lezzet/domain-core';
 import type { ConversationInboxRow, Message } from '@lezzet/types';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
-import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './whatsapp-labels';
-import type { InboxRowView, MessageView, WindowView } from './whatsapp-types';
+import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
+import type { InboxRowView, MessageView, WindowView } from './social-types';
 
-// WhatsApp izleme ekranının OKUMA DÖNÜŞÜMLERİ (15.5) — saf fonksiyonlar, sunucu turu yok.
+// Sosyal gelen kutusunun OKUMA DÖNÜŞÜMLERİ (15.5 · üç kanal 15.15) — saf fonksiyonlar, sunucu turu yok.
 //
 // Ayrı dosya olmalarının sebebi sınanabilirlik: pencerenin ne zaman "az kaldı"ya döndüğü, gövdesiz
 // bir mesajın nasıl okunacağı ve adsız bir konuşmanın satırda ne göstereceği birer KARARDIR — ve
@@ -36,7 +36,8 @@ export function remainingLabel(msRemaining: number): string {
  *
  * Süre burada yeniden hesaplanmaz ve hesaplanmamalı: 24 saat kuralı motorda tek kopya durur
  * (`serviceWindowExpiry`), ekran onu ikinci kez yazsaydı bir gün ayrışırlardı ve ayrışma sessiz
- * olurdu — ekranda "açık" yazarken gönderim şablon ücretiyle geçerdi.
+ * olurdu — ekranda "açık" yazarken gönderim şablon ücretiyle geçerdi. Pencerenin SÜRESİ üç kanalda
+ * aynı (24 saat); ANLAMI kanala göre sözlükte ayrışır (`WINDOW_NOTE[source]`).
  */
 export function toWindowView(windowExpiresAt: string | null, now: Date): WindowView {
   const state = serviceWindowState(windowExpiresAt, now);
@@ -65,17 +66,25 @@ export function previewOf(text: string | null, kind: ConversationInboxRow['lastM
 }
 
 /**
+ * Satırın/sohbetin başlığı — üç basamaklı düşüş, kanala duyarlı (15.15): müşteri adı → sağlayıcı
+ * profil adı → dış anahtar. Son basamak WhatsApp'ta okunaklıdır (telefon — operatörün WhatsApp'ta
+ * aradığı şey); Messenger/IG'de opak PSID/IGSID'dir ve ancak hiçbir ad yoksa görünür — boş bir
+ * başlık satırı tanınmaz kılardı, opak da olsa bir anahtar "hangi satır" sorusunu cevaplar.
+ */
+export function titleOf(row: { customerName?: string | null; profileName: string | null; externalRef: string }): string {
+  return row.customerName?.trim() || row.profileName?.trim() || row.externalRef;
+}
+
+/**
  * Gelen kutusu satırları. `now` DIŞARIDAN gelir — sayfa onu bir kez okur ve ekrandaki bütün yaşlar
  * aynı ana göre çıkar; içeride okunsaydı listenin başı ile sonu farklı anlara göre hesaplanırdı.
- *
- * Başlık adsız konuşmada NUMARADIR: `customerName` yalnız kimlik çözülünce dolar ve boş bir başlık
- * satırı tanınmaz kılardı. Numara zaten operatörün WhatsApp'ta aradığı şey.
  */
 export function toInboxRows(rows: readonly ConversationInboxRow[], now: Date): InboxRowView[] {
   const nowMs = now.getTime();
   return rows.map((row) => ({
     id: row.id,
-    title: row.customerName?.trim() || row.externalRef,
+    source: row.source,
+    title: titleOf(row),
     preview: previewOf(row.lastMessageText, row.lastMessageKind),
     ago: row.lastMessageAt ? agoShort(ageMinutes(row.lastMessageAt, nowMs)) : '—',
     awaitingReply: row.awaitingReply,

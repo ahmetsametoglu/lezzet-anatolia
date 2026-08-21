@@ -22,14 +22,16 @@ import { QueueRow } from '@/components/operation/ui/queue-pane';
 import { Textarea } from '@/components/operation/form/input';
 import { TICKETS_PATH } from '../tickets/tickets-url';
 import { customersUrl } from '../customers/customers-url';
-import { AI_OUTBOUND_LABEL, OUTBOUND_LABEL, WINDOW_NOTE, WINDOW_TONE } from './whatsapp-labels';
-import type { ConversationDetailView, InboxRowView, MessageView } from './whatsapp-types';
+import { AI_OUTBOUND_LABEL, OUTBOUND_LABEL, SOURCE_EDGE, SOURCE_LABELS, WINDOW_NOTE, WINDOW_TONE } from './social-labels';
+import type { ConversationDetailView, InboxRowView, MessageView } from './social-types';
 
-// WhatsApp izleme ekranının PANOLARI (15.5) — sol kuyruk satırı, orta sohbet, sağ müşteri bağlamı.
+// Sosyal gelen kutusunun PANOLARI (15.5 · üç kanal 15.15) — sol kuyruk satırı, orta sohbet, sağ
+// müşteri bağlamı.
 //
 // Üçünün de İSKELETİ ortak kitten geliyor (`QueueRow` · `MessageThread` · `ContextPane`): Talepler
 // ekranı aynı iskeleti kullanıyor ve iki kopya bir gün ayrışırdı. Burada kalan yalnız ANLAM —
-// hangi rozet, hangi renk, hangi cümle.
+// hangi rozet, hangi renk, hangi cümle. Kanal (`source`) da bir ANLAM eksenidir: kenar rengi,
+// pencere cümlesi ve sağ panelin dili ona göre seçilir.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SOL — gelen kutusu satırı
@@ -48,12 +50,17 @@ export function InboxRow({ row, active, onSelect }: InboxRowProps) {
       active={active}
       onSelect={onSelect}
       title={row.title}
-      // Seçili kenar WhatsApp YEŞİLİ (çizim): kuyruk hangi kanalın kuyruğu olduğunu da söylüyor.
-      edgeClass="border-l-brand-whatsapp"
+      // Seçili kenar KANALIN marka rengi (15.15): kuyruk artık üç kanalın kuyruğu, satırın nereden
+      // geldiği ilk bakışta okunmalı.
+      edgeClass={SOURCE_EDGE[row.source]}
       trailing={<span className="flex-none font-ops-mono text-ops-micro text-ops-faint">{row.ago}</span>}
       preview={row.preview}
       badges={
         <>
+          {/* Kanal rozeti — "Tümü" görünümünde satırlar karışık akar, rozet ayırt eder; tek kanala
+              daralmış görünümde de kalır: rozetin var/yok oynaması satırı süzgece göre başka
+              gösterirdi. */}
+          <Badge tone="slate">{SOURCE_LABELS[row.source]}</Badge>
           {row.awaitingReply ? (
             <Badge tone="amber" dot>
               Cevap bekliyor
@@ -77,11 +84,11 @@ export function InboxEmpty({ filtered }: { filtered: boolean }) {
   return (
     <EmptyState
       icon={<WhatsAppIcon size={22} />}
-      title={filtered ? 'Cevap bekleyen sohbet yok' : 'Henüz konuşma yok'}
+      title={filtered ? 'Bu süzgeçte sohbet yok' : 'Henüz konuşma yok'}
       description={
         filtered
-          ? 'Son sözü müşterinin söylediği bir sohbet kalmadı. Tümü çipiyle bütün konuşmalara dönebilirsiniz.'
-          : 'Müşteri WhatsApp’tan yazdığında sohbeti buraya işleyin — üstteki "Gelen DM işle" düğmesi numaradan konuşmayı açar.'
+          ? 'Süzgeçle eşleşen konuşma kalmadı. Tümü çipleriyle bütün konuşmalara dönebilirsiniz.'
+          : 'Müşteri WhatsApp’tan yazdığında sohbeti buraya işleyin — üstteki "Gelen DM işle" düğmesi numaradan konuşmayı açar. Messenger ve Instagram sohbetleri canlı bağlantıyla (webhook) düşecek.'
       }
     />
   );
@@ -167,7 +174,10 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{detail.title}</span>
           <span className="font-ops-body text-ops-xs text-ops-muted">
-            {detail.context ? (detail.context.isCompany ? 'B2B' : 'B2C') : 'kimlik çözülmedi'} · {detail.messages.length} mesaj ·{' '}
+            {/* Kanal adı alt satırda da yazar: başlık bir müşteri adı olabilir ve aynı kişinin iki
+                kanalda iki sohbeti olabilir — hangisine bakıldığı cümleyle söylenmeli. */}
+            {SOURCE_LABELS[detail.source]} · {detail.context ? (detail.context.isCompany ? 'B2B' : 'B2C') : 'kimlik çözülmedi'} ·{' '}
+            {detail.messages.length} mesaj ·{' '}
             {/* Alt satır modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
                 anahtar seçimi, cümle durumu okur. */}
             {detail.handledBy === 'ai' ? 'AI ajanı yürütüyor' : detail.handledBy === 'hybrid' ? 'hibrit — AI taslak yazar' : 'insan yürütüyor'}
@@ -204,8 +214,8 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
 
       {/* HİBRİT taslak (16.08) — talep ekranından TEK farkı eylemler: burada gönderim kanalı yok
           (15.7/15.11), taslağın tek dürüst çıkışı defter kutusuna taşınmak. Operatör metni
-          telefonundan gönderir, kutu zaten "gönderdiğini işle" kutusudur. Pencere kapalıyken
-          taşınacak kutu da yok — kart yine görünür ama eylem yerine sebep yazar. */}
+          telefonundan/Business Suite'ten gönderir, kutu zaten "gönderdiğini işle" kutusudur.
+          Pencere kapalıyken taşınacak kutu da yok — kart yine görünür ama eylem yerine sebep yazar. */}
       {detail.handledBy === 'hybrid' ? (
         <div className="flex flex-none flex-col border-t border-ops-line bg-ops-card px-5 pt-3">
           {detail.aiDraft ? (
@@ -248,6 +258,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
         // Konuşma değişince kutu SIFIRLANIR: yarım kalmış bir metin bir sonraki müşterinin
         // penceresinde durursa yanlış sohbetin defterine işlenir.
         key={detail.id}
+        source={detail.source}
         window={detail.window}
         busy={busy}
         error={error}
@@ -259,6 +270,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
 }
 
 interface ReplyBoxProps {
+  source: ConversationDetailView['source'];
   window: ConversationDetailView['window'];
   busy: boolean;
   error: string | null;
@@ -269,19 +281,21 @@ interface ReplyBoxProps {
 
 /**
  * Altlık — **çizimin iki hâli birebir**: pencere açıkken tek kutu + tek eylem, kapalıyken yalnız
- * uyarı bandı (kutu HİÇ çizilmez, çizimde de yok).
+ * uyarı bandı (kutu HİÇ çizilmez, çizimde de yok). Bandın CÜMLESİ kanala göre seçilir (15.15):
+ * WhatsApp'ta kapalı pencere bir ücret kararıdır, Messenger/IG'de bir kural sınırı — yanlış cümle
+ * operatörü olmayan bir ücretten korkutur ya da olmayan bir serbestliğe güvendirir.
  *
- * Kapalıyken kutunun kalkması yalnız çizime uymak değil, DOĞRU: pencere kapalıyken admin kendi
- * telefonundan da serbest metin gönderemez — Meta engeller. Yani kaydedilecek bir cevap da yoktur.
+ * Kapalıyken kutunun kalkması yalnız çizime uymak değil, DOĞRU: pencere kapalıyken serbest metin
+ * kanal tarafında da gönderilemez. Yani kaydedilecek bir cevap da yoktur.
  *
  * **Kutu bir GÖNDERME kutusu değil, DEFTER kutusudur** ve tek sapma bu. Çizim uçak düğmesi koyuyor
- * ama arkasında bugün hiçbir şey yok: gönderim kanalı 360dialog'la geliyor (15.7/15.11). Yazdığını
- * gönderdiğini sanan operatör, cevapsız kalan müşteriyi asla fark etmez.
+ * ama arkasında bugün hiçbir şey yok: gönderim kanalı webhook turuyla geliyor (15.7/15.11).
+ * Yazdığını gönderdiğini sanan operatör, cevapsız kalan müşteriyi asla fark etmez.
  *
  * **GELEN mesaj burada işlenmez** — o iş "Gelen mesaj işle" penceresinin, çünkü gelen mesaj
  * pencereyi AÇAN olaydır ve alınma anını ister.
  */
-function ReplyBox({ window: win, busy, error, prefill, onRecordOutbound }: ReplyBoxProps) {
+function ReplyBox({ source, window: win, busy, error, prefill, onRecordOutbound }: ReplyBoxProps) {
   const [text, setText] = useState('');
 
   // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Cevap kutusuna taşı") — ezmesi bu yüzden kabul:
@@ -302,7 +316,7 @@ function ReplyBox({ window: win, busy, error, prefill, onRecordOutbound }: Reply
           <span className="flex-none text-ops-amber">
             <AlertIcon size={16} />
           </span>
-          <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">{WINDOW_NOTE[win.state]}</span>
+          <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">{WINDOW_NOTE[source][win.state]}</span>
         </div>
       </div>
     );
@@ -327,7 +341,7 @@ function ReplyBox({ window: win, busy, error, prefill, onRecordOutbound }: Reply
           <span className="font-semibold text-ops-red">{error}</span>
         ) : (
           <>
-            {WINDOW_NOTE.open} {win.chip} kaldı · buradan mesaj GÖNDERİLMEZ, yazışma telefondan yürür.
+            {WINDOW_NOTE[source].open} {win.chip} kaldı · buradan mesaj GÖNDERİLMEZ, yazışma telefondan yürür.
           </>
         )}
       </span>
@@ -339,48 +353,62 @@ function ReplyBox({ window: win, busy, error, prefill, onRecordOutbound }: Reply
 // SAĞ — müşteri bağlamı (ORTAK pano + bu ekrana özel bloklar)
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface WhatsappContextPaneProps {
+interface SocialContextPaneProps {
   context: CustomerContextData | null;
-  /** Konuşmanın numarası — kimlik çözülmese de bilinir ve gösterilmelidir. */
-  phone: string;
+  /** Konuşmanın dış anahtarı — WhatsApp'ta okunaklı telefon, Messenger/IG'de opak PSID/IGSID. */
+  externalRef: string;
+  source: ConversationDetailView['source'];
+  profileName: string | null;
   tickets: ConversationDetailView['tickets'];
   onNewTicket: () => void;
 }
 
-export function WhatsappContextPane({ context, phone, tickets, onNewTicket }: WhatsappContextPaneProps) {
-  const searchHref = customersUrl({ q: phone, type: 'all', scope: 'all', mc: 'any' });
+export function SocialContextPane({ context, externalRef, source, profileName, tickets, onNewTicket }: SocialContextPaneProps) {
+  const whatsapp = source === 'whatsapp';
+  // Müşteri araması kanala göre ANLAMLI anahtarla yapılır: WhatsApp'ta numara kimlik anahtarıdır ve
+  // kesin eşleşir; Messenger/IG'de elimizde yalnız görünen ad var — arama kesinlik değil ADAY verir.
+  const searchHref = customersUrl({ q: whatsapp ? externalRef : (profileName ?? ''), type: 'all', scope: 'all', mc: 'any' });
 
   if (!context) {
     return (
       <ContextPane>
-        <span className="font-ops-mono text-ops-sm text-ops-ink">{phone}</span>
-        {/* Kimliksiz konuşma bir ARIZA DEĞİL, tasarımın bir hâli: adım 2'de webhook mesajı önce
-            yazar, kimliği sonra çözer. Elle işlemede ise telefon ve e-posta ayrı müşterilere
-            çıktığında konuşma bilerek bağlanmadan açılır — yanlış hesaba bağlanmış bir sohbet,
-            bağlanmamış bir sohbetten pahalıdır. */}
+        {/* WhatsApp'ta anahtar (telefon) gösterilir — operatörün telefonunda aradığı şey. PSID/IGSID
+            GÖSTERİLMEZ: operatöre hiçbir şey söylemez, profil adı söyler. */}
+        <span className="font-ops-mono text-ops-sm text-ops-ink">{whatsapp ? externalRef : (profileName ?? 'İsimsiz profil')}</span>
+        {/* Kimliksiz konuşma bir ARIZA DEĞİL, tasarımın bir hâli — Messenger/IG'de üstelik VARSAYILAN
+            hâl: PSID/IGSID telefon taşımaz, kimlik ancak müşteri kendini tanıtınca kurulur (bağlama
+            eylemi 15.16). WhatsApp'ta ise telefon/e-posta çakışmasında konuşma bilerek bağlanmadan
+            açılır — yanlış hesaba bağlanmış bir sohbet, bağlanmamış bir sohbetten pahalıdır. */}
         <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
-          Bu numara bir müşteriye bağlanmadı. Sipariş geçmişi ve izin bilgisi ancak kimlik çözülünce görünür.
+          {whatsapp
+            ? 'Bu numara bir müşteriye bağlanmadı. Sipariş geçmişi ve izin bilgisi ancak kimlik çözülünce görünür.'
+            : `${SOURCE_LABELS[source]} kimliği telefon taşımaz — müşteri kendini tanıttığında kayıt Müşteriler ekranından birleştirilir.`}
         </span>
-        <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline">
-          Müşterilerde ara →
-        </Link>
+        {(whatsapp || profileName) ? (
+          <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline">
+            Müşterilerde ara →
+          </Link>
+        ) : null}
       </ContextPane>
     );
   }
 
   return (
     <ContextPane>
-      {/* Ad müşteri ekranına NUMARAYLA gider: WhatsApp'ta kimliğin anahtarı numaradır ve aynı adlı
-          iki müşteri varsa ad araması ikisini birden getirirdi. */}
-      <ContextIdentity context={context} href={searchHref} secondary={phone} />
+      {/* WhatsApp'ta ad müşteri ekranına NUMARAYLA gider (kimliğin anahtarı numara; aynı adlı iki
+          müşteri varsa ad araması ikisini birden getirirdi). Messenger/IG'de numara yok — ikincil
+          satır sağlayıcı profil adıdır. */}
+      <ContextIdentity context={context} href={searchHref} secondary={whatsapp ? externalRef : (profileName ?? SOURCE_LABELS[source])} />
 
       {context.isDraft ? (
         <ContextNotice>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-            Numara kayıtlı bir müşteriyle eşleşmedi — WhatsApp&apos;tan otomatik açılmış taslak kayıt.
+            {whatsapp
+              ? 'Numara kayıtlı bir müşteriyle eşleşmedi — WhatsApp’tan otomatik açılmış taslak kayıt.'
+              : 'Sohbetten otomatik açılmış taslak kayıt — kimlik doğrulanmış bir girişten geçmedi.'}
           </span>
           {/* Birleştirme MÜŞTERİLER ekranının işi (09.10) ve orada gerçekten var; burada yalnız o
-              ekrana numarayla gidiliyor. Kendi birleştirme düğmemizi çizmek, aynı kararı iki yerde
+              ekrana gidiliyor. Kendi birleştirme düğmemizi çizmek, aynı kararı iki yerde
               yaşatmak olurdu. */}
           <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-amber hover:underline">
             Müşterilerde ara ve birleştir →
@@ -389,7 +417,11 @@ export function WhatsappContextPane({ context, phone, tickets, onNewTicket }: Wh
       ) : null}
 
       <ContextOrders context={context} />
-      <ContextConsent context={context} channel="whatsapp" />
+      {/* Pazarlama izni kanal bazlı (DOMAIN §11) ve bugün müşteri kaydında yalnız whatsapp/email
+          anahtarları var — Messenger/IG izni, Meta tarafında ayrı bir opt-in mekanizmasıyla gelecek
+          (Marketing Messages); o gün blok kanala göre genişler. Yanlış kanalın iznini göstermek,
+          olmayan bir izne güvendirmek olurdu. */}
+      {whatsapp ? <ContextConsent context={context} channel="whatsapp" /> : null}
 
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Bağlı talepler</SectionLabel>

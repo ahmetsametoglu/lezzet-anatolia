@@ -37,7 +37,7 @@ function numara(): string {
 const an = (value: string | null | undefined): string | null => (value ? new Date(value).toISOString() : null);
 
 async function konusmaAc(externalRef: string, customerId?: string | null) {
-  const row = await conversations.open({ externalRef, customerId });
+  const row = await conversations.open({ source: 'whatsapp', externalRef, customerId });
   if (!conversationIds.includes(row.id)) conversationIds.push(row.id);
   return row;
 }
@@ -112,8 +112,10 @@ describe('konuşma açılışı', () => {
     const ref = numara();
     const acilan = await konusmaAc(ref);
 
-    expect((await conversations.findByExternalRef(ref))?.id).toBe(acilan.id);
-    expect(await conversations.findByExternalRef(`${ref}00`)).toBeNull();
+    expect((await conversations.findByExternalRef('whatsapp', ref))?.id).toBe(acilan.id);
+    expect(await conversations.findByExternalRef('whatsapp', `${ref}00`)).toBeNull();
+    // Tekillik uzayının adı source: aynı dize başka kaynakta BAŞKA kişidir, bulunamaz.
+    expect(await conversations.findByExternalRef('messenger', ref)).toBeNull();
   });
 });
 

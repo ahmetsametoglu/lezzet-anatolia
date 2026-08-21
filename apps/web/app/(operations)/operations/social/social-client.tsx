@@ -12,27 +12,28 @@ import {
 } from './actions';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
 import { ManualDmDialog } from './manual-dm-dialog';
-import { WhatsappDesktop } from './whatsapp.desktop';
-import { whatsappUrl, type WhatsappFilterKey, type WhatsappUrlState } from './whatsapp-url';
-import type { InboxRowView, WhatsappData } from './whatsapp-types';
+import { SocialDesktop } from './social.desktop';
+import { socialUrl, type SocialChannelKey, type SocialFilterKey, type SocialUrlState } from './social-url';
+import type { InboxRowView, SocialData } from './social-types';
 
-// WhatsApp izleme ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız;
+// Sosyal gelen kutusu client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız;
 // personelin mobil deneyimi native uygulamanın işi (`docs/uygulama`).
 //
-// SÜZGEÇ ve SEÇİM gerçek gezinmedir (`?f=…&c=…`): detay sunucuda okunuyor ve bir sohbetin bağlantısı
-// paylaşılabilir olmalı — Talepler ekranı da buraya konuşma kimliğiyle bağlanıyor.
+// SÜZGEÇ, KANAL ve SEÇİM gerçek gezinmedir (`?f=…&ch=…&c=…`): detay sunucuda okunuyor ve bir
+// sohbetin bağlantısı paylaşılabilir olmalı — Talepler ekranı da buraya konuşma kimliğiyle
+// bağlanıyor.
 
-interface WhatsappClientProps {
-  data: WhatsappData;
-  urlState: WhatsappUrlState;
+interface SocialClientProps {
+  data: SocialData;
+  urlState: SocialUrlState;
 }
 
-export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
+export function SocialClient({ data, urlState }: SocialClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
 
-  const go = (patch: Partial<WhatsappUrlState>) => {
-    startNav(() => router.replace(whatsappUrl({ ...urlState, ...patch }), { scroll: false }));
+  const go = (patch: Partial<SocialUrlState>) => {
+    startNav(() => router.replace(socialUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
   // Liste: ilk sayfa sunucudan, devamı action ile EKLENİR. Sunucu verisi değişince (süzgeç ya da
@@ -61,9 +62,9 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /**
-   * Gelen mesaj penceresinin iki kapısı, TEK durum: `new` yeni bir numara, `follow` açık sohbetin
-   * devamı (numara kilitli). İki ayrı bayrak tutmak, ikisinin aynı anda açık olabildiği bir hâl
-   * üretirdi — üstelik pencere zaten aynı pencere.
+   * Gelen mesaj penceresinin iki kapısı, TEK durum: `new` yeni bir WhatsApp numarası, `follow` açık
+   * sohbetin devamı (anahtar kilitli, kanal-nötr). İki ayrı bayrak tutmak, ikisinin aynı anda açık
+   * olabildiği bir hâl üretirdi — üstelik pencere zaten aynı pencere.
    */
   const [dmMode, setDmMode] = useState<'new' | 'follow' | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
@@ -103,8 +104,10 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,
-    onFilter: (f: WhatsappFilterKey) => go({ f }),
-    // Süzgeç değişmiyor, seçim değişiyor: aynı adres iki soruyu birden taşıyor.
+    onFilter: (f: SocialFilterKey) => go({ f }),
+    // Kanal çipi de gerçek gezinme — devam sayfaları adresi okuyor, ölçüt tek yerde kalmalı.
+    onChannel: (ch: SocialChannelKey) => go({ ch }),
+    // Süzgeç değişmiyor, seçim değişiyor: aynı adres üç soruyu birden taşıyor.
     onSelect: (c: string) => go({ c }),
     onRecordOutbound: (text: string) =>
       detail ? run(() => recordOutboundAction({ conversationId: detail.id, text })) : Promise.resolve(false),
@@ -134,13 +137,17 @@ export function WhatsappClient({ data, urlState }: WhatsappClientProps) {
 
   return (
     <>
-      <WhatsappDesktop {...view} />
+      <SocialDesktop {...view} />
 
       {dmMode ? (
         <ManualDmDialog
-          // Devam kapısı numarayı SOHBETTEN alır, operatör yeniden yazmaz — ve yazamaz da:
+          // Devam kapısı sohbeti KİMLİĞİYLE alır, operatör anahtar yazmaz — ve yazamaz da:
           // değiştirilebilir olsaydı mesaj farkında olmadan başka birinin sohbetine düşerdi.
-          existingPhone={dmMode === 'follow' ? detail?.phone : undefined}
+          existing={
+            dmMode === 'follow' && detail
+              ? { conversationId: detail.id, title: detail.title, source: detail.source }
+              : undefined
+          }
           onClose={() => setDmMode(null)}
           onOpened={(conversationId) => {
             setDmMode(null);

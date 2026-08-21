@@ -307,7 +307,7 @@ async function waKonusmaKur(db: Db, customerId: string, t: Talep): Promise<strin
   const phone = (data as { phone: string | null } | null)?.phone;
   if (!phone) return null;
 
-  const konusma = await new ConversationService(db).open({ externalRef: phone, customerId });
+  const konusma = await new ConversationService(db).open({ source: 'whatsapp', externalRef: phone, customerId });
   const messages = new MessageService(db);
   const alindi = an(-t.yas);
 
@@ -502,5 +502,88 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
     }
   }
 
-  console.log(`✓ talep: ${sayi} kayıt (3 durum · 4 kaynak · AI + devralma + HİBRİT taslak · iade tetikli · fotoğraflı · iki yönlü çevrili)`);
+  // ── SOSYAL KANALLAR (15.15): Messenger + Instagram konuşmaları ──────────────
+  // Üretimde bu satırları YALNIZ webhook doğurur (PSID/IGSID operatörce bilinemez, elle işleme
+  // kapısı whatsapp'a kilitli) — seed webhook'un yazacağı şekli yazar: kimliksiz konuşma
+  // (customer_id NULL, Messenger/IG'de VARSAYILAN hâl), profil adı başlık olarak, dış anahtar opak.
+  // İkisi bilinçli iki ayrı hâlde: Messenger sohbeti müşterinin sorusuyla bitiyor (cevap bekliyor
+  // sayacı kanal süzgeciyle sınanabilsin), Instagram sohbeti bizim cevabımızla.
+  await sosyalKonusmaKur(db, {
+    source: 'messenger',
+    externalRef: `24${String(Date.now()).slice(-13)}01`,
+    profileName: 'Emre Yildirim',
+    yas: 1,
+    mesajlar: [
+      { sender: 'customer', body: 'Selam, Facebook sayfanızdan gördüm — Strasbourg dışına da gönderiyor musunuz?' },
+      { sender: 'admin', body: 'Merhaba! Evet, Fransa geneline kargoyla gönderiyoruz; soğuk zincir ürünlerde bölgeye göre değişiyor.' },
+      { sender: 'customer', body: 'Süper. Fıstıklı baklava Lyon’a kaç günde gelir?' },
+    ],
+  });
+  await sosyalKonusmaKur(db, {
+    source: 'instagram',
+    externalRef: `178414${String(Date.now()).slice(-11)}`,
+    profileName: 'aylin.gurme',
+    yas: 3,
+    mesajlar: [
+      { sender: 'customer', body: 'Merhaba, hikayedeki künefe tepsisi hâlâ var mı? 🙌' },
+      { sender: 'admin', body: 'Merhaba! Var — bu hafta cuma fırınından çıkıyor; DM’den adres alırsak cuma teslim ederiz.' },
+    ],
+  });
+
+  console.log(`✓ talep: ${sayi} kayıt (3 durum · 4 kaynak · AI + devralma + HİBRİT taslak · iade tetikli · fotoğraflı · iki yönlü çevrili · messenger + instagram sohbeti)`);
+}
+
+/**
+ * Webhook'un yazacağı şekli yazan sosyal konuşma (15.15) — Messenger/Instagram.
+ *
+ * `waKonusmaKur`dan ayrı, çünkü sözleşmesi farklı: orada anahtar müşterinin TELEFONU ve konuşma
+ * kimlikli doğar; burada anahtar opak PSID/IGSID ve konuşma KİMLİKSİZ doğar — Messenger/IG'de
+ * kimlik ancak müşteri kendini tanıtınca kurulur (bağlama 15.16). Yaşlandırma deseni aynı
+ * (mesajlara dakika arayla ayrı damga; gerekçe `waKonusmaKur`da).
+ */
+async function sosyalKonusmaKur(
+  db: Db,
+  k: {
+    source: 'messenger' | 'instagram';
+    externalRef: string;
+    profileName: string;
+    /** Son mesajın yaşı (gün) — kuyruk sıralaması ancak farklı tarihlerle görünür. */
+    yas: number;
+    mesajlar: { sender: 'customer' | 'admin'; body: string }[];
+  },
+): Promise<void> {
+  const konusma = await new ConversationService(db).open({
+    source: k.source,
+    externalRef: k.externalRef,
+    profileName: k.profileName,
+  });
+  const messages = new MessageService(db);
+  const son = an(-k.yas);
+
+  const kayitlar: string[] = [];
+  for (const m of k.mesajlar) {
+    const gelen = m.sender === 'customer';
+    kayitlar.push(
+      (
+        await messages.record({
+          conversationId: konusma.id,
+          direction: gelen ? 'inbound' : 'outbound',
+          author: m.sender,
+          body: { text: m.body },
+          // Pencereyi yalnız gelen mesaj açar — kural kanal-nötr (üç kanalda da 24 saat).
+          windowExpiresAt: gelen ? serviceWindowExpiry(son) : null,
+        })
+      ).id,
+    );
+  }
+
+  for (const [n, id] of kayitlar.entries()) {
+    const damga = new Date(new Date(son).getTime() - (kayitlar.length - 1 - n) * 60_000).toISOString();
+    const { error } = await db.from('message').update({ created_at: damga }).eq('id', id);
+    if (error) throw error;
+  }
+  const { error: cErr } = await db.from('conversation').update({ last_message_at: son }).eq('id', konusma.id);
+  if (cErr) throw cErr;
+
+  console.log(`  ✓ ${k.source} sohbeti · ${k.profileName}`);
 }

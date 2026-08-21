@@ -458,11 +458,16 @@ export const CouponRejectionEnum = z.enum([
 export type CouponRejection = z.infer<typeof CouponRejectionEnum>;
 
 /**
- * Konuşmanın kaynağı (15.1). Bugün tek değerli ve yine de bir enum: yarın Instagram DM eklenirse
- * `externalRef` artık telefon olmaz — tekillik anahtarının hangi uzayda olduğunu SÖYLEYEN bir alan
- * gerekir, yoksa aynı dize iki farklı kişiyi gösterebilir.
+ * Konuşmanın kaynağı (15.1 · üç kanala genişledi 21.08, ADR-006). Tekillik anahtarının hangi uzayda
+ * olduğunu SÖYLEYEN alan: `externalRef` WhatsApp'ta E.164 telefon, Messenger'da PSID (sayfa-kapsamlı
+ * kişi kimliği), Instagram'da IGSID. Üç uzay ayrı dizelerdir ve `source` olmadan aynı dize iki
+ * farklı kişiyi gösterebilirdi.
+ *
+ * **`messenger` ile `instagram` AYRI değerler, tek "meta" kovası DEĞİL:** aynı kişinin FB ve IG
+ * kimlikleri farklı dizelerdir — tek kova PSID↔IGSID uzaylarını karıştırırdı. Webhook tarafında da
+ * ikisi ayrı objeyle gelir (`object: "page"` / `object: "instagram"`).
  */
-export const ConversationSourceEnum = z.enum(['whatsapp']);
+export const ConversationSourceEnum = z.enum(['whatsapp', 'messenger', 'instagram']);
 export type ConversationSource = z.infer<typeof ConversationSourceEnum>;
 
 /**

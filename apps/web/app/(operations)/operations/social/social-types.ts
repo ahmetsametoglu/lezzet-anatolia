@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   TicketTypeEnum,
+  type ConversationSource,
   type KeysetCursor,
   type MessageDirection,
   type MessageKind,
@@ -8,9 +9,9 @@ import {
   type TicketSender,
 } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
-import type { WhatsappFilterKey, WhatsappUrlState } from './whatsapp-url';
+import type { SocialChannelKey, SocialFilterKey, SocialUrlState } from './social-url';
 
-// WhatsApp izleme ekranının GÖRÜNÜM tipleri (15.5).
+// Sosyal gelen kutusunun GÖRÜNÜM tipleri (15.5 · üç kanal 15.15).
 //
 // Ekran hiçbir yerde ham satır okumaz: gelen kutusu görünümü ve mesaj defteri burada üç panelin
 // ihtiyacına indirgenir. Sebep tek: pencere durumu, yaş ve önizleme birer KARARDIR (eşik nedir,
@@ -18,7 +19,8 @@ import type { WhatsappFilterKey, WhatsappUrlState } from './whatsapp-url';
 
 /**
  * 24 saatlik servis penceresinin ekrandaki hâli — kararı motor verir (`serviceWindowState`), burası
- * yalnız onu operatörün diline çevirir.
+ * yalnız onu operatörün diline çevirir. Pencere kavramı üç kanalda da var (24 saat); EKONOMİSİ
+ * kanala göre değişir ve o fark sözlükte durur (`WINDOW_NOTE[source]`), burada değil.
  *
  * Üç durum AYRI tutulur ve son ikisi aynı "serbest mesaj gönderemezsin"e düşse de aynı şey değildir:
  * `closed` kaçırılmış bir fırsattır (müşteri yazmıştı, süre doldu), `never` kurulmamış bir ilişkidir
@@ -37,14 +39,16 @@ export interface WindowView {
 /** Gelen kutusu satırı — sol panel. */
 export interface InboxRowView {
   id: string;
-  /** Müşteri adı; kimlik çözülmemişse numaranın kendisi (boş satır göstermek yerine). */
+  /** Hangi kanal (15.15) — satırın kenar rengi ve rozeti buradan okunur. */
+  source: ConversationSource;
+  /** Müşteri adı; çözülmemişse sağlayıcı profil adı; o da yoksa dış anahtar (boş satır yerine). */
   title: string;
   /** Son mesajın tek satırlık önizlemesi; metinsiz türde türün adı okunur. */
   preview: string;
   /** Son hareketin yaşı — dar sütun biçiminde (`agoShort`). */
   ago: string;
   awaitingReply: boolean;
-  /** Kimlik çözülmemiş konuşma (webhook önce yazar, sonra çözer — ve elle işlemede çakışma olabilir). */
+  /** Kimlik çözülmemiş konuşma (webhook önce yazar, sonra çözer — Messenger/IG'de varsayılan hâl). */
   unidentified: boolean;
   /** Sohbeti kim yürütüyor (16.08) — satırdaki AI/Hibrit rozetinin kaynağı. */
   handledBy: TicketHandler;
@@ -62,29 +66,34 @@ export interface MessageView {
   text: string;
   /** "22 Tem 14:30" — aynı gün iki mesajı ayırt etmek için saat şart. */
   stamp: string;
-  /** Yalnız şablon mesajında dolu: hangi kalıp, hangi ücret sınıfı. */
+  /** Yalnız şablon mesajında dolu: hangi kalıp, hangi ücret sınıfı (yalnız WhatsApp'ta olabilir). */
   templateLabel: string | null;
 }
 
 export interface ConversationDetailView {
   id: string;
+  /** Hangi kanal — başlık rozeti, pencere cümleleri ve sağ panelin dili buradan seçilir. */
+  source: ConversationSource;
   title: string;
   /**
-   * Konuşmanın numarası (`external_ref`) — müşteri bağlamından AYRI tutulur, çünkü konuşmanın malı.
-   * Kimlik çözülmemiş sohbette bağlam `null`'dır ama numara yine bilinir ve gösterilmelidir.
+   * Konuşmanın dış anahtarı (`external_ref`) — müşteri bağlamından AYRI tutulur, çünkü konuşmanın
+   * malı. WhatsApp'ta okunaklı bir telefondur; Messenger/IG'de opak PSID/IGSID — ekran onu kanala
+   * göre gösterir ya da göstermez, veri kapısı bu kararı vermez.
    */
-  phone: string;
+  externalRef: string;
+  /** Sağlayıcı profil adı — kimliksiz Messenger/IG sohbetinin tek okunur başlığı. */
+  profileName: string | null;
   window: WindowView;
   /**
    * Eskiden yeniye — okunan şey bir sohbet, ters sıralı sohbet okunmaz.
    *
    * Sayfalama YOK ve bugün doğru: adım 1'de mesajlar elle işleniyor, bir avuç satır var. Ters
-   * yönlü sayfalı okuma geldiğinde eklenir → BEKLEYEN(15.7); gerekçe `lib/whatsapp/read.ts`'te.
+   * yönlü sayfalı okuma geldiğinde eklenir → BEKLEYEN(15.7); gerekçe `lib/messaging/read.ts`'te.
    */
   messages: MessageView[];
   /**
    * Müşteri bağlamı — ORTAK okuma (`lib/customer/context`), Talepler ekranı da aynısını kullanır.
-   * Kimlik çözülememiş konuşmada `null`; sağ panel o zaman numarayla ne yapılacağını söyler.
+   * Kimlik çözülememiş konuşmada `null`; sağ panel o zaman kanala göre ne yapılacağını söyler.
    */
   context: CustomerContextData | null;
   /** Bu konuşmadan açılmış talepler — köprü iki yönlü olsun diye. */
@@ -95,10 +104,10 @@ export interface ConversationDetailView {
   aiDraft: string | null;
 }
 
-export interface WhatsappData {
+export interface SocialData {
   rows: InboxRowView[];
   nextCursor: KeysetCursor | null;
-  /** "N cevap bekliyor" — SAYIM, yüklenmiş sayfanın uzunluğu değil. */
+  /** "N cevap bekliyor" — SAYIM, yüklenmiş sayfanın uzunluğu değil; kanal süzgecine uyar. */
   awaitingCount: number;
   /** Çizimin ikinci sayısı ("N AI'da") — 16.08'de gerçek oldu; ai + hibrit sohbetler. */
   aiCount: number;
@@ -106,7 +115,10 @@ export interface WhatsappData {
 }
 
 /**
- * Elle DM işleme penceresinin girdisi (15.1'in yüzey yarısı).
+ * Elle DM işleme penceresinin girdisi (15.1'in yüzey yarısı) — **yalnız WhatsApp**: telefon kimlik
+ * anahtarıdır ve operatör onu telefonundan okur. Messenger/IG kişi kimliği (PSID/IGSID) operatörce
+ * bilinemez — o konuşmaları webhook doğuracak (15.7); var olan sohbete mesaj işlemek ise kanal-nötr
+ * (`RecordOutboundSchema` + gelen-devam kapısı konuşma kimliğiyle çalışır).
  *
  * `receivedAt` ZORUNLU ve varsayılanı YOK — kapının kendi kuralı (`recordInboundMessage`) ve tam da
  * bu ekran için konmuş: admin sabah gelen bir DM'i öğlen işler, pencere ise müşteri YAZDIĞINDA
@@ -124,12 +136,24 @@ export const ManualInboundSchema = z.object({
 /**
  * Var olan konuşmaya GİDEN mesaj işleme — damga YOK ve olmamalı: giden mesaj pencereye dokunmuyor.
  *
- * Gelen mesajın kendi kapısı var (`ManualInboundSchema`), çünkü gelen mesaj pencereyi AÇAN olaydır
- * ve alınma anını ister. İkisini tek şemaya toplamak, damgayı "bazen zorunlu" bir alana çevirirdi.
+ * Gelen mesajın kendi kapısı var (`ManualInboundSchema` + devam modu), çünkü gelen mesaj pencereyi
+ * AÇAN olaydır ve alınma anını ister. İkisini tek şemaya toplamak, damgayı "bazen zorunlu" bir
+ * alana çevirirdi.
  */
 export const RecordOutboundSchema = z.object({
   conversationId: z.string().uuid(),
   text: z.string().min(1),
+});
+
+/**
+ * Var olan sohbete GELEN mesaj (devam) — kanal-nötr: konuşma zaten var, kimlik anahtarı gerekmez.
+ * Yeni-numara yolundan (`ManualInboundSchema`) ayrı, çünkü orada kimlik çözümü de yapılır ve o
+ * yalnız WhatsApp'ta mümkün.
+ */
+export const FollowUpInboundSchema = z.object({
+  conversationId: z.string().uuid(),
+  text: z.string().min(1),
+  receivedAt: z.string().min(1),
 });
 
 /**
@@ -147,16 +171,18 @@ export const ConversationTicketSchema = z.object({
   body: z.string().min(1),
 });
 
-export interface WhatsappViewProps {
-  data: WhatsappData;
-  urlState: WhatsappUrlState;
+export interface SocialViewProps {
+  data: SocialData;
+  urlState: SocialUrlState;
   navPending: boolean;
   busy: boolean;
   error: string | null;
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
-  onFilter: (f: WhatsappFilterKey) => void;
+  onFilter: (f: SocialFilterKey) => void;
+  /** Kanal çipi (15.15) — durum çipinden ayrı eksen. */
+  onChannel: (ch: SocialChannelKey) => void;
   onSelect: (c: string) => void;
   onRecordOutbound: (text: string) => Promise<boolean>;
   /** Yürütücü modu (16.08): human · hybrid · ai — Devral da bu kapıdan geçer (`mode='human'`). */
@@ -165,8 +191,9 @@ export interface WhatsappViewProps {
   onConsumeDraft: () => Promise<string | null>;
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;
-  /** Açık sohbete GELEN mesaj — numarası kilitli pencereyi açar. */
+  /** Açık sohbete GELEN mesaj — anahtarı kilitli pencereyi açar (kanal-nötr devam kapısı). */
   onIncoming: () => void;
+  /** Yeni WhatsApp DM'i işle — yalnız WhatsApp (kimlik anahtarı telefon). */
   onNewDm: () => void;
   onNewTicket: () => void;
 }

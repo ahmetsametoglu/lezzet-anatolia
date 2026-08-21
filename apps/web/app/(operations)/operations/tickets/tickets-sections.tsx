@@ -27,7 +27,7 @@ import type { TicketMessageView } from '@/lib/ticket/ticket-types';
 // Başka ekranların URL SÖZLEŞMESİ (STACK §7 istisnası): adres elle kurulmaz, sahibinden alınır.
 import { customersUrl } from '../customers/customers-url';
 import { ORDERS_PATH } from '../orders/orders-url';
-import { whatsappLink } from '../whatsapp/whatsapp-url';
+import { socialLink } from '../social/social-url';
 import {
   RETURN_BLOCKED_REASON,
   TICKET_SENDER_LABELS,
@@ -184,15 +184,16 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
             ) : null}
           </span>
 
-          {/* WhatsApp köprüsü artık GERÇEK BAĞLANTI: izleme ekranı yazıldı (15.5) ve konuşmayı
-              kimliğiyle açıyor. Bir tur boyunca düz metindi — o zaman doğruydu, çünkü var olmayan
-              bir sayfaya götüren bağlantı çalışan bir şey vaat ederdi. */}
+          {/* Sohbet köprüsü GERÇEK BAĞLANTI: izleme ekranı yazıldı (15.5) ve konuşmayı kimliğiyle
+              açıyor; 21.08'de ekran üç kanallı sosyal gelen kutusuna dönüştü (15.15) — köprü aynı,
+              adres yeni. Bir tur boyunca düz metindi — o zaman doğruydu, çünkü var olmayan bir
+              sayfaya götüren bağlantı çalışan bir şey vaat ederdi. */}
           {ticket.conversationId ? (
             <Link
-              href={whatsappLink(ticket.conversationId)}
+              href={socialLink(ticket.conversationId)}
               className="flex cursor-pointer items-center gap-1.5 font-ops-body text-ops-micro text-ops-olive hover:underline"
             >
-              <WhatsAppIcon size={12} /> Bağlı WhatsApp konuşmasını aç →
+              <WhatsAppIcon size={12} /> Bağlı konuşmayı aç →
             </Link>
           ) : null}
         </div>

@@ -29,7 +29,7 @@ import { dbToApp } from '../utils/case-transformers';
 /**
  * Konuşma servisleri (15.1) — **karar vermez, satır getirir/yazar** (STACK §4).
  *
- * Kimliğin telefondan çözülmesi burada DEĞİL, uygulama katmanında (`lib/whatsapp/conversation.ts`):
+ * Kimliğin telefondan çözülmesi burada DEĞİL, uygulama katmanında (`lib/messaging/conversation.ts`):
  * karar motorun (`resolveIdentity`), satır servisin. Servis kimliği de çözseydi aynı kural iki
  * yerde yaşar ve WhatsApp'tan gelen müşteri, web'den gelenle farklı bir kapıdan geçerdi.
  *
@@ -48,15 +48,29 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
    * "konuşma yok" görür, ikincisi tekillik indeksine çarpar ve mesaj kaybolur.
    *
    * Mevcut müşteri bağı EZİLMEZ (`coalesce`): bağlanmış bir konuşmayı başka müşteriye kaydırmak bir
-   * BİRLEŞTİRME kararıdır ve insana aittir (DOMAIN §10).
+   * BİRLEŞTİRME kararıdır ve insana aittir (DOMAIN §10). `profileName` ise tersine YENİSİYLE
+   * güncellenir — görünen ad kimlik değil, son görülen değer tutulur.
+   *
+   * `source` ZORUNLU ve varsayılansız (21.08): üç kanal dünyasında sessiz bir 'whatsapp'
+   * varsayılanı, kaynağı unutan tek çağıranın Messenger mesajını WhatsApp konuşmasına dikmesiydi.
    *
    * Bu yüzden `insert` bu serviste kapalı — tek yazma yolu RPC.
    */
-  async open(input: { externalRef: string; customerId?: string | null; source?: ConversationSource }): Promise<Conversation> {
+  async open(input: {
+    source: ConversationSource;
+    externalRef: string;
+    customerId?: string | null;
+    /** Konuşmanın aktığı işletme hesabı (phone_number_id / sayfa id / IG hesap id) — webhook yazar. */
+    providerAccountRef?: string | null;
+    /** Sağlayıcı profil adı — kimliksiz sohbetin başlığı; son görülen değer kazanır. */
+    profileName?: string | null;
+  }): Promise<Conversation> {
     const raw = await this.executeRpc('open_conversation', {
-      p_source: input.source ?? 'whatsapp',
+      p_source: input.source,
       p_external_ref: input.externalRef,
       p_customer_id: input.customerId ?? null,
+      p_provider_account_ref: input.providerAccountRef ?? null,
+      p_profile_name: input.profileName ?? null,
     });
     return ConversationSchema.parse(dbToApp(raw));
   }
@@ -64,10 +78,10 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   /**
    * Sağlayıcı anahtarıyla tek konuşma — gelen mesajın hangi sohbete ait olduğu sorusu.
    *
-   * `source` ile birlikte aranır, çünkü tekillik o ikilide: aynı dize başka bir kaynakta başka
-   * birini gösterebilir.
+   * `source` ile birlikte aranır ve ZORUNLUDUR, çünkü tekillik o ikilide: aynı dize başka bir
+   * kaynakta başka birini gösterebilir (varsayılan 21.08'de kaldırıldı — `open` ile aynı gerekçe).
    */
-  async findByExternalRef(externalRef: string, source: ConversationSource = 'whatsapp'): Promise<Conversation | null> {
+  async findByExternalRef(source: ConversationSource, externalRef: string): Promise<Conversation | null> {
     const rows = await this.getAll({ source, externalRef }, { limit: 1 });
     return rows[0] ?? null;
   }
@@ -112,10 +126,11 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   /**
    * Cevabı insanın yazmadığı sohbet sayısı (16.5) — başlığın "N AI'da" sayacı.
    * `TicketService.countHandledByAi` ile aynı soru; konuşmanın "kapanmış" hâli olmadığı için
-   * ek süzgeç yok.
+   * ek durum süzgeci yok. Kanal süzgeci var (21.08): başlık süzgeçli kuyruğu sayarken süzgeçsiz
+   * sayı yazsaydı, tam da kalabalıkta yalan söylerdi.
    */
-  countHandledByAi(): Promise<number> {
-    return this.count({ handledBy: ['ai', 'hybrid'] });
+  countHandledByAi(source?: ConversationSource): Promise<number> {
+    return this.count({ handledBy: ['ai', 'hybrid'], source });
   }
 }
 
@@ -240,14 +255,19 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
 
   /**
    * Kuyruk — **son harekete göre** sıralı: tek amacı cevap bekleyeni bekletmemek, o yüzden sıra
-   * açılış tarihine değil son mesaja bakar.
+   * açılış tarihine değil son mesaja bakar. Kanal süzgeci (21.08): sosyal gelen kutusu üç kanalı
+   * tek kuyrukta gösterir, operatör istediğinde tek kanala daraltır.
    *
    * Sayfalı, çünkü konuşma kümesi veriyle SINIRSIZ büyür (`CLAUDE §1`) — canlı kanalda aylarca.
    * İmleci ekran tüketiyor ("daha eski" düğmesi), yani sessiz kırpma yok.
    */
-  list(filter: { awaitingReply?: boolean } = {}, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<ConversationInboxRow>> {
+  list(
+    filter: { awaitingReply?: boolean; source?: ConversationSource } = {},
+    cursor?: KeysetCursor,
+    limit = DEFAULT_PAGE_SIZE,
+  ): Promise<Page<ConversationInboxRow>> {
     return this.getPage(
-      { awaitingReply: filter.awaitingReply },
+      { awaitingReply: filter.awaitingReply, source: filter.source },
       { orderBy: 'lastMessageAt', orderDirection: 'desc', limit, keysetAfter: cursor },
     );
   }
@@ -256,9 +276,10 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
    * "3 cevap bekliyor" başlığının sayısı — SAYIM, sayfa uzunluğu değil.
    *
    * Yüklenmiş sayfadan saymak, tam da sayının anlam kazandığı yerde (kalabalık kuyrukta) yalan
-   * söylerdi: "ilk sayfada 3 bekliyor" ile "3 bekliyor" aynı cümle değil.
+   * söylerdi: "ilk sayfada 3 bekliyor" ile "3 bekliyor" aynı cümle değil. Kanal süzgeciyle sayılır
+   * (21.08) — süzgeçli kuyruğun başlığı süzgeçsiz sayı yazamaz.
    */
-  countAwaitingReply(): Promise<number> {
-    return this.count({ awaitingReply: true });
+  countAwaitingReply(source?: ConversationSource): Promise<number> {
+    return this.count({ awaitingReply: true, source });
   }
 }

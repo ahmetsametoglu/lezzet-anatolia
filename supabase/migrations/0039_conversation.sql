@@ -1,20 +1,24 @@
--- Modül 15 adım 1 — Konuşma zemini (15.1/15.2). CHANNELS §7, `data-model/iletisim-geribildirim.md`.
+-- Modül 15 adım 1 — Konuşma zemini (15.1/15.2; üç kanala genişledi 21.08, ADR-006).
+-- CHANNELS §7, `data-model/iletisim-geribildirim.md`.
 --
 -- ── KONUŞMA BİZİM VERİTABANIMIZDA YAŞAR ─────────────────────────────────────
--- Sağlayıcının (360dialog) kendi arşivi var; yine de konuşmayı biz tutuyoruz. Üç sebep:
+-- Meta'nın kendi arşivi var; yine de konuşmayı biz tutuyoruz. Üç sebep:
 --   • AI ajanının bağlamı bizde olmalı — "geçen sefer ne konuştuk" sorusu dış API'ye sorulamaz;
 --   • servis penceresi ve opt-in bizim kararımızdır (hangi mesaj ücretsiz, hangisi template);
 --   • sağlayıcı değişse de konuşma tarihi ve müşteri bağı bizde kalır (taşınırlık).
 --
 -- ── ADIM 1 YALNIZ ZEMİN ATAR ────────────────────────────────────────────────
--- Bugün satırları **elle** doğuyor: admin gelen DM'i işler. Adım 2'de aynı satırları webhook yazar.
--- Veri modeli değişmez — değişen tek şey satırı yazan yüzeydir (CHANNELS §8). Bu yüzden alanların
--- tamamı bugünden var: sonradan eklenen bir kolon, o güne kadarki her konuşmanın geçmişini
--- belirsiz bırakırdı (`ticket.handled_by` ile aynı gerekçe).
+-- Bugün satırları **elle** doğuyor: admin gelen DM'i işler (yalnız WhatsApp — Messenger/IG kişi
+-- kimliği PSID/IGSID'dir ve operatörce bilinemez; o satırları webhook yazacak, 15.7). Adım 2'de
+-- aynı satırları webhook yazar. Veri modeli değişmez — değişen tek şey satırı yazan yüzeydir
+-- (CHANNELS §8). Bu yüzden alanların tamamı bugünden var: sonradan eklenen bir kolon, o güne
+-- kadarki her konuşmanın geçmişini belirsiz bırakırdı (`ticket.handled_by` ile aynı gerekçe).
 
--- Bugün tek kaynak WhatsApp. Enum yine de tek değerli: yarın Instagram DM eklenirse `external_ref`
--- artık telefon olmaz ve tekillik anahtarının hangi uzayda olduğunu SÖYLEYEN bir alan gerekir.
-create type conversation_source as enum ('whatsapp');
+-- Üç Meta kanalı, tek tablo (ADR-006): kanal `source` ekseninde ayrışır. `external_ref`in uzayı
+-- kaynağa bağlı — WhatsApp'ta E.164 telefon, Messenger'da PSID, Instagram'da IGSID. `messenger`
+-- ile `instagram` AYRI değerler, tek "meta" kovası değil: aynı kişinin FB ve IG kimlikleri farklı
+-- dizelerdir, tek kova iki uzayı karıştırırdı.
+create type conversation_source as enum ('whatsapp', 'messenger', 'instagram');
 -- Yön, gönderenden AYRI bir eksendir: `ticket_message.sender` "kim yazdı" (müşteri/personel/AI)
 -- der, burada sorulan "hangi tarafa aktı". WhatsApp'ta bizim adımıza AI da personel de yazabilir;
 -- ikisi de aynı numaradan çıkar ve müşteri farkı görmez — yani taşıma açısından tek yöndür.
@@ -43,11 +47,25 @@ create table public.conversation (
   -- `cascade`: hesap silinince konuşma da gider (GDPR kovası 1, `anonymize_customer`).
   customer_id uuid references public.user_profiles (id) on delete cascade,
 
-  source conversation_source not null default 'whatsapp',
-  -- Sağlayıcıdaki kişi/thread anahtarı. WhatsApp'ta **E.164 normalize telefon** — `wa_id` numarayı
-  -- `+` olmadan verir, biz `+33…` tutarız; normalize etmeyen bir yazım aynı kişiye ikinci bir
-  -- konuşma açar ve geçmiş ikiye bölünür.
+  -- Varsayılan YOK (21.08): üç kanal dünyasında sessiz bir 'whatsapp' varsayılanı, kaynağı geçmeyi
+  -- unutan tek çağıranın Messenger mesajını WhatsApp konuşmasına dikmesi demekti.
+  source conversation_source not null,
+  -- Sağlayıcıdaki kişi/thread anahtarı — uzayı kaynağa bağlı: WhatsApp'ta **E.164 normalize
+  -- telefon** (`wa_id` numarayı `+` olmadan verir, biz `+33…` tutarız), Messenger'da **PSID**,
+  -- Instagram'da **IGSID**. Normalize etmeyen bir telefon yazımı aynı kişiye ikinci bir konuşma
+  -- açar ve geçmiş ikiye bölünür; PSID/IGSID opak dizedir, normalize edilmez.
   external_ref text not null check (length(btrim(external_ref)) > 0),
+  -- Konuşmanın aktığı İŞLETME hesabı (21.08): WhatsApp'ta phone_number_id, Messenger'da sayfa
+  -- kimliği, Instagram'da IG hesap kimliği. Zeminde (elle işleme) boş — webhook yazmaya
+  -- başladığında dolar ve cevabın hangi hesaptan gönderileceğini söyler. Tekillik bugün
+  -- `(source, external_ref)` — ikinci bir işletme hesabı açıldığı gün üçlüye genişletilir
+  -- (PSID sayfa-kapsamlıdır; bugün genişletmek elle işlenen geçmişi webhook geçmişinden bölerdi).
+  provider_account_ref text,
+  -- Sağlayıcı profil adı (21.08): WhatsApp push name, Messenger ad-soyad, Instagram kullanıcı adı.
+  -- GÖRÜNEN addır, kimlik değil — kullanıcı istediği an değiştirir, son görülen değer tutulur.
+  -- Messenger/IG'de kimlik otomatik çözülemez (PSID/IGSID telefon taşımaz); kimliksiz sohbetin
+  -- başlığı buradan okunur — WhatsApp'ta okunaklı telefon zaten vardı.
+  profile_name text,
 
   -- Sohbeti kim yürütüyor (15.13/16.5 · kullanıcı kararı 16.08). `ticket.handled_by` ile aynı
   -- gerekçe ve AYNI enum: iki yüzeyde iki ayrı "yürütücü" kümesi, bir gün ayrışan iki gerçek
@@ -80,9 +98,10 @@ create table public.conversation (
 
 alter table public.conversation enable row level security;
 
--- **Bir kişi, bir konuşma.** WhatsApp'ta thread kavramı yoktur: aynı numaradan gelen her mesaj aynı
--- sohbetin devamıdır. Tekillik olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi
--- gelen kutusunda iki kez görür ve AI ajanı geçmişin yarısını okurdu.
+-- **Bir kişi, bir konuşma — kanal başına.** Üç kanalda da thread kavramı yoktur: aynı kişiden gelen
+-- her mesaj aynı sohbetin devamıdır. Tekillik olmasaydı ikinci mesaj yeni bir satır açar, admin aynı
+-- müşteriyi gelen kutusunda iki kez görür ve AI ajanı geçmişin yarısını okurdu. `source` anahtarın
+-- parçası: PSID ile IGSID ayrı uzaylardır, aynı dize iki kanalda iki farklı kişiyi gösterebilir.
 create unique index conversation_external_ref_key on public.conversation (source, external_ref);
 -- Müşteri kartından konuşmasına geçiş (15.5) — yeniden eskiye.
 create index conversation_customer_idx on public.conversation (customer_id, last_message_at desc) where customer_id is not null;
@@ -140,6 +159,11 @@ alter table public.message enable row level security;
 
 -- Tek okuma deseni: bir konuşmanın mesajları, eskiden yeniye.
 create index message_conversation_idx on public.message (conversation_id, created_at);
+-- Mesaj-düzeyi idempotency'nin SON savunma hattı (15.7): Meta teslimatı 7 gün boyunca tekrarlar;
+-- birincil koruma `webhook_event` claim'idir (provider+event_id = mesaj kimliği), bu indeks ise
+-- claim'in atlandığı bir yolda aynı sağlayıcı mesajının deftere iki kez yazılmasını VERİDE keser.
+-- Kısmi: elle işlenen satırlar kimliksizdir ve null tekilliğe girmez.
+create unique index message_provider_message_key on public.message (provider_message_id) where provider_message_id is not null;
 
 -- ── Talebin konuşma bağı ─────────────────────────────────────────────────────
 -- `ticket.conversation_id` 0026'da FK'siz kondu — işaret ettiği tablo henüz yoktu. Şimdi var.
@@ -167,10 +191,19 @@ alter table public.ticket
 -- **`coalesce(conversation.customer_id, excluded.customer_id)`** — mevcut bağ EZİLMEZ. Bir konuşma
 -- bir müşteriye bağlandıktan sonra başka bir müşteriye kaydırmak bir BİRLEŞTİRME kararıdır ve
 -- insana aittir (DOMAIN §10); sessizce yapılırsa geçmiş yanlış hesapta görünür.
+--
+-- Üç alanın üç ayrı birleşme kuralı var ve fark bilinçli (21.08):
+--   · customer_id          → yalnız BOŞSA dolar (birleştirme insana ait);
+--   · provider_account_ref → yalnız BOŞSA dolar (konuşma hesabını değiştirmez — değişen hesap
+--     yeni bir external_ref uzayı demektir, aynı satırda sessizce el değiştiremez);
+--   · profile_name         → YENİSİ kazanır (görünen ad kimlik değil; kullanıcı adını değiştirir
+--     ve son görülen ad, aylar önceki addan değerlidir).
 create or replace function public.open_conversation(
   p_source conversation_source,
   p_external_ref text,
-  p_customer_id uuid default null
+  p_customer_id uuid default null,
+  p_provider_account_ref text default null,
+  p_profile_name text default null
 ) returns public.conversation
 language plpgsql
 security invoker
@@ -179,10 +212,12 @@ as $$
 declare
   v_conversation public.conversation;
 begin
-  insert into public.conversation (source, external_ref, customer_id)
-  values (p_source, p_external_ref, p_customer_id)
+  insert into public.conversation (source, external_ref, customer_id, provider_account_ref, profile_name)
+  values (p_source, p_external_ref, p_customer_id, p_provider_account_ref, p_profile_name)
   on conflict (source, external_ref) do update
-     set customer_id = coalesce(conversation.customer_id, excluded.customer_id)
+     set customer_id = coalesce(conversation.customer_id, excluded.customer_id),
+         provider_account_ref = coalesce(conversation.provider_account_ref, excluded.provider_account_ref),
+         profile_name = coalesce(excluded.profile_name, conversation.profile_name)
   returning * into v_conversation;
 
   return v_conversation;
@@ -225,6 +260,15 @@ as $$
 declare
   v_message public.message;
 begin
+  -- Kalıp mesaj (template) bir WhatsApp kavramıdır — Meta-onaylı şablon + ücret sınıfı. Messenger/
+  -- Instagram'da karşılığı yok (ücretsiz kanallar; pencere-dışı kuralları etikettir, şablon değil).
+  -- `message` tablosunun kendi kısıtları kaynağı GÖREMEZ (source `conversation`'da durur), kural
+  -- bu yüzden burada: yanlış kanala yazılan şablon, maliyet raporunu ve pencere mantığını sessizce
+  -- kirletirdi (21.08).
+  if p_kind = 'template' and (select source from public.conversation where id = p_conversation_id) <> 'whatsapp' then
+    raise exception 'template mesaji yalniz whatsapp konusmasina yazilabilir (conversation %)', p_conversation_id;
+  end if;
+
   insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id)
   values (
     p_conversation_id,
@@ -247,10 +291,10 @@ begin
 end;
 $$;
 
-revoke all on function public.open_conversation(conversation_source, text, uuid) from anon;
+revoke all on function public.open_conversation(conversation_source, text, uuid, text, text) from anon;
 revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender) from anon;
 
 comment on table public.conversation is
-  'WhatsApp/mesajlaşma konuşması (15.1): kimlik bağı, opt-in, 24s servis penceresi, son hareket.';
+  'Mesajlaşma konuşması (15.1 · üç kanal 21.08): kaynak (whatsapp/messenger/instagram), kimlik bağı, opt-in, 24s servis penceresi, son hareket.';
 comment on table public.message is
   'Konuşmanın mesajları (15.1): yön + tür + gövde. Defterdir — yazılır, güncellenmez.';

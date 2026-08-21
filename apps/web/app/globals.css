@@ -315,10 +315,13 @@
   --color-ops-band-muted: #a7ada0; /* şerit üzerindeki etiket ve gerekçe */
   --color-ops-band-line: #454a41; /* şerit içindeki ikincil düğmenin çerçevesi */
 
-  /* MARKA rengi — palete ait değil, WhatsApp'ın kendi yeşili. Token olarak duruyor ki ham hex
-     ikonun içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsın: marka rengi temayla
-     dönmez, döndüğü an marka olmaktan çıkar. */
+  /* MARKA renkleri — palete ait değil, kanalların kendi renkleri. Token olarak duruyorlar ki ham
+     hex ikonun/kenarın içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsınlar: marka
+     rengi temayla dönmez, döndüğü an marka olmaktan çıkar. Messenger/Instagram 21.08'de geldi
+     (15.15 — sosyal gelen kutusunun kanal kenarı); envanter senkronu design/BACKLOG'da. */
   --color-brand-whatsapp: #128c4b;
+  --color-brand-messenger: #0084ff;
+  --color-brand-instagram: #e1306c;
 
   /* Mavi — YENİ aile (bilgi, nötr bildirim, aday kayıt) */
   --color-ops-blue: #3a6b8a; /* bilgi ikonu, etiket, vade rozeti */

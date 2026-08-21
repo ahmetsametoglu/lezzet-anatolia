@@ -1,34 +1,37 @@
 'use client';
 
 import { useState } from 'react';
+import type { ConversationSource } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { DateField } from '@/components/operation/form/date-field';
 import { toDay } from '@/components/operation/form/calendar-math';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { InputField, Textarea } from '@/components/operation/form/input';
-import { openManualDmAction } from './actions';
+import { openManualDmAction, recordFollowUpInboundAction } from './actions';
+import { SOURCE_LABELS } from './social-labels';
 
 /**
- * **Gelen DM'i işle** (15.1'in yüzey yarısı) — numaradan konuşmayı açar, mesajı deftere yazar.
+ * **Gelen DM'i işle** (15.1'in yüzey yarısı · üç kanal 15.15) — iki kapı, tek pencere:
  *
- * Bu pencere olmadan gelen kutusunun VERİ KAYNAĞI YOK: konuşma satırlarını bugün yalnız elle işleme
- * doğurabiliyor, webhook 15.7 ile geliyor. Yani ekranın kendisi bu pencereyle anlam kazanıyor —
- * 15.1 servisleri yazmıştı, onları çağıran hiçbir yüzey yoktu.
+ * · **Yeni numara** (`existing` yok): numaradan konuşmayı açar, mesajı deftere yazar. **Yalnız
+ *   WhatsApp** — kimlik anahtarı telefondur ve operatör onu telefonundan okur; Messenger/IG kişi
+ *   kimliği (PSID/IGSID) operatörce bilinemez, o konuşmaları webhook doğuracak (15.7).
+ * · **Devam** (`existing` dolu): var olan sohbete düşen yeni mesajı işler — KANAL-NÖTR, konuşma
+ *   kimliğiyle çalışır; anahtar yeniden yazılmaz ve yazılamaz: değiştirilebilir olsaydı mesaj
+ *   farkında olmadan başka birinin sohbetine düşerdi.
  *
- * **Aynı pencere iki kapıya hizmet ediyor** ve fark tek bir prop: başlıktan açılınca yeni bir numara
- * (`existingPhone` yok), sohbetin içinden açılınca o sohbetin devamı (numara kilitli, kimlik alanları
- * gizli — konuşma zaten var). Ayrı bir pencere yazmak, aynı formu iki kez yaşatmak olurdu; kapı da
- * zaten aynı: `open_conversation` tek deyimlik upsert, aynı numara ikinci konuşma AÇMAZ.
+ * Bu pencere olmadan gelen kutusunun WhatsApp tarafında VERİ KAYNAĞI YOK: konuşma satırlarını bugün
+ * yalnız elle işleme doğurabiliyor, webhook 15.7 ile geliyor.
  *
- * **E-posta İSTEĞE BAĞLI ve ikinci kimlik anahtarıdır.** Numara kayıtsız ama e-posta tanıdıksa
- * müşteri o zaman bulunur. İkisi AYRI müşterilere çıkarsa konuşma bilerek AÇILMAZ — sessizce birini
- * seçmek, yanlış hesaba bağlanmış bir sohbet üretirdi (DOMAIN §10).
+ * **E-posta İSTEĞE BAĞLI ve ikinci kimlik anahtarıdır** (yalnız yeni numarada). Numara kayıtsız ama
+ * e-posta tanıdıksa müşteri o zaman bulunur. İkisi AYRI müşterilere çıkarsa konuşma bilerek
+ * AÇILMAZ — sessizce birini seçmek, yanlış hesaba bağlanmış bir sohbet üretirdi (DOMAIN §10).
  */
 
 interface ManualDmDialogProps {
-  /** Dolu ise: var olan sohbetin devamı — numara kilitli, kimlik alanları gizli. */
-  existingPhone?: string;
+  /** Dolu ise: var olan sohbetin devamı — anahtar kilitli, kimlik alanları gizli. */
+  existing?: { conversationId: string; title: string; source: ConversationSource };
   onClose: () => void;
   onOpened: (conversationId: string) => void;
 }
@@ -36,9 +39,9 @@ interface ManualDmDialogProps {
 /** `HH:MM` — 24 saat. Saat alanı serbest metin olduğu için biçim BURADA elenir, sunucuya gitmeden. */
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-export function ManualDmDialog({ existingPhone, onClose, onOpened }: ManualDmDialogProps) {
-  const followUp = Boolean(existingPhone);
-  const [phone, setPhone] = useState(existingPhone ?? '');
+export function ManualDmDialog({ existing, onClose, onOpened }: ManualDmDialogProps) {
+  const followUp = Boolean(existing);
+  const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   // Gün BUGÜNE düşer, saat DÜŞMEZ: gün neredeyse hep bugündür (operatör okuduğu mesajı işler), saat
@@ -50,7 +53,7 @@ export function ManualDmDialog({ existingPhone, onClose, onOpened }: ManualDmDia
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const blocked = !phone.trim()
+  const blocked = !followUp && !phone.trim()
     ? 'Numara yazılmalı'
     : !day
       ? 'Mesajın geldiği gün seçilmeli'
@@ -67,13 +70,19 @@ export function ManualDmDialog({ existingPhone, onClose, onOpened }: ManualDmDia
     // Gün + saat YEREL okunur (`new Date('2026-08-08T09:30')`), çünkü operatör telefonundaki saati
     // giriyor ve o saat yerel. UTC'ye çevirme sunucuya değil buraya ait: kullanıcının saati, onun
     // tarayıcısının diliminde anlam taşır.
-    const { data, error: actionError } = await openManualDmAction({
-      phone,
-      name: name.trim() || undefined,
-      email: email.trim() || undefined,
-      text,
-      receivedAt: new Date(`${day}T${time.trim()}`).toISOString(),
-    });
+    const receivedAt = new Date(`${day}T${time.trim()}`).toISOString();
+    const { data, error: actionError } = existing
+      ? await recordFollowUpInboundAction({ conversationId: existing.conversationId, text, receivedAt }).then((r) => ({
+          data: r.data ? { conversationId: existing.conversationId } : null,
+          error: r.error,
+        }))
+      : await openManualDmAction({
+          phone,
+          name: name.trim() || undefined,
+          email: email.trim() || undefined,
+          text,
+          receivedAt,
+        });
     setBusy(false);
     if (!data) {
       setError(actionError ?? 'Konuşma açılamadı.');
@@ -88,13 +97,17 @@ export function ManualDmDialog({ existingPhone, onClose, onOpened }: ManualDmDia
       onClose={onClose}
       maxWidth={520}
       title={followUp ? 'Gelen mesaj işle' : 'Gelen DM işle'}
-      subtitle={followUp ? 'Bu sohbete düşen yeni mesajı deftere yazar' : 'Telefondan okunan mesajı sisteme geçirir'}
+      subtitle={
+        followUp
+          ? `${existing ? SOURCE_LABELS[existing.source] : ''} sohbetine düşen yeni mesajı deftere yazar`
+          : 'Telefondan okunan WhatsApp mesajını sisteme geçirir'
+      }
       footer={
         <>
           {/* Metin düğmeleri EZMEZ (`min-w-0` + `flex-none`): uzun bir hata cümlesi düğmeyi iki
               satıra bölüyordu ve birincil eylem okunmaz hâle geliyordu. */}
           <span className="mr-auto min-w-0 font-ops-body text-ops-xs text-ops-muted">
-            {error ? <span className="font-semibold text-ops-red">{error}</span> : 'Aynı numara ikinci sohbet açmaz'}
+            {error ? <span className="font-semibold text-ops-red">{error}</span> : 'Aynı kişi ikinci sohbet açmaz'}
           </span>
           <Button variant="secondary" className="flex-none" onClick={onClose} disabled={busy}>
             İptal
@@ -111,24 +124,25 @@ export function ManualDmDialog({ existingPhone, onClose, onOpened }: ManualDmDia
         </>
       }
     >
-      <InputField
-        label="WhatsApp numarası"
-        required
-        mono
-        // Sohbetin devamında numara KİLİTLİ: değiştirilebilir olsaydı operatör farkında olmadan
-        // başka bir kişinin sohbetini açar ve mesajı oraya yazardı.
-        disabled={followUp}
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        placeholder="+33 6 12 34 56 78"
-        // Yerel yazım da kabul: normalize uygulama kapısında (`normalizePhone`) — operatörün numarayı
-        // ekranda gördüğü biçimde yazabilmesi, yazım hatasını azaltır.
-      />
-
-      {/* Kimlik alanları YALNIZ yeni numarada: var olan sohbette müşteri zaten çözülmüş ve alanların
-          hiçbir etkisi olmazdı — etkisiz alan, doldurulduğunda bir şey yaptığını sandırır. */}
-      {followUp ? null : (
+      {/* Devamda anahtar alanı YOK: sohbet zaten belli ve başlıkta yazıyor — kilitli bir kutu bile
+          "değiştirilebilir bir şey var" hissi verirdi. Yeni numarada alan WhatsApp'ındır. */}
+      {followUp ? (
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+          Sohbet: <span className="font-semibold text-ops-ink">{existing?.title}</span>
+        </span>
+      ) : (
         <>
+          <InputField
+            label="WhatsApp numarası"
+            required
+            mono
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+33 6 12 34 56 78"
+            // Yerel yazım da kabul: normalize uygulama kapısında (`normalizePhone`) — operatörün numarayı
+            // ekranda gördüğü biçimde yazabilmesi, yazım hatasını azaltır.
+          />
+
           <InputField
             label="WhatsApp adı"
             labelAside="isteğe bağlı"

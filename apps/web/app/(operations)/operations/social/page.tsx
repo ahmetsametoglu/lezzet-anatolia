@@ -5,13 +5,14 @@ import { guarded, requireAdmin } from '@/lib/guard';
 import { LiveRefresh } from '@/components/operation/ui/live-refresh';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { readCustomerContext } from '@/lib/customer/context';
-import { readConversationDetail } from '@/lib/whatsapp/read';
-import { WhatsappClient } from './whatsapp-client';
-import { toInboxRows, toMessageViews, toWindowView } from './whatsapp-read';
-import { parseWhatsappUrl } from './whatsapp-url';
-import type { ConversationDetailView, WhatsappData } from './whatsapp-types';
+import { readConversationDetail } from '@/lib/messaging/read';
+import { SocialClient } from './social-client';
+import { titleOf, toInboxRows, toMessageViews, toWindowView } from './social-read';
+import { channelSource, parseSocialUrl } from './social-url';
+import type { ConversationDetailView, SocialData } from './social-types';
 
-// WhatsApp konuşma izleme (15.5) — gelen kutusu, sohbet ve müşteri bağlamı tek ekranda.
+// Sosyal gelen kutusu (15.5 · üç kanal 15.15) — WhatsApp + Messenger + Instagram DM tek kuyrukta;
+// sohbet ve müşteri bağlamı aynı ekranda.
 //
 // ── KAPI: YALNIZ YÖNETİCİ ────────────────────────────────────────────────────
 // Talepler ekranıyla aynı gerekçe: burada müşterinin kendi cümleleri okunuyor ve elle işlenen her
@@ -34,29 +35,32 @@ import type { ConversationDetailView, WhatsappData } from './whatsapp-types';
 // (AI rozeti + mod anahtarı + hibrit taslak 16.08'de geldi: mod bir VERİ ve `conversation.handled_by`
 // gerçek — motorun kendisi hâlâ 15.8/15.13'ün işi.)
 
-interface WhatsappPageProps {
+interface SocialPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function WhatsappPage({ searchParams }: WhatsappPageProps) {
+export default async function SocialPage({ searchParams }: SocialPageProps) {
   const access = await guarded(requireAdmin);
   if (!access.ok) {
     return (
       <NoAccessPane
-        title="WhatsApp"
-        reason="Müşteri yazışması yönetime açıktır. Bir sohbetin ilerlemesi gerekiyorsa yöneticiye müşterinin numarasıyla bildirin."
+        title="Sosyal Mesajlar"
+        reason="Müşteri yazışması yönetime açıktır. Bir sohbetin ilerlemesi gerekiyorsa yöneticiye müşterinin adı ya da numarasıyla bildirin."
       />
     );
   }
 
-  const urlState = parseWhatsappUrl(await searchParams);
+  const urlState = parseSocialUrl(await searchParams);
   const inbox = new ConversationInboxService(serviceDb());
+  const source = channelSource(urlState.ch);
 
   const [page, awaitingCount, aiCount] = await Promise.all([
-    inbox.list(urlState.f === 'awaiting' ? { awaitingReply: true } : {}, undefined, DEFAULT_PAGE_SIZE),
-    inbox.countAwaitingReply(),
+    inbox.list({ awaitingReply: urlState.f === 'awaiting' ? true : undefined, source }, undefined, DEFAULT_PAGE_SIZE),
+    // Sayaçlar kanal süzgecine UYAR: süzgeçli kuyruğun başlığı süzgeçsiz sayı yazsaydı, tam da
+    // kalabalıkta yalan söylerdi.
+    inbox.countAwaitingReply(source),
     // Çizimin "1 AI yürütüyor" sayısı — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi).
-    new ConversationService(serviceDb()).countHandledByAi(),
+    new ConversationService(serviceDb()).countHandledByAi(source),
   ]);
 
   /**
@@ -76,8 +80,10 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
 
   const detailView: ConversationDetailView | null = detail && {
     id: detail.conversation.id,
-    title: context?.name.trim() || detail.conversation.externalRef,
-    phone: detail.conversation.externalRef,
+    source: detail.conversation.source,
+    title: context?.name.trim() || titleOf({ profileName: detail.conversation.profileName, externalRef: detail.conversation.externalRef }),
+    externalRef: detail.conversation.externalRef,
+    profileName: detail.conversation.profileName,
     window: toWindowView(detail.conversation.windowExpiresAt, now),
     messages: toMessageViews(detail.messages),
     context,
@@ -90,7 +96,7 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
     aiDraft: detail.conversation.aiDraftReply,
   };
 
-  const data: WhatsappData = {
+  const data: SocialData = {
     rows: toInboxRows(page.rows, now),
     nextCursor: page.nextCursor,
     awaitingCount,
@@ -104,7 +110,7 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
           taslak belirmeli. Kanal talep kuyruğununkinden AYRI: her müşteri talebinde bu ekranı da
           tazelemek, konuşmayı okuyan operatörün altından sayfayı çekerdi. */}
       <LiveRefresh channel={conversationsChannelName()} />
-      <WhatsappClient data={data} urlState={{ ...urlState, c: selectedId }} />
+      <SocialClient data={data} urlState={{ ...urlState, c: selectedId }} />
     </>
   );
 }

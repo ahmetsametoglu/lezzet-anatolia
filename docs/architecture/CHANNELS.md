@@ -2,6 +2,12 @@
 
 Bu dosya, **bir siparişin nereden kapandığını** ve sistemin bunu nasıl **tek modelde** taşıdığını anlatır. WhatsApp kanalı buraya oturur; strateji kararları `ADR_WHATSAPP.md`'de, işler `BACKLOG.md`'de, pazar analizi `WHATSAPP_ANALYSIS.md`/`COMPETITORS.md`'de.
 
+> **Taşıma katmanı değişti + kanal genişledi (21.08 · ADR-006):** 360dialog kurulmayacak — tek
+> Business tipi Meta app'te **WhatsApp Cloud API + Messenger Platform + Instagram Messaging**, tek
+> webhook alıcısı. Konuşma modeli üç kanalı `conversation.source` ekseninde taşıyor; operasyondaki
+> yüzey `/operations/social` (sosyal gelen kutusu). Bu dosyadaki 360dialog referansları "Meta
+> Cloud API / Graph API" diye okunur; metin webhook turunda (15.7) elden geçirilecek.
+
 Temel ilke (STACK §8, ADR-004): WhatsApp yeni bir *beyin* değil, `domain-core`'un yeni bir **yüzeyidir**. Stok, fiyat ve sipariş durum makinesi her yüzeyde aynı motordan geçer.
 
 ---
@@ -39,7 +45,7 @@ Bir sipariş üç ayrı soruyu bağımsız yanıtlar. Bunlar **ortogonaldir**; b
 
 ---
 
-## 3. Kimlik çözümü — telefon anahtardır
+## 3. Kimlik çözümü — telefon anahtardır (yalnız WhatsApp'ta)
 
 WhatsApp müşteriyi **telefon numarasıyla** tanır; web müşteriyi e-posta/oturumla tanır. Aynı kişi iki yüzeyden gelebilir, sistem tek müşteride birleştirmelidir.
 
@@ -47,6 +53,12 @@ WhatsApp müşteriyi **telefon numarasıyla** tanır; web müşteriyi e-posta/ot
 - `Customer.phone` bu yüzden bir **kimlik anahtarıdır** — normalize edilmiş (E.164) tutulur.
 - Web'de e-postayla, WhatsApp'ta telefonla gelen aynı müşteride birleşir; kanal (b2b/b2c) yine `company_info` varlığından türetilir, kaynaktan değil.
 - Bu kural `domain-core`'da saf bir çözümleyici olarak yaşar (uygulama katmanına dağıtılmaz).
+- **Messenger/Instagram'da telefon YOKTUR (21.08 · doğrulanmış):** kişi kimliği PSID/IGSID'dir ve
+  Meta ondan telefon/e-posta VERMEZ. Bu kanalların konuşması **kimliksiz doğar**
+  (`conversation.customer_id null`) ve müşteriye ancak iki yolla bağlanır: operatörün bağlama
+  eylemi (15.16) ya da 04.10 çapraz-kanal çapasının bu kanallara genellenmesi (kod e-postaya
+  gider, müşteri sohbetten geri yazar). Sohbetin görünen adı `conversation.profile_name`'dir —
+  görünen ad, kimlik değil.
 
 ---
 
@@ -94,10 +106,14 @@ Akış: `müşteri mesajı → 360dialog webhook → apps/backend → packages/a
 
 ## 7. Konuşma verisi (kendi DB'mizde)
 
-Konuşma durumu **bizim veritabanımızda** yaşar (karar: kendi DB — AI ajan bağlamı + tek-kaynak + taşınırlık). Alanlar zeminde tanımlıdır, otomasyon canlı adımda doldurur. Varlıklar `DATA_MODEL.md`'de: `Conversation` (thread, opt-in, 24s pencere, son mesaj), `Message` (yön, tür, sağlayıcı mesaj id'si).
+Konuşma durumu **bizim veritabanımızda** yaşar (karar: kendi DB — AI ajan bağlamı + tek-kaynak + taşınırlık). Alanlar zeminde tanımlıdır, otomasyon canlı adımda doldurur. Varlıklar `DATA_MODEL.md`'de: `Conversation` (kaynak ekseni, opt-in, 24s pencere, işletme hesabı, profil adı, son mesaj), `Message` (yön, tür, sağlayıcı mesaj id'si).
 
+- **Üç Meta kanalı tek modelde (21.08, ADR-006):** kanal `conversation.source` ekseninde ayrışır
+  (`whatsapp` · `messenger` · `instagram`); tekillik `(source, external_ref)`. Pencere kavramı üç
+  kanalda da 24 saattir; **ekonomisi** yalnız WhatsApp'ındır (şablon/ücret — Messenger/IG ücretsiz,
+  pencere-dışı kuralları etikettir).
 - Opt-in durumu ve servis penceresi bitişi bizde tutulur → hangi mesajın ücretsiz/template olduğu bizim tarafta bilinir.
-- Sağlayıcı (360dialog) değişse de konuşma tarihi ve müşteri bağlamı bizde kalır.
+- Sağlayıcı değişse de konuşma tarihi ve müşteri bağlamı bizde kalır.
 
 ---
 

@@ -133,7 +133,9 @@ const NAV_SECTIONS: NavSection[] = [
       // tıklayan admin not-found'a düşüyordu — var olmayan bir yere giden düğme, olmayan bir yetenek
       // vaat eder. Ray, modülün ne zaman biteceğinin ilanı değil, BUGÜN gidilebilecek yerlerin
       // listesidir. Giriş, o notun koyduğu şartla geri geldi: 15.5 (konuşma izleme) yazıldı.
-      { key: 'whatsapp', label: 'WhatsApp', href: '/operations/whatsapp', roles: ADMIN_ONLY },
+      // 21.08'de ekran ÜÇ KANALA genişledi (15.15, ADR-006): WhatsApp + Messenger + Instagram DM
+      // tek sosyal gelen kutusunda — giriş de kanal adından bölüm adına döndü.
+      { key: 'social', label: 'Sosyal Mesajlar', href: '/operations/social', roles: ADMIN_ONLY },
     ],
   },
   {

@@ -93,7 +93,7 @@ describe('kayıtlar taşınır', () => {
     const hedefKayit = await musteri('tasima-hedef');
     const kaynakKayit = await musteri('tasima-kaynak');
 
-    const konusma = await conversations.open({ externalRef: `+33900${String(stamp).slice(-6)}`, customerId: kaynakKayit.id });
+    const konusma = await conversations.open({ source: 'whatsapp', externalRef: `+33900${String(stamp).slice(-6)}`, customerId: kaynakKayit.id });
     conversationIds.push(konusma.id);
     await points.insert({ customerId: kaynakKayit.id, points: 40, reason: 'referral' });
     await points.insert({ customerId: hedefKayit.id, points: 10, reason: 'referral' });

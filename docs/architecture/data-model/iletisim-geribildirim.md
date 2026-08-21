@@ -6,28 +6,32 @@ Konuşma/mesaj, webhook, analitik olayı, yorum, puan, talep, işletme ayarı.
 
 ---
 
-## Conversation (konuşma) — WhatsApp/mesajlaşma
+## Conversation (konuşma) — sosyal mesajlaşma (WhatsApp · Messenger · Instagram)
 
-Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7`). Alanlar Faz 1'de tanımlı, otomasyon Faz 2'de doldurur.
+Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7`). Alanlar Faz 1'de tanımlı, otomasyon Faz 2'de doldurur. Üç Meta kanalı tek tabloya düşer (ADR-006, 21.08); kanal `source` ekseninde ayrışır.
 
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| customer_id | uuid \| null | telefonla çözülür; taslakta boş olabilir |
-| source | enum(`whatsapp`) | ileride başka mesajlaşma kaynağı eklenebilir |
-| external_ref | string | sağlayıcıdaki kişi/thread anahtarı (WhatsApp: telefon) |
+| customer_id | uuid \| null | WhatsApp'ta telefonla çözülür; Messenger/IG'de otomatik çözüm YOK (PSID/IGSID telefon taşımaz) — kimliksiz doğar, bağlama 15.16 |
+| source | enum(`whatsapp`,`messenger`,`instagram`) | tekillik anahtarının uzayını söyler; `messenger`≠`instagram` (PSID ve IGSID ayrı uzaylar) |
+| external_ref | string | sağlayıcıdaki kişi anahtarı — WhatsApp: E.164 telefon · Messenger: PSID · Instagram: IGSID |
+| provider_account_ref | string \| null | konuşmanın aktığı İŞLETME hesabı (phone_number_id / sayfa id / IG hesap id); zeminde boş, webhook doldurur — cevap yönlendirme buradan |
+| profile_name | string \| null | sağlayıcı profil adı (push name / ad-soyad / kullanıcı adı) — GÖRÜNEN ad, kimlik değil; son görülen değer tutulur |
 | handled_by | enum(`human`,`hybrid`,`ai`) | sohbeti kim yürütüyor (16.08) — `ticket.handled_by` ile aynı enum ve sözleşme |
 | ai_draft_reply | text \| null | hibrit modun bekleyen AI taslağı — satırda durur, mesaj DEĞİL (defter gönderilmişi yazar) |
 | ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
 | opt_in | boolean | ticari mesaj izni (double opt-in, `DOMAIN.md §11`) |
 | opt_in_at | timestamptz \| null | |
-| window_expires_at | timestamptz \| null | 24s servis penceresi bitişi (ücretsiz/template kararı) |
+| window_expires_at | timestamptz \| null | 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp) |
 | last_message_at | timestamptz \| null | |
 | created_at | timestamptz | |
 
-**Bir kişi, bir konuşma** — tekillik `(source, external_ref)` üzerinde (0039). WhatsApp'ta thread kavramı yoktur: aynı numaradan gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu.
+**Bir kişi, bir konuşma — kanal başına** — tekillik `(source, external_ref)` üzerinde (0039). Üç kanalda da thread kavramı yoktur: aynı kişiden gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu. **Hesap boyutu tekillikte DEĞİL (bilinçli):** PSID sayfa-kapsamlıdır ve ikinci bir işletme hesabı (ikinci numara/sayfa) açıldığı gün tekillik `(source, provider_account_ref, external_ref)` üçlüsüne genişletilir — bugün genişletmek, elle işlenen (hesapsız) geçmişi webhook geçmişinden bölerdi; kolon yine de bugünden var, çünkü sonradan eklenen kolon o güne kadarki geçmişi belirsiz bırakır.
 
-**`customer_id` nullable ve öyle kalmalı:** canlı adımda webhook mesajı önce yazar, kimliği sonra çözer — kimlik çözülemediği için mesajın kaybolduğu bir yol olamaz. Mevcut bağ da EZİLMEZ (`coalesce`): bağlanmış bir konuşmayı başka müşteriye kaydırmak bir **birleştirme** kararıdır ve insana aittir (`DOMAIN §10`).
+**`customer_id` nullable ve öyle kalmalı:** canlı adımda webhook mesajı önce yazar, kimliği sonra çözer — kimlik çözülemediği için mesajın kaybolduğu bir yol olamaz. Messenger/IG'de kimliksizlik üstelik VARSAYILAN hâldir: PSID/IGSID'den telefon/e-posta alınamaz (Meta vermez), kimlik ancak müşteri kendini tanıtınca kurulur. Mevcut bağ da EZİLMEZ (`coalesce`): bağlanmış bir konuşmayı başka müşteriye kaydırmak bir **birleştirme** kararıdır ve insana aittir (`DOMAIN §10`). `profile_name` tersine YENİSİYLE güncellenir — görünen ad kimlik değildir, son görülen değer aylar önceki addan değerlidir.
+
+**Şablon (template) yalnız WhatsApp'ındır** — `record_message` RPC'si başka kaynağın konuşmasına `kind='template'` yazımını reddeder: `message` tablosunun kendi kısıtları kaynağı göremez (source `conversation`'da durur), kural bu yüzden RPC'de. Messenger/IG ücretsiz kanallardır; pencere-dışı kuralları şablon değil ETİKETTİR (insan-temsilci 7 gün).
 
 **24 saatlik pencerenin hesabı burada DEĞİL, motorda** (`serviceWindowExpiry` — domain-core). Tablo yalnız saklar; süreyi RPC'ye de yazmak aynı kuralın iki dilde iki kopyası olurdu. **Pencereyi yalnız GELEN mesaj açar:** giden mesajın uzatması ücretsiz mesajlaşma süresini kendi kendimize uzatmak olurdu — Meta tarafında pencere kapanmıştır ve gönderim şablon ücretiyle geçer.
 
@@ -47,7 +51,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | body | jsonb | metin veya kart/interaktif yapı |
 | template_name | string \| null | outbound template ise (Meta-onaylı) |
 | template_category | enum(`marketing`,`utility`,`authentication`) \| null | şablonun **ücret sınıfı** — adla birlikte gelir, ondan ayrı düşemez |
-| provider_message_id | string \| null | 360dialog/Cloud API mesaj id'si |
+| provider_message_id | string \| null | Meta mesaj id'si (wamid/mid) — dolu olduğunda TEKİL (kısmi unique, 15.7): webhook tekrarında aynı mesaj deftere iki kez yazılamaz; birincil koruma `webhook_event` claim'i |
 | created_at | timestamptz | |
 
 **Defterdir — yazılır, güncellenmez.** `TicketMessage` ile aynı gerekçe: gönderilmiş mesaj değişmez. Servisin güncelleme tipi bu yüzden `never`; bir gün biri "mesajı düzelt" demek istese derlemede durur.
