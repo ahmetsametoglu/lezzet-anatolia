@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import type { Address } from '@lezzet/types';
+import type { Address, Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { formatDeliveryDate } from '@/lib/storefront/format';
+import { AddressFields, type AddressFieldsCopy } from './address-fields';
 import { useDeliveryPlace } from './place-context';
 
 /**
@@ -34,7 +35,16 @@ export interface NewAddressInput {
   postalCode: string;
   city: string;
   phone?: string;
-  /** Ülke K33'te SALT OKUNUR ("Fransa") — bugün tek ülkeye teslim ediyoruz, seçim sunmak yalan olurdu. */
+  /**
+   * Ülke müşteriye SORULMAZ, posta kodundan TÜRER (19.8) — ve bu alan o türetmenin taşıyıcısı.
+   *
+   * Form bir tur boyunca ülkeyi hiç taşımıyordu: `toAddressFields` sabit `'FR'` yazıyordu ve
+   * ekranda "Fransa" salt okunur duruyordu. Bugün tek ülkeye teslim ettiğimiz için zararsız
+   * görünüyordu, ama **610 posta kodu iki ülkede birden geçerli** (ölçüm 10.08) ve KEHL deposu
+   * etkin — o kodlarda sabit `FR` bir varsayımdı, sonuç değil. Alan boş bırakılabilir: dolduran
+   * yer kodun ÇÖZÜMÜDÜR, müşterinin beyanı değil.
+   */
+  country?: Country;
   makeDefault?: boolean;
 }
 
@@ -56,7 +66,10 @@ export function toAddressFields(input: NewAddressInput) {
     postalCode: input.postalCode,
     city: input.city,
     phone: input.phone ?? null,
-    country: 'FR' as const,
+    /* Çözülemediyse bugünkü davranış korunur (`FR`) — geri düşüş, formun kodu hiç doğrulatmadan
+       kaydedilebildiği hâl için. Doğru olan çözümden geleni yazmak; hiç yoksa da bir değer
+       yazmak zorundayız, kolon `not null`. */
+    country: input.country ?? ('FR' as const),
   };
 }
 
@@ -70,6 +83,7 @@ export function toFormInput(address: Address): NewAddressInput {
     postalCode: address.postalCode,
     city: address.city,
     phone: address.phone ?? undefined,
+    country: address.country,
     makeDefault: address.isDefault,
   };
 }
@@ -80,14 +94,11 @@ export function toFormInput(address: Address): NewAddressInput {
  * Dışa AÇILMAZ: çağıranlar kendi `Messages` tipinden geçiyor, yapısal uyum yeter. Export edilseydi
  * kullanılmayan bir dışa açık tip olurdu (`knip`).
  */
-interface AddressFormCopy {
+interface AddressFormCopy extends AddressFieldsCopy {
   optional: string;
   label: string;
   recipient: string;
-  line1: string;
   line2: string;
-  postalCode: string;
-  city: string;
   phone: string;
   country: string;
   countryValue: string;
@@ -169,6 +180,11 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
     // Kabul edilen tek hâl `resolved`. `ambiguous`/`unknown`/`unresolved` ve arıza (`null`) hepsi
     // "bu kodla devam edilemez" demek — ekranları ayrışacak (19.7) ama form için sonuç aynı.
     setPostalError(lookup?.kind === 'resolved' ? null : copy.postalHint);
+    /* ÜLKE BURADAN TÜRER — tek kaynak. `AddressFields` seçim yolunda da bu işlevi çağırıyor
+       (`onPostalBlur`), yani seçilen kod da elle yazılan kod da aynı çözümden geçiyor; ikinci bir
+       türetme yazsaydık iki yolun bir gün ayrışması kaçınılmazdı. Çözülemeyen kodda ülkeye
+       DOKUNULMAZ: bilinmeyeni bir değere düşürmek, bilinmeyeni bilinen gibi okutmak olurdu. */
+    if (lookup?.kind === 'resolved') setForm((prev) => ({ ...prev, country: lookup.place.country }));
   };
 
   /**
@@ -204,26 +220,35 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
         <div className="flex-1">{field('label', copy.label)}</div>
         <div className="flex-1">{field('recipient', copy.recipient)}</div>
       </div>
-      {field('line1', copy.line1)}
-      {field('line2', copy.line2, true)}
-
-      <div className="flex gap-3">
-        {/* Posta kodu DAR (150px): beş hane, tam genişlikte kutu değerinden büyük görünüyor. */}
-        <div className="w-[150px] flex-none">
-          <FormInputField
-            label={copy.postalCode}
-            value={form.postalCode}
-            onChange={(e) => setForm((prev) => ({ ...prev, postalCode: e.target.value }))}
-            onBlur={(e) => void checkPostal(e.target.value)}
-            error={postalError ?? undefined}
-            inputMode="numeric"
-            maxLength={5}
-            autoComplete="postal-code"
-            name="postal-code"
-          />
-        </div>
-        <div className="flex-1">{field('city', copy.city)}</div>
-      </div>
+      {/* Sokak · posta kodu · şehir ARTIK ÖNERİLİ ve davranış ortak bileşende (`AddressFields`):
+          aynı üçlüyü çizen profesyonel başvuru formu da oradan besleniyor. Kapı numarası, posta
+          kodu ve şehir tek dokunuşla birlikte dolar. */}
+      <AddressFields
+        value={{ line1: form.line1, postalCode: form.postalCode, city: form.city }}
+        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+        copy={copy}
+        onPostalBlur={(code) => void checkPostal(code)}
+        onCountryChange={(country) => setForm((prev) => ({ ...prev, country: country ?? undefined }))}
+        postalError={postalError ?? undefined}
+        afterLine1={field('line2', copy.line2, true)}
+      />
+      {/**
+       * ── ÜLKENİN İKİ KAYNAĞI VAR VE İKİSİ DE GEREKLİ (ölçüldü 21.08) ──────────────────────────
+       * Bu satır bir tur boyunca yoktu: ülkeyi yalnız `checkPostal` türetiyordu, gerekçesi de
+       * *"iki yol da aynı çözümden geçiyor, ikinci kaynak gereksiz"*di. **Ölçüm bunu çürüttü.**
+       *
+       * `77694` (Kehl) seçilerek girildi ve kayıt `country = FR` ile yazıldı. Sebep: kod
+       * ÇÖZÜLMÜYOR — yer hapı da aynı cevabı veriyor (*"bu ülkeye gönderim açık değil"*: DE için
+       * sevk deposu tanımlı değil, `unresolved`). Çözüm başarısız olunca `checkPostal` ülkeye hiç
+       * dokunmuyor ve `toAddressFields` geri düşüşü `FR` yazıyor — yani sessizce YANLIŞ ülke.
+       *
+       * Oysa bilgi ekranda ZATEN vardı: öneri satırı `(country, postalCode)` ikilisini birlikte
+       * taşıyor ve kaynağı `postal_code_place` referansı — sevk deposu yapılandırmasından
+       * BAĞIMSIZ. Bir yer bize gönderim açık olmadığı için Fransa'ya taşınmaz.
+       *
+       * Üç yol, ikisi bilgili: listeden seçim → referanstan ülke · elle yazıp kod çözüldü →
+       * çözümden ülke · elle yazıp çözülemedi → BİLİNMİYOR, geri düşüş devrede (`toAddressFields`).
+       */}
 
       {/* Teslimat cevabı. Bölge dışı bir HATA DEĞİLDİR (tasarım): nötr krem satır kullanılır,
           kırmızı yalnız biçim hatasına ayrılmıştır. */}

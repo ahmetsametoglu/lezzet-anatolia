@@ -14,6 +14,7 @@ import {
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { Link } from '@/i18n/navigation';
 import { FormInputField } from '@/components/customer/form/form-input-field';
+import { AddressFields } from '@/components/customer/delivery/address-fields';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import { sendEmailOtp } from '@/lib/auth/otp-actions';
@@ -273,27 +274,30 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
             onBlur={(e) => verifyVat(e.target.value)}
             labelAside={<VatSignal t={t} checking={checkingVat} valid={vatValid} />}
           />
-          <FormInputField
-            label={t.form.line1}
-            value={input.line1}
-            invalid={invalid('line1')}
-            onChange={(e) => set({ line1: e.target.value })}
+          {/* ── ÜÇ DÜZ ALAN GİTTİ, ORTAK DAVRANIŞ GELDİ ───────────────────────────────────────
+              Buradaki `line1 / postalCode / city` üçlüsü adres formunun aynısıydı ama üç düz
+              girdi olarak yazılmıştı: ne posta kodu seçilebiliyordu, ne çok yerleşimli kodun
+              yerleşim listesi vardı. Aynı müşteri, aynı adresi, hangi ekrandan girdiğine göre
+              farklı bir yardım alıyordu — `AddressFields` künyesindeki ayrım tam da bunun için:
+              kalıcılık çağıranın (burada adres bir KAYIT değil, başvuru gövdesinin parçası),
+              DAVRANIŞ ortak.
+
+              **Sokak önerisi (BAN) burada KAPALI:** bu yol 🇩🇪 AB-vergi yolu, yani şirket Fransız
+              değil ve BAN yalnız Fransız adreslerini biliyor. Posta kodu önerisi açık kalıyor —
+              onun kaynağı kendi referansımız ve iki ülkeyi de kapsıyor.
+
+              Ülke burada TÜKETİLMİYOR: `B2bApplicationInput` bir ülke alanı taşımıyor
+              (`domain-core/identity/b2b-application`), o yüzden `onCountryChange` geçilmedi.
+              Uydurma bir alan eklemek yerine boşluk kayda geçti: `BEKLEYEN(BACKLOG §1)`. */}
+          <AddressFields
+            value={{ line1: input.line1, postalCode: input.postalCode, city: input.city }}
+            onChange={(patch) => set(patch)}
+            copy={t.form}
+            streetSuggest={false}
+            line1Invalid={invalid('line1')}
+            cityInvalid={invalid('city')}
+            postalInvalid={invalid('postalCode')}
           />
-          <div className="grid grid-cols-[1fr_1.6fr] gap-2.5">
-            <FormInputField
-              label={t.form.postalCode}
-              value={input.postalCode}
-              inputMode="numeric"
-              invalid={invalid('postalCode')}
-              onChange={(e) => set({ postalCode: e.target.value })}
-            />
-            <FormInputField
-              label={t.form.city}
-              value={input.city}
-              invalid={invalid('city')}
-              onChange={(e) => set({ city: e.target.value })}
-            />
-          </div>
         </>
       )}
 

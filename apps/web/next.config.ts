@@ -72,10 +72,25 @@ const STRIPE_IMG = 'https://*.stripe.com';
 // ihtiyaç duymadığı bir yüzeydi; ikisi de geri çıkarıldı. Daha az izin, daha az arıza.
 const MAP_TILES = 'https://tile.openstreetmap.org';
 
+// Fransız devletinin adres servisi (BAN) — adres formunun sokak önerisi.
+//
+// **Tarayıcıdan çağrılıyor ve bu bilinçli** (`lib/address/use-address-search.hook` künyesi):
+// servisin sınırı IP başına saniyede 50 istek, sunucudan proxy'lense tüm müşteriler tek IP'yi
+// paylaşırdı. Ama o karar CSP'yi de gerektiriyor ve native'de böyle bir kapı olmadığı için akla
+// gelmiyordu. **ÖLÇÜLDÜ (21.08):** kapı açılmadan önce ekranda hiçbir öneri çıkmıyordu, konsolda
+// tek satır vardı — *"Connecting to 'https://data.geopf.fr/geocodage/search…' violates the
+// following Content Security Policy directive: connect-src"*. Sessiz bir başarısızlıktı: paket
+// `unavailable` dönüyor, ekran da öneri göstermiyor; yani hiçbir şey kırılmış GÖRÜNMÜYORDU.
+//
+// **Açılan yüzey dar:** yalnız `connect-src` — bu host'tan script çalıştırılamaz, çerçeve
+// açılamaz, görsel yüklenemez. **Servis bizim verimizi görmez:** giden tek şey müşterinin YAZDIĞI
+// adres metnidir; kimlik yok, oturum yok, çerez yok (istek anahtarsız ve kimliksiz).
+const BAN_API = 'https://data.geopf.fr';
+
 /**
  * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler.
  * Bugün: self + Supabase + R2 görselleri + Stripe (kart alanı, 07.5) + harita karoları (bölge
- * kurulumu, 19.20) + next/font (self-hosted).
+ * kurulumu, 19.20) + adres servisi (BAN, 08.51) + next/font (self-hosted).
  */
 function securityHeaders(): Array<{ key: string; value: string }> {
   const { http: sbHttp, ws: sbWs } = supabaseOrigins();
@@ -87,7 +102,7 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_UPLOAD_HOST} ${STRIPE_API}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_UPLOAD_HOST} ${STRIPE_API} ${BAN_API}`.replace(/\s+/g, ' ').trim(),
     // Harita karoları BURADA ve yalnız burada: Leaflet onları `<img>` olarak yükler.
     `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     "font-src 'self' data:",

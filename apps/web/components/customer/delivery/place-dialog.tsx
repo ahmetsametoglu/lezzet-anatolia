@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { pillInputClass } from '@/components/customer/form/pill-input';
-import { suggestPostalCodesAction } from '@/lib/delivery/actions';
-import { isValidPostalCode, type PlaceLookup, type PlaceOption, type PlaceSuggestion } from '@/lib/delivery/place-types';
+import { usePostalSuggest } from '@/lib/address/use-postal-suggest.hook';
+import { isValidPostalCode, type PlaceLookup, type PlaceOption } from '@/lib/delivery/place-types';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
@@ -56,8 +56,6 @@ interface PlaceDialogProps {
   onClose: () => void;
 }
 
-/** Öneri isteği gecikmesi (ms) — her tuşta sunucuya gitmemek için. */
-const SUGGEST_DELAY = 220;
 /** Satırda kaç yerleşim adı yazılır, gerisi "+N" olur (tasarım kararı — veri biçim dayatmaz). */
 const NAMES_SHOWN = 2;
 
@@ -68,7 +66,6 @@ export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
   // diye bakarken listenin yarısı henüz yoktu.
   const { place, setPostalCode, clear, zones } = useDeliveryPlace();
   const [value, setValue] = useState(place?.postalCode ?? '');
-  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   /** `resolved` DIŞINDAKİ hâl — ekranın kuracağı cümlenin kaynağı. Çözülünce `null`. */
   const [lookup, setLookup] = useState<PlaceLookup | null>(null);
   /** Biçim hatası (5 hane) — sunucuya hiç gitmeden, yazarken. */
@@ -79,24 +76,20 @@ export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
   /** Son sorulan kod — öneri listesi cevaplanmış bir kodu tekrar önermesin. */
   const asked = useRef<string | null>(place?.postalCode ?? null);
 
-  // Öneriler yazarken gelir. Gecikme + iptal: hızlı yazan müşteride ara istekler sonuçsuz kalır ve
-  // geç dönen eski bir cevap yeni listeyi ezmez.
-  useEffect(() => {
-    if (value.length < 2 || value === asked.current) {
-      setSuggestions([]);
-      return;
-    }
-    let live = true;
-    const timer = setTimeout(() => {
-      void suggestPostalCodesAction(value).then((rows) => {
-        if (live) setSuggestions(rows);
-      });
-    }, SUGGEST_DELAY);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-  }, [value]);
+  /**
+   * ── ELLE YAZILMIŞ GECİKME GİTTİ, ORTAK ÇEKİRDEK GELDİ (21.08) ────────────────────────────────
+   * Burada gecikme + yarış koruması elle yazılıydı ve **önbelleği yoktu**: harf silip geri yazan
+   * müşteri aynı soruyu tekrar tekrar sunucuya sorduruyordu. Aynı üç karar (gecikme · önbellek ·
+   * yarış) adres formunun iki alanında da veriliyor; üç nüsha, birinin bir gün ötekilerden farklı
+   * davranması demekti (CLAUDE §1). Karar tek yerde: `@lezzet/react-hooks`.
+   *
+   * **Gecikme 220 → 300 ms.** Fark ölçülmüş bir tercih değildi, iki ayrı yerde ayrı yazılmış iki
+   * sayıydı; çekirdeğin künyesi 300'ün gerekçesini taşıyor (tuşlar arası ortalamanın üstünde,
+   * algılanabilir gecikmenin altında). Karşılığında panel önbelleği kazandı.
+   *
+   * `asked` yine devrede: cevaplanmış bir kod tekrar önerilmez — kapı artık `enabled` üstünden.
+   */
+  const suggestions = usePostalSuggest(value, { enabled: value !== asked.current });
 
   const submit = async (code: string, country?: Country) => {
     if (!isValidPostalCode(code)) {
@@ -108,8 +101,8 @@ export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
     setBusy(true);
     const result = await setPostalCode(code, country);
     setBusy(false);
+    // Cevaplanmış kod artık önerilmez — liste `asked` üstünden kapanıyor (yukarıdaki künye).
     asked.current = code;
-    setSuggestions([]);
     if (result === null) {
       setFailed(true);
       setLookup(null);

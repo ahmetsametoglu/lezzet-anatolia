@@ -1,0 +1,5 @@
+{
+  "extends": "@lezzet/typescript-config/base.json",
+  "compilerOptions": { "jsx": "react-jsx" },
+  "include": ["src"]
+}
