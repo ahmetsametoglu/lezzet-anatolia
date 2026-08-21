@@ -1059,9 +1059,67 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   getiren kazanır" kuralıyla aynı soydan). Ödül bölünmez ve ikiye verilmez: bu bir lojistik
   ödülüdür, araca eklenen tek bir durak vardır.
 
-  **İş bölümü:** sözleşmenin çoğula dönmesi ve sıralamanın kabul tarihine bağlanması web şeridinde
-  (deftere yazıldı); gün çipindeki işaret ve bandın seçili güne göre konuşması bizde — sözleşme
-  gelince mekanik.
+  ── **KARAR GÜNCELLENDİ (kullanıcı 21.08) — "SON KABUL EDİLEN KAZANIR"** ─────
+  Kullanıcı 12.08 kararının gerekçesindeki iki hatayı düzeltti:
+
+  **1. "Araca eklenen tek durak" diye bir algoritma YOK** (kullanıcının sorusu üzerine ölçüldü).
+  Kodda sokak ya da adres yakınlığı hiç geçmiyor; davetin anahtarı `(bölge, gün)` ve iktisadi
+  gerekçe modülün kendi künyesinde yazılı: *"o güne ikinci sipariş = durak başına maliyet düşer."*
+  Yani ödül **zaten planlanmış bir sefere sipariş eklemeye** veriliyor, ortak durağa değil.
+
+  **2. Kabul, davetlinin AÇIK EYLEMİDİR** (ölçüldü — `acceptNeighborInvite` ancak bağlantıya
+  tıklanıp kabul edildiğinde bir kabul satırı yazıyor; o ana kadar davet, davetlinin hesabında
+  hiç yok). Kullanıcının çıkarımı: *"son gelendeki kullanıcı tekrar kendisi tıklamış oluyor"* —
+  yani **en son tıklama en güncel niyettir.** "İlk kazanır" eski bir seçimi dondurur ve
+  kullanıcının yeni, bilinçli tıklaması hiçbir şey yapmaz; ekranda *"tıkladım, bir şey olmadı"*
+  hissi doğar.
+
+  Kararı güçlendiren ölçüm: aynı gün + aynı bölgedeki iki davette **teslimat sonucu birebir aynı**
+  (aynı sefer). Değişen tek şey ödülün kime yazıldığı — yani bu bir lojistik seçimi değil bir
+  ATIF kuralı, dolayısıyla kullanıcıya sormamak doğru.
+
+  **Kararın tamamı:**
+  · **Son kabul edilen kazanır** — ölçüt dizinin sırası DEĞİL kabul ZAMANI (arızanın kökü buydu).
+  · **Davet edenin adı görünür** — rota günü seçilirken / rota seçenekleri içinde *"şu komşunuz
+    sizi bu güne davet etti"*. Ad zaten sunucudan geliyor (`inviterName`), eksik olan tek davet
+    yerine hepsini döndürmek.
+  · **Davetli reddedebilir**; reddedilen davet seçime girmez.
+  · **Geri dönüş serbest** — önceki davet bağlantısına yeniden tıklamak onu tekrar öne alır.
+
+  **ŞEMA SONUÇLARI (ölçüldü, `0044_neighbor_invite.sql`):** bugünkü kabul satırı yalnız
+  `created_at` taşıyor ve tekrar kabulde `acceptNeighborInvite` erkenden çıkıp **hiçbir şeyi
+  tazelemiyor** — yani "geri dönüş" bugün fiilen çalışmaz. Reddin yazılacağı alan da yok.
+  İkisi de kolon ister; migration doğrudan düzenlenir (greenfield).
+
+  ~~**İş bölümü:** sözleşmenin çoğula dönmesi ve sıralamanın kabul tarihine bağlanması web
+  şeridinde (deftere yazıldı); gün çipindeki işaret ve bandın seçili güne göre konuşması bizde.~~
+  **Bölünmedi — tek turda yazıldı (21.08).** Sözleşme çoğula dönünce web'in checkout ekranı da
+  aynı anda kırılıyordu; iki şeride bölmek, arada derlenmeyen bir ağaç bırakmak olurdu.
+
+  **TESLİM EDİLDİ (21.08) — cihazda ölçüldü, Claire → Julien senaryosu:**
+  · `chosen_at` + `declined_at` kolonları eklendi; dizin `(customer_id, chosen_at desc)`.
+  · Sözleşme çoğula döndü (`neighborInvites`), gün başına tek kayıt, kazanan en yeni `chosen_at`.
+  · Ret ucu `POST /me/invite/neighbor/decline` — kimlik **Bearer'dan**, gövdeden değil.
+  · Ölçüm: iki davet kabul edildi (10:08 ve 10:09), ekranda **tek not** çizildi ve uç ikinciyi
+    bağladı. Ret sonrası not ve gün ön seçimi kalktı; aynı bağlantı yeniden açılınca `declined_at`
+    temizlenip `chosen_at` öne alındı — geri dönüş gerçekten çalışıyor.
+  · Kabul satırı ret'te **silinmiyor**, yalnız damgalanıyor: geri alınabilirliğin dayanağı bu.
+
+  **SINIR ARTIK YAZILI (kullanıcı kararı 21.08 — şeffaflık).** Ekran kaç komşunun
+  yararlanabileceğini hiç söylemiyordu; `maxUses` müşteri yüzeyine hiçbir yoldan ulaşmıyordu.
+  Sonuç: dolmuş bir daveti paylaşmaya devam eden müşteri, tıkladıktan SONRA "bu davet dolu"
+  cümlesiyle karşılaşan komşu. `OrderNeighborInviteSchema` artık `remainingUses` + `maxUses`
+  taşıyor; sipariş onayı *"Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max})"* yazıyor
+  ve **doluysa paylaşım düğmesini çizmiyor**. Sayı SUNUCUDA sayılıyor (iptal olan sipariş
+  sayılmaz, tavan davet satırında dondurulmuş) — ekrana gömülmüş bir "3", ayar değiştiği gün
+  yalan söyleyen bir cümle olurdu.
+
+  **Onay diyaloğu KONMADI** (kullanıcı sordu, ölçüldü): `Share.share` ateşle-unut bir çağrıdır —
+  kullanıcının gönderip göndermediği geri dönmez. "Üçüncü paylaşımdan sonra uyar" düğmeye basma
+  sayısını sayardı, paylaşımı değil. Sayılan şey TÜKETİM; söylenen de o.
+
+  BEKLEYEN(MB-61): "davet doldu" hâli cihazda GÖRÜLMEDİ — üç ayrı komşunun aynı güne gerçekten
+  sipariş vermesi gerekiyordu. Uç tarafı (`remainingUses: 0`) doğrulandı, ekran dalı değil.
 
 - [~] **MB-24 · Fiyat değişti bildirimi** (`DOMAIN §5`: fiyat arttıysa müşteriye söylenir ve onay
   istenir; düştüyse sessizce uygulanır) — `design/BACKLOG.md` §1'den devralındı.
@@ -1873,6 +1931,8 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   Ayrı bir iş değil; bir dahaki dokunuşta silinsin.
 
 - [ ] **MB-78 · FATURANIN NEREDEN ALINACAĞI HİÇBİR YERDE YAZMIYOR — B2B'de yasal ağırlığı var.**
+  ⚑ **BU KALEM GÜNDEME GETİRİLMEZ — kullanıcı kendisi açacak** (kararı 21.08). Kayıt duruyor,
+  hatırlatması yapılmaz; sıradaki işler önerilirken bu madde sayılmaz.
   Ölçüldü 19.08 (kullanıcı isteğiyle sistem geneli tarandı). Sistemin kararı net ve tutarlı
   (`DOMAIN §9`: resmî belge üretilmez, fatura muhasebeden gelir) — **eksik olan bu kararın müşteriye
   söylenmesi.**

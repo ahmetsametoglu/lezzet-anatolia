@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { Locale } from '@lezzet/i18n';
+import type { OrderNeighborInvite } from '@lezzet/types';
 
 import { openOrderNeighborInvite } from '@/lib/invite/invite-api';
 
@@ -23,21 +24,29 @@ import { openOrderNeighborInvite } from '@/lib/invite/invite-api';
   aynı daveti döner, yeni satır açmaz.
 */
 
-/** Paylaşılabilir davet adresi; `null` = henüz gelmedi ya da bu siparişin daveti yok. */
-export function useOrderNeighborInvite(orderId: string | null, locale: Locale): string | null {
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+/**
+ * Davetin ekrana gereken hâli — adres + **kalan hak**.
+ *
+ * KALAN HAK DA BURADAN GEÇER (kullanıcı kararı 21.08): ekran sınırı müşteriye söylemeliydi ve
+ * söylemiyordu. Sayı sunucudan geliyor, kancada hesaplanmıyor — tüketim siparişlerden sayılıyor,
+ * tavan davet satırında dondurulmuş (sözleşme künyesi).
+ *
+ * `null` = henüz gelmedi ya da bu siparişin daveti yok; ekran o hâlde şeridi hiç çizmez.
+ */
+export function useOrderNeighborInvite(orderId: string | null, locale: Locale): OrderNeighborInvite | null {
+  const [invite, setInvite] = useState<OrderNeighborInvite | null>(null);
 
   useEffect(() => {
     if (orderId === null) return;
     let alive = true;
     void openOrderNeighborInvite(orderId, locale).then((result) => {
       if (!alive || result.error !== null) return;
-      setInviteUrl(result.data.inviteUrl);
+      setInvite(result.data);
     });
     return () => {
       alive = false;
     };
   }, [orderId, locale]);
 
-  return inviteUrl;
+  return invite;
 }

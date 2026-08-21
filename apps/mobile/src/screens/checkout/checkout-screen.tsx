@@ -15,6 +15,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
+import { declineNeighborInvite } from '@/lib/invite/invite-api';
 import { TextField } from '@/components/ui/text-field';
 import type { MeAddress } from '@/lib/api/addresses';
 import { placeCheckoutOrder } from '@/lib/api/checkout';
@@ -197,7 +198,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      Alan cihazdan değil KİŞİDEN geliyor: davetli web'de kabul edip uygulamayı sonra yüklemiş
      olabilir (kullanıcı kararı 12.08). Süzgeç de sunucuda — gün `availableDates` içinde değilse
      alan zaten `null`, yani ekran seçilemeyen bir günü hiç görmüyor. */
-  const neighborInvite = delivery?.neighborInvite ?? null;
+  const neighborInvites = delivery?.neighborInvites ?? [];
 
   /* SEÇİLEN GÜN TÜRETİLİR, saklanan değer körü körüne kullanılmaz: adres değişince eski gün artık
      uygun günlerden biri olmayabilir. Tek gün varsa seçim SUNULMAZ, o gün kullanılır
@@ -207,11 +208,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      gelir; dokunduğu an kendi seçimi geçerlidir. Davet bir ÇAĞRIDIR — seçimi elinden almak,
      "komşunla aynı gün" kolaylığını bir kısıtlamaya çevirirdi. Sıra da bu yüzden böyle: müşterinin
      kendi seçimi (`deliveryDate`) her zaman önce sorulur. */
+  /* Önseçim EN YAKIN davetli gündür: liste sunucudan gün sırasında geliyor (sözleşme künyesi),
+     yani baştaki. Ötekiler kaybolmuyor — her biri kendi satırıyla aşağıda duruyor. */
+  const firstInvitedDate = neighborInvites.find((invite) => dates.includes(invite.deliveryDate))?.deliveryDate ?? null;
   const chosenDate =
     deliveryDate !== null && dates.includes(deliveryDate)
       ? deliveryDate
-      : neighborInvite !== null && dates.includes(neighborInvite.deliveryDate)
-        ? neighborInvite.deliveryDate
+      : firstInvitedDate !== null
+        ? firstInvitedDate
         : delivery !== null && !delivery.requiresDateChoice
           ? (dates[0] ?? null)
           : null;
@@ -768,8 +772,15 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                     gerekçesidir. Aşağıda dursaydı müşteri günü çoktan seçmiş olurdu; kullanıcının
                     "kaybolmaması lazım" dediği şey tam olarak bu bağ. "Sefer" kelimesi geçmez —
                     müşteriye gün söylenir. */}
-                {isRoute && neighborInvite !== null ? (
+                {/* HER DAVET KENDİ SATIRINDA (MB-61, kullanıcı kararı 21.08): müşteriyi birden çok
+                    komşusu birden çok güne çağırmış olabilir ve eskiden sunucu yalnız en yakın günü
+                    dönüyordu — ikinci davet ekranda HİÇ görünmüyordu. Aynı gün + aynı bölgeye iki
+                    davet varsa sunucu zaten tekini gönderir (son kabul edilen kazanır), yani burada
+                    gün başına tek satır çizilir. */}
+                {isRoute
+                  ? neighborInvites.map((neighborInvite) => (
                   <Note
+                    key={neighborInvite.inviteId}
                     tone="olive"
                     /* CÜMLE SEÇİME BAĞLI (12.08 · cihazda ölçüldü). Tek metin yazılmıştı ve müşteri
                        başka güne dokununca *"o gün sizin için seçili"* yalana dönüyordu — üstelik
@@ -780,9 +791,30 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                     description={(chosenDate === neighborInvite.deliveryDate ? t.delivery.neighborInvite : t.delivery.neighborInviteOtherDay)
                       .replace('{name}', neighborInvite.inviterName || t.delivery.neighborSomeone)
                       .replace('{day}', formatDeliveryDate(neighborInvite.deliveryDate, locale))}
+                    /* RET KUTUNUN İÇİNDE (kullanıcı kararı 21.08) — dışına konsaydı kutu bir cümleye
+                       inip denetim sayfaya dökülürdü (`Note` yuvasının künyesi). Metin "sil" değil
+                       "kaldır": kayıt silinmiyor, ret geri alınabilir — aynı bağlantıya yeniden
+                       tıklamak daveti geri getirir ve öne alır.
+
+                       Ekran YEREL BİR LİSTE TUTMAZ: ret yazıldıktan sonra anlık görüntü yeniden
+                       okunuyor (`checkout.reload`). İkinci bir doğruluk kaynağı açsaydık, sunucu
+                       reddi kabul etmediğinde ekran onu kabul etmiş gibi görünürdü. */
+                    action={
+                      <TextAction
+                        label={t.delivery.neighborDecline}
+                        tone="terracotta"
+                        onPress={() => {
+                          void declineNeighborInvite(neighborInvite.inviteId).then((result) => {
+                            if (result.error === null) checkout.reload();
+                          });
+                        }}
+                        testID="checkout-neighbor-decline"
+                      />
+                    }
                     testID="checkout-neighbor-invite"
                   />
-                ) : null}
+                    ))
+                  : null}
 
                 {/* Gün YALNIZ rota-içi teslimatta: kargonun günü müşterinin kararı değil. */}
                 {isRoute && dates.length > 0 ? (

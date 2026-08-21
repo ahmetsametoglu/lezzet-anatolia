@@ -71,7 +71,7 @@ export function OrderConfirmedScreen({
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
-  const neighborInviteUrl = useOrderNeighborInvite(orderId, locale);
+  const neighborInvite = useOrderNeighborInvite(orderId, locale);
 
   return (
     <View style={styles.screen}>
@@ -110,17 +110,37 @@ export function OrderConfirmedScreen({
           kararı). Bağlantı YOKSA şerit hiç çizilmez — boş bir şerit "burada bir şey vardı ama
           çalışmıyor" der.
         */}
-        {neighborInviteUrl === null ? null : (
+        {neighborInvite === null || neighborInvite.inviteUrl === null ? null : (
           <View style={styles.neighbor} testID="confirmed-neighbor">
             <Text style={styles.neighborTitle}>{t.confirmed.neighborTitle}</Text>
             <Text style={styles.neighborBody}>{t.confirmed.neighborBody}</Text>
-            <SecondaryButton
-              label={t.confirmed.neighborShare}
-              onPress={() => void Share.share({ message: t.confirmed.neighborMessage.replace('{url}', neighborInviteUrl) })}
-              tone="olive"
-              shape="pill"
-              testID="confirmed-neighbor-share"
-            />
+            {/* SINIR ARTIK YAZILI (kullanıcı kararı 21.08 — şeffaflık). Ekran bir süre kaç komşunun
+                yararlanabileceğini HİÇ söylemiyordu ve `maxUses` müşteri yüzeyine hiçbir yoldan
+                ulaşmıyordu; sonuç, dolmuş bir daveti paylaşmaya devam eden müşteri ve tıkladıktan
+                SONRA "bu davet dolu" cümlesiyle karşılaşan komşuydu — iki tarafın da emeği boşa.
+
+                SAYI SABİT YAZILMAZ, sözleşmeden gelir: tavan davet satırında dondurulmuş ve ayar
+                bir gün değişebilir; ekrana "3" gömmek, değiştiği gün yalan söyleyen bir cümle
+                bırakırdı (29.07 denetiminin kapattığı arıza sınıfı). */}
+            <Text style={styles.neighborLimit} testID="confirmed-neighbor-limit">
+              {(neighborInvite.remainingUses === 0 ? t.confirmed.neighborFull : t.confirmed.neighborRemaining)
+                .replace('{n}', String(neighborInvite.remainingUses))
+                .replace('{max}', String(neighborInvite.maxUses))}
+            </Text>
+            {/* DOLDUYSA PAYLAŞIM SUNULMAZ: ölü bir bağlantı paylaştırmak, davet edeni de komşusunu
+                da boşa uğraştırır. Şerit yine duruyor — düğmeyi tümden kaldırmak "bir şey bozuldu"
+                gibi okunurdu; kalan, ne olduğunu söyleyen bir cümle. */}
+            {neighborInvite.remainingUses > 0 ? (
+              <SecondaryButton
+                label={t.confirmed.neighborShare}
+                onPress={() =>
+                  void Share.share({ message: t.confirmed.neighborMessage.replace('{url}', neighborInvite.inviteUrl ?? '') })
+                }
+                tone="olive"
+                shape="pill"
+                testID="confirmed-neighbor-share"
+              />
+            ) : null}
           </View>
         )}
 
@@ -201,6 +221,15 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   neighborBody: {
     fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
+    color: theme.colors.muted,
+    textAlign: 'center',
+  },
+  /* Sınır cümlesi gövdeden bir tık ÖNDE (600): bir kolaylık değil bir KURAL söylüyor ve kullanıcı
+     onu paylaşmadan önce görmeli. Ayrı bir ton verilmedi — uyarı değil, bilgi. */
+  neighborLimit: {
+    fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
     lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors.muted,

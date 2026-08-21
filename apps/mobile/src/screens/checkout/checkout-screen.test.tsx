@@ -80,7 +80,7 @@ function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 
   return {
     addresses: [ADDRESS],
     // Komşu daveti (21.45) bu senaryonun konusu değil: kargo siparişinde davet zaten açılmıyor.
-    delivery: { deliveryType: 'shipping', availableDates: [], requiresDateChoice: false, neighborInvite: null, blocked },
+    delivery: { deliveryType: 'shipping', availableDates: [], requiresDateChoice: false, neighborInvites: [], blocked },
     payment: {
       methods: ['online'],
       creditAvailable: false,

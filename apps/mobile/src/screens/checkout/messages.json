@@ -40,7 +40,8 @@
       "dayLabel": "Teslimat günü: {day}",
       "neighborInvite": "{name} sizi {day} teslimatına çağırdı — o gün sizin için seçili.",
       "neighborInviteOtherDay": "{name} sizi {day} teslimatına çağırdı. Birlikte teslim alıp puan kazanmak için o günü seçin.",
-      "neighborSomeone": "Komşunuz"
+      "neighborSomeone": "Komşunuz",
+      "neighborDecline": "Bu daveti kaldır"
     },
     "payment": {
       "eyebrow": "Ödeme",
@@ -148,6 +149,8 @@
       "neighborTitle": "🚚 Komşunuzu da bu güne çağırın",
       "neighborBody": "Aracımız o gün zaten sokağınızda olacak. Komşunuz da aynı güne sipariş verirse birlikte teslim alırsınız — ve siz puan kazanırsınız.",
       "neighborShare": "Davet bağlantısını paylaş",
+      "neighborRemaining": "Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max}).",
+      "neighborFull": "Bu davet doldu — {max} komşunuz katıldı. Bir sonraki siparişinizde yeni bir davet açılır.",
       "neighborMessage": "Lezzet Anatolia aracı sokağımıza geliyor — bağlantıdaki güne sipariş verirsen birlikte teslim alırız: {url}"
     }
   },
@@ -192,7 +195,8 @@
       "dayLabel": "Jour de livraison : {day}",
       "neighborInvite": "{name} vous invite à la livraison du {day} — cette date est présélectionnée.",
       "neighborInviteOtherDay": "{name} vous invite à la livraison du {day}. Choisissez cette date pour être livrés ensemble et gagner des points.",
-      "neighborSomeone": "Votre voisin"
+      "neighborSomeone": "Votre voisin",
+      "neighborDecline": "Retirer cette invitation"
     },
     "payment": {
       "eyebrow": "Paiement",
@@ -300,6 +304,8 @@
       "neighborTitle": "🚚 Invitez votre voisin pour ce jour-là",
       "neighborBody": "Notre camion sera déjà dans votre rue ce jour-là. Si votre voisin commande pour la même date, vous serez livrés ensemble — et vous gagnez des points.",
       "neighborShare": "Partager le lien d'invitation",
+      "neighborRemaining": "Encore {n} voisin(s) peuvent profiter de cette invitation (maximum {max}).",
+      "neighborFull": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande.",
       "neighborMessage": "Le camion Lezzet Anatolia passe dans notre rue — commande pour la date indiquée dans le lien et nous serons livrés ensemble : {url}"
     }
   },
@@ -344,7 +350,8 @@
       "dayLabel": "Liefertag: {day}",
       "neighborInvite": "{name} lädt Sie zur Lieferung am {day} ein — dieser Tag ist für Sie vorausgewählt.",
       "neighborInviteOtherDay": "{name} lädt Sie zur Lieferung am {day} ein. Wählen Sie diesen Tag, um zusammen beliefert zu werden und Punkte zu sammeln.",
-      "neighborSomeone": "Ihre Nachbarschaft"
+      "neighborSomeone": "Ihre Nachbarschaft",
+      "neighborDecline": "Diese Einladung entfernen"
     },
     "payment": {
       "eyebrow": "Zahlung",
@@ -452,6 +459,8 @@
       "neighborTitle": "🚚 Laden Sie Ihre Nachbarschaft für diesen Tag ein",
       "neighborBody": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Straße. Bestellt Ihre Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
       "neighborShare": "Einladungslink teilen",
+      "neighborRemaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
+      "neighborFull": "Diese Einladung ist voll — {max} Nachbarn haben teilgenommen. Bei Ihrer nächsten Bestellung öffnet sich eine neue.",
       "neighborMessage": "Der Lezzet-Anatolia-Wagen kommt in unsere Straße — bestell für den Tag im Link, dann werden wir zusammen beliefert: {url}"
     }
   }

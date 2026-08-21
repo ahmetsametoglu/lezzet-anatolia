@@ -30,7 +30,7 @@ const delivery: NonNullable<CheckoutSnapshot['delivery']> = {
   requiresDateChoice: true,
   // Komşu daveti engel kararına GİRMEZ (17.10): davet bir kolaylıktır, sipariş verilebilirliğin
   // koşulu değil. Fikstürde `null` — davetli hâli ayrı bir soru ve bu dosyanın konusu değil.
-  neighborInvite: null,
+  neighborInvites: [],
   blocked: false,
 };
 

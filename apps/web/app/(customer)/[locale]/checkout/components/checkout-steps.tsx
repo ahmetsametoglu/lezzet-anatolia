@@ -358,14 +358,23 @@ export function DeliveryStep(props: CheckoutViewProps) {
       {/* **Komşu daveti — günün ÜSTÜNDE** (17.10, kullanıcı vurgusu 12.08: *"bunun kaybolmaması
           lazım"*). Seçimin altında dursaydı davetli önce günü seçer, sonra neden o günü seçtiğini
           okurdu. Cümle davet edenin YALNIZ adını taşır; gün zaten aşağıda önseçili geliyor. */}
-      {inRoute && !delivery.blocked && delivery.neighborInvite && (
-        <p className="rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive-dark">
-          🚚{' '}
-          {t.delivery.neighborInvite
-            .replace('{name}', delivery.neighborInvite.inviterName)
-            .replace('{date}', formatDeliveryDate(delivery.neighborInvite.deliveryDate, locale))}
-        </p>
-      )}
+      {/* HER DAVET KENDİ SATIRINDA (MB-61, kullanıcı kararı 21.08): sözleşme artık liste taşıyor
+          çünkü müşteriyi birden çok komşusu birden çok güne çağırmış olabilir ve eskiden yalnız en
+          yakın gün görünüyordu — ikinci davet sessizce kayboluyordu. Cümle aynı, tekrarlanan yok:
+          aynı sözlük satırı her davet için kuruluyor. */}
+      {inRoute &&
+        !delivery.blocked &&
+        delivery.neighborInvites.map((invite) => (
+          <p
+            key={invite.inviteId}
+            className="rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive-dark"
+          >
+            🚚{' '}
+            {t.delivery.neighborInvite
+              .replace('{name}', invite.inviterName)
+              .replace('{date}', formatDeliveryDate(invite.deliveryDate, locale))}
+          </p>
+        ))}
 
       {/* Kargoda gün SEÇİLMEZ: tarih taşıyıcıya bağlı, söz vermiyoruz (DOMAIN §6). */}
       {inRoute && !delivery.blocked && (

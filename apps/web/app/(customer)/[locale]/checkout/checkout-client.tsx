@@ -132,7 +132,10 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
         // Komşu daveti varsa o gün ÖNSEÇİLİ gelir (17.10): davetin tek işlevi o güne denk gelmek
         // ve davetliyi günü kendi bulmaya bırakmak, daveti sessizce işlevsiz kılardı. Müşterinin
         // KENDİ seçimi yine üstte: `prev.deliveryDate` geçerliyse ona dokunulmuyor.
-        const invited = data.delivery?.neighborInvite?.deliveryDate ?? null;
+        // Davet artık LİSTE (MB-61): önseçim EN YAKIN davetli gündür — liste sunucuda zaten gün
+        // sırasında geliyor, yani baştaki. Ötekiler kaybolmuyor, gün seçicide kendi adlarıyla
+        // duruyor (aşağıdaki bant künyesi).
+        const invited = data.delivery?.neighborInvites[0]?.deliveryDate ?? null;
         const keepDate =
           prev.deliveryDate && dates.includes(prev.deliveryDate)
             ? prev.deliveryDate

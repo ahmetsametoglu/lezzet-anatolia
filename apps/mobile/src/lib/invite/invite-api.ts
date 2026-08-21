@@ -5,6 +5,7 @@ import {
   OrderNeighborInviteSchema,
   type InviteWelcomeView,
   type NeighborWelcomeView,
+  type OrderNeighborInvite,
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
@@ -91,6 +92,18 @@ export function fetchNeighborWelcome(token: string): Promise<ApiResult<NeighborW
  * `inviteUrl: null` ARIZA DEĞİL: kargo siparişinde "aynı sefer" yok, kesim saati dolmuş seferde de
  * çağrılacak kimse kalmamıştır. Ekran o hâlde şeridi hiç çizmez.
  */
-export function openOrderNeighborInvite(orderId: string, locale: Locale): Promise<ApiResult<{ inviteUrl: string | null }>> {
+export function openOrderNeighborInvite(orderId: string, locale: Locale): Promise<ApiResult<OrderNeighborInvite>> {
   return authorizedFetch(`/api/v1/me/invite/neighbor?locale=${locale}`, OrderNeighborInviteSchema, { method: 'POST', body: { orderId } });
+}
+
+/**
+ * **Komşu davetini reddet** (kullanıcı kararı 21.08) — davet artık gün seçicide görünmez ve
+ * sipariş ona bağlanmaz.
+ *
+ * Kimlik gövdede TAŞINMAZ, Bearer'dan çözülür: başkasının davetini reddettirmek gövdeye yazılacak
+ * bir müşteri kimliğiyle mümkün olurdu (uç künyesi). Ret geri alınabilir — aynı bağlantıya yeniden
+ * tıklamak kabulü öne alır.
+ */
+export function declineNeighborInvite(inviteId: string): Promise<ApiResult<boolean>> {
+  return authorizedFetch('/api/v1/me/invite/neighbor/decline', z.boolean(), { method: 'POST', body: { inviteId } });
 }

@@ -4566,3 +4566,35 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   "Siparişler"e döndü, toptan çatalı) · Yaman (kişisel) → davet GÖRÜNÜR. Test hesabı ölçüm sonrası
   eski oturumuna geri alındı. `typecheck` · `lint` temiz; mobil paket 595/599 — düşen dördü kabuk
   düzeyi zaman aşımı ailesi, İZOLE koşuda dördü birden geçti (18/18).
+
+- [x] (21.93) **KOMŞU DAVETİ: SON KABUL EDİLEN KAZANIR, DAVETLİ REDDEDEBİLİR, SINIR YAZILI**
+  `touches:` `supabase/migrations/0044_neighbor_invite.sql` · `packages/types/src/{entities/neighbor-invite,contracts/checkout-api,contracts/invite-api}.schema.ts` · `packages/database/src/services/neighbor-invite.service.ts` · `packages/application/src/{customer/neighbor,order/checkout-snapshot}.ts` · `apps/mobile-api/src/api/v1/invite.ts` · `apps/mobile/src/screens/checkout/*` · `apps/web/app/(customer)/[locale]/checkout/*`
+
+  **Durum (21.08):** kullanıcı kararı `docs/uygulama/BACKLOG-musteri.md` MB-61'de; kod ve ölçüm
+  burada. `(21.45)` daveti cihaza getirmişti — bu tur onu **çoğullaştırdı ve geri alınabilir**
+  yaptı.
+
+  · Kabul satırına `chosen_at` + `declined_at`; dizin `(customer_id, chosen_at desc)`.
+  · `neighborInvite` → `neighborInvites` (dizi); gün başına tek kayıt, kazanan en yeni `chosen_at`.
+    Ölçüt dizinin sırası DEĞİL kabul zamanı — arızanın kökü buydu.
+  · `POST /api/v1/me/invite/neighbor/decline` — `inviteClaim` router'ında, çünkü "kim reddediyor"
+    Bearer'dan çözülür; açık uçta dursa kimlik gövdeden gelir ve başkasının daveti reddettirilirdi.
+  · `OrderNeighborInviteSchema` artık `remainingUses` + `maxUses` taşıyor; sipariş onayı sınırı
+    yazıyor ve doluysa paylaşım düğmesini çizmiyor. Sayı sunucuda sayılıyor.
+
+  **Cihazda ölçüldü (OPPO CPH1907, Claire → Julien, Fransızca arayüz):** sınır satırı *"Encore 3
+  voisin(s) peuvent profiter de cette invitation (maximum 3)"* · davet notu *"Claire vous invite à
+  la livraison du mardi 25 août — cette date est présélectionnée"* + 25 Ağustos çipi ön seçili ·
+  ret sonrası not ve ön seçim kalktı, `declined_at` damgalandı, satır silinmedi · aynı bağlantı
+  yeniden açılınca `declined_at` temizlendi ve `chosen_at` 10:05 → 10:08 öne alındı · iki kabul
+  (10:08, 10:09) varken ekranda **tek not**, uç ikinciyi bağladı.
+
+  BEKLEYEN(21.93): "davet doldu" hâli cihazda görülmedi — üç ayrı komşunun aynı güne gerçekten
+  sipariş vermesi gerekiyordu. Uç tarafı (`remainingUses: 0`) doğrulandı, ekran dalı değil.
+
+  **Tam paket bu turda YEŞİL DEĞİL ve sebebi bu iş değil:** iki koşuda da yalnız
+  `Test timed out in 15000ms` düştü, düşen kümeler kesişmedi (1 → 8) ve hepsi fiyat testlerindeydi
+  (`price-change`, `pricing-viewer`) — dokunulan alanlarda düşen yok. Ayrıca ölçüm sırasında
+  ödeme ekranında **döküm satırlarıyla genel toplamın farklı sepetlerden geldiği** görüldü
+  (8× börek 47,47 € listelenirken toplam 16,00 € = sunucudaki 2 kalemin %30 indirimlisi);
+  müdahale EDİLMEDİ, kökü ölçülüyor.
