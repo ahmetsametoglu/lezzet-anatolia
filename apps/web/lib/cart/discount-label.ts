@@ -1,5 +1,5 @@
 import type { Locale } from '@lezzet/i18n';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type CheckoutSummary } from '@lezzet/types';
 import type { CartDiscount } from './cart-types';
 
 /**
@@ -69,4 +69,24 @@ export function discountLabel(discount: CartDiscount, t: DiscountLabelCopy, loca
  */
 function percent(template: string, value: number): string {
   return template.replace('{percent}', String(value));
+}
+
+/**
+ * SİPARİŞ ÖZETİNİN indirimi → aynı künye (kullanıcı kararı 21.08).
+ *
+ * Sepetinkinden ayrı bir kapı, çünkü sözleşmeleri ayrı: sepet indirimin dört HÂLİNİ taşır (kupon
+ * tuttu / reddedildi / kendiliğinden indi / yok), checkout özeti o hâllerin ÇÖZÜLMÜŞ sonucunu —
+ * tutar zaten kapsamın payı kadar hesaplanmış, ad zaten dile çözülmüş, kupon kodu ad yerine
+ * konmuş. Hâlleri ikinci kez burada ayıklamak, sunucunun verdiği kararı istemcide tekrar vermekti.
+ *
+ * Ortak olan tek şey SEBEP cümleleri ve onlar bilerek paylaşılıyor: adı olmayan bir kampanya
+ * sepette "İndirim — kampanya %8" iken özette başka türlü yazamaz.
+ */
+export function orderDiscountLabel(discount: CheckoutSummary['discount'], t: DiscountLabelCopy): string {
+  if (!discount) return t.discount;
+  if (discount.label) return `${t.discount} — ${discount.label}`;
+  const reason = discount.reason;
+  if (!reason) return t.discount;
+  if (reason.kind === 'customer_rate') return `${t.discount} — ${percent(t.discountCustomerRate, reason.percent)}`;
+  return `${t.discount} — ${reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent)}`;
 }

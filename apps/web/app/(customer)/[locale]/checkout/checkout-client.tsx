@@ -49,7 +49,7 @@ interface CheckoutClientProps {
   customer: { name: string; email: string; phone: string | null } | null;
 }
 
-const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, payment: null };
+const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, payment: null, summary: null };
 
 /** `crypto.randomUUID` sunucu render'ında da var (Node 19+); yine de eski tarayıcı için yedeği var. */
 function newAttemptKey(): string {
@@ -171,6 +171,11 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
       couponCode: coupon,
       idempotencyKey: attemptKey.current,
       shippingOrder,
+      /* Ekranın gösterdiği sepetin imzası (21.08) — sunucunun verdiği değer, olduğu gibi geri
+         gidiyor. Sepet iki yüzeyde paylaşıldığı için son okumamızla bu tıklama arasında değişmiş
+         olabilir; değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp bilerek
+         onaylar. */
+      expectedCartFingerprint: snapshot.summary?.fingerprint ?? null,
     });
 
     if (errorKey || !data) {

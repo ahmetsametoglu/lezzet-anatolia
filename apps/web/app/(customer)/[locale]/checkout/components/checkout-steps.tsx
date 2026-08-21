@@ -11,7 +11,7 @@ import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
 import { AddressForm, toFormInput } from '@/components/customer/delivery/address-form';
 import { cartKey } from '@/lib/cart/cart-types';
-import { discountLabel } from '@/lib/cart/discount-label';
+import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { checkoutBlocker, type CheckoutViewProps } from '../checkout-types';
 
@@ -499,7 +499,31 @@ export function OrderSummary(props: CheckoutViewProps) {
       ? formatPrice(payment.shippingFeeCents, locale)
       : summary.free;
   const totalCents = payment?.orderTotalCents ?? cart.totalCents;
-  const discountCents = cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? cart.discount.amountCents : 0;
+  /*
+    ── DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) ──────────────────
+    Kural TEK CÜMLE: **özet varsa hem satırlar hem indirim ondan gelir; yoksa ikisi de sepetten.
+    Asla karışık.**
+
+    Karışıktı: satırlar `cart.lines`ten, toplam `payment`ten geliyordu — ve aynı ifade mobilde de
+    birebir duruyordu. Sepet SUNUCUDA yaşayıp iki yüzeyde paylaşıldığı için ikisi ayrışabiliyor;
+    cihazda ölçüldü (21.08): ekran `2× kek + 8× börek` listelerken genel toplam `16,00 €` yazdı.
+    Kalemler 63,47 € topluyordu ve hangisinin doğru olduğunu söyleyen hiçbir şey yoktu — doğru
+    olan TOPLAMDI, bayat olan listeydi.
+
+    Adres seçilmeden özet YOKTUR (sunucu kapsamı çözemez) ve o hâlde sepete düşmek doğrudur:
+    ekran "sepetin şu, şimdi adres seç" der. Yanlış olan ikisini aynı anda karıştırmaktı.
+  */
+  const orderSummary = snapshot.summary;
+  const summaryLines: { key: string; kind: 'variant' | 'bundle'; name: string; qty: number; lineTotalCents: number | null }[] =
+    orderSummary === null
+      ? cart.lines.map((line) => ({ key: cartKey(line), kind: line.kind, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
+      : orderSummary.lines.map((line, index) => ({ key: `order-${index}`, ...line }));
+  const discountCents =
+    orderSummary !== null
+      ? (orderSummary.discount?.amountCents ?? 0)
+      : cart.discount.status === 'applied' || cart.discount.status === 'automatic'
+        ? cart.discount.amountCents
+        : 0;
 
   // Onay düğmesi kart ödemesinde ÇİZİLMEZ: orada onayı Stripe formunun kendi düğmesi veriyor
   // (önce kartı valide etmesi gerekiyor). İki düğme müşteriye hangisinin bitirdiğini sordururdu.
@@ -534,9 +558,9 @@ export function OrderSummary(props: CheckoutViewProps) {
             </div>
           ))}
         {cartReady &&
-          cart.lines.map((line) => (
+          summaryLines.map((line) => (
             <SummaryRow
-              key={cartKey(line)}
+              key={line.key}
               // Paket satırı adetle değil KÜNYESİYLE anılır (tasarım: "Bayram Sofrası (paket)"):
               // paketin adedi tek, satılan şey bütünün kendisi.
               label={line.kind === 'bundle' ? `${line.name} ${t.summary.packageSuffix}` : `${line.name} × ${line.qty}`}
@@ -545,7 +569,14 @@ export function OrderSummary(props: CheckoutViewProps) {
           ))}
         {discountCents > 0 && (
           // Etiket sepetle AYNI yardımcıdan: müşteri iki ekranda aynı indirimi iki türlü okumamalı.
-          <SummaryRow label={discountLabel(cart.discount, summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
+          <SummaryRow
+            /* Künye de aynı kaynaktan: özet varsa sunucunun çözdüğü ad, yoksa sepetin türetmesi.
+               Adı olmayan kampanyada iki yol da SEBEBİ yazar — müşteri aynı indirimi iki ekranda
+               iki türlü okumasın. */
+            label={orderSummary !== null ? orderDiscountLabel(orderSummary.discount, summary) : discountLabel(cart.discount, summary, locale)}
+            value={`−${formatPrice(discountCents, locale)}`}
+            tone="olive"
+          />
         )}
         {/* Ücretsizde YALNIZ tutar yeşil (tasarım): ücret bir maliyet, ücretsizlik bir kazanç. */}
         {/* Yeşil ton bir KAZANÇ söyler ("Ücretsiz"); bilinmeyen tutar bir kazanç değil, o yüzden

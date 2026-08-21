@@ -35,7 +35,9 @@ const delivery: NonNullable<CheckoutSnapshot['delivery']> = {
 };
 
 function snapshotOf(over: Partial<CheckoutSnapshot> = {}): CheckoutSnapshot {
-  return { addresses: [], delivery, payment, ...over };
+  // Özet engel kararına GİRMEZ (21.08): döküm "ne ödüyorum"un cevabıdır, "verebilir miyim"in değil
+  // — `checkoutBlocker` sepetin engelli kalemine, adrese ve ödemeye bakar. Fikstürde `null`.
+  return { addresses: [], delivery, payment, summary: null, ...over };
 }
 
 const OK = { cartFailed: false, cartHasBlocked: false, snapshot: snapshotOf(), addressId: 'adr-1' };

@@ -4598,3 +4598,50 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ödeme ekranında **döküm satırlarıyla genel toplamın farklı sepetlerden geldiği** görüldü
   (8× börek 47,47 € listelenirken toplam 16,00 € = sunucudaki 2 kalemin %30 indirimlisi);
   müdahale EDİLMEDİ, kökü ölçülüyor.
+
+- [x] (21.94) **ÖDEME ÖZETİ TEK OKUMADAN — döküm ile toplam ayrı sepetleri anlatıyordu**
+  `touches:` `packages/types/src/contracts/checkout-api.schema.ts` · `packages/application/src/{cart/cart-types,order/checkout-snapshot,order/checkout-draft,order/place-order}.ts` · `apps/mobile-api/src/api/v1/checkout.ts` · `apps/mobile/src/screens/{checkout,customer-kit}/*` · `apps/web/app/(customer)/[locale]/checkout/*` · `apps/web/lib/cart/discount-label.ts`
+
+  **Durum (21.08):** kullanıcı cihazda gördü, kararı A+B birlikte verdi.
+
+  ── ARIZA (cihazda ölçüldü, OPPO CPH1907) ───────────────────────────────────
+  Ekran `2× Gâteau artisan citron 16,00 €` + `8× Peynirli Adana Böreği 55,84 €` listeleyip
+  **Total général 16,00 €** yazıyordu; kalemler 63,47 € topluyordu. Sebep iki kaynak:
+  `payment?.orderTotalCents ?? view.totalCents` — döküm YEREL sepetten, toplam SUNUCUDAN. Aynı
+  ifade iki yüzeyde birebir kopyaydı ([checkout-screen.tsx:331], [checkout-steps.tsx:501]).
+
+  **Doğru olan TOPLAMDI, bayat olan listeydi** — kullanıcının ilk okuması tersiydi ve düzeltmenin
+  hedefini değiştiren fark bu. Asgari sepet uyarısı da doğru sayıya göre çıkıp ekrandaki listeye
+  göre anlamsız görünüyordu.
+
+  Sepet SUNUCUDA yaşayıp iki yüzeyde paylaşıldığı için (`cart-store` künyesi) ayrışma istisna
+  değil: müşteri webde kalem çıkarırken telefonu ödeme adımında açık durabilir. Bu turda da bir
+  seed koşusu üç hesabın sepetini birden yeniden yazdı (`updated_at` hepsinde sabit `2025-08-06`).
+
+  ── A · ÖZET SÖZLEŞMEYE GİRDİ ───────────────────────────────────────────────
+  Anlık görüntü toplamı ZATEN bu kalemlerden hesaplıyordu (`orderScopeOf`); yalnız toplamı
+  döndürüyordu. Artık dökümü de döndürüyor (`summary`: satırlar, ara toplam, indirim, kapsam dışı
+  satırlar). Kural tek cümle: **özet varsa hem liste hem toplam ondan; yoksa ikisi de sepetten —
+  asla karışık.** Adres seçilmeden özet olmaz ve o hâlde sepete düşmek zaten doğruydu.
+
+  ── B · `cart_changed` KAPISI ───────────────────────────────────────────────
+  Özet bir içerik imzası taşıyor (`cartFingerprint`); onay gövdesi onu geri gönderiyor, taslak
+  sunucudaki sepeti yeniden okuyup karşılaştırıyor. `price_changed`ın kardeşi ve ONUN ÖNÜNDE:
+  içerik değiştiyse fiyat karşılaştırması başka bir sepeti anlatır. Bu kapı olmadan müşteri
+  gördüğü listeyi onaylayıp SESSİZCE başka bir sipariş alabiliyordu — ret hâlleri arasında böyle
+  bir hâl hiç yoktu.
+
+  İmza `cart.updated_at` DEĞİL içerik özeti: o kolonu seed sabit tarihle yazıyor, yani hem yanlış
+  alarm verir hem gerçek değişimi kaçırırdı. İmzasız istek reddedilmez — kapı imzayı GÖNDERENİ
+  korur, eski istemciyi kırmaz.
+
+  ── NEREDEYSE SESSİZCE ÖLÜYORDU ─────────────────────────────────────────────
+  `placeOrder` alanları tek tek kopyalıyor ve `expectedCartFingerprint` orada yoktu; mobil taraf
+  `spread` kullandığı için derleyici susmuştu ve kapı HİÇ çalışmayacaktı. Web'in tip denetimi
+  yakaladı. Gerekçe `PlaceOrderInput` künyesine yazıldı.
+
+  **Ölçümler:** eski imzayla sipariş → `cart_changed` · doğru imzayla → kapıyı geçti, gerçek
+  duruma düştü (`min_basket`) · imzasız → geçti · cihazda döküm 16,00 + 55,84 = **71,84**,
+  −8,37 → **63,47** ve üçü de sunucunun tek okumasıyla birebir (`7184 / 837 / 6347`).
+  `typecheck` sekiz pakette temiz · `lint` · `boundaries` (1410 modül) · birim **1380/1380** ·
+  mobil checkout 3/3. Metinler tr/fr/de, iki yüzeyde.

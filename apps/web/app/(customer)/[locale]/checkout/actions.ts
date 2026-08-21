@@ -75,7 +75,7 @@ export async function loadCheckoutAction(
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
-    if (!customerId) return { data: { addresses: [], delivery: null, payment: null }, errorKey: null };
+    if (!customerId) return { data: { addresses: [], delivery: null, payment: null, summary: null }, errorKey: null };
 
     // Sıra, iki tur teslimat çözümü ve kargo siparişinin bölgesizliği — hepsi kapının kendi
     // künyesinde (`@lezzet/application`, `order/checkout-snapshot`). Uç yalnız kimliği çözer,
@@ -205,6 +205,13 @@ export async function confirmCheckoutAction(input: {
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — `loadCheckoutAction` ile aynı bayrak. */
   shippingOrder?: boolean;
+  /**
+   * **Ekranın gösterdiği sepetin imzası** — anlık görüntünün `summary.fingerprint`ı, olduğu gibi
+   * geri gelir (21.08). Sepet iki yüzeyde paylaşıldığı için son okuma ile bu dokunuş arasında
+   * değişmiş olabilir; değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp
+   * bilerek onaylar. Boşsa kontrol atlanır.
+   */
+  expectedCartFingerprint?: string | null;
 }): Promise<CustomerResult<ConfirmOutcome>> {
   try {
     if (!hasLocale(routing.locales, input.locale)) throw new Error('Geçersiz dil');
@@ -227,6 +234,7 @@ export async function confirmCheckoutAction(input: {
       couponCode: input.couponCode,
       idempotencyKey: input.idempotencyKey,
       shippingOrder: input.shippingOrder,
+      expectedCartFingerprint: input.expectedCartFingerprint,
       // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım.
       bundles: getPackagesByIds,
       // Edinim kaynağı oturumun kampanya ÇEREZİNİ okur — taşıma ayrıntısı, pakette yaşayamaz.
