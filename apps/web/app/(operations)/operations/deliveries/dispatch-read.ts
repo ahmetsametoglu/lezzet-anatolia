@@ -142,8 +142,10 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
     new WarehouseService(db).list(),
     new UserProfileService(db).listByRole('courier'),
     // Sefer şeridi (18.08): kuryenin rota seçim ekranıyla AYNI kapı — sevkiyatçının gördüğü
-    // "açılmadı" ile kuryenin gördüğü seçim listesi ayrışamaz.
-    listCourierRoutes(db, { date }),
+    // "açılmadı" ile kuryenin gördüğü seçim listesi ayrışamaz. Kapsam AÇIKÇA depo-üstü (11.7):
+    // bu dala yalnız admin ulaşıyor (page guard `requireAdmin`) ve sevkiyat masasının işi tam
+    // olarak bütün ağın gününü görmek — kuryedeki daraltma burada bir kayıp olurdu.
+    listCourierRoutes(db, { date, scope: { kind: 'all' } }),
   ]);
 
   /**

@@ -104,12 +104,21 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     **Catch-up claim:** aynı kuryenin açık sefere ikinci basışı reddedilmez, sonradan hazırlanan
     durakları da sefere bağlar (mobil şeridin bulgusu). **`courier_id` sökülmedi:** beş sahiplik
     kapısı ona yaslanıyor; yazan el sevkiyatçı menüsünden kuryenin sefer başlangıcına geçti.
-  - **BEKLEYEN(11.7):** rota seçimi kuryenin DEPO KAPSAMINI süzmüyor — A deposunun kuryesi B'nin
-    rotasını başlatabilir (rol kapısı yalnız role bakıyor). ~~Kapsam ataması 19.5 ile bağlanacak~~
-    → **beklediği altyapı 19.08 itibarıyla HAZIR** (kayıt düzeltmesi): kapsam Ayarlar'dan yazılıyor
-    (03.08, `user_profiles.warehouse_ids`) ve `warehouseScope` motoru 19.3'ten beri var — bu artık
-    bekleyen değil, rota kapılarına (`listCourierRoutes` · `startCourierDay`) süzgeç ekleyen DAR bir
-    iş; sırada.
+  - ✅ **KAPSAM SÜZGECİ YAZILDI (21.08, kullanıcı kuralı: "kurye hangi depoya aitse o depoya ait
+    rotaları görebilmeli ve alabilmeli")** — eski kayıt: rota seçimi depo kapsamını süzmüyordu, A
+    deposunun kuryesi B'nin rotasını başlatabilirdi. Artık: `listCourierRoutes` `scope` (zorunlu,
+    `WarehouseScope`) alıyor ve bölgeleri `canAccessWarehouse` ile süzüyor; `startCourierDay`
+    kapsamı KURYENİN PROFİLİNDEN sunucuda çözüyor (istemciden kapsam alınmaz — hazırlık kapılarının
+    gerekçesi) ve verilmiş `zoneId` kapsam dışıysa `no_route` dönüyor (`zone_not_found` emsali:
+    seçim listesi zaten yalnız kendi deposunu gösterir, yazım hiç yapılmaz). İki eksen ayrık kaldı:
+    kurye eksenine daraltma YOK (sahiplik claim'le doğar), depo ekseni süzer. Boş kapsam = hiçbir
+    rota (fail-closed, motorun kuralı). Sevkiyat masası depo-üstü bakışını `{ kind: 'all' }` ile
+    AÇIKÇA söylüyor (sayfaya yalnız admin ulaşıyor). Mobil `/courier/routes` ucu `staff` profilinden
+    kapsam geçiriyor — uyarlama mekanik yapıldı, not bırakıldı
+    (`docs/talep/not-mobil-kurye-rota-kapsam-suzgeci.md`). **Negatif taraf TESTLE kilitli**
+    (kullanıcı onayı 21.08): `day.test` › *"başka deponun rotası listede görünmez ve kimliği elle
+    verilse bile başlatılamaz"* — yabancı rota listede yok, elle `zoneId` `no_route` + sıfır sefer
+    kaydı, boş kapsam boş liste (fail-closed).
 
 ## Netleşecekler
 

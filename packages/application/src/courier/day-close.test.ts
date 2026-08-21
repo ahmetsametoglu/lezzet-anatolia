@@ -60,6 +60,8 @@ beforeAll(async () => {
   customerId = customer.id;
   courierId = courier.id;
   createdProfiles.push(customer.id, courier.id);
+  // Kurye rol + depo kapsamıyla açılır (11.7): boş kapsam fail-closed `no_route` demek.
+  await profiles.setRoles(courierId, ['courier'], [warehouseId]);
 
   accountId = (await new AccountService(db).insert({ name: `Kapanış kasası ${stamp}`, type: 'cash' })).id;
   // Rota HER GÜN koşar: testin hangi gün koştuğu davranışı değiştirmesin.

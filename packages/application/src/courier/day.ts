@@ -11,7 +11,7 @@ import {
   SettingsService,
   UserProfileService,
 } from '@lezzet/database';
-import { canTransition, deliveryRunReferenceNo, whatsAppLink, type MessageLocale } from '@lezzet/domain-core';
+import { canAccessWarehouse, canTransition, deliveryRunReferenceNo, warehouseScope, whatsAppLink, type MessageLocale } from '@lezzet/domain-core';
 import { listCourierRoutes } from './routes';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -259,14 +259,30 @@ export async function startCourierDay(
 ): Promise<CourierDayStart> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
 
+  /**
+   * Kuryenin DEPO KAPSAMI sunucuda, kendi profilinden çözülür (11.7 · kullanıcı kuralı 21.08:
+   * "kurye hangi depoya aitse o depoya ait rotaları görebilmeli ve alabilmeli"). Parametre olarak
+   * alınmaz — hazırlık kapılarının aynı gerekçesi: istemciden gelen kapsam, kapsam kontrolünü
+   * kandırmanın kendisidir. Profil yoksa kapsam da yoktur (fail-closed).
+   */
+  const profile = await new UserProfileService(db).getById(input.courierId);
+  const scope = profile ? warehouseScope(profile.roles, profile.warehouseIds) : ({ kind: 'none' } as const);
+
   // Rota çözümü — verilmemişse o gün koşanlardan; seçim listesiyle AYNI kaynaktan gelir ki ekranın
   // gösterdiği ile kapının seçtiği ayrışamasın.
   let zoneId = input.zoneId ?? null;
   if (!zoneId) {
-    const routes = await listCourierRoutes(db, { date });
+    const routes = await listCourierRoutes(db, { date, scope });
     if (routes.length === 0) return { status: 'no_route' };
     if (routes.length > 1) return { status: 'route_required' };
     zoneId = routes[0]!.zoneId;
+  } else {
+    // Kimlik VERİLMİŞSE de aynı süzgeçten geçer: seçim listesi kapsamla daraldı, buraya kapsam
+    // dışı bir kimliğin gelmesi bayat bir ekranın ya da elle kurulmuş bir isteğin işaretidir.
+    // Cevap `zone_not_found`un emsali — başlatılacak rota yok, ekran seçim listesine döner ve o
+    // liste zaten yalnız kuryenin kendi deposunu gösterir. Yazım HİÇ yapılmaz.
+    const zone = await new DeliveryZoneService(db).getById(zoneId);
+    if (!zone || !canAccessWarehouse(scope, zone.warehouseId)) return { status: 'no_route' };
   }
 
   const runs = new DeliveryRunService(db);

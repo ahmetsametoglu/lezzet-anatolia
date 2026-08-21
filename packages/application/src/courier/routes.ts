@@ -7,6 +7,7 @@ import {
   VehicleService,
   WarehouseService,
 } from '@lezzet/database';
+import { canAccessWarehouse, type WarehouseScope } from '@lezzet/domain-core';
 import type { DeliveryRun, DeliveryZone } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -15,8 +16,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  *
  * Hedef akış kullanıcının cümlesi: *"arayüzden kurye ataması saçma — kurye giriş yapar, ROTAYI
  * seçer, aracını doldurur, o rotayı sürer."* Bu kapı seçim ekranının verisini kurar: o gün koşan
- * aktif rotalar, yükleri ve varsa açık seferin künyesi. Kuryeye SÜZÜLMEZ — seçilecek rotanın
+ * aktif rotalar, yükleri ve varsa açık seferin künyesi. KURYEYE süzülmez — seçilecek rotanın
  * durakları henüz kimsenin değil; sahiplik seferi başlatanın claim'iyle doğar.
+ *
+ * ── İKİ EKSEN, İKİ AYRI KARAR (11.7 · kullanıcı kuralı 21.08) ────────────────
+ * Kurye eksenİ süzmez (üstteki karar), DEPO ekseni süzer: *"kurye hangi depoya aitse o depoya ait
+ * rotaları görebilmeli ve alabilmeli."* Rota bölgeden, bölge depodan doğar; başka deponun rotası
+ * bu listede hiç görünmez — görünseydi Strasbourg'un kuryesi Kehl'in seferini başlatır, malı başka
+ * şehirde duran duraklar onun üstüne yazılırdı (`CLAUDE §1`: süzgeci unutulan okuma çok depoluda
+ * sessizce başka şehrin işini gösterir). `scope` bu yüzden ZORUNLU; depo-üstü bakış isteyen çağıran
+ * bunu `{ kind: 'all' }` ile AÇIKÇA söyler (Sevkiyat masası öyle yapıyor).
  *
  * Rota kümesi doğal tavanlı (operatör elle kurar) → tek turda çekilir, sayfalama yok (CLAUDE §1).
  */
@@ -56,7 +65,10 @@ function isoWeekdayOf(date: string): number {
  * TS'te, çünkü rota kümesi tek turda zaten elde (dizi-içerir süzgecini DB'ye taşımak, doğal
  * tavanlı bir küme için ikinci bir sorgu dili öğrenmek olurdu).
  */
-export async function listCourierRoutes(db: SupabaseClient, input: { date: string }): Promise<CourierRouteView[]> {
+export async function listCourierRoutes(
+  db: SupabaseClient,
+  input: { date: string; scope: WarehouseScope },
+): Promise<CourierRouteView[]> {
   const weekday = isoWeekdayOf(input.date);
   const [zones, runs, orders, warehouses] = await Promise.all([
     new DeliveryZoneService(db).list({ activeOnly: true }),
@@ -65,7 +77,10 @@ export async function listCourierRoutes(db: SupabaseClient, input: { date: strin
     new WarehouseService(db).list(),
   ]);
 
-  const today = zones.filter((zone) => zone.weekdays.includes(weekday));
+  // Kapsam süzgeci gün süzgecinden ÖNCE değil, onunla birlikte: boş kapsam (`none`) boş liste
+  // demektir — atanmamış kurye "her şeyi görür"e değil "hiçbir şey görmez"e düşer (fail-closed,
+  // `warehouseScope` motorunun kendi kuralı).
+  const today = zones.filter((zone) => zone.weekdays.includes(weekday) && canAccessWarehouse(input.scope, zone.warehouseId));
   if (today.length === 0) return [];
 
   const runByZone = new Map(runs.map((run) => [run.deliveryZoneId, run]));

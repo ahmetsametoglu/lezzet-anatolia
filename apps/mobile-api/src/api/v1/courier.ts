@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
+import { warehouseScope } from '@lezzet/domain-core';
 import {
   closeCourierDay,
   confirmDoorDelivery,
@@ -146,12 +147,13 @@ courier.get('/day', async (c) => {
  * künyesi. Gün verilmezse bugün, `/day`in AYNI gerekçesiyle burada çözülür (kapı `date`i zorunlu
  * istiyor ve cevaptaki gün ile sorgulanan gün tek hesaptan çıkmalı).
  *
- * ── LİSTE SÜZÜLMEZ, VE BU BİR KARAR ────────────────────────────────────────
- * Kullanıcının cümlesi: *"arayüzden kurye ataması saçma — kurye giriş yapar, ROTAYI seçer, aracını
- * doldurur, o rotayı sürer."* Yani rotalar kuryeye göre daraltılmaz; seçilecek rotanın durakları
- * henüz kimsenin değildir, sahiplik seferi BAŞLATANIN claim'iyle doğar. Rota bugün başka kuryede
- * açılmışsa `run.courierId` onu söyler ve ekran "bu rota bugün X'te" der — bilgiyi gizlemek,
- * kuryeyi başlatmayı deneyip `already_started` almaya zorlamak olurdu.
+ * ── KURYEYE SÜZÜLMEZ, DEPOYA SÜZÜLÜR (11.7 · kullanıcı kuralı 21.08) ────────
+ * İki ayrı eksen: *"arayüzden kurye ataması saçma — kurye giriş yapar, ROTAYI seçer"* kararı
+ * sürüyor (kurye eksenine daraltma yok; sahiplik seferi BAŞLATANIN claim'iyle doğar, başka kuryede
+ * açılmış rota `run.courierId` ile görünür kalır). DEPO ekseni ise artık süzüyor: *"kurye hangi
+ * depoya aitse o depoya ait rotaları görebilmeli ve alabilmeli"* — başka deponun rotası listeye
+ * hiç girmez; kapsam profilden çözülür (`warehouseScope`, admin-kurye depo-üstü kalır — auth
+ * künyesindeki "admin ek kapı açmaz" kuralının kapsam istisnası).
  *
  * Küme doğal tavanlıdır (operatör elle kurar) → tek turda çekilir, sayfalama yok (CLAUDE §1).
  */
@@ -159,8 +161,9 @@ courier.get('/routes', async (c) => {
   const query = DateQuerySchema.safeParse(c.req.query());
   if (!query.success) return fail(c, 'invalid_query', 400);
 
+  const staff = c.get('staff');
   const date = query.data.date ?? new Date().toISOString().slice(0, 10);
-  const routes = await listCourierRoutes(serviceDb(), { date });
+  const routes = await listCourierRoutes(serviceDb(), { date, scope: warehouseScope(staff.roles, staff.warehouseIds) });
 
   const body: z.input<typeof CourierRoutesResponseSchema> = { date, routes };
   return ok(c, CourierRoutesResponseSchema.parse(body));

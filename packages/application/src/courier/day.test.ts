@@ -4,7 +4,9 @@ import {
   ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, settingsSnapshot } from '@lezzet/database/testing';
+import { warehouseScope } from '@lezzet/domain-core';
 import { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
+import { listCourierRoutes } from './routes';
 import { recordOrderPayment } from '../order/payment';
 import { advanceOrder } from '../order/advance.testkit';
 
@@ -41,6 +43,9 @@ let stockId: string;
 let accountId: string;
 /** Sefer akışının rotası (18.08): start artık zone claim'i yapıyor — zonesuz sipariş görünmez. */
 let zoneId: string;
+/** İkinci deponun rotası (11.7): kapsam süzgecinin "görmemesi gereken" tarafı — negatif kanıt. */
+let foreignWarehouseId: string;
+let foreignZoneId: string;
 const createdProfiles: string[] = [];
 
 const today = new Date().toISOString().slice(0, 10);
@@ -66,6 +71,10 @@ beforeAll(async () => {
   courierId = courier.id;
   otherCourierId = other.id;
   createdProfiles.push(customer.id, courier.id, other.id);
+  // Kurye rol + depo kapsamıyla açılır (11.7): kapı kapsamı profilden çözüyor ve boş kapsam
+  // fail-closed `no_route` demek — üretimde de Ayarlar bu ikisini birlikte yazıyor.
+  await profiles.setRoles(courierId, ['courier'], [warehouseId]);
+  await profiles.setRoles(otherCourierId, ['courier'], [warehouseId]);
 
   addressId = (await new AddressService(db).insert({
     customerId, line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg',
@@ -74,6 +83,12 @@ beforeAll(async () => {
   // Rota HER GÜN koşar (weekdays 1-7): testin hangi gün koştuğu davranışı değiştirmesin.
   zoneId = (await new DeliveryZoneService(db).insert({
     name: `Kurye testi rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
+  // İkinci depo + rotası (11.7): kuryenin kapsamı DIŞINDA — süzgecin negatif tarafı ancak
+  // gerçekten var olan ama görünmemesi gereken bir rotayla sınanabilir.
+  foreignWarehouseId = (await createTestWarehouse(db)).id;
+  foreignZoneId = (await new DeliveryZoneService(db).insert({
+    name: `Yabancı depo rotası ${stamp}`, warehouseId: foreignWarehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
   })).id;
 });
 
@@ -101,7 +116,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds: createdProfiles,
     accountIds: [accountId],
-    warehouseIds: [warehouseId],
+    warehouseIds: [warehouseId, foreignWarehouseId],
   });
 });
 
@@ -442,5 +457,26 @@ describe('ulaşılamadı / reddedildi (11.4)', () => {
 
     expect(result).toEqual({ status: 'forbidden', reason: 'not_assigned' });
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+  });
+});
+
+describe('depo kapsamı (11.7 · kullanıcı kuralı 21.08)', () => {
+  it('başka deponun rotası listede görünmez ve kimliği elle verilse bile başlatılamaz', async () => {
+    // LİSTE: kapsam kuryenin profilindekiyle aynı formülden kurulur (motor, elle kurgu değil).
+    // Kendi rotası içeride, yabancı deponunki HİÇ yok — soluk/gri değil, yok.
+    const scope = warehouseScope(['courier'], [warehouseId]);
+    const routes = await listCourierRoutes(db, { date: today, scope });
+    expect(routes.some((route) => route.zoneId === zoneId)).toBe(true);
+    expect(routes.some((route) => route.zoneId === foreignZoneId)).toBe(false);
+
+    // BAŞLATMA: seçim listesini atlayıp kimliği elle veren istek de aynı süzgece çarpar —
+    // cevap `zone_not_found` emsali `no_route`, ve HİÇBİR yazım yapılmaz (sefer kaydı doğmaz).
+    const result = await startCourierDay(db, { courierId, zoneId: foreignZoneId });
+    expect(result.status).toBe('no_route');
+    const { data: runs } = await db.from('delivery_run').select('id').eq('delivery_zone_id', foreignZoneId);
+    expect(runs ?? []).toHaveLength(0);
+
+    // Boş kapsam = hiçbir rota (fail-closed): atanmamış kurye "hepsini görür"e düşmez.
+    expect(await listCourierRoutes(db, { date: today, scope: warehouseScope(['courier'], []) })).toHaveLength(0);
   });
 });
