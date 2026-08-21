@@ -51,10 +51,20 @@ interface DialogProps {
    * `sheet` geçer, masaüstü hiç geçmez. `md:` ile akışkan bir dönüşüm YOK.
    */
   placement?: 'center' | 'sheet';
+  /**
+   * Kaymayan alt bölme (yalnız `sheet`) — eylem düğmeleri buraya konur.
+   *
+   * **Yapışkan (`sticky`) bir satır bunu KARŞILAMIYORDU** (kullanıcı bildirimi 21.08): satır
+   * kayan gövdenin İÇİNDE durduğu için, henüz dibe kaydırılmamışken kendisinden sonra gelen
+   * içerik (varsayılan-adres kutusu) düğmenin ALTINDAN görünüyordu — ekranda düğmenin altında
+   * ince bir şerit hâlinde form kalıyordu. Kaymayan bölme bunu yapısal olarak imkânsız kılar:
+   * gövde ile alt bölme ayrı kutular, biri ötekinin üstüne binemez.
+   */
+  footer?: ReactNode;
   children: ReactNode;
 }
 
-export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement = 'center', children }: DialogProps) {
+export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement = 'center', footer, children }: DialogProps) {
   const sheet = placement === 'sheet';
   const panelRef = useRef<HTMLDivElement>(null);
   const tokenRef = useRef<object>({});
@@ -136,7 +146,8 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement =
             ✕
           </button>
         </div>
-        {sheet ? <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 pb-5">{children}</div> : children}
+        {sheet ? <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 pb-4">{children}</div> : children}
+        {sheet && footer && <div className="flex-none border-t border-sand-100 px-5 pt-3.5 pb-5">{footer}</div>}
       </div>
     </div>
   );

@@ -248,16 +248,48 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
 
   const answer = !postalError && place && place.postalCode === form.postalCode.trim() ? place : null;
 
+  const kaydet = (
+    <Button
+      disabled={!complete || busy}
+      /* Çekmecede TAM GENİŞLİK: yanında ikinci bir düğme yok, ve uzun etiket dar kutuda iki satıra
+         kırılıyordu (kullanıcı bildirimi: *"aşağıdaki butona sığmama durumu var"*). */
+      fullWidth={compact}
+      onClick={async () => {
+        setBusy(true);
+        await onSave({
+          ...form,
+          label: form.label?.trim() || undefined,
+          recipient: form.recipient?.trim() || undefined,
+          line2: form.line2?.trim() || undefined,
+          phone: form.phone?.trim() || undefined,
+        });
+        setBusy(false);
+      }}
+    >
+      {copy.save}
+    </Button>
+  );
+
   /**
-   * ── ÇEKMECE KARARI FORMUN KENDİSİNDE, ÇAĞIRANLARDA DEĞİL (kullanıcı kararı 21.08) ────────────
-   * Form BUGÜN dört yerden satır içi açılıyor (hesap: ekle + düzenle · checkout: ekle + düzenle).
-   * Sarmalamayı çağıranlara bıraksaydık aynı `Dialog` kurulumu dört kez yazılırdı ve dördünün bir
-   * gün ayrışması kaçınılmazdı — `Dialog` künyesinin kendi dersi bu (*"iki panel kabuğu ayrı
-   * kurulmuştu ve kapanma sözleşmeleri farklıydı"*). Çağıran tek bir şey söyler: `compact`.
+   * Eylem satırı. **Çekmecede "Vazgeç" YOK** (kullanıcı kararı 21.08): çekmece zaten üç kapanış
+   * yolu sunuyor — ✕, örtüye dokunma, Escape. Dördüncü bir düğme hem yer yiyor hem de kaydetin
+   * yanında durup onu dar kutuya sıkıştırıyordu.
    *
-   * **`onCancel` çekmecenin de kapanışıdır** — ✕, örtüye dokunma ve Escape hepsi oraya bağlanır;
-   * müşteri için "vazgeç" tek bir şeydir, üç ayrı kapanış yolu üç ayrı sonuç doğurmamalı.
+   * Masaüstünde satır içi formun ✕'i YOK; orada "Vazgeç" tek çıkıştır ve kalıyor — K2'ye göre
+   * çerçeveli, metne kaçmış bir bağlantı değil.
    */
+  const actions = compact ? (
+    kaydet
+  ) : (
+    /* Tasarımda eylem satırı İNCE BİR AYRAÇLA ayrılır: formun sonu ile kararın başladığı yer. */
+    <div className="flex items-center gap-2.5 border-t border-sand-100 pt-3.5">
+      {kaydet}
+      <Button variant="secondary" size="sm" onClick={onCancel}>
+        {copy.cancel}
+      </Button>
+    </div>
+  );
+
   /* Gövde kaptan BAĞIMSIZ tutuluyor: masaüstünde doğrudan, mobil webde çekmecenin içinde çizilir.
      İkinci bir kopya yok, yani iki yol da aynı alanları aynı sırada göstermek zorunda. */
   const body = (
@@ -325,8 +357,11 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
         </div>
       )}
 
-      <div className={compact ? 'flex flex-col gap-3.5' : 'flex gap-3'}>
-        <div className="flex-1">{field('phone', copy.phone)}</div>
+      {/* Telefon + ülke aynı satırda; çekmecede pay çevrilir (kullanıcı kararı 21.08). Masaüstünde
+          ülke 170 px sabit — geniş kapta oturuyor. Dar kapta o sabit, SALT OKUNUR bir alanın
+          satırın %61'ini yemesi demekti (ölçüldü: telefon 96 px). Telefon uzun, ülke tek kelime. */}
+      <div className="flex gap-3">
+        <div className={compact ? 'basis-[65%]' : 'flex-1'}>{field('phone', copy.phone)}</div>
         {/**
          * Ülke SALT OKUNUR (K34'ün beşinci hâli): seçim sunmak müşteriye bir karar veriyormuş gibi
          * yapmak olurdu — ülke bir alan değil, posta kodundan türeyen bir SONUÇ (19.8).
@@ -341,7 +376,7 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
          * zaten orada ve üç dilde (yer hapı onları çiziyor). Dört ayrı sözlüğe kopyalamak, bir gün
          * yer hapının "Almanya" derken formun başka bir şey demesi demekti (CLAUDE §1).
          */}
-        <div className={compact ? '' : 'w-[170px] flex-none'}>
+        <div className={compact ? 'basis-[35%]' : 'w-[170px] flex-none'}>
           <FormInputField
             label={copy.country}
             value={(form.country ?? 'FR') === 'DE' ? placeCopy[locale].countryDE : placeCopy[locale].countryFR}
@@ -363,37 +398,9 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
       </label>
 
       {/* Tasarımda eylem satırı İNCE BİR AYRAÇLA ayrılır: formun sonu ile kararın başladığı yer.
-          ÇEKMECEDE ayrıca YAPIŞKAN: form uzun (sekiz alan + öneri listeleri) ve dar ekranda kaydet
-          düğmesi görünmeyen bir dibe düşüyordu — ölçüldü, çekmece 611 px yüksekken içerik onu
-          aşıyor. Zemin opak olmalı, yoksa altından kayan alanlar düğmenin içinden geçiyor. */}
-      <div
-        className={[
-          'flex items-center gap-2.5 border-t border-sand-100 pt-3.5',
-          compact ? 'sticky bottom-0 -mx-5 -mb-5 bg-card px-5 pb-5' : '',
-        ].join(' ')}
-      >
-        <Button
-          disabled={!complete || busy}
-          onClick={async () => {
-            setBusy(true);
-            await onSave({
-              ...form,
-              label: form.label?.trim() || undefined,
-              recipient: form.recipient?.trim() || undefined,
-              line2: form.line2?.trim() || undefined,
-              phone: form.phone?.trim() || undefined,
-            });
-            setBusy(false);
-          }}
-        >
-          {copy.save}
-        </Button>
-        {/* Vazgeç ÇERÇEVELİ (K2), hayalet metin değil: kaydetin yanında duran ikinci bir karar,
-            metne kaçmış bir bağlantı değil. */}
-        <Button variant="secondary" size="sm" onClick={onCancel}>
-          {copy.cancel}
-        </Button>
-      </div>
+          ÇEKMECEDE bu satır gövdenin İÇİNDE DEĞİL, kabuğun kaymayan alt bölmesinde durur (aşağıda
+          `actions`) — gerekçesi `Dialog.footer` künyesinde. */}
+      {!compact && actions}
     </div>
   );
 
@@ -410,7 +417,7 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
    */
   if (!compact) return body;
   return (
-    <Dialog title={copy.sheetTitle} closeLabel={placeCopy[locale].close} onClose={onCancel} placement="sheet">
+    <Dialog title={copy.sheetTitle} closeLabel={placeCopy[locale].close} onClose={onCancel} placement="sheet" footer={actions}>
       {body}
     </Dialog>
   );

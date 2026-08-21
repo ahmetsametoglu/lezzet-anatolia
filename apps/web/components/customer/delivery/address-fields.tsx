@@ -114,12 +114,13 @@ interface AddressFieldsProps {
    */
   afterLine1?: React.ReactNode;
   /**
-   * Mobil web forku — posta kodu ve şehir ALT ALTA gelir.
+   * Mobil web forku — posta kodu ve şehir AYNI SATIRDA ama sabit genişlikle değil, ORANLA
+   * bölüşür (%35 / %65).
    *
-   * Yan yana duruşları masaüstünün ölçüsüydü: kod dar sabit sütun (150 px), şehir kalan genişlik.
-   * Dar ekranda bu tersine dönüyordu — ölçüldü (390 px): kod **150 px**, şehir **116 px**. Beş
-   * haneli bir sayı, şehir adından geniş. Sabit sütunun mantığı geniş kapta doğru, dar kapta
-   * yanlış; oran değil, düzen değişmeli.
+   * Sabit sütun masaüstünün ölçüsüydü ve dar ekranda tersine dönüyordu — ölçüldü (390 px): kod
+   * **150 px**, şehir **116 px**; beş haneli bir sayı şehir adından geniş. Bir tur alt alta
+   * alındılar, kullanıcı düzeltti: ikisi mantıkça bir bütün, ayrı satırlara bölünmeleri formu
+   * gereksiz uzatıyor. Doğru çözüm satırı bölmek değil, PAYI çevirmekti.
    */
   compact?: boolean;
 }
@@ -232,10 +233,17 @@ export function AddressFields({
 
       {afterLine1}
 
-      <div className={compact ? 'flex flex-col gap-3.5' : 'flex gap-3'}>
-        {/* Posta kodu DAR (150px): beş hane, tam genişlikte kutu değerinden büyük görünüyor.
-            Çekmecede sabit sütun DÜŞER — dar kapta 150 px "dar" değil, satırın yarısıdır. */}
-        <div className={compact ? '' : 'w-[150px] flex-none'}>
+      <div className="flex gap-3">
+        {/**
+         * Posta kodu DAR: beş hane, tam genişlikte kutu değerinden büyük görünüyor.
+         *
+         * **Masaüstünde SABİT 150 px, çekmecede ORAN (kullanıcı kararı 21.08: "şehir yüzde altmış
+         * beşini kaplar, geri kalanını posta kodu").** Sabit genişlik geniş kapta doğru, dar kapta
+         * yanlıştı — ölçüldü (390 px): kod 150 px, şehir 116 px; beş haneli bir sayı şehir adından
+         * genişti. Alt alta almak da çözüm değildi (denendi ve kullanıcı düzeltti): iki alan
+         * mantıkça bir bütün ve ayrı satırlara bölünmeleri formu gereksiz uzatıyor.
+         */}
+        <div className={compact ? 'basis-[35%]' : 'w-[150px] flex-none'}>
           <FormInputField
             label={copy.postalCode}
             value={value.postalCode}
