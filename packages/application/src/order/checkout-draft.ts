@@ -14,8 +14,8 @@ import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod, Prefe
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
+import { cartFingerprint } from '../cart/fingerprint';
 import {
-  cartFingerprint,
   discountAmountOf,
   entryOf,
   itemOfEntry,

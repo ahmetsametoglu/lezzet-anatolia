@@ -4645,3 +4645,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   −8,37 → **63,47** ve üçü de sunucunun tek okumasıyla birebir (`7184 / 837 / 6347`).
   `typecheck` sekiz pakette temiz · `lint` · `boundaries` (1410 modül) · birim **1380/1380** ·
   mobil checkout 3/3. Metinler tr/fr/de, iki yüzeyde.
+
+  ── DÜZELTME (21.08, aynı gün) · PARMAK İZİ YANLIŞ EVDEYDİ ──────────────────
+  `cartFingerprint` ilk turda `cart/cart-types.ts`e yazılmıştı ve o dosyanın ilk satırına giren
+  `import { createHash } from 'node:crypto'` **web production derlemesini kesti**:
+
+  ```
+  Module not found: Can't resolve 'node:crypto'
+  cart/cart-types.ts → lib/cart/cart-types.ts → cart-context.tsx
+  ```
+
+  `cart-types.ts` iki yüzeyin **izomorfik** modülü — web'in İSTEMCİ bileşenleri de okuyor. Tek
+  satırlık import bütün zinciri Node'a bağladı. **Bu şeritte görünmüyordu:** `tsc --noEmit`
+  paketleyici çözümlemesine bakmaz ve mobil-api zaten Node'da koşar; arızayı denetim (web) yakaladı
+  (`docs/talep/not-mobil-cart-types-node-crypto-...`, işlendi ve silindi).
+
+  İşlev kendi dosyasına taşındı (`cart/fingerprint.ts`), mantığa dokunulmadı; çağıranı zaten
+  yalnız iki SUNUCU modülüydü (`checkout-draft`, `checkout-snapshot`), yani ayrı dosya doğal evi.
+
+  **Kural:** istemcinin okuduğu bir modül node-only hiçbir şey import edemez. Aynı disiplin
+  `@lezzet/address-fr`te açıkça yazılı; `cart-types.ts` de o sınıfa girer. Sunucuya ait yardımcı
+  gerektiğinde ayrı dosya açmak yeterli — ve **bu şeridin doğrulama listesine `pnpm prod:web`
+  eklenmeli**: derlenmeyi kesen bu sınıf hata `typecheck`/`lint`/`boundaries` üçlüsünün hiçbirinde
+  görünmüyor. Düzeltme `pnpm prod:web` ile doğrulandı (derleme geçti).
