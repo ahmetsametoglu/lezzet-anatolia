@@ -89,6 +89,12 @@ export function rejectionMessage(
           .map((line) => `${line.name}: ${formatPrice(line.fromCents, locale)} → ${formatPrice(line.toCents, locale)}`)
           .join(', '),
       );
+    /* Sepet altımızdan değişti (21.08). Cümle NE değiştiğini saymaz — özet yeniden okununca yeni
+       liste zaten ekranda; sayarsak aynı gerçeği iki kez, üstelik daha kötü anlatmış oluruz
+       (sözleşme künyesindeki aynı gerekçe). Söylenmesi gereken tek şey siparişin AÇILMADIĞI ve
+       listenin tazelendiğidir — müşteri onaya ikinci kez, bilerek bassın. */
+    case 'cart_changed':
+      return r.cart_changed;
     case 'customer_not_found':
       return r.customer_not_found;
     case 'insufficient_stock': {

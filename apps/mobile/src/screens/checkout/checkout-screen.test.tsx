@@ -93,6 +93,31 @@ function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 
       missingForMinBasketCents: 0,
       placeLabel: '75011 Paris',
     },
+    /* ÖZET FİKSTÜRDE DE SUNUCUNUN İŞİ (21.08): ekran artık dökümü buradan çiziyor, yerel sepetten
+       değil — arıza tam olarak ikisinin ayrışabilmesiydi. Fikstür bu yüzden sunucunun yaptığı
+       ayrımı BİREBİR tekrarlıyor (`group === 'undeliverable'` → kapsam dışı) ve `mockCart`tan
+       türetiliyor: elle yazılmış bir liste, testin sepetiyle sessizce ayrışır ve o gün test
+       ekranın değil kendisinin doğruluğunu ölçmeye başlardı. */
+    summary: summaryOfMockCart(),
+  };
+}
+
+/** Anlık görüntünün özeti — `mockCart`ın satırlarından, sunucunun kapsam ayrımıyla. */
+function summaryOfMockCart(): NonNullable<CheckoutSnapshot['summary']> {
+  const lines = mockCart.view.lines;
+  const row = (line: (typeof lines)[number]) => ({
+    kind: line.kind,
+    name: line.name,
+    qty: line.qty,
+    lineTotalCents: line.lineTotalCents,
+  });
+  const kept = lines.filter((line) => line.group !== 'undeliverable');
+  return {
+    lines: kept.map(row),
+    subtotalCents: kept.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0),
+    discount: null,
+    excludedLines: lines.filter((line) => line.group === 'undeliverable').map(row),
+    fingerprint: 'test-fingerprint',
   };
 }
 

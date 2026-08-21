@@ -144,6 +144,10 @@ checkout.get('/', async (c) => {
     // yani ekran seçilemeyen bir günü hiç görmüyor (`CheckoutDeliverySchema` künyesi).
     delivery: snapshot.delivery,
     payment: snapshot.payment === null ? null : { ...snapshot.payment, codBlockedReason: codReasonOf(snapshot.payment.codBlockedReason) },
+    // Döküm de kapıdan OLDUĞU GİBİ geçer: ekranın çizeceği küme ile taslağın tahsil edeceği küme
+    // aynı hesaptan çıktı (`summary` künyesi), burada yeniden şekillendirilmesi ikinci bir kaynak
+    // açardı — düzeltilen arıza tam olarak buydu.
+    summary: snapshot.summary,
   };
   return ok(c, CheckoutSnapshotSchema.parse(body));
 });

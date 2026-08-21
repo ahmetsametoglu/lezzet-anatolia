@@ -74,3 +74,26 @@ export function discountSummaryOf(discount: MeCartView['discount'], locale: Loca
   }
   return null;
 }
+
+/**
+ * SİPARİŞ ÖZETİNİN indirimi → aynı künye (kullanıcı kararı 21.08).
+ *
+ * Sepetinkinden AYRI bir kapı, çünkü sözleşmeleri ayrı: sepet indirimin dört hâlini taşır (kupon
+ * tuttu / reddedildi / kendiliğinden indi / yok), checkout özeti ise o hâllerin ÇÖZÜLMÜŞ sonucunu
+ * taşır — tutar zaten kapsamın payı kadar hesaplanmış, ad zaten dile çözülmüş. Hâlleri ikinci kez
+ * burada ayıklamak, sunucunun verdiği kararı istemcide tekrar vermek olurdu.
+ *
+ * ORTAK olan tek şey `reasonLabel` ve o bilerek paylaşılıyor: adı olmayan bir kampanya sepette
+ * "Kampanya · %8" iken özette başka bir şey yazamaz.
+ */
+export function orderDiscountSummaryOf(
+  discount: { amountCents: number; label: string | null; reason: DiscountReason | null } | null,
+  locale: Locale,
+): DiscountSummary | null {
+  if (discount === null) return null;
+  const t: Messages = messages[locale];
+  return {
+    name: discount.label ?? (discount.reason === null ? null : reasonLabel(discount.reason, t)),
+    amountCents: discount.amountCents,
+  };
+}

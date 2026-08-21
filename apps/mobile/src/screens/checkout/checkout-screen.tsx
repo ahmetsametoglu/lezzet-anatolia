@@ -29,7 +29,7 @@ import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/ad
 import { cartLineId, refreshCart, setPurchasePlace, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
-import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
+import { discountSummaryOf, orderDiscountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { publishMe, useMe } from '@/screens/customer-kit/use-me.hook';
@@ -310,12 +310,39 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    */
   const orderedSubtotalCents = view.subtotalCents - view.undeliverableSubtotalCents;
 
+  /*
+    ── DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) ──────────────────
+    Buradaki kural TEK CÜMLE: **özet varsa hem satırlar hem toplam ondan gelir; yoksa ikisi de
+    yerel sepetten. Asla karışık.**
+
+    Karışıktı ve cihazda ölçüldü (21.08): satırlar `view`den, toplam `payment`ten geliyordu. Sepet
+    SUNUCUDA yaşayıp iki yüzeyde paylaşıldığı için ikisi ayrışabiliyor — ekran `2× kek + 8× börek`
+    listelerken genel toplam `16,00 €` yazdı (börek o sırada sunucudaki sepetten çıkmıştı). Kalemler
+    63,47 € topluyordu; hangisinin doğru olduğunu söyleyen hiçbir şey yoktu. Doğru olan TOPLAMDI —
+    bayat olan listeydi, ve asgari sepet uyarısı da doğru sayıya göre çıkıp müşteriye anlamsız
+    görünüyordu ("63 €'luk listeye bakıyorum, neden 24 € daha isteniyor?").
+
+    Adres SEÇİLMEDEN özet yoktur (sunucu kapsamı çözemez) ve o hâlde yerel sepete düşmek DOĞRUdur:
+    ekran "sepetin şu, şimdi adres seç" der. Yanlış olan tek şey ikisini aynı anda karıştırmaktı.
+  */
+  const summary = snapshot?.summary ?? null;
+  const summaryLines: { key: string; name: string; qty: number; lineTotalCents: number | null }[] =
+    summary === null
+      ? orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
+      : summary.lines.map((line, index) => ({ key: `order-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
+  /* Sipariş DIŞI kalanlar da aynı kaynaktan — özetin yarısını yerelden çizmek, düzeltilen
+     ayrışmayı yarı yolda bırakmaktı. */
+  const droppedRows: { key: string; name: string; qty: number; lineTotalCents: number | null }[] =
+    summary === null
+      ? droppedLines.map((line) => ({ key: `dropped-${cartLineId(line)}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
+      : summary.excludedLines.map((line, index) => ({ key: `dropped-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
+
   /* Hangi kalemler olduğu SÖYLENİR ama ancak biliniyorsa: sepet görünümü başka bir posta koduyla
      çözülmüşse elimizde ad yoktur ve uydurulmuş bir liste, yanlış ürünü aratırdı. */
   const undeliverableText =
-    droppedLines.length === 0
+    droppedRows.length === 0
       ? t.undeliverable.body
-      : `${t.undeliverable.body} ${t.undeliverable.items.replace('{items}', droppedLines.map((line) => line.name).join(', '))}`;
+      : `${t.undeliverable.body} ${t.undeliverable.items.replace('{items}', droppedRows.map((line) => line.name).join(', '))}`;
 
   const shippingFeeLabel =
     payment === null ? t.summary.pending : payment.shippingFeeCents === 0 ? t.summary.free : formatPrice(payment.shippingFeeCents, locale);
@@ -330,15 +357,17 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    */
   const grandTotalCents = payment?.orderTotalCents ?? view.totalCents;
 
-  /* Türetme SEPETLE ORTAK (`discountSummaryOf`) — künyesi kitte. */
-  const discountSummary = discountSummaryOf(view.discount, locale);
+  /* İndirim de aynı kaynaktan: özet varsa onun çözülmüş indirimi, yoksa sepetinki. `reasonLabel`
+     ikisinde de ORTAK (künyesi kitte) — adı olmayan bir kampanya sepette "Kampanya · %8" iken
+     özette başka türlü yazamaz. */
+  const discountSummary = summary === null ? discountSummaryOf(view.discount, locale) : orderDiscountSummaryOf(summary.discount, locale);
 
   /* Paket satırı artık `orderedLines`ın içinde (sunucu çözüyor) — ayrı bir yerel blok YOK.
      Vardı ve 20.08'de söküldü: yerelden yazılan satır toplamı ekranın kendi çarpımıydı, oysa
      tahsil edilecek tutarı sunucu hesaplıyor; ikisi bir gün ayrışırdı. */
   const summaryRows: SummaryRow[] = [
-    ...orderedLines.map((line) => ({
-      key: cartLineId(line),
+    ...summaryLines.map((line) => ({
+      key: line.key,
       label: t.summary.line.replace('{quantity}', String(line.qty)).replace('{name}', line.name),
       // Fiyatı olmayan satır SIFIR yazılmaz (CLAUDE §1): satışa kapanmış kalem "bedava" değildir.
       value: line.lineTotalCents === null ? t.summary.noPrice : formatPrice(line.lineTotalCents, locale),
@@ -348,17 +377,17 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
        duruyor ve bir uyarı gibi okunmuyordu. Artık kalem gözün gittiği yerde, kırmızı ve üstü
        çizili; hemen altında da NEDEN olduğu yazılı. Satırlar ara toplamın ÜSTÜNDE duruyor ki
        "bunlar bu listenin parçasıydı ama düştü" okunsun. */
-    ...droppedLines.map((line) => ({
-      key: `dropped-${cartLineId(line)}`,
+    ...droppedRows.map((line) => ({
+      key: line.key,
       label: t.summary.line.replace('{quantity}', String(line.qty)).replace('{name}', line.name),
       value: line.lineTotalCents === null ? t.summary.noPrice : formatPrice(line.lineTotalCents, locale),
       tone: 'danger' as const,
       strike: true,
     })),
-    ...(droppedLines.length === 0
+    ...(droppedRows.length === 0
       ? []
       : [{ key: 'undeliverable-note', label: t.summary.undeliverableNote, value: '', tone: 'danger' as const }]),
-    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(orderedSubtotalCents, locale) },
+    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(summary?.subtotalCents ?? orderedSubtotalCents, locale) },
     /* İndirimin KÜNYESİ de yazılır, yalnız tutarı değil (kullanıcı kararı 10.08 — web'in aynı
        hükmü): sepette "İndirim · Baklava haftası" okuyan müşteri burada sadece "İndirim" görürse
        aynı indirimden bahsedildiğini ancak sayıları karşılaştırarak anlar. Ad çok dilli bir alandan
@@ -516,6 +545,12 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       idempotencyKey: orderKey,
       marketingConsent: marketing,
       shippingOrder,
+      /* EKRANIN GÖSTERDİĞİ SEPETİN İMZASI (21.08) — sunucunun verdiği değer, olduğu gibi geri
+         gidiyor. Sepet iki yüzeyde paylaşıldığı için son okumamızla bu dokunuş arasında değişmiş
+         olabilir; değiştiyse sunucu `cart_changed` ile reddeder ve müşteri yeni listeyi görüp
+         bilerek onaylar. Özet yoksa imza da yok: o hâlde zaten adres seçilmemiştir ve buraya
+         gelinemez. */
+      expectedCartFingerprint: summary?.fingerprint ?? null,
     });
 
     if (result.error !== null) {
@@ -739,7 +774,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                 söylüyor: bu siparişe girmiyorlar, SEPETTE bekliyorlar, bölge içi bir adres seçilirse
                 dahil olurlar. Ton `warm`; hata kırmızısı müşteriye düzeltmesi gereken bir yanlış
                 yaptığını söylerdi. */}
-            {droppedLines.length === 0 ? null : (
+            {droppedRows.length === 0 ? null : (
               <Note tone="warm" title={t.undeliverable.title} description={undeliverableText} testID="checkout-undeliverable" />
             )}
 
