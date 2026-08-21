@@ -99,3 +99,21 @@ Artık `layout-messages.json`'dan dile göre çözülüyor.
 - Yedek zinciri **TR → FR → DE.**
 - Dil **URL'de**, çerezde değil.
 - İçerik **server-rendered**, çatallanma içeriği kırpmaz.
+
+---
+
+## Bu belgenin KAPSAMADIĞI üç konu (21.08)
+
+Buradaki her şey **klasik arama motoru** optimizasyonudur. Aşağıdaki üçü ayrı işlerdir, hiçbiri
+açılmadı ve **kullanıcı kararıyla en sona bırakıldı** (*"en son konuşulacak konular bunlar, şu an
+vakit kaybetmeyelim"*). Kapsam ve gerekçeleri `BACKLOG.md` Faz 2'de:
+
+1. **AI tarayıcı politikası** — `robots.ts` yalnız `userAgent: '*'` yazıyor; `GPTBot`/`ClaudeBot`
+   vb. şu an örtük SERBEST. Tercih değil, **karar verilmemiş** olması.
+2. **GEO/AEO** — üretken arama için içerik yapısı, `llms.txt`.
+3. **Semantik indeks** — bu SEO DEĞİL, iç arama/öneri altyapısıdır (`pgvector` + gömme). İkisini
+   aynı başlık altında konuşmak, birini ötekinin bütçesiyle ölçmeye yol açar.
+
+Aranıp bulunamadığı için kayda geçiyor ki tekrar taranmasın: `llms.txt` · `GEO` · `AEO` ·
+`embedding` · `pgvector` repoda **hiç geçmiyor**. Dokümandaki "semantik" tasarım renk ailelerini,
+`vector` ise `to_tsvector`ü (tam metin, `05-katalog`da kapsam dışı) anlatır.

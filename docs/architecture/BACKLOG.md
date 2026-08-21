@@ -290,3 +290,28 @@ Mobil uygulama + push, teslimat penceresi/rota kapasitesi, Meta/Google pixel + C
   ürün-tekil maliyet/marj asistana kapalı. **Faz 1'in tamamı bitmeden kod yazılmaz** (kullanıcı
   kararı). Referans projede sunucu + iki anahtar + oran sınırı + çağrı izi ÇALIŞIYOR; onay kuyruğu
   ve veri maskeleme bize özgü, sıfırdan yazılacak.
+
+- **ARAMA MOTORU + ÜRETKEN ARAMA + SEMANTİK İNDEKS — üçü ayrı iş, üçü de AÇILMADI**
+  *(kullanıcı 21.08: "en son konuşulacak konular bunlar, şu an vakit kaybetmeyelim")*.
+  Tarandı ve ölçüldü: `llms.txt` · `GEO` · `AEO` · `embedding` · `pgvector` **hiçbir dokümanda
+  geçmiyor**. İki eşleşme yanıltıcı ve kayda geçsin ki bir daha aranmasın: dokümandaki "semantik"
+  tasarım RENK ailelerini anlatıyor, `vector` ise `to_tsvector` (tam metin araması, `05-katalog`da
+  zaten *"gerekirse ayrı iş"* diye kapsam dışı). `RAG` geçen yerler mevcut AI ajanlarının kurgu
+  notları — sitenin dış dünyaya indekslenmesiyle ilgili değil.
+
+  **Klasik SEO bunlardan AYRI ve zaten yapılmış** (`SEO_I18N.md` + kodu): sunucuda çizim,
+  schema.org (`Product`/`Offer`/`AggregateRating`/`GroceryStore`), Open Graph tek kapıdan,
+  hreflang, dil başına ayrı URL, `robots.ts`, `sitemap.ts`. Aşağıdaki üç kalem onun ÜSTÜNE gelir,
+  yerine değil.
+
+  1. **AI tarayıcı politikası — en ucuzu, ve bugün bir KARAR BOŞLUĞU.** `robots.ts` yalnız
+     `userAgent: '*'` kuralı yazıyor; yani `GPTBot` · `ClaudeBot` · `PerplexityBot` ·
+     `OAI-SearchBot` şu an örtük olarak SERBEST. Bu bir tercih değil, varsayılan — kimse
+     "modeller kataloğumuzu okusun" ya da "okumasın" diye karar vermedi. Karar verilince
+     `robots.ts`e tek blok; kod işi neredeyse yok, eksik olan cevap.
+  2. **GEO/AEO (üretken arama için içerik).** İçerik işi: soru-cevap yapısı, net ve tek anlamlı
+     beyanlar, `llms.txt`. Yapısal veri zemini hazır olduğu için bunun üstüne bina edilir.
+  3. **Semantik indeks — SEO DEĞİL, iç arama/öneri altyapısı.** Karıştırılmaması kayda geçsin:
+     dışarıya indekslenmek başka, katalogda anlam yakınlığıyla aramak başkadır. Bugünkü katalog
+     araması jsonb ad araması; tam metin indeksi bile yok. Bu kalem `pgvector` + gömme üretimi +
+     tazeleme hattı demek, yani üçünün en pahalısı.
