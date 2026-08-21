@@ -91,6 +91,22 @@ export function ManagementHubScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.body} testID="management-hub-body">
+        {/* Sosyal gelen kutusunun kapısı — karar kuyruğundan BAĞIMSIZ (gerçek uca bağlı tek satır,
+            fixture değil): kuyruk boşken de yazışma sürüyor olabilir, kapı iki hâlde de durur. */}
+        <PressableSurface
+          onPress={() => router.navigate('/social')}
+          feedback="scale"
+          style={styles.socialCard}
+          accessibilityLabel={t.social.hubEntry.title}
+          testID="management-hub-social"
+        >
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>{t.social.hubEntry.title}</Text>
+            <Text style={styles.rowSubtitle}>{t.social.hubEntry.subtitle}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </PressableSurface>
+
         {DECISION_QUEUE.length === 0 ? (
           <View style={styles.emptyBlock}>
             <OperationsNoticeBlock
@@ -185,6 +201,19 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors.olive,
+  },
+  /** Sosyal gelen kutusu kartı — özet kartının kardeşi; kanal markaları alt satırda metinle. */
+  socialCard: {
+    marginTop: operationsTheme.space.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.xl,
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['3xl'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-500'],
+    borderRadius: operationsTheme.radius.card,
   },
   /** v2:504 — kuyruğun ÜSTÜNDEKİ özet kartı; günün fotoğrafına tek dokunuşluk kapı. */
   summaryCard: {

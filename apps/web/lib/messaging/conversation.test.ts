@@ -1,8 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest';
+// Kayıt kapıları 21.08'de `@lezzet/application`a terfi etti (`messaging/record.ts`); açılış webde.
+import { recordInboundMessage, recordOutboundMessage } from '@lezzet/application';
 import { ConversationService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { SERVICE_WINDOW_HOURS, serviceWindowState } from '@lezzet/domain-core';
-import { openWhatsappConversation, recordInboundMessage, recordOutboundMessage } from './conversation';
+import { openWhatsappConversation } from './conversation';
 
 /**
  * Telefon kimlik çözümünün GERÇEK akışa bağlanması (15.2) — DOMAIN §10, CHANNELS §3.
@@ -136,13 +138,13 @@ describe('mesaj kaydı ve servis penceresi', () => {
     if (sonuc.status !== 'ok') return;
 
     const alindi = '2026-08-08T09:00:00.000Z';
-    await recordInboundMessage({ conversationId: sonuc.conversation.id, text: 'Mantı var mı?', receivedAt: alindi });
+    await recordInboundMessage(db, { conversationId: sonuc.conversation.id, text: 'Mantı var mı?', receivedAt: alindi });
 
     const acik = await conversations.getById(sonuc.conversation.id);
     const beklenen = new Date(new Date(alindi).getTime() + SERVICE_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
     expect(an(acik?.windowExpiresAt)).toBe(beklenen);
 
-    await recordOutboundMessage({ conversationId: sonuc.conversation.id, text: 'Var, 500 g paket.' });
+    await recordOutboundMessage(db, { conversationId: sonuc.conversation.id, text: 'Var, 500 g paket.' });
     expect(an((await conversations.getById(sonuc.conversation.id))?.windowExpiresAt)).toBe(beklenen);
   });
 
@@ -151,7 +153,7 @@ describe('mesaj kaydı ve servis penceresi', () => {
     expect(sonuc.status).toBe('ok');
     if (sonuc.status !== 'ok') return;
 
-    await recordOutboundMessage({
+    await recordOutboundMessage(db, {
       conversationId: sonuc.conversation.id,
       text: 'Siparişiniz hazırlanıyor.',
       templateName: 'order_confirm',
@@ -176,12 +178,12 @@ describe('mesaj kaydı ve servis penceresi', () => {
     expect(sonuc.status).toBe('ok');
     if (sonuc.status !== 'ok') return;
 
-    await recordInboundMessage({
+    await recordInboundMessage(db, {
       conversationId: sonuc.conversation.id,
       text: 'Merhaba',
       receivedAt: new Date().toISOString(),
     });
-    const kayit = await recordOutboundMessage({
+    const kayit = await recordOutboundMessage(db, {
       conversationId: sonuc.conversation.id,
       text: 'Bu hafta mantıda %20 indirim!',
       templateName: 'weekly_promo',

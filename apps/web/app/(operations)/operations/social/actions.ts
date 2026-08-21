@@ -1,13 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { generateConversationDraft } from '@lezzet/application';
+import { generateConversationDraft, recordInboundMessage, recordOutboundMessage } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { openTicket } from '@/lib/ticket/write';
-import { openWhatsappConversation, recordInboundMessage, recordOutboundMessage } from '@/lib/messaging/conversation';
+import { openWhatsappConversation } from '@/lib/messaging/conversation';
 import { toInboxRows } from './social-read';
 import {
   ConversationTicketSchema,
@@ -92,7 +92,7 @@ export async function openManualDmAction(input: unknown): Promise<ActionResult<{
       };
     }
 
-    await recordInboundMessage({
+    await recordInboundMessage(serviceDb(), {
       conversationId: opened.conversation.id,
       text: parsed.text,
       receivedAt: parsed.receivedAt,
@@ -116,7 +116,7 @@ export async function recordFollowUpInboundAction(input: unknown): Promise<Actio
   try {
     await requireAdmin();
     const parsed = FollowUpInboundSchema.parse(input);
-    const message = await recordInboundMessage({
+    const message = await recordInboundMessage(serviceDb(), {
       conversationId: parsed.conversationId,
       text: parsed.text,
       receivedAt: parsed.receivedAt,
@@ -139,7 +139,7 @@ export async function recordOutboundAction(input: unknown): Promise<ActionResult
   try {
     await requireAdmin();
     const parsed = RecordOutboundSchema.parse(input);
-    const message = await recordOutboundMessage({ conversationId: parsed.conversationId, text: parsed.text });
+    const message = await recordOutboundMessage(serviceDb(), { conversationId: parsed.conversationId, text: parsed.text });
     refresh();
     return { data: { id: message.id }, error: null };
   } catch (err) {

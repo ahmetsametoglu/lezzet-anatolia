@@ -111,5 +111,71 @@
     "cta": "\"Masada kur\" notu düş",
     "ctaDone": "Not düştü — masada kurulacak ✓",
     "openChat": "Konuşmayı WhatsApp'ta aç"
+  },
+  "social": {
+    "title": "Sosyal Mesajlar",
+    "caption": "{awaiting} cevap bekliyor · {ai} AI'da",
+    "hubEntry": {
+      "title": "Sosyal Mesajlar",
+      "subtitle": "WhatsApp · Messenger · Instagram — tek gelen kutusu"
+    },
+    "filter": { "all": "Tümü", "awaiting": "Cevap bekleyen" },
+    "channelAll": "Tüm kanallar",
+    "channel": { "whatsapp": "WhatsApp", "messenger": "Messenger", "instagram": "Instagram" },
+    "kind": {
+      "text": "[boş mesaj]",
+      "interactive": "[etkileşimli kart]",
+      "template": "[kalıp mesaj]",
+      "media": "[görsel / dosya]"
+    },
+    "empty": { "title": "Gelen kutusu boş", "body": "Bu süzgeçte konuşma yok." },
+    "error": { "title": "Liste yüklenemedi", "body": "Bağlantıyı kontrol edip yeniden deneyin.", "retry": "Tekrar dene" },
+    "tail": { "loading": "Yükleniyor…", "failed": "Devamı gelmedi — dokun, yeniden dene", "end": "Liste bitti" },
+    "detail": {
+      "older": "Daha eski mesajları yükle",
+      "olderLoading": "Geçmiş yükleniyor…",
+      "you": "Siz",
+      "ai": "AI ajanı",
+      "template": "kalıp: {name}",
+      "draftCaption": "YZ TASLAĞI — operatör cevabı değildir",
+      "draftTake": "Cevap kutusuna al",
+      "suggest": "Taslak öner",
+      "mode": { "label": "Yürütücü:", "human": "İnsan", "hybrid": "Hibrit", "ai": "AI" },
+      "replyPlaceholder": "Cevabı deftere yaz…",
+      "replyLabel": "Konuşmanın defter cevabı",
+      "record": "Deftere işle",
+      "recordNote": "Mesaj buradan gönderilmez — yazışma telefondan yürür, defter burada tutulur.",
+      "window": {
+        "whatsapp": {
+          "open": "Cevap süresi açık · {hours} saat kaldı",
+          "closed": "Cevap süresi doldu — serbest mesaj gönderilemez; yalnız onaylı kalıp mesaj (ücretli) gider.",
+          "never": "Müşteri bize hiç yazmadı — pencere hiç açılmadı."
+        },
+        "messenger": {
+          "open": "Cevap süresi açık · {hours} saat kaldı",
+          "closed": "24 saatlik süre doldu — cevap 7 güne kadar yalnız insan-temsilci kuralıyla gidebilir (ücret yok).",
+          "never": "Müşteri henüz yazmadı — Messenger sohbetini her zaman müşteri başlatır."
+        },
+        "instagram": {
+          "open": "Cevap süresi açık · {hours} saat kaldı",
+          "closed": "24 saatlik süre doldu — cevap 7 güne kadar yalnız insan-temsilci kuralıyla gidebilir (ücret yok).",
+          "never": "Müşteri henüz yazmadı — Instagram sohbetini her zaman müşteri başlatır."
+        }
+      },
+      "failure": {
+        "generic": "İşlem tamamlanamadı — yeniden deneyin.",
+        "network_error": "Bağlantı kurulamadı — yeniden deneyin.",
+        "mode_unchanged": "Sohbet zaten bu modda — bir başkası az önce değiştirmiş olabilir.",
+        "no_draft": "Bekleyen AI taslağı yok — bu sırada tüketilmiş olabilir.",
+        "conversation_not_found": "Konuşma bulunamadı — listeye dönüp tazeleyin.",
+        "not_configured": "AI yapılandırılmamış — sağlayıcı anahtarı gerekli.",
+        "provider_error": "AI sağlayıcısına ulaşılamadı — birazdan yeniden deneyin.",
+        "invalid_output": "AI beklenen biçimde cevap üretemedi — yeniden deneyin.",
+        "wrong_mode": "Taslak yalnız hibrit modda üretilir — önce modu Hibrit yapın.",
+        "nothing_to_answer": "Cevaplanacak yeni müşteri mesajı yok — son sözü zaten biz söylemişiz.",
+        "empty_thread": "Bu konuşmada hiç mesaj yok — taslak üretilecek soru yok."
+      },
+      "notFound": { "title": "Sohbet yüklenemedi", "body": "Bağlantıyı kontrol edip yeniden deneyin.", "retry": "Tekrar dene" }
+    }
   }
 }

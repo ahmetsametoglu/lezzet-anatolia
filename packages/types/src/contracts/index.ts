@@ -71,3 +71,6 @@ export * from './invite-api.schema';
 // Canlı zilin istemciye bakan yüzü — kanal adı + olay adı. Şema değil, iki dizgelik sözleşme:
 // zili çalan sunucu ile onu duyan İKİ istemci (web · native) aynı adı bilsin diye (gerekçe dosyada).
 export * from './realtime.contract';
+// Sosyal gelen kutusu — üç Meta kanalının mobil operasyon yüzü (kuyruk · sohbet · cevap · mod ·
+// taslak). Varlık şemasından `pick` ile türer; ham alan taşır, hesaplanmış etiket taşımaz.
+export * from './social-api.schema';

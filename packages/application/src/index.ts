@@ -135,6 +135,13 @@ export {
 // cevabı tek bir çağrıyla okunur olmalı, prompt metninden çıkarılmamalı.
 export { customerSupportTools } from './ticket/support-tools';
 
+// ── Mesaj defteri (15.1 · üç kanal 21.08) — terfi 21.08 ─────────────────────────────────────
+// Kaynak `apps/web/lib/messaging/conversation.ts`ın kayıt yarısı; web action'ları ve Meta
+// webhook'u artık buradan çağırıyor, mobil `/social` uçları da aynı kapıya yazıyor. Konuşma
+// AÇILIŞI webde kaldı — kimlik çözümü web'in identity katmanında (gerekçe dosya başlığında).
+export { recordInboundMessage, recordOutboundMessage } from './messaging/record';
+export type { RecordMessageInput } from './messaging/record';
+
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
 // Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden
 // tazelenmesi için, zili çalan üç süreç (web · mobil arka uç · backend cron) tek çağrıyı paylaşsın.

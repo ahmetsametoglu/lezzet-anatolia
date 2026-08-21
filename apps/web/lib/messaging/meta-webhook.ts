@@ -1,11 +1,10 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { ringConversationsBell } from '@lezzet/application';
+import { recordInboundMessage, recordOutboundMessage, ringConversationsBell } from '@lezzet/application';
 import { ConversationService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, MessageKind } from '@lezzet/types';
 import { findOrCreateCustomer } from '../identity/find-or-create';
-import { recordInboundMessage, recordOutboundMessage } from './conversation';
 
 /**
  * Meta webhook İŞLEYİCİSİ (15.7) — HTTP'siz, test edilebilir; kabuk `app/api/webhooks/meta/route.ts`.
@@ -208,7 +207,7 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
           });
 
           const { kind, text, payload } = waBodyOf(message);
-          await recordInboundMessage({
+          await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text,
             kind,
@@ -289,9 +288,9 @@ async function ingestMessengerEntry(source: ConversationSource, entry: Record<st
           if (echo) {
             // Sayfadan giden cevap (Business Suite / telefon) — defter kendiliğinden dolar; pencereye
             // dokunmaz (giden mesaj pencere açmaz) ve yazar operatördür (RPC yönden türetir).
-            await recordOutboundMessage({ conversationId: conversation.id, text, kind, payload, providerMessageId: message.mid });
+            await recordOutboundMessage(serviceDb(), { conversationId: conversation.id, text, kind, payload, providerMessageId: message.mid });
           } else {
-            await recordInboundMessage({
+            await recordInboundMessage(serviceDb(), {
               conversationId: conversation.id,
               text,
               kind,
@@ -318,7 +317,7 @@ async function ingestMessengerEntry(source: ConversationSource, entry: Record<st
             providerAccountRef: accountRef,
             profileName: null,
           });
-          await recordInboundMessage({
+          await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text: event.postback?.title ?? null,
             kind: 'interactive',
