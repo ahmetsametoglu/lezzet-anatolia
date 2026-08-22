@@ -18,6 +18,14 @@ Bu klasör, sistemi **hangi sırayla ve hangi parçalar halinde** kodlayacağım
 
 Her `NN-modul.md` dosyası şunları taşır: **Kapsam** (bu modül ne, ne değil) · **Okunacaklar** (mimari bölüm referansları) · **Bağımlılık** (önce ne bitmiş olmalı) · **Görevler** (işaretlenebilir, her biri bitti-kriteriyle) · **Netleşecekler** (varsa: kodlamadan önce konuşulacak maddeler).
 
+## Yatay planlar
+
+Bir modüle sığmayan, birden çok modülü aynı ölçütle kat eden planlar burada durur; ilerleme yine
+modül dosyalarındaki görev satırlarında işaretlenir.
+
+- [`test-dalgasi.md`](test-dalgasi.md) — testlerin toplu yazılma dalgası: sıra (yeniden eskiye),
+  yöntem (birim/entegrasyon, kim koşar) ve sırası gelen dalganın envanteri.
+
 ## Sıra ve durum
 
 Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül dosyalarındaki görev satırlarıdır; `pnpm docs:sync` yeniden üretir, `pnpm docs:check` bayatlamışsa uyarır.
@@ -48,7 +56,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 81/97 (+12 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 21/39 (+11 kısmi) |
-| 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | sürüyor | 2/9 (+1 kısmi) |
+| 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | sürüyor | 2/10 (+1 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

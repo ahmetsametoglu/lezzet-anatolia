@@ -160,6 +160,22 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   tüm kutular okutulmadan teslim tamamlanmaz) · kurye ekranları
 - [ ] (23.9) **Parti karışma sinyali:** aynı varyantın aynı depoda 2+ açık partisi sayısı — Stok
   "Dikkat" sekmesine tek satır (lot etiketi kararının sayısal ölçütü; etüt §1.10)
+- [ ] (23.10) **Test dalgası — Dalga 1b** (plan: `docs/build/test-dalgasi.md` §5, §6.2). Modül 23 en
+  yeni modül ve yüzeyi hâlâ küçük; testi ucuzken yazılır. `touches: packages/database/src/services/variant-barcode.service.ts, apps/mobile/src/components/scan/**, packages/types/src/entities/variant-barcode.schema.ts`
+  - *Bitti:* aşağıdaki envanterin tamamı yazılmış; birim olanlar yeşil, DB'ye vuranlar denetmenin
+    kilitli paketinde koşulmuş.
+  - **Bugünkü hâl ölçüldü (22.08):** `packages/application/src/warehouse/scan.ts` ve
+    `apps/mobile/src/components/scan/scan-sheet.tsx` TESTLİ; `variant-barcode.service.ts` ve
+    `dev-scan-pool.ts` testsiz.
+  - **SAF (birim — şerit koşar):**
+    - `dev-scan-pool` — kod üretimi · havuzun tükenmesi · **üretim modunda devre dışı kalması**
+      (testi olmayan bir dev aracı bir gün üretimde açık kalır).
+    - Barkod biçim doğrulaması (EAN-13/EAN-8 sağlama basamağı) — geçersiz basamak REDDEDİLMELİ.
+  - **DB'YE VURAN (yazılır, koşmak DENETMENİN işi — `CLAUDE §4b`):**
+    - `VariantBarcodeService` tek arama kapısı: bilinen kod doğru varyanta düşer · bilinmeyen kod
+      **`null`** (sıfır ya da "ilk varyant" DEĞİL) · öğrenen eşleme aynı kodu ikinci kez bağlamaz ·
+      aynı kod iki varyanta bağlanamaz (kısıt gerçekten reddediyor mu).
+    - Mal kabulde okutma → kod eşleşmesinin doğru partiye yazması (`receive_intake` yolu).
 
 ## Netleşecekler
 

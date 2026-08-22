@@ -182,6 +182,11 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
     - `BaseDbService.updateIfNull` + `ConversationService.linkCustomer` — boş alan sahipleniliyor; DOLU bağ ezilmiyor ve ikinci çağrı `null` dönüyor.
     - Beş destek aracı: `teslimat_gunleri` (adressiz `bilinmiyor`, rota dışında kargo cümlesi), `siparislerim` (tutar YOK), `urun_ara` (B2B/B2C fiyat ayrışması · adressizde depo-üstü okuma · dört stok hâli · eşleşme yoksa `bilinmiyor`), `teslimat_sartlari` (kapsam farkı · asgari 0 → "alt sınır yok"), `posta_kodu_kontrol` (rota/kargo/hizmet dışı/belirsiz/geçersiz beş hâl).
     - `/api/v1/social/*` uçları — `admin` dışı rol 403; kuyruk sayaçları süzgeçle tutarlı; cevap ucu GÜNCEL detay döndürüyor; mod yarışı 409.
+  - **22.08'de eklenenler (envantere sonradan girdi):**
+    - `ConversationHandlerEnum` (15.13) — sohbet İSTEĞİ `ai`yi reddeder, YANIT şeması kabul eder (asimetri bilinçli: kolon eski `ai` satırlarını taşıyabilir); `TicketHandlerEnum` üçlü kalır. **Saf.**
+    - `recordConversationOptInAction` (15.12) — sohbet izni + yalnız WhatsApp'ta müşteri kartı çift yazımı; **Messenger/IG'de müşteri kartına YAZILMAMASI** (asıl korunacak dal). Ayrıca 22.08'de ölçülemeyen çalışma zamanı doğrulaması bu testle kalıcı olarak kapanır. **DB'ye vuran.**
+    - `generateConversationDraft` — `handledBy !== 'hybrid'` → `wrong_mode`: devirdeyken ajanın sustuğu güvencesi (15.13'ün ölçülen yarısı). **DB'ye vuran.**
+  - **Bu görev, yatay test dalgasının 1a adımıdır** — sıra ve yöntem `docs/build/test-dalgasi.md`'de.
   - **Yazılırken uyulacak:** yeni test kullanıcı istemeden yazılmaz kuralı BU DALGA için kalkar, ötesi için sürer. DB'ye vuran testler entegrasyon köküne yazılır, teardown `purgeTestData`/`mustDelete` ile (elle silme yok), küresel sayıya bakan iddia yazılmaz.
 
 ## Netleşecekler
