@@ -25,6 +25,7 @@
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/helper": "workspace:*",
     "@lezzet/i18n": "workspace:*",
+    "@lezzet/react-hooks": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@stripe/stripe-react-native": "0.64.0",
     "@supabase/supabase-js": "^2.48.1",

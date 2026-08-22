@@ -1,5 +1,5 @@
 import { suggestPostalCodes, type PlaceOption } from '@/lib/api/places';
-import { useDebouncedLookup, type LookupResult } from '@/lib/hooks/use-debounced-lookup.hook';
+import { useDebouncedLookup, type LookupResult } from '@lezzet/react-hooks';
 
 /*
   POSTA KODU ÖNERİSİ (21.28) — adres formunun kod alanını kendi `postal_code_place` referansımıza

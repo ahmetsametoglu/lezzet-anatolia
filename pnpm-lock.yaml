@@ -150,6 +150,9 @@ importers:
       '@lezzet/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@lezzet/react-hooks':
+        specifier: workspace:*
+        version: link:../../packages/react-hooks
       '@lezzet/types':
         specifier: workspace:*
         version: link:../../packages/types

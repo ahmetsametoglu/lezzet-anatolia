@@ -24,8 +24,9 @@ import { fail, ok } from '../../lib/respond';
   Yanlış cümlenin bedeli ölçülebilirdi: "personel yerelde giriş yapamaz" diye bir teşhis üretmişti.
 
   YETKİYİ AÇMAZ: kurulan oturum sıradan bir müşteri oturumuyla aynıdır; hangi uca girilebileceğine
-  yine `bearerAuth` + `requireStaffRole` karar verir. Web'in guard'ı sunucuda kısa devre yapan bir
-  bypass taşıyor (`apps/web/lib/guard.ts`), burada öyle bir şey YOK ve olmamalı.
+  yine `bearerAuth` + `requireStaffRole` karar verir. Burada guard'ı kısa devre yapan hiçbir şey
+  YOK ve olmamalı. (Bu cümle bir süre web'in bypass'ını şimdiki zamanla anıyordu; o bypass 19.08'de
+  tamamen söküldü — oturumsuz `/operations` artık yerelde de 307 → giriş.)
 */
 
 const DevSessionBodySchema = z.object({ email: z.string().email() });

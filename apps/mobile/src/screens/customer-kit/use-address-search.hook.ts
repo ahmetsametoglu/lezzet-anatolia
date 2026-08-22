@@ -1,6 +1,6 @@
 import { MIN_QUERY_LENGTH, searchAddresses, type AddressSuggestion } from '@lezzet/address-fr';
 
-import { useDebouncedLookup, type LookupResult } from '@/lib/hooks/use-debounced-lookup.hook';
+import { useDebouncedLookup, type LookupResult } from '@lezzet/react-hooks';
 
 /*
   ADRES ÖNERİSİ DURUMU (21.15) — adres çekmecesinin sokak alanını Fransız devletinin adres

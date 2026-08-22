@@ -1292,7 +1292,10 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   yeniden yükleme olmadı. **`BEKLEYEN(21.30)` işaretleri bu kararla kaldırıldı** — açık bir
   ölçüm borcu kalmadı.
   `touches:` `apps/mobile/src/screens/customer-kit/use-address-search.hook.ts` ·
-  `apps/mobile/src/lib/hooks/use-debounced-lookup.hook.ts` · `packages/address-fr/src/ban-client.ts`
+  ~~`apps/mobile/src/lib/hooks/use-debounced-lookup.hook.ts`~~ → **`packages/react-hooks/src/use-debounced-lookup.hook.ts`**
+  (dosya 21.08'de pakete TAŞINDI — web adres araması aynı çekirdeği çağırıyor, ikinci nüsha
+  yazılmasın diye; mantığa dokunulmadı. Taşıyan: denetim şeridi, notu `docs/talep/`te) ·
+  `packages/address-fr/src/ban-client.ts`
 
   **Belirti:** yeni adres çekmecesinde sokak alanına yazıldıktan ~3 sn sonra JS bundle baştan
   yükleniyor (`ReactNativeJS: Running "main"`), çekmece kapanıyor ve girilen alanlar kayboluyor.
@@ -4668,3 +4671,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   gerektiğinde ayrı dosya açmak yeterli — ve **bu şeridin doğrulama listesine `pnpm prod:web`
   eklenmeli**: derlenmeyi kesen bu sınıf hata `typecheck`/`lint`/`boundaries` üçlüsünün hiçbirinde
   görünmüyor. Düzeltme `pnpm prod:web` ile doğrulandı (derleme geçti).
+
+- [x] (21.95) **DEV GİRİŞ DÜĞMESİ MÜŞTERİ AÇMIYORDU + ARAMA ÇEKİRDEĞİNİN NÜSHASI SÖKÜLDÜ**
+  `touches:` `apps/mobile/src/lib/auth/dev-login.ts` · `apps/mobile-api/src/api/v1/dev-login.ts` · `apps/mobile/src/screens/customer-kit/{use-address-search,use-postal-suggest}.hook.ts` · `apps/mobile/package.json`
+
+  **Durum (21.08):** iki denetim notu işlendi ve silindi (`docs/talep/not-mobil-dev-giris-...`,
+  `not-mobil-gecikmeli-arama-cekirdegi-...`).
+
+  ── "MÜŞTERİ" DÜĞMESİ ADMİN AÇIYORDU ────────────────────────────────────────
+  `yamansehzade@gmail.com` yerel `auth.users`ın EN ESKİ satırıydı — veritabanında hiç admin yokken
+  doğmuş ve `0002` trigger'ının açılış kuralı (*"hiç admin yoksa ilk hesap admin olur"*) onu
+  `{admin}` yapmıştı. Yani müşteri yüzeyi düğmeden HİÇ açılamıyordu (webde ölçüldü: `/operations`a
+  düşüyordu). Bu, `(21.32)`nin personel düğmeleri için çözdüğü arızanın aynısıydı; müşteri düğmesi
+  o turda dışarıda kalmıştı çünkü `seedStaffLogins` müşteriye auth açmıyordu.
+
+  Düğme `claire.weber@example.fr`e bağlandı — seed'in siparişli, adresli, puanlı müşterisi.
+  **Cihazda ölçüldü:** düğme müşteri yüzeyini açıyor (Claire Weber · 195 puan · iki adres · kupon),
+  operasyona düşmüyor. OTP akışı kapanmadı: öteki müşteriler auth'suz.
+
+  **Liste web'inkiyle hizalandı** (`apps/web/lib/auth/dev-login-gate.ts` ile aynı sıra, aynı
+  adresler) ve **`Muhasebe` eklendi** — bu dosyanın kendi künyesi onu gerekçe diye anlatıyordu
+  (*"çok bölümlüdür, sekme çubuğunun görünür hâli buradan denenir"*) ama listede yoktu; künye
+  teslim etmediği bir şey vaat ediyordu. Rolü ölçüldü: `{accounting,warehouse}` = para + depo.
+  Cihazda beş düğme doğrulandı.
+
+  ── ARAMA ÇEKİRDEĞİ: İKİ NÜSHA → BİR EV ─────────────────────────────────────
+  `use-debounced-lookup.hook` kullanıcı kararıyla `@lezzet/react-hooks`a taşındı (web de aynı üç
+  kararı — gecikme · önbellek · yarış — istiyordu). Buradaki nüsha silindi, iki tüketici pakete
+  bağlandı. **Cihazda ölçüldü:** adres formunda sokak önerisi çalışıyor (dört sonuç + BAN künyesi).
+
+  ── KÜNYE DÜZELTMESİ ────────────────────────────────────────────────────────
+  İki dosyada web'in dev bypass'ı ŞİMDİKİ ZAMANLA anılıyordu; o bypass 19.08'de tamamen söküldü
+  (ölçüm: oturumsuz `/operations` yerelde 200 dönüyordu, artık 307 → giriş). Cümleler geçmiş
+  zamana çekildi — bu dosyanın reddi haklı çıktı ve web de aynı yere geldi.
+
+  BEKLEYEN(21.95): adres formu ALICI ve TELEFON sormuyor, web ikisini de zorunlu tutuyor
+  (`not-mobil-adres-formu-alici-telefon-sormuyor`, cihazda doğrulandı — form yalnız
+  Libellé/Adresse/Code postal/Ville soruyor). Telefon ADRESE aittir, hesaba değil: kurye kapıya
+  ulaşamadığında arayacağı numara odur. Ayrı turda, `@lezzet/helper`ın `normalizePhone`/`DIAL_CODE`
+  kapısıyla.
