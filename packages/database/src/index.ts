@@ -40,6 +40,7 @@ export { AddressService } from './services/address.service';
 export { SettingsService, SETTINGS_CACHE_TTL_MS } from './services/settings.service';
 export { DeliveryZoneService, DeliveryZonePostalCodeService } from './services/delivery-zone.service';
 export { PostalCodePlaceService, type PostalCodeSuggestion } from './services/postal-code-place.service';
+export { VariantBarcodeService, type CodeMatch } from './services/variant-barcode.service';
 export { VariantStockNoticeService } from './services/variant-stock-notice.service';
 export { ZoneNoticeService } from './services/zone-notice.service';
 export { PostalCodeDemandService } from './services/postal-code-demand.service';

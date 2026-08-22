@@ -31,6 +31,7 @@ export * from './delivery-run.schema';
 export * from './setting.schema';
 export * from './delivery-zone.schema';
 export * from './postal-code-place.schema';
+export * from './variant-barcode.schema';
 export * from './variant-stock-notice.schema';
 export * from './zone-notice.schema';
 export * from './warehouse.schema';

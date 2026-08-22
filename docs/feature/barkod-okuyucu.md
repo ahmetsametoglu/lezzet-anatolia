@@ -1,11 +1,10 @@
 # Barkod/QR ile operasyon takibi — etüt + kararlar
 
-> **Statü: KARARLAR ALINDI (17.08.2026).** Dosya 02.08'de yerleşim etüdü olarak açıldı; 17.08'de
-> kullanıcıyla sahne sahne konuşuldu ve §1'deki kararlar çıktı. Kararlar bağlayıcıdır, altındaki
-> etüt bölümleri o kararlara göre güncellenmiştir. Sıradaki adım **tasarım** (kutu akışının ekran
-> anları), sonra şema — kutu ekranı henüz çizilmedi, şemayı önce yazmak iki hafta sonra değişen bir
-> tablo demektir. Görev satırlarına inince (`10.x` · `11.x` · yeni kutu görevi) bu dosya onlara
-> işaret eder.
+> **Statü: OPERASYONDA (21.08).** Dosya 02.08'de yerleşim etüdü olarak açıldı; 17.08'de kullanıcıyla
+> sahne sahne konuşuldu ve §1'deki kararlar çıktı — kararlar bağlayıcıdır. 21.08'de operasyona
+> geçildi: görev satırları `docs/build/23-barkod-kutu.md`'de (durumun tek sahibi ORASI), tasarım
+> brief'leri yazıldı, barkod şeması + tarama kapısı teslim edildi (23.2). Kutu şeması tasarım
+> dönünce (23.6). Netleşecek 1 cevaplandı: toplayan kişi ROL VARSAYMAZ (21.08).
 
 ## 0. Mevcut zemin (kod gerçeği — 17.08'de yeniden ölçüldü)
 

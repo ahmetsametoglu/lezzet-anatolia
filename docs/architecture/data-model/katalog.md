@@ -211,6 +211,28 @@ Paylaşılan alanlar (ad, açıklama, kategori, görsel, `date_type`, `shelf_lif
 
 `customer_id` tek kimlik tablosunu (`user_profiles`) işaret eder — "müşteri rolüyle davranan profil".
 
+## VariantBarcode (ürün barkodu)
+
+Taranabilir kod ↔ varyant eşlemesi (Modül 23 · `0047_barcode.sql`, kararlar
+`docs/feature/barkod-okuyucu.md §1`). DIŞ dünyanın kimliği: paket EAN-13, koli GTIN-14 — "bu hangi
+mal". Bizim bastığımız kutu QR'ı ("bu hangi kayıt") AYRI iştir ve burada yaşamaz. Varyanta kolon
+değil ayrı tablo: aynı varyantın birden çok kodu olur ve **çarpanı kod taşır** (koli kaç adetse kodu
+onu söyler; `supplier_product.pack_qty` tedarikçinin satış bilgisidir, okutulanın kanıtı değil).
+Tablo mal kabulde KENDİNİ doldurur (öğrenen eşleme): tanınmayan kod için ekran "bu kod hangi ürün?"
+diye sorar, cevap yazılır, ikinci gelişte tanınır. Geri alma = satırı silmek (web varyant editörü);
+kod tarihçesiz bir EŞLEMEDİR, beyan değil. Arama zinciri TEK kapıda
+(`VariantBarcodeService.findByCode`): `barkod → sku → supplier_code` — ekranlar başka yol kurmaz.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| variant_id | uuid | FK → product_variant, cascade |
+| code | text | **global unique** — bir kod tek varyanta (yanlış varyanta bağlanabilir, iki varyanta bağlanamaz) |
+| kind | barcode_kind | `unit` (paket) · `case` (koli) — kapalı küme |
+| qty_per_code | int | okutulunca kaç adet sayılır; `unit`te daima 1 (check) |
+| created_by | uuid | öğreten kişi; null = sistem kaydı (seed/içe aktarım) — `set null` |
+| created_at | timestamptz | |
+
 ## PriceGroup (müşteri fiyat grubu)
 
 B2B'nin alt kademeleri (kullanıcı kararı 20.08): market aylık yüksek hacim alır, restoran/pastane

@@ -126,6 +126,7 @@ import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/fe
 import { seedJobRuns } from './seed/jobs';
 import { seedBankQueue, seedMoney } from './seed/money';
 import { seedErrorLog, seedSystemHealth } from './seed/observability';
+import { seedBarcodes } from './seed/barcode';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
 import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
@@ -261,6 +262,8 @@ async function main(): Promise<void> {
   await seedStaffLogins(db);
   // Pazarlıklı fiyat müşteriden SONRA: kanal listesini ezen satır bir müşteri kimliğine yazılıyor.
   await seedNegotiatedPrices(db, varyantlar, kisiler);
+  // Barkodlar kişilerden SONRA: "öğrenilmiş kod" satırı depocunun kimliğine yazılıyor (Modül 23).
+  await seedBarcodes(db, varyantlar, kisiler);
   // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle
   // yazılan bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur.
   await seedBundles(db);

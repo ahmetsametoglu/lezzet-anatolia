@@ -519,3 +519,61 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_found') }),
 ]);
 export type WarehouseReturnResponse = z.infer<typeof WarehouseReturnResponseSchema>;
+
+// ── Tarama · kod çözümü + öğrenen eşleme (Modül 23) ─────────────────────────
+
+/**
+ * Okutulan kodun çözümü — TEK tarama sözleşmesi: mal kabul, toplama, transfer ve tezgâh aynı
+ * kapıyı çağırır, ekran kaynağın ne olduğunu bilmez (etüt 2.3). Kapı yalnız KİMLİK bulur; stok ve
+ * depo kararı mevcut motorlarda kalır (CLAUDE §1 depo değişmezi — barkodla satış kararı verilmez).
+ */
+export const ResolveCodeRequestSchema = z.object({ code: z.string().min(1) });
+export type ResolveCodeRequest = z.infer<typeof ResolveCodeRequestSchema>;
+
+/**
+ * Arama zinciri TEK kapıda ve öncelik sırası sözleşmenin parçası: `barcode → sku → supplier_code`
+ * (etüt §4). `source` o yüzden dönüyor — SKU'dan bulunan bir eşleşme barkod eşleşmesi kadar kesin
+ * değildir ve ekran "SKU'dan bulundu" diyebilmeli. `unknown` bir hata değil ÖĞRENME davetidir:
+ * ekran "bu kod hangi ürün?" diye sorar (karar §1.3).
+ */
+export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('found'),
+    variantId: z.string().uuid(),
+    /** Operasyon dilinde ad — "Fıstıklı Baklava" + boy etiketi ("500 g"; tek boyluda boş). */
+    productName: z.string(),
+    variantLabel: z.string(),
+    kind: z.enum(['unit', 'case']),
+    /** Bu kod kaç adet sayılır — koli kodunda çarpan, SKU/tedarikçi kodunda 1. */
+    qtyPerCode: z.number().int().positive(),
+    source: z.enum(['barcode', 'sku', 'supplier_code']),
+  }),
+  z.object({ status: z.literal('unknown') }),
+]);
+export type ResolveCodeResponse = z.infer<typeof ResolveCodeResponseSchema>;
+
+/** Öğrenen eşleme: tanınmayan kod bir varyanta bağlanır — kabul ekranının "bu kod hangi ürün?"
+    cevabı. `kind`/`qtyPerCode` verilmezse `unit`/1 (koli olduğu biliniyorsa çarpanla gelir). */
+export const LearnCodeRequestSchema = z.object({
+  code: z.string().min(1),
+  variantId: z.string().uuid(),
+  kind: z.enum(['unit', 'case']).optional(),
+  qtyPerCode: z.number().int().positive().optional(),
+});
+export type LearnCodeRequest = z.infer<typeof LearnCodeRequestSchema>;
+
+/**
+ * `already_bound` bir ret ve cevabın kendisi: kod BAŞKA varyanta bağlıysa ikinci bağ yazılmaz
+ * (kural veride — `variant_barcode_code_uq`); ekran hangi varyanta bağlı olduğunu söyler ki
+ * depocu yanlışı fark edebilsin. Düzeltme web varyant editöründen (sil + yeniden öğret).
+ */
+export const LearnCodeResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok') }),
+  z.object({
+    status: z.literal('already_bound'),
+    variantId: z.string().uuid(),
+    productName: z.string(),
+    variantLabel: z.string(),
+  }),
+]);
+export type LearnCodeResponse = z.infer<typeof LearnCodeResponseSchema>;

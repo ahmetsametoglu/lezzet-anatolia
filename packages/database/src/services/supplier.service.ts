@@ -108,6 +108,15 @@ export class SupplierProductService extends BaseDbService<SupplierProduct, Suppl
     return this.getAll({ variantId }, { orderBy: 'isPreferred', orderDirection: 'desc' });
   }
 
+  /**
+   * Tedarikçi koduyla tek eşleme — tarama zincirinin ÜÇÜNCÜ halkası
+   * (`VariantBarcodeService.findByCode`). Kod tedarikçi başına benzersizdir, küresel değil;
+   * çakışmada ilk satır döner. Zinciri burada kurma — tek kapı orada.
+   */
+  async findBySupplierCode(supplierCode: string): Promise<SupplierProduct | null> {
+    return this.getOneBy({ supplierCode });
+  }
+
   /** Varyantların eşlemelerini TEK sorguda — PO taslağı üretirken satır başına sorgu atılmasın. */
   async listByVariants(variantIds: string[]): Promise<SupplierProduct[]> {
     return this.getAll({ variantId: variantIds });

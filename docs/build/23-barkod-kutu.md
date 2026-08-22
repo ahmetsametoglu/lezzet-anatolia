@@ -23,8 +23,8 @@ ilerleme (kullanıcı kararı 17.08). Öteki modüllere yalnız çapraz referans
   alındı, 17.08). §0 bugünün kod ölçümü, §2 aşama aşama akış, §3 lot etiketinin neden ertelendiği,
   §4 veri modeli yönü, §5 fazlama.
 - `design/pages/app-depo.md` (D1 toplama · D2 mal kabul) ve `app-kurye.md` (K1 rota · K3 teslim) —
-  **ikisi de kutu akışını henüz TAŞIMIYOR**; brief güncellemesi bu modülün ilk işi (tasarım turu).
-  `app-depo.md` YOKLAR listesi hâlâ *"Barkod/QR okuma (v2)"* diyor; o satır karar değişince düşer.
+  ~~ikisi de kutu akışını henüz taşımıyor~~ → **taşıyorlar (21.08, 23.1):** her ikisinde "Barkod
+  güncellemesi" bölümü; YOKLAR'daki "v2" satırı düştü.
 - `DOMAIN §4` (FEFO/parti/rezervasyon), `§16` (tedarik/mal kabul), `§17` (depo değişmezi),
   `ORDER_LIFECYCLE` (durum geçişleri — teslim yalnız `out_for_delivery`den olur).
 - `19.28` (`0045_storage_area_vehicle.sql`) — depo içi alanlar; toplama sırasının dayanağı.
@@ -67,19 +67,60 @@ göre sırala" isteği artık bir ekran işi — şema işi değil. Gerekçe zin
 
 ## Görevler
 
-**Görev satırları henüz AÇILMADI** (17.08). Sebep sıradadır: kararlar alındı
-(`docs/feature/barkod-okuyucu.md §1`) ama kutu **yeni bir kavram** ve ekran anları henüz çizilmedi —
-şemayı tasarımdan önce yazmak iki hafta sonra değişecek bir tablo açmak olur. Sıra:
-**tasarım brief'i → Claude Design → görev satırları → şema → ekranlar.**
+**Operasyona geçildi (21.08, kullanıcı kararlarıyla):** *(1)* iki koldan — tasarım brief'i Claude
+Design'a giderken tasarımdan bağımsız parçalar (barkod şeması · tarama · iğne deneyi) beklemez;
+*(2)* toplayan kişi ROL VARSAYMAZ (kimi gün depocu toplar kurye yükler, kimi gün kurye kendisi) —
+yükleme okutması hem doğrulama hem sayım; *(3)* modülü uçtan uca web şeridi yazar (mobil ekranlar +
+mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §5 fazlaması.
 
-Fazlamanın kendisi etüdün §5'inde duruyor; satırlar oradan türetilecek.
+- [x] (23.1) **Tasarım brief'i** — kutu döngüsü + tarama anları iki brief'e işlendi, istek yazıldı ·
+  touches: `design/pages/app-depo.md`, `design/pages/app-kurye.md`, `design/project/uploads/barkod-kutu-tasarim-istegi.md`
+  - *Bitti:* D1'de kutu döngüsü (aç · okut · yanlış ürün reddi · kapat+etiket · eksik), D2'de
+    tarama + öğrenen eşleme, K1'de yükleme sayacı + yanlış kutu reddi, K3'te okutmayla teslim;
+    YOKLAR'daki "Barkod/QR okuma (v2)" satırı düştü; 4×6 etiket şablonu istekte (fiyat/tutar asla).
+  - **Durum (21.08):** yazıldı; Claude Design'a iletim kullanıcıda. Kutu ŞEMASI (`order_box`) ve
+    ekranları tasarım dönene kadar AÇILMAZ — modülün kendi kuralı.
+- [x] (23.2) **Barkod şeması + tek arama kapısı + öğrenen eşleme** · touches:
+  `supabase/migrations/0047_barcode.sql`, `packages/types/src/entities/variant-barcode.schema.ts`,
+  `packages/types/src/contracts/warehouse-api.schema.ts`, `packages/database/src/services/variant-barcode.service.ts`,
+  `packages/application/src/warehouse/scan.ts`, `apps/mobile-api/src/api/v1/warehouse.ts`,
+  `scripts/seed/barcode.ts`, `scripts/seed/coverage.ts`
+  - *Bitti:* `variant_barcode` (kod global unique · `kind: unit|case` · çarpan KODUN üstünde ·
+    `created_by` izi); `findByCode` zinciri tek metot (`barkod → sku → supplier_code`, kaynak
+    cevapta); kapılar `resolveScannedCode`/`learnCode` (`already_bound` reddi); mobil uçlar
+    `POST /warehouse/codes/resolve` + `POST /warehouse/codes`; seed 4 zorunlu kovayla.
+  - **Durum (21.08):** yazıldı. `supplier_product.barcode` BİLEREK açılmadı (etüt "isteğe bağlı" —
+    öğrenen eşleme aynı işi görür, ihtiyaç ölçülünce). SKU/tedarikçi kodu eşleşmesi çarpansız (1) —
+    çarpan yalnız gerçek koli barkodunun bilgisi. Kapı stok KARARI vermez (depo değişmezi).
+- [ ] (23.3) **Web dokunuşları:** varyant editörüne barkod listesi (öğrenen eşlemenin GERİ ALMA
+  yeri: tür/çarpan + sil) · fiyat/tedarik aramalarına kod zinciri (`prices/actions.ts` ·
+  `procurement/actions.ts` bugün yalnız ada bakıyor)
+- [ ] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
+  (`apps/mobile/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
+  çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode`
+- [ ] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
+  0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
+  `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.
+- [ ] (23.6) **Kutu şeması + döngüsü** *(tasarım dönünce)*: `order_box`/`order_box_item` +
+  `seal_order_box` RPC (kutu + picks TEK transaction; ⚠ `record_preparation` picks yazımı kalem
+  başına ABSOLÜT — çok kutulu siparişte birleşimi `sealBox` kapısı kurar) + `boxCompletion` motoru +
+  mobil toplama ekranı + web hazırlık paneline kutu özeti. Kutu kodu `reference_no` DEĞİL.
+  Kutusuz sipariş eski yoldan gider (bilinçli çift akış).
+- [ ] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
+  etiket tasarımıyla) · yazıcı ayarı `settings` warehouse kapsamı (`label_printer_*`) + Depolar
+  ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan
+- [ ] (23.8) **Yükleme + teslim okutması:** `loadBox` (rota doğrulama + damga + sayaç) ·
+  `startCourierDay` kutulu siparişte tüm kutular binmeden `out_for_delivery` yazmaz ·
+  `deliverByBox` (`deliver_order` DEĞİŞMEZ; okutulan kod `delivery_proof`a — B2C'ye bedava kanıt;
+  tüm kutular okutulmadan teslim tamamlanmaz) · kurye ekranları
+- [ ] (23.9) **Parti karışma sinyali:** aynı varyantın aynı depoda 2+ açık partisi sayısı — Stok
+  "Dikkat" sekmesine tek satır (lot etiketi kararının sayısal ölçütü; etüt §1.10)
 
 ## Netleşecekler
 
-1. **Toplayan kişi kuryenin kendisi mi?** Kullanıcı paralel toplama için "her masaya bir kurye
-   görevlendirilir" dedi (17.08). Öyleyse yükleme okutmasının *"bu kutu bu rotanın malı mı"* sorusu
-   zayıflar (topladığı kutuyu kendi yüklüyor) ama kutu SAYIMI değerli kalır. Ekran anları buna göre
-   ayrışır.
+1. ~~**Toplayan kişi kuryenin kendisi mi?**~~ → **CEVAPLANDI (kullanıcı kararı 21.08): rol
+   ayrılmaz** — kimi gün depocu toplar kurye yükler, kimi gün kurye kendisi toplar. Ekranlar rol
+   varsaymaz; yükleme okutması hem doğrulama hem sayım olarak kalır.
 2. **Etiket dosya biçimi: PDF mi PNG mi?** Brother SDK ikisini de basıyor. Karar barkod/QR üretimi
    ve font kontrolüyle birlikte verilir — etiketin içeriğine sunucu karar verdiği için biçim de
    sunucu tarafının kararı.

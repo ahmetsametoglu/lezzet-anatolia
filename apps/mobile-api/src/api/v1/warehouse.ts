@@ -4,6 +4,7 @@ import { serviceDb, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
   confirmPreparation,
+  learnCode,
   listInboundTransfers,
   listPendingIntakes,
   listPreparationQueue,
@@ -13,12 +14,15 @@ import {
   receiveGoods,
   receiveTransfer,
   recordAdjustment,
+  resolveScannedCode,
 } from '@lezzet/application';
 import {
   ConfirmPreparationRequestSchema,
   ConfirmPreparationResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
+  LearnCodeRequestSchema,
+  LearnCodeResponseSchema,
   PendingIntakesResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsRequestSchema,
@@ -27,6 +31,8 @@ import {
   ReceiveTransferResponseSchema,
   RecordAdjustmentRequestSchema,
   RecordAdjustmentResponseSchema,
+  ResolveCodeRequestSchema,
+  ResolveCodeResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
@@ -454,4 +460,38 @@ warehouse.post('/returns/:orderId', async (c) => {
 
   const body: z.input<typeof WarehouseReturnResponseSchema> = outcome;
   return ok(c, WarehouseReturnResponseSchema.parse(body));
+});
+
+// ── Tarama · kod çözümü + öğrenen eşleme (Modül 23) ─────────────────────────
+
+/**
+ * **Okutulan kodun çözümü** — TEK tarama sözleşmesi: mal kabul, toplama, transfer ve tezgâh aynı
+ * ucu çağırır, ekran kaynağın ne olduğunu bilmez (etüt 2.3). Kimlik bulur, stok/depo kararı
+ * VERMEZ (CLAUDE §1 depo değişmezi) — bu uca stok okuması eklenmez.
+ *
+ * `unknown` bir hata değil ÖĞRENME davetidir (karar §1.3): ekran "bu kod hangi ürün?" diye sorar
+ * ve cevabı aşağıdaki uca yazar. POST çünkü kod gövdede gider — URL'e konsaydı erişim loglarında
+ * dolaşırdı ve `/` içeren bir kod yolu bölerdi.
+ */
+warehouse.post('/codes/resolve', async (c) => {
+  const parsed = ResolveCodeRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await resolveScannedCode(serviceDb(), parsed.data);
+  const body: z.input<typeof ResolveCodeResponseSchema> = outcome;
+  return ok(c, ResolveCodeResponseSchema.parse(body));
+});
+
+/**
+ * **Öğrenen eşleme** — tanınmayan kod bir varyanta bağlanır; ikinci gelişte tanınır. Öğreten kişi
+ * kayda geçer (`staff.id` — iz, suçlama değil). Kod zaten bağlıysa `already_bound` cevabın
+ * kendisidir: ekran kime bağlı olduğunu söyler, düzeltme web varyant editöründen.
+ */
+warehouse.post('/codes', async (c) => {
+  const parsed = LearnCodeRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await learnCode(serviceDb(), { ...parsed.data, actorId: c.get('staff').id });
+  const body: z.input<typeof LearnCodeResponseSchema> = outcome;
+  return ok(c, LearnCodeResponseSchema.parse(body));
 });

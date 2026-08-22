@@ -267,6 +267,9 @@ export type {
 export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';
 export type { PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
+// Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.
+export { learnCode, resolveScannedCode } from './warehouse/scan';
+export type { LearnCodeOutcome, ScanResolution } from './warehouse/scan';
 export type {
   IntakeDifference,
   IntakeFormLine,

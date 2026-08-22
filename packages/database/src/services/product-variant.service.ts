@@ -26,6 +26,15 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
   }
 
   /**
+   * SKU ile tek varyant — tarama zincirinin ikinci halkası (`VariantBarcodeService.findByCode`).
+   * `sku` benzersiz DEĞİL (nullable serbest metin); çakışmada ilk satır döner ve çağıran kaynağın
+   * kesinlik derecesini `source: 'sku'` ile taşır. Zinciri burada kurma — tek kapı orada.
+   */
+  async findBySku(sku: string): Promise<ProductVariant | null> {
+    return this.getOneBy({ sku });
+  }
+
+  /**
    * Verilen varyantlar TEK sorguda. Varyanttan ürüne çıkmak gerektiğinde kullanılır: teklife açık
    * partiler varyant kimliği taşır, vitrin ise ürün gösterir — bu okuma o köprüdür.
    */

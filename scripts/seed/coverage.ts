@@ -464,6 +464,21 @@ export const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    // ── ÜRÜN BARKODU (Modül 23) ───────────────────────────────────────────────────────────────
+    // Dört kova dört ayrı davranışı açıyor: paket kodu (çarpan 1) ↔ koli kodu (çarpan kadar öner) ·
+    // öğrenilmiş kod (izli — "kim öğretti") ↔ sistem kaydı (izsiz). "Tanınmayan kod" hâli kovasızdır
+    // ve bilinçli: onu var eden şey kodsuz KALAN varyantlardır — katalogun tamamına kod yazılsaydı
+    // öğrenen eşleme ekranı hiçbir koşuda açılmazdı (seed künyesi).
+    baslik: 'Ürün barkodu',
+    tablo: 'variant_barcode',
+    kovalar: [
+      { ad: 'paket kodu (unit)', zorunlu: true, filtre: (q) => q.eq('kind', 'unit') },
+      { ad: 'koli kodu (case, çarpanlı)', zorunlu: true, filtre: (q) => q.eq('kind', 'case') },
+      { ad: 'öğrenilmiş kod (izli)', zorunlu: true, filtre: (q) => q.not('created_by', 'is', null) },
+      { ad: 'sistem kaydı (izsiz)', zorunlu: true, filtre: (q) => q.is('created_by', null) },
+    ],
+  },
+  {
     // ── ÖLÇÜM NOKTALARI (19.28) ───────────────────────────────────────────────────────────────
     // Ölçüm noktası serbest metinden tanımlı kayda geçti; kapsam da onunla birlikte doğdu.
     // Dördü de ZORUNLU çünkü dördü de AYRI bir ekran hâlini açıyor:

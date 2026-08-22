@@ -92,3 +92,32 @@ bilgisi yerel bayrak değil sunucudaki sefer kaydı (`day.run`). K7'nin öznesi 
 SF kodu, kapatma `runId` ile. "Rota SIRASINI değiştirme plan operatörünün" cümlesi geçerli kalır —
 ama rota SEÇİMİ kuryenindir: sıra ile seçim ayrı sorular. Araç seçimi parametrik (Setting): araç kaydı
 girilmemiş kurulumda sorulmaz, tek araçta otomatik.
+
+## Barkod güncellemesi (21.08 — `docs/feature/barkod-okuyucu.md §1`, 13 karar bağlayıcı)
+
+> Hazırlık her kutuyu QR'lı 4×6 etiketle kapatıyor (bkz. `app-depo.md` güncellemesi). Kuryenin iki
+> yeni anı o QR üzerinde döner. **Rol varsayılmaz** (kullanıcı kararı 21.08): kutuyu kimi gün depocu
+> toplar kurye yükler, kimi gün kurye kendisi toplayıp yükler — okutma HEM doğrulama HEM sayımdır,
+> ikisi birden çizilir (karar §1.11).
+
+### K1'e eklenen: ARACA YÜKLEME OKUTMASI
+
+- Rota onayı ("Seferi başlat") DURUR — o *niyet* doğrulamasıdır; **garanti kutu okutmasıdır**.
+- Sefer başlatılınca (ya da öncesinde — tasarım karar versin) kurye kutuları TEK TEK okutur:
+  **yükleme sayacı** sürekli önündedir ("5/8 kutu bindi · 3 kaldı"), sayaç kutu kayıtlarından
+  türer.
+- **Rotaya ait olmayan kutu okutulursa ekran REDDEDER** — kutu araca binmez; cümle hangi
+  rotanın/siparişin kutusu olduğunu söyler.
+- **Tüm kutuları binmeyen sipariş "yolda" sayılmaz** — kalan kutular listede görünür durur.
+- **Kutusuz sipariş** (web masasından kutusuz hazırlanan) bugünkü akıştan gider: okutmasız,
+  toplu; ekran iki hâli birlikte taşır — geçiş dönemi bilinçli.
+
+### K3'e eklenen: KAPIDA OKUTMAYLA TESLİM
+
+- Kurye kapı önünde kutunun QR'ını okutur → sistem kutunun O siparişe ait olduğunu ve siparişin
+  gerçekten yolda olduğunu doğrular → **teslim kaydı kendiliğinden düşer**; ayrıca "teslim ettim"
+  formu doldurulmaz. Yanlış anda/yanlış kapıda okutulan kod sessiz geçmez — ret cümlesi çizilir.
+- **Çok kutulu siparişte tüm kutular okutulmadan teslim tamamlanmaz** — ekran kalan kutuyu söyler.
+- Okutulan kod teslim KANITINA yazılır: B2C'de (bugün kanıt istenmeyen yol) bedava kanıt olur;
+  B2B'nin imza/fotoğraf zorunluluğu AYNEN durur, okutma onun yerine geçmez.
+- Tahsilat (K4) değişmez: kurye tutarı QR'ı okutunca kendi ekranında görür — etikette tutar yok.

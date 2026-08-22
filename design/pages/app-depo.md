@@ -91,5 +91,52 @@
 
 ## YOKLAR (v1)
 
-- Barkod/QR okuma (v2 — v1 liste-işaretle) · depo seçimi (sabit) · tedarik siparişi OLUŞTURMA
-  (yönetimin işi, Y4) · raf/konum yönetimi (modelde yok).
+- ~~Barkod/QR okuma (v2 — v1 liste-işaretle)~~ → **karar değişti, satır düştü (21.08):** tarama
+  artık bu bölümün işi — aşağıdaki güncelleme. · depo seçimi (sabit) · tedarik siparişi OLUŞTURMA
+  (yönetimin işi, Y4) · raf/alan YÖNETİMİ (alanlar artık modelde VAR — `storage_area`, 19.28 —
+  ama yönetimi web Depolar ekranında; mobil yalnız okur).
+
+## Barkod güncellemesi (21.08 — `docs/feature/barkod-okuyucu.md §1`, 13 karar bağlayıcı)
+
+> Tarama DAİMA telefon kamerasıyla (karar §1.1) — bu yüzden akışların evi bu bölüm. İki kimlik
+> karıştırılmaz: **ürün barkodu** (EAN/GTIN — "bu hangi mal") ve **bizim bastığımız kutu QR'ı**
+> ("bu hangi kayıt"). Aşağıdaki anlar çizilecek; web tarafında tarama HİÇ olmayacak.
+
+### D1'e eklenen: KUTU DÖNGÜSÜ (karar §1.4)
+
+Toplama artık kutu ekseninde döner: **sipariş seç → kutu aç → kalemleri okutarak doldur →
+"kutu kapandı" → her şey konduysa sipariş kapanır, değilse yeni kutu açılır.** Tek kutu bu
+döngünün özel hâlidir — ayrı bir "tek kutulu" akış çizilmez. Çizilecek anlar:
+
+- **Kutu açma:** sipariş seçilince ilk kutu tek dokunuşla açılır; başlıkta "Kutu 1 · <sipariş>".
+- **Okutma anı:** vizör + altında siparişin kalem listesi (istenen/konan sayaçlarıyla). Okutulan
+  ürün listede bulunur ve kutuya işlenir; **koli barkoduysa adet çarpanı kadar** işlenir (kod
+  çarpanı kendisi taşır — karar §1.2), depocu adedi düzeltebilir.
+- **Yanlış ürün reddi:** sipariş kaleminde OLMAYAN ürün okutulursa ekran ANINDA durdurur —
+  kutuya girmez; cümle net ("bu siparişte yok"), ses/titreşim ayrımı düşünülebilir.
+- **Kutu kapanışı:** "Kutuyu kapat" → içerik özeti → 4×6 etiket basılır (aşağıda) → etiket
+  kutunun üstüne yapıştırılır. Kapanan kutu SALT-OKUNUR.
+- **Eksik kalem:** mevcut eksik akışının (D1 "eksik bildir") kutu döngüsündeki yeri — eksik
+  bildirilen sipariş kutuları kapansa da "Hazırlanıyor"da kalır; karar yine yönetimde.
+- **Toplama sırası:** kalem listesi `storage_area.sort_order`'a göre dizilir ve satırda alanın
+  ADI görünür ("Derin dondurucu 2") — depocu raf düzeninde yürür (karar §1.13).
+- **Paralel toplama masa kuralıyla:** bir masa = bir sipariş = bir kişi (karar §1.7); ekran rol
+  VARSAYMAZ — toplayan kimi gün depocu, kimi gün kuryenin kendisidir (kullanıcı kararı 21.08).
+
+### D2'ye eklenen: TARAMA + ÖĞRENEN EŞLEME (karar §1.3)
+
+- **Tarama:** koli okutulur → kabul satırı kendiliğinden bulunur; koli barkoduysa gelen adet
+  çarpan kadar ÖNERİLİR (ölçülmüş gerçek — beklenen adet değil), depocu düzeltir. SKT/lot girişi
+  aynen sürer.
+- **"Bu kod hangi ürün?":** okutulan kod sistemde yoksa ekran sorar — formdaki satırlardan biri
+  seçilir, kod o varyanta KAYDEDİLİR, ikinci gelişte tanınır. "Barkodsuz koli" yok, *henüz
+  tanımadığımız* koli var; kimse oturup katalog barkodu girmez. (Yanlış eşleme web'den geri
+  alınır — mobilde geri alma çizilmez.)
+- PO kalemiyle uyuşmazlık MEVCUT fark mekanizmasına düşer; yeni uyarı dili çizilmez.
+
+### 4×6 ETİKET (karar §1.5-§1.6, kutu kapanışında basılır)
+
+İçerik: ürün + adet dökümü · müşteri/sipariş kimliği · rota/gün · **tahsilat YÖNTEMİ** · QR
+(kutu kodu — sipariş referansı DEĞİL). **Fiyat/tutar ASLA yazılmaz** — depo yüzeyi tutar görmez;
+kurye QR'ı okutunca tahsil edilecek tutarı kendi ekranında görür. Basım sistem diyaloğu olmadan,
+kapanışta kendiliğinden (karar §1.8).
