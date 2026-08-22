@@ -7,7 +7,7 @@ import { logger } from '@lezzet/observability';
 import { COUNTRY_LABELS, ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
-import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
+import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 import { readPublicDeliveryTerms } from '../settings/public-terms';
 
@@ -202,6 +202,68 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
             'destek aracı okuyamadı',
           );
           return { bilinmiyor: 'Katalog şu an okunamadı.' };
+        }
+      },
+    }),
+
+    posta_kodu_kontrol: tool({
+      description:
+        'Verilen POSTA KODUNA teslimat yapılıp yapılmadığını söyler: kapıya rota teslimi mi, kargo mu, yoksa hiç gitmiyor mu. ' +
+        '"Şu koda geliyor musunuz", "adresime gelir mi", "biz X şehrindeyiz" sorularında ÇAĞIR. ' +
+        'Müşterinin KENDİ kayıtlı adresi soruluyorsa teslimat_gunleri aracını kullan; bu araç adresi olmayan ya da BAŞKA bir yeri soran kişi içindir.',
+      inputSchema: z.object({
+        postaKodu: z.string().min(4).describe('Posta kodu — örn. "67000", "75001"'),
+      }),
+      execute: async ({ postaKodu }) => {
+        try {
+          /*
+            BU ARAÇ GİRDİ ALIYOR ve değişmezi çiğnemiyor: alınan şey KİMLİK değil, herkese açık bir
+            soru. "67000'e geliyor musunuz" cevabı sitede zaten var (posta kodu adımı ziyaretçiye
+            açık) — kimseye ait olmayan bir bilgiyi okumak, başkasının verisini okumak değildir.
+
+            Kimliğe dayalı sorunun aracı ayrı (`teslimat_gunleri`, girdisi boş): "benim adresim"
+            sorusunu bu araca postalayan bir model, müşterinin adresini uydurmak zorunda kalırdı.
+          */
+          const cozum = await resolvePlaceForPostalCode(db, postaKodu);
+          switch (cozum.kind) {
+            case 'route':
+              // En değerli cevap: rota günleri ÇÖZÜMLE BİRLİKTE geliyor, ikinci okuma gerekmiyor.
+              return {
+                kod: postaKodu,
+                teslimat: 'kapıya teslim (haftalık rota)',
+                yer: cozum.placeName,
+                haftalikGunler: cozum.weekdays.map(gunAdi),
+              };
+            case 'shipping':
+              return {
+                kod: postaKodu,
+                teslimat: 'kargo ile gönderim (haftalık rota yok)',
+                yer: cozum.placeName,
+                not: 'Kargo ücreti ve ücretsiz kargo eşiği için teslimat_sartlari aracına bak.',
+              };
+            case 'unresolved':
+              // Ülke biliniyor ama hizmet yok: "yanlış kod" DEĞİL, "buraya henüz gelmiyoruz".
+              return {
+                kod: postaKodu,
+                teslimat: 'yok — bu koda şu an teslimat yapmıyoruz',
+                not: 'Kod geçerli; bölgemiz henüz oraya ulaşmıyor. Müşteri isterse haber listesine yazılabilir (bunu operatör yapar).',
+              };
+            case 'ambiguous':
+              // Aynı kod iki hizmet ülkemizde birden geçerli — model UYDURMAZ, SORAR.
+              return {
+                kod: postaKodu,
+                bilinmiyor: 'Bu kod birden çok ülkede geçerli — hangi ülke olduğunu müşteriye SOR, tahmin etme.',
+                adaylar: cozum.candidates.map((c) => `${COUNTRY_LABELS[c.country]}${c.inRoute ? ' (rota bölgemizde)' : ''}`),
+              };
+            case 'unknown':
+              return { kod: postaKodu, bilinmiyor: 'Böyle bir posta kodu bulunamadı — büyük olasılıkla yazım hatası. Müşteriden kodu teyit et.' };
+          }
+        } catch (err) {
+          logger.warn(
+            { context: 'application/support-tools', tool: 'posta_kodu_kontrol', customerId, err: String(err) },
+            'destek aracı okuyamadı',
+          );
+          return { bilinmiyor: 'Bölge bilgisi şu an okunamadı.' };
         }
       },
     }),
