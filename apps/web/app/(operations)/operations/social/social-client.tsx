@@ -11,6 +11,7 @@ import {
   suggestConversationDraftAction,
 } from './actions';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
+import { LinkCustomerDialog } from './link-customer-dialog';
 import { ManualDmDialog } from './manual-dm-dialog';
 import { SocialDesktop } from './social.desktop';
 import { socialUrl, type SocialChannelKey, type SocialFilterKey, type SocialUrlState } from './social-url';
@@ -68,6 +69,7 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
    */
   const [dmMode, setDmMode] = useState<'new' | 'follow' | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const detail = data.detail;
 
@@ -133,6 +135,7 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     onIncoming: () => setDmMode('follow'),
     onNewDm: () => setDmMode('new'),
     onNewTicket: () => setTicketOpen(true),
+    onLinkCustomer: () => setLinkOpen(true),
   };
 
   return (
@@ -153,6 +156,23 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
             setDmMode(null);
             // İşlenen sohbet AÇILIR: operatör onu okumak için buraya geldi, kuyrukta aramamalı.
             go({ c: conversationId });
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {/* Bağlama penceresi YALNIZ kimliksiz sohbette açılır — bağı DEĞİŞTİRME yolu değil, KURMA
+          yolu (15.16). Dolu bağı değiştirmek bir birleştirme kararıdır ve Müşteriler ekranının
+          işidir; kapıyı burada da açmak aynı kararı iki yerde yaşatırdı. */}
+      {linkOpen && detail && !detail.context ? (
+        <LinkCustomerDialog
+          conversationId={detail.id}
+          title={detail.title}
+          source={detail.source}
+          onClose={() => setLinkOpen(false)}
+          onLinked={() => {
+            setLinkOpen(false);
+            // Bağ kurulunca sağ panel müşteri kartına döner: sipariş geçmişi ve izin sunucudan gelir.
             router.refresh();
           }}
         />

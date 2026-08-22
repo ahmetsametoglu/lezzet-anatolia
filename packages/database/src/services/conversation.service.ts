@@ -97,6 +97,27 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   }
 
   /**
+   * **Kimliksiz sohbeti müşteriye bağla** (15.16) — YALNIZ boşsa yazar, dolu bağı EZMEZ.
+   *
+   * Messenger/Instagram'da bu kapı istisna değil KURALDIR: PSID/IGSID telefon taşımaz, yani o
+   * kanallarda konuşma daima kimliksiz doğar (`open_conversation` künyesi) ve kimliğin tek yolu
+   * operatörün "bu sohbet şu müşteri" demesidir. WhatsApp'ta ise ancak telefon/e-posta çakışması
+   * yaşandığında gerekir — orada kimlik zaten numaradan çözülür.
+   *
+   * Ezmeme güvencesi `open_conversation`ın `coalesce` kuralıyla AYNI cümledir ve aynı sebeple:
+   * bağlanmış bir konuşmayı başka müşteriye kaydırmak bir BİRLEŞTİRME kararıdır ve insana aittir
+   * (DOMAIN §10) — yanlış hesaba bağlanmış bir sohbet, bağlanmamış bir sohbetten pahalıdır.
+   * Yarışı DB çözer (`updateIfNull` künyesi): kaybeden `null` alır, sessiz bir ezme olmaz.
+   *
+   * **Ayırma (unlink) kapısı BİLEREK YOK.** Yanlış bağı düzeltmek bir birleştirme/ayırma işidir ve
+   * Müşteriler ekranının işidir (09.10); buraya ikinci bir yol açmak, aynı kararı iki yerde
+   * yaşatmak olurdu.
+   */
+  linkCustomer(id: string, customerId: string): Promise<Conversation | null> {
+    return this.updateIfNull(id, 'customerId', { customerId });
+  }
+
+  /**
    * Ticari mesaj izni (DOMAIN §11) — izin ve ANI birlikte yazılır.
    *
    * İkisi ayrı çağrıya bırakılsaydı biri unutulur ve elimizde tarihsiz bir "izin var" kaydı

@@ -361,9 +361,11 @@ interface SocialContextPaneProps {
   profileName: string | null;
   tickets: ConversationDetailView['tickets'];
   onNewTicket: () => void;
+  /** Kimliksiz sohbeti müşteriye bağlama penceresini açar (15.16). */
+  onLinkCustomer: () => void;
 }
 
-export function SocialContextPane({ context, externalRef, source, profileName, tickets, onNewTicket }: SocialContextPaneProps) {
+export function SocialContextPane({ context, externalRef, source, profileName, tickets, onNewTicket, onLinkCustomer }: SocialContextPaneProps) {
   const whatsapp = source === 'whatsapp';
   // Müşteri araması kanala göre ANLAMLI anahtarla yapılır: WhatsApp'ta numara kimlik anahtarıdır ve
   // kesin eşleşir; Messenger/IG'de elimizde yalnız görünen ad var — arama kesinlik değil ADAY verir.
@@ -384,6 +386,12 @@ export function SocialContextPane({ context, externalRef, source, profileName, t
             ? 'Bu numara bir müşteriye bağlanmadı. Sipariş geçmişi ve izin bilgisi ancak kimlik çözülünce görünür.'
             : `${SOURCE_LABELS[source]} kimliği telefon taşımaz — müşteri kendini tanıttığında kayıt Müşteriler ekranından birleştirilir.`}
         </span>
+        {/* BAĞLAMA kapısı (15.16) — kimliğin kurulduğu tek yer. Messenger/IG'de bu ekranın en
+            önemli düğmesi: o kanallarda kimlik başka hiçbir yoldan çözülemez. Aramanın ÜSTÜNDE
+            duruyor çünkü sıra öyle işliyor — operatör önce arar, bulunca bağlar. */}
+        <Button variant="secondary" onClick={onLinkCustomer}>
+          Müşteriye bağla
+        </Button>
         {(whatsapp || profileName) ? (
           <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline">
             Müşterilerde ara →

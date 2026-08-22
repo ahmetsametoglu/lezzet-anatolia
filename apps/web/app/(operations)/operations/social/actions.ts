@@ -6,12 +6,14 @@ import { ConversationInboxService, ConversationService, serviceDb } from '@lezze
 import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { openTicket } from '@/lib/ticket/write';
 import { openWhatsappConversation } from '@/lib/messaging/conversation';
 import { toInboxRows } from './social-read';
 import {
   ConversationTicketSchema,
   FollowUpInboundSchema,
+  LinkConversationCustomerSchema,
   ManualInboundSchema,
   RecordOutboundSchema,
   type InboxRowView,
@@ -216,6 +218,51 @@ export async function consumeConversationDraftAction(conversationId: string): Pr
     await service.clearDraft(conversationId);
     refresh();
     return { data: { draft }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Sohbet için müşteri arama (15.16) — paylaşılan seçicinin kaynağı (`lib/customer-options`), talep
+ * ve fiyat ekranlarıyla AYNI sorgu. Guard ve zarf burada, çünkü action sayfa klasöründe yaşar.
+ */
+export async function searchSocialCustomersAction(term: string): Promise<ActionResult<CustomerOption[]>> {
+  try {
+    await requireAdmin();
+    const query = term.trim();
+    if (!query) return { data: [], error: null };
+    return { data: await searchCustomerOptions(query), error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **Kimliksiz sohbeti müşteriye bağla** (15.16) — Messenger/Instagram'da kimliğin TEK yolu.
+ *
+ * O kanallarda konuşma daima kimliksiz doğar (PSID/IGSID telefon taşımaz), yani "bu sohbet şu
+ * müşteri" cümlesini ancak operatör kurabilir: müşteri sohbette kendini tanıtır, operatör kaydı
+ * seçer. WhatsApp'ta da işe yarar ama orada istisnadır — kimlik numaradan çözülür, bu kapı yalnız
+ * telefon/e-posta çakışmasında bağlanmadan açılmış sohbetler için gerekir.
+ *
+ * Dolu bağ EZİLMEZ ve yarış sessiz geçilmez: kapı `null` dönerse bu sırada başka biri bağlamıştır
+ * ve operatöre söylenir (`ConversationService.linkCustomer` künyesi). Ayırma yolu YOK — yanlış bağı
+ * düzeltmek Müşteriler ekranının birleştirme işidir (09.10).
+ */
+export async function linkConversationCustomerAction(input: unknown): Promise<ActionResult<{ customerId: string }>> {
+  try {
+    await requireAdmin();
+    const parsed = LinkConversationCustomerSchema.parse(input);
+    const updated = await new ConversationService(serviceDb()).linkCustomer(parsed.conversationId, parsed.customerId);
+    if (!updated) {
+      return {
+        data: null,
+        error: 'Sohbet bu sırada bir müşteriye bağlanmış — ekranı tazeleyin. Bağı değiştirmek Müşteriler ekranının birleştirme işidir.',
+      };
+    }
+    refresh();
+    return { data: { customerId: parsed.customerId }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

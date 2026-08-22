@@ -157,6 +157,18 @@ export const FollowUpInboundSchema = z.object({
 });
 
 /**
+ * Kimliksiz sohbeti müşteriye bağlama (15.16) — iki kimlik, ikisi de uuid.
+ *
+ * Serbest metin (ad/telefon) ALMIYOR ve bu bilinçli: operatör seçiciden bir KAYIT seçer, kimlik
+ * yazmaz. Metin kabul etseydik "aynı adlı iki müşteri" sorusunu bu kapının çözmesi gerekirdi ve
+ * çözemezdi — sohbet yanlış hesaba bağlanırdı.
+ */
+export const LinkConversationCustomerSchema = z.object({
+  conversationId: z.string().uuid(),
+  customerId: z.string().uuid(),
+});
+
+/**
  * Konuşmadan talep açma — `ticket.conversation_id` FK'sini gerçekten dolduran TEK yol.
  *
  * Bağ 15.1'de kuruldu ama bugüne kadar hiçbir yazma yolu onu doldurmuyordu; Talepler ekranı da
@@ -196,4 +208,6 @@ export interface SocialViewProps {
   /** Yeni WhatsApp DM'i işle — yalnız WhatsApp (kimlik anahtarı telefon). */
   onNewDm: () => void;
   onNewTicket: () => void;
+  /** Kimliksiz sohbeti müşteriye bağla (15.16) — Messenger/IG'de kimliğin TEK yolu. */
+  onLinkCustomer: () => void;
 }

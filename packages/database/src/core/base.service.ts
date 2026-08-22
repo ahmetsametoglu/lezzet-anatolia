@@ -618,6 +618,34 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     if (error) throw error;
   }
 
+  /**
+   * **Boş alanı SAHİPLENEN güncelleme** — yalnız `nullField` HÂLÂ boşken yazar; doluysa hiçbir şey
+   * yazmaz ve `null` döner.
+   *
+   * **Neden oku-sonra-yaz değil:** iki operatör aynı kimliksiz kaydı aynı anda bağlarsa ikisi de
+   * "boş" görür ve ikincisi birincinin yazdığını sessizce ezer. Kimlik bağlama bir BİRLEŞTİRME
+   * kararıdır ve insana aittir (DOMAIN §10) — sessizce ezilen bir karar, hiç sorulmamış bir karardır.
+   * Koşul veritabanına bırakılınca kazananı DB seçer ve kaybeden görünür bir `null` alır.
+   *
+   * **Neden tabana eklendi, alt sınıfta ham yazılmadı:** `updateWhereIn`in aynı gerekçesi —
+   * `STACK §6` tabanı atlayan ham yazımı yasaklıyor (doğrulama ve para eşlemesi atlanır), taban da
+   * koşullu güncellemeyi bilmiyordu. Kural ile kolaylık çatıştığında kural kazanır, taban büyür.
+   *
+   * Dönüş GÜNCEL SATIRDIR, boolean değil: çağıran çoğu zaman yazdığı satırı okumak zorunda
+   * (ekranı tazelemek, sonucu doğrulamak) ve ikinci bir tur atmak aynı soruyu iki kez sormaktır.
+   */
+  protected async updateIfNull(id: string, nullField: string, patch: Record<string, unknown>): Promise<TDb | null> {
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .update(this.toDbRow(patch))
+      .eq('id', id)
+      .is(this.column(nullField), null)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    return data ? this.dbSchema.parse(this.toApp(data)) : null;
+  }
+
   /** Filtreye göre siler (bileşik anahtarlı tablolar için; en az bir filtre zorunlu). */
   protected async deleteWhere(filters: Record<string, unknown>): Promise<void> {
     const entries = Object.entries(filters).filter(([, v]) => v !== undefined && v !== null);
