@@ -52,3 +52,9 @@ jest.mock('expo-camera', () => ({
     jest.fn().mockResolvedValue({ granted: false, canAskAgain: true, status: 'undetermined' }),
   ],
 }));
+
+/* ScanSheet yüklemeden önce native modülü YOKLAR — jest'te native yoktur ve gerçek yoklama kamera
+   dalını hiç açtırmazdı; izin akışı test edilemez kalırdı. Sahtelenen şey `expo-modules-core`
+   DEĞİL (bir kez denendi ve preset'in öteki native sahtelerini deldi — 7 suite düştü, ölçüldü),
+   yalnız bizim tek soruluk yoklama dosyamız: "var" der, üstteki mock'lu JS dalı çalışır. */
+jest.mock('@/components/scan/camera-availability', () => ({ hasCameraNativeModule: () => true }));

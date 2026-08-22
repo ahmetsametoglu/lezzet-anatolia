@@ -23,7 +23,7 @@
       "body": "Bağlantı ya da sunucu sorunu — kayıtlı işlerin güvende."
     },
     "offline": "Bağlantı yok — mal kabul, transfer ve sayım çevrimdışı yapılamaz (raf ↔ sistem çelişkisi yasak).",
-    "footnote": "Depo ekranları fiyat/tutar görmez. Parti kararı motorundur; barkod v2'de.",
+    "footnote": "Depo ekranları fiyat/tutar görmez. Parti kararı motorundur; mal kabulde kod okutulur.",
     "rows": {
       "picking": {
         "code": "D1",

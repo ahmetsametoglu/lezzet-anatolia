@@ -121,8 +121,28 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     kamera modülü TEMBEL yükleniyor (`require` try/catch) — eski dev-client'ta üst-düzey import
     ScanSheet'li her ekranı çökertirdi; şimdi modülsüz derlemede kamera alanı açıklamaya düşer,
     akış simülasyonla bugün test edilebilir.
-  - **KALAN:** kameranın KENDİSİ gerçek cihaz ister — dev-client yeniden derlemesi (kullanıcının
-    build'i) sonrası cihaz turu. Satır o ölçümle `[x]` olur; simülasyon turu bugün atılabilir.
+  - **TESTLER (kullanıcı isteği 22.08):** `scan-sheet.test.tsx` (4 — çip tek yoldan teslim eder ·
+    kilit okuma başına · yeniden açılışta sıfırlanır · izin kutusu + havuz birlikte) +
+    `intake-scan.test.tsx` (5 — çarpanla toplama · SKU cümlesi · PO-dışı satır açmaz · öğren+1 ·
+    `already_bound` yarışı). Mobil jest 84→86 suite, 599→608.
+  - **CİHAZDA ÖLÇÜLDÜ (22.08, bağlı Android — OPPO CPH1907, eski dev-client):** simülasyon
+    havuzuyla uçtan uca: depocu girişi → hazırlık hub'ı → PO'lu kabul formu → "Koli okut" →
+    kamera-yok açıklaması + dört çip → "Tanınmayan kod" → "Bu kod hangi ürün?" → satır seçimi →
+    *"Kod öğrenildi — Çilekli Artisan Kek · 90 g satırına 1 adet eklendi"* → **aynı çip ikinci
+    kez: sormadan buldu, adet 2** ("ikinci gelişte tanır" fiilen). DB'de kod öğreten kişinin
+    iziyle doğrulandı; cihaz turunun yazdığı kod ölçümden sonra silindi.
+    - ⚠ **Cihazın öğrettiği ders — çıplak `require` yetmiyor:** native modül yokken tembel
+      `require('expo-camera')` try/catch İÇİNDE bile Metro'nun guarded-require'ı yüzünden tam
+      ekran hataya dönüşüyordu (ölçüldü). Çözüm `requireOptionalNativeModule('ExpoCamera')` ile
+      ÖNCE yoklamak — fırlatmaz, yoksa `null` döner; JS paketi ancak native varken yüklenir.
+    - ⚠ **19.25 artçısı bu turda yakalandı ve düzeltildi:** depocuya verilen çift kapsam
+      (str+colmar) MOBİL depo bölümünü kilitliyordu (bölüm çok kapsamlı depocuda kapanıyor —
+      seçim listesi uçtan yok; ekran dürüst ama iş duruyor). Depocu tek kapsama döndü, Colmar
+      kendi depocusunu aldı (`depocuColmar`); çok kapsamlı depo-rolü hâli muhasebede yaşıyor,
+      kurye çift kapsamlı KALDI (rota seçimli akış kilitlenmez, Colmar rotası için şart).
+      Hub'ın bayat "barkod v2'de" dipnotu da düzeltildi.
+  - **KALAN:** kameranın KENDİSİ gerçek cihaz + yeni dev-client build'i ister (kullanıcının
+    build'i). Satır o ölçümle `[x]` olur; akışın geri kalanı cihazda kanıtlı.
 - [ ] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
   0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
   `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.

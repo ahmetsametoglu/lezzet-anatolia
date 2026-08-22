@@ -3,6 +3,7 @@ import { Modal, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // YALNIZ TİP: değer importu değil — native modülün kendisi tembel yüklenir (aşağıdaki künye).
 import type * as ExpoCamera from 'expo-camera';
+import { hasCameraNativeModule } from './camera-availability';
 
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { operationsTheme } from '@/theme/unistyles';
@@ -59,8 +60,18 @@ const MESSAGES = {
 
 type CameraModule = typeof ExpoCamera;
 
-/** Tembel yükleme künyesi yukarıda — modül yoksa `null`, ve bu bir HÂL, hata değil. */
+/**
+ * Tembel yükleme künyesi yukarıda — modül yoksa `null`, ve bu bir HÂL, hata değil.
+ *
+ * ── ÖNCE YOKLA, SONRA YÜKLE (cihazda ölçüldü 22.08) ─────────────────────────
+ * Çıplak `require('expo-camera')` try/catch İÇİNDE bile yetmiyor: native modül yokken paket
+ * değerlendirilirken fırlıyor ve Metro modül fabrikası hatalarını yakalansa DA redbox'a çeviriyor
+ * (guarded require) — eski dev-client'ta sayfa tam ekran hatayla kapanıyordu. `requireOptionalNativeModule`
+ * bunun için var: fırlatmaz, native taraf yoksa `null` döner; JS paketini ancak native mevcutsa
+ * yükleriz. Yoklamanın kendisi ayrı dosyada (`camera-availability`) — jest dikişi, künyesi orada.
+ */
 function loadCameraModule(): CameraModule | null {
+  if (!hasCameraNativeModule()) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-camera') as CameraModule;

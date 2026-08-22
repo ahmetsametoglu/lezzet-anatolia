@@ -173,13 +173,18 @@ const KISILER: SeedKisi[] = [
   { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolia.fr', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
   // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
-  // **STR + COLMAR birlikte** (19.25): pilot depo kendi ekibini kurmadan önce ana deponun ekibiyle
-  // çalışır — gerçekçi, ve iki şeyi birden var ediyor. (1) Colmar rotası KOŞABİLİR: 11.7'den beri
-  // kurye yalnız kapsamındaki deponun rotasını görüyor, kapsamsız bırakılan bir rota hiç
-  // başlatılamazdı. (2) Çok kapsamlı personelin ekran hâli (üst bardaki depo seçicisi) burada da
-  // doğuyor. Negatif taraf `depocuKehl`/`kuryeKehl` ile duruyor: tek kapsamlı personel ötekinin
-  // işini görmez.
-  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str', 'colmar'], preferredLanguage: 'tr' },
+  // **Depocu TEK kapsamlı, Colmar'ın depocusu AYRI** (düzeltme 22.08, cihazda ölçüldü): 19.25 bir
+  // gün depocuya çift kapsam vermişti (str+colmar) ve mobil depo bölümü ÇOK kapsamlı depocuda
+  // kapanıyor — depo seçim listesi uçtan henüz gelmiyor, ekran bunu dürüstçe söylüyor ama bölüm
+  // fiilen kilitli kalıyordu. Günlük hâl zaten tek depodur (v2: "DEPO · STRASBOURG (SABİT)");
+  // Colmar kendi depocusunu aldı — hazırlık ekranının personel şartı (setup gap) da böyle dolu
+  // kalıyor. Çok kapsamlı DEPO ROLÜ hâli kaybolmadı: `muhasebe` (accounting+warehouse, str+kehl)
+  // o ekran hâlini taşımaya devam ediyor.
+  //
+  // **Kurye ÇİFT kapsamlı KALIR** (19.25): kurye akışı rota SEÇİMLİ (K1) — çok kapsam onu
+  // kilitlemez, Colmar rotasının koşulabilmesi için şarttır (11.7: kapsam dışı rota görünmez).
+  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
+  { key: 'depocuColmar', name: 'Claire Muller', email: 'depo.colmar@lezzetanatolia.fr', phone: '+33600000105', roles: ['warehouse'], depolar: ['colmar'], preferredLanguage: 'fr' },
   { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'colmar'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
   // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
