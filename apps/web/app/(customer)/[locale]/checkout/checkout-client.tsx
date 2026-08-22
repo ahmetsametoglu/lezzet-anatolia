@@ -16,7 +16,7 @@ import { errorText } from '@/lib/customer-error-text';
 import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
-import { toAddressFields } from '@/components/customer/delivery/address-form';
+import { addressDefaultsOf, toAddressFields } from '@/components/customer/delivery/address-form';
 import {
   addCheckoutAddressAction,
   confirmCheckoutAction,
@@ -280,6 +280,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     authenticated,
     shippingOrder,
     customerEmail: customer?.email ?? '',
+    addressDefaults: addressDefaultsOf(customer),
     busy,
     error,
     selectedAddress,

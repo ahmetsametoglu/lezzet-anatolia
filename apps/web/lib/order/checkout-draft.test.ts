@@ -122,7 +122,13 @@ beforeAll(async () => {
   const zoneSvc = new DeliveryZoneService(db);
   zoneId = (await zoneSvc.insert({ name: `Test bölgesi ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5] })).id;
   await zoneSvc.replacePostalCodes(zoneId, [{ country: 'FR', postalCode: rotaKodu }]);
-  addressId = (await new AddressService(db).addForCustomer({ customerId, line1: '1 rue du Test', postalCode: rotaKodu, city: 'Strasbourg' })).id;
+  // Alıcı + telefon 22.08'den beri ZORUNLU — sipariş kopyasına da bu ikisi giriyor.
+  addressId = (
+    await new AddressService(db).addForCustomer({
+      customerId, recipient: 'Ayşe Yılmaz', phone: '+33612345678',
+      line1: '1 rue du Test', postalCode: rotaKodu, city: 'Strasbourg',
+    })
+  ).id;
 
   /**
    * **ASGARİ SEPET BU DOSYANIN KONUSU DEĞİL — susturuluyor** (10.08 kural değişimi · düzeltildi 15.08).
@@ -445,6 +451,8 @@ describe('sepet → taslak sipariş', () => {
   it('rota DIŞI adreste soğuk zincir kalemi varsa sipariş açılmaz', async () => {
     const disaridaki = await new AddressService(db).addForCustomer({
       customerId,
+      recipient: 'Ayşe Yılmaz',
+      phone: '+33612345678',
       line1: '17 avenue Jean Jaurès',
       postalCode: '69007', // hiçbir bölgeye düşmez → kargo
       city: 'Lyon',
@@ -515,6 +523,8 @@ describe('sepet → taslak sipariş', () => {
     it('koda AİT OLMAYAN şehirle rota siparişi açılmaz', async () => {
       const tutarsiz = await new AddressService(db).addForCustomer({
         customerId,
+        recipient: 'Ayşe Yılmaz',
+        phone: '+33612345678',
         line1: '192C rue du Maréchal Foch',
         postalCode: referansKodu,
         city: 'LINGOLSHEIM',
@@ -539,6 +549,8 @@ describe('sepet → taslak sipariş', () => {
       // görünürdü — yanlış öten bir uyarı, bir süre sonra hiç okunmayan bir uyarıdır.
       const tutarli = await new AddressService(db).addForCustomer({
         customerId,
+        recipient: 'Ayşe Yılmaz',
+        phone: '+33612345678',
         line1: '3 rue de l\'Église',
         postalCode: referansKodu,
         city: 'Marolles',

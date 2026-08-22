@@ -62,8 +62,10 @@ beforeAll(async () => {
   otherCourierId = other.id;
   createdProfiles.push(customer.id, courier.id, other.id);
 
+  // Alıcı + telefon 22.08'den beri ZORUNLU — kurye durağının kapıda soracağı ad ve arayacağı numara.
   addressId = (await new AddressService(db).insert({
-    customerId, line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg',
+    customerId, recipient: 'Ayşe Yılmaz', phone: '+33612345678',
+    line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg',
   })).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
 });

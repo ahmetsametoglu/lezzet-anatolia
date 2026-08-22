@@ -99,6 +99,8 @@ beforeAll(async () => {
   addressId = (
     await new AddressService(db).addForCustomer({
       customerId,
+      recipient: 'Stefan Weber',
+      phone: '+4978514455',
       line1: 'Marktplatz 3',
       postalCode: rotaKodu,
       city: 'Kehl',
@@ -126,6 +128,8 @@ beforeAll(async () => {
   b2bAddressId = (
     await new AddressService(db).addForCustomer({
       customerId: b2bCustomerId,
+      recipient: 'Klaus Bauer',
+      phone: '+4978514456',
       line1: 'Hauptstraße 12',
       postalCode: rotaKodu,
       city: 'Kehl',

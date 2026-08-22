@@ -37,7 +37,10 @@ afterAll(async () => {
 
 /** Sıra ÖNEMLİ: "en yeni" ölçütü `created_at` ile çözülüyor, damga da öyle ayrışmalı. */
 async function ekle(city: string): Promise<string> {
-  await addAddress(customerId, { line1: `${city} sokak`, postalCode: '67000', city });
+  // Alıcı + telefon 22.08'den beri ZORUNLU (kullanıcı kararı): adres kaydının kendisi "burada kim
+  // teslim alır" sorusunun cevabı. Fikstür de o asgariyi taşımalı, yoksa test gerçek yazma yolunun
+  // giremeyeceği bir satırı kurar.
+  await addAddress(customerId, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: `${city} sokak`, postalCode: '67000', city });
   const list = await addresses.listByCustomer(customerId);
   return list.find((a) => a.city === city)!.id;
 }
@@ -93,7 +96,9 @@ describe('adres yazma kapısı', () => {
     // gerçekten var olduğunu doğrulamak olurdu.
     await expect(deleteAddress(otherId, benim)).rejects.toThrow('Adres bulunamadı');
     await expect(setDefaultAddress(otherId, benim)).rejects.toThrow('Adres bulunamadı');
-    await expect(updateAddress(otherId, benim, { line1: 'Ele geçirildi', postalCode: '75000', city: 'Paris' })).rejects.toThrow(
+    await expect(
+      updateAddress(otherId, benim, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: 'Ele geçirildi', postalCode: '75000', city: 'Paris' }),
+    ).rejects.toThrow(
       'Adres bulunamadı',
     );
 
@@ -109,7 +114,14 @@ describe('adres yazma kapısı', () => {
 
     // `isDefault` geçirilse bile yok sayılır: tek satırı işaretlemek öbürlerini düşürmez ve
     // ortada iki varsayılan kalırdı.
-    await updateAddress(customerId, ikinci, { line1: 'Yeni sokak', postalCode: '67000', city: 'Lingolsheim', isDefault: true });
+    await updateAddress(customerId, ikinci, {
+      recipient: 'Ayşe Yılmaz',
+      phone: '+33612345678',
+      line1: 'Yeni sokak',
+      postalCode: '67000',
+      city: 'Lingolsheim',
+      isDefault: true,
+    });
 
     const list = await addresses.listByCustomer(customerId);
     expect(list.find((a) => a.id === ilk)?.isDefault).toBe(true);

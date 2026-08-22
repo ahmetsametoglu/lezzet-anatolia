@@ -6,7 +6,7 @@ import type { CartView } from '@/lib/cart/cart-types';
  * ile hesap sayfası aynı formu kullanıyor. Tip de orada yaşar; burada yalnız yeniden dışa açılır,
  * iki tanım bir gün ayrışırdı (CLAUDE.md §1).
  */
-import type { NewAddressInput } from '@/components/customer/delivery/address-form';
+import type { AddressDefaults, NewAddressInput } from '@/components/customer/delivery/address-form';
 import type { CheckoutSnapshot } from './actions';
 import type messages from './messages.json';
 
@@ -49,6 +49,14 @@ export interface CheckoutViewProps extends StepProps {
   shippingOrder: boolean;
   /** Girişli müşterinin e-postası — kimlik satırı ("… olarak devam ediyorsunuz") bunu yazar. */
   customerEmail: string;
+  /**
+   * YENİ adres formunun ön-dolu açılacağı künye (kullanıcı kararı 22.08) — hesabın adı ve numarası.
+   * `undefined` = kimlik okunamadı; alanlar boş açılır ve müşteriden istenir.
+   *
+   * Kuralı ekran KURMAZ, `addressDefaultsOf` üretir: hesap sayfası da aynı kaynaktan besleniyor ve
+   * iki yerde elle yazılsaydı biri bir gün telefonu ham E.164 geçirirdi.
+   */
+  addressDefaults: AddressDefaults | undefined;
   busy: boolean;
   error: string | null;
   onSelectAddress: (id: string) => void;

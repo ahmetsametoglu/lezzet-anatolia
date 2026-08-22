@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
-import { AddressForm, toAddressFields, toFormInput } from '@/components/customer/delivery/address-form';
+import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from '@/components/customer/delivery/address-form';
 import { errorText } from '@/lib/customer-error-text';
 import { addAddressAction, deleteAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
@@ -30,10 +30,15 @@ interface AddressesCardProps {
   t: Messages;
   locale: Locale;
   addresses: Address[];
+  /**
+   * Hesabın adı ve numarası — YENİ adres formu bununla dolu açılır (kullanıcı kararı 22.08).
+   * Kartın kendisi kuralı bilmez, `addressDefaultsOf` üretir ve sayfa geçirir.
+   */
+  defaults: AddressDefaults | undefined;
   compact: boolean;
 }
 
-export function AddressesCard({ t, locale, addresses, compact }: AddressesCardProps) {
+export function AddressesCard({ t, locale, addresses, defaults, compact }: AddressesCardProps) {
   /** Tek seferde tek form: ekleme ile düzenleme aynı yerde açılır, ikisi birden açık kalamaz. */
   const [editing, setEditing] = useState<'new' | string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -154,6 +159,7 @@ export function AddressesCard({ t, locale, addresses, compact }: AddressesCardPr
           copy={t.addressForm}
           locale={locale}
           compact={compact}
+          defaults={defaults}
           onCancel={() => setEditing(null)}
           onSave={async (input) => {
             await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault }));

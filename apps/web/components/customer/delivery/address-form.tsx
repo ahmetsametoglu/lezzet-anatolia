@@ -32,13 +32,21 @@ import placeCopy from './place-messages.json';
 export interface NewAddressInput {
   /** "Ev", "İş" — kart başlığı olur; boş bırakılabilir, o zaman şehir başlık olur. */
   label?: string;
-  /** Alıcı: adrese GİDEN kişi, hesabın sahibi olmak zorunda değil (hediye, iş adresi). */
-  recipient?: string;
+  /**
+   * Alıcı: adrese GİDEN kişi, hesabın sahibi olmak zorunda değil (hediye, iş adresi).
+   *
+   * **ZORUNLU oldu** (kullanıcı kararı 22.08 — *"her hâlükârda net bir şekilde bir teslimat kişisi
+   * ve teslimat numarasına ihtiyacımız var"*). Form onu zaten kaydetmenin ön koşulu sayıyordu
+   * (`complete`), ama tip isteğe bağlı diyordu ve `toAddressFields` `null` üretebiliyordu; şema
+   * sertleşince o boşluk derleme hatası olarak çıktı. Kolaylık ön-doldurmada (`defaults`).
+   */
+  recipient: string;
   line1: string;
   line2?: string;
   postalCode: string;
   city: string;
-  phone?: string;
+  /** Teslimat telefonu — `recipient` ile aynı gerekçeyle ZORUNLU (22.08). */
+  phone: string;
   /**
    * Ülke müşteriye SORULMAZ, posta kodundan TÜRER (19.8) — ve bu alan o türetmenin taşıyıcısı.
    *
@@ -64,7 +72,7 @@ export interface NewAddressInput {
 export function toAddressFields(input: NewAddressInput) {
   return {
     label: input.label ?? null,
-    recipient: input.recipient ?? null,
+    recipient: input.recipient.trim(),
     line1: input.line1,
     line2: input.line2 ?? null,
     postalCode: input.postalCode,
@@ -80,11 +88,11 @@ export function toAddressFields(input: NewAddressInput) {
      * Form artık ülke kodunu SORMUYOR (kod ülke alanında yazılı), bu yüzden birleştirme burada
      * yapılmalı — ülke posta kodundan türediği için kod uydurulmuş değil, çözülmüş bir değer.
      *
-     * **Çözemezse HAM değeri korur, `null`a düşürmez:** anlaşılmayan bir numarayı silmek,
-     * "yazamadım"ı "numara yok"a çevirmek olurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir).
-     * Kurye hiç numara bulamamaktansa tuhaf yazılmış bir numara bulsun.
+     * **Çözemezse HAM değeri korur, boşaltmaz:** anlaşılmayan bir numarayı silmek, "yazamadım"ı
+     * "numara yok"a çevirmek olurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir). Kurye hiç
+     * numara bulamamaktansa tuhaf yazılmış bir numara bulsun.
      */
-    phone: normalizePhone(input.phone ?? '', input.country ?? 'FR') ?? input.phone?.trim() ?? null,
+    phone: normalizePhone(input.phone, input.country ?? 'FR') ?? input.phone.trim(),
     /* Çözülemediyse bugünkü davranış korunur (`FR`) — geri düşüş, formun kodu hiç doğrulatmadan
        kaydedilebildiği hâl için. Doğru olan çözümden geleni yazmak; hiç yoksa da bir değer
        yazmak zorundayız, kolon `not null`. */
@@ -92,11 +100,45 @@ export function toAddressFields(input: NewAddressInput) {
   };
 }
 
+/** Yeni adresin ön-dolu açılacağı iki alan — `AddressForm.defaults`in şekli. */
+export interface AddressDefaults {
+  recipient: string;
+  phone: string;
+}
+
+/**
+ * Hesabın künyesinden adres varsayılanı (kullanıcı kararı 22.08).
+ *
+ * Karar şuydu: *"her hâlükârda net bir şekilde bir teslimat kişisi ve teslimat numarasına
+ * ihtiyacımız var. Bu kısım varsayılan olarak kişinin bilgileri ile gelebilir."* Alanlar zaten
+ * zorunluydu ama BOŞ açılıyordu; müşteri her yeni adreste adını ve numarasını yeniden yazıyordu.
+ *
+ * **Künye yoksa `undefined`, boş dize değil:** form alanları boş açar ve müşteriden ister. Boş
+ * dizeyle doldurmak "hesapta ad yok" demek olurdu ve müşteri o boşluğu kendi künyesi sanabilirdi.
+ *
+ * ── TELEFON NEDEN ÜLKE İÇİ YAZIMA ÇEVRİLİYOR ────────────────────────────────
+ * Profilin numarası E.164 saklanıyor (`+33768012345`), form ise ülke içi yazımı gösteriyor — kod
+ * ülke alanında duruyor (`Fransa (+33)`). Ham geçirseydik müşteri kodu iki kez yazılmış sanır ve
+ * silmeye kalkardı; `toFormInput`un düzenleme için verdiği kararın aynısı, aynı gerekçeyle.
+ * Ülke burada HENÜZ BİLİNMİYOR (adres girilmedi) — `FR` varsayılanı kullanılır; numara başka bir
+ * ülkenin koduyla başlıyorsa `nationalPhone` onu olduğu gibi bırakır, kırpmaz.
+ *
+ * **Mobil şeridin `addressDefaultsOf`u ile aynı ADI taşır, aynı işi yapmaz** ve bu bilinçli: orada
+ * form ülke kodunu ayırmıyor, numara ham geçiyor. Ortak bir yardımcıya çıkarmak için önce iki
+ * formun telefonu aynı biçimde sunması gerekir; bugün sunmuyorlar.
+ */
+export function addressDefaultsOf(
+  profile: { name: string; phone: string | null } | null | undefined,
+): AddressDefaults | undefined {
+  if (profile == null) return undefined;
+  return { recipient: profile.name.trim(), phone: nationalPhone(profile.phone, 'FR') };
+}
+
 /** DB satırı → formun beklediği şekil. Düzenlemede alanlar DOLU açılır; boş form yeniden yazdırırdı. */
 export function toFormInput(address: Address): NewAddressInput {
   return {
     label: address.label ?? undefined,
-    recipient: address.recipient ?? undefined,
+    recipient: address.recipient,
     line1: address.line1,
     line2: address.line2 ?? undefined,
     postalCode: address.postalCode,
@@ -109,7 +151,7 @@ export function toFormInput(address: Address): NewAddressInput {
      * Gidiş-dönüş kayıpsız: `nationalPhone` gövde sıfırını geri koyar, `normalizePhone` kaydederken
      * yine düşürür. Kod eşleşmiyorsa (eski ham kayıtlar, yabancı numara) değer OLDUĞU GİBİ gelir.
      */
-    phone: nationalPhone(address.phone, address.country) || undefined,
+    phone: nationalPhone(address.phone, address.country),
     country: address.country,
     makeDefault: address.isDefault,
   };
@@ -145,6 +187,18 @@ interface AddressFormProps {
   locale: Locale;
   /** Düzenlemede mevcut değerler; yeni adreste boş. */
   initial?: NewAddressInput;
+  /**
+   * YENİ adresin ön-dolu açılacağı künye — hesabın adı ve numarası (kullanıcı kararı 22.08:
+   * *"tamamen yeni adres kaydedilirken alanlar dolu gelecek; kullanıcı değiştirecek veya
+   * değiştirmeyip kaydedecek"*). `addressDefaultsOf` üretir.
+   *
+   * `initial` varsa (düzenleme) BAKILMAZ: kayıtlı alıcının üstüne hesabın adını yazmak, hediye
+   * adresine konmuş bir adı sessizce silmek olurdu.
+   *
+   * Verilmezse alanlar boş açılır — künye okunamadığında boş dizeyle doldurmak "hesapta ad yok"
+   * demek olurdu ve müşteri o boşluğu kendi künyesi sanıp geçebilirdi.
+   */
+  defaults?: AddressDefaults;
   onSave: (input: NewAddressInput) => Promise<void>;
   onCancel: () => void;
   /**
@@ -165,8 +219,10 @@ interface AddressFormProps {
   compact?: boolean;
 }
 
-export function AddressForm({ copy, locale, initial, onSave, onCancel, compact = false }: AddressFormProps) {
-  const [form, setForm] = useState<NewAddressInput>(initial ?? { line1: '', postalCode: '', city: '' });
+export function AddressForm({ copy, locale, initial, defaults, onSave, onCancel, compact = false }: AddressFormProps) {
+  const [form, setForm] = useState<NewAddressInput>(
+    initial ?? { recipient: '', line1: '', postalCode: '', city: '', phone: '', ...defaults },
+  );
   const [busy, setBusy] = useState(false);
   const [postalError, setPostalError] = useState<string | null>(null);
   const { place, setPostalCode } = useDeliveryPlace();
@@ -289,9 +345,11 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel, compact =
         await onSave({
           ...form,
           label: form.label?.trim() || undefined,
-          recipient: form.recipient?.trim() || undefined,
           line2: form.line2?.trim() || undefined,
-          phone: form.phone?.trim() || undefined,
+          /* Alıcı ve telefon ZORUNLU (22.08): boşu `undefined`a çevirmek artık yanlış olurdu —
+             düğme zaten ikisi dolmadan etkin değil (`complete`), kırpma yeter. */
+          recipient: form.recipient.trim(),
+          phone: form.phone.trim(),
         });
         setBusy(false);
       }}

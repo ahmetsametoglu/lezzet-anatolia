@@ -182,7 +182,7 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
  *
  * Tasarımda karşılığı yok (`design/BACKLOG §3`): çizim adresi yalnız seçtiriyor.
  */
-export function AddressStep({ t, locale, snapshot, state, compact, selectedAddress, onSelectAddress, onAddAddress, onUpdateAddress }: CheckoutViewProps) {
+export function AddressStep({ t, locale, snapshot, state, compact, selectedAddress, addressDefaults, onSelectAddress, onAddAddress, onUpdateAddress }: CheckoutViewProps) {
   /** Tek seferde tek form: ekleme ile düzenleme aynı yerde açılır, ikisi birden açık kalamaz. */
   const [editing, setEditing] = useState<'new' | string | null>(null);
   const adding = editing === 'new';
@@ -231,7 +231,9 @@ export function AddressStep({ t, locale, snapshot, state, compact, selectedAddre
           </div>
 
           {adding ? (
-            <AddressForm copy={t.address.form} locale={locale} compact={compact} onCancel={() => setEditing(null)} onSave={async (input) => { await onAddAddress(input); setEditing(null); }} />
+            /* `defaults` YALNIZ burada: bu dal YENİ adres. Düzenleme dalı `initial` alıyor ve
+               oraya varsayılan geçmek, kayıtlı alıcının üstüne hesabın adını yazardı. */
+            <AddressForm copy={t.address.form} locale={locale} compact={compact} defaults={addressDefaults} onCancel={() => setEditing(null)} onSave={async (input) => { await onAddAddress(input); setEditing(null); }} />
           ) : (
             <>
               {selectedAddress && (

@@ -4,6 +4,7 @@ import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
+import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { CouponsCard } from './components/coupons-card';
 import { DeleteAccount } from './components/delete-account';
 import { ProfileCard } from './components/profile-card';
@@ -65,7 +66,13 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
         </Card>
       )}
 
-      <AddressesCard t={t} locale={locale} addresses={account.addresses} compact={compact} />
+      <AddressesCard
+        t={t}
+        locale={locale}
+        addresses={account.addresses}
+        defaults={addressDefaultsOf(account.profile)}
+        compact={compact}
+      />
 
       <Card compact={compact}>
         <CardHead title={t.savedTitle} compact={compact} action={<SavedAddAll label={t.savedAddAll} saved={account.saved} />} />
