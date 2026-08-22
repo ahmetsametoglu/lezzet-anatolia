@@ -162,6 +162,9 @@ const config: ExpoConfig = {
       'expo-camera',
       { cameraPermission: 'Kamera yalnız ürün ve koli kodlarını okutmak için kullanılır.' },
     ],
+    // Brother etiket yazıcısı (23.5 iğne deneyi → 23.7 basım): SDK ağ/BT üzerinden diyalogsuz
+    // basar (karar §1.8 — sistem yazdırma diyaloğu depoda kabul edilemez, kullanıcı denedi).
+    'expo-brother-printer-sdk',
     [
       '@stripe/stripe-react-native',
       {

@@ -156,9 +156,25 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
       Hub'ın bayat "barkod v2'de" dipnotu da düzeltildi.
   - **KALAN:** kameranın KENDİSİ gerçek cihaz + yeni dev-client build'i ister (kullanıcının
     build'i). Satır o ölçümle `[x]` olur; akışın geri kalanı cihazda kanıtlı.
-- [ ] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
+- [x] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
   0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
   `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.
+  - **Durum (22.08) — DENEY TUTTU, iki yazıcıda da kâğıt çıktı.** SDK New Arch dev-client'ına
+    bağlandı (config plugin + autolinking, elle native iş yok); `searchNetworkPrinters` iki
+    yazıcıyı da buldu (QL-1110NWB → 192.168.1.90 · QL-820NWB → 192.168.1.169 — ağ keşfiyle
+    birebir) ve `printImage` ikisinde de bastı; 1110'un çıktısını kullanıcı gözle doğruladı.
+    Etüdün B planı (`modules/brother-print/` local modülü) DÜŞTÜ.
+  - **Ölçülen etiket boyları** (23.7'nin `label_printer_*` ayarına yazılacak değerler):
+    QL-1110NWB **`DieCutW103H164`** (103×164 mm kalıp kesim — DK-1247; sürekli `RollW102` ve
+    `DieCutW102H152` reddedildi), QL-820NWB **`RollW62`** (62 mm sürekli rulo). Yanlış boyun
+    reddi AYNEN: `Call to function 'ExpoBrotherPrinterSdk.printImageWithURL' has been rejected.
+    → Caused by: GenericError(description='Print failed: SetLabelSizeError')` — takılı kâğıt
+    SDK'dan OKUNAMIYOR, boy ayarla eşleşmek zorunda; `printNeedleTest` aday boyları sırayla
+    deneyip tutanı raporlar (deney aracı; kalıcı çözüm 23.7'de depo başına ayar).
+  - Dikiş `src/lib/print/{printer-availability.ts,brother.ts}` (kameranın yoklama deseni) +
+    dev-only `PrintProbe` paneli (etiket kartının içinde; release'te ve modülsüz derlemede hiç
+    çizilmez). Desen `assets/print/needle-test.png` — SDK yalnız yerel `file://` bastığı için
+    `expo-asset` ile cihaza indirilir.
 - [~] (23.6) **Kutu şeması + döngüsü**: `order_box`/`order_box_item` + `seal_order_box` RPC (kutu +
   picks TEK transaction; ⚠ `record_preparation` picks yazımı kalem başına ABSOLÜT — çok kutulu
   siparişte birleşimi `sealBox` kapısı kurar) + `boxCompletion` motoru + mobil toplama ekranı +

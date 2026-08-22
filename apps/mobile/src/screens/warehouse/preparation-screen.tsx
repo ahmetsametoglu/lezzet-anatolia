@@ -7,6 +7,7 @@ import { PAYMENT_METHOD_LABELS, type BoxLabelContract, type PreparationLineContr
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { PrintProbe } from '@/components/print/print-probe';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -337,6 +338,8 @@ function LabelCard({ label, onClose }: { label: BoxLabelContract; onClose: () =>
       ))}
       <Text style={styles.labelQr}>{fillCopy(t.picking.box.labelQr, { code: label.code })}</Text>
       <Text style={styles.labelPending}>{t.picking.box.labelPending}</Text>
+      {/* İğne deneyi paneli (23.5) — yalnız __DEV__ + yazıcı modülü varken çizilir. */}
+      <PrintProbe />
     </View>
   );
 }
