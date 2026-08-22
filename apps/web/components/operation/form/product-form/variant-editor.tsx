@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type LocalizedText, type VariantBarcode } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { Input } from '@/components/operation/form/input';
 import { LocaleTabs } from '@/components/operation/form/locale-tabs';
 import { Toggle } from '@/components/operation/form/toggle';
 import { TranslateInput } from '@/components/operation/form/translate-input';
 import { suggestTranslationAction } from '@/lib/ai/translate';
+import { deleteVariantBarcodeAction, listVariantBarcodesAction } from '@/lib/catalog/barcode-actions';
 import { TrashIcon } from '@/components/operation/ui/icons';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import type { ProductFormValues } from './schema';
@@ -69,6 +70,43 @@ export function VariantEditor({ control }: VariantEditorProps) {
   // sıralamada onu kullanmak son yazılanı geri alırdı. Dil noktası da bununla anında güncellenir.
   const rows = useWatch({ control, name: 'variants' }) ?? [];
 
+  /*
+    BARKODLAR (23.3) — öğrenen eşlemenin GERİ ALMA yeri. Kodlar form durumu DEĞİL: mal kabulde
+    öğretilen ayrı kayıtlar (`variant_barcode`), bu yüzden RHF'e girmez — editör onları kendi
+    okur ve satırın altında çip olarak listeler. Yalnız KAYITLI varyantın kodu olabilir; yeni
+    eklenen satır kaydedilmeden koda sahip olamaz, o satırda bölüm hiç çizilmez.
+
+    Silme onaysız ve bu bilinçli (action künyesi): kaybolan şey bir eşleme — koli bir sonraki
+    kabulde okutulunca yeniden öğretilir. Yanlış varyanta bağlanmış kodun düzeltme yolu tam bu.
+  */
+  const [barcodes, setBarcodes] = useState<Map<string, VariantBarcode[]>>(new Map());
+  const savedIdsKey = rows
+    .map((row) => row?.id)
+    .filter(Boolean)
+    .sort()
+    .join(',');
+  useEffect(() => {
+    const ids = savedIdsKey ? savedIdsKey.split(',') : [];
+    if (ids.length === 0) return;
+    void listVariantBarcodesAction(ids).then(({ data }) => {
+      if (data === null) return; // okunamadıysa bölüm çizilmez — boş liste "kod yok" derdi, yalan olurdu
+      const next = new Map<string, VariantBarcode[]>();
+      for (const code of data) next.set(code.variantId, [...(next.get(code.variantId) ?? []), code]);
+      setBarcodes(next);
+    });
+  }, [savedIdsKey]);
+
+  const unlearnCode = (code: VariantBarcode) => {
+    void deleteVariantBarcodeAction(code.id).then(({ error }) => {
+      if (error !== null) return; // satır yerinde kalır — sessizce düşürmek eşlemeyi silinmiş gösterirdi
+      setBarcodes((current) => {
+        const next = new Map(current);
+        next.set(code.variantId, (next.get(code.variantId) ?? []).filter((row) => row.id !== code.id));
+        return next;
+      });
+    });
+  };
+
   // Dil sekmesindeki eksik-dil noktası: etiketi OLAN satırların hepsi o dilde dolu mu? Tek boylu ürünün
   // etiketi hiç olmayabilir (müşteri seçici görmez) — o yüzden ölçüt "hiç yazılmamış" değil.
   const named = rows.map((r) => r?.label).filter((l): l is LocalizedText => Boolean(l && resolveLocalizedText(l)));
@@ -127,8 +165,10 @@ export function VariantEditor({ control }: VariantEditorProps) {
             // kendi anahtarıdır, varyantın uuid'i değil — o yüzden canlı değerden okunur.
             const saved = Boolean(rows[i]?.id);
             const confirming = confirmKey === f.id;
+            const rowCodes = saved ? (barcodes.get(rows[i]!.id!) ?? []) : [];
             return (
-              <div className={`${CELL} border-b border-ops-line-soft bg-ops-white px-[13px] py-2 last:border-b-0`}>
+              <div className="border-b border-ops-line-soft bg-ops-white last:border-b-0">
+              <div className={`${CELL} px-[13px] py-2`}>
                 {handle}
                 <Controller
                   control={control}
@@ -233,6 +273,35 @@ export function VariantEditor({ control }: VariantEditorProps) {
                     <TrashIcon />
                   </button>
                 )}
+              </div>
+              {/* Barkodlar (23.3): mal kabulde ÖĞRETİLEN kodlar — yanlış öğretilenin geri alma
+                  yeri burası. Kod eklenmez (öğrenme kabuldedir, karar §1.3); yalnız silinir. */}
+              {rowCodes.length === 0 ? null : (
+                <div className="flex flex-wrap items-center gap-1.5 px-[13px] pb-2 pl-[31px]">
+                  <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">
+                    Barkod
+                  </span>
+                  {rowCodes.map((code) => (
+                    <span
+                      key={code.id}
+                      className="inline-flex items-center gap-1 rounded-[6px] border border-ops-line bg-ops-subtle px-1.5 py-0.5 font-ops-mono text-ops-micro text-ops-body"
+                      title={code.createdBy ? 'Mal kabulde öğretilmiş kod' : 'Sistem kaydı'}
+                    >
+                      {code.code}
+                      <span className="text-ops-faint">{code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'}</span>
+                      <button
+                        type="button"
+                        onClick={() => unlearnCode(code)}
+                        className="cursor-pointer text-ops-faint hover:text-ops-red"
+                        aria-label={`${code.code} kodunu sil`}
+                        title="Eşlemeyi geri al — kod bir sonraki kabulde yeniden sorulur"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               </div>
             );
           }}

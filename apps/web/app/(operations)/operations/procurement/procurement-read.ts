@@ -13,6 +13,7 @@ import {
 import type { serviceDb } from '@lezzet/database';
 import { summarizePurchaseOrder } from '@lezzet/domain-core';
 import { resolveLocalizedText, type KeysetCursor, type PurchaseOrderRow, type PurchaseOrderStatus } from '@lezzet/types';
+import { productIdOfCode } from '@/lib/catalog/code-search';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseContext } from '@/lib/warehouse/context';
 import type {
@@ -356,7 +357,13 @@ export async function searchVariantOptions(db: Db, term: string): Promise<Varian
   const query = term.trim();
   if (!query) return [];
 
-  const page = await new ProductService(db).listPriceRows({ filters: { query }, limit: VARIANT_SEARCH_LIMIT });
+  // Kod zinciri (23.3): terim bir barkod/SKU/tedarikçi koduysa ürün ORADAN bulunur — elinde koli
+  // olan operatör eşlemeyi adla aramak zorunda kalmaz (`code-search` künyesi).
+  const codeProductId = await productIdOfCode(db, query);
+  const page = await new ProductService(db).listPriceRows({
+    filters: codeProductId ? { ids: [codeProductId] } : { query },
+    limit: VARIANT_SEARCH_LIMIT,
+  });
   return page.rows.flatMap((product) =>
     product.variants.map((variant) => ({
       variantId: variant.id,

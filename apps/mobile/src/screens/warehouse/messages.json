@@ -69,6 +69,7 @@
     "error": { "title": "Toplama listesi yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — toplanan adetler güvende." },
     "empty": { "title": "Toplanacak sipariş yok", "body": "Sipariş onaylandığında bildirim gelir — bu liste kendiliğinden dolar." },
     "queueHeading": "BEKLEYEN SİPARİŞLER — BİRİNİ SEÇ",
+    "parcelName": "Koliye: {name}",
     "queueLines": "{picked}/{total} kalem hazır",
     "queueHalf": "yarım",
     "orderCaption": "{ref} · {customer} · {channel}",

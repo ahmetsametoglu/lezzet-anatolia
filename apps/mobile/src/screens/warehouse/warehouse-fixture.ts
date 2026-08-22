@@ -52,6 +52,8 @@ export function preparationOrder(overrides: Partial<PreparationOrderContract> = 
     orderId: ORDER_ID,
     referenceNo: 'LZA-26-3M8C',
     customerName: 'Restaurant Bosphore',
+    // Varsayılan `null` = alıcı hesabın sahibiyle aynı (yaygın hâl); koli adı satırı çizilmez.
+    recipientName: null,
     channel: 'b2b',
     status: 'confirmed',
     deliveryDate: '2026-08-09',

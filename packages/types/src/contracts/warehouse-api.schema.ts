@@ -119,6 +119,13 @@ export const PreparationOrderSchema = z.object({
   referenceNo: z.string().nullable(),
   /** Koli etiketi için AD; iletişim ve adres okunmaz. */
   customerName: z.string(),
+  /**
+   * Adrese GİDEN kişi — koliye yazılacak ad (kullanıcı kararı 21.08; kapı künyesi
+   * `preparation.ts:recipientName`). `null` = adreste alıcı yazılı değil, ekran müşteri adını
+   * kullanır. Kapı alanı zaten dolduruyordu; sözleşmeye 23.3 turunda girdi (mobil şeridin
+   * işareti: alan yazılıyor ama D1'e hiç ulaşmıyordu).
+   */
+  recipientName: z.string().nullable(),
   channel: ChannelEnum,
   status: OrderStatusEnum,
   deliveryDate: z.string().nullable(),

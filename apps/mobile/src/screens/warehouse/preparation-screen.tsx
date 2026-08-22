@@ -146,6 +146,14 @@ export function PreparationScreen() {
       {header}
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
+        {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
+            FARKLIYSA çizilir (web `parcelName` kuralı birebir): ikisi aynıyken satır, hiçbir şey
+            söylemeyen bir tekrar olurdu. Adres/telefon yine YOK (tasarım §6). */}
+        {parcelName(order) === null ? null : (
+          <Text style={styles.parcelName} testID="warehouse-picking-parcel">
+            {fillCopy(t.picking.parcelName, { name: parcelName(order)! })}
+          </Text>
+        )}
         {/* KUTU ŞERİDİ (23.6): kapalı kutular salt-okunur özet, açık kutu başlık çipi + tarama.
             Kutusuz başlanmış işte (boxMode false) şerit hiç çizilmez — eski akış aynen. */}
         {picking.boxMode && picking.boxes.length > 0 ? (
@@ -237,6 +245,16 @@ export function PreparationScreen() {
 /** Sipariş künyesi (v2:319) — referans · müşteri · kanal. Tutar ve adres YOK (sözleşme de vermiyor). */
 function captionOf(order: PreparationOrderContract): string {
   return [order.referenceNo ?? t.picking.noReference, order.customerName, t.common.channel[order.channel]].join(' · ');
+}
+
+/**
+ * Koliye yazılacak ad — alıcı hesabın sahibinden BAŞKAYSA (web `parcelName` kuralı birebir:
+ * boşluk ve büyük/küçük harf duyarsız karşılaştırma; "ayşe yılmaz " ile "Ayşe Yılmaz" aynı kişi).
+ */
+function parcelName(order: PreparationOrderContract): string | null {
+  const recipient = order.recipientName?.trim();
+  if (!recipient) return null;
+  return recipient.toLocaleLowerCase('tr') === order.customerName.trim().toLocaleLowerCase('tr') ? null : recipient;
 }
 
 /**
@@ -396,6 +414,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: operationsTheme.border.base,
     borderStyle: 'dashed',
     borderBottomColor: operationsTheme.colors['sand-300'],
+  },
+  parcelName: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.ink,
+    paddingTop: operationsTheme.space.xl,
   },
   boxStrip: {
     gap: operationsTheme.space.xs,

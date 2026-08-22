@@ -11,6 +11,7 @@ import { repriceAllAuto } from '@/lib/pricing/auto-price';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toPriceRows, type ChannelPriceMaps } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
+import { productIdOfCode } from '@/lib/catalog/code-search';
 import { titleOf } from '@/lib/catalog/title';
 import { type PriceRow, type VariantOption } from './prices-types';
 
@@ -113,7 +114,13 @@ export async function searchVariantsAction(term: string): Promise<ActionResult<V
     if (!query) return { data: [], error: null };
 
     const db = serviceDb();
-    const page = await new ProductService(db).listPriceRows({ filters: { query }, limit: VARIANT_SEARCH_LIMIT });
+    // Kod zinciri (23.3): terim bir barkod/SKU/tedarikçi koduysa ürün ORADAN bulunur, ada
+    // bakılmaz — kod kesin kimliktir. Değilse ad araması aynen (`code-search` künyesi).
+    const codeProductId = await productIdOfCode(db, query);
+    const page = await new ProductService(db).listPriceRows({
+      filters: codeProductId ? { ids: [codeProductId] } : { query },
+      limit: VARIANT_SEARCH_LIMIT,
+    });
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
 
     // Liste fiyatları ve maliyet AYNI turda: özel fiyat verirken "indirim mi zam mı, ne kâr

@@ -231,3 +231,19 @@ describe('D1 · gönderim', () => {
     );
   });
 });
+
+describe('D1 · koliye yazılacak ad (23.3 — mobil şeridin işareti)', () => {
+  it('alıcı hesabın sahibinden FARKLIYSA yazılır; aynıysa satır hiç çizilmez', async () => {
+    withQueue([preparationOrder({ recipientName: 'Claire Weber' })]);
+    await renderPicking();
+
+    expect(screen.getByTestId('warehouse-picking-parcel')).toHaveTextContent('Koliye: Claire Weber');
+  });
+
+  it('alıcı müşteriyle aynı kişiyse (boşluk/harf farkı dahil) tekrar yazılmaz', async () => {
+    withQueue([preparationOrder({ recipientName: ' restaurant bosphore ' })]);
+    await renderPicking();
+
+    expect(screen.queryByTestId('warehouse-picking-parcel')).toBeNull();
+  });
+});

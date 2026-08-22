@@ -92,9 +92,22 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   - **Durum (21.08):** yazıldı. `supplier_product.barcode` BİLEREK açılmadı (etüt "isteğe bağlı" —
     öğrenen eşleme aynı işi görür, ihtiyaç ölçülünce). SKU/tedarikçi kodu eşleşmesi çarpansız (1) —
     çarpan yalnız gerçek koli barkodunun bilgisi. Kapı stok KARARI vermez (depo değişmezi).
-- [ ] (23.3) **Web dokunuşları:** varyant editörüne barkod listesi (öğrenen eşlemenin GERİ ALMA
+- [x] (23.3) **Web dokunuşları:** varyant editörüne barkod listesi (öğrenen eşlemenin GERİ ALMA
   yeri: tür/çarpan + sil) · fiyat/tedarik aramalarına kod zinciri (`prices/actions.ts` ·
-  `procurement/actions.ts` bugün yalnız ada bakıyor)
+  `procurement/actions.ts` bugün yalnız ada bakıyor) · touches:
+  `apps/web/lib/catalog/{barcode-actions.ts,code-search.ts}`,
+  `apps/web/components/operation/form/product-form/variant-editor.tsx`,
+  `apps/web/app/(operations)/operations/{prices/actions.ts,procurement/procurement-read.ts}`
+  - *Bitti:* varyant satırının altında kod çipleri (tür + koli çarpanı + ×) ve iki seçicide kod
+    zinciri; kodla arama kod EŞLEŞİRSE ada hiç bakmaz (kod kesin kimliktir).
+  - **Durum (22.08) — YAZILDI.** Silme ONAYSIZ ve gerekçeli (`barcode-actions` künyesi): kaybolan
+    şey bir eşleme — koli sonraki kabulde yeniden sorulur; varyant silmenin iki adımlı onayı emsal
+    değil (orada fiyat satırları da gidiyor). Kod formun durumu DEĞİL: editör kayıtlı varyantların
+    kodlarını kendisi okur, RHF'e sokmaz. Kod EKLEME bilinçle yok — öğrenme kabuldedir (karar §1.3).
+    Zincir tek kapıdan (`findByCode`, scan.test.ts'te ölçülü); `code-search` yalnız varyantı ürüne
+    çıkarır. **Ek (mobil şeridin işareti, aynı tur):** `recipientName` mobil kuyruğa girdi —
+    sözleşme + D1 ekranında "Koliye: X" (yalnız alıcı hesap sahibinden farklıysa; web `parcelName`
+    kuralı birebir) + 2 jest. Depo jest 10 suite · 81 test.
 - [~] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
   (`apps/mobile/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
   çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode` · touches:
