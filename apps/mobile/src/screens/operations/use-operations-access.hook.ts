@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchMe } from '@/lib/api/me';
+import { getSupabase } from '@/lib/auth/supabase';
 import { operationsSectionsOf, type OperationsSection } from '@/lib/operations/sections';
 
 /*
@@ -70,6 +71,20 @@ export function useOperationsAccess(): OperationsAccess {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  /* OTURUM DEĞİŞİNCE KAPI YENİDEN SORULUR (21.97b — cihazda ölçüldü 22.08).
+     Kapı `/me`yi YALNIZ montajda okuyordu ve bir daha hiç bakmıyordu. Belirtisi menünün
+     "Oturumu kapat"ıyla görünür oldu: çıkış GERÇEKTEN yapılıyordu (uygulama yeniden açıldığında
+     misafir geliyordu) ama ekran kurye rotasında kalıyordu — personel çıktığını sanıp bırakıyor,
+     ölü bir oturumun rotası ekranda duruyor. Paylaşılan bir cihazda bu bir güvenlik hâli.
+     Düğmeye "çıkınca yönlen" yazmak PANSUMAN olurdu: aynı boşluk oturum SÜRESİ dolduğunda da
+     açık kalırdı ve kurye kabuğu bütün gün açık duruyor. Kök sebep kapının sağır olmasıydı.
+     Dinleyici müşteri tarafındaki desenin aynısı (`use-me.hook`); `denied` dalı zaten müşteri
+     yüzeyine yönlendiriyor, yani karar zinciri değişmedi — yalnız tetiği doğdu. */
+  useEffect(() => {
+    const { data } = getSupabase().auth.onAuthStateChange(() => void load());
+    return () => data.subscription.unsubscribe();
   }, [load]);
 
   /* `retry` hâlin İÇİNDE duruyor ki çağıran onu yalnız hata dalında bulabilsin: yüklenirken de

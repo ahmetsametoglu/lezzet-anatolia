@@ -4791,8 +4791,31 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   `typecheck` · `lint` · `knip` (yeni bulgu yok) · `boundaries` · birim **1380/1380**.
 
-  BEKLEYEN(21.97): **cihaz turu koşulmadı** — telefon kilitli ve ekran uzaktan sürülemedi
-  (`mScreenState=ON` ama capture siyah, odak `NotificationShade`de asılı). Ölçülecek dört şey:
-  kurye oturumuyla uygulamayı kapatıp açınca Günün Rotası'na inmesi · kimlik dairesinin zille
-  hizalı çıkması · köprüden müşteri yüzeyine geçişte temanın DÖNMESİ · ve o geçişten sonra
-  operasyona geri savrulmaması (ping-pong).
+  ── CİHAZ TURU KOŞULDU (22.08, OPPO CPH1907 · wifi adb) ─────────────────────
+  Dördü de doğrulandı, kanıtları ekran görüntüleriyle:
+  · Kurye oturumuyla uygulama **öldürülüp açıldı → doğrudan "Günün Rotası"** (arızanın kendisi:
+    eskiden müşteri vitrinine düşüyordu). İki ayrı turda tekrarlandı.
+  · Kimlik dairesi zilin yanında, **aynı çapta ve hizalı**; "ML" (Marc L.), dolu zeytin.
+  · Menü: `Hesabın` · Marc Lemoine · kurye@lezzetanatolia.fr · `Kurye` · iki eylem.
+  · Köprü → **"Bonjour, Marc"**, müşteri teması ve sekme çubuğu geri geldi; 10 sn beklendi,
+    **operasyona geri savrulma YOK** (ping-pong guard'ı işliyor).
+  · Hesap ekranının dibinde **"Accéder aux écrans du personnel"**, çıkışın hemen üstünde —
+    notun "köprü yok" dediği tam nokta.
+
+  ── VE TUR YENİ BİR ARIZA ÇIKARDI (21.97b, aynı gün ölçülüp düzeltildi) ─────
+  **"Oturumu kapat" çalışıyordu ama ekran kurye rotasında kalıyordu.** İki kez tekrarlandı; kesin
+  ölçüm uygulamayı öldürüp açmak oldu — misafir vitrini geldi, yani **çıkış gerçekten yapılmıştı**,
+  kabuk duymamıştı. Sahadaki karşılığı: personel çıktığını sanıp paylaşılan cihazı bırakıyor, ölü
+  bir oturumun rotası ekranda duruyor.
+
+  **Kök sebep düğme değil KAPIYDI:** `useOperationsAccess` `/me`yi yalnız montajda okuyup bir daha
+  hiç bakmıyordu. Künyeme "kapı 401'e düşünce yönleniyor" diye yazmıştım — YANLIŞTI, düzeltildi.
+  Düğmeye `router.replace` yazmak pansuman olurdu: aynı boşluk oturum SÜRESİ dolduğunda da açık
+  kalırdı ve kurye kabuğu bütün gün açık duruyor. Kapıya `onAuthStateChange` dinleyicisi kondu
+  (müşteri tarafındaki desenin aynısı); `denied` dalı zaten müşteri yüzeyine yönlendiriyordu, yani
+  karar zinciri değişmedi — yalnız tetiği doğdu. **Cihazda doğrulandı:** çıkış artık kabuğu anında
+  bırakıp misafir vitrinine iniyor.
+
+  Turda bir kez "Operasyon açılamadı" görüldü (dev girişin hemen ardından); ikinci turda
+  **tekrarlanmadı**, bulgu sayılmadı. Kapının o hâlde "yetkin yok" değil "okunamadı" demesi
+  tasarlanmış davranış — doğru çalıştı.

@@ -123,8 +123,13 @@ export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
         <View style={styles.actions}>
           <TextAction label={t.toCustomer} onPress={leaveToCustomer} testID="operations-staff-to-customer" />
           {/* Çıkış terracotta: kitin "dikkat isteyen eylem" tonu, hesap ekranındaki çıkışla aynı.
-              Sonuç beklenmiyor — `signOut` cihaz deposunu her hâlükârda temizliyor ve kapının
-              `/me` okuması 401'e düşünce kabuk kendiliğinden müşteri yüzeyine yönleniyor. */}
+              Sonuç beklenmiyor ve YÖNLENDİRME DE BURADA DEĞİL: `signOut` cihaz deposunu her
+              hâlükârda temizliyor, oturum düşünce kapı bunu KENDİ duyuyor ve `denied` dalıyla
+              müşteri yüzeyine yönlendiriyor (`use-operations-access` künyesi).
+              Buraya bir `router.replace` yazmak cazipti — cihazda ölçülen arıza tam olarak
+              buydu (22.08: çıkış yapılıyor, ekran kurye rotasında kalıyor). Ama o pansuman
+              olurdu: aynı boşluk oturum SÜRESİ dolduğunda açık kalırdı. Kapı sağırdı, düğme
+              değil. */}
           <TextAction
             label={t.signOut}
             tone="terracotta"
