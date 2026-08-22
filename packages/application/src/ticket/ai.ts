@@ -211,6 +211,30 @@ export async function generateConversationDraft(
  * (kuyruğun `answeredByAi` süzgeci tam bu kümeye bakıyor). Durum kararı personel cevabıyla aynı
  * motordan (`statusAfterStaffReply`) — AI'a özel bir durum kuralı YOK.
  */
+/**
+ * **OTOMATİK ASISTAN BEYANI** — özerk cevabın müşteriye kendini tanıttığı cümle.
+ *
+ * ── NEDEN PROMPT'TA DEĞİL, BURADA ───────────────────────────────────────────
+ * Bu bir hukuki yükümlülük (AB Yapay Zekâ Yasası md. 50; Meta mesajlaşma politikası: *"automated
+ * chat experiences must disclose that a person is interacting with an automated service"*) ve
+ * modelin unutabileceği bir talimat, yükümlülük olamaz. Prompt'a yazılsaydı beyan sıcaklığa, bağlam
+ * uzunluğuna ve modelin o günkü hâline bağlı kalırdı; burada deterministik.
+ *
+ * ── İKİNCİ CÜMLE SÜS DEĞİL, İKİNCİ YÜKÜMLÜLÜK ───────────────────────────────
+ * Meta'nın kuralı beyanla bitmiyor: *"must have a way for users to chat with a human agent as
+ * needed"*. Devir kapısı sistemde var (ajan `handoff` seçer, mod insana döner) ama MÜŞTERİ bunu
+ * bilmiyordu — bileceği tek yer cevabın kendisi.
+ *
+ * ── TÜRKÇE, ÇÜNKÜ ÇEVİRİ SONRA ──────────────────────────────────────────────
+ * Cevap gövdesine EKLENİYOR ve gövdeyle birlikte `translateTicketMessageNow`den geçiyor: müşteri
+ * beyanı da kendi dilinde okuyor. Ayrı bir kanaldan gönderilseydi çeviri kuralını ikinci bir yerde,
+ * denetimsiz yaşatırdık (20.2'nin kararı).
+ *
+ * 15.8'in özerk SOHBET motoru doğduğunda aynı cümleyi kullanır — kanal değişse de yükümlülük aynı.
+ */
+const AI_DISCLOSURE =
+  'Bu cevabı otomatik asistanımız yazdı. Dilediğiniz an bir yetkiliye bağlanmak isterseniz yazmanız yeterli.';
+
 export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: string, opts: SupportAiOpts = {}): Promise<SupportAiOutcome> {
   const tickets = new TicketService(db);
   const ticket = await tickets.getById(ticketId);
@@ -236,10 +260,20 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
     return { status: 'handoff', reason };
   }
 
+  /*
+    Beyan YAZIŞMANIN BAŞINDA ve uzun sessizlikten sonra tekrar — politikanın kendi üç anı: *"at the
+    beginning of any conversation or message thread, after a significant lapse of time, or when a
+    chat moves from human interaction to automated experience"*.
+
+    Ölçüt olarak PENCEREYİ (son N mesaj) kullanıyoruz, yazışmanın tamamını değil ve bu bilinçli: AI
+    otuz mesaj önce konuşmuşsa müşteri o beyanı çoktan unutmuştur — pencereden düşmesi tam olarak
+    "uzun aralık" demektir. Tamamına bakan bir ölçüt, bir kez beyan edip ömür boyu susmak olurdu.
+  */
+  const alreadyDisclosed = context.messages.some((message) => message.who === 'ai');
   const written = await tickets.reply({
     ticketId: ticket.id,
     sender: 'ai',
-    body: reply,
+    body: alreadyDisclosed ? reply : `${AI_DISCLOSURE}\n\n${reply}`,
     newStatus: statusAfterStaffReply(ticket.status),
   });
   /* ÇEVİRİ HABERDEN VE ZİLDEN ÖNCE (17.08): müşteri bu cevabı ilk görüşte kendi dilinde okusun.
