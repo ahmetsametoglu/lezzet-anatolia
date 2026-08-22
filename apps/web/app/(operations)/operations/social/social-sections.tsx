@@ -353,6 +353,47 @@ function ReplyBox({ source, window: win, busy, error, prefill, onRecordOutbound 
 // SAĞ — müşteri bağlamı (ORTAK pano + bu ekrana özel bloklar)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Sohbette verilen iznin KAYDI (15.12) — iki düğme, tek gerçek.
+ *
+ * **Operatör karar vermiyor, müşterinin dediğini yazıyor** ve arayüz bunu söylemek zorunda: "İzin
+ * ver" yazan bir düğme, izni operatörün verdiğini ima ederdi ve GDPR'da izni veren müşteridir.
+ * Bu yüzden etiketler "Müşteri izin verdi" / "Müşteri reddetti".
+ *
+ * Seçili olan düğme SÖNÜK ve tıklanamaz: aynı değeri ikinci kez yazmak yeni bir damga atardı ve
+ * kayıt "az önce yeniden izin verdi" gibi okunurdu — izin bir kanıttır, damgası olayın anıdır.
+ */
+function OptInRecorder({
+  source,
+  optIn,
+  busy,
+  onOptIn,
+}: {
+  source: ConversationDetailView['source'];
+  optIn: boolean;
+  busy: boolean;
+  onOptIn: (granted: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <SectionLabel>Sohbette verilen izin</SectionLabel>
+      <div className="flex gap-1.5">
+        <Button variant={optIn ? 'primary' : 'secondary'} size="sm" disabled={busy || optIn} onClick={() => onOptIn(true)}>
+          Müşteri izin verdi
+        </Button>
+        <Button variant={optIn ? 'secondary' : 'primary'} size="sm" disabled={busy || !optIn} onClick={() => onOptIn(false)}>
+          Müşteri reddetti
+        </Button>
+      </div>
+      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+        {source === 'whatsapp'
+          ? 'Kayıt müşteri kartına da işlenir (kampanya izni · kaynak: whatsapp).'
+          : `${SOURCE_LABELS[source]} izni bu sohbete yazılır, müşteri kartına İŞLENMEZ — kampanya izni kanalı henüz yalnız WhatsApp ve e-posta taşıyor.`}
+      </span>
+    </div>
+  );
+}
+
 interface SocialContextPaneProps {
   context: CustomerContextData | null;
   /** Konuşmanın dış anahtarı — WhatsApp'ta okunaklı telefon, Messenger/IG'de opak PSID/IGSID. */
@@ -363,9 +404,13 @@ interface SocialContextPaneProps {
   onNewTicket: () => void;
   /** Kimliksiz sohbeti müşteriye bağlama penceresini açar (15.16). */
   onLinkCustomer: () => void;
+  /** Sohbette verilen ticari mesaj izninin kaydı (15.12) — operatör müşterinin dediğini yazar. */
+  optIn: boolean;
+  busy: boolean;
+  onOptIn: (granted: boolean) => void;
 }
 
-export function SocialContextPane({ context, externalRef, source, profileName, tickets, onNewTicket, onLinkCustomer }: SocialContextPaneProps) {
+export function SocialContextPane({ context, externalRef, source, profileName, tickets, onNewTicket, onLinkCustomer, optIn, busy, onOptIn }: SocialContextPaneProps) {
   const whatsapp = source === 'whatsapp';
   // Müşteri araması kanala göre ANLAMLI anahtarla yapılır: WhatsApp'ta numara kimlik anahtarıdır ve
   // kesin eşleşir; Messenger/IG'de elimizde yalnız görünen ad var — arama kesinlik değil ADAY verir.
@@ -430,6 +475,12 @@ export function SocialContextPane({ context, externalRef, source, profileName, t
           (Marketing Messages); o gün blok kanala göre genişler. Yanlış kanalın iznini göstermek,
           olmayan bir izne güvendirmek olurdu. */}
       {whatsapp ? <ContextConsent context={context} channel="whatsapp" /> : null}
+
+      {/* İzin KAYDI (15.12) — operatör karar vermez, müşterinin sohbette dediğini yazar. Üç kanalda
+          da var: `conversation.opt_in` kanal-nötr. Müşteri kaydına yazım yalnız WhatsApp'ta olur
+          (izin şeması bugün email+whatsapp taşıyor) ve fark aşağıda operatöre SÖYLENİR — yoksa
+          Messenger'da izni işaretleyen operatör onun kampanya listesine girdiğini sanırdı. */}
+      <OptInRecorder source={source} optIn={optIn} busy={busy} onOptIn={onOptIn} />
 
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Bağlı talepler</SectionLabel>

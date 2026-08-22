@@ -102,6 +102,11 @@ export interface ConversationDetailView {
   handledBy: TicketHandler;
   /** Hibrit modun bekleyen AI taslağı — kesikli kartın metni; `null` = taslak yok. */
   aiDraft: string | null;
+  /**
+   * Ticari mesaj izni (DOMAIN §11) — sohbette verilmiş/reddedilmiş izin. Operatör bunu KAYDEDER,
+   * kendisi karar vermez: müşteri sohbette ne dediyse o yazılır (15.12).
+   */
+  optIn: boolean;
 }
 
 export interface SocialData {
@@ -169,6 +174,18 @@ export const LinkConversationCustomerSchema = z.object({
 });
 
 /**
+ * Sohbette verilen/reddedilen ticari mesaj izninin KAYDI (15.12 · DOMAIN §11).
+ *
+ * `granted` boolean ve üçüncü bir "sorulmadı" değeri YOK: sorulmamışlık bir beyan değil, kaydın
+ * hiç olmamasıdır (`opt_in_at` boş kalır). Enum'a "sorulmadı" eklemek, sorulmamış bir izni
+ * kaydedilmiş gibi göstermek olurdu.
+ */
+export const ConversationOptInSchema = z.object({
+  conversationId: z.string().uuid(),
+  granted: z.boolean(),
+});
+
+/**
  * Konuşmadan talep açma — `ticket.conversation_id` FK'sini gerçekten dolduran TEK yol.
  *
  * Bağ 15.1'de kuruldu ama bugüne kadar hiçbir yazma yolu onu doldurmuyordu; Talepler ekranı da
@@ -210,4 +227,6 @@ export interface SocialViewProps {
   onNewTicket: () => void;
   /** Kimliksiz sohbeti müşteriye bağla (15.16) — Messenger/IG'de kimliğin TEK yolu. */
   onLinkCustomer: () => void;
+  /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
+  onOptIn: (granted: boolean) => void;
 }

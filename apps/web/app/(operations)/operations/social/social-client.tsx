@@ -6,6 +6,7 @@ import type { TicketHandler } from '@lezzet/types';
 import {
   consumeConversationDraftAction,
   loadMoreConversationsAction,
+  recordConversationOptInAction,
   recordOutboundAction,
   setConversationModeAction,
   suggestConversationDraftAction,
@@ -136,6 +137,10 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     onNewDm: () => setDmMode('new'),
     onNewTicket: () => setTicketOpen(true),
     onLinkCustomer: () => setLinkOpen(true),
+    /** İzin kaydı (15.12) — yazma sarmalından geçer: hata görünür, başarıda sunucu yeniden okunur. */
+    onOptIn: (granted: boolean) => {
+      if (detail) void run(() => recordConversationOptInAction({ conversationId: detail.id, granted }));
+    },
   };
 
   return (

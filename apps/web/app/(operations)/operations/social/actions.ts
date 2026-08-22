@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { generateConversationDraft, recordInboundMessage, recordOutboundMessage } from '@lezzet/application';
+import { generateConversationDraft, recordInboundMessage, recordOutboundMessage, updateCustomerPreferences } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -11,6 +11,7 @@ import { openTicket } from '@/lib/ticket/write';
 import { openWhatsappConversation } from '@/lib/messaging/conversation';
 import { toInboxRows } from './social-read';
 import {
+  ConversationOptInSchema,
   ConversationTicketSchema,
   FollowUpInboundSchema,
   LinkConversationCustomerSchema,
@@ -263,6 +264,53 @@ export async function linkConversationCustomerAction(input: unknown): Promise<Ac
     }
     refresh();
     return { data: { customerId: parsed.customerId }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **Sohbetteki izni KAYDET** (15.12 · DOMAIN §11) — operatör karar vermez, müşterinin dediğini yazar.
+ *
+ * ── İKİ YERE BİRDEN YAZILIR VE İKİSİ AYRI SORUYU CEVAPLAR ───────────────────
+ * `conversation.opt_in` bu SOHBETİN izni; `user_profiles.marketing_consent` MÜŞTERİNİN izni. Biri
+ * ötekinin yerine geçmez: kimliksiz bir sohbette müşteri kaydı yoktur ama izin yine de kaydedilmeli
+ * (kimlik sonra bağlanınca kaybolmasın), kimlikli müşterinin izni ise kanal boyunca taşınır ve
+ * kampanya gönderiminin dayanağıdır.
+ *
+ * ── MÜŞTERİ KAYDINA YALNIZ WhatsApp YAZILIR ─────────────────────────────────
+ * `marketing_consent` bugün yalnız `email` ve `whatsapp` anahtarlarını taşıyor (şemadan türer).
+ * Messenger/Instagram izni Meta'nın kendi opt-in mekanizmasıyla gelecek; olmayan bir kanalı
+ * WhatsApp'ın kutusuna yazmak, bir gün yanlış kanaldan kampanya göndermenin dayanağı olurdu.
+ * O kanallarda kayıt sohbet düzeyinde kalır ve ekran bunu söyler.
+ *
+ * İzin bir KANITTIR: ne zaman ve nereden verildiği yazılmadan "izin var" demek GDPR'da bir şey
+ * ifade etmez — damgayı `setOptIn` (sohbet) ve `updateCustomerPreferences` (müşteri, `source`
+ * alanıyla) atıyor; bu kapı ikisini tek operatör hareketinde tutuyor.
+ */
+export async function recordConversationOptInAction(input: unknown): Promise<ActionResult<{ granted: boolean }>> {
+  try {
+    await requireAdmin();
+    const parsed = ConversationOptInSchema.parse(input);
+    const db = serviceDb();
+    const service = new ConversationService(db);
+    const conversation = await service.getById(parsed.conversationId);
+    if (!conversation) return { data: null, error: 'Konuşma bulunamadı — ekranı tazeleyin.' };
+
+    await service.setOptIn(parsed.conversationId, parsed.granted);
+
+    if (conversation.source === 'whatsapp' && conversation.customerId) {
+      // `source` İZNİN NEREDEN geldiğidir ve operatöre ham hâliyle görünür ("… · whatsapp") —
+      // hesap sayfasından verilen izinle sohbette verilen izin ayırt edilebilmeli.
+      await updateCustomerPreferences(db, {
+        profileId: conversation.customerId,
+        source: 'whatsapp',
+        marketingConsent: { whatsapp: parsed.granted },
+      });
+    }
+
+    refresh();
+    return { data: { granted: parsed.granted }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

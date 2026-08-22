@@ -94,6 +94,7 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     })),
     handledBy: detail.conversation.handledBy,
     aiDraft: detail.conversation.aiDraftReply,
+    optIn: detail.conversation.optIn,
   };
 
   const data: SocialData = {
