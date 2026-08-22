@@ -4509,10 +4509,13 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `package` · `points-history` · `feedback` · `support`×2 · `order-detail`). Göç tek turda
   yapılmalı ki iki biçim bir arada az yaşasın.
 
-  **BEKLEYEN(21.91):** toparlanma sonrası vitrin selamlaması misafir kalıyor — hesap sekmesinde
+  ~~**BEKLEYEN(21.91):** toparlanma sonrası vitrin selamlaması misafir kalıyor — hesap sekmesinde
   "Tekrar dene" ile kimlik geri geldiği hâlde başlıkta *"Hoş geldiniz"* yazıyor, sekme değiştirmek
-  de düzeltmiyor; soğuk açılışta doğru (*"İyi akşamlar, Yaman"*). Posta kodu 67000 ARIZA DEĞİL:
-  o gezinme kodudur, satın alma tarafı adresten 67380'i çözer (`setPurchasePlace` künyesi).
+  de düzeltmiyor; soğuk açılışta doğru (*"İyi akşamlar, Yaman"*).~~ → **22.08'de ölçüldü ve
+  kapandı (21.98).** İşaretin yarısı ÜREMEDİ: "Tekrar dene" selamlamayı gerçekten geri getiriyor.
+  Üreyen ve düzeltilen yarısı başkaydı — kendiliğinden hiç toparlanmıyordu. Ölçüm ve çare aşağıda.
+  Posta kodu 67000 ARIZA DEĞİL: o gezinme kodudur, satın alma tarafı adresten 67380'i çözer
+  (`setPurchasePlace` künyesi).
 
 - [x] (21.92) **KEŞİF DAVETİ ARTIK KART KALMADIYSA ÇİZİLMİYOR — ve vitrin çağrısı kimliği taşımıyormuş (MB-58b, 20.08).**
   `touches: packages/types/src/contracts/home-api.schema.ts, packages/application/src/feedback/discover.ts, packages/application/src/index.ts, apps/mobile-api/src/api/v1/home.ts, apps/mobile/src/lib/api/home.ts, apps/mobile/src/screens/home/home-screen.tsx`
@@ -4819,3 +4822,46 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Turda bir kez "Operasyon açılamadı" görüldü (dev girişin hemen ardından); ikinci turda
   **tekrarlanmadı**, bulgu sayılmadı. Kapının o hâlde "yetkin yok" değil "okunamadı" demesi
   tasarlanmış davranış — doğru çalıştı.
+
+- [x] (21.98) **DÜŞEN KİMLİK OKUMASI KENDİ BAŞINA TOPARLANMIYORDU — müşteri, oturumu yerli yerindeyken uygulamayı çıkış yapmış gibi görüyordu**
+  `touches:` `apps/mobile/src/screens/customer-kit/use-me.hook.ts`
+
+  **Kaynak:** `BEKLEYEN(21.91)`'in ikinci işareti (20.08). Ölçüm işaretin YARISINI çürüttü, öteki
+  yarısını doğruladı ve sebebi başka bir yerde buldu.
+
+  ── CİHAZDA ÜRETİLDİ (22.08, OPPO CPH1907 · USB adb, wifi kesilerek) ─────────
+  Kurulum: Claire oturumu açık → `svc wifi disable` → hesap sekmesinde aşağı çekip kimliği
+  okutmak → `/me` düşüyor, `status: 'error'`. USB'den bağlanıldığı için ağı kesmek adb'yi
+  düşürmüyor; arıza doğal yolundan üretilebiliyor.
+
+  | Toparlanma yolu | Sonuç |
+  | --- | --- |
+  | Hesap sekmesi → "Tekrar dene" | **çalışıyor** (işaretin iddiası ÜREMEDİ) |
+  | Vitrin → aşağı çekip tazeleme | **çalışıyor** (`onRefresh` zaten `meState.refresh` çağırıyor) |
+  | Sekme değiştirmek | çalışmıyor |
+  | **Ağ geri gelince kendiliğinden** | **çalışmıyor** ← gerçek açık |
+
+  Yani `load` yalnız İLK abonede ve oturum değişiminde koşuyordu; düşen bir okumadan çıkış yolu
+  iki elle yapılan harekete bağlıydı. Sahadaki karşılığı: metroda bağlantısı kopan müşterinin
+  selamlaması, sipariş bantları ve toptan rozeti kayboluyor, ağ dönse bile geri gelmiyor —
+  oturumu duruyorken uygulama çıkış yapmış gibi görünüyor. `error` hâlinin misafir GİBİ
+  çizilmesi bilinçli bir karardı (hook künyesi: "giriş daveti basmak yalan olurdu"); yanlış olan
+  o karar değil, ondan çıkışın olmamasıydı.
+
+  ── ÇARE: ÖNE GELİNCE VE YALNIZ `error` HÂLİNDE YENİDEN OKU ─────────────────
+  `AppState` dinleyicisi `subscribe`ın içinde, auth dinleyicisinin yanında (aynı ömür, aynı
+  sökülme). Tetik öne gelmedir çünkü sahadaki toparlanma böyle oluyor: bağlantısı olmadığını fark
+  eden kişi uygulamadan çıkıp wifi'yi düzeltiyor ve dönüyor. `netinfo` daha doğrudan bir sinyal
+  olurdu ama projede o bağımlılık YOK ve tek bir tazeleme için kütüphane almak bakımıyla pahalı.
+  **Yalnız `error`da koşar:** sağlıklı durumda her öne gelişte `/me` çekmek, düzeltmeye çalıştığı
+  arızadan pahalı bir yoklama olurdu. `guest` de tazelenmez — o KESİN bir cevaptır (401), eksik
+  bir okuma değil; oturum açılırsa `onAuthStateChange` zaten duyar.
+
+  **Doğrulama cihazda, iki tur:** hata hâli kuruldu → wifi geri verildi (ping 8 ms ile gerçekten
+  bağlı olduğu ölçüldü) → tek arka plan–ön plan turu → **"Bonsoir, Claire" ve sipariş bandı
+  kendiliğinden geri geldi**, hiçbir düğmeye basılmadan. İlk denemede düzelmemişti ve sebebi
+  ölçüldü: Android `svc wifi enable`ı bağlantı gerçekten kurulmadan "enabled" diye bildiriyor —
+  tetik doğru anda koşmuştu, ağ hazır değildi. Mekanizma her öne gelişte yeniden denediği için
+  o hâl kendini bir sonraki dönüşte düzeltiyor.
+
+  `typecheck` · `lint` · birim **1384/1384**.

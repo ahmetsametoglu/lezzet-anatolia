@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { fetchMe, type Me } from '@/lib/api/me';
 import { getSupabase } from '@/lib/auth/supabase';
@@ -62,11 +63,37 @@ export function publishMe(me: Me): void {
   setState({ status: 'ready', me });
 }
 
+/**
+ * DÜŞEN OKUMA TEK BAŞINA TOPARLANMAZDI (21.98 — cihazda ölçüldü 22.08).
+ *
+ * Ağ düşünce `status` `error`a geçiyor ve ekran misafir GİBİ çiziliyor (yukarıdaki künye: misafir
+ * DEMİYOR, ama selamlama, sipariş bantları ve toptan rozeti kayboluyor). Sorun o karar değil,
+ * ondan ÇIKIŞ yolunun olmamasıydı: `load` yalnız ilk abonede ve oturum değişiminde koşuyordu.
+ * Ölçülen dört yol — hesap sekmesindeki "Tekrar dene" ✓ · vitrini aşağı çekmek ✓ · sekme
+ * değiştirmek ✗ · **ağ geri gelince kendiliğinden ✗**. Yani oturumu yerli yerinde duran müşteri,
+ * doğru düğmeyi bulana kadar uygulamayı çıkış yapmış gibi görüyordu.
+ *
+ * Tetik ÖNE GELME, çünkü sahadaki toparlanma böyle oluyor: bağlantısı olmadığını fark eden kişi
+ * uygulamadan çıkıp wifi'yi/uçak kipini düzeltiyor ve geri dönüyor. Bağlantı dinleyicisi
+ * (`netinfo`) daha doğrudan bir sinyal olurdu ama projede o bağımlılık YOK ve bir kütüphaneyi
+ * tek bir tazeleme için almak, taşıdığı bakımdan pahalı.
+ *
+ * YALNIZ `error` HÂLİNDE koşar: sağlıklı durumda her öne gelişte `/me` çekmek, düzeltmeye
+ * çalıştığı arızadan pahalı bir yoklama olurdu. `guest` de tazelenmez — o KESİN bir cevaptır
+ * (401), eksik bir okuma değil; oturum açılırsa zaten `onAuthStateChange` duyar.
+ */
+function retryOnForeground(appState: AppStateStatus): void {
+  if (appState === 'active' && state.status === 'error') load();
+}
+
+let appStateSubscription: { remove: () => void } | null = null;
+
 function subscribe(listener: () => void): () => void {
   if (listeners.size === 0) {
     load();
     const { data } = getSupabase().auth.onAuthStateChange(() => load());
     authSubscription = data.subscription;
+    appStateSubscription = AppState.addEventListener('change', retryOnForeground);
   }
   listeners.add(listener);
   return () => {
@@ -74,6 +101,8 @@ function subscribe(listener: () => void): () => void {
     if (listeners.size === 0) {
       authSubscription?.unsubscribe();
       authSubscription = null;
+      appStateSubscription?.remove();
+      appStateSubscription = null;
     }
   };
 }
