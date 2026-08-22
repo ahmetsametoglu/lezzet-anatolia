@@ -23,11 +23,23 @@ export const brand = {
 } as const;
 
 /**
- * WhatsApp konuşma bağı. `wa.me` numarayı ARTISIZ ve rakam dışı karaktersiz ister — biçimi
+ * WhatsApp konuşma bağı (15.3). `wa.me` numarayı ARTISIZ ve rakam dışı karaktersiz ister — biçimi
  * çağıranların hatırlamasına bırakmak, bir gün çalışmayan bir bağ demek.
+ *
+ * **Önceden yazılı metin PARAMETRE, burada kurulmuyor** ve bu bilinçli: metin müşteriye görünen
+ * i18n kopyasıdır, sayfanın kendi `messages.json`'unda yaşar (`CLAUDE §2`). Burada kurulsaydı marka
+ * paketi üç dilin sözlüğünü taşımak zorunda kalır ve sayfa metnini değiştiren kişi onu bulamazdı.
+ * Boş/boşluk metin METİNSİZ bağ üretir — `?text=` ile boş bir parametre göndermek, WhatsApp'ta boş
+ * bir taslakla açılan sohbet demek.
+ *
+ * Yön farkı önemli: bu bağ MÜŞTERİDEN BİZE yazar (numara bizim). Kuryenin "yoldayım" bağı
+ * (`domain-core/delivery/on-the-way`) ters yöndedir — numara müşterinindir, metin de bizim
+ * ağzımızdan kuruludur. İkisi ayrı kurucu, çünkü ayrı iki cümle kuruyorlar.
  */
-export function whatsappHref(): string {
-  return `https://wa.me/${brand.contact.phoneE164.replace(/\D/g, '')}`;
+export function whatsappHref(text?: string | null): string {
+  const number = brand.contact.phoneE164.replace(/\D/g, '');
+  const message = text?.trim();
+  return message ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : `https://wa.me/${number}`;
 }
 
 export type BrandLocale = (typeof brand.locales)[number];

@@ -42,7 +42,7 @@ export function ConfirmationDesktop(props: ConfirmationViewProps) {
               okuduğu anda "komşunu da bu güne çağır" cümlesi anlamlı; en altta sorulsa geç kalırdı.
               Bağlantı yoksa hiç çizilmiyor, sıra da bozulmuyor. */}
           <NeighborBand t={props.t} compact={false} view={props.view} />
-          <HelpBand t={props.t} compact={false} />
+          <HelpBand t={props.t} compact={false} referenceNo={props.view.referenceNo} />
         </div>
 
         <div className="sticky top-5">

@@ -33,7 +33,7 @@ export function ConfirmationMobile(props: ConfirmationViewProps) {
         <TimelineCard {...props} />
         {/* Sıra masaüstüyle AYNI (gerekçe orada): eylem şeridi zaman çizgisinin ardında. */}
         <NeighborBand t={props.t} compact view={props.view} />
-        <HelpBand t={props.t} compact />
+        <HelpBand t={props.t} compact referenceNo={props.view.referenceNo} />
         <SummaryCard {...props} />
       </div>
     </>

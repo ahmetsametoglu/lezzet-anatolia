@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { whatsappHref } from '@lezzet/brand';
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
@@ -220,11 +221,21 @@ export function TimelineCard({ t, locale, view, compact }: ConfirmationViewProps
  * Yardım şeridi: kart değil BANT — "bir sorunuz mu var" siparişin bir parçası değil, sayfanın
  * altındaki açık kapı. Düğme mobilde çizilmiyor (tasarım): dar ekranda bant zaten tek satır.
  *
- * BEKLEYEN(15.3): WhatsApp yazışma bağlantısı — düğme yerinde, kanal yok. (İşaret 15.1'e asılıydı;
- * o görev veri zeminiydi ve 08.08'de kapandı — düğmenin beklediği şey `wa.me` girişi, yani 15.3:
- * numara + dile uygun önceden yazılı mesaj. Zemin hazır olduğu için kalan iş yalnız bu bağ.)
+ * **Kanal bağlandı (15.3):** düğme artık gerçek bir `wa.me` bağı ve metin SİPARİŞE ÖZGÜ — müşteri
+ * WhatsApp'ı referans numarası yazılı hâlde açıyor. Bu, bandın kendi cümlesinin ("sipariş
+ * numaranızla yazın") gereğini müşteriye yaptırmak yerine BİZİM yapmamız: numarayı hatırlamak,
+ * kopyalamak ve doğru yazmak operatörün değil müşterinin sırtındaydı ve orada sık sık düşerdi.
+ *
+ * Referans TASLAKTA `null` olabilir (`ConfirmationView` künyesi: numara ilk kalıcı durumda doğar) —
+ * o hâlde numarasız metin gider. Yuvası boş bir cümle ("siparişim {reference} hakkında") göndermek,
+ * operatöre anlamsız bir mesaj düşürürdü.
  */
-export function HelpBand({ t, compact }: Pick<ConfirmationViewProps, 't' | 'compact'>) {
+export function HelpBand({
+  t,
+  compact,
+  referenceNo,
+}: Pick<ConfirmationViewProps, 't' | 'compact'> & { referenceNo: string | null }) {
+  const href = whatsappHref(referenceNo ? t.help.prefill.replace('{reference}', referenceNo) : t.help.prefillPlain);
   return (
     <div className={['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ')}>
       <span className="text-icon" aria-hidden="true">
@@ -234,10 +245,18 @@ export function HelpBand({ t, compact }: Pick<ConfirmationViewProps, 't' | 'comp
         <span className="font-sans text-body-sm font-bold text-ink">{t.help.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.help.body}</span>
       </div>
+      {/* `target="_blank"` + `rel`: WhatsApp Web yeni sekmede açılır, mobil cihazda uygulamaya
+          devredilir. Sipariş sayfası ARKADA KALIR — müşteri yazışmadan dönünce siparişini
+          kaybetmemeli. */}
       {!compact && (
-        <Button variant="secondary" size="sm" disabled className="flex-none">
-          {t.help.cta} · {t.soon}
-        </Button>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none' })}
+        >
+          {t.help.cta}
+        </a>
       )}
     </div>
   );

@@ -494,6 +494,24 @@ Beklenen: Claude Design'ın bu şeridi kendi diliyle çizmesi. Şeridin taşıma
 `design/pages/musteri-checkout.md`'ye yazıldı. Bağlantı yoksa (kargo siparişi · taslak · kesim saati
 dolmuş sefer) blok **hiç çizilmiyor** — boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
 
+### Sipariş Alındı — yardım şeridinin düğmesi artık ÇALIŞIYOR, ama mobilde çizilmiyor (22.08, 15.3)
+
+Yardım şeridinin WhatsApp düğmesi bugüne kadar `disabled` + "· yakında" idi; 15.3 ile gerçek bir
+`wa.me` bağı oldu ve metin **siparişe özgü** gidiyor (müşteri WhatsApp'ı referans numarası yazılı
+hâlde açıyor — bandın kendi cümlesi olan *"sipariş numaranızla yazın"* işini artık biz yapıyoruz).
+
+Açık şu: **düğme mobilde çizilmiyor** (`!compact` — çizimin kararı, `HelpBand` künyesinde yazılı) ve
+o karar düğme ÖLÜYKEN verilmişti. Şimdi tam tersi bir gerilim var: WhatsApp'ın doğal cihazı telefon,
+yani düğmenin en değerli olduğu yer mobil. `CLAUDE.md §3` gereği improvise EDİLMEDİ — mobil düğme
+eklenmedi, karar Claude Design'a bırakıldı.
+
+Aciliyeti düşük, çünkü müşteri mobilde tamamen kapıda kalmıyor: site altbilgisindeki WhatsApp satırı
+her sayfada ve her cihazda duruyor (`site-frame`). Kaybolan tek şey, o anki siparişe bağlı
+önceden-yazılı metin.
+
+Beklenen: dar ekranda şeridin ikinci satıra düğme alıp almayacağı ya da bandın tamamının
+tıklanabilir olup olmayacağı kararı.
+
 ## 4. Tasarımı olmayan yüzeyler
 
 Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel karar var (üstteki
