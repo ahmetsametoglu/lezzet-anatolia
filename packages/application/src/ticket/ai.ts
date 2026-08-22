@@ -1,4 +1,5 @@
 import { runTask, ticketAgentTask, ticketDraftTask, type AiModel, type SupportContextInput } from '@lezzet/ai';
+import { brand } from '@lezzet/brand';
 import {
   ConversationService,
   MessageService,
@@ -95,12 +96,26 @@ async function orderContextOf(db: SupabaseClient, orderId: string | null): Promi
   };
 }
 
+/**
+ * İşletme künyesinin görev girdisine giren hâli — TEK yerde kuruluyor.
+ *
+ * İki bağlam kurucusu (talep · sohbet) aynı değeri geçmek zorunda: ayrı ayrı yazılsaydı biri gün
+ * gelip makine biçimini (`+33616990681`) geçer ve müşteriye okunaksız bir numara söylenirdi.
+ * `phoneDisplay` bilinçli tercih — bu numara müşterinin OKUYACAĞI hâlidir, `wa.me`'nin istediği
+ * biçim değil (marka künyesi ikisini ayrı alanda tutuyor, tam da bu yüzden).
+ */
+const BUSINESS_CARD: SupportContextInput['business'] = {
+  whatsapp: brand.contact.phoneDisplay,
+  email: brand.contact.email,
+};
+
 /** Talebin yazışması → görev girdisi. Kırpma BURADA (son N mesaj) — sınır kapıda, prompt'ta değil. */
 async function ticketContextOf(db: SupabaseClient, ticket: Ticket): Promise<SupportContextInput | null> {
   const messages = await new TicketMessageService(db).listByTicket(ticket.id);
   if (messages.length === 0) return null;
   return {
     channel: 'ticket',
+    business: BUSINESS_CARD,
     messages: messages.slice(-THREAD_LIMIT).map((message) => ({
       who: message.sender === 'customer' ? 'customer' : message.sender === 'ai' ? 'ai' : 'staff',
       text: message.body,
@@ -155,6 +170,7 @@ async function conversationContextOf(db: SupabaseClient, conversation: Conversat
   if (messages.length === 0) return null;
   return {
     channel: conversation.source,
+    business: BUSINESS_CARD,
     messages: messages.slice(-THREAD_LIMIT).map((message) => ({
       who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
       text: message.body.text?.trim() || '[metinsiz mesaj]',

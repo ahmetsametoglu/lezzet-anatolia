@@ -57,6 +57,22 @@ export interface SupportContextInput {
    * Messenger'dan yazan müşteriye ajan WhatsApp diyordu.
    */
   channel: 'ticket' | ConversationSource;
+  /**
+   * İşletmenin DEĞİŞMEYEN künyesi — ARAÇ DEĞİL, GİRDİ.
+   *
+   * Statik bilgi için araç açmak, hiç değişmeyen bir veriyi her soruda bir tur attırmaktı: araç
+   * çağrısı gecikme ve jeton demek, karşılığında da hep aynı iki satır. Ayrım net — **değişen şey
+   * araca, değişmeyen şey girdiye**: fiyat ve rota günü araçtan gelir (bugün başka, yarın başka),
+   * WhatsApp numarası prompt'a yazılır.
+   *
+   * Değerler `@lezzet/brand`ten UYGULAMA katmanında doldurulur; bu paket marka sabitini bilmez
+   * (bağımlılık tek yönlü — `@lezzet/ai` taşımasız bir görev kütüphanesidir).
+   */
+  business: {
+    /** Okunaklı biçim ("+33 (0)6 …") — müşteriye söylenecek hâli; makine biçimi burada işe yaramaz. */
+    whatsapp: string;
+    email: string;
+  };
   /** Yazışma, ESKİDEN YENİYE. Uygulama katmanı kırpar (son N mesaj) — sınır kapıda, prompt'ta değil. */
   messages: SupportMessageInput[];
   order: {
@@ -85,7 +101,9 @@ const FACTS = `GERÇEKLİK KURALLARI:
 - Sana verilen bağlamın DIŞINA çıkma. Fiyat, stok, teslimat günü/saati, kampanya, iade tutarı UYDURMA — bağlamda yoksa bilmiyorsun demektir.
 - Sipariş bağlamı "null" ise sipariş hakkında hiçbir cümle kurma.
 - Para sözü verme: iade, indirim, telafi, tazminat KARARI insana aittir. En fazla "konuyu inceliyoruz" diyebilirsin.
-- Tarih/gün bağlamda yazıyorsa aynen kullan; yazmıyorsa ARAÇLARA bak; araç da bilmiyorsa "teslimat gününüzü kontrol edip döneceğiz" de.`;
+- Tarih/gün bağlamda yazıyorsa aynen kullan; yazmıyorsa ARAÇLARA bak; araç da bilmiyorsa "teslimat gününüzü kontrol edip döneceğiz" de.
+- ADRES ve ÇALIŞMA SAATİ SÖYLEME. Müşterinin gelip alabileceği bir mağaza/şube olduğunu ima etme, "bize uğrayın" deme — böyle bir bilgi sana verilmedi. "Şu an mağaza ziyareti için bilgi veremiyorum, bir yetkiliye aktarıyorum" de.
+- Fatura, vergi numarası, şirket unvanı gibi yasal künye sorulursa sitedeki "Yasal bilgiler" sayfasına yönlendir; numaraları hafızandan yazma.`;
 
 /**
  * Araç kuralları (16.9) — **araç verilmediğinde de zararsız**, çünkü hepsi "araç varsa" diye
@@ -210,6 +228,9 @@ function buildSupportPrompt(input: SupportContextInput): string {
 
   return [
     `Kanal: ${CHANNEL_LABELS[input.channel]}.`,
+    '',
+    // Künye BAĞLAM olarak veriliyor, talimat olarak değil: model bunu ancak müşteri sorarsa söyler.
+    `İŞLETME KÜNYESİ (müşteri sorarsa söyleyebilirsin): WhatsApp ${input.business.whatsapp} · e-posta ${input.business.email}.`,
     '',
     order,
     '',
