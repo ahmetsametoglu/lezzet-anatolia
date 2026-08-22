@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
+import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
@@ -88,6 +89,7 @@ export function ManagementHubScreen() {
             testID="operations-bell"
           />
         }
+        identity={<OperationsStaffMenu testID="operations-staff-menu" />}
       />
 
       <ScrollView contentContainerStyle={styles.body} testID="management-hub-body">

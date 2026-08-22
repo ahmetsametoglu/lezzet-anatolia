@@ -10,6 +10,7 @@ import { AccountScreen } from '@/screens/account/account-screen';
 import { accountData } from '@/screens/account/account-fixture';
 import messages from '@/screens/account/messages.json';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { operationsHomeRoute } from '@/screens/login/post-login-route';
 
 /*
   Rota dosyası İNCE (katalogla aynı gerekçe) — ekranın parçaları `src/screens/account/`ta.
@@ -86,6 +87,10 @@ export default function AccountRoute() {
       /* Aşağı çekildiğinde kimliği TAZELEYEN kapı (21.29c): ekran `/me`yi kendi okumuyor, bu satır
          okuyor — tazeleme de burada. Puan ve adresleri ekran kendi tazeliyor. */
       onRefreshIdentity={meState.refresh}
+      /* PERSONEL KÖPRÜSÜ (21.97) — karar burada, çünkü `/me` burada okunuyor ve kural girişin
+         okuduğu kuralın ta kendisi (`operationsHomeRoute`). Müşteride `null` döner ve ekranda
+         satır hiç doğmaz. */
+      staffRoute={operationsHomeRoute(me)}
       data={accountData({
         /* Ad OLDUĞU GİBİ taşınır — girilmemişse BOŞ (MB-66, 18.08). Yedeğe düşme kararı EKRANINDIR.
            Eskiden burada e-postaya düşülüyordu ("kart adsız kalmasın") ve karar doğruydu, yeri

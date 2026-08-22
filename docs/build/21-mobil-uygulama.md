@@ -1485,9 +1485,12 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   girişinde personel yönlendirmesi · OAuth dönüşünde aynısı) · mobil + mobile-api typecheck ·
   scripts typecheck · eslint temiz; yeni ihraç edilen kullanılmayan tip yok.
 
-  **BEKLEYEN(21.13): kabuktan müşteri yüzeyine DÖNÜŞ yolu hâlâ yok** — personel giriyor ama
+  ~~**BEKLEYEN(21.13): kabuktan müşteri yüzeyine DÖNÜŞ yolu hâlâ yok** — personel giriyor ama
   çıkamıyor (uygulamayı kapatıp açmak gerekiyor). Kabuğun künyesi bu geçişin tema dikişini de
-  şart koşuyor (odak/blur), o yüzden ayrı ve bilinçli bırakıldı.
+  şart koşuyor (odak/blur), o yüzden ayrı ve bilinçli bırakıldı.~~ → **22.08'de kapandı (21.97):**
+  kimlik menüsünün "Müşteri uygulamasına geç"i dönüş yolunu açtı, tema dikişi de aynı dilimde
+  `useFocusEffect`e bağlandı. Ölçüm o gün bir üçüncüsünü de gösterdi — kabukta ÇIKIŞ da yoktu;
+  o da aynı menüye kondu.
 
 - [x] (21.33) **KLAVYE AÇIKKEN DÜĞMEYE İLK DOKUNUŞ YUTULUYORDU — geri bildirim yorumu sessizce
   kayboluyordu (cihazda ölçüldü 11.08).**
@@ -4746,3 +4749,50 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   BEKLEYEN(21.96): adres formunun alıcı+telefon sorması. Artık okuyan taraf var, yani sormak
   anlam kazandı; web zaten ikisini zorunlu tutuyor (`normalizePhone` ile E.164'e indiriyor).
+
+- [x] (21.97) **KABUK ÇİFT YÖNLÜ AÇILDI — kurye artık rotasını kaybetmiyor, personel de kabuğa hapsolmuyor**
+  `touches:` `apps/mobile/src/screens/operations/{use-staff-landing.hook.ts,sections-context.ts,use-operations-access.hook.ts,messages.json}` · `apps/mobile/src/components/operations/{staff-menu.tsx,section-header.tsx}` · `apps/mobile/src/app/(operations)/_layout.tsx` · `apps/mobile/src/app/(tabs)/{_layout.tsx,account.tsx}` · `apps/mobile/src/screens/{account/account-screen.tsx,account/messages.json,courier/courier-day-screen.tsx,warehouse/warehouse-hub-screen.tsx,management/management-hub-screen.tsx,money/money-screen.tsx}`
+
+  **Kaynak:** sefer şeridinin cihaz turu (18.08, CPH1907) — *"kurye yeniden açılışta müşteri
+  vitrinine düşüyor, rotasına uygulama İÇİNDEN köprü yok"*. Kabuğun kendi künyesindeki
+  `BEKLEYEN(21.13)` de ters yönü yazmıştı: *"personel giriyor ama çıkamıyor"*.
+
+  ── ÜÇ ÖLÇÜM (22.08) ────────────────────────────────────────────────────────
+  · **Açılışta rol kararı hiç sorulmuyordu.** Girişte soruluyordu (`operationsHomeRoute`, 21.32),
+    açılışta sorulmuyordu — aynı kullanıcı, aynı oturum, İKİ farklı iniş yeri.
+  · **Kabuktan müşteri yüzeyine dönüş yolu yoktu** (alt barda personel girişi yok, hesap
+    ekranının dibinde köprü yok — notun cihazda gezilmiş kanıtı).
+  · **Ve kabukta ÇIKIŞ da yoktu** — bu ilk kez burada ölçüldü: `signOut`un native'deki tek
+    çağıranı hesap ekranıydı ve oraya kabuktan gidilemiyordu. Web'de AYNI arıza ölçülüp
+    çözülmüştü (02.08, `page-header.tsx`: *"operasyon yüzeyinde hiç çıkış yolu yoktu"*).
+    Personel bugün kabuktan yalnız Android geri tuşuyla çıkabiliyordu — o da kaza eseri
+    (sekmeler yığında altta duruyor) ve yeniden açılıştan sonra hiç işlemiyor.
+
+  ── YAPILAN (kullanıcı kararları 22.08, şıklı soruldu) ──────────────────────
+  · **Açılış girişle aynı yere iner** (kullanıcı seçimi): `use-staff-landing.hook` müşteri
+    kabuğunda tek atış koşar ve personeli operasyon köküne taşır. Kararı kendi HESAPLAMAZ,
+    `operationsHomeRoute`a sorar — iki kaynak ayrışamasın. Yalnız `/`dayken koşar: davet /
+    geri bildirim / bildirim bağıyla açılan uygulama EZİLMEZ. Kapı değil yan etki — `/me`yi
+    beklerdi ve şebekesiz kuryenin uygulaması hiç açılmazdı.
+  · **Kimlik menüsü** (`staff-menu.tsx`) — zilin komşusu, dolu zeytin daire (web'in ölçtüğü ders:
+    barda başka hiçbir şey daire değil). Çekmecede ad · e-posta · açabildiği bölümler, altında
+    **"Müşteri uygulamasına geç"** ve **"Oturumu kapat"**. Rol ETİKETİ değil BÖLÜM etiketi
+    yazılıyor: web'in `roleText` sözlüğü web UI modülünde ve ikinci kopyası nüsha olurdu.
+  · **Hesap ekranında personel köprüsü** — çıkışın hemen üstünde, yalnız personelde çizilir.
+    Ölçüt yine `operationsSectionsOf`; rota `staffRoute` prop'uyla geliyor, `AccountData`ya
+    yetki alanı EKLENMEDİ (müşteri künyesi oturum kararının taşıyıcısı olmamalı).
+  · **Tema dikişi odağa bağlandı** — kapının künyesi bunu ilk çapraz bağlantıyı ekleyen dilime
+    şart koşmuştu (`useEffect` → `useFocusEffect`); kabuk odaktan düşünce tema müşteriye döner.
+  · Ping-pong tuzağı kapatıldı: taze girişte bayrak tüketilmemiş oluyor, köprü basıldığında
+    `markStaffLandingDone` çağırıyor — yoksa köprü basıldığı anda kendini iptal ederdi.
+
+  **Tip kapısı iki gerçek bulgu yakaladı:** `/me.email` sözleşmede `string | null` (menü o satırı
+  hiç çizmiyor, boş dizeye ÇEVRİLMEDİ) ve üç ekran testinin bağlam değeri eksik kaldı.
+
+  `typecheck` · `lint` · `knip` (yeni bulgu yok) · `boundaries` · birim **1380/1380**.
+
+  BEKLEYEN(21.97): **cihaz turu koşulmadı** — telefon kilitli ve ekran uzaktan sürülemedi
+  (`mScreenState=ON` ama capture siyah, odak `NotificationShade`de asılı). Ölçülecek dört şey:
+  kurye oturumuyla uygulamayı kapatıp açınca Günün Rotası'na inmesi · kimlik dairesinin zille
+  hizalı çıkması · köprüden müşteri yüzeyine geçişte temanın DÖNMESİ · ve o geçişten sonra
+  operasyona geri savrulmaması (ping-pong).

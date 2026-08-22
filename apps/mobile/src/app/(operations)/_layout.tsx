@@ -1,5 +1,5 @@
-import { Redirect, Stack } from 'expo-router';
-import { useEffect } from 'react';
+import { Redirect, Stack, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 
@@ -34,16 +34,18 @@ import { operationsTheme } from '@/theme/unistyles';
   için operasyon farkları (`cream`, `olive-bg`) onlara böyle ulaşır. Operasyon komponentleri
   token'larını sabitten okur — gerekçe `theme/unistyles.ts` künyesinde — yani bu çağrı DÜŞSE bile
   ekranlar doğru çizilir; dikişin işi paylaşılan kiti hizalamaktır, ekranı ayakta tutmak değil.
-  DİKİŞİN SINIRI (inceleme bulgusu 08.08): geri dönüş UNMOUNT'a bağlı — kabuk yığında dururken
-  ÜSTÜNE bir müşteri rotası açılırsa o ekran operasyon temasıyla çizilir. Bugün kabuktan müşteri
-  rotasına giden hiçbir bağlantı yok (ölçüldü), o yüzden odak-dinleyici makinesi KURULMADI;
-  kabuk-içi ilk çapraz bağlantıyı ekleyen dilim bu geçişi focus/blur'a bağlamak zorundadır.
+  DİKİŞİN SINIRI KAPANDI (21.97): dönüş eskiden UNMOUNT'a bağlıydı ve kabuk yığında dururken
+  üstüne açılan bir müşteri rotası operasyon temasıyla çizilirdi (inceleme bulgusu 08.08). O gün
+  kabuktan müşteri rotasına giden hiçbir bağlantı YOKTU, bu yüzden makine kurulmamış ama borç
+  yazılmıştı; kimlik menüsünün "Müşteri uygulamasına geç"i ilk çapraz bağlantı olunca `useEffect`
+  `useFocusEffect`e çevrildi — kabuk odaktan düştüğünde de tema müşteriye döner.
 
-  GİRİŞ AKIŞI BU DİLİMDE DEĞİL: personel giriş yaptığında buraya YÖNLENDİRİLMESİ (web'in tek
-  `/connexion` modelinin karşılığı) oturum diliminin işi; bugün kabuk adresle/derin bağla açılır ve
-  kapı her hâlükârda burada duruyor.
-  BEKLEYEN(21.13): girişten sonra operasyon kabuğuna otomatik yönlendirme + push dokunuşunun
-  ekrana açılması aynı oturum/bildirim hattının parçası.
+  GİRİŞ AKIŞI BU DİLİMDE DEĞİL: personelin buraya yönlendirilmesi oturum diliminin işi ve İKİ
+  yerden koşuyor — girişte (`post-login-route`, 21.32) ve AÇILIŞTA
+  (`use-staff-landing.hook`, 21.97). İkisi de aynı kurala (`operationsHomeRoute`) sorar; ayrı
+  hesaplasalardı "girince operasyona gidiyor ama açınca gitmiyor" diye bir fark doğardı — nitekim
+  21.97'den önce tam olarak o vardı. `BEKLEYEN(21.13)`ün yönlendirme yarısı böylece kapandı;
+  push dokunuşunun ekrana açılması bildirim hattıyla (21.88) gelecek.
 */
 
 const t = operationsCopy;
@@ -52,11 +54,20 @@ export default function OperationsLayout() {
   const access = useOperationsAccess();
   const granted = access.status === 'granted';
 
-  useEffect(() => {
-    if (!granted) return;
-    UnistylesRuntime.setTheme('operations');
-    return () => UnistylesRuntime.setTheme('light');
-  }, [granted]);
+  /* TEMA DİKİŞİ ODAĞA BAĞLI, MONTAJA DEĞİL (21.97).
+     Eskiden `useEffect` idi ve künyenin kendisi sınırını yazmıştı: dönüş UNMOUNT'a bağlıydı, yani
+     kabuk yığında dururken üstüne bir müşteri rotası açılsa o ekran operasyon temasıyla çizilirdi.
+     O gün kabuktan müşteri yüzeyine giden hiçbir bağlantı YOKTU ve künye şunu şart koşmuştu:
+     "kabuk-içi ilk çapraz bağlantıyı ekleyen dilim bu geçişi focus/blur'a bağlamak zorundadır."
+     Kimlik menüsünün "Müşteri uygulamasına geç"i o ilk bağlantıdır — borç burada ödeniyor.
+     `useFocusEffect` kabuk odaktan DÜŞTÜĞÜNDE de temizler; sökülmeyi beklemez. */
+  useFocusEffect(
+    useCallback(() => {
+      if (!granted) return;
+      UnistylesRuntime.setTheme('operations');
+      return () => UnistylesRuntime.setTheme('light');
+    }, [granted]),
+  );
 
   if (access.status === 'loading') {
     return (
@@ -87,7 +98,9 @@ export default function OperationsLayout() {
   }
 
   return (
-    <OperationsSessionProvider value={{ sections: access.sections, userName: access.userName }}>
+    <OperationsSessionProvider
+      value={{ sections: access.sections, userName: access.userName, userEmail: access.userEmail }}
+    >
       <Stack
         screenOptions={{
           // Başlıkları ekranlar kendi çiziyor (v2: zeminle aynı renkte, çizgisiz, sayfayla kayan).

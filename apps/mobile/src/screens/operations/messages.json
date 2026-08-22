@@ -27,5 +27,11 @@
       "body": "Bağlantı ya da sunucu sorunu — tekrar denenebilir.",
       "retry": "Tekrar dene"
     }
+  },
+  "staff": {
+    "menuLabel": "Hesap menüsü",
+    "sheetTitle": "Hesabın",
+    "toCustomer": "Müşteri uygulamasına geç",
+    "signOut": "Oturumu kapat"
   }
 }

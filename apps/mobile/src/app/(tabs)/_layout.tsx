@@ -6,6 +6,7 @@ import type { IconName } from '@/components/ui/icon-paths';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { useCartSync } from '@/screens/customer-kit/cart-store';
 import { useWholesale } from '@/screens/customer-kit/use-me.hook';
+import { useStaffLanding } from '@/screens/operations/use-staff-landing.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
 import messages from './messages.json';
 
@@ -79,6 +80,13 @@ export default function TabsLayout() {
      Önceden sepet ekranı takıyordu; o hâlde açılıştaki yüzen düğme sayacı sunucudaki satırları
      henüz saymıyordu — sepet dolu, rozet boş görünüyordu. */
   useCartSync();
+
+  /* AÇILIŞTA ROL KARARI (21.97) — personel bu kabukta karşılanır ve operasyona taşınır. Kararın
+     tamamı ve gerekçeleri hook'ta; burada olmasının sebebi `/me` aboneliğinin (`useWholesale`)
+     zaten burada kurulu olması: ikinci bir uçuş doğmuyor. Kökte takılsaydı ziyaretçiye açık
+     yollar (davet · geri bildirim — kimlik token'ın KENDİSİDİR) oturum altyapısına bağlanırdı;
+     o ders `use-me.hook` künyesinde ölçümüyle yazılı. */
+  useStaffLanding();
 
   return (
     <Tabs

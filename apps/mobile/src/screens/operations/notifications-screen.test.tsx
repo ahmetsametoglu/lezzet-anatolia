@@ -32,7 +32,7 @@ const t = messages;
 async function renderScreen(sections: OperationsSection[], feed: OperationsNotification[]) {
   mockFeed = feed;
   await render(
-    <OperationsSessionProvider value={{ sections, userName: 'Musa Kaya' }}>
+    <OperationsSessionProvider value={{ sections, userName: 'Musa Kaya', userEmail: 'musa@lezzetanatolia.fr' }}>
       <OperationsNotificationsScreen />
     </OperationsSessionProvider>,
   );

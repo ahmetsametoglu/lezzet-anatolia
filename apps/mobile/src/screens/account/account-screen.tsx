@@ -1,6 +1,6 @@
 import { formatCompactEuro, formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -79,9 +79,23 @@ interface AccountScreenProps {
    * adresleri kapsar — testlerin ve demo hâllerinin çağırdığı yol.
    */
   onRefreshIdentity?: () => void;
+  /**
+   * Personel köprüsünün hedefi — `null` ya da verilmemişse satır hiç çizilmez (21.97).
+   *
+   * Rol `AccountData`ya EKLENMEDİ ve karar burada hesaplanMIYOR: `AccountData` müşteri künyesidir
+   * (ad, e-posta, izinler) ve oraya bir yetki alanı koymak, müşteri görünümünü oturum kararının
+   * taşıyıcısı yapardı. Rota zaten `/me` → ekran çevirisini yapan yer; karar da (`operationsHomeRoute`,
+   * girişin okuduğu kuralın aynısı) orada verilir. Ekran yalnız "gidilecek bir yer var mı" bilir.
+   */
+  staffRoute?: Href | null;
 }
 
-export function AccountScreen({ data = accountData(), signedIn = true, onRefreshIdentity }: AccountScreenProps) {
+export function AccountScreen({
+  data = accountData(),
+  signedIn = true,
+  onRefreshIdentity,
+  staffRoute = null,
+}: AccountScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -738,6 +752,24 @@ export function AccountScreen({ data = accountData(), signedIn = true, onRefresh
         <LegalLinks testID="account-legal" />
 
         <View style={styles.logoutRow}>
+          {/* PERSONEL KÖPRÜSÜ (21.97) — müşteri yüzeyinden operasyon kabuğuna dönüş.
+              Sefer şeridi cihazda ölçtü (18.08): kurye uygulamayı kapatıp açınca müşteri
+              vitrinine düşüyor ve rotasına ancak ÇIKIP yeniden girerek ulaşıyordu; alt barda
+              personel girişi, hesap ekranının dibinde de köprü yoktu. Açılıştaki rol kararı
+              (`use-staff-landing`) o yolu artık kapatıyor, ama personel müşteri yüzeyine
+              GEÇEBİLDİĞİ için dönüş yolu da olmak zorunda — köprü çift yönlü olmazsa biri
+              hapsolur.
+              Ölçüt kabuğun ölçütüyle AYNI kaynaktan (`operationsSectionsOf`): "roles içinde
+              admin var mı" diye ikinci bir kural yazmak, yeni bir personel rolü eklendiği gün
+              kapının açılıp köprünün görünmemesi demekti.
+              Satır yalnız personelde çizilir; müşteride hiç doğmaz. */}
+          {staffRoute === null ? null : (
+            <TextAction
+              label={t.staffBridge}
+              onPress={() => router.replace(staffRoute)}
+              testID="account-staff-bridge"
+            />
+          )}
           {/* Gerçek çıkış (21.14c): oturum cihazdan silinir, `useMe` dinleyicisi vitrini misafire
               döndürür; sekme yerinde kalır ("oturumsuz kullanım = müşteri gezinmesi", 02-mimari §4).
               Çıkış hatası yutulMAZ ama ekrana da taşınmaz: depo temizliği deterministik

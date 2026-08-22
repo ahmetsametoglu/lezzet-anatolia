@@ -6,6 +6,7 @@ import type { CourierRoute, CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
+import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -118,6 +119,7 @@ export function CourierDayScreen() {
           testID="operations-bell"
         />
       }
+      identity={<OperationsStaffMenu testID="operations-staff-menu" />}
     />
   );
 

@@ -116,7 +116,9 @@ function mockDay(
 
 async function renderDay() {
   await render(
-    <OperationsSessionProvider value={{ sections: ['courier'], userName: 'Musa Kaya' }}>
+    <OperationsSessionProvider
+      value={{ sections: ['courier'], userName: 'Musa Kaya', userEmail: 'musa@lezzetanatolia.fr' }}
+    >
       <CourierDayScreen />
     </OperationsSessionProvider>,
   );

@@ -57,7 +57,9 @@ function routeReplies(replies: { preparation?: () => Promise<Response>; transfer
 
 async function renderHub() {
   await render(
-    <OperationsSessionProvider value={{ sections: ['warehouse'], userName: 'Ayşe K.' }}>
+    <OperationsSessionProvider
+      value={{ sections: ['warehouse'], userName: 'Ayşe K.', userEmail: 'ayse@lezzetanatolia.fr' }}
+    >
       <WarehouseHubScreen />
     </OperationsSessionProvider>,
   );

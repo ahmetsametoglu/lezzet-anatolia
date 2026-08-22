@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsSectionHeader } from '@/components/operations/section-header';
+import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
@@ -58,6 +59,7 @@ export function MoneyTrackingScreen() {
             <Text style={styles.dayEndLabel}>{t.track.dayEnd}</Text>
           </PressableSurface>
         }
+        identity={<OperationsStaffMenu testID="operations-staff-menu" />}
       />
 
       <ScrollView contentContainerStyle={styles.body} testID="money-tracking-body">

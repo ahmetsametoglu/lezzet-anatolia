@@ -39,10 +39,27 @@ interface OperationsSectionHeaderProps {
   title: string;
   /** Sağ yuva: bildirim düğmesi ya da ekrana özel metin eylemi. */
   right?: ReactNode;
+  /**
+   * Kimlik yuvası (21.97) — kabuğun oturum düğmesi (`OperationsStaffMenu`), `right`in DIŞINDA.
+   *
+   * Neden ikinci bir yuva ve neden komponente GÖMÜLMEDİ: `right` ekranın bilgisini taşıyor (zil
+   * üç bölümde, Para'da "Gün sonu →") ve ikisini tek yuvaya sıkıştırmak, her ekranın kimliği
+   * kendi eliyle çizmesi demekti — biri unutulduğu gün o bölümde çıkış yolu olmazdı. Gömmek de
+   * doğru değil: bu komponent SAF (bağlam okumaz) ve testi kabuk kurmadan koşuyor; künyesinin
+   * `right` için yazdığı gerekçenin aynısı burada da geçerli.
+   */
+  identity?: ReactNode;
   testID?: string;
 }
 
-export function OperationsSectionHeader({ section, eyebrow, title, right, testID }: OperationsSectionHeaderProps) {
+export function OperationsSectionHeader({
+  section,
+  eyebrow,
+  title,
+  right,
+  identity,
+  testID,
+}: OperationsSectionHeaderProps) {
   return (
     <View style={styles.header} testID={testID}>
       <View style={styles.titles}>
@@ -51,7 +68,14 @@ export function OperationsSectionHeader({ section, eyebrow, title, right, testID
           {title}
         </Text>
       </View>
-      {right}
+      {/* İkisi de yoksa satır hiç doğmaz; varsa kimlik EN SAĞDA durur — webin barında da avatar
+          en dışta ve "bu benim oturumum" demek, ekranın eyleminden sonra gelir. */}
+      {right === undefined && identity === undefined ? null : (
+        <View style={styles.rightSlot}>
+          {right}
+          {identity}
+        </View>
+      )}
     </View>
   );
 }
@@ -64,6 +88,13 @@ const styles = StyleSheet.create((_theme, rt) => ({
     paddingTop: rt.insets.top + operationsTheme.space['5xl'],
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space.sm,
+  },
+  rightSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    /* Zil ile kimlik arasındaki nefes: iki 42 dp daire bitişik durursa tek bir kontrol gibi
+       okunur. `md` kitin komşu kontrol aralığı. */
+    gap: operationsTheme.space.md,
   },
   titles: {
     /* v2: `gap:3px` — ölçekte 3 yok, 2 ve 4 eşit uzaklıkta. Kitin AYNI yerleşimdeki (üstbaşlık +

@@ -26,7 +26,7 @@ type OperationsAccess =
    * içinde. Ayrıca okunsaydı ekran başına bir uçuş ve iki cevap arasında ayrışma riski doğardı
    * (`sections-context.ts` künyesi: tek okuma, tek doğruluk).
    */
-  | { status: 'granted'; sections: OperationsSection[]; userName: string }
+  | { status: 'granted'; sections: OperationsSection[]; userName: string; userEmail: string | null }
   /** Oturum yok ya da yalnız müşteri — kabuk açılmaz, müşteri yüzeyine dönülür. */
   | { status: 'denied' }
   /** Rol bilgisi okunamadı; yetki hakkında hiçbir şey İDDİA EDİLMİYOR. */
@@ -62,7 +62,9 @@ export function useOperationsAccess(): OperationsAccess {
 
     const sections = operationsSectionsOf(result.data.roles);
     setState(
-      sections.length === 0 ? { status: 'denied' } : { status: 'granted', sections, userName: result.data.name },
+      sections.length === 0
+        ? { status: 'denied' }
+        : { status: 'granted', sections, userName: result.data.name, userEmail: result.data.email },
     );
   }, []);
 
