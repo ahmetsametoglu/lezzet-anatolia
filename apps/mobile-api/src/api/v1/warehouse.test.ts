@@ -539,8 +539,12 @@ describe('D2 · mal kabul', () => {
       supplierName: `Gaziantep Gıda ${stamp}`,
       lineCount: 1,
     });
-    // Depo ekranına giden listede TUTAR yok — kapı fiyatı okur ama taşımaz.
-    expect(JSON.stringify(mine)).not.toContain('600');
+    // Depo ekranına giden listede TUTAR yok — kapı fiyatı okur ama taşımaz. İddiayı üstteki
+    // `toEqual` KURUYOR: tam nesne eşitliği fazladan bir anahtarı da reddeder, yani fiyat alanı
+    // eklenirse bu test kırılır. Burada eskiden ikinci bir tel vardı (`not.toContain('600')`) ve
+    // ALT DİZE arıyordu; 19.08'de yalancı kırmızı üretti — rastgele `purchaseOrderId`in hex'i
+    // (`…db4ba60054ff`) tesadüfen "600" içeriyordu. Yasak olan sayı değil FİYAT ALANI, onu da
+    // şekil eşitliği söyler; damgalı `referenceNo` için her koşuda zar atan tel söküldü.
   });
 
   it('bekleyen listesi TASLAĞI göstermez — tedarikçi ondan habersiz', async () => {

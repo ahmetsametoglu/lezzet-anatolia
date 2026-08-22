@@ -46,10 +46,10 @@ export interface HomeFlashDealView {
 
   FIRSATLAR DA ARTIK BURADA DEĞİL (09.08): kullanıcı isteği üzerine bölümün gerçekten bağlı olup
   olmadığı ölçüldü — bağlı DEĞİLDİ, sözleşmesi (`HomeOfferSchema`) hazır olduğu hâlde ekran
-  fixture'daki iki kartı çiziyordu. Bugün `/home`un `offers` dizisinden okunuyor. Uç o diziyi
-  şimdilik BOŞ döndürüyor (`home.ts` yeri `UNKNOWN_PLACE` ile çözüyor: teklif tutarı yer
-  bilinmeden hiç okunmaz) — yani bölüm çizilmiyor. Uydurma iki kart basmak, olmayan bir indirimi
-  varmış gibi göstermekti; boş bırakmak arızayı görünür kılıyor (terfi ihtiyacı raporlandı).
+  fixture'daki iki kartı çiziyordu. Bugün `/home`un `offers` dizisinden okunuyor ve dizi GERÇEKTEN
+  dolabiliyor: yer çözümü terfi etti (`readPlace`, 09.08), istemci posta kodunu gönderdiğinde uç
+  o deponun tekliflerini okuyor. Kod göndermeyen ziyaretçide dizi boş kalır — bu bir hâldir,
+  eksik bağlantı değil. Uydurma iki kart basmak, olmayan bir indirimi varmış gibi göstermekti.
 
   SİPARİŞ BANTLARI DA ARTIK BURADA DEĞİL (09.08): "siparişiniz yolda" ve "geçen siparişinizi
   tekrarlayın" bantları sabit bir `LA-2418` çiziyordu (kullanıcı bulgusu). İkisi de gerçek uçtan

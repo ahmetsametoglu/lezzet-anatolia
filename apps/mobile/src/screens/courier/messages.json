@@ -31,8 +31,8 @@
       "retry": "Tekrar dene"
     },
     "empty": {
-      "title": "Bugün koşan rota yok",
-      "body": "Sevkiyat günün rotalarını yazdığında bu ekran kendiliğinden dolar."
+      "title": "Sana açık rota yok",
+      "body": "Sevkiyat günün rotalarını yazdığında ya da deponun tanımlandığında bu ekran kendiliğinden dolar. Beklediğin bir rota varsa yöneticine sor."
     },
     "runEmpty": {
       "title": "Seferde durak yok",

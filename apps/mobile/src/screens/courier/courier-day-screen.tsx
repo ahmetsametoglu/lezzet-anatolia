@@ -195,6 +195,10 @@ export function CourierDayScreen() {
 
           {day.routes.length === 0 ? (
             // Kapanan seferden sonra açılacak rota kalmamış olabilir: gün bitti, bu bir arıza değil.
+            // Boş listenin İKİ sebebi var ve uç ikisini ayırmıyor (21.08 depo kapsamı süzgeci —
+            // `listCourierRoutes(scope)` fail-closed): ya o gün rota yazılmamıştır, ya kuryenin
+            // depo kapsamı boştur. Bu yüzden cümle tek sebep SÖYLEMEZ — "sevkiyat yazmadı" demek,
+            // kapsamı unutulmuş kuryeye yanlış sebep okutup arızayı görünmez kılardı.
             <View style={styles.emptyInline}>
               <OperationsNoticeBlock
                 variant="empty"

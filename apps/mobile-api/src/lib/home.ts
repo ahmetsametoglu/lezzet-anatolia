@@ -294,8 +294,11 @@ function hasWonOffer(p: StorefrontProduct): p is StorefrontProduct & { wasCents:
  * sayacı). Kopyasız tek yol buydu; tur sayısı rapora ölçülü yazıldı, tek-okumaya indirme kararı
  * gecikme ölçümüyle birlikte verilecek (STACK "Okumada RPC eşiği").
  *
- * ⚠ Yer bilinmezken (`warehouseId: null`) teklif TUTARI hiç okunmaz — verilmiş söz (`catalog.ts`
- * `UNKNOWN_PLACE` künyesi): dizi bugün hep BOŞ döner, yer çözümü terfi edince (21.6 B) dolar.
+ * ⚠ Yer bilinmezken (`warehouseId: null`) teklif TUTARI hiç okunmaz ve dizi BOŞ döner. Bu artık
+ * "bekleyen terfi" değil bir HÂL: `readPlace` posta kodunu her istekte çözüyor (`catalog.ts`,
+ * eski `BEKLEYEN(21.6)` 09.08'de kapandı), kodu göndermeyen istemci yeri bilinmeyen ziyaretçidir.
+ * Üçüncü hâli karıştırma (`not-mobil-yer-sozlesmesi-uc-hal`): `(null, null)` "yer bilinmiyor"dur,
+ * ROTA DIŞI değil — o `(null, kargoDeposu)`dur ve teklif tutarı orada da okunmaz.
  */
 export async function readHomeOffers(
   db: SupabaseClient,
