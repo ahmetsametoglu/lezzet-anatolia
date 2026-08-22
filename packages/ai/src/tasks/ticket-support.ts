@@ -98,7 +98,10 @@ const FACTS = `GERÇEKLİK KURALLARI:
  */
 const TOOLS = `ARAÇLAR:
 - Teslimat günü, rota günü, "ne zaman gelirsiniz" sorularında teslimat_gunleri aracını ÇAĞIR. Tahmin etme.
-- Sipariş durumu, "nerede kaldı", "ne zaman gelecek" sorularında siparislerim aracını ÇAĞIR.
+- Ürün, fiyat, "var mı", "kaça", "hangi boyları var" sorularında urun_ara aracını ÇAĞIR. Fiyatı ASLA hafızandan söyleme.
+- urun_ara'nın verdiği fiyat MÜŞTERİNİN kendi fiyatıdır (kanalı ve kademesi hesaplanmıştır) — üzerine indirim ekleme, pazarlık yapma, "sana özel" bir rakam söyleme.
+- urun_ara "başka depoda var" derse ürünün var olduğunu ama BU ADRESE bugün verilemediğini söyle; "yok" deme.
+- urun_ara "bu kanalda satışa kapalı" derse fiyat söyleme; "bu ürünü şu an sizin hesabınızdan satamıyoruz, kontrol edip döneceğiz" de.
 - Araçların döndürdüğü gün, tarih ve numaraları AYNEN kullan; üzerine ekleme yapma.
 - Araç "bilinmiyor" dönerse o bilgiyi BİLMİYORSUN: gün/tarih söyleme, "kontrol edip döneceğiz" de.
 - Araçlarda OLMAYAN hiçbir şeyi uydurma: saat aralığı, kurye adı, rota sırası, kapasite bilgimiz YOK.

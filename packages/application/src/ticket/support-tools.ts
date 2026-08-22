@@ -2,9 +2,12 @@
 // bekliyor, ikinci bir kopya sessizce tutmaz (`@lezzet/ai` barrel künyesi).
 import { tool, z, type ToolSet } from '@lezzet/ai';
 import { AddressService, OrderService, type Db } from '@lezzet/database';
-import { formatShortDate } from '@lezzet/helper';
+import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import { ORDER_STATUS_LABELS, type Address } from '@lezzet/types';
+import { ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
+import { getCatalogData } from '../catalog/catalog';
+import { pricingViewerOf } from '../catalog/pricing-viewer';
+import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 
 /*
@@ -30,15 +33,47 @@ import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
   operasyon kararıdır (`dispatch-actions.ts` operatörün elinde) ve sipariş değişikliği zaten devir
   tetikleyicileri arasında. Ajan gerçeği SÖYLER, taahhüdü insan verir.
 
-  ── DEĞİŞMEZ: TUTAR YOK ─────────────────────────────────────────────────────
-  Sipariş aracı numara/durum/teslim günü döndürür, tutar döndürmez — kapalı girdinin bugünkü
-  kararıyla aynı (`ticket-support.ts` künyesi): para konuşulacaksa insan konuşur.
+  ── DEĞİŞMEZ: İŞLEM TUTARI YOK — LİSTE FİYATI VAR (22.08'de netleşti) ────────
+  Sipariş aracı numara/durum/teslim günü döndürür, TUTAR döndürmez: sipariş toplamı, iade, telafi,
+  indirim pazarlığı insanın işidir (`ticket-support.ts` künyesi).
+
+  Katalog aracı (`urun_ara`) FİYAT döndürür ve bu değişmezi ihlal etmez, çünkü ikisi ayrı şeydir:
+  liste fiyatı sitede herkese açık YAYIMLANMIŞ bilgidir, işlem tutarı ise bir karardır. "Baklava
+  3,76 €" demek taahhüt değil, katalogu okumaktır; "size 3,00 €'ya veririm" demek karardır ve ajan
+  onu yapamaz (prompt bunu ayrıca yasaklıyor: indirim ekleme, pazarlık yapma, "sana özel" rakam yok).
+
+  Fiyat MÜŞTERİNİN KENDİ fiyatıdır, varsayılan değil: `pricingViewerOf` kanalı (B2C/B2B) ve kademeyi
+  çözüyor. Ölçüldü (22.08): aynı ürün B2B müşteride 3,76 €, B2C müşteride 4,57 €. Varsayılan bir
+  görüntüleyici geçilseydi toptancıya perakende fiyat söylenirdi — sessiz ve ticari bir hata.
 
   ── BİLİNMEYEN, SIFIR DEĞİLDİR ──────────────────────────────────────────────
   Adres yoksa ya da posta kodu hiçbir aktif bölgeye düşmüyorsa araç "gün yok" DEMEZ, `bilinmiyor`
   der ve sebebini yazar. "Teslimat günü yok" cümlesi müşteriye yanlış bir kesinlik verirdi; prompt
   da bu hâlde gün söylemeyip devretmekle yükümlü (CLAUDE §1).
 */
+
+/**
+ * Katalog aramasında modele verilecek EN FAZLA ürün sayısı.
+ *
+ * Tavan var çünkü araç cevabı prompt'a giriyor: sınırsız bir liste hem maliyeti hem de modelin
+ * "hangisini söyleyeyim" belirsizliğini büyütürdü. Beş, müşterinin tek soruda duyabileceği makul
+ * sayı — daha fazlası zaten sohbet değil, katalog gezintisidir ve orası sitenin işi.
+ */
+const PRODUCT_HITS = 5;
+
+/**
+ * Stok hâlinin modele söylenen karşılığı — DÖRT hâl, dört ayrı cümle (19.10).
+ *
+ * `Record` kilit: enum büyüdüğünde derleme durur. Cümleler bilerek KOŞULLU değil AÇIK — "elsewhere"
+ * için "yok" demek yanlış olurdu (mal var, ama müşterinin deposunda değil) ve model o farkı ancak
+ * kendisine söylenirse bilir.
+ */
+const STOK_SOZLUGU: Record<StockStatus, string> = {
+  available: 'stokta — bu adrese teslim edilebilir',
+  shipping: 'stokta — bu adrese kargoyla gider',
+  elsewhere: 'başka depoda var; bu adrese bugün verilemiyor',
+  out_of_stock: 'tükendi',
+};
 
 /** Modelin gördüğü tarih biçimi — "18 Ağustos Salı". İki bilgi tek dizede: gün adı da lazım. */
 function tarihAdi(iso: string): string {
@@ -111,6 +146,61 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
             'destek aracı okuyamadı',
           );
           return { bilinmiyor: 'Teslimat bilgisi şu an okunamadı.' };
+        }
+      },
+    }),
+
+    urun_ara: tool({
+      description:
+        'Katalogda ürün arar ve müşterinin KENDİ fiyatıyla, KENDİ adresine göre satın alınabilirliğini söyler. ' +
+        '"X var mı", "fiyatı ne", "kaça", "hangi boyları var" sorularında MUTLAKA bunu çağır. Tahmin etme.',
+      inputSchema: z.object({
+        terim: z.string().min(2).describe('Aranacak ürün adı ya da anahtar kelime — örn. "baklava", "su böreği"'),
+      }),
+      execute: async ({ terim }) => {
+        try {
+          /*
+            İKİ BAĞLAM ZORUNLU ve ikisi de MÜŞTERİDEN çözülür — katalog kapısının kendi kuralı:
+            `place` (hangi depo) ve `viewer` (hangi kanal/kademe). Varsayılan geçmek, B2B müşteriye
+            B2C fiyatı ya da başka deponun stoğunu okutmak olurdu; kapı bu yüzden ikisini de
+            zorunlu istiyor (`CatalogInput` künyesi) ve araç da uydurmuyor.
+
+            Adres yoksa `place` DEPO-ÜSTÜ okunur (`UNRESOLVED_PLACE`): "hiç var mı" sorusu
+            cevaplanabilir, "sana gelir mi" sorusu cevaplanamaz — ve model bunu bilsin diye
+            cevapta ayrıca söyleniyor (`adresBilinmiyor`).
+          */
+          const adres = birincilAdres(await new AddressService(db).listByCustomer(customerId));
+          const [place, viewer] = await Promise.all([
+            adres ? resolvePlaceWarehouses(db, adres.postalCode) : Promise.resolve(UNRESOLVED_PLACE),
+            pricingViewerOf(db, customerId),
+          ]);
+
+          const katalog = await getCatalogData(db, {
+            // Operasyon dili Türkçe ve model Türkçe yazıyor; cevabın müşteri diline çevrilmesi
+            // gönderim anında, tek kapıdan yapılıyor (20.2). Araç ikinci bir dil kararı vermez.
+            locale: 'tr',
+            place,
+            viewer,
+            query: { search: terim },
+          });
+
+          const urunler = katalog.products.slice(0, PRODUCT_HITS).map((p) => ({
+            ad: p.name,
+            birim: p.unitLabel,
+            // `null` fiyat = bu kanalda SATIŞA KAPALI (DOMAIN §5) — "0 €" demek yanlış olurdu.
+            fiyat: p.priceCents === null ? 'bu kanalda satışa kapalı' : formatPrice(p.priceCents, 'tr'),
+            durum: STOK_SOZLUGU[p.stockStatus],
+            ...(p.variantCount > 1 ? { boySayisi: p.variantCount } : {}),
+          }));
+
+          if (urunler.length === 0) return { bilinmiyor: `"${terim}" için katalogda eşleşen ürün yok.` };
+          return adres ? { urunler } : { urunler, adresBilinmiyor: 'Müşterinin adresi yok — stok "hiç var mı" düzeyinde okundu, adrese göre değil.' };
+        } catch (err) {
+          logger.warn(
+            { context: 'application/support-tools', tool: 'urun_ara', customerId, err: String(err) },
+            'destek aracı okuyamadı',
+          );
+          return { bilinmiyor: 'Katalog şu an okunamadı.' };
         }
       },
     }),
