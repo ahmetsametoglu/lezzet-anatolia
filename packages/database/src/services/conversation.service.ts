@@ -118,6 +118,22 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   }
 
   /**
+   * **Sağlayıcı profil adını doldur** (15.7 · 22.08) — `linkCustomer` ile aynı kural: YALNIZ boşsa yazar.
+   *
+   * İhtiyaç canlı Messenger turunda ölçüldü: Meta'nın `messages` webhook'u **ad taşımıyor**, yalnız
+   * `sender.id` (PSID) veriyor — WhatsApp'ta `profile.name` geliyor, Messenger/IG'de gelmiyor. Ad
+   * doldurulmazsa gelen kutusunda başlık ham PSID olur (`38324983613781600`) ve operatöre hiçbir şey
+   * söylemez; adı ayrı bir Graph çağrısı getiriyor (`lib/messaging/meta-profile.ts`).
+   *
+   * **Neden `updateIfNull`:** ad bir kez öğrenilir ve OPERATÖRÜN düzelttiği bir alan olabilir; her
+   * mesajda yeniden yazmak hem gereksiz bir tur hem de elle düzeltmeyi sessizce ezmek olurdu. Ayrıca
+   * yarış güvencesi bedava gelir — iki mesaj aynı anda düşerse ikincisi `null` alır, ezme olmaz.
+   */
+  setProfileName(id: string, profileName: string): Promise<Conversation | null> {
+    return this.updateIfNull(id, 'profileName', { profileName });
+  }
+
+  /**
    * Ticari mesaj izni (DOMAIN §11) — izin ve ANI birlikte yazılır.
    *
    * İkisi ayrı çağrıya bırakılsaydı biri unutulur ve elimizde tarihsiz bir "izin var" kaydı

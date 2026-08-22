@@ -5,6 +5,7 @@ import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, MessageKind } from '@lezzet/types';
 import { findOrCreateCustomer } from '../identity/find-or-create';
+import { fetchMetaProfileName } from './meta-profile';
 
 /**
  * Meta webhook İŞLEYİCİSİ (15.7) — HTTP'siz, test edilebilir; kabuk `app/api/webhooks/meta/route.ts`.
@@ -243,6 +244,32 @@ function waTimestamp(timestamp: string | undefined): string {
 
 // ── Messenger / Instagram: entry → messaging[] ───────────────────────────────
 
+/**
+ * Messenger/IG konuşmasını aç ve — ilk kez açılıyorsa — sağlayıcı profil adını doldur (22.08).
+ *
+ * Ad AYRI bir Graph çağrısıyla gelir çünkü webhook onu taşımıyor (künyesi `meta-profile.ts`).
+ * Çağrı YALNIZ ad boşken yapılır: konuşma başına bir kez, her mesajda değil. Düşerse konuşma adsız
+ * kalır ve mesaj yine yazılır — ad bilinmiyor olabilir, mesaj kaybolamaz.
+ */
+async function openSocialConversation(source: ConversationSource, personId: string, accountRef: string | null) {
+  const service = new ConversationService(serviceDb());
+  const conversation = await service.open({
+    source,
+    externalRef: personId,
+    // PSID/IGSID telefon taşımaz — kimlik çözümü DENENMEZ, konuşma kimliksiz doğar (15.16).
+    customerId: null,
+    providerAccountRef: accountRef,
+    // Webhook ad taşımıyor; aşağıda Graph'tan çekiliyor. `open` yalnız boş alanı doldurur.
+    profileName: null,
+  });
+  if (conversation.profileName) return conversation;
+
+  const name = await fetchMetaProfileName(source, personId);
+  if (!name) return conversation;
+  // `setProfileName` de "yalnız boşsa yazar" — iki mesaj aynı anda düşerse ikincisi ezmez.
+  return (await service.setProfileName(conversation.id, name)) ?? conversation;
+}
+
 async function ingestMessengerEntry(source: ConversationSource, entry: Record<string, unknown>, tally: Tally): Promise<void> {
   // entry.id = sayfa / IG hesabı kimliği — konuşmanın aktığı İŞLETME hesabı (cevap yönlendirme anahtarı).
   const accountRef = typeof entry.id === 'string' ? entry.id : null;
@@ -268,15 +295,7 @@ async function ingestMessengerEntry(source: ConversationSource, entry: Record<st
         type: `${source}.${echo ? 'echo' : 'message'}`,
         payload: message as Record<string, unknown>,
         write: async () => {
-          const conversation = await new ConversationService(serviceDb()).open({
-            source,
-            externalRef: personId,
-            // PSID/IGSID telefon taşımaz — kimlik çözümü DENENMEZ, konuşma kimliksiz doğar (15.16).
-            customerId: null,
-            providerAccountRef: accountRef,
-            // Webhook profil adı taşımaz; User Profile API çağrısı gönderim turunda (15.11, token'la).
-            profileName: null,
-          });
+          const conversation = await openSocialConversation(source, personId, accountRef);
 
           const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
           const text = typeof message.text === 'string' && message.text.trim() ? message.text : null;
@@ -310,13 +329,7 @@ async function ingestMessengerEntry(source: ConversationSource, entry: Record<st
         type: `${source}.postback`,
         payload: event.postback as Record<string, unknown>,
         write: async () => {
-          const conversation = await new ConversationService(serviceDb()).open({
-            source,
-            externalRef: personId,
-            customerId: null,
-            providerAccountRef: accountRef,
-            profileName: null,
-          });
+          const conversation = await openSocialConversation(source, personId, accountRef);
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text: event.postback?.title ?? null,
