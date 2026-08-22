@@ -13,15 +13,24 @@ import type { MultiToggleOption } from '@/components/operation/form/multi-toggle
  */
 
 /**
- * Mod anahtarının seçenekleri — üçü de her zaman açık: mod bir İZİN değil, operatörün kararıdır ve
- * motor (16.5) hangi talebi/sohbeti nasıl yürüteceğini buradan okuyacak. Sözlük şemadan
- * (`TICKET_HANDLER_LABELS`) — yeni bir mod eklendiğinde burası kendiliğinden genişler.
+ * Mod anahtarının seçenekleri. Sözlük şemadan (`TICKET_HANDLER_LABELS`) — yeni bir mod eklendiğinde
+ * burası kendiliğinden genişler.
+ *
+ * Mod bir İZİN değil operatörün kararıdır; ama karar verilebilmesi için **arkasında bir motor
+ * olmalı**. `unavailable`, o motorun henüz olmadığı modu kapatır ve SEBEBİNİ taşır: seçenek görünür
+ * kalır (`MultiToggle.disabled` künyesi — gizlemek kontrolün genişliğini ekrandan ekrana oynatır),
+ * ipucu neden olmadığını söyler.
+ *
+ * İhtiyaç sohbetten geldi (15.13 · 22.08): sohbette `ai` seçilebiliyordu, rozet takılıyordu, başlık
+ * sayıyordu — ve hiçbir şey koşmuyordu (özerk sohbet motoru 15.8, gönderim kanalı 15.11). Kapalı
+ * seçenek, çalışmayan bir seçenekten dürüsttür.
  */
-export function handlerOptions(busy: boolean): MultiToggleOption<TicketHandler>[] {
+export function handlerOptions(busy: boolean, unavailable?: Partial<Record<TicketHandler, string>>): MultiToggleOption<TicketHandler>[] {
   return (Object.keys(TICKET_HANDLER_LABELS) as TicketHandler[]).map((key) => ({
     key,
     label: TICKET_HANDLER_LABELS[key],
-    disabled: busy,
+    disabled: busy || unavailable?.[key] !== undefined,
+    title: unavailable?.[key],
   }));
 }
 

@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { TicketHandlerEnum, type TicketHandler } from '@lezzet/types';
+import { ConversationHandlerEnum, type ConversationHandler } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -38,7 +38,13 @@ import { useSocialConversation } from './use-social-conversation.hook';
 const t = managementCopy.social;
 const td = managementCopy.social.detail;
 
-const MODES = TicketHandlerEnum.options;
+/*
+  Sohbette İKİ mod (15.13 · 22.08) — `ai` listede YOK ve bu bir kısıtlama değil, yalanın kaldırılması:
+  özerk sohbet motoru yazılmadı (15.8; gönderim kanalı 15.11'e bağlı), yani "AI" seçildiğinde arkada
+  hiçbir şey koşmuyordu — cron yalnız hibrit sohbetleri tarıyor. Sohbet, operatör AI'ın ilgilendiğini
+  sanarken cevapsız kalıyordu. Kaynak tek: `ConversationHandlerEnum` (API isteği de onunla doğrulanır).
+*/
+const MODES = ConversationHandlerEnum.options;
 
 /** Ret anahtarı → operatör cümlesi; tanınmayan anahtar (taşıma hatası vs.) genel cümleye düşer. */
 function failureText(key: string): string {
@@ -156,7 +162,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
 
       <View style={styles.modeRow}>
         <Text style={styles.modeLabel}>{td.mode.label}</Text>
-        {MODES.map((mode: TicketHandler) => {
+        {MODES.map((mode: ConversationHandler) => {
           const active = conversation.handledBy === mode;
           return (
             <PressableSurface
@@ -177,6 +183,14 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         })}
         {conversation.awaitingReply ? <Text style={styles.ourTurn}>{managementCopy.common.ourTurn}</Text> : null}
       </View>
+
+      {/* Eski `ai` satırının ÇIKIŞ uyarısı: mod artık seçilemiyor ama kolonda durabilir (16.08 ile
+          22.08 arası). Hiçbir çip aktif görünmez ve sebebi söylenmezse ekran bozuk sanılır. */}
+      {conversation.handledBy === 'ai' ? (
+        <Text style={styles.modeOrphan} testID="management-social-mode-orphan">
+          {td.mode.aiOrphan}
+        </Text>
+      ) : null}
 
       <View style={[styles.windowBand, styles[`windowBand_${window.state}`]]} testID="management-social-window">
         <Text style={[styles.windowText, styles[`windowText_${window.state}`]]}>
@@ -320,6 +334,14 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.ink,
+  },
+  /** Yetim `ai` satırının uyarısı — pencere bandı gibi zeminli değil, tek satır not (uyarı değil bilgi). */
+  modeOrphan: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.sm,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.terracotta,
   },
   ourTurn: {
     paddingVertical: operationsTheme.space.xs,

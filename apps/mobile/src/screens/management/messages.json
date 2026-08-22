@@ -140,7 +140,7 @@
       "draftCaption": "YZ TASLAĞI — operatör cevabı değildir",
       "draftTake": "Cevap kutusuna al",
       "suggest": "Taslak öner",
-      "mode": { "label": "Yürütücü:", "human": "İnsan", "hybrid": "Hibrit", "ai": "AI" },
+      "mode": { "label": "Yürütücü:", "human": "İnsan", "hybrid": "Hibrit", "aiOrphan": "AI modunda ama sohbette ajan yok — cevapsız bekliyor, İnsan'a alın." },
       "replyPlaceholder": "Cevabı deftere yaz…",
       "replyLabel": "Konuşmanın defter cevabı",
       "record": "Deftere işle",

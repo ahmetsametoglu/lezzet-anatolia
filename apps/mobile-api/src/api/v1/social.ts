@@ -171,8 +171,10 @@ social.post('/conversations/:id/reply', async (c) => {
 });
 
 /**
- * Yürütücü modu (human · hybrid · ai) — web `setConversationModeAction`ın aynası: hedef enum'dan
- * doğrulanır; aynı moda ikinci çağrı bir YARIŞIN işaretidir ve görünür retle döner (`409
+ * Yürütücü modu — sohbette İKİ değer (`ConversationHandlerEnum`: human · hybrid), talepteki üçlü
+ * değil: `ai` isteği `invalid_body` ile reddedilir, çünkü özerk sohbet motoru yok (15.13/15.8) ve
+ * kabul edilseydi mobil ekran arkasında hiçbir şey koşmayan bir modu "AI yürütüyor" diye gösterirdi.
+ * Web `setConversationModeAction`ın aynası: hedef enum'dan doğrulanır; aynı moda ikinci çağrı bir YARIŞIN işaretidir ve görünür retle döner (`409
  * mode_unchanged`) — sessizce "oldu" demek, öteki operatörün değişikliğini yutmak olurdu.
  */
 social.post('/conversations/:id/mode', async (c) => {

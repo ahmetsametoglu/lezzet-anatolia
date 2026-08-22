@@ -268,6 +268,27 @@ export type TicketSource = z.infer<typeof TicketSourceEnum>;
 export const TicketHandlerEnum = z.enum(['human', 'hybrid', 'ai']);
 export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
 
+/**
+ * Sohbette OPERATÖRÜN seçebileceği modlar (15.13 · 22.08) — `ai` YOK ve bu bilinçli.
+ *
+ * Talepte üç modun üçünün de arkasında bir motor var: `human` operatör, `hybrid` taslak üreticisi
+ * (`generateTicketDraft`), `ai` özerk cevaplayıcı (`runAutonomousTicketReply`). Sohbette üçüncüsü
+ * YOK — özerk sohbet motoru 15.8'in işi ve o da gönderim kanalı olmadan yazılamıyor (15.11).
+ *
+ * Seçenek yine de duruyordu: operatör "AI" diyebiliyor, kuyruk satırı "AI" rozeti takıyor, başlık
+ * `N AI'da` sayıyordu — ve **hiçbir şey koşmuyordu**. Ne cron o modu tarıyor (hibriti tarıyor) ne
+ * taslak kapısı açılıyor (`handledBy !== 'hybrid'` → `wrong_mode`). Yani sohbet, operatör AI'ın
+ * ilgilendiğini sanarken cevapsız kalıyordu — sessiz ve en pahalı hâliyle: müşteri bekliyor,
+ * kuyrukta kimse "cevap bekliyor" görmüyor.
+ *
+ * ── OKUMA DEĞİL, YAZMA DARALTILDI ───────────────────────────────────────────
+ * Kolon (`conversation.handled_by`) hâlâ `ticket_handler` ve `ai` değeri geçerli: 16.08 ile bugün
+ * arasında o modu seçmiş satırlar olabilir ve okuma yolu onları GÖSTEREBİLMELİ. Daralan yalnız
+ * girdi tarafı — "hangi modu seçebilirsin" sorusu. Motor doğduğu gün bu satır silinir.
+ */
+export const ConversationHandlerEnum = TicketHandlerEnum.exclude(['ai']);
+export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
+
 /** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */
 export const TICKET_HANDLER_LABELS: Record<TicketHandler, string> = {
   human: 'İnsan',

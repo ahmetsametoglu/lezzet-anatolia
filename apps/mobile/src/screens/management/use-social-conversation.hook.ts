@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import type { TicketHandler } from '@lezzet/types';
+import type { ConversationHandler } from '@lezzet/types';
 
 import {
   consumeSocialDraft,
@@ -50,7 +50,7 @@ interface UseSocialConversationResult {
   loadOlder: () => void;
   /** Cevabı deftere işler; başarıda `true` — ekran giriş kutusunu o zaman boşaltır. */
   reply: (text: string) => Promise<boolean>;
-  changeMode: (mode: TicketHandler) => Promise<void>;
+  changeMode: (mode: ConversationHandler) => Promise<void>;
   suggestDraft: () => Promise<void>;
   /** Taslağı tüketir; dönen metin cevap kutusuna taşınır (`null` = tüketilemedi, sebep `lastError`). */
   takeDraft: () => Promise<string | null>;
@@ -145,7 +145,7 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
   );
 
   const changeMode = useCallback(
-    async (mode: TicketHandler): Promise<void> => {
+    async (mode: ConversationHandler): Promise<void> => {
       if (busy) return;
       setBusy(true);
       setLastError(null);

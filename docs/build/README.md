@@ -40,7 +40,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 7/11 (+2 kısmi) |
 | 13 | `13-analitik.md` | Analitik | sürüyor | 6/8 (+2 kısmi) |
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 7/11 |
-| 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | sürüyor | 5/18 (+5 kısmi) |
+| 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | sürüyor | 5/18 (+6 kısmi) |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 5/9 (+2 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 8/11 (+1 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/13 (+2 kısmi) |

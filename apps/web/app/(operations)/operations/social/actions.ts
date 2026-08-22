@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { generateConversationDraft, recordInboundMessage, recordOutboundMessage, updateCustomerPreferences } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
-import { DEFAULT_PAGE_SIZE, TicketHandlerEnum, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
+import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
@@ -162,7 +162,9 @@ export async function setConversationModeAction(
 ): Promise<ActionResult<{ mode: TicketHandler }>> {
   try {
     await requireAdmin();
-    const target = TicketHandlerEnum.parse(mode);
+    /* Sohbette İKİ mod (15.13): `ai` burada da reddedilir, yalnız ekranda kapatılmaz — motoru
+       olmayan bir modu yazan tek bir yol bile kalırsa "AI ilgileniyor" yalanı geri döner. */
+    const target = ConversationHandlerEnum.parse(mode);
     const service = new ConversationService(serviceDb());
     const conversation = await service.getById(conversationId);
     if (!conversation) return { data: null, error: 'Konuşma bulunamadı — ekranı tazeleyin.' };

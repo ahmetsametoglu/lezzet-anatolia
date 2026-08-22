@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ConversationInboxRowSchema, MessageSchema } from '../entities/conversation.schema';
-import { TicketHandlerEnum } from '../primitives/enums.schema';
+import { ConversationHandlerEnum, TicketHandlerEnum } from '../primitives/enums.schema';
 
 /**
  * Sosyal gelen kutusu SÖZLEŞME şemaları (15.15 · mobil ayağı 21.08) — mobil `/api/v1/social/*`
@@ -106,12 +106,24 @@ export const SocialReplyRequestSchema = z.object({
 });
 export type SocialReplyRequest = z.infer<typeof SocialReplyRequestSchema>;
 
-/** Yürütücü modu isteği — talep ekranıyla aynı üçlü (human · hybrid · ai). */
+/**
+ * Yürütücü modu isteği — sohbette İKİ mod (`ConversationHandlerEnum`), talepteki üçlü değil (15.13).
+ *
+ * `ai` isteği kapıda reddedilir: sohbette özerk motor yok (15.8, gönderim kanalı 15.11'e bağlı) ve
+ * kabul edilseydi API, arkasında hiçbir şey koşmayan bir modu yazmış olurdu — mobil ekran da
+ * "AI yürütüyor" derdi. Doğrulama İSTEK tarafında; kural sunucuda durmalı, tek istemcinin
+ * nezaketine bırakılmamalı.
+ */
 export const SocialModeRequestSchema = z.object({
-  mode: TicketHandlerEnum,
+  mode: ConversationHandlerEnum,
 });
 export type SocialModeRequest = z.infer<typeof SocialModeRequestSchema>;
 
+/**
+ * Yanıt GENİŞ kalır (`TicketHandlerEnum`) ve asimetri bilinçli: kolon hâlâ `ai` taşıyabilir (16.08
+ * ile 22.08 arasında o modu seçmiş satırlar), okuma yolu onları gösterebilmeli. Daralan yalnız
+ * yazma.
+ */
 export const SocialModeResponseSchema = z.object({
   mode: TicketHandlerEnum,
 });

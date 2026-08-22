@@ -9,7 +9,7 @@ import {
   type SocialConversationDetail,
   type SocialConversationRowContract,
   type SocialMessageContract,
-  type TicketHandler,
+  type ConversationHandler,
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
@@ -82,8 +82,12 @@ export function recordSocialReply(id: string, text: string): Promise<ApiResult<S
   });
 }
 
-/** Yürütücü modu (human · hybrid · ai) — aynı moda ikinci çağrı 409 `mode_unchanged` döner (yarış işareti). */
-export function setSocialMode(id: string, mode: TicketHandler): Promise<ApiResult<z.infer<typeof SocialModeResponseSchema>>> {
+/**
+ * Yürütücü modu — sohbette İKİ değer (human · hybrid); `ai` sunucuda da reddedilir, çünkü özerk
+ * sohbet motoru yok (15.13 künyesi `ConversationHandlerEnum`de). Aynı moda ikinci çağrı 409
+ * `mode_unchanged` döner (yarış işareti).
+ */
+export function setSocialMode(id: string, mode: ConversationHandler): Promise<ApiResult<z.infer<typeof SocialModeResponseSchema>>> {
   return authorizedFetch(`/api/v1/social/conversations/${encodeURIComponent(id)}/mode`, SocialModeResponseSchema, {
     method: 'POST',
     body: { mode },

@@ -22,7 +22,7 @@ import { QueueRow } from '@/components/operation/ui/queue-pane';
 import { Textarea } from '@/components/operation/form/input';
 import { TICKETS_PATH } from '../tickets/tickets-url';
 import { customersUrl } from '../customers/customers-url';
-import { AI_OUTBOUND_LABEL, OUTBOUND_LABEL, SOURCE_EDGE, SOURCE_LABELS, WINDOW_NOTE, WINDOW_TONE } from './social-labels';
+import { AI_MODE_UNAVAILABLE, AI_OUTBOUND_LABEL, OUTBOUND_LABEL, SOURCE_EDGE, SOURCE_LABELS, WINDOW_NOTE, WINDOW_TONE } from './social-labels';
 import type { ConversationDetailView, InboxRowView, MessageView } from './social-types';
 
 // Sosyal gelen kutusunun PANOLARI (15.5 · üç kanal 15.15) — sol kuyruk satırı, orta sohbet, sağ
@@ -180,12 +180,29 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
             {detail.messages.length} mesaj ·{' '}
             {/* Alt satır modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
                 anahtar seçimi, cümle durumu okur. */}
-            {detail.handledBy === 'ai' ? 'AI ajanı yürütüyor' : detail.handledBy === 'hybrid' ? 'hibrit — AI taslak yazar' : 'insan yürütüyor'}
+            {/* `ai` artık SEÇİLEMEZ (aşağıdaki künye) ama eski satırlarda durabilir — ve o hâlde
+                cümle "yürütüyor" DEMEZ: kimse yürütmüyor, sohbet cevapsız bekliyor. */}
+            {detail.handledBy === 'ai'
+              ? 'AI modunda ama ajan yok — sohbet cevapsız bekliyor, Devral’a basın'
+              : detail.handledBy === 'hybrid'
+                ? 'hibrit — AI taslak yazar'
+                : 'insan yürütüyor'}
           </span>
         </div>
-        <MultiToggle size="sm" label="Yürütücü modu" value={detail.handledBy} options={handlerOptions(busy)} onChange={onMode} />
-        {/* Devral yalnız AI özerkken: kararın kendisi (AI susar), mod anahtarındaki "İnsan" ile aynı
-            kapı — ama çizimin tek dokunuşluk sözü burada duruyor. */}
+        {/* `AI` KAPALI ve sebebi ipucunda (15.13 · 22.08): sohbette özerk motor yok — cron yalnız
+            hibrit sohbetleri tarıyor, taslak kapısı da `handledBy !== 'hybrid'`de duruyor. Seçilebilir
+            bırakıldığı sürece operatör "AI ilgileniyor" sanıyor ve sohbet sessizce cevapsız kalıyordu.
+            Sunucu tarafı da daraltıldı (`ConversationHandlerEnum`) — kural istemcinin nezaketine
+            bırakılmaz. Motor doğduğu gün (15.8) bu harita boşalır. */}
+        <MultiToggle
+          size="sm"
+          label="Yürütücü modu"
+          value={detail.handledBy}
+          options={handlerOptions(busy, { ai: AI_MODE_UNAVAILABLE })}
+          onChange={onMode}
+        />
+        {/* Devral yalnız AI modundayken. Çizimde "özerk ajanı sustur" düğmesiydi; sohbette bugün
+            ÇIKIŞ KAPISI: motoru olmayan moda düşmüş eski bir satırı insana geri alır. */}
         {detail.handledBy === 'ai' ? (
           <Button size="sm" variant="violet" className="flex-none" onClick={() => onMode('human')} disabled={busy}>
             Devral
