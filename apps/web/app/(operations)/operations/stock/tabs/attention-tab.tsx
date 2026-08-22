@@ -33,7 +33,12 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
   );
 
   if (rows.length === 0) {
-    return <CleanState filtered={Boolean(term)} inStock={data.counts.inStock} nearExpiryPercent={data.nearExpiryPercent} />;
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <MixedLotLine count={data.mixedLotCount} />
+        <CleanState filtered={Boolean(term)} inStock={data.counts.inStock} nearExpiryPercent={data.nearExpiryPercent} />
+      </div>
+    );
   }
 
   const totalRisk = totalRiskCents(rows);
@@ -62,6 +67,8 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
         </span>
       </div>
 
+      <MixedLotLine count={data.mixedLotCount} />
+
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-[22px] pt-[18px]">
         {EXPIRY_GROUPS.map((group) => {
           const items = rows.filter((b) => groupOf(b) === group.key).sort(compareUrgency);
@@ -69,6 +76,28 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
           return <ExpiryGroup key={group.key} group={group} items={items} onOpenOffer={onOpenOffer} />;
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * PARTİ KARIŞMA SİNYALİ (23.9 · etüt §1.10) — tek satır, karar kuyruğunun altında değil ÜSTÜNDE
+ * bir bant değil, sakin bir izleme satırı. Lot etiketi BİLİNÇLE ertelendi; bu sayı o kararın
+ * sayısal ölçütü: sıfırda kaldıkça problem hiç doğmadı, tırmanıyorsa lot etiketinin günü rakamla
+ * gelir ("hissedilirse" değil "ölçülürse"). Sıfırda da ÇİZİLİR — sinyalin yokluğu ile ölçümün
+ * yokluğu karışmasın (CLAUDE §1).
+ */
+function MixedLotLine({ count }: { count: number }) {
+  return (
+    <div className="border-b border-ops-line-soft px-6 py-2 font-ops-body text-ops-xs text-ops-muted">
+      Parti karışması: {count === 0 ? (
+        <>yok — hiçbir boyun aynı depoda 2+ açık partisi bulunmuyor; lot etiketi gündemde değil.</>
+      ) : (
+        <>
+          <strong className="text-ops-body">{count} durum</strong> — aynı boyun aynı depoda 2+ açık partisi var.
+          Ayrım raf düzeniyle yönetiliyor; sayı tırmanırsa lot etiketi gündeme alınır (etüt §1.10).
+        </>
+      )}
     </div>
   );
 }

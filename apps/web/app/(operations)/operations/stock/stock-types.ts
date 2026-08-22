@@ -158,6 +158,12 @@ export interface StockData {
   nextCursor: KeysetCursor | null;
   /** Karar bekleyen TÜM partiler — sayfalanmaz; bir partiyi kaçırmak imhalık malı satmaktır. */
   attention: BatchView[];
+  /**
+   * Parti karışma sinyali (23.9): aynı varyantın aynı depoda 2+ açık partisi olan durum sayısı —
+   * lot etiketi kararının SAYISAL ölçütü (etüt §1.10). Tüm partiler üzerinden, süzgeçsiz: sinyal
+   * bir izlemedir, görünüm tercihi değil.
+   */
+  mixedLotCount: number;
   losses: LossRow[];
   lossCursor: KeysetCursor | null;
   /** Düşüm formunun parti seçenekleri — yalnız Çıkışlar sekmesi açıkken dolu (form orada açılıyor). */

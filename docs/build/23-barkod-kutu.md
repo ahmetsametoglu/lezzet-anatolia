@@ -240,8 +240,13 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     suite · 618; tam kurye entegrasyonu 50/50. Kurye ekranlarında cihaz turu YAPILMADI (kutulu
     seed siparişleri Salı/Cuma rotasında — tur o güne denk bir seed ister); tarama zinciri cihazda
     23.4/23.6 turlarında kanıtlı.
-- [ ] (23.9) **Parti karışma sinyali:** aynı varyantın aynı depoda 2+ açık partisi sayısı — Stok
-  "Dikkat" sekmesine tek satır (lot etiketi kararının sayısal ölçütü; etüt §1.10)
+- [x] (23.9) **Parti karışma sinyali:** aynı varyantın aynı depoda 2+ açık partisi sayısı — Stok
+  "Dikkat" sekmesine tek satır (lot etiketi kararının sayısal ölçütü; etüt §1.10) · touches:
+  `apps/web/app/(operations)/operations/stock/{stock-labels.ts,stock-types.ts,page.tsx,tabs/attention-tab.tsx,mixed-lot.test.ts}`
+  - *Bitti:* `mixedLotCases` saf türetim (mevcut parti okumasından — yeni tablo/sorgu yok, 4 birim
+    testi: tükenmiş parti SAYILMAZ, ayrım depo içinde) + Dikkat sekmesinde tek satır. **Sıfırda da
+    çizilir** — sinyalin yokluğu ile ölçümün yokluğu karışmasın; Netleşecek 5 böylece kapandı
+    (sinyalin yeri: Dikkat sekmesi).
 - [ ] (23.10) **Test dalgası — Dalga 1b** (plan: `docs/build/test-dalgasi.md` §5, §6.2). Modül 23 en
   yeni modül ve yüzeyi hâlâ küçük; testi ucuzken yazılır. `touches: packages/database/src/services/variant-barcode.service.ts, apps/mobile/src/components/scan/**, packages/types/src/entities/variant-barcode.schema.ts`
   - *Bitti:* aşağıdaki envanterin tamamı yazılmış; birim olanlar yeşil, DB'ye vuranlar denetmenin

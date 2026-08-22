@@ -93,3 +93,23 @@ export function lossKind(reason: StockAdjustmentReason, qty: number): { text: st
   if (reason === 'count_diff') return { text: 'Sayım farkı', tone: 'slate' };
   return { text: 'Fire', tone: 'amber' };
 }
+
+/**
+ * **Parti karışma sinyali** (23.9 · etüt §1.10) — aynı varyantın aynı depoda 2+ AÇIK partisi olan
+ * durum sayısı. Lot etiketi BİLİNÇLE ertelendi; bu sayı o kararın SAYISAL ölçütüdür: sıfırda
+ * kaldıkça problem hiç doğmadı, tırmanıyorsa lot etiketinin günü geldi — "hissedilirse" değil
+ * "ölçülürse" (karar §1.10). Mevcut parti okumasından TÜRER, yeni tablo/sorgu yok.
+ *
+ * "Açık parti" = fiziksel adedi sıfırdan büyük: tükenmiş parti rafta ayrım sorunu yaratmaz.
+ */
+export function mixedLotCases(
+  batches: ReadonlyArray<Pick<BatchView, 'warehouseId' | 'variantId' | 'physicalQty'>>,
+): number {
+  const openCounts = new Map<string, number>();
+  for (const batch of batches) {
+    if (batch.physicalQty <= 0) continue;
+    const key = `${batch.warehouseId}:${batch.variantId}`;
+    openCounts.set(key, (openCounts.get(key) ?? 0) + 1);
+  }
+  return [...openCounts.values()].filter((count) => count >= 2).length;
+}

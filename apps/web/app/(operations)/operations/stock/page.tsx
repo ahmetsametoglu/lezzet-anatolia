@@ -25,6 +25,7 @@ import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readOfferHandoff } from './stock-handoff';
 import { pendingOrderCount, readIntakeProgress, readIntakeTab } from './intake-read';
 import { readTransfersPage, readTransitCount } from './transfer-read';
+import { mixedLotCases } from './stock-labels';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
@@ -183,6 +184,8 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         pinned: pinnedRow,
         nextCursor: productPage.nextCursor,
         attention,
+        // Parti karışma sinyali (23.9) — zaten okunmuş partilerden türer, ek sorgu yok.
+        mixedLotCount: mixedLotCases(batches),
         transfers,
         transitCount,
         losses: toLossRows(lossPage.rows, actorNames),
