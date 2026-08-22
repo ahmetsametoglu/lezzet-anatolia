@@ -79,7 +79,10 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
     );
   }
 
-  const receiver = stop.customerName;
+  /* KAPIYI AÇAN KİŞİ, hesabın sahibi DEĞİL (21.08). Değişken adı zaten `receiver`dı ama hesabın
+     adını okuyordu; adresin alıcısı varsa o yazılır — hediye/iş/aile adresinde kurye yanlış adı
+     soruyordu. İmza satırı ve imza ipucu da bu adı kullanıyor: kapıda imzalayan kişi odur. */
+  const receiver = stop.recipient ?? stop.customerName;
 
   return (
     <View style={styles.screen} testID="courier-delivery">

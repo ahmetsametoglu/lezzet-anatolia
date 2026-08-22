@@ -43,6 +43,18 @@ export const CourierStopSchema = z.object({
   orderId: z.string().uuid(),
   referenceNo: z.string().nullable(),
   customerName: z.string(),
+  /**
+   * **Kapıda sorulacak kişi** — adresin alıcısı; `null` = hesap sahibiyle aynı.
+   *
+   * `address.recipient` bir süre YAZILIYOR ama hiç OKUNMUYORDU (ölçüldü 21.08): şema künyesi
+   * *"kurye kapıda kimi soracağını buradan bilir"* diyor, oysa durak yalnız hesabın adını
+   * taşıyordu. Hediye adresinde, iş adresinde ve aile büyüğünün adresinde kapıyı açan kişi
+   * hesabın sahibi değildir — kurye yanlış adı sorar.
+   *
+   * `customerName`i EZMEZ, yanında durur: ödemenin muhatabı hesabın sahibidir, kapıyı açan
+   * alıcıdır. Tek alana sıkıştırmak, kuryenin kime "borcunuz var" diyeceğini belirsizleştirirdi.
+   */
+  recipient: z.string().nullable(),
   channel: ChannelEnum,
   /** Sipariş anındaki adres kopyası; adres kaydı sonradan düzelse de kuryenin gideceği yer budur. */
   address: z.string().nullable(),

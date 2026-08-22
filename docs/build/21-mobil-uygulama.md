@@ -4707,6 +4707,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   BEKLEYEN(21.95): adres formu ALICI ve TELEFON sormuyor, web ikisini de zorunlu tutuyor
   (`not-mobil-adres-formu-alici-telefon-sormuyor`, cihazda doğrulandı — form yalnız
-  Libellé/Adresse/Code postal/Ville soruyor). Telefon ADRESE aittir, hesaba değil: kurye kapıya
-  ulaşamadığında arayacağı numara odur. Ayrı turda, `@lezzet/helper`ın `normalizePhone`/`DIAL_CODE`
-  kapısıyla.
+  Libellé/Adresse/Code postal/Ville soruyor). **Tüketen uç bağlandı (aşağıda); formun sorması
+  ayrı turda**, `@lezzet/helper`ın `normalizePhone`/`DIAL_CODE` kapısıyla.
+
+- [x] (21.96) **ADRESİN ALICISI VE TELEFONU YAZILIYOR AMA HİÇ OKUNMUYORDU — kurye ucu bağlandı**
+  `touches:` `packages/application/src/courier/day.ts` · `packages/types/src/contracts/courier-api.schema.ts` · `apps/mobile/src/screens/courier/{delivery-screen,courier-fixture}.ts(x)`
+
+  **Durum (21.08):** denetim notu adres formunun bu iki alanı sormadığını bildirdi. Ölçüm başka
+  bir şey gösterdi ve **kullanıcı kararı "önce tüketeni bağla" oldu** (şıklı soruldu).
+
+  ── ÜÇ ÖLÇÜM, BİRBİRİYLE ÇELİŞİYORDU ────────────────────────────────────────
+  · `address.schema` künyesi niyeti yazmış: *"Kurye kapıda kimi soracağını buradan bilir"* /
+    *"Kapıya teslimde kurye önce arar; hediye adresinde aranacak numara alıcınınkidir."*
+  · **Kurye ikisini de okumuyordu:** `courier/day.ts` `customer?.phone` taşıyordu ve
+    `address.recipient` kod tabanının HİÇBİR yerinde tüketilmiyordu.
+  · Native telefon soruyor ama BAŞKASINI: profil kurulumu ve checkout `user_profiles.phone`u
+    zorunlu tutuyor (`PATCH /me`) — yani hesabın numarası, adresin değil.
+
+  Sonuç: notun *"kurye arayacak numarayı bulamaz"* gerekçesi bugün gerçekleşmiyordu (kurye zaten
+  dolu olan hesap numarasını arıyor), ama şemanın vaat ettiği davranışın **tüketen ucu hiç
+  bağlanmamıştı**. Forma iki zorunlu alan eklemek, hiçbir şeyin okumadığı veri için müşteriye
+  sürtünme koymak olurdu — önce okuyan taraf yazıldı.
+
+  ── YAPILAN ───────────────────────────────────────────────────────────────
+  · `addressTexts` artık üçünü tek okumadan döndürüyor (metin + alıcı + telefon); **ikinci sorgu
+    açılmadı**, aynı döngü zaten aynı kaynağı okuyordu. Öncelik değişmedi: siparişin anlık kopyası
+    (`addressSnapshot`) önce — sipariş anında kime, hangi numaraya söz verildiyse o.
+  · Durak telefonu `adres.phone ?? hesap.phone`. Hesabınki YEDEK kalıyor: adres telefonu bugün çoğu
+    kayıtta boş ve yedek olmasaydı kuryenin elindeki çalışan numara da kaybolurdu.
+  · `CourierStop.recipient` eklendi — `customerName`i EZMİYOR, yanında duruyor. İkisi ayrı gerçek:
+    hesabın sahibi ödemenin muhatabı, alıcı kapıyı açan kişi. Tek alana sıkıştırmak kuryenin kime
+    "borcunuz var" diyeceğini belirsizleştirirdi.
+  · Teslimat ekranındaki `receiver` zaten bu adı taşıyordu ama hesabınkini okuyordu; artık
+    `stop.recipient ?? stop.customerName`. İmza satırı ve imza ipucu da bu adı kullanıyor.
+  · WhatsApp bağlantısı da çözülmüş numarayı ve alıcı adını kullanıyor.
+
+  `typecheck` altı pakette temiz · `lint` · `boundaries` · mobil kurye **73/73**.
+
+  BEKLEYEN(21.96): adres formunun alıcı+telefon sorması. Artık okuyan taraf var, yani sormak
+  anlam kazandı; web zaten ikisini zorunlu tutuyor (`normalizePhone` ile E.164'e indiriyor).

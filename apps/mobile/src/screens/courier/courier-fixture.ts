@@ -42,6 +42,9 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     orderId: uuid(index),
     referenceNo: `LZA-26-000${index}`,
     customerName: `Müşteri ${index}`,
+    /* Varsayılan `null` = alıcı hesabın sahibiyle aynı; ekran o hâlde müşteri adını yazar
+       (yaygın hâl). Alıcının AYRI olduğu hâli sınayan test bunu `overrides` ile verir. */
+    recipient: null,
     channel: 'b2c',
     address: `Grand Rue ${index}`,
     phone: '+33600000001',

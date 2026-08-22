@@ -38,6 +38,14 @@ export interface CourierStop {
   orderId: string;
   referenceNo: string | null;
   customerName: string;
+  /**
+   * **Kapıda sorulacak kişi** — adresin alıcısı; `null` = hesap sahibiyle aynı, söylenecek fazlası yok.
+   *
+   * `customerName`in yerine GEÇMEZ, yanında durur: hesabın sahibi ödemenin muhatabıdır, alıcı ise
+   * kapıyı açacak kişi (hediye, iş adresi, aile büyüğü — `address.schema`nın kendi örnekleri).
+   * İkisini tek alana sıkıştırmak, kuryenin kime "borcunuz var" diyeceğini belirsizleştirirdi.
+   */
+  recipient: string | null;
   /** B2B/B2C — kapıda teslim onayı beklentisini baştan kurar. */
   channel: Order['channel'];
   /** Navigasyon bu metin üzerinden açılır; sipariş anındaki kopya (adres sonradan düzelse de sabit). */
@@ -126,18 +134,28 @@ export async function listCourierDay(
     const lines = items.filter((item) => item.orderId === order.id);
     const customer = customers.get(order.customerId);
     const attempts = failedAttempts(logs, order.id);
+    const place = addresses.get(order.id) ?? null;
+    /* ADRESİN NUMARASI ÖNCE, HESABINKİ YEDEK (21.08). Şemanın kuralı bu: *"Teslimat telefonu ADRESE
+       aittir, hesaba değil … hediye adresinde aranacak numara alıcınınkidir."* Hesabınki yedek
+       kalıyor çünkü adres telefonu bugün çoğu kayıtta boş — yedek olmasaydı kuryenin elindeki
+       çalışan numara da kaybolurdu. */
+    const doorPhone = place?.phone ?? customer?.phone ?? null;
 
     return {
       orderId: order.id,
       referenceNo: order.referenceNo,
       customerName: customer?.name ?? '—',
+      /* Kapıda SORULACAK kişi — `customerName`i EZMEZ, yanına durur. İkisi ayrı gerçek: hesabın
+         sahibi ödemenin/vadenin muhatabı, alıcı ise kapıyı açacak kişi (hediye, iş adresi, aile
+         büyüğü). `null` = söylenecek fazladan bir şey yok, kurye müşteri adını sorar. */
+      recipient: place?.recipient ?? null,
       channel: order.channel,
-      address: addresses.get(order.id) ?? null,
-      phone: customer?.phone ?? null,
+      address: place?.text ?? null,
+      phone: doorPhone,
       whatsAppLink: whatsAppLink({
-        phone: customer?.phone,
+        phone: doorPhone ?? undefined,
         locale: input.locale ?? 'fr',
-        customerName: customer?.name,
+        customerName: place?.recipient ?? customer?.name,
       }),
       payment: {
         dueAmountCents: amountDueCents(order),
@@ -505,12 +523,32 @@ async function customerCards(
 }
 
 /**
- * Durak adresi. Önce siparişin **anlık kopyası** (`addressSnapshot`) okunur: adres kaydı sonradan
- * düzeltilse bile kuryenin gideceği yer siparişin verildiği andaki adrestir.
+ * Durağın ADRES BİLGİSİ — metin + kapıda sorulacak kişi + aranacak numara.
+ *
+ * Önce siparişin **anlık kopyası** (`addressSnapshot`) okunur: adres kaydı sonradan düzeltilse bile
+ * kuryenin gideceği yer siparişin verildiği andaki adrestir. Aynı öncelik `recipient`/`phone` için
+ * de geçerli ve aynı sebepten — sipariş anında kime, hangi numaraya söz verildiyse o.
+ *
+ * ── ÜÇÜ TEK OKUMADAN (21.08) ────────────────────────────────────────────────
+ * Alanlar bir süre YAZILIYOR ama HİÇ OKUNMUYORDU: `address.schema` künyesi *"kurye kapıda kimi
+ * soracağını buradan bilir"* / *"kapıya teslimde kurye önce arar"* diyordu, oysa durak yalnız
+ * `customer.phone`u taşıyordu ve `recipient` kod tabanında hiçbir yerde tüketilmiyordu (ölçüldü
+ * 21.08). Yani şemanın vaat ettiği davranışın tüketen ucu hiç bağlanmamıştı.
+ *
+ * Ayrı bir sorgu AÇILMADI: bu döngü zaten aynı kaynağı okuyor, tek yaptığımız aynı nesneden iki
+ * alan daha almak.
  */
-async function addressTexts(db: SupabaseClient, orders: readonly Order[]): Promise<Map<string, string>> {
+interface StopAddress {
+  text: string | null;
+  recipient: string | null;
+  phone: string | null;
+}
+
+async function addressTexts(db: SupabaseClient, orders: readonly Order[]): Promise<Map<string, StopAddress>> {
   const addresses = new AddressService(db);
-  const map = new Map<string, string>();
+  const map = new Map<string, StopAddress>();
+  const str = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 
   for (const order of orders) {
     const snapshot = order.addressSnapshot as Record<string, unknown> | null;
@@ -519,7 +557,11 @@ async function addressTexts(db: SupabaseClient, orders: readonly Order[]): Promi
 
     const parts = [source['line1'], source['line2'], source['postalCode'], source['city']]
       .filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
-    if (parts.length > 0) map.set(order.id, parts.join(', '));
+    map.set(order.id, {
+      text: parts.length > 0 ? parts.join(', ') : null,
+      recipient: str(source['recipient']),
+      phone: str(source['phone']),
+    });
   }
   return map;
 }
