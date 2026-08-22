@@ -117,6 +117,22 @@ export function channelLabel(order: PreparationOrderView): string {
   return order.totalQty >= HACIM_ESIGI ? 'B2B · hacimli' : 'B2B';
 }
 
+/**
+ * **Koliye yazılacak ad** — adresin alıcısı hesap sahibinden BAŞKAYSA (kullanıcı kararı 21.08).
+ *
+ * `null` iki hâlde: adreste alıcı yazılı değil (etiket zaten hesap adıyla gider) ya da ikisi aynı
+ * kişi. İkisi aynıyken satır çizmek, her siparişe hiçbir şey söylemeyen bir tekrar eklerdi —
+ * gösterilmeye değer olan şey FARKIN kendisi: paketi alacak kişi sipariş verenden başkası.
+ *
+ * Karşılaştırma boşluk ve büyük/küçük harf duyarsız: "ayşe yılmaz " ile "Ayşe Yılmaz" aynı kişidir
+ * ve aradaki farkı depocuya bir uyarı gibi göstermek yanlış olurdu.
+ */
+export function parcelName(order: PreparationOrderView): string | null {
+  const alici = order.recipientName?.trim();
+  if (!alici) return null;
+  return alici.toLocaleLowerCase('tr') === order.customerName.trim().toLocaleLowerCase('tr') ? null : alici;
+}
+
 export const PREP_NOTES = {
   empty: 'Bekleyen hazırlık yok. Onaylanan siparişler bu listeye kendiliğinden düşer.',
   /**

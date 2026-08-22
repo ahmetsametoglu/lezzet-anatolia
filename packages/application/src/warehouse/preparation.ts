@@ -91,6 +91,22 @@ export interface PreparationOrder {
   orderId: string;
   referenceNo: string | null;
   customerName: string;
+  /**
+   * Adrese GİDEN kişi — sipariş anındaki kopyadan (`address_snapshot.recipient`). `null` = adreste
+   * alıcı yazılı değil; ekran o zaman `customerName`i kullanır.
+   *
+   * ── TASARIM §6'DAN BİLİNÇLİ SAPMA (kullanıcı kararı 21.08) ──────────────────
+   * `design/pages/depo-hazirlik.md` *"müşteri iletişim bilgisi ve adres görünmez — teslimat
+   * kuryenin işidir"* diyor ve o karar duruyor: adres de telefon da BURADA YOK, eklenmedi. Ama aynı
+   * tasarım müşteri adını *"koli etiketleme/eşleştirme için"* istiyor ve etikete yazılacak ad
+   * hesap sahibininki değildir: hediye ya da iş adresinde paketi alan başka biridir ve taşıyıcı
+   * künyesi o adla üretilir (ölçüldü 21.08 — dört taşıyıcının hiçbiri adsız künye kabul etmiyor,
+   * teslim noktası kimliği künyedeki adla karşılaştırıyor). Yani değişen şey "yeni bir bilgi
+   * göstermek" değil, alanın KENDİ amacına doğru adı taşımak.
+   *
+   * Ek sorgu YOK: kopya siparişin kendi satırında duruyor.
+   */
+  recipientName: string | null;
   /** B2B/B2C — hacim beklentisini kurar (B2B 10-50 koli olabilir). */
   channel: Order['channel'];
   status: Order['status'];
@@ -167,6 +183,7 @@ export async function listPreparationQueue(
       orderId: order.id,
       referenceNo: order.referenceNo,
       customerName: customers.get(order.customerId) ?? '—',
+      recipientName: recipientOf(order.addressSnapshot),
       channel: order.channel,
       status: order.status,
       deliveryDate: order.deliveryDate,
@@ -416,6 +433,16 @@ async function pinnedStockIds(db: SupabaseClient, orderIds: readonly string[]): 
     }
   }
   return map;
+}
+
+/**
+ * Kopyadaki alıcı adı — koli etiketine yazılacak ad (kullanıcı kararı 21.08; gerekçesi
+ * `PreparationOrder.recipientName` künyesinde). Yalnız AD okunur: adres ve telefon burada
+ * görünmez, tasarım §6 o kısmıyla yürürlükte.
+ */
+function recipientOf(snapshot: Record<string, unknown> | null | undefined): string | null {
+  const raw = snapshot?.['recipient'];
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
 }
 
 /** Müşteri adı — koli etiketleme için. İletişim ve adres OKUNMAZ (tasarım §6). */

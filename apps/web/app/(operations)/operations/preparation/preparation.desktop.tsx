@@ -9,7 +9,7 @@ import { num } from '@/components/operation/ui/format';
 import { CARRIER_LABEL, CARRIER_OPTIONS } from '@/components/operation/ui/labels';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
-import { LANE_HINTS, LANE_LABELS, PREP_NOTES, channelLabel, queueStatus } from './preparation-labels';
+import { LANE_HINTS, LANE_LABELS, PREP_NOTES, channelLabel, parcelName, queueStatus } from './preparation-labels';
 import { WarehouseStrip } from './warehouse-strip';
 import {
   PREPARATION_LANES,
@@ -160,6 +160,13 @@ function QueueRow({ order, selected, onSelect }: { order: PreparationOrderView; 
       <span className="font-ops-body text-ops-xs text-ops-muted">
         {channelLabel(order)} · {num(order.lineCount)} kalem · {num(order.totalQty)} paket
       </span>
+      {/* KOLİYE YAZILACAK AD — yalnız sipariş verenden BAŞKASIYSA (hediye/iş adresi). Etiket ve
+          taşıyıcı künyesi bu adla üretilir; hesap sahibinin adıyla giden paket teslim noktasında
+          kimlikle eşleşmez ve iade döner. Aynı kişiyse satır hiç çıkmaz — her siparişe eklenen
+          bir tekrar, gerçekten farklı olan hâli gözden kaybettirirdi. */}
+      {parcelName(order) ? (
+        <span className="font-ops-body text-ops-xs font-medium text-ops-body">Koliye: {parcelName(order)}</span>
+      ) : null}
     </button>
   );
 }
@@ -189,6 +196,10 @@ function OrderPanel({
         <span className="font-ops-body text-ops-xs text-ops-muted">
           {channelLabel(order)} · {num(order.lineCount)} kalem · {num(order.totalQty)} paket
         </span>
+        {/* Panelde de yazılır: koliyi kapatan kişi burada duruyor, adı kuyruğa dönüp aramamalı. */}
+        {parcelName(order) ? (
+          <span className="font-ops-body text-ops-xs font-medium text-ops-body">Koliye: {parcelName(order)}</span>
+        ) : null}
         <span className="mt-1 font-ops-body text-ops-xs font-semibold text-ops-body">
           {num(order.pickedLineCount)} / {num(order.lineCount)} kalem toplandı
         </span>

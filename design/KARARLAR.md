@@ -1599,3 +1599,32 @@ kırpma editörü gerçeği göstersin diye `IMAGE_ROLES` çerçeve listeleri g�
 görünürlük listesine "detay kahramanı (mobil)" eklendi, galeri fotoğrafı artık İKİ çerçevede
 önizlenir (3:2 masaüstü · 1:1 mobil). Galerideki gömülü `3/2` sabiti de söküldü — oran artık
 yalnız `packages/types`ten okunur (duplikasyon kuralı).
+
+## Depo hazırlık: koli adı ALICININ adı (tasarım §6'dan dar sapma) — 21.08
+
+`design/pages/depo-hazirlik.md §6` şunu diyor ve o kısmı **yürürlükte kalıyor**:
+
+> *"Müşteri iletişim bilgisi ve adres görünmez — teslimat kuryenin işidir; depocuya yalnız ad
+> (koli eşleştirme) yeter"*
+
+Sapma yalnız **hangi ad** sorusunda: ekran hesap sahibinin adını gösteriyordu, artık adresin
+alıcısını da gösteriyor (`Koliye: <ad>`) — ve **yalnız ikisi farklıysa**.
+
+**Gerekçe kullanıcının sorusundan doğdu** (*"posta ile gönderilen kargoların üzerinde isim soyisim
+yazması gerekmiyor mu?"*): gerekiyor. Dört taşıyıcının (Colissimo · Chronopost · DHL · UPS) hiçbiri
+adsız künye üretmiyor ve teslim noktasında kimlik künyedeki adla karşılaştırılıyor; ad tutmazsa
+paket teslim edilmez, iade döner. Tasarımın adı istemesinin sebebi zaten *"koli etiketleme"* —
+etikete yanlış ad yazmak o amacın kendisini boşa düşürüyordu. Yani bu, ekrana yeni bir bilgi
+eklemek değil, var olan alanın kendi amacına doğru adı taşımak.
+
+**Sınır korundu:** adres YOK, telefon YOK. Sapma tek satır ve yalnız ad.
+
+**Kapsam kullanıcı kararı (21.08):** her kulvarda — rota ve kargo ayırt edilmiyor. Dar seçenek
+(yalnız kargo kulvarı) sunuldu, kullanıcı geniş olanı seçti: kapıda teslimde de zile basılan ad
+adresinkidir, kolinin üstündeki adın kulvara göre değişmesi depocuya iki kural öğretirdi.
+
+Aynı adı sipariş detayının teslimat kartı da gösteriyor (`Alıcı` + `Adres tel.`) — orası tasarımın
+kendi kapsamında (`admin-siparisler.md`: *"adres — sipariş anındaki kopyası"*), sapma değil.
+
+**Mobil Depo ekranı (D1) bu satırı HENÜZ çizmiyor:** alan paylaşılan kapıda
+(`PreparationOrder.recipientName`), benimsemesi native şeridin işi — not `docs/talep/`te.

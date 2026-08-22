@@ -276,6 +276,20 @@ export interface OrderDetailView {
     type: 'route' | 'shipping';
     date: string | null;
     address: string;
+    /**
+     * Adrese GİDEN kişi — sipariş anındaki kopyadan (`address_snapshot.recipient`), hesap sahibi
+     * DEĞİL. Kargo künyesi adsız üretilemez (taşıyıcıların hepsinde zorunlu alan) ve teslim
+     * noktasında kimlik BU adla karşılaştırılır; hediye ya da iş adresinde o ad hesabınkinden
+     * başkasıdır ve yanlış ad paketi iade ettirir.
+     *
+     * `fromAccount: true` = adreste alıcı yazılı değil, hesap sahibinin adına düşüldü. Bayrak
+     * EKRANDA yazılır: geri düşüşü sessizce yapmak, tahmin edilmiş bir adı ölçülmüş gibi
+     * okuturdu (CLAUDE §1). `phone` yalnız ADRESİN telefonudur — hesabınkine düşmez, çünkü kapıda
+     * aranacak numara hesap sahibininki olmak zorunda değil; yoksa satır hiç çizilmez.
+     *
+     * Tümü `null`: ne kopyada alıcı var ne hesabın adı çözülebildi.
+     */
+    recipient: { name: string; phone: string | null; fromAccount: boolean } | null;
     courierName: string | null;
     /** Hangi GERÇEKLEŞEN seferle gitti (18.08) — SF kodu; `null` = henüz sefere bağlanmadı. */
     runReference: string | null;

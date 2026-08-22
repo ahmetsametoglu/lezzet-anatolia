@@ -452,6 +452,22 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             <div className="flex flex-col gap-2 px-3.5 py-[11px]">
               <InfoRow label="Gün" value={order.delivery.date ? shortDate(order.delivery.date) : 'girilmemiş'} />
               <InfoRow label="Adres" value={order.delivery.address || 'kopya yok'} />
+              {/* ALICI — kargo künyesine yazılacak ad. Taşıyıcıların hiçbiri adsız künye üretmiyor
+                  ve teslim noktası kimliği bu adla karşılaştırıyor; hediye adresinde o ad hesap
+                  sahibininki DEĞİL. Ad adreste yoksa hesap sahibine düşülür ama bu GÖRÜNÜR yazılır:
+                  künyeyi yazan kişi tahmin edilmiş bir adı ölçülmüş sanmamalı. */}
+              {order.delivery.recipient ? (
+                <InfoRow
+                  label="Alıcı"
+                  value={order.delivery.recipient.name}
+                  hint={order.delivery.recipient.fromAccount ? 'adreste alıcı yazılı değil — hesap sahibi' : undefined}
+                />
+              ) : null}
+              {/* Adresin telefonu — hesabınki değil (kapıda aranacak numara başkasınınki olabilir).
+                  Yoksa satır hiç çizilmez: boş bir alan "numara yok" der, oysa cevap bilinmiyor. */}
+              {order.delivery.recipient?.phone ? (
+                <InfoRow label="Adres tel." value={order.delivery.recipient.phone} />
+              ) : null}
               {/* HANGİ DEPODAN — künye, kontrol değil: depo adresin posta kodundan türedi ve sipariş
                   tek depodan çıkar (DOMAIN §17). Buradan değiştirilemez; değiştirilebilseydi malın
                   ayrıldığı depo ile siparişin deposu ayrışırdı. */}
@@ -593,11 +609,20 @@ function MetaCell({ label, value, mono, strong, tone }: MetaCellProps) {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+/**
+ * `hint` = değerin NEREDEN geldiğini söyleyen kısa not (bugün tek kullanıcısı: alıcı adının hesap
+ * sahibine düşmesi). Ayrı bir satır değil, değerin devamı: künye satırlarının arasına ikinci bir
+ * satır girseydi kartın ritmi bozulur ve not kendi başına bir bilgi gibi okunurdu — oysa o notun
+ * tek işi üstündeki değeri nitelemek.
+ */
+function InfoRow({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex items-baseline gap-2">
       <span className="w-[78px] flex-none font-ops-body text-ops-xs text-ops-muted">{label}</span>
-      <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-ink">{value}</span>
+      <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-ink">
+        {value}
+        {hint ? <span className="text-ops-micro text-ops-muted"> · {hint}</span> : null}
+      </span>
     </div>
   );
 }

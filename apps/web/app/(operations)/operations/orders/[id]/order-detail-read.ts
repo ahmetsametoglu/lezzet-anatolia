@@ -250,6 +250,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       type: order.deliveryType,
       date: order.deliveryDate,
       address: addressOf(order.addressSnapshot),
+      recipient: recipientOf(order.addressSnapshot, customer?.name ?? null),
       courierName: courier?.name ?? null,
       runReference: run?.referenceNo ?? null,
       proof: await proofOf(order.deliveryProof),
@@ -568,6 +569,33 @@ function addressOf(snapshot: Record<string, unknown> | null): string {
   return [part('line1'), part('line2'), [part('postalCode'), part('city')].filter(Boolean).join(' ')]
     .filter(Boolean)
     .join(', ');
+}
+
+/**
+ * Kargo künyesine yazılacak ALICI — adresin kendi alıcısı, hesap sahibi değil.
+ *
+ * Adres alanı bir süredir toplanıyordu ama hiçbir ekran okumuyordu (ölçüldü 21.08); oysa taşıyıcı
+ * künyesi ad olmadan üretilemiyor ve teslim noktası kimliği o adla karşılaştırıyor. Hediye
+ * adresinde hesap sahibinin adını yazmak, paketi alamayacak birinin adına göndermektir.
+ *
+ * Geri düşüş İŞARETLENİR, gizlenmez: künyeyi yazan kişi "bu ad adresten mi geldi yoksa hesaptan mı
+ * tahmin edildi" sorusunun cevabını görmeli. `phone` hesabınkine DÜŞMEZ — adresin telefonu yoksa
+ * cevap "bilinmiyor"dur, hesabınki değil (hesap numarası hediye adresinde başka birinin olabilir).
+ */
+function recipientOf(
+  snapshot: Record<string, unknown> | null,
+  accountName: string | null,
+): OrderDetailView['delivery']['recipient'] {
+  const part = (key: string): string | null => {
+    const raw = snapshot?.[key];
+    return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+  };
+  const phone = part('phone');
+  const recipient = part('recipient');
+  if (recipient) return { name: recipient, phone, fromAccount: false };
+
+  const fallback = accountName?.trim();
+  return fallback ? { name: fallback, phone, fromAccount: true } : null;
 }
 
 /**
