@@ -175,6 +175,8 @@ export function creditFill(order: OrderDetailView): string {
 export const PROOF_KIND_LABEL: Record<DeliveryProofView['kind'], string> = {
   signature: 'imza',
   photo: 'foto',
+  /** 23.8: kanıt kapıda okutulan kutu QR'larıdır — görseli yoktur, kaydı vardır. */
+  box_scan: 'kutu QR',
 };
 
 /** Sipariş detayının kısa cümleleri — ekranda tekrarlanan metin koda gömülmez. */
@@ -186,4 +188,7 @@ export const ORDER_NOTES = {
    */
   proofImageUnavailable:
     'Kanıt kaydı var ama görsel açılamıyor — depolama bağlantısı yok ya da anahtar geçersiz. Kayıt siparişte duruyor.',
+  /** `box_scan` görselsizdir ve bu bir arıza DEĞİL (23.8) — cümle "açılamıyor"la karışmasın. */
+  proofBoxScan:
+    'Kanıt, kapıda okutulan kutu QR kodları — görseli yoktur, okutulan kodlar teslim kaydında duruyor.',
 } as const;

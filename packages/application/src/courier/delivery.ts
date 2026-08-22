@@ -1,4 +1,4 @@
-import { OrderService, SettingsService } from '@lezzet/database';
+import { OrderBoxService, OrderService, SettingsService } from '@lezzet/database';
 import type { DeliveryProofRecord, FulfillmentAdjustment, Order, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OrderEffects } from '../order/effects';
@@ -78,6 +78,8 @@ export type DoorDeliveryOutcome =
     }
   /** Kanıt zorunlu ama gelmedi — HİÇBİR yazım yapılmadı. */
   | { status: 'proof_required'; channel: Order['channel'] }
+  /** Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI (23.8, etüt 2.5). */
+  | { status: 'boxes_missing'; remainingBoxNos: number[] }
   | { status: 'forbidden'; reason: 'not_assigned' }
   | { status: 'stale'; currentStatus: Order['status'] }
   | { status: 'not_found' };
@@ -97,6 +99,12 @@ export async function confirmDoorDelivery(
     adjustments?: readonly FulfillmentAdjustment[];
     proof?: DeliveryProofInput | null;
     collection?: DoorCollectionInput | null;
+    /**
+     * Kapıda okutulan kutu kodları (23.8). Kutulu siparişte teslimin ÖN KOŞULU: set siparişin
+     * kutularını kapsamıyorsa hiçbir yazım yapılmadan `boxes_missing` döner — yanlış anda/yerde
+     * okutulan kod sessiz geçmez. Kodlar `delivery_proof`a yazılır.
+     */
+    scannedBoxCodes?: readonly string[];
     /** Müşteri haberi / puan portları — `order/effects.ts`. */
     effects?: OrderEffects;
   },
@@ -105,6 +113,18 @@ export async function confirmDoorDelivery(
   const order = await orders.getById(input.orderId);
   if (!order) return { status: 'not_found' };
   if (order.courierId !== input.courierId) return { status: 'forbidden', reason: 'not_assigned' };
+
+  // ── Kutu kapısı: yazımdan önce (23.8, etüt 2.5) ───────────────────────────
+  // "Tüm kutular okutulmadan teslim tamamlanmaz." Ekran kalan kutuyu numarasıyla söyler — kurye
+  // araçta hangi kutuyu unuttuğunu numaradan bulur. Kutusuz sipariş bu kapıyı hiç görmez.
+  const boxes = await new OrderBoxService(db).listByOrder(input.orderId);
+  if (boxes.length > 0) {
+    const scanned = new Set((input.scannedBoxCodes ?? []).map((code) => code.trim()));
+    const remaining = boxes.filter((box) => !scanned.has(box.code));
+    if (remaining.length > 0) {
+      return { status: 'boxes_missing', remainingBoxNos: remaining.map((box) => box.boxNo) };
+    }
+  }
 
   // ── Kanıt kapısı: yazımdan önce ────────────────────────────────────────────
   if (!input.proof && (await proofRequired(db, order.channel))) {
@@ -131,9 +151,17 @@ export async function confirmDoorDelivery(
   }
 
   // ── Teslim ─────────────────────────────────────────────────────────────────
+  // Kutulu siparişte okutulan kodlar KANITA yazılır (etüt 2.5): görselli kanıt varsa onun içine,
+  // yoksa görselsiz `box_scan` kaydı doğar — B2C'nin bugün hiç kanıt istemeyen teslimi böylece
+  // bedava bir kanıt kazanır.
+  const boxCodes = boxes.length > 0 ? boxes.map((box) => box.code) : null;
   const delivered = await deliverOrder(db, input.orderId, {
     actorId: input.courierId,
-    deliveryProof: input.proof ? proofRecord(input.proof, input.courierId) : null,
+    deliveryProof: input.proof
+      ? proofRecord(input.proof, input.courierId, boxCodes)
+      : boxCodes
+        ? boxScanRecord(boxCodes, input.courierId)
+        : null,
     effects: input.effects,
   });
   if (!delivered.ok) return { status: 'stale', currentStatus: delivered.currentStatus };
@@ -205,12 +233,28 @@ function cashLegalLimitCents(db: SupabaseClient): Promise<number> {
  * kanıtı "var" gösteriyor, ama neyin var olduğunu söyleyemiyordu. Tipe bağlanınca yanlış alan adı
  * derleme hatasına döndü.
  */
-function proofRecord(proof: DeliveryProofInput, courierId: string): DeliveryProofRecord {
+function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: string[] | null = null): DeliveryProofRecord {
   return {
     kind: proof.kind,
     imageKey: proof.imageKey,
     receivedBy: proof.receivedBy ?? null,
     courierId,
     at: new Date().toISOString(),
+    ...(boxCodes ? { boxCodes } : {}),
+  };
+}
+
+/**
+ * Görselsiz kanıt (23.8): kanıtın kendisi kapıda okutulan QR'lardır. Yalnız kutulu siparişin
+ * görselsiz tesliminde doğar — görselli kanıt varken kodlar onun İÇİNE yazılır, iki kayıt olmaz.
+ */
+function boxScanRecord(boxCodes: string[], courierId: string): DeliveryProofRecord {
+  return {
+    kind: 'box_scan',
+    imageKey: null,
+    receivedBy: null,
+    courierId,
+    at: new Date().toISOString(),
+    boxCodes,
   };
 }

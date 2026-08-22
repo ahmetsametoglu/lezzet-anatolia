@@ -47,10 +47,9 @@ export type OrderBoxInsert = z.infer<typeof OrderBoxInsertSchema>;
  * kapılarında. Kutunun kimliği (`code`, `boxNo`, sipariş) doğumdan sonra DEĞİŞMEZ.
  */
 export const OrderBoxUpdateSchema = OrderBoxSchema.pick({
-  printedAt: true,
-  loadedAt: true,
-  loadedBy: true,
-}).partial();
+  id: true,
+})
+  .extend(OrderBoxSchema.pick({ printedAt: true, loadedAt: true, loadedBy: true }).partial().shape);
 export type OrderBoxUpdate = z.infer<typeof OrderBoxUpdateSchema>;
 
 export const OrderBoxItemSchema = z.object({

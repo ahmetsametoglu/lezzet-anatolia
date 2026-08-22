@@ -83,6 +83,8 @@ function startResult(
     alreadyOut: [],
     stale: [],
     skipped: [],
+    // 23.8: kutulu sipariş okutulmayı bekliyor olabilir — varsayılan "kutusuz gün".
+    awaitingBoxes: [],
     ...overrides,
   };
 }
@@ -462,5 +464,59 @@ describe('K1 · "Seferi başlat" — gerçek yazım', () => {
     expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/Sefer başlatılamadı/);
     // Ekran seçim hâlinde kaldı: düğme hâlâ seçili rotanın adını taşıyor.
     expect(screen.getByText(START_CTA)).toBeOnTheScreen();
+  });
+});
+
+describe('yükleme okutması (23.8 · karar §1.11)', () => {
+  it('sayaç duraklardaki damgalardan türer; son kutunun okutması siparişi yola çıkarır', async () => {
+    const kutulu = (ikinciYuklu: boolean) =>
+      courierStop(1, {
+        boxes: [
+          { boxNo: 1, code: 'KT-26-CCCCCCCCCC', loadedAt: '2026-08-22T08:00:00Z' },
+          { boxNo: 2, code: 'KT-26-DDDDDDDDDD', loadedAt: ikinciYuklu ? '2026-08-22T08:05:00Z' : null },
+        ],
+      });
+    let day = courierDay([kutulu(false)]);
+    fetchMock.mockImplementation((url) => {
+      const address = String(url);
+      if (address.includes('/boxes/load')) {
+        // Sunucu gibi: damga yazıldı — sonraki gün okuması yüklü kutuyu taşır.
+        day = courierDay([kutulu(true)]);
+        return Promise.resolve(
+          okResponse({
+            status: 'ok',
+            orderId: kutulu(false).orderId,
+            referenceNo: kutulu(false).referenceNo,
+            boxNo: 2,
+            loadedBoxes: 2,
+            boxCount: 2,
+            orderStarted: true,
+          }),
+        );
+      }
+      if (address.includes('/day-close')) return Promise.resolve(okResponse(dayCloseDraft()));
+      if (address.includes('/courier/routes')) return Promise.resolve(okResponse({ date: '2026-08-08', routes: [] }));
+      return Promise.resolve(okResponse(day));
+    });
+    await renderDay();
+
+    expect(screen.getByTestId('courier-day-boxes')).toHaveTextContent(/1\/2 kutu araçta/);
+
+    // Çipler günün YÜKLENMEMİŞ kutularından kurulur — yalnız Kutu 2 çip olur.
+    await fireEvent.press(screen.getByTestId('courier-day-box-scan'));
+    await fireEvent.press(screen.getByLabelText(`${kutulu(false).referenceNo} · K2`));
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/YOLA ÇIKTI/));
+    await waitFor(() => expect(screen.getByTestId('courier-day-boxes')).toHaveTextContent(/2\/2 kutu araçta/));
+    // Hepsi binince okutma düğmesi çekilir — sayaç bilgi olarak kalır.
+    expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
+  });
+
+  it('kutusuz günde sayaç HİÇ çizilmez — eski akış aynen', async () => {
+    mockDay(courierDay([courierStop(1)]));
+    await renderDay();
+    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+
+    expect(screen.queryByTestId('courier-day-boxes')).toBeNull();
   });
 });

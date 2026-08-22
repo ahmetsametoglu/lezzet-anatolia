@@ -104,6 +104,16 @@ const oneLineStop = (overrides = {}) =>
     ...overrides,
   });
 
+/** Kutulu durak (23.8) — iki kutu, ikisi de araca yüklenmiş; kapıda okutulmayı bekliyor. */
+const boxedStop = (overrides = {}) =>
+  oneLineStop({
+    boxes: [
+      { boxNo: 1, code: 'KT-26-AAAAAAAAAA', loadedAt: '2026-08-22T08:00:00Z' },
+      { boxNo: 2, code: 'KT-26-BBBBBBBBBB', loadedAt: '2026-08-22T08:01:00Z' },
+    ],
+    ...overrides,
+  });
+
 /** Teslim isteğinin gövdesi — kapıya NE gittiği tek yerden okunur. */
 function deliverBody(): Record<string, unknown> {
   const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/deliver'));
@@ -608,5 +618,56 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     expect(screen.getByTestId('courier-delivery-notice')).toHaveTextContent(/para İKİLENMEDİ/);
     await fireEvent.press(screen.getByTestId('courier-delivery-done'));
     expect(mockBack).toHaveBeenCalled();
+  });
+});
+
+describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
+  it('kutulu durakta teslim kutular okutulmadan KİLİTLİ; okutuldukça sayaç ilerler, kilit açılır', async () => {
+    mockRoutes({ day: courierDay([boxedStop()]) });
+    await renderDelivery();
+
+    expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/0\/2 okutuldu/);
+    // Kalem işaretli olsa da kutu kapısı kapalı — kapı notu sebebini söyler.
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
+
+    // Çipler durağın GERÇEK kodlarından kurulur (devCodes) — ikisi de okutulur.
+    await fireEvent.press(screen.getByTestId('courier-box-scan'));
+    await fireEvent.press(screen.getByLabelText('Kutu 1'));
+    await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/1\/2 okutuldu/));
+    expect(screen.getByTestId('courier-box-1')).toHaveTextContent('Kutu 1 ✓');
+    expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
+
+    await fireEvent.press(screen.getByTestId('courier-box-scan'));
+    await fireEvent.press(screen.getByLabelText('Kutu 2'));
+    await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/2\/2 okutuldu/));
+    expect(screen.getByTestId('courier-delivery-cta')).not.toBeDisabled();
+  });
+
+  it('teslim isteği okutulan kodları taşır — kapı sunucuda bir kez daha doğrular', async () => {
+    mockRoutes({ day: courierDay([boxedStop()]) });
+    await renderDelivery();
+
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    for (const label of ['Kutu 1', 'Kutu 2']) {
+      await fireEvent.press(screen.getByTestId('courier-box-scan'));
+      await fireEvent.press(screen.getByLabelText(label));
+    }
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).toMatchObject({ scannedBoxCodes: ['KT-26-AAAAAAAAAA', 'KT-26-BBBBBBBBBB'] });
+  });
+
+  it('kutusuz durakta kutu bölümü HİÇ çizilmez ve gövdeye kod alanı girmez (eski akış aynen)', async () => {
+    mockRoutes({ day: courierDay([oneLineStop()]) });
+    await renderDelivery();
+
+    expect(screen.queryByTestId('courier-boxes-heading')).toBeNull();
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).not.toHaveProperty('scannedBoxCodes');
   });
 });

@@ -60,6 +60,8 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     ],
     outcome: 'pending',
     attempts: 0,
+    // 23.8: durak kutuları da taşıyor — varsayılan "kutusuz akış" (eski yol).
+    boxes: [],
     ...overrides,
   };
 }

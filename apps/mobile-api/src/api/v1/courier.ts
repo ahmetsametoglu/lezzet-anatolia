@@ -7,6 +7,7 @@ import {
   confirmDoorDelivery,
   listCourierDay,
   listCourierRoutes,
+  loadBox,
   markUndelivered,
   openDayClose,
   readCourierRun,
@@ -24,6 +25,8 @@ import {
   DayCloseDraftSchema,
   DeliveryProofUploadRequestSchema,
   DeliveryProofUploadResponseSchema,
+  LoadBoxRequestSchema,
+  LoadBoxResponseSchema,
   MarkUndeliveredRequestSchema,
   MarkUndeliveredResponseSchema,
   StartCourierDayRequestSchema,
@@ -226,6 +229,22 @@ courier.post('/day/start', async (c) => {
  * isteği tekrar gönderdiğinde aynı anahtarla gelir ve para iki kez yazılmaz. Sunucu tarafındaki
  * sınırı (oku-sonra-yaz; atomik değil) `application/order/payment.ts` künyesinde yazılı.
  */
+/**
+ * **Araca yükleme okutması** (23.8 · karar §1.11). Kod gövdede gider (URL'de dolaşmasın —
+ * `codes/resolve` gerekçesi). Olumsuz dalların hepsi 200 + gövde: `wrong_route` kutunun HANGİ
+ * siparişin malı olduğunu söyler (kurye rampada doğru yığını bulur), `not_sealed` açık kutuyu,
+ * `not_loadable` siparişin durumunu. Kutulu siparişin `ready → out_for_delivery` geçişi son
+ * kutunun okutmasıyla BURADAN yazılır (`orderStarted`).
+ */
+courier.post('/boxes/load', async (c) => {
+  const parsed = LoadBoxRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await loadBox(serviceDb(), { code: parsed.data.code, courierId: c.get('staff').id });
+  const body: z.input<typeof LoadBoxResponseSchema> = outcome;
+  return ok(c, LoadBoxResponseSchema.parse(body));
+});
+
 courier.post('/stops/:orderId/deliver', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
   if (!orderId.success) return fail(c, 'invalid_order_id', 400);

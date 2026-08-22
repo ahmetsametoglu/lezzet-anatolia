@@ -189,10 +189,31 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
 - [ ] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
   etiket tasarımıyla) · yazıcı ayarı `settings` warehouse kapsamı (`label_printer_*`) + Depolar
   ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan
-- [ ] (23.8) **Yükleme + teslim okutması:** `loadBox` (rota doğrulama + damga + sayaç) ·
+- [x] (23.8) **Yükleme + teslim okutması:** `loadBox` (rota doğrulama + damga + sayaç) ·
   `startCourierDay` kutulu siparişte tüm kutular binmeden `out_for_delivery` yazmaz ·
-  `deliverByBox` (`deliver_order` DEĞİŞMEZ; okutulan kod `delivery_proof`a — B2C'ye bedava kanıt;
-  tüm kutular okutulmadan teslim tamamlanmaz) · kurye ekranları
+  ~~`deliverByBox`~~ → ayrı kapı açılmadı: kutu ön koşulu `confirmDoorDelivery`'nin İÇİNE girdi
+  (`deliver_order` DEĞİŞMEZ; okutulan kod `delivery_proof`a — B2C'ye bedava kanıt; tüm kutular
+  okutulmadan teslim tamamlanmaz) · kurye ekranları · touches:
+  `packages/application/src/courier/{load.ts,day.ts,delivery.ts,proof.ts}`,
+  `packages/types/src/{entities/courier.schema.ts,contracts/courier-api.schema.ts}`,
+  `apps/mobile-api/src/api/v1/courier.ts`, `apps/mobile/src/screens/courier/*`,
+  `apps/mobile/src/components/scan/scan-sheet.tsx`
+  - *Bitti:* çok kutulu sipariş son kutu okutulmadan yolda sayılmadı; kodsuz teslim `boxes_missing`
+    ile reddedildi; kapanan teslimin kanıtında okutulan kodlar göründü — entegrasyonda ölçüldü.
+  - **Durum (22.08) — YAZILDI.** `POST /courier/boxes/load`: kutu → sipariş → kurye damgası zinciri
+    (`wrong_route` hangi siparişin malı olduğunu söyler — kurye rampada doğru yığını bulur; açık
+    kutu `not_sealed`); kutulu siparişin `ready → out_for_delivery` geçişini SON kutunun okutması
+    yazar (`orderStarted`), `startCourierDay` onları `awaitingBoxes` sayacıyla atlar (hepsi zaten
+    yüklüyse eski yoldan geçirir — dünden araçtaki kutu bekletmez). Teslim: `scannedBoxCodes` ön
+    koşul; kanıt `box_scan` türü doğdu (görselsiz — kodların kendisi kanıt; görselli kanıt varsa
+    kodlar onun içine yazılır), web sipariş detayı türü tanıyor ("kutu QR"). `ScanSheet` çağıranın
+    dev çiplerini kabul ediyor (`devCodes`): kutu QR'ları üretilmiş kayıt olduğundan simülasyon
+    ancak ekranın elindeki gerçek kodlardan kurulur. Sayaç damgalardan türer, tablo yok.
+    Testler: `load.test.ts` (8 — çok kutulu geçiş, boxes_missing, box_scan kanıtı dahil) +
+    `day.test.ts` kutulu başlatma + kurye ekranlarına 5 jest (gerçek hook + sözleşme). Mobil 87
+    suite · 618; tam kurye entegrasyonu 50/50. Kurye ekranlarında cihaz turu YAPILMADI (kutulu
+    seed siparişleri Salı/Cuma rotasında — tur o güne denk bir seed ister); tarama zinciri cihazda
+    23.4/23.6 turlarında kanıtlı.
 - [ ] (23.9) **Parti karışma sinyali:** aynı varyantın aynı depoda 2+ açık partisi sayısı — Stok
   "Dikkat" sekmesine tek satır (lot etiketi kararının sayısal ölçütü; etüt §1.10)
 - [ ] (23.10) **Test dalgası — Dalga 1b** (plan: `docs/build/test-dalgasi.md` §5, §6.2). Modül 23 en

@@ -9,6 +9,8 @@ import {
   DayCloseDraftSchema,
   type DeliveryProofUploadRequest,
   DeliveryProofUploadResponseSchema,
+  type LoadBoxRequest,
+  LoadBoxResponseSchema,
   type MarkUndeliveredRequest,
   MarkUndeliveredResponseSchema,
   type StartCourierDayRequest,
@@ -92,6 +94,15 @@ export function startCourierDay(
   body: StartCourierDayRequest = {},
 ): Promise<ApiResult<z.infer<typeof StartCourierDayResponseSchema>>> {
   return authorizedFetch('/api/v1/courier/day/start', StartCourierDayResponseSchema, { method: 'POST', body });
+}
+
+/**
+ * **Araca yükleme okutması** (23.8 · karar §1.11). Kutulu siparişin `ready → out_for_delivery`
+ * geçişi son kutunun okutmasıyla bu uçtan yazılır (`orderStarted`); yanlış rota `wrong_route`
+ * ile GÖRÜNÜR reddedilir.
+ */
+export function loadCourierBox(body: LoadBoxRequest): Promise<ApiResult<z.infer<typeof LoadBoxResponseSchema>>> {
+  return authorizedFetch('/api/v1/courier/boxes/load', LoadBoxResponseSchema, { method: 'POST', body });
 }
 
 /**

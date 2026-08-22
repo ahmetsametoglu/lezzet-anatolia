@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { DeliveryProofRecordSchema } from '../entities/courier.schema';
 import { DeliveryRunCloseSchema } from '../entities/delivery-run.schema';
 import { FulfillmentAdjustmentSchema } from '../entities/order.schema';
 import { ChannelEnum, OrderStatusEnum, PaymentMethodEnum, PaymentStatusEnum } from '../primitives/enums.schema';
@@ -90,6 +89,19 @@ export const CourierStopSchema = z.object({
   outcome: StopOutcomeEnum,
   /** Kaç kez yola çıkılıp dönüldü — ulaşılamayan durak listede kaybolmaz. */
   attempts: z.number().int(),
+  /**
+   * Siparişin KUTULARI (23.8) — boş dizi = kutusuz akış (eski yol). İki tüketicisi var: yükleme
+   * sayacı ("5/8 kutu bindi" `loadedAt` damgalarından türer — ayrı tablo yok, karar §1.11) ve
+   * kapıda okutma eşleşmesi (ekran okutulan kodu bu listeyle yerelde eşler; son doğrulama yine
+   * sunucuda — `scannedBoxCodes`). `code` kurye kanalında taşınır ve müşteriye HİÇ gösterilmez.
+   */
+  boxes: z.array(
+    z.object({
+      boxNo: z.number().int().positive(),
+      code: z.string(),
+      loadedAt: z.string().nullable(),
+    }),
+  ),
 });
 export type CourierStopContract = z.infer<typeof CourierStopSchema>;
 
@@ -212,6 +224,15 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
     stale: z.array(CourierDayStopStateSchema),
     /** Yola çıkarılmadı — durumu uygun değil (henüz hazırlanmadı ya da gün içinde kapandı). */
     skipped: z.array(CourierDayStopStateSchema),
+    /**
+     * KUTULU sipariş — tüm kutuları binene kadar "yolda" YAZILMAZ (23.8, etüt 2.4: *"araca
+     * binmeyen kutu 'yolda' görünmez"*). Yola çıkışı `loadBox` tamamlar: son kutu okutulunca
+     * geçiş oradan yazılır. `skipped`ten ayrı bir liste, çünkü çare farklı — bunlar hazırlanmayı
+     * değil OKUTULMAYI bekliyor ve ekran sayacı buradan kurar.
+     */
+    awaitingBoxes: z.array(
+      z.object({ orderId: z.string().uuid(), loadedBoxes: z.number().int(), boxCount: z.number().int() }),
+    ),
   }),
   /**
    * Rota+gün başına TEK sefer (18.08): bu rota bugün zaten açılmış. `mine` = başlatan bu kurye —
@@ -230,6 +251,50 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('no_route') }),
 ]);
 export type StartCourierDayResponse = z.infer<typeof StartCourierDayResponseSchema>;
+
+/**
+ * **Araca yükleme okutması** (23.8 · karar §1.11). Kod gövdede gider (URL'de kod, erişim
+ * loglarında dolaşırdı — `codes/resolve` ile aynı gerekçe).
+ */
+export const LoadBoxRequestSchema = z.object({ code: z.string().min(1) });
+export type LoadBoxRequest = z.infer<typeof LoadBoxRequestSchema>;
+
+/**
+ * Yüklemenin cevabı. Karar §1.11'in iki yarısı burada: onay NİYET doğrulamasıdır, garanti KUTU
+ * kontrolüdür — rotaya ait olmayan kutu `wrong_route` ile GÖRÜNÜR reddedilir (hangi siparişin
+ * kutusu olduğu söylenir ki kurye rampada doğru yığını bulsun). `orderStarted` = bu okutma
+ * siparişin SON kutusuydu ve sipariş yola çıktı (`ready → out_for_delivery` buradan yazılır —
+ * kutulu siparişte "yolda"nın tek kapısı).
+ */
+export const LoadBoxResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    orderId: z.string().uuid(),
+    referenceNo: z.string().nullable(),
+    boxNo: z.number().int().positive(),
+    /** Siparişin sayacı: kaç kutusu bindi / toplam. Sefer sayacını ekran duraklardan toplar. */
+    loadedBoxes: z.number().int(),
+    boxCount: z.number().int(),
+    orderStarted: z.boolean(),
+  }),
+  /** Aynı kutu ikinci kez okutuldu — hata değil, "zaten araçta" cevabı; sayaç değişmedi. */
+  z.object({
+    status: z.literal('already_loaded'),
+    orderId: z.string().uuid(),
+    boxNo: z.number().int().positive(),
+    loadedBoxes: z.number().int(),
+    boxCount: z.number().int(),
+  }),
+  /** Kutu bu kuryenin seferine ait değil — YÜKLENMEZ (karar §1.11). */
+  z.object({ status: z.literal('wrong_route'), referenceNo: z.string().nullable() }),
+  /** Açık (mühürlenmemiş) kutu araca binemez — içeriği kesinleşmedi (0048 kısıtı). */
+  z.object({ status: z.literal('not_sealed'), boxNo: z.number().int().positive() }),
+  /** Sipariş yüklenebilir durumda değil (iptal/teslim edilmiş) — durumuyla söylenir. */
+  z.object({ status: z.literal('not_loadable'), currentStatus: OrderStatusEnum }),
+  /** Kod hiçbir kutuya ait değil — yanlış etiket ya da bizim olmayan bir QR. */
+  z.object({ status: z.literal('unknown_code') }),
+]);
+export type LoadBoxResponse = z.infer<typeof LoadBoxResponseSchema>;
 
 /**
  * **Ulaşılamadı / reddedildi** isteği (K5). İki ayrı işaret, iki ayrı akıbet — tek düğmeye
@@ -254,8 +319,16 @@ export const MarkUndeliveredResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type MarkUndeliveredResponse = z.infer<typeof MarkUndeliveredResponseSchema>;
 
-/** Teslim kanıtı (K3) — imza çizimi de fotoğraf da görsel olarak saklanır. */
-export const DeliveryProofInputSchema = DeliveryProofRecordSchema.pick({ kind: true, imageKey: true }).extend({
+/**
+ * Teslim kanıtı GİRDİSİ (K3) — imza çizimi de fotoğraf da görsel olarak saklanır.
+ *
+ * Kayıt şemasından (`DeliveryProofRecordSchema`) BİLEREK dar: `box_scan` istemciden GELMEZ —
+ * o kanıdı sunucu, okutulan kodlardan kendisi kurar (23.8). Girdi kümesi görselli iki türle
+ * sınırlı ve `imageKey` zorunlu; kayıt tarafındaki nullable yalnız sunucunun `box_scan`ı için.
+ */
+export const DeliveryProofInputSchema = z.object({
+  kind: z.enum(['signature', 'photo']),
+  imageKey: z.string().min(1),
   /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
   receivedBy: z.string().nullish(),
 });
@@ -288,6 +361,13 @@ export const ConfirmDoorDeliveryRequestSchema = z.object({
   adjustments: z.array(FulfillmentAdjustmentSchema).optional(),
   proof: DeliveryProofInputSchema.nullish(),
   collection: DoorCollectionInputSchema.nullish(),
+  /**
+   * Kapıda okutulan kutu kodları (23.8). KUTULU siparişte teslimin ön koşulu: kapı seti siparişin
+   * kutularıyla karşılaştırır, eksikse `boxes_missing` döner ve HİÇBİR yazım yapılmaz — "tüm
+   * kutular okutulmadan teslim tamamlanmaz" (etüt 2.5). Kodlar `delivery_proof`a yazılır.
+   * Kutusuz siparişte alan gönderilmez.
+   */
+  scannedBoxCodes: z.array(z.string()).optional(),
 });
 export type ConfirmDoorDeliveryRequest = z.infer<typeof ConfirmDoorDeliveryRequestSchema>;
 
@@ -307,6 +387,11 @@ export const ConfirmDoorDeliveryResponseSchema = z.discriminatedUnion('status', 
   }),
   /** Kanıt zorunlu ama gelmedi — HİÇBİR yazım yapılmadı, sipariş hâlâ yolda. */
   z.object({ status: z.literal('proof_required'), channel: ChannelEnum }),
+  /**
+   * Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI (etüt 2.5: tüm kutular okutulmadan
+   * tamamlanmaz). Kalan kutuların numarası döner: ekran "Kutu 2 ve 3 okutulmadı" der.
+   */
+  z.object({ status: z.literal('boxes_missing'), remainingBoxNos: z.array(z.number().int()) }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('not_assigned') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   z.object({ status: z.literal('not_found') }),

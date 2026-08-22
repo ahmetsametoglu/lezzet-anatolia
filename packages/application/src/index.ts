@@ -232,6 +232,8 @@ export { listCourierRoutes } from './courier/routes';
 export type { CourierRouteView } from './courier/routes';
 export { confirmDoorDelivery } from './courier/delivery';
 export type { DeliveryProofInput, DoorCollectionInput, DoorDeliveryOutcome } from './courier/delivery';
+export { loadBox } from './courier/load';
+export type { LoadBoxOutcome } from './courier/load';
 export { closeCourierDay, openDayClose } from './courier/day-close';
 export type { DayCloseDraft } from './courier/day-close';
 export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proof';

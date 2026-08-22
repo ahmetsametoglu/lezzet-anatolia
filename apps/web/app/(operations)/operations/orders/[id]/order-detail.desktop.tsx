@@ -510,7 +510,8 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                     />
                   ) : (
                     <span className="rounded-ops-btn border border-ops-olive-line bg-ops-white px-2.5 py-2 font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
-                      {ORDER_NOTES.proofImageUnavailable}
+                      {/* `box_scan` görselsizdir ve bu bir arıza değil (23.8) — "açılamıyor" cümlesi yanlış olurdu. */}
+                      {order.delivery.proof.kind === 'box_scan' ? ORDER_NOTES.proofBoxScan : ORDER_NOTES.proofImageUnavailable}
                     </span>
                   )}
                   <span className="font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">

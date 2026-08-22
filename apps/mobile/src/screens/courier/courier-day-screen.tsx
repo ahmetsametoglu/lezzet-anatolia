@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRoute, CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { ScanSheet } from '@/components/scan/scan-sheet';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { NotificationBell } from '@/components/operations/notification-bell';
@@ -262,6 +263,31 @@ export function CourierDayScreen() {
                 </Text>
               )}
 
+              {/* YÜKLEME SAYACI + OKUTMA (23.8) — yalnız kutulu sipariş varsa çizilir; sayaç
+                  duraklardaki damgalardan türer (karar §1.11). Son kutu siparişi yola çıkarır. */}
+              {day.boxCounter === null ? null : (
+                <View style={styles.boxLoadRow} testID="courier-day-boxes">
+                  <Text style={styles.boxLoadCounter}>
+                    {fillCopy(t.day.boxes.counter, {
+                      loaded: String(day.boxCounter.loaded),
+                      total: String(day.boxCounter.total),
+                    })}
+                  </Text>
+                  {day.boxCounter.loaded >= day.boxCounter.total ? null : (
+                    <PressableSurface
+                      onPress={() => day.setBoxScanOpen(true)}
+                      feedback="scale"
+                      compact
+                      style={styles.boxLoadButton}
+                      accessibilityLabel={t.day.boxes.scanCta}
+                      testID="courier-day-box-scan"
+                    >
+                      <Text style={styles.boxLoadButtonLabel}>{t.day.boxes.scanCta}</Text>
+                    </PressableSurface>
+                  )}
+                </View>
+              )}
+
               {stops.map((stop, index) => (
                 <StopRow
                   key={stop.orderId}
@@ -337,6 +363,21 @@ export function CourierDayScreen() {
           )}
         </LinearGradient>
       )}
+
+      <ScanSheet
+        open={day.boxScanOpen}
+        title={t.day.boxes.scanTitle}
+        hint={t.day.boxes.scanHint}
+        onClose={() => day.setBoxScanOpen(false)}
+        onScan={day.handleLoadScan}
+        // Kutu QR'ı üretilmiş kayıttır — çipler günün YÜKLENMEMİŞ kutularından kurulur.
+        devCodes={stops.flatMap((stop) =>
+          stop.boxes
+            .filter((box) => box.loadedAt === null)
+            .map((box) => ({ label: `${stop.referenceNo ?? '—'} · K${box.boxNo}`, code: box.code })),
+        )}
+        testID="courier-day-box-scan-sheet"
+      />
     </View>
   );
 }
@@ -539,6 +580,30 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.terracotta,
     paddingTop: operationsTheme.space.sm,
+  },
+  boxLoadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+    paddingTop: operationsTheme.space.sm,
+  },
+  boxLoadCounter: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  boxLoadButton: {
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.lg,
+    borderWidth: operationsTheme.border.base,
+    borderRadius: operationsTheme.radius.badge,
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  boxLoadButtonLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['olive-dark'],
   },
   /** Gövdenin açıklama kutusu — rota seçiminde "nasıl seçilir", kapanmış seferde "neden kilitli". */
   hintBox: {

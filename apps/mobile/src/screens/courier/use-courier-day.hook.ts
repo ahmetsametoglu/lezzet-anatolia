@@ -8,7 +8,7 @@ import {
   type CourierStopContract,
 } from '@lezzet/types';
 
-import { fetchCourierDay, fetchCourierRoutes, fetchDayCloseDraft, startCourierDay } from '@/lib/api/courier';
+import { fetchCourierDay, fetchCourierRoutes, fetchDayCloseDraft, loadCourierBox, startCourierDay } from '@/lib/api/courier';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
@@ -117,6 +117,15 @@ interface UseCourierDayResult {
   startNotice: StartNotice | null;
   start: () => void;
   reload: () => void;
+  /**
+   * YÜKLEME SAYACI (23.8, karar §1.11) — duraklardaki kutu damgalarından TÜRER; `null` = günde
+   * kutulu sipariş yok, sayaç hiç çizilmez. Okutma `loadCourierBox` ile: rotaya ait olmayan kutu
+   * reddedilir, son kutu siparişi yola çıkarır.
+   */
+  boxCounter: { loaded: number; total: number } | null;
+  boxScanOpen: boolean;
+  setBoxScanOpen: (open: boolean) => void;
+  handleLoadScan: (code: string) => void;
 }
 
 /** Atlanan/bayat durakların O ANDAKİ durumları — tekrarsız ve operasyon dilinde. */
@@ -139,6 +148,7 @@ export function useCourierDay(): UseCourierDayResult {
   const [collectedCents, setCollectedCents] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
   const [startNotice, setStartNotice] = useNotice<StartNotice>();
+  const [boxScanOpen, setBoxScanOpen] = useState(false);
 
   /** Kaçıncı yükün geçerli olduğu — geç gelen eski cevaplar yazılmaz (katalog emsali). */
   const generation = useRef(0);
@@ -272,7 +282,7 @@ export function useCourierDay(): UseCourierDayResult {
         return;
       }
 
-      const { run: openedRun, started: startedIds, alreadyOut, stale, skipped } = result.data;
+      const { run: openedRun, started: startedIds, alreadyOut, stale, skipped, awaitingBoxes } = result.data;
       // Kilit sunucunun kaydından gelir: sefer açıldıysa duraklar açılır — hiçbir durak yola
       // çıkmasa da. "Açılmamış say" demek, var olan bir seferi ekranda yok saymak olurdu.
       setRun(openedRun);
@@ -290,12 +300,21 @@ export function useCourierDay(): UseCourierDayResult {
           ? fillCopy(t.day.start.skipped, { n: String(skipped.length), statuses: statusList(skipped) })
           : '',
         stale.length > 0 ? fillCopy(t.day.start.stale, { n: String(stale.length) }) : '',
-        onTheRoad === 0 ? t.day.start.none : '',
+        // Kutulu sipariş okutulmayı bekliyor (23.8) — çaresi tekrar basmak değil KUTU OKUTMAK;
+        // cümle onu söyler, `canRetry` bu yüzden bu listeden etkilenmez.
+        awaitingBoxes.length > 0
+          ? fillCopy(t.day.start.awaitingBoxes, {
+              n: String(awaitingBoxes.length),
+              k: String(awaitingBoxes.reduce((sum, row) => sum + row.loadedBoxes, 0)),
+              m: String(awaitingBoxes.reduce((sum, row) => sum + row.boxCount, 0)),
+            })
+          : '',
+        onTheRoad === 0 && awaitingBoxes.length === 0 ? t.day.start.none : '',
       ].filter((part) => part.length > 0);
 
       const pending = skipped.length > 0 || stale.length > 0;
       setStartNotice({
-        tone: onTheRoad === 0 ? 'warn' : pending ? 'warn' : 'ok',
+        tone: onTheRoad === 0 ? 'warn' : pending || awaitingBoxes.length > 0 ? 'warn' : 'ok',
         text: parts.join(' '),
         canRetry: pending,
       });
@@ -305,6 +324,77 @@ export function useCourierDay(): UseCourierDayResult {
       await load();
     })();
   }, [date, load, run, setStartNotice, startZoneId, starting]);
+
+  /*
+    YÜKLEME OKUTMASI (23.8). Sayaç duraklardaki damgalardan türer — ayrı tablo yok (karar §1.11).
+    Okutmanın sonucu bir StartNotice olarak yazılır (aynı bildirim alanı: iki iş de "araç yükleme"
+    aşamasının işi); ok/already dallarından sonra liste tazelenir ki sayaç ve durak durumu sunucu
+    gerçeğini göstersin.
+  */
+  const allBoxes = stops.flatMap((stop) => stop.boxes);
+  const boxCounter =
+    allBoxes.length === 0
+      ? null
+      : { loaded: allBoxes.filter((box) => box.loadedAt !== null).length, total: allBoxes.length };
+
+  const handleLoadScan = useCallback(
+    (code: string) => {
+      setBoxScanOpen(false);
+      void (async () => {
+        const result = await loadCourierBox({ code });
+        if (result.error !== null) {
+          setStartNotice({ tone: 'error', text: t.day.boxes.error, canRetry: false });
+          return;
+        }
+
+        const data = result.data;
+        if (data.status === 'ok') {
+          const ref = data.referenceNo ?? '—';
+          setStartNotice({
+            tone: 'ok',
+            text: data.orderStarted
+              ? fillCopy(t.day.boxes.loadedStarted, { n: String(data.boxNo), ref, m: String(data.boxCount) })
+              : fillCopy(t.day.boxes.loaded, {
+                  n: String(data.boxNo),
+                  ref,
+                  k: String(data.loadedBoxes),
+                  m: String(data.boxCount),
+                }),
+            canRetry: false,
+          });
+          await load();
+          return;
+        }
+        if (data.status === 'already_loaded') {
+          setStartNotice({ tone: 'warn', text: fillCopy(t.day.boxes.alreadyLoaded, { n: String(data.boxNo) }), canRetry: false });
+          await load();
+          return;
+        }
+        if (data.status === 'wrong_route') {
+          setStartNotice({
+            tone: 'error',
+            text: fillCopy(t.day.boxes.wrongRoute, { ref: data.referenceNo ? ` (${data.referenceNo})` : '' }),
+            canRetry: false,
+          });
+          return;
+        }
+        if (data.status === 'not_sealed') {
+          setStartNotice({ tone: 'error', text: fillCopy(t.day.boxes.notSealed, { n: String(data.boxNo) }), canRetry: false });
+          return;
+        }
+        if (data.status === 'not_loadable') {
+          setStartNotice({
+            tone: 'error',
+            text: fillCopy(t.day.boxes.notLoadable, { status: ORDER_STATUS_LABELS[data.currentStatus] }),
+            canRetry: false,
+          });
+          return;
+        }
+        setStartNotice({ tone: 'error', text: t.day.boxes.unknownCode, canRetry: false });
+      })();
+    },
+    [load, setStartNotice],
+  );
 
   return {
     status,
@@ -321,5 +411,9 @@ export function useCourierDay(): UseCourierDayResult {
     startNotice,
     start,
     reload,
+    boxCounter,
+    boxScanOpen,
+    setBoxScanOpen,
+    handleLoadScan,
   };
 }

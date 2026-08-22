@@ -3,6 +3,7 @@ import {
   DeliveryRunCloseService,
   DeliveryRunService,
   DeliveryZoneService,
+  OrderBoxService,
   OrderItemService,
   OrderService,
   OrderStatusLogService,
@@ -75,6 +76,12 @@ export interface CourierStop {
   outcome: StopOutcome;
   /** Ulaşılamadıysa kaçıncı denemede olduğu; listede kaybolmaz, tekrar denenir. */
   attempts: number;
+  /**
+   * Siparişin KUTULARI (23.8) — boş dizi = kutusuz akış. Yükleme sayacı `loadedAt` damgalarından
+   * türer (karar §1.11: ayrı tablo yok); kapıda okutma ekranı okutulan kodu bu listeyle yerelde
+   * eşler, son doğrulama sunucuda (`confirmDoorDelivery` kutu kapısı).
+   */
+  boxes: Array<{ boxNo: number; code: string; loadedAt: string | null }>;
 }
 
 /** Durağın tek kalemi — kapıda işaretlenebilmesi için KİMLİĞİYLE. */
@@ -122,11 +129,13 @@ export async function listCourierDay(
   if (orders.length === 0) return [];
 
   const orderIds = orders.map((order) => order.id);
-  const [items, logs, customers, addresses] = await Promise.all([
+  // Kutu okuması mevcut dalganın İÇİNE giriyor (hazırlık kuyruğunun 21.11d dersi) — arkalarına değil.
+  const [items, logs, customers, addresses, allBoxes] = await Promise.all([
     new OrderItemService(db).listByOrders(orderIds),
     new OrderStatusLogService(db).listByOrders(orderIds),
     customerCards(db, orders),
     addressTexts(db, orders),
+    new OrderBoxService(db).listByOrders(orderIds),
   ]);
   const names = await variantNames(db, items);
 
@@ -170,6 +179,9 @@ export async function listCourierDay(
       })),
       outcome: outcomeOf(order.status, attempts),
       attempts,
+      boxes: allBoxes
+        .filter((box) => box.orderId === order.id)
+        .map((box) => ({ boxNo: box.boxNo, code: box.code, loadedAt: box.loadedAt })),
     };
   });
 }
@@ -231,6 +243,12 @@ export type CourierDayStart =
       stale: { orderId: string; currentStatus: Order['status'] }[];
       /** Durumu uygun değil — henüz hazırlanmadı ya da gün içinde kapandı. */
       skipped: { orderId: string; currentStatus: Order['status'] }[];
+      /**
+       * KUTULU sipariş — tüm kutuları binene kadar "yolda" yazılmaz (23.8, etüt 2.4). Geçişi son
+       * kutunun okutması yazar (`loadBox`); burada yalnız sayaç döner ki ekran "3 kutu bekliyor"
+       * diyebilsin. `skipped`ten ayrı: çare hazırlanmak değil OKUTMAK.
+       */
+      awaitingBoxes: { orderId: string; loadedBoxes: number; boxCount: number }[];
     }
   | { status: 'already_started'; runId: string; referenceNo: string; courierId: string; mine: boolean }
   | { status: 'route_required' }
@@ -359,7 +377,19 @@ export async function startCourierDay(
     alreadyOut: [],
     stale: [],
     skipped: [],
+    awaitingBoxes: [],
   };
+
+  // Kutulu sipariş toplu geçişten AYRILIR (23.8, etüt 2.4): araca binmeyen kutu "yolda" görünmez.
+  // Tek okuma, sipariş başına tur değil — kutusuz veride (bugünün baskın hâli) harita boş kalır.
+  const claimedIds = (start.claimed ?? []).map((claim) => claim.orderId);
+  const boxesByOrder = new Map<string, { loaded: number; total: number }>();
+  for (const box of await new OrderBoxService(db).listByOrders(claimedIds)) {
+    const entry = boxesByOrder.get(box.orderId) ?? { loaded: 0, total: 0 };
+    entry.total += 1;
+    if (box.loadedAt !== null) entry.loaded += 1;
+    boxesByOrder.set(box.orderId, entry);
+  }
 
   const orders = new OrderService(db);
   for (const claim of start.claimed ?? []) {
@@ -369,6 +399,14 @@ export async function startCourierDay(
     }
     if (claim.status !== 'ready' || !canTransition(claim.status, 'out_for_delivery').allowed) {
       result.skipped.push({ orderId: claim.orderId, currentStatus: claim.status });
+      continue;
+    }
+
+    // Kutulu sipariş: geçişi son kutunun okutması yazar (`loadBox`) — hepsi zaten yüklüyse
+    // (sefer yeniden başlatıldı, kutular dünden araçta) beklemeye gerek yok, geçiş burada.
+    const boxState = boxesByOrder.get(claim.orderId);
+    if (boxState && boxState.loaded < boxState.total) {
+      result.awaitingBoxes.push({ orderId: claim.orderId, loadedBoxes: boxState.loaded, boxCount: boxState.total });
       continue;
     }
 

@@ -183,8 +183,8 @@ export interface DeliveryProofView {
   when: string | null;
   /** Kapıda teslim ALAN kişi — B2B'de "kim imzaladı" ihtilafın asıl cevabıdır. */
   receivedBy: string | null;
-  /** Kanıt türü — imza çizimi mi kapı fotoğrafı mı. */
-  kind: 'signature' | 'photo';
+  /** Kanıt türü — imza çizimi · kapı fotoğrafı · kutu okutması (23.8: görselsiz, kodların kendisi kanıt). */
+  kind: 'signature' | 'photo' | 'box_scan';
   /**
    * SÜRELİ imzalı adres (15 dk, private kova). `null` = kova yapılandırılmamış ya da anahtar ölü.
    * Kalıcı bir bağlantı DEĞİL: ekranda saklanmaz, paylaşılmaz.

@@ -19,14 +19,22 @@ import { z } from 'zod';
  * bağlamak (`CLAUDE §1`) — artık yanlış alan adı DERLEME hatası.
  */
 export const DeliveryProofRecordSchema = z.object({
-  /** İmza çizimi mi kapı fotoğrafı mı — ikisi de görsel olarak saklanır. */
-  kind: z.enum(['signature', 'photo']),
-  /** PRIVATE kovadaki anahtar (`delivery/proofs/{orderId}/…`). Public adresi YOKTUR. */
-  imageKey: z.string(),
+  /**
+   * İmza çizimi · kapı fotoğrafı · **kutu okutması** (23.8). İlk ikisi görsel taşır; `box_scan`
+   * görselsizdir — kanıtın kendisi kapıda okutulan QR'lardır (etüt 2.5: *"B2C'de bugün hiç kanıt
+   * istemeyen teslime bedava bir kanıt"*). Görselli kanıt varken kodlar ONUN içine yazılır;
+   * `box_scan` yalnız görselsiz teslimde doğar.
+   */
+  kind: z.enum(['signature', 'photo', 'box_scan']),
+  /** PRIVATE kovadaki anahtar (`delivery/proofs/{orderId}/…`). Public adresi YOKTUR.
+      `null` yalnız `box_scan`da: o kanıtın görseli yoktur, kodları vardır. */
+  imageKey: z.string().nullable(),
   /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
   receivedBy: z.string().nullable(),
   /** Kanıtı üreten kurye — sipariş sonradan başkasına atansa da kanıt kimin olduğunu söyler. */
   courierId: z.string().uuid(),
   at: z.string(),
+  /** Kapıda okutulan kutu kodları (23.8) — kutusuz siparişte ve eski kayıtlarda yok. */
+  boxCodes: z.array(z.string()).nullish(),
 });
 export type DeliveryProofRecord = z.infer<typeof DeliveryProofRecordSchema>;

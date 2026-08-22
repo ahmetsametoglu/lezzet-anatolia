@@ -89,10 +89,17 @@ interface ScanSheetProps {
   onClose: () => void;
   /** Ham kod — çözüm ve karar çağıranın. Teslimden sonra kilit kapanır (künye). */
   onScan: (code: string) => void;
+  /**
+   * ÇAĞIRANIN simülasyon çipleri (23.8) — verilirse varsayılan havuzun YERİNE geçer. Ürün
+   * barkodları statik bir formülle taklit edilebiliyor (`dev-scan-pool`) ama kutu QR'ları
+   * ÜRETİLMİŞ kayıtlardır: yükleme/teslim ekranı ancak elindeki gerçek kodları çip yapabilir.
+   * Yalnız `__DEV__`de okunur — release'te bu dal zaten yok.
+   */
+  devCodes?: ReadonlyArray<{ label: string; code: string }>;
   testID?: string;
 }
 
-export function ScanSheet({ open, title, hint, onClose, onScan, testID }: ScanSheetProps) {
+export function ScanSheet({ open, title, hint, onClose, onScan, devCodes, testID }: ScanSheetProps) {
   // Modül ömür boyu ya hep var ya hep yok — memo bir kez yüklenir, render dalları sabit kalır.
   const camera = useMemo(loadCameraModule, []);
   const locked = useRef(false);
@@ -135,7 +142,7 @@ export function ScanSheet({ open, title, hint, onClose, onScan, testID }: ScanSh
           <View style={styles.devPool} testID="scan-dev-pool">
             <Text style={styles.devPoolTitle}>{MESSAGES.devPool}</Text>
             <View style={styles.devPoolChips}>
-              {DEV_SCAN_POOL.map((entry) => (
+              {(devCodes ?? DEV_SCAN_POOL).map((entry) => (
                 <PressableSurface
                   key={entry.code}
                   onPress={() => deliver(entry.code)}

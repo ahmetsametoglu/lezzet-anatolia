@@ -6,6 +6,8 @@ import {
 import { purgeTestData, createTestWarehouse, settingsSnapshot } from '@lezzet/database/testing';
 import { warehouseScope } from '@lezzet/domain-core';
 import { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
+import { loadBox } from './load';
+import { openBox, sealBox } from '../warehouse/boxes';
 import { listCourierRoutes } from './routes';
 import { recordOrderPayment } from '../order/payment';
 import { advanceOrder } from '../order/advance.testkit';
@@ -298,6 +300,31 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
     // Sipariş SEFERE damgalanır: kanıtlı "kim götürdü" artık run üzerinden okunur.
     expect((await orders.getById(orderId))?.deliveryRunId).toBe(result.run.runId);
+  });
+
+  it('KUTULU sipariş tüm kutuları binmeden yola çıkmaz — geçişi son kutunun okutması yazar (23.8)', async () => {
+    // Kutulu hazırlık: kutu mühürlenince sipariş kendiliğinden `ready` olur (sealBox geçişi).
+    const { orderId, itemId } = await dispatched({ upTo: 'confirmed' });
+    const opened = await openBox(db, { orderId, warehouseId });
+    if (opened.status !== 'ok') throw new Error(`kutu açılamadı (${opened.status})`);
+    const sealed = await sealBox(db, {
+      boxId: opened.box.boxId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId, qty: 2 }] }],
+    });
+    if (sealed.status !== 'ok' || !sealed.ready) throw new Error('kutu kapanamadı');
+
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    // Sefer AÇILDI ve sipariş claim edildi ama YOLA ÇIKMADI: araca binmeyen kutu "yolda" görünmez.
+    expect(result.started).not.toContain(orderId);
+    expect(result.awaitingBoxes).toEqual([{ orderId, loadedBoxes: 0, boxCount: 1 }]);
+    expect((await orders.getById(orderId))?.status).toBe('ready');
+
+    // Son (tek) kutunun okutması geçişi yazar — kutulu siparişin "yolda"ya tek kapısı.
+    const loaded = await loadBox(db, { code: opened.box.code, courierId });
+    expect(loaded).toMatchObject({ status: 'ok', orderStarted: true });
+    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
 
     const { data } = await db.from('order_status_log').select('from_status,to_status,actor_id').eq('order_id', orderId);
     expect(

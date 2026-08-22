@@ -103,5 +103,6 @@ interface DeliveryProofView extends DeliveryProofRecord {
 export async function readDeliveryProof(raw: unknown): Promise<DeliveryProofView | null> {
   const parsed = DeliveryProofRecordSchema.safeParse(raw);
   if (!parsed.success) return null;
-  return { ...parsed.data, imageUrl: await privateReadUrl(parsed.data.imageKey) };
+  // `box_scan` görselsizdir (23.8): kanıt okutulan kodların kendisi, açılacak bir dosya yok.
+  return { ...parsed.data, imageUrl: parsed.data.imageKey ? await privateReadUrl(parsed.data.imageKey) : null };
 }

@@ -6,6 +6,7 @@ import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperButton } from '@/components/operations/stepper-button';
+import { ScanSheet } from '@/components/scan/scan-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -161,6 +162,43 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </PressableSurface>
           )}
         </View>
+
+        {/* ── KUTULAR (23.8) — kutulu durakta teslimin ÖN koşulu; kutusuz durakta çizilmez ── */}
+        {delivery.boxes.length === 0 ? null : (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeading} testID="courier-boxes-heading">
+              {fillCopy(t.delivery.boxes.heading, {
+                scanned: String(delivery.scannedBoxCount),
+                total: String(delivery.boxes.length),
+              })}
+            </Text>
+            <View style={styles.boxRows}>
+              {delivery.boxes.map((box) => (
+                <Text
+                  key={box.code}
+                  style={[styles.boxRow, delivery.isBoxScanned(box.code) ? styles.boxRowDone : null]}
+                  testID={`courier-box-${box.boxNo}`}
+                >
+                  {fillCopy(delivery.isBoxScanned(box.code) ? t.delivery.boxes.rowScanned : t.delivery.boxes.row, {
+                    n: String(box.boxNo),
+                  })}
+                </Text>
+              ))}
+            </View>
+            {delivery.finished ? null : (
+              <PressableSurface
+                onPress={() => delivery.setBoxScanOpen(true)}
+                feedback="scale"
+                style={[styles.proofButton, styles.contactOutline]}
+                accessibilityLabel={t.delivery.boxes.scanCta}
+                testID="courier-box-scan"
+              >
+                <Text style={styles.contactLabel}>{t.delivery.boxes.scanCta}</Text>
+              </PressableSurface>
+            )}
+            <Text style={styles.boxNote}>{t.delivery.boxes.note}</Text>
+          </View>
+        )}
 
         {/* ── 1 · KANIT ─────────────────────────────────────────────────────── */}
         <View style={styles.section}>
@@ -364,6 +402,17 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           </View>
         )}
       </FormScroll>
+
+      <ScanSheet
+        open={delivery.boxScanOpen}
+        title={t.delivery.boxes.scanTitle}
+        hint={t.delivery.boxes.scanHint}
+        onClose={() => delivery.setBoxScanOpen(false)}
+        onScan={delivery.handleBoxScan}
+        // Kutu QR'ı üretilmiş kayıttır — simülasyon çipi ancak durağın gerçek kodlarından kurulur.
+        devCodes={delivery.boxes.map((box) => ({ label: fillCopy(t.delivery.boxes.row, { n: String(box.boxNo) }), code: box.code }))}
+        testID="courier-box-scan-sheet"
+      />
 
       {/* ── SONUÇ ALANI ───────────────────────────────────────────────────── */}
       <View style={styles.footer}>
@@ -574,6 +623,27 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors.muted,
+  },
+  boxRows: { flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.md },
+  /** Okutulmamış kutu — bekleyen iş; okutulunca zeytin dolguya döner (`boxRowDone`). */
+  boxRow: {
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.lg,
+    borderRadius: operationsTheme.radius.badge,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  boxRowDone: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderColor: operationsTheme.colors['olive-bg'],
+  },
+  boxNote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
   },
   proofButtons: { flexDirection: 'row', gap: operationsTheme.space.md },

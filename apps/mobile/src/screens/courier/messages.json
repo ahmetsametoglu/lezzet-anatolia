@@ -61,6 +61,7 @@
       "started": "{n} durak yola çıktı.",
       "alreadyOut": "{n} durak zaten yoldaydı.",
       "skipped": "{n} durak hazırlanmayı bekliyor ({statuses}) — hazırlık bitince tekrar dene.",
+      "awaitingBoxes": "{n} kutulu sipariş okutulmayı bekliyor ({k}/{m} kutu bindi) — kutuları okut, son kutuyla yola çıkar.",
       "stale": "{n} durağın durumu tam o sırada değişti — liste tazelendi, gerekirse tekrar dene.",
       "none": "Sefer açıldı ama hiçbir durak yola çıkmadı — hazırlanan durak yok.",
       "opened": "Sefer açıldı: {route} · {ref}.",
@@ -71,6 +72,20 @@
       "failed": "Sefer başlatılamadı ({error}) — hiçbir durak yola çıkmadı.",
       "network": "Bağlantı yok — sefer başlatılamadı. Bağlantı gelince tekrar deneyin.",
       "retry": "Kalanları yola çıkar"
+    },
+    "boxes": {
+      "counter": "{loaded}/{total} kutu araçta",
+      "scanCta": "📷 Kutu yükle",
+      "scanTitle": "Kutuyu araca yükle",
+      "scanHint": "Kutunun üstündeki QR — rotana ait değilse reddedilir.",
+      "loaded": "Kutu {n} yüklendi — {ref} ({k}/{m}).",
+      "loadedStarted": "Kutu {n} yüklendi — {ref} YOLA ÇIKTI ({m} kutu tamam).",
+      "alreadyLoaded": "Bu kutu zaten araçta (Kutu {n}).",
+      "wrongRoute": "Bu kutu bu rotanın malı DEĞİL{ref} — araca alma, rampadaki yığınına geri koy.",
+      "notSealed": "Kutu {n} henüz kapanmamış — açık kutu yüklenmez.",
+      "notLoadable": "Bu kutunun siparişi yüklenebilir durumda değil ({status}).",
+      "unknownCode": "Kod tanınmadı — bu bizim kutu QR'ımız değil.",
+      "error": "Okutma gönderilemedi — bağlantıyı kontrol edin."
     },
     "close": "Seferi kapat",
     "openBadge": "{n} açık",
@@ -154,6 +169,7 @@
       "gate": "sıra: kanıt → mal → teslim → para",
       "gateProof": " — kanıt eksik",
       "gateGoods": " — her kalemi işaretle",
+      "gateBoxes": " — kutuları okut",
       "unreachable": "Ulaşılamadı",
       "refused": "Kabul etmedi"
     },
@@ -180,7 +196,20 @@
       "unreachable": "Ulaşılamadı olarak kaydedildi — durak sefer kapanışında yeniden planlamaya düşer.",
       "refused": "Kabul etmedi olarak kaydedildi — koliler iade akışına düştü."
     },
+    "boxes": {
+      "heading": "KUTULAR · {scanned}/{total} okutuldu",
+      "scanCta": "📷 Kutu okut",
+      "scanTitle": "Kutuyu okut",
+      "scanHint": "Kutunun üstündeki QR — teslim, tüm kutular okutulunca açılır.",
+      "row": "Kutu {n}",
+      "rowScanned": "Kutu {n} ✓",
+      "scanned": "Kutu {n} okundu ({k}/{total}).",
+      "alreadyScanned": "Kutu {n} zaten okutuldu.",
+      "notMine": "Bu QR bu durağın kutusu değil — araçtaki yığını kontrol edin.",
+      "note": "Kutu QR'ları okutulmadan teslim kapanmaz — yanlış kapıya inen kutu böyle yakalanır."
+    },
     "refusal": {
+      "boxesMissing": "Okutulmamış kutu var: {boxes}. Tüm kutular okutulmadan teslim yazılmaz — HİÇBİR kayıt yazılmadı.",
       "proofRequired": "Bu teslimat ({channel}) imza ya da fotoğraf ister; kanıt alınmadan kapanmaz. HİÇBİR kayıt yazılmadı.",
       "stale": "Sipariş artık \"{status}\" durumunda — bu durak başkası tarafından kapatılmış olabilir. Para ve kayıt İKİLENMEDİ.",
       "notAssigned": "Bu durak size atanmamış.",

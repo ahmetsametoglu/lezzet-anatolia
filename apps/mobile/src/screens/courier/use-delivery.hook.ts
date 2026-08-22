@@ -111,6 +111,18 @@ interface UseDeliveryResult {
   confirmSignature: (pngBase64: string) => void;
   clearProof: () => void;
 
+  /**
+   * KUTU OKUTMASI (23.8) — kutulu durakta teslimin ön koşulu. `boxes` boşsa bölüm hiç çizilmez
+   * (kutusuz akış); doluysa tüm kodlar okutulmadan teslim kapısı açılmaz — son doğrulama yine
+   * sunucuda (`boxes_missing`).
+   */
+  boxes: CourierStopContract['boxes'];
+  scannedBoxCount: number;
+  isBoxScanned: (code: string) => boolean;
+  boxScanOpen: boolean;
+  setBoxScanOpen: (open: boolean) => void;
+  handleBoxScan: (code: string) => void;
+
   /** Durağın kalem satırları — sözleşmeden, anahtarı `orderItemId`. */
   lines: StopLine[];
   markOf: (orderItemId: string) => LineMark;
@@ -160,6 +172,9 @@ function refusalText(result: CourierRefusal): string {
   switch (result.status) {
     case 'proof_required':
       return fillCopy(t.delivery.refusal.proofRequired, { channel: t.channel[result.channel] });
+    case 'boxes_missing':
+      // Ekran zaten yerelde kilitliyor; bu dal yarışın (başka cihaz, bayat liste) son savunması.
+      return fillCopy(t.delivery.refusal.boxesMissing, { boxes: result.remainingBoxNos.join(', ') });
     case 'stale':
       return fillCopy(t.delivery.refusal.stale, { status: ORDER_STATUS_LABELS[result.currentStatus] });
     case 'not_found':
@@ -197,6 +212,10 @@ export function useDelivery(orderId: string): UseDeliveryResult {
 
   const [marks, setMarks] = useState<Record<string, LineMark>>({});
   const [returnQty, setReturnQty] = useState<Record<string, number>>({});
+
+  /** Kapıda okutulan kutu KODLARI (23.8) — teslim isteğiyle gider, kanıt kaydına yazılır. */
+  const [scannedBoxCodes, setScannedBoxCodes] = useState<string[]>([]);
+  const [boxScanOpen, setBoxScanOpen] = useState(false);
 
   const [amountText, setAmountText] = useState('');
   const [method, setMethod] = useState<'cash' | 'card' | 'cheque'>('cash');
@@ -247,6 +266,41 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     void load();
   }, [load]);
 
+  /*
+    KUTU KAPISI (23.8, etüt 2.5): kutulu durakta teslim, tüm kutuların QR'ı okutulmadan açılmaz —
+    yanlış kapıya inen kutu tam burada yakalanır. Eşleşme YERELDE (kodlar gün cevabında geldi;
+    kapı önünde tur atılmaz), son doğrulama sunucuda (`boxes_missing` — bayat listeye karşı).
+  */
+  const boxes = stop?.boxes ?? [];
+  const boxesSatisfied = boxes.length === 0 || boxes.every((box) => scannedBoxCodes.includes(box.code));
+
+  const handleBoxScan = useCallback(
+    (code: string) => {
+      setBoxScanOpen(false);
+      const trimmed = code.trim();
+      const box = boxes.find((candidate) => candidate.code === trimmed);
+      if (!box) {
+        setNotice({ tone: 'error', text: t.delivery.boxes.notMine });
+        return;
+      }
+      if (scannedBoxCodes.includes(trimmed)) {
+        setNotice({ tone: 'ok', text: fillCopy(t.delivery.boxes.alreadyScanned, { n: String(box.boxNo) }) });
+        return;
+      }
+      const next = [...scannedBoxCodes, trimmed];
+      setScannedBoxCodes(next);
+      setNotice({
+        tone: 'ok',
+        text: fillCopy(t.delivery.boxes.scanned, {
+          n: String(box.boxNo),
+          k: String(next.length),
+          total: String(boxes.length),
+        }),
+      });
+    },
+    [boxes, scannedBoxCodes],
+  );
+
   const lines = stop?.items ?? [];
   const allMarked = lines.length > 0 && lines.every((line) => marks[line.orderItemId] !== undefined);
   const hasRefused = lines.some((line) => marks[line.orderItemId] === 'refused');
@@ -295,7 +349,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
 
   const proofRequired = stop?.channel === 'b2b';
   const proofSatisfied = !proofRequired || proof !== null;
-  const gateOpen = proofSatisfied && allMarked && !allRefused && !collectionBlocked && !finished;
+  const gateOpen = boxesSatisfied && proofSatisfied && allMarked && !allRefused && !collectionBlocked && !finished;
 
   const gateNote = gateOpen
     ? null
@@ -303,7 +357,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       ? null
       : collectionBlocked
         ? t.delivery.collection.blocked
-        : `${t.delivery.cta.gate}${proofSatisfied ? '' : t.delivery.cta.gateProof}${allMarked ? '' : t.delivery.cta.gateGoods}`;
+        : `${t.delivery.cta.gate}${boxesSatisfied ? '' : t.delivery.cta.gateBoxes}${proofSatisfied ? '' : t.delivery.cta.gateProof}${allMarked ? '' : t.delivery.cta.gateGoods}`;
 
   const ctaLabel = allRefused
     ? t.delivery.cta.allRefused
@@ -366,6 +420,8 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         ...(adjustments.length === 0 ? {} : { adjustments }),
         ...(proof === null ? {} : { proof }),
         ...(collection === null ? {} : { collection }),
+        // Kutulu durakta okutulan kodlar teslimin ön koşulu (23.8) — kutusuz durakta alan gitmez.
+        ...(scannedBoxCodes.length === 0 ? {} : { scannedBoxCodes }),
       });
       setSending(false);
 
@@ -393,7 +449,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       });
       setFinished(true);
     })();
-  }, [adjustments, buildCollection, gateOpen, orderId, proof, sending]);
+  }, [adjustments, buildCollection, gateOpen, orderId, proof, scannedBoxCodes, sending]);
 
   const confirmOutcome = useCallback(() => {
     if (outcome === null || sending) return;
@@ -457,6 +513,13 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       setProof(null);
       setProofError(null);
     }, []),
+
+    boxes,
+    scannedBoxCount: scannedBoxCodes.length,
+    isBoxScanned: (code) => scannedBoxCodes.includes(code),
+    boxScanOpen,
+    setBoxScanOpen,
+    handleBoxScan,
 
     lines,
     markOf: (orderItemId) => marks[orderItemId],
