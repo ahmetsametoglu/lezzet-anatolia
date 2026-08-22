@@ -4,11 +4,12 @@ import { tool, z, type ToolSet } from '@lezzet/ai';
 import { AddressService, OrderService, type Db } from '@lezzet/database';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import { ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
+import { COUNTRY_LABELS, ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
+import { readPublicDeliveryTerms } from '../settings/public-terms';
 
 /*
   DESTEK AJANININ ARAÇLARI (16.9) — modelin veriye KENDİSİ bakabildiği dar yüzey.
@@ -201,6 +202,40 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
             'destek aracı okuyamadı',
           );
           return { bilinmiyor: 'Katalog şu an okunamadı.' };
+        }
+      },
+    }),
+
+    teslimat_sartlari: tool({
+      description:
+        'Kargo ücreti, ücretsiz kargo eşiği, asgari sepet tutarı, kapıda ödeme üst sınırı ve kargo gönderdiğimiz ülkeleri söyler. ' +
+        '"Kargo kaç para", "asgari sipariş var mı", "ne kadar alırsam kargo bedava", "kapıda ödeyebilir miyim" sorularında ÇAĞIR.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        try {
+          /*
+            Sayılar `settings`ten ve MÜŞTERİNİN KAPSAMIYLA okunuyor (`readPublicDeliveryTerms`
+            kimliği alıyor): B2B'nin asgari sepeti B2C'ninkinden farklı olabilir. Aynı kapıyı bilgi
+            sayfaları, sepet ve checkout da okuyor — ajanın ikinci bir sayı söylemesi, sitede yazanla
+            sohbette söylenenin ayrışması demekti (07.15'in ölçülmüş dersi).
+          */
+          const s = await readPublicDeliveryTerms(db, customerId);
+          return {
+            kargoUcreti: formatPrice(s.shippingFeeCents, 'tr'),
+            ucretsizKargoEsigi: formatPrice(s.freeShippingCents, 'tr'),
+            asgariSepetKapiyaTeslim: formatPrice(s.minBasketRouteCents, 'tr'),
+            // 0 = alt sınır YOK (kapının kendi künyesi) — "0,00 €" yazmak "sıfır euroluk sipariş
+            // verebilirsiniz" gibi okunurdu; yokluk ile sıfır ayrı şeylerdir.
+            asgariSepetKargo: s.minBasketShippingCents > 0 ? formatPrice(s.minBasketShippingCents, 'tr') : 'alt sınır yok',
+            kapidaOdemeUstSiniri: formatPrice(s.codMaxCents, 'tr'),
+            kargoGonderilenUlkeler: s.shippingCountries.map((c) => COUNTRY_LABELS[c]),
+          };
+        } catch (err) {
+          logger.warn(
+            { context: 'application/support-tools', tool: 'teslimat_sartlari', customerId, err: String(err) },
+            'destek aracı okuyamadı',
+          );
+          return { bilinmiyor: 'Teslimat şartları şu an okunamadı.' };
         }
       },
     }),
