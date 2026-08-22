@@ -479,6 +479,37 @@ export const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    // ── SİPARİŞ KUTUSU (23.6) ─────────────────────────────────────────────────────────────────
+    // Kutu döngüsünün dört hâli, dördü de ayrı bir ekran/kural açıyor: AÇIK kutu = masada
+    // dolduruluyor (yarım iş kaldığı yerden sürer), KAPALI = salt-okunur + etiketi basılacak,
+    // YÜKLENMEMİŞ = 23.8'in yükleme sayacının "kaç kaldı" tarafı, ÇOK KUTULU = absolüt birleşim
+    // (0048 ⚠) ve "tüm kutular binmeden yolda sayılmaz" kuralının tek sınanabildiği hâl.
+    baslik: 'Sipariş kutusu',
+    tablo: 'order_box',
+    kovalar: [
+      { ad: 'açık kutu', zorunlu: true, filtre: (q) => q.is('sealed_at', null) },
+      { ad: 'kapalı kutu', zorunlu: true, filtre: (q) => q.not('sealed_at', 'is', null) },
+      {
+        ad: 'kapalı ama yüklenmemiş',
+        zorunlu: true,
+        sayac: (db) => say(db, 'order_box', (q) => q.not('sealed_at', 'is', null).is('loaded_at', null)),
+      },
+      {
+        ad: 'çok kutulu sipariş (2+)',
+        zorunlu: true,
+        sayac: async (db) => {
+          const { data, error } = await db.from('order_box').select('order_id');
+          if (error) throw new Error(`[kapsam] order_box: ${error.message}`);
+          const sayilar = new Map<string, number>();
+          for (const r of (data ?? []) as Array<{ order_id: string }>) {
+            sayilar.set(r.order_id, (sayilar.get(r.order_id) ?? 0) + 1);
+          }
+          return [...sayilar.values()].filter((n) => n >= 2).length;
+        },
+      },
+    ],
+  },
+  {
     // ── ÖLÇÜM NOKTALARI (19.28) ───────────────────────────────────────────────────────────────
     // Ölçüm noktası serbest metinden tanımlı kayda geçti; kapsam da onunla birlikte doğdu.
     // Dördü de ZORUNLU çünkü dördü de AYRI bir ekran hâlini açıyor:

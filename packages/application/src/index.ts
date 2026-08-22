@@ -265,7 +265,9 @@ export type {
 // **Her kapı DEPO KİMLİĞİ ister** (CLAUDE.md §1: varsayılan depo YOKTUR) ve kapsam dışı yazım
 // görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
 export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';
-export type { PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
+export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
+export { openBox, sealBox } from './warehouse/boxes';
+export type { OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 // Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.
 export { learnCode, resolveScannedCode } from './warehouse/scan';

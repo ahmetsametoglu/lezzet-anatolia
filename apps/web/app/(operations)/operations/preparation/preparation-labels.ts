@@ -133,6 +133,23 @@ export function parcelName(order: PreparationOrderView): string | null {
   return alici.toLocaleLowerCase('tr') === order.customerName.trim().toLocaleLowerCase('tr') ? null : alici;
 }
 
+/**
+ * **Kutu özeti** (23.6) — "2 kutu · 1 kapalı · 1 açık". `null` = kutusuz akış (eski yol) ve o
+ * hâlde satır hiç çizilmez: kutu istisnadır, yokluğunu her siparişe yazmak gürültü olurdu.
+ *
+ * Web'de kutu AÇILMAZ/KAPANMAZ (karar §1.1: tarama telefonda) — masa yalnız okur; bu yüzden
+ * dönen şey bir cümledir, bir etkileşim modeli değil.
+ */
+export function boxSummary(order: PreparationOrderView): string | null {
+  if (order.boxes.length === 0) return null;
+  const sealed = order.boxes.filter((box) => box.sealedAt !== null).length;
+  const open = order.boxes.length - sealed;
+  const parts = [`${num(order.boxes.length)} kutu`];
+  if (sealed > 0) parts.push(`${num(sealed)} kapalı`);
+  if (open > 0) parts.push(`${num(open)} açık`);
+  return parts.join(' · ');
+}
+
 export const PREP_NOTES = {
   empty: 'Bekleyen hazırlık yok. Onaylanan siparişler bu listeye kendiliğinden düşer.',
   /**

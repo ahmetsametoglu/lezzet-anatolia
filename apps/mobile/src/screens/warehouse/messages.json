@@ -109,6 +109,32 @@
     "shortfallAction": {
       "ask_customer": "müşteriye sorulsun",
       "send_rest": "kalanı gönder"
+    },
+    "box": {
+      "open": "Kutu aç",
+      "openNext": "Yeni kutu aç (Kutu {n})",
+      "opening": "Kutu açılıyor…",
+      "current": "KUTU {n} · AÇIK",
+      "sealedRow": "Kutu {n} kapalı · {qty} ürün",
+      "scanCta": "📷 Kalemi kutuya okut",
+      "scanTitle": "Kalemi kutuya okut",
+      "scanHint": "Paket ya da koli barkodu — koli, çarpanı kadar sayılır.",
+      "scanFound": "{name}: +{n} adet kutuda.",
+      "scanFoundSku": "{name}: +{n} adet kutuda (SKU eşleşmesi).",
+      "scanFoundSupplier": "{name}: +{n} adet kutuda (tedarikçi kodu).",
+      "scanCapacity": "{name}: raf önerisi doldu — adet artırılmadı.",
+      "notInOrder": "Bu kod {name} ürününe bağlı — bu siparişte yok, kutuya girmez.",
+      "unknownCode": "Kod tanınmıyor. Öğretme mal kabulde yapılır — burada satırı elle işaretleyin.",
+      "scanError": "Kod çözülemedi — bağlantıyı kontrol edip yeniden okutun.",
+      "seal": "Kutuyu KAPAT",
+      "sealShort": "Kutuyu kapat — eksikleri bildir",
+      "sealPending": "Kutuya kalem koy — okut ya da elle say",
+      "sealedReady": "Kutu {n} kapandı — sipariş HAZIR ({total} kutu).",
+      "sealedMissing": "Kutu {n} kapandı; eksik kalan var. Yeni kutu aç ya da eksik bildirerek kapat.",
+      "alreadySealed": "Bu kutu zaten kapalı — liste tazelendi.",
+      "stale": "Sipariş artık toplanmıyor — liste tazelendi.",
+      "prevBoxes": "önceki kutularda {qty}",
+      "footnote": "Adet bu KUTUYA konanı sayar — önceki kutular kayıtta durur, üstüne yazılmaz. Kutu kapanınca içerik kesinleşir; etiket basımı sıradaki adımda."
     }
   },
   "intake": {

@@ -178,6 +178,32 @@ Hazırlıkta fiilen çıkan parti(ler)in kaydı — depocu FEFO önerisini onayl
 
 Σ qty = kalemin `fulfilled_qty`'si. `cogs_amount` = Σ (qty × partinin `purchase_price`) — kapanışta sabitlenir.
 
+## OrderBox (sipariş kutusu — 0048 · 23.6)
+
+Bizim bastığımız QR'ın kaydı ("bu hangi kayıt" — ürün barkodunun "bu hangi mal"ından ayrı iş, `katalog.md`). Kutu döngüsü karar §1.4 (`docs/feature/barkod-okuyucu.md`): sipariş seç → kutu aç → okutarak doldur → kapat → her şey konduysa sipariş `ready`, değilse yeni kutu. Kutusu olmayan sipariş eski yoldan gider (bilinçli çift akış).
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| order_id | uuid | |
+| warehouse_id | uuid | siparişin deposu — yükleme okutması (23.8) rampayı siparişe gitmeden bilir |
+| box_no | int | sipariş içi insan sayısı ("Kutu 2/3"); kimlik DEĞİL — unique `(order_id, box_no)` |
+| code | text | **QR'ın içeriği**, global unique; `reference_no` değil ve ondan türetilemez (referans müşteriye görünür, kutu kodu teslim kaydı düşürür) — üreteç `orderBoxCode` (`KT-YY-` + 10 karakter) |
+| sealed_at / sealed_by | timestamptz/uuid \| null | null = AÇIK kutu (masada); kapanan kutu salt-okunur. Mühür yalnız `seal_order_box` RPC'sinden |
+| printed_at | timestamptz \| null | etiket basımı (23.7) — "kapalı ama basılamadı" görünür bir hâl |
+| loaded_at / loaded_by | timestamptz/uuid \| null | araca yükleme (23.8); sayaç bu damgalardan türer, ayrı tablo yok. Kısıt: açık kutu yüklenemez |
+
+## OrderBoxItem (kutu içeriği)
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| box_id | uuid | |
+| order_item_id | uuid | unique `(box_id, order_item_id)` — kalem kutuda tek satır; bir kalem birden çok KUTUYA bölünebilir |
+| qty | int | > 0 |
+
+**Yazma yolu yalnız `seal_order_box` RPC'si** (kutu içeriği + `record_preparation` + mühür TEK transaction — "kutu var ama parti izi yok" doğamaz). RPC kapanışta **Σ kutu = `fulfilled_qty`** eşitliğini denetler: çok kutulu birleşimi `sealBox` kapısı kurar (0015'in absolüt yazımı), eksik kurulmuş birleşim tümüyle geri alınır. Kutulanmış kalem kutusuz akışla karışamaz — çift akış sipariş düzeyinde meşru, kalem düzeyinde değil.
+
 ## OrderStatusLog (durum geçiş kaydı)
 
 "Her geçiş kaydedilir" kuralının varlığı (bkz. `ORDER_LIFECYCLE.md`). Teslim anı, kapanış anı ve geri bildirim zamanlaması (~10 gün) buradan türetilir.

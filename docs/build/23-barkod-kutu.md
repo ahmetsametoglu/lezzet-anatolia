@@ -146,11 +146,46 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
 - [ ] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
   0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
   `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.
-- [ ] (23.6) **Kutu şeması + döngüsü** *(tasarım dönünce)*: `order_box`/`order_box_item` +
-  `seal_order_box` RPC (kutu + picks TEK transaction; ⚠ `record_preparation` picks yazımı kalem
-  başına ABSOLÜT — çok kutulu siparişte birleşimi `sealBox` kapısı kurar) + `boxCompletion` motoru +
-  mobil toplama ekranı + web hazırlık paneline kutu özeti. Kutu kodu `reference_no` DEĞİL.
-  Kutusuz sipariş eski yoldan gider (bilinçli çift akış).
+- [~] (23.6) **Kutu şeması + döngüsü**: `order_box`/`order_box_item` + `seal_order_box` RPC (kutu +
+  picks TEK transaction; ⚠ `record_preparation` picks yazımı kalem başına ABSOLÜT — çok kutulu
+  siparişte birleşimi `sealBox` kapısı kurar) + `boxCompletion` motoru + mobil toplama ekranı +
+  web hazırlık paneline kutu özeti. Kutu kodu `reference_no` DEĞİL. Kutusuz sipariş eski yoldan
+  gider (bilinçli çift akış). · touches: `supabase/migrations/0048_order_box.sql`,
+  `packages/types/src/entities/order-box.schema.ts`, `packages/types/src/contracts/warehouse-api.schema.ts`,
+  `packages/database/src/services/order-box.service.ts`, `packages/domain-core/src/order/{box-completion.ts,reference-no.ts}`,
+  `packages/application/src/warehouse/{boxes.ts,preparation.ts}`, `apps/mobile-api/src/api/v1/warehouse.ts`,
+  `scripts/seed/{orders.ts,coverage.ts}`
+  - ~~*(tasarım dönünce)*~~ → **kullanıcı kararı 22.08: ekranlar MEVCUT desene göre şimdi yazılır,
+    Claude Design'a sonra gösterilir** — modülün "kutu şeması tasarım dönene kadar açılmaz" kuralı
+    bu kararla düştü.
+  - *Bitti:* kutu döngüsü cihazda uçtan uca ölçüldü — kapalı kutu özeti · açık kutu çipi · "önceki
+    kutularda N" · yanlış ürün reddi ("kutuya girmez") · çarpan/tavan kesişimi · kapanışta
+    "sipariş HAZIR (2 kutu)" ve kuyruktan düşüş; DB'de Σ kutu = karşılanan (6=6 · 4=4) doğrulandı.
+  - **Durum (22.08) — ARKA UÇ YAZILDI, ekranlar sırada.** `0048`: kutu AÇIK doğar (`sealed_at
+    null`), kapanış `seal_order_box` ile TEK transaction (içerik + `record_preparation` + mühür);
+    RPC **Σ kutu = fulfilled** eşitliğini denetler — eksik kurulmuş birleşim tümüyle geri alınır,
+    kutulu/kutusuz karışım kalem düzeyinde reddedilir. Kutu kodu `orderBoxCode` (`KT-YY-` + 10
+    karakter; referanstan hem önek hem uzunlukça ayrık — Netleşecek 4 kapandı). `boxCompletion`
+    motoru (birim testli) "kapandı mı / eksik ne"yi söyler; eksik TAVSİYESİ yalnız `declareShort`
+    beyanıyla üretilir (ara kutunun doğal eksiği yönetime soru olmaz). Kuyruk sözleşmesi `boxes`
+    taşıyor; uçlar `POST /warehouse/orders/:id/boxes` + `POST /warehouse/boxes/:id/seal`. Çıpalı
+    parti ve eksik tavsiyesi `confirmPreparation` ile ORTAK yardımcılardan (ikinci hazırlık dili
+    açılmadı). Seed: tek kutu KAPALI + çok kutulu (1 kapalı · 1 açık), dördü zorunlu coverage
+    kovası. Entegrasyon testi `boxes.test.ts` (10 test — çok kutulu birleşim dahil).
+  - **EKRANLAR (22.08, aynı gün) — kullanıcı deseniyle yazıldı ve CİHAZDA ölçüldü.** Mobil D1 kutu
+    eksenine döndü: taze sipariş "Kutu aç" ile başlar (ilk kutu tek dokunuş — brief'in anı), açık
+    kutu çipi + kapalı kutu özetleri + `ScanSheet` yeniden kullanımı ("Kalemi kutuya okut", aynı
+    `onScan` sözleşmesi, simülasyon havuzu dahil); okutulan kod satıra ÇARPAN kadar ekler ama tavan
+    motorun kapasitesi; siparişte olmayan ürün ANINDA reddedilir; kapanış BU kutunun dağılımını
+    gönderir (birleşim sunucuda), eksik beyanı satırlardaki "eksik bildir"den türer. **Kutusuz
+    BAŞLANMIŞ iş kutu moduna girmez** (web masasından yarım gelen sipariş eski akışta biter —
+    kalem düzeyi karışım duvarına ekran hiç koşturmaz). Web hazırlık paneli kutu ÖZETİ okur
+    ("2 kutu · 1 kapalı · 1 açık") — web'de kutu açılmaz/kapanmaz (karar §1.1). Jest: eski akış
+    testleri "kutusuz başlanmış iş" fikstürüne çevrildi, kutu akışına 5 test (`picking-box.test.tsx`);
+    mobil 87 suite · 613 test yeşil.
+  - KALAN: toplama listesinin `storage_area.sort_order` dizilimi (karar §1.13'ün ekran yarısı —
+    kuyruk sözleşmesi alan SIRASINI henüz taşımıyor) → 23.7 ile birlikte; ve 23.7 etiket (kapanışın
+    "etiket basılır" adımı — footnote bugün "sıradaki adımda" diyor).
 - [ ] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
   etiket tasarımıyla) · yazıcı ayarı `settings` warehouse kapsamı (`label_printer_*`) + Depolar
   ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan

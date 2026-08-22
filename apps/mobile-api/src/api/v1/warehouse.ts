@@ -9,12 +9,14 @@ import {
   listPendingIntakes,
   listPreparationQueue,
   listWarehouseReturns,
+  openBox,
   openIntakeForm,
   readIntakeHeader,
   receiveGoods,
   receiveTransfer,
   recordAdjustment,
   resolveScannedCode,
+  sealBox,
 } from '@lezzet/application';
 import {
   ConfirmPreparationRequestSchema,
@@ -23,6 +25,7 @@ import {
   IntakeFormResponseSchema,
   LearnCodeRequestSchema,
   LearnCodeResponseSchema,
+  OpenBoxResponseSchema,
   PendingIntakesResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsRequestSchema,
@@ -33,6 +36,8 @@ import {
   RecordAdjustmentResponseSchema,
   ResolveCodeRequestSchema,
   ResolveCodeResponseSchema,
+  SealBoxRequestSchema,
+  SealBoxResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
@@ -217,6 +222,48 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
 
   const body: z.input<typeof ConfirmPreparationResponseSchema> = outcome;
   return ok(c, ConfirmPreparationResponseSchema.parse(body));
+});
+
+// ── D1 · Kutu döngüsü (23.6) ────────────────────────────────────────────────
+
+/**
+ * **Kutu açar** (karar §1.4). Gövde YOK: kutunun içeriği doğumda yoktur, numarası sipariş içi
+ * sıradan, kodu üreteçten gelir. `stale` cevabın kendisidir — sipariş artık toplanabilir değilse
+ * ekran hangi durumda olduğunu söyler, sessiz 4xx'e indirgemez.
+ */
+warehouse.post('/orders/:orderId/boxes', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'invalid_order_id', 400);
+
+  const outcome = await openBox(serviceDb(), { orderId: orderId.data, warehouseId: c.get('warehouseId') });
+  const body: z.input<typeof OpenBoxResponseSchema> = outcome;
+  return ok(c, OpenBoxResponseSchema.parse(body));
+});
+
+/**
+ * **Kutuyu kapatır** (23.6) — içerik + parti izi + mühür tek transaction (`seal_order_box`).
+ * `picks` BU kutunun dağılımıdır; çok kutulu birleşimi kapı kurar (`sealBox` künyesindeki ⚠ —
+ * ekran kümülatif göndermeye çalışmaz). Cevabın olumsuz dalları da 200: `already_sealed` çift
+ * dokunuştur, `missing` "yeni kutu aç" davetidir, `shortfalls` yalnız `declareShort` beyanıyla
+ * dolar ve karar yine yönetim ekranındadır.
+ */
+warehouse.post('/boxes/:boxId/seal', async (c) => {
+  const boxId = UuidSchema.safeParse(c.req.param('boxId'));
+  if (!boxId.success) return fail(c, 'invalid_box_id', 400);
+
+  const parsed = SealBoxRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await sealBox(serviceDb(), {
+    boxId: boxId.data,
+    warehouseId: c.get('warehouseId'),
+    picks: parsed.data.picks,
+    declareShort: parsed.data.declareShort,
+    actorId: c.get('staff').id,
+  });
+
+  const body: z.input<typeof SealBoxResponseSchema> = outcome;
+  return ok(c, SealBoxResponseSchema.parse(body));
 });
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────

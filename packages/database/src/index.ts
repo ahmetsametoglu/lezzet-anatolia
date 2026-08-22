@@ -49,6 +49,7 @@ export { WarehouseTransferService, WarehouseTransferLineService } from './servic
 export { StorageAreaService, VehicleService } from './services/storage-point.service';
 export { CartService, type CartRef } from './services/cart.service';
 export { OrderItemBatchService } from './services/order-item-batch.service';
+export { OrderBoxService, OrderBoxItemService } from './services/order-box.service';
 export {
   OrderService,
   OrderItemService,

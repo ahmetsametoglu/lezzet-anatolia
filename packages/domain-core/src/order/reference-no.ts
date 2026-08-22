@@ -106,3 +106,26 @@ export function purchaseOrderReferenceNo(year: number, random?: () => number): s
 export function deliveryRunReferenceNo(year: number, random?: () => number): string {
   return generateReferenceNo({ prefix: 'SF', year, random });
 }
+
+/** Kutu kodunun gövde uzunluğu — kardeşlerinden BİLEREK uzun (aşağıdaki künye). */
+const BOX_CODE_LENGTH = 10;
+
+/**
+ * KUTU kodu — `KT-26-4K2M9P7HWX` benzeri, QR'ın içeriği (Modül 23 · Netleşecek 4).
+ *
+ * Kardeşlerinden iki bilinçli sapması var:
+ *
+ *   • **`reference_no` DEĞİL ve ondan türetilemez.** Sipariş referansı müşteriye gösteriliyor;
+ *     kutu QR'ı ise teslim kaydını düşürüyor (23.8). Referansı bilen biri kutu kodunu
+ *     üretebilseydi, başkasının siparişini "teslim edildi"ye çekebilirdi.
+ *   • **10 karakter, 6 değil.** Referans telefonda OKUNUYOR, kısalık orada değer; kutu kodu
+ *     kameryla okutuluyor, kısalığın değeri yok — 26^10 uzay tahmini pratikte imkânsız kılar
+ *     (6 karakterlik uzayda sabırlı bir tarama düşünülebilirdi).
+ *
+ * Önek `KT` (kutu): kod bir arıza anında telefonda da anılabilir ("KT'li etiket") ve `LA`/`TS`/
+ * `SF` aileleriyle karışmamalı. Benzersizlik DB'de (`order_box_code_uq`); çakışmada çağıran
+ * yeniden üretir. Rastgelelik enjekte edilebilir, varsayılan kriptografiktir (`readableCode`).
+ */
+export function orderBoxCode(year: number, random?: () => number): string {
+  return `KT-${String(year).slice(-2)}-${readableCode(BOX_CODE_LENGTH, random)}`;
+}

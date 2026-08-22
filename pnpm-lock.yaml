@@ -11,6 +11,9 @@ importers:
       '@lezzet/ai':
         specifier: workspace:*
         version: link:packages/ai
+      '@lezzet/application':
+        specifier: workspace:*
+        version: link:packages/application
       '@lezzet/database':
         specifier: workspace:*
         version: link:packages/database

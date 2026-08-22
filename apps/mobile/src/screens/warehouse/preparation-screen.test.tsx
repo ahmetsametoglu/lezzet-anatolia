@@ -12,6 +12,11 @@ import { resetWarehouseStatus } from './warehouse-status';
   · **gönderilen partiler motorun önerdiği partilerdir** — uydurulmuş bir `stockId`, geri çağırmanın
     dayandığı kaydı bozar;
   · **`pinned_violation` GÖSTERİLİR** — hiçbir şeyin yazılmadığını söyleyen tek cümle odur.
+
+  23.6'DAN SONRA BU DOSYA ESKİ (KUTUSUZ) AKIŞI ÖLÇER: taze sipariş artık kutu moduyla açılıyor
+  (`picking-box.test.tsx`), eski akış yalnız KUTUSUZ BAŞLANMIŞ işte yaşıyor — o yüzden onay/CTA
+  testlerinin fikstürleri `pickedQty > 0` taşır (web masasından yarım gelmiş iş). Satır-düzeyi
+  testler (tavan, çıpa) iki modda da aynı bileşeni kullandığından fikstürleri değişmedi.
 */
 
 jest.mock('expo-router', () => {
@@ -101,7 +106,7 @@ describe('D1 · kuyruk', () => {
 
 describe('D1 · sayım', () => {
   it('CTA sayım bitmeden KAPALIDIR', async () => {
-    withQueue([preparationOrder()]);
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })]);
 
     await renderPicking();
 
@@ -110,7 +115,7 @@ describe('D1 · sayım', () => {
   });
 
   it('"tamamı" motorun kapasitesine kadar doldurur ve CTA "Sipariş HAZIR"a döner', async () => {
-    withQueue([preparationOrder()]);
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })]);
 
     await renderPicking();
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
@@ -131,7 +136,7 @@ describe('D1 · sayım', () => {
   });
 
   it('"eksik bildir" CTA kapısını açar ama cümlesini DEĞİŞTİRİR — sipariş hazır olmaz', async () => {
-    withQueue([preparationOrder()]);
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })]);
 
     await renderPicking();
     await fireEvent.press(screen.getByTestId(`warehouse-picking-short-${ITEM_A}`));
@@ -163,6 +168,7 @@ describe('D1 · gönderim', () => {
         lines: [
           preparationLine({
             orderedQty: 3,
+            pickedQty: 1,
             suggestion: [
               { stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', areaName: null },
               { stockId: STOCK_B, qty: 1, expiryDate: '2026-08-18', areaName: null },
@@ -183,7 +189,7 @@ describe('D1 · gönderim', () => {
   });
 
   it('yarım iş HATA DEĞİL: `ready:false` "sürüyor" der ve eksik tavsiyesi yazılır', async () => {
-    withQueue([preparationOrder({ lines: [preparationLine(), preparationLine({ itemId: ITEM_B })] })], {
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 }), preparationLine({ itemId: ITEM_B })] })], {
       status: 'ok',
       items: 2,
       ready: false,
@@ -202,7 +208,7 @@ describe('D1 · gönderim', () => {
   });
 
   it('`pinned_violation` GÖSTERİLİR — hiçbir satır yazılmadı', async () => {
-    withQueue([preparationOrder()], { status: 'pinned_violation', itemId: ITEM_A, requiredStockId: STOCK_B });
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })], { status: 'pinned_violation', itemId: ITEM_A, requiredStockId: STOCK_B });
 
     await renderPicking();
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
@@ -214,7 +220,7 @@ describe('D1 · gönderim', () => {
   });
 
   it('kapsam dışı sipariş 200 ile gelir ve EKRANDA görünür', async () => {
-    withQueue([preparationOrder()], { status: 'forbidden', reason: 'out_of_scope' });
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })], { status: 'forbidden', reason: 'out_of_scope' });
 
     await renderPicking();
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));

@@ -98,6 +98,21 @@ export const PreparationLineSchema = z.object({
 });
 export type PreparationLineContract = z.infer<typeof PreparationLineSchema>;
 
+/**
+ * Siparişin bir kutusu — kuyrukla birlikte gelir (23.6). `sealedAt null` = açık kutu (masada
+ * dolduruluyor). `items` kutuya KONMUŞ kalemlerdir: mobil ekran "bu kalemden kaç adet zaten
+ * kutulandı"yı bundan türetir, web paneli yalnız sayar ("2 kutu · 1 kapalı").
+ */
+export const PreparationBoxSchema = z.object({
+  boxId: z.string().uuid(),
+  boxNo: z.number().int().positive(),
+  /** QR'ın içeriği (`KT-…`) — sipariş referansı DEĞİL (Netleşecek 4). */
+  code: z.string(),
+  sealedAt: z.string().nullable(),
+  items: z.array(z.object({ orderItemId: z.string().uuid(), qty: z.number().int().positive() })),
+});
+export type PreparationBoxContract = z.infer<typeof PreparationBoxSchema>;
+
 /** Kuyruk satırı — sipariş künyesi + kalemleri. Tutar, adres, iletişim YOK (tasarım §6). */
 export const PreparationOrderSchema = z.object({
   orderId: z.string().uuid(),
@@ -110,6 +125,8 @@ export const PreparationOrderSchema = z.object({
   lineCount: z.number().int(),
   pickedLineCount: z.number().int(),
   lines: z.array(PreparationLineSchema),
+  /** Siparişin kutuları, `boxNo` sırasıyla; boş dizi = kutusuz akış (eski yol — bilinçli çift akış). */
+  boxes: z.array(PreparationBoxSchema),
 });
 export type PreparationOrderContract = z.infer<typeof PreparationOrderSchema>;
 
@@ -161,6 +178,61 @@ export const ConfirmPreparationResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_found') }),
 ]);
 export type ConfirmPreparationResponse = z.infer<typeof ConfirmPreparationResponseSchema>;
+
+// ── D1 · Kutu döngüsü (23.6 — karar §1.4) ───────────────────────────────────
+
+/**
+ * Kutu açılışının cevabı. `stale` bir hata değil cevabın kendisidir: sipariş artık toplanabilir
+ * durumda değil (araya biri girdi — teslim edildi, iptal oldu) ve ekran hangi durumda olduğunu
+ * söyleyebilmeli. Açılış gövdesizdir: kutunun içeriği yoktur, sayısı sipariş içi sıradan türer.
+ */
+export const OpenBoxResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), box: PreparationBoxSchema }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type OpenBoxResponse = z.infer<typeof OpenBoxResponseSchema>;
+
+/**
+ * Kutu kapanışı isteği — `picks` BU KUTUYA konanlardır (kutu başına dağılım), kümülatif değil:
+ * absolüt birleşimi kapı kurar (`sealBox` — `record_preparation`ın absolüt yazımıyla çok kutulu
+ * birleşim ekranın değil sunucunun işidir; ekran kurmaya kalksaydı yarım işte eski dağılımı
+ * bilmek zorunda kalırdı).
+ *
+ * `declareShort`: "bu kutu SON — eksik kalanları bildiriyorum." Yalnız bu bayrakla eksik
+ * tavsiyesi üretilir; bayraksız kapanışta eksik kalem "devam ediyor" demektir (yeni kutu
+ * açılacak) ve tavsiye ÜRETİLMEZ — ara kutunun doğal eksiği yönetime soru olarak gitmemeli.
+ */
+export const SealBoxRequestSchema = z.object({
+  picks: z.array(PreparationPickSchema),
+  declareShort: z.boolean().optional(),
+});
+export type SealBoxRequest = z.infer<typeof SealBoxRequestSchema>;
+
+export const SealBoxResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    boxNo: z.number().int().positive(),
+    /** Sipariş tamamen kutulandı ve `ready`'e geçti mi — `false` hata değil: döngü sürüyor. */
+    ready: z.boolean(),
+    /** Eksik kalan kalemler (motorun aritmetiği) — ekran "yeni kutu"yu bununla önerir. */
+    missing: z.array(z.object({ itemId: z.string().uuid(), missingQty: z.number().int().positive() })),
+    /** Yalnız `declareShort` ile dolar — karar yine YÖNETİM ekranında (D1 → Y2). */
+    shortfalls: z.array(z.object({ itemId: z.string().uuid(), suggestion: ShortfallSuggestionSchema })),
+  }),
+  /** Kilitli kalem başka partiden verilmek istendi — HİÇBİR yazım yapılmadı (kutu açık kalır). */
+  z.object({ status: z.literal('pinned_violation'), itemId: z.string().uuid(), requiredStockId: z.string().uuid() }),
+  /** Kutu zaten kapalı — çift dokunuş/yarış; içerik değişmedi. */
+  z.object({ status: z.literal('already_sealed') }),
+  /** Boş kutu kapatılamaz — etiketi basılacak içerik yok. */
+  z.object({ status: z.literal('empty') }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  /** RPC reddi — mesaj operatöre AYNEN gösterilir (en sık: fiziksel gerçek ihlali, 0015/0048). */
+  z.object({ status: z.literal('failed'), message: z.string() }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type SealBoxResponse = z.infer<typeof SealBoxResponseSchema>;
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 

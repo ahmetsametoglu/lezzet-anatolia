@@ -4,17 +4,20 @@ import {
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeResponseSchema,
+  OpenBoxResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsResponseSchema,
   ReceiveTransferResponseSchema,
   RecordAdjustmentResponseSchema,
   ResolveCodeResponseSchema,
+  SealBoxResponseSchema,
   WarehouseReturnResponseSchema,
   type ConfirmPreparationRequest,
   type LearnCodeRequest,
   type RecordAdjustmentRequest,
   type ReceiveGoodsRequest,
   type ReceiveTransferRequest,
+  type SealBoxRequest,
   type WarehouseReturnRequest,
 } from '@lezzet/types';
 
@@ -74,6 +77,23 @@ export function confirmPreparation(
     method: 'POST',
     body,
   });
+}
+
+/** **Kutu açar** (23.6 · karar §1.4). Gövde yok: içerik doğumda yoktur, numara/kod sunucudan. */
+export function openOrderBox(orderId: string): Promise<ApiResult<z.infer<typeof OpenBoxResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/boxes`, OpenBoxResponseSchema, { method: 'POST' });
+}
+
+/**
+ * **Kutuyu kapatır** (23.6). `picks` BU kutunun dağılımıdır (kümülatif değil) — çok kutulu
+ * birleşimi sunucu kurar (`sealBox` ⚠ künyesi); ekran kurmaya kalksaydı yarım işte eski dağılımı
+ * bilmek zorunda kalırdı. `declareShort` = "bu kutu son, eksikleri bildiriyorum".
+ */
+export function sealOrderBox(
+  boxId: string,
+  body: SealBoxRequest,
+): Promise<ApiResult<z.infer<typeof SealBoxResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/seal`, SealBoxResponseSchema, { method: 'POST', body });
 }
 
 /** **Tedarik siparişinden dolu kabul formu** (D2). Boş dizi = plansız alım (form elle doldurulur). */

@@ -9,7 +9,7 @@ import { num } from '@/components/operation/ui/format';
 import { CARRIER_LABEL, CARRIER_OPTIONS } from '@/components/operation/ui/labels';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
-import { LANE_HINTS, LANE_LABELS, PREP_NOTES, channelLabel, parcelName, queueStatus } from './preparation-labels';
+import { LANE_HINTS, LANE_LABELS, PREP_NOTES, boxSummary, channelLabel, parcelName, queueStatus } from './preparation-labels';
 import { WarehouseStrip } from './warehouse-strip';
 import {
   PREPARATION_LANES,
@@ -203,6 +203,10 @@ function OrderPanel({
         <span className="mt-1 font-ops-body text-ops-xs font-semibold text-ops-body">
           {num(order.pickedLineCount)} / {num(order.lineCount)} kalem toplandı
         </span>
+        {/* Kutu özeti (23.6) — masa yalnız OKUR: kutu açma/kapama telefonda (karar §1.1). */}
+        {boxSummary(order) ? (
+          <span className="font-ops-body text-ops-xs text-ops-muted">Kutular: {boxSummary(order)}</span>
+        ) : null}
       </div>
 
       {/* Kargo künyesi (10.9) — PANELDE, kuyruk satırında değil: satır bir <button> ve içine form

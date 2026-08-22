@@ -1,3 +1,4 @@
+import { openBox, sealBox } from '@lezzet/application';
 import {
   AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
   OrderService, ReservationService, StockService, UserProfileService,
@@ -730,7 +731,61 @@ export async function seedOrders(
     console.log(`  ▸ KEHL siparişleri atlandı: orada 8+ adetli parti yok (${kehlStoklu.length} varyant)`);
   }
 
+  // — KUTU DÖNGÜSÜ (23.6): hazırlık kutu ekseninde de örneklenir ────────────────────────────────
+  // Üç hâl coverage'ın zorunlu kovaları: KAPALI (ve yüklenmemiş) kutu, ÇOK KUTULU sipariş, AÇIK
+  // kutu. Kutular GERÇEK kapılardan geçer (`openBox`/`sealBox` → `seal_order_box` RPC): Σ kutu =
+  // karşılanan denetimi ve `ready` geçişi seed'de de sınanmış olur. Yukarıdaki siparişler kutusuz
+  // kalır — çift akış bilinçli (0048 künyesi: kutusuz sipariş eski yoldan gider).
+  {
+    const strPicks = async (items: Array<{ id: string; variantId: string }>, adetler: number[]) => {
+      const picks = [];
+      for (const [i, item] of items.entries()) {
+        const adet = adetler[i] ?? 0;
+        if (adet > 0) picks.push({ orderItemId: item.id, batches: await partiSec(item.variantId, adet, depolar.str) });
+      }
+      return picks;
+    };
+
+    const tekKutulu = await siparis({
+      musteri: 'b2cSadik', kalemler: [kalem(45, 2), kalem(46, 1)], hedef: 'confirmed', channel: 'b2c',
+      paymentMethod: 'cash', tahsilat: 0, etiket: 'KUTULU — tek kutu (kapalı, yüklenmemiş)',
+    });
+    if (tekKutulu) {
+      const bulunan = await orders.getWithItems(tekKutulu);
+      const kutu = await openBox(db, { orderId: tekKutulu, warehouseId: depolar.str });
+      if (!bulunan || kutu.status !== 'ok') throw new Error('seed kutu: tek kutulu açılamadı');
+      const sonuc = await sealBox(db, {
+        boxId: kutu.box.boxId, warehouseId: depolar.str,
+        picks: await strPicks(bulunan.items, bulunan.items.map((i) => i.qty)), actorId: depocu,
+      });
+      // Sessiz eksik yok: kapanmayan kutu bir VERİ hâli değil seed arızasıdır (stok yetmedi vb.).
+      if (sonuc.status !== 'ok' || !sonuc.ready) throw new Error(`seed kutu: tek kutulu kapanmadı (${sonuc.status})`);
+    }
+
+    const cokKutulu = await siparis({
+      musteri: 'b2bOnayli', kalemler: [kalem(47, 6), kalem(48, 4)], hedef: 'confirmed', channel: 'b2b',
+      onAccount: true, etiket: 'KUTULU — çok kutulu (biri açık)',
+    });
+    if (cokKutulu) {
+      const bulunan = await orders.getWithItems(cokKutulu);
+      const kutu1 = await openBox(db, { orderId: cokKutulu, warehouseId: depolar.str });
+      if (!bulunan || kutu1.status !== 'ok') throw new Error('seed kutu: çok kutulunun ilk kutusu açılamadı');
+      // Kutu 1: ilk kalem TAM + ikincinin yarısı — kalem iki kutuya bölünüyor, yani ikinci kutunun
+      // kapanışı absolüt birleşim yolunu (0048 ⚠) fiilen kullanacak.
+      const sonuc = await sealBox(db, {
+        boxId: kutu1.box.boxId, warehouseId: depolar.str,
+        picks: await strPicks(bulunan.items, bulunan.items.map((i, n) => (n === 0 ? i.qty : Math.max(1, Math.floor(i.qty / 2))))),
+        actorId: depocu,
+      });
+      if (sonuc.status !== 'ok' || sonuc.ready) throw new Error(`seed kutu: çok kutulunun ilk kutusu beklenen hâlde değil (${sonuc.status})`);
+      // Kutu 2 AÇIK bırakılır: masada dolduruluyor — yarım iş ekranı ve "açık kutu" kovası.
+      const kutu2 = await openBox(db, { orderId: cokKutulu, warehouseId: depolar.str });
+      if (kutu2.status !== 'ok') throw new Error('seed kutu: ikinci kutu açılamadı');
+      console.log('  ✓ kutu döngüsü: tek kutu KAPALI + çok kutulu (1 kapalı · 1 açık) — hepsi yüklenmemiş');
+    }
+  }
+
   const { count } = await db.from('order').select('*', { count: 'exact', head: true });
-  console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri)`);
+  console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri · kutulu hazırlık)`);
 }
 

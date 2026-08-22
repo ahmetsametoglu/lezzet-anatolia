@@ -1,4 +1,6 @@
 import {
+  OrderBoxItemService,
+  OrderBoxService,
   OrderItemBatchService,
   OrderItemService,
   OrderService,
@@ -128,6 +130,22 @@ export interface PreparationOrder {
   /** Toplanan kalem sayısı — hazırlık ilerlemesi. */
   pickedLineCount: number;
   lines: PreparationLine[];
+  /**
+   * Siparişin kutuları (23.6) — `boxNo` sırasıyla; boş dizi = kutusuz akış (eski yol, bilinçli
+   * çift akış). Mobil ekran "bu kalemden kaç adet zaten kutulandı"yı `items`ten türetir; web
+   * paneli yalnız sayar ("2 kutu · 1 kapalı") — web'de kutu açılmaz/kapanmaz (karar §1.1).
+   */
+  boxes: PreparationBox[];
+}
+
+/** Bir kutu, kuyruğun gözünden — `sealedAt null` = açık (masada dolduruluyor). */
+export interface PreparationBox {
+  boxId: string;
+  boxNo: number;
+  /** QR'ın içeriği (`KT-…`) — sipariş referansı DEĞİL (Netleşecek 4). */
+  code: string;
+  sealedAt: string | null;
+  items: Array<{ orderItemId: string; qty: number }>;
 }
 
 /**
@@ -151,13 +169,14 @@ export async function listPreparationQueue(
   if (orders.length === 0) return [];
 
   const items = await new OrderItemService(db).listByOrders(orders.map((order) => order.id));
-  // Dördü AYNI dalgada: parti dağılımı okuması mevcut turların yanına giriyor, arkalarına DEĞİL —
-  // ikinci bir uçuş açsaydı kuyruğun gecikmesi iki katına çıkardı (21.11d ölçümü).
-  const [names, customers, pinned, picked] = await Promise.all([
+  // Beşi AYNI dalgada: parti dağılımı ve kutu okumaları mevcut turların yanına giriyor,
+  // arkalarına DEĞİL — ikinci bir uçuş açsaydı kuyruğun gecikmesi iki katına çıkardı (21.11d ölçümü).
+  const [names, customers, pinned, picked, boxes] = await Promise.all([
     variantNames(db, items.map((item) => item.variantId)),
     customerNames(db, orders),
     pinnedStockIds(db, orders.map((order) => order.id)),
     pickedBatches(db, orders.map((order) => order.id)),
+    orderBoxes(db, orders.map((order) => order.id)),
   ]);
 
   const queue: PreparationOrder[] = [];
@@ -193,6 +212,7 @@ export async function listPreparationQueue(
       lineCount: lines.length,
       pickedLineCount: lines.filter((line) => line.pickedQty >= line.orderedQty).length,
       lines,
+      boxes: boxes.get(order.id) ?? [],
     });
   }
   return queue;
@@ -287,38 +307,18 @@ export async function confirmPreparation(
   if (!found) return { status: 'not_found' };
   if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
 
-  const pinned = await pinnedStockIds(db, [input.orderId]);
-  for (const pick of input.picks) {
-    const item = found.items.find((row) => row.id === pick.orderItemId);
-    if (!item) continue;
-    const requiredStockId = pinned.get(`${input.orderId}:${item.variantId}`) ?? item.stockId;
-    if (!requiredStockId) continue;
-
-    const wrong = pick.batches.find((batch) => batch.stockId !== requiredStockId);
-    if (wrong) return { status: 'pinned_violation', itemId: item.id, requiredStockId };
-  }
+  const violation = await findPinnedViolation(db, input.orderId, found.items, input.picks);
+  if (violation) return { status: 'pinned_violation', ...violation };
 
   const result: PreparationResult = await new OrderService(db).recordPreparation(input.orderId, input.picks);
 
-  // Tavsiye için tutar motora GİRDİ olarak verilir, dönen değerde yer almaz (depocu parayı görmez).
-  const thresholds = await shortfallThresholds(db);
-  const shortfalls = [];
-  for (const pick of input.picks) {
-    const item = found.items.find((row) => row.id === pick.orderItemId);
-    if (!item) continue;
-    const picked = pick.batches.reduce((sum, batch) => sum + batch.qty, 0);
-    if (picked >= item.qty) continue;
-
-    shortfalls.push({
-      itemId: item.id,
-      suggestion: suggestShortfallAction({
-        orderedQty: item.qty,
-        pickedQty: picked,
-        missingValueCents: item.unitPriceCents * (item.qty - picked),
-        thresholds,
-      }),
-    });
-  }
+  const shortfalls = await adviseShortfalls(
+    db,
+    input.picks.flatMap((pick) => {
+      const item = found.items.find((row) => row.id === pick.orderItemId);
+      return item ? [{ item, pickedQty: pick.batches.reduce((sum, batch) => sum + batch.qty, 0) }] : [];
+    }),
+  );
 
   // Tamamı toplandıysa sipariş sevkiyata hazırdır. Eksik varsa `preparing`'de kalır: karar
   // verilmeden ilerletmek, yönetimin elindeki soruyu atlamak olurdu.
@@ -382,6 +382,55 @@ export async function recordShipment(
   return { status: 'ok' };
 }
 
+/**
+ * **Çıpalı parti ihlali** — kilitli kalem başka partiden verilmek istendi mi (DOMAIN §4).
+ * `confirmPreparation` ile `sealBox`ın (23.6) ORTAK kuralı: kutu döngüsü de indirimli teklifin
+ * partisine dokunamaz; kural iki kapıda ayrı yazılsaydı bir gün yalnız birinde değişirdi.
+ * Dönüş `null` = ihlal yok.
+ */
+export async function findPinnedViolation(
+  db: SupabaseClient,
+  orderId: string,
+  items: readonly OrderItem[],
+  picks: readonly PreparationPick[],
+): Promise<{ itemId: string; requiredStockId: string } | null> {
+  const pinned = await pinnedStockIds(db, [orderId]);
+  for (const pick of picks) {
+    const item = items.find((row) => row.id === pick.orderItemId);
+    if (!item) continue;
+    const requiredStockId = pinned.get(`${orderId}:${item.variantId}`) ?? item.stockId;
+    if (!requiredStockId) continue;
+
+    const wrong = pick.batches.find((batch) => batch.stockId !== requiredStockId);
+    if (wrong) return { itemId: item.id, requiredStockId };
+  }
+  return null;
+}
+
+/**
+ * **Eksik tavsiyesi** — toplanan adet sipariş edileni karşılamayan kalemler için motorun önerisi.
+ * Tutar motora GİRDİ olarak verilir, dönen değerde yer almaz (depocu parayı görmez). İki kapının
+ * ortak dili: `confirmPreparation` her onayda, `sealBox` yalnız `declareShort` beyanında çağırır.
+ */
+export async function adviseShortfalls(
+  db: SupabaseClient,
+  rows: ReadonlyArray<{ item: OrderItem; pickedQty: number }>,
+): Promise<Array<{ itemId: string; suggestion: ShortfallSuggestion }>> {
+  const short = rows.filter((row) => row.pickedQty < row.item.qty);
+  if (short.length === 0) return [];
+
+  const thresholds = await shortfallThresholds(db);
+  return short.map(({ item, pickedQty }) => ({
+    itemId: item.id,
+    suggestion: suggestShortfallAction({
+      orderedQty: item.qty,
+      pickedQty,
+      missingValueCents: item.unitPriceCents * (item.qty - pickedQty),
+      thresholds,
+    }),
+  }));
+}
+
 /** Eşikler ayardan — kodda sabit yok (CLAUDE.md §4). */
 async function shortfallThresholds(db: SupabaseClient): Promise<{ ratio: number; valueCents: number }> {
   const settings = new SettingsService(db);
@@ -406,7 +455,7 @@ async function shortfallThresholds(db: SupabaseClient): Promise<{ ratio: number;
  * `Promise.all` tek çağrıya iner ve künyenin bu bölümü silinir. Bugünkü hâl yeni bir N+1 SINIFI
  * açmıyor — aynı döngü kuyruğun içinde zaten iki kez var.
  */
-async function pickedBatches(
+export async function pickedBatches(
   db: SupabaseClient,
   orderIds: readonly string[],
 ): Promise<Map<string, PreparationPick['batches']>> {
@@ -419,6 +468,39 @@ async function pickedBatches(
     // Bir kalem birden çok partiye bölünmüş olabilir: satırlar TOPLANIR, üzerine yazılmaz.
     if (batches) batches.push({ stockId: row.stockId, qty: row.qty });
     else map.set(row.orderItemId, [{ stockId: row.stockId, qty: row.qty }]);
+  }
+  return map;
+}
+
+/**
+ * Siparişlerin kutuları — kuyruk sözleşmesinin `boxes` alanı (23.6). İki okuma zincirli ama
+ * dalganın TEK turu: kutusuz veride (bugünün baskın hâli) ikinci okuma hiç koşmaz.
+ */
+async function orderBoxes(db: SupabaseClient, orderIds: readonly string[]): Promise<Map<string, PreparationBox[]>> {
+  const boxes = await new OrderBoxService(db).listByOrders([...orderIds]);
+  if (boxes.length === 0) return new Map();
+
+  const items = await new OrderBoxItemService(db).listByBoxes(boxes.map((box) => box.id));
+  const itemsByBox = new Map<string, PreparationBox['items']>();
+  for (const row of items) {
+    const list = itemsByBox.get(row.boxId);
+    const entry = { orderItemId: row.orderItemId, qty: row.qty };
+    if (list) list.push(entry);
+    else itemsByBox.set(row.boxId, [entry]);
+  }
+
+  const map = new Map<string, PreparationBox[]>();
+  for (const box of boxes) {
+    const view: PreparationBox = {
+      boxId: box.id,
+      boxNo: box.boxNo,
+      code: box.code,
+      sealedAt: box.sealedAt,
+      items: itemsByBox.get(box.id) ?? [],
+    };
+    const list = map.get(box.orderId);
+    if (list) list.push(view);
+    else map.set(box.orderId, [view]);
   }
   return map;
 }

@@ -13,6 +13,7 @@ export * from './order/bundle-qty';
 export * from './order/channel';
 export * from './order/reference-no';
 export * from './order/decisions';
+export * from './order/box-completion';
 export * from './order/customer-status';
 export * from './identity/b2b-application';
 export * from './identity/b2b-approval';

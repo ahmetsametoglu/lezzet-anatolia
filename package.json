@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@lezzet/ai": "workspace:*",
+    "@lezzet/application": "workspace:*",
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",

@@ -7,6 +7,7 @@ import type { PreparationLineContract, PreparationOrderContract } from '@lezzet/
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { ScanSheet } from '@/components/scan/scan-sheet';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
@@ -135,17 +136,56 @@ export function PreparationScreen() {
     );
   }
 
-  const cta = ctaOf(picking.resolved, picking.anyShort, picking.sending, offline);
+  const cta = picking.boxMode
+    ? boxCtaOf(picking.openBox !== null, picking.boxes.length, picking.anyQty, picking.anyShort, picking.sending, offline)
+    : ctaOf(picking.resolved, picking.anyShort, picking.sending, offline);
+  const onCta = picking.boxMode ? (picking.openBox === null ? picking.openNewBox : picking.sealCurrentBox) : picking.submit;
 
   return (
     <View style={styles.screen} testID="warehouse-picking">
       {header}
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
+        {/* KUTU ŞERİDİ (23.6): kapalı kutular salt-okunur özet, açık kutu başlık çipi + tarama.
+            Kutusuz başlanmış işte (boxMode false) şerit hiç çizilmez — eski akış aynen. */}
+        {picking.boxMode && picking.boxes.length > 0 ? (
+          <View style={styles.boxStrip} testID="warehouse-picking-boxes">
+            {picking.boxes
+              .filter((box) => box.sealedAt !== null)
+              .map((box) => (
+                <Text key={box.boxId} style={styles.boxSealed} testID={`warehouse-picking-box-${box.boxNo}`}>
+                  {fillCopy(t.picking.box.sealedRow, {
+                    n: String(box.boxNo),
+                    qty: String(box.items.reduce((sum, item) => sum + item.qty, 0)),
+                  })}
+                </Text>
+              ))}
+            {picking.openBox === null ? null : (
+              <Text style={styles.boxCurrent} testID="warehouse-picking-box-open">
+                {fillCopy(t.picking.box.current, { n: String(picking.openBox.boxNo) })}
+              </Text>
+            )}
+          </View>
+        ) : null}
+        {/* Çevrimdışıyken okutma düğmesi ÇİZİLMEZ (kabul ekranı deseni): kod çözümü sunucuda,
+            kuyruğu yok — basılamayan düğme yerine yokluk, kilidin kendisini anlatır. */}
+        {picking.boxMode && picking.openBox !== null && !offline ? (
+          <PressableSurface
+            onPress={() => picking.setScanOpen(true)}
+            feedback="scale"
+            style={styles.scanButton}
+            accessibilityLabel={t.picking.box.scanCta}
+            testID="warehouse-picking-scan"
+          >
+            <Text style={styles.scanButtonLabel}>{t.picking.box.scanCta}</Text>
+          </PressableSurface>
+        ) : null}
+
         {order.lines.map((line) => (
           <LineRow
             key={line.itemId}
             line={line}
+            boxMode={picking.boxMode}
             qty={picking.lineState(line.itemId).qty}
             shortReported={picking.lineState(line.itemId).shortReported}
             capacity={picking.capacityOf(line)}
@@ -156,8 +196,17 @@ export function PreparationScreen() {
             onShort={() => picking.reportShort(line.itemId)}
           />
         ))}
-        <Text style={styles.footnote}>{t.picking.footnote}</Text>
+        <Text style={styles.footnote}>{picking.boxMode ? t.picking.box.footnote : t.picking.footnote}</Text>
       </ScrollView>
+
+      <ScanSheet
+        open={picking.scanOpen}
+        title={t.picking.box.scanTitle}
+        hint={t.picking.box.scanHint}
+        onClose={() => picking.setScanOpen(false)}
+        onScan={picking.handleScan}
+        testID="warehouse-picking-scan-sheet"
+      />
 
       {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (kurye emsali). */}
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
@@ -171,7 +220,7 @@ export function PreparationScreen() {
           </Text>
         )}
         <PressableSurface
-          onPress={picking.submit}
+          onPress={onCta}
           disabled={!cta.enabled}
           feedback="shadow"
           style={[styles.cta, cta.enabled ? styles.ctaReady : styles.ctaIdle]}
@@ -190,6 +239,31 @@ function captionOf(order: PreparationOrderContract): string {
   return [order.referenceNo ?? t.picking.noReference, order.customerName, t.common.channel[order.channel]].join(' · ');
 }
 
+/**
+ * Kutu modunun CTA'sı (23.6): açık kutu yoksa "kutu aç" (ilk kutu tek dokunuş — tasarım brief'i),
+ * varsa "kutuyu kapat" — boş kutu kapanmadığı için içerik girilene dek kilitli. Eksik bildirilmiş
+ * satır varsa kapanış beyanla gider (cümle onu söyler).
+ */
+function boxCtaOf(
+  hasOpenBox: boolean,
+  boxCount: number,
+  anyQty: boolean,
+  anyShort: boolean,
+  sending: boolean,
+  offline: boolean,
+): { label: string; enabled: boolean } {
+  if (offline) return { label: t.common.offlineCta, enabled: false };
+  if (sending) return { label: hasOpenBox ? t.picking.cta.sending : t.picking.box.opening, enabled: false };
+  if (!hasOpenBox) {
+    return {
+      label: boxCount === 0 ? t.picking.box.open : fillCopy(t.picking.box.openNext, { n: String(boxCount + 1) }),
+      enabled: true,
+    };
+  }
+  if (!anyQty) return { label: t.picking.box.sealPending, enabled: false };
+  return { label: anyShort ? t.picking.box.sealShort : t.picking.box.seal, enabled: true };
+}
+
 /** CTA'nın üç hâli (v2'nin `dTopCta`sı) + çevrimdışı kilidi. */
 function ctaOf(
   resolved: boolean,
@@ -205,6 +279,8 @@ function ctaOf(
 
 interface LineRowProps {
   line: PreparationLineContract;
+  /** Kutu modunda alt cümle değişir: önceki kayıt "yerine geçmez", önceki KUTULARDADIR. */
+  boxMode: boolean;
   qty: number;
   shortReported: boolean;
   capacity: number;
@@ -213,7 +289,7 @@ interface LineRowProps {
   onShort: () => void;
 }
 
-function LineRow({ line, qty, shortReported, capacity, onQty, onComplete, onShort }: LineRowProps) {
+function LineRow({ line, boxMode, qty, shortReported, capacity, onQty, onComplete, onShort }: LineRowProps) {
   const name = productLabel(line.productName, line.variantLabel);
   const first = line.suggestion[0];
   const wanted =
@@ -265,10 +341,11 @@ function LineRow({ line, qty, shortReported, capacity, onQty, onComplete, onShor
       )}
 
       {line.pickedQty === 0 ? null : (
-        /* Yarım iş: eski parti dağılımı okunamıyor, yeni kayıt öncekinin YERİNE geçiyor —
-           sessizce üstüne yazmak depocunun bilmediği bir kaybı doğururdu (hook künyesi). */
+        /* Yarım işin iki dili: kutu modunda önceki kayıt önceki KUTULARDA durur (birleşimi sunucu
+           kurar, üstüne yazılmaz); kutusuz akışta yeni kayıt öncekinin YERİNE geçer (hook künyesi)
+           — sessizce üstüne yazmak depocunun bilmediği bir kaybı doğururdu. */
         <Text style={styles.shortHint} testID={`warehouse-picking-previous-${line.itemId}`}>
-          {fillCopy(t.picking.line.previous, { qty: String(line.pickedQty) })}
+          {fillCopy(boxMode ? t.picking.box.prevBoxes : t.picking.line.previous, { qty: String(line.pickedQty) })}
         </Text>
       )}
 
@@ -319,6 +396,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: operationsTheme.border.base,
     borderStyle: 'dashed',
     borderBottomColor: operationsTheme.colors['sand-300'],
+  },
+  boxStrip: {
+    gap: operationsTheme.space.xs,
+    paddingTop: operationsTheme.space.xl,
+  },
+  /** Kapalı kutu satırı — salt-okunur özet; kutu artık değiştirilemez, rengi de bunu söyler. */
+  boxSealed: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  boxCurrent: {
+    alignSelf: 'flex-start',
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.lg,
+    borderRadius: operationsTheme.radius.badge,
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    color: operationsTheme.colors['olive-dark'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+  },
+  scanButton: {
+    marginTop: operationsTheme.space.xl,
+    height: operationsTheme.size.controlSm,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanButtonLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors['olive-dark'],
   },
   lineRow: {
     gap: operationsTheme.space.sm,

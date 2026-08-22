@@ -1,6 +1,7 @@
 import type {
   InboundTransferContract,
   IntakeFormRowContract,
+  PreparationBoxContract,
   PreparationLineContract,
   PreparationOrderContract,
 } from '@lezzet/types';
@@ -56,8 +57,22 @@ export function preparationOrder(overrides: Partial<PreparationOrderContract> = 
     deliveryDate: '2026-08-09',
     lineCount: lines.length,
     pickedLineCount: 0,
+    // 23.6: kuyruk kutuları da taşıyor — varsayılan "kutusuz akış" (eski yol).
+    boxes: [],
     ...overrides,
     lines,
+  };
+}
+
+/** Kutu (23.6) — varsayılan AÇIK ve boş: masada doldurulmayı bekleyen hâl. */
+export function preparationBox(overrides: Partial<PreparationBoxContract> = {}): PreparationBoxContract {
+  return {
+    boxId: '00000000-0000-4000-8000-0000000000b1',
+    boxNo: 1,
+    code: 'KT-26-4K2M9P7HWX',
+    sealedAt: null,
+    items: [],
+    ...overrides,
   };
 }
 
