@@ -212,10 +212,13 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     ("2 kutu · 1 kapalı · 1 açık") — web'de kutu açılmaz/kapanmaz (karar §1.1). Jest: eski akış
     testleri "kutusuz başlanmış iş" fikstürüne çevrildi, kutu akışına 5 test (`picking-box.test.tsx`);
     mobil 87 suite · 613 test yeşil.
-  - KALAN: toplama listesinin `storage_area.sort_order` dizilimi (karar §1.13'ün ekran yarısı —
-    kuyruk sözleşmesi alan SIRASINI henüz taşımıyor) → 23.7 ile birlikte; ve 23.7 etiket (kapanışın
-    "etiket basılır" adımı — footnote bugün "sıradaki adımda" diyor).
-- [~] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
+  - ~~KALAN: toplama listesinin `storage_area.sort_order` dizilimi~~ → 23.7 ile birlikte yazıldı
+    (22.08): kalemler ilk öneri partisinin alan sırasına dizilir — sıra SUNUCUDA kurulur
+    (`listPreparationQueue`), sözleşmeye sayı taşınmaz; alansız kalem sona düşer. Gömüye
+    `sort_order` girince İLK çok-kelimeli embed alanı doğdu ve `StockService.embeds` beyanı
+    gerekti (ölçüldü: beyansız iç satır snake kalıyor, kuyruk okuma anında düşüyordu — taban
+    künyesinin "arıza sessiz değildir" cümlesi). Kapanışın "etiket basılır" adımı da doldu.
+- [x] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
   etiket tasarımıyla) · yazıcı ayarı `settings` warehouse kapsamı (`label_printer_*`) + Depolar
   ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan · touches:
   `packages/application/src/warehouse/boxes.ts`, `packages/types/src/contracts/warehouse-api.schema.ts`,
@@ -228,9 +231,25 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     ÖNİZLEMESİ (CLAUDE §3: dış-modül bekleyende UI tam, arka uç stub — kart "basım iğne deneyini
     bekliyor" der). Testler: +2 entegrasyon (para sızıntısı dahil) + jest kapanış testi etiketi
     de ölçüyor.
-  - KALAN (23.5 iğne deneyine kilitli): PDF/PNG üretimi + fiili basım + `printed_at` damgası +
-    yazıcı ayarları (`label_printer_*`, Depolar ekranı) — üçünün de tüketicisi Brother SDK'yla
-    doğar; şimdi açmak ilk günden ölü kod olurdu (CLAUDE §0 tüketicisiz uç kuralı).
+  - **Durum (22.08 gece) — BASIM YARISI YAZILDI ve CİHAZDA KÂĞITLA ölçüldü** (iğne deneyi 23.5
+    aynı gün tuttuğu için kilit düştü). Biçim kararı (Netleşecek 2): **PNG** — Brother SDK yalnız
+    görüntü basıyor, PDF ara katmanı kimseye hizmet etmeyecekti. Zincir: `boxLabelSvg`
+    (`application/warehouse/label-svg.ts`, SAF string şablon + `qrcode` matrisi — birim testli,
+    para sızıntısı ölçülü) → `GET /boxes/:id/label.png` (`mobile-api/lib/label-png`,
+    `@resvg/resvg-js` + Karla dosyadan; zarfsız binary) → telefon `fetch`+`expo-file-system` ile
+    cihaza yazar (`lib/print/label-file`) → `printLabel` ayarlı yazıcıya basar → **başarıda**
+    `POST /boxes/:id/printed` damgayı vurur (niyet damgalanmaz — 05.08; yeniden basım damgayı
+    günceller). Ölçüldü: `sealed_at` 20:16:04 → `printed_at` 20:16:11, kâğıt çıktı gözle onaylı.
+  - Yazıcı ayarı üç anahtar (`label_printer_address/model/label_size` — warehouse kapsamı, yeni
+    tablo yok); üçü birden dolu değilse `labelPrinterFor` **null** döner ve telefon basmayı hiç
+    denemez (kart önizleme dilinde kalır, Depolar'a işaret eder). Ayar etiket cevabının İÇİNDE
+    gelir (`BoxLabelResponse.printer`) — telefon ayrı ayar ucu okumaz, ayarın tüketicisi basım
+    anıdır. Web: Depolar ekranına "Etiket yazıcısı" bölümü + pencere (boy KAPALI liste —
+    `SetLabelSizeError` 23.5 ölçümü; üç alanı boşaltmak yazıcıyı kaldırır). Seed STR'ye ölçülen
+    değerleri yazar (1110 · 192.168.1.90 · DieCutW103H164); öteki depolar bilerek yazıcısız
+    (çift hâl coverage). Basım hatası kutu kapanışını GERİ ÇEKMEZ: cümle AYNEN karta yazılır,
+    "yeniden bas" eli bekler. Jest +2 (otomatik basım · redde kapanışın ayakta kalışı + yeniden
+    basım), entegrasyon +2 (`labelPrinterFor` yarım ayar reddi · damga yalnız kapalı kutuya).
 - [x] (23.8) **Yükleme + teslim okutması:** `loadBox` (rota doğrulama + damga + sayaç) ·
   `startCourierDay` kutulu siparişte tüm kutular binmeden `out_for_delivery` yazmaz ·
   ~~`deliverByBox`~~ → ayrı kapı açılmadı: kutu ön koşulu `confirmDoorDelivery`'nin İÇİNE girdi

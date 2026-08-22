@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import type {
   BoxLabelContract,
+  BoxPrinterContract,
   PreparationBoxContract,
   PreparationLineContract,
   PreparationOrderContract,
@@ -13,10 +14,14 @@ import {
   confirmPreparation,
   fetchBoxLabel,
   fetchPreparationQueue,
+  markBoxPrinted,
   openOrderBox,
   resolveScannedCode,
   sealOrderBox,
 } from '@/lib/api/warehouse';
+import { printLabel } from '@/lib/print/brother';
+import { downloadLabelPng } from '@/lib/print/label-file';
+import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
@@ -117,7 +122,21 @@ interface UsePreparationResult {
    */
   label: BoxLabelContract | null;
   dismissLabel: () => void;
+  /**
+   * Basımın hâli (23.7). `off` = yazıcı tanımsız ya da modül bu derlemede yok — kart önizleme
+   * olarak kalır; öteki hâller fiili basımın seyri. Hata cümlesi AYNEN taşınır (SDK reddi
+   * teşhisin verisidir, sabit metne indirgenmez).
+   */
+  printState: PrintState;
+  /** Yeniden basım — yırtılan/silik etiket için; damga güncellenir. */
+  reprintLabel: () => void;
 }
+
+export type PrintState =
+  | { phase: 'off' }
+  | { phase: 'printing' }
+  | { phase: 'printed'; model: string }
+  | { phase: 'failed'; message: string };
 
 /** Motorun bu satır için ayırabildiği toplam adet — sipariş adedi DEĞİL, raftaki gerçek. */
 function capacity(line: PreparationLineContract): number {
@@ -255,6 +274,30 @@ export function usePreparation(): UsePreparationResult {
   const anyQty = order !== null && order.lines.some((line) => (lines[line.itemId]?.qty ?? 0) > 0);
   const [scanOpen, setScanOpen] = useState(false);
   const [label, setLabel] = useState<BoxLabelContract | null>(null);
+  const [printState, setPrintState] = useState<PrintState>({ phase: 'off' });
+  /** Basımın hedefi — etiketle birlikte gelir; yeniden basım aynı kutu + aynı yazıcıyla koşar. */
+  const printTarget = useRef<{ boxId: string; printer: BoxPrinterContract } | null>(null);
+
+  const runPrint = useCallback(async (boxId: string, printer: BoxPrinterContract) => {
+    setPrintState({ phase: 'printing' });
+    try {
+      // PNG sunucudan (tek şablon — karar §1.9), basım cihazdan (SDK ağ üzerinden basar, 23.5).
+      const fileUri = await downloadLabelPng(boxId);
+      await printLabel(fileUri, printer);
+      // Damga başarının kaydı. Damga yazımı düşse bile kâğıt çıktı GERÇEK — basım "bastı" kalır;
+      // düşen damga bir sonraki basımda güncellenir, akışı geriye çekmek kâğıdı geri almaz.
+      await markBoxPrinted(boxId);
+      setPrintState({ phase: 'printed', model: printer.model });
+    } catch (error) {
+      setPrintState({ phase: 'failed', message: error instanceof Error ? error.message : String(error) });
+    }
+  }, []);
+
+  const reprintLabel = useCallback(() => {
+    const target = printTarget.current;
+    if (target === null || printState.phase === 'printing') return;
+    void runPrint(target.boxId, target.printer);
+  }, [printState.phase, runPrint]);
 
   const openNewBox = useCallback(() => {
     if (order === null || sending) return;
@@ -379,7 +422,19 @@ export function usePreparation(): UsePreparationResult {
         // Etiket önizlemesi (23.7): içerik kapanışta kesinleşti, sunucudan okunur. Okuma düşerse
         // sessiz kalınır — kapanışın kendisi yazıldı, etiket karta sonra da bakılabilir.
         const labelResult = await fetchBoxLabel(currentBox.boxId);
-        if (labelResult.error === null && labelResult.data.status === 'ok') setLabel(labelResult.data.label);
+        if (labelResult.error === null && labelResult.data.status === 'ok') {
+          setLabel(labelResult.data.label);
+          // Basım kutu kapanışında (karar §1.6) — yazıcı ayarlıysa ve modül bu derlemede varsa.
+          // Beklenmez (`void`): kapanışın kendisi yazıldı, kâğıdın seyri kartta ayrıca akar.
+          const printer = labelResult.data.printer;
+          if (printer !== null && hasPrinterNativeModule()) {
+            printTarget.current = { boxId: currentBox.boxId, printer };
+            void runPrint(currentBox.boxId, printer);
+          } else {
+            printTarget.current = null;
+            setPrintState({ phase: 'off' });
+          }
+        }
         await load();
         return;
       }
@@ -461,7 +516,13 @@ export function usePreparation(): UsePreparationResult {
     setScanOpen,
     handleScan,
     label,
-    dismissLabel: useCallback(() => setLabel(null), []),
+    dismissLabel: useCallback(() => {
+      setLabel(null);
+      setPrintState({ phase: 'off' });
+      printTarget.current = null;
+    }, []),
+    printState,
+    reprintLabel,
   };
 }
 

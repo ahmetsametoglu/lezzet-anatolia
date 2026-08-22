@@ -268,8 +268,9 @@ export type {
 // görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
 export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
-export { boxLabelPayload, openBox, sealBox } from './warehouse/boxes';
-export type { BoxLabel, BoxLabelOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
+export { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './warehouse/boxes';
+export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
+export { boxLabelSvg, LABEL_WIDTH_PX, LABEL_HEIGHT_PX } from './warehouse/label-svg';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 // Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.
 export { learnCode, resolveScannedCode } from './warehouse/scan';

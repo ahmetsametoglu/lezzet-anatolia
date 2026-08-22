@@ -11,6 +11,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import type { Country, UserProfile } from '@lezzet/types';
+import { labelPrinterFor } from '@lezzet/application';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
@@ -150,6 +151,9 @@ async function readCard(
    */
   const measure = await readMeasurePoints(db, row.id, new Date());
 
+  // Etiket yazıcısı (23.7) — kapalı tesiste de okunur: yazıcı da nokta gibi KÜNYEDİR.
+  const printer = await labelPrinterFor(db, row.id);
+
   /**
    * **Bölgelerin ağırlığı** (19.28) — kart artık yalnız tanımı değil sonucu da gösteriyor.
    *
@@ -169,6 +173,7 @@ async function readCard(
     row,
     zones: toZoneCards(zones, row.id, { orders: zoneOrders, waiting: zoneWaiting, now: new Date() }),
     staff: toStaffChips(staff, row.id),
+    printer,
     points: measure.points,
     measureTruncated: measure.truncated,
     scorecard: toScorecard({

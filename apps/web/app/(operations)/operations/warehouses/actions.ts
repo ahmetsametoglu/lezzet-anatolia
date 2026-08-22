@@ -2,14 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { StorageAreaService, TemperatureLogService, VehicleService, WarehouseService, serviceDb } from '@lezzet/database';
+import { SettingsService, StorageAreaService, TemperatureLogService, VehicleService, WarehouseService, serviceDb } from '@lezzet/database';
+import { LABEL_PRINTER_KEYS } from '@lezzet/application';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
 import { isUnusualReading } from './measure-read';
 import type { TemperatureDeviation } from './measure-rules';
 import { WAREHOUSES_PATH } from './warehouses-url';
-import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema } from './warehouses-types';
+import { LabelPrinterFormSchema, StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema } from './warehouses-types';
 
 // Depolar ekranının yazma kapıları (19.5).
 //
@@ -90,6 +91,32 @@ export async function setWarehouseActiveAction(input: { id: string; isActive: bo
     // Kargo çıkış rolü kapanan depoda BIRAKILMAZ: kısmi unique indeks yalnız aktif satırlara
     // baktığı için kayıt geçerdi, ama o ülkede "kargo deposu var" diye okunan bir satır kalırdı.
     await svc.update(input.isActive ? { id: row.id, isActive: true } : { id: row.id, isActive: false, shipsOnline: false });
+    revalidatePath(WAREHOUSES_PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}
+
+/**
+ * Etiket yazıcısı ayarı (23.7) — `settings` warehouse kapsamına üç anahtar (`LABEL_PRINTER_KEYS`;
+ * yeni tablo YOK, plan kararı). Üçü boş = yazıcıyı KALDIR: `labelPrinterFor` boş değeri tanımsız
+ * okur ve telefon basmayı hiç denemez. Yarım ayar form şemasında reddedilir (`LabelPrinterFormSchema`).
+ */
+export async function saveLabelPrinterAction(input: unknown): Promise<ActionResult> {
+  try {
+    const staff = await requireAdmin();
+    // `refine`li şema `extend` taşımaz (ZodEffects) — kimlik ayrı, form alanları ayrı ayrıştırılır.
+    const { warehouseId } = z.object({ warehouseId: z.string().uuid() }).parse(input);
+    const parsed = LabelPrinterFormSchema.parse(input);
+
+    const settings = new SettingsService(serviceDb());
+    const scope = { scopeType: 'warehouse' as const, scopeId: warehouseId, actorId: staff.id };
+    await Promise.all([
+      settings.set(LABEL_PRINTER_KEYS.address, parsed.address, scope),
+      settings.set(LABEL_PRINTER_KEYS.model, parsed.model, scope),
+      settings.set(LABEL_PRINTER_KEYS.labelSize, parsed.labelSize, scope),
+    ]);
     revalidatePath(WAREHOUSES_PATH);
     return { data: null, error: null };
   } catch (error) {

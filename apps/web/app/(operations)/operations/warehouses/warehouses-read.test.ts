@@ -113,6 +113,7 @@ describe('kapatmanın sonuçları', () => {
     row: rowsOf()[0]!,
     zones: [],
     staff: [],
+    printer: null,
     points: [],
     measureTruncated: false,
     scorecard: {

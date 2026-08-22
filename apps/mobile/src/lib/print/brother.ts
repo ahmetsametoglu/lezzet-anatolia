@@ -47,6 +47,27 @@ export async function findNetworkPrinters(): Promise<PrinterChannel[]> {
 }
 
 /**
+ * **Gerçek etiket basımı** (23.7) — sunucunun ürettiği PNG dosyasını deponun ayarlı yazıcısına
+ * basar. Boy AYARDAN gelir (`label_printer_label_size`, Depolar ekranı): takılı kâğıt SDK'dan
+ * okunamıyor, yanlış boy `SetLabelSizeError` (23.5 ölçümü) — burada deneme listesi YOKTUR, ayar
+ * doğruyu söylemekle yükümlü; hata çağırana fırlar ve ekran cümleyi gösterir.
+ */
+export async function printLabel(
+  fileUri: string,
+  printer: { address: string; model: string; labelSize: string },
+): Promise<void> {
+  const sdk = loadSdk();
+  if (!sdk) throw new Error('yazıcı modülü bu derlemede yok');
+
+  const labelSize = sdk.BPQLLabelSize[printer.labelSize as keyof typeof sdk.BPQLLabelSize];
+  // Numerik enum'un ters eşlemesine düşen değer (sayı → ad, string döner) de geçersizdir.
+  if (typeof labelSize !== 'number') throw new Error(`bilinmeyen etiket boyu: ${printer.labelSize}`);
+
+  const channel = { type: sdk.BPChannelType.WiFi, address: printer.address, modelName: printer.model };
+  await sdk.BrotherPrinterSDK.printImage(fileUri, channel, { labelSize, autoCut: true, cutAtEnd: true });
+}
+
+/**
  * İğne deneyi baskısı: paketlenmiş test desenini verilen yazıcıya basar. Başarı = kâğıt çıktı;
  * dönüş, tutan etiket boyunun adıdır (23.7'nin `label_printer_*` ayarına ölçülmüş değer).
  * SDK reddi fırlar ve çağıran cümleyi AYNEN gösterir (yutulmaz — arıza deneyin verisidir).

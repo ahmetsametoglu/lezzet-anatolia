@@ -16,7 +16,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { usePreparation } from './use-preparation.hook';
+import { usePreparation, type PrintState } from './use-preparation.hook';
 import { batchLabel, parseQty, productLabel, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
@@ -111,7 +111,7 @@ export function PreparationScreen() {
         <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-queue">
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
-          {picking.label === null ? null : <LabelCard label={picking.label} onClose={picking.dismissLabel} />}
+          {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
           <Text style={styles.heading}>{t.picking.queueHeading}</Text>
           {picking.orders.map((row) => (
             <PressableSurface
@@ -151,7 +151,7 @@ export function PreparationScreen() {
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
         {/* Son kapanan kutunun etiketi (23.7) — ara kutu kapanışında burada görünür. */}
-        {picking.label === null ? null : <LabelCard label={picking.label} onClose={picking.dismissLabel} />}
+        {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
         {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
             FARKLIYSA çizilir (web `parcelName` kuralı birebir): ikisi aynıyken satır, hiçbir şey
             söylemeyen bir tekrar olurdu. Adres/telefon yine YOK (tasarım §6). */}
@@ -302,11 +302,22 @@ function ctaOf(
 }
 
 /**
- * ETİKET ÖNİZLEMESİ (23.7) — 4×6 etiketin içeriği, sunucudan (`boxLabelPayload`). Basım Brother
- * SDK bağlanınca (23.5 iğne deneyi); bu kart "dış-modül bekleyende UI tam, arka uç stub"
- * kuralının uygulamasıdır (CLAUDE §3). **Tutar yok ve olamaz** — sözleşme taşımıyor (karar §1.5).
+ * ETİKET KARTI (23.7) — 4×6 etiketin içeriği sunucudan (`boxLabelPayload`); basım kutu
+ * kapanışında kendiliğinden koşar (karar §1.6) ve seyri bu kartta okunur. Yazıcı tanımsızsa ya da
+ * modül derlemede yoksa (`printState: off`) kart önizleme olarak kalır — Depolar ekranına işaret
+ * eder. **Tutar yok ve olamaz** — sözleşme taşımıyor (karar §1.5).
  */
-function LabelCard({ label, onClose }: { label: BoxLabelContract; onClose: () => void }) {
+function LabelCard({
+  label,
+  printState,
+  onReprint,
+  onClose,
+}: {
+  label: BoxLabelContract;
+  printState: PrintState;
+  onReprint: () => void;
+  onClose: () => void;
+}) {
   const route =
     label.deliveryType === 'shipping'
       ? fillCopy(t.picking.box.labelShipping, { date: label.deliveryDate ?? t.picking.box.labelNoDate })
@@ -337,7 +348,23 @@ function LabelCard({ label, onClose }: { label: BoxLabelContract; onClose: () =>
         </Text>
       ))}
       <Text style={styles.labelQr}>{fillCopy(t.picking.box.labelQr, { code: label.code })}</Text>
-      <Text style={styles.labelPending}>{t.picking.box.labelPending}</Text>
+      {/* Basımın seyri — hata cümlesi AYNEN (SDK reddi teşhis verisidir); `off` = önizleme hâli. */}
+      {printState.phase === 'off' ? (
+        <Text style={styles.labelPending}>{t.picking.box.labelPending}</Text>
+      ) : (
+        <View style={styles.labelPrintRow} testID="warehouse-picking-label-print">
+          <Text style={styles.labelPending}>
+            {printState.phase === 'printing'
+              ? t.picking.box.labelPrinting
+              : printState.phase === 'printed'
+                ? fillCopy(t.picking.box.labelPrinted, { model: printState.model })
+                : fillCopy(t.picking.box.labelPrintFailed, { error: printState.message })}
+          </Text>
+          {printState.phase === 'printing' ? null : (
+            <TextAction label={t.picking.box.labelReprint} onPress={onReprint} testID="warehouse-picking-label-reprint" />
+          )}
+        </View>
+      )}
       {/* İğne deneyi paneli (23.5) — yalnız __DEV__ + yazıcı modülü varken çizilir. */}
       <PrintProbe />
     </View>
@@ -508,6 +535,13 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
+  },
+  /** Basım seyri satırı — cümle + "yeniden bas" yan yana; cümle uzarsa eylem sağda kalır. */
+  labelPrintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.md,
   },
   boxStrip: {
     gap: operationsTheme.space.xs,

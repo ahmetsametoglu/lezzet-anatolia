@@ -129,6 +129,25 @@ export const DAILY_CHECK_OPTIONS = [
   { value: '3', label: 'Günde 3' },
 ];
 
+// ── Etiket yazıcısı (23.7) ──────────────────────────────────────────────────
+
+/**
+ * Etiket boyu — Brother SDK'nın boy adları, insan diliyle. KAPALI küme, serbest metin değil:
+ * yanlış yazılmış bir boy adı basım anında `SetLabelSizeError` olurdu (23.5 ölçümü — takılı kâğıt
+ * SDK'dan okunamıyor, boyun DOĞRU söylenmesi şart). Liste QL serisinin depoda anlamlı boyları;
+ * yeni bir rulo alınırsa buraya eklenir (`BPQLLabelSize`nin tam listesi SDK'da).
+ */
+export const LABEL_SIZE_OPTIONS = [
+  { value: 'DieCutW103H164', label: '103×164 mm kalıp kesim (4×6 — DK-1247)' },
+  { value: 'DieCutW102H152', label: '102×152 mm kalıp kesim (DK-1241)' },
+  { value: 'DieCutW102H51', label: '102×51 mm kalıp kesim (DK-1240)' },
+  { value: 'RollW103', label: '103 mm sürekli rulo' },
+  { value: 'RollW102', label: '102 mm sürekli rulo (DK-2243)' },
+  { value: 'RollW62', label: '62 mm sürekli rulo (DK-2205)' },
+  { value: 'DieCutW62H100', label: '62×100 mm kalıp kesim (DK-1202)' },
+  { value: 'DieCutW62H29', label: '62×29 mm kalıp kesim (DK-1209)' },
+];
+
 /** Kısa rozet — kartta yer dar, tam ad satırı taşırdı. */
 export const AREA_KIND_SHORT: Record<StorageAreaKind, string> = {
   frozen: 'donuk',

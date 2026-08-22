@@ -39,7 +39,7 @@ import { dbToApp } from '../utils/case-transformers';
  * ayrıca çözmesi ekran başına ikinci bir sorgu demekti. Üç okuma paylaşıyor (parti detayı, tarihli
  * parti, varyant geçmişi); metni üç kez yazmak, birinin bir gün `kind`ı unutması demekti.
  */
-const AREA_EMBED = 'storage_area:storage_area(id,name,kind)';
+const AREA_EMBED = 'storage_area:storage_area(id,name,kind,sort_order)';
 
 const BATCH_DETAIL_SELECT =
   `*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days,vat_rate)),${AREA_EMBED}`;
@@ -59,7 +59,11 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * (bkz. `BaseDbService.embeds`). Yalnız üst takma ad beyan edilir: gömülü alt ağaç bütünüyle
    * çevrilir, yani içteki `product` da kapsam altında (`date_type` → `dateType`).
    */
-  protected override readonly embeds = ['variant'];
+  // `storageArea` 23.6'da eklendi: gömüye `sort_order` girince (yürüyüş sırası) ilk çok-kelimeli
+  // alan doğdu — beyansız iç satır snake kalıyor ve projeksiyon şeması OKUMA ANINDA patlıyordu
+  // (tek kelimeli id/name/kind yıllarca beyansız geçti; taban künyesindeki "arıza sessiz değildir"
+  // cümlesi burada ölçüldü).
+  protected override readonly embeds = ['variant', 'storageArea'];
 
   constructor(supabase: SupabaseClient) {
     super(supabase, 'stock', StockSchema, StockInsertSchema, StockUpdateSchema);

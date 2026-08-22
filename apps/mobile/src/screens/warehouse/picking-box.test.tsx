@@ -39,6 +39,25 @@ jest.mock('@/lib/auth/supabase', () => ({
   }),
 }));
 
+/**
+ * Basım dikişi sahte (23.7): jest'te native modül yok — `available` bayrağı testin anahtarı.
+ * `printLabel`/`downloadLabelPng` modül seviyesinde mock'lanır; PrintProbe'un kullandığı öteki
+ * ihracatlar da (arama/iğne deneyi) boş sahtelerle taşınır ki import kırılmasın.
+ */
+const mockPrinterModule = { available: false };
+jest.mock('@/lib/print/printer-availability', () => ({
+  hasPrinterNativeModule: () => mockPrinterModule.available,
+}));
+const mockPrintLabel = jest.fn<Promise<void>, [string, unknown]>(async () => undefined);
+jest.mock('@/lib/print/brother', () => ({
+  printLabel: (uri: string, printer: unknown) => mockPrintLabel(uri, printer),
+  findNetworkPrinters: jest.fn(async () => []),
+  printNeedleTest: jest.fn(async () => 'RollW62'),
+}));
+jest.mock('@/lib/print/label-file', () => ({
+  downloadLabelPng: async (boxId: string) => `file:///cache/box-label-${boxId}.png`,
+}));
+
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 function ok(data: unknown): Response {
@@ -61,6 +80,7 @@ fetchMock.mockImplementation((url, init) => {
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
   if (path.endsWith('/seal')) return Promise.resolve(ok(net.seal));
   if (path.endsWith('/label')) return Promise.resolve(ok(net.label ?? { status: 'not_found' }));
+  if (path.endsWith('/printed')) return Promise.resolve(ok({ status: 'ok', printedAt: '2026-08-22T20:00:00Z' }));
   if (init?.method === 'POST' && path.endsWith('/boxes')) return Promise.resolve(ok(net.open));
   if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
   return Promise.resolve(ok({ date: null, orders: net.orders }));
@@ -95,6 +115,10 @@ beforeEach(() => {
   net.open = undefined;
   net.seal = undefined;
   net.resolve = undefined;
+  net.label = undefined;
+  mockPrinterModule.available = false;
+  mockPrintLabel.mockClear();
+  mockPrintLabel.mockImplementation(async () => undefined);
 });
 
 describe('D1 · kutu döngüsü', () => {
@@ -153,6 +177,8 @@ describe('D1 · kutu döngüsü', () => {
         deliveryDate: '2026-08-24', paymentMethod: 'cash',
         items: [{ name: 'Fıstıklı Baklava · 1 kg', qty: 2 }],
       },
+      // Yazıcı tanımsız — kart önizleme hâlinde kalır, basım hiç denenmez.
+      printer: null,
     };
     await renderPicking();
 
@@ -166,11 +192,77 @@ describe('D1 · kutu döngüsü', () => {
     expect(lastBodyOf('/seal')).toMatchObject({
       picks: [{ orderItemId: ITEM_A, batches: [{ stockId: STOCK_A, qty: 2 }] }],
     });
-    // Etiket kartı: QR kodu, döküm ve tahsilat YÖNTEMİ (tutar asla) — basım iğne deneyini bekliyor.
+    // Etiket kartı: QR kodu, döküm ve tahsilat YÖNTEMİ (tutar asla) — yazıcı tanımsız, önizleme.
     const card = screen.getByTestId('warehouse-picking-label');
     expect(card).toHaveTextContent(/KT-26-4K2M9P7HWX/);
     expect(card).toHaveTextContent(/2 × Fıstıklı Baklava/);
     expect(card).toHaveTextContent(/Tahsilat: nakit/);
+    // Basım hiç denenmedi: yazıcı `null` — kart "Depolar'dan tanımlanır" önizleme dilinde.
+    expect(mockPrintLabel).not.toHaveBeenCalled();
+    expect(card).toHaveTextContent(/Yazıcı tanımlı değil/);
+  });
+
+  it('yazıcı ayarlıysa kapanış etiketi KENDİLİĞİNDEN basar: PNG sunucudan, damga başarıdan sonra', async () => {
+    mockPrinterModule.available = true;
+    const printer = { address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
+    net.orders = [preparationOrder({ boxes: [preparationBox()] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    net.label = {
+      status: 'ok',
+      label: {
+        code: 'KT-26-4K2M9P7HWX', boxNo: 1, boxCount: 1, referenceNo: 'LZA-26-3M8C',
+        parcelName: 'Restaurant Bosphore', routeName: 'Kuzey rotası', deliveryType: 'route',
+        deliveryDate: '2026-08-24', paymentMethod: null, items: [],
+      },
+      printer,
+    };
+    await renderPicking();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Etiket basıldı \(QL-1110NWB\)/));
+    // PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef AYARDAN geldi.
+    expect(mockPrintLabel).toHaveBeenCalledWith('file:///cache/box-label-00000000-0000-4000-8000-0000000000b1.png', printer);
+    // Damga başarıdan SONRA vuruldu — niyet sayılmaz (05.08 dersi).
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/printed'))).toBe(true);
+    // Yeniden basım eli: yırtılan etiketin yolu.
+    expect(screen.getByTestId('warehouse-picking-label-reprint')).toBeTruthy();
+  });
+
+  it('basım reddi kutu kapanışını GERİ ÇEKMEZ: cümle AYNEN yazılır, "yeniden bas" beklemede', async () => {
+    mockPrinterModule.available = true;
+    mockPrintLabel.mockImplementation(async () => {
+      throw new Error('Print failed: SetLabelSizeError');
+    });
+    net.orders = [preparationOrder({ boxes: [preparationBox()] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    net.label = {
+      status: 'ok',
+      label: {
+        code: 'KT-26-4K2M9P7HWX', boxNo: 1, boxCount: 1, referenceNo: 'LZA-26-3M8C',
+        parcelName: 'Restaurant Bosphore', routeName: 'Kuzey rotası', deliveryType: 'route',
+        deliveryDate: '2026-08-24', paymentMethod: null, items: [],
+      },
+      printer: { address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'RollW62' },
+    };
+    await renderPicking();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    // Kapanış yazıldı (sipariş HAZIR cümlesi), basım düştü — ikisi AYRI gerçek.
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/sipariş HAZIR/));
+    await waitFor(() =>
+      expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Basım düştü: Print failed: SetLabelSizeError/),
+    );
+    // Damga YOK: kâğıt çıkmadı, niyet damgalanmaz.
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/printed'))).toBe(false);
+
+    // "Yeniden bas" ikinci denemeyi koşturur — bu kez tutar.
+    mockPrintLabel.mockImplementation(async () => undefined);
+    await fireEvent.press(screen.getByTestId('warehouse-picking-label-reprint'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Etiket basıldı/));
   });
 
   it('eksikli kapanış "yeni kutu" yolunu açar: kapalı kutu özetlenir, CTA sıradaki kutuyu önerir', async () => {

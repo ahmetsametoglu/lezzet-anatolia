@@ -269,7 +269,7 @@ async function main(): Promise<void> {
   await seedBundles(db);
   await seedDeliveryZones(db, depolar);
   // Kapsamlı ayarlar BÖLGELERDEN SONRA: bölge kapsamlı satır, bölgenin kimliğine yazılır.
-  await seedScopedSettings(db);
+  await seedScopedSettings(db, depolar);
   await seedDraftCustomers(db);
   await seedAddresses(db, kisiler);
   await seedPostalDemand(db);

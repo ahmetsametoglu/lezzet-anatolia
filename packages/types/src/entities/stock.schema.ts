@@ -99,7 +99,14 @@ export type AvailableStockTotal = z.infer<typeof AvailableStockTotalSchema>;
  * toplama, varyant geçmişi) ve hepsi ADI kullanıyor. Tek yerde tanımlı: üç şemada elle
  * tekrarlansaydı biri bir gün `kind`ı unutur ve o ekran uyumsuzluk uyarısını kuramazdı.
  */
-export const StockAreaEmbedSchema = StorageAreaSchema.pick({ id: true, name: true, kind: true }).nullable();
+export const StockAreaEmbedSchema = StorageAreaSchema.pick({
+  id: true,
+  name: true,
+  kind: true,
+  // Yürüyüş sırası (23.6 · karar §1.13): toplama listesi kalemlerini bu sayıya göre dizer —
+  // depocu rafların arasında zikzak çizmez. Sıra operatörün Depolar ekranındaki dizilimidir.
+  sortOrder: true,
+}).nullable();
 
 /** Parti + yalnız alanı — varyant geçmişinin okuduğu şekil (ürün alanları gerekmiyor). */
 export const StockWithAreaSchema = StockSchema.extend({ storageArea: StockAreaEmbedSchema });

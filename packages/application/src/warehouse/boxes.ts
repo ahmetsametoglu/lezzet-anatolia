@@ -1,4 +1,11 @@
-import { DeliveryZoneService, OrderBoxItemService, OrderBoxService, OrderService, UserProfileService } from '@lezzet/database';
+import {
+  DeliveryZoneService,
+  OrderBoxItemService,
+  OrderBoxService,
+  OrderService,
+  SettingsService,
+  UserProfileService,
+} from '@lezzet/database';
 import { boxCompletion, orderBoxCode } from '@lezzet/domain-core';
 import type { Order, PreparationPick, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -263,6 +270,64 @@ export async function boxLabelPayload(
       }),
     },
   };
+}
+
+/**
+ * Deponun etiket yazıcısı — `settings` warehouse kapsamı (23.7; yeni tablo YOK, plan kararı).
+ * Üçü birden dolu değilse yazıcı TANIMSIZDIR ve `null` döner: yarım ayarla basmaya kalkmak,
+ * hatayı depocunun telefonuna taşımak olurdu — ekran "yazıcı tanımlı değil" der, karar Depolar
+ * ekranındadır. `labelSize` Brother SDK'nın boy adıdır (23.5 ölçümü: takılı kâğıt SDK'dan
+ * okunamıyor, boyu ayar söylemek zorunda — ör. `DieCutW103H164`, `RollW62`).
+ */
+export interface BoxPrinter {
+  address: string;
+  model: string;
+  labelSize: string;
+}
+
+export const LABEL_PRINTER_KEYS = {
+  address: 'label_printer_address',
+  model: 'label_printer_model',
+  labelSize: 'label_printer_label_size',
+} as const;
+
+export async function labelPrinterFor(db: SupabaseClient, warehouseId: string): Promise<BoxPrinter | null> {
+  const settings = new SettingsService(db);
+  const scope = { warehouseId };
+  const [address, model, labelSize] = await Promise.all([
+    settings.get<string>(LABEL_PRINTER_KEYS.address, '', scope),
+    settings.get<string>(LABEL_PRINTER_KEYS.model, '', scope),
+    settings.get<string>(LABEL_PRINTER_KEYS.labelSize, '', scope),
+  ]);
+  if (!address || !model || !labelSize) return null;
+  return { address, model, labelSize };
+}
+
+export type MarkPrintedOutcome =
+  | { status: 'ok'; printedAt: string }
+  | { status: 'not_sealed' }
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  | { status: 'not_found' };
+
+/**
+ * **Basım damgası** (23.7) — telefon SDK'dan "bastı" cevabını alınca çağırır; damga BAŞARININ
+ * kaydıdır, niyetin değil (05.08 sayaç dersi). Yeniden basım damgayı GÜNCELLER: `printed_at`
+ * "en son ne zaman basıldı"dır, "ilk kez" değil — yırtılan etiketin yenisi de bir basımdır.
+ */
+export async function markBoxPrinted(
+  db: SupabaseClient,
+  input: { boxId: string; warehouseId: string },
+): Promise<MarkPrintedOutcome> {
+  const boxes = new OrderBoxService(db);
+  const box = await boxes.getById(input.boxId);
+  if (!box) return { status: 'not_found' };
+  if (box.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+  // Açık kutunun etiketi yoktur (`boxLabelPayload` ile aynı çizgi) — basılamayanın damgası da olamaz.
+  if (box.sealedAt === null) return { status: 'not_sealed' };
+
+  const printedAt = new Date().toISOString();
+  await boxes.update({ id: box.id, printedAt });
+  return { status: 'ok', printedAt };
 }
 
 /** Parti başına toplanmış birleşim — aynı partiden iki kutuya konan mal tek satıra iner. */

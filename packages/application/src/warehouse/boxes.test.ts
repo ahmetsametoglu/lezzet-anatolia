@@ -7,13 +7,14 @@ import {
   OrderService,
   ProductService,
   ReservationService,
+  SettingsService,
   StockService,
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
-import { boxLabelPayload, openBox, sealBox } from './boxes';
+import { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './boxes';
 import { listPreparationQueue } from './preparation';
 
 /**
@@ -81,12 +82,15 @@ beforeEach(async () => {
   ).id;
 });
 
+const createdSettingIds: string[] = [];
+
 afterAll(async () => {
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
     warehouseIds: [warehouseId, otherWarehouseId],
+    settingIds: createdSettingIds,
   });
 });
 
@@ -311,6 +315,62 @@ describe('etiket içeriği (boxLabelPayload · 23.7)', () => {
     });
 
     expect(await boxLabelPayload(db, { boxId, warehouseId: otherWarehouseId })).toEqual({
+      status: 'forbidden',
+      reason: 'out_of_scope',
+    });
+  });
+});
+
+describe('basım (markBoxPrinted + labelPrinterFor · 23.7)', () => {
+  it('yazıcı ayarı ÜÇÜ BİRDEN doluysa döner; eksik ya da hiç yoksa null (yarım ayarla basılmaz)', async () => {
+    const settings = new SettingsService(db);
+    const scope = { scopeType: 'warehouse' as const, scopeId: warehouseId };
+
+    // Hiç ayar yok → tanımsız.
+    expect(await labelPrinterFor(db, warehouseId)).toBeNull();
+
+    // Yarım ayar (yalnız adres) → yine tanımsız: hata depocunun telefonuna taşınmaz.
+    createdSettingIds.push((await settings.set(LABEL_PRINTER_KEYS.address, '192.168.1.90', scope)).id);
+    expect(await labelPrinterFor(db, warehouseId)).toBeNull();
+
+    createdSettingIds.push((await settings.set(LABEL_PRINTER_KEYS.model, 'QL-1110NWB', scope)).id);
+    createdSettingIds.push((await settings.set(LABEL_PRINTER_KEYS.labelSize, 'DieCutW103H164', scope)).id);
+    expect(await labelPrinterFor(db, warehouseId)).toEqual({
+      address: '192.168.1.90',
+      model: 'QL-1110NWB',
+      labelSize: 'DieCutW103H164',
+    });
+    // BAŞKA deponun ayarı yok — kapsam sızmaz.
+    expect(await labelPrinterFor(db, otherWarehouseId)).toBeNull();
+  });
+
+  it('damga yalnız KAPALI kutuya vurulur ve yeniden basımda güncellenir', async () => {
+    const { orderId, itemIds } = await confirmedOrder([1]);
+    const opened = await openBox(db, { orderId, warehouseId });
+    const boxId = opened.status === 'ok' ? opened.box.boxId : '';
+
+    // Açık kutunun etiketi yok — damgası da olamaz.
+    expect(await markBoxPrinted(db, { boxId, warehouseId })).toEqual({ status: 'not_sealed' });
+
+    await sealBox(db, {
+      boxId,
+      warehouseId,
+      picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 1 }] }],
+    });
+
+    const first = await markBoxPrinted(db, { boxId, warehouseId });
+    expect(first.status).toBe('ok');
+    const firstAt = first.status === 'ok' ? first.printedAt : '';
+    // Aynı AN, iki gösterim: kapı `Z` üretir, Postgres `+00:00` döndürür — metin değil zaman kıyaslanır.
+    expect(Date.parse((await boxService.getById(boxId))?.printedAt ?? '')).toBe(Date.parse(firstAt));
+
+    // Yeniden basım damgayı İLERİ taşır — `printed_at` "en son ne zaman"dır.
+    const second = await markBoxPrinted(db, { boxId, warehouseId });
+    const secondAt = second.status === 'ok' ? second.printedAt : '';
+    expect(Date.parse(secondAt)).toBeGreaterThanOrEqual(Date.parse(firstAt));
+
+    // Kapsam kapısı etiketle aynı çizgide.
+    expect(await markBoxPrinted(db, { boxId, warehouseId: otherWarehouseId })).toEqual({
       status: 'forbidden',
       reason: 'out_of_scope',
     });

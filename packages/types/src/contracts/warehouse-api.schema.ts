@@ -265,14 +265,35 @@ export const BoxLabelSchema = z.object({
 });
 export type BoxLabelContract = z.infer<typeof BoxLabelSchema>;
 
+/**
+ * Deponun etiket yazıcısı (23.7) — `settings` warehouse kapsamından (`label_printer_*`).
+ * `labelSize` Brother SDK'nın boy adıdır (23.5 ölçümü: takılı kâğıt SDK'dan okunamıyor —
+ * ör. `DieCutW103H164`, `RollW62`). `null` = yazıcı tanımsız; telefon basmayı hiç denemez.
+ */
+export const BoxPrinterSchema = z.object({
+  address: z.string(),
+  model: z.string(),
+  labelSize: z.string(),
+});
+export type BoxPrinterContract = z.infer<typeof BoxPrinterSchema>;
+
 export const BoxLabelResponseSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('ok'), label: BoxLabelSchema }),
+  z.object({ status: z.literal('ok'), label: BoxLabelSchema, printer: BoxPrinterSchema.nullable() }),
   /** Açık kutunun etiketi yoktur — içerik kesinleşmedi; basılan etiket yalan söylerdi. */
   z.object({ status: z.literal('not_sealed') }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('not_found') }),
 ]);
 export type BoxLabelResponse = z.infer<typeof BoxLabelResponseSchema>;
+
+/** Basım damgası cevabı (23.7) — damga başarının kaydıdır; telefon SDK "bastı" deyince çağırır. */
+export const MarkBoxPrintedResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), printedAt: z.string() }),
+  z.object({ status: z.literal('not_sealed') }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type MarkBoxPrintedResponse = z.infer<typeof MarkBoxPrintedResponseSchema>;
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 

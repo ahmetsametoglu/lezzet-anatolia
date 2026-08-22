@@ -1,6 +1,9 @@
 {
   "common": {
-    "channel": { "b2b": "B2B", "b2c": "B2C" },
+    "channel": {
+      "b2b": "B2B",
+      "b2c": "B2C"
+    },
     "back": "Geri",
     "retry": "Tekrar dene",
     "offlineCta": "Bağlantı yok — kayıt kilitli",
@@ -66,8 +69,14 @@
   "picking": {
     "title": "Toplama",
     "loading": "Toplama listesi yükleniyor…",
-    "error": { "title": "Toplama listesi yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — toplanan adetler güvende." },
-    "empty": { "title": "Toplanacak sipariş yok", "body": "Sipariş onaylandığında bildirim gelir — bu liste kendiliğinden dolar." },
+    "error": {
+      "title": "Toplama listesi yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — toplanan adetler güvende."
+    },
+    "empty": {
+      "title": "Toplanacak sipariş yok",
+      "body": "Sipariş onaylandığında bildirim gelir — bu liste kendiliğinden dolar."
+    },
     "queueHeading": "BEKLEYEN SİPARİŞLER — BİRİNİ SEÇ",
     "parcelName": "Koliye: {name}",
     "queueLines": "{picked}/{total} kalem hazır",
@@ -143,9 +152,13 @@
       "labelPayment": "Tahsilat: {method}",
       "labelItem": "{qty} × {name}",
       "labelQr": "QR: {code}",
-      "labelPending": "Önizleme — içerik sunucudan, basılacak olanın kendisi. Basım, Brother yazıcı bağlanınca (iğne deneyi).",
+      "labelPending": "Önizleme — içerik sunucudan, basılacak olanın kendisi. Yazıcı tanımlı değil: basım için Depolar ekranından yazıcı tanımlanır.",
       "labelClose": "kapat",
-      "footnote": "Adet bu KUTUYA konanı sayar — önceki kutular kayıtta durur, üstüne yazılmaz. Kutu kapanınca içerik kesinleşir; etiket basımı sıradaki adımda."
+      "footnote": "Adet bu KUTUYA konanı sayar — önceki kutular kayıtta durur, üstüne yazılmaz. Kutu kapanınca içerik kesinleşir ve etiket ayarlı yazıcıdan basılır.",
+      "labelPrinting": "Etiket basılıyor…",
+      "labelPrinted": "✓ Etiket basıldı ({model}).",
+      "labelPrintFailed": "✗ Basım düştü: {error}",
+      "labelReprint": "yeniden bas"
     }
   },
   "intake": {
@@ -153,7 +166,10 @@
     "loading": "Kabul formu yükleniyor…",
     "captionPlanned": "tedarik siparişi · gönderildi",
     "captionUnplanned": "plansız kabul",
-    "error": { "title": "Kabul formu yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — hiçbir satır yazılmadı." },
+    "error": {
+      "title": "Kabul formu yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — hiçbir satır yazılmadı."
+    },
     "noSubject": {
       "title": "Hangi sevkiyat kabul edilecek?",
       "body": "Bekleyen tedarik siparişlerini listeleyen bir kapı henüz yok; ekran bildirimden ya da doğrudan sipariş bağıyla açılır."
@@ -164,9 +180,24 @@
     },
     "expected": "beklenen {qty}",
     "qtyLabel": "{name} için gelen adet",
-    "expiry": { "missing": "SKT gir *", "set": "SKT {date} ✓", "placeholder": "gg.aa.yyyy", "field": "{name} için son kullanma tarihi", "done": "tamam" },
-    "lot": { "known": "lot: {lot}", "empty": "lot yok — bilinçli boş", "field": "{name} için lot numarası" },
-    "damage": { "idle": "hasar bildir", "set": "hasar notu eklendi ✓", "field": "{name} için hasar notu", "placeholder": "ne oldu?" },
+    "expiry": {
+      "missing": "SKT gir *",
+      "set": "SKT {date} ✓",
+      "placeholder": "gg.aa.yyyy",
+      "field": "{name} için son kullanma tarihi",
+      "done": "tamam"
+    },
+    "lot": {
+      "known": "lot: {lot}",
+      "empty": "lot yok — bilinçli boş",
+      "field": "{name} için lot numarası"
+    },
+    "damage": {
+      "idle": "hasar bildir",
+      "set": "hasar notu eklendi ✓",
+      "field": "{name} için hasar notu",
+      "placeholder": "ne oldu?"
+    },
     "lifeWarning": "⚠ kalan ömür %{pct} — uyarı, engellemez",
     "lifeUnknown": "⚠ raf ömrü bilinmiyor — uyarı, engellemez",
     "diffHeading": "FARK ÖZETİ — YALNIZ SAPAN SATIRLAR",
@@ -250,8 +281,14 @@
   "transfer": {
     "title": "Transfer",
     "loading": "Gelen transferler yükleniyor…",
-    "error": { "title": "Transfer listesi yüklenemedi", "body": "Bağlantı ya da sunucu sorunu — sayım yazılmadı." },
-    "empty": { "title": "Yolda transfer yok", "body": "Başka depo sevk ettiğinde burada görünür." },
+    "error": {
+      "title": "Transfer listesi yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — sayım yazılmadı."
+    },
+    "empty": {
+      "title": "Yolda transfer yok",
+      "body": "Başka depo sevk ettiğinde burada görünür."
+    },
     "queueHeading": "GELEN TRANSFERLER — BİRİNİ SEÇ",
     "caption": "{ref} · yolda",
     "queueLines": "{n} kalem · {date}",

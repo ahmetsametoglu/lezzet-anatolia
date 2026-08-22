@@ -182,7 +182,7 @@ export async function listPreparationQueue(
   const queue: PreparationOrder[] = [];
   for (const order of orders) {
     const orderItems = items.filter((item) => item.orderId === order.id);
-    const lines = await Promise.all(
+    const built = await Promise.all(
       orderItems.map((item) =>
         buildLine(
           db,
@@ -197,6 +197,16 @@ export async function listPreparationQueue(
         ),
       ),
     );
+    /*
+      YÜRÜYÜŞ SIRASI (23.6 · karar §1.13'ün ekran yarısı): kalemler ilk öneri partisinin alanına
+      göre dizilir (`storage_area.sort_order` — operatörün Depolar'daki dizilimi); depocu listeyi
+      yukarıdan aşağı okuyarak depoyu TEK yönde yürür. Sıra SUNUCUDA kurulur, sözleşmeye sayı
+      taşınmaz: ekranın işi verilen sırayla çizmek. Alanı olmayan (ya da önerisiz) kalem sona düşer
+      — `Infinity` bir ceza değil "yürüyüşe oturmayan işin sonu" (stabil sort eşitleri korur).
+    */
+    const lines = built
+      .sort((a, b) => (a.areaSort ?? Infinity) - (b.areaSort ?? Infinity))
+      .map((row) => row.line);
 
     queue.push({
       orderId: order.id,
@@ -221,6 +231,9 @@ export async function listPreparationQueue(
 /**
  * Kalem satırı + parti önerisi. Kilitli kalemde öneri o partiye sabitlenir — FEFO'ya sorulmaz:
  * teklife söz verilen stok başka partiyle karşılanamaz (DOMAIN §4).
+ *
+ * `areaSort` satırın YÜRÜYÜŞ anahtarıdır (ilk öneri partisinin alan sırası) — sözleşmeye girmez,
+ * yalnız kuyruğun dizilimini kurar (`listPreparationQueue` künyesi).
  */
 async function buildLine(
   db: SupabaseClient,
@@ -229,7 +242,7 @@ async function buildLine(
   variant: { productName: string; variantLabel: string } | undefined,
   pinnedStockId: string | null,
   picked: PreparationPick['batches'],
-): Promise<PreparationLine> {
+): Promise<{ line: PreparationLine; areaSort: number | null }> {
   const remaining = Math.max(0, item.qty - item.fulfilledQty);
   const base = {
     itemId: item.id,
@@ -246,26 +259,33 @@ async function buildLine(
     // ekranda göreceği şey o (19.29). Kimlikle dönseydik telefon ikinci bir okuma yapardı.
     const batch = (await new StockService(db).getBatchDetails([pinnedStockId]))[0];
     return {
-      ...base,
-      pinnedStockId,
-      suggestion: batch
-        ? [{ stockId: batch.id, qty: remaining, expiryDate: batch.expiryDate, areaName: batch.storageArea?.name ?? null }]
-        : [],
-      shortfallQty: batch ? Math.max(0, remaining - batch.physicalQty) : remaining,
+      areaSort: batch?.storageArea?.sortOrder ?? null,
+      line: {
+        ...base,
+        pinnedStockId,
+        suggestion: batch
+          ? [{ stockId: batch.id, qty: remaining, expiryDate: batch.expiryDate, areaName: batch.storageArea?.name ?? null }]
+          : [],
+        shortfallQty: batch ? Math.max(0, remaining - batch.physicalQty) : remaining,
+      },
     };
   }
 
   const fefo = await suggestPicksForVariant(db, warehouseId, item.variantId, remaining);
   return {
-    ...base,
-    pinnedStockId: null,
-    suggestion: fefo.picks.map((pick) => ({
-      stockId: pick.stockId,
-      qty: pick.qty,
-      expiryDate: pick.expiryDate,
-      areaName: pick.areaName,
-    })),
-    shortfallQty: fefo.shortfall,
+    // İlk öneri FEFO'nun başı — depocunun gideceği İLK raf; yürüyüş ona göre kurulur.
+    areaSort: fefo.picks[0]?.areaSort ?? null,
+    line: {
+      ...base,
+      pinnedStockId: null,
+      suggestion: fefo.picks.map((pick) => ({
+        stockId: pick.stockId,
+        qty: pick.qty,
+        expiryDate: pick.expiryDate,
+        areaName: pick.areaName,
+      })),
+      shortfallQty: fefo.shortfall,
+    },
   };
 }
 
@@ -561,7 +581,7 @@ async function suggestPicksForVariant(
   variantId: string,
   qty: number,
   now: Date = new Date(),
-): Promise<{ picks: PreparationSuggestion[]; shortfall: number }> {
+): Promise<{ picks: Array<PreparationSuggestion & { areaSort: number | null }>; shortfall: number }> {
   const [batches, reservations] = await Promise.all([
     new StockService(db).listByVariantWithDates(warehouseId, variantId),
     new ReservationService(db).listActiveByVariant(variantId),
@@ -584,7 +604,14 @@ async function suggestPicksForVariant(
     shortfall: decision.shortfall,
     picks: decision.picks.map((pick) => {
       const batch = byId.get(pick.stockId)!;
-      return { stockId: pick.stockId, qty: pick.qty, expiryDate: batch.expiryDate, areaName: batch.storageArea?.name ?? null };
+      return {
+        stockId: pick.stockId,
+        qty: pick.qty,
+        expiryDate: batch.expiryDate,
+        areaName: batch.storageArea?.name ?? null,
+        // Yürüyüş anahtarı (sözleşmeye girmez) — `buildLine` ilk önerininkini satıra taşır.
+        areaSort: batch.storageArea?.sortOrder ?? null,
+      };
     }),
   };
 }

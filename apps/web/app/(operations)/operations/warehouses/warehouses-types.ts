@@ -7,6 +7,7 @@ import {
   StorageAreaInsertSchema,
   VehicleInsertSchema,
   WarehouseInsertSchema,
+  type BoxPrinterContract,
   type Country,
   type DeliveryZone,
   type StorageAreaKind,
@@ -174,12 +175,32 @@ export interface ScorecardView {
   lastIntakeAt: string | null;
 }
 
+/**
+ * Etiket yazıcısı formu (23.7) — üçü BİRLİKTE dolu ya da BİRLİKTE boş: yarım ayar, basım anında
+ * depocunun telefonunda patlayan bir hata demekti; ekran onu daha kaydederken reddeder. Üçü boş
+ * kaydetmek yazıcıyı KALDIRIR (geçerli bir karar — depo etiketsiz çalışabilir, kutu akışı basımsız
+ * da tamamlanır).
+ */
+export const LabelPrinterFormSchema = z
+  .object({
+    address: z.string().trim(),
+    model: z.string().trim(),
+    labelSize: z.string().trim(),
+  })
+  .refine((v) => [v.address, v.model, v.labelSize].every((s) => s === '') || [v.address, v.model, v.labelSize].every((s) => s !== ''), {
+    message: 'Üç alan birlikte doldurulur — ya da yazıcıyı kaldırmak için üçü birden boş bırakılır.',
+    path: ['address'],
+  });
+export type LabelPrinterFormInput = z.infer<typeof LabelPrinterFormSchema>;
+
 /** Seçili tesisin tam kartı. */
 export interface WarehouseCardView {
   row: WarehouseRowView;
   zones: ZoneCardView[];
   staff: StaffChipView[];
   scorecard: ScorecardView;
+  /** Etiket yazıcısı (23.7) — `settings` warehouse kapsamından; `null` = tanımsız, basım denenmez. */
+  printer: BoxPrinterContract | null;
   /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */
   points: MeasurePointView[];
   /**

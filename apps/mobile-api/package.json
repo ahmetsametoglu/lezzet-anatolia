@@ -11,6 +11,7 @@
     "clean": "rm -rf .turbo dist node_modules"
   },
   "dependencies": {
+    "@expo-google-fonts/karla": "^0.4.2",
     "@hono/node-server": "^1.13.7",
     "@lezzet/application": "workspace:*",
     "@lezzet/database": "workspace:*",
@@ -19,6 +20,7 @@
     "@lezzet/i18n": "workspace:*",
     "@lezzet/observability": "workspace:*",
     "@lezzet/types": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.48.1",
     "hono": "^4.6.15",
     "stripe": "^22.3.2",

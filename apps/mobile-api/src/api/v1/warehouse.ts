@@ -4,7 +4,10 @@ import { serviceDb, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
   boxLabelPayload,
+  boxLabelSvg,
   confirmPreparation,
+  labelPrinterFor,
+  markBoxPrinted,
   learnCode,
   listInboundTransfers,
   listPendingIntakes,
@@ -27,6 +30,7 @@ import {
   IntakeFormResponseSchema,
   LearnCodeRequestSchema,
   LearnCodeResponseSchema,
+  MarkBoxPrintedResponseSchema,
   OpenBoxResponseSchema,
   PendingIntakesResponseSchema,
   PreparationQueueResponseSchema,
@@ -46,6 +50,7 @@ import {
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
+import { renderLabelPng } from '../../lib/label-png';
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
@@ -278,8 +283,42 @@ warehouse.get('/boxes/:boxId/label', async (c) => {
   if (!boxId.success) return fail(c, 'invalid_box_id', 400);
 
   const outcome = await boxLabelPayload(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
-  const body: z.input<typeof BoxLabelResponseSchema> = outcome;
+  // Yazıcı yalnız BAŞARILI etikete iliştirilir: telefon "basabilir miyim" sorusunu tek cevaptan
+  // okur (ayrı ayar ucu açılmaz — ayarın tüketicisi bu an). `null` = tanımsız, basım hiç denenmez.
+  const body: z.input<typeof BoxLabelResponseSchema> =
+    outcome.status === 'ok'
+      ? { ...outcome, printer: await labelPrinterFor(serviceDb(), c.get('warehouseId')) }
+      : outcome;
   return ok(c, BoxLabelResponseSchema.parse(body));
+});
+
+/**
+ * **Etiketin BASILACAK görseli** (23.7) — 4×6 PNG, 300 dpi. Zarfsız BİNARY cevap: tüketicisi
+ * `fetch`+dosya yazımı (telefon), JSON zarfına base64 gömmek yükü %33 şişirirdi. İçerik ve görsel
+ * tek yerden (`boxLabelPayload` → `boxLabelSvg`) — telefon etiketi ÇİZMEZ, basar (karar §1.9).
+ */
+warehouse.get('/boxes/:boxId/label.png', async (c) => {
+  const boxId = UuidSchema.safeParse(c.req.param('boxId'));
+  if (!boxId.success) return fail(c, 'invalid_box_id', 400);
+
+  const outcome = await boxLabelPayload(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
+  if (outcome.status !== 'ok') return fail(c, outcome.status === 'forbidden' ? 'out_of_scope' : outcome.status, outcome.status === 'not_found' ? 404 : 409);
+
+  const png = renderLabelPng(boxLabelSvg(outcome.label));
+  return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
+});
+
+/**
+ * **Basım damgası** (23.7) — telefon SDK'dan "bastı" cevabını alınca çağırır; damga başarının
+ * kaydıdır (05.08 sayaç dersi: niyet sayılmaz). Yeniden basım damgayı günceller.
+ */
+warehouse.post('/boxes/:boxId/printed', async (c) => {
+  const boxId = UuidSchema.safeParse(c.req.param('boxId'));
+  if (!boxId.success) return fail(c, 'invalid_box_id', 400);
+
+  const outcome = await markBoxPrinted(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
+  const body: z.input<typeof MarkBoxPrintedResponseSchema> = outcome;
+  return ok(c, MarkBoxPrintedResponseSchema.parse(body));
 });
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────

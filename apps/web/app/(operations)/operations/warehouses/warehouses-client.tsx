@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { setPointActiveAction } from './actions';
 import { CloseWarehouseDialog } from './close-warehouse-dialog';
 import { MeasurePointDialog } from './measure-point-dialog';
+import { PrinterDialog } from './printer-dialog';
 import { WarehouseDialog } from './warehouse-dialog';
 import { WarehousesDesktop } from './warehouses.desktop';
 import { warehousesUrl, type WarehousesUrlState } from './warehouses-url';
@@ -44,6 +45,8 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
    * sormaktı. Kayıtlı bir noktanın türü de değişmiyor — dolap araca dönüşmez.
    */
   const [point, setPoint] = useState<{ kind: 'area' | 'vehicle'; editing: MeasurePointView | null } | null>(null);
+  /** Etiket yazıcısı penceresi (23.7) — seçili tesisin kurulum künyesi, değerler karttan. */
+  const [printerOpen, setPrinterOpen] = useState(false);
   /**
    * **Rota KURULUMU burada değil (07.08, kullanıcı kararı).** Rota tanımlamak ile günü planlamak
    * aynı işin iki anıdır; tasarım ikisini tek sayfada topluyor ve kurulum Teslimat & Rota'ya taşındı.
@@ -63,6 +66,7 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
     onEditZone: (zone: ZoneCardView) => openRoute(zone.id),
     onAddPoint: (kind: 'area' | 'vehicle') => setPoint({ kind, editing: null }),
     onEditPoint: (point: MeasurePointView) => setPoint({ kind: point.kind, editing: point }),
+    onEditPrinter: () => setPrinterOpen(true),
     onTogglePoint: (point: MeasurePointView) => {
       // Onay penceresi YOK ve bu bilinçli: susturmak yıkıcı değil, geri açılabilir ve hiçbir kayıt
       // kaybolmuyor. Depo kapatmanın (dört sonuçlu, kod yazdıran) yanına konsaydı ikisi aynı
@@ -104,6 +108,19 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
           onClose={() => setClosing(null)}
           onDone={() => {
             setClosing(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {printerOpen && data.card ? (
+        <PrinterDialog
+          key={data.card.row.id}
+          warehouseId={data.card.row.id}
+          printer={data.card.printer}
+          onClose={() => setPrinterOpen(false)}
+          onSaved={() => {
+            setPrinterOpen(false);
             router.refresh();
           }}
         />

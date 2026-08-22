@@ -24,11 +24,13 @@
     "@lezzet/observability": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
-    "@supabase/supabase-js": "^2.48.1"
+    "@supabase/supabase-js": "^2.48.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",
     "@types/node": "^22.10.5",
+    "@types/qrcode": "^1.5.6",
     "typescript": "^5.7.2"
   }
 }

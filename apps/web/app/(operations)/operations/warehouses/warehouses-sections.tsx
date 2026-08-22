@@ -13,7 +13,7 @@ import type { Country } from '@lezzet/types';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
-import { postalCodeLabel, weekdayList } from './warehouses-labels';
+import { LABEL_SIZE_OPTIONS, postalCodeLabel, weekdayList } from './warehouses-labels';
 import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
@@ -280,6 +280,33 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
       >
         Kapsam Ayarlar'da yönetilir →
       </Link>
+    </div>
+  );
+}
+
+/**
+ * **Etiket yazıcısı** (23.7) — kurulum künyesi: kutu kapanışında 4×6 etiketi basan Brother QL.
+ * Tanımsızlık bir ARIZA değil bir hâldir (depo etiketsiz çalışabilir) ama amber'le söylenir:
+ * kutu akışı kurulmuş bir depoda yazıcısızlık büyük olasılıkla unutulmuş kurulumdur.
+ */
+export function PrinterCard({ printer, onEdit }: { printer: { address: string; model: string; labelSize: string } | null; onEdit: () => void }) {
+  const size = LABEL_SIZE_OPTIONS.find((o) => o.value === printer?.labelSize)?.label ?? printer?.labelSize;
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {printer ? (
+        <span className="flex items-center gap-1.5 rounded-full border border-ops-line bg-ops-card px-3 py-1.5 font-ops-body text-ops-sm text-ops-strong">
+          {printer.model}
+          <span className="font-ops-mono text-ops-xs text-ops-muted">{printer.address}</span>
+          <span className="font-ops-body text-ops-xs text-ops-muted">· {size}</span>
+        </span>
+      ) : (
+        <span className="font-ops-body text-ops-sm text-ops-amber">
+          Yazıcı tanımlı değil — kutu kapanışında etiket basılmaz, telefon yalnız önizleme gösterir.
+        </span>
+      )}
+      <Button variant="secondary" size="sm" onClick={onEdit}>
+        {printer ? 'Düzenle' : 'Yazıcı tanımla'}
+      </Button>
     </div>
   );
 }

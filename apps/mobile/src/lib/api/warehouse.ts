@@ -5,6 +5,7 @@ import {
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeResponseSchema,
+  MarkBoxPrintedResponseSchema,
   OpenBoxResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsResponseSchema,
@@ -97,9 +98,14 @@ export function sealOrderBox(
   return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/seal`, SealBoxResponseSchema, { method: 'POST', body });
 }
 
-/** **Etiket içeriği** (23.7) — kapanış önizlemesi; Brother SDK bağlanınca aynı içerik basılır. */
+/** **Etiket içeriği** (23.7) — önizleme + basım girdisi; yazıcı ayarı da bu cevapta gelir. */
 export function fetchBoxLabel(boxId: string): Promise<ApiResult<z.infer<typeof BoxLabelResponseSchema>>> {
   return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/label`, BoxLabelResponseSchema);
+}
+
+/** **Basım damgası** (23.7) — SDK "bastı" deyince çağrılır; damga başarının kaydıdır, niyetin değil. */
+export function markBoxPrinted(boxId: string): Promise<ApiResult<z.infer<typeof MarkBoxPrintedResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/printed`, MarkBoxPrintedResponseSchema, { method: 'POST' });
 }
 
 /** **Tedarik siparişinden dolu kabul formu** (D2). Boş dizi = plansız alım (form elle doldurulur). */

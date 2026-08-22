@@ -11,7 +11,7 @@ import { SectionHead, SetupGapNote } from '@/components/operation/ui/section-hea
 import { addressForClipboard, addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
 import { MeasurePoints } from './measure-points';
-import { FacilityStrip, Scorecard, StaffChips, ZoneCard } from './warehouses-sections';
+import { FacilityStrip, PrinterCard, Scorecard, StaffChips, ZoneCard } from './warehouses-sections';
 import type { MeasurePointView, WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 
 // Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin
@@ -49,6 +49,8 @@ interface WarehousesViewProps {
   onAddPoint: (kind: 'area' | 'vehicle') => void;
   onEditPoint: (point: MeasurePointView) => void;
   onTogglePoint: (point: MeasurePointView) => void;
+  /** Etiket yazıcısı penceresi (23.7) — kurulum künyesinin düzenlemesi. */
+  onEditPrinter: () => void;
 }
 
 export function WarehousesDesktop(props: WarehousesViewProps) {
@@ -90,6 +92,7 @@ function FacilityView({
   onAddPoint,
   onEditPoint,
   onTogglePoint,
+  onEditPrinter,
   card,
 }: WarehousesViewProps & { card: WarehouseCardView | null }) {
   const { order, reorder } = useFacilityOrder(data.rows);
@@ -226,6 +229,12 @@ function FacilityView({
               onEdit={onEditPoint}
               onToggle={onTogglePoint}
             />
+          </section>
+
+          {/* ── Etiket yazıcısı ── kurulum künyesi (23.7): kutu kapanışının basım hedefi. */}
+          <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
+            <SectionHead title="Etiket yazıcısı" hint="kutu kapanınca 4×6 etiket buradan çıkar — boy, takılı kâğıdın beyanıdır" />
+            <PrinterCard printer={card.printer} onEdit={onEditPrinter} />
           </section>
 
           {/* ── Bağlı personel ── okunur; kapsam ataması Ayarlar'da. */}
