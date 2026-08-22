@@ -135,6 +135,16 @@
       "alreadySealed": "Bu kutu zaten kapalı — liste tazelendi.",
       "stale": "Sipariş artık toplanmıyor — liste tazelendi.",
       "prevBoxes": "önceki kutularda {qty}",
+      "labelTitle": "ETİKET — Kutu {n}/{m}",
+      "labelOrder": "{ref} · {name}",
+      "labelRoute": "{route} · {date}",
+      "labelShipping": "KARGO · {date}",
+      "labelNoDate": "gün yazılmamış",
+      "labelPayment": "Tahsilat: {method}",
+      "labelItem": "{qty} × {name}",
+      "labelQr": "QR: {code}",
+      "labelPending": "Önizleme — içerik sunucudan, basılacak olanın kendisi. Basım, Brother yazıcı bağlanınca (iğne deneyi).",
+      "labelClose": "kapat",
       "footnote": "Adet bu KUTUYA konanı sayar — önceki kutular kayıtta durur, üstüne yazılmaz. Kutu kapanınca içerik kesinleşir; etiket basımı sıradaki adımda."
     }
   },

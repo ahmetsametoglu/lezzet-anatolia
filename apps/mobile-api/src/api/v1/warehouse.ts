@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { serviceDb, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
+  boxLabelPayload,
   confirmPreparation,
   learnCode,
   listInboundTransfers,
@@ -19,6 +20,7 @@ import {
   sealBox,
 } from '@lezzet/application';
 import {
+  BoxLabelResponseSchema,
   ConfirmPreparationRequestSchema,
   ConfirmPreparationResponseSchema,
   InboundTransfersResponseSchema,
@@ -264,6 +266,20 @@ warehouse.post('/boxes/:boxId/seal', async (c) => {
 
   const body: z.input<typeof SealBoxResponseSchema> = outcome;
   return ok(c, SealBoxResponseSchema.parse(body));
+});
+
+/**
+ * **Etiket içeriği** (23.7 · karar §1.9) — içerik SUNUCUDAN: tek şablon, tek yerde test. Bugünkü
+ * tüketici kapanış önizlemesi; Brother SDK bağlanınca aynı içerik basılır (dosya biçimi o gün —
+ * Netleşecek 2). Tutar taşımaz (karar §1.5); `not_sealed` cevabın kendisidir.
+ */
+warehouse.get('/boxes/:boxId/label', async (c) => {
+  const boxId = UuidSchema.safeParse(c.req.param('boxId'));
+  if (!boxId.success) return fail(c, 'invalid_box_id', 400);
+
+  const outcome = await boxLabelPayload(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
+  const body: z.input<typeof BoxLabelResponseSchema> = outcome;
+  return ok(c, BoxLabelResponseSchema.parse(body));
 });
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────

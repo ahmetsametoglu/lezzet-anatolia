@@ -129,6 +129,20 @@ export const PaymentMethodEnum = z.enum(['online', 'cash', 'card', 'cheque', 'ba
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
 
 /**
+ * Yöntemin OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la aynı
+ * dosyada durur ki yeni bir yöntem eklendiğinde `Record` derlemede eksik anahtarı söylesin.
+ * (23.7'de etiket önizlemesi için merkezîleşti; kurye sözlüğündeki `method` haritası aynı
+ * kelimeleri taşıyor — oradaki JSON copy dosyası types'a bakamadığı için bilinçli ikiz.)
+ */
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  online: 'online',
+  cash: 'nakit',
+  card: 'kart',
+  cheque: 'çek',
+  bank_transfer: 'havale',
+};
+
+/**
  * İçerik dili. `packages/i18n` aynı üçlüyü ARAYÜZ tarafı için `LOCALES` olarak tutar — bilerek
  * ayrı: `types` hiçbir iç pakete bağlanmaz (STACK §4), bu yüzden ikisi birbirinden import edemez.
  * Değerler değişirse İKİSİ birden güncellenir.

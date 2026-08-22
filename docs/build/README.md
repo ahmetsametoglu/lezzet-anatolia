@@ -56,7 +56,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 82/98 (+12 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 21/39 (+11 kısmi) |
-| 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | sürüyor | 4/10 (+2 kısmi) |
+| 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | sürüyor | 4/10 (+3 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

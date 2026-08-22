@@ -5,7 +5,9 @@ import { ReceiveIntakeResultSchema } from '../entities/supply.schema';
 import { DispatchLineSchema, ReceiveLineSchema } from '../entities/warehouse.schema';
 import {
   ChannelEnum,
+  DeliveryTypeEnum,
   OrderStatusEnum,
+  PaymentMethodEnum,
   PaymentStatusEnum,
   ReturnDispositionEnum,
   TransferStatusEnum,
@@ -240,6 +242,37 @@ export const SealBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_found') }),
 ]);
 export type SealBoxResponse = z.infer<typeof SealBoxResponseSchema>;
+
+/**
+ * 4×6 etiketin içeriği (23.7 · karar §1.5/§1.9) — İÇERİK SUNUCUDAN, telefon gösterir/basar.
+ * **Fiyat/tutar alanı YOK ve olamaz** (karar §1.5): tahsilatın yalnız YÖNTEMİ yazılır; kurye
+ * tutarı QR'ı okutunca kendi ekranında görür. Bugünkü tüketici kapanış önizlemesi; Brother SDK
+ * bağlanınca (23.5) aynı içerik basılır.
+ */
+export const BoxLabelSchema = z.object({
+  /** QR'ın içeriği — kutu kodu; sipariş referansı DEĞİL (Netleşecek 4). */
+  code: z.string(),
+  boxNo: z.number().int().positive(),
+  boxCount: z.number().int().positive(),
+  referenceNo: z.string().nullable(),
+  /** Koliye yazılacak ad: adresin alıcısı, yoksa hesap sahibi (10.9 kuralı). */
+  parcelName: z.string(),
+  routeName: z.string().nullable(),
+  deliveryType: DeliveryTypeEnum,
+  deliveryDate: z.string().nullable(),
+  paymentMethod: PaymentMethodEnum.nullable(),
+  items: z.array(z.object({ name: z.string(), qty: z.number().int().positive() })),
+});
+export type BoxLabelContract = z.infer<typeof BoxLabelSchema>;
+
+export const BoxLabelResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), label: BoxLabelSchema }),
+  /** Açık kutunun etiketi yoktur — içerik kesinleşmedi; basılan etiket yalan söylerdi. */
+  z.object({ status: z.literal('not_sealed') }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type BoxLabelResponse = z.infer<typeof BoxLabelResponseSchema>;
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 

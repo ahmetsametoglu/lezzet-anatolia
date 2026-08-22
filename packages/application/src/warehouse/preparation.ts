@@ -522,7 +522,7 @@ async function pinnedStockIds(db: SupabaseClient, orderIds: readonly string[]): 
  * `PreparationOrder.recipientName` künyesinde). Yalnız AD okunur: adres ve telefon burada
  * görünmez, tasarım §6 o kısmıyla yürürlükte.
  */
-function recipientOf(snapshot: Record<string, unknown> | null | undefined): string | null {
+export function recipientOf(snapshot: Record<string, unknown> | null | undefined): string | null {
   const raw = snapshot?.['recipient'];
   return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
 }

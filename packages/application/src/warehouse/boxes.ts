@@ -1,8 +1,9 @@
-import { OrderBoxService, OrderService } from '@lezzet/database';
+import { DeliveryZoneService, OrderBoxItemService, OrderBoxService, OrderService, UserProfileService } from '@lezzet/database';
 import { boxCompletion, orderBoxCode } from '@lezzet/domain-core';
 import type { Order, PreparationPick, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { adviseShortfalls, findPinnedViolation, pickedBatches, type PreparationBox } from './preparation';
+import { variantNames } from './names';
+import { adviseShortfalls, findPinnedViolation, pickedBatches, recipientOf, type PreparationBox } from './preparation';
 import { rpcRejectionMessage } from './rpc-error';
 
 /**
@@ -179,6 +180,89 @@ export async function sealBox(
     : [];
 
   return { status: 'ok', boxNo: box.boxNo, ready, missing: completion.missing, shortfalls };
+}
+
+/**
+ * 4×6 ETİKETİN İÇERİĞİ (23.7 · karar §1.5/§1.9) — içerik SUNUCUDAN, telefon yalnız gösterir/basar:
+ * tek şablon, tek yerde test; yazıcı değişse mobil kod değişmez.
+ *
+ * **FİYAT/TUTAR ASLA YOK** ve bu bir tip sınırıdır (karar §1.5): depo yüzeyi tutar görmez;
+ * etikette tahsilatın yalnız YÖNTEMİ yazar — kurye tutarı QR'ı okutunca kendi ekranında görür.
+ * Ad "koliye yazılacak ad" kuralıyla gelir (alıcı ≠ hesap sahibi olabilir — 10.9'un aynı kararı).
+ */
+export interface BoxLabel {
+  /** QR'ın içeriği — kutu kodu (`KT-…`); sipariş referansı DEĞİL. */
+  code: string;
+  boxNo: number;
+  boxCount: number;
+  referenceNo: string | null;
+  /** Koliye yazılacak ad: adresin alıcısı, yoksa hesap sahibi. */
+  parcelName: string;
+  /** Rota adı; kargo siparişinde `null` (rota yok — kulvar `deliveryType`). */
+  routeName: string | null;
+  deliveryType: Order['deliveryType'];
+  deliveryDate: string | null;
+  /** Tahsilatın YÖNTEMİ — tutar asla (karar §1.5). `null` = yöntem yazılı değil. */
+  paymentMethod: Order['paymentMethod'];
+  /** Kutunun dökümü: ürün adı + adet — operasyon dilinde. */
+  items: Array<{ name: string; qty: number }>;
+}
+
+export type BoxLabelOutcome =
+  | { status: 'ok'; label: BoxLabel }
+  /** Açık kutunun etiketi yoktur: içerik kesinleşmedi — basılan etiket yalan söylerdi. */
+  | { status: 'not_sealed' }
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  | { status: 'not_found' };
+
+/**
+ * **Etiket içeriğini kurar** (23.7). Bugünkü tüketicisi kapanış ÖNİZLEMESİ (mobil); Brother SDK
+ * bağlanınca (23.5 iğne deneyi) aynı içerik basılır — dosya biçimi (PDF/PNG) o gün kesinleşir
+ * (Netleşecek 2), içerik sözleşmesi değişmez.
+ */
+export async function boxLabelPayload(
+  db: SupabaseClient,
+  input: { boxId: string; warehouseId: string },
+): Promise<BoxLabelOutcome> {
+  const boxes = new OrderBoxService(db);
+  const box = await boxes.getById(input.boxId);
+  if (!box) return { status: 'not_found' };
+  if (box.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+  if (box.sealedAt === null) return { status: 'not_sealed' };
+
+  const found = await new OrderService(db).getWithItems(box.orderId);
+  if (!found) return { status: 'not_found' };
+  const { order, items } = found;
+
+  const boxItems = (await new OrderBoxItemService(db).listByBoxes([box.id])).filter((row) => row.boxId === box.id);
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const names = await variantNames(db, boxItems.map((row) => itemById.get(row.orderItemId)?.variantId ?? ''));
+
+  const [siblings, customer, zone] = await Promise.all([
+    boxes.listByOrder(box.orderId),
+    new UserProfileService(db).getById(order.customerId),
+    order.deliveryZoneId ? new DeliveryZoneService(db).getById(order.deliveryZoneId) : Promise.resolve(null),
+  ]);
+
+  return {
+    status: 'ok',
+    label: {
+      code: box.code,
+      boxNo: box.boxNo,
+      boxCount: siblings.length,
+      referenceNo: order.referenceNo,
+      parcelName: recipientOf(order.addressSnapshot) ?? customer?.name ?? '—',
+      routeName: zone?.name ?? null,
+      deliveryType: order.deliveryType,
+      deliveryDate: order.deliveryDate,
+      paymentMethod: order.paymentMethod,
+      items: boxItems.map((row) => {
+        const item = itemById.get(row.orderItemId);
+        const name = item ? names.get(item.variantId) : undefined;
+        return { name: name ? `${name.productName}${name.variantLabel ? ` · ${name.variantLabel}` : ''}` : '—', qty: row.qty };
+      }),
+    },
+  };
 }
 
 /** Parti başına toplanmış birleşim — aynı partiden iki kutuya konan mal tek satıra iner. */

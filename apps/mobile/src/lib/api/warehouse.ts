@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import {
+  BoxLabelResponseSchema,
   ConfirmPreparationResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
@@ -94,6 +95,11 @@ export function sealOrderBox(
   body: SealBoxRequest,
 ): Promise<ApiResult<z.infer<typeof SealBoxResponseSchema>>> {
   return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/seal`, SealBoxResponseSchema, { method: 'POST', body });
+}
+
+/** **Etiket içeriği** (23.7) — kapanış önizlemesi; Brother SDK bağlanınca aynı içerik basılır. */
+export function fetchBoxLabel(boxId: string): Promise<ApiResult<z.infer<typeof BoxLabelResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/label`, BoxLabelResponseSchema);
 }
 
 /** **Tedarik siparişinden dolu kabul formu** (D2). Boş dizi = plansız alım (form elle doldurulur). */

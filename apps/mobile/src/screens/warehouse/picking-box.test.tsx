@@ -51,6 +51,7 @@ interface Net {
   open?: unknown;
   seal?: unknown;
   resolve?: unknown;
+  label?: unknown;
 }
 
 const net: Net = { orders: [] };
@@ -59,6 +60,7 @@ fetchMock.mockImplementation((url, init) => {
   const path = String(url);
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
   if (path.endsWith('/seal')) return Promise.resolve(ok(net.seal));
+  if (path.endsWith('/label')) return Promise.resolve(ok(net.label ?? { status: 'not_found' }));
   if (init?.method === 'POST' && path.endsWith('/boxes')) return Promise.resolve(ok(net.open));
   if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
   return Promise.resolve(ok({ date: null, orders: net.orders }));
@@ -139,9 +141,19 @@ describe('D1 · kutu döngüsü', () => {
     expect(String(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value)).toBe('2');
   });
 
-  it('kapanış BU kutunun dağılımını gönderir ve `ready` cümlesini yazar', async () => {
+  it('kapanış BU kutunun dağılımını gönderir, `ready` cümlesini ve ETİKET önizlemesini yazar', async () => {
     net.orders = [preparationOrder({ boxes: [preparationBox()] })];
     net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    // Etiket içeriği SUNUCUDAN (23.7) — tutar alanı yok, sözleşme taşımıyor.
+    net.label = {
+      status: 'ok',
+      label: {
+        code: 'KT-26-4K2M9P7HWX', boxNo: 1, boxCount: 1, referenceNo: 'LZA-26-3M8C',
+        parcelName: 'Restaurant Bosphore', routeName: 'Kuzey rotası', deliveryType: 'route',
+        deliveryDate: '2026-08-24', paymentMethod: 'cash',
+        items: [{ name: 'Fıstıklı Baklava · 1 kg', qty: 2 }],
+      },
+    };
     await renderPicking();
 
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
@@ -154,6 +166,11 @@ describe('D1 · kutu döngüsü', () => {
     expect(lastBodyOf('/seal')).toMatchObject({
       picks: [{ orderItemId: ITEM_A, batches: [{ stockId: STOCK_A, qty: 2 }] }],
     });
+    // Etiket kartı: QR kodu, döküm ve tahsilat YÖNTEMİ (tutar asla) — basım iğne deneyini bekliyor.
+    const card = screen.getByTestId('warehouse-picking-label');
+    expect(card).toHaveTextContent(/KT-26-4K2M9P7HWX/);
+    expect(card).toHaveTextContent(/2 × Fıstıklı Baklava/);
+    expect(card).toHaveTextContent(/Tahsilat: nakit/);
   });
 
   it('eksikli kapanış "yeni kutu" yolunu açar: kapalı kutu özetlenir, CTA sıradaki kutuyu önerir', async () => {

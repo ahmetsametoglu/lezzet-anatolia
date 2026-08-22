@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import type {
+  BoxLabelContract,
   PreparationBoxContract,
   PreparationLineContract,
   PreparationOrderContract,
@@ -8,7 +9,14 @@ import type {
   ShortfallSuggestionContract,
 } from '@lezzet/types';
 
-import { confirmPreparation, fetchPreparationQueue, openOrderBox, resolveScannedCode, sealOrderBox } from '@/lib/api/warehouse';
+import {
+  confirmPreparation,
+  fetchBoxLabel,
+  fetchPreparationQueue,
+  openOrderBox,
+  resolveScannedCode,
+  sealOrderBox,
+} from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
@@ -101,6 +109,14 @@ interface UsePreparationResult {
   scanOpen: boolean;
   setScanOpen: (open: boolean) => void;
   handleScan: (code: string) => void;
+  /**
+   * Son KAPANAN kutunun etiketi (23.7) — içerik sunucudan (`boxLabelPayload`); basım Brother SDK
+   * bağlanınca (23.5), bugünkü hâli ÖNİZLEME. `null` = gösterilecek etiket yok (kapat düğmesi ya
+   * da yeni seçim sıfırlar). Sipariş hazır olup kuyruktan düşse de kart görünür kalır — depocu
+   * "ne bastıracağını" kapanış anında okur.
+   */
+  label: BoxLabelContract | null;
+  dismissLabel: () => void;
 }
 
 /** Motorun bu satır için ayırabildiği toplam adet — sipariş adedi DEĞİL, raftaki gerçek. */
@@ -179,6 +195,8 @@ export function usePreparation(): UsePreparationResult {
     setSelectedId(orderId);
     setLines({});
     setNotice(null);
+    // Yeni seçim yeni iştir: önceki kutunun etiketi artık bu ekranın konusu değil.
+    setLabel(null);
   }, []);
 
   const lineState = useCallback(
@@ -236,6 +254,7 @@ export function usePreparation(): UsePreparationResult {
   const boxMode = order !== null && (boxes.length > 0 || order.lines.every((line) => line.pickedQty === 0));
   const anyQty = order !== null && order.lines.some((line) => (lines[line.itemId]?.qty ?? 0) > 0);
   const [scanOpen, setScanOpen] = useState(false);
+  const [label, setLabel] = useState<BoxLabelContract | null>(null);
 
   const openNewBox = useCallback(() => {
     if (order === null || sending) return;
@@ -357,6 +376,10 @@ export function usePreparation(): UsePreparationResult {
         const shortfalls = shortfallSentences(data.shortfalls, order);
         setNotice({ tone: data.ready && shortfalls.length === 0 ? 'ok' : 'warn', text: [head, ...shortfalls].join(' ') });
         setLines({});
+        // Etiket önizlemesi (23.7): içerik kapanışta kesinleşti, sunucudan okunur. Okuma düşerse
+        // sessiz kalınır — kapanışın kendisi yazıldı, etiket karta sonra da bakılabilir.
+        const labelResult = await fetchBoxLabel(currentBox.boxId);
+        if (labelResult.error === null && labelResult.data.status === 'ok') setLabel(labelResult.data.label);
         await load();
         return;
       }
@@ -437,6 +460,8 @@ export function usePreparation(): UsePreparationResult {
     scanOpen,
     setScanOpen,
     handleScan,
+    label,
+    dismissLabel: useCallback(() => setLabel(null), []),
   };
 }
 

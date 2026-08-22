@@ -13,7 +13,7 @@ import {
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
-import { openBox, sealBox } from './boxes';
+import { boxLabelPayload, openBox, sealBox } from './boxes';
 import { listPreparationQueue } from './preparation';
 
 /**
@@ -268,5 +268,51 @@ describe('kutu kapanışı (sealBox)', () => {
 
     expect(outcome).toEqual({ status: 'forbidden', reason: 'out_of_scope' });
     expect(await itemBatches.listByOrder(orderId)).toHaveLength(0);
+  });
+});
+
+describe('etiket içeriği (boxLabelPayload · 23.7)', () => {
+  it('açık kutunun etiketi YOKTUR; kapanınca içerik döner ve TUTAR hiçbir alanda sızmaz', async () => {
+    const { orderId, itemIds } = await confirmedOrder([2]);
+    const opened = await openBox(db, { orderId, warehouseId });
+    const boxId = opened.status === 'ok' ? opened.box.boxId : '';
+
+    expect(await boxLabelPayload(db, { boxId, warehouseId })).toEqual({ status: 'not_sealed' });
+
+    await sealBox(db, {
+      boxId,
+      warehouseId,
+      picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 2 }] }],
+    });
+
+    const outcome = await boxLabelPayload(db, { boxId, warehouseId });
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      label: { boxNo: 1, boxCount: 1, parcelName: 'Kutu Müşterisi', deliveryType: 'route', items: [{ qty: 2 }] },
+    });
+    const label = outcome.status === 'ok' ? outcome.label : null;
+    expect(label?.code).toMatch(/^KT-/);
+    expect(label?.items[0]?.name).toContain('Cevizli Sucuk');
+    // Karar §1.5: etikette fiyat/tutar ASLA — alan adları üstünden de sızmadığı ölçülür.
+    const serialized = JSON.stringify(outcome);
+    for (const moneyKey of ['Cents', 'price', 'amount', 'total']) {
+      expect(serialized).not.toContain(moneyKey);
+    }
+  });
+
+  it('BAŞKA DEPONUN kutusunun etiketi verilmez', async () => {
+    const { orderId, itemIds } = await confirmedOrder([1]);
+    const opened = await openBox(db, { orderId, warehouseId });
+    const boxId = opened.status === 'ok' ? opened.box.boxId : '';
+    await sealBox(db, {
+      boxId,
+      warehouseId,
+      picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 1 }] }],
+    });
+
+    expect(await boxLabelPayload(db, { boxId, warehouseId: otherWarehouseId })).toEqual({
+      status: 'forbidden',
+      reason: 'out_of_scope',
+    });
   });
 });

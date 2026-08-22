@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { PreparationLineContract, PreparationOrderContract } from '@lezzet/types';
+import { PAYMENT_METHOD_LABELS, type BoxLabelContract, type PreparationLineContract, type PreparationOrderContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
@@ -108,6 +108,9 @@ export function PreparationScreen() {
       <View style={styles.screen} testID="warehouse-picking">
         {header}
         <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-queue">
+          {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
+              burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
+          {picking.label === null ? null : <LabelCard label={picking.label} onClose={picking.dismissLabel} />}
           <Text style={styles.heading}>{t.picking.queueHeading}</Text>
           {picking.orders.map((row) => (
             <PressableSurface
@@ -146,6 +149,8 @@ export function PreparationScreen() {
       {header}
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
+        {/* Son kapanan kutunun etiketi (23.7) — ara kutu kapanışında burada görünür. */}
+        {picking.label === null ? null : <LabelCard label={picking.label} onClose={picking.dismissLabel} />}
         {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
             FARKLIYSA çizilir (web `parcelName` kuralı birebir): ikisi aynıyken satır, hiçbir şey
             söylemeyen bir tekrar olurdu. Adres/telefon yine YOK (tasarım §6). */}
@@ -295,6 +300,47 @@ function ctaOf(
   return { label: anyShort ? t.picking.cta.reported : t.picking.cta.ready, enabled: true };
 }
 
+/**
+ * ETİKET ÖNİZLEMESİ (23.7) — 4×6 etiketin içeriği, sunucudan (`boxLabelPayload`). Basım Brother
+ * SDK bağlanınca (23.5 iğne deneyi); bu kart "dış-modül bekleyende UI tam, arka uç stub"
+ * kuralının uygulamasıdır (CLAUDE §3). **Tutar yok ve olamaz** — sözleşme taşımıyor (karar §1.5).
+ */
+function LabelCard({ label, onClose }: { label: BoxLabelContract; onClose: () => void }) {
+  const route =
+    label.deliveryType === 'shipping'
+      ? fillCopy(t.picking.box.labelShipping, { date: label.deliveryDate ?? t.picking.box.labelNoDate })
+      : fillCopy(t.picking.box.labelRoute, {
+          route: label.routeName ?? '—',
+          date: label.deliveryDate ?? t.picking.box.labelNoDate,
+        });
+  return (
+    <View style={styles.labelCard} testID="warehouse-picking-label">
+      <View style={styles.labelHead}>
+        <Text style={styles.labelTitle}>
+          {fillCopy(t.picking.box.labelTitle, { n: String(label.boxNo), m: String(label.boxCount) })}
+        </Text>
+        <TextAction label={t.picking.box.labelClose} onPress={onClose} testID="warehouse-picking-label-close" />
+      </View>
+      <Text style={styles.labelLine}>
+        {fillCopy(t.picking.box.labelOrder, { ref: label.referenceNo ?? t.picking.noReference, name: label.parcelName })}
+      </Text>
+      <Text style={styles.labelLine}>{route}</Text>
+      {label.paymentMethod === null ? null : (
+        <Text style={styles.labelLine}>
+          {fillCopy(t.picking.box.labelPayment, { method: PAYMENT_METHOD_LABELS[label.paymentMethod] })}
+        </Text>
+      )}
+      {label.items.map((item, index) => (
+        <Text key={index} style={styles.labelItem}>
+          {fillCopy(t.picking.box.labelItem, { qty: String(item.qty), name: item.name })}
+        </Text>
+      ))}
+      <Text style={styles.labelQr}>{fillCopy(t.picking.box.labelQr, { code: label.code })}</Text>
+      <Text style={styles.labelPending}>{t.picking.box.labelPending}</Text>
+    </View>
+  );
+}
+
 interface LineRowProps {
   line: PreparationLineContract;
   /** Kutu modunda alt cümle değişir: önceki kayıt "yerine geçmez", önceki KUTULARDADIR. */
@@ -420,6 +466,45 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.ink,
     paddingTop: operationsTheme.space.xl,
+  },
+  labelCard: {
+    marginTop: operationsTheme.space.xl,
+    padding: operationsTheme.space['2xl'],
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+    backgroundColor: operationsTheme.colors.card,
+    gap: operationsTheme.space.xs,
+  },
+  labelHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  labelTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  labelLine: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  labelItem: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.body,
+  },
+  labelQr: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  labelPending: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
   },
   boxStrip: {
     gap: operationsTheme.space.xs,

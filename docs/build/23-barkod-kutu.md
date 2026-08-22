@@ -199,9 +199,22 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   - KALAN: toplama listesinin `storage_area.sort_order` dizilimi (karar §1.13'ün ekran yarısı —
     kuyruk sözleşmesi alan SIRASINI henüz taşımıyor) → 23.7 ile birlikte; ve 23.7 etiket (kapanışın
     "etiket basılır" adımı — footnote bugün "sıradaki adımda" diyor).
-- [ ] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
+- [~] (23.7) **Etiket + basım:** `GET /warehouse/boxes/:id/label` (içerik sunucudan; PDF/PNG kararı
   etiket tasarımıyla) · yazıcı ayarı `settings` warehouse kapsamı (`label_printer_*`) + Depolar
-  ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan
+  ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan · touches:
+  `packages/application/src/warehouse/boxes.ts`, `packages/types/src/contracts/warehouse-api.schema.ts`,
+  `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/screens/warehouse/{use-preparation.hook.ts,preparation-screen.tsx}`
+  - **Durum (22.08) — İÇERİK YARISI YAZILDI.** `boxLabelPayload`: 4×6 etiketin içeriği sunucudan
+    (karar §1.9 — tek şablon, tek yerde test): kutu kodu (QR) · N/M · referans · koliye yazılacak
+    ad (10.9 kuralı) · rota/gün (kargoda kulvar) · tahsilatın YÖNTEMİ · döküm. **Tutar alanı yok
+    ve olamaz** (karar §1.5 — sözleşme taşımıyor; testte alan-adı sızıntısıyla da ölçülü). Açık
+    kutunun etiketi YOKTUR (`not_sealed` — içerik kesinleşmedi). Bugünkü tüketici mobil kapanış
+    ÖNİZLEMESİ (CLAUDE §3: dış-modül bekleyende UI tam, arka uç stub — kart "basım iğne deneyini
+    bekliyor" der). Testler: +2 entegrasyon (para sızıntısı dahil) + jest kapanış testi etiketi
+    de ölçüyor.
+  - KALAN (23.5 iğne deneyine kilitli): PDF/PNG üretimi + fiili basım + `printed_at` damgası +
+    yazıcı ayarları (`label_printer_*`, Depolar ekranı) — üçünün de tüketicisi Brother SDK'yla
+    doğar; şimdi açmak ilk günden ölü kod olurdu (CLAUDE §0 tüketicisiz uç kuralı).
 - [x] (23.8) **Yükleme + teslim okutması:** `loadBox` (rota doğrulama + damga + sayaç) ·
   `startCourierDay` kutulu siparişte tüm kutular binmeden `out_for_delivery` yazmaz ·
   ~~`deliverByBox`~~ → ayrı kapı açılmadı: kutu ön koşulu `confirmDoorDelivery`'nin İÇİNE girdi
