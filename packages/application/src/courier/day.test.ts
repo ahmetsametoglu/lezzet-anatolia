@@ -78,8 +78,16 @@ beforeAll(async () => {
   await profiles.setRoles(courierId, ['courier'], [warehouseId]);
   await profiles.setRoles(otherCourierId, ['courier'], [warehouseId]);
 
+  /* Alıcı ve telefon 22.08'de zorunlu oldu. Değerler bu dosyada ANLAMLI: alıcı hesabın sahibinden
+     FARKLI (hediye/iş adresi hâli) ve telefon dolu — kurye durağının "kapıda kimi sorayım, kimi
+     arayayım" cevabı buradan türüyor. */
   addressId = (await new AddressService(db).insert({
-    customerId, line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg',
+    customerId,
+    recipient: 'Ali Şahin',
+    phone: '+33655443322',
+    line1: '12 rue des Fleurs',
+    postalCode: '67000',
+    city: 'Strasbourg',
   })).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
   // Rota HER GÜN koşar (weekdays 1-7): testin hangi gün koştuğu davranışı değiştirmesin.

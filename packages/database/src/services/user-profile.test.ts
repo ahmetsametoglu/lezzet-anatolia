@@ -367,14 +367,19 @@ describe('pazarlama izni süzgeci (ANALYTICS §6)', () => {
   });
 });
 
+/* Adres artık teslim alacak kişi VE numarayla birlikte doğuyor (kullanıcı kararı 22.08, kolonlar
+   `not null`) — fikstürler o değişmeze uydu. Değerler sabit: bu blok varsayılan seçimini ölçüyor,
+   alıcı/telefon burada yalnız kaydın var olabilmesi için dolu. */
+const DOOR = { recipient: 'Claire Weber', phone: '+33612345678' } as const;
+
 describe('adresler (04.4)', () => {
   it('ilk adres otomatik varsayılandır', async () => {
-    const address = await addresses.addForCustomer({ customerId, line1: '1 rue de la Paix', postalCode: '67000', city: 'Strasbourg' });
+    const address = await addresses.addForCustomer({ customerId, ...DOOR, line1: '1 rue de la Paix', postalCode: '67000', city: 'Strasbourg' });
     expect(address.isDefault).toBe(true);
   });
 
   it('varsayılan tekildir — yenisi seçilince eskisi düşer', async () => {
-    const ikinci = await addresses.addForCustomer({ customerId, line1: '2 avenue des Vosges', postalCode: '67000', city: 'Strasbourg' });
+    const ikinci = await addresses.addForCustomer({ customerId, ...DOOR, line1: '2 avenue des Vosges', postalCode: '67000', city: 'Strasbourg' });
     expect(ikinci.isDefault).toBe(false); // ilk adres varsayılan kaldı
 
     await addresses.setDefault(ikinci.id);
@@ -386,7 +391,7 @@ describe('adresler (04.4)', () => {
   it('profil silinince adresleri de gider (yetim adres kalmaz)', async () => {
     const temporary = await profiles.insert({ name: `Geçici ${stamp}` });
     createdIds.push(temporary.id); // test yarıda kalırsa da toplanır
-    await addresses.addForCustomer({ customerId: temporary.id, line1: 'x', postalCode: '67000', city: 'Strasbourg' });
+    await addresses.addForCustomer({ customerId: temporary.id, ...DOOR, line1: 'x', postalCode: '67000', city: 'Strasbourg' });
     // Servis silme kapalı (kimlik kaydı silinmez, kapatılır) — CASCADE'i doğrudan doğruluyoruz.
     await db.from('user_profiles').delete().eq('id', temporary.id);
 

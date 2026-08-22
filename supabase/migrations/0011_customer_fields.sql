@@ -227,7 +227,19 @@ create table public.address (
   -- Alıcı: adrese GİDEN kişi. Hesap sahibiyle aynı olmak ZORUNDA DEĞİL — hediye gönderimi, iş
   -- adresi, aile büyüğüne sipariş. Kurye kapıda kimi soracağını buradan bilir; hesabın adını
   -- kullanmak "Ayşe'nin siparişi" yazan bir paketi annesinin kapısına götürmek olurdu.
-  recipient text,
+  --
+  -- NOT NULL (kullanıcı kararı 22.08): *"Her hâlükârda net bir şekilde bir teslimat kişisi ve
+  -- teslimat numarasına ihtiyacımız var… kaydedilen adresin de bir parçası olması gerekir."*
+  -- Kolon nullable'ken kural yalnız YORUMDA yaşıyordu ve ölçüldü (22.08): native form iki alanı
+  -- hiç sormuyordu, web zorunlu tutuyordu, okuyan iki uç boşluğu iki FARKLI şekilde dolduruyordu
+  -- (biri hesabın numarasına düşüyor, öteki düşmüyor) — yani aynı veri iki yüzeyde iki başka
+  -- cevap veriyordu. Kural veride durmalı: değişmez burada zorlanmazsa bir sonraki yazan yol
+  -- (içe aktarma, besleme, yeni bir yüzey) yine boş satır üretir. Aynı ders `stock`ta yazılı.
+  --
+  -- Varsayılan YOK ve bilerek: `''` koymak "alıcı yazılmamış"ı "alıcı boş" diye kaydetmek olurdu.
+  -- Kolaylık form tarafında — yeni adres hesabın künyesiyle DOLU açılıyor, müşteri ister
+  -- değiştirir ister olduğu gibi kaydeder.
+  recipient text not null,
   line1 text not null,
   line2 text,
   postal_code text not null,
@@ -235,7 +247,14 @@ create table public.address (
   -- Teslimat telefonu — ADRESE aittir, hesaba değil (`user_profiles.phone` hesabın numarasıdır).
   -- Kapıya teslimde kurye zili çalmadan önce arar; hediye adresinde aranacak numara müşterinin
   -- kendi numarası değil, alıcınınkidir. Tek numara tutulsaydı bu iki hâl birbirini ezerdi.
-  phone text,
+  --
+  -- NOT NULL — gerekçesi `recipient` ile aynı (kullanıcı kararı 22.08). Biçim E.164'tür ve
+  -- İSTEMCİDE indirgenir (`normalizePhone`, iki yüzey de aynı kapıdan): kolonda `06 12 …` ile
+  -- `+33612…` yan yana birikirse aynı numara iki numara gibi okunur. Kısıt olarak yazılMADI —
+  -- biçim dayatan bir check, numarası olan müşteriyi adres ekleyemez hâle getirebilir
+  -- (adres defteri hiçbir hâlde reddetmez, kullanıcı kararı 10.08); burada zorlanan şey
+  -- "bir numara VAR" olması, hangi biçimde olduğu değil.
+  phone text not null,
   country country_code not null default 'FR',
   -- Checkout'un önceden seçtiği adres; TEKİLDİR (yenisi seçilince eskisi düşer).
   is_default boolean not null default false,

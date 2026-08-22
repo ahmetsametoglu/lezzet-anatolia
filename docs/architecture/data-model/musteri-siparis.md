@@ -64,12 +64,12 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | id | uuid | |
 | customer_id | uuid | |
 | label | string? | müşterinin kendi verdiği ad ("Ev", "İş"). Checkout adres kartının **başlığı** budur: iki adres arasında seçim yapan müşteri sokak adını okuyarak değil adıyla ayırt eder. Boş bırakılabilir — ekran o zaman şehri başlık yapar, uydurma etiket yazılmaz |
-| recipient | string? | adrese **giden** kişi — hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi, aile büyüğü). Kurye kapıda kimi soracağını buradan bilir |
+| recipient | string | adrese **giden** kişi — hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi, aile büyüğü). Kurye kapıda kimi soracağını buradan bilir. **ZORUNLU** (kullanıcı kararı 22.08): adres kaydı *"burada kim teslim alır"* sorusunun cevabıdır; nullable kaldığı sürece cevap okuma anına erteleniyor ve okuyan her uç kendi yedeğini uyduruyordu — ölçüldü, iki yüzey aynı veride zıt karar verdi. Kolaylık formda: yeni adres hesabın künyesiyle **dolu** açılır |
 | line1 | string | |
 | line2 | string \| null | |
 | postal_code | string | |
 | city | string | |
-| phone | string? | **teslimat** telefonu; `user_profiles.phone` hesabın numarasıdır, bu adresin. Kapıya teslimde kurye zili çalmadan önce arar — hediye adresinde aranacak numara alıcınınkidir |
+| phone | string | **teslimat** telefonu; `user_profiles.phone` hesabın numarasıdır, bu adresin. Kapıya teslimde kurye zili çalmadan önce arar — hediye adresinde aranacak numara alıcınınkidir. **ZORUNLU** (22.08, gerekçe `recipient` ile aynı). Biçim E.164 ve **istemcide** indirgenir (`normalizePhone`); kolonda biçim kısıtı YOK — dayatan bir check, numarası olan müşteriyi adres ekleyemez hâle getirirdi (adres defteri reddetmez, 10.08) |
 | country | enum(`FR`,`DE`) | |
 | is_default | boolean | müşterinin varsayılan adresi — checkout onu önceden seçer; **tekildir** (yenisi seçilince eskisi düşer). İlk adres otomatik varsayılan olur |
 | created_at | timestamptz | |

@@ -246,7 +246,15 @@ beforeAll(async () => {
   adminToken = (await signedInUser('patron', ['admin'])).token;
 
   addressId = (
-    await new AddressService(db).insert({ customerId, line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg' })
+    // Alıcı ve telefon 22.08'de zorunlu oldu (kolonlar `not null`); kurye kapıda ikisini de okur.
+    await new AddressService(db).insert({
+      customerId,
+      recipient: 'Ali Şahin',
+      phone: '+33655443322',
+      line1: '12 rue des Fleurs',
+      postalCode: '67000',
+      city: 'Strasbourg',
+    })
   ).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
 });

@@ -237,7 +237,15 @@ beforeAll(async () => {
   adminToken = (await signedInUser('patron', ['admin'])).token;
 
   addressId = (
-    await new AddressService(db).insert({ customerId, line1: '3 rue du Dôme', postalCode: '67000', city: 'Strasbourg' })
+    // Alıcı ve telefon 22.08'de zorunlu oldu (kolonlar `not null`).
+    await new AddressService(db).insert({
+      customerId,
+      recipient: 'Ayşe Yılmaz',
+      phone: '+33612345678',
+      line1: '3 rue du Dôme',
+      postalCode: '67000',
+      city: 'Strasbourg',
+    })
   ).id;
   supplierId = (await new SupplierService(db).insert({ name: `Gaziantep Gıda ${stamp}` })).id;
 });

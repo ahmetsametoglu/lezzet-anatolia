@@ -18,8 +18,13 @@ export const AddressSchema = z.object({
   /**
    * Adrese GİDEN kişi — hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi, aile büyüğü).
    * Kurye kapıda kimi soracağını buradan bilir.
+   *
+   * ZORUNLU (kullanıcı kararı 22.08, kolon `not null`): adres kaydının kendisi *"burada kim teslim
+   * alır"* sorusunun cevabıdır. Nullable kaldığı sürece cevap OKUMA anına erteleniyordu ve okuyan
+   * her uç kendi yedeğini uyduruyordu — ölçüldü, iki yüzey aynı veride zıt karar verdi. Kolaylık
+   * formda: yeni adres hesabın künyesiyle dolu açılır, müşteri ister değiştirir.
    */
-  recipient: z.string().nullable(),
+  recipient: z.string(),
   line1: z.string(),
   line2: z.string().nullable(),
   postalCode: z.string(),
@@ -27,8 +32,11 @@ export const AddressSchema = z.object({
   /**
    * Teslimat telefonu — ADRESE aittir, hesaba değil (`UserProfile.phone` hesabın numarasıdır).
    * Kapıya teslimde kurye önce arar; hediye adresinde aranacak numara alıcınınkidir.
+   *
+   * ZORUNLU (kullanıcı kararı 22.08, kolon `not null`) — gerekçesi `recipient` ile aynı. Biçim
+   * E.164 ve istemcide indirgeniyor (`normalizePhone`); şema BİÇİM dayatmaz, varlığını zorlar.
    */
-  phone: z.string().nullable(),
+  phone: z.string(),
   country: CountryEnum,
   /** Checkout'un önceden seçtiği adres — tekildir (yenisi seçilince eskisi düşer). */
   isDefault: z.boolean(),
@@ -39,12 +47,14 @@ export type Address = z.infer<typeof AddressSchema>;
 export const AddressInsertSchema = z.object({
   customerId: z.string().uuid(),
   label: z.string().nullish(),
-  recipient: z.string().nullish(),
+  /** Kolon `not null` — yazan hiçbir yol (form, besleme, içe aktarma) bunu atlayamaz (22.08). */
+  recipient: z.string().min(1),
   line1: z.string().min(1),
   line2: z.string().nullish(),
   postalCode: z.string().min(1),
   city: z.string().min(1),
-  phone: z.string().nullish(),
+  /** Kolon `not null`; biçim E.164'e istemcide indirgenir (`normalizePhone`). */
+  phone: z.string().min(1),
   country: CountryEnum.optional(),
   isDefault: z.boolean().optional(),
 });

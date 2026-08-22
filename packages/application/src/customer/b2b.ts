@@ -157,9 +157,14 @@ export async function submitB2bApplication(
       line1,
       postalCode,
       city: input.city.trim(),
-      // Adresin telefonu tekil DEĞİL (kapıda aranacak numara adrese aittir) — profil kaydında
-      // atlanmış olsa bile burada durur, kurye numarasız kalmaz.
-      phone,
+      /* Adresin telefonu tekil DEĞİL (kapıda aranacak numara adrese aittir) — profil kaydında
+         atlanmış olsa bile burada durur, kurye numarasız kalmaz.
+
+         İNDİRGENEMEYEN NUMARA HAM HÂLİYLE YAZILIR (22.08, kolon `not null` olunca gerekti):
+         `normalizePhone` tanıyamadığı bir yazımda `null` döner ve o hâlde başvuranın yazdığı metin
+         olduğu gibi geçer. Uydurma DEĞİL — başvuranın beyanı; boş bırakmak ise artık mümkün değil
+         ve olsaydı da kuryeyi kapıda numarasız bırakırdı. Aynı hüküm native adres formunda da var. */
+      phone: phone ?? input.phone.trim(),
       country: isEuVat ? 'DE' : 'FR',
     });
   }

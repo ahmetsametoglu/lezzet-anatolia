@@ -29,8 +29,14 @@ async function createCustomer(tag: string) {
   createdIds.push(row.id);
   return row;
 }
+/* Alıcı ve telefon 22.08'de ZORUNLU oldu (kolonlar `not null`) — adres teslim alacak kişi ve
+   numarayla birlikte kaydediliyor. Yardımcı ikisini sabit veriyor: bu dosyanın ölçtüğü şey
+   varsayılan devri, etiket kırpma ve sahiplik; alıcı/telefon burada yalnız kaydın var olabilmesi
+   için dolu. Değerini konu edinen test `extra` ile ezer. */
 const write = (line1: string, extra: Partial<Parameters<typeof addCustomerAddress>[1]> = {}) => ({
   label: null,
+  recipient: 'Claire Weber',
+  phone: '+33612345678',
   line1,
   line2: null,
   postalCode: '67000',

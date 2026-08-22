@@ -4912,9 +4912,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **620/620**. Hesap ekranı testi ön-doldurmayı da çiviliyor: müşteri iki alana hiç dokunmadan
   gövde `recipient: 'Ayşe Demir'` ve E.164'e inmiş numarayla gidiyor.
 
-  **BEKLEYEN(21.99): şema sertleştirmesi — `address.recipient`/`phone` hâlâ `nullable`.** Değişmez
-  veride durmazsa üçüncü bir yazan yol (içe aktarma, seed, sonraki yüzey) yine boş satır üretir;
-  kural veride durmalı (CLAUDE §1'in depo kalıbı). Greenfield olduğumuz için migration doğrudan
-  düzenlenebilir ama mevcut satırlarda `null` var → **`db:reset` şart ve o KULLANICININ kararı**.
-  Seed'in de doldurması gerekecek (`scripts/seed/*`, web şeridinde). Web'e not bırakıldı
-  (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — ön-doldurma onların yarısı.
+  ── ŞEMA SERTLEŞTİRİLDİ (kullanıcı talimatı 22.08: *"Besleme dosyalarını da güncelle. Sertleşmeyle yaz. Reset için onay bekle"*) ──
+  · `0011_customer_fields.sql`: `address.recipient` ve `address.phone` artık **`not null`**.
+    Varsayılan YOK ve bilerek — `''` koymak "yazılmamış"ı "boş" diye kaydetmek olurdu. Telefona
+    biçim `check`'i de KONMADI: biçim dayatan bir kısıt, numarası olan müşteriyi adres ekleyemez
+    hâle getirebilirdi (adres defteri reddetmez, 10.08); zorlanan şey "bir numara VAR" olması.
+  · Zod aynası (`address.schema`) ve `AddressInsertSchema` da zorunlu — yazan hiçbir yol atlayamaz.
+  · **Besleme uydu** (`scripts/seed/delivery.ts`): telefonlar E.164'e indi (kolonda iki biçim
+    birikmesin) ve **alıcısız/telefonsuz Alman satırı doldu** — o satır "üç boş alanın ekran hâli
+    denensin" diye duruyordu, oysa artık o hâl veritabanında var OLAMIYOR; üretilemeyecek bir
+    ekranı beslemede tutmak olurdu. Etiketsiz hâli aynı satırda korundu.
+  · `b2b.ts`: indirgenemeyen numara ham hâliyle yazılıyor (`phone ?? input.phone.trim()`) —
+    `normalizePhone` `null` döndüğünde başvuranın beyanı geçer; uydurma değil, ve artık boş
+    bırakmak mümkün de değil.
+  · Kırılan fikstürler onarıldı: `packages/database`, `packages/application` (iki dosya),
+    `apps/mobile-api` (iki dosya). **`apps/web`in dört test dosyasına DOKUNULMADI** — web şeridi
+    o sırada aynı alanda çalışıyordu ve süpürmeyi kendisi yaptı (ölçüldü: dokunmadan önce 8 hata,
+    beklerken 0'a indi). Elimizi çekmek doğru karardı; onların uçuşan dosyasını düzenlemek
+    künye kaymasının ta kendisi olurdu.
+
+  Doğrulama (sertleştirme turu): `typecheck` **19/19** · `lint` · `boundaries` · birim
+  **1388/1388** · mobil jest **620/620**.
+
+  **BEKLEYEN(21.99): `db:reset` KOŞULMADI — kullanıcının onayı bekleniyor** (kendi talimatı).
+  Migration doğrudan düzenlendi (greenfield) ama mevcut satırlarda `null` var, yani şema ancak
+  reset sonrası yürürlüğe girer; o zamana dek **kod ile veritabanı ayrık**. Web'e not bırakıldı
+  (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — form ön-doldurması onların yarısı.
