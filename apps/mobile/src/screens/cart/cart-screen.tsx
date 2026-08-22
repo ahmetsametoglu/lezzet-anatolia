@@ -34,6 +34,7 @@ import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { addressLine } from '@/screens/customer-kit/address-format';
 import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';
+import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
@@ -137,7 +138,9 @@ export function CartScreen() {
 
      ADRESİ OLMAYANDA gezinme koduna düşülür (misafir ya da hiç adres eklememiş müşteri) — orada
      zaten iki kaynak yok, çelişki de yok. */
-  const { status: meStatus } = useMe();
+  /* `me` de okunuyor (22.08): adres çekmecesi yeni adresi hesabın künyesiyle DOLU açıyor.
+     Ek uçuş YOK — kanca zaten bu ekranda kurulu, alınan alan sayısı değişti yalnız. */
+  const { status: meStatus, me } = useMe();
   const { addresses, publish: publishAddresses } = useAddresses(meStatus === 'ready');
   /* Seçim ORTAK depoda (`delivery-address-store`): sepette seçilen adres checkout'ta da geçerli.
      `null` = müşteri seçmedi, varsayılan geçerli — kimliğini burada saklamıyoruz (künye orada). */
@@ -733,6 +736,8 @@ export function CartScreen() {
           selectDeliveryAddress(savedId);
           setAddressSheet(null);
         }}
+        /* Yeni adres hesabın künyesiyle DOLU açılır (22.08). */
+        defaults={addressDefaultsOf(me)}
         testID="cart-address-sheet"
       />
 

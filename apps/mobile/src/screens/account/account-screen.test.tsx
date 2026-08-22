@@ -159,8 +159,19 @@ describe('AccountScreen', () => {
     await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');
     await fireEvent.press(screen.getByTestId('address-save'));
 
-    // Boş etiket null olarak gider; line2 gövdede HİÇ yok (gönderilmeyen alana kapı dokunmaz).
-    expect(mockCreateAddress).toHaveBeenCalledWith({ label: null, line1: '8 Rue Neuve', postalCode: '67100', city: 'Strasbourg' });
+    /* Boş etiket null olarak gider; line2 gövdede HİÇ yok (gönderilmeyen alana kapı dokunmaz).
+       ALICI VE TELEFON HESABIN KÜNYESİNDEN (22.08): müşteri o iki alana hiç dokunmadı ve gövde
+       yine de dolu gitti — kullanıcı kararının ("alanlar dolu gelecek, değiştirmeyip de
+       kaydedebilecek") ekrandaki karşılığı budur. Telefon E.164'e indi (`+33 6 24…` → `+336 24…`):
+       fikstürün yazdığı boşluklu biçim tek sütunda ikinci bir biçim olarak birikmiyor. */
+    expect(mockCreateAddress).toHaveBeenCalledWith({
+      label: null,
+      recipient: 'Ayşe Demir',
+      phone: '+33624510988',
+      line1: '8 Rue Neuve',
+      postalCode: '67100',
+      city: 'Strasbourg',
+    });
     await waitFor(() => expect(screen.queryByTestId('account-address-sheet')).toBeNull());
     expect(screen.getByText('8 Rue Neuve, 67100 Strasbourg')).toBeOnTheScreen();
   });

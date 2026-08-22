@@ -4865,3 +4865,56 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   o hâl kendini bir sonraki dönüşte düzeltiyor.
 
   `typecheck` · `lint` · birim **1384/1384**.
+
+- [~] (21.99) **ADRES ARTIK TESLİM ALACAK KİŞİ VE NUMARAYLA BİRLİKTE KAYDEDİLİYOR — iki yüzeyin aynı veride zıt karar verdiği yer kapandı**
+  `touches:` `packages/types/src/contracts/address-api.schema.ts` · `packages/application/src/courier/day.ts` · `apps/mobile/src/screens/customer-kit/{address-form.tsx,address-sheet.tsx,address-sheet-messages.json}` · `apps/mobile/src/screens/{account/account-screen.tsx,cart/cart-screen.tsx,checkout/checkout-screen.tsx,profile-setup/profile-setup-screen.tsx}`
+
+  **Kullanıcı kararı (22.08):** *"Her hâlükârda net bir şekilde bir teslimat kişisi ve teslimat
+  numarasına ihtiyacımız var… varsayılan olarak kişinin bilgileri ile gelebilir. Ve kaydedilen
+  adresin de bir parçası olması gerekir."* + *"Tamamen yeni adres kaydedilirken alanlar dolu
+  gelecek. Kullanıcı değiştirecek veya değiştirmeyip kaydedecek."*
+  **KURUMSAL AYRI KONU** (aynı oturum): B2B'de fatura künyesi başka bilgiler ve başka biçim
+  istiyor; bu görev **yalnız son müşteriyi (B2C)** kapsıyor.
+
+  ── ÖLÇÜM: KURAL YORUMDA YAZILI, HİÇBİR YERDE ZORLANMIYORDU ─────────────────
+  Alanlar (`address.recipient`, `address.phone`) vardı ve şema künyesi ne işe yaradıklarını
+  anlatıyordu; ama kolonlar `nullable`, **native form ikisini de hiç sormuyordu** (yani native'den
+  girilen HER adres alıcısız ve telefonsuz doğuyordu), web zorunlu tutuyordu ve hiçbir yüzeyde
+  ön-doldurma yoktu. Boşluğu okuyan uçlar kendi yedeğini uydurdu ve **iki yüzey aynı gün zıt karar
+  verdi**: web sipariş detayı yedeğe DÜŞMÜYOR (`09-admin.md`: *"hesabın numarası hediye adresinde
+  başkasının olabilir"*), kurye durağı ise koşulsuz DÜŞÜYORDU (bizim 21.96).
+
+  **Bizimki ölçünce somut bir yalan üretiyordu:** adreste alıcı yazılı ama telefon yazılı değilken
+  ekran `Alıcı: Ali Şahin` yazıp sipariş verenin numarasını "kapıda aranacak numara" diye
+  sunuyordu; WhatsApp bağlantısı da **"Ali Şahin"i o numarada selamlıyordu**. Bir kişinin adını
+  başka birinin numarasının üstüne yazmak, bilgiyi tamamlamak değil UYDURMAKTIR.
+
+  ── YAPILAN ───────────────────────────────────────────────────────────────
+  · **Sözleşme:** `MeAddressSchema` iki alanı taşıyor (düzenlemede kaybolmasınlar — `country`nin
+    21.28'de kümeye girmesiyle birebir aynı gerekçe); `AddressWriteSchema`'da **ikisi de zorunlu**.
+    Sözleşme yalnız mobil+mobil-api'de kullanılıyor (ölçüldü), yani web hiç etkilenmedi.
+  · **Form iki alanı soruyor ve hesabın künyesiyle DOLU açıyor.** Taslakta `string | null` tutuluyor
+    ve `null` "boş" değil **"müşteri dokunmadı"** demek: görünen değer o hâlde varsayılana düşer,
+    müşteri yazdığı an yedek devreden çıkar. `useEffect` ile doldurulmadı çünkü çekmece `/me`
+    cevabından önce açılabiliyor — efekt ya boş gösterir ya müşterinin yazdığını ezerdi.
+  · Telefon `normalizePhone` ile E.164'e iniyor — **web ile aynı kapı**; tek sütunda iki biçim
+    (`06 12…` / `+336 12…`) aynı numarayı iki numara gibi gösterirdi.
+  · **Varsayılanı ÇAĞIRAN geçiriyor** (`addressDefaultsOf`), form saf kaldı. İlk deneme kancayı
+    doğrudan forma takmıştı ve **testler patladı**: `useMe`ye abone olmak `getSupabase()` çağırıyor,
+    o da env istiyor (`use-me.hook` künyesinin 10.08'de ölçtüğü tuzak). Form kitte ve dört ekran
+    çağırıyor; oturum bağını buraya koymak onu dördüne birden yayardı.
+  · **Kurye yedeği koşullu oldu:** alıcı YOKSA hesabın numarası gerçekten kapıyı açanınkidir →
+    yedek kalır; alıcı VARSA yedek yok, cevap "bilinmiyor" (CLAUDE §1) ve arama düğmesi çizilmez.
+    İkinci bir "sipariş sahibinin numarası" alanı EKLENMEDİ: bu hâl kapanmakta olan bir boşluk
+    (yeni adresler artık numarayla doğuyor), sözleşmeyi onun için büyütmek olurdu.
+
+  Doğrulama: `typecheck` (19 paket) · `lint` · `boundaries` · birim **1388/1388** · mobil jest
+  **620/620**. Hesap ekranı testi ön-doldurmayı da çiviliyor: müşteri iki alana hiç dokunmadan
+  gövde `recipient: 'Ayşe Demir'` ve E.164'e inmiş numarayla gidiyor.
+
+  **BEKLEYEN(21.99): şema sertleştirmesi — `address.recipient`/`phone` hâlâ `nullable`.** Değişmez
+  veride durmazsa üçüncü bir yazan yol (içe aktarma, seed, sonraki yüzey) yine boş satır üretir;
+  kural veride durmalı (CLAUDE §1'in depo kalıbı). Greenfield olduğumuz için migration doğrudan
+  düzenlenebilir ama mevcut satırlarda `null` var → **`db:reset` şart ve o KULLANICININ kararı**.
+  Seed'in de doldurması gerekecek (`scripts/seed/*`, web şeridinde). Web'e not bırakıldı
+  (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — ön-doldurma onların yarısı.

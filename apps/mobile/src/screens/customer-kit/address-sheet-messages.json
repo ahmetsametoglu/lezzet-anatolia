@@ -4,6 +4,11 @@
     "titleEdit": "Adresi düzenle",
     "labelLabel": "Adres etiketi",
     "labelPlaceholder": "Etiket (Ev, Ofis…)",
+    "recipientLabel": "Teslim alacak kişi",
+    "recipientPlaceholder": "Ad soyad",
+    "phoneLabel": "Teslimat telefonu",
+    "phonePlaceholder": "Telefon",
+    "recipientHint": "Kurye kapıda bu kişiyi sorar, bu numarayı arar. Hediye ya da iş adresinde değiştirin.",
     "lineLabel": "Sokak ve numara",
     "linePlaceholder": "Adres",
     "suggestLabel": "Adres önerileri",
@@ -19,7 +24,7 @@
     "saving": "Kaydediliyor…",
     "delete": "Adresi sil",
     "deleted": "Adres silindi",
-    "error": "Adres, posta kodu (5 hane) ve şehir gerekli.",
+    "error": "Teslim alacak kişi, telefon, adres, posta kodu (5 hane) ve şehir gerekli.",
     "unexpected": "Kaydedilemedi — yeniden deneyin."
   },
   "fr": {
@@ -27,6 +32,11 @@
     "titleEdit": "Modifier l'adresse",
     "labelLabel": "Libellé de l'adresse",
     "labelPlaceholder": "Libellé (Maison, Bureau…)",
+    "recipientLabel": "Personne qui réceptionne",
+    "recipientPlaceholder": "Nom et prénom",
+    "phoneLabel": "Téléphone de livraison",
+    "phonePlaceholder": "Téléphone",
+    "recipientHint": "Le livreur demandera cette personne et appellera ce numéro. Modifiez-les pour un cadeau ou une adresse professionnelle.",
     "lineLabel": "Rue et numéro",
     "linePlaceholder": "Adresse",
     "suggestLabel": "Suggestions d'adresses",
@@ -42,7 +52,7 @@
     "saving": "Enregistrement…",
     "delete": "Supprimer l'adresse",
     "deleted": "Adresse supprimée",
-    "error": "Adresse, code postal (5 chiffres) et ville sont requis.",
+    "error": "La personne qui réceptionne, le téléphone, l’adresse, le code postal (5 chiffres) et la ville sont requis.",
     "unexpected": "Impossible d'enregistrer — réessayez."
   },
   "de": {
@@ -50,6 +60,11 @@
     "titleEdit": "Adresse bearbeiten",
     "labelLabel": "Adressbezeichnung",
     "labelPlaceholder": "Bezeichnung (Zuhause, Büro…)",
+    "recipientLabel": "Empfangende Person",
+    "recipientPlaceholder": "Vor- und Nachname",
+    "phoneLabel": "Liefertelefon",
+    "phonePlaceholder": "Telefon",
+    "recipientHint": "Der Fahrer fragt an der Tür nach dieser Person und ruft diese Nummer an. Bei Geschenk- oder Firmenadressen bitte ändern.",
     "lineLabel": "Straße und Hausnummer",
     "linePlaceholder": "Adresse",
     "suggestLabel": "Adressvorschläge",
@@ -65,7 +80,7 @@
     "saving": "Wird gespeichert…",
     "delete": "Adresse löschen",
     "deleted": "Adresse gelöscht",
-    "error": "Adresse, Postleitzahl (5 Ziffern) und Stadt sind erforderlich.",
+    "error": "Empfangende Person, Telefon, Adresse, Postleitzahl (5 Stellen) und Stadt sind erforderlich.",
     "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
   }
 }

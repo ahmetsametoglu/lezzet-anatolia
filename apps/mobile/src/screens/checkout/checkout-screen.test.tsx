@@ -64,6 +64,9 @@ const t = messages.tr;
 const ADDRESS = {
   id: '11111111-1111-4111-8111-111111111111',
   label: 'Ev',
+  // Adres artık teslim alacak kişiyi ve numarayı da taşıyor (22.08 · kullanıcı kararı).
+  recipient: 'Claire Weber',
+  phone: '+33612345678',
   line1: '3 rue des Lilas',
   line2: null,
   postalCode: '75011',

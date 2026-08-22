@@ -27,6 +27,7 @@ import { toastSuccess } from '@/lib/toast/toast-store';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
+import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
@@ -949,6 +950,8 @@ export function AccountScreen({
         addresses={addressBook.addresses}
         onClose={() => setAddressSheet(null)}
         onSaved={(next) => addressBook.publish(next)}
+        /* Yeni adres hesabın künyesiyle DOLU açılır (22.08) — kaynak ekranın zaten çizdiği veri. */
+        defaults={addressDefaultsOf({ name: data.name, phone: data.phone })}
         testID="account-address-sheet"
       />
     </View>

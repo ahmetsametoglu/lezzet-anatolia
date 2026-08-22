@@ -25,6 +25,7 @@ import { upperIn } from '@/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine } from '@/screens/customer-kit/address-format';
+import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { cartLineId, refreshCart, setPurchasePlace, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
@@ -964,6 +965,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         addresses={addresses}
         onClose={() => setAddressSheet(null)}
         onSaved={applyAddressWrite}
+        /* Yeni adres hesabın künyesiyle DOLU açılır (22.08); `me` bu ekranda zaten okunuyor. */
+        defaults={addressDefaultsOf(me)}
         testID="checkout-address-sheet"
       />
     </View>

@@ -13,7 +13,7 @@ import { TextField } from '@/components/ui/text-field';
 import { updateMe } from '@/lib/api/me';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { toastSuccess } from '@/lib/toast/toast-store';
-import { AddressForm } from '@/screens/customer-kit/address-form';
+import { AddressForm, addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { publishMe, useMe } from '@/screens/customer-kit/use-me.hook';
@@ -204,6 +204,9 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
           editing={null}
           addresses={addressBook.addresses}
           saveLabel={t.address.save}
+          /* Bu akışın ÖNCEKİ adımı zaten adı ve numarayı yazdırıyor — adres adımına gelindiğinde
+             ikisini bir kez daha sormak, az önce verilen cevabı unutmuş gibi görünürdü (22.08). */
+          defaults={addressDefaultsOf(me)}
           onSaved={(next) => {
             addressBook.publish(next);
             advance();

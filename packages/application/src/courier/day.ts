@@ -144,11 +144,25 @@ export async function listCourierDay(
     const customer = customers.get(order.customerId);
     const attempts = failedAttempts(logs, order.id);
     const place = addresses.get(order.id) ?? null;
-    /* ADRESİN NUMARASI ÖNCE, HESABINKİ YEDEK (21.08). Şemanın kuralı bu: *"Teslimat telefonu ADRESE
-       aittir, hesaba değil … hediye adresinde aranacak numara alıcınınkidir."* Hesabınki yedek
-       kalıyor çünkü adres telefonu bugün çoğu kayıtta boş — yedek olmasaydı kuryenin elindeki
-       çalışan numara da kaybolurdu. */
-    const doorPhone = place?.phone ?? customer?.phone ?? null;
+    /* ADRESİN NUMARASI ÖNCE — AMA YEDEK KOŞULLU (22.08'de düzeltildi).
+       Dün (21.08) yedek koşulsuzdu (`adres.phone ?? hesap.phone`) ve ölçünce yanlış çıktı: adreste
+       ALICI yazılıysa ama telefon yazılı değilse, hesabın numarası BAŞKASININDIR (hediye/iş
+       adresi) ve ekran o numarayı "kapıda aranacak numara" diye sunuyordu — üstelik WhatsApp
+       bağlantısı alıcıyı ADIYLA selamlayıp sipariş verenin numarasına gönderiyordu. Bir kişinin
+       adını başka birinin numarasının üstüne yazmak, bilgiyi tamamlamak değil UYDURMAKTIR.
+       Web aynı veride aynı gün ters kararı vermişti (`09-admin.md`: *"telefon hesabınkine
+       DÜŞMEZ… hesabın numarası hediye adresinde başkasının olabilir"*) — iki yüzey ayrışmıştı.
+
+       Kural artık koşullu ve ikisini de karşılıyor: alıcı YOKSA kapıyı açan zaten hesap sahibidir,
+       numarası da gerçekten onundur → yedek doğru. Alıcı VARSA yedek yok; cevap "bilinmiyor"dur
+       (CLAUDE §1) ve ekran arama düğmesini hiç çizmez.
+
+       Bu hâl GEÇİCİ: kullanıcı kararıyla (22.08) adres artık teslim alacak kişi VE numarayla
+       birlikte kaydediliyor, yani "alıcısı var ama numarası yok" satırı yalnız eski kayıtlarda
+       kalıyor. O yüzden buraya ikinci bir "sipariş sahibinin numarası" alanı EKLENMEDİ — sözleşmeyi
+       ve ekranı, kapanmakta olan bir boşluk için büyütmek olurdu. */
+    const namedRecipient = place?.recipient != null;
+    const doorPhone = place?.phone ?? (namedRecipient ? null : customer?.phone ?? null);
 
     return {
       orderId: order.id,

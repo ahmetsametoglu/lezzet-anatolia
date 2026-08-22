@@ -10,12 +10,24 @@ import { CountryEnum } from '../primitives/enums.schema';
  */
 
 /**
- * Küme EKRANIN OKUDUĞU alanlardır (v3 hesap listesi + adres çekmecesi): etiket, iki adres satırı,
- * posta kodu, şehir, ülke, varsayılan bayrağı. Bilinçli dışarıda: `customerId` (jetondan çözülür,
- * tele dönmesi gereksiz), `recipient`/`phone` (çekmece göstermiyor; checkout dilimi bu alanları
- * istediği gün küme oradan büyür — sözleşme ekranın ihtiyacını taşır), `createdAt` (sıralama
- * sunucuda). `line2` kümede: çekmece göstermese de web'den girilmiş bir "Kat 2 / Daire 5" satırını
- * listede yutmak teslimat adresini eksik gösterirdi.
+ * Küme EKRANIN OKUDUĞU alanlardır (v3 hesap listesi + adres çekmecesi): etiket, alıcı, teslimat
+ * telefonu, iki adres satırı, posta kodu, şehir, ülke, varsayılan bayrağı. Bilinçli dışarıda:
+ * `customerId` (jetondan çözülür, tele dönmesi gereksiz) ve `createdAt` (sıralama sunucuda).
+ * `line2` kümede: çekmece göstermese de web'den girilmiş bir "Kat 2 / Daire 5" satırını listede
+ * yutmak teslimat adresini eksik gösterirdi.
+ *
+ * ── `recipient`/`phone` 22.08'DE KÜMEYE GİRDİ (kullanıcı kararı) ────────────
+ * Bu künye bir gün için söz vermişti: *"çekmece göstermiyor; checkout dilimi bu alanları istediği
+ * gün küme oradan büyür"*. O gün geldi ve sebebi ölçüldü: **native'den girilen her adres alıcısız
+ * ve telefonsuz doğuyordu** (form sormuyor), web ise ikisini zorunlu tutuyordu — aynı tablo, iki
+ * yüzeyden iki farklı asgari. Okuyan uçlar boşluğu farklı doldurunca ayrışma ölçülebilir hâle
+ * geldi (web sipariş detayı yedeğe DÜŞMÜYOR, kurye durağı hesaba DÜŞÜYOR).
+ *
+ * Kullanıcı kararı (22.08): *"her hâlükârda net bir teslimat kişisi ve teslimat numarasına
+ * ihtiyacımız var… adres, teslim alacak kişi ve telefon numarası ile beraber kaydedilmiş olacak"*.
+ * Alanlar okuma kümesinde çünkü DÜZENLEME onları gerektiriyor — `country`nin 21.28'de kümeye
+ * girmesiyle birebir aynı gerekçe: geri gönderilmeyen alan, "hiçbir şeyi değiştirmeden Kaydet"
+ * diyen müşteride kaybolurdu.
  *
  * ── `country` 21.28'DE KÜMEYE GİRDİ ─────────────────────────────────────────
  * Bir süre "çekmece göstermiyor" diye dışarıdaydı ve doğruydu — gösterilecek bir şey değil.
@@ -27,6 +39,8 @@ import { CountryEnum } from '../primitives/enums.schema';
 export const MeAddressSchema = AddressSchema.pick({
   id: true,
   label: true,
+  recipient: true,
+  phone: true,
   line1: true,
   line2: true,
   postalCode: true,
@@ -55,6 +69,31 @@ export const MeAddressListSchema = z.array(MeAddressSchema);
  */
 export const AddressWriteSchema = z.object({
   label: z.string().nullish(),
+  /**
+   * ADRESTE TESLİM ALACAK KİŞİ — ZORUNLU (kullanıcı kararı 22.08).
+   *
+   * Nullable DEĞİL: adres kaydının kendisi *"burada kim teslim alır"* sorusunun cevabıdır ve o
+   * cevap boş bırakılırsa soru okuma anına ertelenir — okuyan her uç kendi yedeğini uydurur ve
+   * ayrışırlar (ölçüldü 22.08). Kolaylık formda: yeni adreste alan hesabın adıyla DOLU gelir,
+   * müşteri ister değiştirir ister olduğu gibi kaydeder. Yani zorunluluk bir sürtünme değil,
+   * müşterinin zaten verdiği cevabın kayda geçmesi.
+   *
+   * `min(1)` gövde kapısıdır; asıl değişmez veride olmalı (`address.recipient not null`) —
+   * o adım `db:reset` gerektirdiği için kullanıcının kararına bırakıldı, kaydı `BEKLEYEN(21.99)`.
+   */
+  recipient: z.string().min(1),
+  /**
+   * TESLİMAT TELEFONU — ZORUNLU, ve E.164'e indirgenmiş olarak beklenir.
+   *
+   * Hesabın numarasından AYRI bir alan olmasının gerekçesi entity künyesinde (hediye adresinde
+   * aranacak numara alıcınınkidir). Zorunluluğun gerekçesi `recipient` ile aynı: kapıya teslimde
+   * kurye önce arıyor ve "numara bilinmiyor" hâli kuryeyi kapıda bırakıyor.
+   *
+   * Biçimi İSTEMCİ indirger (`normalizePhone`, `@lezzet/helper`) — burada kalıp dayatılmıyor
+   * çünkü iki ülke iki uzunluk taşıyor ve serbest yazımı reddetmek, numarası olan müşteriyi
+   * adres ekleyemez hâle getirirdi (adres defteri hiçbir hâlde reddetmez — kullanıcı kararı 10.08).
+   */
+  phone: z.string().min(1),
   line1: z.string().min(1),
   line2: z.string().nullish(),
   postalCode: z.string().regex(/^\d{5}$/),

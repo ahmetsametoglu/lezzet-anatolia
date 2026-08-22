@@ -66,7 +66,18 @@ function suggestReply(rows: unknown[]): Response {
 
 async function renderForm(rows: unknown[]): Promise<void> {
   globalThis.fetch = jest.fn(async () => suggestReply(rows)) as unknown as typeof fetch;
-  await render(<AddressForm editing={null} addresses={[]} onSaved={jest.fn()} />);
+  /* `defaults` üretimdeki hâli taklit ediyor (22.08): dört çağıranın dördü de hesabın künyesini
+     geçiriyor ve form o hâlde alıcı/telefon alanlarını DOLU açıyor. Geçirilmezse kaydetme
+     doğrulamaya takılır — bu dosyanın konusu posta kodu seçimi, o yüzden künye verilerek
+     yolun önü açılıyor; zorunluluğun kendi testi ayrı. */
+  await render(
+    <AddressForm
+      editing={null}
+      addresses={[]}
+      onSaved={jest.fn()}
+      defaults={{ recipient: 'Claire Weber', phone: '+33612345678' }}
+    />,
+  );
 }
 
 /** Kod alanına yazıp öneri listesinin gelmesini bekler (gecikme + tel turu). */

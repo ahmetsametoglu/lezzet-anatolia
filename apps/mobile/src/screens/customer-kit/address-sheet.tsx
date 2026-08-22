@@ -35,10 +35,12 @@ interface AddressSheetProps {
   onClose: () => void;
   /** Yazım başarılı; imza `AddressForm`unkiyle aynı (`savedId` silmede `null`). */
   onSaved: (addresses: MeAddress[], savedId: string | null) => void;
+  /** Yeni adreste alıcı/telefon varsayılanı — hesabın künyesi; gerekçesi `AddressForm`da. */
+  defaults?: { recipient: string; phone: string };
   testID?: string;
 }
 
-export function AddressSheet({ target, addresses, onClose, onSaved, testID }: AddressSheetProps) {
+export function AddressSheet({ target, addresses, onClose, onSaved, defaults, testID }: AddressSheetProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
 
@@ -62,6 +64,7 @@ export function AddressSheet({ target, addresses, onClose, onSaved, testID }: Ad
         editing={shown?.editing ?? null}
         addresses={addresses}
         active={target !== null}
+        defaults={defaults}
         onSaved={(next, savedId) => {
           onSaved(next, savedId);
           onClose();
