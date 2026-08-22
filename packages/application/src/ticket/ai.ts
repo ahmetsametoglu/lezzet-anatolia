@@ -144,12 +144,17 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
   return { status: 'generated' };
 }
 
-/** Konuşmanın (WhatsApp) yazışması → görev girdisi. Sipariş bağı yok — konuşma siparişe bağlanmaz. */
+/**
+ * Sosyal konuşmanın yazışması → görev girdisi. Sipariş bağı yok — konuşma siparişe bağlanmaz.
+ *
+ * Kanal KONUŞMADAN okunur, sabit değil (21.08): sabit `'whatsapp'` yazılıydı ve Messenger'dan yazan
+ * müşteriye ajan "WhatsApp" diyordu. Kanal adı modele söyleniyor çünkü müşteri onu görüyor.
+ */
 async function conversationContextOf(db: SupabaseClient, conversation: Conversation): Promise<SupportContextInput | null> {
   const messages = await new MessageService(db).listByConversation(conversation.id);
   if (messages.length === 0) return null;
   return {
-    channel: 'whatsapp',
+    channel: conversation.source,
     messages: messages.slice(-THREAD_LIMIT).map((message) => ({
       who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
       text: message.body.text?.trim() || '[metinsiz mesaj]',

@@ -1,4 +1,10 @@
-import { TicketAgentDecisionSchema, TicketDraftReplySchema, type TicketAgentDecision, type TicketDraftReply } from '@lezzet/types';
+import {
+  TicketAgentDecisionSchema,
+  TicketDraftReplySchema,
+  type ConversationSource,
+  type TicketAgentDecision,
+  type TicketDraftReply,
+} from '@lezzet/types';
 import type { AiTask } from '../types';
 
 /**
@@ -41,7 +47,16 @@ export interface SupportMessageInput {
  * `order: null` = talep siparişsiz — model sipariş hakkında hiçbir şey söyleyemez.
  */
 export interface SupportContextInput {
-  channel: 'ticket' | 'whatsapp';
+  /**
+   * Konuşmanın geçtiği yüzey. Sosyal kanallar `ConversationSource`tan TÜRER, elle sayılmaz (15.15):
+   * dördüncü bir kanal eklendiği gün bu tip kendiliğinden büyür ve prompt'un eşlemesi derlemede
+   * kırılır — sessizce yanlış kanal adı söyleyen bir ajan yerine durmuş bir derleme.
+   *
+   * Kanal adı modele SÖYLENİYOR çünkü müşteri onu görüyor: "WhatsApp'tan yazdığınız için…" gibi bir
+   * cümle Messenger'da yanlış olur. 21.08'e kadar konuşma yolu sabit `'whatsapp'` geçiyordu ve
+   * Messenger'dan yazan müşteriye ajan WhatsApp diyordu.
+   */
+  channel: 'ticket' | ConversationSource;
   /** Yazışma, ESKİDEN YENİYE. Uygulama katmanı kırpar (son N mesaj) — sınır kapıda, prompt'ta değil. */
   messages: SupportMessageInput[];
   order: {
@@ -154,6 +169,20 @@ export const ticketAgentTask: AiTask<SupportContextInput, TicketAgentDecision> =
   buildPrompt: buildSupportPrompt,
 };
 
+/**
+ * Kanalın modele söylenen adı. `Record` KİLİTTİR: `ConversationSource` büyüdüğünde eksik anahtar
+ * derlemeyi durdurur — kanal adı sessizce yanlış söylenmez (`SupportContextInput.channel` künyesi).
+ *
+ * Talep kanalının parantezi bilinçli: müşteri cevabı e-postadan okuyacak, yani ajan "hemen
+ * dönüyoruz" derken sohbet hızını değil posta hızını vaat ediyor.
+ */
+const CHANNEL_LABELS: Record<'ticket' | ConversationSource, string> = {
+  ticket: 'destek talebi (e-posta ile bildirilir)',
+  whatsapp: 'WhatsApp',
+  messenger: 'Facebook Messenger',
+  instagram: 'Instagram DM',
+};
+
 /** İki görevin ortak girdi düzeni — bağlam önce, yazışma sonra, soru en sonda. */
 function buildSupportPrompt(input: SupportContextInput): string {
   const order = input.order
@@ -172,7 +201,7 @@ function buildSupportPrompt(input: SupportContextInput): string {
     .join('\n');
 
   return [
-    `Kanal: ${input.channel === 'whatsapp' ? 'WhatsApp' : 'destek talebi (e-posta ile bildirilir)'}.`,
+    `Kanal: ${CHANNEL_LABELS[input.channel]}.`,
     '',
     order,
     '',
