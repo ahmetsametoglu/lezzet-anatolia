@@ -156,6 +156,13 @@ const config: ExpoConfig = {
     'react-native-edge-to-edge',
     'expo-secure-store',
     [
+      // Kamera YALNIZ kod okutmak için (Modül 23) ve izin metni bunu söylüyor — genel bir "kamera
+      // erişimi" cümlesi, mağaza incelemesinde de kullanıcı karşısında da fazlasını vaat ederdi.
+      // Metin İngilizce+Fransızca değil TEK cümle: operasyon uygulaması personel içindir.
+      'expo-camera',
+      { cameraPermission: 'Kamera yalnız ürün ve koli kodlarını okutmak için kullanılır.' },
+    ],
+    [
       '@stripe/stripe-react-native',
       {
         /*

@@ -40,3 +40,15 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
    elle taklit yazılmadı. */
 jest.mock('@stripe/stripe-react-native', () => require('@stripe/stripe-react-native/jest/mock.js'));
 /* eslint-enable @typescript-eslint/no-require-imports */
+
+/* KAMERA (Modül 23) — paketin hazır jest mock'u YOK (jest-expo da sahtelemiyor; ölçüldü:
+   `useCameraPermissions()` undefined dönüyor ve ScanSheet'i içeren her ekran testi düşüyordu).
+   Sahtenin şekli gerçek imzanın en küçüğü: izin "verilmedi ve sorulabilir" hâliyle döner —
+   test ortamında vizör hiç açılmaz, izin isteği çağrılabilir ama hiçbir yere gitmez. */
+jest.mock('expo-camera', () => ({
+  CameraView: () => null,
+  useCameraPermissions: () => [
+    { granted: false, canAskAgain: true, status: 'undetermined' },
+    jest.fn().mockResolvedValue({ granted: false, canAskAgain: true, status: 'undetermined' }),
+  ],
+}));

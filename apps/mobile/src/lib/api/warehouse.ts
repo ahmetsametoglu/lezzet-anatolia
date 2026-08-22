@@ -3,12 +3,15 @@ import {
   ConfirmPreparationResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
+  LearnCodeResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsResponseSchema,
   ReceiveTransferResponseSchema,
   RecordAdjustmentResponseSchema,
+  ResolveCodeResponseSchema,
   WarehouseReturnResponseSchema,
   type ConfirmPreparationRequest,
+  type LearnCodeRequest,
   type RecordAdjustmentRequest,
   type ReceiveGoodsRequest,
   type ReceiveTransferRequest,
@@ -124,6 +127,27 @@ export function receiveTransfer(
     method: 'POST',
     body,
   });
+}
+
+/**
+ * **Okutulan kodun çözümü** (Modül 23) — TEK tarama sözleşmesi: mal kabul, toplama, transfer ve
+ * tezgâh aynı ucu çağırır. Kimlik bulur, stok/depo kararı VERMEZ. `unknown` bir hata değil ÖĞRENME
+ * davetidir — ekran "bu kod hangi ürün?" diye sorar ve cevabı `learnScannedCode` ile yazar.
+ */
+export function resolveScannedCode(code: string): Promise<ApiResult<z.infer<typeof ResolveCodeResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/codes/resolve', ResolveCodeResponseSchema, {
+    method: 'POST',
+    body: { code },
+  });
+}
+
+/**
+ * **Öğrenen eşleme** (karar §1.3): tanınmayan kod bir varyanta bağlanır, ikinci gelişte tanınır.
+ * `already_bound` cevabın kendisidir — kod başka varyanta bağlıysa ekran kime bağlı olduğunu
+ * söyler; düzeltme web varyant editöründen (sil + yeniden öğret).
+ */
+export function learnScannedCode(body: LearnCodeRequest): Promise<ApiResult<z.infer<typeof LearnCodeResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/codes', LearnCodeResponseSchema, { method: 'POST', body });
 }
 
 /**

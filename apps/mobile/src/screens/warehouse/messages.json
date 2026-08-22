@@ -145,6 +145,21 @@
     "result": {
       "ok": "Kabul yazıldı — {n} parti açıldı.",
       "empty": "Satırsız istek — hiçbir şey yazılmadı."
+    },
+    "scan": {
+      "cta": "📷 Koli okut",
+      "title": "Koli okut",
+      "hint": "Kolinin ya da paketin barkodunu çerçeveye getirin — satır kendiliğinden bulunur.",
+      "found": "{name} bulundu — {n} adet eklendi.",
+      "foundSku": "{name} bulundu (SKU eşleşmesi) — {n} adet eklendi.",
+      "foundSupplier": "{name} bulundu (tedarikçi kodu) — {n} adet eklendi.",
+      "notInForm": "Bu kod {name} ürününe bağlı — bu siparişin kaleminde yok. Satır eklenmedi.",
+      "learnTitle": "Bu kod hangi ürün?",
+      "learnBody": "{code} sistemde kayıtlı değil. Satırı seçin — kod o ürüne öğretilir, bir daha sorulmaz.",
+      "learnCancel": "Şimdi değil",
+      "learned": "Kod öğrenildi — {name} satırına 1 adet eklendi.",
+      "alreadyBound": "Bu kod az önce {name} ürününe bağlanmış — satır oradan sayıldı.",
+      "error": "Kod çözülemedi — bağlantıyı kontrol edip yeniden okutun."
     }
   },
   "nearExpiry": {

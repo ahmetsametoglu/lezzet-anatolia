@@ -95,9 +95,34 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
 - [ ] (23.3) **Web dokunuşları:** varyant editörüne barkod listesi (öğrenen eşlemenin GERİ ALMA
   yeri: tür/çarpan + sil) · fiyat/tedarik aramalarına kod zinciri (`prices/actions.ts` ·
   `procurement/actions.ts` bugün yalnız ada bakıyor)
-- [ ] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
+- [~] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
   (`apps/mobile/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
-  çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode`
+  çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode` · touches:
+  `apps/mobile/src/components/scan/scan-sheet.tsx`, `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}`,
+  `apps/mobile/src/lib/api/warehouse.ts`, `apps/mobile/app.config.ts`, `apps/mobile/jest.setup.ts`
+  - *Bitti:* gerçek cihazda koli okutulup satırın bulunduğu ve tanınmayan kodun öğretildiği görüldü
+  - **Durum (22.08) — YAZILDI, cihaz ölçümü bekliyor.** `expo-camera ~57.0.4` girdi (beyan modül
+    dosyasında; app.config'e izin metniyle eklendi — "yalnız kod okutmak için"). `ScanSheet` tek
+    `onScan` sözleşmesi: ham kodu verir, çözüm/karar çağıranın; tekrar-okuma kilidi OKUMA başına
+    (kod başına değil — iki koli aynı kodu taşıyabilir); izin kendiliğinden sorulur, kalıcı redde
+    tekrar-sor düğmesi ÇİZİLMEZ. Mal kabul: "📷 Koli okut" (çevrimdışıyken çizilmez — çözüm
+    sunucuda, kuyruğu yok), bulunan satıra çarpan kadar EKLENİR (kaynak SKU/tedarikçiyse cümle
+    bunu söyler), PO'da olmayan ürünün kodu satır AÇMAZ (fark raporunun kümesi bozulmaz);
+    tanınmayan kod alt sayfada formun satırlarından seçtirilir (katalog araması bilinçle yok —
+    yanlış ürüne öğretmenin kapısı). Jest'e `expo-camera` mock'u girdi (paketin hazır mock'u yok,
+    ölçüldü). Mobil jest 84 suite · 599/599; tsc kendi dosyalarımda temiz.
+  - **SİMÜLASYON HAVUZU (kullanıcı kararı 22.08): geliştirmede kamerasız tarama.** İki kaynak,
+    TEK yol: üretimde kod kameradan, geliştirmede ayrıca havuz çiplerinden gelir (paket · koli ·
+    SKU · tanınmayan — dört çip dört yolu tetikler) ve İKİSİ AYNI teslim noktasından geçer
+    (`deliver`: kilit + `onScan`) — fark yalnız kodun kaynağı. Havuz `__DEV__` arkasında (release'te
+    bundler atar; ayrı env bayrağı bilinçle yok — "üretimde açık kalan simülasyon" derleme sabitiyle
+    kapanır). Kodlar seed formülünün AYNASI (`dev-scan-pool.ts` ↔ `scripts/seed/barcode.ts`,
+    künyeler birbirini gösterir; ayrışırsa çip "tanınmayan"a düşer, kırılmaz). **Yan kazanım:**
+    kamera modülü TEMBEL yükleniyor (`require` try/catch) — eski dev-client'ta üst-düzey import
+    ScanSheet'li her ekranı çökertirdi; şimdi modülsüz derlemede kamera alanı açıklamaya düşer,
+    akış simülasyonla bugün test edilebilir.
+  - **KALAN:** kameranın KENDİSİ gerçek cihaz ister — dev-client yeniden derlemesi (kullanıcının
+    build'i) sonrası cihaz turu. Satır o ölçümle `[x]` olur; simülasyon turu bugün atılabilir.
 - [ ] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
   0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
   `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.

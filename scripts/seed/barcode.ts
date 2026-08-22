@@ -16,6 +16,10 @@ import { tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
  * birinde sahici bir ürünün koduyla çakışmak demektir. `869` Türkiye önekiyle başlar (görünüş
  * gerçekçi), gövde varyant sırasından türer (deterministik — iki koşu aynı kodu üretir, guard'lı
  * seed'de çakışma doğmaz). Kontrol hanesi hesaplanmaz; sistem biçim zorlamıyor (şema künyesi).
+ *
+ * **AYNASI VAR:** mobilin simülasyon havuzu (`apps/mobile/src/components/scan/dev-scan-pool.ts`)
+ * aynı formülü taşıyor — scripts mobile'a bağlanamadığı için bilinçli kopya. Formül değişirse iki
+ * taraf birlikte değişir; ayrışırsa havuz çipleri "tanınmayan kod"a düşer (kırılmaz, söyler).
  */
 const eanBenzeri = (n: number): string => `869${String(1000000000 + n * 7919).slice(-10)}`;
 

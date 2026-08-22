@@ -7,6 +7,8 @@ import type { IntakeFormRowContract } from '@lezzet/types';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { ScanSheet } from '@/components/scan/scan-sheet';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -129,6 +131,21 @@ export function IntakeScreen() {
       {header}
 
       <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-lines">
+        {/* Tarama (Modül 23 · 23.4): barkodun buradaki TEK işi satırı bulmak — koli kodunda adet
+            çarpan kadar önerilir, depocu düzeltebilir. Çevrimdışıyken çizilmez: çözüm sunucuda ve
+            "sonra dene" diyecek bir kuyruğu yok. */}
+        {offline ? null : (
+          <PressableSurface
+            onPress={intake.openScan}
+            feedback="shadow"
+            style={styles.scanCta}
+            accessibilityLabel={t.intake.scan.cta}
+            testID="warehouse-intake-scan-cta"
+          >
+            <Text style={styles.scanCtaLabel}>{t.intake.scan.cta}</Text>
+          </PressableSurface>
+        )}
+
         {intake.rows.map((row) => (
           <IntakeRow
             key={row.variantId}
@@ -188,6 +205,45 @@ export function IntakeScreen() {
           <Text style={styles.ctaLabel}>{cta.label}</Text>
         </PressableSurface>
       </LinearGradient>
+
+      <ScanSheet
+        open={intake.scanOpen}
+        title={t.intake.scan.title}
+        hint={t.intake.scan.hint}
+        onClose={intake.closeScan}
+        onScan={intake.handleScan}
+        testID="warehouse-intake-scan"
+      />
+
+      {/* Öğrenen eşleme (karar §1.3): tanınmayan kod için satır seçtirilir — kod o varyanta
+          yazılır, bir daha sorulmaz. Aday kümesi FORMUN satırlarıdır: PO'lu kabulde gelen koli
+          zaten siparişin bir kalemidir; katalog araması açmak, yanlış ürüne öğretmenin kapısını
+          ardına kadar açardı. */}
+      <BottomSheet
+        visible={intake.learn !== null}
+        title={t.intake.scan.learnTitle}
+        onClose={intake.cancelLearn}
+        testID="warehouse-intake-learn"
+      >
+        <Text style={styles.learnBody}>
+          {fillCopy(t.intake.scan.learnBody, { code: intake.learn?.code ?? '' })}
+        </Text>
+        {intake.rows.map((row) => (
+          <PressableSurface
+            key={row.variantId}
+            onPress={() => intake.teach(row.variantId)}
+            feedback="tint"
+            style={styles.learnRow}
+            accessibilityLabel={productLabel(row.productName, row.variantLabel)}
+          >
+            <Text style={styles.learnRowLabel}>{productLabel(row.productName, row.variantLabel)}</Text>
+            <Text style={styles.learnRowMeta}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+          </PressableSurface>
+        ))}
+        <PressableSurface onPress={intake.cancelLearn} feedback="opacity" style={styles.learnCancel} accessibilityLabel={t.intake.scan.learnCancel}>
+          <Text style={styles.learnCancelLabel}>{t.intake.scan.learnCancel}</Text>
+        </PressableSurface>
+      </BottomSheet>
     </View>
   );
 }
@@ -467,5 +523,59 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors.card,
+  },
+  // Tarama CTA'sı kabul CTA'sından KASITLI farklı (çerçeveli, dolgusuz): asıl iş kabulü
+  // kaydetmektir, tarama ona giden bir yardımcı — iki dolu düğme hangisinin birincil olduğunu
+  // belirsizleştirirdi.
+  scanCta: {
+    marginTop: operationsTheme.space['2xl'],
+    height: operationsTheme.size.controlLg,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors.olive,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: operationsTheme.colors.card,
+  },
+  scanCtaLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors.olive,
+  },
+  learnBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+    paddingBottom: operationsTheme.space.xl,
+  },
+  learnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.xl,
+    borderTopWidth: operationsTheme.border.base,
+    borderTopColor: operationsTheme.colors['sand-300'],
+  },
+  learnRowLabel: {
+    flexShrink: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  learnRowMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
+  },
+  learnCancel: {
+    marginTop: operationsTheme.space.xl,
+    alignItems: 'center',
+    paddingVertical: operationsTheme.space.lg,
+  },
+  learnCancelLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors.muted,
   },
 });

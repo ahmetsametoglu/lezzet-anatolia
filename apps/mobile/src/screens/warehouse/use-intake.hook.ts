@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntakeFormRowContract } from '@lezzet/types';
 
-import { fetchIntakeForm, receiveGoods } from '@/lib/api/warehouse';
+import { fetchIntakeForm, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
@@ -76,6 +76,17 @@ interface UseIntakeResult {
   warnings: { name: string; remainingPercent: number | null }[];
   submit: () => void;
   reload: () => void;
+  /** Tarama sayfası açık mı (Modül 23) — ekran ScanSheet'i bununla çizer. */
+  scanOpen: boolean;
+  openScan: () => void;
+  closeScan: () => void;
+  /** Ham kodun işlenmesi — çözüm, satır bulma ve adet önerisi (künye aşağıda). */
+  handleScan: (code: string) => void;
+  /** Tanınmayan kod — dolu ise ekran "bu kod hangi ürün?" seçimini çizer. */
+  learn: { code: string } | null;
+  /** Seçilen satıra kodu öğretir; `already_bound` cevabı da burada cümleye çevrilir. */
+  teach: (variantId: string) => void;
+  cancelLearn: () => void;
 }
 
 export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
@@ -199,7 +210,116 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
     })();
   }, [complete, purchaseOrderId, rows, sending, states]);
 
-  return { status, rows, stateOf, patch, complete, differences, sending, notice, warnings, submit, reload };
+  /*
+    ── TARAMA (Modül 23 · etüt 2.1) ─────────────────────────────────────────
+    Barkodun buradaki TEK işi satırı bulmak: kod çözülür, formdaki satır eşlenir, adet ÖNERİLİR.
+    Koli kodunda öneri çarpan kadardır ve bu "adet önden doldurulmaz" kuralının istisnası DEĞİL:
+    çarpan kodun kendi söylediği ölçülmüş gerçektir (koli kaç adetse o), beklenen adet değil —
+    depocu yine düzeltebilir. SKT/lot girişi aynen elle sürer; kabulün kendisi değişmez.
+
+    PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ (yalnız söyler): PO'lu kabulün satır kümesi
+    siparişten gelir ve fark raporu o kümeye göre kurulur — listeye dışarıdan satır eklemek,
+    "beklenmedik mal" hâlini fark raporunun göremeyeceği bir yere yazmak olurdu.
+  */
+  const [scanOpen, setScanOpen] = useState(false);
+  const [learn, setLearn] = useState<{ code: string } | null>(null);
+
+  /** Bulunan satıra okumanın adedini ekler ve cümlesini kurar — tarama ile öğrenmenin ortak ucu. */
+  const addScanned = useCallback(
+    (variantId: string, qty: number, text: (name: string) => string) => {
+      const row = rows.find((candidate) => candidate.variantId === variantId);
+      if (row === undefined) return false;
+      setStates((current) => {
+        const state = current[variantId] ?? EMPTY_ROW;
+        return { ...current, [variantId]: { ...state, qty: (state.qty ?? 0) + qty } };
+      });
+      setNotice({ tone: 'ok', text: text(productLabel(row.productName, row.variantLabel)) });
+      return true;
+    },
+    [rows, setNotice],
+  );
+
+  const handleScan = useCallback(
+    (code: string) => {
+      setScanOpen(false);
+      void (async () => {
+        const result = await trackWarehouse(resolveScannedCode(code));
+        if (result.error !== null) {
+          setNotice({ tone: 'error', text: t.intake.scan.error });
+          return;
+        }
+        if (result.data.status === 'unknown') {
+          setLearn({ code });
+          return;
+        }
+
+        const { variantId, qtyPerCode, source, productName, variantLabel } = result.data;
+        const copy =
+          source === 'sku' ? t.intake.scan.foundSku : source === 'supplier_code' ? t.intake.scan.foundSupplier : t.intake.scan.found;
+        const added = addScanned(variantId, qtyPerCode, (name) =>
+          fillCopy(copy, { name, n: String(qtyPerCode) }),
+        );
+        if (!added) {
+          setNotice({
+            tone: 'warn',
+            text: fillCopy(t.intake.scan.notInForm, { name: productLabel(productName, variantLabel) }),
+          });
+        }
+      })();
+    },
+    [addScanned, setNotice],
+  );
+
+  const teach = useCallback(
+    (variantId: string) => {
+      const code = learn?.code;
+      setLearn(null);
+      if (code === undefined) return;
+      void (async () => {
+        const result = await trackWarehouse(learnScannedCode({ code, variantId }));
+        if (result.error !== null) {
+          setNotice({ tone: 'error', text: t.intake.scan.error });
+          return;
+        }
+        if (result.data.status === 'ok') {
+          addScanned(variantId, 1, (name) => fillCopy(t.intake.scan.learned, { name }));
+          return;
+        }
+        // Bu arada BAŞKASI öğretmiş (iki depocu aynı koliyle): kod kime bağlıysa oradan sayılır —
+        // sessiz bir çift kayıt yerine, formda varsa o satıra düşer, yoksa yalnız söylenir.
+        const bound = result.data;
+        const added = addScanned(bound.variantId, 1, (name) => fillCopy(t.intake.scan.alreadyBound, { name }));
+        if (!added) {
+          setNotice({
+            tone: 'warn',
+            text: fillCopy(t.intake.scan.notInForm, { name: productLabel(bound.productName, bound.variantLabel) }),
+          });
+        }
+      })();
+    },
+    [addScanned, learn, setNotice],
+  );
+
+  return {
+    status,
+    rows,
+    stateOf,
+    patch,
+    complete,
+    differences,
+    sending,
+    notice,
+    warnings,
+    submit,
+    reload,
+    scanOpen,
+    openScan: useCallback(() => setScanOpen(true), []),
+    closeScan: useCallback(() => setScanOpen(false), []),
+    handleScan,
+    learn,
+    teach,
+    cancelLearn: useCallback(() => setLearn(null), []),
+  };
 }
 
 function nameOf(rows: readonly IntakeFormRowContract[], variantId: string): string {
