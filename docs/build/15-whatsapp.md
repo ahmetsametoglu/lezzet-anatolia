@@ -62,6 +62,8 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 - [ ] (15.4) **Admin elle sipariş köprüsü:** konuşmadan "sipariş oluştur" → müşteri önseçili admin sipariş girişi, `order_source=whatsapp`
   - *Bitti:* köprüden girilen sipariş kaynak=whatsapp ile normal yaşam döngüsünde akıyor
   - **Engeli kalktı (08.08):** konuşma zemini hazır (15.1) — köprünün ihtiyacı olan `conversation.customer_id` dolu geliyor, `order_source` alanı 07'den beri var. Kalan iş operasyon yüzeyinde.
+  - ⛔ **HEDEFİ YOK — 09.8'e bağlı (ölçüldü 22.08).** Köprünün gideceği ekran **elle sipariş girişi**dir ve o ekran yazılmadı: `09.8` açık, siparişler listesindeki "+ Sipariş" girişi hâlâ `BEKLEYEN(09.8)` künyesiyle duruyor (`orders.desktop.tsx`). Bugün "Sipariş oluştur" düğmesi koymak, tam da bu turda iki kez kapattığım arızayı üçüncü kez üretmek olurdu: hiçbir yere götürmeyen bir geçit (çağıransız `setOptIn` 15.12, `disabled` WhatsApp düğmesi 15.3). **Bu iş 15'in değil 09'un sırasını bekliyor** — 09.8 yazıldığı gün buradaki köprü mekanik bir eklemedir: sohbetten müşteri kimliğiyle o ekrana geçiş + `order_source='whatsapp'`.
+  - **Kanal değerleri o gün eklenir:** `order_source` enum'unda messenger/instagram YOK ve bilerek (15.15 künyesi) — yazacak yol doğduğunda eklenir; kullanılmayan enum değeri yalan söyler.
 - [x] (15.5) **Admin konuşma izleme:** konuşma listesi + detay (mesaj geçmişi, bağlı müşteri/sipariş) `touches: apps/web/app/(operations)/operations/social/**, apps/web/lib/messaging/read.ts, apps/web/components/operation/ui/ops-nav.ts`
   - **EKRAN 21.08'de SOSYAL GELEN KUTUSUNA DÖNÜŞTÜ (15.15):** rota `/operations/whatsapp` → `/operations/social`, dosyalar `social-*`; aşağıdaki durum notları o günkü adlarıyla tarihsel kayıttır.
   - **Durum (08.08 · operasyon) — EKRAN YAZILDI, `/operations/whatsapp`.** Üç panel (çizim: `Operasyon - WhatsApp.dc.html`, tek "· web" karesi): kuyruk · sohbet · müşteri bağlamı. Süzgeç ve seçim ADRESTE (`?f=&c=`) — detay sunucuda okunuyor ve sohbetin bağlantısı paylaşılabilir; Talepler ekranı da buraya `whatsappLink(conversationId)` ile bağlanıyor. Sol raydaki WhatsApp girişi, 03.08 denetiminin (O-Y3) koyduğu şartla geri kondu: ekran artık var.
@@ -147,6 +149,8 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
     - **Doğrulama (22.08):** typecheck (types · web · mobil · mobil-API) · lint · knip · birim 1380/1380 yeşil.
 - [ ] (15.14) **Ajanın Ticket açması:** şikâyette hangi sipariş → hangi ürün → birkaç netleştirme sorusu → `Ticket` (`conversation_id` bağlı; 16 servisleri)
   - *Bitti:* sohbetten açılan talep admin kuyruğunda, sipariş/kalem bağıyla görünüyor
+  - ⛔ **15.8'e bağlı (22.08).** "Netleştirme sorusu sorma" bir SOHBET çevrimidir: ajanın müşteriye yazıp cevabı beklemesi gerekir — o çevrimin motoru yok (özerk sohbet ajanı 15.8) ve motorun kendisi gönderim kanalına bağlı (15.11, Meta tarafı kısıtlama incelemesinde).
+  - **Yolun İNSAN yarısı çalışıyor ve emsal orada:** operatör sohbeti okuyup talebi kendi açıyor (`openConversationTicketAction` · `ConversationTicketSchema`) ve `ticket.conversation_id` ilk kez o yolla doldu (15.5 durum notu). Ajan geldiğinde yazacağı kapı bu — yeni bir yazma yolu değil, aynı kapının ikinci çağıranı.
 
 ### Genişleme — sosyal gelen kutusu (21.08)
 
