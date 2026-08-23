@@ -119,6 +119,65 @@ describe('konuşma açılışı', () => {
   });
 });
 
+/**
+ * **YALNIZ BOŞSA YAZAN KAPILAR** (`BaseDbService.updateIfNull` · 15.16 · 15.7 · dalga 1a).
+ *
+ * `open()`in `coalesce` güvencesi zaten sınanıyor (yukarıda) — bunlar ONDAN AYRI iki kapı ve ayrı
+ * bir riski var: `open` bir konuşmayı AÇARKEN korur, bu ikisi ise VAR OLAN satırı günceller. Aynı
+ * cümleyi ikinci kez, farklı bir yolda kurmanın bedeli, o yolun bir gün gevşemesidir.
+ *
+ * Kaybedenin `null` alması testin merkezinde: sessiz bir ezme, yanlış hesaba bağlanmış bir sohbet
+ * demektir ve o, bağlanmamış bir sohbetten pahalıdır (`linkCustomer` künyesi).
+ */
+describe('yalnız boşsa yazan kapılar', () => {
+  it('linkCustomer BOŞ bağı doldurur', async () => {
+    const ref = numara();
+    const konusma = await konusmaAc(ref);
+    const musteri = await profiles.insert({ name: `Bağ kapısı ${stamp}`, phone: numara() });
+    profileIds.push(musteri.id);
+
+    const sonuc = await conversations.linkCustomer(konusma.id, musteri.id);
+    expect(sonuc?.customerId).toBe(musteri.id);
+  });
+
+  it('linkCustomer DOLU bağı EZMEZ ve `null` döner — kaybeden yarışçı sessiz kalmaz', async () => {
+    const ref = numara();
+    const sahip = await profiles.insert({ name: `Bağ sahibi ${stamp}`, phone: numara() });
+    const yabanci = await profiles.insert({ name: `Bağ yabancı ${stamp}`, phone: numara() });
+    profileIds.push(sahip.id, yabanci.id);
+
+    const konusma = await konusmaAc(ref);
+    await conversations.linkCustomer(konusma.id, sahip.id);
+
+    // İkinci çağrı `null` DÖNMELİ: `undefined` ya da eski satır dönseydi çağıran "oldu" sanardı.
+    const ikinci = await conversations.linkCustomer(konusma.id, yabanci.id);
+    expect(ikinci).toBeNull();
+
+    const guncel = await conversations.getById(konusma.id);
+    expect(guncel?.customerId).toBe(sahip.id);
+  });
+
+  it('setProfileName BOŞ adı doldurur — Messenger/IG başlığının tek kaynağı', async () => {
+    // Webhook ad taşımıyor (23.08 canlı ölçümü); ad Graph'tan gelip bu kapıdan yazılıyor.
+    const konusma = await konusmaAc(numara());
+    expect(konusma.profileName).toBeNull();
+
+    const sonuc = await conversations.setProfileName(konusma.id, 'Ahmet Yılmaz');
+    expect(sonuc?.profileName).toBe('Ahmet Yılmaz');
+  });
+
+  it('setProfileName DOLU adı EZMEZ — operatörün düzeltmesi her mesajda geri alınamaz', async () => {
+    const konusma = await konusmaAc(numara());
+    await conversations.setProfileName(konusma.id, 'İlk Ad');
+
+    const ikinci = await conversations.setProfileName(konusma.id, 'Sağlayıcıdan Gelen');
+    expect(ikinci).toBeNull();
+
+    const guncel = await conversations.getById(konusma.id);
+    expect(guncel?.profileName).toBe('İlk Ad');
+  });
+});
+
 describe('mesaj kaydı', () => {
   it('yön ve tür ile kaydedilir; konuşmanın son hareket damgası aynı turda güncellenir', async () => {
     const konusma = await konusmaAc(numara());
