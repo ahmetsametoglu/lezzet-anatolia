@@ -72,29 +72,43 @@ Ayrım `vitest.config.ts`'in kendi kuralıdır, burada tekrar edilmiyor; dalga i
 Test edilmeyecekler de açık yazılır: sunum biçimi (renk, boşluk), çizim birebirliği, üçüncü taraf
 kütüphanenin kendi davranışı.
 
-## 4. ÖN KOŞUL — koşmayan test yazma tuzağı (ölçüldü 22.08)
+## 4. ✅ ÖN KOŞUL KAPANDI (23.08) — koşmayan test yazma tuzağı
 
-**Dalga başlamadan kapatılacak:** iki paket HİÇBİR vitest projesinde değil.
+**Bulgu (22.08):** `packages/address-fr` ve `packages/react-hooks` HİÇBİR vitest projesinde
+değildi. Oraya yazılacak bir test **sessizce hiç koşmayacaktı** — "test yazdım" ile "test koşuyor"
+arasındaki fark tam olarak bu, ve aynı tuzak `mask.test.ts`'te bir kez yaşanmıştı.
 
-| Paket | Bugün test | `vitest.config.ts` include |
-| --- | --- | --- |
-| `packages/address-fr` | 0 | **YOK** |
-| `packages/react-hooks` | 0 | **YOK** |
+**Düzeltme (23.08):** ikisi de birim projesinin `include` listesine eklendi.
 
-İkisi de saf (adres ayrıştırma · React hook'ları) ve birim projesine aittir. Bugün oraya bir test
-yazılsa **sessizce hiç koşmaz** — "test yazdım" ile "test koşuyor" arasındaki fark tam olarak bu ve
-aynı tuzak `mask.test.ts`'te bir kez yaşandı (`vitest.config.ts` künyesi).
+**KANITLANDI, VARSAYILMADI:** her iki pakete birer sonda testi konup paket koşuldu —
+**120 → 122 dosya, 1388 → 1390 test**; sondalar sonra silindi. Listeyi ekleyip "artık koşar"
+demek, bu görevin kapatmaya çalıştığı hatanın kendisi olurdu.
 
-Aynı turda doğrulanacak ikinci gerçek: **`pnpm test` mobil jest paketini KOŞMAZ** (yalnız vitest).
-Mobil şeridin 86 dosyası kendi komutuyla koşuyor. Bu bugün bilinçli sayılabilir (mobil DB'ye
-vurmuyor, kendi şeridi var) ama **yazılı değildi** — dalga kapanırken ya birleştirilir ya
-gerekçesiyle kayda geçer.
+**`react-hooks` için bir ayrım kayda geçti:** paket DB'siz ama React'e bağlı. `include` bir
+*çalışma ortamı* vaadi değil, "bu dosyalar KOŞSUN" listesidir. Hook'u RENDER eden bir test node
+ortamında **düşer — ama görünür biçimde düşer**, sessizce yok sayılmaz; kötü olan ikincisiydi.
+Render kararı (jsdom + testing-library) ayrıca verilecek: bugün depoda ikisi de YOK ve bu bilinçli
+— web'in dört komponent testi de saf mantık sınıyor, hiçbiri render etmiyor.
+
+### `pnpm test` mobil jest paketini koşmuyor — KARAR: doğru, ve artık yazılı
+
+Ölçüldü: `scripts/shared-test-run.mjs` yalnız `vitest` çağırıyor; mobilin **86 jest dosyası** kendi
+komutuyla (`pnpm --filter mobile test`) koşuyor.
+
+**Birleştirilmeyecek.** Kilitli koşunun sebebi paylaşılan veritabanıdır (`CLAUDE §4b`); mobil suite
+DB'ye HİÇ vurmuyor. Onu kilidin arkasına koymak, hiçbir yarış riski taşımayan 86 dosyayı DB'ye
+vuran koşuların sırasını beklemeye zorlardı — bedel var, karşılık yok. Mobil şerit kendi
+koşucusunun sahibidir (`docs/talep/not-mobil-test-defteri.md`).
+
+**Geriye kalan gerçek açık:** mobil suite'i commit öncesi kimse otomatik koşmuyor. Bu bir
+*koşucu birleştirme* sorunu değil, mobil şeridin kendi disiplin kararı — dalga 2'de o şeritle
+birlikte ele alınır.
 
 ## 5. Sıra — yeniden eskiye
 
 | Dalga | Kapsam | Neden bu sırada | Durum |
 | --- | --- | --- | --- |
-| **0** | §4 ön koşulu | Koşmayan teste yazı yazmak, hiç yazmamaktan pahalı | açık |
+| **0** | §4 ön koşulu | Koşmayan teste yazı yazmak, hiç yazmamaktan pahalı | ✅ **kapandı 23.08** |
 | **1a** | **15** — sosyal gelen kutusu + AI ajan araçları | En yeni ve en geniş yüzey; envanteri hazır | `15.18` |
 | **1b** | **23** — barkod | En yeni MODÜL (22.08 doğdu), yüzeyi hâlâ küçük — ucuzken çivilenir | açığı §6.2 |
 | **2** | **21.9x** mobil kabuk/kurye/davet | Mobil şeridin kendi defteri var (`docs/talep/not-mobil-test-defteri.md`) — dalga onunla birleşir | şeridinde |

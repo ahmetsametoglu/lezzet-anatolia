@@ -92,6 +92,19 @@ export default defineConfig({
             'packages/email/src/**/*.test.ts?(x)',
             'packages/brand/src/**/*.test.ts?(x)',
             'packages/i18n/src/**/*.test.ts?(x)',
+            // Adres ayrıştırma saf: tek bağımlılığı zod, DB istemcisi hiç kurulmuyor.
+            'packages/address-fr/src/**/*.test.ts?(x)',
+            /*
+              Gecikmeli arama çekirdeği — DB'siz ama React'e bağlı, ve bu ayrım burada ÖNEMLİ.
+              Liste bir "çalışma ortamı" vaadi değil, "bu dosyalar KOŞSUN" listesidir: iki paket
+              23.08'e kadar HİÇBİR projede değildi, yani oraya yazılacak bir test sessizce hiç
+              koşmayacaktı (`mask.test.ts` tuzağının aynısı, künyesi aşağıda).
+              Hook'u RENDER eden bir test bu node ortamında düşer — ama GÖRÜNÜR biçimde düşer,
+              sessizce yok sayılmaz; kötü olan ikincisidir. Render gerektiğinde jsdom kararı
+              ayrıca verilir (bugün depoda jsdom da testing-library da YOK ve bu bilinçli:
+              web'in dört komponent testi de saf mantık sınıyor, hiçbiri render etmiyor).
+            */
+            'packages/react-hooks/src/**/*.test.ts?(x)',
             'packages/ai/src/**/*.test.ts?(x)',
             // Maskeleme saf metin işi, DB'siz (05.08). Liste eksik olsaydı `mask.test.ts` sessizce
             // hiç koşmazdı — "test yazdım" ile "test koşuyor" arasındaki fark tam olarak budur.
