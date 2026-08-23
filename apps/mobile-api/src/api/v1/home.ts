@@ -5,6 +5,7 @@ import { serviceDb } from '@lezzet/database';
 import { HomeSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
+import { toWireCampaign } from '../../lib/campaign-wire';
 import { readHomeBands, readHomeFeatured, readHomeOffers } from '../../lib/home';
 // Tarif/paket KARTI iki yüzeyin ortak kapısından gelir (`lib/ideas.ts`): vitrin şeridi ile Fikirler
 // listesi aynı kartı çiziyor, fark yalnız sınır ve süzgeçte.
@@ -67,6 +68,17 @@ home.get('/home', async (c) => {
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: okuma kapısının döndürdüğü şekiller sözleşmeye alan alan
   // uymak zorunda ve uymadığı gün burası DERLENMEZ; `parse` da süzgeçtir — fazla alan zarfa sızamaz.
-  const body: z.input<typeof HomeSchema> = { bands, offers, featured, recipes, packages, discoverCards };
+  /* Kartın kampanya ROZETİ (23.08) — kesit başlığıyla ve vitrin bandıyla AYNI çeviri kapısı.
+     `offers` rayında kampanya zaten doğmaz: her kartı bir fırsat kartıdır ve "Fırsat kampanyayı
+     yener" kararı kaynakta uygulanıyor (`toProduct`), yani burada ikinci bir dal yazmaya gerek yok
+     — yazsaydık aynı kural iki yerde yaşar ve bir gün ayrışırdı. */
+  const body: z.input<typeof HomeSchema> = {
+    bands,
+    offers: offers.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale.data) ?? undefined })),
+    featured: featured.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale.data) ?? undefined })),
+    recipes,
+    packages,
+    discoverCards,
+  };
   return ok(c, HomeSchema.parse(body));
 });

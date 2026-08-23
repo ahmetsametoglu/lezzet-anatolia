@@ -12,7 +12,6 @@ import {
   type PricingViewer,
 } from '@lezzet/application';
 import { localizedUrl } from '@lezzet/i18n';
-import { resolveLocalizedText } from '@lezzet/types';
 import {
   CatalogCategoryListSchema,
   CatalogPageSchema,
@@ -24,6 +23,7 @@ import {
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
+import { toWireCampaign } from '../../lib/campaign-wire';
 // İmleç kodlaması `lib/request.ts`te: sipariş listesi ikinci çağıran olunca oraya taşındı (21.18).
 import { decodeCursor, encodeCursor } from '../../lib/request';
 import { optionalCustomerId } from './auth';
@@ -262,7 +262,12 @@ catalog.get('/products', async (c) => {
   return ok(
     c,
     CatalogPageSchema.parse({
-      products: data.products,
+      /* Kartın kampanya ROZETİ (23.08) — çeviri kesit başlığıyla AYNI kapıdan (`toWireCampaign`).
+         `null` → alanı HİÇ göndermiyoruz (`undefined`), sözleşmenin `wasCents` deyimiyle aynı:
+         "alan yoksa kampanya da yoktur". Boş bir nesne göndermek, okuyana "kampanya var ama boş"
+         dedirtirdi. Okuma zaten iki sessizliği birleştirdi (kampanya yok · başlık zaten söylüyor);
+         uç o kararı tekrar sorgulamaz. */
+      products: data.products.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale) ?? undefined })),
       total: data.total,
       nextCursor: data.nextCursor ? encodeCursor(data.nextCursor) : null,
       /* Ad SUNUCUDA çözülmüş hâlde gidiyor (sözleşme künyesi); `id`/`description` sözleşmede yok,
@@ -271,15 +276,7 @@ catalog.get('/products', async (c) => {
       activeCollection: data.activeCollection ? { slug: data.activeCollection.slug, name: data.activeCollection.name } : null,
       /* Kampanyanın ADI burada çözülür (sözleşme tek dize taşır); `id` gitmez — ekranın kampanyayı
          ayırt etmesi gereken bir yer yok, kimlik yalnız sunucu tarafının işi. */
-      campaign:
-        data.campaign === null
-          ? null
-          : {
-              label: data.campaign.label === null ? null : resolveLocalizedText(data.campaign.label, locale),
-              percent: data.campaign.percent,
-              amountCents: data.campaign.amountCents,
-              minBasketCents: data.campaign.minBasketCents,
-            },
+      campaign: toWireCampaign(data.campaign, locale),
     } satisfies z.input<typeof CatalogPageSchema>),
   );
 });
@@ -321,6 +318,10 @@ catalog.get('/products/:slug', async (c) => {
      tarafa "Su Böreği" yazan, tıklanacak hiçbir şeyi olmayan bir mesaj gidiyordu. */
   const body: z.input<typeof CatalogProductDetailSchema> = {
     ...detail,
+    /* Öneri şeridinin kampanya ROZETİ (23.08) — katalog listesiyle AYNI çeviri kapısı. Şerit
+       karışık bir listedir (kartlar farklı kategorilerden) ve üstünde kampanyayı söyleyecek bir
+       başlık yok; kararın tarif ettiği yer tam burası. */
+    similar: detail.similar.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale.data) ?? undefined })),
     shareUrl: localizedUrl('/product/[slug]', locale.data, { slug: detail.slug }),
   };
   return ok(c, CatalogProductDetailSchema.parse(body));

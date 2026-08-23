@@ -17,7 +17,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { campaignValueOf } from '@/screens/customer-kit/campaign-label';
+import { campaignValueOf, cardBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
@@ -221,7 +221,10 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
       priceLabel: productPriceLabel(product.priceCents, product.variantCount, locale),
       soldOut: product.soldOut,
       soldOutLabel: t.card.soldOut,
-      discountLabel: product.wasCents === undefined ? undefined : t.card.offer,
+      /* Rozet kararı KİTTE (23.08): "Fırsat kampanyayı yener" ve "eşikli kampanya rozete girmez"
+         kuralları tek yerde yaşasın diye. Kategori/koleksiyon seçiliyken sunucu kampanyayı zaten
+         göndermiyor — orada kesit başlığı söylüyor ve 40 özdeş rozet rozeti anlamsızlaştırırdı. */
+      discountLabel: cardBadgeOf(product, { offer: t.card.offer, campaign: t.card.campaign }, locale),
       placeNote,
       /* SOLMA yalnız KAPALI kapıda: "bu adrese gönderemiyoruz" kalıcı bir hâl ve kart bir satın
          alma değil bir bilgi. `shipping` ve rota içi `elsewhere` SOLMAZ — ikisinde de ürün

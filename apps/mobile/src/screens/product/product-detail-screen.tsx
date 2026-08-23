@@ -24,6 +24,7 @@ import { upperIn } from '@/lib/i18n/locale';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastInfo, toastSuccess } from '@/lib/toast/toast-store';
+import { cardBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
@@ -535,6 +536,9 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                   key={product.slug}
                   name={product.name}
                   priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
+                  /* KAMPANYA ROZETİ (23.08) — öneri şeridi karışık bir listedir, kampanyayı
+                     söyleyecek başlığı yok. Kural kitte; katalog ve vitrinle aynı. */
+                  discountLabel={cardBadgeOf(product, { offer: t.card.offer, campaign: t.card.campaign }, locale)}
                   size="sm"
                   photoUri={product.image.url}
                   initial={product.name.slice(0, 1)}

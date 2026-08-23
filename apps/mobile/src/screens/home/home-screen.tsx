@@ -29,7 +29,7 @@ import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { emToDp } from '@/theme/parse';
-import { campaignValueOf } from '@/screens/customer-kit/campaign-label';
+import { campaignValueOf, cardBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import {
@@ -582,6 +582,11 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                        çizilmez. Buradaki eski `?? 0` gerekçeliydi (uç fiyatsızı süzer) ama artık
                        gereksiz — kural tek yerde ve sıfıra düşmüyor (`customer-kit/price-label`). */
                     priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
+                    /* KAMPANYA ROZETİ (23.08) — seçki KARIŞIK bir liste: kartları farklı
+                       kategorilerden gelir ve üstünde kampanyayı söyleyecek bir başlık yok.
+                       Kullanıcı kararının tarif ettiği yer tam burası. Kural kitte (`cardBadgeOf`):
+                       Fırsat kampanyayı yener, eşikli kampanya rozete girmez. */
+                    discountLabel={cardBadgeOf(product, { offer: t.card.offer, campaign: t.card.campaign }, locale)}
                     photoUri={product.image.url}
                     stockMark={placeMark}
                     // Solma yalnız KAPALI kapıda (gerekçe: katalog ekranının aynı satırı).

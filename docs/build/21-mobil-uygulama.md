@@ -4942,3 +4942,68 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   üzerinde **temiz geçti** (web'in bildirdiği `ZodError: expected "string" · received "null"` artık
   üretilemiyor). Tam paket **2751/2751** (244 dosya, 127 sn). Web'e not bırakılmıştı
   (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — form ön-doldurmasını kendileri yazdı.
+
+- [x] (21.100) **KAMPANYA ARTIK KARTTA GÖRÜNÜYOR — cümlenin içinde kaybolmuyor (MB-22b)**
+  · touches: `packages/application/src/catalog/{campaign,catalog,map,product,storefront-types}.ts`,
+  `packages/types/src/contracts/catalog-api.schema.ts`, `apps/mobile-api/src/lib/campaign-wire.ts`,
+  `apps/mobile-api/src/api/v1/{catalog,home}.ts`, `apps/mobile-api/src/lib/home.ts`,
+  `apps/mobile/src/screens/customer-kit/campaign-label.ts`,
+  `apps/mobile/src/screens/{catalog,home,product}/**`
+
+  **ŞİKÂYET ÖLÇÜLDÜ VE YARISI ÇÜRÜDÜ.** Kullanıcı *"kategori indirimlerini zaten katalog
+  kartlarında gösteriyoruz, ama ne olduğu anlaşılmıyor, metinlerin arasında kayboluyor"* dedi.
+  Ölçüm: kampanya gösteriliyordu ama **kartta değil** — katalogda kesitin başındaki not şeridinde
+  (`catalog-screen.tsx:375`), vitrinde koleksiyon bandının ADET satırına eklenmiş hâlde
+  (*"12 ürün · %15"*). Karttaki tek rozet **"Fırsat"**tı ve o başka bir şey: yakın-SKT parti
+  teklifi, yani birim fiyatta gerçekten düşen, üstü çizili eski fiyatı olan indirim. Yani şikâyet
+  birebir doğruydu ve **veri değil arayüz** işiydi — sözleşme zaten taşıyordu.
+
+  **HARİTA ZATEN YAZILIYMIŞ (08.44) ve kullanıcının saydıklarıyla birebir aynı çıktı.** Dışarıda
+  kalanlar: kupon (kodu olmayana duyurulamaz) · SEPET kapsamlı (ürüne atfedilemez) · kişiye özel
+  (`customerId` — yanlış vaat ve o kişinin kaydının ifşası) · ilk siparişe bağlı (vitrinde kimin
+  ilk siparişte olduğu bilinmez) · süresi geçmiş/pasif. İçeride: kategori + koleksiyon kapsamlı,
+  otomatik, herkese açık kampanyalar. B2B fiyatı bu yolun içinde bile değil — o bir indirim kuralı
+  değil, fiyat kişiselleşmesi.
+
+  **KULLANICI KARARLARI (23.08, üçü de şıklarla soruldu):**
+  · **Rozet, başlığın SÖYLEYEMEDİĞİ yerde.** Kategori/koleksiyon ekranında rozet kartta çizilmez
+    (başlık zaten söylüyor; 40 özdeş rozet rozeti anlamsızlaştırır); karışık listede — vitrin
+    seçkisi, arama sonucu, benzer ürünler — kartta çizilir.
+  · **Eşikli kampanya karta HİÇ çıkmaz.** *"60 € üzeri %15"*i rozete sığdırmak koşulu gizler ve
+    tutulmayan bir söz verir; yeri tam cümlesinin sığdığı kesit başlığıdır.
+  · **Fırsat kampanyayı yener.** Fırsat birim fiyatta kesin bir indirimdir, kampanya sepete
+    bağlıdır; kesin olan koşullu olanın önüne geçer.
+
+  **ÜÇ KURAL DA TEK YERDE, ekranlarda değil:** "başlık söylüyor mu" `catalog.ts`te (kesit seçiliyse
+  sunucu kampanyayı hiç göndermez), "Fırsat yener" `map.ts` → `toProduct`ta (teklif kazanmışsa
+  `campaign` doğmaz), "eşikli rozete girmez" kitte (`campaign-label` → `cardBadgeOf`). Dördüncü
+  ekran geldiği gün kimse bir `if`i unutamaz.
+
+  **FİYATA YAZILMADI, ROZET OLARAK SÖYLENDİ** — gerekçe 08.44'te ölçülmüştü ve hâlâ geçerli:
+  `applyBestDiscount` kazananı TÜM SEPET üzerinden tek-en-büyük seçip kalemlere oransal dağıtır.
+  20 € baklavaya kategori %15 varken sepette %8'lik bir sepet kampanyası kazanırsa baklavaya düşen
+  pay %8 olur; kartta *"%15"* diye bir fiyat vaadi sepet değişince yalan olurdu.
+
+  **MALİYET TAHMİNİ ÖLÇÜMLE ÇÜRÜDÜ — ek sorgu YOK.** "Ürün başına kapsam için join gerekir"
+  denmişti; `ProductWithRelations` zaten `collections[]` taşıyor ve `categoryId` ürün satırında.
+  Kampanya okuması bağlam okumasıyla PARALEL koşuyor (`Promise.all`), kimlik başına sorgu yok.
+
+  **ROZETİN SÖZLÜĞÜ CÜMLENİNKİNDEN AYRI:** ekranların cümle biçimi ayrışıktı (vitrin *"−%15"*,
+  katalog *"%15"*); rozet birinden ödünç alsaydı iki ekranda farklı görünürdü. Kendi anahtarı var
+  ve NE OLDUĞUNU söylüyor — *"%15 indirim"* / *"{amount} indirim"* (fr *de remise*, de *Rabatt*).
+  Çıplak sayı yazılmadı: şikâyetin kendisi "ne olduğu anlaşılmıyor"du.
+
+  Doğrulama: `typecheck` **17/19** (`@lezzet/web` ve `@lezzet/mobile-api` dahil temiz; düşen tek
+  görev `@lezzet/mobile` ve oradaki iki hata BAŞKA şeridin commit'lenmiş `global.fetch` satırları —
+  `social-inbox-screen.test.tsx:88`, `social-conversation-screen.test.tsx:91`, dokunulmadı) ·
+  birim **1417/1417** · mobil jest **657/657** (90 dosya) · `lint` temiz.
+
+  **BEKLEYEN(21.100): rozetin GÖRSELİ tasarıma sorulmadı.** Kullanıcı *"yuvarlak, daha dikkat
+  çekici"* bir rozet istedi; `design/pages/musteri-katalog.md`'de kampanya rozetinin karşılığı yok
+  ve CLAUDE §3 görsel kararı Claude Design'a bırakıyor. Rozet şimdilik kartın MEVCUT rozet dilinde
+  ("Fırsat"ın yuvası) çiziliyor — yeni bir görsel icat edilmedi. Tasarım geldiğinde **yalnız stil**
+  değişir; veri yolu ve üç kural aynen durur.
+
+  **MB-22a AÇIK ve web/operasyonun alanı:** etiketsiz indirim kaydedilebiliyor, o yüzden bazı
+  kampanyalar müşteriye anonim *"Kampanya"* diye görünüyor. Rozet geldiği için artık daha görünür
+  bir eksik. Not bırakıldı (`docs/talep/not-operasyon-kampanya-etiketi-zorunlu-olmali.md`).

@@ -100,6 +100,47 @@ function announceable(row: Discount, now: Date): boolean {
   return row.type === 'percent' ? row.percent != null : row.amountCents != null;
 }
 
+/**
+ * ÜRÜN BAŞINA kampanya — karışık listenin rozeti için (kullanıcı kararı 23.08).
+ *
+ * ── NEDEN AYRI BİR OKUMA DEĞİL, AYNI KAPININ İKİNCİ YÜZÜ ────────────────────
+ * `readScopeCampaigns` "şu kesitte kampanya var mı" sorusunun cevabıdır ve kesit seçilmeden
+ * sorulamaz. Ama rozet KARIŞIK listede de gerekiyor — vitrin rayı, arama sonucu, benzer ürünler:
+ * orada başlık diye bir şey yok, kampanyayı söyleyecek tek yer kartın kendisi. O yüzden kapı
+ * genişledi, ikizi doğmadı: duyurulabilirlik süzgeci (`announceable`) ve üstünlük kuralı (`put`)
+ * TEK yerde kalsın diye ürün eşlemesi de buraya yazıldı.
+ *
+ * **Kimlik başına sorgu YOK:** çağıran sayfanın kategori ve koleksiyon kimliklerini toplu geçirir,
+ * kampanya tablosu zaten toptan okunuyor (`listCandidates` — operatörün elle kurduğu, doğal tavanı
+ * olan küme), eşleme bellekte yapılır.
+ *
+ * **Koleksiyon kategoriyi yener** — `getCatalogData`'nın etkin kesit sırası neyse o (`catalog.ts`).
+ * Aynı ürün iki koleksiyonda birden kampanyalıysa `put`un kuralı geçerlidir: önce KOŞULSUZ olan.
+ * Ürünün kendi kategorisi yoksa (`categoryId === null`) yalnız koleksiyonlarına bakılır.
+ */
+export function campaignsByProduct(
+  campaigns: ScopeCampaigns,
+  products: readonly { id: string; categoryId: string | null }[],
+  collectionsByProduct: ReadonlyMap<string, readonly string[]>,
+): Map<string, ScopeCampaign> {
+  const result = new Map<string, ScopeCampaign>();
+  if (campaigns.byCategory.size === 0 && campaigns.byCollection.size === 0) return result;
+
+  for (const product of products) {
+    // Koleksiyon adayları önce: aralarındaki seçim `put`un kuralına bırakılır ki "hangi koleksiyon
+    // kazandı" sorusu iki farklı yerde iki farklı cevap almasın.
+    let won: ScopeCampaign | undefined;
+    for (const collectionId of collectionsByProduct.get(product.id) ?? []) {
+      const candidate = campaigns.byCollection.get(collectionId);
+      if (candidate === undefined) continue;
+      if (won === undefined || (won.minBasketCents !== null && candidate.minBasketCents === null)) won = candidate;
+    }
+    won ??= product.categoryId === null ? undefined : campaigns.byCategory.get(product.categoryId);
+    if (won !== undefined) result.set(product.id, won);
+  }
+  return result;
+}
+
 function put(target: Map<string, ScopeCampaign>, key: string, row: Discount): void {
   const next = toCampaign(row);
   const current = target.get(key);

@@ -159,6 +159,19 @@ export const CatalogVariantSchema = ProductVariantSchema.pick({ id: true, netWei
 export type CatalogVariant = z.infer<typeof CatalogVariantSchema>;
 
 /**
+ * Kampanyanın YÜZEY ŞEKLİ — kesit başlığı, vitrin bandı (`HomeBandSchema.campaign`) ve 23.08'den
+ * beri kartın rozeti aynı şekli kullanır, çünkü hepsi aynı gerçeği taşıyor ve aynı türetmeden
+ * geçiyor (`customer-kit/campaign-label`). Ayrı şekiller olsaydı (`HomeBandSchema.campaign`) ile AYNI şekil, çünkü aynı gerçeği
+ * aynı kampanya iki ekranda farklı yazılabilirdi.
+ */
+const CatalogCampaignSchema = z.object({
+  label: z.string().nullable(),
+  percent: z.number().nullable(),
+  amountCents: z.number().int().nullable(),
+  minBasketCents: z.number().int().nullable(),
+});
+
+/**
  * Katalog kartı (`StorefrontProduct` aynası) — liste, "benzer ürünler" şeridi ve aile dışındaki her
  * ürün gösteriminin gövdesi.
  *
@@ -193,6 +206,23 @@ export const CatalogProductSchema = ProductSchema.pick({ id: true, slug: true })
      * detayda yapılır).
      */
     variantCount: z.number().int().min(0),
+    /**
+     * Ürünün KAPSAM kampanyası — kartın rozeti (23.08 · kullanıcı kararı).
+     *
+     * **Alan hiç yoksa kampanya da yoktur** — `wasCents` ile aynı deyim: sözleşme fazladan bir
+     * "kampanya yok" değeri taşımaz.
+     *
+     * **İki ayrı sessizlik aynı yere düşer ve bu bilinçlidir:** ürünün kampanyası olmayabilir, ya
+     * da kesit BAŞLIĞI onu zaten söylüyor olabilir (kategori/koleksiyon ekranı — orada her kart
+     * aynı rozeti taşısaydı rozet anlamını yitirirdi). Ayrımı okuma yapar (`catalog.ts`), çünkü
+     * "başlık söylüyor mu" sorusunun cevabı okumanın bağlamındadır, ürünün özelliği değildir.
+     * Kart yalnız sonucu görür: alan doluysa çiz, yoksa çizme.
+     *
+     * **Bu bir FİYAT DEĞİL.** `applyBestDiscount` kazananı tüm sepet üzerinden tek-en-büyük seçip
+     * kalemlere oransal dağıtır (ölçüldü 08.44), yani kartta birim fiyat vaat etmek sepet
+     * değişince yalan olurdu. Yüzey kampanyayı SÖYLER, fiyatı değiştirmez.
+     */
+    campaign: CatalogCampaignSchema.optional(),
   });
 export type CatalogProduct = z.infer<typeof CatalogProductSchema>;
 
@@ -203,18 +233,6 @@ export type CatalogProduct = z.infer<typeof CatalogProductSchema>;
  *
  * `null` = liste bitti; istemci "daha fazla"yı kapatır (`Page<T>` sözleşmesiyle aynı anlam).
  */
-/**
- * Kesitin kampanyası — vitrin bandı (`HomeBandSchema.campaign`) ile AYNI şekil, çünkü aynı gerçeği
- * taşıyorlar ve aynı türetmeden geçiyorlar (`customer-kit/campaign-label`). İki ayrı şekil olsaydı
- * aynı kampanya iki ekranda farklı yazılabilirdi.
- */
-const CatalogCampaignSchema = z.object({
-  label: z.string().nullable(),
-  percent: z.number().nullable(),
-  amountCents: z.number().int().nullable(),
-  minBasketCents: z.number().int().nullable(),
-});
-
 export const CatalogPageSchema = z.object({
   products: z.array(CatalogProductSchema),
   /**

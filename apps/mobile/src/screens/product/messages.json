@@ -70,6 +70,13 @@
     },
     "cart": {
       "open": "Sepeti aç, {n} ürün"
+    },
+    "card": {
+      "offer": "Fırsat",
+      "campaign": {
+        "percent": "%{n} indirim",
+        "amount": "{amount} indirim"
+      }
     }
   },
   "fr": {
@@ -143,6 +150,13 @@
     },
     "cart": {
       "open": "Ouvrir le panier, {n} articles"
+    },
+    "card": {
+      "offer": "Offre",
+      "campaign": {
+        "percent": "{n} % de remise",
+        "amount": "{amount} de remise"
+      }
     }
   },
   "de": {
@@ -216,6 +230,13 @@
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"
+    },
+    "card": {
+      "offer": "Angebot",
+      "campaign": {
+        "percent": "{n} % Rabatt",
+        "amount": "{amount} Rabatt"
+      }
     }
   }
 }

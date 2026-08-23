@@ -2,7 +2,7 @@ import { CategoryImageService, CategoryService, CollectionService, ProductListin
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import type { CatalogSort, KeysetCursor, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { readScopeCampaigns } from './campaign';
+import { campaignsByProduct, readScopeCampaigns, type ScopeCampaign, type ScopeCampaigns } from './campaign';
 import { listOfferProductIds, loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, type CatalogCategoryRow } from './map';
@@ -134,18 +134,16 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
   // keyset sayfalamayı ve toplam sayıyı bozardı. Boş küme erken döner: `ids: []` PostgREST'e
   // "hiçbiri" diye gitmez, süzgeç düşer ve TÜM katalog gelirdi.
   const ids = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
-  /* Etkin kesitin kampanyası (08.44) — süzgeç yokken hiç sorulmaz: kampanya bir KESİTE aittir,
-     kesit seçilmeden söylenemez (sözleşme künyesi). Tek okuma, en çok bir kimlik. */
-  const scopeCampaigns = await readScopeCampaigns(db, {
-    categoryIds: activeCategory ? [activeCategory.id] : [],
-    collectionIds: activeCollection ? [activeCollection.id] : [],
-  });
-  const campaign =
-    (activeCollection ? scopeCampaigns.byCollection.get(activeCollection.id) : undefined) ??
-    (activeCategory ? scopeCampaigns.byCategory.get(activeCategory.id) : undefined) ??
-    null;
-
-  if (ids && !ids.length) return noProducts(categories, activeCategory, activeCollection, campaign);
+  /* Ürünsüz erken çıkışın kampanyası — kesit seçiliyken "hiç ürün yok" da bir cevaptır ve
+     kampanyayı yine söyler. Ana yolun okuması aşağıda, sayfa kimlikleriyle BİRLİKTE yapılıyor
+     (23.08): iki çağrı yeri var ama her istekte yalnız biri koşuyor ve kural tek kapıda. */
+  if (ids && !ids.length) {
+    const only = await readScopeCampaigns(db, {
+      categoryIds: activeCategory ? [activeCategory.id] : [],
+      collectionIds: activeCollection ? [activeCollection.id] : [],
+    });
+    return noProducts(categories, activeCategory, activeCollection, sectionCampaignOf(only, activeCategory, activeCollection));
+  }
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
   const filters = {
@@ -186,17 +184,66 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     // nesne veriliyor, içeride üçü atılıyor.
     productSvc.countMatching(filters),
   ]);
-  const context = await loadProductContext(db, page.rows, place, viewer);
+  /* KAMPANYA TEK OKUMADAN, İKİ SORUYA CEVAP (23.08 · kullanıcı kararı).
+     Eskiden yalnız ETKİN kesit soruluyordu ve künyesi haklıydı: kampanya bir kesite aittir. Ama
+     rozet KARIŞIK listede de gerekiyor (arama sonucu, benzer ürünler, vitrin rayı) ve orada
+     başlık diye bir şey yok — kampanyayı söyleyecek tek yer kartın kendisi. Sayfanın kategori ve
+     koleksiyon kimlikleri de sorulur oldu; ek SORGU doğmuyor, çünkü `ProductWithRelations` zaten
+     `collections[]` taşıyor ve `categoryId` ürün satırında. `loadProductContext` ile PARALEL
+     koşuyor: ikisi de sayfa satırlarına bakıyor ama birbirini beklemiyor. */
+  const [context, scopeCampaigns] = await Promise.all([
+    loadProductContext(db, page.rows, place, viewer),
+    readScopeCampaigns(db, {
+      categoryIds: [
+        ...(activeCategory ? [activeCategory.id] : []),
+        ...page.rows.flatMap((p) => (p.categoryId === null ? [] : [p.categoryId])),
+      ],
+      collectionIds: [
+        ...(activeCollection ? [activeCollection.id] : []),
+        ...page.rows.flatMap((p) => p.collections.map((c) => c.collectionId)),
+      ],
+    }),
+  ]);
+  /* Kesit başlığı kampanyayı ZATEN söylüyorsa kartta tekrarlanmaz (kullanıcı kararı 23.08):
+     kategori ekranında 40 özdeş rozet, rozeti anlamsızlaştırır. Karar "rozet, başlığın
+     söyleyemediği yerde" diye tek cümleye indi — ölçüt de o: kesit seçili mi. */
+  const sectionSpeaks = activeCategory !== null || activeCollection !== null;
+  const byProduct = sectionSpeaks
+    ? new Map<string, ScopeCampaign>()
+    : campaignsByProduct(
+        scopeCampaigns,
+        page.rows,
+        new Map(page.rows.map((p) => [p.id, p.collections.map((c) => c.collectionId)])),
+      );
 
   return {
     categories,
     activeCategory,
     activeCollection,
-    products: page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)),
+    products: page.rows.map((p) =>
+      toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT, byProduct.get(p.id) ?? null),
+    ),
     total,
     nextCursor: page.nextCursor,
-    campaign,
+    campaign: sectionCampaignOf(scopeCampaigns, activeCategory, activeCollection),
   };
+}
+
+/**
+ * Etkin kesitin kampanyası — koleksiyon kategoriyi yener (daha dar olan kazanır; müşteri o
+ * koleksiyonu seçerek zaten daralttı). İki çağrı yeri var (ürünsüz erken çıkış ve ana yol), kural
+ * tek yerde: sıra ikiye yazılsaydı bir gün ayrışır ve aynı kesit iki yolda iki kampanya söylerdi.
+ */
+function sectionCampaignOf(
+  campaigns: ScopeCampaigns,
+  activeCategory: { id: string } | null,
+  activeCollection: { id: string } | null,
+): ScopeCampaign | null {
+  return (
+    (activeCollection ? campaigns.byCollection.get(activeCollection.id) : undefined) ??
+    (activeCategory ? campaigns.byCategory.get(activeCategory.id) : undefined) ??
+    null
+  );
 }
 
 /**

@@ -21,6 +21,7 @@ import type {
   LocalizedText,
   PreferredLanguage,
 } from '@lezzet/types';
+import { toWireCampaign } from './campaign-wire';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -208,17 +209,9 @@ function toBand(
     subtitle: resolvedOrNull(subtitle, locale),
     productCount,
     image: imageOf(row),
-    // Kampanyanın ADI burada çözülür (sözleşme tek dize taşır); tutar çözülmez, çünkü taşınan şey
-    // tutar değil kuralın kendisi — ekran onu kendi diliyle cümleye döker.
-    campaign:
-      campaign === undefined
-        ? null
-        : {
-            label: resolvedOrNull(campaign.label, locale),
-            percent: campaign.percent,
-            amountCents: campaign.amountCents,
-            minBasketCents: campaign.minBasketCents,
-          },
+    // Çeviri TEK yerde (`campaign-wire`): aynı iş katalog kesitinde ve kartın rozetinde de
+    // yapılıyor, üçe yazılsaydı aynı kampanya iki ekranda farklı görünebilirdi.
+    campaign: toWireCampaign(campaign, locale),
   };
 }
 

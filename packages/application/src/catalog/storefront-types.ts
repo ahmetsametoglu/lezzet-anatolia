@@ -139,6 +139,18 @@ export interface StorefrontProduct {
    * kurulsun) ama sepete eklenemez; kartın kendisi yine detaya tıklanabilir (`musteri-katalog.md §2`).
    */
   soldOut: boolean;
+  /**
+   * Ürünün KAPSAM kampanyası — kartın rozeti (23.08 · kullanıcı kararı).
+   *
+   * **`null` iki şey demek olabilir ve ikisi de "rozet çizme"dir:** kampanya yok, ya da kesit
+   * başlığı zaten söylüyor (kategori/koleksiyon ekranı). Ayrımı okuma yapar; kart yalnız sonucu
+   * görür — "başlık söylüyor mu" sorusunun cevabı okumanın bağlamındadır, ürünün özelliği değildir.
+   *
+   * **Fiyata YAZILMAZ, rozet olarak söylenir** (`campaign.ts` künyesi, 08.44'te ölçüldü):
+   * `applyBestDiscount` kazananı tüm sepet üzerinden seçip kalemlere oransal dağıtır, yani birim
+   * fiyat vaadi sepet değişince yalan olurdu.
+   */
+  campaign: ScopeCampaign | null;
 }
 
 /**

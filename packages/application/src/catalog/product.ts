@@ -4,6 +4,7 @@ import { parseEmphasis } from '@lezzet/helper';
 import { hasNutrition, resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText, PreferredLanguage, ProductWithRelations } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { campaignsByProduct, readScopeCampaigns } from './campaign';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, primaryVariantOf, toCategory, toProduct, toVariant } from './map';
 import type { ProductContext } from './map';
 import { loadProductContext } from './product-context';
@@ -148,8 +149,28 @@ async function readSimilar(
    * bir temsilcinin yerine ailenin alınabilir üyesi geçemezdi.
    */
   const candidates = page.rows.filter((p) => p.id !== product.id);
-  const context = await loadProductContext(db, candidates, place, viewer);
-  const views = new Map(candidates.map((p) => [p.id, toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)]));
+  /* Öneri şeridi KARIŞIK bir listedir — kartları farklı kategori ve koleksiyonlardan gelir ve
+     üstünde kampanyayı söyleyecek bir başlık yoktur. Kullanıcı kararı 23.08 tam bu yeri tarif
+     ediyor: "rozet, başlığın söyleyemediği yerde". Bağlam okumasıyla PARALEL koşuyor; ek sorgu
+     doğmuyor, çünkü kapsam kimlikleri zaten elimizdeki satırlarda (`categoryId` + `collections`). */
+  const [context, scopeCampaigns] = await Promise.all([
+    loadProductContext(db, candidates, place, viewer),
+    readScopeCampaigns(db, {
+      categoryIds: candidates.flatMap((p) => (p.categoryId === null ? [] : [p.categoryId])),
+      collectionIds: candidates.flatMap((p) => p.collections.map((c) => c.collectionId)),
+    }),
+  ]);
+  const byProduct = campaignsByProduct(
+    scopeCampaigns,
+    candidates,
+    new Map(candidates.map((p) => [p.id, p.collections.map((c) => c.collectionId)])),
+  );
+  const views = new Map(
+    candidates.map((p) => [
+      p.id,
+      toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT, byProduct.get(p.id) ?? null),
+    ]),
+  );
 
   const buyable = candidates.filter((p) => {
     const status = views.get(p.id)?.stockStatus;

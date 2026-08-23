@@ -13,6 +13,7 @@ import type {
   ProductVariant,
   StockStatus,
 } from '@lezzet/types';
+import type { ScopeCampaign } from './campaign';
 import type { StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
 import { rotateDaily } from './featured';
 import { VISITOR, type PricingViewer } from './pricing-viewer';
@@ -300,7 +301,17 @@ export type CatalogProductRow = Pick<Product, 'id' | 'slug' | 'name' | 'shippabl
  * Tek fiyat kuralı korunur — üstü çizili değer satın alınabilir bir fiyat değil, referanstır
  * (DOMAIN §5, komponent envanteri K6).
  */
-export function toProduct(row: CatalogProductRow, locale: PreferredLanguage, ctx: ProductContext): StorefrontProduct {
+export function toProduct(
+  row: CatalogProductRow,
+  locale: PreferredLanguage,
+  ctx: ProductContext,
+  /**
+   * Ürünün KAPSAM kampanyası — kartın rozeti (23.08). `null` = yok ya da kesit başlığı zaten
+   * söylüyor; ayrımı çağıran yapar (`catalog.ts`), çünkü "başlık söylüyor mu" sorusunun cevabı
+   * okumanın bağlamında yaşar, ürünün kendisinde değil.
+   */
+  campaign: ScopeCampaign | null = null,
+): StorefrontProduct {
   // Fiyat, ürünün EN UCUZ aktif boyundan okunur (`primaryVariantOf`) — çok boyluda bu gerçekten
   // "başlangıç fiyatı"dır. Eskiden ilk boydan okunuyordu ve o boy en ucuz olmak zorunda değildi.
   const variants = ctx.variants.filter((v) => v.isActive);
@@ -329,5 +340,15 @@ export function toProduct(row: CatalogProductRow, locale: PreferredLanguage, ctx
     stockStatus,
     // Yalnız GERÇEK tükenmede true (bkz. `StockStatus`).
     soldOut: stockStatus === 'out_of_stock',
+    /* FIRSAT KAMPANYAYI YENER (kullanıcı kararı 23.08) — ve karar BURADA veriliyor, ekranda değil.
+       İkisi de aynı satırda hesaplanıyor (`selling.wasCents` ve kapsam kampanyası), yani ayrımı
+       burada yapmamak her yüzeyi aynı `if`i tekrar yazmaya zorlardı — üçüncü yüzey geldiği gün
+       biri unuturdu.
+       Gerekçe: "Fırsat" birim fiyatta GERÇEKTEN düşen, üstü çizili eski fiyatı olan kesin bir
+       indirimdir; kapsam kampanyası ise sepete bağlıdır ve tutarı ancak sepet varken bilinir.
+       Kesin olan, koşullu olanın önüne geçer. Kartta tek rozet yuvası olması bu kararı zorunlu
+       kıldı, ama karar yuvadan bağımsız doğru: iki rozet çizilse bile hangisinin sözü bağlayıcı
+       olduğu söylenmeliydi. */
+    campaign: selling?.wasCents === undefined ? campaign : null,
   };
 }
