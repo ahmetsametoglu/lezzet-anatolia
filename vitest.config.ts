@@ -57,6 +57,10 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/delivery/place-filter.test.ts',
   // `order/carrier.test.ts` YOK ARTIK — kural pakete terfi etmişti, web nüshası köprü bile olmadan
   // sahipsiz kalmıştı (K5-1 benimsemesi 10.08). Dosya ve testi silindi, test pakete taşındı.
+  // `verifyMetaSignature` saf: node:crypto + dize. Modül `serviceDb`i import ediyor ama ÇAĞIRMIYOR
+  // (istemci fonksiyon içinde kuruluyor) — bu yüzden birim projesinde güvenle koşuyor. Ölçüldü 23.08;
+  // `delivery/map-codes.test.ts`in listeye ALINMAMA gerekçesi tam da bunun tersiydi.
+  'apps/web/lib/messaging/meta-signature.test.ts',
   'apps/web/lib/order/order-id.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
   'apps/web/lib/storefront/showcase-rank.test.ts',
