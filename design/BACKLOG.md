@@ -271,46 +271,31 @@ değişecek yer parantezde.
 
 ---
 
-### Talepler kuyruğu — çip şeridi sistemin kendi birincil sorusunu sormuyor (03.08, 16.3)
+### Talepler kuyruğu — iki gerçek süzgeç hâlâ ekranda yok (03.08 · daraltıldı 23.08, 16.3)
 
-`Operasyon - Talepler.dc.html`'in çip şeridi beş çip taşıyor: **Açık · İşlemde · Çözüldü ·
-Siparişli · AI yanıtladı.** Üçü aynı ekseni (durum) bölüyor, biri sipariş bağı, biri de bugün
-karşılığı olmayan bir hâl (AI — `16.5` yazılmadı, her talep `human`, çip daima boş dönerdi).
+> **AI yarısı KAPANDI (23.08 ölçümü).** Madde uzun uzun "AI çipi `16.5` ile birlikte döner"
+> diyordu; döndü. Çip şeridi bugün **yedi çip** taşıyor ve kullanıcının 03.08'de koyduğu ayrım
+> ekranda gerçek: **"AI'da"** (`handledBy` — şu an kim yürütüyor) ile **"AI yanıtladı"**
+> (`answeredByAi` — devralınmış talep de bu kümede, kalite denetimi tam ona bakar) ayrı çipler.
+> Arka uç talebi de karşılanıp silinmiş. O bölüm buradan çıkarıldı.
 
-Buna karşılık **iki gerçek süzgeç ekranda yok**, ikisi de arka uçta hazır:
+**Açık kalan iki süzgeç — ikisi de arka uçta HAZIR, ekranda yok:**
 
 - **"Cevap bekliyor"** (`awaitingReply`). Migration'ın kendi künyesi *"kuyruğun tek amacı cevap
   bekleyeni bekletmemek"* diyor ve görünüm `awaiting_reply`'ı yalnız bunun için türetiyor. Yani
-  sistemin kendi tanımladığı birincil soru ekrandan sorulamıyor. Kuyruk zaten son mesaja göre
-  sıralı ama sıra ile süzgeç aynı şey değil: on beş satırlık kuyrukta "top kimde" ancak satır satır
-  bakılarak anlaşılıyor.
-- **Tip** (`bozuk · eksik · soru · diğer`). `admin-talepler.md §2` daraltma listesinde adıyla
-  yazıyor (*"durum, tip, siparişli/siparişsiz"*), `filter.type` hazır, çizimde çip yok. Tip
-  ayrımı ağırlık ayrımı: bozuk/eksik iade kararına gider, soru tek cevapla kapanır.
+  **sistemin kendi tanımladığı birincil soru ekrandan sorulamıyor.** Kuyruk son mesaja göre sıralı
+  ama sıra ile süzgeç aynı şey değil: on beş satırlık kuyrukta "top kimde" ancak satır satır
+  bakılarak anlaşılıyor. *(Sosyal gelen kutusunda bu çip VAR — iki ekran aynı iskeleti paylaşıyor
+  ama bu soruyu yalnız biri sorabiliyor.)*
+- **Tip** (`bozuk · eksik · soru · diğer`). `admin-talepler.md §2` daraltma listesinde adıyla yazılı
+  (*"durum, tip, siparişli/siparişsiz"*), `filter.type` hazır, çizimde çip yok. Tip ayrımı ağırlık
+  ayrımıdır: bozuk/eksik iade kararına gider, soru tek cevapla kapanır.
 
-**İstenen karar:** çip şeridi nasıl kurulsun? Bugünkü hâli tek eksende (durum) üç çip harcıyor.
-Bir öneri — karar sizin: durum çipleri tek bir seçiciye inip ("Açık/İşlemde/Çözüldü/Hepsi"),
-açılan yere "Cevap bekliyor" ve tip çipleri gelebilir. AI çipi `16.5` ile birlikte döner.
-
-Karar gelene kadar ekran **çizili çipleri** uyguluyor, eksik olanları uydurmuyor (`CLAUDE.md §3`);
-"AI yanıtladı" çizilmiyor çünkü arkasında hiçbir kayıt olamaz.
-
-**EK (03.08, kullanıcı) — AI süzgeci TEK DEĞİL İKİ, ve çizim bunu zaten söylüyormuş.** Kullanıcı
-ayrımı koydu: *"AI'ın yanıtladığı ve AI'ın kontrolünde olan farklı anlamlara geliyor; duruma göre
-her ikisini de süzmem gerekebilir."* Çizime dönüp bakınca ayrım orada duruyor ve iki ayrı kelimeyle
-yazılmış — süzgeç çipi **"AI yanıtladı"**, satır rozeti **"AI yürütüyor"**. Ben ikisini tek şey
-sanıp arka uçtan yalnız `handledBy` istemiştim; istek eksikti.
-
-Fark kalıcı ve önemli: operatör devralınca `handled_by` `human`'a döner ama AI'ın yazdığı mesaj
-yerinde kalır. Yani **devralınmış bir talep "AI yürütüyor" değildir ama "AI yanıtladı"dır** — ve
-kalite denetimi tam da o kümeye bakar (devralma zaten bir şeyin ters gittiğinin işareti).
-`handled_by` ile süzmek o soruyu sessizce yanlış cevaplardı: liste dolu görünür, en ilginç satırlar
-eksik olurdu.
-
-İki süzgeç de arka uçtan istendi (`docs/talep/arka-uc-talep-ai-suzgecleri.md`; `answeredByAi` için
-görünüme `exists(… sender='ai')` alanı gerekiyor). İkisi `16.5` ile birlikte gelecek — bugün her
-talep `human` ve hiç `ai` mesajı yok, yani ikisi de boş liste dönerdi. **Yukarıdaki "çip şeridi
-nasıl kurulsun" kararı bu yüzden altı çipli bir şerit üzerinden düşünülmeli**, beş değil.
+**İstenen karar — ve artık daha sıkışık:** şerit yedi çipe çıktı; üçü tek ekseni (durum) bölüyor.
+Eksik ikisi de eklenirse on bir çip olur ve şerit okunmaz hâle gelir. Bir öneri, karar sizin: durum
+çipleri tek seçiciye insin ("Açık/İşlemde/Çözüldü/Hepsi"), açılan yere "Cevap bekliyor" ve tip
+çipleri gelsin. Karar gelene kadar ekran **çizili çipleri** uyguluyor, eksik olanları uydurmuyor
+(`CLAUDE §3`).
 
 ### Geri Bildirim — üç bilinçli sapma (03.08, 17.1)
 
