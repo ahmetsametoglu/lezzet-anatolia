@@ -59,7 +59,8 @@
     "set-role": "tsx scripts/set-role.ts",
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "stripe:smoke": "tsx scripts/stripe-smoke.ts",
-    "ai:smoke": "tsx scripts/ai-smoke.ts"
+    "ai:smoke": "tsx scripts/ai-smoke.ts",
+    "meta:smoke": "tsx scripts/meta-smoke.ts"
   },
   "devDependencies": {
     "@lezzet/ai": "workspace:*",
