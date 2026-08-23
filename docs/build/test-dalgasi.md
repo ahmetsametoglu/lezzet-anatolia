@@ -110,8 +110,20 @@ birlikte ele alınır.
 | --- | --- | --- | --- |
 | **0** | §4 ön koşulu | Koşmayan teste yazı yazmak, hiç yazmamaktan pahalı | ✅ **kapandı 23.08** |
 | **1a** | **15** — sosyal gelen kutusu + AI ajan araçları | En yeni ve en geniş yüzey; envanteri hazır | `15.18` |
-| **1b** | **23** — barkod | En yeni MODÜL (22.08 doğdu), yüzeyi hâlâ küçük — ucuzken çivilenir | açığı §6.2 |
+| ~~**1b**~~ | ~~**23** — barkod~~ | **KAPSAM DIŞI (kullanıcı uyarısı 23.08):** barkod bu şeridin geliştirdiği modül değil. Plan yazmak o işi üstlenmek değildir. Yazılan tek dosya şeridine devredildi (`docs/talep/not-barkod-arama-kapisi-testi-yazildi.md`) | devredildi |
 | **2** | **21.9x** mobil kabuk/kurye/davet | Mobil şeridin kendi defteri var (`docs/talep/not-mobil-test-defteri.md`) — dalga onunla birleşir | şeridinde |
+
+**Kapsam kuralı (kullanıcı uyarısı 23.08):** bu dalgayı yürüten şerit **kendi geliştirdiği işin**
+testini yazar. Plan bütün depoyu kapsayabilir; **yürütme kapsamayı gerektirmez** — başka şeridin
+modülüne test yazmak, o modülün kararlarını bilmeden doğrulamaya kalkmaktır. Başka alanda görülen
+açık `docs/talep/` üzerinden **not olarak** bırakılır.
+
+**Tek istisna önerisi (karar kullanıcıda):** mobil **sosyal** ekranları (`social-inbox-screen`,
+`social-conversation-screen`, `social-format.ts`) bu şerit tarafından yazıldı (15.17, geçici mobil
+izin penceresinde). Testlerinin çivileyeceği kararlar da bu şeridin kararları — örneğin *"Deftere
+işle mesaj GÖNDERMEZ"*. Bunu bilmeyen biri o testi yazarsa yanlış şeyi doğrular. Verimli olan bu
+şeridin yazması, ama **koordineli**: mobil şeride not, sonra onlar o dosyalarda değilken bir
+pencere. Mobilin öteki alanları (kurye, sepet, barkod) kesinlikle kendi şeridinde.
 | **3** | **19** çoklu depo (transfer · besleme · yer çözümü) | Ağustos ortası; motorları `domain-core`da ve zaten testli, açık uygulama kapılarında | envanter sırası gelince |
 | **4** | **09.28 · 08.5x · 11.7 · 10.9** — fiyat grubu, adres, kurye kapsamı, kargo künyesi | Tekil ama para/yetkiye dokunan işler | envanter sırası gelince |
 | **5** | **16 · 17 · 20** talep/geri bildirim/AI çekirdeği | Temmuz sonu–ağustos başı | envanter sırası gelince |
