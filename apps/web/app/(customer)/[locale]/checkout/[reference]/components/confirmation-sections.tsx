@@ -236,28 +236,50 @@ export function HelpBand({
   referenceNo,
 }: Pick<ConfirmationViewProps, 't' | 'compact'> & { referenceNo: string | null }) {
   const href = whatsappHref(referenceNo ? t.help.prefill.replace('{reference}', referenceNo) : t.help.prefillPlain);
-  return (
-    <div className={['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ')}>
+  const box = ['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ');
+
+  /* `target="_blank"` + `rel`: WhatsApp Web yeni sekmede açılır, mobil cihazda uygulamaya devredilir.
+     Sipariş sayfası ARKADA KALIR — müşteri yazışmadan dönünce siparişini kaybetmemeli. */
+  const link = { href, target: '_blank', rel: 'noopener noreferrer' } as const;
+
+  const content = (
+    <>
       <span className="text-icon" aria-hidden="true">
         💬
       </span>
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.help.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.help.body}</span>
+        {/* Dar ekranda düğme yerine bu satır: dokunma hedefi ŞERİDİN TAMAMI ama görünmez değil —
+            eylemin adı yazılı durur. Görünmez bir dokunma hedefi, olmayan bir düğmeden kötüdür. */}
+        {compact && <span className="font-sans text-note font-bold text-olive underline">{t.help.cta}</span>}
       </div>
-      {/* `target="_blank"` + `rel`: WhatsApp Web yeni sekmede açılır, mobil cihazda uygulamaya
-          devredilir. Sipariş sayfası ARKADA KALIR — müşteri yazışmadan dönünce siparişini
-          kaybetmemeli. */}
-      {!compact && (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none' })}
-        >
-          {t.help.cta}
-        </a>
-      )}
+    </>
+  );
+
+  /*
+    DAR EKRANDA ŞERİDİN TAMAMI TIKLANABİLİR (23.08 · kullanıcı kararı) — düğme ikinci satıra
+    alınmadı.
+
+    ~~Karar Claude Design'a bırakılmıştı~~: `!compact` çizimin kararıydı ama o karar düğme ÖLÜYKEN
+    (`disabled` + "· yakında") verilmişti. 15.3 düğmeyi canlandırınca gerilim tersine döndü —
+    **WhatsApp'ın doğal cihazı telefondur**, yani düğmenin en değerli olduğu yer mobil ve tam orada
+    yoktu. Kullanıcı 23.08'de "gerekli gördüğünü yap" dedi.
+
+    İki seçenekten bu seçildi çünkü YENİ BİR DÜZEN İCAT ETMİYOR (`CLAUDE §3`): kutu, boşluklar ve
+    tipografi aynen kalıyor; değişen tek şey sarmalayıcı öğe. Düğmeyi ikinci satıra almak, dar
+    ekranda çizimde olmayan bir yerleşim kurmak olurdu.
+  */
+  return compact ? (
+    <a {...link} className={`${box} cursor-pointer`}>
+      {content}
+    </a>
+  ) : (
+    <div className={box}>
+      {content}
+      <a {...link} className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none' })}>
+        {t.help.cta}
+      </a>
     </div>
   );
 }

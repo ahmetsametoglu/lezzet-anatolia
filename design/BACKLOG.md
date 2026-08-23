@@ -17,37 +17,6 @@ neyi neden bekliyoruz, hangi karar tasarım tarafında netleşmeli.
 
 ---
 
-## 0. CLAUDE DESIGN'DAN İSTENENLER — tek okumada devir (23.08)
-
-Bu dosyadaki maddelerin çoğu *bizim* borcumuz. Aşağıdakiler **tasarım tarafının** borcu: kod
-tarafında yapılacak bir şey yok, çizim ya da envanter kararı bekliyorlar. Dizin niteliğindedir —
-gerekçeler kendi bölümlerinde, buraya kopyalanmıyor.
-
-| # | İstenen | Nerede | Aciliyet |
-| --- | --- | --- | --- |
-| D1 | **Sosyal gelen kutusunun ÜÇ KANALLI çizimi** | girdi: `design/pages/admin-sosyal.md` (23.08 güncellendi) | orta |
-| D2 | **Sosyal kanal marka renkleri envantere** (`--color-brand-messenger`, `--color-brand-instagram`) | §"Sosyal kanal marka renkleri" | düşük |
-| D3 | **Onay sayfası WhatsApp düğmesi — mobil çizimi yok** | §3 | düşük |
-| D4 | **"Elle talep aç" penceresinin içi çizilmemiş** | §"Talepler — Elle talep aç" | düşük |
-
-**D1 en önemlisi ve sebebi kayda değer:** ekran 21.08'de tek kanaldan üç kanala genişledi
-(`/operations/whatsapp` → `/operations/social`) ama **tasarım girdisi eski kalmıştı** — Messenger ve
-Instagram o dosyada hiç geçmiyordu (ölçüldü 23.08: sıfır geçiş). Yani Claude Design bugün oradan
-çizse, var olmayan bir ekranı çizerdi. Girdi güncellendi; ekranın kendisi bugün mevcut WhatsApp
-çiziminin kanal-eksenli genişlemesiyle yürüyor ve kit desenleriyle kuruldu.
-
-Girdiye eklenen ve **çizimi doğrudan etkileyen** üç yeni gerçek:
-- **Pencere üç kanalda da var ama ANLAMI farklı** — WhatsApp'ta ücret kararı, Messenger/IG'de kural
-  sınırı (insan-temsilci, 7 gün, ücretsiz). Operatöre önerilen eylem değişiyor.
-- **Kimliksiz sohbet Messenger/IG'de İSTİSNA DEĞİL, VARSAYILAN** — PSID/IGSID telefon taşımaz, sağ
-  panel müşteri kartı yerine "müşteriye bağla" eylemi göstermek zorunda. Hata gibi değil, normal bir
-  yaşam evresi gibi çizilmeli.
-- **Mesaj kutusu bir DEFTER kutusu, gönderme kutusu değil** — sistemin gönderim kanalı yok; yazışma
-  operatörün telefonundan yürüyor. Çizim "gönder" derse, gönderdiğini sanan operatör cevapsız kalan
-  müşteriyi fark etmez. Gönderim kanalı açıldığı gün bu karar geri alınır.
-
----
-
 ## 1. Tasarımı hazır, başka modül bekliyor
 
 Bu maddelerde **kodlanacak bir şey yok** — arayüz tamam, arkasındaki model yok. Bekleyen iş gelince
@@ -367,25 +336,6 @@ hedefi. Kalan düzen farkı açık madde.
 > makul görünüyordu; toplamı çizimden başka bir ekran çıkardı. Ders: sapmanın SAYISI da bir ölçüdür —
 > üçüncüsünden sonra soru "bu gerekçe geçerli mi" değil, "ben hâlâ bu çizimi mi uyguluyorum" olmalı.
 
-### Talepler — "Elle talep aç" penceresinin içi çizilmemiş (03.08, 16.3)
-
-Çizimdeki modal genel bir kabuk: başlık + gövde metni + not + iki düğme. Gerçek pencerenin
-istediği alanların hiçbiri yok. Brief tek cümle veriyor (`§3`): *"WhatsApp/telefon
-konuşmasından; müşteri + varsa sipariş seçilir"*, `§4` de tipin belirlendiğini ima ediyor.
-
-Arka ucun beklediği alanlar belli (`openTicket`): **müşteri** (zorunlu) · **tip** (zorunlu) ·
-**anlatım** (zorunlu, boş olamaz) · sipariş (isteğe bağlı) · işaretli kalemler (sipariş seçiliyse)
-· başlık. Yani pencere en az dört alan taşıyacak ve ikisi arama gerektiriyor (müşteri, sipariş).
-
-**İstenen karar:** düzen. Bu ekranın kendi seçici deseni var (`Combobox` uzak arama), o yüzden
-kodlanabilir — ama dört alanlı bir formun çiziminin olmaması, ekranın geri kalanıyla aynı dilde
-durup durmayacağını belirsiz bırakıyor. Karar gelene kadar pencere brief'ten türetilerek, ekranın
-mevcut form kitiyle kurulacak; çizim gelince birebir uygulanır.
-
-**Yazıldı (03.08, `manual-ticket-dialog.tsx`):** müşteri (uzak arama) · tip (`MultiToggle`, dört
-değer) · bağlı sipariş (müşteriye bağlı seçici, isteğe bağlı) · başlık (isteğe bağlı) · anlatım.
-İşaretli kalemler KONMADI: brief "müşteri + varsa sipariş" diyor ve operatör telefonda konuşurken
-kalem kimliğiyle uğraşmaz — gerekirse sipariş ekranından görülür. Çizim gelirse birebir uygulanır.
 
 ### Talepler — çizimin karşılığı olmayan üç sunum kararı (03.08, 16.3)
 
@@ -510,23 +460,6 @@ Beklenen: Claude Design'ın bu şeridi kendi diliyle çizmesi. Şeridin taşıma
 `design/pages/musteri-checkout.md`'ye yazıldı. Bağlantı yoksa (kargo siparişi · taslak · kesim saati
 dolmuş sefer) blok **hiç çizilmiyor** — boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
 
-### Sipariş Alındı — yardım şeridinin düğmesi artık ÇALIŞIYOR, ama mobilde çizilmiyor (22.08, 15.3)
-
-Yardım şeridinin WhatsApp düğmesi bugüne kadar `disabled` + "· yakında" idi; 15.3 ile gerçek bir
-`wa.me` bağı oldu ve metin **siparişe özgü** gidiyor (müşteri WhatsApp'ı referans numarası yazılı
-hâlde açıyor — bandın kendi cümlesi olan *"sipariş numaranızla yazın"* işini artık biz yapıyoruz).
-
-Açık şu: **düğme mobilde çizilmiyor** (`!compact` — çizimin kararı, `HelpBand` künyesinde yazılı) ve
-o karar düğme ÖLÜYKEN verilmişti. Şimdi tam tersi bir gerilim var: WhatsApp'ın doğal cihazı telefon,
-yani düğmenin en değerli olduğu yer mobil. `CLAUDE.md §3` gereği improvise EDİLMEDİ — mobil düğme
-eklenmedi, karar Claude Design'a bırakıldı.
-
-Aciliyeti düşük, çünkü müşteri mobilde tamamen kapıda kalmıyor: site altbilgisindeki WhatsApp satırı
-her sayfada ve her cihazda duruyor (`site-frame`). Kaybolan tek şey, o anki siparişe bağlı
-önceden-yazılı metin.
-
-Beklenen: dar ekranda şeridin ikinci satıra düğme alıp almayacağı ya da bandın tamamının
-tıklanabilir olup olmayacağı kararı.
 
 ## 4. Tasarımı olmayan yüzeyler
 
@@ -718,14 +651,6 @@ yok"). O ekran bugün yazılsa kurye siparişleri **oluşturulma sırasıyla** g
 Navigasyon linki (`kurye-gun.md:21` — adresi telefonun harita uygulamasında açmak) bu tartışmanın
 dışında ve zaten çizili: bir rota hesabı değil, bir kısayol.
 
-### Sosyal kanal marka renkleri — envantere işlenmeli (21.08, 15.15)
-
-Sosyal gelen kutusu (`/operations/social`) kanal kenarı için iki marka token'ı kodlandı:
-`--color-brand-messenger: #0084ff` ve `--color-brand-instagram: #e1306c` (`--color-brand-whatsapp`
-emsali — marka rengi temayla dönmez). Değerler kanalların kanonik renkleri; envanter (§0) bu iki
-kaydı henüz taşımıyor — Claude Design envanterine işlenmeli, işlenirken değer değişirse kod tek
-noktadan döner (token). Ekranın kendisi mevcut WhatsApp çiziminin kanal-eksenli genişlemesi;
-kanal rozeti/çipi kit desenleriyle kuruldu, yeni çizim gerekirse tasarım turu ayrıca açılır.
 
 ### Açık kademeler (envanter kararı bekliyor)
 

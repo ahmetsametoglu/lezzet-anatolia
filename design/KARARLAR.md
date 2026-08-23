@@ -1628,3 +1628,51 @@ kendi kapsamında (`admin-siparisler.md`: *"adres — sipariş anındaki kopyas�
 
 **Mobil Depo ekranı (D1) bu satırı HENÜZ çizmiyor:** alan paylaşılan kapıda
 (`PreparationOrder.recipientName`), benimsemesi native şeridin işi — not `docs/talep/`te.
+
+## Sosyal mesajlar ve yardım şeridi — üç madde tasarım borcu OLMAKTAN ÇIKTI — 23.08
+
+**Kullanıcı kararı (23.08):** *"Biz bazen tasarımdaki yapıyı başlangıç olarak kabul edip üzerine
+bazı değişiklikler yapıyoruz. Nitekim sosyal mesajlar konusu da bu şekilde oldu… Eğer yaptığın
+kısımların bir de Claude Design tarafından yapılmasını istiyorsan gerek yok."*
+
+Bu, `design/BACKLOG.md`de kısa süre açık kalan **"Claude Design'dan istenenler"** bölümünü kapattı.
+Ders açık: yapılmış ve çalışan bir ekranın çizimini sonradan istemek, tasarım borcu değil **tekrar**
+üretmektir. Aşağıdaki üç madde bu yüzden BACKLOG'dan çıkarıldı.
+
+### 1. Sosyal gelen kutusunun üç kanallı çizimi — İSTENMİYOR
+
+Ekran çalışıyor ve mevcut WhatsApp çiziminin kanal-eksenli genişlemesi olarak, kit desenleriyle
+kuruldu. Yeniden çizdirmek bugünkü ekranı yeniden üretmek olurdu.
+
+**Değeri olan iş yapıldı ve o ayrı:** tasarım GİRDİSİ (`design/pages/admin-sosyal.md`) 23.08'de
+gerçeğe çekildi — Messenger ve Instagram o dosyada hiç geçmiyordu (ölçüldü: sıfır geçiş). Girdi
+bayat kalırsa **sonraki** iş yanlış zeminden başlar; asıl risk oydu, çizimin yokluğu değil.
+
+### 2. Sosyal kanal marka renkleri — ENVANTER KARARI DEĞİL, OLGU
+
+`--color-brand-messenger: #0084ff` ve `--color-brand-instagram: #e1306c` kodlandı
+(`--color-brand-whatsapp` emsali — marka rengi temayla dönmez). Bunlar **kanalların kanonik
+renkleri**, yani tasarımın seçeceği bir şey değil: Messenger'ın mavisi Messenger'ın malı.
+
+`CLAUDE §3`'ün kuralı (*"ham hex yasak, token'dan gelir"*) zaten sağlandı — ham hex yok, token var.
+Envantere yazılması bir defter işi; Claude Design'ın vereceği bir karar yok.
+
+### 3. "Elle talep aç" penceresi — ÇİZİMSİZ YAZILDI, KAPANDI
+
+Pencere brief'ten türetilip ekranın mevcut form kitiyle kuruldu (`manual-ticket-dialog.tsx`,
+03.08): müşteri (uzak arama) · tip (`MultiToggle`) · bağlı sipariş · başlık · anlatım. Çalışıyor.
+Çizim ileride gelirse birebir uygulanır — ama **beklenen bir borç değil**.
+
+### 4. Yardım şeridinin WhatsApp düğmesi — mobilde de var artık (KAPANDI)
+
+`!compact` kararı çizimindi ama düğme **ÖLÜYKEN** verilmişti (`disabled` + "· yakında"). 15.3
+düğmeyi canlandırınca gerilim tersine döndü: **WhatsApp'ın doğal cihazı telefondur**, yani düğmenin
+en değerli olduğu yer mobil ve tam orada yoktu.
+
+**Çözüm (23.08): dar ekranda ŞERİDİN TAMAMI tıklanabilir.** Düğme ikinci satıra alınmadı — o, dar
+ekranda çizimde olmayan bir yerleşim kurmak olurdu (`CLAUDE §3`). Bu seçenek yeni bir düzen icat
+etmiyor: kutu, boşluklar ve tipografi aynen kalıyor, değişen tek şey sarmalayıcı öğe.
+
+**Dokunma hedefi görünmez bırakılmadı:** dar ekranda eylemin adı (`help.cta`) bağlantı renginde bir
+satır olarak duruyor. Görünmez bir dokunma hedefi, olmayan bir düğmeden kötüdür — müşteri
+dokunulabileceğini bilmez, dokunanlar da kazara dokunur.
