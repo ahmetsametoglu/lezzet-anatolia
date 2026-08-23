@@ -101,7 +101,7 @@ Her `pages/*.md` dosyası şu başlıkları taşır:
 | `admin-teslimat.md` | Günün çıkışları: rota (kurye atamalı) + kargo (takip no) — bölge TANIMI Depolar'dadır |
 | `admin-depolar.md` | Tesis künyesi + hizmet alanı (bölge/posta kodu tanımı) + depo karnesi |
 | `admin-ayarlar.md` | Parametrik ayarlar + kullanıcı/rol yönetimi |
-| `admin-whatsapp.md` | WhatsApp konuşma izleme (ajan devir alma dahil) |
+| `admin-sosyal.md` | Sosyal mesajlar — WhatsApp · Messenger · Instagram tek gelen kutusunda (ajan devralma dahil) |
 
 ### Depo — operasyon stil evreni (admin ile ortak olabilir)
 | Dosya | Sayfa |

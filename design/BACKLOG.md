@@ -17,6 +17,37 @@ neyi neden bekliyoruz, hangi karar tasarım tarafında netleşmeli.
 
 ---
 
+## 0. CLAUDE DESIGN'DAN İSTENENLER — tek okumada devir (23.08)
+
+Bu dosyadaki maddelerin çoğu *bizim* borcumuz. Aşağıdakiler **tasarım tarafının** borcu: kod
+tarafında yapılacak bir şey yok, çizim ya da envanter kararı bekliyorlar. Dizin niteliğindedir —
+gerekçeler kendi bölümlerinde, buraya kopyalanmıyor.
+
+| # | İstenen | Nerede | Aciliyet |
+| --- | --- | --- | --- |
+| D1 | **Sosyal gelen kutusunun ÜÇ KANALLI çizimi** | girdi: `design/pages/admin-sosyal.md` (23.08 güncellendi) | orta |
+| D2 | **Sosyal kanal marka renkleri envantere** (`--color-brand-messenger`, `--color-brand-instagram`) | §"Sosyal kanal marka renkleri" | düşük |
+| D3 | **Onay sayfası WhatsApp düğmesi — mobil çizimi yok** | §3 | düşük |
+| D4 | **"Elle talep aç" penceresinin içi çizilmemiş** | §"Talepler — Elle talep aç" | düşük |
+
+**D1 en önemlisi ve sebebi kayda değer:** ekran 21.08'de tek kanaldan üç kanala genişledi
+(`/operations/whatsapp` → `/operations/social`) ama **tasarım girdisi eski kalmıştı** — Messenger ve
+Instagram o dosyada hiç geçmiyordu (ölçüldü 23.08: sıfır geçiş). Yani Claude Design bugün oradan
+çizse, var olmayan bir ekranı çizerdi. Girdi güncellendi; ekranın kendisi bugün mevcut WhatsApp
+çiziminin kanal-eksenli genişlemesiyle yürüyor ve kit desenleriyle kuruldu.
+
+Girdiye eklenen ve **çizimi doğrudan etkileyen** üç yeni gerçek:
+- **Pencere üç kanalda da var ama ANLAMI farklı** — WhatsApp'ta ücret kararı, Messenger/IG'de kural
+  sınırı (insan-temsilci, 7 gün, ücretsiz). Operatöre önerilen eylem değişiyor.
+- **Kimliksiz sohbet Messenger/IG'de İSTİSNA DEĞİL, VARSAYILAN** — PSID/IGSID telefon taşımaz, sağ
+  panel müşteri kartı yerine "müşteriye bağla" eylemi göstermek zorunda. Hata gibi değil, normal bir
+  yaşam evresi gibi çizilmeli.
+- **Mesaj kutusu bir DEFTER kutusu, gönderme kutusu değil** — sistemin gönderim kanalı yok; yazışma
+  operatörün telefonundan yürüyor. Çizim "gönder" derse, gönderdiğini sanan operatör cevapsız kalan
+  müşteriyi fark etmez. Gönderim kanalı açıldığı gün bu karar geri alınır.
+
+---
+
 ## 1. Tasarımı hazır, başka modül bekliyor
 
 Bu maddelerde **kodlanacak bir şey yok** — arayüz tamam, arkasındaki model yok. Bekleyen iş gelince
