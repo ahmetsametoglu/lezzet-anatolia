@@ -296,14 +296,13 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   - **Bugünkü hâl ölçüldü (22.08):** `packages/application/src/warehouse/scan.ts` ve
     `apps/mobile/src/components/scan/scan-sheet.tsx` TESTLİ; `variant-barcode.service.ts` ve
     `dev-scan-pool.ts` testsiz.
-  - **SAF (birim — şerit koşar):**
-    - `dev-scan-pool` — kod üretimi · havuzun tükenmesi · **üretim modunda devre dışı kalması**
-      (testi olmayan bir dev aracı bir gün üretimde açık kalır).
-    - Barkod biçim doğrulaması (EAN-13/EAN-8 sağlama basamağı) — geçersiz basamak REDDEDİLMELİ.
-  - **DB'YE VURAN (yazılır, koşmak DENETMENİN işi — `CLAUDE §4b`):**
-    - `VariantBarcodeService` tek arama kapısı: bilinen kod doğru varyanta düşer · bilinmeyen kod
-      **`null`** (sıfır ya da "ilk varyant" DEĞİL) · öğrenen eşleme aynı kodu ikinci kez bağlamaz ·
-      aynı kod iki varyanta bağlanamaz (kısıt gerçekten reddediyor mu).
+  - ⚠️ **ENVANTER DÜZELTMESİ (23.08):** ~~Barkod biçim doğrulaması (EAN-13/EAN-8 sağlama basamağı) — geçersiz basamak REDDEDİLMELİ~~ → **YANLIŞ ÖNERİYDİ.** Şema biçimi BİLEREK zorlamıyor ve gerekçesi künyede yazılı: *"iç etiketler ve QR'lar da taranabilir; 'geçersiz biçim' reddi gerçek bir kolinin kabulünü durdururdu."* Test, olmayan bir davranışı istemiş olurdu. Yerine **kararın kendisi** çivilendi: EAN olmayan iç etiket kabul EDİLMELİ — biri bir gün "iyilik olsun diye" doğrulama eklerse depoda gerçek koli reddedilmeye başlar ve sebebi aylarca anlaşılmaz.
+  - ⏳ **YAZILDI — KOŞULMADI (23.08):** `packages/database/src/services/variant-barcode.test.ts`, 7 iddia. Typecheck + lint yeşil; koşmak denetmenin işi (`CLAUDE §4b`).
+    - **Tek arama kapısı:** bilinmeyen kod **`null`** (sıfır ya da "ilk varyant" DEĞİL — tahmin eden bir arama yanlış malı stoğa yazardı) · bilinen barkod doğru varyanta düşer ve `source` ile kesinlik derecesini söyler · **koli barkodu çarpanını KENDİ taşır** (tedarikçinin `pack_qty`si okunmaz — iki tedarikçinin kolisi farklı olabilir).
+    - **Kısıtlar veride, kodda değil:** aynı kod ikinci varyanta bağlanamaz · `unit` kodun çarpanı 1 olmak zorunda · çarpan sıfır/negatif olamaz.
+    - **Biçim doğrulamasının YOKLUĞU** ayrıca çivilendi (yukarıdaki düzeltme).
+  - **MOBİL YARISI ŞERİDİNDE KALIYOR:** `dev-scan-pool` ve tarama ekranı testleri `apps/mobile/src/components/scan/**` altında ve orası **23.4'ün açık çalışma alanı** (`[~]`, mobil şerit şu an o dosyalarda). `touches` kesişen iki görev aynı anda başlamaz (`WORKFLOW §7`); mobil suite zaten jest'te ve kendi şeridi koşuyor. Dalga 2'de o şeritle birlikte ele alınır.
+  - **DB'YE VURAN — KALAN:**
     - Mal kabulde okutma → kod eşleşmesinin doğru partiye yazması (`receive_intake` yolu).
 
 ## Netleşecekler
