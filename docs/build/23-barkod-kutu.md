@@ -108,7 +108,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     çıkarır. **Ek (mobil şeridin işareti, aynı tur):** `recipientName` mobil kuyruğa girdi —
     sözleşme + D1 ekranında "Koliye: X" (yalnız alıcı hesap sahibinden farklıysa; web `parcelName`
     kuralı birebir) + 2 jest. Depo jest 10 suite · 81 test.
-- [~] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
+- [x] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
   (`apps/mobile/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
   çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode` · touches:
   `apps/mobile/src/components/scan/scan-sheet.tsx`, `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}`,
@@ -154,8 +154,15 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
       kendi depocusunu aldı (`depocuColmar`); çok kapsamlı depo-rolü hâli muhasebede yaşıyor,
       kurye çift kapsamlı KALDI (rota seçimli akış kilitlenmez, Colmar rotası için şart).
       Hub'ın bayat "barkod v2'de" dipnotu da düzeltildi.
-  - **KALAN:** kameranın KENDİSİ gerçek cihaz + yeni dev-client build'i ister (kullanıcının
-    build'i). Satır o ölçümle `[x]` olur; akışın geri kalanı cihazda kanıtlı.
+  - **GERÇEK KAMERA ÖLÇÜLDÜ (23.08) — satır bununla kapandı.** Fiziksel barkod elde yoktu;
+    seed'in EAN-13'ü (`8691000007919` — Limonlu Artisan Kek · 90 g; checksum'ı geçerli, kamera
+    ancak geçerli koda tepki verir) 62 mm ruloya basıldı (62×19 mm etiket — yazıcının baskı payı
+    kenarı yediği için ~3 mm güvenli boşluk gerekti, ölçüldü) ve KAĞITTAN okutuldu: yeni
+    dev-client'ta izin kutusu kendiliğinden geldi, D1 kutu akışında `CameraView` kodu çözdü →
+    `resolveScannedCode` ürünü tanıdı → siparişte olmayan ürün ANINDA reddedildi ("bu siparişte
+    yok, kutuya girmez") — decode + çözüm + iş kuralı tek okutmada. Not: kamera önizlemesi ayrı
+    yüzeyde çizildiğinden `screencap`e SİYAH düşüyor — ajan turlarında vizör ekran görüntüsüyle
+    doğrulanamaz, sonuç cümlesiyle doğrulanır.
 - [x] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
   0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
   `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.
