@@ -239,6 +239,12 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
     - YZ taslağının tek çıkışı "Cevap kutusuna al"; hibritte taslak yokken "Taslak öner".
     - Pencere bandı kanalın diliyle: `never` ayrı cümle, ve **Messenger kapalı penceresinde "ücretli" GEÇMİYOR** (orada kural sınırı var, ücret değil).
     - **İki tuzak ölçülerek bulundu, tahminle değil:** `env.apiUrl` tanımsızken `apiFetch` daha `fetch`e varmadan fırlıyor ve sonuç `network_error` oluyor — ekran sahte cevabı hiç görmeden hata durumuna düşüyordu. İkincisi: kayıt düğmesi metin boşken kapalı, basmadan önce açıldığı doğrulanmazsa `press` sessizce yutuluyor ve test "POST atılmadı" diye YANLIŞ bir sonuç okuyor.
+  - ✅ **MOBİL GELEN KUTUSU (23.08) — 8 iddia, jest'te KOŞTU** (yönetim klasörü toplam **35/35**).
+    - **Üç kanal TEK listede akıyor** — kanal bir sekme değil süzgeç; sekme olsaydı "kim cevap bekliyor" sorusu üçe bölünürdü.
+    - **İki eksen BAĞIMSIZ:** "cevap bekleyen" seçiliyken kanal seçmek durum süzgecini düşürmüyor, ve **ikisi de SUNUCUYA gidiyor** (`filter=awaiting`, `source=messenger`) — yerel süzme, sayfalanmış listede kuyruğun geri kalanını sessizce yutardı.
+    - **Sayaç sunucudan:** tek satır yüklüyken başlık 3 diyor. Yüklenmiş sayfadan türetilseydi 1 derdi ve kalabalık kuyrukta tam da sayının anlam kazandığı yerde yalan söylerdi. İddia **sözlükten türetiliyor**, sabit metinden değil — cümle değişirse test kırılmaz, kırılması gereken tek şey sayının KAYNAĞIdır.
+    - **Boş ile HATA ayrı:** sunucu düşerse hata bloğu çiziliyor, boş liste gibi gösterilmiyor — "kuyruk boş" huzur verir, "kuyruğu okuyamadım" bekleyen müşteriyi görünmez kılar.
+    - **Bir tuzak daha ölçülerek bulundu:** sözleşme `id`yi **uuid** olarak doğruluyor; kısa etiketli sahte kimlik (`c1`) satırı düşürüyor ve ekran hata durumuna geçiyordu. Şema sondasıyla bulundu, ekran koduna bakarak değil.
   - **DB'YE VURAN (yazılır, koşmak DENETMENİN işi — `CLAUDE §4b`):**
     - `BaseDbService.updateIfNull` + `ConversationService.linkCustomer` — boş alan sahipleniliyor; DOLU bağ ezilmiyor ve ikinci çağrı `null` dönüyor.
     - Beş destek aracı: `teslimat_gunleri` (adressiz `bilinmiyor`, rota dışında kargo cümlesi), `siparislerim` (tutar YOK), `urun_ara` (B2B/B2C fiyat ayrışması · adressizde depo-üstü okuma · dört stok hâli · eşleşme yoksa `bilinmiyor`), `teslimat_sartlari` (kapsam farkı · asgari 0 → "alt sınır yok"), `posta_kodu_kontrol` (rota/kargo/hizmet dışı/belirsiz/geçersiz beş hâl).
