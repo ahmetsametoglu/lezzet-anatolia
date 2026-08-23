@@ -140,6 +140,15 @@ export { customerSupportTools } from './ticket/support-tools';
 // webhook'u artık buradan çağırıyor, mobil `/social` uçları da aynı kapıya yazıyor. Konuşma
 // AÇILIŞI webde kaldı — kimlik çözümü web'in identity katmanında (gerekçe dosya başlığında).
 export { recordInboundMessage, recordOutboundMessage } from './messaging/record';
+export {
+  sendOutboundMessage,
+  unconfiguredSender,
+  type MessageSender,
+  type SendMessageInput,
+  type SendOutcome,
+  type SendResult,
+  type SendTarget,
+} from './messaging/send';
 export type { RecordMessageInput } from './messaging/record';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
