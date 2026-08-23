@@ -96,6 +96,18 @@ export interface PurgeTargets {
    */
   assistantProposalIds?: string[];
   /**
+   * Sahiplenilmiş webhook olayları (`webhook_event`, 0022) — anahtar **sağlayıcı kimliği**
+   * (`event_id`), bizim uuid'imiz değil: satırı testin kendi ürettiği `wamid.…`/`evt_…` damgası
+   * tanır ve çağıran o damgayı zaten biliyor.
+   *
+   * Hiçbir FK'si yok, yani kimse onu tutmaz ama kimse de toplamaz. Silinmezse tekrar-güvenliği
+   * sınayan her koşu bir sonrakini SESSİZCE bozar: aynı olay kimliği ikinci koşuda "zaten
+   * sahiplenilmiş" sayılır, `written` beklenirken `duplicates` gelir ve düşen test kendi
+   * sebebini göstermez. Damgalı kimlik bunu bugün engelliyor; hedefi burada tutmak birikimi de
+   * engelliyor.
+   */
+  webhookEventIds?: string[];
+  /**
    * WhatsApp konuşmaları (15.1) — mesajları CASCADE ile gider.
    *
    * Müşteriye bağlı konuşma zaten profil silinince gider (`conversation.customer_id` CASCADE); bu
@@ -190,6 +202,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     orderIds,
     profileIds,
     assistantProposalIds,
+    webhookEventIds,
     conversationIds,
     storageAreaIds,
     vehicleIds,
@@ -214,6 +227,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     orderIds: clean(targets.orderIds),
     profileIds: clean(targets.profileIds),
     assistantProposalIds: clean(targets.assistantProposalIds),
+    webhookEventIds: clean(targets.webhookEventIds),
     conversationIds: clean(targets.conversationIds),
     storageAreaIds: clean(targets.storageAreaIds),
     vehicleIds: clean(targets.vehicleIds),
@@ -301,6 +315,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   await step(async () => {
     if (assistantProposalIds.length > 0) {
       await mustDelete(db, 'assistant_proposal', (q) => q.in('id', assistantProposalIds));
+    }
+    // Webhook olayları da bağımsız: mesajı silinmiş bir olay kaydı geride kalırsa, aynı sağlayıcı
+    // kimliği bir daha ASLA yazılamaz (claim onu tekrar sayar) — sessiz bir kilit olurdu.
+    if (webhookEventIds.length > 0) {
+      await mustDelete(db, 'webhook_event', (q) => q.in('event_id', webhookEventIds));
     }
   });
 

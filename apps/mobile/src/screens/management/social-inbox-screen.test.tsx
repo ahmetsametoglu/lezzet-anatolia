@@ -85,7 +85,7 @@ async function ekranAc() {
 beforeAll(() => {
   // `env.apiUrl` tanımsızsa `apiFetch` fetch'e varmadan fırlar ve ekran hata durumuna düşer.
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
-  global.fetch = fetchMock as unknown as typeof fetch;
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
 
 beforeEach(() => {
