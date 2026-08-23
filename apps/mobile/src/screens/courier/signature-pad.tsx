@@ -140,6 +140,7 @@ export function SignaturePad({ hintName, onConfirm, onCancel, busy, error, testI
             setCaptureError(null);
           }}
           feedback="scale"
+          grow
           style={[styles.action, styles.actionOutline]}
           accessibilityLabel={t.delivery.proof.clear}
           testID="courier-signature-clear"
@@ -150,6 +151,7 @@ export function SignaturePad({ hintName, onConfirm, onCancel, busy, error, testI
           onPress={confirm}
           disabled={empty || busy}
           feedback="scale"
+          grow
           style={[styles.action, empty || busy ? styles.actionDisabled : styles.actionFilled]}
           accessibilityLabel={busy ? t.delivery.proof.uploading : t.delivery.proof.confirm}
           testID="courier-signature-confirm"
@@ -161,6 +163,7 @@ export function SignaturePad({ hintName, onConfirm, onCancel, busy, error, testI
         <PressableSurface
           onPress={onCancel}
           feedback="scale"
+          grow
           style={[styles.action, styles.actionOutline]}
           accessibilityLabel={t.delivery.proof.cancel}
           testID="courier-signature-cancel"
@@ -208,8 +211,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: operationsTheme.space.md,
   },
+  // `flex` düğme stilinde DEĞİL (23.08 ölçümü — `PressableSurface.grow` künyesi).
   action: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: operationsTheme.space.xl,

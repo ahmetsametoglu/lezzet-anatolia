@@ -37,6 +37,15 @@ interface PressableSurfaceProps {
   accessibilityRole?: 'button' | 'link' | 'tab';
   /** Seçili durum a11y'ye de bildirilir — renk farkı ekran okuyucuya ulaşmaz. */
   selected?: boolean;
+  /**
+   * SATIRDA ESNEYEN DÜĞME — `flex` DIŞ Pressable'a buradan verilir, `style`e yazılmaz
+   * (ölçüldü 23.08, cihaz + uiautomator): `style` İÇ yüzeye gider; dış Pressable stilsiz kalınca
+   * içerik kadar daralıyor, içerideki `flex: 1` ise sütun ekseninde yükseklik hesabını çökertip
+   * metni ~8 px'e eziyordu ("Vazgeç" görünmez olmuştu — kurye kapanış onayı ve teslim sonuç
+   * düğmeleri). `true` = flex 1; sayı = o oran (`1.3` gibi). Jest bunu göremez (stil işlemez),
+   * kural buradaki tiptedir: esneyecek düğme `grow` verir, stiline flex yazmaz.
+   */
+  grow?: number | boolean;
   /** Görsel yüksekliği 44 dp'nin altındaki öğe: dokunma payı eklenir. */
   compact?: boolean;
   /**
@@ -69,6 +78,7 @@ export function PressableSurface({
   accessibilityHint,
   accessibilityRole = 'button',
   selected,
+  grow,
   compact = false,
   compactEdges = 'all',
   testID,
@@ -92,7 +102,10 @@ export function PressableSurface({
          Yer BURADA ayrılır — gölgeyi çizen yüzeyin kendi kutusunda — ki hangi kabın içinde
          durduğu önemsiz olsun ve ekran başına dolgu yaması gerekmesin. Gerekçe `metrics.ts`
          `shadowRoom` künyesinde. */
-      style={feedback === 'shadow' ? shadowRoomStyle.room : undefined}
+      style={[
+        feedback === 'shadow' ? shadowRoomStyle.room : undefined,
+        grow === undefined || grow === false ? undefined : { flex: grow === true ? 1 : grow },
+      ]}
       hitSlop={hitSlop}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}

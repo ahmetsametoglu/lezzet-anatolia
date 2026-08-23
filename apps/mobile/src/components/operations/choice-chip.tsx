@@ -50,7 +50,10 @@ export function OperationsChoiceChip({
       selected={selected}
       feedback="scale"
       compact
-      style={[styles.base, fill ? styles.fill : styles.hug, selected ? styles[tone] : styles.idle]}
+      // Segment eşitliği `grow` ile — stile `flex` yazmak dış Pressable'ı esnetmiyor ve iç
+      // yükseklik hesabını çökertiyordu (23.08 ölçümü — `PressableSurface.grow` künyesi).
+      grow={fill || undefined}
+      style={[styles.base, fill ? undefined : styles.hug, selected ? styles[tone] : styles.idle]}
       accessibilityLabel={label}
       testID={testID}
     >
@@ -68,7 +71,6 @@ const styles = StyleSheet.create({
     borderWidth: operationsTheme.border.base,
     borderRadius: operationsTheme.radius.badge,
   },
-  fill: { flex: 1 },
   hug: { paddingHorizontal: operationsTheme.space.xl },
   ink: {
     backgroundColor: operationsTheme.colors.ink,

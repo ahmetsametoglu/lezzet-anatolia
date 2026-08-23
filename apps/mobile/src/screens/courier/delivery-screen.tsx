@@ -238,6 +238,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 <PressableSurface
                   onPress={delivery.openSignature}
                   feedback="scale"
+                  grow
                   style={[styles.proofButton, styles.contactOutline]}
                   accessibilityLabel={t.delivery.proof.sign}
                   testID="courier-proof-sign"
@@ -246,7 +247,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                   <Text style={styles.proofButtonLabel}>{t.delivery.proof.sign}</Text>
                 </PressableSurface>
                 {/* Sapma 1: kamera modülü kurulu değil — düğme çizili ama kapalı, sebebi altında. */}
-                <View style={[styles.proofButton, styles.contactDisabled]}>
+                <View style={[styles.proofButton, styles.proofGrow, styles.contactDisabled]}>
                   <Icon
                     name="camera"
                     size={operationsTheme.size.inlineIcon}
@@ -457,6 +458,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               <PressableSurface
                 onPress={() => delivery.openOutcome('unreachable')}
                 feedback="scale"
+                grow
                 style={[styles.outcomeButton, styles.outcomeNeutral]}
                 accessibilityLabel={t.delivery.cta.unreachable}
                 testID="courier-outcome-unreachable"
@@ -466,6 +468,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               <PressableSurface
                 onPress={() => delivery.openOutcome('refused')}
                 feedback="scale"
+                grow
                 style={[styles.outcomeButton, styles.outcomeDanger]}
                 accessibilityLabel={t.delivery.cta.refused}
                 testID="courier-outcome-refused"
@@ -522,6 +525,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               <PressableSurface
                 onPress={delivery.cancelOutcome}
                 feedback="scale"
+                grow
                 style={[styles.outcomeButton, styles.outcomeNeutral]}
                 accessibilityLabel={t.delivery.outcome.cancel}
                 testID="courier-outcome-cancel"
@@ -531,6 +535,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               <PressableSurface
                 onPress={delivery.confirmOutcome}
                 feedback="shadow"
+                grow={1.3}
                 style={[styles.outcomeButton, styles.outcomeConfirm]}
                 accessibilityLabel={t.delivery.outcome.confirm}
                 testID="courier-outcome-confirm"
@@ -647,8 +652,9 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   proofButtons: { flexDirection: 'row', gap: operationsTheme.space.md },
+  // `flex` BURADA DEĞİL (23.08 ölçümü — `PressableSurface.grow` künyesi): esneyen düğme flex'i
+  // grow prop'undan alır; düz `View` kalan tek kullanım (`Fotoğraf`) `proofGrow` ile esner.
   proofButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -866,9 +872,9 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     textAlign: 'center',
   },
+  proofGrow: { flex: 1 },
   outcomeRow: { flexDirection: 'row', gap: operationsTheme.space.md },
   outcomeButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: operationsTheme.space['2xl'],
@@ -888,7 +894,6 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.error,
   },
   outcomeConfirm: {
-    flexGrow: 1.3,
     backgroundColor: operationsTheme.colors.error,
     borderColor: operationsTheme.colors.error,
     boxShadow: operationsTheme.shadow.hard,

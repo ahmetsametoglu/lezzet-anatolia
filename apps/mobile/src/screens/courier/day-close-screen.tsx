@@ -222,6 +222,7 @@ export function CourierDayCloseScreen() {
               <PressableSurface
                 onPress={dayClose.cancelConfirm}
                 feedback="scale"
+                grow
                 style={[styles.confirmButton, styles.confirmCancel]}
                 accessibilityLabel={t.dayClose.cancel}
                 testID="courier-day-close-cancel"
@@ -231,6 +232,7 @@ export function CourierDayCloseScreen() {
               <PressableSurface
                 onPress={dayClose.close}
                 feedback="shadow"
+                grow={1.3}
                 style={[styles.confirmButton, styles.confirmYes]}
                 accessibilityLabel={t.dayClose.confirm}
                 testID="courier-day-close-confirm"
@@ -428,8 +430,8 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.error,
   },
   confirmRow: { flexDirection: 'row', gap: operationsTheme.space.md },
+  // `flex` düğme stilinde DEĞİL (23.08 ölçümü — `PressableSurface.grow` künyesi).
   confirmButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: operationsTheme.space['2xl'],
@@ -443,7 +445,6 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.ink,
   },
   confirmYes: {
-    flexGrow: 1.3,
     backgroundColor: operationsTheme.colors.error,
     borderColor: operationsTheme.colors.error,
     boxShadow: operationsTheme.shadow.hard,

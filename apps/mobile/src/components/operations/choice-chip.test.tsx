@@ -23,7 +23,7 @@ describe('OperationsChoiceChip', () => {
     expect(screen.getByRole('button', { name: 'kart', selected: true })).toBeOnTheScreen();
   });
 
-  it('`fill` segmenti satırı eşit paylaştırır; varsayılan içerik genişliğidir', async () => {
+  it('`fill` esnemeyi DIŞ Pressable`a taşır — iç yüzeyde `flex` OLMAZ (23.08 arızası)', async () => {
     await render(
       <>
         <OperationsChoiceChip label="a" selected={false} onPress={jest.fn()} fill testID="fill" />
@@ -31,7 +31,12 @@ describe('OperationsChoiceChip', () => {
       </>,
     );
 
-    expect(screen.getByTestId('fill')).toHaveStyle({ flex: 1 });
+    // İç yüzeye `flex: 1` yazmak cihazda düğmeyi daraltıp metni eziyordu (ölçüldü 23.08 —
+    // `PressableSurface.grow` künyesi). Esneme dış Pressable'da (grow prop'u); iç yüzey temiz.
+    expect(screen.getByTestId('fill')).not.toHaveStyle({ flex: 1 });
+    expect(screen.getByTestId('fill').parent?.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ flex: 1 })]),
+    );
     expect(screen.getByTestId('hug')).not.toHaveStyle({ flex: 1 });
   });
 });

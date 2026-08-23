@@ -491,6 +491,11 @@ describe('teslimat · sonuç akışı (K5)', () => {
     await renderDelivery();
     expect(screen.queryByTestId('courier-outcome-panel')).toBeNull();
 
+    // Etiketler render AĞACINDA da ölçülür (23.08 arızasının dersi: cihazda metin görünmez
+    // olmuştu ve jest süslemeyi göremez — bu satır en azından metnin ağaçtan düşmesini yakalar).
+    expect(screen.getByTestId('courier-outcome-unreachable')).toHaveTextContent('Ulaşılamadı');
+    expect(screen.getByTestId('courier-outcome-refused')).toHaveTextContent('Kabul etmedi');
+
     await fireEvent.press(screen.getByTestId('courier-outcome-unreachable'));
 
     expect(screen.getByTestId('courier-outcome-panel')).toBeOnTheScreen();
