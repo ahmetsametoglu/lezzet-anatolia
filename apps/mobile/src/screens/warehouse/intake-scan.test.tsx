@@ -5,11 +5,13 @@ import { intakeRow } from './warehouse-fixture';
 import { resetWarehouseStatus } from './warehouse-status';
 
 /*
-  D2 · TARAMA AKIŞI (Modül 23 · 23.4) — barkodun mal kabuldeki BEŞ yolu:
+  D2 · TARAMA AKIŞI (Modül 23 · 23.4 · çekmece 23.08) — barkodun mal kabuldeki yolları:
 
-  · bulunan satıra ÇARPAN kadar eklenir ve toplamalıdır (iki koli = 2×çarpan)
-  · SKU eşleşmesi cümlesini söyler (kaynak şeffaf — barkod kadar kesin değil)
-  · PO'da olmayan ürünün kodu satır AÇMAZ (fark raporunun kümesi bozulmaz)
+  · bulunan kod ÇEKMECE açar (okutma sayım değil TANITIM): varsayılan adet okutulan birimin
+    miktarı (koli → çarpan), depocu düzeltir, satıra ONAYLA yazılır ve toplamalıdır
+  · SKU eşleşmesi kaynağını söyler (barkod kadar kesin değil — çekmece künyesi + onay cümlesi)
+  · çekmece vazgeçilirse HİÇBİR satıra yazılmaz
+  · PO'da olmayan ürünün kodu satır AÇMAZ (fark raporunun kümesi bozulmaz) — çekmece de açılmaz
   · tanınmayan kod öğrenme sayfasını açar; satır seçilince kod öğretilir, 1 eklenir
   · `already_bound` yarışı: bu arada başkası öğretmişse kod kime bağlıysa oradan sayılır
 
@@ -46,7 +48,7 @@ function ok(data: unknown): Response {
 }
 
 type Resolved =
-  | { status: 'found'; variantId: string; productName: string; variantLabel: string; kind: 'unit' | 'case'; qtyPerCode: number; source: 'barcode' | 'sku' | 'supplier_code' }
+  | { status: 'found'; variantId: string; productName: string; variantLabel: string; kind: 'unit' | 'case'; qtyPerCode: number; source: 'barcode' | 'sku' | 'supplier_code'; imageUrl: string | null }
   | { status: 'unknown' };
 
 /** Ağın senaryosu: form satırları + çözüm cevabı + (öğretme cevabı). URL'e göre dallanır. */
@@ -88,36 +90,61 @@ beforeEach(() => {
 });
 
 describe('D2 · tarama akışı', () => {
-  it('koli kodu satırı bulur ve ÇARPAN kadar ekler; ikinci okuma TOPLANIR', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode' });
+  it('koli kodu ÇEKMECE açar (varsayılan çarpan), onayla yazılır; ikinci okuma TOPLANIR', async () => {
+    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', imageUrl: null });
     await renderIntake();
 
     await scanOnce();
+    // Satıra HENÜZ yazılmadı: adet kararı çekmecenin — varsayılan, kolinin çarpanı.
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('6'));
+    expect(qtyOf(ROW_A.variantId)).toBe('');
+
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-confirm'));
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('6'));
     expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/6 adet eklendi/);
 
+    // İkinci koli: depocu ince ayarla 7'ye çıkarır — onayda TOPLANIR (6 + 7).
     await scanOnce();
-    await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('12'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('6'));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-qty-increase'));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-confirm'));
+    await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('13'));
   });
 
   it('SKU eşleşmesi kaynağını SÖYLER — barkod kadar kesin değil, cümle bunu taşır', async () => {
-    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku' });
+    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku', imageUrl: null });
     await renderIntake();
 
     await scanOnce();
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('1'));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/SKU eşleşmesi/));
     expect(qtyOf(ROW_B.variantId)).toBe('1');
   });
 
-  it('PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ — yalnız söyler', async () => {
-    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode' });
+  it('çekmeceden VAZGEÇİLİRSE hiçbir satıra yazılmaz', async () => {
+    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', imageUrl: null });
+    await renderIntake();
+
+    await scanOnce();
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('6'));
+    // Örtü erişilebilirlik ağacından gizli (yalnız işaretçi kısayolu) — sorguya bunu söylemek gerek.
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-scrim', { includeHiddenElements: true }));
+
+    expect(qtyOf(ROW_A.variantId)).toBe('');
+    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
+  });
+
+  it('PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ — çekmece de açılmaz, yalnız söyler', async () => {
+    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', imageUrl: null });
     await renderIntake();
 
     await scanOnce();
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/kaleminde yok/));
     // Hiçbir satıra adet DÜŞMEZ ve yeni satır doğmaz: fark raporunun kümesi siparişten gelir.
+    expect(screen.queryByTestId('warehouse-intake-scanned-qty-value')).toBeNull();
     expect(qtyOf(ROW_A.variantId)).toBe('');
     expect(qtyOf(ROW_B.variantId)).toBe('');
   });

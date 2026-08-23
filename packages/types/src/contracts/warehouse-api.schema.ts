@@ -680,6 +680,8 @@ export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
     /** Bu kod kaç adet sayılır — koli kodunda çarpan, SKU/tedarikçi kodunda 1. */
     qtyPerCode: z.number().int().positive(),
     source: z.enum(['barcode', 'sku', 'supplier_code']),
+    /** Ürün görseli (public URL) — okutma çekmecesinin "doğru malı mı tuttum" bakışı; yoksa null. */
+    imageUrl: z.string().nullable(),
   }),
   z.object({ status: z.literal('unknown') }),
 ]);

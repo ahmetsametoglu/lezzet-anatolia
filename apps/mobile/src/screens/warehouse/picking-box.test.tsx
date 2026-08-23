@@ -147,7 +147,7 @@ describe('D1 · kutu döngüsü', () => {
     // Koli 6'lık ama motor 2 ayırabilmiş: 2 eklenir — rafta olmayan mal okutmayla da yazılamaz.
     net.resolve = {
       status: 'found', variantId: line.variantId, productName: line.productName,
-      variantLabel: line.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode',
+      variantLabel: line.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', imageUrl: null,
     };
     await renderPicking();
 
@@ -158,7 +158,7 @@ describe('D1 · kutu döngüsü', () => {
     // Siparişte olmayan ürün: ANINDA durdurulur, hiçbir satıra düşmez (tasarım: "bu siparişte yok").
     net.resolve = {
       status: 'found', variantId: '00000000-0000-4000-8000-000000000077', productName: 'Sahlep',
-      variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode',
+      variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', imageUrl: null,
     };
     await scanChip('Paket barkodu');
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/bu siparişte yok/));

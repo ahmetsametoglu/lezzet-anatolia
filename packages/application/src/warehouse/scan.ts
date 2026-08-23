@@ -32,6 +32,8 @@ export type ScanResolution =
       /** Bu kod okutulunca kaç adet sayılır — yalnız gerçek koli barkodu 1'den büyük taşır. */
       qtyPerCode: number;
       source: 'barcode' | 'sku' | 'supplier_code';
+      /** Ürün kapağı (public URL) — okutma çekmecesinin görseli; kapaksız üründe null. */
+      imageUrl: string | null;
     }
   | { status: 'unknown' };
 
@@ -49,6 +51,7 @@ export async function resolveScannedCode(db: SupabaseClient, input: { code: stri
     kind: match.kind,
     qtyPerCode: match.qtyPerCode,
     source: match.source,
+    imageUrl: name?.imageUrl ?? null,
   };
 }
 

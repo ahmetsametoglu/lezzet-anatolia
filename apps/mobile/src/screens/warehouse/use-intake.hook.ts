@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { IntakeFormRowContract } from '@lezzet/types';
+import type { IntakeFormRowContract, ResolveCodeResponse } from '@lezzet/types';
 
 import { fetchIntakeForm, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
@@ -61,6 +61,15 @@ export interface IntakeRowState {
 
 const EMPTY_ROW: IntakeRowState = { qty: null, expiryText: '', lotText: '', lotSkipped: false, damageNote: '' };
 
+/**
+ * Okutma çekmecesinin konusu: çözülen kod + depocunun seçtiği adet. `expectedQty` satırdan kopyalanır
+ * ki ekran ikinci bir arama yapmasın; `qty` çekmecede oynar, satıra ancak onayla yazılır.
+ */
+export interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status: 'found' }>, 'status'> {
+  qty: number;
+  expectedQty: number;
+}
+
 interface UseIntakeResult {
   status: IntakeStatus;
   rows: IntakeFormRowContract[];
@@ -80,8 +89,14 @@ interface UseIntakeResult {
   scanOpen: boolean;
   openScan: () => void;
   closeScan: () => void;
-  /** Ham kodun işlenmesi — çözüm, satır bulma ve adet önerisi (künye aşağıda). */
+  /** Ham kodun işlenmesi — çözüm, satır bulma ve adet çekmecesi (künye aşağıda). */
   handleScan: (code: string) => void;
+  /** Çözülen kodun çekmecesi — dolu ise ekran ürün kartı + adet seçiciyi çizer. */
+  scanned: ScannedCode | null;
+  setScannedQty: (qty: number) => void;
+  /** Seçilen adedi satıra yazar ve çekmeceyi kapatır. */
+  confirmScanned: () => void;
+  cancelScanned: () => void;
   /** Tanınmayan kod — dolu ise ekran "bu kod hangi ürün?" seçimini çizer. */
   learn: { code: string } | null;
   /** Seçilen satıra kodu öğretir; `already_bound` cevabı da burada cümleye çevrilir. */
@@ -211,17 +226,20 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
   }, [complete, purchaseOrderId, rows, sending, states]);
 
   /*
-    ── TARAMA (Modül 23 · etüt 2.1) ─────────────────────────────────────────
-    Barkodun buradaki TEK işi satırı bulmak: kod çözülür, formdaki satır eşlenir, adet ÖNERİLİR.
-    Koli kodunda öneri çarpan kadardır ve bu "adet önden doldurulmaz" kuralının istisnası DEĞİL:
-    çarpan kodun kendi söylediği ölçülmüş gerçektir (koli kaç adetse o), beklenen adet değil —
-    depocu yine düzeltebilir. SKT/lot girişi aynen elle sürer; kabulün kendisi değişmez.
+    ── TARAMA (Modül 23 · etüt 2.1 · kullanıcı tasarımı 23.08) ───────────────
+    Okutma bir SAYIM değil TANITIMDIR: depocu her koliyi ayrı okutmaz, bir kez okutur ve kod
+    çözülünce ÜRÜN KARTI ÇEKMECESİ açılır — görsel + ad + adet seçici. Varsayılan adet okutulan
+    birimin kendi miktarıdır (koli → çarpan, tekil → 1); "10 koli geldi" gerçeğini depocu adedi
+    çekmecede artırarak söyler ve satıra ancak ONAYLA yazılır. Çarpan önerisi "adet önden
+    doldurulmaz" kuralının istisnası DEĞİL: kodun kendi söylediği ölçülmüş gerçektir, beklenen
+    adet değil. SKT/lot girişi aynen elle sürer; kabulün kendisi değişmez.
 
     PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ (yalnız söyler): PO'lu kabulün satır kümesi
     siparişten gelir ve fark raporu o kümeye göre kurulur — listeye dışarıdan satır eklemek,
     "beklenmedik mal" hâlini fark raporunun göremeyeceği bir yere yazmak olurdu.
   */
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanned, setScanned] = useState<ScannedCode | null>(null);
   const [learn, setLearn] = useState<{ code: string } | null>(null);
 
   /** Bulunan satıra okumanın adedini ekler ve cümlesini kurar — tarama ile öğrenmenin ortak ucu. */
@@ -253,22 +271,47 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
           return;
         }
 
-        const { variantId, qtyPerCode, source, productName, variantLabel } = result.data;
-        const copy =
-          source === 'sku' ? t.intake.scan.foundSku : source === 'supplier_code' ? t.intake.scan.foundSupplier : t.intake.scan.found;
-        const added = addScanned(variantId, qtyPerCode, (name) =>
-          fillCopy(copy, { name, n: String(qtyPerCode) }),
-        );
-        if (!added) {
+        const found = result.data;
+        const row = rows.find((candidate) => candidate.variantId === found.variantId);
+        if (row === undefined) {
           setNotice({
             tone: 'warn',
-            text: fillCopy(t.intake.scan.notInForm, { name: productLabel(productName, variantLabel) }),
+            text: fillCopy(t.intake.scan.notInForm, { name: productLabel(found.productName, found.variantLabel) }),
           });
+          return;
         }
+        // Satıra henüz yazılmaz: adet kararı çekmecenin işi — varsayılan, okutulan birimin miktarı.
+        setScanned({
+          variantId: found.variantId,
+          productName: found.productName,
+          variantLabel: found.variantLabel,
+          kind: found.kind,
+          qtyPerCode: found.qtyPerCode,
+          source: found.source,
+          imageUrl: found.imageUrl,
+          qty: found.qtyPerCode,
+          expectedQty: row.expectedQty,
+        });
       })();
     },
-    [addScanned, setNotice],
+    [rows, setNotice],
   );
+
+  const setScannedQty = useCallback((qty: number) => {
+    setScanned((current) => (current === null ? null : { ...current, qty }));
+  }, []);
+
+  const confirmScanned = useCallback(() => {
+    if (scanned === null || scanned.qty <= 0) return;
+    const copy =
+      scanned.source === 'sku'
+        ? t.intake.scan.foundSku
+        : scanned.source === 'supplier_code'
+          ? t.intake.scan.foundSupplier
+          : t.intake.scan.found;
+    addScanned(scanned.variantId, scanned.qty, (name) => fillCopy(copy, { name, n: String(scanned.qty) }));
+    setScanned(null);
+  }, [addScanned, scanned]);
 
   const teach = useCallback(
     (variantId: string) => {
@@ -316,6 +359,10 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
     openScan: useCallback(() => setScanOpen(true), []),
     closeScan: useCallback(() => setScanOpen(false), []),
     handleScan,
+    scanned,
+    setScannedQty,
+    confirmScanned,
+    cancelScanned: useCallback(() => setScanned(null), []),
     learn,
     teach,
     cancelLearn: useCallback(() => setLearn(null), []),

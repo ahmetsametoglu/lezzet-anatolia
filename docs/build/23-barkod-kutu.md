@@ -305,6 +305,35 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   - **DB'YE VURAN — KALAN:**
     - Mal kabulde okutma → kod eşleşmesinin doğru partiye yazması (`receive_intake` yolu).
 
+- [~] (23.11) **Okutma çekmecesi + elastik adet seçici (mal kabul)** — kullanıcı tasarımı 23.08:
+  okutma bir SAYIM değil TANITIMDIR. Kod çözülünce ürün kartı çekmecesi açılır (görsel + ad +
+  kaynak künyesi + beklenen), varsayılan adet okutulan birimin miktarı (koli → çarpan, tekil → 1);
+  "10 koli geldi" gerçeği adet artırılarak söylenir, satıra ONAYLA yazılır. · touches:
+  `apps/mobile/src/components/operations/qty-slider.tsx`, `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
+  `packages/types/src/contracts/warehouse-api.schema.ts`, `packages/application/src/warehouse/{scan.ts,names.ts}`
+  - **Durum (23.08) — YAZILDI, cihaz bakışı bekliyor (kullanıcı).** `OperationsQtySlider`:
+    elastik eksenli seçici — ray beklenen adetle açılır (yoksa 10 kaba adım), sürükleme KABA
+    adımla atlar (okutulan birimin çarpanı), ± düğmeleri 1'er; topuz SAĞ UCA dayalı TUTULUNCA
+    değer akar ve pencere onunla büyür (hızlanarak — `growthFactor`), bırakınca pencere değerin
+    %25 üstüne oturur (`axisWindow`). Zemin parmağın altında KAYMAZ: ölçek yalnız kenar jestinde
+    ve bırakışta değişir; çapa üstteki büyük sayıdır ("40" + "10 koli" dökümü). Mekaniğin emsali
+    `route-hours.tsx`ün kaba/ince adımı; sürükleme + kenar büyümesi cihazda ölçülür (jest'te
+    jest sahte). Çözüm cevabına `imageUrl` girdi (`ResolveCodeResponse` + `variantNames` —
+    kapak `publicImageUrl` ile çözülür); çekmece görseli `AvatarThumb`. Vazgeçilen çekmece hiçbir
+    satıra yazmaz (testli); PO'da olmayan ürün çekmece bile açmaz. Jest: seçiciye 9, tarama
+    akışına 7 (davranış değişti: onaysız ekleme kalktı). Toplama okutması BİLEREK sessiz kaldı —
+    çekmecenin oraya da gelip gelmeyeceği ayrı karar (tempo ödünleşmesi), kullanıcıya soruldu.
+- [ ] (23.12) **Öğrenme çekmecesine tür + çarpan** — tanınmayan kod öğretilirken "tekil mi koli
+  mi, koliyse kaç adet?" sorulur (aynı adet seçici); bugün her öğretilen kod 1 adetlik yazılıyor
+  ve koli kodunu doğru çarpanla öğretmenin yolu yok (kapı `kind`/`qtyPerCode` alıyor, ekran
+  göndermiyor). · touches: `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts}`,
+  `apps/mobile/src/lib/api/warehouse.ts`
+- [ ] (23.13) **Plansız kabul: operasyon ürün araması + satır açma** — PO'suz gelen mal (kapı
+  `/intake/receive` hazır, ekran plansız modda satır açamıyor). Okutulan kod tanınıyorsa ürün
+  bulunur; tanınmıyorsa arama/öğrenme ile bağlanır; kabul kapanınca kaydı oluşur. PO'lu kabulün
+  "listede olmayan satır açılmaz" duvarı burada YOKTUR (plansızın doğası "liste yok"). ·
+  touches: `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/screens/warehouse/*`
+
 ## Netleşecekler
 
 1. ~~**Toplayan kişi kuryenin kendisi mi?**~~ → **CEVAPLANDI (kullanıcı kararı 21.08): rol

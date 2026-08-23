@@ -6,8 +6,10 @@ import type { IntakeFormRowContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsQtySlider } from '@/components/operations/qty-slider';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
+import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -16,7 +18,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { useIntake, type IntakeRowState } from './use-intake.hook';
+import { useIntake, type IntakeRowState, type ScannedCode } from './use-intake.hook';
 import { parseDate, parseQty, productLabel, qtyToText, shortDate } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
@@ -215,6 +217,61 @@ export function IntakeScreen() {
         testID="warehouse-intake-scan"
       />
 
+      {/* Okutma çekmecesi (kullanıcı tasarımı 23.08): okutma bir SAYIM değil TANITIMDIR — kod bir
+          kez okutulur, "kaç geldi" burada söylenir. Varsayılan adet okutulan birimin miktarı
+          (koli → çarpan, tekil → 1); satıra ancak onayla yazılır. `key` her okutmada seçicinin
+          eksenini tazeler: önceki okutmanın büyütülmüş penceresi yenisine miras kalmaz. */}
+      <BottomSheet
+        visible={intake.scanned !== null}
+        title={t.intake.scan.drawerTitle}
+        onClose={intake.cancelScanned}
+        testID="warehouse-intake-scanned"
+      >
+        {intake.scanned === null ? null : (
+          <>
+            <View style={styles.scannedHead}>
+              <AvatarThumb
+                initial={intake.scanned.productName.slice(0, 1)}
+                photoUri={intake.scanned.imageUrl}
+                size="lg"
+                accessibilityLabel={productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
+                testID="warehouse-intake-scanned-photo"
+              />
+              <View style={styles.scannedNames}>
+                <Text style={styles.scannedName}>
+                  {productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
+                </Text>
+                <Text style={styles.scannedMeta}>{scanMeta(intake.scanned)}</Text>
+                <Text style={styles.scannedMeta}>
+                  {fillCopy(t.intake.expected, { qty: String(intake.scanned.expectedQty) })}
+                </Text>
+              </View>
+            </View>
+            <OperationsQtySlider
+              key={intake.scanned.variantId}
+              value={intake.scanned.qty}
+              onChange={intake.setScannedQty}
+              step={intake.scanned.qtyPerCode}
+              expected={intake.scanned.expectedQty}
+              accessibilityLabel={t.intake.scan.drawerQty}
+              fineLabels={{ increase: t.intake.scan.drawerQtyIncrease, decrease: t.intake.scan.drawerQtyDecrease }}
+              caption={qtyCaption(intake.scanned)}
+              testID="warehouse-intake-scanned-qty"
+            />
+            <PressableSurface
+              onPress={intake.confirmScanned}
+              disabled={intake.scanned.qty <= 0}
+              feedback="shadow"
+              style={[styles.cta, intake.scanned.qty > 0 ? styles.ctaReady : styles.ctaIdle]}
+              accessibilityLabel={t.intake.scan.drawerConfirm}
+              testID="warehouse-intake-scanned-confirm"
+            >
+              <Text style={styles.ctaLabel}>{t.intake.scan.drawerConfirm}</Text>
+            </PressableSurface>
+          </>
+        )}
+      </BottomSheet>
+
       {/* Öğrenen eşleme (karar §1.3): tanınmayan kod için satır seçtirilir — kod o varyanta
           yazılır, bir daha sorulmaz. Aday kümesi FORMUN satırlarıdır: PO'lu kabulde gelen koli
           zaten siparişin bir kalemidir; katalog araması açmak, yanlış ürüne öğretmenin kapısını
@@ -246,6 +303,25 @@ export function IntakeScreen() {
       </BottomSheet>
     </View>
   );
+}
+
+/** Çekmecenin künye satırı: kodun TÜRÜ ve kesinlik derecesi — SKU/tedarikçi eşleşmesi barkod kadar kesin değildir, ekran bunu söyler. */
+function scanMeta(scanned: ScannedCode): string {
+  if (scanned.source === 'sku') return t.intake.scan.drawerSku;
+  if (scanned.source === 'supplier_code') return t.intake.scan.drawerSupplier;
+  return scanned.kind === 'case'
+    ? fillCopy(t.intake.scan.drawerCase, { n: String(scanned.qtyPerCode) })
+    : t.intake.scan.drawerUnit;
+}
+
+/** Koli dökümü ("10 koli + 3 adet") — yalnız gerçek koli kodunda; tekilde sayının kendisi yeter. */
+function qtyCaption(scanned: ScannedCode): string | undefined {
+  if (scanned.kind !== 'case' || scanned.qtyPerCode <= 1) return undefined;
+  const cases = Math.floor(scanned.qty / scanned.qtyPerCode);
+  const loose = scanned.qty % scanned.qtyPerCode;
+  return loose === 0
+    ? fillCopy(t.intake.scan.drawerCases, { k: String(cases) })
+    : fillCopy(t.intake.scan.drawerCasesPlus, { k: String(cases), m: String(loose) });
 }
 
 interface IntakeRowProps {
@@ -541,6 +617,25 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors.olive,
+  },
+  scannedHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space['2xl'],
+  },
+  scannedNames: {
+    flexShrink: 1,
+    gap: operationsTheme.space['2xs'],
+  },
+  scannedName: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  scannedMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
   },
   learnBody: {
     fontFamily: operationsTheme.font.body[400],

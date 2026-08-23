@@ -122,8 +122,9 @@ export async function listWarehouseReturns(
   return drops.sort((a, b) => (b.returnedAt ?? '').localeCompare(a.returnedAt ?? ''));
 }
 
-/** Kalem → döküm satırı. Ad çözümü kuyruğun ortak okumasından (`names.ts`), ikinci kez kurulmaz. */
-function toDropLine(names: Map<string, { productName: string; variantLabel: string }>) {
+/** Kalem → döküm satırı. Ad çözümü kuyruğun ortak okumasından (`names.ts`), ikinci kez kurulmaz —
+    tip de oradan türer: haritanın şekli elle ikinci kez yazılırsa alan eklendiğinde ayrışır (yaşandı 23.08). */
+function toDropLine(names: Awaited<ReturnType<typeof variantNames>>) {
   return (item: OrderItem): ReturnDropLine => ({
     orderItemId: item.id,
     name: displayName(names.get(item.variantId)),

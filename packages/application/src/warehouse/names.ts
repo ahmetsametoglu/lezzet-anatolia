@@ -1,4 +1,5 @@
 import { ProductService, ProductVariantService } from '@lezzet/database';
+import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -25,6 +26,8 @@ interface VariantName {
   productName: string;
   /** "500 g" gibi boy etiketi; tek boylu üründe boş dize. */
   variantLabel: string;
+  /** Ürün kapağının public URL'i — okutma çekmecesinin görseli; kapaksız üründe null. */
+  imageUrl: string | null;
 }
 
 /** Bilinmeyen varyant için gösterilecek ad — uydurma bir metin yerine görünür bir boşluk. */
@@ -42,13 +45,17 @@ export async function variantNames(
   const productOf = new Map(products.map((product) => [product.id, product]));
 
   return new Map(
-    variants.map((variant) => [
-      variant.id,
-      {
-        productName: resolveLocalizedText(productOf.get(variant.productId)?.name ?? {}, 'tr'),
-        variantLabel: resolveLocalizedText(variant.label, 'tr'),
-      },
-    ]),
+    variants.map((variant) => {
+      const product = productOf.get(variant.productId);
+      return [
+        variant.id,
+        {
+          productName: resolveLocalizedText(product?.name ?? {}, 'tr'),
+          variantLabel: resolveLocalizedText(variant.label, 'tr'),
+          imageUrl: publicImageUrl(product?.imageKey, product?.imageUpdatedAt),
+        },
+      ];
+    }),
   );
 }
 
