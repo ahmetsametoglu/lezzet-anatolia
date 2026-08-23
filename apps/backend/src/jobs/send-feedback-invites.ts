@@ -7,6 +7,8 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
+import { notificationPreferencesUrl } from '@lezzet/application';
+import { notificationAllowed } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
 import { defaultNotifier, formatMessageDate, type NotifyChannel, type NotifyRecipient, type NotifyResult } from '@lezzet/notify';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
@@ -171,6 +173,15 @@ async function buildInvites(
     const profile = profileById.get(request.customerId);
     if (!order || !profile) continue;
 
+    /* ── DAVETİ REDDEDEN MÜŞTERİYE GÖNDERİLMEZ (22.08) ──────────────────────────────
+       İzin bugüne kadar TOPLANIYOR ama hiçbir gönderim yolunda okunmuyordu (`0011` künyesi:
+       "Faz 1'de yalnız toplanır") — yani tercih sayfasındaki anahtar hiçbir şeyi değiştirmezdi.
+       Söz veren bir düğme, olmayan bir düğmeden kötüdür.
+
+       Kural OPT-OUT: anahtar yoksa davet GİDER (`notificationAllowed`). Opt-in yapılsaydı özellik
+       doğduğu gün susardı — bugün davet herkese gidiyor ve kimse "evet" demedi. */
+    if (!notificationAllowed(profile.notificationConsent, 'feedbackInvite')) continue;
+
     // **Dil ÖNCE siparişten** (sipariş mailleriyle aynı kural): müşteri o siparişi hangi dilde
     // verdiyse davetini de o dilde okur. Web dışı kayıtta sipariş dilsizdir; orada profil doğrudur.
     const locale: PreferredLanguage = order.locale ?? profile.preferredLanguage ?? 'fr';
@@ -190,7 +201,8 @@ async function buildInvites(
         deliveredOn: formatMessageDate(deliveredAt.get(order.id) ?? order.createdAt, locale),
         productCount: productCount.get(order.id) ?? 0,
         feedbackUrl: localizedUrl('/feedback/[token]', locale, { token: request.token }),
-        notificationPreferencesUrl: localizedUrl('/account/notifications', locale),
+        // Jetonlu (22.08) — bu mailde bağın işi asıl burada: davet, kapatılabilen tek mail türü.
+        notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId: profile.id }),
       },
     });
   }

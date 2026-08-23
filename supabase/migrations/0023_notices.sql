@@ -103,7 +103,21 @@ create table public.zone_notice (
   created_at timestamptz not null default now(),
   -- Haber gönderildiğinde damgalanır. **Tek hatırlatma** sözü (tasarım) bu alanla tutulur: dolu
   -- olan satıra ikinci kez yazılmaz.
-  notified_at timestamptz
+  notified_at timestamptz,
+  /*
+    Tercih bağının OTURUMSUZ anahtarı (22.08) — bu tablonun kaydı HESAPSIZ olabildiği için gerekli.
+
+    On mail şablonunun altbilgisi "Bildirim tercihleri" bağı taşıyor; dokuzunun alıcısında mutlaka
+    bir profil var, **bu kaydınkinde çoğu zaman yok** (`customer_id null` — ziyaretçi bıraktı).
+    Profil jetonuyla (`user_profiles.notification_token`) çözülemeyen tek yol burası; jetonsuz
+    bırakılsaydı "haber ver" diyen ziyaretçi tercih bağına bastığında hesabı olmayan bir giriş
+    ekranında kalırdı — vazgeçmenin önüne konmuş ikinci bir engel, tam da tablonun künyesinin
+    reddettiği şey.
+
+    Kayıtla birlikte doğar (`feedback_request.token` deseni). Açtığı sayfa yalnız AYNI E-POSTAYA
+    bağlı bekleyen kayıtları gösterir ve iptal ettirir — kimlik, adres, sipariş görünmez.
+  */
+  token text unique
 );
 
 alter table public.zone_notice enable row level security;

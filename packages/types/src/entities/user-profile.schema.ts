@@ -41,6 +41,27 @@ export const MarketingConsentSchema = z.object({
 export type MarketingConsent = z.infer<typeof MarketingConsentSchema>;
 
 /**
+ * Bildirim TÜRÜ bazlı ret (22.08) — `MarketingConsent`ten AYRI ve bu ayrım kasıtlı.
+ *
+ * Orası KANAL sözlüğü ve `MarketingChannelEnum` onun anahtarlarından türüyor; buraya konan her ad
+ * operasyonun "izinli müşteriler" süzgecinde bir kanal olarak belirirdi.
+ *
+ * **Varsayılan da ters:** pazarlama izni opt-in (anahtar yoksa izin yok), bu opt-out (anahtar yoksa
+ * gönderilir). Hukuki ayrım: kampanya açık rıza ister; teslim edilmiş bir siparişin değerlendirme
+ * daveti mevcut müşteri ilişkisine dayanır ve gereken şey rıza değil, kolay reddedilebilirliktir.
+ * Kolon künyesi (`0011`) aynı gerekçeyi taşıyor.
+ */
+export const NotificationConsentSchema = z.object({
+  /** Teslim edilmiş siparişin değerlendirme daveti. Yoksa ya da `granted` ise gider. */
+  feedbackInvite: ConsentSchema.nullish(),
+});
+export type NotificationConsent = z.infer<typeof NotificationConsentSchema>;
+
+/** Ret edilebilen bildirim türleri — şemadan TÜRER (`MarketingChannelEnum` ile aynı gerekçe). */
+export const NotificationKindEnum = NotificationConsentSchema.keyof();
+export type NotificationKind = z.infer<typeof NotificationKindEnum>;
+
+/**
  * İzin KANALLARI — şemanın kendi anahtarlarından TÜRER (`.keyof()`), elle ikinci bir liste yazılmaz.
  *
  * Gerekçe pratikte yaşandı: kanal listesi ayrı yazılsaydı üçüncü kanal (SMS) eklendiğinde şema
@@ -158,6 +179,16 @@ export const UserProfileSchema = z.object({
   priceGroupId: z.string().uuid().nullable(),
   codAllowed: z.boolean(),
   marketingConsent: MarketingConsentSchema,
+  notificationConsent: NotificationConsentSchema,
+  /**
+   * Tercih sayfasının oturumsuz anahtarı (22.08) — her mailin altbilgisindeki bağ bunu taşır.
+   * `null` = bu profile henüz mail gitmedi; jeton istek üzerine doğar (`referralCode` deseni).
+   *
+   * `referralCode` ile KARIŞTIRILMAZ: o paylaşılmak için var, bu paylaşılmamak için. Aynı dize
+   * ikisini birden yapsaydı, davet bağlantısını gören herkes davet edenin bildirimlerini
+   * kapatabilirdi.
+   */
+  notificationToken: z.string().nullable(),
   acquisitionSource: z.record(z.unknown()).nullable(),
   referredBy: z.string().uuid().nullable(),
   /**

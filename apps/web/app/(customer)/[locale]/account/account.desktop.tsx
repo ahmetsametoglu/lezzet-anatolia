@@ -3,6 +3,7 @@ import type { AccountViewProps } from './account-types';
 import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
+import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { CouponsCard } from './components/coupons-card';
@@ -49,8 +50,11 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
 
           <Card compact={compact}>
             <CardHead title={t.consentTitle} compact={compact} />
-            <ConsentSwitch channel="email" label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
-            <ConsentSwitch channel="whatsapp" label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
+            {/* `bind` — kapanış DEĞİL: bu dosya sunucu bileşeni ve istemciye ancak bir server
+                action geçebilir. Yerinde yazılmış bir ok fonksiyonu sıradan bir fonksiyondur ve
+                serileştirilemez; `bind` üretilen şeyi yine server action olarak bırakır. */}
+            <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={setConsentAction.bind(null, 'email')} />
+            <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={setConsentAction.bind(null, 'whatsapp')} />
             <span className="font-sans text-micro leading-relaxed text-muted">{t.consentNote}</span>
           </Card>
 

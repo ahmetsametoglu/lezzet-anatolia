@@ -13,6 +13,7 @@ import { localizedUrl } from '@lezzet/i18n';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage } from '@lezzet/types';
+import { notificationPreferencesUrl } from '../customer/notification-preferences';
 
 /**
  * Sipariş bildiriminin VERİSİNİ kurar (14.5) — **uygulama katmanı orkestrasyonu**.
@@ -138,7 +139,9 @@ export async function buildOrderNotification(
     orderUrl: localizedUrl('/orders/[reference]', locale, { reference: order.id }),
     deliverySummaryUrl: null, // Teslimat özeti belgesi 14.6'da doğar.
     supportUrl: localizedUrl('/support', locale),
-    notificationPreferencesUrl: localizedUrl('/account/notifications', locale),
+    /* JETONLU (22.08): sayfa oturum istiyor, mailin alıcısı ise o an çoğu zaman girişli değil.
+       Bağ tek kapıdan üretilir — altı gönderim yolu aynı jetonu aynı biçimde eklesin. */
+    notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId: order.customerId }),
   };
 
   return {

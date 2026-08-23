@@ -4,6 +4,7 @@ import { localizedUrl } from '@lezzet/i18n';
 import { defaultNotifier, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { PreferredLanguage, Ticket, TicketHistoryEntry, TicketMessage, TicketStatus } from '@lezzet/types';
+import { notificationPreferencesUrl } from '../customer/notification-preferences';
 
 /**
  * Talep bildirimlerinin tetiklendiği yer (16.4) — şablonlar 14.7'de.
@@ -110,7 +111,8 @@ async function buildTicketNotification(db: Db, ticket: Ticket, opts: { previousS
       history: buildHistory(messages, locale),
       previousStatus: opts.previousStatus ?? null,
       ticketUrl: localizedUrl('/support/[ticket]', locale, { ticket: ticket.id }),
-      notificationPreferencesUrl: localizedUrl('/account/notifications', locale),
+      // Jetonlu (22.08) — tek kapıdan; gerekçesi `customer/notification-preferences` künyesinde.
+      notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId: customer.id }),
     },
     recipient: { name: customer.name, email: customer.email, phone: customer.phone, locale },
   };

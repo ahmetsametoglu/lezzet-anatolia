@@ -1,5 +1,5 @@
 import { DeliveryZoneService, ZoneNoticeService, type Db } from '@lezzet/database';
-import type { PostalCodeResolution } from '@lezzet/domain-core';
+import { notificationToken, type PostalCodeResolution } from '@lezzet/domain-core';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import type { Country, PreferredLanguage } from '@lezzet/types';
@@ -123,6 +123,11 @@ export async function recordZoneNotice(db: Db, input: ZoneNoticeInput): Promise<
     email,
     customerId: input.customerId,
     locale: input.locale,
+    /* Tercih bağının anahtarı KAYITLA BİRLİKTE doğar (22.08). Jetonu SERVİS üretmiyor çünkü
+       üreteç `domain-core`da ve `database` onu bilmez (CLAUDE §1: iki katman birbirini tanımaz);
+       ikisini birleştiren yer burasıdır. Çakışan kayıtta satır yazılmaz, dolayısıyla jeton da
+       harcanmaz — `insertIgnoringConflict` var olanı korur ve onun kendi jetonu zaten vardır. */
+    token: notificationToken(),
   });
 
   // Sayaç kuvvetli sinyalden SONRA ve `already` hâlinde de artar: tekrar sormak yeni bir bekleyiş

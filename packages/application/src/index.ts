@@ -65,6 +65,20 @@ export {
   resolveReferrer,
 } from './customer/referral';
 export type { InviteWelcome, LinkReferrerOutcome } from './customer/referral';
+// ── Bildirim tercihleri (22.08) — her mailin altbilgisindeki bağın hedefi ──
+// Kapı TEK: bağı üreten altı gönderim yolu da buradan geçer, yoksa biri jetonu unutur ve o mailin
+// bağı sessizce giriş duvarına çıkar.
+export {
+  cancelZoneNotices,
+  ensureNotificationToken,
+  notificationPreferencesUrl,
+  preferencesSubjectOf,
+  readNotificationPreferences,
+  resolvePreferencesToken,
+  setMarketingConsent,
+  setNotificationConsent,
+} from './customer/notification-preferences';
+export type { NotificationPreferencesView, PreferencesSubject } from './customer/notification-preferences';
 // ── Komşu daveti (17.10) — davetin İKİNCİ türü: kimliğe değil SEFERE bağlı ──
 // Üç ucu da iki yüzeyden çağrılıyor: daveti AÇMA (sipariş sonrası ekran) · KARŞILAMA (bağlantının
 // indiği sayfa) · SEFERE BAĞLAMA (checkout). Ödül burada değil, para tarafında (`feedback/points`).

@@ -7,7 +7,7 @@ import { formatPrice } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { useCart } from '@/components/customer/cart/cart-context';
 import type { AccountView } from '@/lib/account/read';
-import { cancelZoneNoticeAction, setConsentAction } from '../actions';
+import { cancelZoneNoticeAction } from '../actions';
 import type { Messages } from '../account-types';
 import { RedeemPoints } from './redeem-points';
 
@@ -59,13 +59,21 @@ export function ConsentSwitch({
   on,
   onLabel,
   offLabel,
-  channel,
+  onToggle,
 }: {
   label: string;
   on: boolean;
   onLabel: string;
   offLabel: string;
-  channel: 'email' | 'whatsapp';
+  /**
+   * Yazma eylemi ÇAĞIRANIN — anahtar hangi kapıya yazdığını bilmez (22.08).
+   *
+   * Önce `channel: 'email' | 'whatsapp'` alıyordu ve `setConsentAction`ı kendi çağırıyordu; bildirim
+   * tercihleri sayfası açılınca aynı anahtar üç ayrı kapıya yazmak zorunda kaldı (kampanya kanalı ·
+   * bildirim türü · jetonlu hâlleri). Kanal listesini büyütmek anahtarı her yeni tercihte
+   * değiştirmek, ikinci bir anahtar yazmak ise duplikasyon olurdu (CLAUDE §1).
+   */
+  onToggle: (next: boolean) => Promise<{ errorKey: string | null }>;
 }) {
   const [value, setValue] = useState(on);
   const [busy, setBusy] = useState(false);
@@ -79,7 +87,7 @@ export function ConsentSwitch({
     setValue(next);
     setBusy(true);
     setFailed(false);
-    const { errorKey } = await setConsentAction(channel, next);
+    const { errorKey } = await onToggle(next);
     setBusy(false);
     if (errorKey) {
       setValue(!next);

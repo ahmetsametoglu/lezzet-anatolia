@@ -113,6 +113,22 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
+   * Bildirim jetonunun sahibi (22.08) — tercih sayfasının oturumsuz girişi.
+   *
+   * `findByReferralCode` ile aynı şekil, **ama büyük harfe ÇEVİRMEZ**: davet kodu telefonda elle
+   * yazılabilsin diye okunabilir alfabededir ve harf kutusu önemsizdir; bu jeton yalnız
+   * tıklanır — dönüştürmek, üretilenden başka bir dize aramak olurdu.
+   *
+   * Bulunamayan jeton `null`'dır, hata değil: mail eski olabilir ya da kimlik silinmiş olabilir
+   * (`anonymize_customer` jetonu düşürüyor).
+   */
+  findByNotificationToken(token: string): Promise<UserProfile | null> {
+    const temiz = token.trim();
+    if (!temiz) return Promise.resolve(null);
+    return this.getOneBy({ notificationToken: temiz });
+  }
+
+  /**
    * Kimlik çözümünün DB yarısı: iki anahtar TEK turda aranır. Motor bu iki adaya bakıp
    * bağlan/oluştur/çakışma kararını verir — servis hangisinin kazandığını bilmez.
    */

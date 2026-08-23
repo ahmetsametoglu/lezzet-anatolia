@@ -1,6 +1,7 @@
 import 'server-only';
 import { UserProfileService, serviceDb } from '@lezzet/database';
 import {
+  notificationPreferencesUrl,
   readB2bApplicant as readApplicant,
   submitB2bApplication as submitApplication,
   type B2bApplicantView,
@@ -79,7 +80,8 @@ export async function readB2bApplicant(viewLanguage: PreferredLanguage): Promise
  */
 export async function notifyB2bDecision(customerId: string, approved: boolean): Promise<void> {
   try {
-    const profile = await new UserProfileService(serviceDb()).getById(customerId);
+    const db = serviceDb();
+    const profile = await new UserProfileService(db).getById(customerId);
     if (!profile?.email) return;
 
     const locale = profile.preferredLanguage ?? 'fr';
@@ -105,7 +107,8 @@ export async function notifyB2bDecision(customerId: string, approved: boolean): 
         // Onayda toptan vitrine, rette hesaba: onaylanan kişinin yapacağı şey alışveriş, reddedilenin
         // yapacağı şey eksiği görmek. Tek adrese yönlendirmek ikisinden birini boşa çıkarırdı.
         actionUrl: localizedUrl(approved ? '/catalog' : '/account', locale),
-        notificationPreferencesUrl: localizedUrl('/account/notifications', locale),
+        // Jetonlu (22.08) — tek kapıdan; gerekçesi `customer/notification-preferences` künyesinde.
+        notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId }),
       },
     );
   } catch (err) {

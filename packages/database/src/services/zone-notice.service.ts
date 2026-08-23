@@ -55,6 +55,46 @@ export class ZoneNoticeService extends BaseDbService<ZoneNotice, ZoneNoticeInser
   }
 
   /**
+   * Jetonun sahibi kayıt (22.08) — tercih sayfasının oturumsuz girişi.
+   *
+   * Bulunamayan jeton bir HATA DEĞİL `null`'dır: bağlantı yanlış kopyalanmış ya da kayıt iptal
+   * edilmiş olabilir. Sayfa "geçersiz bağ" der; hangi ihtimalin doğru olduğunu SÖYLEMEZ, çünkü
+   * ikisini ayırt etmek "bu adres bizde kayıtlı" bilgisini sızdırırdı.
+   */
+  findByToken(token: string): Promise<ZoneNotice | null> {
+    const temiz = token.trim();
+    if (!temiz) return Promise.resolve(null);
+    return this.getOneBy({ token: temiz });
+  }
+
+  /**
+   * Aynı e-postaya bağlı, haberi HENÜZ GİTMEMİŞ kayıtlar — tercih sayfasının listesi.
+   *
+   * Kimlikle değil E-POSTAYLA aranıyor ve bu bilinçli: bu tablonun kaydı hesapsız olabilir, yani
+   * `customerId` çoğu ziyaretçi satırında yok. Jetonun taşıdığı kimlik de zaten bir e-postadır.
+   *
+   * **Haberi gitmiş kayıtlar dışarıda:** onların sözü tamamlandı, iptal edilecek bir bekleyiş
+   * kalmadı. Listede göstermek, müşteriye kapatabileceği bir şey varmış gibi okuturdu.
+   */
+  listPendingForEmail(email: string): Promise<ZoneNotice[]> {
+    const temiz = email.trim().toLowerCase();
+    if (!temiz) return Promise.resolve([]);
+    return this.getAll({ email: temiz }, { isNullFields: ['notifiedAt'], orderBy: 'createdAt' });
+  }
+
+  /**
+   * Bir e-postaya bağlı bekleyişlerin TAMAMINI kaldırır — ziyaretçinin "artık haber vermeyin"i.
+   *
+   * Haberi gitmiş satırlara dokunulmaz: onlar bir bekleyiş değil, olmuş bir olayın kaydıdır ve
+   * silinseydi "bu kişiye haber verildi mi" sorusunun cevabı kaybolurdu.
+   */
+  async removeAllPendingForEmail(email: string): Promise<void> {
+    const temiz = email.trim().toLowerCase();
+    if (!temiz) return;
+    await this.deleteWhere({ email: temiz }, { isNullFields: ['notifiedAt'] });
+  }
+
+  /**
    * Müşteri bekleme kaydını kaldırır — verdiğimiz sözü geri alması.
    *
    * Ülke ARANMAZ ve bu bilinçli: aynı müşterinin aynı kodu iki ülkede birden beklemesi gerçek bir

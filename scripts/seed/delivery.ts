@@ -1,4 +1,5 @@
 import { AddressService, DeliveryZoneService } from '@lezzet/database';
+import { notificationToken } from '@lezzet/domain-core';
 import { an, tabloDolu, type Db, type Kisiler } from './shared';
 import type { Depolar } from './warehouse';
 
@@ -232,6 +233,10 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
       email: k.email,
       customer_id: k.customer_id ?? null,
       notified_at: k.notified_at ?? null,
+      // Tercih bağının anahtarı (22.08) — kayıtla birlikte doğar. Beslemede de yazılmalı: hesapsız
+      // kaydın tercih sayfası YALNIZ bununla açılıyor ve jetonsuz satır o yolu yerelde
+      // denenemez bırakırdı.
+      token: notificationToken(),
       created_at: an(-30),
     })),
   );

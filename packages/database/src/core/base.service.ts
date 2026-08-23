@@ -646,12 +646,23 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return data ? this.dbSchema.parse(this.toApp(data)) : null;
   }
 
-  /** Filtreye göre siler (bileşik anahtarlı tablolar için; en az bir filtre zorunlu). */
-  protected async deleteWhere(filters: Record<string, unknown>): Promise<void> {
+  /**
+   * Filtreye göre siler (bileşik anahtarlı tablolar için; en az bir filtre zorunlu).
+   *
+   * `isNullFields` = "bu kolon boş olan satırlar" (`getAll`in aynı adlı seçeneği). Eşitlik
+   * filtresiyle ifade edilemez: `eq(col, null)` PostgREST'te satır getirmez/silmez, `is null`
+   * gerekir. **Filtre sayısına dahil DEĞİL** — tek başına bir `is null` ile silmek, bir kolonun
+   * boş olduğu HER satırı silmek olurdu.
+   */
+  protected async deleteWhere(
+    filters: Record<string, unknown>,
+    options?: { isNullFields?: readonly string[] },
+  ): Promise<void> {
     const entries = Object.entries(filters).filter(([, v]) => v !== undefined && v !== null);
     if (entries.length === 0) throw new Error(`[${this.tableName}] deleteWhere filtresiz çağrılamaz.`);
     let query = this.supabase.from(this.tableName).delete();
     for (const [key, value] of entries) query = query.eq(this.column(key), this.filterValue(key, value));
+    for (const field of options?.isNullFields ?? []) query = query.is(this.column(field), null);
     const { error } = await query;
     if (error) throw error;
   }

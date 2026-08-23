@@ -1,3 +1,4 @@
+import { notificationPreferencesUrl } from '@lezzet/application';
 import { DeliveryZoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import { isInRoute } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
@@ -107,7 +108,14 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
           locale,
           postalCode: notice.postalCode,
           catalogUrl: localizedUrl('/catalog', locale),
-          notificationPreferencesUrl: localizedUrl('/account/notifications', locale),
+          /* JETONLU, VE İKİ KAYNAKTAN (22.08). Bu yolun alıcısı çoğu zaman HESAPSIZ — tercih
+             sayfası oturum isteseydi, "haber ver" diyen ziyaretçi hesabı olmayan bir giriş
+             ekranında kalırdı. Profili varsa profilin jetonu, yoksa KAYDIN kendi jetonu
+             kullanılır; ikisi de yoksa çıplak adrese düşülür (eski kayıtlarda `token` null). */
+          notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, {
+            customerId: notice.customerId,
+            zoneNoticeToken: notice.token,
+          }),
         },
       );
       delivered = results.some((r) => r.status === 'sent');

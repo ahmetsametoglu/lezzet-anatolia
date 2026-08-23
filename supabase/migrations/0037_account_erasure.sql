@@ -149,6 +149,11 @@ begin
          referral_code = null,
          acquisition_source = null,
          marketing_consent = '{}'::jsonb,
+         -- Bildirim tercihleri de kimliğin parçası: hangi türü reddettiği kişiye ait bir bilgidir.
+         notification_consent = '{}'::jsonb,
+         -- Jeton bir ANAHTARDIR ve silinen kimliğin anahtarı ayakta kalmamalı: eski bir mailin
+         -- altbilgisinden gelen bağ, artık kimsenin olmayan bir tercih sayfasını açardı.
+         notification_token = null,
          b2b_reject_reason = null,
          b2b_reject_reason_translations = null,
          b2b_rejected_at = null,

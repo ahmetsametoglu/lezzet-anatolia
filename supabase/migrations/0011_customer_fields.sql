@@ -51,8 +51,47 @@ alter table public.user_profiles
   add column price_group_id uuid references public.price_group (id) on delete restrict,
   add column cod_allowed boolean not null default true, -- kapıda ödeme izni; kötüye kullanımda kapanır
 
-  -- Kanal bazlı pazarlama izni + GDPR kanıtı (ne zaman, nereden). Faz 1'de yalnız toplanır.
+  -- Kanal bazlı pazarlama izni + GDPR kanıtı (ne zaman, nereden). **OPT-IN**: anahtar yoksa izin
+  -- YOKTUR. Kampanya göndermek açık rıza ister; sessizliği rıza saymak hukuken de yanlıştır.
   add column marketing_consent jsonb not null default '{}'::jsonb,
+  /*
+    Bildirim TÜRÜ bazlı ret (22.08) — kanal değil TÜR. Bugün tek anahtar: `feedbackInvite`.
+
+    ── NEDEN `marketing_consent`E EKLENMEDİ ────────────────────────────────────
+    O şemanın anahtarları KANAL adıdır ve `MarketingChannelEnum` onlardan TÜRÜYOR
+    (`user-profile.schema` künyesi: "üçüncü kanal eklendiğinde derleme dursun"). Değerlendirme
+    daveti bir kanal değil; oraya konsaydı operasyonun "izinli müşteriler" süzgecinde bir kanal
+    olarak belirir ve "e-posta / WhatsApp / değerlendirme daveti" diye okunurdu.
+
+    ── VARSAYILAN TERS, VE BİLEREK ─────────────────────────────────────────────
+    `marketing_consent` opt-in; bu alan **opt-OUT**: anahtar yoksa davet GİDER. Sebebi hukuki ayrım
+    — kampanya açık rıza ister, teslim edilmiş bir siparişin değerlendirme daveti mevcut müşteri
+    ilişkisine dayanır ve gereken şey rıza değil, KOLAY REDDEDİLEBİLİRLİKTİR. Opt-in yapılsaydı
+    özellik doğduğu gün susardı (bugün davet herkese gidiyor).
+
+    Şekil `marketing_consent` ile aynı (`{granted, at, source}`) — iki alan iki dilde konuşmasın.
+  */
+  add column notification_consent jsonb not null default '{}'::jsonb,
+  /*
+    Bildirim tercihleri sayfasının OTURUMSUZ anahtarı (22.08). Her giden mailin altbilgisinde
+    "Bildirim tercihleri" bağı var ve o bağ bugüne kadar giriş duvarına çıkıyordu.
+
+    **Neden gerekli:** izni geri almak, vermek kadar kolay olmalı (GDPR). İzni checkout'ta tek
+    tıkla veren müşteriye geri almak için OTP'li giriş yaptırmak bu ölçüte uymaz.
+
+    **Neden `referral_code` KULLANILMIYOR:** o kod paylaşılmak için var — WhatsApp'ta, ekran
+    görüntüsünde dolaşır. Aynı dizeyle tercih değiştirilebilseydi, davet bağlantısını gören herkes
+    davet edenin bildirimlerini kapatabilirdi.
+
+    **İSTEK ÜZERİNE üretilir** (`referral_code` deseni): mail göndermeyen bir profile jeton
+    yazmanın karşılığı yok. `null` = bu profile henüz mail gitmedi.
+
+    Süresi YOK ve bu bilinçli: jeton yıllar önce gönderilmiş bir mailin altbilgisinde duruyor
+    olabilir ve süreli olsaydı o mail bir gün sessizce ölü bağa dönerdi. Taşıdığı yetki dar —
+    yalnız tercihleri okumak ve yazmak; kimlik, adres, sipariş görünmez. Kimlik silinince
+    (`anonymize_customer`, 0037) jeton da düşer.
+  */
+  add column notification_token text unique,
   -- Edinim kaynağı — İLK siparişte bir kez yazılır, sonra değişmez.
   add column acquisition_source jsonb,
   add column referred_by uuid references public.user_profiles (id) on delete set null,

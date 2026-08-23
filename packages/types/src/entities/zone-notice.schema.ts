@@ -50,6 +50,16 @@ export const ZoneNoticeSchema = z.object({
   createdAt: z.string(),
   /** Haber gönderildiğinde damgalanır — **tek hatırlatma** sözü bununla tutulur. */
   notifiedAt: z.string().nullable(),
+  /**
+   * Tercih bağının oturumsuz anahtarı (22.08). **Bu tabloda gerekli, çünkü kayıt HESAPSIZ olabilir**
+   * — on mail şablonundan dokuzunun alıcısında profil var, burada çoğu zaman yok. Profil jetonuyla
+   * çözülemeyen tek yol bu; jetonsuz bırakılsaydı ziyaretçi tercih bağına bastığında hesabı olmayan
+   * bir giriş ekranında kalırdı.
+   *
+   * `null` = eski kayıt (jeton kavramından önce). Okuyan taraf onu "bağ üretilemez" sayar, hata
+   * değil: mail yine gider, yalnız altbilgisi giriş sayfasına düşer.
+   */
+  token: z.string().nullable(),
 });
 export type ZoneNotice = z.infer<typeof ZoneNoticeSchema>;
 
@@ -61,6 +71,9 @@ export const ZoneNoticeInsertSchema = ZoneNoticeSchema.omit({ id: true, createdA
   // kayıt alınmamalı, çünkü haberi nereye göndereceğimizi bilmiyor oluruz.
   placeName: true,
   source: true,
+  // Jetonu SERVİS üretir (`ZoneNoticeService.record`) — çağıranın uydurmasına bırakılırsa iki
+  // yüzey iki farklı uzunlukta dize yazar ve biri bir gün tahmin edilebilir olur.
+  token: true,
 });
 export type ZoneNoticeInsert = z.infer<typeof ZoneNoticeInsertSchema>;
 
