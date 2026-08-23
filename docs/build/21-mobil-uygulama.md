@@ -4934,7 +4934,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama (sertleştirme turu): `typecheck` **19/19** · `lint` · `boundaries` · birim
   **1388/1388** · mobil jest **620/620**.
 
-  **BEKLEYEN(21.99): `db:reset` KOŞULMADI — kullanıcının onayı bekleniyor** (kendi talimatı).
-  Migration doğrudan düzenlendi (greenfield) ama mevcut satırlarda `null` var, yani şema ancak
-  reset sonrası yürürlüğe girer; o zamana dek **kod ile veritabanı ayrık**. Web'e not bırakıldı
-  (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — form ön-doldurması onların yarısı.
+  **Reset KOŞULDU (22.08, kullanıcı onayıyla) — sertleştirme artık veride de yürürlükte.**
+  `db:reset` tek başına bu projede BOŞ veritabanı bırakıyor (`supabase/config.toml`: SQL seed hook
+  kapalı, besleme TS ile sürülüyor), o yüzden `pnpm db:refresh` koşuldu: reset + `seed.ts` +
+  `seed-coverage.ts`. Ölçüm — `address.recipient` ve `address.phone` `is_nullable = NO`;
+  9 satırın 9'u dolu ve 9'u da E.164 (`+33…` / `+49…`); `MeAddressListSchema.parse` gerçek satırlar
+  üzerinde **temiz geçti** (web'in bildirdiği `ZodError: expected "string" · received "null"` artık
+  üretilemiyor). Tam paket **2751/2751** (244 dosya, 127 sn). Web'e not bırakılmıştı
+  (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — form ön-doldurmasını kendileri yazdı.
