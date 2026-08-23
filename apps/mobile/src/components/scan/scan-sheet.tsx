@@ -6,6 +6,7 @@ import type * as ExpoCamera from 'expo-camera';
 import { hasCameraNativeModule } from './camera-availability';
 
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { hapticCommit } from '@/lib/haptics/haptics';
 import { operationsTheme } from '@/theme/unistyles';
 import { DEV_SCAN_POOL } from './dev-scan-pool';
 
@@ -114,6 +115,10 @@ export function ScanSheet({ open, title, hint, onClose, onScan, devCodes, testID
     (code: string) => {
       if (locked.current || code.length === 0) return;
       locked.current = true;
+      // OKUMA ANININ fiziksel karşılığı (kullanıcı isteği 23.08): kod daha çözülmeden "okundu"
+      // hissi — el okuyucunun bip'inin titreşim hâli. Sonucun tonu ayrıca titreşir (`useNotice`);
+      // bu darbe onun yerine değil, öncesindedir: kamera-sunucu arası boşluk sağır kalmasın.
+      hapticCommit();
       onScan(code);
     },
     [onScan],
@@ -218,8 +223,12 @@ function CameraArea({
         }}
         onBarcodeScanned={({ data }) => onCode(data)}
       />
-      {/* Vizör çerçevesi kameranın ÜSTÜNE çizilir — hedefleme ipucu, kırpma değil. */}
-      <View pointerEvents="none" style={styles.frame} />
+      {/* Vizör çerçevesi kameranın ÜSTÜNE çizilir — hedefleme ipucu, kırpma değil. İçindeki
+          kırmızı çizgi el okuyucularının lazer dili (kullanıcı isteği 23.08): "kodu bu hizaya
+          getir" — çizgiye hizalanan barkod çerçeveye de sığar. */}
+      <View pointerEvents="none" style={styles.frame}>
+        <View style={styles.scanLine} />
+      </View>
     </View>
   );
 }
@@ -248,15 +257,27 @@ const styles = StyleSheet.create((_theme, rt) => ({
   },
   cameraBox: { flex: 1, overflow: 'hidden' },
   camera: { flex: 1 },
+  // Dikeyde ORTALI ve küçük (kullanıcı isteği 23.08 — eski hâli %22'den başlıyor ve %30
+  // yükseklikteydi: yukarıda ve iri duruyordu). Barkod yatay bir şerittir; çerçeve de yatay.
   frame: {
     position: 'absolute',
-    top: '22%',
-    left: '12%',
-    right: '12%',
-    height: '30%',
+    top: '38%',
+    left: '16%',
+    right: '16%',
+    height: '18%',
     borderWidth: 2,
     borderColor: operationsTheme.colors.cream,
     borderRadius: operationsTheme.radius.card,
+    opacity: 0.9,
+  },
+  /** Okuyucu çizgisi — çerçevenin dikey ortasında, kenarlara değmeden. */
+  scanLine: {
+    position: 'absolute',
+    top: '50%',
+    left: operationsTheme.space.xl,
+    right: operationsTheme.space.xl,
+    height: 2,
+    backgroundColor: operationsTheme.colors.terracotta,
     opacity: 0.9,
   },
   permissionBox: {
