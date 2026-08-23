@@ -944,7 +944,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
 
 ## 5. Fiyat ve sayı tutarlılığı
 
-- [~] **MB-20 · Katalog kartındaki fiyat ile detayın açılış fiyatı farklı.** **Ölçüldü:** kart
+- [x] **MB-20 · Katalog kartındaki fiyat ile detayın açılış fiyatı farklı.** **Ölçüldü:** kart
   *4,11 €* gösterdi, detay *6,80 €* (450g) seçili açıldı. Kartta **"…'dan" eki yok** — oysa aynı
   ürün sayfasında aile kartı *"Cevizli 4,82 €'dan"* diye doğru yazıyor.
   **Zaten açık bir talep var:** `docs/talep/musteri-liste-fiyati-baslangic.md` (denetim → müşteri,
@@ -973,9 +973,18 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   detay `?? 0` yazıp fiyatsız üründe **0,00 €** gösterebiliyordu. Alan isteğe bağlı yapıldı, çip
   çizilmiyor. Ölçüldü: bugün fiyatsız dört ürünün dördü de `candidate`, yani yol ekrana çıkmıyordu
   — düzeltme yaşayan bir arızayı değil, sessiz bir tuzağı kapattı.
-  **WEB YARISI AÇIK:** aynı ek web müşteri kartlarında yok — talep dosyası duruyor
+  ~~**WEB YARISI AÇIK:** aynı ek web müşteri kartlarında yok — talep dosyası duruyor
   (`docs/talep/musteri-liste-fiyati-baslangic.md`). İki yüzey bir süre ayrışacak; ayrışma doğru
-  yönde, mobil daha dürüst.
+  yönde, mobil daha dürüst.~~
+  → **WEB YARISI DA KAPANMIŞ — kayıt bayattı, ölçüldü 23.08.** Talep dosyası defterde YOK, yani
+  açan şerit karşılandığını görüp silmiş (`docs/talep/README` yaşam döngüsü). Kodda karşılığı var:
+  `apps/web/.../messages.json` üç dilde `fromPrice` taşıyor (`"{price}'dan"` · `dès {price}` ·
+  `ab {price}`) ve `components/customer/ui/storefront-cards.tsx:305` onu `fromTemplate` olarak
+  geçiriyor. **Kalem bu yüzden `[~]`ten `[x]`e alındı.**
+  *Tek fark ÖLÇÜTTE ve bilerek kayda geçiyor:* web `purchaseMode === 'options'`e bakıyor, mobil
+  `variantCount > 1`e. İkisi bugün aynı kümeyi seçiyor gibi duruyor ama AYNI ŞEY DEĞİL — biri satın
+  alma kipini, öteki boy sayısını soruyor. Ayrıştıkları gün iki yüzey farklı kart gösterir; o gün
+  gelirse ölçüt tek kaynağa çekilmeli, bugün müdahale edilmedi (yaşayan bir arıza yok).
 
 - [x] **MB-21 · Sepette asgari sepet uyarısı ekrandaki toplamla çelişiyor** → **KAPANDI (11.08).**
   **Ölçüldü:** ekranda `Toplam 3,80 €`, hemen altında `Asgari sepet 40,00 € — 33,20 € eksik`. Eksik,
@@ -1022,10 +1031,15 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   sipariş başka yere yönlendirilmişti; gerçek müşteri davranışı değil, test kurgusu. "Geç anlaşılıyor"
   itirazı da sepetteki o cümleyi görmezden geliyordu. *Tekrar açılmasın diye kaydı duruyor.*
 
-- [ ] **MB-59 · Vitrin başlığında yer adının kaybolduğu bir kare — ÜRETİLEMEDİ.** 11.08'de bir kez
+- [ ] **MB-80 · Vitrin başlığında yer adının kaybolduğu bir kare — ÜRETİLEMEDİ.** 11.08'de bir kez
   görüldü: *"67000 STRASBOURG"* yerine yalnız *"67000"*. Yer adı ayrı bir uçtan çözülüyor
   (`usePlaceResolution`), yani çözüm gecikince ya da düşünce kod tek başına kalıyor olabilir —
   **teori, ölçülmedi.** MB-23 elenirken tek gerçek gözlem olarak ayrıldı.
+
+  **KİMLİK DÜZELTİLDİ 23.08: bu kalem MB-59 diye yazılmıştı ama o numara ZATEN KULLANIMDAYDI**
+  (puan geçmişi, `docs/build/21-mobil-uygulama.md` `(21.60)` o kimlikle anıyor). İki ayrı maddenin
+  aynı kimliği taşıması, "işi kimlikle üstlen" kuralını sessizce kırar: `(21.60)`'ı okuyan ajan
+  kapanmış bir kalemi bu açık gözlemle karıştırırdı. Numara MB-80'e alındı, dışarıdan bağı yoktu.
 
 - [x] **MB-60 · Google ile kaydolan davetlinin davet bağı KURULMUYOR — iki yüzeyde de.** Ölçüldü
   11.08 (kod, `21.43` turunda).
@@ -1046,7 +1060,18 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   ikinci bir sessiz boşluk açar. Ölçüt basit: "yeni müşteri kartı DOĞDUĞU an" nerede biliniyorsa
   bağ orada kurulmalı.
 
-- [ ] **MB-61 · Birden fazla komşu daveti — arayüz tek daveti gösteriyor, ödül sırası tanımsız.**
+- [x] **MB-61 · Birden fazla komşu daveti — arayüz tek daveti gösteriyor, ödül sırası tanımsız.**
+  → **NATIVE TARAFI KAPANDI, görev `(21.93)`** (21.08). Kutucuk 23.08'e kadar boş kalmıştı: gövde
+  *"TESLİM EDİLDİ"* diyor ama başlık 12.08'in eski hâlini taşıyordu, yani satırın başını okuyan
+  ajan kapanmış bir işi açık sanıyordu. Kayıt kodla karşılaştırılarak düzeltildi (23.08) —
+  beş vaadin beşi de yerinde: çoğul sözleşme (`checkout-api.schema.ts:67`), çoğul okuma
+  (`neighbor.ts:307` `readPendingNeighborInvites`), `chosen_at`+`declined_at` ve
+  `(customer_id, chosen_at desc)` dizini (`0044_neighbor_invite.sql:125-138`), ret ucu
+  (`invite.ts:232`), sınırın yazılması ve doluysa paylaşımın çizilmemesi
+  (`order-confirmed-screen.tsx:126-133`).
+  **WEB YARISI AÇIK — `docs/talep/not-web-komsu-daveti-sinir-yalniz-native.md`** (23.08): 21.08'in
+  şeffaflık kararı iki yüzeyden yalnız native'e yazılmış. Bu satır o işi TUTMAZ (dosya native
+  kapsamıdır); not web şeridine bırakıldı, takibi orada.
   Ölçüldü 12.08 (kod + cihaz). Bir müşteri birden çok komşusundan davet almış olabilir; davetler
   aynı sefere de olabilir farklı seferlere de. **Bugün:** sunucu yalnız EN YAKIN açık daveti dönüyor
   (`readPendingNeighborInvite`), yani ikinci davet hiç görünmüyor; aynı gündeki iki davette ise hem
@@ -1636,7 +1661,11 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **Yan bulgu (alan: arka-uç/denetim):** `product` tablosunda damgalı bir test fikstürü duruyor —
   `İçli köfte 1786922725238`. Teardown'dan kaçmış; katalog okuyan her ekranda görünür.
 
-- [ ] **MB-32 · Süresi dolmuş davet ile bozuk bağlantı aynı cümleyi alıyor:** *"bağlantı eksik ya
+- [x] **MB-32 · Süresi dolmuş davet ile bozuk bağlantı aynı cümleyi alıyor:**
+  → **KARARLA KAPANDI (14.08): SIRAYA KONMUYOR.** Kutucuk 23.08'e kadar boş duruyordu ve kalem
+  açık iş listelerinde görünüyordu, oysa gövdedeki karar zaten *"sıraya konmuyor"* diyor. Bu
+  dosyanın kendi kuralı (MB-23 "elendi", MB-33 "arıza değil") kararla kapanan kalemi `[x]` yazar;
+  kayıt ölçümüyle aşağıda duruyor ki bir daha "ucuz metin işi" sanılmasın. *"bağlantı eksik ya
   da eskimiş olabilir"*. Süresi dolmuş davete kendi cümlesi gerekiyor.
 
   **ÖLÇÜLDÜ 14.08 (kod) — METİN İŞİ DEĞİL, ve ayrımın olmaması BİLİNÇLİ.** Ekran iki hâli
