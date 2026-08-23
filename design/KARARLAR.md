@@ -1676,3 +1676,40 @@ etmiyor: kutu, boşluklar ve tipografi aynen kalıyor, değişen tek şey sarmal
 **Dokunma hedefi görünmez bırakılmadı:** dar ekranda eylemin adı (`help.cta`) bağlantı renginde bir
 satır olarak duruyor. Görünmez bir dokunma hedefi, olmayan bir düğmeden kötüdür — müşteri
 dokunulabileceğini bilmez, dokunanlar da kazara dokunur.
+
+---
+
+## Kampanya rozeti — HAP köşe evet, RENK yükseltmesi HAYIR (23.08, native müşteri kartı)
+
+Kullanıcı kategori/koleksiyon kampanyalarının kartlarda görünmesini isterken şunu söyledi:
+*"Oradaki gösterme tipi biraz daha görsel yapabiliriz belki rozet koyarız falan yuvarlak biraz daha
+dikkat çekici bir şey yapabiliriz; bir de ne olduğu anlaşılmıyor, metinlerin arasında kayboluyor."*
+
+**Şikâyetin ölçümü (21.100):** kampanya kartta hiç yoktu — katalogda kesitin başındaki not
+şeridinde, vitrinde koleksiyon bandının ADET satırına eklenmiş bir metin parçasıydı. Yani
+"kayboluyor" birebir doğruydu ve asıl kazanç, ifadeyi **metinden rozete taşımak** oldu.
+
+**YAPILAN:** `ProductCircleCard`ın durum rozeti hap köşeye alındı (`Tag shape="pill"` →
+`radius.pill`, resmî setin "hap düğme, çip, sayaç" kademesi). Kullanıcının söylediği "yuvarlak"
+budur ve yeni bir değer icat etmiyor. `Tag`e eklenen `shape` propunun varsayılanı `badge`, yani
+öteki ~18 kullanım aynen kaldı — kademeyi komponentin tamamına dayatmak, tasarımın dört kademeli
+kararını üçe indirirdi.
+
+**YAPILMAYAN ve GEREKÇESİ — ton `cream` kaldı.** "Daha dikkat çekici" için akla ilk gelen şey
+rozeti terracotta'ya çekmekti; ölçüm bunu çürüttü: **daire kartta terracotta zaten FİYAT çipinin
+rengidir** (`product-circle-card` alt köşe). İndirimi de terracotta yapmak, satın alma kararının
+birincil vurgusunu ikiye böler ve iki çip aynı kartta birbiriyle yarışır.
+
+Tasarım dili bu noktada tutarsız DEĞİL, sadece kart tipine göre değişiyor: **fırsat şeridinde**
+indirim çipi terracotta'dır çünkü orada fiyat düz metindir (`home-screen` fırsat kartı); **daire
+kartta** terracotta fiyata aittir ve fotoğraf üstündeki ikincil rozetin tonu `cream`dir. İkisi de
+kendi bağlamında doğru.
+
+Öteki tonlar da elenmiş durumda: `ink` bu yuvada **"Tükendi"** demektir (aynı yuva, karşılıklı
+dışlayan iki hâl) — indirime vermek anlam çakışması olurdu; `sand` zaten yumuşak vurgudur, "dikkat
+çekici" isteğini karşılamaz.
+
+**Sonuç:** rozetin RENK kademesinin yükseltilmesi (yeni bir vurgu tonu ya da mevcut hiyerarşinin
+yeniden kurulması) bir TASARIM kararıdır, kod tarafında uydurulmadı — `CLAUDE §3`. Karar gerekirse
+Claude Design'dan gelir; veri yolu ve üç kuralı (rozet nerede çizilir · Fırsat kampanyayı yener ·
+eşikli kampanya rozete girmez) hazır durduğu için o gün **yalnız stil** değişir.

@@ -18,6 +18,7 @@ import { useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
+import { rememberPlaceName, useRememberedPlaceName } from '@/lib/places/place-name-memory';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
@@ -202,9 +203,22 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
   const savedPlace = usePlaceResolution(postalCode ?? '');
-  const savedPlaceName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
+  const resolvedName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
+  /* HATIRLANAN AD (MB-80, 23.08) — ölçüldü: `resolvedName` üç durumda birden `null` (kod eksik ·
+     cevap HENÜZ gelmedi · istek DÜŞTÜ) ve başlık o üçünde de çıplak kod yazıyordu. Yani vitrin HER
+     açılışta, `/places` cevabı gelene kadar "67000" gösteriyordu; kullanıcının 11.08'de yakaladığı
+     kare buydu. İstek düşerse çıplak kod KALICI oluyordu. Bir posta kodunun şehri değişmez, cihaz
+     onu geçen sefer öğrendi — en doğru tahmin odur (vitrin yerleşim izinin aynı gerekçesi). */
+  const rememberedName = useRememberedPlaceName(postalCode);
+  const savedPlaceName = resolvedName ?? rememberedName;
   const postalLabel =
     postalCode === null ? null : savedPlaceName === null ? postalCode : `${postalCode} ${upperIn(savedPlaceName, locale)}`;
+
+  /* Yazma YALNIZ canlı çözümden: hatırlanan adı geri yazmak kaydı hiç tazelemeden döngüye sokardı.
+     `rememberPlaceName` aynı kaydı ikinci kez diske yazmıyor. */
+  useEffect(() => {
+    if (postalCode !== null && resolvedName !== null) void rememberPlaceName(postalCode, resolvedName);
+  }, [postalCode, resolvedName]);
 
   /* Vitrin okuması YERE bağlı: posta kodu `useHome`a geçer, sunucu depoyu çözer ve fırsat şeridi
      ancak öyle dolar (ölçüldü 09.08 — kodsuz 0, 67000 ile 2). Çağrı bu yüzden posta kodunun

@@ -59,6 +59,8 @@ export const DEVICE_STORE_KEYS = {
   invite: 'lezzet.invite',
   /** Kabul edilmiş KOMŞU daveti belirteci; aynı kapıdan aynı anda devredilir. */
   neighborInvite: 'lezzet.invite.neighbor',
+  /** Posta kodunun ÇÖZÜLMÜŞ yer adı — vitrin başlığı cevabı beklerken çıplak kod yazmasın diye. */
+  placeName: 'lezzet.place.name',
 } as const;
 
 /**

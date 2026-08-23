@@ -4998,12 +4998,46 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `social-inbox-screen.test.tsx:88`, `social-conversation-screen.test.tsx:91`, dokunulmadı) ·
   birim **1417/1417** · mobil jest **657/657** (90 dosya) · `lint` temiz.
 
-  **BEKLEYEN(21.100): rozetin GÖRSELİ tasarıma sorulmadı.** Kullanıcı *"yuvarlak, daha dikkat
-  çekici"* bir rozet istedi; `design/pages/musteri-katalog.md`'de kampanya rozetinin karşılığı yok
-  ve CLAUDE §3 görsel kararı Claude Design'a bırakıyor. Rozet şimdilik kartın MEVCUT rozet dilinde
-  ("Fırsat"ın yuvası) çiziliyor — yeni bir görsel icat edilmedi. Tasarım geldiğinde **yalnız stil**
-  değişir; veri yolu ve üç kural aynen durur.
+  ~~**BEKLEYEN(21.100): rozetin GÖRSELİ tasarıma sorulmadı.**~~ → **YARISI KAPANDI (23.08).**
+  Kullanıcının söylediği *"yuvarlak"* uygulandı: rozet hap köşeye alındı (`Tag shape="pill"` →
+  `radius.pill`, resmî setin "hap düğme, çip, sayaç" kademesi). Prop varsayılanı `badge`, yani
+  `Tag`in öteki ~18 kullanımı aynen kaldı.
+  **RENK yükseltilmedi ve bu bilinçli:** daire kartta terracotta ZATEN fiyat çipinindir; indirimi
+  de ona boyamak satın alma kararının birincil vurgusunu ikiye bölerdi. `ink` bu yuvada "Tükendi"
+  demek, `sand` zaten yumuşak vurgu. Renk kademesinin yükseltilmesi bir TASARIM kararıdır ve
+  uydurulmadı (CLAUDE §3) — gerekçesiyle `design/KARARLAR.md`'ye kapanmış karar olarak yazıldı.
+  Karar gelirse **yalnız stil** değişir; veri yolu ve üç kural aynen durur.
 
   **MB-22a AÇIK ve web/operasyonun alanı:** etiketsiz indirim kaydedilebiliyor, o yüzden bazı
   kampanyalar müşteriye anonim *"Kampanya"* diye görünüyor. Rozet geldiği için artık daha görünür
   bir eksik. Not bırakıldı (`docs/talep/not-operasyon-kampanya-etiketi-zorunlu-olmali.md`).
+
+- [x] (21.101) **VİTRİN BAŞLIĞI YER ADINI ARTIK HATIRLIYOR — çıplak posta kodu karesi kapandı (MB-80)**
+  · touches: `apps/mobile/src/lib/places/place-name-memory.ts`,
+  `apps/mobile/src/lib/storage/device-store.ts`, `apps/mobile/src/screens/home/home-screen.tsx`
+
+  **KAYIT "ÜRETİLEMEDİ, TEORİ" DİYORDU — ÖLÇÜLDÜ, DETERMİNİSTİKMİŞ.** Kullanıcı 11.08'de bir kez
+  başlıkta *"67000 STRASBOURG"* yerine yalnız *"67000"* görmüş, sebep bulunamamıştı. Kod tek satırda
+  söylüyor (`home-screen.tsx`): `savedPlaceName === null ? postalCode : …` — ve `savedPlaceName`
+  ÜÇ durumda birden `null`: kod eksik · cevap HENÜZ gelmedi · istek DÜŞTÜ. Yani bu nadir bir arıza
+  değil, **her açılışta olan** ve genelde çok kısa süren bir geçiş; kullanıcı o kareyi yakalamış.
+
+  **İkinci ve daha kötü hâl:** istek düşerse başlık **kalıcı olarak** çıplak kodda kalıyor. Hook
+  bu iki hâli ayırt edebilsin diye `pending` bayrağını zaten üretiyor (`use-place-resolution`
+  künyesi: *"ekranın iskelet göstereceği tek hâl"*), ama vitrin ince sarmalayıcıyı kullanıp o
+  bayrağı yere düşürüyordu.
+
+  **ÇARE İSKELET DEĞİL, BELLEK.** "Cevap gelene kadar iskelet çiz" ilk akla gelen ama daha kötüsü:
+  ilk açılışta yine bekleme çizilir ve DÜŞEN istekte iskelet hiç sönmez. Oysa cevabın kendisi
+  biliniyor — **bir posta kodunun şehri değişmez.** Cihaz onu geçen sefer öğrendi; en doğru tahmin
+  odur (vitrin yerleşim izinin `home-layout-memory` aynı gerekçesi).
+
+  **YALNIZ AD SAKLANIYOR, ÇÖZÜMÜN TAMAMI DEĞİL:** `PlaceResolution` içinde `inRoute` gibi
+  DEĞİŞEBİLEN alanlar var; onları saklayıp taze veri gibi okumak stok işaretini ve bölge uyarısını
+  bayat bilgiyle çizmek olurdu (CLAUDE §0 — belirtiyi susturan çözüm). Stok işareti ve uyarı bandı
+  canlı çözümü okumaya devam ediyor. Kayıt tek satır ve anahtarı kodun kendisi: kod değişirse
+  eşleşmez ve kullanılmaz — bayat bir şehir adının yeni kodun yanında görünmesi, düzeltmeye
+  çalıştığımız yanlışın daha beteri olurdu.
+
+  Doğrulama: `typecheck` temiz (`@lezzet/mobile`de kalan iki hata BAŞKA şeridin commit'lenmiş
+  `global.fetch` satırları) · mobil jest · birim paketi.

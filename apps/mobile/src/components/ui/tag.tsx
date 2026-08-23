@@ -32,14 +32,32 @@ interface TagProps {
   rotate?: number;
   /** Sert değil YUMUŞAK gölge — fotoğraf üstünde duran rozetler bunu taşır. */
   shadow?: boolean;
+  /**
+   * Köşe kademesi (kullanıcı isteği 23.08 — *"biraz daha yuvarlak, dikkat çekici"*).
+   *
+   * Varsayılan `badge` (12px) bugünkü ~18 kullanımın hepsinin hâli; `pill` (22px) resmî setin
+   * "hap düğme, çip, sayaç" kademesidir (`customerAppRadius` künyesi). Prop, çünkü kademeyi
+   * komponentin tamamına dayatmak tasarımın dört kademeli kararını üçe indirirdi — burada
+   * daha yuvarlak istenen TEK bir rozet var, hepsi değil.
+   */
+  shape?: 'badge' | 'pill';
   /** Verilirse rozet dokunulabilir olur (fiyat çipi "sepete ekle" gibi). */
   onPress?: () => void;
   accessibilityLabel?: string;
   testID?: string;
 }
 
-export function Tag({ label, tone = 'terracotta', rotate = 0, shadow = false, onPress, accessibilityLabel, testID }: TagProps) {
-  const badgeStyle = [styles.badge, styles[tone], shadow ? styles.shadow : undefined];
+export function Tag({
+  label,
+  tone = 'terracotta',
+  rotate = 0,
+  shadow = false,
+  shape = 'badge',
+  onPress,
+  accessibilityLabel,
+  testID,
+}: TagProps) {
+  const badgeStyle = [styles.badge, styles[tone], shape === 'pill' ? styles.pill : undefined, shadow ? styles.shadow : undefined];
   const content = <Text style={[styles.label, styles[`${tone}Label`]]}>{label}</Text>;
   const rotation = rotate === 0 ? undefined : { transform: [{ rotate: `${rotate}deg` }] };
 
@@ -74,6 +92,7 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space.xl,
     borderRadius: theme.radius.badge,
   },
+  pill: { borderRadius: theme.radius.pill },
   shadow: {
     // Rozetin KENDİ gölgesi (#16): `soft`un 1 px yüksekliği fotoğraf üstünde yetmiyordu.
     boxShadow: theme.shadow.badge,

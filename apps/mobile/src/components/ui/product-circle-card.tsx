@@ -114,7 +114,14 @@ export function ProductCircleCard({
           </View>
         ) : !soldOut && discountLabel !== undefined ? (
           <View style={styles.statusBadge}>
-            <Tag label={discountLabel} tone="cream" rotate={-7} shadow />
+            {/* HAP KÖŞE (kullanıcı isteği 23.08 — "biraz daha yuvarlak, dikkat çekici"): kampanya
+                rozeti buraya geldiğinde (21.100) kullanıcı onun metnin arasında kaybolduğunu
+                söyledi. Ton DEĞİŞMEDİ ve bu bilinçli: terracotta bu kartta FİYAT çipinindir
+                (aşağıda) ve indirimi de ona boyamak, satın alma kararının birincil vurgusunu
+                ikiye bölerdi. Fırsat şeridindeki çip terracotta çünkü orada fiyat düz metin —
+                yani tasarım dili tutarlı, kartların ihtiyacı farklı. Rengin yükseltilmesi bir
+                TASARIM kararıdır ve uydurulmadı (`design/KARARLAR.md`). */}
+            <Tag label={discountLabel} tone="cream" rotate={-7} shadow shape="pill" />
           </View>
         ) : null}
         {/* YER İŞARETİ DAİRENİN İÇİNDE (kullanıcı kararı 10.08) — kartın ALTINDA değil.
