@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   ConversationSourceEnum,
+  LinkProofKindEnum,
   MessageDirectionEnum,
   MessageKindEnum,
   TemplateCategoryEnum,
@@ -67,6 +68,19 @@ export const ConversationSchema = z.object({
    * buradan okunur (15.11). Kararı motor verir (`serviceWindowExpiry`), tablo yalnız saklar.
    */
   windowExpiresAt: z.string().nullable(),
+  /**
+   * **Bağın künyesi** (15.19) — kimliği KİM kurdu, NE ZAMAN, HANGİ KANITLA.
+   *
+   * **Üçü de boş = bağı SİSTEM kurdu:** WhatsApp'ta kimlik numaradan çözülür, ortada operatör
+   * kararı yoktur. Boşluk burada "bilgi eksik" değil, okunur bir cevaptır.
+   *
+   * `linkedBy` ötekilerden ayrı boşalabilir (FK `set null` — personel kaydı silinirse): kimin
+   * bağladığı kaybolabilir, neye dayanarak bağladığı hayır.
+   */
+  linkedBy: z.string().uuid().nullable(),
+  linkedAt: z.string().nullable(),
+  /** Kanıtın TÜRÜ — değeri saklanmaz (`CLAUDE §1`: kimlik yazılır, içerik yazılmaz). */
+  linkProof: LinkProofKindEnum.nullable(),
   /** Son hareketin anı; gelen kutusunun sıralama alanı. `recordMessage` yazar. */
   lastMessageAt: z.string().nullable(),
   createdAt: z.string(),

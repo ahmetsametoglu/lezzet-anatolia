@@ -154,6 +154,8 @@ export { customerSupportTools } from './ticket/support-tools';
 // webhook'u artık buradan çağırıyor, mobil `/social` uçları da aynı kapıya yazıyor. Konuşma
 // AÇILIŞI webde kaldı — kimlik çözümü web'in identity katmanında (gerekçe dosya başlığında).
 export { recordInboundMessage, recordOutboundMessage } from './messaging/record';
+// Kimlik bağlama KAPISI (15.19) — kanıt sunucuda doğrulanır; ikinci yüzey kendi kapısını yazmasın.
+export { linkConversationCustomer } from './messaging/link';
 export {
   sendOutboundMessage,
   unconfiguredSender,
@@ -164,6 +166,7 @@ export {
   type SendTarget,
 } from './messaging/send';
 export type { RecordMessageInput } from './messaging/record';
+export type { LinkProof, LinkOutcome } from './messaging/link';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
 // Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden
@@ -499,3 +502,16 @@ export { listPublicDeliveryAreas } from './delivery/zones';
 // gerekçesi ölçümüyle yazılı), yüzey onu rozet/cümle olarak söyler.
 export { readScopeCampaigns, EMPTY_SCOPE_CAMPAIGNS } from './catalog/campaign';
 export type { ScopeCampaign, ScopeCampaigns } from './catalog/campaign';
+
+/* Analitiğin İKİ YÜZEYE ortak tek parçası (24.08 · MB-63) — günlük oturum tuzu. Kapının kendisi
+   ortak DEĞİL ve olmamalı: web'in düşürme kurallarının (prefetch · bot UA · rota kalıbı · UTM)
+   native'de karşılığı yok, native'in kendi kapısı `apps/mobile-api/src/lib/analytics.ts`. */
+export { dailySalt } from './analytics/salt';
+
+/* Görüntüleme anındaki satılabilirlik — `apps/web`ten taşındı (24.08 · MB-63): saf mantık, iki
+   yüzeyde AYNI soru. Kopyalansaydı aynı ürün web'de `sellable`, native'de `sold_out` sınıflanabilir
+   ve hiçbir yerde hata vermezdi. */
+export { availabilityOf } from './analytics/availability';
+export { bundleAvailabilityOf } from './analytics/availability';
+export { effectiveChannelOf } from './catalog/pricing-viewer';
+export { checkoutBlockedAnalyticsReason } from './cart/cart-types';

@@ -303,6 +303,35 @@ export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
 export const ConversationHandlerEnum = TicketHandlerEnum.exclude(['ai']);
 export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 
+/**
+ * **Sohbeti müşteriye bağlarken sunulan KANIT** (15.19).
+ *
+ * Messenger/Instagram'da kimliğin tek yolu operatörün elle kurduğu bağdır (PSID/IGSID telefon
+ * taşımaz) ve o bağ yanlış kurulursa yalnız ekran değil, AJANIN ARAÇLARI da yanlış müşteriye
+ * açılır — hata tek alanı değil, o müşterinin verisinin tamamını açar. Bu yüzden bağ bir kanıta
+ * dayanır ve kanıt SUNUCUDA doğrulanır.
+ *
+ * Üçü de **kişinin bilmesi gereken** şeylerdir, operatörün gözüyle doğrulanan şeyler değil:
+ *   · `order_ref` — sipariş referansı; seçilen müşterinin siparişlerinden biri olmak zorunda.
+ *   · `email` / `phone` — kayıtlı iletişim anahtarı; normalize edilip kayıtla karşılaştırılır.
+ *
+ * **"Kontrol ettim" kutusu YOK** ve olmayacak: onay kutusu bir KAYIT olurdu, bir KAPI değil —
+ * acelede tıklanır ve hiçbir şeyi durdurmaz.
+ *
+ * **Dördüncü değer bekleniyor:** kayıtlı kanala kod gönderip sohbetten geri istemek en güçlü
+ * doğrulamadır ama sistemin gönderim kanalı yok (15.11); o yol 04.10'un çapası ve geldiğinde
+ * buraya eklenir.
+ */
+export const LinkProofKindEnum = z.enum(['order_ref', 'email', 'phone']);
+export type LinkProofKind = z.infer<typeof LinkProofKindEnum>;
+
+/** Kanıt türlerinin operatöre görünen adları — pencere bunları okur. */
+export const LINK_PROOF_LABELS: Record<LinkProofKind, string> = {
+  order_ref: 'Sipariş numarası',
+  email: 'Kayıtlı e-posta',
+  phone: 'Kayıtlı telefon',
+};
+
 /** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */
 export const TICKET_HANDLER_LABELS: Record<TicketHandler, string> = {
   human: 'İnsan',

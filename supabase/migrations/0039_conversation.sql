@@ -82,6 +82,22 @@ create table public.conversation (
   opt_in boolean not null default false,
   opt_in_at timestamptz,
 
+  -- ── BAĞIN KÜNYESİ (15.19) — kimliği KİM kurdu, NE ZAMAN, HANGİ KANITLA ─────
+  -- Messenger/IG'de kimliğin tek yolu operatörün elle kurduğu bağdır (PSID/IGSID telefon
+  -- taşımaz). O bağ yanlış kurulursa yalnız ekran değil, AJANIN ARAÇLARI da yanlış müşteriye
+  -- açılır (`support-tools.ts` kimliğe kapatılmıştır) — yani hata tek bir alanı değil, o
+  -- müşterinin verisinin TAMAMINI açar. Üç kolon o kararı geri izlenebilir kılıyor.
+  --
+  -- **Üçü de boş = bağı SİSTEM kurdu:** WhatsApp'ta kimlik numaradan çözülür ve ortada bir
+  -- operatör kararı yoktur. Boşluk burada "bilgi eksik" değil, okunur bir CEVAPTIR.
+  linked_by uuid references public.user_profiles (id) on delete set null,
+  linked_at timestamptz,
+  -- Kanıtın TÜRÜ — değeri DEĞİL (`CLAUDE §1`: kimlik yazılır, içerik yazılmaz). Sorulacak soru
+  -- "hangi kanıtla bağlandı"dır; "e-postası neydi" değil, ve değeri saklamak gereksiz bir
+  -- kişisel veriyi ikinci bir yere kopyalamak olurdu. Enum DEĞİL `text`+check: dördüncü değer
+  -- (04.10'un e-posta kodu) geldiğinde tip değişimi gerektirmesin.
+  link_proof text check (link_proof in ('order_ref', 'email', 'phone')),
+
   -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
   -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
   window_expires_at timestamptz,
@@ -93,7 +109,14 @@ create table public.conversation (
   -- İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
   constraint conversation_opt_in_stamp check (opt_in = false or opt_in_at is not null),
   -- Taslak ile damgası ayrışamaz (`ticket_ai_draft_stamp` ile aynı gerekçe).
-  constraint conversation_ai_draft_stamp check ((ai_draft_reply is null) = (ai_draft_generated_at is null))
+  constraint conversation_ai_draft_stamp check ((ai_draft_reply is null) = (ai_draft_generated_at is null)),
+  -- Bağın künyesi: damga ile kanıt BİRLİKTE doğar; kanıtsız damga "bağladım ama neye dayanarak
+  -- bilmiyorum" demekti. **`linked_by` bu çifte DAHİL DEĞİL** ve bu bilinçli: FK'si `set null`,
+  -- yani personel kaydı silindiğinde kolon boşalır — üçlü bir kısıt tam o gün, hiç kimsenin
+  -- beklemediği bir yerde kırılırdı. Kimin bağladığı kaybolabilir, neye dayanarak bağladığı hayır.
+  constraint conversation_link_proof check ((linked_at is null) = (link_proof is null)),
+  -- Bağ künyesi ancak BAĞ VARKEN yazılabilir: müşterisi olmayan bir konuşmanın "kim bağladı"sı olmaz.
+  constraint conversation_link_customer check (linked_at is null or customer_id is not null)
 );
 
 alter table public.conversation enable row level security;

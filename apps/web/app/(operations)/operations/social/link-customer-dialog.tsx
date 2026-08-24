@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { ConversationSource } from '@lezzet/types';
+import { LINK_PROOF_LABELS, LinkProofKindEnum, type ConversationSource, type LinkProofKind } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Combobox } from '@/components/operation/form/combobox';
@@ -26,7 +26,23 @@ import { SOURCE_LABELS } from './social-labels';
  * **Kaydı OLMAYAN müşteri buradan açılmaz** ve bu bilinçli bir sınır: müşteri açmak Müşteriler
  * ekranının işidir (09.10) ve orada adres, izin, B2B gibi alanlarıyla birlikte açılır. Buraya
  * ikinci bir müşteri açma yolu koymak, yarım kayıtlar üretirdi.
+ *
+ * ── KANIT ZORUNLU (15.19) ───────────────────────────────────────────────────
+ * Kayıt seçmek yetmiyor: operatör müşterinin SÖYLEDİĞİ bir değeri de yazıyor (sipariş numarası,
+ * kayıtlı e-posta ya da telefon) ve sunucu onu seçilen kayda karşı doğruluyor. Doğrulama burada
+ * DEĞİL — pencerede yapılsaydı, tarayıcıya güvenmiş olurduk.
+ *
+ * **"Kontrol ettim" kutusu koymadık ve koymayacağız:** onay kutusu bir kayıttır, bir kapı değil.
+ * Acelede tıklanır ve hiçbir şeyi durdurmaz; oysa yanlış bağ, o müşterinin verisinin tamamını
+ * (ajanın araçları dahil) açar.
  */
+
+/** Her kanıt türünün örneği — operatör müşteriden NE isteyeceğini bilsin. */
+const PROOF_PLACEHOLDER: Record<LinkProofKind, string> = {
+  order_ref: 'LA-26-7K4M2P',
+  email: 'ornek@eposta.com',
+  phone: '06 12 34 56 78',
+};
 
 interface LinkCustomerDialogProps {
   conversationId: string;
@@ -39,6 +55,10 @@ interface LinkCustomerDialogProps {
 
 export function LinkCustomerDialog({ conversationId, title, source, onClose, onLinked }: LinkCustomerDialogProps) {
   const [customer, setCustomer] = useState<CustomerOption | null>(null);
+  // Varsayılan kanıt SİPARİŞ NUMARASI: üçünün en güçlüsü — e-posta ve telefon bir şirket için
+  // yayımlanmış olabilir, sipariş numarası yalnız o siparişi alanın elindedir.
+  const [proofKind, setProofKind] = useState<LinkProofKind>('order_ref');
+  const [proofValue, setProofValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,11 +77,17 @@ export function LinkCustomerDialog({ conversationId, title, source, onClose, onL
       .finally(() => setSearching(false));
   };
 
+  const hazir = Boolean(customer) && proofValue.trim().length >= 3;
+
   const submit = async () => {
-    if (!customer || busy) return;
+    if (!hazir || !customer || busy) return;
     setBusy(true);
     setError(null);
-    const { data, error: actionError } = await linkConversationCustomerAction({ conversationId, customerId: customer.id });
+    const { data, error: actionError } = await linkConversationCustomerAction({
+      conversationId,
+      customerId: customer.id,
+      proof: { kind: proofKind, value: proofValue },
+    });
     setBusy(false);
     if (!data) {
       setError(actionError ?? 'Bağlanamadı.');
@@ -83,7 +109,7 @@ export function LinkCustomerDialog({ conversationId, title, source, onClose, onL
             {error ? (
               <span className="font-semibold text-ops-red">{error}</span>
             ) : (
-              'Bağ kurulunca sipariş geçmişi ve izin bilgisi bu sohbette görünür'
+              'Bağ kurulunca sipariş geçmişi, izin bilgisi ve YZ araçları bu müşteriye açılır'
             )}
           </span>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
@@ -92,8 +118,8 @@ export function LinkCustomerDialog({ conversationId, title, source, onClose, onL
           <Button
             variant="primary"
             onClick={() => void submit()}
-            disabled={busy || !customer}
-            title={customer ? undefined : 'Müşteri seçilmeli'}
+            disabled={busy || !hazir}
+            title={hazir ? undefined : 'Müşteri seçilmeli ve kanıt yazılmalı'}
           >
             {busy ? 'Bağlanıyor…' : 'Bağla'}
           </Button>
@@ -112,6 +138,35 @@ export function LinkCustomerDialog({ conversationId, title, source, onClose, onL
           searchPlaceholder="Ad, telefon ya da e-posta ara…"
           emptyText="Eşleşen müşteri yok. Kaydı olmayan müşteri önce Müşteriler ekranından açılmalı."
         />
+      </FieldShell>
+
+      {/* Kanıt: TÜR + DEĞER. Tür kapalı liste (serbest "başka" seçeneği yok — o, kapıyı geri
+          onay kutusuna çevirirdi); değeri müşteri söyler, doğrulamayı sunucu yapar. */}
+      <FieldShell label="Kanıt" required labelAside="Sunucu seçilen kayda karşı doğrular">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {LinkProofKindEnum.options.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setProofKind(kind)}
+                className={`cursor-pointer rounded-ops-sm border px-2.5 py-1 font-ops-body text-ops-xs transition-colors ${
+                  proofKind === kind
+                    ? 'border-ops-accent bg-ops-accent-soft font-semibold text-ops-accent'
+                    : 'border-ops-line text-ops-muted hover:border-ops-accent hover:text-ops-ink'
+                }`}
+              >
+                {LINK_PROOF_LABELS[kind]}
+              </button>
+            ))}
+          </div>
+          <input
+            value={proofValue}
+            onChange={(e) => setProofValue(e.target.value)}
+            placeholder={PROOF_PLACEHOLDER[proofKind]}
+            className="w-full rounded-ops-sm border border-ops-line bg-ops-surface px-2.5 py-1.5 font-ops-body text-ops-sm text-ops-ink outline-none focus:border-ops-accent"
+          />
+        </div>
       </FieldShell>
 
       {/* Geri alma yolu bilerek YOK ve operatör bunu ÖNCEDEN bilmeli: yanlış bağ, Müşteriler

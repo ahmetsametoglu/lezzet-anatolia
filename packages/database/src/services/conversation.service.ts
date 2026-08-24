@@ -20,6 +20,7 @@ import {
   type TicketHandler,
   type TicketSender,
   type KeysetCursor,
+  type LinkProofKind,
   type Page,
   DEFAULT_PAGE_SIZE,
 } from '@lezzet/types';
@@ -113,8 +114,21 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
    * Müşteriler ekranının işidir (09.10); buraya ikinci bir yol açmak, aynı kararı iki yerde
    * yaşatmak olurdu.
    */
-  linkCustomer(id: string, customerId: string): Promise<Conversation | null> {
-    return this.updateIfNull(id, 'customerId', { customerId });
+  linkCustomer(
+    id: string,
+    input: { customerId: string; linkedBy: string | null; proof: LinkProofKind },
+  ): Promise<Conversation | null> {
+    /* Bağ ve KÜNYESİ tek yazımda gider (15.19): ayrı iki çağrı olsaydı ikincisi düştüğünde
+       elimizde "kim bağladı, neye dayanarak" sorusu cevapsız bir bağ kalırdı — ve tam da o satır
+       denetlenmek istenen satır olurdu. Kanıtın DEĞERİ değil TÜRÜ yazılır (kolonun künyesi).
+       Damgayı burada koyuyoruz, DB varsayılanıyla değil: kolon `null` kalabilmeli (sistemin
+       çözdüğü WhatsApp bağı), yani `default now()` yanlış olurdu. */
+    return this.updateIfNull(id, 'customerId', {
+      customerId: input.customerId,
+      linkedBy: input.linkedBy,
+      linkedAt: new Date().toISOString(),
+      linkProof: input.proof,
+    });
   }
 
   /**

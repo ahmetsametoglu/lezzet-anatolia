@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  LinkProofKindEnum,
   TicketTypeEnum,
   type ConversationSource,
   type KeysetCursor,
@@ -171,6 +172,15 @@ export const FollowUpInboundSchema = z.object({
 export const LinkConversationCustomerSchema = z.object({
   conversationId: z.string().uuid(),
   customerId: z.string().uuid(),
+  /**
+   * **Kanıt ZORUNLU** (15.19) — türü kapalı listeden, değeri müşterinin söylediği metin. Sunucu
+   * değeri seçilen müşteriye karşı doğruluyor; opsiyonel olsaydı kapıyı çağıranın nezaketine
+   * bırakmış olurduk ve ikinci bir yüzey onu boş geçerdi.
+   */
+  proof: z.object({
+    kind: LinkProofKindEnum,
+    value: z.string().trim().min(3, 'Kanıt değeri yazılmalı'),
+  }),
 });
 
 /**

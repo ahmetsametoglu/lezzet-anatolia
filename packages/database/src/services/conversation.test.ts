@@ -136,8 +136,12 @@ describe('yalnız boşsa yazan kapılar', () => {
     const musteri = await profiles.insert({ name: `Bağ kapısı ${stamp}`, phone: numara() });
     profileIds.push(musteri.id);
 
-    const sonuc = await conversations.linkCustomer(konusma.id, musteri.id);
+    const sonuc = await conversations.linkCustomer(konusma.id, { customerId: musteri.id, linkedBy: null, proof: 'email' });
     expect(sonuc?.customerId).toBe(musteri.id);
+    // Bağ ve KÜNYESİ tek yazımda gider (15.19): damgasız bir bağ, "kim neye dayanarak bağladı"
+    // sorusunu cevapsız bırakırdı ve denetlenmek istenen satır tam da o olurdu.
+    expect(sonuc?.linkProof).toBe('email');
+    expect(sonuc?.linkedAt).not.toBeNull();
   });
 
   it('linkCustomer DOLU bağı EZMEZ ve `null` döner — kaybeden yarışçı sessiz kalmaz', async () => {
@@ -147,10 +151,10 @@ describe('yalnız boşsa yazan kapılar', () => {
     profileIds.push(sahip.id, yabanci.id);
 
     const konusma = await konusmaAc(ref);
-    await conversations.linkCustomer(konusma.id, sahip.id);
+    await conversations.linkCustomer(konusma.id, { customerId: sahip.id, linkedBy: null, proof: 'order_ref' });
 
     // İkinci çağrı `null` DÖNMELİ: `undefined` ya da eski satır dönseydi çağıran "oldu" sanardı.
-    const ikinci = await conversations.linkCustomer(konusma.id, yabanci.id);
+    const ikinci = await conversations.linkCustomer(konusma.id, { customerId: yabanci.id, linkedBy: null, proof: 'phone' });
     expect(ikinci).toBeNull();
 
     const guncel = await conversations.getById(konusma.id);

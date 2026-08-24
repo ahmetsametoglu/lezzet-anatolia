@@ -1,7 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { generateConversationDraft, recordInboundMessage, recordOutboundMessage, updateCustomerPreferences } from '@lezzet/application';
+import {
+  generateConversationDraft,
+  linkConversationCustomer,
+  recordInboundMessage,
+  recordOutboundMessage,
+  updateCustomerPreferences,
+} from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -242,6 +248,21 @@ export async function searchSocialCustomersAction(term: string): Promise<ActionR
 }
 
 /**
+ * Reddin operatöre görünen yüzü — her sebep FARKLI bir eylem öneriyor (15.19).
+ *
+ * Tek bir "bağlanamadı" cümlesi olsaydı operatör hangi kapıya gideceğini bilemezdi: kanıt
+ * tutmadıysa müşteriden başka bir kanıt istenir, sohbet bu arada bağlandıysa ekran tazelenir.
+ */
+const LINK_REFUSAL: Record<'conversation_not_found' | 'customer_not_found' | 'proof_mismatch' | 'already_linked', string> = {
+  conversation_not_found: 'Sohbet bulunamadı — ekranı tazeleyin.',
+  customer_not_found: 'Seçilen müşteri kaydı bulunamadı — listeden yeniden seçin.',
+  proof_mismatch:
+    'Kanıt bu müşteri kaydıyla eşleşmedi — bağ kurulmadı. Müşteriden sipariş numarasını, kayıtlı e-postasını ya da telefonunu isteyin.',
+  already_linked:
+    'Sohbet bu sırada bir müşteriye bağlanmış — ekranı tazeleyin. Bağı değiştirmek Müşteriler ekranının birleştirme işidir.',
+};
+
+/**
  * **Kimliksiz sohbeti müşteriye bağla** (15.16) — Messenger/Instagram'da kimliğin TEK yolu.
  *
  * O kanallarda konuşma daima kimliksiz doğar (PSID/IGSID telefon taşımaz), yani "bu sohbet şu
@@ -256,14 +277,19 @@ export async function searchSocialCustomersAction(term: string): Promise<ActionR
 export async function linkConversationCustomerAction(input: unknown): Promise<ActionResult<{ customerId: string }>> {
   try {
     await requireAdmin();
+    const staff = await requireAdmin();
     const parsed = LinkConversationCustomerSchema.parse(input);
-    const updated = await new ConversationService(serviceDb()).linkCustomer(parsed.conversationId, parsed.customerId);
-    if (!updated) {
-      return {
-        data: null,
-        error: 'Sohbet bu sırada bir müşteriye bağlanmış — ekranı tazeleyin. Bağı değiştirmek Müşteriler ekranının birleştirme işidir.',
-      };
-    }
+    /* Kapı PAKETTE (`linkConversationCustomer`): kanıt doğrulaması burada değil, çünkü mobil
+       sosyal kutunun bağlama ucu açıldığı gün aynı kuralın ikinci bir kopyası doğardı — ve
+       atlanabilen bir güvenlik kapısı kapı değildir. Burası yalnız guard + zarf. */
+    const sonuc = await linkConversationCustomer(serviceDb(), {
+      conversationId: parsed.conversationId,
+      customerId: parsed.customerId,
+      proof: parsed.proof,
+      // FK'li kolona giden şey PROFİL kimliğidir, auth kullanıcısı değil (`StaffUser` künyesi).
+      staffId: staff.profileId,
+    });
+    if (sonuc.status === 'refused') return { data: null, error: LINK_REFUSAL[sonuc.reason] };
     refresh();
     return { data: { customerId: parsed.customerId }, error: null };
   } catch (err) {

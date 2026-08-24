@@ -12,7 +12,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import { advanceOrder } from '../order/advance.testkit';
+import { generateReferenceNo } from '@lezzet/domain-core';
 import { customerSupportTools } from './support-tools';
 
 /**
@@ -161,10 +161,14 @@ beforeAll(async () => {
     },
     [{ variantId: fistikliVariantId, qty: 1, unitPriceCents: 4570, vatRate: 5.5 }],
   );
-  /* Referans numarası İLK KALICI DURUMDA üretiliyor (`order.referenceNo` künyesi) — taze
-     `pending` siparişte `null`. Aracın döndürdüğü `numara` alanı da o yüzden ancak onaylanmış
-     siparişte doludur; fikstür bunu bilerek bir adım ilerletiyor. */
-  await advanceOrder(db, order.id, ['confirmed']);
+  /* Referansı GEÇİŞE VEREN taraf üretiyor (`transition_order_status`: `coalesce(reference_no,
+     p_reference_no)`) — RPC kendiliğinden üretmiyor ve `advanceOrder` fikstürü referans
+     geçirmiyor. Ölçüldü 24.08: burada `siparisNo` `null` kalıyordu ve aşağıdaki iddia satırı
+     `numara === null` ile bulup YANLIŞ SEBEPLE geçiyordu — şekli doğru sınıyordu ama numarayı
+     hiç sınamıyordu. Numarayı motor üretir, fikstür geçirir. */
+  const referenceNo = generateReferenceNo({ year: new Date().getFullYear() });
+  const gecis = await new OrderService(db).transition({ orderId: order.id, from: 'draft', to: 'confirmed', referenceNo });
+  if (!gecis.ok) throw new Error('fikstür: sipariş onaylanamadı');
   siparisNo = (await new OrderService(db).getById(order.id))!.referenceNo!;
 });
 
@@ -349,6 +353,9 @@ describe('siparislerim — durum söyler, TUTAR söylemez', () => {
     const siparisler = sonuc.siparisler as Record<string, unknown>[];
     expect(siparisler.length).toBeGreaterThan(0);
 
+    // Numaranın DOLU olduğu ayrıca iddia ediliyor: `null === null` eşleşmesi bir satır bulur ve
+    // test numarayı hiç sınamadan geçerdi (24.08'de tam olarak bu oldu).
+    expect(siparisNo).toMatch(/^LA-/);
     const bizimki = siparisler.find((s) => s.numara === siparisNo);
     expect(bizimki).toBeDefined();
     expect(Object.keys(bizimki!).sort()).toEqual(['durum', 'numara', 'teslimGunu']);

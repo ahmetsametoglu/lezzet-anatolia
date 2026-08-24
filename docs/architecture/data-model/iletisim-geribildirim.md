@@ -23,11 +23,16 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
 | opt_in | boolean | ticari mesaj izni (double opt-in, `DOMAIN.md §11`) |
 | opt_in_at | timestamptz \| null | |
+| linked_by | uuid \| null | bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir |
+| linked_at | timestamptz \| null | bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt) |
+| link_proof | text \| null (`order_ref`,`email`,`phone`) | kanıtın TÜRÜ — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan) |
 | window_expires_at | timestamptz \| null | 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp) |
 | last_message_at | timestamptz \| null | |
 | created_at | timestamptz | |
 
 **Bir kişi, bir konuşma — kanal başına** — tekillik `(source, external_ref)` üzerinde (0039). Üç kanalda da thread kavramı yoktur: aynı kişiden gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu. **Hesap boyutu tekillikte DEĞİL (bilinçli):** PSID sayfa-kapsamlıdır ve ikinci bir işletme hesabı (ikinci numara/sayfa) açıldığı gün tekillik `(source, provider_account_ref, external_ref)` üçlüsüne genişletilir — bugün genişletmek, elle işlenen (hesapsız) geçmişi webhook geçmişinden bölerdi; kolon yine de bugünden var, çünkü sonradan eklenen kolon o güne kadarki geçmişi belirsiz bırakır.
+
+**Elle kurulan bağ KANITA dayanır (15.19).** Messenger/IG'de kimliğin tek yolu operatörün bağıdır ve o bağ kurulur kurulmaz **ajanın araçları da** o müşteriye açılır (`support-tools.ts` kimliğe kapatılmıştır) — yani yanlış bağ tek alanı değil, o müşterinin verisinin tamamını açar. Kapı (`@lezzet/application/messaging/link`) müşterinin söylediği bir değeri SUNUCUDA doğrular: sipariş referansı (müşteriye kapatılmış `findByReference`'tan), kayıtlı e-posta ya da telefon (normalize edilip karşılaştırılır). *"Kontrol ettim"* kutusu bilerek YOK — onay kutusu bir kayıttır, bir kapı değil. Kanıtın **değeri saklanmaz**, türü saklanır (`CLAUDE §1`); damga ile kanıt kısıtla birlikte doğar, `linked_by` ise çifte dahil değildir (FK `set null` olduğu gün üçlü kısıt kırılırdı).
 
 **`customer_id` nullable ve öyle kalmalı:** canlı adımda webhook mesajı önce yazar, kimliği sonra çözer — kimlik çözülemediği için mesajın kaybolduğu bir yol olamaz. Messenger/IG'de kimliksizlik üstelik VARSAYILAN hâldir: PSID/IGSID'den telefon/e-posta alınamaz (Meta vermez), kimlik ancak müşteri kendini tanıtınca kurulur. Mevcut bağ da EZİLMEZ (`coalesce`): bağlanmış bir konuşmayı başka müşteriye kaydırmak bir **birleştirme** kararıdır ve insana aittir (`DOMAIN §10`). `profile_name` tersine YENİSİYLE güncellenir — görünen ad kimlik değildir, son görülen değer aylar önceki addan değerlidir.
 

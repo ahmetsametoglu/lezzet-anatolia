@@ -21,6 +21,10 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     aiDraftGeneratedAt: null,
     optIn: false,
     optInAt: null,
+    // Bağ künyesi boş: bu satırın bağını SİSTEM kurmuş (WhatsApp, numaradan) — operatör kararı yok.
+    linkedBy: null,
+    linkedAt: null,
+    linkProof: null,
     windowExpiresAt: null,
     lastMessageAt: NOW.toISOString(),
     createdAt: NOW.toISOString(),
