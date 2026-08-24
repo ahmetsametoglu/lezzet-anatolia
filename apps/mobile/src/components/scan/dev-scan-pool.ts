@@ -12,30 +12,33 @@
   bayrağı AÇILMADI — "production'da yanlışlıkla açık kalan simülasyon" sınıfı, derleme sabitiyle
   en baştan kapanır (dev-login'in üç kilidiyle aynı içgüdü, tek kilit yeter çünkü veri yazmıyor).
 
-  ── KODLAR SEED'İN AYNASI ───────────────────────────────────────────────────
-  `eanBenzeri` formülü `scripts/seed/barcode.ts`tekiyle AYNI (oradan import edilemez — scripts
-  paketi mobile'a bağlanmaz; formül tek satır ve bilinçli kopya, künyesi iki tarafta da birbirini
-  gösteriyor). Seed değişir de kodlar tutmazsa çipler "tanınmayan kod"a düşer — akış yine anlamlı
-  kalır (öğrenme daveti), sessiz bir kırılma doğmaz. SKU çipi katalog-lezza'nın ilk kodudur; aynı
-  tolerans onun için de geçerli.
+  ── ÇİPLER = ELDEKİ FİZİKSEL ETİKETLER (24.08) ──────────────────────────────
+  Kodlar artık formülden türemiyor; `scripts/seed/test-labels.ts`teki SABİT test etiketi setinin
+  aynası (scripts paketi mobile'a bağlanamadığı için bilinçli kopya — künyeler iki tarafta da
+  birbirini gösteriyor). Yani çipe basmak ile kâğıdı okutmak AYNI kodu üretir: simülasyonla
+  bulunan bir arıza cihazda da, cihazda bulunan simülasyonda da tekrarlanabilir.
+
+  Eskiden havuz sıra tabanlı bir EAN formülünü aynalıyordu ve hangi çipin hangi ekranda işe
+  yaradığı tesadüftü (ölçüldü 24.08: kutulu siparişlerin kalemleriyle kesişim BOŞTU — "koli"
+  çipi toplama ekranında hep "bu siparişte yok" diyordu). Set ayrışırsa çip yine kırılmaz,
+  "tanınmayan kod"a düşer ve akış anlamlı kalır.
 */
 
-/** `scripts/seed/barcode.ts` › `eanBenzeri`nin aynası — iki taraf birlikte değişir. */
-const eanBenzeri = (n: number): string => `869${String(1000000000 + n * 7919).slice(-10)}`;
-
 export interface DevScanCode {
-  /** Çipin etiketi — hangi hâli tetiklediğini söyler, kodu değil. */
+  /** Çipin etiketi — hangi yolu tetiklediğini söyler, kodu değil. */
   label: string;
   code: string;
 }
 
 /**
- * Dört çip dört ayrı yolu tetikler: paket (çarpan 1) · koli (çarpan kadar öner) · SKU (zincirin
- * ikinci halkası, cümlesi "SKU eşleşmesi" der) · tanınmayan (öğrenen eşleme ekranı).
+ * Altı çip, taramanın altı yolu — `TEST_LABELS` ile BİREBİR aynı sıra ve kodlar.
+ * (Kutu QR'ı burada yok: kutu kodlarını çağıran ekran kendi `devCodes`'uyla verir — elindeki
+ * gerçek kutuların kodları, uydurma bir kod değil. Künye: `scan-sheet.tsx`.)
  */
 export const DEV_SCAN_POOL: readonly DevScanCode[] = [
-  { label: 'Paket barkodu', code: eanBenzeri(0) },
-  { label: 'Koli barkodu', code: `1${eanBenzeri(0)}` },
-  { label: 'SKU', code: '700404' },
-  { label: 'Tanınmayan kod', code: 'DEV-TANINMAYAN-01' },
+  { label: 'Paket', code: '8691000007919' },
+  { label: 'Koli ×24', code: '18691000047514' },
+  { label: 'Toplama', code: 'TEST-TOPLAMA-01' },
+  { label: 'Yabancı ürün', code: 'TEST-YABANCI-01' },
+  { label: 'Tanınmayan', code: 'TEST-TANINMAYAN-01' },
 ];

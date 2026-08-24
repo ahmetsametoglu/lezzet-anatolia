@@ -32,32 +32,32 @@ describe('ScanSheet', () => {
   it('simülasyon çipi ham kodu tek `onScan` yolundan teslim eder', async () => {
     await renderSheet();
 
-    await fireEvent.press(screen.getByLabelText('Paket barkodu'));
+    await fireEvent.press(screen.getByLabelText('Paket'));
 
     expect(onScan).toHaveBeenCalledTimes(1);
     // Kod havuzdan geldiği gibi HAM gider — bileşen çözmez, süslemez, kırpmaz.
-    expect(onScan).toHaveBeenCalledWith('8691000000000');
+    expect(onScan).toHaveBeenCalledWith('8691000007919');
   });
 
   it('kilit okuma başınadır: teslimden sonra ikinci dokunuş İLETİLMEZ', async () => {
     await renderSheet();
 
-    await fireEvent.press(screen.getByLabelText('Koli barkodu'));
-    await fireEvent.press(screen.getByLabelText('Koli barkodu'));
-    await fireEvent.press(screen.getByLabelText('SKU'));
+    await fireEvent.press(screen.getByLabelText('Koli ×24'));
+    await fireEvent.press(screen.getByLabelText('Koli ×24'));
+    await fireEvent.press(screen.getByLabelText('Toplama'));
 
-    // İkinci koli VE ardından gelen SKU da yutulur — kilit koda değil, teslim edilmemiş okumanın
-    // varlığına bakar; çağıran cevabı işleyene kadar yeni okuma yoktur.
+    // İkinci koli VE ardından gelen BAŞKA kod da yutulur — kilit koda değil, teslim edilmemiş
+    // okumanın varlığına bakar; çağıran cevabı işleyene kadar yeni okuma yoktur.
     expect(onScan).toHaveBeenCalledTimes(1);
   });
 
   it('sayfa yeniden açılınca kilit sıfırlanır — arka arkaya iki koli okutulabilir', async () => {
     const view = await renderSheet();
-    await fireEvent.press(screen.getByLabelText('Paket barkodu'));
+    await fireEvent.press(screen.getByLabelText('Paket'));
 
     await view.rerender(<ScanSheet open={false} title="Koli okut" onClose={onClose} onScan={onScan} testID="scan" />);
     await view.rerender(<ScanSheet open title="Koli okut" onClose={onClose} onScan={onScan} testID="scan" />);
-    await fireEvent.press(screen.getByLabelText('Paket barkodu'));
+    await fireEvent.press(screen.getByLabelText('Paket'));
 
     expect(onScan).toHaveBeenCalledTimes(2);
   });

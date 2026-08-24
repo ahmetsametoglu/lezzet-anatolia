@@ -1,13 +1,14 @@
 import { openBox, sealBox } from '@lezzet/application';
 import {
   AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
-  OrderService, ReservationService, StockService, UserProfileService,
+  OrderBoxService, OrderService, ReservationService, StockService, UserProfileService,
 } from '@lezzet/database';
 import { derivePaymentStatusForOrder, generateReferenceNo, resolveVatTreatment } from '@lezzet/domain-core';
 import { distributeDiscount, toCents } from '@lezzet/helper';
 import type { OrderStatus } from '@lezzet/types';
 import type { Kuponlar } from './discount';
 import { an, euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
+import { testLabelCode } from './test-labels';
 import type { Katman } from './tier';
 import type { Depolar } from './warehouse';
 
@@ -752,10 +753,18 @@ export async function seedOrders(
     });
     if (tekKutulu) {
       const bulunan = await orders.getWithItems(tekKutulu);
-      const kutu = await openBox(db, { orderId: tekKutulu, warehouseId: depolar.str });
-      if (!bulunan || kutu.status !== 'ok') throw new Error('seed kutu: tek kutulu açılamadı');
+      // TEK KUTULU sipariş FİZİKSEL TEST ETİKETİNİN kutusudur: kodu sabit (`KT-99-TESTKUTU01`),
+      // çünkü kâğıda basılmış bir QR her `db:refresh` sonrası aynı kutuyu bulabilmeli. Kutu kodu
+      // sonradan değiştirilemez (`OrderBoxUpdate` bilerek yalnız damga alanlarını alıyor), o yüzden
+      // AÇILIŞ `openBox` kapısını atlar ve doğrudan kayıt yazar. Kuralın asıl sınandığı yer kapanış
+      // (`sealBox` → `seal_order_box` RPC) ve o AYNEN geçerli; `openBox` kapısı da sınanmaya devam
+      // ediyor — bir alttaki çok kutulu sipariş onu kullanıyor. Künye: `seed/test-labels.ts`.
+      const kutu = { box: await new OrderBoxService(db).insert({
+        orderId: tekKutulu, warehouseId: depolar.str, boxNo: 1, code: testLabelCode('kutu'),
+      }) };
+      if (!bulunan) throw new Error('seed kutu: tek kutulu açılamadı');
       const sonuc = await sealBox(db, {
-        boxId: kutu.box.boxId, warehouseId: depolar.str,
+        boxId: kutu.box.id, warehouseId: depolar.str,
         picks: await strPicks(bulunan.items, bulunan.items.map((i) => i.qty)), actorId: depocu,
       });
       // Sessiz eksik yok: kapanmayan kutu bir VERİ hâli değil seed arızasıdır (stok yetmedi vb.).

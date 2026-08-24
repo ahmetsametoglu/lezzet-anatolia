@@ -45,8 +45,12 @@ function esc(value: string): string {
 /**
  * QR'ın kara modülleri tek SVG path'i olarak — modül başına `<rect>` yüzlerce düğüm üretirdi.
  * `qrcode.create` senkron ve deterministiktir (aynı kod → aynı matris), test buna yaslanır.
+ *
+ * DIŞA VERİLİR (24.08): fiziksel test etiketi seti (`scripts/labels-test.ts`) aynı QR'a ihtiyaç
+ * duyuyor. İkinci bir üretici yazmak, iki ayrı "QR nasıl çizilir" kararı demekti (CLAUDE §1) —
+ * path'in birim kareye oturması (`moduleCount`) o kararın parçası ve tek yerde durmalı.
  */
-function qrPath(text: string): { path: string; moduleCount: number } {
+export function qrPath(text: string): { path: string; moduleCount: number } {
   const qr = createQr(text, { errorCorrectionLevel: 'M' });
   const size = qr.modules.size;
   const data = qr.modules.data;

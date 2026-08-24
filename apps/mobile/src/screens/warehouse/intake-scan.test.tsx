@@ -70,7 +70,7 @@ async function renderIntake() {
 /** Tarama sayfasını açıp bir havuz çipine basar — kodun kendisi önemsiz, cevabı mock belirliyor. */
 async function scanOnce() {
   await fireEvent.press(screen.getByTestId('warehouse-intake-scan-cta'));
-  await fireEvent.press(screen.getByLabelText('Paket barkodu'));
+  await fireEvent.press(screen.getByLabelText('Paket'));
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/codes/resolve'))).toBe(true));
 }
 

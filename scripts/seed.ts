@@ -137,6 +137,7 @@ import { katalogVaryantlari } from './seed/shared';
 import { enAz, katmanOku, uzakHedefMi } from './seed/tier';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
+import { seedTestLabels } from './seed/test-labels';
 import { seedTickets } from './seed/support';
 import { seedStoragePoints, seedThresholds, seedTransfer, seedWarehouses } from './seed/warehouse';
 
@@ -284,6 +285,9 @@ async function main(): Promise<void> {
   // Kuponlar SİPARİŞLERDEN ÖNCE: sipariş kuponu uygular ve kullanım kaydını yazar; tanım hazır olmalı.
   const kuponlar = await seedDiscounts(db, kisiler);
   await seedOrders(db, kisiler, varyantlar, kuponlar, depolar, katman);
+  // FİZİKSEL test etiketleri siparişlerden SONRA: sabit kodlar tedarik siparişinin ve açık kutulu
+  // siparişin GERÇEK kalemlerine bağlanıyor (künye: `seed/test-labels.ts`).
+  await seedTestLabels(db, varyantlar, tedarik);
   // Eşikler: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar. `full`de transferden SONRA
   // koşuyor (sevk edilen mal o sayıyı düşürür); `extend`te transfer yok, sıra da sorun değil.
   await seedThresholds(db, depolar);

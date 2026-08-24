@@ -151,7 +151,7 @@ describe('D1 · kutu döngüsü', () => {
     };
     await renderPicking();
 
-    await scanChip('Paket barkodu');
+    await scanChip('Toplama');
     await waitFor(() => expect(String(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value)).toBe('2'));
     expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/\+2 adet kutuda/);
 
@@ -160,7 +160,7 @@ describe('D1 · kutu döngüsü', () => {
       status: 'found', variantId: '00000000-0000-4000-8000-000000000077', productName: 'Sahlep',
       variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', imageUrl: null,
     };
-    await scanChip('Paket barkodu');
+    await scanChip('Yabancı ürün');
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/bu siparişte yok/));
     expect(String(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value)).toBe('2');
   });

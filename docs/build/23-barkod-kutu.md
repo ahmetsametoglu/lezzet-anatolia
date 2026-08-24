@@ -334,6 +334,36 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   "listede olmayan satır açılmaz" duvarı burada YOKTUR (plansızın doğası "liste yok"). ·
   touches: `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/screens/warehouse/*`
 
+- [x] (23.14) **Fiziksel test etiketi seti** — kâğıt israfını bitiren karar (kullanıcı 24.08:
+  *"elimdeki etiketleri sistemin test etiketi olarak tanımla, her testi bunlar üzerinden yapalım"*).
+  Kodlar SABİT, bağlandıkları ürün ROLLE seçilir; set bir kez basılır, her `db:refresh` sonrası yine
+  çalışır. · touches: `scripts/seed/test-labels.ts`, `scripts/labels-test.ts`,
+  `scripts/seed/{barcode.ts,orders.ts}`, `scripts/seed.ts`,
+  `apps/mobile/src/components/scan/dev-scan-pool.ts`, `packages/application/src/warehouse/label-svg.ts`
+  - *Bitti:* `pnpm labels:test` altı etiketi üretiyor, seed kodları gerçek kayıtlara bağlıyor ve
+    bağların doğruluğu DB'de ölçüldü (toplama → açık kutulu siparişin kalemi · yabancı → hiçbir
+    kabulde/siparişte yok · kutu QR → kapalı kutu · tanınmayan → hiçbir yere yazılmamış).
+  - **Durum (24.08) — YAZILDI ve db:refresh ile ölçüldü (kapsam 138/138).** Altı etiket, taramanın
+    altı yolu: paket · koli ×24 · toplama · yabancı ürün (ret) · tanınmayan (öğrenme) · kutu QR
+    (yükleme+teslim). İlk ikisi 22–24.08'de basılmış ve kullanıcının elinde — kodları bu yüzden
+    değiştirilemez. **Kod sabit, ürün rolle seçilir:** etikette ürün adı YAZMAZ; hangi ürüne
+    bağlanacağı katalog sırasından değil rolden gelir ("kabul bekleyen siparişin ilk kalemi", "açık
+    kutulu siparişin kalemi") — ad yazsaydık ilk katalog değişiminde kâğıt yalan söylerdi. Eski hâl
+    ölçüldü: kodlar sıra tabanlı formüldendi ve hangi etiketin hangi ekranda işe yaradığı
+    TESADÜFTÜ (kutulu siparişlerin kalemleriyle barkodlu varyantların kesişimi BOŞTU — toplama
+    ekranı kâğıtla hiç sınanamıyordu). Genel kodlama artık rezerve kodlardan uzak duruyor
+    (çakışma ölçüldü: `23505`, seed durmuştu). Kutu kodu sonradan değiştirilemediği için
+    (`OrderBoxUpdate` bilerek yalnız damga alanlarını alıyor) test kutusu en baştan sabit kodla
+    açılıyor; kapanış AYNEN `seal_order_box` RPC'sinden geçiyor ve `openBox` kapısı da sınanmaya
+    devam ediyor (çok kutulu sipariş onu kullanıyor). QR üreticisi kutu etiketiyle ORTAK
+    (`qrPath` dışa verildi — ikinci bir "QR nasıl çizilir" kararı açılmadı). Simülasyon havuzu
+    setin aynası: çipe basmak ile kâğıdı okutmak artık AYNI kodu üretiyor.
+  - **SKU eşleşmesi bilerek sette YOK:** o kodun bir varyantın SKU'sunun kendisi olması gerekir,
+    yani sabitlenemez (SKU fiyat dosyalarının anahtarı; test için değiştirmek fiyat eşlemesini
+    bozardı). Zincirin o halkası jest + entegrasyonda ölçülü.
+  - ⏳ **CİHAZ TURU KALDI:** set basılacak (yazıcı kullanıcıda kapalı) ve kamerayla okutulacak;
+    okutma çekmecesinin (23.11) kâğıtla ölçümü de bu turda kapanır.
+
 ## Netleşecekler
 
 1. ~~**Toplayan kişi kuryenin kendisi mi?**~~ → **CEVAPLANDI (kullanıcı kararı 21.08): rol
