@@ -149,7 +149,7 @@ describe('D2 · tarama akışı', () => {
     expect(qtyOf(ROW_B.variantId)).toBe('');
   });
 
-  it('tanınmayan kod öğrenme sayfasını açar; satır seçilince öğretilir ve 1 eklenir', async () => {
+  it('tanınmayan kod TEKİL olarak öğretilir — çarpan 1, satıra 1 eklenir', async () => {
     withScan({ status: 'unknown' });
     await renderIntake();
 
@@ -157,12 +157,56 @@ describe('D2 · tarama akışı', () => {
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
 
     await fireEvent.press(screen.getByLabelText(`${ROW_B.productName} · ${ROW_B.variantLabel}`));
+    // 2. adım varsayılanı TEKİL: koli olduğunu ancak depocu bilir, tersini varsaymak her pakete
+    // uydurma bir çarpan yazmak olurdu.
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-confirm'));
 
     await waitFor(() => expect(qtyOf(ROW_B.variantId)).toBe('1'));
     expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/öğrenildi/);
-    // Öğretme isteği KODUN kendisini ve seçilen varyantı taşır.
     const learnCall = fetchMock.mock.calls.findLast((c) => String(c[0]).endsWith('/codes'));
-    expect(JSON.parse(String(learnCall?.[1]?.body ?? '{}'))).toMatchObject({ variantId: ROW_B.variantId });
+    expect(JSON.parse(String(learnCall?.[1]?.body ?? '{}'))).toMatchObject({
+      variantId: ROW_B.variantId,
+      kind: 'unit',
+      qtyPerCode: 1,
+    });
+  });
+
+  it('KOLİ olarak öğretilen kod ÇARPANIYLA yazılır ve satıra o kadar eklenir (23.12)', async () => {
+    // 23.08'e kadar her öğretilen kod 1 adetlikti: kapı `kind`/`qtyPerCode` alıyordu ama ekran
+    // göndermiyordu. Sonuç sessiz ve kalıcıydı — koli her okutmada 1 sayılırdı.
+    withScan({ status: 'unknown' });
+    await renderIntake();
+
+    await scanOnce();
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByLabelText(`${ROW_B.productName} · ${ROW_B.variantLabel}`));
+
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-case'));
+    // Çarpan 1'den başlar; iki artırma = 3 adetlik koli.
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-qty-increase'));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-qty-increase'));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-confirm'));
+
+    await waitFor(() => expect(qtyOf(ROW_B.variantId)).toBe('3'));
+    const learnCall = fetchMock.mock.calls.findLast((c) => String(c[0]).endsWith('/codes'));
+    expect(JSON.parse(String(learnCall?.[1]?.body ?? '{}'))).toMatchObject({
+      variantId: ROW_B.variantId,
+      kind: 'case',
+      qtyPerCode: 3,
+    });
+  });
+
+  it('koli seçilip çarpan 1 kalırsa öğretme kapısı AÇILMAZ — "1 adetlik koli" bir beyan değil, eksik cevaptır', async () => {
+    withScan({ status: 'unknown' });
+    await renderIntake();
+
+    await scanOnce();
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByLabelText(`${ROW_B.productName} · ${ROW_B.variantLabel}`));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-case'));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-confirm'));
+
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/codes'))).toBe(false);
   });
 
   it('`already_bound` yarışında kod kime bağlıysa ORADAN sayılır — çift kayıt doğmaz', async () => {
@@ -175,6 +219,7 @@ describe('D2 · tarama akışı', () => {
     await scanOnce();
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
     await fireEvent.press(screen.getByLabelText(`${ROW_B.productName} · ${ROW_B.variantLabel}`));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-learn-confirm'));
 
     // Depocu B'yi seçti ama kod bu arada A'ya bağlanmış: adet A'ya düşer, B'ye değil.
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('1'));

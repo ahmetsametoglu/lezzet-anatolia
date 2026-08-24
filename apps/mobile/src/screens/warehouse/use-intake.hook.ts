@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { IntakeFormRowContract, PendingIntakeContract, ResolveCodeResponse } from '@lezzet/types';
+import type { BarcodeKind, IntakeFormRowContract, PendingIntakeContract, ResolveCodeResponse } from '@lezzet/types';
 
 import { fetchIntakeForm, fetchPendingIntakes, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
@@ -70,11 +70,26 @@ export interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status:
   expectedQty: number;
 }
 
+/**
+ * Öğrenmenin iki adımı tek durumda: **hangi ürün** (`variantId`) ve **bu kod neyi sayıyor**
+ * (`kind`/`qtyPerCode`). İkincisi olmadan öğretilen kod hep 1 adetlik kalırdı (23.12 künyesi).
+ */
+export interface LearnState {
+  code: string;
+  /** `null` = ürün henüz seçilmedi; ekran birinci adımı (satır listesi) çizer. */
+  variantId: string | null;
+  kind: BarcodeKind;
+  /** Bir okutmanın kaç adet sayılacağı — `unit` için daima 1 (kural veride). */
+  qtyPerCode: number;
+}
+
 interface UseIntakeResult {
   status: IntakeStatus;
   rows: IntakeFormRowContract[];
   /** Konusuz açılışta bekleyen sevkiyatlar; konulu açılışta boş. */
   pending: PendingIntakeContract[];
+  /** Plansız kabulde aramadan seçilen ürünü satır yapar (23.13). */
+  addManualRow: (variant: { variantId: string; productName: string; variantLabel: string }) => void;
   stateOf: (variantId: string) => IntakeRowState;
   patch: (variantId: string, patch: Partial<IntakeRowState>) => void;
   /** Her satırda adet + geçerli SKT var mı — CTA'nın kapısı. */
@@ -99,14 +114,24 @@ interface UseIntakeResult {
   /** Seçilen adedi satıra yazar ve çekmeceyi kapatır. */
   confirmScanned: () => void;
   cancelScanned: () => void;
-  /** Tanınmayan kod — dolu ise ekran "bu kod hangi ürün?" seçimini çizer. */
-  learn: { code: string } | null;
-  /** Seçilen satıra kodu öğretir; `already_bound` cevabı da burada cümleye çevrilir. */
-  teach: (variantId: string) => void;
+  /** Tanınmayan kod — dolu ise ekran öğrenme çekmecesini çizer (iki adım, künye aşağıda). */
+  learn: LearnState | null;
+  /** 1. adım: kodun hangi ürüne bağlanacağı. */
+  pickLearnVariant: (variantId: string) => void;
+  /** 2. adım: bu kod tekil paketi mi koliyi mi sayıyor, koliyse kaç adet. */
+  setLearnKind: (kind: BarcodeKind) => void;
+  setLearnQty: (qtyPerCode: number) => void;
+  /** Kodu yazar; `already_bound` cevabı da burada cümleye çevrilir. */
+  confirmLearn: () => void;
   cancelLearn: () => void;
 }
 
-export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
+/**
+ * `unplanned` = PO'SUZ kabul (23.13): mal gelmiş ama siparişi girilmemiş. Satır kümesi sunucudan
+ * GELMEZ, depocu kurar — arama ya da okutma ile. PO'lu kabulün "listede olmayan satır açılmaz"
+ * duvarı burada YOKTUR ve olamaz: plansızın doğası zaten "liste yok"tur.
+ */
+export function useIntake(purchaseOrderId: string | null, unplanned = false): UseIntakeResult {
   const [status, setStatus] = useState<IntakeStatus>('loading');
   const [rows, setRows] = useState<IntakeFormRowContract[]>([]);
   /** Konusuz açılışın listesi — "hangi sevkiyatı bekliyorum". Konulu açılışta boş kalır. */
@@ -119,6 +144,12 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
   const generation = useRef(0);
 
   const load = useCallback(async () => {
+    if (unplanned) {
+      // Plansızda okunacak bir form YOK: satırlar depocunun elinden doğar. Sunucuya sormak,
+      // cevabı baştan bilinen bir soruyu sormak olurdu.
+      setStatus('ready');
+      return;
+    }
     if (purchaseOrderId === null) {
       // KONUSUZ AÇILIŞ artık boş bir ekran değil, BEKLEYEN SEVKİYAT LİSTESİ (24.08). Uç 21.11d'den
       // beri vardı ama ekran okumuyordu; mal kabule yalnız derin bağlantıyla girilebiliyordu ve
@@ -148,7 +179,7 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
 
     setRows(result.data.rows);
     setStatus('ready');
-  }, [purchaseOrderId]);
+  }, [purchaseOrderId, unplanned]);
 
   // Form BİR KEZ okunur (odakta değil): yarı doldurulmuş bir kabul formunu ekranın arkasından
   // tazelemek, depocunun yazdığı adetleri silerdi.
@@ -182,7 +213,9 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
       received: states[row.variantId]?.qty ?? null,
     }))
     .filter((row): row is { name: string; expected: number; received: number } => row.received !== null)
-    .filter((row) => row.received !== row.expected);
+    // Beklenen YOKSA sapma da yoktur (plansız kabul, 23.13): kıyaslanacak sipariş olmadan gelen her
+    // adet "beklenenden farklı" görünür ve fark özeti anlamsız bir listeye dönerdi.
+    .filter((row) => row.expected > 0 && row.received !== row.expected);
 
   const submit = useCallback(() => {
     if (sending || !complete) return;
@@ -256,7 +289,7 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
   */
   const [scanOpen, setScanOpen] = useState(false);
   const [scanned, setScanned] = useState<ScannedCode | null>(null);
-  const [learn, setLearn] = useState<{ code: string } | null>(null);
+  const [learn, setLearn] = useState<LearnState | null>(null);
 
   /** Bulunan satıra okumanın adedini ekler ve cümlesini kurar — tarama ile öğrenmenin ortak ucu. */
   const addScanned = useCallback(
@@ -283,18 +316,33 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
           return;
         }
         if (result.data.status === 'unknown') {
-          setLearn({ code });
+          // Varsayılan TEKİL: koli olduğunu ancak depocu bilir ve söylemesi bir dokunuş; tersini
+          // varsaymak, her tekil pakete uydurma bir çarpan yazmak olurdu.
+          setLearn({ code, variantId: null, kind: 'unit', qtyPerCode: 1 });
           return;
         }
 
         const found = result.data;
-        const row = rows.find((candidate) => candidate.variantId === found.variantId);
+        let row = rows.find((candidate) => candidate.variantId === found.variantId);
         if (row === undefined) {
-          setNotice({
-            tone: 'warn',
-            text: fillCopy(t.intake.scan.notInForm, { name: productLabel(found.productName, found.variantLabel) }),
-          });
-          return;
+          // PLANSIZDA OKUTMA SATIR AÇAR — PO'lu kabulün tersi ve bilinçli: orada küme siparişten
+          // gelir ve fark raporu o kümeye göre kurulur, burada küme YOKTUR (23.13). Beklenen adet
+          // 0: kıyaslanacak bir sipariş yok, "beklenen" sıfır değil YOK demektir ve ekran bunu
+          // plansız modda hiç yazmaz.
+          if (!unplanned) {
+            setNotice({
+              tone: 'warn',
+              text: fillCopy(t.intake.scan.notInForm, { name: productLabel(found.productName, found.variantLabel) }),
+            });
+            return;
+          }
+          row = {
+            variantId: found.variantId,
+            productName: found.productName,
+            variantLabel: found.variantLabel,
+            expectedQty: 0,
+          };
+          setRows((current) => [...current, row!]);
         }
         // Satıra henüz yazılmaz: adet kararı çekmecenin işi — varsayılan, okutulan birimin miktarı.
         setScanned({
@@ -310,7 +358,22 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
         });
       })();
     },
-    [rows, setNotice],
+    [rows, setNotice, unplanned],
+  );
+
+  /**
+   * Plansız kabulde aramadan seçilen ürün satır olur (23.13). Zaten varsa İKİNCİ KEZ eklenmez:
+   * aynı ürünün iki satırı, kabulün toplamını iki yere bölerdi.
+   */
+  const addManualRow = useCallback(
+    (variant: { variantId: string; productName: string; variantLabel: string }) => {
+      setRows((current) =>
+        current.some((row) => row.variantId === variant.variantId)
+          ? current
+          : [...current, { ...variant, expectedQty: 0 }],
+      );
+    },
+    [],
   );
 
   const setScannedQty = useCallback((qty: number) => {
@@ -329,40 +392,64 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
     setScanned(null);
   }, [addScanned, scanned]);
 
-  const teach = useCallback(
-    (variantId: string) => {
-      const code = learn?.code;
-      setLearn(null);
-      if (code === undefined) return;
-      void (async () => {
-        const result = await trackWarehouse(learnScannedCode({ code, variantId }));
-        if (result.error !== null) {
-          setNotice({ tone: 'error', text: t.intake.scan.error });
-          return;
-        }
-        if (result.data.status === 'ok') {
-          addScanned(variantId, 1, (name) => fillCopy(t.intake.scan.learned, { name }));
-          return;
-        }
-        // Bu arada BAŞKASI öğretmiş (iki depocu aynı koliyle): kod kime bağlıysa oradan sayılır —
-        // sessiz bir çift kayıt yerine, formda varsa o satıra düşer, yoksa yalnız söylenir.
-        const bound = result.data;
-        const added = addScanned(bound.variantId, 1, (name) => fillCopy(t.intake.scan.alreadyBound, { name }));
-        if (!added) {
-          setNotice({
-            tone: 'warn',
-            text: fillCopy(t.intake.scan.notInForm, { name: productLabel(bound.productName, bound.variantLabel) }),
-          });
-        }
-      })();
-    },
-    [addScanned, learn, setNotice],
-  );
+  /*
+    ── ÖĞRENMENİN İKİNCİ ADIMI: BU KOD NEYİ SAYIYOR? (23.12) ─────────────────
+    Ürünü seçmek yetmiyor. Kod bir KOLİNİN üstündeyse "bir okutma = kaç adet" bilgisi kodun kendi
+    bilgisidir ve öğrenme anında yazılmazsa bir daha yazılacak yeri yok: kapı `kind`/`qtyPerCode`
+    alıyordu ama ekran göndermiyordu, yani her öğretilen kod 1 ADETLİK oluyordu (ölçüldü 23.08).
+    Sonucu sessizdi ve kalıcıydı — koli her okutmada 1 sayılır, depocu adedi hep elle düzeltirdi
+    ve sebebi görünmezdi. Web'de kod EKLEME bilinçle yok (öğrenme kabuldedir, karar §1.3), yani
+    doğru çarpanı yazmanın başka yolu da yoktu.
+  */
+  const pickLearnVariant = useCallback((variantId: string) => {
+    setLearn((current) => (current === null ? null : { ...current, variantId }));
+  }, []);
+
+  const setLearnKind = useCallback((kind: BarcodeKind) => {
+    // Tekile dönüşte çarpan 1'e ÇEKİLİR: `unit` kodun çarpanı veride de 1 olmak zorunda (0047
+    // kısıtı) — ekranın elinde kalan eski koli sayısı kapıya gidip reddedilirdi.
+    setLearn((current) => (current === null ? null : { ...current, kind, qtyPerCode: kind === 'unit' ? 1 : current.qtyPerCode }));
+  }, []);
+
+  const setLearnQty = useCallback((qtyPerCode: number) => {
+    setLearn((current) => (current === null ? null : { ...current, qtyPerCode }));
+  }, []);
+
+  const confirmLearn = useCallback(() => {
+    if (learn === null || learn.variantId === null || learn.qtyPerCode <= 0) return;
+    const { code, variantId, kind, qtyPerCode } = learn;
+    setLearn(null);
+    void (async () => {
+      const result = await trackWarehouse(learnScannedCode({ code, variantId, kind, qtyPerCode }));
+      if (result.error !== null) {
+        setNotice({ tone: 'error', text: t.intake.scan.error });
+        return;
+      }
+      if (result.data.status === 'ok') {
+        // Öğretilen kod ÇARPANI kadar sayılır: az önce "bu koli 12 adet" denmişken satıra 1 yazmak,
+        // kendi söylediğimizi ilk kullanımda yok saymak olurdu.
+        addScanned(variantId, qtyPerCode, (name) => fillCopy(t.intake.scan.learned, { name, n: String(qtyPerCode) }));
+        return;
+      }
+      // Bu arada BAŞKASI öğretmiş (iki depocu aynı koliyle): kod kime bağlıysa oradan sayılır —
+      // sessiz bir çift kayıt yerine, formda varsa o satıra düşer, yoksa yalnız söylenir. Adet
+      // 1'dir ve olmalı: çarpan artık ÖTEKİNİN yazdığı kaydın bilgisi, bizim tahminimiz değil.
+      const bound = result.data;
+      const added = addScanned(bound.variantId, 1, (name) => fillCopy(t.intake.scan.alreadyBound, { name }));
+      if (!added) {
+        setNotice({
+          tone: 'warn',
+          text: fillCopy(t.intake.scan.notInForm, { name: productLabel(bound.productName, bound.variantLabel) }),
+        });
+      }
+    })();
+  }, [addScanned, learn, setNotice]);
 
   return {
     status,
     rows,
     pending,
+    addManualRow,
     stateOf,
     patch,
     complete,
@@ -381,7 +468,10 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
     confirmScanned,
     cancelScanned: useCallback(() => setScanned(null), []),
     learn,
-    teach,
+    pickLearnVariant,
+    setLearnKind,
+    setLearnQty,
+    confirmLearn,
     cancelLearn: useCallback(() => setLearn(null), []),
   };
 }
