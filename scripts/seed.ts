@@ -286,8 +286,8 @@ async function main(): Promise<void> {
   const kuponlar = await seedDiscounts(db, kisiler);
   await seedOrders(db, kisiler, varyantlar, kuponlar, depolar, katman);
   // FİZİKSEL test etiketleri siparişlerden SONRA: sabit kodlar tedarik siparişinin ve açık kutulu
-  // siparişin GERÇEK kalemlerine bağlanıyor (künye: `seed/test-labels.ts`).
-  await seedTestLabels(db, varyantlar, tedarik);
+  // siparişin GERÇEK kalemlerine bağlanıyor, sonra bağlar DOĞRULANIYOR (künye: `seed/test-labels.ts`).
+  await seedTestLabels(db, varyantlar);
   // Eşikler: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar. `full`de transferden SONRA
   // koşuyor (sevk edilen mal o sayıyı düşürür); `extend`te transfer yok, sıra da sorun değil.
   await seedThresholds(db, depolar);

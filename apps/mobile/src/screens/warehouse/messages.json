@@ -39,7 +39,7 @@
       "intake": {
         "code": "D2",
         "title": "Mal kabul",
-        "subtitle": "bekleyen sevkiyat listesi henüz uçtan gelmiyor"
+        "subtitle": "bekleyen sevkiyatlar · barkodla satır bulma"
       },
       "nearExpiry": {
         "code": "D3",
@@ -165,15 +165,17 @@
     "title": "Mal Kabul",
     "loading": "Kabul formu yükleniyor…",
     "captionPlanned": "tedarik siparişi · gönderildi",
-    "captionUnplanned": "plansız kabul",
+    "captionPending": "bekleyen sevkiyatlar",
     "error": {
       "title": "Kabul formu yüklenemedi",
       "body": "Bağlantı ya da sunucu sorunu — hiçbir satır yazılmadı."
     },
-    "noSubject": {
-      "title": "Hangi sevkiyat kabul edilecek?",
-      "body": "Bekleyen tedarik siparişlerini listeleyen bir kapı henüz yok; ekran bildirimden ya da doğrudan sipariş bağıyla açılır."
+    "noPending": {
+      "title": "Bekleyen sevkiyat yok",
+      "body": "Gönderilmiş ya da yarım kabul edilmiş bir tedarik siparişi olduğunda bu liste kendiliğinden dolar."
     },
+    "pendingHeading": "BEKLEYEN SEVKİYATLAR",
+    "pendingLines": "{n} kalem",
     "emptyForm": {
       "title": "Bu siparişin açık kalemi yok",
       "body": "Sipariş ya kapanmış ya da satırları başka bir kabulde yazılmış."

@@ -52,25 +52,65 @@ export function IntakeScreen() {
   const header = (
     <OperationsStackHeader
       title={t.intake.title}
-      subtitle={purchaseOrderId === null ? t.intake.captionUnplanned : t.intake.captionPlanned}
+      // Konusuz açılış artık "plansız kabul" DEĞİL, bekleyen sevkiyat listesi (24.08): plansız
+      // kabul kendi işidir (23.13) ve bu ekran onu henüz açmıyor — yanlış ad, olmayan bir yetenek
+      // vaat ediyordu.
+      subtitle={purchaseOrderId === null ? t.intake.captionPending : t.intake.captionPlanned}
       onBack={() => router.back()}
       backLabel={t.common.back}
       testID="warehouse-intake-header"
     />
   );
 
-  if (purchaseOrderId === null) {
+  /*
+    KONUSUZ AÇILIŞ = BEKLEYEN SEVKİYAT LİSTESİ (24.08). Eskiden burada "bu ekranın konusu yok"
+    yazıyordu ve mal kabule YALNIZ derin bağlantıyla girilebiliyordu; sipariş kimliği her
+    tazelemede değiştiği için o yol sürekli kırılıyordu (ölçüldü). Uç 21.11d'den beri hazırdı.
+  */
+  if (purchaseOrderId === null && intake.status !== 'loading') {
     return (
       <View style={styles.screen} testID="warehouse-intake">
         {header}
-        <View style={styles.block}>
-          <OperationsNoticeBlock
-            variant="empty"
-            title={t.intake.noSubject.title}
-            description={t.intake.noSubject.body}
-            testID="warehouse-intake-no-subject"
-          />
-        </View>
+        {intake.status === 'error' ? (
+          <View style={styles.block}>
+            <OperationsNoticeBlock
+              variant="error"
+              title={t.intake.error.title}
+              description={t.intake.error.body}
+              retry={{ label: t.common.retry, onPress: intake.reload }}
+              testID="warehouse-intake-error"
+            />
+          </View>
+        ) : intake.pending.length === 0 ? (
+          <View style={styles.block}>
+            <OperationsNoticeBlock
+              variant="empty"
+              title={t.intake.noPending.title}
+              description={t.intake.noPending.body}
+              testID="warehouse-intake-no-subject"
+            />
+          </View>
+        ) : (
+          <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-pending">
+            <Text style={styles.heading}>{t.intake.pendingHeading}</Text>
+            {intake.pending.map((row) => (
+              <PressableSurface
+                key={row.purchaseOrderId}
+                onPress={() => router.push(`/intake?purchaseOrderId=${row.purchaseOrderId}`)}
+                feedback="shadow"
+                style={styles.pendingRow}
+                accessibilityLabel={row.referenceNo ?? row.supplierName ?? t.intake.title}
+                testID={`warehouse-intake-pending-${row.purchaseOrderId}`}
+              >
+                <View style={styles.pendingNames}>
+                  <Text style={styles.pendingRef}>{row.referenceNo ?? '—'}</Text>
+                  <Text style={styles.pendingMeta}>{row.supplierName ?? '—'}</Text>
+                </View>
+                <Text style={styles.pendingMeta}>{fillCopy(t.intake.pendingLines, { n: String(row.lineCount) })}</Text>
+              </PressableSurface>
+            ))}
+          </FormScroll>
+        )}
       </View>
     );
   }
@@ -626,6 +666,31 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors.olive,
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+    padding: operationsTheme.space['2xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-500'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  pendingNames: {
+    flexShrink: 1,
+    gap: operationsTheme.space['2xs'],
+  },
+  pendingRef: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  pendingMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
   },
   scannedHead: {
     flexDirection: 'row',

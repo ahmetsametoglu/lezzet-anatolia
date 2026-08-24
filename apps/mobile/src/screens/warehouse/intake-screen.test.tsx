@@ -80,14 +80,32 @@ beforeEach(() => {
 });
 
 describe('D2 · mal kabul', () => {
-  it('konusuz açılırsa "hangi sevkiyat" sorusunu SÖYLER — sahte liste çizilmez', async () => {
+  it('konusuz açılırsa BEKLEYEN SEVKİYATLARI listeler — kabul formu çizilmez', async () => {
+    // 24.08'e kadar burada "konu yok" yazıyordu ve mal kabule yalnız derin bağlantıyla
+    // girilebiliyordu; sipariş kimliği her tazelemede değiştiği için o yol sürekli kırılıyordu.
     delete mockParams.purchaseOrderId;
-    withForm([]);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        ok({
+          intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-ABC123', supplierName: 'Gaziantep', lineCount: 4 }],
+        }),
+      ),
+    );
+
+    await renderIntake();
+
+    expect(screen.getByTestId(`warehouse-intake-pending-${PO_ID}`)).toBeOnTheScreen();
+    expect(screen.getByText('TS-26-ABC123')).toBeOnTheScreen();
+    expect(screen.queryByTestId('warehouse-intake-cta')).toBeNull();
+  });
+
+  it('bekleyen sevkiyat YOKSA uydurma liste çizilmez, boşluk söylenir', async () => {
+    delete mockParams.purchaseOrderId;
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ intakes: [] })));
 
     await renderIntake();
 
     expect(screen.getByTestId('warehouse-intake-no-subject')).toBeOnTheScreen();
-    expect(screen.queryByTestId('warehouse-intake-cta')).toBeNull();
   });
 
   it('SKT girilmeden CTA açılmaz — kural şemada, ekran kapıyı boşuna zorlamaz', async () => {

@@ -1,3 +1,4 @@
+import { listPendingIntakes } from '@lezzet/application';
 import { PurchaseOrderItemService, VariantBarcodeService } from '@lezzet/database';
 import type { Db, VaryantRef } from './shared';
 
@@ -125,15 +126,20 @@ export function testLabelCode(role: TestLabelRole): string {
  * değiştirilemez (`OrderBoxUpdate` bilerek yalnız damga alanlarını alıyor) — o yüzden kutu en
  * baştan sabit kodla açılır.
  */
-export async function seedTestLabels(db: Db, varyantlar: VaryantRef[], tedarik: Map<string, string>): Promise<void> {
+export async function seedTestLabels(db: Db, varyantlar: VaryantRef[]): Promise<void> {
   const barcodes = new VariantBarcodeService(db);
   const kalemServisi = new PurchaseOrderItemService(db);
 
-  // ── Mal kabul: kabul BEKLEYEN tedarik siparişinin kendi kalemleri ───────────────────────────
-  const poId = tedarik.get('kabulBekleyenPo');
-  if (poId === undefined) throw new Error('test etiketi: kabul bekleyen tedarik siparişi yok');
-  const kalemler = await kalemServisi.listByOrder(poId);
-  if (kalemler.length < 2) throw new Error('test etiketi: kabul bekleyen siparişin en az iki kalemi olmalı');
+  // ── Mal kabul: KABUL EDİLEBİLİR bir siparişin kendi kalemleri ───────────────────────────────
+  // Hedef seed'in ara haritasından DEĞİL, veriden bulunuyor: harita `tabloDolu` guard'ıyla erken
+  // dönen bir koşuda boş kalıyor ve `pnpm db:seed` ikinci kez çalıştırıldığında set çöküyordu
+  // (ölçüldü 24.08). Ölçüt kimlik değil DURUM: mal kabul ekranı `sent` ve `partially_received`
+  // siparişleri listeler, etiketin işe yaraması için hedefin o kümede olması yeter.
+  const poId = await kabulEdilebilirSiparis(db);
+  // Kalem sırası da SABİTLENİR: `listByOrder` sıra garanti etmiyor ve sırasız bir listede "ilk
+  // kalem" her koşuda başka ürün demek — sabit kodun anlamı da onunla birlikte kayar.
+  const kalemler = (await kalemServisi.listByOrder(poId)).sort((a, b) => a.variantId.localeCompare(b.variantId));
+  if (kalemler.length < 2) throw new Error('test etiketi: kabul edilebilir siparişin en az iki kalemi olmalı');
 
   await bagla(barcodes, testLabelCode('paket'), kalemler[0]!.variantId, 'unit', 1);
   await bagla(barcodes, testLabelCode('koli'), kalemler[1]!.variantId, 'case', 24);
@@ -151,10 +157,76 @@ export async function seedTestLabels(db: Db, varyantlar: VaryantRef[], tedarik: 
   if (yabanci === undefined) throw new Error('test etiketi: hiçbir işe girmemiş varyant bulunamadı');
   await bagla(barcodes, testLabelCode('yabanci'), yabanci.id, 'unit', 1);
 
-  // Kodlar sabit ama BAĞLANDIKLARI KAYIT her koşuda yeni kimlik alır; turu kuran kişi (ya da ajan)
-  // mal kabul formunu bu kimlikle açar — kimliği aramak için DB'ye inmek zorunda kalmasın.
-  console.log(`✓ test etiketi: ${TEST_LABELS.length} sabit kod (fiziksel set — künye: pnpm labels:test)`);
-  console.log(`  · mal kabul turu: /intake?purchaseOrderId=${poId}`);
+  await dogrula(db, poId, acikKutulu, yabanci.id);
+
+  // Kimlik YAZILMAZ ve gerekmez: mal kabul ekranı 24.08'den beri bekleyen sevkiyatları kendisi
+  // listeliyor (`GET /warehouse/intake`), yani tur `/intake` ile açılır. Kimliği künyeye yazmak,
+  // bir sonraki tazelemede yanlış olacak bir bilgiyi belgelemek olurdu.
+  console.log(`✓ test etiketi: ${TEST_LABELS.length} sabit kod, bağları doğrulandı (künye: pnpm labels:test)`);
+}
+
+/**
+ * **SET KENDİ VAADİNİ DOĞRULAR** (kullanıcı kararı 24.08: *"her seferinde uyumsuzluk problemleri
+ * yaşamayalım"*).
+ *
+ * Bağlar kurulduktan sonra dört soru ölçülür ve tutmayan biri seed'i DURDURUR. Gerekçe yaşananlar:
+ * etiketler bir kez kabul edilmiş bir siparişe bağlandı ve arıza ancak cihazda, boş açılan bir
+ * formla görüldü — o noktada sebep de görünmüyordu ("açık kalemi yok" dedi, kimin suçu olduğunu
+ * söylemedi). Uyumsuzluk artık makinede, sebebiyle birlikte çıkar.
+ */
+async function dogrula(db: Db, poId: string, toplamaVariantId: string, yabanciVariantId: string): Promise<void> {
+  const { data: po } = await db.from('purchase_order').select('status').eq('id', poId).maybeSingle();
+  const durum = (po as { status: string } | null)?.status;
+  // Kabul ekranı `sent` ve `partially_received` siparişleri listeler; kapanmış bir siparişe bağlanan
+  // etiket kâğıtta duruyor ama hiçbir formda karşılığı olmuyor.
+  if (durum !== 'sent' && durum !== 'partially_received') {
+    throw new Error(`test etiketi: paket/koli kabul edilemeyecek bir siparişe bağlandı (durum: ${durum ?? 'yok'})`);
+  }
+
+  // Ekranın İLK satırı olmalı: turu kuran kişi listede en üsttekine basar. İkinci sıraya düşen bir
+  // hedef, sistem doğru çalışsa bile "bu siparişin kaleminde yok" cevabı üretir (ölçüldü 24.08).
+  const [ilk] = await listPendingIntakes(db, { limit: 1 });
+  if (ilk?.purchaseOrderId !== poId) {
+    throw new Error('test etiketi: hedef sipariş mal kabul listesinin ilk satırı değil');
+  }
+
+  const { data: acik } = await db
+    .from('order_box')
+    .select('id, order_id')
+    .is('sealed_at', null)
+    .limit(1)
+    .maybeSingle();
+  if (acik === null) throw new Error('test etiketi: toplama turu için açık kutu yok');
+
+  const { data: toplamaKalem } = await db
+    .from('order_item')
+    .select('id')
+    .eq('order_id', (acik as { order_id: string }).order_id)
+    .eq('variant_id', toplamaVariantId)
+    .limit(1)
+    .maybeSingle();
+  if (toplamaKalem === null) throw new Error('test etiketi: toplama kodu açık kutulu siparişin kaleminde değil');
+
+  // "Yabancı" olmanın tek ölçütü budur: hiçbir kabulde ve hiçbir siparişte bulunmamak.
+  const { count: poSayisi } = await db
+    .from('purchase_order_item')
+    .select('id', { count: 'exact', head: true })
+    .eq('variant_id', yabanciVariantId);
+  const { count: siparisSayisi } = await db
+    .from('order_item')
+    .select('id', { count: 'exact', head: true })
+    .eq('variant_id', yabanciVariantId);
+  if ((poSayisi ?? 0) > 0 || (siparisSayisi ?? 0) > 0) {
+    throw new Error('test etiketi: "yabancı ürün" tanıdık çıktı — ret yolu sınanamaz');
+  }
+
+  const { data: kutu } = await db
+    .from('order_box')
+    .select('sealed_at')
+    .eq('code', testLabelCode('kutu'))
+    .maybeSingle();
+  const muhur = (kutu as { sealed_at: string | null } | null)?.sealed_at ?? null;
+  if (muhur === null) throw new Error('test etiketi: kutu QR kodu KAPALI bir kutuya bağlı değil');
 }
 
 /** Açık (mühürsüz) kutusu olan siparişin ilk kaleminin varyantı — toplama etiketinin hedefi. */
@@ -175,6 +247,40 @@ async function siparisVaryantlari(db: Db): Promise<string[]> {
   return ((data ?? []) as Array<{ variant_id: string }>).map((r) => r.variant_id);
 }
 
+/**
+ * Etiketlerin bağlanacağı sipariş — **mal kabul ekranında EN ÜSTTE görünen**, en az iki kalemli.
+ *
+ * Ölçüt ekranın kendi sıralamasıdır (`listPendingIntakes`: en yeni önce). Sebebi ölçüldü (24.08):
+ * "en çok kalemli"yi seçmek doğru bir sipariş buluyordu ama o sipariş listede İKİNCİ sıradaydı —
+ * turu kuran kişi en üsttekine basıp "bu siparişin kaleminde yok" cevabını alıyordu. Sistem
+ * doğruydu, eşleşme yanlıştı. Etiket artık listenin ilk satırında karşılığını buluyor.
+ *
+ * İki kalem şartı: paket ve koli AYRI kalemlere bağlanıyor; tek kalemli bir siparişte set eksik
+ * kurulurdu. Şartı sağlayan yoksa hata — sessizce üçüncü sıraya kaymak, aynı tuzağı geri getirirdi.
+ */
+async function kabulEdilebilirSiparis(db: Db): Promise<string> {
+  const { data } = await db
+    .from('purchase_order')
+    .select('id, created_at')
+    .in('status', ['sent', 'partially_received'])
+    .order('created_at', { ascending: false });
+  const adaylar = (data ?? []) as Array<{ id: string }>;
+  if (adaylar.length === 0) throw new Error('test etiketi: kabul edilebilir tedarik siparişi yok');
+
+  const kalemServisi = new PurchaseOrderItemService(db);
+  for (const aday of adaylar) {
+    if ((await kalemServisi.listByOrder(aday.id)).length >= 2) return aday.id;
+  }
+  throw new Error('test etiketi: kabul edilebilir siparişlerin hiçbirinde iki kalem yok');
+}
+
+/**
+ * Kodu varyanta bağlar — **tekrar koşuya dayanıklı**: kod zaten aynı yere bağlıysa dokunmaz, BAŞKA
+ * yere bağlıysa durur.
+ *
+ * Sessizce geçmek en kötüsü olurdu: kâğıttaki etiket bir ürünü gösterirken sistem başkasını
+ * tanırdı ve fark ancak depoda, yanlış mal stoğa yazıldıktan sonra görülürdü.
+ */
 async function bagla(
   barcodes: VariantBarcodeService,
   code: string,
@@ -182,7 +288,12 @@ async function bagla(
   kind: 'unit' | 'case',
   qtyPerCode: number,
 ): Promise<void> {
-  // Kod GLOBAL unique. Genel kodlama (`barcode.ts`) bu sabitleri üretmez (biçimleri ayrık), ama bir
-  // gün çakışırsa sessizce geçmesin: hata seed'i durdurur, etiket yanlış ürüne bağlanmaz.
+  const mevcut = await barcodes.getByCode(code);
+  if (mevcut !== null) {
+    if (mevcut.variantId !== variantId) {
+      throw new Error(`test etiketi: "${code}" başka bir varyanta bağlı — set bozulmuş, db:refresh gerekir`);
+    }
+    return;
+  }
   await barcodes.insert({ variantId, code, kind, qtyPerCode });
 }

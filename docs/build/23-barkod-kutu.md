@@ -378,8 +378,35 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   - **SKU eşleşmesi bilerek sette YOK:** o kodun bir varyantın SKU'sunun kendisi olması gerekir,
     yani sabitlenemez (SKU fiyat dosyalarının anahtarı; test için değiştirmek fiyat eşlemesini
     bozardı). Zincirin o halkası jest + entegrasyonda ölçülü.
-  - ⏳ **CİHAZ TURU KALDI:** set basılacak (yazıcı kullanıcıda kapalı) ve kamerayla okutulacak;
-    okutma çekmecesinin (23.11) kâğıtla ölçümü de bu turda kapanır.
+  - **CİHAZDA KÂĞITLA ÖLÇÜLDÜ (24.08) — ITF-14 gerçek kameradan okundu.** Kullanıcı basılı KOLİ
+    etiketini (`18691000047516`) okuttu: `CameraView` çözdü → çekmece 24 adetle açıldı, "1 koli"
+    dökümü ve rayda beklenen (54) çentiği göründü. Yani zincirin tamamı kâğıttan kanıtlandı:
+    çizgili simge → decode → kod çözümü → satır bulma → adet önerisi.
+  - **BESLEME SAĞLAMLAŞTIRILDI (kullanıcı isteği 24.08: *"her seferinde uyumsuzluk problemleri
+    yaşamayalım"*).** Üç kırılganlık ölçülüp giderildi, üçü de aynı kökten — seed test senaryosunu
+    GARANTİ etmiyor, tesadüfe bırakıyordu:
+    - *Hedef kapanmış siparişe düşebiliyordu* → hedef artık veriden seçiliyor ve ölçüt DURUM
+      (`sent`/`partially_received`), seed'in ara haritası değil.
+    - *`pnpm db:seed` ikinci kez koşunca çöküyordu* (harita `tabloDolu` guard'ıyla boş dönüyor) →
+      set haritadan bağımsızlaştı; `bagla` tekrar koşuya dayanıklı (aynı yere bağlıysa dokunmaz,
+      BAŞKA yere bağlıysa durur — sessiz geçmek, kâğıdın bir ürünü sistemin başkasını göstermesi
+      demekti).
+    - *Seçim deterministik değildi* → aynı veri üstünde iki koşu farklı sipariş/kalem seçiyordu;
+      sipariş ekranın kendi sıralamasıyla (en yeni önce), kalemler `variantId` ile sabitlendi.
+    - **Set artık kendi vaadini DOĞRULUYOR** (`dogrula`): hedef kabul edilebilir mi · mal kabul
+      listesinin İLK satırı mı · toplama kodu açık kutulu siparişin kaleminde mi · "yabancı" gerçekten
+      hiçbir yerde yok mu · kutu QR'ı kapalı kutuda mı. Tutmayan biri seed'i DURDURUR — uyumsuzluk
+      artık cihazda değil makinede, sebebiyle birlikte çıkar. (İkisi ölçümle yakalandı: kasten
+      bozulan "yabancı" ve deterministik olmayan seçim.)
+  - **DEEP LINK BAĞIMLILIĞI KALKTI — mal kabul artık kendi listesini okuyor.** Kök sorun buydu:
+    sipariş kimliği her tazelemede değişiyor ve ekrana yalnız derin bağlantıyla girilebiliyordu.
+    Uç (`GET /warehouse/intake`) 21.11d'den beri hazırdı, ekran okumuyordu; konusuz açılış artık
+    "bekleyen sevkiyatlar" listesi (referans · tedarikçi · kalem sayısı → dokun, forma gir).
+    Hedef siparişin listenin İLK satırı olması da doğrulanıyor: ikinci sıraya düşen bir hedef,
+    sistem doğru çalışsa bile "bu siparişin kaleminde yok" cevabı üretiyordu (ölçüldü). Hub'ın
+    bayat *"bekleyen sevkiyat listesi henüz uçtan gelmiyor"* dipnotu ve ekranın yanlış
+    *"plansız kabul"* altyazısı da düzeltildi — ikincisi olmayan bir yetenek vaat ediyordu (plansız
+    kabul 23.13'ün işi). Cihazda uçtan uca ölçüldü: giriş → liste → ilk satır → okutma → çekmece.
 
 ## Netleşecekler
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { IntakeFormRowContract, ResolveCodeResponse } from '@lezzet/types';
+import type { IntakeFormRowContract, PendingIntakeContract, ResolveCodeResponse } from '@lezzet/types';
 
-import { fetchIntakeForm, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
+import { fetchIntakeForm, fetchPendingIntakes, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
@@ -73,6 +73,8 @@ export interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status:
 interface UseIntakeResult {
   status: IntakeStatus;
   rows: IntakeFormRowContract[];
+  /** Konusuz açılışta bekleyen sevkiyatlar; konulu açılışta boş. */
+  pending: PendingIntakeContract[];
   stateOf: (variantId: string) => IntakeRowState;
   patch: (variantId: string, patch: Partial<IntakeRowState>) => void;
   /** Her satırda adet + geçerli SKT var mı — CTA'nın kapısı. */
@@ -105,8 +107,10 @@ interface UseIntakeResult {
 }
 
 export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
-  const [status, setStatus] = useState<IntakeStatus>(purchaseOrderId === null ? 'ready' : 'loading');
+  const [status, setStatus] = useState<IntakeStatus>('loading');
   const [rows, setRows] = useState<IntakeFormRowContract[]>([]);
+  /** Konusuz açılışın listesi — "hangi sevkiyatı bekliyorum". Konulu açılışta boş kalır. */
+  const [pending, setPending] = useState<PendingIntakeContract[]>([]);
   const [states, setStates] = useState<Record<string, IntakeRowState>>({});
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<IntakeNotice>();
@@ -116,8 +120,20 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
 
   const load = useCallback(async () => {
     if (purchaseOrderId === null) {
-      setStatus('ready');
+      // KONUSUZ AÇILIŞ artık boş bir ekran değil, BEKLEYEN SEVKİYAT LİSTESİ (24.08). Uç 21.11d'den
+      // beri vardı ama ekran okumuyordu; mal kabule yalnız derin bağlantıyla girilebiliyordu ve
+      // sipariş kimliği her tazelemede değiştiği için o yol sürekli kırılıyordu.
+      const run = (generation.current += 1);
+      const bekleyen = await trackWarehouse(fetchPendingIntakes());
+      if (run !== generation.current) return;
+
       setRows([]);
+      if (bekleyen.error !== null) {
+        setStatus('error');
+        return;
+      }
+      setPending(bekleyen.data.intakes);
+      setStatus('ready');
       return;
     }
 
@@ -346,6 +362,7 @@ export function useIntake(purchaseOrderId: string | null): UseIntakeResult {
   return {
     status,
     rows,
+    pending,
     stateOf,
     patch,
     complete,

@@ -7,6 +7,7 @@ import {
   LearnCodeResponseSchema,
   MarkBoxPrintedResponseSchema,
   OpenBoxResponseSchema,
+  PendingIntakesResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsResponseSchema,
   ReceiveTransferResponseSchema,
@@ -106,6 +107,16 @@ export function fetchBoxLabel(boxId: string): Promise<ApiResult<z.infer<typeof B
 /** **Basım damgası** (23.7) — SDK "bastı" deyince çağrılır; damga başarının kaydıdır, niyetin değil. */
 export function markBoxPrinted(boxId: string): Promise<ApiResult<z.infer<typeof MarkBoxPrintedResponseSchema>>> {
   return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/printed`, MarkBoxPrintedResponseSchema, { method: 'POST' });
+}
+
+/**
+ * **"Hangi sevkiyatı bekliyorum"** (D2'nin konusuz açılışı) — uç 21.11d'den beri vardı, ekran
+ * bunu 24.08'e kadar okumuyordu ve mal kabule YALNIZ derin bağlantıyla girilebiliyordu. Sipariş
+ * kimliği her `db:refresh`te değiştiği için o yol her tazelemede kırılıyordu (ölçüldü 24.08:
+ * elimdeki kimlik öldü, form "açık kalemi yok" dedi ve sebebi kimliğin bayatlığıydı).
+ */
+export function fetchPendingIntakes(): Promise<ApiResult<z.infer<typeof PendingIntakesResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/intake', PendingIntakesResponseSchema);
 }
 
 /** **Tedarik siparişinden dolu kabul formu** (D2). Boş dizi = plansız alım (form elle doldurulur). */
