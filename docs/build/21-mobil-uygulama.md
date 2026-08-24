@@ -5041,3 +5041,32 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Doğrulama: `typecheck` temiz (`@lezzet/mobile`de kalan iki hata BAŞKA şeridin commit'lenmiş
   `global.fetch` satırları) · mobil jest · birim paketi.
+
+- [x] (21.102) **MAİLDE METNİN SOL KENARI ZIPLIYORDU — beş hiza tek sayıya bağlandı (MB-40)**
+  · touches: `packages/email/src/components/email-layout.tsx`
+
+  **BULGUNUN ADI YANLIŞTI.** Arka-uç şeridi talep mailinde *"üç kartın üç farklı genişliği"* diye
+  bir bulgu bırakmış ve ölçümünü bize devretmişti (`docs/talep/not-mobil-talep-maili-…`). Ölçüm:
+  **kartların kutuları AYNI genişlikte** — 600 − 2×32 = **536 px**, hepsi `width: 100%`. Farklı
+  olan metnin nerede BAŞLADIĞI ve sayfa kenarından ölçüldüğünde beş ayrı değer vardı:
+  `QuoteCard 46` · `InfoBlock 54` · `NoticeCard 55` · `HeaderCard/Timeline/Card 57` ·
+  `StatusBlock 59`. İzlenim doğruydu, sebebin adı değil.
+
+  **SÜRÜKLENME TALEP MAİLİNE ÖZEL DEĞİLDİ:** beş değerin dördü sipariş ve geri bildirim
+  maillerinde de duruyordu. Yalnız talep mailinin üç bloğunu hizalamak aynı arızayı öteki
+  maillerde bırakırdı — bu yüzden hiza TÜRETİLİR oldu: `TEXT_INSET = 57` tek yerde durur,
+  `innerX(kenarlık, şerit)` her bloğun iç dolgusunu ondan hesaplar. Yeni blok yazan bir sayı
+  seçmez, fonksiyonu çağırır; altıncı bir değer doğamaz.
+  **57 keyfî değil:** bugün çoğunluk oydu (`HeaderCard` · `Timeline` · `Card`), yani en az bloğu
+  oynatan ve en az görsel risk taşıyan değer.
+
+  **YARIM BIRAKILMADI:** `ROW_INSET` tanımlanıp satırların elle `32px` yazmaya devam etmesi
+  **yalan söyleyen bir sabit** olurdu — biri onu değiştirse satırlar yerinde kalır, hiza sessizce
+  bozulurdu. `Row` artık dikey dolguyu prop alıyor (ritim bloktan bloğa gerçekten değişiyor),
+  yatayı kendi biliyor; on iki çağrının on ikisi dönüştürüldü.
+
+  **DOĞRULAMA GERÇEK RENDER'DAN, kâğıt hesabından değil.** Mail render edilip HTML'deki dolgular
+  ölçüldü: `NoticeCard` metni **55 → 57**, `QuoteCard` metni **46 → 57**. İlk sonda SAHTE YEŞİL
+  verdi (sipariş maili render'ı düşünce ölçülen küme boş kaldı ve iddia boşluğa geçti) — fark
+  edilip fikstür düzeltildi, sonra sonda silindi. `@lezzet/email` typecheck temiz · mail testleri
+  **26/26**.

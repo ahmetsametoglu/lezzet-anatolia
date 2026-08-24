@@ -23,6 +23,48 @@ void React;
 const SERIF = "Georgia,'Times New Roman',serif";
 const SANS = 'Arial,Helvetica,sans-serif';
 
+/*
+  METNİN HİZASI — TEK SAYI, YEDİ BLOK (MB-40, ölçüldü 24.08).
+
+  ── ARIZA NEYDİ ─────────────────────────────────────────────────────────────
+  Arka-uç şeridi talep mailinde *"üç kartın üç farklı genişliği"* diye bir bulgu bırakmış ve
+  ölçümünü bize devretmişti. Ölçünce izlenim doğru, ADI yanlış çıktı: **kartların kutuları AYNI
+  genişlikte** (600 − 2×32 = 536 px). Farklı olan, metnin nerede BAŞLADIĞI — ve sayfa kenarından
+  ölçüldüğünde bugün beş ayrı değer vardı:
+
+      QuoteCard 46 · InfoBlock 54 · NoticeCard 55 · HeaderCard/Timeline/Card 57 · StatusBlock 59
+
+  Yani maili aşağı okurken metnin sol kenarı zıplıyordu. Hiçbiri hata vermez, hiçbiri testte
+  görünmez; yalnız mail derli toplu durmaz.
+
+  ── NEDEN TEK SABİT, BLOK BLOK DÜZELTME DEĞİL ───────────────────────────────
+  Değerler elle yazılmıştı ve her blok kendi iç boşluğunu kendi biliyordu; sekizinci blok yazılan
+  gün altıncı bir değer doğardı. Hiza artık TÜRETİLİYOR: ortak hedef tek yerde durur, her blok
+  kendi kenarlığını/şeridini ondan düşer. Yeni blok yazan kişi bir sayı seçmez, `innerX`i çağırır.
+
+  ── SÜRÜKLENME TALEP MAİLİNE ÖZEL DEĞİLDİ ───────────────────────────────────
+  Bulgu talep mailinden geldi ama beş değerin dördü sipariş/geri bildirim maillerinde de duruyor;
+  yalnız talep mailinin üç bloğunu hizalamak, aynı arızayı öteki maillerde bırakmak olurdu.
+*/
+
+/** Gövde satırının yatay dolgusu — `Row`ın tek yatay ölçüsü. */
+const ROW_INSET = 32;
+
+/**
+ * Metnin SAYFA KENARINDAN uzaklığı — bütün blokların ortak hizası.
+ *
+ * 57 seçildi çünkü bugün ÇOĞUNLUK oydu (`HeaderCard` · `Timeline` · `Card`): en az bloğu oynatan
+ * değer, yani en az görsel risk taşıyan. Keyfî bir sayı değil, mevcut tasarımın kendi kararı.
+ */
+const TEXT_INSET = 57;
+
+/**
+ * Bir bloğun iç YATAY boşluğu: ortak hizadan satır dolgusu, bloğun kendi kenarlığı ve (varsa) sol
+ * vurgu şeridi düşülür. Kenarlığı olmayan blok (`InfoBlock`) 0 geçer — 1 px'lik fark bile metni
+ * komşusundan kaydırıyordu ve tam olarak bu yüzden elle hesaplanmamalı.
+ */
+const innerX = (border: number, stripe = 0): number => TEXT_INSET - ROW_INSET - border - stripe;
+
 /** Tasarım paleti (`design/project/Email - *.html`) — mailde CSS değişkeni çalışmaz, sabit gerekir. */
 const C = {
   page: '#e9e6df',
@@ -134,10 +176,14 @@ export function EmailLayout({ preview, locale, brandName, region, footer, childr
 }
 
 /** Gövde satırı — iskeletin `children`'ı hep `<tr>` olmalı; dolgu tek yerden verilir. */
-function Row({ children, padding }: { children: React.ReactNode; padding: string }) {
+function Row({ children, top, bottom }: { children: React.ReactNode; top: number; bottom: number }) {
+  /* YATAY dolgu prop DEĞİL: on iki çağıranın on ikisi de aynı 32'yi yazıyordu ve `ROW_INSET`
+     yalnız `innerX`in içinde yaşadığı sürece SABİT YALAN SÖYLERDİ — biri onu değiştirse satırlar
+     yerinde kalır, hiza sessizce bozulurdu. Dikey dolgu bloktan bloğa gerçekten değişiyor
+     (ritim), o yüzden o prop kaldı. */
   return (
     <tr>
-      <td style={{ padding }}>{children}</td>
+      <td style={{ padding: `${top}px ${ROW_INSET}px ${bottom}px` }}>{children}</td>
     </tr>
   );
 }
@@ -158,7 +204,7 @@ const TONE: Record<StatusTone, { soft: string; ink: string; border: string }> = 
 export function StatusPill({ label, tone = 'green' }: { label: string; tone?: StatusTone }) {
   const colors = TONE[tone];
   return (
-    <Row padding="32px 32px 0">
+    <Row top={32} bottom={0}>
       <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
         <tbody>
           <tr>
@@ -184,14 +230,16 @@ export function StatusPill({ label, tone = 'green' }: { label: string; tone?: St
 export function StatusBlock({ tone, headline, detail }: { tone: StatusTone; headline: string; detail: React.ReactNode }) {
   const colors = TONE[tone];
   return (
-    <Row padding="0 32px 18px">
+    <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${colors.border}`, borderRadius: 16 }}>
         <tbody>
           <tr>
+            {/* Sol vurgu şeridi de hizaya dahil: 4 px'i `innerX`e bildiriliyor, yoksa bu bloğun
+                metni komşularından tam o kadar sağda başlardı (ölçüldü: 59 ↔ 57). */}
             <td width={4} style={{ width: 4, backgroundColor: colors.ink, fontSize: 0, lineHeight: 0 }}>
               &nbsp;
             </td>
-            <td style={{ padding: '18px 22px' }}>
+            <td style={{ padding: `18px ${innerX(1, 4)}px` }}>
               <div style={{ fontFamily: SANS, fontSize: 14, lineHeight: '20px', fontWeight: 'bold', color: colors.ink }}>{headline}</div>
               <div style={{ fontFamily: SANS, fontSize: 13, lineHeight: '20px', color: C.muted, paddingTop: 5 }}>{detail}</div>
             </td>
@@ -206,10 +254,10 @@ export function StatusBlock({ tone, headline, detail }: { tone: StatusTone; head
 export function Headline({ title, intro }: { title: string; intro: React.ReactNode }) {
   return (
     <>
-      <Row padding="14px 32px 0">
+      <Row top={14} bottom={0}>
         <div style={{ fontFamily: SERIF, fontSize: 29, lineHeight: '36px', color: C.ink }}>{title}</div>
       </Row>
-      <Row padding="10px 32px 22px">
+      <Row top={10} bottom={22}>
         <div style={{ fontFamily: SANS, fontSize: 14, lineHeight: '22px', color: C.muted }}>{intro}</div>
       </Row>
     </>
@@ -233,7 +281,7 @@ export function Headline({ title, intro }: { title: string; intro: React.ReactNo
  */
 export function MetaLine({ text }: { text: string }) {
   return (
-    <Row padding="0 32px 20px">
+    <Row top={0} bottom={20}>
       <div style={{ fontFamily: SANS, fontSize: 12.5, lineHeight: '18px', color: C.faint }}>{text}</div>
     </Row>
   );
@@ -248,11 +296,11 @@ export function MetaLine({ text }: { text: string }) {
  */
 export function HeaderCard({ title, meta, statusLabel }: { title: string; meta: string; statusLabel: string }) {
   return (
-    <Row padding="0 32px 18px">
+    <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${C.innerBorder}`, borderRadius: 16 }}>
         <tbody>
           <tr>
-            <td style={{ padding: '18px 24px' }}>
+            <td style={{ padding: `18px ${innerX(1)}px` }}>
               <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%' }}>
                 <tbody>
                   <tr>
@@ -288,11 +336,11 @@ export function HeaderCard({ title, meta, statusLabel }: { title: string; meta: 
  */
 export function Timeline({ steps, labels }: { steps: readonly NotificationStep[]; labels: Record<NotificationStep['key'], string> }) {
   return (
-    <Row padding="0 32px 18px">
+    <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${C.innerBorder}`, borderRadius: 16 }}>
         <tbody>
           <tr>
-            <td style={{ padding: '22px 24px' }}>
+            <td style={{ padding: `22px ${innerX(1)}px` }}>
               <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%' }}>
                 <tbody>
                   {steps.map((step, index) => {
@@ -359,11 +407,11 @@ export function Timeline({ steps, labels }: { steps: readonly NotificationStep[]
 /** Krem bilgi kutusu — teslimat penceresi / kurye saati. */
 export function InfoBlock({ icon, headline, detail }: { icon: string; headline: string; detail: React.ReactNode }) {
   return (
-    <Row padding="0 32px 18px">
+    <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.cream, borderRadius: 16 }}>
         <tbody>
           <tr>
-            <td style={{ padding: '18px 22px' }}>
+            <td style={{ padding: `18px ${innerX(0)}px` }}>
               <div style={{ fontFamily: SANS, fontSize: 14, lineHeight: '21px', fontWeight: 'bold', color: C.strong }}>{`${icon} ${headline}`}</div>
               <div style={{ fontFamily: SANS, fontSize: 13, lineHeight: '20px', color: C.muted, paddingTop: 4 }}>{detail}</div>
             </td>
@@ -377,11 +425,11 @@ export function InfoBlock({ icon, headline, detail }: { icon: string; headline: 
 /** Beyaz kart kabuğu — başlıklı içerik blokları (kalemler, tutar, özet) bunun içinde durur. */
 function Card({ title, children }: { title: string | null; children: React.ReactNode }) {
   return (
-    <Row padding="0 32px 18px">
+    <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${C.innerBorder}`, borderRadius: 16 }}>
         <tbody>
           <tr>
-            <td style={{ padding: '20px 24px' }}>
+            <td style={{ padding: `20px ${innerX(1)}px` }}>
               {title && <div style={{ fontFamily: SERIF, fontSize: 18, lineHeight: '24px', color: C.ink, paddingBottom: 10 }}>{title}</div>}
               {children}
             </td>
@@ -598,7 +646,7 @@ export interface EmailQuote {
  */
 export function QuoteCard({ title, entries }: { title: string; entries: readonly EmailQuote[] }) {
   return (
-    <Row padding="4px 32px 22px">
+    <Row top={4} bottom={22}>
       <div style={{ fontFamily: SERIF, fontSize: 16, lineHeight: '22px', color: C.muted, paddingBottom: 10 }}>{title}</div>
       {entries.map((entry, index) => (
         <table
@@ -612,7 +660,16 @@ export function QuoteCard({ title, entries }: { title: string; entries: readonly
         >
           <tbody>
             <tr>
-              <td style={{ padding: index === 0 ? '0 0 12px 12px' : '12px 0 12px 12px', borderLeft: `2px solid ${C.pendingRule}` }}>
+              {/* Alıntı bir KART DEĞİL, şeritle işaretli bir liste — kutusu yok, o yüzden hizayı
+                  kendi şeridinden (2 px) türetiyor. Bugüne dek metni 46 px'te başlıyordu, yani
+                  kartların 11 px SOLUNDA: alıntı normalde daha içeride durur, burada dışarıda
+                  duruyordu ve göz sütunu kaybediyordu. */}
+              <td
+                style={{
+                  padding: index === 0 ? `0 0 12px ${innerX(2)}px` : `12px 0 12px ${innerX(2)}px`,
+                  borderLeft: `2px solid ${C.pendingRule}`,
+                }}
+              >
                 <div style={{ fontFamily: SANS, fontSize: 12, lineHeight: '17px', color: C.faint, paddingBottom: 4 }}>
                   <strong style={{ color: C.muted }}>{entry.author}</strong> · {entry.at}
                 </div>
@@ -630,7 +687,7 @@ export function QuoteCard({ title, entries }: { title: string; entries: readonly
 /** Yeşil hap buton — her mailde tek birincil eylem. */
 export function CtaButton({ label, url }: { label: string; url: string }) {
   return (
-    <Row padding="2px 32px 26px">
+    <Row top={2} bottom={26}>
       <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
         <tbody>
           <tr>
@@ -656,11 +713,11 @@ export function CtaButton({ label, url }: { label: string; url: string }) {
  */
 export function NoticeCard({ title, text, linkLabel, linkUrl }: { title: string; text: string; linkLabel?: string | null; linkUrl?: string | null }) {
   return (
-    <Row padding="0 32px 18px">
+    <Row top={0} bottom={18}>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.cream, border: `1px solid ${C.cream}`, borderRadius: 16 }}>
         <tbody>
           <tr>
-            <td style={{ padding: '18px 22px' }}>
+            <td style={{ padding: `18px ${innerX(1)}px` }}>
               <div style={{ fontFamily: SERIF, fontSize: 17, lineHeight: '23px', color: C.ink }}>{title}</div>
               <div style={{ fontFamily: SANS, fontSize: 13, lineHeight: '20px', color: C.muted, padding: linkLabel ? '6px 0 12px' : '6px 0 0' }}>{text}</div>
               {linkLabel && linkUrl && (
