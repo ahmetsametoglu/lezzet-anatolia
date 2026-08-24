@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { getProductDetail } from './product';
-import { VISITOR, pricingViewerOf } from './pricing-viewer';
+import { VISITOR, effectiveChannelOf, pricingViewerOf } from './pricing-viewer';
 
 /**
  * **Fiyatın "kim soruyor" ekseni** (DOMAIN §5, §10) — terfi 21.6 (C).
@@ -159,5 +159,44 @@ describe('fiyatın görüntüleyen ekseni — vitrin kapısından', () => {
     const customerId = await newCustomer({ company: true, approved: true });
     await new PriceService(db).setPrice({ variantId, channel: 'b2b', customerId, amountCents: OZEL_FIYAT });
     expect(await birimFiyat(customerId)).toBe(OZEL_FIYAT);
+  });
+});
+
+/**
+ * KANAL KURALININ KENDİSİ — DB'siz, çünkü ikinci çağıranı fiyat sormuyor (24.08 · MB-63).
+ *
+ * Yukarıdaki testler kuralı **fiyat üzerinden** doğruluyor ve doğru olan da oydu: kod okunarak
+ * değil, müşterinin gördüğü sayı sorularak. Ama `effectiveChannelOf` artık ayrı bir kapı ve ikinci
+ * çağıranı **analitik kapısı** — o hiç fiyat okumuyor, yalnız olayın kanalını yazıyor.
+ *
+ * Yani bu kural bozulduğunda fiyat testleri hâlâ yeşil kalabilir ve tek belirti, defterde onaysız
+ * şirketlerin `b2b` diye sayılması olur — hiçbir yerde hata vermeden, üstelik kanal kırılımına
+ * bakan herkesi yanıltarak. Aynı dosyada duruyorlar çünkü konu tek: "kim soruyor".
+ */
+describe('effectiveChannelOf', () => {
+  it('birey B2C', () => {
+    expect(effectiveChannelOf({ type: 'individual', b2bApproved: null })).toBe('b2c');
+  });
+
+  it('ONAYLI şirket B2B', () => {
+    expect(effectiveChannelOf({ type: 'company', b2bApproved: true })).toBe('b2b');
+  });
+
+  it('ONAYSIZ şirket B2C — şirket olmak yetmez', () => {
+    expect(effectiveChannelOf({ type: 'company', b2bApproved: false })).toBe('b2c');
+  });
+
+  it('HİÇ BAŞVURMAMIŞ şirket de B2C — `null` onay DEĞİLDİR', () => {
+    expect(effectiveChannelOf({ type: 'company', b2bApproved: null })).toBe('b2c');
+  });
+
+  it('onaylı ama şirket OLMAYAN kayıt B2B olmaz — iki koşul birlikte aranır', () => {
+    // Veri bir gün tutarsız olabilir (onay bayrağı kalmış, tür bireye dönmüş). Kapının önce türe
+    // bakması, o hâlde toptan fiyatın açılmamasını garanti ediyor.
+    expect(effectiveChannelOf({ type: 'individual', b2bApproved: true })).toBe('b2c');
+  });
+
+  it('TÜRÜ BİLİNMEYEN kayıt B2C — bilinmeyen, ayrıcalık DEĞİLDİR', () => {
+    expect(effectiveChannelOf({ type: null, b2bApproved: true })).toBe('b2c');
   });
 });

@@ -104,7 +104,15 @@ function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   if (!readStarted) {
     readStarted = true;
-    void readMemory().then(publish);
+    void readMemory().then((stored) => {
+      /* OKUMA SÜRERKEN AD ÇÖZÜLDÜYSE TAZE OLAN KAZANIR (ölçüldü 24.08, testle üretildi).
+         Koşulsuz `publish` yazılıydı ve `/places` cevabı diskten önce geldiğinde taze adı eski
+         disk değeriyle geri alıyordu — yani MB-80'in kapattığı çıplak kod karesi geri geliyordu.
+         Kod DEĞİŞMİŞSE daha kötüsü oluyordu: eski kayıt yeni kodla eşleşmediği için ad tümden
+         kayboluyordu. Kardeş modülde (`home-layout-memory`) aynı koruma zaten vardı ve künye onu
+         emsal gösteriyordu; kopyalanan desen korumayı taşımamıştı. */
+      if (snapshot === undefined) publish(stored);
+    });
   }
   return () => {
     listeners.delete(listener);

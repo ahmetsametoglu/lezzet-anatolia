@@ -39,6 +39,31 @@ import { configDefaults, defineConfig } from 'vitest/config';
  */
 const PAKET_DBSIZ = ['packages/database/src/utils/case-transformers.test.ts'];
 
+/**
+ * `packages/application` de entegrasyon köküdür (orkestrasyonlar servislerle DB'ye vurur) ama
+ * içinde SAF karar fonksiyonları da var: sepet engelleri, ölçüm kovaları, kampanya üstünlüğü.
+ * Hiçbiri istemci kurmuyor.
+ *
+ * **Neden ayrı liste, neden bugün doğdu (24.08):** `CLAUDE §4b` entegrasyon koşusunu şeritlere
+ * KAPATIYOR — yani bu dosyalar entegrasyon projesinde kaldığı sürece, onları yazan şerit kendi
+ * testini koşamıyor ve doğrulaması commit öncesi tam pakete erteleniyor. `WEB_LIB_DBSIZ`in K8-1
+ * ölçümüyle çözdüğü sorunun aynısı, ikinci kökte.
+ *
+ * **Kök başına ayrı sabit** (üstteki künyenin kuralı): `docs:check §3g` `WEB_LIB_DBSIZ`i ADIYLA
+ * okuyup `'apps/…'` önekiyle tarıyor, buraya paket yolu koymak denetimin kapsamını bulandırırdı.
+ *
+ * **BU LİSTE MAKİNEYLE DENETLENMİYOR ve bilerek yazılıyor:** §3g yalnız `apps/` ağacını tarar,
+ * yani buraya girmeyi hak eden yeni bir saf dosya sessizce entegrasyonda kalabilir. Bedeli
+ * yavaşlık ve şeridin koşamaması; yanlış sonuç değil. Tersi — DB'ye vuran bir dosyayı buraya
+ * yazmak — GÜRÜLTÜLÜ patlar: birim projesi `.env` yüklemez ve DB env'ini siler, dosya ilk
+ * satırında "Supabase env eksik" der.
+ */
+const UYGULAMA_DBSIZ = [
+  'packages/application/src/analytics/availability.test.ts',
+  'packages/application/src/cart/cart-blocker.test.ts',
+  'packages/application/src/catalog/campaign.test.ts',
+];
+
 const WEB_LIB_DBSIZ = [
   'apps/web/lib/analytics/route-pattern.test.ts',
   'apps/web/lib/analytics/session-key.test.ts',
@@ -119,6 +144,7 @@ export default defineConfig({
             // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).
             ...WEB_LIB_DBSIZ,
             ...PAKET_DBSIZ,
+            ...UYGULAMA_DBSIZ,
           ],
           setupFiles: ['./vitest.setup.unit.ts'],
         },
@@ -140,7 +166,7 @@ export default defineConfig({
           // Birim projesine alınan 19 dosya buradan DÜŞER, yoksa İKİ projede birden koşarlardı.
           // `configDefaults.exclude` korunuyor: `exclude` verildiğinde vitest varsayılanı EZER ve
           // `node_modules` yeniden taranmaya başlardı.
-          exclude: [...configDefaults.exclude, ...WEB_LIB_DBSIZ, ...PAKET_DBSIZ],
+          exclude: [...configDefaults.exclude, ...WEB_LIB_DBSIZ, ...PAKET_DBSIZ, ...UYGULAMA_DBSIZ],
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.
           fileParallelism: false,

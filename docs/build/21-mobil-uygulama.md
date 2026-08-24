@@ -5134,3 +5134,59 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **BEKLEYEN(21.103):** katalog ve paket uçları `country: null` geçiyor — `readPlace` yalnız depo
   kimliği döndürüyor, ülke taşımıyor. Yer çözümü ucunda alan DOLU — yani kolon ölü değil, kırılımı
   eksik. Kapatması `readPlace`in dönüşünü genişletmek; ayrı bir tur, çünkü o kapıyı web de kullanıyor.
+
+- [x] (21.104) **TESLİM EDİLMİŞ BEŞ ÖZELLİĞİN TESTLERİ YAZILDI — biri gerçek bir arıza çıkardı**
+  · touches: `packages/application/src/catalog/campaign.test.ts`,
+  `packages/application/src/analytics/availability.test.ts`,
+  `packages/application/src/cart/cart-blocker.test.ts`,
+  `packages/application/src/catalog/pricing-viewer.test.ts`,
+  `apps/mobile/src/screens/customer-kit/campaign-label.test.ts`,
+  `apps/mobile/src/lib/places/place-name-memory.test.ts`,
+  `apps/mobile/src/lib/places/place-name-memory.ts`,
+  `packages/email/src/components/email-layout.test.tsx`, `vitest.config.ts`
+
+  **KULLANICI ÖLÇÜTÜ (24.08):** *"Bir özelliği bitirdiysen sonrasında testi yazdın mı? Yazmadıysan
+  yeni bir konuya geçmeden önce daha önce tamamlanmış özelliklerin testlerini yazmalıyız."* Testler
+  modül modül, özellik özellik yazılır — dalganın kapsamı "hepsi" değil, TESLİM EDİLMİŞ olanlar.
+
+  **ÖLÇÜM ÖNCE YAPILDI VE İYİ DEĞİLDİ:** son beş özellik commit'imde (21.100 · 21.101 · 21.102 ·
+  21.103 · 08.53) **sıfır** yeni test vardı. 21.103'te dört test dosyası görünüyordu ama hepsi
+  ONARIMDI — kendi kırdığım fikstürler. 21.102'de daha kötüsü: doğrulama için sonda kuruldu,
+  ölçüldü ve **sonda silindi**; o sonda zaten bir test olmalıydı. *(Aynı günlerde yan şerit tersini
+  yapıyordu: `link.test.ts` 259 satır, özelliğiyle AYNI commit'te.)*
+
+  **YAZILAN: 47 iddia, 7 dosya.** Kampanya üstünlüğü (koleksiyon kategoriyi yener — eşikli olsa
+  bile) · rozet kararı (fırsat kampanyayı yener, eşikli rozete girmez) · paket satılabilirliği
+  (`route: null` "burada yok" DEĞİLDİR) · ödeme retlerinin ölçüm karşılığı (bilerek ölçülmeyenler
+  `null` döner) · kanal kuralı (onaysız şirket B2C) · yer adı belleği · mail bloklarının sol hizası.
+
+  **GERÇEK ARIZA ÇIKTI — `place-name-memory` yarışı.** `subscribe` diski `.then(publish)` ile
+  KOŞULSUZ yayınlıyordu: `/places` cevabı diskten önce gelirse taze ad eski disk değeriyle geri
+  alınıyor, yani **MB-80'in kapattığı çıplak kod karesi geri geliyordu**. Kod değişmişse daha
+  kötüsü — eski kayıt yeni kodla eşleşmediği için ad TÜMDEN kayboluyordu (`COLMAR` → `null`).
+  Kardeş modülde (`home-layout-memory`) aynı yarışa karşı `snapshot === undefined` koruması vardı
+  ve 21.101 künyesi onu emsal gösteriyordu; kopyalanan desen korumayı taşımamıştı.
+  Önce testle ÜRETİLDİ, sonra düzeltildi.
+
+  **İKİ SAHTE YEŞİL YAKALANDI VE İKİSİ DE DERS:**
+  · Yarış testi ilk hâlinde **korumasız kodda bile geçiyordu** — `renderHook` beklenirken mikro
+    görev kuyruğu boşalıyor, disk cevabı yazımdan ÖNCE geliyor ve sınanmak istenen sıra hiç
+    kurulmuyordu. Disk `deferRead()` ile askıya alınınca arıza göründü.
+  · Mail hizası testinin ilk taslağı her blok için kenarlık/şerit kalınlığını ELLE yazıyordu ve
+    ikisini YANLIŞ yazdım (QuoteCard'ın 2 px'i şerit değil `border-left`; StatusBlock'un 4 px'i
+    kenarlık değil ayrı bir hücre). **Kaynağı tekrar eden test, kaynakla birlikte yanılır.** Ölçüm
+    render edilmiş HTML'den TOPLANIR oldu ve testin yakaladığı bir blok bilerek bozularak
+    kanıtlandı (57 → 61, üç iddia birden kırmızı).
+
+  **`UYGULAMA_DBSIZ` LİSTESİ AÇILDI** (`vitest.config.ts`): `packages/application` entegrasyon
+  köküdür ama içindeki saf karar fonksiyonları DB'ye vurmuyor — ve `CLAUDE §4b` entegrasyon
+  koşusunu şeritlere kapattığı için o testleri YAZAN şerit KOŞAMIYORDU. `WEB_LIB_DBSIZ`in K8-1
+  ölçümüyle çözdüğü sorunun aynısı, ikinci kökte. Üç dosya taşındı; ölçüldü: DB'siz, 40 test 11 ms.
+  Listenin makineyle denetlenmediği (§3g yalnız `apps/` tarar) künyesine yazıldı.
+
+  **`resetPlaceNameMemory` ölü ihracattı** — "testler için" yazılmış, hiç çağrılmamıştı. Testi
+  gelince amacına kavuştu; `jest.resetModules()` burada İŞLEMİYOR çünkü taze yüklenen modül kendi
+  React nüshasını çekiyor ve dispatcher `null` kalıyor (ölçüldü: 12 test birden düştü).
+
+  Doğrulama: birim projesi **1473/1473** · mobil paket **702/702** · `@lezzet/email` typecheck ·
+  `@lezzet/application` typecheck · `@lezzet/mobile` typecheck · lint temiz · `docs:check` yeşil.

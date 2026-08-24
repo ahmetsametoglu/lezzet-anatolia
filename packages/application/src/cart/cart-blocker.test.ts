@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_CART, cartBlockReason, cartBlockedAnalyticsReason, isSplitCart, type CartLine, type CartView } from './cart-types';
+import {
+  EMPTY_CART,
+  cartBlockReason,
+  cartBlockedAnalyticsReason,
+  checkoutBlockedAnalyticsReason,
+  isSplitCart,
+  type CartLine,
+  type CartView,
+} from './cart-types';
 
 /**
  * Sepetin ilerleyememe sebebi — SIRA sınanıyor, koşullar değil.
@@ -64,6 +72,48 @@ describe('cartBlockedAnalyticsReason', () => {
   it('iki engel birden varken kalem sebebi kazanır (ekrandaki sırayla aynı)', () => {
     const view = viewOf({ hasBlocked: true, minBasketOk: false, lines: [blockedLine('unavailable')] });
     expect(cartBlockedAnalyticsReason(view)).toBe('out_of_stock');
+  });
+});
+
+/**
+ * ÖDEME adımının retleri (24.08 · MB-63) — kardeşinin sepet karşılığı.
+ *
+ * **Sınanan asıl şey `null` dönen dal.** Eşleşmeyen bir ret sessizce ölçülmüyor ve bu BİLİNÇLİ
+ * (`price_changed` bir engel değil, onay yenilemesidir; `date_unavailable`ın enum'da karşılığı
+ * yok). Ama "bilinçli" ile "unutulmuş" kodda aynı görünür: ikisi de `null` döner. Test o ayrımı
+ * yazıya döküyor — biri bir gün bu kümeyi genişletmek isterse, neyin karar neyin boşluk olduğunu
+ * buradan okur.
+ *
+ * İkinci kural: iki farklı stok reddi TEK kovaya düşer. Ayrı ayrı sayılsalardı huninin aynı
+ * sürtünmesi iki satıra bölünür ve ikisi de küçük görünürdü.
+ */
+describe('checkoutBlockedAnalyticsReason', () => {
+  it('engellenen kalem → `not_shippable`', () => {
+    expect(checkoutBlockedAnalyticsReason('blocked_lines')).toBe('not_shippable');
+  });
+
+  it('iki ayrı stok reddi AYNI kovaya düşer', () => {
+    expect(checkoutBlockedAnalyticsReason('insufficient_here')).toBe('out_of_stock');
+    expect(checkoutBlockedAnalyticsReason('insufficient_stock')).toBe('out_of_stock');
+  });
+
+  it('ödeme oturumu açılamadı → kendi adıyla', () => {
+    expect(checkoutBlockedAnalyticsReason('payment_failed')).toBe('payment_failed');
+  });
+
+  it('BİLEREK ölçülmeyenler `null` döner — sözlükte karşılığı olmayan ret uydurulmaz', () => {
+    // `price_changed`: müşteri engellenmiyor, onayı yenileniyor. `date_unavailable`: gerçek bir
+    // sürtünme ama `AnalyticsBlockedReason`da karşılığı yok. `order_not_placed`: sürtünme değil hata.
+    expect(checkoutBlockedAnalyticsReason('price_changed')).toBeNull();
+    expect(checkoutBlockedAnalyticsReason('date_unavailable')).toBeNull();
+    expect(checkoutBlockedAnalyticsReason('order_not_placed')).toBeNull();
+  });
+
+  it('tanınmayan bir dize ölçüme SIZMAZ', () => {
+    // Kapı `string` alıyor (durum makinesinin çıktısı geniş); tanınmayan her şey sessizce düşmeli,
+    // yoksa yeni bir durum adı bir gün yanlış kovaya yazılır.
+    expect(checkoutBlockedAnalyticsReason('placed')).toBeNull();
+    expect(checkoutBlockedAnalyticsReason('')).toBeNull();
   });
 });
 
