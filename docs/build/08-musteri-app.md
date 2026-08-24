@@ -1463,7 +1463,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
   **Doğrulandı:** aynı ölçüm düzeltmeden sonra **68 → 1**. Ve testler kusuru gerçekten görüyor: kanal `'b2c'`e geri sabitlenince dört test birden düşüyor, üstelik gerçek veride ölçülen yanlış sıranın birebir aynısıyla (`['Ucuz','Orta','Pahalı']` beklenen `['Orta','Ucuz','Pahalı']` yerine).
 
-  **AÇIK — kalan 1 kayma:** müşteriye özel (pazarlıklı) fiyat sıralamaya girmiyor; kart pazarlıklı tutarı gösterirken sıra liste fiyatını kullanıyor. Görünüm parametre alamaz, sokmak keyset'i bir RPC'ye taşımak demek. `BEKLEYEN(08.54)` → `design/BACKLOG.md §2` (ticari karar gerekiyor).
+  **KALAN 1 KAYMA — açık değil, KARAR (kullanıcı 24.08):** müşteriye özel (pazarlıklı) fiyat sıralamaya girmiyor; kart pazarlıklı tutarı gösterirken sıra liste fiyatını kullanıyor. Ölçüldü: 12 pazarlıklı satırı olan tek onaylı toptan müşteride 97 üründe **1** yer değişimi. Kullanıcı soruldu ve *"şimdilik böyle kalsın"* dedi; verilen söz açık yazıldı: *"Liste bizim fiyatımıza göre sıralanır, size özel fiyatınız kartta yazar."* Gerekçe ve **yeniden açılma koşulu** `design/KARARLAR.md §1a`'da — `BEKLEYEN` işareti kaldırıldı, çünkü bu bir boşluk değil bilinçli bir sapma.
 
 - [x] (08.55) **KOMŞU DAVETİNİN SINIRI WEB'DE DE SÖYLENSİN — karar iki yüzeyden yalnız native'e yazılmış** *(kullanıcı kararı 21.08 — şeffaflık; mobil şeridin gözlemi 23.08, denetim 24.08'de ölçtü)* · `touches: apps/web/app/(customer)/[locale]/checkout/[reference]/{confirmation-types.ts,page.tsx,messages.json,components/confirmation-sections.tsx}, packages/application/src/customer/neighbor.ts, packages/application/src/index.ts`
 

@@ -17,10 +17,12 @@
 -- demekti. Fiyat GRUBU (`price_group.percent_off`) ise girmek zorunda değil — tekdüze bir yüzde
 -- sırayı KORUR, yalnız rakamları ölçekler.
 --
--- BEKLEYEN(08.54): müşteriye özel fiyatı olan müşteride sıra o ürünlerde kayar — kart pazarlıklı
--- fiyatı gösterir, sıralama liste fiyatını kullanır. Ölçüldü (24.08, onaylı B2B müşteri, 6 özel
--- fiyat satırı): 97 üründe **1** yer değişimi. Düzeltmeden önceki hâl 68'di, yani açık kapanan
--- kusurun 1/68'i kadar. Gerekçe ve maliyeti `design/BACKLOG.md`de.
+-- **Bu bir eksik değil, VERİLMİŞ BİR KARAR** (kullanıcı 24.08 · `design/KARARLAR.md §1a`): pazarlıklı
+-- fiyatı olan müşteride sıra o ürünlerde kayar — kart pazarlıklı tutarı gösterir, sıralama liste
+-- fiyatını kullanır. Verilen söz açık: *"Liste bizim fiyatımıza göre sıralanır; size özel fiyatınız
+-- kartta yazar."* Ölçüldü (24.08, 12 pazarlıklı satırı olan tek onaylı toptan müşteri): 97 üründe
+-- **1** yer değişimi — düzeltilen kusurun 1/68'i kadar. Yeniden açılma koşulu KARARLAR'da yazılı;
+-- oraya bakmadan burada bir "düzeltme" denenmemeli.
 --
 -- Ayrışma riski YORUMLA değil TESTLE tutuluyor: `packages/application/src/catalog/catalog.test.ts`
 -- görünümün verdiği sırayı motorun çözdüğü fiyatlarla karşılaştırır — ve testler ARTIK İKİ KANALI

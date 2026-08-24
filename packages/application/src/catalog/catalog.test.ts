@@ -64,8 +64,10 @@ async function makeProduct(label: string, priceCents: number, b2bCents: number) 
 /**
  * **Onaylı toptan müşteri** — künye elle kuruluyor, gerçek bir müşteri kaydı gerekmiyor: kapı
  * `PricingViewer`i ÇAĞIRANDAN alıyor (`getCatalogData` künyesi) ve fiyat okuması yalnız `channel`
- * ile `customerId`ye bakıyor. Müşteriye özel fiyat sınanmıyor (`customerId: null`) çünkü o, bilerek
- * sıralamanın dışında — gerekçesi `0032` künyesinde, açığı `BEKLEYEN(08.54)`.
+ * ile `customerId`ye bakıyor. Müşteriye özel (pazarlıklı) fiyat sınanmıyor (`customerId: null`) ve
+ * bu bir eksik DEĞİL: pazarlıklı fiyatın sıralamaya girmemesi **verilmiş bir karardır** (kullanıcı
+ * 24.08) — gerekçesi ve yeniden açılma koşulu `design/KARARLAR.md §1a`'da, uygulaması `0032`
+ * künyesinde. Buraya bir gün pazarlıklı fiyat testi yazılacaksa önce o karar açılmalı.
  */
 const TOPTANCI: PricingViewer = { channel: 'b2b', b2bApproved: true, customerId: null, groupPercentOff: null };
 

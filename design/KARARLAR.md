@@ -75,8 +75,24 @@ partisi boştur hâllerinde sıralamanın kullandığı fiyat ile kartta yazan f
 (`where p.channel = 'b2c'`) ve testlerin onu da `VISITOR` ile koşuyordu — yani bekçi, koruduğu çiftin
 tek yarısını ölçüyordu. Sonucu canlıydı: onaylı B2B müşteri kartlarda kendi toptan fiyatını görüp
 listeyi son müşteri fiyatlarına göre sıralanmış alıyordu (97 üründe 68 yanlış yerleşim, en büyük
-kayma 22 sıra). Kanal artık görünümün grain'inde ve testler iki kanalı da koşuyor. Kalan tek açık
-pazarlıklı (müşteriye özel) fiyat — `BACKLOG §2`.
+kayma 22 sıra). Kanal artık görünümün grain'inde ve testler iki kanalı da koşuyor.
+
+**PAZARLIKLI FİYAT SIRALAMAYA GİRMEZ — bilinçli sapma (kullanıcı kararı 24.08).**
+Sıralama müşterinin KANALINDAKİ liste fiyatını (+ son-tarih teklifini) okur; müşteriye ÖZEL
+(pazarlıklı) fiyatı okumaz. Kart doğru rakamı gösterir, sıra o ürünlerde birkaç basamak kayar.
+Ölçüldü (24.08): 12 pazarlıklı satırı olan tek onaylı toptan müşteride, 97 üründe **1** yer değişimi.
+
+Verilen söz açıkça şudur: *"Liste bizim fiyatımıza göre sıralanır; size özel fiyatınız kartta yazar."*
+
+**Neden bu kabul edildi:** düzeltmenin maliyeti kazancıyla orantısız. Sıralama keyset (imleç)
+yüzünden SQL'de olmak zorunda ve görünüm parametre alamaz — pazarlıklı fiyatı sokmanın iki yolu var,
+ikisi de büyük: müşteri eksenini grain'e katmak (`müşteri × depo × kanal × ürün`) ya da sıralamayı
+bir RPC'ye taşıyıp sonsuz kaydırmanın imlecini yeniden yazmak. Bugünkü etki 1/68 kadar.
+
+**YENİDEN AÇILMA KOŞULU** (yoksa bu karar yeniden tartışılmaz): pazarlıklı fiyat verilen müşteri
+sayısı anlamlı bir yere çıkarsa ya da o müşterilerden "sıralama yanlış" bildirimi gelirse. O gün
+ölçülecek ilk şey müşteri eksenini görünüme eklemenin sorgu planına maliyetidir — **ölçülmedi**, tek
+müşteri süzülünce ucuz kalacağı bir teoriden ibaret.
 
 ### 1b. "Çok sevilenler" — KAPANDI (29.07, kullanıcı kararı puristliği bozdu)
 

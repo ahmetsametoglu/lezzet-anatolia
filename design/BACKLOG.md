@@ -47,22 +47,6 @@ değişecek yer parantezde.
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
-- **PAZARLIKLI FİYAT SIRALAMAYA GİRMİYOR — kalan tek kayma (24.08, 08.54'ün açığı).**
-  Kod işareti: `BEKLEYEN(08.54)` → `supabase/migrations/0032_product_listing.sql`.
-  **Durum:** katalog sıralaması artık müşterinin KANALINDAN okunuyor (08.54) ve o düzeltme ölçüldü —
-  97 üründe 68 yanlış yerleşim sıfırlandı. Kalan tek hâl **müşteriye özel (pazarlıklı) fiyat**:
-  kartta pazarlıklı tutar yazıyor, sıralama liste fiyatını kullanıyor. Ölçüldü: 6 özel fiyat satırı
-  olan onaylı bir B2B müşteride 97 üründe **1** kayma.
-  **Neden kapatılmadı:** sıralama keyset (imleç) yüzünden SQL'de olmak zorunda, görünüm ise parametre
-  alamaz. Müşteri eksenini görünüme katmak `(müşteri × depo × kanal × ürün)` demek — pazarlıklı
-  müşteri sayısıyla çarpan bir tablo; alternatifi sayfalamayı bir RPC'ye taşımak. İkisi de bu
-  düzeltmenin 1/68'i için ödenecek bedelden büyük.
-  **Karar gereken:** pazarlıklı fiyatın sıralamayı da değiştirmesi bekleniyor mu, yoksa *"sıra liste
-  fiyatındandır, sizin fiyatınız kartta yazar"* kabul edilebilir bir sözleşme mi? Cevap "değiştirmeli"
-  ise iş bir RPC + imleç yeniden yazımıdır ve kendi görev satırını hak eder. Soru ticari: pazarlıklı
-  fiyat verilen müşteri sayısı ve o müşterilerin fiyata göre sıralama kullanıp kullanmadığı —
-  ikisini de yalnız kullanıcı bilir (yerel veriden çıkarım yasak).
-
 - **DÖKME KOLİ BİR VARYANT OLARAK SUNULMALI (kullanıcı kararı 19.08).**
   **İlke önce:** *"Tedarikçimiz bize neyi kime satacağımızı söyleyemez."* Kaynak katalogdaki
   `horeca`/`retail` işareti bir ara fiyat yazmanın kapısı yapılmıştı; kaldırıldı. O işaret
