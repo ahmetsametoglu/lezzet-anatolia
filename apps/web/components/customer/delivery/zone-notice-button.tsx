@@ -40,7 +40,13 @@ export type NoticeEmphasis = 'card' | 'panel' | 'ghost';
 export function noticeButtonClass(emphasis: NoticeEmphasis): string {
   if (emphasis === 'ghost') return buttonClass({ variant: 'ghost', size: 'sm' });
   return buttonClass({
-    variant: emphasis === 'card' ? 'secondary' : 'primary',
+    // ── `panel` ARTIK DOLU DEĞİL, ÇERÇEVELİ YEŞİL (kullanıcı bildirimi 19.08) ──────────────────
+    // Dolu yeşildi ve ürün detayında "Sepete ekle" ile YAN YANA düşüyordu: iki dolu yeşil düğme,
+    // hiçbiri birincil değil. Tasarım (`Musteri - Urun Detay.dc.html`) bu kutuda ÜÇ ağırlık
+    // çiziyor — benzerleri gör (dolu) → haber ver (çerçeveli) → yine de sepete ekle (nötr) — ve
+    // uygulama yalnız bu ortadakini birinciye terfi ettirmişti. `outlineOlive` tasarımın kendi
+    // ölçüsü: `border:2px solid #5f7a2c; color:#5f7a2c`.
+    variant: emphasis === 'card' ? 'secondary' : 'outlineOlive',
     size: emphasis === 'card' ? 'card' : 'md',
     fullWidth: emphasis === 'panel',
     className: emphasis === 'card' ? '!border-olive !text-olive flex-none whitespace-nowrap' : '',
