@@ -65,14 +65,26 @@ export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, cust
  *
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), tıpkı `auth/otp` gibi.
  */
+/**
+ * Müşterinin GEÇERLİ kanalı — şirket olmak yetmez, ONAY da gerekir.
+ *
+ * **Ayrı bir fonksiyon çünkü ikinci çağıranı doğdu (24.08 · MB-63):** sepet ucu ölçüm için kanalı
+ * bilmek zorunda ve profili ZATEN okumuş durumda (`resolveCustomer`). `pricingViewerOf`u çağırmak
+ * aynı satırı ikinci kez okumak, kuralı elle tekrarlamak ise onaysız şirketin bir gün bir yerde
+ * B2B sayılması olurdu — fiyat motoru da aynı daraltmayı uyguluyor (çift kat).
+ */
+export function effectiveChannelOf(profile: { type: string | null; b2bApproved: boolean | null }): Channel {
+  const channel = deriveChannel({ isCompany: profile.type === 'company' });
+  return channel === 'b2b' && profile.b2bApproved === true ? 'b2b' : 'b2c';
+}
+
 export async function pricingViewerOf(db: SupabaseClient, customerId: string | null): Promise<PricingViewer> {
   if (!customerId) return VISITOR;
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile) return VISITOR;
 
   const b2bApproved = profile.b2bApproved === true;
-  const channel = deriveChannel({ isCompany: profile.type === 'company' });
-  const effective = channel === 'b2b' && b2bApproved ? 'b2b' : 'b2c';
+  const effective = effectiveChannelOf(profile);
   // Grup yüzdesi yalnız toptan kanalda okunur: onaysız şirket B2C'ye düşerken kademe de kapanır
   // (motor da aynı kuralı uygular — çift kat, `channel` daraltmasının aynı gerekçesi).
   const groupPercentOff =

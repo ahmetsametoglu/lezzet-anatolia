@@ -156,6 +156,14 @@ export async function recordEvent(input: AnalyticsInput, context: EventContext =
       warehouseId: place.warehouseId,
       device: await detectDevice(),
       /**
+       * YÜZEY sabittir ve SABİT OLMASI doğrudur (24.08 · MB-63): bu kapı yalnız web'den çağrılır,
+       * native kendi kapısını kullanır (`apps/mobile-api/src/lib/analytics.ts`). Alan zorunlu —
+       * `default 'web'` yazmak, yüzeyi söylemeyi unutan bir yazımın sessizce web sayılması demekti
+       * ve MB-63'ün arızası (`analytics_daily` yalnız web'i sayarken ekranın "toplam" demesi) tam
+       * olarak öyle doğmuştu.
+       */
+      surface: 'web',
+      /**
        * ── ÜLKE: IP'den DEĞİL, ÇÖZÜLMÜŞ YERDEN (07.08 · `ANALYTICS §2` düzeltildi) ──────────
        * Künye "IP saklanmaz, yalnız `country` türetilir" diyordu ve bu **hiç uygulanmadı**; sebebi
        * de kolonun kendi TİPİNDE yazılıydı: `CountryEnum = ['FR','DE']`. IP'den türeyen bir ülke

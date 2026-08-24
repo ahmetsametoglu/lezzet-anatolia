@@ -9,6 +9,7 @@ import {
   type CartEntry,
   type CartLine,
   type CartView,
+  type PlaceWarehouses,
 } from '@lezzet/application';
 import { serviceDb, type Db } from '@lezzet/database';
 import {
@@ -96,7 +97,7 @@ export async function readCartView(
     /** Ham posta kodu; depoya çeviren `readPlace` — istemcinin yazdığı bir depo kimliği KABUL EDİLMEZ. */
     postalCode: string | undefined;
   },
-): Promise<MeCartView> {
+): Promise<CartRead> {
   const place = await readPlace(db, opts.postalCode);
   const view = await getCartView(db, locale, entries, {
     customerId: opts.customerId,
@@ -111,7 +112,23 @@ export async function readCartView(
   });
   // `parse` süzgeçtir: sunucuda kalan alanlar (KDV oranı, kargolanabilirlik, indirimin kalem
   // payları) zarfa sızamaz — eşleme onları zaten almıyor, şema ikinci kilit.
-  return MeCartViewSchema.parse(toViewBody(view, locale));
+  /* ÜÇÜ BİRDEN DÖNÜYOR (24.08 · MB-63) — ve gerekçe ölçüm: sepet olayları hem ENGELİN sebebini
+     (`cartBlockedAnalyticsReason`, kapının KENDİ görünümünü ister — sözleşme şekli değil) hem de
+     DEPO boyutunu istiyor. İkisi de bu fonksiyonun içinde zaten hesaplanmış durumda; dışarıdan
+     yeniden hesaplatmak, aynı yeri iki kez okumak ya da kuralı ikinci kez yazmak olurdu. */
+  return { body: MeCartViewSchema.parse(toViewBody(view, locale)), source: view, place };
+}
+
+/**
+ * Sepet okumasının TAM çıktısı: tele giden gövde + kapının kendi görünümü + çözülmüş yer.
+ *
+ * `body` dışındakiler SUNUCUDA KALIR — zarfa girmezler (`MeCartViewSchema.parse` zaten süzüyor);
+ * çağıran onları yalnız ölçüm ve karar için kullanır.
+ */
+export interface CartRead {
+  body: MeCartView;
+  source: CartView;
+  place: PlaceWarehouses;
 }
 
 /** Kapının görünümü → sözleşme şekli. `z.input` KİLİTTİR: kapı saparsa burası DERLENMEZ. */
@@ -265,12 +282,14 @@ cartView.post('/view', async (c) => {
   const body = CartViewBodySchema.safeParse(await readJsonBody(c));
   if (!body.success) return fail(c, 'invalid_body', 400);
 
-  const view = await readCartView(serviceDb(), locale.data, body.data.items.map(entryOfWrite), {
+  const read = await readCartView(serviceDb(), locale.data, body.data.items.map(entryOfWrite), {
     customerId: null,
     couponCode: body.data.couponCode,
     postalCode: c.req.query('postalCode'),
   });
-  return ok(c, view);
+  /* YALNIZ `body` tele gider. `CartRead` künyesinin dediği gibi `source` ve `place` SUNUCUDA
+     KALIR — `ok()` gevşek tiplidir ve tamamını göndermek derlemede HATA VERMEZDİ. */
+  return ok(c, read.body);
 });
 
 /**

@@ -1,7 +1,13 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { listPublicDeliveryAreas, recordZoneNotice, resolvePlaceForPostalCode, suggestPlaces } from '@lezzet/application';
+import {
+  listPublicDeliveryAreas,
+  recordZoneNotice,
+  resolvePlaceForPostalCode,
+  suggestPlaces,
+  UNRESOLVED_PLACE,
+} from '@lezzet/application';
 import { placeLabel, type PostalCodeResolution } from '@lezzet/domain-core';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
 import {
@@ -15,6 +21,7 @@ import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { readJsonBody } from '../../lib/request';
 import { optionalCustomerId } from './auth';
+import { recordNativeEvent } from '../../lib/analytics';
 import { localeOf } from './cart-view';
 
 /**
@@ -89,7 +96,36 @@ places.get('/places/by-postal-code', async (c) => {
   const code = normalizePostalCode(c.req.query('code') ?? '');
   if (!isValidPostalCode(code)) return fail(c, 'invalid_code', 400);
 
-  const resolution = await resolvePlaceForPostalCode(serviceDb(), code);
+  const db = serviceDb();
+  const resolution = await resolvePlaceForPostalCode(db, code);
+
+  /* YER KAPISI — HUNİNİN İLK ADIMI (24.08 · MB-63). `ANALYTICS §3`ün cümlesi: *"oturumda yer
+     çözülmeden düşen ziyaretçi en erken ve muhtemelen en büyük kayıptır."*
+
+     BU UÇ SAYILIR, `suggest` SAYILMAZ ve ayrım bu dosyanın kendi künyesinde yazılı: *"öneri bir
+     OKUMA, onay bir NİYET."* Kardeş uç her tuşta çağrılıyor; onu saymak paydayı tuş sayısı kadar
+     şişirirdi.
+
+     ÜLKE BURADA GERÇEKTEN BİLİNİYOR — `ambiguous`/`unknown` dışındaki her çözüm onu taşıyor. Bu,
+     katalog uçlarının `null` geçtiği alanın DOLDUĞU tek yer (`BEKLEYEN(21.103)`).
+
+     DEPO YAZILMAZ: bu uç depo çözmüyor (kardeşi `readPlace` çözüyor) ve ölçüm uğruna ikinci bir
+     tur atmak, henüz kurulmamış bir bağlamı sormak olurdu. */
+  void recordNativeEvent(
+    {
+      db,
+      // Kanal SORULMUYOR: bu uç oturumsuz gezilen kapıda ve çözüm fiyat taşımıyor. Ziyaretçinin
+      // kanalı B2C'dir; B2B müşterisi de aynı soruyu aynı cevapla alır.
+      channel: 'b2c',
+      customerId: await optionalCustomerId(db, c.req.header('authorization')),
+      place: UNRESOLVED_PLACE,
+      // Bu uç DİL ALMIYOR ve cevabı dile bağlı değil — uydurulmuş bir dil yazmaktansa boş.
+      locale: null,
+      country: 'country' in resolution ? resolution.country : null,
+    },
+    { type: 'place_resolved', resolved: resolution.kind === 'route' || resolution.kind === 'shipping' },
+  );
+
   // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): şekil derlemede, fazla alan çalışma zamanında yakalanır.
   return ok(c, PlaceResolutionSchema.parse(toContract(code, resolution)));
 });

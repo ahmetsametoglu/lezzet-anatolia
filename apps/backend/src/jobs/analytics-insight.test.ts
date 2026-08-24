@@ -47,7 +47,9 @@ describe('analytics_insight', () => {
     onceki = await settings.get<unknown>(ANALYTICS_INSIGHT_SETTING, null);
 
     // Dönemde en az bir özet satırı olsun — iş boş dönemde modeli hiç çağırmıyor (aşağıdaki test).
-    await db.from('analytics_event').insert([{ created_at: at(9), type: 'page_view', session_key: sessionKey, path: '/' }]);
+    // `surface` zorunlu (24.08, MB-63): eksik yazılırsa satır hiç doğmaz, dönem boş kalır ve iş
+    // modeli hiç çağırmaz — test "anlatı üretilmedi" diye düşerdi, sebebi görünmeden.
+    await db.from('analytics_event').insert([{ created_at: at(9), type: 'page_view', session_key: sessionKey, path: '/', surface: 'web' }]);
     await db.rpc('build_analytics_daily', { p_day: day });
 
     const sonuc = await analyticsInsightJob({ model: fakeAiModel(ANLATI) });

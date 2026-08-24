@@ -10,6 +10,7 @@ import {
   UNRESOLVED_PLACE,
   type PlaceWarehouses,
   type PricingViewer,
+  availabilityOf,
 } from '@lezzet/application';
 import { localizedUrl } from '@lezzet/i18n';
 import {
@@ -24,6 +25,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { toWireCampaign } from '../../lib/campaign-wire';
+import { recordNativeEvent } from '../../lib/analytics';
 // İmleç kodlaması `lib/request.ts`te: sipariş listesi ikinci çağıran olunca oraya taşındı (21.18).
 import { decodeCursor, encodeCursor } from '../../lib/request';
 import { optionalCustomerId } from './auth';
@@ -259,6 +261,27 @@ catalog.get('/products', async (c) => {
   // ikisi de yalnız AKTİF satırlar arasından, yani pasif koleksiyon da tanınmaz.
   if (collection && !data.activeCollection) return fail(c, 'unknown_collection', 400);
 
+  /* ARAMA / SÜZGEÇ (24.08 · MB-63) — talep sinyalinin kendisi: müşteri ne aradı, buldu mu.
+     ÜÇ KOŞUL, üçü de web kapısının aynısı:
+     · Süzgeçsiz liste SAYILMAZ — o bir arama değil, katalogun sıradan hâli.
+     · YALNIZ İLK SAYFA — sonraki sayfalar imleçle geliyor ve saysaydık tek arama, kaydırma sayısı
+       kadar sayılırdı.
+     · `zeroResultKind` sonucu olmayan aramayı SÜZGEÇSİZDEN ayırır: "aradı bulamadı" ile "süzgeci
+       fazla daralttı" aynı şey değil, aksiyonları da farklı (tedarik ↔ arayüz).
+     Sorgu HAM geçiliyor; temizlik (`scrubMessage` + normalleştirme + 100 karakter) kapının işi. */
+  const suzgecli = Boolean(category || collection || parsed.data.shippable === '1');
+  if ((q || suzgecli) && parsed.data.cursor === undefined) {
+    void recordNativeEvent(
+      { db, channel: viewer.channel, customerId: viewer.customerId, place, locale, country: null },
+      {
+        type: 'search',
+        query: q ?? '',
+        resultCount: data.products.length,
+        zeroResultKind: data.products.length > 0 ? null : q ? 'search' : 'filter',
+      },
+    );
+  }
+
   return ok(
     c,
     CatalogPageSchema.parse({
@@ -304,6 +327,27 @@ catalog.get('/products/:slug', async (c) => {
     viewer,
   });
   if (!detail) return fail(c, 'product_not_found', 404);
+
+  /* ÜRÜN GÖRÜNTÜLEMESİ (24.08 · MB-63) — `ANALYTICS §1`in tek "render'dan atılan" olayı, ve
+     native'de o bile SUNUCUDAN atılıyor: detay ucu zaten bu istekte çağrılıyor, istemciye atıcı
+     koymak aynı olayı ikinci bir yerden saymak olurdu.
+
+     `availability` GÖRÜNTÜLEME ANININ hâlidir ve sonradan kurulamaz (stok hareket eder) — bu
+     yüzden satılabilirlik burada, cevabın kendisinden okunuyor.
+
+     ÜLKE `null` GEÇİLİYOR ve bu bir unutma değil: `readPlace` yalnız DEPO döndürüyor
+     (`PlaceWarehouses` künyesi), ülkeyi çözümün içinde bırakıyor. Bilen uç (`/places`) onu
+     dolduruyor; bilmeyen uç uydurmuyor. → BEKLEYEN(21.103) */
+  void recordNativeEvent(
+    { db, channel: viewer.channel, customerId: viewer.customerId, place, locale: locale.data, country: null },
+    {
+      type: 'product_view',
+      subjectType: 'product',
+      subjectId: detail.id,
+      productId: detail.id,
+      availability: availabilityOf(detail.variants),
+    },
+  );
 
   // ── SÖZLEŞMENİN KİLİDİ ────────────────────────────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR, `parse`a `unknown` gibi girmez: orkestrasyonun döndürdüğü

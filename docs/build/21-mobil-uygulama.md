@@ -5070,3 +5070,67 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   verdi (sipariş maili render'ı düşünce ölçülen küme boş kaldı ve iddia boşluğa geçti) — fark
   edilip fikstür düzeltildi, sonra sonda silindi. `@lezzet/email` typecheck temiz · mail testleri
   **26/26**.
+
+- [x] (21.103) **NATIVE ARTIK ÖLÇÜLÜYOR — tek defter, `surface` boyutu, sekiz atıcı (MB-63)**
+  · touches: `supabase/migrations/0035_analytics.sql`,
+  `packages/types/src/entities/analytics.schema.ts`, `apps/mobile-api/src/lib/analytics.ts`,
+  `apps/mobile-api/src/api/v1/{catalog,packages,places,cart,cart-view,checkout}.ts`,
+  `packages/application/src/analytics/{salt,availability}.ts`,
+  `packages/application/src/cart/cart-types.ts`, `packages/application/src/catalog/pricing-viewer.ts`,
+  `apps/web/lib/analytics/{record,session-key}.ts`,
+  `apps/mobile/src/screens/legal/messages.json`
+
+  **ARIZA "eksik özellik" değil, EKRANDA YAZAN BİR YALANDI.** `analytics_daily_*` satırları "toplam"
+  başlığıyla gösteriliyordu ama içinde yalnız web vardı: `apps/mobile*` içinde tek ölçüm çağrısı
+  yoktu. Hata veren hiçbir yer yok — yalnız her gün biraz daha yanlış olan bir cümle.
+
+  **TEK DEFTER + BOYUT (kullanıcı kararı 24.08).** İkinci bir tablo aynı huniyi iki kez tanımlar ve
+  "toplam" sorusunu her seferinde elle birleştirmeye çevirirdi. `analytics_surface` (`web|native`)
+  **varsayılansız `not null`**: `default 'web'` yazmak, yüzeyi söylemeyi unutan bir yazımı sessizce
+  web saydırırdı — düzelttiğimiz arızanın aynısını yeniden kurmak. Günlük özete KOYULMADI: özet
+  `product_id` kırılımlı olduğu için native olayları kendiliğinden akıyor ve "toplam" gerçekten
+  toplam oluyor; yüzey kırılımı gerekirse ham defterden sorulur (25 ay duruyor).
+
+  **KAPI ORTAK PAKETE TAŞINMADI — teori ölçülüp ÇÜRÜTÜLDÜ.** İlk taslak "yoksa kuralı iki yerde
+  yazarız" diyordu; `record.ts`in yedi kuralının yedisinin native'de karşılığı yok (prefetch · bot
+  UA · `headers()` · rota kalıbı · UTM · cihaz türetimi · IP+UA anahtarı). Terfi ettirilseydi
+  `apps/web`e ait yedi kuralı taşıyan bir "ortak" kapı doğardı. Gerçekten ortak olan her şey zaten
+  ortak pakette; günlük tuz oraya **taşındı, kopyalanmadı** (`application/analytics/salt`).
+  Ret gerekçesi kapının künyesinde yazılı ki aynı yanlış bir daha kurulmasın.
+
+  **OTURUM ANAHTARININ BEDELİ AÇIKÇA YAZILDI.** Web'in `hash(tuz‖ip‖ua)` formülü native'de
+  ÇALIŞMAZ: `ua` aynı sürümün her kurulumunda birebir aynı, operatör NAT'ı binlerce kişiyi tek
+  bloğa topluyor — uygulasaydık bütün kurulumlar tek oturuma çökerdi ve ölçülmemiş bir sayı
+  ölçülmüş gibi görünürdü. Bugünkü dürüst hâl: girişli müşteri `hash(tuz‖müşteri‖native)` (tuz her
+  gün döner, eskisi saklanmaz → ertesi gün geri hesaplanamaz; kimlik defterde DURMAZ), misafir ise
+  günün tek ortak anahtarı. Yani native `session_count` bir **TABANDIR**, gerçek sayı bundan
+  büyüktür — yönü bilinen eksik ölçüm, yalan değil (CLAUDE §1). Kurulum başına rastgele değer
+  kullanıcı kararı ve bu turda kapsam dışı (kapsam ürün/paket sayımı).
+
+  **SEKİZ ATICI, HEPSİ SUNUCUDAN VE NİYETTEN** (`ANALYTICS §1`): `search` · `product_view` (ürün ve
+  paket) · `place_resolved` · `add_to_cart` · `cart_blocked` · `checkout_start` · `order_placed` ·
+  `checkout_blocked`. Personel süzgeci kapıda ve native'de web'dekinden daha gerekli — kabuk çift
+  yönlü (21.97), personel müşteri yüzeyine de girebiliyor.
+
+  **UYDURULMAYAN ÜÇ ALAN.** `path: null` (native'de URL yok — uydurulmuş bir rota, boş rotadan
+  kötüdür) · dil ucun BİLDİĞİ kadar, bilmiyorsa `null` · ülke **çözülmüş yerden**, IP'den değil.
+  Ülke alanı kapı sözleşmesinde zorunlu ama `null` olabilir: opsiyonel olsaydı unutan uç sessizce
+  ülkesiz yazardı, zorunlu olunca `null` bile BİR KARAR olur.
+
+  **GİZLİLİK METNİ AYNI TURDA YAZILDI** — MB-63'ün şartıydı (`(21.87)`de paragraf silinmişti:
+  yapmadığımız bir işlemi beyan ediyor ve yöntem sözü veriyordu). Yeni paragraf **kurulan
+  mekanizmayı** anlatıyor, eski metni geri yapıştırmıyor: cihaza hiçbir şey yazılmadığı, reklam
+  kimliği kullanılmadığı, kaydın yanında kimlik durmadığı ve anahtarın ertesi gün geri
+  hesaplanamadığı. Üç dilde, `legal/messages.json` → `privacy.sections[6]`.
+
+  **İKİ BACKEND TESTİ DÜŞTÜ VE SEBEBİ BENDİM** (web şeridi `db:refresh` sonrası bildirdi):
+  `analytics-rollup.test.ts` + `analytics-insight.test.ts` ham `insert` ile fikstür yazıyor, yani
+  Zod kapısını hiç geçmiyor ve zorunlu `surface` kolonunu taşımıyordu. Supabase `insert()` hatayı
+  FIRLATMAZ, DÖNDÜRÜR: satırlar hiç doğmadı, iş boş günü özetledi, testler "0 satır" diye düştü —
+  sebebi görünmeden. Beş + bir fikstür düzeltildi ve migration künyesindeki *"unutmayı derleme
+  hatasına çevirir"* cümlesi **daraltıldı**: bu güvence yalnız Zod'dan geçen yazımda geçerli, ham
+  `insert` kısıttan öğrenir ve orası sessizdir.
+
+  **BEKLEYEN(21.103):** katalog ve paket uçları `country: null` geçiyor — `readPlace` yalnız depo
+  kimliği döndürüyor, ülke taşımıyor. Yer çözümü ucunda alan DOLU — yani kolon ölü değil, kırılımı
+  eksik. Kapatması `readPlace`in dönüşünü genişletmek; ayrı bir tur, çünkü o kapıyı web de kullanıyor.

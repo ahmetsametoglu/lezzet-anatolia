@@ -1,7 +1,8 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { headers } from 'next/headers';
-import { SettingsService, serviceDb } from '@lezzet/database';
+import { serviceDb } from '@lezzet/database';
+import { dailySalt as sharedDailySalt } from '@lezzet/application';
 
 /**
  * **ÇEREZSİZ OTURUM ANAHTARI** (13.1 · `ANALYTICS §2`) — kapının ve atfın ortak zemini.
@@ -11,58 +12,19 @@ import { SettingsService, serviceDb } from '@lezzet/database';
  * — yalnız kampanya atfı sessizce hiç eşleşmezdi.
  */
 
-const SALT_KEY = 'analytics_session_salt';
-
-/** Süreç içi tuz önbelleği — gün değişene kadar DB'ye gidilmez. */
-let saltCache: { day: string; salt: string } | null = null;
-
 /**
- * Günün OTURUM TUZU.
+ * Günlük tuz ARTIK ORTAK PAKETTE (24.08 · MB-63) — native ölçüm açılınca ikinci tüketici doğdu
+ * (`apps/mobile-api`) ve uygulamalar birbirinden import edemez. Kopyalamak seçenek değildi: iki
+ * üretici aynı gün iki farklı tuz üretebilir ve o gün iki yüzeyin anahtarları karşılaştırılamaz
+ * hâle gelirdi — hata vermeden. Kararların künyesi taşındığı yerde (`@lezzet/application`).
  *
- * **Tuz her gün değişir ve eskisi SAKLANMAZ** — üzerine yazılır. Atıldığı an o günün anahtarları
- * geri hesaplanamaz, yani defter psödonimden ANONİME döner (GDPR Recital 26'nın aradığı şey).
- *
- * **Sabit bir sırdan TÜRETİLMEZ ve fark önemli:** `hash(SIR ‖ gün)` biçiminde bir tuz, sırrı bilen
- * için her günü geriye dönük yeniden hesaplanabilir kılardı — yani "eskisi saklanmıyor" iddiası
- * yalan olurdu. Rastgele üretilip üzerine yazılan bir tuzda o yol kapalıdır.
- *
- * Yarış: aynı gün iki süreç birden üretirse ikisi de yazar ve son yazan kazanır. Kabul edilebilir —
- * en kötü hâlde o günün bir kısım anahtarı iki farklı tuzla üretilir ve oturumlar bölünür; ölçüm
- * biraz gürültülenir, kimlik sızmaz. Ters ödünleşme (kilit) en sıcak yola kilit koymak olurdu.
+ * Buradan yeniden ihraç ediliyor: bu dosyanın iki tüketicisi (`record.ts`, `attribution.ts`) tuzu
+ * hep buradan aldı, import satırlarını oynatmanın bir kazancı yok.
  */
 export async function dailySalt(): Promise<string> {
-  const day = new Date().toISOString().slice(0, 10);
-  if (saltCache?.day === day) return saltCache.salt;
-
-  const settings = new SettingsService(serviceDb());
-  const stored = await settings.get<{ day?: string; salt?: string }>(SALT_KEY, {});
-  if (stored.day === day && stored.salt) {
-    saltCache = { day, salt: stored.salt };
-    return stored.salt;
-  }
-
-  const salt = createHash('sha256').update(`${day}:${Math.random()}:${process.hrtime.bigint()}`).digest('hex');
-  await settings.set(SALT_KEY, { day, salt }, { description: 'Analitik oturum tuzu — günlük döner, eskisi saklanmaz.' });
-  saltCache = { day, salt };
-  return salt;
+  return sharedDailySalt(serviceDb());
 }
 
-/**
- * Oturum anahtarı: `hash(günlük_tuz ‖ kırpılmış_ip ‖ ua ‖ site)`.
- *
- * **IP KIRPILIR** ve ham hâli hiçbir yerde durmaz (IPv4 son oktet, IPv6 son bloklar). Kırpılmamış
- * IP + UA sabit bir tuzla birleşseydi bu bir PARMAK İZİ olurdu ve CNIL'e göre rıza isterdi.
- *
- * **Çerezden TÜRETİLMEZ:** sitenin bugünkü çerezleri (oturum tazeleme, yer cevabı) kesinlikle-gerekli
- * muafiyetindedir; analitiğe kullanıldıkları an o muafiyetin gerekçesi düşer ve banner tartışması
- * geri gelir.
- */
-/**
- * IPv6'nın ilk 48 biti — sıkıştırık gösterim açıldıktan sonra. Saf ve sınanabilir.
- *
- * `2001:db8::1` ile `2001:0db8:0000:0000:0000:0000:0000:0001` aynı adres; `::` yerine eksik grup
- * sayısı kadar sıfır konur. Açmadan kırpsaydık ikisi iki farklı anahtar üretirdi.
- */
 export function ipv6Prefix(ip: string): string {
   const [sol, sag] = ip.split('::');
   const solGruplar = sol ? sol.split(':').filter(Boolean) : [];

@@ -51,12 +51,15 @@ describe('analytics_rollup', () => {
       utm: { source: 'instagram', campaign, medium: 'cpc' },
       source: 'instagram.com',
     });
+    // `surface` ZORUNLU (24.08, MB-63) ve varsayılanı yok — ham `insert` yazmayı unutursa Supabase
+    // hatayı FIRLATMAZ, DÖNDÜRÜR: satırlar hiç doğmaz, iş boş günü özetler ve test "0 satır" diye
+    // düşer. Fikstür web olayı kurduğu için (`path` taşıyor) yüzey de `web`.
     await db.from('analytics_event').insert([
-      { created_at: at(8), type: 'page_view', session_key: sessionKey, path: '/' },
-      { created_at: at(9), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable' },
-      { created_at: at(9), type: 'add_to_cart', session_key: sessionKey, product_id: productId },
-      { created_at: at(10), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' } },
-      { created_at: at(11), type: 'checkout_blocked', session_key: sessionKey, path: '/checkout', blocked_reason: 'min_basket' },
+      { created_at: at(8), type: 'page_view', session_key: sessionKey, path: '/', surface: 'web' },
+      { created_at: at(9), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable', surface: 'web' },
+      { created_at: at(9), type: 'add_to_cart', session_key: sessionKey, product_id: productId, surface: 'web' },
+      { created_at: at(10), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' }, surface: 'web' },
+      { created_at: at(11), type: 'checkout_blocked', session_key: sessionKey, path: '/checkout', blocked_reason: 'min_basket', surface: 'web' },
     ]);
 
     const sonuc = await analyticsRollupJob();

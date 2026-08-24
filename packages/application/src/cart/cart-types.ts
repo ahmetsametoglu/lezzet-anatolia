@@ -827,3 +827,26 @@ export function discountSharesOf(discount: CartDiscount): readonly number[] {
  * tek satırlık o import bütün zinciri Node'a bağlayıp `pnpm prod:web`i kesiyordu (gerekçe ve
  * ölçüm `fingerprint.ts` künyesinde). Sunucu çağıranları oradan alır.
  */
+
+/**
+ * Checkout retlerinin ölçüm karşılığı (24.08 · MB-63) — `cartBlockedAnalyticsReason`ın kardeşi.
+ *
+ * **`apps/web`ten BURAYA TAŞINDI.** Oradaki künye *"mobil bu kapıyı hiç geçmeyecek"* diyordu ve o
+ * cümle native ölçümden ÖNCE yazılmıştı; artık iki yüzey de aynı retleri sayıyor. Kopyalansaydı
+ * aynı ret bir gün web'de `out_of_stock`, native'de ölçülmemiş olabilirdi — hiçbir yerde hata
+ * vermeden.
+ *
+ * ── NELER BİLEREK ÖLÇÜLMÜYOR ────────────────────────────────────────────────
+ * · `price_changed` (07.13): müşteri ENGELLENMİYOR, onayı yenileniyor — `AnalyticsBlockedReason`
+ *   sözlüğünün konusu değil. Kümeye değer eklemek analitiğin şemasını ilgilendirir; unutulduğu
+ *   için değil, ait olmadığı için yok.
+ * · `date_unavailable` gerçek bir sürtünme ama enum'da karşılığı YOK — uydurmak yerine ölçmüyoruz.
+ * · `order_not_placed` ve benzeri iç arızalar: sürtünme değil, hata.
+ */
+export function checkoutBlockedAnalyticsReason(reason: string): AnalyticsBlockedReason | null {
+  if (reason === 'blocked_lines') return 'not_shippable';
+  if (reason === 'insufficient_here' || reason === 'insufficient_stock') return 'out_of_stock';
+  // Ödeme oturumu açılamadı — enum'da KENDİ karşılığı var ve kapı onu adıyla veriyor.
+  if (reason === 'payment_failed') return 'payment_failed';
+  return null;
+}

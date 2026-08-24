@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
-import { getPackageDetail } from '@lezzet/application';
+import { bundleAvailabilityOf, getPackageDetail } from '@lezzet/application';
 import { localizedUrl } from '@lezzet/i18n';
 import { PackageDetailSchema, PackageListSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
+import { recordNativeEvent } from '../../lib/analytics';
+import { optionalCustomerId } from './auth';
 import { readPackageCards } from '../../lib/ideas';
 // Yer çözümü katalog ucunun kapısından (`readPlace`): posta kodu → depo eşlemesi TEK yerde durur.
 import { readPlace } from './catalog';
@@ -82,9 +84,29 @@ packages.get('/packages/:slug', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const place = await readPlace(db, c.req.query('postalCode'));
+  /* KANAL BURADA SORULMAZ, BİLİNİR: paket yalnız B2C'dedir (bu dosyanın künyesi) — ölçüm uğruna
+     `readViewer` çağırmak, o kararın açıkça "boşa bir tur" dediği şeyi yapmak olurdu. Okunan tek
+     şey KİMLİK ve o da yalnız personel süzgeci için (`ANALYTICS §1`: personel ölçülmez); misafirde
+     ek sorgu doğmaz, `optionalCustomerId` kimliksizde erken döner. */
+  const [place, customerId] = await Promise.all([
+    readPlace(db, c.req.query('postalCode')),
+    optionalCustomerId(db, c.req.header('authorization')),
+  ]);
   const pack = await getPackageDetail(db, c.req.param('slug'), locale.data, place);
   if (!pack) return fail(c, 'package_not_found', 404);
+
+  /* PAKET GÖRÜNTÜLEMESİ — ürün detayının aynı olayı, yalnız öznesi `bundle`. Enum'da `bundle`
+     ZATEN vardı, yeni bir olay türü icat edilmedi. `productId` YAZILMAZ: paket bir ürün değil,
+     ürünlerin demeti — birine atfetmek günlük ürün özetini yanlış beslerdi. */
+  void recordNativeEvent(
+    { db, channel: 'b2c', customerId, place, locale: locale.data, country: null },
+    {
+      type: 'product_view',
+      subjectType: 'bundle',
+      subjectId: pack.id,
+      availability: bundleAvailabilityOf(pack),
+    },
+  );
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: şekil sözleşmeden saparsa burası DERLENMEZ; `parse` da

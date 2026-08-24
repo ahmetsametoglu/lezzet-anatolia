@@ -102,6 +102,20 @@ export type UtmTags = z.infer<typeof UtmTagsSchema>;
 export const AnalyticsDeviceEnum = z.enum(['mobile', 'desktop']);
 export type AnalyticsDevice = z.infer<typeof AnalyticsDeviceEnum>;
 
+/**
+ * **YÜZEY** — olayın hangi uygulamadan geldiği (kullanıcı kararı 24.08 · MB-63).
+ *
+ * `AnalyticsDeviceEnum` ile KARIŞTIRILMAZ: o tarayıcı cihazıdır (`mobile|desktop`), bu ise ürünün
+ * hangi yüzeyi. Native uygulamada `device` her zaman `mobile`dır ve o bilgi hiçbir soruyu ayırt
+ * etmez — nitekim MB-63'ün arızası tam buydu: `analytics_daily` yalnız web'in sayılarını taşırken
+ * ekran "toplam" yazıyordu.
+ *
+ * **AYRI DEFTER DEĞİL, BOYUT** (kullanıcı kararı): iki defter aynı huniyi iki kez tanımlamak olurdu
+ * ve "toplam" sorusu her seferinde elle birleştirme isterdi.
+ */
+export const AnalyticsSurfaceEnum = z.enum(['web', 'native']);
+export type AnalyticsSurface = z.infer<typeof AnalyticsSurfaceEnum>;
+
 /** Nesne referansı — atıcının bildiği kadarı. */
 const SubjectSchema = z.object({
   subjectType: AnalyticsSubjectTypeEnum,
@@ -207,6 +221,12 @@ export const AnalyticsEventInsertSchema = z.object({
   availability: AnalyticsAvailabilityEnum.nullish(),
   blockedReason: AnalyticsBlockedReasonEnum.nullish(),
   device: AnalyticsDeviceEnum.nullish(),
+  /**
+   * Hangi yüzeyden geldi — **ZORUNLU, `nullish` değil.** `default 'web'` ya da opsiyonel bir alan,
+   * yüzeyi söylemeyi unutan bir yazımın sessizce web sayılması demekti; yani MB-63'ün arızasının
+   * yeniden üretilmesi. Zorunlu alan, unutmayı DERLEME hatasına çevirir.
+   */
+  surface: AnalyticsSurfaceEnum,
   country: CountryEnum.nullish(),
   language: PreferredLanguageEnum.nullish(),
   meta: z.record(z.unknown()).nullish(),

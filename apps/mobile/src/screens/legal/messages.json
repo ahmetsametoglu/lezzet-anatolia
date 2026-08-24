@@ -227,7 +227,8 @@
             "heading": "Cihazınızda saklananlar",
             "paragraphs": [
               "Uygulama çerez kullanmaz — ne reklam, ne takip, ne de başka türlüsü. Cihazınızda tutulanlar uygulamanın çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu. Oturum bilgisi işletim sisteminin güvenli kasasında saklanır (iOS'ta Anahtar Zinciri, Android'de Keystore).",
-              "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda cihazdaki sepetiniz hesabınıza devredilir ve cihazdan silinir."
+              "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda cihazdaki sepetiniz hesabınıza devredilir ve cihazdan silinir.",
+              "Uygulamanın nasıl kullanıldığını ölçüyoruz: hangi ürünlere bakıldığı, ne arandığı, sepete ne eklendiği ve siparişin nerede yarıda kaldığı. Bu ölçüm için cihazınıza hiçbir şey yazılmaz ve reklam kimliği kullanılmaz — kayıt, isteğiniz sunucuya ulaştığında orada oluşur. Kaydın yanında adınız, e-posta adresiniz ya da hesap numaranız durmaz: istekleri gruplayan anahtar her gün değişen ve ertesi gün saklanmayan bir değerden türetilir, yani sonradan geri hesaplanamaz. Arama kutusuna yazdığınız metin de saklanır — hangi aramaların sonuçsuz kaldığını görebilmek için."
             ],
             "bullets": []
           }
@@ -661,7 +662,8 @@
             "heading": "Ce qui est conservé sur votre appareil",
             "paragraphs": [
               "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android).",
-              "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil."
+              "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil.",
+              "Nous mesurons la façon dont l'application est utilisée : quels produits sont consultés, ce qui est recherché, ce qui est ajouté au panier et à quel endroit une commande s'interrompt. Cette mesure n'écrit rien sur votre appareil et n'utilise aucun identifiant publicitaire — l'enregistrement se crée sur nos serveurs, au moment où votre demande y arrive. Ni votre nom, ni votre adresse e-mail, ni votre numéro de compte n'y figurent : la clé qui regroupe les demandes est dérivée d'une valeur qui change chaque jour et n'est pas conservée le lendemain, elle ne peut donc pas être recalculée après coup. Le texte saisi dans la recherche est également conservé — afin de voir quelles recherches restent sans résultat."
             ],
             "bullets": []
           }
@@ -1095,7 +1097,8 @@
             "heading": "Was auf Ihrem Gerät gespeichert wird",
             "paragraphs": [
               "Die App verwendet keinerlei Cookies — weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android).",
-              "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht."
+              "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht.",
+              "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet — der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kontonummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert — damit wir sehen, welche Suchen ohne Ergebnis bleiben."
             ],
             "bullets": []
           }

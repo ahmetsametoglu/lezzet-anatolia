@@ -40,7 +40,6 @@ import { configDefaults, defineConfig } from 'vitest/config';
 const PAKET_DBSIZ = ['packages/database/src/utils/case-transformers.test.ts'];
 
 const WEB_LIB_DBSIZ = [
-  'apps/web/lib/analytics/availability.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',
   'apps/web/lib/analytics/session-key.test.ts',
   'apps/web/lib/analytics/utm.test.ts',

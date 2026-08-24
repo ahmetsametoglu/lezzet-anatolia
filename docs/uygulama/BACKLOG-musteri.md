@@ -2011,8 +2011,13 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   açılmadı (CLAUDE §1); vazgeç sessiz metne indi. **Ders kayda değer:** çelişki kodu okurken
   değil, ekrana bakarken görüldü — künye doğruydu, uygulaması değildi.
 
-- [ ] **MB-63 · Native uygulama HİÇ ölçülmüyor — analitikte karşılığı yok** (denetim ölçtü 10.08,
-  kayıt bu listede yoktu). Ölçüm: `apps/mobile` ve `apps/mobile-api` içinde tek `recordEvent`
+- [x] **MB-63 · Native uygulama HİÇ ölçülmüyor — analitikte karşılığı yok** (denetim ölçtü 10.08,
+  kayıt bu listede yoktu) → **KAPANDI, görev `(21.103)` (24.08).** Tek defter + `surface` boyutu,
+  sekiz atıcı, gizlilik paragrafı üç dilde. Aşağıdaki "bloke" satırı **artık geçerli değil**:
+  kullanıcı A1'i (tek defter) ve kapsamı (ürün/paket sayımı) 24.08'de verdi; **kurulum kimliği ön
+  koşul ÇIKMADI** — girişli müşteri için tuzdan türeyen anahtar yeterli, misafir tarafı ise ölçüsüz
+  değil eksik ölçülü kaldı ve yönü (taban) künyeye yazıldı. *(Eski gerekçe, kararın nasıl döndüğü
+  görünsün diye aynen duruyor.)* Ölçüm: `apps/mobile` ve `apps/mobile-api` içinde tek `recordEvent`
   çağrısı yok, `/api/v1`'de analitik ucu yok, şemada yüzey kolonu yok. Sonuç `analytics_daily`
   sayılarının **web'in sayıları olması ama ekranda "toplam" yazması** — her gün biraz daha yanlış
   olan ve hata vermeyen bir cümle.
@@ -2052,9 +2057,11 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   Tur iki bulgu çıkardı — MB-64 (kitte yıkıcı onay tonu yoktu) ve MB-65 (`OTP_TEST_CODE`
   mobile-api env'inde yoktu).
 
-- [ ] **MB-40 · Talep maili kart genişliği açık** (`docs/talep/not-mobil-talep-maili-duzeltildi-
-  genislik-acik.md`): arka-uç notun iki bulgusunu kapattı, üçüncüsünün ölçümünü mobile bıraktı ve
-  hâlâ ölçülmedi.
+- [x] **MB-40 · Talep maili kart genişliği açık** (`docs/talep/not-mobil-talep-maili-duzeltildi-
+  genislik-acik.md`) → **KAPANDI, görev `(21.102)` (23.08).** Ölçüm bulgunun ADINI düzeltti:
+  kartların kutuları AYNI genişlikte (536 px), farklı olan metnin nerede BAŞLADIĞI — sayfa
+  kenarından beş ayrı değer vardı ve dördü sipariş/geri bildirim maillerinde de duruyordu. Hiza
+  artık türetiliyor (`TEXT_INSET = 57`, `innerX(kenarlık, şerit)`); altıncı bir değer doğamaz.
 
 - [x] **MB-41 · Ham hex yalnız `app.config.ts` splash'ta kaldı** (`BEKLEYEN(21.3)`). Tek satır;
   token'a bağlanamıyorsa gerekçesi künyeye yazılıp işaret kapatılmalı.

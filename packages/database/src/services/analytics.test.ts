@@ -72,7 +72,14 @@ afterAll(async () => {
 describe('olay defteri — YAZMA-YALNIZ', () => {
   it('olay yazılır ve satır geri istenmez', async () => {
     await expect(
-      events.record({ type: 'product_view', sessionKey, path: '/product/[slug]', channel: 'b2c', availability: 'sellable' }),
+      events.record({
+        type: 'product_view',
+        sessionKey,
+        path: '/product/[slug]',
+        channel: 'b2c',
+        availability: 'sellable',
+        surface: 'web',
+      }),
     ).resolves.toBeUndefined();
   });
 
@@ -82,8 +89,9 @@ describe('olay defteri — YAZMA-YALNIZ', () => {
     // olay dönüş SAYFASINDAN atılacak sanılıyordu. Artık sunucu eyleminden atılıyor, yani
     // yenileme sorunu yok — kural kalsaydı ikinci niyeti sessizce yutardı.
     const taze = `test-${stamp}-niyet`;
-    await events.record({ type: 'order_placed', sessionKey: taze });
-    await events.record({ type: 'order_placed', sessionKey: taze });
+    await events.record({ type: 'order_placed', sessionKey: taze, surface: 'web' });
+    // İkinci niyet NATIVE'den gelmiş olabilir — yüzey ayrı, sayım aynı deftere düşer (24.08).
+    await events.record({ type: 'order_placed', sessionKey: taze, surface: 'native' });
 
     const { count } = await db
       .from('analytics_event')
@@ -98,7 +106,7 @@ describe('olay defteri — YAZMA-YALNIZ', () => {
   it('KİMLİK kolonu yok — tipte de yok, şemada da yok', async () => {
     // Derleme zaten engelliyor; burada sınanan şey satırın yazılabilmesi, yani şemanın kolonu
     // gerçekten istemediği. `customer_id` zorunlu olsaydı bu yazım düşerdi.
-    await expect(events.record({ type: 'page_view', sessionKey, path: '/' })).resolves.toBeUndefined();
+    await expect(events.record({ type: 'page_view', sessionKey, path: '/', surface: 'web' })).resolves.toBeUndefined();
   });
 });
 
@@ -114,12 +122,12 @@ describe('oturum künyesi BİR KEZ yazılır', () => {
 
 describe('günlük özet', () => {
   it('boyutlara göre gruplar, saat kırılımını doğru kovaya yazar', async () => {
-    await events.record({ type: 'search', sessionKey, path: searchPath, channel: 'b2c', availability: null });
+    await events.record({ type: 'search', sessionKey, path: searchPath, channel: 'b2c', availability: null, surface: 'web' });
     // Aynı boyut, farklı saat → aynı satır, farklı kova.
     await db.from('analytics_event').insert([
-      { created_at: at(9), type: 'search', session_key: sessionKey, path: searchPath, channel: 'b2c' },
-      { created_at: at(9), type: 'search', session_key: otherKey, path: searchPath, channel: 'b2c' },
-      { created_at: at(14), type: 'search', session_key: sessionKey, path: searchPath, channel: 'b2c' },
+      { created_at: at(9), type: 'search', session_key: sessionKey, path: searchPath, channel: 'b2c', surface: 'web' },
+      { created_at: at(9), type: 'search', session_key: otherKey, path: searchPath, channel: 'b2c', surface: 'web' },
+      { created_at: at(14), type: 'search', session_key: sessionKey, path: searchPath, channel: 'b2c', surface: 'web' },
     ]);
 
     await daily.build(day);
@@ -146,7 +154,7 @@ describe('günlük özet', () => {
   it('`null` BOYUTLU satır da çoğalmaz — `nulls not distinct` olmasaydı sessizce ikilenirdi', async () => {
     // `warehouse_id` ve `availability` null: yer seçmemiş ziyaretçinin engellenen sepeti.
     await db.from('analytics_event').insert([
-      { created_at: at(11), type: 'cart_blocked', session_key: sessionKey, path: '/cart', blocked_reason: 'min_basket' },
+      { created_at: at(11), type: 'cart_blocked', session_key: sessionKey, path: '/cart', blocked_reason: 'min_basket', surface: 'web' },
     ]);
     await daily.build(day);
     const ilk = (await daily.list({ from: day, to: day, types: ['cart_blocked'] })).filter((r) => r.warehouseId === null);
@@ -172,11 +180,11 @@ describe('günlük özet', () => {
 describe('sinyal özetleri', () => {
   it('ürün kırılımı: satılabilir görüntüleme AYRI sayılır ve oran ondan çıkar', async () => {
     await db.from('analytics_event').insert([
-      { created_at: at(10), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable' },
-      { created_at: at(10), type: 'product_view', session_key: otherKey, product_id: productId, availability: 'sellable' },
+      { created_at: at(10), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable', surface: 'web' },
+      { created_at: at(10), type: 'product_view', session_key: otherKey, product_id: productId, availability: 'sellable', surface: 'web' },
       // Stoksuzken bakılan görüntüleme: toplam görüntülemeye girer, PAYDAYA girmez.
-      { created_at: at(11), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sold_out' },
-      { created_at: at(12), type: 'add_to_cart', session_key: sessionKey, product_id: productId },
+      { created_at: at(11), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sold_out', surface: 'web' },
+      { created_at: at(12), type: 'add_to_cart', session_key: sessionKey, product_id: productId, surface: 'web' },
     ]);
     await daily.buildAll(day);
 
@@ -192,7 +200,7 @@ describe('sinyal özetleri', () => {
     // Hiç satılabilir hâlde görünmemiş bir ürün: "kimse almıyor" DEĞİL, "hiç satılamamış".
     const stoksuz = soldOutOnlyProductId;
     await db.from('analytics_event').insert([
-      { created_at: at(13), type: 'product_view', session_key: sessionKey, product_id: stoksuz, availability: 'sold_out' },
+      { created_at: at(13), type: 'product_view', session_key: sessionKey, product_id: stoksuz, availability: 'sold_out', surface: 'web' },
     ]);
     await daily.buildAll(day);
 
@@ -203,9 +211,9 @@ describe('sinyal özetleri', () => {
 
   it('arama: sıfır-sonuç kovası AYRI satır — süzgeç boşluğu ile çeşit boşluğu karışmaz', async () => {
     await db.from('analytics_event').insert([
-      { created_at: at(9), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' } },
-      { created_at: at(9), type: 'search', session_key: otherKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' } },
-      { created_at: at(10), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 4, zeroResultKind: null } },
+      { created_at: at(9), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' }, surface: 'web' },
+      { created_at: at(9), type: 'search', session_key: otherKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' }, surface: 'web' },
+      { created_at: at(10), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 4, zeroResultKind: null }, surface: 'web' },
     ]);
     await daily.buildAll(day);
 
@@ -221,7 +229,7 @@ describe('sinyal özetleri', () => {
 
   it('kaynak: künyeli oturum kendi kovasında, künyesiz oturum DOĞRUDAN kovasında', async () => {
     await sessions.remember({ sessionKey, utm: { source: 'instagram', campaign, medium: 'cpc' }, source: 'instagram.com' });
-    await db.from('analytics_event').insert([{ created_at: at(15), type: 'order_placed', session_key: sessionKey }]);
+    await db.from('analytics_event').insert([{ created_at: at(15), type: 'order_placed', session_key: sessionKey, surface: 'web' }]);
     await daily.buildAll(day);
 
     const rows = await sources.list(day, day);

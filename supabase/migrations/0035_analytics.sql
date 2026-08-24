@@ -76,6 +76,28 @@ create type analytics_blocked_reason as enum (
 -- tanım sunucununkidir, yoksa aynı ziyaret iki cihaz sayılabilirdi.
 create type analytics_device as enum ('mobile', 'desktop');
 
+-- ═══ YÜZEY — hangi uygulamadan geldi (kullanıcı kararı 24.08 · MB-63) ════════
+-- **`device` ile KARIŞTIRILMAZ:** o tarayıcı cihazıdır (`mobile|desktop`), bu ise ürünün hangi
+-- yüzeyi. Native uygulamada `device` her zaman `mobile`dır ve o bilgi hiçbir soruyu ayırt etmez.
+--
+-- NEDEN AYRI TABLO DEĞİL, BOYUT (kullanıcı kararı 24.08): iki defter tutmak aynı huniyi iki kez
+-- tanımlamak olurdu ve "toplam" sorusu her seferinde elle birleştirme isterdi. Tek defter +
+-- boyut, hem toplamı hem kırılımı verir.
+--
+-- **VARSAYILANI YOK ve bu bilinçli.** `default 'web'` yazmak, yüzeyi söylemeyi unutan bir yazımın
+-- sessizce web sayılması demekti — tam olarak MB-63'ün şikâyet ettiği arızanın (native sayılmıyor
+-- ama ekranda "toplam" yazıyor) yeniden üretilmesi. Zorunlu alan, unutmayı derleme hatasına çevirir
+-- — ama YALNIZ Zod şemasından geçen yazımda (`AnalyticsEventInsert`). Ham `insert` yazan testler
+-- kısıttan öğrenir ve orası sessizdir: Supabase `insert()` hatayı FIRLATMAZ, DÖNDÜRÜR; satır hiç
+-- doğmaz, test boş kümeyi ölçer. Ölçüldü 24.08: iki backend testi tam böyle düştü, sebebi
+-- görünmeden. Bu tablonun ham fikstürünü yazan her testin `surface` taşıması gerekir.
+--
+-- GÜNLÜK ÖZETE (`analytics_daily_*`) KOYULMADI: özet `product_id`'ye göre gruplandığı için native
+-- olayları kendiliğinden akar ve "toplam" yazan sayı GERÇEKTEN toplam olur — MB-63'ün kapattığı şey
+-- budur. Yüzey kırılımı gerekirse ham defterden sorulur (25 ay duruyor); özeti şimdiden ikiye
+-- katlamak, sorulmamış bir soruya satır üretmek olurdu.
+create type analytics_surface as enum ('web', 'native');
+
 -- ═══ OTURUMUN KAMPANYA KÜNYESİ ═══════════════════════════════════════════════
 -- UTM oturum başına BİR KEZ düşer; sonraki olaylar taşımaz, rapor `session_key` üzerinden çözer.
 --
@@ -143,6 +165,8 @@ create table public.analytics_event (
   blocked_reason analytics_blocked_reason,
 
   device analytics_device,
+  -- Hangi yüzeyden geldi — ZORUNLU (enum künyesi: varsayılan yok, unutma derlemede patlasın).
+  surface analytics_surface not null,
   country country_code,
   language preferred_language,
 

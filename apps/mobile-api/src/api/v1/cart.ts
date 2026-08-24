@@ -1,8 +1,14 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import { z } from 'zod';
-import { entryOfItem, itemOfEntry, storedPrices } from '@lezzet/application';
-import { CartService, serviceDb, UserProfileService, type CartRef, type Db } from '@lezzet/database';
+import {
+  cartBlockedAnalyticsReason,
+  effectiveChannelOf,
+  entryOfItem,
+  itemOfEntry,
+  storedPrices,
+} from '@lezzet/application';
+import { CartService, ProductVariantService, serviceDb, UserProfileService, type CartRef, type Db } from '@lezzet/database';
 import {
   MeCartAddBodySchema,
   MeCartQtyBodySchema,
@@ -11,10 +17,11 @@ import {
   ProductVariantSchema,
   StockSchema,
 } from '@lezzet/types';
-import type { Cart, MeCartItemWriteSchema, MeCartView, PreferredLanguage } from '@lezzet/types';
+import type { Cart, Channel, MeCartItemWriteSchema, PreferredLanguage } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
+import { recordNativeEvent } from '../../lib/analytics';
 import type { V1Env } from './auth';
-import { entryOfWrite, localeOf, readCartView } from './cart-view';
+import { entryOfWrite, localeOf, readCartView, type CartRead } from './cart-view';
 
 /*
   `/me/cart` — SUNUCU SEPETİ mobilde. Sepet iki yüzeyde PAYLAŞILIR (kullanıcı kararı 09.08):
@@ -86,7 +93,9 @@ const LineKeySchema = z.union([
 
 /** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — sepetin sahibi ikincisidir. */
 interface CustomerEnv {
-  Variables: V1Env['Variables'] & { customerId: string; locale: PreferredLanguage };
+  /* `channel` ölçümün boyutu (`ANALYTICS §3`: karışık ölçüm yalan söyler) ve BEDAVA geliyor:
+     `resolveCustomer` profili zaten okuyor, türetme de tek kapıdan (`effectiveChannelOf`). */
+  Variables: V1Env['Variables'] & { customerId: string; locale: PreferredLanguage; channel: Channel };
 }
 
 /**
@@ -115,6 +124,7 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
   const profile = await new UserProfileService(serviceDb()).findByAuthUserId(c.get('authUser').id);
   if (!profile) return fail(c, 'profile_not_found', 404);
   c.set('customerId', profile.id);
+  c.set('channel', effectiveChannelOf(profile));
   await next();
 }
 
@@ -167,7 +177,7 @@ cart.use('*', resolveCustomer);
  * uyarısız görür. Yer (`?postalCode=`) ve kupon (`?coupon=`) da her uçta okunur — yazma sonrası
  * dönen görünüm, `GET`in döndüreceğiyle birebir aynı olmalı.
  */
-async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<MeCartView> {
+async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<CartRead> {
   return readCartView(db, c.get('locale'), stored.items.map(entryOfItem), {
     customerId: c.get('customerId'),
     // Zam bildiriminin ÇIPASI: sepette saklanan fiyat bağlayıcı değildir, yalnız "arttı mı"
@@ -182,7 +192,7 @@ async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<Me
 cart.get('/', async (c) => {
   const db = serviceDb();
   const stored = await new CartService(db).get(c.get('customerId'));
-  return ok(c, await viewOf(c, db, stored));
+  return ok(c, (await viewOf(c, db, stored)).body);
 });
 
 /**
@@ -199,8 +209,65 @@ cart.post('/items', async (c) => {
 
   const db = serviceDb();
   const updated = await new CartService(db).addItems(c.get('customerId'), incomingOf(body.data.items));
-  return ok(c, await viewOf(c, db, updated));
+  const read = await viewOf(c, db, updated);
+  void measureCartWrite(c, db, body.data.items, read);
+  return ok(c, read.body);
 });
+
+/**
+ * SEPET TURUNUN ÖLÇÜMÜ (24.08 · MB-63) — iki olay, tek yer.
+ *
+ * **`add_to_cart` niyeti İSTEMCİ BEYANIDIR** (`ANALYTICS §3`): sepet ucu bir EŞİTLEME ucudur,
+ * "az önce ne oldu" bilgisi yalnız istemcide var. Beyan-edilmiş olay gözlenen olay değildir —
+ * sayısı sepet satırlarıyla tutmaz ve bu bir arıza değil.
+ *
+ * **`cart_blocked` bir DURUM değil bir AN olarak yazılır** (web kapısının aynı kararı): engel her
+ * okumada var olabilir, ama burası müşterinin sepetini DEĞİŞTİRDİĞİ an. Her okumada atsaydık aynı
+ * engel onlarca kez sayılır ve huninin en kıymetli olayı gürültüye dönerdi.
+ *
+ * ── `productId` ÇÖZÜLÜYOR, ve bu WEB'DEN BİLİNÇLİ BİR AYRILIK ───────────────
+ * Web `productId: null` geçiyor (`lib/cart/actions.ts`) çünkü `AddToCartIntent` ürünü taşımıyor.
+ * Ama günlük ürün özeti satırları **gruplamadan ÖNCE** `product_id is not null` ile eliyor
+ * (`build_analytics_daily_product`), yani `cart_count` yapısal olarak SIFIR kalıyor — "ilgi sepete
+ * dönüşüyor mu" sorusu hiç cevaplanamıyor. Ölçüldü 24.08; web'e not bırakıldı.
+ * Native aynı boşluğu tekrarlamıyor: varyantın ürünü TEK okumada çözülüyor (`listByIds`, kimlik
+ * başına sorgu yok). PAKET satırında `productId` yine null — paket bir ürün değil, ürünlerin
+ * demeti; birine atfetmek ürün özetini yanlış beslerdi (paket detayının aynı kararı).
+ */
+async function measureCartWrite(
+  c: Context<CustomerEnv>,
+  db: Db,
+  yazilan: z.infer<typeof MeCartAddBodySchema>['items'],
+  read: CartRead,
+): Promise<void> {
+  const variantIds = yazilan.flatMap((i) => (i.kind === 'variant' ? [i.variantId] : []));
+  const urunler = new Map(
+    variantIds.length === 0
+      ? []
+      : (await new ProductVariantService(db).listByIds(variantIds)).map((v) => [v.id, v.productId] as const),
+  );
+
+  const ctx = {
+    db,
+    channel: c.get('channel'),
+    customerId: c.get('customerId'),
+    place: read.place,
+    locale: c.get('locale'),
+    country: null,
+  };
+  for (const item of yazilan) {
+    void recordNativeEvent(ctx, {
+      type: 'add_to_cart',
+      subjectType: item.kind,
+      subjectId: item.kind === 'variant' ? item.variantId : item.bundleId,
+      productId: item.kind === 'variant' ? (urunler.get(item.variantId) ?? null) : null,
+      qty: item.qty,
+    });
+  }
+
+  const reason = cartBlockedAnalyticsReason(read.source);
+  if (reason) void recordNativeEvent(ctx, { type: 'cart_blocked', reason });
+}
 
 /** Adet belirleme — sıfır satırı siler (`setQty`in kendi kuralı; `DELETE` ile aynı kapıya çıkar). */
 cart.patch('/items/:lineId', async (c) => {

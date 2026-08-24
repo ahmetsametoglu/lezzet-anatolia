@@ -1,11 +1,28 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import type { z } from 'zod';
-import { entryOfItem, getPackagesByIds, notifyOrderStatus, placeOrder, readCheckoutSnapshot, type OrderEffects } from '@lezzet/application';
+import {
+  checkoutBlockedAnalyticsReason,
+  effectiveChannelOf,
+  entryOfItem,
+  getPackagesByIds,
+  notifyOrderStatus,
+  placeOrder,
+  readCheckoutSnapshot,
+  UNRESOLVED_PLACE,
+  type OrderEffects,
+} from '@lezzet/application';
 import { CartService, serviceDb, UserProfileService, type Db } from '@lezzet/database';
-import { CheckoutOrderBodySchema, CheckoutOrderResultSchema, CheckoutSnapshotSchema, type PreferredLanguage } from '@lezzet/types';
+import {
+  CheckoutOrderBodySchema,
+  CheckoutOrderResultSchema,
+  CheckoutSnapshotSchema,
+  type Channel,
+  type PreferredLanguage,
+} from '@lezzet/types';
 import { readJsonBody } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
+import { recordNativeEvent } from '../../lib/analytics';
 import { paymentSessionCreator } from '../../lib/stripe';
 import type { V1Env } from './auth';
 import { localeOf } from './cart-view';
@@ -40,7 +57,9 @@ import { localeOf } from './cart-view';
 */
 
 interface CustomerEnv {
-  Variables: V1Env['Variables'] & { customerId: string; locale: PreferredLanguage };
+  /* `channel` ölçümün boyutu ve BEDAVA: `resolveCustomer` profili zaten okuyor (sepet ucunun
+     aynı deseni), türetme tek kapıdan (`effectiveChannelOf`). */
+  Variables: V1Env['Variables'] & { customerId: string; locale: PreferredLanguage; channel: Channel };
 }
 
 /**
@@ -64,6 +83,7 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
   const profile = await new UserProfileService(serviceDb()).findByAuthUserId(c.get('authUser').id);
   if (!profile) return fail(c, 'profile_not_found', 404);
   c.set('customerId', profile.id);
+  c.set('channel', effectiveChannelOf(profile));
   await next();
 }
 
@@ -116,6 +136,21 @@ checkout.get('/', async (c) => {
   // NİYET SUNUCUDAN: `cart.items` → `CartEntry`. Eşleme `@lezzet/application`ın kendi kapısı
   // (`entryOfItem`) — iki tür satırın hangi alanı hangi türde taşıdığı bilgisi tek yerde durur.
   const stored = await new CartService(db).get(customerId);
+
+  /* HUNİNİN SON ADIMI BAŞLIYOR (24.08 · MB-63). Web bunu checkout SAYFASINDAN atıyor; native'de
+     sayfa yok, o yüzden ekranın verisini kuran uçtan atılıyor — aynı an, aynı niyet.
+     Depo boyutu snapshot'tan SONRA bilinecek ama olay "başladı" diyor, "nereye" demiyor. */
+  void recordNativeEvent(
+    {
+      db,
+      channel: c.get('channel'),
+      customerId,
+      place: UNRESOLVED_PLACE,
+      locale: c.get('locale'),
+      country: null,
+    },
+    { type: 'checkout_start' },
+  );
 
   const snapshot = await readCheckoutSnapshot(db, c.get('locale'), {
     customerId,
@@ -207,6 +242,28 @@ checkout.post('/order', async (c) => {
      YOK. Kapı yarın bir hâl eklerse burası DERLENMEZ ve fark edilir; elle yazılmış bir `switch`
      olsaydı yeni hâl sessizce eski bir cümleye düşerdi. `parse` de süzgeç: kapının taşıdığı ama
      ekranın işi olmayan alanlar zarfa sızamaz. */
+  /* HUNİNİN KAPANIŞI (24.08 · MB-63) — iki olay, tek yer.
+     `order_placed` `ANALYTICS §1`in TEK bilinçli istisnası: sipariş kendi tablosunda zaten duruyor
+     ama huniyi defterde kapatmanın öteki yolu oturum anahtarını siparişe yazmaktı. İstisna
+     mahremiyeti bozan değil, KORUYAN seçenek — tutar ve müşteri taşımaz, yalnız "oturum siparişle
+     bitti" der.
+     Ret eşlemesi ortak kapıdan (`checkoutBlockedAnalyticsReason`): hangi retlerin ölçülmediği ve
+     NEDEN ölçülmediği orada yazılı — `price_changed` engel değil, onay yenilemesidir. */
+  const olcumCtx = {
+    db,
+    channel: c.get('channel'),
+    customerId,
+    place: UNRESOLVED_PLACE,
+    locale: c.get('locale'),
+    country: null,
+  };
+  if (outcome.status === 'placed' || outcome.status === 'payment_required') {
+    void recordNativeEvent(olcumCtx, { type: 'order_placed' });
+  } else {
+    const reason = checkoutBlockedAnalyticsReason(outcome.status);
+    if (reason) void recordNativeEvent(olcumCtx, { type: 'checkout_blocked', reason });
+  }
+
   const result: z.input<typeof CheckoutOrderResultSchema> = outcome;
   return ok(c, CheckoutOrderResultSchema.parse(result));
 });
