@@ -86,13 +86,21 @@ export interface ConfirmationView {
   /** Adresin ANLIK GÖRÜNTÜSÜ: müşteri adresini sonradan düzenlerse bu sipariş nereye gittiğini unutmaz. */
   address: { label?: string; line1?: string; line2?: string; postalCode?: string; city?: string } | null;
   /**
-   * Komşu davetinin paylaşılabilir adresi (17.10) — `null` ise bloğu HİÇ çizilmez.
+   * Komşu daveti (17.10 · 08.55) — `null` ise bloğu HİÇ çizilmez.
    *
    * `null` üç meşru hâlde: kargo siparişi (sefer diye bir şey yok), sipariş henüz kesinleşmedi ya
    * da seferin kesim saati doldu (çağırmanın anlamı kalmadı). Üçü de "bugün değil" der ve boş bir
    * blok göstermek, müşteriye çalışmayan bir düğme sunmak olurdu.
+   *
+   * **Tek nesne, üç ayrı alan DEĞİL** (08.55): adres varsa kontenjan da vardır, yoksa hiçbiri
+   * yoktur. Üç alan yan yana dursaydı "adres dolu ama sayı yok" gibi anlamsız bir ara hâl tipçe
+   * mümkün olur ve ekran onu bir gün çizerdi.
+   *
+   * **`remainingUses` SUNUCUDA sayılır** (kullanıcı kararı 21.08), `maxUses` da davet satırından
+   * gelir — ekrana sabit bir "3" gömmek, ayar değiştiği gün yalan söyleyen bir cümle bırakırdı.
+   * Sıfır "davet yok" demek değil, **davet doldu** demektir.
    */
-  neighborInviteUrl: string | null;
+  neighborInvite: { url: string; remainingUses: number; maxUses: number } | null;
   lines: ConfirmationLine[];
 }
 

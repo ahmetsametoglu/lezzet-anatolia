@@ -85,6 +85,7 @@ export type { NotificationPreferencesView, PreferencesSubject } from './customer
 export {
   acceptNeighborInvite,
   countNeighborInviteUses,
+  remainingNeighborInviteUses,
   declineNeighborInvite,
   matchNeighborInviteForOrder,
   neighborInviteUrl,

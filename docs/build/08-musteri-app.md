@@ -1465,7 +1465,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
   **AÇIK — kalan 1 kayma:** müşteriye özel (pazarlıklı) fiyat sıralamaya girmiyor; kart pazarlıklı tutarı gösterirken sıra liste fiyatını kullanıyor. Görünüm parametre alamaz, sokmak keyset'i bir RPC'ye taşımak demek. `BEKLEYEN(08.54)` → `design/BACKLOG.md §2` (ticari karar gerekiyor).
 
-- [ ] (08.55) **KOMŞU DAVETİNİN SINIRI WEB'DE DE SÖYLENSİN — karar iki yüzeyden yalnız native'e yazılmış** *(kullanıcı kararı 21.08 — şeffaflık; mobil şeridin gözlemi 23.08, denetim 24.08'de ölçtü)* · `touches (planlanan): apps/web/app/(customer)/[locale]/checkout/[reference]/{confirmation-types.ts,page.tsx,messages.json,components/confirmation-sections.tsx}`
+- [x] (08.55) **KOMŞU DAVETİNİN SINIRI WEB'DE DE SÖYLENSİN — karar iki yüzeyden yalnız native'e yazılmış** *(kullanıcı kararı 21.08 — şeffaflık; mobil şeridin gözlemi 23.08, denetim 24.08'de ölçtü)* · `touches: apps/web/app/(customer)/[locale]/checkout/[reference]/{confirmation-types.ts,page.tsx,messages.json,components/confirmation-sections.tsx}, packages/application/src/customer/neighbor.ts, packages/application/src/index.ts`
 
   **Karar (21.08):** sipariş onayı *"Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max})"* yazsın, davet **doluysa paylaşım düğmesi hiç çizilmesin**. Sayı sunucuda sayılsın — ekrana gömülü bir sabit, ayar değiştiği gün yalan söyler.
 
@@ -1490,3 +1490,10 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   **Test:** bugünkü test (`analytics.test.ts:193`) ham `insert` ile yazıp rollup'ı doğruluyor ve rollup zaten doğruydu; kırık olan ATICI ve onu kapsayan test yok. Kapanışa atıcıyı kapsayan test yazılacak.
 
   **Sıra:** analitik alanında başka şerit çalışıyor (`0035` açık, `analytics.schema.ts` değişmiş, `surface` kolonu geliyor). Aynı migration ailesine iki şerit birden girmemeli — o pencere kapanınca alınacak.
+
+  - **Durum (24.08 — tamamlandı):** onay sayfası artık kontenjanı söylüyor ve dolduysa paylaşım düğmesini çizmiyor.
+    **Kural ORTAK PAKETE alındı** (`remainingNeighborInviteUses`): formül mobil ucun taşıma katmanında (`apps/mobile-api/.../invite.ts`) yaşıyordu; web aynı cümleyi kuracakken ikinci bir kopya doğacaktı. İki yüzeyin aynı müşteriye farklı sayı söylemesi, kuralın kendisinden pahalı bir arıza — hele fark yalnız iptal edilmiş bir sipariş ya da düşürülmüş bir ayar varken görünürken. `Math.max(0, …)` tabanı savunmacı değil gerekli: tavan davet açılırken donduruluyor ve ayar sonradan düşürülebilir; çıplak çıkarma o gün *"-1 komşu daha yararlanabilir"* yazardı.
+    **Görünüm TEK NESNE taşıyor** (`neighborInvite: {url, remainingUses, maxUses} | null`), üç ayrı alan değil: adres varsa kontenjan da vardır. Üç alan yan yana dursa *"adres dolu ama sayı yok"* gibi anlamsız bir ara hâl tipçe mümkün olurdu.
+    **Doluyken şerit KALIR, yalnız düğme gider** — native'in aynı kararı: şeridi tümden kaldırmak "bir şey bozuldu" gibi okunur; kalan, ne olduğunu söyleyen bir cümle. Metinler native'in sözlüğünden **birebir kopyalandı** (üç dilde `remaining` + `full`); anahtar adları web'in kendi yuvalanmasına uyuyor (`neighbor.remaining`), ama müşterinin OKUDUĞU cümle iki yüzeyde aynı — asıl kural oydu.
+    **Ölçüldü (gerçek kod yolundan, geçici davet satırıyla; veri geri alındı):** davet yok → bant çizilmiyor · 2 İPTAL sipariş bağlı → kullanılan 0 (iptal sayılmıyor) · 1 geçerli sipariş + tavan 3 → kalan 2, "remaining" cümlesi + düğme · tavan 1 → kalan 0, "full" cümlesi + düğme YOK · tavan kullanımın altına düşürülünce → 0, negatif değil.
+    **Para tarafına DOKUNULMADI ve gerek yoktu:** kontenjan zaten sipariş anında motorda uygulanıyordu (`neighbor.ts`), açık yalnız söylemedeydi.

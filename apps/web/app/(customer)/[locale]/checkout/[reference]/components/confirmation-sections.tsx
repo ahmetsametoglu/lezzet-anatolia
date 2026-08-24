@@ -292,8 +292,24 @@ export function HelpBand({
  * görmeden verilmiş görsel bir karar olurdu; var olan gramerde kalmak ise yalnız içerik ekliyor.
  * Nihai görsel karar Claude Design'da verilecek (`design/pages/musteri-checkout.md`'ye brief yazıldı).
  *
- * **Bağlantı yoksa blok HİÇ çizilmez** (`neighborInviteUrl === null`): kargo siparişi, taslak ya da
+ * **Davet yoksa blok HİÇ çizilmez** (`neighborInvite === null`): kargo siparişi, taslak ya da
  * kesim saati dolmuş sefer. Boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
+ *
+ * ── KONTENJAN SÖYLENİR, DOLDUYSA PAYLAŞIM SUNULMAZ (08.55 · kullanıcı kararı 21.08) ──────────
+ * Şerit kaç komşunun daha yararlanabileceğini HİÇ söylemiyordu ve `maxUses` müşteri yüzeyine
+ * hiçbir yoldan ulaşmıyordu. Sonuç: dolmuş bir daveti paylaşmaya devam eden müşteri ve tıkladıktan
+ * SONRA "bu davet dolu" cümlesiyle karşılaşan komşu — iki tarafın da emeği boşa.
+ *
+ * Karar 21.08'de verilmişti ama iki yüzeyden yalnız **native'e** yazılmıştı; web müşterisi için
+ * durum aynen duruyordu (mobil şeridin gözlemi, denetim 24.08'de ölçtü). Kayıtta "webde
+ * yapılmayacak" diyen tek satır yoktu — bilinçli sapma değil, atlama.
+ *
+ * **Dolduğunda şerit KALIR, yalnız düğme gider.** Şeridi tümden kaldırmak "bir şey bozuldu" gibi
+ * okunurdu; kalan, ne olduğunu söyleyen bir cümle (native'in aynı kararı). Ölü bir bağlantıyı
+ * paylaştırmak ise daveti de komşusunu da boşa uğraştırır.
+ *
+ * **Sayı sözleşmeden gelir, ekrana gömülmez:** tavan davet açılırken dondurulur ve ayar bir gün
+ * değişebilir — sabit bir "3", değiştiği gün yalan söyleyen bir cümle bırakırdı.
  *
  * Kopyalama `coupons-card`taki desenin aynısı: başarısızlık sessiz ama SONUÇSUZ değil — adres zaten
  * ekranda seçilebilir hâlde duruyor, hata cümlesi açmak müşterinin hâlâ yapabildiği bir işi arıza
@@ -302,8 +318,15 @@ export function HelpBand({
  */
 export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
   const [copied, setCopied] = useState(false);
-  const url = view.neighborInviteUrl;
-  if (!url) return null;
+  const invite = view.neighborInvite;
+  if (!invite) return null;
+  const { url } = invite;
+  const full = invite.remainingUses === 0;
+  // Yer tutucular metnin İÇİNDE: cümle dile göre farklı sırada kuruluyor (FR'de sayı başta, DE'de
+  // ortada) ve parçalara bölünmüş bir çeviri o sırayı dayatırdı.
+  const limitText = (full ? t.neighbor.full : t.neighbor.remaining)
+    .replace('{n}', String(invite.remainingUses))
+    .replace('{max}', String(invite.maxUses));
 
   const share = async () => {
     if (navigator.share) {
@@ -328,12 +351,20 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.neighbor.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.neighbor.body}</span>
+        {/* Kontenjan cümlesi gövdenin ALTINDA ve daha soluk: davetin kendisi değil, koşulu.
+            Dolduğunda vurgusu artar (`text-ink`) — o hâlde tek bilgi taşıyan satır bu. */}
+        <span className={['font-sans text-micro leading-relaxed', full ? 'font-medium text-ink' : 'text-muted'].join(' ')}>
+          {limitText}
+        </span>
       </div>
       {/* Mobilde de çizilir — yardım şeridinden farkı bu: orada düğme bir "yakında"dır (tasarım),
-          burada bloğun TEK işlevi paylaşmak; düğmesiz bir davet şeridi hiçbir şey yapmaz. */}
-      <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share()}>
-        {copied ? t.neighbor.copied : t.neighbor.cta}
-      </Button>
+          burada bloğun TEK işlevi paylaşmak; düğmesiz bir davet şeridi hiçbir şey yapmaz.
+          DOLUYSA çizilmez: ölü bir bağlantıyı paylaştırmak iki tarafı da boşa uğraştırır. */}
+      {full ? null : (
+        <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share()}>
+          {copied ? t.neighbor.copied : t.neighbor.cta}
+        </Button>
+      )}
     </div>
   );
 }

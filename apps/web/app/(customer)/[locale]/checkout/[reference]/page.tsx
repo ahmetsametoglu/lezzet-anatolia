@@ -7,7 +7,7 @@ import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
-import { imageOf, neighborInviteUrl, tryOpenNeighborInvite } from '@lezzet/application';
+import { imageOf, neighborInviteUrl, remainingNeighborInviteUses, tryOpenNeighborInvite } from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
@@ -98,7 +98,16 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
 
   const view: ConfirmationView = {
     orderId: order.id,
-    neighborInviteUrl: invite ? neighborInviteUrl(invite.token, locale as Locale) : null,
+    /* Kontenjan SUNUCUDA sayılıyor (08.55): ekran "kaç komşu daha" cümlesini kurabilsin ve davet
+       dolduysa paylaşımı hiç sunmasın. Sayım siparişlerden yapılır, iptal olan sayılmaz — kural
+       ortak pakette (`remainingNeighborInviteUses`), mobil uç da aynı kapıdan geçiyor. */
+    neighborInvite: invite
+      ? {
+          url: neighborInviteUrl(invite.token, locale as Locale),
+          remainingUses: await remainingNeighborInviteUses(db, invite),
+          maxUses: invite.maxUses,
+        }
+      : null,
     referenceNo: order.referenceNo,
     createdAt: order.createdAt,
     placed,

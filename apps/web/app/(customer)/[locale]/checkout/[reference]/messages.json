@@ -53,7 +53,9 @@
       "title": "Komşunuzu bu teslimata çağırın",
       "body": "Aynı gün, aynı araç: komşunuz bu sefere sipariş verirse ikiniz de birlikte teslim alırsınız — ve siz puan kazanırsınız.",
       "cta": "Bağlantıyı kopyala",
-      "copied": "Kopyalandı"
+      "copied": "Kopyalandı",
+      "remaining": "Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max}).",
+      "full": "Bu davet doldu — {max} komşunuz katıldı. Bir sonraki siparişinizde yeni bir davet açılır."
     },
     "track": "Siparişi takip et",
     "incomplete": "Siparişiniz tamamlanmadı",
@@ -113,7 +115,9 @@
       "title": "Invitez votre voisin à cette livraison",
       "body": "Même jour, même véhicule : si votre voisin commande pour cette tournée, vous êtes livrés ensemble — et vous gagnez des points.",
       "cta": "Copier le lien",
-      "copied": "Lien copié"
+      "copied": "Lien copié",
+      "remaining": "Encore {n} voisin(s) peuvent profiter de cette invitation (maximum {max}).",
+      "full": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande."
     },
     "track": "Suivre ma commande",
     "incomplete": "Votre commande n'a pas abouti",
@@ -173,7 +177,9 @@
       "title": "Laden Sie Ihre Nachbarschaft zu dieser Lieferung ein",
       "body": "Gleicher Tag, gleiches Fahrzeug: bestellt Ihre Nachbarschaft für diese Tour, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
       "cta": "Link kopieren",
-      "copied": "Kopiert"
+      "copied": "Kopiert",
+      "remaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
+      "full": "Diese Einladung ist voll — {max} Nachbarn haben teilgenommen. Bei Ihrer nächsten Bestellung öffnet sich eine neue."
     },
     "track": "Bestellung verfolgen",
     "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",

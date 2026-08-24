@@ -432,6 +432,29 @@ export async function countNeighborInviteUses(db: SupabaseClient, inviteId: stri
 }
 
 /**
+ * **Davetten kaç komşunun daha yararlanabileceği** (kullanıcı kararı 21.08 — şeffaflık).
+ *
+ * `maxUses − kullanılan`, sıfırın altına düşmez. Taban `Math.max(0, …)` savunmacı değil GEREKLİ:
+ * tavan davet AÇILIRKEN dondurulur (`neighbor_invite.max_uses`) ve ayar sonradan düşürülebilir —
+ * o gün eski davetlerin kullanımı tavanı aşmış görünür ve çıplak çıkarma negatif verirdi. Ekran da
+ * *"-1 komşu daha yararlanabilir"* yazardı.
+ *
+ * **Burada, taşıma katmanında DEĞİL** (08.55): formül mobil ucun `invite.ts`inde yaşıyordu ve web
+ * onay sayfası aynı cümleyi kuracakken ikinci bir kopyası doğacaktı. İki yüzeyin aynı müşteriye
+ * farklı sayı söylemesi, kuralın kendisinden daha pahalı bir arıza — hele ki fark yalnız iptal
+ * edilmiş bir sipariş ya da düşürülmüş bir ayar varken görünür.
+ *
+ * **Sıfır, "davet yok" DEMEK DEĞİLDİR:** daveti olmayan siparişte bu fonksiyon hiç çağrılmaz
+ * (çağıran zaten `null` ile erken döner). Sıfır burada tek bir şey söyler: davet doldu.
+ */
+export async function remainingNeighborInviteUses(
+  db: SupabaseClient,
+  invite: Pick<NeighborInvite, 'id' | 'maxUses'>,
+): Promise<number> {
+  return Math.max(0, invite.maxUses - (await countNeighborInviteUses(db, invite.id)));
+}
+
+/**
  * Sefer hâlâ açık mı — eşikler ayardan, kural motordan.
  *
  * **Eşikler ROTA kapsamıyla okunuyor** (`zoneId`, kullanıcı kararı 17.08): davet bir seferin daveti,
