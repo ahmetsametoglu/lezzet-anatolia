@@ -5190,3 +5190,49 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Doğrulama: birim projesi **1473/1473** · mobil paket **702/702** · `@lezzet/email` typecheck ·
   `@lezzet/application` typecheck · `@lezzet/mobile` typecheck · lint temiz · `docs:check` yeşil.
+
+- [x] (21.105) **KABUK VE KİMLİK TESTLENDİ — yetki kapısı, açılış kararı, düşen okumanın toparlanması**
+  · touches: `apps/mobile/src/screens/operations/use-operations-access.hook.test.ts`,
+  `apps/mobile/src/screens/operations/use-staff-landing.hook.test.ts`,
+  `apps/mobile/src/screens/operations/use-staff-landing.hook.ts`,
+  `apps/mobile/src/screens/customer-kit/use-me.hook.test.ts`
+
+  **DALGA 2'NİN İLK DİLİMİ** (`docs/build/test-dalgasi.md`): plan bu şeride `21.9x` kabuk/kurye/davet
+  kapsamını veriyor. Seçim ölçütü planın kendi ölçütü — kapsama yüzdesi değil **sessiz bozulma
+  riski**: burada üç kalem birden var (yetki kapısı · "bir kez yaşandı" hatası · karar dalı).
+
+  **38 iddia, 3 dosya.** `useOperationsAccess` 12 · `useStaffLanding` 11 · `useMe` 15.
+
+  **NEDEN BU ÜÇÜ — üçü de bozulduğunda HATA VERMEZ, yanlış yere götürür:**
+  · **Dört hâl, üç değil** (21.97): kapı *"erişemiyor"* ile *"ÖĞRENEMEDİK"*i ayırıyor ve bu ayrımı
+    silmek KODU SADELEŞTİRİR — bedeli, wifi'si düşen kuryenin sessizce vitrine düşmesi. Sabotajla
+    kanıtlandı: `error` dalı `denied`a katıldığında **5 iddia birden** kırmızı yandı.
+  · **Karar YALNIZ kökte, bayrak kök dışında TÜKETİLMEZ** (21.97): derin bağla açılan uygulamada
+    karar ertelenir, iptal edilmez. Sabotajla kanıtlandı: bayrağı kök dışında da yakan bir yazım
+    **yalnız o tek testi** düşürdü, ötekiler yeşil kaldı — çivi tam yerinde.
+  · **Tazeleme yalnız `error` hâlinde** (21.98): koşulu gevşetmek hiçbir yerde patlamaz, yalnız her
+    sekme dönüşünde bir ağ turu doğurur. Sabotajla kanıtlandı: koşul kalkınca 2 iddia kırmızı.
+
+  **GERÇEK KAPILAR TAKLİT EDİLMEDİ:** `operationsSectionsOf` ve `operationsHomeRoute` gerçek
+  çalışıyor — girişin okuduğu kuralla açılışın okuduğu kural AYNI olmalı ve taklit edilseydi test,
+  ayrışmayı ölçemeyeceği bir dünyayı doğrulardı. Taklit edilen tek şey tel (`fetchMe`), oturum
+  tesisatı ve yönlendirici.
+
+  **ÜÇ ÖLÇÜM, ÜÇÜ DE KURULUM DERSİ:**
+  · `react-native` modülünü TOPTAN sahtelemek suite'i daha açılmadan düşürdü (`expo-modules-core`
+    `Platform.select`i yüklenirken çağırıyor); `jest.requireActual` ile yaymak da düştü (gerçek
+    index yerel modül arıyor — `TurboModuleRegistry … 'DevMenu'`). Doğru kapı `spyOn`: preset'in
+    kurduğu dünya yerinde kalır, yalnız dinleyici teslim edilir.
+  · **RNTL v14 asenkron:** `unmount()` de beklenmezse temizleme efektleri koşmamış olur ve iddia
+    *"sızıntı var"* der — oysa yalnız erken bakılmıştır.
+  · `import/first` bu depoda TANIMLI DEĞİL; ona yazılan `eslint-disable` üç dosyada birden lint
+    hatası verdi. Var olmayan bir kuralı susturmak, kuralın kendisinden pahalı.
+
+  **`resetStaffLanding` EKLENDİ** (üretim modülüne, tek satır): bayrak modül düzeyinde yaşıyor ve
+  `jest.resetModules()` hook'larda İŞLEMİYOR (taze modül kendi React nüshasını çeker, dispatcher
+  `null` kalır — `place-name-memory` testinde ölçüldü). `resetPlaceNameMemory`nin aynı gerekçesi.
+  **`use-me` için ÜÇÜNCÜ bir sıfırlama kapısı AÇILMADI** — her iddia `waitFor` ile beklenen hâle
+  bakıyor, yani sızan ilk kare hiçbir iddiayı taşımıyor. Bedeli açıkça yazılı: geçici `loading`
+  karesi orada sınanmıyor.
+
+  Doğrulama: mobil paket **740/740** (702 → 740) · `@lezzet/mobile` typecheck temiz · lint temiz.

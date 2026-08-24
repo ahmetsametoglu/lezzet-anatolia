@@ -56,6 +56,19 @@ export function markStaffLandingDone(): void {
 }
 
 /**
+ * "YENİ AÇILIŞ" — bayrağı sıfırlar. Testler için.
+ *
+ * Bayrak modül düzeyinde yaşadığı için (yukarıdaki künye: uygulama ömrü) testler onu
+ * `jest.resetModules()` ile tazeleyemez: taze yüklenen modül kendi React nüshasını çeker ve
+ * hook'un dispatcher'ı `null` kalır (`place-name-memory` testinde ölçüldü, 24.08). Sıfırlamanın
+ * dış kapıdan verilmesi, testin okuduğu kararın da GERÇEK karar olmasını sağlar — ikinci bir
+ * "açılış" kavramı uydurulmuyor, var olanı geri alınıyor.
+ */
+export function resetStaffLanding(): void {
+  landed = false;
+}
+
+/**
  * Müşteri kabuğunun kökünde bir kez koşar: oturum sahibinin operasyon bölümü varsa kabuğa taşır.
  *
  * Değer döndürmez — çağıranın çizeceği bir şey yok. Sekme kabuğunda durmasının sebebi `/me`
