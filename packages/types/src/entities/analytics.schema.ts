@@ -39,8 +39,16 @@ export const ANALYTICS_FUNNEL_STEPS = [
   'order_placed',
 ] as const satisfies readonly AnalyticsEventType[];
 
-/** Ölçülen nesne. Paket de bir katalog yüzeyidir — `product_id` ile ölçülemezdi. */
-export const AnalyticsSubjectTypeEnum = z.enum(['product', 'variant', 'bundle', 'category', 'collection']);
+/**
+ * Ölçülen nesne. Paket de bir katalog yüzeyidir — `product_id` ile ölçülemezdi.
+ *
+ * **`recipe` 24.08'de katıldı** (08.57, mobil şeridin gözlemi): tarif sayfası ölçülüyordu ama
+ * yazılan `path` rota KALIBIDIR ve slug bilerek maskeli (gizlilik kararı, denetim P2). Sonuç:
+ * *"kaç tarif sayfası görüntülendi"* cevaplanıyor, *"HANGİ tarif ilgi çekti"* cevaplanmıyordu.
+ * Kimliği `path`e yazmak çare değildi — tek alana iki anlam yüklemek olurdu; kimliğin evi zaten
+ * `subject_id`.
+ */
+export const AnalyticsSubjectTypeEnum = z.enum(['product', 'variant', 'bundle', 'category', 'collection', 'recipe']);
 export type AnalyticsSubjectType = z.infer<typeof AnalyticsSubjectTypeEnum>;
 
 /**
@@ -149,6 +157,17 @@ export const AnalyticsInputSchema = z.discriminatedUnion('type', [
     utm: z.record(z.string()).nullish(),
     /** Yönlendiren ALAN ADI — ham URL değil (sorgu dizesi kişisel veri taşır). */
     source: z.string().nullish(),
+    /**
+     * **Sayfanın öznesi — İSTEĞE BAĞLI** (08.57). `path` rota KALIBIDIR (slug maskeli, denetim P2),
+     * yani "hangi sayfa türü" cevaplanır ama "hangi kayıt" cevaplanmazdı. Tarif sayfası bunu
+     * dolduruyor: kendi `*_view` olayı yok ve olması da gerekmiyor — ölçülen şey aynı, bir içerik
+     * sayfasına bakıldı.
+     *
+     * Öznesi olmayan sayfalar (katalog, hesap, sepet) geçmez ve geçmemeleri doğrudur; zorunlu
+     * yapmak her sayfaya uydurma bir kimlik yazdırmak olurdu.
+     */
+    subjectType: AnalyticsSubjectTypeEnum.optional(),
+    subjectId: z.string().uuid().optional(),
   }),
 
   z.object({

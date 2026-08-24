@@ -1514,3 +1514,15 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     yokluğuydu. Yeni test gerçek bir ürün+varyant kuruyor (çözüm o tablodan okunuyor) ve paket
     satırının atfedilmediğini de çiviliyor. Bekçilik doğrulandı: fonksiyon eski hâline döndürülünce
     test düşüyor (`expected undefined to be 1`).
+
+- [x] (08.57) **TARİF GÖRÜNTÜLEMESİ ARTIK HANGİ TARİFE BAKILDIĞINI SÖYLÜYOR** *(mobil şeridin gözlemi 24.08: "kaç tarif görüntülendi cevaplanıyor, hangi tarif cevaplanmıyor")* · `touches: supabase/migrations/0035_analytics.sql, packages/types/src/entities/analytics.schema.ts, apps/web/lib/analytics/{page-view.ts,record.ts}, apps/web/app/(customer)/[locale]/recipe/[slug]/page.tsx`
+
+  **Belirti:** tarif sayfası ölçülüyordu (`recordPageView('/recipe/[slug]')`) ama yazılan `path` rota KALIBIDIR ve slug bilerek maskeli (gizlilik kararı, denetim P2). Sonuç: "kaç tarif sayfası görüntülendi" cevaplanıyor, **"hangi tarif ilgi çekti" cevaplanmıyordu.**
+
+  **Çözüm kimliğin kendi evinde:** `AnalyticsSubjectTypeEnum`'a `recipe` eklendi (DB enum'u + Zod), `page_view` girdisi İSTEĞE BAĞLI özne kabul eder oldu ve tarif sayfası onu geçiyor. `path` hiç değişmedi — maskeleme yerinde.
+
+  **Öneriyi olduğu gibi almadım:** mobil şerit ikinci bir şey daha önermişti — *"ürün görüntülemesinin `path`'i KAYNAK ekranı taşısın"* (tariften ürüne geçiş ölçülsün diye). Reddedildi: `path` rota kalıbıdır ve oraya "nereden gelindi" yazmak tek alana iki anlam yüklemek olurdu — bu depoda aynı sınıftan bir kusur 09.08'de düzeltilmişti (`resolution.warehouseId` hem rota hem kargo deposunu taşıyordu, okuyan taraf ayırt edemiyordu). Sorulan soru gerçek ama cevabı bir **yönlendiren (referrer)** alanıdır ve kendi tasarımını hak ediyor: hangi ekranlar kaynak sayılır, kaç adım geriye bakılır, oturum içinde mi. Ayrı iş.
+
+  **Özne İSTEĞE BAĞLI ve varsayılanı yok:** öznesi olmayan sayfalar (katalog, hesap, sepet) bugünkü çağrılarını bit bazında koruyor. Zorunlu yapmak, öznesi olmayan her sayfaya uydurma bir kimlik yazdırmak olurdu.
+
+  **Yan etki, kayda geçiyor:** ölçüm çağrısı tarif ÇÖZÜLDÜKTEN sonraya taşındı (kimlik ancak orada belli), yani **bulunamayan tarif artık sayılmıyor** — `notFound()` önce koşuyor. Eskiden 404 de bir görüntüleme yazıyordu ve o sayı "tarife ilgi" değil "ölü bağlantı" ölçüyordu; düzeltme sayının kendisini de iyileştiriyor.

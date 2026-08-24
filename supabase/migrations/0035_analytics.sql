@@ -39,7 +39,11 @@ create type analytics_event_type as enum (
 -- silinmemeli, yoksa mart ayının sayıları haziranda değişir. Çeviri torbası tartışmasındaki
 -- "polimorfik olmasın" itirazı BURAYA UYMAZ: orada itiraz "FK'siz kalır, öksüz satır doğar" idi,
 -- burada FK'yi zaten istemiyoruz.
-create type analytics_subject_type as enum ('product', 'variant', 'bundle', 'category', 'collection');
+-- `recipe` 24.08'de katıldı (08.57, mobil şeridin gözlemi): tarif sayfası ölçülüyordu ama yol
+-- KALIBI yazıldığı ve slug bilerek maskeli olduğu için (`route-pattern`, denetim P2) "kaç tarif
+-- görüntülendi" cevaplanıyor, "HANGİ tarif" cevaplanmıyordu. Kimlik `path`e yazılamazdı — o alan
+-- rota kalıbıdır ve maskeleme bir gizlilik kararı; kimliğin evi zaten `subject_id`.
+create type analytics_subject_type as enum ('product', 'variant', 'bundle', 'category', 'collection', 'recipe');
 
 -- Görüntüleme ANINDAKİ satılabilirlik — anlık görüntü (snapshot), sonradan kurulamaz çünkü stok
 -- hareket eder. Kaydedilmezse "çok bakılıp az alınan" listesinin başına STOKSUZ ürünler oturur ve

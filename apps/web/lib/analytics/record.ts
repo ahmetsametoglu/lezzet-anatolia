@@ -212,6 +212,11 @@ export async function recordEvent(input: AnalyticsInput, context: EventContext =
 /** Girdi tipine özel alanlar — ayrık birlik burada satıra iner. */
 function contextOf(girdi: AnalyticsInput): Partial<AnalyticsEventInsert> {
   switch (girdi.type) {
+    /* Sayfa görüntülemesinin öznesi İSTEĞE BAĞLI (08.57): tarif sayfası hangi tarife bakıldığını
+       söylüyor, öznesi olmayan sayfalar hiçbir şey geçmiyor. `undefined` alanlar satıra `null`
+       olarak iner — ayrı bir dal yazmaya gerek yok. */
+    case 'page_view':
+      return { subjectType: girdi.subjectType, subjectId: girdi.subjectId };
     case 'product_view':
       return { subjectType: girdi.subjectType, subjectId: girdi.subjectId, productId: girdi.productId, availability: girdi.availability };
     case 'add_to_cart':

@@ -1,6 +1,7 @@
 import 'server-only';
 import { headers } from 'next/headers';
 import type { AppRoute } from '@lezzet/i18n';
+import type { AnalyticsSubjectType } from '@lezzet/types';
 import { recordEvent } from './record';
 
 /**
@@ -50,9 +51,23 @@ type RawSearchParams = Record<string, string | string[] | undefined>;
  * burada da geçerli — render anında bilen SAYFA, eylem anında bilen TARAYICI.
  * (Gerekçeye dayanıyor; canlı ölçüm render tarafı için yapıldı, eylem tarafı için bekliyor.)
  */
-export async function recordPageView(path: AppRoute, searchParams?: RawSearchParams): Promise<void> {
+/**
+ * ── ÖZNE İSTEĞE BAĞLI, ÇÜNKÜ HER SAYFANIN ÖZNESİ YOK (08.57) ─────────────────
+ * `path` rota kalıbı olduğu için "hangi sayfa türü" cevaplanıyor ama "hangi KAYIT" cevaplanmıyordu.
+ * Ürün sayfası bunu kendi `product_view` olayıyla çözüyor; tarifin öyle bir olayı yok ve olması da
+ * gerekmiyor — ölçülen şey aynı: bir içerik sayfasına bakıldı.
+ *
+ * Alan opsiyonel ve varsayılanı YOK: özne taşımayan sayfalar (katalog, hesap, sepet) bugünkü
+ * çağrılarını bit bazında koruyor. Zorunlu yapmak, öznesi olmayan her sayfaya uydurma bir kimlik
+ * yazdırmak olurdu.
+ */
+export async function recordPageView(
+  path: AppRoute,
+  searchParams?: RawSearchParams,
+  subject?: { subjectType: AnalyticsSubjectType; subjectId: string },
+): Promise<void> {
   const params = flatten(searchParams);
-  void recordEvent({ type: 'page_view', utm: params, source: params ? null : await externalReferrer() }, { path });
+  void recordEvent({ type: 'page_view', utm: params, source: params ? null : await externalReferrer(), ...subject }, { path });
 }
 
 /**

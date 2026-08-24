@@ -72,7 +72,6 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView('/recipe/[slug]', await searchParams);
 
   const t: Messages = messages[locale];
   const [recipe, device] = await Promise.all([
@@ -80,6 +79,15 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
     detectDevice(),
   ]);
   if (!recipe) notFound();
+
+  /* Ölçüm tarif ÇÖZÜLDÜKTEN sonra (08.57): görüntüleme artık HANGİ tarife bakıldığını söylüyor ve
+     kimlik ancak burada belli. `path` yine rota kalıbı — slug maskeli kalıyor (denetim P2), kimliğin
+     evi `subject_id`.
+
+     Çağrı yukarıdan buraya taşındı ve bunun bir yan etkisi var, kayda geçiyor: **bulunamayan tarif
+     artık sayılmıyor** (`notFound()` önce koşuyor). Eskiden 404 de bir görüntüleme yazıyordu; o sayı
+     "tarife ilgi" değil "ölü bağlantı" ölçüyordu, yani düzeltme sayının kendisini de iyileştiriyor. */
+  void recordPageView('/recipe/[slug]', await searchParams, { subjectType: 'recipe', subjectId: recipe.id });
 
   return (
     <SiteFrame
