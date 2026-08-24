@@ -17,12 +17,18 @@
 -- demekti. Fiyat GRUBU (`price_group.percent_off`) ise girmek zorunda değil — tekdüze bir yüzde
 -- sırayı KORUR, yalnız rakamları ölçekler.
 --
--- **Bu bir eksik değil, VERİLMİŞ BİR KARAR** (kullanıcı 24.08 · `design/KARARLAR.md §1a`): pazarlıklı
--- fiyatı olan müşteride sıra o ürünlerde kayar — kart pazarlıklı tutarı gösterir, sıralama liste
--- fiyatını kullanır. Verilen söz açık: *"Liste bizim fiyatımıza göre sıralanır; size özel fiyatınız
--- kartta yazar."* Ölçüldü (24.08, 12 pazarlıklı satırı olan tek onaylı toptan müşteri): 97 üründe
--- **1** yer değişimi — düzeltilen kusurun 1/68'i kadar. Yeniden açılma koşulu KARARLAR'da yazılı;
--- oraya bakmadan burada bir "düzeltme" denenmemeli.
+-- **Bu bir eksik değil, VERİLMİŞ BİR KARAR** (kullanıcı 24.08 · `design/KARARLAR.md §1a`).
+--
+-- **Etkilenen şey GÖSTERİM DEĞİL, SIRA** — ve bu ayrım bir kez yanlış anlaşıldı, o yüzden burada da
+-- açıkça yazılı: pazarlıklı (müşteriye özel) fiyat müşteriye HER YERDE gösterilir (katalog kartı,
+-- ürün detayı, sepet, ödeme) çünkü onu motor çözüyor (`resolvePrice` → `customerPriceCents`), bu
+-- görünüm değil. Görünümün tek işi sıralama anahtarı üretmek ve o anahtar kanalın LİSTE fiyatından
+-- kuruluyor. Yani müşteri 0,89 € gördüğü ürünü listede 0,99 €'nun yerinde bulur — fiyatı yanlış
+-- görmez, birkaç sıra aşağıda görür.
+--
+-- Ölçüldü (24.08, 12 pazarlıklı satırı olan tek onaylı toptan müşteri): 97 üründe **1** yer
+-- değişimi — düzeltilen kusurun 1/68'i kadar. Yeniden açılma koşulu KARARLAR'da yazılı; oraya
+-- bakmadan burada bir "düzeltme" denenmemeli.
 --
 -- Ayrışma riski YORUMLA değil TESTLE tutuluyor: `packages/application/src/catalog/catalog.test.ts`
 -- görünümün verdiği sırayı motorun çözdüğü fiyatlarla karşılaştırır — ve testler ARTIK İKİ KANALI

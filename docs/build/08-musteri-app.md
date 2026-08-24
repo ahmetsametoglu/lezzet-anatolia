@@ -1463,7 +1463,11 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
   **Doğrulandı:** aynı ölçüm düzeltmeden sonra **68 → 1**. Ve testler kusuru gerçekten görüyor: kanal `'b2c'`e geri sabitlenince dört test birden düşüyor, üstelik gerçek veride ölçülen yanlış sıranın birebir aynısıyla (`['Ucuz','Orta','Pahalı']` beklenen `['Orta','Ucuz','Pahalı']` yerine).
 
-  **KALAN 1 KAYMA — açık değil, KARAR (kullanıcı 24.08):** müşteriye özel (pazarlıklı) fiyat sıralamaya girmiyor; kart pazarlıklı tutarı gösterirken sıra liste fiyatını kullanıyor. Ölçüldü: 12 pazarlıklı satırı olan tek onaylı toptan müşteride 97 üründe **1** yer değişimi. Kullanıcı soruldu ve *"şimdilik böyle kalsın"* dedi; verilen söz açık yazıldı: *"Liste bizim fiyatımıza göre sıralanır, size özel fiyatınız kartta yazar."* Gerekçe ve **yeniden açılma koşulu** `design/KARARLAR.md §1a`'da — `BEKLEYEN` işareti kaldırıldı, çünkü bu bir boşluk değil bilinçli bir sapma.
+  **KALAN 1 KAYMA — açık değil, KARAR (kullanıcı 24.08):** müşteriye özel (pazarlıklı) fiyat **sıralamaya** girmiyor.
+
+  **Gösterim etkilenmiyor** ve bunu ayrıca yazıyorum çünkü cümle bir kez yanlış anlaşıldı: pazarlıklı müşteri giriş yaptığı andan itibaren **her yerde** kendi fiyatını görüyor — katalog kartı, ürün detayı, sepet, ödeme. Sepete atmasına gerek yok. Ölçüldü (Bosphore · Fıstıklı Artisan Kek): ziyaretçi 1,27 € · Bosphore **0,89 €**, hem kartta hem detayda. Fiyatı motor çözüyor (`resolvePrice` → `customerPriceCents`), görünüm değil.
+
+  Değişen tek şey sıra: müşteri 0,89 € gördüğü ürünü listede 0,99 €'ya karşılık gelen yerinde buluyor. Ölçüldü: 12 pazarlıklı satırı olan tek onaylı toptan müşteride 97 üründe **1** yer değişimi. Kullanıcı soruldu ve *"şimdilik böyle kalsın"* dedi; verilen söz: *"Fiyatınız her yerde sizin fiyatınızdır; yalnız fiyata göre sıralama bizim liste fiyatımıza göre dizilir."* Gerekçe ve **yeniden açılma koşulu** `design/KARARLAR.md §1a`'da — `BEKLEYEN` işareti kaldırıldı, çünkü bu bir boşluk değil bilinçli bir sapma.
 
 - [x] (08.55) **KOMŞU DAVETİNİN SINIRI WEB'DE DE SÖYLENSİN — karar iki yüzeyden yalnız native'e yazılmış** *(kullanıcı kararı 21.08 — şeffaflık; mobil şeridin gözlemi 23.08, denetim 24.08'de ölçtü)* · `touches: apps/web/app/(customer)/[locale]/checkout/[reference]/{confirmation-types.ts,page.tsx,messages.json,components/confirmation-sections.tsx}, packages/application/src/customer/neighbor.ts, packages/application/src/index.ts`
 

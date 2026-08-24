@@ -78,11 +78,21 @@ listeyi son müşteri fiyatlarına göre sıralanmış alıyordu (97 üründe 68
 kayma 22 sıra). Kanal artık görünümün grain'inde ve testler iki kanalı da koşuyor.
 
 **PAZARLIKLI FİYAT SIRALAMAYA GİRMEZ — bilinçli sapma (kullanıcı kararı 24.08).**
-Sıralama müşterinin KANALINDAKİ liste fiyatını (+ son-tarih teklifini) okur; müşteriye ÖZEL
-(pazarlıklı) fiyatı okumaz. Kart doğru rakamı gösterir, sıra o ürünlerde birkaç basamak kayar.
-Ölçüldü (24.08): 12 pazarlıklı satırı olan tek onaylı toptan müşteride, 97 üründe **1** yer değişimi.
 
-Verilen söz açıkça şudur: *"Liste bizim fiyatımıza göre sıralanır; size özel fiyatınız kartta yazar."*
+**ÖNCE NE ETKİLENMİYOR — çünkü bu cümle bir kez yanlış anlaşıldı (24.08):** pazarlıklı fiyat
+GÖSTERİMDE hiçbir şey kaybetmez. Müşteri giriş yaptığı andan itibaren **her yerde** kendi fiyatını
+görür — katalog kartında, ürün detayında, sepette, ödemede. Sepete atmasına gerek yoktur. Ölçüldü
+(24.08, Restaurant Bosphore · Fıstıklı Artisan Kek): ziyaretçi 1,27 € · Bosphore **0,89 €** hem
+kartta hem detayda (liste fiyatı 0,99 €, pazarlıklı 0,89 €).
+
+**Etkilenen tek şey SIRA.** "Artan/azalan fiyat" seçildiğinde liste, müşterinin KANALINDAKİ liste
+fiyatına (+ son-tarih teklifine) göre dizilir; pazarlıklı fiyat bu dizilime katılmaz. Yani müşteri
+0,89 € gördüğü ürünü, listede 0,99 €'ya karşılık gelen yerinde bulur — fiyatı yanlış görmez, birkaç
+sıra aşağıda görür. Ölçüldü: 12 pazarlıklı satırı olan tek onaylı toptan müşteride, 97 üründe
+**1** yer değişimi.
+
+Verilen söz açıkça şudur: *"Fiyatınız her yerde sizin fiyatınızdır; yalnız fiyata göre sıralama
+bizim liste fiyatımıza göre dizilir."*
 
 **Neden bu kabul edildi:** düzeltmenin maliyeti kazancıyla orantısız. Sıralama keyset (imleç)
 yüzünden SQL'de olmak zorunda ve görünüm parametre alamaz — pazarlıklı fiyatı sokmanın iki yolu var,
