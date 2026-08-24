@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -172,6 +172,13 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent testID={testID}>
+      {/* JEST KÖKÜ MODAL İÇİNDE AYRICA GEREKİR (24.08). `Modal` kendi pencere hiyerarşisini kurar ve
+          uygulama kökündeki `GestureHandlerRootView` (`app/_layout.tsx`) oraya UZANMAZ — RNGH'nin
+          kendi kuralı: bir jestin çalışması için aynı köke bağlı olması gerekir. Panelin tutamağı
+          bu kökü zaten örtük olarak buluyordu (kapanış sürüklemesi çalışıyor), ama İÇERİĞE konan
+          jestler (adet seçicinin rayı — kullanıcı bulgusu 24.08: "sağa sola çektiğimde hareket
+          etmiyor") kökü bulamıyordu. Kök burada olunca çekmecenin içine konan HER jest çalışır. */}
+      <GestureHandlerRootView style={styles.layer}>
       {/* KLAVYE PANELİ EZEMEZ (kullanıcı bulgusu 08.08 — profil çekmecesinde alanlar klavyenin
           altında kalıyordu): `statusBarTranslucent` bir Modal'da Android pencereyi kendiliğinden
           daraltmaz; kaçınma burada, KİTTE durur — girdili her çekmece (adres, kupon…) aynı
@@ -231,6 +238,7 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

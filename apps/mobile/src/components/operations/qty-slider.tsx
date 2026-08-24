@@ -157,12 +157,26 @@ export function OperationsQtySlider({
     setAxisMax(axisWindow(valueRef.current, step, expected));
   }, [expected, step, stopHold]);
 
-  /* `runOnJS`: seçim ayrık adımlarla ilerliyor, her olayda UI thread hassasiyeti gerekmez —
-     karşılığında state ve zamanlayıcı doğrudan JS'te yaşar (worklet köprüsü yok). */
+  /*
+    `runOnJS`: seçim ayrık adımlarla ilerliyor, her olayda UI thread hassasiyeti gerekmez —
+    karşılığında state ve zamanlayıcı doğrudan JS'te yaşar (worklet köprüsü yok).
+
+    ── KAYDIRMA İLE SÜRÜKLEME YARIŞI (kullanıcı bulgusu 24.08) ───────────────
+    Ray bir çekmecenin İÇİNDE ve çekmecenin içeriği kayan bir alanda duruyor (`BottomSheet`in
+    `ScrollView`i). Android'de dıştaki kaydırma, içteki pan jestiyle yarışır ve dokunmayı kendine
+    alabilir — RNGH'nin bilinen davranışı; çözümü ilişkiyi AÇIKÇA kurmaktır, umut etmek değil.
+
+    İki eşik bunu söylüyor: `activeOffsetX` "6 dp yatay gittiysen bu bir SÜRÜKLEMEDİR" (aktivasyon
+    yatay niyetle olur, dikey kaydırmayı çalmaz), `failOffsetY` "14 dp dikey gittiysen bu bir
+    KAYDIRMADIR" (ray parmağı bırakır, çekmece kayar). Değerin dokunulan noktaya ATLAMASI eşiği
+    beklemez: `onBegin` aktivasyondan önce çalışır, yani tek dokunuş yine anında yerine gider.
+  */
   const pan = useMemo(
     () =>
       Gesture.Pan()
         .runOnJS(true)
+        .activeOffsetX([-6, 6])
+        .failOffsetY([-14, 14])
         .onBegin((event) => moveTo(event.x))
         .onChange((event) => moveTo(event.x))
         .onFinalize(() => settle()),
