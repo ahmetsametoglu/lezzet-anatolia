@@ -1,5 +1,6 @@
 import 'server-only';
-import { AnalyticsProductDailyService, CategoryImageService, CategoryService, CollectionService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
+import { AnalyticsProductDailyService, CategoryImageService, CategoryService, CollectionService, ProductListingService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
+import type { ProductListingScope } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
 // `ProductWithRelations` şema tipidir, servis tipi değil — kaynağı `@lezzet/types` (`CLAUDE §1`:
@@ -108,28 +109,38 @@ export async function readShowcase(
   place: PlaceWarehouses,
   viewer: PricingViewer,
 ): Promise<StorefrontProduct[]> {
-  const rows = await showcaseRows(db);
+  const rows = await showcaseRows(db, { warehouseId: place.warehouseId, channel: viewer.channel });
   const context = await loadProductContext(db, rows, place, viewer);
   return rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
-/** Seçkinin ürün satırları: önce ölçüt, eksik kalırsa katalogla tamamlanır. */
-async function showcaseRows(db: SupabaseClient): Promise<ProductWithRelations[]> {
-  const products = new ProductService(db);
+/**
+ * Seçkinin ürün satırları: önce ölçüt, eksik kalırsa katalogla tamamlanır.
+ *
+ * **Kaynak `product_listing` görünümü** (08.46, 24.08), ham `product` tablosu değil: bant kartlarda
+ * FİYAT gösteriyor ve kanalında satılamayan ürün orada fiyatsız bir kart olarak çiziliyordu.
+ *
+ * Süzgeç okuma SONRASINDA olamazdı — `similar`/`family`den ayrılan yer burası: bant sabit dört kart
+ * ister (`topUp`) ve elemeyi sonradan yapsaydık bant üçe düşerdi. *"Eksik bir band, tasarımın
+ * dörtlü ızgarasını bozar"* kuralı zaten bu dosyada yazılı; süzgeç kaynağa taşınınca `topUp`
+ * yeniden doldurabiliyor.
+ */
+async function showcaseRows(db: SupabaseClient, scope: ProductListingScope): Promise<ProductWithRelations[]> {
+  const products = new ProductListingService(db);
   const ranked = await rankedProductIds(db);
   if (!ranked.length) {
     // **İlk gün hâli birinci sınıf:** sinyal birikmeden band boş kalmaz, katalogla dolar. Bu bir
     // uydurma sıralama değil — "en çok sevilen" iddiası yalnız ölçüt varken kuruluyor.
-    return (await products.listWithRelations({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT })).rows;
+    return (await products.list({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT, ...scope })).rows;
   }
 
-  const page = await products.listWithRelations({ filters: { ids: ranked, status: 'active' }, limit: SIGNAL_OVERFETCH });
+  const page = await products.list({ filters: { ids: ranked, status: 'active' }, limit: SIGNAL_OVERFETCH, ...scope });
   const picked = orderByRank(page.rows, ranked);
   if (picked.length >= SHOWCASE_LIMIT) return picked.slice(0, SHOWCASE_LIMIT);
 
   // Ölçütü olan ürünlerin bir kısmı pasifleşmişse band yine dört kart ister: kalanı katalogdan.
   // Eksik bir band, tasarımın dörtlü ızgarasını bozar ve müşteriye "bir şeyler eksik" dedirtir.
-  const filler = await products.listWithRelations({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT + picked.length });
+  const filler = await products.list({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT + picked.length, ...scope });
   return topUp(picked, filler.rows, SHOWCASE_LIMIT);
 }
 

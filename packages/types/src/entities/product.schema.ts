@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
+import { ChannelEnum } from '../primitives/enums.schema';
 import { LOCALIZED_TEXT_KEYS, LocalizedTextSchema, type LocalizedText } from '../primitives/localized-text.schema';
 import { ImageMetaInsertSchema, ImageMetaSchema } from '../primitives/image.schema';
 import { ProductVariantSchema } from './product-variant.schema';
@@ -321,21 +322,35 @@ export const ProductWithRelationsSchema = ProductSchema.extend({
 export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
 
 /**
- * **`product_listing` görünümünün satırı** (08.10 · 21.6) — ürün + ilişkiler + görünümün HESAPLADIĞI
- * iki kolon.
+ * **`product_listing` görünümünün satırı** (08.10 · 21.6 · 08.54) — ürün + ilişkiler + görünümün
+ * kapsamı (kanal) ve HESAPLADIĞI kolonlar.
  *
  * Ayrı şema olmasının sebebi bir arıza: servis cevabı `ProductWithRelationsSchema` ile parse
  * ediyordu ve Zod tanımadığı alanları düşürüyor — **görünüm hesaplıyor, servis çöpe atıyordu.**
  * Hiçbir yerde hata vermiyordu; yalnız ziyaretçi fiyatı okumanın ucuna hiç varmıyordu ve her
  * tüketici onu ikinci kez hesaplamak zorunda kalıyordu (mobil şeridin ölçümü, 07.08).
  *
- * `product` TABLOSUNDA bu iki kolon YOK ve olmamalı: fiyat kanaldan, müşteriden, depodan ve
+ * `product` TABLOSUNDA bu kolonlar YOK ve olmamalı: fiyat kanaldan, müşteriden, depodan ve
  * yaklaşan son tarihli partiden türer — saklanan bir "geçerli fiyat" ilk gün yalan söyler. Görünüm
  * o türetimi tek yerde yapıyor (`0032`), bu şema da onun çıktısını tarif ediyor.
  */
 export const ProductListingRowSchema = ProductWithRelationsSchema.extend({
-  /** Ziyaretçinin göreceği birim fiyat; `null` = kanal fiyatı girilmemiş (satışa kapalı). */
-  effectivePrice: dbNumericNullable,
+  /**
+   * Satırın KANALI (08.54) — görünümün grain'i `(depo × kanal × ürün)`.
+   *
+   * Şemada durması şart: süzgeci unutan bir okuma aynı ürünü kanal sayısı kadar döndürür ve keyset
+   * imleci bozulur (depo ekseninin 01.08'deki aynı tuzağı). Alan burada olunca hata tip düzeyinde
+   * değil ama satırda GÖRÜNÜR olur.
+   */
+  channel: ChannelEnum,
+  /**
+   * Birincil boyun bu kanaldaki birim fiyatı.
+   *
+   * **`null` OLAMAZ** (08.54): görünüm artık o kanalda fiyatı olmayan ürünü hiç listelemiyor
+   * (08.46), yani satır varsa fiyat da vardır. Eskiden nullable'dı ve `null` "satışa kapalı ama
+   * listede" demekti — o hâl artık yok.
+   */
+  effectivePrice: dbNumeric,
   /** Fiyat yaklaşan son tarihli parti teklifinden mi geliyor — kartta "fırsat" rozeti. */
   hasNearExpiryOffer: z.boolean(),
 });

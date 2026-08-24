@@ -87,6 +87,31 @@ export interface CatalogInput {
    * iş kuralı değil.
    */
   limit?: number;
+  /**
+   * **Kanalında satılamayan ürünler de gelsin mi** — varsayılan HAYIR (08.46).
+   *
+   * Vitrinin kuralı süzmektir: müşteri alamayacağı ürünü görmez. Ama bu kural yalnız **KEŞİF**
+   * yüzeyleri içindir — birileri katalogu tarıyor ve satın alacak bir şey arıyor.
+   *
+   * **REFERANS okumalarda aynı kural TERS etki yapıyor** ve ölçüldü (24.08, `support-tools` testi
+   * yakaladı): destek aracı `urun_ara` bir ürünü ADIYLA arıyor ("cevizli baklava var mı"). Ürün
+   * süzülünce araç *"katalogda eşleşen ürün yok"* diyor — yani VAR OLAN bir ürün için "yok"
+   * cevabı üretiyor. Doğru cümle *"var ama sizin fiyat kanalınızda satışa kapalı"*; 08.46'nın
+   * kaldırmak istediği güven riskinin (engeli rafta değil kasada öğrenmek) başka bir kapıda geri
+   * dönmesi olurdu.
+   *
+   * **Neden bayrak, ikinci bir kapı değil:** kurulum aynı (aynı süzgeç, aynı bağlam okuması, aynı
+   * kart indirgemesi); ayrışan tek şey satırların hangi kaynaktan geldiği. İkinci bir kapı yazmak,
+   * katalog montajını iki yerde yaşatmak olurdu.
+   *
+   * **Varsayılanın yönü bilinçli:** `false` = vitrin kuralı. Ters varsayılan, bayrağı geçirmeyi
+   * unutan her yeni yüzeyi sessizce süzgeçsiz bırakırdı — ve kural yüzeyde durmayan bir kural olurdu.
+   *
+   * **FİYAT SIRALAMASI bu kipte ÇALIŞMAZ** ve sessizce yok sayılır: sıralama anahtarı yalnız
+   * görünümde var, görünüm ise satılamayanı hiç üretmiyor. Referans okumaların da fiyata göre
+   * sıralamaya ihtiyacı yok — birini adıyla arıyorlar.
+   */
+  includeUnsellable?: boolean;
 }
 
 /** Ürün bulunmayan katalog cevabı — süzgeç hiçbir şeyi getirmediğinde sorgu boşa atılmasın. */
@@ -160,20 +185,30 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     collectionId: activeCollection?.id,
     onlyShippable: q.onlyShippable,
   };
-  const productSvc = new ProductService(db);
-  // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0043): sıralama anahtarı
-  // ürün tablosunda yoktur. Süzgeçler ve satır şeması ortaktır — ayrışan tek şey sıra.
+  const listing = new ProductListingService(db);
+  /* **VİTRİNİN ÜÇ OKUMASI DA GÖRÜNÜMDEN** (08.46 · 08.54) — kapsam tek nesnede.
+
+     Eskiden yalnız fiyat sıralaması görünümden geliyordu; varsayılan sıra ve sayaç ham `product`
+     tablosundan okunuyordu. Görünüm kanalında satılamayan ürünü süzmeye başlayınca o bölünme
+     tutarsızlaştı: aynı katalog "artan fiyat"ta süzülmüş, "öne çıkanlar"da süzülmemiş bir küme
+     gösterirdi — ve başlıktaki sayı ikisini de tutmazdı.
+
+     `place` ve `viewer` zaten ÇAĞIRANDAN geliyor (bu modülün kapıları istek bağlamı okumaz);
+     kapsam da onlardan türer, burada yeni bir karar verilmiyor. */
+  const scope = { warehouseId: place.warehouseId, channel: viewer.channel };
   const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
+  /* REFERANS kipi (`includeUnsellable`) ham `product` tablosundan okur — görünüm satılamayanı hiç
+     üretmiyor, o yüzden "hepsini getir" görünümden İSTENEMEZ. Süzgeç ve projeksiyon yine ortak
+     (`buildProductQuery` · `productSelect`), yani süzme davranışı iki kaynakta ayrışmaz; ayrışan
+     tek şey satırların nereden geldiği. Fiyat sıralaması bu kipte yok (künyesi `CatalogInput`de). */
+  const referans = input.includeUnsellable === true;
+  const products = referans ? new ProductService(db) : null;
   const [page, total] = await Promise.all([
-    direction
-      ? new ProductListingService(db).listByPrice({
-          filters,
-          cursor: q.cursor,
-          limit,
-          direction,
-          warehouseId: place.warehouseId,
-        })
-      : productSvc.listWithRelations({ filters, cursor: q.cursor, limit }),
+    products
+      ? products.listWithRelations({ filters, cursor: q.cursor, limit })
+      : direction
+        ? listing.listByPrice({ filters, cursor: q.cursor, limit, direction, ...scope })
+        : listing.list({ filters, cursor: q.cursor, limit, ...scope }),
     // **`countMatching`, `counts` DEĞİL** — ve bu bir tercih değil, geri gelmiş bir arızanın
     // kapatılması (08.26'da ölçüldü). `counts()` operasyon RPC'sini çağırıyor ve süzgeçlerin
     // yalnız dördünü iletiyor (`query · category · status · onlyIncomplete`); vitrin ise altı-yedi
@@ -182,7 +217,11 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     // künyesi: *"çip açıkken liste 1 satır basarken başlık 131 diyordu"*); okuma bu pakete terfi
     // ederken eski çağrı geri gelmiş. Hata fırlatmıyor, çünkü çağrı tip olarak kusursuz: tam
     // nesne veriliyor, içeride üçü atılıyor.
-    productSvc.countMatching(filters),
+    //
+    // **Sayaç da artık GÖRÜNÜMDEN** (08.46): `ProductService`inki ham `product` tablosunu sayıyor
+    // ve kanal/depo kapsamını bilmiyor — süzülen listenin yanında süzülmemiş bir sayı yazardı.
+    // Aynı arızanın üçüncü kez doğmasını engelleyen şey, kapsamın süzgeçle aynı nesneden gitmesi.
+    products ? products.countMatching(filters) : listing.countMatching(filters, scope),
   ]);
   /* KAMPANYA TEK OKUMADAN, İKİ SORUYA CEVAP (23.08 · kullanıcı kararı).
      Eskiden yalnız ETKİN kesit soruluyordu ve künyesi haklıydı: kampanya bir kesite aittir. Ama

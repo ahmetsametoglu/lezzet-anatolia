@@ -173,6 +173,17 @@ export interface PriceCounts {
   missing: number;
 }
 
+/**
+ * **Vitrinde görünmeyen aktif ürün sayısı, kanal başına** (08.46) — gizlemenin sessiz kalmaması için.
+ *
+ * `PriceCounts.missing` ile karıştırılmamalı: o yüklenmiş sayfadaki BOYLARI sayar, bu katalogun
+ * tamamındaki ÜRÜNLERİ. Yalnız kanal sekmesi okunduğunda dolar; öteki sekmelerde `null`.
+ */
+export interface HiddenFromStorefront {
+  b2c: number;
+  b2b: number;
+}
+
 /** RSC'nin client'a geçirdiği tüm veri. */
 export interface PricesData {
   /** Fiyat listesinin İLK SAYFASI — süzgeçler sunucuda uygulanmıştır. */
@@ -193,6 +204,8 @@ export interface PricesData {
   categories: CategoryOption[];
   /** Kapsam seçicisinin koleksiyon seçenekleri — yalnız kupon sekmesi okunduğunda dolu. */
   collections: CategoryOption[];
+  /** Vitrinde görünmeyen ürün sayısı — yalnız kanal sekmesi okunduğunda dolu (08.46). */
+  hiddenFromStorefront: HiddenFromStorefront | null;
 }
 
 /** prices-client'ın tuttuğu durum + eylemler; masaüstü görünümü bunu tüketir. */

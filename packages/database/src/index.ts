@@ -23,6 +23,7 @@ export {
   VARIANT_POOL_LIMIT,
   type CreateProductInput,
   type CreateVariantInput,
+  type ProductListingScope,
 } from './services/product.service';
 export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';

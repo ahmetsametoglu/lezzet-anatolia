@@ -65,11 +65,18 @@ Engel bir modül değildi (stub bir süre yanlışlıkla `→05.4` etiketliydi):
 tablodadır ve "bu ürünün b2c fiyatı" tek bir kolon değil bir **seçimdir**. Sayfa çekildikten sonra
 sıralamak seçenek değildi — "artan fiyat" yalnız o 30 satır içinde artan olur.
 
-Çözüm `available_stock` desenindedir: `product_listing` okuma görünümü (`0043`) seçimi SQL'de çözer,
-sıralama ve keyset imleci onun üstünde çalışır. Görünüm motorun (`resolvePrice`) **ziyaretçi dalını**
+Çözüm `available_stock` desenindedir: `product_listing` okuma görünümü (`0032`) seçimi SQL'de çözer,
+sıralama ve keyset imleci onun üstünde çalışır. Görünüm motorun (`resolvePrice`) **liste dalını**
 SQL'de yeniden ifade eder; bu bilinçli bir ödünleşmedir ve ayrışma riski yorumla değil **testle**
-tutulur (`catalog-sort.test.ts`: teklif kazanır / kaybeder / eşittir / partisi boştur hâllerinde
-sıralamanın kullandığı fiyat ile kartta yazan fiyat karşılaştırılır).
+tutulur (`packages/application/src/catalog/catalog.test.ts`: teklif kazanır / kaybeder / eşittir /
+partisi boştur hâllerinde sıralamanın kullandığı fiyat ile kartta yazan fiyat karşılaştırılır).
+
+**Düzeltme (24.08, 08.54 — ölçülerek):** görünüm uzun süre yalnız **ziyaretçi** dalını ifade ediyordu
+(`where p.channel = 'b2c'`) ve testlerin onu da `VISITOR` ile koşuyordu — yani bekçi, koruduğu çiftin
+tek yarısını ölçüyordu. Sonucu canlıydı: onaylı B2B müşteri kartlarda kendi toptan fiyatını görüp
+listeyi son müşteri fiyatlarına göre sıralanmış alıyordu (97 üründe 68 yanlış yerleşim, en büyük
+kayma 22 sıra). Kanal artık görünümün grain'inde ve testler iki kanalı da koşuyor. Kalan tek açık
+pazarlıklı (müşteriye özel) fiyat — `BACKLOG §2`.
 
 ### 1b. "Çok sevilenler" — KAPANDI (29.07, kullanıcı kararı puristliği bozdu)
 

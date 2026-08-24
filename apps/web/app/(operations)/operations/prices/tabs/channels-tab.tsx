@@ -18,7 +18,7 @@ import type { PriceRow, PricesViewProps } from '../prices-types';
 // → NE kazanıyorum (marj) → otomatik mi. Maliyet fiyatların sağında duruyor ki göz "fiyat–maliyet"
 // karşılaştırmasını yan yana yapabilsin.
 
-export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search, counts, navPending }: PricesViewProps) {
+export function ChannelsTab({ data, rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search, counts, navPending }: PricesViewProps) {
   const columns: Column<PriceRow>[] = withCells<PriceRow>(PRICES_COLUMN_TRACKS, {
     name: (r) => (
       // Görsel satır içeriğinden (iki metin satırı ≈ 40px) KISA (36px): satır yüksekliğini görsel
@@ -84,6 +84,18 @@ export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, sc
                 Satıra tıkla → fiyat düzenle. Otomatik fiyatı açık üründe fiyat elle değil, hedef marj değişir. Fiyat değişikliği verilmiş
                 siparişleri etkilemez.
               </span>
+              {/* **Vitrinde görünmeyen ürün** (08.46) — gizleme sessiz kalmasın. Kanalında fiyatı
+                  olmayan ürün katalogdan, anasayfadan ve site haritasından düşüyor; kazancı açık ama
+                  bedeli fark edilmezlik: fiyatı yanlışlıkla silinen ürün hiçbir hata vermeden
+                  kaybolur. Çip AMBER, marj-altının kırmızısıyla yarışmasın: marj-altı "yanlış fiyatla
+                  SATIYORSUN" (para akıyor), bu "SATMIYORSUN" (fırsat kaçıyor) — ikisi aynı aciliyette
+                  değil. Sayı sıfırken çizilmez: her zaman duran bir uyarı, uyarı olmaktan çıkar. */}
+              {data.hiddenFromStorefront && data.hiddenFromStorefront.b2c + data.hiddenFromStorefront.b2b > 0 ? (
+                <span className="flex-none rounded-ops-btn border border-ops-amber-line bg-ops-amber-bg px-[11px] py-[5px] font-ops-body text-ops-xs font-medium text-ops-amber">
+                  vitrinde yok: <strong className="font-ops-mono">{data.hiddenFromStorefront.b2c}</strong> perakende ·{' '}
+                  <strong className="font-ops-mono">{data.hiddenFromStorefront.b2b}</strong> toptan
+                </span>
+              ) : null}
               {counts.below > 0 ? (
                 <span className="flex-none rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-[11px] py-[5px] font-ops-body text-ops-xs font-medium text-ops-red">
                   <strong className="font-ops-mono">{counts.below}</strong> marj-altı

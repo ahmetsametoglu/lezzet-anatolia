@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { BundleService, ProductService, RecipeService, serviceDb } from '@lezzet/database';
+import { BundleService, ProductListingService, RecipeService, serviceDb } from '@lezzet/database';
 import { LOCALES, localizedPath, siteOrigin, type AppRoute } from '@lezzet/i18n';
 
 /**
@@ -50,10 +50,12 @@ const STATIC_ROUTES: AppRoute[] = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const db = serviceDb();
-  // `listSellable` zaten "aday ve pasif hariç" süzüyor — haritaya özel ikinci bir okuma yazmak,
-  // aynı kuralın iki tanımı olurdu ve biri bir gün aday ürünleri indekse açardı.
+  // `listSellable` "aday ve pasif hariç" VE "ziyaretçinin kanalında fiyatı var" süzüyor (08.46) —
+  // haritaya özel ikinci bir okuma yazmak, aynı kuralın iki tanımı olurdu ve biri bir gün aday
+  // ürünleri indekse açardı. İkinci süzgeç 24.08'de eklendi: yalnız toptana fiyatlanmış bir ürünün
+  // adresi haritada duruyordu, yani arama motoru anonim ziyaretçinin alamayacağı sayfaya çağrılıyordu.
   const [products, bundles, recipes] = await Promise.all([
-    new ProductService(db).listSellable(),
+    new ProductListingService(db).listSellable(),
     new BundleService(db).listAll(),
     // `listActive` zaten yalnız YAYINDAKİLERİ veriyor — taslak tarif haritaya girmez, çünkü sayfası
     // da 404 döner (`getRecipeDetail`). Sınır listenin sayfa tavanı değil harita tavanıdır: harita

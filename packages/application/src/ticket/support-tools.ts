@@ -183,6 +183,11 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
             place,
             viewer,
             query: { search: terim },
+            /* REFERANS okuma — vitrin değil (08.46). Vitrin, kanalında satılamayan ürünü hiç
+               listelemiyor ve müşteri için doğrusu o. Ama burada müşteri bir ürünü ADIYLA soruyor;
+               süzseydik araç VAR OLAN bir ürün için "katalogda eşleşen ürün yok" derdi. Doğru cümle
+               aşağıda zaten kurulu: "bu kanalda satışa kapalı". */
+            includeUnsellable: true,
           });
 
           const urunler = katalog.products.slice(0, PRODUCT_HITS).map((p) => ({

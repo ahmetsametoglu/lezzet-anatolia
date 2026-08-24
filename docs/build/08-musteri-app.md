@@ -326,7 +326,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     **Düzeltme (27.07, kullanıcı geri bildirimi):** (1) sayfa geniş ekranda **yayılıyordu** — tasarımın masaüstü ekranı 1360 px'tir ve bu bir viewport temsili değil, düzenin kendisidir. `SiteFrame`'e tek `SHELL` sabiti kondu: zeminler (duyuru şeridi, footer) tam genişlikte kalır, yalnız içerik 1360'ta ortalanır. (2) Başlıkta marka **metni** vardı, tasarımda **logo** var (`public/logo.jpg`, masaüstü 58 px · mobil 40 px, `mix-blend-multiply` — jpg şeffaf değil, krem zemine bu şekilde oturur). Footer'da metin kalır; tasarım orada da metin gösteriyor.
     **Katalog sayfası (27.07, ikinci teslimat):** `/catalog` rotası açıldı (`routing.ts` pathnames: fr `/catalogue` · de `/katalog` · tr `/katalog`). Okuma `lib/storefront/catalog.ts`; indirgeme `map.ts`'e çıkarıldı — anasayfa ve katalog AYNI dönüşümü kullanır, ayrı yazılsa iki sayfa aynı ürünü farklı gösterebilirdi. **Gerçek olanlar:** kategori süzgeci, ad araması (üç dilde birden, SQL'de), keyset sayfalama, sonuç sayısı, aday ürünün katalogdan dışlanması (`status: 'active'`). **Stub:** fiyat sıralaması (→05.4), "yalnız indirimliler" (→05.6), tükendi/varyant durumu (→06, →05.5).
     **Fiyat sıralaması bağlandı (28.07, arka uç):** stub kalkmıştı ama seçenek hâlâ ölüydü. Engel bir modül değil, **bir okuma görünümü** eksikliğiydi (`design/BACKLOG §1a`): uygulanabilir fiyat ayrı tablodadır ve "bu ürünün b2c fiyatı" tek kolon değil bir SEÇİMDİR; sayfa çekildikten sonra sıralamak keyset sayfalamayı bozar ("artan fiyat" yalnız o 30 satır içinde artan olur). `0043` → `product_listing` görünümü + `ProductListingService.listByPrice`. Süzgeç makinesi ORTAK (`buildProductQuery`) — kategori süzgeci sıralamaya göre farklı davranırsa katalog kendi sayacıyla çelişirdi.
-    **Görünüm motorun bir dalını SQL'de yeniden ifade eder** ve bu bilinçli bir ödünleşmedir: sıralama + imleç yalnız SQL'de yapılabilir. Ayrışma riski yorumla değil **testle** tutuluyor (`catalog-sort.test.ts`, 9 test) — teklif kazanır/kaybeder/eşittir/partisi boştur hâllerinde sıralamanın kullandığı fiyat ile kartta YAZAN fiyat karşılaştırılıyor. Fiyatı olmayan ürün listeden düşmez, sonda durur (`sort_price` sonsuz): satışa kapalı olması ekranın söyleyeceği bir şeydir, saklayacağı değil.
+    **Görünüm motorun bir dalını SQL'de yeniden ifade eder** ve bu bilinçli bir ödünleşmedir: sıralama + imleç yalnız SQL'de yapılabilir. Ayrışma riski yorumla değil **testle** tutuluyor (`packages/application/src/catalog/catalog.test.ts`) — teklif kazanır/kaybeder/eşittir/partisi boştur hâllerinde sıralamanın kullandığı fiyat ile kartta YAZAN fiyat karşılaştırılıyor. ~~Fiyatı olmayan ürün listeden düşmez, sonda durur (`sort_price` sonsuz)~~ → **karar 19.08'de tersine döndü ve 24.08'de uygulandı (08.46):** kanalında satılamayan ürün vitrinde hiç listelenmiyor. ~~Görünüm motorun ZİYARETÇİ dalını ifade eder~~ → **kanal 24.08'de grain'e katıldı (08.54)**; o güne dek görünüm `b2c`'ye çakılıydı ve testlerin onu da `VISITOR` ile koşuyordu — bekçi, koruduğu çiftin tek yarısını ölçüyordu.
     **Yol üstünde çıkan kusur:** kartın fiyatını belirleyen "ilk aktif varyant" sırası garanti DEĞİLDİ — PostgREST gömülü ilişkiyi sırasız döndürüyor, aynı ürün iki istekte farklı başlangıç fiyatı gösterebilirdi. `read-context.ts`'te sıra sabitlendi (`sortOrder`, eşitlikte `createdAt`); görünüm de aynı ölçütü kullanır.
     **Süzgeç durumu URL'de, client state'te değil** — filtreli liste paylaşılabilir, geri tuşu çalışır, ilk boya sunucudan tam gelir. `hrefFor` bir süzgeci değiştirip diğerlerini korur (çipe basmak sıralamayı sıfırlamaz).
     **Yeni komponentler:** K17 `FilterChip` · K18 `SortSelect` · K20 `EmptyState` (`filter-controls.tsx`, üçü de link tabanlı). K7 `ProductCard` tasarımın "Etkileşim sözleşmesi" bölümüne göre dört duruma çıktı: normal · çok varyantlı ("Seçenekler →", varyant seçimi ATLANAMAZ) · fırsat (rozet + üstü çizili fiyat) · tükendi (aksiyon pasif, görsel soluk, kart yine detaya tıklanır). Tükendi fırsat rozetini ezer — satın alınamayan üründe indirim vurgusu yanıltır.
@@ -1216,11 +1216,40 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   ürün/paket tarafına bağlanmamış. Aynı düzeltme kampanyalı katalog adresini de paylaşılabilir yapar
   (kampanyanın adresi zaten filtrelenmiş katalog URL'i ve üç dilde tanımlı).
 
-- [ ] (08.46) **KANALINDA FİYATI OLMAYAN ÜRÜN VİTRİNDE HİÇ LİSTELENMESİN** *(kullanıcı kararı
+- [x] (08.46) **KANALINDA FİYATI OLMAYAN ÜRÜN VİTRİNDE HİÇ LİSTELENMESİN** *(kullanıcı kararı
   19.08: "giriş yapmamış kullanıcı son müşteri kabul edilmeli; bir firma giriş yaptıysa sadece
-  onunkiler gelmeli")* · `touches (planlanan): supabase/migrations/0032_product_listing.sql,
-  packages/database/src/services/product.service.ts, packages/application/src/catalog/catalog.ts,
-  apps/web/components/customer/ui/storefront-cards.tsx`
+  onunkiler gelmeli")* · `touches: supabase/migrations/0032_product_listing.sql,
+  packages/database/src/services/product.service.ts, packages/database/src/index.ts,
+  packages/types/src/entities/product.schema.ts, packages/application/src/catalog/{catalog.ts,product.ts,catalog.test.ts},
+  apps/web/lib/storefront/home.ts, apps/web/app/sitemap.ts,
+  apps/web/app/(operations)/operations/prices/{page.tsx,prices-types.ts,tabs/channels-tab.tsx},
+  apps/web/components/customer/ui/storefront-cards.tsx, packages/database/src/services/product.test.ts`
+
+  - **Durum (24.08 — tamamlandı, 08.54 ile TEK turda):** dört ölçülmüş engelin dördü de kalktı.
+    Engel #3 (görünümün B2C'ye çakılı olması) kendi başına bir kusurdu ve ölçülüp **08.54** olarak
+    ayrı satıra çıkarıldı; ikisi aynı görünümü, aynı servisi ve aynı testleri değiştirdiği için
+    kullanıcı kararıyla tek iş birimi olarak yürütüldü (tek `db:reset` penceresi).
+    **Süzgeç görünümde, tek yerde:** `primary_variant` → `variant_effective_price` INNER (o kanalda
+    fiyatı olmayan boy birincil olamaz) + `product_listing` → `primary_variant` INNER (o kanalda
+    satılabilir boyu olmayan ürün listede yok). Boy düzeyinde süzülüp ürün düzeyinde sonuç veriyor
+    (engel #4): karışık boylu üründe satılabilir tek boy yeterli.
+    **Üç okuma yolu tek kaynağa indi** (engel #2): varsayılan sıra, fiyat sırası ve başlık sayacı
+    artık `ProductListingService`ten — kapsam (`depo × kanal`) tek nesnede (`ProductListingScope`).
+    Ayrışsalardı katalog "artan fiyat"ta süzülmüş, "öne çıkanlar"da süzülmemiş küme gösterirdi.
+    **Dördüncü bir yol ölçümde çıktı:** `listSellable()` (site haritası) adı "satılabilir" diyordu
+    ama yalnız `status`a bakıyordu — yalnız toptana fiyatlanmış ürünün herkese açık adresi haritaya
+    yazılıyordu. Metot `ProductListingService`e taşındı ve adının gereğini yapıyor.
+    **Sayfalanan liste SQL'de, doğal tavanlı küme okuma sonrasında süzülüyor** — ölçüt liste olmak
+    değil, imleçle sayfalanıyor olmak. Benzer ürünler ve aile çeşitleri motorun cevabıyla
+    (`priceCents`) süzülüyor; anasayfa vitrin bandı ise kaynağa taşındı çünkü sabit dört kart
+    istiyor ve sonradan elemek bandı üçe düşürürdü.
+    **Dar düzeltme de yapıldı ve çöp değil:** `storefront-cards.tsx` artık `disabled={!buyableVariantId}`
+    — süzemediğimiz yerlerin (doğrudan bağlantı, süzülmemiş bir küme) cevabı o. `map.ts` künyesinin
+    *"kart fiyat göstermez VE aksiyonu pasifleşir"* sözünün yazılmamış ikinci yarısı kapandı.
+    **Sessizliğin karşılığı kondu:** fiyat ekranının kanal sekmesinde katalog-geneli
+    *"vitrinde yok: N perakende · N toptan"* çipi (`countHiddenFromStorefront`). Satır sayacından
+    (`PriceCounts.missing`) farklı ve ikisi de gerekli: o yüklenmiş sayfadaki BOYLARI sayar, bu
+    katalogun tamamındaki ÜRÜNLERİ. Ölçüt görünümün kendisi — gizleyen neyse sayan da o.
 
   **Belirti (kullanıcının ekran turu 19.08):** katalogda fiyatı hiç yazmayan ürünlerde "Sepete
   ekle" düğmesi açık duruyor.
@@ -1413,3 +1442,51 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
   **AÇIK:** sayfanın çizimi YOK — `design/pages/musteri-hesap.md` izinleri hesap sayfasının içinde tanımlıyor, ayrı bir tercih sayfası hiç çizilmedi (URL mail altbilgisinden doğdu). Yerleşim hesap kartlarının kendi diliyle kuruldu (`Card` · `CardHead` · `ConsentSwitch`), improvise edilen görsel karar yok ama tasarım kararı olarak DOĞRULANMADI. `BEKLEYEN(08.53)`
   **AÇIK:** `zone_notice` tablosunun veri modeli dokümanında hiç girdisi yok (bu işten önce de yoktu) — eklenen `token` kolonu da orada görünmüyor. `BEKLEYEN(08.53)`
+
+- [x] (08.54) **SIRALAMA MÜŞTERİNİN KANALINDAN OKUNUYOR — toptan müşteri perakende sırasıyla sıralanıyordu** *(denetim ölçümü 24.08, kullanıcı isteğiyle: "bu problemi ölçmen ve kendi testlerinle ispatlaman gerekiyor")* · `touches: supabase/migrations/0032_product_listing.sql, packages/types/src/entities/product.schema.ts, packages/database/src/services/product.service.ts, packages/application/src/catalog/{catalog.ts,catalog.test.ts}`
+
+  - **Durum (24.08 — tamamlandı, 08.46 ile tek turda):** kanal görünümün grain'ine katıldı; katalog sıralaması artık `viewer.channel`den okunuyor.
+
+  **Belirti:** onaylı bir toptan müşteri kartlarda kendi toptan fiyatını görüyor, ama "Artan fiyat" seçtiğinde liste **son müşteri fiyatlarına göre** diziliyordu. Fiyatlar doğru, sıra yanlıştı.
+
+  **Ölçüm (gerçek seed verisi, hiçbir şeye dokunmadan):** Strasbourg deposu · onaylı B2B müşteri · `sort=priceAsc` → **97 üründen 68'i yanlış yerde**, en büyük kayma **22 sıra**. Aynı sayfa ziyaretçi gözüyle **0 ihlal**. İlk ekran: `0,18 · 0,18 · 0,28 · 0,28 · 0,83 · 0,44 · 0,44 · 0,43 …` — "artan fiyat" seçili ve fiyat artmıyor.
+
+  **Veri kazası DEĞİL:** b2b/b2c oranı sabit olsaydı sıra tesadüfen doğru çıkardı. Ölçüldü — oran **%48,9 ile %84,2 arasında 58 farklı değer** alıyor.
+
+  **Kök:** fiyatı GÖSTEREN yer ile SIRALAYAN yer ayrı. Gösteren `resolvePrice` (kanal · onay · özel fiyat · grup); sıralayan `product_listing` görünümü, ve içinde `where p.channel = 'b2c'` yazıyordu. Sıralama keyset (imleç) yüzünden SQL'de olmak zorunda, o yüzden fiyat kuralının bir dalı SQL'e ikinci kez yazılmış — yazılan dal ziyaretçi dalıydı, toptan dal hiç yazılmamıştı. Kusur 08.46'nın engel #3'ünde **şüphe olarak kayıtlıydı**, ölçülmemişti.
+
+  **İkinci ölçüm — fiyatsız ürün B2B'de kendi kuralına da uymuyordu** (geçici veriyle üretilip geri alındı): `sort_price = Infinity` "sonda dursun" diyordu ama sıra B2C fiyatından kurulduğu için b2b fiyatı silinen ürün **7/97**'de (ilk ekranda, alınamaz hâlde) duruyordu; b2c fiyatı silinen ürün ise **97/97**'de — oysa 0,18 € ile o müşterinin en ucuz ürünüydü. İkisi tam ters yerleşiyordu.
+
+  **Testler neden hiç uyarmadı — sınıfı kayda değer:** `catalog.test.ts` bu çifti çivilemek için yazılmış 10 test taşıyordu ve **onu da `VISITOR` ile koşuyordu**. Dosyanın kendi yorumu gerekçeyi yazmıştı: *"ölçtüğü şey fiyatın kim tarafından görüldüğü değil, sıranın kümenin tamamında doğru kurulduğu."* Cümle makul görünüyor ve yanlış — sıra, fiyatın kim tarafından görüldüğüne bağlıdır çünkü fiyatın kendisi öyle. Bekçi, koruduğu çiftin tek yarısını ölçüyordu ve kusuru **yapısal olarak** göremezdi. `typecheck` de `lint` de göremez.
+
+  **Çözüm:** kanal grain'e katıldı (depo ekseninin 01.08'deki ikizi) — 504 → ~1008 satır. Okuma tarafında `channel` **varsayılansız zorunlu**; `warehouseId` de `?`'dan zorunluya çekildi (künyesi "zorunlu" diyordu, tip isteğe bağlı bırakmıştı — düzeltilen kusurun tam sınıfı).
+
+  **Doğrulandı:** aynı ölçüm düzeltmeden sonra **68 → 1**. Ve testler kusuru gerçekten görüyor: kanal `'b2c'`e geri sabitlenince dört test birden düşüyor, üstelik gerçek veride ölçülen yanlış sıranın birebir aynısıyla (`['Ucuz','Orta','Pahalı']` beklenen `['Orta','Ucuz','Pahalı']` yerine).
+
+  **AÇIK — kalan 1 kayma:** müşteriye özel (pazarlıklı) fiyat sıralamaya girmiyor; kart pazarlıklı tutarı gösterirken sıra liste fiyatını kullanıyor. Görünüm parametre alamaz, sokmak keyset'i bir RPC'ye taşımak demek. `BEKLEYEN(08.54)` → `design/BACKLOG.md §2` (ticari karar gerekiyor).
+
+- [ ] (08.55) **KOMŞU DAVETİNİN SINIRI WEB'DE DE SÖYLENSİN — karar iki yüzeyden yalnız native'e yazılmış** *(kullanıcı kararı 21.08 — şeffaflık; mobil şeridin gözlemi 23.08, denetim 24.08'de ölçtü)* · `touches (planlanan): apps/web/app/(customer)/[locale]/checkout/[reference]/{confirmation-types.ts,page.tsx,messages.json,components/confirmation-sections.tsx}`
+
+  **Karar (21.08):** sipariş onayı *"Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max})"* yazsın, davet **doluysa paylaşım düğmesi hiç çizilmesin**. Sayı sunucuda sayılsın — ekrana gömülü bir sabit, ayar değiştiği gün yalan söyler.
+
+  **Ölçüm (24.08):** native'de tam (`order-confirmed-screen.tsx:126-133`), webde hiç yok. `confirmation-types.ts:95` davetten yalnız `neighborInviteUrl` taşıyor; `confirmation-sections.tsx:306` `if (!url) return null` diyor, yani bağlantı varsa bant **koşulsuz** çiziliyor; `messages.json` üç dilde de yalnız dört anahtar taşıyor (`title · body · cta · copied`) — "kalan"/"dolu" cümlesi yok.
+
+  **Bilinçli sapma DEĞİL:** kayıtta "webde yapılmayacak" diyen tek satır yok. Atlama.
+
+  **Ne KIRILMIYOR:** para tarafı sağlam — kontenjan sipariş anında motorda uygulanıyor (`neighbor.ts:416`) ve sayım siparişlerden yapılıyor, iptal olan sayılmıyor. Dördüncü komşuya yanlışlıkla ödül yazılmıyor. Açık tamamen **söylemede** ve tam bu yüzden sessiz: hata vermiyor, yalnız müşteri dolmuş bir daveti paylaşmaya devam ediyor, komşusu tıkladıktan sonra öğreniyor.
+
+  **İş dar, sözleşme hazır:** `invite-api.schema.ts:102-104` zaten `remainingUses` + `maxUses` taşıyor. Görünüme iki alan, banda bir koşul, üç dile iki cümle. Metin anahtarları native ile birebir aynı olmalı (`neighborRemaining` · `neighborFull`) — yoksa aynı müşteri uygulamada başka, tarayıcıda başka bir söz duyar.
+
+- [ ] (08.56) **`cart_count` YAPISAL OLARAK SIFIR — özet, kimliği varyanttan çözmüyor** *(mobil şeridin gözlemi 24.08, denetim aynı gün doğruladı)* · `touches (planlanan): supabase/migrations/0036_analytics_signals.sql, packages/database/src/services/analytics.test.ts`
+
+  **Ölçüldü, üç parça da doğru:** `AddToCartIntent` (`cart-types.ts:459`) `productId` taşımıyor · `apps/web/lib/cart/actions.ts:179` sabit `productId: null` yazıyor · `build_analytics_daily_product` (`0036:135`) `and e.product_id is not null` ile **gruplamadan önce** eliyor. Sonuç: `count(*) filter (where e.type = 'add_to_cart')` her zaman **0**.
+
+  **Kimliğin taşınmaması bir KARAR ve kayıtlı** (`cart-types.ts:453`): istemcinin elindeki `CartEntry` ürünü değil varyantı tanıyor, sunucuda doldurmak en sıcak yazma yoluna fazladan okuma eklerdi. Gerekçe hâlâ geçerli. **Asıl açık kararın kendi telafisi:** künye *"ürün kırılımı varyant tablosundan çözülebiliyor"* diyor ama özet fonksiyonu `product_variant`'a hiç uğramıyor.
+
+  **Çözüm sıcak yola DEĞİL özete:** `left join product_variant v on v.id = e.subject_id and e.subject_type = 'variant'`, süzgeç ve gruplama `coalesce(e.product_id, v.product_id)` üzerinden. Üç kazancı var: sıcak yol hiç değişmez · **geriye dönük** çalışır (bugüne dek yazılmış satırlar da sayılır) · native'in kendi doldurması `coalesce`'un ilk terimi olarak çalışmaya devam eder. Paket satırı `null` kalır ve atfedilmez — paket bir ürün değil.
+
+  **Etkisi üç yerde:** yönetim ekranı her ürün için "1.240 → 0" yazıyor ve yönetici bunu "kimse sepete atmıyor" diye okur · `cartRate` hep 0 · vitrin seçkisinin sıralaması (`home.ts:174`) `viewCount + cartCount` diyor ve ikinci terim hiçbir şey yapmıyor. Üçü de hata vermiyor — `CLAUDE §1`: *"Ölçülemeyen değer SIFIR değildir."*
+
+  **Test:** bugünkü test (`analytics.test.ts:193`) ham `insert` ile yazıp rollup'ı doğruluyor ve rollup zaten doğruydu; kırık olan ATICI ve onu kapsayan test yok. Kapanışa atıcıyı kapsayan test yazılacak.
+
+  **Sıra:** analitik alanında başka şerit çalışıyor (`0035` açık, `analytics.schema.ts` değişmiş, `surface` kolonu geliyor). Aynı migration ailesine iki şerit birden girmemeli — o pencere kapanınca alınacak.

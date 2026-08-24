@@ -234,10 +234,26 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
   // "Bölgenizde şu an yok": ürün ağda var, müşterinin yerine ulaşamıyor. Tükendi DEĞİL — görsel
   // yarı solar (tamamen değil: ürün gerçek ve geri gelecek), fiyat sessizleşir, ad ink kalır.
   const away = product.stockStatus === 'elsewhere';
+  /* **Sepete eklenebilir mi** (08.46) — iki şart: eklenecek bir boy VAR ve o boy BU KANALDA
+     satılıyor. İkincisi eksikti: kart yalnız `variantId`ye bakıyordu ve fiyatı olmayan üründe
+     "Sepete ekle" açık duruyordu. `map.ts` künyesi *"kart fiyat göstermez VE aksiyonu pasifleşir"*
+     diye söz veriyor; ikinci yarısı hiç yazılmamıştı.
+
+     Zincirin öteki üç katmanı zaten doğru davranıyordu (motor `sellable:false`, detay düğmeyi
+     kapatıyor, sepet `blocked` işaretliyor) — yani para riski yoktu, GÜVEN riski vardı: müşteri
+     engeli rafta değil kasada öğreniyordu.
+
+     Katalog artık bu ürünü hiç listelemiyor (0032 süzüyor), ama güvence YEREL kalmalı: kart
+     süzülmemiş bir kümeyle de çizilebilir ve o gün susmamalı.
+
+     Sabit `boolean` değil KİMLİK tutuyor ve bu tesadüf değil: ayrı bir bayrak, `variantId`yi
+     daraltmaz — eylem yine `null` olabilen bir kimliği okurdu ve koşul ikinci kez yazılmak
+     zorunda kalırdı. Kimliği taşıyınca tek kaynak hem iki düğmeyi hem eylemi besliyor. */
+  const buyableVariantId = product.priceCents != null ? product.variantId : null;
   // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
   const addToCart = () => {
-    if (!product.variantId) return;
-    add({ kind: 'variant', variantId: product.variantId, qty: 1, stockId: product.stockId });
+    if (!buyableVariantId) return;
+    add({ kind: 'variant', variantId: buyableVariantId, qty: 1, stockId: product.stockId });
   };
   const inCart = product.variantId ? lineOf({ variantId: product.variantId }) : null;
   return (
@@ -364,7 +380,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             <button
               type="button"
               onClick={addToCart}
-              disabled={!product.variantId}
+              disabled={!buyableVariantId}
               className={buttonClass({ size: 'cardSm', fullWidth: true, className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
             >
               {labels.addToCart}
@@ -373,7 +389,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             <button
               type="button"
               onClick={addToCart}
-              disabled={!product.variantId}
+              disabled={!buyableVariantId}
               className={buttonClass({ size: 'card', className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
             >
               {labels.addToCart}

@@ -172,9 +172,16 @@ async function readSimilar(
     ]),
   );
 
+  /* Alınabilirlik İKİ soru: stokta mı, ve BU KANALDA satılıyor mu (08.46).
+     İkincisi 24.08'de eklendi — şerit fiyatsız kart çizebiliyordu. Süzgeç burada, SQL'de değil ve
+     bu bilinçli: öneri şeridi SAYFALANMAZ (doğal tavanlı, `SIMILAR_LIMIT`), yani okuduktan sonra
+     elemek keyset'i bozmaz. Katalogda tersi geçerliydi ve kural oraya SQL'de yazıldı (0032) —
+     ölçüt liste olmak değil, imleçle sayfalanıyor olmak.
+     Cevabı MOTOR veriyor (`priceCents`, `resolvePrice` üzerinden): kuralın ikinci bir evi açılmıyor. */
   const buyable = candidates.filter((p) => {
-    const status = views.get(p.id)?.stockStatus;
-    return status !== 'elsewhere' && status !== 'out_of_stock';
+    const view = views.get(p.id);
+    if (view?.priceCents == null) return false;
+    return view.stockStatus !== 'elsewhere' && view.stockStatus !== 'out_of_stock';
   });
 
   // Hiçbiri kalmazsa bölüm HİÇ ÇİZİLMEZ (`product.desktop`: `similar.length > 0`) — alakasız bir
@@ -226,7 +233,10 @@ async function readFamily(
     // olmayan bir sayının önüne "…'dan" yazmak, olmayan bir alt sınır sözü vermekti.
     .map((row) => ({ row, card: toProduct(row, locale, context.get(row.id) ?? EMPTY_PRODUCT_CONTEXT) }))
     // Tükenen HER üye düşer — bakılan çeşit dâhil (çizimin etkileşim sözleşmesi).
-    .filter(({ card }) => !card.soldOut)
+    // **Kanalında satılmayan üye de düşer** (08.46, 24.08): "Alınabilir çeşitler" başlığının altına
+    // alınamayan bir çeşit koymak, başlığın kendi sözünü bozar. Ölçüt motorun cevabı (`priceCents`),
+    // aile doğal tavanlı olduğu için süzgeç okuma sonrasında — `similar` ile aynı gerekçe.
+    .filter(({ card }) => !card.soldOut && card.priceCents != null)
     .map(({ row, card }) => ({
       slug: row.slug,
       // Etiket veri kısıtıyla zorunlu; yine de savunmalı okuma — dil yedek zinciri boş dönerse

@@ -5,6 +5,7 @@ import {
   DiscountService,
   PriceGroupService,
   PriceService,
+  ProductListingService,
   ProductService,
   ProductVariantService,
   SettingsService,
@@ -22,7 +23,14 @@ import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows } from './p
 import { toChannelMaps, toPriceRows } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
-import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceGroupRow, type PriceRow } from './prices-types';
+import {
+  type CustomerPriceRow,
+  type DiscountCustomerRow,
+  type DiscountRow,
+  type HiddenFromStorefront,
+  type PriceGroupRow,
+  type PriceRow,
+} from './prices-types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
@@ -69,6 +77,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         discounts: coupons?.rows ?? [],
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
         collections: coupons?.collections ?? [],
+        hiddenFromStorefront: channels?.hidden ?? null,
       }}
       urlState={urlState}
     />
@@ -89,7 +98,7 @@ async function readChannelTab(
   db: Db,
   urlState: ReturnType<typeof parsePricesUrl>,
   categoryNames: Map<string, string>,
-): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null }> {
+): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null; hidden: HiddenFromStorefront }> {
   const page = await new ProductService(db).listPriceRows({
     filters: toPriceFilters(urlState),
     limit: DEFAULT_PAGE_SIZE,
@@ -97,16 +106,48 @@ async function readChannelTab(
   const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
 
   const priceSvc = new PriceService(db);
-  const [b2cMap, b2bMap, costs] = await Promise.all([
+  const [b2cMap, b2bMap, costs, hidden] = await Promise.all([
     priceSvc.findApplicableMap(variantIds, 'b2c'),
     priceSvc.findApplicableMap(variantIds, 'b2b'),
     readCostBasis(db, variantIds),
+    countHiddenFromStorefront(db),
   ]);
 
   return {
     rows: toPriceRows({ products: page.rows, prices: toChannelMaps(b2cMap, b2bMap), costs, categoryNames }),
     nextCursor: page.nextCursor,
+    hidden,
   };
+}
+
+/**
+ * **Vitrinde GÖRÜNMEYEN aktif ürün sayısı, kanal başına** (08.46'nın kendi şartı).
+ *
+ * 08.46'dan beri kanalında fiyatı olmayan ürün katalogdan, anasayfa şeridinden ve site haritasından
+ * DÜŞÜYOR. Kazanç açık — müşteri alamayacağı ürünü görmüyor — ama bedeli sessizlik: fiyatı yanlışlıkla
+ * silinen ya da hiç girilmemiş bir ürün vitrinden kaybolur ve **hiçbir yerde hata vermez**. Bu sayaç
+ * o sessizliğin karşılığıdır; kararın kendisiyle birlikte istenmişti.
+ *
+ * **Satır sayacından (`PriceCounts.missing`) FARKLI ve ikisi de gerekli:** o, yüklenmiş sayfadaki
+ * BOYLARI sayar ("bu ekranda düzeltecek işin var"); bu, katalogun TAMAMINDAKİ ÜRÜNLERİ sayar ("şu an
+ * kaç ürün müşteriye görünmüyor"). Sayfa-kapsamlı bir sayaç gizlenmeyi bulmak için listenin sonuna
+ * kadar kaydırmayı gerektirirdi — yani uyarı olmazdı.
+ *
+ * Ölçüt görünümün KENDİSİ: "aktif ürün sayısı − o kanalda listelenen ürün sayısı". İkinci bir kural
+ * yazmıyoruz; gizleyen şey neyse sayan da o. Kapsam yeri bilinmeyen okuma (`warehouseId: null`)
+ * çünkü soru depoya değil FİYATA dair — katalog süzülmesi de zaten depodan bağımsız.
+ *
+ * Üç `head` sayımı; satır taşınmaz.
+ */
+async function countHiddenFromStorefront(db: Db): Promise<HiddenFromStorefront> {
+  const listing = new ProductListingService(db);
+  const scope = (channel: 'b2c' | 'b2b') => ({ warehouseId: null, channel }) as const;
+  const [aktif, gorunenB2c, gorunenB2b] = await Promise.all([
+    new ProductService(db).countMatching({ status: 'active' }),
+    listing.countMatching({ status: 'active' }, scope('b2c')),
+    listing.countMatching({ status: 'active' }, scope('b2b')),
+  ]);
+  return { b2c: aktif - gorunenB2c, b2b: aktif - gorunenB2b };
 }
 
 /**

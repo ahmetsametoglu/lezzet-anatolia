@@ -16,6 +16,7 @@ import {
   resolveLocalizedText,
   LOCALIZED_TEXT_KEYS,
   DEFAULT_PAGE_SIZE,
+  type Channel,
   type KeysetCursor,
   type Page,
   type ProductStatus,
@@ -185,16 +186,47 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
 }
 
 /**
- * **Fiyata göre sıralı katalog** (08.10) — `product_listing` görünümü (0043).
+ * **Görünümün KAPSAMI** (08.54) — vitrinin her okuması bunu kurmak zorunda.
  *
- * Kendi sınıfı olmasının sebebi teknik: keyset sayfalama `tableName`'e bağlıdır ve sıralama anahtarı
- * (`sort_price`) yalnız görünümde vardır (`OrderSaleService` ile aynı gerekçe). Süzgeçler paylaşılır
- * (`buildProductQuery`); satır şeması ise ürününkinden TÜRER ama aynısı DEĞİL
- * (`ProductListingRowSchema` = ürün + görünümün hesapladığı iki kolon) — ayrışan şey hangi
- * kaynaktan, hangi sıraya göre ve hangi türetilmiş alanlarla okunduğu.
+ * `product_listing` grain'i `(depo × kanal × ürün)`. İki eksenden biri süzülmezse aynı ürün sayfada
+ * birkaç kez görünür ve keyset imleci bozulur. Tek nesnede durmalarının sebebi bu: üç okuma
+ * (varsayılan sıra · fiyat sırası · sayaç) aynı kapsamı kurmalı, yoksa "24 sonuç" yazıp 17 kart
+ * çizen ekran doğar — bu depoda bir kez yaşandı (08.10 künyesi).
+ */
+export interface ProductListingScope {
+  /**
+   * `null` = yer bilinmiyor → görünümün `warehouse_id is null` satırı okunur: liste fiyatıyla
+   * sıralanır, near-expiry teklif TUTARI gösterilmez (yalnız bayrağı). Eksiklik değil, verilen
+   * sözün korunması: teklif bir depodadır ve ziyaretçinin posta kodu oraya düşmeyebilir.
+   */
+  warehouseId: string | null;
+  /**
+   * Görüntüleyenin ETKİN kanalı (`PricingViewer.channel`) — onaysız şirket orada zaten `b2c`'ye
+   * daraltılmış gelir, yani bu okuma daraltmayı ikinci kez yapmaz.
+   */
+  channel: Channel;
+}
+
+/**
+ * **Vitrinin katalog okuması** (08.10 · 08.46 · 08.54) — `product_listing` görünümü (0032).
  *
- * **Sıralamanın kullandığı fiyat, kartta yazan fiyattır.** Görünüm motorun ziyaretçi dalını yeniden
- * ifade eder (0043 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur.
+ * Kendi sınıfı olmasının sebebi teknik: keyset sayfalama `tableName`'e bağlıdır ve hem sıralama
+ * anahtarı (`sort_price`) hem kapsam kolonları (`channel`, `warehouse_id`) yalnız görünümde vardır
+ * (`OrderSaleService` ile aynı gerekçe). Süzgeçler paylaşılır (`buildProductQuery`); satır şeması
+ * ise ürününkinden TÜRER ama aynısı DEĞİL (`ProductListingRowSchema` = ürün + kapsam + görünümün
+ * hesapladığı kolonlar).
+ *
+ * **Üç okuma da BURADA** (08.46) ve bu şart: görünüm artık kanalında satılamayan ürünü süzüyor.
+ * Varsayılan sıra `ProductService`ten okunmaya devam etseydi katalog, sıralama seçilince başka,
+ * seçilmeyince başka bir ürün kümesi gösterirdi.
+ *
+ * **Operasyon bu sınıfı KULLANMAZ** — ürün listesi `ProductService` üzerinden ham `product`
+ * tablosundan gelir ve gelmeye devam etmeli: operatör tam olarak eksik fiyatlı ürünü görmek
+ * zorunda, onu düzeltecek olan o.
+ *
+ * **Sıralamanın kullandığı fiyat, kartta yazan fiyattır.** Görünüm motorun LİSTE dalını yeniden
+ * ifade eder (0032 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur — ve test artık
+ * iki kanalı da koşar (08.54: dört ay boyunca yalnız ziyaretçi dalı ölçülmüştü).
  */
 export class ProductListingService extends BaseDbService<ProductListingRow, never, never> {
   /**
@@ -219,38 +251,113 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
   }
 
   /**
-   * Fiyata göre sayfa. Fiyatı olmayan ürün (kanal fiyatı girilmemiş → satışa kapalı) listeden
-   * DÜŞMEZ, sonda durur — görünümdeki `sort_price` sonsuzdur (0043).
+   * Kapsamı eq-süzgeçlerine çevirir. **Yer belliyse depo satırı, belli değilse `warehouse_id is
+   * null` satırı** — ikisi ayrı süzgeç biçimi çünkü null'a `eq` uygulanamaz; o yüzden ikinci
+   * parçayı `isNullFields` taşıyor (`scopeOptions`). Kanalın böyle bir ikiliği yok, her zaman eq.
    *
-   * ── DEPO SÜZGECİ ZORUNLU, YOKLUĞU DA BİR DEĞER ──────────────────────────────
-   * Görünüm depo boyutu aldı (0043): her ürün için aktif depo sayısı kadar satır + yeri bilinmeyen
-   * okuma için bir satır. Süzgeç uygulanmazsa **aynı ürün sayfada birkaç kez görünür** ve keyset
-   * imleci bozulur — `sort_price` artık tek başına benzersiz bir sıra vermez.
-   *
-   * `warehouseId` null = yer bilinmiyor → görünümdeki `warehouse_id is null` satırı okunur: liste
-   * fiyatıyla sıralanır, near-expiry teklif TUTARI gösterilmez (yalnız `has_near_expiry_offer`
-   * bayrağı). Bu bir eksiklik değil, verilen sözün korunmasıdır: teklif bir depodadır ve
-   * ziyaretçinin posta kodu oraya düşmeyebilir.
+   * Tek yerde durmasının sebebi üç okumanın aynı kapsamı kurma zorunluluğu — `ProductListingScope`
+   * künyesi.
    */
-  async listByPrice(
-    opts: ProductListOptions & { direction: 'asc' | 'desc'; warehouseId?: string | null },
-  ): Promise<Page<ProductListingRow>> {
+  private scopedFilters(filters: Record<string, unknown>, scope: ProductListingScope): Record<string, unknown> {
+    return { ...filters, channel: scope.channel, ...(scope.warehouseId ? { warehouseId: scope.warehouseId } : {}) };
+  }
+
+  /** Kapsamın `eq` ile ifade edilemeyen yarısı: "yer bilinmiyor" satırı. */
+  private scopeOptions(scope: ProductListingScope): { isNullFields?: string[] } {
+    return scope.warehouseId ? {} : { isNullFields: ['warehouse_id'] };
+  }
+
+  /**
+   * **Katalogun VARSAYILAN sırası** (`sort_order` — operatörün sırası), görünümden okunur.
+   *
+   * Eskiden `ProductService.listWithRelations` ile ham `product` tablosundan geliyordu ve fiyata
+   * hiç teması yoktu. 08.46 kanalında satılamayan ürünü süzünce o hâl tutarsızlaştı: aynı katalog
+   * "artan fiyat" seçiliyken süzülmüş, "öne çıkanlar"dayken süzülmemiş bir küme gösterirdi.
+   *
+   * Geçiş bedelsiz çünkü görünüm `p.*` seçiyor — ürün tablosunun ÜST KÜMESİ. Süzgeç kurucusu ve
+   * projeksiyon zaten ortaktı; değişen tek şey hangi kaynaktan okunduğu.
+   */
+  async list(opts: ProductListOptions & ProductListingScope): Promise<Page<ProductListingRow>> {
     const { filters, orFilters } = buildProductQuery(opts.filters);
-    // Yer belliyse depo satırı, belli değilse `warehouse_id is null` satırı — ikisi ayrı süzgeç
-    // biçimi: null'a `eq` uygulanamaz.
-    const scoped = opts.warehouseId ? { ...filters, warehouseId: opts.warehouseId } : filters;
     // **Şema GÖRÜNÜMÜN satırı, ürünün değil** (07.08): önceki hâl `ProductWithRelationsSchema` ile
     // parse ediyordu ve Zod tanımadığı alanları düşürüyordu — görünüm `effective_price` ile
     // `has_near_expiry_offer`i hesaplıyor, servis çöpe atıyordu. Hiçbir yerde hata vermiyordu;
-    // yalnız her tüketici ziyaretçi fiyatını ikinci kez hesaplamak zorunda kalıyordu.
-    return this.getPageAs(ProductListingRowSchema, scoped, {
+    // yalnız her tüketici fiyatı ikinci kez hesaplamak zorunda kalıyordu.
+    return this.getPageAs(ProductListingRowSchema, this.scopedFilters(filters, opts), {
+      select: productSelect(opts.filters),
+      orderBy: 'sortOrder',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+      orFilters,
+      ...this.scopeOptions(opts),
+    });
+  }
+
+  /**
+   * Fiyata göre sayfa. **Kanalında fiyatı olmayan ürün listede HİÇ YOKTUR** (08.46) — görünüm onu
+   * süzer, yani buraya gelen her satırın fiyatı vardır ve `sort_price` asla null değildir.
+   *
+   * ── İKİ EKSEN DE ZORUNLU, YOKLUĞU DA BİR DEĞER ──────────────────────────────
+   * Görünüm önce depo (0032 · 01.08), sonra KANAL boyutu aldı (08.54). Süzgeçlerden biri
+   * uygulanmazsa **aynı ürün sayfada birkaç kez görünür** ve keyset imleci bozulur — `sort_price`
+   * artık tek başına benzersiz bir sıra vermez.
+   *
+   * **Kapsam VARSAYILANSIZ ve bu bilinçli.** `warehouseId` eskiden `?` ile isteğe bağlıydı ve
+   * künyesi "zorunlu" diyordu — tip ile künye ayrışmıştı. Varsayılan bırakmak tam olarak 08.54'ün
+   * düzelttiği kusuru üretir: argümanı unutan çağrı DERLENİR ve sessizce yanlış kapsamı okur.
+   * Kanal için aynı tuzak daha sinsi olurdu — tek kanallı veride doğru cevap verir, ikinci kanal
+   * açılınca sessizce yanlışa döner. Bu kusur tam olarak öyle dört ay yaşadı.
+   */
+  async listByPrice(
+    opts: ProductListOptions & ProductListingScope & { direction: 'asc' | 'desc' },
+  ): Promise<Page<ProductListingRow>> {
+    const { filters, orFilters } = buildProductQuery(opts.filters);
+    return this.getPageAs(ProductListingRowSchema, this.scopedFilters(filters, opts), {
       select: productSelect(opts.filters),
       orderBy: 'sortPrice',
       orderDirection: opts.direction,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
-      isNullFields: opts.warehouseId ? undefined : ['warehouse_id'],
+      ...this.scopeOptions(opts),
+    });
+  }
+
+  /**
+   * **Site haritasının ürünleri** — herkese açık URL'ler, yani ZİYARETÇİ kapsamı: `b2c` ve yeri
+   * bilinmeyen okuma.
+   *
+   * Eskiden `ProductService.listSellable()`ti ve **adı sözünü tutmuyordu**: yalnız `status='active'`
+   * süzüyordu, satılabilirliğe hiç bakmıyordu. Sonucu ölçülebilir bir tutarsızlıktı — yalnız toptana
+   * fiyatlanmış bir ürünün herkese açık adresi haritaya yazılıyor, arama motoru anonim ziyaretçinin
+   * satın alamayacağı bir sayfaya çağrılıyordu.
+   *
+   * Sayfalama YOK ve olmamalı: harita kümenin tamamıdır. Tavanı da yok — büyürse haritanın kendi
+   * bölünme kuralı devreye girer, listenin sayfa boyu değil.
+   */
+  async listSellable(): Promise<ProductListingRow[]> {
+    return this.getAllAs(
+      ProductListingRowSchema,
+      this.scopedFilters({ status: 'active' }, { warehouseId: null, channel: 'b2c' }),
+      { select: productSelect(undefined), orderBy: 'sortOrder', ...this.scopeOptions({ warehouseId: null, channel: 'b2c' }) },
+    );
+  }
+
+  /**
+   * Başlıktaki sonuç sayısı — **listeyle AYNI kaynaktan, AYNI süzgeçle, AYNI kapsamla**.
+   *
+   * `ProductService.countMatching` ham `product` tablosunu sayıyor ve kanal/depo kapsamını
+   * bilmiyor; 08.46'dan sonra o sayaç süzülmemiş kümeyi sayardı. Ayrışmanın sonucu bu depoda
+   * bilinen bir arıza: *"çip açıkken liste 1 satır basarken başlık 131 diyordu"* (08.10 künyesi).
+   */
+  async countMatching(filters: ProductFilters | undefined, scope: ProductListingScope): Promise<number> {
+    const { filters: eq, orFilters } = buildProductQuery(filters);
+    // Projeksiyon sayımda da geçer: gömülü ilişkide süzen bir sayım, ilişki select'te yoksa
+    // `PGRST108` ile patlar (`ProductService.countMatching` künyesindeki ölçüm).
+    return this.count(this.scopedFilters(eq, scope), {
+      orFilters,
+      select: productSelect(filters),
+      ...this.scopeOptions(scope),
     });
   }
 }
@@ -476,10 +583,9 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return page.rows[0] ?? null;
   }
 
-  /** Satılabilir katalog: yalnız satışta olanlar (aday ve pasif hariç). */
-  async listSellable(): Promise<Product[]> {
-    return this.getAll({ status: 'active' }, { orderBy: 'sortOrder' });
-  }
+  /* `listSellable` BURADAN KALKTI (08.46 · 24.08) — `ProductListingService`e taşındı.
+     Adı "satılabilir" diyordu ama yalnız `status`a bakıyordu; satılabilirlik kanal fiyatını da
+     gerektiriyor ve o bilgi ürün tablosunda YOK. Tek çağıranı site haritasıydı. */
 
   /** Aday ürünler (keşif/tinder bölümü). */
   async listCandidates(): Promise<Product[]> {

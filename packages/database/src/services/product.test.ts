@@ -1,11 +1,14 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { createServiceRoleClient } from '../client';
-import { ProductService } from './product.service';
+import { ProductListingService, ProductService } from './product.service';
+import { PriceService } from './price.service';
 import { CollectionService } from './collection.service';
 
 // Entegrasyon testleri — local Supabase'e vurur (pnpm db:start + migrationlar uygulı olmalı).
 const db = createServiceRoleClient();
 const products = new ProductService(db);
+const listings = new ProductListingService(db);
+const prices = new PriceService(db);
 const collections = new CollectionService(db);
 const productIds: string[] = [];
 const collectionIds: string[] = [];
@@ -46,10 +49,17 @@ describe('ProductService', () => {
     expect(variants.map((v) => v.sortOrder)).toEqual([0, 1]);
   });
 
+  /* `listSellable` `ProductListingService`e taşındı (08.46): satılabilirlik kanal fiyatını da
+     gerektiriyor ve o bilgi ürün tablosunda yok.
+
+     **Aday ürüne FİYAT yazılıyor** ve bu şart: yazılmasaydı aday zaten fiyatsız olduğu için listeden
+     düşer ve test, `status` süzgeci tamamen kalksa bile YEŞİL kalırdı — iddiasını değil, tesadüfü
+     ölçerdi. Fiyatlı aday, "aday satılamaz" kuralını yalnız başına sınıyor. */
   it('aday ürün satılabilir listede YOK, aday listesinde VAR', async () => {
-    const { product: candidate } = await products.create({ name: { tr: 'Deneme Aday' }, status: 'candidate' });
+    const { product: candidate, variants } = await products.create({ name: { tr: 'Deneme Aday' }, status: 'candidate' });
     productIds.push(candidate.id);
-    const sellable = await products.listSellable();
+    await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 500, validFrom: new Date().toISOString() });
+    const sellable = await listings.listSellable();
     const candidates = await products.listCandidates();
     expect(sellable.some((p) => p.id === candidate.id)).toBe(false);
     expect(candidates.some((p) => p.id === candidate.id)).toBe(true);
