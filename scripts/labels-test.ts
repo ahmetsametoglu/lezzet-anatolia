@@ -5,6 +5,7 @@ import { Resvg } from '@resvg/resvg-js';
 // Barrel yerine ALT YOL (paketin `./*` ihracı): bu script paketin kamu yüzeyine yeni bir ad
 // eklemeyi hak etmiyor — `qrPath` bir çizim ayrıntısı, uygulama katmanının sözleşmesi değil.
 import { qrPath } from '@lezzet/application/warehouse/label-svg';
+import { ean13Modules, itf14Modules, modulesToSvg } from './barcode-svg';
 import { TEST_LABELS, type TestLabel } from './seed/test-labels';
 
 /*
@@ -13,14 +14,18 @@ import { TEST_LABELS, type TestLabel } from './seed/test-labels';
   Kâğıt israfını bitiren karar: kodlar seed'de SABİT (`seed/test-labels.ts`), yani basılmış set her
   `db:refresh` sonrasında yine çalışır. Bu script o setin BASILABİLİR hâlini üretir.
 
-  ── QR, BARKOD DEĞİL ────────────────────────────────────────────────────────
-  Vizör yedi biçimi birden tanıyor (`scan-sheet.tsx`: ean13 · ean8 · itf14 · upc_a · code128 · qr ·
-  datamatrix) ve okutulan şey ham METİNDİR — kapı kodun hangi simgeyle çizildiğini bilmez, bilmesi
-  de gerekmez. QR seçildi çünkü her uzunluktaki kodu taşır (`TEST-TANINMAYAN-01` bir EAN'a sığmaz),
-  62 mm ruloda küçük yer kaplar ve ucundan okunur. Gerçek EAN-13 decode'u ayrıca ölçüldü (23.4).
+  ── SİMGE, GERÇEK DEPODAKİ SİMGEDİR (kullanıcı bulgusu 24.08) ───────────────
+  Vizör yedi biçimi birden tanıyor (`scan-sheet.tsx`) ve okutulan şey ham METİNDİR — kapı kodun
+  hangi simgeyle çizildiğini bilmez. Ama DECODE katmanı bilir: QR en kolay okunan simgedir, gerçek
+  depoda okutulacak şeyse paket için EAN-13, koli için ITF-14 — ince çizgili, açıya ve mesafeye çok
+  daha duyarlı. İlk set tamamen QR basıldı ve kullanıcı yakaladı: o hâlde sınamak istediğimiz ZOR
+  yol hiç sınanmıyordu. Simge artık setin kendi kararı (`TestLabel.symbology`); QR yalnız BİZİM
+  kodumuzda (kutu QR'ı harf taşır, EAN'a sığmaz).
 
   QR üreticisi kutu etiketiyle ORTAK (`application/warehouse/label-svg.ts` → `qrPath`): ikinci bir
-  "QR nasıl çizilir" kararı açılmadı (CLAUDE §1). Rasterizasyon (SVG→PNG) burada kendi kurulumunu
+  "QR nasıl çizilir" kararı açılmadı (CLAUDE §1). Çizgili simgeler `barcode-svg.ts`te — sağlama
+  basamağı orada zorlanıyor, çünkü tutmayan bir kodu okuyucu SESSİZCE yutar (elde basılı koli kodu
+  tam da böyleydi). Rasterizasyon (SVG→PNG) burada kendi kurulumunu
   yapıyor ve bu bir kopya DEĞİL, sınır: üretimin hattı `apps/mobile-api/src/lib/label-png.ts`te ve
   `scripts` bir uygulamaya bağımlı olamaz. Fark da bilinçli — orada fontlar dosyadan yükleniyor
   (dağıtımda sistem fontuna sessiz düşüş olmasın diye), burada sistem fontu yeterli: bu kâğıt
@@ -69,7 +74,14 @@ function sar(metin: string, satirBasinaKarakter: number, satirSayisi: number): s
   return satirlar.slice(0, satirSayisi);
 }
 
-function etiketSvg(label: TestLabel): string {
+const sarmal = (govde: string): string =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${GENISLIK_MM}mm" height="${YUKSEKLIK_MM}mm" viewBox="0 0 ${GENISLIK_MM} ${YUKSEKLIK_MM}"><rect width="${GENISLIK_MM}" height="${YUKSEKLIK_MM}" fill="#fff"/>${govde}</svg>`;
+
+/**
+ * QR düzeni: kare simge SOLDA, künye sağda — kod kısa olduğu için yan yana sığar.
+ * (Tek çağıranı kutu QR'ı; çizgili simgeler kendi düzenini kullanıyor.)
+ */
+function qrEtiket(label: TestLabel): string {
   const qrBoy = 20;
   // `qrPath` birim kareye (modül = 1) çizer; ölçek modül sayısından türer — kutu etiketinin
   // yaptığının aynısı, orada da QR bir `scale` ile yerleştiriliyor.
@@ -79,14 +91,34 @@ function etiketSvg(label: TestLabel): string {
   const kunye = sar(label.hint, 24, 3)
     .map((satir, i) => `<text x="${solx}" y="${17 + i * 3.2}" font-family="Helvetica" font-size="2.4" fill="#000">${esc(satir)}</text>`)
     .join('\n');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${GENISLIK_MM}mm" height="${YUKSEKLIK_MM}mm" viewBox="0 0 ${GENISLIK_MM} ${YUKSEKLIK_MM}">
-<rect width="${GENISLIK_MM}" height="${YUKSEKLIK_MM}" fill="#fff"/>
-<g transform="translate(2,3) scale(${olcek.toFixed(4)})"><path d="${path}" fill="#000"/></g>
+  return sarmal(`<g transform="translate(2,3) scale(${olcek.toFixed(4)})"><path d="${path}" fill="#000"/></g>
 <text x="${solx}" y="7.5" font-family="Helvetica" font-size="4.2" font-weight="bold" fill="#000">${esc(label.title)}</text>
 <text x="${solx}" y="12.6" font-family="Helvetica" font-size="3.2" fill="#000">${esc(label.code)}</text>
-${kunye}
-</svg>`;
+${kunye}`);
 }
+
+/**
+ * Çizgili simge düzeni: barkod ÜSTTE ve TAM GENİŞLİKTE, altında rakamlar + künye.
+ *
+ * Genişlik pazarlık konusu değil: EAN-13 95 modül, ITF-14 daha da fazla — dar basılan bir çizgili
+ * kod ilk kırpılan şeydir. QR'ın yaptığı gibi yana sıkıştırsaydık modül genişliği yazıcının nokta
+ * ölçüsünün altına inerdi (300 dpi'da bir nokta ≈ 0,085 mm) ve kâğıt okunmaz çıkardı.
+ */
+function cizgiliEtiket(label: TestLabel): string {
+  const moduller = label.symbology === 'ean13' ? ean13Modules(label.code) : itf14Modules(label.code);
+  // Çubukların altında SESSİZ BİR ŞERİT kalmalı: metin guard çubuklarına değerse okuyucu kodun
+  // bittiği yeri bulamaz (ilk denemede bindi ve kâğıtta okunmaz görünüyordu — ölçüldü 24.08).
+  const cubuklar = modulesToSvg(moduller, { widthMm: GENISLIK_MM - 6, heightMm: 12, x: 3, y: 2 });
+  const kunye = sar(label.hint, 44, 2)
+    .map((satir, i) => `<text x="3" y="${21.4 + i * 3}" font-family="Helvetica" font-size="2.4" fill="#000">${esc(satir)}</text>`)
+    .join('\n');
+  return sarmal(`${cubuklar}
+<text x="3" y="18" font-family="Helvetica" font-size="3.4" font-weight="bold" fill="#000">${esc(label.title)}</text>
+<text x="${GENISLIK_MM - 3}" y="18" text-anchor="end" font-family="Helvetica" font-size="3.4" fill="#000">${esc(label.code)}</text>
+${kunye}`);
+}
+
+const etiketSvg = (label: TestLabel): string => (label.symbology === 'qr' ? qrEtiket(label) : cizgiliEtiket(label));
 
 async function main(): Promise<void> {
   const bas = process.argv.includes('--print');

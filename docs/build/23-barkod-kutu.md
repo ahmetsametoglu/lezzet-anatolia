@@ -358,6 +358,23 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     devam ediyor (çok kutulu sipariş onu kullanıyor). QR üreticisi kutu etiketiyle ORTAK
     (`qrPath` dışa verildi — ikinci bir "QR nasıl çizilir" kararı açılmadı). Simülasyon havuzu
     setin aynası: çipe basmak ile kâğıdı okutmak artık AYNI kodu üretiyor.
+  - **SİMGE DÜZELTMESİ (kullanıcı bulgusu 24.08) — ilk set tamamen QR basılmıştı, YANLIŞTI.**
+    Yazılım katmanı için simge tipi fark etmez (kapı ham metin alır, `variant_barcode` biçim
+    zorlamaz — o karar bilinçli ve duruyor), ama DECODE katmanı için eder: QR en kolay okunan
+    simgedir, gerçek depoda okutulacak şeyse paket için **EAN-13**, koli için **ITF-14** — ince
+    çizgili, açı ve mesafe toleransı düşük. Set tamamen QR olsaydı sınamak istediğimiz zor yol hiç
+    sınanmazdı. Simge artık setin kendi kararı (`TestLabel.symbology`); QR yalnız BİZİM kodumuzda
+    (kutu QR'ı harf taşır, EAN'a sığmaz). Çizim `scripts/barcode-svg.ts` (EAN-13 L/G/R + parite ·
+    ITF-14 geçmeli kodlama; bitişik modüller tek dikdörtgende birleşir — rasterde saç teli kadar
+    boşluk okuyucuda "ince çubuk" olur). **Sağlama basamağı artık zorlanıyor** (`assertCheckDigit`):
+    elde basılı `18691000047514` GEÇERSİZ bir GTIN-14'tü ve okuyucu onu sessizce yutardı — doğrusu
+    `…516`, kod düzeltildi. Diğer üç kod da geçerli EAN-13 olacak şekilde seçildi.
+  - **KÂĞIDA BASMADAN MAKİNEYLE DOĞRULANDI (24.08):** üretilen altı PNG macOS Vision ile decode
+    edildi — `EAN13 = 8691000007919` · `I2of5 = 18691000047516` · `EAN13 = 8691000030009` ·
+    `EAN13 = 8691000040008` · `EAN13 = 8691000050007` · `QR = KT-99-TESTKUTU01`. Yani çizim doğru
+    ve kod okunabiliyor; cihaz turunda ölçülecek olan artık yalnız KAMERANIN bu simgeleri gerçek
+    kâğıttan çözmesi. İlk düzende metin guard çubuklarına biniyordu (ölçüldü, düzeltildi: çubukların
+    altında sessiz şerit).
   - **SKU eşleşmesi bilerek sette YOK:** o kodun bir varyantın SKU'sunun kendisi olması gerekir,
     yani sabitlenemez (SKU fiyat dosyalarının anahtarı; test için değiştirmek fiyat eşlemesini
     bozardı). Zincirin o halkası jest + entegrasyonda ölçülü.

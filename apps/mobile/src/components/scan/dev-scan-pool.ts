@@ -31,14 +31,18 @@ export interface DevScanCode {
 }
 
 /**
- * Altı çip, taramanın altı yolu — `TEST_LABELS` ile BİREBİR aynı sıra ve kodlar.
+ * Beş çip — `TEST_LABELS` ile BİREBİR aynı sıra ve kodlar.
+ *
+ * Kâğıtta bu kodlar EAN-13/ITF-14 olarak basılı (24.08); burada yalnız metinleri durur, çünkü
+ * simge kâğıdın meselesidir, kapının değil. Çipe basmak ile kâğıdı okutmak AYNI metni üretir.
+ *
  * (Kutu QR'ı burada yok: kutu kodlarını çağıran ekran kendi `devCodes`'uyla verir — elindeki
  * gerçek kutuların kodları, uydurma bir kod değil. Künye: `scan-sheet.tsx`.)
  */
 export const DEV_SCAN_POOL: readonly DevScanCode[] = [
   { label: 'Paket', code: '8691000007919' },
-  { label: 'Koli ×24', code: '18691000047514' },
-  { label: 'Toplama', code: 'TEST-TOPLAMA-01' },
-  { label: 'Yabancı ürün', code: 'TEST-YABANCI-01' },
-  { label: 'Tanınmayan', code: 'TEST-TANINMAYAN-01' },
+  { label: 'Koli ×24', code: '18691000047516' },
+  { label: 'Toplama', code: '8691000030009' },
+  { label: 'Yabancı ürün', code: '8691000040008' },
+  { label: 'Tanınmayan', code: '8691000050007' },
 ];

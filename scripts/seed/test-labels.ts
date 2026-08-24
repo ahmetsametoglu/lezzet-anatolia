@@ -31,10 +31,22 @@ import type { Db, VaryantRef } from './shared';
 /** Etiketin sınadığı yol — basılan kâğıdın üstünde bu ad yazar. */
 export type TestLabelRole = 'paket' | 'koli' | 'toplama' | 'yabanci' | 'taninmayan' | 'kutu';
 
+/**
+ * Kâğıda hangi SİMGEYLE basılacağı (kullanıcı bulgusu 24.08).
+ *
+ * Veri için fark etmez — kapı ham metin alır ve `variant_barcode` biçim zorlamaz. Fark DECODE
+ * katmanındadır: gerçek depoda paket EAN-13, koli ITF-14 okutulur ve ikisi de QR'dan çok daha
+ * zordur (ince çizgi, açı ve mesafe toleransı düşük). Setin tamamı QR olsaydı sınamak istediğimiz
+ * zor yol hiç sınanmazdı. QR yalnız KENDİ kodumuz için: kutu QR'ı harf taşır, EAN'a sığmaz.
+ */
+export type TestLabelSymbology = 'ean13' | 'itf14' | 'qr';
+
 export interface TestLabel {
   role: TestLabelRole;
   /** Kâğıda basılan kod — SABİT; değiştirmek basılı etiketleri çöpe atar. */
   code: string;
+  /** Çizgili simgelerde kod SAĞLAMA BASAMAĞIYLA geçerli olmalı; okuyucu tutmayanı sessizce yutar. */
+  symbology: TestLabelSymbology;
   title: string;
   /** Kâğıdın altındaki tek satır: bu etiket ne yapar. */
   hint: string;
@@ -50,36 +62,46 @@ export const TEST_LABELS: readonly TestLabel[] = [
   {
     role: 'paket',
     code: '8691000007919',
+    symbology: 'ean13',
     title: 'PAKET',
     hint: 'Mal kabul · tekil paket kodu — çekmece 1 adetle açılır',
   },
   {
+    // 24.08: elde basılı olan `…514` GEÇERSİZ bir GTIN-14'tü (sağlama basamağı 6 olmalı) —
+    // okuyucu onu sessizce yutardı. Düzeltildi; set zaten yeniden basılıyor.
     role: 'koli',
-    code: '18691000047514',
+    code: '18691000047516',
+    symbology: 'itf14',
     title: 'KOLİ x24',
     hint: 'Mal kabul · koli kodu — çekmece 24 adetle açılır',
   },
   {
     role: 'toplama',
-    code: 'TEST-TOPLAMA-01',
+    code: '8691000030009',
+    symbology: 'ean13',
     title: 'TOPLAMA',
     hint: 'Toplama · açık kutulu siparişin kalemi — kutuya eklenir',
   },
   {
     role: 'yabanci',
-    code: 'TEST-YABANCI-01',
+    code: '8691000040008',
+    symbology: 'ean13',
     title: 'YABANCI ÜRÜN',
     hint: 'Ret yolu · kayıtlı ürün ama bu kabulde/siparişte yok',
   },
   {
+    // Tanınmayan kod da gerçek hayatta bir EAN'dır: depoya gelen yeni bir ürünün paketi.
     role: 'taninmayan',
-    code: 'TEST-TANINMAYAN-01',
+    code: '8691000050007',
+    symbology: 'ean13',
     title: 'TANINMAYAN',
     hint: 'Öğrenme · hiçbir ürüne bağlı değil ("bu kod hangi ürün?")',
   },
   {
+    // BİZİM kodumuz — harf taşır, EAN'a sığmaz ve zaten QR olarak basılıyor (kutu etiketi 23.7).
     role: 'kutu',
     code: 'KT-99-TESTKUTU01',
+    symbology: 'qr',
     title: 'KUTU QR',
     hint: 'Kurye · yükleme + kapıda teslim okutması (kapalı kutu)',
   },
