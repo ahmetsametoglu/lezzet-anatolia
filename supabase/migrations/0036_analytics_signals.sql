@@ -122,11 +122,16 @@ create index analytics_daily_source_day_idx on public.analytics_daily_source (da
  * çözülebiliyor"* diyordu — çözüm hiçbir yerde yazılmamıştı. Eksik olan kimliğin taşınması değil,
  * taşınmayan kimliğin yerine konacak okuma.
  *
- * **Düzeltme sıcak yazma yoluna DEĞİL buraya kondu.** Üç gerekçe: (1) `AddToCartIntent`e alan
- * eklemek kayıtlı kararı bozardı ve gerekçesi hâlâ geçerli; (2) burası **geriye dönük** çalışır —
- * bugüne dek yazılmış satırlar da sayılmaya başlar, oysa kimliği ileriden taşımak yalnız yeni
- * satırları kurtarırdı; (3) native uç `product_id`yi kendisi dolduruyor ve `coalesce`'un ilk terimi
- * olarak çalışmaya devam eder — iki yüzey ayrışmaz.
+ * **Düzeltme sıcak yazma yoluna DEĞİL buraya kondu.** İki gerekçe: (1) `AddToCartIntent`e alan
+ * eklemek kayıtlı kararı bozardı ve gerekçesi hâlâ geçerli — sepete ekleme en sıcak yazma yolu,
+ * kimlik başına bir okuma orada birikir; **günlük bir toplu işte aynı okuma bedelsizdir** ve
+ * arama yapılacak yer burasıdır; (2) native uç `product_id`yi kendisi dolduruyor ve `coalesce`'un
+ * ilk terimi olarak çalışmaya devam eder — iki yüzey ayrışmaz.
+ *
+ * **"Geçmiş satırlar da sayılır" bir gerekçe DEĞİL** (kullanıcı düzeltmesi 24.08): proje greenfield,
+ * veritabanı sürekli sıfırlanıyor ve kurtarılacak geçmiş yok. İlk yazımda bu üçüncü bir gerekçe
+ * olarak yazılmıştı; `CLAUDE.md`'nin greenfield notu ("geriye uyum gözetilmez") ile çelişiyordu ve
+ * silindi. Karar değişmiyor — üstteki iki gerekçe tek başına yeterli.
  *
  * **PAKET satırı atfedilmez:** `subject_type = 'bundle'` join'e girmez, `product_id` de boştur, yani
  * satır düşer. Paket bir ürün değil, ürünlerin demeti; birine atfetmek ürün özetini yanlış beslerdi

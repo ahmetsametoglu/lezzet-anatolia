@@ -1483,7 +1483,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
   **Kimliğin taşınmaması bir KARAR ve kayıtlı** (`cart-types.ts:453`): istemcinin elindeki `CartEntry` ürünü değil varyantı tanıyor, sunucuda doldurmak en sıcak yazma yoluna fazladan okuma eklerdi. Gerekçe hâlâ geçerli. **Asıl açık kararın kendi telafisi:** künye *"ürün kırılımı varyant tablosundan çözülebiliyor"* diyor ama özet fonksiyonu `product_variant`'a hiç uğramıyor.
 
-  **Çözüm sıcak yola DEĞİL özete:** `left join product_variant v on v.id = e.subject_id and e.subject_type = 'variant'`, süzgeç ve gruplama `coalesce(e.product_id, v.product_id)` üzerinden. Üç kazancı var: sıcak yol hiç değişmez · **geriye dönük** çalışır (bugüne dek yazılmış satırlar da sayılır) · native'in kendi doldurması `coalesce`'un ilk terimi olarak çalışmaya devam eder. Paket satırı `null` kalır ve atfedilmez — paket bir ürün değil.
+  **Çözüm sıcak yola DEĞİL özete:** `left join product_variant v on v.id = e.subject_id and e.subject_type = 'variant'`, süzgeç ve gruplama `coalesce(e.product_id, v.product_id)` üzerinden. İki kazancı var: sıcak yol hiç değişmez — kimlik başına bir okuma sepete eklemede birikir, **günlük toplu işte bedelsizdir** · native'in kendi doldurması `coalesce`'un ilk terimi olarak çalışmaya devam eder, iki yüzey ayrışmaz. Paket satırı `null` kalır ve atfedilmez — paket bir ürün değil.
 
   **Etkisi üç yerde:** yönetim ekranı her ürün için "1.240 → 0" yazıyor ve yönetici bunu "kimse sepete atmıyor" diye okur · `cartRate` hep 0 · vitrin seçkisinin sıralaması (`home.ts:174`) `viewCount + cartCount` diyor ve ikinci terim hiçbir şey yapmıyor. Üçü de hata vermiyor — `CLAUDE §1`: *"Ölçülemeyen değer SIFIR değildir."*
 
@@ -1501,11 +1501,14 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   - **Durum (24.08 — tamamlandı):** özet artık ürün kimliğini varyanttan da çözüyor
     (`left join product_variant on subject_type='variant'`, süzgeç ve gruplama
     `coalesce(e.product_id, v.product_id)` üzerinden).
-    **Sıcak yazma yoluna DOKUNULMADI** — `AddToCartIntent` kayıtlı kararıyla kaldı. Üç gerekçe:
-    kararın gerekçesi hâlâ geçerli (sepete ekleme en sıcak yol) · düzeltme **geriye dönük** çalışıyor,
-    yani bugüne dek yazılmış satırlar da sayılmaya başlıyor (kimliği ileriden taşımak yalnız yeni
-    satırları kurtarırdı) · native ucun kendi doldurması `coalesce`'un ilk terimi olarak çalışmaya
-    devam ediyor, iki yüzey ayrışmıyor.
+    **Sıcak yazma yoluna DOKUNULMADI** — `AddToCartIntent` kayıtlı kararıyla kaldı. İki gerekçe:
+    kararın gerekçesi hâlâ geçerli (sepete ekleme en sıcak yazma yolu; kimlik başına bir okuma orada
+    birikir, **günlük toplu işte bedelsizdir** — arama yapılacak yer özet) · native ucun kendi
+    doldurması `coalesce`'un ilk terimi olarak çalışmaya devam ediyor, iki yüzey ayrışmıyor.
+    **Kullanıcı düzeltmesi 24.08:** ilk yazımda üçüncü bir gerekçe daha vardı — *"geçmiş satırlar da
+    sayılmaya başlar"*. Geçersiz: proje greenfield, veritabanı sürekli sıfırlanıyor, kurtarılacak
+    geçmiş yok (`CLAUDE.md` greenfield notu: *"geriye uyum gözetilmez"*). Karar değişmedi, gerekçe
+    silindi — kalan ikisi tek başına yeterli.
     **PAKET atfedilmiyor:** `subject_type='bundle'` join'e girmez, kimlik `null` kalır, satır düşer.
     **Ölçüldü (aynı 3 olay, kapının yazdığı gibi: `product_id` yok, özne varyant):** bozuk fonksiyon
     `cart_count = 0`, düzeltilmiş fonksiyon `cart_count = 3`.
