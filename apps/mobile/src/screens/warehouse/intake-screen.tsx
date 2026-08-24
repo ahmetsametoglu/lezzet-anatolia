@@ -1,9 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { IntakeFormRowContract } from '@lezzet/types';
+import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/types';
 
+import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
@@ -16,10 +18,11 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
+import { searchIntakeVariants } from '@/lib/api/warehouse';
 import { warehouseCopy } from './copy';
 import { useIntake, type IntakeRowState, type ScannedCode } from './use-intake.hook';
 import { parseDate, parseQty, productLabel, qtyToText, shortDate } from './warehouse-format';
-import { useWarehouseStatus } from './warehouse-status';
+import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
 
 /*
   D2 · MAL KABUL (v2:353-400).
@@ -43,19 +46,21 @@ const t = warehouseCopy;
 
 export function IntakeScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ purchaseOrderId?: string }>();
+  const params = useLocalSearchParams<{ purchaseOrderId?: string; unplanned?: string }>();
   const purchaseOrderId =
     typeof params.purchaseOrderId === 'string' && params.purchaseOrderId.length > 0 ? params.purchaseOrderId : null;
-  const intake = useIntake(purchaseOrderId);
+  /** Plansız kabul (23.13): PO'suz gelen mal — satırları depocu kurar. */
+  const unplanned = params.unplanned === '1' && purchaseOrderId === null;
+  const intake = useIntake(purchaseOrderId, unplanned);
   const { offline } = useWarehouseStatus();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const header = (
     <OperationsStackHeader
       title={t.intake.title}
-      // Konusuz açılış artık "plansız kabul" DEĞİL, bekleyen sevkiyat listesi (24.08): plansız
-      // kabul kendi işidir (23.13) ve bu ekran onu henüz açmıyor — yanlış ad, olmayan bir yetenek
-      // vaat ediyordu.
-      subtitle={purchaseOrderId === null ? t.intake.captionPending : t.intake.captionPlanned}
+      subtitle={
+        unplanned ? t.intake.captionUnplanned : purchaseOrderId === null ? t.intake.captionPending : t.intake.captionPlanned
+      }
       onBack={() => router.back()}
       backLabel={t.common.back}
       testID="warehouse-intake-header"
@@ -67,7 +72,7 @@ export function IntakeScreen() {
     yazıyordu ve mal kabule YALNIZ derin bağlantıyla girilebiliyordu; sipariş kimliği her
     tazelemede değiştiği için o yol sürekli kırılıyordu (ölçüldü). Uç 21.11d'den beri hazırdı.
   */
-  if (purchaseOrderId === null && intake.status !== 'loading') {
+  if (purchaseOrderId === null && !unplanned && intake.status !== 'loading') {
     return (
       <View style={styles.screen} testID="warehouse-intake">
         {header}
@@ -92,6 +97,18 @@ export function IntakeScreen() {
           </View>
         ) : (
           <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-pending">
+            {/* PLANSIZ KABULÜN KAPISI (23.13) — listenin ÜSTÜNDE değil altında olurdu ama kabul
+                bekleyen sevkiyat sayısı değişken; sabit yer sabit alışkanlık demek. Siparişi
+                girilmemiş mal da bir kabuldür ve tek dokunuşluk uzakta olmalı. */}
+            <PressableSurface
+              onPress={() => router.push('/intake?unplanned=1')}
+              feedback="shadow"
+              style={styles.scanCta}
+              accessibilityLabel={t.intake.unplannedCta}
+              testID="warehouse-intake-unplanned-cta"
+            >
+              <Text style={styles.scanCtaLabel}>{t.intake.unplannedCta}</Text>
+            </PressableSurface>
             <Text style={styles.heading}>{t.intake.pendingHeading}</Text>
             {intake.pending.map((row) => (
               <PressableSurface
@@ -143,6 +160,61 @@ export function IntakeScreen() {
     );
   }
 
+  /* Plansızda BOŞ liste bir arıza değil, akışın başlangıcı: depocu ürünleri kendisi ekleyecek. */
+  if (intake.rows.length === 0 && unplanned) {
+    return (
+      <View style={styles.screen} testID="warehouse-intake">
+        {header}
+        <View style={styles.block}>
+          <OperationsNoticeBlock
+            variant="empty"
+            title={t.intake.unplannedEmpty.title}
+            description={t.intake.unplannedEmpty.body}
+            testID="warehouse-intake-unplanned-empty"
+          />
+          {offline ? null : (
+            <>
+              <PressableSurface
+                onPress={intake.openScan}
+                feedback="shadow"
+                style={styles.scanCta}
+                accessibilityLabel={t.intake.scan.cta}
+                testID="warehouse-intake-scan-cta"
+              >
+                <Text style={styles.scanCtaLabel}>{t.intake.scan.cta}</Text>
+              </PressableSurface>
+              <PressableSurface
+                onPress={() => setSearchOpen(true)}
+                feedback="shadow"
+                style={styles.scanCta}
+                accessibilityLabel={t.intake.searchCta}
+                testID="warehouse-intake-search-cta"
+              >
+                <Text style={styles.scanCtaLabel}>{t.intake.searchCta}</Text>
+              </PressableSurface>
+            </>
+          )}
+        </View>
+        <ScanSheet
+          open={intake.scanOpen}
+          title={t.intake.scan.title}
+          hint={t.intake.scan.hint}
+          onClose={intake.closeScan}
+          onScan={intake.handleScan}
+          testID="warehouse-intake-scan"
+        />
+        <VariantSearchSheet
+          visible={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          onPick={(variant) => {
+            intake.addManualRow(variant);
+            setSearchOpen(false);
+          }}
+        />
+      </View>
+    );
+  }
+
   if (intake.rows.length === 0) {
     return (
       <View style={styles.screen} testID="warehouse-intake">
@@ -184,6 +256,19 @@ export function IntakeScreen() {
             testID="warehouse-intake-scan-cta"
           >
             <Text style={styles.scanCtaLabel}>{t.intake.scan.cta}</Text>
+          </PressableSurface>
+        )}
+        {/* Arama YALNIZ plansızda: PO'lu kabulde satır kümesi siparişten gelir ve dışarıdan satır
+            eklemek fark raporunun göremeyeceği bir yere "beklenmedik mal" yazmak olurdu (23.4). */}
+        {offline || !unplanned ? null : (
+          <PressableSurface
+            onPress={() => setSearchOpen(true)}
+            feedback="shadow"
+            style={styles.scanCta}
+            accessibilityLabel={t.intake.searchCta}
+            testID="warehouse-intake-search-cta"
+          >
+            <Text style={styles.scanCtaLabel}>{t.intake.searchCta}</Text>
           </PressableSurface>
         )}
 
@@ -268,24 +353,22 @@ export function IntakeScreen() {
       >
         {intake.scanned === null ? null : (
           <>
-            <View style={styles.scannedHead}>
-              {/* Fotoğraf KARE ve büyük (kullanıcı bulgusu 24.08): çekmecenin işi "doğru malı mı
-                  tuttum" bakışıdır ve `AvatarThumb`ın 56 dp'lik DAİRESİ bunu vermiyordu — ürün
-                  fotoğrafı kare bir ambalaj, daire kırpması kutunun kenarlarını kesiyor. Katalog
-                  kartı (`ProductPhotoCard`) da kullanılmadı: o kartın taşıdığı ad, rozet ve fiyat
-                  çipi burada yok — kalanı zaten yandaki künye söylüyor. */}
-              {intake.scanned.imageUrl === null ? (
-                <View style={[styles.scannedPhoto, styles.scannedPhotoEmpty]}>
-                  <Text style={styles.scannedInitial}>{intake.scanned.productName.slice(0, 1)}</Text>
-                </View>
-              ) : (
+            {/* ÜRÜN KARTI — fotoğraf ARKA PLAN, künye onun üstünde (kullanıcı isteği 24.08).
+                Önce yan yana duruyordu (kare fotoğraf + sağda metin) ve dar kalıyordu: çekmecenin
+                işi "doğru malı mı tuttum" bakışı, o bakışa en çok yardım eden şey fotoğrafın
+                KENDİSİ. Şablonun kendi deseni de bu (`ProductPhotoCard`: ad fotoğrafın İÇİNDE);
+                o komponent kullanılmadı çünkü kare ve rozet/fiyat yuvaları taşıyor — burada
+                geniş bir bant ve üç satır künye var. Gradyan yazının okunması için, tokenlardan. */}
+            <View style={styles.scannedCard}>
+              {intake.scanned.imageUrl === null ? null : (
                 <Image
                   source={{ uri: intake.scanned.imageUrl }}
                   style={styles.scannedPhoto}
-                  accessibilityLabel={productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
+                  accessibilityIgnoresInvertColors
                   testID="warehouse-intake-scanned-photo"
                 />
               )}
+              <LinearGradient {...operationsTheme.gradient.photoBottom} style={styles.scannedScrim} pointerEvents="none" />
               <View style={styles.scannedNames}>
                 <Text style={styles.scannedName}>
                   {productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
@@ -327,31 +410,160 @@ export function IntakeScreen() {
           ardına kadar açardı. */}
       <BottomSheet
         visible={intake.learn !== null}
-        title={t.intake.scan.learnTitle}
+        title={intake.learn?.variantId === null ? t.intake.scan.learnTitle : t.intake.scan.learnUnitTitle}
         onClose={intake.cancelLearn}
         testID="warehouse-intake-learn"
       >
-        <Text style={styles.learnBody}>
-          {fillCopy(t.intake.scan.learnBody, { code: intake.learn?.code ?? '' })}
-        </Text>
-        {intake.rows.map((row) => (
-          <PressableSurface
-            key={row.variantId}
-            onPress={() => intake.teach(row.variantId)}
-            feedback="tint"
-            style={styles.learnRow}
-            accessibilityLabel={productLabel(row.productName, row.variantLabel)}
-          >
-            <Text style={styles.learnRowLabel}>{productLabel(row.productName, row.variantLabel)}</Text>
-            <Text style={styles.learnRowMeta}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
-          </PressableSurface>
-        ))}
+        {intake.learn === null ? null : intake.learn.variantId === null ? (
+          <>
+            <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnBody, { code: intake.learn.code })}</Text>
+            {intake.rows.map((row) => (
+              <PressableSurface
+                key={row.variantId}
+                onPress={() => intake.pickLearnVariant(row.variantId)}
+                feedback="tint"
+                style={styles.learnRow}
+                accessibilityLabel={productLabel(row.productName, row.variantLabel)}
+              >
+                <Text style={styles.learnRowLabel}>{productLabel(row.productName, row.variantLabel)}</Text>
+                <Text style={styles.learnRowMeta}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+              </PressableSurface>
+            ))}
+          </>
+        ) : (
+          /* 2. ADIM (23.12): bu kod NEYİ sayıyor? Çarpan öğrenme anında yazılmazsa yazılacak
+             başka yeri yok — web'de kod ekleme bilinçle kapalı (öğrenme kabuldedir, karar §1.3). */
+          <>
+            <Text style={styles.learnBody}>
+              {fillCopy(t.intake.scan.learnUnitBody, {
+                name: nameOfRow(intake.rows, intake.learn.variantId),
+              })}
+            </Text>
+            <View style={styles.learnKindRow}>
+              <OperationsChoiceChip
+                label={t.intake.scan.learnUnitSingle}
+                selected={intake.learn.kind === 'unit'}
+                onPress={() => intake.setLearnKind('unit')}
+                fill
+                testID="warehouse-intake-learn-unit"
+              />
+              <OperationsChoiceChip
+                label={t.intake.scan.learnUnitCase}
+                selected={intake.learn.kind === 'case'}
+                onPress={() => intake.setLearnKind('case')}
+                fill
+                testID="warehouse-intake-learn-case"
+              />
+            </View>
+            {intake.learn.kind === 'unit' ? null : (
+              <OperationsQtySlider
+                value={intake.learn.qtyPerCode}
+                onChange={intake.setLearnQty}
+                step={1}
+                accessibilityLabel={t.intake.scan.learnUnitQty}
+                fineLabels={{ increase: t.intake.scan.drawerQtyIncrease, decrease: t.intake.scan.drawerQtyDecrease }}
+                caption={t.intake.scan.learnUnitCaption}
+                testID="warehouse-intake-learn-qty"
+              />
+            )}
+            <PressableSurface
+              onPress={intake.confirmLearn}
+              disabled={intake.learn.kind === 'case' && intake.learn.qtyPerCode < 2}
+              feedback="shadow"
+              style={[
+                styles.cta,
+                intake.learn.kind === 'unit' || intake.learn.qtyPerCode >= 2 ? styles.ctaReady : styles.ctaIdle,
+              ]}
+              accessibilityLabel={t.intake.scan.learnConfirm}
+              testID="warehouse-intake-learn-confirm"
+            >
+              <Text style={styles.ctaLabel}>{t.intake.scan.learnConfirm}</Text>
+            </PressableSurface>
+          </>
+        )}
         <PressableSurface onPress={intake.cancelLearn} feedback="opacity" style={styles.learnCancel} accessibilityLabel={t.intake.scan.learnCancel}>
           <Text style={styles.learnCancelLabel}>{t.intake.scan.learnCancel}</Text>
         </PressableSurface>
       </BottomSheet>
     </View>
   );
+}
+
+interface VariantSearchSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  onPick: (variant: { variantId: string; productName: string; variantLabel: string }) => void;
+}
+
+/**
+ * **PLANSIZ KABULÜN ÜRÜN ARAMASI** (23.13) — sayfaya özel, kite terfi etmedi: bugün tek çağıranı
+ * var ve ikinci bir yüzey doğduğunda ortak yanı ölçülür (CLAUDE §1'in "önce var mı?" sorusu bu
+ * yönde de işler — olmayan bir ortaklık için ortak komponent yazmak da bir duplikasyondur).
+ *
+ * Arama SUNUCUDA (`GET /warehouse/variants`): katalog istemciye indirilip filtrelenmez (STACK §6).
+ * Her tuşta çağrılır ama yarış korumalı — geç dönen eski cevap yenisini ezmez.
+ */
+function VariantSearchSheet({ visible, onClose, onPick }: VariantSearchSheetProps) {
+  const [query, setQuery] = useState('');
+  const [rows, setRows] = useState<VariantSearchRowContract[]>([]);
+  const generation = useRef(0);
+
+  useEffect(() => {
+    if (!visible) {
+      // Kapanışta sıfırlanır: bir sonraki açılış önceki aramanın kuyruğuyla başlamamalı.
+      setQuery('');
+      setRows([]);
+      return;
+    }
+  }, [visible]);
+
+  const search = useCallback((next: string) => {
+    setQuery(next);
+    const run = (generation.current += 1);
+    void (async () => {
+      const result = await trackWarehouse(searchIntakeVariants(next));
+      if (run !== generation.current) return;
+      setRows(result.error === null ? result.data.variants : []);
+    })();
+  }, []);
+
+  return (
+    <BottomSheet visible={visible} title={t.intake.searchTitle} onClose={onClose} testID="warehouse-intake-search">
+      <TextInput
+        value={query}
+        onChangeText={search}
+        placeholder={t.intake.searchPlaceholder}
+        placeholderTextColor={operationsTheme.colors.muted}
+        autoFocus
+        style={styles.textInput}
+        accessibilityLabel={t.intake.searchTitle}
+        testID="warehouse-intake-search-input"
+      />
+      <Text style={styles.learnRowMeta}>{t.intake.searchHint}</Text>
+      {query.trim().length > 0 && rows.length === 0 ? (
+        <Text style={styles.learnRowMeta}>{t.intake.searchEmpty}</Text>
+      ) : null}
+      {rows.map((row) => (
+        <PressableSurface
+          key={row.variantId}
+          onPress={() => onPick(row)}
+          feedback="tint"
+          style={styles.learnRow}
+          accessibilityLabel={productLabel(row.productName, row.variantLabel)}
+          testID={`warehouse-intake-search-${row.variantId}`}
+        >
+          <Text style={styles.learnRowLabel}>{productLabel(row.productName, row.variantLabel)}</Text>
+          <Text style={styles.learnRowMeta}>{row.sku ?? ''}</Text>
+        </PressableSurface>
+      ))}
+    </BottomSheet>
+  );
+}
+
+/** Öğrenme 2. adımının başlığındaki ürün adı — satır kümesi zaten ekranın elinde, ikinci arama yok. */
+function nameOfRow(rows: readonly IntakeFormRowContract[], variantId: string): string {
+  const row = rows.find((candidate) => candidate.variantId === variantId);
+  return row === undefined ? '—' : productLabel(row.productName, row.variantLabel);
 }
 
 /** Çekmecenin künye satırı: kodun TÜRÜ ve kesinlik derecesi — SKU/tedarikçi eşleşmesi barkod kadar kesin değildir, ekran bunu söyler. */
@@ -389,13 +601,19 @@ function IntakeRow({ row, state, onPatch }: IntakeRowProps) {
       <View style={styles.lineHead}>
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle}>{name}</Text>
-          <Text style={styles.rowSub}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+          {/* Plansızda BEKLENEN YOKTUR (23.13) — kıyaslanacak sipariş yok. "beklenen 0" yazmak,
+              olmayan bir beklentiyi sıfır diye göstermek olurdu (CLAUDE §1: ölçülemeyen değer
+              sıfır değildir); satır bunun yerine hiç künye taşımaz. */}
+          {row.expectedQty === 0 ? null : (
+            <Text style={styles.rowSub}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+          )}
         </View>
         <OperationsQtyField
           value={qtyToText(state.qty)}
           onChangeText={(text) => onPatch({ qty: parseQty(text) })}
           accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
-          tone={state.qty === null ? 'muted' : state.qty === row.expectedQty ? 'neutral' : 'diff'}
+          // Sapma tonu da beklentinin VARLIĞINA bağlı: beklenen yokken her sayı "farklı" görünürdü.
+          tone={state.qty === null ? 'muted' : row.expectedQty === 0 || state.qty === row.expectedQty ? 'neutral' : 'diff'}
           testID={`warehouse-intake-qty-${row.variantId}`}
         />
       </View>
@@ -692,48 +910,47 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.muted,
   },
-  scannedHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space['2xl'],
-  },
-  /* 96 dp: kutunun üstündeki yazı seçilebilsin diye 56'dan büyütüldü (24.08). Ölçü `size`
-     ailesinden türer — `circleSm` (96) katalog dairesinin çapı ve buradaki kare onunla aynı
-     kutuyu kaplıyor; yeni bir durak açmak seti büyütürdü. */
-  scannedPhoto: {
-    width: operationsTheme.size.circleSm,
-    height: operationsTheme.size.circleSm,
+  /* Fotoğraflı bant. Yükseklik `circleSm` (96) + künyenin nefesi: kart bir kahraman görsel değil,
+     tanıma yetecek kadar fotoğraf + üç satır künye. Kırpılır (`overflow`), yoksa fotoğrafın köşeleri
+     yuvarlak çerçeveyi taşar. */
+  scannedCard: {
+    height: operationsTheme.size.circleSm + operationsTheme.space['8xl'],
     borderRadius: operationsTheme.radius.card,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
     backgroundColor: operationsTheme.colors['sand-300'],
   },
-  scannedPhotoEmpty: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  /** Fotoğraf kartın TAMAMINI kaplar; yoksa kum zemin kalır — baş harf YOK, ad zaten üstünde. */
+  scannedPhoto: {
+    ...StyleSheet.absoluteFillObject,
   },
-  scannedInitial: {
-    fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
-    fontSize: operationsTheme.text['h2-sm'],
-    color: operationsTheme.colors.muted,
+  /** Yazının okunması için alt karartma — token'dan (katalog kartının aynı gradyanı). */
+  scannedScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
   scannedNames: {
-    flexShrink: 1,
     gap: operationsTheme.space['2xs'],
+    padding: operationsTheme.space['2xl'],
   },
   scannedName: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.body,
-    color: operationsTheme.colors.ink,
+    fontFamily: operationsTheme.font.display[operationsTheme.text['card-title--font-weight']],
+    fontSize: operationsTheme.text['card-title'],
+    color: operationsTheme.colors['on-image'],
   },
   scannedMeta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['on-image-soft'],
   },
   learnBody: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.body,
     color: operationsTheme.colors.ink,
     paddingBottom: operationsTheme.space.xl,
+  },
+  learnKindRow: {
+    flexDirection: 'row',
+    gap: operationsTheme.space.xl,
   },
   learnRow: {
     flexDirection: 'row',

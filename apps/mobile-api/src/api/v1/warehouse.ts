@@ -22,6 +22,9 @@ import {
   resolveScannedCode,
   sealBox,
 } from '@lezzet/application';
+// Alt yol (paketin `./*` ihracı): arama kapısı bugün TEK yüzeyin işi — barrel'a ad eklemek, henüz
+// ortak olmayan bir şeyi paketin kamu sözleşmesine yazmak olurdu. İkinci çağıran doğduğunda terfi eder.
+import { searchVariantsForIntake } from '@lezzet/application/warehouse/variant-search';
 import {
   BoxLabelResponseSchema,
   ConfirmPreparationRequestSchema,
@@ -33,6 +36,7 @@ import {
   MarkBoxPrintedResponseSchema,
   OpenBoxResponseSchema,
   PendingIntakesResponseSchema,
+  VariantSearchResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsRequestSchema,
   ReceiveGoodsResponseSchema,
@@ -338,6 +342,22 @@ warehouse.get('/intake', async (c) => {
 
   const body: z.input<typeof PendingIntakesResponseSchema> = { intakes };
   return ok(c, PendingIntakesResponseSchema.parse(body));
+});
+
+/**
+ * **Plansız kabulün ürün araması** (23.13) — "elimde mal var, kayıtta hangisi?".
+ *
+ * Adres `/variants`, `/intake/variants` DEĞİL: aranan şey kabulün değil KATALOĞUN kaydı; kabul
+ * yalnız bugünkü tek çağıran. Boş sorgu boş liste döner (400 değil): ekran her tuşta çağırıyor ve
+ * "henüz yazmadın" bir hata değil, akışın normal hâli.
+ *
+ * PARA ÇIKMAZ: satır şeması fiyat taşımıyor (09.14 — depo yolu fiyat görmez).
+ */
+warehouse.get('/variants', async (c) => {
+  const variants = await searchVariantsForIntake(serviceDb(), { query: c.req.query('q') ?? '' });
+
+  const body: z.input<typeof VariantSearchResponseSchema> = { variants };
+  return ok(c, VariantSearchResponseSchema.parse(body));
 });
 
 /**

@@ -323,16 +323,37 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     satıra yazmaz (testli); PO'da olmayan ürün çekmece bile açmaz. Jest: seçiciye 9, tarama
     akışına 7 (davranış değişti: onaysız ekleme kalktı). Toplama okutması BİLEREK sessiz kaldı —
     çekmecenin oraya da gelip gelmeyeceği ayrı karar (tempo ödünleşmesi), kullanıcıya soruldu.
-- [ ] (23.12) **Öğrenme çekmecesine tür + çarpan** — tanınmayan kod öğretilirken "tekil mi koli
-  mi, koliyse kaç adet?" sorulur (aynı adet seçici); bugün her öğretilen kod 1 adetlik yazılıyor
-  ve koli kodunu doğru çarpanla öğretmenin yolu yok (kapı `kind`/`qtyPerCode` alıyor, ekran
-  göndermiyor). · touches: `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts}`,
-  `apps/mobile/src/lib/api/warehouse.ts`
-- [ ] (23.13) **Plansız kabul: operasyon ürün araması + satır açma** — PO'suz gelen mal (kapı
-  `/intake/receive` hazır, ekran plansız modda satır açamıyor). Okutulan kod tanınıyorsa ürün
-  bulunur; tanınmıyorsa arama/öğrenme ile bağlanır; kabul kapanınca kaydı oluşur. PO'lu kabulün
-  "listede olmayan satır açılmaz" duvarı burada YOKTUR (plansızın doğası "liste yok"). ·
-  touches: `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/screens/warehouse/*`
+- [x] (23.12) **Öğrenme çekmecesine tür + çarpan** — tanınmayan kod öğretilirken "tekil mi koli
+  mi, koliyse kaç adet?" sorulur. · touches: `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`
+  - *Bitti:* öğrenme iki adımlı (ürün → bu kod neyi sayıyor); koli seçilip çarpan verilince kod
+    ÇARPANIYLA yazılıyor ve satıra o kadar ekleniyor. Jest +3.
+  - **Durum (24.08) — YAZILDI.** Açık şuydu: kapı `kind`/`qtyPerCode` alıyordu ama ekran
+    göndermiyordu, yani her öğretilen kod **1 adetlik** oluyordu (ölçüldü 23.08). Sonucu sessiz ve
+    KALICIYDI — koli her okutmada 1 sayılır, depocu adedi hep elle düzeltir ve sebebi görünmezdi;
+    web'de kod ekleme bilinçle kapalı olduğu için (öğrenme kabuldedir, karar §1.3) doğru çarpanı
+    yazmanın başka yolu da yoktu. Varsayılan TEKİL: koli olduğunu ancak depocu bilir ve söylemesi
+    bir dokunuş; tersini varsaymak her pakete uydurma bir çarpan yazmak olurdu. Tekile dönüşte
+    çarpan 1'e çekilir (`unit` kodun çarpanı veride de 1 olmak zorunda — 0047 kısıtı). **Koli
+    seçilip çarpan 1 kalırsa kapı AÇILMAZ**: "1 adetlik koli" bir beyan değil, eksik cevaptır.
+    `already_bound` yarışında adet yine 1 — çarpan artık ötekinin yazdığı kaydın bilgisi, bizim
+    tahminimiz değil.
+- [x] (23.13) **Plansız kabul: ürün araması + satır açma** — PO'suz gelen mal. · touches:
+  `packages/application/src/warehouse/variant-search.ts`, `packages/types/src/contracts/warehouse-api.schema.ts`,
+  `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/lib/api/warehouse.ts`,
+  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-screen.test.tsx,messages.json}`
+  - *Bitti:* bekleyen sevkiyat listesinden "Siparişsiz mal geldi" ile girilir; ürün aramayla ya da
+    okutmayla satır açılır, kabul `POST /intake/receive` ile yazılır (kapı 21.11'den beri hazırdı).
+  - **Durum (24.08) — YAZILDI, kapı gerçek veriyle ölçüldü.** Arama `searchVariantsForIntake`:
+    KOD önce (`findByCode` zinciri — eşleşirse ada hiç bakılmaz, kod kesin kimliktir), sonra ad
+    (üç dilde `ilike`). Ölçüm: `"baklava"` → 27 boy · `8691000007919` → tek satır, çarpan 1 ·
+    `18691000047516` → tek satır, çarpan 24 · eşleşmeyen sorgu → boş. **PO'lu kabulle iki noktada
+    TERS ve ikisi de bilinçli:** (1) okutma SATIR AÇAR — orada küme siparişten gelir ve dışarıdan
+    satır eklemek "beklenmedik mal"ı fark raporunun göremeyeceği yere yazmak olurdu; burada küme
+    zaten yoktur. (2) **beklenen adet YOKTUR** — "beklenen 0" yazılmaz, satırın künyesi hiç
+    çizilmez ve fark özeti bu satırları saymaz (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+    Arama düğmesi de yalnız plansızda çizilir. Uç `GET /warehouse/variants?q=…`; boş sorgu boş
+    liste döner (400 değil — ekran her tuşta çağırıyor, "henüz yazmadın" bir hata değil) ve satır
+    şeması PARA taşımaz (09.14).
 
 - [x] (23.14) **Fiziksel test etiketi seti** — kâğıt israfını bitiren karar (kullanıcı 24.08:
   *"elimdeki etiketleri sistemin test etiketi olarak tanımla, her testi bunlar üzerinden yapalım"*).
@@ -375,6 +396,16 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     ve kod okunabiliyor; cihaz turunda ölçülecek olan artık yalnız KAMERANIN bu simgeleri gerçek
     kâğıttan çözmesi. İlk düzende metin guard çubuklarına biniyordu (ölçüldü, düzeltildi: çubukların
     altında sessiz şerit).
+  - **SÜRÜKLEME ARIZASI (kullanıcı bulgusu 24.08) — düzeltildi, cihaz ölçümü bekliyor.** Adet
+    topuzu sürüklenince değer değişmiyordu; ± düğmeleri çalıştığı için akış tıkalı değildi ama
+    tasarlanan etkileşim ölüydü. Kanıt zinciri koddan çıkarıldı: çekmecenin kendi tutamak
+    sürüklemesi `ScrollView`in DIŞINDA ve çalışıyor, ray İÇİNDE. İki eksik birden bulundu ve ikisi
+    de RNGH'nin belgelenmiş kuralı: (1) RN `Modal` kendi pencere hiyerarşisini kurar ve uygulama
+    kökündeki `GestureHandlerRootView` oraya UZANMAZ — jest kökü çekmecenin içinde ayrıca gerekir;
+    (2) Android'de dıştaki kaydırma içteki pan ile yarışır ve dokunmayı alabilir — ilişki AÇIKÇA
+    kurulmalı. Kök `BottomSheet`e eklendi (kitteki her çekmecenin içi artık jest alabilir);
+    rayın eşikleri kondu: `activeOffsetX` yatay niyeti, `failOffsetY` dikey kaydırmayı ayırıyor,
+    dokunulan noktaya atlama eşiği beklemiyor (`onBegin` aktivasyondan önce çalışır).
   - **SKU eşleşmesi bilerek sette YOK:** o kodun bir varyantın SKU'sunun kendisi olması gerekir,
     yani sabitlenemez (SKU fiyat dosyalarının anahtarı; test için değiştirmek fiyat eşlemesini
     bozardı). Zincirin o halkası jest + entegrasyonda ölçülü.

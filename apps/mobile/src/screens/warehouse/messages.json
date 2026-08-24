@@ -176,6 +176,17 @@
     },
     "pendingHeading": "BEKLEYEN SEVKİYATLAR",
     "pendingLines": "{n} kalem",
+    "captionUnplanned": "plansız kabul · siparişsiz mal",
+    "unplannedCta": "Siparişsiz mal geldi",
+    "unplannedEmpty": {
+      "title": "Henüz ürün eklenmedi",
+      "body": "Gelen malın barkodunu okutun ya da arayarak ekleyin. Tedarik siparişi olmadığı için beklenen adet yoktur; ne geldiyse onu yazarsınız."
+    },
+    "searchCta": "＋ Ürün ara ve ekle",
+    "searchTitle": "Hangi ürün geldi?",
+    "searchPlaceholder": "Ürün adı, SKU ya da barkod",
+    "searchEmpty": "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin.",
+    "searchHint": "Kod yazarsanız (barkod/SKU) doğrudan o ürün bulunur.",
     "emptyForm": {
       "title": "Bu siparişin açık kalemi yok",
       "body": "Sipariş ya kapanmış ya da satırları başka bir kabulde yazılmış."
@@ -238,7 +249,14 @@
       "learnTitle": "Bu kod hangi ürün?",
       "learnBody": "{code} sistemde kayıtlı değil. Satırı seçin — kod o ürüne öğretilir, bir daha sorulmaz.",
       "learnCancel": "Şimdi değil",
-      "learned": "Kod öğrenildi — {name} satırına 1 adet eklendi.",
+      "learnUnitTitle": "Bu kod neyi sayıyor?",
+      "learnUnitBody": "{name} seçildi. Bu barkod tek bir paketin üstünde mi, yoksa kolinin üstünde mi? Koliyse bir okutmanın kaç adet sayılacağını söyleyin — sonraki kabullerde sormayacağız.",
+      "learnUnitSingle": "Tek paket",
+      "learnUnitCase": "Koli",
+      "learnUnitQty": "Bir kolideki adet",
+      "learnUnitCaption": "bir okutma = bu kadar adet",
+      "learnConfirm": "Kodu öğret",
+      "learned": "Kod öğrenildi — {name} satırına {n} adet eklendi.",
       "alreadyBound": "Bu kod az önce {name} ürününe bağlanmış — satır oradan sayıldı.",
       "error": "Kod çözülemedi — bağlantıyı kontrol edip yeniden okutun."
     }

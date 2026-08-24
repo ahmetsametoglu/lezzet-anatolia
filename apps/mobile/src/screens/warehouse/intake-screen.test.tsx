@@ -12,9 +12,10 @@ import { resetWarehouseStatus } from './warehouse-status';
   çizilmediğinin kanıtı o test.
 */
 
-const mockParams: { purchaseOrderId?: string } = {};
+const mockParams: { purchaseOrderId?: string; unplanned?: string } = {};
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ navigate: jest.fn(), back: jest.fn(), push: mockPush }),
   useLocalSearchParams: () => mockParams,
 }));
 
@@ -75,8 +76,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  mockPush.mockReset();
   resetWarehouseStatus();
   mockParams.purchaseOrderId = PO_ID;
+  delete mockParams.unplanned;
 });
 
 describe('D2 · mal kabul', () => {
@@ -213,5 +216,66 @@ describe('D2 · mal kabul', () => {
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-warning')).toHaveTextContent(/raf ömrü bilinmiyor/));
     // Depo ekranı fiyat görmez: `repricedCount` hiçbir hâlde ekrana çıkmaz.
     expect(screen.queryByText(/fiyat/i)).toBeNull();
+  });
+});
+
+/*
+  PLANSIZ KABUL (23.13) — PO'suz gelen mal. PO'lu kabulün TERSİ iki noktada: satır kümesi yok
+  (depocu kurar) ve beklenen adet yok (kıyaslanacak sipariş yok).
+*/
+describe('D2 · plansız kabul', () => {
+  beforeEach(() => {
+    delete mockParams.purchaseOrderId;
+    mockParams.unplanned = '1';
+  });
+
+  it('boş başlar ve ürünü ARAMADAN ekler — beklenen adet YAZILMAZ', async () => {
+    fetchMock.mockImplementation((url) => {
+      if (String(url).includes('/warehouse/variants')) {
+        return Promise.resolve(
+          ok({
+            variants: [
+              {
+                variantId: ROW_A.variantId,
+                productName: ROW_A.productName,
+                variantLabel: ROW_A.variantLabel,
+                sku: 'SKU-1',
+                imageUrl: null,
+                qtyPerCode: null,
+              },
+            ],
+          }),
+        );
+      }
+      throw new Error(`beklenmeyen istek: ${String(url)}`);
+    });
+
+    await render(<IntakeScreen />);
+    // Sunucudan form OKUNMAZ: plansızda cevabı baştan bilinen bir soru sorulmaz.
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-unplanned-empty')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByTestId('warehouse-intake-search-cta'));
+    await fireEvent.changeText(screen.getByTestId('warehouse-intake-search-input'), 'baklava');
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-search-${ROW_A.variantId}`)).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-search-${ROW_A.variantId}`));
+
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeOnTheScreen());
+    // "beklenen 0" YAZILMAZ: olmayan bir beklentiyi sıfır diye göstermek, ölçülemeyeni sıfıra
+    // düşürmektir (CLAUDE §1).
+    expect(screen.queryByText(/beklenen/)).toBeNull();
+  });
+
+  it('bekleyen sevkiyat listesinden plansız kabule geçilir', async () => {
+    delete mockParams.unplanned;
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        ok({ intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X', lineCount: 2 }] }),
+      ),
+    );
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId('warehouse-intake-unplanned-cta'));
+
+    expect(mockPush).toHaveBeenCalledWith('/intake?unplanned=1');
   });
 });

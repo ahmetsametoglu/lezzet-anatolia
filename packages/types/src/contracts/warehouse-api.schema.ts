@@ -687,6 +687,34 @@ export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type ResolveCodeResponse = z.infer<typeof ResolveCodeResponseSchema>;
 
+/**
+ * **Plansız kabulün ürün araması** (23.13) — `GET /warehouse/variants?q=…`.
+ *
+ * PO'lu kabulde arama YOKTUR ve olmamalı (satır kümesi siparişten gelir; katalog araması açmak
+ * yanlış ürüne öğretmenin kapısıdır — karar §1.3). Plansızda küme yoktur: mal gelmiş, siparişi
+ * girilmemiştir; depocu ürünü seçemezse kabul hiç yazılamaz.
+ *
+ * **Para taşımaz:** satırda fiyat alanı yok — depo yolu fiyat görmez (09.14).
+ */
+export const VariantSearchRowSchema = z.object({
+  variantId: z.string().uuid(),
+  productName: z.string(),
+  variantLabel: z.string(),
+  sku: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  /** Kod eşleşmesiyle bulunduysa bir okutmanın kaç adet saydığı; ad aramasında `null`. */
+  qtyPerCode: z.number().int().positive().nullable(),
+});
+export type VariantSearchRowContract = z.infer<typeof VariantSearchRowSchema>;
+
+/**
+ * Sayfalanmaz: arama zaten DARALTMA aracı ve kapı kendi tavanını taşıyor (`DEFAULT_LIMIT`).
+ * Tavansız bir okuma bir gün sessizce kesilirdi; sayfalı bir arama ise depocuyu ikinci sayfaya
+ * göndermek olurdu — cevap ilk turda gelmeliyse sorgu daraltılmalıdır.
+ */
+export const VariantSearchResponseSchema = z.object({ variants: z.array(VariantSearchRowSchema) });
+export type VariantSearchResponse = z.infer<typeof VariantSearchResponseSchema>;
+
 /** Öğrenen eşleme: tanınmayan kod bir varyanta bağlanır — kabul ekranının "bu kod hangi ürün?"
     cevabı. `kind`/`qtyPerCode` verilmezse `unit`/1 (koli olduğu biliniyorsa çarpanla gelir). */
 export const LearnCodeRequestSchema = z.object({

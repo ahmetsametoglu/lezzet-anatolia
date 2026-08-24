@@ -48,7 +48,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 7/11 (+2 kısmi) |
 | 13 | `13-analitik.md` | Analitik | sürüyor | 6/8 (+2 kısmi) |
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 7/11 |
-| 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | sürüyor | 6/19 (+8 kısmi) |
+| 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | sürüyor | 7/19 (+8 kısmi) |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 5/9 (+2 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 8/11 (+1 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/13 (+2 kısmi) |
@@ -56,7 +56,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 87/104 (+13 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 21/39 (+11 kısmi) |
-| 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | sürüyor | 9/14 (+2 kısmi) |
+| 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | sürüyor | 11/14 (+2 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

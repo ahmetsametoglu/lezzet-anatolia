@@ -14,6 +14,7 @@ import {
   RecordAdjustmentResponseSchema,
   ResolveCodeResponseSchema,
   SealBoxResponseSchema,
+  VariantSearchResponseSchema,
   WarehouseReturnResponseSchema,
   type ConfirmPreparationRequest,
   type LearnCodeRequest,
@@ -117,6 +118,14 @@ export function markBoxPrinted(boxId: string): Promise<ApiResult<z.infer<typeof 
  */
 export function fetchPendingIntakes(): Promise<ApiResult<z.infer<typeof PendingIntakesResponseSchema>>> {
   return authorizedFetch('/api/v1/warehouse/intake', PendingIntakesResponseSchema);
+}
+
+/**
+ * **Plansız kabulün ürün araması** (23.13). Boş sorgu boş liste döner — ekran her tuşta çağırır ve
+ * "henüz yazmadın" bir hata değil.
+ */
+export function searchIntakeVariants(query: string): Promise<ApiResult<z.infer<typeof VariantSearchResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/variants?q=${encodeURIComponent(query)}`, VariantSearchResponseSchema);
 }
 
 /** **Tedarik siparişinden dolu kabul formu** (D2). Boş dizi = plansız alım (form elle doldurulur). */
