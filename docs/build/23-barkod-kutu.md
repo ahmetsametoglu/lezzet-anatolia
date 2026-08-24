@@ -182,7 +182,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     dev-only `PrintProbe` paneli (etiket kartının içinde; release'te ve modülsüz derlemede hiç
     çizilmez). Desen `assets/print/needle-test.png` — SDK yalnız yerel `file://` bastığı için
     `expo-asset` ile cihaza indirilir.
-- [~] (23.6) **Kutu şeması + döngüsü**: `order_box`/`order_box_item` + `seal_order_box` RPC (kutu +
+- [x] (23.6) **Kutu şeması + döngüsü**: `order_box`/`order_box_item` + `seal_order_box` RPC (kutu +
   picks TEK transaction; ⚠ `record_preparation` picks yazımı kalem başına ABSOLÜT — çok kutulu
   siparişte birleşimi `sealBox` kapısı kurar) + `boxCompletion` motoru + mobil toplama ekranı +
   web hazırlık paneline kutu özeti. Kutu kodu `reference_no` DEĞİL. Kutusuz sipariş eski yoldan
@@ -305,13 +305,18 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   - **DB'YE VURAN — KALAN:**
     - Mal kabulde okutma → kod eşleşmesinin doğru partiye yazması (`receive_intake` yolu).
 
-- [~] (23.11) **Okutma çekmecesi + elastik adet seçici (mal kabul)** — kullanıcı tasarımı 23.08:
+- [x] (23.11) **Okutma çekmecesi + elastik adet seçici (mal kabul)** — kullanıcı tasarımı 23.08:
   okutma bir SAYIM değil TANITIMDIR. Kod çözülünce ürün kartı çekmecesi açılır (görsel + ad +
   kaynak künyesi + beklenen), varsayılan adet okutulan birimin miktarı (koli → çarpan, tekil → 1);
   "10 koli geldi" gerçeği adet artırılarak söylenir, satıra ONAYLA yazılır. · touches:
   `apps/mobile/src/components/operations/qty-slider.tsx`, `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
   `packages/types/src/contracts/warehouse-api.schema.ts`, `packages/application/src/warehouse/{scan.ts,names.ts}`
-  - **Durum (23.08) — YAZILDI, cihaz bakışı bekliyor (kullanıcı).** `OperationsQtySlider`:
+  - **Durum (24.08) — YAZILDI ve CİHAZDA ÖLÇÜLDÜ; tek açık kalem sürükleme jestinin turu.**
+    Kâğıttan okutulan koli kodu (ITF-14) çekmeceyi 24 adetle açtı; "1 koli" dökümü, beklenen
+    çentiği ve satıra yazma ölçüldü. Kullanıcı bulgusuyla iki rötuş yapıldı (fotoğraf arka plana
+    taşındı · eksen beklenen adete göre daraldı) ve sürükleme arızası düzeltildi — o düzeltmenin
+    cihaz doğrulaması kaldı (künye 23.14'te).
+  - *(ilk yazım künyesi)* `OperationsQtySlider`:
     elastik eksenli seçici — ray beklenen adetle açılır (yoksa 10 kaba adım), sürükleme KABA
     adımla atlar (okutulan birimin çarpanı), ± düğmeleri 1'er; topuz SAĞ UCA dayalı TUTULUNCA
     değer akar ve pencere onunla büyür (hızlanarak — `growthFactor`), bırakınca pencere değerin
@@ -438,6 +443,22 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     bayat *"bekleyen sevkiyat listesi henüz uçtan gelmiyor"* dipnotu ve ekranın yanlış
     *"plansız kabul"* altyazısı da düzeltildi — ikincisi olmayan bir yetenek vaat ediyordu (plansız
     kabul 23.13'ün işi). Cihazda uçtan uca ölçüldü: giriş → liste → ilk satır → okutma → çekmece.
+
+## Kalan cihaz turu (kâğıtla)
+
+Modülün İŞ satırları kapandı; aşağıdakiler yazılmış ve makinede doğrulanmış davranışların gerçek
+cihazda son kez görülmesi. Kâğıt set elde ve kalıcı (23.14) — tur her `db:refresh` sonrası aynı
+etiketlerle tekrarlanabilir, yeni basım gerekmez.
+
+- **Sürükleme jesti** — düzeltme yazıldı (jest kökü çekmecenin içine + ray eşikleri), cihazda
+  ölçülmedi. Ölçüm: adet topuzunu sağa çek → sayı kaba adımlarla artmalı; çekmeceyi dikey kaydır →
+  ray parmağı bırakmalı.
+- **TOPLAMA etiketi** → D1 kutu döngüsü (kutuya ekleme).
+- **YABANCI ÜRÜN etiketi** → iki ekranda da ret yolu ("bu siparişte yok" · "kaleminde yok").
+- **TANINMAYAN etiketi** → öğrenmenin iki adımı (ürün → tür/çarpan); tur sonrası o barkod satırı
+  silinmeli, yoksa etiket bir daha "tanınmayan" olmaz.
+- **KUTU QR etiketi** → kurye yükleme + kapıda teslim okutması.
+- **Plansız kabul** (23.13) → "Siparişsiz mal geldi" → arama/okutma ile satır → kabul yazılır.
 
 ## Netleşecekler
 
