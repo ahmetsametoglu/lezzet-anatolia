@@ -4,9 +4,9 @@ import { revalidatePath } from 'next/cache';
 import {
   generateConversationDraft,
   linkConversationCustomer,
+  recordConversationOptIn,
   recordInboundMessage,
   recordOutboundMessage,
-  updateCustomerPreferences,
 } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
@@ -320,22 +320,11 @@ export async function recordConversationOptInAction(input: unknown): Promise<Act
   try {
     await requireAdmin();
     const parsed = ConversationOptInSchema.parse(input);
-    const db = serviceDb();
-    const service = new ConversationService(db);
-    const conversation = await service.getById(parsed.conversationId);
-    if (!conversation) return { data: null, error: 'Konuşma bulunamadı — ekranı tazeleyin.' };
-
-    await service.setOptIn(parsed.conversationId, parsed.granted);
-
-    if (conversation.source === 'whatsapp' && conversation.customerId) {
-      // `source` İZNİN NEREDEN geldiğidir ve operatöre ham hâliyle görünür ("… · whatsapp") —
-      // hesap sayfasından verilen izinle sohbette verilen izin ayırt edilebilmeli.
-      await updateCustomerPreferences(db, {
-        profileId: conversation.customerId,
-        source: 'whatsapp',
-        marketingConsent: { whatsapp: parsed.granted },
-      });
-    }
+    /* Çift yazımın kuralı PAKETTE (`recordConversationOptIn`, 24.08): burada durduğu sürece
+       sınanamıyordu — action guard'la başlıyor, guard oturum istiyor, depoda taklit yok. Kural
+       taşınınca mobil izin ucu açıldığında ikinci bir kopyası da doğmayacak. */
+    const sonuc = await recordConversationOptIn(serviceDb(), parsed);
+    if (sonuc.status === 'refused') return { data: null, error: 'Konuşma bulunamadı — ekranı tazeleyin.' };
 
     refresh();
     return { data: { granted: parsed.granted }, error: null };

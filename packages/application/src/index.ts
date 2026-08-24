@@ -156,6 +156,8 @@ export { customerSupportTools } from './ticket/support-tools';
 export { recordInboundMessage, recordOutboundMessage } from './messaging/record';
 // Kimlik bağlama KAPISI (15.19) — kanıt sunucuda doğrulanır; ikinci yüzey kendi kapısını yazmasın.
 export { linkConversationCustomer } from './messaging/link';
+// Sohbet izninin çift yazımı (15.12) — kural tek yerde, iki yüzey aynı kapıdan.
+export { recordConversationOptIn } from './messaging/opt-in';
 export {
   sendOutboundMessage,
   unconfiguredSender,
@@ -167,6 +169,7 @@ export {
 } from './messaging/send';
 export type { RecordMessageInput } from './messaging/record';
 export type { LinkProof, LinkOutcome } from './messaging/link';
+export type { ConversationOptInOutcome } from './messaging/opt-in';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
 // Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden
