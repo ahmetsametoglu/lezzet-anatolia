@@ -43,6 +43,12 @@ const productId = `00000000-0000-4000-8000-${String(stamp).slice(-12).padStart(1
  * "(silinmiş ürün)" ile dolduruyordu). Teardown, testin geçmesine bağlı olmamalı.
  */
 const soldOutOnlyProductId = `00000000-0000-4000-8001-${String(stamp).slice(-12).padStart(12, '0')}`;
+/**
+ * **GERÇEK** bir ürün — sentetik olamaz (08.56): özet, ürün kimliği yazılmamış satırlarda kırılımı
+ * `product_variant` tablosundan çözüyor ve o tablonun `product`a FK'si var. Kimlik testin içinde
+ * doğuyor, temizliği `afterAll`'da: teardown testin geçmesine bağlı olmamalı (üstteki künye).
+ */
+let gercekUrunId: string | null = null;
 const searchQuery = `lahmacun-${stamp}`;
 const campaign = `kampanya-${stamp}`;
 /**
@@ -61,7 +67,8 @@ const at = (hour: number) => `${day}T${String(hour).padStart(2, '0')}:30:00.000Z
 afterAll(async () => {
   await purgeTestData(db, {
     analyticsSessionKeys: [sessionKey, otherKey],
-    productIds: [productId, soldOutOnlyProductId],
+    // Gerçek ürün de purge'e giriyor: varyantı ve özet satırı onunla düşer (sıra `cleanup.ts`'te).
+    productIds: [productId, soldOutOnlyProductId, ...(gercekUrunId ? [gercekUrunId] : [])],
     analyticsSearchQueries: [searchQuery],
   });
   // GÜN özeti satırları testin ürettiği güne ait; başka koşular da aynı güne yazabildiği için
@@ -194,6 +201,45 @@ describe('sinyal özetleri', () => {
     expect(signal?.cartCount).toBe(1);
     // 1 / 2 — payda TOPLAM görüntüleme (3) olsaydı 0.33 çıkardı ve ürün olduğundan ilgisiz görünürdü.
     expect(signal?.cartRate).toBeCloseTo(0.5);
+  });
+
+  /**
+   * **ATICI'nın yazdığı şekle bakan tek test** (08.56 · 24.08).
+   *
+   * Üstteki sınama `product_id`yi ELDEN veriyor ve geçiyordu; oysa sepete ekleme kapısı öyle
+   * yazmıyor. `AddToCartIntent` ürünü değil VARYANTI taşıyor (bilinçli — `cart-types.ts` künyesi:
+   * istemcinin elindeki `CartEntry` ürünü tanımıyor, sunucuda doldurmak en sıcak yazma yoluna
+   * fazladan bir okuma eklerdi), atıcı da `product_id: null` yazıyor. Özet o satırları eliyordu ve
+   * `cart_count` **yapısal olarak sıfırdı**.
+   *
+   * Kırık olan rollup DEĞİLDİ, onu kapsayan test yoktu: mevcut test doğru olanı doğruluyordu.
+   * Bu yüzden fikstür ham `insert` ile ve KAPININ yazdığı şekilde kuruluyor — ürün kimliği YOK,
+   * özne varyant. Gerçek bir `product_variant` satırı şart: çözüm o tablodan okunuyor.
+   */
+  it('ürün kimliği YAZILMAMIŞ sepete ekleme de sayılır — özet onu varyanttan çözer', async () => {
+    const { data: urun } = await db
+      .from('product')
+      .insert({ name: { tr: `Atıcı Kanıtı ${stamp}` }, slug: `atici-kaniti-${stamp}`, status: 'active' })
+      .select('id')
+      .single();
+    gercekUrunId = urun!.id as string;
+    const { data: boy } = await db
+      .from('product_variant')
+      .insert({ product_id: gercekUrunId, label: { tr: '1 kg' } })
+      .select('id')
+      .single();
+
+    await db.from('analytics_event').insert([
+      // Kapının yazdığı hâl: ürün kimliği YOK, özne varyant.
+      { created_at: at(14), type: 'add_to_cart', session_key: sessionKey, subject_type: 'variant', subject_id: boy!.id, surface: 'web' },
+      // PAKET satırı atfedilmemeli: paket bir ürün değil, ürünlerin demeti.
+      { created_at: at(14), type: 'add_to_cart', session_key: sessionKey, subject_type: 'bundle', subject_id: gercekUrunId, surface: 'web' },
+    ]);
+    await daily.buildAll(day);
+
+    const [signal] = await products.signals(day, day, 200).then((rows) => rows.filter((r) => r.productId === gercekUrunId));
+    // Düzeltmeden önce bu sayı 0'dı ve hiçbir test bunu görmüyordu.
+    expect(signal?.cartCount).toBe(1);
   });
 
   it('ürün oranı payda SIFIRKEN `null` — sıfır değil (ölçülemeyen değer sıfır değildir)', async () => {

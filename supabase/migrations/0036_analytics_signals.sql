@@ -108,8 +108,34 @@ create index analytics_daily_source_day_idx on public.analytics_daily_source (da
 /**
  * Ürün kırılımını üretir (idempotent) → yazılan satır sayısı.
  *
- * `product_id is null` satırlar DIŞARIDA: kategori/koleksiyon görüntülemeleri ürün sinyali değildir
+ * Ürüne bağlanamayan satırlar DIŞARIDA: kategori/koleksiyon görüntülemeleri ürün sinyali değildir
  * ve toplanırlarsa "ilgi" sıralaması listeleme sayfalarıyla dolar.
+ *
+ * ── ÜRÜN KİMLİĞİ VARYANTTAN DA ÇÖZÜLÜR (08.56 · 24.08, ölçülerek) ────────────
+ * `cart_count` **yapısal olarak sıfırdı** ve sebebi bir hesap hatası değil, üç doğru parçanın
+ * birbirine değmemesiydi: `AddToCartIntent` `productId` taşımıyor (bilinçli — `cart-types.ts`
+ * künyesi: istemcinin elindeki `CartEntry` ürünü değil VARYANTI tanıyor ve sunucuda doldurmak en
+ * sıcak yazma yoluna fazladan bir okuma eklerdi), atıcı bu yüzden `product_id: null` yazıyor, ve
+ * bu fonksiyon o satırları `group by`a girmeden eliyordu.
+ *
+ * **Kararın kendi telafisi yapılmamıştı.** Aynı künye *"ürün kırılımı varyant tablosundan
+ * çözülebiliyor"* diyordu — çözüm hiçbir yerde yazılmamıştı. Eksik olan kimliğin taşınması değil,
+ * taşınmayan kimliğin yerine konacak okuma.
+ *
+ * **Düzeltme sıcak yazma yoluna DEĞİL buraya kondu.** Üç gerekçe: (1) `AddToCartIntent`e alan
+ * eklemek kayıtlı kararı bozardı ve gerekçesi hâlâ geçerli; (2) burası **geriye dönük** çalışır —
+ * bugüne dek yazılmış satırlar da sayılmaya başlar, oysa kimliği ileriden taşımak yalnız yeni
+ * satırları kurtarırdı; (3) native uç `product_id`yi kendisi dolduruyor ve `coalesce`'un ilk terimi
+ * olarak çalışmaya devam eder — iki yüzey ayrışmaz.
+ *
+ * **PAKET satırı atfedilmez:** `subject_type = 'bundle'` join'e girmez, `product_id` de boştur, yani
+ * satır düşer. Paket bir ürün değil, ürünlerin demeti; birine atfetmek ürün özetini yanlış beslerdi
+ * (mobil ucun paket görüntülemesinde verdiği kararla aynı).
+ *
+ * **Etkisi ölçülmüştü, üç yerde:** yönetim ekranı her ürün için "1.240 → 0" yazıyordu ve yönetici
+ * bunu "kimse sepete atmıyor" diye okurdu · `cartRate` payı hep 0 · vitrin seçkisinin sıralaması
+ * (`home.ts`) `viewCount + cartCount` diyor ve ikinci terim hiçbir şey yapmıyordu. Üçü de hata
+ * vermiyordu — `CLAUDE §1`: *"Ölçülemeyen değer SIFIR değildir."*
  */
 create or replace function public.build_analytics_daily_product(p_day date)
 returns integer
@@ -123,7 +149,7 @@ begin
   insert into public.analytics_daily_product as t
     (day, product_id, view_count, cart_count, share_count, sellable_view_count, session_count, updated_at)
   select p_day,
-         e.product_id,
+         coalesce(e.product_id, v.product_id),
          count(*) filter (where e.type = 'product_view')::int,
          count(*) filter (where e.type = 'add_to_cart')::int,
          count(*) filter (where e.type = 'share')::int,
@@ -131,9 +157,13 @@ begin
          count(distinct e.session_key)::int,
          now()
     from public.analytics_event e
+    -- Kimliği YAZILMAMIŞ ama çözülebilir satırlar için (08.56): olay varyantı işaret ediyorsa ürünü
+    -- ondan okunur. `left join` çünkü satırların çoğu ürünü zaten taşıyor ve join'e ihtiyacı yok.
+    left join public.product_variant v
+           on e.subject_type = 'variant' and v.id = e.subject_id
    where e.created_at >= p_day and e.created_at < p_day + 1
-     and e.product_id is not null
-   group by e.product_id
+     and coalesce(e.product_id, v.product_id) is not null
+   group by coalesce(e.product_id, v.product_id)
   on conflict on constraint analytics_daily_product_key do update
     set view_count = excluded.view_count,
         cart_count = excluded.cart_count,

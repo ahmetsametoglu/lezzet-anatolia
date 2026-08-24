@@ -1477,7 +1477,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
   **İş dar, sözleşme hazır:** `invite-api.schema.ts:102-104` zaten `remainingUses` + `maxUses` taşıyor. Görünüme iki alan, banda bir koşul, üç dile iki cümle. Metin anahtarları native ile birebir aynı olmalı (`neighborRemaining` · `neighborFull`) — yoksa aynı müşteri uygulamada başka, tarayıcıda başka bir söz duyar.
 
-- [ ] (08.56) **`cart_count` YAPISAL OLARAK SIFIR — özet, kimliği varyanttan çözmüyor** *(mobil şeridin gözlemi 24.08, denetim aynı gün doğruladı)* · `touches (planlanan): supabase/migrations/0036_analytics_signals.sql, packages/database/src/services/analytics.test.ts`
+- [x] (08.56) **`cart_count` YAPISAL OLARAK SIFIR — özet, kimliği varyanttan çözmüyor** *(mobil şeridin gözlemi 24.08, denetim aynı gün doğruladı)* · `touches: supabase/migrations/0036_analytics_signals.sql, packages/database/src/services/analytics.test.ts`
 
   **Ölçüldü, üç parça da doğru:** `AddToCartIntent` (`cart-types.ts:459`) `productId` taşımıyor · `apps/web/lib/cart/actions.ts:179` sabit `productId: null` yazıyor · `build_analytics_daily_product` (`0036:135`) `and e.product_id is not null` ile **gruplamadan önce** eliyor. Sonuç: `count(*) filter (where e.type = 'add_to_cart')` her zaman **0**.
 
@@ -1492,8 +1492,25 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   **Sıra:** analitik alanında başka şerit çalışıyor (`0035` açık, `analytics.schema.ts` değişmiş, `surface` kolonu geliyor). Aynı migration ailesine iki şerit birden girmemeli — o pencere kapanınca alınacak.
 
   - **Durum (24.08 — tamamlandı):** onay sayfası artık kontenjanı söylüyor ve dolduysa paylaşım düğmesini çizmiyor.
-    **Kural ORTAK PAKETE alındı** (`remainingNeighborInviteUses`): formül mobil ucun taşıma katmanında (`apps/mobile-api/.../invite.ts`) yaşıyordu; web aynı cümleyi kuracakken ikinci bir kopya doğacaktı. İki yüzeyin aynı müşteriye farklı sayı söylemesi, kuralın kendisinden pahalı bir arıza — hele fark yalnız iptal edilmiş bir sipariş ya da düşürülmüş bir ayar varken görünürken. `Math.max(0, …)` tabanı savunmacı değil gerekli: tavan davet açılırken donduruluyor ve ayar sonradan düşürülebilir; çıplak çıkarma o gün *"-1 komşu daha yararlanabilir"* yazardı.
+    **Kural ORTAK PAKETE alındı** (`remainingNeighborInviteUses`): formül mobil ucun taşıma katmanında (`apps/mobile-api/src/api/v1/invite.ts`) yaşıyordu; web aynı cümleyi kuracakken ikinci bir kopya doğacaktı. İki yüzeyin aynı müşteriye farklı sayı söylemesi, kuralın kendisinden pahalı bir arıza — hele fark yalnız iptal edilmiş bir sipariş ya da düşürülmüş bir ayar varken görünürken. `Math.max(0, …)` tabanı savunmacı değil gerekli: tavan davet açılırken donduruluyor ve ayar sonradan düşürülebilir; çıplak çıkarma o gün *"-1 komşu daha yararlanabilir"* yazardı.
     **Görünüm TEK NESNE taşıyor** (`neighborInvite: {url, remainingUses, maxUses} | null`), üç ayrı alan değil: adres varsa kontenjan da vardır. Üç alan yan yana dursa *"adres dolu ama sayı yok"* gibi anlamsız bir ara hâl tipçe mümkün olurdu.
     **Doluyken şerit KALIR, yalnız düğme gider** — native'in aynı kararı: şeridi tümden kaldırmak "bir şey bozuldu" gibi okunur; kalan, ne olduğunu söyleyen bir cümle. Metinler native'in sözlüğünden **birebir kopyalandı** (üç dilde `remaining` + `full`); anahtar adları web'in kendi yuvalanmasına uyuyor (`neighbor.remaining`), ama müşterinin OKUDUĞU cümle iki yüzeyde aynı — asıl kural oydu.
     **Ölçüldü (gerçek kod yolundan, geçici davet satırıyla; veri geri alındı):** davet yok → bant çizilmiyor · 2 İPTAL sipariş bağlı → kullanılan 0 (iptal sayılmıyor) · 1 geçerli sipariş + tavan 3 → kalan 2, "remaining" cümlesi + düğme · tavan 1 → kalan 0, "full" cümlesi + düğme YOK · tavan kullanımın altına düşürülünce → 0, negatif değil.
     **Para tarafına DOKUNULMADI ve gerek yoktu:** kontenjan zaten sipariş anında motorda uygulanıyordu (`neighbor.ts`), açık yalnız söylemedeydi.
+
+  - **Durum (24.08 — tamamlandı):** özet artık ürün kimliğini varyanttan da çözüyor
+    (`left join product_variant on subject_type='variant'`, süzgeç ve gruplama
+    `coalesce(e.product_id, v.product_id)` üzerinden).
+    **Sıcak yazma yoluna DOKUNULMADI** — `AddToCartIntent` kayıtlı kararıyla kaldı. Üç gerekçe:
+    kararın gerekçesi hâlâ geçerli (sepete ekleme en sıcak yol) · düzeltme **geriye dönük** çalışıyor,
+    yani bugüne dek yazılmış satırlar da sayılmaya başlıyor (kimliği ileriden taşımak yalnız yeni
+    satırları kurtarırdı) · native ucun kendi doldurması `coalesce`'un ilk terimi olarak çalışmaya
+    devam ediyor, iki yüzey ayrışmıyor.
+    **PAKET atfedilmiyor:** `subject_type='bundle'` join'e girmez, kimlik `null` kalır, satır düşer.
+    **Ölçüldü (aynı 3 olay, kapının yazdığı gibi: `product_id` yok, özne varyant):** bozuk fonksiyon
+    `cart_count = 0`, düzeltilmiş fonksiyon `cart_count = 3`.
+    **Test artık ATICI'nın yazdığı şekle bakıyor** (`analytics.test.ts`): mevcut test `product_id`yi
+    elden veriyordu ve doğru olanı doğruluyordu — kırık olan rollup değil, onu kapsayan testin
+    yokluğuydu. Yeni test gerçek bir ürün+varyant kuruyor (çözüm o tablodan okunuyor) ve paket
+    satırının atfedilmediğini de çiviliyor. Bekçilik doğrulandı: fonksiyon eski hâline döndürülünce
+    test düşüyor (`expected undefined to be 1`).
