@@ -240,9 +240,21 @@ begin
   end if;
 
   insert into public.discount (
-    name, trigger, type, amount, scope, customer_id, max_uses, per_customer_limit, is_active
+    name, public_label, trigger, type, amount, scope, customer_id, max_uses, per_customer_limit, is_active
   ) values (
     'Puan çevrimi',
+    /*
+      MÜŞTERİYE GÖRÜNEN AD (23.08) — bir tur burada YOKTU ve sonucu ölçüldü: müşteri kendi
+      puanıyla açtığı kuponu sepette *"İndirim · Kampanya"* diye görüyordu. `name` operasyonun iç
+      etiketidir (Türkçe, listede aranan); vitrinin cümlesi bu alandır ve boşsa yüzey anonim
+      yedeğe düşer (`publicLabel` künyesi).
+
+      Adı burada sabit yazmak bir kopya DEĞİL: bu satırı yazan tek yer RPC'nin kendisi ve indirim
+      operatörün kurduğu bir kampanya değil, müşterinin kendi eyleminin karşılığı. Operatör
+      formundaki zorunluluk (kullanıcı kararı 23.08) bu yolu kapsamıyordu — kapsasaydı puan
+      çevrimi hiç yazılamazdı.
+    */
+    '{"tr":"Puanlarınız","fr":"Vos points","de":"Ihre Punkte"}'::jsonb,
     'coupon',
     -- Sabit tutar: puanın karşılığı EURO'dur, yüzde değil. Yüzde olsaydı aynı puan farklı
     -- sepetlerde farklı değer ederdi ve "500 puan = 5 €" cümlesi yalan olurdu.

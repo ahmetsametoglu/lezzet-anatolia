@@ -285,6 +285,24 @@ export function discountValuesFromProposal(payload: DiscountDraftPayload): {
 export function discountBlocked(v: DiscountFormValues): string | null {
   const codeCount = LOCALES.filter((l) => (v.codes[l] ?? '').trim()).length;
   if (!v.name.trim()) return 'Ad girilmeli';
+  /**
+   * ── MÜŞTERİYE GÖRÜNEN AD ZORUNLU (kullanıcı kararı 23.08) ─────────────────────────────────
+   * Alan opsiyoneldi ve boş bırakılanı yüzey anonim yedeğe düşürüyordu: müşteri sepette
+   * *"İndirim · **Kampanya** · %8"* okuyordu. Yedeğin kendisi tasarlanmıştı (`publicLabel`
+   * künyesi) ama kusur yedeğe düşülebilmesiydi.
+   *
+   * **Eksik BÜYÜDÜ** (mobil şeridin notu, 23.08): kampanya artık katalog kartlarında ROZET olarak
+   * da çiziliyor. Rozet küçük bir alandır ve orada "Kampanya" demek hiçbir şey söylemez —
+   * kullanıcının bu turu başlatan cümlesi zaten *"ne olduğu anlaşılmıyor"*du.
+   *
+   * **BİR dil yeter, üçü değil:** eksik dilleri yüzey kendi geri düşüşüyle çözüyor
+   * (`resolveLocalizedText`) ve üç dili şart koşmak, kampanyayı çeviri bekler hâlde bırakırdı.
+   * Şart olan "bir adı var" olması.
+   *
+   * `name` ile karıştırılmaz: o operasyonun iç etiketi (Türkçe, listede aranan), bu vitrinin ve
+   * mailin cümlesi. İkisini birleştirmek, iç adı müşteriye göstermek olurdu.
+   */
+  if (!LOCALES.some((l) => (v.publicLabel[l] ?? '').trim())) return 'Müşteriye görünen ad en az bir dilde girilmeli';
   if (v.trigger === 'coupon' && codeCount === 0) return 'En az bir dilde kupon kodu girilmeli';
   if (v.value === null || v.value <= 0) return 'İndirim değeri girilmeli';
   // Tavan DB kısıtında da var (%100 üstü yüzde yasak) ama oradan dönen mesaj ham Postgres metnidir.

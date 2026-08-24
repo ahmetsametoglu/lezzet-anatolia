@@ -78,6 +78,13 @@ export async function saveDiscountAction(
         : [];
 
     if (!payload.name) throw new Error('Ad girilmeli — listede kuralı bu adla tanıyacaksınız.');
+    /* Müşteriye görünen ad ZORUNLU (kullanıcı kararı 23.08). Kapıda da duruyor, yalnız formda
+       değil: aynı eylemi ASİSTAN kuyruğu da çağırıyor (`saveDiscountAction(payload, proposalId)`)
+       ve o yol formun `blocked` kontrolünden geçmiyor. Yüzeyde durdurulan bir kuralın ikinci bir
+       yazma yolu varsa, kural yok demektir. */
+    if (!payload.publicLabel) {
+      throw new Error('Müşteriye görünen ad girilmeli — boş bırakılırsa kampanya sepette ve kartta anonim "Kampanya" diye görünür.');
+    }
     // Kodsuz kupon hiç uygulanamaz: kapısı olmayan bir kural, kimsenin giremediği bir odadır.
     // (Kural DB'de kısıt olarak DURAMAZ — kod ayrı tabloda ve kural yazılmadan satırı olamaz.)
     if (payload.trigger === 'coupon' && codes.length === 0) throw new Error('En az bir kupon kodu girilmeli.');

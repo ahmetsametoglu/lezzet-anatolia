@@ -14,9 +14,12 @@ import { an, tabloDolu, type Db, type Kisiler } from './shared';
 // KULLANIM KAYDI burada YAZILMAZ (`discount_use`): kupon bir siparişte kullanılır, sipariş bölümü
 // yazar (`orders.ts`). Tek istisna "hakkı tükenmiş" kupondur — onu tüketen sipariş oradadır.
 //
-// MÜŞTERİYE GÖRÜNEN AD (`publicLabel`) çoğunda dolu, İKİSİNDE bilerek boş ("Sınırlı deneme kuponu",
-// "Büyük sepet indirimi"): alan opsiyonel ve yüzeyin adsız hâli de bir hâldir — sepet o zaman
-// "İndirim — kampanya %8" der. Hepsini doldursaydık o yol hiç görünmezdi.
+// MÜŞTERİYE GÖRÜNEN AD (`publicLabel`) ARTIK HEPSİNDE DOLU (23.08). İkisi ("Sınırlı deneme
+// kuponu", "Büyük sepet indirimi") bilerek boştu — yüzeyin adsız hâli de bir hâldi ve sepet o
+// zaman "İndirim — kampanya %8" diyordu. **Kullanıcı kararıyla o hâl artık ÜRETİLEMİYOR:** operatör
+// formu ve kaydetme kapısı en az bir dilde ad istiyor, puan çevriminin RPC'si de kendi adını
+// yazıyor. Üretilemeyen bir hâli beslemede tutmak, hiç doğmayacak bir ekranı denemek olurdu —
+// adres alıcısında aynı ders alındı (22.08).
 //
 // KODLAR ayrı satırlardır (`discount_code`) ve bir kuponun BİRDEN ÇOK kodu olur. İlk kupon üç dilde
 // üç kod taşıyor — kurulumun görünmesi gereken hâli bu: aynı kural, aynı kota, üç ayrı kapı. Geri
@@ -116,6 +119,7 @@ export async function seedDiscounts(db: Db, kisiler: Kisiler): Promise<Kuponlar>
     {
       etiket: 'TEK HAK (siparişle tükenecek)',
       name: 'Sınırlı deneme kuponu',
+      publicLabel: { tr: 'Deneme kuponu', fr: 'Coupon découverte', de: 'Probier-Gutschein' },
       trigger: 'coupon',
       // Dilsiz kod (`locale` verilmedi): matbu bir kart üstündeki tek kodun karşılığı — kodun bir
       // dile ait olması ZORUNLU değil ve formun o hâli de görünmeli.
@@ -206,6 +210,7 @@ export async function seedDiscounts(db: Db, kisiler: Kisiler): Promise<Kuponlar>
     {
       etiket: 'Kampanya · 60 € üstü %8',
       name: 'Büyük sepet indirimi',
+      publicLabel: { tr: 'Büyük sepet indirimi', fr: 'Remise gros panier', de: 'Großer-Warenkorb-Rabatt' },
       trigger: 'automatic',
       type: 'percent',
       percent: 8,
