@@ -15,6 +15,17 @@ describe('axisWindow', () => {
     expect(axisWindow(12, 12, 120)).toBe(120);
   });
 
+  it('beklenen KÜÇÜKSE eksen ona göre DARALIR — hassasiyet boş bölgeye gitmez (24.08 ölçümü)', () => {
+    // Cihazda ölçüldü: 24'lük koli + beklenen 54'te eksen 240'a kadar uzuyordu.
+    // Artık beklenen taban: adımın katına yuvarlanmış 54 → 72.
+    expect(axisWindow(24, 24, 54)).toBe(72);
+  });
+
+  it('beklenen tek adımdan küçükse ray yine iki duraklık açılır', () => {
+    // Aksi hâlde ray tek duraklı kalır ve sürüklemenin anlamı kalmazdı.
+    expect(axisWindow(24, 24, 10)).toBe(48);
+  });
+
   it('beklenen yoksa 10 kaba adımlık pencere açar (tekilde en az 10)', () => {
     expect(axisWindow(0, 12, null)).toBe(120);
     expect(axisWindow(1, 1, null)).toBe(10);

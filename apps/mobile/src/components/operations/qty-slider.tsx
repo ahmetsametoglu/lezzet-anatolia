@@ -44,12 +44,19 @@ export function snapToStep(raw: number, step: number): number {
 }
 
 /**
- * Eksenin oturduğu pencere. Taban: beklenen adet, yoksa 10 kaba adım (ve en az 10) — koli için
- * "10 koli"lik, tekil için "10 adet"lik bir açılış. Değer tabanı aşıyorsa pencere değerin %25
- * üstüne oturur: topuz uçtan içeri döner, bir sonraki sürüklemede oynayacak yer kalır.
+ * Eksenin oturduğu pencere.
+ *
+ * **Beklenen adet varsa eksenin tabanı ODUR** (en az iki kaba adım, yoksa ray tek duraklı kalır);
+ * beklenen yoksa 10 kaba adım. Cihazda ölçüldü (24.08): taban her hâlde `step*10` alınınca 24'lük
+ * koli için ray 240'a kadar uzuyordu, oysa beklenen 54'tü — hassasiyetin dörtte üçü kullanılmayan
+ * bir bölgeye gidiyordu. Beklenen bir TAVAN değil, eksenin makul açılışıdır: fazlası kenar
+ * jestiyle gelir.
+ *
+ * Değer tabanı aşıyorsa pencere değerin %25 üstüne oturur: topuz uçtan içeri döner, bir sonraki
+ * sürüklemede oynayacak yer kalır.
  */
 export function axisWindow(value: number, step: number, expected: number | null): number {
-  const floor = Math.max(expected ?? 0, step * 10, 10);
+  const floor = expected !== null && expected > 0 ? Math.max(expected, step * 2) : Math.max(step * 10, 10);
   const target = value <= floor ? floor : value * 1.25;
   return Math.ceil(target / step) * step;
 }

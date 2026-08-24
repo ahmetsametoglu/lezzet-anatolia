@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, TextInput, View } from 'react-native';
+import { Image, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { IntakeFormRowContract } from '@lezzet/types';
 
@@ -9,7 +9,6 @@ import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
-import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -230,13 +229,23 @@ export function IntakeScreen() {
         {intake.scanned === null ? null : (
           <>
             <View style={styles.scannedHead}>
-              <AvatarThumb
-                initial={intake.scanned.productName.slice(0, 1)}
-                photoUri={intake.scanned.imageUrl}
-                size="lg"
-                accessibilityLabel={productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
-                testID="warehouse-intake-scanned-photo"
-              />
+              {/* Fotoğraf KARE ve büyük (kullanıcı bulgusu 24.08): çekmecenin işi "doğru malı mı
+                  tuttum" bakışıdır ve `AvatarThumb`ın 56 dp'lik DAİRESİ bunu vermiyordu — ürün
+                  fotoğrafı kare bir ambalaj, daire kırpması kutunun kenarlarını kesiyor. Katalog
+                  kartı (`ProductPhotoCard`) da kullanılmadı: o kartın taşıdığı ad, rozet ve fiyat
+                  çipi burada yok — kalanı zaten yandaki künye söylüyor. */}
+              {intake.scanned.imageUrl === null ? (
+                <View style={[styles.scannedPhoto, styles.scannedPhotoEmpty]}>
+                  <Text style={styles.scannedInitial}>{intake.scanned.productName.slice(0, 1)}</Text>
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: intake.scanned.imageUrl }}
+                  style={styles.scannedPhoto}
+                  accessibilityLabel={productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
+                  testID="warehouse-intake-scanned-photo"
+                />
+              )}
               <View style={styles.scannedNames}>
                 <Text style={styles.scannedName}>
                   {productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
@@ -622,6 +631,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space['2xl'],
+  },
+  /* 96 dp: kutunun üstündeki yazı seçilebilsin diye 56'dan büyütüldü (24.08). Ölçü `size`
+     ailesinden türer — `circleSm` (96) katalog dairesinin çapı ve buradaki kare onunla aynı
+     kutuyu kaplıyor; yeni bir durak açmak seti büyütürdü. */
+  scannedPhoto: {
+    width: operationsTheme.size.circleSm,
+    height: operationsTheme.size.circleSm,
+    borderRadius: operationsTheme.radius.card,
+    backgroundColor: operationsTheme.colors['sand-300'],
+  },
+  scannedPhotoEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannedInitial: {
+    fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
+    fontSize: operationsTheme.text['h2-sm'],
+    color: operationsTheme.colors.muted,
   },
   scannedNames: {
     flexShrink: 1,
