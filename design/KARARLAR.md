@@ -1780,3 +1780,41 @@ dışlayan iki hâl) — indirime vermek anlam çakışması olurdu; `sand` zate
 yeniden kurulması) bir TASARIM kararıdır, kod tarafında uydurulmadı — `CLAUDE §3`. Karar gerekirse
 Claude Design'dan gelir; veri yolu ve üç kuralı (rozet nerede çizilir · Fırsat kampanyayı yener ·
 eşikli kampanya rozete girmez) hazır durduğu için o gün **yalnız stil** değişir.
+
+## Hazırlık kâğıdı bir İŞ EMRİ — elle doldurulan sütunlar kalktı, QR geldi (25.08, kullanıcı kararı)
+
+**Tasarım (`Belge - Hazirlik Kagidi.dc.html`) kâğıdı DOLDURULMAK üzere çiziyor:** tabloda *"Kondu /
+eksik"* sütunu, altında *"Not / eksik açıklaması"* kutusu ve *"Hazırlayan · saat"* satırı var;
+kapanış cümlesi de *"İşaretledikten sonra ekrana geçin"* diyor. Kâğıt ilk hâlinde birebir böyle
+yazıldı (10.1, 25.08).
+
+**Kullanıcı aynı gün asıl soruyu sordu:** *"Bu kağıt depoda basılacak. Belki depoda basılmasına
+gerek yok… ya o hazırlık kağıdı üzerinde bir QR kod olacak ve alakalı kısmı açacak, ya da depocu
+elindeki cihaza göre kutuyu hazırlayacak."*
+
+**ÖLÇÜM — o sütunlar bugün ÖLÜ.** Depocu raf karşısında telefonla çalışıyor: mobil D1 hazırlık
+ekranı ve kutu döngüsü (`23.6`) orada — kutu aç → kalem okut → kutu kapat; kapanışta etiket
+basılıyor ve o etiket içerik dökümünü zaten taşıyor (`BoxLabel.items`). Yani depocu kâğıda kalem
+değdirmiyor ve değdirmesi de istenmiyor.
+
+**Sebep tarihseldi, bir çelişki değil:** tasarım 08.08'de yazıldı, kutu döngüsü yirmi gün sonra
+geldi ve toplamayı telefona taşıdı; belge tasarımı güncellenmedi. Kod tasarıma sadık kalınca
+çelişki kâğıda basıldı.
+
+**KARAR — kâğıt doldurulmaz, OKUTULUR.** Elle doldurma alanlarının üçü de kaldırıldı; yerine sağ
+üstte iri bir QR (içeriği sipariş referansı) ve üç adımlık bir talimat kondu: *al → okut → telefondan
+yürüt*. Doldurulmayacak bir boşluk, kâğıdı okuyan kişiye yapılmamış bir iş varmış gibi görünür.
+
+**Kâğıdın gerçek işi FİZİKSEL KUYRUK olmak:** masada duran kâğıt = yapılacak iş, alınan kâğıt =
+üstlenilmiş iş. İki depocu aynı siparişi toplamaz ve *"bugün ne var"* sorusu bakışta cevaplanır —
+yazılımın kuyruğu bunu ancak ekran açılınca söyler. QR o kâğıdı telefona bağlayan köprüdür.
+
+**QR'ın içeriği REFERANS NUMARASI, kutu kodu gibi gizli bir dize DEĞİL** ve ayrım kasıtlı: kutu
+QR'ı (`KT-…`) okutulunca teslim kaydı düşüyor, yani bir YETKİ taşıyor ve tahmin edilemez olmak
+zorunda. Bu QR hiçbir şey yazmıyor — yalnız *"şu siparişi aç"* diyor, kapsam kontrolü zaten
+sunucuda. Referans olması ayrıca doğru: kâğıdın üstünde iri harflerle yazılı, yani QR okunmazsa
+(buruşmuş kâğıt, kirli kamera) depocu aynı işi elle arayarak yapar — okunmayan bir QR çıkmaz sokak
+olmamalı.
+
+**ELENEN seçenek — "önce topla, sonra kâğıt otomatik çıksın":** kutu etiketi *"ne hazırlandı"*
+sorusunu zaten cevaplıyor; ikinci bir belge aynı gerçeğin ikinci nüshası olurdu (`CLAUDE §1`).

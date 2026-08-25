@@ -104,6 +104,62 @@ describe('D1 · kuyruk', () => {
   });
 });
 
+/*
+  HAZIRLIK KÂĞIDININ QR'I (10.1) — masada basılan kâğıt buradan telefona bağlanıyor.
+
+  Kâğıdın rolü 25.08'de değişti: artık doldurulmuyor, OKUTULUYOR (`design/KARARLAR.md`). Depocu
+  kâğıdı alıyor, sağ üstteki karekodu okutuyor ve sipariş burada açılıyor. Zincirin bu ucu
+  kırılırsa kâğıdın üstündeki üç adımlık talimat yalan söyler — ve arıza sessizdir: okutma bir şey
+  yapmaz, depocu kamerayı suçlar.
+*/
+describe('D1 · kuyruk okutması (hazırlık kâğıdı)', () => {
+  /**
+   * İki sipariş, İKİ FARKLI KALEM: kuyruk dalının açılması için ikisi şart (tek sipariş doğrudan
+   * açılıyor), farklı kalem ise iddianın kendisi — "bir sipariş açıldı" ile "DOĞRU sipariş açıldı"
+   * ancak böyle ayrılır. Aynı kalemle iki fikstürde her iki okutma da testi geçerdi.
+   */
+  const ikiSiparis = () => [
+    preparationOrder(),
+    preparationOrder({
+      orderId: '00000000-0000-4000-8000-000000000002',
+      referenceNo: 'LZA-26-9XQ2',
+      lines: [preparationLine({ itemId: ITEM_B, productName: 'Şöbiyet', variantLabel: '500 g' })],
+    }),
+  ];
+
+  it('okutulan REFERANS o siparişi açar', async () => {
+    withQueue(ikiSiparis());
+    await renderPicking();
+
+    await fireEvent.press(screen.getByTestId('warehouse-picking-queue-scan'));
+    // Simülasyon çipi kuyruğun kendi referansını taşıyor (`devCodes`) — kâğıdı okutmanın aynısı.
+    await fireEvent.press(screen.getByLabelText('LZA-26-3M8C'));
+
+    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeOnTheScreen();
+  });
+
+  it('İKİNCİ referans İKİNCİ siparişi açar — kod hangi kâğıtsa o', async () => {
+    withQueue(ikiSiparis());
+    await renderPicking();
+
+    await fireEvent.press(screen.getByTestId('warehouse-picking-queue-scan'));
+    await fireEvent.press(screen.getByLabelText('LZA-26-9XQ2'));
+
+    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_B}`)).toBeOnTheScreen();
+    // Asıl iddia: ÖTEKİ siparişin kalemi ekranda YOK. "Bir şey açıldı" yeterli değil.
+    expect(screen.queryByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeNull();
+  });
+
+  it('okutma listeyi GİZLEMEZ — kâğıtsız çalışan elle seçebilir', async () => {
+    withQueue(ikiSiparis());
+    await renderPicking();
+
+    // Düğme listenin üstünde ama listenin yerine geçmiyor: kâğıt bir kolaylık, tek yol değil.
+    expect(screen.getByTestId('warehouse-picking-queue-scan')).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-picking-order-${ORDER_ID}`)).toBeOnTheScreen();
+  });
+});
+
 describe('D1 · sayım', () => {
   it('CTA sayım bitmeden KAPALIDIR', async () => {
     withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })]);

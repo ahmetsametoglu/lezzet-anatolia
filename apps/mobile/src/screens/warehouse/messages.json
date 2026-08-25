@@ -78,6 +78,12 @@
       "body": "Sipariş onaylandığında bildirim gelir — bu liste kendiliğinden dolar."
     },
     "queueHeading": "BEKLEYEN SİPARİŞLER — BİRİNİ SEÇ",
+    "queueScan": {
+      "cta": "📄 Hazırlık kâğıdını okut",
+      "title": "Hazırlık kâğıdını okut",
+      "hint": "Kâğıdın sağ üstündeki karekodu çerçeveye getirin — sipariş açılır.",
+      "notFound": "{code} bu deponun bekleyen listesinde yok — kâğıt başka depoya ya da hazırlanmış bir siparişe ait olabilir."
+    },
     "parcelName": "Koliye: {name}",
     "queueLines": "{picked}/{total} kalem hazır",
     "queueHalf": "yarım",

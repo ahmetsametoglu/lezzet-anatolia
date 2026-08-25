@@ -7,17 +7,24 @@ import { num, shortDate } from '@/components/operation/ui/format';
 import { PREP_PATH } from '../../preparation-labels';
 
 /**
- * **Hazırlık kâğıdının kendisi** — `design/project/Belge - Hazirlik Kagidi.dc.html`, A4 / 14 mm.
+ * **Hazırlık kâğıdı = İŞ EMRİ** — `design/project/Belge - Hazirlik Kagidi.dc.html` (A4 / 14 mm),
+ * kullanıcı kararı 25.08 ile rolü değişti.
  *
- * ── KÂĞIT EKRANIN KOPYASI DEĞİL ─────────────────────────────────────────────
- * Ekranda olmayan iki sütun var ve belgenin varlık sebebi onlar: **"Kondu / eksik"** ve **"Not"**.
- * Depocu rafın karşısında kalemle işaretler, sonra masaya dönüp ekrana geçer. Ekranın aynısını
- * basmak, kâğıdı gereksiz kılardı.
+ * ── KÂĞIT ARTIK DOLDURULMUYOR, OKUTULUYOR ───────────────────────────────────
+ * İlk hâlinde elle işaretlenen iki sütun vardı (*"Kondu / eksik"*, *"Not"*) ve o sütunlar bugün
+ * ÖLÜ: toplama telefonda yapılıyor (mobil D1 · kutu döngüsü 23.6), depocu kâğıda kalem
+ * değdirmiyor. Sebep tarihseldi — tasarım 08.08'de yazıldı, kutu döngüsü yirmi gün sonra geldi ve
+ * işi telefona taşıdı; tasarım güncellenmedi. Elle doldurma alanları kaldırıldı: doldurulmayacak
+ * bir boşluk, kâğıdı okuyan kişiye yapılmamış bir iş varmış gibi görünür.
+ *
+ * ── KÂĞIDIN GERÇEK İŞİ: FİZİKSEL KUYRUK ─────────────────────────────────────
+ * Masada duran kâğıt = yapılacak iş; alınan kâğıt = üstlenilmiş iş. İki depocu aynı siparişi
+ * toplamaz ve "bugün ne var" sorusu bakışta cevaplanır — yazılımın kuyruğu bunu ancak ekran
+ * açılınca söyler. QR o kâğıdı telefona bağlar: okut → sipariş açılır → toplama telefonda sürer.
  *
  * ── SIRA EKRANIN SIRASI ─────────────────────────────────────────────────────
  * Kalemler kapının verdiği sırayla basılıyor (yürüyüş sırası — `storage_area.sort_order`). Kâğıt
- * kendi sırasını kursaydı, aynı depoyu iki farklı yönde yürüten iki liste doğardı ve tasarımın
- * *"kâğıt ile ekran karşılaştırılmaz"* cümlesi yalan olurdu.
+ * kendi sırasını kursaydı, aynı depoyu iki farklı yönde yürüten iki liste doğardı.
  *
  * ── YAZDIRMA KENDİLİĞİNDEN AÇILMAZ ──────────────────────────────────────────
  * Operatör önce kâğıdı görmeli: doğru siparişi bastığını doğrulamadan onay isteyen bir pencere,
@@ -30,9 +37,11 @@ import { PREP_PATH } from '../../preparation-labels';
 interface PaperSheetProps {
   order: PreparationOrder;
   warehouseName: string;
+  /** Siparişin QR'ı (referans numarası); `null` = referanssız sipariş, okutacak bir şey yok. */
+  qr: { path: string; moduleCount: number } | null;
 }
 
-export function PaperSheet({ order, warehouseName }: PaperSheetProps) {
+export function PaperSheet({ order, warehouseName, qr }: PaperSheetProps) {
   const sealed = order.boxes.filter((box) => box.sealedAt !== null).length;
 
   return (
@@ -77,9 +86,25 @@ export function PaperSheet({ order, warehouseName }: PaperSheetProps) {
               ].join(' · ')}
             </span>
           </div>
-          <span className="shrink-0 font-ops-body text-ops-micro text-ops-faint">
-            Depoda kalır — kutuya konmaz
-          </span>
+          {/* QR SAĞ ÜSTTE ve İRİ: kâğıdın ilk işi okutulmak. Kenarda küçük bir işaret olsaydı
+              depocu onu aramak zorunda kalır, eldivenli elle kâğıdı çevirirdi. */}
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            {qr ? (
+              <svg
+                viewBox={`0 0 ${qr.moduleCount} ${qr.moduleCount}`}
+                className="h-[26mm] w-[26mm]"
+                shapeRendering="crispEdges"
+                aria-label={`${order.referenceNo} karekodu`}
+              >
+                {/* Beyaz zemin AÇIKÇA çiziliyor: kâğıt beyaz ama okuyucu sessiz bölgeyi (quiet
+                    zone) matrisin dışında arar — zeminsiz bir QR, koyu bir yüzeye basılırsa
+                    okunmaz olur. */}
+                <rect width={qr.moduleCount} height={qr.moduleCount} fill="#ffffff" />
+                <path d={qr.path} fill="#000000" />
+              </svg>
+            ) : null}
+            <span className="font-ops-body text-ops-micro text-ops-faint">Depoda kalır</span>
+          </div>
         </header>
 
         <div className="flex gap-8 border-b border-ops-line py-3">
@@ -93,7 +118,7 @@ export function PaperSheet({ order, warehouseName }: PaperSheetProps) {
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-ops-line">
-              {['Ürün', 'Adet', 'Konum', 'Bu partiden al · son tarih', 'Kondu / eksik'].map((header) => (
+              {['Ürün', 'Adet', 'Konum', 'Bu partiden al · son tarih'].map((header) => (
                 <th
                   key={header}
                   className="py-2 pr-3 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted"
@@ -137,11 +162,6 @@ export function PaperSheet({ order, warehouseName }: PaperSheetProps) {
                       ))
                     )}
                   </td>
-                  {/* ELLE DOLDURULACAK — kâğıdın varlık sebebi. Boş bir hücre değil, çizgili bir
-                      alan: nereye yazılacağı belli olmayan bir boşluk doldurulmaz. */}
-                  <td className="w-[26mm] py-2.5">
-                    <span className="block h-[16px] border-b border-ops-line" />
-                  </td>
                 </tr>
               );
             })}
@@ -150,32 +170,29 @@ export function PaperSheet({ order, warehouseName }: PaperSheetProps) {
 
         <p className="mt-3 font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
           Sıra ekrandaki sırayla aynıdır — kâğıt ile ekran karşılaştırılmaz. Parti önerisi tazelik kuralına göre
-          verilir: <strong className="font-medium text-ops-body">en yakın tarihli önce çıkar</strong>. Başka partiden
-          aldıysanız sağdaki boşluğa yazın.
+          verilir: <strong className="font-medium text-ops-body">en yakın tarihli önce çıkar</strong>.
         </p>
 
-        <section className="mt-6 flex flex-col gap-1">
-          <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-            Not / eksik açıklaması
-          </span>
-          <span className="block h-[22mm] rounded-ops-card border border-ops-line" />
-          <span className="font-ops-body text-ops-micro text-ops-faint">
-            Eksik işaretlediyseniz sebebini kısaca yazın; ekranda listeden seçilecek (stokta kalmadı · tazelik ·
-            hasarlı).
-          </span>
-        </section>
-
-        <section className="mt-5 flex items-end gap-8">
-          <label className="flex flex-1 flex-col gap-1">
-            <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-              Hazırlayan · saat
-            </span>
-            <span className="block h-[14px] border-b border-ops-line" />
-          </label>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            İşaretledikten sonra ekrana geçin — kâğıt depoda kalır, kutuya konmaz.
-          </span>
-        </section>
+        {/* KÂĞIDIN KULLANMA TALİMATI — bir cümle, en görünür yerde. Kâğıt artık doldurulmuyor ve
+            bunu söylemeyen bir belge, alışkanlıktan kalem arayan depocuya doldurulacakmış gibi
+            görünür. Adım sırası da burada: al → okut → topla. */}
+        <ol className="mt-6 flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-subtle px-4 py-3.5">
+          {[
+            ['Bu kâğıdı alın', 'aldığınız iş sizindir — aynı siparişi kimse ikinci kez toplamaz.'],
+            ['Karekodu telefonla okutun', 'sipariş telefonda açılır.'],
+            ['Toplamayı telefondan yürütün', 'kutu, eksik ve not oraya yazılır — kâğıda işaret koymanız gerekmez.'],
+          ].map(([baslik, aciklama], index) => (
+            <li key={baslik} className="flex items-baseline gap-2.5">
+              {/* Numara SABİT genişlikte: üç satırın metni aynı hizadan başlasın, göz kaymasın. */}
+              <span className="w-[14px] shrink-0 font-ops-mono text-ops-sm font-semibold text-ops-ink">
+                {index + 1}
+              </span>
+              <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-body">
+                <strong className="font-semibold text-ops-ink">{baslik}</strong> — {aciklama}
+              </span>
+            </li>
+          ))}
+        </ol>
 
         <footer className="mt-8 flex items-center justify-between gap-4 border-t border-ops-line pt-3">
           <span className="font-ops-body text-ops-micro text-ops-faint">
@@ -185,7 +202,9 @@ export function PaperSheet({ order, warehouseName }: PaperSheetProps) {
               .filter(Boolean)
               .join(' · ')}
           </span>
-          <span className="font-ops-body text-ops-micro text-ops-faint">İç belge · fiyat bilgisi içermez</span>
+          <span className="font-ops-body text-ops-micro text-ops-faint">
+            İç belge · fiyat bilgisi içermez · kutuya konmaz
+          </span>
         </footer>
       </article>
     </div>

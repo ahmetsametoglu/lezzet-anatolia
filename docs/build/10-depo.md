@@ -67,6 +67,39 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
     - **Para yok, adres yok:** kapı zaten taşımıyor; belgenin altbilgisi bunu kâğıdın üstüne de
       yazıyor (*"İç belge · fiyat bilgisi içermez"*). Koliye yazılacak ad 10.9'un kuralıyla aynı —
       adresten gelir ve yalnız sipariş verenden farklıysa çizilir.
+  - **Durum (25.08, aynı gün) — KÂĞIT DOLDURULMAKTAN ÇIKTI, OKUTULUYOR** *(kullanıcı sorusu:
+    "bu kâğıt depoda basılacak… ya üzerinde bir QR olacak ve alakalı kısmı açacak, ya da depocu
+    elindeki cihazla kutuyu hazırlayacak")* — karar `design/KARARLAR.md`'de.
+    - **Elle doldurulan üç alan ÖLÜYDÜ ve kaldırıldı** (*"Kondu / eksik"* sütunu · *"Not"* kutusu ·
+      *"Hazırlayan · saat"*). Ölçüm: depocu raf karşısında telefonla çalışıyor (mobil D1 + kutu
+      döngüsü 23.6) ve kutu kapanışında basılan etiket içerik dökümünü zaten taşıyor. Sebep
+      tarihseldi — belge tasarımı 08.08'de yazıldı, kutu döngüsü yirmi gün sonra geldi ve toplamayı
+      telefona taşıdı; tasarım güncellenmedi, kod ona sadık kalınca çelişki kâğıda basıldı.
+    - **Yerine QR + üç adımlık talimat:** *al → okut → telefondan yürüt*. Kâğıdın işi artık
+      **fiziksel kuyruk** olmak: masada duran = yapılacak, alınan = üstlenilmiş; iki depocu aynı
+      siparişi toplamaz.
+    - **QR'ın içeriği REFERANS numarası**, kutu kodu gibi gizli bir dize değil: bu QR hiçbir şey
+      yazmıyor, yalnız "şu siparişi aç" diyor ve kapsam zaten sunucuda kontrol ediliyor. Kâğıdın
+      üstünde iri harflerle yazılı olduğu için okunmazsa depocu elle arayabilir — okunmayan bir QR
+      çıkmaz sokak olmamalı.
+    - ✅ **KARŞI UCU DA YAZILDI (mobil D1, aynı gün — kullanıcı kararı: "ben yazayım")** · touches:
+      `apps/mobile/src/screens/warehouse/{preparation-screen.tsx,use-preparation.hook.ts,messages.json,preparation-screen.test.tsx}`
+      - Kuyruğun ÜSTÜNDE *"📄 Hazırlık kâğıdını okut"* düğmesi (dolu zeminli, `controlLg` — eldivenli
+        parmakla basılacak birincil eylem). Altta olsaydı önce göz taraması yaptırırdı ve kâğıdın
+        kazandırdığı adım geri alınırdı. **Liste yine duruyor:** kâğıt bir kolaylık, tek yol değil.
+      - Eşleşme KUYRUĞUN İÇİNDE aranıyor, sunucuya sorulmuyor: kuyruk zaten elde ve depo kapsamıyla
+        süzülmüş. Daha önemlisi kuyrukta olmayan referans için doğru cevap *"aç"* değil *"bu senin
+        işin değil"* — sunucu sorgusu o cevabı bulanıklaştırırdı (başka depoda? kapanmış? ileri
+        tarihli?). Bulunamayan kod sessiz geçmiyor, sebebini yazıyor: hiçbir şey yapmayan bir
+        okutma bozuk bir kamera gibi görünür ve depocu aynı kâğıdı defalarca okutur.
+      - **Ayrı bayrak** (`queueScanOpen`), kutu okutmasıyla paylaşılmıyor: iki farklı soru — *"bu
+        kalem hangisi"* ↔ *"hangi sipariş"*; tek bayrak olsaydı kuyrukta açılan okutucu kutu
+        mantığını çalıştırırdı.
+      - Simülasyon çipleri kuyruğun kendi referansları (`devCodes`) — havuzun ürün barkodları burada
+        hiçbir siparişi açmaz ve çip "tanınmayan" gibi görünürdü (23.8'in aynı kararı).
+      - **3 test:** doğru referans doğru siparişi açar · ikinci referans ikinci siparişi açar (öteki
+        kalem ekranda YOK — "bir şey açıldı" yeterli değil) · okutma listeyi gizlemez. Eşleşme
+        mutasyonla doğrulandı. Mobil depo ekranlarının tamamı 92/92.
   - **Durum (08.08) — MASAÜSTÜ ÇİZİMİ YOK, istendi.** *(Aynı gün karşılandı — üstteki nota bakın.)* Ekranı yazmak için canvas'a bakıldı: `Operasyon - Depo Hazirlik.dc.html` başlığıyla *"Depo — Hazırlık · **mobil**"* diyor ve üç karesi de telefon (liste · toplama · eksik kararı). Masaüstü karesi yok. Aynısı 10.4 ve 10.5'in canvas'larında da geçerli — üçü de "· mobil". İçerik dosyaları (`design/pages/depo-*.md`) bağlayıcı ve tam; eksik olan yalnız görsel karar. İstek yazıldı: `design/project/uploads/depo-masaustu-tasarim-istegi.md`. **Kullanıcı kararı 08.08: önce çizim istenecek, ekran beklemede** — mobil çizimden masaüstü türetmek ya da depoyu tümüyle native'e bırakmak seçenekleri elendi.
     - **Çelişki DEĞİL, yüzey ayrımı:** içerik dosyası §7 *"telefon önceliklidir"* diyor, CLAUDE §2 ise operasyonu masaüstü-yalnız kılıyor. İkisi çelişmiyor — 06.08 yüzey formülü depocunun telefon işini native'e verdi (`21.11`, henüz `[ ]`) ve aynı dosya §7 web için zaten *"günün tamamını görüp planlamak"* diyor. Mevcut mobil kareler 21.11'in referansı, web şeridinin uygulayacağı çizim değil.
   - **KARGO TAKİP NUMARASI bu ekranın işi** (`yer-ekseni-arka-uc-talebi.md §5`: *"numarayı hazırlık ekranı girer — paketi kapatan kişi etiketi elinde tutuyor"*). ~~Kapı hazır ve bugün hiç çağrılmıyor~~ → **ÇAĞRILIYOR (21.08, 10.9'un kapanışı):** panele `ShipmentBox` yazıldı, `setShipment` ilk arayüz çağıranına kavuştu. Seed üç taşıyıcıyı da taşıyor (DHL · Colissimo · UPS) ve bir kargo siparişi bilinçle TAŞIYICISIZ — "henüz kargoya verilmedi" hâli ekranda o cümleyle duruyor.

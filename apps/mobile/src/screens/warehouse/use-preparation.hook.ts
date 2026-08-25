@@ -115,6 +115,17 @@ interface UsePreparationResult {
   setScanOpen: (open: boolean) => void;
   handleScan: (code: string) => void;
   /**
+   * **Kuyruk okutması (10.1)** — hazırlık kâğıdının QR'ı bu kapıya bakıyor.
+   *
+   * Kâğıt masada basılıyor ve depocu onu alıp okutuyor; QR'ın içeriği siparişin REFERANS
+   * numarası (`LA-26-…`). Ayrı bir state, çünkü ayrı bir soru: `scanOpen` *"bu kalem hangisi"*
+   * diye soruyor, bu *"hangi sipariş"* diye — ikisi tek bayrağı paylaşsaydı kuyrukta açılan
+   * okutucu kutu mantığını çalıştırırdı.
+   */
+  queueScanOpen: boolean;
+  setQueueScanOpen: (open: boolean) => void;
+  scanQueueOrder: (code: string) => void;
+  /**
    * Son KAPANAN kutunun etiketi (23.7) — içerik sunucudan (`boxLabelPayload`); basım Brother SDK
    * bağlanınca (23.5), bugünkü hâli ÖNİZLEME. `null` = gösterilecek etiket yok (kapat düğmesi ya
    * da yeni seçim sıfırlar). Sipariş hazır olup kuyruktan düşse de kart görünür kalır — depocu
@@ -218,6 +229,39 @@ export function usePreparation(): UsePreparationResult {
     setLabel(null);
   }, []);
 
+  /**
+   * **Kâğıdın QR'ı → sipariş açılır** (10.1). Okunan kod siparişin referans numarası.
+   *
+   * ── EŞLEŞME KUYRUĞUN İÇİNDE ARANIR, SUNUCUYA SORULMAZ ───────────────────────
+   * Kuyruk zaten elde ve depo kapsamıyla süzülmüş; sunucuya ikinci bir tur atmak hem yavaş hem
+   * gereksiz olurdu. Daha önemlisi: kuyrukta OLMAYAN bir referans için doğru cevap "aç" değil
+   * "bu senin işin değil" — sunucu sorgusu o cevabı bulanıklaştırırdı (sipariş var ama başka
+   * depoda? kapanmış? ileri tarihli?). Depocunun sorusu tek: *elimdeki kâğıt bu listede mi.*
+   *
+   * ── BULUNAMAYAN KOD SESSİZ GEÇMEZ ───────────────────────────────────────────
+   * Hiçbir şey yapmayan bir okutma, bozuk bir kamera gibi görünür ve depocu aynı kâğıdı defalarca
+   * okutur. Cevap her hâlde bir cümle: bulundu → sipariş açılır, bulunamadı → sebebi yazılır.
+   *
+   * Karşılaştırma harf duyarsız ve boşluksuz: QR'dan gelen dize temizdir ama elle girilen ya da
+   * başka bir okuyucudan gelen kod öyle olmayabilir.
+   */
+  const scanQueueOrder = useCallback(
+    (code: string) => {
+      const wanted = code.trim().toLocaleUpperCase('tr');
+      if (wanted.length === 0) return;
+      const match = orders.find((row) => (row.referenceNo ?? '').toLocaleUpperCase('tr') === wanted);
+
+      setQueueScanOpen(false);
+      if (!match) {
+        setNotice({ tone: 'warn', text: fillCopy(t.picking.queueScan.notFound, { code: code.trim() }) });
+        return;
+      }
+      select(match.orderId);
+    },
+    // `t` modül sabiti (`warehouseCopy`) — bağımlılık listesine girmez.
+    [orders, select, setNotice],
+  );
+
   const lineState = useCallback(
     (itemId: string): LineState => lines[itemId] ?? { qty: 0, shortReported: false },
     [lines],
@@ -273,6 +317,7 @@ export function usePreparation(): UsePreparationResult {
   const boxMode = order !== null && (boxes.length > 0 || order.lines.every((line) => line.pickedQty === 0));
   const anyQty = order !== null && order.lines.some((line) => (lines[line.itemId]?.qty ?? 0) > 0);
   const [scanOpen, setScanOpen] = useState(false);
+  const [queueScanOpen, setQueueScanOpen] = useState(false);
   const [label, setLabel] = useState<BoxLabelContract | null>(null);
   const [printState, setPrintState] = useState<PrintState>({ phase: 'off' });
   /** Basımın hedefi — etiketle birlikte gelir; yeniden basım aynı kutu + aynı yazıcıyla koşar. */
@@ -515,6 +560,9 @@ export function usePreparation(): UsePreparationResult {
     scanOpen,
     setScanOpen,
     handleScan,
+    queueScanOpen,
+    setQueueScanOpen,
+    scanQueueOrder,
     label,
     dismissLabel: useCallback(() => {
       setLabel(null);

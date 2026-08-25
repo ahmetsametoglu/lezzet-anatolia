@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { listPreparationQueue } from '@lezzet/application';
+// Alt yol: paketin barrel'ı başka şeridin aktif alanı (23.13'te iki kez çakıştı).
+import { qrPath } from '@lezzet/application/warehouse/label-svg';
 import { serviceDb } from '@lezzet/database';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { AuthError } from '@/lib/guard';
@@ -56,5 +58,21 @@ export default async function PreparationPaperPage({ params }: PaperPageProps) {
   const [order] = await listPreparationQueue(serviceDb(), { warehouseId: workplace.warehouseId, orderId });
   if (!order) notFound();
 
-  return <PaperSheet order={order} warehouseName={workplace.name} />;
+  /*
+    KÂĞIDIN QR'I — telefonu bu siparişin toplama ekranına götürür (kullanıcı kararı 25.08).
+
+    ── İÇERİĞİ REFERANS NUMARASI, KUTU KODU GİBİ GİZLİ BİR DİZE DEĞİL ──────────
+    Kutu QR'ı (`KT-…`) tahmin edilemez olmak ZORUNDA: okutulması teslim kaydı düşürüyor, yani bir
+    YETKİ taşıyor. Bu QR hiçbir şey yazmıyor — yalnız "şu siparişi aç" diyor ve açan kişinin
+    kapsamı zaten sunucuda kontrol ediliyor. Referans numarası olması ayrıca DOĞRU: kâğıdın
+    üstünde iri harflerle zaten yazılı, yani QR okunmazsa (buruşmuş kâğıt, kirli kamera) depocu
+    aynı işi elle arayarak yapar. Okunmayan bir QR çıkmaz sokak olmamalı.
+
+    Üretim SUNUCUDA: `qrcode` paketi tarayıcıya gitmiyor ve matris deterministik (aynı kod → aynı
+    path), yani sayfa önbelleğe alınsa da QR kaymaz. Referanssız sipariş (taslak) QR almaz —
+    okutacak bir şey yok.
+  */
+  const qr = order.referenceNo ? qrPath(order.referenceNo) : null;
+
+  return <PaperSheet order={order} warehouseName={workplace.name} qr={qr} />;
 }

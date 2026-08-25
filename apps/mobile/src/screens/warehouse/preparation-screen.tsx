@@ -112,6 +112,21 @@ export function PreparationScreen() {
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
           {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
+
+          {/* HAZIRLIK KÂĞIDININ QR'I (10.1) — masada basılan kâğıt buradan telefona bağlanıyor.
+              Düğme listenin ÜSTÜNDE: kâğıdı eline almış depocu listeye hiç bakmadan okutur;
+              altta olsaydı önce göz taraması yaptırırdı ve kâğıdın kazandırdığı adım geri
+              alınırdı. Liste yine duruyor — kâğıtsız çalışan da elle seçebilir. */}
+          <PressableSurface
+            onPress={() => picking.setQueueScanOpen(true)}
+            feedback="scale"
+            style={styles.queueScanButton}
+            accessibilityLabel={t.picking.queueScan.cta}
+            testID="warehouse-picking-queue-scan"
+          >
+            <Text style={styles.queueScanLabel}>{t.picking.queueScan.cta}</Text>
+          </PressableSurface>
+
           <Text style={styles.heading}>{t.picking.queueHeading}</Text>
           {picking.orders.map((row) => (
             <PressableSurface
@@ -136,6 +151,20 @@ export function PreparationScreen() {
             </PressableSurface>
           ))}
         </ScrollView>
+
+        {/* Okutucu kuyruk dalında da çizilir — `ScanSheet` bir Modal ve listenin içinde değil.
+            Kutu okutmasından AYRI bayrak: iki farklı soru, iki farklı cevap yolu. */}
+        <ScanSheet
+          open={picking.queueScanOpen}
+          title={t.picking.queueScan.title}
+          hint={t.picking.queueScan.hint}
+          onClose={() => picking.setQueueScanOpen(false)}
+          onScan={picking.scanQueueOrder}
+          // Simülasyon çipleri KUYRUĞUN kendi referansları: havuzdaki ürün barkodları burada
+          // hiçbir siparişi açmaz ve çip "tanınmayan" gibi görünürdü (23.8'in aynı kararı).
+          devCodes={picking.orders.flatMap((row) => (row.referenceNo ? [{ label: row.referenceNo, code: row.referenceNo }] : []))}
+          testID="warehouse-picking-queue-scan-sheet"
+        />
       </View>
     );
   }
@@ -562,6 +591,24 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors['olive-dark'],
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
+  },
+  /**
+   * Kuyruğun kâğıt okutma düğmesi (10.1) — DOLU zeminli, kutu okutmasının çerçeveli hâlinden
+   * ayrı. Gerekçe hiyerarşi: kuyrukta bu birincil eylemdir (kâğıdı eline almış depocunun ilk
+   * hareketi), kutu içindeyse okutma akışın ortasında bir adımdır.
+   */
+  queueScanButton: {
+    // `controlLg`: eldivenli parmakla, soğuk depoda basılacak birincil düğme (tasarım §7).
+    height: operationsTheme.size.controlLg,
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.olive,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  queueScanLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors.cream,
   },
   scanButton: {
     marginTop: operationsTheme.space.xl,
