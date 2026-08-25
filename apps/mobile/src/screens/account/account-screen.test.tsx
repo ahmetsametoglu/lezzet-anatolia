@@ -60,6 +60,15 @@ jest.mock('@/lib/api/addresses', () => ({
   makeDefaultAddress: (id: string) => mockMakeDefaultAddress(id),
 }));
 
+/* Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı
+   bırakmasın (login testinin deseni). */
+const mockToast = jest.fn();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
 const HOME = { id: 'addr-home', label: 'Ev', line1: '12 Quai des Bateliers', line2: null, postalCode: '67000', city: 'Strasbourg', isDefault: true };
 const WORK = { id: 'addr-work', label: 'İş', line1: '3 Rue du Dôme', line2: null, postalCode: '67000', city: 'Strasbourg', isDefault: false };
 const listResult = (addresses: unknown[]) => ({ data: addresses, error: null, status: 200, retryAfterSec: null });
@@ -71,6 +80,7 @@ beforeEach(() => {
   mockUpdateAddress.mockReset();
   mockDeleteAddress.mockReset();
   mockMakeDefaultAddress.mockReset();
+  mockToast.mockReset();
 });
 
 describe('AccountScreen', () => {
@@ -136,6 +146,54 @@ describe('AccountScreen', () => {
     expect(screen.queryByTestId('account-address-addr-work-default')).toBeNull();
   });
 
+  /*
+    ONAY TOAST'LARI — rozetin yer değiştirmesi "oldu" demek DEĞİLDİR.
+
+    Rozet iyimser bir çizimdir: sunucu cevabı gelmeden de kayabilirdi. Toast ise yalnız yazma
+    BAŞARIYLA döndükten sonra basılıyor (`makeDefault` hata dalında erken çıkıyor). Bu yüzden
+    üç iddia birlikte anlam taşıyor: metin, ETİKETSİZ adreste ne yazdığı, ve BAŞARISIZLIKTA
+    basılmaması.
+  */
+  it('varsayılan yapma ONAYI toast ile söylenir ve adresin ADIYLA söylenir', async () => {
+    mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-work-default');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('İş varsayılan yapıldı'));
+  });
+
+  it('ETİKETSİZ adreste toast ŞEHRİ yazar — yer tutucu ham ya da boş kalmaz', async () => {
+    /* Etiket isteğe bağlı bir alan; `{label}` yer tutucusu doldurulmazsa müşteri "undefined
+       varsayılan yapıldı" okur. Kart başlığıyla aynı kural: etiket yoksa şehir. */
+    const noLabel = { ...WORK, label: null };
+    mockFetchAddresses.mockResolvedValue(listResult([HOME, noLabel]));
+    mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...noLabel, isDefault: true }, { ...HOME, isDefault: false }]));
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-work-default');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Strasbourg varsayılan yapıldı'));
+    expect(mockToast).not.toHaveBeenCalledWith(expect.stringContaining('{label}'));
+  });
+
+  it('varsayılan DEĞİŞTİRİLEMEZSE onay toast\'ı BASILMAZ — yerine hata bloğu çıkar', async () => {
+    /* Bu dosyanın asıl iddiası: başarısız yazmada da toast basılsaydı müşteri değişmemiş bir
+       ayarı değişmiş sanırdı ve hatayı ancak bir sonraki siparişinde fark ederdi. */
+    mockMakeDefaultAddress.mockResolvedValue({ data: null, error: 'unexpected', status: 500, retryAfterSec: null });
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-work-default');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+
+    await waitFor(() => expect(screen.getByTestId('account-address-error')).toBeOnTheScreen());
+    expect(mockToast).not.toHaveBeenCalled();
+    // Rozet de kaymadı: ekran sunucunun döndürdüğü listeyi bekliyor.
+    expect(screen.getByTestId('account-address-addr-work-default')).toBeOnTheScreen();
+  });
+
   it('"＋ Yeni adres ekle" çekmeceyi BOŞ açar; Kaydet doğru gövdeyle yazar ve dönen liste basılır', async () => {
     mockCreateAddress.mockResolvedValue(
       listResult([HOME, WORK, { id: 'addr-new', label: null, line1: '8 Rue Neuve', line2: null, postalCode: '67100', city: 'Strasbourg', isDefault: false }]),
@@ -190,6 +248,19 @@ describe('AccountScreen', () => {
     expect(mockDeleteAddress).toHaveBeenCalledWith('addr-work');
     await waitFor(() => expect(screen.queryByTestId('account-address-sheet')).toBeNull());
     expect(screen.queryByText('3 Rue du Dôme, 67000 Strasbourg')).toBeNull();
+  });
+
+  it('adres silinince "Adres silindi" denir — geri alınamayan işlem sessizce kapanmaz', async () => {
+    /* Çekmecenin kapanması tek başına bir onay değil: müşteri "Vazgeç"e basmış da olabilir.
+       Toast, geri alınamayan tek adres işleminin gerçekten olduğunu söyleyen cümledir. */
+    mockDeleteAddress.mockResolvedValue(listResult([HOME]));
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-work-edit');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-edit'));
+    await fireEvent.press(screen.getByTestId('address-delete'));
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Adres silindi'));
   });
 
   it('misafirde doğrulama kapısı çıkar, menü çıkmaz — adres ucu HİÇ çağrılmaz', async () => {

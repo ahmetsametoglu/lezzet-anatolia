@@ -5545,7 +5545,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: mobil paket **763/763** (753 → 763) · `points.test.ts` **22/22** · beş paket typecheck
   temiz (types · application · mobile · mobile-api · web) · lint temiz.
 
-- [~] (21.114) **TEST DEFTERİ GERÇEK KALANINA İNDİ — baş maddesi ÜRETİLEMEDİ (MB-38)**
+- [x] (21.114) **TEST DEFTERİ GERÇEK KALANINA İNDİ — baş maddesi ÜRETİLEMEDİ (MB-38)**
   · touches: `apps/mobile/src/lib/places/place-view.test.ts`, `docs/talep/not-mobil-test-defteri.md`
 
   **DEFTERİN BAŞ MADDESİ KAPANDI ÇÜNKÜ ÜRETİLEMİYOR.** *"`account-routes.test` tam koşuda düşüyor,
@@ -5570,9 +5570,35 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   arıza gibi gösterecekti.
 
   **DURUM — KALAN ÜÇ MADDE, biri KARAR:**
-  · `account-screen.test`e iki toast iddiası (dosya var, iddia eksik).
+  · `account-screen.test`e iki toast iddiası (dosya var, iddia eksik). → `21.115`'te yazıldı.
   · vFb fixture→şema dönüşü **bloke** — o dönüş yapılmadan tip kaynağı güncellenemez.
-  · `social-inbox-screen` testi **KARAR bekliyor, iş değil**: ekranı web şeridi yazdı (15.17) ve
-    `test-dalgasi.md §5` kararı açıkça kullanıcıya bırakmış. Kardeşi zaten yazılmış durumda.
+  · ~~`social-inbox-screen` testi KARAR bekliyor~~ — **karar sorulduğunda ÖLÇÜLDÜ: iş zaten
+    yapılmıştı.** Web şeridi kendi ekranının testini 23.08 21:01'de yazmış
+    (`16dd89eb`, görev `15.18`); 8 iddia, koşuyor. Yani kural istisnası hiç gerekmedi.
+    Defter maddesi bayattı — **bu satır, ölçmeden karar sorulmuş olmasının kaydıdır.**
 
   Doğrulama: mobil paket **778/778** (763 → 778) · `@lezzet/mobile` typecheck temiz.
+
+- [x] (21.115) **ONAY TOAST'LARI ÇİVİLENDİ — "rozet kaydı" ile "sunucu yazdı" ayrı şeyler (4 iddia)**
+  · touches: `apps/mobile/src/screens/account/account-screen.test.tsx`
+
+  Defterin kalan iki mekanik maddesinden biri. Ama yazarken ölçüm bir şeyi büyüttü: **rozetin yer
+  değiştirmesi "oldu" demek değildir.** Rozet iyimser bir çizim olabilirdi; onayın tek gerçek
+  kaynağı, yalnız başarılı yazmadan SONRA basılan toast'tır (`makeDefault` hata dalında erken
+  çıkıyor). Dördü birlikte anlamlı:
+  · onay adresin ADIYLA söylenir (`İş varsayılan yapıldı`),
+  · **etiketsiz adreste ŞEHİR yazılır** — yer tutucu doldurulmazsa müşteri "undefined varsayılan
+    yapıldı" okurdu; hiçbir yerde hata vermez,
+  · **başarısız yazmada toast BASILMAZ**, yerine hata bloğu çıkar ve rozet de kaymaz — aksi hâlde
+    müşteri değişmemiş bir ayarı değişmiş sanır, hatayı ancak bir sonraki siparişinde fark ederdi,
+  · silmede *"Adres silindi"* denir: çekmecenin kapanması onay değil ("Vazgeç" de kapatır) ve
+    silme geri alınamayan tek adres işlemidir.
+
+  Defterin *"her ikisi de `account-screen.test`e"* demesi yarı yanlıştı: silme toast'ı 10.08'de
+  ortak çekmeceye (`customer-kit/address-form.tsx`) taşınmıştı. Çekmece bu ekranın içinde
+  çizildiği için iddia yine buraya yazıldı — ama kaynağı başka dosyada.
+
+  Doğrulama: `account-screen.test` **12/12** · üç ayrı sabotaj, her biri **tam bir** testi
+  düşürdü (şehir yedeği söküldü → etiketsiz iddiası; toast erken çıkışın önüne alındı →
+  başarısızlık iddiası; silme toast'ı söküldü → silme iddiası) · mobil paket **782/782** (100 dosya)
+  · typecheck + lint temiz.
