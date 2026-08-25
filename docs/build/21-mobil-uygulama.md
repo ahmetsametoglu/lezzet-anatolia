@@ -5327,3 +5327,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   09.08'den beri *"AÇIK — cevap bekliyor"*.
 
   Doğrulama: `points.test.ts` **20/20**, 3,5 sn · `@lezzet/mobile-api` typecheck temiz.
+
+- [x] (21.108) **KAPI SINIRI ÇİVİLENDİ — hangi ucun herkese açık olduğu artık bir BEYAN (42 iddia)**
+  · touches: `apps/mobile-api/src/api/v1/router.test.ts`, `apps/mobile-api/src/api/v1/invite.test.ts`
+
+  **BU DOSYAYI GÖZDEN KAÇIRMIŞTIM ve en değerlisiydi.** `router.ts` "varsayılan kapalı" kuruluyor:
+  `v1.use('*', bearerAuth)` satırından ÖNCE bağlanan her uç herkese açık, sonrakiler korumalı.
+  **Sıra bir stil tercihi değil, güvenlik kararının kendisi** — tek bir `v1.route(...)` satırını o
+  çizginin üstüne taşımak bir ucu sessizce herkese açar. Hiçbir yerde hata vermez, testler geçer,
+  tip sistemi susar; fark yalnız `curl`layan biri görür.
+  **Sabotajla kanıtlandı:** `/me/points` çizginin üstüne taşındığında iki iddia birden kırmızı.
+
+  **LİSTE KAYNAKTAN TÜRETİLMİYOR ve bu, mail hizası testinin TERSİ bir karar.** Orada kaynağı
+  tekrar eden test kaynakla birlikte yanılıyordu; burada tam tersi isteniyor — liste bir
+  **beyandır**. Router'dan türetilseydi, taşınan bir satır testi de kendiliğinden taşır ve iddia
+  hiçbir şey söylemezdi. Yeni bir açık uç eklemek artık bu dosyayı da değiştirmeyi gerektiriyor.
+  10 açık uç (her biri gerekçesiyle) · 15 korumalı uç.
+
+  **İKİ ÖLÇÜM TESTİN KENDİSİNİ DÜZELTTİ:**
+  · **Metot da listede olmalıymış:** ilk taslak her yolu GET'liyordu ve `POST`-only uçlar 401
+    döndü — çünkü eşleşmeyen METOT da `bearerAuth`a düşüyor. "Açık mı" sorusu yol+metot çiftine
+    sorulur; yalnız yola sormak yanlış alarm üretir.
+  · **Tanınmayan yol 401 dönüyor, 404 değil — ve DAVRANIŞ HAKLI ÇIKTI.** İlk taslak 404
+    bekliyordu. Ölçünce görüldü ki bu, "varsayılan kapalı"nın doğal uzantısı: dışarıdan bakan biri
+    hangi ucun VAR OLDUĞUNU ayırt edemiyor. 404 döndürmek kimliksiz bir tarayıcıya uç envanteri
+    çıkarma yolu açardı. Test artık davranışı gerekçesiyle çiviliyor.
+
+  **DAVET UÇLARI (12 iddia)** — karar katmanı zaten çiviliydi (`neighbor.test.ts`, 21.106); burada
+  taşıma sınandı. En kırılgan karar **açık ama kimliğe duyarlı** olmaları: Bearer istemezler
+  (bağlantıyı açan kişi henüz müşterimiz değil, davetin bütün amacı o) ama jeton VARSA okunur ve
+  kendi bağlantısını açan `self` cevabını alır. `optionalCustomerId` düşürüldüğünde iki iddia
+  birden kırmızı yandı — sabotajla kanıtlandı.
+  Ayrıca bir sızıntı sınırı: komşu karşılaması motorda `deliveryZoneId` taşıyor, şema süzüyor —
+  bölge kimliği operasyonun iç künyesi, komşuya söylenecek şey GÜNDÜR.
+  Ve *"cevap HEP `true`"* kararı: geçersiz davet de `true` döner, çünkü kaydolmayı yeni bitirmiş
+  kişiye söylenecek ilk cümle *"davetin geçersiz"* değildir; reddin gerekçesi log'a düşer.
+
+  Doğrulama: `router.test.ts` **30/30** · `invite.test.ts` **12/12** · typecheck temiz.
