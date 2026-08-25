@@ -39,11 +39,17 @@ export function FeedbackOutcome({ t, completion, customerName, compact = false }
         {unhappy ? t.doneTitleUnhappy : customerName ? t.doneTitle.replace('{name}', customerName) : t.doneTitleNoName}
       </span>
 
-      {/* Puan rozeti YALNIZ bu turda puan kazanıldıysa: ikinci kez açılan davette 0 döner ve
-          "+0 puan" yazmak müşteriye anlamsız bir rozet göstermek olurdu. */}
-      {completion.pointsAwarded > 0 && (
+      {/* ROZETİN SAYISI TURUN TOPLAMIDIR (`invitePointsTotal`), tamamlama primi DEĞİL — mobil şeridin
+          cihazda ölçtüğü arıza buydu (MB-17, 11.08) ve web'de de aynen yaşanıyordu: ekran primi (5)
+          yazıyor, puan defteri turun toplamını (30) gösteriyordu. Müşteri oy verip yorum yazarak
+          kazandığı puanı ekranda göremiyordu.
+
+          KAPI DA TOPLAMA BAĞLI: prim, tavan dolduğunda ya da davet ikinci kez tamamlandığında 0'a
+          düşüyor. Kapı prime bakarsa müşteri, o turda 20 puan kazanmış olsa bile hiçbir puan bilgisi
+          görmüyordu. Toplam gerçekten 0 ise rozet yine çizilmez — "+0 puan" anlamsız bir rozettir. */}
+      {completion.invitePointsTotal > 0 && (
         <span className="rounded-pill bg-olive px-4.5 py-2 font-sans text-body-sm font-bold text-white">
-          {t.pointsBadge.replace('{n}', String(completion.pointsAwarded))}
+          {t.pointsBadge.replace('{n}', String(completion.invitePointsTotal))}
         </span>
       )}
       <span className="font-sans text-note leading-relaxed text-body">{t.pointsNote}</span>
