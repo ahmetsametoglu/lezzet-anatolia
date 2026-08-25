@@ -149,11 +149,30 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
    * RPC YAZILMADI: tek tablo üzerinde toplama, STACK §13'ün "çok tablolu + farkı bariz" eşiğini
    * karşılamıyor. Dönem seçicisi de yükü sınırlıyor. "Tümü" seçildiğinde okuma geçmişle büyür —
    * ölçülüp gerekirse RPC'ye alınır; bugün ölçüsüz bir migration yazmak erken karar olurdu.
+   *
+   * ── OKUMA GÖRÜNÜMDEN, TABLODAN DEĞİL (22.28 turu) ───────────────────────────
+   * Depo süzgeci eklenince kaynak da değişmek zorunda kaldı: `stock_adjustment`ta `warehouse_id`
+   * YOK (depo partinin üstünde), `stock_adjustment_detail` görünümünde VAR — `listPage` zaten
+   * oradan okuyor. Tabloda kalıp elde süzmek, dönemin TAMAMINI çekip bellekte elemek olurdu ve
+   * "tümü" döneminde bu bütün geçmişi taşımak demek.
+   *
+   * **Süzgeçsiz toplam ile süzgeçli listenin yan yana durması sessiz bir yalandır:** başlık "bu
+   * çeyrek 366 €" derken tablo yalnız bir deponun kayıtlarını gösterirse, operatör göremediği
+   * satırların toplamını kendi deposuna yazar.
    */
-  async reasonSummary(from?: Date, to?: Date): Promise<{ byReason: Map<StockAdjustmentReason, { qty: number; costCents: number }>; qty: number; costCents: number }> {
-    let query = this.supabase.from(this.tableName).select('reason,qty,unit_cost');
+  async reasonSummary(
+    from?: Date,
+    to?: Date,
+    warehouseIds?: readonly string[],
+  ): Promise<{ byReason: Map<StockAdjustmentReason, { qty: number; costCents: number }>; qty: number; costCents: number }> {
+    const empty = { byReason: new Map<StockAdjustmentReason, { qty: number; costCents: number }>(), qty: 0, costCents: 0 };
+    // Boş dizi "hiçbiri" (`listPage` ile aynı sözleşme) — sorgu bile atılmaz.
+    if (warehouseIds?.length === 0) return empty;
+
+    let query = this.supabase.from('stock_adjustment_detail').select('reason,qty,unit_cost');
     if (from) query = query.gte('created_at', from.toISOString());
     if (to) query = query.lte('created_at', to.toISOString());
+    if (warehouseIds) query = query.in('warehouse_id', [...warehouseIds]);
     const { data, error } = await query;
     if (error) throw error;
 

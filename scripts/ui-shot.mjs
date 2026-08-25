@@ -14,7 +14,18 @@
  * Görüntüler İNCELEME kaynağıdır, assertion değil — hiçbir şeyi kırmaz (00.9 Kademe 2 ayrı iş).
  *
  * Dev server'ı KULLANICI yönetir (CLAUDE §4) — kapalıysa açık mesajla çıkar, kendisi başlatmaz.
- * Operasyon sayfaları dev auth bypass'ıyla açılır (guard.ts, seed'li DEV_ADMIN kimliği).
+ *
+ * ── OPERASYON ÇEKİMİ ÖNCE GİRİŞ YAPAR (düzeltildi 25.08) ────────────────────
+ * Burada *"dev auth bypass'ıyla açılır"* yazıyordu ve o bypass **19.08'de söküldü** (`guard.ts`
+ * künyesi). Araç güncellenmediği için o günden beri her operasyon çekimi giriş sayfasını
+ * çekiyordu — ve arıza SESSİZDİ: `page.goto` başarılı olduğu için satır `✓` basıyor, dosya
+ * üretiliyor, yalnız içindeki ekran istenen ekran değil. Görüntüye bakmadan "çektim" diyen bir
+ * ajan, hiç görmediği bir sayfayı doğrulanmış sayardı.
+ *
+ * Çözüm bypass'ı geri getirmek değil, aracı bugünkü TEK yola bağlamak: `/auth/dev-login?next=…`
+ * gerçek bir oturum kurar (magic-link jetonu tüketilir), yani ekran production'da nasıl
+ * davranacaksa öyle davranır. Kapı kapalıysa (`DEV_LOGIN_ENABLED` yok) çekim yine yapılır ama
+ * konsol dökümüne not düşülür — sessizce giriş sayfası çekmek yerine sebebini söyler.
  */
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -43,6 +54,32 @@ try {
 
 const slugOf = (p) => p.replaceAll('/', '_').replace(/^_+|_+$/g, '') || 'root';
 
+/**
+ * **Operasyon oturumu — BİR KEZ kurulur, tüm çekimlerde paylaşılır.**
+ *
+ * Her bağlamın kendi girişini yapması denendi ve KIRILDI: `/auth/dev-login` her çağrıda yeni bir
+ * magic-link üretiyor, arka arkaya gelen ikinci istek **400** alıyor (ölçüldü 25.08 — aynı yolun
+ * açık/karanlık çekimleri). Oturum bir kez kurulup çerezler tekrar kullanılınca hem yarış biter
+ * hem çekim hızlanır: derlenmiş rota ikinci kez ısınmaz.
+ *
+ * `null` = kapı kapalı ya da giriş tutmadı; çağıran bunu konsol dökümüne yazar (sessizce giriş
+ * sayfası çekmek, hiç görülmemiş bir ekranı doğrulanmış saydırırdı).
+ */
+async function operationsState(browser) {
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await page.goto(`${BASE}/auth/dev-login`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    // Kapı `next` verilmezse yöneticiyi kendi panosuna atar; oturum kurulduysa artık `/operations`tayız.
+    const ok = new URL(page.url()).pathname.startsWith('/operations');
+    return ok ? await context.storageState() : null;
+  } catch {
+    return null;
+  } finally {
+    await context.close();
+  }
+}
+
 /** Tek sayfanın tek varyantını çek: görüntü + konsol dökümü. */
 async function shoot(browser, path, variant, options) {
   const context = await browser.newContext(options);
@@ -58,6 +95,13 @@ async function shoot(browser, path, variant, options) {
   mkdirSync(dir, { recursive: true });
   try {
     await page.goto(BASE + path, { waitUntil: 'networkidle', timeout: 30_000 });
+    // Guard yolu geri çevirdiyse çekim yine olur ama İÇERİĞİ yanlıştır; sessiz kalmak yerine söylenir.
+    if (path.startsWith('/operations') && !new URL(page.url()).pathname.startsWith('/operations')) {
+      logs.push(
+        `[ui-shot] operasyon oturumu açılamadı — ${page.url()} çekildi. ` +
+          '`DEV_LOGIN_ENABLED=true` ve `NEXT_PUBLIC_SITE_URL` yerel mi (auth/dev-login künyesi)?',
+      );
+    }
     await page.screenshot({ path: join(dir, `${variant}.png`), fullPage: true });
     console.log(`  ✓ ${path} → ${slugOf(path)}/${variant}.png${logs.length ? ` (${logs.length} konsol kaydı)` : ''}`);
   } catch (err) {
@@ -69,15 +113,25 @@ async function shoot(browser, path, variant, options) {
 }
 
 const browser = await chromium.launch();
+// Oturum yalnız operasyon yolu istendiyse kurulur: müşteri çekimi ziyaretçi gözüyle yapılmalı,
+// giriş yapmış bir bağlamda vitrin başka bir sayfadır.
+const needsAuth = paths.some((p) => p.startsWith('/operations'));
+const storageState = needsAuth ? await operationsState(browser) : null;
+if (needsAuth && storageState === null) {
+  console.error('[ui-shot] operasyon oturumu kurulamadı — çekimler giriş sayfasını gösterecek (console.txt).');
+}
+const opsContext = { viewport: { width: 1440, height: 900 }, ...(storageState ? { storageState } : {}) };
+
 for (const path of paths) {
   const dir = join(OUT, slugOf(path));
   rmSync(dir, { recursive: true, force: true }); // her çekim öncekini siler — bayat görüntü okunmasın
   const allLogs = [];
-  allLogs.push(...(await shoot(browser, path, 'desktop', { viewport: { width: 1440, height: 900 } })));
+  const base = path.startsWith('/operations') ? opsContext : { viewport: { width: 1440, height: 900 } };
+  allLogs.push(...(await shoot(browser, path, 'desktop', base)));
   if (path.startsWith('/operations')) {
     // Mobil web çekimi yok (masaüstü-yalnız, 06.08); onun yerine karanlık mod: `data-theme` sistem
     // tercihinden türer (theme-toggle.tsx) — emülasyon yeter.
-    allLogs.push(...(await shoot(browser, path, 'desktop-dark', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' })));
+    allLogs.push(...(await shoot(browser, path, 'desktop-dark', { ...base, colorScheme: 'dark' })));
   } else {
     allLogs.push(...(await shoot(browser, path, 'mobile-web', { ...devices['iPhone 13'] })));
   }

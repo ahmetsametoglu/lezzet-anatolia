@@ -1,10 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  DEFAULT_PAGE_SIZE,
   ReceiveIntakeResultSchema,
   StockIntakeSchema,
   StockIntakeInsertSchema,
   StockIntakeUpdateSchema,
   type IntakeLine,
+  type KeysetCursor,
+  type Page,
   type ReceiveIntakeResult,
   type StockIntake,
   type StockIntakeInsert,
@@ -74,6 +77,42 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
 
   async listBySupplier(supplierId: string): Promise<StockIntake[]> {
     return this.getAll({ supplierId }, { orderBy: 'date', orderDirection: 'desc' });
+  }
+
+  /**
+   * **Kabul edilen girişler — "ne geldi" sorusunun cevabı** (22.28).
+   *
+   * ── SAYFALI, ÇÜNKÜ SINIRSIZ BÜYÜR ───────────────────────────────────────────
+   * Giriş kaydı veriyle büyüyen bir kümedir ve hiç erimez (`CLAUDE §1`): açık siparişler kabul
+   * edildikçe kapanır ama bu defter yalnız uzar. Keyset — `offset` iki eşzamanlı kabulde satır
+   * atlatır.
+   *
+   * ── DEPO SÜZGECİ SÖZLEŞMEDE, ÇAĞIRANIN İNSAFINDA DEĞİL ──────────────────────
+   * Depo bir boyut değil DEĞİŞMEZDİR (`CLAUDE §1`): süzgeci unutulan bir okuma tek depolu veride
+   * DOĞRU cevap verir ve çok depoluda sessizce başka şehrin defterini gösterir. `stock_adjustment`
+   * tarafı bunu 08.08'de acı yoldan öğrendi (ekran belleğinde süzüyordu, keyset yüzünden sonraki
+   * sayfalar eksik geliyordu) — aynı hatayı ikinci kez yapmıyoruz.
+   *
+   * **Boş dizi "hepsi" DEĞİL "hiçbiri"** (`stock.service.ts:127` ile aynı kural).
+   *
+   * ── SIRA `created_at`, `date` DEĞİL ─────────────────────────────────────────
+   * `date` operatörün girdiği İRSALİYE günüdür ve geriye dönük yazılabilir (dün gelen mal bugün
+   * kaydedilir). Defterin sırası kaydın kendi anıdır: "az önce ne yazdım" sorusuna cevap veren
+   * tek alan odur, yoksa yeni kayıt listenin ortasına düşer ve operatör onu bulamaz.
+   */
+  async listRecent(
+    opts: { warehouseIds?: readonly string[]; limit?: number; cursor?: KeysetCursor } = {},
+  ): Promise<Page<StockIntake>> {
+    if (opts.warehouseIds?.length === 0) return { rows: [], nextCursor: null };
+    return this.getPage(
+      { warehouseId: opts.warehouseIds ? [...opts.warehouseIds] : undefined },
+      {
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+        limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+        keysetAfter: opts.cursor,
+      },
+    );
   }
 
   /**

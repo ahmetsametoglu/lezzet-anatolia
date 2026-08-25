@@ -63,6 +63,17 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
       - **Katalog dışı ürün girilmez** — tanımı olmayan ürün buradan yaratılamaz; rampada açılan bir ürün kaydı adı/beyanı/görseli eksik bir katalog satırı bırakırdı.
       - **Telefon `contact` bloğunda:** tedarikçide ayrı `phone` kolonu yok ve açılmadı — iletişim bilgisi zaten orada, ikinci bir yer iki gerçek demek olurdu.
     - **KALAN:** *"Bugün girilenler"* şeridi çizilmedi ve kabul gerçek veriyle tamamlanmadı ("Kabulü tamamla"ya basılmadı — stoğa yazar). **Bu turun eklediği parçalar ekranda GÖRÜLMEDİ:** dev server bozuk hâlde (kök 500, sayfa 404) ve `pnpm ui:shot` alınamadı; tip/lint/knip zinciri temiz. Satır `[~]`. BEKLEYEN(10.4)
+  - **EV DEĞİŞTİ ve KALAN'IN YARISI KAPANDI (kayıt düzeltmesi 25.08).** Ekran artık ayrı sayfa değil:
+    mal kabul **Stok'un Giriş sekmesi** (`stock?tab=intake`; `/operations/receiving` yalnız
+    yönlendiriyor — 22.26). Yukarıdaki notlar taşınma ÖNCESİNİ anlatır, davranış sekmede sürüyor.
+    - ✅ *"Bugün girilenler"* → **"Kabul edilenler" defteri olarak yazıldı (`22.28`)**: sayfalı okuma
+      (`StockIntakeService.listRecent`, depo süzgeçli keyset) + sekmenin ikinci bölümü. Şerit değil
+      defter oldu ve gerekçesi kapsam: "bugün" bir gün süzgeciydi, oysa soru *"az önce ne girdim"* —
+      dün yazılmış bir kabulü ertesi sabah gizlemek, aranan kaydı tam da arandığı an kaybetmekti.
+      Ekranda ölçüldü (iki tema, konsol temiz).
+    - ⏳ **Açık kalan tek şey ölçüm:** kabul GERÇEK veriyle uçtan uca tamamlanmadı ("Kabulü tamamla"
+      basılmadı — stoğa yazar ve geri alınması elle düzeltme gerektirir). Satır bu yüzden `[~]`.
+      BEKLEYEN(10.4)
   - **"Alış fiyatı alanı yok" TİPTE zorlanıyor:** depocunun gönderdiği satırda (`IntakeFormLine`) `unitCost` alanı YOKTUR; maliyet PO'dan sunucu tarafında eşleşir. Testte depocu fiyat girmeden partinin alış fiyatı 6 € doğuyor — gördüğü bir sayı değil, admin'in girdiği.
   - **Fark hata değildir:** eksik/fazla gelen mal işaretlenir, kabul yine tamamlanır ve mal fiilen girer. **PO'suz alımda fark üretilmez** — karşılaştırılacak sipariş yok, her satırı "beklenmedik" saymak gürültü olurdu (bu kusuru test yakaladı).
   - **MLOR engellemez, uyarır:** ömrünün onda dokuzu geçmiş parti de kabul edilir, uyarı listelenir — karar mal kabul edende (DOMAIN §4).

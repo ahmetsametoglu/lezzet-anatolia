@@ -19,9 +19,10 @@ import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/conte
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
+import { readReceivedIntakes } from './intake-read';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
-import type { LossRow, RecallResult, StockLevelRow } from './stock-types';
+import type { LossRow, RecallResult, ReceivedIntake, StockLevelRow } from './stock-types';
 
 // Stok ekranı server action'ları — 'use server' + requireStaff ilk + servise/motora devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.
@@ -117,6 +118,31 @@ export async function loadMoreLevelsAction(
   }
 }
 
+/**
+ * **Kabul defterinin sonraki sayfası** (22.28) — giriş kaydı hiç erimez, yalnız uzar.
+ *
+ * Kapsam ve para yetkisi burada YENİDEN çözülüyor, istemciden gelmiyor: imleci elle değiştiren
+ * biri en fazla başka bir sayfa ister, başka bir deponun defterini ya da gizlenmiş tutarı alamaz.
+ * Dönem süzgeci YOK ve gerekmiyor — bu defterin adres durumu ilk sayfayla aynı (`losses`teki
+ * `period` gibi bir aralık taşımıyor), yani devam sayfası ilk sayfadan ayrışamaz.
+ */
+export async function loadMoreReceivedAction(
+  cursor: KeysetCursor,
+): Promise<ActionResult<{ received: ReceivedIntake[]; nextCursor: KeysetCursor | null }>> {
+  try {
+    await requireStaff();
+    const ctx = await readWarehouseContext();
+    const page = await readReceivedIntakes({
+      warehouseIds: ctx.warehouseIds,
+      canSeeCost: ctx.scope.kind === 'all',
+      cursor,
+    });
+    return { data: { received: page.rows, nextCursor: page.nextCursor }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 /** İmha/fire geçmişinin sonraki sayfası — liste zamanla sınırsız büyür, imleçle ilerler. */
 export async function loadMoreLossesAction(
   search: string,
@@ -129,7 +155,15 @@ export async function loadMoreLossesAction(
     const { period } = parseStockUrl(Object.fromEntries(new URLSearchParams(search)));
     const db = serviceDb();
     const svc = new StockAdjustmentService(db);
-    const page = await svc.listRecent({ from: periodStart(period, new Date()), cursor, limit: DEFAULT_PAGE_SIZE });
+    // Depo süzgeci ilk sayfayla AYNI (22.28 turu): devam sayfası daha geniş bir evren görseydi
+    // liste kaydırıldıkça başka depoların kayıtları sızardı — ve sızıntı yalnız aşağıda olurdu.
+    const ctx = await readWarehouseContext();
+    const page = await svc.listRecent({
+      from: periodStart(period, new Date()),
+      cursor,
+      limit: DEFAULT_PAGE_SIZE,
+      warehouseIds: ctx.warehouseIds,
+    });
     const actorNames = await readActorNames(new UserProfileService(db), page.rows);
     return { data: { losses: toLossRows(page.rows, actorNames), nextCursor: page.nextCursor }, error: null };
   } catch (err) {

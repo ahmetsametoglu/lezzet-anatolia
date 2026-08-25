@@ -138,6 +138,41 @@ export interface IntakeTabData {
   storageAreas: Array<{ id: string; name: string; kind: StorageAreaKind }>;
   /** Bağlamda tek depo seçiliyse onun kimliği — diyalogda ÖN SEÇİLİ gelir, sorulmadan yazılmaz. */
   warehouseId: string | null;
+  /** Kabul edilenler defterinin İLK sayfası (22.28) — en yeni önce. */
+  received: ReceivedIntake[];
+  /** Defterin devamı; `null` = son sayfa. Sessiz kırpma yok, ekran "daha var" diyebilmeli. */
+  receivedCursor: KeysetCursor | null;
+}
+
+/**
+ * **Kabul edilmiş bir giriş — defterin satırı** (22.28).
+ *
+ * Sekmenin ikinci sorusu: "ne bekliyorum"un yanında **"ne geldi"**. Cevabı olmayan bir depo ekranı,
+ * az önce yazdığı kaydı bir daha göremeyen bir operatör demektir — ve göremeyen operatör, tereddüt
+ * ettiğinde aynı malı ikinci kez girer.
+ *
+ * **Para YALNIZ `canSeeCost` ile taşınır** ve alanın `null` olması iki şey demek DEĞİL: burada
+ * "gösterilmiyor" demek, "sıfır" değil (`CLAUDE §1` — ölçülemeyen değer sıfır değildir). Depoya
+ * bağlı personelde sunucu bu alanı hiç doldurmaz; ekran isteseydi bile gösteremez.
+ */
+export interface ReceivedIntake {
+  id: string;
+  /** İRSALİYE günü — operatörün girdiği tarih; geriye dönük olabilir (sıra `createdAt`ten gelir). */
+  date: string;
+  /** Kaydın yazıldığı an — defterin sırası budur; "az önce ne girdim" sorusunu o cevaplar. */
+  createdAt: string;
+  /** Tedarikçi adı; `null` = tedarikçisiz giriş (dökme/plansız). */
+  supplierName: string | null;
+  /** Bağlı tedarik siparişinin numarası; `null` = siparişsiz kabul. */
+  purchaseRef: string | null;
+  /** Malın girdiği depo — kayıt bu kapıya takılıdır (`StockIntakeSchema.warehouseId` künyesi). */
+  warehouseName: string | null;
+  /** Kaç parti doğdu (kalem sayısı) ve toplam kaç paket girdi. */
+  lineCount: number;
+  qty: number;
+  note: string | null;
+  /** Girişin parasal toplamı — **yalnız depo-üstü kapsamda dolu**; `null` = gösterilmiyor. */
+  totalAmountCents: number | null;
 }
 
 /** Kategori seçeneği — süzgeç menüsünü besler (tavanı sınırlı, tek turda gelir). */
@@ -248,6 +283,16 @@ export interface StockViewProps {
   hasMoreLosses: boolean;
   loadingLosses: boolean;
   onLoadMoreLosses: () => void;
+  /**
+   * Kabul defteri (22.28) — ilk sayfa + elde biriken devamı, TEK liste hâlinde.
+   *
+   * `data.intake.received` doğrudan okunmuyor: o yalnız sunucunun son turudur ve sekme ondan
+   * beslenseydi "daha fazla" düğmesi hiçbir şey yapmıyor gibi görünürdü (`losses` ile aynı desen).
+   */
+  received: ReceivedIntake[];
+  hasMoreReceived: boolean;
+  loadingReceived: boolean;
+  onLoadMoreReceived: () => void;
   period: LossPeriod;
   onPeriod: (p: LossPeriod) => void;
   selectedId: string | null;

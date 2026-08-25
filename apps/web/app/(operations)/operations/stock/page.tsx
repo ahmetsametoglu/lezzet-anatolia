@@ -106,8 +106,12 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       selectedVariant ? productSvc.listStockRows({ filters: { ids: [selectedVariant.productId] }, limit: 1 }) : null,
       stockSvc.listInStockDetailed(undefined, ctx.warehouseIds),
       new CategoryService(db).list(),
-      onOutgoing ? lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }) : EMPTY_LOSS_PAGE,
-      onOutgoing ? lossSvc.reasonSummary(from) : EMPTY_LOSS_TOTALS,
+      // ⚠ DEPO SÜZGECİ (22.28 turunda ölçülerek bulundu): `listPage` süzgeci 08.08'de sunucuya
+      // alınmıştı ama bu çağrı onu geçirmiyordu — sekme BÜTÜN depoların çıkışlarını listeliyordu
+      // (10.7'de bir kez kapatılan açığın aynısı, bu kez sayfa tarafında). Tek depolu yerelde
+      // görünmez, çok depoluda depo değişmezini deler (`CLAUDE §1`).
+      onOutgoing ? lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE, warehouseIds: ctx.warehouseIds }) : EMPTY_LOSS_PAGE,
+      onOutgoing ? lossSvc.reasonSummary(from, undefined, ctx.warehouseIds) : EMPTY_LOSS_TOTALS,
       readExpiryThresholds(new SettingsService(db)),
       readWarehouseLabels(),
       // Rozet HER sekmede okunuyor: "bugün ne bekliyorum" bir bakışta görünmeli (tasarım §7);

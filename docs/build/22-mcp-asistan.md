@@ -1381,10 +1381,42 @@ satırında.
     toplamıyor — eksik bir toplam, doğru bir toplam gibi okunurdu.
   - Sevk (`warehouse_transfer`) de burada: kaydı var ama listeye bağlı değil.
 
-- [ ] (22.28) **Mal kabul sekmesine "kabul edilenler" listesi** — geçmiş girişler
+- [x] (22.28) **Mal kabul sekmesine "kabul edilenler" listesi** — geçmiş girişler · touches:
+  `packages/database/src/services/{stock-intake,stock,purchase-order,stock-adjustment}.service.ts`,
+  `apps/web/app/(operations)/operations/stock/{intake-read.ts,actions.ts,page.tsx,stock-types.ts,stock-client.tsx,tabs/intake-tab.tsx}`
   - *Bitti:* sekme iki bölüm olur (bekleyenler + kabul edilenler); "ne geldi" sorusu Stok'tan yanıtlanır
-  - `stock_intake` için sayfalı bir okuma yok (bugün yalnız tedarikçi bazlı `listBySupplier`). Boş bir
-    bölüm çizilmedi: veri olmadan başlık koymak, olmayan bir listeyi vaat etmektir.
+  - ~~`stock_intake` için sayfalı bir okuma yok~~ → **YAZILDI (25.08).** `StockIntakeService.listRecent`
+    (keyset + depo süzgeci) · `StockService.summaryByIntake` (sayfa başına TEK tur: kalem sayısı +
+    giren adet) · `PurchaseOrderService.listByIds` (kapanmış siparişin numarası — `listOpen` onu
+    artık vermiyor, numara okunamasaydı satır "siparişsiz kabul" derdi ve doğru bilgi yokluğa
+    dönüşürdü). Ekranda ölçüldü: üç kayıt, iki tema, konsol temiz.
+    - **Sıra `created_at`, `date` DEĞİL.** İki tarih de doğru: `date` malın geldiği gün (geriye dönük
+      girilebilir), `created_at` kaydın yazıldığı an. Defterin sırası ikincisi — *"az önce ne girdim"*
+      sorusunu yalnız o cevaplar; `date` sıralaması dün gelen malın bugünkü kaydını listenin ortasına
+      atardı ve bulunamayan kayıt İKİNCİ kez girilirdi. Satır ikisini de gösteriyor, saat yalnız
+      farklıysa ayrıca yazılıyor.
+    - **`initial_qty` toplanıyor, `physical_qty` değil:** defter "ne geldi" der, "ne kaldı" demez.
+      Erimiş bir sayı geçmişteki kabulü küçültür ve fark denetimini sessizce yanıltırdı (testli).
+    - **Para `canSeeCost` ile:** depoya bağlı personelde alan hiç DOLDURULMUYOR (`null` = gösterilmiyor,
+      sıfır değil) ve kolon çizilmiyor — süzmeyi ekrana bırakmak, tutarı tarayıcıya göndermenin en
+      sessiz yoluydu.
+  - ⚠ **Yol boyunca ÜÇ kusur ölçüldü ve kapatıldı** — üçü de bu iş olmasa görünmeyecekti:
+    1. **Çıkışlar sekmesi BÜTÜN depoların kayıtlarını gösteriyordu.** `listPage`in depo süzgeci
+       08.08'de sunucuya alınmıştı (10.7) ama sayfa onu geçirmiyordu; `reasonSummary` ise süzgeci
+       hiç ALMIYORDU. Yani başlıktaki *"bu çeyrek −16,59 €"* bütün ağın toplamıyken tablo tek
+       deponun kayıtlarını gösterebiliyordu — iki sayı da doğru görünür, farklı evrenden geldiklerini
+       hiçbir şey söylemez. `reasonSummary` artık `stock_adjustment_detail` görünümünden okuyor
+       (`stock_adjustment`ta `warehouse_id` yok) ve süzgeç alıyor; devam sayfası da (`loadMoreLosses`)
+       aynı evreni görüyor. Testli.
+    2. **`pnpm ui:shot` operasyon ekranını 19.08'den beri ÇEKEMİYORDU.** Dev auth bypass o gün
+       söküldü (`guard.ts`), araç güncellenmedi — her operasyon çekimi giriş sayfasını alıyordu ve
+       arıza sessizdi: `page.goto` başarılı olduğu için satır `✓` basıyor, dosya üretiliyor. Araç
+       artık `/auth/dev-login` ile GERÇEK oturum kuruyor; oturum bir kez kurulup çekimler arasında
+       paylaşılıyor (arka arkaya iki magic-link **400** alıyor — ölçüldü). Giriş tutmazsa çekim yine
+       yapılır ama konsol dökümüne sebebi yazılır.
+    3. **`ea88f1ff` bir tip hatası taşıyordu** (`scripts/barcode-svg.test.ts`): daraltma `expect`in
+       closure'ına geçmiyor. Vitest tip görmez, commit `--no-verify` ile atılmıştı — iki kapı da
+       aynı anda kapalıydı. Düzeltildi.
 
 - [x] (22.29) **Sıcaklık kaydının kalıcı evi** — Depolar mı, native uygulama mı
   - *Bitti:* ölçüm kaydı ait olduğu yüzeyde yaşar; `/operations/temperature` ya taşınır ya gerekçesiyle kalır

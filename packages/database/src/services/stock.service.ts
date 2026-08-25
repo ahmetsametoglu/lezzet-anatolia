@@ -197,6 +197,40 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
+   * **Girişlerin parti özeti — "o kabulde kaç kalem, kaç paket girdi"** (22.28).
+   *
+   * Mal kabul defteri `stock_intake` başlıklarını sayfalıyor; kalemler ise partilerdir ve onlar
+   * BU tabloda. Sayfa başına TEK tur: satır başına sorgu atmak otuz satırlık bir defteri otuz
+   * sorguya çevirirdi.
+   *
+   * **`initial_qty` okunur, `physical_qty` DEĞİL** (`orderVsReceived` ile aynı kural): defter
+   * "ne geldi" der, "bugün ne kaldı" demez. Parti satıldıkça erir; erimiş bir sayı geçmişteki
+   * kabulü küçük gösterir ve fark denetimini sessizce yanıltır.
+   *
+   * Şema entiteden TÜRER (`CLAUDE §1`): iki alanlık bir tip elle yazılsaydı `initialQty`'nin
+   * tamsayı olduğu ikinci bir yerde daha beyan edilirdi.
+   */
+  async summaryByIntake(intakeIds: readonly string[]): Promise<Map<string, { lineCount: number; qty: number }>> {
+    const summary = new Map<string, { lineCount: number; qty: number }>();
+    if (intakeIds.length === 0) return summary;
+
+    const rows = await this.getAllAs(StockSchema.pick({ intakeId: true, initialQty: true }), {
+      intakeId: [...intakeIds],
+    }, { select: 'intake_id,initial_qty' });
+
+    for (const row of rows) {
+      // `intakeId` şemada nullable (PO'suz doğrudan parti düzeltmeleri): kimliksiz satır bu
+      // deftere ait değildir, süzgeç zaten getirmez ama tip onu bilmiyor.
+      if (row.intakeId === null) continue;
+      const entry = summary.get(row.intakeId) ?? { lineCount: 0, qty: 0 };
+      entry.lineCount += 1;
+      entry.qty += row.initialQty;
+      summary.set(row.intakeId, entry);
+    }
+    return summary;
+  }
+
+  /**
    * Lot numarasıyla parti arama — geri çağırmanın (rappel) ilk adımı. Tedarikçi "şu lotu topla"
    * dediğinde elde yalnız o numara vardır; hangi varyantın hangi partisi olduğu buradan çıkar.
    *

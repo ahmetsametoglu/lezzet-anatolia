@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
-import { loadMoreLevelsAction, loadMoreLossesAction } from './actions';
+import { loadMoreLevelsAction, loadMoreLossesAction, loadMoreReceivedAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { IntakeDialog } from './dialogs/intake-dialog';
 import { WriteOffDialog } from './dialogs/write-off-dialog';
@@ -12,7 +12,7 @@ import { StockDesktop } from './stock.desktop';
 import { stockUrl, type LossPeriod, type StockScope, type StockTab, type StockUrlState } from './stock-url';
 import type { ReceiveOutcome } from '@/lib/warehouse/intake-types';
 import type { OfferHandoff } from './stock-handoff';
-import type { BatchView, StockData, StockLevelRow } from './stock-types';
+import type { BatchView, ReceivedIntake, StockData, StockLevelRow } from './stock-types';
 
 // Stok ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
 // mobil deneyim native uygulamada — `docs/uygulama`.
@@ -127,6 +127,30 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
       .finally(() => setLoadingLosses(false));
   };
 
+  // ── Kabul defteri (22.28): aynı desen, ayrı imleç ──
+  // İmleç sunucu turu her tazelendiğinde sıfırlanır: kabul yazıldıktan sonra `router.refresh()`
+  // ilk sayfayı yeniden getiriyor ve elde birikmiş eski sayfalar kalsaydı, az önce yazılan kayıt
+  // listede İKİ kez görünürdü (yeni ilk sayfa + eski birikim).
+  const [extraReceived, setExtraReceived] = useState<ReceivedIntake[]>([]);
+  const [receivedCursor, setReceivedCursor] = useState(data.intake?.receivedCursor ?? null);
+  const [loadingReceived, setLoadingReceived] = useState(false);
+  useEffect(() => {
+    setExtraReceived([]);
+    setReceivedCursor(data.intake?.receivedCursor ?? null);
+  }, [data.intake?.received, data.intake?.receivedCursor]);
+
+  const onLoadMoreReceived = () => {
+    if (!receivedCursor || loadingReceived) return;
+    setLoadingReceived(true);
+    void loadMoreReceivedAction(receivedCursor)
+      .then(({ data: page }) => {
+        if (!page) return;
+        setExtraReceived((prev) => [...prev, ...page.received]);
+        setReceivedCursor(page.nextCursor);
+      })
+      .finally(() => setLoadingReceived(false));
+  };
+
   const levels = [...data.levels, ...extraLevels];
 
   /**
@@ -222,6 +246,12 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
     hasMoreLosses: lossCursor !== null,
     loadingLosses,
     onLoadMoreLosses,
+    // Defter `losses` desenini izler: ilk sayfa sunucudan, devamı elde birikir, sekme tek liste
+    // görür. `data.intake.received` doğrudan okunsaydı sekme yalnız ilk sayfayı çizerdi.
+    received: [...(data.intake?.received ?? []), ...extraReceived],
+    hasMoreReceived: receivedCursor !== null,
+    loadingReceived,
+    onLoadMoreReceived,
     selectedId: selected?.variantId ?? null,
     onSelect,
     openVariantId,

@@ -148,6 +148,17 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
+   * Kimliğe göre siparişler — geçmişe bakan okumaların künye kaynağı (22.28).
+   *
+   * `listOpen` yalnız AÇIK siparişleri veriyor ve kabul defteri tam tersini soruyor: kabul edilmiş
+   * bir giriş, çoktan `received`e dönmüş bir siparişe bağlıdır. Numarası orada okunmasaydı defter
+   * satırı "siparişsiz kabul" gibi görünürdü — yani doğru bilgi yokluğa dönüşürdü.
+   */
+  listByIds(ids: readonly string[]): Promise<PurchaseOrder[]> {
+    return this.getByIds([...ids]);
+  }
+
+  /**
    * Siparişler ekranının sayfası (09.14) — **tek turda**, keyset imleçli.
    *
    * ── NEDEN AYRI BİR OKUMA ────────────────────────────────────────────────────

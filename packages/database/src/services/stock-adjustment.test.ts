@@ -25,12 +25,19 @@ let productId: string;
 let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
+/**
+ * İKİNCİ depo — süzgeç ancak komşusu varken sınanabilir (tek depolu veride süzgeci unutulan okuma
+ * da doğru cevap verir). Fikstürde duruyor, testin içinde değil: `warehouse` FK'leri `restrict` ve
+ * partileri silinmeden silinemiyor — teardown sırası `cleanup.ts`in işi, testin değil (`CLAUDE §4b`).
+ */
+let neighbourWarehouseId: string;
 // Ölçüm noktaları (19.28): sıcaklık kaydı artık serbest metin konum değil TANIMLI nokta taşıyor.
 let storageAreaId: string;
 let vehicleId: string;
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'DUZ' })).id;
+  neighbourWarehouseId = (await createTestWarehouse(db, { label: 'KMS' })).id;
   const stamp = Date.now();
   storageAreaId = (await areas.insert({ warehouseId, name: `Dolap ${stamp}`, kind: 'frozen' })).id;
   vehicleId = (await vehicles.insert({ plate: `T-${stamp}`, warehouseId })).id;
@@ -52,7 +59,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     storageAreaIds: [storageAreaId],
     vehicleIds: [vehicleId],
-    warehouseIds: [warehouseId],
+    warehouseIds: [warehouseId, neighbourWarehouseId],
   });
 });
 
@@ -165,6 +172,44 @@ describe('imha/fire araması (09.18)', () => {
     const row = (await adjustments.listRecent({ limit: 50 })).rows.find((r) => r.stockId === batch.id);
     expect(row).toMatchObject({ qty: 3, reason: 'expired', stock: { id: batch.id } });
     expect(row?.stock.variant.product.id).toBe(productId);
+  });
+});
+
+/**
+ * **Dönem toplamı ile listenin AYNI evreni görmesi** (22.28 turunda ölçülerek bulundu).
+ *
+ * `listPage`in depo süzgeci 08.08'de sunucuya alınmıştı ama `reasonSummary` onu hiç almamıştı —
+ * yani başlıktaki *"bu çeyrek 366 €"* bütün depoların toplamıyken tablo tek deponun kayıtlarını
+ * gösterebiliyordu. Sessiz, çünkü iki sayı da doğru görünür: biri "ne kadar", öteki "hangi kayıt"
+ * der ve ikisinin farklı evrenden geldiğini hiçbir şey söylemez. Operatör göremediği satırların
+ * toplamını kendi deposuna yazar.
+ */
+describe('çıkışların depo süzgeci', () => {
+  it('TOPLAM ile LİSTE aynı depoyu görür — komşu deponun imhası ikisine de girmez', async () => {
+    const kendi = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(15), purchasePriceCents: 200 });
+    const oteki = await stocks.insert({ variantId, warehouseId: neighbourWarehouseId, physicalQty: 10, expiryDate: dayOffset(15), purchasePriceCents: 200 });
+    await adjustments.adjust({ stockId: kendi.id, qty: 3, reason: 'expired' });
+    await adjustments.adjust({ stockId: oteki.id, qty: 7, reason: 'expired' });
+
+    const liste = await adjustments.listRecent({ warehouseIds: [warehouseId], limit: 50 });
+    const toplam = await adjustments.reasonSummary(undefined, undefined, [warehouseId]);
+
+    expect(liste.rows.map((row) => row.stockId)).toContain(kendi.id);
+    expect(liste.rows.map((row) => row.stockId)).not.toContain(oteki.id);
+    // Asıl iddia: toplam da süzülmeli. Süzgeçsizken burada 3 + 7 = 10 çıkardı ve başlık,
+    // tablosunda hiç görünmeyen 7 adedi kendi deposunun kaybı gibi yazardı.
+    expect(toplam.byReason.get('expired')?.qty).toBe(3);
+    expect(toplam.qty).toBe(3);
+    expect(toplam.costCents).toBe(600);
+
+    // Komşunun kendi bakışı da tam: süzgeç bir yönü kesip ötekini açık bırakmıyor.
+    expect((await adjustments.reasonSummary(undefined, undefined, [neighbourWarehouseId])).qty).toBe(7);
+  });
+
+  it('BOŞ dizi "hiçbiri" — kapsamsız personel bütün depoların toplamını görmez', async () => {
+    const toplam = await adjustments.reasonSummary(undefined, undefined, []);
+    expect(toplam).toEqual({ byReason: new Map(), qty: 0, costCents: 0 });
+    expect((await adjustments.listRecent({ warehouseIds: [] })).rows).toEqual([]);
   });
 });
 
