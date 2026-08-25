@@ -262,6 +262,9 @@ export async function getCartView(
       // Kapsam üyeliği satırla birlikte taşınır (künye: `CartLineView.categoryId`) — `discountable`
       // zaten aynı iki değeri okuyor, ikinci bir sorgu yok.
       categoryId: product.categoryId,
+      // Ürün kimliği ÖLÇÜM için taşınıyor (künyesi `CartLineView.productId`) — `categoryId` ile
+      // aynı yerden, aynı okumadan; ikinci bir sorgu doğurmuyor.
+      productId: product.id,
       collectionIds: product.collections?.map((row) => row.collectionId) ?? [],
       shippable: product.shippable,
       vatRate: product.vatRate,
@@ -467,6 +470,8 @@ function orphanLine(entry: CartEntry): CartLine {
     ...entry,
     // Kaynağı kaybolmuş satırın kapsamı da bilinmiyor — ve zaten fiyatı `null`, indirime girmiyor.
     categoryId: null,
+    // Ürünü de bilinmiyor: ölçüm bu satırı kimliksiz yazar, UYDURMAZ.
+    productId: null,
     collectionIds: [],
     slug: '',
     name: '',
@@ -506,6 +511,8 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
     qty,
     // Paket kalemleri indirim matrahına GİRMEZ (DOMAIN §13) — kapsam üyeliği sorulmaz bile.
     categoryId: null,
+    // Paket bir ÜRÜN değildir: ürün kırılımına girmez ve kimliği de yoktur.
+    productId: null,
     collectionIds: [],
     slug: pack.slug,
     name: pack.name,

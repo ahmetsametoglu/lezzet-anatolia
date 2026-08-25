@@ -312,6 +312,7 @@ Sepet ucu eşitleme ucudur ve ziyaretçide sunucuya hiç yazmaz
 ziyaretçinin sepete eklemesi **hiç** ölçülmez — oysa huninin asıl sorusu tam olarak ziyaretçinin
 nerede düştüğü. Künyeye yazılacak cümle: *beyan edilmiş olay gözlenen olay değildir; sayısı sepet
 satırlarıyla tutmaz ve bu arıza değildir.*
+- ✅ **Ölçülen ve kapatılan açık (25.08) — olay ÜRÜNÜ taşımıyordu, yani ürün kırılımı YAPISAL olarak sıfırdı.** `add_to_cart` olayı `product_id: null` yazıyordu (sepet satırı varyant/paket kimliği taşır, ürün kimliğini değil) ve toplama sorgusu gruplamadan ÖNCE süzdüğü için `cart_count` hiçbir üründe sıfırdan büyük olamıyordu. Bu, "veri az" değil **"okuma imkânsız"** hâliydi ve raporu sessizce yalancı yapardı. Çözüm: `CartLineView`e `productId` eklendi (paket/öksüz satırda `null` — ölçülemeyen değer uydurulmuyor) ve olayı yazan taraf onu satırdan çözüyor. **Sunucuda ek okuma gerekmedi** — eski künyedeki "ikinci bir tur maliyeti" varsayımı ölçülünce doğru çıkmadı: kimlik zaten okunan görünümde vardı.
 
 **3. Paylaşma sunucu eylemine dönüyor — üç ayrıntı, üçü de düğmenin bugünkü hâlinden.**
 `ShareButton` (`components/customer/ui/share-button.tsx`) **konusunu bilmiyor**: yalnız `label`

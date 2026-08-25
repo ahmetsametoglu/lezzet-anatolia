@@ -68,6 +68,18 @@ afterAll(async () => {
 
 const entry = (qty: number) => [{ kind: 'variant' as const, variantId, qty, stockId: null }];
 
+describe('satır ÖLÇÜM kimliğini taşır (24.08)', () => {
+  it('varyant satırı ÜRÜN kimliğini taşır — `add_to_cart` onu yazacak', async () => {
+    /* Bu alanın tek tüketicisi ölçüm kapısı (`measureWrite`). Taşınmadığı sürece olay
+       `product_id = null` doğuyordu ve ürün kırılımı özeti o satırları GRUPLAMADAN ÖNCE eliyordu
+       (`product_id is not null`) — `cart_count` yapısal olarak hep sıfırdı ve hiçbir yerde hata
+       vermiyordu (mobil şeridin gözlemi 24.08). Kırılması gereken yer burası: değer kaybolursa
+       ölçüm sessizce yalan söyler. */
+    const view = await getCartView(db, 'tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
+    expect(view.lines[0]?.productId).toBe(productId);
+  });
+});
+
 describe('sepetin yol ayrımı', () => {
   it('yerelde olmayan kargolanabilir kalem KARGO grubuna düşer — "tükendi" denmez', async () => {
     const view = await getCartView(db, 'tr',entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });

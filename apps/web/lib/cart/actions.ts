@@ -176,7 +176,21 @@ export async function writeCartAction(
  */
 function measureWrite(view: CartView, signal: CartSignal | null): void {
   for (const item of signal?.added ?? []) {
-    void recordEvent({ type: 'add_to_cart', subjectType: item.subjectType, subjectId: item.subjectId, productId: null, qty: item.qty });
+    /* ÜRÜN KİMLİĞİ GÖRÜNÜMDEN okunuyor (24.08 · mobil şeridin gözlemi). Eskiden `null` yazılıyordu
+       ve ürün kırılımı özeti o satırları GRUPLAMADAN ÖNCE eliyordu (`product_id is not null`) —
+       yani `cart_count` yapısal olarak hep sıfırdı ve hiçbir yerde hata vermiyordu: yönetim
+       ekranı her ürün için "1.240 → 0" yazıyor, yönetici bunu "kimse sepete atmıyor" diye okuyordu.
+       İstemci hâlâ yalnız VARYANT beyan ediyor (`AddToCartIntent` künyesi); ürünü sunucu, az önce
+       hesapladığı görünümden dolduruyor — fazladan sorgu yok. Paket satırında `null` DOĞRU: paket
+       bir ürün değildir. */
+    const line = view.lines.find((l) => (l.kind === 'variant' ? l.variantId : l.bundleId) === item.subjectId);
+    void recordEvent({
+      type: 'add_to_cart',
+      subjectType: item.subjectType,
+      subjectId: item.subjectId,
+      productId: line?.productId ?? null,
+      qty: item.qty,
+    });
   }
   const reason = cartBlockedAnalyticsReason(view);
   if (reason) void recordEvent({ type: 'cart_blocked', reason });

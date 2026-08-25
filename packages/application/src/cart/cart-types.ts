@@ -214,6 +214,17 @@ interface CartLineView {
   collectionIds: readonly string[];
   /** Ürüne dönüş bağlantısı için; paket satırında paketin slug'ı. */
   slug: string;
+  /**
+   * Satırın ÜRÜN kimliği — paket satırında `null` (paket bir ürün değildir).
+   *
+   * **Ölçüm için taşınıyor** (24.08): `add_to_cart` olayı `product_id` olmadan yazılıyordu ve ürün
+   * kırılımı özeti o satırları gruplamadan ÖNCE eliyor (`product_id is not null`), yani
+   * `cart_count` YAPISAL olarak hep sıfırdı — hata vermeden. `AddToCartIntent`in künyesi
+   * "sunucuda doldurmak en sıcak yazma yoluna fazladan bir okuma eklerdi" diyordu; **ölçüldü ve
+   * bu yolda geçerli değil**: satırı kuran okuma (`read.ts`) ürünü zaten elinde tutuyor,
+   * `categoryId` de aynı yerden aynı gerekçeyle taşınıyor. İkinci sorgu yok.
+   */
+  productId: string | null;
   name: string;
   image: StorefrontImage;
   /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş. */
@@ -451,10 +462,12 @@ export function cartBlockReason(view: Pick<CartView, 'hasBlocked' | 'minBasketOk
  *
  * Tip burada, `actions.ts`'te değil: `'use server'` dosyası bir uçtur, tip sözlüğü değil.
  *
- * **`productId` bugün TAŞINMIYOR** ve bu bilinçli bir sınır: istemcinin elindeki `CartEntry` ürünü
- * değil VARYANTI tanıyor, sunucuda doldurmak ise en sıcak yazma yoluna fazladan bir okuma eklerdi.
- * Kayıp sınırlı — `subjectId` varyantın kendisi ve ürün kırılımı varyant tablosundan çözülebiliyor;
- * denormalize alanın işi "varyant silinse de ürün okunabilsin"di. Sınır 08.9 görev satırında yazılı.
+ * **`productId` İSTEMCİDEN gelmiyor** ve bu doğru: istemcinin elindeki `CartEntry` ürünü değil
+ * VARYANTI tanıyor. Ama olay `product_id`SİZ yazılamaz — ürün kırılımı özeti o satırları
+ * gruplamadan önce eliyor ve `cart_count` sessizce hep sıfır kalıyordu (ölçüldü 24.08).
+ * **Sunucu dolduruyor:** ölçüm kapısı (`measureWrite`) az önce hesapladığı sepet görünümünden
+ * okuyor (`CartLineView.productId`) — fazladan sorgu YOK. Eski künye "sunucuda doldurmak bir okuma
+ * ekler" diyordu; o varsayım bu yolda yanlıştı.
  */
 export interface AddToCartIntent {
   subjectType: 'variant' | 'bundle';
