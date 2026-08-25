@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   anonDb,
@@ -508,7 +509,7 @@ describe('katalog oturumsuz gezilir; Bearer YALNIZ fiyatı değiştirir', () => 
     // Auth kullanıcısı → trigger profil satırını açar (`0002`). Kimlik zinciri buradan kurulur:
     // auth kimliği ≠ müşteri kimliği (`apps/web/lib/guard.ts:70-74`), uç `findByAuthUserId` ile çevirir.
     const email = `mapi-b2b-${stamp}@example.com`;
-    const password = `Mapi!${stamp}`;
+    const password = randomUUID();
     const { data: created, error: createError } = await db.auth.admin.createUser({ email, password, email_confirm: true });
     if (createError || !created.user) throw new Error(`test kullanıcısı açılamadı: ${createError?.message ?? 'kullanıcı yok'}`);
     authUserIds.push(created.user.id);

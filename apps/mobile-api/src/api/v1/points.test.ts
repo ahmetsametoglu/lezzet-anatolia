@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { anonDb, serviceDb, UserProfileService } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
@@ -43,7 +44,7 @@ let toptanToken: string;
 /** Auth kullanıcısı + rolleri yazılmış profil + açık oturum (kurye ucu testinin deseni). */
 async function signedInUser(label: string, overrides: Record<string, unknown> = {}) {
   const email = `points-api-${label}-${stamp}@example.test`;
-  const password = `Puan!${stamp}`;
+  const password = randomUUID();
   const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
   authUserIds.push(created.user.id);

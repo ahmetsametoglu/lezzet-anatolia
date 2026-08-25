@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ConversationService, UserProfileService, anonDb, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
@@ -47,7 +48,7 @@ let conversationId = '';
  */
 async function signedInUser(label: string, roles: ('customer' | 'warehouse' | 'admin')[], scope: string[] = []) {
   const email = `social-api-${label}-${stamp}@example.test`;
-  const password = `Sosyal!${stamp}`;
+  const password = randomUUID();
   const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
   authUserIds.push(created.user.id);

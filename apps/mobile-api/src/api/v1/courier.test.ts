@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService,
@@ -109,7 +110,7 @@ async function post(path: string, body: unknown): Promise<Response> {
  */
 async function signedInUser(label: string, roles: ('customer' | 'courier' | 'admin')[], warehouseIds: string[] = []) {
   const email = `courier-api-${label}-${stamp}@example.test`;
-  const password = `Kurye!${stamp}`;
+  const password = randomUUID();
   const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
   authUserIds.push(created.user.id);

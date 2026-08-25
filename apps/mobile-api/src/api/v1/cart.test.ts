@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CartService,
@@ -52,7 +53,7 @@ const ileriGun = (offset: number): string => new Date(Date.now() + offset * 86_4
 
 async function signedInUser(label: string) {
   const email = `cart-api-${label}-${stamp}@example.test`;
-  const password = `Sepet!${stamp}`;
+  const password = randomUUID();
   const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
   authUserIds.push(created.user.id);
