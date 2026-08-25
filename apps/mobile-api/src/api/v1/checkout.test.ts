@@ -1,19 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  AddressService,
-  CartService,
-  CategoryService,
-  DeliveryZoneService,
-  PriceService,
-  ProductService,
-  StockService,
-  UserProfileService,
-  anonDb,
-  serviceDb,
-} from '@lezzet/database';
+import { AddressService, CartService, CategoryService, DeliveryZoneService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { app } from '../../app';
+import { createSignedInUser } from '../../lib/testing';
 
 /**
  * ÖDEME ADIMI — `/api/v1/me/checkout`, iki uç (21.22).
@@ -53,24 +42,6 @@ let addressId: string;
 
 const BIRIM_FIYAT = 1250;
 const ileriGun = (offset: number): string => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
-
-async function signedInUser(label: string) {
-  const email = `checkout-api-${label}-${stamp}@example.test`;
-  const password = randomUUID();
-  const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
-  if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
-  authUserIds.push(created.user.id);
-
-  const profiles = new UserProfileService(db);
-  const profile = await profiles.findByAuthUserId(created.user.id);
-  if (!profile) throw new Error('auth trigger profil satırı açmadı');
-  profileIds.push(profile.id);
-  await profiles.update({ id: profile.id, roles: ['customer'], name: `Ödeme ${label}` });
-
-  const { data: session, error: signInError } = await anonDb().auth.signInWithPassword({ email, password });
-  if (signInError || !session.session) throw new Error(`oturum açılamadı: ${signInError?.message ?? 'oturum yok'}`);
-  return { profileId: profile.id, token: session.session.access_token };
-}
 
 /** Ödeme uçları da dili SORGU DİZESİNDEN okur (`localeOf`, sepet ailesinin ortak kapısı). */
 function req(path: string, init: RequestInit = {}) {
@@ -125,7 +96,9 @@ beforeAll(async () => {
     weekdays: [1, 2, 3, 4, 5, 6, 7],
   });
 
-  const musteri = await signedInUser('musteri');
+  const musteri = await createSignedInUser({ prefix: 'checkout-api', label: 'musteri' });
+  authUserIds.push(musteri.authUserId);
+  profileIds.push(musteri.profileId);
   musteriId = musteri.profileId;
   musteriToken = musteri.token;
   addressId = (await new AddressService(db).insert({

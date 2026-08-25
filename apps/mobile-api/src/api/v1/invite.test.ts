@@ -1,18 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  CategoryService,
-  DeliveryZoneService,
-  OrderService,
-  ProductService,
-  StockService,
-  UserProfileService,
-  anonDb,
-  serviceDb,
-} from '@lezzet/database';
+import { CategoryService, DeliveryZoneService, OrderService, ProductService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { openNeighborInvite } from '@lezzet/application';
 import { app } from '../../app';
+import { createSignedInUser } from '../../lib/testing';
 
 /**
  * DAVET UÇLARI — açık karşılama + Bearer'ın ardındaki kabul (21.43 · 21.44 · 21.45).
@@ -52,24 +43,6 @@ let neighborToken: string;
 
 const ileriGun = (offset: number): string => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
-async function signedInUser(label: string) {
-  const email = `invite-api-${label}-${stamp}@example.test`;
-  const password = randomUUID();
-  const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
-  if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
-  authUserIds.push(created.user.id);
-
-  const profiles = new UserProfileService(db);
-  const profile = await profiles.findByAuthUserId(created.user.id);
-  if (!profile) throw new Error('auth trigger profil satırı açmadı');
-  profileIds.push(profile.id);
-  await profiles.update({ id: profile.id, roles: ['customer'], name: `Davet ${label}` });
-
-  const { data: session, error: signInError } = await anonDb().auth.signInWithPassword({ email, password });
-  if (signInError || !session.session) throw new Error(`oturum açılamadı: ${signInError?.message ?? 'oturum yok'}`);
-  return { profileId: profile.id, token: session.session.access_token };
-}
-
 const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
 async function dataOf<T>(res: Response): Promise<T> {
@@ -96,10 +69,15 @@ beforeAll(async () => {
   })).id;
   await new StockService(db).insert({ warehouseId, variantId, physicalQty: 50, expiryDate: ileriGun(60), purchasePriceCents: 300 });
 
-  const davetEden = await signedInUser('eden');
+  const davetEden = await createSignedInUser({ prefix: 'invite-api', label: 'eden' });
+  authUserIds.push(davetEden.authUserId);
+  profileIds.push(davetEden.profileId);
   davetEdenId = davetEden.profileId;
   davetEdenToken = davetEden.token;
-  komsuToken = (await signedInUser('komsu')).token;
+  const _komsuToken = await createSignedInUser({ prefix: 'invite-api', label: 'komsu' });
+  authUserIds.push(_komsuToken.authUserId);
+  profileIds.push(_komsuToken.profileId);
+  komsuToken = _komsuToken.token;
 
   // Getiren kodu kartın GET'i sırasında üretiliyor (tembel üretim); uç üzerinden aldırıyoruz ki
   // test, kodun gerçekten müşteriye verilen kod olduğunu ölçsün.
@@ -127,6 +105,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  /* SİPARİŞ ÖNCE SİLİNİR. Komşu daveti bir rota siparişinden doğuyor ve o sipariş ürünü de depoyu
+     da `restrict` FK'lerle tutuyor — purge onu bilmediği için teardown iki adımda yarım kalıyordu
+     (ölçüldü 25.08). `mustDelete` sayesinde sessiz değil GÜRÜLTÜLÜ kaldı; kirlilik haftalarca
+     birikmedi (`cleanup.ts` künyesi). */
+  for (const id of profileIds) await db.from('order').delete().eq('customer_id', id);
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

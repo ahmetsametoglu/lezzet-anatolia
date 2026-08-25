@@ -5452,3 +5452,48 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   yapmak güncellemeyen her cihazı ödeme yapamaz hâle getirirdi) · Bearer olmadan 401.
 
   Doğrulama: `checkout.test.ts` **9/9** · `@lezzet/mobile-api` typecheck temiz.
+
+- [x] (21.112) **KALAN ON UÇ TESTLENDİ + ORTAK YARDIMCI DOĞDU — dalga 2 kapandı (56 iddia)**
+  · touches: `apps/mobile-api/src/lib/testing.ts`,
+  `apps/mobile-api/src/api/v1/{orders,payments,b2b,tickets,addresses,preferences,public-reads}.test.ts`,
+  `apps/mobile-api/src/api/v1/{cart,points,invite,checkout}.test.ts`
+
+  **KAPSAM: TESTSİZ KALAN ON UCUN ONU.** Kullanıcı kararı 25.08 — *"hepsini yaz"*. Üçe ayrılmış
+  triyaj sunulmuştu (4 yazmaya değer · 2 sınırda · 4 yazmamayı öneriyorum); kullanıcı hepsini
+  istedi ve dördü de yazıldı. Öneri yanlış değildi ama kapsam kararı kullanıcınındır.
+
+  **ÇİVİLENEN ORTAK EKSEN: SAHİPLİK JETONDAN, YOLDAN DEĞİL.** `orders` · `payments` · `tickets` ·
+  `addresses` — dördünde de kimlik URL'de dolaşıyor (referans numarası, adres uuid'si, talep
+  kimliği) ve **tahmin edilemezlik bir yetki denetimi değildir**. Her birinde "başkasınınkine
+  dokunulamaz" iddiası, GERÇEKTEN VAR OLAN ama görünmemesi gereken bir kayıtla kuruldu; yanına da
+  "sahibi görebiliyor" iddiası konuldu — yoksa liste hep boş olsa da ilki geçerdi (sahte yeşil).
+
+  **SİPARİŞ SAHİPLİĞİ ÇİFT KAT KORUNUYORMUŞ** (sabotajla ölçüldü): servis sorguyu daraltıyor VE
+  uygulama katmanı dönen satırı ayrıca doğruluyor. Tek katı kaldırmak testi düşürmedi, ikisi
+  birden kalkınca düştü — iddia bir katmanı değil korumanın kendisini ölçüyor.
+
+  **İKİ VARSAYIM ÖLÇÜMLE ÇÜRÜDÜ:**
+  · **Dev giriş kapısı kayıtsız e-postayı REDDETMİYOR ve bu BİLİNÇLİ.** İlk iddia ret bekliyordu;
+    kapının künyesi tersini söylüyor (*"e-posta süzgeci bilerek yok"*) ve `generateLink` kullanıcıyı
+    açıyor. Sözleşmeyi okumadan varsayan test, doğru davranışı arıza gibi gösterecekti. İddia
+    kapının ASIL güvenlik özelliğine çevrildi: uç oturum değil, Supabase'in kendi doğrulamasından
+    geçmesi gereken tek kullanımlık HASH döndürüyor — üretime sızsa bile zinciri atlamıyor.
+  · **`b2b`nin açık yarısı bilerek SINANMIYOR:** SIRET ve AB KDV sorgusu DIŞ SERVİSE çıkıyor;
+    onları koşuya sokmak üçüncü tarafın çalışma süresini bu paketin içine almak olurdu.
+
+  **ORTAK YARDIMCI DOĞDU — `BEKLEYEN(21.110)` kapandı.** `signedInUser` sekiz dosyada birebir
+  tekrarlanıyordu ve on tane daha yazılacaktı (`CLAUDE §1`). `lib/testing.ts` tek kapı oldu;
+  tekrarın bedeli teorik değildi — GitGuardian'ı tetikleyen parola deseni de sekiz kopyanın
+  sekizinde birden yaşıyordu.
+
+  **TAŞIMA İKİ ARIZA ÜRETTİ VE İKİSİ DE ÖLÇÜLDÜ:** yerel yardımcı silinirken `profileIds`/
+  `authUserIds`e yazan satırlar da gitti — dört dosyada teardown hiçbir şey temizlemez oldu.
+  `mustDelete` bunu SESSİZ değil GÜRÜLTÜLÜ hâle getirdi (*"teardown 2 adımda yarım kaldı"*), yani
+  `CLAUDE §4b`'nin kurduğu koruma tam da tasarlandığı gibi çalıştı. Ayrıca davet testi rota siparişi
+  açıyor ve onu silmiyordu; sipariş ürünü ve depoyu `restrict` ile tutuyordu.
+  **BEKLEYEN(21.112):** o pencerede yerel veritabanında **11 test profili** artık kaldı. Düzeltilmiş
+  teardown yenisini bırakmıyor (ölçüldü: `cart-api` profilleri 2 → 2). Eskilerin silinmesi bir DB
+  YAZMA işidir ve kullanıcının kararıdır (`CLAUDE §0`) — istendiğinde tek sorguyla temizlenir.
+
+  Doğrulama: `apps/mobile-api/src/api/v1` **22 dosya · 298 test yeşil** (101 sn) · typecheck temiz ·
+  lint temiz.

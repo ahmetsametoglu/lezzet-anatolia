@@ -1,10 +1,10 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { anonDb, serviceDb, UserProfileService } from '@lezzet/database';
+import { serviceDb } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import { awardPoints } from '@lezzet/application';
 import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@lezzet/domain-core';
 import { app } from '../../app';
+import { createSignedInUser } from '../../lib/testing';
 
 /**
  * `/api/v1/me/points` — BEŞ UÇ, taşıma katmanı (MB-18'in adlandırdığı boşluk).
@@ -31,7 +31,6 @@ import { app } from '../../app';
  * konuyor — "boşa çek" de bir varsayımdır ve bir gün yanlış olur.
  */
 const db = serviceDb();
-const stamp = Date.now();
 const settings = settingsSnapshot(db);
 
 const authUserIds: string[] = [];
@@ -40,27 +39,6 @@ const profileIds: string[] = [];
 let musteriToken: string;
 let musteriId: string;
 let toptanToken: string;
-
-/** Auth kullanıcısı + rolleri yazılmış profil + açık oturum (kurye ucu testinin deseni). */
-async function signedInUser(label: string, overrides: Record<string, unknown> = {}) {
-  const email = `points-api-${label}-${stamp}@example.test`;
-  const password = randomUUID();
-  const { data: created, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
-  if (error || !created.user) throw new Error(`test kullanıcısı açılamadı: ${error?.message ?? 'kullanıcı yok'}`);
-  authUserIds.push(created.user.id);
-
-  const profiles = new UserProfileService(db);
-  const profile = await profiles.findByAuthUserId(created.user.id);
-  if (!profile) throw new Error('auth trigger profil satırı açmadı');
-  profileIds.push(profile.id);
-  // Roller AÇIKÇA yazılıyor: `0002` ilk kullanıcıya `admin` veriyor ve trigger'a güvenmek testi
-  // yerel veritabanının geçmişine bağlardı (kurye ucu testinin ölçtüğü tuzak).
-  await profiles.update({ id: profile.id, roles: ['customer'], name: `Puan ${label}`, ...overrides });
-
-  const { data: session, error: signInError } = await anonDb().auth.signInWithPassword({ email, password });
-  if (signInError || !session.session) throw new Error(`oturum açılamadı: ${signInError?.message ?? 'oturum yok'}`);
-  return { profileId: profile.id, token: session.session.access_token };
-}
 
 const auth = (token: string) => ({ headers: { authorization: `Bearer ${token}` } });
 const authPost = (token: string) => ({ method: 'POST', headers: { authorization: `Bearer ${token}` } });
@@ -77,12 +55,17 @@ async function errorOf(res: Response): Promise<string> {
 }
 
 beforeAll(async () => {
-  const musteri = await signedInUser('musteri');
+  const musteri = await createSignedInUser({ prefix: 'points-api', label: 'musteri' });
+  authUserIds.push(musteri.authUserId);
+  profileIds.push(musteri.profileId);
   musteriToken = musteri.token;
   musteriId = musteri.profileId;
   // Onaylı toptan müşteri: program DIŞI. Onaysız şirket B2C'ye düşer (fiyat tarafında ayrıca
   // sınanıyor) — burada gerçekten program dışı olan hâl kuruluyor.
-  toptanToken = (await signedInUser('toptan', { type: 'company', b2bApproved: true })).token;
+  const toptan = await createSignedInUser({ prefix: 'points-api', label: 'toptan', overrides: { type: 'company', b2bApproved: true } });
+  authUserIds.push(toptan.authUserId);
+  profileIds.push(toptan.profileId);
+  toptanToken = toptan.token;
 });
 
 beforeEach(async () => {
