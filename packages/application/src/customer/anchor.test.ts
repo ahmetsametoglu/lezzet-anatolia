@@ -1,7 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CustomerPhoneService, UserProfileService, serviceDb } from '@lezzet/database';
+import { CustomerPhoneService, EmailVerificationService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { answerEmailAnchor, issueSecurityCode, startEmailAnchor, verifySecurityCode, SECURITY_CODE_MAX_ATTEMPTS } from './anchor';
+import {
+  anchorGateOf,
+  answerEmailAnchor,
+  issueSecurityCode,
+  raiseChallengeIfDue,
+  startEmailAnchor,
+  verifySecurityCode,
+  SECURITY_CODE_MAX_ATTEMPTS,
+} from './anchor';
 
 /**
  * **Kimlik çapası — kuruluş** (04.10 · DOMAIN §10).
@@ -191,5 +199,144 @@ describe('güvenlik kodu', () => {
 
     expect(await issueSecurityCode(db, m.id)).toEqual({ status: 'already_anchored' });
     expect(await startEmailAnchor(db, m.id, posta('zaten2'))).toEqual({ status: 'already_anchored' });
+  });
+});
+
+/**
+ * **Tetik ve kapı** (04.10 · DOMAIN §10) — çapayı KURMAK ayrı, dönüşte SORMAK ayrı.
+ *
+ * Buradaki dört iddia tasarımın işleyen yarısı:
+ *   1. **Boşluk yalnız kanıt tazelenmeden ÖNCE görünür** — soru o anda açılmazsa bir daha açılamaz.
+ *   2. **Çapası olmayana soru sorulmaz** — cevabı olmayan soru sormak müşteriyi yorar, kapı zaten kapalı.
+ *   3. **Soru bir kez açılır** — her mesajda yenilenseydi, e-posta yolunda müşterinin elindeki kod
+ *      her seferinde ölürdü.
+ *   4. **Doğru cevap kapıyı açar** — ayrı bir "kapat" adımı yok.
+ */
+describe('kimlik sorusu: tetik ve kapı', () => {
+  /** Tazelemeden ÖNCEKİ kanıt satırı — çağıranın `recordProof`tan aldığı `previous`. */
+  const gecmis = (row: Awaited<ReturnType<typeof phones.findActive>>, gunOnce: number) => ({
+    ...row!,
+    lastSeenAt: new Date(Date.now() - gunOnce * 86_400_000).toISOString(),
+  });
+
+  it('uzun sessizlik sonrası dönüşte soru AÇILIR ve kapı kapanır', async () => {
+    const m = await musteri('Sessiz');
+    await issueSecurityCode(db, m.id); // 6 haneli çapa: e-posta bağlamamış müşteri
+    const profile = (await profiles.getById(m.id))!;
+
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ state: 'code', open: true, ask: null });
+
+    const row = await phones.findActive(m.phone);
+    expect(await raiseChallengeIfDue(db, { profile, previous: gecmis(row, 200) })).toBe('silence');
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ state: 'code', open: false, ask: 'code' });
+  });
+
+  it('taşıyıcının `failed` beyanı ERKEN tetiktir — sessizliği beklemez ve damga temizlenir', async () => {
+    const m = await musteri('Ulaşılamayan');
+    await issueSecurityCode(db, m.id);
+    const profile = (await profiles.getById(m.id))!;
+
+    // Taşıyıcı "ulaşamadım" dedi; numara daha DÜN görülmüş olsa bile bağ şüpheli.
+    expect(await phones.markDelivery(m.phone, true)).not.toBeNull();
+    const row = await phones.findActive(m.phone);
+    expect(row?.deliveryFailedAt).not.toBeNull();
+
+    expect(await raiseChallengeIfDue(db, { profile, previous: gecmis(row, 1) })).toBe('delivery_failed');
+    // Sinyal soruya dönüştü: damga silinmeli, yoksa cevaptan sonraki ilk mesajda soru yeniden doğar.
+    expect((await phones.findActive(m.phone))?.deliveryFailedAt).toBeNull();
+  });
+
+  it('başarılı teslim, önceki `failed` damgasını ÇÜRÜTÜR', async () => {
+    const m = await musteri('Geri dönen hat');
+    await phones.markDelivery(m.phone, true);
+    await phones.markDelivery(m.phone, false);
+    expect((await phones.findActive(m.phone))?.deliveryFailedAt).toBeNull();
+  });
+
+  it('ÇAPASIZ müşteriye soru sorulmaz — ama kapı da hiç açılmaz', async () => {
+    const m = await musteri('Çapasız');
+    const profile = (await profiles.getById(m.id))!;
+    const row = await phones.findActive(m.phone);
+
+    expect(await raiseChallengeIfDue(db, { profile, previous: gecmis(row, 400) })).toBeNull();
+    expect((await profiles.getById(m.id))?.challengeReason).toBeNull();
+    // Sorulacak bir şey yok, ama geçmiş de açılmıyor: çapa yokluğu kapının kendisi.
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ state: 'none', open: false, ask: null });
+  });
+
+  it('bekleyen soru varken YENİDEN sorulmaz — ikinci mesaj yeni bir kod üretmez', async () => {
+    const m = await musteri('İki mesaj');
+    await issueSecurityCode(db, m.id);
+    const row = await phones.findActive(m.phone);
+
+    const ilk = await raiseChallengeIfDue(db, { profile: (await profiles.getById(m.id))!, previous: gecmis(row, 200) });
+    const damga = (await profiles.getById(m.id))?.challengeRaisedAt;
+    const ikinci = await raiseChallengeIfDue(db, { profile: (await profiles.getById(m.id))!, previous: gecmis(row, 200) });
+
+    expect(ilk).toBe('silence');
+    expect(ikinci).toBe('silence');
+    expect((await profiles.getById(m.id))?.challengeRaisedAt).toBe(damga); // soru yenilenmedi
+  });
+
+  it('e-posta çapalı müşteride soruyu sormak, KODU GÖNDERMEKTİR', async () => {
+    // Çapa doğrudan damgalanıyor: gerçek hayatta bu hâl aylar önce kurulmuş olur (ya çapraz kanal
+    // kanıtıyla ya posta kutusuna gelen kodla girişle). `startEmailAnchor` üzerinden kursaydık aynı
+    // adrese saniyeler içinde ikinci kod istenirdi ve 60 sn'lik bekleme kuralına takılırdı (0003) —
+    // ölçtüğümüz şey de tetik değil, o kural olurdu.
+    const m = await musteri('Postalı');
+    const adres = posta('donus');
+    await profiles.update({ id: m.id, email: adres, emailAnchoredAt: new Date().toISOString() });
+
+    const row = await phones.findActive(m.phone);
+    expect(await raiseChallengeIfDue(db, { profile: (await profiles.getById(m.id))!, previous: gecmis(row, 200) })).toBe('silence');
+
+    // Soru açıldı VE kod yeniden yola çıktı — ajan "kutunuza gönderdik" diyebilsin diye.
+    const sonra = await profiles.getById(m.id);
+    expect(sonra?.anchorEmail).toBe(adres);
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ state: 'email', open: false, ask: 'email' });
+
+    // Ve cevap yine NUMARADAN dönüyor: çapraz kanal, bu kez dönüş anında.
+    expect(await answerEmailAnchor(db, m.phone, KOD)).toMatchObject({ status: 'anchored', customerId: m.id });
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ open: true, ask: null });
+  });
+
+  it('kod GÖNDERİLEMESE bile soru açık kalır — kapı kapalı olmalı', async () => {
+    // Gönderim engellenebilir (bekleme kuralı, Resend arızası). O hâlde soruyu düşürmek, kapıyı
+    // sessizce açmak olurdu: kimlik şüphesi gönderim başarısına bağlı değil.
+    const m = await musteri('Gönderilemedi');
+    const adres = posta('engel');
+    await profiles.update({ id: m.id, email: adres, emailAnchoredAt: new Date().toISOString() });
+    // Adrese az önce kod istendi → 60 sn'lik bekleme penceresi açık (0003).
+    await new EmailVerificationService(db).requestCode(adres, KOD);
+
+    const row = await phones.findActive(m.phone);
+    expect(await raiseChallengeIfDue(db, { profile: (await profiles.getById(m.id))!, previous: gecmis(row, 200) })).toBe('silence');
+
+    const sonra = await profiles.getById(m.id);
+    expect(sonra?.challengeReason).toBe('silence');
+    expect(sonra?.anchorEmail).toBeNull(); // bekleyen adres yazılmadı: kod üretilemedi
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ open: false, ask: 'email' });
+  });
+
+  it('doğru cevap kapıyı AÇAR — ayrı bir kapatma adımı yok', async () => {
+    const m = await musteri('Cevaplayan');
+    const kod = await issueSecurityCode(db, m.id);
+    await raiseChallengeIfDue(db, { profile: (await profiles.getById(m.id))!, previous: gecmis(await phones.findActive(m.phone), 200) });
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ open: false, ask: 'code' });
+
+    if (kod.status !== 'ok') throw new Error('kod üretilemedi');
+    expect(await verifySecurityCode(db, m.phone, `kodum ${kod.code}`)).toEqual({ status: 'ok', customerId: m.id });
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ state: 'code', open: true, ask: null });
+  });
+
+  it('`recordProof` tazelemeden ÖNCEKİ satırı döndürür — boşluk başka hiçbir yerde ölçülemez', async () => {
+    const m = await musteri('Ölçüm');
+    const once = await phones.findActive(m.phone);
+    const sonuc = await phones.recordProof(m.id, m.phone);
+
+    expect(sonuc.status).toBe('seen');
+    expect(sonuc.previous?.lastSeenAt).toBe(once?.lastSeenAt);
+    // Tazelenmiş hâl ileri gitti (ya da eşit — aynı milisaniye): geriye ASLA gitmez.
+    expect(new Date(sonuc.row!.lastSeenAt).getTime()).toBeGreaterThanOrEqual(new Date(once!.lastSeenAt).getTime());
   });
 });

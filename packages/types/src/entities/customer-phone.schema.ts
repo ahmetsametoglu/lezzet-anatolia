@@ -31,6 +31,14 @@ export const CustomerPhoneSchema = z.object({
    */
   lastSeenAt: z.string().datetime({ offset: true }),
   /**
+   * **Taşıyıcının son beyanı: ulaşılamadı** (`failed`) — kimlik şüphesinin ERKEN tetiği.
+   *
+   * Tahmin değil beyandır: numara kapanmış ya da bizi engellemiş. `lastSeenAt`ten ayrı durur çünkü
+   * ayrı bir şey söylüyor — biri "en son ne zaman yazdı", öteki "yazdığımız yerine ulaştı mı".
+   * Başarılı bir teslim onu SİLER (RPC), soru sorulduğunda da silinir: bir sinyal iki kez sayılmaz.
+   */
+  deliveryFailedAt: z.string().datetime({ offset: true }).nullable(),
+  /**
    * Emeklilik anı — bağ koptu (hat devri / taşıyıcının `failed` beyanı). `null` = aktif.
    *
    * Satır SİLİNMEZ: silmek, o numaranın bir zamanlar bu kişiye ait olduğu bilgisini yok etmek olurdu

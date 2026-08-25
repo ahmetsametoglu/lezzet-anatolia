@@ -21,6 +21,20 @@ import { BaseDbService } from '../core/base.service';
  * ile aynı dizeyi taşımak zorunda (0039) ve o dize çağıranda üretiliyor. İki yerde normalize etmek,
  * bir gün iki farklı sonuç üretmenin en kısa yoludur.
  */
+/**
+ * `recordProof`un cevabı. `previous` **tazelemeden ÖNCEKİ** satırdır ve tek bir soru için var:
+ * *"bu mesaj gelmeden önce en son ne zaman görülmüştü?"*
+ *
+ * Sessizlik tetiği (DOMAIN §10) yalnız bu andan hesaplanabilir — `lastSeenAt` birazdan bu mesajla
+ * tazelenecek ve boşluk sonradan bakan hiç kimseye görünmeyecek. Servis tetiği HESAPLAMAZ (karar
+ * uygulamanın), yalnız hesaplanabilmesi için gereken gerçeği elden kaçırmaz.
+ */
+export type RecordProofResult = {
+  status: 'bound' | 'seen' | 'taken';
+  row: CustomerPhone | null;
+  previous: CustomerPhone | null;
+};
+
 export class CustomerPhoneService extends BaseDbService<CustomerPhone, CustomerPhoneInsert, CustomerPhoneUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'customer_phone', CustomerPhoneSchema, CustomerPhoneInsertSchema, CustomerPhoneUpdateSchema, false);
@@ -59,21 +73,36 @@ export class CustomerPhoneService extends BaseDbService<CustomerPhone, CustomerP
    * "yok" görebilir; ikincinin yazımı kısmi unique indekse takılır (`23505`) ve satır yeniden
    * okunur. Karar veritabanında kalır (`insertIgnoringConflict` künyesiyle aynı gerekçe).
    */
-  async recordProof(customerId: string, phone: string): Promise<{ status: 'bound' | 'seen' | 'taken'; row: CustomerPhone | null }> {
+  async recordProof(customerId: string, phone: string): Promise<RecordProofResult> {
     const mevcut = await this.findActive(phone);
     if (mevcut) {
-      if (mevcut.customerId !== customerId) return { status: 'taken', row: mevcut };
-      return { status: 'seen', row: await this.touchSeen(mevcut.id) };
+      if (mevcut.customerId !== customerId) return { status: 'taken', row: mevcut, previous: null };
+      return { status: 'seen', row: await this.touchSeen(mevcut.id), previous: mevcut };
     }
 
     const yeni = await this.insertIgnoringConflict({ customerId, phone });
-    if (yeni) return { status: 'bound', row: yeni };
+    if (yeni) return { status: 'bound', row: yeni, previous: null };
 
     // Yarışı kaybettik: satırı kazanan yazdı. Kim yazdıysa gerçeği o taşıyor — yeniden oku.
     const kazanan = await this.findActive(phone);
-    if (!kazanan) return { status: 'taken', row: null }; // aynı anda emekliye ayrılmış: çağıran tekrar dener
-    if (kazanan.customerId !== customerId) return { status: 'taken', row: kazanan };
-    return { status: 'seen', row: kazanan };
+    if (!kazanan) return { status: 'taken', row: null, previous: null }; // aynı anda emekliye ayrılmış: çağıran tekrar dener
+    if (kazanan.customerId !== customerId) return { status: 'taken', row: kazanan, previous: null };
+    return { status: 'seen', row: kazanan, previous: kazanan };
+  }
+
+  /**
+   * **Taşıyıcının teslim beyanını yaz** (04.10) — `failed` damgalar, başarılı teslim SİLER.
+   *
+   * Numarayla çağrılır, satır kimliğiyle değil: taşıyıcının elinde bizim kimliğimiz yok,
+   * `recipient_id` var. Tek deyimde döner (RPC) — bir okuma + bir yazma yerine tek tur.
+   *
+   * Tanımadığımız numara `null` döner ve bu olağandır: kanıt satırı olmayan bir numaraya mesaj
+   * göndermiş olabiliriz (elle işlenen konuşma). Sessiz geçmesi doğru — kimlik künyesi yoksa
+   * güncellenecek kimlik de yoktur.
+   */
+  async markDelivery(phone: string, failed: boolean): Promise<CustomerPhone | null> {
+    const rows = await this.executeRpc<unknown[]>('mark_customer_phone_delivery', { p_phone: phone, p_failed: failed });
+    return this.parseRows(rows ?? [])[0] ?? null;
   }
 
   /**

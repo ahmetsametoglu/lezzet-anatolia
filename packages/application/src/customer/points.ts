@@ -4,6 +4,8 @@ import {
   POINTS_CENT_VALUE_KEY,
   POINTS_REDEEM_MIN_KEY,
   POINTS_SETTING_KEYS,
+  anchorStateOf,
+  canOpenHistory,
   canRedeem,
   redemptionCode,
 } from '@lezzet/domain-core';
@@ -146,7 +148,11 @@ export interface CustomerPointsView {
  */
 export type RedeemCustomerPointsOutcome =
   | { status: 'ok'; view: CustomerPointsView; code: string | null }
-  | { status: 'insufficient_balance' | 'below_minimum' | 'not_eligible' };
+  /**
+   * `anchor_required` — kimlik çapası yok (04.10, DOMAIN §10). Puanı harcatmak, kapılı üç yetkiden
+   * biridir: "seni tanıyorum" demektir ve yanlış kişiye söylenirse geri alınamaz.
+   */
+  | { status: 'insufficient_balance' | 'below_minimum' | 'not_eligible' | 'anchor_required' };
 
 /**
  * Program dışı mı — **İKİ sinyal de sayılır** ve bu web'in okumasından bilinçli bir SAPMA.
@@ -388,6 +394,17 @@ export async function redeemCustomerPoints(db: SupabaseClient, input: { customer
     redeemSettings(db),
   ]);
   if (!profile) return { status: 'not_eligible' };
+
+  // ── KİMLİK KAPISI (04.10, DOMAIN §10) ─────────────────────────────────────────────────────────
+  // Puanı harcatmak kapılı üç yetkiden biri. Kapı burada, çünkü kural puanın KENDİSİNE ait: bugünkü
+  // tek çağıran oturum açmış müşteri (mobil `/me/points/redeem`) ve orada çapa zaten kurulu — ama
+  // yarın bir ajan aracı ya da operatör kapısı eklendiğinde kuralı hatırlaması gereken yer burası.
+  //
+  // **Bekleyen kimlik SORUSU burada okunmuyor** (`anchorGateOf` yerine doğrudan motor): o soru
+  // WhatsApp'tan dönen numaraya sorulur ve cevabı o kanaldan gelir. Oturum açmış müşteri kimliğini
+  // ŞU AN kanıtlamıştır (posta kutusuna gelen kodla girdi) — onu WhatsApp'ta bekleyen bir soru
+  // yüzünden reddetmek, daha güçlü kanıtı daha zayıfına yenik düşürmek olurdu.
+  if (!canOpenHistory(anchorStateOf(profile))) return { status: 'anchor_required' };
 
   const check = canRedeem({
     customerType: profile.type,

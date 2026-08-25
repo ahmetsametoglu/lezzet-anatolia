@@ -1,3 +1,5 @@
+import type { ChallengeReason } from '@lezzet/types';
+
 /**
  * **Kimlik çapası** (04.10) — saf kararlar. DOMAIN §10 ("Kimlik anahtarı, çapa ve süreklilik").
  *
@@ -52,13 +54,6 @@ export function anchorStateOf(facts: AnchorFacts): AnchorState {
 export function canOpenHistory(state: AnchorState): boolean {
   return state !== 'none';
 }
-
-/** Tetik sebebi — ikisi birbirinin yerine GEÇMEZ (DOMAIN §10, kullanıcı eklemesi 02.08). */
-export type ChallengeReason =
-  /** Taşıyıcı "ulaşamadım" dedi: numara kapanmış ya da bizi engellemiş. ERKEN tetik, beyandır. */
-  | 'delivery_failed'
-  /** Uzun sessizlik sonrası dönüş. GEÇ tetik, yalnız bir işarettir. */
-  | 'silence';
 
 export interface ChallengeInput {
   state: AnchorState;

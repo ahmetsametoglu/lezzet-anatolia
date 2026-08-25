@@ -53,8 +53,12 @@ beforeAll(async () => {
   candidateId = candidate.product.id;
   await products.update({ id: candidateId, status: 'candidate' });
 
-  b2cId = (await profiles.insert({ name: 'Ayşe Kaya', email: `puan-b2c-${stamp}@example.test`, type: 'individual' })).id;
-  b2bId = (await profiles.insert({ name: 'Restoran SARL', email: `puan-b2b-${stamp}@example.test`, type: 'company' })).id;
+  // Çapa damgası ŞART (04.10): puanı harcatmak kapılı üç yetkiden biri ve kapı çapaya bakıyor.
+  // Gerçek hayatta çevirebilen müşterinin çapası zaten var — oturumu posta kutusuna gelen kodla
+  // açılmıştır; damgasız bir kayıt burada motoru değil, kimlik kapısını sınardı.
+  const capa = new Date().toISOString();
+  b2cId = (await profiles.insert({ name: 'Ayşe Kaya', email: `puan-b2c-${stamp}@example.test`, type: 'individual', emailAnchoredAt: capa })).id;
+  b2bId = (await profiles.insert({ name: 'Restoran SARL', email: `puan-b2b-${stamp}@example.test`, type: 'company', emailAnchoredAt: capa })).id;
   staffId = (await profiles.insert({ name: 'Patron', email: `puan-staff-${stamp}@example.test` })).id;
   createdProfiles.push(b2cId, b2bId, staffId);
 

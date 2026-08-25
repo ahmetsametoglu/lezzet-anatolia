@@ -12,6 +12,8 @@ import {
   POINTS_DAILY_CAP_KEY,
   POINTS_REDEEM_MIN_KEY,
   POINTS_SETTING_KEYS,
+  anchorStateOf,
+  canOpenHistory,
   canRedeem,
   redemptionCode,
   type EarnablePointsReason,
@@ -151,6 +153,19 @@ export async function redeemPoints(input: { customerId: string; points?: number 
     pointsSettings(),
   ]);
   if (!profile) return { ok: false, reason: 'not_eligible' };
+
+  // ── KİMLİK KAPISI (04.10, DOMAIN §10) ─────────────────────────────────────────────────────────
+  // Puanı harcatmak kapılı üç yetkiden biri. Kapı BURAYA da konuyor çünkü çevirmenin iki gövdesi
+  // var (web'in bu yolu · `application/customer/points.ts` → mobil) ve tek yerde durursa kural
+  // yalnız bir kapıda geçerli olurdu — yarısı kapalı bir kapı, kapı değildir.
+  // BEKLEYEN(04.10): çevirmenin iki gövdesi tekleşmeli — ayrıntı ve yön 17.5'in durum notunda.
+  // Tekleşene kadar bu kapı ile `application/customer/points.ts`teki eşi BİRLİKTE hareket eder.
+  //
+  // Ret kodu burada KABA (`not_eligible`): bu yolun sözlüğünde ayrı bir değer yok ve müşteri zaten
+  // tek bir "şu an çevrilemiyor" cümlesi görüyor (`redeem_unavailable`). Bugünkü tek çağıran oturum
+  // açmış müşteri, yani pratikte bu dal kapalı; ayrı bir kod uydurmak, kimsenin görmediği bir
+  // sözlüğü büyütmek olurdu.
+  if (!canOpenHistory(anchorStateOf(profile))) return { ok: false, reason: 'not_eligible' };
 
   const check = canRedeem({
     customerType: profile.type,

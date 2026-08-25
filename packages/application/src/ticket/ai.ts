@@ -15,6 +15,7 @@ import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 import { ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
@@ -49,8 +50,20 @@ const THREAD_LIMIT = 12;
  * olduklarını değiştiremez (`support-tools.ts` künyesi). Enjekte model verildiğinde (test) araç
  * geçilmiyor: sahte model araç çağırmaz ve geçmek testi ağa açardı.
  */
-function runOpts(db: SupabaseClient, customerId: string, opts: SupportAiOpts) {
+async function runOpts(db: SupabaseClient, customerId: string, opts: SupportAiOpts, known: AnchorGate | null = null) {
   if (opts.model) return { model: opts.model };
+  // ── KİMLİK KAPISI (04.10, DOMAIN §10) ─────────────────────────────────────
+  // Araç seti müşterinin GEÇMİŞİDİR (siparişleri, adresine gelinen günler). Çapası olmayan ya da
+  // dönüşü şüpheli müşteride verilmez: *"kimliği bilmeden ne açtığımız asıl sorudur."*
+  //
+  // Kapı ARAÇTA, prompt'ta değil. Modele "söyleme" demek bir ricadır; aracı vermemek bir kısıttır.
+  // `known` sohbet yolundan gelir: orada kapı zaten okundu (soruyu da o okuma söylüyor) — iki kez
+  // okumak aynı cevabı iki sorguya mal ederdi.
+  const gate = known ?? (await anchorGateOf(db, customerId));
+  if (!gate.open) {
+    logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — geçmiş araçları verilmedi');
+    return {};
+  }
   return { tools: customerSupportTools(db, customerId) };
 }
 
@@ -156,7 +169,7 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
     if (lastMessageAt && ticket.aiDraftGeneratedAt >= lastMessageAt) return { status: 'cached' };
   }
 
-  const result = await runTask(ticketDraftTask, context, runOpts(db, ticket.customerId, opts));
+  const result = await runTask(ticketDraftTask, context, await runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   await tickets.update({ id: ticket.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
@@ -207,10 +220,11 @@ export async function generateConversationDraft(
 
   // Kimliği ÇÖZÜLMEMİŞ konuşmada araç verilmez (16.9): tanımadığımız bir numaranın "benim
   // siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kapalı girdiyle koşar.
+  const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
   const result = await runTask(
     ticketDraftTask,
-    context,
-    conversation.customerId ? runOpts(db, conversation.customerId, opts) : opts.model ? { model: opts.model } : {},
+    gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
+    conversation.customerId ? await runOpts(db, conversation.customerId, opts, gate) : opts.model ? { model: opts.model } : {},
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
@@ -307,7 +321,7 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   if (!context) return { status: 'skipped', reason: 'empty_thread' };
   if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
 
-  const result = await runTask(ticketAgentTask, context, runOpts(db, ticket.customerId, opts));
+  const result = await runTask(ticketAgentTask, context, await runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   const reply = result.data.action === 'reply' ? result.data.reply?.trim() : null;
@@ -438,10 +452,14 @@ export async function runAutonomousConversationReply(
   /* Kimliği ÇÖZÜLMEMİŞ sohbette araç verilmez — taslak yolunun kuralının aynısı (16.9). Messenger/
      IG'de PSID telefon taşımaz, yani kimliksiz sohbet istisna değil KURAL; ajan o hâlde de konuşur
      ama yalnız herkese açık bilgiyle. */
+  /* Kimlik sorusu YALNIZ sohbet yolunda soruluyor (04.10): çapanın cevabı müşterinin KENDİ
+     numarasından gelmek zorunda (`verifySecurityCode` imzası), yani e-posta talebinde sormak
+     cevaplanamayacak bir soru sormaktır. Kapı orada da kapalı — ama soru burada. */
+  const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
   const result = await runTask(
     ticketAgentTask,
-    context,
-    conversation.customerId ? runOpts(db, conversation.customerId, opts) : opts.model ? { model: opts.model } : {},
+    gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
+    conversation.customerId ? await runOpts(db, conversation.customerId, opts, gate) : opts.model ? { model: opts.model } : {},
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 

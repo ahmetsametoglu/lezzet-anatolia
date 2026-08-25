@@ -73,6 +73,18 @@ export interface SupportContextInput {
     whatsapp: string;
     email: string;
   };
+  /**
+   * **Bekleyen kimlik sorusu** (04.10, DOMAIN §10) — yoksa alan hiç verilmez.
+   *
+   * Uzun sessizlik sonrası dönüşte ya da taşıyıcı "ulaşamadım" dediğinde, geçmişe açılan kapılar
+   * kapanır ve müşteriden çapasını göstermesi istenir. **Bu alan yalnız SORUYU taşır, kapıyı
+   * DEĞİL:** kapı araç setinin verilip verilmemesiyle kapanıyor (uygulama katmanı), yani model bu
+   * satırı yok saysa bile geçmişi okuyamaz. Prompt'a güvenerek kurulan bir kapı, kapı değildir.
+   *
+   * `email` → kod müşterinin posta kutusuna GÖNDERİLDİ, sohbete geri yazması istenecek.
+   * `code`  → e-posta bağlamamış müşteri; elindeki 6 haneli güvenlik kodunu yazması istenecek.
+   */
+  identity?: { ask: 'email' | 'code' };
   /** Yazışma, ESKİDEN YENİYE. Uygulama katmanı kırpar (son N mesaj) — sınır kapıda, prompt'ta değil. */
   messages: SupportMessageInput[];
   order: {
@@ -213,6 +225,31 @@ const CHANNEL_LABELS: Record<'ticket' | ConversationSource, string> = {
   instagram: 'Instagram DM',
 };
 
+/**
+ * **Kimlik sorusunun modele söylenen hâli** (04.10) — DOMAIN §10.
+ *
+ * ── SUÇLAMA YOK, KAPI YOK, SORU VAR ─────────────────────────────────────────
+ * Boşluğun kendisi teşhis değildir: yılda bir bayramda sipariş veren sadık müşteri ile devredilmiş
+ * hat aynı şekli üretir. Bu yüzden metin *"kimliğinizi doğrulayın"* demiyor, *"teyit alalım"* diyor
+ * ve sipariş almayı hiçbir yerde durdurmuyor — cevaplanamayan dönüşte kaybedilen tek şey geçmişe
+ * erişimdir.
+ *
+ * ── AJAN GEÇMİŞİ SÖYLEMEZ, SORAR ────────────────────────────────────────────
+ * *"Her zamanki adrese mi göndereyim?"* sızıntının kendisidir — soru gibi görünür, cevabı ele verir.
+ * Model bu hâldeyken zaten araçsız koşuyor (geçmişi okuyamaz); metin de ona neyi söylememesi
+ * gerektiğini açıkça yazıyor, çünkü yazışmanın içinde geçmişten izler kalmış olabilir.
+ */
+const IDENTITY_ASK: Record<'email' | 'code', string> = {
+  email:
+    'KİMLİK TEYİDİ BEKLİYOR: Bu numaradan uzun süredir haber alamadık. Müşterinin KAYITLI E-POSTASINA az önce 6 haneli bir kod gönderildi; ' +
+    'cevabında kibarca o kodu BU SOHBETE yazmasını iste. Suçlayıcı olma, "güvenlik" jargonuna girme — "hesabınızı doğru eşleştirmek için" yeterli. ' +
+    'Kodu, adresi ya da geçmiş sipariş/adres/puan bilgisini SEN SÖYLEME; müşteri kod yazana kadar bu konularda hiçbir şey bildiğini ima etme. Sipariş almayı ENGELLEMİYORSUN.',
+  code:
+    'KİMLİK TEYİDİ BEKLİYOR: Bu numaradan uzun süredir haber alamadık. Müşteride daha önce verilmiş 6 haneli bir güvenlik kodu var; ' +
+    'cevabında kibarca onu yazmasını iste. Kodun kendisini SEN SÖYLEME ve hatırlatma; geçmiş sipariş/adres/puan bilgisini de açma. ' +
+    'Kod elinde yoksa üzülmesin — bir temsilcimiz yardımcı olacak. Sipariş almayı ENGELLEMİYORSUN.',
+};
+
 /** İki görevin ortak girdi düzeni — bağlam önce, yazışma sonra, soru en sonda. */
 function buildSupportPrompt(input: SupportContextInput): string {
   const order = input.order
@@ -238,6 +275,7 @@ function buildSupportPrompt(input: SupportContextInput): string {
     '',
     order,
     '',
+    ...(input.identity ? [IDENTITY_ASK[input.identity.ask], ''] : []),
     'YAZIŞMA (eskiden yeniye):',
     thread,
     '',

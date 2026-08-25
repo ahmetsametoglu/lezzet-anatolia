@@ -7,7 +7,7 @@ import {
   ringConversationsBell,
   verifySecurityCode,
 } from '@lezzet/application';
-import { ConversationService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, MessageKind } from '@lezzet/types';
@@ -159,14 +159,18 @@ export async function handleMetaWebhook(body: unknown): Promise<MetaWebhookOutco
 async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally): Promise<void> {
   const changes = Array.isArray(entry.changes) ? entry.changes : [];
   for (const change of changes as { field?: string; value?: Record<string, unknown> }[]) {
-    // `messages` alanı hem gelen mesajları hem giden `statuses`'ı taşır. Statuses adım 1'de
-    // BİLEREK işlenmiyor: defterde mesaj durumu kolonu yok (teslim/okundu izleme 15.11'in işi) —
-    // sayıp geçiyoruz, tekrar döngüsüne sokmuyoruz.
+    // `messages` alanı hem gelen mesajları hem giden `statuses`'ı taşır.
     if (change.field !== 'messages' || !change.value) {
       tally.ignored += 1;
       continue;
     }
     const value = change.value;
+
+    // Statuses'ın DEFTER yarısı (mesaj durumu kolonu, teslim/okundu izleme) hâlâ 15.11'in işi.
+    // Buradaki okuma o değil, KİMLİK yarısı (04.10): taşıyıcının `failed` beyanı kimlik şüphesinin
+    // erken tetiğidir ve tetik ölçülemezse motorun o dalı hiç çalışmaz.
+    await tasiyiciBeyani(value);
+
     const messages = Array.isArray(value.messages) ? (value.messages as WaMessage[]) : [];
     if (messages.length === 0) {
       tally.ignored += 1; // yalnız statuses taşıyan teslimat
@@ -274,6 +278,46 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
  * **Hiçbir hâl mesajın kaydını etkilemez:** yanlış kod da, süresi geçmiş cevap da deftere normal
  * bir mesaj olarak yazılır. Cevabı müşteriye ajan verir; bu kapı yalnız gerçeği işler.
  */
+/** Taşıyıcının durum olayı — gövde bu kadar dar çünkü okuduğumuz tek şey ULAŞILDI MI. */
+interface WaStatus {
+  status?: string;
+  recipient_id?: string;
+}
+
+/**
+ * **Taşıyıcının teslim beyanını numaranın kimlik künyesine yaz** (04.10) — DOMAIN §10.
+ *
+ * `failed` bir tahmin değil, **beyandır**: numara kapanmış ya da bizi engellemiş. Kimlik şüphesinin
+ * ERKEN tetiği budur; 3 aylık sessizliği beklemenin anlamı yok, bağ zaten şüpheli.
+ *
+ * **Belirsiz durumlar yazılmaz ve bu kararın yarısıdır.** `delivered` gelip okunmaması hâlâ
+ * belirsizdir (telefon kapalı, bildirim kapalı, umursamamış), `sent`te kalan mesaj da hiçbir şey
+ * söylemez — ağ gecikmesi ile terk edilmiş hat aynı görünür. Yalnız iki uç işleniyor: `failed`
+ * damgalar, `delivered`/`read` damgayı SİLER (sonraki başarılı teslim, önceki başarısızlığı
+ * gerçekten çürütür).
+ *
+ * **Defter yarısı burada DEĞİL:** mesaj durumu kolonu ve teslim/okundu izleme 15.11'in işi. Bu kapı
+ * yalnız kimlik künyesine dokunuyor; tanımadığı numarada sessizce düşer (kanıt satırı yoksa
+ * güncellenecek kimlik de yoktur).
+ */
+async function tasiyiciBeyani(value: Record<string, unknown>): Promise<void> {
+  const statuses = Array.isArray(value.statuses) ? (value.statuses as WaStatus[]) : [];
+  const phones = new CustomerPhoneService(serviceDb());
+
+  for (const status of statuses) {
+    if (!status.recipient_id) continue;
+    const basarisiz = status.status === 'failed';
+    if (!basarisiz && status.status !== 'delivered' && status.status !== 'read') continue;
+
+    // wa_id '+'SIZ gelir — kanıt satırıyla aynı normalize (gelen mesaj yolundaki gerekçenin aynısı).
+    const phone = normalizePhone(`+${status.recipient_id}`) ?? `+${status.recipient_id}`;
+    const row = await phones.markDelivery(phone, basarisiz);
+    if (row && basarisiz) {
+      logger.info({ conversationRef: phone.slice(-4), customerId: row.customerId }, 'kimlik: taşıyıcı ulaşamadı — erken tetik damgalandı');
+    }
+  }
+}
+
 async function cevabiIsle(phone: string, text: string | null): Promise<void> {
   const capa = await answerEmailAnchor(serviceDb(), phone, text);
   if (capa.status !== 'none' && capa.status !== 'not_pending') {

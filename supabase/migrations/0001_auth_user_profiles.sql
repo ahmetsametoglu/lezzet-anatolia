@@ -138,6 +138,10 @@ create table public.customer_phone (
   -- Bu numaradan en son ne zaman mesaj geldi — sessizlik tetiğinin (DOMAIN §10, ~3 ay) ölçütü.
   -- Doğrulama anıyla aynı başlar; her gelen mesajda tazelenir.
   last_seen_at timestamptz not null default now(),
+  -- Taşıyıcının SON beyanı: bu numaraya ulaşılamadı (`failed`). ERKEN tetik (DOMAIN §10) — sessizliği
+  -- beklemenin anlamı yok, bağ zaten şüpheli. Tahmin değil beyan olduğu için ayrı kolonda duruyor.
+  -- Soru SORULDUĞUNDA temizlenir: sinyal orada bekleyen bir soruya dönüşmüştür, iki kez sayılmaz.
+  delivery_failed_at timestamptz,
   -- Emeklilik: bağ koptu (hat devredildi / taşıyıcı `failed` dedi). Satır SİLİNMEZ.
   retired_at   timestamptz,
   created_at   timestamptz not null default now()
@@ -162,6 +166,8 @@ comment on column public.customer_phone.verified_at is
   'Zilyetliğin kanıtlandığı an (imzalı webhook''tan gelen mesaj). Satır varsa doludur.';
 comment on column public.customer_phone.last_seen_at is
   'Bu numaradan gelen SON mesajın anı — sessizlik tetiğinin ölçütü.';
+comment on column public.customer_phone.delivery_failed_at is
+  'Taşıyıcı bu numaraya ulaşamadı (`failed`) — kimlik şüphesinin ERKEN tetiği. Soru sorulunca temizlenir.';
 comment on column public.customer_phone.retired_at is
   'Bağ koptu (hat devri / taşıyıcı beyanı). Satır silinmez; numara yeni sahibine açılır.';
 
@@ -194,3 +200,32 @@ grant execute on function public.touch_customer_phone(uuid) to service_role;
 
 comment on function public.touch_customer_phone(uuid) is
   'Kanıt satırının son görülme damgasını DB saatiyle tazeler (04.10). Emekli satıra dokunmaz.';
+
+-- ─── "Taşıyıcı ne dedi" ──────────────────────────────────────────────────────
+-- Giden mesajın durum olayı (`failed` / `delivered`) → numaranın kimlik künyesi. **Numara ile
+-- çağrılır, satır kimliğiyle değil:** taşıyıcının elinde bizim satır kimliğimiz yok, `recipient_id`
+-- var — arada bir okuma yapmamak için kapı numarayı kabul ediyor.
+--
+-- Tek deyim, tek tur: `failed` damgayı basar, başarılı teslim onu SİLER. Silme önemli — taşıyıcının
+-- sonraki başarılı teslimi, önceki başarısızlığı gerçekten çürütür; bayat kalan bir damga her
+-- dönüşte gereksiz bir kimlik sorusu doğururdu (DOMAIN §10: "cezalandırdığı kitlenin ezici
+-- çoğunluğu kendi müşterilerimiz olur").
+--
+-- Emekli satır güncellenmez: bağı kopmuş numaranın teslim durumu artık kimsenin kimliği değil.
+create or replace function public.mark_customer_phone_delivery(p_phone text, p_failed boolean)
+returns setof public.customer_phone
+language sql
+security definer
+set search_path = public
+as $$
+  update public.customer_phone
+     set delivery_failed_at = case when p_failed then now() else null end
+   where phone = p_phone and retired_at is null
+  returning *;
+$$;
+
+revoke all on function public.mark_customer_phone_delivery(text, boolean) from public, anon, authenticated;
+grant execute on function public.mark_customer_phone_delivery(text, boolean) to service_role;
+
+comment on function public.mark_customer_phone_delivery(text, boolean) is
+  'Taşıyıcının teslim beyanını numaranın kimlik künyesine yazar (04.10): failed damgalar, başarılı teslim siler.';

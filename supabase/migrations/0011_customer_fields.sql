@@ -190,6 +190,38 @@ alter table public.user_profiles
   -- yalnız sızacak yüzeyi ve anlatılacak şeyi ikiye katlar.
   add constraint user_profiles_single_anchor check (email_anchored_at is null or security_code_hash is null),
 
+  /*
+    ── BEKLEYEN KİMLİK SORUSU (04.10) — DOMAIN §10 ────────────────────────────────────────────────
+    Tetik (uzun sessizlik / taşıyıcının `failed` beyanı) bir AN'dır; soru ise o andan sonra
+    CEVAPLANANA KADAR sürer. Kolon tam olarak bu süreyi tutuyor.
+
+    ── NEDEN TÜRETİLEMİYOR, SAKLANMAK ZORUNDA ─────────────────────────────────────────────────────
+    Tetiğin ölçütü `customer_phone.last_seen_at`; ama o damga, soruyu doğuran mesajın KENDİSİ
+    tarafından tazeleniyor. Yani soru sorulduktan sonra bakıldığında boşluk çoktan kapanmış görünür
+    ve soru kendiliğinden buharlaşır — dönen yabancının iki kez "merhaba" yazması kapıyı açardı.
+    Bu yüzden karar, boşluğun HÂLÂ görülebildiği tek anda (kanıt tazelenmeden hemen önce) verilip
+    buraya yazılıyor.
+
+    ── NEDEN PROFİLDE, NUMARADA DEĞİL ─────────────────────────────────────────────────────────────
+    Kapının koruduğu şey KİMLİKTİR (geçmiş · puan · kişiye özel fiyat) ve cevabı da kimliğin
+    çapasıdır. Numaraya yazsaydık iki numaralı müşteride "bir numaradan sorulmuş, ötekinden
+    cevaplanmış" hâli doğardı.
+
+    Sebep saklanıyor çünkü cevabı DEĞİŞTİRMİYOR ama ANLAMINI değiştiriyor: `delivery_failed`
+    taşıyıcının beyanıdır (numara kapanmış/engellemiş), `silence` yalnız bir işarettir — yılda bir
+    bayramda sipariş veren sadık müşteri ile devredilmiş hat aynı şekli üretir. Operatör ekranda
+    hangisi olduğunu görmeli.
+  */
+  add column challenge_reason text,
+  add column challenge_raised_at timestamptz,
+  add constraint user_profiles_challenge_pair check ((challenge_reason is null) = (challenge_raised_at is null)),
+  -- Değer kümesi VERİDE kilitli: motorun `ChallengeReason` birleşimi ile aynı iki değer. Enum
+  -- açmadık — bu küme domain-core'da yaşıyor ve orada büyüyor; iki yerde büyütmek yerine veri
+  -- yalnız yanlışı reddediyor.
+  add constraint user_profiles_challenge_reason_values check (
+    challenge_reason is null or challenge_reason in ('silence', 'delivery_failed')
+  ),
+
   -- Gerekçesiz ret YAZILAMAZ. Ret e-postayla bildiriliyor ve "neden" sorusunun cevabı yoksa soru
   -- desteğe düşer; damgayı atıp gerekçeyi atlamak, verilmiş kararı kayıt dışı bırakır.
   add constraint user_profiles_b2b_reject_stamp check (

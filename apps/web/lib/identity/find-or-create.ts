@@ -1,4 +1,4 @@
-import { linkReferrer } from '@lezzet/application';
+import { linkReferrer, raiseChallengeIfDue } from '@lezzet/application';
 import { CustomerPhoneService, UserProfileService, serviceDb } from '@lezzet/database';
 import { resolveIdentity } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
@@ -131,7 +131,7 @@ export async function findOrCreateCustomer(input: FindOrCreateInput): Promise<Fi
       const existing = await profiles.getById(decision.customerId);
       if (!existing) return { status: 'insufficient' }; // yarışta silinmiş — çağıran tekrar dener
       const profile = await enrich(profiles, existing, input, decision);
-      await kaniti(phones, profile.id, input, decision.normalizedPhone);
+      await kaniti(phones, profile, input, decision.normalizedPhone);
       return { status: 'attached', profile };
     }
 
@@ -145,7 +145,7 @@ export async function findOrCreateCustomer(input: FindOrCreateInput): Promise<Fi
         authUserId: input.authUserId ?? null,
         isDraft: input.asDraft ?? false,
       });
-      await kaniti(phones, profile.id, input, decision.normalizedPhone);
+      await kaniti(phones, profile, input, decision.normalizedPhone);
       // Getiren bağı kayıttan SONRA kurulur: `linkReferrer` kendini-getirme ve "ilk getiren kazanır"
       // kurallarını taşıyor ve bunlar yeni satırın kimliğini bilmeden uygulanamaz. Ödül burada
       // DOĞMAZ — o, getirilen kişinin ilk siparişinin PARASI ALINDIĞINDA doğar (17.9:
@@ -173,18 +173,24 @@ export async function findOrCreateCustomer(input: FindOrCreateInput): Promise<Fi
  */
 async function kaniti(
   phones: CustomerPhoneService,
-  customerId: string,
+  profile: UserProfile,
   input: FindOrCreateInput,
   normalizedPhone: string | null,
 ): Promise<void> {
   if (input.phoneProven !== true || !normalizedPhone) return;
-  const sonuc = await phones.recordProof(customerId, normalizedPhone);
+  const sonuc = await phones.recordProof(profile.id, normalizedPhone);
   if (sonuc.status === 'taken') {
     logger.warn(
-      { customerId, holderId: sonuc.row?.customerId ?? null },
+      { customerId: profile.id, holderId: sonuc.row?.customerId ?? null },
       'kimlik: kanıtlı numara başka müşteride aktif — kanıt satırı yazılmadı',
     );
+    return;
   }
+
+  // ── DÖNÜŞ DEĞERLENDİRMESİ BURADA, ÇÜNKÜ BOŞLUK YALNIZ BURADA GÖRÜNÜR (04.10) ───────────────────
+  // `recordProof` az önce `lastSeenAt`i tazeledi; bir satır sonra bakan hiç kimse "üç aydır sessizdi"
+  // diyemez. `previous` tazelemeden önceki hâldir ve kimlik sorusunun tek ölçütü odur.
+  await raiseChallengeIfDue(serviceDb(), { profile, previous: sonuc.previous });
 }
 
 /**

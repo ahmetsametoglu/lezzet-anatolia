@@ -74,6 +74,19 @@ export type MarketingChannel = z.infer<typeof MarketingChannelEnum>;
 export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier', 'accounting']);
 export type UserRole = z.infer<typeof UserRoleEnum>;
 
+/**
+ * **Kimlik sorusunun tetiği** (04.10, DOMAIN §10) — ikisi birbirinin YERİNE GEÇMEZ.
+ *
+ * `delivery_failed` taşıyıcının BEYANIDIR (numara kapanmış ya da bizi engellemiş): erken tetik,
+ * 3 aylık eşiği beklemenin anlamı yok. `silence` yalnız bir İŞARETTİR — yılda bir bayramda sipariş
+ * veren sadık müşteri ile devredilmiş hat aynı şekli üretir; bu yüzden kapı değil soru doğurur.
+ *
+ * Küme burada duruyor çünkü hem motor (`needsChallenge`) hem DB kısıtı aynı iki değeri istiyor;
+ * ikinci bir yerde tekrarlansa biri gün gelip ötekinden ayrılırdı (CLAUDE §1).
+ */
+export const ChallengeReasonEnum = z.enum(['silence', 'delivery_failed']);
+export type ChallengeReason = z.infer<typeof ChallengeReasonEnum>;
+
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
 export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
 
@@ -239,6 +252,17 @@ export const UserProfileSchema = z.object({
   securityCodeHash: z.string().nullable(),
   /** Yanlış deneme sayacı; tavan 5 (DOMAIN §10). Doğru cevapta sıfırlanır. */
   securityCodeAttempts: z.number().int(),
+
+  /**
+   * **Bekleyen kimlik sorusu** (04.10) — `null` = sorulmuş bir soru yok, kapılar çapaya göre açık.
+   *
+   * Tetik bir AN'dır, soru ise cevaplanana kadar SÜRER; kolon o süreyi tutuyor. Türetilemiyor,
+   * çünkü tetiğin ölçütü (`customer_phone.last_seen_at`) soruyu doğuran mesajın kendisi tarafından
+   * tazeleniyor — sonradan bakan biri boşluğu göremez (migration 0011 künyesi).
+   */
+  challengeReason: ChallengeReasonEnum.nullable(),
+  /** Sorunun doğduğu an. Sebeple birlikte var ya da birlikte yok (DB kısıtı). */
+  challengeRaisedAt: z.string().datetime({ offset: true }).nullable(),
 
   /**
    * GDPR silme damgası (05.08) — `null` = hiç silinmedi.

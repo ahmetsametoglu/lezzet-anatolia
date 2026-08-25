@@ -173,7 +173,13 @@ points.get('/history', async (c) => {
 points.post('/redeem', async (c) => {
   const outcome = await redeemCustomerPoints(serviceDb(), { customerId: c.get('customerId') });
   if (outcome.status !== 'ok') {
-    const status = outcome.status === 'not_eligible' ? 403 : outcome.status === 'insufficient_balance' ? 409 : 400;
+    // `anchor_required` de 403: yetki reddi, istek hatası değil (04.10 — kimlik çapası yok).
+    const status =
+      outcome.status === 'not_eligible' || outcome.status === 'anchor_required'
+        ? 403
+        : outcome.status === 'insufficient_balance'
+          ? 409
+          : 400;
     return fail(c, outcome.status, status);
   }
   return ok(c, MePointsRedeemResultSchema.parse({ ...outcome.view, redeemedCode: outcome.code }));

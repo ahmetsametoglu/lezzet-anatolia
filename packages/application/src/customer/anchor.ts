@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { CustomerPhoneService, EmailVerificationService, UserProfileService } from '@lezzet/database';
-import { anchorStateOf, sixDigitCodeIn, type AnchorState } from '@lezzet/domain-core';
+import { anchorStateOf, canOpenHistory, needsChallenge, sixDigitCodeIn, type AnchorState } from '@lezzet/domain-core';
+import type { ChallengeReason, CustomerPhone, UserProfile } from '@lezzet/types';
 import { brand } from '@lezzet/brand';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { captureError, logger, maskEmail, SOURCES } from '@lezzet/observability';
@@ -100,6 +101,22 @@ export async function startEmailAnchor(db: SupabaseClient, customerId: string, r
   // serbest: kart dolu olabilir ama kanıtsız olabilir (operatör elle yazmış olabilir).
   if (profile.email && profile.email.toLowerCase() !== email) return { status: 'email_locked' };
 
+  const sonuc = await sendAnchorCode(db, profile, email);
+  return sonuc.status === 'ok' ? { status: 'ok', email } : sonuc;
+}
+
+type SendAnchorCodeOutcome = { status: 'ok' } | { status: 'send_failed' } | { status: 'throttled'; retryAfterSec: number };
+
+/**
+ * **Çapa kodunu üret, bekleyen adres olarak yaz ve GÖNDER.**
+ *
+ * İki çağıranı var ve ikisi de aynı işi ister: çapayı KURAN akış (`startEmailAnchor`) ve dönüşte
+ * çapayı SORAN akış (`raiseChallengeIfDue`). DOMAIN §10 ikincisini açıkça birincinin aynısı
+ * yapıyor — *"kod yine e-postasına gider, WhatsApp'tan geri yazılır"* — yani ortak gövde bir
+ * kolaylık değil, kararın kendisi. İki kopya olsaydı biri gün gelip ötekinden ayrılır ve dönüşteki
+ * kod, kuruluştakinden farklı bir kanaldan gitmeye başlardı (CLAUDE §1).
+ */
+async function sendAnchorCode(db: SupabaseClient, profile: UserProfile, email: string): Promise<SendAnchorCodeOutcome> {
   // Test kapısı `requestOtpCode` ile ORTAK (`devOtpCode`, BEKLEYEN(18.13)): kod hiçbir yere
   // yazılamadığı için testin/e2e'nin bilmesinin tek yolu sabit koddur. Aynı kapı Resend'i de
   // atlatıyor — yoksa her koşu gerçek bir mail üretirdi.
@@ -110,9 +127,9 @@ export async function startEmailAnchor(db: SupabaseClient, customerId: string, r
   // Bekleyen adres MAİLDEN ÖNCE yazılıyor: mail gitse de gitmese de, o adrese bir kod ÜRETİLDİ ve
   // müşteri onu alabilir. Sırayı ters kursaydık, gönderim yarıda kalan bir kod satırda karşılıksız
   // kalır ve gelen doğru cevap "bekleyen soru yok" diye reddedilirdi.
-  await profiles.update({ id: customerId, anchorEmail: email, anchorEmailAt: new Date().toISOString() });
+  await new UserProfileService(db).update({ id: profile.id, anchorEmail: email, anchorEmailAt: new Date().toISOString() });
 
-  if (testKodu) return { status: 'ok', email };
+  if (testKodu) return { status: 'ok' };
 
   const locale = profile.preferredLanguage;
   const mail = await sendEmail({
@@ -125,11 +142,11 @@ export async function startEmailAnchor(db: SupabaseClient, customerId: string, r
     // (OBSERVABILITY §5): hangi kayıt olduğunu söyler, kim olduğunu söylemez.
     await captureError(new Error(`Çapa kodu maili gönderilemedi: ${mail.error}`), {
       source: SOURCES.applicationTicket,
-      context: { flow: 'customer/startEmailAnchor', customerId, email: maskEmail(email) },
+      context: { flow: 'customer/sendAnchorCode', customerId: profile.id, email: maskEmail(email) },
     });
     return { status: 'send_failed' };
   }
-  return { status: 'ok', email };
+  return { status: 'ok' };
 }
 
 export type AnswerAnchorOutcome =
@@ -198,6 +215,10 @@ export async function answerEmailAnchor(db: SupabaseClient, phone: string, text:
     // İki çapa bir arada bulunmaz (DOMAIN §10) — DB kısıtı da zorluyor, ama silen taraf biziz.
     securityCodeHash: null,
     securityCodeAttempts: 0,
+    // Bekleyen kimlik sorusu varsa CEVAPLANMIŞTIR: çapraz kanal kanıtı, dönüşte istediğimizin ta
+    // kendisi. Ayrı bir "cevapla" adımı yok — soruyu kapatan şey doğru cevabın kendisidir.
+    challengeReason: null,
+    challengeRaisedAt: null,
   });
   logger.info({ context: 'customer/anchor', customerId, email: maskEmail(profile.anchorEmail) }, 'çapa: e-posta çapraz kanalla bağlandı');
   return { status: 'anchored', customerId, email: profile.anchorEmail };
@@ -267,7 +288,119 @@ export async function verifySecurityCode(db: SupabaseClient, phone: string, text
     return { status: 'wrong', remainingAttempts: SECURITY_CODE_MAX_ATTEMPTS - deneme };
   }
 
-  // Doğru cevap sayacı sıfırlar: tavan bir CEZA değil, tahmin denemesine konan sınırdır.
-  if (profile.securityCodeAttempts > 0) await profiles.update({ id: customerId, securityCodeAttempts: 0 });
+  // Doğru cevap sayacı sıfırlar: tavan bir CEZA değil, tahmin denemesine konan sınırdır. Bekleyen
+  // kimlik sorusu da burada kapanır — kapıyı açan şey doğru cevabın kendisidir.
+  if (profile.securityCodeAttempts > 0 || profile.challengeReason) {
+    await profiles.update({ id: customerId, securityCodeAttempts: 0, challengeReason: null, challengeRaisedAt: null });
+  }
   return { status: 'ok', customerId };
+}
+
+/*
+  ── KİMLİK ŞÜPHESİ: TETİK VE KAPI (04.10) ────────────────────────────────────────────────────────
+  Yukarısı çapayı KURAR; burası onu SORAR ve cevaplanmadıkça kapıları kapalı tutar. DOMAIN §10.
+
+  ── ÜÇ KAPI, TEK SORU ────────────────────────────────────────────────────────────────────────────
+  Kimliği bilmeden ne açtığımız asıl sorudur. Sipariş almak geçmiş gerektirmez — kapılı olan üç
+  yetki: **geçmişi göstermek · puanı harcatmak · kişiye özel fiyat/kupon uygulamak.** Üçü de "seni
+  tanıyorum" demektir ve yanlış kişiye söylenirse sızıntının kendisidir.
+
+  ── SORU BİR KAPI DEĞİL, SORUDUR ────────────────────────────────────────────────────────────────
+  Cevaplanamayan dönüş engellenmiyor: müşteri sipariş verebilir, konuşabilir, cevap alabilir. Yalnız
+  o üç yetki kapalı kalır. Boşluğun kendisi teşhis değildir — yılda bir bayramda sipariş veren sadık
+  müşteri ile devredilmiş hat aynı şekli üretir; kapı olarak kullanılsaydı cezalandırdığı kitlenin
+  ezici çoğunluğu kendi müşterilerimiz olurdu.
+*/
+
+/**
+ * Sessizlik eşiği (gün) — DOMAIN §10 "~3 ay" diyor, sayıyı parametrik tutuyoruz.
+ *
+ * Neden ayarlanabilir: doğru değeri bugün kimse bilmiyor ve **yerel veriden ÇIKARILAMAZ** (CLAUDE
+ * girişi). Canlıda müşteri dönüş aralıkları görülünce oynatılacak tek yer burası olsun.
+ */
+const SILENCE_DAYS = Number(process.env.IDENTITY_SILENCE_DAYS ?? 90);
+
+/**
+ * **Dönüşte kimlik sorusu gerekiyor mu — gerekiyorsa SOR.**
+ *
+ * Kanıt satırı tazelenirken, yani boşluğun HÂLÂ görülebildiği tek anda çağrılır (`recordProof`un
+ * `previous`ı). Bir mesaj sonra bakan hiç kimse o boşluğu göremez: damga bu mesajla tazelendi.
+ *
+ * ── ZATEN SORULMUŞSA YENİDEN SORULMAZ ───────────────────────────────────────────────────────────
+ * Bekleyen soru duruyorsa dokunulmaz. Her mesajda yeniden sormak hem müşteriyi yorar hem de
+ * e-posta yolunda her seferinde yeni bir kod üretip öncekini geçersiz kılardı — müşteri kutusundaki
+ * kodu yazarken elindeki kod çoktan ölmüş olurdu.
+ *
+ * ── E-POSTA ÇAPASINDA SORUYU SORMAK, KODU GÖNDERMEKTİR ──────────────────────────────────────────
+ * DOMAIN §10 (02.08): *"kod yine e-postasına gider, WhatsApp'tan geri yazılır."* Ajanın "kutunuza
+ * gönderdiğimiz kodu yazın" demesi ancak kod GERÇEKTEN gönderilmişse doğrudur; göndermeyip sormak,
+ * müşteriyi olmayan bir maili aramaya yollardı. Gönderim başarısızsa soru YİNE de kayıtlı kalır:
+ * kapı kapalı olmalı, ve operatör panelden yeniden gönderebilir.
+ *
+ * 6 haneli kod yolunda gönderilecek bir şey yok — sır zaten müşterinin elinde (DOMAIN §10: "sır,
+ * şüphe doğmadan önce kurulur").
+ */
+export async function raiseChallengeIfDue(
+  db: SupabaseClient,
+  input: { profile: UserProfile; previous: CustomerPhone | null },
+): Promise<ChallengeReason | null> {
+  const { profile, previous } = input;
+  if (profile.challengeReason) return profile.challengeReason; // bekleyen soru duruyor
+
+  const state = anchorStateOf(profile);
+  const reason = needsChallenge({
+    state,
+    lastSeenAt: previous?.lastSeenAt ?? null,
+    deliveryFailed: previous?.deliveryFailedAt != null,
+    silenceDays: SILENCE_DAYS,
+    now: new Date(),
+  });
+  if (!reason) return null;
+
+  await new UserProfileService(db).update({ id: profile.id, challengeReason: reason, challengeRaisedAt: new Date().toISOString() });
+  // Taşıyıcı beyanı SORUYA dönüştü; damga silinir ki aynı sinyal ikinci kez sayılmasın — yoksa
+  // müşteri cevapladıktan hemen sonra bir sonraki mesajında soru yeniden doğardı.
+  if (previous?.deliveryFailedAt) await new CustomerPhoneService(db).markDelivery(previous.phone, false);
+
+  if (state === 'email' && profile.email) {
+    const gonderim = await sendAnchorCode(db, profile, profile.email);
+    if (gonderim.status !== 'ok') {
+      logger.warn({ context: 'customer/anchor', customerId: profile.id, outcome: gonderim.status }, 'çapa: dönüş kodu gönderilemedi — soru yine de açık');
+    }
+  }
+
+  logger.info({ context: 'customer/anchor', customerId: profile.id, reason, anchor: state }, 'çapa: kimlik sorusu açıldı');
+  return reason;
+}
+
+/** Kapının durumu — `ask` yalnız bekleyen soru varken dolu; sorulacak şey çapanın TÜRÜDÜR. */
+export interface AnchorGate {
+  state: AnchorState;
+  /** Geçmiş · puan · kişiye özel fiyat açılabilir mi. */
+  open: boolean;
+  /** Müşteriye sorulacak çapa; `null` = sorulacak bir şey yok. */
+  ask: 'email' | 'code' | null;
+}
+
+/**
+ * **Kapının tek okuması** — üç yetkinin de sorduğu soru burada cevaplanıyor.
+ *
+ * İki koşul birden: çapa VAR olacak (`canOpenHistory`) **ve** bekleyen bir soru olmayacak. İkisi
+ * ayrı şeyler — çapası olan ama dönüşü şüpheli müşterinin kapısı, cevap gelene kadar kapalıdır.
+ *
+ * **Bilinmeyen müşteri kapalıdır:** profil okunamazsa kapı açılmaz. Ölçülemeyen değer sıfır
+ * değildir, ama kimlik sorusunda "bilmiyorum" ile "hayır" aynı kapıya çıkar (CLAUDE §1).
+ */
+export async function anchorGateOf(db: SupabaseClient, customerId: string): Promise<AnchorGate> {
+  const profile = await new UserProfileService(db).getById(customerId);
+  if (!profile) return { state: 'none', open: false, ask: null };
+
+  const state = anchorStateOf(profile);
+  const bekleyen = profile.challengeReason !== null;
+  return {
+    state,
+    open: canOpenHistory(state) && !bekleyen,
+    // Çapası olmayana sorulacak bir şey yoktur: sormak, cevabı olmayan bir soruyu sormaktır.
+    ask: bekleyen && state !== 'none' ? (state === 'email' ? 'email' : 'code') : null,
+  };
 }
