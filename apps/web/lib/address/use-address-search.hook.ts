@@ -46,11 +46,32 @@ interface AddressSearchState {
 
 const EMPTY: AddressSearchState = { suggestions: [], throttled: false };
 
-/** Sorgu metni → öneriler. Modül düzeyinde: form kapanıp açılınca da yaşar (aynı oturum). */
-const cache = new Map<string, AddressSearchState>();
+/**
+ * Sorgu metni → öneriler. Modül düzeyinde: form kapanıp açılınca da yaşar (aynı oturum).
+ *
+ * **İKİ KATLI, ÇÜNKÜ CEVAP ARTIK YALNIZ METNE BAĞLI DEĞİL (08.41):** aynı sorgu, müşterinin
+ * yerine göre farklı SIRADA dönüyor. Tek katlı bir depoda *"12 rue foch"* anahtarı Strasbourg'a
+ * göre sıralanmış cevabı taşırdı ve müşteri yerini Paris yapınca **aynı cevabı yeniden görürdü** —
+ * üstelik sessizce, çünkü liste dolu ve makul görünürdü. Dış anahtar noktadır; çekirdek yalnız iç
+ * Map'i görür ve sorgu metnine göre çalışmaya devam eder (`use-debounced-lookup` sözleşmesi).
+ */
+const caches = new Map<string, Map<string, AddressSearchState>>();
 
-async function lookup(term: string): Promise<LookupResult<AddressSearchState>> {
-  const found = await searchAddresses({ query: term });
+function cacheFor(key: string): Map<string, AddressSearchState> {
+  const found = caches.get(key);
+  if (found !== undefined) return found;
+  const fresh = new Map<string, AddressSearchState>();
+  caches.set(key, fresh);
+  return fresh;
+}
+
+async function lookup(term: string, near: NearPoint | undefined): Promise<LookupResult<AddressSearchState>> {
+  /* Alan adları BİLEREK çevriliyor: bizim tarafımızda nokta `lat`/`lng` (kolon adlarının aynısı),
+     BAN kapısında `latitude`/`longitude`. Paket kendi sözcüklerini kullanıyor ve öyle kalmalı —
+     `@lezzet/address-fr` künyesi: servisin alan adları o sisteme ait, bizim tipimize dayatılmaz. */
+  const found = await searchAddresses(
+    near === undefined ? { query: term } : { query: term, near: { latitude: near.lat, longitude: near.lng } },
+  );
   switch (found.status) {
     case 'ok':
       return { value: { suggestions: found.suggestions, throttled: false }, cache: true };
@@ -63,11 +84,37 @@ async function lookup(term: string): Promise<LookupResult<AddressSearchState>> {
   }
 }
 
+/** Yakınlık ipucunun noktası — `DeliveryPlace.point` ile aynı şekil, çağıran onu geçiriyor. */
+export interface NearPoint {
+  lat: number;
+  lng: number;
+}
+
 interface AddressSearchOptions {
   /** Kapalıyken hiç ağa çıkılmaz — form kapalı ya da müşteri öneriyi seçmişken. */
   enabled: boolean;
+  /**
+   * Müşterinin bilinen yeri — öneriler buna YAKIN olanları öne alır (08.41). Süzgeç değil:
+   * uzaktaki adres listede kalır, yalnız sırası düşer (ölçüm `@lezzet/address-fr` künyesinde).
+   *
+   * `undefined` = yer bilinmiyor → ipuçsuz sorulur, bugünkü davranış. Uydurulmuş bir merkez
+   * KONMAZ: yeri bilinmeyen müşteri, farkında olmadan başkasının şehrine göre sıralanmış bir
+   * liste okurdu.
+   */
+  near?: NearPoint;
 }
 
-export function useAddressSearch(query: string, { enabled }: AddressSearchOptions): AddressSearchState {
-  return useDebouncedLookup(query, { enabled, minLength: MIN_QUERY_LENGTH, empty: EMPTY, lookup, cache });
+export function useAddressSearch(query: string, { enabled, near }: AddressSearchOptions): AddressSearchState {
+  /* Depo noktaya göre ayrılır (künye yukarıda). Anahtar altı haneye yuvarlanmış çift — kolonun
+     kendi kesinliği de o (`numeric(9,6)`), yani yuvarlama bir kayıp değil aynı değerin metni. */
+  const cache = cacheFor(near === undefined ? '-' : `${near.lat},${near.lng}`);
+  return useDebouncedLookup(query, {
+    enabled,
+    minLength: MIN_QUERY_LENGTH,
+    empty: EMPTY,
+    /* Satır içi kapanış: çekirdek `lookup`ı ref'te tutuyor ve bağımlılık dizisine KOYMUYOR
+       (kendi künyesi) — yani her render'da yeni kimlik almak gecikmeyi sıfırlamıyor. */
+    lookup: (term) => lookup(term, near),
+    cache,
+  });
 }

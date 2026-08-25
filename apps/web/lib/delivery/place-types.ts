@@ -139,6 +139,19 @@ export interface DeliveryPlace {
    * çözülür ve sayfa önbelleğine yapışmaz.
    */
   nextDate: string | null;
+  /**
+   * Kodun coğrafi noktası (`postal_code_place.lat/lng`) — **yalnız adres önerisini SIRALAMAK için**
+   * (08.41). Ekranda hiçbir yerde gösterilmez ve bir karar girdisi değildir; teslimat kararı rota
+   * tablosundan çıkar, noktadan değil.
+   *
+   * Neden burada: BAN araması TARAYICIDAN çağrılıyor (kota IP başına — `use-address-search.hook`
+   * künyesi), yani nokta istemcide bilinmek zorunda. Çözüm zaten `postal_code_place` satırını
+   * okuyor, o yüzden ek bir sorgu yok — taşınmayan bir alanı taşımaya başladık, o kadar.
+   *
+   * `null` GEÇERLİ bir hâl: koordinatsız kayıt olabilir (kısıt `postal_code_place_point`: lat ve
+   * lng ya birlikte var ya birlikte yok). O zaman öneri ipuçsuz istenir — bugünkü davranış.
+   */
+  point: { lat: number; lng: number } | null;
 }
 
 /**

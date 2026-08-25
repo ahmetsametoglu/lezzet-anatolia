@@ -307,6 +307,9 @@ export function DeliveryStep(props: CheckoutViewProps) {
         zoneName: null,
         inRoute,
         nextDate: null,
+        // Koordinat da TAŞINMAZ, aynı gerekçeyle: nokta yalnız adres önerisini sıralamak için var
+        // (08.41) ve bu blok öneri göstermiyor — seçilmiş bir adresin kısıtlarını yazıyor.
+        point: null,
       }
     : null;
   const restricted = restrictedLines(addressPlace, cart.lines);

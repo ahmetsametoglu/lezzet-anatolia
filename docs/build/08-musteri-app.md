@@ -989,10 +989,24 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     - **Bir künye YANLIŞ çıktı ve düzeltildi:** `packages/application/src/delivery/places.ts` *"harfli girdi
       kod dalına düşüp boş dönüyor, davranış değişmedi"* diyordu. `normalizePostalCode` yalnız boşluk
       siler ve büyütür — harfler hayatta kalıyor ve ad dalına gidiyor. Cümle bir ölçüm değil varsayımdı.
-    - **AÇIK KALAN, gerekçesiyle:** adres formunda (`address-fields`) ad araması AÇILMADI. Oradaki
-      kod alanı bir arama kutusu değil saklanan bir değer; ada göre arama ayrı bir yer istiyor ve
-      nereye konacağı bir çizim kararı (`design/BACKLOG §2`). Kodda improvise edilmedi (`CLAUDE §3`).
-      Native de aynı hâlde, yani karar iki yüzeyi birden bağlıyor.
+    - **AÇIK DEĞİL, KARAR (kullanıcı 25.08 — `design/KARARLAR §1g`):** adres formunda ada göre arama
+      AÇILMAYACAK. Denetimin "müşteri kodunu bilmeyebilir" gerekçesi çürütüldü: Fransa ve Almanya'da
+      posta kodu aktif kullanılıyor. Dahası çok yerleşimli kodda ada göre giriş DAHA tehlikeli — ad
+      yazan müşteri kodu seçmiş olmaz, biz onun adına seçmiş oluruz. Akış **adres listesinden seçim**:
+      sokak yazılır, listeden seçilir, üç alan dolar, sonrasında elle düzeltilebilir. Ölçüldü (gerçek
+      formda, 25.08): `"12 rue du Marechal Foch"` → `12 Rue du Maréchal Foch · 67000 · Strasbourg`.
+    - **ÖNERİ LİSTESİ ARTIK MÜŞTERİNİN BÖLGESİNİ ÖNE ALIYOR** (aynı turda, kullanıcı onayı 25.08).
+      Ölçülen eksik: sokak adları Fransa'da yüzlerce kez tekrar ediyor ve servis yalnız metne göre
+      sıralıyordu — `"12 rue foch"` → Saint-Denis · Montpellier · Tournefeuille, beşinin hiçbiri
+      müşterinin bölgesinde değil. `@lezzet/address-fr` artık `near` (lat/lon) alıyor ve yer bağlamı
+      onu besliyor. Ölçüldü (gerçek formda): yer 67000 iken aynı sorgu → **Schiltigheim · Mundolsheim
+      · Dabo · Saint-Denis (4., ELENMEDİ)**. Süzgeç değil sıralama tercihi olması şart — `postcode`
+      parametresi sert süzgeçtir ve hediye/iş adresi girenin yolunu keserdi.
+      Nokta `postal_code_place`ten geliyor (16.878/16.878 satırda dolu) ve çözümün zaten okuduğu
+      satırdan alınıyor — ek sorgu yok. Yeri bilinmeyen ziyaretçide ipucu gönderilmez; uydurulmuş bir
+      merkez konmadı (`CLAUDE §1` — bilinmeyeni bir değere düşürmek).
+    - **Mobil aynı işi yapabilir ve ucu hazır** — `apps/mobile-api/src/api/v1/places.ts` `suggestPlaces`i
+      süzgeçsiz çağırıyor. Karar ve ölçüm burada; uygulaması mobil şeridin işi.
   - **Bugünkü hâl ölçüldü (15.08):** form üç alanı da serbest metin tutuyor — `postalCode` ve `city` ayrı `<input>`, `country` sabit `'FR' as const`. Yani müşteri kodu yazıyor, şehri de ayrıca yazıyor ve ikisinin tutarlılığını kimse doğrulamıyor.
   - **Altyapı HAZIR, yazılacak olan yalnız form:** `suggestPlaces(db, prefix)` (`@lezzet/application` — `searchPrefix`in üstünde, `placeLabel` ad türetimi dahil) · `PlaceOptionListSchema` (`@lezzet/types`) · `resolveAddressCountry(db, {postalCode, country?})` (`Country | null` döner, **hiçbir hâlde reddetmez**). Web bugün `searchPrefix`i kendi action'ından HAM okuyor (`lib/delivery/actions.ts` → `suggestPostalCodesAction`); o kapıya geçmek ad türetme kuralını tek yerde tutar.
   - **Dört karar mobilde verildi ve web'de de aynı olmalı** (kullanıcı, 10.08):

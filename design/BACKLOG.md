@@ -47,21 +47,6 @@ değişecek yer parantezde.
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
-- **ADRES FORMUNDA YER ADIYLA ARAMA — nereye yazılacağı bir tasarım kararı (25.08, 08.41).**
-  Yer hapında (`place-dialog`) ad araması açıldı ve ölçüldü: müşteri *"Strasbourg"* yazıp listeden
-  seçebiliyor. **Adres formunda (`address-fields`) açılmadı** ve sebebi teknik değil: oradaki posta
-  kodu alanı bir ARAMA KUTUSU değil, SAKLANAN bir değer (`address.postal_code`) — bugün harfleri
-  eliyor (`replace(/\D/g, '')`) ve elemesi doğru. Ada göre arama için ayrı bir yer gerekiyor ve
-  seçenekler farklı ekranlar demek:
-  · **şehir alanı bir aramaya dönüşür** — müşteri şehri yazar, seçim posta kodunu da doldurur
-    (bugünkü akışın aynası: kod seçilince şehir doluyor);
-  · **sokak alanının BAN araması yeter sayılır** — o zaten kodu ve şehri birlikte yazıyor, ama
-    yalnız Fransız adreslerini biliyor (`address-fields` künyesi: Alman yazımında sıfır öneri);
-  · **üçüncü bir arama satırı** — en açık, ama formu uzatıyor.
-  Motor üçüne de hazır (`suggestPlaces`, iki dallı `search`). Karar çizimde verilmeli; kodda
-  improvise edilmeyecek (`CLAUDE §3`). Native karşılığı da aynı hâlde (`21.28` — orada da kod alanı
-  harfi eliyor), yani karar iki yüzeyi birden bağlar.
-
 - **DÖKME KOLİ BİR VARYANT OLARAK SUNULMALI (kullanıcı kararı 19.08).**
   **İlke önce:** *"Tedarikçimiz bize neyi kime satacağımızı söyleyemez."* Kaynak katalogdaki
   `horeca`/`retail` işareti bir ara fiyat yazmanın kapısı yapılmıştı; kaldırıldı. O işaret

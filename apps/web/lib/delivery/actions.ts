@@ -67,7 +67,7 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
        */
       const picked = chosenCountry ? lookup.candidates.find((c) => c.country === chosenCountry) : undefined;
       if (picked) {
-        return await finishResolved(postalCode, { country: picked.country, placeName: placeLabel(picked.places), places: picked.places }, zones);
+        return await finishResolved(postalCode, { country: picked.country, placeName: placeLabel(picked.places), places: picked.places }, zones, matches);
       }
       // Kayıt tutulur ama HATA değil: müşterinin cevaplayabileceği meşru bir soru. Yine de iz
       // bırakıyoruz — hangi kodların gerçekten sorulduğunu bilmek veri kalitesinin ölçüsü.
@@ -100,7 +100,7 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
       return { data: { kind: 'unresolved', reason: lookup.reason }, errorKey: null };
     }
 
-    return await finishResolved(postalCode, { country: lookup.country, placeName: lookup.placeName, places: lookup.places }, zones);
+    return await finishResolved(postalCode, { country: lookup.country, placeName: lookup.placeName, places: lookup.places }, zones, matches);
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -115,7 +115,15 @@ async function finishResolved(
   postalCode: string,
   identity: { country: Country; placeName: string | null; places: readonly string[] },
   zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>,
+  /**
+   * Kodun referans satırları — noktayı buradan okuyoruz (08.41). Satırlar çağıranda ZATEN
+   * okunmuş durumda (`findByPostalCode`), yani ikinci bir sorgu yok. Ülkeye göre seçiliyor:
+   * 610 kod iki ülkede birden geçerli ve iki ülkenin noktası aynı yer değil.
+   */
+  matches: readonly { country: Country; lat: number | null; lng: number | null }[],
 ): Promise<CustomerResult<PlaceLookup>> {
+  const row = matches.find((m) => m.country === identity.country);
+  const point = row?.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : null;
   const delivery = await resolveDelivery({ postalCode, country: identity.country });
 
   // Bölge adı yalnız rota içinde bilinir. Motor aday tipini döndürür (ad taşımaz — karar için
@@ -148,6 +156,7 @@ async function finishResolved(
         zoneName: inRoute ? (zone?.name ?? null) : null,
         inRoute,
         nextDate: delivery.availableDates[0] ?? null,
+        point,
       },
     },
     errorKey: null,

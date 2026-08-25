@@ -165,6 +165,40 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ---
 
+### 1g. Adres girişi — ADRES LİSTESİNDEN SEÇİM, ada göre arama YOK (25.08, kullanıcı kararı)
+
+**Karar:** müşteri sokak adresini yazar, **adres listesinden seçer, alanlar dolar, isterse sonradan
+kendisi değiştirir.** Posta kodu ya da şehir adı üzerinden ayrı bir arama AÇILMAZ.
+
+**Denetimin önerisi REDDEDİLDİ ve gerekçesi düzeltildi.** Öneri şuydu: "müşteri kodunu bilmeyebilir,
+şehir alanı da arama olsun." Kullanıcının itirazı: *"Fransa ve Almanya'da yaşayan insanlar posta
+kodlarını bilirler, bu iki ülkede posta kodu çok aktif kullanılır."* Yani önerinin dayandığı ihtiyaç
+yok. İkinci itiraz daha ağır: **çok yerleşimli kodda ada göre giriş DAHA tehlikeli** — ad yazan
+müşteri kodu seçmiş olmaz, biz onun adına seçmiş oluruz. `67800` ile *"Bischheim mi Hœnheim mi"*
+sorusunun cevabı müşterinindir; ad araması o cevabı sessizce üretirdi.
+
+**Bugünkü kod zaten bu akış** (ölçüldü 25.08, gerçek formda): `"12 rue du Marechal Foch"` →
+`12 Rue du Maréchal Foch · 67000 · Strasbourg`, üç alan birden doluyor, aksansız yazım aksanlı
+kayda oturuyor, seçim sonrası her alan düzenlenebilir kalıyor.
+
+**Bilinen ve KABUL EDİLEN sonuç:** seçimden sonra elle düzeltme serbest olduğu için kod ile şehir
+ayrışabilir (67000 + "Bischheim" yazılabilir) ve bunu kimse doğrulamıyor. Kullanıcının kararı bunu
+kapsıyor (*"sonra istiyorsa kendisi değiştirebilsin"*); tutarlılık dayatmak, gerçek bir adresi
+reddetme riskini getirirdi.
+
+**Bilinen sınır:** BAN yalnız Fransız adreslerini biliyor — ölçüldü, `"Hauptstrasse 12 Kehl"` ve
+`"77694 Hauptstrasse 12"` sıfır öneri döndürüyor. Alman adresi elle yazılır; kodu bilindiği için
+engel değil, ülke yine koddan doğru türüyor.
+
+**Öneri listesi müşterinin bölgesini ÖNE ALIR** (aynı turda yazıldı, 08.41): sokak adları Fransa'da
+yüzlerce kez tekrar ediyor ve servis sıralamayı yalnız metne bakarak yapıyordu — `"12 rue foch"`
+Saint-Denis · Montpellier · Tournefeuille döndürüyordu. Yer ipucuyla Schiltigheim · Mundolsheim
+dönüyor, **Saint-Denis dördüncü sırada listede kalıyor**. Süzgeç değil sıralama tercihi olması şart:
+hediye ya da iş adresi girenin yolu kapanmamalı.
+
+**Yer hapının (başlık) ad araması AYRI ve duruyor** (kullanıcı kararı 25.08): orada seçilen şey
+yalnız posta kodudur, şehir değil — çok yerleşimli koddaki tehlike o yüzeyde doğmuyor.
+
 ## 2. Bilinçli sapmalar (eski BACKLOG §3)
 
 - **"FIRSATLAR" ÜST MENÜDEN VE FOOTER'DAN KALDIRILDI (kullanıcı kararı 09.08, 08.29).**

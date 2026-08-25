@@ -70,6 +70,25 @@ export interface AddressSearchInput {
   postalCode?: string;
   /** INSEE komün koduna daraltma (posta kodundan kesin). */
   cityCode?: string;
+  /**
+   * YAKINLIK İPUCU — bir SÜZGEÇ DEĞİL, bir SIRALAMA tercihi (08.41).
+   *
+   * `postalCode`/`cityCode` sert süzgeçtir: verilirse başka yerdeki adres HİÇ dönmez. Adres
+   * defterinde bu yanlış olurdu — müşteri hediye ya da iş adresi girerken başka bir şehri arıyor
+   * olabilir. `lat`/`lon` ise servisin skorunu yakınlığa göre eğiyor, kümeyi daraltmıyor.
+   *
+   * ÖLÇÜLDÜ (25.08, servise doğrudan sorularak). `"12 rue foch"`:
+   *   · ipuçsuz → 97490 Saint-Denis · 34000 Montpellier · 31170 Tournefeuille · 94550 · 49110
+   *   · Strasbourg noktasıyla → 67300 Schiltigheim · 67450 Mundolsheim · 57850 Dabo ·
+   *     **97490 Saint-Denis (4. sırada, elenmedi)** · 54480
+   * Yani uzaktaki adres listede kalıyor, yalnız sırası değişiyor — istenen davranış tam buydu.
+   *
+   * Nokta ZORUNLU DEĞİL: yeri bilinmeyen ziyaretçide alan hiç gönderilmez ve servis bugünkü gibi
+   * davranır. "Bilinmeyeni bir değere düşürmek" (CLAUDE §1) burada da geçerli — varsayılan bir
+   * merkez uydurulsaydı, yeri bilinmeyen müşteri sessizce o merkeze göre sıralanmış bir liste
+   * okurdu ve bunu hiçbir yerde göremezdi.
+   */
+  near?: { latitude: number; longitude: number };
   /** Yalnız belirli incelikte sonuç iste (ör. yalnız kapı numaraları). */
   kind?: AddressKind;
   limit?: number;
@@ -105,6 +124,11 @@ export async function searchAddresses(input: AddressSearchInput): Promise<Addres
   if (input.postalCode !== undefined) params.set('postcode', input.postalCode);
   if (input.cityCode !== undefined) params.set('citycode', input.cityCode);
   if (input.kind !== undefined) params.set('type', input.kind);
+  // Yakınlık ipucu: servis `lat`/`lon`u skorlamada kullanır, süzgeçte değil (alanın künyesi).
+  if (input.near !== undefined) {
+    params.set('lat', String(input.near.latitude));
+    params.set('lon', String(input.near.longitude));
+  }
 
   return read(`${BASE_URL}/search?${params.toString()}`, input.timeoutMs, input.signal);
 }

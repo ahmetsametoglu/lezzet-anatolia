@@ -8,6 +8,7 @@ import { FormInputField } from '@/components/customer/form/form-input-field';
 import { SuggestionList } from '@/components/customer/ui/suggestion-list';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
 import { usePostalSuggest } from '@/lib/address/use-postal-suggest.hook';
+import { useDeliveryPlace } from './place-context';
 
 /*
   ADRESİN ÜÇ ALANI — sokak · posta kodu · şehir, ÖNERİLERİYLE birlikte.
@@ -150,7 +151,30 @@ export function AddressFields({
      alan zaten dolu) ve öneri seçildikten sonra kapalıdır — aksi hâlde seçilen adres kendi
      önerisini yeniden getirir ve liste seçimin üstünde asılı kalırdı. */
   const [suggestOpen, setSuggestOpen] = useState(false);
-  const search = useAddressSearch(value.line1, { enabled: streetSuggest && active && suggestOpen });
+  /**
+   * ÖNERİLER MÜŞTERİNİN BULUNDUĞU YERİ ÖNE ALIR (08.41 · kullanıcı kararı 25.08).
+   *
+   * Ölçülen eksik şuydu: *"12 rue foch"* Saint-Denis · Montpellier · Tournefeuille döndürüyordu —
+   * beşinin hiçbiri müşterinin bölgesinde değil. Sokak adı Fransa'da yüzlerce kez tekrar ediyor ve
+   * servis sıralamayı yalnız metne bakarak yapıyordu. Yer ipucuyla aynı sorgu Schiltigheim ·
+   * Mundolsheim döndürüyor, Saint-Denis dördüncü sırada KALIYOR.
+   *
+   * Nokta site genelindeki yer bağlamından okunuyor, prop'la değil: `PlaceProvider` müşteri
+   * yerleşiminin kökünde (`(customer)/[locale]/layout.tsx`), yani bu bileşenin İKİ çağıranı da
+   * (adres çekmecesi · B2B başvurusu) onun içinde. Prop olsaydı aynı satır iki yerde yazılır ve
+   * biri bir gün unutulurdu — unutulduğunda da hiçbir şey kırılmaz, yalnız liste sessizce
+   * kötüleşirdi. Bu bir DAVRANIŞ girdisi, kalıcılık değil; bileşenin künyesindeki ayrım gereği
+   * burada duruyor.
+   *
+   * Yer bilinmiyorsa (`place === null`) ipucu gönderilmez ve arama bugünkü gibi çalışır.
+   */
+  /* Adı `browsingPlace`: aşağıdaki `place` KOD LİSTESİNDEN seçilen satırdır (şehir listesini
+     çizmek için), bu ise sitenin gezinme yeri. İkisi farklı sorular — aynı adı taşımamalılar. */
+  const { place: browsingPlace } = useDeliveryPlace();
+  const search = useAddressSearch(value.line1, {
+    enabled: streetSuggest && active && suggestOpen,
+    near: browsingPlace?.point ?? undefined,
+  });
 
   /**
    * BAN önerisine tıklandı: satır, posta kodu ve şehir BİRLİKTE yazılır, listeler kapanır.
