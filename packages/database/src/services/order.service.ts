@@ -741,13 +741,23 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    *
    * `warehouseId` verilirse yalnız o deponun kuyruğu — depocu başka deponun siparişini görmez (C5)
    * ve zaten hazırlayamaz: partiler siparişin deposundan seçilir. Verilmezse depo-üstü (admin).
+   *
+   * **`id` süzgeci kuyruğun ÖLÇÜTLERİNİ değiştirmez** (10.1 · hazırlık kâğıdı): tek bir siparişi
+   * adresleyen çağıran da aynı durum/depo kapısından geçer. Yani kapanmış ya da başka deponun
+   * siparişinin kimliği verilse liste BOŞ döner — "kimlikle istedim, o hâlde bana ver" diye bir
+   * kestirme yok.
    */
   listByStatus(
     status: OrderStatus | OrderStatus[],
-    opts: { deliveryDate?: string; limit?: number; warehouseId?: string } = {},
+    opts: { deliveryDate?: string; limit?: number; warehouseId?: string; orderId?: string } = {},
   ): Promise<Order[]> {
     return this.getAll(
-      { status: Array.isArray(status) ? status : [status], deliveryDate: opts.deliveryDate, warehouseId: opts.warehouseId },
+      {
+        status: Array.isArray(status) ? status : [status],
+        deliveryDate: opts.deliveryDate,
+        warehouseId: opts.warehouseId,
+        id: opts.orderId,
+      },
       { orderBy: 'createdAt', limit: opts.limit },
     );
   }

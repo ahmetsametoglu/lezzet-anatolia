@@ -244,6 +244,33 @@ describe('hazırlık kuyruğu (D1 · 10.1)', () => {
     const theirs = await listPreparationQueue(db, { warehouseId: otherWarehouseId });
     expect(theirs.some((row) => row.orderId === orderId)).toBe(true);
   });
+
+  /*
+    TEK SİPARİŞ SÜZGECİ (10.1 · hazırlık kâğıdı) — belge tek siparişi basıyor ve onun için
+    kuyruğun tamamını okuyup elde süzmek, kâğıdın maliyetini kuyruğun boyuna bağlardı.
+
+    Asıl iddia süzgecin ÇALIŞMASI değil, kuyruğun ÖLÇÜTLERİNİ değiştirmemesi: kimlikle istemek bir
+    kestirme olsaydı, adrese başka deponun sipariş kimliğini yazan biri o siparişin kâğıdını
+    basardı — kalemleri, partileri, rafları ve alıcı adıyla birlikte.
+  */
+  it('`orderId` verilince YALNIZ o sipariş gelir', async () => {
+    const mine = await confirmedOrder(2);
+    await confirmedOrder(3);
+
+    const rows = await listPreparationQueue(db, { warehouseId, orderId: mine.orderId });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.orderId).toBe(mine.orderId);
+    // Kalemler eksiksiz: kâğıt kuyruk satırından değil, tam siparişten basılıyor.
+    expect(rows[0]?.lines).toHaveLength(1);
+  });
+
+  it('`orderId` kapsamı DELMEZ — başka deponun siparişi kimlikle de gelmez', async () => {
+    await stocks.insert({ warehouseId: otherWarehouseId, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePriceCents: 400 });
+    const { orderId } = await confirmedOrder(2, { inWarehouse: otherWarehouseId });
+
+    expect(await listPreparationQueue(db, { warehouseId, orderId })).toEqual([]);
+  });
 });
 
 describe('partiye kilitli kalem (10.2)', () => {

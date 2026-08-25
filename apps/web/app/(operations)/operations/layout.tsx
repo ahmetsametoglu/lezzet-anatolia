@@ -88,8 +88,14 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
             warehouse: { warehouses, activeWarehouseId, unscoped: scope.kind === 'all' },
           }}
         >
-          <AdminSidebar roles={roles} />
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+          {/* Gezinme rayı KÂĞIDA gitmez (10.1): basılı belgede bir menü, mürekkebin yarısını
+              götüren ve hiçbir işe yaramayan bir sütundur. İşaret sidebar'ın kendisinde değil
+              burada, çünkü karar "bu öğe basılmaz" değil "kabuk basılmaz" — aynı kural bir gün
+              üst bara da uygulanacaksa yeri burasıdır. */}
+          <div data-print="hide" className="contents">
+            <AdminSidebar roles={roles} />
+          </div>
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">{children}</main>
         </OpsShellProvider>
       </div>
     </RootShell>

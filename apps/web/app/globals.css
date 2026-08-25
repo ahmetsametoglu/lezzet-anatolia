@@ -488,6 +488,49 @@ body {
   --color-ops-row-selected: #31352c;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASILI BELGE (10.1 · hazırlık kâğıdı) — KÂĞIT TEMA İZLEMEZ.
+
+   Operasyon ekranları karanlık moda dönüyor ve dönmeli; kâğıt dönemez. Karanlık palet mirasla
+   belgeye de inseydi çıktı ya bembeyaz zemine açık gri mürekkep basardı (okunmaz) ya da yazıcı
+   koca bir siyah alan boşaltırdı. Yazdırmada `print-color-adjust` da bu yüzden yok: tarayıcının
+   kendi ekonomisi zaten zemini atıyor, biz de zaten beyaz bir zemin veriyoruz.
+
+   Token'lar TEKRAR YAZILMIYOR, AÇIK DEĞERLERİNE SABİTLENİYOR — belge yalnız kullandığı yedi
+   değişkeni geri alıyor. İkinci bir gerçek doğmuyor: aynı palet, tema izlemeyen bir ortamda
+   (`.ops-map-tiles` emsali — tek amaçlı, künyeli, tek yerde).
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-doc='paper'] {
+  color-scheme: light;
+  --color-ops-ink: #22251f;
+  --color-ops-body: #4a5044;
+  --color-ops-muted: #6a7065;
+  --color-ops-faint: #8b9184;
+  --color-ops-white: #ffffff;
+  --color-ops-subtle: #f6f7f4;
+  --color-ops-line: #d9ddd3;
+  --color-ops-line-soft: #e8ebe4;
+}
+
+/* Yazdırırken ekranın kabuğu (sol ray, üst bar, düğmeler) kâğıda gitmez. */
+@media print {
+  /* Operasyon kabuğu `h-screen overflow-hidden` — ekranda doğru (sidebar ve içerik kendi içinde
+     kayar), kâğıtta felaket: belge ilk sayfada KESİLİR ve gerisi hiç basılmaz. Yazdırmada akış
+     serbest bırakılıyor. */
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+  }
+  [data-doc='paper'] {
+    margin: 0;
+    padding: 0;
+  }
+  [data-print='hide'] {
+    display: none !important;
+  }
+}
+
 /* Harita karolarının soluklaştırması (19.20) — tasarımın kendi değerleri
    (`Depolar - Bolge Haritasi.html`: `.tiles`). Zemin sönükleşir, posta kodu noktaları öne çıkar.
    Raster karo olduğu için tek filtre yetiyor; vektörde stil katmanlarını yeniden boyamak gerekirdi. */

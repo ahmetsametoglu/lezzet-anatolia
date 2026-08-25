@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
@@ -190,8 +191,20 @@ function OrderPanel({
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-1 border-b border-ops-line px-5 py-3.5">
-        <span className="font-ops-display text-ops-lg font-semibold text-ops-ink">
-          {order.referenceNo ?? '—'} · {order.customerName}
+        <span className="flex items-start justify-between gap-3">
+          <span className="font-ops-display text-ops-lg font-semibold text-ops-ink">
+            {order.referenceNo ?? '—'} · {order.customerName}
+          </span>
+          {/* Hazırlık kâğıdı (10.1) — YENİ SEKMEDE: kuyruk açık kalmalı, depocu kâğıdı basıp
+              masadaki ekrana geri dönüyor. Bağlantı, düğme değil: hedefi bir sayfa ve orta
+              tıklamayla da açılabilmeli. */}
+          <Link
+            href={`/operations/preparation/${order.orderId}/paper`}
+            target="_blank"
+            className="shrink-0 cursor-pointer rounded-ops-btn border border-ops-line px-3 py-1.5 font-ops-body text-ops-xs font-medium text-ops-body transition-colors hover:border-ops-ink hover:text-ops-ink"
+          >
+            Kâğıt bas ↗
+          </Link>
         </span>
         <span className="font-ops-body text-ops-xs text-ops-muted">
           {channelLabel(order)} · {num(order.lineCount)} kalem · {num(order.totalQty)} paket

@@ -164,16 +164,22 @@ export interface PreparationBox {
  * Teslim gününe göre süzülür; gün verilmezse o deponun bekleyen her siparişi gelir. **Arşiv
  * yığılmaz**: teslim edilmiş/kapanmış sipariş bu okumaya hiç girmez.
  *
+ * **`orderId` verilirse TEK sipariş** (10.1 · hazırlık kâğıdı): belge tek siparişi basıyor ve onun
+ * için kuyruğun tamamını okuyup elde süzmek, kâğıdın maliyetini kuyruğun boyuna bağlardı. Süzgeç
+ * kuyruğun kendi ölçütlerini DEĞİŞTİRMEZ — kapanmış bir siparişin kimliği verilse de liste boş
+ * döner, yani kâğıt yalnız hazırlanabilir bir siparişe basılır.
+ *
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
  */
 export async function listPreparationQueue(
   db: SupabaseClient,
-  input: { warehouseId: string; deliveryDate?: string; limit?: number },
+  input: { warehouseId: string; deliveryDate?: string; limit?: number; orderId?: string },
 ): Promise<PreparationOrder[]> {
   const orders = await new OrderService(db).listByStatus(['confirmed', 'preparing'], {
     deliveryDate: input.deliveryDate,
     limit: input.limit ?? 50,
     warehouseId: input.warehouseId,
+    orderId: input.orderId,
   });
   if (orders.length === 0) return [];
 

@@ -75,7 +75,26 @@ async function operationsState(browser) {
     await page.goto(`${BASE}/auth/dev-login`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     // Kapı `next` verilmezse yöneticiyi kendi panosuna atar; oturum kurulduysa artık `/operations`tayız.
     const ok = new URL(page.url()).pathname.startsWith('/operations');
-    return ok ? await context.storageState() : null;
+    if (!ok) return null;
+
+    /*
+      ÇALIŞMA DEPOSU — istenirse (`UI_SHOT_WAREHOUSE=<depo kimliği>`).
+
+      Depo ekranlarının bir kısmı bağlam çerezi olmadan kuyruğa hiç girmiyor (hazırlık "önce depo
+      seçin" satırlarını çiziyor, hazırlık kâğıdı 404 dönüyor) — yani araç o ekranların ASIL
+      hâlini hiç gösteremiyordu. Çerez uygulamanın kendi seçicisiyle aynı ad ve değeri taşıyor.
+
+      **Varsayılan YOK ve olmamalı** (`CLAUDE §1`): depo seçimi operatörün kararıdır, bir aracın
+      sessizce seçtiği depo yanlış ekranı doğru sanmanın yoludur. Verilmezse davranış bugünküyle
+      aynı kalır.
+    */
+    const warehouseId = process.env.UI_SHOT_WAREHOUSE;
+    if (warehouseId) {
+      await context.addCookies([
+        { name: 'lezzet.ops.warehouse', value: warehouseId, url: BASE, sameSite: 'Lax' },
+      ]);
+    }
+    return await context.storageState();
   } catch {
     return null;
   } finally {

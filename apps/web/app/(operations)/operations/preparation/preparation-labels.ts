@@ -13,6 +13,13 @@ import type { PreparationLane, PreparationOrderView, WarehouseWorkView } from '.
  */
 
 /**
+ * Masanın kendi yolu — üç tüketicisi var (`revalidatePath`, kâğıdın "kuyruğa dön" bağlantısı,
+ * gezinme). Üçü de kendi dizesini yazsaydı biri bir gün ötekinden ayrışırdı ve ayrışma sessiz
+ * olurdu: yanlış yol yalnız tazelemeyi kaçırır, hata vermez.
+ */
+export const PREP_PATH = '/operations/preparation';
+
+/**
  * Kulvar adları (10.9) — hem kuyruk başlıklarında hem seçim kartlarında. **Tek yerde**, çünkü
  * ikisi aynı üç kulvarı sayıyor: ayrı yazılsalardı biri bir gün "kargo", öteki "günsüz" derdi ve
  * operatör iki ekranda iki farklı küme sanırdı.

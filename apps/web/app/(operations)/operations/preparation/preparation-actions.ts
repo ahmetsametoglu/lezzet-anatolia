@@ -10,6 +10,7 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
 import { openTicket } from '@/lib/ticket/write';
 import { readWorkWarehouse } from '@/lib/warehouse/context';
+import { PREP_PATH } from './preparation-labels';
 
 /**
  * Hazırlık masasının tek yazma yolu (10.1–10.3).
@@ -23,7 +24,7 @@ import { readWorkWarehouse } from '@/lib/warehouse/context';
  * siparişini kapatırdı — kapının `out_of_scope` kontrolü de kanmış olurdu, çünkü ona verilen kimlik
  * "operatörün deposu" diye geçerdi. Bağlam kapısı kimliği kapsama karşı doğrulanmış hâlde döndürür.
  */
-const PREP_PATH = '/operations/preparation';
+// Yol sözlükte (`preparation-labels`): kâğıdın "kuyruğa dön" bağlantısı da aynı dizeyi okuyor.
 
 interface ConfirmResult {
   /** Yazılan kalem sayısı. */

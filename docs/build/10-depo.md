@@ -31,7 +31,38 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
     - ⚠ **Görsel doğrulamada bir sunum hatası çıktı ve düzeltildi:** toplanmış kalemde öneri sütunu kırmızı *"Uygun parti bulunamadı"* yazıyordu. Kapı öneriyi KALAN adet için kuruyor (toplanan tekrar toplanmaz), yani boşluğun iki ayrı anlamı var — bitmiş iş ile stoksuz kalem. Ekran ikisini artık ayırıyor.
     - **Gezinmeye ikon eklendi** (`hazirlik`): panoya tutturulmuş liste. Kutu/koli BİLEREK değil — stok ikonu zaten katman katman kutu ve ikisi rayda alt alta; aynı metafor bakışta ayırt edilemez olurdu.
     - **ONAY UÇTAN UCA ÖLÇÜLDÜ (08.08, kullanıcı isteğiyle gerçek siparişte).** `LA-26-393WX3` kuyruktan seçilip "✓ Hazırlandı" basıldı; veritabanı kanıtı: sipariş `confirmed → ready`, `fulfilled_qty` 3/3, `order_item_batch` 1 kayıt. Yani parti kaydı gerçekten düşüyor ve sipariş kendiliğinden hazıra geçiyor — bitti-kriterinin ilk yarısı karşılandı. Konsol temiz.
-    - **KALAN:** ekranın onay SONRASI tazelenmesi yakalanamadı — çekim yazım sürerken alındı (düğmeler `busy`) ve `router.refresh()` sonrası hâl görüntülenemedi; arıza kanıtı da yok, ölçülmemiş bir davranış var. Ayrıca tasarımdaki **"Hazırlık kâğıdı bas"** düğmesi çizilmedi (`Belge - Hazirlik Kagidi.dc.html` ayrı bir belge işi). Satır bu yüzden `[~]`. BEKLEYEN(10.1)
+    - **KALAN:** ekranın onay SONRASI tazelenmesi yakalanamadı — çekim yazım sürerken alındı (düğmeler `busy`) ve `router.refresh()` sonrası hâl görüntülenemedi; arıza kanıtı da yok, ölçülmemiş bir davranış var. ~~Ayrıca tasarımdaki **"Hazırlık kâğıdı bas"** düğmesi çizilmedi~~ → **YAZILDI 25.08**, aşağıya bakın. Satır bu yüzden `[~]`. BEKLEYEN(10.1)
+  - **Durum (25.08) — HAZIRLIK KÂĞIDI BASILIYOR** (`Belge - Hazirlik Kagidi.dc.html`, A4 / 14 mm) ·
+    touches: `apps/web/app/(operations)/operations/preparation/[orderId]/paper/{page.tsx,paper-sheet.tsx}`,
+    `apps/web/app/(operations)/operations/{layout.tsx,preparation/preparation.desktop.tsx,preparation/preparation-labels.ts,preparation/preparation-actions.ts}`,
+    `apps/web/app/globals.css`, `packages/application/src/warehouse/preparation.ts`,
+    `packages/database/src/services/order.service.ts`
+    - **YENİ BAĞIMLILIK YOK.** PDF kütüphanesi eklenmedi (`STACK §2` beyanı gerektirirdi) ve
+      gerekmiyor: belge A4 bir tablo, tarayıcı hem basıyor hem PDF'e kaydediyor. Yazdırma penceresi
+      KENDİLİĞİNDEN açılmıyor — operatör önce kâğıdı görmeli; doğru siparişi bastığını doğrulamadan
+      onay isteyen bir pencere, yanlış listeyi eline alma ihtimalini artırır.
+    - **Kâğıt ekranın kopyası DEĞİL:** ekranda olmayan iki sütun var ve belgenin varlık sebebi
+      onlar — *"Kondu / eksik"* ve *"Not"*. Depocu rafın karşısında kalemle işaretler, sonra masaya
+      dönüp ekrana geçer.
+    - **AYRI ROTA, gizli bölüm değil** (`/operations/preparation/[orderId]/paper`): kuyruğun DOM'una
+      gizli bir belge konsaydı her açılışta çizilir ve hiç basılmayan bir kâğıt her operatörün
+      tarayıcısına yüklenirdi. Kuyruktaki bağlantı YENİ SEKMEDE açıyor — masa açık kalmalı.
+    - **Kapı aynı, kapsam aynı:** kâğıt `listPreparationQueue`ın kendi kapısından geçiyor (yeni
+      `orderId` süzgeci). Kimlikle istemek bir KESTİRME değil: başka deponun ya da kapanmış bir
+      siparişin kimliği adrese yazılsa liste boş döner ve sayfa 404 olur — yani belge, ekranda
+      görülemeyen bir siparişi basamaz (testli).
+    - **KÂĞIT TEMA İZLEMEZ** (`[data-doc='paper']`, `globals.css`): operasyon ekranları karanlık
+      moda dönüyor ve dönmeli, kâğıt dönemez — karanlık palet mirasla inseydi çıktı ya beyaz zemine
+      açık gri mürekkep basardı ya yazıcı koca bir siyah alan boşaltırdı. Yedi token açık değerine
+      sabitleniyor (`.ops-map-tiles` emsali: tek amaçlı, künyeli, tek yerde). Ölçüldü: karanlık
+      modda çekilen sayfa beyaz kaldı.
+    - **Yazdırmada kabuk gitmiyor:** gezinme rayı `data-print="hide"`, ve `html/body` akışı serbest
+      bırakılıyor — kabuk `h-screen overflow-hidden` ve o kural kâğıtta belgeyi ilk sayfada KESER.
+    - **Ekran turunda üç kusur görüldü ve düzeltildi:** tablo başlıkları bitişikti (`ADETKONUM`),
+      altbilgi *"ana depo deposu"* yazıyordu (ad zaten "depo" içeriyor), sol ray kâğıda gidiyordu.
+    - **Para yok, adres yok:** kapı zaten taşımıyor; belgenin altbilgisi bunu kâğıdın üstüne de
+      yazıyor (*"İç belge · fiyat bilgisi içermez"*). Koliye yazılacak ad 10.9'un kuralıyla aynı —
+      adresten gelir ve yalnız sipariş verenden farklıysa çizilir.
   - **Durum (08.08) — MASAÜSTÜ ÇİZİMİ YOK, istendi.** *(Aynı gün karşılandı — üstteki nota bakın.)* Ekranı yazmak için canvas'a bakıldı: `Operasyon - Depo Hazirlik.dc.html` başlığıyla *"Depo — Hazırlık · **mobil**"* diyor ve üç karesi de telefon (liste · toplama · eksik kararı). Masaüstü karesi yok. Aynısı 10.4 ve 10.5'in canvas'larında da geçerli — üçü de "· mobil". İçerik dosyaları (`design/pages/depo-*.md`) bağlayıcı ve tam; eksik olan yalnız görsel karar. İstek yazıldı: `design/project/uploads/depo-masaustu-tasarim-istegi.md`. **Kullanıcı kararı 08.08: önce çizim istenecek, ekran beklemede** — mobil çizimden masaüstü türetmek ya da depoyu tümüyle native'e bırakmak seçenekleri elendi.
     - **Çelişki DEĞİL, yüzey ayrımı:** içerik dosyası §7 *"telefon önceliklidir"* diyor, CLAUDE §2 ise operasyonu masaüstü-yalnız kılıyor. İkisi çelişmiyor — 06.08 yüzey formülü depocunun telefon işini native'e verdi (`21.11`, henüz `[ ]`) ve aynı dosya §7 web için zaten *"günün tamamını görüp planlamak"* diyor. Mevcut mobil kareler 21.11'in referansı, web şeridinin uygulayacağı çizim değil.
   - **KARGO TAKİP NUMARASI bu ekranın işi** (`yer-ekseni-arka-uc-talebi.md §5`: *"numarayı hazırlık ekranı girer — paketi kapatan kişi etiketi elinde tutuyor"*). ~~Kapı hazır ve bugün hiç çağrılmıyor~~ → **ÇAĞRILIYOR (21.08, 10.9'un kapanışı):** panele `ShipmentBox` yazıldı, `setShipment` ilk arayüz çağıranına kavuştu. Seed üç taşıyıcıyı da taşıyor (DHL · Colissimo · UPS) ve bir kargo siparişi bilinçle TAŞIYICISIZ — "henüz kargoya verilmedi" hâli ekranda o cümleyle duruyor.
