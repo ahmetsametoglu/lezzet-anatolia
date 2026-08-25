@@ -20,7 +20,7 @@ import { resetWarehouseStatus } from './warehouse-status';
   Ağ fetch seviyesinde sahte: URL'e göre dallanır, cevap sözleşme şeklindedir.
 */
 
-const mockParams: { purchaseOrderId?: string } = {};
+const mockParams: { purchaseOrderId?: string; unplanned?: string } = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
   useLocalSearchParams: () => mockParams,
@@ -87,6 +87,7 @@ beforeEach(() => {
   fetchMock.mockReset();
   resetWarehouseStatus();
   mockParams.purchaseOrderId = PO_ID;
+  delete mockParams.unplanned;
 });
 
 describe('D2 · tarama akışı', () => {
@@ -225,5 +226,46 @@ describe('D2 · tarama akışı', () => {
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('1'));
     expect(qtyOf(ROW_B.variantId)).toBe('');
     expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/bağlanmış/);
+  });
+});
+
+/*
+  PLANSIZ KABULÜN BOŞ HÂLİ — cihaz turunda bulunan sessiz arıza (25.08).
+
+  Ekranın plansız-boş dalı erken dönüyor ve öğrenme çekmecesi yalnız ANA dalda çiziliyordu.
+  Sonuç: plansız kabulde İLK okutma tanınmayan bir kod olduğunda `setLearn` çalışıyor, state
+  doğru kuruluyor ve ekran hiç kıpırdamıyordu. Testler bunu görmüyordu çünkü hepsi PO'lu kabulde
+  koşuyor (`mockParams.purchaseOrderId` dolu) — yani dal hiç uyanmıyordu.
+
+  Gerçek cihazda TANINMAYAN etiketi okutulup ölçüldü: ekran kıpırdamadı, uyarı da çıkmadı.
+  Depocu böyle bir hâlde kamerayı suçlar ve kâğıdı defalarca okutur.
+*/
+describe('D2 · plansız kabulün boş hâli', () => {
+  /** Plansız mod: PO yok, `unplanned=1`. Boş hâl bu ikisinin birleşimiyle doğuyor. */
+  function unplannedMode() {
+    delete mockParams.purchaseOrderId;
+    mockParams.unplanned = '1';
+  }
+
+  it('TANINMAYAN kod ilk okutmada öğrenme çekmecesini AÇAR — ekran sessiz kalmaz', async () => {
+    unplannedMode();
+    // Plansızda form BOŞ gelir: satır kümesi yok, ilk satırı okutma açacak.
+    fetchMock.mockImplementation((url, init) => {
+      const path = String(url);
+      if (path.includes('/codes/resolve')) return Promise.resolve(ok({ status: 'unknown' }));
+      if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
+      return Promise.resolve(ok({ purchaseOrder: null, rows: [] }));
+    });
+    await render(<IntakeScreen />);
+    await waitFor(() => expect(screen.queryByTestId('warehouse-intake-loading')).toBeNull());
+
+    // Boş hâl çizildi mi — dalın gerçekten uyandığının kanıtı.
+    expect(screen.getByTestId('warehouse-intake-unplanned-empty')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scan-cta'));
+    await fireEvent.press(screen.getByLabelText('Tanınmayan'));
+
+    // ASIL İDDİA: çekmece görünür. Yoksa okutma hiçbir iz bırakmaz.
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
   });
 });

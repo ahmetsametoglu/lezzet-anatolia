@@ -211,6 +211,9 @@ export function IntakeScreen() {
             setSearchOpen(false);
           }}
         />
+        {/* Boş hâlde de ÇİZİLİR: plansız kabulün ilk okutması tanınmayan bir kod olabilir ve
+            çekmece yoksa ekran hiç kıpırdamaz (cihaz turu 25.08 — künyesi `LearnSheet`te). */}
+        <LearnSheet intake={intake} />
       </View>
     );
   }
@@ -404,10 +407,28 @@ export function IntakeScreen() {
         )}
       </BottomSheet>
 
-      {/* Öğrenen eşleme (karar §1.3): tanınmayan kod için satır seçtirilir — kod o varyanta
-          yazılır, bir daha sorulmaz. Aday kümesi FORMUN satırlarıdır: PO'lu kabulde gelen koli
-          zaten siparişin bir kalemidir; katalog araması açmak, yanlış ürüne öğretmenin kapısını
-          ardına kadar açardı. */}
+      <LearnSheet intake={intake} />
+    </View>
+  );
+}
+
+/**
+ * **Öğrenen eşleme çekmecesi** (karar §1.3) — tanınmayan kod için satır seçtirilir; kod o varyanta
+ * yazılır, bir daha sorulmaz. Aday kümesi FORMUN satırlarıdır: PO'lu kabulde gelen koli zaten
+ * siparişin bir kalemidir; katalog araması açmak, yanlış ürüne öğretmenin kapısını ardına kadar
+ * açardı.
+ *
+ * ── AYRI BİLEŞEN, ÇÜNKÜ İKİ DALDA ÇİZİLİYOR (cihaz turu 25.08) ──────────────
+ * Ekranın plansız-boş hâli erken dönüyor ve çekmece yalnız ANA dalda duruyordu: plansız kabulde
+ * tanınmayan bir kod okutulunca `setLearn` çalışıyor, state doğru kuruluyor ve **hiçbir şey
+ * görünmüyordu**. Sessiz arızanın tam tanımı — kod doğru, yüzey yok; depocu kamerayı suçlar.
+ * Cihazda ölçülerek bulundu (TANINMAYAN etiketi okutuldu, ekran kıpırdamadı).
+ *
+ * Kopyalamak yerine bileşen: iki dalda iki nüsha olsaydı biri gün gelip ötekinden ayrışırdı ve
+ * ayrışma yine sessiz olurdu.
+ */
+function LearnSheet({ intake }: { intake: ReturnType<typeof useIntake> }) {
+  return (
       <BottomSheet
         visible={intake.learn !== null}
         title={intake.learn?.variantId === null ? t.intake.scan.learnTitle : t.intake.scan.learnUnitTitle}
@@ -485,7 +506,6 @@ export function IntakeScreen() {
           <Text style={styles.learnCancelLabel}>{t.intake.scan.learnCancel}</Text>
         </PressableSurface>
       </BottomSheet>
-    </View>
   );
 }
 

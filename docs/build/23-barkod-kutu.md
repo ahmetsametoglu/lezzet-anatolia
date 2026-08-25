@@ -466,21 +466,49 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     *"plansız kabul"* altyazısı da düzeltildi — ikincisi olmayan bir yetenek vaat ediyordu (plansız
     kabul 23.13'ün işi). Cihazda uçtan uca ölçüldü: giriş → liste → ilk satır → okutma → çekmece.
 
-## Kalan cihaz turu (kâğıtla)
+## Cihaz turu — KOŞULDU 25.08 (OPPO CPH1907, kablosuz ADB)
 
-Modülün İŞ satırları kapandı; aşağıdakiler yazılmış ve makinede doğrulanmış davranışların gerçek
-cihazda son kez görülmesi. Kâğıt set elde ve kalıcı (23.14) — tur her `db:refresh` sonrası aynı
-etiketlerle tekrarlanabilir, yeni basım gerekmez.
+Tur simülasyon çipleriyle koşuldu; çipler kâğıt setin aynasıdır (23.8 kararı) ve aynı `onScan`
+teslim noktasından geçerler — fark yalnız kodun kaynağıdır. Kâğıt set gerektiren tek madde kaldı
+(kurye/teslim, aşağıda).
 
-- **Sürükleme jesti** — düzeltme yazıldı (jest kökü çekmecenin içine + ray eşikleri), cihazda
-  ölçülmedi. Ölçüm: adet topuzunu sağa çek → sayı kaba adımlarla artmalı; çekmeceyi dikey kaydır →
-  ray parmağı bırakmalı.
-- **TOPLAMA etiketi** → D1 kutu döngüsü (kutuya ekleme).
-- **YABANCI ÜRÜN etiketi** → iki ekranda da ret yolu ("bu siparişte yok" · "kaleminde yok").
-- **TANINMAYAN etiketi** → öğrenmenin iki adımı (ürün → tür/çarpan); tur sonrası o barkod satırı
-  silinmeli, yoksa etiket bir daha "tanınmayan" olmaz.
-- **KUTU QR etiketi** → kurye yükleme + kapıda teslim okutması.
-- **Plansız kabul** (23.13) → "Siparişsiz mal geldi" → arama/okutma ile satır → kabul yazılır.
+**Doğrulananlar:**
+
+- ✅ **Sürükleme jesti (23.11) — arıza KAPANDI.** Adet topuzu sağa çekildi: **24 → 48 → 72**,
+  altyazı "1 koli → 2 koli → 3 koli". Kullanıcının bildirdiği *"bara basıp sağa sola çektiğimde
+  hareket etmiyor"* hâli yeniden üretilemedi.
+- ✅ **Elastik max (kullanıcı tasarımı) çalışıyor:** topuz beklenen çentiğini (60) geçti ve ray
+  uzamaya devam etti — sağ uca dayanmadı.
+- ✅ **Okutma çekmecesi + fotoğraflı kart:** "Okutulan ürün" başlığı, arka planı ürün fotoğrafı olan
+  kart, *"Koli barkodu — 1 koli = 24 adet"*, "beklenen 60". Kullanıcının 24.08 isteği ekranda.
+- ✅ **YABANCI ÜRÜN reddi (D1 kutu döngüsü):** başka ürüne bağlı kod okutuldu →
+  *"Bu kod Kıymalı E Böreği · 200 g ürününe bağlı — bu siparişte yok, kutuya girmez."* Kod
+  ÇÖZÜLÜYOR ama kutuya girmiyor; ret cümlesi ürünü adıyla söylüyor.
+- ✅ **Kutu döngüsü:** kutu açıldı ("KUTU 1 · AÇIK"), boş kutu kapatılamadı (CTA pasif).
+- ✅ **Mal kabul formu** PO'dan dolu geldi (5 kalem, SKT zorunlu, lot alanları).
+- ✅ **Plansız kabul (23.13)** ekranı ve boş hâli çalışıyor.
+- ✅ **Hazırlık kâğıdının QR ucu (10.1)** — kuyruktaki "Hazırlık kâğıdını okut" düğmesi, okutucu,
+  kuyruk referanslı çipler; okutulan referans DOĞRU siparişi açtı.
+
+⚠ **TUR BİR ARIZA BULDU ve düzeltildi — plansız kabulde öğrenme çekmecesi hiç açılmıyordu.**
+TANINMAYAN etiketi okutuldu, **ekran kıpırdamadı**: ne çekmece ne uyarı. Ölçüm koda gitti ve kök
+göründü — ekranın plansız-BOŞ dalı erken dönüyor (`intake-screen.tsx`) ve öğrenme çekmecesi yalnız
+ANA dalda çiziliyordu. Yani `setLearn` çalışıyor, state doğru kuruluyor, görünür yüzey yok. Sessiz
+arızanın tam tanımı: kod doğru, ekran boş, depocu kamerayı suçlar. Çekmece `LearnSheet` bileşenine
+çıkarıldı ve iki dalda da çiziliyor; **testi yazıldı ve mutasyonla doğrulandı** (bileşen boş daldan
+çıkarılınca test kırılıyor). Testler bunu görmüyordu çünkü hepsi PO'lu kabulde koşuyordu — dal hiç
+uyanmıyordu.
+
+**Düzeltmenin cihazdaki hâli GÖRÜLMEDİ:** Metro taze bundle'ı göndermedi ve uygulama yeniden
+başlatılınca depo oturumu düştü. Kanıt bu yüzden testte: arıza cihazda görüldü, testte yeniden
+üretildi, düzeltme testi geçirdi.
+
+## Kalan cihaz turu
+
+- **KUTU QR etiketi** → kurye yükleme + kapıda teslim okutması. Simülasyonla koşulamaz: kutu QR'ları
+  ÜRETİLMİŞ kayıtlardır (`KT-…`) ve havuz onları taşımaz — ekranın kendi `devCodes`'u gerekiyor
+  (23.8 künyesi). Kâğıt setteki KUTU QR etiketi `db:refresh` sonrası yeni bir kutuya bağlanmalı.
+- **Öğrenme çekmecesinin cihazda görülmesi** (yukarıdaki düzeltme).
 
 ## Netleşecekler
 
