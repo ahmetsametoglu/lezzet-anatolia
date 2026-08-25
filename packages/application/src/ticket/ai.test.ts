@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { fakeAiModel } from '@lezzet/ai/testing';
 import { ConversationService, MessageService, TicketMessageService, TicketService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import type { ConversationSource } from '@lezzet/types';
 import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
 import { metaCloudSender } from '../messaging/meta-sender';
 import { recordInboundMessage, recordOutboundMessage } from '../messaging/record';
@@ -64,22 +65,29 @@ async function talepAc(mode: 'ai' | 'hybrid' | 'human'): Promise<string> {
  * eski bir damga kapalı pencere demektir. Taze bir mesaj ÖNCE yazılıp sonra eskisi eklenemez —
  * `record_message` pencereyi `greatest(...)` ile hesaplar, yani pencere geriye gitmez.
  */
-async function sohbetAc(mode: 'ai' | 'hybrid' | 'human', saatOnce = 0): Promise<string> {
+async function sohbetAc(
+  mode: 'ai' | 'hybrid' | 'human',
+  opts: { saatOnce?: number; source?: ConversationSource; turSayisi?: number } = {},
+): Promise<string> {
+  const { saatOnce = 0, source = 'messenger', turSayisi = 1 } = opts;
   sira += 1;
   const konusma = await conversations.open({
-    source: 'messenger',
-    externalRef: `PSID-AI-${stamp}-${sira}`,
+    source,
+    externalRef: source === 'whatsapp' ? `+3360${String(stamp).slice(-6)}${sira}` : `PSID-AI-${stamp}-${sira}`,
     customerId: null,
     providerAccountRef: 'PAGE-TEST',
     profileName: null,
   });
   conversationIds.push(konusma.id);
   if (mode !== 'human') await conversations.setMode(konusma.id, mode);
-  await recordInboundMessage(db, {
-    conversationId: konusma.id,
-    text: 'Fıstıklı baklava var mı?',
-    receivedAt: new Date(Date.now() - saatOnce * 3_600_000).toISOString(),
-  });
+  // `turSayisi` müşterinin KAÇ kez yazdığı — izin sorusunun eşiği buna bakıyor (OPT_IN_MIN_TURNS).
+  for (let i = 0; i < turSayisi; i += 1) {
+    await recordInboundMessage(db, {
+      conversationId: konusma.id,
+      text: i === 0 ? 'Fıstıklı baklava var mı?' : `Peki kaç paket kaldı? (${i})`,
+      receivedAt: new Date(Date.now() - saatOnce * 3_600_000).toISOString(),
+    });
+  }
   return konusma.id;
 }
 
@@ -280,7 +288,7 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
   it('PENCERE KAPALIYSA devredilir ve sağlayıcıya hiç GİDİLMEZ', async () => {
     // Kapının reddi bizim kuralımızdır: tekrar denemek aynı sonucu verir. İnsan ise onaylı şablon
     // gönderebilir ya da arayabilir — o yüzden doğru davranış devirdir, susmak değil.
-    const conversationId = await sohbetAc('ai', 30);
+    const conversationId = await sohbetAc('ai', { saatOnce: 30 });
     const meta = fakeMeta();
     const sonuc = await runAutonomousConversationReply(db, metaCloudSender(fakeCloudApiConfig(meta)), conversationId, {
       model: fakeAiModel(AJAN_CEVABI),
@@ -310,5 +318,71 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
       model: fakeAiModel(AJAN_CEVABI),
     });
     expect(sonuc).toEqual({ status: 'skipped', reason: 'wrong_mode' });
+  });
+});
+
+/**
+ * **İZİN SORUSU** (15.12) — ajanın cevabına eklenen tek cümle, ve üç deterministik şartı.
+ *
+ * Şartlar modele SORULMUYOR: kanal · daha önce sorulmamış olması · yeterli tur. Modele bırakılsaydı
+ * "uygun an" her koşuda başka bir şey olur, aynı müşteriye iki kez sorulabilir ve GDPR'ın en
+ * hassas kaydı bir sıcaklık değerine bağlanırdı.
+ */
+describe('ajan izin soruyor — bir kez, doğru kanalda, yardımdan sonra', () => {
+  const meta = fakeMeta();
+  const sender = metaCloudSender(fakeCloudApiConfig(meta));
+
+  it('WhatsApp\'ta yeterli tur geçince soru cevabın SONUNA eklenir ve damgalanır', async () => {
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 2 });
+    const sonuc = await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+    expect(sonuc).toEqual({ status: 'replied' });
+
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden[0]!.body.text).toContain('kampanyalarımızdan haberdar');
+    // Cevabın YERİNE geçmiyor, sonuna ekleniyor — müşteri sorusunun cevabını yine alıyor.
+    expect(giden[0]!.body.text).toContain('Siparişiniz salı günü çıkıyor.');
+    // Damga gönderim BAŞARILI olduktan sonra: sorulmuş sayılan ama ulaşmamış bir talep kalmasın.
+    expect((await conversations.getById(conversationId))?.optInAskedAt).not.toBeNull();
+  });
+
+  it('İKİNCİ kez SORULMAZ — ısrar, reddin kendisinden kötü bir izlenim bırakır', async () => {
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 2 });
+    await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+    await recordInboundMessage(db, { conversationId, text: 'Teşekkürler', receivedAt: new Date().toISOString() });
+
+    await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden).toHaveLength(2);
+    expect(giden[1]!.body.text).not.toContain('kampanyalarımızdan haberdar');
+  });
+
+  it('REDDEDENE tekrar sorulmaz — retten sonra damga dolu kalıyor', async () => {
+    /* 15.12'nin asıl vaadi buydu ve eski veriyle İMKÂNSIZDI: ret `optIn=false, optInAt=null`
+       yazıyordu, yani "hiç sorulmadı" hâlinden ayırt edilemiyordu. */
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 2 });
+    await conversations.setOptIn(conversationId, false);
+
+    await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden[0]!.body.text).not.toContain('kampanyalarımızdan haberdar');
+  });
+
+  it('MESSENGER\'da hiç sorulmaz — o kanalın izni Meta\'nın kendi mekanizmasından gelir', async () => {
+    // Olmayan bir kanal için izin kaydı üretmek, dayanağı olmayan bir izin demekti (`opt-in.ts`).
+    const conversationId = await sohbetAc('ai', { source: 'messenger', turSayisi: 2 });
+    await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden[0]!.body.text).not.toContain('kampanyalarımızdan haberdar');
+    expect((await conversations.getById(conversationId))?.optInAskedAt).toBeNull();
+  });
+
+  it('İLK turda sorulmaz — önce yardım, sonra istek', async () => {
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 1 });
+    await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden[0]!.body.text).not.toContain('kampanyalarımızdan haberdar');
+    expect((await conversations.getById(conversationId))?.optInAskedAt).toBeNull();
   });
 });

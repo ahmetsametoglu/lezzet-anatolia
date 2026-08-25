@@ -61,8 +61,21 @@ export const ConversationSchema = z.object({
   aiDraftGeneratedAt: z.string().nullable(),
   /** Ticari mesaj izni (DOMAIN §11) — Faz 2 broadcast'inin dayanağı; bugün yalnız kaydedilir. */
   optIn: z.boolean(),
-  /** İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez. */
+  /**
+   * İZNİN VERİLDİĞİ an. Bir kanıttır: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir
+   * şey ifade etmez. **Bir kez yazılır ve izin geri alınsa bile SİLİNMEZ** — ispat yükü bizde
+   * (md. 7/1) ve "o gün izni vardı" sorusu sonradan da cevaplanabilmeli.
+   */
   optInAt: z.string().nullable(),
+  /**
+   * SORULDUĞU an — cevap ne olursa olsun (15.12). `optIn`/`optInAt` ile birlikte üç hâl kurar:
+   * boş → hiç sorulmadı · dolu + `optIn=false` → soruldu, reddetti · `optInAt` dolu → izin verildi.
+   *
+   * Ayrı bir kolon, çünkü iki alan üç hâli taşıyamıyordu: ret `optIn=false, optInAt=null` yazıyor,
+   * varsayılan da tam olarak buydu — yani ret hiçbir iz bırakmıyordu ve ajan reddeden müşteriye
+   * tekrar tekrar sorabilirdi.
+   */
+  optInAskedAt: z.string().nullable(),
   /**
    * 24 saatlik servis penceresinin bitişi — hangi mesajın ücretsiz, hangisinin template olduğu
    * buradan okunur (15.11). Kararı motor verir (`serviceWindowExpiry`), tablo yalnız saklar.

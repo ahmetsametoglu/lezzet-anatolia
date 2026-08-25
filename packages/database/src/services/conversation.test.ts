@@ -98,14 +98,49 @@ describe('konuşma açılışı', () => {
 
   it('izin ve ANI birlikte yazılır — tarihsiz bir izin, izin değildir', async () => {
     const row = await konusmaAc(numara());
+    // Başlangıç HİÇ SORULMAMIŞ hâldir; üç hâlin ayrımı buradan başlıyor.
+    expect(row.optInAskedAt).toBeNull();
 
     const verildi = await conversations.setOptIn(row.id, true);
     expect(verildi.optIn).toBe(true);
     expect(verildi.optInAt).not.toBeNull();
+    expect(verildi.optInAskedAt).not.toBeNull();
+  });
+
+  it('RET de iz bırakır — "reddetti" ile "hiç sorulmadı" ayırt edilebilmeli (15.12)', async () => {
+    /* Eskiden ret `optIn=false, optInAt=null` yazıyordu: kolonların VARSAYILANIYLA birebir aynı.
+       Yani "Müşteri reddetti" düğmesi hiçbir şey kaydetmiyordu ve kimliksiz sohbette (Messenger/
+       IG'nin olağan hâli) ret tamamen kayboluyordu — ajan da reddedene tekrar tekrar sorabilirdi. */
+    const row = await konusmaAc(numara());
+    const reddetti = await conversations.setOptIn(row.id, false);
+
+    expect(reddetti.optIn).toBe(false);
+    expect(reddetti.optInAskedAt).not.toBeNull(); // ← asıl iddia: ret artık görünür
+    expect(reddetti.optInAt).toBeNull(); // izin verilmedi, izin damgası da yok
+  });
+
+  it('İZİN DAMGASI geri alınınca SİLİNMEZ — "o gün izni vardı" sonradan da sorulabilmeli', async () => {
+    /* İspat yükü bizde (GDPR md. 7/1). Damgayı ret hâlinde silmek ya da üzerine yazmak, 1. gün
+       verilip 30. gün geri alınan bir izinde kanıtı yok ederdi: `optIn` bugünkü hâli söyler,
+       `optInAt` ise bir kez yaşanmış olayı. */
+    const row = await konusmaAc(numara());
+    const verildi = await conversations.setOptIn(row.id, true);
+    const damga = verildi.optInAt;
 
     const geriAlindi = await conversations.setOptIn(row.id, false);
     expect(geriAlindi.optIn).toBe(false);
-    expect(geriAlindi.optInAt).toBeNull();
+    expect(geriAlindi.optInAt).toBe(damga);
+  });
+
+  it('`markOptInAsked` İLK anı korur — ikinci tur damgayı ileri itmez', async () => {
+    // İtseydi "ne zaman sorduk" her turda tazelenir ve ajanın susma kuralı hiç devreye girmezdi.
+    const row = await konusmaAc(numara());
+    const ilk = await conversations.markOptInAsked(row.id);
+    expect(ilk?.optInAskedAt).not.toBeNull();
+
+    const ikinci = await conversations.markOptInAsked(row.id);
+    expect(ikinci).toBeNull(); // koşullu yazım: dolu alan ezilmiyor
+    expect((await conversations.getById(row.id))?.optInAskedAt).toBe(ilk?.optInAskedAt);
   });
 
   it('sağlayıcı anahtarıyla bulunur — gelen mesaj hangi sohbete ait sorusu', async () => {

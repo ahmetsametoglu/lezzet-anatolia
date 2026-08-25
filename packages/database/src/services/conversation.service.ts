@@ -148,14 +148,40 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   }
 
   /**
-   * Ticari mesaj izni (DOMAIN §11) — izin ve ANI birlikte yazılır.
+   * Ticari mesaj izni (DOMAIN §11) — **müşterinin CEVABI** yazılır, üç hâl birden korunur.
    *
-   * İkisi ayrı çağrıya bırakılsaydı biri unutulur ve elimizde tarihsiz bir "izin var" kaydı
-   * kalırdı; GDPR'da ne zaman verildiği yazılmayan izin, izin değildir. DB kısıtı da bunu zorluyor —
-   * burası kısıtın okunur yüzü.
+   * İzin ve ANI birlikte yazılır: ikisi ayrı çağrıya bırakılsaydı biri unutulur ve elimizde
+   * tarihsiz bir "izin var" kaydı kalırdı; GDPR'da ne zaman verildiği yazılmayan izin, izin
+   * değildir. DB kısıtı da bunu zorluyor — burası kısıtın okunur yüzü.
+   *
+   * ── RET DE BİR CEVAPTIR VE İZ BIRAKIR (15.12, düzeltildi 25.08) ─────────────
+   * Eskiden ret `optIn=false, optInAt=null` yazıyordu — kolonların VARSAYILANIYLA birebir aynı.
+   * Yani "Müşteri reddetti" düğmesi hiçbir şey kaydetmiyordu ve kimliksiz sohbette (Messenger/IG'nin
+   * olağan hâli) ret tamamen kayboluyordu. Artık `optInAskedAt` her cevapta damgalanıyor.
+   *
+   * ── İZİN DAMGASI ÜZERİNE YAZILMAZ ───────────────────────────────────────────
+   * Ret geldiğinde `optInAt`e DOKUNULMUYOR. Silmek ya da üzerine yazmak, 1. gün verilip 30. gün
+   * geri alınan bir izinde *"o gün izni vardı"* kanıtını yok ederdi — oysa ispat yükü bizde.
+   * `optIn` bugünkü hâli, `optInAt` ise bir kez yaşanmış olayı söyler.
    */
   setOptIn(id: string, granted: boolean): Promise<Conversation> {
-    return this.update({ id, optIn: granted, optInAt: granted ? new Date().toISOString() : null });
+    const now = new Date().toISOString();
+    return this.update({ id, optIn: granted, optInAskedAt: now, ...(granted ? { optInAt: now } : {}) });
+  }
+
+  /**
+   * **Soruldu ama henüz cevap YOK** (15.12) — ajanın izin sorusunu gönderdiği an.
+   *
+   * Cevabı beklerken `optIn` false kalır (bu doğru: izin yok). Ayrı bir kapı, çünkü `setOptIn`
+   * bir CEVABI kaydediyor; soruyu da ona yükleseydik "granted=false" ile "cevap gelmedi" aynı
+   * çağrıya girer ve çağıran hangisini kastettiğini söyleyemezdi.
+   *
+   * Koşullu yazım (`updateIfNull`) bilinçli: iki tur arka arkaya koşarsa ya da operatör aynı anda
+   * kaydederse, İLK soru anı korunur — sonraki turun damgası öncekini ileri itmemeli, yoksa
+   * "ne zaman sorduk" sorusu her turda tazelenir ve ajan hiç susmaz.
+   */
+  markOptInAsked(id: string): Promise<Conversation | null> {
+    return this.updateIfNull(id, 'optInAskedAt', { optInAskedAt: new Date().toISOString() });
   }
 
   /**

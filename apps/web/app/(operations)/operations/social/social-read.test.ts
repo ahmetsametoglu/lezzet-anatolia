@@ -21,6 +21,8 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     aiDraftGeneratedAt: null,
     optIn: false,
     optInAt: null,
+    // Hiç sorulmamış hâl (15.12): üç izin hâlinden ilki — ret de bu satırdan ayırt edilebilmeli.
+    optInAskedAt: null,
     // Bağ künyesi boş: bu satırın bağını SİSTEM kurmuş (WhatsApp, numaradan) — operatör kararı yok.
     linkedBy: null,
     linkedAt: null,

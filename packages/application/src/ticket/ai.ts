@@ -267,6 +267,36 @@ const AI_DISCLOSURE =
  */
 const HANDOFF_NOTICE = 'Bu konuda size bir yetkilimiz yardımcı olacak — en kısa sürede dönüş yapacağız.';
 
+/**
+ * **İZİN SORUSU** (15.12) — cevabın sonuna eklenir, ayrı mesaj olarak gönderilmez.
+ *
+ * ── NEDEN AYRI MESAJ DEĞİL ──────────────────────────────────────────────────
+ * İkinci bir mesaj ikinci bir bildirim demek: müşteri sorusuna cevap alır, telefonu bir kez daha
+ * titrer ve karşısında pazarlama sorusu bulur. Aynı baloncuğun sonuna eklenen bir cümle ise
+ * konuşmanın doğal kapanışı gibi okunur. (Pencere içinde ücret farkı yok — ikisi de ücretsiz.)
+ *
+ * ── METİN OTOMATİK İŞLEME VAAT ETMİYOR ──────────────────────────────────────
+ * *"Evet yazmanız yeterli"* diyor ve orada duruyor; kaydı OPERATÖR yapıyor (bugünkü tek yol —
+ * `recordConversationOptIn`). Model müşterinin cevabını yorumlayıp izni kendi kaydetseydi, GDPR'ın
+ * *"açık ve tereddüde yer bırakmayan"* (md. 4/11) şartını bir tahmine dayandırmış olurduk.
+ * İnteraktif düğmeler (15.9) geldiğinde cevap tahmin değil PAYLOAD olur; kayıt o gün otomatikleşir.
+ *
+ * ── İSTEMEYENE HİÇBİR ŞEY YAPTIRMIYOR ───────────────────────────────────────
+ * "İstemezseniz bir şey yapmanıza gerek yok" cümlesi sessizliği RET saymıyor — sessizlik cevapsızdır
+ * ve `optIn` false kalır. Söylediği tek şey müşterinin kendini savunmak zorunda olmadığı.
+ */
+const OPT_IN_QUESTION =
+  'Bu arada: kampanyalarımızdan haberdar olmak ister misiniz? "Evet" yazmanız yeterli — istemezseniz bir şey yapmanıza gerek yok.';
+
+/**
+ * İzin sorusunun sorulacağı EN ERKEN tur — parametrik ve varsayılanı bilinçli (15.12).
+ *
+ * İlk mesajda sormak, daha yardım etmeden pazarlama istemektir; müşterinin gözünde cevabın kendisi
+ * de o isteğin bahanesi hâline gelir. İki müşteri mesajı, "bir soru soruldu, cevaplandı" eşiğidir.
+ * Sayı bir tercih olduğu için sabit: veriye bakarak seçilmedi (yerel veri sahtedir — `CLAUDE`).
+ */
+const OPT_IN_MIN_TURNS = 2;
+
 export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: string, opts: SupportAiOpts = {}): Promise<SupportAiOutcome> {
   const tickets = new TicketService(db);
   const ticket = await tickets.getById(ticketId);
@@ -418,9 +448,26 @@ export async function runAutonomousConversationReply(
   const reply = result.data.action === 'reply' ? result.data.reply?.trim() : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 
+  /*
+    İZİN SORUSU (15.12) — üç şart, üçü de deterministik; modele sorulmuyor.
+
+    Kanal WhatsApp olmalı: müşteri kartındaki izin şeması bugün yalnız `email` ve `whatsapp`
+    taşıyor, Messenger/IG izni Meta'nın kendi mekanizmasıyla gelecek (`opt-in.ts` künyesi).
+    Olmayan bir kanal için izin sormak, dayanağı olmayan bir kayıt üretmekti.
+
+    `optInAskedAt` boş olmalı — bir kez sorulur. Cevap gelmese bile tekrar sorulmaz: ısrar,
+    reddin kendisinden daha kötü bir izlenim bırakır ve müşteri sohbeti kapatır.
+
+    Ve yeterince tur geçmiş olmalı (`OPT_IN_MIN_TURNS`) — önce yardım, sonra istek.
+  */
+  const musteriMesaji = context.messages.filter((m) => m.who === 'customer').length;
+  const izinSorulacak =
+    conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS;
+
+  const govde = izinSorulacak ? `${reply}\n\n${OPT_IN_QUESTION}` : reply;
   const outcome = await sendOutboundMessage(db, sender, {
     conversationId: conversation.id,
-    text: alreadyDisclosed ? reply : `${AI_DISCLOSURE}\n\n${reply}`,
+    text: alreadyDisclosed ? govde : `${AI_DISCLOSURE}\n\n${govde}`,
     /* Yazar `ai` — "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep eşiyle aynı
        karar). Boş bırakılsaydı RPC gideni `admin` sayardı: ekranın AI tonu ve kuyruğun AI süzgeci
        sessizce yanlış kümeyi gösterirdi. */
@@ -435,6 +482,11 @@ export async function runAutonomousConversationReply(
     );
     return { status: 'failed', reason: outcome.reason === 'not_configured' ? 'send_not_configured' : 'provider_error' };
   }
+
+  /* Damga GÖNDERİM BAŞARILI olduktan SONRA: önce işaretlenseydi, gönderim düşen bir turda soru
+     "sorulmuş" sayılır ve müşteriye hiç ulaşmayan bir izin talebi bir daha asla sorulmazdı.
+     Koşullu yazım (`markOptInAsked`) ilk anı koruyor — künyesi serviste. */
+  if (izinSorulacak) await conversations.markOptInAsked(conversation.id);
 
   await ringConversationsBell();
   return { status: 'replied' };

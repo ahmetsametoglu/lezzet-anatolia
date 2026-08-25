@@ -78,9 +78,23 @@ create table public.conversation (
   ai_draft_reply text,
   ai_draft_generated_at timestamptz,
 
-  -- Ticari mesaj izni (DOMAIN §11). Faz 2 broadcast'inin dayanağı; bugün yalnız kaydedilir.
+  -- ── TİCARİ MESAJ İZNİ (DOMAIN §11) — ÜÇ HÂL, ÇÜNKÜ İKİSİ YETMİYOR (15.12) ──
+  -- Faz 2 broadcast'inin dayanağı; bugün yalnız kaydedilir.
+  --
+  -- Ölçülen açık (25.08): iki kolonla *sorulmadı* ile *soruldu, reddetti* AYIRT EDİLEMİYORDU —
+  -- ret `opt_in=false, opt_in_at=null` yazıyordu ve varsayılan da tam olarak bu. Yani "Müşteri
+  -- reddetti" düğmesi sohbet düzeyinde hiçbir kalıcı iz bırakmıyordu; kimliksiz sohbette (Messenger/
+  -- IG'nin olağan hâli) ret tamamen kayboluyordu. Ajanın "reddedene tekrar sorma" kuralı da bu
+  -- veriyle kurulamıyordu.
+  --
+  -- Damgayı ret hâlinde de `opt_in_at`e yazmak ÇARE DEĞİLDİ ve daha kötüsüydü: izin 1. gün verilip
+  -- 30. gün geri alınırsa üzerine yazılan damga *"o gün izni vardı"* kanıtını yok ederdi — oysa
+  -- ispat yükü bizde (GDPR md. 7/1). Bu yüzden iki damga ayrı yaşıyor:
+  --   · opt_in_asked_at → müşteriye SORULDUĞU an (cevap ne olursa olsun)
+  --   · opt_in_at       → İZNİN VERİLDİĞİ an; bir kez yazılır, geri alınsa bile SİLİNMEZ
   opt_in boolean not null default false,
   opt_in_at timestamptz,
+  opt_in_asked_at timestamptz,
 
   -- ── BAĞIN KÜNYESİ (15.19) — kimliği KİM kurdu, NE ZAMAN, HANGİ KANITLA ─────
   -- Messenger/IG'de kimliğin tek yolu operatörün elle kurduğu bağdır (PSID/IGSID telefon
@@ -108,6 +122,9 @@ create table public.conversation (
 
   -- İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
   constraint conversation_opt_in_stamp check (opt_in = false or opt_in_at is not null),
+  -- Sorulmadan izin VERİLEMEZ. Kural veride durur: izin damgası varken "hiç sorulmadı" diyen bir
+  -- satır, ajanın "reddedene tekrar sorma" kararını sessizce bozardı (o satırı hep sorulmamış sayar).
+  constraint conversation_opt_in_asked check (opt_in_at is null or opt_in_asked_at is not null),
   -- Taslak ile damgası ayrışamaz (`ticket_ai_draft_stamp` ile aynı gerekçe).
   constraint conversation_ai_draft_stamp check ((ai_draft_reply is null) = (ai_draft_generated_at is null)),
   -- Bağın künyesi: damga ile kanıt BİRLİKTE doğar; kanıtsız damga "bağladım ama neye dayanarak

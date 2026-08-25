@@ -21,8 +21,9 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | handled_by | enum(`human`,`hybrid`,`ai`) | sohbeti kim yürütüyor (16.08) — `ticket.handled_by` ile aynı enum ve sözleşme |
 | ai_draft_reply | text \| null | hibrit modun bekleyen AI taslağı — satırda durur, mesaj DEĞİL (defter gönderilmişi yazar) |
 | ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
-| opt_in | boolean | ticari mesaj izni (double opt-in, `DOMAIN.md §11`) |
-| opt_in_at | timestamptz \| null | |
+| opt_in | boolean | ticari mesaj izni — **bugünkü hâl** (double opt-in, `DOMAIN.md §11`) |
+| opt_in_at | timestamptz \| null | **iznin VERİLDİĞİ an**; bir kez yazılır, izin geri alınsa bile silinmez (ispat yükü bizde — GDPR md. 7/1) |
+| opt_in_asked_at | timestamptz \| null | **SORULDUĞU an**, cevap ne olursa olsun. Üç hâli bu ayırıyor: boş → hiç sorulmadı · dolu + `opt_in=false` → soruldu, reddetti · `opt_in_at` dolu → izin verildi. Ayrı kolon, çünkü iki alan üç hâli taşıyamıyordu: ret `opt_in=false, opt_in_at=null` yazıyor ve **varsayılan da tam olarak buydu** — yani ret hiçbir iz bırakmıyordu (ölçüldü 25.08) |
 | linked_by | uuid \| null | bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir |
 | linked_at | timestamptz \| null | bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt) |
 | link_proof | text \| null (`order_ref`,`email`,`phone`) | kanıtın TÜRÜ — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan) |
