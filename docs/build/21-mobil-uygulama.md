@@ -5236,3 +5236,49 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   karesi orada sınanmıyor.
 
   Doğrulama: mobil paket **740/740** (702 → 740) · `@lezzet/mobile` typecheck temiz · lint temiz.
+
+- [x] (21.106) **KOMŞU DAVETİ TESTLENDİ — iki katman, 34 iddia; para tarafı da çivilendi**
+  · touches: `apps/mobile/src/screens/invite/use-invite-welcome.hook.test.ts`,
+  `packages/application/src/customer/neighbor.test.ts`
+
+  **DALGA 2'NİN İKİNCİ DİLİMİ** (`test-dalgasi.md`). Davet, kabuktan sonra sıradaki en büyük
+  korumasız yüzeydi: `screens/invite/` altında **hiç test yoktu** ve `customer/neighbor.ts` (505
+  satır, paraya dokunan altı karar) da testsizdi.
+
+  **CİHAZ YARISI — `use-invite-welcome` (13 iddia).** Çivilenen ayrım **ağ hâli ≠ iş hâli**:
+  `unknown`/`self`/`already_customer` sunucunun KESİN cevaplarıdır. Bir ağ arızası `unknown`a
+  katılırsa davetli, geçici bir bağlantı sorununda **kodunun geçersiz olduğunu** okur — kod
+  geçerlidir, tıklamıştır, arkadaşı çağırmıştır. Tersi de yanlış: kesin cevabı `error`a katmak,
+  hiç düzelmeyecek bir şey için "tekrar dene" dedirtirdi.
+  **İki sabotaj, ikisi de tam hedefinde:** eskimiş-cevap sayacı sökülünce YALNIZ yarış testi
+  düştü; boş-kod kısa devresi sökülünce YALNIZ o iki test düştü.
+
+  **SUNUCU YARISI — `neighbor.test.ts` (21 iddia, 649 ms).** Dört karar:
+  · **Davet İDEMPOTENT açılır** — ikinci çağrı yeni bağlantı doğurursa müşterinin PAYLAŞTIĞI
+    bağlantı sessizce ölür ve bunu ancak komşusu tıklayıp "tanımadık" görünce fark eder.
+  · **Sıra `self` → pencere → doluluk** — kendi bağlantısını açana *"hakkın doldu"* demek doğru
+    ama işe yaramaz bir cümle.
+  · **Kullanım SİPARİŞTEN türetilir, sayaçtan değil → iptal hakkı GERİ VERİR.** Sayaç tutulsaydı
+    müşteri, üç komşu çağırma hakkını gelmemiş bir siparişe kaptırırdı.
+  · **Kalan hak sıfırın altına düşmez** — tavan davet açılırken donuyor, ayar sonradan düşerse
+    çıplak çıkarma negatif verir ve ekran *"-1 komşu daha yararlanabilir"* yazardı.
+  Ayrıca 17.08'de ölçülen boşluk çivilendi: komşu bağlantısıyla gelen kişi `referred_by` alıyor mu
+  — almazsa **500 puanlık getiren ödülü hiç doğmuyordu** (`referred_by`yi yazan tek yol getiren
+  KODUNDAN geçiyordu, oysa komşu bağlantısı kod değil TOKEN taşıyor).
+
+  **DB'YE VURAN TESTİN DOĞRULAMASI SAHTE YEŞİL VERDİ — ve yakalandı.** İlk sabotaj koşusu,
+  koşucunun TEK UÇUŞLU olması yüzünden **benim değişikliğimden ÖNCE başlamış** bir koşuya katıldı;
+  sonuç sabotajı hiç içermiyordu. Aracın kendi uyarısı bunu söylüyor (*"koşu senin değişikliğinden
+  ÖNCE başladıysa bir kez daha tetikle"*) ve o satır okunmadan "kanıtlandı" denmişti. Kilit
+  boşalması beklenip tekrarlandı: iptal süzgeci sökülünce **yalnız** hedeflenen test düştü
+  (`× İPTAL edilen sipariş hakkı GERİ VERİR — 36ms`), komşusu yeşil kaldı.
+  **Ders kayda geçsin:** paylaşılan kilitli koşuda bir sabotajın sonucu, koşunun `startedAt`i
+  değişiklikten SONRA olmadıkça geçersizdir.
+
+  **İKİ TİP HATASI YAZARKEN YAKALANDI:** sipariş başlığında `subtotalCents`, kaleminde
+  `lineTotalCents` diye alanlar YOK (`vatRate` zorunlu). Fikstürü sözleşmeden değil hafızadan
+  yazmanın bedeli; typecheck tuttu.
+
+  Doğrulama: `neighbor.test.ts` **21/21** · mobil paket **753/753** · typecheck temiz · lint temiz.
+  Pakette kalan tek düşen test bu şeridin DEĞİL: `roles.test.ts` **15002 ms** = zaman aşımı
+  (kardeşi 11475 ms — sıra bekleme, iddia değil).
