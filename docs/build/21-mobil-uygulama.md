@@ -5364,3 +5364,34 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kişiye söylenecek ilk cümle *"davetin geçersiz"* değildir; reddin gerekçesi log'a düşer.
 
   Doğrulama: `router.test.ts` **30/30** · `invite.test.ts` **12/12** · typecheck temiz.
+
+- [x] (21.109) **MİSAFİR SEPETİ TESTLENDİ — gözle yakalanan sızıntı artık kendiliğinden görünüyor**
+  · touches: `apps/mobile-api/src/api/v1/cart-view.test.ts`
+
+  **BU DOSYANIN YAZILMA SEBEBİ BİR HATANIN KENDİSİ.** 24.08'de `readCartView`in dönüşü genişletildi
+  (`CartRead = {body, source, place}`) ve misafir ucu bir süre `ok(c, view)` ile **tamamını** tele
+  gönderdi — yani `source` ve `place` istemciye sızdı. `ok()` gevşek tipli olduğu için **derlemede
+  hata vermedi**; sızıntı gözle fark edilip düzeltildi. Testi olsaydı gözle aramaya gerek kalmazdı.
+  **Sabotajla kanıtlandı:** `ok(c, read.body)` → `ok(c, read)` yapıldığında beş iddia birden
+  kırmızı yanıyor.
+
+  **ÇİVİLENEN ÜÇ KARAR:**
+  · **NİYET gövdeden, FİYAT asla** — gövde satırın yalnız adresini ve adedini taşır. İstemcinin
+    gönderdiği bir tutar yok sayılıyor; kabul edilseydi sepet müşterinin belirlediği fiyattan
+    kurulurdu.
+  · **HİÇBİR ŞEY YAZMAZ** — uç bir görünüm üretir; sunucuda satır açsaydı girişli kullanıcının
+    sepeti buradan gölgelenebilirdi. İddia `cart` tablosunun sayımını önce/sonra karşılaştırıyor.
+  · **Bayat sepet isteği DÜŞÜRMEZ** — cihazdaki sepette silinmiş bir varyant olabilir; isteği
+    tümden reddetmek müşteriye sepetini hiç göstermemek olurdu.
+
+  **TESTİN KENDİ HATASI ÖLÇÜLDÜ:** ilk taslak dili `accept-language` BAŞLIĞINDAN veriyordu, oysa uç
+  `?locale=` SORGU parametresi okuyor — altı iddia birden 400 aldı. Sözleşmeyi hafızadan yazmanın
+  bedeli; bu turda ikinci kez oldu (öncekinde sipariş başlığının alan adları).
+
+  **ARA ÖLÇÜM — bir kırmızı benim değildi:** sabotaj koşusu bir kez `packages/application/src/
+  ticket/ai.ts`te *"It can not be redeclared here"* diye düştü. `git status` o dosyanın BAŞKA
+  şeridin çalışma ağacındaki yarım düzenlemesi olduğunu gösterdi; birkaç dakika sonra kendiliğinden
+  düzeldi. Paylaşılan ağaçta bir kırmızıyı sahiplenmeden önce `git status`a bakmak, bu turda üçüncü
+  kez işe yaradı.
+
+  Doğrulama: `cart-view.test.ts` **8/8** · `@lezzet/mobile-api` typecheck temiz.
