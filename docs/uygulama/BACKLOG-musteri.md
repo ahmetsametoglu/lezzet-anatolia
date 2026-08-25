@@ -1049,10 +1049,19 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   sipariş başka yere yönlendirilmişti; gerçek müşteri davranışı değil, test kurgusu. "Geç anlaşılıyor"
   itirazı da sepetteki o cümleyi görmezden geliyordu. *Tekrar açılmasın diye kaydı duruyor.*
 
-- [ ] **MB-80 · Vitrin başlığında yer adının kaybolduğu bir kare — ÜRETİLEMEDİ.** 11.08'de bir kez
-  görüldü: *"67000 STRASBOURG"* yerine yalnız *"67000"*. Yer adı ayrı bir uçtan çözülüyor
-  (`usePlaceResolution`), yani çözüm gecikince ya da düşünce kod tek başına kalıyor olabilir —
-  **teori, ölçülmedi.** MB-23 elenirken tek gerçek gözlem olarak ayrıldı.
+- [x] **MB-80 · Vitrin başlığında yer adının kaybolduğu bir kare** → **KAPANDI, görev `(21.101)`
+  (23.08).** ~~ÜRETİLEMEDİ~~ — **ölçülünce DETERMİNİSTİK çıktı:** `savedPlaceName === null` ÜÇ
+  durumda birden doğru (kod eksik · cevap HENÜZ gelmedi · istek DÜŞTÜ), yani nadir bir arıza değil
+  HER açılışta olan kısa bir geçişti; kullanıcı o kareyi yakalamış. İstek düşerse başlık KALICI
+  olarak çıplak kodda kalıyordu.
+  **Çare iskelet değil BELLEK:** bir posta kodunun şehri değişmez, cihaz onu geçen sefer öğrendi.
+  Yalnız AD saklanıyor — `inRoute` gibi değişebilen alanlar canlı çözümden okunmaya devam ediyor.
+  **25.08'de bir yarış daha bulundu ve düzeltildi** (`(21.104)`): geç gelen disk cevabı taze adı
+  eziyordu, yani düzeltme kendini geri alabiliyordu.
+
+  *(Özgün kayıt:)* 11.08'de bir kez görüldü: *"67000 STRASBOURG"* yerine yalnız *"67000"*. Yer adı
+  ayrı bir uçtan çözülüyor (`usePlaceResolution`), yani çözüm gecikince ya da düşünce kod tek
+  başına kalıyor olabilir — **teori, ölçülmedi.** MB-23 elenirken tek gerçek gözlem olarak ayrıldı.
 
   **KİMLİK DÜZELTİLDİ 23.08: bu kalem MB-59 diye yazılmıştı ama o numara ZATEN KULLANIMDAYDI**
   (puan geçmişi, `docs/build/21-mobil-uygulama.md` `(21.60)` o kimlikle anıyor). İki ayrı maddenin

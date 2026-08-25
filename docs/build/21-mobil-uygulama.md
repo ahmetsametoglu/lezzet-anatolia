@@ -5544,3 +5544,35 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Doğrulama: mobil paket **763/763** (753 → 763) · `points.test.ts` **22/22** · beş paket typecheck
   temiz (types · application · mobile · mobile-api · web) · lint temiz.
+
+- [~] (21.114) **TEST DEFTERİ GERÇEK KALANINA İNDİ — baş maddesi ÜRETİLEMEDİ (MB-38)**
+  · touches: `apps/mobile/src/lib/places/place-view.test.ts`, `docs/talep/not-mobil-test-defteri.md`
+
+  **DEFTERİN BAŞ MADDESİ KAPANDI ÇÜNKÜ ÜRETİLEMİYOR.** *"`account-routes.test` tam koşuda düşüyor,
+  tekil koşuda geçiyor — hata metni hâlâ yakalanmadı"* diye 09.08'den beri duruyordu.
+  **Bugün üç tam koşu: 763/763 · 763/763 · 763/763.** Desen yok.
+  Sebep zaten 19.08'de ölçülmüştü ve dosyayla ilgisi yoktu: yük ortalaması **22.96**, paket süresi
+  **11 sn → 58 sn**. Yani düşüş MAKİNENİN SIKIŞIKLIĞINA bağlıydı. Açık tutmak, üretilemeyeni
+  "bilinen arıza" diye taşımak olurdu — ve bugün aynı sınıfı bir kez daha ölçtük (tam paket 190 sn
+  → 5329 sn, takas 8 GB/9 GB dolu; izole koşuda aynı dosyalar 12,8 sn'de yeşil).
+  *"Jest did not exit"* uyarısı da üç koşuda hiç çıkmadı.
+
+  **`21.20`'NİN BİRİM TEST BORCU ÖDENDİ** (`place-view.test.ts`, 15 iddia). Çivilenen asıl karar:
+  **yer bilinmiyorsa "gönderemiyoruz" DENMEZ.** `elsewhere` iki ayrı şey olabilir — rota dışısınız
+  (kalıcı) ya da bölgenizde şu an yok (geçici); ayrımı yer çözümü belirliyor ve yer BİLİNMİYORSA
+  kural "geçici" der, çünkü kalıcı ret için rota dışında olduğunu BİLMEK gerekir. Ters çevrilseydi
+  posta kodunu henüz vermemiş HER ziyaretçiye kalıcı bir ret gösterilirdi ve hiçbir yerde hata
+  vermezdi: müşteri sessizce vazgeçerdi. Sabotajla kanıtlandı.
+
+  **BİR DEFTER MADDESİ ÖLÇÜLÜNCE YANLIŞ ÇIKTI:** dev giriş kapısı için *"kayıtsız 400
+  `dev_session_failed`"* yazıyordu; kapının künyesi tersini söylüyor (*"e-posta süzgeci bilerek
+  yok"*) ve `generateLink` kullanıcıyı açıyor. Defteri okuyup varsayan bir test, doğru davranışı
+  arıza gibi gösterecekti.
+
+  **DURUM — KALAN ÜÇ MADDE, biri KARAR:**
+  · `account-screen.test`e iki toast iddiası (dosya var, iddia eksik).
+  · vFb fixture→şema dönüşü **bloke** — o dönüş yapılmadan tip kaynağı güncellenemez.
+  · `social-inbox-screen` testi **KARAR bekliyor, iş değil**: ekranı web şeridi yazdı (15.17) ve
+    `test-dalgasi.md §5` kararı açıkça kullanıcıya bırakmış. Kardeşi zaten yazılmış durumda.
+
+  Doğrulama: mobil paket **778/778** (763 → 778) · `@lezzet/mobile` typecheck temiz.
