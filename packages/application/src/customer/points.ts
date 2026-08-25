@@ -121,6 +121,14 @@ export interface CustomerPointsCard extends CustomerPointsRules {
    * tutmak, ayar değiştiğinde ikisinin ayrışması demekti. Boş dizi = bekleyen yok.
    */
   pendingNeighborAwards: PendingNeighborAward[];
+  /**
+   * **Bugünkü ziyaret puanı alındı mı** (MB-54) — ekranın *"o tik yanmalı"* dediği hâl.
+   *
+   * Kartın içinde çünkü kimliğe bağlı: program tarifi (`earnWays`) misafire de gösteriliyor ve
+   * oraya kimlikli bir bayrak koymak açık ucun sınırını delerdi. Gün İŞLETMENİN günü —
+   * `earnedToday` kısıtla ve tavanla aynı tanımı okuyor, ikinci bir "bugün" yazılmıyor.
+   */
+  visitClaimedToday: boolean;
 }
 
 export interface CustomerPointsView {
@@ -278,7 +286,7 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { points: null, coupons: [] };
 
-  const [balance, rules, coupons, referralCode, pendingNeighborAwards] = await Promise.all([
+  const [balance, rules, coupons, referralCode, pendingNeighborAwards, visitEarnedToday] = await Promise.all([
     getPointsBalance(db, customerId),
     // Kural kapısı KOPYALANMIYOR, çağrılıyor: kartın gösterdiği yollar ile misafirin onboarding'de
     // gördüğü yollar bir gün ayrışırsa ikisi de "doğru" görünür ve fark edilmez.
@@ -291,6 +299,11 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
     // "Puan yolda" (★ karar 3): komşu sipariş verdi, parası henüz alınmadı. Kartın İÇİNDE çünkü
     // program dışı profilde anlamı yok — yukarıdaki erken `return` ikisini birden düşürüyor.
     readPendingNeighborAwards(db, customerId),
+    /* BUGÜNKÜ ZİYARET PUANI (MB-54) — sayı değil VARLIK sorusu; `earnedToday` işletme gününü
+       (Europe/Paris) kısıtla ve günlük tavanla AYNI tanımdan okuyor. İkinci bir "bugün" tanımı
+       yazmak, ekranın "alındı" dediği anla motorun yeni günü açtığı anın ayrışması demekti —
+       yazın Paris'te 00:00–02:00 arasında görünür, hiçbir yerde hata vermez. */
+    new PointsEntryService(db).earnedToday(customerId, ['visit']),
   ]);
 
   return {
@@ -302,6 +315,9 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
       // "bu bağlantıyı paylaş" deyip boş bir adres vermek, çalışmayan bir düğme göstermektir.
       inviteUrl: referralCode ? inviteUrl(referralCode, profile.preferredLanguage) : null,
       pendingNeighborAwards,
+      // Puan POZİTİF yazılır (`canEarnPoints` sıfır değerli aksiyonu reddediyor), yani "bugün
+      // kazanılan ziyaret puanı > 0" ile "satır var" aynı şey.
+      visitClaimedToday: visitEarnedToday > 0,
     },
     coupons,
   };

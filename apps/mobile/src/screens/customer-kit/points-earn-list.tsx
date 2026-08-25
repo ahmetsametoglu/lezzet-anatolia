@@ -53,7 +53,15 @@ function iconOf(key: MePointsEarnWayKey, size: number, invited: string, own: str
     referral: <Icon name="share" size={size} color={invited} />,
     neighbor: <Icon name="home" size={size} color={invited} />,
     review: <Icon name="orders" size={size} color={own} />,
-    visit: <CustomerIcon name="check" size={size} color={own} />,
+    /* ── ZİYARETİN İKONU ONAY İŞARETİ DEĞİL, TEKRAR OKU (MB-54 · kullanıcı kararı 25.08) ──
+       Buraya `check` konmuştu ve satır "bugün alındı" durumunu kazanınca ÇAKIŞTI: aynı satırda
+       iki tik demekti ve ikisi de durum bildirmez, süs gibi okunurdu.
+       Kimlik ikonu değişti, tik DURUMA serbest kaldı — ikon artık "bu ne", tik "oldu mu" diyor.
+       `refresh` tasarımın kendi sözlüğünden (yeni geometri UYDURULMADI, CLAUDE §3) ve anlamı
+       isabetli: dairesel ok "tekrar eden" demek, ödülün kendisi de her gün tekrarlıyor.
+       Takvim daha doğrudan olurdu ama sözlükte YOK; olmayan bir ikonu elle çizmek, tasarımın
+       söylemediği bir geometriyi bizim uydurmamız olurdu. */
+    visit: <Icon name="refresh" size={size} color={own} />,
     feedback_purchase: <CustomerIcon name="star" size={size} color={own} />,
     feedback_candidate: <Icon name="search" size={size} color={own} />,
   };
@@ -71,6 +79,15 @@ export type PointsEarnActions = Partial<Record<MePointsEarnWayKey, () => void>>;
 
 interface PointsEarnListProps {
   rules: PointsRules;
+  /**
+   * **Bugünkü ziyaret puanı alındı mı** (MB-54) — verilmezse durum HİÇ çizilmez.
+   *
+   * İsteğe bağlı olması şart: bileşeni onboarding de kullanıyor ve orayı gören kişi henüz
+   * MİSAFİR — hesabı yok, "bugün aldın mı" diye bir hâli de yok. Zorunlu yapsaydık misafire
+   * ya uydurma bir `false` gösterirdik (yanlış: alamadığı değil, alamayacağı bir şey) ya da
+   * onboarding'i kimliğe bağlardık.
+   */
+  visitClaimedToday?: boolean;
   /** Verilmezse liste düğmesiz çizilir (onboarding: müşterinin daha hesabı yok). */
   actions?: PointsEarnActions;
   /**
@@ -85,7 +102,7 @@ interface PointsEarnListProps {
   testID?: string;
 }
 
-export function PointsEarnList({ rules, actions, showRules = false, testID }: PointsEarnListProps): ReactElement {
+export function PointsEarnList({ rules, actions, showRules = false, visitClaimedToday, testID }: PointsEarnListProps): ReactElement {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -105,6 +122,12 @@ export function PointsEarnList({ rules, actions, showRules = false, testID }: Po
       {rules.earnWays.filter((way) => known(way.key)).map((way) => {
         const copy = t.ways[way.key];
         const action = actions?.[way.key];
+        /* BUGÜN ALINDI İŞARETİ YALNIZ ZİYARET SATIRINDA (MB-54). Öteki yolların "bugünlük" bir
+           hakkı yok — getiren ödülü başkasının siparişini bekler, yorum teslim edilmiş bir
+           siparişe yazılır. İşareti kümeye yaymak, olmayan bir ritmi ima ederdi.
+           `=== true` bilinçli: prop verilmediğinde (onboarding, misafir) durum HİÇ çizilmez ve
+           `undefined` "alınmadı" sayılmaz — bilmemek, olumsuz DEĞİLDİR (CLAUDE §1). */
+        const claimed = way.key === 'visit' && visitClaimedToday === true;
         return (
           <View key={way.key} style={styles.row} testID={`points-earn-${way.key}`}>
             <View style={styles.icon}>{iconOf(way.key, theme.size.inlineIcon, theme.colors.terracotta, theme.colors['olive-dark'])}</View>
@@ -130,7 +153,22 @@ export function PointsEarnList({ rules, actions, showRules = false, testID }: Po
                 kendisiyle söylüyor: `+500 (5 €)`. Kuruş da düştü, gerekçesi `compact-euro`
                 künyesinde: kupon tam eurodur, `5,00` olmayan bir hassasiyet iddia ediyordu. */}
             <View style={styles.body}>
-              <Text style={styles.title}>{copy.title}</Text>
+              <View style={styles.titleLine}>
+                <Text style={styles.title}>{copy.title}</Text>
+                {/* İŞARET BAŞLIĞIN YANINDA, satırın SONUNDA değil: göz başlığı okurken durumu da
+                    alır. Sağa yaslanmış bir tik, uzun başlıklarda metinden kopar ve "hangi satıra
+                    ait" sorusunu doğururdu (13.08'de sağ sütunun elenme gerekçesiyle aynı). */}
+                {claimed ? (
+                  /* İŞARETİN KENDİ KİMLİĞİ VAR ve bu testin isteği değil, ölçümün sonucu: metin
+                     iddiası tek başına yetmiyordu. Sıklık metni `'claimedToday' in copy` ile
+                     korunuyor (öteki yolların sözlüğünde o anahtar yok), ama İKON böyle bir
+                     korumaya sahip değil — işareti kümeye yayan bir yazım metinde görünmez,
+                     yalnız ikonda görünürdü. Ölçüldü 25.08: sabotaj metin iddiasını geçti. */
+                  <View testID={`points-earn-${way.key}-claimed`}>
+                    <CustomerIcon name="check" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+                  </View>
+                ) : null}
+              </View>
               <View style={styles.rewardLine}>
                 <Text style={styles.rewardBadge}>
                   +{way.points} ({formatCompactEuro(way.points * rules.centValue, locale)})
@@ -139,7 +177,14 @@ export function PointsEarnList({ rules, actions, showRules = false, testID }: Po
                     başka bir satır da sınır taşırsa metin çalışır, taşımayanda `replace` hiçbir şey
                     yapmaz. Koşullu yazsaydık "hangi satır hangi yer tutucuyu bilir" diye ikinci bir
                     eşleme doğardı. */}
-                <Text style={styles.cadence}>{copy.cadence.replace('{max}', String(rules.neighborMaxUses))}</Text>
+                {/* SIKLIK METNİ DURUMA GÖRE DEĞİŞİR: "günde bir" bir KURALDIR, "bugün alındı" bir
+                    OLAYDIR. Tik tek başına bırakılsaydı ekran kuralı söyler ama olayı söylemezdi;
+                    ikisi birlikte, göz hangisine takılırsa aynı cevabı verir. */}
+                <Text style={styles.cadence}>
+                  {claimed && 'claimedToday' in copy
+                    ? copy.claimedToday
+                    : copy.cadence.replace('{max}', String(rules.neighborMaxUses))}
+                </Text>
               </View>
               <Text style={styles.description}>{copy.body}</Text>
               {action === undefined || !('cta' in copy) ? null : (
@@ -184,6 +229,8 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text.body,
     color: theme.colors.terracotta,
   },
+  /* Başlık + işaret aynı hizada; işaret başlığın SONUNA yapışır, satırın sonuna değil. */
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',

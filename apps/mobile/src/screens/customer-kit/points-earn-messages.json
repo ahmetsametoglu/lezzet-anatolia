@@ -25,6 +25,7 @@
       "visit": {
         "title": "Uygulamayı açın",
         "cadence": "her gün",
+        "claimedToday": "bugün alındı",
         "body": "Günde bir kez, siz hiçbir şey yapmadan hesabınıza yazılır."
       },
       "feedback_purchase": {
@@ -66,6 +67,7 @@
       "visit": {
         "title": "Ouvrez l'application",
         "cadence": "chaque jour",
+        "claimedToday": "obtenu aujourd’hui",
         "body": "Une fois par jour, crédités sans rien avoir à faire."
       },
       "feedback_purchase": {
@@ -107,6 +109,7 @@
       "visit": {
         "title": "Öffnen Sie die App",
         "cadence": "täglich",
+        "claimedToday": "heute erhalten",
         "body": "Einmal am Tag, ohne dass Sie etwas tun müssen."
       },
       "feedback_purchase": {

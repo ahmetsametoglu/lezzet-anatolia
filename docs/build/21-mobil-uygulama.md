@@ -5497,3 +5497,50 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Doğrulama: `apps/mobile-api/src/api/v1` **22 dosya · 298 test yeşil** (101 sn) · typecheck temiz ·
   lint temiz.
+
+- [x] (21.113) **ZİYARET PUANI ARTIK EKRANDA İŞARETLİ — MB-54 kapandı, çift tik çözüldü**
+  · touches: `packages/types/src/contracts/points-api.schema.ts`,
+  `packages/application/src/customer/points.ts`,
+  `apps/mobile/src/screens/customer-kit/points-earn-list.tsx`,
+  `apps/mobile/src/screens/customer-kit/points-earn-messages.json`,
+  `apps/mobile/src/screens/account/account-screen.tsx`
+
+  **MB-54'ün açık kalan (c) yarısı.** Kullanıcı kararı 11.08: *"kullanıcı geldiği zaman o tik
+  yanmalı."* (a) yarısı 12.08'de kapanmıştı; sözleşme "bugün alındı mı" bilgisini taşımıyordu.
+
+  **ÖNCE BİR TASARIM ÇAKIŞMASI ÇÖZÜLDÜ (kullanıcı kararı 25.08).** Ziyaret satırının KİMLİK ikonu
+  zaten bir onay işaretiydi; durumu da tikle söylemek aynı satırda **iki tik** demekti ve ikisi de
+  durum bildirmez, süs gibi okunurdu. Kullanıcı ikonu değiştirmeyi seçti — tik DURUMA serbest kaldı.
+  **İkon `refresh` oldu, takvim DEĞİL ve gerekçesi ölçülü:** tasarım dosyalarında takvim ikonu YOK
+  (yalnız metinde geçiyor) ve olmayan bir geometriyi elle çizmek, tasarımın söylemediği bir şeyi
+  bizim uydurmamız olurdu (CLAUDE §3). `refresh` sözlüğün kendi ikonu, aynı elden, ve anlamı
+  isabetli: dairesel ok *"tekrar eden"* der — ödülün kendisi de her gün tekrarlıyor.
+  **Üçüncü parti ikon kütüphanesi KURULMADI** (karar bu şeride bırakılmıştı): 35 ikonun 35'i tek
+  elden (24×24, konturlu, dolgusuz); Lucide/Phosphor yanlarına ikinci bir el yazısı koyardı.
+
+  **BAYRAK KARTTA, `earnWays` SATIRINDA DEĞİL.** Program tarifi (`/points/rules`) AÇIK bir uç ve
+  onboarding onu MİSAFİRE gösteriyor; oraya kimliğe bağlı bir alan koymak o ucun *"kişisel hiçbir
+  şey taşımaz"* sınırını delerdi. Kart zaten kimliğin kendisi ve B2B'de tümden `null` —
+  `referralCode`/`earnWays`in kartın içinde olmasının gerekçesiyle birebir aynı.
+
+  **İKİNCİ BİR "BUGÜN" TANIMI YAZILMADI:** `earnedToday(customerId, ['visit'])` işletme gününü
+  (Europe/Paris) kısıttaki (`points_entry_visit_day`) ve günlük tavandaki tanımla AYNI okuyor.
+  Ayrı olsalardı yazın Paris'te 00:00–02:00 arasında ekran "bugün alındı" derken motor yeni günü
+  açmış olurdu — hiçbir yerde hata vermeyen, yılda bir kez görünen bir ayrışma.
+
+  **BİLMEMEK OLUMSUZ DEĞİLDİR:** prop İSTEĞE BAĞLI ve verilmediğinde durum HİÇ çizilmiyor.
+  Zorunlu olsaydı onboarding'deki misafire uydurma bir `false` gösterilirdi — yani "alamadığı"
+  değil, **alamayacağı** bir şey için eksik işareti (CLAUDE §1).
+
+  **ÜÇ SABOTAJ, ÜÇÜ DE YAKALANDI** — ve ikincisi TESTİ DÜZELTTİRDİ: işareti kümeye yayan sabotaj
+  metin iddiasını GEÇTİ, çünkü sıklık metni `'claimedToday' in copy` ile korunuyor (öteki yolların
+  sözlüğünde o anahtar yok) ama İKON böyle bir korumaya sahip değildi. İddia ikona çevrildi
+  (`points-earn-<yol>-claimed`) ve sabotaj artık düşüyor. Üçüncüsü sunucuda: sebep süzgeci
+  kaldırılınca *"başka sebeple kazanılan puan ziyaret işaretini yakmaz"* kırmızıya döndü.
+
+  **TESTİN KENDİ İKİ HATASI:** RNTL v14'te `render` da beklenmezse `screen` kurulmuyor (beş test
+  birden *"render function has not been called"*) · cihaz dili sabitlenmezse metin iddiaları
+  makinenin diline bağlanıyor.
+
+  Doğrulama: mobil paket **763/763** (753 → 763) · `points.test.ts` **22/22** · beş paket typecheck
+  temiz (types · application · mobile · mobile-api · web) · lint temiz.

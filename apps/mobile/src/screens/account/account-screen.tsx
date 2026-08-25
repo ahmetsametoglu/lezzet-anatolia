@@ -479,7 +479,14 @@ export function AccountScreen({
                     ikisinin unutulduğu üç ayrı metin demekti. `wallet` sözleşme gereği kuralın
                     kendisini de taşıyor (`MePointsCardSchema` = kural + kimlik), o yüzden ayrı bir
                     okuma turu atılmıyor. */}
-                <PointsEarnList rules={wallet} actions={earnActions} testID="account-earn-list" />
+                {/* Bugünkü ziyaret puanı KARTTAN gelir (`MePointsCardSchema.visitClaimedToday`),
+                    ikinci bir okuma turundan değil: `wallet` zaten kimlikli cevabın kendisi. */}
+                <PointsEarnList
+                  rules={wallet}
+                  actions={earnActions}
+                  visitClaimedToday={wallet.visitClaimedToday}
+                  testID="account-earn-list"
+                />
               </>
             ) : (
               <>
@@ -803,6 +810,7 @@ export function AccountScreen({
         {wallet === null ? null : (
           <PointsEarnList
             rules={wallet}
+            visitClaimedToday={wallet.visitClaimedToday}
             actions={{
               ...earnActions,
               /* Çekmeceden gidilen her hedef ÖNCE çekmeceyi kapatır: altında açık bir modal

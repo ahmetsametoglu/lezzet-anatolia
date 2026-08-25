@@ -163,6 +163,28 @@ export const MePointsCardSchema = PointsBalanceSchema.pick({ balance: true }).me
    */
   inviteUrl: z.string().nullable(),
   /**
+   * **BUGÜNKÜ ZİYARET PUANI ALINDI MI** (MB-54 · kullanıcı kararı 11.08 — *"kullanıcı geldiği zaman
+   * o tik yanmalı"*).
+   *
+   * ── NEDEN KARTTA, `earnWays` SATIRINDA DEĞİL ────────────────────────────────
+   * `MePointsEarnWaySchema` PROGRAMI anlatıyor (*"hangi yol, kaç puan"*) ve kimlikten bağımsız:
+   * onboarding'in son adımı onu MİSAFİRE gösteriyor (`/points/rules`, açık uç). Oraya kimliğe bağlı
+   * bir bayrak koymak, misafirin göremeyeceği bir alanı program tarifine sokmak olurdu — ve o ucun
+   * *"kişisel hiçbir şey taşımaz"* sınırını delerdi.
+   *
+   * Kart ise zaten kimliğin kendisi ve B2B'de tümden `null` (program dışı). `referralCode` ve
+   * `earnWays`in kartın İÇİNDE olmasının gerekçesi birebir aynı: tek koşul, tek karar.
+   *
+   * ── NEDEN "KAÇ PUAN KALDI" DEĞİL, İKİ DEĞERLİ ───────────────────────────────
+   * Ziyaret günde bir kezdir (`points_entry_visit_day` — işletme günü başına tek satır), yani
+   * cevap zaten evet/hayır. Sayı taşımak, olmayan bir kısmiliği ima ederdi.
+   *
+   * **Gün İŞLETMENİN günüdür (Europe/Paris)**, sunucunun değil — kısıtla ve günlük tavanla AYNI
+   * tanım. Ayrı olsalardı yazın Paris'te 00:00–02:00 arasında ekran "bugün alındı" derken motor
+   * yeni günü açmış olurdu.
+   */
+  visitClaimedToday: z.boolean(),
+  /**
    * **"Puan yolda"** — davet edilen komşu sipariş verdi ama parası henüz alınmadı (★ karar 3 · MB-57).
    *
    * Ödül `paid` geçişinde doğuyor; o ana kadar müşterinin ekranında HİÇBİR ŞEY değişmiyordu —

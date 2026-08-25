@@ -625,12 +625,17 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   açan bağlantı tanımı (evrensel/uygulama bağlantıları) + `findOrCreateCustomer`a daveti geçiren
   çağrı. Bu altyapı **MB-56'nın da zemini** — ikisi aynı bağlantı mekanizmasını paylaşır.
 
-- [~] **MB-54 · Ziyaret puanı native'de yazılacak + hesap sayfasında görünecek (kullanıcı kararı 11.08).**
-  **İKİ PARÇANIN İKİSİ DE İLERLEDİ, BİRİ AÇIK KALDI — görev `(21.47)` (12.08).** (a) yazım kapısı
-  KAPANDI (MB-50) · sözleşme üçten altıya genişledi, ziyaret satırı listede. (c) **AÇIK:** *"o gün
-  ziyaret puanı alınmışsa satır İŞARETLİ görünür"* — bugünkü hakkının kullanılıp kullanılmadığı
-  ekranda görünmüyor. Sözleşme bunu taşımıyor: `earnWays` yalnız "hangi yol, kaç puan" diyor,
-  "bugün alındı mı" demiyor. `BEKLEYEN(MB-54)`.
+- [x] **MB-54 · Ziyaret puanı native'de yazılacak + hesap sayfasında görünecek (kullanıcı kararı 11.08)**
+  → **KAPANDI, görevler `(21.47)` + `(21.113)` (25.08).** (a) yazım kapısı 12.08'de kapanmıştı;
+  (c) *"o gün ziyaret puanı alınmışsa satır İŞARETLİ görünür"* bugün kapandı.
+  **Sözleşmeye `visitClaimedToday` eklendi — KARTA, `earnWays` satırına DEĞİL:** program tarifi açık
+  bir uçta ve onboarding onu misafire gösteriyor; oraya kimlikli bir alan koymak o ucun *"kişisel
+  hiçbir şey taşımaz"* sınırını delerdi. İkinci bir "bugün" tanımı da yazılmadı — `earnedToday`
+  işletme gününü kısıtla ve tavanla aynı okuyor.
+  **Bir tasarım çakışması çözüldü (kullanıcı kararı 25.08):** ziyaretin kimlik ikonu zaten onay
+  işaretiydi, durum da tikle söylenince aynı satırda iki tik oluyordu. İkon `refresh`e çevrildi
+  (takvim tasarımda YOK, uydurulmadı), tik duruma serbest kaldı. Üçüncü parti ikon kütüphanesi
+  kurulmadı — 35 ikonun 35'i tek elden.
   MB-50'nin kararı: *"ziyaret puanı native'de yazılmalı… hesabım sayfasında bu da olmalı ve
   kullanıcı geldiği zaman o tik yanmalı."* İki parça: (a) mobil arka uçta günlük ziyaret kapısı
   (web'deki `awardVisitPoints` aynı motoru kullanır, ikinci nüsha YAZILMAZ); (b) hesap ekranındaki

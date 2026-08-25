@@ -127,6 +127,34 @@ describe('GET /api/v1/me/points — kart', () => {
     expect(view.coupons).toEqual([]);
   });
 
+  it('BUGÜNKÜ ZİYARET işareti kartta gelir (MB-54) — ve ziyaret yazılmadan `false`', async () => {
+    /* Ekranın *"o tik yanmalı"* dediği hâlin sunucu yarısı. `earnedToday` işletme gününü
+       (Europe/Paris) kısıttaki ve tavandaki tanımla AYNI okuyor; ikinci bir "bugün" yazılsaydı
+       yazın Paris'te 00:00–02:00 arasında ekran "alındı" derken motor yeni günü açmış olurdu. */
+    const once = await dataOf<{ points: { visitClaimedToday: boolean } | null }>(
+      await app.request('/api/v1/me/points', auth(musteriToken)),
+    );
+    expect(once.points?.visitClaimedToday).toBe(false);
+
+    await app.request('/api/v1/me/points/visit', authPost(musteriToken));
+
+    const sonra = await dataOf<{ points: { visitClaimedToday: boolean } | null }>(
+      await app.request('/api/v1/me/points', auth(musteriToken)),
+    );
+    expect(sonra.points?.visitClaimedToday).toBe(true);
+  });
+
+  it('BAŞKA sebeple kazanılan puan ziyaret işaretini YAKMAZ', async () => {
+    // `earnedToday` sebep süzgeci olmadan çağrılsaydı, o gün yorum yazan müşteri ziyaret puanını
+    // almadan "bugün alındı" görürdü — ve ertesi gün almadığını fark etmezdi.
+    await awardPoints(db, { customerId: musteriId, reason: 'review', refId: crypto.randomUUID() });
+
+    const view = await dataOf<{ points: { visitClaimedToday: boolean } | null }>(
+      await app.request('/api/v1/me/points', auth(musteriToken)),
+    );
+    expect(view.points?.visitClaimedToday).toBe(false);
+  });
+
   it('kazanılan puan kartta GÖRÜNÜR — defter ile ekran aynı sayıyı söyler', async () => {
     await awardPoints(db, { customerId: musteriId, reason: 'visit' });
 
