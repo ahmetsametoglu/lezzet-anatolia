@@ -962,7 +962,37 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     - **CÜMLE HANGİ TUTARA BAKTIĞINI SÖYLEMİYORDU** (mobil şeridin cihaz ölçümü 11.08, web'de 15.08 karşılandı). Ekranda `Toplam 3,80 €` yazarken hemen altında `Asgari sepet 40,00 € — 33,20 € eksik` çıkıyor; müşteri iki sayıyı bağdaştıramıyor çünkü eksik **indirimsiz ara toplamdan** hesaplanıyor ama cümle bunu söylemiyor. **Hesap doğru ve bilinçli** (`cart/read.ts` → `meets(subtotalCents - undeliverableSubtotalCents, …)`, kullanıcı kararı 11.08: *"eşik indirimsiz toplam fiyata bakar"*) — kusur cümledeydi. Üç dilde tabana atıf eklendi (`ara toplamınıza` · `au sous-total` · `Ihrer Zwischensumme`), **hem sepette hem ödeme adımında**: iki ayrı `messages.json`, aynı belirsizlik. Müşteri artık üstteki "Ara toplam" satırına bakıp çıkarmayı kendi yapabiliyor ve indirimlerin sayılmadığı cümleden anlaşılıyor.
     - `edge-min-basket.smoke.ts` · fikstüre **`priceCents` parametresi** eklendi (bildirilen üç seçenekten birincisi): ürün **44,90 €**, eşik **45,00 €** — *"1 adet = eşikten 10 cent aşağı"* kurgusu ve *"söz ↔ kural aynı sayı"* iddiası birebir korundu, yalnız sayılar tabanın üstüne taşındı. Dar kapsam eşiği yükseltebilir ama düşüremez (`STRICTEST_WINS`), yani başka yolu yoktu. **e2e KOŞULMADI** — kuyrukta kullanıcının incelediği dilekçeler var ve e2e sakin pencerede koşulur; kod tarafı okunarak doğrulandı, `typecheck` 18/18 · `lint` temiz.
 
-- [ ] (08.41) **Adres formunda posta kodu SEÇİLSİN, şehir ve ülke seçimden gelsin** *(kullanıcı kararı 10.08: "web'de de kullanıcı posta kodunu ayrı, şehir adını ayrı girmesini istemiyorum — seçilerek gelecek"; mobil karşılığı `21.28` tamamlandı, altyapı hazır)* · `touches: apps/web/components/customer/delivery/address-form.tsx, apps/web/lib/delivery/actions.ts`
+- [x] (08.41) **Adres formunda posta kodu SEÇİLSİN, şehir ve ülke seçimden gelsin** *(kullanıcı kararı 10.08: "web'de de kullanıcı posta kodunu ayrı, şehir adını ayrı girmesini istemiyorum — seçilerek gelecek"; mobil karşılığı `21.28` tamamlandı, altyapı hazır)* · `touches: apps/web/components/customer/delivery/address-form.tsx, apps/web/lib/delivery/actions.ts`
+  - **Durum (25.08 — KAPANDI; dört kararın üçü zaten yazılmıştı, ölçülen açık BAŞKA yerdeydi).**
+    Aşağıdaki *"bugünkü hâl (15.08)"* tespiti bayatlamış: form üç alanı serbest metin tutmuyor artık.
+    Bugün ölçüldü — ülke koddan türüyor (`applyZip` → `onCountryChange`, `checkPostal` →
+    `lookup.place.country`), çok yerleşimli kodda şehir SEÇTİRİLİYOR (`applyZip`: `places.length > 1`
+    → liste açılır, alan boşalır), elle yazma yedeği duruyor, adres defteri depo tablosuna bakmıyor.
+    - **ÖLÇÜLEN GERÇEK AÇIK — yer hapı cevaplayamayacağı girdiyi kabul ediyordu.** Tarayıcıda
+      ölçüldü (3001): `672` → 8 öneri ✔ · `67800` → *"Bischheim, Hœnheim"* ✔ · **`Strasbourg` →
+      alanda "Stras" (5 hane kırpması), 0 öneri, "Göster" → *"posta kodu 5 haneli olmalı"***. Alan
+      harfi engellemiyor kırpıyordu; kapı ise harfi reddediyordu. Müşteri geçerli bir yer adı yazıp
+      düzeltemeyeceği bir kurala yollanıyordu.
+    - **Kök: web kendi kapısını ham okuyordu.** `suggestPostalCodesAction` `PostalCodePlaceService`i
+      doğrudan çağırıyor ve `/\p{L}/` süzgeciyle harfi eliyordu. Oysa motor ad aramasını 15.08'den
+      beri biliyor (`OB-03`, iki dallı `search`) ve operasyon rota seçicisi onu kullanıyordu.
+    - **Yapıldı:** eylem `suggestPlaces` köprüsüne geçti (ad türetme kuralı `placeLabel` artık tek
+      yerde — `CLAUDE §1`), harf süzgeci kalktı, eşik terimin türüne bağlandı (kodda 2 hane, adda 3
+      harf). Yer hapının alanı ad kabul ediyor (`maxLength` 5 → 40, `inputMode` düştü), metin üç
+      dilde güncellendi ve harf yazana ayrı cümle çıkıyor (*"Listeden bir yer seçin — yazdığınız bir
+      posta kodu değil"*). **Kopya tip silindi:** `PlaceSuggestion` `PlaceOption`ın `placeName`siz
+      nüshasıydı; `@lezzet/types` istemci güvenli olduğu için ayrı tutma gerekçesi de yoktu.
+    - **Doğrulandı (tarayıcı, 3001):** `Strasbourg` → 3 öneri · `hoenheim` → `67800 (Bischheim,
+      Hœnheim)` · `st` → 0 (üç harf eşiği) · `672` → 8 (kod dalı birebir aynı) · seçimden sonra
+      *"📍 67000 Strasbourg"* + teslimat cevabı + *"Prochaine livraison : vendredi 28 août"*.
+      E2E paketi taban değerinde: 31 geçti / 4 beklenen düşüş.
+    - **Bir künye YANLIŞ çıktı ve düzeltildi:** `packages/application/src/delivery/places.ts` *"harfli girdi
+      kod dalına düşüp boş dönüyor, davranış değişmedi"* diyordu. `normalizePostalCode` yalnız boşluk
+      siler ve büyütür — harfler hayatta kalıyor ve ad dalına gidiyor. Cümle bir ölçüm değil varsayımdı.
+    - **AÇIK KALAN, gerekçesiyle:** adres formunda (`address-fields`) ad araması AÇILMADI. Oradaki
+      kod alanı bir arama kutusu değil saklanan bir değer; ada göre arama ayrı bir yer istiyor ve
+      nereye konacağı bir çizim kararı (`design/BACKLOG §2`). Kodda improvise edilmedi (`CLAUDE §3`).
+      Native de aynı hâlde, yani karar iki yüzeyi birden bağlıyor.
   - **Bugünkü hâl ölçüldü (15.08):** form üç alanı da serbest metin tutuyor — `postalCode` ve `city` ayrı `<input>`, `country` sabit `'FR' as const`. Yani müşteri kodu yazıyor, şehri de ayrıca yazıyor ve ikisinin tutarlılığını kimse doğrulamıyor.
   - **Altyapı HAZIR, yazılacak olan yalnız form:** `suggestPlaces(db, prefix)` (`@lezzet/application` — `searchPrefix`in üstünde, `placeLabel` ad türetimi dahil) · `PlaceOptionListSchema` (`@lezzet/types`) · `resolveAddressCountry(db, {postalCode, country?})` (`Country | null` döner, **hiçbir hâlde reddetmez**). Web bugün `searchPrefix`i kendi action'ından HAM okuyor (`lib/delivery/actions.ts` → `suggestPostalCodesAction`); o kapıya geçmek ad türetme kuralını tek yerde tutar.
   - **Dört karar mobilde verildi ve web'de de aynı olmalı** (kullanıcı, 10.08):

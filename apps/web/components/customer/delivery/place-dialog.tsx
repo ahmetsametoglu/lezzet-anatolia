@@ -130,8 +130,23 @@ export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
             setLookup(null);
           }}
           onKeyDown={(e) => e.key === 'Enter' && void submit(value)}
-          inputMode="numeric"
-          maxLength={5}
+          /**
+           * ── ALAN ARTIK YER ADI DA KABUL EDİYOR (08.41) ─────────────────────────────────────
+           * Eskiden `inputMode="numeric"` + `maxLength={5}` vardı ve alan harfi ENGELLEMİYOR,
+           * yalnız KIRPIYORDU: müşteri "Strasbourg" yazınca alanda *"Stras"* kalıyor, öneri
+           * gelmiyor, "Göster"e basınca da *"posta kodu 5 hane olmalı"* okuyordu (ölçüldü 25.08).
+           * Yani alan, cevaplayamayacağı bir şeyi kabul ediyordu — çıkmazın kendisi buydu.
+           *
+           * Motor ad aramasını 15.08'den beri biliyor (`OB-03`) ve operasyon rota seçicisi onu
+           * kullanıyordu; eksik olan yalnız müşteri yüzeyinin kapısıydı. Ölçüm: `Strasbourg` → 3
+           * öneri, `hoenheim` → `67800 (Bischheim, Hœnheim)`.
+           *
+           * `inputMode` DÜŞTÜ, sayısal klavye dayatması ada uymuyor. Tavan 40: en uzun Fransız
+           * komün adı 38 harf (*"Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson"* kısaltmasız 45
+           * ama arama parça eşleşmesi, tamamını yazmak gerekmiyor) — sınır bir yazım kolaylığı
+           * değil, yapıştırılan bir metnin alanı taşırmasına karşı.
+           */
+          maxLength={40}
           placeholder={t.placeholder}
           aria-label={t.dialogTitle}
           // Liste bir açılır kutu değil, panelin akışında duran bir blok — `combobox` rolü
@@ -144,7 +159,14 @@ export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
         </Button>
       </div>
 
-      {invalid && <span className="font-sans text-note font-semibold text-terracotta">{t.invalid}</span>}
+      {/* İKİ AYRI EKSİK, İKİ AYRI CÜMLE (08.41). Harf yazan müşteriye *"posta kodu 5 hane olmalı"*
+          demek onu düzeltemeyeceği bir kurala yollamaktır — yazdığı şey bir kod değil, bir yer adı
+          ve doğrusu listeden seçmek. `failed`in kendi künyesindeki ayrımın aynısı: arıza ≠ tanımadık. */}
+      {invalid && (
+        <span className="font-sans text-note font-semibold text-terracotta">
+          {/\p{L}/u.test(value) ? t.pickFromList : t.invalid}
+        </span>
+      )}
       {/* Arıza ≠ "tanımadık": biri bizim ulaşamadığımız, öteki kodun cevabı. Aynı cümleyi
           kullanmak müşteriye kodunun yanlış olduğunu düşündürürdü. */}
       {failed && <span className="font-sans text-note font-semibold text-terracotta">{t.failed}</span>}

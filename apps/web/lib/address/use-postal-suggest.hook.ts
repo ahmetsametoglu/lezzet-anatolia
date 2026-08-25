@@ -2,8 +2,9 @@
 
 import { useDebouncedLookup, type LookupResult } from '@lezzet/react-hooks';
 
+import type { PlaceOption } from '@lezzet/types';
+
 import { suggestPostalCodesAction } from '@/lib/delivery/actions';
-import type { PlaceSuggestion } from '@/lib/delivery/place-types';
 
 /*
   POSTA KODU ÖNERİSİ (web) — adres formunun kod alanını kendi `postal_code_place` referansımıza
@@ -34,15 +35,20 @@ import type { PlaceSuggestion } from '@/lib/delivery/place-types';
 /**
  * İki haneden kısa önek hiçbir yeri işaret etmez ve eylem de aynı eşiği uyguluyor. Boşa gidiş-dönüş
  * yapmanın anlamı yok — eşik iki yerde de var, ama ikisi de aynı ÖLÇÜMÜN sonucu, kopya bir kural değil.
+ *
+ * **Kancanın eşiği İKİSİNİN KÜÇÜĞÜ** (08.41): terim ad da olabildiği için gerçek eşik eylemde,
+ * terimin türüne bakılarak uygulanıyor (kodda 2, adda 3). Burada 2 kalıyor ki üç harfli bir ad
+ * ("kehl") kancada takılıp eyleme hiç ulaşamasın; eylem kısa terimi zaten bir sorgu harcamadan
+ * eliyor. Buraya da tür ölçütü yazmak, aynı kuralı iki yerde tutmak olurdu.
  */
 const MIN_PREFIX_LENGTH = 2;
 
-const EMPTY: PlaceSuggestion[] = [];
+const EMPTY: PlaceOption[] = [];
 
 /** Önek → adaylar. Modül düzeyinde: form kapanıp açılınca da yaşar (aynı oturum). */
-const cache = new Map<string, PlaceSuggestion[]>();
+const cache = new Map<string, PlaceOption[]>();
 
-async function lookup(term: string): Promise<LookupResult<PlaceSuggestion[]>> {
+async function lookup(term: string): Promise<LookupResult<PlaceOption[]>> {
   const rows = await suggestPostalCodesAction(term);
   /* **DOLU cevap hatırlanır, BOŞ cevap hatırlanmaz** — ve bu ayrım eylemin sözleşmesinden geliyor.
      Eylem fırlatmıyor, arızayı da BOŞ LİSTEYE indiriyor (kendi künyesi: *"kırmızı bir satır
@@ -57,6 +63,6 @@ async function lookup(term: string): Promise<LookupResult<PlaceSuggestion[]>> {
   return { value: rows, cache: rows.length > 0 };
 }
 
-export function usePostalSuggest(prefix: string, { enabled }: { enabled: boolean }): PlaceSuggestion[] {
+export function usePostalSuggest(prefix: string, { enabled }: { enabled: boolean }): PlaceOption[] {
   return useDebouncedLookup(prefix, { enabled, minLength: MIN_PREFIX_LENGTH, empty: EMPTY, lookup, cache });
 }

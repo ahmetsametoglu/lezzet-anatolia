@@ -33,12 +33,16 @@ export async function placesForPostalCode(db: Db, country: Country, postalCode: 
  * (mobil uç + web eylemi) ayrı ayrı yazılırdı (CLAUDE §1). Web bugün önerileri kendi server
  * action'ından ham okuyor; benimsemesi web şeridinin işi.
  *
- * ── AD ARAMASI BU KAPIDAN GEÇMİYOR (OB-03 · 15.08) ──────────────────────────
- * Servis artık harf gören terimi yerleşim adı sayıyor, ama burada terim `normalizePostalCode`ten
- * geçiyor ve harfli girdi kod dalına düşüp boş dönüyor — yani **davranış değişmedi.** Bilerek:
- * bu kapı müşteri adres formunu ve mobil ucu besliyor, ikisi de bu turun kapsamı dışında ve
- * ikisinde de ölçüm yapılmadı. Genişletmesi `21.28`in web karşılığıyla aynı turda yapılır
- * (`docs/talep/not-denetim-adres-posta-kodu-secilebilir.md`).
+ * ── AD ARAMASI BU KAPIDAN GEÇİYOR — künye bir tur YANLIŞ söyledi (08.41 · 25.08) ─────────────
+ * Burada *"harfli girdi kod dalına düşüp boş dönüyor, davranış değişmedi"* yazıyordu. **Yanlıştı**
+ * ve kimse ölçmediği için bir tur boyunca öyle kaldı: `normalizePostalCode` yalnız boşluk siler ve
+ * büyütür — harfler hayatta kalır, servisin iki dallı `search`i (`OB-03`) terimi ad sayar ve ad
+ * dalına gider. Ölçüldü: `'Strasbourg'` → 3 öneri · `'hoenheim'` → `67800 (Bischheim, Hœnheim)` ·
+ * `'st'` → 0 (üç harf eşiği) · `'672'` → 8 (kod dalı, birebir eskisi gibi).
+ *
+ * Yani kapı hazırdı; eksik olan yalnız web eyleminin kendi `/\p{L}/` süzgeciydi ve o da bu turda
+ * kalktı. **Künyenin dersi:** "değişmedi" cümlesi bir ÖLÇÜM değil bir varsayımdı, ve bir alt
+ * katmanın davranışı hakkında yazılmıştı.
  *
  * ── DEPO TABLOSUNA BAKILMAZ (kullanıcı kararı 10.08) ─────────────────────────
  * İlk yazımda satır bir de `serviced` taşıyordu — "bu ülkeye fiilen gönderebiliyor muyuz",

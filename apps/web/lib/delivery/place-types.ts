@@ -62,25 +62,16 @@ export interface PlaceOption {
 }
 
 /**
- * Autocomplete satırı (19.7) — müşteri yazarken gösterilen aday.
+ * ── `PlaceSuggestion` SİLİNDİ (08.41) ────────────────────────────────────────
+ * Autocomplete satırının (19.7) burada kendi arayüzü vardı ve künyesi *"kopya değil, doğrulanan bir
+ * sözleşme"* diyordu. Doğruydu ama ihtiyaç ortadan kalktı: eylem artık `suggestPlaces` köprüsünden
+ * geçiyor ve o kapı `@lezzet/types`in `PlaceOption`ını dönüyor — **istemci güvenli bir paket**, yani
+ * "veri paketine bağlanmayalım" gerekçesi bu tipe uymuyor. İki arayüz de aynı dört alanı taşıyordu;
+ * `PlaceOption` ayrıca `placeName`i (ad türetiminin TEK yeri) getiriyor.
  *
- * **Neden burada, `@lezzet/database`'ten alınmıyor:** bu tipi bir İSTEMCİ bileşeni okuyor (panel) ve
- * yüzeydeki hiçbir istemci dosyası veri paketine bağlanmıyor — bugün `import type` zararsız görünse
- * de aynı yoldan bir gün bir değer içe aktarılır ve sunucu kodu tarayıcı paketine düşer. Sınır
- * `DeliveryZoneSummary` ile aynı gerekçeyle burada çiziliyor.
- *
- * **Kopya değil, DOĞRULANAN bir sözleşme:** `suggestPostalCodesAction` dönüşünü bu tiple imzalıyor;
- * veri tarafındaki `PostalCodeSuggestion` ayrışırsa eylem derlenmez. Bağ yorumla değil, tip
- * denetimiyle duruyor.
+ * Bir tipi bir alan eksiğiyle ikinci kez yazmak, o alanı isteyen ekranın onu üçüncü kez türetmesiyle
+ * biter — 19.8'in yanlış ad üretmesi tam olarak bu zincirdi (`CLAUDE §1`).
  */
-export interface PlaceSuggestion {
-  country: Country;
-  postalCode: string;
-  /** Kodun kapsadığı TÜM yerleşimler, ham. Kısaltma ("+4") ekranın kararı. */
-  places: string[];
-  /** Kod bizim bir teslimat bölgemizde mi — sıralamayı belirler, seçimi DEĞİL. */
-  inRoute: boolean;
-}
 
 /**
  * Yer çözümünün ekrana ulaşan hâli (19.16b) — **dört hâl ayrık taşınır.**

@@ -1,14 +1,13 @@
 'use client';
 
 import { addressLineOf } from '@lezzet/address-fr';
-import type { Country } from '@lezzet/types';
+import type { Country, PlaceOption } from '@lezzet/types';
 import { useState } from 'react';
 
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { SuggestionList } from '@/components/customer/ui/suggestion-list';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
 import { usePostalSuggest } from '@/lib/address/use-postal-suggest.hook';
-import type { PlaceSuggestion } from '@/lib/delivery/place-types';
 
 /*
   ADRESİN ÜÇ ALANI — sokak · posta kodu · şehir, ÖNERİLERİYLE birlikte.
@@ -142,7 +141,7 @@ export function AddressFields({
 }: AddressFieldsProps) {
   /* Kod listesinden SEÇİLEN satır — yalnız ŞEHİR listesini çizmek için (çok yerleşimli kod).
      Elle yazılan kodda `null` kalır. */
-  const [place, setPlace] = useState<PlaceSuggestion | null>(null);
+  const [place, setPlace] = useState<PlaceOption | null>(null);
   const [zipOpen, setZipOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const zipSuggestions = usePostalSuggest(value.postalCode, { enabled: active && zipOpen });
@@ -174,7 +173,7 @@ export function AddressFields({
   };
 
   /** Kod önerisinin satır kimliği: aynı kod iki ülkede geçerli olabiliyor, kod tek başına anahtar değil. */
-  const zipKey = (suggestion: PlaceSuggestion): string => `${suggestion.country}:${suggestion.postalCode}`;
+  const zipKey = (suggestion: PlaceOption): string => `${suggestion.country}:${suggestion.postalCode}`;
 
   /**
    * Posta kodu seçildi. Şehir de buradan gelir: kod tek yerleşimliyse doğrudan yazılır, çok

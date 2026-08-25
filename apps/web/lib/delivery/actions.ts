@@ -1,13 +1,14 @@
 'use server';
 
+import { suggestPlaces } from '@lezzet/application';
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
 import { findZoneForPostalCode, placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { Country } from '@lezzet/types';
+import type { Country, PlaceOption } from '@lezzet/types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { resolveDelivery } from '@/lib/order/delivery';
 import { recordEvent } from '@/lib/analytics/record';
-import { isValidPostalCode, normalizePostalCode, type PlaceLookup, type PlaceSuggestion } from './place-types';
+import { isValidPostalCode, normalizePostalCode, type PlaceLookup } from './place-types';
 
 /**
  * Teslimat yeri çözümü (K30-K31) — posta kodu → "ne gönderebiliriz, ne zaman".
@@ -170,26 +171,35 @@ async function finishResolved(
  * yazıp "Göster"e basar ve akış sürer; kırmızı bir satır göstermek çalışan bir yolu arızalı gibi
  * okuturdu.
  */
-export async function suggestPostalCodesAction(prefix: string): Promise<PlaceSuggestion[]> {
+export async function suggestPostalCodesAction(prefix: string): Promise<PlaceOption[]> {
   const normalized = normalizePostalCode(prefix);
-  if (normalized.length < 2) return [];
   /**
-   * **MÜŞTERİ YÜZEYİ BU TURDA GENİŞLEMİYOR** (`OB-03` · 15.08).
+   * **EŞİK TERİMİN TÜRÜNE GÖRE** (08.41): kodda iki hane, adda üç harf. İkisi de servisin kendi
+   * ölçümünden geliyor (`PostalCodePlaceService`): tek harflik kod öneki 16.9k satırın onda birini
+   * gezip hiçbir şey ayırt etmiyor, iki harflik ad parçası ("st") yüzlerce yerleşime uyup tavana
+   * takılıyor ve rastgele bir kesit dönüyor — cevap gibi görünen bir gürültü. Trigram indeksinin
+   * kendi birimi de üç harf.
    *
-   * Kapı artık harf gören terimi yerleşim adı sayıyor (`PostalCodePlaceService.search`) ve bu
-   * kapıyı olduğu gibi bıraksaydık müşteri adres formu da yan etkiyle ad aramaya başlardı —
-   * istenmemiş, tasarlanmamış ve müşteri yüzeyinde ölçülmemiş bir davranış.
-   *
-   * Bugünkü davranış birebir korunuyor: harfli terim zaten boş liste dönüyordu (kod öneki
-   * `STRAS%` hiçbir satırla eşleşmez), burada aynı sonuç bir sorgu HARCAMADAN veriliyor.
-   *
-   * **Genişletmek istenen bir şey ve kaydı var:** `docs/talep/not-denetim-adres-posta-kodu-secilebilir.md`
-   * — kullanıcı 10.08'de web adres formunda posta kodunun SEÇİLEREK gelmesini istedi ve mobil
-   * tarafı bunu yaptı. O iş kendi turunda yapılır; ad araması onun bir parçası olacak.
+   * Eşiği burada da uygulamak kopya bir kural değil, boşa gidiş-dönüşten kaçınmak: servis aynı
+   * terimi zaten reddedecek, ama bunu bir sunucu turu harcadıktan sonra yapardı.
    */
-  if (/\p{L}/u.test(normalized)) return [];
+  if (normalized.length < (/\p{L}/u.test(normalized) ? 3 : 2)) return [];
   try {
-    return await new PostalCodePlaceService(serviceDb()).search(normalized);
+    /**
+     * **AD ARAMASI AÇIK** (08.41 · kullanıcı kararı 10.08'in müşteri yüzeyindeki karşılığı).
+     *
+     * Ölçülen çıkmaz şuydu: yer hapının alanı harfi KABUL ediyor (`maxLength=5` yüzünden
+     * "Strasbourg" → "Stras"), kapı harfi REDDEDİYORDU — müşteri sıfır öneri alıyor, "Göster"e
+     * basınca da *"posta kodu 5 hane olmalı"* okuyordu. Oysa yazdığı şey geçerli bir yer adı ve
+     * motor onu 15.08'den beri biliyor (`OB-03`, iki dallı `search`). Ölçüm: `Strasbourg` → 3
+     * öneri, `hoenheim` → `67800 (Bischheim, Hœnheim)`.
+     *
+     * **Neden servise değil `suggestPlaces`e:** ad türetme kuralı (`placeLabel` — tek yerleşimse
+     * adı, çoksa `null`) tek yerde durmalı. Web burayı ham okuduğu sürece o kuralın ikinci bir
+     * kopyası doğuyordu ve 19.8'in yanlış ad üretmesi tam olarak böyle olmuştu. Aynı kapı mobil
+     * ucu da besliyor (`21.28`); iki yüzey artık aynı cevabı görüyor.
+     */
+    return await suggestPlaces(serviceDb(), normalized);
   } catch (err) {
     await captureError(err, { source: SOURCES.webAction, context: { prefix: normalized } });
     return [];
