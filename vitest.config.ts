@@ -139,6 +139,15 @@ export default defineConfig({
             'packages/observability/src/**/*.test.ts?(x)',
             // Token paritesi saf dosya-okuma, DB'siz (21.3): globals.css ↔ design-tokens modülü.
             'packages/design-tokens/src/**/*.test.ts?(x)',
+            /*
+              `scripts` KÖKÜ — yalnız kökteki dosyalar, `scripts/seed/**` DEĞİL (25.08).
+              Kök dosyalar araçtır ve içlerinde saf mantık var (barkod kodlaması, sağlama basamağı);
+              `seed/` ise DB'ye vurur ve oraya bir test yazılırsa entegrasyona alınmalı — dar desen
+              o ayrımı şimdiden kuruyor.
+              Bu satır olmadan `scripts/*.test.ts` HİÇBİR projede olmuyordu, yani oraya yazılacak
+              test sessizce hiç koşmazdı (yukarıdaki `mask.test.ts` tuzağının aynısı).
+            */
+            'scripts/*.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
             // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).

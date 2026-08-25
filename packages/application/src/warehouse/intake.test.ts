@@ -6,6 +6,7 @@ import {
   StockService,
   StorageAreaService,
   SupplierService,
+  VariantBarcodeService,
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
@@ -21,6 +22,8 @@ import {
   type IntakeWarning,
   type PurchaseIntakeLine,
 } from './intake';
+// Zincirin öteki ucu: tarama kapısı. Ayrı dosyada testli ama BAĞ burada sınanıyor (künye aşağıda).
+import { learnCode, resolveScannedCode } from './scan';
 
 /**
  * **Mal kabul — D2** (10.4), terfi 21.11 (kaynağı `apps/web/lib/stock/intake.test.ts`).
@@ -386,5 +389,74 @@ describe('otomatik fiyat portu', () => {
     expect(outcome.status).toBe('ok');
     expect(outcome.status === 'ok' ? outcome.repricedCount : undefined).toBeNull();
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(6);
+  });
+});
+
+/**
+ * **OKUTMA → KABUL zincirinin son halkası** (23.10'un kalan maddesi).
+ *
+ * Tarama kapısı ile kabul kapısı ayrı ayrı testli; sınanmayan şey ARALARINDAKİ bağdı: okutulan
+ * kodun çözdüğü varyant, kabulün yazdığı partinin varyantı mı? Ekran bu iki kapıyı birleştiriyor
+ * ve arada bir eşleme hatası olsaydı (yanlış varyanta yazma) hiçbir test görmezdi — sonucu depoda,
+ * olmayan malı satmaya çalışırken görülürdü.
+ *
+ * Koli kodunun ÇARPANI da burada anlam kazanıyor: kod "1 okutma = N adet" diyorsa, kabulün yazdığı
+ * parti de o kadar olmalı.
+ */
+describe('okutulan kod → yazılan parti (23.10)', () => {
+  it('okutulan kodun varyantı, kabulün yazdığı partinin varyantıdır', async () => {
+    const code = `TARAMA-${stamp}`;
+    await new VariantBarcodeService(db).insert({ variantId, code });
+
+    // 1) Depocu okutur: kapı kimliği bulur (stok kararı VERMEZ — depo değişmezi).
+    const resolved = await resolveScannedCode(db, { code });
+    expect(resolved.status).toBe('found');
+    const okutulanVariantId = resolved.status === 'found' ? resolved.variantId : '';
+
+    // 2) Ekran o kimliği kabul satırına koyar ve gönderir.
+    const outcome = await receiveGoods(db, {
+      warehouseId,
+      purchaseOrderId: null,
+      lines: [{ variantId: okutulanVariantId, qty: 4, expiryDate: dayOffset(70), storageAreaId }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
+    // Zincirin kanıtı: kodun çözdüğü varyant ile partinin varyantı AYNI.
+    expect(batch?.variantId).toBe(okutulanVariantId);
+    expect(batch?.variantId).toBe(variantId);
+    expect(batch?.warehouseId).toBe(warehouseId);
+  });
+
+  it('KOLİ kodunun çarpanı kadar mal girer — "1 okutma = N adet" sözü partide tutulur', async () => {
+    const code = `KOLI-${stamp}`;
+    await new VariantBarcodeService(db).insert({ variantId, code, kind: 'case', qtyPerCode: 12 });
+
+    const resolved = await resolveScannedCode(db, { code });
+    expect(resolved.status === 'found' ? resolved.qtyPerCode : 0).toBe(12);
+
+    const oncekiToplam = (await stocks.getAvailable(warehouseId, variantId)).physicalQty;
+    const outcome = await receiveGoods(db, {
+      warehouseId,
+      purchaseOrderId: null,
+      // Ekranın yaptığı da tam olarak bu: çarpanı adet olarak koyar (depocu düzeltebilir).
+      lines: [{ variantId, qty: resolved.status === 'found' ? resolved.qtyPerCode : 0, expiryDate: dayOffset(70) }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(oncekiToplam + 12);
+  });
+
+  it('ÖĞRETİLEN kod aynı turda kabule girer — öğrenme ile yazım arasında boşluk yok', async () => {
+    // "İkinci gelişte tanır" vaadinin ilk yarısı: öğretilen kod ANINDA çözülebilmeli, yoksa depocu
+    // aynı koliyi ikinci kez okutmak zorunda kalırdı.
+    const code = `OGREN-${stamp}`;
+    expect(await learnCode(db, { variantId, code, kind: 'case', qtyPerCode: 6 })).toEqual({ status: 'ok' });
+
+    const resolved = await resolveScannedCode(db, { code });
+
+    expect(resolved.status).toBe('found');
+    expect(resolved.status === 'found' ? resolved.variantId : '').toBe(variantId);
+    expect(resolved.status === 'found' ? resolved.qtyPerCode : 0).toBe(6);
   });
 });

@@ -289,10 +289,31 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     testi: tükenmiş parti SAYILMAZ, ayrım depo içinde) + Dikkat sekmesinde tek satır. **Sıfırda da
     çizilir** — sinyalin yokluğu ile ölçümün yokluğu karışmasın; Netleşecek 5 böylece kapandı
     (sinyalin yeri: Dikkat sekmesi).
-- [ ] (23.10) **Test dalgası — Dalga 1b** (plan: `docs/build/test-dalgasi.md` §5, §6.2). Modül 23 en
+- [x] (23.10) **Test dalgası — Dalga 1b** (plan: `docs/build/test-dalgasi.md` §5, §6.2). Modül 23 en
   yeni modül ve yüzeyi hâlâ küçük; testi ucuzken yazılır. `touches: packages/database/src/services/variant-barcode.service.ts, apps/mobile/src/components/scan/**, packages/types/src/entities/variant-barcode.schema.ts`
-  - *Bitti:* aşağıdaki envanterin tamamı yazılmış; birim olanlar yeşil, DB'ye vuranlar denetmenin
-    kilitli paketinde koşulmuş.
+  - *Bitti:* envanterin tamamı yazıldı ve KOŞTU — kilitli tam pakette (25.08) modül 23'ün dokuz
+    test dosyası da yeşil: `variant-barcode` 7 · `scan` 6 · `variant-search` 7 · `intake` 27 ·
+    `boxes` 14 · `label-svg` 6 · `preparation` 17 · `load` 8 · `barcode-svg` 15.
+  - **Durum (25.08) — KAPANDI.** Üç açık kalem vardı, üçü de kapatıldı:
+    - **Koşulmamış test koştu:** `variant-barcode.test.ts` 23.08'de yazılmış ama hiç
+      çalıştırılmamıştı ("test yazdım" ile "test koşuyor" farkı) — ilk koşusunda 7/7 geçti.
+    - **Zincirin son halkası yazıldı:** okutma ve kabul kapıları ayrı ayrı testliydi, aralarındaki
+      BAĞ değildi — okutulan kodun çözdüğü varyant, kabulün yazdığı partinin varyantı mı?
+      `intake.test.ts`e üç iddia (kimlik zinciri · koli çarpanının partiye yansıması · öğretilen
+      kodun aynı turda çözülmesi). Bir eşleme hatası olsaydı hiçbir test görmezdi; sonucu depoda,
+      olmayan malı satmaya çalışırken görülürdü.
+    - **Mobil yarısı da kapandı:** `dev-scan-pool.test.ts` (4 iddia) — havuz kodlarının KÂĞIDA
+      basılabilir olduğunu ölçüyor (sağlama basamağı, benzersizlik, beş yolun tamamı). Kopya
+      sessizce ayrışırsa çipe basmak ile kâğıdı okutmak aynı şeyi sınamaz olurdu.
+  - ⚠️ **`scripts/` HİÇBİR VİTEST PROJESİNDE DEĞİLDİ** (bulgu 25.08): oraya yazılan test sessizce
+    hiç koşmazdı — config'in kendi künyesindeki `mask.test.ts` tuzağının aynısı. Kök seviyesindeki
+    test dosyaları birim projesine eklendi (`vitest.config.ts`); desen DAR — `scripts/seed/` altı
+    DIŞARIDA, çünkü seed DB'ye vuruyor ve oraya yazılacak bir test entegrasyona ait.
+  - **Tam pakette iki düşüş vardı, ikisi de MODÜL DIŞI ve altyapı kaynaklı** (ölçüldü): biri
+    `warehouse.test.ts` — DE'de artık bir test deposu kalıntısı `warehouse_single_online` kısıtını
+    dolduruyordu (`pnpm test:purge --apply` ile temizlendi, ikisi de o günün koşularından);
+    öteki `checkout-shipping-order.test.ts` teardown'ında `delivery_zone` silme zaman aşımı.
+    İkisi de tek başına koşulunca GEÇTİ (15/15 ve 5/5).
   - **Bugünkü hâl ölçüldü (22.08):** `packages/application/src/warehouse/scan.ts` ve
     `apps/mobile/src/components/scan/scan-sheet.tsx` TESTLİ; `variant-barcode.service.ts` ve
     `dev-scan-pool.ts` testsiz.
@@ -301,9 +322,10 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     - **Tek arama kapısı:** bilinmeyen kod **`null`** (sıfır ya da "ilk varyant" DEĞİL — tahmin eden bir arama yanlış malı stoğa yazardı) · bilinen barkod doğru varyanta düşer ve `source` ile kesinlik derecesini söyler · **koli barkodu çarpanını KENDİ taşır** (tedarikçinin `pack_qty`si okunmaz — iki tedarikçinin kolisi farklı olabilir).
     - **Kısıtlar veride, kodda değil:** aynı kod ikinci varyanta bağlanamaz · `unit` kodun çarpanı 1 olmak zorunda · çarpan sıfır/negatif olamaz.
     - **Biçim doğrulamasının YOKLUĞU** ayrıca çivilendi (yukarıdaki düzeltme).
-  - **MOBİL YARISI ŞERİDİNDE KALIYOR:** `dev-scan-pool` ve tarama ekranı testleri `apps/mobile/src/components/scan/**` altında ve orası **23.4'ün açık çalışma alanı** (`[~]`, mobil şerit şu an o dosyalarda). `touches` kesişen iki görev aynı anda başlamaz (`WORKFLOW §7`); mobil suite zaten jest'te ve kendi şeridi koşuyor. Dalga 2'de o şeritle birlikte ele alınır.
-  - **DB'YE VURAN — KALAN:**
-    - Mal kabulde okutma → kod eşleşmesinin doğru partiye yazması (`receive_intake` yolu).
+  - ~~**MOBİL YARISI ŞERİDİNDE KALIYOR**~~ → 23.4 kapandığı için çalışma alanı serbest kaldı;
+    `dev-scan-pool.test.ts` 25.08'de yazıldı (yukarıda).
+  - ~~**DB'YE VURAN — KALAN:** mal kabulde okutma → doğru partiye yazma~~ → yazıldı ve koştu
+    (`intake.test.ts` › "okutulan kod → yazılan parti").
 
 - [x] (23.11) **Okutma çekmecesi + elastik adet seçici (mal kabul)** — kullanıcı tasarımı 23.08:
   okutma bir SAYIM değil TANITIMDIR. Kod çözülünce ürün kartı çekmecesi açılır (görsel + ad +
