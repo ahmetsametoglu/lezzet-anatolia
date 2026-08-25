@@ -5602,3 +5602,46 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   düşürdü (şehir yedeği söküldü → etiketsiz iddiası; toast erken çıkışın önüne alındı →
   başarısızlık iddiası; silme toast'ı söküldü → silme iddiası) · mobil paket **782/782** (100 dosya)
   · typecheck + lint temiz.
+
+- [x] (21.116) **UYGULAMANIN İKONU ARTIK MARKANIN — ve açılış perdesi BOŞ DEĞİL (MB-43 + MB-42)**
+  · touches: `apps/mobile/assets/images/*`, `apps/mobile/app.config.ts`, `packages/design-tokens/package.json`
+
+  **İKİ SESSİZ KUSUR ÖLÇÜLDÜ — ikisi de hiçbir yerde hata vermiyordu.**
+  · `icon.png` **Expo şablonunun MAVİ gradyanıydı** (#3EA1FF → #0173DE), `android-icon-background.png`
+    soluk mavi (#E6F4FE). Uygulama markanın değil ŞABLONUN ikonuyla taşınıyordu.
+  · `splash-icon.png`in **19 310 opak pikselinin TAMAMI #FFFFFF** idi ve perde zemini de `#FFFFFF`.
+    Beyaz üstüne beyaz → **açılış perdesi boş görünüyordu.** Karanlık mod alternatifi de yoktu.
+  · `app.config.ts` künyesi *"PNG'lerin zemini beyaz"* diyordu; **ölçüm bunu yalanladı** ve `MB-42`
+    kaleminin bütün gerekçesi o yanlış ölçüme dayanıyordu.
+
+  **KAYNAK KULLANICININ VERDİĞİ MARKA LOGOSU** ve **REPOYA ALINDI**:
+  `apps/mobile/assets/brand/logo-master.png` (3000²) + üretim parametrelerini taşıyan `README.md`.
+  Kaynağın repo DIŞINDA durması (`temp/`) seed fikstürlerinde alınan dersin aynısıdır: bir gün
+  silinince yeniden üretim imkânsız olur. Yazısız sürüm bilerek seçildi (ikon boyutunda kelime
+  markası okunmaz); yazılı sürüm giriş/onboarding ekranlarındaki `logo.png` olarak **ayrı bir
+  varlık** hâlinde kalıyor — geniş oranlı ve üç ekranın yerleşimi ona göre kurulu.
+
+  Yazılı logonun yeni (kare) sürümü de verildi ama **kullanılmadı ve bu bilinçli:** bugünkü
+  `logo.png` geniş oranlı (1244×602) ve üç ekranın yerleşimi ona göre kurulu; kareye geçmek görsel
+  bir karardır, improvise edilmez (CLAUDE §3). Kalem `BACKLOG-musteri §8`'e yazıldı.
+
+  **ZEMİN UYDURULMADI, ÖLÇÜLDÜ:** logonun kendi zemini **#FAF6EC** ve bu birebir
+  `customerSand['sand-25']` ("sayfa zemini"). Yani ikon, uygulamanın açtığı ilk ekranla AYNI yüzeyi
+  gösteriyor — açılışta zemin bir kez zıplamıyor.
+
+  Üretilenler (tek kaynaktan, ölçülen içerik kutusuyla): `icon.png` 1024² **opak** (iOS saydamlık
+  kabul etmez) · `splash-icon.png` 512² saydam · `android-icon-foreground.png` 1024² saydam,
+  sanat **güvenli bölgede** (%60 — uyarlanabilir ikonun görünen alanı tuvalin orta 72/108'i) ·
+  `android-icon-background.png` düz krem · `android-icon-monochrome.png` siluet.
+
+  **VE `MB-42` BUNUNLA BİRLİKTE KAPANDI — depo geneli bayrak GEREKMEDİ.** Paketin GİRİŞİ uzantısız
+  yeniden-ihraçlar taşıyor ve Node onları çözemiyor (`ERR_MODULE_NOT_FOUND`, üretildi). Denendi:
+  `allowImportingTsExtensions`i paketin kendi tsconfig'ine koymak YETMİYOR — tüketici paketin
+  kaynağını kendi programına dahil ediyor (ölçüldü: paket temiz, `apps/mobile` 5 × TS5097), yani
+  bayrak `packages/typescript-config/base.json`e girmek zorundaydı. **Çare girişi hiç kullanmamak
+  oldu:** `customer.ts` YAPRAK modül (hiç göreli import'u yok) ve pakete **alt yol ihracı** eklendi
+  (`"./customer": "./src/customer.ts"`). Paylaşılan alanda **EKLEME**; mevcut düzen korundu.
+
+  Doğrulama: `expo config` → `backgroundColor: '#faf6ec'` (ham hex kalktı) · mobil paket
+  **786/786** · `@lezzet/design-tokens` birim **30/30** · mobil + web + tokens typecheck temiz · lint temiz.
+

@@ -157,9 +157,18 @@
   birden karşılaması `(21.51)`de yazılı. Cihazda yazılan veri uygulamanın kendi silme akışıyla
   geri alındı (`anonymized_at` 11:09:06Z).
 
-- [ ] **MB-10 · Başvuru ekranının kahraman görseli yok.** `design/BACKLOG.md` §1'de
-  `professionals_hero` slot'u tanımlı ve arka ucu 09.08'de yazıldı (`site_image` tablosu + kova);
-  görsel künyesi hâlâ boş.
+- [x] ~~**MB-10 · Başvuru ekranının kahraman görseli yok.**~~ → **KAPANDI, ÖLÇÜLDÜ 25.08 —
+  kalemin gerekçesi de karşılığı da düşmüş.**
+
+  Gerekçe *"görsel künyesi hâlâ boş"*tu. **Dolu:** `professionals_hero` → `site/professionals-hero.jpg`.
+  Kayıt ancak **yükleme başarılıysa** yazılıyor (`scripts/seed/site-image.ts:97-107` — `uploadImageFromPath`
+  `null` dönerse slot boş bırakılıp geçiliyor), yani görsel gerçekten kovada. 19.08'de kullanıcı
+  isteğiyle eklenmiş; kaynağı ve lisansı seed'de kalıcı yazılı (Unsplash · Pylyp Sukhenko).
+
+  **Ve native tarafta zaten görsel İSTENMİYOR:** mobil kurumsal ekranın kahramanı v3'te mürekkep
+  zemin (`professionals-screen.tsx:443`, `backgroundColor: theme.colors.ink`) — fotoğraf çeken
+  sayfa web'inki ve o çekiyor (`professionals.desktop.tsx:43`). Kalem native backlog'una düşmüş
+  ama burada hiç karşılığı yoktu.
 
 - [x] **MB-11 · "Başvurunuz inceleniyor" gövdesi başlığı birebir tekrarlıyor.** Başlık
   *"Başvurunuz inceleniyor"*, gövde *"Başvurunuz inceleniyor — sonuç e-posta ile."*
@@ -1017,27 +1026,41 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   çalışmalı"*) — motor ortak olduğu için hesap zaten aynı; cümle için dosya açıldı:
   `docs/talep/musteri-asgari-sepet-cumlesi.md`.
 
-- [ ] **MB-22 · Sepetteki indirimin kaynağı — İKİ AYRI SORUN, biri düzeltildi diye yazılmıştı.**
-  **(a) Anonim kampanya — SEBEP ÖLÇÜLDÜ 11.08, kod hatası DEĞİL veri eksiği.** Sepette bazen
-  *"İndirim · **Bayram Sofrası** −3,00 €"* yazıyor, bazen *"İndirim · **Kampanya** · %8"*. Ölçüm:
-  `discount.public_label` dolu olan indirim adıyla görünüyor (`Bayram Sofrası seçkisi` — üç dilde
-  etiketi var), boş olan anonim "Kampanya"ya düşüyor (`Büyük sepet indirimi` — etiketi yok).
-  Mekanizma doğru; **indirim açılırken herkese açık etiketin zorunlu tutulmaması** sorun. Çözüm
-  operasyon yüzeyinde: etiketsiz indirim kaydedilememeli, çünkü müşteriye "Kampanya" demek hiçbir
-  şey söylemiyor. *(Bu yarısı web/operasyon şeridinin alanı.)*
-  **(b) Ürün sayfası kampanyayı hiç söylemiyor** — müşteri sepete gelene kadar indirimli olduğunu
-  bilmiyor. Ürün sayfası ile sepet aynı şeyi söylemeli. Bu yarısı mobil tarafta.
-  **ÖLÇÜLDÜ 14.08 — ekran işi DEĞİL, ve önce bir DOMAİN kararı istiyor.** Katalog sözleşmesindeki
-  tek indirim alanı `wasCents` ve künyesi kapsamını açıkça daraltıyor: *"yalnız yakın-SKT teklifi
-  normal fiyatı yendiğinde dolar"* (`catalog-api.schema.ts:105`) — yani parti teklifi, kampanya
-  değil. Sepetteki indirim ise ayrı bir yerde hesaplanıyor (`cart/read.ts`).
-  **Asıl engel teknik değil:** sepet indirimlerinin bir kısmı **SEPET kapsamlıdır** (MB-22a'nın
-  ölçtüğü *"Büyük sepet indirimi"* gibi) ve o, ürüne atfedilemez — ürün sayfasında *"bu ürün
-  indirimli"* demek, sepet toplamına bağlı bir şeyi ürünün özelliğiymiş gibi söylemek olurdu ve
-  müşteri sepette indirimi göremediğinde haklı olarak yanıltıldığını düşünürdü. Yani önce
-  **hangi indirim kapsamlarının ürün sayfasında gösterilebilir olduğu** kararlaştırılmalı
-  (ürün/koleksiyon kapsamlı → evet; sepet kapsamlı → hayır), sonra sözleşmeye alan açılmalı.
-  Karar verilmeden ekran yazılırsa yanlış vaat üretir.
+- [x] ~~**MB-22 · Sepetteki indirimin kaynağı — İKİ AYRI SORUN.**~~ → **İKİSİ DE KAPANDI
+  (ölçüldü 25.08, kullanıcı uyarısıyla yeniden bakıldı).**
+
+  **(a) Anonim kampanya → KAPANDI 24.08, `ec2d2341`, görev `09.6`.** Kayıt *"etiketsiz indirim
+  kaydedilememeli"* diyordu; tam da o yapılmış ve **iki kapıda birden**:
+  · ekran — `discount-form.tsx:305` *"Müşteriye görünen ad en az bir dilde girilmeli"*
+  · kapı — `discount-actions.ts:83` aynı kural `saveDiscountAction` içinde
+  İkincisi bilinçli: asistan onay kuyruğu aynı eylemi çağırıyor ve formun `blocked` kontrolünden
+  geçmiyor — *"yüzeyde durdurulan bir kuralın ikinci bir yazma yolu varsa, kural yok demektir."*
+  **Bir dil yeter, üçü değil** (eksik dilleri `resolveLocalizedText` çözüyor; üçü şart koşulsa
+  kampanya çeviri bekler hâlde kalırdı).
+
+  **Ölçüm ayrıca sistemin KENDİ yazdığı bir yolu buldu:** puan çevriminin RPC'si `public_label`
+  yazmıyordu, yani müşteri **kendi puanıyla açtığı kuponu** *"Kampanya"* diye görüyordu.
+  `0028_points.sql` düzeltildi (`{"tr":"Puanlarınız","fr":"Vos points","de":"Ihre Punkte"}`).
+
+  **Veride kısıt AÇILMADI ve bu bilinçli:** kullanıcı kararı *"formda zorunlu kıl"*dı, `not null`
+  değil. Gerekçesiyle `BEKLEYEN(09.6)`. *(25.08 gözlemi: o `BEKLEYEN`in tarif ettiği üçüncü yazma
+  yolu kodda duruyor — `apply.ts:274` `applyDiscountDraft` `publicLabel`'ı hiç geçirmiyor. Bugün
+  ulaşılamıyor çünkü `discount_draft`'ın kuyrukta kendi gövdesi var ve akış `saveDiscountAction`'a
+  gidiyor; `applyProposal`'ın başka çağıranı yok. Operasyon şeridine not bırakıldı.)*
+
+  **(b) Ürün sayfası kampanyayı hiç söylemiyordu → KAPANDI 23.08.** Kayıt *"önce bir domain kararı
+  istiyor"* diyordu ve karar tam istenen yerden verilmiş: kampanya artık katalog sözleşmesinde
+  (`CatalogCampaignSchema`) ve ürün detayında rozet olarak çiziliyor
+  (`product-detail-screen.tsx:541`) — ama **sepet kapsamlı kampanya çizilmiyor**:
+
+  ```ts
+  // campaign-label.ts:99
+  if (campaign === undefined || campaign.minBasketCents !== null) return undefined;
+  ```
+
+  Yani kaydın *"ürüne atfedilemez, yanlış vaat üretir"* uyarısı kodda karşılığını bulmuş.
+  **Tutar değil kural taşınıyor:** yüzey kampanyayı SÖYLER, fiyatı değiştirmez (`applyBestDiscount`
+  kazananı tüm sepet üzerinden seçtiği için kartta birim fiyat vaat etmek sepet değişince yalan olurdu).
 
 - [x] ~~**MB-23 · Vitrindeki bölge ile sepetteki teslimat adresi farklı yer gösteriyor.**~~ →
   **ELENDİ, ARIZA DEĞİL (kullanıcı kararı 11.08).** Tasarım zaten tutarlı: vitrindeki yer bir
@@ -1251,19 +1274,21 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **Bu turun asıl kazancı MB-20'ye gitti:** sebebi ararken mobilin `primaryVariantId`i hiç
   okumadığı bulundu — aşağıya bak.
 
-- [ ] **MB-29 · Görselsiz koleksiyon/paket kartında ekranın yarısı kadar tek harf çiziliyor**
-  ("Y", "F"). Yedek gösterim bilinçli ama fotoğraflı kartların yanında arıza gibi duruyor.
-  Bağlantılı: `design/BACKLOG.md` §1 — **boş sepet kahraman görseli** (native 180×140) ve
-  **paketler kahraman görseli** (3:2) hâlâ görselsiz.
-  **ÖLÇÜLDÜ 14.08 (cihazda görüldü + kod) — "ekranın yarısı" abartı, ve kusur BOYUTTA DEĞİL.**
-  Harf 148 dp'lik dairenin içinde 30 px, yani çapın ~%20'si; tonlar da zaten sessiz seçilmiş
-  (daire `scrim-soft`, harf `on-image-soft`). Rahatsız eden şey oran değil **BAĞLAM**: fotoğraflı
-  bantların arasında çıplak bir harf, eksik bir şey varmış hissi veriyor — ki gerçekten de eksik
-  olan GÖRSELİN KENDİSİ. Yani asıl çözüm içerik tarafında (§8'deki görsel bekleyenleri), yedek
-  gösterimi kurcalamak değil.
-  **Bu şerit yedek gösterime DOKUNMADI ve bu bilinçli (CLAUDE §3):** görsel karar `.dc.html`den
-  gelir, improvise edilmez. Harfi küçültmek/silmek bir tasarım kararıdır — Claude Design'a
-  sorulmalı. **Karar maddesi olarak işaretlendi**, kod işi değil.
+- [x] ~~**MB-29 · Görselsiz koleksiyon/paket kartında ekranın yarısı kadar tek harf çiziliyor.**~~
+  → **KARARLA KAPANDI (kullanıcı kararı 25.08): SIRAYA KONMUYOR.**
+
+  Kullanıcının sözü: *"Netice itibariyle görsel yoksa orada bir şey gösterilecek ve hangi harfin
+  gösterildiği gerçekte çok da önemli değil."*
+
+  Ölçüm zaten aynı yöne bakıyordu (14.08, cihazda + kod): *"ekranın yarısı"* abartıydı — harf
+  148 dp'lik dairenin içinde 30 px, yani çapın ~%20'si, tonlar da sessiz seçilmiş (daire
+  `scrim-soft`, harf `on-image-soft`). Rahatsız eden oran değil BAĞLAMdı: fotoğraflı bantların
+  arasında çıplak bir harf eksik bir şey varmış hissi veriyordu — ve gerçekten eksik olan
+  GÖRSELİN KENDİSİ. Yani asıl çözüm içerik tarafındaydı, yedek gösterimde değil.
+
+  Yedek gösterime bu şerit hiç dokunmadı ve dokunmayacak (`CLAUDE §3`: görsel karar `.dc.html`den
+  gelir, improvise edilmez). Kalem *"bir daha ucuz bir düzeltme sanılmasın"* diye ölçümüyle burada
+  duruyor.
 
 - [x] **MB-48 · Alttan açılan çekmece YUKARIDAN taşıyordu; öneri listesinin boyu sınırsızdı**
   → **KAPANDI, görev `(21.41)`** (11.08, kullanıcı bulgusu + cihazda ölçüldü). Panelin tavanı tam
@@ -1679,11 +1704,22 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   **seçili → TR → FR → DE** (`packages/types/src/primitives/localized-text.schema.ts:43`). Yani
   Fransızca eksikse Fransız müşteri **sessizce Türkçe** görüyor — hiçbir işaret yok. Talep
   mesajlarında bunun karşılığı var (*"Traduit automatiquement"*), katalogda yok.
-  **KARAR VERİLDİ (kullanıcı kararı 17.08): katalog metinleri de ÇEVİRİ KUYRUĞUNA girsin.** Motor
-  zaten var (`translateUserText`) ve talep mesajlarında çalışıyor; eksik dil kendiliğinden dolar.
-  Yedek zincir SÖKÜLMEZ — çeviri gelene kadar geçen sürede tek koruma odur, ve bir metin hiç
-  gelmezse boş ekran göstermek Türkçe göstermekten kötüdür. İşaretli yedek (b) seçilmedi: kalıcı
-  çözüm varken kusuru görünür kılmakla yetinmek olurdu.
+  ~~**KARAR VERİLDİ (17.08): katalog metinleri de ÇEVİRİ KUYRUĞUNA girsin.**~~
+  → **KARAR DEĞİŞTİ (kullanıcı kararı 25.08): KATALOG KUYRUĞA GİRMEZ, ÇEVİRİ ZORUNLU OLUR.**
+
+  Kullanıcının gerekçesi ölçümle doğrulandı: **kuyruk denetimsizdir, tasarım gereği.**
+  `translate-user-text.ts` üç kaynak tarıyor — ürün yorumu, talep mesajı, B2B ret gerekçesi; üçü de
+  MÜŞTERİNİN yazdığı metin, kimse okumadan yayına gidiyor. Doğrusu da bu: bir yorumun çevirisi
+  kusurluysa bedeli küçük. **Katalog o sınıfta değil** — ürün adı ve açıklaması müşterinin satın
+  alma kararını verdiği metin, üstelik gıda. Ve zaten operasyon formunda **"✦ AI çeviri" düğmesi
+  var** (`form-localized-text.tsx`): aynı motor, ama operatör sonucu GÖRÜP kaydediyor. Kuyruğa
+  almak, kontrollü bir yolu kontrolsüz bir yola taşımak olurdu.
+
+  **YERİNE: ürün metinleri üç dilde ZORUNLU.** Emsal depoda ve kullanıcının kendi kararı (07.08):
+  tarif **üç dil dolmadan yayınlanamıyor** — `has_all_locales(p)` (`0038_recipe.sql`), boş dize
+  dolu sayılmıyor. **Üründe böyle bir kısıt YOK** (`product` tablosunda tek check var, o da aile
+  etiketi). AI çeviri düğmesi bunu ucuz kılıyor: operatör basar, bakar, yayınlar.
+  *(Alan: katalog/operasyon. Talep açıldı — `docs/talep/operasyon-urun-metni-uc-dil-zorunlu.md`.)*
 
   **Yan bulgu (alan: arka-uç/denetim):** `product` tablosunda damgalı bir test fikstürü duruyor —
   `İçli köfte 1786922725238`. Teardown'dan kaçmış; katalog okuyan her ekranda görünür.
@@ -1731,7 +1767,8 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
 | --- | --- | --- |
 | **"Günün fırsatı" bandı** — native vitrinden kaldırıldı, kampanya modeli kararı bekliyor (a/b/c şıkları) | karar bekliyor | `design/BACKLOG.md` §2 |
 | **Boş sepet kahraman görseli** (native 180×140) · **Paketler kahraman görseli** (3:2) | görsel künyesi yok | §1 |
-| **`professionals_hero` görseli** — arka ucu yazıldı (`site_image`, 09.08), görsel yok | bekliyor | §1 → MB-10 |
+| ~~**`professionals_hero` görseli**~~ — görsel 19.08'de yüklendi (`site/professionals-hero.jpg`); native kahraman zaten mürekkep zemin | **kapandı** | §1 → MB-10 |
+| **Yazılı logo kare sürüme geçsin mi** — yeni sürüm verildi (25.08); bugünkü `logo.png` geniş oranlı (1244×602) ve giriş/onboarding/profil yerleşimleri ona kurulu | **tasarım kararı** | `21.116` |
 | **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / tutar) | checkout adres adımına bağlı | §1 |
 | **Fiyat değişti bildirimi** | kodlanmadı | §1 → MB-24 |
 | **Hesapta "sonraya kaydedilenler" + bölge haberi kartı** | veri hazır (`cart.saved_items`, `zone_notice`) | §1 |
@@ -1784,8 +1821,9 @@ Bunlar `design/BACKLOG.md`'de duruyor; kopyalanmadı, **buradan işaret ediliyor
 5. **MB-15..MB-19** — puan sisteminin komple denetimi + teşekkür kartının yeniden tasarımı.
 6. **MB-20 + MB-28** — liste fiyatı/"…'dan" eki ve varyant sırası; web talebiyle (`musteri-liste-
    fiyati-baslangic.md`) **aynı turda**, iki yüzey ayrışmasın.
-7. **MB-21 + MB-22 + MB-51** — sepetteki sayı çelişkisi, indirimin anonim kalması ve adres
-   formunun yanlış bölge sözü. *(MB-23 bu kümeden çıktı — elendi, arıza değilmiş.)*
+7. **MB-21 + MB-51** — sepetteki sayı çelişkisi ve adres formunun yanlış bölge sözü.
+   *(MB-23 bu kümeden çıktı — elendi, arıza değilmiş. **MB-22 de çıktı**: iki yarısı da
+   kapandı — (a) `09.6`/24.08, (b) 23.08.)*
 8. **MB-31** — katalog dili; önce ölçüm (veri mi, yedek dil mi), sonra karar.
 9. Kalan yerleşim/içerik maddeleri ve §8'in görsel bekleyenleri.
 
@@ -2010,16 +2048,36 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   SSS'e bir soru, B2B onay mailine bir paragraf. Karar gelene kadar bu kalem **MB-44'ü de bloke
   ediyor**.
 
-- [ ] **MB-42 · `packages/design-tokens` yerelden import edilemiyor — göreli ihraçlarında uzantı yok.**
-  Ölçüldü (11.08, MB-41 turunda): `app.config.ts`ten `@lezzet/design-tokens` import etmek
-  `expo config`i **düşürüyor** (`ERR_MODULE_NOT_FOUND`); sebep paketin girişindeki uzantısız göreli
-  yeniden-ihraçlar. Uzantılı denek modül AYNI yükleyicide çalıştı, yani engel yükleyici değil paketin
-  kendisi. Bugünkü bedeli: splash rengi token'a bağlanamıyor (`(21.34)`'te gerekçesiyle hex kaldı).
-  Paket web ve mobil ortak, o yüzden değişiklik iki yüzeyi de ilgilendirir.
+- [x] ~~**MB-42 · `packages/design-tokens` yerelden import edilemiyor.**~~ → **KAPANDI 25.08,
+  görev `(21.116)` — ve depo geneli derleyici bayrağı GEREKMEDİ.**
 
-- [ ] **MB-43 · İkon/splash PNG'lerinin krem zemine yeniden üretimi HİÇBİR YERDE kayıtlı değil.**
-  MB-41 turunda görüldü: `app.config.ts` splash rengini taşıyor ama görsel varlıkların kendisi
-  eski zeminde. İş bir tasarım kararı ister (hangi zemin, hangi boyut seti); şimdilik yalnız kayıt.
+  Arıza gerçekti ve üretildi (`expo config` → `ERR_MODULE_NOT_FOUND`): paketin GİRİŞİ uzantısız
+  göreli yeniden-ihraçlar taşıyor, Node onlara `.ts` eklemiyor. `@lezzet/i18n` aynı biçimde
+  okunup çalışıyor çünkü girişi tek dosya.
+
+  **"Uzantı ekle" yolu ölçülüp ELENDİ:** `allowImportingTsExtensions`i paketin kendi tsconfig'ine
+  koymak yetmiyor — tüketici paketin kaynağını kendi programına dahil ediyor (paket typecheck
+  temiz, aynı anda `apps/mobile` 5 × TS5097), yani bayrak `packages/typescript-config/base.json`e,
+  yani her şeridin paylaştığı derleyici ayarına girmek zorundaydı.
+
+  **Çare girişi hiç kullanmamak oldu:** `customer.ts` YAPRAK modül (hiç göreli import'u yok) ve
+  pakete **alt yol ihracı** eklendi — `"./customer": "./src/customer.ts"`. Paylaşılan alanda
+  EKLEME; mevcut düzen korundu. `app.config.ts` artık `customerSand['sand-25']` okuyor ve
+  `expo config` `#faf6ec` basıyor.
+
+- [x] ~~**MB-43 · İkon/splash PNG'lerinin krem zemine yeniden üretimi hiçbir yerde kayıtlı değil.**~~
+  → **KAPANDI 25.08, görev `(21.116)` — ve kalem GERÇEKTE daha ağırmış.**
+
+  Kayıt *"görseller eski zeminde"* diyordu. Piksel okundu ve iki sessiz kusur çıktı:
+  · `icon.png` **Expo şablonunun MAVİ gradyanıydı** (#3EA1FF → #0173DE), `android-icon-background.png`
+    soluk mavi (#E6F4FE) — yani uygulama markanın değil ŞABLONUN ikonuyla taşınıyordu.
+  · `splash-icon.png`in **19 310 opak pikselinin TAMAMI #FFFFFF** ve perde zemini de `#FFFFFF` →
+    **açılış perdesi boş görünüyordu.**
+  İkisi de hiçbir yerde hata vermiyordu; ancak pikseli okuyunca görülüyordu.
+
+  Kullanıcının verdiği marka logosundan (yazısız sürüm — ikon boyutunda kelime markası okunmaz)
+  beş varlık tek kaynaktan üretildi. **Zemin uydurulmadı:** logonun kendi zemini `#FAF6EC` ve bu
+  birebir `customerSand['sand-25']`, yani uygulamanın açtığı ilk ekranla aynı yüzey.
 
 - [x] **MB-65 · `OTP_TEST_CODE` mobile-api'nin env'inde YOKTU — native'de kimlik akışları cihazda
   hiç yürütülemiyordu** (ölçüldü 14.08, cihaz turunda) → **KAPANDI, görev `(21.49)`.**

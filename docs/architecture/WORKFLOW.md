@@ -249,5 +249,6 @@ Farklı projelerde tekrar eden, ucuz önlemi olan hatalar:
 | Veritabanı tetikleyicisi düşmüş kullanıcı, profilsiz kalır | Kayıt akışında profil varlığını doğrula |
 | Dosya deposunda sahipsiz nesneler birikir | Sahipsizliği **kaynağında** kes (kayıt düşerse yüklemeyi geri al); toplu temizleyici yazma — canlı veriyi silme riski beklenenden yüksek |
 | Aynı değeri iki yerde tutmak (kod + veritabanı) | Tek kaynak seç, diğerini ondan türet |
+| Testin açtığı auth kullanıcısına **literal parola** yazmak — `` `Kelime!${stamp}` `` deseni gizli-tarayıcıyı (GitGuardian) tetikler ve kullanıcının kutusuna mail gider | Parolayı **üret**: `randomUUID()`. Sızıntı gerçek değildir (yerel, `purgeTestData` siler) ama tarayıcı bunu ayırt edemez ve "yanlış alarm" diye geçmek bir sonraki GERÇEK uyarıyı gürültüye gömer. Üstelik damgadan türeyen parola aynı saniyede açılan iki kullanıcıda çakışır (ölçüldü 25.08; desen sekiz dosyadaydı) |
 
 Son satır özellikle önemli: bu şablondaki neredeyse her kural — üçlü şema, taban servis, tek sabit kaynağı — aynı ilkenin farklı yüzleridir. **Bir bilgi tek yerde yaşar.**

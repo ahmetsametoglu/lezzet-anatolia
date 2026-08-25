@@ -1,5 +1,8 @@
 import type { ExpoConfig } from 'expo/config';
 import { LOCALES, localizedPath } from '@lezzet/i18n';
+/* Alt yol ihracı (paketin GİRİŞİ değil) — gerekçesi `adaptiveIcon` künyesinde: giriş uzantısız
+   yeniden-ihraçlar taşıyor ve Node onları çözemiyor; `customer.ts` yaprak modül. */
+import { customerSand } from '@lezzet/design-tokens/customer';
 
 /*
   EXPO YAPILANDIRMASI — `app.json`ın yerine geçti (21.7).
@@ -90,30 +93,31 @@ const config: ExpoConfig = {
   android: {
     package: 'com.lezzetanatolia.app',
     /*
-      NÖTR BEYAZ — HAM HEX, ÖLÇÜLMÜŞ ZORUNLULUK (21.3 kapandı, ölçüm 11.08).
+      İKON ZEMİNİ MARKA KREMİ VE TOKEN'DAN GELİYOR (25.08) — ham hex kalktı.
 
-      Kural ham hex yazılmamasını söyler ve doğrusu `@lezzet/design-tokens`ten okumaktır
-      (`customerSurface.card` = #ffffff, setin tek saf beyazı). DENENDİ VE ÇÖZÜLEMEDİ: bu dosya
-      Metro'dan ÖNCE, Node'un kendi ESM yükleyicisiyle değerlendiriliyor ve paketin girişi
-      UZANTISIZ yeniden-ihraçlar taşıyor (`export … from './customer'`). Node uzantısız göreli
-      yola `.ts` eklemez; `expo config` şununla kesildi:
-          ERR_MODULE_NOT_FOUND · Cannot find module
-          '…/packages/design-tokens/src/customer' imported from '…/src/index.ts'
-      Sebep paket YOLU ya da workspace çözümü DEĞİL: `@lezzet/i18n` aynı biçimde okunuyor ve
-      çalışıyor — çünkü onun girişi tek dosya, göreli yeniden-ihracı yok. Uzantılı göreli
-      yeniden-ihraçla kurulmuş bir denek modül aynı yükleyicide SORUNSUZ okundu; yani engel tam
-      olarak paketin sekiz uzantısız belirtecidir (`packages/design-tokens/src/*`).
+      ── ÖNCEKİ KAYDIN İKİ AYRI YANLIŞI ÖLÇÜLDÜ ────────────────────────────────
+      Burası `#FFFFFF` yazıyordu ve gerekçesi *"ikon/splash PNG'lerinin zemini beyaz"*dı.
+      Piksel okundu: zemin BEYAZ DEĞİLDİ. `icon.png` Expo şablonunun MAVİ gradyanıydı
+      (#3EA1FF → #0173DE), `android-icon-background.png` soluk maviydi (#E6F4FE) — yani
+      uygulama, markanın değil şablonun ikonuyla taşınıyordu. Ve `splash-icon.png`in 19 310
+      opak pikselinin TAMAMI #FFFFFF idi: beyaz perde üstünde beyaz çizim, yani AÇILIŞ PERDESİ
+      BOŞ GÖRÜNÜYORDU. İkisi de sessiz kusurdu — hiçbir yerde hata vermiyorlardı.
 
-      Düzeltme paketin KENDİ dosyalarında (uzantı eklemek ya da derlenmiş giriş yayımlamak) ve
-      web tarafını da ilgilendiriyor; mobil şeridin yazma alanı değil — TERFİ İHTİYACI olarak
-      raporlandı. O gün burası tek satırlık bir değişiklikle token'a bağlanır.
+      ── ZEMİN UYDURULMADI, ÖLÇÜLDÜ ────────────────────────────────────────────
+      Marka logosunun kendi zemini #FAF6EC ve bu birebir `customerSand['sand-25']`
+      ("sayfa zemini"). Yani ikon, uygulamanın açtığı ilk ekranla AYNI yüzeyi gösteriyor;
+      açılışta zemin bir kez zıplamıyor.
 
-      DEĞER NEDEN BEYAZ, KREM DEĞİL: ikon/splash PNG'lerinin zemini beyaz. Renk tek başına marka
-      kremine (`sand-50`) çekilirse beyaz zeminli görselin kenarı krem çerçevede görünür bir kare
-      bırakır — önce GÖRSELLER krem zemine göre yeniden üretilmeli (tasarım/varlık işi).
+      ── PAKET NEDEN NİHAYET OKUNABİLİYOR ──────────────────────────────────────
+      Bu dosya Metro'dan ÖNCE, Node'un kendi ESM yükleyicisiyle değerlendiriliyor ve paketin
+      GİRİŞİ uzantısız yeniden-ihraçlar taşıyor (`export … from './customer'`) — Node uzantısız
+      göreli yola `.ts` eklemez, `expo config` `ERR_MODULE_NOT_FOUND` ile kesiliyordu (MB-42).
+      Çare girişi hiç kullanmamak oldu: `customer.ts` YAPRAK modül (hiç göreli import'u yok) ve
+      pakete ALT YOL İHRACI eklendi (`"./customer": "./src/customer.ts"`). Ekleme; mevcut düzen
+      korundu, depo geneli derleyici bayrağı gerekmedi.
     */
     adaptiveIcon: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: customerSand['sand-25'],
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -147,8 +151,8 @@ const config: ExpoConfig = {
       'expo-splash-screen',
       {
         // Açılış perdesi ikon zeminiyle AYNI yüzeyi gösterir; ikisi ayrışırsa uygulama açılırken
-        // zemin bir kez zıplar. Ham hex olmasının gerekçesi ikon zemininin künyesinde (21.3).
-        backgroundColor: '#FFFFFF',
+        // zemin bir kez zıplar. Değer artık token'dan — gerekçe ikon zemininin künyesinde.
+        backgroundColor: customerSand['sand-25'],
         image: './assets/images/splash-icon.png',
         imageWidth: 76,
       },
